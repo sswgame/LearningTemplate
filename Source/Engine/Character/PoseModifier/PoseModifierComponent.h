@@ -2,7 +2,7 @@
  * @file PoseModifierComponent.h
  * @brief 후처리 리그 컴포넌트입니다. 리그 에셋(`*.rig.xml`, IK, 제약, 스프링 본 노드 목록)을 그래프 뒤, 스키닝 앞(`AnimationPhase::PostProcess`)에서 실행합니다.
  * @details 평가는 자기 onTick 이 아니라 `AnimationSystem` 이 한다. 같은 오브젝트의 `SkeletalMeshComponent`(유닛)에 단계 작업으로 붙고, 유닛들은
- *          레벨 안에서 병렬로 돈다. 대상이 다른 유닛의 본이나 소켓이면 그 유닛을 의존으로 등록해 먼저 평가되게 하고, 고리가 생기면 로드 오류로 그 대상을 끈다.
+ *          성분 단위로 병렬로 돈다. 대상이 다른 유닛의 본이나 소켓이면 그 유닛을 의존으로 등록해 모든 단계를 먼저 마치게 하고(최종 포즈를 읽는다), 고리가 생기면 로드 오류로 그 대상을 끈다.
  *          언리얼의 Control Rig(후처리 노드)와 IK Rig, 유니티의 Animation Rigging(Rig Builder, 제약 컴포넌트)에 해당한다.
  */
 #pragma once

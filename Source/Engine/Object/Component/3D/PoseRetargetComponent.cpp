@@ -134,7 +134,7 @@ namespace sw
         _pBoundSourceSkeleton       = nullptr;
         const bool bNeedsDependency = pSource != nullptr && _pUnit != nullptr && pSource != _pUnit;
         if ( bNeedsDependency )
-            _pUnit->addAnimationDependency( pSource ); // 원본의 기본 포즈가 먼저 끝나야 한다
+            _pUnit->addAnimationDependency( pSource ); // 원본의 모든 단계(최종 포즈)가 먼저 끝나야 한다
     }
 
     void PoseRetargetComponent::bindToUnit()
@@ -175,7 +175,8 @@ namespace sw
             _pBoundSourceSkeleton = &sourceSkeleton;
             _pBoundTargetSkeleton = &targetSkeleton;
         }
-        // 원본은 의존이라 이 레벨보다 먼저 기본 포즈를 끝냈다(그 유닛의 후처리 리그는 아직 — 리타깃은 애니메이션만 옮긴다).
+        // 원본은 의존이라 이 유닛보다 먼저 모든 단계를 마쳤다(`AnimationDependencyEdge`) — 원본의 후처리(IK · 스프링)와 부착까지 적용된 최종 로컬 포즈를 옮긴다.
+        // 이 유닛 자신의 후처리(리그)는 그 위에서 다시 돈다.
         _retargeter.retarget( pSource->getLocalPose(), unit.getLocalPose() );
     }
 } // namespace sw

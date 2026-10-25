@@ -202,7 +202,7 @@ namespace sw
         const AnimationCrowdBucket* findCrowdBucket() const { return _pCrowdBucket; }
         /** @brief 묶음, 사본, VAT 를 정합니다(게임 스레드, `AnimationSystem` 이 시간 단계 뒤에 부릅니다). */
         void updateCrowdMembership( AnimationCrowd& crowd );
-        /** @brief 이 유닛의 포즈를 읽는 유닛(리더, 부착 의존)이 있는지 정합니다(`AnimationSystem` 이 레벨을 만들 때 부릅니다). */
+        /** @brief 이 유닛의 포즈를 읽는 유닛(리더, 부착 의존)이 있는지 정합니다(`AnimationSystem` 이 성분을 만들 때 부릅니다). */
         void setHasAnimationDependents( bool bHasDependents ) { _bHasDependents = bHasDependents ? SW_TRUE : SW_FALSE; }
         bool hasAnimationDependents() const { return _bHasDependents == SW_TRUE; }
 

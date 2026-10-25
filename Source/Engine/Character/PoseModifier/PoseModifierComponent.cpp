@@ -748,7 +748,7 @@ namespace sw
         // 꺼졌어도 유닛은 다른 일(애니메이터)로 돌 수 있다. 그때 리그는 아무것도 하지 않는다.
         if ( _bRigEnabled == SW_FALSE || _instance.isInitialized() == false )
             return;
-        // 의존을 등록한 유닛은 앞 레벨에서 이번 프레임 포즈를 끝냈다. 그 본을 읽어 대상 값을 채운다(워커에서 하며, 그 유닛은 읽기만 한다).
+        // 의존을 등록한 유닛은 이 유닛보다 먼저 모든 단계를 마쳤다(최종 포즈). 그 본을 읽어 대상 값을 채운다(워커에서 하며, 그 유닛은 읽기만 한다).
         for ( uint32 targetIndex = 0; targetIndex < static_cast<uint32>( _listExternal.size() ); ++targetIndex )
         {
             const ExternalTarget&        external    = _listExternal[targetIndex];

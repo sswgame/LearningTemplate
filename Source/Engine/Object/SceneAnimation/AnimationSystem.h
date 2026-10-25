@@ -33,7 +33,8 @@ namespace sw
 
     /**
      * @enum AnimationPhase
-     * @brief 한 프레임의 단계입니다. 단계마다 모든 유닛을 의존 순서(레벨)대로 처리하고, 레벨 안에서는 병렬로 처리합니다.
+     * @brief 한 프레임의 단계입니다. 시간 단계는 모든 유닛을 순서 없이 병렬로 돌리고(자기 유닛만 읽는다), 나머지 넷(포즈 단계)은 의존으로 이어진 유닛 묶음(성분)마다 한 번에 돕니다 —
+     *        묶음 안은 위 유닛이 네 단계를 모두 마친 뒤 아래 유닛이 시작합니다(`AnimationDependencyEdge`). 단계 사이에 모든 유닛을 기다리는 장벽은 시간 단계 뒤와 포즈 단계 뒤, 둘뿐입니다.
      */
     enum class AnimationPhase : uint8
     {
@@ -84,7 +85,9 @@ namespace sw
     /**
      * @class IAnimationPhaseTask
      * @brief 유닛 하나의 단계에 끼어드는 작업입니다(애니메이터, 이후의 PoseModifier, 소켓 부착). 유닛에 등록합니다(`SkeletalMeshComponent::registerAnimationPhaseTask`).
-     * @details 단계 함수는 워커에서 불린다. 자기 유닛과, 의존으로 선언한 위 유닛만 읽는다. 게임 스레드에서 해야 하는 일(트랜스폼 쓰기)은
+     * @details 단계 함수는 워커에서 불린다. 자기 유닛과, 의존으로 선언한 위 유닛만 읽는다. 시간 단계에서는 위 유닛조차 읽지 않는다(시간 단계는 유닛 사이 순서가 없다).
+     *          위 유닛은 포즈 단계에서 이미 **모든 단계**를 마친 뒤라 최종 포즈(부착 · 후처리까지 적용된 로컬 포즈와 모델 공간)를 읽는다. 선언하지 않은 다른 유닛은 포즈 단계 어느 때에도
+     *          읽지 않는다(그 유닛이 어느 단계에 있는지 정해져 있지 않다 — 단계 사이에 모든 유닛을 기다리는 장벽이 없다). 게임 스레드에서 해야 하는 일(트랜스폼 쓰기)은
      *          `finishAnimationFrame` 에 둔다(모든 단계가 끝난 뒤 게임 스레드에서 차례로 불린다).
      */
     class SW_API IAnimationPhaseTask
@@ -203,7 +206,7 @@ namespace sw
     /**
      * @class AnimationOrderedList
      * @brief 포인터를 등록 순서대로 들고, 등록 · 해제 · 위치 찾기를 O(1) 로 받는 목록입니다(`AnimationSystem` 전용 — 유닛 · LOD 클라이언트).
-     * @details 평가 순서(레벨 안 순서) · 스킨 팔레트 순서 · LOD 예산 순서가 등록 순서라서, 해제가 남은 원소의 상대 순서를 바꾸면 안 된다. 그래서 가운데 원소의 해제는 칸을 비워 두기만 하고
+     * @details 평가 순서(성분 안 · 성분 사이 순서) · 스킨 팔레트 순서 · LOD 예산 순서가 등록 순서라서, 해제가 남은 원소의 상대 순서를 바꾸면 안 된다. 그래서 가운데 원소의 해제는 칸을 비워 두기만 하고
      *          (O(1)), 비운 칸은 목록을 읽을 때(`getItems` · `findIndex`) 한 번에 접는다 — M 개를 연달아 해제해도 접는 비용은 O(N) 한 번이다. 마지막 칸의 해제는 바로 뺀다.
      *          읽기 함수가 const 인 채로 접으므로 저장소는 `mutable` 이다. 그래서 **읽기도 쓰기다** — 게임 스레드 전용이고(`GPUSkinPaletteCollector` 도 `populateFromScene` 의 게임 스레드에서 읽는다),
      *          병렬 평가 구간에서는 등록 · 해제도 읽기도 없다. 두 스레드가 동시에 접으면 Debug 에서 단언한다(스레드 정체를 모르는 곳에서도 쓸 수 있게 겹침만 본다).
@@ -333,8 +336,9 @@ namespace sw
     /**
      * @struct AnimationDependencyEdge
      * @brief 의존 간선 하나입니다. **위 유닛의 모든 단계가 끝난 뒤에야 아래 유닛이 시작합니다**(리더 포즈 · 부착 대상 · 리그 대상 모두 위 유닛의 최종 포즈를 읽는다).
-     * @details 번호는 `AnimationUnitList` 의 위치입니다. 이 뜻을 지키는 순서는 `AnimationComponentSet` 의 성분 안 순서(유닛 먼저, 한 유닛의 단계를 이어서)이고,
-     *          레벨 순서(단계마다 위 유닛이 먼저)는 위 유닛의 뒤 단계(부착 · 후처리)가 끝나기 전에 아래 유닛이 앞 단계에서 위 유닛의 포즈를 읽을 수 있다.
+     * @details 번호는 `AnimationUnitList` 의 위치입니다. 이 뜻을 지키는 순서는 `AnimationComponentSet` 의 성분 안 순서(유닛 먼저, 한 유닛의 네 포즈 단계를 이어서)입니다.
+     *          "단계마다 위 유닛이 먼저" 인 순서는 이 뜻을 지키지 못한다 — 아래 유닛의 기본 포즈 단계가 위 유닛의 부착 · 후처리 단계보다 먼저 돌아 최종이 아닌 포즈를 읽는다.
+     *          리타깃 원본도 이 뜻으로 읽는다: 원본의 후처리(IK · 스프링)까지 끝난 최종 포즈를 옮긴다(언리얼 `Retarget Pose From Mesh` 도 원본 메시 컴포넌트의 평가가 끝난 포즈를 읽는다).
      */
     struct AnimationDependencyEdge
     {
@@ -366,6 +370,8 @@ namespace sw
         uint32 getComponentEnd( uint32 componentIndex ) const { return _listStart[componentIndex + 1]; }
         /** @brief 성분 순서로 이어 붙인 유닛 전부입니다. */
         const vector<SkeletalMeshComponent*>& getUnits() const { return _listUnit; }
+        /** @brief 의존 고리가 있었으면 true 입니다(`AnimationSystem` 이 지을 때 정한다). 고리의 유닛은 한 성분 구간의 뒤에 등록 순서로 놓여 있습니다. */
+        bool hasCycle() const { return _bCycle == SW_TRUE; }
 
     private:
         friend class AnimationSystem;
@@ -375,13 +381,13 @@ namespace sw
             _listUnit.clear();
             _listStart.clear();
             _maxComponentSize = 0;
+            _bCycle           = SW_FALSE;
         }
         /**
-         * @brief 유닛 하나짜리 성분 가운데 @p inoutListRemap 의 그 칸이 `invalid_index::kUint32` 인 것을 뺍니다. 남은 칸의 새 번호를 같은 배열에 씁니다(남은 성분의 순서와 안쪽 순서는 그대로).
-         * @details 해제된 외톨이 유닛을 평가 전에 한 번에 빼는 길입니다(`AnimationSystem::flushLevelRemoval`). 제자리에서 접으므로 할당이 없습니다.
-         * @param inoutListRemap 칸마다 0(남김) 또는 `kUint32`(뺌)로 들어오고, 남은 칸은 새 칸 번호로 나갑니다. 크기는 `getUnitCount()` 입니다.
+         * @brief 유닛 하나짜리 성분 가운데 그 유닛이 @p uniqueRemoval 에 든 것을 뺍니다(남은 성분의 순서와 안쪽 순서는 그대로).
+         * @details 해제된 외톨이 유닛을 평가 전에 한 번에 빼는 길입니다(`AnimationSystem::flushSingletonRemoval`). 제자리에서 접으므로 할당이 없습니다.
          */
-        void removeMarkedSingletons( vector<uint32>& inoutListRemap )
+        void removeSingletons( const unordered_set<const SkeletalMeshComponent*>& uniqueRemoval )
         {
             const uint32 componentCount = getComponentCount();
             uint32       writeUnit      = 0;
@@ -390,12 +396,15 @@ namespace sw
             {
                 const uint32 start = _listStart[componentIndex];
                 const uint32 end   = _listStart[componentIndex + 1];
-                if ( end - start == 1 && inoutListRemap[start] == invalid_index::kUint32 )
-                    continue;
+                if ( end - start == 1 )
+                {
+                    const SkeletalMeshComponent* pKey = _listUnit[start];
+                    if ( uniqueRemoval.contains( pKey ) )
+                        continue;
+                }
                 _listStart[writeComponent++] = writeUnit; // 쓰는 자리는 읽은 자리를 앞서지 않으므로 아직 읽지 않은 칸을 덮지 않는다
                 for ( uint32 slot = start; slot < end; ++slot )
                 {
-                    inoutListRemap[slot]   = writeUnit;
                     _listUnit[writeUnit++] = _listUnit[slot];
                 }
             }
@@ -417,6 +426,7 @@ namespace sw
         vector<SkeletalMeshComponent*> _listUnit;              ///< 성분 순서로 이어 붙인 유닛이다
         vector<uint32>                 _listStart;             ///< 성분마다 `_listUnit` 안의 시작 칸이다(끝 하나 더, 비어 있으면 성분이 없다)
         uint32                         _maxComponentSize{ 0 }; ///< 가장 큰 성분의 유닛 수다
+        uint8                          _bCycle{ SW_FALSE };    ///< 의존 고리가 있었다
     };
 } // namespace sw
 
@@ -424,10 +434,12 @@ namespace sw
 {
     /**
      * @class AnimationSystem
-     * @brief 등록된 유닛을 의존(위 유닛 → 아래 유닛) 레벨로 나눠 단계마다 평가합니다. 언리얼의 애니메이션 평가, 유니티의 Playable 그래프 평가에 해당합니다.
-     * @details 프레임 순서는 다음과 같다. (0) 의존이 바뀌었으면 레벨을 다시 만든다(위상 정렬이며, 고리는 오류로 알리고 남은 유닛은 등록 순서로 한 유닛씩 뒤 레벨에 둔다 — 레벨 안은 병렬이라 고리 유닛을 모으면 레이스다. 같은 간선으로 연결 성분도 짓는다 — `AnimationComponentSet`, 아직 평가는 레벨을 따른다). (1) 유닛마다 이번 프레임
-     *          할 일과 LOD(갱신 주기, 화면 밖 여부)를 정한다. (2) 단계마다 레벨 순서로 `engine::runParallelByCost` 를 돌리고, 시간 단계 뒤에는 동기 그룹을 맞춘다.
-     *          (3) 게임 스레드에서 `finishAnimationFrame` 을 부른다. 쉬는 유닛(할 일 없음, 포즈 깨끗함)은 (1) 에서 빠지므로 비용이 없다.
+     * @brief 등록된 유닛을 의존(위 유닛 → 아래 유닛)으로 이어진 묶음(연결 성분)으로 나눠 평가합니다. 언리얼의 애니메이션 평가, 유니티의 Playable 그래프 평가에 해당합니다.
+     * @details 프레임 순서는 다음과 같다. (0) 의존이 바뀌었으면 성분을 다시 만든다(위상 정렬 + union-find. 성분 안은 위 유닛이 먼저이고, 고리는 오류로 알리며 고리의 유닛과 그 아래 유닛은 성분의 뒤에 등록 순서로 놓는다 —
+     *          성분 안은 직렬이라 고리 유닛이 서로의 포즈를 읽고 써도 레이스가 아니다). (1) 유닛마다 이번 프레임 할 일과 LOD(갱신 주기, 화면 밖 여부)를 정한다.
+     *          (2) 시간 단계를 일하는 유닛 위로 `engine::runParallelByCost` 한 번에 돌리고, 동기 그룹을 맞추고 군중을 정한다. (3) 포즈 단계 넷(기본 포즈 · 부착 · 후처리 · 스킨 팔레트)을
+     *          성분 위로 `runParallelByCost` 한 번에 돌린다 — 성분 하나를 항목 하나로, 성분 안은 유닛 먼저(위 유닛이 네 단계를 모두 마친 뒤 아래 유닛)다. 전체 대기는 프레임에 두 번이다.
+     *          (4) 게임 스레드에서 `finishAnimationFrame` 을 부른다. 쉬는 유닛(할 일 없음, 포즈 깨끗함)은 (1) 에서 빠지므로 비용이 없다.
      *          "상태를 가진 시스템 타입, `engine::runParallel` · `runParallelByCost`, 매니저 tick 의 단계 한 줄"이라는 구조를 따른다(`SceneTransformHierarchy` 와 같다).
      */
     class SW_API AnimationSystem final : public ISceneService
@@ -455,11 +467,11 @@ namespace sw
         void registerUnit( SkeletalMeshComponent* pUnit );
         /**
          * @brief 유닛을 해제합니다. 여러 번 불러도 안전합니다.
-         * @details 의존을 가지지도 받지도 않는 유닛(레벨 0 의 외톨이)은 레벨을 다시 짓지 않습니다. 다음 평가가 시작될 때 해제한 유닛을 모아 레벨 0 에서 한 번에 뺍니다.
-         *          그 밖의 유닛은 레벨을 비우고 다음 평가가 다시 짓습니다.
+         * @details 의존을 가지지도 받지도 않는 유닛(유닛 하나짜리 성분)은 성분을 다시 짓지 않습니다. 다음 평가가 시작될 때 해제한 유닛을 모아 성분 목록에서 한 번에 뺍니다.
+         *          그 밖의 유닛은 성분을 비우고 다음 평가가 다시 짓습니다.
          */
         void unregisterUnit( SkeletalMeshComponent* pUnit );
-        /** @brief 의존이나 리더가 바뀌었음을 알립니다. 다음 평가가 레벨을 다시 만듭니다. */
+        /** @brief 의존이나 리더가 바뀌었음을 알립니다. 다음 평가가 성분을 다시 만듭니다. */
         void markOrderDirty() { _bOrderDirty = SW_TRUE; }
 
         /** @brief 한 프레임을 평가합니다(게임 스레드, 틱 뒤). LOD 판정 다음에 단계들을 순서대로 처리합니다. */
@@ -507,26 +519,19 @@ namespace sw
 
         /** @brief 등록된 유닛 수입니다. */
         uint32 getUnitCount() const { return _unitList.getCount(); }
-        /** @brief 등록된 유닛 전부입니다(등록 순서이고 평가 순서는 아닙니다). 레벨은 다음 평가 때 고쳐지므로 "지금 있는 유닛"은 이 함수로 봅니다. */
+        /** @brief 등록된 유닛 전부입니다(등록 순서이고 평가 순서는 아닙니다). 성분은 다음 평가 때 고쳐지므로 "지금 있는 유닛"은 이 함수로 봅니다. */
         const vector<SkeletalMeshComponent*>& getUnits() const { return _unitList.getItems(); }
-        /** @brief 의존 레벨입니다(0 이 먼저). 테스트와 진단용입니다. 해제된 외톨이 유닛을 레벨 0 에서 먼저 빼므로 죽은 유닛 포인터는 보이지 않습니다. */
-        const vector<vector<SkeletalMeshComponent*>>& getLevels()
-        {
-            flushLevelRemoval();
-            return _listLevel;
-        }
         /**
-         * @brief 의존으로 이어진 유닛 묶음(연결 성분)입니다. 테스트와 진단용이며 아직 평가는 레벨을 따릅니다. `getLevels` 처럼 해제된 외톨이 유닛을 먼저 뺍니다.
+         * @brief 의존으로 이어진 유닛 묶음(연결 성분)입니다 — 평가 순서 그대로입니다(성분은 가장 앞선 등록 순서 순, 성분 안은 위 유닛이 먼저). 테스트와 진단용입니다.
+         *        해제된 외톨이 유닛을 먼저 빼므로 죽은 유닛 포인터는 보이지 않습니다. 의존 고리 여부는 `AnimationComponentSet::hasCycle` 입니다.
          */
         const AnimationComponentSet& getComponents()
         {
-            flushLevelRemoval();
+            flushSingletonRemoval();
             return _componentAll;
         }
         /** @brief 지난 평가에서 일한(쉬지 않은) 유닛만 성분별로 모은 것입니다. 일하는 유닛이 없는 성분은 빠집니다. */
         const AnimationComponentSet& getActiveComponents() const { return _componentActive; }
-        /** @brief 마지막으로 만든 레벨에 의존 고리가 있었으면 true 입니다. */
-        bool hasDependencyCycle() const { return _bCycle == SW_TRUE; }
         /** @brief 평가한 프레임 수입니다. */
         uint64 getFrameIndex() const { return _frameIndex; }
         /** @brief 지난 프레임에 일한(쉬지 않은) 유닛 수를 반환합니다. */
@@ -550,20 +555,22 @@ namespace sw
     private:
         /** @brief LOD 판정(가시성, 화면 크기, 주기, 본 LOD, 예산)을 하고 클라이언트에 알립니다. */
         void updateLOD();
-        /** @brief 의존을 해석해 레벨과 성분을 다시 만듭니다. 임시 버퍼(`_listScratch*`)와 레벨 벡터의 용량을 재사용합니다. */
-        void rebuildLevels();
-        /** @brief 간선(`_listScratchEdge`)으로 유닛을 성분으로 묶고, 성분마다 `_listScratchOrder`(위상 순서)대로 유닛을 놓습니다. `rebuildLevels` 가 레벨을 짓고 나서 부릅니다. */
-        void rebuildComponents();
-        /** @brief 해제된 외톨이 유닛(`unregisterUnit`)을 레벨 0 과 성분 목록(유닛 하나짜리 성분)에서 한 번에 뺍니다. 레벨을 다시 지을 예정이면 모아 둔 것만 버립니다. */
-        void flushLevelRemoval();
-        /** @brief 단계 하나를 레벨 순서로 처리합니다. */
-        void runPhase( AnimationPhase phase );
         /**
-         * @brief 이번 프레임에 일하는 유닛만 레벨 순서로 `_listActive` 에 모읍니다(쉬는 유닛은 빠져 단계를 돌지 않는다). 각 레벨의 시작 번호는 `_listLevelStart` 에 남깁니다.
-         *        같은 유닛을 성분별로도 `_componentActive` 에 모읍니다.
+         * @brief 의존을 해석해 성분을 다시 만듭니다. 간선을 모아 위상 정렬(Kahn)하고, 같은 간선으로 유닛을 성분으로 묶은 뒤(union-find) 성분마다 위상 순서대로 유닛을 놓습니다.
+         *        임시 버퍼(`_listScratch*`)와 성분 벡터의 용량을 재사용합니다.
+         */
+        void rebuildComponents();
+        /** @brief 해제된 외톨이 유닛(`unregisterUnit`)을 성분 목록(유닛 하나짜리 성분)에서 한 번에 뺍니다. 성분을 다시 지을 예정이면 모아 둔 것만 버립니다. */
+        void flushSingletonRemoval();
+        /**
+         * @brief 이번 프레임에 일하는 유닛만 성분 순서로 `_componentActive` 에 모읍니다(쉬는 유닛은 빠져 단계를 돌지 않는다). 성분 안은 위 유닛이 먼저이므로,
+         *        게임 스레드의 순회(`beginAnimationFrame` · 군중 · 동기 그룹 · `finishAnimationFrame` · 되감기 기록)도 이 순서를 따른다 — 아래 유닛이 위 유닛의 결과를 이어 받는다(군중 묶음 가입 등).
          */
         void collectActiveUnits( float32 deltaSeconds );
-        /** @brief 포즈 단계들(기본 포즈 · 부착 · 후처리 · 스킨 팔레트)을 돌고 포즈 단계의 벽시계 평균(`_averageEvaluationMicroseconds`)을 갱신합니다. */
+        /**
+         * @brief 포즈 단계 넷(기본 포즈 · 부착 · 후처리 · 스킨 팔레트)을 성분 위로 `runParallelByCost` 한 번에 돌리고(성분 안은 유닛 먼저), 포즈 단계의 벽시계 평균
+         *        (`_averageEvaluationMicroseconds`)을 갱신합니다. 단계별 시간은 워커가 단계마다 누적해 한 청크에 한 번 프로파일 카운터로 냅니다.
+         */
         void runPosePhases();
         /** @brief 프레임을 마칩니다 — 군중을 닫고 되감기 기록을 남깁니다. */
         void endEvaluationFrame( float32 deltaSeconds );
@@ -579,32 +586,23 @@ namespace sw
 #endif
 
         AnimationUnitList                           _unitList;
-        unordered_set<const SkeletalMeshComponent*> _uniqueLevelRemoval; ///< 레벨 0 에서 뺄 외톨이 유닛이다(`unregisterUnit` 이 모으고 `flushLevelRemoval` 이 비운다)
-        vector<vector<SkeletalMeshComponent*>>      _listLevel;
-        AnimationComponentSet                       _componentAll;    ///< 모든 유닛의 성분이다(레벨과 같은 시점에 짓고, 외톨이 해제도 같이 뺀다)
-        AnimationComponentSet                       _componentActive; ///< 이번 프레임에 일하는 유닛의 성분별 구간이다(`collectActiveUnits` 가 채운다)
-        vector<uint32>                              _listLevelSlot;   ///< `_listLevel` 을 레벨 순서로 이은 칸마다, 그 유닛이 `_componentAll` 안에서 놓인 칸 번호다
-        vector<SkeletalMeshComponent*>              _listActive;      ///< 이번 프레임에 단계를 처리하는 유닛(레벨 순서)이다. 재사용한다
-        vector<uint32>                              _listLevelStart;  ///< `_listActive` 안의 레벨 시작 위치다. 끝 위치를 하나 더 둔다
-        AnimationOrderedList<IAnimationLODClient>   _lodClientList;   ///< LOD 클라이언트(등록 순서 — 판정 · 예산 순서)
+        unordered_set<const SkeletalMeshComponent*> _uniqueSingletonRemoval; ///< 성분 목록에서 뺄 외톨이 유닛이다(`unregisterUnit` 이 모으고 `flushSingletonRemoval` 이 비운다)
+        AnimationComponentSet                       _componentAll;           ///< 모든 유닛의 성분이다(평가 순서 — 외톨이 해제는 지름길로 뺀다)
+        AnimationComponentSet                       _componentActive;        ///< 이번 프레임에 일하는 유닛의 성분별 구간이다(`collectActiveUnits` 가 채운다). 단계를 처리하는 유닛 전부다
+        AnimationOrderedList<IAnimationLODClient>   _lodClientList;          ///< LOD 클라이언트(등록 순서 — 판정 · 예산 순서)
         vector<AnimationLODView>                    _listLODView;
         AnimationLODView                            _pendingLODView;             ///< 대기 뷰(`setPendingLODView`) — `_bHasPendingLODView` 일 때만 판정에 든다
         vector<AnimationLODState>                   _listScratchLODState;        ///< 판정 중 클라이언트별 상태다(재사용)
         vector<AnimationBudgetItem>                 _listScratchBudgetItem;      ///< 예산 배분 입력(재사용)
-        vector<AnimationDependencyEdge>             _listScratchEdge;            ///< 레벨과 성분을 지을 때 모은 의존 간선이다(재사용)
+        vector<AnimationDependencyEdge>             _listScratchEdge;            ///< 성분을 지을 때 모은 의존 간선이다(재사용)
         vector<uint32>                              _listScratchPendingCount;    ///< 유닛마다 아직 놓이지 않은 위 유닛 수다(재사용)
         vector<uint32>                              _listScratchDependentStart;  ///< 위 유닛마다 `_listScratchDependent` 안의 아래 유닛 구간 시작이다(끝 하나 더, 재사용)
         vector<uint32>                              _listScratchDependentCursor; ///< 아래 유닛 구간을 채우는 위치다(재사용)
         vector<uint32>                              _listScratchDependent;       ///< 위 유닛별로 모은 아래 유닛 번호다(재사용)
-        vector<uint32>                              _listScratchReady;           ///< 이번 레벨에 놓을 유닛 번호다(재사용)
-        vector<uint32>                              _listScratchNext;            ///< 다음 레벨에 놓을 유닛 번호다(재사용)
-        vector<uint32>                              _listScratchOrder;           ///< 레벨 순서로 이은 유닛 번호다. 고리의 남은 유닛은 등록 순서로 뒤에 온다(재사용)
+        vector<uint32>                              _listScratchOrder;           ///< 위상 순서로 이은 유닛 번호다(Kahn 의 큐를 겸한다). 고리의 남은 유닛은 등록 순서로 뒤에 온다(재사용)
         vector<uint32>                              _listScratchComponentRoot;   ///< 유닛마다 같은 성분의 대표 유닛 번호다(union-find, 대표는 성분에서 가장 작은 번호, 재사용)
         vector<uint32>                              _listScratchComponentOf;     ///< 유닛마다 성분 번호다(재사용)
         vector<uint32>                              _listScratchComponentCursor; ///< 성분 구간을 채우는 칸 번호다(재사용)
-        vector<uint32>                              _listScratchSlotOfUnit;      ///< 유닛 번호마다 `_componentAll` 안의 칸 번호다(재사용)
-        vector<uint32>                              _listScratchSlotRemap;       ///< 외톨이를 뺄 때 옛 칸 번호 → 새 칸 번호다(뺀 칸은 `invalid_index::kUint32`, 재사용)
-        vector<uint8>                               _listScratchActiveFlag;      ///< `_componentAll` 의 칸마다 이번 프레임에 일하는지(1)다(재사용)
         AnimationLODSettings                        _lodSettings;
         AnimationCrowd                              _crowd;
 #if SW_ANIMATION_REWIND_ENABLED
@@ -622,7 +620,6 @@ namespace sw
         uint32             _poseEvaluatedUnitCount;
         uint32             _arrCrowdModeCount[4]; ///< 지난 프레임에 일한 유닛의 군중 방식(`AnimationCrowdMode`)별 수
         uint8              _bOrderDirty;
-        uint8              _bCycle;
         uint8              _bLODViewsSet;         ///< 뷰를 한 번이라도 받았다(받지 않으면 LOD 꺼짐)
         uint8              _bLODSettingsReady;    ///< 테이블을 정했거나 읽었다
         uint8              _bLODSettingsFailed;   ///< 테이블 파일을 못 읽었다 — LOD 를 판정하지 않는다(기본 표로 대신하지 않는다)

@@ -106,18 +106,25 @@ namespace
             inoutPose.setBoneTransform( bone, local );
         }
 
-        /** @brief 기본 포즈 단계에서 본 1 을 Z 축으로 돌리는 일입니다(애니메이터 대신). */
+        /** @brief @p bendPhase 단계(기본은 기본 포즈 단계)에서 본 1 을 Z 축으로 돌리는 일입니다(애니메이터 대신). */
         class BendTask final : public IAnimationPhaseTask
         {
         public:
+            explicit BendTask( AnimationPhase bendPhase = AnimationPhase::BasePose )
+                : _bendPhase{ bendPhase }
+            {
+            }
+
             bool                isAnimationActive() const override { return true; }
             AnimationPoseAccess getPoseAccess() const override { return AnimationPoseAccess::Writes; }
             void                runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override
             {
                 (void)context;
-                if ( phase == AnimationPhase::BasePose )
+                if ( phase == _bendPhase )
                     rotateLocal( unit.getLocalPose(), 1, float3::UnitZ, 0.6f );
             }
+
+            AnimationPhase _bendPhase;
         };
     };
 } // namespace
@@ -583,8 +590,9 @@ SW_TEST_CASE( RetargetTest, ComponentFollowsSourceUnit )
 
     AnimationSystem& system = manager.getSubsystem<AnimationSystem>();
     system.evaluate( 1.0f / 60.0f );
-    SW_ASSERT_EQUAL( 2u, static_cast<uint32>( system.getLevels().size() ) );
-    SW_EXPECT_TRUE( system.getLevels()[0][0] == pSource );
+    SW_ASSERT_EQUAL( 1u, system.getComponents().getComponentCount() );
+    SW_ASSERT_EQUAL( 2u, system.getComponents().getUnitCount() );
+    SW_EXPECT_TRUE( system.getComponents().getUnits()[0] == pSource );
     SW_EXPECT_NEAR_EQUAL( 1.0f, MathUtil::abs( pSource->getLocalPose().getBoneTransform( 1 )._rotation.dot( pTarget->getLocalPose().getBoneTransform( 1 )._rotation ) ), 1e-5f );
     float4x4 sourceTip{};
     float4x4 targetTip{};
@@ -592,6 +600,49 @@ SW_TEST_CASE( RetargetTest, ComponentFollowsSourceUnit )
     SW_ASSERT_TRUE( pTarget->findBoneModelTransform( "bone2", targetTip ) );
     SW_EXPECT_TRUE( TestRetargetInternal::isNear( sourceTip.getTranslation(), targetTip.getTranslation(), 1e-4f ) );
     SW_EXPECT_TRUE( sourceTip.getTranslation()._x < -0.3f ); // 굽힘이 실제로 옮겨졌다
+    pSource->unregisterAnimationPhaseTask( &bend );
+}
+
+/**
+ * @brief [RetargetTest] 런타임 컴포넌트 — 원본의 최종 포즈를 옮긴다: 원본이 후처리 단계에서 굽힌 자세도 이 유닛이 같은 프레임에 따른다
+ * @details 리타깃 원본은 의존이라 위 유닛의 모든 단계(후처리 포함)가 끝난 뒤 읽힌다(`AnimationDependencyEdge`). 기본 포즈 단계까지만 읽던 예전 순서에서는 후처리의 굽힘이 빠졌다.
+ */
+SW_TEST_CASE( RetargetTest, ComponentFollowsSourceFinalPoseAfterPostProcess )
+{
+    GameObjectManager manager;
+    GameObject*       pSourceObject = manager.createGameObject( "Source" );
+    GameObject*       pTargetObject = manager.createGameObject( "Target" );
+    SW_ASSERT_TRUE( pSourceObject != nullptr && pTargetObject != nullptr );
+    SkeletalMeshComponent* pSource = pSourceObject->addComponent<SkeletalMeshComponent>();
+    SkeletalMeshComponent* pTarget = pTargetObject->addComponent<SkeletalMeshComponent>();
+    SW_ASSERT_TRUE( pSource != nullptr && pTarget != nullptr );
+    const Skeleton chain = test::makeChainSkeleton( 3 );
+    pSource->setSkeleton( make_shared<Skeleton>( chain ) );
+    pTarget->setSkeleton( make_shared<Skeleton>( chain ) );
+    TestRetargetInternal::BendTask bend( AnimationPhase::PostProcess );
+    pSource->registerAnimationPhaseTask( &bend );
+
+    RetargetProfile profile;
+    profile.setRootAndPelvis( "bone0", "bone0", "bone0", "bone0", RetargetTranslationMode::Copy );
+    RetargetChain arm{};
+    arm._name           = hashed_string( "Arm" );
+    arm._listSourceBone = { hashed_string( "bone1" ), hashed_string( "bone2" ) };
+    arm._listTargetBone = arm._listSourceBone;
+    profile.addChain( arm );
+    PoseRetargetComponent* pRetarget = pTargetObject->addComponent<PoseRetargetComponent>();
+    SW_ASSERT_NOT_NULL( pRetarget );
+    pRetarget->setProfile( profile );
+    pRetarget->setSource( pSource );
+    pRetarget->dispatchBeginPlay();
+
+    manager.getSubsystem<AnimationSystem>().evaluate( 1.0f / 60.0f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, MathUtil::abs( pSource->getLocalPose().getBoneTransform( 1 )._rotation.dot( pTarget->getLocalPose().getBoneTransform( 1 )._rotation ) ), 1e-5f );
+    float4x4 sourceTip{};
+    float4x4 targetTip{};
+    SW_ASSERT_TRUE( pSource->findBoneModelTransform( "bone2", sourceTip ) );
+    SW_ASSERT_TRUE( pTarget->findBoneModelTransform( "bone2", targetTip ) );
+    SW_EXPECT_TRUE( sourceTip.getTranslation()._x < -0.3f ); // 후처리의 굽힘이 원본에 실제로 적용됐다
+    SW_EXPECT_TRUE( TestRetargetInternal::isNear( sourceTip.getTranslation(), targetTip.getTranslation(), 1e-4f ) );
     pSource->unregisterAnimationPhaseTask( &bend );
 }
 

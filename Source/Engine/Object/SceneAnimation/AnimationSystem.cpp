@@ -10,6 +10,7 @@
 #include "Engine/Animation/AnimationPlayer.h"
 #include "Engine/Animation/Skeletal/SkeletonBoneLOD.h"
 #include "Engine/Common/EngineParallel.h"
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Profiling/FrameProfiler.h"
@@ -32,17 +33,65 @@ namespace sw
     {
         struct AnimationSystemInternal
         {
-            /** @brief 한 레벨의 유닛 구간에 단계 하나를 돌리는 잡입니다. 워커는 포인터만 받습니다. */
-            struct PhaseJob
+            /** @brief 성분 안에서 한 유닛이 이어서 돌리는 포즈 단계의 수와 순서입니다(`AnimationPhase::Time` 은 따로 돈다). */
+            static constexpr uint32         kPosePhaseCount = 4;
+            static constexpr AnimationPhase kArrPosePhase[kPosePhaseCount]{ AnimationPhase::BasePose, AnimationPhase::Attachment, AnimationPhase::PostProcess, AnimationPhase::SkinPalette };
+
+            /** @brief 일하는 유닛 구간에 시간 단계를 돌리는 잡입니다. 시간 단계는 자기 유닛만 읽으므로 유닛 사이 순서가 없다. 워커는 포인터만 받습니다. */
+            struct TimeJob
             {
                 SkeletalMeshComponent* const* _ppUnit{ nullptr };
-                AnimationPhase                _phase{ AnimationPhase::Time };
 
                 void runRange( uint32 start, uint32 end )
                 {
                     for ( uint32 index = start; index < end; ++index )
                     {
-                        _ppUnit[index]->runAnimationPhase( _phase );
+                        _ppUnit[index]->runAnimationPhase( AnimationPhase::Time );
+                    }
+                }
+            };
+
+            /**
+             * @brief 성분 구간에 포즈 단계 넷을 돌리는 잡입니다. 성분 하나가 항목 하나이고, 성분 안은 유닛 먼저입니다(위 유닛이 네 단계를 모두 마친 뒤 아래 유닛이 시작 —
+             *        `AnimationDependencyEdge`). 서로 다른 성분은 의존이 없어 병렬로 돌아도 같은 유닛을 만지지 않는다. 워커는 포인터만 받습니다.
+             * @details 단계별 시간은 청크마다 지역 배열에 모아 끝에 한 번 프로파일 카운터로 더한다(유닛마다 공유 칸을 두드리지 않는다). 재지 않으면 시계를 읽지 않는다.
+             */
+            struct PoseJob
+            {
+                const AnimationComponentSet* _pComponent{ nullptr };
+                const uint32*                _pCounterSlot{ nullptr }; ///< `kArrPosePhase` 와 같은 순서의 프로파일 카운터 칸이다(`_bTiming` 일 때만 쓴다)
+                bool                         _bTiming{ false };
+
+                void runRange( uint32 start, uint32 end )
+                {
+                    int64 arrPhaseTime[kPosePhaseCount]{};
+                    for ( uint32 componentIndex = start; componentIndex < end; ++componentIndex )
+                    {
+                        const uint32 unitEnd = _pComponent->getComponentEnd( componentIndex );
+                        for ( uint32 unitSlot = _pComponent->getComponentStart( componentIndex ); unitSlot < unitEnd; ++unitSlot )
+                        {
+                            SkeletalMeshComponent* pUnit = _pComponent->getUnits()[unitSlot];
+                            for ( uint32 phaseIndex = 0; phaseIndex < kPosePhaseCount; ++phaseIndex )
+                            {
+                                if ( _bTiming )
+                                {
+                                    const int64 phaseStart = MonotonicClock::nowNanoseconds();
+                                    pUnit->runAnimationPhase( kArrPosePhase[phaseIndex] );
+                                    arrPhaseTime[phaseIndex] += MonotonicClock::nowNanoseconds() - phaseStart;
+                                }
+                                else
+                                {
+                                    pUnit->runAnimationPhase( kArrPosePhase[phaseIndex] );
+                                }
+                            }
+                        }
+                    }
+                    if ( _bTiming )
+                    {
+                        for ( uint32 phaseIndex = 0; phaseIndex < kPosePhaseCount; ++phaseIndex )
+                        {
+                            FrameProfiler::addEngineCount( _pCounterSlot[phaseIndex], static_cast<uint64>( arrPhaseTime[phaseIndex] ) );
+                        }
                     }
                 }
             };
@@ -78,13 +127,9 @@ namespace sw
 
     AnimationSystem::AnimationSystem( GameObjectManager& manager )
         : _unitList{}
-        , _uniqueLevelRemoval{}
-        , _listLevel{}
+        , _uniqueSingletonRemoval{}
         , _componentAll{}
         , _componentActive{}
-        , _listLevelSlot{}
-        , _listActive{}
-        , _listLevelStart{}
         , _lodClientList{}
         , _listLODView{}
         , _pendingLODView{}
@@ -95,15 +140,10 @@ namespace sw
         , _listScratchDependentStart{}
         , _listScratchDependentCursor{}
         , _listScratchDependent{}
-        , _listScratchReady{}
-        , _listScratchNext{}
         , _listScratchOrder{}
         , _listScratchComponentRoot{}
         , _listScratchComponentOf{}
         , _listScratchComponentCursor{}
-        , _listScratchSlotOfUnit{}
-        , _listScratchSlotRemap{}
-        , _listScratchActiveFlag{}
         , _lodSettings{}
         , _crowd{}
 #if SW_ANIMATION_REWIND_ENABLED
@@ -121,7 +161,6 @@ namespace sw
         , _poseEvaluatedUnitCount{ 0 }
         , _arrCrowdModeCount{}
         , _bOrderDirty{ SW_FALSE }
-        , _bCycle{ SW_FALSE }
         , _bLODViewsSet{ SW_FALSE }
         , _bLODSettingsReady{ SW_FALSE }
         , _bLODSettingsFailed{ SW_FALSE }
@@ -159,8 +198,10 @@ namespace sw
         {
             count = 0;
         }
-        bool bAnyShared = false;
-        for ( const SkeletalMeshComponent* pUnit : _listActive )
+        // 성분 순서(성분 안은 위 유닛이 먼저)로 돈다 — 리더를 따르는 부품은 리더가 먼저 묶음에 가입해 있어야 같은 묶음에 든다(`joinLeaderCrowdBucket`).
+        const vector<SkeletalMeshComponent*>& listActive = _componentActive.getUnits();
+        bool                                  bAnyShared = false;
+        for ( const SkeletalMeshComponent* pUnit : listActive )
         {
             bAnyShared = bAnyShared || pUnit->isShareCrowdPose() || pUnit->getCrowdMode() != AnimationCrowdMode::Own;
         }
@@ -180,7 +221,7 @@ namespace sw
         if ( _bCrowdSettingsFailed == SW_TRUE )
             return;
         // 묶음 · 사본 · VAT 를 정한다(게임 스레드 — 메시를 갈아 끼운다). 나눈 유닛은 이번 프레임 포즈 단계를 돌지 않는다.
-        for ( SkeletalMeshComponent* pUnit : _listActive )
+        for ( SkeletalMeshComponent* pUnit : listActive )
         {
             if ( pUnit->isShareCrowdPose() || pUnit->getCrowdMode() != AnimationCrowdMode::Own )
                 pUnit->updateCrowdMembership( _crowd );
@@ -347,84 +388,41 @@ namespace sw
     {
         if ( pUnit == nullptr || _unitList.remove( pUnit ) == false )
             return;
-        // 레벨이 맞고(더럽지 않고 고리가 없음) 이 유닛이 의존을 가지지도 받지도 않으면 레벨 0 에만 있다 — 다른 유닛의 레벨은 그대로이므로 레벨 0 에서 빼는 것으로 끝난다
-        // (전체 재구성과 같은 결과다: 레벨 0 은 의존 없는 유닛을 등록 순서로 모은 것이다). 평가가 시작될 때 모아서 한 번에 뺀다.
-        const bool bIsolated = _bOrderDirty == SW_FALSE && _bCycle == SW_FALSE && pUnit->hasAnimationDependents() == false && pUnit->getAnimationDependencies().empty();
+        // 성분이 맞고(더럽지 않고 고리가 없음) 이 유닛이 의존을 가지지도 받지도 않으면 유닛 하나짜리 성분이다 — 다른 유닛의 성분은 그대로이므로 그 성분을 빼는 것으로 끝난다
+        // (전체 재구성과 같은 결과다: 성분은 가장 앞선 등록 순서 순이다). 평가가 시작될 때 모아서 한 번에 뺀다.
+        const bool bIsolated = _bOrderDirty == SW_FALSE && _componentAll.hasCycle() == false && pUnit->hasAnimationDependents() == false && pUnit->getAnimationDependencies().empty();
         if ( bIsolated )
         {
-            _uniqueLevelRemoval.insert( pUnit );
+            _uniqueSingletonRemoval.insert( pUnit );
             return;
         }
         _bOrderDirty = SW_TRUE;
-        _uniqueLevelRemoval.clear();
-        // 지은 레벨과 성분에 남은 죽은 포인터를 다음 평가 전에 쓰지 않게 바로 비운다.
-        _listLevel.clear();
-        _listLevelSlot.clear();
+        _uniqueSingletonRemoval.clear();
+        // 지은 성분에 남은 죽은 포인터를 다음 평가 전에 쓰지 않게 바로 비운다.
         _componentAll.clear();
     }
 
-    void AnimationSystem::flushLevelRemoval()
+    void AnimationSystem::flushSingletonRemoval()
     {
-        if ( _uniqueLevelRemoval.empty() )
+        if ( _uniqueSingletonRemoval.empty() )
             return;
-        // 레벨을 다시 지을 예정이면(더럽거나 아직 안 지음) 지을 때 해제된 유닛이 빠진다.
-        if ( _bOrderDirty == SW_FALSE && _listLevel.empty() == false )
-        {
-            vector<SkeletalMeshComponent*>& levelZero     = _listLevel.front();
-            const size_t                    levelZeroSize = levelZero.size();
-            // 레벨 0 은 `_listLevelSlot` 의 앞 구간이다. 빼는 유닛은 외톨이라 유닛 하나짜리 성분이므로, 그 칸을 표시해 두었다가 성분 목록에서도 뺀다.
-            _listScratchSlotRemap.assign( _componentAll.getUnitCount(), 0 );
-            size_t keepCount = 0;
-            for ( size_t position = 0; position < levelZeroSize; ++position )
-            {
-                SkeletalMeshComponent*       pUnit = levelZero[position];
-                const SkeletalMeshComponent* pKey  = pUnit;
-                if ( _uniqueLevelRemoval.contains( pKey ) )
-                {
-                    _listScratchSlotRemap[_listLevelSlot[position]] = invalid_index::kUint32;
-                    continue;
-                }
-                levelZero[keepCount]      = pUnit;
-                _listLevelSlot[keepCount] = _listLevelSlot[position];
-                ++keepCount;
-            }
-            levelZero.resize( keepCount );
-            // 유닛이 모두 빠졌거나 레벨 0 이 비었으면 레벨을 비운다 — 남은 유닛이 있으면 다음 평가가 다시 짓는다.
-            if ( keepCount == 0 )
-            {
-                _listLevel.clear();
-                _listLevelSlot.clear();
-                _componentAll.clear();
-            }
-            else
-            {
-                _listLevelSlot.erase( _listLevelSlot.begin() + static_cast<ptrdiff_t>( keepCount ), _listLevelSlot.begin() + static_cast<ptrdiff_t>( levelZeroSize ) );
-                _componentAll.removeMarkedSingletons( _listScratchSlotRemap );
-                for ( uint32& slot : _listLevelSlot )
-                {
-                    slot = _listScratchSlotRemap[slot];
-                }
-            }
-        }
-        _uniqueLevelRemoval.clear();
+        // 성분을 다시 지을 예정이면(더럽거나 아직 안 지음) 지을 때 해제된 유닛이 빠진다.
+        if ( _bOrderDirty == SW_FALSE && _componentAll.getUnitCount() > 0 )
+            _componentAll.removeSingletons( _uniqueSingletonRemoval );
+        _uniqueSingletonRemoval.clear();
     }
 
-    void AnimationSystem::rebuildLevels()
+    void AnimationSystem::rebuildComponents()
     {
         _bOrderDirty = SW_FALSE;
-        _bCycle      = SW_FALSE;
-        _uniqueLevelRemoval.clear();
+        _uniqueSingletonRemoval.clear();
+        _componentAll.clear();
         const vector<SkeletalMeshComponent*>& listUnit  = _unitList.getItems();
-        const size_t                          unitCount = listUnit.size();
+        const uint32                          unitCount = static_cast<uint32>( listUnit.size() );
         if ( unitCount == 0 )
-        {
-            _listLevel.clear();
-            _listLevelSlot.clear();
-            _componentAll.clear();
             return;
-        }
 
-        // Kahn 위상 정렬을 레벨 단위로 한다: 레벨 n 의 유닛은 의존이 모두 레벨 n 보다 앞이다.
+        // Kahn 위상 정렬: 모든 유닛이 자기 위 유닛보다 뒤에 오는 순서(`_listScratchOrder`)를 만든다.
         // 간선(위 유닛 → 아래 유닛)을 모아 위 유닛별 구간(CSR)으로 정렬한다 — 유닛마다 벡터를 할당하지 않고, 임시 버퍼는 멤버로 재사용한다.
         // 위 유닛의 번호는 `_unitList` 의 위치 색인으로 O(1) 에 찾는다.
         _listScratchEdge.clear();
@@ -462,66 +460,38 @@ namespace sw
             _listScratchDependent[_listScratchDependentCursor[edge._upstream]++] = edge._dependent;
         }
 
-        _listScratchReady.clear();
-        for ( uint32 unitIndex = 0; unitIndex < static_cast<uint32>( unitCount ); ++unitIndex )
+        // 순서 배열이 큐를 겸한다: 위 유닛이 없는 유닛을 등록 순서로 넣고, 앞에서부터 꺼내며 아래 유닛의 남은 위 유닛 수를 줄여 0 이 되면 뒤에 붙인다.
+        for ( uint32 unitIndex = 0; unitIndex < unitCount; ++unitIndex )
         {
             if ( _listScratchPendingCount[unitIndex] == 0 )
-                _listScratchReady.push_back( unitIndex );
-        }
-        // 레벨 벡터는 지난 번의 용량을 재사용한다(`_listLevel` 의 앞 `levelCount` 개만 이번 결과이고 남는 뒤쪽은 마지막에 자른다).
-        size_t placedCount = 0;
-        size_t levelCount  = 0;
-        while ( _listScratchReady.empty() == false )
-        {
-            if ( levelCount == _listLevel.size() )
-                _listLevel.emplace_back();
-            vector<SkeletalMeshComponent*>& listLevelUnit = _listLevel[levelCount++];
-            listLevelUnit.clear();
-            listLevelUnit.reserve( _listScratchReady.size() );
-            _listScratchNext.clear();
-            for ( const uint32 unitIndex : _listScratchReady )
-            {
-                listLevelUnit.push_back( listUnit[unitIndex] );
                 _listScratchOrder.push_back( unitIndex );
-                for ( uint32 dependentSlot = _listScratchDependentStart[unitIndex]; dependentSlot < _listScratchDependentStart[unitIndex + 1]; ++dependentSlot )
-                {
-                    const uint32 dependentIndex = _listScratchDependent[dependentSlot];
-                    if ( --_listScratchPendingCount[dependentIndex] == 0 )
-                        _listScratchNext.push_back( dependentIndex );
-                }
+        }
+        for ( size_t queueIndex = 0; queueIndex < _listScratchOrder.size(); ++queueIndex )
+        {
+            const uint32 unitIndex = _listScratchOrder[queueIndex];
+            for ( uint32 dependentSlot = _listScratchDependentStart[unitIndex]; dependentSlot < _listScratchDependentStart[unitIndex + 1]; ++dependentSlot )
+            {
+                const uint32 dependentIndex = _listScratchDependent[dependentSlot];
+                if ( --_listScratchPendingCount[dependentIndex] == 0 )
+                    _listScratchOrder.push_back( dependentIndex );
             }
-            placedCount += listLevelUnit.size();
-            _listScratchReady.swap( _listScratchNext );
         }
 
-        if ( placedCount != unitCount )
+        if ( _listScratchOrder.size() != unitCount )
         {
-            // 고리 — 데이터 오류다. 알리고, 남은 유닛은 등록 순서로 한 유닛씩 따로 레벨을 둔다.
-            // 레벨 안은 병렬로 돈다(runPhase). 고리의 유닛은 서로의 포즈를 읽고 쓰므로 한 레벨에 모으면 데이터 레이스다 — "레벨 안의 유닛은 서로 의존하지 않는다" 를 고리에서도 지킨다.
-            _bCycle = SW_TRUE;
-            for ( size_t unitIndex = 0; unitIndex < unitCount; ++unitIndex )
+            // 고리 — 데이터 오류다. 알리고, 고리의 유닛과 그 아래 유닛(위 유닛이 놓이지 않은 유닛)은 등록 순서로 순서 배열의 뒤에 붙인다.
+            // 성분 안은 직렬로 돌므로 고리의 유닛이 서로의 포즈를 읽고 써도 데이터 레이스가 아니다(순서만 강제하지 않는다).
+            _componentAll._bCycle = SW_TRUE;
+            for ( uint32 unitIndex = 0; unitIndex < unitCount; ++unitIndex )
             {
                 if ( _listScratchPendingCount[unitIndex] > 0 )
                 {
-                    if ( levelCount == _listLevel.size() )
-                        _listLevel.emplace_back();
-                    vector<SkeletalMeshComponent*>& listCycleLevel = _listLevel[levelCount++];
-                    listCycleLevel.clear();
-                    listCycleLevel.push_back( listUnit[unitIndex] );
-                    _listScratchOrder.push_back( static_cast<uint32>( unitIndex ) );
+                    _listScratchOrder.push_back( unitIndex );
                     const GameObject* pOwner = listUnit[unitIndex]->getOwner();
                     SW_LOG_ERROR( "Animation dependency cycle includes unit on '%#'", pOwner != nullptr ? pOwner->getName().c_str() : "(no owner)" );
                 }
             }
         }
-        _listLevel.resize( levelCount );
-        rebuildComponents();
-    }
-
-    void AnimationSystem::rebuildComponents()
-    {
-        const vector<SkeletalMeshComponent*>& listUnit  = _unitList.getItems();
-        const uint32                          unitCount = static_cast<uint32>( listUnit.size() );
 
         // 간선으로 이어진 유닛을 한 성분으로 묶는다(union-find). 대표는 성분에서 가장 작은 번호이므로 성분 번호는 "등록 순서가 가장 앞선 유닛" 순으로 매겨진다.
         _listScratchComponentRoot.resize( unitCount );
@@ -554,29 +524,29 @@ namespace sw
             listStart[componentIndex + 1] += listStart[componentIndex];
         }
 
-        // 레벨 순서(위상 순서)로 훑으며 성분 구간에 차례로 놓는다 — 구간 안은 위 유닛이 먼저이고 고리의 남은 유닛은 등록 순서로 뒤에 온다.
-        // 레벨 순서의 칸마다 놓인 칸 번호를 `_listLevelSlot` 에 남겨, 레벨을 도는 쪽이 같은 유닛을 성분에서 찾게 한다.
+        // 위상 순서로 훑으며 성분 구간에 차례로 놓는다 — 구간 안은 위 유닛이 먼저이고 고리의 남은 유닛은 등록 순서로 뒤에 온다.
         _listScratchComponentCursor.assign( listStart.begin(), listStart.end() - 1 );
         _componentAll._listUnit.resize( unitCount );
-        _listScratchSlotOfUnit.resize( unitCount );
-        _listLevelSlot.resize( _listScratchOrder.size() );
-        for ( size_t position = 0; position < _listScratchOrder.size(); ++position )
+#if defined( SW_DEBUG )
+        vector<uint32> listSlotOfUnit( unitCount ); // 유닛 번호 → 놓인 칸 번호(아래 단언에서만 쓴다)
+#endif
+        for ( const uint32 unitIndex : _listScratchOrder )
         {
-            const uint32 unitIndex = _listScratchOrder[position];
-            const uint32 slot      = _listScratchComponentCursor[_listScratchComponentOf[unitIndex]]++;
+            const uint32 slot = _listScratchComponentCursor[_listScratchComponentOf[unitIndex]]++;
 
-            _componentAll._listUnit[slot]     = listUnit[unitIndex];
-            _listScratchSlotOfUnit[unitIndex] = slot;
-            _listLevelSlot[position]          = slot;
+            _componentAll._listUnit[slot] = listUnit[unitIndex];
+#if defined( SW_DEBUG )
+            listSlotOfUnit[unitIndex] = slot;
+#endif
         }
         _componentAll.updateMaxComponentSize();
 #if defined( SW_DEBUG )
         // 간선의 뜻("위 유닛이 먼저")이 성분 안 순서에 지켜졌는지 본다. 고리가 있으면 그 유닛들은 순서를 강제하지 않는다.
-        if ( _bCycle == SW_FALSE )
+        if ( _componentAll.hasCycle() == false )
         {
             for ( const AnimationDependencyEdge& edge : _listScratchEdge )
             {
-                SW_ASSERT( _listScratchSlotOfUnit[edge._upstream] < _listScratchSlotOfUnit[edge._dependent] );
+                SW_ASSERT( listSlotOfUnit[edge._upstream] < listSlotOfUnit[edge._dependent] );
             }
         }
 #endif
@@ -584,27 +554,7 @@ namespace sw
 
     void AnimationSystem::collectActiveUnits( float32 deltaSeconds )
     {
-        _listActive.clear();
-        _listLevelStart.clear();
-        _listScratchActiveFlag.assign( _componentAll.getUnitCount(), 0 );
-        size_t position = 0;
-        for ( const vector<SkeletalMeshComponent*>& level : _listLevel )
-        {
-            _listLevelStart.push_back( static_cast<uint32>( _listActive.size() ) );
-            for ( SkeletalMeshComponent* pUnit : level )
-            {
-                const uint32 slot = _listLevelSlot[position++];
-                if ( pUnit->beginAnimationFrame( deltaSeconds, _frameIndex ) )
-                {
-                    _listActive.push_back( pUnit );
-                    _listScratchActiveFlag[slot] = 1;
-                }
-            }
-        }
-        _listLevelStart.push_back( static_cast<uint32>( _listActive.size() ) );
-        SW_ASSERT( position == _listLevelSlot.size() );
-
-        // 같은 유닛을 성분별로 다시 모은다 — 일하는 유닛이 없는 성분은 빠진다.
+        // 성분 순서(성분 안은 위 유닛이 먼저)로 유닛마다 이번 프레임을 시작한다. 일하는 유닛만 일하는 성분 구간에 담고, 일하는 유닛이 없는 성분은 빠진다.
         _componentActive.clear();
         const uint32 componentCount = _componentAll.getComponentCount();
         for ( uint32 componentIndex = 0; componentIndex < componentCount; ++componentIndex )
@@ -612,8 +562,9 @@ namespace sw
             const uint32 activeStart = static_cast<uint32>( _componentActive._listUnit.size() );
             for ( uint32 slot = _componentAll.getComponentStart( componentIndex ); slot < _componentAll.getComponentEnd( componentIndex ); ++slot )
             {
-                if ( _listScratchActiveFlag[slot] != 0 )
-                    _componentActive._listUnit.push_back( _componentAll._listUnit[slot] );
+                SkeletalMeshComponent* pUnit = _componentAll._listUnit[slot];
+                if ( pUnit->beginAnimationFrame( deltaSeconds, _frameIndex ) )
+                    _componentActive._listUnit.push_back( pUnit );
             }
             if ( _componentActive._listUnit.size() > activeStart )
                 _componentActive._listStart.push_back( activeStart );
@@ -621,7 +572,7 @@ namespace sw
         if ( _componentActive._listStart.empty() == false )
             _componentActive._listStart.push_back( static_cast<uint32>( _componentActive._listUnit.size() ) );
         _componentActive.updateMaxComponentSize();
-        _activeUnitCount        = static_cast<uint32>( _listActive.size() );
+        _activeUnitCount        = _componentActive.getUnitCount();
         _poseEvaluatedUnitCount = 0;
     }
 
@@ -629,37 +580,32 @@ namespace sw
     {
         // 포즈 단계의 벽시계 시간을 측정한다 — 예산 배분이 "유닛 하나에 얼마" 를 이 평균으로 본다(언리얼 예산 배분기도 전체 시간을 측정해서 나눈다).
         uint32 poseUnitCount = 0;
-        for ( const SkeletalMeshComponent* pUnit : _listActive )
+        for ( const SkeletalMeshComponent* pUnit : _componentActive.getUnits() )
         {
             poseUnitCount += pUnit->isPoseNeededThisFrame() ? 1u : 0u;
         }
         const int64 poseStart = MonotonicClock::nowNanoseconds();
         {
-            SW_PROFILE_SCOPE( "GT.Animation.phaseBasePose" );
-            runPhase( AnimationPhase::BasePose );
-        }
-        {
-            SW_PROFILE_SCOPE( "GT.Animation.phaseAttachment" );
-            runPhase( AnimationPhase::Attachment );
-        }
-        {
-            SW_PROFILE_SCOPE( "GT.Animation.phasePostProcess" );
-            runPhase( AnimationPhase::PostProcess );
-        }
-        {
-            SW_PROFILE_SCOPE( "GT.Animation.phaseSkinPalette" );
-            runPhase( AnimationPhase::SkinPalette );
+            // 벽시계 구간은 포즈 단계 넷을 합친 하나다 — 단계는 유닛 안에서 이어서 돌아 전체 대기가 단계마다 없다. 단계별 몫은 워커가 단계마다 누적한 CPU 시간(나노초)의 프레임 합이며
+            // 비용 곡선(계획 AnimationAdvancedFeatures A1)이 샘플 · 블렌드(BasePose) · 부착 · 리그 노드(PostProcess) · 팔레트(SkinPalette)를 따로 읽는다(스레드를 더한 값이라 벽시계보다 클 수 있다).
+            SW_PROFILE_SCOPE( "GT.Animation.phasePose" );
+            static const uint32 s_arrCounterSlot[AnimationSystemInternal::kPosePhaseCount]{
+                FrameProfiler::registerEngineCounter( "GT.Animation.phaseBasePoseCpuNanos" ),
+                FrameProfiler::registerEngineCounter( "GT.Animation.phaseAttachmentCpuNanos" ),
+                FrameProfiler::registerEngineCounter( "GT.Animation.phasePostProcessCpuNanos" ),
+                FrameProfiler::registerEngineCounter( "GT.Animation.phaseSkinPaletteCpuNanos" ),
+            };
+            AnimationSystemInternal::PoseJob job{};
+            job._pComponent   = &_componentActive;
+            job._pCounterSlot = s_arrCounterSlot;
+            job._bTiming      = engine::getSubsystem<FrameProfiler>().isEnabled();
+            // 성분 하나가 항목 하나다 — 항목마다 비용이 다르지만(성분 크기) 앞 항목을 직접 돌아 잰 값으로 나눌지 정한다. 독립 유닛만 있으면 크기 1 의 성분 N 개라 예전과 같은 모양이다.
+            engine::runParallelByCost( _componentActive.getComponentCount(), SW_DELEGATE_METHOD( ParallelBlockDelegate, &AnimationSystemInternal::PoseJob::runRange, &job ) );
         }
         _poseEvaluatedUnitCount = poseUnitCount;
         SW_PROFILE_COUNT( "GT.Animation.activeUnits", _activeUnitCount );
         SW_PROFILE_COUNT( "GT.Animation.poseUnits", poseUnitCount );
-        // 레벨 수는 단계마다 전체 대기를 하는 횟수의 기준이다(대기 = 단계 수 × 이 값). 성분 수와 가장 큰 성분은 성분 단위로 옮길 때의 병렬도와 직렬 길이다.
-        uint32 levelRunCount = 0;
-        for ( size_t levelIndex = 0; levelIndex + 1 < _listLevelStart.size(); ++levelIndex )
-        {
-            levelRunCount += ( _listLevelStart[levelIndex] < _listLevelStart[levelIndex + 1] ) ? 1u : 0u;
-        }
-        SW_PROFILE_COUNT( "GT.Animation.levelCount", levelRunCount );
+        // 성분 수는 병렬로 나눌 수 있는 항목 수이고, 가장 큰 성분은 직렬로 도는 임계 경로의 길이(유닛 수)다.
         SW_PROFILE_COUNT( "GT.Animation.componentCount", _componentActive.getComponentCount() );
         SW_PROFILE_COUNT( "GT.Animation.maxComponentSize", _componentActive.getMaxComponentSize() );
         if ( poseUnitCount > 0 )
@@ -683,7 +629,7 @@ namespace sw
     void AnimationSystem::evaluate( float32 deltaSeconds )
     {
         SW_PROFILE_SCOPE( "GT.Animation.evaluate" );
-        flushLevelRemoval();
+        flushSingletonRemoval();
 #if SW_ANIMATION_REWIND_ENABLED
         // 되감기: 요청(콘솔 · 패널 · -gv_animationRewind)을 따르고, 되감는 동안에는 평가 대신 기록된 포즈를 건다.
         _rewind.syncWithRequest();
@@ -703,29 +649,33 @@ namespace sw
         }
 #endif
         updateLOD();
-        if ( _bOrderDirty == SW_TRUE || ( _listLevel.empty() && _unitList.getCount() > 0 ) )
-            rebuildLevels();
+        if ( _bOrderDirty == SW_TRUE || ( _componentAll.getUnitCount() == 0 && _unitList.getCount() > 0 ) )
+            rebuildComponents();
         ++_frameIndex;
         _deltaSeconds = deltaSeconds;
         _crowd.beginFrame( deltaSeconds );
 
         collectActiveUnits( deltaSeconds );
-        if ( _listActive.empty() )
+        const vector<SkeletalMeshComponent*>& listActive = _componentActive.getUnits();
+        if ( listActive.empty() )
         {
             endEvaluationFrame( deltaSeconds );
             return;
         }
 
-        // 단계마다 프로파일 구간을 둔다 — 비용 곡선(계획 AnimationAdvancedFeatures A1)이 샘플 · 블렌드(BasePose) · 리그 노드(PostProcess) · 팔레트(SkinPalette)를 따로 읽는다.
+        // 시간 단계는 자기 유닛만 읽으므로 성분과 상관없이 일하는 유닛 위로 한 번에 돌린다(유닛 하나가 수 us 라 고정 개수로는 나눌 값이 갈린다 — 캐릭터 20 개는 직렬이,
+        // 100 개 이상은 병렬이 이긴다 — 측정한 비용으로 고른다).
         {
             SW_PROFILE_SCOPE( "GT.Animation.phaseTime" );
-            runPhase( AnimationPhase::Time );
+            AnimationSystemInternal::TimeJob job{};
+            job._ppUnit = listActive.data();
+            engine::runParallelByCost( static_cast<uint32>( listActive.size() ), SW_DELEGATE_METHOD( ParallelBlockDelegate, &AnimationSystemInternal::TimeJob::runRange, &job ) );
         }
         synchronizeGroups();
         updateCrowd();
         runPosePhases();
 
-        for ( SkeletalMeshComponent* pUnit : _listActive )
+        for ( SkeletalMeshComponent* pUnit : listActive )
         {
             pUnit->finishAnimationFrame();
         }
@@ -738,20 +688,21 @@ namespace sw
         if ( _rewind.isEnabled() == false )
             return;
         SW_PROFILE_SCOPE( "GT.Animation.rewindRecord" );
-        for ( const SkeletalMeshComponent* pUnit : _listActive )
+        for ( const SkeletalMeshComponent* pUnit : _componentActive.getUnits() )
         {
             _rewind.recordUnit( *pUnit, _frameIndex );
         }
+        // 진단 훅(`collectDebugState`)이 등록 · 해제를 불러도 안전하도록 `forEach` 로 돈다(해제된 클라이언트는 건너뛴다).
         AnimationDebugState state;
-        for ( const IAnimationLODClient* pClient : _lodClientList.getItems() )
+        _lodClientList.forEach( [this, &state]( uint32, IAnimationLODClient* pClient )
         {
             const Component* pTarget = pClient->findRewindTarget();
             if ( pTarget == nullptr )
-                continue;
+                return;
             state.reset();
             pClient->collectDebugState( state );
             _rewind.recordState( *pTarget, AnimationRewindKind::Sprite, state, _frameIndex );
-        }
+        } );
     }
 
     void AnimationSystem::applyRewindScrub()
@@ -767,39 +718,25 @@ namespace sw
             if ( pUnit->applyRewindPose( _rewindScratchPose ) )
                 _bRewindApplied = SW_TRUE;
         }
-        for ( IAnimationLODClient* pClient : _lodClientList.getItems() )
+        // 적용 훅(`applyRewindState`)이 등록 · 해제를 불러도 안전하도록 `forEach` 로 돈다(해제된 클라이언트는 건너뛴다).
+        _lodClientList.forEach( [this, scrubTime]( uint32, IAnimationLODClient* pClient )
         {
             const Component*            pTarget = pClient->findRewindTarget();
             const AnimationRewindTrack* pTrack  = ( pTarget != nullptr ) ? _rewind.findTrack( pTarget->getHandle() ) : nullptr;
             const AnimationRewindFrame* pFrame  = ( pTrack != nullptr ) ? pTrack->findFrame( scrubTime ) : nullptr;
             if ( pFrame != nullptr )
                 pClient->applyRewindState( pFrame->_state );
-        }
+        } );
     }
 #endif
-
-    void AnimationSystem::runPhase( AnimationPhase phase )
-    {
-        for ( size_t levelIndex = 0; levelIndex + 1 < _listLevelStart.size(); ++levelIndex )
-        {
-            const uint32 start = _listLevelStart[levelIndex];
-            const uint32 end   = _listLevelStart[levelIndex + 1];
-            if ( start == end )
-                continue;
-            AnimationSystemInternal::PhaseJob job{};
-            job._ppUnit = _listActive.data() + start;
-            job._phase  = phase;
-            // 유닛 하나가 수 us 라 고정 개수로는 나눌 값이 갈린다(캐릭터 20 개는 직렬이, 100 개 이상은 병렬이 이긴다) — 측정한 비용으로 고른다.
-            engine::runParallelByCost( end - start, SW_DELEGATE_METHOD( ParallelBlockDelegate, &AnimationSystemInternal::PhaseJob::runRange, &job ) );
-        }
-    }
 
     void AnimationSystem::synchronizeGroups()
     {
         vector<AnimationPlayer*> listPlayer;
         vector<float32>          listWeight;
         vector<hashed_string>    listGroup;
-        for ( SkeletalMeshComponent* pUnit : _listActive )
+        // 순서: 성분 순서(성분 안은 위 유닛이 먼저). 의존이 없는 장면에서는 등록 순서와 같다. 같은 그룹에서 가중치가 같은 플레이어는 이 순서의 앞이 리더가 된다.
+        for ( SkeletalMeshComponent* pUnit : _componentActive.getUnits() )
         {
             pUnit->collectSyncPlayers( listPlayer, listWeight, listGroup );
         }
