@@ -55,7 +55,7 @@
  10) 활성이 아닌 게임 팩의 원본을 읽는 일반 케이스는 `SW_TEST_REQUIRES_FEATURE( SourceResources )` 를 선언한다.
      Shipping 은 활성 게임(`game/empty`)의 구운 팩만 두고 낱개 원본을 읽지 않는다. 케이스 본문이나 그 케이스가 쓰는 같은 파일의 상수에
      `game/<다른 게임>/` 리터럴이 있는데 선언이 없으면 CI Linux Shipping 에서 진다 — 사람이 기억하던 것을 이 검사가 기억한다.
-     "다른 게임" 은 `Resource/game/` 에 실제로 있는 폴더에서 `_kPackLiteralKnownNames`(활성 게임 · 임시 폴더 픽스처)를 뺀 것이다 —
+     "다른 게임" 은 `Resource/game/` 에 실제로 있는 폴더에서 규칙 데이터의 `pack:` 예외(활성 게임 · 임시 폴더 픽스처)를 뺀 것이다 —
      디스크에 닿지 않는 순수 문자열 픽스처(`game/prefabs/…`, `game/a/…`)는 걸리지 않는다. 부하 스위트는 보지 않는다.
 
      shortcut: 문자열 리터럴만 본다 — 경로를 이어 붙이거나(`"game/" + name`) 헤더 · 다른 파일의 상수 · 도우미 함수 안에서 읽는 것은 못 본다.
@@ -110,28 +110,9 @@ _kSourceResourcesRe = re.compile(r"\bSW_TEST_REQUIRES_FEATURE\(\s*SourceResource
 _kPackLiteralRe = re.compile(r"(?<![\w])game/(\w+)\b")
 _kDeclaredNameRe = re.compile(r"(\w+)\s*(?:\[\s*\])?\s*[={]")
 
-# 규칙 10 에서 `game/<이름>/` 리터럴을 봐도 되는 이름 — 나머지 실제 게임 팩은 `SourceResources` 선언이 있어야 읽는다.
-_kPackLiteralKnownNames: dict[str, str] = {
-    "empty": "활성 게임 — Shipping 도 구운 팩으로 갖고 있다",
-    "test": "임시 폴더 픽스처 이름(디스크의 실제 팩이 아니다)",
-    "x": "임시 폴더 픽스처 이름(디스크의 실제 팩이 아니다)",
-    "demo": "임시 폴더 픽스처 이름(디스크의 실제 팩이 아니다)",
-    "probe": "임시 폴더 픽스처 이름(디스크의 실제 팩이 아니다)",
-}
-# 리터럴은 있지만 **경로 문자열만** 다루고 디스크의 팩을 읽지 않는 케이스 — 리터럴만으로는 읽기와 구별되지 않아 케이스 단위로 선언한다.
-# 낡은 줄(케이스가 사라졌거나 리터럴이 없어짐)은 위반이다. 선언을 더하면 Shipping 에서 그 케이스가 건너뛰어져 커버리지를 잃으므로 선언 대신 여기에 둔다.
-_kPackLiteralPathOnlyCases: dict[str, str] = {
-    "AssetHotReloadTest.AudioDataReloadsThroughTheEngineAudioCache": "에디터 에셋 종류 표가 경로 문자열로 다시 읽기 경로를 고른다",
-    "EditorAssetTypeTest.ReloadRouteComesFromTheTable": "에디터 에셋 종류 표가 경로 문자열로 다시 읽기 경로를 고른다",
-    "EditorAssetTypeTest.UIDocumentOpensTheUIPreviewPanel": "경로 문자열의 종류 판정",
-    "EditorWindowTitleTest.SceneNameIsTheLastPathSegment": "창 제목을 경로 문자열에서 만든다",
-    "GamePackDataTest.KindPathComesFromTheRegistration": "팩 경로 조립(문자열)",
-    "GamePackDataTest.MissingRuleIsAnError": "팩 경로 조립(문자열)",
-    "NavMeshBakeTest.CookedAssetRoundTripsTilesByteForByte": "쿠킹 경로 이름 규칙(문자열)",
-    "ResourceDataKindTest.ModulesRegisterTheirCatalogKinds": "데이터 종류의 경로 일치 판정(문자열)",
-    "ResourceHostTargetTest.DedicatedServerDoesNotReadExcludedKinds": "호스트 제외 판정(문자열) — 읽는 쪽은 활성 게임 경로",
-    "ResourcePakTest.CollectResourcesTellsMissingFolderFromFailure": "없는 폴더를 묻는다 — 팩이 있든 없든 FolderMissing",
-}
+# 규칙 10 의 예외 표(`pack:<이름>` · `pathOnly:<스위트.케이스>`)는 Scripts/lint/rules/CheckTestSuites.toml 의 [exemption] 에 있다.
+_kPackKeyPrefix = "pack:"
+_kPathOnlyKeyPrefix = "pathOnly:"
 
 
 def listTestSourceInternal(rootDir: Path) -> list[Path]:
@@ -359,7 +340,15 @@ def listForeignPacks(rootDir: Path) -> set[str]:
     packRoot = rootDir / _kPackRoot
     if packRoot.is_dir() is False:
         return set()
-    return {entry.name for entry in packRoot.iterdir() if entry.is_dir()} - set(_kPackLiteralKnownNames)
+    allowed = {key.removeprefix(_kPackKeyPrefix) for key in CheckTestSuitesGate.mapExemption if key.startswith(_kPackKeyPrefix)}
+    return {entry.name for entry in packRoot.iterdir() if entry.is_dir()} - allowed
+
+
+def noteAllowedPackLiteral(pack: str) -> None:
+    """허용 이름의 리터럴을 테스트 코드에서 보았다고 적습니다 — 리터럴이 하나도 없는 허용 줄은 낡은 예외다."""
+    key = _kPackKeyPrefix + pack
+    if key in CheckTestSuitesGate.mapExemption:
+        CheckTestSuitesGate.useExemption(key)
 
 
 def findCaseBodies(code: str, maskedCode: str) -> list[tuple[re.Match, int, int]]:
@@ -388,12 +377,16 @@ def checkSourceResourcesDeclared(rootDir: Path, loadSuites: set[str], existingCa
         return [f"{_kPackRoot}: 폴더가 없습니다 (규칙 10 이 헛돌고 있습니다)"]
     foreign = listForeignPacks(rootDir)
     errors: list[str] = []
-    usedPathOnly: set[str] = set()
+    for caseKey in existingCases:
+        if _kPathOnlyKeyPrefix + caseKey in CheckTestSuitesGate.mapExemption:
+            CheckTestSuitesGate.seeExemption(_kPathOnlyKeyPrefix + caseKey)
     for path in listTestSourceInternal(rootDir):
         relPath = path.relative_to(rootDir).as_posix()
         code = blankComments(path.read_text(encoding="utf-8", errors="ignore"))
         if "game/" not in code:
             continue
+        for literal in _kPackLiteralRe.finditer(code):
+            noteAllowedPackLiteral(literal.group(1))
         bodies = [row for row in findCaseBodies(code, blankCommentsAndLiterals(code)) if row[0].group(1) not in loadSuites]
         if not bodies:
             continue
@@ -420,19 +413,17 @@ def checkSourceResourcesDeclared(rootDir: Path, loadSuites: set[str], existingCa
                 found[index].setdefault(literal.group(1), line)
         for (caseMatch, begin, end), packs in zip(bodies, found):
             caseKey = f"{caseMatch.group(1)}.{caseMatch.group(2)}"
-            if packs and caseKey in _kPackLiteralPathOnlyCases:
-                usedPathOnly.add(caseKey)
+            pathOnlyKey = _kPathOnlyKeyPrefix + caseKey
+            if packs and pathOnlyKey in CheckTestSuitesGate.mapExemption:
+                CheckTestSuitesGate.useExemption(pathOnlyKey)
                 continue
             if not packs or _kSourceResourcesRe.search(code, begin, end) is not None:
                 continue
             for pack, line in sorted(packs.items()):
                 errors.append(f"{relPath}:{line}: `{caseMatch.group(1)}.{caseMatch.group(2)}` 가 활성이 아닌 게임 팩 `game/{pack}/` 을 읽는데 "
                               f"`SW_TEST_REQUIRES_FEATURE( SourceResources )` 가 없습니다 — Shipping 은 활성 게임의 구운 팩만 둬서 "
-                              f"CI Linux Shipping 에서 집니다(케이스 맨 앞에 선언하세요. 경로 문자열만 다루면 `_kPackLiteralPathOnlyCases` 에 사유와 함께 두세요)")
-    # 케이스가 있는데 리터럴이 사라졌으면 낡은 줄이다(케이스가 없으면 아무 일도 하지 않는 줄이라 두고, 이름을 바꾼 케이스는 위에서 걸린다).
-    for caseKey in sorted((set(_kPackLiteralPathOnlyCases) & existingCases) - usedPathOnly):
-        errors.append(f"{_kTestRoot}: `_kPackLiteralPathOnlyCases` 의 `{caseKey}` 가 낡았습니다 — 활성이 아닌 팩 리터럴이 더는 없습니다 "
-                      f"(Scripts/lint/gate/CheckTestSuites.py 에서 그 줄을 지우세요)")
+                              f"CI Linux Shipping 에서 집니다(케이스 맨 앞에 선언하세요. 경로 문자열만 다루면 Scripts/lint/rules/CheckTestSuites.toml 의 [exemption] 에 `pathOnly:스위트.케이스` 로 사유와 함께 두세요)")
+    # 낡은 줄(케이스가 있는데 리터럴이 사라짐)은 기반이 전체 훑기 뒤에 "낡은 예외" 로 잡는다.
     return errors
 
 

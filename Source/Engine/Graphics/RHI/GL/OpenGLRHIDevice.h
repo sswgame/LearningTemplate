@@ -18,6 +18,7 @@
 #include "Engine/Graphics/RHI/IRHITimestampProvider.h"
 #include "Engine/Graphics/RHI/Support/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Support/RHIReleaseQueue.h"
+#include "Engine/Graphics/RHI/Support/RHIRenderPassLedger.h"
 #include "Engine/Graphics/RHI/Support/RHIStagingAllocator.h"
 #include "Engine/Graphics/RHI/Support/RHITimestamp.h"
 #include "Engine/Graphics/RHI/Support/RHITransferSerials.h"
@@ -242,7 +243,7 @@ namespace sw
          * @details 링이 차 있으면 끝난 펜스를 한 번 모아(컨텍스트를 잠깐 빌린다) 다시 시도한다 — 프레임을 돌리지 않는 동기 대기(`submitWhileBusy`)도 링을 비우게 한다(계약 7).
          *          링보다 큰 한 장은 장부가 단독 구간을 내주면 그 크기의 일회성 영속 매핑 버퍼를 만든다(`attachSoloBuffer`, 컨텍스트를 잠깐 빌린다).
          * @return 잡았으면 `Accepted`, 지금 차 있으면 `Busy`, 링이 없거나 링과 단독 상한을 모두 넘거나 장치를 잃었으면 이유를 로그로 남기고 `Rejected` 입니다
-         *         (옮기는 규칙은 `RHITransferSerials::classifyStagingAllocation` 한 곳).
+         *         (옮기고 놓고 남기는 일은 `RHIStagingRingUtil::settleAllocation` 한 곳).
          */
         [[nodiscard]] RHISubmitResult allocateStagingSpan( uint64 sizeBytes, const utf8* pCaller, RHIStagingSpan& outSpan );
         /**
@@ -427,14 +428,6 @@ namespace sw
             uint8                _reserved            : 4;
         };
 
-        /// @brief 렌더 패스 서술 캐시입니다.
-        struct OpenGLRenderPassRecord
-        {
-            RHIRenderPassDesc _desc{};
-            uint8             _bAlive   : 1;
-            uint8             _reserved : 7;
-        };
-
         /** @brief 플랫폼 GL 컨텍스트(WGL, GLX)입니다. 생성, 바인딩, 프레젠트, VSync 를 모두 여기가 압니다. */
         unique_ptr<IOpenGLPlatformContext> _platformContext;
 
@@ -483,7 +476,7 @@ namespace sw
         uint32 _arrComputeRootConstantShadow[shaderslot::kRootConstantDwords];
 
         RHIHandleTable<OpenGLPipelineStateRecord> _pipelineStates;
-        vector<OpenGLRenderPassRecord>            _listRenderPass;
+        RHIRenderPassLedger                       _renderPassLedger; ///< 렌더 패스 핸들 장부. 자기 뮤텍스로 직렬화해 어느 스레드에서나 부른다.
 
         RHIReleaseQueue _releaseQueue;
         /// @brief 프레임마다 끝에 내는 펜스 링입니다(`retireFrameOnGPU`). `GLsync` 는 불투명 포인터라 `void*` 로 둔다. 프레임 번호 n 의 칸은 `( n - 1 ) % kMaxFrameCountInFlight` 이고, 비면 nullptr 입니다.

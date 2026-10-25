@@ -200,20 +200,12 @@ namespace sw
 
     RHIRenderPassHandle OpenGLRHIResourceFactory::createRenderPass( const RHIRenderPassDesc& desc )
     {
-        OpenGLRHIDevice::OpenGLRenderPassRecord record{};
-        record._desc     = desc;
-        record._bAlive   = SW_TRUE;
-        record._reserved = 0;
-        _pDevice->_listRenderPass.push_back( record );
-        return _pDevice->_listRenderPass.size();
+        return _pDevice->_renderPassLedger.add( desc );
     }
 
     void OpenGLRHIResourceFactory::destroyRenderPass( RHIRenderPassHandle pass )
     {
-        if ( pass == 0 || pass > _pDevice->_listRenderPass.size() )
-            return;
-        _pDevice->_listRenderPass[pass - 1]._bAlive = SW_FALSE;
-        _pDevice->_listRenderPass[pass - 1]._desc   = RHIRenderPassDesc{};
+        _pDevice->_renderPassLedger.retire( pass );
     }
 
     bool OpenGLRHIResourceFactory::linkProgram( uint32 program, const utf8* pLabel )

@@ -95,7 +95,7 @@ namespace sw
         , _listUavSourceBuffer{}
         , _listUavFree{}
         , _pipelineStates{}
-        , _listRenderPass{}
+        , _renderPassLedger{}
         , _depthEnabledState{ nullptr }
         , _depthDisabledState{ nullptr }
         , _arrStaticSampler{}

@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Engine/Graphics/RHI/Support/RHIStagingAllocator.h"
+#include "Engine/Graphics/RHI/Support/RHIStagingRingUtil.h"
 #include "Engine/Graphics/RHI/Support/RHITransferSerials.h"
 
 #include "TestFramework/TestFramework.h"
@@ -375,4 +376,69 @@ SW_TEST_CASE( RHIStagingRingTest, FakeDeviceReusesRingSpansOnlyAfterTheFencePref
     SW_ASSERT_TRUE( isAllocated( ring.allocate( 600, serials.getWatermark(), next ) ) );
     SW_EXPECT_EQUAL( static_cast<uint64>( 0 ), next._offsetBytes );
     SW_EXPECT_EQUAL( static_cast<uint32>( 1 ), ring.getLiveCount() );
+}
+
+/**
+ * @brief [RHIStagingRingTest] 할당 결과의 마무리는 한 곳이다: 받으면 구간을 남기고, Busy 는 조용히, 거절은 구간을 놓고 이유를 한 줄 남긴다
+ * @details DX12 · Vulkan · GL 의 `allocateStagingSpan` 이 같이 부르는 `RHIStagingRingUtil::settleAllocation` 과 단독 버퍼 생성 실패의 `rejectSoloBufferFailure` 를 GPU 없이 본다.
+ */
+SW_TEST_CASE( RHIStagingRingTest, SettleAllocationKeepsAcceptedAndBusyQuietAndFreesRejectedSpans )
+{
+    sw::RHIStagingAllocator ring;
+    sw::RHITransferSerials  serials;
+    ring.initialize( 256, 16, 1024 );
+    test::ScopedLogCollector logs;
+
+    sw::RHIStagingSpan held{};
+    SW_ASSERT_TRUE( isAllocated( ring.allocate( 128, serials.getWatermark(), held ) ) );
+    SW_EXPECT_TRUE( sw::RHIStagingRingUtil::settleAllocation( ring, serials, sw::RHIStagingAllocateResult::Allocated, 128, "Test", "settleProbe", held ) == sw::RHISubmitResult::Accepted );
+    SW_EXPECT_EQUAL( static_cast<uint32>( 1 ), ring.getLiveCount() ); // 받았으면 구간은 호출자 것이다
+
+    sw::RHIStagingSpan none{};
+    SW_EXPECT_TRUE( sw::RHIStagingRingUtil::settleAllocation( ring, serials, sw::RHIStagingAllocateResult::Full, 128, "Test", "settleProbe", none ) == sw::RHISubmitResult::Busy );
+    SW_EXPECT_EQUAL( 0u, logs.count() ); // Busy 는 오류가 아니다
+
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a request over the single transfer limit is rejected with one log line" );
+        SW_EXPECT_TRUE( sw::RHIStagingRingUtil::settleAllocation( ring, serials, sw::RHIStagingAllocateResult::TooLarge, 4096, "Test", "settleProbe", none ) == sw::RHISubmitResult::Rejected );
+    }
+    SW_EXPECT_EQUAL( 1u, logs.count() );
+
+    sw::RHIStagingSpan solo{};
+    sw::RHIStagingSpan second{};
+    SW_ASSERT_TRUE( isAllocated( ring.allocate( 64, serials.getWatermark(), second ) ) );
+    SW_EXPECT_EQUAL( static_cast<uint32>( 2 ), ring.getLiveCount() );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a lost device rejects and frees the span it had allocated" );
+        serials.markLost();
+        SW_EXPECT_TRUE( sw::RHIStagingRingUtil::settleAllocation( ring, serials, sw::RHIStagingAllocateResult::Allocated, 64, "Test", "settleProbe", second ) == sw::RHISubmitResult::Rejected );
+    }
+    SW_EXPECT_EQUAL( static_cast<uint32>( 1 ), ring.getLiveCount() ); // 거절된 구간은 놓였다
+    SW_EXPECT_EQUAL( 2u, logs.count() );
+
+    ring.free( held );
+    SW_ASSERT_TRUE( isAllocated( ring.allocate( 512, serials.getWatermark(), solo ) ) ); // 링(256)보다 크고 단독 상한(1024) 이하라 단독 구간이다
+    SW_ASSERT_TRUE( solo._bSolo != SW_FALSE );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a single transfer buffer that could not be created rejects and frees the span" );
+        SW_EXPECT_TRUE( sw::RHIStagingRingUtil::rejectSoloBufferFailure( ring, solo, "Test", "settleProbe" ) == sw::RHISubmitResult::Rejected );
+    }
+    SW_EXPECT_EQUAL( static_cast<uint32>( 0 ), ring.getLiveCount() );
+    SW_EXPECT_EQUAL( 3u, logs.count() );
+}
+
+/**
+ * @brief [RHIStagingRingTest] 스테이징 할당이 받지 못한 결과는 하나의 변환으로 제출 결과가 된다: Busy 는 busy, 나머지는 rejected
+ * @details 두 백엔드가 각자 갖던 `makeUnacceptedSubmit` 과 GL 의 인라인 삼항식을 `RHITransferSubmit::fromUnaccepted` 하나로 합쳤다.
+ */
+SW_TEST_CASE( RHIStagingRingTest, UnacceptedSubmitMapsBusyAndRejectedWithoutATicket )
+{
+    const sw::RHITransferSubmit busy     = sw::RHITransferSubmit::fromUnaccepted( sw::RHISubmitResult::Busy );
+    const sw::RHITransferSubmit rejected = sw::RHITransferSubmit::fromUnaccepted( sw::RHISubmitResult::Rejected );
+    SW_EXPECT_TRUE( busy._result == sw::RHISubmitResult::Busy );
+    SW_EXPECT_TRUE( rejected._result == sw::RHISubmitResult::Rejected );
+    SW_EXPECT_FALSE( busy.isAccepted() );
+    SW_EXPECT_FALSE( rejected.isAccepted() );
+    SW_EXPECT_FALSE( busy._ticket.isValid() );
+    SW_EXPECT_FALSE( rejected._ticket.isValid() );
 }

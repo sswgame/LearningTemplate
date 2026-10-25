@@ -45,7 +45,7 @@ namespace sw
         , _timestampFrame{}
         , _arrComputeRootConstantShadow{}
         , _pipelineStates{}
-        , _listRenderPass{}
+        , _renderPassLedger{}
         , _releaseQueue{ constant::kGPUReleaseFrameLatency }
         , _arrFrameDoneSync{}
         , _frameSerial{ 0 }
