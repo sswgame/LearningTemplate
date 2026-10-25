@@ -315,6 +315,8 @@ namespace sw
             return false;
         }
         // Map 에서 Unmap 까지 한 덩어리로 잠근다. 기다리지 않는다 — GPU 가 아직이면(콜백 계약 밖) 실패로 돌려준다.
+        // 일부러 `D3D11_MAP_FLAG_DO_NOT_WAIT` 다: 이 읽기는 `waitIdle` 이 정말 기다렸는지 가리는 탐침이기도 하다(기다리는 Map 이면 안 기다린 waitIdle 이 가려진다).
+        // 끝난 복사에도 `WAS_STILL_DRAWING` 이 나올 수 있으나(takeTextureReadback 결정) 실패는 false 로 한 번 끝나고 되풀이하지 않으므로 장치 제거에서도 무한 폴링이 없다.
         D3D11_MAPPED_SUBRESOURCE                mapped{};
         const D3D11ImmediateContext::ScopedLock context = _pDevice->_immediateContext.lock();
         if ( FAILED( context->Map( pBuffer, 0, D3D11_MAP_READ, D3D11_MAP_FLAG_DO_NOT_WAIT, &mapped ) ) || mapped.pData == nullptr )
