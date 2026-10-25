@@ -87,10 +87,14 @@ namespace sw
         }
         inoutFrame._listAtlasUpload.clear();
 
-        // 2) 페이지 텍스처 — 없으면 만들고(새 디바이스 · 백엔드 교체 뒤에도 거울에서 다시 올린다) 바뀐 구간을 올린다.
-        for ( AtlasPage& page : _listAtlasPage )
+        // 2) 페이지 텍스처 — 없으면 만들고(새 디바이스 · 백엔드 교체 뒤에도 거울에서 다시 올린다) 바뀐 구간을 올린다. 프레임 경로라 GPU 완료를 기다리지 않는다:
+        //    제출만 하고 완료는 이후 프레임에 폴링한다(`...AndWait` 를 부르면 Debug 단언).
         {
-            uploadAtlasPage( device, page );
+            const RHITransferUtil::ScopedForbidBlockingTransfer forbidBlocking;
+            for ( AtlasPage& page : _listAtlasPage )
+            {
+                uploadAtlasPage( device, page );
+            }
         }
         // 경로 그림 — 게임 스레드는 디바이스가 없어 경로만 실었다. 머티리얼 텍스처와 같은 캐시에서 빌린다(기록 전이라 만들 수 있다).
         acquirePathTextures( device, inoutFrame._mainOutput );
@@ -241,8 +245,11 @@ namespace sw
                     pDevice->getResourceFactory()->unregisterBindlessTexture( page._srv );
                 pDevice->getResourceFactory()->destroyTexture( page._texture );
             }
-            page._texture = 0;
-            page._srv     = kInvalidDescriptorIndex;
+            // 끝나지 않은 전송이 있어도 파괴할 수 있다 — 백엔드가 GPU 자원 해제를 전송 뒤로 미룬다(전송 계약 6). 티켓은 옛 장치 것이라 버린다.
+            page._texture        = 0;
+            page._srv            = kInvalidDescriptorIndex;
+            page._registerTicket = RHITransferTicket{};
+            page._bFailed        = SW_FALSE;
             page._listDirty.clear();
             // 거울은 남긴다 — 다음 prepareFrame 이 텍스처를 다시 만들고 전체를 올린다.
             page._bWholePageDirty = page._bytes.empty() ? SW_FALSE : SW_TRUE;
@@ -383,9 +390,17 @@ namespace sw
         }
     }
 
+    void CanvasRenderer::failAtlasPage( AtlasPage& page, string_view reason )
+    {
+        const size_t pageIndex = static_cast<size_t>( &page - _listAtlasPage.data() );
+        SW_LOG_ERROR( "Glyph atlas page %# %# - its glyphs are not drawn until the canvas GPU resources are recreated", pageIndex, reason );
+        page._bFailed        = SW_TRUE;
+        page._registerTicket = RHITransferTicket{};
+    }
+
     void CanvasRenderer::uploadAtlasPage( IRHIDevice& device, AtlasPage& page )
     {
-        if ( page._bytes.empty() )
+        if ( page._bytes.empty() || page._bFailed == SW_TRUE )
             return;
         constexpr uint32     kPageSize = GlyphAtlas::kPageSize;
         IRHIResourceFactory& factory   = *device.getResourceFactory();
@@ -403,28 +418,61 @@ namespace sw
             page._texture            = factory.createTexture2D( desc );
             if ( page._texture == 0 )
             {
-                SW_LOG_ERROR( "Failed to create a %#x%# glyph atlas page (%# bytes per texel) - its glyphs are not drawn", kPageSize, kPageSize, page._bytesPerTexel );
+                failAtlasPage( page, "could not be created" );
                 return;
             }
-            page._srv             = factory.registerBindlessTexture( page._texture );
+            // 등록은 첫 전체 업로드가 끝난 뒤다(전송 계약 10) — 끝나지 않은 전송이 있는 텍스처의 등록은 백엔드가 거절한다.
             page._bWholePageDirty = SW_TRUE;
         }
 
+        // 새 페이지는 첫 전체 업로드의 티켓이 `Complete` 가 된 프레임에 등록한다. 그 전에는 이 페이지의 글리프를 그리지 않고(SRV 가 없다), 그동안 쌓인 구간은
+        // 등록한 프레임에 이어서 올린다(등록 전에 구간을 내면 마지막 전송이 늘 새것이라 등록이 계속 밀린다).
+        if ( page._srv == kInvalidDescriptorIndex && page._registerTicket.isValid() )
+        {
+            const RHITransferStatus status = factory.pollTransfer( page._registerTicket );
+            if ( status == RHITransferStatus::Pending )
+                return;
+            if ( status == RHITransferStatus::Failed )
+            {
+                failAtlasPage( page, "first upload failed on the GPU" );
+                return;
+            }
+            page._registerTicket = RHITransferTicket{};
+            page._srv            = factory.registerBindlessTexture( page._texture );
+            if ( page._srv == kInvalidDescriptorIndex )
+            {
+                failAtlasPage( page, "could not be registered for bindless sampling" );
+                return;
+            }
+        }
+
+        // 실패 규칙: `Busy` 는 더티 상태를 그대로 두고 다음 프레임에 다시 낸다(미러가 최신 내용을 들고 있다). `Rejected` 는 다시 내도 안 되는 요청이라
+        // 오류를 남기고 이 페이지를 멈춘다(`failAtlasPage`). 어느 쪽도 더티 상태를 버리고 지나가지 않는다.
         if ( page._bWholePageDirty == SW_TRUE )
         {
             RHITextureUploadDesc upload{};
-            upload._pData     = page._bytes.data();
-            upload._sizeBytes = static_cast<uint32>( page._bytes.size() );
-            upload._mipLevels = 1;
-            if ( RHITransferUtil::uploadTexture2DAndWait( factory, page._texture, upload ) == false )
-                SW_LOG_ERROR( "Glyph atlas page upload failed" );
+            upload._pData                  = page._bytes.data();
+            upload._sizeBytes              = static_cast<uint32>( page._bytes.size() );
+            upload._mipLevels              = 1;
+            const RHITransferSubmit submit = factory.submitTextureUpload( page._texture, upload );
+            if ( submit._result == RHISubmitResult::Busy )
+                return;
+            if ( submit.isAccepted() == false )
+            {
+                failAtlasPage( page, "upload was rejected" );
+                return;
+            }
             ++_lastUploadCallCount;
             page._bWholePageDirty = SW_FALSE;
             page._listDirty.clear();
+            if ( page._srv == kInvalidDescriptorIndex )
+                page._registerTicket = submit._ticket;
             return;
         }
 
+        // 구간은 기다리지 않고 잇달아 낸다. 같은 텍스처에 낸 전송은 낸 순서대로, 뒤에 낼 프레임 커맨드보다 먼저 실행된다(전송 계약 3).
         mergeUploadRegions( page._listDirty, kMaxRegionUploadPerPage );
+        size_t submittedCount = 0;
         for ( const GlyphAtlasRect& region : page._listDirty )
         {
             const size_t texelBytes = page._bytesPerTexel;
@@ -435,17 +483,25 @@ namespace sw
                               page._bytes.data() + ( static_cast<size_t>( region._y + row ) * kPageSize + region._x ) * texelBytes, static_cast<size_t>( region._width ) * texelBytes );
             }
             RHITextureRegionUploadDesc upload{};
-            upload._pData     = _regionScratchBytes.data();
-            upload._sizeBytes = static_cast<uint32>( _regionScratchBytes.size() );
-            upload._x         = region._x;
-            upload._y         = region._y;
-            upload._width     = region._width;
-            upload._height    = region._height;
-            if ( RHITransferUtil::uploadTexture2DRegionAndWait( factory, page._texture, upload ) == false )
-                SW_LOG_ERROR( "Glyph atlas region upload failed" );
+            upload._pData                  = _regionScratchBytes.data();
+            upload._sizeBytes              = static_cast<uint32>( _regionScratchBytes.size() );
+            upload._x                      = region._x;
+            upload._y                      = region._y;
+            upload._width                  = region._width;
+            upload._height                 = region._height;
+            const RHITransferSubmit submit = factory.submitTextureRegionUpload( page._texture, upload );
+            if ( submit._result == RHISubmitResult::Busy )
+                break;
+            if ( submit.isAccepted() == false )
+            {
+                failAtlasPage( page, "region upload was rejected" );
+                return;
+            }
+            ++submittedCount;
             ++_lastUploadCallCount;
         }
-        page._listDirty.clear();
+        // 낸 앞부분만 지운다 — `Busy` 에서 멈춘 나머지는 다음 프레임에 같은 순서로 낸다.
+        page._listDirty.erase( page._listDirty.begin(), page._listDirty.begin() + static_cast<ptrdiff_t>( submittedCount ) );
     }
 
     void CanvasRenderer::prepareTargets( IRHIDevice& device, const CanvasFrameData& frame )
@@ -514,7 +570,11 @@ namespace sw
             return kInvalidDescriptorIndex;
         }
         if ( texture._atlasPage < _listAtlasPage.size() )
-            return _listAtlasPage[texture._atlasPage]._srv;
+        {
+            // 첫 업로드가 끝나기 전(SRV 없음)이거나 멈춘 페이지는 그리지 않는다.
+            const AtlasPage& page = _listAtlasPage[texture._atlasPage];
+            return page._bFailed == SW_TRUE ? kInvalidDescriptorIndex : page._srv;
+        }
         return kInvalidDescriptorIndex;
     }
 

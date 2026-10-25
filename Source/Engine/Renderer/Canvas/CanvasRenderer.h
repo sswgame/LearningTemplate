@@ -47,7 +47,8 @@ namespace sw
 
         /**
          * @brief 프레임의 캔버스를 그릴 준비를 합니다. **기록 시작 전에** 부릅니다(버퍼와 텍스처 생성, bindless 등록은 기록 중에 할 수 없습니다).
-         * @details 아틀라스 업로드를 미러에 반영하고(소비한 업로드는 @p inoutFrame 에서 비웁니다), 페이지 텍스처를 만들거나(없으면) 바뀐 구간을 업로드하고,
+         * @details 아틀라스 업로드를 미러에 반영하고(소비한 업로드는 @p inoutFrame 에서 비웁니다), 페이지 텍스처를 만들거나(없으면) 바뀐 구간의 업로드를 내고
+         *          (GPU 완료를 기다리지 않는다 — 새 페이지는 첫 업로드가 끝난 이후 프레임부터 그려진다),
          *          사각형 버퍼를 갱신합니다. 주 출력 다음에 렌더 텍스처 대상들을 이어 한 버퍼에 담아(같은 프레임에 버퍼를 두 번 갱신하지 않게) 갱신하고, 대상마다 시작 위치는
          *          `getTargetQuadBase` 로 얻습니다. 프로파일 항목은 RT.Canvas.Upload 입니다.
          *          그 앞에 렌더 텍스처 대상을 `TextureCache` 에서 빌리고(위젯이 그리기 크기를 바꾸면 다시 만듭니다) 목록에서 사라진 대상은 돌려줍니다.
@@ -84,7 +85,7 @@ namespace sw
 
         /** @brief 지금 보관 중인 아틀라스 페이지 수입니다(미러 기준). */
         uint32 getAtlasPageCount() const { return static_cast<uint32>( _listAtlasPage.size() ); }
-        /** @brief 마지막 `prepareFrame` 이 실행한 아틀라스 업로드 호출 수입니다(전체 페이지와 구간의 합이며 진단과 테스트용입니다). */
+        /** @brief 마지막 `prepareFrame` 이 받아들여진 아틀라스 업로드 제출 수입니다(전체 페이지와 구간의 합이며 진단과 테스트용입니다. `Busy` 는 세지 않습니다). */
         uint32 getLastUploadCallCount() const { return _lastUploadCallCount; }
 
         /**
@@ -94,23 +95,33 @@ namespace sw
         static void mergeUploadRegions( vector<GlyphAtlasRect>& inoutListRegion, uint32 maxRegionCount );
 
     private:
-        /** @brief 아틀라스 페이지 하나입니다. CPU 미러(SDF 는 R8, MSDF 는 RGBA8, 페이지 크기²)와 그 텍스처, SRV, 이번 프레임에 바뀐 구간을 담습니다. */
+        /**
+         * @brief 아틀라스 페이지 하나입니다. CPU 미러(SDF 는 R8, MSDF 는 RGBA8, 페이지 크기²)와 그 텍스처, SRV, 아직 올리지 못한 구간을 담습니다.
+         * @details 상태는 셋입니다: 첫 업로드 중(`_registerTicket` 유효, SRV 없음 — 그리지 않는다), 그릴 수 있음(SRV 있음), 멈춤(`_bFailed` — 그리지도 올리지도 않는다).
+         */
         struct AtlasPage
         {
             vector<uint8>          _bytes{};            ///< 미러(행 우선, `GlyphAtlas::kPageSize` × 텍셀당 바이트 행)
             uint8                  _bytesPerTexel{ 1 }; ///< 미러의 텍셀당 바이트입니다(첫 업로드가 정하고, 페이지 텍스처 형식이 이것을 따른다).
-            vector<GlyphAtlasRect> _listDirty{};        ///< 업로드할 구간(미러 기준)
+            vector<GlyphAtlasRect> _listDirty{};        ///< 아직 내지 못한 구간(미러 기준). `Busy` 로 못 낸 것은 다음 프레임까지 남는다
             RHITextureHandle       _texture{ 0 };
+            RHITransferTicket      _registerTicket{}; ///< 새 텍스처의 첫 전체 업로드 티켓. `Complete` 가 된 프레임에 SRV 를 등록하고 비운다
             RHIDescriptorIndex     _srv{ kInvalidDescriptorIndex };
             uint8                  _bWholePageDirty{ SW_FALSE }; ///< 페이지 전체를 업로드해야 한다(새 텍스처이거나 비운 페이지)
+            uint8                  _bFailed{ SW_FALSE };         ///< 생성 · 업로드 · 등록이 다시 시도해도 안 되는 이유로 실패했다(오류를 남겼다). `release` 가 푼다
         };
 
         /** @brief 화면 앵커를 버퍼 맨 앞에 업로드합니다. @p bForce 가 아니면 지난번과 같을 때 업로드하지 않습니다. */
         void uploadAnchors( IRHIDevice& device, const vector<CanvasAnchor>& listAnchor, bool bForce );
         /** @brief 업로드 하나를 미러에 반영하고 업로드할 구간으로 적습니다. */
         void applyAtlasUpload( const GlyphAtlasUpload& upload );
-        /** @brief 페이지 텍스처를 갖추고(없으면 만듭니다) 바뀐 구간을 업로드합니다. */
+        /**
+         * @brief 페이지 텍스처를 갖추고(없으면 만듭니다) 바뀐 구간의 업로드를 냅니다. GPU 완료를 기다리지 않습니다.
+         * @details 새 페이지의 SRV 는 첫 업로드 티켓이 `Complete` 가 된 이후 프레임에 등록합니다. `Busy` 는 다음 프레임에 다시 내고, `Rejected` · `Failed` 는 페이지를 멈춥니다.
+         */
         void uploadAtlasPage( IRHIDevice& device, AtlasPage& page );
+        /** @brief 페이지를 멈춥니다: 오류를 남기고, `release` 전까지 그리지도 올리지도 않습니다(폴백 없이 실패를 드러냅니다). */
+        void failAtlasPage( AtlasPage& page, string_view reason );
         /** @brief 경로로 빌린 이미지 하나입니다(텍스처는 `TextureCache` 가 소유하며 `release` 가 돌려줍니다). */
         struct PathTexture
         {

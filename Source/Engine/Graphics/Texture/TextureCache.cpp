@@ -149,6 +149,7 @@ namespace sw
             uint32        _width{ 0 };
             uint32        _height{ 0 };
             vector<uint8> _rgbaBytes;
+            bool          _bSwappedToBgra{ false }; ///< `_rgbaBytes` 를 이미 BGRA 순서로 바꿨다(`Busy` 로 미룬 갱신을 다시 낼 때 두 번 바꾸지 않게)
         };
         unordered_map<string, Entry>            _mapEntry;
         vector<RegionUpdate>                    _listPendingRegion;  ///< 게임 스레드가 쌓고 렌더 스레드가 비운다(`_regionMutex`)
@@ -693,10 +694,21 @@ namespace sw
                 return 0;
             _impl->_listFlushingRegion.swap( _impl->_listPendingRegion );
         }
-        uint32                     uploadedCount{ 0 };
-        vector<Impl::RegionUpdate> listRetry;
+        // 프레임 경로라 GPU 완료를 기다리지 않는다(`...AndWait` 를 부르면 Debug 단언). 등록된 텍스처의 구간 갱신이므로 제출만 하면 된다 — 같은 텍스처의 전송은
+        // 낸 순서대로, 뒤에 낼 프레임 커맨드보다 먼저 실행된다(전송 계약 3).
+        // 실패 규칙: `Busy` 가 한 번 나면 이번 차례의 나머지는 모두 다음 프레임으로 미룬다(뒤의 갱신이 먼저 들어가 같은 자리를 옛 내용으로 덮지 않게 순서를 지킨다).
+        // `Rejected` 는 다시 내도 안 되는 요청이라 오류를 남기고 버린다.
+        const RHITransferUtil::ScopedForbidBlockingTransfer forbidBlocking;
+        uint32                                              uploadedCount{ 0 };
+        bool                                                bBusy{ false };
+        vector<Impl::RegionUpdate>                          listRetry;
         for ( Impl::RegionUpdate& update : _impl->_listFlushingRegion )
         {
+            if ( bBusy )
+            {
+                listRetry.push_back( std::move( update ) );
+                continue;
+            }
             // 올리는 동안 같은 텍스처를 놓거나 다시 올리지 못하게 읽기 잠금을 쥔다(release · reload 는 쓰기 잠금을 잡는다).
             std::shared_lock<std::shared_mutex> lock{ _impl->_mutex };
             const auto                          it     = _impl->_mapEntry.find( update._key );
@@ -712,9 +724,26 @@ namespace sw
             if ( pFound != nullptr && pFound->hasCPUBytes() )
             {
                 if ( it->second._bLoading )
+                {
                     listRetry.push_back( std::move( update ) );
-                else if ( pFound->writeCPUBytes( pDevice, desc ) )
+                    continue;
+                }
+                const RHISubmitResult written = pFound->writeCPUBytes( pDevice, desc );
+                if ( written == RHISubmitResult::Accepted )
+                {
                     ++uploadedCount;
+                }
+                else if ( written == RHISubmitResult::Busy )
+                {
+                    // 원본은 이미 고쳤다 — 다음 프레임에 같은 구간을 다시 쓰고 낸다(같은 바이트라 원본은 그대로다).
+                    bBusy = true;
+                    listRetry.push_back( std::move( update ) );
+                }
+                else
+                {
+                    SW_LOG_ERROR( "Region update for CPU texture %# rejected (%#,%# %#x%#) - dropped", update._key.c_str(), update._x, update._y, update._width,
+                                  update._height );
+                }
                 continue;
             }
             const bool bResident = pFound != nullptr && it->second._bPublished && it->second._bLoading == false && pFound->isRHIValid();
@@ -726,9 +755,13 @@ namespace sw
             const Texture2D& texture = *pFound;
             if ( texture.getFormat() == RHIFormat::B8G8R8A8_UNORM )
             {
-                for ( size_t offset = 0; offset + 3 < update._rgbaBytes.size(); offset += 4 )
+                if ( update._bSwappedToBgra == false )
                 {
-                    std::swap( update._rgbaBytes[offset], update._rgbaBytes[offset + 2] );
+                    for ( size_t offset = 0; offset + 3 < update._rgbaBytes.size(); offset += 4 )
+                    {
+                        std::swap( update._rgbaBytes[offset], update._rgbaBytes[offset + 2] );
+                    }
+                    update._bSwappedToBgra = true;
                 }
             }
             else if ( texture.getFormat() != RHIFormat::R8G8B8A8_UNORM )
@@ -736,8 +769,21 @@ namespace sw
                 SW_LOG_WARNING( "Region update for texture %# dropped - only RGBA8 and BGRA8 textures take RGBA8 bytes", update._key.c_str() );
                 continue;
             }
-            if ( RHITransferUtil::uploadTexture2DRegionAndWait( *pDevice->getResourceFactory(), texture.getHandle(), desc ) )
+            const RHITransferSubmit submit = pDevice->getResourceFactory()->submitTextureRegionUpload( texture.getHandle(), desc );
+            if ( submit._result == RHISubmitResult::Busy )
+            {
+                bBusy = true;
+                listRetry.push_back( std::move( update ) );
+            }
+            else if ( submit.isAccepted() )
+            {
                 ++uploadedCount;
+            }
+            else
+            {
+                SW_LOG_ERROR( "Region update for texture %# rejected by the RHI (%#,%# %#x%#) - dropped", update._key.c_str(), update._x, update._y, update._width,
+                              update._height );
+            }
         }
         _impl->_listFlushingRegion.clear();
         if ( listRetry.empty() == false )
