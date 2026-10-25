@@ -106,7 +106,6 @@
 "Source/Engine/Common/RenderTargetDeclaration.cpp" = 1
 # Source/Engine/Config — 이전 대기
 "Source/Engine/Config/GameAutoplay.cpp" = 1
-"Source/Engine/Config/GameConfig.cpp" = 1
 "Source/Engine/Config/GameSelection.cpp" = 1
 "Source/Engine/Config/GameTimeScale.cpp" = 2
 # Source/Engine/Destruction — 이전 대기

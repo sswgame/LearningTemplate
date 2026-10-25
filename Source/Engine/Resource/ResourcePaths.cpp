@@ -13,6 +13,7 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/AssetTypeRegistry.h"
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
@@ -618,9 +619,9 @@ namespace sw
             const string token = FileUtil::normalizePath( tokenRaw );
             if ( token == "game" )
             {
-                // 게임 프리셋을 읽기 전(기동의 리소스 루트 단계)에는 활성 팩이 아직 없다 — 그때는 game/ 아래 팩만 순서에 넣는다.
-                const DataPath& activePackRoot = GameConfig::getActive()._packRoot;
-                const string    activePack     = activePackRoot.isSet() ? findLooseDomainFolder( activePackRoot.get() ).getDiskPath() : string();
+                // 게임 프리셋을 읽기 전(기동의 리소스 루트 단계 - 서비스 표가 서기 전이거나 아직 읽지 않았다)에는 활성 팩이 아직 없다 - 그때는 game/ 아래 팩만 순서에 넣는다.
+                const GameConfig* pGameConfig = engine::findSubsystem<GameConfig>();
+                const string      activePack  = pGameConfig != nullptr && pGameConfig->_packRoot.isSet() ? findLooseDomainFolder( pGameConfig->_packRoot.get() ).getDiskPath() : string();
                 if ( activePack.empty() == false && FileUtil::isDirectory( activePack ) )
                 {
                     const string normPack = FileUtil::normalizeSeparators( activePack );

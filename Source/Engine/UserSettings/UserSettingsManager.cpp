@@ -1020,7 +1020,7 @@ namespace sw
         }
 
         // 사용자 폴더의 파일이다(세이브 게임과 별개). 자동화는 `-gv_userSettingsFile` 로 사용자 폴더를 건드리지 않는다.
-        const string gameName = FileUtil::getFileNamePart( FileUtil::trimTrailingSlashes( GameConfig::getActive()._packRoot.get() ) );
+        const string gameName = FileUtil::getFileNamePart( FileUtil::trimTrailingSlashes( engine::getSubsystem<GameConfig>()._packRoot.get() ) );
         setUserFilePath( gv_userSettingsFile.empty() ? makeDefaultUserFilePath( gameName ) : gv_userSettingsFile );
         if ( loadUserFile( getUserFilePath() ) == false )
             (void)applyAutoDetectedPreset( HardwareProbe::probe() ); // 맞는 프리셋이 없으면 기본값 그대로다

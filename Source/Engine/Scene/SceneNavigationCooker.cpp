@@ -5,6 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Navigation/NavMeshAsset.h"
 #include "Engine/Object/Component/Navigation/NavMeshSurfaceComponent.h"
@@ -99,7 +100,7 @@ namespace sw
         FileUtil::collectFiles( resourceRoot, ".xml", listFile, true );
         std::sort( listFile.begin(), listFile.end() );
         const string      normalizedRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) );
-        const string      activePackRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizePath( GameConfig::getActive()._packRoot.get() ) );
+        const string      activePackRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizePath( engine::getSubsystem<GameConfig>()._packRoot.get() ) );
         const CookJobDesc desc           = makeCookJobDesc();
         CookTally         tally;
         for ( const string& filePath : listFile )

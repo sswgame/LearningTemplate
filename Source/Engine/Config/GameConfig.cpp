@@ -2,20 +2,12 @@
 
 #include "Engine/Config/GameConfig.h"
 
+#include "Engine/Common/EngineServices.h"
+
 namespace sw
 {
-    namespace
-    {
-        GameConfig s_activeGameConfig{};
-    } // namespace
-
-    void GameConfig::setActive( const GameConfig& config )
-    {
-        s_activeGameConfig = config;
-    }
-
     const GameConfig& GameConfig::getActive()
     {
-        return s_activeGameConfig;
+        return engine::getSubsystem<GameConfig>();
     }
 } // namespace sw

@@ -2,6 +2,7 @@
 
 #include "Core/File/FileUtil.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Localization/StringTable.h"
 
@@ -140,17 +141,23 @@ SW_TEST_CASE( StringTableTest, RuntimeLanguageSwitchingOnSameUIKeys )
     SW_EXPECT_EQUAL( size_t( 0 ), stringTable.size() );
 }
 /**
- * @brief [GameConfigTest] GameConfig 활성 싱글톤 설정 및 조회 검증
+ * @brief [GameConfigTest] 게임 프리셋은 서비스 표가 돌려주고, 범위를 갈아 끼우면 그 값이 보이다가 나가면 하네스의 값으로 돌아온다
+ * @details 정적 활성본이 없다 - 값은 `ConfigManager` 가 든 자리에 있고 테스트는 서비스 범위에 다른 프리셋을 걸어 본다. 전달 창구(`GameConfig::getActive`)도 같은 값을 본다.
  */
 SW_TEST_CASE( GameConfigTest, ActiveManagement )
 {
-    const sw::GameConfig oldActive = sw::GameConfig::getActive();
+    sw::GameConfig custom = test::makeGameConfig( "game/custom_pack" );
+    const void*    pHarness{ nullptr };
+    {
+        pHarness = &sw::engine::getSubsystem<sw::GameConfig>();
+        test::ScopedEngineServiceOverride scope;
+        SW_ASSERT_TRUE( scope.bindObject( &custom ) );
+        SW_ASSERT_TRUE( scope.bind() == nullptr );
 
-    sw::GameConfig::setActive( test::makeGameConfig( "game/custom_pack" ) );
-
-    const sw::GameConfig& retrieved = sw::GameConfig::getActive();
-    SW_EXPECT_EQUAL( sw::string( "game/custom_pack" ), retrieved._packRoot.get() );
-
-    // 이전 상태 복구
-    sw::GameConfig::setActive( oldActive );
+        const sw::GameConfig& retrieved = sw::engine::getSubsystem<sw::GameConfig>();
+        SW_EXPECT_EQUAL( sw::string( "game/custom_pack" ), retrieved._packRoot.get() );
+        SW_EXPECT_TRUE( &retrieved == &custom );
+        SW_EXPECT_TRUE( &sw::GameConfig::getActive() == &custom );
+    }
+    SW_EXPECT_TRUE( &sw::engine::getSubsystem<sw::GameConfig>() == pHarness ); // 범위를 나가면 하네스의 값으로 돌아온다
 }

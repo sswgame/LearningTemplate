@@ -163,7 +163,7 @@ namespace sw
                 if ( commandLine.isArgumentProvided( CommandLineArgument::GAME ) )
                 {
                     // 팩 폴더 이름은 게임 이름과 다를 수 있어(ThemeParkTycoon → themepark) 게임 설정의 팩 루트(`game/<폴더>`)에서 읽는다.
-                    const string packRoot  = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( GameConfig::getActive()._packRoot.get() ) );
+                    const string packRoot  = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( engine::getSubsystem<GameConfig>()._packRoot.get() ) );
                     params._gamePackFolder = FileUtil::getFileNamePart( packRoot );
                 }
                 uint32 packCount = 0;

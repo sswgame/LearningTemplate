@@ -1191,9 +1191,14 @@ SW_TEST_CASE( SceneTest, SceneCookFailsOnAComponentOfUnknownType )
 {
     struct ScopedActivePack
     {
-        sw::GameConfig _previous{ sw::GameConfig::getActive() };
-        explicit ScopedActivePack( const utf8* pPackRoot ) { sw::GameConfig::setActive( test::makeGameConfig( pPackRoot ) ); }
-        ~ScopedActivePack() { sw::GameConfig::setActive( _previous ); }
+        sw::GameConfig                    _config; ///< 이 가드가 사는 동안 서비스 표가 가리키는 프리셋(가드 뒤에 사라진다 - 아래 범위가 먼저 풀린다)
+        test::ScopedEngineServiceOverride _override;
+        explicit ScopedActivePack( const utf8* pPackRoot )
+            : _config{ test::makeGameConfig( pPackRoot ) }
+        {
+            SW_EXPECT_TRUE( _override.bindObject( &_config ) );
+            SW_EXPECT_TRUE( _override.bind() == nullptr );
+        }
         ScopedActivePack( const ScopedActivePack& )            = delete;
         ScopedActivePack& operator=( const ScopedActivePack& ) = delete;
     };

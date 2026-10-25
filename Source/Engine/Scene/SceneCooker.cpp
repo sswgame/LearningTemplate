@@ -6,6 +6,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/MissingComponent.h"
@@ -545,7 +546,7 @@ namespace sw
 
         const string      normalizedRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) );
         const string      normalizedOut  = FileUtil::normalizeSeparators( cookedDir );
-        const string      activePackRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizePath( GameConfig::getActive()._packRoot.get() ) );
+        const string      activePackRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizePath( engine::getSubsystem<GameConfig>()._packRoot.get() ) );
         const CookJobDesc desc           = makeCookJobDesc( registry );
         const CookJobDesc preloadDesc    = makePreloadCookJobDesc();
 
