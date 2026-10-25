@@ -18,6 +18,7 @@
 #include "Engine/Graphics/RHI/IRHITimestampProvider.h"
 #include "Engine/Graphics/RHI/Support/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Support/RHIReleaseQueue.h"
+#include "Engine/Graphics/RHI/Support/RHIStagingRing.h"
 #include "Engine/Graphics/RHI/Support/RHITimestamp.h"
 #include "Engine/Graphics/RHI/Support/RHITransferSerials.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
@@ -136,6 +137,14 @@ namespace sw
         /** @brief VS 가 GPUScene 인스턴스 버퍼를 SSBO(g_SwInstances, t4)로 읽을 수 있어 true 입니다(glBindBufferBase). */
         bool supportsInstancedSceneDraw() const override { return true; }
 
+        /** @brief 정적 능력 테이블에 런타임 값을 덮습니다. 스테이징 링은 초기화가 실제로 만들었을 때만 참입니다(`GL_ARB_buffer_storage`, GL 4.4). */
+        RHICapabilities getCapabilities() const override
+        {
+            RHICapabilities caps         = RHIAvailability::query( RHIBackend::OpenGL );
+            caps._bPersistentStagingRing = _stagingRingBuffer != 0 ? SW_TRUE : SW_FALSE;
+            return caps;
+        }
+
 #if !defined( SW_SHIPPING )
         /**
          * @brief 텍스처 · 버퍼 등록 표의 그 자리에 핸들이 있으면 true 입니다(GL 은 인덱스를 텍스처 유닛 · 버퍼 바인딩으로 흉내 낸다).
@@ -211,6 +220,25 @@ namespace sw
         uint64 endTransfer( bool bGPUPending );
         /** @brief 앞에서부터 끝난 전송의 펜스를 놓고 워터마크를 올립니다. 기다리지 않습니다. GL 컨텍스트를 가진 스레드에서만 부릅니다. */
         void retireFinishedTransfers();
+        /**
+         * @brief 컨텍스트를 기다리지 않고 끝난 전송을 모읍니다. 이 스레드가 이미 쥐었으면 그대로, 비어 있으면 한 번 집어 모으고 놓습니다.
+         * @return 모았으면 true, 다른 스레드가 컨텍스트를 쥐고 있어 못 모았으면 false 입니다(그 스레드의 `endFrame` · 제출이 모은다).
+         * @details `pollTransfer` 와 링이 찼을 때의 할당이 부른다. 쥔 쪽에만 맡기면 RT 가 프레임을 돌리지 않는 동안(동기 로드) 기다리는 쪽이 시간 초과까지 멈춘다.
+         */
+        [[nodiscard]] bool tryRetireFinishedTransfers();
+        /**
+         * @brief 업로드 스테이징 링(영속 매핑 PBO)을 만듭니다. 초기화 끝에 컨텍스트를 쥔 채 부릅니다.
+         * @return `GL_ARB_buffer_storage`(GL 4.4)가 없어 링을 만들지 않았어도 true 입니다(그때 업로드는 모두 `Rejected`). 용량 설정이 0 이거나 GL 이 버퍼를 만들지 못하면 false 입니다.
+         */
+        [[nodiscard]] bool initializeStagingRing( uint64 capacityBytes );
+        /** @brief 링의 매핑을 풀고 버퍼를 지웁니다. 컨텍스트를 쥔 채, 전송이 모두 끝난 뒤(`waitIdle` 다음) 부릅니다. */
+        void shutdownStagingRing();
+        /**
+         * @brief 업로드 바이트 @p sizeBytes 를 담을 링 구간을 잡습니다. 컨텍스트가 없어도 부를 수 있습니다(복사는 컨텍스트 밖에서 한다).
+         * @details 링이 차 있으면 끝난 펜스를 한 번 모아(컨텍스트를 잠깐 빌린다) 다시 시도한다 — 프레임을 돌리지 않는 동기 대기(`submitWhileBusy`)도 링을 비우게 한다(계약 7).
+         * @return 잡았으면 `Accepted`, 지금 차 있으면 `Busy`, 링이 없거나 링보다 크면 이유를 로그로 남기고 `Rejected` 입니다.
+         */
+        [[nodiscard]] RHISubmitResult allocateStagingSpan( uint64 sizeBytes, const utf8* pCaller, RHIStagingSpan& outSpan );
 
         /** @brief 컴퓨트 루트 상수 UBO 를 확보합니다. */
         bool ensureComputeRootConstantUbo();
@@ -416,12 +444,17 @@ namespace sw
         RHITransferFenceQueue<void*> _transferQueue;
         /// @brief 아직 가져가지 않은 텍스처 읽기의 결과 바이트입니다(제출 시점에 동기로 읽어 둔 것).
         RHIPendingReadbackTable<vector<uint8>> _readbackTable;
+        /// @brief 업로드 스테이징 링의 구간 장부입니다. 구간은 전송 시리얼이 워터마크를 지나면 돌아옵니다(`_transferSerials`).
+        RHIStagingRing _stagingRing;
+        /// @brief 링의 영속 매핑 주소입니다(`GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT`). 어느 스레드에서나 장부가 내준 구간에만 씁니다. 링이 없으면 nullptr 입니다.
+        uint8* _pStagingRingMapped;
 
         sw::unique_ptr<OpenGLRHICommandContext>  _frameStreamContext;
         sw::unique_ptr<OpenGLRHIResourceFactory> _resourceImpl;
 
         // 8바이트보다 작은 필드는 끝에 모은다. 큰 필드 사이에 끼면 필드마다 패딩이 생긴다.
         uint32                 _computeRootConstantUbo;
+        uint32                 _stagingRingBuffer; ///< 스테이징 링 PBO 이름. 0 이면 링이 없다(GL 4.4 미만) — 업로드는 Rejected 다
         int8                   _lastVsync;         ///< -1이면 아직 정하지 않았고, 0/1은 마지막으로 적용한 값이다.
         uint8                  _bTimestampEnabled; ///< 엔진이 켜기 전에는 쿼리도 만들지 않는다.
         uint8                  _bTimestampReady;

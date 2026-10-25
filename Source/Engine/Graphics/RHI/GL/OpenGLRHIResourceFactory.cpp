@@ -88,6 +88,46 @@ namespace sw
             return pRow != nullptr ? pRow->_pixelType : 0;
         }
 
+        /// @brief `GL_UNPACK_ALIGNMENT` · `GL_PACK_ALIGNMENT` 의 GL 기본값입니다. 가드 밖에서는 늘 이 값이다.
+        constexpr GLint kGlDefaultPixelStoreAlignment = 4;
+
+        /**
+         * @class ScopedStagingUnpack
+         * @brief 스테이징 링에서 텍스처로 올리는 동안 언팩 상태(`GL_PIXEL_UNPACK_BUFFER` = 링, `GL_UNPACK_ALIGNMENT` = 1)를 걸고, 소멸자에서 GL 기본값(0, 4)으로 되돌립니다.
+         * @details 가드 밖의 언팩 상태는 늘 기본값이다. 주의: PBO 가 걸린 채 클라이언트 포인터로 올리는 호출(초기화의 1x1 흰 텍스처, ImGui 백엔드의 폰트 텍스처)이
+         *          나가면 GL 이 그 포인터를 PBO 오프셋으로 읽어 엉뚱한 바이트를 올린다. 손으로 되돌리면 중간의 이른 반환 하나가 상태를 샌다.
+         *          행 정렬 1 은 행이 빈틈없이 이어진 업로드 데이터(R32G32B32 의 12 바이트 행, R8 의 홀수 폭 행) 때문이다.
+         */
+        class ScopedStagingUnpack
+        {
+        public:
+            explicit ScopedStagingUnpack( GLuint stagingBuffer )
+            {
+                glBindBuffer( GL_PIXEL_UNPACK_BUFFER, stagingBuffer );
+                glPixelStorei( GL_UNPACK_ALIGNMENT, 1 );
+            }
+            ~ScopedStagingUnpack()
+            {
+                glPixelStorei( GL_UNPACK_ALIGNMENT, kGlDefaultPixelStoreAlignment );
+                glBindBuffer( GL_PIXEL_UNPACK_BUFFER, 0 );
+            }
+            ScopedStagingUnpack( const ScopedStagingUnpack& )            = delete;
+            ScopedStagingUnpack& operator=( const ScopedStagingUnpack& ) = delete;
+
+            /** @brief 링 안의 바이트 오프셋을 PBO 가 걸린 텍스처 명령의 데이터 인자로 바꿉니다(GL 은 그 자리에 포인터 대신 오프셋을 받는다). */
+            static const void* toPixelOffset( uint64 offsetBytes ) { return reinterpret_cast<const void*>( static_cast<uintptr_t>( offsetBytes ) ); }
+        };
+
+        /** @class ScopedTightPack @brief 되읽기 동안 `GL_PACK_ALIGNMENT` 를 1 로 걸고 소멸자에서 기본값(4)으로 되돌립니다. 읽는 쪽 버퍼의 행이 빈틈없이 이어지기 때문입니다. */
+        class ScopedTightPack
+        {
+        public:
+            ScopedTightPack() { glPixelStorei( GL_PACK_ALIGNMENT, 1 ); }
+            ~ScopedTightPack() { glPixelStorei( GL_PACK_ALIGNMENT, kGlDefaultPixelStoreAlignment ); }
+            ScopedTightPack( const ScopedTightPack& )            = delete;
+            ScopedTightPack& operator=( const ScopedTightPack& ) = delete;
+        };
+
         /** @brief 텍스처 GL 이름과 면 FBO 이름들을 지웁니다. 0 인 이름은 건너뜁니다. 해제 큐에서 GL 컨텍스트가 있는 쪽에서 부릅니다. */
         void deleteTextureNames( GLuint fboName, GLuint texName, const vector<uint32>& listSliceFbo )
         {
@@ -414,10 +454,22 @@ namespace sw
             return RHITransferSubmit::rejected();
         }
 
+        // 밉은 `desc._pData` 안에 빈틈없이 이어져 있다(resolveTextureUploadMips) — 링에는 마지막 밉의 끝까지 한 번에 복사하고, 밉마다 링 오프셋으로 올린다.
+        // 링 한 바퀴보다 큰 업로드는 기다려도 못 받으므로 Rejected 다(allocateStagingSpan 이 이유와 설정 이름을 로그로 남긴다). 나눠 올리는 두 번째 경로는 두지 않는다.
+        const RHITextureMipSpan& lastMip     = arrMip[mipCount - 1];
+        const uint64             stagedBytes = static_cast<uint64>( lastMip._offsetBytes ) + lastMip._sizeBytes;
+        RHIStagingSpan           staging{};
+        const RHISubmitResult    allocation = _pDevice->allocateStagingSpan( stagedBytes, "submitTextureUpload", staging );
+        if ( allocation != RHISubmitResult::Accepted )
+            return allocation == RHISubmitResult::Busy ? RHITransferSubmit::busy() : RHITransferSubmit::rejected();
+        // 복사는 컨텍스트 밖에서 한다(계약 1: 반환 전에 소스를 복사한다). 컨텍스트를 빌리는 시간은 PBO 바인딩, 텍스처 명령, 펜스뿐이다.
+        Memory::copy( _pDevice->_pStagingRingMapped + staging._offsetBytes, desc._pData, static_cast<size_t>( stagedBytes ) );
+
         // 컨텍스트를 빌려 올린다(어느 스레드에서나 제출할 수 있다 — 계약 4). 렌더 스레드가 프레임 끝까지 쥐고 있으면 기다리다 못 얻을 수 있고, 그때는 나중에 다시 시도하면 된다.
         ScopedOpenGLContext contextScope( _pDevice );
         if ( _pDevice->isGraphicsContextCurrent() == false )
         {
+            _pDevice->_stagingRing.free( staging );
             SW_LOG_ERROR( "submitTextureUpload: the GL context could not be acquired; submit again later" );
             return RHITransferSubmit::busy();
         }
@@ -425,49 +477,52 @@ namespace sw
         const GLenum glInternal  = toGlInternalFormat( pRecord->_format );
         const GLenum glFormat    = toGlFormat( pRecord->_format );
         const GLenum glType      = toGlType( pRecord->_format );
-
-        // 행이 빈틈없이 이어진 데이터라 기본 4바이트 행 정렬을 끈다(R32G32B32 12바이트 행 같은 경우).
-        glPixelStorei( GL_UNPACK_ALIGNMENT, 1 );
-        if ( pRecord->_target == GL_TEXTURE_2D )
         {
-            glBindTexture( GL_TEXTURE_2D, pRecord->_texture );
-            for ( uint32 mip = 0; mip < mipCount; ++mip )
+            const ScopedStagingUnpack unpack( _pDevice->_stagingRingBuffer );
+            if ( pRecord->_target == GL_TEXTURE_2D )
             {
-                const RHITextureMipSpan& span = arrMip[mip];
-                if ( bCompressed )
+                glBindTexture( GL_TEXTURE_2D, pRecord->_texture );
+                for ( uint32 mip = 0; mip < mipCount; ++mip )
                 {
-                    glCompressedTexSubImage2D( GL_TEXTURE_2D, static_cast<GLint>( span._mip ), 0, 0, static_cast<GLsizei>( span._width ),
-                                               static_cast<GLsizei>( span._height ), glInternal, static_cast<GLsizei>( span._sizeBytes ), span._pData );
+                    const RHITextureMipSpan& span    = arrMip[mip];
+                    const void*              pPixels = ScopedStagingUnpack::toPixelOffset( staging._offsetBytes + span._offsetBytes );
+                    if ( bCompressed )
+                    {
+                        glCompressedTexSubImage2D( GL_TEXTURE_2D, static_cast<GLint>( span._mip ), 0, 0, static_cast<GLsizei>( span._width ),
+                                                   static_cast<GLsizei>( span._height ), glInternal, static_cast<GLsizei>( span._sizeBytes ), pPixels );
+                    }
+                    else
+                    {
+                        glTexSubImage2D( GL_TEXTURE_2D, static_cast<GLint>( span._mip ), 0, 0, static_cast<GLsizei>( span._width ),
+                                         static_cast<GLsizei>( span._height ), glFormat, glType, pPixels );
+                    }
                 }
-                else
+                glBindTexture( GL_TEXTURE_2D, 0 );
+            }
+            else
+            {
+                // 배열 · 큐브는 DSA 의 3D 창(z = 면)으로 올린다. 큐브 맵도 DSA 에서는 면이 z 다. DSA 업로드도 걸린 GL_PIXEL_UNPACK_BUFFER 를 읽는다.
+                for ( uint32 mip = 0; mip < mipCount; ++mip )
                 {
-                    glTexSubImage2D( GL_TEXTURE_2D, static_cast<GLint>( span._mip ), 0, 0, static_cast<GLsizei>( span._width ),
-                                     static_cast<GLsizei>( span._height ), glFormat, glType, span._pData );
+                    const RHITextureMipSpan& span    = arrMip[mip];
+                    const void*              pPixels = ScopedStagingUnpack::toPixelOffset( staging._offsetBytes + span._offsetBytes );
+                    if ( bCompressed )
+                    {
+                        glCompressedTextureSubImage3D( pRecord->_texture, static_cast<GLint>( span._mip ), 0, 0, static_cast<GLint>( desc._arraySlice ),
+                                                       static_cast<GLsizei>( span._width ), static_cast<GLsizei>( span._height ), 1, glInternal,
+                                                       static_cast<GLsizei>( span._sizeBytes ), pPixels );
+                    }
+                    else
+                    {
+                        glTextureSubImage3D( pRecord->_texture, static_cast<GLint>( span._mip ), 0, 0, static_cast<GLint>( desc._arraySlice ),
+                                             static_cast<GLsizei>( span._width ), static_cast<GLsizei>( span._height ), 1, glFormat, glType, pPixels );
+                    }
                 }
             }
-            glBindTexture( GL_TEXTURE_2D, 0 );
         }
-        else
-        {
-            // 배열 · 큐브는 DSA 의 3D 창(z = 면)으로 올린다. 큐브 맵도 DSA 에서는 면이 z 다.
-            for ( uint32 mip = 0; mip < mipCount; ++mip )
-            {
-                const RHITextureMipSpan& span = arrMip[mip];
-                if ( bCompressed )
-                {
-                    glCompressedTextureSubImage3D( pRecord->_texture, static_cast<GLint>( span._mip ), 0, 0, static_cast<GLint>( desc._arraySlice ),
-                                                   static_cast<GLsizei>( span._width ), static_cast<GLsizei>( span._height ), 1, glInternal,
-                                                   static_cast<GLsizei>( span._sizeBytes ), span._pData );
-                }
-                else
-                {
-                    glTextureSubImage3D( pRecord->_texture, static_cast<GLint>( span._mip ), 0, 0, static_cast<GLint>( desc._arraySlice ),
-                                         static_cast<GLsizei>( span._width ), static_cast<GLsizei>( span._height ), 1, glFormat, glType, span._pData );
-                }
-            }
-        }
-        glPixelStorei( GL_UNPACK_ALIGNMENT, 4 );
+        // 펜스가 링 구간의 회수 시점이다 — 워터마크가 이 시리얼을 지나면 구간이 돌아온다.
         const uint64 serial = _pDevice->endTransfer( true );
+        _pDevice->_stagingRing.markSubmitted( staging, serial );
         pRecord->_lastTransferSerial.store( serial );
         return _pDevice->_transferSerials.makeAccepted( serial );
     }
@@ -485,32 +540,43 @@ namespace sw
         if ( validateTextureRegionUpload( pRecord->_format, pRecord->_width, pRecord->_height, pRecord->_mipLevels, pRecord->_arraySize, desc, rowBytes ) == false )
             return RHITransferSubmit::rejected();
 
+        // 전체 업로드와 같은 링 · 같은 가드를 쓴다. `desc._sizeBytes` 가 더 커도 구간의 행만 복사한다(행은 빈틈없이 `rowBytes`).
+        const uint64          stagedBytes = static_cast<uint64>( rowBytes ) * desc._height;
+        RHIStagingSpan        staging{};
+        const RHISubmitResult allocation = _pDevice->allocateStagingSpan( stagedBytes, "submitTextureRegionUpload", staging );
+        if ( allocation != RHISubmitResult::Accepted )
+            return allocation == RHISubmitResult::Busy ? RHITransferSubmit::busy() : RHITransferSubmit::rejected();
+        Memory::copy( _pDevice->_pStagingRingMapped + staging._offsetBytes, desc._pData, static_cast<size_t>( stagedBytes ) );
+
         ScopedOpenGLContext contextScope( _pDevice );
         if ( _pDevice->isGraphicsContextCurrent() == false )
         {
+            _pDevice->_stagingRing.free( staging );
             SW_LOG_ERROR( "submitTextureRegionUpload: the GL context could not be acquired; submit again later" );
             return RHITransferSubmit::busy();
         }
         const GLenum glFormat = toGlFormat( pRecord->_format );
         const GLenum glType   = toGlType( pRecord->_format );
-        // 행이 빈틈없이 이어진 데이터라 기본 4바이트 행 정렬을 끈다(R8 12픽셀 행 = 12바이트).
-        glPixelStorei( GL_UNPACK_ALIGNMENT, 1 );
-        if ( pRecord->_target == GL_TEXTURE_2D )
         {
-            glBindTexture( GL_TEXTURE_2D, pRecord->_texture );
-            glTexSubImage2D( GL_TEXTURE_2D, static_cast<GLint>( desc._mip ), static_cast<GLint>( desc._x ), static_cast<GLint>( desc._y ),
-                             static_cast<GLsizei>( desc._width ), static_cast<GLsizei>( desc._height ), glFormat, glType, desc._pData );
-            glBindTexture( GL_TEXTURE_2D, 0 );
+            const ScopedStagingUnpack unpack( _pDevice->_stagingRingBuffer );
+            const void*               pPixels = ScopedStagingUnpack::toPixelOffset( staging._offsetBytes );
+            if ( pRecord->_target == GL_TEXTURE_2D )
+            {
+                glBindTexture( GL_TEXTURE_2D, pRecord->_texture );
+                glTexSubImage2D( GL_TEXTURE_2D, static_cast<GLint>( desc._mip ), static_cast<GLint>( desc._x ), static_cast<GLint>( desc._y ),
+                                 static_cast<GLsizei>( desc._width ), static_cast<GLsizei>( desc._height ), glFormat, glType, pPixels );
+                glBindTexture( GL_TEXTURE_2D, 0 );
+            }
+            else
+            {
+                // 배열 · 큐브는 전체 업로드와 같은 DSA 3D 창(z = 면)이다.
+                glTextureSubImage3D( pRecord->_texture, static_cast<GLint>( desc._mip ), static_cast<GLint>( desc._x ), static_cast<GLint>( desc._y ),
+                                     static_cast<GLint>( desc._arraySlice ), static_cast<GLsizei>( desc._width ), static_cast<GLsizei>( desc._height ), 1, glFormat,
+                                     glType, pPixels );
+            }
         }
-        else
-        {
-            // 배열 · 큐브는 전체 업로드와 같은 DSA 3D 창(z = 면)이다.
-            glTextureSubImage3D( pRecord->_texture, static_cast<GLint>( desc._mip ), static_cast<GLint>( desc._x ), static_cast<GLint>( desc._y ),
-                                 static_cast<GLint>( desc._arraySlice ), static_cast<GLsizei>( desc._width ), static_cast<GLsizei>( desc._height ), 1, glFormat,
-                                 glType, desc._pData );
-        }
-        glPixelStorei( GL_UNPACK_ALIGNMENT, 4 );
         const uint64 serial = _pDevice->endTransfer( true );
+        _pDevice->_stagingRing.markSubmitted( staging, serial );
         pRecord->_lastTransferSerial.store( serial );
         return _pDevice->_transferSerials.makeAccepted( serial );
     }
@@ -520,18 +586,9 @@ namespace sw
         const RHITransferStatus status = _pDevice->_transferSerials.classify( ticket );
         if ( status != RHITransferStatus::Pending )
             return status;
-        if ( _pDevice->isGraphicsContextCurrent() )
-        {
-            _pDevice->retireFinishedTransfers();
-            return _pDevice->_transferSerials.classify( ticket );
-        }
-        // 컨텍스트를 기다리며 빌리지 않는다(계약) — 비어 있을 때만 한 번 집어 펜스를 본다. 쥔 쪽(RT 의 endFrame, 제출 스레드)에만 맡기면
-        // RT 가 프레임을 돌리지 않는 동안(게임 스레드가 동기 로드로 막혀 프레임을 내지 않는다) 기다리는 쪽이 시간 초과까지 멈춘다.
-        const bool bBorrowed = _pDevice->requiresExclusiveContextThread() && _pDevice->tryMakeCurrentAndRecordOwner();
-        if ( bBorrowed == false )
+        // 컨텍스트를 기다리며 빌리지 않는다(계약 4) — 이미 쥐었거나 비어 있을 때만 펜스를 본다. 다른 스레드가 쥐었으면 그쪽이 올린 워터마크를 다음 폴링이 본다.
+        if ( _pDevice->tryRetireFinishedTransfers() == false )
             return RHITransferStatus::Pending;
-        _pDevice->retireFinishedTransfers();
-        _pDevice->unbindGraphicsContext();
         return _pDevice->_transferSerials.classify( ticket );
     }
 
@@ -597,8 +654,8 @@ namespace sw
         }
         // GL 의 읽기는 제출 시점에 동기로 읽어 둔다(glGetTexImage 가 앞선 명령을 끝내고 돌아온다). 그래서 앞서 제출된 쓰기가 보이고(계약 3), 티켓은 앞선 전송이 모두 끝나는 즉시 Complete 다.
         // 비동기 읽기(PBO + 펜스)는 이 계획 밖이다.
-        vector<uint8> readBytes( outLayout._sizeBytes, 0 );
-        glPixelStorei( GL_PACK_ALIGNMENT, 1 );
+        vector<uint8>         readBytes( outLayout._sizeBytes, 0 );
+        const ScopedTightPack tightPack;
         if ( pRecord->_target == GL_TEXTURE_2D )
         {
             glBindTexture( GL_TEXTURE_2D, pRecord->_texture );
@@ -624,7 +681,6 @@ namespace sw
                                       readBytes.data() );
             }
         }
-        glPixelStorei( GL_PACK_ALIGNMENT, 4 );
         const uint64 serial = _pDevice->endTransfer( false );
         _pDevice->_readbackTable.add( serial, std::move( readBytes ) );
         return _pDevice->_transferSerials.makeAccepted( serial );

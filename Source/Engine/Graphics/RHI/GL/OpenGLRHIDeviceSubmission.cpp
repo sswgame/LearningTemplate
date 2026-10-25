@@ -214,6 +214,51 @@ namespace sw
         } );
     }
 
+    bool OpenGLRHIDevice::tryRetireFinishedTransfers()
+    {
+        if ( isGraphicsContextCurrent() )
+        {
+            retireFinishedTransfers();
+            return true;
+        }
+        const bool bBorrowed = requiresExclusiveContextThread() && tryMakeCurrentAndRecordOwner();
+        if ( bBorrowed == false )
+            return false;
+        retireFinishedTransfers();
+        unbindGraphicsContext();
+        return true;
+    }
+
+    RHISubmitResult OpenGLRHIDevice::allocateStagingSpan( uint64 sizeBytes, const utf8* pCaller, RHIStagingSpan& outSpan )
+    {
+        if ( _stagingRingBuffer == 0 )
+        {
+            SW_LOG_ERROR( "%#: the GL staging ring is unavailable (needs OpenGL 4.4 / ARB_buffer_storage); the upload is rejected", pCaller );
+            return RHISubmitResult::Rejected;
+        }
+        RHIStagingAllocateResult result = _stagingRing.allocate( sizeBytes, _transferSerials.getWatermark(), outSpan );
+        if ( result == RHIStagingAllocateResult::Full && tryRetireFinishedTransfers() )
+            result = _stagingRing.allocate( sizeBytes, _transferSerials.getWatermark(), outSpan );
+        switch ( result )
+        {
+            case RHIStagingAllocateResult::Allocated:
+            {
+                return RHISubmitResult::Accepted;
+            }
+            case RHIStagingAllocateResult::Full:
+            {
+                return RHISubmitResult::Busy; // 앞선 전송이 끝나면 빈다 — 호출자가 다시 제출한다(계약 2)
+            }
+            case RHIStagingAllocateResult::TooLarge:
+            {
+                SW_LOG_ERROR( "%#: %# bytes do not fit the %#-byte staging ring; raise gv_rhiStagingRingMegabytes to upload it", pCaller, sizeBytes,
+                              _stagingRing.getCapacityBytes() );
+                return RHISubmitResult::Rejected;
+            }
+        }
+        return RHISubmitResult::Rejected;
+    }
+
     void OpenGLRHIDevice::retireFrameOnGPU()
     {
         ScopedOpenGLContext contextScope( this );

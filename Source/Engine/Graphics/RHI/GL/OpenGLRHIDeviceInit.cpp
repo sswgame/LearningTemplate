@@ -184,6 +184,9 @@ namespace sw
             return false;
         }
 
+        if ( initializeStagingRing( desc._stagingRingBytes ) == false )
+            return false;
+
         _bInitialized = SW_TRUE;
 
         {
@@ -276,6 +279,63 @@ namespace sw
 
         SW_LOG_INFO( "OpenGL RHI Backend Device Active (DirectX Coordinate System & Top-Left UV Texture Space Configured)" );
         return true;
+    }
+
+    bool OpenGLRHIDevice::initializeStagingRing( uint64 capacityBytes )
+    {
+        if ( capacityBytes == 0 )
+        {
+            SW_LOG_ERROR( "The OpenGL backend needs a staging ring capacity (gv_rhiStagingRingMegabytes must be positive)" );
+            return false;
+        }
+        // 영속 매핑(glBufferStorage + GL_MAP_PERSISTENT_BIT)은 GL 4.4 코어다(glad 는 4.4 미만 컨텍스트에서 이 포인터를 채우지 않는다). 없으면 링을 두지 않고
+        // 텍스처 업로드를 모두 Rejected 로 돌려준다 — 클라이언트 메모리에서 바로 올리는 두 번째 경로를 두지 않는다(RHICapabilities::_bPersistentStagingRing).
+        if ( glad_glBufferStorage == nullptr )
+        {
+            SW_LOG_ERROR( "OpenGL 4.4 (ARB_buffer_storage) is unavailable - there is no staging ring and every texture upload is rejected" );
+            return true;
+        }
+
+        // 구간 시작 정렬. PBO 오프셋은 픽셀 성분 크기(최대 float 4 바이트)와 BC 블록(16 바이트)의 배수면 되지만, 복사 대상이 캐시 줄 경계에서 시작하도록 넉넉히 둔다.
+        constexpr uint64     kSpanAlignmentBytes = 256;
+        constexpr GLbitfield kMapFlags           = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT;
+        GLuint               name{ 0 };
+        glGenBuffers( 1, &name );
+        void* pMapped = nullptr;
+        if ( name != 0 )
+        {
+            // GL_COPY_WRITE_BUFFER 로 만들어 다른 바인딩을 건드리지 않는다. COHERENT 라 복사한 바이트는 뒤에 낸 GL 명령에 보인다(flush 가 필요 없다).
+            glBindBuffer( GL_COPY_WRITE_BUFFER, name );
+            glBufferStorage( GL_COPY_WRITE_BUFFER, static_cast<GLsizeiptr>( capacityBytes ), nullptr, kMapFlags );
+            pMapped = glMapBufferRange( GL_COPY_WRITE_BUFFER, 0, static_cast<GLsizeiptr>( capacityBytes ), kMapFlags );
+            glBindBuffer( GL_COPY_WRITE_BUFFER, 0 );
+        }
+        if ( pMapped == nullptr )
+        {
+            SW_LOG_ERROR( "The OpenGL staging ring (%# bytes) could not be created or mapped (gv_rhiStagingRingMegabytes)", capacityBytes );
+            if ( name != 0 )
+                glDeleteBuffers( 1, &name );
+            return false;
+        }
+
+        _stagingRingBuffer  = name;
+        _pStagingRingMapped = static_cast<uint8*>( pMapped );
+        _stagingRing.initialize( capacityBytes, kSpanAlignmentBytes );
+        getMemoryLedger().recordAllocation( RHIMemoryKey::makeDeviceObject( &_stagingRing ), RHIMemoryKind::Staging, capacityBytes );
+        return true;
+    }
+
+    void OpenGLRHIDevice::shutdownStagingRing()
+    {
+        if ( _stagingRingBuffer == 0 )
+            return;
+        // 매핑된 버퍼를 지우면 매핑도 풀린다. 전송은 waitIdle(종료 2단계)이 모두 끝냈다.
+        GLuint name = _stagingRingBuffer;
+        glDeleteBuffers( 1, &name );
+        getMemoryLedger().recordFree( RHIMemoryKey::makeDeviceObject( &_stagingRing ) );
+        _stagingRing.shutdown();
+        _stagingRingBuffer  = 0;
+        _pStagingRingMapped = nullptr;
     }
 
     void OpenGLRHIDevice::detachCommandRecordingInternal()
@@ -448,6 +508,7 @@ namespace sw
             glDeleteBuffers( 1, &_computeRootConstantUbo );
             _computeRootConstantUbo = 0;
         }
+        shutdownStagingRing();
 
         if ( _platformContext != nullptr )
         {

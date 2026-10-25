@@ -1,0 +1,103 @@
+#include "pch.h"
+
+#include "Engine/Graphics/RHI/Support/RHIStagingRing.h"
+
+#include "TestFramework/TestFramework.h"
+
+// 업로드 스테이징 링(RHIStagingRing)의 장부 규칙을 GPU 없이 본다. 그 링을 쓰는 GL 업로드는 TestRHIStagingRingGPU.cpp 가 실제 디바이스로 본다.
+
+namespace
+{
+    /** @brief 할당 결과가 `Allocated` 인지 묻습니다(열거값을 테스트 메시지 없이 비교하는 줄을 줄인다). */
+    bool isAllocated( sw::RHIStagingAllocateResult result )
+    {
+        return result == sw::RHIStagingAllocateResult::Allocated;
+    }
+} // namespace
+
+/**
+ * @brief [RHIStagingRingTest] 구간은 정렬된 오프셋에 차례로 잡히고, 끝에 자리가 없으면 맨 앞이 돌아온 만큼만 처음으로 감는다
+ * @details 링보다 큰 요청과 0 바이트는 기다려도 못 받으므로 `TooLarge`(제출의 Rejected), 지금 자리가 없을 뿐이면 `Full`(Busy)이다.
+ */
+SW_TEST_CASE( RHIStagingRingTest, AllocatesAlignedSpansAndWrapsAfterTheFrontCompletes )
+{
+    sw::RHIStagingRing ring;
+    ring.initialize( 1024, 256 );
+
+    sw::RHIStagingSpan a{};
+    sw::RHIStagingSpan b{};
+    sw::RHIStagingSpan c{};
+    SW_ASSERT_TRUE( isAllocated( ring.allocate( 100, 0, a ) ) );
+    SW_ASSERT_TRUE( isAllocated( ring.allocate( 300, 0, b ) ) );
+    SW_ASSERT_TRUE( isAllocated( ring.allocate( 200, 0, c ) ) );
+    SW_EXPECT_EQUAL( static_cast<uint64>( 0 ), a._offsetBytes );
+    SW_EXPECT_EQUAL( static_cast<uint64>( 256 ), b._offsetBytes ); // 100 바이트 뒤가 아니라 다음 256 경계
+    SW_EXPECT_EQUAL( static_cast<uint64>( 768 ), c._offsetBytes );
+
+    sw::RHIStagingSpan rejected{};
+    SW_EXPECT_TRUE( ring.allocate( 300, 0, rejected ) == sw::RHIStagingAllocateResult::Full ); // 끝에도 앞에도 자리가 없다
+    SW_EXPECT_EQUAL( static_cast<uint64>( 0 ), rejected._id );                                 // 못 잡은 구간은 빈 값이다
+    SW_EXPECT_TRUE( ring.allocate( 1025, 0, rejected ) == sw::RHIStagingAllocateResult::TooLarge );
+    SW_EXPECT_TRUE( ring.allocate( 0, 0, rejected ) == sw::RHIStagingAllocateResult::TooLarge );
+
+    ring.markSubmitted( a, 1 );
+    ring.markSubmitted( b, 2 );
+    ring.markSubmitted( c, 3 );
+
+    // 워터마크 1: a 만 돌아온다. 앞의 빈 곳은 [0, 256) 이라 300 은 못 받고 200 은 처음으로 감아 받는다.
+    sw::RHIStagingSpan wrapped{};
+    SW_EXPECT_TRUE( ring.allocate( 300, 1, rejected ) == sw::RHIStagingAllocateResult::Full );
+    SW_ASSERT_TRUE( isAllocated( ring.allocate( 200, 1, wrapped ) ) );
+    SW_EXPECT_EQUAL( static_cast<uint64>( 0 ), wrapped._offsetBytes );
+    // 감긴 뒤의 빈 곳은 [256, 256) — 뒤 구간의 끝에서 맨 앞 구간 사이다.
+    SW_EXPECT_TRUE( ring.allocate( 16, 1, rejected ) == sw::RHIStagingAllocateResult::Full );
+
+    // 워터마크 3: b · c 가 돌아오고, 아직 제출하지 않은 감긴 구간(시리얼 0)이 맨 앞에 남는다.
+    sw::RHIStagingSpan afterWrap{};
+    SW_ASSERT_TRUE( isAllocated( ring.allocate( 700, 3, afterWrap ) ) );
+    SW_EXPECT_EQUAL( static_cast<uint64>( 256 ), afterWrap._offsetBytes );
+    SW_EXPECT_EQUAL( static_cast<uint32>( 2 ), ring.getLiveCount() );
+}
+
+/**
+ * @brief [RHIStagingRingTest] 회수는 할당 순서로만 한다 — 뒤 구간이 먼저 끝나도, 제출하지 않은 구간이 앞에 있어도 거기서 멈춘다
+ * @details 시리얼은 컨텍스트 · 큐 락 안에서 매기므로 먼저 잡은 스레드가 늦게 제출할 수 있다. 앞을 건너뛰면 GPU 가 아직 읽는 구간을 덮는다.
+ *          제출하지 못하고 놓은 구간(`free`)은 맨 앞에 오면 시리얼 없이 돌아온다.
+ */
+SW_TEST_CASE( RHIStagingRingTest, FreesInAllocationOrderOnly )
+{
+    sw::RHIStagingRing ring;
+    ring.initialize( 512, 16 );
+
+    sw::RHIStagingSpan first{};
+    sw::RHIStagingSpan second{};
+    SW_ASSERT_TRUE( isAllocated( ring.allocate( 256, 0, first ) ) );
+    SW_ASSERT_TRUE( isAllocated( ring.allocate( 256, 0, second ) ) );
+    ring.markSubmitted( second, 1 ); // 뒤에 잡은 쪽이 먼저 제출했다
+    ring.markSubmitted( first, 2 );
+
+    sw::RHIStagingSpan probe{};
+    SW_EXPECT_TRUE( ring.allocate( 16, 1, probe ) == sw::RHIStagingAllocateResult::Full ); // second 는 끝났지만 맨 앞 first 가 아직이다
+    SW_EXPECT_EQUAL( static_cast<uint32>( 2 ), ring.getLiveCount() );
+    SW_ASSERT_TRUE( isAllocated( ring.allocate( 16, 2, probe ) ) );
+    SW_EXPECT_EQUAL( static_cast<uint64>( 0 ), probe._offsetBytes );
+    SW_EXPECT_EQUAL( static_cast<uint32>( 1 ), ring.getLiveCount() );
+
+    ring.free( probe );
+    ring.freeCompleted( 0 );
+    SW_EXPECT_EQUAL( static_cast<uint32>( 0 ), ring.getLiveCount() );
+
+    sw::RHIStagingSpan unsubmitted{};
+    sw::RHIStagingSpan submitted{};
+    SW_ASSERT_TRUE( isAllocated( ring.allocate( 128, 2, unsubmitted ) ) );
+    SW_ASSERT_TRUE( isAllocated( ring.allocate( 128, 2, submitted ) ) );
+    ring.markSubmitted( submitted, 5 );
+    ring.freeCompleted( 10 );
+    SW_EXPECT_EQUAL( static_cast<uint32>( 2 ), ring.getLiveCount() ); // 맨 앞이 아직 제출 전(복사 중)이다
+    ring.free( unsubmitted );
+    ring.freeCompleted( 10 );
+    SW_EXPECT_EQUAL( static_cast<uint32>( 0 ), ring.getLiveCount() );
+
+    ring.shutdown();
+    SW_EXPECT_TRUE( ring.allocate( 16, 0, probe ) == sw::RHIStagingAllocateResult::TooLarge ); // 용량 0 이면 모두 못 받는다
+}
