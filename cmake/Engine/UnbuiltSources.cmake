@@ -46,6 +46,35 @@ function(sw_excludeUnbuiltSources LIST_VAR)
 	set(${LIST_VAR} "${listKept}" PARENT_SCOPE)
 endfunction()
 
+# 목록 LIST_VAR 에서 접두(ARGN, 예: `OnlineLoadBot/`)로 시작하는 헤더를 `#include "…"` 하는 소스를 빼고, 뺀 것을 "짓지 않는 소스" 로 적는다.
+# 파일 이름 정규식을 손으로 적는 대신 소스가 스스로 말하는 의존(include)을 읽는다 — 도구 타깃이 없는 구성에서 그 도구를 쓰는 테스트가 빠진다.
+# 한 단계만 본다(그 헤더를 간접으로 끄는 파일은 보지 않는다 — 간접까지 보는 것은 `sw_excludeSourcesIncludingUnbuiltEngineFolders`).
+function(sw_excludeSourcesIncludingPrefix LIST_VAR)
+	set(listKept "")
+	set(listDropped "")
+	foreach(source IN LISTS ${LIST_VAR})
+		set(bDrop OFF)
+		if(source MATCHES "\\.(cpp|h)$")
+			file(STRINGS "${source}" includeLines REGEX "^[ \t]*#[ \t]*include[ \t]+\"")
+			foreach(prefix IN LISTS ARGN)
+				string(FIND "${includeLines}" "\"${prefix}" hit)
+				if(NOT hit EQUAL -1)
+					set(bDrop ON)
+				endif()
+			endforeach()
+		endif()
+		if(bDrop)
+			list(APPEND listDropped "${source}")
+		else()
+			list(APPEND listKept "${source}")
+		endif()
+	endforeach()
+	if(listDropped)
+		sw_declareUnbuiltSources(${listDropped})
+	endif()
+	set(${LIST_VAR} ${listKept} PARENT_SCOPE)
+endfunction()
+
 # 플랫폼 폴더 규칙 — 저장소 기준 경로에 `Windows/` 가 든 소스는 Windows 에서만, `Linux/` 는 리눅스에서만, `Posix/` 는 Windows 가 아닌 곳에서만 짓는다.
 # 고르지 않은 것은 목록에서 빼고 "이 구성이 짓지 않는 소스" 로 적는다. (경로를 저장소 기준으로 보는 이유: 저장소를 담은 상위 폴더 이름에 걸리지 않게.)
 # 지금은 Core 만 쓴다 — Engine 의 플랫폼 폴더 .cpp 는 파일 안 `#if` 로 비어 있는 채 모든 플랫폼에서 컴파일된다.

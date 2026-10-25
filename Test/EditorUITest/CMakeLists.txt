@@ -18,11 +18,20 @@ if(SW_TARGET_TYPE STREQUAL "Server")
 	return()
 endif()
 
+# 같이 컴파일하는 에디터 백엔드 소스. `Platform/` 은 폴더 규칙으로 훑는다 — 플랫폼 창 백엔드(Win32 · X11 …)는 ImGui 만 쓰는 단위라
+# 새 플랫폼 백엔드가 폴더에 들어오면 자동으로 따라온다(못 지으면 링크 오류로 드러난다). `Render/` 는 RHI 디바이스가 필요해 뺀다.
+# 최상위 두 개(입력 필터 · 키 전달)는 폴더로 가를 수 없다 — 같은 폴더에 `EditorUICapture` · `DrawSnapshotHandoff` 처럼 엔진 밖 의존을 끄는
+# 파일이 함께 있고, 에디터 타깃(Source/Editor)이 이 파일들을 따로 묶어 노출하는 선언도 없다(그 CMake 는 이 단위의 소유가 아니다).
+# 이름 둘이 이 목록의 유일한 손 입력이다.
+file(GLOB swEditorUIPlatformBackends CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/Source/Editor/Common/Backend/Platform/*.cpp")
+if(NOT swEditorUIPlatformBackends)
+	message(FATAL_ERROR "EditorUITest: Source/Editor/Common/Backend/Platform 에 플랫폼 백엔드 소스가 없다")
+endif()
+
 sw_addTestExecutable(EditorUITest
-	# 테스트 소스는 이 폴더를 훑는다. 같이 컴파일하는 에디터 백엔드 소스만 적는다.
+	# 테스트 소스는 이 폴더를 훑는다. 같이 컴파일하는 에디터 백엔드 소스는 위 목록.
 	EXTRA_SOURCES
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Backend/Platform/ImGuiWin32PlatformBackend.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Backend/Platform/ImGuiX11PlatformBackend.cpp"
+		${swEditorUIPlatformBackends}
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Backend/ImGuiOsInputFilter.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Backend/ImGuiKeyForward.cpp"
 	LIBS
