@@ -46,6 +46,28 @@ namespace sw
                     }
                 }
             };
+
+            /** @brief union-find 에서 @p unitIndex 의 대표 유닛 번호를 찾습니다(경로를 반으로 줄이며 오른다). */
+            static uint32 findComponentRoot( vector<uint32>& inoutListRoot, uint32 unitIndex )
+            {
+                while ( inoutListRoot[unitIndex] != unitIndex )
+                {
+                    inoutListRoot[unitIndex] = inoutListRoot[inoutListRoot[unitIndex]];
+                    unitIndex                = inoutListRoot[unitIndex];
+                }
+                return unitIndex;
+            }
+
+            /** @brief 두 유닛의 성분을 합칩니다. 대표는 더 작은 번호이므로 성분의 대표는 늘 그 성분에서 등록 순서가 가장 앞선 유닛입니다. */
+            static void uniteComponents( vector<uint32>& inoutListRoot, uint32 leftIndex, uint32 rightIndex )
+            {
+                const uint32 leftRoot  = findComponentRoot( inoutListRoot, leftIndex );
+                const uint32 rightRoot = findComponentRoot( inoutListRoot, rightIndex );
+                if ( leftRoot < rightRoot )
+                    inoutListRoot[rightRoot] = leftRoot;
+                else if ( rightRoot < leftRoot )
+                    inoutListRoot[leftRoot] = rightRoot;
+            }
         };
     } // namespace
 } // namespace sw
@@ -58,6 +80,9 @@ namespace sw
         : _unitList{}
         , _uniqueLevelRemoval{}
         , _listLevel{}
+        , _componentAll{}
+        , _componentActive{}
+        , _listLevelSlot{}
         , _listActive{}
         , _listLevelStart{}
         , _lodClientList{}
@@ -65,14 +90,20 @@ namespace sw
         , _pendingLODView{}
         , _listScratchLODState{}
         , _listScratchBudgetItem{}
-        , _listScratchEdgeUpstream{}
-        , _listScratchEdgeDependent{}
+        , _listScratchEdge{}
         , _listScratchPendingCount{}
         , _listScratchDependentStart{}
         , _listScratchDependentCursor{}
         , _listScratchDependent{}
         , _listScratchReady{}
         , _listScratchNext{}
+        , _listScratchOrder{}
+        , _listScratchComponentRoot{}
+        , _listScratchComponentOf{}
+        , _listScratchComponentCursor{}
+        , _listScratchSlotOfUnit{}
+        , _listScratchSlotRemap{}
+        , _listScratchActiveFlag{}
         , _lodSettings{}
         , _crowd{}
 #if SW_ANIMATION_REWIND_ENABLED
@@ -326,8 +357,10 @@ namespace sw
         }
         _bOrderDirty = SW_TRUE;
         _uniqueLevelRemoval.clear();
-        // 지은 레벨에 남은 죽은 포인터를 다음 평가 전에 쓰지 않게 바로 비운다.
+        // 지은 레벨과 성분에 남은 죽은 포인터를 다음 평가 전에 쓰지 않게 바로 비운다.
         _listLevel.clear();
+        _listLevelSlot.clear();
+        _componentAll.clear();
     }
 
     void AnimationSystem::flushLevelRemoval()
@@ -337,18 +370,41 @@ namespace sw
         // 레벨을 다시 지을 예정이면(더럽거나 아직 안 지음) 지을 때 해제된 유닛이 빠진다.
         if ( _bOrderDirty == SW_FALSE && _listLevel.empty() == false )
         {
-            vector<SkeletalMeshComponent*>& levelZero = _listLevel.front();
-            size_t                          keepCount = 0;
-            for ( SkeletalMeshComponent* pUnit : levelZero )
+            vector<SkeletalMeshComponent*>& levelZero     = _listLevel.front();
+            const size_t                    levelZeroSize = levelZero.size();
+            // 레벨 0 은 `_listLevelSlot` 의 앞 구간이다. 빼는 유닛은 외톨이라 유닛 하나짜리 성분이므로, 그 칸을 표시해 두었다가 성분 목록에서도 뺀다.
+            _listScratchSlotRemap.assign( _componentAll.getUnitCount(), 0 );
+            size_t keepCount = 0;
+            for ( size_t position = 0; position < levelZeroSize; ++position )
             {
-                const SkeletalMeshComponent* pKey = pUnit;
-                if ( _uniqueLevelRemoval.contains( pKey ) == false )
-                    levelZero[keepCount++] = pUnit;
+                SkeletalMeshComponent*       pUnit = levelZero[position];
+                const SkeletalMeshComponent* pKey  = pUnit;
+                if ( _uniqueLevelRemoval.contains( pKey ) )
+                {
+                    _listScratchSlotRemap[_listLevelSlot[position]] = invalid_index::kUint32;
+                    continue;
+                }
+                levelZero[keepCount]      = pUnit;
+                _listLevelSlot[keepCount] = _listLevelSlot[position];
+                ++keepCount;
             }
             levelZero.resize( keepCount );
             // 유닛이 모두 빠졌거나 레벨 0 이 비었으면 레벨을 비운다 — 남은 유닛이 있으면 다음 평가가 다시 짓는다.
             if ( keepCount == 0 )
+            {
                 _listLevel.clear();
+                _listLevelSlot.clear();
+                _componentAll.clear();
+            }
+            else
+            {
+                _listLevelSlot.erase( _listLevelSlot.begin() + static_cast<ptrdiff_t>( keepCount ), _listLevelSlot.begin() + static_cast<ptrdiff_t>( levelZeroSize ) );
+                _componentAll.removeMarkedSingletons( _listScratchSlotRemap );
+                for ( uint32& slot : _listLevelSlot )
+                {
+                    slot = _listScratchSlotRemap[slot];
+                }
+            }
         }
         _uniqueLevelRemoval.clear();
     }
@@ -363,14 +419,16 @@ namespace sw
         if ( unitCount == 0 )
         {
             _listLevel.clear();
+            _listLevelSlot.clear();
+            _componentAll.clear();
             return;
         }
 
         // Kahn 위상 정렬을 레벨 단위로 한다: 레벨 n 의 유닛은 의존이 모두 레벨 n 보다 앞이다.
         // 간선(위 유닛 → 아래 유닛)을 모아 위 유닛별 구간(CSR)으로 정렬한다 — 유닛마다 벡터를 할당하지 않고, 임시 버퍼는 멤버로 재사용한다.
         // 위 유닛의 번호는 `_unitList` 의 위치 색인으로 O(1) 에 찾는다.
-        _listScratchEdgeUpstream.clear();
-        _listScratchEdgeDependent.clear();
+        _listScratchEdge.clear();
+        _listScratchOrder.clear();
         _listScratchPendingCount.assign( unitCount, 0 );
         _listScratchDependentStart.assign( unitCount + 1, 0 );
         for ( SkeletalMeshComponent* pUnit : listUnit )
@@ -385,8 +443,7 @@ namespace sw
                 const uint32                 upstreamIndex = _unitList.findIndex( pUpstream );
                 if ( upstreamIndex == invalid_index::kUint32 )
                     continue; // 사라졌거나 다른 씬의 유닛 — 순서를 강제하지 않는다
-                _listScratchEdgeUpstream.push_back( upstreamIndex );
-                _listScratchEdgeDependent.push_back( static_cast<uint32>( unitIndex ) );
+                _listScratchEdge.push_back( AnimationDependencyEdge{ upstreamIndex, static_cast<uint32>( unitIndex ) } );
                 ++_listScratchPendingCount[unitIndex];
                 ++_listScratchDependentStart[upstreamIndex + 1];
                 // 다른 유닛이 이 유닛의 포즈를 읽는다(리더 · 부착) — VAT 로 넘기면 CPU 포즈가 멈춰 따르는 쪽이 굳는다.
@@ -398,12 +455,11 @@ namespace sw
             _listScratchDependentStart[unitIndex + 1] += _listScratchDependentStart[unitIndex];
         }
         // 위 유닛별 구간 안의 순서는 간선을 모은 순서(아래 유닛 번호 순, 같은 유닛 안은 의존 등록 순)이다 — 옛 벡터 방식과 같다.
-        const size_t edgeCount = _listScratchEdgeUpstream.size();
-        _listScratchDependent.resize( edgeCount );
+        _listScratchDependent.resize( _listScratchEdge.size() );
         _listScratchDependentCursor.assign( _listScratchDependentStart.begin(), _listScratchDependentStart.end() - 1 );
-        for ( size_t edgeIndex = 0; edgeIndex < edgeCount; ++edgeIndex )
+        for ( const AnimationDependencyEdge& edge : _listScratchEdge )
         {
-            _listScratchDependent[_listScratchDependentCursor[_listScratchEdgeUpstream[edgeIndex]]++] = _listScratchEdgeDependent[edgeIndex];
+            _listScratchDependent[_listScratchDependentCursor[edge._upstream]++] = edge._dependent;
         }
 
         _listScratchReady.clear();
@@ -426,6 +482,7 @@ namespace sw
             for ( const uint32 unitIndex : _listScratchReady )
             {
                 listLevelUnit.push_back( listUnit[unitIndex] );
+                _listScratchOrder.push_back( unitIndex );
                 for ( uint32 dependentSlot = _listScratchDependentStart[unitIndex]; dependentSlot < _listScratchDependentStart[unitIndex + 1]; ++dependentSlot )
                 {
                     const uint32 dependentIndex = _listScratchDependent[dependentSlot];
@@ -451,28 +508,119 @@ namespace sw
                     vector<SkeletalMeshComponent*>& listCycleLevel = _listLevel[levelCount++];
                     listCycleLevel.clear();
                     listCycleLevel.push_back( listUnit[unitIndex] );
+                    _listScratchOrder.push_back( static_cast<uint32>( unitIndex ) );
                     const GameObject* pOwner = listUnit[unitIndex]->getOwner();
                     SW_LOG_ERROR( "Animation dependency cycle includes unit on '%#'", pOwner != nullptr ? pOwner->getName().c_str() : "(no owner)" );
                 }
             }
         }
         _listLevel.resize( levelCount );
+        rebuildComponents();
+    }
+
+    void AnimationSystem::rebuildComponents()
+    {
+        const vector<SkeletalMeshComponent*>& listUnit  = _unitList.getItems();
+        const uint32                          unitCount = static_cast<uint32>( listUnit.size() );
+
+        // 간선으로 이어진 유닛을 한 성분으로 묶는다(union-find). 대표는 성분에서 가장 작은 번호이므로 성분 번호는 "등록 순서가 가장 앞선 유닛" 순으로 매겨진다.
+        _listScratchComponentRoot.resize( unitCount );
+        for ( uint32 unitIndex = 0; unitIndex < unitCount; ++unitIndex )
+        {
+            _listScratchComponentRoot[unitIndex] = unitIndex;
+        }
+        for ( const AnimationDependencyEdge& edge : _listScratchEdge )
+        {
+            AnimationSystemInternal::uniteComponents( _listScratchComponentRoot, edge._upstream, edge._dependent );
+        }
+        _listScratchComponentOf.resize( unitCount );
+        uint32 componentCount = 0;
+        for ( uint32 unitIndex = 0; unitIndex < unitCount; ++unitIndex )
+        {
+            const uint32 root = AnimationSystemInternal::findComponentRoot( _listScratchComponentRoot, unitIndex );
+            // 대표는 성분에서 가장 작은 번호라 자기 번호보다 앞서므로 성분 번호는 이미 정해져 있다.
+            _listScratchComponentOf[unitIndex] = ( root == unitIndex ) ? componentCount++ : _listScratchComponentOf[root];
+        }
+
+        // 성분별 구간(CSR)을 센다.
+        vector<uint32>& listStart = _componentAll._listStart;
+        listStart.assign( componentCount + 1, 0 );
+        for ( uint32 unitIndex = 0; unitIndex < unitCount; ++unitIndex )
+        {
+            ++listStart[_listScratchComponentOf[unitIndex] + 1];
+        }
+        for ( uint32 componentIndex = 0; componentIndex < componentCount; ++componentIndex )
+        {
+            listStart[componentIndex + 1] += listStart[componentIndex];
+        }
+
+        // 레벨 순서(위상 순서)로 훑으며 성분 구간에 차례로 놓는다 — 구간 안은 위 유닛이 먼저이고 고리의 남은 유닛은 등록 순서로 뒤에 온다.
+        // 레벨 순서의 칸마다 놓인 칸 번호를 `_listLevelSlot` 에 남겨, 레벨을 도는 쪽이 같은 유닛을 성분에서 찾게 한다.
+        _listScratchComponentCursor.assign( listStart.begin(), listStart.end() - 1 );
+        _componentAll._listUnit.resize( unitCount );
+        _listScratchSlotOfUnit.resize( unitCount );
+        _listLevelSlot.resize( _listScratchOrder.size() );
+        for ( size_t position = 0; position < _listScratchOrder.size(); ++position )
+        {
+            const uint32 unitIndex = _listScratchOrder[position];
+            const uint32 slot      = _listScratchComponentCursor[_listScratchComponentOf[unitIndex]]++;
+
+            _componentAll._listUnit[slot]     = listUnit[unitIndex];
+            _listScratchSlotOfUnit[unitIndex] = slot;
+            _listLevelSlot[position]          = slot;
+        }
+        _componentAll.updateMaxComponentSize();
+#if defined( SW_DEBUG )
+        // 간선의 뜻("위 유닛이 먼저")이 성분 안 순서에 지켜졌는지 본다. 고리가 있으면 그 유닛들은 순서를 강제하지 않는다.
+        if ( _bCycle == SW_FALSE )
+        {
+            for ( const AnimationDependencyEdge& edge : _listScratchEdge )
+            {
+                SW_ASSERT( _listScratchSlotOfUnit[edge._upstream] < _listScratchSlotOfUnit[edge._dependent] );
+            }
+        }
+#endif
     }
 
     void AnimationSystem::collectActiveUnits( float32 deltaSeconds )
     {
         _listActive.clear();
         _listLevelStart.clear();
+        _listScratchActiveFlag.assign( _componentAll.getUnitCount(), 0 );
+        size_t position = 0;
         for ( const vector<SkeletalMeshComponent*>& level : _listLevel )
         {
             _listLevelStart.push_back( static_cast<uint32>( _listActive.size() ) );
             for ( SkeletalMeshComponent* pUnit : level )
             {
+                const uint32 slot = _listLevelSlot[position++];
                 if ( pUnit->beginAnimationFrame( deltaSeconds, _frameIndex ) )
+                {
                     _listActive.push_back( pUnit );
+                    _listScratchActiveFlag[slot] = 1;
+                }
             }
         }
         _listLevelStart.push_back( static_cast<uint32>( _listActive.size() ) );
+        SW_ASSERT( position == _listLevelSlot.size() );
+
+        // 같은 유닛을 성분별로 다시 모은다 — 일하는 유닛이 없는 성분은 빠진다.
+        _componentActive.clear();
+        const uint32 componentCount = _componentAll.getComponentCount();
+        for ( uint32 componentIndex = 0; componentIndex < componentCount; ++componentIndex )
+        {
+            const uint32 activeStart = static_cast<uint32>( _componentActive._listUnit.size() );
+            for ( uint32 slot = _componentAll.getComponentStart( componentIndex ); slot < _componentAll.getComponentEnd( componentIndex ); ++slot )
+            {
+                if ( _listScratchActiveFlag[slot] != 0 )
+                    _componentActive._listUnit.push_back( _componentAll._listUnit[slot] );
+            }
+            if ( _componentActive._listUnit.size() > activeStart )
+                _componentActive._listStart.push_back( activeStart );
+        }
+        if ( _componentActive._listStart.empty() == false )
+            _componentActive._listStart.push_back( static_cast<uint32>( _componentActive._listUnit.size() ) );
+        _componentActive.updateMaxComponentSize();
         _activeUnitCount        = static_cast<uint32>( _listActive.size() );
         _poseEvaluatedUnitCount = 0;
     }
@@ -505,6 +653,15 @@ namespace sw
         _poseEvaluatedUnitCount = poseUnitCount;
         SW_PROFILE_COUNT( "GT.Animation.activeUnits", _activeUnitCount );
         SW_PROFILE_COUNT( "GT.Animation.poseUnits", poseUnitCount );
+        // 레벨 수는 단계마다 전체 대기를 하는 횟수의 기준이다(대기 = 단계 수 × 이 값). 성분 수와 가장 큰 성분은 성분 단위로 옮길 때의 병렬도와 직렬 길이다.
+        uint32 levelRunCount = 0;
+        for ( size_t levelIndex = 0; levelIndex + 1 < _listLevelStart.size(); ++levelIndex )
+        {
+            levelRunCount += ( _listLevelStart[levelIndex] < _listLevelStart[levelIndex + 1] ) ? 1u : 0u;
+        }
+        SW_PROFILE_COUNT( "GT.Animation.levelCount", levelRunCount );
+        SW_PROFILE_COUNT( "GT.Animation.componentCount", _componentActive.getComponentCount() );
+        SW_PROFILE_COUNT( "GT.Animation.maxComponentSize", _componentActive.getMaxComponentSize() );
         if ( poseUnitCount > 0 )
         {
             const float32 sample           = static_cast<float32>( MonotonicClock::nowNanoseconds() - poseStart ) * 0.001f / static_cast<float32>( poseUnitCount );

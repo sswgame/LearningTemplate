@@ -125,6 +125,32 @@ SW_TEST_CASE( PoseModifierTest, RunsInPostProcessBeforeSkinning )
 }
 
 /**
+ * @brief [PoseModifierTest] 리더 포즈를 따르는 부품은 리그(IK)가 적용된 리더의 최종 포즈를 본다
+ * @details 몸의 리그가 본 2 를 공 위치로 끈다(후처리 단계). 부품은 몸을 리더로 따르고, 한 번 평가한 뒤 부품의 본 2 가 몸과 같은 자리여야 한다.
+ *          단계마다 레벨 순서로 도는 평가는 부품의 기본 포즈 단계가 몸의 후처리 단계보다 먼저라 리그 적용 전 포즈를 복사한다 — 성분 단위로 옮기면 사라지는 결함이다.
+ */
+SW_TEST_CASE( PoseModifierTest, FollowerReadsLeaderPoseAfterRig )
+{
+    GameObjectManager      manager;
+    SkeletalMeshComponent* pBody = TestPoseModifierInternal::createUnit( manager, "Hero", float3{ 5.0f, 0.0f, 0.0f } );
+    SkeletalMeshComponent* pPart = TestPoseModifierInternal::createUnit( manager, "Part", float3{ 5.0f, 0.0f, 0.0f } );
+    SW_ASSERT_TRUE( pBody != nullptr && pPart != nullptr );
+    GameObject* pBall = TestPoseModifierInternal::createMarker( manager, "Ball", float3{ 5.0f, 1.5f, 1.0f } );
+    SW_ASSERT_NOT_NULL( pBall );
+    PoseModifierComponent* pModifier = TestPoseModifierInternal::addRig(
+        *pBody, R"(<RigAsset><targets><item name="Ball" object="Ball" /></targets><nodes><item type="Position" name="Reach" bone="bone2" target="Ball" /></nodes></RigAsset>)" );
+    SW_ASSERT_NOT_NULL( pModifier );
+    pModifier->dispatchBeginPlay();
+    SW_ASSERT_TRUE( pModifier->isRigReady() );
+    pPart->setLeaderPose( pBody );
+
+    manager.getSubsystem<AnimationSystem>().evaluate( 1.0f / 60.0f );
+    const float3 bodyBone = TestPoseModifierInternal::getBoneModel( *pBody, 2 );
+    SW_EXPECT_TRUE( TestPoseModifierInternal::isNear( float3{ 0.0f, 1.5f, 1.0f }, bodyBone, 1e-4f ) ); // 몸 자신은 리그가 끌어간 자리다
+    SW_EXPECT_TRUE( TestPoseModifierInternal::isNear( bodyBone, TestPoseModifierInternal::getBoneModel( *pPart, 2 ), 1e-4f ) );
+}
+
+/**
  * @brief [PoseModifierTest] 다른 유닛의 본을 대상으로 하면 그 유닛이 먼저 평가되도록 의존이 걸리고 같은 프레임 값을 읽는다. 고리가 생기는 대상은 오류로 꺼진다
  */
 SW_TEST_CASE( PoseModifierTest, CrossUnitTargetOrdersUnitsAndRejectsCycle )

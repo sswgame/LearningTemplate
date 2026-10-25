@@ -160,6 +160,75 @@ namespace
             return true;
         }
 
+        /**
+         * @class AttachmentHeightTask
+         * @brief 부착 단계에서 본 1 의 이동 높이를 정해진 값으로 바꾸는 테스트용 일입니다(체형 비율이 부착 단계에서 포즈를 고치는 모양).
+         */
+        class AttachmentHeightTask final : public IAnimationPhaseTask
+        {
+        public:
+            explicit AttachmentHeightTask( float32 height )
+                : _height{ height }
+            {
+            }
+
+            bool                isAnimationActive() const override { return true; }
+            AnimationPoseAccess getPoseAccess() const override { return AnimationPoseAccess::Writes; }
+            void                runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override
+            {
+                (void)context;
+                if ( phase != AnimationPhase::Attachment )
+                    return;
+                BoneTransform bone   = unit.getLocalPose().getBoneTransform( 1 );
+                bone._translation._y = _height;
+                unit.getLocalPose().setBoneTransform( 1, bone );
+            }
+
+            float32 _height;
+        };
+
+        /** @brief 유닛 번호(목록 위치) → 번호 표를 만듭니다. */
+        static unordered_map<const SkeletalMeshComponent*, uint32> makeUnitIDMap( const vector<SkeletalMeshComponent*>& listUnit )
+        {
+            unordered_map<const SkeletalMeshComponent*, uint32> mapUnitID;
+            for ( uint32 unitID = 0; unitID < static_cast<uint32>( listUnit.size() ); ++unitID )
+            {
+                mapUnitID.emplace( static_cast<const SkeletalMeshComponent*>( listUnit[unitID] ), unitID );
+            }
+            return mapUnitID;
+        }
+
+        /** @brief 사슬 스켈레톤 유닛 @p unitCount 개를 번호 순서로 만듭니다(등록 순서 = 번호). */
+        static vector<SkeletalMeshComponent*> createNumberedUnits( GameObjectManager& manager, uint32 unitCount )
+        {
+            vector<SkeletalMeshComponent*> listUnit;
+            for ( uint32 unitID = 0; unitID < unitCount; ++unitID )
+            {
+                fixed_string<constant::kMaxBuffer32> nameBuf{};
+                formatstring( nameBuf.data(), nameBuf.capacity(), "Numbered%#", unitID );
+                listUnit.push_back( createUnit( manager, nameBuf.c_str(), 2 ) );
+            }
+            return listUnit;
+        }
+
+        /** @brief 성분 목록을 성분 순서 · 성분 안 순서 그대로 유닛 번호의 목록으로 바꿔 모읍니다(맵에 없는 유닛은 `kUint32`). */
+        static vector<vector<uint32>> collectComponentIDs( const AnimationComponentSet& components, const unordered_map<const SkeletalMeshComponent*, uint32>& mapUnitID )
+        {
+            vector<vector<uint32>> listComponentID;
+            for ( uint32 componentIndex = 0; componentIndex < components.getComponentCount(); ++componentIndex )
+            {
+                vector<uint32> listID;
+                for ( uint32 slot = components.getComponentStart( componentIndex ); slot < components.getComponentEnd( componentIndex ); ++slot )
+                {
+                    const SkeletalMeshComponent* pUnit = components.getUnits()[slot];
+                    const auto                   it    = mapUnitID.find( pUnit );
+                    listID.push_back( it != mapUnitID.end() ? it->second : invalid_index::kUint32 );
+                }
+                listComponentID.push_back( std::move( listID ) );
+            }
+            return listComponentID;
+        }
+
         static bool isSameUnits( const vector<SkeletalMeshComponent*>& listLeft, const vector<SkeletalMeshComponent*>& listRight )
         {
             if ( listLeft.size() != listRight.size() )
@@ -737,6 +806,240 @@ SW_TEST_CASE( SkeletalAnimationTest, SystemLevelsMatchFreshBuildAfterUnregister 
         SW_EXPECT_TRUE( TestSkeletalAnimationInternal::isSameLevels( TestSkeletalAnimationInternal::collectLevelIDs( referenceSystem, mapReferenceID ),
                                                                      TestSkeletalAnimationInternal::collectLevelIDs( system, mapUnitID ) ) );
     }
+}
+
+/**
+ * @brief [SkeletalAnimationTest] 연결 성분 — 독립 유닛은 각자 성분이고, 리더와 부품 · 의존 사슬은 한 성분에서 위 유닛이 먼저이며, 성분은 등록 순서가 가장 앞선 유닛 순이다
+ * @details 유닛 7 개: 0 은 2 에 의존, 1 독립, 2 위 유닛, 3 은 리더이고 4 · 5 가 3 을 따르며, 6 독립. 성분은 {2, 0} · {1} · {3, 4, 5} · {6} 이다(성분 번호는 가장 작은 등록 번호 순).
+ */
+SW_TEST_CASE( SkeletalAnimationTest, ComponentsGroupDependentUnitsInTopologicalOrder )
+{
+    GameObjectManager                                         manager;
+    const vector<SkeletalMeshComponent*>                      listUnit  = TestSkeletalAnimationInternal::createNumberedUnits( manager, 7 );
+    const unordered_map<const SkeletalMeshComponent*, uint32> mapUnitID = TestSkeletalAnimationInternal::makeUnitIDMap( listUnit );
+    listUnit[0]->addAnimationDependency( listUnit[2] );
+    listUnit[4]->setLeaderPose( listUnit[3] );
+    listUnit[5]->setLeaderPose( listUnit[3] );
+
+    AnimationSystem& system = manager.getSubsystem<AnimationSystem>();
+    system.evaluate( 0.016f );
+    const AnimationComponentSet& components = system.getComponents();
+    SW_EXPECT_EQUAL( 4u, components.getComponentCount() );
+    SW_EXPECT_EQUAL( 7u, components.getUnitCount() );
+    SW_EXPECT_EQUAL( 3u, components.getMaxComponentSize() );
+    const vector<vector<uint32>> listExpected{
+        { 2, 0 },
+        { 1 },
+        { 3, 4, 5 },
+        { 6 }
+    };
+    SW_EXPECT_TRUE( TestSkeletalAnimationInternal::isSameLevels( listExpected, TestSkeletalAnimationInternal::collectComponentIDs( components, mapUnitID ) ) );
+    // 첫 프레임은 모든 유닛이 일한다 — 일하는 성분도 같다.
+    SW_EXPECT_EQUAL( 7u, system.getActiveUnitCount() );
+    SW_EXPECT_TRUE( TestSkeletalAnimationInternal::isSameLevels( listExpected, TestSkeletalAnimationInternal::collectComponentIDs( system.getActiveComponents(), mapUnitID ) ) );
+}
+
+/**
+ * @brief [SkeletalAnimationTest] 연결 성분 — 등록 순서와 반대로 건 다이아몬드 의존도 한 성분이고 간선마다 위 유닛이 앞이다. 고리의 유닛은 등록 순서로 직렬이고 다른 성분과 섞이지 않는다
+ * @details 다이아몬드: 0 은 1 · 2 에 의존, 1 · 2 는 3 에 의존(3 이 맨 위). 한 성분 {3, 1, 2, 0} 이고 레벨은 셋이다. 고리: 4 → 5 → 6 → 4 와 독립한 7 은 {4, 5, 6} · {7} 이다.
+ */
+SW_TEST_CASE( SkeletalAnimationTest, ComponentsKeepUpstreamFirstAndCycleInRegistrationOrder )
+{
+    GameObjectManager                                         manager;
+    const vector<SkeletalMeshComponent*>                      listUnit  = TestSkeletalAnimationInternal::createNumberedUnits( manager, 8 );
+    const unordered_map<const SkeletalMeshComponent*, uint32> mapUnitID = TestSkeletalAnimationInternal::makeUnitIDMap( listUnit );
+    listUnit[0]->addAnimationDependency( listUnit[1] );
+    listUnit[0]->addAnimationDependency( listUnit[2] );
+    listUnit[1]->addAnimationDependency( listUnit[3] );
+    listUnit[2]->addAnimationDependency( listUnit[3] );
+
+    AnimationSystem& system = manager.getSubsystem<AnimationSystem>();
+    system.evaluate( 0.016f );
+    SW_EXPECT_FALSE( system.hasDependencyCycle() );
+    {
+        const AnimationComponentSet& components = system.getComponents();
+        const vector<vector<uint32>> listExpected{
+            { 3, 1, 2, 0 },
+            { 4 },
+            { 5 },
+            { 6 },
+            { 7 }
+        };
+        SW_EXPECT_TRUE( TestSkeletalAnimationInternal::isSameLevels( listExpected, TestSkeletalAnimationInternal::collectComponentIDs( components, mapUnitID ) ) );
+        SW_EXPECT_EQUAL( 4u, components.getMaxComponentSize() );
+        SW_EXPECT_EQUAL( 3u, static_cast<uint32>( system.getLevels().size() ) );
+    }
+
+    {
+        test::ScopedDefensiveTestLog expected( "an animation dependency cycle is reported" );
+        listUnit[4]->addAnimationDependency( listUnit[6] );
+        listUnit[5]->addAnimationDependency( listUnit[4] );
+        listUnit[6]->addAnimationDependency( listUnit[5] );
+        system.evaluate( 0.016f );
+    }
+    SW_EXPECT_TRUE( system.hasDependencyCycle() );
+    const vector<vector<uint32>> listExpectedCycle{
+        { 3, 1, 2, 0 },
+        { 4, 5, 6 },
+        { 7 }
+    };
+    SW_EXPECT_TRUE( TestSkeletalAnimationInternal::isSameLevels( listExpectedCycle, TestSkeletalAnimationInternal::collectComponentIDs( system.getComponents(), mapUnitID ) ) );
+}
+
+/**
+ * @brief [SkeletalAnimationTest] 연결 성분 — 유닛이 없으면 성분도 없고, 마지막 유닛을 해제하면 성분이 비며, 쉬는 유닛의 성분은 일하는 성분에서 빠진다
+ * @details 유닛 0 은 독립이고 1 은 리더, 2 가 1 을 따른다. 둘째 프레임에 0 의 일이 꺼지면 일하는 성분은 {1, 2} 하나다(리더가 일을 하나 더 가진다).
+ */
+SW_TEST_CASE( SkeletalAnimationTest, ComponentsHandleEmptyAndIdleUnits )
+{
+    GameObjectManager manager;
+    AnimationSystem&  system = manager.getSubsystem<AnimationSystem>();
+    system.evaluate( 0.016f );
+    SW_EXPECT_EQUAL( 0u, system.getComponents().getComponentCount() );
+    SW_EXPECT_EQUAL( 0u, system.getComponents().getUnitCount() );
+    SW_EXPECT_EQUAL( 0u, system.getComponents().getMaxComponentSize() );
+    SW_EXPECT_EQUAL( 0u, system.getActiveComponents().getComponentCount() );
+
+    const vector<SkeletalMeshComponent*>                      listUnit  = TestSkeletalAnimationInternal::createNumberedUnits( manager, 3 );
+    const unordered_map<const SkeletalMeshComponent*, uint32> mapUnitID = TestSkeletalAnimationInternal::makeUnitIDMap( listUnit );
+    listUnit[2]->setLeaderPose( listUnit[1] );
+    TestSkeletalAnimationInternal::RecordingTask idleTask( nullptr, 0.1f );
+    TestSkeletalAnimationInternal::RecordingTask leaderTask( nullptr, 0.2f );
+    listUnit[0]->registerAnimationPhaseTask( &idleTask );
+    listUnit[1]->registerAnimationPhaseTask( &leaderTask );
+
+    system.evaluate( 0.016f );
+    SW_EXPECT_EQUAL( 2u, system.getActiveComponents().getComponentCount() );
+    idleTask._bActive = false;
+    system.evaluate( 0.016f );
+    const vector<vector<uint32>> listExpectedAll{
+        { 0 },
+        { 1, 2 }
+    };
+    const vector<vector<uint32>> listExpectedActive{
+        { 1, 2 }
+    };
+    SW_EXPECT_EQUAL( 2u, system.getActiveUnitCount() );
+    SW_EXPECT_TRUE( TestSkeletalAnimationInternal::isSameLevels( listExpectedAll, TestSkeletalAnimationInternal::collectComponentIDs( system.getComponents(), mapUnitID ) ) );
+    SW_EXPECT_TRUE( TestSkeletalAnimationInternal::isSameLevels( listExpectedActive, TestSkeletalAnimationInternal::collectComponentIDs( system.getActiveComponents(), mapUnitID ) ) );
+    SW_EXPECT_EQUAL( 2u, system.getActiveComponents().getMaxComponentSize() );
+
+    // 일하는 유닛이 없으면 일하는 성분도 없다.
+    leaderTask._bActive = false;
+    listUnit[2]->setLeaderPose( nullptr );
+    system.evaluate( 0.016f );
+    system.evaluate( 0.016f );
+    SW_EXPECT_EQUAL( 0u, system.getActiveUnitCount() );
+    SW_EXPECT_EQUAL( 0u, system.getActiveComponents().getComponentCount() );
+
+    // 마지막 유닛까지 해제하면 성분이 빈다.
+    for ( SkeletalMeshComponent* pUnit : listUnit )
+    {
+        system.unregisterUnit( pUnit );
+    }
+    SW_EXPECT_EQUAL( 0u, system.getComponents().getComponentCount() );
+    system.evaluate( 0.016f );
+    SW_EXPECT_EQUAL( 0u, system.getActiveComponents().getComponentCount() );
+    listUnit[0]->unregisterAnimationPhaseTask( &idleTask );
+    listUnit[1]->unregisterAnimationPhaseTask( &leaderTask );
+}
+
+/**
+ * @brief [SkeletalAnimationTest] 유닛을 해제해도 성분과 일하는 성분은 처음부터 다시 지은 것과 같다 — 외톨이 해제의 지름길 · 의존 유닛 해제의 전체 재구성 (유닛 700 개)
+ * @details 7 개마다 세 단계 사슬(성분 하나)이고 나머지 넷은 외톨이다. (1) 외톨이만 해제한 뒤 평가 전에 읽어도, 사슬 유닛만 일하게 한 평가 뒤에도 새로 지은 시스템과 성분이 같고
+ *          일하는 성분은 사슬 유닛만 남은 것이다(레벨 → 성분 칸 번호가 지름길에서 맞게 고쳐졌는지 본다). (2) 사슬의 유닛을 해제하면 전체 재구성이다.
+ */
+SW_TEST_CASE( SkeletalAnimationTest, ComponentsMatchFreshBuildAfterUnregister )
+{
+    constexpr uint32 kUnitCount = 700;
+    vector<uint8>    listAlive( kUnitCount, SW_TRUE );
+
+    GameObjectManager                                   manager;
+    vector<SkeletalMeshComponent*>                      listUnit;
+    unordered_map<const SkeletalMeshComponent*, uint32> mapUnitID;
+    TestSkeletalAnimationInternal::createDependencyUnits( manager, listAlive, listUnit, mapUnitID );
+    AnimationSystem& system = manager.getSubsystem<AnimationSystem>();
+    system.evaluate( 0.016f );
+    SW_ASSERT_EQUAL( 500u, system.getComponents().getComponentCount() );
+    SW_ASSERT_EQUAL( 3u, system.getComponents().getMaxComponentSize() );
+
+    for ( uint32 step = 0; step < 2; ++step )
+    {
+        // step 0: 외톨이(번호를 7 로 나눈 나머지가 3 이상)만 해제. step 1: 사슬의 유닛(위 · 아래)을 해제.
+        for ( uint32 unitID = 0; unitID < kUnitCount; ++unitID )
+        {
+            const bool bRemove = ( step == 0 ) ? ( unitID % 7 >= 3 && unitID % 11 == 0 ) : ( listAlive[unitID] == SW_TRUE && unitID % 13 == 0 );
+            if ( bRemove )
+            {
+                system.unregisterUnit( listUnit[unitID] );
+                listAlive[unitID] = SW_FALSE;
+            }
+        }
+        GameObjectManager                                   referenceManager;
+        vector<SkeletalMeshComponent*>                      listReferenceUnit;
+        unordered_map<const SkeletalMeshComponent*, uint32> mapReferenceID;
+        TestSkeletalAnimationInternal::createDependencyUnits( referenceManager, listAlive, listReferenceUnit, mapReferenceID );
+        AnimationSystem& referenceSystem = referenceManager.getSubsystem<AnimationSystem>();
+        referenceSystem.evaluate( 0.016f );
+        const vector<vector<uint32>> listExpected = TestSkeletalAnimationInternal::collectComponentIDs( referenceSystem.getComponents(), mapReferenceID );
+
+        // 외톨이만 해제했으면 평가 전에 읽어도 해제한 유닛이 빠진 같은 성분이다(지름길). 사슬 유닛을 해제했으면 다음 평가가 다시 짓는다.
+        if ( step == 0 )
+            SW_EXPECT_TRUE( TestSkeletalAnimationInternal::isSameLevels( listExpected, TestSkeletalAnimationInternal::collectComponentIDs( system.getComponents(), mapUnitID ) ) );
+
+        // 사슬 유닛(번호를 7 로 나눈 나머지가 3 보다 작은)만 깨워 평가한다 — 일하는 성분은 사슬 유닛만 남은 성분이다.
+        for ( uint32 unitID = 0; unitID < kUnitCount; ++unitID )
+        {
+            if ( listAlive[unitID] == SW_TRUE && unitID % 7 < 3 )
+                listUnit[unitID]->markPoseDirty();
+        }
+        system.evaluate( 0.016f );
+        SW_EXPECT_FALSE( system.hasDependencyCycle() );
+        const vector<vector<uint32>> listAfter = TestSkeletalAnimationInternal::collectComponentIDs( system.getComponents(), mapUnitID );
+        SW_EXPECT_TRUE( TestSkeletalAnimationInternal::isSameLevels( listExpected, listAfter ) );
+        vector<vector<uint32>> listExpectedActive;
+        for ( const vector<uint32>& listComponent : listAfter )
+        {
+            vector<uint32> listActiveID;
+            for ( const uint32 unitID : listComponent )
+            {
+                if ( unitID % 7 < 3 )
+                    listActiveID.push_back( unitID );
+            }
+            if ( listActiveID.empty() == false )
+                listExpectedActive.push_back( std::move( listActiveID ) );
+        }
+        SW_EXPECT_TRUE( TestSkeletalAnimationInternal::isSameLevels( listExpectedActive, TestSkeletalAnimationInternal::collectComponentIDs( system.getActiveComponents(), mapUnitID ) ) );
+    }
+}
+
+/**
+ * @brief [SkeletalAnimationTest] 리더 포즈를 따르는 부품은 리더의 최종 포즈(부착 단계의 체형 비율까지 적용된 포즈)를 본다
+ * @details 몸이 부착 단계에서 본 1 의 높이를 1 m 에서 2.5 m 로 바꾸고, 부품은 몸을 리더로 따른다. 한 번 평가한 뒤 부품의 본 1 과 모델 공간 본 2 가 몸과 같아야 한다.
+ *          단계마다 레벨 순서로 도는 평가는 부품의 기본 포즈 단계가 몸의 부착 단계보다 먼저라 비율 적용 전 포즈(1 m)를 복사한다 — 성분 단위로 옮기면 사라지는 결함이다.
+ */
+SW_TEST_CASE( SkeletalAnimationTest, FollowerReadsLeaderFinalPoseAfterAttachmentPhase )
+{
+    GameObjectManager      manager;
+    SkeletalMeshComponent* pBody = TestSkeletalAnimationInternal::createUnit( manager, "Body", 3 );
+    SkeletalMeshComponent* pPart = TestSkeletalAnimationInternal::createUnit( manager, "Part", 3 );
+    SW_ASSERT_TRUE( pBody != nullptr && pPart != nullptr );
+    TestSkeletalAnimationInternal::AttachmentHeightTask proportion( 2.5f );
+    pBody->registerAnimationPhaseTask( &proportion );
+    pPart->setLeaderPose( pBody );
+
+    manager.getSubsystem<AnimationSystem>().evaluate( 0.016f );
+    // 몸 자신은 비율이 적용된 포즈다.
+    SW_EXPECT_NEAR_EQUAL( 2.5f, pBody->getLocalPose().getBoneTransform( 1 )._translation._y, 1e-5f );
+    float4x4 bodyBone{};
+    float4x4 partBone{};
+    SW_ASSERT_TRUE( pBody->findBoneModelTransform( hashed_string( "bone2" ), bodyBone ) );
+    SW_ASSERT_TRUE( pPart->findBoneModelTransform( hashed_string( "bone2" ), partBone ) );
+    SW_EXPECT_NEAR_EQUAL( 3.5f, bodyBone.getTranslation()._y, 1e-5f );
+    // 부품은 몸의 최종 포즈를 따라야 한다.
+    SW_EXPECT_NEAR_EQUAL( 2.5f, pPart->getLocalPose().getBoneTransform( 1 )._translation._y, 1e-5f );
+    SW_EXPECT_NEAR_EQUAL( bodyBone.getTranslation()._y, partBone.getTranslation()._y, 1e-5f );
+    pBody->unregisterAnimationPhaseTask( &proportion );
 }
 
 /**

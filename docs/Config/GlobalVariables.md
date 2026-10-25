@@ -301,8 +301,10 @@
 |---|---|---|---|---|---|
 | `gv_benchAnimate` | `int32` | `1` | 테스트 | 벤치의 시간 구동 변화(회전·상하 이동·스케일) (0=멈춤, 픽셀 비교 검증용) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
 | `gv_benchCharacterColumns` | `int32` | `0` | 테스트 | 벤치 캐릭터를 N 열 격자로 세운다 (0=한 줄) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
+| `gv_benchCharacterFollowers` | `int32` | `0` | 테스트 | 벤치 캐릭터마다 리더 포즈 부품 유닛 수 (0=없음, 의존 레벨 · 성분 측정) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
 | `gv_benchCharacters` | `int32` | `0` | 테스트 | 벤치 스킨드 캐릭터 수 (0=사용 안 함, KayKit 기사 · Idle/Walking_A) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
 | `gv_benchCharacterStagger` | `int32` | `0` | 테스트 | 벤치 캐릭터 시작 시각을 흩는다 (0=모두 0 초) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
+| `gv_benchCharacterWeapon` | `int32` | `0` | 테스트 | 벤치 캐릭터마다 리그 무기 유닛 (0=없음, 가장 깊은 부품이 대상이라 레벨이 하나 깊어진다) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
 | `gv_benchCombat` | `int32` | `0` | 테스트 | 벤치 전투 연출 (0=사용 안 함, KayKit 스켈레톤 — 알림 · 히트 존 · 래그돌 · 칼 떨어뜨리기) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
 | `gv_benchCrowdShare` | `int32` | `0` | 테스트 | 벤치 캐릭터 군중 포즈 공유 (0=캐릭터마다 사본 · 1=그룹 공유 + 먼 캐릭터 VAT) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
 | `gv_benchFaces` | `int32` | `0` | 테스트 | 벤치 테스트 머리 수 (0=사용 안 함, 모프 · 표정 · 립싱크 · 깜빡임 · 시선) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |

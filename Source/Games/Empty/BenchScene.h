@@ -103,6 +103,11 @@ namespace sw
         void spawnRigCape( GameObjectManager& objects, GameObject* pKnight, SkeletalMeshComponent* pBody, bool bRig );
         /** @brief `-gv_benchCharacters=N`: 스킨드 캐릭터 N 명을 한 줄로 스폰하고 Idle 과 Walking_A 를 번갈아 재생합니다. */
         void spawnCharacters( uint32 characterCount );
+        /**
+         * @brief `-gv_benchCharacterFollowers` · `-gv_benchCharacterWeapon`: 캐릭터 @p pBody 에 리더 포즈로 따르는 부품 유닛과 리그가 붙은 무기 유닛을 만듭니다(애니메이션 의존 레벨 · 성분 측정).
+         * @details 부품은 메시 없이 몸과 같은 스켈레톤만 가져 의존 순서의 비용만 잰다. 무기는 가장 깊은 부품(없으면 몸)을 리그 대상으로 삼아 한 레벨 더 깊다.
+         */
+        void spawnCharacterParts( GameObjectManager& objects, uint32 characterIndex, SkeletalMeshComponent* pBody );
         /** @brief `-gv_benchCombat=1`: 전투 연출(KayKit 스켈레톤 적, 칼, 강체 바닥, 연출 컴포넌트)을 스폰합니다. */
         void spawnCombat();
         /** @brief `-gv_benchRagdolls=N`: 래그돌을 가진 스켈레톤 N 명을 격자로 세웁니다. */
