@@ -100,19 +100,27 @@ namespace sw
         ++entry._refCount;
 
         // GPU 자원이 초기화됐는지는 머티리얼에게 묻는다. 캐시가 따로 기록하면 디바이스가 죽었을 때 그 기록이 틀려진다.
-        if ( pDevice != nullptr && entry._material->isRHIValid() == false )
-        {
-            if ( entry._material->initialize( pDevice, key ) == false )
-            {
-                SW_LOG_ERROR( "Failed to initialize Material %#", key.c_str() );
-                --entry._refCount;
-                if ( entry._refCount == 0 )
-                    _impl->_mapEntry.erase( key );
-                return nullptr;
-            }
-        }
+        if ( pDevice == nullptr || entry._material->isRHIValid() )
+            return entry._material.get();
 
-        return entry._material.get();
+        // 초기화(파일 읽기 · 버퍼 생성 · 등록)는 잠금 밖에서 한다. GL 은 이 일이 렌더 스레드의 프레임 끝까지 기다리는데, 렌더 스레드는 프레임 안에서
+        // `takePSOWarmMaterials` 로 이 잠금을 잡는다. 소유를 하나 빌려 그 사이 참조가 0 이 되어도 머티리얼이 살아 있게 한다(`initializePending` 과 같다).
+        // 디바이스를 주고 부르는 곳은 게임 스레드 하나라 같은 머티리얼을 둘이 초기화하지 않는다.
+        const shared_ptr<Material> material = entry._material;
+        lock.unlock();
+        if ( material->initialize( pDevice, key ) )
+            return material.get();
+
+        SW_LOG_ERROR( "Failed to initialize Material %#", key.c_str() );
+        lock.lock();
+        const auto failedIt = _impl->_mapEntry.find( key );
+        if ( failedIt != _impl->_mapEntry.end() )
+        {
+            --failedIt->second._refCount;
+            if ( failedIt->second._refCount == 0 )
+                _impl->_mapEntry.erase( key );
+        }
+        return nullptr;
     }
 
     void MaterialCache::release( string_view relativePath )
@@ -224,23 +232,31 @@ namespace sw
 
         const string key{ FileUtil::normalizePath( relativePath ) };
 
-        std::unique_lock<std::shared_mutex> lock{ _impl->_mutex };
-        auto                                it{ _impl->_mapEntry.find( key ) };
-        if ( it != _impl->_mapEntry.end() )
+        // 대기와 초기화는 잠금 밖에서 한다. `waitIdle` 은 렌더 스레드가 받은 일을 끝내길 기다리는데 렌더 스레드는 프레임 안에서
+        // `takePSOWarmMaterials` 로 이 잠금을 잡는다. 잠금을 쥔 채 기다리면 서로 영영 기다린다. 소유를 하나 빌려 그 사이 항목이 지워져도 머티리얼이 살아 있게 한다.
+        shared_ptr<Material> material;
         {
-            if ( it->second._material->isRHIValid() && pDevice != nullptr )
-            {
-                // 아직 이전 프레임(들)이 GPU 에서 이 Material 의 bindless 상수버퍼 인덱스를 참조하고
-                // 있을 수 있다. releaseRHI() 의 unregisterBindlessResource 는 인덱스를 즉시 프리리스트로
-                // 반환해서, waitIdle 없이 바로 initialize() 가 같은 인덱스를 재할당하면 아직 그 인덱스를
-                // 읽는 중인 드로우가 다른 머티리얼의 값을 읽는 조용한 데이터 오염이 될 수 있다.
-                pDevice->waitIdle();
-                it->second._material->releaseRHI( pDevice );
-            }
-
-            if ( pDevice != nullptr && it->second._material->initialize( pDevice, key ) == false )
-                SW_LOG_ERROR( "Hot-Reload failed for Material %#", key.c_str() );
+            std::shared_lock<std::shared_mutex> lock{ _impl->_mutex };
+            const auto                          it = _impl->_mapEntry.find( key );
+            if ( it == _impl->_mapEntry.end() )
+                return;
+            material = it->second._material;
         }
+        if ( pDevice == nullptr )
+            return;
+
+        if ( material->isRHIValid() )
+        {
+            // 아직 이전 프레임(들)이 GPU 에서 이 Material 의 bindless 상수버퍼 인덱스를 참조하고
+            // 있을 수 있다. releaseRHI() 의 unregisterBindlessResource 는 인덱스를 즉시 프리리스트로
+            // 반환해서, waitIdle 없이 바로 initialize() 가 같은 인덱스를 재할당하면 아직 그 인덱스를
+            // 읽는 중인 드로우가 다른 머티리얼의 값을 읽는 조용한 데이터 오염이 될 수 있다.
+            pDevice->waitIdle();
+            material->releaseRHI( pDevice );
+        }
+
+        if ( material->initialize( pDevice, key ) == false )
+            SW_LOG_ERROR( "Hot-Reload failed for Material %#", key.c_str() );
     }
 
     shared_ptr<const void> MaterialCache::pinAsset( string_view relativePath )

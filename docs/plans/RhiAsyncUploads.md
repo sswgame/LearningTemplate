@@ -155,9 +155,24 @@ DX12 의 인덱스 반환 지연(`deferFreeBindlessIndex`)과 Vulkan 의 해제 
 | `IRHIDevice` 지연 핸들 큐 | 넣는 쪽은 렌더 스레드 밖의 아무 스레드, 빼는 쪽은 렌더 스레드와 `waitIdle` · `shutdown` | `_mutex` 가 목록을 지키고 프레임 수는 atomic | 아니오(목록을 락 안에서 통째로 옮겨 락 밖에서 해제) | 큐는 문제 없음. 같은 자리의 렌더 스레드 등록 셋(함수 · 컨텍스트 · id)과 `_bParallelRecording` 이 일반 변수라 렌더 스레드를 세우고 풀 때 `releaseHandle` 과 겹쳤다. 고침 |
 | `RHIHandleTable::get` → `SlotHandleTable` | `insert` · `take` · `erase` 는 내부 뮤텍스, `get` 은 락 없음 | 슬롯 저장소가 `PagedArray`(청크 고정 배열)라 슬롯이 늘어도 돌려준 주소가 옮겨지지 않고, 점유와 세대가 원자값 하나다 | 예(슬롯 주소) | 주소 안정성은 성립한다. 값의 수명은 상위 계층 몫이다(아래) |
 
-**고친 것.** ① GL 의 bindless 등록 · 해제 아홉 함수가 `ScopedOpenGLContext` 안에서 표를 바꿉니다. GL 의 규칙은 "표는 컨텍스트를 쥔 스레드만 읽고 쓴다"이고(DX 와 Vulkan 의 `_bindlessMutex` 와 같은 역할), 등록 · 해제만 그 가드 밖에 있었습니다. 렌더 스레드가 프레임 중이면 프레임 끝까지 기다리며, 바로 앞의 `createConstantBuffer` · `createTexture2D` 가 이미 그렇게 합니다. ② `IRHIDevice` 의 `_pfnRenderThreadDrain` · `_pRenderThreadDrainContext` · `_renderThreadID` · `_bParallelRecording` 을 atomic 으로 바꿨습니다(세울 때 함수를 마지막에 release 로 쓰고 읽는 쪽이 함수를 acquire 로 먼저 읽습니다). 컴파일은 확인하지 않았습니다 **[확인 전]**.
+**고친 것.** ① GL 의 bindless 등록 · 해제 아홉 함수가 `ScopedOpenGLContext` 안에서 표를 바꿉니다. GL 의 규칙은 "표는 컨텍스트를 쥔 스레드만 읽고 쓴다"이고(DX 와 Vulkan 의 `_bindlessMutex` 와 같은 역할), 등록 · 해제만 그 가드 밖에 있었습니다. 렌더 스레드가 프레임 중이면 프레임 끝까지 기다리며, 바로 앞의 `createConstantBuffer` · `createTexture2D` 가 이미 그렇게 합니다. ② `IRHIDevice` 의 `_pfnRenderThreadDrain` · `_pRenderThreadDrainContext` · `_renderThreadID` · `_bParallelRecording` 을 atomic 으로 바꿨습니다(세울 때 함수를 마지막에 release 로 쓰고 읽는 쪽이 함수를 acquire 로 먼저 읽습니다). ③ DX11 의 `destroyBuffer` · `destroyPipelineState` 가 `assertRegistryMutableNow` 로 병렬 기록 중 호출을 감시합니다(아래 `forget*InRecordingStates`). ④ `MaterialCache::acquire`(디바이스를 준 호출)와 `reload` 가 파일 읽기 · 버퍼 생성 · 등록 · `waitIdle` 을 `_impl->_mutex` 밖에서 합니다(아래 락 순서). 바꾼 파일은 `clang-cl /Zs` 로 문법을 확인했습니다 **[코드]**.
 
-**남은 계약.** `SlotHandleTable::get` 이 돌려준 슬롯의 **내용**은 그 핸들을 `take` · `erase` 하는 스레드와 겹치면 안 됩니다. 핸들 해제를 렌더 스레드가 프레임 밖에서 하게 미루는 `IRHIDevice::releaseHandle` 이 그 계약을 지킵니다. `get` 을 부르는 곳 전부가 이 미룸을 거치는지는 읽지 않았습니다 **[확인 전]**.
+**락 순서(GL 가드가 렌더 스레드의 프레임 끝을 기다리므로 순환을 호출처별로 따라갔다) [코드].** 렌더 스레드는 프레임 안에서 컨텍스트를 쥐고 있으므로, 렌더 스레드가 아닌 스레드가 락 L 을 쥔 채 등록 · 해제(또는 같은 가드의 `create*` · `destroy*`)를 부르고 렌더 스레드가 프레임 안에서 L 을 잡으면 서로 기다립니다.
+
+| 호출처(스레드) | 쥔 락 | 가드 대기 | 판정 |
+| --- | --- | --- | --- |
+| 렌더 스레드의 모든 호출(트랜지언트 · 캔버스 · `GPUScene` 의 `updateRHI` · 텍스처 펌프 · 슬롯 해제) | 무엇이든 | 컨텍스트가 이미 현재라 기다리지 않는다 | 안전 |
+| `MaterialCache::acquire`(경로, 디바이스) — 게임 스레드 | `_impl->_mutex` | 초기화가 렌더 스레드의 프레임 끝까지 기다린다. 렌더 스레드는 `takePSOWarmMaterials`(`warmPinnedMaterialPSOs`)로 같은 락을 잡는다 | **순환 가능**(가드를 더하기 전에도 `createConstantBuffer` 가 같은 모양이었다). 고침: 초기화를 락 밖으로 |
+| `MaterialCache::reload` — 게임 스레드 | `_impl->_mutex` 를 쥔 채 `waitIdle` · `releaseRHI` · `initialize` | `waitIdle` 이 렌더 스레드가 받은 일을 끝내길 기다리는데 그 일이 같은 락을 기다린다 | **순환**(백엔드와 무관한 교착). 고침: 락 밖으로 |
+| `MaterialCache::initializePending` | 없음(소유만 빌려 락 밖에서 초기화) | 기다려도 순환 없음 | 안전 |
+| `TextureCache` 의 `request` · `acquire` · 렌더 타깃 · CPU 텍스처 · 완료 | 장치를 쓰기 전에 `_mutex` · `_awaitingMutex` 를 푼다 | 기다려도 순환 없음 | 안전 |
+| `MaterialInstance::updateRHI`(`_overrideMutex` 를 쥔 채 만들고 등록) | `_overrideMutex` | 호출처가 `GPUScene` 뿐이라 렌더 스레드다 | 안전 |
+| `IRHIDevice::releaseHandle` 즉시 경로 · `flushDeferredHandleReleases` · `releaseRetiredHandles` | 큐 `_mutex` 는 목록을 옮긴 뒤 풀고 해제한다 | 렌더 스레드가 떠 있으면 다른 스레드의 해제는 미룬다. 렌더 스레드가 없으면 경쟁자가 없다 | 안전 |
+| DX11 · DX12 · Vulkan 의 등록 · 해제 | `_bindlessMutex` 하나(잎). 안에서 해제 큐 스핀락만 잡는다. Vulkan `unregisterBindlessTexture` 는 핸들 테이블 뮤텍스 → `_bindlessMutex` 순이고 거꾸로 잡는 곳이 없다. DX12 `_resourceStateMutex` 는 `_bindlessMutex` 와 겹치지 않는다 | 컨텍스트 · 제출 락(`_uploadSlotMutex` · `_queueMutex` · DX11 즉시 컨텍스트 락)을 잡는 곳이 없다 | 안전 |
+
+**DX11 `forget*InRecordingStates`.** `destroyBuffer` · `destroyPipelineState` 를 `releaseHandle` 을 거치지 않고 직접 부르는 곳을 모두 따라갔다: `AsyncBufferReadback`(초기화 · 종료는 프레임 셋업의 `requestOcclusionReadback`), `RHIConstantBufferSlot` · `RHIStructuredBufferSlot` · `GPUMeshVertexPool` · `GPUScene` · `RenderPSOCache::releaseAll`(디바이스를 비우거나 셰이더를 다시 지을 때). 모두 렌더 스레드의 셋업이나 렌더러 초기화 · 해제이고 병렬 기록 구간(`recordAndSubmitLevel`)에서 부르는 곳은 없었습니다. 그래서 두 함수에 `assertRegistryMutableNow` 를 둬 계약으로 못 박았습니다(Debug 에서 걸리면 그 호출처가 결함이고 `releaseHandle` 로 돌려야 합니다). 에디터의 직접 `destroyTexture`(`EditorUICapture`, `EditorRenderViews` · `RenderTargetPanel` 의 렌더러 없을 때 분기)는 스레드를 읽지 않았습니다 **[확인 전]**.
+
+**`SlotHandleTable::get` 의 수명 계약 [코드].** 주소: `PagedArray` 는 청크 포인터를 acquire 로 읽고 청크를 release 로 발행하며 `ensure` 는 `SlotHandleTable` 이 뮤텍스 안에서만 부르고 `releaseChunks` 는 소멸자에서만 부릅니다(`clear` 는 청크를 남깁니다). 그래서 `get` 이 받은 주소는 테이블이 살아 있는 동안 옮겨지지 않습니다. 값: `get` 의 호출은 백엔드마다 `_gpuBuffers` · `_gpuTextures` · `_pipelineStates` 에 닿는 34곳(`forEach` 포함, 대부분 `resolve*` 래퍼)이고 기록 · 등록 · 전송 안에서 곧바로 쓰는 모양입니다(34곳을 하나씩 읽지는 않았습니다 **[확인 전]**). 슬롯의 값이 비워지는 `take` · `erase` 는 렌더 스레드가 프레임 밖에서 하는 `releaseNow`(`notifyRenderFrameRetired` · `waitIdle` · 렌더 스레드 세우기 · `shutdown`)나, 위의 렌더 스레드 소유 직접 해제뿐입니다. 읽지 않은 곳은 에디터의 직접 `destroyTexture` 와 렌더 스레드 밖에서 `resolve*` 를 불러 텍스처 레코드를 읽는 전송 · 등록 경로(`registerBindlessTexture` 가 `resolveTexture` 로 얻은 레코드를 읽는 동안 다른 스레드가 그 텍스처를 `destroyTexture` 하지 않는다는 것은 호출한 쪽 몫입니다)입니다 **[확인 전]**.
 
 ### 2.5 열린 문제
 

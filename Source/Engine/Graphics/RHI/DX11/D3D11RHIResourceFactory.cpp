@@ -251,6 +251,8 @@ namespace sw
     {
         if ( buffer == 0 )
             return;
+        // 아래 `forgetBufferInRecordingStates` 는 다른 스레드가 기록 중인 리스트의 상태에 쓴다. 병렬 기록 중에는 부르지 않는 것이 계약이다.
+        _pDevice->assertRegistryMutableNow( "destroyBuffer" );
         _pDevice->forgetBufferInRecordingStates( buffer );
 
         D3D11RHIDevice::BufferRecord owned;
