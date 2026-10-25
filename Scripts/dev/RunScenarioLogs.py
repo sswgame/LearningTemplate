@@ -40,7 +40,7 @@ kAllowListRelPath = "Resource/engine/automation/allowedlogs.json"
 kPlaceholderText = "TODO"
 #: 시나리오가 끝까지 돈 종료 코드 — 통과 · 미확정 · 처리하지 않은 로그. 그 밖(실패 · 읽기 오류 · 시간 초과)은 로그 게이트까지 가지 못해 맞은 id 를 모른다.
 kRanToEndExitCodes: tuple[int, ...] = (0, 14, 15)
-#: 처리하지 않은 로그로 끝난 시나리오의 종료 코드(C++ `AutomationResult::UnhandledLog`).
+#: 처리하지 않은 로그로 끝난 시나리오의 종료 코드(C++ `AutomationOutcome::UnhandledLog`, `AutomationExitCode.h`).
 kUnhandledLogExitCode = 15
 #: `unhandledLogs` 줄의 id 부분 — `[Warning] [호출자] (id=영역.사건) 본문`. id 가 없는 줄은 `(no log id)` 라 맞지 않는다.
 _kUnhandledIdRe = re.compile(r"\(id=([A-Za-z0-9_.]+)\)")

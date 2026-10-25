@@ -49,7 +49,7 @@ GPU 확인(main d679388a5 의 Shipping)에서 나온 거짓 실패 세 가지를
 사진 지표를 단언하는 시나리오(`<ExpectImage>`)의 문턱이 첫 측정 전의 어림값인 채 커밋되어, 어림값과 잰 값이 데이터에서 구분되지 않았습니다(`sky` · `vfxgpulights` 의 어림값, 에디터 시작 시나리오의 틀린 개수). 근본 원인은 측정 전에 숫자를 시나리오에 적는 흐름이 있고 그 숫자의 출처가 형식에 없는 것입니다.
 
 - **형식:** 모든 `ExpectImage` 는 `measured="YYYY-MM-DD 백엔드:값 …"`(잰 값) 또는 `provisional="이유"`(어림값) 가운데 정확히 하나를 가져야 합니다. 없거나 형식이 틀리면 시나리오 읽기 오류입니다(`AutomationThresholdBasis`). 옛 형식 리더는 두지 않았고 시나리오 데이터를 다시 썼습니다.
-- **어림값의 취급:** 어림값 문턱은 틀리면 그대로 실패이고, 맞으면 통과(0)가 아니라 미확정(14, `AutomationResult::Unconfirmed`)으로 끝납니다. 보고 JSON 의 `unconfirmed[]` 와 `[Scenario] UNCONFIRMED` 줄이 목록입니다. `AppScenarioTest` 는 실패로 세지 않고 `[AppTestUtil] UNCONFIRMED` 로그로 알립니다.
+- **어림값의 취급:** 어림값 문턱은 틀리면 그대로 실패이고, 맞으면 통과(0)가 아니라 미확정(14, `AutomationOutcome::Unconfirmed`)으로 끝납니다. 보고 JSON 의 `unconfirmed[]` 와 `[Scenario] UNCONFIRMED` 줄이 목록입니다. `AppScenarioTest` 는 실패로 세지 않고 `[AppTestUtil] UNCONFIRMED` 로그로 알립니다.
 - **확정하는 법:** GPU 실행의 `metrics` 줄(`metric(영역) 파일 = 값`)을 보고 `provisional` 을 `measured="날짜 all:값"` 으로 바꿉니다. 문턱 숫자도 그 값에 맞춰 정합니다.
 - **문턱을 정하는 규칙(잰 값 기준):** 켜져 있어야 하는 쪽의 하한(`atLeast`)은 잰 값의 70 % 아래, 꺼져 있어야 하는 쪽의 상한(`atMost`)은 잰 값의 1.5 배 위(0 이 기준이면 0.001), 부호가 있는 값(`meanRedMinusBlue`)은 0 과 잰 값 사이 절반쯤에 둡니다.
   백엔드 사이 차이는 1e-3 아래라 여유가 그것을 먹지 않습니다. 근거는 `measured` 속성(날짜 · 백엔드별 값)과 시나리오 머리 주석(측정 커밋 · 구성)에 둡니다.

@@ -26,11 +26,11 @@ namespace test
     {
         struct AppTestUtilInternal
         {
-            /** @brief 시나리오가 건너뜀으로 끝났다(전경 창을 못 얻음 등 — `AutomationResult::Skipped`). */
+            /** @brief 시나리오가 건너뜀으로 끝났다(전경 창을 못 얻음 등 — `AutomationOutcome::Skipped`). */
             static constexpr int32 kSkippedExitCode = 13;
-            /** @brief 시나리오의 단언은 모두 맞았지만 어림값 문턱이 들어 있다(`AutomationResult::Unconfirmed`). 실패가 아니라 로그로 미확정을 알리고 통과로 넘긴다. */
+            /** @brief 시나리오의 단언은 모두 맞았지만 어림값 문턱이 들어 있다(`AutomationOutcome::Unconfirmed`). 실패가 아니라 로그로 미확정을 알리고 통과로 넘긴다. */
             static constexpr int32 kUnconfirmedExitCode = 14;
-            /** @brief 시나리오는 통과했지만 출력에 처리하지 않은 Warning · Error 가 있다(`AutomationResult::UnhandledLog` 와 같은 값). 실행기 안의 로그 게이트와 같은 코드로 끝난다. */
+            /** @brief 시나리오는 통과했지만 출력에 처리하지 않은 Warning · Error 가 있다(`AutomationOutcome::UnhandledLog` 와 같은 값). 실행기 안의 로그 게이트와 같은 코드로 끝난다. */
             static constexpr int32 kUnhandledLogExitCode = 15;
 
             /**
@@ -116,10 +116,10 @@ namespace test
                     sw::string             error;
                     if ( reason.empty() == false )
                         return;
-                    const bool bDeclares = scenario.loadFromPath( scenarioPath, error ) && scenario.getLaunchVariables().empty() == false;
+                    const bool bDeclares = scenario.loadFromPath( scenarioPath, error ) && scenario.getTestOptions()._listLaunchVariable.empty() == false;
                     if ( bDeclares == false )
                         return; // 못 읽은 시나리오는 App 이 읽기 오류(11)로 끝내 제 실행에서 진다
-                    reason = sw::string( "<Launch> declares the development variable " ) + scenario.getLaunchVariables().front()._name;
+                    reason = sw::string( "<Launch> declares the development variable " ) + scenario.getTestOptions()._listLaunchVariable.front()._name;
                 } );
                 return reason;
             }

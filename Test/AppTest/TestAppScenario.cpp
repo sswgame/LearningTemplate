@@ -81,7 +81,7 @@ namespace
         {
             sw::AutomationScenario scenario;
             sw::string             error;
-            return scenario.loadFromPath( scenarioPath, error ) && scenario.requiresEditor();
+            return scenario.loadFromPath( scenarioPath, error ) && scenario.getTestOptions()._bRequiresEditor;
         }
 
         /** @brief 시나리오가 `<Launch>` 로 선언한 기동 인자(`-gv_firstScene=…`)입니다. 못 읽으면 빈 글 — 그 시나리오가 제 실행에서 읽기 오류로 진다. */
@@ -89,7 +89,7 @@ namespace
         {
             sw::AutomationScenario scenario;
             sw::string             error;
-            return scenario.loadFromPath( scenarioPath, error ) ? scenario.makeLaunchArguments() : sw::string{};
+            return scenario.loadFromPath( scenarioPath, error ) ? scenario.getTestOptions().makeLaunchArguments() : sw::string{};
         }
 
         /**
@@ -227,7 +227,7 @@ namespace
         {
             sw::AutomationScenario scenario;
             sw::string             error;
-            return scenario.loadFromPath( scenarioPath, error ) == false || scenario.isIsolated();
+            return scenario.loadFromPath( scenarioPath, error ) == false || scenario.getTestOptions()._bIsolated;
         }
 
         /**

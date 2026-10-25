@@ -2,7 +2,7 @@
  * @file AutomationStepContext.h
  * @brief 시나리오 단계 함수가 실행기에서 쓰는 것만 담은 좁은 문맥 인터페이스를 정의합니다.
  * @details 단계를 등록하는 쪽(UI · GameFramework · Editor · App)은 이 헤더만 봅니다. 로그 게이트 · 보고 · 종료 코드(`AutomationRunner.h`)를 끌어오지 않는다.
- *          단계가 시나리오를 끝낼 때도 종료 코드(`AutomationResult`)가 아니라 단계 쪽 말(`AutomationStepEnd`)로 말한다 — 어떤 코드로 번역할지는 실행기가 정한다.
+ *          단계가 시나리오를 끝낼 때도 종료 코드(`AutomationOutcome`)가 아니라 단계 쪽 말(`AutomationStepEnd`)로 말한다 — 어떤 코드로 번역할지는 실행기가 정한다.
  *          실행기(`AutomationRunner`)가 구현하고, 테스트는 가짜 문맥으로 단계 함수를 실행기 없이 부를 수 있다.
  */
 #pragma once

@@ -228,9 +228,7 @@ namespace sw
 
     AutomationScenario::AutomationScenario()
         : _listStep{}
-        , _listScratchFolder{}
-        , _listLaunchVariable{}
-        , _load{}
+        , _testOptions{}
         , _name{}
         , _sourcePath{}
         , _fixedDelta{ AutomationScenarioInternal::kDefaultFixedDelta }
@@ -238,9 +236,6 @@ namespace sw
         , _startTimeoutFrames{ AutomationScenarioInternal::kDefaultStartTimeoutFrames }
         , _startCondition{ AutomationStartCondition::ScenePlaying }
         , _inputMode{ VirtualInputMode::Exclusive }
-        , _bIsolated{ false }
-        , _bRequiresEditor{ false }
-        , _bRequiresForeground{ false }
     {
     }
 
@@ -296,11 +291,11 @@ namespace sw
             return true;
         }
         if ( name == "isolated" )
-            return Internal::readBool( "isolated", pText, _bIsolated, outReason );
+            return Internal::readBool( "isolated", pText, _testOptions._bIsolated, outReason );
         if ( name == "requireForeground" )
-            return Internal::readBool( "requireForeground", pText, _bRequiresForeground, outReason );
+            return Internal::readBool( "requireForeground", pText, _testOptions._bRequiresForeground, outReason );
         if ( name == "editor" )
-            return Internal::readBool( "editor", pText, _bRequiresEditor, outReason );
+            return Internal::readBool( "editor", pText, _testOptions._bRequiresEditor, outReason );
         if ( name == "input" )
         {
             const string_view value = pText;
@@ -366,7 +361,7 @@ namespace sw
             const string_view elementName = atNode.getName();
             if ( elementName == "Load" )
             {
-                if ( _load._bDeclared )
+                if ( _testOptions._load._bDeclared )
                 {
                     outError = _sourcePath + ": only one <Load> may sit under <Scenario>";
                     return false;
@@ -388,12 +383,12 @@ namespace sw
                     outError = _sourcePath + ": " + reason;
                     return false;
                 }
-                _listScratchFolder.push_back( std::move( folder ) );
+                _testOptions._listScratchFolder.push_back( std::move( folder ) );
                 continue;
             }
             if ( elementName == "Launch" )
             {
-                if ( Internal::readLaunchVariable( atNode, _listLaunchVariable, reason ) == false )
+                if ( Internal::readLaunchVariable( atNode, _testOptions._listLaunchVariable, reason ) == false )
                 {
                     outError = _sourcePath + ": <Launch> " + reason;
                     return false;
@@ -455,7 +450,7 @@ namespace sw
         // 부하 시나리오는 측정 창이 끝낸다 — `<Pass/>` 가 있으면 창이 닫히기 전에 프로세스가 끝나 보고가 없다.
         for ( const AutomationStep& step : _listStep )
         {
-            if ( _load._bDeclared && step._kind == "Pass" )
+            if ( _testOptions._load._bDeclared && step._kind == "Pass" )
             {
                 outError = _sourcePath + ": " + step.describe() + ": a scenario with <Load> ends when its measurement window closes - remove <Pass/>";
                 return false;
@@ -464,7 +459,7 @@ namespace sw
         return true;
     }
 
-    string AutomationScenario::makeLaunchArguments() const
+    string AutomationTestOptions::makeLaunchArguments() const
     {
         string arguments;
         for ( const AutomationAttribute& variable : _listLaunchVariable )
@@ -476,30 +471,30 @@ namespace sw
 
     bool AutomationScenario::parseLoad( const XMLNode& node, string& outReason )
     {
-        using Internal   = AutomationScenarioInternal;
-        _load._bDeclared = true;
+        using Internal                = AutomationScenarioInternal;
+        _testOptions._load._bDeclared = true;
         for ( XMLAttribute attribute = node.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
         {
             const string_view name  = attribute.getName();
             const utf8*       pText = attribute.getValue();
             if ( name == "clients" )
             {
-                if ( Internal::readUint( pText, "clients", _load._clientCount, outReason ) == false )
+                if ( Internal::readUint( pText, "clients", _testOptions._load._clientCount, outReason ) == false )
                     return false;
             }
             else if ( name == "meshes" )
             {
-                if ( Internal::readUint( pText, "meshes", _load._meshCount, outReason ) == false )
+                if ( Internal::readUint( pText, "meshes", _testOptions._load._meshCount, outReason ) == false )
                     return false;
             }
             else if ( name == "movers" )
             {
-                if ( Internal::readUint( pText, "movers", _load._moverCount, outReason ) == false )
+                if ( Internal::readUint( pText, "movers", _testOptions._load._moverCount, outReason ) == false )
                     return false;
             }
             else if ( name == "durationSeconds" || name == "rampUpSeconds" )
             {
-                float32& outSeconds = name == "durationSeconds" ? _load._durationSeconds : _load._rampUpSeconds;
+                float32& outSeconds = name == "durationSeconds" ? _testOptions._load._durationSeconds : _testOptions._load._rampUpSeconds;
                 if ( StringUtil::parseFloat( string_view{ pText }, outSeconds ) == false || outSeconds < 0.0f )
                 {
                     outReason = string( name ) + " must be a non-negative number, got '" + pText + "'";
@@ -520,7 +515,7 @@ namespace sw
                     outReason = string( "unknown network preset '" ) + pText + "' (" + presetTable.makePresetNames() + ")";
                     return false;
                 }
-                _load._network = pText;
+                _testOptions._load._network = pText;
             }
             else
             {
@@ -528,7 +523,7 @@ namespace sw
                 return false;
             }
         }
-        if ( _load._durationSeconds <= 0.0f )
+        if ( _testOptions._load._durationSeconds <= 0.0f )
         {
             outReason = "needs durationSeconds > 0 (the measurement window)";
             return false;

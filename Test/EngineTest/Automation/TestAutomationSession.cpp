@@ -2,6 +2,7 @@
 
 #include "Core/File/FileUtil.h"
 
+#include "Engine/Automation/AutomationExitCode.h"
 #include "Engine/Automation/AutomationRunner.h"
 #include "Engine/Automation/AutomationSession.h"
 #include "Engine/Automation/AutomationStepRegistry.h"
@@ -96,14 +97,14 @@ SW_TEST_CASE( AutomationSessionTest, FailureStopsTheChainUnlessKeepGoing )
         Internal::s_markCount = 0;
         sw::AutomationSession session;
         SW_ASSERT_TRUE( session.begin( failing + "," + after, {}, false, 0u ) );
-        SW_EXPECT_EQUAL( static_cast<int32>( sw::AutomationResult::Failed ), Internal::run( session, input ) );
+        SW_EXPECT_EQUAL( sw::getAutomationExitCode( sw::AutomationOutcome::Failed ), Internal::run( session, input ) );
         SW_EXPECT_EQUAL( 0u, Internal::s_markCount ); // 뒤 시나리오는 돌지 않았다
     }
     {
         Internal::s_markCount = 0;
         sw::AutomationSession session;
         SW_ASSERT_TRUE( session.begin( failing + "," + after, {}, true, 0u ) );
-        SW_EXPECT_EQUAL( static_cast<int32>( sw::AutomationResult::Failed ), Internal::run( session, input ) );
+        SW_EXPECT_EQUAL( sw::getAutomationExitCode( sw::AutomationOutcome::Failed ), Internal::run( session, input ) );
         SW_EXPECT_EQUAL( 1u, Internal::s_markCount ); // 이어 돌았다
         // 끝난 뒤 앱이 창을 닫아도 마지막 단계의 통과(0)가 체인의 실패 코드를 덮지 않는다
         sw::IEngineFrameObserver& observer = session;
@@ -126,7 +127,7 @@ SW_TEST_CASE( AutomationSessionTest, MissingScenarioIsALoadErrorAndAnEmptyListDo
 
     sw::AutomationSession missing;
     SW_ASSERT_TRUE( missing.begin( "Saved/Automation/SessionTest/does-not-exist.scenario.xml", {}, false, 0u ) );
-    SW_EXPECT_EQUAL( static_cast<int32>( sw::AutomationResult::LoadError ), Internal::run( missing, input ) );
+    SW_EXPECT_EQUAL( sw::getAutomationExitCode( sw::AutomationOutcome::LoadError ), Internal::run( missing, input ) );
 
     sw::AutomationSession empty;
     SW_EXPECT_FALSE( empty.begin( " , ", {}, false, 0u ) );

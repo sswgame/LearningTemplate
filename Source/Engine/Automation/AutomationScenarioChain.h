@@ -8,7 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
-#include "Engine/Automation/AutomationRunner.h"
+#include "Engine/Automation/AutomationOutcome.h"
 
 namespace sw
 {
@@ -45,9 +45,9 @@ namespace sw
          * @brief 지금 단계가 @p result 로 끝났음을 알립니다.
          * @return 다음 단계로 넘어갔으면 true(통과했거나 `keepGoing` 이 실패를 넘겼고 단계가 남았다). 아니면 false 이고 체인이 끝난다.
          */
-        [[nodiscard]] bool onStageEnded( AutomationResult result );
+        [[nodiscard]] bool onStageEnded( AutomationOutcome result );
         /** @brief 체인의 최종 결과입니다. 끝나기 전에는 `Running`, 전부 통과했으면 `Passed`(미확정 단계가 있으면 `Unconfirmed`), 아니면 처음으로 통과하지 못한 단계의 결과입니다. */
-        AutomationResult getFinalResult() const { return _finalResult; }
+        AutomationOutcome getFinalResult() const { return _finalResult; }
         /** @brief 통과하지 못해 멈춰서 돌리지 않은 단계 수입니다. */
         size_t getSkippedStageCount() const { return _skippedStageCount; }
         /** @brief 통과하지 못한 단계 수입니다(`keepGoing` 이 아니면 많아야 하나). 건너뜀은 세지 않습니다(`keepGoing` 일 때). */
@@ -60,19 +60,19 @@ namespace sw
          * @brief 단계 하나의 끝을 한 줄로 적습니다(`chain stage 2/3 FAIL (shooter3d.reload) — 1 later stage(s) skipped`). `[Scenario]` 로그 줄 뒤에 붙습니다.
          * @param stageIndex 방금 끝난 단계 번호
          */
-        string describeStageEnd( size_t stageIndex, AutomationResult result, string_view scenarioName ) const;
+        string describeStageEnd( size_t stageIndex, AutomationOutcome result, string_view scenarioName ) const;
 
     private:
-        vector<string>   _listPath;
-        size_t           _stageIndex{ 0 };
-        size_t           _skippedStageCount{ 0 };
-        size_t           _failedStageCount{ 0 };
-        size_t           _skippedResultCount{ 0 };
-        size_t           _unconfirmedResultCount{ 0 };
-        AutomationResult _firstNonPassResult{ AutomationResult::Passed }; ///< 처음 통과하지 못한 단계의 결과(없으면 Passed)
-        AutomationResult _finalResult{ AutomationResult::Running };
-        bool             _bKeepGoing{ false };
-        bool             _bBegun{ false };
-        bool             _bFinished{ false };
+        vector<string>    _listPath;
+        size_t            _stageIndex{ 0 };
+        size_t            _skippedStageCount{ 0 };
+        size_t            _failedStageCount{ 0 };
+        size_t            _skippedResultCount{ 0 };
+        size_t            _unconfirmedResultCount{ 0 };
+        AutomationOutcome _firstNonPassResult{ AutomationOutcome::Passed }; ///< 처음 통과하지 못한 단계의 결과(없으면 Passed)
+        AutomationOutcome _finalResult{ AutomationOutcome::Running };
+        bool              _bKeepGoing{ false };
+        bool              _bBegun{ false };
+        bool              _bFinished{ false };
     };
 } // namespace sw

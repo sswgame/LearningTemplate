@@ -10,6 +10,7 @@
 
 #include "Engine/Automation/AutomationLogCapture.h"
 #include "Engine/Automation/AutomationLogPolicy.h"
+#include "Engine/Automation/AutomationOutcome.h"
 #include "Engine/Automation/AutomationReportWriter.h"
 #include "Engine/Automation/AutomationScenario.h"
 #include "Engine/Automation/AutomationStepContext.h"
@@ -23,22 +24,6 @@ namespace sw
     class GameObjectManager;
     class InputManager;
 
-    /** @brief 시나리오가 끝난 까닭 = App 종료 코드입니다. */
-    enum class AutomationResult : int32
-    {
-        Running      = -1,
-        Passed       = 0,
-        Failed       = 10,
-        LoadError    = 11, ///< 파일, 형식, 모르는 단계, 모르는 속성, 모르는 탐침이 있습니다. 조용히 버리지 않습니다.
-        TimedOut     = 12,
-        Skipped      = 13, ///< 이 기계에서 돌 수 없습니다(전경 창을 얻지 못한 경우 등). CTest 는 건너뜀으로 봅니다.
-        Unconfirmed  = 14, ///< 단언은 모두 맞았지만 아직 재지 않은 어림값 문턱(`provisional`)이 들어 있습니다. 통과(0)로 세지 않고 잰 값을 `measured` 로 옮길 때까지 미확정으로 보고합니다.
-        UnhandledLog = 15, ///< 단언은 모두 맞았지만 허용 목록에도 `<ExpectLog>` 에도 없는 `[Warning]` · `[Error]` 줄이 남았습니다(id 없는 줄 포함). 통과(0)도 미확정(14)도 아니며 14 보다 항상 앞섭니다.
-    };
-} // namespace sw
-
-namespace sw
-{
     /**
      * @class AutomationRunner
      * @brief 시나리오 한 편을 프레임마다 진행합니다. `Engine` 가 `-scenario` 를 받으면 하나를 가지고 프레임 앞뒤에서 부릅니다.
@@ -68,12 +53,12 @@ namespace sw
         /** @brief 프레임 시작(입력 `beginFrame` 전)에 부릅니다. 시작 조건을 보고, 시작했으면 가상 입력을 붙이고 입력 전 단계(`_bBeforeInput`)를 돌립니다. */
         void onFrameBegin( InputManager& input );
         /** @brief 프레임 끝(씬 틱과 렌더 제출 뒤)에 부릅니다. 이 프레임의 나머지 단계, 시간 초과, 끝을 확인합니다. 끝났으면 결과를, 아니면 Running 을 반환합니다. */
-        AutomationResult onFrameEnd( InputManager& input );
+        AutomationOutcome onFrameEnd( InputManager& input );
         /**
          * @brief 창이 닫혀 루프가 끝났습니다. `ExpectExitWithin` 을 기다리던 중이면 그 시한 안인지로, 아니면 "끝나기 전에 닫혔다" 로 끝냅니다.
          * @return 최종 결과(이미 끝났으면 그 결과)
          */
-        AutomationResult onWindowClosed( InputManager* pInput );
+        AutomationOutcome onWindowClosed( InputManager* pInput );
 
         /**
          * @brief `<Screenshot>` 이 요청한 경로를 하나 꺼냅니다(Engine 가 다음 렌더 패킷에 싣고, 그 패킷이 그린 이미지가 찍힙니다). 없으면 false 입니다.
@@ -112,16 +97,16 @@ namespace sw
         InputManager* getInputManager() const override { return _pInputManager; }
 
         /** @brief 시나리오를 바로 끝냅니다(`Pass`, `Fail`, `Skipped` 등). 실패가 적혀 있으면 Passed 는 Failed 가 됩니다. 이미 끝났으면 무시합니다. */
-        void finish( AutomationResult result, string_view reason );
+        void finish( AutomationOutcome result, string_view reason );
 
-        bool isActive() const { return _result == AutomationResult::Running; }
+        bool isActive() const { return _result == AutomationOutcome::Running; }
         /**
          * @brief 끝맺음(요약 줄, 보고, 가상 입력 떼기)까지 마쳤는지 묻습니다.
          * @details `isActive` 가 false 여도 아직 끝맺지 않았을 수 있다. 시작 프레임(`onFrameBegin`)에서 읽기 오류나 시작 시한으로 끝나면
          *          그 프레임의 `onFrameEnd` 가 끝맺고 결과를 돌려준다. 루프는 이것으로 `onFrameEnd` 를 부를지 정한다.
          */
         bool                      hasEnded() const { return _bEnded == SW_TRUE; }
-        AutomationResult          getResult() const { return _result; }
+        AutomationOutcome         getResult() const { return _result; }
         const AutomationScenario& getScenario() const { return _scenario; }
         const vector<string>&     getFailures() const { return _listFailure; }
         /** @brief 맞았지만 어림값 문턱(`provisional`)이라 미확정인 단언 줄입니다. 비어 있지 않고 실패가 없으면 결과는 `Unconfirmed` 입니다. */
@@ -135,9 +120,6 @@ namespace sw
         /** @brief 탐침 값 한 줄을 보고의 `records` 에 남깁니다(`<Record>`). 백엔드끼리 같아야 하는 값이다(AppScenarioTest 가 비교한다). */
         void                  addRecordLine( string line );
         const vector<string>& getRecordLines() const { return _reportWriter.getRecordLines(); }
-
-        /** @brief 결과 이름(`PASS`, `FAIL`, `LOAD ERROR`, `TIMEOUT`, `SKIP`)입니다. */
-        static const utf8* getResultName( AutomationResult result );
 
     private:
         /**
@@ -241,7 +223,7 @@ namespace sw
         uint32                  _clockHoldFrameCount;    ///< 시계 잡기 조건이 이어서 붙잡은 프레임(`holdClockForBackgroundWork`)
         float64                 _clockHoldStartSeconds;  ///< 그 붙잡기가 시작된 단조 시계 초
         string                  _clockHolderName;        ///< 붙잡은 조건의 이름(로그)
-        AutomationResult        _result;
+        AutomationOutcome       _result;
         uint8                   _bStarted   : 1;
         uint8                   _bEnded     : 1;
         uint8                   _bClockHeld : 1; ///< 이 프레임을 시계 잡기 조건이 붙잡았다(`onFrameBegin` 이 정하고 `onFrameEnd` 가 단계를 건너뛴다)

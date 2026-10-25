@@ -59,13 +59,13 @@ namespace
         }
 
         /** @brief 실행기를 Engine 과 같은 순서로 돌린다. "Jump" 발동을 세고 "Move" 값을 적는다. */
-        static sw::AutomationResult run( sw::AutomationRunner& runner, sw::InputManager& input, uint32 maxFrames = 300 )
+        static sw::AutomationOutcome run( sw::AutomationRunner& runner, sw::InputManager& input, uint32 maxFrames = 300 )
         {
-            s_frameCount                = 0;
-            s_jumpCount                 = 0;
-            s_move                      = sw::float2{};
-            sw::AutomationResult result = sw::AutomationResult::Running;
-            for ( uint32 frame = 0; frame < maxFrames && result == sw::AutomationResult::Running; ++frame )
+            s_frameCount                 = 0;
+            s_jumpCount                  = 0;
+            s_move                       = sw::float2{};
+            sw::AutomationOutcome result = sw::AutomationOutcome::Running;
+            for ( uint32 frame = 0; frame < maxFrames && result == sw::AutomationOutcome::Running; ++frame )
             {
                 runner.onFrameBegin( input );
                 input.beginFrame( 1.0f / 60.0f );
@@ -130,8 +130,8 @@ SW_TEST_CASE( AutomationGameplayStepsTest, QueryProbeComparesTextAndReportsTheTa
         <At frame="15"><Expect probe="TestGame.GuardState" target="guard" is="Patrol"/></At>
         <At frame="16"><Pass/></At>
       </Scenario>)" ) );
-        const sw::AutomationResult result = Internal::run( runner, input );
-        SW_EXPECT_TRUE_MSG( result == sw::AutomationResult::Passed, runner.getFinishReason().c_str() );
+        const sw::AutomationOutcome result = Internal::run( runner, input );
+        SW_EXPECT_TRUE_MSG( result == sw::AutomationOutcome::Passed, runner.getFinishReason().c_str() );
     }
     {
         SW_TEST_DEFENSIVE_SCOPE( "a wrong state and a missing target are failures that name the step and the target" );
@@ -141,7 +141,7 @@ SW_TEST_CASE( AutomationGameplayStepsTest, QueryProbeComparesTextAndReportsTheTa
         <At frame="6"><Expect probe="TestGame.GuardState" target="nobody" is="Idle"/></At>
         <At frame="7"><Expect probe="TestGame.GuardState" target="guard" atLeast="1"/><Pass/></At>
       </Scenario>)" ) );
-        SW_EXPECT_TRUE( Internal::run( runner, input ) == sw::AutomationResult::Failed );
+        SW_EXPECT_TRUE( Internal::run( runner, input ) == sw::AutomationOutcome::Failed );
         SW_ASSERT_EQUAL( 3u, static_cast<uint32>( runner.getFailures().size() ) );
         SW_EXPECT_TRUE_MSG( runner.getFailures()[0].find( "frame 5 <Expect> #1: Expect TestGame.GuardState(guard) is 'Chase', got Idle" ) != sw::string::npos,
                             runner.getFailures()[0].c_str() );
@@ -152,11 +152,11 @@ SW_TEST_CASE( AutomationGameplayStepsTest, QueryProbeComparesTextAndReportsTheTa
         SW_TEST_DEFENSIVE_SCOPE( "a query probe without its target, or a scene probe with one, is a load error" );
         sw::AutomationRunner runner;
         SW_ASSERT_TRUE( runner.startFromText( R"(<Scenario name="t" startAfter="Immediately"><At frame="1"><Expect probe="TestGame.GuardState" is="Idle"/></At></Scenario>)" ) );
-        SW_EXPECT_TRUE( Internal::run( runner, input ) == sw::AutomationResult::LoadError );
+        SW_EXPECT_TRUE( Internal::run( runner, input ) == sw::AutomationOutcome::LoadError );
         sw::AutomationRunner sceneRunner;
         SW_ASSERT_TRUE( sceneRunner.startFromText(
             R"(<Scenario name="t" startAfter="Immediately"><At frame="1"><Expect probe="TestGame.JumpCount" target="x" equals="0"/></At></Scenario>)" ) );
-        SW_EXPECT_TRUE( Internal::run( sceneRunner, input ) == sw::AutomationResult::LoadError );
+        SW_EXPECT_TRUE( Internal::run( sceneRunner, input ) == sw::AutomationOutcome::LoadError );
     }
     input.shutdown();
 }
@@ -178,8 +178,8 @@ SW_TEST_CASE( AutomationGameplayStepsTest, ExpectVisitedChecksTheStateHistory )
           <Pass/>
         </At>
       </Scenario>)" ) );
-        const sw::AutomationResult result = Internal::run( runner, input );
-        SW_EXPECT_TRUE_MSG( result == sw::AutomationResult::Passed, runner.getFinishReason().c_str() );
+        const sw::AutomationOutcome result = Internal::run( runner, input );
+        SW_EXPECT_TRUE_MSG( result == sw::AutomationOutcome::Passed, runner.getFinishReason().c_str() );
     }
     {
         SW_TEST_DEFENSIVE_SCOPE( "a state that was never reached is reported with what was seen" );
@@ -187,7 +187,7 @@ SW_TEST_CASE( AutomationGameplayStepsTest, ExpectVisitedChecksTheStateHistory )
         SW_ASSERT_TRUE( runner.startFromText( R"(<Scenario name="t" startAfter="Immediately" timeoutFrames="100">
         <At frame="15"><ExpectVisited probe="TestGame.GuardState" target="guard" sequence="Idle,Chase"/><Pass/></At>
       </Scenario>)" ) );
-        SW_EXPECT_TRUE( Internal::run( runner, input ) == sw::AutomationResult::Failed );
+        SW_EXPECT_TRUE( Internal::run( runner, input ) == sw::AutomationOutcome::Failed );
         SW_ASSERT_EQUAL( 1u, static_cast<uint32>( runner.getFailures().size() ) );
         SW_EXPECT_TRUE_MSG( runner.getFailures()[0].find( "missing 'Chase'" ) != sw::string::npos, runner.getFailures()[0].c_str() );
         SW_EXPECT_TRUE_MSG( runner.getFailures()[0].find( "Idle@0 > Patrol@10" ) != sw::string::npos, runner.getFailures()[0].c_str() );
@@ -209,8 +209,8 @@ SW_TEST_CASE( AutomationGameplayStepsTest, WaitWithinSecondsAndRecordValues )
         <At frame="1"><WaitUntil probe="TestGame.GuardState" target="guard" is="Chase" timeoutSeconds="3"/></At>
         <At frame="2"><Record probe="TestGame.GuardState" target="guard"/><Record probe="TestGame.KeyLength" key="xyz"/><Pass/></At>
       </Scenario>)" ) );
-        const sw::AutomationResult result = Internal::run( runner, input );
-        SW_EXPECT_TRUE_MSG( result == sw::AutomationResult::Passed, runner.getFinishReason().c_str() );
+        const sw::AutomationOutcome result = Internal::run( runner, input );
+        SW_EXPECT_TRUE_MSG( result == sw::AutomationOutcome::Passed, runner.getFinishReason().c_str() );
         SW_ASSERT_EQUAL( 2u, static_cast<uint32>( runner.getRecordLines().size() ) );
         SW_EXPECT_TRUE_MSG( runner.getRecordLines()[0] == "frame 2 TestGame.GuardState(guard) = Chase", runner.getRecordLines()[0].c_str() );
         SW_EXPECT_TRUE_MSG( runner.getRecordLines()[1] == "frame 2 TestGame.KeyLength(xyz) = 3", runner.getRecordLines()[1].c_str() );
@@ -222,7 +222,7 @@ SW_TEST_CASE( AutomationGameplayStepsTest, WaitWithinSecondsAndRecordValues )
         <At frame="1"><WaitUntil probe="TestGame.GuardState" target="guard" is="Chase" timeoutSeconds="0.5"/></At>
         <At frame="2"><Pass/></At>
       </Scenario>)" ) );
-        SW_EXPECT_TRUE( Internal::run( runner, input ) == sw::AutomationResult::Failed );
+        SW_EXPECT_TRUE( Internal::run( runner, input ) == sw::AutomationOutcome::Failed );
         SW_ASSERT_EQUAL( 1u, static_cast<uint32>( runner.getFailures().size() ) );
         SW_EXPECT_TRUE_MSG( runner.getFailures()[0].find( "gave up after 5" ) != sw::string::npos, runner.getFailures()[0].c_str() );
     }
@@ -253,14 +253,14 @@ SW_TEST_CASE( AutomationGameplayStepsTest, ActionStepsPressTheBoundSlots )
         <At after="2"><ActionAxis name="Move" x="-0.5" device="gamepad" frames="3"/></At>
         <At after="1"><Expect probe="TestGame.MoveX" near="-0.5" tolerance="0.01"/><Pass/></At>
       </Scenario>)" ) );
-        const sw::AutomationResult result = Internal::run( runner, input );
-        SW_EXPECT_TRUE_MSG( result == sw::AutomationResult::Passed, ( runner.getFailures().empty() ? runner.getFinishReason() : runner.getFailures()[0] ).c_str() );
+        const sw::AutomationOutcome result = Internal::run( runner, input );
+        SW_EXPECT_TRUE_MSG( result == sw::AutomationOutcome::Passed, ( runner.getFailures().empty() ? runner.getFinishReason() : runner.getFailures()[0] ).c_str() );
     }
     {
         SW_TEST_DEFENSIVE_SCOPE( "an action the input map does not have is a load error" );
         sw::AutomationRunner runner;
         SW_ASSERT_TRUE( runner.startFromText( R"(<Scenario name="t" startAfter="Immediately"><At frame="1"><Action name="Fly"/></At></Scenario>)" ) );
-        SW_EXPECT_TRUE( Internal::run( runner, input ) == sw::AutomationResult::LoadError );
+        SW_EXPECT_TRUE( Internal::run( runner, input ) == sw::AutomationOutcome::LoadError );
         SW_EXPECT_TRUE_MSG( runner.getFinishReason().find( "no action 'Fly'" ) != sw::string::npos, runner.getFinishReason().c_str() );
     }
     input.shutdown();

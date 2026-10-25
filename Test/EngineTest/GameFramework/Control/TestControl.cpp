@@ -183,12 +183,12 @@ namespace
         }
 
         /** @brief 실행기를 Engine 와 같은 순서로 한 프레임 돌립니다. */
-        static AutomationResult runFrame( AutomationRunner& runner, GameObjectManager& manager, InputManager& input )
+        static AutomationOutcome runFrame( AutomationRunner& runner, GameObjectManager& manager, InputManager& input )
         {
             runner.onFrameBegin( input );
             input.beginFrame( ControlTestInternal::kDeltaTime );
             manager.update( ControlTestInternal::kDeltaTime );
-            const AutomationResult result = runner.onFrameEnd( input );
+            const AutomationOutcome result = runner.onFrameEnd( input );
             input.endFrame();
             return result;
         }
@@ -819,8 +819,8 @@ SW_TEST_CASE( ControlTest, ScenarioIntentStepDrivesThePawnLikeTheAI )
                                               "<At frame=\"0\"><Intent pawn=\"Hero\" move=\"0,1\" yaw=\"0\" buttons=\"Jump\" frames=\"30\"/></At>"
                                               "<At frame=\"40\"><Pass/></At>"
                                               "</Scenario>" ) );
-        AutomationResult result = AutomationResult::Running;
-        for ( uint32 frame = 0; frame < 60 && result == AutomationResult::Running; ++frame )
+        AutomationOutcome result = AutomationOutcome::Running;
+        for ( uint32 frame = 0; frame < 60 && result == AutomationOutcome::Running; ++frame )
         {
             result                  = ControlTestInternal::runFrame( runner, manager, input );
             const float3 heroAt     = Internal::findPosition( *pHero );
@@ -839,14 +839,14 @@ SW_TEST_CASE( ControlTest, ScenarioIntentStepDrivesThePawnLikeTheAI )
                 SW_EXPECT_NEAR_EQUAL( 0.0f, pHeroPawn->getIntent()._move._y, 1.0e-6f );
             }
         }
-        SW_EXPECT_TRUE( result == AutomationResult::Passed );
+        SW_EXPECT_TRUE( result == AutomationOutcome::Passed );
         // 30 프레임 × 4 m/s × 1/60 s = 2 m 에서 멈췄다.
         SW_EXPECT_NEAR_EQUAL( 2.0f, Internal::findPosition( *pHero )._z, 1.0e-3f );
 
         AutomationRunner badRunner;
         badRunner.setObjectManager( &manager );
         SW_ASSERT_TRUE( badRunner.startFromText( "<Scenario name=\"control.bad\"><At frame=\"0\"><Intent pawn=\"Hero\" speed=\"1\"/></At></Scenario>" ) );
-        SW_EXPECT_TRUE( ControlTestInternal::runFrame( badRunner, manager, input ) == AutomationResult::LoadError );
+        SW_EXPECT_TRUE( ControlTestInternal::runFrame( badRunner, manager, input ) == AutomationOutcome::LoadError );
     }
     input.shutdown();
 }
@@ -1015,8 +1015,8 @@ SW_TEST_CASE( ControlTest, ScenarioPossessStepMovesPossession )
                                               "<ExpectLog contains=\"Pawn 'Horse' axis action\" count=\"2\"/>"
                                               "<ExpectLog contains=\"has no InputMap action\" count=\"3\"/><Pass/></At>"
                                               "</Scenario>" ) );
-        AutomationResult result = AutomationResult::Running;
-        for ( uint32 frame = 0; frame < 30 && result == AutomationResult::Running; ++frame )
+        AutomationOutcome result = AutomationOutcome::Running;
+        for ( uint32 frame = 0; frame < 30 && result == AutomationOutcome::Running; ++frame )
         {
             result = ControlTestInternal::runFrame( runner, manager, input );
             if ( frame == 4 )
@@ -1027,7 +1027,7 @@ SW_TEST_CASE( ControlTest, ScenarioPossessStepMovesPossession )
                 SW_EXPECT_FALSE( pHero->isPossessed() );
             }
         }
-        SW_EXPECT_TRUE( result == AutomationResult::Passed );
+        SW_EXPECT_TRUE( result == AutomationOutcome::Passed );
         SW_EXPECT_FALSE( pHorse->isPossessed() );
         SW_EXPECT_TRUE( pPlayer->findPawn() == nullptr );
     }

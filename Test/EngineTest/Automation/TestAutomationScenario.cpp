@@ -93,14 +93,14 @@ namespace
         }
 
         /** @brief 실행기를 끝날 때까지(최대 @p maxFrames) Engine 와 같은 순서로 돌린다. "Switch" 발동을 센다. */
-        static sw::AutomationResult run( sw::AutomationRunner& runner, sw::InputManager& input, uint32 maxFrames = 200 )
+        static sw::AutomationOutcome run( sw::AutomationRunner& runner, sw::InputManager& input, uint32 maxFrames = 200 )
         {
-            s_switchCount               = 0;
-            s_bSwitchDown               = false;
-            s_beforeInputRunCount       = 0;
-            s_runFrameCount             = 0;
-            sw::AutomationResult result = sw::AutomationResult::Running;
-            for ( uint32 frame = 0; frame < maxFrames && result == sw::AutomationResult::Running; ++frame )
+            s_switchCount                = 0;
+            s_bSwitchDown                = false;
+            s_beforeInputRunCount        = 0;
+            s_runFrameCount              = 0;
+            sw::AutomationOutcome result = sw::AutomationOutcome::Running;
+            for ( uint32 frame = 0; frame < maxFrames && result == sw::AutomationOutcome::Running; ++frame )
             {
                 ++s_runFrameCount;
                 runner.onFrameBegin( input );
@@ -148,8 +148,8 @@ SW_TEST_CASE( AutomationScenarioTest, TapStepTriggersOncePerTap )
         <At frame="27"><Tap slot="Key.Q" hold="0"/></At>
         <At frame="30"><Expect probe="Test.SwitchDown" equals="0"/><Expect probe="Test.SwitchCount" equals="3"/><Pass/></At>
       </Scenario>)" ) );
-    const sw::AutomationResult result = Internal::run( runner, input );
-    SW_EXPECT_TRUE_MSG( result == sw::AutomationResult::Passed, runner.getFinishReason().c_str() );
+    const sw::AutomationOutcome result = Internal::run( runner, input );
+    SW_EXPECT_TRUE_MSG( result == sw::AutomationOutcome::Passed, runner.getFinishReason().c_str() );
     SW_EXPECT_EQUAL( 30u, runner.getFrameIndex() );
     SW_EXPECT_FALSE( input.isVirtualInputAttached() ); // 끝나면 뗀다
     input.shutdown();
@@ -168,10 +168,10 @@ SW_TEST_CASE( AutomationScenarioTest, DevCommandScenarioIsSkippedWithoutDevComma
       </Scenario>)" );
 #if SW_DEV_COMMANDS_ENABLED
     SW_EXPECT_TRUE( bStarted );
-    SW_EXPECT_TRUE( runner.getResult() == sw::AutomationResult::Running );
+    SW_EXPECT_TRUE( runner.getResult() == sw::AutomationOutcome::Running );
 #else
     SW_EXPECT_FALSE( bStarted );
-    SW_EXPECT_TRUE_MSG( runner.getResult() == sw::AutomationResult::Skipped, runner.getFinishReason().c_str() );
+    SW_EXPECT_TRUE_MSG( runner.getResult() == sw::AutomationOutcome::Skipped, runner.getFinishReason().c_str() );
 #endif
 }
 
@@ -192,8 +192,8 @@ SW_TEST_CASE( AutomationScenarioTest, FailedExpectEndsAsFailed )
         <At frame="6"><Expect probe="Test.SwitchCount" near="1" tolerance="0.5"/><Pass/></At>
       </Scenario>)" ) );
     SW_TEST_DEFENSIVE_SCOPE( "a scenario that fails on purpose logs its failures" );
-    const sw::AutomationResult result = Internal::run( runner, input );
-    SW_EXPECT_TRUE( result == sw::AutomationResult::Failed );
+    const sw::AutomationOutcome result = Internal::run( runner, input );
+    SW_EXPECT_TRUE( result == sw::AutomationOutcome::Failed );
     SW_ASSERT_EQUAL( 2u, static_cast<uint32>( runner.getFailures().size() ) );
     SW_EXPECT_TRUE( runner.getFailures()[0].find( "got 1" ) != sw::string::npos );
     SW_EXPECT_TRUE( runner.getFailures()[1].find( "no value" ) != sw::string::npos );
@@ -241,8 +241,8 @@ SW_TEST_CASE( AutomationScenarioTest, UnknownStepOrAttributeIsALoadError )
         sw::AutomationRunner runner;
         const sw::string     text = sw::string( R"(<Scenario name="t" startAfter="Immediately"><At frame="0">)" ) + pStep + "</At></Scenario>";
         SW_ASSERT_TRUE( runner.startFromText( text ) );
-        const sw::AutomationResult result = Internal::run( runner, input, 5 );
-        SW_EXPECT_TRUE_MSG( result == sw::AutomationResult::LoadError, pStep );
+        const sw::AutomationOutcome result = Internal::run( runner, input, 5 );
+        SW_EXPECT_TRUE_MSG( result == sw::AutomationOutcome::LoadError, pStep );
         SW_EXPECT_TRUE_MSG( runner.getFinishReason().find( "frame 0" ) != sw::string::npos, runner.getFinishReason().c_str() );
     }
 
@@ -261,14 +261,14 @@ SW_TEST_CASE( AutomationScenarioTest, UnknownStepOrAttributeIsALoadError )
     {
         sw::AutomationRunner runner;
         SW_EXPECT_FALSE_MSG( runner.startFromText( pFile ), pFile );
-        SW_EXPECT_TRUE( runner.getResult() == sw::AutomationResult::LoadError );
+        SW_EXPECT_TRUE( runner.getResult() == sw::AutomationOutcome::LoadError );
     }
 
     // <MousePosition> 은 엔진 단계다(등록표의 엔진 단계 목록에 있어야 "모르는 단계" 가 아니다) — 창이 없는 테스트에서는 커서를 놓을 자리가 없다는 오류.
     {
         sw::AutomationRunner runner;
         SW_ASSERT_TRUE( runner.startFromText( R"(<Scenario name="t" startAfter="Immediately"><At frame="0"><MousePosition x="0.5" y="0.5"/></At></Scenario>)" ) );
-        SW_EXPECT_TRUE( Internal::run( runner, input, 5 ) == sw::AutomationResult::LoadError );
+        SW_EXPECT_TRUE( Internal::run( runner, input, 5 ) == sw::AutomationOutcome::LoadError );
         SW_EXPECT_TRUE_MSG( runner.getFinishReason().find( "no window to place the pointer" ) != sw::string::npos, runner.getFinishReason().c_str() );
     }
     input.shutdown();
@@ -315,14 +315,14 @@ SW_TEST_CASE( AutomationScenarioTest, ExpectVariableComparesGlobalVariables )
         sw::AutomationRunner runner;
         SW_ASSERT_TRUE( runner.startFromText( makeScenario( R"(<ExpectVariable name="gv_testFloat" value="80"/><ExpectVariable name="gv_testFloat" value="80.4" tolerance="0.5"/>
             <ExpectVariable name="gv_testInt" value="60"/><ExpectVariable name="gv_testBool" value="true"/><ExpectVariable name="gv_testString" value="abc"/>)" ) ) );
-        SW_EXPECT_TRUE_MSG( Internal::run( runner, input, 10 ) == sw::AutomationResult::Passed, runner.getFinishReason().c_str() );
+        SW_EXPECT_TRUE_MSG( Internal::run( runner, input, 10 ) == sw::AutomationOutcome::Passed, runner.getFinishReason().c_str() );
     }
     {
         sw::AutomationRunner runner;
         SW_ASSERT_TRUE( runner.startFromText( makeScenario( R"(<ExpectVariable name="gv_testFloat" value="70"/><ExpectVariable name="gv_testFloat" value="80.7" tolerance="0.5"/>
             <ExpectVariable name="gv_testInt" value="61"/><ExpectVariable name="gv_testBool" value="false"/><ExpectVariable name="gv_testString" value="abd"/>)" ) ) );
         SW_TEST_DEFENSIVE_SCOPE( "a scenario that expects wrong variable values fails" );
-        SW_EXPECT_TRUE( Internal::run( runner, input, 10 ) == sw::AutomationResult::Failed );
+        SW_EXPECT_TRUE( Internal::run( runner, input, 10 ) == sw::AutomationOutcome::Failed );
         SW_ASSERT_EQUAL( 5u, static_cast<uint32>( runner.getFailures().size() ) );
         SW_EXPECT_TRUE_MSG( runner.getFailures()[0].find( "gv_testFloat is '" ) != sw::string::npos && runner.getFailures()[0].find( "expected '70'" ) != sw::string::npos,
                             runner.getFailures()[0].c_str() );
@@ -342,7 +342,7 @@ SW_TEST_CASE( AutomationScenarioTest, ExpectVariableComparesGlobalVariables )
     {
         sw::AutomationRunner runner;
         SW_ASSERT_TRUE( runner.startFromText( makeScenario( pStep ) ) );
-        SW_EXPECT_TRUE_MSG( Internal::run( runner, input, 10 ) == sw::AutomationResult::LoadError, pStep );
+        SW_EXPECT_TRUE_MSG( Internal::run( runner, input, 10 ) == sw::AutomationOutcome::LoadError, pStep );
     }
     input.shutdown();
 }
@@ -366,7 +366,7 @@ SW_TEST_CASE( AutomationScenarioTest, LaunchVariablesMustMatchTheCommandLine )
     sw::AutomationScenario scenario;
     sw::string             error;
     SW_ASSERT_TRUE( scenario.parse( makeScenario( R"(<Launch variable="gv_testInt" value="60"/><Launch variable="gv_testString" value="a/b.xml"/>)" ), "launch", error ) );
-    SW_EXPECT_EQUAL( sw::string( "-gv_testInt=60 -gv_testString=a/b.xml" ), scenario.makeLaunchArguments() );
+    SW_EXPECT_EQUAL( sw::string( "-gv_testInt=60 -gv_testString=a/b.xml" ), scenario.getTestOptions().makeLaunchArguments() );
     static constexpr const utf8* kArrBadLaunch[] = {
         R"(<Launch variable="testInt" value="60"/>)",
         R"(<Launch variable="gv_testInt" value="6 0"/>)",
@@ -385,13 +385,13 @@ SW_TEST_CASE( AutomationScenarioTest, LaunchVariablesMustMatchTheCommandLine )
     {
         sw::AutomationRunner runner;
         SW_ASSERT_TRUE( runner.startFromText( makeScenario( R"(<Launch variable="gv_testInt" value="60"/>)" ) ) );
-        SW_EXPECT_TRUE_MSG( Internal::run( runner, input, 10 ) == sw::AutomationResult::Passed, runner.getFinishReason().c_str() );
+        SW_EXPECT_TRUE_MSG( Internal::run( runner, input, 10 ) == sw::AutomationOutcome::Passed, runner.getFinishReason().c_str() );
     }
     {
         sw::AutomationRunner runner;
         SW_ASSERT_TRUE( runner.startFromText( makeScenario( R"(<Launch variable="gv_testInt" value="61"/>)" ) ) );
         SW_TEST_DEFENSIVE_SCOPE( "a scenario launched without its declared variable stops with a load error" );
-        SW_EXPECT_TRUE( Internal::run( runner, input, 10 ) == sw::AutomationResult::LoadError );
+        SW_EXPECT_TRUE( Internal::run( runner, input, 10 ) == sw::AutomationOutcome::LoadError );
         SW_EXPECT_TRUE_MSG( runner.getFinishReason().find( "-gv_testInt=61" ) != sw::string::npos, runner.getFinishReason().c_str() );
     }
     input.shutdown();
@@ -406,11 +406,11 @@ SW_TEST_CASE( AutomationScenarioTest, EditorRootAttributeMarksEditorScenarios )
     sw::AutomationScenario scenario;
     sw::string             error;
     SW_ASSERT_TRUE_MSG( scenario.parse( R"(<Scenario name="t"><At frame="0"><Pass/></At></Scenario>)", "", error ), error.c_str() );
-    SW_EXPECT_FALSE( scenario.requiresEditor() );
+    SW_EXPECT_FALSE( scenario.getTestOptions()._bRequiresEditor );
     SW_ASSERT_TRUE_MSG( scenario.parse( R"(<Scenario name="t" editor="true"><At frame="0"><Pass/></At></Scenario>)", "", error ), error.c_str() );
-    SW_EXPECT_TRUE( scenario.requiresEditor() );
+    SW_EXPECT_TRUE( scenario.getTestOptions()._bRequiresEditor );
     SW_ASSERT_TRUE_MSG( scenario.parse( R"(<Scenario name="t" editor="false"><At frame="0"><Pass/></At></Scenario>)", "", error ), error.c_str() );
-    SW_EXPECT_FALSE( scenario.requiresEditor() );
+    SW_EXPECT_FALSE( scenario.getTestOptions()._bRequiresEditor );
 }
 
 /**
@@ -424,9 +424,9 @@ SW_TEST_CASE( AutomationScenarioTest, RequireForegroundHoldsTheStartAndSkipsWith
     sw::AutomationScenario scenario;
     sw::string             error;
     SW_ASSERT_TRUE_MSG( scenario.parse( R"(<Scenario name="t"><At frame="0"><Pass/></At></Scenario>)", "", error ), error.c_str() );
-    SW_EXPECT_FALSE( scenario.requiresForeground() );
+    SW_EXPECT_FALSE( scenario.getTestOptions()._bRequiresForeground );
     SW_ASSERT_TRUE_MSG( scenario.parse( R"(<Scenario name="t" requireForeground="true"><At frame="0"><Pass/></At></Scenario>)", "", error ), error.c_str() );
-    SW_EXPECT_TRUE( scenario.requiresForeground() );
+    SW_EXPECT_TRUE( scenario.getTestOptions()._bRequiresForeground );
     SW_EXPECT_FALSE( scenario.parse( R"(<Scenario name="t" requireForeground="maybe"><At frame="0"><Pass/></At></Scenario>)", "", error ) );
 
     sw::InputManager input;
@@ -435,8 +435,8 @@ SW_TEST_CASE( AutomationScenarioTest, RequireForegroundHoldsTheStartAndSkipsWith
     SW_ASSERT_TRUE( runner.startFromText( R"(<Scenario name="t" requireForeground="true" startAfter="Immediately" startTimeoutFrames="3">
         <At frame="0"><TestMark/><Pass/></At>
       </Scenario>)" ) );
-    const sw::AutomationResult result = Internal::run( runner, input, 20 );
-    SW_EXPECT_TRUE_MSG( result == sw::AutomationResult::Skipped, runner.getFinishReason().c_str() );
+    const sw::AutomationOutcome result = Internal::run( runner, input, 20 );
+    SW_EXPECT_TRUE_MSG( result == sw::AutomationOutcome::Skipped, runner.getFinishReason().c_str() );
     SW_EXPECT_EQUAL( 0u, Internal::s_beforeInputRunCount );
     SW_EXPECT_EQUAL( 4u, Internal::s_runFrameCount ); // 시한 3 프레임을 기다린 뒤 넷째 프레임에 끝난다
     input.shutdown();
@@ -479,8 +479,8 @@ SW_TEST_CASE( AutomationScenarioTest, WaitUntilHoldsTheScenarioClock )
         <At frame="4"><Tap slot="Key.E"/></At>
         <At frame="5"><Expect probe="Test.SwitchCount" equals="1"/><Pass/></At>
       </Scenario>)" ) );
-        const sw::AutomationResult result = Internal::run( runner, input );
-        SW_EXPECT_TRUE_MSG( result == sw::AutomationResult::Passed, runner.getFinishReason().c_str() );
+        const sw::AutomationOutcome result = Internal::run( runner, input );
+        SW_EXPECT_TRUE_MSG( result == sw::AutomationOutcome::Passed, runner.getFinishReason().c_str() );
         SW_EXPECT_EQUAL( 5u, runner.getFrameIndex() );
         SW_EXPECT_TRUE( Internal::s_runFrameCount >= 40u ); // 시나리오 시한(20) 보다 오래 돌았다 — 붙잡은 프레임은 시한에 세지 않는다
     }
@@ -491,7 +491,7 @@ SW_TEST_CASE( AutomationScenarioTest, WaitUntilHoldsTheScenarioClock )
         <At frame="1"><WaitUntil probe="Test.Nothing" atLeast="0" timeoutFrames="5"/></At>
         <At frame="2"><Pass/></At>
       </Scenario>)" ) );
-        SW_EXPECT_TRUE( Internal::run( runner, input ) == sw::AutomationResult::Failed );
+        SW_EXPECT_TRUE( Internal::run( runner, input ) == sw::AutomationOutcome::Failed );
         SW_ASSERT_EQUAL( 1u, static_cast<uint32>( runner.getFailures().size() ) );
         SW_EXPECT_TRUE_MSG( runner.getFailures()[0].find( "gave up after 5" ) != sw::string::npos, runner.getFailures()[0].c_str() );
     }
@@ -519,8 +519,8 @@ SW_TEST_CASE( AutomationScenarioTest, ClockHolderStopsTheScenarioClock )
         <At frame="5"><Expect probe="Test.SwitchCount" equals="1"/></At>
         <At frame="6"><Expect probe="Test.Ready" equals="1"/><Pass/></At>
       </Scenario>)" ) );
-        const sw::AutomationResult result = Internal::run( runner, input );
-        SW_EXPECT_TRUE_MSG( result == sw::AutomationResult::Passed, runner.getFailures().empty() ? runner.getFinishReason().c_str() : runner.getFailures()[0].c_str() );
+        const sw::AutomationOutcome result = Internal::run( runner, input );
+        SW_EXPECT_TRUE_MSG( result == sw::AutomationOutcome::Passed, runner.getFailures().empty() ? runner.getFinishReason().c_str() : runner.getFailures()[0].c_str() );
         SW_EXPECT_EQUAL( 6u, runner.getFrameIndex() );
     }
     {
@@ -530,8 +530,8 @@ SW_TEST_CASE( AutomationScenarioTest, ClockHolderStopsTheScenarioClock )
         SW_ASSERT_TRUE( runner.startFromText( R"(<Scenario name="t" startAfter="Immediately" startTimeoutFrames="5" timeoutFrames="20">
         <At frame="1"><Expect probe="Test.Ready" equals="1"/><Pass/></At>
       </Scenario>)" ) );
-        const sw::AutomationResult result = Internal::run( runner, input );
-        SW_EXPECT_TRUE_MSG( result == sw::AutomationResult::Passed, runner.getFailures().empty() ? runner.getFinishReason().c_str() : runner.getFailures()[0].c_str() );
+        const sw::AutomationOutcome result = Internal::run( runner, input );
+        SW_EXPECT_TRUE_MSG( result == sw::AutomationOutcome::Passed, runner.getFailures().empty() ? runner.getFinishReason().c_str() : runner.getFailures()[0].c_str() );
     }
     Internal::s_busyUntilRunFrame = 0;
     input.shutdown();
@@ -554,8 +554,8 @@ SW_TEST_CASE( AutomationScenarioTest, HoldUntilReadyWaitsForALateTarget )
         <At frame="2"><TestLate/></At>
         <At frame="3"><Pass/></At>
       </Scenario>)" ) );
-        const sw::AutomationResult result = Internal::run( runner, input );
-        SW_EXPECT_TRUE_MSG( result == sw::AutomationResult::Passed, runner.getFailures().empty() ? runner.getFinishReason().c_str() : runner.getFailures()[0].c_str() );
+        const sw::AutomationOutcome result = Internal::run( runner, input );
+        SW_EXPECT_TRUE_MSG( result == sw::AutomationOutcome::Passed, runner.getFailures().empty() ? runner.getFinishReason().c_str() : runner.getFailures()[0].c_str() );
         SW_EXPECT_EQUAL( 3u, runner.getFrameIndex() ); // 붙잡은 프레임은 시나리오 프레임으로 세지 않는다
     }
     {
@@ -566,7 +566,7 @@ SW_TEST_CASE( AutomationScenarioTest, HoldUntilReadyWaitsForALateTarget )
         <At frame="1"><TestLate/></At>
         <At frame="2"><Pass/></At>
       </Scenario>)" ) );
-        SW_EXPECT_TRUE( Internal::run( runner, input ) == sw::AutomationResult::Failed );
+        SW_EXPECT_TRUE( Internal::run( runner, input ) == sw::AutomationOutcome::Failed );
         SW_ASSERT_EQUAL( 1u, static_cast<uint32>( runner.getFailures().size() ) );
         SW_EXPECT_TRUE_MSG( runner.getFailures()[0].find( "not there yet" ) != sw::string::npos, runner.getFailures()[0].c_str() );
         SW_EXPECT_TRUE( Internal::s_runFrameCount >= 30u ); // 시한(30 프레임)까지 기다렸다
@@ -586,17 +586,17 @@ SW_TEST_CASE( AutomationScenarioTest, TimeoutWithoutPass )
     {
         sw::AutomationRunner runner;
         SW_ASSERT_TRUE( runner.startFromText( R"(<Scenario name="t" startAfter="Immediately" timeoutFrames="8"><At frame="1"><Tap slot="Key.E"/></At></Scenario>)" ) );
-        SW_EXPECT_TRUE( Internal::run( runner, input ) == sw::AutomationResult::TimedOut );
+        SW_EXPECT_TRUE( Internal::run( runner, input ) == sw::AutomationOutcome::TimedOut );
         SW_EXPECT_EQUAL( 9u, runner.getFrameIndex() );
     }
     {
         // 테스트 하네스에는 플레이를 시작한 씬이 없다(있어도 이 테스트 동안 플레이를 시작하지 않는다) — 단계는 하나도 돌지 않는다.
         sw::AutomationRunner runner;
         SW_ASSERT_TRUE( runner.startFromText( R"(<Scenario name="t" startTimeoutFrames="4"><At frame="0"><TestMark/></At></Scenario>)" ) );
-        const sw::AutomationResult result = Internal::run( runner, input, 50 );
+        const sw::AutomationOutcome result = Internal::run( runner, input, 50 );
         if ( runner.findActiveObjectManager() == nullptr || runner.findActiveObjectManager()->hasBegunPlay() == false )
         {
-            SW_EXPECT_TRUE( result == sw::AutomationResult::TimedOut );
+            SW_EXPECT_TRUE( result == sw::AutomationOutcome::TimedOut );
             SW_EXPECT_EQUAL( 0u, Internal::s_beforeInputRunCount );
         }
     }
@@ -615,7 +615,7 @@ SW_TEST_CASE( AutomationScenarioTest, LoadScenarioOpensTheMeasureWindowAndIgnore
         SW_ASSERT_TRUE_MSG( scenario.parse( R"(<Scenario name="t"><Load clients="200" rampUpSeconds="2.5" durationSeconds="30" network="lte" meshes="8000" movers="1"/></Scenario>)", "",
                                             error ),
                             error.c_str() );
-        const sw::AutomationLoad& load = scenario.getLoad();
+        const sw::AutomationLoad& load = scenario.getTestOptions()._load;
         SW_EXPECT_TRUE( load._bDeclared );
         SW_EXPECT_EQUAL( 200u, load._clientCount );
         SW_EXPECT_EQUAL( 8000u, load._meshCount );
@@ -648,7 +648,7 @@ SW_TEST_CASE( AutomationScenarioTest, LoadScenarioOpensTheMeasureWindowAndIgnore
         SW_TEST_DEFENSIVE_SCOPE( "a build without the frame profiler rejects <Load>" );
         sw::AutomationRunner runner;
         SW_ASSERT_TRUE( runner.startFromText( R"(<Scenario name="t" startAfter="Immediately" timeoutFrames="8"><Load durationSeconds="2.2"/><At frame="1"><TestMark/></At></Scenario>)" ) );
-        SW_EXPECT_TRUE( Internal::run( runner, input, 30 ) == sw::AutomationResult::LoadError );
+        SW_EXPECT_TRUE( Internal::run( runner, input, 30 ) == sw::AutomationOutcome::LoadError );
         input.shutdown();
         return;
     }
@@ -660,10 +660,10 @@ SW_TEST_CASE( AutomationScenarioTest, LoadScenarioOpensTheMeasureWindowAndIgnore
     {
         sw::AutomationRunner runner;
         SW_ASSERT_TRUE( runner.startFromText( R"(<Scenario name="t" startAfter="Immediately" timeoutFrames="8"><Load durationSeconds="2.2"/><At frame="1"><TestMark/></At></Scenario>)" ) );
-        SW_EXPECT_TRUE( Internal::run( runner, input, 30 ) == sw::AutomationResult::Running ); // 프레임 시한(8)을 넘어도 측정 창이 끝낼 때까지 돈다
+        SW_EXPECT_TRUE( Internal::run( runner, input, 30 ) == sw::AutomationOutcome::Running ); // 프레임 시한(8)을 넘어도 측정 창이 끝낼 때까지 돈다
         SW_EXPECT_EQUAL( sw::string( "3" ), variables.findVariable( "gv_profileSeconds" )->getValueAsString() );
         // 측정 창이 닫혀 엔진이 루프를 끝내면(창 닫힘 자리) 단계를 다 돈 부하 시나리오는 통과다.
-        SW_EXPECT_TRUE_MSG( runner.onWindowClosed( &input ) == sw::AutomationResult::Passed, runner.getFinishReason().c_str() );
+        SW_EXPECT_TRUE_MSG( runner.onWindowClosed( &input ) == sw::AutomationOutcome::Passed, runner.getFinishReason().c_str() );
     }
     input.shutdown();
 }
@@ -678,7 +678,7 @@ SW_TEST_CASE( AutomationScenarioTest, RegisteredStepRunsOnItsFrame )
     SW_ASSERT_TRUE( input.initialize() );
     sw::AutomationRunner runner;
     SW_ASSERT_TRUE( runner.startFromText( R"(<Scenario name="t" startAfter="Immediately"><At frame="3"><TestMark/></At><At frame="4"><Pass/></At></Scenario>)" ) );
-    SW_EXPECT_TRUE( Internal::run( runner, input ) == sw::AutomationResult::Passed );
+    SW_EXPECT_TRUE( Internal::run( runner, input ) == sw::AutomationOutcome::Passed );
     SW_EXPECT_EQUAL( 1u, Internal::s_beforeInputRunCount );
     SW_EXPECT_EQUAL( 3u, Internal::s_beforeInputFrame );
     input.shutdown();
@@ -696,8 +696,8 @@ SW_TEST_CASE( AutomationScenarioTest, ExpectLogCountsLinesSinceAFrame )
         <At frame="2"><ExpectLog contains="[AutoProbe] tick" count="3"/></At>
         <At frame="4"><ExpectLog contains="[AutoProbe] tick" count="2" since="3"/><ExpectLog contains="[AutoProbe]" atLeast="5"/><Pass/></At>
       </Scenario>)" ) );
-    sw::AutomationResult result = sw::AutomationResult::Running;
-    for ( uint32 frame = 0; frame < 20 && result == sw::AutomationResult::Running; ++frame )
+    sw::AutomationOutcome result = sw::AutomationOutcome::Running;
+    for ( uint32 frame = 0; frame < 20 && result == sw::AutomationOutcome::Running; ++frame )
     {
         runner.onFrameBegin( input );
         input.beginFrame( 1.0f / 60.0f );
@@ -705,7 +705,7 @@ SW_TEST_CASE( AutomationScenarioTest, ExpectLogCountsLinesSinceAFrame )
         result = runner.onFrameEnd( input );
         input.endFrame();
     }
-    SW_EXPECT_TRUE_MSG( result == sw::AutomationResult::Passed, runner.getFinishReason().c_str() );
+    SW_EXPECT_TRUE_MSG( result == sw::AutomationOutcome::Passed, runner.getFinishReason().c_str() );
     input.shutdown();
 }
 
@@ -722,8 +722,8 @@ SW_TEST_CASE( AutomationScenarioTest, UnhandledWarningEndsUnhandledLog )
     {
         sw::AutomationRunner runner;
         SW_ASSERT_TRUE( runner.startFromText( R"(<Scenario name="t" startAfter="Immediately"><At frame="3"><Pass/></At></Scenario>)" ) );
-        sw::AutomationResult result = sw::AutomationResult::Running;
-        for ( uint32 frame = 0; frame < 20 && result == sw::AutomationResult::Running; ++frame )
+        sw::AutomationOutcome result = sw::AutomationOutcome::Running;
+        for ( uint32 frame = 0; frame < 20 && result == sw::AutomationOutcome::Running; ++frame )
         {
             runner.onFrameBegin( input );
             input.beginFrame( 1.0f / 60.0f );
@@ -739,7 +739,7 @@ SW_TEST_CASE( AutomationScenarioTest, UnhandledWarningEndsUnhandledLog )
             result = runner.onFrameEnd( input );
             input.endFrame();
         }
-        SW_EXPECT_TRUE( result == sw::AutomationResult::UnhandledLog );
+        SW_EXPECT_TRUE( result == sw::AutomationOutcome::UnhandledLog );
         SW_EXPECT_EQUAL( 15, static_cast<int32>( result ) );
         SW_EXPECT_EQUAL( 1u, static_cast<uint32>( runner.getUnhandledLogs().size() ) );
         SW_EXPECT_TRUE_MSG( runner.getFinishReason().find( sw::AutomationLogPolicy::kAllowListPath ) != sw::string::npos, runner.getFinishReason().c_str() );
@@ -766,8 +766,8 @@ SW_TEST_CASE( AutomationScenarioTest, UnhandledLogOutranksUnconfirmed )
     const sw::string     text = sw::string( R"(<Scenario name="t" startAfter="Immediately"><At frame="1"><ExpectImage file=")" ) + imagePath +
                             R"(" metric="meanLuma" atLeast="0.5" provisional="guess"/><Pass/></At></Scenario>)";
     SW_ASSERT_TRUE( runner.startFromText( text ) );
-    sw::AutomationResult result = sw::AutomationResult::Running;
-    for ( uint32 frame = 0; frame < 20 && result == sw::AutomationResult::Running; ++frame )
+    sw::AutomationOutcome result = sw::AutomationOutcome::Running;
+    for ( uint32 frame = 0; frame < 20 && result == sw::AutomationOutcome::Running; ++frame )
     {
         runner.onFrameBegin( input );
         input.beginFrame( 1.0f / 60.0f );
@@ -775,7 +775,7 @@ SW_TEST_CASE( AutomationScenarioTest, UnhandledLogOutranksUnconfirmed )
         result = runner.onFrameEnd( input );
         input.endFrame();
     }
-    SW_EXPECT_TRUE_MSG( result == sw::AutomationResult::UnhandledLog, runner.getFinishReason().c_str() );
+    SW_EXPECT_TRUE_MSG( result == sw::AutomationOutcome::UnhandledLog, runner.getFinishReason().c_str() );
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( runner.getUnconfirmed().size() ) ); // 미확정도 보고에는 남는다
     input.shutdown();
 }
@@ -1016,15 +1016,15 @@ SW_TEST_CASE( AutomationScenarioTest, ProvisionalThresholdEndsUnconfirmed )
 
     struct Case
     {
-        const utf8*          _pBasis;
-        const utf8*          _pRule;
-        sw::AutomationResult _expected;
+        const utf8*           _pBasis;
+        const utf8*           _pRule;
+        sw::AutomationOutcome _expected;
     };
     static constexpr Case kArrCase[] = {
-        {        R"(provisional="guess")", R"(atLeast="0.5")", sw::AutomationResult::Unconfirmed},
-        {R"(measured="2026-10-22 all:1")", R"(atLeast="0.5")",      sw::AutomationResult::Passed},
-        {        R"(provisional="guess")",  R"(atMost="0.5")",      sw::AutomationResult::Failed},
-        {R"(measured="2026-10-22 all:1")",  R"(atMost="0.5")",      sw::AutomationResult::Failed},
+        {        R"(provisional="guess")", R"(atLeast="0.5")", sw::AutomationOutcome::Unconfirmed},
+        {R"(measured="2026-10-22 all:1")", R"(atLeast="0.5")",      sw::AutomationOutcome::Passed},
+        {        R"(provisional="guess")",  R"(atMost="0.5")",      sw::AutomationOutcome::Failed},
+        {R"(measured="2026-10-22 all:1")",  R"(atMost="0.5")",      sw::AutomationOutcome::Failed},
     };
     SW_TEST_DEFENSIVE_SCOPE( "a wrong threshold fails whatever its basis" );
     for ( const Case& testCase : kArrCase )
@@ -1033,9 +1033,9 @@ SW_TEST_CASE( AutomationScenarioTest, ProvisionalThresholdEndsUnconfirmed )
         const sw::string     text = sw::string( R"(<Scenario name="t" startAfter="Immediately"><At frame="1"><ExpectImage file=")" ) + imagePath + R"(" metric="meanLuma" )" +
                                 testCase._pRule + " " + testCase._pBasis + "/><Pass/></At></Scenario>";
         SW_ASSERT_TRUE( runner.startFromText( text ) );
-        const sw::AutomationResult result = Internal::run( runner, input, 20 );
+        const sw::AutomationOutcome result = Internal::run( runner, input, 20 );
         SW_EXPECT_TRUE_MSG( result == testCase._expected, text.c_str() );
-        const bool bProvisionalHeld = testCase._expected == sw::AutomationResult::Unconfirmed;
+        const bool bProvisionalHeld = testCase._expected == sw::AutomationOutcome::Unconfirmed;
         SW_EXPECT_EQUAL( bProvisionalHeld ? 1u : 0u, static_cast<uint32>( runner.getUnconfirmed().size() ) );
     }
     input.shutdown();
@@ -1055,9 +1055,9 @@ SW_TEST_CASE( AutomationScenarioTest, ExpectImageWithoutRendererFails )
         <At frame="2"><ExpectImage file="a.ppm" metric="meanLuma" atLeast="0" provisional="t"/><Pass/></At>
       </Scenario>)" ) );
     SW_TEST_DEFENSIVE_SCOPE( "no renderer takes the screenshot" );
-    sw::string                 pendingPath;
-    const sw::AutomationResult result = Internal::run( runner, input, 100 );
-    SW_EXPECT_TRUE( result == sw::AutomationResult::Failed );
+    sw::string                  pendingPath;
+    const sw::AutomationOutcome result = Internal::run( runner, input, 100 );
+    SW_EXPECT_TRUE( result == sw::AutomationOutcome::Failed );
     SW_ASSERT_EQUAL( 1u, static_cast<uint32>( runner.getFailures().size() ) );
     SW_EXPECT_TRUE( runner.getFailures()[0].find( "never completed" ) != sw::string::npos );
     SW_EXPECT_TRUE( runner.takePendingScreenshotPath( pendingPath ) ); // 아무도 가져가지 않았다

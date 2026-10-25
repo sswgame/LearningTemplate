@@ -6,6 +6,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 
+#include "Engine/Automation/AutomationExitCode.h"
 #include "Engine/Automation/AutomationRunner.h"
 #include "Engine/Automation/AutomationScenarioChain.h"
 #include "Engine/Automation/AutomationStepRegistry.h"
@@ -162,25 +163,24 @@ namespace sw
             return kRunning;
         const uint32 completedScreenshotCount = context._completedScreenshotCount;
         _pRunner->setCompletedScreenshotCount( completedScreenshotCount >= _screenshotBaseline ? completedScreenshotCount - _screenshotBaseline : 0u );
-        const AutomationResult result = _pRunner->onFrameEnd( *context._pInput );
-        if ( result == AutomationResult::Running )
+        const AutomationOutcome result = _pRunner->onFrameEnd( *context._pInput );
+        if ( result == AutomationOutcome::Running )
             return kRunning;
-        const int32 exitCode = onStageEnded( static_cast<int32>( result ), completedScreenshotCount );
+        const int32 exitCode = onStageEnded( result, completedScreenshotCount );
         if ( exitCode != kRunning )
             finishRecording();
         return exitCode;
     }
 
-    int32 AutomationSession::onStageEnded( int32 resultCode, uint32 completedScreenshotCount )
+    int32 AutomationSession::onStageEnded( AutomationOutcome result, uint32 completedScreenshotCount )
     {
-        const AutomationResult result     = static_cast<AutomationResult>( resultCode );
-        const size_t           stageIndex = _pChain->getStageIndex();
-        const string           stageName  = _pRunner->getScenario().getName().empty() ? _pChain->getCurrentPath() : _pRunner->getScenario().getName();
-        const bool             bNextStage = _pChain->onStageEnded( result );
+        const size_t stageIndex = _pChain->getStageIndex();
+        const string stageName  = _pRunner->getScenario().getName().empty() ? _pChain->getCurrentPath() : _pRunner->getScenario().getName();
+        const bool   bNextStage = _pChain->onStageEnded( result );
         if ( _pChain->isChain() )
         {
             const string line = _pChain->describeStageEnd( stageIndex, result, stageName );
-            if ( result == AutomationResult::Passed || result == AutomationResult::Unconfirmed )
+            if ( result == AutomationOutcome::Passed || result == AutomationOutcome::Unconfirmed )
                 SW_LOG_INFO( "[Scenario] %#", line.c_str() );
             else
                 SW_LOG_ERROR( "[Scenario] %#", line.c_str() );
@@ -191,10 +191,10 @@ namespace sw
             return kRunning;
         }
         if ( _pChain->isChain() )
-            SW_LOG_INFO( "[Scenario] chain %# (%# stage(s), %# failed, %# skipped, %# not run)", AutomationRunner::getResultName( _pChain->getFinalResult() ),
+            SW_LOG_INFO( "[Scenario] chain %# (%# stage(s), %# failed, %# skipped, %# not run)", getAutomationOutcomeName( _pChain->getFinalResult() ),
                          static_cast<uint32>( _pChain->getStageCount() ), static_cast<uint32>( _pChain->getFailedStageCount() ),
                          static_cast<uint32>( _pChain->getSkippedResultCount() ), static_cast<uint32>( _pChain->getSkippedStageCount() ) );
-        return static_cast<int32>( _pChain->getFinalResult() );
+        return getAutomationExitCode( _pChain->getFinalResult() );
     }
 
     int32 AutomationSession::onWindowClosed( const EngineFrameContext& context )
@@ -204,15 +204,15 @@ namespace sw
         // 마지막 단계의 결과(통과 0)가 앞 단계의 실패(10)를 덮는다(엔진 루프는 창 닫힘 관찰자의 코드를 앞선 종료 요청보다 앞세운다).
         if ( _pRunner == nullptr || _pRunner->hasEnded() )
             return kRunning;
-        AutomationResult result = _pRunner->onWindowClosed( context._pInput );
+        AutomationOutcome result = _pRunner->onWindowClosed( context._pInput );
         // 창이 닫히면 루프가 끝난다 — 돌릴 단계가 남아 있으면 체인은 끝까지 가지 못했다(`CloseWindow` 는 마지막 단계에만 둔다).
         if ( _pChain != nullptr && _pChain->onStageEnded( result ) )
         {
             SW_LOG_ERROR( "[Scenario] the window closed with %# stage(s) still to run (put <CloseWindow> in the last scenario of a chain)",
                           static_cast<uint32>( _pChain->getStageCount() - _pChain->getStageIndex() ) );
-            result = AutomationResult::Failed;
+            result = AutomationOutcome::Failed;
         }
-        return static_cast<int32>( result );
+        return getAutomationExitCode( result );
     }
 
     void AutomationSession::onBuildRenderPacket( EngineRenderPacketContext& inoutContext )
