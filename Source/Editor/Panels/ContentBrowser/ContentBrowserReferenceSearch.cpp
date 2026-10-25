@@ -4,8 +4,10 @@
 
 #include "Core/Common/StdHeaders.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Task/TaskManager.h"
 
 #include "Editor/Common/Workspace/AssetHotReload.h"
+#include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Resource/ResourcePaths.h"
 
@@ -95,7 +97,7 @@ namespace sw::editor
         // 이 스캔이 지금까지의 변경을 모두 담는다 — 그 뒤에 오는 변경만 기억한다.
         if ( _pChangeSource != nullptr )
             _pChangeSource->discardChangedPaths();
-        _job.request( ResourcePaths::getRootFolderPath() );
+        _job.request( ResourcePaths::getRootFolderPath(), editor::findSubsystem<TaskManager>() ); // 워커는 에디터 범위를 찾지 않는다 — 여기서 찾아 넘긴다
     }
 
     void ContentBrowserReferenceSearch::query( string_view absolutePath, bool bDependencies )

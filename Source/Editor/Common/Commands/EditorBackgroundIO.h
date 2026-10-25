@@ -20,6 +20,7 @@
 namespace sw
 {
     class TaskArgs;
+    class TaskManager;
 } // namespace sw
 
 namespace sw::editor
@@ -137,8 +138,11 @@ namespace sw::editor
     class EditorReferenceIndexJob final : public EditorBackgroundTask<string, EditorReferenceIndexData>
     {
     public:
-        /** @brief 워커에 @p resourceRoot 아래 스캔을 요청합니다. 이미 대기 중이면 세대를 올리고, 오래된 결과는 버립니다. */
-        void request( string_view resourceRoot );
+        /**
+         * @brief 워커에 @p resourceRoot 아래 스캔을 요청합니다. 이미 대기 중이면 세대를 올리고, 오래된 결과는 버립니다.
+         * @details 텍스트 에셋은 @p pTaskManager 로 병렬로 읽습니다(nullptr 이면 그 워커가 차례로). 워커는 에디터 범위를 찾지 않으므로 부른 쪽(UI 스레드)이 찾아 넘깁니다.
+         */
+        void request( string_view resourceRoot, TaskManager* pTaskManager );
 
     private:
         static void runJob( const TaskArgs& args );

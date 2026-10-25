@@ -108,7 +108,7 @@ SW_TEST_CASE( EditorReferenceIndexTest, ReferrersAndDependenciesAreInverse )
     SW_ASSERT_TRUE( root.write( "engine/materials/c.material", "{ \"_texture\": \"game/test/models/b.mesh\" }" ) );
 
     EditorReferenceIndexData data{};
-    EditorReferenceIndex::scan( root._path, data );
+    EditorReferenceIndex::scan( root._path, data, nullptr );
     SW_EXPECT_EQUAL( 2u, data._scannedFileCount );
     EditorReferenceIndex index{};
     index.assign( std::move( data ) );
@@ -141,7 +141,7 @@ SW_TEST_CASE( EditorReferenceIndexTest, RefreshFileDropsRemovedReferences )
     SW_ASSERT_TRUE( root.write( "game/test/models/b.mesh", "binary" ) );
 
     EditorReferenceIndexData data{};
-    EditorReferenceIndex::scan( root._path, data );
+    EditorReferenceIndex::scan( root._path, data, nullptr );
     EditorReferenceIndex index{};
     index.assign( std::move( data ) );
     SW_EXPECT_EQUAL( 2u, index.countReferrerFiles( "game/test/models/b.mesh" ) );
@@ -170,7 +170,7 @@ SW_TEST_CASE( EditorReferenceIndexTest, ScratchCopiesAreReferenceDomains )
     SW_ASSERT_TRUE( root.write( "engine/automation/editor/assetmanage/probe.material", "{}" ) );
 
     EditorReferenceIndexData data{};
-    EditorReferenceIndex::scan( root._path, data );
+    EditorReferenceIndex::scan( root._path, data, nullptr );
     EditorReferenceIndex index{};
     index.assign( std::move( data ) );
     SW_EXPECT_EQUAL( 1u, index.countReferrerFiles( scratchMaterial ) );

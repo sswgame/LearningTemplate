@@ -195,11 +195,6 @@ namespace sw::editor
         }
     }
 
-    void EditorReferenceIndex::scan( string_view resourceRoot, EditorReferenceIndexData& outData )
-    {
-        scan( resourceRoot, outData, editor::findSubsystem<TaskManager>() );
-    }
-
     void EditorReferenceIndex::scan( string_view resourceRoot, EditorReferenceIndexData& outData, TaskManager* pTaskManager )
     {
         const Stopwatch stopwatch;

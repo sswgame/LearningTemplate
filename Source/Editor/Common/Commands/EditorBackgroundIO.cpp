@@ -155,25 +155,26 @@ namespace sw::editor
     // EditorReferenceIndexJob
     // ======================================================================
 
-    void EditorReferenceIndexJob::request( string_view resourceRoot )
+    void EditorReferenceIndexJob::request( string_view resourceRoot, TaskManager* pTaskManager )
     {
         const uint32 generation = beginRequest( string{ resourceRoot } );
         submitEditorBackgroundJob( "EditorReferenceIndex",
                                    SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorReferenceIndexJob::runJob ),
-                                   MakeTaskArgs( _pState, generation ) );
+                                   MakeTaskArgs( _pState, generation, pTaskManager ) );
     }
 
     void EditorReferenceIndexJob::runJob( const TaskArgs& args )
     {
         const shared_ptr<State> pState     = args.get<shared_ptr<State>>( 0 );
         const uint32            generation = args.get<uint32>( 1 );
+        TaskManager* const      pTasks     = args.get<TaskManager*>( 2 );
 
         string resourceRoot;
         if ( readInput( pState, generation, resourceRoot ) == false )
             return;
 
         EditorReferenceIndexData data{};
-        EditorReferenceIndex::scan( resourceRoot, data );
+        EditorReferenceIndex::scan( resourceRoot, data, pTasks );
 
         publish( pState, generation, std::move( data ) );
     }
