@@ -306,7 +306,8 @@ namespace sw::editor
 
     void ImGuiVulkanRendererBackend::render( class IRHIDevice* pRHIDevice, ImDrawData* pDrawData )
     {
-        if ( pDrawData == nullptr || pRHIDevice == nullptr || _pRHIDevice == nullptr )
+        const bool bNothingToRender = pDrawData == nullptr || pRHIDevice == nullptr || _pRHIDevice == nullptr;
+        if ( bNothingToRender )
             return;
         // 프레임 스트림의 열린 세그먼트에 기록한다. 렌더 스레드(present 훅)만 쓰는 버퍼라 콜백 밖으로 들고 나가지 않는다.
         // 다른 백엔드이면 withNativeContext 가 로그를 남기고 부르지 않는다.

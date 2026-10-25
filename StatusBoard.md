@@ -30,7 +30,7 @@
 | - | [OnlineKits](docs/plans/OnlineKits.md) — 온라인 키트 마감 계획 (2026-10-21) | 구현중 | 29/34 | 없음 | network | D7-5 |
 | - | [PackedTypes](docs/plans/PackedTypes.md) — 저장 전용 압축 타입 | 구현중 | 3/6 | 없음 | graphics | 없음 |
 | - | [PreloadAndLod](docs/plans/PreloadAndLod.md) — 프리로딩 · LOD · 사전 준비 | 구현중 | 10/11 | 없음 | gameplay | D4-7 |
-| - | [RhiAsyncUploads](docs/plans/RhiAsyncUploads.md) — RHI 비동기 업로드 · 머티리얼 초기화 · PSO 준비 상태 | 구현중 | 5/15 | 없음 | graphics | 없음 |
+| - | [RhiAsyncUploads](docs/plans/RhiAsyncUploads.md) — RHI 비동기 업로드 · 머티리얼 초기화 · PSO 준비 상태 | 구현중 | 6/15 | 없음 | graphics | 없음 |
 | - | [ServerDebug](docs/plans/ServerDebug.md) — 서버 디버깅 계획 — 에디터에서 서버 · 멀티플레이를 손쉽게 보는 길 | 구현중 | 9/15 | 없음 | network | D7-3 |
 | - | [ShooterCharacterIntegration](docs/plans/ShooterCharacterIntegration.md) — Shooter3D 캐릭터 통합의 남은 것 | 구현중 | 6/7 | 없음 | gameplay | D4-10 |
 | - | [SilentFallbackAudit](docs/plans/SilentFallbackAudit.md) — 조용한 폴백과 남은 같은 결함 감사 (2026-10-22) | 구현중 | 10/14 | 없음 | engine | 없음 |
