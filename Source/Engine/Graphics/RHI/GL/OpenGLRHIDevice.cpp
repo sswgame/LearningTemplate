@@ -18,7 +18,6 @@ namespace sw
     OpenGLRHIDevice::OpenGLRHIDevice()
         : _pHDC{ nullptr }
         , _pHRC{ nullptr }
-        , _pHWnd{ nullptr }
         , _width{ 1280 }
         , _height{ 720 }
         , _shaderProgram{ 0 }

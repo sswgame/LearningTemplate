@@ -23,7 +23,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief `RHIStagingRing::allocate` 의 결과입니다. 제출 함수가 `RHISubmitResult` 로 옮깁니다(계약 2). */
+    /** @brief `RHIStagingRing::allocate` 의 결과입니다. `RHITransferSerials::classifyStagingAllocation` 한 곳이 `RHISubmitResult` 로 옮깁니다(계약 2, 장치를 잃었으면 모두 `Rejected`). */
     enum class RHIStagingAllocateResult : uint8
     {
         Allocated, ///< 구간을 잡았다

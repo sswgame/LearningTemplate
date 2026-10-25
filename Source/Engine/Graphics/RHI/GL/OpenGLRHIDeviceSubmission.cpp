@@ -239,22 +239,20 @@ namespace sw
         RHIStagingAllocateResult result = _stagingRing.allocate( sizeBytes, _transferSerials.getWatermark(), outSpan );
         if ( result == RHIStagingAllocateResult::Full && tryRetireFinishedTransfers() )
             result = _stagingRing.allocate( sizeBytes, _transferSerials.getWatermark(), outSpan );
-        switch ( result )
+        // 결과 옮기기는 RHITransferSerials 한 곳이다 — 장치를 잃었으면(펜스 확인이 GL_WAIT_FAILED) 링이 다시 비지 않으므로 Full 도 Busy 가 아니라 Rejected 다(계약 2).
+        const RHISubmitResult submitResult = _transferSerials.classifyStagingAllocation( result );
+        if ( submitResult != RHISubmitResult::Rejected )
+            return submitResult;
+        if ( result == RHIStagingAllocateResult::Allocated )
+            _stagingRing.free( outSpan );
+        if ( result == RHIStagingAllocateResult::TooLarge )
         {
-            case RHIStagingAllocateResult::Allocated:
-            {
-                return RHISubmitResult::Accepted;
-            }
-            case RHIStagingAllocateResult::Full:
-            {
-                return RHISubmitResult::Busy; // 앞선 전송이 끝나면 빈다 — 호출자가 다시 제출한다(계약 2)
-            }
-            case RHIStagingAllocateResult::TooLarge:
-            {
-                SW_LOG_ERROR( "%#: %# bytes do not fit the %#-byte staging ring; raise gv_rhiStagingRingMegabytes to upload it", pCaller, sizeBytes,
-                              _stagingRing.getCapacityBytes() );
-                return RHISubmitResult::Rejected;
-            }
+            SW_LOG_ERROR( "%#: %# bytes do not fit the %#-byte staging ring; raise gv_rhiStagingRingMegabytes to upload it", pCaller, sizeBytes,
+                          _stagingRing.getCapacityBytes() );
+        }
+        else
+        {
+            SW_LOG_ERROR( "%#: the GL device is lost; the staging ring no longer drains and the upload is rejected", pCaller );
         }
         return RHISubmitResult::Rejected;
     }

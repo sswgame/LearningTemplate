@@ -236,7 +236,8 @@ namespace sw
         /**
          * @brief 업로드 바이트 @p sizeBytes 를 담을 링 구간을 잡습니다. 컨텍스트가 없어도 부를 수 있습니다(복사는 컨텍스트 밖에서 한다).
          * @details 링이 차 있으면 끝난 펜스를 한 번 모아(컨텍스트를 잠깐 빌린다) 다시 시도한다 — 프레임을 돌리지 않는 동기 대기(`submitWhileBusy`)도 링을 비우게 한다(계약 7).
-         * @return 잡았으면 `Accepted`, 지금 차 있으면 `Busy`, 링이 없거나 링보다 크면 이유를 로그로 남기고 `Rejected` 입니다.
+         * @return 잡았으면 `Accepted`, 지금 차 있으면 `Busy`, 링이 없거나 링보다 크거나 장치를 잃었으면 이유를 로그로 남기고 `Rejected` 입니다
+         *         (옮기는 규칙은 `RHITransferSerials::classifyStagingAllocation` 한 곳).
          */
         [[nodiscard]] RHISubmitResult allocateStagingSpan( uint64 sizeBytes, const utf8* pCaller, RHIStagingSpan& outSpan );
 
@@ -387,7 +388,6 @@ namespace sw
         /** @brief getNativeDevice 계약용 복사본입니다. 실제 소유는 _platformContext 가 합니다. */
         void*  _pHDC;
         void*  _pHRC;
-        void*  _pHWnd;
         uint32 _width;
         uint32 _height;
         uint32 _shaderProgram;
