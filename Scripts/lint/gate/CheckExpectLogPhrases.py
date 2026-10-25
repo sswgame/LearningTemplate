@@ -13,6 +13,8 @@
 - `ExpectLog/UnknownID`: `id` 가 `SW_LOG_*_ID( "id", …)` 의 id 로 소스에 없다.
 - `ExpectLog/StalePhrase`: `contains` 문구가 어떤 로그 호출(`SW_LOG_*`)의 글에도, 번역 문자열(`Resource/**/localization/`)에도 없다.
 - `ExpectLog/UseID`: `contains` 문구가 id 가 있는 로그에서만 나온다 — `id` 로 지정한다.
+- `ExpectLog/PartialLine`: `contains`(`count="0"` 이 아닌 것)가 id 없는 Warning · Error 로그의 **일부분**이다. 런타임의 선언은 본문 전체가 같은 줄만 가리므로(부분 문자열은 다른 줄까지 가린다) 이 문구는 그 줄을 가리지 못한다 —
+  본문 전체를 적거나 로그에 `SW_LOG_*_ID` 를 붙여 `id` 로 지정한다. shortcut: 같은 문구가 Info 줄에도 맞으면(셈만 하는 단언일 수 있어) 보지 않는다.
 - `ExpectLog/LevelTag`: `contains` 가 `[Error]` · `[Warning]` 같은 수준 꼬리표다. 실행기가 세는 글은 로그 **본문**이라 수준 꼬리표는 들어 있지 않다
   (`count="0"` 이 항상 참이다). 처리하지 않은 Warning · Error 는 로그 게이트(`allowedlogs.json`)가 이미 실패로 센다.
 
@@ -42,7 +44,7 @@ _kScanRoots = ("Source",)
 _kTranslationSuffixes = (".xml", ".json", ".po", ".csv", ".tsv")
 
 #: 로그 호출의 시작. 인자는 `;` 까지다(CheckLogLanguage 와 같은 덩어리).
-_kLogCallRe = re.compile(r"\bSW_LOG_(?:ERROR|WARNING|INFO|TRACE)(_ID)?\s*\(")
+_kLogCallRe = re.compile(r"\bSW_LOG_(ERROR|WARNING|INFO|TRACE)(_ID)?\s*\(")
 _kCppStringRe = re.compile(r'"(?:\\.|[^"\\\n])*"')
 _kStringOrCommentRe = re.compile(r'"(?:\\.|[^"\\\n])*"|//[^\n]*|/\*.*?\*/', re.S)
 #: 서식 구멍. `%#`(이 프로젝트의 만능 서식)와 printf 서식. `%%` 는 먼저 글자 `%` 로 바꾼다.
@@ -57,17 +59,19 @@ _kPercentSentinel = "\x01"
 _kMinFixedMatch = 12
 #: 둘로 나눠 찾을 때 각 조각의 최소 글자 수. 너무 짧으면 아무 문구나 두 조각으로 갈라 맞는다.
 _kMinPartLength = 6
+_kGatedLevels = ("WARNING", "ERROR")   # 로그 게이트가 보는 수준(AutomationLogPolicy::isGatedLevel)
 
 
 class LogTemplate:
     """로그 호출 하나의 글 — 고정 조각들(구멍 사이)과 id."""
 
-    __slots__ = ("pieces", "logID", "location")
+    __slots__ = ("pieces", "logID", "location", "level")
 
-    def __init__(self, pieces: list[str], logID: str, location: str) -> None:
+    def __init__(self, pieces: list[str], logID: str, location: str, level: str = "") -> None:
         self.pieces = pieces
         self.logID = logID
         self.location = location
+        self.level = level   # ERROR · WARNING · INFO · TRACE. 로그 호출 밖 문장의 글은 빈 글
 
 
 def unescapeLiteral(literal: str) -> str:
@@ -102,10 +106,10 @@ def collectLogTemplates(relative: str, text: str) -> tuple[list[LogTemplate], li
         if not listLiteral:
             continue
         logID = ""
-        if match.group(1):
+        if match.group(2):
             logID, listLiteral = listLiteral[0], listLiteral[1:]
         line = noComment.count("\n", 0, match.start()) + 1
-        listLog.append(LogTemplate(splitPieces("".join(listLiteral)), logID, f"{relative}:{line}"))
+        listLog.append(LogTemplate(splitPieces("".join(listLiteral)), logID, f"{relative}:{line}", match.group(1)))
     spanIndex = 0
     listPiece: list[str] = []      # 지금 문장에서 모은 고정 조각 — 리터럴 사이가 공백뿐이면 잇고, 아니면 구멍으로 새 조각
     previousEnd = -1
@@ -251,6 +255,11 @@ def collectScenarioLogSteps(repositoryRoot: Path) -> list[tuple[str, dict[str, s
     return listStep
 
 
+def isWholeBody(phrase: str, pieces: list[str]) -> bool:
+    """`phrase` 가 로그 한 줄의 **본문 전체**와 같은가(서식 구멍은 아무 글). 선언은 본문 전체만 가린다."""
+    return re.fullmatch(".*".join(re.escape(piece) for piece in pieces), phrase, re.S) is not None
+
+
 def fitsAsTwoParts(phrase: str, index: TemplateIndex, genericIndex: TemplateIndex) -> bool:
     """
     문구가 둘로 나뉘어 각각 소스에 있는가 — `"Catalog %#"` 에 `describe( "Edited", … )` 가 들어가듯 로그 글이 호출 · 함수 경계를 넘어 이어지는 곳.
@@ -288,6 +297,12 @@ def findExpectLogViolations(listStep: list[tuple[str, dict[str, str], str]], ind
             continue
         if not listFitting and not bElsewhere:
             listViolation.append(f"[ExpectLog/StalePhrase] {relative}: contains='{phrase}' 인 로그가 소스에 없습니다 — 문구가 바뀌었다면 새 문구로, 로그 id 가 있으면 id 로 고칩니다")
+            continue
+        # 선언은 본문 전체가 같은 줄만 가린다(런타임 AutomationLogPolicy). id 없는 Warning · Error 로그만 가리키는 부분 문자열은 아무것도 가리지 못해 그 줄이 처리 안 된 줄로 남는다.
+        listGated = [template for template in listFitting if template.level in _kGatedLevels and not template.logID]
+        bDeclares = attrib.get("count") != "0"
+        if bDeclares and listGated and len(listGated) == len(listFitting) and not any(isWholeBody(phrase, template.pieces) for template in listGated):
+            listViolation.append(f"[ExpectLog/PartialLine] {relative}: contains='{phrase}' 는 id 없는 {listGated[0].level} 로그({listGated[0].location})의 일부분입니다 — 부분 문자열은 그 줄을 가리지 못합니다. 본문 전체를 적거나 그 로그에 SW_LOG_*_ID 를 붙여 id 로 지정합니다")
             continue
         if listFitting and all(template.logID for template in listFitting) and not bElsewhere:
             listViolation.append(f"[ExpectLog/UseID] {relative}: contains='{phrase}' 는 id 가 있는 로그({listFitting[0].logID} · {listFitting[0].location})입니다 — id=\"{listFitting[0].logID}\" 로 지정합니다")
@@ -351,6 +366,16 @@ class CheckExpectLogPhrasesGate(LintGate):
             "files": {
                 "Source/Engine/Probe.cpp": "void f() { SW_LOG_ERROR( \"[Error] in a literal\" ); }\n",
                 "Resource/engine/automation/probe.scenario.xml": "<Scenario><At frame=\"1\"><ExpectLog contains=\"[Error]\" count=\"0\"/></At></Scenario>\n",
+            },
+        },
+        {
+            "name": "id 없는 Warning 의 일부분 문구는 그 줄을 가리지 못한다(본문 전체는 가린다)",
+            "expectedViolation": "[ExpectLog/PartialLine] Resource/engine/automation/probe.scenario.xml: contains='unsaved edits of' 는 id 없는 WARNING 로그",
+            "files": {
+                "Source/Engine/Probe.cpp": "void f() { SW_LOG_WARNING( \"Probe: unsaved edits of '%#' are discarded\", name ); }\n",
+                "Resource/engine/automation/probe.scenario.xml": (
+                    "<Scenario><At frame=\"1\"><ExpectLog contains=\"Probe: unsaved edits of 'a.xml' are discarded\" atLeast=\"1\"/>"
+                    "<ExpectLog contains=\"unsaved edits of\" atLeast=\"1\"/><ExpectLog contains=\"unsaved edits of\" count=\"0\"/></At></Scenario>\n"),
             },
         },
         {

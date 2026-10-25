@@ -3,7 +3,7 @@
  * @brief 자동화 실행과 호스트 테스트 스위트의 로그 게이트입니다. 남은 `[Warning]` · `[Error]` 줄 가운데 처리하지 않은 줄을 가려냅니다.
  * @details 언리얼 Automation 의 `AddExpectedError`(기대한 줄 선언)와 "경고를 실패로" 설정을 합친 자리다. 줄 하나는 아래 순서로 판정한다(`classify`).
  *          1. 실행기 줄(`[Scenario]`)과 방어 구간 줄(`[Expected Defensive Test]`)은 처음부터 보지 않는다.
- *          2. 시나리오의 `<ExpectLog contains="…">` 가 선언한 줄은 통과다 — 시나리오가 일부러 만드는 줄을 그 자리에서 적는다(줄 수 단언과 짝이다).
+ *          2. 시나리오의 `<ExpectLog>` 가 선언한 줄은 통과다(`count="0"` 은 선언이 아니다). id 가 있는 줄은 `id="…"` 로만, id 없는 줄은 `contains="…"` 가 **본문 전체와 같을 때만** 선언된다 — 부분 문자열로 다른 줄까지 가리지 못한다.
  *          3. 로그 id(`SW_LOG_WARNING_ID` · `SW_LOG_ERROR_ID`)가 없는 줄은 허용 목록으로 가릴 수 없다 — 소스에 id 를 붙여야 한다(`MissingID`).
  *          4. id 가 있으면 허용 목록 `Resource/engine/automation/allowedlogs.json` 에서 (id, 지금 범위)가 맞는 항목을 찾는다. 없으면 `NotAllowed` 다.
  *          허용 목록의 항목은 id · 범위(`scenario` 나 `suite` 중 하나) · 사유 · 처리 계획 문서가 모두 있어야 읽힌다. 하나라도 비었거나 `TODO` 이면 읽기 오류로 멈춘다 —
@@ -92,7 +92,7 @@ namespace sw
         void selectScenario( string_view name );
         /** @brief 호스트 스위트 @p name 의 범위를 켭니다(`suite` 칸이 이 이름인 항목이 맞는다). */
         void selectSuite( string_view name );
-        /** @brief 시나리오의 `<ExpectLog contains="…">` 선언 하나를 더합니다. 빈 글은 무시합니다. */
+        /** @brief 시나리오의 `<ExpectLog contains="…">` 선언 하나를 더합니다. id 없는 줄의 **본문 전체**와 같을 때만 그 줄을 가립니다. 빈 글은 무시합니다. */
         void declareExpected( string_view contains );
         /** @brief 시나리오의 `<ExpectLog id="…">` 선언 하나를 더합니다. 그 id 의 줄은 문구와 무관하게 통과입니다. 빈 글은 무시합니다. */
         void declareExpectedID( string_view id );
@@ -103,7 +103,7 @@ namespace sw
         static bool isGatedLevel( LogLevel level ) { return level == LogLevel::Error || level == LogLevel::Warning; }
         /** @brief 게이트가 보지 않는 줄(실행기 줄 · 방어 구간 줄)이면 true 입니다. @p message 는 로그 본문입니다. */
         static bool isExemptMessage( string_view message );
-        /** @brief @p text 가 `<ExpectLog>` 선언 하나라도 담으면 true 입니다. */
+        /** @brief @p text(줄 본문 전체)가 `<ExpectLog contains>` 선언 하나와 같으면 true 입니다(부분 문자열이 아니다). */
         bool isDeclared( string_view text ) const;
         /** @brief @p id 가 `<ExpectLog id>` 선언 하나와 같으면 true 입니다. 빈 id(id 없는 줄)는 항상 false 입니다. */
         bool isDeclaredID( string_view id ) const;

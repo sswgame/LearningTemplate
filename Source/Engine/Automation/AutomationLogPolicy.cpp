@@ -194,7 +194,7 @@ namespace sw
     bool AutomationLogPolicy::isDeclared( string_view text ) const
     {
         return VectorUtil::containsIf( _listExpected, [&]( const string& expected )
-        { return text.find( string_view( expected ) ) != string_view::npos; } );
+        { return text == string_view( expected ); } );
     }
 
     bool AutomationLogPolicy::isDeclaredID( string_view id ) const
@@ -218,7 +218,8 @@ namespace sw
     {
         if ( isGatedLevel( level ) == false || isExemptMessage( message ) )
             return AutomationLogVerdict::NotGated;
-        if ( isDeclaredID( id ) || isDeclared( message ) )
+        // 선언은 줄을 정확히 가리킨다: id 가 있는 줄은 id 로만, id 없는 줄은 본문 전체가 같을 때만(부분 문자열은 다른 줄까지 가린다).
+        if ( id.empty() ? isDeclared( message ) : isDeclaredID( id ) )
             return AutomationLogVerdict::Declared;
         if ( id.empty() )
             return AutomationLogVerdict::MissingID;

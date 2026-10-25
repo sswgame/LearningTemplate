@@ -1013,7 +1013,8 @@ SW_TEST_CASE( ControlTest, ScenarioPossessStepMovesPossession )
                                               // 입력 맵이 빈 테스트라 Horse 에 빙의할 때 맵에 없는 액션마다 한 번 경고한다(버튼 Jump, 축 Move · Look) — 시나리오가 기대한 줄로 선언한다
                                               "<At frame=\"10\"><ExpectLog contains=\"Pawn 'Horse' intent button 'Jump' has no InputMap action\" count=\"1\"/>"
                                               "<ExpectLog contains=\"Pawn 'Horse' axis action\" count=\"2\"/>"
-                                              "<ExpectLog contains=\"has no InputMap action\" count=\"3\"/><Pass/></At>"
+                                              "<ExpectLog contains=\"has no InputMap action\" count=\"3\"/>"
+                                              "<ExpectLog id=\"Control.IntentButtonNotInInputMap\" atLeast=\"0\"/><ExpectLog id=\"Control.IntentAnalogNotInInputMap\" atLeast=\"0\"/><ExpectLog id=\"Control.AxisActionNotInInputMap\" atLeast=\"0\"/><Pass/></At>"
                                               "</Scenario>" ) );
         AutomationOutcome result = AutomationOutcome::Running;
         for ( uint32 frame = 0; frame < 30 && result == AutomationOutcome::Running; ++frame )

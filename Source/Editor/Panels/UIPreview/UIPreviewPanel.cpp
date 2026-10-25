@@ -472,7 +472,7 @@ namespace sw::editor
         if ( _documentPath.commit( focused ) == false )
             return; // 리소스 id 가 아니면 commit 이 알렸다 — 지금 문서를 그대로 둔다
         if ( isDocumentDirty() )
-            SW_LOG_WARNING( "UI Preview: unsaved edits of '%#' are discarded because '%#' was opened", previous.c_str(), _documentPath.c_str() );
+            SW_LOG_WARNING_ID( "UIPreview.UnsavedEditsDiscarded", "UI Preview: unsaved edits of '%#' are discarded because '%#' was opened", previous.c_str(), _documentPath.c_str() );
         _error.clear();
     }
 
@@ -908,7 +908,7 @@ namespace sw::editor
         if ( _documentPath.drawField( "##uipreviewdoc", 320.0f * EditorThemeUtil::getDpiScale() ) )
         {
             if ( isDocumentDirty() )
-                SW_LOG_WARNING( "UI Preview: unsaved edits of '%#' are discarded because the path changed", previous.c_str() );
+                SW_LOG_WARNING_ID( "UIPreview.UnsavedEditsDiscarded", "UI Preview: unsaved edits of '%#' are discarded because the path changed", previous.c_str() );
             _error.clear();
         }
         UIPreviewPanelInternal::noteMark( "uipreview", "path" );

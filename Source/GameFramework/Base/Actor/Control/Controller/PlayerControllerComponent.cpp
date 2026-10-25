@@ -200,12 +200,12 @@ namespace sw
         for ( const hashed_string& name : pawn.getButtonNames() )
         {
             if ( inputMap.getActionHandle( name ).isValid() == false )
-                SW_LOG_WARNING( "Pawn '%#' intent button '%#' has no InputMap action - a player cannot press it", pPawnName, name.c_str() );
+                SW_LOG_WARNING_ID( "Control.IntentButtonNotInInputMap", "Pawn '%#' intent button '%#' has no InputMap action - a player cannot press it", pPawnName, name.c_str() );
         }
         for ( const hashed_string& name : pawn.getAnalogNames() )
         {
             if ( inputMap.getActionHandle( name ).isValid() == false )
-                SW_LOG_WARNING( "Pawn '%#' intent analog '%#' has no InputMap action - a player cannot drive it", pPawnName, name.c_str() );
+                SW_LOG_WARNING_ID( "Control.IntentAnalogNotInInputMap", "Pawn '%#' intent analog '%#' has no InputMap action - a player cannot drive it", pPawnName, name.c_str() );
         }
         // 축 액션 · 입력 레이어도 이름으로 묻는다 — 맵에 없으면 질의가 로그 없이 0 이라 그 조작이 영영 안 된다.
         const hashed_string* arrAxisAction[] = { &pawn.getMoveAction(), &pawn.getLookAction(), &pawn.getUpAction() };

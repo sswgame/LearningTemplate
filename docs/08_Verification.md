@@ -50,7 +50,7 @@ cd build/Ninja-Debug/Bin
 ```
 
 **시나리오 통과 기준.** 시나리오는 종료 코드 0 이고 처리하지 않은 `[Warning]` · `[Error]` 줄이 없을 때만 통과다. 처리하지 않은 줄이 하나라도 남으면 실행기가 15(`UnhandledLog`)로 끝나며 미확정(14)보다 항상 앞선다.
-줄이 처리됐다는 것은 ① 그 시나리오의 `<ExpectLog id="…">`(로그 id 가 있는 줄) 또는 `<ExpectLog contains="…">`(id 없는 줄)가 선언한 줄이거나 ② 로그 id(`SW_LOG_WARNING_ID` · `SW_LOG_ERROR_ID`)가 붙은 줄이 `Resource/engine/automation/allowedlogs.json` 의 항목(id · 시나리오 하나 · 사유 · 처리 계획 문서)에 있다는 뜻이다. **id 없는 줄은 목록으로 가릴 수 없다** — 소스에 id 를 붙이거나 고친다.
+줄이 처리됐다는 것은 ① 그 시나리오의 `<ExpectLog id="…">`(로그 id 가 있는 줄) 또는 `<ExpectLog contains="…">`(id 없는 줄)가 선언한 줄이거나 ② 로그 id(`SW_LOG_WARNING_ID` · `SW_LOG_ERROR_ID`)가 붙은 줄이 `Resource/engine/automation/allowedlogs.json` 의 항목(id · 시나리오 하나 · 사유 · 처리 계획 문서)에 있다는 뜻이다. **선언은 줄을 정확히 가린다** — id 가 있는 줄은 `id` 로만, id 없는 줄은 `contains` 가 본문 전체와 같을 때만 가리고(부분 문자열은 다른 줄까지 가려 규칙을 무력화하므로 안 된다) `count="0"` 은 선언이 아니다. **id 없는 줄은 목록으로 가릴 수 없다** — 소스에 id 를 붙이거나 고친다.
 목록의 칸이 비었거나 `TODO` 이면 모든 시나리오가 읽기 오류(11)로 선다. 호스트 테스트 스위트(`hostgpu`)는 같은 목록의 `suite` 항목을 쓴다. 보고에는 이렇게 쓴다 — 허용 목록에 없는 Warning · Error 가 하나라도 있으면 "통과" 가 아니라 "실패(UnhandledLog)" 다.
 시나리오를 돌린 뒤에는 `py -3 -m Scripts scenario-logs --check` 로 목록에 있으나 더 나오지 않는 항목(지운다)과 15 로 끝난 보고를 센다. 처음 목록을 채울 때는 `--regen` 이 초안(사유 · 계획이 `TODO`)을 만든다. 절차와 이유는 [GPU 검증](plans/GpuVerification.md) 4절이다.
 

@@ -1553,6 +1553,12 @@ namespace sw
         {
             if ( step._kind != "ExpectLog" )
                 continue;
+            AutomationRunnerInternal::ExpectLogArgs args;
+            string                                  argsError;
+            const bool                              bParsed = AutomationRunnerInternal::parseExpectLog( step, args, argsError );
+            const bool                              bAbsent = bParsed && args._bExactCount && args._expected == 0;
+            if ( bAbsent )
+                continue; // count="0" 은 "이 줄이 없어야 한다" 는 단언이지 선언이 아니다 — 그 줄이 나오면 단언과 로그 게이트가 모두 진다
             if ( const string* pID = step.findAttribute( "id" ); pID != nullptr )
                 _logPolicy.declareExpectedID( *pID );
             else
