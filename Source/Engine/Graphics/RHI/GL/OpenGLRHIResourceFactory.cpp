@@ -520,10 +520,18 @@ namespace sw
         const RHITransferStatus status = _pDevice->_transferSerials.classify( ticket );
         if ( status != RHITransferStatus::Pending )
             return status;
-        // 컨텍스트를 기다리며 빌리지 않는다(계약). 이 스레드가 이미 컨텍스트를 쥐었을 때만 GL 에 묻고, 아니면 컨텍스트를 쥔 쪽(RT 의 endFrame, 제출 스레드)이 올린 워터마크를 본다.
-        if ( _pDevice->isGraphicsContextCurrent() == false )
+        if ( _pDevice->isGraphicsContextCurrent() )
+        {
+            _pDevice->retireFinishedTransfers();
+            return _pDevice->_transferSerials.classify( ticket );
+        }
+        // 컨텍스트를 기다리며 빌리지 않는다(계약) — 비어 있을 때만 한 번 집어 펜스를 본다. 쥔 쪽(RT 의 endFrame, 제출 스레드)에만 맡기면
+        // RT 가 프레임을 돌리지 않는 동안(게임 스레드가 동기 로드로 막혀 프레임을 내지 않는다) 기다리는 쪽이 시간 초과까지 멈춘다.
+        const bool bBorrowed = _pDevice->requiresExclusiveContextThread() && _pDevice->tryMakeCurrentAndRecordOwner();
+        if ( bBorrowed == false )
             return RHITransferStatus::Pending;
         _pDevice->retireFinishedTransfers();
+        _pDevice->unbindGraphicsContext();
         return _pDevice->_transferSerials.classify( ticket );
     }
 
