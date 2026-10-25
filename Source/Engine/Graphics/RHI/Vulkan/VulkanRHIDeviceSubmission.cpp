@@ -157,9 +157,17 @@ namespace sw
         // 잃은 장치는 기다리지 않는다 — 끝나지 않을 일을 기다리게 되거나(TDR 중의 드라이버) 같은 손실만 다시 듣는다.
         if ( _device && isDeviceLost() == false )
         {
-            std::scoped_lock<mutex> queueLock{ _queueMutex };
-            reportQueueResult( static_cast<int32>( vkDeviceWaitIdle( _device ) ), "waitIdle: vkDeviceWaitIdle" );
+            {
+                std::scoped_lock<mutex> queueLock{ _queueMutex };
+                reportQueueResult( static_cast<int32>( vkDeviceWaitIdle( _device ) ), "waitIdle: vkDeviceWaitIdle" );
+            }
+            // 큐가 비었으니 낸 전송은 모두 끝났다. 잃었으면 워터마크를 올리지 않는다 — 끝나지 않은 티켓이 Complete 로 보이면 안 된다.
+            if ( isDeviceLost() == false )
+                _transferFenceQueue.retireAll( [this]( VulkanTransferJob& job )
+                { recycleTransferJob( job ); } );
         }
+        // 전송을 기다리던 해제가 먼저 프레임 해제 큐로 넘어가야 아래에서 함께 놓인다.
+        _transferReleaseQueue.flushAll();
         _releaseQueue.flushAll();
     }
 
@@ -323,12 +331,17 @@ namespace sw
 
         const VkResult fenceResult = vkWaitForFences( _device, 1, &_listInFlightFence[_currentFrame], VK_TRUE, UINT64_MAX );
         reportQueueResult( static_cast<int32>( fenceResult ), "beginFrame: vkWaitForFences" );
+        // 펜스 대기에서 잃었음을 봤으면 이 프레임을 바로 건너뛴다 — 획득 · 기록으로 이어가면 잃은 장치에 대기와 제출을 더 낸다.
+        if ( isDeviceLost() )
+            return;
         // **여기가 타임스탬프를 읽는 유일한 안전한 자리다.** 이 슬롯의 펜스를 방금 통과했다.
         ensureTimestampPool();
         collectTimestampsForSlot();
         // 이 링 슬롯의 펜스가 신호됐다는 것은 그 슬롯에 마지막으로 제출한 세대(_listRingFrameNumber)의
         // GPU 작업이 실제로 끝났다는 뜻이다. 그 세대 이하로 태그된 리소스 해제를 지금 실행한다.
         _releaseQueue.tickCompleted( _listRingFrameNumber[_currentFrame] );
+        // 끝난 텍스처 전송도 걷는다 — 아무도 폴링하지 않는 전송(구간 갱신)의 링 구간과, 전송을 기다리던 텍스처 해제가 프레임마다 진행한다.
+        retireFinishedTransfers();
         // 이 칸의 GPU 사용이 끝났다. 값이 바뀔 때만 쓰는 상수버퍼 가운데 이 칸이 옛 값인 것을 채운다.
         fillConstantBufferSlot();
         // 이 링 슬롯에서 프레임 스트림이 쓴 슬롯 세트들도 GPU 가 다 읽었다. 풀 묶음을 통째로 비워 이번 프레임에 다시 쓴다.

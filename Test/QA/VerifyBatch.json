@@ -914,13 +914,19 @@
       "id": "rhi-transfer-u9-canvas-gpu", "title": "글리프 아틀라스 · 텍스처 구간 갱신이 프레임 안에서 기다리지 않아도 글자가 나온다(새 페이지는 첫 업로드 완료 뒤 프레임, 네 백엔드)", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true, "timeout_minutes": 40,
       "filter": "RenderPassGPUTest.CanvasDrawsOnEveryBackend,AppUITest.DemoScreenMatchesAcrossBackends,AppUITest.MsdfGlyphsMatchSdfDemoScreen", "extra_args": ["--host_suites=all"],
       "source": "docs/plans/RhiAsyncUploads.md U8 · U9", "result_doc": "docs/plans/RhiAsyncUploads.md 3절",
-      "note": "로그에 'Glyph atlas page ... not drawn' · 'rejected by the RHI' 오류가 없어야 한다. 느려졌다는 보고의 확인은 App.exe -scenario=engine/automation/uidemo.scenario.xml 을 -dx12 · -dx11 · -gl · -vulkan 으로 B0 만 든 빌드(wt/integ-l)와 이 브랜치에서 돌려 RT.Canvas.Upload 와 프레임 시간을 눈으로 견준다(Vulkan 은 U6 전까지 제출 안에서 펜스를 기다린다)."
+      "note": "로그에 'Glyph atlas page ... not drawn' · 'rejected by the RHI' 오류가 없어야 한다. 느려졌다는 보고의 확인은 App.exe -scenario=engine/automation/uidemo.scenario.xml 을 -dx12 · -dx11 · -gl · -vulkan 으로 B0 만 든 빌드(wt/integ-l)와 이 브랜치에서 돌려 RT.Canvas.Upload 와 프레임 시간을 눈으로 견준다(Vulkan 은 U6 부터 제출이 기다리지 않는다 — rhi-transfer-vk-u6)."
     },
     {
       "id": "rhi-transfer-gl1-staging-ring", "title": "GL 업로드가 영속 매핑 PBO 링으로 올라간다(밉 · BC · 면 · 구간 갱신 · 링 감기와 Busy, GL 시나리오)", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true, "timeout_minutes": 45,
       "filter": "RHIStagingRingGPUTest.*,RHIDeviceTest.UploadTexture2DAllBackends,RHIDeviceTest.TextureReadbackMatchesUpload,RHIDeviceTest.SlicedTexturesTargetUploadAndReadBackPerSlice,RHIDeviceTest.RegionUploadReadsBackOnEveryBackend,RHIDeviceTest.RegionUploadRejectsOutOfRange,RenderPassGPUTest.CanvasDrawsOnEveryBackend,AppUITest.DemoScreenMatchesAcrossBackends", "extra_args": ["--host_suites=all"],
       "source": "docs/plans/RhiAsyncUploads.md 3절 GL-1", "result_doc": "docs/plans/RhiAsyncUploads.md 3절",
       "note": "nogpu 의 RHIStagingRingTest.* 는 ctest-nogpu 가 돈다. 화면은 App.exe -gl -scenario=engine/automation/uidemo.scenario.xml (글리프 아틀라스 구간 갱신)과 텍스처가 많은 게임 하나를 -gl 로 돌려 Error · Warning 0 과 텍스처가 빠지거나 깨지지 않는지 본다. 로그에 'staging ring is unavailable' · 'do not fit the' · 'GL debug' 오류가 없어야 한다. 장부(RHIMemoryLedger)의 Staging 항목이 64 MiB 로 보이는지도 본다."
+    },
+    {
+      "id": "rhi-transfer-vk-u6", "title": "Vulkan 전송이 제출 안에서 기다리지 않는다(업로드 · 되읽기 링, 구간 갱신, 폴링만으로 완료, 전송 중 파괴 · 버린 읽기, 손실 뒤 Rejected, Canvas · AppUI)", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true, "timeout_minutes": 45,
+      "filter": "RHIStagingRingGPUTest.*,RHIDeviceTest.UploadTexture2DAllBackends,RHIDeviceTest.TextureReadbackMatchesUpload,RHIDeviceTest.SlicedTexturesTargetUploadAndReadBackPerSlice,RHIDeviceTest.RegionUploadReadsBackOnEveryBackend,RHIDeviceTest.RegionUploadRejectsOutOfRange,RHIDeviceTest.VulkanLostDeviceStopsWaitingOnTheGPU,RHIDeviceTest.LostDeviceRejectsTransferSubmitsAtEntry,RenderPassGPUTest.PresentCaptureFollowsOffscreenOutput,RenderPassGPUTest.CanvasDrawsOnEveryBackend,AppUITest.DemoScreenMatchesAcrossBackends", "extra_args": ["--host_suites=all"],
+      "source": "docs/plans/RhiAsyncUploads.md 3절 U6", "result_doc": "docs/plans/RhiAsyncUploads.md 3절",
+      "note": "nogpu 의 RHIStagingRingTest.* 는 ctest-nogpu 가 돈다. 화면은 App.exe -vulkan -scenario=engine/automation/uidemo.scenario.xml (글리프 아틀라스 구간 갱신)과 텍스처가 많은 게임 하나(kaykitcharacters)를 -vulkan 으로 돌려 종료 코드 0, Error · Warning 0, 텍스처가 빠지거나 깨지지 않는지 본다. 로그에 'do not fit the' · 'device is lost' · 'transfer command buffer' · 'one-shot submit' 오류가 없어야 한다. 검증 레이어는 Debug 구성에서만 켜진다(cmake/Engine/BuildLayout.cmake SW_VULKAN_VALIDATION) — 같은 필터와 uidemo 시나리오를 Debug 빌드로 한 번 돌려 'Validation Error' · VUID 줄이 0 인지 본다(이미 Debug 빌드가 있을 때, 레이아웃 불일치 · 펜스 재사용 · 호스트 읽기 배리어가 여기서 드러난다). 장부의 Staging 항목이 64 MiB 두 개(업로드 · 되읽기)로 보이는지 본다. 측정(RT 프레임 p99, uidemo 의 Vulkan 프레임 시간이 DX12 와 비슷해졌는지)은 rhi-transfer-b0-measure 와 같이 본다."
     },
     {
       "id": "occlusion-snapshot-tests", "title": "가림 타일 사본 판정 · 우편함 · 수집기의 가려짐 판정", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,

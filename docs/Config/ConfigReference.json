@@ -4265,7 +4265,7 @@
    "type": "int32",
    "default": "64",
    "kind": "일반",
-   "description": "업로드 스테이징 링 용량(MiB). 이보다 큰 텍스처 업로드 하나는 Rejected 다(지금은 GL 만 쓴다)",
+   "description": "업로드 스테이징 링 용량(MiB). 이보다 큰 텍스처 전송 하나는 Rejected 다(GL 업로드, Vulkan 업로드 · 되읽기 — Vulkan 은 링을 둘 둔다)",
    "source": "Source/Engine/Graphics/RHI/IRHIDevice.cpp"
   },
   {

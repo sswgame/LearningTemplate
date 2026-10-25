@@ -13,21 +13,12 @@ namespace sw
         , _watermark{ 0 }
         , _generation{ allocateRHIDeviceGeneration() }
         , _bLost{ SW_FALSE }
-        , _issueCompletedMutex{}
     {
     }
 
     uint64 RHITransferSerials::issue()
     {
         return _lastIssued.fetch_add( 1, std::memory_order_acq_rel ) + 1;
-    }
-
-    uint64 RHITransferSerials::issueCompleted()
-    {
-        std::scoped_lock<mutex> lock{ _issueCompletedMutex };
-        const uint64            serial = issue();
-        advanceWatermark( serial );
-        return serial;
     }
 
     void RHITransferSerials::advanceWatermark( uint64 serial )

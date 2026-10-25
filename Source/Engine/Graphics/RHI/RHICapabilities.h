@@ -48,7 +48,7 @@ namespace sw
          * @brief 텍스처 업로드가 영속 매핑 스테이징 링을 쓰는지입니다. 참이면 제출 스레드가 GPU 컨텍스트 밖에서 링에 복사하고, 링보다 큰 업로드 하나는 `Rejected`,
          *        링이 지금 차 있으면 `Busy` 입니다(`gv_rhiStagingRingMegabytes`).
          * @details GL 은 `GL_ARB_buffer_storage`(GL 4.4 코어)가 있어야 링을 만든다. 없으면 이 값이 거짓이고 **텍스처 업로드는 모두 이유를 로그로 남기고 `Rejected`** 다
-         *          (클라이언트 메모리에서 바로 올리는 두 번째 경로를 두지 않는다). DX11 은 `UpdateSubresource` 라 거짓, DX12 · Vulkan 은 자기 링(U5 · U6)이 생길 때 참으로 바꾼다.
+         *          (클라이언트 메모리에서 바로 올리는 두 번째 경로를 두지 않는다). DX11 은 `UpdateSubresource` 라 거짓, Vulkan 은 링을 만들지 못하면 초기화가 실패하므로 늘 참이다. DX12 는 자기 링(U5)이 생길 때 참으로 바꾼다.
          */
         uint8 _bPersistentStagingRing{ SW_FALSE };
 

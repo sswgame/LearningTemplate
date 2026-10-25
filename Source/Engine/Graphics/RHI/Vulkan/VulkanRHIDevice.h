@@ -10,6 +10,7 @@
 #include "Engine/Graphics/RHI/Support/RHIConstantBufferMirror.h"
 #include "Engine/Graphics/RHI/Support/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Support/RHIReleaseQueue.h"
+#include "Engine/Graphics/RHI/Support/RHIStagingRing.h"
 #include "Engine/Graphics/RHI/Support/RHITimestamp.h"
 #include "Engine/Graphics/RHI/Support/RHITransferSerials.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIHandle.h"
@@ -241,6 +242,8 @@ namespace sw
             caps._bMultiDrawIndirect = _bMultiDrawIndirect;
             caps._bNativeBindless    = _textureSet != nullptr ? 1u : 0u;
             caps._bWireframeFill     = _bFillModeNonSolid;
+            // 텍스처 업로드 · 되읽기는 영속 매핑 링으로만 간다(링이 없으면 초기화가 실패한다).
+            caps._bPersistentStagingRing = _uploadRing._buffer != nullptr ? SW_TRUE : SW_FALSE;
             return caps;
         }
 
@@ -441,7 +444,9 @@ namespace sw
             uint32              _arrayLayers{ 1 }; ///< 면 수(배열 원소 · 큐브 면)
             RHITextureDimension _dimension{ RHITextureDimension::Texture2D };
             /// 이 텍스처에 마지막으로 제출한 쓰기 전송(업로드)의 시리얼입니다. 0 이면 전송한 적이 없습니다. bindless 등록이 이 전송이 끝났는지 확인합니다(`RHITransferSerials::isTextureReadyToRegister`).
-            atomic<uint64>     _lastTransferSerial{ 0 };
+            atomic<uint64> _lastTransferSerial{ 0 };
+            /// 이 텍스처에서 마지막으로 읽은 전송(되읽기)의 시리얼입니다. bindless 등록은 보지 않고, 파괴가 이 복사가 끝날 때까지 이미지를 남길 때 씁니다(전송 계약 6).
+            atomic<uint64>     _lastReadbackSerial{ 0 };
             uint8              _bRenderTarget : 1;
             uint8              _bDepthStencil : 1;
             uint8              _reserved      : 6;
@@ -564,7 +569,7 @@ namespace sw
         VkRenderPass  _offscreenRenderPass; ///< 게임 뷰와 RT 드로우용 R8G8B8A8_UNORM 컬러 전용 패스
         VkCommandPool _commandPool;         ///< 프레임 버퍼와 프레임 세그먼트용 풀이다. 렌더 스레드만 쓴다.
         /**
-         * @brief 프레임 밖 일회성 제출(텍스처 업로드, 리드백, 초기 버퍼 복사) 전용 풀입니다. `_oneShotMutex` 가 보호합니다.
+         * @brief 프레임 밖에서 제출하고 기다리는 일회성 제출(구조 버퍼 갱신, GPU 시계 읽기) 전용 풀입니다. `_oneShotMutex` 가 보호합니다. 텍스처 전송은 `_transferCommandPool` 을 쓴다.
          * @details 커맨드 풀은 외부 동기화 대상이다. 게임 스레드나 로더 스레드의 업로드가 렌더 스레드가 프레임 버퍼를 기록하는
          *          `_commandPool` 에서 할당하고 해제하면, 스트리밍 텍스처가 프레임 기록과 겹칠 때 풀이 깨진다.
          */
@@ -734,10 +739,90 @@ namespace sw
         RHIHandleTable<VulkanPipelineStateRecord> _pipelineStates;
         VkPipelineCache                           _pipelineCache;
 
-        /// @brief 전송 티켓의 시리얼 발급기와 완료 워터마크입니다. 지금은 임시 구현이라 제출이 끝난 뒤에 발급한다(`issueCompleted`) — U6 이 큐 제출 락 안의 `issue` 와 연속 구간 워터마크로 바꾼다.
+        /**
+         * @struct VulkanTransferJob
+         * @brief 텍스처 전송 제출 하나의 커맨드 버퍼와 펜스입니다. 제출 뒤에도 살아 있다가 펜스를 지나면 `_listFreeTransferJob` 으로 돌아가 다시 쓰인다.
+         * @details 버퍼는 `_transferCommandPool` 에서 받는다(`_transferMutex` 가 풀을 지킨다). 펜스는 다시 쓰기 직전에 리셋한다.
+         */
+        struct VulkanTransferJob
+        {
+            VkCommandBuffer _commandBuffer{ nullptr };
+            VkFence         _fence{ nullptr };
+        };
+
+        /**
+         * @struct VulkanStagingRing
+         * @brief 영속 매핑한 호스트 가시 · 일관 버퍼 하나와 그 구간 장부입니다. 업로드 링과 되읽기 링이 하나씩 있다.
+         * @details 업로드 구간은 시리얼을 붙여(`markSubmitted`) 워터마크가 지나면 돌아온다. 되읽기 구간은 결과를 가져갈 때(`free`) 돌아오고, 끝나기 전에 버린 구간은
+         *          그때 시리얼을 붙여 복사가 끝난 뒤에 돌아온다 — 구간을 GPU 가 아직 쓰는 동안 다음 되읽기가 같은 자리를 받지 않는다.
+         */
+        struct VulkanStagingRing
+        {
+            RHIStagingRing _ledger;
+            VkBuffer       _buffer{ nullptr };
+            VkDeviceMemory _memory{ nullptr };
+            uint8*         _pMapped{ nullptr };
+        };
+
+        /** @brief 가져가지 않은 텍스처 읽기 하나입니다. 결과 바이트는 되읽기 링에 그대로 있고 `takeTextureReadback` 이 그때 복사해 간다. */
+        struct VulkanPendingReadback
+        {
+            RHIStagingSpan _span{};
+            uint64         _dataOffsetBytes{ 0 };   ///< 복사가 쓴 링 오프셋(구간 시작을 복사 정렬로 올린 값)
+            uint32         _sizeBytes{ 0 };         ///< 결과 바이트 수(`RHITextureMipSpan::_sizeBytes`)
+            uint32         _depth24TexelCount{ 0 }; ///< D24 깊이를 float32 로 바꿀 텍셀 수. 0 이면 바꾸지 않는다
+        };
+
+        /**
+         * @brief 전송 전용 커맨드 풀과 업로드 · 되읽기 스테이징 링을 만듭니다.
+         * @param ringBytes 링 하나의 용량입니다(`RHISwapChainDesc::_stagingRingBytes`). 0 이면 오류를 남기고 false 입니다(기본값으로 바꾸지 않는다).
+         */
+        [[nodiscard]] bool initializeTransfers( uint64 ringBytes );
+        /** @brief 남은 전송 작업, 전송을 기다리던 해제, 링, 풀을 놓습니다. GPU 가 쉰 뒤(종료 2단계 뒤)에 부릅니다. */
+        void shutdownTransfers();
+        /** @brief @p ring 에 @p capacityBytes 의 호스트 가시 · 일관 버퍼를 만들어 영속 매핑하고 장부의 Staging 항목에 올립니다. */
+        [[nodiscard]] bool createStagingRing( VulkanStagingRing& ring, uint64 capacityBytes, uint32 usageFlags, const utf8* pName );
+        /** @brief 링 버퍼를 놓고 장부를 비웁니다. 없는 링이면 아무것도 하지 않습니다. */
+        void destroyStagingRing( VulkanStagingRing& ring );
+        /**
+         * @brief @p ring 에서 구간을 잡습니다. 차 있으면 끝난 전송을 한 번 걷은 뒤 다시 봅니다. 기다리지 않습니다.
+         * @details 할당 결과를 제출 결과로 옮기는 곳은 `RHITransferSerials::classifyStagingAllocation` 하나다(잃은 장치면 Full 도 Rejected). Rejected 면 이유를 로그로 남기고
+         *          잡은 구간은 놓는다. 어느 스레드에서나, 전송 락 밖에서 부른다.
+         */
+        [[nodiscard]] RHISubmitResult allocateStagingSpan( VulkanStagingRing& ring, uint64 sizeBytes, const utf8* pCaller, RHIStagingSpan& outSpan );
+        /** @brief 놀고 있는 전송 작업을 꺼내(없으면 만들어) 기록을 시작합니다. `_transferMutex` 를 쥐고 부릅니다. */
+        [[nodiscard]] bool beginTransferJob( VulkanTransferJob& outJob );
+        /**
+         * @brief 기록을 끝내고 큐 락 안에서 작업의 펜스와 함께 제출한 뒤, 같은 락 안에서 시리얼을 매깁니다(계약 5). 완료를 기다리지 않습니다.
+         * @return 시리얼입니다. 제출하지 못했으면 결과를 보고하고 작업을 돌려놓은 뒤 0 입니다. `_transferMutex` 를 쥐고 부릅니다.
+         */
+        [[nodiscard]] uint64 submitTransferJob( const VulkanTransferJob& job, const utf8* pWhere );
+        /** @brief 펜스를 지난 작업을 놀고 있는 작업 목록으로 돌려놓습니다. */
+        void recycleTransferJob( const VulkanTransferJob& job );
+        /**
+         * @brief 펜스를 지난 전송을 앞에서부터 걷어 워터마크를 올리고, 전송을 기다리던 해제를 프레임 해제 큐로 넘깁니다. 기다리지 않습니다.
+         * @details 어느 스레드에서나 부른다(`pollTransfer`, 링이 찬 제출, `beginFrame`). 펜스는 하나씩 확인하므로 앞의 것이 늦게 끝나면 뒤가 끝나도 워터마크는 거기서 멈춘다.
+         */
+        void retireFinishedTransfers();
+
+        /// @brief 전송 티켓의 시리얼 발급기와 완료 워터마크입니다. 시리얼은 큐 제출 락 안에서 `_transferFenceQueue` 가 매긴다.
         RHITransferSerials _transferSerials;
-        /// @brief 아직 가져가지 않은 텍스처 읽기의 결과 바이트입니다(제출 안에서 읽어 둔 것).
-        RHIPendingReadbackTable<vector<uint8>> _readbackTable;
+        /// @brief 아직 가져가지 않은 텍스처 읽기입니다(결과는 되읽기 링에 있다).
+        RHIPendingReadbackTable<VulkanPendingReadback> _readbackTable;
+        /// @brief 제출 순서대로 쌓인 전송 작업입니다. 펜스가 앞에서부터 연속으로 지난 만큼 워터마크를 올린다(`retireFinishedTransfers`).
+        RHITransferFenceQueue<VulkanTransferJob> _transferFenceQueue;
+        /// @brief 끝나지 않은 전송이 쓰는 텍스처의 해제입니다. 키는 전송 시리얼이고, 워터마크가 지나면 그때의 다음 프레임 펜스 뒤로 `_releaseQueue` 에 넘어간다(계약 6).
+        RHIReleaseQueue   _transferReleaseQueue;
+        VulkanStagingRing _uploadRing;   ///< 업로드 스테이징(`gv_rhiStagingRingMegabytes`)
+        VulkanStagingRing _readbackRing; ///< 되읽기 스테이징(같은 용량)
+        /**
+         * @brief 텍스처 전송의 기록과 제출을 직렬화합니다. 전송 커맨드 풀, 전송이 바꾸는 레이아웃 기록의 순서를 지킨다.
+         * @details 잡는 순서는 `_transferMutex` → `_imageLayoutMutex`(짧게) · `_queueMutex` → `_transferFenceQueue` 이다. 링 할당과 소스 복사는 이 락 밖에서 한다.
+         */
+        mutex                     _transferMutex;
+        VkCommandPool             _transferCommandPool; ///< 텍스처 전송 전용 풀(RESET_COMMAND_BUFFER). `_transferMutex` 가 지킨다
+        mutex                     _transferJobMutex;    ///< `_listFreeTransferJob` 만 지키는 잎 락(펜스 줄의 회수 콜백 안에서 잡는다)
+        vector<VulkanTransferJob> _listFreeTransferJob;
 
         sw::unique_ptr<VulkanRHICommandContext>  _frameStreamContext;
         sw::unique_ptr<VulkanRHIResourceFactory> _resourceImpl;

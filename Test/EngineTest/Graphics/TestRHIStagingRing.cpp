@@ -5,7 +5,7 @@
 
 #include "TestFramework/TestFramework.h"
 
-// 업로드 스테이징 링(RHIStagingRing)의 장부 규칙을 GPU 없이 본다. 그 링을 쓰는 GL 업로드는 TestRHIStagingRingGPU.cpp 가 실제 디바이스로 본다.
+// 스테이징 링(RHIStagingRing)의 장부 규칙을 GPU 없이 본다. 그 링을 쓰는 GL · Vulkan 전송은 TestRHIStagingRingGPU.cpp 가 실제 디바이스로 본다.
 
 namespace
 {
@@ -146,4 +146,104 @@ SW_TEST_CASE( RHIStagingRingTest, MarkLostReportsOnlyTheFirstMark )
     SW_EXPECT_TRUE( serials.isLost() );
     SW_EXPECT_FALSE( serials.markLost() ); // 이미 잃은 상태다
     SW_EXPECT_TRUE( serials.isLost() );
+}
+
+/**
+ * @brief [RHIStagingRingTest] 되읽기 링(Vulkan): 구간은 결과를 가져갈 때까지 남고, 끝나기 전에 버린 구간은 그 복사의 시리얼이 워터마크를 지난 뒤에 돌아온다
+ * @details 되읽기 구간에 제출 때 시리얼을 붙이면 복사가 끝나는 순간 돌아와 가져가기 전에 다음 되읽기가 덮는다. 끝나기 전에 버린 구간을 바로 놓으면 GPU 가 아직 쓰는 자리를
+ *          다음 되읽기가 받는다. 그래서 `VulkanRHIResourceFactory` 는 가져갈 때 `free`, 끝나기 전에 버릴 때 `markSubmitted` 를 부른다. 장치 종료는 보관표를 비운다(`clear`).
+ */
+SW_TEST_CASE( RHIStagingRingTest, ReadbackSpansStayUntilTakenAndDiscardedOnesWaitForTheirCopy )
+{
+    sw::RHIStagingRing                              ring;
+    sw::RHITransferSerials                          serials;
+    sw::RHIPendingReadbackTable<sw::RHIStagingSpan> table;
+    ring.initialize( 512, 256 );
+
+    sw::RHIStagingSpan taken{};
+    sw::RHIStagingSpan discarded{};
+    SW_ASSERT_TRUE( isAllocated( ring.allocate( 256, serials.getWatermark(), taken ) ) );
+    const uint64 takenSerial = serials.issue();
+    table.add( takenSerial, taken );
+    SW_ASSERT_TRUE( isAllocated( ring.allocate( 256, serials.getWatermark(), discarded ) ) );
+    const uint64 discardedSerial = serials.issue();
+    table.add( discardedSerial, discarded );
+
+    // 첫 복사가 끝났지만 아직 가져가지 않았다 — 구간은 돌아오지 않는다.
+    serials.advanceWatermark( takenSerial );
+    sw::RHIStagingSpan probe{};
+    SW_EXPECT_TRUE( ring.allocate( 16, serials.getWatermark(), probe ) == sw::RHIStagingAllocateResult::Full );
+
+    // 둘째는 끝나기 전에 버린다(시리얼을 붙인다), 첫째는 가져간다(놓는다).
+    sw::RHIStagingSpan out{};
+    SW_ASSERT_TRUE( table.take( discardedSerial, out ) );
+    SW_EXPECT_FALSE( serials.isComplete( discardedSerial ) );
+    ring.markSubmitted( out, discardedSerial );
+    SW_ASSERT_TRUE( table.take( takenSerial, out ) );
+    ring.free( out );
+    ring.freeCompleted( serials.getWatermark() );
+    SW_EXPECT_EQUAL( static_cast<uint32>( 1 ), ring.getLiveCount() ); // 버린 구간은 복사가 아직 쓰고 있다
+    SW_EXPECT_TRUE( ring.allocate( 512, serials.getWatermark(), probe ) == sw::RHIStagingAllocateResult::Full );
+
+    serials.advanceWatermark( discardedSerial );
+    SW_ASSERT_TRUE( isAllocated( ring.allocate( 512, serials.getWatermark(), probe ) ) );
+    SW_EXPECT_EQUAL( static_cast<uint64>( 0 ), probe._offsetBytes );
+
+    table.add( serials.issue(), probe );
+    table.clear();
+    SW_EXPECT_EQUAL( static_cast<uint32>( 0 ), table.getCount() );
+}
+
+/**
+ * @brief [RHIStagingRingTest] 가짜 장치로 본 Vulkan 업로드의 링 재사용: 펜스가 앞에서부터 연속으로 지난 만큼만 구간이 돌아오고, 뒤의 펜스가 먼저 신호돼도 앞 구간을 덮지 않는다
+ * @details `VulkanRHIDevice` 의 순서를 흉내 낸다 — 링 할당, 제출과 같은 락 안의 시리얼(`RHITransferFenceQueue::enqueue`), 구간에 시리얼 붙이기(`markSubmitted`),
+ *          펜스 확인(`retireDone`)과 작업 재사용. 펜스는 작업마다 따로라 신호 순서가 제출 순서와 다를 수 있다. 링이 찬 동안의 결과는 `Busy` 다.
+ */
+SW_TEST_CASE( RHIStagingRingTest, FakeDeviceReusesRingSpansOnlyAfterTheFencePrefixPasses )
+{
+    struct FakeJob
+    {
+        uint32 _fenceIndex;
+    };
+
+    sw::RHITransferSerials             serials;
+    sw::RHITransferFenceQueue<FakeJob> fenceQueue{ serials };
+    sw::RHIStagingRing                 ring;
+    ring.initialize( 768, 256 );
+
+    constexpr uint32   kJobCount = 3;
+    bool               arrSignaled[kJobCount]{ false, false, false };
+    sw::RHIStagingSpan arrSpan[kJobCount]{};
+    uint64             arrSerial[kJobCount]{};
+    uint32             recycledCount{ 0 };
+    const auto         isSignaled = [&arrSignaled]( const FakeJob& job )
+    { return arrSignaled[job._fenceIndex]; };
+    const auto recycle = [&recycledCount]( FakeJob& )
+    { ++recycledCount; };
+
+    for ( uint32 jobIndex = 0; jobIndex < kJobCount; ++jobIndex )
+    {
+        SW_ASSERT_TRUE( isAllocated( ring.allocate( 200, serials.getWatermark(), arrSpan[jobIndex] ) ) );
+        arrSerial[jobIndex] = fenceQueue.enqueue( FakeJob{ jobIndex } );
+        ring.markSubmitted( arrSpan[jobIndex], arrSerial[jobIndex] );
+    }
+
+    // 뒤의 두 펜스가 먼저 신호됐다. 걷어도 맨 앞이 안 끝나 워터마크가 그대로이고 링은 차 있다(Busy).
+    arrSignaled[1] = true;
+    arrSignaled[2] = true;
+    SW_EXPECT_FALSE( fenceQueue.retireDone( isSignaled, recycle ) );
+    SW_EXPECT_EQUAL( static_cast<uint32>( 0 ), recycledCount );
+    SW_EXPECT_FALSE( serials.isComplete( arrSerial[2] ) );
+    sw::RHIStagingSpan                 next{};
+    const sw::RHIStagingAllocateResult fullResult = ring.allocate( 200, serials.getWatermark(), next );
+    SW_EXPECT_TRUE( serials.classifyStagingAllocation( fullResult ) == sw::RHISubmitResult::Busy );
+
+    // 맨 앞이 끝나면 셋이 함께 걷혀 작업이 재사용 목록으로 돌아가고, 링은 처음부터 다시 받는다.
+    arrSignaled[0] = true;
+    SW_EXPECT_TRUE( fenceQueue.retireDone( isSignaled, recycle ) );
+    SW_EXPECT_EQUAL( kJobCount, recycledCount );
+    SW_EXPECT_EQUAL( arrSerial[2], serials.getWatermark() );
+    SW_ASSERT_TRUE( isAllocated( ring.allocate( 600, serials.getWatermark(), next ) ) );
+    SW_EXPECT_EQUAL( static_cast<uint64>( 0 ), next._offsetBytes );
+    SW_EXPECT_EQUAL( static_cast<uint32>( 1 ), ring.getLiveCount() );
 }

@@ -559,8 +559,11 @@ namespace sw
             return false;
         {
             std::scoped_lock<mutex> queueLock{ _queueMutex };
-            vkDeviceWaitIdle( _device );
+            reportQueueResult( static_cast<int32>( vkDeviceWaitIdle( _device ) ), "recreateSwapChain: vkDeviceWaitIdle" );
         }
+        // 대기에서 잃었음을 봤으면 다시 만들지 않는다 — 잃은 장치의 스왑체인 생성은 같은 손실만 다시 듣는다.
+        if ( isDeviceLost() )
+            return false;
 
         // 아래에서 스왑체인을 통째로 버린다. 쥐고 있던 이미지도 같이 사라지므로 표식을 내린다.
         // 남겨 두면 새 스왑체인에서 첫 acquire 를 건너뛰어 이미지 없이 그리게 된다.
@@ -614,8 +617,10 @@ namespace sw
             return false;
         {
             std::scoped_lock<mutex> queueLock{ _queueMutex };
-            vkDeviceWaitIdle( _device );
+            reportQueueResult( static_cast<int32>( vkDeviceWaitIdle( _device ) ), "recreateSurfaceAndSwapChain: vkDeviceWaitIdle" );
         }
+        if ( isDeviceLost() )
+            return false;
         // 스왑체인이 서피스 위에 있으므로 스왑체인 → 서피스 순으로 버리고 서피스 → 스왑체인 순으로 만든다.
         _bSwapChainImageHeld = SW_FALSE;
         destroyFrameFences();

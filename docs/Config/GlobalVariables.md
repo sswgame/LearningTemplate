@@ -123,7 +123,7 @@
 | `gv_rhiBackBufferFormat` | `int32` | `0` | 일반 | 요청 백버퍼 포맷: 0=R8G8B8A8_UNORM, 1=B8G8R8A8_UNORM (실제 채택값은 getBackBufferFormat) | [IRHIDevice.cpp](../../Source/Engine/Graphics/RHI/IRHIDevice.cpp) |
 | `gv_rhiBackend` | `RHIBackend` | `SW_RHI_BACKEND_DEFAULT` | 일반 | Current RHI Backend | [RHI.cpp](../../Source/Engine/Graphics/RHI/RHI.cpp) |
 | `gv_rhiSoftwareAdapter` | `int32` | `0` | 테스트 | 소프트웨어 어댑터로 띄운다: 0=하드웨어, 1=WARP(DX11 · DX12) · CPU 디바이스(Vulkan) | [IRHIDevice.cpp](../../Source/Engine/Graphics/RHI/IRHIDevice.cpp) |
-| `gv_rhiStagingRingMegabytes` | `int32` | `64` | 일반 | 업로드 스테이징 링 용량(MiB). 이보다 큰 텍스처 업로드 하나는 Rejected 다(지금은 GL 만 쓴다) | [IRHIDevice.cpp](../../Source/Engine/Graphics/RHI/IRHIDevice.cpp) |
+| `gv_rhiStagingRingMegabytes` | `int32` | `64` | 일반 | 업로드 스테이징 링 용량(MiB). 이보다 큰 텍스처 전송 하나는 Rejected 다(GL 업로드, Vulkan 업로드 · 되읽기 — Vulkan 은 링을 둘 둔다) | [IRHIDevice.cpp](../../Source/Engine/Graphics/RHI/IRHIDevice.cpp) |
 | `gv_textureMipDrop` | `int32` | `0` | 일반 | 텍스처를 읽을 때 버리는 위쪽 밉 수 (사용자 설정 graphics.textureQuality 의 targetValue, 다시 시작해야 반영) | [Texture2D.cpp](../../Source/Engine/Graphics/Texture/Texture2D.cpp) |
 | `gv_textureStreaming` | `int32` | `1` | 일반 | Upload async-loaded textures with their low mips first and stream the top mips in later (0 = upload every mip at once) | [TextureCache.cpp](../../Source/Engine/Graphics/Texture/TextureCache.cpp) |
 | `gv_validateBindlessIndex` | `int32` | `kDefaultLevel` | 테스트 | 셰이더에 넘기는 bindless 인덱스 검사 — 0 끔, 1 죽은 번호(Debug 기본), 2 '없음' 번호가 가는 자리까지 | [BindlessIndexValidator.cpp](../../Source/Engine/Graphics/RHI/Support/BindlessIndexValidator.cpp) |

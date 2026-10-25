@@ -292,7 +292,7 @@ namespace sw
     SW_TEST_GLOBAL_VARIABLE( int32, gv_rhiSoftwareAdapter, 0, "소프트웨어 어댑터로 띄운다: 0=하드웨어, 1=WARP(DX11 · DX12) · CPU 디바이스(Vulkan)" );
     // 업로드 스테이징 링 용량. 64 MiB 는 측정값이 아니라 4096² BC7 밉 체인(약 21 MiB) 몇 장을 동시에 담는 추정이다(RhiAsyncUploads 2.2, M1 이 조정한다).
     // 링보다 큰 업로드 하나는 기다려도 못 받으므로 Rejected 다 — 그런 텍스처를 올려야 하면 이 값을 올린다.
-    SW_GLOBAL_VARIABLE( int32, gv_rhiStagingRingMegabytes, 64, "업로드 스테이징 링 용량(MiB). 이보다 큰 텍스처 업로드 하나는 Rejected 다(지금은 GL 만 쓴다)" );
+    SW_GLOBAL_VARIABLE( int32, gv_rhiStagingRingMegabytes, 64, "업로드 스테이징 링 용량(MiB). 이보다 큰 텍스처 전송 하나는 Rejected 다(GL 업로드, Vulkan 업로드 · 되읽기 — Vulkan 은 링을 둘 둔다)" );
 
     bool IRHIDevice::initialize()
     {
