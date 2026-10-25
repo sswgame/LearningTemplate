@@ -45,8 +45,36 @@ namespace sw
         , _depthOfField{}
         , _lensShift{ 0.0f, 0.0f }
         , _bOrthographic{ false }
-        , _bCutPending{ SW_FALSE }
+        , _cutFrame{ 0 }
+        , _cutStamp{ 0 }
+        , _arrCutSeenStamp{}
     {
+    }
+
+    namespace
+    {
+        /** @brief 소유 씬의 프레임 번호입니다. 씬에 붙기 전이면 0 입니다. */
+        uint64 getSceneFrame( const CameraComponent& camera )
+        {
+            const GameObject*        pOwner   = camera.getOwner();
+            const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+            return pManager != nullptr ? pManager->getUpdateSerial() : 0;
+        }
+    } // namespace
+
+    void CameraComponent::markCut()
+    {
+        _cutFrame = getSceneFrame( *this );
+        ++_cutStamp;
+    }
+
+    bool CameraComponent::consumeCut( CameraCutReader reader )
+    {
+        uint32& seen = _arrCutSeenStamp[static_cast<uint32>( reader )];
+        if ( _cutStamp == seen )
+            return false;
+        seen = _cutStamp; // 낡은 컷도 본 것으로 적어 둔다(다음 `markCut` 까지 다시 묻지 않게)
+        return getSceneFrame( *this ) <= _cutFrame + 1;
     }
 
     CameraComponent* CameraComponent::findOrCreateNamed( GameObjectManager* pObjectManager, hashed_string objectName, CameraRole role,
