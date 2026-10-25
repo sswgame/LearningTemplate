@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/Network/DebugReplyLine.h"
+
 #include "Engine/Scene/SceneStateHash.h"
 
 #include "TestFramework/TestFramework.h"
@@ -130,14 +132,14 @@ SW_TEST_CASE( StateHashReportLineTest, AnObjectLineRoundTripsAwkwardNamesInsideA
 }
 
 /**
- * @brief [StateHashReportLineTest] 한 줄 상한(`SceneStateHash::kMaxReportLineBytes`)을 넘는 목록은 쓰는 쪽이 오류로 멈추고, 읽는 쪽도 넘는 줄을 거절한다
+ * @brief [StateHashReportLineTest] 한 줄 상한(`DebugReplyLine::kMaxBytes`)을 넘는 목록은 쓰는 쪽이 오류로 멈추고, 읽는 쪽도 넘는 줄을 거절한다
  * @details 파이프 · 로그 줄 버퍼가 한 줄을 조용히 자르거나 둘로 쪼개 다음 줄과 섞는 일을 만들지 않는다. 상한 안의 줄은 그대로 쓰이고 읽힌다.
  */
 SW_TEST_CASE( StateHashReportLineTest, ALineOverTheLimitIsAnErrorOnBothSides )
 {
     // 오브젝트 하나가 `<16자리>:<이름>,` — 이름 8 글자면 26 바이트다.
     vector<SceneObjectHash> listObject;
-    for ( size_t index = 0; index < SceneStateHash::kMaxReportLineBytes / 26 + 8; ++index )
+    for ( size_t index = 0; index < DebugReplyLine::kMaxBytes / 26 + 8; ++index )
     {
         listObject.push_back( SceneObjectHash{ "Obj" + to_string( 10000 + index ), index } );
     }
@@ -153,7 +155,7 @@ SW_TEST_CASE( StateHashReportLineTest, ALineOverTheLimitIsAnErrorOnBothSides )
     // 상한 안의 목록은 쓰이고 되읽힌다.
     listObject.resize( 20 );
     SW_ASSERT_TRUE( SceneStateHash::writeObjectReportLine( 1, listObject, line ) );
-    SW_EXPECT_TRUE( line.size() <= SceneStateHash::kMaxReportLineBytes );
+    SW_EXPECT_TRUE( line.size() <= DebugReplyLine::kMaxBytes );
     uint64                  tick = 0;
     vector<SceneObjectHash> parsed;
     SW_EXPECT_TRUE( SceneStateHash::tryParseObjectReportLine( line, tick, parsed ) );
@@ -161,7 +163,7 @@ SW_TEST_CASE( StateHashReportLineTest, ALineOverTheLimitIsAnErrorOnBothSides )
 
     // 읽는 쪽: 같은 상수를 넘는 줄(유효한 항목이라도)은 거절한다.
     string tooLong = string( SceneStateHash::kObjectReportLinePrefix ) + " 1 ";
-    while ( tooLong.size() <= SceneStateHash::kMaxReportLineBytes )
+    while ( tooLong.size() <= DebugReplyLine::kMaxBytes )
     {
         tooLong += "00000000000000aa:Door,";
     }
@@ -177,12 +179,12 @@ SW_TEST_CASE( StateHashReportLineTest, ALineOverTheLimitIsAnErrorOnBothSides )
     }
     string historyLine = "stale";
     SW_ASSERT_TRUE( StateHashHistory::writeReportLine( listSample, historyLine ) );
-    SW_EXPECT_TRUE( historyLine.size() <= SceneStateHash::kMaxReportLineBytes );
+    SW_EXPECT_TRUE( historyLine.size() <= DebugReplyLine::kMaxBytes );
     vector<StateHashSample> parsedSample;
     SW_EXPECT_TRUE( StateHashHistory::tryParseReportLine( historyLine, parsedSample ) );
     SW_EXPECT_EQUAL( size_t( StateHashHistory::kMaxReportLineSamples ), parsedSample.size() );
 
-    while ( listSample.size() < SceneStateHash::kMaxReportLineBytes / 20 )
+    while ( listSample.size() < DebugReplyLine::kMaxBytes / 20 )
     {
         listSample.push_back( StateHashSample{ 0xFFFFFFFFFFFFFFFFull - listSample.size(), 0xFFFFFFFFFFFFFFFFull } );
     }
@@ -193,5 +195,5 @@ SW_TEST_CASE( StateHashReportLineTest, ALineOverTheLimitIsAnErrorOnBothSides )
         SW_EXPECT_EQUAL( 1u, log.countWithID( "State.ReportLineTooLong" ) );
     }
     SW_EXPECT_TRUE( historyLine.empty() );
-    SW_EXPECT_FALSE( StateHashHistory::tryParseReportLine( string( StateHashHistory::kReportLinePrefix ) + " " + string( SceneStateHash::kMaxReportLineBytes, '1' ), parsedSample ) );
+    SW_EXPECT_FALSE( StateHashHistory::tryParseReportLine( string( StateHashHistory::kReportLinePrefix ) + " " + string( DebugReplyLine::kMaxBytes, '1' ), parsedSample ) );
 }

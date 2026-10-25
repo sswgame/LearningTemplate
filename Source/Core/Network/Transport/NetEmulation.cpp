@@ -9,6 +9,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/XorShift32.h"
+#include "Core/Network/DebugReplyLine.h"
 
 #include <algorithm>
 
@@ -135,7 +136,7 @@ namespace sw
         text += " resent=" + to_string( _resentMessageCount );
         NetEmulationInternal::appendValue( text, "lossPercent", static_cast<float64>( _measuredLossPercent ) );
         NetEmulationInternal::appendValue( text, "rttMs", static_cast<float64>( _rttMilliseconds ) );
-        return text;
+        return DebugReplyLine::makeFixed( std::move( text ) );
     }
 
     bool NetEmulationReport::tryParseLine( string_view line, NetEmulationReport& outReport )

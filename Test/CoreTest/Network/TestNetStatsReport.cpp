@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Network/DebugReplyLine.h"
 #include "Core/Network/Message/NetStatsReport.h"
 
 #include "TestFramework/TestFramework.h"
@@ -102,11 +103,11 @@ SW_TEST_CASE( NetStatsReportTest, OverlongLineIsCappedAndMarkedTruncated )
         report._listReplicaEntry.push_back( NetStatsReplicaEntry{ longName + to_string( index ), 1, 1 } );
     }
     const string line = report.makeLine();
-    SW_EXPECT_TRUE( line.size() <= NetStatsReport::kMaxLineBytes );
+    SW_EXPECT_TRUE( line.size() <= DebugReplyLine::kMaxBytes );
 
     NetStatsReport parsed;
     SW_ASSERT_TRUE( NetStatsReport::tryParseLine( line, parsed ) );
-    SW_EXPECT_TRUE( parsed._truncatedLineBytes > NetStatsReport::kMaxLineBytes );
+    SW_EXPECT_TRUE( parsed._truncatedLineBytes > DebugReplyLine::kMaxBytes );
     SW_EXPECT_TRUE( parsed._listReplicaEntry.size() < report._listReplicaEntry.size() );
 
     NetStatsReport small;

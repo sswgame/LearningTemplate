@@ -32,7 +32,7 @@ namespace sw::editor
             static constexpr float32 kFieldWidthInFonts = 10.0f;
             /** @brief 경로 칸의 너비(글자 크기 배수)입니다. */
             static constexpr float32 kPathWidthInFonts = 20.0f;
-            /** @brief 클라이언트에게 묻는 최근 틱 수입니다. 답은 로그 한 줄이라 한 줄 상한(`SceneStateHash::kMaxReportLineBytes`)에 드는 수까지만 묻는다(더 많이 물으면 클라이언트가 오류로 답한다). 세션 서버 이력(3600 틱)보다 짧다. */
+            /** @brief 클라이언트에게 묻는 최근 틱 수입니다. 답은 로그 한 줄이라 한 줄 상한(`DebugReplyLine::kMaxBytes`)에 드는 수까지만 묻는다(더 많이 물으면 클라이언트가 오류로 답한다). 세션 서버 이력(3600 틱)보다 짧다. */
             static constexpr int32 kClientHistoryTicks = static_cast<int32>( StateHashHistory::kMaxReportLineSamples );
             /** @brief 슬롯 이름입니다(탭 · 명령 답). */
             static constexpr const utf8* kArrSourceName[EditorStateHashCompare::kSourceCount] = { "A", "B" };

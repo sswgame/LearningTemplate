@@ -3,6 +3,7 @@
 #include "Core/Network/Message/NetStatsReport.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Network/DebugReplyLine.h"
 #include "Core/Network/NetTypes.h"
 
 #include <algorithm>
@@ -97,9 +98,6 @@ namespace sw
                 }
             }
 
-            /** @brief 잘림 표시 ` truncated=<20자리 길이>` 의 최대 바이트입니다(복제 셈을 담을 때 미리 비워 둔다). */
-            static constexpr size_t kTruncatedMarkerBytes = 32;
-
             /**
              * @brief ` replicas=<이름>:<수>:<바이트>,…` 를 붙입니다. 이름이 형식에 맞지 않는 항목은 싣지 않습니다(줄 구분자를 깨지 않게).
              * @details 줄이 @p maxBytes 를 넘지 않게 항목을 앞에서부터 담고, 담지 못한 항목이 있으면 true 를 반환합니다(부른 쪽이 잘림 표시를 붙인다).
@@ -186,13 +184,10 @@ namespace sw
         NetStatsReportInternal::appendKinds( text, "kinds", _listKindEntry );
         NetStatsReportInternal::appendKinds( text, "sentKinds", _listSentKindEntry );
         // 종류 칸은 각 `kMaxKindEntry` 개라 머리는 상한에 한참 못 미친다. 길이가 열린 칸은 복제 셈(이름 길이 제한 없음)뿐이라 거기서만 줄인다.
-        string fullText = text;
-        (void)NetStatsReportInternal::appendReplicas( fullText, _listReplicaEntry, std::numeric_limits<size_t>::max() );
-        if ( fullText.size() <= kMaxLineBytes )
-            return fullText;
-        (void)NetStatsReportInternal::appendReplicas( text, _listReplicaEntry, kMaxLineBytes - NetStatsReportInternal::kTruncatedMarkerBytes );
-        text += " truncated=" + to_string( static_cast<uint64>( fullText.size() ) );
-        return text;
+        return DebugReplyLine::makeCapped( std::move( text ), [this]( string& inoutText, size_t maxBytes )
+        {
+            (void)NetStatsReportInternal::appendReplicas( inoutText, _listReplicaEntry, maxBytes );
+        } );
     }
 
     bool NetStatsReport::tryParseLine( string_view line, NetStatsReport& outReport )

@@ -82,7 +82,7 @@ namespace sw
         float32 _rttMilliseconds{ 0.0f };     ///< 연결들의 평활 RTT 중 가장 큰 값(ms)
         int32   _connectionCount{ 0 };        ///< 붙어 있는 연결 수
 
-        /** @brief `kLinePrefix connections=1 sent=… dropped=… resent=… lossPercent=… rttMs=…` 한 줄을 만듭니다. */
+        /** @brief `kLinePrefix connections=1 sent=… dropped=… resent=… lossPercent=… rttMs=…` 한 줄을 만듭니다. 길이는 정해져 있지만 한 줄 답의 상한(`DebugReplyLine::kMaxBytes`)은 `DebugReplyLine::makeFixed` 가 강제한다. */
         string makeLine() const;
         /** @brief @p line 에서 `kLinePrefix` 를 찾아 뒤의 값을 읽습니다. 머리가 없거나 아는 키의 값이 숫자가 아니면 false 이고 @p outReport 를 바꾸지 않습니다. 모르는 키는 건너뜁니다. */
         [[nodiscard]] static bool tryParseLine( string_view line, NetEmulationReport& outReport );

@@ -15,6 +15,7 @@
 #if SW_DEV_COMMANDS_ENABLED
 
     #include "Core/Container/StringUtil.h"
+    #include "Core/Network/DebugReplyLine.h"
 
     #include "Engine/Common/EngineServices.h"
     #include "Engine/Object/Component/Component.h"
@@ -219,7 +220,7 @@ namespace sw
                     return false;
                 if ( SceneStateHash::writeObjectReportLine( tick, listObject, outReply ) == false )
                 {
-                    outReply = "the object report does not fit one line (" + to_string( listObject.size() ) + " objects, limit " + to_string( SceneStateHash::kMaxReportLineBytes ) +
+                    outReply = "the object report does not fit one line (" + to_string( listObject.size() ) + " objects, limit " + to_string( DebugReplyLine::kMaxBytes ) +
                                " bytes) - use state.objects";
                     return false;
                 }
@@ -291,7 +292,7 @@ namespace sw
                 }
                 if ( StateHashHistory::writeReportLine( listSample, outReply ) == false )
                 {
-                    outReply = "the hash history does not fit one line (limit " + to_string( SceneStateHash::kMaxReportLineBytes ) + " bytes) - use state.hashes";
+                    outReply = "the hash history does not fit one line (limit " + to_string( DebugReplyLine::kMaxBytes ) + " bytes) - use state.hashes";
                     return false;
                 }
                 return true;
