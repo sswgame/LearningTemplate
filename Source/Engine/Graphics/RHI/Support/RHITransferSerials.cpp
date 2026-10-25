@@ -2,6 +2,8 @@
 
 #include "Engine/Graphics/RHI/Support/RHITransferSerials.h"
 
+#include "Engine/Graphics/RHI/Support/RHIStagingRing.h"
+
 namespace sw
 {
     SW_LOG_CALLER( "RHITransferSerials" );
@@ -38,6 +40,28 @@ namespace sw
         _bLost.store( SW_TRUE, std::memory_order_release );
     }
 
+    RHISubmitResult RHITransferSerials::classifyStagingAllocation( RHIStagingAllocateResult result ) const
+    {
+        if ( isLost() )
+            return RHISubmitResult::Rejected;
+        switch ( result )
+        {
+            case RHIStagingAllocateResult::Allocated:
+            {
+                return RHISubmitResult::Accepted;
+            }
+            case RHIStagingAllocateResult::Full:
+            {
+                return RHISubmitResult::Busy;
+            }
+            case RHIStagingAllocateResult::TooLarge:
+            {
+                return RHISubmitResult::Rejected;
+            }
+        }
+        return RHISubmitResult::Rejected;
+    }
+
     RHITransferStatus RHITransferSerials::classify( RHITransferTicket ticket ) const
     {
         if ( ticket.isValid() == false )
@@ -58,7 +82,7 @@ namespace sw
         }
         if ( isComplete( ticket._serial ) )
             return RHITransferStatus::Complete;
-        if ( _bLost.load( std::memory_order_acquire ) == SW_TRUE )
+        if ( isLost() )
             return RHITransferStatus::Failed;
         return RHITransferStatus::Pending;
     }

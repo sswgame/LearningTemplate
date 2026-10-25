@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Engine/Graphics/RHI/Support/RHIStagingRing.h"
+#include "Engine/Graphics/RHI/Support/RHITransferSerials.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -100,4 +101,35 @@ SW_TEST_CASE( RHIStagingRingTest, FreesInAllocationOrderOnly )
 
     ring.shutdown();
     SW_EXPECT_TRUE( ring.allocate( 16, 0, probe ) == sw::RHIStagingAllocateResult::TooLarge ); // 용량 0 이면 모두 못 받는다
+}
+
+/**
+ * @brief [RHIStagingRingTest] 장치를 잃은 뒤에는 링이 차 있어도 Busy 가 아니라 Rejected 다(계약 2)
+ * @details 잃은 장치의 펜스는 끝나지 않아 워터마크가 멈추고 링이 다시 비지 않는다. 그때 Full 을 Busy 로 옮기면 `submitWhileBusy` 와 다음 프레임의 재제출이
+ *          끝없이 되풀이한다. 할당 결과를 제출 결과로 옮기는 곳은 `RHITransferSerials::classifyStagingAllocation` 하나이고, 백엔드 제출 함수는 진입에서 `isLost` 를 본다.
+ */
+SW_TEST_CASE( RHIStagingRingTest, LostDeviceRejectsInsteadOfBusyWhenTheRingIsFull )
+{
+    sw::RHIStagingRing     ring;
+    sw::RHITransferSerials serials;
+    ring.initialize( 256, 16 );
+
+    sw::RHIStagingSpan held{};
+    SW_ASSERT_TRUE( isAllocated( ring.allocate( 256, serials.getWatermark(), held ) ) );
+    ring.markSubmitted( held, serials.issue() ); // 제출했지만 GPU 가 끝내지 않았다(워터마크 0)
+
+    sw::RHIStagingSpan                 probe{};
+    const sw::RHIStagingAllocateResult fullBeforeLoss = ring.allocate( 16, serials.getWatermark(), probe );
+    SW_ASSERT_TRUE( fullBeforeLoss == sw::RHIStagingAllocateResult::Full );
+    SW_EXPECT_FALSE( serials.isLost() );
+    SW_EXPECT_TRUE( serials.classifyStagingAllocation( fullBeforeLoss ) == sw::RHISubmitResult::Busy ); // GPU 가 진행하면 빈다
+    SW_EXPECT_TRUE( serials.classifyStagingAllocation( sw::RHIStagingAllocateResult::Allocated ) == sw::RHISubmitResult::Accepted );
+    SW_EXPECT_TRUE( serials.classifyStagingAllocation( sw::RHIStagingAllocateResult::TooLarge ) == sw::RHISubmitResult::Rejected );
+
+    serials.markLost();
+    const sw::RHIStagingAllocateResult fullAfterLoss = ring.allocate( 16, serials.getWatermark(), probe );
+    SW_ASSERT_TRUE( fullAfterLoss == sw::RHIStagingAllocateResult::Full ); // 워터마크가 멈춰 링은 그대로 차 있다
+    SW_EXPECT_TRUE( serials.isLost() );
+    SW_EXPECT_TRUE( serials.classifyStagingAllocation( fullAfterLoss ) == sw::RHISubmitResult::Rejected );
+    SW_EXPECT_TRUE( serials.classifyStagingAllocation( sw::RHIStagingAllocateResult::Allocated ) == sw::RHISubmitResult::Rejected ); // 잡은 구간은 호출자가 놓는다
 }

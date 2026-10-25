@@ -426,11 +426,12 @@ namespace sw
 
     RHITransferSubmit OpenGLRHIResourceFactory::submitTextureUpload( RHITextureHandle texture, const RHITextureUploadDesc& desc )
     {
-        OpenGLRHIDevice::OpenGLTextureRecord* pRecord               = _pDevice->resolveTexture( texture );
-        const bool                            bTextureNotUploadable = pRecord == nullptr || pRecord->_texture == 0 || _pDevice->_bInitialized == SW_FALSE;
+        OpenGLRHIDevice::OpenGLTextureRecord* pRecord = _pDevice->resolveTexture( texture );
+        // 장치를 잃었으면 진입에서 Rejected 다(계약 2) — 잃은 뒤에는 워터마크가 멈춰 링이 비지 않으므로 아래 할당까지 가면 Busy 로 끝없이 되풀이된다.
+        const bool bTextureNotUploadable = pRecord == nullptr || pRecord->_texture == 0 || _pDevice->_bInitialized == SW_FALSE || _pDevice->_transferSerials.isLost();
         if ( bTextureNotUploadable )
         {
-            SW_LOG_ERROR( "submitTextureUpload: texture %# or the device is not usable", texture );
+            SW_LOG_ERROR( "submitTextureUpload: texture %# or the device is not usable (uninitialized or lost)", texture );
             return RHITransferSubmit::rejected();
         }
         if ( pRecord->_bDepthStencil != SW_FALSE )
@@ -530,10 +531,11 @@ namespace sw
     RHITransferSubmit OpenGLRHIResourceFactory::submitTextureRegionUpload( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc )
     {
         OpenGLRHIDevice::OpenGLTextureRecord* pRecord                     = _pDevice->resolveTexture( texture );
-        const bool                            bTextureRegionNotUploadable = pRecord == nullptr || pRecord->_texture == 0 || _pDevice->_bInitialized == SW_FALSE || pRecord->_bDepthStencil != SW_FALSE;
+        const bool                            bTextureRegionNotUploadable = pRecord == nullptr || pRecord->_texture == 0 || _pDevice->_bInitialized == SW_FALSE || pRecord->_bDepthStencil != SW_FALSE ||
+                                                 _pDevice->_transferSerials.isLost();
         if ( bTextureRegionNotUploadable )
         {
-            SW_LOG_ERROR( "submitTextureRegionUpload: texture %# is missing, a depth texture, or the device is not usable", texture );
+            SW_LOG_ERROR( "submitTextureRegionUpload: texture %# is missing, a depth texture, or the device is not usable (uninitialized or lost)", texture );
             return RHITransferSubmit::rejected();
         }
         uint32 rowBytes{ 0 };
@@ -624,10 +626,10 @@ namespace sw
     RHITransferSubmit OpenGLRHIResourceFactory::submitTextureReadback( RHITextureHandle texture, uint32 mip, uint32 arraySlice, RHITextureMipSpan& outLayout )
     {
         OpenGLRHIDevice::OpenGLTextureRecord* pRecord             = _pDevice->resolveTexture( texture );
-        const bool                            bTextureNotReadable = pRecord == nullptr || pRecord->_texture == 0 || _pDevice->_bInitialized == SW_FALSE;
+        const bool                            bTextureNotReadable = pRecord == nullptr || pRecord->_texture == 0 || _pDevice->_bInitialized == SW_FALSE || _pDevice->_transferSerials.isLost();
         if ( bTextureNotReadable )
         {
-            SW_LOG_ERROR( "submitTextureReadback: texture %# or the device is not usable", texture );
+            SW_LOG_ERROR( "submitTextureReadback: texture %# or the device is not usable (uninitialized or lost)", texture );
             return RHITransferSubmit::rejected();
         }
         if ( mip >= pRecord->_mipLevels || arraySlice >= pRecord->_arraySize )

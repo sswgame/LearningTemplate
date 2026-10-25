@@ -16,6 +16,11 @@
 
 namespace sw
 {
+    enum class RHIStagingAllocateResult : uint8;
+} // namespace sw
+
+namespace sw
+{
     /**
      * @class RHITransferSerials
      * @brief 한 장치의 전송 시리얼을 발급하고 완료 워터마크를 쥡니다.
@@ -62,6 +67,20 @@ namespace sw
 
         /** @brief 장치 손실을 알립니다. 이후 끝나지 않은 티켓은 `Failed` 입니다. 이미 `Complete` 인 티켓은 그대로 `Complete` 입니다. */
         void markLost();
+
+        /**
+         * @brief 장치를 잃었으면 true 입니다. 어느 스레드에서나 읽습니다.
+         * @details 제출 함수는 진입에서 이 값을 보고 `Rejected` 를 돌려준다(계약 2). 잃은 뒤에는 펜스가 끝나지 않아 워터마크가 멈추고 스테이징 링이 비지 않으므로,
+         *          `Busy` 를 돌려주면 호출자(`submitWhileBusy`, 다음 프레임의 재제출)가 끝없이 다시 낸다.
+         */
+        [[nodiscard]] bool isLost() const { return _bLost.load( std::memory_order_acquire ) == SW_TRUE; }
+
+        /**
+         * @brief 스테이징 링의 할당 결과를 제출 결과로 옮깁니다. 링을 쓰는 백엔드는 모두 이 한 곳으로 옮깁니다.
+         * @details `Allocated` → `Accepted`, `Full` → `Busy`, `TooLarge` → `Rejected` 이고, 장치를 잃었으면 무엇이든 `Rejected` 입니다 — `Busy` 는 GPU 가 진행하면
+         *          비는 경우에만 쓰는데 잃은 장치는 진행하지 않는다. `Allocated` 인데 `Rejected` 를 받았으면 호출자가 구간을 `RHIStagingRing::free` 로 놓습니다.
+         */
+        [[nodiscard]] RHISubmitResult classifyStagingAllocation( RHIStagingAllocateResult result ) const;
 
         /**
          * @brief 티켓을 판정합니다. 무효 티켓, 다른 세대의 티켓, 발급한 적 없는 시리얼은 오류를 남기고 `Failed` 입니다.
