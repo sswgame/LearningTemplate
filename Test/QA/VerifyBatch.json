@@ -899,6 +899,18 @@
       "source": "docs/09_Decisions.md 5-5", "result_doc": "docs/plans/CameraRendererIntegration.md 1절"
     },
     {
+      "id": "rhi-transfer-b0-gpu", "title": "RHI 전송 계약 B0(제출 · 폴링 · 업로드 · 구간 갱신 · 되읽기 · 캡처, 네 백엔드)", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true, "timeout_minutes": 45,
+      "filter": "RHIDeviceTest.UploadTexture2DAllBackends,RHIDeviceTest.TextureReadbackMatchesUpload,RHIDeviceTest.SlicedTexturesTargetUploadAndReadBackPerSlice,RHIDeviceTest.RegionUploadReadsBackOnEveryBackend,RHIDeviceTest.RegionUploadRejectsOutOfRange,RHIDeviceTest.ComputeTextureUavWriteIsReadable,RHIDeviceTest.ComputeEntryPointOtherThanCSMainRuns,RenderPassGPUTest.PresentCaptureFollowsOffscreenOutput",
+      "extra_args": ["--host_suites=all"],
+      "source": "docs/plans/RhiAsyncUploads.md 3절 B0", "result_doc": "docs/plans/RhiAsyncUploads.md 3절",
+      "note": "옛 동기 호출을 ...AndWait 로 옮긴 테스트가 네 백엔드에서 그대로 통과하는지 본다. nogpu 의 RHITransferTest.* 는 ctest-nogpu 가 돈다. 업로드 직후 텍스처 파괴 · 폴링만 도는 경로(프레임 없음)는 U7 의 계약 테스트가 맡는다."
+    },
+    {
+      "id": "rhi-transfer-b0-measure", "title": "RHI 전송 B0 측정 질문 넷(제출→Complete 프레임 수 · pollTransfer 비용 · U2 대기 범위 이득 · AndWait 스핀 CPU)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": true,
+      "need_command": "제출→Complete 프레임 수와 pollTransfer 호출당 비용을 세는 프로파일 스코프(RT.Transfer.*)와 perf-compare 케이스가 아직 없다. Vulkan U2 의 RT.Upload.waitIdle 합계는 wt/profscopes 병합 뒤 M0 과 같은 시나리오로 잰다",
+      "source": "docs/plans/RhiAsyncUploads.md 3절 측정", "result_doc": "docs/plans/RhiAsyncUploads.md 3절"
+    },
+    {
       "id": "occlusion-snapshot-tests", "title": "가림 타일 사본 판정 · 우편함 · 수집기의 가려짐 판정", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
       "filter": "OcclusionTileQueryTest.*,OcclusionTileMailboxTest.*,RenderViewCollectorTest.*",
       "source": "docs/plans/CameraRendererIntegration.md S4", "result_doc": "docs/plans/CameraRendererIntegration.md 1절"

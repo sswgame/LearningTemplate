@@ -1,10 +1,10 @@
 # RHI 비동기 업로드 · 머티리얼 초기화 · PSO 준비 상태
 
-> 상태: 설계 · 선행: 없음 · 영역: graphics · 옛번호: 없음 · 진행: 0/14
+> 상태: 구현중 · 선행: 없음 · 영역: graphics · 옛번호: 없음 · 진행: 4/14
 
 > 질문: 게임 스레드와 렌더 스레드가 GPU 완료를 기다리는 지점을 어떤 계약으로 없애고, 무엇부터 바꾸는가?
 > 독자: RHI 백엔드와 렌더러를 고치는 작업자, 통합 담당.
-> 결론: 업로드와 되읽기는 "제출 → 티켓 → 폴링" 계약 하나로 바꾸고(RHI ABI 버전을 한 번 높여 옛 동기 함수 세 개를 지운다), 새 머티리얼과 PSO 는 "준비 전 / 준비됨 / 실패" 상태를 데이터로 두어 준비 전에는 그리지 않는다. 프레임 경로에는 `waitIdle` 을 새로 만들지 않는다. ABI 변경이 없는 Vulkan 대기 좁히기(U2)는 먼저 갈 수 있다.
+> 결론: 업로드와 되읽기는 "제출 → 티켓 → 폴링" 계약 하나로 바꾸고(RHI ABI 버전을 한 번 높여 옛 동기 함수 세 개를 지운다), 새 머티리얼과 PSO 는 "준비 전 / 준비됨 / 실패" 상태를 데이터로 두어 준비 전에는 그리지 않는다. 프레임 경로에는 `waitIdle` 을 새로 만들지 않는다. ABI 변경이 없는 Vulkan 대기 좁히기(U2)는 B0 에 들어갔다.
 
 2026-10-25 코드 읽기로 정리했습니다. 작업자는 빌드와 실행을 하지 않으므로 실행으로 확인한 것은 없습니다. 근거는 **[코드]**(읽어서 확인), **[추정]**, **[확인 전]** 으로 표시합니다.
 
@@ -52,7 +52,7 @@ W2 의 Vulkan 업로드는 큐 락 `_queueMutex` 를 잡은 채 `vkQueueWaitIdle
 
 ### 2.2 C. RHI 업로드와 되읽기: 제출 → 티켓 → 폴링
 
-`IRHIResourceFactory` 의 동기 함수 세 개(`uploadTexture2D`, `uploadTexture2DRegion`, `readbackTexture2D`)를 지우고 아래 여섯 개로 바꿉니다. 시그니처는 U3 ~ U6 작업자가 U1 을 기다리지 않고 코딩할 수 있게 여기서 고정합니다.
+`IRHIResourceFactory` 의 동기 함수 세 개(`uploadTexture2D`, `uploadTexture2DRegion`, `readbackTexture2D`)를 지우고 아래 여섯 개로 바꿉니다. 시그니처는 여기서 고정했고 B0 안에서 design-reviewer 검토를 반영했습니다(ABI 34 유지).
 
 | 함수 | 뜻 | 대체하는 것 |
 |---|---|---|
@@ -69,7 +69,7 @@ W2 의 Vulkan 업로드는 큐 락 `_queueMutex` 를 잡은 채 `vkQueueWaitIdle
 
 1. 제출 함수는 반환하기 전에 소스 메모리를 복사합니다. 호출자는 바로 버퍼를 재사용합니다.
 2. 제출 함수는 GPU 완료를 기다리지 않습니다. 결과는 셋입니다. `Accepted` 는 티켓이 유효합니다. `Busy` 는 **다시 시도하면 될 수 있을 때만** 씁니다(스테이징 링이나 단독 버퍼 총량이 지금 차 있지만 GPU 가 진행하면 비는 경우). 호출자가 다음 프레임에 다시 제출합니다. `Rejected` 는 다시 시도해도 안 되는 요청입니다. 검사에 걸린 것, 링이나 단독 버퍼 총량 상한보다 **큰 요청**, 장치 손실이 여기에 들고 이유를 로그로 남깁니다.
-3. 순서는 양방향입니다. 제출한 전송은 **앞서 제출된** 프레임 커맨드 뒤에 실행되고 **뒤에 제출될** 모든 프레임 커맨드 앞에 실행됩니다. 지금 DX12 가 복사 리스트를 프레임 리스트 앞에 끼우는 것과 같은 의미입니다 **[코드]**. 같은 텍스처에 대한 제출끼리는 제출 순서대로 실행되고, 되읽기는 요청 시점까지 제출된 프레임(직전 프레임까지)의 쓰기를 봅니다. 아직 제출하지 않고 기록 중인 리스트가 어느 내용을 보는지는 백엔드마다 달라 정해져 있지 않으므로 호출자는 전송을 그리기 기록 전에 제출합니다. 지금 RT 가 셋업 구간에서 하는 것과 같습니다. **렌더 타깃처럼 프레임 커맨드가 상태(레이아웃 · 리소스 상태)를 바꾸는 텍스처의 전송은 RT 기록 밖 구간에서만** 제출합니다.
+3. 순서는 양방향입니다. 제출한 전송은 **앞서 제출된** 프레임(`endFrame` 이 이미 반환한 프레임) 뒤에 실행되고 **뒤에 제출될** 모든 프레임 커맨드 앞에 실행됩니다. 진행 중인 프레임 안에서 `executeCommandList` 로 넘긴 리스트는 앞서 제출된 것에 들지 않습니다(DX12 와 Vulkan 은 그 리스트를 `endFrame` 까지 모아 한 번에 내므로 전송이 그 앞에 끼고, DX11 과 GL 은 곧바로 실행합니다). 지금 DX12 가 복사 리스트를 프레임 리스트 앞에 끼우는 것과 같은 의미입니다 **[코드]**. 같은 텍스처에 대한 제출끼리는 제출 순서대로 실행되고, 되읽기는 요청 시점까지 제출된 프레임(직전 프레임까지)의 쓰기를 봅니다. 아직 제출하지 않고 기록 중인 리스트가 어느 내용을 보는지는 백엔드마다 달라 정해져 있지 않으므로 호출자는 전송을 그리기 기록 전에 제출합니다. 지금 RT 가 셋업 구간에서 하는 것과 같습니다. **렌더 타깃처럼 프레임 커맨드가 상태(레이아웃 · 리소스 상태)를 바꾸는 텍스처의 전송은 RT 기록 밖 구간에서만** 제출합니다.
 4. **스레드.** 제출 함수는 어느 스레드에서나 부를 수 있습니다. DX11, DX12, Vulkan 은 자기 락으로 직렬화합니다. GL 은 제출 함수가 `ScopedOpenGLContext` 로 컨텍스트를 빌립니다(지금 코드가 그렇고, U8 의 동기 `acquire` 가 비 RT 스레드에서 부르기 때문입니다). RT 가 컨텍스트를 쥐고 있으면 프레임 끝에 놓을 때까지 기다리므로 GL 의 비 RT 제출은 프레임 경로 밖에서만 씁니다. `pollTransfer` 도 어느 스레드에서나 부릅니다. **GL 의 `pollTransfer` 는 컨텍스트를 빌리지 않고** 원자 워터마크를 읽으며, 이미 컨텍스트를 가진 스레드일 때만 GL 에 물어 워터마크를 올립니다. 컨텍스트 없는 스레드는 컨텍스트를 가진 쪽(RT 의 `endFrame`, 제출 스레드)이 올린 워터마크를 봅니다 — 그래서 GL 의 비 RT 대기는 RT 가 프레임을 돌리는 동안 진행합니다.
 5. **시리얼과 장치 세대.** 시리얼은 큐에 낸 순서대로 같은 락 안에서 매깁니다(`RHITransferSerials::issue`). 락 밖에서 매기면 시리얼 순서가 큐 실행 순서와 어긋나 워터마크가 끝나지 않은 제출을 덮습니다. 티켓에는 장치 세대가 실려 있어 백엔드를 바꾼 뒤의 옛 티켓은 새 장치에서 `Failed` 입니다.
 6. **파괴.** 전송 중인 텍스처를 파괴하면 백엔드가 GPU 자원 해제를 전송이 끝난 뒤로 미룹니다(해제 큐).
@@ -139,7 +139,7 @@ DX12 의 인덱스 반환 지연(`deferFreeBindlessIndex`)과 Vulkan 의 해제 
 
 **키 공간 전망.** 키는 (씬 메시 패스 수) × (머티리얼 퍼뮤테이션 수) × (마스크에 포함된 뷰 모드 수) × (컬 반전 2가지)의 곱입니다 **[코드: `materialPSOKey`, `collectFrameViewModeMask`]**. 곱이라서 불리언 스위치 하나가 키 수를 두 배로 만듭니다. 등장 디더가 불투명 머티리얼에서 이미 그랬습니다. 뷰 모드는 현재 보이는 모드만 키가 되지만, 에디터에서 모드를 바꾸는 순간 (머티리얼 수 × 패스 수)만큼 새 키가 한꺼번에 생기므로 가장 큰 히치 후보입니다 **[추정]**. 실제 키 수와 생성 시간 분포는 M0 이 `RT.PSO.create` 로 측정합니다. 쿠킹 산출물도 같은 곱을 따르며 게임 셰이더 하나가 백엔드당 180 파일입니다(결정 기록 5-5). Shipping 에서는 셰이더가 쿠킹돼 있어 드라이버 컴파일만 남을 것입니다 **[추정]**.
 
-**빌더의 안전성은 확인하지 못했습니다 [확인 전].** 네 백엔드의 `createPipelineState` 를 워커에서 불러도 되는지(PSO 핸들 테이블 잠금, Vulkan 파이프라인 캐시의 외부 동기화), Dev 빌드의 런타임 셰이더 컴파일(`ShaderCache::getOrCompile`)이 워커에서 안전한지 점검해야 합니다. 이 점검은 U3 ~ U6 이 자기 백엔드에서 하고, 결과를 U12 가 읽고 시작합니다.
+**빌더의 안전성은 확인하지 못했습니다 [확인 전].** 네 백엔드의 `createPipelineState` 를 워커에서 불러도 되는지(PSO 핸들 테이블 잠금, Vulkan 파이프라인 캐시의 외부 동기화), Dev 빌드의 런타임 셰이더 컴파일(`ShaderCache::getOrCompile`)이 워커에서 안전한지 점검해야 합니다. 이 점검은 U5 와 U6 이 자기 백엔드에서 하고 결과를 여기에 적으며, **DX11 과 GL 은 B0 에서 하지 않았으므로** U12 가 시작하기 전에 같이 해야 합니다. U12 는 그 결과를 읽고 시작합니다.
 
 ### 2.5 열린 문제
 
@@ -150,57 +150,66 @@ DX12 의 인덱스 반환 지연(`deferFreeBindlessIndex`)과 Vulkan 의 해제 
 
 | 단위 | 내용 | 선행 | GPU |
 |---|---|---|---|
-| U1 | 계약, ABI 34, 블로킹 헬퍼 | 없음 | 아니오 |
-| U2 | Vulkan 일회성 제출의 대기 좁히기(ABI 불변) | 없음 | 예 |
-| U3 | DX11 새 계약 구현 | U1 시그니처 | 예 |
-| U4 | GL 새 계약 구현 | U1 시그니처 | 예 |
-| U5 | DX12 새 계약 구현 | U1 시그니처 | 예 |
-| U6 | Vulkan 새 계약 구현 | U1 시그니처, U2 | 예 |
-| U7 | 계약 테스트와 옛 호출 이전 | U1 시그니처 | 예 |
-| U8 | 텍스처 소비자 이전 | U1 시그니처 | 예 |
-| U9 | 구간 갱신과 되읽기 소비자 이전 | U1 시그니처 | 예 |
+| U5 | DX12 최종 구현: 전용 업로드 링, 복사 리스트와 얼로케이터 풀(B0 는 슬롯 모델 + 전용 전송 펜스) | B0 | 예 |
+| U6 | Vulkan 비동기화: 업로드 링, 제출 뒤에도 사는 전송 작업 객체, 연속 구간 워터마크(B0 는 제출 안에서 펜스를 기다리는 임시 구현) | B0 | 예 |
+| U7 | 계약 GPU 테스트(옛 호출 이전은 B0 가 했다) | B0 | 예 |
+| U8 | 텍스처 소비자 비동기 이전(B0 는 `uploadTexture2DAndWait`) | B0 | 예 |
+| U9 | 구간 갱신과 되읽기 소비자 비동기 이전(B0 는 `...AndWait`) | B0 | 예 |
 | U10 | 머티리얼 GPU 상태와 프레임 경계 초기화 | U8 | 예 |
 | U11 | PSO 상태 데이터와 드로우 규칙 | 없음 | 예 |
-| U12 | PSO 백그라운드 빌더 | U11, U3 ~ U6 | 예 |
-| U13 | 렌더 타깃 크기 변경의 `waitIdle` 제거 | U3, U4, U8 | 예 |
+| U12 | PSO 백그라운드 빌더 | U11, U5, U6, DX11 · GL 의 워커 안전성 점검 | 예 |
+| U13 | 렌더 타깃 크기 변경의 `waitIdle` 제거 | U8 | 예 |
 | U14 | `waitIdle` 이유 인자와 게이트 | U13 | 아니오 |
 
-**병합 번들.** U1, U3 ~ U9 는 ABI 를 바꾸므로 한 번들로 병합하고 통합이 한 번에 빌드합니다. 워커는 빌드하지 않으므로 병렬로 작업하고, 번들에 들어가기 전의 개별 브랜치는 서로 없이는 컴파일되지 않는 것이 정상입니다. U1 은 새 함수를 더하면서 옛 가상 함수 선언을 지우고, 각 백엔드 단위는 자기 폴더에서 새 함수를 구현하면서 옛 오버라이드를 지웁니다. 그래서 main 에 두 경로가 함께 남는 구간이 없습니다. U2, U10, U11, U12, U13, U14 는 각각 따로 병합할 수 있습니다. 동시에 띄울 수 있는 작업자는 여섯 안팎입니다. 1차는 U1 을 먼저 끝낸 뒤 {Vulkan(U2 → U6), DX11(U3), GL(U4), DX12(U5), 테스트(U7), PSO 상태(U11)} 입니다.
+**끝난 단위: B0 골격 번들.** U1(계약, ABI 34, 블로킹 헬퍼), U2(Vulkan 일회성 제출의 펜스 대기), U3(DX11), U4(GL)가 끝났고, U5 ~ U9 는 **골격**까지 들어갔습니다: 네 백엔드가 새 계약을 구현하고(DX11 과 GL 은 사실상 최종, DX12 는 슬롯 복사 리스트에 전용 전송 펜스를 단 모양, Vulkan 은 U6 의 임시 구현), 옛 호출처와 테스트가 `...AndWait` 위에서 컴파일됩니다. 확인은 매니페스트 id `rhi-transfer-b0-gpu` (GPU 네 백엔드)와 `rhi-transfer-b0-measure` (측정 질문 넷)입니다. nogpu 테스트 `RHITransferTest.*` 는 `ctest-nogpu` 가 돕니다.
+
+**병합 전략: B0 골격 번들 하나, 그 뒤는 단위별.** 옛 동기 가상 함수 셋을 지우면 네 백엔드와 모든 호출처가 한 번에 새 계약 위에 서야 컴파일되므로 이 일은 쪼갤 수 없습니다. 그래서 번들 B0 는 계약(단계 1: 문구 수정, `discardTextureReadback`, 장치 세대, 대기 결과 분리)과 구현(단계 2: DX11 → GL → Vulkan → DX12 → 호출처 · 테스트)을 커밋만 나눠 한 번에 병합하고, 통합이 한 번에 빌드합니다. 별칭이나 shim 은 두지 않으므로 main 에 두 경로가 함께 남는 구간이 없습니다. B0 가 선 뒤에는 U5, U6, U7, U8, U9 가 각각 따로 병합됩니다(번들 밖, 서로 없이도 컴파일됩니다). 이어서 U10, U11, U12, U13, U14 도 따로 갑니다. 동시에 띄울 수 있는 작업자는 여섯 안팎이고, 다음 차례는 {DX12(U5), Vulkan(U6), 테스트(U7), 텍스처 소비자(U8), 구간 갱신과 되읽기 소비자(U9), PSO 상태(U11)} 입니다.
+
+**B0 의 구현 수준과 알려진 비용.**
+
+- DX11: 이벤트 쿼리(풀) + 스테이징 복사 + `Map( DO_NOT_WAIT )`. 최종에 가깝습니다.
+- GL: 업로드는 `glFenceSync` + `glFlush`, 되읽기는 제출 시점에 동기로 읽어 두고 앞선 전송이 모두 끝나는 즉시 `Complete` 입니다. PBO 비동기 읽기는 이 계획 밖입니다.
+- DX12: 열린 복사 리스트가 내보내질 때(프레임 끝, 폴링, 즉시 제출) 그때까지의 시리얼을 한 묶음으로 전송 전용 `ID3D12Fence` 에 매답니다. 폴링이 아직 내보내지 않은 시리얼을 내보내고 펜스를 올리므로 프레임을 돌리지 않아도 끝에 이릅니다. 업로드 링과 얼로케이터 풀은 U5 입니다.
+- Vulkan: 제출 안에서 U2 의 펜스(`VkFence`)를 기다리고 곧바로 `Complete` 티켓을 줍니다. 헤더와 주석에 "임시, U6"을 적었습니다.
+- 비용: 이전에 GPU 를 기다리지 않던 DX11, DX12, GL 의 프레임 경로 호출처(글리프 아틀라스 `CanvasRenderer`, `TextureCache` 구간 갱신, `RenderThread` 렌더 타깃 읽기, 동기 텍스처 `acquire`)가 `...AndWait` 로 바뀌어 **GPU 왕복이 새로 생깁니다.** 그 호출처를 비동기로 바꾸는 일이 U8 과 U9 이고, 그 전에는 로드가 많은 프레임에서 느려질 수 있습니다. 프레임 셋업 구간의 `...AndWait` 는 `ScopedForbidBlockingTransfer` 로 잡을 수 있지만 표시를 거는 일은 그 구간을 소유한 U10 의 몫입니다.
 
 **파일 소유(겹치지 않게).** `Source/Engine/Graphics/RHI/` 아래의 폴더는 하나의 작업자만 맡습니다.
 
 | 단위 | 소유 파일 |
 |---|---|
-| U1 | `IRHIResourceFactory.h`, `RHITypes.h`, `Modules/RHIModuleAbi.h`, `IRHIDevice.h`(주석), `Support/` 의 새 파일 |
-| U2, U6 | `RHI/Vulkan/` 전체 |
-| U3 | `RHI/DX11/` 전체 |
-| U4 | `RHI/GL/` 전체 |
 | U5 | `RHI/DX12/` 전체 |
+| U6 | `RHI/Vulkan/` 전체 |
 | U7 | `Test/EngineTest/Graphics/TestRHIDevice.cpp`, `Test/EngineTest/Renderer/TestRenderPassGPU.cpp`, `Test/EngineTest/Graphics/TestRenderTargetRegistry.cpp` |
 | U8 | `Graphics/Texture/` |
 | U9 | `Renderer/Canvas/CanvasRenderer.*`, `Renderer/Frame/Capture/FrameCapture.*`, `Renderer/RenderThread.cpp`, `Graphics/Debug/RenderTargetRegistry.*`, `Editor/Common/Backend/EditorUICapture.cpp`, `Editor/Common/Workspace/EditorRenderViews.cpp`, `Editor/Panels/RenderTarget/RenderTargetPanel.cpp` |
 | U10 | `Graphics/Material/`, `Engine.cpp`, `Renderer/Scene/GPUSceneBuilder.cpp`, `Renderer/Scene/GPUScene.cpp`, `Renderer/Frame/FrameRenderer.cpp` |
 | U11, U12 | `Renderer/Frame/Resource/RenderPSOCache.*`, `Renderer/Frame/FrameRendererPSO.cpp`, `Renderer/Frame/FrameRendererDraw.cpp`, `Renderer/Frame/FrameRenderer.h`, 새 파일 |
-| U13 | `Graphics/Texture/TextureCache.cpp`, `RHI/DX11/` 와 `RHI/GL/` 의 bindless 파일(U3 와 U4 의 작업자가 이어서) |
+| U13 | `Graphics/Texture/TextureCache.cpp`, `RHI/DX11/` 와 `RHI/GL/` 의 bindless 파일 |
 | U14 | 호출처 전부(기계적 변경이라 혼자) |
 
-`FrameRenderer.cpp` 는 U10 만 고칩니다(셋업 구간의 `initializePending` 호출). U8 은 `completePendingLoads` 와 `updateStreaming` 의 구현을 `TextureCache` 안에서 바꾸고 호출 줄은 그대로 둡니다. U11 과 U12 는 `warmPinnedMaterialPSOs` 의 호출 줄(`FrameRenderer.cpp` 817)을 건드리지 않습니다.
+`FrameRenderer.cpp` 는 U10 만 고칩니다(셋업 구간의 `initializePending` 호출과 `ScopedForbidBlockingTransfer` 표시). U8 은 `completePendingLoads` 와 `updateStreaming` 의 구현을 `TextureCache` 안에서 바꾸고 호출 줄은 그대로 둡니다. U11 과 U12 는 `warmPinnedMaterialPSOs` 의 호출 줄(`FrameRenderer.cpp` 817)을 건드리지 않습니다.
 
 **단위별 내용과 검증.** GPU 검증은 통합이 `gpu-verifier`(Shipping, 네 백엔드)로 한 번에 돌립니다. 항목은 구현하는 단위가 `Test/QA/VerifyBatch.json` 에 더합니다.
 
-- **U1.** 새 함수 다섯 개와 타입 세 개(`RHITransferTicket`, `RHITransferStatus`, `RHISubmitResult`)를 더하고, 옛 가상 함수 세 개를 지우고, ABI 정수와 스탬프를 함께 높입니다(`static_assert` 가 어긋남을 잡습니다). `IRHIDevice.h` 머리말의 완료 계약 표에 두 줄을 더하고 `RHITransferUtil` 을 만듭니다. 시그니처를 확정하기 전에 `design-reviewer` 로 한 번 검토합니다. 검증은 통합 빌드와 린트입니다.
-- **U2.** `endSubmitAndWait` 가 `vkQueueWaitIdle` 대신 `VkFence` 를 `vkQueueSubmit` 에 달고, 큐 락은 제출하는 동안만 잡고, 대기는 락 밖의 `vkWaitForFences` 로 합니다. 일회성 풀 락(`_oneShotMutex`)은 커맨드 버퍼 기록에도 필요하다고 이해합니다(Vulkan 사양의 외부 동기화 규칙, 사양 확인 전). 그러므로 `vkEndCommandBuffer` 와 제출이 끝나면 풀 락을 놓고, 대기한 뒤 해제할 때 다시 잡습니다. 펜스는 장치가 풀로 재사용하고 U6 이 그대로 씁니다. 호출 스레드는 자기 업로드가 끝날 때까지 여전히 기다리므로 이것은 비동기가 아니라 대기 범위를 "큐 전체와 락 점유"에서 "내 제출"로 줄이는 변경입니다. 검증은 Vulkan GPU(공유)입니다. `RHIDeviceTest.TextureReadbackMatchesUpload` 와 업로드 테스트, 시나리오 `game/empty/automation/light2dcookie.scenario.xml`(구간 갱신), `ditherappear.scenario.xml` 입니다. M1 이 Release 독점으로 `RT.Upload.waitIdle` 합계와 RT 프레임 p99 를 전후로 비교합니다.
-- **U3 ~ U6.** 위 백엔드 표의 구현과, 각 백엔드의 `createPipelineState` 가 워커에서 안전한지 점검한 결과를 이 문서 2.4 에 적는 일입니다. 각 단위는 자기 백엔드의 `pollTransfer` 가 `Pending` → `Complete` 로 가는 것과 순서 규칙을 U7 의 테스트가 통과하게 합니다.
-- **U7.** `RHIDeviceTest` 에 계약 테스트를 더합니다: 제출 → `Pending` 또는 `Complete` → 폴링, 구간 갱신 뒤 업로드된 내용이 보임(순서), `Busy` 경로, 장치 손실 뒤 `Failed`(Vulkan 은 `VulkanLostDeviceStopsWaitingOnTheGPU` 와 같은 모양). 옛 함수를 부르는 테스트 40곳 남짓을 블로킹 헬퍼로 바꿉니다. GPU 네 백엔드입니다.
-- **U8.** 텍스처 로드를 세 단계로 나눕니다: 워커 읽기 → RT 펌프의 `beginUpload`(텍스처 생성과 `submitTextureUpload`) → 이후 프레임의 `finishUpload`(`pollTransfer` 가 `Complete` 면 bindless 등록과 발행). `Busy` 는 다음 프레임에 다시 제출합니다. 프레임당 상한은 제출 수에 적용합니다. `updateStreaming` 의 위쪽 밉 교체도 같은 세 단계입니다. 동기 `acquire` 와 `wait()` 는 블로킹 헬퍼로 `beginUpload → 대기 → finishUpload` 를 합니다. 검증은 `RenderPassGPUTest.AsyncTextureStreamsTopMipsAfterBase`, `StreamingUploadsTheTextureNotedAsLargestOnScreenFirst`, `AssetStreamingTest.*` 와 텍스처가 있는 시나리오(`kaykitcharacters`) 네 백엔드입니다. 스크린샷으로 회색 텍스처가 진짜 텍스처로 바뀌는지 봅니다.
-- **U9.** 글리프 아틀라스(`CanvasRenderer.cpp` 418, 443)는 새 함수로 바꾸고, `Busy` 면 더티 목록을 지우지 않고 다음 프레임에 다시 제출합니다. `RenderThread::readRequestedRenderTarget` 는 요청 프레임에 읽지 않고 티켓을 레지스트리에 두었다가 이후 프레임에 `takeTextureReadback` 합니다. 스크린샷과 에디터 캡처는 블로킹 헬퍼를 씁니다. 검증은 `engine/automation/uidemo.scenario.xml` 네 백엔드(글자), `-gv_screenshot` 이 쓰는 캡처 경로, `RenderTargetRegistry` 읽기 테스트, 에디터 `engine/automation/editor/uiaudit.scenario.xml` 입니다.
+- **U5.** DX12 의 B0 구현을 최종으로 바꿉니다: 전용 업로드 링과 `Busy`(링 · 단독 버퍼 총량), 복사 리스트와 얼로케이터 풀(지금은 폴링이 새 펜스 구간을 만들지 않지만 `openUploadSlot` 이 얼로케이터 Reset 전에 펜스를 기다리는 비용이 남아 있다), `_uploadSlotMutex` 범위 축소(업로드와 프레임 제출이 같이 걸려 있다), 텍스처 상태 추적(`getTrackedTextureState`)과 RT 기록이 겹치는지 점검. `createPipelineState` 가 워커에서 안전한지 점검한 결과를 2.4 에 적습니다. 검증은 DX12 GPU(`rhi-transfer-b0-gpu` 와 U7 의 계약 테스트)입니다.
+- **U6.** Vulkan 의 임시 구현을 비동기로 바꿉니다: 업로드 링, 제출 뒤에도 살아 있는 전송 작업 객체(펜스 통과 후 회수, `VulkanOneShotCommands` 가 소멸자에서 커맨드 버퍼를 해제하는 구조를 바꾼다), 연속 구간 워터마크(`RHITransferFenceQueue`), 레코드의 `_layout` 갱신 시점. 시리얼은 지금의 `issueCompleted` 대신 큐 제출 락 안의 `issue` 로 매깁니다. `createPipelineState` 의 워커 안전성 점검 결과를 2.4 에 적습니다. 검증은 Vulkan GPU 와 M1 의 `RT.Upload.waitIdle` 합계, RT 프레임 p99 전후 비교입니다.
+- **U7.** `RHIDeviceTest` 에 계약 테스트를 더합니다: 제출 → `Pending` 또는 `Complete` → 폴링, 프레임 없이 폴링만 도는 경로(진행 보장), 구간 갱신 뒤 업로드된 내용이 보임(순서), 업로드 직후 텍스처 파괴, `Busy` 경로, 장치 손실 뒤 `Failed`(Vulkan 은 `VulkanLostDeviceStopsWaitingOnTheGPU` 와 같은 모양), 읽기를 가져가지 않고 버리는 경로(`discardTextureReadback`), 끝나지 않은 전송이 있는 텍스처의 bindless 등록 거절. 옛 함수를 부르던 테스트의 이전은 B0 가 했습니다. GPU 네 백엔드입니다.
+- **U8.** 텍스처 로드를 세 단계로 나눕니다: 워커 읽기 → RT 펌프의 `beginUpload`(텍스처 생성과 `submitTextureUpload`) → 이후 프레임의 `finishUpload`(`pollTransfer` 가 `Complete` 면 bindless 등록과 발행). `Busy` 는 다음 프레임에 다시 제출합니다. 프레임당 상한은 제출 수에 적용합니다. `updateStreaming` 의 위쪽 밉 교체도 같은 세 단계입니다. 동기 `acquire` 와 `wait()` 는 블로킹 헬퍼로 `beginUpload → 대기 → finishUpload` 를 합니다(B0 의 `Texture2D::createTextureWithMips` 와 `TextureCache` 구간 갱신이 쓰는 `...AndWait` 를 이 흐름으로 바꿉니다). 검증은 `RenderPassGPUTest.AsyncTextureStreamsTopMipsAfterBase`, `StreamingUploadsTheTextureNotedAsLargestOnScreenFirst`, `AssetStreamingTest.*` 와 텍스처가 있는 시나리오(`kaykitcharacters`) 네 백엔드입니다. 스크린샷으로 회색 텍스처가 진짜 텍스처로 바뀌는지 봅니다.
+- **U9.** 글리프 아틀라스(`CanvasRenderer.cpp` 의 `uploadTexture2DAndWait` 두 곳)는 `submitTexture*` 로 바꾸고, `Busy` 면 더티 목록을 지우지 않고 다음 프레임에 다시 제출합니다. `RenderThread::readRequestedRenderTarget` 는 요청 프레임에 읽지 않고 읽기 티켓(`RHITransferUtil::PendingReadback`)을 레지스트리에 두었다가 이후 프레임에 `take` 합니다. 스크린샷과 에디터 캡처는 블로킹 헬퍼를 그대로 씁니다. 검증은 `engine/automation/uidemo.scenario.xml` 네 백엔드(글자), `-gv_screenshot` 이 쓰는 캡처 경로, `RenderTargetRegistry` 읽기 테스트, 에디터 `engine/automation/editor/uiaudit.scenario.xml` 입니다.
 - **U10.** 2.3 의 여섯 항목입니다. 검증은 `material-cache-gpu-test`(매니페스트 id), 새 시나리오 `game/empty/automation/materialfirstuse.scenario.xml`(처음 보는 머티리얼의 오브젝트를 스폰하고 프레임마다 캡처해 몇 프레임 안에 나타나는지, Error 로그가 없는지 봄), 그리고 M1 의 `GT.Material.waitIdle` 호출 수 0 입니다.
 - **U11.** 2.4 의 상태 데이터, `psoForBatch` 의 구분, `RT.PSO.pendingBatches` 카운터, `findMaterialPSO` 주석 수정입니다. 이 단위에서는 생성이 여전히 RT 에서 동기로 끝나므로 항목이 `Absent` → `Ready` 로 한 프레임 안에 가서 화면은 지금과 같아야 합니다. `RenderPSOCache` 상태 전이는 GPU 없이 테스트합니다(nogpu). GPU 는 기존 골든이 그대로인지만 봅니다.
 - **U12.** 빌더 스레드, 우선순위, 완료 목록 합치기, GL 의 시간 예산, `-gv_psoAsync`(0 이면 U11 의 동기 생성, 상태 규칙은 같다). 이 스위치는 A/B 측정용이며 `gv_gpuUploadQueue` 와 같은 선례입니다. 검증은 새 시나리오 `game/empty/automation/psoasync.scenario.xml` 네 백엔드입니다. 뷰 모드를 번갈아 바꾸고 새 머티리얼을 스폰한 뒤, 몇 프레임 안에 동기 생성(`-gv_psoAsync=0`)과 같은 이미지에 이르는지, Error 로그가 없는지 봅니다.
 - **U13.** `TextureCache::resizeRenderTarget` 의 `waitIdle`(W6)을 지웁니다. 옛 텍스처를 지연 해제로 넘기고 새 핸들과 인덱스를 받습니다. 전제는 DX11 과 GL 의 bindless 인덱스 반환이 GPU 완료 뒤로 미뤄지는 것입니다. DX12 는 이미 `deferFreeBindlessIndex` 로 그렇고, DX11 은 `releaseFreeListIndex` 로 즉시 돌려줍니다 **[코드]**. 핫 리로드의 `waitIdle` 은 도구 경로라 남깁니다. 검증은 에디터에서 캔버스 타깃 크기를 바꾸는 시나리오(`engine/automation/editor` 의 기존 시나리오 가운데 크기를 바꾸는 것이 있는지 확인해야 함 **[확인 전]**)와 `engine/automation/hotreload.scenario.xml` 입니다.
 - **U14.** `IRHIDevice::waitIdle` 에 이유 열거형(`Shutdown`, `BackendSwap`, `Resize`, `HotReload`, `SceneActivation`, `Capture`, `Tool`)을 필수 인자로 더합니다. 호출처는 W7 의 20곳 안팎이고 U13 뒤에 남은 것입니다. 이유 열거형으로 이름을 가르면 프레임 경로에 새로 생기는 호출이 눈에 띄고, 린트 게이트가 프레임 경로 폴더(`Renderer/Frame/`, `Graphics/Material/`, `Graphics/Texture/` 의 비 reload 함수)에서 이유 `Tool` 이 아닌 호출을 막을 수 있습니다. 게이트는 열거형으로 막지 못하는 틈(함수 단위 허용)에만 둡니다. 기계적 변경이라 혼자 하고 커밋만 단계별로 나눕니다.
 
-**측정.** M0 은 착수 전입니다. `wt/profscopes` 병합 뒤 Release 에서 혼자(GPU 독점) 네 스코프의 호출 수와 ms 분포, RT 와 GT 프레임의 p99 와 최악 프레임을 측정합니다. 시나리오는 게임 시작, 씬 로드, 새 머티리얼 스폰, 뷰 모드 전환, 글자가 많은 UI 변경이고 설정은 LowEnd 를 포함합니다. M0 에서 W2 의 합이 작거나 Vulkan 이 아닌 백엔드에서 W1 과 W3 이 작으면 U10 과 U12 의 우선순위를 낮춥니다. M1 은 U2 병합 뒤와 마지막 단위 뒤에 같은 시나리오로 다시 측정합니다. 결과는 [검증과 측정](../08_Verification.md) 에 적습니다.
+**측정.** M0 은 착수 전입니다. `wt/profscopes` 병합 뒤 Release 에서 혼자(GPU 독점) 네 스코프의 호출 수와 ms 분포, RT 와 GT 프레임의 p99 와 최악 프레임을 측정합니다. 시나리오는 게임 시작, 씬 로드, 새 머티리얼 스폰, 뷰 모드 전환, 글자가 많은 UI 변경이고 설정은 LowEnd 를 포함합니다. M0 에서 W2 의 합이 작거나 Vulkan 이 아닌 백엔드에서 W1 과 W3 이 작으면 U10 과 U12 의 우선순위를 낮춥니다. M1 은 B0 병합 뒤와 마지막 단위 뒤에 같은 시나리오로 다시 측정합니다. 결과는 [검증과 측정](../08_Verification.md) 에 적습니다.
+
+**B0 측정 질문 넷**(매니페스트 id `rhi-transfer-b0-measure`, 아직 한 명령으로 안 돕니다 — 세는 스코프가 없습니다).
+
+1. 제출에서 `Complete` 까지 몇 프레임 걸리는가. 백엔드별로 같은 프레임 안(DX11, GL, Vulkan B0)인지 한 프레임 이상(DX12, 이후 Vulkan)인지 봅니다. U8 의 `finishUpload` 가 생기면 제출 프레임과 처음 `Complete` 를 본 프레임의 차로 셉니다.
+2. `pollTransfer` 한 번의 비용. DX11 은 즉시 컨텍스트 락 + `GetData`, DX12 는 `_uploadSlotMutex`(RT 의 프레임 제출과 공유) + 전송 펜스 읽기와 필요할 때의 내보내기, GL 은 원자 읽기(컨텍스트를 쥔 스레드는 `glClientWaitSync`)입니다. 프레임당 폴링 수가 늘 때 락 경합이 생기는지 봅니다.
+3. U2(Vulkan 대기 범위 축소)와 U6(비동기화)의 이득. `RT.Upload.waitIdle` 합계와 RT 프레임 p99 를 전후로 비교합니다.
+4. `...AndWait` 대기의 CPU 사용. yield 32 번 뒤 200 µs 잠으로 대기 스레드가 얼마나 CPU 를 쓰는지, 10 초 상한에 걸린 적이 있는지 봅니다.
 
 ## 4. 규칙
 
@@ -217,24 +226,27 @@ DX12 의 인덱스 반환 지연(`deferFreeBindlessIndex`)과 Vulkan 의 해제 
 
 | 위험 | 영향 | 완화 |
 |---|---|---|
-| ABI 34 를 한 번에 맞춰야 한다 | 한 백엔드가 늦으면 번들 전체가 대기 | U2 를 먼저 병합해 Vulkan 이득을 먼저 얻는다. DX11 과 GL 구현은 작다. 번들은 U6 없이 병합하지 않는다 |
-| 시그니처를 구현 뒤에 바꾸면 ABI 를 다시 높여 모든 백엔드를 재빌드 | 되돌리기 어려운 결정 | U1 병합 전에 `design-reviewer` 로 검토하고, DX12 와 Vulkan 작업자가 시그니처로 구현 가능한지 먼저 읽는다 |
+| ABI 34 를 한 번에 맞춰야 한다 | 한 백엔드가 늦으면 번들 전체가 대기 | 번들 B0 가 네 백엔드와 호출처를 한 번에 담는다. Vulkan 은 임시 구현(U6 가 비동기로 바꾼다)이라 B0 는 U6 없이 병합한다. DX11 과 GL 구현은 작다 |
+| 시그니처를 구현 뒤에 바꾸면 ABI 를 다시 높여 모든 백엔드를 재빌드 | 되돌리기 어려운 결정 | `design-reviewer` 검토 결과(단계 1 의 `discardTextureReadback`, 장치 세대, 대기 결과 분리)를 B0 안에서 ABI 34 에 반영했다. B0 병합 뒤의 시그니처 변경은 ABI 를 다시 높인다 |
+| B0 의 프레임 경로 호출처가 `...AndWait` 로 GPU 를 기다린다 | DX11, DX12, GL 에서 로드가 많은 프레임이 느려질 수 있음(전에는 대기 없음) | U8 과 U9 가 비동기로 바꾼다. 측정 질문 2, 4(`rhi-transfer-b0-measure`)가 크기를 본다 |
+| DX12 폴링이 `_uploadSlotMutex` 를 잡고 열린 복사 리스트를 내보낸다 | 프레임 제출과 같은 락이라 폴링이 잦으면 RT 제출과 겨룸 | 폴링은 아직 내보내지 않은 시리얼일 때만 락을 잡는다. U5 가 락 범위를 줄인다 |
 | GL 의 `pollTransfer` 가 컨텍스트를 빌리지 않고 컨텍스트 소유 스레드(RT)가 올린 워터마크에 기대는 점 | RT 가 프레임을 돌리지 않으면 컨텍스트 없는 스레드의 대기는 시간 초과 | 제출이 `glFlush` 로 GPU 를 진행시키고 컨텍스트를 가진 스레드의 폴링 · 제출 · `endFrame` 이 워터마크를 올린다. 블로킹 헬퍼의 비 RT 사용은 RT 가 도는 동안에만 허용하고, 시간 초과가 틈을 오류로 드러낸다 **[추정]** |
 | Vulkan 의 완료 순서가 제출 순서와 다를 수 있다 | 워터마크가 앞서 올라가면 미완 자원을 발행 | 연속 구간만 워터마크로 올린다. 테스트(U7)가 지연된 앞 제출 위에서 확인 |
 | 스테이징 메모리 | 큰 텍스처가 몰리면 `Busy` 가 길어지거나 메모리가 튄다 | 링 용량 상수와 단독 버퍼 총량 상한, 장부 표시, M1 이 조정 |
 | DX12 `_uploadSlotMutex` 범위 | 새 제출이 RT 프레임 제출을 막을 수 있음 | U5 가 락 범위를 줄이고 텍스처 상태 추적과의 겹침을 점검 |
 | `Material` GPU 필드의 스레드 간 읽기 | 게임 스레드가 쓰는 중인 인덱스를 읽는 경쟁 | `GpuState` 를 acquire 로 읽은 뒤에만 읽는 규칙, Debug 에서 단언 |
-| PSO 빌더의 스레드 안전성 | 백엔드나 셰이더 컴파일러의 잠금 누락 | U3 ~ U6 의 점검이 끝나기 전 U12 를 시작하지 않는다. `-gv_psoAsync=0` 으로 동기 생성과 비교 |
+| PSO 빌더의 스레드 안전성 | 백엔드나 셰이더 컴파일러의 잠금 누락 | 네 백엔드의 점검(U5, U6 포함)이 끝나기 전 U12 를 시작하지 않는다. `-gv_psoAsync=0` 으로 동기 생성과 비교 |
 | 보이는 변화(수 프레임 늦은 등장, 뷰 모드 전환 직후 빈 배치) | 사용자가 결함으로 느낄 수 있음 | 건너뛴 수 카운터로 드러내고 O1 로 디더를 맞춘다 |
 | Vulkan 이 아닌 백엔드에서는 W2 가 이미 대기가 없다 | 이득이 Vulkan 에 몰림 | M0 이 먼저 측정한다. 이득이 작으면 U10 과 U12 를 미룬다 |
 
-**되돌리기.** U2, U10, U11, U12, U13, U14 는 각각 커밋 단위로 revert 합니다. ABI 번들은 병합 커밋 하나를 revert 합니다(`git revert -m 1`). 옛 함수와 새 함수가 한동안 공존하는 단계는 만들지 않으므로 중간 상태로 되돌리는 방법은 없습니다.
+**되돌리기.** U5 ~ U14 는 B0 가 선 뒤 각각 커밋 단위로 revert 합니다. 번들 B0 는 병합 커밋 하나를 revert 합니다(`git revert -m 1`). 옛 함수와 새 함수가 한동안 공존하는 단계는 만들지 않으므로 중간 상태로 되돌리는 방법은 없습니다.
 
 **한 백엔드씩 옮기는 단계.** ABI 는 한 번에 높이지만, 새 계약이 약속하는 성질(제출이 GPU 를 기다리지 않음)은 백엔드마다 따로 채워집니다. 순서는 다음과 같습니다.
 
-1. U2: Vulkan 단독, ABI 불변. 대기 범위가 큐 전체에서 내 제출로 줄고 큐 락을 놓습니다.
-2. 번들: DX11, GL, DX12 는 원래 GPU 를 기다리지 않아 새 계약의 구현이 "같은 호출 + 완료 확인"입니다. Vulkan 은 U6 로 비동기가 됩니다.
-3. U10 → U11 → U12: 소비자 쪽 대기를 하나씩 지웁니다.
+1. B0: 계약 + 네 백엔드 + 호출처. DX11 과 GL 은 "같은 호출 + 완료 확인"으로 최종에 가깝고, DX12 는 슬롯 모델에 전송 펜스를 달고, Vulkan 은 U2 의 펜스 대기(대기 범위가 큐 전체에서 내 제출로 줄고 큐 락을 놓는다)를 쓰는 임시 구현입니다.
+2. U5, U6: DX12 와 Vulkan 의 최종 구현. Vulkan 이 비로소 비동기가 됩니다.
+3. U8, U9: 소비자 쪽을 `...AndWait` 에서 제출 → 폴링으로 바꿉니다.
+4. U10 → U11 → U12: 소비자 쪽 대기를 하나씩 지웁니다.
 
 ## 6. 상용 엔진 비교
 
@@ -247,7 +259,9 @@ DX12 의 인덱스 반환 지연(`deferFreeBindlessIndex`)과 Vulkan 의 해제 
 정한 것(사용자 결정이 필요한 항목은 없습니다):
 
 - ABI 34 에서 옛 동기 함수 세 개를 지우고 shim 을 두지 않는다. 동기 변형은 ABI 밖에 있는, 이름에 `AndWait` 가 드러나는 헬퍼다.
-- 완료는 콜백이 아니라 티켓 폴링이다. 해제용 `enqueueGPURelease` 는 그대로 둔다.
+- 완료는 콜백이 아니라 티켓 폴링이다. 해제용 `enqueueGPURelease` 는 그대로 둔다. **텍스처는 티켓, 버퍼 되읽기는 `enqueueGPURelease` 콜백인 이유와 기준:** 결과를 받는 쪽이 RT 셋업 구간에서 상태(bindless 인덱스)를 바꿔야 하는 텍스처 전송은 티켓과 폴링이고(콜백으로 받아도 결국 RT 큐에 넣고 다시 읽는다), 프레임에 묶인 읽기 버퍼(`createReadbackBuffer`)를 완료 콜백 안에서 한 번 비우면 끝나는 되읽기는 콜백이다.
+- **B0 전략:** 옛 동기 가상 함수 셋을 지우는 일은 네 백엔드와 모든 호출처가 한 번에 새 계약 위에 서야 컴파일되므로 쪼개지 않고 골격 번들 하나로 병합한다(계약 수정 → DX11 → GL → Vulkan → DX12 → 호출처 · 테스트 → 문서 순 커밋). 번들 밖의 U5 ~ U9 와 U10 ~ U14 는 B0 뒤에 단위별로 병합한다. 별칭과 shim 은 두지 않는다.
+- 이 결정들은 `docs/decisions/` 의 영역 파일이 없어 이 문서와 B0 커밋 메시지에 둔다(통합이 옮길 곳을 정한다).
 - 1단계는 그래픽스 큐 하나다. 전용 전송 큐는 측정 뒤에 다시 판단한다.
 - 새 머티리얼의 GPU 초기화는 RT 셋업 구간에서 하고, 준비 전에는 그리지 않는다.
 - PSO 는 네 가지 상태를 데이터로 두고 생성 스레드는 하나이며 병렬 생성은 하지 않는다.
