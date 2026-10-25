@@ -305,6 +305,21 @@ namespace sw::editor
             ImGui::SameLine();
             ImGui::TextUnformatted( MultiplayerSyncTabInternal::describeComparison( compare.getComparison() ).c_str() );
         }
+#if SW_DEV_COMMANDS_ENABLED
+        // 어긋난 틱 근처에서 두 서버를 pause 한 채 누른다 — 두 서버의 현재 오브젝트 해시를 다시 받아 다른 오브젝트를 짚는다.
+        if ( ImGui::Button( "Which objects differ" ) && compare.compareObjectsFromChannels() == false )
+            SW_LOG_WARNING( "Sync could not compare objects: %#", compare.getLastError() );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "SyncObjects" ) );
+        if ( compare.hasObjectComparison() )
+        {
+            if ( compare.getDifferingObjects().empty() )
+                ImGui::TextUnformatted( "every named object matches" );
+            for ( const string& name : compare.getDifferingObjects() )
+            {
+                ImGui::BulletText( "%s", name.c_str() );
+            }
+        }
+#endif
     }
 
     SW_EDITOR_MULTIPLAYER_TAB( MultiplayerSyncTab, "sync", 400, "Sync" );

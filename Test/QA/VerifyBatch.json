@@ -648,6 +648,16 @@
       "source": "docs/plans/ServerDebug.md S7", "result_doc": "docs/plans/ServerDebug.md S7 남은 것"
     },
     {
+      "id": "sync-tab-object-diff-tests", "title": "Sync 탭의 다른 오브젝트 찾기(EditorStateHashCompare 오브젝트 답 견주기)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 10,
+      "filter": "EditorStateHashCompareTest.*",
+      "source": "docs/plans/ServerDebug.md S7", "result_doc": "docs/plans/ServerDebug.md S7 남은 것"
+    },
+    {
+      "id": "profiler-replica-rate-tests", "title": "Profiler 탭의 복제 셈 초당 값 · 비율 계산", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 10,
+      "filter": "EditorNetProfilerTest.*",
+      "source": "docs/plans/ServerDebug.md S5", "result_doc": "docs/plans/ServerDebug.md S5 남은 것"
+    },
+    {
       "id": "epoll-stream-transport-wsl", "title": "리눅스 epoll 스트림 전송 — StreamTransportTest 를 반복 20 회(WSL Debug · Shipping)", "kind": "test", "config": "Debug", "platform": "wsl", "gpu": "none", "pending": true, "timeout_minutes": 40,
       "filter": "StreamTransportTest.*",
       "need_command": "--test_repeat=20 과 변이(setReceivePaused( false ) 의 할 일을 빼면 백프레셔 테스트가 진다) 확인은 한 명령이 아니다. WSL 은 사용자가 요청할 때만 돌린다",

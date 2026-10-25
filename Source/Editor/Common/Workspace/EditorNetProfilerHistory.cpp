@@ -143,6 +143,37 @@ namespace sw::editor
 
 namespace sw::editor
 {
+    void EditorNetProfilerUtil::computeReplicaRates( const vector<NetStatsReplicaEntry>& listPrevious, const vector<NetStatsReplicaEntry>& listCurrent, float64 elapsedSeconds,
+                                                     vector<EditorNetReplicaRate>& outListRate )
+    {
+        outListRate.clear();
+        if ( elapsedSeconds <= 0.0 )
+            return;
+        float64 totalBytesPerSecond = 0.0;
+        for ( const NetStatsReplicaEntry& current : listCurrent )
+        {
+            EditorNetReplicaRate rate;
+            rate._name                               = current._name;
+            const NetStatsReplicaEntry* pPrevious    = VectorUtil::findBy<&NetStatsReplicaEntry::_name>( listPrevious, current._name );
+            const bool                  bHasBaseline = pPrevious != nullptr && pPrevious->_updateCount <= current._updateCount && pPrevious->_byteCount <= current._byteCount;
+            rate._updatesPerSecond                   = bHasBaseline ? static_cast<float32>( static_cast<float64>( current._updateCount - pPrevious->_updateCount ) / elapsedSeconds ) : 0.0f;
+            rate._bytesPerSecond                     = bHasBaseline ? static_cast<float32>( static_cast<float64>( current._byteCount - pPrevious->_byteCount ) / elapsedSeconds ) : 0.0f;
+            totalBytesPerSecond += static_cast<float64>( rate._bytesPerSecond );
+            outListRate.push_back( rate );
+        }
+        for ( EditorNetReplicaRate& rate : outListRate )
+        {
+            rate._share = totalBytesPerSecond > 0.0 ? static_cast<float32>( static_cast<float64>( rate._bytesPerSecond ) / totalBytesPerSecond ) : 0.0f;
+        }
+        std::sort( outListRate.begin(), outListRate.end(), []( const EditorNetReplicaRate& left, const EditorNetReplicaRate& right )
+        {
+            return left._bytesPerSecond != right._bytesPerSecond ? left._bytesPerSecond > right._bytesPerSecond : left._name < right._name;
+        } );
+    }
+} // namespace sw::editor
+
+namespace sw::editor
+{
     EditorNetProfilerHistory::EditorNetProfilerHistory()
         : _listTrack{}
         , _lastQuerySeconds{ 0.0 }
@@ -191,6 +222,9 @@ namespace sw::editor
         if ( _listTrack.size() <= static_cast<size_t>( processIndex ) )
             _listTrack.resize( static_cast<size_t>( processIndex ) + 1 );
         EditorNetProfilerTrack& track = _listTrack[static_cast<size_t>( processIndex )];
+        EditorNetProfilerUtil::computeReplicaRates( track._lastReport._listReplicaEntry, report._listReplicaEntry, timeSeconds - track._lastTimeSeconds, track._listReplicaRate );
+        if ( track._bHasReport == false )
+            track._listReplicaRate.clear();
         track._series.push( EditorNetProfilerUtil::makeSample( track._bHasReport ? &track._lastReport : nullptr, track._lastTimeSeconds, report, timeSeconds ) );
         track._lastReport      = report;
         track._lastTimeSeconds = timeSeconds;

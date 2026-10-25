@@ -165,6 +165,8 @@ namespace sw::editor
         void drawGraphs( const EditorNetProfilerTrack& track );
         /** @brief 메시지 종류별 비중 테이블을 그립니다. */
         void drawKindShares( const EditorNetProfilerTrack& track );
+        /** @brief 복제 키트가 올린 셈(`replicas=`)의 초당 갱신 · 바이트 비중 테이블을 그립니다. */
+        void drawReplicaRates( const EditorNetProfilerTrack& track );
 
         vector<float32>            _listValueScratch;
         vector<NetStatsKindEntry>  _listKindEntryScratch;
@@ -245,6 +247,35 @@ namespace sw::editor
         }
     }
 
+    void MultiplayerProfilerTab::drawReplicaRates( const EditorNetProfilerTrack& track )
+    {
+        if ( track._listReplicaRate.empty() )
+        {
+            ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorMultiplayer", "ProfilerNoReplicas" ) );
+            return;
+        }
+        if ( ImGui::BeginTable( "##ProfilerReplicas", 4, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp ) )
+        {
+            ImGui::TableSetupColumn( "Name" );
+            ImGui::TableSetupColumn( "Updates/s" );
+            ImGui::TableSetupColumn( "Bytes/s" );
+            ImGui::TableSetupColumn( "Share" );
+            ImGui::TableHeadersRow();
+            for ( const EditorNetReplicaRate& rate : track._listReplicaRate )
+            {
+                ImGui::TableNextColumn();
+                ImGui::TextUnformatted( rate._name.c_str() );
+                ImGui::TableNextColumn();
+                ImGui::Text( "%.1f", static_cast<float64>( rate._updatesPerSecond ) );
+                ImGui::TableNextColumn();
+                ImGui::Text( "%.1f", static_cast<float64>( rate._bytesPerSecond ) );
+                ImGui::TableNextColumn();
+                ImGui::ProgressBar( rate._share, ImVec2( -1.0f, 0.0f ) );
+            }
+            ImGui::EndTable();
+        }
+    }
+
     void MultiplayerProfilerTab::drawTab( const MultiplayerTabContext& context )
     {
         EditorNetPlaySession&     session = *context._pSession;
@@ -284,6 +315,11 @@ namespace sw::editor
         ImGui::Checkbox( "Sent", &_bSentKinds );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "ProfilerKindsSent" ) );
         drawKindShares( track );
+
+        ImGui::Separator();
+        ImGui::TextUnformatted( SW_LOCKEY( "EditorMultiplayer", "ProfilerReplicas" ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "ProfilerReplicasHelp" ) );
+        drawReplicaRates( track );
     }
 
     SW_EDITOR_MULTIPLAYER_TAB( MultiplayerProfilerTab, "profiler", 300, "Profiler" );

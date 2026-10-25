@@ -12,9 +12,12 @@ namespace sw::editor
 {
     EditorStateHashCompare::EditorStateHashCompare()
         : _arrSource{}
+        , _arrChannel{}
         , _comparison{}
+        , _listDifferingObject{}
         , _lastError{}
         , _bComparisonCurrent{ false }
+        , _bObjectComparison{ false }
     {
     }
 
@@ -54,7 +57,9 @@ namespace sw::editor
         EditorStateHashSource& source = _arrSource[sourceIndex];
         source._label                 = string( label );
         source._listSample.swap( listSample );
-        _bComparisonCurrent = false;
+        _arrChannel[sourceIndex] = ChannelOrigin{}; // 채널에서 읽었으면 loadFromChannel 이 곧 다시 채운다
+        _bComparisonCurrent      = false;
+        _bObjectComparison       = false;
         return true;
     }
 
@@ -78,9 +83,56 @@ namespace sw::editor
             _lastError = body.empty() ? "no state.hashes answer from " + remote.toString() : body;
             return false;
         }
-        return loadFromReport( sourceIndex, remote.toString(), body );
+        if ( loadFromReport( sourceIndex, remote.toString(), body ) == false )
+            return false;
+        _arrChannel[sourceIndex] = ChannelOrigin{ remote, string( token ), true };
+        return true;
+    }
+
+    bool EditorStateHashCompare::compareObjectsFromChannels()
+    {
+        string arrText[kSourceCount];
+        for ( int32 sourceIndex = 0; sourceIndex < kSourceCount; ++sourceIndex )
+        {
+            const ChannelOrigin& origin = _arrChannel[sourceIndex];
+            if ( origin._bValid == false )
+            {
+                _lastError = "slot " + to_string( sourceIndex ) + " was not read from a debug channel - object hashes come only from a live server";
+                return false;
+            }
+            DebugChannelClient client;
+            if ( client.connect( origin._remote, origin._token, kChannelTimeoutMilliseconds ) == false )
+            {
+                _lastError = "could not connect to the debug channel at " + origin._remote.toString();
+                return false;
+            }
+            const bool bAnswered = client.request( "state.objects", kChannelTimeoutMilliseconds, arrText[sourceIndex] );
+            client.disconnect();
+            if ( bAnswered == false )
+            {
+                _lastError = arrText[sourceIndex].empty() ? "no state.objects answer from " + origin._remote.toString() : arrText[sourceIndex];
+                return false;
+            }
+        }
+        return compareObjectReports( arrText[0], arrText[1] );
     }
 #endif
+
+    bool EditorStateHashCompare::compareObjectReports( string_view leftText, string_view rightText )
+    {
+        vector<SceneObjectHash> listLeft;
+        vector<SceneObjectHash> listRight;
+        if ( SceneStateHash::parseObjectReport( leftText, listLeft ) == false || SceneStateHash::parseObjectReport( rightText, listRight ) == false )
+        {
+            _lastError = "an answer is not an object hash list (<hex hash> <name> per line)";
+            return false;
+        }
+        vector<string> listName;
+        static_cast<void>( SceneStateHash::findDifferingObjects( listLeft, listRight, listName ) );
+        _listDifferingObject = std::move( listName );
+        _bObjectComparison   = true;
+        return true;
+    }
 
     bool EditorStateHashCompare::loadFromFile( int32 sourceIndex, string_view path )
     {
@@ -112,8 +164,10 @@ namespace sw::editor
     {
         if ( isSourceIndexValid( sourceIndex ) == false )
             return;
-        _arrSource[sourceIndex] = EditorStateHashSource{};
-        _bComparisonCurrent     = false;
+        _arrSource[sourceIndex]  = EditorStateHashSource{};
+        _arrChannel[sourceIndex] = ChannelOrigin{};
+        _bComparisonCurrent      = false;
+        _bObjectComparison       = false;
     }
 
     bool EditorStateHashCompare::compare()

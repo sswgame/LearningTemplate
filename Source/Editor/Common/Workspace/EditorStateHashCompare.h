@@ -62,7 +62,18 @@ namespace sw::editor
          * @details 디버그 채널은 개발 명령과 함께만 있다(배포 구성에는 없다 — `DebugChannel.h`).
          */
         [[nodiscard]] bool loadFromChannel( int32 sourceIndex, const NetAddress& remote, string_view token );
+        /**
+         * @brief 두 칸이 채널에서 읽은 서버의 현재 오브젝트별 해시(`state.objects`)를 다시 받아 견주고, 다른 오브젝트 이름을 `getDifferingObjects` 에 채웁니다.
+         * @details 어긋난 틱 근처에서 두 서버를 `pause` 한 채 부른다(이력에 오브젝트별 해시를 쌓지 않는 까닭 — 틱 × 오브젝트가 크다). 채널에서 읽은 칸이 아니거나 한쪽 답이 오브젝트 목록이 아니면 false 이고 이유는 `getLastError` 다.
+         */
+        [[nodiscard]] bool compareObjectsFromChannels();
 #endif
+        /** @brief 두 오브젝트 목록 글(`state.objects` 답)을 견줘 다른 오브젝트 이름을 채웁니다. 형식이 다른 글이면 false 이고 결과는 그대로입니다. */
+        [[nodiscard]] bool compareObjectReports( string_view leftText, string_view rightText );
+        /** @brief 마지막 `compareObjects*` 가 찾은 다른 오브젝트 이름(이름 순, 중복 없음)입니다. */
+        const vector<string>& getDifferingObjects() const { return _listDifferingObject; }
+        /** @brief 마지막 `compareObjects*` 가 끝까지 갔으면 true 입니다(false 면 `getDifferingObjects` 가 비어 있어도 "같다" 가 아니다). */
+        bool hasObjectComparison() const { return _bObjectComparison; }
         /** @brief 이력 파일을 칸에 담습니다. 형식이 다른 줄이 있으면 false 입니다. */
         [[nodiscard]] bool loadFromFile( int32 sourceIndex, string_view path );
         /** @brief 이력 글을 칸에 담습니다(`writeReport` 형식). 형식이 다르거나 비어 있으면 false 입니다. */
@@ -87,9 +98,20 @@ namespace sw::editor
     private:
         [[nodiscard]] bool isSourceIndexValid( int32 sourceIndex );
 
+        /** @brief 칸을 채널에서 읽었을 때의 주소와 토큰입니다(`compareObjectsFromChannels` 가 같은 서버에 다시 묻는다). */
+        struct ChannelOrigin
+        {
+            NetAddress _remote{};
+            string     _token{};
+            bool       _bValid{ false };
+        };
+
         EditorStateHashSource     _arrSource[kSourceCount];
+        ChannelOrigin             _arrChannel[kSourceCount];
         EditorStateHashComparison _comparison;
+        vector<string>            _listDifferingObject;
         string                    _lastError;
         bool                      _bComparisonCurrent;
+        bool                      _bObjectComparison;
     };
 } // namespace sw::editor

@@ -36,3 +36,30 @@ SW_TEST_CASE( EditorStateHashCompareTest, RejectsTextThatIsNotAHistory )
     SW_EXPECT_FALSE( compare.compare() );
     SW_EXPECT_FALSE( compare.getLastError().empty() );
 }
+
+/**
+ * @brief [EditorStateHashCompareTest] 두 오브젝트 해시 답을 견줘 다른 오브젝트 이름만 낸다 — 한쪽에만 있는 오브젝트도 다른 것이다
+ */
+SW_TEST_CASE( EditorStateHashCompareTest, NamesTheObjectsWhoseHashesDiffer )
+{
+    EditorStateHashCompare compare;
+    SW_EXPECT_FALSE( compare.hasObjectComparison() );
+    SW_ASSERT_TRUE( compare.compareObjectReports( "00000000000000aa Door\n00000000000000bb Lamp\n00000000000000cc Gone\n",
+                                                  "00000000000000aa Door\n00000000000000b0 Lamp\n" ) );
+    SW_EXPECT_TRUE( compare.hasObjectComparison() );
+    SW_ASSERT_EQUAL( size_t{ 2 }, compare.getDifferingObjects().size() );
+    SW_EXPECT_TRUE( compare.getDifferingObjects()[0] == "Gone" );
+    SW_EXPECT_TRUE( compare.getDifferingObjects()[1] == "Lamp" );
+}
+
+/**
+ * @brief [EditorStateHashCompareTest] 오브젝트 목록이 아닌 답(서버 오류 글)은 견주지 않고 거절한다 — 앞 결과를 지우지 않는다
+ */
+SW_TEST_CASE( EditorStateHashCompareTest, RejectsAnObjectAnswerThatIsNotAList )
+{
+    EditorStateHashCompare compare;
+    SW_ASSERT_TRUE( compare.compareObjectReports( "00000000000000aa Door\n", "00000000000000ab Door\n" ) );
+    SW_EXPECT_FALSE( compare.compareObjectReports( "no active scene", "00000000000000aa Door\n" ) );
+    SW_EXPECT_FALSE( compare.getLastError().empty() );
+    SW_EXPECT_EQUAL( size_t{ 1 }, compare.getDifferingObjects().size() );
+}
