@@ -62,6 +62,14 @@ class RunDocTest(unittest.TestCase):
         self.assertIn("#### 5-4.1 세부", out)
         self.assertNotIn("5-40", out)
 
+    def testDecisionAreaNumberReadsAreaFile(self) -> None:
+        (self.root / "docs" / "decisions").mkdir()
+        (self.root / "docs" / "decisions" / "5-4_Data.md").write_text("# 5-4. 데이터\n\n영역 본문\n", encoding="utf-8")
+        code, out, _ = self.runInternal(["09_Decisions", "--section", "5-4"])
+        self.assertEqual(code, 0)
+        self.assertIn("영역 본문", out)
+        self.assertNotIn("5-40", out)
+
     def testMissingDocOrSectionExitsOne(self) -> None:
         self.assertEqual(self.runInternal(["없는문서"])[0], 1)
         code, _, err = self.runInternal(["09_Decisions", "--section", "5-"])

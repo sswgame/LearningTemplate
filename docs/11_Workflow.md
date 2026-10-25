@@ -89,6 +89,8 @@ py -3 -m Scripts shared-lock release vcpkg --owner <이름>                     
 - **에디터 변경은 에디터 시나리오로 확인합니다.** 시나리오 실행기의 에디터 단계(`-EnableEditor`)로 그 흐름을 하나 더하고 AppScenarioTest 로 돌립니다.
 - **"확인 대기"는 쌓아 두지 않고 통합 단계에서 한 번에 돌립니다.** 작업자는 GPU · 눈 확인을 하지 않고 "GPU 확인 대기"로 보고하며, 적용 담당은 병합 · `full-build` 직후 그 대기 항목을 모아 `gpu-verifier`(Shipping, 기존 시나리오 · 네 백엔드)로 한 번에 돌려 결과를 계획 문서에 반영합니다. 대기 목록을 인계 문서나 후보로 넘기는 것은 시나리오로 만들 수 없는 것에 한합니다.
 - **검증 · 측정은 묶음 하나의 단위로 돌립니다**(사용자 지시). 확인 · 측정 후보마다 따로 돌리지 않고 빌드 구성별로 모읍니다: Debug 한 번(`full-build` · `lint` · `nogpu` · `race`) → Shipping 한 번(`hostgpu` 전체와 확인 대기 전부, GPU 공유) → Release 한 번(쿠킹 · 골든 다시 뜨기 뒤 `perf` · `load` · `perf-compare` · 네트 벤치 · 후보의 측정 질문을 혼자 이어서, GPU 독점) → push 뒤 CI(리눅스). 같은 구성이 필요한 일은 전부 그 구성에서 이어서 하고, 실패하면 그 단계부터 다시 합니다. 측정 질문은 "어쩌다" 따로 쌓지 않고 Release 단계에 한 줄로 더합니다. 이번 묶음의 실제 표는 `NEXT.md` 0000절입니다. **측정 항목은 매니페스트 하나(`Test/QA/VerifyBatch.json`)에 두고 `py -3 -m Scripts verify-batch --owner <이름>` 한 명령으로 돌립니다** — ctest · 테스트 필터 · 쿠킹 · 골든 · 측정을 구성별(Debug → Shipping → Release)로 모아 이어 돌리고(GPU 공유 · 독점 잠금을 묶음마다 한 번), 한 항목이 져도 나머지를 돌려 결과 표 하나를 남깁니다. 확인 대기도 문서에 글로 쌓지 않고 항목 id 로 적습니다(`매니페스트 id` 와 id — `plans --check` 와 린트 `CheckVerifyPending` 이 없는 id 와 가리키는 줄이 없는 일회성 항목을 막습니다). 한 명령으로 안 도는 확인은 항목의 `need_command` 에 이유를 적어 결과 표에 남깁니다.
+- **main 앞의 증거는 `integ-gate` 가 요구합니다.** 병합 결과(커밋한 트리)에서 `py -3 -m Scripts integ-gate run --owner <이름>` 이 `-k 0` 으로 끝까지 지어 컴파일 오류를 한 번에 모으고, 빌드가 서지 않았으면 `ctest -L "nogpu|lint"` 를 돌려 통과 · 실패 요약을 `<공통 .git>/sw-integration-evidence/<빌드 입력 해시>.json` 에 남깁니다(`full-build` 와 같은 키라 마크다운 · `.claude/` 만 바뀐 커밋은 직전 증거가 맞고, 통과한 `-k 0` 빌드는 `full-build` 증거도 함께 씁니다). 통합 담당은 push 앞에 `integ-gate check` 가 0 인지 봅니다 — 증거가 없거나 실패한 증거거나 라벨이 좁거나 항목이 0 개면 이유를 찍고 1 입니다. pre-push 훅에는 아직 걸지 않았습니다(걸려면 훅이 `integ-gate check-push` 를 `full-build check-push` 옆에서 부릅니다).
+- **GPU 항목은 정해진 시각에 `verify-batch` 로 몰아 돌립니다.** 배치마다 GPU 를 독점해 통합을 세우지 않도록, 위 증거는 GPU 없이 도는 것만 요구하고 `hostgpu` · 시나리오 · 골든 · 측정은 매니페스트 항목으로 두었다가 정해 둔 시각(예: 밤)에 한 명령으로 돌립니다. 통합 워크트리에서 `py -3 -m Scripts verify-batch --owner nightly --config Shipping --config Release` 를 부르면 구성별로 GPU 공유 · 독점 잠금을 한 번씩만 잡고 `build/verify-batch/<시각>/result.md` 에 표 하나를 남기며, 다음 통합이 그 표를 읽습니다. 예약 작업의 등록은 사용자 PC 설정이라 이 저장소는 명령만 정합니다(Windows 작업 스케줄러라면 동작에 `py -3 -m Scripts verify-batch ...` 를, 시작 위치에 통합 워크트리를 둡니다). 먼저 `verify-batch --dry-run` 으로 순서를 봅니다.
 - **손 확인을 사용자에게 넘기지 않습니다.** 화면에서 확인할 일은 자동화 시나리오(`Resource/<영역>/automation/*.scenario.xml`)로 만들어 직접 확인합니다. 시나리오로 못 하는 것만 이유와 함께 `Candidates-<영역>.md` 에 후보 절로 씁니다.
 - 성능 주장은 Release 측정값으로만 하고, 측정 없이 최적화하지 않습니다. 측정하는 법은 [검증과 측정](08_Verification.md) 2절이고, 결함을 고치는 순서(재현 테스트, 고침, 변이 검사)는 1절입니다.
 
@@ -102,7 +104,7 @@ py -3 -m Scripts shared-lock release vcpkg --owner <이름>                     
 
 ## 5. 결정하는 방식
 
-- **기술 결정은 상용 엔진의 같은 기능과 비교해 정하고, 근거 한 줄과 함께 [결정 기록](09_Decisions.md)에 남깁니다.** 비교 대상은 언리얼, 유니티, Godot 이고 온라인 기능은 PlayFab, EOS, Nakama 도 봅니다. 우리 구조가 더 낫거나 확장성이 좋으면 상용 엔진을 따르지 않고 더 발전시킵니다.
+- **기술 결정은 상용 엔진의 같은 기능과 비교해 정하고, 근거 한 줄과 함께 [결정 기록](09_Decisions.md) 5절이 가리키는 영역 파일(`docs/decisions/5-<번호>_*.md`)의 끝에 남깁니다.** 비교 대상은 언리얼, 유니티, Godot 이고 온라인 기능은 PlayFab, EOS, Nakama 도 봅니다. 우리 구조가 더 낫거나 확장성이 좋으면 상용 엔진을 따르지 않고 더 발전시킵니다.
 - 사용자에게는 결과 요약에서 "정한 것" 으로만 알리고 결정 표를 올려 고르게 하지 않습니다. **"사용자 결정 대기" 를 인계 문서에 쌓지 않습니다.** 판정이 필요하면 `design-reviewer` 로 상용 엔진과 비교해 그 자리에서 정하고 결정 기록에 남깁니다(작업자의 "하지 않기로 한 것" 판정도 같습니다).
 - 사용자에게 묻는 것은 다음뿐입니다. 법과 라이선스, 외부 공개(PR, 게시), 비용이나 계정이 드는 연동, 사용자가 보류로 정한 항목, 되돌리기 어려운 큰 데이터 삭제입니다.
 - 게임 리소스는 CC0 급만 넣습니다. 조건과 예는 [결정 기록](09_Decisions.md) 5-1 에 있습니다.
@@ -120,10 +122,10 @@ py -3 -m Scripts shared-lock release vcpkg --owner <이름>                     
 | `docs/plans/NEXT.md` | 지금 상태만. 통합 담당만 고칩니다 |
 
 - 일의 식별자는 이름입니다(`ClusteredLighting`, 단위는 `ClusteredLighting.S2`). 코드 주석 · 결정 기록에 남은 옛 번호(`C-30` 등)는 `py -3 -m Scripts plans --find <옛번호>` 로 새 이름을 찾습니다. 새 일에 번호를 매기지 않습니다.
-- 목록은 `py -3 -m Scripts plans`, 링크 점검은 `plans --check` 입니다. 최상단 `README.md` 의 진행 표는 `py -3 -m Scripts status-board --write README.md` 가 만든 생성물이라 손으로 고치지 않습니다.
+- 목록은 `py -3 -m Scripts plans`, 링크 점검은 `plans --check` 입니다. 루트 `StatusBoard.md` 의 진행 표는 `py -3 -m Scripts status-board --write` 가 만든 생성물이라 손으로 고치지 않고, 병합 뒤 통합 담당만 다시 만듭니다(작업자가 만들면 브랜치마다 같은 파일이 바뀌어 병합이 충돌합니다).
 - **일을 끝낸 사람이 직접 고칩니다.** 단위를 끝내면 그 계획 문서의 단위 절을 지우고 머리 줄 `진행` 을 올립니다. 후보를 착수하면 절을 계획 문서로 옮기고 후보 문서에서 지웁니다. 마지막 단위를 끝내 진행이 `n/n` 이 되면 머리 줄 상태도 올립니다: 실행 확인(GPU · 측정)이 남았으면 `측정대기`, 다 끝났으면 `끝`(`plans --check` 가 `n/n` 인데 `구현중` 인 문서를 위반으로 잡습니다).
 - **상태가 `끝` 인 계획 문서는 지웁니다**(2026-10-24 사용자 지시). 남길 교훈은 먼저 코드 헤더 주석 · [결정 기록](09_Decisions.md) · [검증과 측정](08_Verification.md)으로 옮기고, 지운 문서를 가리키던 링크(Roadmap, 다른 문서, 코드 주석)를 모두 고칩니다. 끝난 일은 `Roadmap.md` 에서도 지웁니다.
-- 갱신은 묻지 않고 작업 커밋에 함께 넣습니다. 이 점검은 `plans --check` 와 `status-board --check README.md` 가 맡습니다.
+- 갱신은 묻지 않고 작업 커밋에 함께 넣습니다. 이 점검은 `plans --check` 와 `status-board --check` 가 맡습니다(표 신선도는 통합 담당의 일이라 작업자 커밋 훅은 보지 않습니다).
 - 여러 PC 에서 고치는 파일이라 작업 중에 pull 과 충돌이 날 수 있습니다. 병합 중이면(`.git/MERGE_HEAD`) 충돌 파일이 내가 만진 것인지부터 봅니다. 커밋 훅 없이 올라온 커밋은 포맷 위반을 달고 올 수 있으므로, `.clang-format` 과 `Tools/LLVM` 버전이 같은지 확인한 뒤 `py -3 Scripts/lint/fixer/FormatModified.py` 로 정리합니다.
 
 ## 7. 커밋 메시지와 글
