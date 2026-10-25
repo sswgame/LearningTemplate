@@ -28,6 +28,7 @@
 #include "GameFramework/Base/Actor/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
+#include "GameFramework/Base/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Base/Gameplay/Appearance/CharacterAppearanceComponent.h"
 
 #include "Games/Shooter3D/ShooterAutoAimControllerComponent.h"
@@ -123,8 +124,8 @@ namespace sw
         : _enemyPrefab{}
         , _effectPrefab{}
         , _tracerPrefab{}
-        , _listEnemyPreset{ "SkeletonMinion", "SkeletonRaider", "SkeletonRogue", "SkeletonRaider" }
-        , _eliteEnemyPreset{ "SkeletonWarrior" }
+        , _listEnemyPreset{}
+        , _eliteEnemyPreset{}
         , _player{}
         , _listSpawnPoint{}
         , _arenaHalfSize{ 20.0f }
@@ -366,6 +367,26 @@ namespace sw
     {
         using Internal = ShooterDirectorComponentInternal;
         _bPacingReady  = SW_FALSE;
+        // 적 프리셋 이름은 씬 데이터가 정본이다(C++ 에 기본값이 없다). 비었거나 외형 표에 없는 이름이면 이유를 남기고 적을 내지 않는다.
+        const AppearanceDatabase* pAppearance     = game::findSubsystem<AppearanceDatabase>();
+        const bool                bPresetNamesSet = _listEnemyPreset.empty() == false && _eliteEnemyPreset.empty() == false;
+        if ( pAppearance == nullptr || bPresetNamesSet == false )
+        {
+            SW_LOG_ERROR( "[Shooter] enemy presets are not set (or no appearance database) - no enemies will come" );
+            return;
+        }
+        bool bPresetsKnown = pAppearance->getPresets().findPreset( hashed_string( _eliteEnemyPreset ) ) != nullptr;
+        if ( bPresetsKnown == false )
+            SW_LOG_ERROR( "[Shooter] elite preset '%#' is not in the appearance presets", _eliteEnemyPreset.c_str() );
+        for ( const string& preset : _listEnemyPreset )
+        {
+            if ( pAppearance->getPresets().findPreset( hashed_string( preset ) ) != nullptr )
+                continue;
+            SW_LOG_ERROR( "[Shooter] enemy preset '%#' is not in the appearance presets", preset.c_str() );
+            bPresetsKnown = false;
+        }
+        if ( bPresetsKnown == false )
+            return;
         if ( _profile.loadFromResource( _pacingProfile ) == false || _table.loadFromResource( _spawnTable ) == false )
         {
             SW_LOG_ERROR( "[Shooter] pacing data '%#' / '%#' could not be loaded - no enemies will come", _pacingProfile.c_str(), _spawnTable.c_str() );

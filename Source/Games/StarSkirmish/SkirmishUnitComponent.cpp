@@ -11,62 +11,41 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Probe/AutomationProbe.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
+
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 
 #include "Games/StarSkirmish/SkirmishDirectorComponent.h"
 
 namespace sw
 {
+    SW_LOG_CALLER( "SkirmishUnit" );
+
     namespace
     {
-        struct SkirmishUnitComponentInternal
+        /**
+         * @brief 탐침 `Skirmish.ViewLagMax` 입니다. 모든 유닛 뷰 가운데 메시가 디렉터의 유닛 자리에서 가장 멀리 벗어난 거리입니다.
+         *        측정한 뷰가 하나도 없으면(뷰가 없거나 모두 비교 불가) false 를 돌려 시나리오가 빈 측정으로 통과하지 못하게 합니다.
+         */
+        [[nodiscard]] bool readViewLagMax( const GameObjectManager* pManager, float64& outValue )
         {
-            /** @brief Kenney Space Kit 모델의 가로 폭 표입니다. 키트 모델은 크기가 제각각이라(안테나 0.75 · 격납고 3.3) 모델마다 폭을 두고 Footprint Fill · Unit Fill 로 늘린다. */
-            static constexpr SkirmishUnitModel kArrUnitModel[] = {
-                {      "minerals",     "rock_crystals", 0.85f},
-                { "rich_minerals",     "rock_crystals", 0.85f},
-                {        "geyser",            "crater", 0.83f},
-                {"command_center",    "hangar_large_a",  3.0f},
-                {  "supply_depot", "machine_generator",  0.7f},
-                {      "refinery",         "structure",  1.0f},
-                {      "barracks",    "hangar_small_a",  2.0f},
-                {       "academy",  "machine_wireless", 0.75f},
-                {       "factory",    "hangar_round_a", 3.27f},
-                {      "starport",    "platform_large",  2.0f},
-                {        "bunker",     "turret_double",  0.9f},
-                {"missile_turret",     "turret_single", 0.72f},
-                {        "worker",       "craft_miner",  2.6f},
-                {        "marine",   "craft_speeder_a",  2.1f},
-                {       "firebat",   "craft_speeder_b", 2.03f},
-                {       "vulture",       "craft_racer", 2.03f},
-                {          "tank",     "craft_cargo_a", 2.45f},
-                {       "goliath",   "craft_speeder_b", 2.03f},
-                {        "wraith",       "craft_racer", 2.03f},
-            };
-
-            /**
-             * @brief 탐침 `Skirmish.ViewLagMax` 입니다. 모든 유닛 뷰 가운데 메시가 디렉터의 유닛 자리에서 가장 멀리 벗어난 거리입니다.
-             *        측정한 뷰가 하나도 없으면(뷰가 없거나 모두 비교 불가) false 를 돌려 시나리오가 빈 측정으로 통과하지 못하게 합니다.
-             */
-            [[nodiscard]] static bool readViewLagMax( const GameObjectManager* pManager, float64& outValue )
+            if ( pManager == nullptr )
+                return false;
+            float32 lagMax        = 0.0f;
+            uint32  measuredCount = 0;
+            pManager->forEachComponentOfType<SkirmishUnitComponent>( [&lagMax, &measuredCount]( const SkirmishUnitComponent* pView )
             {
-                if ( pManager == nullptr )
-                    return false;
-                float32 lagMax        = 0.0f;
-                uint32  measuredCount = 0;
-                pManager->forEachComponentOfType<SkirmishUnitComponent>( [&lagMax, &measuredCount]( const SkirmishUnitComponent* pView )
-                {
-                    const float32 lag = pView->measureViewLag();
-                    if ( lag < 0.0f )
-                        return;
-                    lagMax = MathUtil::max( lagMax, lag );
-                    ++measuredCount;
-                } );
-                if ( measuredCount == 0 )
-                    return false;
-                outValue = static_cast<float64>( lagMax );
-                return true;
-            }
-        };
+                const float32 lag = pView->measureViewLag();
+                if ( lag < 0.0f )
+                    return;
+                lagMax = MathUtil::max( lagMax, lag );
+                ++measuredCount;
+            } );
+            if ( measuredCount == 0 )
+                return false;
+            outValue = static_cast<float64>( lagMax );
+            return true;
+        }
     } // namespace
 } // namespace sw
 
@@ -105,31 +84,57 @@ namespace sw
         _bPlaced    = SW_FALSE;
     }
 
-    const SkirmishUnitModel* SkirmishUnitComponent::findUnitModel( const hashed_string& unitID )
-    {
-        for ( const SkirmishUnitModel& entry : SkirmishUnitComponentInternal::kArrUnitModel )
-        {
-            if ( unitID == hashed_string( entry._pUnitID ) )
-                return &entry;
-        }
-        return nullptr;
-    }
-
     string SkirmishUnitComponent::makeModelPath( const utf8* pName )
     {
         return string( "game/starskirmish/models/" ) + pName + string( MeshAssetFormat::kExtension );
     }
 
-    vector<string> SkirmishUnitComponent::makeAllModelPaths()
+    vector<string> SkirmishUnitModelCatalog::makeAllModelPaths() const
     {
         vector<string> listPath;
-        for ( const SkirmishUnitModel& entry : SkirmishUnitComponentInternal::kArrUnitModel )
+        for ( const SkirmishUnitModel& entry : getAll() )
         {
-            string path = makeModelPath( entry._pModel );
+            string path = SkirmishUnitComponent::makeModelPath( entry._model.c_str() );
             if ( VectorUtil::contains( listPath, path ) == false )
                 listPath.push_back( std::move( path ) );
         }
         return listPath;
+    }
+
+    uint32 SkirmishUnitModelCatalog::loadRoot( const XMLNode& root, string_view sourceName )
+    {
+        uint32 loadedCount = 0;
+        for ( XMLNode node = root.findChild( "Model" ); node; node = node.findNextSibling( "Model" ) )
+        {
+            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
+            if ( pID == nullptr )
+                continue;
+            hashed_string     modelName;
+            SkirmishUnitModel entry;
+            entry._id   = hashed_string( pID );
+            bool bValid = GameDataXML::readRequiredName( node, "model", sourceName, modelName );
+            // 폭은 필수다(적지 않은 칸이 조용히 1 이 되지 않는다). 0 이하는 오류다.
+            if ( node.findAttribute( "width" ) == nullptr )
+            {
+                SW_LOG_ERROR( "%#: model '%#' has no width", sourceName, pID );
+                bValid = false;
+            }
+            else
+            {
+                bValid = GameDataXML::readOptionalNumber( node, "width", sourceName, 0.01f, 1000.0f, entry._width ) && bValid;
+            }
+            if ( bValid == false )
+            {
+                SW_LOG_ERROR( "%#: model '%#' has invalid fields - skipped", sourceName, pID );
+                continue;
+            }
+            entry._model = string( modelName.c_str() );
+            add( entry );
+            ++loadedCount;
+        }
+        if ( loadedCount == 0 )
+            SW_LOG_WARNING( "%#: no <Model> entries", sourceName );
+        return loadedCount;
     }
 
     float32 SkirmishUnitComponent::measureViewLag() const
@@ -210,5 +215,5 @@ namespace sw
 
 namespace sw
 {
-    SW_AUTOMATION_PROBE( skirmishViewLagMax, "Skirmish.ViewLagMax", "Largest distance between a unit view mesh and the director's unit position", &SkirmishUnitComponentInternal::readViewLagMax );
+    SW_AUTOMATION_PROBE( skirmishViewLagMax, "Skirmish.ViewLagMax", "Largest distance between a unit view mesh and the director's unit position", &readViewLagMax );
 } // namespace sw

@@ -32,6 +32,11 @@ namespace sw
                 return settings;
             }
 
+            /** @brief 맵 배치가 놓는 자원 유닛의 카탈로그 id 입니다(units.xml). 없으면 판을 열지 않습니다. */
+            static constexpr const utf8* kMineralID     = "minerals";
+            static constexpr const utf8* kRichMineralID = "rich_minerals";
+            static constexpr const utf8* kGeyserID      = "geyser";
+
             static bool isArmy( const RTSUnit& unit ) { return unit.isMobile() && unit._pDef->_bWorker == SW_FALSE && unit._pDef->canAttack(); }
         };
     } // namespace
@@ -60,6 +65,18 @@ namespace sw
         if ( _world.initialize( pCatalog, kMapSize, kMapSize, RTSSettings{} ) == false )
             return false;
         _settings = matchSettings;
+        // 맵 배치가 놓는 유닛이 카탈로그에 없으면 조용히 건너뛰지 않고 판을 열지 않는다. 본진 건물 · 일꾼은 디렉터 데이터의 id 를 쓰고, 자원 id 는 맵 배치의 일부다.
+        bool bLayoutKnown = true;
+        for ( const hashed_string& layoutID : { _settings._depotID, _settings._workerID, hashed_string( SkirmishMatchInternal::kMineralID ),
+                                                hashed_string( SkirmishMatchInternal::kRichMineralID ), hashed_string( SkirmishMatchInternal::kGeyserID ) } )
+        {
+            if ( pCatalog->find( layoutID ) != nullptr )
+                continue;
+            SW_LOG_ERROR( "[Skirmish] the map layout places '%#' but the unit catalog has no such unit - the match cannot start", layoutID.c_str() );
+            bLayoutKnown = false;
+        }
+        if ( bLayoutKnown == false )
+            return false;
         _listEvent.clear();
         _listFrameEvent.clear();
         _statusTimer   = 0.0f;
@@ -83,11 +100,11 @@ namespace sw
         // 가운데 길목의 확장 광물(누구 것도 아니다).
         for ( int32 index = 0; index < 5; ++index )
         {
-            spawnResource( "rich_minerals", 3, 38 + index, false );
-            spawnResource( "rich_minerals", 3, 38 + index, true );
+            spawnResource( SkirmishMatchInternal::kRichMineralID, 3, 38 + index, false );
+            spawnResource( SkirmishMatchInternal::kRichMineralID, 3, 38 + index, true );
         }
-        spawnResource( "geyser", 6, 45, false );
-        spawnResource( "geyser", 6, 45, true );
+        spawnResource( SkirmishMatchInternal::kGeyserID, 6, 45, false );
+        spawnResource( SkirmishMatchInternal::kGeyserID, 6, 45, true );
 
         for ( int32 player = 0; player < kPlayerCount; ++player )
         {
@@ -202,15 +219,15 @@ namespace sw
     void SkirmishMatch::spawnBase( int32 player, bool bMirror )
     {
         // 본진(8..11, 8..11) · 뒤쪽 광물 줄(x 3, y 6..13) · 아래 간헐천(8..9, 2..3) · 사이에 일꾼 넷.
-        (void)spawnAt( "command_center", player, 8, 8, bMirror );
+        (void)spawnAt( _settings._depotID.c_str(), player, 8, 8, bMirror );
         for ( int32 y = 6; y <= 13; ++y )
         {
-            spawnResource( "minerals", 3, y, bMirror );
+            spawnResource( SkirmishMatchInternal::kMineralID, 3, y, bMirror );
         }
-        spawnResource( "geyser", 8, 2, bMirror );
+        spawnResource( SkirmishMatchInternal::kGeyserID, 8, 2, bMirror );
         for ( int32 index = 0; index < 4; ++index )
         {
-            (void)spawnAt( "worker", player, 6, 8 + index, bMirror ); // id 는 쓰지 않는다 — 정의가 없으면 spawnAt 이 경고한다
+            (void)spawnAt( _settings._workerID.c_str(), player, 6, 8 + index, bMirror ); // id 는 쓰지 않는다 — 카탈로그에 있음은 initialize 가 본다
         }
 
         // 사람 쪽 일꾼도 놀지 않게 처음 한 번 캐러 보낸다(AI 쪽은 AI 가 보낸다).

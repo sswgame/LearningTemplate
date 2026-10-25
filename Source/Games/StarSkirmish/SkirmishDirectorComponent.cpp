@@ -151,6 +151,7 @@ namespace sw
 {
     SkirmishDirectorComponent::SkirmishDirectorComponent()
         : _unitDataPath{}
+        , _unitModelPath{}
         , _commanderTreePath{}
         , _cliffPrefab{}
         , _unitPrefab{}
@@ -195,6 +196,7 @@ namespace sw
         , _mineralColor{ 0.35f, 0.85f, 1.0f, 1.0f }
         , _gasColor{ 0.3f, 0.8f, 0.4f, 1.0f }
         , _catalog{}
+        , _unitModelCatalog{}
         , _commanderTree{}
         , _match{}
         , _selection{}
@@ -234,7 +236,7 @@ namespace sw
         // 처음 짓는 건물 · 유닛의 모델을 게임 스레드가 플레이 중에 디스크에서 읽지 않게 판을 열 때 워커로 미리 읽는다(느린 디스크의 히치).
         if ( _unitModels.getCount() == 0 )
         {
-            for ( const string& path : SkirmishUnitComponent::makeAllModelPaths() )
+            for ( const string& path : _unitModelCatalog.makeAllModelPaths() )
             {
                 _unitModels.add( MeshCache::request( path ) );
             }
@@ -355,6 +357,12 @@ namespace sw
             SW_LOG_WARNING( "[Skirmish] %# could not be loaded - the match cannot start", _unitDataPath.c_str() );
             return false;
         }
+        _unitModelCatalog.clear();
+        if ( _unitModelCatalog.loadFromResource( _unitModelPath ) == false )
+        {
+            SW_LOG_ERROR( "[Skirmish] the unit model table '%#' could not be loaded - the match cannot start", _unitModelPath.c_str() );
+            return false;
+        }
         if ( _commanderTree.loadFromResource( _commanderTreePath ) == false )
         {
             SW_LOG_ERROR( "[Skirmish] the commander behavior tree '%#' could not be loaded - the match cannot start", _commanderTreePath.c_str() );
@@ -450,7 +458,7 @@ namespace sw
         const RTSUnit* pUnit = _match.getWorld().findUnit( slot._shownID );
         if ( pUnit == nullptr )
             return;
-        const SkirmishUnitModel* pModel = SkirmishUnitComponent::findUnitModel( pUnit->_pDef->_id );
+        const SkirmishUnitModel* pModel = _unitModelCatalog.find( pUnit->_pDef->_id );
         if ( pModel == nullptr )
             return;
         GameObject* pObject = spawnPrefab( manager, _unitPrefab, "SkirmishUnit" );
@@ -463,7 +471,7 @@ namespace sw
             // 모델은 유닛 종류마다 정해져 바뀌지 않는다. 그래서 여기(게임 스레드)에서 지정한다. 색, 위치, 크기, 방향은 뷰가 맞춘다.
             if ( _listUnitLook.empty() )
                 prepareUnitLooks( pMesh->getMaterial() );
-            pMesh->setMeshID( SkirmishUnitComponent::makeModelPath( pModel->_pModel ) );
+            pMesh->setMeshID( SkirmishUnitComponent::makeModelPath( pModel->_model.c_str() ) );
         }
         SkirmishUnitComponent* pView = pObject->getComponent<SkirmishUnitComponent>();
         if ( pView != nullptr )
@@ -498,8 +506,8 @@ namespace sw
             const bool bHiddenFromHuman = bHuman && unit._owner != 0 && unit._owner != RTSWorld::kNoOwner && world.isVisibleTo( 0, unit._id ) == false;
             if ( bHiddenFromHuman )
                 return;
-            if ( SkirmishUnitComponent::findUnitModel( unit._pDef->_id ) == nullptr )
-                return;
+            if ( _unitModelCatalog.find( unit._pDef->_id ) == nullptr )
+                return; // 모든 유닛에 모델 줄이 있음은 hasValidNames 가 시작할 때 본다
             const size_t slotIndex = static_cast<size_t>( unit._id.index() );
             if ( _listUnitSlot.size() <= slotIndex )
                 _listUnitSlot.resize( slotIndex + 1 );
@@ -687,6 +695,21 @@ namespace sw
             if ( _catalog.find( *pUnitID ) != nullptr )
                 continue;
             SW_LOG_ERROR( "%#: unit id '%#' is not in %#", kOwner, pUnitID->c_str(), _unitDataPath.c_str() );
+            bValid = false;
+        }
+        // 모델 표와 유닛 카탈로그는 서로 같은 id 를 가져야 한다. 모델이 없는 유닛은 조용히 그려지지 않으므로 시작할 때 막는다.
+        for ( const RTSUnitDef& def : _catalog.getAll() )
+        {
+            if ( _unitModelCatalog.find( def._id ) != nullptr )
+                continue;
+            SW_LOG_ERROR( "%#: unit '%#' of %# has no row in %#", kOwner, def._id.c_str(), _unitDataPath.c_str(), _unitModelPath.c_str() );
+            bValid = false;
+        }
+        for ( const SkirmishUnitModel& model : _unitModelCatalog.getAll() )
+        {
+            if ( _catalog.find( model._id ) != nullptr )
+                continue;
+            SW_LOG_ERROR( "%#: model row '%#' of %# is not in %#", kOwner, model._id.c_str(), _unitModelPath.c_str(), _unitDataPath.c_str() );
             bValid = false;
         }
         if ( _listBuildAction.size() != _listBuildUnitID.size() )

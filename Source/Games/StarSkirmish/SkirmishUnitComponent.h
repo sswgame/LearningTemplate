@@ -14,14 +14,39 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Base/Foundation/Data/GameCatalog.h"
+#include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
+
 namespace sw
 {
-    /** @brief 유닛 정의 → Kenney Space Kit 모델 이름 · 모델의 가로 폭(가장 넓은 수평 축)입니다. */
+    class XMLNode;
+
+    /** @brief 유닛 정의 → Kenney Space Kit 모델 이름 · 모델의 가로 폭(가장 넓은 수평 축)입니다(`unitmodels.xml` 의 한 줄). */
     struct SkirmishUnitModel
     {
-        const utf8* _pUnitID;
-        const utf8* _pModel;
-        float32     _width;
+        hashed_string _id{};    ///< 유닛 카탈로그(units.xml)의 id
+        string        _model{}; ///< 모델 파일 이름(확장자 없이)
+        float32       _width{ 1.0f };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @brief `<SkirmishUnitModels><Model id="marine" model="craft_speeder_a" width="2.1"/></SkirmishUnitModels>` 를 읽습니다.
+     * @details 키트 모델은 크기가 제각각이라(안테나 0.75 · 격납고 3.3) 모델마다 폭을 두고 Footprint Fill · Unit Fill 로 늘린다. 세 속성은 모두 필수다.
+     */
+    class SkirmishUnitModelCatalog : public XMLCatalog<SkirmishUnitModelCatalog>, public GameCatalog<SkirmishUnitModel>
+    {
+        friend class XMLCatalog<SkirmishUnitModelCatalog>;
+
+    public:
+        /** @brief 모델 표의 모든 모델 경로입니다(겹치는 모델은 한 번). 판을 열 때 미리 읽는다. */
+        vector<string> makeAllModelPaths() const;
+
+    private:
+        static constexpr const utf8* kXMLRootName = "SkirmishUnitModels";
+        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
     };
 } // namespace sw
 
@@ -54,11 +79,7 @@ namespace sw
          */
         float32 measureViewLag() const;
 
-        /** @brief 유닛 정의의 모델입니다. 그리지 않는 유닛이면 nullptr 입니다. */
-        static const SkirmishUnitModel* findUnitModel( const hashed_string& unitID );
-        static string                   makeModelPath( const utf8* pName );
-        /** @brief 모델 표의 모든 모델 경로입니다(겹치는 모델은 한 번). 판을 열 때 미리 읽는다. */
-        static vector<string> makeAllModelPaths();
+        static string makeModelPath( const utf8* pName );
 
     private:
         PROPERTY( Category = "Unit", DisplayName = "Director", Tooltip = "Object with the SkirmishDirectorComponent" )

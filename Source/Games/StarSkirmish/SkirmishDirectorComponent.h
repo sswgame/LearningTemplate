@@ -27,6 +27,7 @@
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSSelection.h"
 
 #include "Games/StarSkirmish/SkirmishMatch.h"
+#include "Games/StarSkirmish/SkirmishUnitComponent.h"
 
 namespace sw
 {
@@ -119,6 +120,8 @@ namespace sw
     private:
         PROPERTY( Category = "Data", DisplayName = "Unit Data", AssetPath, Tooltip = "Unit catalog XML" )
         string _unitDataPath;
+        PROPERTY( Category = "Data", DisplayName = "Unit Models", AssetPath, Tooltip = "Unit model table XML (unit id -> kit model and width); every unit of the unit catalog needs a row" )
+        string _unitModelPath;
         PROPERTY( Category = "Data", DisplayName = "Commander Tree", AssetPath, Tooltip = "Behavior tree (.bt.xml) of the computer opponent; its task names are the rts.* tasks of the RTS kit" )
         string _commanderTreePath;
         PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab" )
@@ -210,6 +213,7 @@ namespace sw
         float4 _gasColor;
 
         RTSCatalog                           _catalog;
+        SkirmishUnitModelCatalog             _unitModelCatalog;
         BehaviorTreeAsset                    _commanderTree;
         SkirmishMatch                        _match;
         RTSSelection                         _selection;
