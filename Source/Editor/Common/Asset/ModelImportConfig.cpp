@@ -25,29 +25,29 @@ namespace sw::editor
     {
         /** @brief 파일 루트입니다. */
         static constexpr ConfigKeyDoc kArrModelImportRootKeyDoc[] = {
-            { "rules", "object[]", "", "규칙 목록(아래 키). 첫 매칭이 이긴다. 맞는 규칙이 없는 원본은 기본값(옮기지 않음 · 애니메이션 모두 · ACL)" },
+            { "rules", "object[]", "", "규칙 목록(아래 키). 한 원본에는 규칙이 하나만 맞아야 한다(둘 이상이면 임포트 오류 — `exclude_patterns` 로 풀어 쓴다). 맞는 규칙이 없는 원본은 기본값(옮기지 않음 · 애니메이션 모두 · ACL)" },
         };
         /** @brief 규칙 하나입니다. 적용 순서는 `translation` 다음 `recenter` — 스킨드 모델에는 둘 다 쓸 수 없다(바인드 행렬이 어긋난다). */
         static constexpr ConfigKeyDoc kArrModelImportRuleKeyDoc[] = {
-            {                    "name",    "string",        "",                                                                      "규칙 이름(로그에 나온다)"},
-            {        "include_patterns",  "string[]",        "",                                              "맞아야 하는 와일드카드(`*` · `?`, 대소문자 무시)"},
-            {        "exclude_patterns",  "string[]",        "",                                                                        "맞으면 빼는 와일드카드"},
-            {           "include_paths",  "string[]",        "",                                                                    "들어 있어야 하는 경로 조각"},
-            {           "exclude_paths",  "string[]",        "",                                                                    "들어 있으면 빼는 경로 조각"},
-            {             "translation", "number[3]", "0, 0, 0",                                "모든 노드 월드 위치에 더하는 이동(glTF 원본 공간 — 축 변환 전)"},
-            {                "recenter",    "string",    "none",               "none · xz(경계 상자 XZ 중심을 원점) · bottom-center(XZ 중심 + 가장 낮은 Y 를 0)"},
-            {              "animations",      "bool",    "true",                                                                         "애니메이션을 가져온다"},
-            {                   "clips",  "string[]",        "",                                  "가져올 클립 이름(비면 모두 — 원본에 없는 이름은 임포트 오류)"},
-            {         "animation_codec",    "string",     "acl",                            "애니메이션 코덱 이름(`AnimationCodecRegistry` 에 없으면 설정 오류)"},
-            {   "animation_sample_rate",    "number",      "30",                                                                                  "초당 표본 수"},
-            {     "animation_precision",    "number",  "0.0001",                                                         "코덱 정밀도(`AnimationCodecSettings`)"},
-            {"animation_shell_distance",    "number",     "0.1",                                                                          "코덱 껍질 거리(미터)"},
-            {        "root_motion_bone",    "string",        "",                                                             "루트 모션 트랙이 될 본(비면 없음)"},
-            {             "attachments",      "bool",    "true",                                                      "본 아래 스킨 없는 메시를 따로 임포트한다"},
-            {                "fracture",    "object",        "",                            "있으면 `.mesh` 옆에 `.fracture` 를 쓴다(스킨 없는 메시만, 아래 키)"},
-            {            "body_surface",    "string",        "", "장비 메시면 몸 `.mesh` 리소스 id — 정점마다 가장 가까운 몸 삼각형의 스킨 · 체형 모프를 옮긴다"},
-            {   "body_surface_distance",    "number",    "0.05",                               "몸 표면에 묶는 최대 거리(미터) — 넘는 정점이 있으면 임포트 오류"},
-            {                    "lods",  "object[]",        "",            "메시 LOD 1 이상(아래 키, 순서대로 단계). 스킨 · 모프 · 머티리얼 구간이 없는 메시만"},
+            {                    "name",    "string",        "",                                                                                                                          "규칙 이름(로그에 나온다)"},
+            {        "include_patterns",  "string[]",        "", "맞아야 하는 와일드카드(`*` · `?`, 대소문자 무시). `/` 없으면 파일 이름에, 있으면 경로 마디에 맞춘다 — `*` 는 폴더를 넘지 않고 마디 `**` 만 넘는다"},
+            {        "exclude_patterns",  "string[]",        "",                                                                                                                            "맞으면 빼는 와일드카드"},
+            {           "include_paths",  "string[]",        "",                                                                                           "들어 있어야 하는 폴더 마디(`ui/` 는 `…/ui/…` 에 맞는다)"},
+            {           "exclude_paths",  "string[]",        "",                                                                                                                        "들어 있으면 빼는 폴더 마디"},
+            {             "translation", "number[3]", "0, 0, 0",                                                                                    "모든 노드 월드 위치에 더하는 이동(glTF 원본 공간 — 축 변환 전)"},
+            {                "recenter",    "string",    "none",                                                                   "none · xz(경계 상자 XZ 중심을 원점) · bottom-center(XZ 중심 + 가장 낮은 Y 를 0)"},
+            {              "animations",      "bool",    "true",                                                                                                                             "애니메이션을 가져온다"},
+            {                   "clips",  "string[]",        "",                                                                                      "가져올 클립 이름(비면 모두 — 원본에 없는 이름은 임포트 오류)"},
+            {         "animation_codec",    "string",     "acl",                                                                                "애니메이션 코덱 이름(`AnimationCodecRegistry` 에 없으면 설정 오류)"},
+            {   "animation_sample_rate",    "number",      "30",                                                                                                                                      "초당 표본 수"},
+            {     "animation_precision",    "number",  "0.0001",                                                                                                             "코덱 정밀도(`AnimationCodecSettings`)"},
+            {"animation_shell_distance",    "number",     "0.1",                                                                                                                              "코덱 껍질 거리(미터)"},
+            {        "root_motion_bone",    "string",        "",                                                                                                                 "루트 모션 트랙이 될 본(비면 없음)"},
+            {             "attachments",      "bool",    "true",                                                                                                          "본 아래 스킨 없는 메시를 따로 임포트한다"},
+            {                "fracture",    "object",        "",                                                                                "있으면 `.mesh` 옆에 `.fracture` 를 쓴다(스킨 없는 메시만, 아래 키)"},
+            {            "body_surface",    "string",        "",                                                     "장비 메시면 몸 `.mesh` 리소스 id — 정점마다 가장 가까운 몸 삼각형의 스킨 · 체형 모프를 옮긴다"},
+            {   "body_surface_distance",    "number",    "0.05",                                                                                   "몸 표면에 묶는 최대 거리(미터) — 넘는 정점이 있으면 임포트 오류"},
+            {                    "lods",  "object[]",        "",                                                                "메시 LOD 1 이상(아래 키, 순서대로 단계). 스킨 · 모프 · 머티리얼 구간이 없는 메시만"},
         };
         /** @brief `lods` 의 한 칸입니다(`ModelImportLODRule`). 단계는 원본에서 따로 단순화한다(`meshopt_simplify`). */
         static constexpr ConfigKeyDoc kArrModelImportLODKeyDoc[] = {
@@ -219,6 +219,16 @@ namespace sw::editor
                 }
             }
             _listRule.push_back( rule );
+        }
+
+        // 조건 없는 규칙은 나머지를 받는 규칙이라 맨 끝에 하나만 둔다. 중간에 있으면 순서가 뜻을 갖는 설정으로 읽히므로 오류로 멈춘다.
+        const size_t misplacedIndex = AssetImportRuleUtil::findMisplacedCatchAllIndex( _listRule );
+        if ( misplacedIndex < _listRule.size() )
+        {
+            SW_LOG_ERROR( "ModelImportConfig: rule #%# ('%#') has no condition, so it takes every path no other rule matches. Put the unconditional rule at the very end of the list, once.",
+                          misplacedIndex, _listRule[misplacedIndex]._name.c_str() );
+            _listRule.clear();
+            return false;
         }
         return true;
     }
@@ -451,14 +461,9 @@ namespace sw::editor
         return text;
     }
 
-    ModelImportRule ModelImportConfig::findMatchingRule( string_view relativePath ) const
+    ModelImportRuleMatch ModelImportConfig::findMatchingRule( string_view relativePath ) const
     {
-        for ( const ModelImportRule& rule : _listRule )
-        {
-            if ( rule._filter.matchesPath( relativePath ) )
-                return rule;
-        }
-        return ModelImportRule{};
+        return AssetImportRuleUtil::select( _listRule, relativePath, "ModelImportConfig" );
     }
 
     bool ModelImportConfig::parseRecenter( string_view text, ModelRecenter& outRecenter )

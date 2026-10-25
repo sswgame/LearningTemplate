@@ -47,7 +47,7 @@
     {
       "name": "Pixel_Art",
       "inherits": "Base_Uncompressed",
-      "include_patterns": ["*/textures_raw/pixel/*"],
+      "include_patterns": ["*/textures_raw/pixel/**"],
       "generate_mips": false
     },
     {
@@ -61,7 +61,8 @@
     {
       "name": "Normal_Maps",
       "inherits": "Base_NormalMap",
-      "include_patterns": ["*_n.*", "*_normal.*", "*_norm.*"]
+      "include_patterns": ["*_n.*", "*_normal.*", "*_norm.*"],
+      "exclude_paths": ["ui/", "gui/", "icons/"]
     },
     {
       "name": "Roughness_Maps",
@@ -100,7 +101,7 @@
     {
       "name": "Vrm_Character_Textures",
       "inherits": "Base_Default",
-      "include_patterns": ["*/textures_raw/avatarsample_d/*"],
+      "include_patterns": ["**/textures_raw/avatarsample_d/**"],
       "format": "BC3_UNORM"
     },
     {

@@ -1,30 +1,32 @@
 # 임포트 규칙의 겹침 막기
 
-> 상태: 구현대기 · 선행: 없음 · 영역: editor · 옛번호: C-44 · 진행: 0/3
+> 상태: 측정대기 · 선행: 없음 · 영역: editor · 옛번호: C-44 · 진행: 3/3
 
-`Config/Editor/ModelImportConfig.json` 과 `TextureImportConfig.json` 의 규칙은 "넓은 와일드카드 + 첫 매칭"이라, 새 팩의 파일에 다른 팩의 규칙(배치 오프셋 등)이 적용돼도 경고가 없다(`res3` 도입에서 확인, 새 줄을 표 앞에 두어 피했다).
-credits 표는 이미 고쳤다 — `CheckResourceCredits` 의 패턴은 경로 마디 단위(`*` 는 폴더를 넘지 않고 `**` 만 넘는다)이고 한 파일에 줄이 둘 이상 맞으면 오류이며, 출처 목록(`*.sources.json`)의 해시 · 목록 밖 파일도 그 게이트가 본다.
-이 문서는 임포트 규칙에 같은 형식을 옮기는 일을 나눈다.
+**남은 확인(통합에서 확인):** 매니페스트 id `import-rule-overlap-test`(코드 · 테스트는 들어갔고 빌드 · 테스트 확인만 남았다). 확인이 끝나면 통합 담당이 이 문서를 닫는다.
 
-## 1. 사실
+`Config/Editor/ModelImportConfig.json` 과 `TextureImportConfig.json` 의 규칙이 "넓은 와일드카드 + 첫 매칭"이라, 새 팩의 파일에 다른 팩의 규칙(배치 오프셋 등)이 적용돼도 경고가 없었다.
+credits 표(`CheckResourceCredits`)에 먼저 옮긴 형식을 임포트 규칙에도 옮겼다.
 
-- 모델: `ModelImportConfig::findMatchingRule` 은 규칙을 순서대로 보고 처음 맞는 것을 돌려준다(`AssetImportPathFilter::matchesPath` — `*` 가 폴더를 넘는 `StringUtil::matchesWildcard`).
-  순서가 뜻을 가진 곳이 있다: `StarSkirmish_KayKitSpaceBase` 가 `StarSkirmish_KitLayoutOffset` 보다 먼저 맞아야 한다(뒤 규칙의 `models_raw/*` 가 앞 규칙의 `models_raw/kaykit_space/*` 를 포함한다).
-- 텍스처: `TextureImportConfig::findMatchingRule` 도 첫 매칭이고, 마지막 `Fallback_Default` 는 캐치올이다(맨 끝이면 가리는 것이 없다 — `findShadowingRuleIndex`). 캐치올이 "맞지 않은 나머지"를 받는 것은 의도된 쓰임이라
-  겹침 검사에서 빼고 따로 다뤄야 한다. 그 밖의 규칙끼리(예: `*splash*` · `*_n.*` · 폴더 규칙)는 서로 겹칠 수 있는지 `Config/Editor/TextureImportConfig.json` 의 12 개 규칙으로 따져야 하고,
-  `TestTexturePipeline` 이 일부 우선순위(`hero_preview_n` 이 폴백으로 가는 제외 등)를 고정한다.
-- 호출부: 모델은 `ModelImporter.cpp`(해시 계산 · 임포트 두 곳), 텍스처는 `TextureImporter.cpp` 한 곳과 테스트가 부른다.
+## 1. 결정
 
-## 2. 단위
+- 패턴은 경로 마디 단위다(`AssetImportPathFilter`): `/` 없는 패턴은 파일 이름에만 맞고, 있으면 마디별로 맞춘다. `*` · `?` 는 폴더를 넘지 않고 마디 `**` 만 넘는다. `include_paths` · `exclude_paths` 도 부분 문자열이 아니라 폴더 마디의 연속이다.
+- 규칙 선택은 `AssetImportRuleUtil::select` 하나다. 조건 있는 규칙이 둘 이상 맞으면 순서로 고르지 않고 `AssetImportRuleMatch::_error` 를 채운다(`[[nodiscard]]` 결과형이라 호출부가 오류를 무시할 수 없다). 목록의 순서는 결과에 영향을 주지 않는다.
+- 조건 없는 규칙은 나머지를 받는 규칙이다. 겹침 검사에서 빼고, 맨 끝에 하나만 둘 수 있다(중간에 있으면 두 설정 모두 로드 오류). 우선순위 필드는 두지 않고 겹침은 `exclude_patterns` 로 풀어 쓴다.
+- 호출부(`ModelRawImporter` · `TextureRawImporter`)는 겹친 원본의 해시를 0(읽지 못함)으로 두고 임포트를 같은 오류로 멈춘다. 일괄 임포트의 문제 목록에 오른다.
+- 저장소 데이터는 규칙 배정이 바뀌지 않게 다시 썼다(옛 방식과 새 방식으로 모델 155 · 텍스처 1071 원본의 배정을 견주어 같음을 확인했다). 모델 `KitLayoutOffset` 은 `kaykit_space` 를 제외하고, 텍스처 `Normal_Maps` 는 UI 폴더(`ui/` · `gui/` · `icons/`)를 제외한다(아래 UI `_n` 이미지 19 개만 `UI_Textures` 로 바뀐다 — 이름이 `_n` 으로 끝날 뿐 노멀 맵이 아니었다).
+- I3(산출물의 결정성): 텍스처는 기존 테스트가 있고, 모델 `.mesh` 는 같은 원본을 두 번 임포트해 바이트를 견주는 테스트를 더했다.
 
-| 단위 | 내용 | 건드릴 폴더 | 선행 | 검증 | 측정 |
-|---|---|---|---|---|---|
-| I1 | 모델 규칙: 매칭을 경로 마디 단위로(`*` 는 폴더를 넘지 않고 `**` 만 넘는다), 한 원본에 규칙이 둘 이상 맞으면 오류(`findMatchingRule` 이 `Result` 를 돌려준다 — 호출부 둘이 오류를 전한다). 겹치던 규칙은 `exclude_patterns` 로 다시 쓴다(`KitLayoutOffset` 이 `kaykit_space` 를 제외) | `Source/Editor/Common/Asset/`, `Config/Editor/ModelImportConfig.json`, `Test/EditorTest/Common/Asset/` | 없음 | `EditorTest` 의 모델 임포트 테스트 + 저장소의 모든 모델 원본이 규칙 하나에만 맞는지 보는 테스트 | 필요 없음 |
-| I2 | 텍스처 규칙: 같은 형식을 적용한다(캐치올은 겹침 검사에서 뺀다). 겹치는 규칙쌍이 나오면 우선순위 필드 없이 `exclude_*` 로 풀어 쓴다. 위 1절의 우선순위 테스트를 새 데이터에 맞춘다 | `Source/Editor/Common/Asset/`, `Config/Editor/TextureImportConfig.json`, `Test/EditorTest/Common/Asset/` | I1 | `EditorTest` 텍스처 파이프라인 테스트 | 필요 없음 |
-| I3 | 출처 목록의 해시가 맞으려면 산출물이 결정적이어야 한다. 인코더가 만드는 산출물(텍스처 DDS 변환 등)의 비결정 바이트를 점검한다 — 같은 원본을 두 번 구워 바이트를 견준다 | `Source/Editor/Common/Asset/` | I1 | App 빌드와 실행(같은 원본 두 번 임포트) | 필요 없음 |
+## 2. 남은 것
 
-I1 의 첫 구현 단위가 작지 않은 까닭: 매칭기 반환형이 바뀌어 호출부 · 테스트 · 데이터가 함께 움직이고, 빌드와 `EditorTest` 로 확인해야 한다.
+- 통합에서 매니페스트 `import-rule-overlap-test` 를 돌린다. 저장소 전수 테스트(`RepositoryRaw*MatchAtMostOneRule`, 기존 `RepositoryRaw*Match*`)가 실패하면 데이터를 다시 본다.
+- 통합에서 UI `_n` 이미지 19 개의 DDS 와 스탬프를 다시 만든다(규칙 배정이 `Normal_Maps`(BC5) 에서 `UI_Textures`(B8G8R8A8) 로 바뀌었다). 목록은 `Resource/engine/textures_raw/ui/` 아래 `kenney_ui/{blue,green,grey,red,yellow}/arrow_{basic,decorative}_n.png` 10 개, `kenney_cursor/{basic,outline}/{arrow,hand_point,hand_small_point,navigation}_n.png` 8 개, `kenney_input_prompts/keyboard_mouse/keyboard_n.png` 1 개다. 명령은 `App --import-textures` 한 번이고(`Resource/engine/textures/ui/…` 의 해당 `.dds` 와 `Resource/engine/textures_raw/import.stamp` 만 바뀌어야 한다), 끝나면 `RepositoryRawTexturesMatchTheirDDS` 가 깨끗해야 한다.
 
-## 3. 사용자 결정
+## 3. 같은 모양 정리(임포트 밖 패턴)
 
-없습니다. I2 에서 두 규칙이 모두 뜻을 가진 파일이 나오면 어느 규칙을 이기게 할지 데이터로 고르는데, 현재 테스트가 고정한 쪽을 그대로 따른다.
+- `Scripts/common/AssetValidation.py` 는 `fnmatch` 라 `*` 가 폴더를 넘었다. `Scripts/common/PathPattern.py`(임포트 규칙과 같은 마디 매칭의 Python 쪽)로 바꾸고 `Config/Editor/AssetValidationRules.json` 의 패턴을 `**` 로 다시 썼다. 35 개 규칙의 포함 · 제외 · 대상 파일 집합이 옛 방식과 같음을 저장소 전수(17 654 파일)로 견줬고, `{pack}/*.input.xml` 만 하위 폴더(`data/`)에 닿지 못해 `{pack}/**/*.input.xml` 로 고쳤다. 대소문자는 이제 가리지 않는다.
+- C++ 마디 매처는 하나다: `AssetImportPathFilter` 안에 있던 구현을 Core `StringUtil::matchesPathPattern` 으로 옮겨 `AssetImportPathFilter` 와 `PackCooker`(`PackConfig` 제외 패턴)가 같은 코드를 쓴다. `PackConfig.json` 제외 패턴 11 개는 모두 `/` 없는 파일 이름 패턴이고, 옛 방식(파일 이름 또는 전체 경로에 `*` 가 `/` 를 넘는 매칭)과 마디 매칭이 `git ls-files` 23 631 파일 × 11 패턴에서 하나도 다르지 않다(그래서 패턴은 그대로). 이제 `PackConfig` 에 슬래시 패턴을 써도 임포트 규칙과 같은 뜻이다. `matchesWildcard` 는 마디 안 글자 매처로 `matchesPathPattern` 이 쓰고(테스트 두 곳도 직접 쓴다) 남겨 두었다. 새 테스트는 `StringUtilTest.MatchesPathPattern` 이다.
+- `ConfigCatalog` 의 `pathPattern` · `kListResourceSettingPattern` 과 `ConfigReference.py` 의 대조도 `PathPattern` 으로 바꿨다. 의도된 동작은 패턴을 `**` 로 다시 써 유지했다: `Source/**/*.module.json`(하위 폴더 모듈 85 개), `Resource/game/*/models/**/*.facial.xml`(`avatarsample_d/` 하위), 설정 파일 이름 패턴의 `Resource/**/…`, 폴더 이름이 `settings` 인 곳을 잇는 `Resource/**/settings/*.xml` 한 줄을 더했다(옛 `Resource/*settings*.xml` 이 폴더 이름에도 맞았던 것). 옛 `fnmatch` 와 새 매칭을 저장소 `Config` · `Resource` · `Source` 21 900 파일로 견줘 표 40 줄 각각의 닿는 파일 집합, 첫 매칭으로 고른 줄, 설정 파일 이름 패턴의 합집합(49 개)이 모두 같음을 확인했다. 같은 파일이 두 페이지(`GameSettings` · `PackEngineSettings`)에 오르는 것은 두 줄이 같은 패턴이라 그대로다.
+- 에디터 `ProjectSettingsCatalog` 는 `ConfigReference.json` 의 `path` 중 `Config/` · `Resource/` 아래 `.json` 만 읽고, 와일드카드는 마지막 구성요소만 확장했다(폴더 `*` 는 건너뜀). 확장자로만 모아 이름 조건을 보지 않던 것을 `AssetImportPathFilter` 로 거르게 했다(새 매칭 코드 없음). 지금 데이터(`Config/Game/*.json` · `Config/Server/*.json`)에서는 결과가 같고 `**` 가 든 경로는 JSON 이 아니어서 읽지 않는다. 컴파일 확인은 통합에서 한다.
+- 저장소 전수 검사 `TestAssetValidation.py` 가 느렸던 원인은 `PathPattern` 이 호출마다 패턴과 경로를 다시 나누던 것(경로 × 패턴 수백만 번)이다. 패턴 해석과 경로 마디 나누기를 캐시해 32 초(프로파일러 35 초)에서 5 초로 줄었고, 옛 구현과 30 패턴 × 7 800 경로에서 결과가 같다. CTest `TIMEOUT` 은 그대로 둔다.
+- 데이터 패턴 전수 조사(Scripts 의 `glob` · `rglob` · `fnmatch` · 자체 매처, C++ 의 `matchesWildcard` 호출처): `CheckResourceCredits.py` 만 `credits.md` 표의 패턴을 자체 마디 매처(대소문자 구분, `/` 없는 패턴은 최상위 파일만)로 읽었다. `PathPattern` 으로 바꿨고, 저장소 `Resource` 17 654 파일 × 표 패턴 382 510 쌍에서 맞음 결과가 옛 매처와 하나도 다르지 않다. 나머지는 코드에 박힌 고정 패턴(`RemoveWorktree` 의 쿠킹 스탬프 `fnmatch` 는 `*` 가 `/` 를 넘는 것이 의도, `CheckProductNames` · `LintGate` 예외 키 · `glob("*.h")` 류)이라 두었다. C++ 은 `PackCooker`(위 `PackConfig` 줄)와 `AssetImportPathFilter` 뿐이다.
+- 대소문자만 다른 두 파일은 한 이름으로 겹친다(`PathPattern` · `ResourcePaths::normalizePath` 모두 대소문자 무시). `CheckResourceCredits` 게이트가 `Resource` 파일 목록에서 소문자로 같은 경로 쌍을 위반으로 거절한다(저장소 `Resource` · `Config` · `Source` 21 900 파일에 쌍 없음). 대소문자 구분 없는 파일 시스템에서는 두 파일을 시나리오로 만들 수 없어, 쌍 검사를 경로 목록을 받는 순수 함수 `findCaseOnlyDuplicatesInternal` 로 빼고 `Test/PythonTest/TestPathPattern.py` 에서 경로 목록으로 시험한다.

@@ -60,7 +60,7 @@ namespace
         /** @brief `Config/Editor/` 아래 파일 한 종류입니다. */
         struct ConfigKind
         {
-            const utf8* _pFileName;                         ///< `Config/Editor/` 아래 이름(`*` 는 아무 글)
+            const utf8* _pFileName;                         ///< `Config/Editor/` 바로 아래 파일 이름(`StringUtil::matchesPathPattern` 패턴)
             bool ( *_pLoad )( const string& absolutePath ); ///< nullptr = 파이썬이 보는 파일
         };
 
@@ -73,11 +73,14 @@ namespace
             {    "Cc0PropPlacement.json",                 nullptr}, // Scripts/dev/MakeCc0SceneProps.py
         };
 
+        /** @brief 하위 폴더의 파일은 종류가 없다(`/` 없는 경로 패턴은 하위 폴더 파일 이름에도 맞으므로 여기서 막는다). */
         static const ConfigKind* findKind( string_view relativePath )
         {
+            if ( relativePath.find( '/' ) != string_view::npos )
+                return nullptr;
             for ( const ConfigKind& kind : kArrKind )
             {
-                if ( StringUtil::matchesWildcard( kind._pFileName, relativePath ) )
+                if ( StringUtil::matchesPathPattern( kind._pFileName, relativePath ) )
                     return &kind;
             }
             return nullptr;

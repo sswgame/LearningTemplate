@@ -1060,6 +1060,11 @@
       "covered": ["engine/automation/editor/uiaudit.scenario.xml", "engine/automation/editor/previewswap.scenario.xml"], "covered_by": "app-scenarios-release",
       "source": "docs/decisions/5-5_GraphicsRHI.md withNativeContext 항목", "result_doc": "docs/plans/RhiAsyncUploads.md U5",
       "note": "에디터 UI 가 네 백엔드에서 그대로 그려지는지(DX11 은 텍스처 갱신 · 보조 뷰포트를 렌더 스레드가 그린다) 캡처로 본다. DX11 은 플로팅 창을 띄우고 크기를 바꿔 ResizeBuffers 실패 · 렌더 타깃 깨짐이 없는지 본다(이것을 한 명령으로 도는 시나리오는 아직 없다). DX12 는 rhi-transfer-b0-gpu 와 함께 돌려 'GPU has not reached fence' 경고 · DEVICE_HUNG 이 없는지 본다."
+    },
+    {
+      "id": "import-rule-overlap-test", "title": "임포트 규칙 겹침 막기(모델 · 텍스처 규칙의 마디 단위 매칭 · 겹침 오류 · 저장소 원본이 규칙 하나에만 맞음 · 같은 원본을 두 번 임포트하면 같은 바이트)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 30,
+      "filter": "ModelImporterTest.*,EditorTexturePipelineTest.*,TextureImportStampTest.*",
+      "source": "docs/plans/ImportRuleOverlap.md I1 ~ I3", "result_doc": "docs/plans/ImportRuleOverlap.md 상태를 끝으로"
     }
   ]
 }

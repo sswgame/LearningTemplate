@@ -5,7 +5,7 @@
  *          모든 칸이 `Required` 입니다 — 빠진 칸은 기본값으로 대신하지 않고 로드 오류입니다(예전 파이썬 쿠커의 `KeyError` 를 형식이 한다).
  *          - `_compression._codec` 은 `PackCompressionType` 의 이름입니다(`Zlib` · `LZ4` · `Zstd` · `RLE` · `None`). 모든 코덱이 엔진 안에 있어 도구 설치와 관계없습니다.
  *            실측(1MB 모사 데이터): Zlib 기준 대비 LZ4 는 크지만 해제가 3배 빠르고, Zstd 는 가장 작다. `_level` 0 = 코덱 기본값.
- *          - 제외 패턴은 `StringUtil::matchesWildcard`(`*` · `?`, 대소문자 무시)로 파일 이름이나 도메인 기준 경로에 맞춥니다. 제외 폴더는 경로 성분 이름입니다.
+ *          - 제외 패턴은 `StringUtil::matchesPathPattern`(에디터 임포트 규칙과 같은 마디 매칭: `/` 없는 패턴은 파일 이름에, 있으면 경로 마디별로, `*` 는 폴더를 넘지 않고 마디 `**` 만 넘는다. 대소문자 무시)으로 도메인 기준 경로에 맞춥니다. 제외 폴더는 경로 성분 이름입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"

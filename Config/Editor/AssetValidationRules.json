@@ -6,7 +6,7 @@
       "description": "Lowercase letters, digits, underscore, dot and dash only; no spaces.",
       "severity": "error",
       "include_patterns": ["*"],
-      "exclude_patterns": ["README.md", "*/README.md"],
+      "exclude_patterns": ["README.md"],
       "exclude_reason": "README.md — folder description documents (the name GitHub shows for a folder)",
       "name_pattern": "[a-z0-9_.\\-]+"
     },
@@ -14,35 +14,35 @@
       "name": "prefab-folder",
       "check": "naming",
       "severity": "error",
-      "include_patterns": ["game/*/prefabs/*"],
+      "include_patterns": ["game/*/prefabs/**"],
       "allowed_suffixes": [".prefab.xml", ".prefab.xml.meta"]
     },
     {
       "name": "map-folder",
       "check": "naming",
       "severity": "error",
-      "include_patterns": ["game/*/maps/*"],
+      "include_patterns": ["game/*/maps/**"],
       "allowed_suffixes": [".scene.xml", ".tilemap.xml"]
     },
     {
       "name": "material-folder",
       "check": "naming",
       "severity": "error",
-      "include_patterns": ["*/materials/*"],
+      "include_patterns": ["**/materials/**"],
       "allowed_suffixes": [".material", ".material.meta"]
     },
     {
       "name": "model-folder",
       "check": "naming",
       "severity": "error",
-      "include_patterns": ["*/models/*"],
+      "include_patterns": ["**/models/**"],
       "allowed_suffixes": [".mesh", ".sockets.xml", ".refpose.xml", ".skeleton.xml", ".animclip", ".fracture", ".facial.xml", ".livelinkface.xml", ".avatar.xml", ".bonelod.xml", ".vertexanimation.xml", ".modifiers.json", ".mfpc", ".material", ".material.meta", ".rig.xml", ".prefab.xml", ".prefab.xml.meta"]
     },
     {
       "name": "model-source-folder",
       "check": "naming",
       "severity": "error",
-      "include_patterns": ["*/models_raw/*"],
+      "include_patterns": ["**/models_raw/**"],
       "allowed_suffixes": [".glb", ".gltf", ".vrm", ".bin", ".clips.json", "import.stamp"]
     },
     {
@@ -50,7 +50,7 @@
       "check": "texture",
       "description": "Every runtime texture: at most 4096, a known GPU format, and a power of two when it has mips (a mip chain halves each side; UI images and pixel-art atlases have none).",
       "severity": "error",
-      "include_patterns": ["*/textures/*.dds"],
+      "include_patterns": ["**/textures/**/*.dds"],
       "max_size": 4096,
       "mipped_power_of_two": true,
       "allowed_formats": ["BC1_UNORM", "BC1_UNORM_SRGB", "BC3_UNORM", "BC3_UNORM_SRGB", "BC4_UNORM", "BC5_UNORM", "BC6H_UF16",
@@ -70,7 +70,7 @@
       "check": "texture",
       "description": "Pixel-art atlases are sampled by exact texel: no mips (they blur neighbouring cells) and no block compression (it bleeds colours across 4x4 blocks and needs sides in multiples of 4).",
       "severity": "error",
-      "include_patterns": ["*/textures/pixel/*.dds"],
+      "include_patterns": ["**/textures/pixel/**/*.dds"],
       "require_mips": false,
       "allowed_formats": ["R8G8B8A8_UNORM_SRGB"]
     },
@@ -78,7 +78,7 @@
       "name": "texture-ui-no-mips",
       "check": "texture",
       "severity": "warning",
-      "include_patterns": ["*/textures/ui/*.dds"],
+      "include_patterns": ["**/textures/ui/**/*.dds"],
       "require_mips": false
     },
     {
@@ -86,7 +86,7 @@
       "check": "texture",
       "description": "Tiled world textures need the full mip chain (shimmering at distance otherwise).",
       "severity": "warning",
-      "include_patterns": ["engine/textures/random/*.dds", "engine/textures/perlin.dds"],
+      "include_patterns": ["engine/textures/random/**/*.dds", "engine/textures/perlin.dds"],
       "require_mips": true
     },
     {
@@ -102,8 +102,8 @@
       "check": "mesh_budget",
       "description": "Packs that place many copies of one prop (city, park, skirmish units) keep props light.",
       "severity": "warning",
-      "include_patterns": ["game/nilecity/models/*.mesh", "game/themepark/models/*.mesh", "game/starskirmish/models/*.mesh",
-                           "game/harvestvalley/models/*.mesh"],
+      "include_patterns": ["game/nilecity/models/**/*.mesh", "game/themepark/models/**/*.mesh", "game/starskirmish/models/**/*.mesh",
+                           "game/harvestvalley/models/**/*.mesh"],
       "max_triangles": 20000
     },
     {
@@ -127,9 +127,9 @@
       "check": "orphan",
       "description": "Assets nobody names.",
       "severity": "warning",
-      "include_patterns": ["*.prefab.xml", "*.material", "*.mesh", "*/textures/*.dds", "*.ogg", "*.scene.xml"],
-      "exclude_patterns": ["game/nilecity/models/*.mesh", "game/starskirmish/models/*.mesh", "game/harvestvalley/models/crop*.mesh",
-                           "game/empty/models/avatarsample_d.mesh", "common/prefabs/gimmicks/*", "common/sounds/*", "common/music/*"],
+      "include_patterns": ["*.prefab.xml", "*.material", "*.mesh", "**/textures/**/*.dds", "*.ogg", "*.scene.xml"],
+      "exclude_patterns": ["game/nilecity/models/**/*.mesh", "game/starskirmish/models/**/*.mesh", "game/harvestvalley/models/**/crop*.mesh",
+                           "game/empty/models/avatarsample_d.mesh", "common/prefabs/gimmicks/**", "common/sounds/**", "common/music/**"],
       "exclude_reason": "meshes a game picks by name from a code table (path built at runtime), the merged mesh of a sectioned VRM import, the gimmick prefab library, and the shared CC0 audio library (common/audio.sources.json)"
     },
     {
@@ -236,7 +236,7 @@
       "component_types": ["PawnComponent", "PlayerControllerComponent", "CameraDirectorComponent", "CameraManagerComponent"],
       "attributes": ["_moveAction", "_lookAction", "_upAction", "_mouseLockAction", "_cycleAction", "_panAction", "_rotateAction", "_lookHoldAction",
                      "_zoomAction"],
-      "target_patterns": ["engine/input/*.input.xml", "{pack}/*.input.xml"],
+      "target_patterns": ["engine/input/*.input.xml", "{pack}/**/*.input.xml"],
       "target_elements": ["action"],
       "id_attribute": "name",
       "ignore_values": ["", "None"]
@@ -249,7 +249,7 @@
       "include_patterns": ["*.scene.xml", "*.prefab.xml"],
       "component_types": ["PawnComponent"],
       "attributes": ["_inputLayer"],
-      "target_patterns": ["engine/input/*.input.xml", "{pack}/*.input.xml"],
+      "target_patterns": ["engine/input/*.input.xml", "{pack}/**/*.input.xml"],
       "target_elements": ["layer"],
       "id_attribute": "name",
       "ignore_values": ["", "None"]

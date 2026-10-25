@@ -15,22 +15,22 @@ namespace sw::editor
     {
         /** @brief 파일 루트입니다. */
         static constexpr ConfigKeyDoc kArrTextureImportRootKeyDoc[] = {
-            {"presets",   "object", "", "프리셋 이름 → 규칙(아래 키). 위에서 아래로 읽으니 부모 프리셋을 먼저 적는다"},
-            {  "rules", "object[]", "",             "규칙 목록(아래 키). 첫 매칭이 이긴다 — 조건 없는 규칙은 맨 끝에"},
+            {"presets",   "object", "",                                                                                   "프리셋 이름 → 규칙(아래 키). 위에서 아래로 읽으니 부모 프리셋을 먼저 적는다"},
+            {  "rules", "object[]", "", "규칙 목록(아래 키). 한 원본에는 조건 있는 규칙이 하나만 맞아야 한다(둘 이상이면 임포트 오류). 조건 없는 규칙(나머지 규칙)은 맨 끝에 — 중간에 있으면 로드 오류"},
         };
         /** @brief 프리셋 · 규칙 하나입니다. 적지 않은 필드는 `inherits` 의 값, 그것도 없으면 기본값입니다. */
         static constexpr ConfigKeyDoc kArrTextureImportRuleKeyDoc[] = {
-            {            "name",   "string",          "",                                                                                     "규칙 이름(로그 · 경고에 나온다). 프리셋은 키가 이름이다"},
-            {        "inherits",   "string",          "",                                                                             "값을 물려받을 프리셋 이름 — 위에 정의되지 않은 이름은 로드 오류"},
-            {          "format",   "string", "BC7_UNORM", "DXGI 포맷 이름(BC1~BC5_UNORM · BC6H_UF16 · BC7_UNORM · B8G8R8A8_UNORM · R8G8B8A8_UNORM · R16G16B16A16_FLOAT · R8_UNORM) — 그 밖은 로드 오류"},
-            {         "swizzle",   "string",      "RGBA",                                                                                    "채널 순서: RGBA · BGRA · ARGB · RGB1 — 그 밖은 로드 오류"},
-            {   "generate_mips",     "bool",      "true",                                                                                                                               "밉맵을 만든다"},
-            {            "srgb",     "bool",      "true",                                                                                       "sRGB 색 공간으로 읽는다(노멀 · 데이터 텍스처는 false)"},
-            {    "invert_green",     "bool",     "false",                                                                                                 "G 채널을 뒤집는다(DirectX ↔ OpenGL 노멀 맵)"},
-            {"include_patterns", "string[]",          "",                                                                 "맞아야 하는 와일드카드(`*` · `?`, 대소문자 무시, 파일 이름이나 리소스 경로)"},
-            {"exclude_patterns", "string[]",          "",                                                                                                  "맞으면 빼는 와일드카드(포함보다 먼저 본다)"},
-            {   "include_paths", "string[]",          "",                                                                                                                  "들어 있어야 하는 경로 조각"},
-            {   "exclude_paths", "string[]",          "",                                                                                                                  "들어 있으면 빼는 경로 조각"},
+            {            "name",   "string",          "",                                                                                           "규칙 이름(로그 · 경고에 나온다). 프리셋은 키가 이름이다"},
+            {        "inherits",   "string",          "",                                                                                   "값을 물려받을 프리셋 이름 — 위에 정의되지 않은 이름은 로드 오류"},
+            {          "format",   "string", "BC7_UNORM",       "DXGI 포맷 이름(BC1~BC5_UNORM · BC6H_UF16 · BC7_UNORM · B8G8R8A8_UNORM · R8G8B8A8_UNORM · R16G16B16A16_FLOAT · R8_UNORM) — 그 밖은 로드 오류"},
+            {         "swizzle",   "string",      "RGBA",                                                                                          "채널 순서: RGBA · BGRA · ARGB · RGB1 — 그 밖은 로드 오류"},
+            {   "generate_mips",     "bool",      "true",                                                                                                                                     "밉맵을 만든다"},
+            {            "srgb",     "bool",      "true",                                                                                             "sRGB 색 공간으로 읽는다(노멀 · 데이터 텍스처는 false)"},
+            {    "invert_green",     "bool",     "false",                                                                                                       "G 채널을 뒤집는다(DirectX ↔ OpenGL 노멀 맵)"},
+            {"include_patterns", "string[]",          "", "맞아야 하는 와일드카드(`*` · `?`, 대소문자 무시). `/` 없으면 파일 이름에, 있으면 경로 마디에 맞춘다 — `*` 는 폴더를 넘지 않고 마디 `**` 만 넘는다"},
+            {"exclude_patterns", "string[]",          "",                                                                                                        "맞으면 빼는 와일드카드(포함보다 먼저 본다)"},
+            {   "include_paths", "string[]",          "",                                                                                           "들어 있어야 하는 폴더 마디(`ui/` 는 `…/ui/…` 에 맞는다)"},
+            {   "exclude_paths", "string[]",          "",                                                                                                                        "들어 있으면 빼는 폴더 마디"},
         };
 
         /** @brief `format` 이름 표의 한 줄입니다 — DXGI 이름(로그에 쓰는 이름)과 짧은 이름이 같은 형식입니다. */
@@ -150,15 +150,15 @@ namespace sw::editor
 
         SW_LOG_INFO( "Loaded TextureImportConfig: %# presets, %# rules.", _mapPreset.size(), _listRule.size() );
 
-        // 규칙을 적어 두었는데 아무 일도 일어나지 않는 것(조건 없는 규칙이 중간에 있다)은 로드 오류가 아니라 경고다 — 그 위치를 이름으로 짚어 준다.
-        const size_t shadowingIndex = findShadowingRuleIndex();
-        if ( shadowingIndex < _listRule.size() )
+        // 조건 없는 규칙은 나머지를 받는 규칙이라 맨 끝에 하나만 둔다. 중간에 있으면 순서가 뜻을 갖는 설정으로 읽히므로 오류로 멈춘다 — 그 위치를 이름으로 짚어 준다.
+        const size_t misplacedIndex = findShadowingRuleIndex();
+        if ( misplacedIndex < _listRule.size() )
         {
-            const TextureImportRule& shadowingRule = _listRule[shadowingIndex];
-            SW_LOG_WARNING( "TextureImportConfig: rule #%# ('%#') matches every path without a condition, so the following %# rules are never selected. "
-                            "Put unconditional rules at the very end of the list.",
-                            shadowingIndex, shadowingRule._name.empty() ? "(unnamed)" : shadowingRule._name.c_str(),
-                            _listRule.size() - shadowingIndex - 1 );
+            const TextureImportRule& misplacedRule = _listRule[misplacedIndex];
+            SW_LOG_ERROR( "TextureImportConfig: rule #%# ('%#') has no condition, so it takes every path no other rule matches. "
+                          "Put the unconditional rule at the very end of the list, once.",
+                          misplacedIndex, misplacedRule._name.empty() ? "(unnamed)" : misplacedRule._name.c_str() );
+            return clearAndFail();
         }
 
         return true;
@@ -276,28 +276,12 @@ namespace sw::editor
 
     size_t TextureImportConfig::findShadowingRuleIndex() const
     {
-        if ( _listRule.size() < 2 )
-            return _listRule.size();
-
-        // 마지막 규칙은 캐치올이어도 가리는 것이 없다. 그래서 하나 앞까지만 본다.
-        for ( size_t ruleIndex = 0; ruleIndex + 1 < _listRule.size(); ++ruleIndex )
-        {
-            if ( isCatchAllRule( _listRule[ruleIndex] ) )
-                return ruleIndex;
-        }
-        return _listRule.size();
+        // 마지막 규칙은 캐치올이어도 정상이다. 그래서 하나 앞까지만 본다.
+        return AssetImportRuleUtil::findMisplacedCatchAllIndex( _listRule );
     }
 
-    bool TextureImportConfig::findMatchingRule( string_view relativePath, TextureImportRule& outRule ) const
+    TextureImportRuleMatch TextureImportConfig::findMatchingRule( string_view relativePath ) const
     {
-        // 첫 매칭이 이긴다.
-        for ( const TextureImportRule& rule : _listRule )
-        {
-            if ( rule._filter.matchesPath( relativePath ) == false )
-                continue;
-            outRule = rule;
-            return true;
-        }
-        return false;
+        return AssetImportRuleUtil::select( _listRule, relativePath, "TextureImportConfig" );
     }
 } // namespace sw::editor

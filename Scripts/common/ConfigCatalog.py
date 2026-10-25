@@ -53,7 +53,7 @@ class ConfigFileEntry:
     """설정 파일 한 종류입니다. `pathPattern` 하나가 여러 파일에 맞을 수 있습니다(게임마다 하나인 프리셋)."""
 
     page: str                     #: 생성 페이지 이름(`docs/Config/<page>.md`). 빈 글이면 색인에만 나온다
-    pathPattern: str              #: 저장소 상대 경로 패턴(`fnmatch`, `*` 는 `/` 를 넘는다). 저장소 밖이면 설명 글
+    pathPattern: str              #: 저장소 상대 경로 패턴(`PathPattern` 마디 매칭: `*` 는 폴더를 넘지 않고 `**` 마디만 넘는다). 저장소 밖이면 설명 글
     layer: str                    #: 위 `kLayer*` 하나
     fileFormat: str               #: "json" · "xml" · "ini"
     reader: str                   #: 무엇이 읽나(코드 자리)
@@ -181,7 +181,7 @@ kListConfigFile: tuple[ConfigFileEntry, ...] = (
         reader="`InputMap::loadFromResource` (`GameSettings::_inputMap`)", readWhen="게임 인스턴스 초기화",
         shipping="게임 팩에 실림", bCommitted=True, bOptional=True),
     ConfigFileEntry(
-        page="FacialRig", pathPattern="Resource/game/*/models/*.facial.xml", layer=kLayerPackData, fileFormat="xml",
+        page="FacialRig", pathPattern="Resource/game/*/models/**/*.facial.xml", layer=kLayerPackData, fileFormat="xml",
         reader="`FacialRig::loadFromResource` (`FacialAnimationComponent::_facialRigPath`)", readWhen="컴포넌트 시작 · 경로를 바꿀 때",
         shipping="게임 팩에 실림", bCommitted=True,
         typeName="FacialRig", header="Source/Engine/Animation/Facial/FacialRig.h", keyStyle=kKeyStyleXmlMember,
@@ -259,7 +259,7 @@ kListConfigFile: tuple[ConfigFileEntry, ...] = (
         bCommitted=True, ownerDoc="Source/Engine/Resource/Cook/PackConfig.h"),
     # --- 모듈 매니페스트 ----------------------------------------------------------------------------------------------------
     ConfigFileEntry(
-        page="ModuleManifest", pathPattern="Source/*.module.json", layer=kLayerModule, fileFormat="json",
+        page="ModuleManifest", pathPattern="Source/**/*.module.json", layer=kLayerModule, fileFormat="json",
         reader="CMake `ModuleManifest.cmake` · `ModuleCatalog::loadDirectory`", readWhen="configure · 기동(모듈 적재 순서)",
         shipping="빌드에 굳음(링크할 모듈 · 순서)", bCommitted=True,
         typeName="ModuleManifestFile", header="Source/Engine/Module/ModuleCatalog.h", keyStyle=kKeyStyleJsonMember,
@@ -293,7 +293,7 @@ kListConfigFile: tuple[ConfigFileEntry, ...] = (
 kSetConfigFolderNonConfig = frozenset({"Config/README.md"})
 
 #: `Resource/` 아래에서 "설정 파일" 로 보는 이름 패턴 — 이 패턴에 맞는데 표의 어느 줄에도 맞지 않으면 게이트가 진다.
-kListResourceSettingPattern = ("Resource/*settings*.xml", "Resource/*.settings.xml", "Resource/*.input.xml",
+kListResourceSettingPattern = ("Resource/**/*settings*.xml", "Resource/**/settings/*.xml", "Resource/**/*.settings.xml", "Resource/**/*.input.xml",
                                "Resource/*/data/render2d.xml", "Resource/engine/data/enginedefaultassets.xml",
-                               "Resource/engine/animation/lipsync.xml", "Resource/*.facial.xml", "Resource/engine/animation/livelinkface.xml",
-                               "Resource/*.livelinkface.xml")
+                               "Resource/engine/animation/lipsync.xml", "Resource/**/*.facial.xml", "Resource/engine/animation/livelinkface.xml",
+                               "Resource/**/*.livelinkface.xml")

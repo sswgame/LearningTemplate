@@ -18,7 +18,6 @@ C++ 를 파싱하지 않고 **이 저장소의 선언 모양**을 읽습니다(`
 
 from __future__ import annotations
 
-import fnmatch
 import json
 import re
 import subprocess
@@ -29,6 +28,7 @@ from xml.etree import ElementTree
 
 from .CodeText import blankCommentsAndLiterals, blankMatch
 from .CookContract import kCookContractConfigRelative
+from .PathPattern import matchesPattern
 from .ConfigCatalog import (ConfigFileEntry, kKeyStyleJsonMember, kKeyStyleKeyTable, kKeyStyleXmlElementBare, kKeyStyleXmlMember,
                             kListConfigFile, kListLayerOrder, kListResourceSettingPattern, kSetConfigFolderNonConfig)
 
@@ -616,9 +616,9 @@ def collectUserSettings(repositoryRoot: Path) -> list[tuple[str, list[dict[str, 
 # 5) 카탈로그 대조 — 파일이 모두 어느 줄에 맞나, 줄이 가리키는 것이 있나
 # ------------------------------------------------------------------------------
 def findCatalogEntry(relativePath: str) -> ConfigFileEntry | None:
-    """저장소 상대 경로에 맞는 첫 줄입니다. 대소문자를 가린다(`fnmatchcase`)."""
+    """저장소 상대 경로에 맞는 첫 줄입니다. 마디 매칭이며 대소문자는 가리지 않는다(`PathPattern`)."""
     for entry in kListConfigFile:
-        if entry.bOutsideRepo is False and fnmatch.fnmatchcase(relativePath, entry.pathPattern):
+        if entry.bOutsideRepo is False and matchesPattern(entry.pathPattern, relativePath):
             return entry
     return None
 
@@ -650,7 +650,7 @@ def collectConfigFiles(repositoryRoot: Path) -> list[str]:
             continue
         if relative.startswith("Config/"):
             listPath.append(relative)
-        elif relative.startswith("Resource/") and any(fnmatch.fnmatchcase(relative, pattern) for pattern in kListResourceSettingPattern):
+        elif relative.startswith("Resource/") and any(matchesPattern(pattern, relative) for pattern in kListResourceSettingPattern):
             listPath.append(relative)
         elif relative.startswith("Source/") and relative.endswith(".module.json"):
             listPath.append(relative)
@@ -667,7 +667,7 @@ def findCatalogViolations(repositoryRoot: Path, index: SourceIndex) -> list[str]
     for entry in kListConfigFile:
         if entry.bOutsideRepo:
             continue
-        if entry.bOptional is False and not any(fnmatch.fnmatchcase(relative, entry.pathPattern) for relative in listFile):
+        if entry.bOptional is False and not any(matchesPattern(entry.pathPattern, relative) for relative in listFile):
             violations.append(f"[Config Catalog] 표의 줄에 맞는 파일이 없습니다: {entry.pathPattern}")
         if entry.typeName and entry.typeName not in index.mapStruct:
             violations.append(f"[Config Catalog] {entry.pathPattern}: 리플렉션 구조체 {entry.typeName} 를 {entry.header or 'Source/'} 에서 찾지 못했습니다")

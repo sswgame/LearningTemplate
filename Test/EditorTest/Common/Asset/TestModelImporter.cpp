@@ -449,11 +449,11 @@ SW_TEST_CASE( ModelImporterTest, ImportRuleIsChosenByPathAndFeedsTheSourceHash )
     sw::editor::ModelImportConfig recenterConfig;
     SW_ASSERT_TRUE( recenterConfig.loadFromJSONString(
         R"({ "rules": [ { "name": "Probe", "include_patterns": [ "*/probe/models_raw/*" ], "recenter": "xz", "translation": [ 0.5, 0, -1 ] } ] })" ) );
-    const sw::editor::ModelImportRule probeRule = recenterConfig.findMatchingRule( "game/probe/models_raw/a.glb" );
+    const sw::editor::ModelImportRule probeRule = recenterConfig.findMatchingRule( "game/probe/models_raw/a.glb" )._rule;
     SW_EXPECT_TRUE( sw::editor::ModelRecenter::Xz == probeRule._recenter );
     SW_EXPECT_NEAR_EQUAL( 0.5f, probeRule._arrTranslation[0], 0.0f );
     SW_EXPECT_NEAR_EQUAL( -1.0f, probeRule._arrTranslation[2], 0.0f );
-    SW_EXPECT_TRUE( sw::editor::ModelRecenter::None == recenterConfig.findMatchingRule( "game/other/models_raw/a.glb" )._recenter );
+    SW_EXPECT_TRUE( sw::editor::ModelRecenter::None == recenterConfig.findMatchingRule( "game/other/models_raw/a.glb" )._rule._recenter );
 
     {
         test::ScopedDefensiveTestLog  expected( "an unknown recenter value rejects the whole config" );
@@ -655,7 +655,7 @@ SW_TEST_CASE( ModelImporterTest, FractureRuleWritesFractureAssetBesideTheMesh )
     sw::editor::ModelImportConfig fractureConfig;
     SW_ASSERT_TRUE( fractureConfig.loadFromJSONString( R"({ "rules": [ { "name": "Wall", "include_patterns": [ "*/probe/models_raw/*" ],
         "fracture": { "pattern": "slices", "slices": [ 3, 1, 1 ], "slice_jitter": 0, "levels": [ 2 ], "seed": 5, "interior_color": [ 1, 0, 0, 1 ] } } ] })" ) );
-    const sw::editor::ModelImportRule rule = fractureConfig.findMatchingRule( "game/probe/models_raw/box.gltf" );
+    const sw::editor::ModelImportRule rule = fractureConfig.findMatchingRule( "game/probe/models_raw/box.gltf" )._rule;
     SW_EXPECT_TRUE( rule._bFracture == SW_TRUE );
     SW_EXPECT_TRUE( rule._fracture._pattern == sw::FracturePattern::Slices );
     SW_EXPECT_EQUAL( 5ull, rule._fracture._seed );
@@ -702,7 +702,7 @@ SW_TEST_CASE( ModelImporterTest, LODRuleSimplifiesStaticMeshIntoLevels )
     sw::editor::ModelImportConfig lodConfig;
     SW_ASSERT_TRUE( lodConfig.loadFromJSONString( R"({ "rules": [ { "name": "Grid", "include_patterns": [ "*" ],
         "lods": [ { "triangle_ratio": 0.5, "screen_size": 0.4, "max_error": 0.05 }, { "triangle_ratio": 0.1, "screen_size": 0.1, "max_error": 0.2 } ] } ] })" ) );
-    const sw::editor::ModelImportRule rule = lodConfig.findMatchingRule( "game/probe/models_raw/grid.gltf" );
+    const sw::editor::ModelImportRule rule = lodConfig.findMatchingRule( "game/probe/models_raw/grid.gltf" )._rule;
     SW_ASSERT_EQUAL( size_t( 2 ), rule._listLOD.size() );
     SW_EXPECT_FALSE( rule.makeLODHashText().empty() );
     SW_EXPECT_TRUE( sw::editor::ModelImportRule{}.makeLODHashText().empty() ); // LOD 없는 규칙은 해시에 섞지 않는다(옛 모델이 다시 임포트되지 않는다)
@@ -743,4 +743,142 @@ SW_TEST_CASE( ModelImporterTest, LODRuleSimplifiesStaticMeshIntoLevels )
         sw::editor::ModelImportResult tooSmall{};
         SW_EXPECT_FALSE( sw::editor::ModelImporter::readModelAsset( trianglePath, rule, tooSmall ) );
     }
+}
+
+/**
+ * @brief [ModelImporterTest] 패턴은 경로 마디 단위다 — `*` 는 폴더를 넘지 않고 마디 `**` 만 넘으며, `/` 없는 패턴은 파일 이름에만 맞는다
+ */
+SW_TEST_CASE( ModelImporterTest, RulePatternsMatchPathSegments )
+{
+    sw::editor::ModelImportConfig config;
+    SW_ASSERT_TRUE( config.loadFromJSONString( R"({ "rules": [
+        { "name": "Flat", "include_patterns": [ "*/pack/models_raw/*" ] },
+        { "name": "Deep", "include_patterns": [ "*/deep/models_raw/**" ] },
+        { "name": "Name", "include_patterns": [ "hero_?.glb" ] },
+        { "name": "Folder", "include_paths": [ "ui/" ] } ] })" ) );
+
+    SW_EXPECT_EQUAL( sw::string( "Flat" ), config.findMatchingRule( "game/pack/models_raw/a.glb" )._rule._name );
+    SW_EXPECT_FALSE( config.findMatchingRule( "game/pack/models_raw/sub/a.glb" )._bMatched ); // `*` 는 폴더를 넘지 않는다
+    SW_EXPECT_EQUAL( sw::string( "Deep" ), config.findMatchingRule( "game/deep/models_raw/a.glb" )._rule._name );
+    SW_EXPECT_EQUAL( sw::string( "Deep" ), config.findMatchingRule( "game/deep/models_raw/x/y/a.glb" )._rule._name );   // `**` 는 0 개 이상의 마디
+    SW_EXPECT_EQUAL( sw::string( "Name" ), config.findMatchingRule( "game/other/models_raw/HERO_1.glb" )._rule._name ); // 대소문자 무시, 파일 이름에만
+    SW_EXPECT_FALSE( config.findMatchingRule( "game/other/models_raw/hero_12.glb" )._bMatched );
+    SW_EXPECT_EQUAL( sw::string( "Folder" ), config.findMatchingRule( "game/ui/models_raw/b.glb" )._rule._name );
+    SW_EXPECT_FALSE( config.findMatchingRule( "game/guide/models_raw/b.glb" )._bMatched ); // 경로는 폴더 마디이지 부분 문자열이 아니다
+}
+
+/**
+ * @brief [ModelImporterTest] 한 원본에 규칙이 둘 이상 맞으면 순서로 고르지 않고 오류다 — 규칙 순서를 바꿔도 결과가 같고, `exclude_patterns` 로 풀어 쓰면 맞는다
+ */
+SW_TEST_CASE( ModelImporterTest, OverlappingRulesAreAnErrorNotFirstWins )
+{
+    const sw::string broad  = R"({ "name": "Broad", "include_patterns": [ "*/probe/models_raw/**" ] })";
+    const sw::string narrow = R"({ "name": "Narrow", "include_patterns": [ "*/probe/models_raw/special/**" ] })";
+    const sw::string split  = R"({ "name": "Broad", "include_patterns": [ "*/probe/models_raw/**" ], "exclude_patterns": [ "*/probe/models_raw/special/**" ] })";
+
+    for ( const bool bBroadFirst : { true, false } )
+    {
+        sw::editor::ModelImportConfig config;
+        const sw::string              json = "{ \"rules\": [ " + ( bBroadFirst ? broad + ", " + narrow : narrow + ", " + broad ) + " ] }";
+        SW_ASSERT_TRUE( config.loadFromJSONString( json ) );
+        const sw::editor::ModelImportRuleMatch clash = config.findMatchingRule( "game/probe/models_raw/special/a.glb" );
+        SW_EXPECT_TRUE( clash.hasError() );
+        SW_EXPECT_TRUE( clash._error.find( "'Broad'" ) != sw::string::npos );
+        SW_EXPECT_TRUE( clash._error.find( "'Narrow'" ) != sw::string::npos );
+        SW_EXPECT_TRUE( clash._error.find( "game/probe/models_raw/special/a.glb" ) != sw::string::npos );
+        const sw::editor::ModelImportRuleMatch single = config.findMatchingRule( "game/probe/models_raw/a.glb" );
+        SW_EXPECT_FALSE( single.hasError() );
+        SW_EXPECT_EQUAL( sw::string( "Broad" ), single._rule._name );
+    }
+
+    // 겹침을 exclude 로 풀어 쓰면 서로 겹치지 않는다.
+    sw::editor::ModelImportConfig splitConfig;
+    SW_ASSERT_TRUE( splitConfig.loadFromJSONString( "{ \"rules\": [ " + split + ", " + narrow + " ] }" ) );
+    const sw::editor::ModelImportRuleMatch special = splitConfig.findMatchingRule( "game/probe/models_raw/special/a.glb" );
+    SW_EXPECT_FALSE( special.hasError() );
+    SW_EXPECT_EQUAL( sw::string( "Narrow" ), special._rule._name );
+    SW_EXPECT_EQUAL( sw::string( "Broad" ), splitConfig.findMatchingRule( "game/probe/models_raw/a.glb" )._rule._name );
+
+    // 조건 없는 규칙은 나머지를 받는 규칙이다: 겹침으로 세지 않고, 맨 끝이 아니면 로드 오류다.
+    sw::editor::ModelImportConfig rest;
+    SW_ASSERT_TRUE( rest.loadFromJSONString( "{ \"rules\": [ " + broad + ", { \"name\": \"Rest\" } ] }" ) );
+    SW_EXPECT_EQUAL( sw::string( "Broad" ), rest.findMatchingRule( "game/probe/models_raw/a.glb" )._rule._name );
+    SW_EXPECT_EQUAL( sw::string( "Rest" ), rest.findMatchingRule( "game/x/models_raw/a.glb" )._rule._name );
+
+    test::ScopedDefensiveTestLog  expected( "a rule without a condition must be the last rule" );
+    sw::editor::ModelImportConfig misplaced;
+    SW_EXPECT_FALSE( misplaced.loadFromJSONString( "{ \"rules\": [ { \"name\": \"Rest\" }, " + broad + " ] }" ) );
+    SW_EXPECT_TRUE( misplaced.getRules().empty() );
+}
+
+/**
+ * @brief [ModelImporterTest] 규칙이 겹치는 원본은 임포트하지 않고 문제로 보고한다(해시를 만들지 못하고, 임포트도 같은 오류로 멈춘다)
+ */
+SW_TEST_CASE( ModelImporterTest, OverlappingRulesStopTheImportOfThatSource )
+{
+    sw::editor::ModelImportConfig config;
+    SW_ASSERT_TRUE( config.loadFromJSONString( R"({ "rules": [
+        { "name": "A", "include_patterns": [ "*/probe/models_raw/**" ] },
+        { "name": "B", "include_patterns": [ "**/triangle.gltf" ] } ] })" ) );
+
+    const sw::string resourceRoot = test::makeTempDirectory( "model_import_overlap_resource" );
+    const sw::string sourcePath   = sw::FileUtil::joinPath( resourceRoot, "game/probe/models_raw/triangle.gltf" );
+    SW_ASSERT_TRUE( sw::FileUtil::ensureParentDirectoryExists( sourcePath ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sourcePath, TestModelImporterInternal::makeOffsetTriangleGltf() ) );
+
+    test::ScopedDefensiveTestLog         expected( "the rules overlap on the source" );
+    const sw::editor::AssetImportSummary summary = sw::editor::ModelImporter::importAllModels( resourceRoot, config, sw::editor::AssetImportMode::ImportStale );
+    SW_EXPECT_EQUAL( size_t( 1 ), summary._listProblem.size() );
+    SW_EXPECT_EQUAL( 0u, summary._importedCount );
+}
+
+/**
+ * @brief [ModelImporterTest] 저장소의 모든 모델 원본은 임포트 규칙에 하나만 맞는다(겹치면 새 팩의 파일에 다른 팩의 규칙이 조용히 적용된다)
+ */
+SW_TEST_CASE( ModelImporterTest, RepositoryRawModelsMatchAtMostOneRule )
+{
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+    sw::editor::ModelImportConfig config;
+    SW_ASSERT_TRUE( config.loadFromFile( sw::editor::ModelImportConfig::makeDefaultConfigPath() ) == sw::ConfigReadResult::Loaded );
+
+    const sw::string       root = sw::FileUtil::normalizeSeparators( sw::ResourcePaths::getRootFolderPath() );
+    sw::vector<sw::string> listFile;
+    SW_ASSERT_TRUE( sw::FileUtil::collectFiles( root, "", listFile, true ) );
+    size_t modelCount = 0;
+    for ( const sw::string& file : listFile )
+    {
+        const sw::string path = sw::FileUtil::normalizeSeparators( file );
+        if ( path.size() <= root.size() + 1 || path.find( "/models_raw/" ) == sw::string::npos )
+            continue;
+        if ( sw::FileUtil::hasAnyExtension( path, { ".glb", ".gltf", ".vrm" } ) == false )
+            continue;
+        const sw::string                       resourcePath = sw::string( sw::string_view( path ).substr( root.size() + 1 ) );
+        const sw::editor::ModelImportRuleMatch match        = config.findMatchingRule( resourcePath );
+        SW_EXPECT_FALSE_MSG( match.hasError(), match._error.c_str() );
+        ++modelCount;
+    }
+    SW_EXPECT_TRUE( modelCount > 0 );
+}
+
+/**
+ * @brief [ModelImporterTest] 같은 원본 · 같은 규칙은 같은 `.mesh` 바이트를 낸다
+ * @details 임포트된 `.mesh` 를 커밋하고 그 해시를 스탬프에 적으므로, 임포트가 흔들리면(정렬 순서 · 초기화 안 된 바이트) 스탬프가 매번 어긋난다.
+ */
+SW_TEST_CASE( ModelImporterTest, ImportingTheSameSourceTwiceGivesTheSameBytes )
+{
+    const sw::string sourcePath = test::makeTempPath( "determinism_model.gltf" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sourcePath, TestModelImporterInternal::makeOffsetTriangleGltf() ) );
+
+    const sw::editor::ModelImportRule rule       = TestModelImporterInternal::makeRule( sw::editor::ModelRecenter::Xz, sw::float3{ 0.5f, 0.0f, -1.0f } );
+    const sw::string                  firstPath  = test::makeTempPath( "determinism_first.mesh" );
+    const sw::string                  secondPath = test::makeTempPath( "determinism_second.mesh" );
+    SW_ASSERT_TRUE( sw::editor::ModelImporter::importModel( sourcePath, rule, firstPath ) );
+    SW_ASSERT_TRUE( sw::editor::ModelImporter::importModel( sourcePath, rule, secondPath ) );
+
+    sw::vector<uint8> firstBytes;
+    sw::vector<uint8> secondBytes;
+    SW_ASSERT_TRUE( sw::FileUtil::readFile( firstPath, firstBytes ) );
+    SW_ASSERT_TRUE( sw::FileUtil::readFile( secondPath, secondBytes ) );
+    SW_EXPECT_TRUE( firstBytes.empty() == false );
+    SW_EXPECT_TRUE( firstBytes == secondBytes );
 }

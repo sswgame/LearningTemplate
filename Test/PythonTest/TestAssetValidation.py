@@ -146,6 +146,22 @@ class CheckTest(AssetValidationFixture):
                                       "name_pattern": "[a-z0-9_.\\-]+", "allowed_suffixes": [".prefab.xml"]})
         self.assertEqual(2, len(messages), messages)
 
+    def testPatternStarDoesNotCrossFolders(self) -> None:
+        """`*` 는 폴더를 넘지 않는다(임포트 규칙과 같은 뜻) — 하위 폴더까지 보려면 마디 `**` 를 쓴다."""
+        self.put("Resource/game/p/prefabs/Bad Name.xml", "<a/>")
+        self.put("Resource/game/p/prefabs/sub/Bad Name.xml", "<a/>")
+        rule = {"name": "n", "check": "naming", "allowed_suffixes": [".prefab.xml"]}
+        self.assertEqual(1, len(self.findMessages({**rule, "include_patterns": ["game/*/prefabs/*"]})))
+        self.assertEqual(2, len(self.findMessages({**rule, "include_patterns": ["game/*/prefabs/**"]})))
+
+    def testRepositoryRulesReachNestedFolders(self) -> None:
+        """저장소 규칙의 `**` 가 하위 폴더(`textures/ui/<묶음>/`)의 DDS 까지 닿는다 — `*` 로 쓰면 조용히 건너뛴다."""
+        listRule = loadRules(kRepositoryRoot / "Config/Editor/AssetValidationRules.json")
+        ruleTexture = next(rule for rule in listRule if rule.name == "texture-limits")
+        self.assertTrue(ruleTexture.matches("engine/textures/ui/kenney_ui/blue/a.dds"))
+        self.assertTrue(ruleTexture.matches("game/p/textures/a.dds"))
+        self.assertFalse(ruleTexture.matches("game/p/textures_raw/a.dds"))
+
     def testTextureLimits(self) -> None:
         self.put("Resource/game/p/textures/big.dds", makeDdsInternal(8192, 8192, 14, 98))
         self.put("Resource/game/p/textures/npot.dds", makeDdsInternal(300, 256, 9, 98))
@@ -278,7 +294,7 @@ class CheckTest(AssetValidationFixture):
         self.put("Resource/game/p/data/units.xml",
                  '<Catalog><Unit id="worker"/><Unit id="barracks" producedBy="worker"/><Unit id="marine" producedBy="barrack" '
                  'requires="barracks academy"/></Catalog>')
-        messages = self.findMessages({"name": "u", "check": "catalog_reference", "include_patterns": ["*/units.xml"],
+        messages = self.findMessages({"name": "u", "check": "catalog_reference", "include_patterns": ["**/units.xml"],
                                       "elements": ["Unit"], "reference_attributes": ["producedBy", "requires"], "id_attribute": "id"})
         self.assertEqual(2, len(messages), messages)
 
@@ -311,7 +327,7 @@ class CheckTest(AssetValidationFixture):
         self.assertEqual(1, len(messages), messages)  # 파생 타입의 오타만 — 다른 타입의 같은 이름 칸 · 빈 값 · None 은 보지 않는다
         self.assertIn("Statik", messages[0])
         action = {"name": "a", "check": "component_reference", "include_patterns": ["*.scene.xml"], "attributes": ["_action"],
-                  "target_patterns": ["{pack}/*.input.xml"], "target_elements": ["action"], "id_attribute": "name", "ignore_values": ["", "None"]}
+                  "target_patterns": ["{pack}/**/*.input.xml"], "target_elements": ["action"], "id_attribute": "name", "ignore_values": ["", "None"]}
         messages = self.findMessages(action)
         self.assertEqual(1, len(messages), messages)  # 다른 팩(q)의 액션은 이 팩에서 풀리지 않는다
         self.assertIn("Dash", messages[0])

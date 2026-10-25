@@ -391,6 +391,44 @@ namespace sw
                 return true;
             }
         };
+
+        /** @brief 경로를 `/` 마디로 나눕니다(빈 마디는 버립니다). 뷰는 @p path 가 살아 있는 동안만 유효합니다. */
+        void splitPathSegmentsInternal( string_view path, vector<string_view>& outListSegment )
+        {
+            outListSegment.clear();
+            size_t start = 0;
+            while ( start <= path.size() )
+            {
+                size_t end = path.find( '/', start );
+                if ( end == string_view::npos )
+                    end = path.size();
+                if ( end > start )
+                    outListSegment.push_back( path.substr( start, end - start ) );
+                start = end + 1;
+            }
+        }
+
+        /** @brief 패턴 마디 @p patternIndex 부터가 경로 마디 @p textIndex 부터에 모두 맞는지 봅니다. 마디 `**` 만 폴더를 넘습니다. */
+        bool matchesPathSegmentsInternal( const vector<string_view>& listPattern, size_t patternIndex, const vector<string_view>& listText, size_t textIndex )
+        {
+            while ( patternIndex < listPattern.size() )
+            {
+                if ( listPattern[patternIndex] == "**" )
+                {
+                    for ( size_t skipIndex = textIndex; skipIndex <= listText.size(); ++skipIndex )
+                    {
+                        if ( matchesPathSegmentsInternal( listPattern, patternIndex + 1, listText, skipIndex ) )
+                            return true;
+                    }
+                    return false;
+                }
+                if ( textIndex >= listText.size() || StringUtil::matchesWildcard( listPattern[patternIndex], listText[textIndex] ) == false )
+                    return false;
+                ++patternIndex;
+                ++textIndex;
+            }
+            return textIndex == listText.size();
+        }
     } // namespace
 } // namespace sw
 
@@ -865,6 +903,21 @@ namespace sw
             ++patternIndex;
         }
         return patternIndex == pattern.size();
+    }
+
+    bool StringUtil::matchesPathPattern( string_view pattern, string_view path )
+    {
+        if ( pattern.find( '/' ) == string_view::npos )
+        {
+            const size_t lastSlash = path.rfind( '/' );
+            return matchesWildcard( pattern, lastSlash == string_view::npos ? path : path.substr( lastSlash + 1 ) );
+        }
+
+        vector<string_view> listPatternSegment;
+        vector<string_view> listTextSegment;
+        splitPathSegmentsInternal( pattern, listPatternSegment );
+        splitPathSegmentsInternal( path, listTextSegment );
+        return matchesPathSegmentsInternal( listPatternSegment, 0, listTextSegment, 0 );
     }
 
     string_view StringUtil::trimStart( string_view input )

@@ -78,12 +78,12 @@ namespace sw
                 return false;
             }
 
-            /** @brief 패턴 가운데 하나가 파일 이름이나 도메인 기준 경로에 맞으면 true 입니다. */
-            static bool matchesAnyPattern( const vector<string>& listPattern, string_view fileName, string_view normalized )
+            /** @brief 패턴 가운데 하나가 도메인 기준 경로에 맞으면 true 입니다(`/` 없는 패턴은 파일 이름에, 있으면 마디별로: `StringUtil::matchesPathPattern`). */
+            static bool matchesAnyPattern( const vector<string>& listPattern, string_view normalized )
             {
                 for ( const string& pattern : listPattern )
                 {
-                    if ( StringUtil::matchesWildcard( pattern, fileName ) || StringUtil::matchesWildcard( pattern, normalized ) )
+                    if ( StringUtil::matchesPathPattern( pattern, normalized ) )
                         return true;
                 }
                 return false;
@@ -281,7 +281,7 @@ namespace sw
             if ( PackCookerInternal::containsDirectory( listDirectory, directory ) )
                 return false;
         }
-        if ( PackCookerInternal::matchesAnyPattern( config._listGlobalExcludePattern, fileName, normalized ) )
+        if ( PackCookerInternal::matchesAnyPattern( config._listGlobalExcludePattern, normalized ) )
             return false;
 
         for ( const PackExcludeRule& rule : config._listRule )
@@ -293,7 +293,7 @@ namespace sw
                 if ( bExcluded )
                     return false;
             }
-            if ( PackCookerInternal::matchesAnyPattern( rule._listExcludePattern, fileName, normalized ) )
+            if ( PackCookerInternal::matchesAnyPattern( rule._listExcludePattern, normalized ) )
                 return false;
         }
 

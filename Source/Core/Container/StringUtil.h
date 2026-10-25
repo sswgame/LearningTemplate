@@ -176,9 +176,16 @@ namespace sw
         static bool contains( string_view str, string_view sub, bool bIgnoreCase = false ) noexcept;
         /**
          * @brief `*`(0 글자 이상, '/' 도 넘는다) · `?`(한 글자) 와일드카드 @p pattern 이 @p text 전체에 맞는지 봅니다(ASCII 대소문자 무시).
-         * @details 팩 쿠커의 제외 패턴(`PackConfig`)과 에디터 임포트 규칙(`AssetImportPathFilter`)이 같은 규칙으로 맞춘다.
+         * @details 글자 단위의 바탕 매처입니다. 경로에는 `/` 를 넘지 않는 `matchesPathPattern` 을 씁니다(이 함수를 경로에 직접 쓰면 `*` 가 폴더를 넘는다).
          */
         static bool matchesWildcard( string_view pattern, string_view text ) noexcept;
+        /**
+         * @brief 경로 패턴 @p pattern 이 @p path(`/` 구분, 호출부가 구분자를 맞춘다)에 맞는지 봅니다. 팩 쿠커 제외 패턴과 에디터 임포트 규칙이 함께 쓰는 마디 매칭입니다.
+         * @details `/` 없는 패턴은 파일 이름에만 맞춥니다. `/` 가 있으면 경로를 마디(폴더 이름 · 파일 이름) 단위로 맞춥니다.
+         *          마디 안의 `*` · `?` 는 마디를 넘지 않고, 마디 하나가 통째로 `**` 이면 0 개 이상의 마디에 맞습니다. 대소문자는 가리지 않습니다.
+         *          Python 쪽 정본은 `Scripts/common/PathPattern.py` 입니다.
+         */
+        [[nodiscard]] static bool matchesPathPattern( string_view pattern, string_view path );
 
         /** @brief string_view 의 앞 공백을 제거한 뷰를 반환합니다. */
         static string_view trimStart( string_view input );

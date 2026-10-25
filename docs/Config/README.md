@@ -46,7 +46,7 @@
 | `Resource/game/*/data/render2d.xml` | `Render2DSettingsSubsystem` — 기동 · `reload`. 엔진 기본 `render2d.xml` 을 통째로 대신한다 | 게임 팩에 실림 | 한다 | [형식 설명](../../Source/Engine/Graphics/2D/Render2DSettings.h) |
 | `Resource/game/*/data/*.settings.xml` | `UserSettingsManager::loadSchema` (게임 프리셋 `_userSettingsSchema`) — 기동. 엔진 스키마에 덧붙는 게임 설정 | 게임 팩에 실림 | 한다 | [UserSettings](UserSettings.md) |
 | `Resource/game/*/data/*.input.xml` | `InputMap::loadFromResource` (`GameSettings::_inputMap`) — 게임 인스턴스 초기화 | 게임 팩에 실림 | 한다 |  |
-| `Resource/game/*/models/*.facial.xml` | `FacialRig::loadFromResource` (`FacialAnimationComponent::_facialRigPath`) — 컴포넌트 시작 · 경로를 바꿀 때. 메시에 없는 모프 타깃 · 스켈레톤에 없는 눈 본은 바인딩할 때 오류(`FacialRig::validate`) | 게임 팩에 실림 | 한다 | [FacialRig](FacialRig.md) |
+| `Resource/game/*/models/**/*.facial.xml` | `FacialRig::loadFromResource` (`FacialAnimationComponent::_facialRigPath`) — 컴포넌트 시작 · 경로를 바꿀 때. 메시에 없는 모프 타깃 · 스켈레톤에 없는 눈 본은 바인딩할 때 오류(`FacialRig::validate`) | 게임 팩에 실림 | 한다 | [FacialRig](FacialRig.md) |
 | `Resource/game/*/data/*.livelinkface.xml` | `LiveLinkFaceMapping::loadFromResource` (`LiveLinkFaceComponent::_mappingPath`) — 컴포넌트 시작. 패킷 채널 → 얼굴 리그 표정 연결. 배치 표(`livelinkface.xml`)에 없는 채널은 오류 | 게임 팩에 실림 | 한다 | [LiveLinkFaceMapping](LiveLinkFaceMapping.md) |
 
 ## 사용자 설정
@@ -86,7 +86,7 @@
 
 | 파일 | 읽는 곳과 시점 | 배포본 | 커밋 | 문서 |
 |---|---|---|---|---|
-| `Source/*.module.json` | CMake `ModuleManifest.cmake` · `ModuleCatalog::loadDirectory` — configure · 기동(모듈 적재 순서). `ModuleCatalogTest.EveryRepositoryManifestParses` 가 모두 읽는다 | 빌드에 굳음(링크할 모듈 · 순서) | 한다 | [ModuleManifest](ModuleManifest.md) |
+| `Source/**/*.module.json` | CMake `ModuleManifest.cmake` · `ModuleCatalog::loadDirectory` — configure · 기동(모듈 적재 순서). `ModuleCatalogTest.EveryRepositoryManifestParses` 가 모두 읽는다 | 빌드에 굳음(링크할 모듈 · 순서) | 한다 | [ModuleManifest](ModuleManifest.md) |
 
 ## 개발 머신 로컬
 
