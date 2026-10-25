@@ -197,6 +197,7 @@ namespace
                 pAnimator->setInitialState( ( index % 2 ) == 0 ? "clip_00" : "clip_01" );
                 pAnimator->setInitialTime( duration * static_cast<float32>( ( index * 37u ) % 100u ) / 100.0f );
                 pAnimator->dispatchBeginPlay();
+                pAnimator->waitForAnimationAssets(); // 시작의 클립 읽기는 비동기다 — 읽히기 전의 유닛은 포즈를 만들지 않아 평가 수 확인이 진다
                 if ( mode == Mode::OwnRig || mode == Mode::OwnFullBody )
                 {
                     sw::PoseModifierComponent* pModifier = pObject->addComponent<sw::PoseModifierComponent>();

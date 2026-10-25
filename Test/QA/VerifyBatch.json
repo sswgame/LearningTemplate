@@ -392,7 +392,7 @@
     },
     {
       "id": "net-udp-bench", "title": "UDP 소켓 계층 벤치(Windows Release, 패킷당 시간)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": true, "timeout_minutes": 30,
-      "tool": "scripts", "args": ["test", "NetUDPBenchTest.*", "--preset", "{preset}", "--no-build", "--load_suites=only", "--host_suites=all"],
+      "tool": "scripts", "args": ["test", "NetUDPBenchTest.*", "--preset", "{preset}", "--no-build", "--host_suites=all"],
       "limit": "보고만 — 패킷당 약 6.5 us(08_Verification 2절 UDP 소켓 계층)와 나란히 둔다. 일괄 받기는 시스템 호출이 지배적일 때만 착수", "judge": "exit",
       "source": "docs/plans/Candidates-network.md UdpSocketLayerScaling", "result_doc": "docs/08_Verification.md 2절 UDP 소켓 계층"
     },
@@ -633,7 +633,7 @@
     },
     {
       "id": "audio-bench-release", "title": "AudioBenchTest Release — Stereo · 5.1 · 7.1 렌더 비용 비율과 평면 대 인터리브 전후", "kind": "test", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": true, "timeout_minutes": 30,
-      "filter": "AudioBenchTest.*",
+      "filter": "AudioBenchTest.*", "extra_args": ["--load_suites=only"],
       "source": "docs/plans/AudioChannelLayout.md 5절", "result_doc": "docs/plans/AudioChannelLayout.md 상태를 끝으로"
     },
     {
