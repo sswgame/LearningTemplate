@@ -83,7 +83,7 @@ namespace sw
     void IRHIDevice::reportBarrierDuringRecording( [[maybe_unused]] const utf8* pWhat ) const
     {
 #if defined( SW_DEBUG )
-        if ( _bParallelRecording == false )
+        if ( _bParallelRecording.load( std::memory_order_relaxed ) == false )
             return;
 
         // 진단이지 오류가 아니다. 레벨 프롤로그가 대부분을 미리 발행하지만 **전부는 아니다.**
@@ -104,7 +104,7 @@ namespace sw
     {
         // 로그만 남기면 프레임마다 쏟아지는 다른 줄에 묻힌다. 이건 "언젠가 GPU 가 쓰레기 디스크립터를
         // 읽는다" 는 뜻이라 개발자가 그 자리에서 알아채야 하므로 디버거를 세운다.
-        SW_LOG_ASSERT( _bParallelRecording == false,
+        SW_LOG_ASSERT( _bParallelRecording.load( std::memory_order_relaxed ) == false,
                        "%# tries to change the resource table during parallel pass recording. Creation/registration/release must "
                        "finish in the graph setup phase - a resize during recording leaves the descriptor "
                        "references held by draws dangling and the GPU dies with a PageFault "
@@ -114,12 +114,22 @@ namespace sw
 
     SW_LOG_CALLER( "RHI" );
 
+    void IRHIDevice::requireRegistryMutableNow( const utf8* pWhat ) const
+    {
+        if ( _bParallelRecording.load( std::memory_order_relaxed ) == false )
+            return;
+        SW_LOG_ERROR( "%# tries to change the resource table during parallel pass recording - release it through IRHIDevice::releaseHandle (see setParallelRecording)", pWhat );
+        Logger::flushGlobalForCrash(); // 비동기 싱크가 보관하고 있는 위 한 줄을 멈추기 전에 내보낸다
+        std::abort();
+    }
+
     void IRHIDevice::waitIdle()
     {
         // 렌더 스레드가 떠 있으면 그 스레드만 이 장치로 기록 · 제출한다. 다른 스레드가 장치 대기(펜스 Signal · 해제 큐 비우기)를 끼워 넣으려면
         // 렌더 스레드가 받은 일을 먼저 모두 끝내야 한다. 렌더 스레드 자신이 부르면 기다릴 것이 없다.
-        if ( _pfnRenderThreadDrain != nullptr && std::this_thread::get_id() != _renderThreadID )
-            _pfnRenderThreadDrain( _pRenderThreadDrainContext );
+        const RenderThreadDrainFunction pfnDrain = _pfnRenderThreadDrain.load( std::memory_order_acquire );
+        if ( pfnDrain != nullptr && std::this_thread::get_id() != _renderThreadID.load( std::memory_order_relaxed ) )
+            pfnDrain( _pRenderThreadDrainContext.load( std::memory_order_relaxed ) );
         // 렌더 스레드가 받은 일을 다 끝냈다 — 그 사이 미룬 핸들을 지금 내린다(GPU 대기 전에 넣어야 같은 대기가 해제 큐까지 비운다).
         flushDeferredHandleReleases();
         waitIdleInternal();
@@ -195,9 +205,18 @@ namespace sw
 
     void IRHIDevice::setRenderThreadDrain( RenderThreadDrainFunction pfnDrain, void* pContext, std::thread::id renderThreadID )
     {
-        _pfnRenderThreadDrain      = pfnDrain;
-        _pRenderThreadDrainContext = ( pfnDrain != nullptr ) ? pContext : nullptr;
-        _renderThreadID            = ( pfnDrain != nullptr ) ? renderThreadID : std::thread::id{};
+        if ( pfnDrain != nullptr )
+        {
+            _pRenderThreadDrainContext.store( pContext, std::memory_order_relaxed );
+            _renderThreadID.store( renderThreadID, std::memory_order_relaxed );
+            _pfnRenderThreadDrain.store( pfnDrain, std::memory_order_release );
+        }
+        else
+        {
+            _pfnRenderThreadDrain.store( nullptr, std::memory_order_release );
+            _pRenderThreadDrainContext.store( nullptr, std::memory_order_relaxed );
+            _renderThreadID.store( std::thread::id{}, std::memory_order_relaxed );
+        }
         // 렌더 스레드가 서거나 풀리는 자리다 — 든 프레임이 없으니 미룬 것을 내리고 셈을 맞춘다.
         _pDeferredHandleQueue->_retiredFrameCount.store( _pDeferredHandleQueue->_queuedFrameCount.load( std::memory_order_acquire ), std::memory_order_release );
         flushDeferredHandleReleases();
@@ -211,8 +230,8 @@ namespace sw
         // (GPUScene 배치의 머티리얼 텍스처 SRV). 그래서 다음에 넘길 프레임(넘긴 수 + 1)이 끝난 뒤에 내린다 — 렌더 스레드가 쉬고 있어도 그렇다.
         const uint64 queuedFrameCount = _pDeferredHandleQueue->_queuedFrameCount.load( std::memory_order_acquire );
         const bool   bFrameInFlight   = queuedFrameCount != _pDeferredHandleQueue->_retiredFrameCount.load( std::memory_order_acquire );
-        const bool   bRenderThreadUp  = _pfnRenderThreadDrain != nullptr;
-        if ( ( bRenderThreadUp || bFrameInFlight ) && std::this_thread::get_id() != _renderThreadID )
+        const bool   bRenderThreadUp  = _pfnRenderThreadDrain.load( std::memory_order_acquire ) != nullptr;
+        if ( ( bRenderThreadUp || bFrameInFlight ) && std::this_thread::get_id() != _renderThreadID.load( std::memory_order_relaxed ) )
         {
             std::scoped_lock<mutex> lock{ _pDeferredHandleQueue->_mutex };
             _pDeferredHandleQueue->_listHandle.push_back( RHIDeferredHandleQueue::Entry{ handle, kind, queuedFrameCount + 1 } );
@@ -303,7 +322,7 @@ namespace sw
         , _pContextThreadBinding{ nullptr }
         , _pfnRenderThreadDrain{ nullptr }
         , _pRenderThreadDrainContext{ nullptr }
-        , _renderThreadID{}
+        , _renderThreadID{ std::thread::id{} }
         , _backBufferWidth{ 0 }
         , _backBufferHeight{ 0 }
         , _bPreferredVSync{ false }

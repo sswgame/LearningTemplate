@@ -132,9 +132,10 @@ namespace sw
 
         /** @brief desc 로 만든(또는 스왑체인 RP 를 별칭한) 렌더패스를 등록하고 핸들(인덱스+1)을 반환합니다. */
         RHIRenderPassHandle addRenderPassRecord( VkRenderPass renderPass, bool bOwned );
-        /** @brief 핸들의 레코드를 반환합니다. 범위 밖이면 nullptr 입니다. */
-        RenderPassRecord* resolveRenderPassRecord( RHIRenderPassHandle handle );
-        /** @brief 핸들의 렌더패스를 파괴합니다. 소유한 것만 부수고 스왑체인 RP 는 건너뜁니다. 레코드는 비웁니다. */
+        /**
+         * @brief 핸들의 렌더패스를 파괴합니다. 소유한 것만 부수고 스왑체인 RP 는 건너뜁니다. 레코드는 비웁니다.
+         * @details 레코드를 읽는 쪽이 이 함수 하나라 포인터를 밖으로 내주지 않습니다(`add` 의 재할당 뒤에 매달리지 않게). 어느 스레드에서나 부를 수 있습니다.
+         */
         void destroyRenderPassRecord( VkDevice device, RHIRenderPassHandle handle, VkRenderPass swapchainRenderPass );
 
         /** @brief 모두 파괴하고 비웁니다(디바이스가 살아 있을 때). 스왑체인 RP 별칭은 소유가 아니라 건너뜁니다. */
@@ -144,7 +145,11 @@ namespace sw
         /// @brief 합성 프레임버퍼 캐시를 보호합니다. 여러 스레드가 동시에 beginRenderPass 를 부릅니다.
         mutable mutex                                                  _compositeMutex;
         unordered_map<CompositeKey, CompositeRecord, CompositeKeyHash> _mapComposite;
-        unordered_map<PipelineKey, VkRenderPass, PipelineKeyHash>      _mapPipelineRenderPass;
-        vector<RenderPassRecord>                                       _listRenderPassRecord;
+        /// @brief PSO 호환 렌더패스 맵을 보호합니다(PSO 생성이 워커 스레드에서 불릴 수 있다).
+        mutable mutex                                             _pipelineMutex;
+        unordered_map<PipelineKey, VkRenderPass, PipelineKeyHash> _mapPipelineRenderPass;
+        /// @brief desc 렌더패스 레코드 목록을 보호합니다(`createRenderPass` 는 어느 스레드에서나 불린다). 잎 락입니다.
+        mutable mutex            _recordMutex;
+        vector<RenderPassRecord> _listRenderPassRecord;
     };
 } // namespace sw

@@ -398,6 +398,8 @@ namespace sw
          * @brief 살아 있는 모든 기록 상태에서 이 버퍼와 PSO 캐시를 지웁니다.
          * @details 캐시가 리스트마다 있으므로 자원이 사라질 때 **모두** 훑어야 한다. 한 곳만 지우면
          *          다른 리스트가 죽은 핸들을 드로우 시점에 다시 참조한다.
+         *          목록은 `_liveCmdListMutex` 가 지키지만 **리스트의 상태**는 그 리스트를 기록하는 스레드의 것이다. 그래서 병렬 기록 중에는 부르지 않는다
+         *          (`destroyBuffer` · `destroyPipelineState` 가 `requireRegistryMutableNow` 로 모든 구성에서 감시한다. 해제는 `IRHIDevice::releaseHandle` 이 기록 밖으로 미룬다).
          */
         void forgetBufferInRecordingStates( RHIBufferHandle buffer );
         void forgetPipelineStateInRecordingStates( RHIPipelineStateHandle pso );

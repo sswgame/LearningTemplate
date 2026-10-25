@@ -150,7 +150,7 @@ namespace sw
 #if !defined( SW_SHIPPING )
         /**
          * @brief 텍스처 · 버퍼 등록 표의 그 자리에 핸들이 있으면 true 입니다(GL 은 인덱스를 텍스처 유닛 · 버퍼 바인딩으로 흉내 낸다).
-         * @note GL 의 등록 표에는 잠금이 없다. 기록 중에는 등록 표가 바뀌지 않는다는 규칙(`assertRegistryMutableNow`)에 기대어 읽는다.
+         * @note GL 의 등록 표에는 잠금이 없다. 표는 GL 컨텍스트를 쥔 스레드만 읽고 쓴다 — 등록 · 해제 · 파괴가 `ScopedOpenGLContext` 안에서 표를 바꾸고, 읽는 쪽은 프레임을 기록하는 스레드다.
          */
         bool isBindlessIndexLive( RHIBindlessIndexSpace space, RHIDescriptorIndex index ) const override;
 #endif
@@ -265,7 +265,8 @@ namespace sw
          * @brief 되읽기 바이트 @p sizeBytes 를 담을 링 구간을 잡습니다. 컨텍스트가 없어도 부를 수 있습니다.
          * @details 되읽기 구간은 GPU 완료가 아니라 CPU 가 다 읽었을 때(`takeTextureReadback`) 돌아온다. 버린 읽기의 구간만 펜스가 지나면 돌아오므로, 차 있으면 펜스를 한 번 모은 뒤 다시 본다.
          *          링보다 큰 한 장은 업로드와 같이 단독 구간과 일회성 버퍼로 받는다.
-         * @return 잡았으면 `Accepted`, 앞선 되읽기를 아직 가져가지 않아 차 있으면 `Busy`, 링이 없거나 링과 단독 상한을 모두 넘으면 이유를 로그로 남기고 `Rejected` 입니다.
+         * @return 잡았으면 `Accepted`, 앞선 되읽기를 아직 가져가지 않아 차 있으면 `Busy`, 링이 없거나 링과 단독 상한을 모두 넘거나 장치를 잃었으면 이유를 로그로 남기고 `Rejected` 입니다
+         *         (옮기는 곳은 업로드와 같은 `RHIStagingRingUtil::settleAllocation`).
          */
         [[nodiscard]] RHISubmitResult allocateReadbackSpan( uint64 sizeBytes, RHIStagingSpan& outSpan );
 
