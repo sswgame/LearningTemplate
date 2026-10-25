@@ -2,6 +2,10 @@
 
 #include "GameFramework/Base/Online/HTTP/Hpack.h"
 
+#include "GameFramework/Base/Online/HTTP/HpackHuffmanTable.h"
+
+#include <algorithm>
+
 namespace sw
 {
     namespace
@@ -100,6 +104,26 @@ namespace sw
                 return false;
             }
         };
+
+        /** @brief 허프만 부호를 (비트 수, 부호) 순으로 정렬한 목록을 만듭니다. 항목은 `(비트 수 << 32 | 부호) << 9 | 기호` 다. 부호가 접두사 코드라 한 비트씩 늘려 가며 찾으면 처음 맞는 것이 기호다. */
+        vector<uint64> buildHuffmanLookup()
+        {
+            vector<uint64> listLookup;
+            listLookup.reserve( HpackHuffman::kSymbolCount );
+            for ( int32 symbol = 0; symbol < HpackHuffman::kSymbolCount; ++symbol )
+            {
+                const HpackHuffmanCode& entry = HpackHuffman::kArrCode[symbol];
+                listLookup.push_back( ( ( ( static_cast<uint64>( entry._bits ) << 32 ) | entry._code ) << 9 ) | static_cast<uint64>( symbol ) );
+            }
+            std::sort( listLookup.begin(), listLookup.end() );
+            return listLookup;
+        }
+
+        const vector<uint64>& getHuffmanLookup()
+        {
+            static const vector<uint64> s_listLookup = buildHuffmanLookup();
+            return s_listLookup;
+        }
     } // namespace
 
     void HpackEncoder::writeInteger( uint32 value, int32 prefixBits, uint8 firstByteFlags, vector<uint8>& outListBlock )
@@ -209,6 +233,50 @@ namespace sw
         return true;
     }
 
+    bool HpackDecoder::decodeHuffman( const uint8* pData, size_t size, string& outText, string& outError ) const
+    {
+        const vector<uint64>& listLookup = getHuffmanLookup();
+        outText.clear();
+        uint32 code     = 0;
+        int32  bitCount = 0;
+        bool   bAllOnes = true; // 지금까지 모은 미완성 부호가 모두 1 인가(끝 패딩은 EOS 의 앞부분이라 1 이어야 한다)
+        for ( size_t byteIndex = 0; byteIndex < size; ++byteIndex )
+        {
+            for ( int32 shift = 7; 0 <= shift; --shift )
+            {
+                const uint32 bit = ( pData[byteIndex] >> shift ) & 1u;
+                code             = ( code << 1 ) | bit;
+                ++bitCount;
+                bAllOnes = bAllOnes && bit == 1u;
+                if ( bitCount > 30 )
+                {
+                    outError = "HPACK Huffman string has an invalid code";
+                    return false;
+                }
+                const uint64 key   = ( ( static_cast<uint64>( bitCount ) << 32 ) | code ) << 9;
+                const auto   found = std::lower_bound( listLookup.begin(), listLookup.end(), key );
+                if ( found == listLookup.end() || ( *found >> 9 ) != ( key >> 9 ) )
+                    continue;
+                const int32 symbol = static_cast<int32>( *found & 0x1FFu );
+                if ( symbol == HpackHuffman::kEndOfString )
+                {
+                    outError = "HPACK Huffman string contains the end-of-string symbol";
+                    return false;
+                }
+                outText.push_back( static_cast<utf8>( symbol ) );
+                code     = 0;
+                bitCount = 0;
+                bAllOnes = true;
+            }
+        }
+        if ( 7 < bitCount || bAllOnes == false )
+        {
+            outError = "HPACK Huffman string has invalid padding";
+            return false;
+        }
+        return true;
+    }
+
     bool HpackDecoder::readString( const uint8*& pCursor, const uint8* pEnd, string& outText, string& outError ) const
     {
         if ( pCursor >= pEnd )
@@ -220,15 +288,16 @@ namespace sw
         uint32     length   = 0;
         if ( readInteger( pCursor, pEnd, 7, length, outError ) == false )
             return false;
-        if ( bHuffman )
-        {
-            outError = "HPACK Huffman-coded strings are not supported yet (RFC 7541 appendix B table is the next step)";
-            return false;
-        }
         if ( length > static_cast<size_t>( pEnd - pCursor ) )
         {
             outError = "HPACK string is longer than the block";
             return false;
+        }
+        if ( bHuffman )
+        {
+            const bool bDecoded = decodeHuffman( pCursor, length, outText, outError );
+            pCursor += length;
+            return bDecoded;
         }
         outText.assign( reinterpret_cast<const utf8*>( pCursor ), length );
         pCursor += length;

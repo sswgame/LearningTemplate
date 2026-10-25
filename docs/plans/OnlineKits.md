@@ -36,7 +36,7 @@
 | G2 | 우편의 오프라인 푸시 연결(`IOfflinePushSender`) | 없음 | 끝남(빌드 미확인) |
 | G5 | 라이브 이벤트 시작의 오프라인 푸시(전체 대상이라 제공자의 토픽 발송이 필요하다) | G4 | 끝남(2026-10-22 Debug 빌드 · 테스트 통과) |
 | G3 | 이벤트 운영 화면(GF_Admin 패널) | C1 | 끝남(빌드 미확인) |
-| G4 | 실제 푸시 제공자 둘 | 결정(4절) | 일부(FCM 끝남 — 2026-10-22 Debug 빌드 · 테스트 통과. APNs 는 HTTP/2 클라이언트 단계 H2-1(프레임 · HPACK 부호기와 허프만 없는 복호기) 코드가 들어감 — 아래 3절 G4 단계표. 확인 대기: 매니페스트 id `http2-codec-tests`) |
+| G4 | 실제 푸시 제공자 둘 | 결정(4절) | 일부(FCM 끝남 — 2026-10-22 Debug 빌드 · 테스트 통과. APNs 는 HTTP/2 클라이언트 단계 H2-2 까지(프레임 · HPACK 부호기와 복호기) 코드가 들어감 — 아래 3절 G4 단계표. 확인 대기: 매니페스트 id `http2-codec-tests`) |
 | H1 | 환불과 결제 취소 알림을 받아 `refund.revoke` 로 회수 | 없음 | 끝남(빌드 미확인) |
 | H2 | 유상 재화 청약철회 규칙 | H1 | 끝남(빌드 미확인) |
 | H3 | 영수증 제공자 셋(애플, 구글, 스팀) | 결정(4절) | 끝남(2026-10-22 Debug 빌드 · 테스트 통과. 애플은 가짜 앱 스토어 서버와 테스트용 인증서 사슬로만 확인했다 — 실제 앱 스토어 응답 확인은 iOS 빌드가 생길 때) |
@@ -98,7 +98,7 @@ FCM HTTP v1 제공자(`Provider/Fcm/FcmPushProvider`)와 이벤트 시작의 토
 - **함정**: `liveops_push` 표는 창마다 한 줄이고 지우지 않는다(보존 기간 정리 규칙이 없다 — 하루 한 번 반복하는 이벤트는 한 해에 365 줄). 서버 하나의 `Retry` 가 없다 — 표를 쓴 서버가 제공자 호출 전에 죽으면 그 알림은 나가지 않는다(중복보다 놓침을 택했다).
   APNs 는 HTTP/2 가 필수라 공통 HTTP 클라이언트(HTTP/1.1)와 따로 HTTP/2 클라이언트를 단계로 쌓은 뒤 `Provider/Apns/` 에 더한다. 오픈 소스 라이브러리를 들이지 않는 이유: 이 저장소의 HTTP 는 자체 TLS 계층 위에 있어 라이브러리의 소켓 · TLS 와 맞지 않는다.
   - **H2-1(2026-10-24, 빌드 전)**: `Base/Online/HTTP/HTTP2Frame`(연결 서문 · 프레임 머리 · SETTINGS · WINDOW_UPDATE · PING · HEADERS · DATA · RST_STREAM · GOAWAY 바이트)와 `Hpack`(정적 표 · 동적 표 · 정수 · 글자 그대로의 부호기와 복호기). 복호기는 허프만 문자열을 만나면 오류로 멈춘다. 테스트 `HTTP2Test.*`.
-  - **H2-2(남음)**: 허프만 표(RFC 7541 부록 B 의 257 부호)를 넣어 복호기가 서버 응답 머리를 읽게 한다. 표를 외워 옮기지 말고 RFC 본문에서 기계적으로 옮겨 RFC C.4 · C.6 의 허프만 예 바이트로 테스트한다.
+  - **H2-2(2026-10-25, 빌드 전)**: 허프만 표 `HpackHuffmanTable.h` 는 `Scripts/generate/GenerateHpackHuffman.py` 가 RFC 7541 본문(부록 B)에서 줄마다 비트 열 · 16 진 · 길이를 맞춰 보며 읽어 쓴다(손으로 옮기지 않았다). 복호기는 허프만 문자열을 풀고 틀린 패딩(7 비트 초과 · 1 아님) · EOS · 없는 부호는 오류로 멈춘다. 테스트 `HTTP2Test.HpackDecodesTheRfcHuffmanExamples`(C.4.1 · C.6.1).
   - **H2-3(남음)**: TLS 계층의 ALPN(`h2`) 협상(`ITLSContext`/`ITLSSession`, OpenSSL 구현). 지금 TLS 계층에 ALPN 이 없다.
   - **H2-4(남음)**: `HTTP2Connection`(스트림 상태 · 연결/스트림 흐름 제어 창 · SETTINGS 교환 · GOAWAY 처리)과 `IHTTPClient` 어댑터. 가짜 HTTP/2 서버(`FakeIssuerHandler` 모양)로 테스트.
   - **H2-5(남음)**: `Provider/Apns/ApnsPushProvider`(제공자 서명 JWT ES256 — `JSONWebToken::makeSigned`, `apns-topic` · `apns-push-type`, 상태 대응 200/410/429/5xx/403).

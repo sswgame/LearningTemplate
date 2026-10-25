@@ -705,7 +705,7 @@
       "source": "docs/plans/StructuralOptimization.md B 표", "result_doc": "docs/plans/StructuralOptimization.md B 표"
     },
     {
-      "id": "http2-codec-tests", "title": "HTTP/2 프레임 · HPACK 부호기와 허프만 없는 복호기", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 10,
+      "id": "http2-codec-tests", "title": "HTTP/2 프레임 · HPACK 부호기와 복호기(허프만 포함)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 10,
       "filter": "HTTP2Test.*",
       "source": "docs/plans/OnlineKits.md G4", "result_doc": "docs/plans/OnlineKits.md G4"
     },
