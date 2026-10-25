@@ -10,11 +10,11 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Container/DrainGate.h"
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
-#include "GameFramework/Base/Online/Service/OnlineDrainGate.h"
 #include "GameFramework/Base/Online/Service/OnlineKitClient.h"
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -57,9 +57,9 @@ namespace sw
         uint64 requestGuildStorage( const ReplyDelegate& onReply );
 
         /** @brief 알림 버퍼를 꺼낼 권한을 @p outLease 에 받습니다. 클라이언트마다 한 곳만 받을 수 있어 이미 다른 표가 있으면 false 입니다(알림을 서로 가져가는 일을 막는다). */
-        [[nodiscard]] bool claimNotifications( OnlineDrainLease& outLease ) { return _notificationGate.claim( outLease ); }
+        [[nodiscard]] bool claimNotifications( DrainLease& outLease ) { return _notificationGate.claim( outLease ); }
         /** @brief 쌓인 알림을 꺼냅니다. @p lease 는 `claimNotifications` 로 받은 표여야 합니다(아니면 어서션이고 꺼내지 않습니다). */
-        void drainNotifications( const OnlineDrainLease& lease, vector<SocialNotification>& outListNotification )
+        void drainNotifications( const DrainLease& lease, vector<SocialNotification>& outListNotification )
         {
             SW_ASSERT( _notificationGate.isHeldBy( lease ) );
             if ( _notificationGate.isHeldBy( lease ) )
@@ -73,7 +73,7 @@ namespace sw
     private:
         uint64 send( uint16 method, const SocialRequest& request, const ReplyDelegate& onReply );
 
-        OnlineDrainGate                 _notificationGate;
+        DrainGate                       _notificationGate;
         EventBuffer<SocialNotification> _notificationBuffer;
     };
 } // namespace sw

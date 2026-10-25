@@ -297,9 +297,9 @@ namespace sw
         return unit._unitID;
     }
 
-    void ConquestWorld::drainEvents( vector<ConquestEvent>& outListEvent )
+    void ConquestWorld::drainEvents( const DrainLease& lease, vector<ConquestEvent>& outListEvent )
     {
-        _eventBuffer.drainTo( outListEvent );
+        _eventBuffer.drainTo( lease, outListEvent );
     }
 
     void ConquestWorld::writeState( Archive& outArchive ) const

@@ -42,7 +42,8 @@ namespace
     {
         CityCatalog    _catalog;
         CitySimulation _city;
-        Wallet         _wallet; ///< 도시가 빌린 금고
+        DrainLease     _eventLease; ///< 이벤트를 꺼내는 표(테스트 하나가 유일한 소비자)
+        Wallet         _wallet;     ///< 도시가 빌린 금고
         int32          _monthIndex{ 0 };
 
         bool initialize( int32 money = 5000, float32 wagePerWorkerPerMonth = 0.5f )
@@ -56,6 +57,8 @@ namespace
             SessionStateRefs refs;
             refs._pWallet = &_wallet;
             _city.initialize( &_catalog, 32, 24, settings, refs );
+            if ( _city.claimEvents( _eventLease ) == false )
+                return false;
             return true;
         }
 
@@ -242,7 +245,7 @@ SW_TEST_CASE( CityBuilderTest, FoodChainFeedsHousesAndHousesEvolveAndDevolve )
     {
         city.update( 0.25f );
         listEvent.clear();
-        city.drainEvents( listEvent );
+        city.drainEvents( scene._eventLease, listEvent );
         for ( const CityEvent& event : listEvent )
         {
             bDelivered = bDelivered || event._kind == CityEvent::Kind::GoodsDelivered;
@@ -291,7 +294,7 @@ SW_TEST_CASE( CityBuilderTest, MonthEndCollectsTaxesPaysWagesAndYearFloods )
         if ( ( stepIndex + 1 ) % 80 == 0 ) // 20 초 — 한 달
             city.settleMonth( ( stepIndex + 1 ) / 80 % 12 == 0 );
         listEvent.clear();
-        city.drainEvents( listEvent );
+        city.drainEvents( scene._eventLease, listEvent );
         for ( const CityEvent& event : listEvent )
         {
             if ( event._kind == CityEvent::Kind::MonthEnded )
@@ -326,10 +329,10 @@ SW_TEST_CASE( CityBuilderTest, FloodRollsOnlyOnANewYear )
     SW_ASSERT_TRUE( scene.initialize() );
     CitySimulation&   city = scene._city;
     vector<CityEvent> listEvent;
-    const auto        countFloods = [&city, &listEvent]()
+    const auto        countFloods = [&scene, &city, &listEvent]()
     {
         listEvent.clear();
-        city.drainEvents( listEvent );
+        city.drainEvents( scene._eventLease, listEvent );
         int32 floodCount = 0;
         for ( const CityEvent& event : listEvent )
         {

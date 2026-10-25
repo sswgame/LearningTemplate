@@ -84,7 +84,7 @@ SW_TEST_CASE( LeaderboardStreamTest, ClientSubmitOnlyOnOpenBoardsAndAchievementP
     leaderboard.start( server );
 
     LeaderboardClient leaderboardClient;
-    OnlineDrainLease  unlockLease;
+    DrainLease        unlockLease;
     SW_ASSERT_TRUE( leaderboardClient.claimAchievementUnlocks( unlockLease ) );
     test::OnlineTestClients clients( network );
     const int32             clientIndex = clients.connect( server._port, { &leaderboardClient } );

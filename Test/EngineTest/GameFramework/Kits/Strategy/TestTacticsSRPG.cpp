@@ -53,12 +53,15 @@ namespace
         SRPGCatalog       _catalog;
         SRPGBattlefield   _field;
         vector<SRPGEvent> _listEvent;
+        DrainLease        _eventLease; ///< 이벤트를 꺼내는 표(`initialize` 가 쥔다)
 
         bool initialize( int32 width, int32 height, const SRPGSettings& settings = SRPGSettings{}, uint32 seed = 7 )
         {
             if ( _catalog.loadFromXMLText( kSRPGTestXML, "TacticsSRPGTest" ) == false )
                 return false;
             _field.initialize( &_catalog, width, height, hashed_string( "plain" ), settings, seed );
+            if ( _field.claimEvents( _eventLease ) == false )
+                return false;
             return true;
         }
 
@@ -69,7 +72,7 @@ namespace
 
         int32 countEvents( SRPGEvent::Kind kind )
         {
-            _field.drainEvents( _listEvent );
+            _field.drainEvents( _eventLease, _listEvent );
             int32 count = 0;
             for ( const SRPGEvent& event : _listEvent )
             {

@@ -105,11 +105,11 @@ SW_TEST_CASE( ChatStreamTest, ChannelChatBetweenTwoClientsWithEchoAndErrors )
     chat._directory._mapName[1] = "alice";
     chat._directory._mapName[2] = "bob";
 
-    ChatClient       aliceChat;
-    ChatClient       bobChat;
-    ChatClient       guestChat;
-    OnlineDrainLease aliceLease;
-    OnlineDrainLease bobLease;
+    ChatClient aliceChat;
+    ChatClient bobChat;
+    ChatClient guestChat;
+    DrainLease aliceLease;
+    DrainLease bobLease;
     SW_ASSERT_TRUE( aliceChat.claimMessages( aliceLease ) );
     SW_ASSERT_TRUE( bobChat.claimMessages( bobLease ) );
     test::OnlineTestClients clients( network );
@@ -176,9 +176,9 @@ SW_TEST_CASE( ChatStreamTest, WhisperHistoryAndMuteAcrossTwoServers )
     secondChat._directory._mapName[2] = "bob";
     first._presence.setOnline( AccountIdentity{ "bob", 2, SW_FALSE }, second.getServerID() ); // 계정 서버(K14)가 쓴 접속 상태
 
-    ChatClient       aliceChat;
-    ChatClient       bobChat;
-    OnlineDrainLease bobLease;
+    ChatClient aliceChat;
+    ChatClient bobChat;
+    DrainLease bobLease;
     SW_ASSERT_TRUE( bobChat.claimMessages( bobLease ) );
     test::OnlineTestClients clients( network );
     const int32             alice = clients.connect( first._port, { &aliceChat } );

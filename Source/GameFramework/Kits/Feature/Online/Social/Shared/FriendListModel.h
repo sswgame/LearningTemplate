@@ -78,7 +78,7 @@ namespace sw
 
         vector<FriendEntry>        _listEntry;
         vector<SocialNotification> _listDrained;
-        OnlineDrainLease           _drainLease;
+        DrainLease                 _drainLease;
         SocialClient*              _pClient;
         uint64                     _revision;
         uint32                     _pendingRequestCount;

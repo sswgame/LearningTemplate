@@ -55,7 +55,7 @@ namespace sw
 
     private:
         deque<ChatMessage>  _listLine;
-        OnlineDrainLease    _drainLease;
+        DrainLease          _drainLease;
         vector<ChatMessage> _listDrained;
         ChatClient*         _pClient;
         uint64              _revision;

@@ -94,8 +94,8 @@ SW_TEST_CASE( MatchmakingStreamTest, PartyLobbyAndQueueOverTheWire )
 
     MatchmakingClient clientA;
     MatchmakingClient clientB;
-    OnlineDrainLease  leaseA;
-    OnlineDrainLease  leaseB;
+    DrainLease        leaseA;
+    DrainLease        leaseB;
     SW_ASSERT_TRUE( clientA.claimNotifications( leaseA ) );
     SW_ASSERT_TRUE( clientB.claimNotifications( leaseB ) );
     test::OnlineTestClients clients( network );

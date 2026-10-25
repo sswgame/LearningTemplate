@@ -9,10 +9,10 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Container/DrainGate.h"
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
 
-#include "GameFramework/Base/Online/Service/OnlineDrainGate.h"
 #include "GameFramework/Base/Online/Service/OnlineKitClient.h"
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -49,24 +49,24 @@ namespace sw
          * @brief 파티 · 초대 · 로비 · 매칭 결과 버퍼를 꺼낼 권한을 @p outLease 에 받습니다.
          * @details 네 버퍼가 한 표를 씁니다(한 클라이언트의 알림은 한 모델이 받는다). 클라이언트마다 한 곳만 받을 수 있어 이미 다른 표가 있으면 false 입니다.
          */
-        [[nodiscard]] bool claimNotifications( OnlineDrainLease& outLease ) { return _notificationGate.claim( outLease ); }
+        [[nodiscard]] bool claimNotifications( DrainLease& outLease ) { return _notificationGate.claim( outLease ); }
         /** @brief 아래 `drain*` 는 모두 `claimNotifications` 로 받은 표를 넘겨야 합니다(아니면 어서션이고 꺼내지 않습니다). */
-        void drainPartyUpdates( const OnlineDrainLease& lease, vector<PartySnapshot>& outListParty )
+        void drainPartyUpdates( const DrainLease& lease, vector<PartySnapshot>& outListParty )
         {
             if ( isDrainLeaseHeld( lease ) )
                 _partyBuffer.drainTo( outListParty );
         }
-        void drainInvites( const OnlineDrainLease& lease, vector<PartyInvite>& outListInvite )
+        void drainInvites( const DrainLease& lease, vector<PartyInvite>& outListInvite )
         {
             if ( isDrainLeaseHeld( lease ) )
                 _inviteBuffer.drainTo( outListInvite );
         }
-        void drainLobbyUpdates( const OnlineDrainLease& lease, vector<LobbySnapshot>& outListLobby )
+        void drainLobbyUpdates( const DrainLease& lease, vector<LobbySnapshot>& outListLobby )
         {
             if ( isDrainLeaseHeld( lease ) )
                 _lobbyBuffer.drainTo( outListLobby );
         }
-        void drainMatchResults( const OnlineDrainLease& lease, vector<MatchAssignment>& outListAssignment )
+        void drainMatchResults( const DrainLease& lease, vector<MatchAssignment>& outListAssignment )
         {
             if ( isDrainLeaseHeld( lease ) )
                 _matchBuffer.drainTo( outListAssignment );
@@ -79,13 +79,13 @@ namespace sw
         void                       onServicePush( uint16 kind, BitReader& body ) override;
 
     private:
-        bool isDrainLeaseHeld( const OnlineDrainLease& lease ) const
+        bool isDrainLeaseHeld( const DrainLease& lease ) const
         {
             SW_ASSERT( _notificationGate.isHeldBy( lease ) );
             return _notificationGate.isHeldBy( lease );
         }
 
-        OnlineDrainGate              _notificationGate;
+        DrainGate                    _notificationGate;
         EventBuffer<PartySnapshot>   _partyBuffer;
         EventBuffer<PartyInvite>     _inviteBuffer;
         EventBuffer<LobbySnapshot>   _lobbyBuffer;

@@ -86,10 +86,10 @@ SW_TEST_CASE( SocialStreamTest, FriendRequestNotificationAndGuildRoundTrip )
     test::OnlineTestServer  server( network, &database, &cacheDatabase, &hub, 1 );
     social.start( server );
 
-    SocialClient     clientOfFirst;
-    SocialClient     clientOfSecond;
-    OnlineDrainLease leaseOfFirst;
-    OnlineDrainLease leaseOfSecond;
+    SocialClient clientOfFirst;
+    SocialClient clientOfSecond;
+    DrainLease   leaseOfFirst;
+    DrainLease   leaseOfSecond;
     SW_ASSERT_TRUE( clientOfFirst.claimNotifications( leaseOfFirst ) );
     SW_ASSERT_TRUE( clientOfSecond.claimNotifications( leaseOfSecond ) );
     test::OnlineTestClients clients( network );

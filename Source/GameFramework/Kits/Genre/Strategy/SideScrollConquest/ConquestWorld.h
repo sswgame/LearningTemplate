@@ -179,7 +179,9 @@ namespace sw
         int32 spawnUnit( const hashed_string& unitID, ConquestTeam team, float32 x, ConquestOrder order );
         void  addResource( const hashed_string& resource, float32 amount ) { _resource.addValue( resource, amount ); }
 
-        void drainEvents( vector<ConquestEvent>& outListEvent );
+        /** @brief 이벤트를 꺼낼 쪽을 정합니다(둘째 쪽은 false). 꺼내기는 이 표가 있어야 한다 — 같은 월드를 붙인 화면 · 시스템이 서로의 이벤트를 가져가지 못한다. */
+        [[nodiscard]] bool claimEvents( DrainLease& outLease ) { return _eventBuffer.claim( outLease ); }
+        void               drainEvents( const DrainLease& lease, vector<ConquestEvent>& outListEvent );
 
         /**
          * @brief 거점(정의 id, 성문, 성벽, 점령), 건물(정의 id, 대기열, 진행, 슬롯, 일꾼), 병사, 자원, 지휘관, 고정 걸음, 지난 시간, 수입, 웨이브 타이머,

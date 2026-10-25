@@ -8,11 +8,11 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Container/DrainGate.h"
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
-#include "GameFramework/Base/Online/Service/OnlineDrainGate.h"
 #include "GameFramework/Base/Online/Service/OnlineKitClient.h"
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -40,9 +40,9 @@ namespace sw
         uint64 report( const ChatMessage& message, string_view reason, const ReplyDelegate& onReply );
 
         /** @brief 메시지 버퍼를 꺼낼 권한을 @p outLease 에 받습니다. 클라이언트마다 한 곳만 받을 수 있어 이미 다른 표가 있으면 false 입니다(메시지를 서로 가져가는 일을 막는다). */
-        [[nodiscard]] bool claimMessages( OnlineDrainLease& outLease ) { return _messageGate.claim( outLease ); }
+        [[nodiscard]] bool claimMessages( DrainLease& outLease ) { return _messageGate.claim( outLease ); }
         /** @brief 받은 메시지(채널과 귓속말)를 @p outListMessage 끝에 넘깁니다. @p lease 는 `claimMessages` 로 받은 표여야 합니다(아니면 어서션이고 꺼내지 않습니다). */
-        void drainMessages( const OnlineDrainLease& lease, vector<ChatMessage>& outListMessage )
+        void drainMessages( const DrainLease& lease, vector<ChatMessage>& outListMessage )
         {
             SW_ASSERT( _messageGate.isHeldBy( lease ) );
             if ( _messageGate.isHeldBy( lease ) )
@@ -54,7 +54,7 @@ namespace sw
         void                       onServicePush( uint16 kind, BitReader& body ) override;
 
     private:
-        OnlineDrainGate          _messageGate;
+        DrainGate                _messageGate;
         EventBuffer<ChatMessage> _messageBuffer;
     };
 } // namespace sw
