@@ -62,7 +62,39 @@ namespace sw::editor
          * @details 디버그 채널은 개발 명령과 함께만 있다(배포 구성에는 없다 — `DebugChannel.h`).
          */
         [[nodiscard]] bool loadFromChannel( int32 sourceIndex, const NetAddress& remote, string_view token );
+        /**
+         * @brief 두 칸이 채널에서 읽은 서버의 현재 오브젝트별 해시(`state.objects`)를 다시 받아 견주고, 다른 오브젝트 이름을 `getDifferingObjects` 에 채웁니다.
+         * @details 어긋난 틱 근처에서 두 서버를 `pause` 한 채 부른다(이력에 오브젝트별 해시를 쌓지 않는 까닭 — 틱 × 오브젝트가 크다). 채널에서 읽은 칸이 아니거나 한쪽 답이 오브젝트 목록이 아니면 false 이고 이유는 `getLastError` 다.
+         */
+        [[nodiscard]] bool compareObjectsFromChannels();
+        /** @brief 칸 @p sourceIndex 를 읽은 디버그 채널의 서버에 `state.objects` 를 다시 물어 틱과 오브젝트별 해시를 받습니다. 채널에서 읽은 칸이 아니거나 답이 목록이 아니면 false 이고 이유는 `getLastError` 다. */
+        [[nodiscard]] bool readObjectsFromChannel( int32 sourceIndex, uint64& outTick, vector<SceneObjectHash>& outListObject );
 #endif
+        /**
+         * @brief 칸 @p sourceIndex 가 세션 클라이언트 프로세스 @p processIndex 에서 읽은 것임을 적습니다(`loadFromReport` 뒤에 부른다 — 칸이 다시 채워지면 지워진다).
+         * @details 클라이언트는 디버그 채널이 없어 오브젝트 해시를 표준 입력(`state.objectline`)으로 받는다. 누가 어느 프로세스에 물을지는 부르는 쪽(탭)이 이 번호로 안다.
+         */
+        void setClientOrigin( int32 sourceIndex, int32 processIndex );
+        /** @brief 칸이 세션 클라이언트에서 읽은 것이면 그 프로세스 번호, 아니면 -1 입니다. */
+        int32 getClientOrigin( int32 sourceIndex ) const;
+        /** @brief 칸이 디버그 채널에서 읽은 것이면 true 입니다. */
+        bool hasChannelOrigin( int32 sourceIndex ) const;
+        /**
+         * @brief 틱을 단 오브젝트 해시 두 목록을 견줘 다른 오브젝트 이름을 채웁니다. 두 틱이 다르면 거절합니다(다른 시각의 해시를 견주지 않는다).
+         * @details `compareObjectReports` 와 탭의 클라이언트 칸(표준 입력으로 받은 목록)이 같이 쓰는 하나의 규칙이다.
+         */
+        [[nodiscard]] bool compareObjects( uint64 leftTick, const vector<SceneObjectHash>& listLeft, uint64 rightTick, const vector<SceneObjectHash>& listRight );
+        /**
+         * @brief 두 오브젝트 목록 글(`state.objects` 답)을 견줘 다른 오브젝트 이름을 채웁니다.
+         * @details 답마다 첫 줄에 서버 틱이 있고, 두 틱이 다르면 거절합니다(다른 시각의 해시를 견주지 않는다). 형식이 다른 글이어도 false 이고 결과는 그대로입니다.
+         */
+        [[nodiscard]] bool compareObjectReports( string_view leftText, string_view rightText );
+        /** @brief 마지막으로 견준 오브젝트 해시의 틱입니다(두 서버가 같은 틱에서 답했을 때만 견주므로 하나다). */
+        uint64 getObjectTick() const { return _objectTick; }
+        /** @brief 마지막 `compareObjects*` 가 찾은 다른 오브젝트 이름(이름 순, 중복 없음)입니다. */
+        const vector<string>& getDifferingObjects() const { return _listDifferingObject; }
+        /** @brief 마지막 `compareObjects*` 가 끝까지 갔으면 true 입니다(false 면 `getDifferingObjects` 가 비어 있어도 "같다" 가 아니다). */
+        bool hasObjectComparison() const { return _bObjectComparison; }
         /** @brief 이력 파일을 칸에 담습니다. 형식이 다른 줄이 있으면 false 입니다. */
         [[nodiscard]] bool loadFromFile( int32 sourceIndex, string_view path );
         /** @brief 이력 글을 칸에 담습니다(`writeReport` 형식). 형식이 다르거나 비어 있으면 false 입니다. */
@@ -87,9 +119,22 @@ namespace sw::editor
     private:
         [[nodiscard]] bool isSourceIndexValid( int32 sourceIndex );
 
+        /** @brief 칸을 채널에서 읽었을 때의 주소와 토큰입니다(`compareObjectsFromChannels` 가 같은 서버에 다시 묻는다). */
+        struct ChannelOrigin
+        {
+            NetAddress _remote{};
+            string     _token{};
+            bool       _bValid{ false };
+        };
+
         EditorStateHashSource     _arrSource[kSourceCount];
+        ChannelOrigin             _arrChannel[kSourceCount];
+        int32                     _arrClientProcess[kSourceCount];
         EditorStateHashComparison _comparison;
+        vector<string>            _listDifferingObject;
         string                    _lastError;
+        uint64                    _objectTick;
         bool                      _bComparisonCurrent;
+        bool                      _bObjectComparison;
     };
 } // namespace sw::editor

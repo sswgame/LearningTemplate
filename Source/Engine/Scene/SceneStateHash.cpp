@@ -6,6 +6,7 @@
 #include "Core/Common/HashUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Log/Logger.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -48,6 +49,11 @@ namespace sw
 
 namespace sw
 {
+    SW_LOG_CALLER( "SceneStateHash" );
+
+    // 샘플 하나는 가장 길 때 `<20자리 틱>:<16자리 해시>,` = 38 바이트다.
+    static_assert( 38u * StateHashHistory::kMaxReportLineSamples + 32u <= SceneStateHash::kMaxReportLineBytes, "kMaxReportLineSamples 가 한 줄 상한 안에 들어야 한다" );
+
     uint64 SceneStateHash::compute( const GameObjectManager& manager )
     {
         vector<SceneStateHashInternal::Entry> listEntry;
@@ -155,6 +161,159 @@ namespace sw
             object._name = string( line.substr( 17 ) );
             outListObject.push_back( object );
         }
+        return true;
+    }
+
+    void SceneStateHash::writeTickedObjectReport( uint64 tick, const vector<SceneObjectHash>& listObject, string& outText )
+    {
+        outText = "tick " + to_string( tick ) + "\n";
+        writeObjectReport( listObject, outText );
+    }
+
+    bool SceneStateHash::parseTickedObjectReport( string_view text, uint64& outTick, vector<SceneObjectHash>& outListObject )
+    {
+        outListObject.clear();
+        constexpr string_view kPrefix = "tick ";
+        const size_t          lineEnd = text.find( '\n' );
+        if ( text.substr( 0, kPrefix.size() ) != kPrefix || lineEnd == string_view::npos )
+            return false;
+        string_view tickText = text.substr( kPrefix.size(), lineEnd - kPrefix.size() );
+        while ( tickText.empty() == false && tickText.back() == '\r' )
+        {
+            tickText.remove_suffix( 1 );
+        }
+        uint64 tick = 0;
+        if ( StringUtil::parseUint64( tickText, tick ) == false )
+            return false;
+        if ( parseObjectReport( text.substr( lineEnd + 1 ), outListObject ) == false )
+            return false;
+        outTick = tick;
+        return true;
+    }
+
+    namespace SceneStateHashInternal
+    {
+        constexpr const utf8* kUpperHexDigit = "0123456789ABCDEF";
+
+        /** @brief 줄 구분 · 로그 꼬리 구분에 쓰는 글자와 제어 문자, '%' 자신은 `%XX` 로 씁니다. */
+        bool needsEscape( utf8 ch )
+        {
+            return ch == '%' || ch == ',' || ch == ':' || static_cast<uint8>( ch ) <= 0x20 || static_cast<uint8>( ch ) == 0x7F;
+        }
+
+        int32 hexValue( utf8 ch )
+        {
+            if ( '0' <= ch && ch <= '9' )
+                return ch - '0';
+            if ( 'A' <= ch && ch <= 'F' )
+                return ch - 'A' + 10;
+            return -1;
+        }
+
+        /** @brief `%XX` 를 푼 이름입니다. 잘못된 `%` 이면 false 입니다. */
+        bool unescapeName( string_view escaped, string& outName )
+        {
+            outName.clear();
+            for ( size_t index = 0; index < escaped.size(); ++index )
+            {
+                if ( escaped[index] != '%' )
+                {
+                    outName += escaped[index];
+                    continue;
+                }
+                const int32 high = index + 2 < escaped.size() ? hexValue( escaped[index + 1] ) : -1;
+                const int32 low  = index + 2 < escaped.size() ? hexValue( escaped[index + 2] ) : -1;
+                if ( high < 0 || low < 0 )
+                    return false;
+                outName += static_cast<utf8>( high * 16 + low );
+                index += 2;
+            }
+            return true;
+        }
+    } // namespace SceneStateHashInternal
+
+    bool SceneStateHash::writeObjectReportLine( uint64 tick, const vector<SceneObjectHash>& listObject, string& outLine )
+    {
+        outLine = kObjectReportLinePrefix;
+        outLine += ' ';
+        outLine += to_string( tick );
+        outLine += ' ';
+        if ( listObject.empty() )
+        {
+            outLine += '-';
+            return true;
+        }
+        for ( size_t index = 0; index < listObject.size(); ++index )
+        {
+            if ( index > 0 )
+                outLine += ',';
+            for ( int32 nibble = 15; nibble >= 0; --nibble )
+            {
+                outLine += "0123456789abcdef"[( listObject[index]._hash >> ( nibble * 4 ) ) & 0xF];
+            }
+            outLine += ':';
+            for ( const utf8 ch : listObject[index]._name )
+            {
+                if ( SceneStateHashInternal::needsEscape( ch ) )
+                {
+                    const uint8 code = static_cast<uint8>( ch );
+                    outLine += '%';
+                    outLine += SceneStateHashInternal::kUpperHexDigit[code >> 4];
+                    outLine += SceneStateHashInternal::kUpperHexDigit[code & 0xF];
+                }
+                else
+                {
+                    outLine += ch;
+                }
+            }
+        }
+        if ( outLine.size() > kMaxReportLineBytes )
+        {
+            SW_LOG_ERROR_ID( "State.ReportLineTooLong", "SceneStateHash: the object report line is %# bytes for %# objects, over the %# byte line limit - not written", outLine.size(), listObject.size(), kMaxReportLineBytes );
+            outLine.clear();
+            return false;
+        }
+        return true;
+    }
+
+    bool SceneStateHash::tryParseObjectReportLine( string_view line, uint64& outTick, vector<SceneObjectHash>& outListObject )
+    {
+        outListObject.clear();
+        const size_t prefixAt = line.find( kObjectReportLinePrefix );
+        if ( prefixAt == string_view::npos )
+            return false;
+        string_view  body    = StringUtil::trim( line.substr( prefixAt + string_view( kObjectReportLinePrefix ).size() ) );
+        const size_t tickEnd = body.find( ' ' );
+        uint64       tick    = 0;
+        if ( tickEnd == string_view::npos || StringUtil::parseUint64( body.substr( 0, tickEnd ), tick ) == false )
+            return false;
+        body = StringUtil::trim( body.substr( tickEnd + 1 ) );
+        body = body.substr( 0, body.find_first_of( " \t" ) ); // 로그 꼬리는 읽지 않는다
+        if ( static_cast<size_t>( body.data() + body.size() - ( line.data() + prefixAt ) ) > kMaxReportLineBytes )
+            return false; // 쓰는 쪽이 만들 수 없는 길이 — 잘린 줄이거나 다른 글이다
+        if ( body != "-" )
+        {
+            size_t itemStart = 0;
+            while ( itemStart <= body.size() )
+            {
+                size_t itemEnd = body.find( ',', itemStart );
+                if ( itemEnd == string_view::npos )
+                    itemEnd = body.size();
+                const string_view item  = body.substr( itemStart, itemEnd - itemStart );
+                const size_t      colon = item.find( ':' );
+                SceneObjectHash   object;
+                const bool        bHasHash = colon == 16 && StringUtil::parseUint64( item.substr( 0, colon ), object._hash, 16 );
+                const bool        bHasName = bHasHash && colon + 1 < item.size() && SceneStateHashInternal::unescapeName( item.substr( colon + 1 ), object._name );
+                if ( bHasName == false )
+                {
+                    outListObject.clear();
+                    return false;
+                }
+                outListObject.push_back( std::move( object ) );
+                itemStart = itemEnd + 1;
+            }
+        }
+        outTick = tick;
         return true;
     }
 
@@ -275,14 +434,14 @@ namespace sw
         }
     }
 
-    void StateHashHistory::writeReportLine( const vector<StateHashSample>& listSample, string& outText )
+    bool StateHashHistory::writeReportLine( const vector<StateHashSample>& listSample, string& outText )
     {
         outText = kReportLinePrefix;
         outText += ' ';
         if ( listSample.empty() )
         {
             outText += '-';
-            return;
+            return true;
         }
         string block;
         writeReport( listSample, block ); // `<tick> <hash>\n` 줄들 — 한 줄 판은 공백을 ':' 로, 줄 끝을 ',' 로 바꾼다
@@ -295,6 +454,14 @@ namespace sw
         }
         block.pop_back(); // 마지막 ','
         outText += block;
+        if ( outText.size() > SceneStateHash::kMaxReportLineBytes )
+        {
+            SW_LOG_ERROR_ID( "State.ReportLineTooLong", "StateHashHistory: the hash line is %# bytes for %# samples, over the %# byte line limit - not written", outText.size(), listSample.size(),
+                             SceneStateHash::kMaxReportLineBytes );
+            outText.clear();
+            return false;
+        }
+        return true;
     }
 
     bool StateHashHistory::tryParseReportLine( string_view line, vector<StateHashSample>& outListSample )
@@ -305,6 +472,8 @@ namespace sw
         outListSample.clear();
         string_view body = StringUtil::trim( line.substr( prefixAt + string_view( kReportLinePrefix ).size() ) );
         body             = body.substr( 0, body.find_first_of( " \t" ) ); // 로그 꼬리는 읽지 않는다
+        if ( static_cast<size_t>( body.data() + body.size() - ( line.data() + prefixAt ) ) > SceneStateHash::kMaxReportLineBytes )
+            return false; // 쓰는 쪽이 만들 수 없는 길이 — 잘린 줄이거나 다른 글이다
         if ( body == "-" )
             return true;
         size_t itemStart = 0;

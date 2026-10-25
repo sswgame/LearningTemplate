@@ -2487,6 +2487,24 @@
 				<item>Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorMultiplayer.ProfilerNoReplicas"
+		       source="The process reports no replication counters (a replication kit raises them with GameNetSession::setReplicaStats)">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.ProfilerReplicas"
+		       source="Replication by name (per second)">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.ProfilerReplicasHelp"
+		       source="Updates and bytes a replication kit counted per second, from the difference of the last two net.stats reports; the share is of the listed bytes">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorMultiplayer.ProfilerNoSession"
 		       source="Start a multiplayer session (Net Mode on the toolbar) to see its traffic">
 			<origins>
@@ -2576,6 +2594,12 @@
 		</entry>
 		<entry key="EditorMultiplayer.SyncCompare"
 		       source="Find the earliest tick both histories hold with different state hashes (scene transforms: name, active, world position)">
+			<origins>
+				<item>Source/Editor/Panels/Multiplayer/MultiplayerSyncTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMultiplayer.SyncObjects"
+		       source="Ask both slots (a server read over a debug channel, or a session client) for their current per-object hashes and list the objects that differ (pause the server near the divergent tick first; the two answers must carry the same tick)">
 			<origins>
 				<item>Source/Editor/Panels/Multiplayer/MultiplayerSyncTab.cpp</item>
 			</origins>

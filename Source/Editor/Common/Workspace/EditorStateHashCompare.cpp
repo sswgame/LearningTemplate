@@ -12,9 +12,14 @@ namespace sw::editor
 {
     EditorStateHashCompare::EditorStateHashCompare()
         : _arrSource{}
+        , _arrChannel{}
+        , _arrClientProcess{ -1, -1 }
         , _comparison{}
+        , _listDifferingObject{}
         , _lastError{}
+        , _objectTick{ 0 }
         , _bComparisonCurrent{ false }
+        , _bObjectComparison{ false }
     {
     }
 
@@ -54,7 +59,10 @@ namespace sw::editor
         EditorStateHashSource& source = _arrSource[sourceIndex];
         source._label                 = string( label );
         source._listSample.swap( listSample );
-        _bComparisonCurrent = false;
+        _arrChannel[sourceIndex]       = ChannelOrigin{}; // 채널에서 읽었으면 loadFromChannel 이 곧 다시 채운다
+        _arrClientProcess[sourceIndex] = -1;              // 클라이언트에서 읽었으면 탭이 setClientOrigin 으로 다시 적는다
+        _bComparisonCurrent            = false;
+        _bObjectComparison             = false;
         return true;
     }
 
@@ -78,9 +86,102 @@ namespace sw::editor
             _lastError = body.empty() ? "no state.hashes answer from " + remote.toString() : body;
             return false;
         }
-        return loadFromReport( sourceIndex, remote.toString(), body );
+        if ( loadFromReport( sourceIndex, remote.toString(), body ) == false )
+            return false;
+        _arrChannel[sourceIndex] = ChannelOrigin{ remote, string( token ), true };
+        return true;
+    }
+
+    bool EditorStateHashCompare::readObjectsFromChannel( int32 sourceIndex, uint64& outTick, vector<SceneObjectHash>& outListObject )
+    {
+        if ( isSourceIndexValid( sourceIndex ) == false )
+            return false;
+        const ChannelOrigin& origin = _arrChannel[sourceIndex];
+        if ( origin._bValid == false )
+        {
+            _lastError = "slot " + to_string( sourceIndex ) + " was not read from a debug channel - object hashes come only from a live process";
+            return false;
+        }
+        DebugChannelClient client;
+        if ( client.connect( origin._remote, origin._token, kChannelTimeoutMilliseconds ) == false )
+        {
+            _lastError = "could not connect to the debug channel at " + origin._remote.toString();
+            return false;
+        }
+        string     text;
+        const bool bAnswered = client.request( "state.objects", kChannelTimeoutMilliseconds, text );
+        client.disconnect();
+        if ( bAnswered == false )
+        {
+            _lastError = text.empty() ? "no state.objects answer from " + origin._remote.toString() : text;
+            return false;
+        }
+        if ( SceneStateHash::parseTickedObjectReport( text, outTick, outListObject ) == false )
+        {
+            _lastError = "an answer is not a ticked object hash list (tick <n>, then <hex hash> <name> per line)";
+            return false;
+        }
+        return true;
+    }
+
+    bool EditorStateHashCompare::compareObjectsFromChannels()
+    {
+        uint64                  arrTick[kSourceCount] = {};
+        vector<SceneObjectHash> arrList[kSourceCount];
+        for ( int32 sourceIndex = 0; sourceIndex < kSourceCount; ++sourceIndex )
+        {
+            if ( readObjectsFromChannel( sourceIndex, arrTick[sourceIndex], arrList[sourceIndex] ) == false )
+                return false;
+        }
+        return compareObjects( arrTick[0], arrList[0], arrTick[1], arrList[1] );
     }
 #endif
+
+    void EditorStateHashCompare::setClientOrigin( int32 sourceIndex, int32 processIndex )
+    {
+        if ( isSourceIndexValid( sourceIndex ) )
+            _arrClientProcess[sourceIndex] = processIndex;
+    }
+
+    int32 EditorStateHashCompare::getClientOrigin( int32 sourceIndex ) const
+    {
+        return 0 <= sourceIndex && sourceIndex < kSourceCount ? _arrClientProcess[sourceIndex] : -1;
+    }
+
+    bool EditorStateHashCompare::hasChannelOrigin( int32 sourceIndex ) const
+    {
+        return 0 <= sourceIndex && sourceIndex < kSourceCount && _arrChannel[sourceIndex]._bValid;
+    }
+
+    bool EditorStateHashCompare::compareObjectReports( string_view leftText, string_view rightText )
+    {
+        vector<SceneObjectHash> listLeft;
+        vector<SceneObjectHash> listRight;
+        uint64                  leftTick  = 0;
+        uint64                  rightTick = 0;
+        if ( SceneStateHash::parseTickedObjectReport( leftText, leftTick, listLeft ) == false || SceneStateHash::parseTickedObjectReport( rightText, rightTick, listRight ) == false )
+        {
+            _lastError = "an answer is not a ticked object hash list (tick <n>, then <hex hash> <name> per line)";
+            return false;
+        }
+        return compareObjects( leftTick, listLeft, rightTick, listRight );
+    }
+
+    bool EditorStateHashCompare::compareObjects( uint64 leftTick, const vector<SceneObjectHash>& listLeft, uint64 rightTick, const vector<SceneObjectHash>& listRight )
+    {
+        if ( leftTick != rightTick )
+        {
+            // 두 서버가 다른 틱에서 답했다 — 그 해시를 견주면 움직이는 오브젝트가 모두 다른 것으로 나온다. 두 서버를 pause 한 채 다시 누른다.
+            _lastError = "the two servers answered at different ticks (" + to_string( leftTick ) + " vs " + to_string( rightTick ) + ") - pause both and try again";
+            return false;
+        }
+        vector<string> listName;
+        static_cast<void>( SceneStateHash::findDifferingObjects( listLeft, listRight, listName ) );
+        _listDifferingObject = std::move( listName );
+        _objectTick          = leftTick;
+        _bObjectComparison   = true;
+        return true;
+    }
 
     bool EditorStateHashCompare::loadFromFile( int32 sourceIndex, string_view path )
     {
@@ -112,8 +213,11 @@ namespace sw::editor
     {
         if ( isSourceIndexValid( sourceIndex ) == false )
             return;
-        _arrSource[sourceIndex] = EditorStateHashSource{};
-        _bComparisonCurrent     = false;
+        _arrSource[sourceIndex]        = EditorStateHashSource{};
+        _arrChannel[sourceIndex]       = ChannelOrigin{};
+        _arrClientProcess[sourceIndex] = -1;
+        _bComparisonCurrent            = false;
+        _bObjectComparison             = false;
     }
 
     bool EditorStateHashCompare::compare()

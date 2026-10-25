@@ -4,6 +4,7 @@
 
 #include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Connection/NetConnection.h"
@@ -254,7 +255,7 @@ namespace sw
             static bool runStats( const vector<string>& listArgument, string& outReply )
             {
                 (void)listArgument;
-                const GameNetSession* pSession = findCommandSession( outReply );
+                GameNetSession* pSession = findCommandSession( outReply );
                 if ( pSession == nullptr )
                     return true;
                 outReply = pSession->makeStatsReport().makeLine();
@@ -789,7 +790,7 @@ namespace sw
         return report;
     }
 
-    NetStatsReport GameNetSession::makeStatsReport() const
+    NetStatsReport GameNetSession::makeStatsReport()
     {
         NetStatsReport report;
         if ( _role == GameNetRole::None )
@@ -813,13 +814,52 @@ namespace sw
         NetMessageKindTallyTable sentTally;
         _peers.addSentKindTally( sentTally );
         report.populateKinds( _router.getKindTally(), sentTally );
-        report._listReplicaEntry = _listReplicaStat;
+        // 상한 안에서 앞 절반은 지난 보고 뒤 늘어난 바이트가 큰 것(표의 초당 바이트와 같은 기준), 나머지는 누적 바이트가 큰 것.
+        const auto increaseOf = []( const ReplicaStat& stat )
+        {
+            return stat._entry._byteCount > stat._reportedByteCount ? stat._entry._byteCount - stat._reportedByteCount : uint64{ 0 };
+        };
+        vector<const ReplicaStat*> listOrder;
+        for ( const ReplicaStat& stat : _listReplicaStat )
+        {
+            listOrder.push_back( &stat );
+        }
+        const size_t cap = static_cast<size_t>( NetStatsReport::kMaxReplicaEntry );
+        std::sort( listOrder.begin(), listOrder.end(), [&increaseOf]( const ReplicaStat* pLeft, const ReplicaStat* pRight )
+        {
+            const uint64 leftIncrease  = increaseOf( *pLeft );
+            const uint64 rightIncrease = increaseOf( *pRight );
+            return leftIncrease != rightIncrease ? leftIncrease > rightIncrease : pLeft->_entry._name < pRight->_entry._name;
+        } );
+        const size_t                      recentCount = ( cap + 1 ) / 2;
+        vector<const ReplicaStat*>        listPicked;
+        unordered_set<const ReplicaStat*> uniqueSetPicked;
+        for ( size_t index = 0; index < listOrder.size() && listPicked.size() < recentCount; ++index )
+        {
+            if ( increaseOf( *listOrder[index] ) > 0 && uniqueSetPicked.insert( listOrder[index] ).second )
+                listPicked.push_back( listOrder[index] );
+        }
+        std::sort( listOrder.begin(), listOrder.end(), []( const ReplicaStat* pLeft, const ReplicaStat* pRight )
+        {
+            return pLeft->_entry._byteCount != pRight->_entry._byteCount ? pLeft->_entry._byteCount > pRight->_entry._byteCount : pLeft->_entry._name < pRight->_entry._name;
+        } );
+        for ( size_t index = 0; index < listOrder.size() && listPicked.size() < cap; ++index )
+        {
+            if ( uniqueSetPicked.insert( listOrder[index] ).second )
+                listPicked.push_back( listOrder[index] );
+        }
+        for ( const ReplicaStat* pStat : listPicked )
+        {
+            report._listReplicaEntry.push_back( pStat->_entry );
+        }
         std::sort( report._listReplicaEntry.begin(), report._listReplicaEntry.end(), []( const NetStatsReplicaEntry& left, const NetStatsReplicaEntry& right )
         {
             return left._byteCount != right._byteCount ? left._byteCount > right._byteCount : left._name < right._name;
         } );
-        if ( report._listReplicaEntry.size() > static_cast<size_t>( NetStatsReport::kMaxReplicaEntry ) )
-            report._listReplicaEntry.resize( static_cast<size_t>( NetStatsReport::kMaxReplicaEntry ) );
+        for ( ReplicaStat& stat : _listReplicaStat )
+        {
+            stat._reportedByteCount = stat._entry._byteCount;
+        }
         return report;
     }
 
@@ -830,12 +870,12 @@ namespace sw
             SW_LOG_WARNING( "Net session: replica stats name '%#' is not [a-z0-9_.-] - the entry is not reported", name );
             return false;
         }
-        for ( NetStatsReplicaEntry& entry : _listReplicaStat )
+        for ( ReplicaStat& stat : _listReplicaStat )
         {
-            if ( entry._name == name )
+            if ( stat._entry._name == name )
             {
-                entry._updateCount = updateCount;
-                entry._byteCount   = byteCount;
+                stat._entry._updateCount = updateCount;
+                stat._entry._byteCount   = byteCount;
                 return true;
             }
         }
@@ -844,7 +884,10 @@ namespace sw
             SW_LOG_WARNING( "Net session: more than %# replica stats names - '%#' is not reported", static_cast<int32>( kMaxReplicaSources ), name );
             return false;
         }
-        _listReplicaStat.push_back( NetStatsReplicaEntry{ string( name ), updateCount, byteCount } );
+        _listReplicaStat.push_back( ReplicaStat{
+            NetStatsReplicaEntry{ string( name ), updateCount, byteCount },
+            0
+        } );
         return true;
     }
 

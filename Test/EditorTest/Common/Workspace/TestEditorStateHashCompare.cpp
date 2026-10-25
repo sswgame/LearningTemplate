@@ -36,3 +36,83 @@ SW_TEST_CASE( EditorStateHashCompareTest, RejectsTextThatIsNotAHistory )
     SW_EXPECT_FALSE( compare.compare() );
     SW_EXPECT_FALSE( compare.getLastError().empty() );
 }
+
+/**
+ * @brief [EditorStateHashCompareTest] 두 오브젝트 해시 답을 견줘 다른 오브젝트 이름만 낸다 — 한쪽에만 있는 오브젝트도 다른 것이다
+ */
+SW_TEST_CASE( EditorStateHashCompareTest, NamesTheObjectsWhoseHashesDiffer )
+{
+    EditorStateHashCompare compare;
+    SW_EXPECT_FALSE( compare.hasObjectComparison() );
+    SW_ASSERT_TRUE( compare.compareObjectReports( "tick 40\n00000000000000aa Door\n00000000000000bb Lamp\n00000000000000cc Gone\n",
+                                                  "tick 40\n00000000000000aa Door\n00000000000000b0 Lamp\n" ) );
+    SW_EXPECT_TRUE( compare.hasObjectComparison() );
+    SW_EXPECT_EQUAL( uint64{ 40 }, compare.getObjectTick() );
+    SW_ASSERT_EQUAL( size_t{ 2 }, compare.getDifferingObjects().size() );
+    SW_EXPECT_TRUE( compare.getDifferingObjects()[0] == "Gone" );
+    SW_EXPECT_TRUE( compare.getDifferingObjects()[1] == "Lamp" );
+}
+
+/**
+ * @brief [EditorStateHashCompareTest] 오브젝트 목록이 아닌 답(서버 오류 글)은 견주지 않고 거절한다 — 앞 결과를 지우지 않는다
+ */
+SW_TEST_CASE( EditorStateHashCompareTest, RejectsAnObjectAnswerThatIsNotAList )
+{
+    EditorStateHashCompare compare;
+    SW_ASSERT_TRUE( compare.compareObjectReports( "tick 7\n00000000000000aa Door\n", "tick 7\n00000000000000ab Door\n" ) );
+    SW_EXPECT_FALSE( compare.compareObjectReports( "no active scene", "tick 7\n00000000000000aa Door\n" ) );
+    SW_EXPECT_FALSE( compare.compareObjectReports( "00000000000000aa Door\n", "00000000000000aa Door\n" ) ); // 틱 머리가 없는 답은 어느 시각인지 모른다
+    SW_EXPECT_FALSE( compare.getLastError().empty() );
+    SW_EXPECT_EQUAL( size_t{ 1 }, compare.getDifferingObjects().size() );
+}
+
+/**
+ * @brief [EditorStateHashCompareTest] 두 서버의 답이 다른 틱이면 견주지 않고 거절한다 — 다른 시각의 해시를 같은 시각으로 읽지 않는다
+ */
+SW_TEST_CASE( EditorStateHashCompareTest, RejectsObjectAnswersFromDifferentTicks )
+{
+    EditorStateHashCompare compare;
+    SW_EXPECT_FALSE( compare.compareObjectReports( "tick 7\n00000000000000aa Door\n", "tick 8\n00000000000000aa Door\n" ) );
+    SW_EXPECT_FALSE( compare.hasObjectComparison() );
+    SW_EXPECT_FALSE( compare.getLastError().empty() );
+}
+
+/**
+ * @brief [EditorStateHashCompareTest] 틱을 단 목록 둘(클라이언트 칸이 표준 입력으로 받은 것)도 서버 칸과 같은 규칙으로 견준다 — 다른 틱은 거절한다
+ */
+SW_TEST_CASE( EditorStateHashCompareTest, ComparesObjectListsWithTheSameTickRuleAsTheTexts )
+{
+    EditorStateHashCompare        compare;
+    const vector<SceneObjectHash> listLeft = {
+        SceneObjectHash{"Door", 0xaaull},
+        SceneObjectHash{"Lamp", 0xbbull}
+    };
+    const vector<SceneObjectHash> listRight = {
+        SceneObjectHash{"Door", 0xaaull},
+        SceneObjectHash{"Lamp", 0xb0ull}
+    };
+    SW_EXPECT_FALSE( compare.compareObjects( 9, listLeft, 10, listRight ) );
+    SW_EXPECT_FALSE( compare.hasObjectComparison() );
+    SW_ASSERT_TRUE( compare.compareObjects( 9, listLeft, 9, listRight ) );
+    SW_EXPECT_EQUAL( uint64{ 9 }, compare.getObjectTick() );
+    SW_ASSERT_EQUAL( size_t{ 1 }, compare.getDifferingObjects().size() );
+    SW_EXPECT_TRUE( compare.getDifferingObjects()[0] == "Lamp" );
+}
+
+/**
+ * @brief [EditorStateHashCompareTest] 칸의 클라이언트 원천은 칸을 다시 채우거나 비우면 지워진다 — 낡은 프로세스 번호로 묻지 않는다
+ */
+SW_TEST_CASE( EditorStateHashCompareTest, ClientOriginIsClearedWhenTheSlotIsRefilledOrCleared )
+{
+    EditorStateHashCompare compare;
+    SW_EXPECT_EQUAL( -1, compare.getClientOrigin( 0 ) );
+    SW_ASSERT_TRUE( compare.loadFromReport( 0, "client", "1 00000000000000aa\n" ) );
+    compare.setClientOrigin( 0, 2 );
+    SW_EXPECT_EQUAL( 2, compare.getClientOrigin( 0 ) );
+    SW_EXPECT_EQUAL( -1, compare.getClientOrigin( 1 ) );
+    SW_ASSERT_TRUE( compare.loadFromReport( 0, "file", "1 00000000000000aa\n" ) );
+    SW_EXPECT_EQUAL( -1, compare.getClientOrigin( 0 ) );
+    compare.setClientOrigin( 1, 1 );
+    compare.clearSource( 1 );
+    SW_EXPECT_EQUAL( -1, compare.getClientOrigin( 1 ) );
+}

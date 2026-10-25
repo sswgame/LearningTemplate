@@ -174,3 +174,74 @@ SW_TEST_CASE( EditorNetProfilerTest, HistoryKeepsOneTrackPerProcess )
     SW_EXPECT_EQUAL( 0, history.computeSampleCount() );
     SW_EXPECT_EQUAL( 0, history.getTrackCount() );
 }
+
+/**
+ * @brief [EditorNetProfilerTest] 복제 셈은 두 보고의 누적 차를 초당 값으로 바꾸고, 기준선이 없는 이름과 줄어든 값은 0 이다 — 바이트가 큰 순서와 비율을 낸다
+ */
+SW_TEST_CASE( EditorNetProfilerTest, ReplicaRatesUseTheDifferenceOfTwoReports )
+{
+    vector<NetStatsReplicaEntry> listPrevious;
+    listPrevious.push_back( NetStatsReplicaEntry{ "door", 10, 1000 } );
+    listPrevious.push_back( NetStatsReplicaEntry{ "lamp", 5, 500 } );
+    listPrevious.push_back( NetStatsReplicaEntry{ "wheel", 9, 900 } );
+    vector<NetStatsReplicaEntry> listCurrent;
+    listCurrent.push_back( NetStatsReplicaEntry{ "door", 14, 1200 } );
+    listCurrent.push_back( NetStatsReplicaEntry{ "lamp", 5, 500 } );
+    listCurrent.push_back( NetStatsReplicaEntry{ "new", 7, 700 } );
+    listCurrent.push_back( NetStatsReplicaEntry{ "wheel", 1, 100 } );
+    vector<EditorNetReplicaRate> listRate;
+    EditorNetProfilerUtil::computeReplicaRates( listPrevious, listCurrent, 2.0, listRate );
+    SW_ASSERT_EQUAL( size_t{ 4 }, listRate.size() );
+    SW_EXPECT_TRUE( listRate[0]._name == "door" );
+    SW_EXPECT_NEAR_EQUAL( listRate[0]._updatesPerSecond, 2.0f, 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( listRate[0]._bytesPerSecond, 100.0f, 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( listRate[0]._share, 1.0f, 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( listRate[1]._bytesPerSecond, 0.0f, 1.0e-6f ); // lamp(변화 없음) · new(기준선 없음) · wheel(줄어듦) 모두 0, 이름 순
+    SW_EXPECT_TRUE( listRate[1]._name == "lamp" );
+    SW_EXPECT_TRUE( listRate[2]._name == "new" );
+    SW_EXPECT_TRUE( listRate[3]._name == "wheel" );
+
+    EditorNetProfilerUtil::computeReplicaRates( listPrevious, listCurrent, 0.0, listRate );
+    SW_EXPECT_TRUE( listRate.empty() );
+}
+
+/**
+ * @brief [EditorNetProfilerTest] 첫 보고에는 복제 비율이 없고, 두 번째 보고부터 앞 보고와의 차로 채운다
+ */
+SW_TEST_CASE( EditorNetProfilerTest, HistoryFillsReplicaRatesFromTheSecondReport )
+{
+    EditorNetProfilerHistory history;
+    NetStatsReport           first;
+    first._listReplicaEntry.push_back( NetStatsReplicaEntry{ "door", 10, 1000 } );
+    history.ingest( 0, first, 1.0 );
+    SW_ASSERT_TRUE( history.findTrack( 0 ) != nullptr );
+    SW_EXPECT_TRUE( history.findTrack( 0 )->_listReplicaRate.empty() );
+    NetStatsReport second;
+    second._listReplicaEntry.push_back( NetStatsReplicaEntry{ "door", 12, 1400 } );
+    history.ingest( 0, second, 2.0 );
+    SW_ASSERT_EQUAL( size_t{ 1 }, history.findTrack( 0 )->_listReplicaRate.size() );
+    SW_EXPECT_NEAR_EQUAL( history.findTrack( 0 )->_listReplicaRate[0]._bytesPerSecond, 400.0f, 1.0e-6f );
+}
+
+/**
+ * @brief [EditorNetProfilerTest] 누적 값 차이는 한 함수로 초당 값을 낸다 — 줄었거나 시간이 흐르지 않았으면 0, 패킷 셈과 복제 셈이 같은 약속을 쓴다
+ */
+SW_TEST_CASE( EditorNetProfilerTest, OneRateFunctionServesPacketsAndReplicas )
+{
+    SW_EXPECT_NEAR_EQUAL( EditorNetProfilerUtil::computeRate( 100, 130, 0.5 ), 60.0f, 1.0e-4f );
+    SW_EXPECT_NEAR_EQUAL( EditorNetProfilerUtil::computeRate( 130, 100, 0.5 ), 0.0f, 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( EditorNetProfilerUtil::computeRate( 100, 130, 0.0 ), 0.0f, 1.0e-6f );
+
+    // 복제 셈은 같은 함수의 값이다.
+    vector<NetStatsReplicaEntry> listPrevious{
+        NetStatsReplicaEntry{ "door", 100, 1000 }
+    };
+    vector<NetStatsReplicaEntry> listCurrent{
+        NetStatsReplicaEntry{ "door", 130, 1300 }
+    };
+    vector<EditorNetReplicaRate> listRate;
+    EditorNetProfilerUtil::computeReplicaRates( listPrevious, listCurrent, 0.5, listRate );
+    SW_ASSERT_EQUAL( size_t{ 1 }, listRate.size() );
+    SW_EXPECT_NEAR_EQUAL( listRate[0]._updatesPerSecond, EditorNetProfilerUtil::computeRate( 100, 130, 0.5 ), 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( listRate[0]._bytesPerSecond, EditorNetProfilerUtil::computeRate( 1000, 1300, 0.5 ), 1.0e-6f );
+}

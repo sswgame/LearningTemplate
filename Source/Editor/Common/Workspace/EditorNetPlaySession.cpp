@@ -36,6 +36,9 @@ namespace sw::editor
         uint32                  _statsReportCount{ 0 };     ///< 받은 `net.stats` 보고 수(게임 스레드)
         vector<StateHashSample> _listStateHash{};           ///< 마지막 `state.hashline` 답(게임 스레드, Sync 탭)
         uint32                  _stateHashReportCount{ 0 };
+        vector<SceneObjectHash> _listObjectHash{};    ///< 마지막 `state.objectline` 답의 오브젝트별 해시(게임 스레드, Sync 탭)
+        uint64                  _objectHashTick{ 0 }; ///< 그 답이 단 틱
+        uint32                  _objectHashReportCount{ 0 };
         atomic<int32>           _exitCode{ 0 };
         atomic<uint32>          _exited{ 0 };    ///< 읽기 스레드가 파이프 끝을 보고 종료 코드를 거뒀다
         int32                   _processID{ 0 }; ///< 띄울 때의 pid(회수한 뒤에도 패널에 보인다)
@@ -379,6 +382,12 @@ namespace sw::editor
                     ++child._stateHashReportCount;
                     continue;
                 }
+                // Sync 탭이 물은 오브젝트별 해시(한 줄)도 보관만 한다 — 오브젝트 수만큼 길다.
+                if ( SceneStateHash::tryParseObjectReportLine( line, child._objectHashTick, child._listObjectHash ) )
+                {
+                    ++child._objectHashReportCount;
+                    continue;
+                }
                 // 자식의 오류 줄은 경고로 남긴다. 에디터 로그의 오류 수는 에디터 자신의 오류만 센다. 줄에는 자식의 로그 수준 레이블이 그대로 있다.
                 if ( line.find( "[Error]" ) != string::npos )
                     SW_LOG_WARNING( "[%#] %#", child._label, line );
@@ -431,20 +440,23 @@ namespace sw::editor
         EditorNetPlayProcessStatus status;
         if ( processIndex < 0 || processIndex >= getProcessCount() )
             return status;
-        const ChildProcess& child    = *_listProcess[static_cast<size_t>( processIndex )];
-        status._label                = child._label;
-        status._lastLine             = child._lastLine;
-        status._tracePath            = child._tracePath;
-        status._emulationReport      = child._emulationReport;
-        status._emulationReportCount = child._emulationReportCount;
-        status._statsReport          = child._statsReport;
-        status._statsReportCount     = child._statsReportCount;
-        status._listStateHash        = child._listStateHash;
-        status._stateHashReportCount = child._stateHashReportCount;
-        status._processID            = child._processID;
-        status._bRunning             = child._exited.load() == 0;
-        status._bConnected           = child._bConnected;
-        status._exitCode             = status._bRunning ? 0 : child._exitCode.load();
+        const ChildProcess& child     = *_listProcess[static_cast<size_t>( processIndex )];
+        status._label                 = child._label;
+        status._lastLine              = child._lastLine;
+        status._tracePath             = child._tracePath;
+        status._emulationReport       = child._emulationReport;
+        status._emulationReportCount  = child._emulationReportCount;
+        status._statsReport           = child._statsReport;
+        status._statsReportCount      = child._statsReportCount;
+        status._listStateHash         = child._listStateHash;
+        status._stateHashReportCount  = child._stateHashReportCount;
+        status._listObjectHash        = child._listObjectHash;
+        status._objectHashTick        = child._objectHashTick;
+        status._objectHashReportCount = child._objectHashReportCount;
+        status._processID             = child._processID;
+        status._bRunning              = child._exited.load() == 0;
+        status._bConnected            = child._bConnected;
+        status._exitCode              = status._bRunning ? 0 : child._exitCode.load();
         return status;
     }
 

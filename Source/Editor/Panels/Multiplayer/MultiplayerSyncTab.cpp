@@ -28,8 +28,8 @@ namespace sw::editor
             static constexpr float32 kFieldWidthInFonts = 10.0f;
             /** @brief 경로 칸의 너비(글자 크기 배수)입니다. */
             static constexpr float32 kPathWidthInFonts = 20.0f;
-            /** @brief 클라이언트에게 묻는 최근 틱 수입니다. 답은 로그 한 줄(틱마다 약 22 바이트)이라 세션 서버 이력(3600 틱)보다 짧게 묻는다. */
-            static constexpr int32 kClientHistoryTicks = 512;
+            /** @brief 클라이언트에게 묻는 최근 틱 수입니다. 답은 로그 한 줄이라 한 줄 상한(`SceneStateHash::kMaxReportLineBytes`)에 드는 수까지만 묻는다(더 많이 물으면 클라이언트가 오류로 답한다). 세션 서버 이력(3600 틱)보다 짧다. */
+            static constexpr int32 kClientHistoryTicks = static_cast<int32>( StateHashHistory::kMaxReportLineSamples );
             /** @brief 슬롯 이름입니다(탭 · 명령 답). */
             static constexpr const utf8* kArrSourceName[EditorStateHashCompare::kSourceCount] = { "A", "B" };
 
@@ -93,12 +93,65 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief 탐침 `Editor.NetPlaySyncObjectsCompared` — 마지막 "Which objects differ" 가 끝까지 갔으면 1 입니다(목록이 비어도 비교는 한 것). */
+            [[nodiscard]] static bool readObjectsCompared( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                outValue = getCompare().hasObjectComparison() ? 1.0 : 0.0;
+                return true;
+            }
+
+            /** @brief 탐침 `Editor.NetPlaySyncDifferingObjects` — 마지막 "Which objects differ" 가 짚은 다른 오브젝트 수입니다. */
+            [[nodiscard]] static bool readDifferingObjects( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                outValue = static_cast<float64>( getCompare().getDifferingObjects().size() );
+                return true;
+            }
+
+            /**
+             * @brief `netplay.sync objects server|client` — 탭의 "Which objects differ" 와 같은 비교를 합니다. 서버 칸은 두 칸을 세션 서버로 두고 채널에서 다시 읽고(`compareObjectsFromChannels`),
+             *        클라이언트 칸은 A 를 세션 서버(채널), B 를 첫 클라이언트(표준 입력의 마지막 `state.objectline` 답)로 두고 `compareObjects` 로 견준다.
+             * @details 두 쪽의 틱이 같아야 하므로 서버를 `pause` 하고 클라이언트가 마지막 틱을 받은 뒤에 부른다. 클라이언트 칸은 먼저 `netplay.command client1 state.objectline` 로 답을 받아 둔다(탭은 단추에서 묻고 답을 기다린다).
+             */
+            static bool runObjects( const string& side, string& outReply )
+            {
+                const bool bServer = side == "server";
+                if ( bServer == false && side != "client" )
+                    return false;
+                EditorStateHashCompare& compare = getCompare();
+                bool                    bDone   = false;
+                if ( loadSessionServer( 0, outReply ) == false )
+                    return true;
+                if ( bServer )
+                {
+                    bDone = loadSessionServer( 1, outReply ) && compare.compareObjectsFromChannels();
+                }
+                else
+                {
+                    EditorNetPlaySession*      pSession   = findSession();
+                    const bool                 bHasClient = pSession != nullptr && pSession->isRunning() && pSession->getProcessCount() > 1;
+                    EditorNetPlayProcessStatus status     = bHasClient ? pSession->getProcessStatus( 1 ) : EditorNetPlayProcessStatus{};
+                    if ( bHasClient == false || status._objectHashReportCount == 0 )
+                    {
+                        outReply = "netplay sync objects client has no state.objectline answer yet - ask with netplay.command client1 state.objectline first";
+                        return true;
+                    }
+                    uint64                  serverTick = 0;
+                    vector<SceneObjectHash> listServer;
+                    bDone = compare.readObjectsFromChannel( 0, serverTick, listServer ) && compare.compareObjects( serverTick, listServer, status._objectHashTick, status._listObjectHash );
+                }
+                outReply = bDone ? "netplay sync objects tick " + to_string( compare.getObjectTick() ) + ": " + to_string( compare.getDifferingObjects().size() ) + " differing object(s)"
+                                 : compare.getLastError();
+                return true;
+            }
+
             /**
              * @brief `netplay.sync save <경로>` — 세션 전용 서버의 이력을 A 에 담아 파일로 씁니다. `netplay.sync compare <경로>` — 세션 서버를 A, 파일을 B 로 담아 비교합니다.
              * @details 탭의 "Session server" · "Load file" · "Save" · "Compare" 와 같은 길이다. 시나리오는 이 명령과 탐침 `Editor.NetPlaySync*` 로 확인한다.
              */
             static bool runSync( const vector<string>& listArgument, string& outReply )
             {
+                if ( listArgument.size() == 2 && listArgument[0] == "objects" )
+                    return runObjects( listArgument[1], outReply );
                 const bool bSave    = listArgument.size() == 2 && listArgument[0] == "save";
                 const bool bCompare = listArgument.size() == 2 && listArgument[0] == "compare";
                 if ( bSave == false && bCompare == false )
@@ -128,8 +181,12 @@ namespace sw::editor
                          &MultiplayerSyncTabInternal::readCommonTicks );
     SW_AUTOMATION_PROBE( editorNetPlaySyncDiverged, "Editor.NetPlaySyncDiverged", "1 when the multiplayer Sync tab's last comparison found a divergent tick",
                          &MultiplayerSyncTabInternal::readDiverged );
-    SW_DEV_COMMAND( NetPlaySync, "netplay.sync", "netplay.sync save|compare <path>",
-                    "Save the session server's per-tick state hash history to a file, or compare it with a saved one (first divergent tick)",
+    SW_AUTOMATION_PROBE( editorNetPlaySyncObjectsCompared, "Editor.NetPlaySyncObjectsCompared", "1 when the Sync tab's last 'Which objects differ' compared the two object hash lists",
+                         &MultiplayerSyncTabInternal::readObjectsCompared );
+    SW_AUTOMATION_PROBE( editorNetPlaySyncDifferingObjects, "Editor.NetPlaySyncDifferingObjects", "Objects the Sync tab's last 'Which objects differ' found different",
+                         &MultiplayerSyncTabInternal::readDifferingObjects );
+    SW_DEV_COMMAND( NetPlaySync, "netplay.sync", "netplay.sync save|compare <path> | netplay.sync objects server|client",
+                    "Save the session server's per-tick state hash history to a file, or compare it with a saved one (first divergent tick), or list the objects that differ (Which objects differ)",
                     &MultiplayerSyncTabInternal::runSync );
 } // namespace sw::editor
 
@@ -156,12 +213,24 @@ namespace sw::editor
         void drawClientSources( int32 sourceIndex );
         /** @brief 기다리는 클라이언트 답이 왔으면 칸에 담습니다. 프레임마다 부릅니다. */
         void pollClientReplies();
+        /**
+         * @brief "Which objects differ" 를 시작합니다. 채널에서 읽은 칸은 바로 받고, 클라이언트에서 읽은 칸은 표준 입력에 `state.objectline` 을 물어 답을 기다린다(`pollObjectReplies`).
+         * @details 두 칸의 답이 모이면 틱 머리 검증을 거치는 `EditorStateHashCompare::compareObjects` 하나로 견준다(서버 칸과 같은 규칙).
+         */
+        void startObjectCompare();
+        /** @brief 기다리는 클라이언트의 오브젝트 해시 답이 왔으면 담고, 두 칸이 모두 모였으면 견줍니다. 프레임마다 부릅니다. */
+        void pollObjectReplies();
 
-        fixed_string<constant::kMaxPathSize>  _arrPath[EditorStateHashCompare::kSourceCount];               ///< 슬롯마다 파일 경로(편집 필드)
-        fixed_string<constant::kMaxBuffer64>  _arrAddress[EditorStateHashCompare::kSourceCount];            ///< 슬롯마다 채널 주소(편집 필드)
-        fixed_string<constant::kMaxBuffer128> _arrToken[EditorStateHashCompare::kSourceCount];              ///< 슬롯마다 채널 토큰(편집 필드)
-        int32                                 _arrPendingProcess[EditorStateHashCompare::kSourceCount];     ///< 슬롯마다 답을 기다리는 클라이언트 프로세스 번호(-1 이면 없다)
-        uint32                                _arrPendingReportCount[EditorStateHashCompare::kSourceCount]; ///< 물을 때의 그 프로세스 이력 답 수 — 늘면 새 답이다
+        fixed_string<constant::kMaxPathSize>  _arrPath[EditorStateHashCompare::kSourceCount];                 ///< 슬롯마다 파일 경로(편집 필드)
+        fixed_string<constant::kMaxBuffer64>  _arrAddress[EditorStateHashCompare::kSourceCount];              ///< 슬롯마다 채널 주소(편집 필드)
+        fixed_string<constant::kMaxBuffer128> _arrToken[EditorStateHashCompare::kSourceCount];                ///< 슬롯마다 채널 토큰(편집 필드)
+        int32                                 _arrPendingProcess[EditorStateHashCompare::kSourceCount];       ///< 슬롯마다 답을 기다리는 클라이언트 프로세스 번호(-1 이면 없다)
+        uint32                                _arrPendingReportCount[EditorStateHashCompare::kSourceCount];   ///< 물을 때의 그 프로세스 이력 답 수 — 늘면 새 답이다
+        bool                                  _bObjectRequest;                                                ///< "Which objects differ" 가 클라이언트 답을 기다리는 중이다
+        int32                                 _arrObjectPendingProcess[EditorStateHashCompare::kSourceCount]; ///< 슬롯마다 오브젝트 해시 답을 기다리는 클라이언트 프로세스 번호(-1 이면 안 기다린다)
+        uint32                                _arrObjectPendingCount[EditorStateHashCompare::kSourceCount];   ///< 물을 때의 그 프로세스 오브젝트 해시 답 수
+        uint64                                _arrObjectTick[EditorStateHashCompare::kSourceCount];           ///< 슬롯마다 받은 오브젝트 해시의 틱
+        vector<SceneObjectHash>               _arrObjectList[EditorStateHashCompare::kSourceCount];           ///< 슬롯마다 받은 오브젝트별 해시
     };
 } // namespace sw::editor
 
@@ -173,6 +242,11 @@ namespace sw::editor
         , _arrToken{}
         , _arrPendingProcess{ -1, -1 }
         , _arrPendingReportCount{}
+        , _bObjectRequest{ false }
+        , _arrObjectPendingProcess{ -1, -1 }
+        , _arrObjectPendingCount{}
+        , _arrObjectTick{}
+        , _arrObjectList{}
     {
         static_assert( EditorStateHashCompare::kSourceCount == 2, "the pending client table is initialized for two sources" );
     }
@@ -229,7 +303,83 @@ namespace sw::editor
             _arrPendingProcess[sourceIndex] = -1;
             if ( MultiplayerSyncTabInternal::loadClientReport( sourceIndex, status ) == false )
                 SW_LOG_WARNING( "Sync could not take %#'s history: %#", status._label, MultiplayerSyncTabInternal::getCompare().getLastError() );
+            else
+                MultiplayerSyncTabInternal::getCompare().setClientOrigin( sourceIndex, processIndex );
         }
+    }
+
+    void MultiplayerSyncTab::startObjectCompare()
+    {
+        EditorStateHashCompare& compare  = MultiplayerSyncTabInternal::getCompare();
+        EditorNetPlaySession*   pSession = MultiplayerSyncTabInternal::findSession();
+        _bObjectRequest                  = false;
+        bool bWaiting                    = false;
+        for ( int32 sourceIndex = 0; sourceIndex < EditorStateHashCompare::kSourceCount; ++sourceIndex )
+        {
+            _arrObjectPendingProcess[sourceIndex] = -1;
+            const int32 processIndex              = compare.getClientOrigin( sourceIndex );
+            if ( processIndex >= 0 )
+            {
+                // 클라이언트는 디버그 채널이 없다 - 표준 입력의 한 줄 답(`state.objectline`)을 기다린다.
+                const bool bSessionRunning = pSession != nullptr && pSession->isRunning();
+                if ( bSessionRunning == false || pSession->sendProcessCommand( processIndex, "state.objectline" ) == false )
+                {
+                    SW_LOG_WARNING( "Sync could not ask slot %# for its object hashes (the session or the process is gone)", sourceIndex );
+                    return;
+                }
+                _arrObjectPendingProcess[sourceIndex] = processIndex;
+                _arrObjectPendingCount[sourceIndex]   = pSession->getProcessStatus( processIndex )._objectHashReportCount;
+                bWaiting                              = true;
+                continue;
+            }
+#if SW_DEV_COMMANDS_ENABLED
+            if ( compare.readObjectsFromChannel( sourceIndex, _arrObjectTick[sourceIndex], _arrObjectList[sourceIndex] ) == false )
+            {
+                SW_LOG_WARNING( "Sync could not compare objects: %#", compare.getLastError() );
+                return;
+            }
+#else
+            SW_LOG_WARNING( "Sync has no debug channel in this build - object hashes come only from session clients" );
+            return;
+#endif
+        }
+        _bObjectRequest = true;
+        if ( bWaiting == false )
+            pollObjectReplies();
+    }
+
+    void MultiplayerSyncTab::pollObjectReplies()
+    {
+        if ( _bObjectRequest == false )
+            return;
+        EditorNetPlaySession* pSession = MultiplayerSyncTabInternal::findSession();
+        bool                  bAllIn   = true;
+        for ( int32 sourceIndex = 0; sourceIndex < EditorStateHashCompare::kSourceCount; ++sourceIndex )
+        {
+            const int32 processIndex = _arrObjectPendingProcess[sourceIndex];
+            if ( processIndex < 0 )
+                continue;
+            if ( pSession == nullptr || pSession->isRunning() == false )
+            {
+                _bObjectRequest = false; // 세션이 끝났다 - 답이 올 곳이 없다
+                return;
+            }
+            const EditorNetPlayProcessStatus status = pSession->getProcessStatus( processIndex );
+            if ( status._objectHashReportCount == _arrObjectPendingCount[sourceIndex] )
+            {
+                bAllIn = false;
+                continue;
+            }
+            _arrObjectTick[sourceIndex]           = status._objectHashTick;
+            _arrObjectList[sourceIndex]           = status._listObjectHash;
+            _arrObjectPendingProcess[sourceIndex] = -1;
+        }
+        if ( bAllIn == false )
+            return;
+        _bObjectRequest                 = false;
+        EditorStateHashCompare& compare = MultiplayerSyncTabInternal::getCompare();
+        if ( compare.compareObjects( _arrObjectTick[0], _arrObjectList[0], _arrObjectTick[1], _arrObjectList[1] ) == false )
+            SW_LOG_WARNING( "Sync could not compare objects: %#", compare.getLastError() );
     }
 
     void MultiplayerSyncTab::drawSource( int32 sourceIndex )
@@ -291,6 +441,7 @@ namespace sw::editor
     void MultiplayerSyncTab::drawTab( const MultiplayerTabContext& /*context*/ )
     {
         pollClientReplies();
+        pollObjectReplies();
         for ( int32 sourceIndex = 0; sourceIndex < EditorStateHashCompare::kSourceCount; ++sourceIndex )
         {
             drawSource( sourceIndex );
@@ -305,6 +456,22 @@ namespace sw::editor
             ImGui::SameLine();
             ImGui::TextUnformatted( MultiplayerSyncTabInternal::describeComparison( compare.getComparison() ).c_str() );
         }
+#if SW_DEV_COMMANDS_ENABLED
+        // 어긋난 틱 근처에서 두 서버를 pause 한 채 누른다 — 두 서버의 현재 오브젝트 해시를 다시 받아 다른 오브젝트를 짚는다.
+        if ( ImGui::Button( "Which objects differ" ) )
+            startObjectCompare();
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "SyncObjects" ) );
+        if ( compare.hasObjectComparison() )
+        {
+            ImGui::TextUnformatted( ( "tick " + to_string( compare.getObjectTick() ) ).c_str() );
+            if ( compare.getDifferingObjects().empty() )
+                ImGui::TextUnformatted( "every named object matches" );
+            for ( const string& name : compare.getDifferingObjects() )
+            {
+                ImGui::BulletText( "%s", name.c_str() );
+            }
+        }
+#endif
     }
 
     SW_EDITOR_MULTIPLAYER_TAB( MultiplayerSyncTab, "sync", 400, "Sync" );

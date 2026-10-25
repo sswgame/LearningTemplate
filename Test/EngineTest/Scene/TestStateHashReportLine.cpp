@@ -17,7 +17,7 @@ SW_TEST_CASE( StateHashReportLineTest, ALineRoundTripsInsideALogLine )
         StateHashSample{13, 0xFFFFFFFFFFFFFFFFull}
     };
     string line;
-    StateHashHistory::writeReportLine( listSample, line );
+    SW_ASSERT_TRUE( StateHashHistory::writeReportLine( listSample, line ) );
 
     vector<StateHashSample> parsed;
     SW_ASSERT_TRUE( StateHashHistory::tryParseReportLine( "[Info] > state.hashline 2 : " + line + " (main.cpp:10)", parsed ) );
@@ -27,7 +27,7 @@ SW_TEST_CASE( StateHashReportLineTest, ALineRoundTripsInsideALogLine )
     SW_EXPECT_EQUAL( uint64( 0xFFFFFFFFFFFFFFFFull ), parsed[1]._hash );
 
     string emptyLine;
-    StateHashHistory::writeReportLine( {}, emptyLine );
+    SW_ASSERT_TRUE( StateHashHistory::writeReportLine( {}, emptyLine ) );
     SW_EXPECT_TRUE( StateHashHistory::tryParseReportLine( emptyLine, parsed ) );
     SW_EXPECT_TRUE( parsed.empty() );
 
@@ -70,4 +70,128 @@ SW_TEST_CASE( StateHashReportLineTest, DifferingObjectsAreNamed )
 
     SW_EXPECT_FALSE( SceneStateHash::parseObjectReport( "not a hash line\n", parsed ) );
     SW_EXPECT_TRUE( parsed.empty() );
+}
+
+/**
+ * @brief [StateHashReportLineTest] 틱을 단 오브젝트 목록은 틱과 함께 되읽히고, 틱 머리가 없거나 숫자가 아니면 거절한다
+ */
+SW_TEST_CASE( StateHashReportLineTest, ATickedObjectReportRoundTripsAndRejectsAMissingTick )
+{
+    const vector<SceneObjectHash> listObject = {
+        SceneObjectHash{"Door", 0x1111ull},
+        SceneObjectHash{"Hero", 0x2222ull}
+    };
+    string text;
+    SceneStateHash::writeTickedObjectReport( 42, listObject, text );
+    uint64                  tick = 0;
+    vector<SceneObjectHash> parsed;
+    SW_ASSERT_TRUE( SceneStateHash::parseTickedObjectReport( text, tick, parsed ) );
+    SW_EXPECT_EQUAL( uint64( 42 ), tick );
+    SW_ASSERT_EQUAL( size_t( 2 ), parsed.size() );
+    SW_EXPECT_TRUE( parsed[1]._name == "Hero" );
+
+    string plain;
+    SceneStateHash::writeObjectReport( listObject, plain );
+    SW_EXPECT_FALSE( SceneStateHash::parseTickedObjectReport( plain, tick, parsed ) );
+    SW_EXPECT_FALSE( SceneStateHash::parseTickedObjectReport( "tick x\n", tick, parsed ) );
+    SW_EXPECT_TRUE( parsed.empty() );
+}
+
+/**
+ * @brief [StateHashReportLineTest] 한 줄 판 오브젝트 목록은 공백 · 쉼표 · 콜론 · 퍼센트가 든 이름도 로그 꼬리가 붙은 채 되읽히고, 항목이 틀리면 거절한다
+ * @details 표준 입력 명령의 답은 로그 한 줄로만 나가므로(클라이언트 칸이 이 길로 읽는다) 여러 줄 판을 쓸 수 없다.
+ */
+SW_TEST_CASE( StateHashReportLineTest, AnObjectLineRoundTripsAwkwardNamesInsideALogLine )
+{
+    const vector<SceneObjectHash> listObject = {
+        SceneObjectHash{ "Door 1", 0x1111ull},
+        SceneObjectHash{"a,b:c%d", 0x2222ull}
+    };
+    string line;
+    SW_ASSERT_TRUE( SceneStateHash::writeObjectReportLine( 42, listObject, line ) );
+    SW_EXPECT_TRUE( line.find( '\n' ) == string::npos );
+    uint64                  tick = 0;
+    vector<SceneObjectHash> parsed;
+    SW_ASSERT_TRUE( SceneStateHash::tryParseObjectReportLine( "[12:00:00][Info] " + line + " (client)", tick, parsed ) );
+    SW_EXPECT_EQUAL( uint64( 42 ), tick );
+    SW_ASSERT_EQUAL( size_t( 2 ), parsed.size() );
+    SW_EXPECT_TRUE( parsed[0]._name == "Door 1" && parsed[0]._hash == 0x1111ull );
+    SW_EXPECT_TRUE( parsed[1]._name == "a,b:c%d" && parsed[1]._hash == 0x2222ull );
+
+    SW_ASSERT_TRUE( SceneStateHash::writeObjectReportLine( 7, {}, line ) );
+    SW_ASSERT_TRUE( SceneStateHash::tryParseObjectReportLine( line, tick, parsed ) );
+    SW_EXPECT_TRUE( parsed.empty() );
+    SW_EXPECT_EQUAL( uint64( 7 ), tick );
+
+    SW_EXPECT_FALSE( SceneStateHash::tryParseObjectReportLine( "no prefix 1 2", tick, parsed ) );
+    SW_EXPECT_FALSE( SceneStateHash::tryParseObjectReportLine( string( SceneStateHash::kObjectReportLinePrefix ) + " 5 zz:Door", tick, parsed ) );
+    SW_EXPECT_FALSE( SceneStateHash::tryParseObjectReportLine( string( SceneStateHash::kObjectReportLinePrefix ) + " 5 00000000000000aa:Do%2", tick, parsed ) );
+    SW_EXPECT_TRUE( parsed.empty() );
+}
+
+/**
+ * @brief [StateHashReportLineTest] 한 줄 상한(`SceneStateHash::kMaxReportLineBytes`)을 넘는 목록은 쓰는 쪽이 오류로 멈추고, 읽는 쪽도 넘는 줄을 거절한다
+ * @details 파이프 · 로그 줄 버퍼가 한 줄을 조용히 자르거나 둘로 쪼개 다음 줄과 섞는 일을 만들지 않는다. 상한 안의 줄은 그대로 쓰이고 읽힌다.
+ */
+SW_TEST_CASE( StateHashReportLineTest, ALineOverTheLimitIsAnErrorOnBothSides )
+{
+    // 오브젝트 하나가 `<16자리>:<이름>,` — 이름 8 글자면 26 바이트다.
+    vector<SceneObjectHash> listObject;
+    for ( size_t index = 0; index < SceneStateHash::kMaxReportLineBytes / 26 + 8; ++index )
+    {
+        listObject.push_back( SceneObjectHash{ "Obj" + to_string( 10000 + index ), index } );
+    }
+    string line = "stale";
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "an over-long object line is refused with an error" );
+        test::ScopedLogCollector log;
+        SW_EXPECT_FALSE( SceneStateHash::writeObjectReportLine( 1, listObject, line ) );
+        SW_EXPECT_EQUAL( 1u, log.countWithID( "State.ReportLineTooLong" ) );
+    }
+    SW_EXPECT_TRUE( line.empty() ); // 반쯤 쓴 줄을 남기지 않는다
+
+    // 상한 안의 목록은 쓰이고 되읽힌다.
+    listObject.resize( 20 );
+    SW_ASSERT_TRUE( SceneStateHash::writeObjectReportLine( 1, listObject, line ) );
+    SW_EXPECT_TRUE( line.size() <= SceneStateHash::kMaxReportLineBytes );
+    uint64                  tick = 0;
+    vector<SceneObjectHash> parsed;
+    SW_EXPECT_TRUE( SceneStateHash::tryParseObjectReportLine( line, tick, parsed ) );
+    SW_EXPECT_EQUAL( size_t( 20 ), parsed.size() );
+
+    // 읽는 쪽: 같은 상수를 넘는 줄(유효한 항목이라도)은 거절한다.
+    string tooLong = string( SceneStateHash::kObjectReportLinePrefix ) + " 1 ";
+    while ( tooLong.size() <= SceneStateHash::kMaxReportLineBytes )
+    {
+        tooLong += "00000000000000aa:Door,";
+    }
+    tooLong.pop_back();
+    SW_EXPECT_FALSE( SceneStateHash::tryParseObjectReportLine( tooLong, tick, parsed ) );
+    SW_EXPECT_TRUE( parsed.empty() );
+
+    // 이력 한 줄: 최대 샘플 수는 상한 안에 들고, 그보다 많은 샘플은 오류다.
+    vector<StateHashSample> listSample;
+    for ( uint32 index = 0; index < StateHashHistory::kMaxReportLineSamples; ++index )
+    {
+        listSample.push_back( StateHashSample{ 0xFFFFFFFFFFFFFFFFull - index, 0xFFFFFFFFFFFFFFFFull } ); // 틱 20자리
+    }
+    string historyLine = "stale";
+    SW_ASSERT_TRUE( StateHashHistory::writeReportLine( listSample, historyLine ) );
+    SW_EXPECT_TRUE( historyLine.size() <= SceneStateHash::kMaxReportLineBytes );
+    vector<StateHashSample> parsedSample;
+    SW_EXPECT_TRUE( StateHashHistory::tryParseReportLine( historyLine, parsedSample ) );
+    SW_EXPECT_EQUAL( size_t( StateHashHistory::kMaxReportLineSamples ), parsedSample.size() );
+
+    while ( listSample.size() < SceneStateHash::kMaxReportLineBytes / 20 )
+    {
+        listSample.push_back( StateHashSample{ 0xFFFFFFFFFFFFFFFFull - listSample.size(), 0xFFFFFFFFFFFFFFFFull } );
+    }
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "an over-long history line is refused with an error" );
+        test::ScopedLogCollector log;
+        SW_EXPECT_FALSE( StateHashHistory::writeReportLine( listSample, historyLine ) );
+        SW_EXPECT_EQUAL( 1u, log.countWithID( "State.ReportLineTooLong" ) );
+    }
+    SW_EXPECT_TRUE( historyLine.empty() );
+    SW_EXPECT_FALSE( StateHashHistory::tryParseReportLine( string( StateHashHistory::kReportLinePrefix ) + " " + string( SceneStateHash::kMaxReportLineBytes, '1' ), parsedSample ) );
 }

@@ -223,12 +223,15 @@ namespace sw
         NetEmulationReport makeEmulationReport() const;
         /**
          * @brief 연결 통계와 라우터의 종류별 셈을 한 보고로 모읍니다(`net.stats` 의 답 — 에디터 Profiler 탭이 묻는다).
-         * @details 이미 세고 있는 값을 읽기만 한다(연결마다 `getConnectionStats` 사본 하나). 세션을 열지 않았으면 빈 보고입니다.
+         * @details 이미 세고 있는 값을 읽는다(연결마다 `getConnectionStats` 사본 하나). 복제 셈은 보고마다 "지난 보고 때 값"을 앞으로 옮기므로 const 가 아니다(묻는 쪽은 Profiler 탭 하나). 세션을 열지 않았으면 빈 보고입니다.
          */
-        NetStatsReport makeStatsReport() const;
+        NetStatsReport makeStatsReport();
         /**
          * @brief 복제 키트가 이름 붙인 누적 셈(갱신 수 · 바이트)을 올립니다 — 스냅숏 크기 · 오브젝트별 복제 빈도처럼 공통 원천이 없는 값의 창구입니다.
-         *        같은 이름을 다시 올리면 값을 덮고(누적값이므로 키트가 자기 합을 올린다), `makeStatsReport` 가 바이트가 큰 `NetStatsReport::kMaxReplicaEntry` 개를 `replicas=` 칸에 싣는다.
+         *        같은 이름을 다시 올리면 값을 덮고(누적값이므로 키트가 자기 합을 올린다), `makeStatsReport` 가 `replicas=` 칸에 상한(`NetStatsReport::kMaxReplicaEntry`) 안에서 싣는다.
+         *        싣는 이름은 앞 절반이 "지난 보고 뒤 늘어난 바이트"가 큰 순서(Profiler 표의 초당 바이트와 같은 기준 — 총량이 작아도 지금 활발한 이름이 밀리지 않는다), 나머지가 누적 바이트가 큰 순서이다.
+         * @details 읽는 쪽(에디터 Profiler 표 — `EditorNetProfilerUtil::computeReplicaRates`)과의 약속: 올린 값을 그대로 싣는다(키트가 다시 시작해 줄어든 값도 덮는다 — 표는 줄어듦을 0 으로 읽는다).
+         *          상위 상한 밖으로 밀렸다 돌아온 이름이나 처음 오른 이름은 표에서 한 번 0 이다(앞 보고에 없으면 기준선이 없다). 누적 값을 대신 눌러 앉히지 않는다.
          * @return 이름이 형식(`NetStatsReport::isValidReplicaName`)에 맞지 않거나, 올린 이름이 상한(`kMaxReplicaSources`)을 넘으면 false 입니다(조용히 버리지 않고 경고를 남긴다).
          */
         [[nodiscard]] bool setReplicaStats( string_view name, uint64 updateCount, uint64 byteCount );
@@ -237,6 +240,12 @@ namespace sw
 
     private:
         struct Shard;
+        /** @brief 올린 복제 셈과 지난 보고에 실은 바이트입니다(늘어난 양 = 지금 − 지난 보고 때). */
+        struct ReplicaStat
+        {
+            NetStatsReplicaEntry _entry{};
+            uint64               _reportedByteCount{ 0 };
+        };
 
         // INetMessageHandler — 클라이언트만 엔진 영역의 서버 틱을 받는다.
         uint8           getMessageRangeBase() const override { return NetMessageRange::kEngine; }
@@ -268,7 +277,7 @@ namespace sw
         NetMessageWriter             _tickWriter;       ///< 서버 — `sendServerTick` 이 다시 쓴다
         TaskFuture<NetConnectResult> _connectFuture;    ///< 클라이언트 — 기다리는 연결(결과를 알리면 비운다)
         vector<NetHostEvent>         _listEventScratch; ///< `update` 가 다시 쓴다
-        vector<NetStatsReplicaEntry> _listReplicaStat;  ///< 복제 키트가 올린 셈(`setReplicaStats`)
+        vector<ReplicaStat>          _listReplicaStat;  ///< 복제 키트가 올린 셈(`setReplicaStats`)
         NetAddress                   _serverAddress;
         NetConnectCredentials        _credentials;      ///< 클라이언트 — 내미는 접속 티켓. 거절되면 지운다(옛 비밀을 들고 있지 않는다)
         uint64                       _latestServerTick; ///< 클라이언트 — 받은 가장 새 서버 틱(`_bServerTickKnown` 일 때만 뜻이 있다)
