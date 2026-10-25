@@ -288,6 +288,16 @@ namespace sw
                                           const_cast<void*>( static_cast<const void*>( std::addressof( func ) ) ) );
         }
         /**
+         * @brief 소문자 키(`normalizePath` 한 상대 경로)의 실제 디스크 표기를 찾습니다.
+         * @details 리소스 id 는 소문자인데 디스크 폴더는 대소문자가 섞일 수 있다(테스트 임시 폴더, 붙인 디스크 도메인). 대소문자를 구분하는 파일 시스템에서는
+         *          소문자 키를 그대로 이으면 "파일 없음" 이라 성분마다 폴더를 훑어 소문자가 같은 항목을 고른다. 이름만 대소문자가 다른 항목이 여럿이면
+         *          정렬 순으로 앞선 것이다(훑는 순서에 기대지 않는다).
+         * @param root 실제 표기의 절대 폴더
+         * @param lowerRelative 소문자 · `/` 구분 상대 키(`..` 없음)
+         * @return `root` 로 시작하는 `/` 구분 경로, 못 찾으면 빈 문자열
+         */
+        [[nodiscard]] static string findPathIgnoringCase( string_view root, string_view lowerRelative );
+        /**
          * @brief 디렉터리에서 확장자 필터에 맞는 파일을 모읍니다.
          * @details 실제 파일 시스템을 훑어 얻은 경로라 **대소문자를 그대로 돌려줍니다**(구분자만 `/` 로 바꿉니다). 그대로 열 수
          *          있는 경로여야 하기 때문입니다. 대소문자를 구분하는 파일 시스템에서는 소문자로 바꾼 경로가 곧 "파일 없음" 입니다.

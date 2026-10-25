@@ -767,6 +767,36 @@ namespace sw
         listDropped.clear();
     }
 
+    string FileUtil::findPathIgnoringCase( string_view root, string_view lowerRelative )
+    {
+        string current = trimTrailingSlashes( normalizeSeparators( root ) );
+        size_t start   = 0;
+        while ( start < lowerRelative.size() )
+        {
+            size_t end = lowerRelative.find( '/', start );
+            if ( end == string_view::npos )
+                end = lowerRelative.size();
+            const string_view component = lowerRelative.substr( start, end - start );
+            start                       = end + 1;
+            if ( component.empty() )
+                continue;
+            // 이름만 대소문자가 다른 항목이 여럿이어도 같은 답이 나오게, 소문자가 같은 항목 중 정렬 순으로 앞선 것을 고른다.
+            string match;
+            (void)forEachDirectoryEntry( current, false, [&match, component]( const DirectoryEntry& entry )
+            {
+                const size_t      nameStart = entry._path.rfind( '/' );
+                const string_view name      = nameStart == string_view::npos ? entry._path : entry._path.substr( nameStart + 1 );
+                if ( normalizePath( name ) == component && ( match.empty() || name < string_view( match ) ) )
+                    match = string( name );
+                return true;
+            } );
+            if ( match.empty() )
+                return {};
+            current = joinPath( current, match );
+        }
+        return current;
+    }
+
     bool FileUtil::collectFiles( string_view directory, string_view filterExtension, vector<string>& outListFilePath, const bool bRecursive )
     {
         if ( isDirectory( directory ) == false )
