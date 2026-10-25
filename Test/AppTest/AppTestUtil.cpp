@@ -8,6 +8,7 @@
 #include "Core/Process/Process.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "Engine/Automation/AutomationExitCode.h"
 #include "Engine/Automation/AutomationLogPolicy.h"
 #include "Engine/Automation/AutomationScenario.h"
 #include "Engine/Graphics/RHI/RHIInitResult.h"
@@ -26,12 +27,12 @@ namespace test
     {
         struct AppTestUtilInternal
         {
-            /** @brief 시나리오가 건너뜀으로 끝났다(전경 창을 못 얻음 등 — `AutomationOutcome::Skipped`). */
-            static constexpr int32 kSkippedExitCode = 13;
-            /** @brief 시나리오의 단언은 모두 맞았지만 어림값 문턱이 들어 있다(`AutomationOutcome::Unconfirmed`). 실패가 아니라 로그로 미확정을 알리고 통과로 넘긴다. */
-            static constexpr int32 kUnconfirmedExitCode = 14;
-            /** @brief 시나리오는 통과했지만 출력에 처리하지 않은 Warning · Error 가 있다(`AutomationOutcome::UnhandledLog` 와 같은 값). 실행기 안의 로그 게이트와 같은 코드로 끝난다. */
-            static constexpr int32 kUnhandledLogExitCode = 15;
+            /** @brief 종료 코드 숫자는 `AutomationExitCode.h` 표가 정본이다 — 여기서 숫자를 다시 쓰지 않는다. */
+            static constexpr int32 kSkippedExitCode = sw::getAutomationExitCode( sw::AutomationOutcome::Skipped );
+            /** @brief 시나리오의 단언은 모두 맞았지만 어림값 문턱이 들어 있다. 실패가 아니라 로그로 미확정을 알리고 통과로 넘긴다. */
+            static constexpr int32 kUnconfirmedExitCode = sw::getAutomationExitCode( sw::AutomationOutcome::Unconfirmed );
+            /** @brief 시나리오는 통과했지만 출력에 처리하지 않은 Warning · Error 가 있다. 실행기 안의 로그 게이트와 같은 코드로 끝난다. */
+            static constexpr int32 kUnhandledLogExitCode = sw::getAutomationExitCode( sw::AutomationOutcome::UnhandledLog );
 
             /**
              * @brief 명령줄 @p arguments 의 인자가 요구하는 구성 기능이 이 빌드에 있는가 — 없으면 실패를 기록하고 false 를 돌려준다.

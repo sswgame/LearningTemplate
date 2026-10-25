@@ -10,7 +10,10 @@
 
 #include "App/RHIBackendSwitcher.h"
 
-#if !defined( SW_SHIPPING )
+#include "Core/Console/DevCommandsEnabled.h"
+
+// 가드 기준은 `SW_DEV_COMMANDS_ENABLED` 한 가지다(`DevCommand` 단계와 같다) — 이 파일이 개발 명령 레지스트리를 쓰는 구성에서만 컴파일된다.
+#if SW_DEV_COMMANDS_ENABLED
 
     #include "Core/Console/DevCommandRegistry.h"
     #include "Core/Container/StringUtil.h"

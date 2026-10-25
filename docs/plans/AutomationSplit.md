@@ -17,8 +17,8 @@
 
 - 인게임에서 시나리오 · 탐침 · `VirtualInputScript` 를 읽는 곳은 현재 0 이다. 탐침을 읽는 곳은 실행기와 테스트뿐이다. 자동화가 아닌 사용은 에디터 `InputMapPanel` 의 `InputReplay` 하나다.
 - Shipping 에 폴더 전체가 들어가고 `-scenario` 가 Shipping App 에서 열려 있다(`App.cpp:310-331`). 결정 기록 5-3 "자동화는 Shipping 에서도 쓴다"와 맞는 의도된 상태다.
-- Shipping 가드 기준이 파일마다 다르다 — `SwapBackend` 는 `SW_SHIPPING`, `DevCommand` 는 `SW_DEV_COMMANDS_ENABLED`, 나머지는 가드가 없다.
-- `-cook-scenes`(`HeadlessSubsystem.cpp:254`)에는 `SW_SHIPPING` 가드가 없다. 다른 곳에서 막는지는 **확인하지 못했다**.
+- Shipping 가드 기준은 `SW_DEV_COMMANDS_ENABLED` 로 통일했다(2026-10-25) — `SwapBackend`(`RHIBackendSwitcherAutomation.cpp`)가 `SW_SHIPPING` 이던 것을 맞췄다. 나머지 단계는 가드가 없는 것이 의도다(Shipping 에서도 쓴다).
+- `-cook-scenes`(`HeadlessSubsystem.cpp` `runCookTask`)에는 `SW_SHIPPING` 가드가 없고, 다른 곳에서도 막지 않는다(2026-10-25 코드 확인). 의도된 상태다 — 쿠킹은 `-cooked-dir` 로 준 폴더에만 쓰는 오프라인 도구이고 `CookAssets` 빌드 타깃과 배포 패키징이 배포 구성 App 으로 부르며, `-cook-shaders` · `-bake-retarget` · `-make-patch` 도 같은 헤드리스 단계로 가드가 없다.
 
 ## 3. 형식 결함 셋
 
@@ -48,5 +48,5 @@
 
 - 실행기 분할(③)이 시계 잡기 · 사진 대기 순서를 건드린다 — 네 백엔드 시나리오 회귀로 확인한다.
 - ① 의 시나리오 네 백엔드 회귀는 작업자가 돌리지 않았다(탐침 정의 위치만 옮겨 동작은 같다 — 통합 검증이 본다).
-- `-cook-scenes` 의 Shipping 차단 여부, Shipping 가드 기준 통일 여부, `Profiler.TraceRecording` 의 같은 구조 여부.
-- ③ 은 결과 형식과 선언 묶음까지 했다(2026-10-25). 남은 것은 실행기 분할(`AutomationRunner.cpp` 2000 줄 — 타임라인 · 입력 단계 쪽과 판정 · 보고 쪽)과 폴더 이동(`Engine/Scenario`, 파일 서른 개 안팎의 include)이다. 둘 다 컴파일 확인이 가능한 단독 작업으로 하고, 시계 잡기 · 사진 대기 순서는 네 백엔드 시나리오 회귀로 본다. `Running` 을 `kAutomationExitCodeRunning`(-1)으로 번역하는 자리와 `IEngineFrameObserver::kRunning` 이 같은 값이라는 것은 형식으로 묶지 않았다(둘 다 -1).
+- `Profiler.TraceRecording` 의 같은 구조 여부. (`-cook-scenes` 차단 여부와 가드 기준 통일은 확인하고 고쳤다.)
+- ③ 은 결과 형식과 선언 묶음까지 했다(2026-10-25). 남은 것은 실행기 분할(`AutomationRunner.cpp` 2000 줄 — 타임라인 · 입력 단계 쪽과 판정 · 보고 쪽)과 폴더 이동(`Engine/Scenario`, 파일 서른 개 안팎의 include)이다. 둘 다 컴파일 확인이 가능한 단독 작업으로 하고, 시계 잡기 · 사진 대기 순서는 네 백엔드 시나리오 회귀로 본다. `kAutomationExitCodeRunning` 은 이제 `IEngineFrameObserver::kRunning` 그 자체다. 종료 코드 숫자는 `AutomationExitCode.h` 한 곳이며 `AppTestUtil` 은 `getAutomationExitCode` 를 부르고 `RunScenarioLogs.py` 는 그 헤더를 읽는다(`TestScenarioLogs.py` 가 지킨다).

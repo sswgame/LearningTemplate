@@ -34,6 +34,20 @@ def makeEntry(entryId: str, scenario: str) -> dict[str, str]:
     return {"id": entryId, "scenario": scenario, "reason": "known", "plan": "SomePlan"}
 
 
+class ExitCodeTableTest(unittest.TestCase):
+    def testScriptReadsCppExitCodeTable(self) -> None:
+        """종료 코드 정본(`AutomationExitCode.h`)을 읽어 온다 — 표가 바뀌어도 숫자가 따로 어긋나지 않고, 줄 모양이 바뀌면 여기서 멈춘다."""
+        self.assertEqual((0, 14, 15), ScenarioLogs.kRanToEndExitCodes)
+        self.assertEqual(15, ScenarioLogs.kUnhandledLogExitCode)
+
+    def testMissingCaseLineStopsLoudly(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            header = Path(temporary) / "AutomationExitCode.h"
+            header.write_text("case AutomationOutcome::Passed: return 0;", encoding="utf-8")
+            with self.assertRaises(SystemExit):
+                ScenarioLogs.readOutcomeExitCodes(header)
+
+
 class ReportReadTest(unittest.TestCase):
     def testOldFormatAndForeignJsonAreNotReports(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
