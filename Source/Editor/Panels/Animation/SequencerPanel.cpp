@@ -64,14 +64,8 @@ namespace sw::editor
         }
         const utf8* GetItemTypeName( int32 typeIndex ) const override
         {
-            const TypeRegistry* pRegistry = editor::findSubsystem<TypeRegistry>(); // 필수 서비스: 없으면 버그
-            if ( pRegistry == nullptr )
-            {
-                SW_LOG_ERROR_ONCE( "[Sequencer] TypeRegistry is missing - the item type name is unknown" );
-                return "?"; // 라이브러리가 const utf8* 를 요구해 사유 문자열을 줄 수 없다
-            }
-            const utf8* pName = pRegistry->enumToString( static_cast<SequenceItemKind>( typeIndex ) );
-            return pName != nullptr ? pName : "?";
+            const utf8* pName = editor::getSubsystem<TypeRegistry>().enumToString( static_cast<SequenceItemKind>( typeIndex ) );
+            return pName != nullptr ? pName : "?"; // 라이브러리가 const utf8* 를 요구해 사유 문자열을 줄 수 없다
         }
         const utf8* GetItemLabel( int32 itemIndex ) const override
         {

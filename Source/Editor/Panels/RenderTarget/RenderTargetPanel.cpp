@@ -130,20 +130,14 @@ namespace sw::editor
     void RenderTargetPanel::refreshTargetsIfStale()
     {
         // 엔진 서비스는 **에디터 로케이터**로 받는다. `EngineServices.h` 는 Engine/App/Test 전용이다.
-        RenderTargetRegistry* pRegistry = editor::findSubsystem<RenderTargetRegistry>();
-        if ( pRegistry == nullptr ) // 필수 서비스: 없으면 버그
-        {
-            SW_LOG_ERROR_ONCE( "[RenderTarget] RenderTargetRegistry is missing - the target list cannot be refreshed" );
-            _listTarget.clear();
-            return;
-        }
+        RenderTargetRegistry& registry = editor::getSubsystem<RenderTargetRegistry>();
 
-        const uint64 generation = pRegistry->getGeneration();
+        const uint64 generation = registry.getGeneration();
         if ( generation == _lastGeneration && _listTarget.empty() == false )
             return;
 
         _lastGeneration = generation;
-        pRegistry->snapshot( _listTarget );
+        registry.snapshot( _listTarget );
 
         // 목록이 새로 만들어졌으면 보관하고 있던 텍스처 id 는 **이미 사라진 핸들**을 가리킬 수 있다.
         // 창 크기가 바뀌면 트랜지언트가 모두 다시 만들어지는데, 그때 그대로 그리면 백엔드가 죽는다.
@@ -172,22 +166,17 @@ namespace sw::editor
 
     void RenderTargetPanel::syncSnapshot()
     {
-        RenderTargetRegistry*   pRegistry = editor::findSubsystem<RenderTargetRegistry>();
-        const RenderTargetInfo* pSelected = findByName( _listTarget, _selectedName );
-        if ( pRegistry == nullptr ) // 필수 서비스: 없으면 버그
-        {
-            SW_LOG_ERROR_ONCE( "[RenderTarget] RenderTargetRegistry is missing - the snapshot cannot be read" );
-            return;
-        }
-        const bool bTargetNotReadable = pSelected == nullptr || RenderTargetViewUtil::isDecodableFormat( pSelected->_format, pSelected->_bDepth != SW_FALSE ) == false;
+        RenderTargetRegistry&   registry           = editor::getSubsystem<RenderTargetRegistry>();
+        const RenderTargetInfo* pSelected          = findByName( _listTarget, _selectedName );
+        const bool              bTargetNotReadable = pSelected == nullptr || RenderTargetViewUtil::isDecodableFormat( pSelected->_format, pSelected->_bDepth != SW_FALSE ) == false;
         if ( bTargetNotReadable )
             return;
 
         // 도착한 결과를 받는다. 다른 타깃의 결과(고르기를 바꾼 사이 도착)는 버리고 다시 읽는다.
-        if ( _pendingReadbackSerial != 0 && pRegistry->getReadbackSerial() == _pendingReadbackSerial )
+        if ( _pendingReadbackSerial != 0 && registry.getReadbackSerial() == _pendingReadbackSerial )
         {
             _pendingReadbackSerial = 0;
-            if ( pRegistry->copyReadback( _snapshot ) && _snapshot._texture == pSelected->_texture )
+            if ( registry.copyReadback( _snapshot ) && _snapshot._texture == pSelected->_texture )
                 _bSnapshotImageDirty = SW_TRUE;
         }
 
@@ -207,7 +196,7 @@ namespace sw::editor
         }
         if ( bWantReadback && _pendingReadbackSerial == 0 )
         {
-            _pendingReadbackSerial = pRegistry->requestReadback( pSelected->_texture );
+            _pendingReadbackSerial = registry.requestReadback( pSelected->_texture );
             _bRefreshRequested     = SW_FALSE;
         }
 

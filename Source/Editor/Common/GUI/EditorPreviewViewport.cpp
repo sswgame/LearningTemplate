@@ -80,16 +80,11 @@ namespace sw::editor
     {
         if ( _pScene != nullptr )
             return true;
-        SceneManager* pSceneManager = findSubsystem<SceneManager>(); // 필수 서비스: 없으면 버그
-        if ( pSceneManager == nullptr )
-        {
-            SW_LOG_ERROR_ONCE( "[PreviewViewport] SceneManager is missing - the preview scene '%#' is not created", string{ sceneName }.c_str() );
-            return false;
-        }
-        _pScene = pSceneManager->createPreviewScene( sceneName, policy );
+        SceneManager& sceneManager = editor::getSubsystem<SceneManager>();
+        _pScene                    = sceneManager.createPreviewScene( sceneName, policy );
         if ( _pScene == nullptr )
             return false;
-        _sceneKey   = pSceneManager->getPreviewSceneKey( _pScene );
+        _sceneKey   = sceneManager.getPreviewSceneKey( _pScene );
         _bOwnsScene = true;
         (void)spawnEnvironment( *_pScene, environment ); // 환경이 없어도 씬은 그려진다(키 라이트 폴백)
 

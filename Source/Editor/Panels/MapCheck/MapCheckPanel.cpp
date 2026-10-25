@@ -71,13 +71,8 @@ namespace sw::editor
             /** @brief 활성 씬이 바뀐 첫 프레임에 오류가 있으면 토스트를 한 번 띄웁니다(언리얼은 맵을 열 때 Map Check 를 띄운다). */
             static void notifyOnSceneChange( EditorContext& context, const MapCheckCounts& counts )
             {
-                SceneManager* pSceneManager = editor::findSubsystem<SceneManager>();
-                if ( pSceneManager == nullptr ) // 필수 서비스: 없으면 버그
-                {
-                    SW_LOG_ERROR_ONCE( "[MapCheck] SceneManager is missing - the scene-change toast is skipped" );
-                    return;
-                }
-                const uint64 generation = pSceneManager->getSceneGeneration();
+                const SceneManager& sceneManager = editor::getSubsystem<SceneManager>();
+                const uint64        generation   = sceneManager.getSceneGeneration();
                 if ( generation == getState()._toastSceneGeneration )
                     return;
                 getState()._toastSceneGeneration = generation;

@@ -236,17 +236,15 @@ namespace sw::editor
 
     void AudioMixerPanel::drawContent()
     {
-        using Internal               = AudioMixerPanelInternal;
-        Internal::ProbeState& probe  = Internal::getProbeState();
-        IAudioService*        pAudio = editor::findSubsystem<IAudioService>(); // 필수 서비스: 없으면 버그(전용 서버도 널 서비스가 있다)
-        if ( pAudio == nullptr )
-            SW_LOG_ERROR_ONCE( "[AudioMixer] IAudioService is missing - the mixer shows the not-running hint" );
-        if ( pAudio == nullptr || pAudio->isInitialized() == false )
+        using Internal              = AudioMixerPanelInternal;
+        Internal::ProbeState& probe = Internal::getProbeState();
+        IAudioService&        audio = editor::getSubsystem<IAudioService>(); // 전용 서버도 널 서비스가 있어 늘 있다
+        if ( audio.isInitialized() == false )
         {
             EditorWidgets::drawEmptyHint( "The audio service is not running" );
             return;
         }
-        pAudio->getEngine().getBusStatuses( _listBusStatus );
+        audio.getEngine().getBusStatuses( _listBusStatus );
         if ( _listBusStatus.empty() )
         {
             EditorWidgets::drawEmptyHint( "No mixer graph has been published yet" );
@@ -267,13 +265,13 @@ namespace sw::editor
                 probe._probedBusVolume = status._userVolume;
         }
 
-        drawPreviewBar( *pAudio );
+        drawPreviewBar( audio );
         ImGui::Separator();
         ImGui::BeginChild( "##AudioMixerStrips", ImVec2{ 0.0f, 0.0f }, ImGuiChildFlags_None, ImGuiWindowFlags_HorizontalScrollbar );
         for ( uint32 busIndex = 0; busIndex < _listBusStatus.size(); ++busIndex )
         {
             ImGui::PushID( static_cast<int32>( busIndex ) );
-            drawBusStrip( *pAudio, busIndex );
+            drawBusStrip( audio, busIndex );
             ImGui::PopID();
             ImGui::SameLine( 0.0f, 18.0f * EditorThemeUtil::getDpiScale() );
         }

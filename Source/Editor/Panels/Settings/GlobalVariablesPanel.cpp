@@ -105,22 +105,14 @@ namespace sw::editor
             /** @brief 리플렉션 enum 테이블이 있으면 열거자 콤보, 없으면 정수 드래그입니다. */
             static bool drawEnumWidget( GlobalVariableInfo& info )
             {
-                const int32   currentVal = info.getValueAsInt();
-                TypeRegistry* pRegistry  = editor::findSubsystem<TypeRegistry>(); // 필수 서비스: 없으면 버그
-                if ( pRegistry == nullptr )
-                {
-                    SW_LOG_ERROR_ONCE( "[GlobalVariables] TypeRegistry is missing - the enum variable is drawn as an integer" );
-                    return drawInt32Widget( info );
-                }
-                const EnumInfo* pEnumInfo =
-                    ( pRegistry != nullptr && info._enumType.empty() == false )
-                        ? pRegistry->findEnum( hashed_string( info._enumType.c_str() ) )
-                        : nullptr;
+                const int32     currentVal = info.getValueAsInt();
+                TypeRegistry&   registry   = editor::getSubsystem<TypeRegistry>();
+                const EnumInfo* pEnumInfo  = info._enumType.empty() == false ? registry.findEnum( hashed_string( info._enumType.c_str() ) ) : nullptr;
                 if ( pEnumInfo == nullptr || pEnumInfo->_mapValueToName.empty() )
                     return drawInt32Widget( info );
 
                 bool        bChanged{ false };
-                const utf8* pName    = pRegistry->enumToString( hashed_string( info._enumType.c_str() ), currentVal );
+                const utf8* pName    = registry.enumToString( hashed_string( info._enumType.c_str() ), currentVal );
                 const utf8* pPreview = ( pName != nullptr ) ? pName : "<Unknown>";
                 if ( ImGui::BeginCombo( "##val", pPreview ) )
                 {
@@ -221,11 +213,7 @@ namespace sw::editor
 
     void GlobalVariablesPanel::revertDocument()
     {
-        GlobalVariableManager* pGvm = editor::findSubsystem<GlobalVariableManager>();
-        if ( pGvm != nullptr )
-            pGvm->resetAllToDefault();
-        else
-            SW_LOG_ERROR_ONCE( "[GlobalVariables] GlobalVariableManager is missing - the revert did nothing" ); // 필수 서비스: 없으면 버그
+        editor::getSubsystem<GlobalVariableManager>().resetAllToDefault();
     }
 
     void GlobalVariablesPanel::markSessionDirty()
@@ -235,17 +223,12 @@ namespace sw::editor
 
     void GlobalVariablesPanel::drawContent()
     {
-        GlobalVariableManager* pGvm = editor::findSubsystem<GlobalVariableManager>();
-        if ( pGvm == nullptr ) // 필수 서비스: 없으면 버그
-        {
-            SW_LOG_ERROR_ONCE( "[GlobalVariables] GlobalVariableManager is missing - the panel cannot draw" );
-            return;
-        }
+        GlobalVariableManager& gvm = editor::getSubsystem<GlobalVariableManager>();
 
-        drawVariableToolbar( *pGvm );
+        drawVariableToolbar( gvm );
 
         // 2) 변수 목록 수집
-        const vector<string> listAllName = pGvm->collectVariableNames();
+        const vector<string> listAllName = gvm.collectVariableNames();
         uint32               totalVarCount{ 0 };
 
         const EditorListFilter filter{ _searchFilter.c_str() };
@@ -258,7 +241,7 @@ namespace sw::editor
         for ( const string& varName : listAllName )
         {
             // 테스트용(`SW_TEST_GLOBAL_VARIABLE`)은 벤치와 자동화 스위치이므로 여기 두지 않는다. 실행 인자로만 준다. 개수에서도 뺀다.
-            GlobalVariableInfo* pInfo = pGvm->findVariable( varName );
+            GlobalVariableInfo* pInfo = gvm.findVariable( varName );
             if ( pInfo == nullptr || pInfo->_bTestOnly )
                 continue;
             ++totalVarCount;
@@ -273,7 +256,7 @@ namespace sw::editor
 
         EditorWidgets::drawCountLabel( static_cast<uint32>( listFiltered.size() ), totalVarCount, "variables" );
 
-        drawPinnedSection( *pGvm );
+        drawPinnedSection( gvm );
 
         // 필터에 걸러져서 0건인 것과 애초에 없는 것은 다르게 안내한다.
         if ( listFiltered.empty() )

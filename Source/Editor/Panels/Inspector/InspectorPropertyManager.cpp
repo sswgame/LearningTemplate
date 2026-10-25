@@ -538,15 +538,12 @@ namespace sw::editor
                 if ( prop._handleTargetTypeName.empty() )
                     return _untyped.draw( instance, prop, grid );
 
-                const TypeRegistry* pRegistry = findSubsystem<TypeRegistry>(); // 필수 서비스: 없으면 버그
-                if ( pRegistry == nullptr )
-                    SW_LOG_ERROR_ONCE( "[Inspector] TypeRegistry is missing - the component picker of '%#' is unavailable", prop._name.c_str() );
-                const TypeInfo*          pTargetType = pRegistry != nullptr ? InspectorComponentPickerUtil::findTargetType( *pRegistry, prop ) : nullptr;
+                const TypeInfo*          pTargetType = InspectorComponentPickerUtil::findTargetType( editor::getSubsystem<TypeRegistry>(), prop );
                 const GameObject*        pOwner      = grid.getEditOwner();
                 const GameObjectManager* pManager    = pOwner != nullptr ? pOwner->getManager() : nullptr;
                 if ( pTargetType == nullptr || pManager == nullptr )
                 {
-                    drawUnavailable( prop, pRegistry != nullptr && pTargetType == nullptr );
+                    drawUnavailable( prop, pTargetType == nullptr );
                     return true;
                 }
 
@@ -971,10 +968,7 @@ namespace sw::editor
             return kArrDrawMethodArg[slot._builtinIndex]( pLabel, slot._value );
 
         // 타입 핸들 인자 — 프로퍼티와 같은 선택기다. 칸의 값은 타입 없는 핸들이고(`_typeName` 이 `ComponentHandle`), 호출 썽크가 대상 타입을 다시 확인한다.
-        const TypeRegistry* pRegistry = findSubsystem<TypeRegistry>(); // 필수 서비스: 없으면 버그
-        if ( pRegistry == nullptr )
-            SW_LOG_ERROR_ONCE( "[Inspector] TypeRegistry is missing - the component picker of a method argument is unavailable" );
-        const TypeInfo* pTargetType = pRegistry != nullptr ? InspectorComponentPickerUtil::findTargetType( *pRegistry, parameter._handleTargetTypeName ) : nullptr;
+        const TypeInfo* pTargetType = InspectorComponentPickerUtil::findTargetType( editor::getSubsystem<TypeRegistry>(), parameter._handleTargetTypeName );
         const bool      bPickable   = pTargetType != nullptr && pManager != nullptr && slot._value.getPtr<ComponentHandle>() != nullptr;
         if ( bPickable == false )
         {

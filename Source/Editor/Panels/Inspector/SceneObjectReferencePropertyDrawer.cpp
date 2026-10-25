@@ -47,18 +47,12 @@ namespace sw::editor
                 SceneObjectReference* pValue = prop.getValuePtr<SceneObjectReference>( instance.get() );
                 if ( pValue == nullptr )
                     return false;
-                const SceneManager* pSceneManager = editor::findSubsystem<SceneManager>(); // 필수 서비스: 없으면 버그
-                if ( pSceneManager == nullptr )
-                {
-                    SW_LOG_ERROR_ONCE( "[SceneObjectReference] SceneManager is missing - the reference of '%#' is not drawn", prop._name.c_str() );
-                    ImGui::TextDisabled( "(no scene manager)" );
-                    return true;
-                }
+                const SceneManager& sceneManager = editor::getSubsystem<SceneManager>();
 
                 uint64                                resolvedID{ 0 };
-                const SceneObjectResolveResult        state = SceneObjectReferenceUtil::resolve( *pSceneManager, *pValue, resolvedID );
+                const SceneObjectResolveResult        state = SceneObjectReferenceUtil::resolve( sceneManager, *pValue, resolvedID );
                 fixed_string<constant::kMaxBuffer512> preview;
-                makePreview( *pSceneManager, *pValue, state, resolvedID, preview );
+                makePreview( sceneManager, *pValue, state, resolvedID, preview );
                 const bool bWarn = state == SceneObjectResolveResult::ObjectMissing;
                 if ( bWarn )
                     EditorThemeUtil::pushTextColor( EditorThemeUtil::getWarningColor() );
@@ -74,7 +68,7 @@ namespace sw::editor
                 if ( ImGui::Selectable( "(none)", pValue->isSet() == false ) )
                     bPicked = true;
                 EditorSelfTestMarks::note( "inspector.sceneref.none" ); // 시나리오가 누른다 — 콤보를 연 프레임에만 그려진다
-                for ( const unique_ptr<Scene>& scene : pSceneManager->getLoadedScenes() )
+                for ( const unique_ptr<Scene>& scene : sceneManager.getLoadedScenes() )
                 {
                     if ( scene == nullptr || scene->getObjectManager() == nullptr )
                         continue;
