@@ -26,7 +26,7 @@ namespace sw
         RenderTarget,  ///< 렌더 타깃, 깊이 첨부, UAV 텍스처 중 트랜지언트 풀 밖의 것(게임 뷰, TAA 히스토리, 캡처)
         TransientPool, ///< 렌더 그래프의 트랜지언트 첨부 풀(`TransientAttachmentPool`)
         Buffer,        ///< 상수, 구조화, 정점, 인덱스 버퍼
-        Staging,       ///< 디바이스가 가지고 있는 업로드 스테이징 링
+        Staging,       ///< 업로드 스테이징: 디바이스가 가진 업로드 힙 · 링(DX12 · Vulkan · GL), DX11 은 업로드마다 만들어 전송이 끝나면 놓는 STAGING 텍스처
         Descriptor,    ///< 셰이더 가시 디스크립터 힙과 디스크립터 풀
         MaxKinds
     };

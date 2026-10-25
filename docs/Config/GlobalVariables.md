@@ -124,7 +124,7 @@
 | `gv_rhiBackend` | `RHIBackend` | `SW_RHI_BACKEND_DEFAULT` | 일반 | Current RHI Backend | [RHI.cpp](../../Source/Engine/Graphics/RHI/RHI.cpp) |
 | `gv_rhiDirectUploadMaxKilobytes` | `int32` | `256` | 테스트 | 이 크기(KiB) 이하의 텍스처 업로드는 스테이징 없이 바로 올린다(지금은 DX11 만 쓴다). 0 이면 모두 스테이징 | [IRHIDevice.cpp](../../Source/Engine/Graphics/RHI/IRHIDevice.cpp) |
 | `gv_rhiSoftwareAdapter` | `int32` | `0` | 테스트 | 소프트웨어 어댑터로 띄운다: 0=하드웨어, 1=WARP(DX11 · DX12) · CPU 디바이스(Vulkan) | [IRHIDevice.cpp](../../Source/Engine/Graphics/RHI/IRHIDevice.cpp) |
-| `gv_rhiStagingRingMegabytes` | `int32` | `64` | 일반 | 업로드 스테이징 용량(MiB): GL 은 링 크기, DX11 은 복사 중인 스테이징 텍스처 합의 상한. 이보다 큰 텍스처 업로드 하나는 Rejected 다 | [IRHIDevice.cpp](../../Source/Engine/Graphics/RHI/IRHIDevice.cpp) |
+| `gv_rhiStagingRingMegabytes` | `int32` | `64` | 일반 | 업로드 스테이징 용량(MiB): GL 은 링 크기(이보다 큰 업로드 하나는 Rejected), DX11 은 복사 중인 스테이징 텍스처 합의 상한(이보다 큰 업로드 하나는 혼자 들어간다) | [IRHIDevice.cpp](../../Source/Engine/Graphics/RHI/IRHIDevice.cpp) |
 | `gv_textureMipDrop` | `int32` | `0` | 일반 | 텍스처를 읽을 때 버리는 위쪽 밉 수 (사용자 설정 graphics.textureQuality 의 targetValue, 다시 시작해야 반영) | [Texture2D.cpp](../../Source/Engine/Graphics/Texture/Texture2D.cpp) |
 | `gv_textureStreaming` | `int32` | `1` | 일반 | Upload async-loaded textures with their low mips first and stream the top mips in later (0 = upload every mip at once) | [TextureCache.cpp](../../Source/Engine/Graphics/Texture/TextureCache.cpp) |
 | `gv_validateBindlessIndex` | `int32` | `kDefaultLevel` | 테스트 | 셰이더에 넘기는 bindless 인덱스 검사 — 0 끔, 1 죽은 번호(Debug 기본), 2 '없음' 번호가 가는 자리까지 | [BindlessIndexValidator.cpp](../../Source/Engine/Graphics/RHI/Support/BindlessIndexValidator.cpp) |

@@ -291,8 +291,8 @@ namespace sw
     // (ctest 가 인자 없이 켠다). 언제 켤지는 엔진이 정하고, 어떻게 고를지는 백엔드가 안다.
     SW_TEST_GLOBAL_VARIABLE( int32, gv_rhiSoftwareAdapter, 0, "소프트웨어 어댑터로 띄운다: 0=하드웨어, 1=WARP(DX11 · DX12) · CPU 디바이스(Vulkan)" );
     // 업로드 스테이징 용량. 64 MiB 는 측정값이 아니라 4096² BC7 밉 체인(약 21 MiB) 몇 장을 동시에 담는 추정이다(RhiAsyncUploads 2.2, M1 이 조정한다).
-    // 이보다 큰 업로드 하나는 기다려도 못 받으므로 Rejected 다 — 그런 텍스처를 올려야 하면 이 값을 올린다.
-    SW_GLOBAL_VARIABLE( int32, gv_rhiStagingRingMegabytes, 64, "업로드 스테이징 용량(MiB): GL 은 링 크기, DX11 은 복사 중인 스테이징 텍스처 합의 상한. 이보다 큰 텍스처 업로드 하나는 Rejected 다" );
+    // GL 링보다 큰 업로드 하나는 기다려도 못 받으므로 Rejected 다. DX11 은 스테이징을 업로드마다 만들어, 이보다 큰 업로드 하나가 예산 전부를 잡고 혼자 들어간다.
+    SW_GLOBAL_VARIABLE( int32, gv_rhiStagingRingMegabytes, 64, "업로드 스테이징 용량(MiB): GL 은 링 크기(이보다 큰 업로드 하나는 Rejected), DX11 은 복사 중인 스테이징 텍스처 합의 상한(이보다 큰 업로드 하나는 혼자 들어간다)" );
     // DX11 은 이 크기 이하의 업로드를 스테이징 없이 UpdateSubresource 로 올린다(소스 복사가 즉시 컨텍스트 잠금 안에서 일어난다).
     // 256 KiB 는 측정값이 아니라 추정이다: 잠금 안의 복사가 수십 µs(메모리 복사 5 ~ 10 GB/s)라 프레임(16.6 ms)에 비해 작고, 스테이징 한 장의 생성 · 추가 복사 명령의
     // 고정 비용과 비슷한 자리다. 글리프 아틀라스 구간 갱신(수 KB)과 256² RGBA8 이하 텍스처가 이 아래로 간다. M1(RhiAsyncUploads 측정)이 조정한다.
