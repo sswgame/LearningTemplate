@@ -54,6 +54,12 @@ namespace sw
         /** @brief 한 줄을 실행해 답만 돌려줍니다(기록 · 출력 · 로그를 건드리지 않습니다). */
         DevConsoleResult execute( string_view line, string& outReply ) const;
 
+        /**
+         * @brief 로그로 내보낼 줄 `> <명령> : <답>` 을 만듭니다. 머리(`> <명령> : `)까지 포함해 `DebugReplyLine::kMaxBytes` 를 넘지 않으며,
+         *        넘으면 답을 자르고 끝에 ` truncated=<원래 길이>` 를 붙입니다(명령이 길어도 같다).
+         */
+        [[nodiscard]] static string makeLogLine( string_view command, string_view reply );
+
         /** @brief 줄을 낱말로 나눕니다. 큰따옴표로 묶은 것은 공백이 있어도 한 낱말입니다. */
         static void tokenize( string_view line, vector<string>& outListToken );
 

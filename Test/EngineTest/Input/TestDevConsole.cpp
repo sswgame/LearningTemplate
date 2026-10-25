@@ -4,6 +4,7 @@
 #include "Core/Console/DevCommandRegistry.h"
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Network/DebugReplyLine.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Console/DevConsole.h"
@@ -189,6 +190,42 @@ SW_TEST_CASE( DevConsoleTest, ExecutesVariablesAndCommands )
     SW_EXPECT_TRUE( console.execute( "   ", reply ) == DevConsoleResult::Empty );
     SW_EXPECT_TRUE( console.execute( "help test.", reply ) == DevConsoleResult::Ok );
     SW_EXPECT_TRUE( reply.find( "Echo the arguments" ) != string::npos );
+}
+
+/**
+ * @brief [DevConsoleTest] 로그로 나가는 줄은 상한 안이면 그대로, 넘으면 머리까지 포함해 상한 안으로 잘리고 원래 길이가 표시된다
+ */
+SW_TEST_CASE( DevConsoleTest, LogLineIsCappedIncludingTheHead )
+{
+    SW_EXPECT_EQUAL( DevConsole::makeLogLine( "get x", "x = 1" ), string( "> get x : x = 1" ) );
+
+    const string longReply( DebugReplyLine::kMaxBytes + 500, 'a' );
+    const string line    = DevConsole::makeLogLine( "get x", longReply );
+    const string head    = "> get x : ";
+    const string fullLen = to_string( static_cast<uint64>( head.size() + longReply.size() ) );
+    SW_EXPECT_TRUE( DebugReplyLine::fits( line.size() ) );
+    SW_EXPECT_TRUE( line.compare( 0, head.size(), head ) == 0 );
+    SW_EXPECT_EQUAL( line.substr( line.size() - ( string( DebugReplyLine::kTruncatedMarker ).size() + fullLen.size() ) ), string( DebugReplyLine::kTruncatedMarker ) + fullLen );
+
+    // 명령이 길어도 머리까지 포함해 상한 안이다(POSIX 읽기 여유를 명령 길이가 먹지 못한다).
+    const string longCommand( DebugReplyLine::kMaxBytes * 2, 'c' );
+    SW_EXPECT_TRUE( DebugReplyLine::fits( DevConsole::makeLogLine( longCommand, "ok" ).size() ) );
+}
+
+/**
+ * @brief [DevConsoleTest] 상한을 넘는 답도 콘솔 출력 줄(오버레이)에는 전체가 남는다
+ */
+SW_TEST_CASE( DevConsoleTest, OverlongReplyKeepsTheFullTextInTheOutputLines )
+{
+    test::ScopedLogSuppressor suppressor;
+    ConsoleVariableFixture    fixture;
+    const DevCommandRegistrar registrar{ &kEchoCommand };
+    DevConsole                console{ &fixture._manager };
+    const string              word( DebugReplyLine::kMaxBytes + 500, 'b' );
+    SW_EXPECT_TRUE( console.submit( "test.echo " + word ) == DevConsoleResult::Ok );
+    const vector<DevConsoleLine>& listOutput = console.getOutput();
+    SW_ASSERT_TRUE( listOutput.size() >= 2 );
+    SW_EXPECT_EQUAL( listOutput.back()._text, "[" + word + "]" );
 }
 
 /**
