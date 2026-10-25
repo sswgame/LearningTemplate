@@ -225,6 +225,11 @@ namespace sw
         void waitForPendingLoad() const;
         /** @brief 로드된 씬을 모두 반환합니다. */
         const vector<unique_ptr<Scene>>& getLoadedScenes() const { return _listLoadedScene; }
+        /**
+         * @brief 올라와 있는 모든 씬(로드된 씬 + 미리보기 씬)을 @p outListScene 에 모읍니다(비우고 채운다).
+         * @details "어느 씬을 훑을 것인가" 를 한 곳에서 정한다 — 씬 사이 참조 검사(`SceneObjectReferenceUtil::findReferenceTo`)처럼 전 씬을 훑는 쪽이 이것을 쓴다.
+         */
+        void collectAllScenes( vector<const Scene*>& outListScene ) const;
         /** @brief 이 매니저와 그 씬이 쓰는 엔진 서비스 묶음입니다. */
         const SceneEngineServices& getEngineServices() const { return _services; }
 

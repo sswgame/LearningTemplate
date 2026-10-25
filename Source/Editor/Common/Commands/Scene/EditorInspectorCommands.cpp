@@ -11,16 +11,19 @@
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Object/Prefab/PrefabInstanceRegistry.h"
 #include "Engine/Object/Prefab/PrefabOverrides.h"
+#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Scene/SceneObjectReference.h"
 
 namespace sw::editor
 {
@@ -191,17 +194,28 @@ namespace sw::editor
         return applyToPrefab( pOuter, outerPath );
     }
 
-    uint32 EditorInspectorCommands::adoptChildPrefabInstances( GameObject* pRoot )
+    EditorInspectorCommands::AdoptResult EditorInspectorCommands::adoptChildPrefabInstances( GameObject* pRoot )
     {
-        EditorContext*     pContext = EditorContext::get();
-        GameObjectManager* pManager = pRoot != nullptr ? pRoot->getManager() : nullptr;
-        if ( pContext == nullptr || pManager == nullptr )
-            return 0;
-        EditorWorkspace&        workspace = pContext->getSubsystem<EditorWorkspace>();
+        // 참조 검사에 필요한 것을 얻지 못하면 검사를 건너뛰고 옮기지 않는다 — 거절 사유와 오류 로그로 멈춘다.
+        GameObjectManager* pManager       = pRoot != nullptr ? pRoot->getManager() : nullptr;
+        EditorWorkspace*   pWorkspace     = editor::findSubsystem<EditorWorkspace>();
+        const Scene*       pScene         = pManager != nullptr ? editor::findSceneOf( pManager ) : nullptr;
+        SceneManager*      pSceneManager  = editor::findSubsystem<SceneManager>();
+        const bool         bMissingObject = pManager == nullptr || pScene == nullptr;
+        const bool         bMissingSystem = pWorkspace == nullptr || pSceneManager == nullptr;
+        if ( bMissingObject || bMissingSystem )
+        {
+            AdoptResult rejected;
+            rejected._rejectReason = "cannot check scene object references: the object, its scene, the scene manager or the editor workspace is missing";
+            SW_LOG_WARNING( "Prefab creation refused: %#", rejected._rejectReason.c_str() );
+            return rejected;
+        }
+        EditorWorkspace&        workspace = *pWorkspace;
         PrefabInstanceRegistry& registry  = pManager->getSubsystem<PrefabInstanceRegistry>();
 
         // 부모를 먼저 기록한다. 프리팹 쓰기는 기록 순서(스폰 순서)로 돌며 부모 노드가 자식 노드보다 앞에 있다고 가정한다.
-        uint32              adoptedCount = 0;
+        // 먼저 옮길 오브젝트를 모두 모으고(아직 아무것도 바꾸지 않는다), 씬 파일을 넘는 참조가 가리키는 것이 있으면 거절한다.
+        vector<GameObject*> listAdopt;
         vector<GameObject*> listPending{ pRoot };
         vector<GameObject*> listChild;
         while ( listPending.empty() == false )
@@ -213,17 +227,33 @@ namespace sw::editor
             {
                 if ( pChild == nullptr || pChild->isPendingDestroy() )
                     continue;
-                const string childPrefab{ workspace.getPlacedPrefabPath( *pChild ) };
-                if ( childPrefab.empty() )
-                    continue;                                                                                // 프리팹 인스턴스가 아니므로 프리팹 본문에 들어가지 않는다
-                registry.registerNestedPart( pChild->getObjectID(), pRoot->getObjectID(), childPrefab, {} ); // 노드는 프리팹을 쓸 때 생기므로 키는 다음 로드에서 얻는다
-                workspace.setPlacedPrefabPath( *pChild, "" );
+                if ( workspace.getPlacedPrefabPath( *pChild ).empty() )
+                    continue; // 프리팹 인스턴스가 아니므로 프리팹 본문에 들어가지 않는다
+                listAdopt.push_back( pChild );
                 listPending.push_back( pChild );
-                ++adoptedCount;
             }
         }
-        if ( adoptedCount > 0 )
-            SW_LOG_INFO( "'%#' took %# child prefab instance(s) as nested prefabs", pRoot->getName().c_str(), adoptedCount );
-        return adoptedCount;
+
+        AdoptResult result;
+        for ( const GameObject* pChild : listAdopt )
+        {
+            string holder;
+            if ( SceneObjectReferenceUtil::findReferenceTo( *pSceneManager, engine::getSubsystem<TypeRegistry>(), *pScene, pChild->getObjectID(), holder ) == false )
+                continue;
+            result._rejectReason = string{ "'" } + pChild->getName().c_str() + "' is referenced by " + holder + " - a scene object reference cannot follow an object the prefab respawns; clear the reference first";
+            SW_LOG_WARNING( "Prefab creation from '%#' refused: %#", pRoot->getName().c_str(), result._rejectReason.c_str() );
+            return result;
+        }
+
+        for ( GameObject* pChild : listAdopt )
+        {
+            const string childPrefab{ workspace.getPlacedPrefabPath( *pChild ) };
+            registry.registerNestedPart( pChild->getObjectID(), pRoot->getObjectID(), childPrefab, {} ); // 노드는 프리팹을 쓸 때 생기므로 키는 다음 로드에서 얻는다
+            workspace.setPlacedPrefabPath( *pChild, "" );
+        }
+        result._adoptedCount = static_cast<uint32>( listAdopt.size() );
+        if ( result._adoptedCount > 0 )
+            SW_LOG_INFO( "'%#' took %# child prefab instance(s) as nested prefabs", pRoot->getName().c_str(), result._adoptedCount );
+        return result;
     }
 } // namespace sw::editor

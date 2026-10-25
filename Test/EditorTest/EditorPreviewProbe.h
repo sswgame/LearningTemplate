@@ -4,9 +4,11 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Scene/SceneObjectReference.h"
 
 namespace sw::editortest
 {
@@ -49,6 +51,61 @@ namespace sw::editortest
         }
 
         int32 _previewCount = 0;
+    };
+} // namespace sw::editortest
+
+namespace sw::editortest
+{
+    /** @brief 씬 파일을 넘는 오브젝트 참조 칸 하나를 가진 컴포넌트입니다(프리팹 만들기가 참조된 오브젝트를 옮기지 않는지 보는 테스트용). */
+    REFLECT()
+    class SceneReferenceHolderProbeComponent : public Component
+    {
+    public:
+        REFLECT_BODY();
+
+        PROPERTY()
+        SceneObjectReference _target;
+    };
+} // namespace sw::editortest
+
+namespace sw::editortest
+{
+    /** @brief 씬 오브젝트 참조 목록 칸(`vector<SceneObjectReference>`) 하나를 가진 컴포넌트입니다(컨테이너 칸도 참조로 세는지 보는 테스트용). */
+    REFLECT()
+    class SceneReferenceListHolderProbeComponent : public Component
+    {
+    public:
+        REFLECT_BODY();
+
+        PROPERTY()
+        vector<SceneObjectReference> _listTarget;
+    };
+} // namespace sw::editortest
+
+namespace sw::editortest
+{
+    /** @brief 참조 칸 하나를 품은 구조체입니다(구조체 안의 칸도 참조로 세는지 보는 테스트용). */
+    REFLECT()
+    struct SceneReferenceBoxProbe
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        SceneObjectReference _inner;
+    };
+} // namespace sw::editortest
+
+namespace sw::editortest
+{
+    /** @brief 참조 칸을 품은 구조체 칸 하나를 가진 컴포넌트입니다. */
+    REFLECT()
+    class SceneReferenceStructHolderProbeComponent : public Component
+    {
+    public:
+        REFLECT_BODY();
+
+        PROPERTY()
+        SceneReferenceBoxProbe _box;
     };
 } // namespace sw::editortest
 

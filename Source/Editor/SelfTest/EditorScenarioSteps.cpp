@@ -1629,7 +1629,7 @@ namespace sw::editor
                 if ( pComponent == nullptr || pComponent->getTypeInfo() == nullptr )
                     return false;
                 const PropertyInfo* pProperty = pComponent->getTypeInfo()->findPropertyInHierarchy( hashed_string( gv_editorProbeProperty.substr( dot + 1 ).c_str() ) );
-                if ( pProperty == nullptr || pProperty->_typeName != hashed_string( "SceneObjectReference" ) )
+                if ( pProperty == nullptr || SceneObjectReferenceUtil::isReferenceTypeName( pProperty->_typeName ) == false )
                     return false;
                 const SceneObjectReference* pReference    = pProperty->getValuePtr<SceneObjectReference>( pComponent );
                 const SceneManager*         pSceneManager = editor::findSubsystem<SceneManager>();
