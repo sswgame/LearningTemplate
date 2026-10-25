@@ -97,15 +97,20 @@ namespace test
         return TestCatalogInternal::kArrBuildFeature[static_cast<size_t>( feature )]._pName;
     }
 
+    const utf8* getCurrentCaseParameter()
+    {
+        return TestRegistry::getInstance().getCurrentContext()->getParameter().c_str();
+    }
+
     sw::string getEnvironmentValue( const utf8* pEnvironmentName )
     {
         const utf8* pValue = std::getenv( pEnvironmentName );
         return pValue == nullptr ? sw::string{} : sw::string( pValue );
     }
 
-    void TestCatalog::addCase( const utf8* pSuiteName, const utf8* pTestName, sw::Delegate<void()> func, float64 expectedSeconds )
+    void TestCatalog::addCase( const utf8* pSuiteName, const utf8* pTestName, sw::Delegate<void()> func, float64 expectedSeconds, const utf8* pParameter )
     {
-        _listCase.push_back( { pSuiteName, pTestName, func, expectedSeconds } );
+        _listCase.push_back( { pSuiteName, pTestName, func, expectedSeconds, pParameter } );
     }
 
     void TestCatalog::addParameterizedCase( const utf8* pSuiteName, const utf8* pTestName, ParameterListFunc listFunc, ParameterCaseFunc caseFunc, float64 expectedSeconds )
@@ -138,7 +143,7 @@ namespace test
                 addCase( family._suiteName.c_str(), ( family._testName + "." + makeParameterLabel( parameter.c_str() ) ).c_str(), [caseFunc, parameter]()
                 {
                     caseFunc( parameter.c_str() );
-                }, family._expectedSeconds );
+                }, family._expectedSeconds, parameter.c_str() );
             }
         }
         for ( const CaseGenerator generator : _listGenerator )

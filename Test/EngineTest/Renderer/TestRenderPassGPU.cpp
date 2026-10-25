@@ -1197,7 +1197,7 @@ SW_TEST_CASE( RenderPassGPUTest, MaterialLifetimeFollowsPacket )
  *       Map, 리스트끼리 기록 상태 캐시 공유 같은 레이스가 생기는 곳)에 테스트가 닿지 않고, 그 레이스는
  *       `AmbientOcclusionReachesBloom` 이 플래키해지는 것으로만 드러난다.
  */
-SW_TEST_CASE( RenderPassGPUTest, RenderGraphExecuteParallelRunsOnRealDevice )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, RenderGraphExecuteParallelRunsOnRealDevice, test::listRHIBackendParameter, 0.4 )
 {
     uint32                attemptedCount{ 0 };
     test::RHIBackendSweep sweep;
@@ -1253,7 +1253,7 @@ SW_TEST_CASE( RenderPassGPUTest, RenderGraphExecuteParallelRunsOnRealDevice )
  *          뎁스 포맷, TAA 히스토리 포맷 하드코딩) DX12 가 몇 프레임 만에 fence wait timeout → DEVICE_HUNG →
  *          크래시로 간다. 검증 레이어 오류가 0 인지도 같이 봐야 의미가 있다.
  */
-SW_TEST_CASE( RenderPassGPUTest, FrameRendererDeferredPipelineParallelLevels )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, FrameRendererDeferredPipelineParallelLevels, test::listRHIBackendParameter, 0.4 )
 {
     uint32                attemptedCount{ 0 };
     test::RHIBackendSweep sweep;
@@ -1346,7 +1346,7 @@ SW_TEST_CASE( RenderPassGPUTest, FrameRendererDeferredPipelineParallelLevels )
  *          픽셀로는 잡기 어렵다. 알파 경로가 컴파일됐는지 여부는 겹치는 곳의 색만 바꾸는데, 그 색은
  *          조명·톤매핑을 타고 흔들린다. 그래서 **드로우가 실제로 고른 PSO 의 디스크립터**를 본다.
  */
-SW_TEST_CASE( RenderPassGPUTest, MaterialPermutationDrivesBatchPSO )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, MaterialPermutationDrivesBatchPSO, test::listRHIBackendParameter, 0.4 )
 {
     auto hasDefine = []( const sw::RHIPipelineStateDesc& desc, const utf8* pDefine ) -> bool
     {
@@ -1483,7 +1483,7 @@ SW_TEST_CASE( RenderPassGPUTest, MaterialPermutationDrivesBatchPSO )
  *          스프라이트가 사각형 + 스프라이트 머티리얼 + 텍스처 인스턴스로 풀리면, 엔진 루프가 패킷 전에 그 머티리얼을 올리고(`initializePending`)
  *          배치 PSO 가 스프라이트 셰이더가 된다. Shipping 에서는 그 퍼뮤테이션이 쿠킹돼 있어야 한다(쿠킹 구멍이면 여기서 진다).
  */
-SW_TEST_CASE( RenderPassGPUTest, SpriteDrawsWithTheSpriteShader )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, SpriteDrawsWithTheSpriteShader, test::listRHIBackendParameter, 0.4 )
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     test::RHIBackendSweep sweep;
@@ -1544,7 +1544,7 @@ SW_TEST_CASE( RenderPassGPUTest, SpriteDrawsWithTheSpriteShader )
  *          만들므로 쿠커가 그 셰이더를 define 없이 베이크하지 않으면 이 케이스가 Shipping 에서 진다. 표본 효과는 연기(알파)와 불꽃(더하기, 1 보다 큰 색)이다.
  *          두 방출기는 CPU 전용 모듈이 없어 기본값(`gv_vfxSimulation` GPU, Shipping 고정)으로 GPU 시뮬레이션(vfxsimulate.hlsl → 간접 드로우)을 탄다.
  */
-SW_TEST_CASE( RenderPassGPUTest, ParticlesDrawInTheTransparentPass )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, ParticlesDrawInTheTransparentPass, test::listRHIBackendParameter, 0.4 )
 {
     constexpr uint32 kMinParticlePixelCount = 50; ///< 재생 판에서 밝아진 화소의 하한
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
@@ -1615,7 +1615,7 @@ SW_TEST_CASE( RenderPassGPUTest, ParticlesDrawInTheTransparentPass )
  *          비추므로 x = ±2.5 는 확실히 밖이고, 카메라는 z 를 뒤로 물리면 그만큼 넓게 본다.
  *          뷰를 잘못 쓰면 이 큐브들이 통째로 사라진다.
  */
-SW_TEST_CASE( RenderPassGPUTest, MainPassCullsWithCameraFrustumNotLight )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, MainPassCullsWithCameraFrustumNotLight, test::listRHIBackendParameter, 0.4 )
 {
     // 라이트 직교 상자는 원점 중심 폭 2.22 — 반폭 1.11 에 바운드 반지름 0.87 을 더해도 2.5 는 밖이다.
     constexpr float32 kSideX = 2.5f;
@@ -1827,7 +1827,7 @@ SW_TEST_CASE( RenderPassGPUTest, TransparentOrderMatchesAcrossBackends )
  *          그래서 **메시 하나를 여럿이 공유해 한 배치에 인스턴스를 여러 개** 만들고, 그중 절반을 카메라
  *          뒤로 보낸다. 화면에 남아야 할 둘이 좌우에 제대로 찍히는지 본다.
  */
-SW_TEST_CASE( RenderPassGPUTest, GPUGeneratedCommandsDrawOnlyVisibleInstances )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, GPUGeneratedCommandsDrawOnlyVisibleInstances, test::listRHIBackendParameter, 0.4 )
 {
     // 기본 카메라는 (0, 1.2, 3.2) 에서 원점을 본다 — -Z 를 보므로 월드 +X 는 화면 왼쪽이다.
     constexpr float32 kSideOffset = 1.2f;
@@ -1928,7 +1928,7 @@ SW_TEST_CASE( RenderPassGPUTest, GPUGeneratedCommandsDrawOnlyVisibleInstances )
  *          백엔드 색공간에 따라 흔들리지만, 같은 조명을 받는 두 큐브 사이의 R-B 대소는 흔들리지 않는다.
  *          픽셀 수로 세면 백엔드마다 값이 널뛰어 판정이 되지 않는다.
  */
-SW_TEST_CASE( RenderPassGPUTest, PerBatchMaterialColorsReachShader )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, PerBatchMaterialColorsReachShader, test::listRHIBackendParameter, 0.4 )
 {
     // 기본 카메라는 -Z 를 본다 — 월드 +X 가 화면 **왼쪽**으로 간다. 그래서 붉은 큐브를 -X 에 두면
     // 화면 오른쪽이 붉어진다.
@@ -2070,7 +2070,7 @@ SW_TEST_CASE( RenderPassGPUTest, PerBatchMaterialColorsReachShader )
  *          메시를 하나만 쓰는 씬(벤치 씬 등)은 이 경로를 타지 않는다. 그래서 같은 큐브를 **두 번 따로 만들어** 포인터를 다르게 하고(기하는 동일해 가시성 변수를 없앤다)
  *          좌우로 떨어뜨린 뒤, 화면 좌우 양쪽에 모두 그려졌는지 본다.
  */
-SW_TEST_CASE( RenderPassGPUTest, MultiBatchPassKeepsPerBatchConstants )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, MultiBatchPassKeepsPerBatchConstants, test::listRHIBackendParameter, 0.4 )
 {
     /// @brief 두 큐브를 카메라가 보는 원점에서 좌우로 이만큼 떼어 놓는다.
     constexpr float32 kSideOffset = 1.1f;
@@ -2166,7 +2166,7 @@ SW_TEST_CASE( RenderPassGPUTest, MultiBatchPassKeepsPerBatchConstants )
  *          회전각은 시간에 따라 달라지므로 백엔드 사이 픽셀 수를 비교하지 않는다. 각 백엔드가
  *          "무언가를 그렸는지" 만 본다 — UAV 를 안 뗐을 때의 증상이 정확히 "아무것도 안 그린다" 다.
  */
-SW_TEST_CASE( RenderPassGPUTest, InstanceAnimationKeepsInstancesReadable )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, InstanceAnimationKeepsInstancesReadable, test::listRHIBackendParameter, 0.4 )
 {
 
     test::RHIBackendSweep sweep;
@@ -2395,7 +2395,7 @@ SW_TEST_CASE( RenderPassGPUTest, FrameRendererParityAllBackends )
  *          함께 보는 것: 그림자 패스는 뷰 모드를 **받지 않아야** 한다(와이어프레임 그림자를 구우면
  *          그림자가 선 몇 개로 남는다), 모드를 되돌리면 캐시에서 같은 PSO 가 다시 나와야 한다.
  */
-SW_TEST_CASE( RenderPassGPUTest, ViewModeSelectsDistinctPipelineStates )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, ViewModeSelectsDistinctPipelineStates, test::listRHIBackendParameter, 0.4 )
 {
     auto hasDefine = []( const sw::RHIPipelineStateDesc& desc, const utf8* pDefine ) -> bool
     {
@@ -2683,7 +2683,7 @@ SW_TEST_CASE( RenderPassGPUTest, UploadQueueLeavesMeshesToTheRenderThreadWithout
  * @details 지형 LOD 교체 · 씬 교체가 게임 스레드에서 메시를 놓는다. 그 자리에서 `destroyBuffer` 를 부르면 렌더 스레드가 기록하며 읽는
  *          백엔드 표(DX11 버퍼 SRV · 기록 상태의 묶인 정점 버퍼)를 쓴다 — DX11 + 환경 쇼케이스가 DataRaceDetector 로 죽었다(5 번 중 2 번).
  */
-SW_TEST_CASE( RenderPassGPUTest, MeshReleaseWaitsForTheRenderThreadFrame )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, MeshReleaseWaitsForTheRenderThreadFrame, test::listRHIBackendParameter, 0.4 )
 {
     test::RHIBackendSweep sweep;
     for ( test::RHITestDevice& device : sweep )
@@ -2863,7 +2863,7 @@ SW_TEST_CASE( RenderPassGPUTest, DeferredPipelineDrawsGeometry )
  *          으로 자기 자리를 얻고, 배치는 인스턴스에서 — 어느 경로가 틀려도 그림이 달라진다(엉뚱한 인스턴스·정점 구간). 그래서
  *          묶은 그림과 배치마다 부른 그림, 그리고 정점 풀 없이 그린 그림을 픽셀로 비교한다.
  */
-SW_TEST_CASE( RenderPassGPUTest, MergedSceneDrawsMatchPerBatch )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, MergedSceneDrawsMatchPerBatch, test::listRHIBackendParameter, 0.4 )
 {
     struct Snapshot
     {
@@ -3009,7 +3009,7 @@ SW_TEST_CASE( RenderPassGPUTest, MergedSceneDrawsMatchPerBatch )
  *          읽으면 SSAO 는 매 프레임 풀스크린 패스를 돌고 결과는 버려진다.
  *          "패스가 돈다" 와 "결과가 쓰인다" 는 다른 말이라, AO 역할을 끈 프레임과 켠 프레임의 Bloom 출력을 비교한다.
  */
-SW_TEST_CASE( RenderPassGPUTest, AmbientOcclusionReachesBloom )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, AmbientOcclusionReachesBloom, test::listRHIBackendParameter, 0.4 )
 {
     /// @brief AO 를 껐을 때 밝아져야 하는 Bloom 화소 수의 하한 — 이 무대에서 650 화소가 밝아진다.
     constexpr uint32 kMinOccludedPixelCount = 100;
@@ -3188,7 +3188,7 @@ SW_TEST_CASE( RenderPassGPUTest, RenderTargetsArePublishedForTheEditor )
  *          모두 π ± 0.43 근처라, t ≈ π/2 + kπ 에서는 모든 정점의 변위가 함께 0 을 지나 노멀 음영만 남는다(달라진 픽셀 약 2 %, 임계값 5 % 미만).
  *          벽시계로 찍으면 부하로 늦어진 실행이 그 창(주기 π 초의 약 12 %)에 들어가 진다. t = 3π/4 는 |sin 2t| = 1 인 자리다.
  */
-SW_TEST_CASE( RenderPassGPUTest, MorphPoolIdentityMatchesRest )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, MorphPoolIdentityMatchesRest, test::listRHIBackendParameter, 0.4 )
 {
     /// @brief 그림 하나의 요약 — 그려진 픽셀 수와 픽셀 비교용 원본.
     struct Snapshot
@@ -3735,7 +3735,7 @@ SW_TEST_CASE( RenderPassGPUTest, MorphWeightsDeformBeforeSkinningLikeCPU )
  *          다시 준다) 같은 메시의 정점을 바꿀 때(`setVertices`) "같은 집합" 으로 보여 옛 정점을 그리고, 정점 수가 줄었으면 배치의 정점 구간이
  *          다른 메시의 정점을 읽는다. 주소 재사용은 테스트에서 마음대로 일으킬 수 없어, 같은 원인의 다른 얼굴(같은 메시의 정점 교체)로 본다.
  */
-SW_TEST_CASE( RenderPassGPUTest, MeshPoolsRebuildWhenMeshContentChanges )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, MeshPoolsRebuildWhenMeshContentChanges, test::listRHIBackendParameter, 0.4 )
 {
     test::RHIBackendSweep sweep( { sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::DirectX11, sw::RHIBackend::OpenGL } );
     for ( test::RHITestDevice& device : sweep )
@@ -3785,7 +3785,7 @@ SW_TEST_CASE( RenderPassGPUTest, MeshPoolsRebuildWhenMeshContentChanges )
  *          (3) 방금 뺀 메시의 구간은 곧바로 다시 주지 않는다 — DX12 · Vulkan 의 정점 버퍼는 CPU 가 직접 쓰는 메모리라, 아직 끝나지 않은 앞 프레임이
  *          읽는 자리를 덮어쓴다. `kMaxFrameCountInFlight` 프레임이 지나면 같은 크기의 메시가 그 자리를 받는다(가장 잘 맞는 구간).
  */
-SW_TEST_CASE( RenderPassGPUTest, VertexPoolUploadsOnlyChangedMeshes )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, VertexPoolUploadsOnlyChangedMeshes, test::listRHIBackendParameter, 0.4 )
 {
     test::RHIBackendSweep sweep( { sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::DirectX11, sw::RHIBackend::OpenGL } );
     for ( test::RHITestDevice& device : sweep )
@@ -3847,7 +3847,7 @@ SW_TEST_CASE( RenderPassGPUTest, VertexPoolUploadsOnlyChangedMeshes )
  * @details 더하면 그 메시의 레스트 바이트만 올라가고 다시 채우기(repack)가 없다. 빼면 아무것도 올리지 않는다. 스킨 구간은 모프 **용량** 뒤에서
  *          시작하므로 용량이 그대로면 바뀌지 않는다.
  */
-SW_TEST_CASE( RenderPassGPUTest, MorphPoolUploadsOnlyChangedMeshes )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, MorphPoolUploadsOnlyChangedMeshes, test::listRHIBackendParameter, 0.4 )
 {
     test::RHIBackendSweep sweep( { sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::DirectX11, sw::RHIBackend::OpenGL } );
     for ( test::RHITestDevice& device : sweep )
@@ -3900,7 +3900,7 @@ SW_TEST_CASE( RenderPassGPUTest, MorphPoolUploadsOnlyChangedMeshes )
  *          `forgetRHI` 는 `~IRHIDevice()` 의 안전망 경로에서 온다(shutdown 을 거치지 않고 사라지는
  *          디바이스). 정상 종료는 `releaseRHI` 라서 평소에는 드러나지 않는다.
  */
-SW_TEST_CASE( RenderPassGPUTest, ForgetThenInitDoesNotDoubleMaterialTextureOrdinals )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, ForgetThenInitDoesNotDoubleMaterialTextureOrdinals, test::listRHIBackendParameter, 0.4 )
 {
     test::RHIBackendSweep sweep( { sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::DirectX11, sw::RHIBackend::OpenGL } );
     for ( test::RHITestDevice& device : sweep )
@@ -3936,7 +3936,7 @@ SW_TEST_CASE( RenderPassGPUTest, ForgetThenInitDoesNotDoubleMaterialTextureOrdin
  *          표시하면, 엔진 루프가 패킷을 내기 전 · 씬 초기화가 디바이스로 올린다. 표시하지 않은 것(머티리얼 편집기 미리보기 — 편집 중인 내용을
  *          넣는다)은 파일 내용으로 덮이면 안 되므로 그대로 둔다.
  */
-SW_TEST_CASE( RenderPassGPUTest, MaterialRequestedWithoutADeviceIsUploadedLater )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, MaterialRequestedWithoutADeviceIsUploadedLater, test::listRHIBackendParameter, 0.4 )
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     constexpr const utf8* kPath = "engine/materials/benchtextured.material";
@@ -3978,7 +3978,7 @@ SW_TEST_CASE( RenderPassGPUTest, MaterialRequestedWithoutADeviceIsUploadedLater 
  *          읽는다 — 지연 해제가 끝나면 다른 텍스처가 그 자리를 받는다. 씬 빌드가 reload 세대를 보고 머티리얼이 새 인덱스를 받게 한다.
  *          DX11 · GL 은 인덱스를 바로 다시 쓰므로(지연 해제가 없다) 같은 인덱스가 돌아오는 일이 있다 — 그때는 결함이 보이지 않아 상태만 본다.
  */
-SW_TEST_CASE( RenderPassGPUTest, ReloadedTextureIsReboundToMaterialsAndBatches )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, ReloadedTextureIsReboundToMaterialsAndBatches, test::listRHIBackendParameter, 0.4 )
 {
     const sw::string      kTexturePath = "engine/textures/test/checker.dds";
     int32                 changedIndexCount{ 0 };
@@ -4054,7 +4054,7 @@ SW_TEST_CASE( RenderPassGPUTest, ReloadedTextureIsReboundToMaterialsAndBatches )
  *          인덱스로 가르면 안 된다 — DX11·GL 은 인덱스를 즉시 회수해 다음 등록이 **같은 번호**를
  *          받는다(옳은 동작이다).
  */
-SW_TEST_CASE( RenderPassGPUTest, InstanceConstantBufferIsRecreatedWhenLayoutGrows )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, InstanceConstantBufferIsRecreatedWhenLayoutGrows, test::listRHIBackendParameter, 0.4 )
 {
     test::RHIBackendSweep sweep( { sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::DirectX11, sw::RHIBackend::OpenGL } );
     for ( test::RHITestDevice& device : sweep )
@@ -4110,7 +4110,7 @@ SW_TEST_CASE( RenderPassGPUTest, InstanceConstantBufferIsRecreatedWhenLayoutGrow
  *          (3) 인스턴스는 부모의 값 변경에도 부모 바이트를 다시 복사한다. 하나라도 어긋나면 화면에서는 "엉뚱한 색" 이다.
  *          XML 의 프로퍼티 순서를 셰이더(forwardlit 의 MaterialData: color, roughness, albedoMap)와 다르게 적어 차이가 바이트에 드러나게 한다.
  */
-SW_TEST_CASE( RenderPassGPUTest, ReloadedMaterialIsLaidOutByTheShaderAgain )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, ReloadedMaterialIsLaidOutByTheShaderAgain, test::listRHIBackendParameter, 0.4 )
 {
     // roughness 를 먼저 — XML 순서로 쌓으면 roughness 가 0, color 가 16 에 간다. 셰이더는 color 가 0, roughness 가 16.
     const sw::string reorderedXML =
@@ -4177,7 +4177,7 @@ SW_TEST_CASE( RenderPassGPUTest, ReloadedMaterialIsLaidOutByTheShaderAgain )
  *          넓힐 수 없으므로 **거절**이 맞다.
  *          네 백엔드가 같은 답(0)을 내는지 여기서 못박는다.
  */
-SW_TEST_CASE( RenderPassGPUTest, StructuredBufferRejectsSizeThatOverflows32Bit )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, StructuredBufferRejectsSizeThatOverflows32Bit, test::listRHIBackendParameter, 0.4 )
 {
     test::RHIBackendSweep sweep( { sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::DirectX11, sw::RHIBackend::OpenGL } );
     for ( test::RHITestDevice& device : sweep )
@@ -4223,7 +4223,7 @@ SW_TEST_CASE( RenderPassGPUTest, StructuredBufferRejectsSizeThatOverflows32Bit )
  *          화면에 옮긴다. 블릿이 Reinhard 를 한 번 더 걸면 [0,1] 값이 c/(c+1) 로 눌려 화면이 절반 밝기 아래로 내려간다. 화면(Present 캡처)과
  *          `TonemapColor` 를 픽셀로 맞춘다.
  */
-SW_TEST_CASE( RenderPassGPUTest, DeferredPresentCopiesTheTonemapResult )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, DeferredPresentCopiesTheTonemapResult, test::listRHIBackendParameter, 0.4 )
 {
     uint32 comparedCount{ 0 };
 
@@ -4338,7 +4338,7 @@ SW_TEST_CASE( RenderPassGPUTest, DeferredPresentCopiesTheTonemapResult )
  *          **최종 화면을 읽으려면 Present 캡처가 필요하다** — 백버퍼는 핸들이 없어 읽을 수 없고,
  *          트랜지언트를 읽으면 Present 패스가 한 일(합친 판에서는 후처리 전부)이 빠진다.
  */
-SW_TEST_CASE( RenderPassGPUTest, FusedPostChainMatchesStaged )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, FusedPostChainMatchesStaged, test::listRHIBackendParameter, 0.4 )
 {
     uint32 comparedCount{ 0 };
 
@@ -4486,7 +4486,7 @@ SW_TEST_CASE( RenderPassGPUTest, FusedPostChainMatchesStaged )
  *          타깃을 낸다. 뎁스 로드 연산도 바인딩한 뎁스로 정해야 한다(SceneDepth 의 클리어 기록이 아니라). `forwardpipeline.xml` 의 SceneColor ·
  *          SceneDepth 를 다른 이름으로 바꿔 같은 씬을 그리고 픽셀을 맞춘다.
  */
-SW_TEST_CASE( RenderPassGPUTest, RenamedAttachmentsRenderTheSameImage )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, RenamedAttachmentsRenderTheSameImage, test::listRHIBackendParameter, 0.4 )
 {
     sw::string pipelineText;
     SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( ::test::getEngineDefaultAssets()._defaultForwardPipeline.c_str(), pipelineText ) );
@@ -4560,7 +4560,7 @@ SW_TEST_CASE( RenderPassGPUTest, RenamedAttachmentsRenderTheSameImage )
  *          떼어, 첨부가 `_role` 로 자기 역할을 선언한다.
  *          `deferredpipeline.xml` 의 여섯 첨부 이름을 바꾸고 역할을 적어 같은 씬을 그려 픽셀을 맞춘다.
  */
-SW_TEST_CASE( RenderPassGPUTest, RenamedGBufferAttachmentsRenderTheSameImage )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, RenamedGBufferAttachmentsRenderTheSameImage, test::listRHIBackendParameter, 0.4 )
 {
     sw::string pipelineText;
     SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( ::test::getEngineDefaultAssets()._defaultDeferredPipeline.c_str(), pipelineText ) );
@@ -4646,7 +4646,7 @@ SW_TEST_CASE( RenderPassGPUTest, RenamedGBufferAttachmentsRenderTheSameImage )
  *          (3) 언리얼 MIC · 유니티 MaterialPropertyBlock 은 텍스처 **자체**를 덮어쓴다. 여기서도 에셋 경로로 덮어쓰고, 값은 그때마다 지금 텍스처에서 읽는다.
  *          앱(Engine)처럼 합치기를 백엔드에 맞춰 켜고 GPUSceneBuilder → 스냅샷 → GPUScene::upload 를 직접 돌려 인스턴스 바이트 · 배치 슬롯을 본다.
  */
-SW_TEST_CASE( RenderPassGPUTest, InstanceOverridesReachTheGPUOnEveryBackend )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, InstanceOverridesReachTheGPUOnEveryBackend, test::listRHIBackendParameter, 0.4 )
 {
     const sw::string      kOverrideTexture = "engine/textures/perlin.dds";
     test::RHIBackendSweep sweep( { sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::DirectX11, sw::RHIBackend::OpenGL } );
@@ -4738,7 +4738,7 @@ SW_TEST_CASE( RenderPassGPUTest, InstanceOverridesReachTheGPUOnEveryBackend )
  * @details 흰색으로 샘플하면 경고 로그 말고는 빠진 것을 알 수 없다 — 언리얼 · 유니티 · Godot 처럼 체커를 빌린다. 요청 경로와 실제로 빌린 경로가
  *          다르므로 슬롯은 체커의 SRV 여야 하고, 놓을 때도 빌린 경로(체커)로 돌려줘야 한다.
  */
-SW_TEST_CASE( RenderPassGPUTest, MissingTextureSamplesTheChecker )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, MissingTextureSamplesTheChecker, test::listRHIBackendParameter, 0.4 )
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     constexpr const utf8* kPresentTexture = "engine/textures/test/checker.dds";
@@ -4846,7 +4846,7 @@ SW_TEST_CASE( RenderPassGPUTest, ConcurrentTextureAcquireCreatesOnce )
  * @details 밉 스트리밍(계획 PreloadAndLod P6). 바꿔 끼우면 리로드 세대가 올라 머티리얼이 새 번호를 받고, 기다리는 수(`countLoadsInFlight`)에 위쪽 밉도 든다
  *          — 시나리오 스크린샷이 작은 밉을 찍지 않는다. 동기 요청(`acquire`)은 처음부터 밉 전부다.
  */
-SW_TEST_CASE( RenderPassGPUTest, AsyncTextureStreamsTopMipsAfterBase )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, AsyncTextureStreamsTopMipsAfterBase, test::listRHIBackendParameter, 0.4 )
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     constexpr const utf8* kStreamedTexture = "engine/textures/particles/kenney_particle/trace_07.dds"; // 512 × 512, 밉 10
@@ -4894,7 +4894,7 @@ SW_TEST_CASE( RenderPassGPUTest, AsyncTextureStreamsTopMipsAfterBase )
  * @details 밉 요청 우선순위(계획 PreloadAndLod P10). 먼저 읽힌 A 와 나중에 읽힌 B 가 둘 다 아래쪽 밉만 올린 채 줄에 있을 때, B 의 화면 크기를 알리면 한 번의 `updateStreaming`
  *          (한 장)이 B 를 올리고 A 는 아직 아래쪽 밉이다. 알리지 않으면 읽힌 순서(A 먼저)가 옛 동작이다.
  */
-SW_TEST_CASE( RenderPassGPUTest, StreamingUploadsTheTextureNotedAsLargestOnScreenFirst )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, StreamingUploadsTheTextureNotedAsLargestOnScreenFirst, test::listRHIBackendParameter, 0.4 )
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     constexpr const utf8* kFirstLoaded  = "engine/textures/particles/kenney_particle/trace_07.dds";
@@ -4947,7 +4947,7 @@ SW_TEST_CASE( RenderPassGPUTest, StreamingUploadsTheTextureNotedAsLargestOnScree
  *          Depth Priming 처럼 `forwardprepasspipeline.xml` 을 두고, 프리패스 없는 포워드와 픽셀을 맞춘다. 깊이 첨부 이름만 바꾼 판도 맞춘다 —
  *          기본 패스가 프리패스의 깊이를 지우지 않고 이어 받아야(Load) 같은 그림이다.
  */
-SW_TEST_CASE( RenderPassGPUTest, DepthPrepassRendersTheSameImage )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, DepthPrepassRendersTheSameImage, test::listRHIBackendParameter, 0.4 )
 {
     sw::string prepassText;
     SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( "engine/pipeline/forwardprepasspipeline.xml", prepassText ) );
@@ -5017,7 +5017,7 @@ SW_TEST_CASE( RenderPassGPUTest, ShadowSurvivesLargeShadowVolume )
  * @details `-gv_screenshotAttachment=ShadowMap` 의 길이다. 읽기가 선언 포맷(D24S8)을 그대로 넘기면 이미지 변환이 float 바이트를 색으로 푼다.
  *          크기는 화면이 아니라 그림자 품질(`FrameRenderer::getShadowMapResolution`)이다.
  */
-SW_TEST_CASE( RenderPassGPUTest, ShadowMapAttachmentReadsBackAsDepth )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, ShadowMapAttachmentReadsBackAsDepth, test::listRHIBackendParameter, 0.4 )
 {
     uint32                checkedCount{ 0 };
     test::RHIBackendSweep sweep;
@@ -5072,7 +5072,7 @@ SW_TEST_CASE( RenderPassGPUTest, ShadowMapAttachmentReadsBackAsDepth )
  *          기본색 알파 0.2 · 컷오프 0.5 의 큐브는 그림자 맵에 깊이가 없어야 한다. 대조: 컷오프를 끈 같은 머티리얼은 깊이를 쓴다(그림자 맵이 정말 그려졌다).
  *          바닥을 두지 않는다 — 그림자 맵의 깊이는 큐브의 것뿐이다.
  */
-SW_TEST_CASE( RenderPassGPUTest, AlphaCutoffClipsTheShadowDepth )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, AlphaCutoffClipsTheShadowDepth, test::listRHIBackendParameter, 0.4 )
 {
     uint32                checkedCount{ 0 };
     test::RHIBackendSweep sweep;
@@ -5170,7 +5170,7 @@ SW_TEST_CASE( RenderPassGPUTest, PointLightShadowCastsOnEveryBackend )
  * @details 볼륨에 밝은 한 색 SH 를 넣으면(베이크 없이 `adoptProbeData`) 그림자 쪽 면이 밝아져 볼륨 없는 그림과 달라야 한다. 같으면 볼륨 원소가 라이트 목록 ·
  *          그리드 · 프로브 버퍼(t13) · `LightData::sampleProbeVolume` 중 어딘가에서 빠졌다.
  */
-SW_TEST_CASE( RenderPassGPUTest, LightProbeVolumeReplacesAmbient )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, LightProbeVolumeReplacesAmbient, test::listRHIBackendParameter, 0.4 )
 {
     uint32                comparedCount{ 0 };
     test::RHIBackendSweep sweep;
@@ -5225,7 +5225,7 @@ SW_TEST_CASE( RenderPassGPUTest, LightProbeVolumeReplacesAmbient )
  * @details 금속은 확산이 없고 F0 가 기본 색이라 같은 큐브가 다른 그림이어야 한다. 디퍼드에서 같으면 금속도가 G버퍼 머티리얼 칸(GBufferMaterial,
  *          에뮬 슬롯 t15)을 지나 조명 패스까지 오지 못한 것이다 — 쓰는 쪽 SurfaceOutput::store · 실행의 셋째 MRT · 바인딩 · PassTexture::loadGbufferMaterial 중 하나다.
  */
-SW_TEST_CASE( RenderPassGPUTest, MetallicChangesForwardAndDeferredPictures )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, MetallicChangesForwardAndDeferredPictures, test::listRHIBackendParameter, 0.4 )
 {
     const utf8*           arrPipeline[] = { ::test::getEngineDefaultAssets()._defaultForwardPipeline.c_str(), ::test::getEngineDefaultAssets()._defaultDeferredPipeline.c_str() };
     uint32                comparedCount{ 0 };
@@ -5271,7 +5271,7 @@ SW_TEST_CASE( RenderPassGPUTest, MetallicChangesForwardAndDeferredPictures )
  *          빌보드 하나만큼의 픽셀이 바뀐다. 허용: 다른 화소가 입자 화소의 `kMaxParticleDifferingPercent` % 이하 — 부동소수 순서(FMA)가 다르면 빌보드 가장자리 픽셀이 한두 칸 바뀔 수 있다.
  *          GPU 의 살아 있는 수는 RHI 에 버퍼 되읽기가 없어 직접 세지 않는다(그림이 수를 대신한다).
  */
-SW_TEST_CASE( RenderPassGPUTest, CPUAndGPUParticleSimulationsDrawTheSameImage )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, CPUAndGPUParticleSimulationsDrawTheSameImage, test::listRHIBackendParameter, 0.4 )
 {
 #if defined( SW_SHIPPING )
     SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // gv_vfxSimulation is a development-build switch
@@ -5345,7 +5345,7 @@ SW_TEST_CASE( RenderPassGPUTest, CPUAndGPUParticleSimulationsDrawTheSameImage )
  *          라이트 순서가 원자 연산의 순서라 더하기 순서가 달라 마지막 비트가 다를 수 있다 — 색 거리 `kSamePathMinDistance` 아래라 다른 화소로 세지 않는다.
  *          판정은 다른 화소 0 이다(라이트 하나가 빠지면 그 클러스터의 화소가 모두 어두워진다).
  */
-SW_TEST_CASE( RenderPassGPUTest, LightCullingProducersDrawTheSameImage )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, LightCullingProducersDrawTheSameImage, test::listRHIBackendParameter, 0.4 )
 {
 #if defined( SW_SHIPPING )
     SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // gv_lightCulling is a development-build switch
@@ -5441,7 +5441,7 @@ SW_TEST_CASE( RenderPassGPUTest, SpotLightShadowCastsOnEveryBackend )
  * @details 주 카메라는 원점을, 캡처 카메라는 30 m 떨어진 붉은 큐브를 본다. 볼륨을 카메라에 맞추는 빛(`_shadowViewDistance` 12 m)이면 주 시점 볼륨은 큐브를
  *          덮지 않는다. 캡처 뷰가 주 시점 볼륨을 쓰면 그림자를 켜도 끈 판과 같은 밝기다.
  */
-SW_TEST_CASE( RenderPassGPUTest, ExtraViewCastsShadowsOutsideTheMainVolume )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, ExtraViewCastsShadowsOutsideTheMainVolume, test::listRHIBackendParameter, 0.4 )
 {
     constexpr uint32      kMinShadowedPixelCount = 40; ///< 그림자를 껐을 때 밝아져야 하는 화소 수의 하한 — 이 무대에서 181 화소가 밝아진다
     uint32                comparedCount{ 0 };
@@ -5476,7 +5476,7 @@ SW_TEST_CASE( RenderPassGPUTest, ExtraViewCastsShadowsOutsideTheMainVolume )
  *          눈이 멀어 있다. 노멀은 조명 이전의 값이라 G버퍼에서 직접 읽는다. 거울 배치는 컬 모드를 뒤집어 그리므로(`GPUMeshBatch::_bReverseCulling`)
  *          파이프라인의 후면 컬링을 그대로 두어도 카메라 쪽 면이 G버퍼에 남는다.
  */
-SW_TEST_CASE( RenderPassGPUTest, NormalsStayPerpendicularUnderNonUniformScale )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, NormalsStayPerpendicularUnderNonUniformScale, test::listRHIBackendParameter, 0.4 )
 {
     struct NormalCase
     {
@@ -5583,7 +5583,7 @@ SW_TEST_CASE( RenderPassGPUTest, NormalsStayPerpendicularUnderNonUniformScale )
  *          배포 빌드에서는 그래프 선언만 본다. 디퍼드에서 SSAO 는 투명 패스보다 먼저 선언돼 불투명 깊이를 읽는다. 그 깊이에는 포워드 전용
  *          패스(ForwardOnlyOpaque — 툰)가 쓴 깊이도 들어가야 하므로(AO 는 PostBloom 에서 그 픽셀에도 곱해진다) SSAO 는 그 패스 뒤 · 투명 패스 앞 레벨이다.
  */
-SW_TEST_CASE( RenderPassGPUTest, DepthAttachmentUnbindsItsShaderInputs )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, DepthAttachmentUnbindsItsShaderInputs, test::listRHIBackendParameter, 0.4 )
 {
     const utf8* const kArrPipeline[] = { "engine/pipeline/forwardpipeline.xml", "engine/pipeline/deferredpipeline.xml" };
 
@@ -5660,7 +5660,7 @@ SW_TEST_CASE( RenderPassGPUTest, DepthAttachmentUnbindsItsShaderInputs )
  *          뒤집히지 않으면 카메라 쪽 빨간 면(+Z) 대신 파란 면(-Z)의 안쪽이 보여 그림이 크게 다르다. 래스터 규칙 차이로 가장자리 몇 픽셀은
  *          다를 수 있어 "다른 화소가 그려진 화소의 1 % 이하" 로 본다.
  */
-SW_TEST_CASE( RenderPassGPUTest, MirroredMeshShowsItsOuterFaces )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, MirroredMeshShowsItsOuterFaces, test::listRHIBackendParameter, 0.4 )
 {
     const utf8* const kArrPipeline[] = { "engine/pipeline/forwardpipeline.xml", "engine/pipeline/deferredpipeline.xml" };
     // 그려진 화소(배경이 아닌 화소) 가운데 다른 화소 비율의 상한(%). 바르게 그리면 0 이고, 컬링이 뒤집히지 않은 그림은 큐브 면적만큼 다르다.
@@ -6028,7 +6028,7 @@ SW_TEST_CASE( RenderPassGPUTest, EngineTextureSlotsAreSampledLinearClamp )
  *          오른쪽 위가 초록이어야 한다 — 감김 방향이 틀리면 이 카메라에서 후면 컬링으로 사라지고, 보이는 쪽에서는 좌우가 뒤집힌다.
  *          가운데 줄을 훑어 그려진 구간 여섯을 찾고 구간 가운데의 평균 색을 본다(톤매핑을 지나므로 우세 채널로 본다).
  */
-SW_TEST_CASE( RenderPassGPUTest, SpriteFramesAndTintsArePerInstance )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, SpriteFramesAndTintsArePerInstance, test::listRHIBackendParameter, 0.4 )
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     constexpr const utf8* kQuadrantTexture = "engine/textures/test/quadrants.dds";
@@ -6202,7 +6202,7 @@ SW_TEST_CASE( RenderPassGPUTest, SpriteFramesAndTintsArePerInstance )
  *          크기로 바꿔 그리고, SceneColor 와 BloomColor 에서 배경이 아닌 픽셀의 무게중심을 비교한다 — BloomColor 의 중심을 두 배 하면
  *          SceneColor 의 중심이어야 한다(블룸은 원본 색 + 밝은 부분이라 배경 판정이 같다).
  */
-SW_TEST_CASE( RenderPassGPUTest, HalfResolutionAttachmentCoversItsWholeTarget )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, HalfResolutionAttachmentCoversItsWholeTarget, test::listRHIBackendParameter, 0.4 )
 {
     sw::string pipelineText;
     SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( "engine/pipeline/forwardpipelinestaged.xml", pipelineText ) );
@@ -6320,7 +6320,7 @@ SW_TEST_CASE( RenderPassGPUTest, HalfResolutionAttachmentCoversItsWholeTarget )
  *          원본 텍셀 반 칸을 비켜 두 번 읽으므로 출력 텍셀마다 이웃 넷의 평균이 된다. 프레임 텍셀로 비키면 반의 반 칸이라 자기 텍셀 쪽으로 기운다.
  *          CPU 로 두 비킴(원본 텍셀 0.5 칸 · 0.25 칸, 바이리니어)을 흉내 내 GPU 결과가 어느 쪽에 가까운지 본다(비킴은 좌우 · 위아래 대칭이라 행 방향이 상관없다).
  */
-SW_TEST_CASE( RenderPassGPUTest, HalfResolutionBloomBlursByTheSourceTexel )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, HalfResolutionBloomBlursByTheSourceTexel, test::listRHIBackendParameter, 0.4 )
 {
     sw::string pipelineText;
     SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( "engine/pipeline/forwardpipelinestaged.xml", pipelineText ) );
@@ -6445,7 +6445,7 @@ SW_TEST_CASE( RenderPassGPUTest, HalfResolutionBloomBlursByTheSourceTexel )
  * @details `deferredpipeline.xml` 은 BloomDownsample 이 반해상도에 밝은 부분을 구하고 PostBloom 이 업샘플해 더한다. 변이: Bloom 패스가 BloomBright 를
  *          읽지 않거나(g_BloomBrightIndex 무효) 다운샘플이 0 을 내면 BloomBright 가 비고, 합성 크기가 반으로 줄면 화면 해상도가 떨어진다.
  */
-SW_TEST_CASE( RenderPassGPUTest, DeferredBloomBrightIsHalfResolution )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, DeferredBloomBrightIsHalfResolution, test::listRHIBackendParameter, 0.4 )
 {
     uint32                comparedCount{ 0 };
     test::RHIBackendSweep sweep;
@@ -6500,7 +6500,7 @@ SW_TEST_CASE( RenderPassGPUTest, DeferredBloomBrightIsHalfResolution )
  * @details 붉은 큐브만 보는 카메라 → `rendertarget/test_red`, 푸른 큐브만 보는 카메라 → `rendertarget/test_blue`. 두 텍스처를 되읽어 한쪽은 붉고
  *          한쪽은 푸른지 본다. 뷰가 컬링 칸 · 상수버퍼 · 풀을 나눠 쓰면 둘이 같은 그림이 되거나(뒤 뷰의 절두체로 거른다) 비어 있다.
  */
-SW_TEST_CASE( RenderPassGPUTest, MultiViewRendersEachCaptureCameraToItsTexture )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, MultiViewRendersEachCaptureCameraToItsTexture, test::listRHIBackendParameter, 0.4 )
 {
     test::RHIBackendSweep sweep;
     for ( test::RHITestDevice& device : sweep )
@@ -6549,7 +6549,7 @@ SW_TEST_CASE( RenderPassGPUTest, MultiViewRendersEachCaptureCameraToItsTexture )
  *          그래서 평균 색 같은 간접 지표가 아니라 **다른 화소 수**로 본다 — 평균 (R − B) 차이에 임계값을 걸면 조명 식이 바뀔 때마다 여유가 흔들린다.
  *          후처리를 켠 같은 자리의 뷰 하나를 대조군으로 두어, 같은 설정이면 화소가 같다는 전제를 함께 확인한다.
  */
-SW_TEST_CASE( RenderPassGPUTest, PostProcessOffViewSkipsThePostChain )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, PostProcessOffViewSkipsThePostChain, test::listRHIBackendParameter, 0.4 )
 {
     test::RHIBackendSweep sweep;
     for ( test::RHITestDevice& device : sweep )
@@ -6653,7 +6653,7 @@ SW_TEST_CASE( RenderPassGPUTest, ExtraViewSkipsFramesByItsUpdateRate )
  * @details 주 카메라는 빈 쪽을 보고, PiP 카메라는 붉은 큐브를 본다. 캡처의 오른쪽 아래 사각형(0.55..0.95)만 붉어야 한다 — 뷰포트를 안 걸면 화면
  *          전체가 붉고, 위아래가 뒤집히면(GL 원점) 오른쪽 위가 붉다.
  */
-SW_TEST_CASE( RenderPassGPUTest, ScreenRectViewDrawsOnlyInsideItsRectangle )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, ScreenRectViewDrawsOnlyInsideItsRectangle, test::listRHIBackendParameter, 0.4 )
 {
     test::RHIBackendSweep sweep;
     for ( test::RHITestDevice& device : sweep )
@@ -6712,7 +6712,7 @@ SW_TEST_CASE( RenderPassGPUTest, ScreenRectViewDrawsOnlyInsideItsRectangle )
  * @details 캔버스는 주 출력에 마지막으로 그리는 뷰가 그린다(언리얼은 모든 장면 뷰 뒤 Slate). 주 시점의 Canvas 패스가 그리면 뒤에 겹치는 PiP 가
  *          UI 를 덮는다 — PiP 사각형 한가운데의 초록 사각형이 PiP 의 붉은 큐브에 가려지면 순서가 틀린 것이다.
  */
-SW_TEST_CASE( RenderPassGPUTest, CanvasDrawsOverScreenRectView )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, CanvasDrawsOverScreenRectView, test::listRHIBackendParameter, 0.4 )
 {
     test::RHIBackendSweep sweep;
     for ( test::RHITestDevice& device : sweep )
@@ -6784,7 +6784,7 @@ SW_TEST_CASE( RenderPassGPUTest, CanvasDrawsOverScreenRectView )
  *          - 텍스처는 체커(test/checker.dds)로 덮어쓴다. 격자 텍스처는 밝은 바탕에 가는 선이라 이 해상도에서 밉으로 뭉개져 창의 대비가 몇 단계뿐이다.
  *            define(MATERIAL_WORLD_UV)은 부모 머티리얼의 것이라 인스턴스도 같은 퍼뮤테이션으로 그린다.
  */
-SW_TEST_CASE( RenderPassGPUTest, PrototypeGridMaterialIsAnchoredToTheWorld )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, PrototypeGridMaterialIsAnchoredToTheWorld, test::listRHIBackendParameter, 0.4 )
 {
     test::RHIBackendSweep sweep;
     uint32                comparedCount{ 0 };
@@ -6855,7 +6855,7 @@ SW_TEST_CASE( RenderPassGPUTest, PrototypeGridMaterialIsAnchoredToTheWorld )
  * @details 카메라 출력의 `_upscaleZoom` = 4. 2D 파이프라인(forward2dpipeline.xml)의 Present 는 원본을 그대로 옮기므로 칸 안의 16 픽셀이 같아야 한다.
  *          변이: Present 가 선형으로 읽거나 뷰포트를 배율 크기로 맞추지 않으면 큐브 가장자리의 칸이 섞인다. 남는 띠는 가운데 정렬로 양쪽에 반씩이다.
  */
-SW_TEST_CASE( RenderPassGPUTest, UpscaledViewDrawsUniformZoomBlocks )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, UpscaledViewDrawsUniformZoomBlocks, test::listRHIBackendParameter, 0.4 )
 {
     constexpr uint32      kZoom = 4;
     uint32                comparedCount{ 0 };
@@ -6936,7 +6936,7 @@ SW_TEST_CASE( RenderPassGPUTest, UpscaledViewDrawsUniformZoomBlocks )
  * @details 스크린샷(`-gv_screenshot`)은 오프스크린 캡처를 읽으므로 캡처 → 창 블릿의 반전 · 잘림은 거기서 보이지 않는다(GL 창은 0 행이 아래).
  *          캡처를 켜고 그린 프레임의 백버퍼를 읽어 캡처와 픽셀로 비교한다 — 위아래가 뒤집히면 큐브 · 바닥 자리가 갈린다.
  */
-SW_TEST_CASE( RenderPassGPUTest, PresentedBackBufferMatchesTheCapture )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, PresentedBackBufferMatchesTheCapture, test::listRHIBackendParameter, 0.4 )
 {
     test::RHIBackendSweep sweep;
     for ( test::RHITestDevice& device : sweep )
@@ -6994,7 +6994,7 @@ SW_TEST_CASE( RenderPassGPUTest, PresentedBackBufferMatchesTheCapture )
  *          디퍼드는 조명 패스가 뷰 모드를 모르므로 G버퍼 알베도(셰이딩 모델 Unlit)로 넘긴다.
  *          Normals 는 바닥(+Y)이 초록으로 보이고(톤맵을 건너뛰어 G = 255), Overdraw 는 큐브와 바닥이 겹친 자리가 바닥만 있는 자리보다 밝다.
  */
-SW_TEST_CASE( RenderPassGPUTest, ViewModesProduceDistinctPictures )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, ViewModesProduceDistinctPictures, test::listRHIBackendParameter, 0.4 )
 {
     test::RHIBackendSweep sweep;
     for ( test::RHITestDevice& device : sweep )
@@ -7053,7 +7053,7 @@ SW_TEST_CASE( RenderPassGPUTest, ViewModesProduceDistinctPictures )
  * @brief [RenderPassGPUTest] 출력이 렌더 타깃(에디터 게임 뷰)이어도 Present 캡처가 그 그림을 담는다 — 4 백엔드
  * @details 에디터 실행의 `-gv_screenshot` · 시나리오 스크린샷이 읽는 길이다. 패킷의 `_outputRenderTarget` 으로 그리고, 캡처를 출력 RT 를 읽은 것과 픽셀로 비교한다.
  */
-SW_TEST_CASE( RenderPassGPUTest, PresentCaptureFollowsOffscreenOutput )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, PresentCaptureFollowsOffscreenOutput, test::listRHIBackendParameter, 0.4 )
 {
     constexpr uint32      kOutputWidth  = 256;
     constexpr uint32      kOutputHeight = 192;
@@ -7222,7 +7222,7 @@ SW_TEST_CASE( RenderPassGPUTest, ScreenshotDumpWritesPngAndPpm )
  * @details GL 기본 프레임버퍼는 아래 원점이라 `setViewport` 가 y 를 뒤집는다. 캡처를 켜면 Present 가 오프스크린 FBO 에 그려 이 분기를 안 지난다
  *          (`ScreenRectViewDrawsOnlyInsideItsRectangle` 은 캡처를 본다). 뒤집기가 빠지면 PiP 가 오른쪽 **위**에 그려진다.
  */
-SW_TEST_CASE( RenderPassGPUTest, ScreenRectViewLandsInItsCornerOfTheBackBuffer )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, ScreenRectViewLandsInItsCornerOfTheBackBuffer, test::listRHIBackendParameter, 0.4 )
 {
     test::RHIBackendSweep sweep;
     for ( test::RHITestDevice& device : sweep )
@@ -7278,7 +7278,7 @@ SW_TEST_CASE( RenderPassGPUTest, ScreenRectViewLandsInItsCornerOfTheBackBuffer )
  *          주 카메라는 앞(+Z)에서, 캡처 카메라는 뒤(-Z)에서 본다. 캡처 텍스처를 "그 캡처 카메라를 주 카메라로 둔 렌더러" 의 Present 캡처(같은 크기)와 비교한다.
  *          주 순서로 그리면 뒤에서 본 그림의 겹침이 거꾸로 섞여 색이 갈린다.
  */
-SW_TEST_CASE( RenderPassGPUTest, ExtraViewSortsTransparencyFromItsOwnEye )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, ExtraViewSortsTransparencyFromItsOwnEye, test::listRHIBackendParameter, 0.4 )
 {
     constexpr uint32      kWidth  = 64;
     constexpr uint32      kHeight = 48;
@@ -7505,7 +7505,7 @@ SW_TEST_CASE( RenderPassGPUTest, SoftwareAdapterSwitchStartsWarp )
  * @details TAA 는 기록을 이번 원본의 3x3 이웃 범위로 잘라 0.9 로 섞는다(taa.hlsl). 붉은 큐브를 몇 프레임 그린 뒤 푸르게 바꾸면 큐브 안쪽의 이웃은 모두 푸르므로
  *          컷이 없어도 붉은 기록이 잘린다. 주 카메라에 컷을 표시하면 C++ 가 기록 슬롯에 이번 원본을 걸어 기록 자체를 버린다.
  */
-SW_TEST_CASE( RenderPassGPUTest, CameraCutResetsTaaHistory )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, CameraCutResetsTaaHistory, test::listRHIBackendParameter, 0.4 )
 {
     test::RHIBackendSweep sweep;
     for ( test::RHITestDevice& device : sweep )
@@ -7569,7 +7569,7 @@ SW_TEST_CASE( RenderPassGPUTest, CameraCutResetsTaaHistory )
  * @details 기록을 재투영 · 이웃 클램프 없이 0.9 로 섞던 때는 옮긴 프레임에 앞 자리의 큐브가 90 % 남았다. 옮기기 전과 뒤의 원본이 다른 픽셀 가운데 이웃 3x3 이 고른 곳
  *          (모서리가 아닌 곳 — 모서리는 이웃 범위에 두 색이 다 있어 기록이 남아도 된다)을 본다.
  */
-SW_TEST_CASE( RenderPassGPUTest, TaaLeavesNoGhostOfAMovedObject )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, TaaLeavesNoGhostOfAMovedObject, test::listRHIBackendParameter, 0.4 )
 {
     test::RHIBackendSweep sweep;
     for ( test::RHITestDevice& device : sweep )
@@ -7628,7 +7628,7 @@ SW_TEST_CASE( RenderPassGPUTest, TaaLeavesNoGhostOfAMovedObject )
  *          노출이 내려가 어둡다. 범위가 한 점(최소 = 최대 = 2 EV)이면 노출이 1/4 이라 범위 0 · 0(중립)보다 어둡다.
  *          포워드(후처리 체인 Present 가 톤맵한다)로 그린다 — 디퍼드의 TAA 는 지난 프레임을 섞어 컷 없는 그림이 노출 말고도 달라진다.
  */
-SW_TEST_CASE( RenderPassGPUTest, AutoExposureMeasuresTheSceneAndSnapsOnCut )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, AutoExposureMeasuresTheSceneAndSnapsOnCut, test::listRHIBackendParameter, 0.4 )
 {
     test::RHIBackendSweep sweep;
     for ( test::RHITestDevice& device : sweep )
@@ -7688,7 +7688,7 @@ SW_TEST_CASE( RenderPassGPUTest, AutoExposureMeasuresTheSceneAndSnapsOnCut )
 /**
  * @brief [RenderPassGPUTest] 렌더 배율 0.5 의 뷰를 업스케일러 spatial 이면 Present 가 FSR 1(EASU + RCAS)로 키운다 — 선형과 그림이 다르고 밝기는 같다, 배율 1 이면 키울 것이 없어 같다(4 백엔드, 디퍼드)
  */
-SW_TEST_CASE( RenderPassGPUTest, SpatialUpscalerReplacesTheLinearPresent )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, SpatialUpscalerReplacesTheLinearPresent, test::listRHIBackendParameter, 0.4 )
 {
     sw::GlobalVariableManager& variables = sw::engine::getSubsystem<sw::GlobalVariableManager>();
     sw::GlobalVariableInfo*    pScale    = variables.findVariable( "gv_renderScale" );
@@ -7736,7 +7736,7 @@ SW_TEST_CASE( RenderPassGPUTest, SpatialUpscalerReplacesTheLinearPresent )
  * @details 지난 깊이로 보는 한계(드러난 물체가 한 프레임 늦다)를 그대로 측정하는 것이 곧 가림 판정이 돈다는 증거다 — 바르게 가린 물체는 그림에 없으니 다른 방법으로는 볼 수 없다.
  *          큐브는 화면에서 타일 8 줄 안에 들도록 작게 둔다(넘으면 판정하지 않는다).
  */
-SW_TEST_CASE( RenderPassGPUTest, OcclusionCullingUsesTheLastFrameDepth )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, OcclusionCullingUsesTheLastFrameDepth, test::listRHIBackendParameter, 0.4 )
 {
     sw::GlobalVariableManager& variables  = sw::engine::getSubsystem<sw::GlobalVariableManager>();
     sw::GlobalVariableInfo*    pOcclusion = variables.findVariable( "gv_occlusionCulling" );
@@ -7827,7 +7827,7 @@ SW_TEST_CASE( RenderPassGPUTest, OcclusionCullingUsesTheLastFrameDepth )
  * @details 활성 씬은 건드리지 않는다 — 씬 매니저의 활성 씬이 그대로이고 스튜디오 오브젝트가 그 씬에 생기지 않는다. 경계 구에 맞춘 카메라라 대상이 가운데에
  *          있고 가장자리는 배경이다.
  */
-SW_TEST_CASE( RenderPassGPUTest, PortraitRendererDrawsAPrefabInIsolation )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, PortraitRendererDrawsAPrefabInIsolation, test::listRHIBackendParameter, 0.4 )
 {
     // 엔진 · 기반 타입만 든 프리팹이다 — 게임 컴포넌트를 든 프리팹은 EngineTest 에 그 게임 모듈이 없어 MissingComponent 경고를 낸다.
     constexpr const utf8* kPrefab = "common/prefabs/gimmicks/adventure/pushblock3d.prefab.xml";
@@ -7889,7 +7889,7 @@ SW_TEST_CASE( RenderPassGPUTest, PortraitRendererDrawsAPrefabInIsolation )
  *          정확한 프레임 시각)로 그려도 같아야 한다. (D) 클립 없는 바인드 포즈와는 달라야 한다 — 같으면 팔레트 · 표가 GPU 에 닿지 않는다.
  *          (B) 가 지면 묶음 팔레트를 싣는 쪽(`GPUSkinPaletteCollector::collect`) · 인스턴스 표(meshskin.hlsl), (C) 가 지면 VAT 정점 셰이더 경로다.
  */
-SW_TEST_CASE( RenderPassGPUTest, CrowdSharingAndVertexAnimationMatchPerUnitSkinning )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, CrowdSharingAndVertexAnimationMatchPerUnitSkinning, test::listRHIBackendParameter, 0.4 )
 {
     struct Snapshot
     {
@@ -8058,7 +8058,7 @@ SW_TEST_CASE( RenderPassGPUTest, CrowdSharingAndVertexAnimationMatchPerUnitSkinn
  *          드라이버 안에서 죽었다(Shooter3D 에서 스켈레톤 시체를 걷을 때). 원본을 페이지 끝에 붙이고 다음 페이지를 접근 불가로 두면, 한 바이트라도
  *          넘어 읽는 순간 죽는다.
  */
-SW_TEST_CASE( RenderPassGPUTest, PartialStructuredBufferUploadReadsOnlyTheSourceRange )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, PartialStructuredBufferUploadReadsOnlyTheSourceRange, test::listRHIBackendParameter, 0.4 )
 {
 #if SW_PLATFORM_WINDOWS
     SYSTEM_INFO sysInfo{};
@@ -8101,7 +8101,7 @@ SW_TEST_CASE( RenderPassGPUTest, PartialStructuredBufferUploadReadsOnlyTheSource
  *          RGBA8 텍스처에 싣고, 읽어 CPU 값과 비교한다. GPU 의 sin · cos 는 정확도가 낮아 비트가 같지는 않다 — 1 mm 안이면 같은 식이다.
  *          식 하나(항의 순서 · Q 나누기 · 분산)라도 갈리면 cm 단위로 벌어진다.
  */
-SW_TEST_CASE( RenderPassGPUTest, WaterWaveShaderMatchesCPU )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, WaterWaveShaderMatchesCPU, test::listRHIBackendParameter, 0.4 )
 {
     constexpr uint32  kSampleCount                                = 32;
     constexpr uint32  kTexelPerRow                                = 8;
@@ -8204,7 +8204,7 @@ SW_TEST_CASE( RenderPassGPUTest, WaterWaveShaderMatchesCPU )
  * @details 머티리얼 스키마는 픽셀 스테이지 리플렉션에서 찾는다. 물 · 식생은 GL 이 두 단계의 구조버퍼 읽기를 거절하므로 머티리얼을 정점 셰이더만
  *          읽는다 — 픽셀에서 못 찾고 멈추면 stride 0 · XML 순서 패킹이 되어 GPUScene 이 원소마다 엉뚱한 자리를 읽는다(파도 · 바람 값이 섞인다).
  */
-SW_TEST_CASE( RenderPassGPUTest, VertexStageMaterialSchemaIsUsed )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, VertexStageMaterialSchemaIsUsed, test::listRHIBackendParameter, 0.4 )
 {
     uint32                checkedCount{ 0 };
     test::RHIBackendSweep sweep;
@@ -8232,7 +8232,7 @@ SW_TEST_CASE( RenderPassGPUTest, VertexStageMaterialSchemaIsUsed )
  *          점 필터(`sprite2dpixel.material`)면 스프라이트 안의 모든 픽셀이 두 색 중 하나이고 줄무늬 한 칸이 정확히 4 픽셀이다. 선형 필터면 경계에
  *          섞인 색이 생긴다.
  */
-SW_TEST_CASE( RenderPassGPUTest, PixelArtSpritesSnapToTheAssetPixelGrid )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, PixelArtSpritesSnapToTheAssetPixelGrid, test::listRHIBackendParameter, 0.4 )
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     constexpr const utf8* kStripeTexture = "engine/textures/test/pixelstripes.dds";
@@ -8380,7 +8380,7 @@ SW_TEST_CASE( RenderPassGPUTest, PixelArtSpritesSnapToTheAssetPixelGrid )
  *          월드 X 로 옮겨 `PointLight2DComponent::computeAttenuation` × 255 와 비교한다. 그다음 (1, 0) 에 0.2 × 1 상자 가림막을 두면 x > 1.1 은 0 이 되고,
  *          가림막 안(x = 1)은 빛 쪽 변에 가려지지 않아 식 그대로다(자기 그림자 없음). 빛 쪽(x < 0.9)은 바뀌지 않는다.
  */
-SW_TEST_CASE( RenderPassGPUTest, Light2DFalloffAndShadowOnEveryBackend )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, Light2DFalloffAndShadowOnEveryBackend, test::listRHIBackendParameter, 0.4 )
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     constexpr float32 kOrthoHeight = 4.0f;
@@ -8505,7 +8505,7 @@ SW_TEST_CASE( RenderPassGPUTest, Light2DFalloffAndShadowOnEveryBackend )
  *          램버트는 표면을 따라 고르게 퍼지고, 계단을 칼같이(toony 1) 둔 툰은 빛 · 그늘 두 무리에 몰린다. 툰이 단계 넷을 넘거나 램버트의 절반을
  *          넘으면 계단(linearstep)이 GPU 에 닿지 않은 것이다(머티리얼 버퍼 레이아웃이 어긋나 shadingToony 가 0 으로 읽혀도 그렇다).
  */
-SW_TEST_CASE( RenderPassGPUTest, ToonShadingHasFewerBrightnessLevelsThanLit )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, ToonShadingHasFewerBrightnessLevelsThanLit, test::listRHIBackendParameter, 0.4 )
 {
     constexpr uint32 kMaxToonLevelCount = 4;
 
@@ -8559,7 +8559,7 @@ SW_TEST_CASE( RenderPassGPUTest, ToonShadingHasFewerBrightnessLevelsThanLit )
  *          (2) 고리는 실루엣 띠(구의 화면 반지름 R ~ R + 두께) 안에 있다. (3) 어둡다(외곽선 색 검정, 빛 섞기 0).
  *          (4) 구 안쪽은 같다 — 앞면 컬링이 빠지면 부풀린 껍질의 앞면이 구를 덮는다.
  */
-SW_TEST_CASE( RenderPassGPUTest, MeshOutlineDrawsDarkRingAroundSilhouette )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, MeshOutlineDrawsDarkRingAroundSilhouette, test::listRHIBackendParameter, 0.4 )
 {
     struct PipelineCase
     {
@@ -8759,7 +8759,7 @@ SW_TEST_CASE( RenderPassGPUTest, MeshOutlineFollowsSkinnedPose )
  * @details 카메라를 등진 사각형을 툰 머티리얼로 그린다. 스위치를 끄면 후면 컬링으로 아무것도 안 그려지고, 켜면 사각형이 보인다
  *          (머리카락 카드 · 치마 같은 VRM 양면 머티리얼이 뒤에서 사라지지 않게).
  */
-SW_TEST_CASE( RenderPassGPUTest, TwoSidedMaterialDrawsBackFaces )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, TwoSidedMaterialDrawsBackFaces, test::listRHIBackendParameter, 0.4 )
 {
     struct QuadCase
     {
@@ -8999,7 +8999,7 @@ SW_TEST_CASE( RenderPassGPUTest, CanvasDrawsOnEveryBackend )
  *        프레임은 다시 그리지 않으며(텍스처가 그림을 지킨다), 번호가 오르면 다시 그린다(파랑). 4 백엔드
  * @details 변이: `CanvasRenderer::drawTargets` 를 부르지 않으면 텍스처가 비어(지운 적도 없다) 붉은 픽셀이 없다.
  */
-SW_TEST_CASE( RenderPassGPUTest, CanvasTargetDrawsIntoRenderTexture )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, CanvasTargetDrawsIntoRenderTexture, test::listRHIBackendParameter, 0.4 )
 {
     constexpr const utf8* kTargetPath = "rendertarget/test_canvas_target";
     test::RHIBackendSweep sweep;
@@ -9055,7 +9055,7 @@ SW_TEST_CASE( RenderPassGPUTest, CanvasTargetDrawsIntoRenderTexture )
  * @details 64 → 128 로 키운 프레임 뒤 텍스처 폭이 128 이고, 그 안에 새 크기 기준의 빨간 사각형(64 × 64)이 있어야 한다. 변이: 다시 만들지 않으면 폭이 64 로 남는다
  *          (언리얼 `UTextureRenderTarget2D::ResizeTarget` 과 같은 동작).
  */
-SW_TEST_CASE( RenderPassGPUTest, CanvasTargetRecreatesTextureWhenWidgetResizes )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, CanvasTargetRecreatesTextureWhenWidgetResizes, test::listRHIBackendParameter, 0.4 )
 {
     constexpr const utf8* kTargetPath = "rendertarget/test_canvas_target_resize";
     test::RHIBackendSweep sweep;
@@ -9107,7 +9107,7 @@ SW_TEST_CASE( RenderPassGPUTest, CanvasTargetRecreatesTextureWhenWidgetResizes )
  * @details WidgetComponent(World)가 짓는 것과 같은 조합이다 — 스프라이트 사각형 메시 · sprite2d 머티리얼 · `premultipliedTexture`. 변이: 대상 그리기를 빼면
  *          텍스처가 비어 가운데가 파랗지 않다.
  */
-SW_TEST_CASE( RenderPassGPUTest, WorldWidgetRenderTextureIsSampled )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, WorldWidgetRenderTextureIsSampled, test::listRHIBackendParameter, 0.4 )
 {
     constexpr const utf8* kTargetPath = "rendertarget/test_world_widget";
     test::RHIBackendSweep sweep;
@@ -9292,7 +9292,7 @@ SW_TEST_CASE( RenderPassGPUTest, CanvasColorVisionChangesRedGreen )
  * @details 화면 마커(`WidgetComponent` Screen)의 길이다. 앵커는 사각형 버퍼 맨 앞 원소이고 주 출력은 그 뒤다(`CanvasRenderer::getMainQuadBase`).
  *          변이: canvas.hlsl 이 앵커를 더하지 않으면 사각형이 왼쪽 위 구석 밖이라 진다. `CanvasRenderer` 가 같은 내용일 때 앵커를 올리지 않으면 둘째 프레임이 옛 자리라 진다.
  */
-SW_TEST_CASE( RenderPassGPUTest, CanvasAnchorMovesQuadsWithoutReupload )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, CanvasAnchorMovesQuadsWithoutReupload, test::listRHIBackendParameter, 0.4 )
 {
     auto isRed = []( const test::Rgba8& pixel )
     { return pixel._r >= 240 && pixel._g <= 16 && pixel._b <= 16; };

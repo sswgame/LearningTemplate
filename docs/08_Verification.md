@@ -493,7 +493,11 @@ ctest --test-dir build/Ninja-Release -L load                     # 부하 스위
   `BackendSwapFollowsTheNewDevice` · `BackendSwapRebuildsGameBeforeEditor` · `BenchFrameMatchesGoldenImage` 도 `<케이스>.<백엔드>` 로 갈렸다(`SW_TEST_CASE_PER_PARAMETER`; 한 프로세스를 이어 쓰는 것은 체인 안의 단계끼리라 목적이 그대로다).
   프로세스를 띄우거나 비싼 항목 루프도 같은 매크로로 갈렸다: `ServerBootTest.EveryBuiltGameStartsAsADedicatedServer.<게임>`(목록이 비는 틈은 `BuiltGameListIsNotEmpty`),
   `LoaderFuzzTest.EveryLoaderSurvivesMutatedInput.<대상>`, `CrashReportTest.EveryCrashKindLeavesAReport.<방식>`. 저장소 파일을 훑는 `Every…` 데이터 검사(수 ms ~ 3 s)는 항목 이름이 이미 실패 메시지에 있어 한 케이스로 둔다.
-  `AppUITest.DemoScreenMatchesAcrossBackends` 는 백엔드끼리 견주는 것이 목적이라 한 케이스로 둔다.
+  GPU 디바이스 케이스(`RHIDeviceTest` · `RenderPassGPUTest`, `RHIBackendSweep` 으로 백엔드를 돌던 것 110개)도 `<케이스>.<dx11|dx12|vk|gl>` 로 갈렸다 — `test::listRHIBackendParameter` 를 목록으로 쓰고,
+  케이스 안의 `RHIBackendSweep` 이 그 케이스의 백엔드 하나로 범위를 좁히므로 본문은 그대로다(`--test_filter=RHIDeviceTest.*.vk` 로 한 백엔드, `RenderPassGPUTest.<케이스>.*` 로 한 케이스). 디바이스는 케이스마다 한 번 세우니
+  총 생성 횟수는 이전(케이스 × 백엔드)과 같다. 백엔드끼리 결과를 견주는 일곱(`BackendSweepVisitsEveryBackendThatStandsUp` · `TransparentOrderMatchesAcrossBackends` · `FrameRendererParityAllBackends` ·
+  `MaterialTexturesAreSampledLinearWrap` · `EngineTextureSlotsAreSampledLinearClamp` · `CanvasDrawsOnEveryBackend` · `MeshModifierGPUTest.ProgramMatchesCPU`)는 목적이 견줌이라 한 케이스로 둔다.
+  `AppUITest.DemoScreenMatchesAcrossBackends` 도 같은 까닭으로 한 케이스다.
   에디터 시나리오(`EditorScenariosPassOn<백엔드>`)는 백엔드당 체인 하나(한 프로세스)라 케이스는 그대로고, 실패 메시지의 `chain sub-results:` 가 통과하지 못한 시나리오마다 결과 · 종료 코드 · `failures[]` · `unhandledLogs[]` 를 나열한다(단계별 보고 `chain_editor_<백엔드>.<단계>.json`).
   손 확인 목록을 후보 절에 적지 말고 시나리오를 쓴다 — 못 쓰는 것만 이유와 함께 손 확인으로. 값을 보려면 `Expect probe`(게임 .cpp 의
   `SW_AUTOMATION_PROBE` 한 줄), 그림은 `Screenshot` + `ExpectImage`(지표 값은 보고 JSON 에 늘 적힌다).

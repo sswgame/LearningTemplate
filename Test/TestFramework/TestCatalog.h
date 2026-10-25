@@ -25,7 +25,7 @@ namespace test
          * @brief 스위트 · 이름 · 함수로 케이스를 더합니다. 이름 글은 복사하므로 동적으로 만든 이름도 된다.
          * @param expectedSeconds 예상 비용(초, 0 = 모름). 샤드 배정이 `--test_costs` 에 없는 케이스에 쓴다.
          */
-        void addCase( const utf8* pSuiteName, const utf8* pTestName, sw::Delegate<void()> func, float64 expectedSeconds = 0.0 );
+        void addCase( const utf8* pSuiteName, const utf8* pTestName, sw::Delegate<void()> func, float64 expectedSeconds = 0.0, const utf8* pParameter = "" );
         /** @brief 매개변수마다 케이스 하나인 묶음을 더합니다. 케이스 이름은 `<이름>.<매개변수 이름>`(`makeParameterLabel`)이고 `expandCaseGenerators` 가 만든다. */
         void addParameterizedCase( const utf8* pSuiteName, const utf8* pTestName, ParameterListFunc listFunc, ParameterCaseFunc caseFunc, float64 expectedSeconds );
         /** @brief 매개변수의 케이스 이름 조각입니다 — 스위치 `-dx12` 는 `dx12`, 빈 글은 `default`(배포본의 백엔드 스위치 없음), 그 밖은 그대로. */
@@ -146,6 +146,12 @@ namespace test
 
     /** @brief 환경 변수 값입니다(없으면 빈 글). 환경 스위트의 케이스가 서버 주소를 읽는다. */
     sw::string getEnvironmentValue( const utf8* pEnvironmentName );
+
+    /**
+     * @brief 지금 도는 매개변수 케이스(`SW_TEST_CASE_PER_PARAMETER`)의 매개변수입니다 — 매개변수 케이스가 아니면 빈 글.
+     * @details 본문을 고치지 않고도 도우미가 매개변수를 읽게 한다: `RHIBackendSweep` 은 케이스의 백엔드(`-dx12` …)로 도는 범위를 좁힌다.
+     */
+    const utf8* getCurrentCaseParameter();
 } // namespace test
 
 /** @brief 테스트 케이스를 등록하고 함수를 정의합니다. */
@@ -173,7 +179,7 @@ namespace test
 #define SW_TEST_CASE_PER_PARAMETER( SuiteName, TestName, parameterListFunc, expectedSeconds )                                                                               \
     void                                    test_##SuiteName##_##TestName( const utf8* pParameter );                                                                        \
     static test::ParameterizedCaseRegistrar registrar_##SuiteName##_##TestName( #SuiteName, #TestName, parameterListFunc, test_##SuiteName##_##TestName, expectedSeconds ); \
-    void                                    test_##SuiteName##_##TestName( const utf8* pParameter )
+    void                                    test_##SuiteName##_##TestName( [[maybe_unused]] const utf8* pParameter )
 
 /**
  * @brief 이 스위트는 CI 러너가 돌릴 수 없다고 선언합니다 — GPU · 디스플레이 · DXC 처럼 호스트에만 있는 것이 필요할 때.

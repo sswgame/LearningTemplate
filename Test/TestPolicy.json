@@ -120,11 +120,11 @@
       "hostShards": 2,
       "_hostShardsReason": "GPU 를 잡아 조각도 직렬이다 — 합계는 같고 조각마다 제한 시간을 받는다.",
       "softwareRenderCases": [
-        "RHIDeviceTest.DeviceCreationAllBackends",
+        "RHIDeviceTest.DeviceCreationAllBackends.*",
         "RHIDeviceTest.BackendSweepVisitsEveryBackendThatStandsUp",
         "RHIDeviceTest.CommandListCreationAndExecution",
         "RHIDeviceTest.BindlessResourceLifecycle",
-        "RHIDeviceTest.UploadTexture2DAllBackends",
+        "RHIDeviceTest.UploadTexture2DAllBackends.*",
         "WindowTest.X11ClipboardRoundTripsBetweenWindowsIncludingIncr",
         "X11DevConsoleTest.OverlayDrawsLatinLineAndSurvivesUtf8Lines"
       ],

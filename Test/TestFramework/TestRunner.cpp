@@ -12,6 +12,7 @@ namespace test
     CaseRecord TestRegistry::runCase( const TestCaseInfo& testInfo, uint32 iteration )
     {
         _currentContext.begin( testInfo.fullName() );
+        _currentContext.setParameter( testInfo._parameter );
         for ( ITestRunListener* pListener : _listListener )
         {
             pListener->onCaseStarted( testInfo );
