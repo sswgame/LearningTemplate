@@ -1,11 +1,11 @@
 #include "pch.h"
 
-#include "Engine/Graphics/RHI/Support/RHIStagingRing.h"
+#include "Engine/Graphics/RHI/Support/RHIStagingAllocator.h"
 #include "Engine/Graphics/RHI/Support/RHITransferSerials.h"
 
 #include "TestFramework/TestFramework.h"
 
-// 업로드 · 되읽기 링(RHIStagingRing)의 장부 규칙을 GPU 없이 본다. 그 링을 쓰는 GL 업로드 · 되읽기는 TestRHIStagingRingGPU.cpp 가 실제 디바이스로 본다.
+// 업로드 · 되읽기 링(RHIStagingAllocator)의 장부 규칙을 GPU 없이 본다. 그 링을 쓰는 GL 업로드 · 되읽기는 TestRHIStagingRingGPU.cpp 가 실제 디바이스로 본다.
 
 namespace
 {
@@ -22,7 +22,7 @@ namespace
  */
 SW_TEST_CASE( RHIStagingRingTest, AllocatesAlignedSpansAndWrapsAfterTheFrontCompletes )
 {
-    sw::RHIStagingRing ring;
+    sw::RHIStagingAllocator ring;
     ring.initialize( 1024, 256 );
 
     sw::RHIStagingSpan a{};
@@ -67,7 +67,7 @@ SW_TEST_CASE( RHIStagingRingTest, AllocatesAlignedSpansAndWrapsAfterTheFrontComp
  */
 SW_TEST_CASE( RHIStagingRingTest, ReturnsEachSpanWhenItsOwnSerialCompletes )
 {
-    sw::RHIStagingRing ring;
+    sw::RHIStagingAllocator ring;
     ring.initialize( 512, 16 );
 
     sw::RHIStagingSpan first{};
@@ -109,8 +109,8 @@ SW_TEST_CASE( RHIStagingRingTest, ReturnsEachSpanWhenItsOwnSerialCompletes )
  */
 SW_TEST_CASE( RHIStagingRingTest, LostDeviceRejectsInsteadOfBusyWhenTheRingIsFull )
 {
-    sw::RHIStagingRing     ring;
-    sw::RHITransferSerials serials;
+    sw::RHIStagingAllocator ring;
+    sw::RHITransferSerials  serials;
     ring.initialize( 256, 16 );
 
     sw::RHIStagingSpan held{};
@@ -140,7 +140,7 @@ SW_TEST_CASE( RHIStagingRingTest, LostDeviceRejectsInsteadOfBusyWhenTheRingIsFul
  */
 SW_TEST_CASE( RHIStagingRingTest, AnUntakenReadbackPinsOnlyItsOwnBytes )
 {
-    sw::RHIStagingRing ring;
+    sw::RHIStagingAllocator ring;
     ring.initialize( 1024, 256 );
 
     sw::RHIStagingSpan held{};
@@ -174,7 +174,7 @@ SW_TEST_CASE( RHIStagingRingTest, AnUntakenReadbackPinsOnlyItsOwnBytes )
  */
 SW_TEST_CASE( RHIStagingRingTest, ReadbackSpansReturnWhenTakenOrWhenTheDiscardedReadFinishes )
 {
-    sw::RHIStagingRing ring;
+    sw::RHIStagingAllocator ring;
     ring.initialize( 512, 256 );
 
     sw::RHIStagingSpan taken{};

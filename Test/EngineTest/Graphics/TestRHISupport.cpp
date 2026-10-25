@@ -1257,3 +1257,33 @@ SW_TEST_CASE( RHITransferTest, BlockingHelpersAssertInsideAForbiddenScope )
     SW_EXPECT_TRUE( sw::RHITransferUtil::uploadTexture2DAndWait( factory, 1, desc ) );
     SW_EXPECT_EQUAL( insideScopeCount, assertCapture.getCount() ); // 스코프를 벗어나면 다시 허용된다
 }
+
+/**
+ * @brief [RHITransferTest] 읽기 티켓(`PendingReadback`)을 쥔 스레드가 제출하는 동기 변형을 부르면 Debug 에서 단언이 걸리고, 놓거나 가져간 뒤에는 걸리지 않는다.
+ */
+SW_TEST_CASE( RHITransferTest, BlockingSubmitsAssertWhileAReadbackTicketIsHeld )
+{
+    SW_TEST_REQUIRES_FEATURE( DebugAsserts );
+    FakeTransferFactory            factory;
+    const sw::RHITextureUploadDesc desc{};
+    test::ScopedAssertCapture      assertCapture;
+
+    {
+        sw::RHITransferUtil::PendingReadback pending{
+            factory, sw::RHITransferTicket{ 1, kFakeDeviceGeneration }
+        };
+        SW_EXPECT_TRUE( sw::RHITransferUtil::uploadTexture2DAndWait( factory, 1, desc ) ); // 단언은 세어질 뿐 코드는 이어진다
+        SW_EXPECT_TRUE( assertCapture.getCount() >= 1 );
+    }
+    const uint32 heldCount = assertCapture.getCount();
+    SW_EXPECT_TRUE( sw::RHITransferUtil::uploadTexture2DAndWait( factory, 1, desc ) );
+    SW_EXPECT_EQUAL( heldCount, assertCapture.getCount() ); // 놓으면 다시 허용된다
+
+    sw::RHITransferUtil::PendingReadback taken{
+        factory, sw::RHITransferTicket{ 2, kFakeDeviceGeneration }
+    };
+    sw::vector<uint8> bytes;
+    SW_EXPECT_TRUE( taken.take( bytes ) );
+    SW_EXPECT_TRUE( sw::RHITransferUtil::uploadTexture2DAndWait( factory, 1, desc ) );
+    SW_EXPECT_EQUAL( heldCount, assertCapture.getCount() ); // 가져간 티켓은 세지 않는다
+}

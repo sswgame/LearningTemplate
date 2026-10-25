@@ -126,6 +126,9 @@ namespace sw
          * @class PendingReadback
          * @brief 읽기 티켓의 소유자입니다. 가져가지 않은 채 사라지면 소멸자가 `discardTextureReadback` 으로 결과를 버립니다.
          * @details 읽기 티켓은 백엔드가 결과(또는 스테이징)를 들고 있어 짝이 되는 `take` 나 `discard` 가 없으면 새어 나간다. 손으로 짝을 맞추지 않게 이동만 되는 RAII 로 둔다.
+         *          쥔 동안은 이 스레드가 제출하는 `...AndWait`(업로드 · 읽기)를 부르면 Debug 에서 단언이 걸린다. 쥔 티켓들이 스테이징의 남은 자리를 다 차지하면 그 제출이
+         *          `Busy` 로 10 초를 기다리다 시간 초과가 되기 때문이다. 한 스레드에서 만들고 그 스레드에서 놓는다.
+         *          한계: 다른 스레드가 쥔 티켓과 `PendingReadback` 에 넣지 않은 날 티켓은 세지 못한다(이유만: 그 수는 백엔드의 표에 있어 이 헬퍼가 볼 수 없다).
          *          **팩토리(장치)보다 오래 살면 안 된다.** 백엔드를 바꾸기 전에 비운다(옛 티켓은 장치 세대 때문에 새 장치에서 `Failed` 이지만, 팩토리 포인터는 지켜 주지 못한다).
          */
         class SW_API PendingReadback
@@ -135,13 +138,15 @@ namespace sw
             PendingReadback() noexcept
                 : _pFactory{ nullptr }
                 , _ticket{}
+                , _pHeldSlot{ nullptr }
             {
             }
 
-            /** @brief `submitTextureReadback` 이 `Accepted` 로 돌려준 티켓을 넘겨받습니다. */
+            /** @brief `submitTextureReadback` 이 `Accepted` 로 돌려준 티켓을 넘겨받습니다. 유효한 티켓이면 이 스레드의 쥔 티켓 수를 하나 올립니다. */
             PendingReadback( IRHIResourceFactory& factory, RHITransferTicket ticket ) noexcept
                 : _pFactory{ &factory }
                 , _ticket{ ticket }
+                , _pHeldSlot{ ticket.isValid() ? acquireHeldSlot() : nullptr }
             {
             }
 
@@ -153,9 +158,11 @@ namespace sw
             PendingReadback( PendingReadback&& other ) noexcept
                 : _pFactory{ other._pFactory }
                 , _ticket{ other._ticket }
+                , _pHeldSlot{ other._pHeldSlot }
             {
-                other._pFactory = nullptr;
-                other._ticket   = RHITransferTicket{};
+                other._pFactory  = nullptr;
+                other._ticket    = RHITransferTicket{};
+                other._pHeldSlot = nullptr;
             }
 
             PendingReadback& operator=( PendingReadback&& other ) noexcept
@@ -163,10 +170,12 @@ namespace sw
                 if ( this != &other )
                 {
                     discard();
-                    _pFactory       = other._pFactory;
-                    _ticket         = other._ticket;
-                    other._pFactory = nullptr;
-                    other._ticket   = RHITransferTicket{};
+                    _pFactory        = other._pFactory;
+                    _ticket          = other._ticket;
+                    _pHeldSlot       = other._pHeldSlot;
+                    other._pFactory  = nullptr;
+                    other._ticket    = RHITransferTicket{};
+                    other._pHeldSlot = nullptr;
                 }
                 return *this;
             }
@@ -190,8 +199,10 @@ namespace sw
                     return false;
                 if ( _pFactory->takeTextureReadback( _ticket, outBytes ) == false )
                     return false;
-                _pFactory = nullptr;
-                _ticket   = RHITransferTicket{};
+                releaseHeldSlot( _pHeldSlot );
+                _pFactory  = nullptr;
+                _ticket    = RHITransferTicket{};
+                _pHeldSlot = nullptr;
                 return true;
             }
 
@@ -200,13 +211,16 @@ namespace sw
             {
                 if ( isValid() )
                     _pFactory->discardTextureReadback( _ticket );
-                _pFactory = nullptr;
-                _ticket   = RHITransferTicket{};
+                releaseHeldSlot( _pHeldSlot );
+                _pFactory  = nullptr;
+                _ticket    = RHITransferTicket{};
+                _pHeldSlot = nullptr;
             }
 
         private:
             IRHIResourceFactory* _pFactory;
             RHITransferTicket    _ticket;
+            void*                _pHeldSlot; ///< 쥔 티켓 수를 올린 스레드의 계수 칸입니다(그 스레드에서만 놓을 수 있다). 비어 있으면 nullptr 입니다.
         };
 
     private:
@@ -216,5 +230,11 @@ namespace sw
         static void backoff( uint32 iteration );
         /** @brief 이 스레드가 `ScopedForbidBlockingTransfer` 안이면 Debug 에서 단언이 걸립니다. */
         static void assertBlockingAllowed();
+        /** @brief `assertBlockingAllowed` 에 더해, 이 스레드가 `PendingReadback` 을 쥐고 있어도 Debug 에서 단언이 걸립니다(제출하는 `...AndWait` 진입에서 부릅니다). */
+        static void assertNoHeldReadbackBeforeSubmit();
+        /** @brief 이 스레드의 쥔 읽기 티켓 수를 올리고 그 계수 칸을 돌려줍니다. */
+        static void* acquireHeldSlot() noexcept;
+        /** @brief `acquireHeldSlot` 의 칸을 놓습니다. 다른 스레드에서 놓으면 단언이 걸리고 아무것도 하지 않습니다. nullptr 이면 아무 일도 하지 않습니다. */
+        static void releaseHeldSlot( void* pSlot ) noexcept;
     };
 } // namespace sw

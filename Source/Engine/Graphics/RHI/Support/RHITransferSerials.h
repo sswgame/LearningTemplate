@@ -82,7 +82,7 @@ namespace sw
         /**
          * @brief 스테이징 링의 할당 결과를 제출 결과로 옮깁니다. 링을 쓰는 백엔드는 모두 이 한 곳으로 옮깁니다.
          * @details `Allocated` → `Accepted`, `Full` → `Busy`, `TooLarge` → `Rejected` 이고, 장치를 잃었으면 무엇이든 `Rejected` 입니다 — `Busy` 는 GPU 가 진행하면
-         *          비는 경우에만 쓰는데 잃은 장치는 진행하지 않는다. `Allocated` 인데 `Rejected` 를 받았으면 호출자가 구간을 `RHIStagingRing::free` 로 놓습니다.
+         *          비는 경우에만 쓰는데 잃은 장치는 진행하지 않는다. `Allocated` 인데 `Rejected` 를 받았으면 호출자가 구간을 `RHIStagingAllocator::free` 로 놓습니다.
          */
         [[nodiscard]] RHISubmitResult classifyStagingAllocation( RHIStagingAllocateResult result ) const;
 

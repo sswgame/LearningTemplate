@@ -2,7 +2,7 @@
 
 #include "Engine/Graphics/RHI/Support/RHITransferSerials.h"
 
-#include "Engine/Graphics/RHI/Support/RHIStagingRing.h"
+#include "Engine/Graphics/RHI/Support/RHIStagingAllocator.h"
 
 namespace sw
 {
