@@ -395,7 +395,7 @@ namespace sw
         _listChurnInstance.clear();
         // 정리한 뒤에는 맞출 장면이 없습니다. 격자 모드로 되돌리고 입력도 지금 값으로 맞춰 두어 update 가 헛맞춤을 하지 않게 합니다.
         _framingMode = FramingMode::Grid;
-        _framedInput = captureFramingInput();
+        _framedInput = captureFramingInput( pScene );
         _keyLight    = {};
     }
 
@@ -1239,11 +1239,13 @@ namespace sw
         applyFraming( pScene, _framingMode );
     }
 
-    FramingInput BenchScene::captureFramingInput() const
+    FramingInput BenchScene::captureFramingInput( const Scene* pScene ) const
     {
         // 모드마다 그 맞춤 함수가 읽는 값만 채웁니다(나머지는 0). 새 입력을 읽게 되면 FramingInput 에 필드를 더하고 여기서 채웁니다.
         FramingInput input;
         input.mode = _framingMode;
+        if ( pScene != nullptr && pScene->getObjectManager() != nullptr )
+            input.cameraCount = static_cast<uint32>( pScene->getObjectManager()->getCameraRegistry().getAll().size() );
         switch ( _framingMode )
         {
             case FramingMode::Grid:
@@ -1277,10 +1279,8 @@ namespace sw
 
     void BenchScene::applyFraming( Scene* pScene, FramingMode requested )
     {
-        // 한 번에 여러 벤치를 켰을 때는 더 높은 모드(열거 순서)가 카메라를 정합니다. 낮은 모드의 스폰이 나중에 와도 덮어쓰지 않습니다.
-        if ( static_cast<uint32>( requested ) > static_cast<uint32>( _framingMode ) )
-            _framingMode = requested;
-        _framedInput = captureFramingInput();
+        _framingMode = selectFramingMode( _framingMode, requested );
+        _framedInput = captureFramingInput( pScene );
         switch ( _framingMode )
         {
             case FramingMode::Grid:
@@ -1336,7 +1336,7 @@ namespace sw
             return;
 
         // 시나리오가 `-gv_bench…` 를 도중에 바꾸면 카메라가 따라간다. 맞춤은 장면을 세울 때와 지연 뒤 두 번뿐이라 늦은 변경이 반영되지 않았다.
-        if ( captureFramingInput() != _framedInput )
+        if ( captureFramingInput( pScene ) != _framedInput )
             applyFraming( pScene, _framingMode );
 
         updateProbes( pObjects );
