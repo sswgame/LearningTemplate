@@ -6,6 +6,8 @@ Claude Code PreToolUse 훅이 Bash · PowerShell 도구 호출마다 부른다(.
 - 커밋 훅 우회 금지: `git commit --no-verify`. 커밋 훅(PreCommitLint)은 우회하지 않는다(CLAUDE.md · docs/11_Workflow.md).
 - 큰 마크다운의 셸 통째 읽기 금지(2026-10-19 토큰 절감): `cat` · `Get-Content` · 넓은 `sed -n` 으로 kMaxUnboundedReadBytes 를 넘는 `.md` 를 읽는 것.
   ReadGuard 는 Read 도구만 막아서 셸로 읽으면 지나갔다. 절만 읽는 길은 `py -3 -m Scripts doc <파일> --section <제목>` 이다.
+- 인터프리터 heredoc 금지(2026-10-25): `python - <<EOF` 로 파일을 고치는 것. 규칙이 문서에만 있어 작업자가 계속 어겼고, 빈 본문의
+  `python -` 가 표준 입력을 기다리며 CPU 를 돌았다. `find /`(디스크 전체 검색)도 같은 이유로 막는다.
 - 링크가 든 폴더의 재귀 삭제 금지: 워크트리는 main 의 도구(`Tools/LLVM` 등)를 정션으로 나눠 쓴다. 링크를 끊지 않고 재귀로 지우면
   도구에 따라 링크 너머의 공유 도구까지 지워진다. 워크트리는 `py -3 -m Scripts worktree-remove <이름>` 으로 지운다.
 
@@ -34,6 +36,8 @@ kMaxSedRangeLines = 300  # 이 줄 수 이하의 `sed -n 'a,bp'` 는 절 읽기�
 kRecursiveDeletePattern = re.compile(
     r"(?i)(\bRemove-Item\b.*-Recurse|\brm\b\s+-[a-z]*r|\brmdir\b.*\s/s\b|\brd\b.*\s/s\b|\bgit\s+worktree\s+remove\b|\bshutil\.rmtree\b)")
 kNoVerifyPattern = re.compile(r"(?i)\bgit\b[^\n;&|]*\bcommit\b[^\n;&|]*--no-verify\b")
+kInterpreterHeredocPattern = re.compile(r"(?i)\b(?:python3?|py)(?:\s+-3)?(?:\s+-)?\s*<<")
+kRootFindPattern = re.compile(r"(?i)(?:^|[;&|(]|&&)\s*find\s+/(?:\s|$)")
 kQuotedPattern = re.compile(r"\"[^\"\n]*\"|'[^'\n]*'")
 kWindowsPathPattern = re.compile(r"[A-Za-z]:[\\/][^\s\"'|;&<>]*")
 kMsysPathPattern = re.compile(r"(?<![\w.])/([a-zA-Z])/([^\s\"'|;&<>]*)")
@@ -97,6 +101,20 @@ def findLinkInside(root: str) -> str:
 def checkNoVerify(command: str) -> str:
     if kNoVerifyPattern.search(stripQuoted(command)):
         return "커밋 훅은 우회하지 않는다(`--no-verify` 금지). 훅이 실패하면 원인을 고친다(CLAUDE.md · docs/11_Workflow.md)."
+    return ""
+
+
+def checkInterpreterHeredoc(command: str) -> str:
+    """파이썬 표준 입력 heredoc 으로 파일을 고치려 하면 막을 이유를 돌려준다(EditingTraps). 본문이 비거나 파이프가 끊기면 인터프리터가 CPU 를 돌며 남는다."""
+    if kInterpreterHeredocPattern.search(stripQuoted(command)):
+        return ("`python - <<EOF` · `py -3 - <<EOF` 같은 인터프리터 heredoc 은 금지다(docs/agents/EditingTraps.md). "
+                "파일 편집은 Edit 도구로 하고, 스크립트가 필요하면 파일로 써서 `py -3 <파일>` 로 돌린다.")
+    return ""
+
+
+def checkRootFind(command: str) -> str:
+    if kRootFindPattern.search(stripQuoted(command)):
+        return "`find /` 는 디스크 전체를 훑어 CPU 를 오래 쓴다. 저장소 안이면 Grep · Glob 도구나 `find <폴더>` 로 범위를 좁힌다."
     return ""
 
 
@@ -166,7 +184,8 @@ def main() -> int:
         if data.get("tool_name") not in ("Bash", "PowerShell"):
             return 0
         command = (data.get("tool_input") or {}).get("command") or ""
-        for reason in (checkNoVerify(command), checkRecursiveDelete(command), checkShellBigDocRead(command)):
+        for reason in (checkNoVerify(command), checkInterpreterHeredoc(command), checkRootFind(command), checkRecursiveDelete(command),
+                       checkShellBigDocRead(command)):
             if reason:
                 # 콘솔 인코딩(cp949)이 아니라 UTF-8 바이트로 쓴다 - 모델이 받는 문구가 깨지지 않게 한다.
                 sys.stderr.buffer.write(("[GuardCommands] " + reason + "\n").encode("utf-8"))
