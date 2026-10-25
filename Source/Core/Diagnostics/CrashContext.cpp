@@ -319,6 +319,11 @@ namespace sw
         writeWholeFile( arrPath, arrText, length );
     }
 
+    void writeFileWithoutAllocation( const utf8* pPath, const utf8* pText, uint32 length )
+    {
+        writeWholeFile( pPath, pText, length );
+    }
+
     void writeCrashStackFile( const utf8* pStackText )
     {
         if ( pStackText == nullptr )

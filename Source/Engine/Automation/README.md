@@ -124,7 +124,24 @@ frame 900 <ExpectVisited> #3: AI.State(FarmAutoFarmer) never went through 'Till 
 `Saved/Automation/Recorded/a.scenario.xml` 은 `-scenario=saved/Automation/Recorded/a.scenario.xml` 입니다(`ScenarioRecorder::makeReplayID`, 녹화를 마칠 때 로그에도 찍힌다). `AppScenarioTest.RecordedPlayReplaysOnEveryBackend` 가 이 왕복을 네 백엔드에서 확인합니다.
 
 **보고의 실행 환경.** 보고 JSON 은 결과 칸 외에 `backend` · `game` · `startedAt` · `startedAtUnixMs` · `wallMilliseconds` · `wallLimitMilliseconds` · `lastStep` · `reproduce` 를 담아, 보고 한 장으로 어디서 어떻게 돌았고 어떻게 다시 돌리는지 알게 합니다.
-`reproduce` 는 세션(`AutomationSession::begin`)이 모은 게임 · 백엔드 · 에디터 · `-scenario` 목록과 시나리오의 `<Launch>` 변수로 지은 App 명령줄입니다(`AutomationRunTitleUtil::makeReproduceCommand`). 원본 명령줄이 아니므로 그 밖의 인자는 빠질 수 있습니다.
+`reproduce` 는 App 의 원본 인자(`CommandLineManager::getOriginalArguments`)를 그대로 옮긴 명령줄입니다(`AutomationRunTitleUtil::makeReproduceCommand`). 보고 · 녹화 경로(`scenario-report` · `scenario-record*` · `crash-reporter`)는 빼고, 이름에 token · secret · password · apikey · credential · auth · license 가 든 인자의 값은 `REDACTED` 로 가립니다(규칙은 `AutomationRunTitle.cpp` 의 `AutomationReproduceRules` 한 곳).
+원본에 없는 게임 · 실제 백엔드 · 시나리오 · `<Launch>` 변수만 세션과 실행기가 채웁니다.
+
+**행 감시.** 벽시계 상한은 프레임이 도는 동안만 보므로, 프레임 자체가 멈춘 행(교착)은 감시 스레드(`AutomationHangWatchdog`)가 잡습니다. 세션이 켠 실행(`armHangWatchdog`)만 시나리오를 읽은 뒤 스레드를 하나 띄우고(부하 시나리오 제외), `endRun` 이 내립니다.
+실행기는 단계 전환 때와 30 프레임마다 고정 크기 스냅샷(`AutomationHangPayload` — 이름 · 백엔드 · 마지막 자리 · 프레임 · 시작 시각 · 재현 명령 · 보고 경로)을 버전 번호 seqlock(`AutomationHangSnapshot`)으로 올립니다.
+상한 + 유예(`AutomationTimeLimits::kHangGraceSeconds` 5 초)가 지나도 `endRun` 이 안 불리면 감시가 할당 · 잠금 없이 스냅샷으로 보고(`hang: true`, 종료 코드 12)를 OS 원시 호출로 쓰고, 크래시 컨텍스트 · 빵부스러기 파일과 stderr 한 줄을 남긴 뒤 프로세스를 12 로 끝냅니다.
+시한들의 대소 관계(감시 + 유예 < 시계 보류 170 초 < 프로세스 시한 180 초)는 `AutomationTimeLimits.h` 한 곳에서 `static_assert` 로 못 박습니다.
+
+**시작을 미루는 조건.** `startAfter` 가 무엇이든 아래 조건이 풀려야 시작합니다(`AutomationStepRegistry::isStartBlocked` — 시작 · 시계 범위).
+
+| 조건 | 등록 위치 | 풀리는 조건 | 에디터에서 영원히 안 풀릴 수 있나 |
+|---|---|---|---|
+| `UILoadingScreen`(시작) | `UIAutomationSteps.cpp` | 로딩 화면이 닫힐 때. 화면 UI 를 막은 동안(멈춘 에디터, `isOnScreenSuppressed`)은 막지 않는다 | 아니오. 억제 깃발은 엔진 `beginFrame` 뒤 `ModuleHost::beginFrame` 이 정하므로 첫 프레임만 이전 값(꺼짐)을 보고, 멈춘 에디터는 다음 프레임에 풀린다 — `editor/loadingscreen` 은 시작이 한두 프레임 늦을 뿐이다 |
+| `ContentWatchFence`(시작) | `AssetHotReload.cpp` | 사본 폴더를 새로 만든 뒤 파일 감시 표지가 오거나 시한이 지날 때(표지 시한 + 임포트 시한, 시한이면 오류 로그 후 시작) | 아니오. 스스로 시한이 있다 |
+| `QuickLauncherIndexing`(시계) | `QuickLauncherPopup.cpp` | 열린 빠른 실행 팝업의 파일 색인 잡이 끝날 때 | 잡이 끝나지 않으면 시계 보류 시한(170 초)과 벽시계 상한이 12 로 끝낸다 |
+| `EditorAssetValidation`(시계) | `EditorFrameSteps.cpp` | 에셋 검증이 끝날 때 | 위와 같다 |
+| `ContentBrowserReferenceIndex`(시계) | `ContentBrowserPanel.cpp` | 참조 색인을 기다리는 동안 | 위와 같다 |
+| `ScreenFade`(캡처) | `LoadingScreenController.cpp` | 시작은 미루지 않고 화면 캡처만 미룬다 | 해당 없음 |
 필드는 읽는 쪽(`Scripts` 의 보고 읽기, `AppTestUtil::readReportRecords`)이 있어 더하기만 하고, `records` 는 끝에 둡니다. 실행기는 단계가 바뀔 때와 30 프레임마다 시나리오 · 백엔드 · 단계 · 프레임을 크래시 컨텍스트의 `Scenario` 키에 적고(`CrashHandler::setContextValue`), 단계 전환을 빵부스러기로 남깁니다.
 
 **로그 게이트.** `<Pass/>` 에 닿은 시나리오도 처리하지 않은 `[Warning]` · `[Error]` 를 남겼으면 종료 코드 15(`UnhandledLog`)로 끝납니다(`AutomationLogPolicy`). 단언이 모두 맞아도, 어림값 문턱이 있어도(14) 마찬가지입니다.

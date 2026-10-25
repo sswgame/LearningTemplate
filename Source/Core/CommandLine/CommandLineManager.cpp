@@ -26,6 +26,7 @@ namespace sw
     {
         _listArgument.clear();
         _mapArgument.clear();
+        _listOriginalArgument.clear();
         _listArgument.reserve( static_cast<size_t>( CommandLineArgument::Count ) );
 
 #define SW_REGISTER_ARGUMENT( name, defaultValue, useDefaultValue, ... )                                   \
@@ -84,6 +85,7 @@ namespace sw
         {
             if ( pPpArgv[argIndex] != nullptr && pPpArgv[argIndex][0] != '\0' )
             {
+                _listOriginalArgument.push_back( string{ pPpArgv[argIndex] } );
                 parseArgumentLine( string_view{ pPpArgv[argIndex] } );
             }
         }
@@ -103,6 +105,7 @@ namespace sw
             if ( pPpArgv[argIndex] != nullptr && pPpArgv[argIndex][0] != L'\0' )
             {
                 const string utf8Line = StringUtil::utf16ToUtf8( pPpArgv[argIndex] );
+                _listOriginalArgument.push_back( utf8Line );
                 parseArgumentLine( string_view{ utf8Line } );
             }
         }

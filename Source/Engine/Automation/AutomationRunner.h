@@ -8,6 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Automation/AutomationHangWatch.h"
 #include "Engine/Automation/AutomationLogCapture.h"
 #include "Engine/Automation/AutomationLogPolicy.h"
 #include "Engine/Automation/AutomationOutcome.h"
@@ -48,6 +49,11 @@ namespace sw
          * @details 시나리오 인자(`_scenarioArgument`)가 비어 있으면(세션 없이 돌리는 테스트) 보고의 `reproduce` 는 빈 글입니다. 이 시나리오의 `<Launch>` 선언 변수는 보고를 쓸 때 실행기가 더한다.
          */
         void setReproduceInput( AutomationReproduceInput input ) { _reproduceInput = std::move( input ); }
+        /**
+         * @brief 행 감시 스레드를 켭니다(시작 전에 부릅니다). 프레임이 멈춰 실행기가 끝맺지 못해도 상한 + 유예 뒤에 감시가 보고를 쓰고 종료 코드 12 로 프로세스를 끝냅니다.
+         * @details 프로세스를 끝내므로 실제 `App` 실행을 구동하는 세션만 켠다. 손으로 실행기를 돌리는 테스트는 켜지 않는다.
+         */
+        void armHangWatchdog() { _bHangWatchArmed = SW_TRUE; }
         /**
          * @brief 지금 RHI 백엔드의 이름(`DirectX12` · `Vulkan` …, 창 있는 호스트의 `gv_rhiBackend`)입니다. 엔진 서비스가 없거나 창이 없으면(디바이스를 만들지 않은 호스트) 빈 글입니다.
          * @details 렌더러(`FrameRenderer`)는 이 층보다 위라 읽지 않는다 — 백엔드 교체가 `gv_rhiBackend` 를 갱신하므로 같은 값이다.
@@ -215,13 +221,22 @@ namespace sw
         /**
          * @brief 시작부터 `wallTimeoutSeconds` 가 지났으면 시간 초과(12)로 끝냅니다. 부하 시나리오는 자기 그물이 있어 보지 않습니다.
          * @details 프레임 시한(`timeoutFrames`)은 붙잡은 프레임(`holdUntilReady` · 시계 잡기)을 세지 않아, 붙잡힌 채로는 영영 끝나지 않고 테스트의 프로세스 시한(보고 없는 kill)까지 간다.
-         *          이 감시는 프레임이 도는 동안만 본다(프레임 자체가 멈춘 행은 못 잡는다).
+         *          이 감시는 프레임이 도는 동안만 본다 — 프레임 자체가 멈춘 행은 행 감시 스레드(`AutomationHangWatchdog`)가 상한 + 유예 뒤에 잡는다.
          */
         void finishIfWallClockExceeded();
         /** @brief 지금 자리 한 줄(`시나리오 · 백엔드 · step N 단계 · f프레임` — 창 제목과 같은 글)입니다. */
         string describeRunPosition() const;
         /** @brief 크래시 보고에 싣는 자리(`Scenario` 키 — 시나리오 · 백엔드 · 단계 · 프레임)를 갱신합니다. 크래시 · 행 뒤 덤프가 어느 시나리오의 어느 단계였는지 알려 준다. */
         void updateCrashContext( string_view note = {} );
+        /** @brief 이 실행의 재현 명령입니다 — 세션이 넘긴 재료에 이 시나리오의 `<Launch>` 변수를 더해 짓습니다. 재료에 시나리오가 없으면 빈 글. */
+        string makeReproduceCommand() const;
+        /**
+         * @brief 행 감시 스레드를 띄웁니다. 감시가 켜져 있고(`armHangWatchdog`) 시나리오를 읽었으며 부하 시나리오가 아닐 때만 띄웁니다.
+         * @details 부하 시나리오는 측정 창 그물이 따로 있어 제외한다. 스레드는 `endRun` 이 내린다.
+         */
+        void startHangWatchdog();
+        /** @brief 감시 스레드가 읽을 스냅샷을 갱신합니다(@p position 은 `describeRunPosition`). 감시가 돌고 있지 않으면 아무것도 하지 않습니다. */
+        void publishHangSnapshot( string_view position );
 
         AutomationScenario       _scenario;
         VirtualInputScript       _inputScript;
@@ -240,6 +255,8 @@ namespace sw
         string                   _currentStepKind;        ///< 마지막으로 시작한 실행 단계(입력 단계는 제외)
         string                   _startedAt;              ///< 벽시계 시작 지역 시각 글(`2026-10-26 14:03:11`). 얻지 못하면 빈 글
         AutomationReproduceInput _reproduceInput;         ///< 보고의 재현 명령 재료(`setReproduceInput`). 이 시나리오의 `<Launch>` 변수는 보고를 쓸 때 더한다
+        AutomationHangPayload    _hangPayload;            ///< 감시 스레드에 넘기는 스냅샷의 게임 스레드 쪽 사본(바뀌지 않는 칸은 시작할 때 한 번 채운다)
+        AutomationHangWatchdog   _hangWatchdog;           ///< 프레임이 멈춘 행을 잡는 감시 스레드(`armHangWatchdog` 로 켠 실행만)
         GameObjectManager*       _pObjectManagerOverride; ///< `setObjectManager` 로 정한 매니저입니다(nullptr 이면 활성 씬).
         InputManager*            _pInputManager;          ///< 시작 프레임에 받은 입력 관리자(`onFrameBegin`)
         float64                  _exitDeadlineSeconds;    ///< `ExpectExitWithin` 이 정한 벽시계 시한입니다(단조 시계 초). 0 이면 기다리지 않습니다.
@@ -261,9 +278,10 @@ namespace sw
         float64                  _clockHoldStartSeconds;  ///< 그 붙잡기가 시작된 단조 시계 초
         string                   _clockHolderName;        ///< 붙잡은 조건의 이름(로그)
         AutomationOutcome        _result;
-        uint8                    _bStarted   : 1;
-        uint8                    _bEnded     : 1;
-        uint8                    _bClockHeld : 1; ///< 이 프레임을 시계 잡기 조건이 붙잡았다(`onFrameBegin` 이 정하고 `onFrameEnd` 가 단계를 건너뛴다)
-        [[maybe_unused]] uint8   _reserved   : 5;
+        uint8                    _bStarted        : 1;
+        uint8                    _bEnded          : 1;
+        uint8                    _bClockHeld      : 1; ///< 이 프레임을 시계 잡기 조건이 붙잡았다(`onFrameBegin` 이 정하고 `onFrameEnd` 가 단계를 건너뛴다)
+        uint8                    _bHangWatchArmed : 1; ///< `armHangWatchdog` 를 불렀다(실제 프로세스를 끝낼 수 있는 감시라 세션만 켠다)
+        [[maybe_unused]] uint8   _reserved        : 4;
     };
 } // namespace sw

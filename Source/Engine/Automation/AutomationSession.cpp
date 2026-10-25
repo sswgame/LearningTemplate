@@ -117,7 +117,11 @@ namespace sw
         _reproduceInput._scenarioArgument = string( scenarioArgument );
         _reproduceInput._bKeepGoing       = bKeepGoing;
         if ( engine::areEngineServicesBound() )
-            (void)engine::getSubsystem<CommandLineManager>().getArgument( CommandLineArgument::ENABLE_EDITOR, _reproduceInput._bEditor ); // 적지 않았으면 false 그대로
+        {
+            const CommandLineManager& commandLine = engine::getSubsystem<CommandLineManager>();
+            (void)commandLine.getArgument( CommandLineArgument::ENABLE_EDITOR, _reproduceInput._bEditor ); // 적지 않았으면 false 그대로
+            _reproduceInput._listOriginalArgument = commandLine.getOriginalArguments();
+        }
         // 녹화(`Saved/Automation/…`)를 id(`saved/…`)로 다시 돌릴 수 있게 붙인다. 못 붙이면 오류가 남고 그 id 를 읽는 단계만 읽기 오류로 진다.
         (void)ScenarioRecorder::mountSavedDomain( _workingFolder );
         _pChain = make_unique<AutomationScenarioChain>();
@@ -147,6 +151,7 @@ namespace sw
 
         _pRunner = make_unique<AutomationRunner>();
         _pRunner->setReproduceInput( _reproduceInput );
+        _pRunner->armHangWatchdog(); // 실제 프로세스를 구동하는 세션만 행 감시를 켠다(상한 + 유예 뒤 보고를 쓰고 종료 코드 12 로 끝낸다)
         _pRunner->startFromPath( _pChain->getCurrentPath(), AutomationScenarioChain::makeStageReportPath( _reportPath, _pChain->getStageIndex(), _pChain->getStageCount() ) );
         _screenshotBaseline = completedScreenshotCount;
         if ( _pRunner->isActive() )

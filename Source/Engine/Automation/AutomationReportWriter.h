@@ -50,6 +50,8 @@ namespace sw
 
         /** @brief 보고를 쓸 경로입니다. 비우면 보고를 쓰지 않습니다. */
         void setReportPath( string_view reportPath ) { _reportPath = string( reportPath ); }
+        /** @brief 정한 보고 경로입니다(비면 보고를 쓰지 않는다). 행 감시가 정상 보고와 같은 자리에 쓰려고 읽는다. */
+        const string& getReportPath() const { return _reportPath; }
         /** @brief 지표 값 줄 하나를 더합니다(`darkFraction(0,0,1,0.12) park.ppm = 0.034`). */
         void addMetricLine( string line ) { _listMetricLine.push_back( std::move( line ) ); }
         /** @brief 지금까지 더한 지표 값 줄입니다. */

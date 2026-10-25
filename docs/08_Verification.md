@@ -53,11 +53,11 @@ cd build/Ninja-Debug/Bin
 줄이 처리됐다는 것은 ① 그 시나리오의 `<ExpectLog contains="…">` 가 선언한 줄이거나 ② 로그 id(`SW_LOG_WARNING_ID` · `SW_LOG_ERROR_ID`)가 붙은 줄이 `Resource/engine/automation/allowedlogs.json` 의 항목(id · 시나리오 하나 · 사유 · 처리 계획 문서)에 있다는 뜻이다. **id 없는 줄은 목록으로 가릴 수 없다** — 소스에 id 를 붙이거나 고친다.
 목록의 칸이 비었거나 `TODO` 이면 모든 시나리오가 읽기 오류(11)로 선다. 호스트 테스트 스위트(`hostgpu`)는 같은 목록의 `suite` 항목을 쓴다. 보고에는 이렇게 쓴다 — 허용 목록에 없는 Warning · Error 가 하나라도 있으면 "통과" 가 아니라 "실패(UnhandledLog)" 다.
 **시한과 종료 코드 12.** 프레임 시한(`timeoutFrames`)은 시나리오 시계를 붙잡은 프레임(`WaitUntil` · 시계 잡기 조건)을 세지 않으므로, 실행기가 시나리오 한 편의 벽시계 상한(`wallTimeoutSeconds`, 적지 않으면 150 초, 양수만)을 따로 본다. 넘으면 12(`TimedOut`)로 끝나고 보고를 쓴다.
-이유에 어느 단계에서 얼마나 붙잡혔는지가 든다. 프로세스 시한(`AppTestUtil::kScenarioTimeoutSeconds` 180 초)이 먼저 죽이면 보고가 없으므로 이 상한이 그보다 짧아야 한다. 부하 시나리오(`<Load>`)는 측정 창 그물이 따로 있어 이 상한을 보지 않는다. 프레임 자체가 멈춘 행은 이 감시가 못 잡는다.
+이유에 어느 단계에서 얼마나 붙잡혔는지가 든다. 프로세스 시한(`AppTestUtil::kScenarioTimeoutSeconds` 180 초)이 먼저 죽이면 보고가 없으므로 이 상한이 그보다 짧아야 한다. 부하 시나리오(`<Load>`)는 측정 창 그물이 따로 있어 이 상한을 보지 않는다. 프레임 자체가 멈춘 행(교착)은 행 감시 스레드가 상한 + 유예(5 초) 뒤에 잡는다 — 미리 채워 둔 스냅샷으로 보고(`"hang": true`)를 쓰고 종료 코드 12 로 프로세스를 끝낸다. 시한 순서(감시 + 유예 < 시계 보류 170 초 < 프로세스 시한 180 초)는 `AutomationTimeLimits.h` 의 `static_assert` 가 지킨다.
 `startAfter="Immediately"` 도 시작 차단 조건(로딩 화면 · 감시 울타리)이 풀린 뒤에 시작한다(씬이 플레이 중일 필요만 없다). 끝내 풀리지 않으면 시작 시한 뒤 12 로 끝난다.
 **진 실행의 로그.** 로그 게이트는 시작한 시나리오 모두에 돌아 처리하지 않은 줄을 보고의 `unhandledLogs` 에 싣는다. 이미 진 실행(10 · 12 …)의 결과 숫자는 바뀌지 않는다 — 15 는 통과했을 때만 된다.
 **보고 필드.** `name` · `result` · `exitCode` · `frames` · `reason` · `failures[]` · `unconfirmed[]` · `unhandledLogs[]` · `allowedLogs[]` · `metrics[]` · `records[]` 에 더해 실행 환경 칸이 있다 — `backend` · `game` · `startedAt`(지역 시각) · `startedAtUnixMs` · `wallMilliseconds` · `wallLimitMilliseconds`(부하는 0) · `lastStep`(끝난 자리 `시나리오 · 백엔드 · step N 단계 · f프레임`) · `reproduce`(같은 실행을 다시 띄우는 App 명령줄).
-읽는 쪽이 있으니 필드는 더하기만 하고 `records[]` 는 끝에 둔다. `reproduce` 는 실행기가 아는 인자(게임 · 백엔드 · 에디터 · `-scenario` 목록 · `<Launch>` 변수)만 담으므로 그 밖의 `-gv_` 인자는 빠져 있을 수 있다. 크래시 · 행 뒤 덤프에는 컨텍스트 키 `Scenario`(같은 자리 한 줄)와 빵부스러기(최근 단계 전환)가 남는다.
+읽는 쪽이 있으니 필드는 더하기만 하고 `records[]` 는 끝에 둔다. `reproduce` 는 App 의 원본 인자를 그대로 옮기고(보고 · 녹화 경로와 `crash-reporter` 는 뺀다), 이름에 token · secret · password · apikey · credential · auth · license 가 든 인자의 값은 `REDACTED` 로 가린다. 원본에 없는 게임 · 실제 백엔드 · 시나리오 · `<Launch>` 변수만 채운다. 크래시 · 행 뒤 덤프에는 컨텍스트 키 `Scenario`(같은 자리 한 줄)와 빵부스러기(최근 단계 전환)가 남는다.
 시나리오를 돌린 뒤에는 `py -3 -m Scripts scenario-logs --check` 로 목록에 있으나 더 나오지 않는 항목(지운다)과 15 로 끝난 보고를 센다. 처음 목록을 채울 때는 `--regen` 이 초안(사유 · 계획이 `TODO`)을 만든다. 절차와 이유는 [GPU 검증](plans/GpuVerification.md) 4절이다.
 
 **단위마다 이 순서로 한다.** 테스트 먼저(이전 코드에서 지는 것을 확인) → 고침 → 변이 검사(고침을 되돌리면 테스트가 지는가) →

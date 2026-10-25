@@ -9,6 +9,7 @@
 #include "Core/Container/vector.h"
 
 #include "Engine/Automation/AutomationScratch.h"
+#include "Engine/Automation/AutomationTimeLimits.h"
 #include "Engine/Input/Virtual/IVirtualInputSource.h"
 
 namespace sw
@@ -119,9 +120,9 @@ namespace sw
         /**
          * @brief 시나리오 한 편의 벽시계 상한(초)의 기본값입니다 — `wallTimeoutSeconds` 를 적지 않은 시나리오가 받는 값입니다(다른 시한의 기본값과 같은 자리).
          * @details 프레임 시한(`timeoutFrames`)은 시계를 붙잡은 프레임(`WaitUntil` · 시계 잡기 조건)을 세지 않아 붙잡힌 채로는 영영 끝나지 않는다. 이 값은 그 틈을 막는 실시간 총량이고,
-         *          테스트 쪽 프로세스 시한(`AppTestUtil::kScenarioTimeoutSeconds` 180 초)보다 짧아야 그 시한이 죽이기 전에 실행기가 보고를 쓴다.
+         *          값과 다른 시한과의 대소 관계는 `AutomationTimeLimits` 한 곳에 있다.
          */
-        static constexpr float32 kDefaultWallTimeoutSeconds = 150.0f;
+        static constexpr float32 kDefaultWallTimeoutSeconds = AutomationTimeLimits::kDefaultWallTimeoutSeconds;
 
         AutomationScenario();
 

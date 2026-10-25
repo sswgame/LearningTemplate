@@ -67,9 +67,6 @@ namespace sw
             static constexpr float32 kDefaultExitWithinSeconds = 10.0f;
             /** @brief `WaitUntil` 의 기본 시한(프레임)입니다. 부하가 걸린 기계에서 에디터가 에셋을 여는 데 드는 시간보다 넉넉하게 잡습니다. */
             static constexpr uint32 kDefaultWaitTimeoutFrames = 1200;
-            /** @brief 시계 잡기 조건 하나가 이어서 시계를 붙잡을 수 있는 벽시계 시한(초)입니다. 저장 검증(파이썬)은 쉬는 기계에서 몇 초, 빌드가 겹치면 30 초를 넘긴다. */
-            static constexpr float64 kClockHoldTimeoutSeconds = 180.0;
-
             /** @brief 단조 시계의 지금 시각(초)입니다. 벽시계 감시와 시한이 같은 시계를 읽는다. */
             [[nodiscard]] static float64 readNowSeconds() { return static_cast<float64>( MonotonicClock::nowMicroseconds() ) * 1.0e-6; }
 
@@ -1233,6 +1230,8 @@ namespace sw
         , _currentStepKind{}
         , _startedAt{}
         , _reproduceInput{}
+        , _hangPayload{}
+        , _hangWatchdog{}
         , _pObjectManagerOverride{ nullptr }
         , _pInputManager{ nullptr }
         , _exitDeadlineSeconds{ 0.0 }
@@ -1257,6 +1256,7 @@ namespace sw
         , _bStarted{ SW_FALSE }
         , _bEnded{ SW_FALSE }
         , _bClockHeld{ SW_FALSE }
+        , _bHangWatchArmed{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -1282,6 +1282,7 @@ namespace sw
                      static_cast<uint32>( _scenario.getSteps().size() ), _scenario.getFixedDelta() );
         if ( _scenario.getInputMode() == VirtualInputMode::Mixed )
             SW_LOG_WARNING( "[Scenario] %# uses mixed input - do not touch the keyboard or mouse while it runs", _scenario.getName().c_str() );
+        startHangWatchdog();
     }
 
     bool AutomationRunner::startFromText( string_view xmlText, string_view reportPath )
@@ -1294,8 +1295,11 @@ namespace sw
             finish( AutomationOutcome::LoadError, error );
             return false;
         }
-        _outputDirectory = "Saved/Automation/" + _scenario.getName();
-        return skipIfStepsAreMissingFromThisBuild() == false && prepareScratchFolders();
+        _outputDirectory  = "Saved/Automation/" + _scenario.getName();
+        const bool bReady = skipIfStepsAreMissingFromThisBuild() == false && prepareScratchFolders();
+        if ( bReady )
+            startHangWatchdog();
+        return bReady;
     }
 
     bool AutomationRunner::prepareScratchFolders()
@@ -1550,7 +1554,8 @@ namespace sw
 
     void AutomationRunner::updateCrashContext( string_view note )
     {
-        string text = describeRunPosition();
+        const string position = describeRunPosition();
+        string       text     = position;
         if ( note.empty() == false )
         {
             text += " (";
@@ -1559,6 +1564,54 @@ namespace sw
         }
         // 키 하나가 시나리오 · 백엔드 · 단계 · 프레임을 든다. 값 길이를 넘으면 글자 경계에서 자른다(저장소가 조용히 자르면 UTF-8 중간이 깨진다).
         CrashHandler::setContextValue( "Scenario", AutomationRunTitleUtil::truncateUtf8( text, CrashContextStore::kMaxValueLength - 1 ) );
+        publishHangSnapshot( position ); // 행 감시 스레드가 읽을 같은 자리(단계 전환 때와 30 프레임마다)
+    }
+
+    string AutomationRunner::makeReproduceCommand() const
+    {
+        AutomationReproduceInput reproduceInput = _reproduceInput;
+        for ( const AutomationAttribute& variable : _scenario.getTestOptions()._listLaunchVariable )
+        {
+            reproduceInput._listExtraArgument.push_back( "-" + variable._name + "=" + variable._value ); // `<Launch>` 변수는 명령줄에 있어야 시작한다
+        }
+        return AutomationRunTitleUtil::makeReproduceCommand( reproduceInput );
+    }
+
+    void AutomationRunner::startHangWatchdog()
+    {
+        const bool bWatches = _bHangWatchArmed == SW_TRUE && _result == AutomationOutcome::Running && _scenario.getTestOptions()._load._bDeclared == false;
+        if ( bWatches == false )
+            return;
+        // 바뀌지 않는 칸은 지금 한 번 채운다. 행에서는 이것만 읽는다(감시 스레드는 실행기 멤버를 건드리지 않는다).
+        _hangPayload = AutomationHangPayload{};
+        AutomationHangPayload::assign( _hangPayload._scenario, AutomationHangPayload::kScenarioBytes, _scenario.getName() );
+        AutomationHangPayload::assign( _hangPayload._game, AutomationHangPayload::kGameBytes, _reproduceInput._game );
+        AutomationHangPayload::assign( _hangPayload._startedAt, AutomationHangPayload::kStartedAtBytes, _startedAt );
+        AutomationHangPayload::assign( _hangPayload._reproduce, AutomationHangPayload::kReproduceBytes, makeReproduceCommand() );
+        AutomationHangPayload::assign( _hangPayload._reportPath, AutomationHangPayload::kReportPathBytes, _reportWriter.getReportPath() );
+        _hangPayload._startedUnixMs         = _startedUnixMs;
+        _hangPayload._wallLimitMilliseconds = static_cast<uint32>( static_cast<float64>( _scenario.getWallTimeoutSeconds() ) * 1000.0 );
+        // 행에서는 보고 폴더를 만들 수 없다(할당 · 잠금 없이 쓴다) — 미리 만들어 둔다.
+        const string reportDirectory = FileUtil::getDirectoryPart( _reportWriter.getReportPath() );
+        if ( reportDirectory.empty() == false )
+            (void)FileUtil::ensureDirectoryExists( reportDirectory ); // 못 만들면 행 보고만 못 쓴다 — 정상 종료의 보고는 자기 쓰기가 알린다
+        _hangWatchdog.publish( _hangPayload );                        // 감시가 뜨기 전에 한 번 채운다
+        AutomationHangWatchdog::Settings settings;
+        settings._startSeconds = _wallStartSeconds;
+        settings._limitSeconds = _scenario.getWallTimeoutSeconds();
+        settings._graceSeconds = AutomationTimeLimits::kHangGraceSeconds;
+        settings._exitCode     = getAutomationExitCode( AutomationOutcome::TimedOut );
+        _hangWatchdog.start( settings );
+    }
+
+    void AutomationRunner::publishHangSnapshot( string_view position )
+    {
+        if ( _hangWatchdog.isRunning() == false )
+            return;
+        AutomationHangPayload::assign( _hangPayload._lastStep, AutomationHangPayload::kLastStepBytes, position );
+        AutomationHangPayload::assign( _hangPayload._backend, AutomationHangPayload::kBackendBytes, findBackendName() );
+        _hangPayload._frame = _frameIndex;
+        _hangWatchdog.publish( _hangPayload );
     }
 
     AutomationOutcome AutomationRunner::onWindowClosed( InputManager* pInput )
@@ -1714,9 +1767,10 @@ namespace sw
         // 시작한 시나리오는 이 프레임을 세지 않는다. 이 프레임에 낼 입력 이벤트부터 한 프레임씩 밀어 시나리오 프레임과 맞춘다(`holdUntilReady` 와 같다).
         if ( _bStarted == SW_TRUE )
             _inputScript.delayEventsFrom( input.getVirtualFrameIndex(), 1 );
-        if ( nowSeconds - _clockHoldStartSeconds > AutomationRunnerInternal::kClockHoldTimeoutSeconds )
+        // 시한은 `AutomationTimeLimits` 한 곳에 있다(저장 검증은 쉬는 기계에서 몇 초, 빌드가 겹치면 30 초를 넘긴다).
+        if ( nowSeconds - _clockHoldStartSeconds > AutomationTimeLimits::kClockHoldTimeoutSeconds )
             finish( AutomationOutcome::TimedOut, _clockHolderName + " held the scenario clock for more than " +
-                                                     to_string( static_cast<uint32>( AutomationRunnerInternal::kClockHoldTimeoutSeconds ) ) + " s" );
+                                                     to_string( static_cast<uint32>( AutomationTimeLimits::kClockHoldTimeoutSeconds ) ) + " s" );
         return true;
     }
 
@@ -2101,6 +2155,7 @@ namespace sw
             return;
         _bEnded         = SW_TRUE;
         _wallEndSeconds = AutomationRunnerInternal::readNowSeconds();
+        _hangWatchdog.stop(); // 정상 끝맺음이 보고를 쓴다 — 감시가 같은 보고를 덮거나 프로세스를 끝내지 못하게 먼저 내린다
         if ( pInput != nullptr && pInput->getVirtualInput() == &_inputScript )
             pInput->detachVirtualInput();
         _logCapture.stop();
@@ -2148,14 +2203,9 @@ namespace sw
         report._pListUnhandledLog = &_listUnhandledLog;
         report._pListAllowedLog   = &_listAllowedLogID;
         // 실행 환경 — 이 보고만으로 어디서 어떻게 돌았고 어떻게 다시 돌리는지 알게 한다.
-        const string             backendName    = findBackendName();
-        const string             lastStep       = describeRunPosition();
-        AutomationReproduceInput reproduceInput = _reproduceInput;
-        for ( const AutomationAttribute& variable : _scenario.getTestOptions()._listLaunchVariable )
-        {
-            reproduceInput._listExtraArgument.push_back( "-" + variable._name + "=" + variable._value ); // `<Launch>` 변수는 명령줄에 있어야 시작한다
-        }
-        const string  reproduce          = AutomationRunTitleUtil::makeReproduceCommand( reproduceInput );
+        const string  backendName        = findBackendName();
+        const string  lastStep           = describeRunPosition();
+        const string  reproduce          = makeReproduceCommand();
         const bool    bWatchedByWallTime = _scenario.getTestOptions()._load._bDeclared == false;
         const float64 wallSeconds        = _wallEndSeconds > _wallStartSeconds ? _wallEndSeconds - _wallStartSeconds : 0.0;
         report._backendName              = backendName;
