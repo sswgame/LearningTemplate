@@ -2,7 +2,6 @@
 
 #include "GameFramework/Kits/Feature/Network/NetDestruction/DestructionNetSession.h"
 
-#include "Core/Container/unordered_set.h"
 #include "Core/Network/Message/NetMessage.h"
 #include "Core/String/StringBuilder.h"
 
@@ -23,6 +22,7 @@ namespace sw
         : _server{}
         , _client{}
         , _listEntry{}
+        , _mapEntryIndex{}
         , _listRecord{}
         , _pManager{ nullptr }
         , _pRouter{ nullptr }
@@ -44,6 +44,7 @@ namespace sw
         _side       = side;
         _serverTick = 0;
         _listEntry.clear();
+        _mapEntryIndex.clear();
         _listRecord.clear();
         _pManager = &manager;
 
@@ -79,23 +80,18 @@ namespace sw
         vector<GameObject*> listObject;
         _pManager->getSubsystem<NetObjectTable>().collectObjects( listObject );
         const NetObjectTable& table = _pManager->getSubsystem<NetObjectTable>();
-        // 등록된 번호를 해시 집합에 모은다 — 오브젝트마다 항목 목록을 훑지 않는다(오브젝트 N 개 · 항목 E 개에 O(N·E) 였다). 항목 순서는 오브젝트를 만나는 순서 그대로다.
-        unordered_set<uint32> uniqueRegisteredID;
-        uniqueRegisteredID.reserve( _listEntry.size() + listObject.size() );
-        for ( const Entry& registered : _listEntry )
-        {
-            uniqueRegisteredID.insert( registered._netID );
-        }
+        // 등록된 번호는 멤버 색인(`_mapEntryIndex`)으로 가린다 — 오브젝트마다 항목 목록을 훑지 않는다. 항목 순서는 오브젝트를 만나는 순서 그대로다.
+        _mapEntryIndex.reserve( _listEntry.size() + listObject.size() );
         for ( GameObject* pObject : listObject )
         {
             FractureComponent* pFracture = pObject->getComponent<FractureComponent>();
             if ( pFracture == nullptr )
                 continue;
             const uint32 netID       = table.findID( *pObject );
-            const bool   bRegistered = uniqueRegisteredID.contains( netID );
+            const bool   bRegistered = _mapEntryIndex.contains( netID );
             if ( netID == 0 || bRegistered )
                 continue;
-            uniqueRegisteredID.insert( netID );
+            _mapEntryIndex.emplace( netID, static_cast<uint32>( _listEntry.size() ) );
             Entry entry{};
             entry._pFracture = pFracture;
             entry._name      = string{ pObject->getName().c_str() };
@@ -160,9 +156,8 @@ namespace sw
 
     string_view DestructionNetSession::findObjectName( uint32 netID ) const
     {
-        const auto it = std::find_if( _listEntry.begin(), _listEntry.end(), [netID]( const Entry& entry )
-        { return entry._netID == netID; } );
-        return it != _listEntry.end() ? string_view{ it->_name } : string_view{};
+        const auto it = _mapEntryIndex.find( netID );
+        return it != _mapEntryIndex.end() ? string_view{ _listEntry[it->second]._name } : string_view{};
     }
 
     string DestructionNetSession::formatHashLine( DestructionNetSide side, const DestructionHashRecord& record, string_view objectName )

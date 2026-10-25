@@ -19,6 +19,7 @@ namespace sw
         : _pManager{ &manager }
         , _listScene{}
         , _listSpawned{}
+        , _mapSpawnedNetID{}
         , _nextSpawned{ 1 }
         , _spawnedRevision{ 0 }
     {
@@ -28,6 +29,7 @@ namespace sw
     {
         _listScene.clear();
         _listSpawned.clear();
+        _mapSpawnedNetID.clear();
         _nextSpawned = 1;
         ++_spawnedRevision;
     }
@@ -114,9 +116,13 @@ namespace sw
 
     const NetObjectTable::Entry* NetObjectTable::findSpawnedEntryByObject( GameObjectHandle object ) const
     {
-        const auto it = std::find_if( _listSpawned.begin(), _listSpawned.end(), [&object]( const Entry& entry )
-        { return entry._object == object; } );
-        return it != _listSpawned.end() ? &*it : nullptr;
+        const auto itNetID = _mapSpawnedNetID.find( object );
+        if ( itNetID == _mapSpawnedNetID.end() )
+            return nullptr;
+        const uint32 netID = itNetID->second;
+        const auto   it    = std::lower_bound( _listSpawned.begin(), _listSpawned.end(), netID, []( const Entry& entry, uint32 id )
+             { return entry._netID < id; } );
+        return ( it != _listSpawned.end() && it->_netID == netID ) ? &*it : nullptr;
     }
 
     uint32 NetObjectTable::findID( const GameObject& object ) const
@@ -156,6 +162,7 @@ namespace sw
         const auto it = std::lower_bound( _listSpawned.begin(), _listSpawned.end(), entry._netID, []( const Entry& other, uint32 id )
         { return other._netID < id; } );
         (void)_listSpawned.insert( it, entry );
+        _mapSpawnedNetID.emplace( entry._object, entry._netID );
         ++_spawnedRevision;
         return entry._netID;
     }
@@ -185,7 +192,9 @@ namespace sw
                 SW_LOG_ERROR( "Spawned net id %# is already bound to another object - '%#' was not bound", netID, object.getName().c_str() );
                 return false;
             }
+            (void)_mapSpawnedNetID.erase( it->_object );
             it->_object = object.getHandle();
+            _mapSpawnedNetID.emplace( it->_object, netID );
             ++_spawnedRevision;
             return true;
         }
@@ -193,6 +202,7 @@ namespace sw
         entry._netID  = netID;
         entry._object = object.getHandle();
         (void)_listSpawned.insert( it, entry );
+        _mapSpawnedNetID.emplace( entry._object, entry._netID );
         ++_spawnedRevision;
         return true;
     }
@@ -200,11 +210,11 @@ namespace sw
     void NetObjectTable::unregisterSpawned( const GameObject& object )
     {
         const GameObjectHandle handle = object.getHandle();
-        const auto             it     = std::find_if( _listSpawned.begin(), _listSpawned.end(), [&handle]( const Entry& entry )
-                        { return entry._object == handle; } );
-        if ( it == _listSpawned.end() )
+        const Entry*           pEntry = findSpawnedEntryByObject( handle );
+        if ( pEntry == nullptr )
             return;
-        _listSpawned.erase( it );
+        _listSpawned.erase( _listSpawned.begin() + ( pEntry - _listSpawned.data() ) );
+        (void)_mapSpawnedNetID.erase( handle );
         ++_spawnedRevision;
     }
 
