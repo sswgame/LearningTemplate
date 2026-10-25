@@ -314,12 +314,12 @@ namespace sw
             SW_LOG_ERROR( "readReadbackBuffer: buffer %# is not a readback buffer of at least %# bytes", readback, sizeBytes );
             return false;
         }
-        // Map 에서 Unmap 까지 한 덩어리로 잠근다. 기다리지 않는다 — GPU 가 아직이면(콜백 계약 밖) 실패로 돌려준다.
-        // 일부러 `D3D11_MAP_FLAG_DO_NOT_WAIT` 다: 이 읽기는 `waitIdle` 이 정말 기다렸는지 가리는 탐침이기도 하다(기다리는 Map 이면 안 기다린 waitIdle 이 가려진다).
-        // 끝난 복사에도 `WAS_STILL_DRAWING` 이 나올 수 있으나(takeTextureReadback 결정) 실패는 false 로 한 번 끝나고 되풀이하지 않으므로 장치 제거에서도 무한 폴링이 없다.
+        // Map 에서 Unmap 까지 한 덩어리로 잠근다. 부르는 쪽 계약이 "GPU 작업이 끝난 뒤" 라서(완료 콜백 안) 기다리는 Map 이다 — `DO_NOT_WAIT` 는 끝난 복사에도
+        // `DXGI_ERROR_WAS_STILL_DRAWING` 을 낸다(런타임 · 드라이버의 자원 사용 추적이 쿼리 완료보다 늦게 풀린다, takeTextureReadback 과 같은 결정 5-5).
+        // 기다리는 Map 은 그 추적만 맞추고 곧 돌아온다. 장치를 잃었으면 Map 이 오류로 바로 돌아와 무한히 기다리지 않는다.
         D3D11_MAPPED_SUBRESOURCE                mapped{};
         const D3D11ImmediateContext::ScopedLock context = _pDevice->_immediateContext.lock();
-        if ( FAILED( context->Map( pBuffer, 0, D3D11_MAP_READ, D3D11_MAP_FLAG_DO_NOT_WAIT, &mapped ) ) || mapped.pData == nullptr )
+        if ( FAILED( context->Map( pBuffer, 0, D3D11_MAP_READ, 0, &mapped ) ) || mapped.pData == nullptr )
             return false;
         Memory::copy( pDestination, mapped.pData, sizeBytes );
         context->Unmap( pBuffer, 0 );
