@@ -59,6 +59,9 @@ namespace sw
         auto* pResource = _pDevice->resolveTexture( texture );
         if ( pResource == nullptr )
             return kInvalidDescriptorIndex;
+        // 끝나지 않은 업로드가 남은 텍스처는 등록하지 않는다(소비자는 pollTransfer 가 Complete 를 준 뒤에 등록한다 — IRHIResourceFactory 전송 계약 머리말).
+        if ( _pDevice->_transferSerials.isTextureReadyToRegister( _pDevice->findTextureTransferSerial( texture ), texture ) == false )
+            return kInvalidDescriptorIndex;
         // 셰이더의 bindless 텍스처 배열은 Texture2D[] 다 — 배열 · 큐브 뷰를 넣으면 셰이더가 읽지 못한다(RHITextureDimension 참고).
         {
             std::scoped_lock<mutex> stateLock{ _pDevice->_resourceStateMutex };

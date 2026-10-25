@@ -158,6 +158,7 @@ namespace sw
         std::scoped_lock<mutex> uploadLock{ _uploadSlotMutex };
         flushPendingUploads( false );
         _commandQueue->ExecuteCommandLists( static_cast<UINT>( _listPendingSubmit.size() ), _listPendingSubmit.data() );
+        signalExportedTransfers(); // 내보낸 복사가 실행됐으니 전송 펜스를 올린다
         _listPendingSubmit.clear();
     }
 
@@ -187,6 +188,80 @@ namespace sw
                 _listPendingSubmit.insert( _listPendingSubmit.begin(), slot._copyCommandList.Get() );
             }
         }
+
+        // 열려 있던 전송이 이 호출로 내보내진다. 마지막 시리얼까지가 한 묶음이고, 전송 펜스는 리스트가 실행된 뒤에 올린다.
+        if ( _openTransferSerial != 0 )
+        {
+            _exportedTransferSerial   = _openTransferSerial;
+            _unsignaledTransferSerial = _openTransferSerial;
+            _openTransferSerial       = 0;
+        }
+        if ( bExecuteNow )
+            signalExportedTransfers();
+    }
+
+    uint64 D3D12RHIDevice::issueTransferSerial()
+    {
+        const uint64 serial = _transferSerials.issue();
+        _openTransferSerial = serial;
+        return serial;
+    }
+
+    void D3D12RHIDevice::signalExportedTransfers()
+    {
+        const bool bNothingToSignal = _unsignaledTransferSerial == 0 || _commandQueue == nullptr || _transferFence == nullptr;
+        if ( bNothingToSignal )
+            return;
+        const UINT64  fenceToSignal = _transferFenceValue + 1;
+        const HRESULT signalHr      = _commandQueue->Signal( _transferFence.Get(), fenceToSignal );
+        if ( FAILED( signalHr ) )
+        {
+            SW_LOG_ERROR( "Transfer fence Signal failed hr=0x%# (DeviceRemoved=0x%#)", static_cast<uint32>( signalHr ),
+                          static_cast<uint32>( _device ? _device->GetDeviceRemovedReason() : S_OK ) );
+            _transferSerials.markLost();
+            return;
+        }
+        _transferFenceValue = fenceToSignal;
+        {
+            std::scoped_lock<mutex> lock{ _transferMutex };
+            _listSignaledTransfer.push_back( SignaledTransfer{ fenceToSignal, _unsignaledTransferSerial } );
+        }
+        _unsignaledTransferSerial = 0;
+    }
+
+    void D3D12RHIDevice::retireCompletedTransfers()
+    {
+        if ( _transferFence == nullptr )
+            return;
+        const uint64            completedFence = _transferFence->GetCompletedValue();
+        uint64                  doneSerial{ 0 };
+        std::scoped_lock<mutex> lock{ _transferMutex };
+        while ( _listSignaledTransfer.empty() == false && _listSignaledTransfer.front()._fenceValue <= completedFence )
+        {
+            doneSerial = _listSignaledTransfer.front()._maxSerial;
+            _listSignaledTransfer.pop_front();
+        }
+        if ( doneSerial != 0 )
+            _transferSerials.advanceWatermark( doneSerial );
+    }
+
+    void D3D12RHIDevice::noteTextureTransfer( RHITextureHandle texture, uint64 serial )
+    {
+        std::scoped_lock<mutex> lock{ _transferMutex };
+        _mapTextureTransferSerial[texture] = serial;
+    }
+
+    uint64 D3D12RHIDevice::findTextureTransferSerial( RHITextureHandle texture )
+    {
+        std::scoped_lock<mutex> lock{ _transferMutex };
+        const auto              foundIt = _mapTextureTransferSerial.find( texture );
+        return foundIt != _mapTextureTransferSerial.end() ? foundIt->second : 0;
+    }
+
+    void D3D12RHIDevice::eraseTextureTransfer( RHITextureHandle texture )
+    {
+        std::scoped_lock<mutex> lock{ _transferMutex };
+        _mapTextureTransferSerial.erase( texture );
     }
 
     bool D3D12RHIDevice::debugRemoveDevice()
@@ -600,6 +675,7 @@ namespace sw
                     _commandQueue->ExecuteCommandLists( static_cast<UINT>( _listPendingSubmit.size() ),
                                                         _listPendingSubmit.data() );
                 }
+                signalExportedTransfers(); // 내보낸 복사가 실행됐으니 전송 펜스를 올린다
                 _listPendingSubmit.clear();
             }
             _pActiveFrameList = nullptr;
