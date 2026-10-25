@@ -1166,7 +1166,7 @@
       {
        "name": "_maxSlope",
        "type": "float32",
-       "default": "0.785398163375",
+       "default": "0.7853982",
        "min": "0.0",
        "max": "1.553343",
        "units": "rad",

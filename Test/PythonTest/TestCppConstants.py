@@ -12,7 +12,8 @@ from pathlib import Path
 kRepositoryRoot = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(kRepositoryRoot / "Scripts"))
 
-from common.CppConstants import ConstantError, ConstantResolver, hasConstantName  # noqa: E402
+from common.ConfigReference import resolveRangeConstantInternal  # noqa: E402
+from common.CppConstants import ConstantError, ConstantResolver, formatDoubleInternal, hasConstantName  # noqa: E402
 
 
 class CppConstantsTest(unittest.TestCase):
@@ -114,6 +115,39 @@ class CppConstantsTest(unittest.TestCase):
         resolver = self.makeResolverInternal({"Source/A/Top.h": "namespace a { constexpr int kMax = 1; }\nnamespace b { constexpr int kMax = 2; }"})
         with self.assertRaises(ConstantError):
             resolver.resolveDefaultExpression("Source/A/Top.h", "kMax")
+
+    def testFloat32ConstantsMatchGeneratorDoubleValue(self) -> None:
+        resolver = self.makeResolverInternal({"Source/A/Top.h": "constexpr float32 kPi = 3.1415926535f;\nconstexpr float32 kHalfPi = kPi * 0.5f;\n"
+                                                                "constexpr double kD = 0.1;\nconstexpr int kN = 7;\nenum class Mode { A };"})
+        header = "Source/A/Top.h"
+        # 생성기: clang 이 float 로 평가한 값을 double 로 읽어 to_chars 로 찍는다.
+        self.assertEqual(formatDoubleInternal(resolver.resolveRangeConstantValue(header, "kHalfPi")), "1.5707963705062866")
+        self.assertEqual(formatDoubleInternal(resolver.resolveRangeConstantValue(header, "kD")), "0.1")
+        self.assertEqual(formatDoubleInternal(resolver.resolveRangeConstantValue(header, "kN")), "7")
+        # 기본값 칸: 되읽으면 같은 float32 인 가장 짧은 글.
+        self.assertEqual(resolver.resolveDefaultExpression(header, "kHalfPi * 0.5"), "0.7853982")
+        self.assertEqual(resolver.resolveDefaultExpression(header, "kD"), "0.1")
+        with self.assertRaises(ConstantError):
+            resolver.resolveRangeConstantValue(header, "Mode::A")   # 생성기는 변수 선언만 찾는다
+
+    def testRangeTextFollowsGeneratorGrammar(self) -> None:
+        resolver = self.makeResolverInternal({"Source/A/Top.h": "namespace n { constexpr int kMax = 8; constexpr float32 kScale = 0.5f; }"})
+        header = "Source/A/Top.h"
+        self.assertEqual(resolveRangeConstantInternal("0.0, -n::kMax, _other", header, resolver, "T"), "0.0, -8, _other")
+        self.assertEqual(resolveRangeConstantInternal("n::kScale", header, resolver, "T"), "0.5")
+        self.assertEqual(resolveRangeConstantInternal("-1.5", header, resolver, "T"), "-1.5")
+        self.assertEqual(resolveRangeConstantInternal("_field", header, resolver, "T"), "_field")
+        for bad in ("n::kMax * 2", "0.5f", "n::kMax, ", "static_cast<int>(n::kMax)"):
+            with self.assertRaises(ValueError, msg=bad):
+                resolveRangeConstantInternal(bad, header, resolver, "T")
+        with self.assertRaises(ValueError):
+            resolveRangeConstantInternal("kMissing", header, resolver, "T")
+
+    def testScopeRuleDifferenceFromGeneratorIsKnown(self) -> None:
+        # 생성기(clang)는 필드가 든 타입의 안쪽 `kMax` 를 쓰지만 여기서는 같은 이름이 둘이라 멈춘다 — 틀린 숫자를 쓰지 않는 쪽의 차이(shortcut 주석).
+        resolver = self.makeResolverInternal({"Source/A/Top.h": "constexpr int kMax = 1;\nstruct S { static constexpr int kMax = 2; };"})
+        with self.assertRaises(ValueError):
+            resolveRangeConstantInternal("kMax", "Source/A/Top.h", resolver, "S")
 
     def testHasConstantName(self) -> None:
         self.assertFalse(hasConstantName("1.0f"))

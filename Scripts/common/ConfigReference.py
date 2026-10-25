@@ -27,7 +27,7 @@ from typing import Iterator
 from xml.etree import ElementTree
 
 from .CodeText import blankCommentsAndLiterals, blankMatch
-from .CppConstants import ConstantError, ConstantResolver, hasConstantName
+from .CppConstants import ConstantError, ConstantResolver, formatDoubleInternal, hasConstantName
 from .CookContract import kCookContractConfigRelative
 from .PathPattern import matchesPattern
 from .ConfigCatalog import (ConfigFileEntry, kKeyStyleJsonMember, kKeyStyleKeyTable, kKeyStyleXmlElementBare, kKeyStyleXmlMember,
@@ -318,19 +318,41 @@ def formatDefaultInternal(initText: str, mapMacro: dict[str, str], resolver: Con
     return ", ".join(listItem)
 
 
-def resolveRangeConstantInternal(rangeText: str | None, relative: str, resolver: ConstantResolver, typeName: str) -> str | None:
-    """`Min` · `Max` 가 C++ 상수 이름이나 산식(`kMaxWorkerCount2D`, `-Limit::kMax`, `Net::kMax * 2`)이면 숫자 글로 바꿉니다.
+_kRangeNumberRe = re.compile(r"[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?")
+_kQualifiedNameRe = re.compile(r"[A-Za-z_]\w*(?:::[A-Za-z_]\w*)*")
 
-    에디터가 읽는 메타데이터 JSON 의 min · max 는 숫자 글이어야 하므로 이름이 남으면 안 됩니다(생성기 `AstVisitor::resolveRangeConstants` 와 같은 규칙:
-    `_` 로 시작하는 이름은 필드). 상수는 그 헤더와 include 로 닿는 헤더에서 찾는다(`CppConstants`). 못 풀면 멈춥니다 — 이름이 그대로 JSON 에
-    들어가면 에디터가 숫자로 읽지 못합니다.
+
+def resolveRangeConstantInternal(rangeText: str | None, relative: str, resolver: ConstantResolver, typeName: str) -> str | None:
+    """`Min` · `Max` 의 상수 이름 항(`kMaxWorkerCount2D`, `-Limit::kMax`)을 숫자 글로 바꿉니다.
+
+    규칙의 정본은 생성기 `AstVisitor::resolveRangeConstants` + `AnnotationApply::isRangeExpression` 입니다 — 쉼표로 나눈 항마다 숫자(접미사 없는 것),
+    `_` 로 시작하는 필드 이름(그대로 둠), 상수 이름 하나(앞에 `-` 가능) 중 하나여야 하고 산식 · `0.5f` 는 거절합니다. 문서는 생성기보다 관대하면 안 되기 때문입니다
+    (생성기가 실패할 모양을 문서가 통과시키면 문서가 틀린 약속을 합니다). 값은 생성기처럼 double 의 가장 짧은 글입니다. 상수는 그 헤더와 include 로 닿는 헤더에서
+    찾고(`CppConstants`, 이름 찾기 규칙의 차이는 `resolveRangeConstantValue` 의 shortcut), 못 풀면 멈춥니다.
     """
-    if not rangeText or not hasConstantName(rangeText):
+    if not rangeText:
         return rangeText
-    try:
-        return resolver.resolveExpression(relative, rangeText)
-    except ConstantError as error:
-        raise ValueError(f"{typeName}: Min/Max '{rangeText}' — {error}") from error
+    listTerm: list[str] = []
+    bChanged = False
+    for part in rangeText.split(","):
+        term = part.strip()
+        if _kRangeNumberRe.fullmatch(term):
+            listTerm.append(term)
+            continue
+        name = term[1:].strip() if term.startswith("-") else term
+        if _kQualifiedNameRe.fullmatch(name) is None:
+            raise ValueError(f"{typeName}: Min/Max '{rangeText}' 의 항 '{term}' 은 숫자도 이름도 아닙니다 — 항은 쉼표로 나누고 숫자(`0.5f` 같은 접미사 없이), "
+                             "필드 이름(`_x`) 또는 상수 이름 하나여야 합니다(산식은 생성기가 받지 않습니다)")
+        if name.startswith("_"):
+            listTerm.append(term)
+            continue
+        try:
+            value = resolver.resolveRangeConstantValue(relative, name)
+        except ConstantError as error:
+            raise ValueError(f"{typeName}: Min/Max '{rangeText}' — {error}") from error
+        listTerm.append(formatDoubleInternal(-value if term.startswith("-") else value))
+        bChanged = True
+    return ", ".join(listTerm) if bChanged else rangeText
 
 
 def parseStructInternal(name: str, index: SourceIndex, mapMacro: dict[str, str]) -> TypeDoc | None:
