@@ -337,7 +337,7 @@ namespace sw::editor
             return true;
         const bool bHeld = areSceneEditsHeld();
         // 매 프레임 부르는 경로(기즈모 드래그 등)가 줄마다 경고를 쏟지 않게, 같은 편집이 같은 이유로 연속 거절되면 첫 한 번만 남긴다.
-        const bool bSameAsLast = pData->_lastRefusedAction == pAction && ( pData->_bLastRefusedByHold != 0 ) == bHeld;
+        const bool bSameAsLast = pData->_lastRefusedAction == pAction && ( pData->_bLastRefusedByHold == SW_TRUE ) == bHeld;
         if ( bSameAsLast )
             return true;
         pData->_lastRefusedAction  = pAction;

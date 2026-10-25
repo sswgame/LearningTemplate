@@ -17,6 +17,7 @@ from typing import Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다
+from common.ExitCode import ExitCode  # noqa: E402
 
 kEntryCount = 61
 kLinePattern = re.compile(r"^\s*\|\s*(\d+)\s*\|\s*([^\s|]+)\s*\|\s*([^|]*?)\s*\|\s*$")
@@ -89,8 +90,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         writeHeader(readEntryList(args.rfcPath), args.outputPath)
     except ValueError as error:
         print(f"[GenerateHpackStatic] 오류: {error}", file=sys.stderr)
-        return 1
-    return 0
+        return ExitCode.Violation
+    return ExitCode.Passed
 
 
 if __name__ == "__main__":
