@@ -88,8 +88,8 @@ namespace sw
         {
             inoutState._listNotify.push_back( notify._name );
         }
-        inoutState._listCurveName.insert( inoutState._listCurveName.end(), _owner._listCurveName.begin(), _owner._listCurveName.end() );
-        inoutState._listCurveValue.insert( inoutState._listCurveValue.end(), _owner._listCurveValue.begin(), _owner._listCurveValue.end() );
+        inoutState._listCurveName.insert( inoutState._listCurveName.end(), _owner._curves.getNames().begin(), _owner._curves.getNames().end() );
+        inoutState._listCurveValue.insert( inoutState._listCurveValue.end(), _owner._curves.getValues().begin(), _owner._curves.getValues().end() );
         inoutState._rootMotionTranslation = _owner._rootMotionDelta._translation;
         inoutState._rootMotionRotation    = _owner._rootMotionDelta._rotation;
     }
@@ -203,8 +203,7 @@ namespace sw
         , _listFiredNotify{}
         , _listActivePlayable{}
         , _listRootMotionModifier{}
-        , _listCurveName{}
-        , _listCurveValue{}
+        , _curves{}
         , _scratchPose{}
         , _scratchTrackPose{}
         , _scratchLayerPose{}
@@ -698,12 +697,7 @@ namespace sw
 
     float32 SkeletalAnimatorComponent::getCurveValue( const hashed_string& curveName ) const
     {
-        for ( size_t curveIndex = 0; curveIndex < _listCurveName.size(); ++curveIndex )
-        {
-            if ( _listCurveName[curveIndex] == curveName )
-                return _listCurveValue[curveIndex];
-        }
-        return 0.0f;
+        return _curves.getValue( curveName );
     }
 
     bool SkeletalAnimatorComponent::describeSharedPose( AnimationSharedPoseRequest& outRequest ) const
@@ -915,8 +909,7 @@ namespace sw
         }
 
         // 커브 — 두 칸의 값을 섞는다. 한쪽에만 있는 커브는 그쪽 가중치만큼입니다.
-        _listCurveName.clear();
-        _listCurveValue.clear();
+        _curves.clear();
         const IAnimationPlayable* arrPlayable[2] = { pCurrent, pNext };
         const float32             arrWeight[2]   = { 1.0f - alpha, alpha };
         const float32             arrTime[2]     = { player.getCurrentTime(), player.getNextTime() };
@@ -1100,17 +1093,7 @@ namespace sw
     {
         for ( const AnimationClipCurve& curve : clip.getCurves() )
         {
-            const float32               value = curve.evaluate( time ) * weight;
-            const std::optional<size_t> found = VectorUtil::findIndex( _listCurveName, curve._name );
-            if ( found.has_value() == false )
-            {
-                _listCurveName.push_back( curve._name );
-                _listCurveValue.push_back( value );
-            }
-            else
-            {
-                _listCurveValue[*found] += value;
-            }
+            _curves.add( curve._name, curve.evaluate( time ) * weight );
         }
     }
 
@@ -1208,11 +1191,13 @@ namespace sw
         // 모프 타깃 커브 — 이름이 그리는 메시의 모프 타깃과 같은 커브는 그 가중치가 된다(임포트가 glTF weights 채널을 타깃 이름의 커브로 싣는다).
         if ( unit.getMorphTargetCount() == 0 )
             return;
-        for ( size_t curveIndex = 0; curveIndex < _listCurveName.size(); ++curveIndex )
+        const vector<hashed_string>& listCurveName  = _curves.getNames();
+        const vector<float32>&       listCurveValue = _curves.getValues();
+        for ( size_t curveIndex = 0; curveIndex < listCurveName.size(); ++curveIndex )
         {
-            const int32 targetIndex = unit.findMorphTargetIndex( _listCurveName[curveIndex] );
+            const int32 targetIndex = unit.findMorphTargetIndex( listCurveName[curveIndex] );
             if ( targetIndex >= 0 )
-                unit.addMorphWeight( static_cast<uint32>( targetIndex ), _listCurveValue[curveIndex] );
+                unit.addMorphWeight( static_cast<uint32>( targetIndex ), listCurveValue[curveIndex] );
         }
     }
 } // namespace sw
