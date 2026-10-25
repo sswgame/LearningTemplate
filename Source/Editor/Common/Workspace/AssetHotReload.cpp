@@ -139,6 +139,9 @@ namespace sw::editor
         , _listQueuedImport{}
         , _listRunningImport{}
         , _listDeferredFile{}
+        , _uniqueSetQueuedImportKey{}
+        , _uniqueSetRunningImportKey{}
+        , _uniqueSetDeferredFile{}
         , _bImportInFlight{ false }
         , _finishedImportCount{ 0 }
         , _fenceImportDeadlineNanoseconds{ 0 }
@@ -202,7 +205,10 @@ namespace sw::editor
         }
         _listQueuedImport.clear();
         _listRunningImport.clear();
+        _uniqueSetQueuedImportKey.clear();
+        _uniqueSetRunningImportKey.clear();
         _listDeferredFile.clear();
+        _uniqueSetDeferredFile.clear();
         _bImportInFlight = false;
 
         if ( _pFileWatchDispatcher == nullptr )
@@ -250,6 +256,7 @@ namespace sw::editor
             _bChangedPathsUnknown = true;
             return;
         }
+        // 목록 크기가 `kMaxTrackedChangedPaths` 로 막혀 있어 선형 검색이 O(256) 으로 끝난다(넘으면 위에서 "모름" 으로 돌아간다).
         if ( std::find( _listChangedPath.begin(), _listChangedPath.end(), resourceID ) == _listChangedPath.end() )
             _listChangedPath.push_back( resourceID );
     }
@@ -346,7 +353,7 @@ namespace sw::editor
         // 임포트가 도는 동안 그 밖의 파일은 미룬다 — 임포트 결과는 여러 파일이라, 쓰는 도중에 읽으면 반쯤 쓴 DDS 나 옆 폴더가 비어 있는 메시를 읽는다.
         if ( isImportBusy() )
         {
-            if ( std::find( _listDeferredFile.begin(), _listDeferredFile.end(), relPath ) == _listDeferredFile.end() )
+            if ( _uniqueSetDeferredFile.insert( relPath ).second )
                 _listDeferredFile.push_back( std::move( relPath ) );
             return;
         }
@@ -366,15 +373,15 @@ namespace sw::editor
 
     void AssetHotReload::requestSourceImport( string_view relativePath, AssetSourceImporterFunc pfnImport )
     {
-        const string path     = FileUtil::normalizeSeparators( relativePath );
-        const auto   isSameAs = [&path]( const ImportRequest& request )
-        { return StringUtil::equals( FileUtil::normalizeSeparators( request._relativePath ), path, true ); };
+        const string path = FileUtil::normalizeSeparators( relativePath );
+        // 같은 원본인지는 구분자를 맞추고 대소문자를 무시한 키로 해시 집합에서 본다. 체크아웃 한 번에 원본이 수천 개 올라오므로 목록을 훑으면 O(N^2) 이다.
+        const string key = StringUtil::toLower( path.c_str() );
 
         // 같은 원본을 지금 임포트하는 중이면 그 잡이 읽은 내용은 낡았다 — 다음 원본 전에 멈추게 하고 이 원본은 아래에서 다시 올린다.
         // (진행 중인 원본 하나는 끝까지 간다. 그 결과 파일은 임포트가 모두 끝날 때까지 읽히지 않는다 — `onResourceFileChanged` 의 미룸.)
-        if ( _bImportInFlight && std::any_of( _listRunningImport.begin(), _listRunningImport.end(), isSameAs ) )
+        if ( _bImportInFlight && _uniqueSetRunningImportKey.contains( key ) )
             _pImportJob->cancel();
-        if ( std::none_of( _listQueuedImport.begin(), _listQueuedImport.end(), isSameAs ) )
+        if ( _uniqueSetQueuedImportKey.insert( key ).second )
             _listQueuedImport.push_back( ImportRequest{ path, pfnImport } );
     }
 
@@ -390,6 +397,7 @@ namespace sw::editor
         {
             SW_LOG_ERROR( "Asset import job lost its result - dropping the %# running source(s)", _listRunningImport.size() );
             _listRunningImport.clear();
+            _uniqueSetRunningImportKey.clear();
             _bImportInFlight = false;
         }
 
@@ -415,6 +423,8 @@ namespace sw::editor
         }
         _listRunningImport = std::move( _listQueuedImport );
         _listQueuedImport.clear();
+        _uniqueSetRunningImportKey = std::move( _uniqueSetQueuedImportKey );
+        _uniqueSetQueuedImportKey.clear();
         _bImportInFlight = true;
         SW_LOG_INFO( "Asset import started: %# changed source(s)", sourceCount );
     }
@@ -445,6 +455,7 @@ namespace sw::editor
         }
         SW_LOG_INFO( "Asset import finished: %# source(s)%#", result._listItem.size() - skippedCount, result._bCanceled ? " (canceled; the rest runs again)" : "" );
         _listRunningImport.clear();
+        _uniqueSetRunningImportKey.clear();
     }
 
     void AssetHotReload::flushDeferredFiles()
@@ -453,6 +464,7 @@ namespace sw::editor
             return;
         vector<string> listFile = std::move( _listDeferredFile );
         _listDeferredFile.clear();
+        _uniqueSetDeferredFile.clear();
         for ( const string& relativePath : listFile )
         {
             handleChangedFile( relativePath );

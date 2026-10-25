@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Resource/ResourcePaths.h"
@@ -266,26 +267,17 @@ namespace sw
         // 바뀌었는지는 상태를 대조해서만 알 수 있다. 다만 그 대조는 **여기서 한 번**, 감시 트리 안에서,
         // 직전 비우기 이후 mtime 인 파일만 stat 으로 확인하고 끝낸다. 평소에는 폴링이 없다.
         // 받는 쪽은 평소와 같은 파일 단위 이벤트만 받고, 리스캔이 있었는지 알 필요가 없다.
-        bool bRescan{ false };
-        for ( size_t index = 0; index < outListEvent.size(); )
-        {
-            if ( outListEvent[index]._filename.empty() == false )
-            {
-                ++index;
-                continue;
-            }
-            bRescan = true;
-            outListEvent.erase( outListEvent.begin() + static_cast<ptrdiff_t>( index ) );
-        }
-        if ( bRescan == false )
+        const size_t rescanSignalCount = VectorUtil::removeIf( outListEvent, []( const FileChangeEvent& event )
+        { return event._filename.empty(); } );
+        if ( rescanSignalCount == 0 )
             return;
 
         // 살아남은 개별 이벤트와 같은 파일은 다시 내지 않는다. 리로드는 멱등이지만 두 번 할 이유는 없다.
-        vector<string> listEmittedPath;
-        listEmittedPath.reserve( outListEvent.size() );
+        // 체크아웃 한 번에 수천 건이 되므로 중복 검사는 해시 집합으로 한다(목록 검색이면 O(N^2)).
+        unordered_set<string> uniqueSetEmittedPath;
         for ( const FileChangeEvent& changeEvent : outListEvent )
         {
-            listEmittedPath.push_back( FileUtil::normalizePath( FileUtil::joinPath( changeEvent._directory, changeEvent._filename ) ) );
+            uniqueSetEmittedPath.insert( FileUtil::normalizePath( FileUtil::joinPath( changeEvent._directory, changeEvent._filename ) ) );
         }
 
         // 되찾은 개수를 쓰는 곳은 아래 로그뿐이다. SW_LOG_INFO 는 Shipping 에서 통째로 사라지므로
@@ -306,9 +298,8 @@ namespace sw
                     continue;
 
                 const string normalized = FileUtil::normalizePath( filePath );
-                if ( VectorUtil::contains( listEmittedPath, normalized ) )
+                if ( uniqueSetEmittedPath.insert( normalized ).second == false )
                     continue;
-                listEmittedPath.push_back( normalized );
 
                 string relative{};
                 if ( FileUtil::makeRelativePath( entry._pathPrefix, filePath, relative ) == false || relative.empty() )

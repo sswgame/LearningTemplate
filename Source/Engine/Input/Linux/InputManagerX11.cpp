@@ -9,6 +9,7 @@
 
 #if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
     #include "Core/Common/X11Headers.h"
+    #include "Core/Concurrency/atomic.h"
     #include "Core/String/fixed_string.h"
 
     #include "Engine/Input/Devices/GamepadDevice.h"
@@ -116,7 +117,7 @@ namespace sw
             static bool isWaylandWindow( const IWindow* pWindow ) { return pWindow != nullptr && pWindow->getSurfaceKind() == NativeSurfaceKind::Wayland; }
 
             /** @brief Wayland 포인터 잠금(zwp_pointer_constraints)이 없다는 오류를 이미 냈다. */
-            static inline bool s_bWaylandLockReported{ false };
+            static inline atomic<bool> s_bWaylandLockReported{ false };
             /** @brief Wayland 포인터의 마지막 자리입니다(버튼 이벤트에는 좌표가 없다). */
             static inline int2 s_waylandPointer{ 0, 0 };
 
@@ -599,9 +600,9 @@ namespace sw
         if ( X11InputInternal::isWaylandWindow( pWindow ) )
         {
             const bool bLockWanted = _pMouse->getLockMode() != MouseLockMode::None;
-            if ( bLockWanted && X11InputInternal::s_bWaylandLockReported == false )
+            // 검사와 표시를 `exchange` 한 번으로 한다 — 두 스레드가 동시에 와도 알림은 한 번이다.
+            if ( bLockWanted && X11InputInternal::s_bWaylandLockReported.exchange( true ) == false )
                 SW_LOG_ERROR( "Mouse lock on Wayland needs pointer constraints, which are not implemented - the pointer stays free" );
-            X11InputInternal::s_bWaylandLockReported = X11InputInternal::s_bWaylandLockReported || bLockWanted;
             return;
         }
 

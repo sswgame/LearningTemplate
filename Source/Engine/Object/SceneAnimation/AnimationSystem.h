@@ -6,6 +6,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/IndexedPtrList.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
@@ -375,7 +376,7 @@ namespace sw
         vector<vector<SkeletalMeshComponent*>>      _listLevel;
         vector<SkeletalMeshComponent*>              _listActive;     ///< 이번 프레임에 단계를 처리하는 유닛(레벨 순서)이다. 재사용한다
         vector<uint32>                              _listLevelStart; ///< `_listActive` 안의 레벨 시작 위치다. 끝 위치를 하나 더 둔다
-        vector<IAnimationLODClient*>                _listLODClient;
+        IndexedPtrList<IAnimationLODClient>         _listLODClient;  ///< 등록 · 해제가 O(1) 이다(순회 순서는 해제 때 바뀐다)
         vector<AnimationLODView>                    _listLODView;
         AnimationLODView                            _pendingLODView;             ///< 대기 뷰(`setPendingLODView`) — `_bHasPendingLODView` 일 때만 판정에 든다
         vector<AnimationLODState>                   _listScratchLODState;        ///< 판정 중 클라이언트별 상태다(재사용)
