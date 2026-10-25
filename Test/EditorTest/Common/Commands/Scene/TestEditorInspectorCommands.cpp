@@ -57,6 +57,16 @@ namespace
 } // namespace
 
 /**
+ * @brief [EditorInspectorCommandsTest] 참조 검사에 필요한 오브젝트를 얻지 못하면 검사를 건너뛰지 않고 거절한다
+ */
+SW_TEST_CASE( EditorInspectorCommandsTest, AdoptRejectsWhenReferenceCheckIsImpossible )
+{
+    const EditorInspectorCommands::AdoptResult result = EditorInspectorCommands::adoptChildPrefabInstances( nullptr );
+    SW_EXPECT_TRUE( result.isRejected() );
+    SW_EXPECT_EQUAL( uint32( 0 ), result._adoptedCount );
+}
+
+/**
  * @brief [EditorInspectorCommandsTest] 가리키는 참조가 없으면 자식 프리팹 인스턴스를 중첩 부품으로 옮긴다
  */
 SW_TEST_CASE( EditorInspectorCommandsTest, AdoptMovesChildInstancesWhenNothingReferencesThem )

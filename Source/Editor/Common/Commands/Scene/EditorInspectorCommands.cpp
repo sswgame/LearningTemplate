@@ -196,10 +196,20 @@ namespace sw::editor
 
     EditorInspectorCommands::AdoptResult EditorInspectorCommands::adoptChildPrefabInstances( GameObject* pRoot )
     {
-        GameObjectManager* pManager   = pRoot != nullptr ? pRoot->getManager() : nullptr;
-        EditorWorkspace*   pWorkspace = editor::findSubsystem<EditorWorkspace>();
-        if ( pWorkspace == nullptr || pManager == nullptr )
-            return {};
+        // 참조 검사에 필요한 것을 얻지 못하면 검사를 건너뛰고 옮기지 않는다 — 거절 사유와 오류 로그로 멈춘다.
+        GameObjectManager* pManager       = pRoot != nullptr ? pRoot->getManager() : nullptr;
+        EditorWorkspace*   pWorkspace     = editor::findSubsystem<EditorWorkspace>();
+        const Scene*       pScene         = pManager != nullptr ? editor::findSceneOf( pManager ) : nullptr;
+        SceneManager*      pSceneManager  = editor::findSubsystem<SceneManager>();
+        const bool         bMissingObject = pManager == nullptr || pScene == nullptr;
+        const bool         bMissingSystem = pWorkspace == nullptr || pSceneManager == nullptr;
+        if ( bMissingObject || bMissingSystem )
+        {
+            AdoptResult rejected;
+            rejected._rejectReason = "cannot check scene object references: the object, its scene, the scene manager or the editor workspace is missing";
+            SW_LOG_WARNING( "Prefab creation refused: %#", rejected._rejectReason.c_str() );
+            return rejected;
+        }
         EditorWorkspace&        workspace = *pWorkspace;
         PrefabInstanceRegistry& registry  = pManager->getSubsystem<PrefabInstanceRegistry>();
 
@@ -224,20 +234,15 @@ namespace sw::editor
             }
         }
 
-        AdoptResult   result;
-        const Scene*  pScene        = editor::findSceneOf( pManager );
-        SceneManager* pSceneManager = editor::findSubsystem<SceneManager>();
-        if ( pScene != nullptr && pSceneManager != nullptr )
+        AdoptResult result;
+        for ( const GameObject* pChild : listAdopt )
         {
-            for ( const GameObject* pChild : listAdopt )
-            {
-                string holder;
-                if ( SceneObjectReferenceUtil::findReferenceTo( *pSceneManager, engine::getSubsystem<TypeRegistry>(), *pScene, pChild->getObjectID(), holder ) == false )
-                    continue;
-                result._rejectReason = string{ "'" } + pChild->getName().c_str() + "' is referenced by " + holder + " - a scene object reference cannot follow an object the prefab respawns; clear the reference first";
-                SW_LOG_WARNING( "Prefab creation from '%#' refused: %#", pRoot->getName().c_str(), result._rejectReason.c_str() );
-                return result;
-            }
+            string holder;
+            if ( SceneObjectReferenceUtil::findReferenceTo( *pSceneManager, engine::getSubsystem<TypeRegistry>(), *pScene, pChild->getObjectID(), holder ) == false )
+                continue;
+            result._rejectReason = string{ "'" } + pChild->getName().c_str() + "' is referenced by " + holder + " - a scene object reference cannot follow an object the prefab respawns; clear the reference first";
+            SW_LOG_WARNING( "Prefab creation from '%#' refused: %#", pRoot->getName().c_str(), result._rejectReason.c_str() );
+            return result;
         }
 
         for ( GameObject* pChild : listAdopt )
