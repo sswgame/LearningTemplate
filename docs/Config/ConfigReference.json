@@ -3213,6 +3213,30 @@
    "source": "Source/Engine/Scene/SceneProbes.cpp"
   },
   {
+   "name": "gv_autoRenderScale",
+   "type": "bool",
+   "default": "false",
+   "kind": "일반",
+   "description": "자동 렌더 배율 — 프레임 시간이 예산을 깨면 주 시점 렌더 배율을 한 단계씩 내리고 여유가 오래 가면 올린다 (gv_renderScale 에 곱해진다)",
+   "source": "Source/Engine/Renderer/Frame/Packet/RenderPacketBuilder.cpp"
+  },
+  {
+   "name": "gv_autoRenderScaleBudgetMs",
+   "type": "float32",
+   "default": "16.7",
+   "kind": "일반",
+   "description": "자동 렌더 배율의 프레임 시간 예산(ms) — 0 초과",
+   "source": "Source/Engine/Renderer/Frame/Packet/RenderPacketBuilder.cpp"
+  },
+  {
+   "name": "gv_autoRenderScaleMin",
+   "type": "float32",
+   "default": "0.5",
+   "kind": "일반",
+   "description": "자동 렌더 배율이 내려가는 아래 한계 — 0 초과 1 이하",
+   "source": "Source/Engine/Renderer/Frame/Packet/RenderPacketBuilder.cpp"
+  },
+  {
    "name": "gv_benchAnimate",
    "type": "int32",
    "default": "1",

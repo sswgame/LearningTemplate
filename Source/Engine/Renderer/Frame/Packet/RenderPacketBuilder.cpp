@@ -24,6 +24,7 @@
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
+#include "Engine/Renderer/Frame/View/RenderScaleAdjuster.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
 #include "Engine/Renderer/Frame/View/RenderViewCollector.h"
 #include "Engine/Renderer/Frame/View/RenderViewScheduler.h"
@@ -44,6 +45,9 @@ namespace sw
      * @details 위젯(UI 단계)이 생기기 전에 Canvas 패스 · canvas.hlsl · 글리프 아틀라스를 네 백엔드에서 눈으로 보는 길이다(스크린샷에도 들어간다).
      */
     SW_TEST_GLOBAL_VARIABLE( bool, gv_canvasTestPattern, false, "주 출력에 캔버스(화면 2D) 테스트 그림을 그린다 — 사각형 · 자르기 · 그림자 · 글자" );
+    SW_GLOBAL_VARIABLE( bool, gv_autoRenderScale, false, "자동 렌더 배율 — 프레임 시간이 예산을 깨면 주 시점 렌더 배율을 한 단계씩 내리고 여유가 오래 가면 올린다 (gv_renderScale 에 곱해진다)" );
+    SW_GLOBAL_VARIABLE( float32, gv_autoRenderScaleBudgetMs, 16.7f, "자동 렌더 배율의 프레임 시간 예산(ms) — 0 초과" );
+    SW_GLOBAL_VARIABLE( float32, gv_autoRenderScaleMin, 0.5f, "자동 렌더 배율이 내려가는 아래 한계 — 0 초과 1 이하" );
 } // namespace sw
 
 namespace sw
@@ -56,6 +60,8 @@ namespace sw
         , _gpuUploadQueue{ nullptr }
         , _renderViewScheduler{ nullptr }
         , _renderViewClock{ 0.0 }
+        , _renderScaleAdjuster{ nullptr }
+        , _bAutoRenderScaleActive{ false }
         , _listLODView{}
         , _listShadowLightIndex{}
         , _listScenePreviewBuilder{}
@@ -123,6 +129,43 @@ namespace sw
         return packet;
     }
 
+    float32 RenderPacketBuilder::updateAutoRenderScale( float32 deltaTime )
+    {
+        if ( gv_autoRenderScale == false )
+        {
+            if ( _bAutoRenderScaleActive )
+            {
+                _renderScaleAdjuster->reset();
+                _bAutoRenderScaleActive = false;
+            }
+            return 1.0f;
+        }
+        if ( _bAutoRenderScaleActive == false )
+        {
+            // 켤 때마다 변수에서 설정을 새로 읽는다. 틀린 값은 기본값으로 대신하지 않고 오류로 알린 뒤 조정을 하지 않는다(배율 1).
+            RenderScaleAdjusterConfig config;
+            config._budgetMs = gv_autoRenderScaleBudgetMs;
+            config._minScale = gv_autoRenderScaleMin;
+            if ( _renderScaleAdjuster == nullptr )
+                _renderScaleAdjuster = make_unique<RenderScaleAdjuster>();
+            const string reason = RenderScaleAdjuster::validate( config );
+            if ( reason.empty() == false )
+            {
+                SW_LOG_ERROR( "gv_autoRenderScale is on but its settings are invalid: %#", reason );
+                gv_autoRenderScale = false;
+                return 1.0f;
+            }
+            if ( _renderScaleAdjuster->configure( config ) == false )
+                return 1.0f; // validate 가 통과했으니 오지 않는 길
+            _bAutoRenderScaleActive = true;
+        }
+        const float32 before = _renderScaleAdjuster->getScale();
+        const float32 scale  = _renderScaleAdjuster->update( deltaTime * 1000.0f );
+        if ( scale != before )
+            SW_LOG_INFO( "Auto render scale %# -> %#", before, scale );
+        return scale;
+    }
+
     void RenderPacketBuilder::populateScene( RenderFramePacket& packet, const HostViewTargets& views, const ViewCameraProviderDelegate& sceneViewCameraProvider,
                                              Scene* pActiveScene, float32 deltaTime, const RHI& rhi, const FrameRenderer* pFrameRenderer )
     {
@@ -170,7 +213,8 @@ namespace sw
         if ( pCam != nullptr )
         {
             // 주 시점의 출력 설정(사각형 · 배율 · 끌 기능)과 컷 표시. 비율은 사각형의 것이다(분할 화면의 한 칸).
-            packet._mainView = RenderViewCollector::makeMainSettings( pCam );
+            packet._mainView                  = RenderViewCollector::makeMainSettings( pCam );
+            packet._mainView._resolutionScale = MathUtil::max( 0.1f, packet._mainView._resolutionScale * updateAutoRenderScale( deltaTime ) );
             packet.setMainView( pCam->getViewProjectionMatrix( RenderViewCollector::computeAspect( packet._mainView, outputWidth, outputHeight ) ), pCam->getCameraPosition() );
             // 안개도 씬이 갖는다. 카메라가 물속이면 물의 안개가 컴포넌트의 값을 덮는다(FogComponent::findFog).
             packet._bHasFog = ( pActiveObjects != nullptr && FogComponent::findFog( *pActiveObjects, pCam->getCameraPosition(), packet._fog ) ) ? SW_TRUE : SW_FALSE;

@@ -352,6 +352,11 @@
       "source": "docs/08_Verification.md 2-1절 부하 검증", "result_doc": "docs/08_Verification.md 2-1절"
     },
     {
+      "id": "load-auto-render-scale", "title": "자동 렌더 배율(-gv_autoRenderScale=1) 켠 LowEnd 렌더 부하 - 로그의 Auto render scale 전환과 예산 판정", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": true, "timeout_minutes": 60,
+      "tool": "scripts", "args": ["load", "run", "renderbench", "--profile", "LowEnd", "--runs", "3", "--app-arg=-gv_autoRenderScale=1"], "limit": "Budgets.json 예산 통과, 꺼진 런과 비교해 p99 가 늘지 않음(첫 측정은 예산의 1/10 안팎이라 전환이 없을 수 있다 - 그러면 -gv_autoRenderScaleBudgetMs=2 로 강제로 깨 본다)", "judge": "exit",
+      "source": "docs/plans/RuntimeQualityAdjust.md Q3", "result_doc": "docs/plans/RuntimeQualityAdjust.md Q3"
+    },
+    {
       "id": "soak-autoplay", "title": "자동 플레이 10 분 soak(메모리 · 핸들 증가)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": false, "timeout_minutes": 40,
       "tool": "scripts", "args": ["soak", "--app", "{app}", "--minutes", "10"], "limit": "사유 메모리 증가 ≤ 2 MB/분, 핸들 증가 ≤ 10 개/분", "judge": "exit",
       "source": "docs/08_Verification.md 2절 측정 명령", "result_doc": "docs/08_Verification.md 2절 영역별 측정값"

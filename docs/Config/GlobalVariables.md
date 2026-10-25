@@ -169,6 +169,9 @@
 
 | 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
 |---|---|---|---|---|---|
+| `gv_autoRenderScale` | `bool` | `false` | 일반 | 자동 렌더 배율 — 프레임 시간이 예산을 깨면 주 시점 렌더 배율을 한 단계씩 내리고 여유가 오래 가면 올린다 (gv_renderScale 에 곱해진다) | [RenderPacketBuilder.cpp](../../Source/Engine/Renderer/Frame/Packet/RenderPacketBuilder.cpp) |
+| `gv_autoRenderScaleBudgetMs` | `float32` | `16.7` | 일반 | 자동 렌더 배율의 프레임 시간 예산(ms) — 0 초과 | [RenderPacketBuilder.cpp](../../Source/Engine/Renderer/Frame/Packet/RenderPacketBuilder.cpp) |
+| `gv_autoRenderScaleMin` | `float32` | `0.5` | 일반 | 자동 렌더 배율이 내려가는 아래 한계 — 0 초과 1 이하 | [RenderPacketBuilder.cpp](../../Source/Engine/Renderer/Frame/Packet/RenderPacketBuilder.cpp) |
 | `gv_canvasTestPattern` | `bool` | `false` | 테스트 | 주 출력에 캔버스(화면 2D) 테스트 그림을 그린다 — 사각형 · 자르기 · 그림자 · 글자 | [RenderPacketBuilder.cpp](../../Source/Engine/Renderer/Frame/Packet/RenderPacketBuilder.cpp) |
 | `gv_crashTest` | `int32` | `0` | 테스트 | 일부러 크래시를 내 리포트 경로를 검증합니다 (1=널 쓰기 2=스택 오버플로 3=작업 스레드 스택 오버플로 4=abort 5=순수 가상 호출) | [RHISubsystem.cpp](../../Source/Engine/Renderer/RHISubsystem.cpp) |
 | `gv_deferred` | `bool` | `false` | 일반 | 기본 파이프라인을 디퍼드로 (기본 포워드) | [FrameRenderer.cpp](../../Source/Engine/Renderer/Frame/FrameRenderer.cpp) |
