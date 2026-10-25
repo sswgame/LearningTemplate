@@ -2,7 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Social/Shared/FriendListScreen.h"
 
-#include "Core/Container/formatString.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/Log/Logger.h"
 
 #include "Engine/UI/Base/PanelWidget.h"
@@ -59,8 +59,8 @@ namespace sw
             static string makeRowText( const FriendEntry& entry )
             {
                 if ( entry._activity.empty() )
-                    return formatstring( "#%#  %#", entry._accountID, getPresenceText( entry._status ) );
-                return formatstring( "#%#  %#  %#", entry._accountID, getPresenceText( entry._status ), entry._activity );
+                    return "#" + to_string( entry._accountID ) + "  " + getPresenceText( entry._status );
+                return "#" + to_string( entry._accountID ) + "  " + getPresenceText( entry._status ) + "  " + entry._activity;
             }
         };
     } // namespace
@@ -135,7 +135,7 @@ namespace sw
         for ( size_t index = 0; index < listEntry.size(); ++index )
         {
             unique_ptr<TextWidget> row = make_unique<TextWidget>();
-            row->setName( hashed_string( formatstring( "%#%#", Internal::kRowPrefix, index ) ) );
+            row->setName( hashed_string( string{ Internal::kRowPrefix } + to_string( static_cast<uint64>( index ) ) ) );
             row->setText( Internal::makeRowText( listEntry[index] ) );
             (void)pFriends->addChild( std::move( row ) );
         }
@@ -156,12 +156,12 @@ namespace sw
             {
                 statusText = listEntry.empty() ? "No friends yet" : "Friends";
                 if ( _pModel->getPendingRequestCount() > 0 )
-                    statusText += formatstring( "  (%# pending requests)", _pModel->getPendingRequestCount() );
+                    statusText += "  (" + to_string( _pModel->getPendingRequestCount() ) + " pending requests)";
                 break;
             }
             case FriendListState::Failed:
             {
-                statusText = formatstring( "Could not load the friend list (error %#)", _pModel->getErrorCode() );
+                statusText = "Could not load the friend list (error " + to_string( static_cast<uint32>( _pModel->getErrorCode() ) ) + ")";
                 break;
             }
         }

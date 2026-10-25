@@ -8,6 +8,7 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Container/DrainGate.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Network/Message/StreamFrame.h"
@@ -111,9 +112,9 @@ namespace sw
         LeaderboardClient          _leaderboardClient;
         MatchmakingClient          _matchmakingClient;
         LiveOpsClient              _liveOpsClient;
-        OnlineDrainLease           _chatLease;
-        OnlineDrainLease           _socialLease;
-        OnlineDrainLease           _matchmakingLease;
+        DrainLease                 _chatLease;
+        DrainLease                 _socialLease;
+        DrainLease                 _matchmakingLease;
         GameRandom                 _random;
         vector<Frame>              _listFrame;
         vector<AccountClientReply> _listAccountReply;

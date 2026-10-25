@@ -11,7 +11,6 @@
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
-#include "Engine/Common/EngineServices.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
@@ -240,7 +239,7 @@ namespace sw::editor
         for ( const GameObject* pChild : listAdopt )
         {
             string holder;
-            if ( SceneObjectReferenceUtil::findReferenceTo( sceneManager, engine::getSubsystem<TypeRegistry>(), *pScene, pChild->getObjectID(), holder ) == false )
+            if ( SceneObjectReferenceUtil::findReferenceTo( sceneManager, editor::getSubsystem<TypeRegistry>(), *pScene, pChild->getObjectID(), holder ) == false )
                 continue;
             result._rejectReason = string{ "'" } + pChild->getName().c_str() + "' is referenced by " + holder + " - a scene object reference cannot follow an object the prefab respawns; clear the reference first";
             SW_LOG_WARNING( "Prefab creation from '%#' refused: %#", pRoot->getName().c_str(), result._rejectReason.c_str() );
