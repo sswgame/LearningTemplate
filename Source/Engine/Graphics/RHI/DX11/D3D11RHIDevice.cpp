@@ -65,7 +65,7 @@ namespace sw
     D3D11RHIDevice::D3D11RHIDevice()
         : _device{ nullptr }
         , _memoryAdapter{ nullptr }
-        , _deviceContext{ nullptr }
+        , _immediateContext{}
         , _backBufferFormat{ constant::kBackBufferFormat }
         , _swapChain{}
         , _vertexBuffer{ nullptr }
