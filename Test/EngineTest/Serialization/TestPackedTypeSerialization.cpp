@@ -6,6 +6,7 @@
 
 #include "Engine/Reflection/ReflectValue.h"
 #include "Engine/Serialization/Base/SerializeContext.h"
+#include "Engine/UI/Binding/UIBindingValue.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -308,4 +309,91 @@ SW_TEST_CASE( PackedValueSerializationTest, ArgumentConversionReadsAndWritesPack
     SW_EXPECT_STREQ( "0.250000, 0.500000", pairText.c_str() );
     const string unitText = ReflectValue::make( unorm8::fromRaw( 255 ) ).toText();
     SW_EXPECT_STREQ( "1.000000", unitText.c_str() );
+}
+
+/**
+ * @brief [PackedValueSerializationTest] 쉼표 목록 글은 칸이 정확히 맞아야 읽히고, 거절하면 값을 그대로 둔다 — 벡터 · 쿼터니언 · 행렬도 같다
+ * @details `float3` 가 `1,2,3,4` 를 받아 네 번째 칸을 버리면 잘못 적은 데이터가 말없이 읽힌다.
+ */
+SW_TEST_CASE( PackedValueSerializationTest, NumberListRejectsExtraAndMissingCells )
+{
+    const SerializeContext context = SerializeContext::deriveFromDefault( SerializePurpose::Authoring );
+    using Test                     = PackedSerializationTestInternal;
+
+    const float3 original{ 7.0f, 8.0f, 9.0f };
+    Test::expectTextRejected( context, "float3", original, "1,2,3,4" );
+    Test::expectTextRejected( context, "float3", original, "1,2,3," );
+    Test::expectTextRejected( context, "float3", original, "1,2" );
+    Test::expectTextRejected( context, "float3", original, "1,2,x" ); // 앞 칸을 읽은 뒤 거절해도 값은 그대로다
+    Test::expectTextRejected( context, "float2", float2{ 7.0f, 8.0f }, "1,2,3" );
+    Test::expectTextRejected( context, "float4", float4{ 7.0f, 8.0f, 9.0f, 10.0f }, "1,2,3,4,5" );
+    Test::expectTextRejected( context, "quaternion", quaternion{}, "0,0,0,1,1" );
+    Test::expectTextRejected( context, "float4x4", float4x4{}, "1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,1" );
+
+    const SerializeContext::TextReadFn* pReadFloat3 = context.findTextReader( hashed_string( "float3" ) );
+    SW_ASSERT_NOT_NULL( pReadFloat3 );
+    float3 value{};
+    SW_EXPECT_TRUE( ( *pReadFloat3 )( &value, "1, 2 ,3" ) );
+    SW_EXPECT_EQUAL( 1.0f, value._x );
+    SW_EXPECT_EQUAL( 2.0f, value._y );
+    SW_EXPECT_EQUAL( 3.0f, value._z );
+}
+
+/**
+ * @brief [PackedValueSerializationTest] 무한대 · NaN · int64 범위 밖의 실수는 정수 변환을 거치지 않고 거절된다
+ * @details `static_cast<int64>` 는 범위 밖과 NaN 에서 정의되지 않는다 — 변환은 범위 · 유한 검사 뒤에만 한다.
+ */
+SW_TEST_CASE( PackedValueSerializationTest, FloatArgumentConversionRejectsNonFiniteAndOutOfRange )
+{
+    TaskValue          converted;
+    const float64      infinity = std::numeric_limits<float64>::infinity();
+    const float64      nan      = std::numeric_limits<float64>::quiet_NaN();
+    const ReflectValue arrBad[] = { ReflectValue::make( infinity ), ReflectValue::make( -infinity ), ReflectValue::make( nan ),
+                                    ReflectValue::make( std::numeric_limits<float32>::infinity() ), ReflectValue::make( std::numeric_limits<float32>::quiet_NaN() ) };
+    for ( const ReflectValue& bad : arrBad )
+    {
+        SW_EXPECT_FALSE( ReflectTypeOpsOf<int32>::convert( bad, converted ) );
+        SW_EXPECT_FALSE( ReflectTypeOpsOf<int64>::convert( bad, converted ) );
+        SW_EXPECT_FALSE( ReflectTypeOpsOf<uint64>::convert( bad, converted ) );
+        SW_EXPECT_FALSE( ReflectTypeOpsOf<half>::convert( bad, converted ) );
+    }
+    // int64 범위 밖의 유한값은 정수가 아닌 숫자로만 읽혀 정수 자리가 거절하고, 실수 자리는 받는다.
+    SW_EXPECT_FALSE( ReflectTypeOpsOf<int64>::convert( ReflectValue::make( float64{ 1.0e300 } ), converted ) );
+    SW_EXPECT_FALSE( ReflectTypeOpsOf<int64>::convert( ReflectValue::make( float64{ 9223372036854775808.0 } ), converted ) );
+    SW_EXPECT_TRUE( ReflectTypeOpsOf<float64>::convert( ReflectValue::make( float32{ 1.0e30f } ), converted ) );
+    // 범위 안의 정수 값은 그대로 받는다.
+    SW_EXPECT_TRUE( ReflectTypeOpsOf<int32>::convert( ReflectValue::make( float64{ -42.0 } ), converted ) );
+    SW_EXPECT_EQUAL( int32{ -42 }, converted.getValue<int32>() );
+    SW_EXPECT_FALSE( ReflectTypeOpsOf<int32>::convert( ReflectValue::make( float64{ 0.5 } ), converted ) );
+}
+
+/**
+ * @brief [PackedValueSerializationTest] 내장 타입의 갈래(숫자 · 글 · 불리언 · 그 밖)는 표에서 나오고, 압축 타입은 성분이 하나일 때만 숫자다
+ * @details 스키마 이주와 UI 바인딩이 같은 갈래를 본다. 압축 타입을 이름 목록에 더하지 않아도 분류가 따라온다.
+ */
+SW_TEST_CASE( PackedValueSerializationTest, BuiltinClassFollowsTheTable )
+{
+    const auto classOf = []( const utf8* pName )
+    { return ReflectValueUtil::getBuiltinClass( ReflectValueUtil::findBuiltinIndex( hashed_string( pName ) ) ); };
+    for ( const utf8* pName : { "int8", "uint64", "float32", "float64", "half", "unorm8", "unorm16", "snorm8", "snorm16" } )
+    {
+        SW_EXPECT_TRUE_MSG( classOf( pName ) == ReflectBuiltinClass::Number, pName );
+    }
+    for ( const utf8* pName : { "half2", "half3", "half4", "unorm8x4", "snorm8x4", "unorm16x2", "snorm16x2", "snorm16x4", "OctahedralNormal", "RGB10A2", "float2", "float3",
+                                "float4", "float4x4", "quaternion", "TagID", "ComponentHandle", "atomic_bool" } )
+    {
+        SW_EXPECT_TRUE_MSG( classOf( pName ) == ReflectBuiltinClass::Other, pName );
+    }
+    SW_EXPECT_TRUE( classOf( "bool" ) == ReflectBuiltinClass::Bool );
+    SW_EXPECT_TRUE( classOf( "string" ) == ReflectBuiltinClass::Text );
+    SW_EXPECT_TRUE( classOf( "hashed_string" ) == ReflectBuiltinClass::Text );
+    SW_EXPECT_TRUE( ReflectValueUtil::getBuiltinClass( -1 ) == ReflectBuiltinClass::Other );
+
+    // UI 바인딩의 종류도 같은 갈래에서 나온다 - 성분이 하나인 압축 타입은 숫자 바인딩이 된다.
+    SW_EXPECT_TRUE( UIBindingValueUtil::classifyType( hashed_string( "unorm8" ) ) == UIBindingValueKind::Number );
+    SW_EXPECT_TRUE( UIBindingValueUtil::classifyType( hashed_string( "half" ) ) == UIBindingValueKind::Number );
+    SW_EXPECT_TRUE( UIBindingValueUtil::classifyType( hashed_string( "half2" ) ) == UIBindingValueKind::Other );
+    SW_EXPECT_TRUE( UIBindingValueUtil::classifyType( hashed_string( "float32" ) ) == UIBindingValueKind::Number );
+    SW_EXPECT_TRUE( UIBindingValueUtil::classifyType( hashed_string( "bool" ) ) == UIBindingValueKind::Bool );
+    SW_EXPECT_TRUE( UIBindingValueUtil::classifyType( hashed_string( "string" ) ) == UIBindingValueKind::Text );
 }

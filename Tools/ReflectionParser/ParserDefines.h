@@ -228,10 +228,11 @@ namespace sw
     // ------------------------------------------------------------------------------
     namespace builtinmacro
     {
-        inline constexpr const utf8* kType          = "SW_REFLECT_BUILTIN_TYPE";
-        inline constexpr const utf8* kContainer     = "SW_REFLECT_BUILTIN_CONTAINER";
-        inline constexpr const utf8* kSkipNamespace = "-";
-        inline constexpr const utf8* kSkipAlias     = "_";
+        inline constexpr const utf8* kType           = "SW_REFLECT_BUILTIN_TYPE";
+        inline constexpr const utf8* kContainer      = "SW_REFLECT_BUILTIN_CONTAINER";
+        inline constexpr const utf8* kSkipNamespace  = "-";
+        inline constexpr const utf8* kSkipAlias      = "_";
+        inline constexpr const utf8* kTextConvPacked = "packed"; ///< TYPE 줄의 세 번째 칸(글 처리기)이 압축 타입을 뜻하는 값
     } // namespace builtinmacro
 
     // ------------------------------------------------------------------------------

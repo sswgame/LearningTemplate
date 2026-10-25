@@ -15,6 +15,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Reflection/ReflectBuiltinClass.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
 namespace sw
@@ -67,6 +68,24 @@ namespace sw
                 out._bInteger   = bInteger;
             }
 
+            /**
+             * @brief 실수 하나를 숫자로 읽어 둡니다. 무한대 · NaN 은 숫자로 읽지 않고(정수 변환이 정의되지 않는다), int64 범위 밖의 유한값은 정수가 아닌 숫자로만 둡니다.
+             * @details `static_cast<int64>` 는 범위 밖 · NaN 에서 정의되지 않으므로 변환은 항상 범위 검사 뒤에만 한다. 2^63 은 float64 로 정확히 나타내는 int64 범위의 열린 상한이다.
+             */
+            static void setFloatNumber( SourceValue& out, const float64 value )
+            {
+                constexpr float64 kInt64Bound = 9223372036854775808.0;
+                if ( std::isfinite( value ) == false )
+                    return;
+                if ( value >= -kInt64Bound && value < kInt64Bound )
+                {
+                    const int64 intValue = static_cast<int64>( value );
+                    setNumber( out, value, value == static_cast<float64>( intValue ), intValue );
+                }
+                else
+                    setNumber( out, value, false, 0 );
+            }
+
             /** @brief 내장 타입 값 하나를 숫자 · 글로 읽습니다. 숫자도 글도 아닌 타입(벡터 · 핸들 · 행렬)은 글로만 씁니다. */
             template <typename T>
             static void readSource( const void* pValue, SourceValue& out )
@@ -82,11 +101,7 @@ namespace sw
                 else if constexpr ( std::is_integral_v<T> )
                     setNumber( out, static_cast<float64>( value ), true, static_cast<int64>( value ) );
                 else if constexpr ( std::is_floating_point_v<T> )
-                {
-                    const float64 asDouble  = static_cast<float64>( value );
-                    const bool    bIntegral = asDouble == static_cast<float64>( static_cast<int64>( asDouble ) );
-                    setNumber( out, asDouble, bIntegral, static_cast<int64>( asDouble ) );
-                }
+                    setFloatNumber( out, static_cast<float64>( value ) );
                 else if constexpr ( std::is_same_v<T, string> )
                 {
                     out._text  = value;
@@ -109,8 +124,7 @@ namespace sw
                     {
                         const float32 asFloat = PackedValueTraits<T>::toFloats( value )._arrValue[0];
                         if ( isPackedFloatsInRange<T>( PackedFloats{ { asFloat } } ) )
-                            setNumber( out, static_cast<float64>( asFloat ), static_cast<float64>( asFloat ) == static_cast<float64>( static_cast<int64>( asFloat ) ),
-                                       static_cast<int64>( asFloat ) );
+                            setFloatNumber( out, static_cast<float64>( asFloat ) );
                     }
                 }
             }
@@ -125,7 +139,7 @@ namespace sw
                 if ( StringUtil::parseInt64( trimmed, intValue ) )
                     setNumber( source, static_cast<float64>( intValue ), true, intValue );
                 else if ( StringUtil::parseDouble( trimmed, floatValue ) )
-                    setNumber( source, floatValue, floatValue == static_cast<float64>( static_cast<int64>( floatValue ) ), static_cast<int64>( floatValue ) );
+                    setFloatNumber( source, floatValue );
                 else if ( StringUtil::tryParseBool( trimmed, boolValue ) )
                     setNumber( source, boolValue ? 1.0 : 0.0, true, boolValue ? 1 : 0 );
             }
@@ -298,15 +312,16 @@ namespace sw
             /** @brief 내장 타입 줄마다 읽기 · 바꾸기 · 쓰기입니다. 순서는 `ReflectBuiltinIndex` 와 같습니다(같은 파일을 같은 순서로 include). */
             struct BuiltinRow
             {
-                ReadSourceFn    _pReadSource;
-                ConvertSourceFn _pConvertSource;
-                FormatFn        _pFormat;
+                ReadSourceFn        _pReadSource;
+                ConvertSourceFn     _pConvertSource;
+                FormatFn            _pFormat;
+                ReflectBuiltinClass _class;
             };
 
             static constexpr BuiltinRow kArrBuiltinRow[] = {
 #define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, ... )                                               \
     { &readSource<ReflectBuiltinCppTypeT<CppType>>, &convertSource<ReflectBuiltinCppTypeT<CppType>>, \
-      &formatBuiltin<ReflectBuiltinCppTypeT<CppType>> },
+      &formatBuiltin<ReflectBuiltinCppTypeT<CppType>>, getReflectBuiltinClass<ReflectBuiltinCppTypeT<CppType>>() },
 #define SW_REFLECT_BUILTIN_CONTAINER( ... )
 #include "Engine/Reflection/ReflectBuiltins.xxx"
 #undef SW_REFLECT_BUILTIN_TYPE
@@ -354,6 +369,13 @@ namespace sw
         const auto& listName = ReflectValueInternal::getNameTable();
         SW_ASSERT( 0 <= builtinIndex && static_cast<size_t>( builtinIndex ) < listName.size() );
         return listName[static_cast<size_t>( builtinIndex )];
+    }
+
+    ReflectBuiltinClass ReflectValueUtil::getBuiltinClass( const int32 builtinIndex )
+    {
+        if ( builtinIndex < 0 || ReflectBuiltinIndex::kCount <= builtinIndex )
+            return ReflectBuiltinClass::Other;
+        return ReflectValueInternal::kArrBuiltinRow[builtinIndex]._class;
     }
 
     int32 ReflectValueUtil::findBuiltinIndex( const hashed_string& typeName )

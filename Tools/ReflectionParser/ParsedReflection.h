@@ -124,6 +124,7 @@ namespace sw
         shared_ptr<ParsedFixedType> _element;            ///< Vector · FixedArray 의 원소
         shared_ptr<ParsedFixedEnum> _enum;               ///< Enum 의 열거자
         FixedValueKind              _kind;
+        uint8                       _bPacked; ///< 압축 타입(`ReflectBuiltins.xxx` 의 `packed` 줄)입니다. 고정 배치형 인코딩 표에 없어 생성 오류로 알립니다
 
         ParsedFixedType() noexcept
             : _typeName{}
@@ -132,6 +133,7 @@ namespace sw
             , _element{ nullptr }
             , _enum{ nullptr }
             , _kind{ FixedValueKind::Ineligible }
+            , _bPacked{ SW_FALSE }
         {
         }
     };

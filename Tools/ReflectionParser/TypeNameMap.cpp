@@ -14,6 +14,7 @@ namespace sw
     TypeNameMap::TypeNameMap()
         : _mapAliasToCanonical{}
         , _listStripPrefix{}
+        , _listPacked{}
         , _bLoaded{ SW_FALSE }
         , _reserved{ 0 }
     {
@@ -22,7 +23,24 @@ namespace sw
     void TypeNameMap::clear()
     {
         _mapAliasToCanonical.clear();
+        _listPacked.clear();
         _bLoaded = SW_FALSE;
+    }
+
+    void TypeNameMap::markPacked( const string& canonical )
+    {
+        if ( canonical.empty() == false && isPacked( canonical ) == false )
+            _listPacked.push_back( canonical );
+    }
+
+    bool TypeNameMap::isPacked( const string& canonical ) const
+    {
+        for ( const string& packed : _listPacked )
+        {
+            if ( packed == canonical )
+                return true;
+        }
+        return false;
     }
 
     void TypeNameMap::addKey( const string& key, const string& canonical )

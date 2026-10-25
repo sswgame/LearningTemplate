@@ -308,24 +308,27 @@ namespace sw
                 return string{ sb.c_str(), sb.size() };
             }
 
-            /** @brief 쉼표로 이은 글에서 원소 정확히 @p kCount 개를 읽습니다. 모자라거나 남거나 숫자가 아니면 false 이고, 그때까지 읽은 원소는 @p pOut 에 남습니다. */
+            /** @brief 쉼표로 이은 글에서 원소 정확히 @p kCount 개를 읽습니다. 모자라거나 남거나 숫자가 아니면 false 이고 @p pOut 은 그대로입니다(다 읽은 뒤에만 씁니다). */
             template <typename TElem, int32 kCount>
             [[nodiscard]] static bool readNumberList( string_view strView, TElem* pOut )
             {
+                TElem  arrParsed[kCount]{};
                 size_t start{ 0 };
                 for ( int32 axisIndex = 0; axisIndex < kCount; ++axisIndex )
                 {
                     const size_t      sep   = strView.find( ',', start );
                     const string_view token = strView.substr( start, sep == string_view::npos ? string_view::npos : sep - start );
-                    if ( parseScalarValue<TElem>( token, pOut[axisIndex] ) == false )
+                    if ( parseScalarValue<TElem>( token, arrParsed[axisIndex] ) == false )
                         return false;
-                    if ( sep == string_view::npos )
-                    {
-                        if ( axisIndex != kCount - 1 )
-                            return false;
-                        break;
-                    }
+                    const bool isLast = axisIndex == kCount - 1;
+                    // 마지막 칸 뒤에 쉼표가 더 있으면(칸이 남으면) 거절하고, 마지막 전에 쉼표가 없으면(칸이 모자라면) 거절한다.
+                    if ( ( sep == string_view::npos ) != isLast )
+                        return false;
                     start = sep + 1;
+                }
+                for ( int32 axisIndex = 0; axisIndex < kCount; ++axisIndex )
+                {
+                    pOut[axisIndex] = arrParsed[axisIndex];
                 }
                 return true;
             }
@@ -360,10 +363,7 @@ namespace sw
                     []( void* pPtr, string_view strView )
                 {
                     constexpr int32 kCount = static_cast<int32>( PackedValueTraits<T>::kComponentCount );
-                    // `readNumberList` 는 마지막 칸 뒤에 남은 칸을 보지 않으므로 쉼표 수로 개수가 정확한지 먼저 본다("0.5,1,2" 를 half2 가 받지 않게).
-                    if ( std::count( strView.begin(), strView.end(), ',' ) != kCount - 1 )
-                        return false;
-                    PackedFloats floats{};
+                    PackedFloats    floats{};
                     if ( readNumberList<float32, kCount>( strView, floats._arrValue ) == false )
                         return false;
                     if ( isPackedFloatsInRange<T>( floats ) == false )

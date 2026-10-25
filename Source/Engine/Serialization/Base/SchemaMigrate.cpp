@@ -7,6 +7,7 @@
 #include "Core/String/TagID.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Reflection/ReflectValue.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Serialization/Base/ContainerVisitor.h"
 #include "Engine/Serialization/Base/SerializeContext.h"
@@ -103,18 +104,14 @@ namespace sw
                 return true;
             }
 
+            /**
+             * @brief 글 하나로 읽는 숫자(불리언 · 정수 · 실수 · 성분이 하나인 압축 타입)인지 확인합니다.
+             * @details 이름 목록이 아니라 내장 타입 표의 갈래(`ReflectBuiltinClass`)로 가른다 — 표에 타입이 늘어도 숫자로 잘못 분류되지 않는다.
+             */
             static bool isNumericTypeName( hashed_string typeName )
             {
-                const TypeInfo* pInfo = engine::getSubsystem<TypeRegistry>().findType( typeName );
-                if ( pInfo == nullptr || pInfo->isPrimitive() == false )
-                    return false;
-                return typeName.isPredefinedType( PredefinedNameType::NameType_string ) == false &&
-                       typeName.isPredefinedType( PredefinedNameType::NameType_hashed_string ) == false &&
-                       typeName.isPredefinedType( PredefinedNameType::NameType_float2 ) == false &&
-                       typeName.isPredefinedType( PredefinedNameType::NameType_float3 ) == false &&
-                       typeName.isPredefinedType( PredefinedNameType::NameType_float4 ) == false &&
-                       typeName.isPredefinedType( PredefinedNameType::NameType_float4x4 ) == false &&
-                       typeName.isPredefinedType( PredefinedNameType::NameType_quaternion ) == false;
+                const ReflectBuiltinClass builtinClass = ReflectValueUtil::getBuiltinClass( ReflectValueUtil::findBuiltinIndex( typeName ) );
+                return builtinClass == ReflectBuiltinClass::Bool || builtinClass == ReflectBuiltinClass::Number;
             }
 
             template <typename T>
