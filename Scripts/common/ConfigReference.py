@@ -324,7 +324,7 @@ def resolveRangeConstantInternal(rangeText: str | None, fileText: str, typeName:
         return rangeText
     valueMatch = re.search(r"constexpr\s+[\w:]+\s+" + re.escape(match.group(3)) + r"\s*=\s*(-?\d+(?:\.\d+)?)f?\s*;", fileText)
     if valueMatch is None:
-        raise ValueError(f"{typeName}: Min/Max 상수 '{rangeText}' 를 같은 파일에서 찾지 못했습니다")
+        raise ValueError(f"{typeName}: Min/Max 상수 '{rangeText}' 를 같은 파일의 constexpr 숫자 상수에서 찾지 못했습니다(문서 생성기는 다른 헤더의 상수를 풀지 못합니다 — 상수를 설정 구조체와 같은 파일에 두세요)")
     value = valueMatch.group(1)
     if match.group(1):
         value = value[1:] if value.startswith("-") else "-" + value
