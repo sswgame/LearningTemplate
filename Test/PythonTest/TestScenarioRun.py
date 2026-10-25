@@ -300,7 +300,7 @@ class AppArgumentTest(ScenarioRunCase):
 
 class ArgumentVocabularyTest(unittest.TestCase):
     def testVocabularyIsReadFromTheCppHeader(self) -> None:
-        """C++ `AppTestUtil` 상수가 정본이다 — 파이썬이 같은 글을 읽어 온다."""
+        """정본(`ArgumentList.xxx` 의 철자 · `AutomationScenario.h` 의 상수)이 맞는 글을 준다 — 파이썬이 그것을 읽어 온다."""
         words = ScenarioArguments.kVocabulary
         self.assertEqual(("-unattended", "-scenario=", "-scenario-report=", "-EnableEditor", "-gv_editorStateDir=", "-game=", "Saved/Automation", "EditorState"),
                          (words.unattendedArgument, words.scenarioArgumentPrefix, words.scenarioReportArgumentPrefix, words.editorArgument,
@@ -308,17 +308,26 @@ class ArgumentVocabularyTest(unittest.TestCase):
 
     def testMissingConstantStopsLoudly(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
-            header = Path(temporary) / "AppTestUtil.h"
-            header.write_text('static constexpr const utf8* kUnattendedArgument = "-unattended";', encoding="utf-8")
+            root = Path(temporary)
+            writeText(root / ScenarioArguments.kAutomationHeaderRelPath, 'inline constexpr const utf8* kAutomationOutputFolder = "Saved/Automation";')
+            writeText(root / ScenarioArguments.kArgumentListRelPath, 'SW_REGISTER_ARGUMENT( HELP, false, false, "help" )\n')
             with self.assertRaises(SystemExit):
-                ScenarioArguments.readScenarioArgumentVocabulary(header)
+                ScenarioArguments.readScenarioArgumentVocabulary(root)
 
-    def testCppAssemblyUsesTheConstantsNotLiterals(self) -> None:
-        """C++ 조립 자리(`AppTestUtil.cpp` · `TestAppScenario.cpp`)가 상수를 쓰고 인자 글을 다시 적지 않는다 — 다시 적으면 정본이 둘이 된다."""
-        for relPath in ("Test/AppTest/AppTestUtil.cpp", "Test/AppTest/TestAppScenario.cpp"):
-            text = (getProjectRoot() / relPath).read_text(encoding="utf-8")
+    def testCppAssemblyUsesTheCanonicalSourcesNotLiterals(self) -> None:
+        """C++ 조립 자리가 인자 글 · 산출물 폴더를 다시 적지 않는다 — 다시 적으면 정본이 둘이 된다(인자는 `getCommandLineArgumentSpelling`, 폴더는 `kAutomationOutputFolder`)."""
+        for relPath in ("Test/AppTest/AppTestUtil.cpp", "Test/AppTest/TestAppScenario.cpp", "Test/AppTest/TestAppSmoke.cpp"):
+            text = (getProjectRoot() / relPath).read_text(encoding="utf-8").replace('"-game=HarvestValley', "")
             for literal in ('"-unattended', '"-scenario=', '"-scenario-report=', '"-EnableEditor', '"-gv_editorStateDir='):
-                self.assertNotIn(literal, text.replace('"-game=HarvestValley', ""), f"{relPath}: {literal}")
+                self.assertNotIn(literal, text, f"{relPath}: {literal}")
+        for relPath in ("Source/Engine/Automation/AutomationRunner.cpp", "Source/Engine/Automation/ScenarioRecorder.cpp", "Test/AppTest/AppTestUtil.cpp"):
+            self.assertNotIn('"Saved/Automation', (getProjectRoot() / relPath).read_text(encoding="utf-8"), relPath)
+
+    def testScenarioStemFollowsTheEngineRule(self) -> None:
+        """엔진 `getAutomationScenarioStem`(마지막 `/` 뒤 파일 이름의 첫 `.` 앞)과 같은 값을 준다."""
+        for resourceId, stem in (("game/empty/automation/fog.scenario.xml", "fog"), ("engine/automation/editor/savedstate.1.scenario.xml", "savedstate"),
+                                 ("runner.scenario.xml", "runner")):
+            self.assertEqual(stem, ScenarioRun.ScenarioDeclaration(resourceId, Path(resourceId), "", (), False, False, False).stem)
 
 
 class ShippingBuildTest(ScenarioRunCase):

@@ -1257,7 +1257,7 @@ namespace sw
             finish( AutomationOutcome::LoadError, error );
             return;
         }
-        _outputDirectory = "Saved/Automation/" + _scenario.getName();
+        _outputDirectory = string( kAutomationOutputFolder ) + "/" + _scenario.getName();
         if ( skipIfStepsAreMissingFromThisBuild() || prepareScratchFolders() == false )
             return;
         SW_LOG_INFO( "[Scenario] %# loaded from %# (%# step(s), fixed delta %#)", _scenario.getName().c_str(), string( scenarioPath ).c_str(),
@@ -1275,7 +1275,7 @@ namespace sw
             finish( AutomationOutcome::LoadError, error );
             return false;
         }
-        _outputDirectory = "Saved/Automation/" + _scenario.getName();
+        _outputDirectory = string( kAutomationOutputFolder ) + "/" + _scenario.getName();
         return skipIfStepsAreMissingFromThisBuild() == false && prepareScratchFolders();
     }
 

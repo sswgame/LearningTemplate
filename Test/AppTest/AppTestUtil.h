@@ -3,6 +3,7 @@
  * @brief AppTest 가 빌드된 App 실행 파일을 찾아 띄우는 도우미입니다.
  */
 #pragma once
+#include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
@@ -83,24 +84,18 @@ namespace test
         static sw::vector<sw::string> collectBuiltGamePacks();
         // `SW_TEST_REQUIRES_FEATURE( SourceResources )` 를 선언한 케이스만 부른다 — Shipping 에서 부르면 실패를 기록한다.
 
-        // 시나리오를 띄우는 App 인자의 글 — 정본은 이 아래 상수 줄들이다. `py -3 -m Scripts scenario`(`Scripts/qa/ScenarioRun.py`)가 이 줄들을 읽어 같은 인자를 만든다
-        // (`Scripts/common/ScenarioArguments.py`). 이름이나 `static constexpr const utf8* kXxx = "…";` 줄 모양을 바꾸면 스크립트가 멈춘다. 상수를 더하면 그 모듈의 칸도 더한다.
-        /** @brief 사람이 지켜보지 않는 실행(Debug 단언이 대화상자를 걸지 않는다). */
-        static constexpr const utf8* kUnattendedArgument = "-unattended";
-        /** @brief 시나리오 경로(쉼표 목록 가능)를 주는 인자의 앞머리. */
-        static constexpr const utf8* kScenarioArgumentPrefix = "-scenario=";
-        /** @brief 보고 JSON 경로를 주는 인자의 앞머리. */
-        static constexpr const utf8* kScenarioReportArgumentPrefix = "-scenario-report=";
-        /** @brief 에디터를 켜는 인자. */
-        static constexpr const utf8* kEditorArgument = "-EnableEditor";
-        /** @brief 에디터 상태 폴더(사용자의 `Saved/Editor` 대신 비운 폴더)를 주는 인자의 앞머리. */
-        static constexpr const utf8* kEditorStateDirArgumentPrefix = "-gv_editorStateDir=";
-        /** @brief 게임 팩을 고르는 인자의 앞머리. */
-        static constexpr const utf8* kGameArgumentPrefix = "-game=";
-        /** @brief 작업 폴더(`Bin`) 아래 보고 · 로그 · 산출물 폴더. */
-        static constexpr const utf8* kAutomationFolder = "Saved/Automation";
-        /** @brief `kAutomationFolder` 아래 에디터 상태 폴더들의 부모 이름. */
-        static constexpr const utf8* kEditorStateSubfolder = "EditorState";
+        // App 인자의 글은 테스트가 정하지 않는다 — 엔진이 읽는 인자의 철자는 `ArgumentList.xxx`(`getCommandLineArgumentSpelling`)가, 산출물 폴더 · 에디터 상태 폴더 이름은
+        // `AutomationScenario.h` 의 상수가 정본이다. 스크립트 `py -3 -m Scripts scenario` 도 같은 파일들을 읽는다(`Scripts/common/ScenarioArguments.py`).
+        /** @brief 표준 인자의 스위치 글(`-unattended`)입니다. */
+        static sw::string makeSwitchArgument( sw::CommandLineArgument argument )
+        {
+            return sw::string( "-" ) + sw::getCommandLineArgumentSpelling( argument );
+        }
+        /** @brief 값을 받는 표준 인자의 글(`-scenario=<값>`)입니다. */
+        static sw::string makeValueArgument( sw::CommandLineArgument argument, sw::string_view value )
+        {
+            return makeSwitchArgument( argument ) + "=" + sw::string( value );
+        }
 
         /** @brief 시나리오가 아닌 App 한 판(스모크 · 쿠킹)의 프로세스 시한(초) — 멈춘 App 이 CTest 시한까지 붙잡지 않게 넉넉히 잡은 그물이다. */
         static constexpr uint32 kAppRunTimeoutSeconds = 600;

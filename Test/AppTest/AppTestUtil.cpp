@@ -43,18 +43,20 @@ namespace test
             {
                 struct ArgumentFeature
                 {
-                    const utf8*        _pToken;
-                    test::BuildFeature _feature;
+                    sw::CommandLineArgument _argument;
+                    bool                    _bTakesValue; // `-이름=값` 인자는 `=` 까지 찾는다(철자가 앞머리인 다른 인자와 가르려고)
+                    test::BuildFeature      _feature;
                 };
                 static constexpr ArgumentFeature kArrArgumentFeature[] = {
-                    {    AppTestUtil::kEditorArgument, test::BuildFeature::DevelopmentBuild}, // 배포본에는 에디터 모듈이 없다
-                    {AppTestUtil::kGameArgumentPrefix,  test::BuildFeature::SourceResources}, // 활성이 아닌 게임 팩은 구운 팩에 없다
+                    {sw::CommandLineArgument::ENABLE_EDITOR, false, test::BuildFeature::DevelopmentBuild}, // 배포본에는 에디터 모듈이 없다
+                    {         sw::CommandLineArgument::GAME,  true,  test::BuildFeature::SourceResources}, // 활성이 아닌 게임 팩은 구운 팩에 없다
                 };
                 for ( const ArgumentFeature& entry : kArrArgumentFeature )
                 {
-                    if ( arguments.find( entry._pToken ) == sw::string_view::npos || test::isBuildFeatureAvailable( entry._feature ) )
+                    const sw::string token = entry._bTakesValue ? AppTestUtil::makeValueArgument( entry._argument, {} ) : AppTestUtil::makeSwitchArgument( entry._argument );
+                    if ( arguments.find( token.c_str() ) == sw::string_view::npos || test::isBuildFeatureAvailable( entry._feature ) )
                         continue;
-                    const sw::string message = sw::string( "App 인자 " ) + entry._pToken + " 는 이 구성에 없는 기능(" + test::getBuildFeatureName( entry._feature ) +
+                    const sw::string message = sw::string( "App 인자 " ) + token + " 는 이 구성에 없는 기능(" + test::getBuildFeatureName( entry._feature ) +
                                                ")이 필요하다 — 케이스 첫 줄에 SW_TEST_REQUIRES_FEATURE 로 선언한다";
                     SW_EXPECT_TRUE_MSG( false, message.c_str() );
                     return false;
@@ -124,14 +126,6 @@ namespace test
                 } );
                 return reason;
             }
-
-            /** @brief 시나리오 이름 조각(`weaponswitch`)입니다 — 로그 · 보고 파일 이름에 쓴다. */
-            static sw::string getScenarioStem( sw::string_view path )
-            {
-                const size_t slash = path.find_last_of( '/' );
-                sw::string   stem{ path.substr( slash == sw::string_view::npos ? 0 : slash + 1 ) };
-                return stem.substr( 0, stem.find( '.' ) );
-            }
         };
     } // namespace
 } // namespace test
@@ -162,7 +156,7 @@ namespace test
         sw::string command{ "\"" };
         command += executablePath;
         command += "\" ";
-        command += kUnattendedArgument;
+        command += makeSwitchArgument( sw::CommandLineArgument::UNATTENDED );
         command += " ";
         command += arguments;
         return command;
@@ -210,14 +204,14 @@ namespace test
 
     AppRunOutcome AppTestUtil::runScenario( const sw::string& scenarioPath, const utf8* pBackendSwitch, sw::string& outScenarioLines, sw::string_view extraArguments )
     {
-        return runScenarioArgument( scenarioPath, AppTestUtilInternal::getScenarioStem( scenarioPath ), pBackendSwitch, outScenarioLines, extraArguments,
+        return runScenarioArgument( scenarioPath, sw::getAutomationScenarioStem( scenarioPath ), pBackendSwitch, outScenarioLines, extraArguments,
                                     kScenarioTimeoutSeconds );
     }
 
     sw::string AppTestUtil::makeReportPath( const sw::string& scenarioPath, const utf8* pBackendSwitch )
     {
         const sw::string backend = pBackendSwitch[0] == '-' ? sw::string( pBackendSwitch + 1 ) : sw::string( "default" );
-        return sw::string( kAutomationFolder ) + "/" + AppTestUtilInternal::getScenarioStem( scenarioPath ) + "_" + backend + ".json";
+        return sw::string( sw::kAutomationOutputFolder ) + "/" + sw::getAutomationScenarioStem( scenarioPath ) + "_" + backend + ".json";
     }
 
     sw::vector<sw::string> AppTestUtil::readReportRecords( const sw::string& reportPath )
@@ -275,9 +269,10 @@ namespace test
             return AppRunOutcome::Skipped;
 
         const sw::string backend    = pBackendSwitch[0] == '-' ? sw::string( pBackendSwitch + 1 ) : sw::string( "default" );
-        const sw::string outputBase = sw::string( kAutomationFolder ) + "/" + outputStem + "_" + backend;
-        (void)sw::FileUtil::ensureDirectoryExists( kAutomationFolder );
-        sw::string arguments = sw::string( kScenarioArgumentPrefix ) + scenarioArgument + " " + kScenarioReportArgumentPrefix + outputBase + ".json " + pBackendSwitch;
+        const sw::string outputBase = sw::string( sw::kAutomationOutputFolder ) + "/" + outputStem + "_" + backend;
+        (void)sw::FileUtil::ensureDirectoryExists( sw::kAutomationOutputFolder );
+        sw::string arguments = makeValueArgument( sw::CommandLineArgument::SCENARIO, scenarioArgument ) + " " +
+                               makeValueArgument( sw::CommandLineArgument::SCENARIO_REPORT, outputBase + ".json" ) + " " + pBackendSwitch;
         if ( extraArguments.empty() == false )
         {
             arguments += " ";

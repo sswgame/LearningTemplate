@@ -92,16 +92,16 @@ namespace
             return scenario.loadFromPath( scenarioPath, error ) ? scenario.getTestOptions().makeLaunchArguments() : sw::string{};
         }
 
-        /** @brief 작업 폴더 기준 에디터 상태 폴더 경로(`Saved/Automation/EditorState/<이름>`)입니다 — 글은 `AppTestUtil` 상수이고 스크립트 `scenario` 가 같은 상수를 읽는다. */
+        /** @brief 작업 폴더 기준 에디터 상태 폴더 경로(`Saved/Automation/EditorState/<이름>`)입니다 — 글은 `AutomationScenario.h` 상수이고 스크립트 `scenario` 가 같은 상수를 읽는다. */
         static sw::string makeEditorStateRelativePath( const sw::string& name )
         {
-            return sw::string( test::AppTestUtil::kAutomationFolder ) + "/" + test::AppTestUtil::kEditorStateSubfolder + "/" + name;
+            return sw::string( sw::kAutomationOutputFolder ) + "/" + sw::kAutomationEditorStateFolder + "/" + name;
         }
 
         /** @brief 에디터를 켠 실행의 인자(`-EnableEditor -gv_editorStateDir=<폴더>`)입니다. */
         static sw::string makeEditorStateArguments( const sw::string& stateFolder )
         {
-            return sw::string( test::AppTestUtil::kEditorArgument ) + " " + test::AppTestUtil::kEditorStateDirArgumentPrefix + stateFolder;
+            return test::AppTestUtil::makeSwitchArgument( sw::CommandLineArgument::ENABLE_EDITOR ) + " -" + sw::kAutomationEditorStateVariable + "=" + stateFolder;
         }
 
         /**
@@ -112,7 +112,7 @@ namespace
         {
             const sw::string backend = pSwitch[0] == '-' ? sw::string( pSwitch + 1 ) : sw::string( "default" );
             sw::string       stateFolder;
-            SW_EXPECT_TRUE( sw::FileUtil::makeAbsolutePath( makeEditorStateRelativePath( sw::FileUtil::getFileNamePart( scenarioPath ) + "_" + backend ), stateFolder ) );
+            SW_EXPECT_TRUE( sw::FileUtil::makeAbsolutePath( makeEditorStateRelativePath( sw::getAutomationScenarioStem( scenarioPath ) + "_" + backend ), stateFolder ) );
             SW_EXPECT_TRUE( sw::FileUtil::removeDirectory( stateFolder ) );
             return makeEditorStateArguments( stateFolder );
         }
@@ -181,14 +181,10 @@ namespace
         /** @brief 체인에서 시나리오 몇 개마다 모듈 리로드를 끼우는지입니다. */
         static constexpr uint32 kReloadEvery = 6;
 
-        /** @brief 시나리오 경로의 묶음 이름(파일 이름의 첫 `.` 앞)입니다. */
+        /** @brief 시나리오 경로의 묶음 이름(파일 이름의 첫 `.` 앞 — 이름 줄기와 같다)입니다. */
         static sw::string getGroupName( const sw::string& scenarioPath )
         {
-            sw::string   fileName = sw::FileUtil::getFileNamePart( scenarioPath );
-            const size_t dot      = fileName.find( '.' );
-            if ( dot != sw::string::npos )
-                fileName.resize( dot );
-            return fileName;
+            return sw::getAutomationScenarioStem( scenarioPath );
         }
 
         /** @brief 묶음마다 빈 상태 폴더를 만들어 묶음의 시나리오를 백엔드 @p pSwitch(`-dx12` …)로 차례로 돌립니다. 돌린(건너뛰지 않은) 수를 돌려줍니다. */
@@ -339,7 +335,7 @@ SW_TEST_CASE( AppScenarioTest, EveryGamePackScenarioPassesOnEveryBackend )
         if ( packRoot.empty() )
             continue;
         const sw::vector<sw::string> listScenario = AppScenarioTestInternal::collectScenarioPaths( { packRoot + "/automation" } );
-        ranCount += AppScenarioTestInternal::runEveryBackend( listScenario, sw::string( test::AppTestUtil::kGameArgumentPrefix ) + gameName );
+        ranCount += AppScenarioTestInternal::runEveryBackend( listScenario, test::AppTestUtil::makeValueArgument( sw::CommandLineArgument::GAME, gameName ) );
     }
     if ( ranCount == 0 )
         SW_TEST_SKIP( "no game pack scenario could run on this machine" );

@@ -585,7 +585,7 @@ SW_TEST_CASE( AppSmokeTest, BackendSwapFollowsTheNewDevice )
     uint32 checkedCount = 0;
     for ( const utf8* pSwapArgument : kArrSwapArgument )
     {
-        string arguments{ "-scenario=engine/automation/rhiswap/swapother.scenario.xml " };
+        string arguments{ test::AppTestUtil::makeValueArgument( sw::CommandLineArgument::SCENARIO, "engine/automation/rhiswap/swapother.scenario.xml" ) + " " };
         arguments += pSwapArgument;
         const AppRunResult result = runApp( arguments, "Active backend is now" );
         if ( test::hasRunHere( result._outcome ) == false )
@@ -623,7 +623,8 @@ SW_TEST_CASE( AppSmokeTest, BackendSwapRebuildsGameBeforeEditor )
     uint32 checkedCount = 0;
     for ( const utf8* pSwapArgument : kArrSwapArgument )
     {
-        string arguments{ "-scenario=engine/automation/rhiswap/swapother.scenario.xml -EnableEditor " };
+        string arguments{ test::AppTestUtil::makeValueArgument( sw::CommandLineArgument::SCENARIO, "engine/automation/rhiswap/swapother.scenario.xml" ) + " " +
+                          test::AppTestUtil::makeSwitchArgument( sw::CommandLineArgument::ENABLE_EDITOR ) + " " };
         arguments += pSwapArgument;
         const AppRunResult result = runApp( arguments, "Module instance initialized: " );
         if ( test::hasRunHere( result._outcome ) == false )
