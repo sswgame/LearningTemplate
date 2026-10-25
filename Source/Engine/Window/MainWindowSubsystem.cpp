@@ -9,6 +9,7 @@ namespace sw
 {
     MainWindowSubsystem::MainWindowSubsystem()
         : _window{ nullptr }
+        , _baseTitle{}
     {
     }
 
@@ -25,6 +26,16 @@ namespace sw
     SubsystemHostMask MainWindowSubsystem::getSubsystemHost() const
     {
         return EngineSubsystemHost::kClient;
+    }
+
+    const utf8* MainWindowSubsystem::getCurrentTitle() const
+    {
+        return _window->getTitle(); // getTitleTarget 이 창이 있을 때만 내놓는다
+    }
+
+    void MainWindowSubsystem::applyWindowTitle( const utf8* pTitle )
+    {
+        _window->setTitle( pTitle ); // 창 제목을 거는 유일한 곳(IWindow 의 friend)
     }
 
     bool MainWindowSubsystem::adopt( unique_ptr<IWindow>& window )

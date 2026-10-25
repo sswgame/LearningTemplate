@@ -74,6 +74,8 @@ namespace sw
          * @return 체인이 끝났으면 프로세스 종료 코드, 아니면 `kRunning` 입니다(입력이 없어도 `kRunning`).
          */
         [[nodiscard]] int32 onFrameEnd( const EngineFrameContext& context ) override;
+        /** @brief 돌고 있는 시나리오 단계의 이름 · 단계 · 프레임입니다(창 제목). 돌고 있지 않으면 false 입니다. */
+        [[nodiscard]] bool tryGetRunStatus( string& outScenarioName, string& outStepKind, uint32& outStepNumber, uint32& outFrame ) const override;
         /**
          * @brief 창이 닫혀 루프가 끝났습니다. 지금 단계를 그 결과로 끝맺고, 돌릴 단계가 남았으면 실패로 봅니다(`CloseWindow` 는 마지막 단계에만 둔다).
          * @return 프로세스 종료 코드, 시작한 단계가 없으면 `kRunning` 입니다.

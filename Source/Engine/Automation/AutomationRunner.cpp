@@ -14,6 +14,7 @@
 #include "Engine/Automation/AutomationEnvironmentSteps.h"
 #include "Engine/Automation/AutomationExitCode.h"
 #include "Engine/Automation/AutomationImageMetric.h"
+#include "Engine/Automation/AutomationRunTitle.h"
 #include "Engine/Automation/AutomationStepRegistry.h"
 #include "Engine/Automation/AutomationThresholdBasis.h"
 #include "Engine/Automation/AutomationWindowSteps.h"
@@ -1221,12 +1222,14 @@ namespace sw
         , _listRemembered{}
         , _outputDirectory{}
         , _finishReason{}
+        , _currentStepKind{}
         , _pObjectManagerOverride{ nullptr }
         , _pInputManager{ nullptr }
         , _exitDeadlineSeconds{ 0.0 }
         , _loadDeadlineSeconds{ 0.0 }
         , _nextStepIndex{ 0 }
         , _frameIndex{ 0 }
+        , _currentStepNumber{ 0 }
         , _waitFrameCount{ 0 }
         , _screenshotRequestedCount{ 0 }
         , _screenshotCompletedCount{ 0 }
@@ -1401,6 +1404,14 @@ namespace sw
                 // 등록이 없으면 검사 뒤에 그 단계를 등록한 모듈이 내려갔다(핫 리로드). 실행 함수가 없는 단계(입력)는 준비에서 이미 끝났다.
                 const bool   bRunsNow        = pRegistration != nullptr && pRegistration->_bBeforeInput == false && pRegistration->_pRun != nullptr;
                 const uint32 requestedBefore = _screenshotRequestedCount;
+                // 단계 전환 한 줄: 실행 함수가 있는 단계만 남긴다(입력 단계는 가상 입력으로 한꺼번에 넘어가 프레임마다 수십 줄이 되므로 뺀다).
+                const bool bHasRunFunction = pRegistration != nullptr && pRegistration->_pRun != nullptr;
+                if ( bHasRunFunction )
+                {
+                    _currentStepKind   = step._kind;
+                    _currentStepNumber = step._orderInFile;
+                    SW_LOG_INFO( "%#", AutomationRunTitleUtil::makeStepLogLine( _scenario.getName(), _currentStepNumber, _currentStepKind, _frameIndex ).c_str() );
+                }
                 if ( pRegistration == nullptr || ( bRunsNow && pRegistration->_pRun( *this, step ) == false ) )
                     finish( AutomationOutcome::LoadError, step.describe() + ": the step could not run" );
                 // 사진은 다음 렌더 패킷이 찍는다 — 같은 프레임에 뒤 단계가 돌면 그 변화가 사진에 들어간다. 사진을 요청한 프레임은 여기서 닫고 뒤 단계는 다음 프레임에 돈다.
@@ -2014,6 +2025,8 @@ namespace sw
             }
             SW_LOG_ERROR( "[Scenario] %# %# at frame %#: %#", getAutomationOutcomeName( _result ), _scenario.getName().c_str(), _frameIndex, detail.c_str() );
         }
+        // 결과마다 말씨가 다른 위 줄과 별개로, 시작 줄(`started after`)과 짝이 되는 같은 모양의 끝 줄을 남긴다(grep 한 번으로 시작 · 끝을 묶는다).
+        SW_LOG_INFO( "[Scenario] %# finished %# frames %#", _scenario.getName().c_str(), getAutomationOutcomeName( _result ), _frameIndex );
         AutomationReportParams report{};
         report._scenarioName      = _scenario.getName();
         report._pResultName       = getAutomationOutcomeName( _result );

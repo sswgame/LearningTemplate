@@ -69,6 +69,18 @@ namespace sw
          */
         [[nodiscard]] virtual int32 onFrameEnd( const EngineFrameContext& context ) = 0;
         /**
+         * @brief 창 제목에 적을 "지금 무엇을 돌리는가" 입니다. 적을 것이 없으면 false 입니다(기본).
+         * @param outScenarioName 돌고 있는 시나리오 이름
+         * @param outStepKind 마지막으로 시작한 단계 이름(아직 없으면 빈 글)
+         * @param outStepNumber 그 단계가 파일에서 몇 번째인지(0 부터)
+         * @param outFrame 시나리오 프레임
+         */
+        [[nodiscard]] virtual bool tryGetRunStatus( [[maybe_unused]] string& outScenarioName, [[maybe_unused]] string& outStepKind, [[maybe_unused]] uint32& outStepNumber,
+                                                    [[maybe_unused]] uint32& outFrame ) const
+        {
+            return false;
+        }
+        /**
          * @brief 창이 닫혀 루프가 끝났습니다(App 이 루프 뒤에 한 번 부른다).
          * @return 이 관찰자가 정하는 종료 코드, 정할 것이 없으면 `kRunning` 입니다. 코드를 내면 다른 종료 요청(프로파일 세션)보다 이깁니다.
          */

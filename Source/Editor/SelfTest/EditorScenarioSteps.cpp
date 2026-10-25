@@ -815,8 +815,8 @@ namespace sw::editor
                 const IWindow* pWindow = pWindowHost->getWindow();
                 if ( pWindow == nullptr )
                     return false; // 창 없는 실행(헤드리스)에서는 값이 없다
-                const string title{ pWindow->getTitle() };
-                outValue = EditorWindowTitleUtil::isDirtyTitle( title ) ? 1.0 : 0.0;
+                // 창에는 엔진이 프레임 끝에 건 제목(실행 정보 포함)이 있어 한 프레임 늦다 — 에디터가 정한 평소 제목을 본다.
+                outValue = EditorWindowTitleUtil::isDirtyTitle( pWindowHost->getBaseTitle() ) ? 1.0 : 0.0;
                 return true;
             }
 

@@ -11,6 +11,7 @@
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
+#include "Engine/Automation/AutomationRunTitle.h"
 #include "Engine/Graphics/RHI/RHIInitResult.h"
 #include "Engine/HeadlessSubsystem.h"
 #include "Engine/Input/ShellInputActions.h"
@@ -225,6 +226,8 @@ namespace sw
          *        종료 코드를 내면 `requestQuit` 입니다. 텔레메트리(기동 단계 `Telemetry` 가 붙인다)와 App 의 진단 · 자동화도 여기로 붙습니다.
          */
         vector<IEngineFrameObserver*> _listFrameObserver;
+        /** @brief 시나리오 · 벤치 실행 정보를 창 제목에 적습니다(`endFrame` 이 부른다). */
+        AutomationRunTitleTracker _runTitle;
 
         /** @brief 이 엔진을 띄운 호스트의 역할입니다. 서비스를 만들기 전에 정한다(오디오 장치 · 기동 표 대상). */
         EngineHostRole _hostRole;
