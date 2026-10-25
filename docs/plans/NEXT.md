@@ -20,7 +20,9 @@
 
 **상태**: main 은 통합 M(`40a8af930`)에 문서 커밋 하나(작업 방식 선행 통합 규칙)를 얹은 곳이다. push 안 했다. 통합 M 의 UI 예제 전후는 DX12 프레임 10.9 → 3.4 ms, DX11 12.5 → 3.4 ms, GL 11.9 → 4.1 ms 로 풀렸고 Vulkan 만 그대로다(U6 전까지 제출 안 펜스 대기). **Vulkan 은 `vku6` 가 풀 것이다.**
 
-**선행 통합 `integ-n`**(워크트리 `D:/w/integ-n`, 브랜치 `wt/integ-n`, 마지막 `b14e66a28`): 통합 M 위에 `dx11ctx` → `glpbo` → `glpbo2` → `glrb` → `cifixl5` → `vkwsi` 를 병합하고 컴파일 오류를 고쳐 놓았다(`-k 0` 빌드 · lint · nogpu 만, GPU 는 안 돌림). 도는 중이던 통합 담당이 끝났는지는 `git log main..wt/integ-n` 으로 본다.
+**선행 통합 `integ-n`**(워크트리 `D:/w/integ-n`, 브랜치 `wt/integ-n`, **끝남 · 마지막 `cee55951f`**): 통합 M 위에 `dx11ctx` → `glpbo` → `glpbo2` → `glrb` → `cifixl5` → `vkwsi` 를 병합했다. `-k 0` 빌드 오류 0 · 경고 0, `integ-gate`(nogpu · lint 119/119) 통과, **GPU 는 안 돌림**. 첫 `integ-gate` 의 시간 초과 4건은 통합 M 과 CPU 를 나눠 쓴 부하였고 따로 돌리니 통과했다.
+- main 은 그 뒤 문서 커밋 둘(`5e2e0ca30`, `cb91c47ca`)이 더 올라가 있다. `integ-n` 이 통합 M 시점의 main 을 병합해 둔 상태라, 다음 통합은 main 을 `integ-n` 에 병합하거나(충돌은 `NEXT.md` 뿐일 것) `integ-n` 위에 나머지 브랜치를 얹은 뒤 main 으로 fast-forward 한다.
+- **RHI ABI 번호**: `integ-n` 은 37 이다(`cifixl5` 가 가상 함수 자리를 옮겨 vtable 순서가 바뀌었는데 번호를 안 올려서 통합이 36 → 37 로 올렸다). `dx11ctx2` · `dx11up` 은 각자 35 를, `bigup` 은 37 을 올려 두었으니 추가 병합마다 38, 39 … 로 순서대로 다시 매긴다. 갈래마다 "기준 + 1" 로 올리는 모양이라 번호 충돌은 병합마다 생긴다(후보: ABI 번호를 파일 하나에서 증가시키는 도구, 또는 vtable · 구조체 레이아웃 해시로 자동 계산).
 
 **아직 `integ-n` 에 안 들어간 브랜치(끝남, 각각 커밋 1 ~ 2 개, 린트만 통과)**
 | 브랜치 | 기준 | 한 줄 |
