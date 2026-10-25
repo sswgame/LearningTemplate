@@ -18,6 +18,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -116,6 +117,7 @@ namespace sw
         DestructionReplicationServer  _server;
         DestructionReplicationClient  _client;
         vector<Entry>                 _listEntry;
+        unordered_map<uint32, uint32> _mapEntryIndex; ///< 번호 → `_listEntry` 위치. 항목은 더하기만 하므로 위치가 바뀌지 않는다(`_listEntry` 와 함께 고친다)
         vector<DestructionHashRecord> _listRecord;
         GameObjectManager*            _pManager; ///< 번호표가 있는 씬(빌린 것)
         NetMessageRouter*             _pRouter;  ///< 처리기를 단 라우터(빌린 것). nullptr 이면 시작하지 않았다

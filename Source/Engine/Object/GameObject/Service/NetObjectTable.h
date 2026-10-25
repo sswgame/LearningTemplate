@@ -19,6 +19,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/GameObjectHandle.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 
 #include "Engine/Object/GameObject/Service/ISceneService.h"
@@ -97,7 +98,9 @@ namespace sw
         GameObjectManager* _pManager;
         vector<Entry>      _listScene;   ///< 번호 순서(이분 탐색)
         vector<Entry>      _listSpawned; ///< 번호 순서(새 번호가 늘 크다 — 클라이언트의 묶기는 끼워 넣는다)
-        uint32             _nextSpawned;
-        uint32             _spawnedRevision;
+        /// 오브젝트 → 생성 번호. `_listSpawned` 와 항상 함께 고친다(오브젝트로 찾을 때 목록을 훑지 않는다 — N 개에 O(1) + 이분 탐색).
+        unordered_map<GameObjectHandle, uint32> _mapSpawnedNetID;
+        uint32                                  _nextSpawned;
+        uint32                                  _spawnedRevision;
     };
 } // namespace sw

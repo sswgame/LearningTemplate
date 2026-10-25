@@ -2,7 +2,6 @@
 
 #include "Engine/Object/SceneAnimation/AnimationSystem.h"
 
-#include "Core/Container/VectorUtil.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
@@ -61,7 +60,7 @@ namespace sw
         , _listLevel{}
         , _listActive{}
         , _listLevelStart{}
-        , _listLODClient{}
+        , _lodClientList{}
         , _listLODView{}
         , _pendingLODView{}
         , _listScratchLODState{}
@@ -166,14 +165,14 @@ namespace sw
 
     void AnimationSystem::registerLODClient( IAnimationLODClient* pClient )
     {
-        if ( pClient == nullptr || VectorUtil::contains( _listLODClient, pClient ) )
+        if ( pClient == nullptr )
             return;
-        _listLODClient.push_back( pClient );
+        (void)_lodClientList.add( pClient ); // 이미 있으면 아무것도 하지 않는다
     }
 
     void AnimationSystem::unregisterLODClient( IAnimationLODClient* pClient )
     {
-        VectorUtil::removeFirst( _listLODClient, pClient );
+        (void)_lodClientList.remove( pClient ); // 없으면 아무것도 하지 않는다
     }
 
     void AnimationSystem::setLODViews( const vector<AnimationLODView>& listView )
@@ -210,17 +209,19 @@ namespace sw
 
     void AnimationSystem::updateLOD()
     {
-        if ( _listLODClient.empty() )
+        if ( _lodClientList.getCount() == 0 )
             return;
         SW_PROFILE_SCOPE( "GT.Animation.lod" );
-        const size_t clientCount = _listLODClient.size();
+        // 판정 중 클라이언트의 적용 훅이 등록 · 해제를 부르지 않는다(목록을 읽는 동안 고치지 않는다) — 접힌 목록을 한 번 잡는다.
+        const vector<IAnimationLODClient*>& listLODClient = _lodClientList.getItems();
+        const size_t                        clientCount   = listLODClient.size();
         // 뷰가 없거나(테스트 · 서버) 꺼져 있으면 판정하지 않는다 — 켜져 있다가 꺼진 첫 프레임에만 지난 판정을 되돌린다(가시성 훅을 직접 부르는 쪽을 덮지 않게).
         if ( gv_animationLod == 0 || _bLODViewsSet == SW_FALSE )
         {
             if ( _bLODApplied == SW_TRUE )
             {
                 const AnimationLODState fullState{};
-                for ( IAnimationLODClient* pClient : _listLODClient )
+                for ( IAnimationLODClient* pClient : listLODClient )
                 {
                     pClient->applyAnimationLOD( fullState );
                 }
@@ -244,7 +245,7 @@ namespace sw
         _listScratchBudgetItem.clear();
         for ( size_t clientIndex = 0; clientIndex < clientCount; ++clientIndex )
         {
-            const IAnimationLODClient* pClient = _listLODClient[clientIndex];
+            const IAnimationLODClient* pClient = listLODClient[clientIndex];
             float3                     center{};
             float32                    radius     = 0.0f;
             float32                    screenSize = 1.0f;
@@ -297,75 +298,8 @@ namespace sw
                     state._bInterpolate = SW_TRUE;
                 state._updateRateDivisor = budgeted;
             }
-            _listLODClient[clientIndex]->applyAnimationLOD( state );
+            listLODClient[clientIndex]->applyAnimationLOD( state );
         }
-    }
-
-    bool AnimationUnitList::add( SkeletalMeshComponent* pUnit )
-    {
-        const SkeletalMeshComponent* pKey      = pUnit;
-        const bool                   bInserted = _mapIndex.emplace( pKey, static_cast<uint32>( _listUnit.size() ) ).second;
-        if ( bInserted )
-            _listUnit.push_back( pUnit );
-        return bInserted;
-    }
-
-    bool AnimationUnitList::remove( const SkeletalMeshComponent* pUnit )
-    {
-        const auto it = _mapIndex.find( pUnit );
-        if ( it == _mapIndex.end() )
-            return false;
-        const size_t index = it->second;
-        (void)_mapIndex.erase( pUnit ); // 위에서 찾았으므로 반드시 하나를 지운다
-        if ( index + 1 == _listUnit.size() )
-        {
-            // 끝 칸은 바로 뺀다. 그 앞에 비워 둔 칸이 이어지면 같이 걷는다.
-            _listUnit.pop_back();
-            while ( _listUnit.empty() == false && _listUnit.back() == nullptr )
-            {
-                _listUnit.pop_back();
-                --_removedCount;
-            }
-            return true;
-        }
-        _listUnit[index] = nullptr;
-        ++_removedCount;
-        return true;
-    }
-
-    const vector<SkeletalMeshComponent*>& AnimationUnitList::getUnits() const
-    {
-        compact();
-        return _listUnit;
-    }
-
-    uint32 AnimationUnitList::findIndex( const SkeletalMeshComponent* pUnit ) const
-    {
-        compact();
-        const auto it = _mapIndex.find( pUnit );
-        return it != _mapIndex.end() ? it->second : invalid_index::kUint32;
-    }
-
-    void AnimationUnitList::compact() const
-    {
-        if ( _removedCount == 0 )
-            return;
-        size_t writeIndex = 0;
-        for ( size_t readIndex = 0; readIndex < _listUnit.size(); ++readIndex )
-        {
-            SkeletalMeshComponent* pUnit = _listUnit[readIndex];
-            if ( pUnit == nullptr )
-                continue;
-            if ( writeIndex != readIndex )
-            {
-                const SkeletalMeshComponent* pKey = pUnit;
-                _listUnit[writeIndex]             = pUnit;
-                _mapIndex[pKey]                   = static_cast<uint32>( writeIndex );
-            }
-            ++writeIndex;
-        }
-        _listUnit.resize( writeIndex );
-        _removedCount = 0;
     }
 
     void AnimationSystem::registerUnit( SkeletalMeshComponent* pUnit )
@@ -421,7 +355,7 @@ namespace sw
         _bOrderDirty = SW_FALSE;
         _bCycle      = SW_FALSE;
         _uniqueLevelRemoval.clear();
-        const vector<SkeletalMeshComponent*>& listUnit  = _unitList.getUnits();
+        const vector<SkeletalMeshComponent*>& listUnit  = _unitList.getItems();
         const size_t                          unitCount = listUnit.size();
         if ( unitCount == 0 )
         {
@@ -602,7 +536,7 @@ namespace sw
         {
             // 되감기가 끝났다 — 걸어 둔 포즈를 지금 상태로 다시 만든다(쉬던 유닛도).
             _bRewindApplied = SW_FALSE;
-            for ( SkeletalMeshComponent* pUnit : _unitList.getUnits() )
+            for ( SkeletalMeshComponent* pUnit : _unitList.getItems() )
             {
                 pUnit->markPoseDirty();
             }
@@ -649,7 +583,7 @@ namespace sw
             _rewind.recordUnit( *pUnit, _frameIndex );
         }
         AnimationDebugState state;
-        for ( const IAnimationLODClient* pClient : _listLODClient )
+        for ( const IAnimationLODClient* pClient : _lodClientList.getItems() )
         {
             const Component* pTarget = pClient->findRewindTarget();
             if ( pTarget == nullptr )
@@ -663,7 +597,7 @@ namespace sw
     void AnimationSystem::applyRewindScrub()
     {
         const float64 scrubTime = _rewind.getScrubTime();
-        for ( SkeletalMeshComponent* pUnit : _unitList.getUnits() )
+        for ( SkeletalMeshComponent* pUnit : _unitList.getItems() )
         {
             const AnimationRewindTrack* pTrack = _rewind.findTrack( pUnit->getHandle() );
             const AnimationRewindFrame* pFrame = ( pTrack != nullptr ) ? pTrack->findFrame( scrubTime ) : nullptr;
@@ -673,7 +607,7 @@ namespace sw
             if ( pUnit->applyRewindPose( _rewindScratchPose ) )
                 _bRewindApplied = SW_TRUE;
         }
-        for ( IAnimationLODClient* pClient : _listLODClient )
+        for ( IAnimationLODClient* pClient : _lodClientList.getItems() )
         {
             const Component*            pTarget = pClient->findRewindTarget();
             const AnimationRewindTrack* pTrack  = ( pTarget != nullptr ) ? _rewind.findTrack( pTarget->getHandle() ) : nullptr;
@@ -712,25 +646,41 @@ namespace sw
         if ( listPlayer.size() < 2 )
             return;
 
-        vector<AnimationPlayer*> listMemberPlayer;
-        vector<float32>          listMemberWeight;
-        vector<uint8>            listDone( listPlayer.size(), SW_FALSE );
-        for ( size_t first = 0; first < listPlayer.size(); ++first )
+        // 그룹 이름 → 그룹 번호(처음 나온 순서)를 해시로 잡고, 번호별로 안정 정렬(계수 정렬)해 그룹마다 연속 구간으로 모은다 — 플레이어 P 개 · 그룹 G 개에 O(P) (옛 방식은 O(P·G)).
+        // 그룹 안 순서는 등록 순서 그대로이고 그룹은 처음 나온 순서로 처리한다(옛 방식과 같다).
+        const size_t                         playerCount = listPlayer.size();
+        unordered_map<hashed_string, uint32> mapGroupIndex;
+        vector<uint32>                       listGroupOfPlayer( playerCount );
+        vector<uint32>                       listGroupStart{ 0 }; // 그룹마다 시작 위치(누적 전에는 개수를 센다)
+        for ( size_t playerIndex = 0; playerIndex < playerCount; ++playerIndex )
         {
-            if ( listDone[first] == SW_TRUE )
-                continue;
-            listMemberPlayer.clear();
-            listMemberWeight.clear();
-            for ( size_t other = first; other < listPlayer.size(); ++other )
-            {
-                if ( listDone[other] == SW_TRUE || listGroup[other] != listGroup[first] )
-                    continue;
-                listDone[other] = SW_TRUE;
-                listMemberPlayer.push_back( listPlayer[other] );
-                listMemberWeight.push_back( listWeight[other] );
-            }
-            if ( listMemberPlayer.size() > 1 )
-                (void)AnimationSyncGroup::synchronize( listMemberPlayer.data(), listMemberWeight.data(), static_cast<uint32>( listMemberPlayer.size() ) );
+            const auto   inserted   = mapGroupIndex.emplace( listGroup[playerIndex], static_cast<uint32>( listGroupStart.size() - 1 ) );
+            const uint32 groupIndex = inserted.first->second;
+            if ( inserted.second )
+                listGroupStart.push_back( 0 );
+            listGroupOfPlayer[playerIndex] = groupIndex;
+            ++listGroupStart[groupIndex + 1];
+        }
+        const size_t groupCount = listGroupStart.size() - 1;
+        for ( size_t groupIndex = 0; groupIndex < groupCount; ++groupIndex )
+        {
+            listGroupStart[groupIndex + 1] += listGroupStart[groupIndex];
+        }
+        vector<AnimationPlayer*> listSortedPlayer( playerCount );
+        vector<float32>          listSortedWeight( playerCount );
+        vector<uint32>           listCursor( listGroupStart.begin(), listGroupStart.end() - 1 );
+        for ( size_t playerIndex = 0; playerIndex < playerCount; ++playerIndex )
+        {
+            const uint32 slot      = listCursor[listGroupOfPlayer[playerIndex]]++;
+            listSortedPlayer[slot] = listPlayer[playerIndex];
+            listSortedWeight[slot] = listWeight[playerIndex];
+        }
+        for ( size_t groupIndex = 0; groupIndex < groupCount; ++groupIndex )
+        {
+            const uint32 start = listGroupStart[groupIndex];
+            const uint32 count = listGroupStart[groupIndex + 1] - start;
+            if ( count > 1 )
+                (void)AnimationSyncGroup::synchronize( listSortedPlayer.data() + start, listSortedWeight.data() + start, count );
         }
     }
 } // namespace sw

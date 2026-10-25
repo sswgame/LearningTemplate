@@ -4,6 +4,7 @@
  *        `SceneFrameStep::Animation` 단계에서 돕니다. 얻기는 `manager.getSubsystem<AnimationSystem>()` 입니다 — 코어(`Object/GameObject`)는 이 타입을 모릅니다.
  */
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/unordered_map.h"
@@ -18,6 +19,8 @@
 #include "Engine/Object/SceneAnimation/AnimationDebugState.h"
 #include "Engine/Object/SceneAnimation/AnimationLOD.h"
 #include "Engine/Object/SceneAnimation/AnimationRewind.h"
+
+#include <atomic>
 
 namespace sw
 {
@@ -197,34 +200,105 @@ namespace sw
 namespace sw
 {
     /**
-     * @class AnimationUnitList
-     * @brief 등록된 애니메이션 유닛을 등록 순서대로 들고, 등록 · 해제 · 위치 찾기를 O(1) 로 받는 목록입니다(`AnimationSystem` 전용).
-     * @details 평가 순서(레벨 안 순서) · 스킨 팔레트 순서가 등록 순서라서, 해제가 남은 유닛의 상대 순서를 바꾸면 안 된다. 그래서 가운데 유닛의 해제는 칸을 비워 두기만 하고
-     *          (O(1)), 비운 칸은 목록을 읽을 때(`getUnits` · `findIndex`) 한 번에 접는다 — 유닛 M 개를 연달아 해제해도 접는 비용은 O(N) 한 번이다.
-     *          마지막 칸의 해제는 바로 뺀다. 읽기 함수가 const 인 채로 접으므로 저장소는 `mutable` 이다 — 게임 스레드 전용이고, 병렬 평가 구간에서는 등록 · 해제도 읽기도 없다.
+     * @class AnimationOrderedList
+     * @brief 포인터를 등록 순서대로 들고, 등록 · 해제 · 위치 찾기를 O(1) 로 받는 목록입니다(`AnimationSystem` 전용 — 유닛 · LOD 클라이언트).
+     * @details 평가 순서(레벨 안 순서) · 스킨 팔레트 순서 · LOD 예산 순서가 등록 순서라서, 해제가 남은 원소의 상대 순서를 바꾸면 안 된다. 그래서 가운데 원소의 해제는 칸을 비워 두기만 하고
+     *          (O(1)), 비운 칸은 목록을 읽을 때(`getItems` · `findIndex`) 한 번에 접는다 — M 개를 연달아 해제해도 접는 비용은 O(N) 한 번이다. 마지막 칸의 해제는 바로 뺀다.
+     *          읽기 함수가 const 인 채로 접으므로 저장소는 `mutable` 이다. 그래서 **읽기도 쓰기다** — 게임 스레드 전용이고(`GPUSkinPaletteCollector` 도 `populateFromScene` 의 게임 스레드에서 읽는다),
+     *          병렬 평가 구간에서는 등록 · 해제도 읽기도 없다. 두 스레드가 동시에 접으면 Debug 에서 단언한다(스레드 정체를 모르는 곳에서도 쓸 수 있게 겹침만 본다).
      */
-    class SW_API AnimationUnitList
+    template <class T>
+    class AnimationOrderedList
     {
     public:
-        /** @brief 유닛을 목록 끝에 더합니다. 이미 있으면 false 입니다. */
-        [[nodiscard]] bool add( SkeletalMeshComponent* pUnit );
-        /** @brief 유닛을 뺍니다(남은 유닛의 상대 순서는 그대로). 없으면 false 입니다. */
-        [[nodiscard]] bool remove( const SkeletalMeshComponent* pUnit );
-        /** @brief 등록된 유닛 수입니다. */
+        /** @brief 원소를 목록 끝에 더합니다. 이미 있으면 false 입니다. */
+        [[nodiscard]] bool add( T* pItem )
+        {
+            const T*   pKey      = pItem;
+            const bool bInserted = _mapIndex.emplace( pKey, static_cast<uint32>( _listItem.size() ) ).second;
+            if ( bInserted )
+                _listItem.push_back( pItem );
+            return bInserted;
+        }
+        /** @brief 원소를 뺍니다(남은 원소의 상대 순서는 그대로). 없으면 false 입니다. */
+        [[nodiscard]] bool remove( const T* pItem )
+        {
+            const auto it = _mapIndex.find( pItem );
+            if ( it == _mapIndex.end() )
+                return false;
+            const size_t index = it->second;
+            (void)_mapIndex.erase( pItem ); // 위에서 찾았으므로 반드시 하나를 지운다
+            if ( index + 1 == _listItem.size() )
+            {
+                // 끝 칸은 바로 뺀다. 그 앞에 비워 둔 칸이 이어지면 같이 걷는다.
+                _listItem.pop_back();
+                while ( _listItem.empty() == false && _listItem.back() == nullptr )
+                {
+                    _listItem.pop_back();
+                    --_removedCount;
+                }
+                return true;
+            }
+            _listItem[index] = nullptr;
+            ++_removedCount;
+            return true;
+        }
+        /** @brief 등록된 원소 수입니다. */
         uint32 getCount() const { return static_cast<uint32>( _mapIndex.size() ); }
-        /** @brief 등록 순서의 유닛 전부입니다. 비운 칸은 먼저 접으므로 nullptr 가 없습니다. */
-        const vector<SkeletalMeshComponent*>& getUnits() const;
-        /** @brief 유닛이 `getUnits()` 의 몇 번째인지 반환합니다. 없으면 `invalid_index::kUint32` 입니다. */
-        uint32 findIndex( const SkeletalMeshComponent* pUnit ) const;
+        /** @brief 등록 순서의 원소 전부입니다. 비운 칸은 먼저 접으므로 nullptr 가 없습니다. */
+        const vector<T*>& getItems() const
+        {
+            compact();
+            return _listItem;
+        }
+        /** @brief 원소가 `getItems()` 의 몇 번째인지 반환합니다. 없으면 `invalid_index::kUint32` 입니다. */
+        uint32 findIndex( const T* pItem ) const
+        {
+            compact();
+            const auto it = _mapIndex.find( pItem );
+            return it != _mapIndex.end() ? it->second : invalid_index::kUint32;
+        }
 
     private:
-        /** @brief 비운 칸을 접고 옮겨진 유닛의 위치를 고칩니다. 비운 칸이 없으면 아무 일도 하지 않습니다. */
-        void compact() const;
+        /** @brief 비운 칸을 접고 옮겨진 원소의 위치를 고칩니다. 비운 칸이 없으면 아무 일도 하지 않습니다. */
+        void compact() const
+        {
+            if ( _removedCount == 0 )
+                return;
+#if defined( SW_DEBUG )
+            SW_ASSERT( _compacting.exchange( true ) == false ); // 두 스레드가 동시에 접는다 — 이 목록은 게임 스레드 전용이다
+#endif
+            size_t writeIndex = 0;
+            for ( size_t readIndex = 0; readIndex < _listItem.size(); ++readIndex )
+            {
+                T* pItem = _listItem[readIndex];
+                if ( pItem == nullptr )
+                    continue;
+                if ( writeIndex != readIndex )
+                {
+                    const T* pKey         = pItem;
+                    _listItem[writeIndex] = pItem;
+                    _mapIndex[pKey]       = static_cast<uint32>( writeIndex );
+                }
+                ++writeIndex;
+            }
+            _listItem.resize( writeIndex );
+            _removedCount = 0;
+#if defined( SW_DEBUG )
+            _compacting.store( false );
+#endif
+        }
 
-        mutable vector<SkeletalMeshComponent*>                      _listUnit;          ///< 등록 순서. 해제한 칸은 nullptr 로 남을 수 있다(`compact` 가 접는다)
-        mutable unordered_map<const SkeletalMeshComponent*, uint32> _mapIndex;          ///< 유닛 → `_listUnit` 안의 위치
-        mutable uint32                                              _removedCount{ 0 }; ///< `_listUnit` 안의 비운 칸 수
+        mutable vector<T*>                      _listItem;          ///< 등록 순서. 해제한 칸은 nullptr 로 남을 수 있다(`compact` 가 접는다)
+        mutable unordered_map<const T*, uint32> _mapIndex;          ///< 원소 → `_listItem` 안의 위치
+        mutable uint32                          _removedCount{ 0 }; ///< `_listItem` 안의 비운 칸 수
+#if defined( SW_DEBUG )
+        mutable std::atomic<bool> _compacting{ false }; ///< Debug: 접는 중인지(동시 접기 탐지)
+#endif
     };
+
+    /** @brief 등록된 애니메이션 유닛(등록 순서). */
+    using AnimationUnitList = AnimationOrderedList<SkeletalMeshComponent>;
 } // namespace sw
 
 namespace sw
@@ -315,7 +389,7 @@ namespace sw
         /** @brief 등록된 유닛 수입니다. */
         uint32 getUnitCount() const { return _unitList.getCount(); }
         /** @brief 등록된 유닛 전부입니다(등록 순서이고 평가 순서는 아닙니다). 레벨은 다음 평가 때 고쳐지므로 "지금 있는 유닛"은 이 함수로 봅니다. */
-        const vector<SkeletalMeshComponent*>& getUnits() const { return _unitList.getUnits(); }
+        const vector<SkeletalMeshComponent*>& getUnits() const { return _unitList.getItems(); }
         /** @brief 의존 레벨입니다(0 이 먼저). 테스트와 진단용입니다. 해제된 외톨이 유닛을 레벨 0 에서 먼저 빼므로 죽은 유닛 포인터는 보이지 않습니다. */
         const vector<vector<SkeletalMeshComponent*>>& getLevels()
         {
@@ -375,7 +449,7 @@ namespace sw
         vector<vector<SkeletalMeshComponent*>>      _listLevel;
         vector<SkeletalMeshComponent*>              _listActive;     ///< 이번 프레임에 단계를 처리하는 유닛(레벨 순서)이다. 재사용한다
         vector<uint32>                              _listLevelStart; ///< `_listActive` 안의 레벨 시작 위치다. 끝 위치를 하나 더 둔다
-        vector<IAnimationLODClient*>                _listLODClient;
+        AnimationOrderedList<IAnimationLODClient>   _lodClientList;  ///< LOD 클라이언트(등록 순서 — 판정 · 예산 순서)
         vector<AnimationLODView>                    _listLODView;
         AnimationLODView                            _pendingLODView;             ///< 대기 뷰(`setPendingLODView`) — `_bHasPendingLODView` 일 때만 판정에 든다
         vector<AnimationLODState>                   _listScratchLODState;        ///< 판정 중 클라이언트별 상태다(재사용)
