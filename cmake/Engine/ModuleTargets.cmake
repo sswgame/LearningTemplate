@@ -416,3 +416,54 @@ function(sw_addEditorExtension TARGET_NAME)
 	)
 	add_dependencies(EditorAll ${TARGET_NAME})
 endfunction()
+
+# ------------------------------------------------------------------------------
+# sw_addEditorExtensionModel — 에디터 확장의 "화면 없는 모델" 소스를 테스트가 직접 컴파일할 집합에 올린다
+#
+# 모델은 ImGui 를 몰라 확장 DLL 을 링크하지 않고도 테스트가 컴파일할 수 있다. 그 목록을 테스트 쪽 CMake 에 손으로 적으면 모델을 더할 때
+# 두 곳을 고쳐야 해서(목록은 하나 — 확장 폴더 안) 확장의 CMakeLists.txt 가 선언하고 테스트는 `sw_getEditorExtensionModelSources` 로 읽는다.
+# 확장의 `sw_addEditorExtension` 보다 먼저 부른다 — 그 함수는 배포 · 꺼진 구성에서 return 하는데, 테스트는 그 구성에서도 모델을 컴파일해 왔다.
+#
+#   TARGET_NAME  확장 모듈 이름(GF_EditorPlugIn_<이름>) — 매니페스트의 키트 의존이 하나라도 꺼져 있으면 올리지 않는다(그 키트 헤더를 쓰는 소스라 못 짓는다)
+#   SOURCES      확장 폴더 기준 .cpp 경로 또는 `*` 가 든 패턴(폴더째). 하나도 못 찾는 패턴 · 없는 파일은 오류다
+#
+# 소스 경로만 올린다(오브젝트가 아니다) — 정의 · include · PCH · 로그 태그는 컴파일하는 테스트 타깃의 것이 그대로 적용된다(확장 DLL 의 내보내기 정의와 섞이지 않는다).
+# ------------------------------------------------------------------------------
+function(sw_addEditorExtensionModel TARGET_NAME)
+	cmake_parse_arguments(ARG "" "" "SOURCES" ${ARGN})
+	if(NOT ARG_SOURCES OR ARG_UNPARSED_ARGUMENTS)
+		message(FATAL_ERROR "sw_addEditorExtensionModel(${TARGET_NAME}): SOURCES 만 받는다 (받은 값: ${ARGN})")
+	endif()
+
+	get_property(listDependency GLOBAL PROPERTY SW_MODULE_${TARGET_NAME}_DEPENDENCIES)
+	foreach(dependency IN LISTS listDependency)
+		get_property(dependencyKind GLOBAL PROPERTY SW_MODULE_${dependency}_KIND)
+		get_property(bDependencyActive GLOBAL PROPERTY SW_MODULE_${dependency}_ACTIVE)
+		if(dependencyKind STREQUAL "Kit" AND NOT bDependencyActive)
+			return()
+		endif()
+	endforeach()
+
+	set(listModelSource "")
+	foreach(pattern IN LISTS ARG_SOURCES)
+		if(pattern MATCHES "\\*")
+			file(GLOB listMatch CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/${pattern}")
+			if(NOT listMatch)
+				message(FATAL_ERROR "sw_addEditorExtensionModel(${TARGET_NAME}): 패턴 '${pattern}' 에 맞는 파일이 없다")
+			endif()
+			list(APPEND listModelSource ${listMatch})
+		else()
+			if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${pattern}")
+				message(FATAL_ERROR "sw_addEditorExtensionModel(${TARGET_NAME}): '${pattern}' 파일이 없다")
+			endif()
+			list(APPEND listModelSource "${CMAKE_CURRENT_SOURCE_DIR}/${pattern}")
+		endif()
+	endforeach()
+	set_property(GLOBAL APPEND PROPERTY SW_EDITOR_EXTENSION_MODEL_SOURCES ${listModelSource})
+endfunction()
+
+# 올라온 모델 소스 전부(절대 경로)를 OUT_VAR 에 돌려준다. 확장 폴더(Source/GameFramework/PlugIn/Editor)가 구성된 뒤, 곧 `Test/` 가 구성될 때 읽는다.
+function(sw_getEditorExtensionModelSources OUT_VAR)
+	get_property(listModelSource GLOBAL PROPERTY SW_EDITOR_EXTENSION_MODEL_SOURCES)
+	set(${OUT_VAR} ${listModelSource} PARENT_SCOPE)
+endfunction()
