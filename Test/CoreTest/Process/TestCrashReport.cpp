@@ -4,6 +4,7 @@
 #include "Core/Diagnostics/CrashContext.h"
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Process/ProcessEnvironment.h"
 #include "Core/String/StringBuilder.h"
 
 #include "TestFramework/Harness/TestChildProcess.h"
@@ -260,14 +261,17 @@ SW_TEST_CASE( CrashReportTest, BreadcrumbsKeepTheLatestLinesInOrder )
  */
 SW_TEST_CASE( CrashReportTest, ChildProcessCrashesAsRequested )
 {
-    const utf8* pKind   = std::getenv( "SW_CRASH_CHILD_KIND" );
-    const utf8* pFolder = std::getenv( "SW_CRASH_CHILD_FOLDER" );
+    sw::string  pKindText;
+    const utf8* pKind = sw::ProcessEnvironment::tryRead( "SW_CRASH_CHILD_KIND", pKindText ) ? pKindText.c_str() : nullptr;
+    sw::string  pFolderText;
+    const utf8* pFolder = sw::ProcessEnvironment::tryRead( "SW_CRASH_CHILD_FOLDER", pFolderText ) ? pFolderText.c_str() : nullptr;
     if ( pKind == nullptr || pFolder == nullptr )
         SW_TEST_SKIP( "crash child only — EveryCrashKindLeavesAReport launches it" );
 
     sw::setCrashReportFolder( pFolder );
-    if ( const utf8* pDeadline = std::getenv( "SW_CRASH_CHILD_DEADLINE_SECONDS" ) )
-        sw::CrashHandler::setReportDeadline( static_cast<uint32>( std::atoi( pDeadline ) ) );
+    sw::string deadlineText;
+    if ( sw::ProcessEnvironment::tryRead( "SW_CRASH_CHILD_DEADLINE_SECONDS", deadlineText ) )
+        sw::CrashHandler::setReportDeadline( static_cast<uint32>( std::atoi( deadlineText.c_str() ) ) );
 #if defined( SW_PLATFORM_WINDOWS )
     // 오류 보고 창이 떠서 부모가 기다리지 않게 한다(핸들러가 처리하면 원래 뜨지 않는다 — 처리하지 못했을 때를 위한 것).
     SetErrorMode( SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX );

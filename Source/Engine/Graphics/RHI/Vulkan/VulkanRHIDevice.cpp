@@ -5,6 +5,7 @@
 #include "Core/Common/PlatformOsHeaders.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Process/ProcessEnvironment.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/RHI/Support/FrameResourceRing.h"
@@ -183,10 +184,10 @@ namespace sw
                 }
                 else
                 {
-                    const utf8* pVulkanSdkEnv = std::getenv( "VULKAN_SDK" );
-                    if ( StringUtil::isNullOrEmpty( pVulkanSdkEnv ) == false )
+                    string vulkanSdkEnv;
+                    if ( ProcessEnvironment::tryReadNonEmpty( "VULKAN_SDK", vulkanSdkEnv ) )
                     {
-                        string sdkBinPath = FileUtil::joinPath( pVulkanSdkEnv, "Bin" );
+                        string sdkBinPath = FileUtil::joinPath( vulkanSdkEnv, "Bin" );
                         SetEnvironmentVariableW( L"VK_ADD_LAYER_PATH", StringUtil::utf8ToUtf16( sdkBinPath.c_str() ).c_str() );
                     }
                 }

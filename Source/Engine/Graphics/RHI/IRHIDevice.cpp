@@ -9,6 +9,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Process/ProcessEnvironment.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
@@ -390,12 +391,12 @@ namespace sw
         swapChainDesc._directUploadMaxBytes = gv_rhiDirectUploadMaxKilobytes > 0 ? static_cast<uint64>( gv_rhiDirectUploadMaxKilobytes ) * constant::kBytesPerKilobyte : 0u;
         swapChainDesc._stagingSoloMaxBytes  = gv_rhiStagingSingleMaxMegabytes > 0 ? static_cast<uint64>( gv_rhiStagingSingleMaxMegabytes ) * constant::kBytesPerMegabyte : 0u;
         {
-            const utf8* pSoftwareEnv = std::getenv( "SW_RHI_SOFTWARE_ADAPTER" );
-            bool        bSoftwareEnv = false;
-            // 환경 변수도 명령줄과 같은 켬/끔 토큰만 받는다. 알 수 없는 값은 끔으로 읽지 않고 멈춘다.
-            if ( pSoftwareEnv != nullptr && StringUtil::tryParseBool( pSoftwareEnv, bSoftwareEnv ) == false )
+            string softwareEnv;
+            bool   bSoftwareEnv = false;
+            // 환경 변수도 명령줄과 같은 켬/끔 토큰만 받는다. 알 수 없는 값은(빈 값 포함) 끔으로 읽지 않고 멈춘다.
+            if ( ProcessEnvironment::tryRead( "SW_RHI_SOFTWARE_ADAPTER", softwareEnv ) && StringUtil::tryParseBool( softwareEnv.c_str(), bSoftwareEnv ) == false )
             {
-                SW_LOG_ERROR( "SW_RHI_SOFTWARE_ADAPTER=\"%#\" is not a boolean (use 1, 0, true, false, yes, no, on or off)", pSoftwareEnv );
+                SW_LOG_ERROR( "SW_RHI_SOFTWARE_ADAPTER=\"%#\" is not a boolean (use 1, 0, true, false, yes, no, on or off)", softwareEnv.c_str() );
                 return false;
             }
             swapChainDesc._bSoftwareAdapter = gv_rhiSoftwareAdapter || bSoftwareEnv;

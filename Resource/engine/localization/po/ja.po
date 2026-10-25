@@ -477,6 +477,11 @@ msgctxt "Loading"
 msgid "Loading"
 msgstr "読み込み中"
 
+#: Source/Engine/UI/Widgets/TextInputWidget.cpp
+msgctxt "Notification.ClipboardWriteFailed"
+msgid "Could not copy to the clipboard."
+msgstr "クリップボードにコピーできませんでした。"
+
 #: Source/GameFramework/Base/Foundation/Framework/Save/Autosave.cpp
 msgctxt "Notification.GameSaved"
 msgid "Game saved"

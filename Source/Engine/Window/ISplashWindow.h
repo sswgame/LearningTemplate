@@ -72,6 +72,12 @@ namespace sw
         /** @brief 현재 플랫폼에 맞는 ISplashWindow 인스턴스를 만들어 반환합니다. */
         static unique_ptr<ISplashWindow> createPlatformSplash();
 
+        /**
+         * @brief 이 세션에서 스플래시 창을 띄울 수 있는지입니다(능력 질의). Windows 는 항상 true 이고, 리눅스는 X 서버(`DISPLAY`)가 있어야 한다 —
+         *        순수 Wayland 세션에는 스플래시 창 구현이 아직 없어 false 이다(XWayland 가 있으면 true). false 면 호출 쪽이 알리고 스플래시 없이 기동한다.
+         */
+        [[nodiscard]] static bool isPlatformSupported();
+
     protected:
         /**
          * @brief 스플래시 이미지(textures/splash.dds)를 로드합니다.

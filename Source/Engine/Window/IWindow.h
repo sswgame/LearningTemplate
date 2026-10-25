@@ -3,10 +3,12 @@
  * @brief 플랫폼 독립적인 창(OS 디스플레이 창) 생성과 메시지 처리 인터페이스입니다.
  */
 #pragma once
+#include "Core/Container/string.h"
 #include "Core/Module/ModuleUnloadListener.h"
 
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/RHI/IRenderSurface.h"
+#include "Engine/Window/CursorShape.h"
 
 namespace sw
 {
@@ -28,6 +30,17 @@ namespace sw
     {
         Windowed = 0,         ///< 테두리와 제목 줄이 있는 창입니다. 클라이언트 크기를 그대로 씁니다.
         BorderlessFullscreen, ///< 창이 놓인 모니터를 덮는 테두리 없는 창. 크기는 모니터 크기입니다.
+    };
+
+    /**
+     * @brief 포인터를 창에 묶는 방식입니다(`IWindow::setPointerLock`).
+     * @details `Released` 는 `None` 이라 쓰지 않는다 — 입력 관리자가 X11 헤더(`None` 매크로) 뒤에 이 헤더를 읽는다.
+     */
+    enum class WindowPointerLock : uint8
+    {
+        Released = 0, ///< 묶지 않는다.
+        Confined,     ///< 포인터가 창 밖으로 나가지 못한다. 움직임은 그대로 온다.
+        Locked,       ///< 포인터가 제자리에 서고 상대 이동만 온다.
     };
 
     /** @brief X11 창의 서버 연결과 창 ID 입니다. `IWindow::tryGetX11Surface` 가 X11 창일 때만 채웁니다. */
@@ -120,6 +133,50 @@ namespace sw
 
         /** @brief 배율 1 에 해당하는 DPI 입니다(Windows 와 X11 의 기준). */
         static constexpr float32 kReferenceDpi = 96.0f;
+
+        // ---- 창이 스스로 하는 포인터 동작(리눅스 입력 관리자가 읽는다) ----
+        // 입력 관리자는 창 종류가 아니라 이 질의로 가른다. X11 은 서버 호출을 입력 관리자가 직접 하므로(`tryGetX11Surface`) 이 동작을 하지 않고(기본: 지원 안 함),
+        // X11 이 아닌 창(Wayland)만 컴포지터 확장으로 이 동작을 한다. 새 확장이 더해져도 입력 관리자는 질의 하나만 읽는다.
+        // "지원 안 함"이 정상인 곳(해당 없는 창)과 청했는데 안 되는 곳(오류)은 호출 쪽이 가른다 — 여기서는 대신하지 않고 false 로 알린다.
+
+        /** @brief 창이 커서 모양을 스스로 바꾸는지(`setCursorShape` 가 되는지)입니다. */
+        [[nodiscard]] virtual bool supportsCursorShape() const { return false; }
+        /** @brief 커서 모양을 바꿉니다. `supportsCursorShape` 가 아니면 아무것도 하지 않고 false 입니다. */
+        [[nodiscard]] virtual bool setCursorShape( CursorShape shape )
+        {
+            (void)shape;
+            return false;
+        }
+        /** @brief 창이 포인터를 스스로 묶는지(`setPointerLock` 의 Locked 가 되는지)입니다. 컴포지터 확장이 없으면 false 입니다. */
+        [[nodiscard]] virtual bool supportsPointerLock() const { return false; }
+        /**
+         * @brief 포인터를 묶거나 풉니다. 같은 방식을 다시 부르면 아무것도 하지 않는다.
+         * @return 요청대로 되었으면(`Released` 는 항상) true, 못 했으면 false 입니다.
+         */
+        [[nodiscard]] virtual bool setPointerLock( WindowPointerLock lock ) { return lock == WindowPointerLock::Released; }
+        /**
+         * @brief 창이 운영체제 글 클립보드를 스스로 잇는지입니다(X11 은 CLIPBOARD 선택의 주인, Wayland 는 `wl_data_device` 선택 — 데이터 장치가 있어야 한다).
+         *        아니면 `PlatformClipboard::isAvailable` 이 false 라서 UI 가 엔진 안 클립보드를 쓴다.
+         */
+        [[nodiscard]] virtual bool supportsClipboard() const { return false; }
+        /** @brief 클립보드의 글을 @p outText 에 담습니다. 글이 없거나 시간 안에 답이 없거나 `supportsClipboard` 가 아니면 false 입니다. */
+        [[nodiscard]] virtual bool readClipboardText( string& outText )
+        {
+            (void)outText;
+            return false;
+        }
+        /** @brief 클립보드에 글을 씁니다. 못 쓰면(선택 주인이 못 되거나 컴포지터가 일련번호를 거절) false 입니다. */
+        [[nodiscard]] virtual bool writeClipboardText( string_view text )
+        {
+            (void)text;
+            return false;
+        }
+        /** @brief 커서를 숨기거나 보입니다. 창이 스스로 하지 않으면 false 입니다. */
+        [[nodiscard]] virtual bool setCursorVisible( bool bVisible )
+        {
+            (void)bVisible;
+            return false;
+        }
 
         /**
          * @brief 창 방식과 (창 모드일 때의) 클라이언트 크기를 바꿉니다.

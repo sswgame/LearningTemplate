@@ -15,14 +15,12 @@ namespace sw
         _api = api;
     }
 
-    void UIClipboardService::setText( string_view text )
+    bool UIClipboardService::setText( string_view text )
     {
         if ( _api._pWrite != nullptr )
-        {
-            _api._pWrite( text );
-            return;
-        }
+            return _api._pWrite( text );
         _text = string{ text };
+        return true;
     }
 
     bool UIClipboardService::tryGetText( string& outText ) const

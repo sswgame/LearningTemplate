@@ -42,19 +42,36 @@ namespace sw
         /** @brief 컴포지터가 창을 한 번 배치(configure)했으면 true 입니다. */
         bool isVisible() const override;
         /**
-         * @brief 화면 배율입니다. 창이 걸친 `wl_output` 들의 정수 배율(`wl_output.scale`) 중 가장 큰 값이고, 걸친 출력이 없으면 1 입니다.
-         * @details 알려 주기만 한다 — 버퍼 배율은 바꾸지 않아 컴포지터가 확대한다. 소수 배율(wp_fractional_scale_v1)은 프로토콜 생성 목록(CMake)에 없어 읽지 않는다.
+         * @brief 화면 배율입니다. 컴포지터가 소수 배율(`wp_fractional_scale_v1.preferred_scale`, 1/120 단위)을 알렸으면 그 값이고,
+         *        아니면 창이 걸친 `wl_output` 들의 정수 배율(`wl_output.scale`) 중 가장 큰 값이며, 걸친 출력도 없으면 1 입니다.
+         * @details 알려 주기만 한다 — 버퍼 배율은 바꾸지 않아 컴포지터가 확대한다. 소수 배율 프로토콜이 없는 컴포지터는 정상이며(오래된 컴포지터) 정수 배율이 그 길이다.
          */
         float32 getContentScale() const override;
+        /** @brief 컴포지터가 `wp_fractional_scale_manager_v1` 을 내놓았으면 true 입니다(없으면 `getContentScale` 은 정수 배율이다). */
+        [[nodiscard]] bool supportsFractionalScale() const;
+        /** @brief 컴포지터에 `zwp_pointer_constraints_v1` 과 `zwp_relative_pointer_manager_v1` 이 둘 다 있고 포인터 장치가 있으면 true 입니다. */
+        [[nodiscard]] bool supportsPointerLock() const override;
+        /**
+         * @brief 포인터를 창에 묶거나(Confined: `zwp_confined_pointer_v1`) 제자리에 세우거나(Locked: `zwp_locked_pointer_v1` + `zwp_relative_pointer_v1`) 풉니다(Released).
+         *        묶임은 컴포지터가 창에 포인터 포커스가 있을 때만 켠다(영속 수명이라 포커스가 돌아오면 다시 켜진다).
+         * @return 요청대로 걸었으면(Released 는 항상) true, 컴포지터에 확장이 없거나 포인터 장치가 없어 못 걸었으면 false 입니다(Confined 는 `zwp_pointer_constraints_v1` 만, Locked 는 `supportsPointerLock` 이 필요하다). 같은 방식을 다시 부르면 아무것도 하지 않는다.
+         */
+        [[nodiscard]] bool setPointerLock( WindowPointerLock lock ) override;
+        /** @brief 컴포지터에 `wp_cursor_shape_manager_v1` 이 있고 포인터 장치가 있으면 true 입니다. 없으면 `setCursorShape` 는 바꾸지 못한다(오래된 컴포지터 — 호출 쪽이 알린다). */
+        [[nodiscard]] bool supportsCursorShape() const override;
+        /** @brief 커서 모양을 `wp_cursor_shape_device_v1.set_shape` 로 바꿉니다. 포인터가 아직 창에 들어오지 않았거나 커서를 숨긴 동안은 기억만 하고 들어올 때 · 보일 때 적용한다. 확장이 없으면 false 입니다. */
+        [[nodiscard]] bool setCursorShape( CursorShape shape ) override;
         /** @brief 클립보드(`wl_data_device` 선택)의 글을 @p outText 에 담습니다. 선택이 없거나 글 형식이 없거나 200 ms 안에 답이 없으면 false 입니다. */
-        [[nodiscard]] bool readClipboardText( string& outText );
+        [[nodiscard]] bool readClipboardText( string& outText ) override;
+        /** @brief 컴포지터에 데이터 장치(`wl_data_device_manager`)와 seat 가 있으면 true 입니다. 없으면(seat 없는 headless 컴포지터) UI 는 엔진 안 클립보드를 쓴다. */
+        [[nodiscard]] bool supportsClipboard() const override;
         /** @brief @p text 를 클립보드 선택으로 내놓습니다. 글은 창이 들고 다른 프로그램이 청할 때(`wl_data_source.send`) 보냅니다. 입력 일련번호가 아직 없거나 데이터 장치가 없으면 false 입니다. */
-        [[nodiscard]] bool writeClipboardText( string_view text );
+        [[nodiscard]] bool writeClipboardText( string_view text ) override;
         /** @brief 전체 화면은 `xdg_toplevel_set_fullscreen`, 창 모드는 크기를 정하고 크기 통보를 보냅니다. */
         bool setDisplayMode( WindowDisplayMode mode, uint32 width, uint32 height ) override;
 
-        /** @brief 포인터가 이 창 위에 있을 때 커서를 숨기거나 기본 커서로 되돌립니다(wl_pointer_set_cursor · 커서 테마). */
-        void setCursorVisible( bool bVisible );
+        /** @brief 포인터가 이 창 위에 있을 때 커서를 숨기거나 되돌립니다(wl_pointer_set_cursor; 보일 때는 커서 모양 확장이 있으면 기억해 둔 모양, 없으면 커서 테마의 `left_ptr`). 커서 테마가 없으면 false 입니다. */
+        [[nodiscard]] bool setCursorVisible( bool bVisible ) override;
 
     protected:
         // 핸들 읽기는 기반의 보호 구역이다 — 바깥은 `getSurfaceHandle` · `getSurfaceDisplay` 를 종류(`getSurfaceKind`)와 함께 읽는다(여기서 다시 public 으로 열지 않는다).

@@ -25,6 +25,7 @@ namespace sw
         /// X11 헤더가 `FocusIn` · `FocusOut` 을 매크로로 정의한다(X.h) — 같은 번역 단위(InputManagerX11.cpp)에서 읽히므로 그 이름을 쓰지 않는다.
         FocusGained,
         FocusLost,
+        PointerRelative, ///< `_relativeX` · `_relativeY` 는 가속을 뺀 상대 이동(픽셀). 포인터가 잠긴 동안에만 온다(그때는 PointerMove 가 오지 않는다)
     };
 
     /** @brief 입력 하나입니다. */
@@ -39,6 +40,8 @@ namespace sw
         int32            _y{ 0 };
         float32          _wheel{ 0.0f };
         float32          _horizontalWheel{ 0.0f };
+        float32          _relativeX{ 0.0f };
+        float32          _relativeY{ 0.0f };
         utf8             _arrText[kTextCapacity]{};
     };
 } // namespace sw

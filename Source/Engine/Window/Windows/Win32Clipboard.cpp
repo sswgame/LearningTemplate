@@ -77,34 +77,34 @@ namespace sw
         return true;
     }
 
-    void PlatformClipboard::writeText( string_view text )
+    bool PlatformClipboard::writeText( string_view text )
     {
         const HWND owner = Win32ClipboardInternal::findOwnerWindow();
         if ( owner == nullptr )
         {
             SW_LOG_WARNING( "Clipboard write needs an active window to own the clipboard - not written" );
-            return;
+            return false;
         }
         const wstring                           wide = StringUtil::utf8ToUtf16( string( text ).c_str() );
         const Win32ClipboardInternal::OpenScope scope( owner );
         if ( scope.isOpen() == false || EmptyClipboard() == FALSE )
         {
             SW_LOG_WARNING( "Clipboard could not be opened - not written" );
-            return;
+            return false;
         }
         const size_t byteSize = ( wide.size() + 1 ) * sizeof( utf16 );
         HGLOBAL      hMemory  = GlobalAlloc( GMEM_MOVEABLE, byteSize );
         if ( hMemory == nullptr )
         {
             SW_LOG_WARNING( "Clipboard memory (%# bytes) could not be allocated - not written", static_cast<uint64>( byteSize ) );
-            return;
+            return false;
         }
         void* pDestination = GlobalLock( hMemory );
         if ( pDestination == nullptr )
         {
             GlobalFree( hMemory );
             SW_LOG_WARNING( "Clipboard memory could not be locked - not written" );
-            return;
+            return false;
         }
         Memory::copy( pDestination, wide.c_str(), byteSize );
         GlobalUnlock( hMemory );
@@ -113,7 +113,9 @@ namespace sw
         {
             GlobalFree( hMemory );
             SW_LOG_WARNING( "Clipboard data could not be set - not written" );
+            return false;
         }
+        return true;
     }
 } // namespace sw
 #endif

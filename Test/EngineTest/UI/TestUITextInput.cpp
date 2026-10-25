@@ -227,7 +227,7 @@ SW_TEST_CASE( UITextInputTest, ClipboardRoundTripAndSingleLinePaste )
     fixture.sendAction( sw::UIActionName::kTextPaste );
     SW_EXPECT_STREQ( "cdefab", field.getText().c_str() );
 
-    fixture._ui.getClipboard().setText( "x\ny\r\nz\t" );
+    SW_ASSERT_TRUE( fixture._ui.getClipboard().setText( "x\ny\r\nz\t" ) );
     field.setText( "" );
     fixture.sendAction( sw::UIActionName::kTextPaste );
     SW_EXPECT_STREQ( "xyz", field.getText().c_str() );
@@ -235,7 +235,7 @@ SW_TEST_CASE( UITextInputTest, ClipboardRoundTripAndSingleLinePaste )
     sw::string changed{};
     (void)field.getOnTextChanged().add( [&changed]( const sw::string& text )
     { changed = text; } );
-    fixture._ui.getClipboard().setText( "123456" );
+    SW_ASSERT_TRUE( fixture._ui.getClipboard().setText( "123456" ) );
     field.setText( "" );
     field.setMaxLength( 4 );
     fixture.sendAction( sw::UIActionName::kTextPaste );
@@ -428,7 +428,7 @@ SW_TEST_CASE( UITextInputTest, ClipboardServiceUsesSystemHooksWhenSet )
     sw::UIClipboardService clipboard{};
     sw::string             out{};
     SW_EXPECT_FALSE( clipboard.tryGetText( out ) ); // 비어 있다
-    clipboard.setText( "inner" );
+    SW_ASSERT_TRUE( clipboard.setText( "inner" ) );
     SW_ASSERT_TRUE( clipboard.tryGetText( out ) );
     SW_EXPECT_STREQ( "inner", out.c_str() );
 
@@ -439,13 +439,45 @@ SW_TEST_CASE( UITextInputTest, ClipboardServiceUsesSystemHooksWhenSet )
         return s_systemText.empty() == false;
     };
     api._pWrite = []( sw::string_view text )
-    { s_systemText = sw::string{ text }; };
+    {
+        s_systemText = sw::string{ text };
+        return true;
+    };
     clipboard.setAPI( api );
-    clipboard.setText( "sent" );
+    SW_ASSERT_TRUE( clipboard.setText( "sent" ) );
     SW_EXPECT_STREQ( "sent", s_systemText.c_str() ); // 운영체제에도 썼다
     s_systemText = "from another app";
     SW_ASSERT_TRUE( clipboard.tryGetText( out ) );
     SW_EXPECT_STREQ( "from another app", out.c_str() );
     s_systemText.clear();
     SW_EXPECT_FALSE( clipboard.tryGetText( out ) ); // 운영체제 쪽이 비면 비었다 — 엔진 안의 옛 글을 내지 않는다
+
+    // 운영체제가 쓰기를 거절하면 호출 쪽이 알 수 있어야 한다(조용히 성공으로 돌려주면 글 입력 칸의 알림도 잘라내기의 보호도 동작하지 않는다).
+    api._pWrite = []( sw::string_view )
+    { return false; };
+    clipboard.setAPI( api );
+    SW_EXPECT_FALSE( clipboard.setText( "refused" ) );
+}
+
+/**
+ * @brief [UITextInputTest] 운영체제 클립보드가 쓰기를 거절하면 잘라내기가 글을 지우지 않고 알림이 올라간다
+ * @details 변이: 복사 결과를 보지 않고 지우면 글이 클립보드에도 없이 사라지고, 알림을 올리지 않으면 사용자는 실패를 모른다.
+ */
+SW_TEST_CASE( UITextInputTest, CutKeepsTextWhenClipboardWriteFails )
+{
+    UITextInputFixture fixture;
+    SW_ASSERT_TRUE( fixture._bReady );
+    sw::TextInputWidget& field = *fixture._pField;
+    sw::UIClipboardAPI   api{};
+    api._pRead = []( sw::string& )
+    { return false; };
+    api._pWrite = []( sw::string_view )
+    { return false; };
+    fixture._ui.getClipboard().setAPI( api );
+    field.setText( "abcdef" );
+    fixture.sendAction( sw::UIActionName::kTextSelectAll );
+    fixture.sendAction( sw::UIActionName::kTextCut );
+    SW_EXPECT_STREQ( "abcdef", field.getText().c_str() );
+    SW_EXPECT_EQUAL( 1u, fixture._ui.getNotifications().getVisibleCount() + fixture._ui.getNotifications().getQueuedCount() );
+    fixture._ui.getClipboard().setAPI( sw::UIClipboardAPI{} );
 }

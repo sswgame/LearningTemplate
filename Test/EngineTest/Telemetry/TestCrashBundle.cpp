@@ -6,6 +6,7 @@
 #include "Core/Diagnostics/CrashContext.h"
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Process/ProcessEnvironment.h"
 
 #include "Engine/Observability/HTTPClient.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
@@ -325,7 +326,8 @@ SW_TEST_CASE( CrashBundleTest, ConsentFollowsTheUserSetting )
  */
 SW_TEST_CASE( CrashBundleTest, ChildCrashesWithBreadcrumbs )
 {
-    const utf8* pFolder = std::getenv( "SW_CRASH_BUNDLE_CHILD_FOLDER" );
+    sw::string  pFolderText;
+    const utf8* pFolder = sw::ProcessEnvironment::tryRead( "SW_CRASH_BUNDLE_CHILD_FOLDER", pFolderText ) ? pFolderText.c_str() : nullptr;
     if ( pFolder == nullptr )
         SW_TEST_SKIP( "crash child only — RealCrashLeavesABundle launches it" );
     setCrashReportFolder( pFolder );

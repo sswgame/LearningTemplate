@@ -7,6 +7,7 @@
 #include "Core/LogSink/ConsoleLogOutput.h"
 #include "Core/LogSink/FileLogOutput.h"
 #include "Core/LogSink/ILogOutput.h"
+#include "Core/Process/ProcessEnvironment.h"
 
 #include "TestFramework/Harness/TestChildProcess.h"
 #include "TestFramework/TestFramework.h"
@@ -646,7 +647,8 @@ SW_TEST_CASE( LogTest, OutputsBeyondTheCapAreRejectedNotSilentlyIgnored )
  */
 SW_TEST_CASE( LogTest, DeadlockChildRoleRunsAScenario )
 {
-    const utf8* pScenario = std::getenv( kDeadlockChildEnvironment );
+    sw::string  pScenarioText;
+    const utf8* pScenario = sw::ProcessEnvironment::tryRead( kDeadlockChildEnvironment, pScenarioText ) ? pScenarioText.c_str() : nullptr;
     if ( pScenario == nullptr )
         SW_TEST_SKIP( "child only — the Deadlock tests launch it" );
     const sw::string_view scenario{ pScenario };
@@ -877,7 +879,7 @@ SW_TEST_CASE( LogTest, FileLogOutputWritesTheFileOfItsHourAndSession )
  */
 SW_TEST_CASE( LogTest, ConsoleChildRoleWritesAMarker )
 {
-    if ( std::getenv( "SW_TEST_CONSOLE_LOG_CHILD" ) == nullptr )
+    if ( sw::ProcessEnvironment::isSet( "SW_TEST_CONSOLE_LOG_CHILD" ) == false )
         SW_TEST_SKIP( "child only — ConsoleLogOutputReachesStandardOutput launches it" );
 
     sw::ConsoleLogOutput output;
@@ -907,7 +909,8 @@ SW_TEST_CASE( LogTest, ConsoleLogOutputReachesStandardOutput )
  */
 SW_TEST_CASE( LogTest, StderrChildRoleWritesMarkers )
 {
-    const utf8* pRole = std::getenv( "SW_TEST_LOG_STDERR_CHILD" );
+    sw::string  pRoleText;
+    const utf8* pRole = sw::ProcessEnvironment::tryRead( "SW_TEST_LOG_STDERR_CHILD", pRoleText ) ? pRoleText.c_str() : nullptr;
     if ( pRole == nullptr )
         SW_TEST_SKIP( "child only — the stderr cases launch it" );
 

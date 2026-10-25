@@ -9,6 +9,7 @@
 #include "Engine/Profiling/Tracy/TracyProfilerBackend.h"
 
 #include "Core/Common/StdHeaders.h"
+#include "Core/Process/ProcessEnvironment.h"
 
 #if defined( SW_PROFILER_TRACY )
     #include "Core/Common/PlatformOsHeaders.h"
@@ -116,9 +117,10 @@ namespace sw
                 TracyClientAPI api{};
     #if defined( SW_PLATFORM_WINDOWS )
                 // Tracy 는 DLL 이 올라올 때 모든 인터페이스에서 연결을 기다려 Windows 방화벽 허용 창이 뜬다. 같은 PC 의 뷰어만 받도록 loopback 에 묶는다.
-                // 다른 PC 의 뷰어를 받으려면 실행 전에 환경 변수 TRACY_ONLY_LOCALHOST=0 을 정한다. CRT 환경 복사본을 쓰므로 _putenv_s 로 정한다.
-                if ( std::getenv( "TRACY_ONLY_LOCALHOST" ) == nullptr )
-                    (void)_putenv_s( "TRACY_ONLY_LOCALHOST", "1" );
+                // 다른 PC 의 뷰어를 받으려면 실행 전에 환경 변수 TRACY_ONLY_LOCALHOST=0 을 정한다(빈 값도 사용자가 정한 값이다). Tracy 클라이언트가 CRT 환경 복사본을 읽으므로 `trySet` 이 복사본도 바꾼다.
+                string tracyOnlyLocalhost;
+                if ( ProcessEnvironment::tryRead( "TRACY_ONLY_LOCALHOST", tracyOnlyLocalhost ) == false )
+                    (void)ProcessEnvironment::trySet( "TRACY_ONLY_LOCALHOST", "1" ); // 못 정해도 방화벽 허용 창이 뜰 뿐이다
                 const HMODULE hClient = LoadLibraryExW( L"TracyClient.dll", nullptr, LOAD_LIBRARY_SEARCH_DEFAULT_DIRS );
                 if ( hClient == nullptr )
                     return api;
@@ -197,10 +199,10 @@ namespace sw
     uint16 TracyProfilerBackend::getDataPort()
     {
         // Tracy 클라이언트와 같은 규칙이다(TracyProfiler.cpp — TRACY_PORT 환경 변수가 있으면 그 값).
-        const utf8* pPort = std::getenv( "TRACY_PORT" );
-        if ( pPort == nullptr || pPort[0] == '\0' )
+        string portText;
+        if ( ProcessEnvironment::tryReadNonEmpty( "TRACY_PORT", portText ) == false )
             return TracyProfilerBackendInternal::kDefaultDataPort;
-        const int32 port = std::atoi( pPort );
+        const int32 port = std::atoi( portText.c_str() );
         if ( 0 < port && port <= TracyProfilerBackendInternal::kMaxPort )
             return static_cast<uint16>( port );
         return TracyProfilerBackendInternal::kDefaultDataPort;

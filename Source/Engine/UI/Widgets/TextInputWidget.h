@@ -99,6 +99,8 @@ namespace sw
         bool handleEditAction( const hashed_string& action );
         /** @brief 이 위젯이 든 화면의 UI 시스템 클립보드입니다(화면 밖이면 nullptr). */
         UIClipboardService* findClipboard() const;
+        /** @brief 클립보드에 쓰지 못했다고 이 화면의 알림(`UINotificationService`)으로 사용자에게 알립니다(화면 밖이면 아무것도 하지 않는다). */
+        void notifyClipboardWriteFailed() const;
         /** @brief 보이는 글(커서 자리에 조합을 끼운 것) 안의 바이트 위치 @p displayByte 가 놓인 가로 위치입니다(이 위젯 로컬, 마지막 그리기의 배치 기준). */
         float32 computeEdgeX( uint32 displayByte ) const;
 

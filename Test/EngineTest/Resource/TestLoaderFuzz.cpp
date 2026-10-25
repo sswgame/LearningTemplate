@@ -5,6 +5,7 @@
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Process/ProcessEnvironment.h"
 
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
 
@@ -209,7 +210,8 @@ namespace
 
     uint64 readEnvironmentNumber( const utf8* pName, uint64 fallback )
     {
-        const utf8* pValue = std::getenv( pName );
+        sw::string  pValueText;
+        const utf8* pValue = sw::ProcessEnvironment::tryRead( pName, pValueText ) ? pValueText.c_str() : nullptr;
         return pValue != nullptr && pValue[0] != '\0' ? std::strtoull( pValue, nullptr, 0 ) : fallback;
     }
 
@@ -351,7 +353,7 @@ SW_TEST_CASE( LoaderFuzzTest, EveryLoaderSurvivesBoundaryInput )
  */
 SW_TEST_CASE( LoaderFuzzTest, ChildLeavesRenderResourceForStaticDestruction )
 {
-    if ( std::getenv( "SW_FUZZ_EXIT_PROBE_CHILD" ) == nullptr )
+    if ( sw::ProcessEnvironment::isSet( "SW_FUZZ_EXIT_PROBE_CHILD" ) == false )
         SW_TEST_SKIP( "exit probe child only — RenderResourceOutlivesStaticDestruction launches it" );
     test::ScopedLogSuppressor suppressor;
     for ( const test::LoaderFuzzTarget& target : test::getLoaderFuzzTargets() )

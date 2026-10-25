@@ -4,6 +4,7 @@
 
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Process/ProcessEnvironment.h"
 
 #include "Engine/Resource/Image/DDSLoader.h"
 #include "Engine/Resource/ResourcePaths.h"
@@ -33,6 +34,19 @@ namespace sw
         return make_unique<X11SplashWindow>();
 #else
         return nullptr;
+#endif
+    }
+
+    bool ISplashWindow::isPlatformSupported()
+    {
+#if defined( SW_PLATFORM_WINDOWS )
+        return true;
+#elif defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
+        // X11 스플래시는 `XOpenDisplay( nullptr )` 로 연결한다 — `DISPLAY` 가 없으면 열 수 없다(순수 Wayland 세션).
+        string display;
+        return ProcessEnvironment::tryReadNonEmpty( "DISPLAY", display );
+#else
+        return false;
 #endif
     }
 

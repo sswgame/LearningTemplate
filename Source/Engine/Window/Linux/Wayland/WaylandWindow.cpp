@@ -18,7 +18,12 @@
     #include <wayland-cursor.h>
     #include <xkbcommon/xkbcommon.h>
 
-    #include "xdg-shell-client-protocol.h" // 구성 때 wayland-scanner 가 만든다(cmake/Modules/Platform/Linux.cmake)
+    // 구성 때 wayland-scanner 가 만든다(cmake/Modules/Platform/Linux.cmake 의 프로토콜 XML 목록)
+    #include "cursor-shape-v1-client-protocol.h"
+    #include "fractional-scale-v1-client-protocol.h"
+    #include "pointer-constraints-unstable-v1-client-protocol.h"
+    #include "relative-pointer-unstable-v1-client-protocol.h"
+    #include "xdg-shell-client-protocol.h"
 
     #include <cerrno>
     #include <csignal>
@@ -71,6 +76,21 @@ namespace sw
         wl_data_offer*          _pIntroducedOffer{ nullptr }; ///< 방금 소개된 제안(`selection` 이 오기 전까지 형식을 모은다)
         string                  _clipboardText;
 
+        // 선택 확장(컴포지터에 없으면 nullptr — 없는 것이 정상인 길과 있어야 하는 길은 호출 쪽이 가른다: 소수 배율은 정수 배율로, 포인터 잠금은 호출 쪽이 오류로 알린다).
+        wp_fractional_scale_manager_v1*  _pFractionalScaleManager{ nullptr };
+        wp_fractional_scale_v1*          _pFractionalScale{ nullptr };
+        uint32                           _fractionalScale120{ 0 }; ///< 컴포지터가 알린 선호 배율(1/120 단위, 0 이면 아직 못 받았다)
+        zwp_pointer_constraints_v1*      _pPointerConstraints{ nullptr };
+        zwp_relative_pointer_manager_v1* _pRelativePointerManager{ nullptr };
+        zwp_relative_pointer_v1*         _pRelativePointer{ nullptr };
+        zwp_locked_pointer_v1*           _pLockedPointer{ nullptr };
+        zwp_confined_pointer_v1*         _pConfinedPointer{ nullptr };
+        wp_cursor_shape_manager_v1*      _pCursorShapeManager{ nullptr };
+        wp_cursor_shape_device_v1*       _pCursorShapeDevice{ nullptr };              ///< 포인터 장치가 생길 때 만든다
+        CursorShape                      _cursorShape{ CursorShape::Arrow };          ///< 기억해 둔 모양(들어올 때 · 보일 때 적용한다)
+        WindowPointerLock                _pointerLock{ WindowPointerLock::Released }; ///< 걸어 둔 방식
+        bool                             _bPointerLocked{ false };                    ///< 컴포지터가 잠금을 켰다(`locked`) — 이 동안 포인터 움직임 대신 상대 이동이 온다
+
         vector<WaylandOutput>     _listOutput;                   ///< 바인드한 출력과 그 배율
         vector<WaylandInputEvent> _listPendingInput;             ///< 리스너가 쌓고 `processMessages` 가 넘긴다
         uint32                    _inputSerial{ 0 };             ///< 마지막 키 · 버튼 · 들어옴의 일련번호(선택을 내놓을 때 컴포지터가 요구한다)
@@ -107,6 +127,19 @@ namespace sw
             _bIntroducedHasPlain = false;
         }
 
+        /** @brief 걸어 둔 잠금 · 가둠을 풉니다(없으면 아무것도 하지 않는다). */
+        void releasePointerConstraint()
+        {
+            if ( _pLockedPointer != nullptr )
+                zwp_locked_pointer_v1_destroy( _pLockedPointer );
+            if ( _pConfinedPointer != nullptr )
+                zwp_confined_pointer_v1_destroy( _pConfinedPointer );
+            _pLockedPointer   = nullptr;
+            _pConfinedPointer = nullptr;
+            _pointerLock      = WindowPointerLock::Released;
+            _bPointerLocked   = false;
+        }
+
         void dropSelectionOffer()
         {
             if ( _pSelectionOffer != nullptr )
@@ -137,6 +170,34 @@ namespace sw
             static constexpr uint32 kOutputVersion     = 2; ///< 2 에서 `scale` 이벤트가 생긴다
             /** @brief 1 로 바인드해 끌어다 놓기(판 3) 이벤트가 오지 않게 한다 — 선택(클립보드)만 쓴다. */
             static constexpr uint32 kDataDeviceManagerVersion = 1;
+            /** @brief 세 확장은 모두 판 1 만 있다 — 리스너 구조체도 판 1 의 이벤트를 모두 채운다. 판이 오르면 여기와 리스너를 함께 올린다(컴파일러가 알려 주지 않는다). */
+            static constexpr uint32 kFractionalScaleVersion    = 1;
+            static constexpr uint32 kPointerConstraintsVersion = 1;
+            static constexpr uint32 kRelativePointerVersion    = 1;
+            static constexpr uint32 kCursorShapeVersion        = 1; ///< 판 1 의 모양 목록만 쓴다(`mapCursorShape`)
+
+            /** @brief 엔진 커서 모양을 `wp_cursor_shape_device_v1` 의 모양 번호로 바꿉니다. */
+            static uint32 mapCursorShape( CursorShape shape )
+            {
+                switch ( shape )
+                {
+                    case CursorShape::Hand:
+                        return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_POINTER;
+                    case CursorShape::TextBeam:
+                        return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_TEXT;
+                    case CursorShape::ResizeHorizontal:
+                        return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_EW_RESIZE;
+                    case CursorShape::ResizeVertical:
+                        return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_NS_RESIZE;
+                    case CursorShape::NotAllowed:
+                        return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_NOT_ALLOWED;
+                    case CursorShape::Arrow:
+                        break;
+                }
+                return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_DEFAULT;
+            }
+            /** @brief `wp_fractional_scale_v1.preferred_scale` 의 분모입니다(배율 = 값 / 120). */
+            static constexpr float32 kFractionalScaleDenominator = 120.0f;
             /** @brief 클립보드 글 형식입니다(우선순위 순서). */
             static constexpr const utf8* kMimeUtf8  = "text/plain;charset=utf-8";
             static constexpr const utf8* kMimePlain = "text/plain";
@@ -162,6 +223,14 @@ namespace sw
                     state._pSeat = static_cast<wl_seat*>( wl_registry_bind( pRegistry, name, &wl_seat_interface, version < kSeatVersion ? version : kSeatVersion ) );
                 else if ( std::strcmp( pInterface, wl_data_device_manager_interface.name ) == 0 )
                     state._pDataDeviceManager = static_cast<wl_data_device_manager*>( wl_registry_bind( pRegistry, name, &wl_data_device_manager_interface, kDataDeviceManagerVersion ) );
+                else if ( std::strcmp( pInterface, wp_fractional_scale_manager_v1_interface.name ) == 0 )
+                    state._pFractionalScaleManager = static_cast<wp_fractional_scale_manager_v1*>( wl_registry_bind( pRegistry, name, &wp_fractional_scale_manager_v1_interface, kFractionalScaleVersion ) );
+                else if ( std::strcmp( pInterface, wp_cursor_shape_manager_v1_interface.name ) == 0 )
+                    state._pCursorShapeManager = static_cast<wp_cursor_shape_manager_v1*>( wl_registry_bind( pRegistry, name, &wp_cursor_shape_manager_v1_interface, kCursorShapeVersion ) );
+                else if ( std::strcmp( pInterface, zwp_pointer_constraints_v1_interface.name ) == 0 )
+                    state._pPointerConstraints = static_cast<zwp_pointer_constraints_v1*>( wl_registry_bind( pRegistry, name, &zwp_pointer_constraints_v1_interface, kPointerConstraintsVersion ) );
+                else if ( std::strcmp( pInterface, zwp_relative_pointer_manager_v1_interface.name ) == 0 )
+                    state._pRelativePointerManager = static_cast<zwp_relative_pointer_manager_v1*>( wl_registry_bind( pRegistry, name, &zwp_relative_pointer_manager_v1_interface, kRelativePointerVersion ) );
                 else if ( std::strcmp( pInterface, wl_output_interface.name ) == 0 )
                 {
                     WaylandOutput output;
@@ -365,6 +434,53 @@ namespace sw
                 wl_data_source_destroy( pSource );
             }
 
+            static void onFractionalScalePreferred( void* pData, wp_fractional_scale_v1* pFractionalScale, uint32 scale120 )
+            {
+                (void)pFractionalScale;
+                static_cast<State*>( pData )->_fractionalScale120 = scale120;
+            }
+
+            static void onLockedPointerLocked( void* pData, zwp_locked_pointer_v1* pLockedPointer )
+            {
+                (void)pLockedPointer;
+                static_cast<State*>( pData )->_bPointerLocked = true;
+            }
+
+            static void onLockedPointerUnlocked( void* pData, zwp_locked_pointer_v1* pLockedPointer )
+            {
+                (void)pLockedPointer;
+                static_cast<State*>( pData )->_bPointerLocked = false; // 포커스를 잃었다 — 영속 수명이라 포커스가 돌아오면 `locked` 가 다시 온다
+            }
+
+            static void onConfinedPointerConfined( void* pData, zwp_confined_pointer_v1* pConfinedPointer )
+            {
+                (void)pData;
+                (void)pConfinedPointer; // 가둠은 움직임을 그대로 받는다 — 알 일이 없다
+            }
+
+            static void onConfinedPointerUnconfined( void* pData, zwp_confined_pointer_v1* pConfinedPointer )
+            {
+                (void)pData;
+                (void)pConfinedPointer;
+            }
+
+            static void onRelativePointerMotion( void* pData, zwp_relative_pointer_v1* pRelativePointer, uint32 timeHigh, uint32 timeLow, wl_fixed_t dx, wl_fixed_t dy, wl_fixed_t dxUnaccelerated, wl_fixed_t dyUnaccelerated )
+            {
+                (void)pRelativePointer;
+                (void)timeHigh;
+                (void)timeLow;
+                (void)dx;
+                (void)dy;
+                State& state = *static_cast<State*>( pData );
+                if ( state._bPointerLocked == false )
+                    return; // 잠기지 않았으면 같은 움직임이 `wl_pointer.motion` 으로 오고, 이중으로 세지 않는다
+                WaylandInputEvent event;
+                event._kind      = WaylandInputKind::PointerRelative;
+                event._relativeX = static_cast<float32>( wl_fixed_to_double( dxUnaccelerated ) );
+                event._relativeY = static_cast<float32>( wl_fixed_to_double( dyUnaccelerated ) );
+                state.pushInput( event );
+            }
+
             static void onRegistryGlobalRemove( void* pData, wl_registry* pRegistry, uint32 name )
             {
                 (void)pData;
@@ -509,6 +625,8 @@ namespace sw
                 state.pushInput( move );
                 if ( state._bCursorVisible == false )
                     wl_pointer_set_cursor( state._pPointer, serial, nullptr, 0, 0 );
+                else if ( state._pCursorShapeDevice != nullptr )
+                    wp_cursor_shape_device_v1_set_shape( state._pCursorShapeDevice, serial, mapCursorShape( state._cursorShape ) ); // 들어올 때마다 커서를 다시 정해야 한다
             }
 
             static void onPointerLeave( void* pData, wl_pointer* pPointer, uint32 serial, wl_surface* pSurface )
@@ -712,33 +830,71 @@ namespace sw
                 return listener;
             }
 
+            static wp_fractional_scale_v1_listener makeFractionalScaleListener()
+            {
+                wp_fractional_scale_v1_listener listener{};
+                listener.preferred_scale = &onFractionalScalePreferred;
+                return listener;
+            }
+
+            static zwp_locked_pointer_v1_listener makeLockedPointerListener()
+            {
+                zwp_locked_pointer_v1_listener listener{};
+                listener.locked   = &onLockedPointerLocked;
+                listener.unlocked = &onLockedPointerUnlocked;
+                return listener;
+            }
+
+            static zwp_confined_pointer_v1_listener makeConfinedPointerListener()
+            {
+                zwp_confined_pointer_v1_listener listener{};
+                listener.confined   = &onConfinedPointerConfined;
+                listener.unconfined = &onConfinedPointerUnconfined;
+                return listener;
+            }
+
+            static zwp_relative_pointer_v1_listener makeRelativePointerListener()
+            {
+                zwp_relative_pointer_v1_listener listener{};
+                listener.relative_motion = &onRelativePointerMotion;
+                return listener;
+            }
+
             // 리스너는 객체가 사는 동안 그 자리에 있어야 한다 — 정적 상수로 둔다(상태를 갖지 않는다).
-            static const wl_registry_listener    s_registryListener;
-            static const xdg_wm_base_listener    s_wmBaseListener;
-            static const xdg_surface_listener    s_xdgSurfaceListener;
-            static const xdg_toplevel_listener   s_toplevelListener;
-            static const wl_keyboard_listener    s_keyboardListener;
-            static const wl_pointer_listener     s_pointerListener;
-            static const wl_seat_listener        s_seatListener;
-            static const wl_output_listener      s_outputListener;
-            static const wl_surface_listener     s_surfaceListener;
-            static const wl_data_offer_listener  s_dataOfferListener;
-            static const wl_data_device_listener s_dataDeviceListener;
-            static const wl_data_source_listener s_dataSourceListener;
+            static const wl_registry_listener             s_registryListener;
+            static const xdg_wm_base_listener             s_wmBaseListener;
+            static const xdg_surface_listener             s_xdgSurfaceListener;
+            static const xdg_toplevel_listener            s_toplevelListener;
+            static const wl_keyboard_listener             s_keyboardListener;
+            static const wl_pointer_listener              s_pointerListener;
+            static const wl_seat_listener                 s_seatListener;
+            static const wl_output_listener               s_outputListener;
+            static const wl_surface_listener              s_surfaceListener;
+            static const wl_data_offer_listener           s_dataOfferListener;
+            static const wl_data_device_listener          s_dataDeviceListener;
+            static const wl_data_source_listener          s_dataSourceListener;
+            static const wp_fractional_scale_v1_listener  s_fractionalScaleListener;
+            static const zwp_locked_pointer_v1_listener   s_lockedPointerListener;
+            static const zwp_confined_pointer_v1_listener s_confinedPointerListener;
+            static const zwp_relative_pointer_v1_listener s_relativePointerListener;
         };
 
-        const wl_registry_listener    WaylandWindowInternal::s_registryListener   = WaylandWindowInternal::makeRegistryListener();
-        const xdg_wm_base_listener    WaylandWindowInternal::s_wmBaseListener     = WaylandWindowInternal::makeWmBaseListener();
-        const xdg_surface_listener    WaylandWindowInternal::s_xdgSurfaceListener = WaylandWindowInternal::makeXdgSurfaceListener();
-        const xdg_toplevel_listener   WaylandWindowInternal::s_toplevelListener   = WaylandWindowInternal::makeToplevelListener();
-        const wl_keyboard_listener    WaylandWindowInternal::s_keyboardListener   = WaylandWindowInternal::makeKeyboardListener();
-        const wl_pointer_listener     WaylandWindowInternal::s_pointerListener    = WaylandWindowInternal::makePointerListener();
-        const wl_seat_listener        WaylandWindowInternal::s_seatListener       = WaylandWindowInternal::makeSeatListener();
-        const wl_output_listener      WaylandWindowInternal::s_outputListener     = WaylandWindowInternal::makeOutputListener();
-        const wl_surface_listener     WaylandWindowInternal::s_surfaceListener    = WaylandWindowInternal::makeSurfaceListener();
-        const wl_data_offer_listener  WaylandWindowInternal::s_dataOfferListener  = WaylandWindowInternal::makeDataOfferListener();
-        const wl_data_device_listener WaylandWindowInternal::s_dataDeviceListener = WaylandWindowInternal::makeDataDeviceListener();
-        const wl_data_source_listener WaylandWindowInternal::s_dataSourceListener = WaylandWindowInternal::makeDataSourceListener();
+        const wl_registry_listener             WaylandWindowInternal::s_registryListener        = WaylandWindowInternal::makeRegistryListener();
+        const xdg_wm_base_listener             WaylandWindowInternal::s_wmBaseListener          = WaylandWindowInternal::makeWmBaseListener();
+        const xdg_surface_listener             WaylandWindowInternal::s_xdgSurfaceListener      = WaylandWindowInternal::makeXdgSurfaceListener();
+        const xdg_toplevel_listener            WaylandWindowInternal::s_toplevelListener        = WaylandWindowInternal::makeToplevelListener();
+        const wl_keyboard_listener             WaylandWindowInternal::s_keyboardListener        = WaylandWindowInternal::makeKeyboardListener();
+        const wl_pointer_listener              WaylandWindowInternal::s_pointerListener         = WaylandWindowInternal::makePointerListener();
+        const wl_seat_listener                 WaylandWindowInternal::s_seatListener            = WaylandWindowInternal::makeSeatListener();
+        const wl_output_listener               WaylandWindowInternal::s_outputListener          = WaylandWindowInternal::makeOutputListener();
+        const wl_surface_listener              WaylandWindowInternal::s_surfaceListener         = WaylandWindowInternal::makeSurfaceListener();
+        const wl_data_offer_listener           WaylandWindowInternal::s_dataOfferListener       = WaylandWindowInternal::makeDataOfferListener();
+        const wl_data_device_listener          WaylandWindowInternal::s_dataDeviceListener      = WaylandWindowInternal::makeDataDeviceListener();
+        const wl_data_source_listener          WaylandWindowInternal::s_dataSourceListener      = WaylandWindowInternal::makeDataSourceListener();
+        const wp_fractional_scale_v1_listener  WaylandWindowInternal::s_fractionalScaleListener = WaylandWindowInternal::makeFractionalScaleListener();
+        const zwp_locked_pointer_v1_listener   WaylandWindowInternal::s_lockedPointerListener   = WaylandWindowInternal::makeLockedPointerListener();
+        const zwp_confined_pointer_v1_listener WaylandWindowInternal::s_confinedPointerListener = WaylandWindowInternal::makeConfinedPointerListener();
+        const zwp_relative_pointer_v1_listener WaylandWindowInternal::s_relativePointerListener = WaylandWindowInternal::makeRelativePointerListener();
 
         void WaylandWindowInternal::onSeatCapabilities( void* pData, wl_seat* pSeat, uint32 capabilities )
         {
@@ -754,6 +910,13 @@ namespace sw
             {
                 state._pPointer = wl_seat_get_pointer( pSeat );
                 wl_pointer_add_listener( state._pPointer, &s_pointerListener, &state );
+                if ( state._pRelativePointerManager != nullptr )
+                {
+                    state._pRelativePointer = zwp_relative_pointer_manager_v1_get_relative_pointer( state._pRelativePointerManager, state._pPointer );
+                    zwp_relative_pointer_v1_add_listener( state._pRelativePointer, &s_relativePointerListener, &state );
+                }
+                if ( state._pCursorShapeManager != nullptr )
+                    state._pCursorShapeDevice = wp_cursor_shape_manager_v1_get_pointer( state._pCursorShapeManager, state._pPointer );
             }
         }
     } // namespace
@@ -816,6 +979,12 @@ namespace sw
 
         state._pSurface = wl_compositor_create_surface( state._pCompositor );
         wl_surface_add_listener( state._pSurface, &Internal::s_surfaceListener, &state );
+        if ( state._pFractionalScaleManager != nullptr )
+        {
+            // 첫 commit 전에 만든다 — 컴포지터는 객체를 만들 때와 배율이 바뀔 때 `preferred_scale` 을 보낸다.
+            state._pFractionalScale = wp_fractional_scale_manager_v1_get_fractional_scale( state._pFractionalScaleManager, state._pSurface );
+            wp_fractional_scale_v1_add_listener( state._pFractionalScale, &Internal::s_fractionalScaleListener, &state );
+        }
         state._pXdgSurface = xdg_wm_base_get_xdg_surface( state._pWmBase, state._pSurface );
         xdg_surface_add_listener( state._pXdgSurface, &Internal::s_xdgSurfaceListener, &state );
         state._pToplevel = xdg_surface_get_toplevel( state._pXdgSurface );
@@ -848,6 +1017,9 @@ namespace sw
         }
         _bShouldClose = SW_FALSE;
         SW_LOG_INFO( "Native Wayland Window created successfully! (%#×%#)", _width, _height );
+        // 없는 확장은 오류가 아니라 능력 차이다 — 소수 배율이 없으면 정수 배율을 쓰고, 포인터 잠금이 없으면 요청하는 쪽(입력 관리자)이 알린다.
+        SW_LOG_INFO( "Wayland extensions: fractional scale %#, cursor shape %#, pointer constraints %#, relative pointer %#", state._pFractionalScaleManager != nullptr ? "yes" : "no",
+                     state._pCursorShapeManager != nullptr ? "yes" : "no", state._pPointerConstraints != nullptr ? "yes" : "no", state._pRelativePointerManager != nullptr ? "yes" : "no" );
         return true;
     }
 
@@ -866,6 +1038,21 @@ namespace sw
         {
             wl_output_destroy( output._pOutput );
         }
+        state.releasePointerConstraint();
+        if ( state._pCursorShapeDevice != nullptr )
+            wp_cursor_shape_device_v1_destroy( state._pCursorShapeDevice );
+        if ( state._pCursorShapeManager != nullptr )
+            wp_cursor_shape_manager_v1_destroy( state._pCursorShapeManager );
+        if ( state._pRelativePointer != nullptr )
+            zwp_relative_pointer_v1_destroy( state._pRelativePointer );
+        if ( state._pRelativePointerManager != nullptr )
+            zwp_relative_pointer_manager_v1_destroy( state._pRelativePointerManager );
+        if ( state._pPointerConstraints != nullptr )
+            zwp_pointer_constraints_v1_destroy( state._pPointerConstraints );
+        if ( state._pFractionalScale != nullptr )
+            wp_fractional_scale_v1_destroy( state._pFractionalScale );
+        if ( state._pFractionalScaleManager != nullptr )
+            wp_fractional_scale_manager_v1_destroy( state._pFractionalScaleManager );
         if ( state._pCursorSurface != nullptr )
             wl_surface_destroy( state._pCursorSurface );
         if ( state._pCursorTheme != nullptr )
@@ -999,6 +1186,10 @@ namespace sw
 
     float32 WaylandWindow::getContentScale() const
     {
+        // 소수 배율을 알린 컴포지터는 그 값이 정답이다(wl_output 의 정수 배율은 올림한 값이라 소수 배율에서는 어긋난다).
+        if ( _pState->_fractionalScale120 != 0 )
+            return static_cast<float32>( _pState->_fractionalScale120 ) / WaylandWindowInternal::kFractionalScaleDenominator;
+        // 소수 배율 프로토콜이 없는 컴포지터는 정상이다 — 정수 배율이 그 길이다.
         int32 scale = 1;
         for ( const WaylandOutput& output : _pState->_listOutput )
         {
@@ -1006,6 +1197,49 @@ namespace sw
                 scale = output._scale;
         }
         return static_cast<float32>( scale );
+    }
+
+    bool WaylandWindow::supportsFractionalScale() const
+    {
+        return _pState->_pFractionalScaleManager != nullptr;
+    }
+
+    bool WaylandWindow::supportsPointerLock() const
+    {
+        return _pState->_pPointerConstraints != nullptr && _pState->_pRelativePointerManager != nullptr && _pState->_pPointer != nullptr;
+    }
+
+    bool WaylandWindow::setPointerLock( WindowPointerLock lock )
+    {
+        State& state = *_pState;
+        if ( lock == state._pointerLock )
+            return true;
+        state.releasePointerConstraint();
+        if ( lock == WindowPointerLock::Released )
+            return true;
+        // 가둠은 상대 이동이 필요 없다 — 잠금만 상대 포인터를 요구한다(잠긴 포인터는 움직임이 오지 않는다).
+        const bool bSupported = lock == WindowPointerLock::Locked ? supportsPointerLock() : ( state._pPointerConstraints != nullptr && state._pPointer != nullptr );
+        if ( bSupported == false )
+            return false;
+        using Internal = WaylandWindowInternal;
+        if ( lock == WindowPointerLock::Locked )
+        {
+            state._pLockedPointer = zwp_pointer_constraints_v1_lock_pointer( state._pPointerConstraints, state._pSurface, state._pPointer, nullptr, ZWP_POINTER_CONSTRAINTS_V1_LIFETIME_PERSISTENT );
+            zwp_locked_pointer_v1_add_listener( state._pLockedPointer, &Internal::s_lockedPointerListener, &state );
+        }
+        else
+        {
+            state._pConfinedPointer = zwp_pointer_constraints_v1_confine_pointer( state._pPointerConstraints, state._pSurface, state._pPointer, nullptr, ZWP_POINTER_CONSTRAINTS_V1_LIFETIME_PERSISTENT );
+            zwp_confined_pointer_v1_add_listener( state._pConfinedPointer, &Internal::s_confinedPointerListener, &state );
+        }
+        state._pointerLock = lock;
+        wl_display_flush( state._pDisplay );
+        return true;
+    }
+
+    bool WaylandWindow::supportsClipboard() const
+    {
+        return _pState->_pDataDevice != nullptr;
     }
 
     bool WaylandWindow::readClipboardText( string& outText )
@@ -1079,30 +1313,53 @@ namespace sw
         return true;
     }
 
-    void WaylandWindow::setCursorVisible( bool bVisible )
+    bool WaylandWindow::supportsCursorShape() const
+    {
+        return _pState->_pCursorShapeDevice != nullptr;
+    }
+
+    bool WaylandWindow::setCursorShape( CursorShape shape )
+    {
+        State& state       = *_pState;
+        state._cursorShape = shape;
+        if ( state._pCursorShapeDevice == nullptr )
+            return false;
+        // 숨긴 동안과 포인터가 들어오기 전에는 일련번호가 없거나 보이면 안 된다 — 기억만 하고 들어올 때(`onPointerEnter`) · 보일 때(`setCursorVisible`) 적용한다.
+        if ( state._bCursorVisible && state._pointerSerial != 0 )
+        {
+            wp_cursor_shape_device_v1_set_shape( state._pCursorShapeDevice, state._pointerSerial, WaylandWindowInternal::mapCursorShape( shape ) );
+            wl_display_flush( state._pDisplay );
+        }
+        return true;
+    }
+
+    bool WaylandWindow::setCursorVisible( bool bVisible )
     {
         State& state          = *_pState;
         state._bCursorVisible = bVisible;
         if ( state._pPointer == nullptr || state._pointerSerial == 0 )
-            return; // 포인터가 들어올 때(`onPointerEnter`) 적용한다
+            return true; // 포인터가 들어올 때(`onPointerEnter`) 적용한다
         if ( bVisible == false )
         {
             wl_pointer_set_cursor( state._pPointer, state._pointerSerial, nullptr, 0, 0 );
-            return;
+            return true;
+        }
+        if ( state._pCursorShapeDevice != nullptr )
+        {
+            wp_cursor_shape_device_v1_set_shape( state._pCursorShapeDevice, state._pointerSerial, WaylandWindowInternal::mapCursorShape( state._cursorShape ) );
+            return true;
         }
         wl_cursor* const pCursor        = state._pCursorTheme != nullptr ? wl_cursor_theme_get_cursor( state._pCursorTheme, "left_ptr" ) : nullptr;
         const bool       bNoCursorImage = pCursor == nullptr || pCursor->image_count == 0 || state._pCursorSurface == nullptr;
         if ( bNoCursorImage )
-        {
-            SW_LOG_ERROR( "Wayland: no cursor theme (left_ptr) to show the cursor with" );
-            return;
-        }
+            return false; // 커서 테마가 없다 — 호출 쪽이 알린다
         wl_cursor_image* const pImage  = pCursor->images[0];
         wl_buffer* const       pBuffer = wl_cursor_image_get_buffer( pImage );
         wl_pointer_set_cursor( state._pPointer, state._pointerSerial, state._pCursorSurface, static_cast<int32>( pImage->hotspot_x ), static_cast<int32>( pImage->hotspot_y ) );
         wl_surface_attach( state._pCursorSurface, pBuffer, 0, 0 );
         wl_surface_damage( state._pCursorSurface, 0, 0, static_cast<int32>( pImage->width ), static_cast<int32>( pImage->height ) );
         wl_surface_commit( state._pCursorSurface );
+        return true;
     }
 
     void WaylandWindow::applyMinimumClientSize()
@@ -1190,6 +1447,26 @@ namespace sw
         return 1.0f;
     }
 
+    bool WaylandWindow::supportsFractionalScale() const
+    {
+        return false;
+    }
+
+    bool WaylandWindow::supportsPointerLock() const
+    {
+        return false;
+    }
+
+    bool WaylandWindow::setPointerLock( WindowPointerLock lock )
+    {
+        return lock == WindowPointerLock::Released;
+    }
+
+    bool WaylandWindow::supportsClipboard() const
+    {
+        return false;
+    }
+
     bool WaylandWindow::readClipboardText( string& outText )
     {
         (void)outText;
@@ -1202,9 +1479,21 @@ namespace sw
         return false;
     }
 
-    void WaylandWindow::setCursorVisible( bool bVisible )
+    bool WaylandWindow::supportsCursorShape() const
+    {
+        return false;
+    }
+
+    bool WaylandWindow::setCursorShape( CursorShape shape )
+    {
+        (void)shape;
+        return false;
+    }
+
+    bool WaylandWindow::setCursorVisible( bool bVisible )
     {
         (void)bVisible;
+        return false;
     }
 
     void WaylandWindow::applyMinimumClientSize()

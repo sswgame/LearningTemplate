@@ -8,6 +8,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
+#include "Engine/Localization/LocText.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Text/TextLayout.h"
 #include "Engine/UI/Accessibility/UIAccessibilityTypes.h"
@@ -284,6 +285,19 @@ namespace sw
         return pUI != nullptr ? &pUI->getClipboard() : nullptr;
     }
 
+    void TextInputWidget::notifyClipboardWriteFailed() const
+    {
+        WidgetTree* const pTree   = getTree();
+        UIScreen* const   pScreen = pTree != nullptr ? pTree->getScreen() : nullptr;
+        UISystem* const   pUI     = pScreen != nullptr ? pScreen->getUISystem() : nullptr;
+        if ( pUI == nullptr )
+            return;
+        UINotificationDesc notice{};
+        notice._text = SW_LOCTEXT( "Notification", "ClipboardWriteFailed", "Could not copy to the clipboard." );
+        notice._kind = UINotificationKind::Warning;
+        pUI->getNotifications().post( notice );
+    }
+
     bool TextInputWidget::handleEditAction( const hashed_string& action )
     {
         using Internal = TextInputWidgetInternal;
@@ -370,7 +384,11 @@ namespace sw
             }
             if ( hasSelection() == false )
                 return true;
-            pClipboard->setText( getSelectedText() );
+            if ( pClipboard->setText( getSelectedText() ) == false )
+            {
+                notifyClipboardWriteFailed();
+                return true; // 잘라내기는 복사가 된 뒤에만 지운다(안 그러면 글이 사라진다)
+            }
             if ( bCut && replaceSelection( string_view{} ) )
                 notifyTextEdited();
             return true;

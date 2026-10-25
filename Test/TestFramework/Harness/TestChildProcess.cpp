@@ -5,6 +5,7 @@
 #include "Core/Common/PlatformOsHeaders.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Process/ProcessEnvironment.h"
 #include "Core/String/StringBuilder.h"
 
 #include <cstdlib>
@@ -33,7 +34,8 @@ namespace test
             /** @brief 지금 값을 돌려준다(없으면 false). */
             [[nodiscard]] static bool readEnvironmentVariable( const utf8* pName, sw::string& outValue )
             {
-                const utf8* pValue = std::getenv( pName );
+                sw::string  pValueText;
+                const utf8* pValue = sw::ProcessEnvironment::tryRead( pName, pValueText ) ? pValueText.c_str() : nullptr;
                 if ( pValue == nullptr )
                     return false;
                 outValue = pValue;

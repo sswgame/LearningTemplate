@@ -461,6 +461,11 @@
 				<item>engine/ui/loading.ui.xml</item>
 			</origins>
 		</entry>
+		<entry key="Notification.ClipboardWriteFailed" source="Could not copy to the clipboard.">
+			<origins>
+				<item>Source/Engine/UI/Widgets/TextInputWidget.cpp</item>
+			</origins>
+		</entry>
 		<entry key="Notification.GameSaved" source="Game saved">
 			<origins>
 				<item>Source/GameFramework/Base/Foundation/Framework/Save/Autosave.cpp</item>

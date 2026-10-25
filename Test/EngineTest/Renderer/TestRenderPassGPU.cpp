@@ -8,6 +8,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Process/ProcessEnvironment.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Task/TaskManager.h"
 #include "Core/Time/MonotonicClock.h"
@@ -7488,7 +7489,8 @@ SW_TEST_CASE( RenderPassGPUTest, SoftwareAdapterSwitchStartsWarp )
         SW_EXPECT_TRUE_MSG( bReady, "the WARP device did not start" );
         SW_EXPECT_TRUE_MSG( bSoftware, "gv_rhiSoftwareAdapter=true did not put the device on the software adapter" );
         // 환경 변수(SW_RHI_SOFTWARE_ADAPTER=1)로 테스트 전체를 WARP 로 돌리는 실행이면 "끄면 하드웨어" 는 볼 수 없다.
-        const utf8* pEnv     = std::getenv( "SW_RHI_SOFTWARE_ADAPTER" );
+        sw::string  pEnvText;
+        const utf8* pEnv     = sw::ProcessEnvironment::tryRead( "SW_RHI_SOFTWARE_ADAPTER", pEnvText ) ? pEnvText.c_str() : nullptr;
         bool        bEnvWarp = false;
         SW_EXPECT_TRUE_MSG( pEnv == nullptr || sw::StringUtil::tryParseBool( pEnv, bEnvWarp ), "SW_RHI_SOFTWARE_ADAPTER is not a boolean" );
         test::RHITestDevice hardware( backend );

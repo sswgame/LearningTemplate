@@ -67,7 +67,11 @@ namespace sw
         void applyWindowVisibility( bool bShow ) override;
         /** @brief X11 창이 지금 화면에 보이는지(창 관리자가 매핑했는지) 반환합니다. */
         bool isVisible() const override;
-        /** @brief 데스크톱이 알리는 `Xft.dpi` 리소스 / 96 입니다(GNOME · KDE · xrdb). 없으면 1. */
+        /**
+         * @brief 데스크톱이 알리는 `Xft.dpi` 리소스 / 96 입니다(GNOME · KDE · xrdb). 없으면 1.
+         * @details XWayland 에서도 같은 길이다(컴포지터가 배율을 이 리소스에 적는다). 리소스는 연결을 연 때의 값(`XResourceManagerString` 은 `XOpenDisplay` 가 읽어 둔 것)이라
+         *          실행 중 배율을 바꾸면 따라가지 않는다 — 서버에 묻는 길은 왕복이고 `Engine::updateRuntimeUI` 가 프레임마다 부르므로 그대로 둔다. Xrandr 의 물리 크기 DPI 는 배율이 아니라 화면 밀도라 쓰지 않는다.
+         */
         float32 getContentScale() const override;
 
         /** @brief EWMH `_NET_WM_STATE_FULLSCREEN` 을 켜고 끄고, 창 모드면 `XResizeWindow` 로 크기를 바꿉니다. 크기 통보는 다음 ConfigureNotify 입니다. */
@@ -78,12 +82,14 @@ namespace sw
          * @brief 이 창을 CLIPBOARD 선택의 주인으로 두고 @p text 를 들고 있습니다. 다른 프로그램의 요청(`SelectionRequest`)은 `processMessages` 가 답합니다.
          * @return 주인이 되지 못하면(창이 없거나 서버가 거절) false 입니다.
          */
-        [[nodiscard]] bool writeClipboardText( string_view text );
+        [[nodiscard]] bool writeClipboardText( string_view text ) override;
+        /** @brief X11 창은 항상 CLIPBOARD 선택을 잇는다. */
+        [[nodiscard]] bool supportsClipboard() const override { return true; }
         /**
          * @brief CLIPBOARD 선택의 글(UTF8_STRING)을 읽습니다. 주인이 이 창이면 들고 있는 글이고, 아니면 주인에게 변환을 청해 짧게 기다립니다. 큰 글은 INCR 조각으로 받습니다.
          * @return 주인이 없거나, UTF-8 글을 주지 않거나, 시간 안에 답하지 않으면 false 입니다.
          */
-        [[nodiscard]] bool readClipboardText( string& outText );
+        [[nodiscard]] bool readClipboardText( string& outText ) override;
 #endif
 
     protected:

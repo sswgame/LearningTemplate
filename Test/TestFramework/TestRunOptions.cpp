@@ -3,6 +3,7 @@
 #include "TestFramework/TestRunOptions.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Process/ProcessEnvironment.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "sw/config/CookContract.gen.h"
@@ -121,8 +122,10 @@ namespace test
             _shardIndex = static_cast<uint32>( index );
             _shardCount = static_cast<uint32>( count );
         };
-        const utf8* pShardIndexEnv = std::getenv( "GTEST_SHARD_INDEX" );
-        const utf8* pShardCountEnv = std::getenv( "GTEST_TOTAL_SHARDS" );
+        sw::string  pShardIndexEnvText;
+        const utf8* pShardIndexEnv = sw::ProcessEnvironment::tryRead( "GTEST_SHARD_INDEX", pShardIndexEnvText ) ? pShardIndexEnvText.c_str() : nullptr;
+        sw::string  pShardCountEnvText;
+        const utf8* pShardCountEnv = sw::ProcessEnvironment::tryRead( "GTEST_TOTAL_SHARDS", pShardCountEnvText ) ? pShardCountEnvText.c_str() : nullptr;
         if ( pShardIndexEnv != nullptr && pShardCountEnv != nullptr )
             setShard( pShardIndexEnv, pShardCountEnv );
 

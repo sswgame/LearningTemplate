@@ -6,6 +6,8 @@
 
 namespace sw
 {
+    SW_LOG_CALLER( "SplashWindow" );
+
     SplashWindow::SplashWindow()
         : _pImpl{ nullptr }
     {
@@ -29,11 +31,20 @@ namespace sw
         (void)height;
         return false;
 #else
+        // 스플래시가 없는 세션은 폴백 없이 스플래시 없이 기동하는 것이 정상 경로이지만 조용히 지나가지 않고 한 번 알린다.
+        if ( ISplashWindow::isPlatformSupported() == false )
+        {
+            SW_LOG_INFO( "Splash window: this session cannot show one (Linux needs an X server - DISPLAY; a Wayland-only session has no splash window yet) - starting without it" );
+            return false;
+        }
         _pImpl = ISplashWindow::createPlatformSplash();
         if ( _pImpl == nullptr )
             return false;
 
-        return _pImpl->initialize( pTitle, pInitialStatus, width, height );
+        const bool bOpened = _pImpl->initialize( pTitle, pInitialStatus, width, height );
+        if ( bOpened == false )
+            SW_LOG_INFO( "Splash window: could not be opened (no display connection) - starting without it" );
+        return bOpened;
 #endif
     }
 

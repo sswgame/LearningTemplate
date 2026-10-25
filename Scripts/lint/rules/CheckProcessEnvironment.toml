@@ -1,0 +1,6 @@
+# CheckProcessEnvironment 의 규칙 데이터 — 게이트는 Scripts/lint/gate/CheckProcessEnvironment.py.
+
+# 환경 변수를 OS 에서 직접 읽어도 되는 파일 → 이유.
+[exemption]
+"Source/Core/Process/Posix/PosixProcessEnvironment.cpp" = "POSIX 의 유일한 읽기 자리 — `getenv` 를 여기서만 부르고 없음 · 빈 값을 `ProcessEnvironment::tryRead` 로 가른다"
+"Source/Core/Process/Windows/WindowsProcessEnvironment.cpp" = "Windows 의 유일한 읽기 자리 — `GetEnvironmentVariableW` 로 읽어 UTF-8 로 돌려준다(CRT `getenv` 는 ANSI 라 한글 사용자 이름이 깨진다)"

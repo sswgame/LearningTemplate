@@ -20,7 +20,6 @@
     #include "Engine/Input/Linux/LinuxGamepadDevice.h"
     #include "Engine/Window/IWindow.h"
     #include "Engine/Window/Linux/Wayland/WaylandInputEvent.h"
-    #include "Engine/Window/Linux/Wayland/WaylandWindow.h"
     #include "Engine/Window/NativeWindowEvent.h"
 
     #include <X11/XKBlib.h>
@@ -113,12 +112,11 @@ namespace sw
                 return s_pInputContext;
             }
 
-            /** @brief 활성 창이 Wayland 창이면 true 입니다 — 그 창의 핸들은 X11 이 아니라 아래 X11 호출을 하면 안 된다(`NativeSurfaceKind`). */
-            static bool isWaylandWindow( const IWindow* pWindow ) { return pWindow != nullptr && pWindow->getSurfaceKind() == NativeSurfaceKind::Wayland; }
-
             /**
              * @brief X11 창이면 서버 연결과 창 ID 를 담고 true 입니다. X11 호출(`XQueryPointer` 등)은 이 함수로 얻은 값으로만 한다.
              * @details Wayland 창의 `getNativeDisplay` 는 wl_display* 라 `Display*` 로 읽으면 죽는다(`IWindow::tryGetX11Surface`). X11 창이 아니거나 연결이 아직 없으면 false 이고 출력은 비어 있다.
+             *          이 입력 관리자는 창 종류를 가르지 않는다 — X11 서버 호출(보조 폴링 · 가운데 되돌리기 · AccessX 억제)은 이 함수가 true 일 때만 하고, false 인 창(Wayland)에는
+             *          그 동작이 해당 없음이라 건너뛰는 것이 정상이다. 창이 스스로 하는 동작(커서 모양 · 포인터 묶기 · 커서 숨기기)은 `IWindow` 의 질의로 가르고 안 되면 한 번 오류로 알린다.
              */
             [[nodiscard]] static bool tryGetX11( const IWindow* pWindow, Display*& pOutDisplay, Window& outWindow )
             {
@@ -132,14 +130,15 @@ namespace sw
                 return true;
             }
 
-            /** @brief Wayland 에 없는 기능을 알린 기록의 비트입니다(`markWaylandReported`). */
-            static constexpr uint32 kWaylandLockBit        = 1u << 0; ///< 포인터 잠금(zwp_pointer_constraints)
-            static constexpr uint32 kWaylandCursorShapeBit = 1u << 1; ///< 커서 모양
-            /** @brief Wayland 에 없는 기능을 이미 알린 비트의 모음입니다. */
-            static inline atomic<uint32> s_waylandReportedMask{ 0 };
+            /** @brief 창이 못 하는 동작을 알린 기록의 비트입니다(`markUnsupportedReported`). */
+            static constexpr uint32 kUnsupportedPointerLockBit   = 1u << 0; ///< 포인터 묶기
+            static constexpr uint32 kUnsupportedCursorShapeBit   = 1u << 1; ///< 커서 모양
+            static constexpr uint32 kUnsupportedCursorVisibleBit = 1u << 2; ///< 커서 숨기기 · 보이기
+            /** @brief 못 하는 동작을 이미 알린 비트의 모음입니다. */
+            static inline atomic<uint32> s_unsupportedReportedMask{ 0 };
 
             /** @brief @p featureBit 를 알린 것으로 표시합니다. 처음이면 true — 검사와 표시를 `fetch_or` 한 번으로 해 두 스레드가 동시에 와도 알림은 한 번이다. */
-            static bool markWaylandReported( uint32 featureBit ) { return ( s_waylandReportedMask.fetch_or( featureBit ) & featureBit ) == 0; }
+            static bool markUnsupportedReported( uint32 featureBit ) { return ( s_unsupportedReportedMask.fetch_or( featureBit ) & featureBit ) == 0; }
             /** @brief Wayland 포인터의 마지막 자리입니다(버튼 이벤트에는 좌표가 없다). */
             static inline int2 s_waylandPointer{ 0, 0 };
 
@@ -363,10 +362,6 @@ namespace sw
         IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
         if ( pWindow == nullptr || _pMouse == nullptr )
             return;
-        // Wayland 는 포인터를 물어볼 길이 없고(서버에 위치 질의가 없다) 들어옴 · 나감 · 버튼이 빠짐없이 온다 — 보조 폴링이 없다.
-        if ( X11InputInternal::isWaylandWindow( pWindow ) )
-            return;
-
         // 포인터가 창 안에 있고 포커스도 있으면 MotionNotify/ButtonRelease 가 빠짐없이 들어오므로
         // 보조 폴링이 필요 없다. XQueryPointer 는 서버와 동기 왕복하는 호출이라 프레임마다 부르면 그만큼 비용이 든다
         // (Win32 의 GetAsyncKeyState/GetCursorPos 는 값싼 호출이라 그쪽에는 없는 문제다).
@@ -377,7 +372,7 @@ namespace sw
         Display* pDisplay  = nullptr;
         Window   x11Window = 0;
         if ( X11InputInternal::tryGetX11( pWindow, pDisplay, x11Window ) == false )
-            return;
+            return; // X11 창이 아니면 해당 없음 — Wayland 는 위치를 물어볼 길이 없고 들어옴 · 나감 · 버튼이 빠짐없이 온다
 
         Window rootReturn{}, childReturn{};
         int32  rootX{}, rootY{}, winX{}, winY{};
@@ -448,6 +443,12 @@ namespace sw
                         postRawEvent( RawInputEvent::makeMouseWheel( input._wheel ) );
                     if ( input._horizontalWheel != 0.0f )
                         postRawEvent( RawInputEvent::makeMouseHorizontalWheel( input._horizontalWheel ) );
+                    break;
+                }
+                case WaylandInputKind::PointerRelative:
+                {
+                    // 포인터가 잠긴 동안의 움직임이다(위치는 서 있다) — Win32 WM_INPUT 과 같이 위치 없이 이동량만 넘긴다.
+                    postRawEvent( RawInputEvent::makeMouseRawDelta( input._relativeX, input._relativeY ) );
                     break;
                 }
                 case WaylandInputKind::PointerEnter:
@@ -576,17 +577,15 @@ namespace sw
         IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
         if ( pWindow == nullptr )
             return;
-        WaylandWindow* pWaylandWindow = WaylandWindow::tryCast( pWindow );
-        if ( pWaylandWindow != nullptr )
-        {
-            pWaylandWindow->setCursorVisible( bVisible );
-            return;
-        }
-
         Display* pDisplay  = nullptr;
         Window   x11Window = 0;
         if ( X11InputInternal::tryGetX11( pWindow, pDisplay, x11Window ) == false )
+        {
+            // X11 이 아닌 창은 스스로 커서를 숨긴다(Wayland `wl_pointer.set_cursor`). 못 하면 커서가 그대로 보이므로 한 번 오류로 알린다.
+            if ( pWindow->setCursorVisible( bVisible ) == false && X11InputInternal::markUnsupportedReported( X11InputInternal::kUnsupportedCursorVisibleBit ) )
+                SW_LOG_ERROR( "This window cannot hide or show the cursor (Wayland needs a pointer device and a cursor theme) - the cursor stays as it is" );
             return;
+        }
 
         if ( bVisible )
             XUndefineCursor( pDisplay, x11Window );
@@ -601,18 +600,18 @@ namespace sw
         IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
         if ( pWindow == nullptr )
             return;
-        // Wayland 창은 모양 커서를 아직 지원하지 않는다(`setCursorVisible` 만 있다). 이전에는 wl_display 를 Display* 로 읽어 죽었다 — 한 번 알리고 건너뛴다.
-        if ( X11InputInternal::isWaylandWindow( pWindow ) )
-        {
-            if ( X11InputInternal::markWaylandReported( X11InputInternal::kWaylandCursorShapeBit ) )
-                SW_LOG_ERROR( "Cursor shapes on Wayland are not implemented - the cursor keeps its current shape" );
-            return;
-        }
-
         Display* pDisplay  = nullptr;
         Window   x11Window = 0;
         if ( X11InputInternal::tryGetX11( pWindow, pDisplay, x11Window ) == false )
+        {
+            // X11 이 아닌 창은 스스로 모양을 바꾼다(Wayland `wp_cursor_shape_manager_v1`). 컴포지터에 그 확장이 없으면 못 바꾸고, 기본 화살표를 청한 것이면 이미 그 모양이라 알릴 일이 없다.
+            // 다른 모양을 청했는데 못 바꾸는 것은 오류로 한 번 알린다(조용히 건너뛰지 않는다).
+            const bool bApplied     = pWindow->supportsCursorShape() && pWindow->setCursorShape( _cursorShape );
+            const bool bNeedsReport = bApplied == false && _cursorShape != CursorShape::Arrow;
+            if ( bNeedsReport && X11InputInternal::markUnsupportedReported( X11InputInternal::kUnsupportedCursorShapeBit ) )
+                SW_LOG_ERROR( "This window cannot change the cursor shape (Wayland needs the compositor's cursor-shape-v1) - the cursor keeps its current shape" );
             return;
+        }
 
         XDefineCursor( pDisplay, x11Window, X11InputInternal::getOrCreateShapeCursor( pDisplay, _cursorShape ) );
         XFlush( pDisplay );
@@ -627,19 +626,20 @@ namespace sw
         IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
         if ( pWindow == nullptr )
             return;
-        // Wayland 는 클라이언트가 포인터를 잡거나 옮길 수 없다(zwp_pointer_constraints · relative-pointer 확장이 필요하고 아직 없다). 잠그지 않은 채로 한 번 알린다.
-        if ( X11InputInternal::isWaylandWindow( pWindow ) )
-        {
-            const bool bLockWanted = _pMouse->getLockMode() != MouseLockMode::None;
-            if ( bLockWanted && X11InputInternal::markWaylandReported( X11InputInternal::kWaylandLockBit ) )
-                SW_LOG_ERROR( "Mouse lock on Wayland needs pointer constraints, which are not implemented - the pointer stays free" );
-            return;
-        }
-
         Display* pDisplay  = nullptr;
         Window   x11Window = 0;
         if ( X11InputInternal::tryGetX11( pWindow, pDisplay, x11Window ) == false )
+        {
+            // X11 이 아닌 창은 포인터를 스스로 묶는다 — 클라이언트가 포인터를 옮길 수 없는 Wayland 는 가두기(ConfinedToWindow) · 잠그기(LockedInCenter)를 zwp_pointer_constraints 로 컴포지터에 청한다.
+            // 잠긴 포인터는 가운데로 되돌릴 필요가 없다(제자리에 서 있고 상대 이동만 온다). 못 걸면 잠그지 않은 채로 한 번 오류로 알린다.
+            // "X11 연결 전"과 헷갈리지 않는다: 창은 `initializeWindow` 가 성공한 뒤에야 `MainWindowSubsystem` 에 들어오고(`App.cpp` adopt), 다시 만들기(`recreate`)는 같은 스레드에서 끝나므로 여기 온 X11 창은 항상 연결이 있다.
+            // 그래서 이 갈래는 X11 이 아닌 창뿐이다. 실패해도 상태가 바뀌지 않아 다음 동기화가 다시 청한다(포인터 장치가 늦게 생긴 경우).
+            const MouseLockMode     mode = _pMouse->getLockMode();
+            const WindowPointerLock lock = mode == MouseLockMode::LockedInCenter ? WindowPointerLock::Locked : ( mode == MouseLockMode::ConfinedToWindow ? WindowPointerLock::Confined : WindowPointerLock::Released );
+            if ( pWindow->setPointerLock( lock ) == false && X11InputInternal::markUnsupportedReported( X11InputInternal::kUnsupportedPointerLockBit ) )
+                SW_LOG_ERROR( "This window cannot lock the pointer (Wayland needs the compositor's pointer-constraints, relative-pointer for a centre lock, and a pointer device) - the pointer stays free" );
             return;
+        }
 
         // 포커스가 없는 창은 포인터를 잡지 않는다. 잡으면 창 관리자의 장식(제목 표시줄)에도 갈 수 없다.
         if ( X11InputInternal::s_bWindowFocused == false )
@@ -669,12 +669,12 @@ namespace sw
 
         MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
         IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
-        if ( pWindow == nullptr || X11InputInternal::isWaylandWindow( pWindow ) )
-            return; // Wayland 는 포인터를 옮길 수 없다(`applyMouseLockMode`)
+        if ( pWindow == nullptr )
+            return;
         Display* pDisplay  = nullptr;
         Window   x11Window = 0;
         if ( X11InputInternal::tryGetX11( pWindow, pDisplay, x11Window ) == false )
-            return;
+            return; // X11 창이 아니면 해당 없음 — Wayland 는 포인터를 옮길 수 없고 잠긴 포인터는 되돌릴 필요가 없다(`applyMouseLockMode`)
 
         XWindowAttributes attrs{};
         if ( XGetWindowAttributes( pDisplay, x11Window, &attrs ) == 0 )
@@ -693,13 +693,15 @@ namespace sw
     {
         MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
         IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
-        if ( pWindow == nullptr || X11InputInternal::isWaylandWindow( pWindow ) )
-            return; // Wayland 는 잡은 적이 없다
-
+        if ( pWindow == nullptr )
+            return;
         Display* pDisplay  = nullptr;
         Window   x11Window = 0;
         if ( X11InputInternal::tryGetX11( pWindow, pDisplay, x11Window ) == false )
+        {
+            (void)pWindow->setPointerLock( WindowPointerLock::Released ); // 풀기는 항상 되고, 걸린 것이 없으면 아무 일도 없다
             return;
+        }
 
         XUngrabPointer( pDisplay, CurrentTime );
         XFlush( pDisplay );
@@ -720,14 +722,14 @@ namespace sw
         // AccessX 팝업이 뜨는 것을 막기 위해서다.
         MainWindowSubsystem* pWindowHost       = engine::findSubsystem<MainWindowSubsystem>();
         IWindow*             pWindow           = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
-        const bool           bNothingToDisable = pWindow == nullptr || X11InputInternal::s_bAccessibilityDisabled || X11InputInternal::isWaylandWindow( pWindow );
+        const bool           bNothingToDisable = pWindow == nullptr || X11InputInternal::s_bAccessibilityDisabled;
         if ( bNothingToDisable )
-            return; // Wayland 에는 클라이언트가 끌 AccessX 가 없다(컴포지터의 설정이다)
+            return;
 
         Display* pDisplay  = nullptr;
         Window   x11Window = 0;
         if ( X11InputInternal::tryGetX11( pWindow, pDisplay, x11Window ) == false )
-            return;
+            return; // X11 창이 아니면 해당 없음 — Wayland 에는 클라이언트가 끌 AccessX 가 없다(컴포지터의 설정이다)
 
         XkbDescPtr pXkb = XkbAllocKeyboard();
         if ( pXkb == nullptr )
@@ -752,14 +754,14 @@ namespace sw
 
         MainWindowSubsystem* pWindowHost       = engine::findSubsystem<MainWindowSubsystem>();
         IWindow*             pWindow           = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
-        const bool           bNothingToRestore = pWindow == nullptr || X11InputInternal::s_bAccessibilityDisabled == false || X11InputInternal::isWaylandWindow( pWindow );
+        const bool           bNothingToRestore = pWindow == nullptr || X11InputInternal::s_bAccessibilityDisabled == false;
         if ( bNothingToRestore )
             return;
 
         Display* pDisplay  = nullptr;
         Window   x11Window = 0;
         if ( X11InputInternal::tryGetX11( pWindow, pDisplay, x11Window ) == false )
-            return;
+            return; // 끈 적이 없는 창(X11 이 아니다)이다
 
         XkbDescPtr pXkb = XkbAllocKeyboard();
         if ( pXkb == nullptr )

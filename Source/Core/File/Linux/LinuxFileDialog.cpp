@@ -7,6 +7,7 @@
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Process/ProcessEnvironment.h"
 
 #if defined( SW_PLATFORM_LINUX )
     #include "Core/Common/PlatformOsHeaders.h"
@@ -58,12 +59,11 @@ namespace sw
                 if ( std::strchr( pName, '/' ) != nullptr )
                     return isExecutableFile( pName ) ? string{ pName } : string{};
 
-                const utf8* pathEnv = std::getenv( "PATH" );
-                if ( pathEnv == nullptr || pathEnv[0] == '\0' )
+                string pathEnvStr;
+                if ( ProcessEnvironment::tryReadNonEmpty( "PATH", pathEnvStr ) == false )
                     return {};
 
-                const string pathEnvStr{ pathEnv };
-                size_t       start{ 0 };
+                size_t start{ 0 };
                 while ( start <= pathEnvStr.size() )
                 {
                     size_t end = pathEnvStr.find( ':', start );

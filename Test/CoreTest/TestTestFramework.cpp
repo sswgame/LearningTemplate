@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/Process/ProcessEnvironment.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "TestFramework/Harness/TestChildProcess.h"
@@ -586,7 +587,8 @@ SW_TEST_CASE( TestFrameworkTest, TempPathsOfThePreviousCaseAreGone )
  */
 SW_TEST_CASE( TestFrameworkTest, ChildRoleEchoesOrHangs )
 {
-    const utf8* pMode = std::getenv( "SW_TEST_CHILD_MODE" );
+    sw::string  pModeText;
+    const utf8* pMode = sw::ProcessEnvironment::tryRead( "SW_TEST_CHILD_MODE", pModeText ) ? pModeText.c_str() : nullptr;
     if ( pMode == nullptr )
         SW_TEST_SKIP( "child only — ChildProcessGetsItsEnvironmentAndOutputIsCaptured · HangingChildIsKilledAtTheDeadline launch it" );
 
@@ -605,7 +607,7 @@ SW_TEST_CASE( TestFrameworkTest, ChildRoleEchoesOrHangs )
  */
 SW_TEST_CASE( TestFrameworkTest, ChildProcessGetsItsEnvironmentAndOutputIsCaptured )
 {
-    SW_ASSERT_TRUE( std::getenv( "SW_TEST_CHILD_MODE" ) == nullptr );
+    SW_ASSERT_TRUE( sw::ProcessEnvironment::isSet( "SW_TEST_CHILD_MODE" ) == false );
 
     const test::ChildEnvironmentVariable arrEnvironment[] = {
         { "SW_TEST_CHILD_MODE", "marker42" }
@@ -615,7 +617,7 @@ SW_TEST_CASE( TestFrameworkTest, ChildProcessGetsItsEnvironmentAndOutputIsCaptur
     SW_EXPECT_FALSE( child._bTimedOut );
     SW_EXPECT_EQUAL( 0, child._exitCode );
     SW_EXPECT_TRUE_MSG( sw::StringUtil::contains( child._output, "SW_CHILD_ECHO:marker42" ), child.getOutputTail().c_str() );
-    SW_EXPECT_TRUE_MSG( std::getenv( "SW_TEST_CHILD_MODE" ) == nullptr, "자식에게 걸어 준 환경 변수가 부모에 남았습니다 — 다음 케이스가 자식 역할을 합니다" );
+    SW_EXPECT_TRUE_MSG( sw::ProcessEnvironment::isSet( "SW_TEST_CHILD_MODE" ) == false, "자식에게 걸어 준 환경 변수가 부모에 남았습니다 — 다음 케이스가 자식 역할을 합니다" );
 }
 
 /**

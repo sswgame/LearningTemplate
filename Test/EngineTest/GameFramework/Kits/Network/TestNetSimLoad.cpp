@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/Process/ProcessEnvironment.h"
+
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/NetEmulationPresetTable.h"
 
@@ -31,7 +33,8 @@ namespace
 
         static float32 readEnvironmentNumber( const utf8* pName, float32 fallback )
         {
-            const utf8* pValue = std::getenv( pName );
+            sw::string  pValueText;
+            const utf8* pValue = sw::ProcessEnvironment::tryRead( pName, pValueText ) ? pValueText.c_str() : nullptr;
             return pValue != nullptr && pValue[0] != '\0' ? static_cast<float32>( std::strtod( pValue, nullptr ) ) : fallback;
         }
     };
@@ -46,7 +49,8 @@ SW_TEST_CASE( NetSimLoadTest, DestructionReplicationUnderLoad )
     SceneDocument document;
     SW_ASSERT_TRUE( loadShowcase( document ) );
 
-    const utf8*       pNetwork = std::getenv( "SW_LOAD_NETWORK" );
+    sw::string        pNetworkText;
+    const utf8*       pNetwork = sw::ProcessEnvironment::tryRead( "SW_LOAD_NETWORK", pNetworkText ) ? pNetworkText.c_str() : nullptr;
     const string_view network  = pNetwork != nullptr && pNetwork[0] != '\0' ? string_view( pNetwork ) : string_view( "lte" );
     ScenarioOptions   options;
     options._clientCount = static_cast<uint32>( MathUtil::max( 1.0f, Internal::readEnvironmentNumber( "SW_LOAD_CLIENTS", 8.0f ) ) );
