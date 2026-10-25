@@ -88,7 +88,6 @@
 # Source/Editor/Panels — 이전 대기
 "Source/Editor/Panels/Catalog/CatalogPanel.cpp" = 3
 # Source/Editor/Viewport — 이전 대기
-"Source/Editor/Viewport/EditorViewportMouseClaim.cpp" = 3
 "Source/Editor/Viewport/ViewportInputOverlay.cpp" = 1
 # Source/Engine/Animation — 이전 대기
 "Source/Engine/Animation/Rig/RigAsset.cpp" = 2

@@ -3,7 +3,6 @@
 #include "Editor/Common/GUI/EditorThumbnailCache.h"
 
 #include "Core/Common/StdHeaders.h"
-#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
@@ -49,6 +48,7 @@ namespace sw::editor
         , _listPendingID{}
         , _listLoading{}
         , _listFailedID{}
+        , _uniqueKnownID{}
         , _frame{ 0 }
     {
     }
@@ -82,6 +82,17 @@ namespace sw::editor
         _listPendingID.clear();
         _listLoading.clear(); // 핸들만 놓는다 — 워커가 읽던 로드는 엔진이 끝내고, 참조를 쥐었다면 블록이 사라질 때 스스로 놓는다
         _listFailedID.clear();
+        _uniqueKnownID.clear();
+    }
+
+    void EditorThumbnailCache::recordFailure( string resourceID )
+    {
+        _listFailedID.push_back( std::move( resourceID ) );
+        while ( _listFailedID.size() > kMaxFailed )
+        {
+            _uniqueKnownID.erase( _listFailedID.front() ); // 잊힌 경로는 다시 보이면 새로 예약된다
+            _listFailedID.pop_front();
+        }
     }
 
     void* EditorThumbnailCache::findTexture( string_view resourceID )
@@ -94,12 +105,8 @@ namespace sw::editor
             entry._lastUsedFrame = _frame;
             return entry._pTextureID;
         }
-        bool bKnown = VectorUtil::contains( _listPendingID, key ) || VectorUtil::contains( _listFailedID, key );
-        for ( const Loading& loading : _listLoading )
-        {
-            bKnown = bKnown || loading._resourceID == key;
-        }
-        if ( bKnown == false )
+        // 예약 · 읽는 중 · 실패는 한 집합에 있다 — 프레임마다 보이는 모든 칸이 부르므로 목록을 훑지 않는다.
+        if ( _uniqueKnownID.insert( key ).second )
             _listPendingID.push_back( key );
         return nullptr;
     }
@@ -134,14 +141,14 @@ namespace sw::editor
         TextureCache* pTextures = EditorThumbnailCacheInternal::findTextureCache();
         while ( _listPendingID.empty() == false && _listLoading.size() < kMaxLoading )
         {
-            const string resourceID = _listPendingID.front();
-            _listPendingID.erase( _listPendingID.begin() );
+            const string resourceID = std::move( _listPendingID.front() );
+            _listPendingID.pop_front();
 
             // 디스크 읽기와 디코드는 워커에서 한다. 이미 올라가 있는 텍스처는 준비된 핸들이 바로 온다.
             const TextureHandle handle = pTextures != nullptr ? pTextures->request( resourceID, pDevice, AssetLoadStart::Async ) : TextureHandle{};
             if ( handle.isValid() == false )
             {
-                _listFailedID.push_back( resourceID );
+                recordFailure( resourceID );
                 continue;
             }
             _listLoading.push_back( Loading{ resourceID, handle.getBlock() } );
@@ -167,7 +174,9 @@ namespace sw::editor
             }
             const string resourceID = _listLoading[loadingIndex]._resourceID;
             if ( state == AssetLoadState::Failed || adoptReady( resourceID, pDevice ) == false )
-                _listFailedID.push_back( resourceID );
+                recordFailure( resourceID );
+            else
+                _uniqueKnownID.erase( resourceID ); // 항목이 생겼다 — 이후엔 항목 목록이 답한다. 쫓겨나면 다시 예약할 수 있게 비운다
             // 핸들 몫의 참조는 지우며 놓인다 — `adoptReady` 가 우리 몫을 따로 쥐었으므로 항목은 남는다.
             _listLoading.erase( _listLoading.begin() + static_cast<std::ptrdiff_t>( loadingIndex ) );
         }

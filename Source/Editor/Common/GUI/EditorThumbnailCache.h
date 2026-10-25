@@ -4,7 +4,9 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Container/deque.h"
 #include "Core/Container/string.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
@@ -83,11 +85,19 @@ namespace sw::editor
         /** @brief 이번 프레임에 쓰지 않은 것 가운데 오래된 것부터 용량까지 놓습니다. */
         void evictOverCapacity( IRHIDevice* pDevice );
 
+        /** @brief 실패 경로를 기억하는 수의 상한입니다. 넘으면 가장 오래된 실패부터 잊어, 폴더를 계속 넘겨 보아도 목록이 끝없이 쌓이지 않습니다(잊힌 경로는 다시 보이면 한 번 더 읽어 본다). */
+        static constexpr uint32 kMaxFailed = 2048;
+
     private:
-        vector<Entry>   _listEntry;
-        vector<string>  _listPendingID;
-        vector<Loading> _listLoading;
-        vector<string>  _listFailedID;
-        uint64          _frame;
+        /** @brief 실패를 기록하고 상한을 넘은 오래된 실패를 잊습니다. */
+        void recordFailure( string resourceID );
+
+    private:
+        vector<Entry>         _listEntry;
+        deque<string>         _listPendingID; ///< 읽기를 기다리는 경로(앞에서 꺼낸다)
+        vector<Loading>       _listLoading;
+        deque<string>         _listFailedID;  ///< 실패한 경로, 오래된 것이 앞이다(`kMaxFailed` 까지)
+        unordered_set<string> _uniqueKnownID; ///< 예약 · 읽는 중 · 실패 경로 모두 — `findTexture` 가 프레임마다 목록을 훑지 않고 한 번에 묻는다
+        uint64                _frame;
     };
 } // namespace sw::editor
