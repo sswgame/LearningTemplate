@@ -14,6 +14,12 @@
 
 namespace sw
 {
+    namespace
+    {
+        /** @brief 종료가 자기 태스크를 기다리는 최대 시간입니다. 이 큐의 태스크는 존재 확인 · 찾기라 짧다 — 넘기면 멈춘 것이므로 오류로 알린다. */
+        constexpr uint32 kShutdownWaitMs = 10000;
+    } // namespace
+
     AssetStreamingQueue::AssetStreamingQueue()
         : _mutex{}
         , _mapAssetResult{}
@@ -45,8 +51,7 @@ namespace sw
     {
         // 순서: 찾기 태스크가 읽기를 다 걸게 둔다 → 걸린 바이트 읽기를 멈추고 완료(태스크 워커가 이 큐를 부른다)까지 기다린다. 핸들은 잠금 밖에서
         // 다룬다 — 취소의 완료가 이 스레드에서 바로 올 수 있고, 그 완료가 `_mutex` 를 잡는다.
-        if ( engine::areEngineServicesBound() )
-            engine::getSubsystem<TaskManager>().waitAll();
+        (void)_taskTracker.waitIdle( kShutdownWaitMs, "AssetStreamingQueue::shutdown" ); // 시간 초과는 추적기가 원인 태스크 이름과 함께 오류로 남긴다
         vector<AsyncReadHandle> listIO;
         {
             std::scoped_lock<mutex> lock{ _mutex };
@@ -65,8 +70,7 @@ namespace sw
             handle.wait();
         }
 
-        if ( engine::areEngineServicesBound() )
-            engine::getSubsystem<TaskManager>().waitAll();
+        (void)_taskTracker.waitIdle( kShutdownWaitMs, "AssetStreamingQueue::shutdown" );
 
         {
             std::scoped_lock<mutex> lock{ _mutex };
@@ -172,6 +176,7 @@ namespace sw
                 issueDataRead( pathStr, generation, priority );
             } ) );
             handle.setPriority( toTaskPriority( priority ) );
+            _taskTracker.track( handle );
             handle.submit();
         }
         return true;
@@ -235,6 +240,7 @@ namespace sw
                 MakeTaskArgs( pathStr, generation, bFetchData ),
                 TaskThreadAffinity::Any );
             handle.setPriority( toTaskPriority( priority ) );
+            _taskTracker.track( handle );
             handle.submit();
             return;
         }

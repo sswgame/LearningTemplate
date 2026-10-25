@@ -9,6 +9,7 @@
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/ISubsystem.h"
 #include "Core/Task/TaskFuture.h"
+#include "Core/Task/TaskHandleTracker.h"
 #include "Core/Task/TaskTypes.h"
 
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"
@@ -289,9 +290,11 @@ namespace sw
         shared_ptr<AsyncLoadSlot> _asyncLoad;
         string                    _queuedPath;
         /** @brief 대기열에 든 요청의 약속. 대기열은 한 자리이므로 이것도 하나다. */
-        TaskPromise<Scene*>             _queuedPromise;
-        atomic<bool>                    _bLoadInFlight;
-        TaskHandle                      _loadHandle;
+        TaskPromise<Scene*> _queuedPromise;
+        atomic<bool>        _bLoadInFlight;
+        TaskHandle          _loadHandle;
+        /** @brief 이 매니저가 띄운 씬 로드 태스크 전부(핸들 하나는 다시 띄우면 덮인다). 종료 · 취소는 엔진 전체(`waitAll`)가 아니라 이것만 기다린다. */
+        TaskHandleTracker               _loadTracker;
         string                          _saveBlockReason;           ///< 비어 있지 않으면 씬 저장을 막는다(`setSaveBlockReason`)
         SceneObjectsInvalidatedDelegate _onSceneObjectsInvalidated; ///< `onSceneObjectsInvalidated`
         DelegateHandle                  _commandStackClearHandle;   ///< 기동 순서가 건 되돌리기 기록 비우기 구독(`initializeSubsystem`)
