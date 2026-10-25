@@ -4265,7 +4265,7 @@
    "type": "int32",
    "default": "64",
    "kind": "일반",
-   "description": "텍스처 되읽기 링 용량(MiB). 이보다 큰 텍스처 읽기 하나는 링이 빌 때 혼자 들어간다(지금은 GL 만 쓴다)",
+   "description": "텍스처 되읽기 링 용량(MiB). 이보다 큰 텍스처 읽기 하나는 링이 빌 때 혼자 들어간다(GL · Vulkan)",
    "source": "Source/Engine/Graphics/RHI/IRHIDevice.cpp"
   },
   {
@@ -4281,7 +4281,7 @@
    "type": "int32",
    "default": "64",
    "kind": "일반",
-   "description": "업로드 스테이징 용량(MiB): GL 은 링 크기(이보다 큰 업로드 하나는 링이 빌 때 혼자 들어간다), DX11 은 복사 중인 스테이징 텍스처 합의 상한(이보다 큰 업로드 하나는 혼자 들어간다)",
+   "description": "업로드 스테이징 용량(MiB): GL · Vulkan 은 링 크기(이보다 큰 업로드 하나는 링이 빌 때 혼자 들어간다), DX11 은 복사 중인 스테이징 텍스처 합의 상한(이보다 큰 업로드 하나는 혼자 들어간다)",
    "source": "Source/Engine/Graphics/RHI/IRHIDevice.cpp"
   },
   {
@@ -4289,7 +4289,7 @@
    "type": "int32",
    "default": "512",
    "kind": "일반",
-   "description": "링보다 큰 업로드 · 텍스처 읽기 한 장을 일회성 버퍼로 받는 상한(MiB). 넘으면 Rejected, 0 이면 링보다 큰 한 장은 모두 Rejected 다(지금은 GL 만 쓴다)",
+   "description": "링보다 큰 업로드 · 텍스처 읽기 한 장을 일회성 버퍼로 받는 상한(MiB). 넘으면 Rejected, 0 이면 링보다 큰 한 장은 모두 Rejected 다(GL · Vulkan)",
    "source": "Source/Engine/Graphics/RHI/IRHIDevice.cpp"
   },
   {

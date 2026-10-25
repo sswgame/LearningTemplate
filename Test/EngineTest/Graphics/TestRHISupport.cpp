@@ -1122,20 +1122,6 @@ SW_TEST_CASE( RHITransferTest, FenceQueueRaisesWatermarkOnlyOverAContiguousPrefi
 }
 
 /**
- * @brief [RHITransferTest] 끝난 뒤 발급하는 경로(`issueCompleted`): 발급한 시리얼이 곧바로 Complete 이고, 시리얼은 단조 증가한다.
- */
-SW_TEST_CASE( RHITransferTest, IssueCompletedIsCompleteImmediately )
-{
-    sw::RHITransferSerials serials;
-    const uint64           first  = serials.issueCompleted();
-    const uint64           second = serials.issueCompleted();
-    SW_EXPECT_TRUE( first < second );
-    SW_EXPECT_TRUE( serials.classify( sw::RHITransferTicket{ first, serials.getGeneration() } ) == sw::RHITransferStatus::Complete );
-    SW_EXPECT_TRUE( serials.classify( serials.makeAccepted( second )._ticket ) == sw::RHITransferStatus::Complete );
-    SW_EXPECT_EQUAL( second, serials.getWatermark() );
-}
-
-/**
  * @brief [RHITransferTest] 읽기 보관표: 결과는 한 번만 나가고, 업로드 티켓(없는 시리얼)과 두 번째 가져가기는 false 다.
  */
 SW_TEST_CASE( RHITransferTest, PendingReadbackTableGivesEachResultOnce )

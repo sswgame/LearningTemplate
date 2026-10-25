@@ -117,6 +117,14 @@ namespace sw
         , _pipelineCache{ nullptr }
         , _transferSerials{}
         , _readbackTable{}
+        , _transferFenceQueue{ _transferSerials }
+        , _transferReleaseQueue{}
+        , _uploadRing{}
+        , _readbackRing{}
+        , _transferMutex{}
+        , _transferCommandPool{ nullptr }
+        , _transferJobMutex{}
+        , _listFreeTransferJob{}
         , _frameStreamContext{ nullptr }
         , _resourceImpl{ nullptr }
         , _lastSubmittedEventMarker{}
@@ -244,6 +252,12 @@ namespace sw
                 return false;
         }
 
+        BLOCK( "Transfer Pool / Staging Rings" )
+        {
+            if ( initializeTransfers( desc ) == false )
+                return false;
+        }
+
         BLOCK( "Descriptor / Pipeline Layout" )
         {
             if ( createDescriptorResources() == false )
@@ -312,6 +326,8 @@ namespace sw
     {
         if ( _device )
         {
+            // 전송을 기다리던 해제는 프레임 해제 큐로 넘어가므로 아래의 `_releaseQueue.flushAll` 보다 먼저 놓는다.
+            shutdownTransfers();
             if ( _commandPool )
             {
                 vkDestroyCommandPool( _device, _commandPool, nullptr );

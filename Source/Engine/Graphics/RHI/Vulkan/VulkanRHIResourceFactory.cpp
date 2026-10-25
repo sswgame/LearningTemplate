@@ -44,6 +44,29 @@ namespace sw
             barrier.subresourceRange.layerCount     = arrayLayers;
             return barrier;
         }
+
+        /**
+         * @brief 버퍼 ↔ 이미지 복사에서 버퍼 오프셋이 맞춰야 하는 단위입니다.
+         * @details 사양은 컬러 포맷이면 텍셀 블록 바이트의 배수이자 4 의 배수, 깊이 aspect 면 4 의 배수를 요구한다. 블록 바이트는 1 · 4 · 8 · 12 · 16 이라
+         *          둘의 최소공배수가 이 값이다(12 바이트 텍셀은 2 의 거듭제곱이 아니라서 링의 구간 정렬만으로는 맞지 않는다).
+         */
+        uint64 computeCopyOffsetAlignment( RHIFormat format )
+        {
+            const uint32 blockBytes = getRHIFormatBlockInfo( format )._blockBytes;
+            return ( blockBytes != 0 && blockBytes % 4 == 0 ) ? blockBytes : 4;
+        }
+
+        /** @brief @p value 를 @p alignment 의 배수로 올립니다. 정렬이 2 의 거듭제곱이 아니어도 된다(12 바이트 텍셀). */
+        uint64 alignUpToMultiple( uint64 value, uint64 alignment )
+        {
+            return ( ( value + alignment - 1 ) / alignment ) * alignment;
+        }
+
+        /** @brief 링 할당 결과를 제출 결과로 돌려줍니다(`Accepted` 는 부르는 쪽이 시리얼로 만든다). */
+        RHITransferSubmit makeUnacceptedSubmit( RHISubmitResult result )
+        {
+            return result == RHISubmitResult::Busy ? RHITransferSubmit::busy() : RHITransferSubmit::rejected();
+        }
     } // namespace
 
     RHIBufferHandle VulkanRHIResourceFactory::createConstantBuffer( uint32 size )
@@ -576,12 +599,13 @@ namespace sw
         return handle;
     }
 
-    // 임시 구현(RhiAsyncUploads B0): 제출한 일회성 커맨드의 펜스를 이 안에서 기다리고 곧바로 `Complete` 티켓을 준다. 비동기화(업로드 링, 제출 뒤에도 사는 전송 작업 객체, 연속 구간 워터마크)는 U6 에서 한다.
+    // 전송(RhiAsyncUploads U6): 소스를 업로드 링에 복사하고, 전송 작업 하나에 기록해 펜스와 함께 낸 뒤 기다리지 않고 티켓을 준다. 완료는 pollTransfer 가 펜스로 본다.
+    // 길이 유지(긴 함수 정리 기준): 검사 · 링 복사 · 기록 · 제출 · 레코드 갱신의 순서가 곧 의미라 나누지 않는다.
     RHITransferSubmit VulkanRHIResourceFactory::submitTextureUpload( RHITextureHandle texture, const RHITextureUploadDesc& desc )
     {
         VulkanRHIDevice::VulkanTextureRecord* pRecord                   = _pDevice->resolveTexture( texture );
         const bool                            bTextureUploadUnavailable = pRecord == nullptr || pRecord->_image == VK_NULL_HANDLE || _pDevice->_device == VK_NULL_HANDLE ||
-                                               _pDevice->_graphicsQueue == VK_NULL_HANDLE || _pDevice->_oneShotCommandPool == VK_NULL_HANDLE || _pDevice->isDeviceLost();
+                                               _pDevice->_graphicsQueue == VK_NULL_HANDLE || _pDevice->_transferCommandPool == VK_NULL_HANDLE || _pDevice->isDeviceLost();
         if ( bTextureUploadUnavailable )
         {
             // 장치를 잃었으면 진입에서 Rejected 다(계약 2) — 잃은 장치의 큐는 제출을 받지 못하고 펜스는 끝나지 않는다.
@@ -600,129 +624,148 @@ namespace sw
         }
 
         RHITextureMipSpan arrMip[constant::kMaxTextureMipCount]{};
-        const uint32      mipCount = resolveTextureUploadMips( desc, static_cast<RHIFormat>( pRecord->_rhiFormat ), pRecord->_width, pRecord->_height,
-                                                               pRecord->_mipLevels, arrMip, constant::kMaxTextureMipCount );
+        const RHIFormat   format   = static_cast<RHIFormat>( pRecord->_rhiFormat );
+        const uint32      mipCount = resolveTextureUploadMips( desc, format, pRecord->_width, pRecord->_height, pRecord->_mipLevels, arrMip, constant::kMaxTextureMipCount );
         if ( mipCount == 0 )
         {
             SW_LOG_ERROR( "submitTextureUpload: unsupported format or not enough data (%# bytes for %#×%#, %# mips)",
                           desc._sizeBytes, pRecord->_width, pRecord->_height, pRecord->_mipLevels );
             return RHITransferSubmit::rejected();
         }
-        const uint32 usedBytes = arrMip[mipCount - 1]._offsetBytes + arrMip[mipCount - 1]._sizeBytes;
 
-        // 호스트 가시 스테이징 버퍼에 통째로 올린 뒤 일회성 커맨드버퍼로 밉마다 복사한다(소스는 여기서 복사된다 — 계약 1).
-        const RHIBufferHandle                staging  = _pDevice->createVulkanBuffer( usedBytes, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, desc._pData );
-        VulkanRHIDevice::VulkanBufferRecord* pStaging = _pDevice->resolveAllocatedBuffer( staging );
-        if ( pStaging == nullptr || pStaging->_buffer == VK_NULL_HANDLE )
-        {
-            destroyBuffer( staging );
-            SW_LOG_ERROR( "submitTextureUpload: failed to create the staging buffer (%# bytes)", usedBytes );
-            return RHITransferSubmit::rejected();
-        }
-
-        VulkanOneShotCommands oneShot{ _pDevice->_device, _pDevice->_oneShotCommandPool, _pDevice->_oneShotMutex, _pDevice->_graphicsQueue,
-                                       _pDevice->_queueMutex };
-        if ( oneShot.isValid() == false )
-        {
-            destroyBuffer( staging );
-            SW_LOG_ERROR( "submitTextureUpload: failed to allocate the one-shot command buffer" );
-            return RHITransferSubmit::rejected();
-        }
-        const VkCommandBuffer cmd = oneShot.get();
-
-        // transitionImageLayout 은 밉 하나만 다루므로 여기서는 전체 밉 체인 배리어를 직접 쓴다.
-        VkImageMemoryBarrier barrier = makeWholeImageBarrier( pRecord->_image, pRecord->_mipLevels, pRecord->_arrayLayers );
-
-        barrier.oldLayout     = static_cast<VkImageLayout>( pRecord->_layout );
-        barrier.newLayout     = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-        barrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT;
-        barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        vkCmdPipelineBarrier( cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier );
-
+        // 밉마다 복사 오프셋 정렬에 맞춰 링에 놓는다. 소스는 밉을 빈틈없이 잇기 때문에 R8 의 작은 밉은 4 의 배수가 아닌 곳에서 시작할 수 있다 — 링에서 다시 맞춘다.
+        const uint64 copyAlignment = computeCopyOffsetAlignment( format );
+        uint64       ringBytes{ 0 };
         for ( uint32 mip = 0; mip < mipCount; ++mip )
         {
-            const RHITextureMipSpan& span = arrMip[mip];
-            VkBufferImageCopy        region{};
-            region.bufferOffset                    = span._offsetBytes;
+            ringBytes += arrMip[mip]._sizeBytes + copyAlignment; // 정렬로 밀리는 몫까지 넉넉히
+        }
+        VulkanRHIDevice::VulkanStagingRing& ring = _pDevice->_uploadRing;
+        RHIStagingSpan                      span{};
+        const RHISubmitResult               allocateResult = _pDevice->allocateStagingSpan( ring, ringBytes, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, "submitTextureUpload", span );
+        if ( allocateResult != RHISubmitResult::Accepted )
+            return makeUnacceptedSubmit( allocateResult );
+
+        // 소스 복사는 전송 락 밖에서 한다(계약 1: 반환 전에 소스를 복사한다).
+        VkBufferImageCopy arrRegion[constant::kMaxTextureMipCount]{};
+        uint64            ringOffset = span._offsetBytes;
+        for ( uint32 mip = 0; mip < mipCount; ++mip )
+        {
+            const RHITextureMipSpan& mipSpan = arrMip[mip];
+            ringOffset                       = alignUpToMultiple( ringOffset, copyAlignment );
+            Memory::copy( ring.getSpanMappedBase( span ) + ringOffset, mipSpan._pData, mipSpan._sizeBytes );
+
+            VkBufferImageCopy& region              = arrRegion[mip];
+            region.bufferOffset                    = ringOffset;
             region.bufferRowLength                 = 0; // 0 = 빈틈없는 행
             region.bufferImageHeight               = 0;
             region.imageSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
-            region.imageSubresource.mipLevel       = span._mip;
+            region.imageSubresource.mipLevel       = mipSpan._mip;
             region.imageSubresource.baseArrayLayer = desc._arraySlice;
             region.imageSubresource.layerCount     = 1;
-            region.imageExtent                     = { span._width, span._height, 1 };
-            vkCmdCopyBufferToImage( cmd, pStaging->_buffer, pRecord->_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region );
+            region.imageExtent                     = { mipSpan._width, mipSpan._height, 1 };
+            ringOffset += mipSpan._sizeBytes;
         }
 
+        std::scoped_lock<mutex>            transferLock{ _pDevice->_transferMutex };
+        VulkanRHIDevice::VulkanTransferJob job{};
+        if ( _pDevice->beginTransferJob( job ) == false )
+        {
+            ring._ledger.free( span );
+            return RHITransferSubmit::rejected();
+        }
+        uint32 layoutBefore{ 0 };
+        {
+            std::scoped_lock<mutex> layoutLock{ _pDevice->_imageLayoutMutex };
+            layoutBefore = pRecord->_layout;
+        }
+
+        // 앞선 모든 큐 작업(이미 낸 프레임 · 전송)의 접근 뒤에 쓴다. transitionImageLayout 은 밉 하나만 다루므로 전체 밉 체인 배리어를 직접 쓴다.
+        VkImageMemoryBarrier barrier = makeWholeImageBarrier( pRecord->_image, pRecord->_mipLevels, pRecord->_arrayLayers );
+        barrier.oldLayout            = static_cast<VkImageLayout>( layoutBefore );
+        barrier.newLayout            = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        barrier.srcAccessMask        = VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT;
+        barrier.dstAccessMask        = VK_ACCESS_TRANSFER_WRITE_BIT;
+        vkCmdPipelineBarrier( job._commandBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier );
+
+        vkCmdCopyBufferToImage( job._commandBuffer, ring.getSpanBuffer( span ), pRecord->_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipCount, arrRegion );
+
+        // 뒤에 낼 프레임의 셰이더 읽기가 이 쓰기를 본다(배리어의 두 번째 범위는 제출 순서상 뒤의 모든 명령이다 — 계약 3).
         barrier.oldLayout     = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
         barrier.newLayout     = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
         barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-        vkCmdPipelineBarrier( cmd, VK_PIPELINE_STAGE_TRANSFER_BIT,
+        vkCmdPipelineBarrier( job._commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
                               VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
                               0, 0, nullptr, 0, nullptr, 1, &barrier );
 
-        const bool bSubmitted = oneShot.endSubmitAndWait();
-        destroyBuffer( staging );
-
-        if ( bSubmitted == false )
+        const uint64 serial = _pDevice->submitTransferJob( job, "submitTextureUpload: vkQueueSubmit" );
+        if ( serial == 0 )
         {
-            _pDevice->reportQueueResult( static_cast<int32>( oneShot.getLastResult() ), "submitTextureUpload: one-shot submit" );
+            ring._ledger.free( span );
             return RHITransferSubmit::rejected();
         }
-        pRecord->_layout    = static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
-        const uint64 serial = _pDevice->_transferSerials.issueCompleted();
+        ring._ledger.markSubmitted( span, serial );
+        // 레이아웃 기록은 제출 순서를 따른다 — 뒤에 기록 · 제출하는 명령은 이 전송 뒤에 실행되므로 지금 바꿔 둔다.
+        {
+            std::scoped_lock<mutex> layoutLock{ _pDevice->_imageLayoutMutex };
+            pRecord->_layout = static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+        }
         pRecord->_lastTransferSerial.store( serial );
         return _pDevice->_transferSerials.makeAccepted( serial );
     }
 
+    // 길이 유지(긴 함수 정리 기준): 전체 업로드와 같은 순서(검사 · 링 복사 · 기록 · 제출 · 레코드 갱신)라 나누지 않는다.
     RHITransferSubmit VulkanRHIResourceFactory::submitTextureRegionUpload( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc )
     {
         VulkanRHIDevice::VulkanTextureRecord* pRecord                         = _pDevice->resolveTexture( texture );
         const bool                            bTextureRegionUploadUnavailable = pRecord == nullptr || pRecord->_image == VK_NULL_HANDLE || _pDevice->_device == VK_NULL_HANDLE ||
-                                                     _pDevice->_graphicsQueue == VK_NULL_HANDLE || _pDevice->_oneShotCommandPool == VK_NULL_HANDLE || pRecord->_bDepthStencil != SW_FALSE ||
-                                                     _pDevice->isDeviceLost();
+                                                     _pDevice->_graphicsQueue == VK_NULL_HANDLE || _pDevice->_transferCommandPool == VK_NULL_HANDLE ||
+                                                     pRecord->_bDepthStencil != SW_FALSE || _pDevice->isDeviceLost();
         if ( bTextureRegionUploadUnavailable )
         {
             SW_LOG_ERROR( "submitTextureRegionUpload: texture %# is missing, a depth texture, or the device is not usable (uninitialized or lost)", texture );
             return RHITransferSubmit::rejected();
         }
-        uint32 rowBytes{ 0 };
-        if ( validateTextureRegionUpload( static_cast<RHIFormat>( pRecord->_rhiFormat ), pRecord->_width, pRecord->_height, pRecord->_mipLevels,
-                                          pRecord->_arrayLayers, desc, rowBytes ) == false )
+        const RHIFormat format = static_cast<RHIFormat>( pRecord->_rhiFormat );
+        uint32          rowBytes{ 0 };
+        if ( validateTextureRegionUpload( format, pRecord->_width, pRecord->_height, pRecord->_mipLevels, pRecord->_arrayLayers, desc, rowBytes ) == false )
             return RHITransferSubmit::rejected();
 
-        // 전체 업로드와 같은 길: 빈틈없는 행 그대로 스테이징 → 일회성 커맨드 → 제출하고 펜스를 기다린다(가끔 · 작게 바뀌는 텍스처용, 임시 구현 — U6 이 비동기화한다).
-        const uint32                         usedBytes = rowBytes * desc._height;
-        const RHIBufferHandle                staging   = _pDevice->createVulkanBuffer( usedBytes, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, desc._pData );
-        VulkanRHIDevice::VulkanBufferRecord* pStaging  = _pDevice->resolveAllocatedBuffer( staging );
-        if ( pStaging == nullptr || pStaging->_buffer == VK_NULL_HANDLE )
-        {
-            destroyBuffer( staging );
-            SW_LOG_ERROR( "submitTextureRegionUpload: failed to create the staging buffer (%# bytes)", usedBytes );
-            return RHITransferSubmit::rejected();
-        }
+        // 빈틈없는 행 그대로 업로드 링에 놓는다(가끔 · 작게 바뀌는 텍스처 — 글리프 아틀라스).
+        const uint64                        usedBytes     = static_cast<uint64>( rowBytes ) * desc._height;
+        const uint64                        copyAlignment = computeCopyOffsetAlignment( format );
+        VulkanRHIDevice::VulkanStagingRing& ring          = _pDevice->_uploadRing;
+        RHIStagingSpan                      span{};
+        const RHISubmitResult               allocateResult = _pDevice->allocateStagingSpan( ring, usedBytes + copyAlignment, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, "submitTextureRegionUpload", span );
+        if ( allocateResult != RHISubmitResult::Accepted )
+            return makeUnacceptedSubmit( allocateResult );
+        const uint64 ringOffset = alignUpToMultiple( span._offsetBytes, copyAlignment );
+        Memory::copy( ring.getSpanMappedBase( span ) + ringOffset, desc._pData, static_cast<size_t>( usedBytes ) );
 
-        VulkanOneShotCommands oneShot{ _pDevice->_device, _pDevice->_oneShotCommandPool, _pDevice->_oneShotMutex, _pDevice->_graphicsQueue,
-                                       _pDevice->_queueMutex };
-        if ( oneShot.isValid() == false )
+        std::scoped_lock<mutex>            transferLock{ _pDevice->_transferMutex };
+        VulkanRHIDevice::VulkanTransferJob job{};
+        if ( _pDevice->beginTransferJob( job ) == false )
         {
-            destroyBuffer( staging );
-            SW_LOG_ERROR( "submitTextureRegionUpload: failed to allocate the one-shot command buffer" );
+            ring._ledger.free( span );
             return RHITransferSubmit::rejected();
         }
-        const VkCommandBuffer cmd = oneShot.get();
+        uint32 layoutBefore{ 0 };
+        {
+            std::scoped_lock<mutex> layoutLock{ _pDevice->_imageLayoutMutex };
+            layoutBefore = pRecord->_layout;
+        }
 
         // 레코드가 이미지 레이아웃 하나만 들므로 배리어도 이미지 전체다. 구간 밖 픽셀은 지금 레이아웃에서 보존된다(UNDEFINED 였다면 원래 정의되지 않았다).
         VkImageMemoryBarrier barrier = makeWholeImageBarrier( pRecord->_image, pRecord->_mipLevels, pRecord->_arrayLayers );
-        barrier.oldLayout            = static_cast<VkImageLayout>( pRecord->_layout );
+        barrier.oldLayout            = static_cast<VkImageLayout>( layoutBefore );
         barrier.newLayout            = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
         barrier.srcAccessMask        = VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT;
         barrier.dstAccessMask        = VK_ACCESS_TRANSFER_WRITE_BIT;
-        vkCmdPipelineBarrier( cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier );
+        vkCmdPipelineBarrier( job._commandBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier );
 
         VkBufferImageCopy region{};
-        region.bufferOffset                    = 0;
+        region.bufferOffset                    = ringOffset;
         region.bufferRowLength                 = 0; // 0 = 빈틈없는 행(imageExtent.width)
         region.bufferImageHeight               = 0;
         region.imageSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -731,32 +774,38 @@ namespace sw
         region.imageSubresource.layerCount     = 1;
         region.imageOffset                     = { static_cast<int32>( desc._x ), static_cast<int32>( desc._y ), 0 };
         region.imageExtent                     = { desc._width, desc._height, 1 };
-        vkCmdCopyBufferToImage( cmd, pStaging->_buffer, pRecord->_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region );
+        vkCmdCopyBufferToImage( job._commandBuffer, ring.getSpanBuffer( span ), pRecord->_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region );
 
         barrier.oldLayout     = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
         barrier.newLayout     = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
         barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-        vkCmdPipelineBarrier( cmd, VK_PIPELINE_STAGE_TRANSFER_BIT,
+        vkCmdPipelineBarrier( job._commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
                               VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr,
                               0, nullptr, 1, &barrier );
 
-        const bool bSubmitted = oneShot.endSubmitAndWait();
-        destroyBuffer( staging );
-        if ( bSubmitted == false )
+        const uint64 serial = _pDevice->submitTransferJob( job, "submitTextureRegionUpload: vkQueueSubmit" );
+        if ( serial == 0 )
         {
-            _pDevice->reportQueueResult( static_cast<int32>( oneShot.getLastResult() ), "submitTextureRegionUpload: one-shot submit" );
+            ring._ledger.free( span );
             return RHITransferSubmit::rejected();
         }
-        pRecord->_layout    = static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
-        const uint64 serial = _pDevice->_transferSerials.issueCompleted();
+        ring._ledger.markSubmitted( span, serial );
+        {
+            std::scoped_lock<mutex> layoutLock{ _pDevice->_imageLayoutMutex };
+            pRecord->_layout = static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+        }
         pRecord->_lastTransferSerial.store( serial );
         return _pDevice->_transferSerials.makeAccepted( serial );
     }
 
     RHITransferStatus VulkanRHIResourceFactory::pollTransfer( RHITransferTicket ticket )
     {
-        // 임시 구현(B0)의 제출은 끝난 뒤에 시리얼을 발급하므로 발급된 티켓은 모두 워터마크 아래다. 판정은 공용 부품이 한다.
+        // 판정은 공용 부품이 한다. 아직이면 끝난 펜스를 한 번 걷고 다시 본다 — 프레임을 돌리지 않아도 되풀이하면 끝에 이른다(계약 7, 제출은 이미 큐에 났다).
+        const RHITransferStatus status = _pDevice->_transferSerials.classify( ticket );
+        if ( status != RHITransferStatus::Pending )
+            return status;
+        _pDevice->retireFinishedTransfers();
         return _pDevice->_transferSerials.classify( ticket );
     }
 
@@ -767,11 +816,19 @@ namespace sw
             SW_LOG_ERROR( "takeTextureReadback: ticket %# has not completed", ticket._serial );
             return false;
         }
-        if ( _pDevice->_readbackTable.take( ticket._serial, outBytes ) == false )
+        VulkanRHIDevice::VulkanPendingReadback pending{};
+        if ( _pDevice->_readbackTable.take( ticket._serial, pending ) == false )
         {
             SW_LOG_ERROR( "takeTextureReadback: ticket %# is not a pending texture readback (an upload ticket, or already taken or discarded)", ticket._serial );
             return false;
         }
+        // 펜스를 지났고 복사 뒤에 HOST 배리어를 걸었다 — 호스트 일관 메모리라 그대로 읽는다. 읽은 뒤 구간을 돌려준다.
+        VulkanRHIDevice::VulkanStagingRing& ring = _pDevice->_readbackRing;
+        outBytes.resize( pending._sizeBytes );
+        Memory::copy( outBytes.data(), ring.getSpanMappedBase( pending._span ) + pending._dataOffsetBytes, pending._sizeBytes );
+        ring._ledger.free( pending._span );
+        if ( pending._depth24TexelCount != 0 )
+            convertRHIDepth24ToFloat( outBytes.data(), pending._depth24TexelCount );
         return true;
     }
 
@@ -779,8 +836,15 @@ namespace sw
     {
         if ( ticket._deviceGeneration != _pDevice->_transferSerials.getGeneration() )
             return;
-        vector<uint8> discardedBytes;
-        (void)_pDevice->_readbackTable.take( ticket._serial, discardedBytes ); // 없으면 업로드 티켓이거나 이미 가져감 · 버림이다 — 계약상 아무 일도 하지 않는다
+        VulkanRHIDevice::VulkanPendingReadback pending{};
+        if ( _pDevice->_readbackTable.take( ticket._serial, pending ) == false )
+            return; // 업로드 티켓이거나 이미 가져감 · 버림이다 — 계약상 아무 일도 하지 않는다
+        // 끝나지 않은 복사는 아직 이 구간에 쓴다. 시리얼을 붙여 워터마크가 지난 뒤에 돌아오게 한다(다음 되읽기가 같은 자리를 받지 않는다).
+        VulkanRHIDevice::VulkanStagingRing& ring = _pDevice->_readbackRing;
+        if ( _pDevice->_transferSerials.isComplete( ticket._serial ) )
+            ring._ledger.free( pending._span );
+        else
+            ring._ledger.markSubmitted( pending._span, ticket._serial );
     }
 
     RHIFormat VulkanRHIResourceFactory::getTextureFormat( RHITextureHandle texture ) const
@@ -825,14 +889,15 @@ namespace sw
         return true;
     }
 
-    // 임시 구현(RhiAsyncUploads B0): 제출 안에서 펜스를 기다려 결과까지 읽어 두고 곧바로 `Complete` 티켓을 준다. 비동기화는 U6 에서 한다.
+    // 전송(RhiAsyncUploads U6): 되읽기 링의 구간에 복사를 기록해 펜스와 함께 내고 기다리지 않는다. 결과는 takeTextureReadback 이 링에서 복사해 간다.
+    // 길이 유지(긴 함수 정리 기준): 검사 · 링 할당 · 기록 · 제출 · 보관의 순서가 곧 의미라 나누지 않는다.
     RHITransferSubmit VulkanRHIResourceFactory::submitTextureReadback( RHITextureHandle texture, uint32 mip, uint32 arraySlice, RHITextureMipSpan& outLayout )
     {
         // **여기의 실패는 모두 소리를 낸다**(형제인 submitTextureUpload 와 같다). 리드백은 오프스크린 렌더 문제가
         // 드러나는 경로라 "거절인데 이유가 없다" 가 곧 긴 추적이 된다.
         VulkanRHIDevice::VulkanTextureRecord* pRecord                     = _pDevice->resolveTexture( texture );
         const bool                            bTextureReadbackUnavailable = pRecord == nullptr || pRecord->_image == VK_NULL_HANDLE || _pDevice->_device == VK_NULL_HANDLE ||
-                                                 _pDevice->_graphicsQueue == VK_NULL_HANDLE || _pDevice->_oneShotCommandPool == VK_NULL_HANDLE || _pDevice->isDeviceLost();
+                                                 _pDevice->_graphicsQueue == VK_NULL_HANDLE || _pDevice->_transferCommandPool == VK_NULL_HANDLE || _pDevice->isDeviceLost();
         if ( bTextureReadbackUnavailable )
         {
             SW_LOG_ERROR( "submitTextureReadback: texture %# or the device is not usable (uninitialized or lost)", texture );
@@ -843,7 +908,7 @@ namespace sw
             SW_LOG_ERROR( "submitTextureReadback: mip %# / slice %# is out of range (%# mips, %# slices)", mip, arraySlice, pRecord->_mipLevels, pRecord->_arrayLayers );
             return RHITransferSubmit::rejected();
         }
-        // 깊이는 깊이 aspect 만 복사한다(텍셀마다 4 바이트). D24 는 아래 24비트가 깊이라 0..1 float32 로 바꾸고, D32 계열은 이미 float32 다(kRHIDepthReadbackFormat).
+        // 깊이는 깊이 aspect 만 복사한다(텍셀마다 4 바이트). D24 는 아래 24비트가 깊이라 가져갈 때 0..1 float32 로 바꾸고, D32 계열은 이미 float32 다(kRHIDepthReadbackFormat).
         const bool      bDepth       = pRecord->_bDepthStencil != SW_FALSE;
         const RHIFormat layoutFormat = bDepth ? kRHIDepthReadbackFormat : static_cast<RHIFormat>( pRecord->_rhiFormat );
         if ( computeRHITextureMipLayout( layoutFormat, pRecord->_width, pRecord->_height, mip, outLayout ) == false )
@@ -853,26 +918,29 @@ namespace sw
             return RHITransferSubmit::rejected();
         }
 
-        const RHIBufferHandle                staging  = _pDevice->createVulkanBuffer( outLayout._sizeBytes, VK_BUFFER_USAGE_TRANSFER_DST_BIT, nullptr );
-        VulkanRHIDevice::VulkanBufferRecord* pStaging = _pDevice->resolveAllocatedBuffer( staging );
-        if ( pStaging == nullptr || pStaging->_buffer == VK_NULL_HANDLE )
+        const uint64                        copyAlignment = computeCopyOffsetAlignment( layoutFormat );
+        VulkanRHIDevice::VulkanStagingRing& ring          = _pDevice->_readbackRing;
+        RHIStagingSpan                      span{};
+        const RHISubmitResult               allocateResult = _pDevice->allocateStagingSpan( ring, outLayout._sizeBytes + copyAlignment, VK_BUFFER_USAGE_TRANSFER_DST_BIT, "submitTextureReadback", span );
+        if ( allocateResult != RHISubmitResult::Accepted )
+            return makeUnacceptedSubmit( allocateResult );
+        const uint64 ringOffset = alignUpToMultiple( span._offsetBytes, copyAlignment );
+
+        std::scoped_lock<mutex>            transferLock{ _pDevice->_transferMutex };
+        VulkanRHIDevice::VulkanTransferJob job{};
+        if ( _pDevice->beginTransferJob( job ) == false )
         {
-            destroyBuffer( staging );
-            SW_LOG_ERROR( "submitTextureReadback: failed to create the staging buffer (%# bytes)", outLayout._sizeBytes );
+            ring._ledger.free( span );
             return RHITransferSubmit::rejected();
         }
-
-        VulkanOneShotCommands oneShot{ _pDevice->_device, _pDevice->_oneShotCommandPool, _pDevice->_oneShotMutex, _pDevice->_graphicsQueue,
-                                       _pDevice->_queueMutex };
-        if ( oneShot.isValid() == false )
+        uint32 layoutBeforeValue{ 0 };
         {
-            destroyBuffer( staging );
-            SW_LOG_ERROR( "submitTextureReadback: failed to allocate the one-shot command buffer" );
-            return RHITransferSubmit::rejected();
+            std::scoped_lock<mutex> layoutLock{ _pDevice->_imageLayoutMutex };
+            layoutBeforeValue = pRecord->_layout;
         }
-        const VkCommandBuffer cmd = oneShot.get();
 
-        const VkImageLayout  layoutBefore = static_cast<VkImageLayout>( pRecord->_layout );
+        // 읽기는 요청 시점까지 낸 프레임의 쓰기를 본다(ALL_COMMANDS 배리어 — 계약 3).
+        const VkImageLayout  layoutBefore = static_cast<VkImageLayout>( layoutBeforeValue );
         VkImageMemoryBarrier barrier      = makeWholeImageBarrier( pRecord->_image, pRecord->_mipLevels, pRecord->_arrayLayers );
         if ( bDepth )
             barrier.subresourceRange.aspectMask = _pDevice->depthAspectMask();
@@ -880,10 +948,10 @@ namespace sw
         barrier.newLayout     = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
         barrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT;
         barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-        vkCmdPipelineBarrier( cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier );
+        vkCmdPipelineBarrier( job._commandBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier );
 
         VkBufferImageCopy region{};
-        region.bufferOffset                    = 0;
+        region.bufferOffset                    = ringOffset;
         region.bufferRowLength                 = 0;
         region.bufferImageHeight               = 0;
         region.imageSubresource.aspectMask     = bDepth ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
@@ -891,7 +959,7 @@ namespace sw
         region.imageSubresource.baseArrayLayer = arraySlice;
         region.imageSubresource.layerCount     = 1;
         region.imageExtent                     = { outLayout._width, outLayout._height, 1 };
-        vkCmdCopyImageToBuffer( cmd, pRecord->_image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, pStaging->_buffer, 1, &region );
+        vkCmdCopyImageToBuffer( job._commandBuffer, pRecord->_image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, ring.getSpanBuffer( span ), 1, &region );
 
         // 읽기 뒤에는 샘플링 레이아웃으로 둔다. 한 번도 안 올린 텍스처(UNDEFINED)도 이제부터는 정의된 레이아웃을 갖는다.
         // 깊이는 읽기 전 레이아웃으로 되돌린다 — 렌더 패스 · 그림자 샘플링이 추적 레이아웃에서 출발한다(UNDEFINED 였으면 샘플링 레이아웃).
@@ -900,40 +968,39 @@ namespace sw
         barrier.newLayout               = layoutAfter;
         barrier.srcAccessMask           = VK_ACCESS_TRANSFER_READ_BIT;
         barrier.dstAccessMask           = VK_ACCESS_SHADER_READ_BIT;
-        vkCmdPipelineBarrier( cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier );
+        vkCmdPipelineBarrier( job._commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier );
 
-        const bool bSubmitted = oneShot.endSubmitAndWait();
+        // 복사가 쓴 바이트를 호스트가 읽게 한다. 펜스 신호만으로는 호스트 읽기가 두 번째 범위에 들지 않는다.
+        VkBufferMemoryBarrier hostBarrier{};
+        hostBarrier.sType               = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+        hostBarrier.srcAccessMask       = VK_ACCESS_TRANSFER_WRITE_BIT;
+        hostBarrier.dstAccessMask       = VK_ACCESS_HOST_READ_BIT;
+        hostBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        hostBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        hostBarrier.buffer              = ring.getSpanBuffer( span );
+        hostBarrier.offset              = ringOffset;
+        hostBarrier.size                = outLayout._sizeBytes;
+        vkCmdPipelineBarrier( job._commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_HOST_BIT, 0, 0, nullptr, 1, &hostBarrier, 0, nullptr );
 
-        vector<uint8> readBytes;
-        bool          bOk = false;
-        if ( bSubmitted )
+        const uint64 serial = _pDevice->submitTransferJob( job, "submitTextureReadback: vkQueueSubmit" );
+        if ( serial == 0 )
         {
-            void* pMapped{ nullptr };
-            if ( vkMapMemory( _pDevice->_device, pStaging->_memory, 0, outLayout._sizeBytes, 0, &pMapped ) == VK_SUCCESS && pMapped != nullptr )
-            {
-                readBytes.assign( outLayout._sizeBytes, 0 );
-                Memory::copy( readBytes.data(), pMapped, outLayout._sizeBytes );
-                vkUnmapMemory( _pDevice->_device, pStaging->_memory );
-                if ( bDepth && static_cast<VkFormat>( pRecord->_format ) == VK_FORMAT_D24_UNORM_S8_UINT )
-                    convertRHIDepth24ToFloat( readBytes.data(), outLayout._width * outLayout._height );
-                bOk = true;
-            }
-            else
-            {
-                SW_LOG_ERROR( "submitTextureReadback: failed to map the staging memory (%# bytes)", outLayout._sizeBytes );
-            }
+            ring._ledger.free( span );
+            return RHITransferSubmit::rejected();
+        }
+        {
+            std::scoped_lock<mutex> layoutLock{ _pDevice->_imageLayoutMutex };
             pRecord->_layout = static_cast<uint32>( layoutAfter );
         }
-        else
-        {
-            _pDevice->reportQueueResult( static_cast<int32>( oneShot.getLastResult() ), "submitTextureReadback: one-shot submit" );
-        }
-        destroyBuffer( staging );
-        if ( bOk == false )
-            return RHITransferSubmit::rejected();
+        pRecord->_lastReadbackSerial.store( serial );
 
-        const uint64 serial = _pDevice->_transferSerials.issueCompleted();
-        _pDevice->_readbackTable.add( serial, std::move( readBytes ) );
+        // 구간에는 시리얼을 붙이지 않는다 — 가져가거나 버릴 때까지 결과가 링에 남아야 한다.
+        VulkanRHIDevice::VulkanPendingReadback pending{};
+        pending._span              = span;
+        pending._dataOffsetBytes   = ringOffset;
+        pending._sizeBytes         = outLayout._sizeBytes;
+        pending._depth24TexelCount = ( bDepth && static_cast<VkFormat>( pRecord->_format ) == VK_FORMAT_D24_UNORM_S8_UINT ) ? outLayout._width * outLayout._height : 0u;
+        _pDevice->_readbackTable.add( serial, pending );
         return _pDevice->_transferSerials.makeAccepted( serial );
     }
 
@@ -954,14 +1021,15 @@ namespace sw
         VulkanRHIDevice::VulkanTextureRecord owned;
         if ( _pDevice->_gpuTextures.take( texture, owned ) == false )
             return;
-        VkDevice            dev        = _pDevice->_device;
-        VkImageView         view       = owned._imageView;
-        VkImageView         sampleView = owned._sampleView;
-        VkImage             image      = owned._image;
-        VkDeviceMemory      mem        = owned._memory;
-        vector<VkImageView> listSliceView{ owned._listSliceView };
-        RHIMemoryLedger*    pLedger = &_pDevice->getMemoryLedger();
-        _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, view, sampleView, image, mem, listSliceView, pLedger, texture]()
+        VkDevice                         dev        = _pDevice->_device;
+        VkImageView                      view       = owned._imageView;
+        VkImageView                      sampleView = owned._sampleView;
+        VkImage                          image      = owned._image;
+        VkDeviceMemory                   mem        = owned._memory;
+        vector<VkImageView>              listSliceView{ owned._listSliceView };
+        RHIMemoryLedger*                 pLedger = &_pDevice->getMemoryLedger();
+        const RHIResourceReleaseDelegate releaseDelegate =
+            SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, view, sampleView, image, mem, listSliceView, pLedger, texture]()
         {
             for ( VkImageView sliceView : listSliceView )
             {
@@ -977,7 +1045,22 @@ namespace sw
                 vkFreeMemory( dev, mem, nullptr );
             // 장부는 메모리를 실제로 놓을 때 줄인다(해제 요청 시점이 아니라).
             pLedger->recordFree( RHIMemoryKey::makeTexture( texture ) );
-        } ),
-                                                   _pDevice->_frameFenceCounter + 1 );
+        } );
+
+        // 전송 중인 텍스처의 해제는 전송이 끝난 뒤로 미룬다(전송 계약 6). 끝나면 그때의 다음 프레임 펜스까지 한 번 더 미뤄 이 텍스처를 그린 프레임도 지나게 한다.
+        // 지금은 전송과 프레임이 같은 큐라 다음 프레임 펜스도 앞서 낸 전송을 덮지만, 해제가 그 큐 공유에 기대지 않게 전송 완료를 직접 본다(DX12 와 같은 규칙).
+        const uint64 lastWriteSerial     = owned._lastTransferSerial.load();
+        const uint64 lastReadSerial      = owned._lastReadbackSerial.load();
+        const uint64 lastSerial          = lastWriteSerial > lastReadSerial ? lastWriteSerial : lastReadSerial;
+        const bool   bUnfinishedTransfer = lastSerial != 0 && _pDevice->_transferSerials.isComplete( lastSerial ) == false;
+        if ( bUnfinishedTransfer )
+        {
+            VulkanRHIDevice* pDevice = _pDevice;
+            _pDevice->_transferReleaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [pDevice, releaseDelegate]()
+            { pDevice->_releaseQueue.enqueueGPURelease( releaseDelegate, pDevice->_frameFenceCounter + 1 ); } ),
+                                                               lastSerial );
+            return;
+        }
+        _pDevice->_releaseQueue.enqueueGPURelease( releaseDelegate, _pDevice->_frameFenceCounter + 1 );
     }
 } // namespace sw

@@ -14,7 +14,7 @@ namespace sw
     class IRHIDevice;
 
     /** @brief 정수 버전입니다. 스탬프의 `v<N>` 과 같아야 합니다(아래 static_assert 가 비교합니다). */
-    inline constexpr uint32 kRHIModuleAbiVersion = 40;
+    inline constexpr uint32 kRHIModuleAbiVersion = 41;
     /**
      * @brief 불투명 표면 지문입니다. 커맨드 리스트와 디바이스 ABI 가 바뀌면 `v<N>` 을 올리고 문자열을 바꿉니다.
      * @details 올려야 하는 변경은 다음과 같습니다. 어느 것이든 vtable 이나 레이아웃이 바뀝니다.
@@ -25,7 +25,7 @@ namespace sw
      *          RHINativeHandles 는 이 스탬프가 Engine ↔ RHI_* 를 덮고, Engine ↔ 호출하는 모듈(에디터)은 구조체의 `_version` 과 `_byteSize` 로 대조합니다.
      *          버전마다 무엇이 바뀌었는지는 git log 에 있습니다.
      */
-    inline constexpr auto kRHIModuleAbiStamp = "rhi-cl-v40-2026-10";
+    inline constexpr auto kRHIModuleAbiStamp = "rhi-cl-v41-2026-10";
 
     namespace RHIModuleAbiInternal
     {
