@@ -16,6 +16,14 @@
 
 namespace sw
 {
+    /** @brief 포인터를 창에 묶는 방식입니다(`WaylandWindow::setPointerLock`). */
+    enum class WaylandPointerLock : uint8
+    {
+        Released = 0, ///< 묶지 않는다. `None` 이라 쓰지 않는다 — 입력 관리자가 X11 헤더(`None` 매크로) 뒤에 이 헤더를 읽는다.
+        Confined,     ///< 포인터가 창 밖으로 나가지 못한다(zwp_confined_pointer_v1). 움직임은 그대로 온다.
+        Locked,       ///< 포인터가 제자리에 서고 상대 이동만 온다(zwp_locked_pointer_v1 + zwp_relative_pointer_v1).
+    };
+
     /** @class WaylandWindow @brief 파일 머리말 참고. */
     class WaylandWindow : public IWindow
     {
@@ -42,10 +50,20 @@ namespace sw
         /** @brief 컴포지터가 창을 한 번 배치(configure)했으면 true 입니다. */
         bool isVisible() const override;
         /**
-         * @brief 화면 배율입니다. 창이 걸친 `wl_output` 들의 정수 배율(`wl_output.scale`) 중 가장 큰 값이고, 걸친 출력이 없으면 1 입니다.
-         * @details 알려 주기만 한다 — 버퍼 배율은 바꾸지 않아 컴포지터가 확대한다. 소수 배율(wp_fractional_scale_v1)은 프로토콜 생성 목록(CMake)에 없어 읽지 않는다.
+         * @brief 화면 배율입니다. 컴포지터가 소수 배율(`wp_fractional_scale_v1.preferred_scale`, 1/120 단위)을 알렸으면 그 값이고,
+         *        아니면 창이 걸친 `wl_output` 들의 정수 배율(`wl_output.scale`) 중 가장 큰 값이며, 걸친 출력도 없으면 1 입니다.
+         * @details 알려 주기만 한다 — 버퍼 배율은 바꾸지 않아 컴포지터가 확대한다. 소수 배율 프로토콜이 없는 컴포지터는 정상이며(오래된 컴포지터) 정수 배율이 그 길이다.
          */
         float32 getContentScale() const override;
+        /** @brief 컴포지터가 `wp_fractional_scale_manager_v1` 을 내놓았으면 true 입니다(없으면 `getContentScale` 은 정수 배율이다). */
+        [[nodiscard]] bool supportsFractionalScale() const;
+        /** @brief 컴포지터에 `zwp_pointer_constraints_v1` 과 `zwp_relative_pointer_manager_v1` 이 둘 다 있고 포인터 장치가 있으면 true 입니다. */
+        [[nodiscard]] bool supportsPointerLock() const;
+        /**
+         * @brief 포인터를 창에 묶거나(Confined) 제자리에 세우거나(Locked) 풉니다(Released). 묶임은 컴포지터가 창에 포인터 포커스가 있을 때만 켠다(영속 수명이라 포커스가 돌아오면 다시 켜진다).
+         * @return 요청대로 걸었으면(Released 는 항상) true, 컴포지터에 확장이 없거나 포인터 장치가 없어 못 걸었으면 false 입니다(Confined 는 `zwp_pointer_constraints_v1` 만, Locked 는 `supportsPointerLock` 이 필요하다). 같은 방식을 다시 부르면 아무것도 하지 않는다.
+         */
+        [[nodiscard]] bool setPointerLock( WaylandPointerLock lock );
         /** @brief 클립보드(`wl_data_device` 선택)의 글을 @p outText 에 담습니다. 선택이 없거나 글 형식이 없거나 200 ms 안에 답이 없으면 false 입니다. */
         [[nodiscard]] bool readClipboardText( string& outText );
         /** @brief @p text 를 클립보드 선택으로 내놓습니다. 글은 창이 들고 다른 프로그램이 청할 때(`wl_data_source.send`) 보냅니다. 입력 일련번호가 아직 없거나 데이터 장치가 없으면 false 입니다. */

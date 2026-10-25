@@ -449,6 +449,12 @@ namespace sw
                         postRawEvent( RawInputEvent::makeMouseHorizontalWheel( input._horizontalWheel ) );
                     break;
                 }
+                case WaylandInputKind::PointerRelative:
+                {
+                    // 포인터가 잠긴 동안의 움직임이다(위치는 서 있다) — Win32 WM_INPUT 과 같이 위치 없이 이동량만 넘긴다.
+                    postRawEvent( RawInputEvent::makeMouseRawDelta( input._relativeX, input._relativeY ) );
+                    break;
+                }
                 case WaylandInputKind::PointerEnter:
                 case WaylandInputKind::PointerLeave:
                 {
@@ -626,12 +632,15 @@ namespace sw
         IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
         if ( pWindow == nullptr )
             return;
-        // Wayland 는 클라이언트가 포인터를 잡거나 옮길 수 없다(zwp_pointer_constraints · relative-pointer 확장이 필요하고 아직 없다). 잠그지 않은 채로 한 번 알린다.
-        if ( X11InputInternal::isWaylandWindow( pWindow ) )
+        // Wayland 는 클라이언트가 포인터를 옮길 수 없다 — 가두기(ConfinedToWindow) · 잠그기(LockedInCenter)를 zwp_pointer_constraints 로 컴포지터에 청한다.
+        // 잠긴 포인터는 가운데로 되돌릴 필요가 없다(제자리에 서 있고 상대 이동만 온다). 컴포지터에 확장이 없으면 잠그지 않은 채로 한 번 오류로 알린다.
+        WaylandWindow* pWaylandWindow = WaylandWindow::tryCast( pWindow );
+        if ( pWaylandWindow != nullptr )
         {
-            const bool bLockWanted = _pMouse->getLockMode() != MouseLockMode::None;
-            if ( bLockWanted && X11InputInternal::markWaylandReported( X11InputInternal::kWaylandLockBit ) )
-                SW_LOG_ERROR( "Mouse lock on Wayland needs pointer constraints, which are not implemented - the pointer stays free" );
+            const MouseLockMode      mode = _pMouse->getLockMode();
+            const WaylandPointerLock lock = mode == MouseLockMode::LockedInCenter ? WaylandPointerLock::Locked : ( mode == MouseLockMode::ConfinedToWindow ? WaylandPointerLock::Confined : WaylandPointerLock::Released );
+            if ( pWaylandWindow->setPointerLock( lock ) == false && X11InputInternal::markWaylandReported( X11InputInternal::kWaylandLockBit ) )
+                SW_LOG_ERROR( "Mouse lock on Wayland needs the compositor's pointer-constraints (and relative-pointer for a centre lock) and a pointer device - the pointer stays free" );
             return;
         }
 
@@ -692,8 +701,14 @@ namespace sw
     {
         MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
         IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
-        if ( pWindow == nullptr || X11InputInternal::isWaylandWindow( pWindow ) )
-            return; // Wayland 는 잡은 적이 없다
+        if ( pWindow == nullptr )
+            return;
+        WaylandWindow* pWaylandWindow = WaylandWindow::tryCast( pWindow );
+        if ( pWaylandWindow != nullptr )
+        {
+            (void)pWaylandWindow->setPointerLock( WaylandPointerLock::Released ); // 풀기는 항상 되고, 걸린 것이 없으면 아무 일도 없다
+            return;
+        }
 
         Display* pDisplay  = nullptr;
         Window   x11Window = 0;

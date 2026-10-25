@@ -67,7 +67,11 @@ namespace sw
         void applyWindowVisibility( bool bShow ) override;
         /** @brief X11 창이 지금 화면에 보이는지(창 관리자가 매핑했는지) 반환합니다. */
         bool isVisible() const override;
-        /** @brief 데스크톱이 알리는 `Xft.dpi` 리소스 / 96 입니다(GNOME · KDE · xrdb). 없으면 1. */
+        /**
+         * @brief 데스크톱이 알리는 `Xft.dpi` 리소스 / 96 입니다(GNOME · KDE · xrdb). 없으면 1.
+         * @details XWayland 에서도 같은 길이다(컴포지터가 배율을 이 리소스에 적는다). 리소스는 연결을 연 때의 값(`XResourceManagerString` 은 `XOpenDisplay` 가 읽어 둔 것)이라
+         *          실행 중 배율을 바꾸면 따라가지 않는다 — 서버에 묻는 길은 왕복이고 `Engine::updateRuntimeUI` 가 프레임마다 부르므로 그대로 둔다. Xrandr 의 물리 크기 DPI 는 배율이 아니라 화면 밀도라 쓰지 않는다.
+         */
         float32 getContentScale() const override;
 
         /** @brief EWMH `_NET_WM_STATE_FULLSCREEN` 을 켜고 끄고, 창 모드면 `XResizeWindow` 로 크기를 바꿉니다. 크기 통보는 다음 ConfigureNotify 입니다. */
