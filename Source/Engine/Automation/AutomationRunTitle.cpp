@@ -308,12 +308,8 @@ namespace sw
         constexpr uint32 kEllipsisBytes = 3; // "…" = E2 80 A6
         if ( text.size() <= maxBytes )
             return string{ text };
-        size_t cut = maxBytes > kEllipsisBytes ? maxBytes - kEllipsisBytes : 0;
-        while ( cut > 0 && ( static_cast<uint8>( text[cut] ) & 0xC0 ) == 0x80 )
-        {
-            --cut; // 이어지는 바이트 위에서는 글자 중간이다
-        }
-        string result{ text.substr( 0, cut ) };
+        const size_t cut = StringUtil::floorToUtf8Boundary( text, maxBytes > kEllipsisBytes ? maxBytes - kEllipsisBytes : 0 );
+        string       result{ text.substr( 0, cut ) };
         result += "\xE2\x80\xA6";
         return result;
     }

@@ -49,7 +49,7 @@ from common.ExitCode import ExitCode  # noqa: E402
 from common.Host import runGit  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 from common.Process import runProcess  # noqa: E402
-from common.SharedLock import acquire, getSharedSlotCount, kDefaultWaitSeconds, kMapSharedSlotCount, releaseHeld  # noqa: E402
+from common.SharedLock import holdLock, kDefaultWaitSeconds  # noqa: E402
 from common.Timeline import appendTimelineLine, kTimelineEnvName, kTimelineItemEnvName  # noqa: E402
 from common.VerifyManifest import (ItemResult, VerifyItem, VerifyManifest, VerifyManifestError, buildItemCommand, checkVerifyPending,  # noqa: E402
                                    formatReport, groupByGpuMode, interpretOutcome, kMapLockByGpuMode, kStatusBlocked, kStatusFailed,
@@ -98,20 +98,13 @@ def formatNow() -> str:
 @contextlib.contextmanager
 def holdLocksInternal(mainRoot: Path, gpuMode: str, owner: str, purpose: str, waitSeconds: int) -> Iterator[int]:
     """GPU 방식에 맞는 잠금들을 잡고 `0` 을 내준다(못 잡으면 그 종료 코드를 내주고 이미 잡은 것을 놓는다). 끝나면 반드시 놓는다."""
-    listHeld: list[argparse.Namespace] = []
-    try:
+    with contextlib.ExitStack() as stack:
         for resource, bShared in kMapLockByGpuMode[gpuMode]:
-            args = argparse.Namespace(resource=resource, owner=owner, purpose=purpose, shared=bShared, pid=os.getpid(), wait=waitSeconds,
-                                      slots=getSharedSlotCount(resource) if bShared else kMapSharedSlotCount.get(resource, 0), belowNormal=False)
-            code = acquire(mainRoot, args)
-            if code != 0:
+            code = stack.enter_context(holdLock(mainRoot, resource, bShared, owner, purpose, waitSeconds))
+            if code != ExitCode.Passed:
                 yield code
                 return
-            listHeld.append(args)
-        yield 0
-    finally:
-        for args in reversed(listHeld):
-            releaseHeld(mainRoot, args)
+        yield ExitCode.Passed
 
 
 def runItemInternal(item: VerifyItem, preset: str, repositoryRoot: Path, owner: str, outputDir: Path) -> ItemResult:

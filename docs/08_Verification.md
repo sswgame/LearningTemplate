@@ -632,6 +632,7 @@ push 뒤 결과를 기다리지 않는 것은 [작업 방식](11_Workflow.md) 4�
 `CheckKitNamespaces`(트리 전체의 같은 상태 표 · 로그 범주). 린트 잡(`RunLintSuite`)과 `ctest -L lint` 는 훅의 건너뜀과 상관없이 `LintCatalog` 의 목록 전부를 돌린다
 (`TestPreCommitLint.testTreeWideCrossFileGatesAreLeftToCi` 가 목록에 남아 있는지 본다). 한계: 이 둘의 위반은 커밋이 아니라 push 뒤 CI 에서 처음 보인다 —
 이름 · 상태 표를 바꾸는 커밋은 push 전에 `py -3 -m Scripts gate CheckNameReferences` 를 손으로 돌린다.
+게이트 결과는 `통과 | 건너뜀(사유) | 불성립` 셋으로 갈린다(`Scripts/lint/GateVerdict.py`). 통합(`lint-suite` · CTest)에서 불성립(종료 5 — 빌드 폴더 · 도구 · 훑을 파일이 없다)은 실패이고, `RunLintSuite --strict` 는 건너뜀도 실패로 센다. 훅 요약 줄은 통과 · 건너뜀(사유 분류별) · 실패를 따로 센다.
 
 ```powershell
 py -3 -m Scripts ci-jobs --summary                 # main 의 가장 새로 끝난 실행 한 줄(실패한 잡과 연속 실패 수) — 세션 가드가 세션 시작에 부른다

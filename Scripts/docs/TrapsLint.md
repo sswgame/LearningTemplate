@@ -4,6 +4,7 @@
 
 ## 함정 · 계약
 
+- **게이트의 "건너뜀" 은 통과가 아니다.** 결과는 `통과(0) | 건너뜀(77) | 불성립(5)` 이고(`lint/GateVerdict.py`), 통합(`lint-suite` · CTest)에서 불성립은 실패, `RunLintSuite --strict` 는 건너뜀도 실패다. 훅 요약은 세 칸을 따로 센다. 사유는 `분류 — 상세` 꼴로 쓴다 — 요약 문구로 `OK (SKIPPED …)` 를 흉내 내면 통과와 같은 줄로 보인다.
 - **약어 코드모드(`FormatAcronymSpelling`)는 도구 자신과 비교하는 글도 고친다.** `--apply-files` · `--apply-text` 는 트리 전체를 돌고 `--files` 를 받지 않는다 — 치환 뒤 레지스트리 · 코드모드 · 테스트 · `docs/agents/NamingCpp.md` 의 옛↔새 철자 예시와 인계 문서를 diff 로 보고 되돌린다(`_kTextExcludedRel` 에 오른 파일은 건너뛴다). `--check` 로 목록을 먼저 본다.
 - **코드모드를 다시 돌리면 남의 이름도 다시 바뀐다**(Vulkan `samplerInfo.maxLod`, Tracy `queryId`, Box2D `bodyIdA`) — 앞머리 규칙은 구조체 이름만 가리고 멤버는 못 가린다. 컴파일로 드러나면 `AcronymRegistry.kExternalName` 에 올린다. `--strings` 는 파일 · 전송 형식 키(`"buildId"` · 크래시 텍스트)도 바꾸니 그 자리는 되돌린다.
 - **이름 길이 · 대소문자가 바뀌면 include 정렬과 clang-format 정렬이 달라진다** — 치환 뒤 `fixer/FormatIncludeOrder` · `FormatModified` 를 돌린다. 에디터 아이콘 상수(`EditorIconGlyphs.h`)는 생성물이라 `generate/GenerateEditorIcons.py` 로 다시 만든다(생성기가 레지스트리의 강제 약어로 쓴다).

@@ -3,6 +3,7 @@
 #include "Engine/Automation/AutomationHangWatch.h"
 
 #include "Core/Concurrency/ThreadName.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/Diagnostics/CrashContext.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -106,15 +107,8 @@ namespace sw
     {
         if ( pDestination == nullptr || capacity == 0 )
             return;
-        size_t count = text.size() < capacity ? text.size() : static_cast<size_t>( capacity - 1 );
         // UTF-8 글자 중간에서 자르지 않는다 — 이어지는 바이트 위에서는 앞 글자 시작까지 물러난다.
-        while ( count > 0 && count < text.size() )
-        {
-            const bool bContinuation = ( static_cast<uint8>( text[count] ) & 0xC0 ) == 0x80;
-            if ( bContinuation == false )
-                break;
-            --count;
-        }
+        const size_t count = StringUtil::floorToUtf8Boundary( text, text.size() < capacity ? text.size() : static_cast<size_t>( capacity - 1 ) );
         std::memcpy( pDestination, text.data(), count );
         std::memset( pDestination + count, 0, capacity - count );
     }
