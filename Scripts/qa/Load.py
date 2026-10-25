@@ -619,7 +619,7 @@ def commandList(catalog: LoadCatalog) -> int:
         print(f"profile  {name:<12} {'emulated' if data['emulated'] else 'native  '} {data['description']}")
     for name, listPair in catalog.suites["suites"].items():
         print(f"suite    {name:<12} {' '.join(f'{scenario}x{profile}' for scenario, profile in listPair)}")
-    return 0
+    return ExitCode.Passed
 
 
 def commandRun(catalog: LoadCatalog, listPair: list[tuple[str, str]], args: argparse.Namespace) -> int:
@@ -658,7 +658,7 @@ def commandTrend(tree: BuildTree, scenarioName: str | None, metricName: str) -> 
     path = tree.path / "LoadResults" / "trend.jsonl"
     if not path.is_file():
         print(f"[Load] no {path}", flush=True)
-        return 1
+        return ExitCode.Violation
     for line in path.read_text(encoding="utf-8").splitlines():
         entry = json.loads(line)
         if scenarioName and entry["scenario"] != scenarioName:
@@ -666,7 +666,7 @@ def commandTrend(tree: BuildTree, scenarioName: str | None, metricName: str) -> 
         value = entry["metrics"].get(metricName)
         print(f"{entry['time']} {entry['commit']:<10} {entry['scenario']} x {entry['profile']:<8} {entry['verdict']:<4} {metricName} "
               f"{'-' if value is None else f'{value:.1f}'}")
-    return 0
+    return ExitCode.Passed
 
 
 def main(listArgument: list[str] | None = None) -> int:
@@ -700,14 +700,14 @@ def main(listArgument: list[str] | None = None) -> int:
             listPair = catalog.suites["suites"].get(args.suite)
             if listPair is None:
                 print(f"[Load] unknown suite '{args.suite}'", file=sys.stderr)
-                return 2
+                return ExitCode.CheckInvalid
             return commandRun(catalog, [(scenario, profile) for scenario, profile in listPair], args)
         if args.command == "scale":
             return commandScale(catalog, args.scenario, args.profile, args)
         return commandTrend(BuildTree.fromPreset(args.preset, catalog.repositoryRoot), args.scenario, args.metric)
     except (KeyError, ValueError, ElementTree.ParseError) as error:
         print(f"[Load] {error}", file=sys.stderr)
-        return 2
+        return ExitCode.CheckInvalid
 
 
 if __name__ == "__main__":

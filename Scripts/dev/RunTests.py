@@ -38,6 +38,7 @@ from common.Host import runGit  # noqa: E402
 from common.Parallel import getCpuCount, mapConcurrent  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 from common.Process import ProcessResult, runProcess  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
 
 #: `--test_list` 가 고른 케이스를 찍는 줄(`  Suite.Case`).
 _kListedCaseRe = re.compile(r"^  ([A-Z]\w*Test)\.(\w+)\s*$")
@@ -117,7 +118,7 @@ def runChangedInternal(tree: BuildTree, args: argparse.Namespace, listExtra: lis
     listChanged = listChangedFiles(root, args.base)
     if listChanged is None:
         print(f"[RunTests] 기준 '{args.base}' 를 찾지 못했습니다", file=sys.stderr)
-        return 2
+        return ExitCode.CheckInvalid
     policy = json.loads((root / "Test" / "TestPolicy.json").read_text(encoding="utf-8"))
     setTestExecutable = set(policy["executables"])
     # 해석하지 못하면 전체 · 일부로 물러서지 않고 까닭을 보이며 멈춘다(common/ChangedTests.py 머리말).
@@ -130,7 +131,7 @@ def runChangedInternal(tree: BuildTree, args: argparse.Namespace, listExtra: lis
         print(f"[RunTests] 바뀐 파일 {len(listChanged)} 개를 테스트로 옮기지 못했습니다:", file=sys.stderr)
         for reason in error.listReason:
             print(f"    {reason}", file=sys.stderr)
-        return 2
+        return ExitCode.CheckInvalid
     print(f"[RunTests] 바뀐 파일 {len(listChanged)} 개 → " + ("전체" if selection.bFull else
           f"실행 파일 {sorted(selection.setExecutable)} · 스위트 {dict((key, sorted(value)) for key, value in selection.mapExecutableSuite.items())}"
           f"{' · 파이썬' if selection.bPython else ''} (+ 린트)"))
@@ -159,7 +160,7 @@ def runChangedInternal(tree: BuildTree, args: argparse.Namespace, listExtra: lis
         print(f"\n[RunTests] ({workingDir}) {' '.join(command)}", flush=True)
         bFailed = runDigested(command, root, executable, bVerbose=args.bVerbose, cwd=workingDir).returnCode != 0 or bFailed
     print("\n[RunTests] " + ("실패가 있습니다" if bFailed else "모두 통과"))
-    return 1 if bFailed else 0
+    return ExitCode.Violation if bFailed else ExitCode.Passed
 
 
 def runPatternInternal(tree: BuildTree, args: argparse.Namespace, listPassthrough: list[str]) -> int:
@@ -167,7 +168,7 @@ def runPatternInternal(tree: BuildTree, args: argparse.Namespace, listPassthroug
     workingDir, listExecutable = findTestExecutables(tree)
     if not listExecutable:
         print(f"[RunTests] {tree.path} 에 테스트 실행 파일이 없습니다 — 먼저 빌드하세요 (cmake --build --preset {tree.name} --target all AllTests)", file=sys.stderr)
-        return 2
+        return ExitCode.CheckInvalid
 
     # 실행 파일마다 `--test_list` 로 묻는다 — 엔진 서비스를 세우느라 하나에 수백 ms 라 동시에.
     listSelection = list(mapConcurrent(lambda executable: (executable, listSelectedCases(executable, workingDir, args.pattern)),
@@ -175,7 +176,7 @@ def runPatternInternal(tree: BuildTree, args: argparse.Namespace, listPassthroug
     listSelection = sorted((item for item in listSelection if item[1]), key=lambda item: item[0].name)
     if not listSelection:
         print(f"[RunTests] '{args.pattern}' 가 고르는 케이스가 어느 실행 파일에도 없습니다 ({len(listExecutable)} 개를 물었다)", file=sys.stderr)
-        return 1
+        return ExitCode.Violation
 
     for executable, listCase in listSelection:
         print(f"[RunTests] {executable.name}: {len(listCase)} cases")
@@ -183,7 +184,7 @@ def runPatternInternal(tree: BuildTree, args: argparse.Namespace, listPassthroug
             for caseName in listCase:
                 print(f"    {caseName}")
     if args.list:
-        return 0
+        return ExitCode.Passed
 
     listExtra = [argument for argument in listPassthrough if argument != "--"]
     if args.repeat > 1:
@@ -201,9 +202,9 @@ def runPatternInternal(tree: BuildTree, args: argparse.Namespace, listPassthroug
     print()
     if listFailed:
         print(f"[RunTests] 실패: {', '.join(listFailed)}")
-        return 1
+        return ExitCode.Violation
     print(f"[RunTests] 모두 통과 ({len(listSelection)} 실행 파일)")
-    return 0
+    return ExitCode.Passed
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -228,20 +229,20 @@ def main(argv: list[str] | None = None) -> int:
     if args.bBuild:
         if not tree.bConfigured:
             print(f"[RunTests] {tree.path} 가 구성되지 않았습니다 — 먼저 cmake --preset {tree.name}", file=sys.stderr)
-            return 2
+            return ExitCode.CheckInvalid
         buildCommand = tree.buildCommand()
         print(f"[RunTests] {' '.join(buildCommand)}", flush=True)
         buildResult = runDigested(buildCommand, getProjectRoot(), "test-build", bVerbose=args.bVerbose)
         if not buildResult.bSucceeded:
             print("[RunTests] 테스트 빌드가 졌습니다" if buildResult.bLaunched else "[RunTests] cmake 를 찾지 못했습니다 (PATH)", file=sys.stderr)
-            return 2
+            return ExitCode.CheckInvalid
     try:
         if args.changed:
             return runChangedInternal(tree, args, [argument for argument in listPassthrough if argument != "--"])
         return runPatternInternal(tree, args, listPassthrough)
     except RunTestsError as error:
         print(f"[RunTests] {error}", file=sys.stderr)
-        return 2
+        return ExitCode.CheckInvalid
 
 
 if __name__ == "__main__":

@@ -44,6 +44,7 @@ import zipfile
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))   # Scripts
 from common.Paths import getProjectRoot  # noqa: E402 — import 하면 콘솔이 UTF-8 이 된다
+from common.ExitCode import ExitCode  # noqa: E402
 
 _kRepositoryRoot = getProjectRoot()
 _kCommonRoot = _kRepositoryRoot / "Resource" / "common"
@@ -202,17 +203,17 @@ def runFetch(manifest: dict) -> int:
     listProblem = [problem for pack in manifest["packs"] for problem in listPackProblemInternal(pack)]
     if listProblem:
         print("\n".join(listProblem))
-        return 1
+        return ExitCode.Violation
     if any(importSoundFileInternal(pack["convert"]) is None for pack in manifest["packs"] if "convert" in pack):
-        return 1   # 받기 전에 변환 도구부터 확인한다 — 반쯤 쓴 상태로 멈추지 않게
+        return ExitCode.Violation   # 받기 전에 변환 도구부터 확인한다 — 반쯤 쓴 상태로 멈추지 않게
     for pack in manifest["packs"]:
         soundfile = importSoundFileInternal(pack["convert"]) if "convert" in pack else None
         if "convert" in pack and soundfile is None:
-            return 1
+            return ExitCode.Violation
         page = downloadInternal(pack["page"]).decode("utf-8", errors="replace")
         if pack["page_license_marker"] not in page:
             print(f"{pack['page']}: 라이선스 표시 '{pack['page_license_marker']}' 가 페이지에 없습니다 — 받지 않습니다")
-            return 1
+            return ExitCode.Violation
         payload = downloadInternal(pack["download"])
         archive = zipfile.ZipFile(io.BytesIO(payload)) if "member" in pack["files"][0] else None
         for entry in pack["files"]:
@@ -221,11 +222,11 @@ def runFetch(manifest: dict) -> int:
             if soundfile is not None:
                 if hashlib.sha256(data).hexdigest() != entry["source_sha256"]:
                     print(f"{label}: 원본 SHA-256 이 목록과 다릅니다 — 쓰지 않습니다")
-                    return 1
+                    return ExitCode.Violation
                 data = convertToVorbisInternal(soundfile, data, pack["convert"], entry["source_sha256"])
             if hashlib.sha256(data).hexdigest() != entry["sha256"]:
                 print(f"{label}: SHA-256 이 목록과 다릅니다 — 쓰지 않습니다")
-                return 1
+                return ExitCode.Violation
             path = _kCommonRoot / pack["folder"] / entry["name"]
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(data)

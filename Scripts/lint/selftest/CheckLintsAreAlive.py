@@ -44,6 +44,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common.Parallel import getProcessWorkerCount, mapConcurrent  # noqa: E402
 from common.Process import runProcess  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
 from lint.LintCatalog import LintScript, discoverLintScripts  # noqa: E402
 from lint.LintGate import GateError, GateResult, LintGate, findGateClass  # noqa: E402
 
@@ -108,10 +109,10 @@ def runCasesOfInternal(gateName: str) -> int:
         gateClass = findGateClass(importlib.import_module(f"lint.gate.{gateName}"))
     if gateClass is None:
         print(f"[CheckLintsAreAlive] gate/ 에 게이트 '{gateName}' 가 없습니다", file=sys.stderr)
-        return 2
+        return ExitCode.CheckInvalid
     listResult = [runCaseInternal(gateClass, case) for case in gateClass.selfTestCases]
     sys.stdout.write(_kResultMarker + json.dumps(listResult, ensure_ascii=False))
-    return 0
+    return ExitCode.Passed
 
 
 class CheckLintsAreAliveGate(LintGate):

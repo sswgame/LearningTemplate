@@ -31,6 +31,7 @@ from pathlib import Path
 from common.BuildTree import addBuildTreeArguments, BuildTree, BuildTreeError  # noqa: E402
 from common.Parallel import getProcessWorkerCount  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
 
 
 @dataclass
@@ -107,7 +108,7 @@ class LintReport:
             return self.produce(context, args)
         except BuildTreeError as error:
             print(f"[{self.name}] {error}", file=sys.stderr)
-            return 2
+            return ExitCode.CheckInvalid
 
 
 def findReportClass(module: types.ModuleType) -> type[LintReport] | None:

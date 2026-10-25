@@ -38,6 +38,7 @@ from common.Constants import (
 from common.Paths import getProjectRoot, normalizePath, platformKey, sharedLibraryNames
 from common.Search import findFirstExistingFile, findFirstExistingFileRecursive
 from common.ToolLocator import ToolSpec, findToolRoot
+from common.ExitCode import ExitCode  # noqa: E402
 
 # llvm-lib / llvm-ar 는 **LTO 때문에** 필요하다. clang 이 -flto 로 내는 .obj 는 LLVM 비트코드라
 # MSVC lib.exe 가 못 읽고(LNK1107), 그러면 CMake 의 `check_ipo_supported` 가 실패해 IPO 가 통째로
@@ -459,9 +460,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(list(argv) if argv is not None else None)
     if path := setupLlvm(allowBootstrap=args.install):
         print(path)
-        return 0
+        return ExitCode.Passed
     sys.stderr.write("[SetupLlvm Error] LLVM kit not available\n")
-    return 1
+    return ExitCode.Violation
 
 
 if __name__ == "__main__":

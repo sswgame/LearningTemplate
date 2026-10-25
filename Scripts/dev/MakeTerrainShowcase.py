@@ -29,6 +29,7 @@ import zlib
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 from common.Paths import getProjectRoot
+from common.ExitCode import ExitCode  # noqa: E402
 
 kResolution = 257
 kHeightRange = 40.0
@@ -221,7 +222,7 @@ def main(argv: list[str] | None = None) -> int:
     writeDetailTextureInternal(resourceRoot)
     # 씬의 강 경로(월드 — 지형 원점 (-128, 0, -128) 기준)와 수면 높이.
     print("river points (world):", ";".join(f"{x - 128.0:g},{y:g},{z - 128.0:g}" for x, z, y in kRiverPoint))
-    return 0
+    return ExitCode.Passed
 
 
 if __name__ == "__main__":

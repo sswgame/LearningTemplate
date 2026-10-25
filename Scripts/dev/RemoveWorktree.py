@@ -31,6 +31,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 from common.Host import runGit  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
 from common.Worktree import (  # noqa: E402
     describeWorktreeOwner,
     findMainRoot,
@@ -152,7 +153,7 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"[RemoveWorktree] 가지 {plan.branch} 를 지우지 않았습니다: {deleted.stderr.strip()}", file=sys.stderr)
         print(f"[RemoveWorktree] 지움: {name}")
     runGit(["worktree", "prune"], cwd=mainRoot)   # 청소 — 남은 기록만 정리한다, 실패해도 다음 prune 이 한다
-    return 1 if failureCount else 0
+    return ExitCode.Violation if failureCount else ExitCode.Passed
 
 
 if __name__ == "__main__":

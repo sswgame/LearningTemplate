@@ -28,6 +28,7 @@ from typing import Callable
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 from common.Paths import getProjectRoot
+from common.ExitCode import ExitCode  # noqa: E402
 
 #: 스플래시 크기 — 스플래시 창이 이 크기로 뜬다(`ISplashWindow`).
 kSplashSize = (1376, 768)
@@ -253,7 +254,7 @@ def main(argv: list[str] | None = None) -> int:
     writeFileInternal(root / kSplashRelPath, encodeRgbaPngInternal(width, height, renderSplashInternal()))
     listIcon = [(size, encodeRgbaPngInternal(size, size, renderIconInternal(size))) for size in kIconSizes]
     writeFileInternal(root / kIconRelPath, encodeIcoInternal(listIcon))
-    return 0
+    return ExitCode.Passed
 
 
 if __name__ == "__main__":

@@ -262,7 +262,7 @@ def main(argv: list[str] | None = None) -> int:
         listViolation = checkVerifyPending(repositoryRoot)
         print("\n".join(listViolation))
         print(f"검증 묶음 위반 {len(listViolation)} 건")
-        return 1 if listViolation else 0
+        return ExitCode.Violation if listViolation else ExitCode.Passed
     try:
         manifest = readManifest(repositoryRoot)
         listItem = selectItems(manifest, args.only, args.config)
@@ -271,11 +271,11 @@ def main(argv: list[str] | None = None) -> int:
         return ExitCode.CheckInvalid
     if args.bList:
         printList(manifest)
-        return 0
+        return ExitCode.Passed
     outputDir = repositoryRoot / kResultRelDir / datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     if args.bDryRun:
         printDryRun(manifest, listItem, repositoryRoot, args.owner, outputDir)
-        return 0
+        return ExitCode.Passed
     if not args.owner:
         print("[VerifyBatch] 오류: 돌리려면 --owner <이름> 이 필요합니다(잠금에 적힌다)", file=sys.stderr)
         return ExitCode.CheckInvalid
@@ -289,7 +289,7 @@ def main(argv: list[str] | None = None) -> int:
     report = writeResultFiles(manifest, listResult, outputDir, environment)
     print("\n" + report)
     print(f"\n[VerifyBatch] 결과: {(outputDir / 'result.md').as_posix()}")
-    return 1 if any(result.status in (kStatusFailed, kStatusBlocked) for result in listResult) else 0
+    return ExitCode.Violation if any(result.status in (kStatusFailed, kStatusBlocked) for result in listResult) else ExitCode.Passed
 
 
 if __name__ == "__main__":

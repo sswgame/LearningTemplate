@@ -125,20 +125,20 @@ def main(listArgument: list[str] | None = None) -> int:
     table = loadGameTable(repositoryRoot)
     if not gameName or gameName not in table["games"]:
         print(f"[Perf] 모르는 게임 '{gameName}' — Test/QA/Games.json 에 더하십시오", file=sys.stderr)
-        return 1
+        return ExitCode.Violation
     if buildType != "Release" and not args.allow_debug:
         print(f"[Perf] {appTree.name} 은 {buildType} 빌드다 — Release 로 재십시오(또는 --allow-debug)", file=sys.stderr)
-        return 1
+        return ExitCode.Violation
 
     listAppArgument = [*table["games"][gameName]["arguments"], f"-gv_profileFrames={args.frames}", kBackendSwitch[args.backend]]
     measured, listFailure = measureInternal(args.app, listAppArgument, max(1, args.runs))
     if listFailure:
         for failure in listFailure:
             print(f"[Perf] FAIL {failure}", flush=True)
-        return ExitCode.Skipped if listFailure == ["backend unusable on this machine"] else 1
+        return ExitCode.Skipped if listFailure == ["backend unusable on this machine"] else ExitCode.Violation
     if "GT.Frame" not in measured:
         print("[Perf] FAIL no [Profile] table in the output", flush=True)
-        return 1
+        return ExitCode.Violation
 
     baselinePath = repositoryRoot / "Test/QA/Perf" / f"{gameName}.json"
     document = json.loads(baselinePath.read_text(encoding="utf-8")) if baselinePath.is_file() else {"game": gameName, "machines": {}}
@@ -155,7 +155,7 @@ def main(listArgument: list[str] | None = None) -> int:
         baselinePath.parent.mkdir(parents=True, exist_ok=True)
         baselinePath.write_text(json.dumps(document, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         print(f"[Perf] 기준을 남겼다 {entryKey} -> {baselinePath.relative_to(repositoryRoot)}", flush=True)
-        return 0
+        return ExitCode.Passed
 
     entry = document["machines"].get(entryKey)
     if entry is None:
@@ -163,7 +163,7 @@ def main(listArgument: list[str] | None = None) -> int:
         return ExitCode.Skipped
     if entry.get("frames") != args.frames or entry.get("arguments") != listAppArgument:
         print("[Perf] 기준이 다른 인자로 재어졌다 — 다시 남기십시오", flush=True)
-        return 1
+        return ExitCode.Violation
     tolerance = {"p50_us": args.tolerance_p50, "p99_us": args.tolerance_p99, "avg_us": args.tolerance_p50}
     listRegression, listNote = compareInternal(entry["scopes"], measured, tolerance, args.floor_us)
     for note in listNote:
@@ -173,7 +173,7 @@ def main(listArgument: list[str] | None = None) -> int:
     if listRegression and not args.no_trace:
         captureTraceInternal(args.app, listAppArgument, gameName, args.backend)
     print("[Perf] PASS" if not listRegression else "[Perf] FAIL", flush=True)
-    return 1 if listRegression else 0
+    return ExitCode.Violation if listRegression else ExitCode.Passed
 
 
 if __name__ == "__main__":

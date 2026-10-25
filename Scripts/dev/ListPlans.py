@@ -29,6 +29,7 @@ from common.Plans import PlanDoc, PlanFormatError, kListPlanArea, kListPlanStatu
 from common.MarkdownSections import extractSection  # noqa: E402
 from common.StatusBoard import checkRoadmap  # noqa: E402
 from common.VerifyManifest import checkVerifyPending  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
 
 
 def displayWidthInternal(text: str) -> int:
@@ -87,15 +88,15 @@ def main(argv: list[str] | None = None) -> int:
         listPlan = readPlans(args.root or getProjectRoot())
     except PlanFormatError as error:
         print(f"[plans] 오류: {error}", file=sys.stderr)
-        return 1
+        return ExitCode.Violation
 
     if args.find:
         listPlace = findPlace(listPlan, args.find)
         if not listPlace:
             print(f"[plans] `{args.find}` 는 옛 번호로도 이름으로도 없습니다", file=sys.stderr)
-            return 1
+            return ExitCode.Violation
         print("\n".join(listPlace))
-        return 0
+        return ExitCode.Passed
 
     if args.check:
         listViolation = checkRoadmap(args.root or getProjectRoot())
@@ -104,32 +105,32 @@ def main(argv: list[str] | None = None) -> int:
         listPendingViolation = checkVerifyPending(args.root or getProjectRoot())
         print("\n".join(listPendingViolation))
         print(f"검증 묶음 위반 {len(listPendingViolation)} 건")
-        return 1 if listViolation or listPendingViolation else 0
+        return ExitCode.Violation if listViolation or listPendingViolation else ExitCode.Passed
 
     if args.fileName:
         stem = args.fileName.removesuffix(".md").lower()
         listMatch = [plan for plan in listPlan if plan.stem.lower() == stem]
         if not listMatch:
             print(f"[plans] `{args.fileName}` 문서가 없습니다: {' · '.join(plan.fileName for plan in listPlan)}", file=sys.stderr)
-            return 1
+            return ExitCode.Violation
         if args.section:
             planPath = (args.root or getProjectRoot()) / kPlansRelDir / listMatch[0].fileName
             try:
                 print("\n".join(extractSection(planPath.read_text(encoding="utf-8").splitlines(), args.section)))
             except ValueError as error:
                 print(f"[plans] 오류: {error}", file=sys.stderr)
-                return 1
-            return 0
+                return ExitCode.Violation
+            return ExitCode.Passed
         print(formatPlanDetail(listMatch[0]))
-        return 0
+        return ExitCode.Passed
     if args.section:
         print("[plans] 오류: --section 은 --file 과 함께 씁니다", file=sys.stderr)
-        return 1
+        return ExitCode.Violation
 
     listSelected = selectPlans(listPlan, args.status, args.area)
     print(formatPlanTable(listSelected))
     print(f"{len(listSelected)} 건")
-    return 0
+    return ExitCode.Passed
 
 
 if __name__ == "__main__":

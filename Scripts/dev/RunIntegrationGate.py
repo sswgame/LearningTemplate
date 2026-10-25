@@ -39,6 +39,7 @@ from common.LogDigest import getLogPath, printDigest, runDigested  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 from common.SharedLock import getSharedSlotCount, kDefaultWaitSeconds, runHolding  # noqa: E402
 from common.Worktree import findMainRoot  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
 
 #: 통합 증거 폴더 — 공통 .git 아래(`full-build` 의 `sw-build-evidence` 와 다른 폴더다: 한쪽이 있다고 다른 쪽이 있는 것이 아니다).
 kIntegrationEvidenceDirName = "sw-integration-evidence"
@@ -133,13 +134,13 @@ def runGate(repositoryRoot: Path, args: argparse.Namespace) -> int:
     listDirty = listUncommittedFiles(repositoryRoot)
     if listDirty:
         print(f"[IntegGate] 커밋하지 않은 변경이 있어 돌리지 않습니다 — 증거는 커밋 트리에 붙는다: {', '.join(listDirty[:10])}", file=sys.stderr)
-        return 2
+        return ExitCode.CheckInvalid
     treeHash = readTreeHash(repositoryRoot, "HEAD")
     inputHash = readBuildInputHash(repositoryRoot, "HEAD")
     tree = BuildTree.fromPreset(args.preset, repositoryRoot)
     if not tree.bConfigured:
         print(f"[IntegGate] 구성되지 않은 빌드 폴더입니다: {tree.path} — `cmake --preset {args.preset}` 를 먼저(vcpkg 잠금을 잡고) 돌립니다", file=sys.stderr)
-        return 2
+        return ExitCode.CheckInvalid
     startTime = time.time()
 
     # 1) `-k 0` 빌드 — `cmake --build` 의 `--` 뒤는 ninja 로 간다. 빌드 칸 잠금은 `full-build` 와 같다.
@@ -175,7 +176,7 @@ def runGate(repositoryRoot: Path, args: argparse.Namespace) -> int:
 
     if listUncommittedFiles(repositoryRoot) or readTreeHash(repositoryRoot, "HEAD") != treeHash:
         print("[IntegGate] 도는 동안 트리가 바뀌었습니다 — 지은 것이 지금 커밋과 같다고 말할 수 없어 증거를 남기지 않습니다.", file=sys.stderr)
-        return 2
+        return ExitCode.CheckInvalid
     record["startTime"], record["endTime"] = startTime, time.time()
     if buildCode == 0:   # `-k 0` 가 0 으로 끝났다면 `all AllTests` 전체가 지어진 것 — `full-build` 증거(pre-push 훅이 보는 것)도 같은 근거로 쓴다
         writeEvidence(getEvidenceDirectory(repositoryRoot), inputHash,
@@ -189,10 +190,10 @@ def runGate(repositoryRoot: Path, args: argparse.Namespace) -> int:
         for reason in listReason:
             print(f"[IntegGate] 실패: {reason}", file=sys.stderr)
         print(f"[IntegGate] 실패 증거를 남겼습니다(`check` 는 받지 않습니다): {path}", file=sys.stderr)
-        return 1
+        return ExitCode.Violation
     ctestSummary = record["ctest"]
     print(f"[IntegGate] 통과 — `-k 0` 빌드 + ctest `{args.labels}` {ctestSummary['passed']}/{ctestSummary['total']}(건너뜀 {ctestSummary['skipped']}) — 증거 {path}")
-    return 0
+    return ExitCode.Passed
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -221,10 +222,10 @@ def main(argv: list[str] | None = None) -> int:
             print(f"[IntegGate] {reason}", file=sys.stderr)
         if not listReason:
             print(f"[IntegGate] {args.rev} 의 통합 증거가 통과입니다")
-        return 1 if listReason else 0
+        return ExitCode.Violation if listReason else ExitCode.Passed
     except (RuntimeError, ValueError, ElementTree.ParseError) as error:
         print(f"[IntegGate] {error}", file=sys.stderr)
-        return 2
+        return ExitCode.CheckInvalid
 
 
 if __name__ == "__main__":

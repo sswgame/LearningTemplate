@@ -49,7 +49,7 @@ def main(listArgument: list[str] | None = None) -> int:
     table = loadGameTable(repositoryRoot)
     if not gameName or gameName not in table["games"]:
         print(f"[Soak] 모르는 게임 '{gameName}' — Test/QA/Games.json 에 더하십시오", file=sys.stderr)
-        return 1
+        return ExitCode.Violation
     seconds = max(10, int(args.minutes * 60))
     listAppArgument = [f"-game={gameName}", *table["games"][gameName]["arguments"], f"-gv_profileSeconds={seconds}", kBackendSwitch[args.backend]]
     print(f"[Soak] {gameName} on {args.backend} for {seconds} s: App {' '.join(listAppArgument)}", flush=True)
@@ -112,7 +112,7 @@ def main(listArgument: list[str] | None = None) -> int:
         print(f"[Soak] FAIL {failure}", flush=True)
     if not listFailure:
         print("[Soak] PASS", flush=True)
-    return 1 if listFailure else 0
+    return ExitCode.Violation if listFailure else ExitCode.Passed
 
 
 if __name__ == "__main__":

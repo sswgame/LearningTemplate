@@ -31,6 +31,7 @@ import sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 from common.GltfBufferWriter import BufferWriter  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
 
 #: 기본 출력 폴더(저장소 루트 기준).
 kDefaultFolder = "Resource/game/shooter3d/models_raw/props"
@@ -225,7 +226,7 @@ def main(argv: list[str] | None = None) -> int:
     for fileName, data in (("bow.glb", makeBow()), ("arrow.glb", makeArrow())):
         (folder / fileName).write_bytes(data)
         print(f"[MakeBowProps] {folder / fileName} ({len(data)} bytes)")
-    return 0
+    return ExitCode.Passed
 
 
 if __name__ == "__main__":

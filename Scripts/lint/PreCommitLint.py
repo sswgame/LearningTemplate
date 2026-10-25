@@ -53,6 +53,7 @@ from common.Host import getAllStagedFiles, getStagedCppFiles, runClangFormatBatc
 from common.Parallel import getCpuCount
 from common.Paths import getProjectRoot
 from common.Process import runProcess
+from common.ExitCode import ExitCode  # noqa: E402
 
 
 def listMatchingStagedInternal(listStaged: list[Path], projectRoot: Path,
@@ -413,7 +414,7 @@ def main(argv: list[str] | None = None) -> int:
     allStagedFiles = getAllStagedFiles(projectRoot)
 
     if not allStagedFiles:
-        return 0
+        return ExitCode.Passed
 
     print(f"[PreCommitLint] {len(allStagedFiles)}개의 Staged 파일에 대해 검사를 시작합니다.")
     hasErrors = False
@@ -477,10 +478,10 @@ def main(argv: list[str] | None = None) -> int:
 
     if hasErrors:
         print("\n[PreCommitLint] [FAIL] 검사에 실패했습니다. 오류를 수정한 후 다시 git add 하고 커밋해주세요.")
-        return 1
+        return ExitCode.Violation
 
     print("\n[PreCommitLint] [OK] 모든 검사를 통과했습니다.")
-    return 0
+    return ExitCode.Passed
 
 
 if __name__ == "__main__":

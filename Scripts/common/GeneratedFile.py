@@ -15,6 +15,8 @@ import sys
 from pathlib import Path
 from typing import Any, Callable, Sequence
 
+from .ExitCode import ExitCode
+
 
 def writeGeneratedFile(path: Path, content: str, *, tag: str, summary: str = "", newline: str | None = None,
                        bReportUnchanged: bool = True, bQuiet: bool = False) -> bool:
@@ -67,5 +69,5 @@ def runGenerator(argv: Sequence[str] | None, *, tag: str, description: str,
         generate(args)
     except GeneratorError as error:
         print(f"[{tag}] {error}", file=sys.stderr)
-        return 1
-    return 0
+        return ExitCode.Violation
+    return ExitCode.Passed

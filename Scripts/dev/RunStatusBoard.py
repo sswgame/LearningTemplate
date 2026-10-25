@@ -23,6 +23,7 @@ import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(co
 from common.Paths import getProjectRoot  # noqa: E402
 from common.Plans import PlanFormatError  # noqa: E402
 from common.StatusBoard import StatusBoardError, buildBoard, diffBoard, kBoardFileName, replaceBoard  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -49,14 +50,14 @@ def main(argv: list[str] | None = None) -> int:
             if listDiff:
                 print(f"[status-board] {args.check} 의 표가 낡았습니다 — `py -3 -m Scripts status-board --write {args.check}`", file=sys.stderr)
                 print("\n".join(listDiff), file=sys.stderr)
-                return 1
+                return ExitCode.Violation
             print("[status-board] 표가 최신입니다")
         else:
             print(board)
     except (PlanFormatError, StatusBoardError) as error:
         print(f"[status-board] 오류: {error}", file=sys.stderr)
-        return 1
-    return 0
+        return ExitCode.Violation
+    return ExitCode.Passed
 
 
 if __name__ == "__main__":

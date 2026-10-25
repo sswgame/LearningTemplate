@@ -43,6 +43,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts — com
 from common.BuildTree import BuildTree  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 from common.Process import runProcess  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
 
 _kTag = "ConfigureSnapshot"
 #: 이 도구가 File API 에 남기는 질의 — 클라이언트 이름을 따로 둬 VS Code 등 다른 클라이언트의 질의와 섞이지 않게 한다.
@@ -71,7 +72,7 @@ def prepareQuery(buildDir: Path) -> int:
     queryPath.parent.mkdir(parents=True, exist_ok=True)
     queryPath.write_text(json.dumps(_kQueryContent, indent=2) + "\n", encoding="utf-8")
     print(f"[{_kTag}] 질의를 뒀습니다: {queryPath.as_posix()} — 이제 cmake --preset 을 돌리십시오")
-    return 0
+    return ExitCode.Passed
 
 
 def readReplyIndexInternal(buildDir: Path) -> dict[str, Any]:
@@ -288,23 +289,23 @@ def main(argv: Sequence[str] | None = None) -> int:
             snapshot = takeSnapshot(buildDir, repositoryRoot, not args.no_ctest)
         except FileNotFoundError as error:
             print(f"[{_kTag}] {error}", file=sys.stderr)
-            return 2
+            return ExitCode.CheckInvalid
         args.out.parent.mkdir(parents=True, exist_ok=True)
         args.out.write_text(json.dumps(snapshot, indent=1, sort_keys=True, ensure_ascii=False) + "\n", encoding="utf-8")
         print(f"[{_kTag}] 타깃 {len(snapshot['targets'])} · 캐시 {len(snapshot['cache'])} · 생성 파일 {len(snapshot['generated'])}"
               f"{' · 테스트 ' + str(len(snapshot['ctest'])) if 'ctest' in snapshot else ''} → {args.out.as_posix()}")
-        return 0
+        return ExitCode.Passed
 
     if args.command == "diff":
         listLine = diffSnapshots(args.before, args.after)
         for line in listLine:
             print(line)
         print(f"[{_kTag}] {'같다' if not listLine else f'다른 곳 {len(listLine)}'}")
-        return 1 if listLine else 0
+        return ExitCode.Violation if listLine else ExitCode.Passed
 
     for line in summarizeProfile(args.trace, args.top):
         print(line)
-    return 0
+    return ExitCode.Passed
 
 
 if __name__ == "__main__":

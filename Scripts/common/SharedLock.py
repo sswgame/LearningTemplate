@@ -122,7 +122,7 @@ def acquireShared(mainRoot: Path, args: argparse.Namespace) -> int:
                     release(slotDirectory, args.owner)
                     break
                 print(f"[SharedLock] {args.resource} 공유 칸 {slotDirectory.name} 을 잡았습니다({args.owner}).")
-                return 0
+                return ExitCode.Passed
         if not bShownWait:
             holder = describeOwner(exclusiveDirectory, now) if exclusiveDirectory.is_dir() else "공유 칸이 모두 찼습니다"
             print(f"[SharedLock] {args.resource} 공유 칸을 기다립니다 — {holder}.")
@@ -156,7 +156,7 @@ def releaseShared(mainRoot: Path, args: argparse.Namespace) -> int:
         record = readOwner(slotDirectory)
         if slotDirectory.is_dir() and record is not None and record.get("owner") == args.owner:
             release(slotDirectory, args.owner)
-    return 0
+    return ExitCode.Passed
 
 
 def describeOwner(lockDirectory: Path, now: float) -> str:
@@ -177,7 +177,7 @@ def printStatus(mainRoot: Path) -> int:
         print(f"{lockDirectory.name}: {describeOwner(lockDirectory, now)}{' [버려짐]' if isStale(lockDirectory, now) else ''}")
     if not listLock:
         print("잡힌 잠금이 없습니다.")
-    return 0
+    return ExitCode.Passed
 
 
 def getSharedSlotCount(resource: str) -> int:
@@ -203,7 +203,7 @@ def acquire(mainRoot: Path, args: argparse.Namespace) -> int:
                 print(f"[SharedLock] {args.wait} 초를 기다렸지만 {args.resource} 공유 보유자가 놓지 않았습니다. 사용자에게 알리세요.", file=sys.stderr)
                 return ExitCode.LimitReached
             print(f"[SharedLock] {args.resource} 를 잡았습니다({args.owner}).")
-            return 0
+            return ExitCode.Passed
         if not bShownWait:
             print(f"[SharedLock] {args.resource} 는 사용 중입니다 — {describeOwner(lockDirectory, now)}. 끝나기를 기다립니다.")
             bShownWait = True

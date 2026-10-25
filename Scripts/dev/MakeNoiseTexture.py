@@ -25,6 +25,7 @@ import zlib
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 from common.Paths import getProjectRoot
+from common.ExitCode import ExitCode  # noqa: E402
 
 #: 텍스처 한 변(텍셀).
 kSize = 256
@@ -129,7 +130,7 @@ def main(argv: list[str] | None = None) -> int:
     outPath.parent.mkdir(parents=True, exist_ok=True)
     outPath.write_bytes(data)
     print(f"wrote {outPath} ({len(data)} bytes)")
-    return 0
+    return ExitCode.Passed
 
 
 if __name__ == "__main__":

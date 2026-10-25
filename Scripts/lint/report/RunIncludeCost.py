@@ -41,6 +41,7 @@ import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(co
 from common.Parallel import mapConcurrent  # noqa: E402
 from common.TranslationUnits import TranslationUnitSweep  # noqa: E402
 from common.HeaderSelfContained import findHeaderProbeProblem, runSyntaxOnly  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
 from lint.LintReport import LintReport, ReportContext  # noqa: E402
 
 #: 헤더 하나를 읽는 구간 — `args.detail` 이 그 파일 경로다.
@@ -134,16 +135,16 @@ class RunIncludeCostReport(LintReport):
         sweep = TranslationUnitSweep(tree, tag=self.name)
         if not sweep.bHasDatabase:
             sweep.reportMissingDatabase()
-            return 0
+            return ExitCode.Passed
         problem = findHeaderProbeProblem(tree.path)
         if problem:
             print(f"[{self.name}] {problem}", file=sys.stderr)
-            return 0
+            return ExitCode.Passed
 
         listEntry = sweep.selectUnits(args.filter)
         if not listEntry:
             print(f"[{self.name}] 잴 TU 가 없습니다.")
-            return 0
+            return ExitCode.Passed
 
         if args.keep_traces:
             args.keep_traces.mkdir(parents=True, exist_ok=True)
@@ -215,7 +216,7 @@ class RunIncludeCostReport(LintReport):
             args.out.parent.mkdir(parents=True, exist_ok=True)
             args.out.write_text(text, encoding="utf-8")
             print(f"[{self.name}] {args.out} 에 남겼습니다")
-        return 0
+        return ExitCode.Passed
 
 
 main = RunIncludeCostReport.run

@@ -44,6 +44,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 from common.CodeText import blankCommentsAndLiterals  # noqa: E402
 from common.Constants import kCppAllExtensions, kNotOurDirNames  # noqa: E402
 from common.Search import collectSourceFiles  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
 from lint.CppScope import blankPreprocessor, classifyHead, isLambdaOpen  # noqa: E402
 from lint.LintReport import LintReport, ReportContext  # noqa: E402
 
@@ -216,7 +217,7 @@ class RunFunctionSizeReport(LintReport):
         print("\n".join(listOutput))
         if args.out:
             args.out.write_text("\n".join(listOutput) + "\n", encoding="utf-8")
-        return 0
+        return ExitCode.Passed
 
 
 main = RunFunctionSizeReport.run

@@ -34,6 +34,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from common.Paths import getProjectRoot  # noqa: E402
 from common.AppRun import addAppRunArguments, kBackendSwitch, parseProfileTable, runApp  # noqa: E402
 from common.Process import runProcess  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
 
 _kTimerRe = re.compile(r"'(Scene\.load\.(?:parse|instantiate))': ([0-9.]+) ms")
 _kSceneLoadedRe = re.compile(r"\[SceneDocument\].*Loaded '[^']*' \(\d+ entities\) from (binary )?(\S+)")
@@ -101,7 +102,7 @@ def main(listArgument: list[str] | None = None) -> int:
     made = runProcess([sys.executable, repositoryRoot / "Scripts/dev/MakeStressScene.py", "--count", str(args.count), "--out", scenePath], cwd=repositoryRoot)
     if made.returnCode != 0:
         print(f"[SceneLoadBench] FAIL MakeStressScene: {made.stdout}{made.stderr}", file=sys.stderr)
-        return 1
+        return ExitCode.Violation
 
     mapResult: dict[str, tuple[dict[str, list[float]], set[str], list[str]]] = {}
     listCreated: list[Path] = []
@@ -142,7 +143,7 @@ def main(listArgument: list[str] | None = None) -> int:
         print(f"[SceneLoadBench] {variant} source: {', '.join(sorted(uniqueSource)) or '-'}")
         for failure in listFailure:
             print(f"[SceneLoadBench] {variant} {failure}")
-    return 0 if mapResult.get("xml", ({}, set(), []))[0] else 1
+    return ExitCode.Passed if mapResult.get("xml", ({}, set(), []))[0] else ExitCode.Violation
 
 
 if __name__ == "__main__":

@@ -23,6 +23,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from common.BuildTree import addBuildTreeArguments, BuildTree  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
 
 _kMsfMagic = b"Microsoft C/C++ MSF 7.00\r\n\x1aDS\x00\x00\x00"
 _kPdbInfoStream = 1
@@ -113,7 +114,7 @@ def main(listArgument: list[str] | None = None) -> int:
     listFile = collectSymbolFilesInternal(buildDir)
     if not listFile:
         print(f"no symbol file under {buildDir}/Symbols or {buildDir}/Bin", file=sys.stderr)
-        return 1
+        return ExitCode.Violation
     copiedCount = 0
     failedCount = 0
     for path in listFile:
@@ -135,7 +136,7 @@ def main(listArgument: list[str] | None = None) -> int:
         if storeFileInternal(path, destination, args.dry_run):
             copiedCount += 1
     print(f"{copiedCount} stored, {len(listFile) - copiedCount - failedCount} already present, {failedCount} skipped")
-    return 1 if failedCount else 0
+    return ExitCode.Violation if failedCount else ExitCode.Passed
 
 
 if __name__ == "__main__":

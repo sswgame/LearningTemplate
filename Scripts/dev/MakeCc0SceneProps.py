@@ -24,6 +24,7 @@ from typing import Sequence
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts — common
 
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
+from common.ExitCode import ExitCode  # noqa: E402
 
 kPlacementConfig = "Config/Editor/Cc0PropPlacement.json"
 kEntityPattern = re.compile(r'\t\t<entity id="(\d+)" name="([^"]*)">.*?\n\t\t</entity>\n', re.S)
@@ -176,7 +177,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         problems += placeGame(repositoryRoot, entry, args.check)
     for problem in problems:
         print(f"[MakeCc0SceneProps] {problem}", file=sys.stderr)
-    return 1 if problems else 0
+    return ExitCode.Violation if problems else ExitCode.Passed
 
 
 if __name__ == "__main__":

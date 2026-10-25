@@ -37,6 +37,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 from lint.LintReport import LintReport, ReportContext  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
 from common.HeaderSelfContained import (findHeaderProbeProblem, findSeedEntry, loadCompileDatabase, makeSeedIndex,  # noqa: E402
                                         runSyntaxOnly)
 
@@ -432,7 +433,7 @@ class RunForwardDeclarationCandidatesReport(LintReport):
                 if applyCandidate(c):
                     applied += 1
             print("\n[ForwardDeclaration] %d건을 바꿨다 — 빌드와 RunHeaderSelfContained 로 확인할 것" % applied)
-        return 0
+        return ExitCode.Passed
 
 
 main = RunForwardDeclarationCandidatesReport.run

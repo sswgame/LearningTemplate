@@ -20,6 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts — com
 
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 from common.ReflectionAnnotationKeys import buildAnnotationKeysFiles  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -36,7 +37,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(data)
         print(f"썼습니다: {relative} ({len(data)} bytes)")
-    return 0
+    return ExitCode.Passed
 
 
 if __name__ == "__main__":

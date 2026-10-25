@@ -53,6 +53,7 @@ from typing import Any, Callable
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 from common.Process import runProcess  # noqa: E402
 from common.TranslationUnits import TranslationUnitSweep  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
 from lint.LintReport import LintReport, ReportContext  # noqa: E402
 
 _kTag = "RunPaddingReport"
@@ -480,7 +481,7 @@ def parseUnitInWorker(request: dict) -> int:
         os.chdir(previousDirectory)
     if not translationUnit:
         print(json.dumps({"error": f"{request['file']}: clang_parseTranslationUnit 실패"}, ensure_ascii=False))
-        return 0
+        return ExitCode.Passed
 
     listError: list[str] = []
     for diagnosticIndex in range(libClang.clang_getNumDiagnostics(translationUnit)):
@@ -498,7 +499,7 @@ def parseUnitInWorker(request: dict) -> int:
         print(record.toJSON())
     libClang.clang_disposeTranslationUnit(translationUnit)
     libClang.clang_disposeIndex(index)
-    return 0
+    return ExitCode.Passed
 
 
 def runUnitInternal(entry: dict, sourceRoot: Path, listExtraDefine: tuple[str, ...]) -> str:
@@ -619,7 +620,7 @@ class RunPaddingReport(LintReport):
         sweep = TranslationUnitSweep(tree, tag=_kTag)
         if sweep.bHasDatabase is False:
             sweep.reportMissingDatabase()
-            return 0
+            return ExitCode.Passed
         listEntry = sweep.selectUnits(args.filter, requirePathPart="/Source/")
 
         uniqueTargetFile: set[str] = set()
@@ -636,7 +637,7 @@ class RunPaddingReport(LintReport):
                 listUnit = listEntry
             if not listUnit:
                 print(f"[{_kTag}] 파싱할 TU 가 없습니다.")
-                return 0
+                return ExitCode.Passed
 
             defineText = f", 정의 {' '.join(args.define)}" if args.define else ""
             print(f"[{_kTag}] {tree.name}{defineText}: TU {len(listUnit)}개를 libclang 으로 파싱합니다 …")
@@ -685,7 +686,7 @@ class RunPaddingReport(LintReport):
             for message in listError[:3]:
                 print(f"    {message}")
         # 보고 도구 — 늘 0 이다.
-        return 0
+        return ExitCode.Passed
 
 
 main = RunPaddingReport.run

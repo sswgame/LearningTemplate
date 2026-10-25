@@ -26,6 +26,7 @@ from typing import Sequence
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts — common
 
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
+from common.ExitCode import ExitCode  # noqa: E402
 
 kOutputPath = "Resource/game/wildwest/models_raw/horse_placeholder.gltf"
 kSampleCount = 17            # 클립마다 키 수(처음과 끝이 같은 자세 — 고리)
@@ -210,7 +211,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     text = json.dumps(makeHorseGltf(), ensure_ascii=False, indent=1, sort_keys=False) + "\n"
     outputPath.write_text(text, encoding="utf-8", newline="\n")
     print(f"[GeneratePlaceholderHorse] wrote {kOutputPath} ({len(text)} bytes)")
-    return 0
+    return ExitCode.Passed
 
 
 if __name__ == "__main__":

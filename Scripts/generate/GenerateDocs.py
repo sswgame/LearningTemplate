@@ -15,6 +15,7 @@ from typing import Sequence
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from common.Paths import getProjectRoot
 from common.Process import runProcess
+from common.ExitCode import ExitCode  # noqa: E402
 
 
 def generateDocs(*, openBrowser: bool = False) -> int:
@@ -28,7 +29,7 @@ def generateDocs(*, openBrowser: bool = False) -> int:
 
     if not doxyfilePath.exists():
         print(f"경고: {doxyfilePath}에서 Doxyfile을 찾을 수 없어 문서 생성을 건너뜁니다.")
-        return 0
+        return ExitCode.Passed
 
     print("Doxygen 실행 중...")
     result = runProcess(["doxygen", "Doxyfile"], cwd=rootDir, bCapture=False)
@@ -36,10 +37,10 @@ def generateDocs(*, openBrowser: bool = False) -> int:
         print(
             "오류: 'doxygen' 명령을 찾을 수 없습니다. Doxygen이 설치되어 있고 시스템 PATH에 추가되어 있는지 확인하세요."
         )
-        return 1
+        return ExitCode.Violation
     if result.returnCode != 0:
         print(f"오류: Doxygen 실행 실패 (종료 코드 {result.returnCode})")
-        return 1
+        return ExitCode.Violation
 
     print("Doxygen 문서 생성이 완료되었습니다.")
     if indexHtml.exists():
@@ -50,7 +51,7 @@ def generateDocs(*, openBrowser: bool = False) -> int:
             print(f"문서 경로: {indexHtml}")
     else:
         print(f"경고: 문서 생성 후 {indexHtml} 파일을 찾을 수 없습니다.")
-    return 0
+    return ExitCode.Passed
 
 
 def main(argv: Sequence[str] | None = None) -> int:

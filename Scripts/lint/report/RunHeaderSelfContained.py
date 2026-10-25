@@ -42,6 +42,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 from lint.LintReport import LintReport, ReportContext  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
 from common.HeaderSelfContained import (collectCheckedHeaders, findHeaderProbeProblem, findHeadersNotSelfContained,  # noqa: E402
                                         isCheckedHeader)
 
@@ -65,7 +66,7 @@ class RunHeaderSelfContainedReport(LintReport):
         if problem:
             print(f"[HeaderSelfContained] {problem}", file=sys.stderr)
             # 보고로 돌 때는 막지 않는다 — 돌 수 없으면 그렇다고 말하고 끝낸다. CI 는 "아무것도 안 봤다" 를 통과로 읽으면 안 된다.
-            return 2 if args.fail_on_violation else 0
+            return ExitCode.CheckInvalid if args.fail_on_violation else ExitCode.Passed
 
         if args.files:
             listHeader = [Path(p) if Path(p).is_absolute() else repositoryRoot / p for p in args.files]
@@ -75,7 +76,7 @@ class RunHeaderSelfContainedReport(LintReport):
 
         if not listHeader:
             print("[HeaderSelfContained] 검사할 헤더가 없습니다.")
-            return 2 if args.fail_on_violation else 0
+            return ExitCode.CheckInvalid if args.fail_on_violation else ExitCode.Passed
 
         print(f"[HeaderSelfContained] 헤더 {len(listHeader)}개를 단독 컴파일합니다 …")
         with tempfile.TemporaryDirectory(prefix="swHeaderProbe") as probeDirName:
@@ -84,14 +85,14 @@ class RunHeaderSelfContainedReport(LintReport):
 
         if not listFailure:
             print(f"[HeaderSelfContained] OK — 헤더 {len(listHeader)}개가 전부 혼자 섭니다.")
-            return 0
+            return ExitCode.Passed
 
         print(f"\n[HeaderSelfContained] 혼자 서지 못하는 헤더 {len(listFailure)}개:\n")
         for spelling, reason in listFailure:
             print(f"  {spelling}\n      {reason}")
         print("\n  그 헤더가 직접 쓰는 이름의 선언을 그 헤더가 직접 include 하세요.")
         print("  지금 컴파일되는 것은 남이 먼저 include 해 준 덕이고, 그 남이 바뀌면 깨집니다.")
-        return 1 if args.fail_on_violation else 0
+        return ExitCode.Violation if args.fail_on_violation else ExitCode.Passed
 
 
 main = RunHeaderSelfContainedReport.run

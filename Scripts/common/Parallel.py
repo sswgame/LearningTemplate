@@ -28,6 +28,8 @@ import concurrent.futures
 import os
 from typing import Callable, Iterable, Iterator, Sequence, TypeVar
 
+from .ExitCode import ExitCode
+
 TItem = TypeVar("TItem")
 TResult = TypeVar("TResult")
 
@@ -163,9 +165,9 @@ def runUntilNonZero(
     이미 제출된 나머지는 끝까지 돈다 — 중간에 끊지 않는다(자식 프로세스를 반만 죽이는 것보다 낫다).
     """
     if not items:
-        return 0
+        return ExitCode.Passed
     workers = workerCount if workerCount is not None else getProcessWorkerCount(len(items))
     for resultCode in mapConcurrent(worker, items, workerCount=workers):
         if resultCode != 0:
             return resultCode
-    return 0
+    return ExitCode.Passed

@@ -20,6 +20,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 from common.Paths import getProjectRoot  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
 
 kAgentsDocRelPath = "docs/12_Agents.md"
 _kTableHeaderRe = re.compile(r"^\|\s*날짜\s*\|\s*일\s*\|\s*조각\s*\|")
@@ -83,10 +84,10 @@ def main(argv: list[str] | None = None, today: datetime.date | None = None) -> i
         newText = insertRow(docPath.read_bytes().decode("utf-8"), row)
     except AgentLogError as error:
         print(f"[agent-log] 오류(아무것도 쓰지 않음): {error}", file=sys.stderr)
-        return 1
+        return ExitCode.Violation
     docPath.write_bytes(newText.encode("utf-8"))
     print(f"[agent-log] {kAgentsDocRelPath} 표 끝에 더함: {row}")
-    return 0
+    return ExitCode.Passed
 
 
 if __name__ == "__main__":

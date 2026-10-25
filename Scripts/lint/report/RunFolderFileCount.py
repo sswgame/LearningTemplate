@@ -30,6 +30,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common.Constants import kCppAllExtensions, kNotOurDirNames  # noqa: E402
 from common.Search import collectSourceFiles, getLintSearchDirs  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
 from lint.LintReport import LintReport, ReportContext  # noqa: E402
 
 kDefaultMaxFileCount = 40
@@ -81,7 +82,7 @@ class RunFolderFileCountReport(LintReport):
         print(f"[RunFolderFileCount] 코드 파일이 하나뿐인 Source 폴더 {len(listSingleFileFolder)}개 — 위 폴더로 합칠지 본다")
         for folder in listSingleFileFolder:
             print(f"        {folder}")
-        return 0
+        return ExitCode.Passed
 
 
 main = RunFolderFileCountReport.run

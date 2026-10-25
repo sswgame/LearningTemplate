@@ -45,6 +45,7 @@ from common.Paths import getProjectRoot  # noqa: E402
 from common.Process import runProcess  # noqa: E402
 
 from common.Worktree import findMainRoot, getDefaultWorktreeRoot  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
 
 kScenarioNames: tuple[str, ...] = ("full", "header", "cpp", "worktree")
 kDefaultHeader = "Source/Core/Container/vector.h"
@@ -236,7 +237,7 @@ def main(argv: list[str] | None = None) -> int:
     listBusy = findBusyProcesses()
     if listBusy and not args.force:
         print(f"[Baseline] 다른 빌드가 돌고 있습니다({', '.join(listBusy)}) — 끝난 뒤 재거나 --force", file=sys.stderr)
-        return 2
+        return ExitCode.CheckInvalid
 
     listResult: list[ScenarioResult] = []
     try:
@@ -247,7 +248,7 @@ def main(argv: list[str] | None = None) -> int:
                 listResult.append(measureWorktreeScenario(repositoryRoot, preset, args, listTarget))
     except RuntimeError as error:
         print(f"[Baseline] {error}", file=sys.stderr)
-        return 1
+        return ExitCode.Violation
 
     text = formatTable(listResult, args, listTarget, repositoryRoot)
     print(text)
@@ -255,7 +256,7 @@ def main(argv: list[str] | None = None) -> int:
         args.out.parent.mkdir(parents=True, exist_ok=True)
         args.out.write_text(text, encoding="utf-8")
         print(f"[Baseline] {args.out} 에 남겼습니다")
-    return 0
+    return ExitCode.Passed
 
 
 if __name__ == "__main__":

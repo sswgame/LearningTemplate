@@ -88,7 +88,7 @@ def main(argv: list[str] | None = None) -> int:
         return acquire(mainRoot, args)
     except (RuntimeError, ValueError) as error:
         print(f"[SharedLock] {error}", file=sys.stderr)
-        return 2
+        return ExitCode.CheckInvalid
 
 
 if __name__ == "__main__":

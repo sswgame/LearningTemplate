@@ -38,6 +38,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common.Constants import kNotOurDirNames  # noqa: E402
 from common.Search import collectRepositoryFiles  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
 from lint.LintReport import LintReport, ReportContext  # noqa: E402
 
 _kTag = "BuildScriptInventory"
@@ -213,7 +214,7 @@ class RunBuildScriptInventoryReport(LintReport):
         if args.json is not None:
             args.json.parent.mkdir(parents=True, exist_ok=True)
             args.json.write_text(json.dumps({"cmake": cmake, "python": python}, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
-        return 0
+        return ExitCode.Passed
 
 
 main = RunBuildScriptInventoryReport.run

@@ -40,6 +40,7 @@ from common.Config import ConfigError, requireConfig  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 from common.Constants import kDirRuntimeGamePreset  # noqa: E402
 from common.Process import runProcess  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
 
 #: 단계 이름 — 창이 `[package] step k/n <이름>` 으로 읽는다. 순서가 진행 순서다.
 kListStepName: tuple[str, ...] = ("build", "cook", "stage", "verify")
@@ -264,9 +265,9 @@ def main(argv: list[str] | None = None) -> int:
         stagingDir = makePackage(request, projectRoot)
     except (PackageError, OSError) as error:
         print(f"[package] FAILED {request.currentStep} {error}", flush=True)
-        return 1
+        return ExitCode.Violation
     print(f"[package] done {stagingDir} {measureBytes(stagingDir)}", flush=True)
-    return 0
+    return ExitCode.Passed
 
 
 if __name__ == "__main__":

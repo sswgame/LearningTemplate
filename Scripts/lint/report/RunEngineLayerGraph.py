@@ -40,6 +40,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 from common.CodeText import iterIncludes  # noqa: E402
 from common.Constants import kCppAllExtensions, kDirSourceEngine  # noqa: E402
 from common.RuleData import kExemptionKey  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
 from lint.LayerGraph import computeTiers, computeTiersFillingComponents, findComponents, newEdgeMap  # noqa: E402
 from lint.LintReport import LintReport, ReportContext  # noqa: E402
 from lint.LayerRules import engineFileEdges, kEngineRootLayerName, readEngineLayerRules  # noqa: E402
@@ -166,8 +167,8 @@ class RunEngineLayerGraphReport(LintReport):
             if listRefused:
                 print("[RunEngineLayerGraph] 올리지 않았다(사유 없이 올리면 위반이 표에 흡수된다): " + " · ".join(listRefused)
                       + "\n  include 를 끊거나, 정말 올릴 일이면 --raise-reason \"<사유>\" 를 준다.")
-                return 1
-        return 0
+                return ExitCode.Violation
+        return ExitCode.Passed
 
 
 main = RunEngineLayerGraphReport.run

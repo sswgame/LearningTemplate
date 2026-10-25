@@ -24,6 +24,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from common.Paths import getProjectRoot  # noqa: E402
 from common.AssetValidation import RuleConfigError, getCheckNames, kAssetRuleConfigRelative, kSeverityOrder, loadRules, validate  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
 
 #: 규칙 표의 기본 자리(저장소 루트 기준).
 kDefaultRulePath = kAssetRuleConfigRelative
@@ -55,7 +56,7 @@ def main(listArgument: list[str] | None = None) -> int:
 
     if args.list_checks:
         print("\n".join(getCheckNames()))
-        return 0
+        return ExitCode.Passed
 
     repositoryRoot = (args.root or getProjectRoot()).resolve()
     resourceRoot = repositoryRoot / "Resource"
@@ -63,7 +64,7 @@ def main(listArgument: list[str] | None = None) -> int:
         listRule = loadRules(args.rules or repositoryRoot / kDefaultRulePath)
     except RuleConfigError as error:
         print(f"[ValidateAssets] {error}", file=sys.stderr)
-        return 2
+        return ExitCode.CheckInvalid
 
     listTarget = None
     if args.files is not None:
@@ -78,7 +79,7 @@ def main(listArgument: list[str] | None = None) -> int:
           f"{len(listRule)} rule(s)")
     if args.json is not None:
         args.json.write_text(json.dumps([finding.toJSON() for finding in listFinding], indent=2), encoding="utf-8")
-    return 1 if mapCount["error"] else 0
+    return ExitCode.Violation if mapCount["error"] else ExitCode.Passed
 
 
 if __name__ == "__main__":

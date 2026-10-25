@@ -28,6 +28,7 @@ import xml.etree.ElementTree as ElementTree
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 from common.GltfBufferWriter import BufferWriter  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
 
 #: 원본 glb · 사슬 스켈레톤 · 기본 출력 폴더(저장소 루트 기준).
 kSourceGlb = "Resource/game/shooter3d/models_raw/kaykit/knight.glb"
@@ -187,7 +188,7 @@ def main(argv: list[str] | None = None) -> int:
     target = folder / f"{kOutputName}.glb"
     target.write_bytes(data)
     print(f"[MakeSkinnedCape] {target} ({len(data)} bytes)")
-    return 0
+    return ExitCode.Passed
 
 
 if __name__ == "__main__":

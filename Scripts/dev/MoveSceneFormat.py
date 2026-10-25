@@ -24,6 +24,7 @@ import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 from common.Paths import getProjectRoot  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
 
 _kTargetVersion = 2
 _kRootRe = re.compile(r'(<Scene\b[^>]*\bformatVersion=")(\d+)(")')
@@ -85,8 +86,8 @@ def main(argv: list[str] | None = None) -> int:
             path.write_bytes(upgraded.encode("utf-8"))
     print(f"[MoveSceneFormat] {changedCount} scene(s) {'to rewrite' if args.check else 'rewritten'}, {failedCount} failed")
     if failedCount > 0:
-        return 1
-    return 1 if args.check and changedCount > 0 else 0
+        return ExitCode.Violation
+    return ExitCode.Violation if args.check and changedCount > 0 else ExitCode.Passed
 
 
 if __name__ == "__main__":
