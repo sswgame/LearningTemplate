@@ -176,14 +176,16 @@ namespace sw
         _releaseQueue.flushAll();
     }
 
-    uint64 OpenGLRHIDevice::endTransfer( bool bGPUPending )
+    uint64 OpenGLRHIDevice::endTransfer()
     {
         // 펜스는 앞선 모든 명령의 끝을 알린다. glFlush 로 명령을 GPU 로 내보내야 프레임을 돌리지 않아도 신호가 선다.
-        void* pSync = nullptr;
-        if ( bGPUPending )
+        void* pSync = glFenceSync( GL_SYNC_GPU_COMMANDS_COMPLETE, 0 );
+        glFlush();
+        if ( pSync == nullptr )
         {
-            pSync = glFenceSync( GL_SYNC_GPU_COMMANDS_COMPLETE, 0 );
-            glFlush();
+            // 펜스가 없으면 이 전송이 끝났는지 알 길이 없다 — 끝난 것으로 치지 않고 장치 손실로 둔다(티켓은 Failed, 이후 제출은 Rejected).
+            SW_LOG_ERROR( "endTransfer: glFenceSync returned no fence; treating the GL device as lost" );
+            _transferSerials.markLost();
         }
         const uint64 serial = _transferQueue.enqueue( pSync );
         retireFinishedTransfers(); // 앞서 낸 전송 가운데 끝난 것을 모은다(이 스레드가 컨텍스트를 쥐고 있다)
@@ -192,11 +194,10 @@ namespace sw
 
     void OpenGLRHIDevice::retireFinishedTransfers()
     {
+        // 큐의 펜스는 모두 endTransfer 가 단 것이다. 펜스가 없는 항목(glFenceSync 실패)은 glClientWaitSync 가 GL_WAIT_FAILED 로 돌려 손실로 남는다.
         _transferQueue.retireDone(
             [this]( void*& pSync )
         {
-            if ( pSync == nullptr )
-                return true; // 동기로 읽어 둔 되읽기 등 이미 끝난 제출이다
             const GLenum waitResult = glClientWaitSync( static_cast<GLsync>( pSync ), 0, 0 );
             if ( waitResult == GL_WAIT_FAILED )
             {
@@ -208,8 +209,7 @@ namespace sw
         },
             []( void*& pSync )
         {
-            if ( pSync != nullptr )
-                glDeleteSync( static_cast<GLsync>( pSync ) );
+            glDeleteSync( static_cast<GLsync>( pSync ) ); // 끝났다고 본 펜스만 온다 — 펜스가 없는 항목은 위에서 끝나지 않는다
             pSync = nullptr;
         } );
     }

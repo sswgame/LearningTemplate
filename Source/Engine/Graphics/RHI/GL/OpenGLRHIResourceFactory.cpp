@@ -537,7 +537,7 @@ namespace sw
             }
         }
         // 펜스가 링 구간의 회수 시점이다 — 워터마크가 이 시리얼을 지나면 구간이 돌아온다.
-        const uint64 serial = _pDevice->endTransfer( true );
+        const uint64 serial = _pDevice->endTransfer();
         _pDevice->_stagingRing.markSubmitted( staging, serial );
         pRecord->_lastTransferSerial.store( serial );
         return _pDevice->_transferSerials.makeAccepted( serial );
@@ -591,7 +591,7 @@ namespace sw
                                      glType, pPixels );
             }
         }
-        const uint64 serial = _pDevice->endTransfer( true );
+        const uint64 serial = _pDevice->endTransfer();
         _pDevice->_stagingRing.markSubmitted( staging, serial );
         pRecord->_lastTransferSerial.store( serial );
         return _pDevice->_transferSerials.makeAccepted( serial );
@@ -700,7 +700,7 @@ namespace sw
                                       static_cast<GLsizei>( outLayout._height ), 1, pixelFormat, pixelType, bufferBytes, pPixels );
             }
         }
-        const uint64 serial = _pDevice->endTransfer( true );
+        const uint64 serial = _pDevice->endTransfer();
         _pDevice->_readbackTable.add( serial, readback );
         return _pDevice->_transferSerials.makeAccepted( serial );
     }

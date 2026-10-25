@@ -8,27 +8,31 @@ namespace sw
 {
     RHIStagingRing::RHIStagingRing()
         : _mutex{}
-        , _listEntry{}
+        , _slots{}
         , _capacityBytes{ 0 }
         , _alignmentBytes{ 1 }
-        , _nextID{ 1 }
+        , _liveCount{ 0 }
     {
     }
 
     void RHIStagingRing::initialize( uint64 capacityBytes, uint64 alignmentBytes )
     {
         SW_ASSERT( MathUtil::isPowerOfTwo( alignmentBytes ) );
+        const uint64 slotCount = capacityBytes / alignmentBytes;
+        SW_ASSERT( slotCount < SpanAllocator::kInvalidOffset );
         std::scoped_lock<mutex> lock{ _mutex };
-        _listEntry.clear();
-        _capacityBytes  = capacityBytes;
+        _slots.reset( static_cast<uint32>( slotCount ) );
+        _capacityBytes  = slotCount * alignmentBytes;
         _alignmentBytes = alignmentBytes;
+        _liveCount      = 0;
     }
 
     void RHIStagingRing::shutdown()
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        _listEntry.clear();
+        _slots.reset( 0 );
         _capacityBytes = 0;
+        _liveCount     = 0;
     }
 
     RHIStagingAllocateResult RHIStagingRing::allocate( uint64 sizeBytes, uint64 completedSerial, RHIStagingSpan& outSpan )
@@ -39,53 +43,32 @@ namespace sw
             return RHIStagingAllocateResult::TooLarge;
 
         freeCompletedLocked( completedSerial );
+        const uint32 slot = _slots.allocate( toSlotCount( sizeBytes ) );
+        if ( slot == SpanAllocator::kInvalidOffset )
+            return RHIStagingAllocateResult::Full;
 
-        uint64 offsetBytes{ 0 };
-        if ( _listEntry.empty() == false )
-        {
-            const Entry& front      = _listEntry.front();
-            const Entry& back       = _listEntry.back();
-            const uint64 backEnd    = MathUtil::align( back._offsetBytes + back._sizeBytes, _alignmentBytes );
-            const bool   bWrapped   = back._offsetBytes < front._offsetBytes; // 산 구간이 링 끝을 넘어 처음으로 이어진다
-            const bool   bFitsAtEnd = backEnd <= _capacityBytes && sizeBytes <= _capacityBytes - backEnd;
-            if ( bWrapped )
-            {
-                // 산 구간 = [front, 끝) + [0, backEnd). 빈 곳은 [backEnd, front) 하나다.
-                if ( backEnd > front._offsetBytes || sizeBytes > front._offsetBytes - backEnd )
-                    return RHIStagingAllocateResult::Full;
-                offsetBytes = backEnd;
-            }
-            else if ( bFitsAtEnd )
-                offsetBytes = backEnd;
-            else if ( sizeBytes <= front._offsetBytes )
-                offsetBytes = 0; // 끝에 남은 자리는 버리고 처음으로 감는다 — 빈 곳은 [0, front) 다
-            else
-                return RHIStagingAllocateResult::Full;
-        }
-
-        const uint64 id = _nextID++;
-        _listEntry.push_back( Entry{ id, offsetBytes, sizeBytes, 0, false } );
-        outSpan = RHIStagingSpan{ offsetBytes, sizeBytes, id };
+        ++_liveCount;
+        outSpan = RHIStagingSpan{ static_cast<uint64>( slot ) * _alignmentBytes, sizeBytes };
         return RHIStagingAllocateResult::Allocated;
     }
 
     void RHIStagingRing::markSubmitted( const RHIStagingSpan& span, uint64 serial )
     {
         SW_ASSERT( serial != 0 );
+        SW_ASSERT( span._sizeBytes != 0 );
         std::scoped_lock<mutex> lock{ _mutex };
-        Entry*                  pEntry = findEntryLocked( span._id );
-        SW_ASSERT( pEntry != nullptr );
-        if ( pEntry != nullptr )
-            pEntry->_serial = serial;
+        _slots.freeDeferred( static_cast<uint32>( span._offsetBytes / _alignmentBytes ), toSlotCount( span._sizeBytes ), serial );
     }
 
     void RHIStagingRing::free( const RHIStagingSpan& span )
     {
+        SW_ASSERT( span._sizeBytes != 0 );
         std::scoped_lock<mutex> lock{ _mutex };
-        Entry*                  pEntry = findEntryLocked( span._id );
-        SW_ASSERT( pEntry != nullptr );
-        if ( pEntry != nullptr )
-            pEntry->_bFreed = true;
+        const uint32            allocatedBefore = _slots.getAllocatedCount();
+        _slots.free( static_cast<uint32>( span._offsetBytes / _alignmentBytes ), toSlotCount( span._sizeBytes ) );
+        // SpanAllocator 가 이중 반납 · 범위 밖을 단언하고 무시한다 — 그때는 산 구간 수도 그대로 둔다.
+        if ( _slots.getAllocatedCount() != allocatedBefore )
+            --_liveCount;
     }
 
     void RHIStagingRing::freeCompleted( uint64 completedSerial )
@@ -103,29 +86,18 @@ namespace sw
     uint32 RHIStagingRing::getLiveCount() const
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        return static_cast<uint32>( _listEntry.size() );
+        return _liveCount;
+    }
+
+    uint32 RHIStagingRing::toSlotCount( uint64 sizeBytes ) const
+    {
+        return static_cast<uint32>( MathUtil::align( sizeBytes, _alignmentBytes ) / _alignmentBytes );
     }
 
     void RHIStagingRing::freeCompletedLocked( uint64 completedSerial )
     {
-        while ( _listEntry.empty() == false )
-        {
-            const Entry& front      = _listEntry.front();
-            const bool   bCompleted = front._serial != 0 && front._serial <= completedSerial;
-            if ( front._bFreed == false && bCompleted == false )
-                break;
-            _listEntry.pop_front();
-        }
-    }
-
-    RHIStagingRing::Entry* RHIStagingRing::findEntryLocked( uint64 id )
-    {
-        // 산 구간은 몇 개뿐이고 방금 잡은 것이 뒤에 있다 — 뒤에서부터 찾는다.
-        for ( auto entryIt = _listEntry.rbegin(); entryIt != _listEntry.rend(); ++entryIt )
-        {
-            if ( entryIt->_id == id )
-                return &*entryIt;
-        }
-        return nullptr;
+        const uint32 deferredBefore = _slots.getDeferredSpanCount();
+        _slots.retireDeferred( completedSerial );
+        _liveCount -= deferredBefore - _slots.getDeferredSpanCount();
     }
 } // namespace sw
