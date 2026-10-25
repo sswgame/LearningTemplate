@@ -14,10 +14,26 @@
 
 namespace sw
 {
+    AutomationValidatorLookup AutomationStepValidation::findValidator( string_view kind, AutomationStepValidateFunction& outValidate )
+    {
+        const AutomationStepRegistration* pStep = AutomationStepRegistry::find( kind );
+        if ( pStep != nullptr )
+        {
+            outValidate = pStep->_pValidate;
+            return outValidate != nullptr ? AutomationValidatorLookup::Found : AutomationValidatorLookup::NoValidator;
+        }
+        const AutomationStepValidatorRegistration* pValidator = AutomationStepRegistry::findValidator( kind );
+        if ( pValidator == nullptr )
+            return AutomationValidatorLookup::Unknown;
+        outValidate = pValidator->_pValidate;
+        return AutomationValidatorLookup::Found;
+    }
+
     AutomationStepDependency AutomationStepValidation::findUnresolvedDependency( const AutomationStep& step, string& outName )
     {
-        outName = step._kind;
-        if ( AutomationStepRegistry::find( step._kind ) == nullptr )
+        outName                                  = step._kind;
+        AutomationStepValidateFunction pValidate = nullptr;
+        if ( findValidator( step._kind, pValidate ) == AutomationValidatorLookup::Unknown )
             return AutomationStepDependency::StepKind;
 
         const string* pProbe = step.findAttribute( "probe" );
@@ -77,5 +93,16 @@ namespace sw
                 return "dev command not registered in this process";
         }
         return "unknown";
+    }
+
+    AutomationStepValidatorRegistrar::AutomationStepValidatorRegistrar( const AutomationStepValidatorRegistration* pRegistration )
+        : _pRegistration{ AutomationStepRegistry::registerValidator( pRegistration ) ? pRegistration : nullptr }
+    {
+    }
+
+    AutomationStepValidatorRegistrar::~AutomationStepValidatorRegistrar()
+    {
+        if ( _pRegistration != nullptr )
+            AutomationStepRegistry::unregisterValidator( _pRegistration );
     }
 } // namespace sw

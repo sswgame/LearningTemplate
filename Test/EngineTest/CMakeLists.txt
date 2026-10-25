@@ -32,6 +32,9 @@ sw_getEditorExtensionModelSources(swEngineTestExtensionSource)
 if(SW_TARGET_TYPE STREQUAL "Server")
 	list(APPEND swEngineTestExtensionSource "${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/ImageUtil.cpp")
 endif()
+# 에디터 시나리오 단계의 검사 함수(ImGui 를 모르는 순수 파일) - 에디터 모듈을 링크하지 않는 이 실행 파일이 `AutomationScenarioDataTest` 로 에디터 시나리오의 단계 속성도 본다.
+# 검사 함수는 `SW_AUTOMATION_STEP_VALIDATOR` 로 올라간다. 에디터 모듈의 같은 파일은 그쪽 DLL 에 따로 들어가 이 실행 파일과 한 프로세스에 겹치지 않는다.
+list(APPEND swEngineTestExtensionSource "${CMAKE_SOURCE_DIR}/Source/Editor/SelfTest/EditorScenarioStepValidation.cpp")
 
 # 테스트 소스는 이 폴더를 훑는다(꺼진 키트의 헤더를 include 하는 파일은 빠진다 — 프로젝트 매니페스트가 키트를 끄면 그 키트의 테스트도 짓지 않는다).
 # 갈래(`_NoGPU` · `_HostOnly`) · 조각 · 시간 · 느린 케이스의 비용표는 Test/TestPolicy.json.

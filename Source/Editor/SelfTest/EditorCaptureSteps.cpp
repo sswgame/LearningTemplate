@@ -15,6 +15,7 @@
 #include "Editor/Common/Backend/EditorUICapture.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
+#include "Editor/SelfTest/EditorScenarioStepValidation.h"
 
 #include "Engine/Automation/AutomationScenario.h"
 #include "Engine/Automation/AutomationStepContext.h"
@@ -66,28 +67,6 @@ namespace sw::editor
                         return &pending;
                 }
                 return nullptr;
-            }
-
-            static bool validateCapture( const AutomationStep& step, string& outError )
-            {
-                for ( const AutomationAttribute& attribute : step._listAttribute )
-                {
-                    const string_view name{ attribute._name };
-                    if ( name == "file" )
-                        continue;
-                    float32    value{ 0.0f };
-                    const bool bLimit      = name == "maxMagentaFraction" || name == "maxClippedWindows";
-                    const bool bValidLimit = bLimit && StringUtil::parseFloat( attribute._value, value ) && value >= 0.0f;
-                    if ( bValidLimit )
-                        continue;
-                    outError = step.describe() + ": unknown or invalid attribute '" + attribute._name + "' (file · maxMagentaFraction · maxClippedWindows)";
-                    return false;
-                }
-                const string* pFile = step.findAttribute( "file" );
-                if ( pFile != nullptr && StringUtil::endsWith( *pFile, ".png", true ) )
-                    return true;
-                outError = step.describe() + ": needs file=\"….png\"";
-                return false;
             }
 
             /** @brief 처음 차례가 오면 캡처를 요청하고, 결과가 나올 때까지 붙잡습니다. */
@@ -159,6 +138,6 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    SW_AUTOMATION_STEP_WITH_HOOKS( editorCaptureUI, "CaptureEditorUI", &EditorCaptureStepsInternal::runCapture, &EditorCaptureStepsInternal::validateCapture, nullptr,
+    SW_AUTOMATION_STEP_WITH_HOOKS( editorCaptureUI, EditorScenarioStepValidation::kCaptureKind, &EditorCaptureStepsInternal::runCapture, &EditorScenarioStepValidation::validateCapture, nullptr,
                                    &EditorCaptureStepsInternal::holdCapture, false );
 } // namespace sw::editor

@@ -69,6 +69,8 @@ _kStepRegistrationByConstantRe = re.compile(r"SW_AUTOMATION_STEP(?:_WITH_HOOKS)?
 _kStepKindConstantRe = re.compile(r'\b(k\w+Kind)\s*(?:\[\s*\])?\s*=\s*"([^"]+)"')
 _kProbeRegistrationRe = re.compile(r'SW_AUTOMATION_(?:QUERY_)?PROBE\s*\(\s*\w+\s*,\s*"([^"]+)"')
 _kDevCommandRegistrationRe = re.compile(r'SW_DEV_COMMAND\s*\(\s*\w+\s*,\s*"([^"]+)"')
+#: 탐침 등록 매크로의 여는 부분(이름까지). 씬 탐침(`SW_AUTOMATION_PROBE`)은 `target` · `key` 를 받지 않고, 질의 탐침(`SW_AUTOMATION_QUERY_PROBE`)은 끝의 두 인자(bNeedsTarget · bNeedsKey)가 꼭 있어야 하는지다.
+_kProbeMacroRe = re.compile(r'SW_AUTOMATION_(QUERY_)?PROBE\s*\(\s*\w+\s*,\s*"([^"]+)"')
 #: 에디터 명령 id — 선언 `SW_EDITOR_COMMAND( 이름, "id", …)` 과 원본 표(`_s_arrCommandRow[]`)의 줄 `{ "id", "라벨", …` 이다.
 #: 시나리오의 `<DevCommand line="editor <id>">` 가 이 id 를 부른다(실행 중 등록이 아니라 선언이라 코드를 돌리지 않고 읽는다).
 _kEditorCommandRegistrationRe = re.compile(r'SW_EDITOR_COMMAND\s*\(\s*\w+\s*,\s*"([^"]+)"')
@@ -219,10 +221,55 @@ def findCodeNameViolations(repositoryRoot: Path) -> tuple[list[str], dict[str, i
     return listViolation, mapCheckedCount
 
 
-def collectAutomationNames(repositoryRoot: Path) -> tuple[set[str], set[str], set[str], set[str]]:
-    """(등록된 시나리오 단계 종류, 탐침 이름, 개발 명령 이름, 에디터 명령 id) — `Source` 의 등록 매크로 · 표에서 줍는다(종류 상수 `k…Kind` 도 푼다)."""
+def splitMacroArguments(text: str, start: int) -> list[str]:
+    """`text[start:]` 가 매크로 호출의 괄호 안(이름 뒤)일 때, 닫는 괄호까지의 인자를 최상위 쉼표로 가른다(문자열 · 괄호 안의 쉼표는 가르지 않는다)."""
+    listArgument: list[str] = []
+    depth = 0
+    current: list[str] = []
+    index = start
+    while index < len(text):
+        character = text[index]
+        if character == '"':
+            end = index + 1
+            while end < len(text) and text[end] != '"':
+                end += 2 if text[end] == "\\" else 1
+            current.append(text[index:end + 1])
+            index = end + 1
+            continue
+        if character in "([{":
+            depth += 1
+        elif character in ")]}":
+            if depth == 0:
+                break
+            depth -= 1
+        if character == "," and depth == 0:
+            listArgument.append("".join(current).strip())
+            current = []
+        else:
+            current.append(character)
+        index += 1
+    listArgument.append("".join(current).strip())
+    return listArgument
+
+
+def collectProbeArguments(text: str) -> dict[str, tuple[bool, bool | None, bool | None]]:
+    """한 파일의 탐침 등록 → 이름 : (질의 탐침인가, target 이 꼭 있어야 하는가, key 가 꼭 있어야 하는가). 끝의 두 인자가 true · false 리터럴이 아니면 None(모른다)."""
+    mapProbe: dict[str, tuple[bool, bool | None, bool | None]] = {}
+    for match in _kProbeMacroRe.finditer(text):
+        if match.group(1) is None:
+            mapProbe[match.group(2)] = (False, False, False)
+            continue
+        listArgument = splitMacroArguments(text, match.end())[-2:]  # 이름 뒤 인자: (이름 뒤 빈 글) 도움말 함수 bNeedsTarget bNeedsKey
+        listNeed = [True if argument == "true" else False if argument == "false" else None for argument in listArgument]
+        mapProbe[match.group(2)] = (True, listNeed[0], listNeed[1]) if len(listNeed) == 2 else (True, None, None)
+    return mapProbe
+
+
+def collectAutomationNames(repositoryRoot: Path) -> tuple[set[str], set[str], set[str], set[str], dict[str, tuple[bool, bool | None, bool | None]]]:
+    """(등록된 시나리오 단계 종류, 탐침 이름, 개발 명령 이름, 에디터 명령 id, 탐침 인자 요구) — `Source` 의 등록 매크로 · 표에서 줍는다(종류 상수 `k…Kind` 도 푼다)."""
     uniqueStep: set[str] = set()
     uniqueProbe: set[str] = set()
+    mapProbeArgument: dict[str, tuple[bool, bool | None, bool | None]] = {}
     uniqueCommand: set[str] = set()
     uniqueEditorCommand: set[str] = set()
     mapKindConstant: dict[str, str] = {}
@@ -233,6 +280,7 @@ def collectAutomationNames(repositoryRoot: Path) -> tuple[set[str], set[str], se
             uniqueStep.update(_kStepRegistrationRe.findall(text))
             listKindIdentifier += _kStepRegistrationByConstantRe.findall(text)
             uniqueProbe.update(_kProbeRegistrationRe.findall(text))
+            mapProbeArgument.update(collectProbeArguments(text))
         if "SW_DEV_COMMAND" in text:
             uniqueCommand.update(_kDevCommandRegistrationRe.findall(text))
         if "SW_EDITOR_COMMAND" in text:
@@ -242,12 +290,29 @@ def collectAutomationNames(repositoryRoot: Path) -> tuple[set[str], set[str], se
             tableEnd = text.find("\n            };", tableStart)
             uniqueEditorCommand.update(_kEditorCommandRowRe.findall(text[tableStart:tableEnd if tableEnd > tableStart else len(text)]))
     uniqueStep.update(mapKindConstant[name] for name in listKindIdentifier if name in mapKindConstant)
-    return uniqueStep, uniqueProbe, uniqueCommand, uniqueEditorCommand
+    return uniqueStep, uniqueProbe, uniqueCommand, uniqueEditorCommand, mapProbeArgument
+
+
+def findProbeArgumentViolations(relative: str, step: ElementTree.Element, mapProbeArgument: dict[str, tuple[bool, bool | None, bool | None]]) -> list[str]:
+    """탐침을 읽는 단계의 `target` · `key` 가 그 탐침의 등록(씬 탐침은 받지 않는다, 질의 탐침의 bNeedsTarget · bNeedsKey)과 맞는가.
+    C++ 검사 함수(`validateProbeReference`)와 같은 규칙이다 - 탐침을 등록한 모듈(게임 · 에디터)이 안 올라온 nogpu 테스트는 이 검사를 못 하므로 여기서 소스를 읽어 본다."""
+    probe = step.get("probe")
+    if probe is None or probe not in mapProbeArgument:
+        return []  # 등록되지 않은 이름은 ScenarioProbe 규칙이 이미 알린다
+    bQuery, needsTarget, needsKey = mapProbeArgument[probe]
+    listViolation: list[str] = []
+    if bQuery is False and (step.get("target") is not None or step.get("key") is not None):
+        listViolation.append(f"[NameReference/ScenarioProbeArgument] {relative}: <{step.tag}> 의 탐침 '{probe}' 는 target · key 를 받지 않습니다(SW_AUTOMATION_PROBE 는 씬 탐침)")
+    if needsTarget is True and step.get("target") is None:
+        listViolation.append(f"[NameReference/ScenarioProbeArgument] {relative}: <{step.tag}> 의 탐침 '{probe}' 는 target 이 꼭 있어야 합니다(bNeedsTarget)")
+    if needsKey is True and step.get("key") is None:
+        listViolation.append(f"[NameReference/ScenarioProbeArgument] {relative}: <{step.tag}> 의 탐침 '{probe}' 는 key 가 꼭 있어야 합니다(bNeedsKey)")
+    return listViolation
 
 
 def findScenarioViolations(repositoryRoot: Path) -> tuple[list[str], int]:
     """시나리오의 `<At>` 단계 · `probe` · `<DevCommand line>` 첫 낱말이 등록된 이름인가."""
-    uniqueStep, uniqueProbe, uniqueCommand, uniqueEditorCommand = collectAutomationNames(repositoryRoot)
+    uniqueStep, uniqueProbe, uniqueCommand, uniqueEditorCommand, mapProbeArgument = collectAutomationNames(repositoryRoot)
     bAutomationEngine = (repositoryRoot / "Source" / "Engine" / "Automation").is_dir()
     if bAutomationEngine and not uniqueStep:
         raise GateError("등록된 시나리오 단계를 하나도 찾지 못했습니다 — SW_AUTOMATION_STEP 모양이 바뀌었나요?")
@@ -268,6 +333,7 @@ def findScenarioViolations(repositoryRoot: Path) -> tuple[list[str], int]:
             for step in at:
                 if step.tag not in uniqueStep:
                     listViolation.append(f"[NameReference/ScenarioStep] {relative}: 단계 <{step.tag}> 가 등록돼 있지 않습니다(SW_AUTOMATION_STEP)")
+                listViolation += findProbeArgumentViolations(relative, step, mapProbeArgument)
         for element in root.iter():
             probe = element.get("probe")
             if probe and probe not in uniqueProbe:
@@ -299,7 +365,7 @@ class CheckNameReferencesGate(LintGate):
     hint = (
         "  전역 변수: 정의(SW_*GLOBAL_VARIABLE)의 이름으로 고치거나, 지운 스위치면 그 인자 · 시나리오 줄을 지웁니다.\n"
         "  입력 액션 · 오디오 이벤트: 그 팩의 *.input.xml · *.audioevents.xml 에 이름을 더하거나 코드의 이름을 데이터의 이름으로 고칩니다.\n"
-        "  시나리오: 단계 · 탐침 · 개발 명령의 이름을 등록된 이름(SW_AUTOMATION_STEP · SW_AUTOMATION_PROBE · SW_DEV_COMMAND)으로 고칩니다."
+        "  시나리오: 단계 · 탐침 · 개발 명령의 이름을 등록된 이름(SW_AUTOMATION_STEP · SW_AUTOMATION_PROBE · SW_DEV_COMMAND)으로 고치고, 탐침의 target · key 는 그 탐침의 등록(씬 탐침은 받지 않고 질의 탐침은 bNeedsTarget · bNeedsKey)에 맞춥니다."
     )
     selfTestCases = [
         {
@@ -372,6 +438,26 @@ class CheckNameReferencesGate(LintGate):
                 "Source/Engine/ProbeSteps.cpp": ("SW_AUTOMATION_STEP( expect, \"Expect\", &run, &validate, false );\n"
                                                  "SW_AUTOMATION_PROBE( count, \"Probe.Count\", \"\", &count );\n"),
                 "Resource/engine/automation/probe.scenario.xml": "<Scenario><At frame=\"1\"><Expect probe=\"Probe.Cuont\" equals=\"1\"/></At></Scenario>\n",
+            },
+        },
+        {
+            "name": "시나리오가 씬 탐침에 target 을 준다",
+            "expectedViolation": "[NameReference/ScenarioProbeArgument] Resource/engine/automation/probe.scenario.xml: <Expect> 의 탐침 'Probe.Count' 는 target · key 를 받지 않습니다",
+            "files": {
+                "Source/Engine/ProbeSteps.cpp": ("SW_AUTOMATION_STEP( expect, \"Expect\", &run, &validate, false );\n"
+                                                 "SW_AUTOMATION_PROBE( count, \"Probe.Count\", \"counts (a, b)\", &count );\n"),
+                "Resource/engine/automation/probe.scenario.xml": "<Scenario><At frame=\"1\"><Expect probe=\"Probe.Count\" target=\"Crate\" equals=\"1\"/></At></Scenario>\n",
+            },
+        },
+        {
+            "name": "시나리오가 key 를 요구하는 질의 탐침에 key 를 빠뜨린다",
+            "expectedViolation": "[NameReference/ScenarioProbeArgument] Resource/engine/automation/probe.scenario.xml: <WaitUntil> 의 탐침 'Probe.Distance' 는 key 가 꼭 있어야 합니다",
+            "files": {
+                "Source/Games/Probe/ProbeProbes.cpp": ("SW_AUTOMATION_STEP( waitUntil, \"WaitUntil\", &run, &validate, false );\n"
+                                                       "SW_AUTOMATION_QUERY_PROBE( distance, \"Probe.Distance\", \"Distance to the (object, key) place\",\n"
+                                                       "                           &distance, true, true );\n"),
+                "Resource/engine/automation/probe.scenario.xml": ("<Scenario><At frame=\"1\"><WaitUntil probe=\"Probe.Distance\" target=\"Farmer\" atMost=\"1\"/>"
+                                                                  "</At></Scenario>\n"),
             },
         },
     ]
