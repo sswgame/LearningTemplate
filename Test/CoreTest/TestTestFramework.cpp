@@ -377,9 +377,10 @@ SW_TEST_CASE( TestFrameworkTest, CaseGeneratorAddsCasesOnceAndTheyAreFilterable 
     test::TestRegistry registry;
     registry.getCatalog().addCaseGenerator( []( test::TestCatalog& catalog )
     {
-        catalog.addCase( "GeneratedProbeTest", "alpha.dx12", {} );
-        catalog.addCase( "GeneratedProbeTest", "alpha.gl", {} );
-        catalog.addCase( "GeneratedProbeTest", "beta.gl", {} );
+        // 고른 케이스는 실제로 돈다 — 빈 대리자를 부르면 죽으므로 아무것도 안 하는 본문을 준다.
+        catalog.addCase( "GeneratedProbeTest", "alpha.dx12", []() {} );
+        catalog.addCase( "GeneratedProbeTest", "alpha.gl", []() {} );
+        catalog.addCase( "GeneratedProbeTest", "beta.gl", []() {} );
     } );
     registry.getOptions().setFilter( "GeneratedProbeTest.alpha.*" );
     SW_EXPECT_EQUAL( 0, registry.runAllTests() );

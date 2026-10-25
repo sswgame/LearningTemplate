@@ -138,8 +138,8 @@ SW_TEST_CASE( AutomationHangWatchTest, CommandLineKeepsTheOriginalArguments )
 SW_TEST_CASE( AutomationHangWatchTest, ReproduceCommandCopiesOriginalArgumentsWithMasking )
 {
     sw::AutomationReproduceInput input;
-    for ( const utf8* pArgument : { "-dx12", "-game=Shooter3D", "-scenario=engine/automation/a.scenario.xml", "-scenario-report=Saved/Automation/a.json", "-gv_serverToken=abc123",
-                                    "-gv_apiKey=zzz", "--password=hunter2", "-gv_benchMeshes=8", "-scenario-record=Saved/x.scenario.xml", "-crash-reporter=https://u:p@host" } )
+    for ( const utf8* pArgument : { "-dx12", "-game=Shooter3D", "-scenario=engine/automation/a.scenario.xml", "-scenario-report=Saved/Automation/a.json", "-serverToken=abc123",
+                                    "-apiKey=zzz", "--password=hunter2", "-gv_benchMeshes=8", "-scenario-record=Saved/x.scenario.xml", "-crash-reporter=https://u:p@host" } )
     {
         input._listOriginalArgument.push_back( pArgument );
     }
@@ -147,7 +147,7 @@ SW_TEST_CASE( AutomationHangWatchTest, ReproduceCommandCopiesOriginalArgumentsWi
     input._backendName       = "DirectX12"; // 원본에 -dx12 가 있으니 쓰이지 않는다
     input._bKeepGoing        = true;        // 원본에 없으니 채운다
     const sw::string command = sw::AutomationRunTitleUtil::makeReproduceCommand( input );
-    SW_EXPECT_STREQ( "App.exe -dx12 -game=Shooter3D \"-scenario=engine/automation/a.scenario.xml\" -gv_serverToken=REDACTED -gv_apiKey=REDACTED --password=REDACTED "
+    SW_EXPECT_STREQ( "App.exe -dx12 -game=Shooter3D \"-scenario=engine/automation/a.scenario.xml\" -serverToken=REDACTED -apiKey=REDACTED --password=REDACTED "
                      "-gv_benchMeshes=8 -scenario-keep-going",
                      command.c_str() );
     SW_EXPECT_TRUE( command.find( "abc123" ) == sw::string::npos );

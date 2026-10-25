@@ -161,9 +161,9 @@ SW_TEST_CASE( AutomationRunTitleTest, ReproduceCommandListsTheArgumentsInOrder )
     input._bEditor          = true;
     input._bKeepGoing       = true;
     input._listExtraArgument.push_back( "-gv_fixedFrameDelta=0.5" );
-    input._listExtraArgument.push_back( "-gv_note=a b" );
+    input._listExtraArgument.push_back( "-gv_firstScene=a b" );
     SW_EXPECT_STREQ( "App.exe -game=Shooter3D -gv_rhiBackend=DirectX12 -EnableEditor \"-scenario=engine/automation/a.scenario.xml,b.scenario.xml\" "
-                     "-scenario-keep-going \"-gv_fixedFrameDelta=0.5\" \"-gv_note=a b\"",
+                     "-scenario-keep-going \"-gv_fixedFrameDelta=0.5\" \"-gv_firstScene=a b\"",
                      sw::AutomationRunTitleUtil::makeReproduceCommand( input ).c_str() );
 
     sw::AutomationReproduceInput bare;

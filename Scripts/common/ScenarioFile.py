@@ -76,7 +76,7 @@ class ScenarioDeclaration:
         return self.resourceId.rpartition("/")[2].count(".") > 2
 
     def makeLaunchArguments(self) -> list[str]:
-        """`<Launch>` 를 명령줄 인자로(`-gv_a=1`) — `AutomationTestOptions::makeLaunchArguments` 와 같은 모양."""
+        """`<Launch>` 를 명령줄 인자로(`-gv_firstScene=<씬>`) — `AutomationTestOptions::makeLaunchArguments` 와 같은 모양."""
         return [f"-{variable}={value}" for variable, value in self.listLaunch]
 
 

@@ -37,9 +37,13 @@ namespace sw
             if ( required == 0 )
                 return GetLastError() != ERROR_ENVVAR_NOT_FOUND; // 빈 값이면 true
             vector<utf16> listBuffer( static_cast<size_t>( required ), L'\0' );
-            const DWORD   written = GetEnvironmentVariableW( wideName.c_str(), listBuffer.data(), required );
-            if ( written == 0 || written >= required )
-                continue;                                            // 그 사이 바뀌었다 — 다시 길이를 잰다
+            // 빈 값이면 길이는 1(끝의 널)이고 읽은 글자 수는 0 이다 — 0 은 "그 사이 지워짐"(ERROR_ENVVAR_NOT_FOUND)일 때만 실패다.
+            SetLastError( ERROR_SUCCESS );
+            const DWORD written = GetEnvironmentVariableW( wideName.c_str(), listBuffer.data(), required );
+            if ( written == 0 && GetLastError() == ERROR_ENVVAR_NOT_FOUND )
+                return false;
+            if ( written >= required )
+                continue;                                            // 그 사이 길어졌다 — 다시 길이를 잰다
             outValue = StringUtil::utf16ToUtf8( listBuffer.data() ); // 끝의 널은 API 가 적었다
             return true;
         }

@@ -217,7 +217,7 @@ def buildArguments(plan: RunPlan, backend: Backend) -> list[str]:
 
 
 def findArgumentName(argument: str) -> str:
-    """인자의 이름 — 앞의 `-` 들과 `=` 뒤 값을 뗀 것(`-gv_a=1` → `gv_a`, `--cook-shaders` → `cook-shaders`)."""
+    """인자의 이름 — 앞의 `-` 들과 `=` 뒤 값을 뗀 것(`-gv_firstScene=x` → `gv_firstScene`, `--cook-shaders` → `cook-shaders`)."""
     return argument.lstrip("-").split("=", 1)[0]
 
 

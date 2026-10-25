@@ -376,9 +376,12 @@ namespace sw::editor
         if ( pObj == nullptr )
             return;
 
-        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+        // 컨텍스트 없이 도는 명령(테스트 · 헤드리스 복제)은 고를 창이 없다 — 선택은 편집 창이 있을 때의 덧붙임이다.
+        EditorContext* pContext = editor::findSubsystem<EditorContext>();
+        if ( pContext == nullptr )
+            return;
 
-        editorContext.getSubsystem<EditorWorkspace>().selectGameObject( pObj, mode );
+        pContext->getSubsystem<EditorWorkspace>().selectGameObject( pObj, mode );
     }
 
     void EditorSceneCommands::collectObjectsWithComponent( GameObjectManager& manager, const TypeInfo* pComponentType, vector<GameObject*>& outListObject )
