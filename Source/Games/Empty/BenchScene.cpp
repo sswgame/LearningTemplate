@@ -10,6 +10,7 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Character/Hit/RagdollComponent.h"
+#include "Engine/Character/PoseModifier/PoseModifierComponent.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -95,6 +96,19 @@ namespace sw
      * @brief `-gv_benchCharacterStagger=1`: 벤치 캐릭터의 시작 시각을 인덱스 해시로 흩어 놓습니다(군중이 한 프레임에 맞춰 움직이지 않게 합니다).
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_benchCharacterStagger, 0, "벤치 캐릭터 시작 시각을 흩는다 (0=모두 0 초)" );
+
+    /**
+     * @brief `-gv_benchCharacterFollowers=K`: 벤치 캐릭터(몸)마다 리더 포즈로 몸을 따르는 부품 유닛 K 개를 더합니다(모듈 캐릭터의 옷 · 머리 모양).
+     * @details 애니메이션 시스템의 의존 레벨(몸 = 레벨 0, 부품 = 레벨 1)과 연결 성분(캐릭터마다 K+1 개)을 재는 스위치입니다. 부품은 메시가 없고 몸과 같은 스켈레톤만 가져
+     *          평가 비용만 더합니다. 대조군은 같은 총 유닛 수를 독립 캐릭터로 채웁니다(`-gv_benchCharacters` = N × (1 + K), 부품 없음).
+     */
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_benchCharacterFollowers, 0, "벤치 캐릭터마다 리더 포즈 부품 유닛 수 (0=없음, 의존 레벨 · 성분 측정)" );
+
+    /**
+     * @brief `-gv_benchCharacterWeapon=1`: 벤치 캐릭터마다 후처리 리그(`knight_weapon.rig.xml`)가 달린 무기 유닛을 더합니다.
+     * @details 무기의 리그 대상은 가장 깊은 부품(`-gv_benchCharacterFollowers` 가 0 이면 몸)이라, 부품이 있으면 레벨이 셋(몸 → 부품 → 무기)이 됩니다.
+     */
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_benchCharacterWeapon, 0, "벤치 캐릭터마다 리그 무기 유닛 (0=없음, 가장 깊은 부품이 대상이라 레벨이 하나 깊어진다)" );
 
     /**
      * @brief `-gv_benchFaces=N`: 테스트 머리 N 개를 한 줄로 스폰합니다(얼굴 애니메이션 확인용). 모두 카메라를 바라보고(시선) 눈을 깜빡입니다.
@@ -636,6 +650,7 @@ namespace sw
                 pAnimator->setInitialTime( static_cast<float32>( hash >> 16 ) / 65535.0f * _settings._characterStaggerSeconds );
             }
             _listBenchExtra.push_back( pMesh->getHandle() );
+            spawnCharacterParts( *pObjects, index, pMesh );
         }
 
         const float32 halfExtent = computeCharacterHalfExtent( characterCount );
@@ -644,6 +659,40 @@ namespace sw
         _bCharacterFraming = SW_TRUE;
         frameCharacterCameras( pScene, halfExtent );
         SW_LOG_INFO( "[Bench] In scene '%#', placed %# skinned characters (%#).", pScene->getName(), characterCount, _settings._knightMesh.c_str() );
+    }
+
+    void BenchScene::spawnCharacterParts( GameObjectManager& objects, uint32 characterIndex, SkeletalMeshComponent* pBody )
+    {
+        const uint32 followerCount = static_cast<uint32>( MathUtil::max( gv_benchCharacterFollowers, 0 ) );
+        const bool   bWeapon       = gv_benchCharacterWeapon != 0;
+        if ( pBody == nullptr || ( followerCount == 0 && bWeapon == false ) )
+            return;
+        SkeletalMeshComponent* pDeepest = pBody; // 무기의 리그 대상이 되는 가장 깊은 유닛
+        for ( uint32 followerIndex = 0; followerIndex < followerCount; ++followerIndex )
+        {
+            StringBuilder<constant::kMaxBuffer64> nameBuilder;
+            nameBuilder.append( "BenchCharacterPart_" ).append( characterIndex ).append( "_" ).append( followerIndex );
+            GameObject*            pPart     = objects.createGameObject( hashed_string( nameBuilder.c_str(), nameBuilder.size() ) );
+            SkeletalMeshComponent* pFollower = ( pPart != nullptr ) ? pPart->addComponent<SkeletalMeshComponent>() : nullptr;
+            if ( pFollower == nullptr )
+                continue;
+            pFollower->setSkeletonPath( _settings._knightSkeleton.c_str() );
+            pFollower->setLeaderPose( pBody );
+            _listBenchExtra.push_back( pFollower->getHandle() );
+            pDeepest = pFollower;
+        }
+        if ( bWeapon == false )
+            return;
+        StringBuilder<constant::kMaxBuffer64> weaponName;
+        weaponName.append( "BenchCharacterWeapon_" ).append( characterIndex );
+        GameObject*            pWeapon     = objects.createGameObject( hashed_string( weaponName.c_str(), weaponName.size() ) );
+        SkeletalMeshComponent* pWeaponUnit = ( pWeapon != nullptr ) ? pWeapon->addComponent<SkeletalMeshComponent>() : nullptr;
+        PoseModifierComponent* pWeaponRig  = ( pWeapon != nullptr ) ? pWeapon->addComponent<PoseModifierComponent>() : nullptr;
+        if ( pWeaponUnit == nullptr || pWeaponRig == nullptr )
+            return;
+        pWeaponRig->setRigPath( _settings._rigWeaponRig.c_str() );
+        pWeaponRig->bindUnit( "Body", pDeepest );
+        _listBenchExtra.push_back( pWeaponUnit->getHandle() );
     }
 
     void BenchScene::spawnCombat()

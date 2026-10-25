@@ -10,6 +10,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 
@@ -330,9 +331,101 @@ namespace sw
 namespace sw
 {
     /**
+     * @struct AnimationDependencyEdge
+     * @brief 의존 간선 하나입니다. **위 유닛의 모든 단계가 끝난 뒤에야 아래 유닛이 시작합니다**(리더 포즈 · 부착 대상 · 리그 대상 모두 위 유닛의 최종 포즈를 읽는다).
+     * @details 번호는 `AnimationUnitList` 의 위치입니다. 이 뜻을 지키는 순서는 `AnimationComponentSet` 의 성분 안 순서(유닛 먼저, 한 유닛의 단계를 이어서)이고,
+     *          레벨 순서(단계마다 위 유닛이 먼저)는 위 유닛의 뒤 단계(부착 · 후처리)가 끝나기 전에 아래 유닛이 앞 단계에서 위 유닛의 포즈를 읽을 수 있다.
+     */
+    struct AnimationDependencyEdge
+    {
+        uint32 _upstream;  ///< 위 유닛 번호다
+        uint32 _dependent; ///< 아래 유닛 번호다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class AnimationComponentSet
+     * @brief 의존으로 이어진 유닛 묶음(연결 성분)의 목록입니다. 성분 하나가 유닛 구간 하나이고, 구간 안은 위상 순서(위 유닛이 먼저)입니다.
+     * @details 성분 사이에는 의존이 없어 서로 병렬로 돌 수 있고, 성분 안은 `AnimationDependencyEdge` 의 뜻대로 직렬로 돌면 된다. 성분은 가장 앞선 등록 순서의 유닛이 앞선 것부터 놓인다.
+     *          고리에 든 유닛과 그 아래 유닛은 등록 순서로 구간의 뒤에 놓인다(순서를 강제하지 않는다 — 고리는 데이터 오류다). 채우는 일은 `AnimationSystem` 만 한다.
+     */
+    class AnimationComponentSet
+    {
+    public:
+        /** @brief 성분 수입니다. */
+        uint32 getComponentCount() const { return _listStart.empty() ? 0u : static_cast<uint32>( _listStart.size() - 1 ); }
+        /** @brief 모든 성분의 유닛 수 합입니다. */
+        uint32 getUnitCount() const { return static_cast<uint32>( _listUnit.size() ); }
+        /** @brief 가장 큰 성분의 유닛 수입니다. 성분이 없으면 0 입니다. */
+        uint32 getMaxComponentSize() const { return _maxComponentSize; }
+        /** @brief @p componentIndex 성분의 첫 칸 번호입니다(`getUnits()` 안의 위치). */
+        uint32 getComponentStart( uint32 componentIndex ) const { return _listStart[componentIndex]; }
+        /** @brief @p componentIndex 성분의 끝 칸 번호입니다(마지막 칸 다음). */
+        uint32 getComponentEnd( uint32 componentIndex ) const { return _listStart[componentIndex + 1]; }
+        /** @brief 성분 순서로 이어 붙인 유닛 전부입니다. */
+        const vector<SkeletalMeshComponent*>& getUnits() const { return _listUnit; }
+
+    private:
+        friend class AnimationSystem;
+
+        void clear()
+        {
+            _listUnit.clear();
+            _listStart.clear();
+            _maxComponentSize = 0;
+        }
+        /**
+         * @brief 유닛 하나짜리 성분 가운데 @p inoutListRemap 의 그 칸이 `invalid_index::kUint32` 인 것을 뺍니다. 남은 칸의 새 번호를 같은 배열에 씁니다(남은 성분의 순서와 안쪽 순서는 그대로).
+         * @details 해제된 외톨이 유닛을 평가 전에 한 번에 빼는 길입니다(`AnimationSystem::flushLevelRemoval`). 제자리에서 접으므로 할당이 없습니다.
+         * @param inoutListRemap 칸마다 0(남김) 또는 `kUint32`(뺌)로 들어오고, 남은 칸은 새 칸 번호로 나갑니다. 크기는 `getUnitCount()` 입니다.
+         */
+        void removeMarkedSingletons( vector<uint32>& inoutListRemap )
+        {
+            const uint32 componentCount = getComponentCount();
+            uint32       writeUnit      = 0;
+            uint32       writeComponent = 0;
+            for ( uint32 componentIndex = 0; componentIndex < componentCount; ++componentIndex )
+            {
+                const uint32 start = _listStart[componentIndex];
+                const uint32 end   = _listStart[componentIndex + 1];
+                if ( end - start == 1 && inoutListRemap[start] == invalid_index::kUint32 )
+                    continue;
+                _listStart[writeComponent++] = writeUnit; // 쓰는 자리는 읽은 자리를 앞서지 않으므로 아직 읽지 않은 칸을 덮지 않는다
+                for ( uint32 slot = start; slot < end; ++slot )
+                {
+                    inoutListRemap[slot]   = writeUnit;
+                    _listUnit[writeUnit++] = _listUnit[slot];
+                }
+            }
+            _listStart[writeComponent] = writeUnit;
+            _listStart.resize( writeComponent + 1 );
+            _listUnit.resize( writeUnit );
+            updateMaxComponentSize();
+        }
+        /** @brief `_listStart` 을 보고 가장 큰 성분의 크기를 다시 셉니다. */
+        void updateMaxComponentSize()
+        {
+            _maxComponentSize = 0;
+            for ( size_t componentIndex = 0; componentIndex + 1 < _listStart.size(); ++componentIndex )
+            {
+                _maxComponentSize = MathUtil::max( _maxComponentSize, _listStart[componentIndex + 1] - _listStart[componentIndex] );
+            }
+        }
+
+        vector<SkeletalMeshComponent*> _listUnit;              ///< 성분 순서로 이어 붙인 유닛이다
+        vector<uint32>                 _listStart;             ///< 성분마다 `_listUnit` 안의 시작 칸이다(끝 하나 더, 비어 있으면 성분이 없다)
+        uint32                         _maxComponentSize{ 0 }; ///< 가장 큰 성분의 유닛 수다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @class AnimationSystem
      * @brief 등록된 유닛을 의존(위 유닛 → 아래 유닛) 레벨로 나눠 단계마다 평가합니다. 언리얼의 애니메이션 평가, 유니티의 Playable 그래프 평가에 해당합니다.
-     * @details 프레임 순서는 다음과 같다. (0) 의존이 바뀌었으면 레벨을 다시 만든다(위상 정렬이며, 고리는 오류로 알리고 남은 유닛은 등록 순서로 한 유닛씩 뒤 레벨에 둔다 — 레벨 안은 병렬이라 고리 유닛을 모으면 레이스다). (1) 유닛마다 이번 프레임
+     * @details 프레임 순서는 다음과 같다. (0) 의존이 바뀌었으면 레벨을 다시 만든다(위상 정렬이며, 고리는 오류로 알리고 남은 유닛은 등록 순서로 한 유닛씩 뒤 레벨에 둔다 — 레벨 안은 병렬이라 고리 유닛을 모으면 레이스다. 같은 간선으로 연결 성분도 짓는다 — `AnimationComponentSet`, 아직 평가는 레벨을 따른다). (1) 유닛마다 이번 프레임
      *          할 일과 LOD(갱신 주기, 화면 밖 여부)를 정한다. (2) 단계마다 레벨 순서로 `engine::runParallelByCost` 를 돌리고, 시간 단계 뒤에는 동기 그룹을 맞춘다.
      *          (3) 게임 스레드에서 `finishAnimationFrame` 을 부른다. 쉬는 유닛(할 일 없음, 포즈 깨끗함)은 (1) 에서 빠지므로 비용이 없다.
      *          "상태를 가진 시스템 타입, `engine::runParallel` · `runParallelByCost`, 매니저 tick 의 단계 한 줄"이라는 구조를 따른다(`SceneTransformHierarchy` 와 같다).
@@ -422,6 +515,16 @@ namespace sw
             flushLevelRemoval();
             return _listLevel;
         }
+        /**
+         * @brief 의존으로 이어진 유닛 묶음(연결 성분)입니다. 테스트와 진단용이며 아직 평가는 레벨을 따릅니다. `getLevels` 처럼 해제된 외톨이 유닛을 먼저 뺍니다.
+         */
+        const AnimationComponentSet& getComponents()
+        {
+            flushLevelRemoval();
+            return _componentAll;
+        }
+        /** @brief 지난 평가에서 일한(쉬지 않은) 유닛만 성분별로 모은 것입니다. 일하는 유닛이 없는 성분은 빠집니다. */
+        const AnimationComponentSet& getActiveComponents() const { return _componentActive; }
         /** @brief 마지막으로 만든 레벨에 의존 고리가 있었으면 true 입니다. */
         bool hasDependencyCycle() const { return _bCycle == SW_TRUE; }
         /** @brief 평가한 프레임 수입니다. */
@@ -447,13 +550,18 @@ namespace sw
     private:
         /** @brief LOD 판정(가시성, 화면 크기, 주기, 본 LOD, 예산)을 하고 클라이언트에 알립니다. */
         void updateLOD();
-        /** @brief 의존을 해석해 레벨을 다시 만듭니다. 임시 버퍼(`_listScratch*`)와 레벨 벡터의 용량을 재사용합니다. */
+        /** @brief 의존을 해석해 레벨과 성분을 다시 만듭니다. 임시 버퍼(`_listScratch*`)와 레벨 벡터의 용량을 재사용합니다. */
         void rebuildLevels();
-        /** @brief 해제된 외톨이 유닛(`unregisterUnit`)을 레벨 0 에서 한 번에 뺍니다. 레벨을 다시 지을 예정이면 모아 둔 것만 버립니다. */
+        /** @brief 간선(`_listScratchEdge`)으로 유닛을 성분으로 묶고, 성분마다 `_listScratchOrder`(위상 순서)대로 유닛을 놓습니다. `rebuildLevels` 가 레벨을 짓고 나서 부릅니다. */
+        void rebuildComponents();
+        /** @brief 해제된 외톨이 유닛(`unregisterUnit`)을 레벨 0 과 성분 목록(유닛 하나짜리 성분)에서 한 번에 뺍니다. 레벨을 다시 지을 예정이면 모아 둔 것만 버립니다. */
         void flushLevelRemoval();
         /** @brief 단계 하나를 레벨 순서로 처리합니다. */
         void runPhase( AnimationPhase phase );
-        /** @brief 이번 프레임에 일하는 유닛만 레벨 순서로 `_listActive` 에 모읍니다(쉬는 유닛은 빠져 단계를 돌지 않는다). 각 레벨의 시작 번호는 `_listLevelStart` 에 남깁니다. */
+        /**
+         * @brief 이번 프레임에 일하는 유닛만 레벨 순서로 `_listActive` 에 모읍니다(쉬는 유닛은 빠져 단계를 돌지 않는다). 각 레벨의 시작 번호는 `_listLevelStart` 에 남깁니다.
+         *        같은 유닛을 성분별로도 `_componentActive` 에 모읍니다.
+         */
         void collectActiveUnits( float32 deltaSeconds );
         /** @brief 포즈 단계들(기본 포즈 · 부착 · 후처리 · 스킨 팔레트)을 돌고 포즈 단계의 벽시계 평균(`_averageEvaluationMicroseconds`)을 갱신합니다. */
         void runPosePhases();
@@ -473,21 +581,30 @@ namespace sw
         AnimationUnitList                           _unitList;
         unordered_set<const SkeletalMeshComponent*> _uniqueLevelRemoval; ///< 레벨 0 에서 뺄 외톨이 유닛이다(`unregisterUnit` 이 모으고 `flushLevelRemoval` 이 비운다)
         vector<vector<SkeletalMeshComponent*>>      _listLevel;
-        vector<SkeletalMeshComponent*>              _listActive;     ///< 이번 프레임에 단계를 처리하는 유닛(레벨 순서)이다. 재사용한다
-        vector<uint32>                              _listLevelStart; ///< `_listActive` 안의 레벨 시작 위치다. 끝 위치를 하나 더 둔다
-        AnimationOrderedList<IAnimationLODClient>   _lodClientList;  ///< LOD 클라이언트(등록 순서 — 판정 · 예산 순서)
+        AnimationComponentSet                       _componentAll;    ///< 모든 유닛의 성분이다(레벨과 같은 시점에 짓고, 외톨이 해제도 같이 뺀다)
+        AnimationComponentSet                       _componentActive; ///< 이번 프레임에 일하는 유닛의 성분별 구간이다(`collectActiveUnits` 가 채운다)
+        vector<uint32>                              _listLevelSlot;   ///< `_listLevel` 을 레벨 순서로 이은 칸마다, 그 유닛이 `_componentAll` 안에서 놓인 칸 번호다
+        vector<SkeletalMeshComponent*>              _listActive;      ///< 이번 프레임에 단계를 처리하는 유닛(레벨 순서)이다. 재사용한다
+        vector<uint32>                              _listLevelStart;  ///< `_listActive` 안의 레벨 시작 위치다. 끝 위치를 하나 더 둔다
+        AnimationOrderedList<IAnimationLODClient>   _lodClientList;   ///< LOD 클라이언트(등록 순서 — 판정 · 예산 순서)
         vector<AnimationLODView>                    _listLODView;
         AnimationLODView                            _pendingLODView;             ///< 대기 뷰(`setPendingLODView`) — `_bHasPendingLODView` 일 때만 판정에 든다
         vector<AnimationLODState>                   _listScratchLODState;        ///< 판정 중 클라이언트별 상태다(재사용)
         vector<AnimationBudgetItem>                 _listScratchBudgetItem;      ///< 예산 배분 입력(재사용)
-        vector<uint32>                              _listScratchEdgeUpstream;    ///< 레벨을 지을 때 의존 간선의 위 유닛 번호다(재사용)
-        vector<uint32>                              _listScratchEdgeDependent;   ///< 간선의 아래 유닛 번호다(`_listScratchEdgeUpstream` 과 같은 순서, 재사용)
+        vector<AnimationDependencyEdge>             _listScratchEdge;            ///< 레벨과 성분을 지을 때 모은 의존 간선이다(재사용)
         vector<uint32>                              _listScratchPendingCount;    ///< 유닛마다 아직 놓이지 않은 위 유닛 수다(재사용)
         vector<uint32>                              _listScratchDependentStart;  ///< 위 유닛마다 `_listScratchDependent` 안의 아래 유닛 구간 시작이다(끝 하나 더, 재사용)
         vector<uint32>                              _listScratchDependentCursor; ///< 아래 유닛 구간을 채우는 위치다(재사용)
         vector<uint32>                              _listScratchDependent;       ///< 위 유닛별로 모은 아래 유닛 번호다(재사용)
         vector<uint32>                              _listScratchReady;           ///< 이번 레벨에 놓을 유닛 번호다(재사용)
         vector<uint32>                              _listScratchNext;            ///< 다음 레벨에 놓을 유닛 번호다(재사용)
+        vector<uint32>                              _listScratchOrder;           ///< 레벨 순서로 이은 유닛 번호다. 고리의 남은 유닛은 등록 순서로 뒤에 온다(재사용)
+        vector<uint32>                              _listScratchComponentRoot;   ///< 유닛마다 같은 성분의 대표 유닛 번호다(union-find, 대표는 성분에서 가장 작은 번호, 재사용)
+        vector<uint32>                              _listScratchComponentOf;     ///< 유닛마다 성분 번호다(재사용)
+        vector<uint32>                              _listScratchComponentCursor; ///< 성분 구간을 채우는 칸 번호다(재사용)
+        vector<uint32>                              _listScratchSlotOfUnit;      ///< 유닛 번호마다 `_componentAll` 안의 칸 번호다(재사용)
+        vector<uint32>                              _listScratchSlotRemap;       ///< 외톨이를 뺄 때 옛 칸 번호 → 새 칸 번호다(뺀 칸은 `invalid_index::kUint32`, 재사용)
+        vector<uint8>                               _listScratchActiveFlag;      ///< `_componentAll` 의 칸마다 이번 프레임에 일하는지(1)다(재사용)
         AnimationLODSettings                        _lodSettings;
         AnimationCrowd                              _crowd;
 #if SW_ANIMATION_REWIND_ENABLED

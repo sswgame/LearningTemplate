@@ -3229,6 +3229,14 @@
    "source": "Source/Games/Empty/BenchScene.cpp"
   },
   {
+   "name": "gv_benchCharacterFollowers",
+   "type": "int32",
+   "default": "0",
+   "kind": "테스트",
+   "description": "벤치 캐릭터마다 리더 포즈 부품 유닛 수 (0=없음, 의존 레벨 · 성분 측정)",
+   "source": "Source/Games/Empty/BenchScene.cpp"
+  },
+  {
    "name": "gv_benchCharacters",
    "type": "int32",
    "default": "0",
@@ -3242,6 +3250,14 @@
    "default": "0",
    "kind": "테스트",
    "description": "벤치 캐릭터 시작 시각을 흩는다 (0=모두 0 초)",
+   "source": "Source/Games/Empty/BenchScene.cpp"
+  },
+  {
+   "name": "gv_benchCharacterWeapon",
+   "type": "int32",
+   "default": "0",
+   "kind": "테스트",
+   "description": "벤치 캐릭터마다 리그 무기 유닛 (0=없음, 가장 깊은 부품이 대상이라 레벨이 하나 깊어진다)",
    "source": "Source/Games/Empty/BenchScene.cpp"
   },
   {
