@@ -82,15 +82,7 @@ namespace sw::editor
             return nullptr;
         }
 
-        // `findSubsystem<T>()` 는 nullptr 을 반환할 수 있다. 역참조하기 전에 확인한다.
-        AssetManager* pResources = editor::findSubsystem<AssetManager>(); // 필수 서비스: 없으면 버그
-        if ( pResources == nullptr )
-        {
-            SW_LOG_ERROR( "Cannot spawn the prefab because there is no AssetManager service: %#", pPath );
-            return nullptr;
-        }
-
-        GameObject* pSpawned = pResources->getAssetCache<PrefabCache>().spawn( pManager, pPath );
+        GameObject* pSpawned = editor::getSubsystem<AssetManager>().getAssetCache<PrefabCache>().spawn( pManager, pPath );
         if ( pSpawned == nullptr )
         {
             SW_LOG_WARNING( "Failed to spawn prefab: %#", pPath );

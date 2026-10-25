@@ -503,12 +503,7 @@ namespace sw::editor
             _status = SW_LOCKEY( "EditorMaterial", "SaveFailedStatus" );
             return false;
         }
-        AssetManager*  pResources = editor::findSubsystem<AssetManager>(); // 필수 서비스: 없으면 버그
-        EditorContext* pContext   = EditorContext::get();                  // 필수: 없으면 버그
-        if ( pResources != nullptr && pContext != nullptr )
-            pResources->getAssetCache<MaterialCache>().reload( getLoadedAssetPath(), pContext->getSubsystem<EditorRenderViews>().getRHIDevice() );
-        else
-            SW_LOG_ERROR_ONCE( "[MaterialPanel] AssetManager or EditorContext is missing - the saved material is not reloaded" );
+        editor::getSubsystem<AssetManager>().getAssetCache<MaterialCache>().reload( getLoadedAssetPath(), editor::getSubsystem<EditorRenderViews>().getRHIDevice() );
         applyLivePreview();
         _status = SW_LOCKEY( "EditorMaterial", "SavedStatus" );
         clearDocumentDirty();

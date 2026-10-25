@@ -110,10 +110,8 @@ namespace sw::editor
     {
         _bCatalogLoaded = true;
         _listPage.clear();
-        _pSelected              = nullptr;
-        TypeRegistry* pRegistry = editor::findSubsystem<TypeRegistry>(); // 필수 서비스: 없으면 버그
-        if ( pRegistry == nullptr )
-            SW_LOG_ERROR_ONCE( "[ProjectSettings] TypeRegistry is missing - no settings page can find its type" );
+        _pSelected                   = nullptr;
+        const TypeRegistry& registry = editor::getSubsystem<TypeRegistry>();
 
         // 활성 팩의 `<Engine>` 요소(창 제목 · 렌더 파이프라인 · 스키마 · UI 규칙) — 게임의 엔진 설정은 프리셋이 아니라 팩 gamesettings.xml 에 있다.
         // 유니티 · 언리얼의 Project Settings 처럼 열린 프로젝트(활성 게임) 하나만 고친다.
@@ -126,7 +124,7 @@ namespace sw::editor
             pPackPage->_entry._elementName  = PackEngineSettings::kElementName;
             pPackPage->_entry._relativePath = FileUtil::joinPath( FileUtil::joinPath( "Resource", packRoot.get() ), PackEngineSettings::kPackRelativePath );
             pPackPage->_absolutePath        = FileUtil::joinPath( ResourcePaths::findLooseDomainFolder( packRoot.get() ).getDiskPath(), PackEngineSettings::kPackRelativePath );
-            pPackPage->_bTypeFound          = pRegistry != nullptr && pRegistry->findType( PackEngineSettings::StaticType()->_name ) != nullptr;
+            pPackPage->_bTypeFound          = registry.findType( PackEngineSettings::StaticType()->_name ) != nullptr;
             _listPage.push_back( std::move( pPackPage ) );
         }
 
@@ -150,18 +148,15 @@ namespace sw::editor
             unique_ptr<Page> pPage = make_unique<Page>();
             pPage->_entry          = std::move( entry );
             pPage->_absolutePath   = EditorPaths::resolveProjectRelativePath( pPage->_entry._relativePath );
-            pPage->_bTypeFound     = pRegistry != nullptr && pRegistry->findType( hashed_string( pPage->_entry._typeName.c_str() ) ) != nullptr;
+            pPage->_bTypeFound     = registry.findType( hashed_string( pPage->_entry._typeName.c_str() ) ) != nullptr;
             _listPage.push_back( std::move( pPage ) );
         }
     }
 
     void ProjectSettingsPanel::openPage( Page& page )
     {
-        page._bOpened           = true;
-        TypeRegistry* pRegistry = editor::findSubsystem<TypeRegistry>(); // 필수 서비스: 없으면 버그
-        if ( pRegistry == nullptr )
-            SW_LOG_ERROR_ONCE( "[ProjectSettings] TypeRegistry is missing - the page '%#' is not opened", page._entry._page.c_str() );
-        const TypeInfo* pType = pRegistry != nullptr ? pRegistry->findType( hashed_string( page._entry._typeName.c_str() ) ) : nullptr;
+        page._bOpened         = true;
+        const TypeInfo* pType = editor::getSubsystem<TypeRegistry>().findType( hashed_string( page._entry._typeName.c_str() ) );
         if ( pType == nullptr )
         {
             page._bTypeFound = false;

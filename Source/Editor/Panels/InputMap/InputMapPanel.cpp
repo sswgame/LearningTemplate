@@ -166,22 +166,19 @@ namespace sw::editor
             _bLoaded = SW_TRUE;
         }
 
-        InputManager* pInput = findSubsystem<InputManager>();
-        if ( pInput == nullptr ) // 필수 서비스: 없으면 버그
-            SW_LOG_ERROR_ONCE( "[InputMap] InputManager is missing - the input map is not attached to it" );
-        else if ( _inputMap.getInputManager() != pInput )
-            _inputMap.setInputManager( pInput );
+        InputManager& input = editor::getSubsystem<InputManager>();
+        if ( _inputMap.getInputManager() != &input )
+            _inputMap.setInputManager( &input );
 
         // ActionPhase 상태 머신, 커맨드 히스토리, 버퍼 만료 타이머 등은 update() 안에서만 갱신되므로,
         // 프레임마다 호출해야 액션 테이블, 콤보 테스터, 버퍼링 데모가 실제로 동작한다.
-        if ( pInput != nullptr )
-            _inputMap.update( ImGui::GetIO().DeltaTime );
+        _inputMap.update( ImGui::GetIO().DeltaTime );
 
         // 실시간 시계열 샘플링
-        if ( pInput != nullptr && _bPlotPaused == SW_FALSE )
+        if ( _bPlotPaused == SW_FALSE )
         {
             float32        lx = 0.0f, ly = 0.0f, lt = 0.0f, rt = 0.0f;
-            GamepadDevice* pGamepad = pInput->getGamepad( 0 );
+            GamepadDevice* pGamepad = input.getGamepad( 0 );
             if ( pGamepad != nullptr && pGamepad->isConnected() )
             {
                 const float2 vecLeftStick1 = pGamepad->getLeftStick();
@@ -192,7 +189,7 @@ namespace sw::editor
             }
 
             int32      mdx = 0, mdy = 0;
-            const int2 vecMouseDelta1 = pInput->getMouseDelta();
+            const int2 vecMouseDelta1 = input.getMouseDelta();
             mdx                       = vecMouseDelta1._x;
             mdy                       = vecMouseDelta1._y;
 
@@ -207,16 +204,16 @@ namespace sw::editor
         }
 
         // 입력 녹화는 입력 프레임마다 한 번, 그 프레임에 장치에 적용된 이벤트를 기록한다.
-        const bool bNewRecordingFrame = _replay.isRecording() && pInput != nullptr && pInput->getBeginFrameCount() != _recordedBeginFrameCount;
+        const bool bNewRecordingFrame = _replay.isRecording() && input.getBeginFrameCount() != _recordedBeginFrameCount;
         if ( bNewRecordingFrame )
         {
-            _recordedBeginFrameCount = pInput->getBeginFrameCount();
-            _replay.recordFrame( ImGui::GetIO().DeltaTime, pInput->getLastFrameEvents() );
+            _recordedBeginFrameCount = input.getBeginFrameCount();
+            _replay.recordFrame( ImGui::GetIO().DeltaTime, input.getLastFrameEvents() );
         }
         // 재생(가상 입력으로 붙인 리플레이)이 끝나면 해제한다.
-        const bool bReplayFinished = pInput != nullptr && pInput->getVirtualInput() == &_replay && _replay.isFinished( pInput->getVirtualFrameIndex() );
+        const bool bReplayFinished = input.getVirtualInput() == &_replay && _replay.isFinished( input.getVirtualFrameIndex() );
         if ( bReplayFinished )
-            pInput->detachVirtualInput();
+            input.detachVirtualInput();
 
         // 탭은 셋이다. 편집(Mappings), 들여다보기(Debug), 녹화와 주입(Replay & Inject)이다. 언리얼의 Enhanced Input 은 액션, 매핑, 트리거를 한 화면에서 편집한다.
         if ( ImGui::BeginTabBar( "InputEditorTabs" ) )
@@ -692,16 +689,10 @@ namespace sw::editor
 
     void InputMapPanel::drawDeviceMonitorTab()
     {
-        InputManager* pInput = findSubsystem<InputManager>(); // 필수 서비스: 없으면 버그
-        if ( pInput == nullptr )
-        {
-            SW_LOG_ERROR_ONCE( "[InputMap] InputManager is missing - the device monitor tab is not drawn" );
-            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorInputMap", "NoInputManager" ) );
-            return;
-        }
+        InputManager& input = editor::getSubsystem<InputManager>();
 
         // 1) 활성 장치 상태
-        const InputGlyphStyle devType   = pInput->getActiveGlyphStyle();
+        const InputGlyphStyle devType   = input.getActiveGlyphStyle();
         const utf8*           pTypeName = InputMapPanelInternal::glyphStyleName( devType );
 
         ImGui::Text( "Active Device:" );
@@ -719,12 +710,7 @@ namespace sw::editor
 
     void InputMapPanel::drawKeyboardMonitor()
     {
-        InputManager* pInput = findSubsystem<InputManager>();
-        if ( pInput == nullptr ) // 필수 서비스: 없으면 버그
-        {
-            SW_LOG_ERROR_ONCE( "[InputMap] InputManager is missing - the keyboard monitor is not drawn" );
-            return;
-        }
+        InputManager& input = editor::getSubsystem<InputManager>();
 
         // 2) 키보드 실시간 모니터
         if ( ImGui::CollapsingHeader( "Keyboard Status", ImGuiTreeNodeFlags_DefaultOpen ) )
@@ -735,7 +721,7 @@ namespace sw::editor
             for ( int32 keyIndex = 1; keyIndex < static_cast<int32>( Key::Count ); ++keyIndex )
             {
                 const Key key = static_cast<Key>( keyIndex );
-                if ( pInput->isKeyDown( key ) )
+                if ( input.isKeyDown( key ) )
                 {
                     const utf8* pName = KeyCodeUtil::toName( key );
                     if ( pName != nullptr )
@@ -755,26 +741,21 @@ namespace sw::editor
 
     void InputMapPanel::drawMouseMonitor()
     {
-        InputManager* pInput = findSubsystem<InputManager>();
-        if ( pInput == nullptr ) // 필수 서비스: 없으면 버그
-        {
-            SW_LOG_ERROR_ONCE( "[InputMap] InputManager is missing - the mouse monitor is not drawn" );
-            return;
-        }
+        InputManager& input = editor::getSubsystem<InputManager>();
 
         // 3) 마우스 실시간 모니터
         if ( ImGui::CollapsingHeader( "Mouse Status", ImGuiTreeNodeFlags_DefaultOpen ) )
         {
             int32      mx = 0, my = 0;
-            const int2 vecMousePos2 = pInput->getMousePosition();
+            const int2 vecMousePos2 = input.getMousePosition();
             mx                      = vecMousePos2._x;
             my                      = vecMousePos2._y;
             int32      dx = 0, dy = 0;
-            const int2 vecMouseDelta3 = pInput->getMouseDelta();
+            const int2 vecMouseDelta3 = input.getMouseDelta();
             dx                        = vecMouseDelta3._x;
             dy                        = vecMouseDelta3._y;
             float32      smoothDx = 0.0f, smoothDy = 0.0f;
-            const float2 vecSmoothDelta2 = pInput->getMouse() != nullptr ? pInput->getMouse()->getSmoothDelta() : float2{};
+            const float2 vecSmoothDelta2 = input.getMouse() != nullptr ? input.getMouse()->getSmoothDelta() : float2{};
             smoothDx                     = vecSmoothDelta2._x;
             smoothDy                     = vecSmoothDelta2._y;
 
@@ -784,31 +765,26 @@ namespace sw::editor
             ImGui::SameLine( 350.0f );
             ImGui::Text( "Smooth Delta: (%.2f, %.2f)", static_cast<float64>( smoothDx ), static_cast<float64>( smoothDy ) );
 
-            ImGui::Text( "Wheel: %.2f", static_cast<float64>( pInput->getMouseWheel() ) );
+            ImGui::Text( "Wheel: %.2f", static_cast<float64>( input.getMouseWheel() ) );
             ImGui::SameLine( 200.0f );
             ImGui::Text( "Buttons:" );
             ImGui::SameLine();
-            ImGui::TextColored( EditorColorUtil::toImVec4( pInput->isMouseButtonDown( MouseButton::Left ) ? InputMapPanelInternal::kButtonDownText : InputMapPanelInternal::kButtonUpText ), "[L]" );
+            ImGui::TextColored( EditorColorUtil::toImVec4( input.isMouseButtonDown( MouseButton::Left ) ? InputMapPanelInternal::kButtonDownText : InputMapPanelInternal::kButtonUpText ), "[L]" );
             ImGui::SameLine();
-            ImGui::TextColored( EditorColorUtil::toImVec4( pInput->isMouseButtonDown( MouseButton::Right ) ? InputMapPanelInternal::kButtonDownText : InputMapPanelInternal::kButtonUpText ), "[R]" );
+            ImGui::TextColored( EditorColorUtil::toImVec4( input.isMouseButtonDown( MouseButton::Right ) ? InputMapPanelInternal::kButtonDownText : InputMapPanelInternal::kButtonUpText ), "[R]" );
             ImGui::SameLine();
-            ImGui::TextColored( EditorColorUtil::toImVec4( pInput->isMouseButtonDown( MouseButton::Middle ) ? InputMapPanelInternal::kButtonDownText : InputMapPanelInternal::kButtonUpText ), "[M]" );
+            ImGui::TextColored( EditorColorUtil::toImVec4( input.isMouseButtonDown( MouseButton::Middle ) ? InputMapPanelInternal::kButtonDownText : InputMapPanelInternal::kButtonUpText ), "[M]" );
         }
     }
 
     void InputMapPanel::drawGamepadMonitor()
     {
-        InputManager* pInput = findSubsystem<InputManager>();
-        if ( pInput == nullptr ) // 필수 서비스: 없으면 버그
-        {
-            SW_LOG_ERROR_ONCE( "[InputMap] InputManager is missing - the gamepad monitor is not drawn" );
-            return;
-        }
+        InputManager& input = editor::getSubsystem<InputManager>();
 
         // 4) 게임패드 실시간 모니터
         if ( ImGui::CollapsingHeader( "Gamepad 0 Status", ImGuiTreeNodeFlags_DefaultOpen ) )
         {
-            GamepadDevice* pGamepad = pInput->getGamepad( 0 );
+            GamepadDevice* pGamepad = input.getGamepad( 0 );
             if ( pGamepad != nullptr && pGamepad->isConnected() )
             {
                 const GamepadBatteryInfo batteryInfo = pGamepad->getBatteryInfo();
@@ -908,13 +884,7 @@ namespace sw::editor
 
     void InputMapPanel::drawInputSimulatorTab()
     {
-        InputManager* pInput = findSubsystem<InputManager>(); // 필수 서비스: 없으면 버그
-        if ( pInput == nullptr )
-        {
-            SW_LOG_ERROR_ONCE( "[InputMap] InputManager is missing - the input simulator tab is not drawn" );
-            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorInputMap", "NoInputManager" ) );
-            return;
-        }
+        InputManager& input = editor::getSubsystem<InputManager>();
 
         ImGui::Text( "Virtual Input Injector & Gameplay Macro Simulator" );
         ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorInputMap", "InjectorHint" ) );
@@ -928,17 +898,17 @@ namespace sw::editor
         ImGui::Combo( "Key", &_simKeyToInject, arrCommonKeys, 11 );
         ImGui::SameLine();
         if ( ImGui::Button( "Inject KeyDown" ) )
-            pInput->postRawEvent( RawInputEvent::makeKeyDown( arrKeyValues[_simKeyToInject] ) );
+            input.postRawEvent( RawInputEvent::makeKeyDown( arrKeyValues[_simKeyToInject] ) );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "InjectKeyDownTip" ) );
         ImGui::SameLine();
         if ( ImGui::Button( "Inject KeyUp" ) )
-            pInput->postRawEvent( RawInputEvent::makeKeyUp( arrKeyValues[_simKeyToInject] ) );
+            input.postRawEvent( RawInputEvent::makeKeyUp( arrKeyValues[_simKeyToInject] ) );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "InjectKeyUpTip" ) );
         ImGui::SameLine();
         if ( ImGui::Button( "Tap Key (Down + Up)" ) )
         {
-            pInput->postRawEvent( RawInputEvent::makeKeyDown( arrKeyValues[_simKeyToInject] ) );
-            pInput->postRawEvent( RawInputEvent::makeKeyUp( arrKeyValues[_simKeyToInject] ) );
+            input.postRawEvent( RawInputEvent::makeKeyDown( arrKeyValues[_simKeyToInject] ) );
+            input.postRawEvent( RawInputEvent::makeKeyUp( arrKeyValues[_simKeyToInject] ) );
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "TapKeyTip" ) );
 
@@ -950,7 +920,7 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "SimStickYTip" ) );
         if ( ImGui::Button( "Inject Stick Tilt" ) )
         {
-            GamepadDevice* pGamepad = pInput->getGamepad( 0 );
+            GamepadDevice* pGamepad = input.getGamepad( 0 );
             if ( pGamepad != nullptr )
             {
                 pGamepad->setAxis( 0, _simStick._x );
@@ -963,7 +933,7 @@ namespace sw::editor
         {
             _simStick._x            = 0.0f;
             _simStick._y            = 0.0f;
-            GamepadDevice* pGamepad = pInput->getGamepad( 0 );
+            GamepadDevice* pGamepad = input.getGamepad( 0 );
             if ( pGamepad != nullptr )
             {
                 pGamepad->setAxis( 0, 0.0f );
@@ -975,7 +945,7 @@ namespace sw::editor
 
     void InputMapPanel::drawInputReplayTab()
     {
-        InputManager* pInput = findSubsystem<InputManager>(); // 필수 서비스: 없으면 버그
+        InputManager& input = editor::getSubsystem<InputManager>();
 
         ImGui::Text( "Input Replay Recorder & Deterministic QA Playback" );
         ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorInputMap", "ReplayHint" ) );
@@ -996,32 +966,25 @@ namespace sw::editor
         ImGui::SameLine();
         if ( ImGui::Button( "Load Replay" ) )
         {
-            if ( pInput != nullptr && pInput->getVirtualInput() == &_replay )
-                pInput->detachVirtualInput();
+            if ( input.getVirtualInput() == &_replay )
+                input.detachVirtualInput();
             const string diskPath = ResourcePaths::findLooseFile( _replayFilePath.get() ).getDiskPath();
             if ( diskPath.empty() || _replay.loadFromFile( diskPath ) == false )
                 SW_LOG_ERROR( "Could not load input replay '%#'", _replayFilePath.c_str() );
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "LoadReplayTip" ) );
 
-        if ( pInput == nullptr )
-        {
-            SW_LOG_ERROR( "[InputMap] InputManager is missing - the replay controls are not drawn" );
-            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorInputMap", "NoInputManager" ) );
-            return;
-        }
-
         ImGui::Separator();
 
-        const bool bPlaying = pInput->getVirtualInput() == &_replay;
-        drawRecordControls( *pInput, bPlaying );
+        const bool bPlaying = input.getVirtualInput() == &_replay;
+        drawRecordControls( input, bPlaying );
 
         ImGui::Separator();
 
         // 재생 제어. 재생은 리플레이를 붙이는 것이고, 일시정지는 그 프레임으로 seekTo 하는 것이다(상태를 재현한 뒤 분리한다). 탐색도 seekTo 다.
         ImGui::Text( "Playback Controls (Total Frames: %u, Duration: %.2f s):", _replay.getFrameCount(), static_cast<float64>( _replay.getTotalDuration() ) );
-        const uint32 currentFrame = _replay.getStartFrameIndex() + ( bPlaying ? pInput->getVirtualFrameIndex() : 0u );
-        drawPlaybackControls( *pInput, bPlaying, currentFrame );
+        const uint32 currentFrame = _replay.getStartFrameIndex() + ( bPlaying ? input.getVirtualFrameIndex() : 0u );
+        drawPlaybackControls( input, bPlaying, currentFrame );
 
         if ( currentFrame < _replay.getFrameCount() )
         {

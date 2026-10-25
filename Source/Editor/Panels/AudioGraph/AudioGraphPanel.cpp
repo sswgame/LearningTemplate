@@ -114,15 +114,13 @@ namespace sw::editor
         ImGui::EndDisabled();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAudioGraph", "SaveTip" ) );
 
-        IAudioService* pAudio = editor::findSubsystem<IAudioService>(); // 필수 서비스: 없으면 버그(전용 서버도 널 서비스가 있다)
-        if ( pAudio == nullptr )
-            SW_LOG_ERROR_ONCE( "[AudioGraph] IAudioService is missing - the preview is disabled" );
-        const bool bAudioReady = pAudio != nullptr && pAudio->isInitialized();
+        IAudioService& audio       = editor::getSubsystem<IAudioService>(); // 전용 서버도 널 서비스가 있어 늘 있다
+        const bool     bAudioReady = audio.isInitialized();
         ImGui::SameLine();
         ImGui::BeginDisabled( bAudioReady == false || _bEditDirty );
         if ( ImGui::Button( SW_LOCKEY( "EditorAudioGraph", "Preview" ) ) )
         {
-            AudioEngine& engine = pAudio->getEngine();
+            AudioEngine& engine = audio.getEngine();
             if ( _previewID != 0 )
                 engine.stop( _previewID, 0.0f );
             _previewID = engine.playClip( _editPath, hashed_string( AudioBusNames::kUI ), AudioClipPlayParams{} );
@@ -133,7 +131,7 @@ namespace sw::editor
         ImGui::BeginDisabled( bAudioReady == false || _previewID == 0 );
         if ( ImGui::Button( SW_LOCKEY( "EditorAudioGraph", "StopPreview" ) ) )
         {
-            pAudio->getEngine().stop( _previewID, 0.05f );
+            audio.getEngine().stop( _previewID, 0.05f );
             _previewID = 0;
         }
         ImGui::EndDisabled();

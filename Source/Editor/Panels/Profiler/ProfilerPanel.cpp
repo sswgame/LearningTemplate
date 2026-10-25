@@ -275,16 +275,11 @@ namespace sw::editor
     void ProfilerPanel::drawContent()
     {
         // 패널이 열려 있는 동안 엔진 프로파일러를 켜 두고 프레임마다 한 칸씩 담는다. 탭과 무관하게 담으므로 탭을 바꿔도 그래프가 끊기지 않는다.
-        FrameProfiler* pProfiler = editor::findSubsystem<FrameProfiler>(); // 필수 서비스: 없으면 버그
-        if ( pProfiler != nullptr )
-        {
-            if ( _bCollect == SW_TRUE && pProfiler->isEnabled() == false )
-                pProfiler->setEnabled( true );
-            if ( _bCapturePaused == SW_FALSE && _scopeHistory.capture( *pProfiler ) )
-                pauseOnSpike();
-        }
-        else
-            SW_LOG_ERROR( "[Profiler] FrameProfiler is missing - the panel cannot collect frames" );
+        FrameProfiler& profiler = editor::getSubsystem<FrameProfiler>();
+        if ( _bCollect == SW_TRUE && profiler.isEnabled() == false )
+            profiler.setEnabled( true );
+        if ( _bCapturePaused == SW_FALSE && _scopeHistory.capture( profiler ) )
+            pauseOnSpike();
 
         if ( ImGui::BeginTabBar( "ProfilerTabs" ) )
         {
@@ -361,12 +356,8 @@ namespace sw::editor
         bool bCollect = _bCollect == SW_TRUE;
         if ( ImGui::Checkbox( "Collect", &bCollect ) )
         {
-            _bCollect                = bCollect ? SW_TRUE : SW_FALSE;
-            FrameProfiler* pProfiler = editor::findSubsystem<FrameProfiler>(); // 필수 서비스: 없으면 버그
-            if ( pProfiler != nullptr )
-                pProfiler->setEnabled( bCollect );
-            else
-                SW_LOG_ERROR_ONCE( "[Profiler] FrameProfiler is missing - the Collect toggle has no effect" );
+            _bCollect = bCollect ? SW_TRUE : SW_FALSE;
+            editor::getSubsystem<FrameProfiler>().setEnabled( bCollect );
         }
         ImGui::SameLine();
         const uint64 capturedFrames = MathUtil::min( _scopeHistory.getCapturedFrameCount(), static_cast<uint64>( UINT32_MAX ) );
@@ -537,16 +528,10 @@ namespace sw::editor
 
     void ProfilerPanel::drawTimelineTab()
     {
-        FrameProfiler* pProfiler = editor::findSubsystem<FrameProfiler>(); // 필수 서비스: 없으면 버그
-        if ( pProfiler == nullptr )
-        {
-            SW_LOG_ERROR_ONCE( "[Profiler] FrameProfiler is missing - the timeline tab is not drawn" );
-            ImGui::TextDisabled( "Engine profiler is not available" );
-            return;
-        }
-        ProfilerTimeline& timeline   = pProfiler->getTimeline();
+        FrameProfiler&    profiler   = editor::getSubsystem<FrameProfiler>();
+        ProfilerTimeline& timeline   = profiler.getTimeline();
         const bool        bRecording = timeline.isRecording();
-        drawTimelineToolbar( *pProfiler, timeline, bRecording );
+        drawTimelineToolbar( profiler, timeline, bRecording );
 
         if ( _bTimelineFrozen == SW_FALSE )
         {
@@ -1050,17 +1035,8 @@ namespace sw::editor
 
         if ( ImGui::CollapsingHeader( "Task Manager & Concurrency", ImGuiTreeNodeFlags_DefaultOpen ) )
         {
-            TaskManager* pTaskManager = editor::findSubsystem<TaskManager>(); // 필수 서비스: 없으면 버그
-            if ( pTaskManager != nullptr )
-            {
-                ImGui::BulletText( "Worker Threads: %u", pTaskManager->getWorkerCount() );
-                ImGui::BulletText( "Task System: Active" );
-            }
-            else
-            {
-                SW_LOG_ERROR( "[Profiler] TaskManager is missing - the task manager section is not drawn" );
-                EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorProfiler", "TaskManagerInactive" ) );
-            }
+            ImGui::BulletText( "Worker Threads: %u", editor::getSubsystem<TaskManager>().getWorkerCount() );
+            ImGui::BulletText( "Task System: Active" );
         }
     }
 
@@ -1238,14 +1214,8 @@ namespace sw::editor
 
     void ProfilerPanel::drawCallTreeTab()
     {
-        FrameProfiler* pProfiler = editor::findSubsystem<FrameProfiler>(); // 필수 서비스: 없으면 버그
-        if ( pProfiler == nullptr )
-        {
-            SW_LOG_ERROR_ONCE( "[Profiler] FrameProfiler is missing - the call tree tab is not drawn" );
-            ImGui::TextDisabled( "Engine profiler is not available" );
-            return;
-        }
-        ProfilerTimeline& timeline   = pProfiler->getTimeline();
+        FrameProfiler&    profiler   = editor::getSubsystem<FrameProfiler>();
+        ProfilerTimeline& timeline   = profiler.getTimeline();
         const bool        bRecording = timeline.isRecording();
         if ( ImGui::Button( bRecording ? "Stop Recording" : "Record" ) )
         {
@@ -1253,7 +1223,7 @@ namespace sw::editor
             {
                 timeline.clear();
                 _bCollect = SW_TRUE;
-                pProfiler->setEnabled( true );
+                profiler.setEnabled( true );
             }
             timeline.setRecording( bRecording == false );
         }
@@ -1321,7 +1291,7 @@ namespace sw::editor
     {
         const FrameProfiler*    pProfiler = &editor::getSubsystem<FrameProfiler>(); // 필수 서비스: 없으면 버그
         const ProfilerCallNode& node      = _listCallNode[nodeIndex];
-        const utf8*             pName     = pProfiler != nullptr ? pProfiler->findScopeName( node._slot ) : nullptr;
+        const utf8*             pName     = pProfiler->findScopeName( node._slot );
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
         ImGui::PushID( static_cast<int32>( nodeIndex ) );

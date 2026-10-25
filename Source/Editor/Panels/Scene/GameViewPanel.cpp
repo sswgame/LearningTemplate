@@ -85,20 +85,15 @@ namespace sw::editor
 
     void GameViewPanel::forwardDetachedKeyboard()
     {
-        InputManager* pInput = findSubsystem<InputManager>();
-        if ( pInput == nullptr ) // 필수 서비스: 없으면 버그
-        {
-            SW_LOG_ERROR_ONCE( "[GameView] InputManager is missing - detached keyboard input is not forwarded" );
-            return;
-        }
-        const bool bDetached = ImGui::GetWindowViewport() != ImGui::GetMainViewport();
-        const bool bForward  = bDetached && ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows );
+        InputManager& input     = editor::getSubsystem<InputManager>();
+        const bool    bDetached = ImGui::GetWindowViewport() != ImGui::GetMainViewport();
+        const bool    bForward  = bDetached && ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows );
         if ( bForward == false )
         {
             // 포커스를 잃었거나 패널을 주 창에 되돌렸다 — 누른 채 남은 키를 놓는다. 큐가 차서 못 넣은 키는 다음 프레임에 다시 시도한다.
             for ( size_t index = _listForwardedKey.size(); index > 0; --index )
             {
-                if ( pInput->postRawEvent( RawInputEvent::makeKeyUp( _listForwardedKey[index - 1] ) ) )
+                if ( input.postRawEvent( RawInputEvent::makeKeyUp( _listForwardedKey[index - 1] ) ) )
                     VectorUtil::removeAtSwap( _listForwardedKey, index - 1 );
             }
             return;
@@ -109,7 +104,7 @@ namespace sw::editor
         ImGuiKeyForward::appendTextInput( listEvent );
         for ( const RawInputEvent& event : listEvent )
         {
-            if ( pInput->postRawEvent( event ) == false )
+            if ( input.postRawEvent( event ) == false )
                 continue; // 큐가 차면 이 사건만 잃는다
             if ( event._type == RawInputEventType::KeyDown && VectorUtil::contains( _listForwardedKey, event._payload._keyData._key ) == false )
                 _listForwardedKey.push_back( event._payload._keyData._key );
@@ -120,12 +115,7 @@ namespace sw::editor
 
     void GameViewPanel::forwardDetachedPointer()
     {
-        InputManager* pInput = findSubsystem<InputManager>();
-        if ( pInput == nullptr ) // 필수 서비스: 없으면 버그
-        {
-            SW_LOG_ERROR_ONCE( "[GameView] InputManager is missing - detached pointer input is not forwarded" );
-            return;
-        }
+        InputManager&        input         = editor::getSubsystem<InputManager>();
         const ImGuiViewport* pMainViewport = ImGui::GetMainViewport();
         const bool           bDetached     = ImGui::GetWindowViewport() != pMainViewport;
         const bool           bHovered      = ImGui::IsWindowHovered( ImGuiHoveredFlags_RootAndChildWindows );
@@ -136,21 +126,21 @@ namespace sw::editor
         const int32    y        = static_cast<int32>( MathUtil::round( io.MousePos.y - pMainViewport->Pos.y ) );
         const bool     bForward = bDetached && bHovered;
         if ( bForward && ( io.MouseDelta.x != 0.0f || io.MouseDelta.y != 0.0f ) )
-            (void)pInput->postRawEvent( RawInputEvent::makeMouseMove( x, y ) ); // 큐가 차면 이 프레임의 이동만 잃는다 — 다음 이동이 위치를 다시 준다
+            (void)input.postRawEvent( RawInputEvent::makeMouseMove( x, y ) ); // 큐가 차면 이 프레임의 이동만 잃는다 — 다음 이동이 위치를 다시 준다
         for ( uint32 index = 0; index < static_cast<uint32>( std::size( kForwardedButtons ) ); ++index )
         {
             const ForwardedButton& button       = kForwardedButtons[index];
             const uint8            bit          = static_cast<uint8>( 1u << index );
             const bool             bPressedHere = bForward && ImGui::IsMouseClicked( button._imguiButton );
-            if ( bPressedHere && pInput->postRawEvent( RawInputEvent::makeMouseButtonDown( button._button, x, y ) ) )
+            if ( bPressedHere && input.postRawEvent( RawInputEvent::makeMouseButtonDown( button._button, x, y ) ) )
                 _forwardedButtonMask = static_cast<uint8>( _forwardedButtonMask | bit );
             // 뗌은 넣은 누름의 짝이면 패널 밖이어도 넣는다 — 안 넣으면 게임에서 단추가 눌린 채 남는다.
             const bool bReleasedForwarded = ( _forwardedButtonMask & bit ) != 0 && ImGui::IsMouseReleased( button._imguiButton );
-            if ( bReleasedForwarded && pInput->postRawEvent( RawInputEvent::makeMouseButtonUp( button._button, x, y ) ) )
+            if ( bReleasedForwarded && input.postRawEvent( RawInputEvent::makeMouseButtonUp( button._button, x, y ) ) )
                 _forwardedButtonMask = static_cast<uint8>( _forwardedButtonMask & ~bit );
         }
         if ( bForward && io.MouseWheel != 0.0f )
-            (void)pInput->postRawEvent( RawInputEvent::makeMouseWheel( io.MouseWheel ) );
+            (void)input.postRawEvent( RawInputEvent::makeMouseWheel( io.MouseWheel ) );
     }
 
     void GameViewPanel::onPanelCollapsed()
@@ -228,9 +218,9 @@ namespace sw::editor
 
         if ( imageSize.x > 1.0f && imageSize.y > 1.0f )
         {
-            InputManager* pInput = findSubsystem<InputManager>();
-            if ( pInput != nullptr && ViewportInputOverlay::getConfig()._bEnabled == SW_TRUE )
-                ViewportInputOverlay::draw( pDrawList, imagePos, imageSize, pInput, &pInput->getInputMap() );
+            InputManager& input = editor::getSubsystem<InputManager>();
+            if ( ViewportInputOverlay::getConfig()._bEnabled == SW_TRUE )
+                ViewportInputOverlay::draw( pDrawList, imagePos, imageSize, &input, &input.getInputMap() );
         }
     }
 

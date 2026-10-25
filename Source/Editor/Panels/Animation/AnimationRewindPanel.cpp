@@ -105,11 +105,9 @@ namespace sw::editor
         const float64               viewTime  = rewind.isScrubbing() ? rewind.getScrubTime() : rewind.getLatestTime();
         const ComponentHandle       selected  = AnimationRewindPanelInternal::findSelectedUnit( pScene );
         const AnimationRewindTrack* pSelected = selected.isValid() ? rewind.findTrack( selected ) : nullptr;
-        DebugDrawQueue*             pQueue    = findSubsystem<DebugDrawQueue>(); // 필수 서비스: 없으면 버그
-        if ( pQueue == nullptr )
-            SW_LOG_ERROR_ONCE( "[AnimationRewind] DebugDrawQueue is missing - the skeleton is not drawn" );
-        if ( _bDrawSkeleton == SW_TRUE && pQueue != nullptr )
+        if ( _bDrawSkeleton == SW_TRUE )
         {
+            DebugDrawQueue& queue = editor::getSubsystem<DebugDrawQueue>();
             for ( const AnimationRewindTrack& track : rewind.getTracks() )
             {
                 const bool bSelected = &track == pSelected;
@@ -117,7 +115,7 @@ namespace sw::editor
                     continue;
                 const AnimationRewindFrame* pFrame = track.findFrame( viewTime );
                 if ( pFrame != nullptr )
-                    AnimationRewindPanelInternal::drawSkeleton( *pQueue, track, *pFrame, _listScratchPosition,
+                    AnimationRewindPanelInternal::drawSkeleton( queue, track, *pFrame, _listScratchPosition,
                                                                 bSelected ? AnimationRewindPanelInternal::kSelectedColor : AnimationRewindPanelInternal::kOtherColor,
                                                                 bSelected );
             }

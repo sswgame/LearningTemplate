@@ -21,15 +21,14 @@ namespace sw::editor
     {
         struct EditorThumbnailCacheInternal
         {
+            /** @brief 읽기 · 올리기 경로의 텍스처 캐시입니다. 에디터가 프레임을 도는 동안은 늘 있다. */
+            static TextureCache& requireTextureCache() { return editor::getSubsystem<AssetManager>().getAssetCache<TextureCache>(); }
+
+            /** @brief 해제 경로(소멸자 · 종료)의 텍스처 캐시입니다. 애셋 매니저가 먼저 내려갔으면 텍스처도 함께 사라졌으니 놓을 것이 없다. */
             static TextureCache* findTextureCache()
             {
-                AssetManager* pAssets = editor::findSubsystem<AssetManager>(); // 필수 서비스: 없으면 버그
-                if ( pAssets == nullptr )
-                {
-                    SW_LOG_ERROR_ONCE( "[ThumbnailCache] AssetManager is missing - no thumbnails are loaded" );
-                    return nullptr;
-                }
-                return &pAssets->getAssetCache<TextureCache>();
+                AssetManager* pAssets = editor::findSubsystem<AssetManager>(); // 종료 순서에 따라 이미 없을 수 있다
+                return pAssets != nullptr ? &pAssets->getAssetCache<TextureCache>() : nullptr;
             }
 
             static IImGuiRendererBackend* findRendererBackend()
@@ -125,11 +124,11 @@ namespace sw::editor
             return;
 
         // 다시 읽기 · 디바이스 교체로 텍스처가 바뀐 썸네일은 놓고 다음 그리기가 다시 예약한다.
-        const TextureCache* pTextures = EditorThumbnailCacheInternal::findTextureCache();
+        const TextureCache& textures = EditorThumbnailCacheInternal::requireTextureCache();
         for ( size_t entryIndex = _listEntry.size(); entryIndex > 0; --entryIndex )
         {
             Entry&           entry    = _listEntry[entryIndex - 1];
-            const Texture2D* pTexture = pTextures != nullptr ? pTextures->find( entry._resourceID ) : nullptr;
+            const Texture2D* pTexture = textures.find( entry._resourceID );
             const bool       bValid   = pTexture != nullptr && pTexture->isRHIValid() && pTexture->getHandle() == entry._textureHandle;
             if ( bValid )
                 continue;
@@ -144,14 +143,16 @@ namespace sw::editor
 
     void EditorThumbnailCache::startLoads( IRHIDevice* pDevice )
     {
-        TextureCache* pTextures = EditorThumbnailCacheInternal::findTextureCache();
+        if ( _listPendingID.empty() )
+            return;
+        TextureCache& textures = EditorThumbnailCacheInternal::requireTextureCache();
         while ( _listPendingID.empty() == false && _listLoading.size() < kMaxLoading )
         {
             const string resourceID = std::move( _listPendingID.front() );
             _listPendingID.pop_front();
 
             // 디스크 읽기와 디코드는 워커에서 한다. 이미 올라가 있는 텍스처는 준비된 핸들이 바로 온다.
-            const TextureHandle handle = pTextures != nullptr ? pTextures->request( resourceID, pDevice, AssetLoadStart::Async ) : TextureHandle{};
+            const TextureHandle handle = textures.request( resourceID, pDevice, AssetLoadStart::Async );
             if ( handle.isValid() == false )
             {
                 recordFailure( resourceID );
@@ -190,15 +191,15 @@ namespace sw::editor
 
     bool EditorThumbnailCache::adoptReady( const string& resourceID, IRHIDevice* pDevice )
     {
-        TextureCache*          pTextures = EditorThumbnailCacheInternal::findTextureCache();
-        IImGuiRendererBackend* pBackend  = EditorThumbnailCacheInternal::findRendererBackend();
+        TextureCache&          textures = EditorThumbnailCacheInternal::requireTextureCache();
+        IImGuiRendererBackend* pBackend = EditorThumbnailCacheInternal::findRendererBackend();
         // 준비된 텍스처라 읽지 않는다(캐시 적중) — 핸들이 살아 있는 동안 참조를 하나 더 세어 해제를 `releaseEntry` 의 `release` 짝으로 맞춘다.
-        Texture2D* pTexture           = pTextures != nullptr ? pTextures->acquire( resourceID, pDevice ) : nullptr;
+        Texture2D* pTexture           = textures.acquire( resourceID, pDevice );
         const bool bThumbnailUnusable = pTexture == nullptr || pTexture->isRHIValid() == false || pBackend == nullptr;
         if ( bThumbnailUnusable )
         {
-            if ( pTexture != nullptr && pTextures != nullptr )
-                pTextures->release( resourceID, pDevice );
+            if ( pTexture != nullptr )
+                textures.release( resourceID, pDevice );
             return false;
         }
 
@@ -209,7 +210,7 @@ namespace sw::editor
         entry._lastUsedFrame = _frame;
         if ( entry._pTextureID == nullptr )
         {
-            pTextures->release( resourceID, pDevice );
+            textures.release( resourceID, pDevice );
             return false;
         }
         _listEntry.push_back( std::move( entry ) );

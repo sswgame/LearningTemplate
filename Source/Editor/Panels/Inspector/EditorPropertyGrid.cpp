@@ -559,14 +559,9 @@ namespace sw::editor
 
         const bool bReadOnly = prop._metadata->_bReadOnly != SW_FALSE;
 
-        auto* pRegistry = editor::findSubsystem<TypeRegistry>();
-        if ( pRegistry == nullptr ) // 필수 서비스: 없으면 버그
-        {
-            SW_LOG_ERROR_ONCE( "[PropertyGrid] TypeRegistry is missing - the enum property is not drawn" );
-            return;
-        }
+        const TypeRegistry& registry = editor::getSubsystem<TypeRegistry>();
 
-        const EnumInfo* pEnumInfo = pRegistry->findEnum( prop._typeName );
+        const EnumInfo* pEnumInfo = registry.findEnum( prop._typeName );
         if ( pEnumInfo != nullptr )
         {
             drawEnumProperty( instance, prop, *pEnumInfo, bReadOnly );
@@ -579,7 +574,7 @@ namespace sw::editor
             return;
         }
 
-        const TypeInfo* pFieldType = pRegistry->findType( prop._typeName );
+        const TypeInfo* pFieldType = registry.findType( prop._typeName );
         if ( pFieldType != nullptr || prop._typeName.isPredefinedType( PredefinedNameType::NameType_string ) )
         {
             drawStructOrStringProperty( instance, prop, pFieldType );
@@ -593,13 +588,6 @@ namespace sw::editor
     {
         using Internal = EditorPropertyGridInternal;
 
-        auto* pRegistry = editor::findSubsystem<TypeRegistry>();
-        if ( pRegistry == nullptr ) // 필수 서비스: 없으면 버그
-        {
-            SW_LOG_ERROR_ONCE( "[PropertyGrid] TypeRegistry is missing - the enum value is not written" );
-            return;
-        }
-
         // enum 의 실제 크기(`EnumInfo::_size` 와 부호)로 읽고 쓴다. 항상 int32 로 읽고 쓰면, 엔진의 enum 은 대부분 uint8 이나
         // uint16 이므로 하나를 고를 때마다 뒤의 필드를 덮어쓰고(`CameraComponent::_role` 을 고르면 바로 뒤의 `_bOrthographic` 이 꺼진다),
         // 읽을 때는 이웃 바이트가 섞여 멀쩡한 값이 "<Unknown>" 으로 보인다.
@@ -612,7 +600,7 @@ namespace sw::editor
         if ( enumInfo._bIsBitFlag )
             Internal::drawBitFlagEnum( enumInfo, currentValue, bReadOnly, editedValue );
         else
-            Internal::drawPlainEnum( *pRegistry, enumInfo, prop, currentValue, bReadOnly, editedValue );
+            Internal::drawPlainEnum( editor::getSubsystem<TypeRegistry>(), enumInfo, prop, currentValue, bReadOnly, editedValue );
         if ( bReadOnly )
             return;
 
@@ -1040,15 +1028,7 @@ namespace sw::editor
     void EditorPropertyGrid::invokeTypeMethod( void* pInstance, const TypeInfo* pTypeInfo, const FunctionInfo& method,
                                                const TaskArgs& args )
     {
-        // `findSubsystem<T>()` 는 nullptr 을 반환할 수 있다. 역참조하기 전에 확인한다.
-        TypeRegistry* pTypeRegistry = editor::findSubsystem<TypeRegistry>();
-        if ( pTypeRegistry == nullptr ) // 필수 서비스: 없으면 버그
-        {
-            SW_LOG_ERROR_ONCE( "[PropertyGrid] TypeRegistry is missing - the method is not invoked" );
-            return;
-        }
-
-        const TaskValue result = pTypeRegistry->invokeMethod( pInstance, pTypeInfo->_fullyQualifiedName, method._hashName, args );
+        const TaskValue result = editor::getSubsystem<TypeRegistry>().invokeMethod( pInstance, pTypeInfo->_fullyQualifiedName, method._hashName, args );
         InspectorBuiltinValueUtil::formatMethodResult( result, method._returnTypeName, _lastInvokeResult.data(),
                                                        _lastInvokeResult.capacity() );
     }

@@ -236,13 +236,10 @@ namespace sw::editor
             outPrefabPath = pContext->getSubsystem<EditorWorkspace>().findPrefabPath( pInstance );
         // 포커스된 에셋으로 넘어가지 않는다. 머티리얼이나 씬일 수 있어 프리팹으로 읽으면 [Error] 를 남긴다. 프리팹 포커스는 부르는 쪽이 종류를 보고 넘긴다.
 
-        AssetManager* pResources = editor::findSubsystem<AssetManager>(); // 필수 서비스: 없으면 버그
-        if ( pResources == nullptr )
-            SW_LOG_ERROR( "No AssetManager - the nested prefabs of '%#' are not collected", outPrefabPath.c_str() );
-        if ( pResources == nullptr || outPrefabPath.empty() )
+        if ( outPrefabPath.empty() )
             return;
 
-        const shared_ptr<const PrefabAsset> pLoaded = pResources->getAssetCache<PrefabCache>().loadPrefab( outPrefabPath );
+        const shared_ptr<const PrefabAsset> pLoaded = editor::getSubsystem<AssetManager>().getAssetCache<PrefabCache>().loadPrefab( outPrefabPath );
         if ( pLoaded == nullptr || pLoaded->isValid() == false )
             return;
 
@@ -309,13 +306,7 @@ namespace sw::editor
             return;
         }
 
-        AssetManager* pResources = editor::findSubsystem<AssetManager>(); // 필수 서비스: 없으면 버그
-        if ( pResources == nullptr )
-        {
-            SW_LOG_ERROR( "No AssetManager - the prefab '%#' is not loaded", string{ prefabPath }.c_str() );
-            return;
-        }
-        const shared_ptr<const PrefabAsset> pLoaded = pResources->getAssetCache<PrefabCache>().loadPrefab( prefabPath );
+        const shared_ptr<const PrefabAsset> pLoaded = editor::getSubsystem<AssetManager>().getAssetCache<PrefabCache>().loadPrefab( prefabPath );
         if ( pLoaded == nullptr )
             return;
 

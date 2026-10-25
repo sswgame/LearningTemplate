@@ -98,12 +98,8 @@ namespace sw::editor
         // 이 스캔이 지금까지의 변경을 모두 담는다 — 그 뒤에 오는 변경만 기억한다.
         if ( _pChangeSource != nullptr )
             _pChangeSource->discardChangedPaths();
-        // 워커는 에디터 범위를 찾지 않는다 — 여기서 찾아 넘긴다. 작업 관리자는 엔진 기동이 늘 올리므로 없으면 버그다
-        // (`request` 는 nullptr 를 받으면 한 워커가 차례로 읽는다 — 스캔은 되지만 느리다).
-        TaskManager* pTaskManager = editor::findSubsystem<TaskManager>(); // 필수 서비스: 없으면 버그
-        if ( pTaskManager == nullptr )
-            SW_LOG_ERROR_ONCE( "Reference index: TaskManager is missing - the scan reads text assets serially" );
-        _job.request( ResourcePaths::getRootFolderPath(), pTaskManager );
+        // 워커는 에디터 범위를 찾지 않는다 — 여기서 찾아 넘긴다. 작업 관리자는 엔진 기동이 늘 올리므로 없으면 버그다.
+        _job.request( ResourcePaths::getRootFolderPath(), &editor::getSubsystem<TaskManager>() );
     }
 
     void ContentBrowserReferenceSearch::query( string_view absolutePath, bool bDependencies )

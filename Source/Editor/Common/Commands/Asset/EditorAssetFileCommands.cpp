@@ -339,13 +339,7 @@ namespace sw::editor
             ++copied;
             const string rel = AssetDatabase::toRelativePath( destPath );
             if ( rel.empty() == false )
-            {
-                AssetManager* pResources = editor::findSubsystem<AssetManager>(); // 필수 서비스: 없으면 버그
-                if ( pResources != nullptr )
-                    pResources->getAssetDatabase().ensureMeta( rel, true );
-                else
-                    SW_LOG_ERROR( "No AssetManager - the meta of the imported file '%#' is not created", rel.c_str() );
-            }
+                editor::getSubsystem<AssetManager>().getAssetDatabase().ensureMeta( rel, true );
             SW_LOG_TRACE( "Imported: %# -> %#", sourcePath.c_str(), destPath.c_str() );
         }
         return copied;

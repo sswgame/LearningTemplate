@@ -90,25 +90,13 @@ namespace sw::editor
 
     bool EditorPreviewPanel::recordPreviewModify( GameObject& obj, const ObjectSnapshot& before, const ObjectSnapshot& after, string_view label )
     {
-        SceneManager* pSceneManager = findSubsystem<SceneManager>(); // 필수 서비스: 없으면 버그
-        if ( pSceneManager == nullptr )
-        {
-            SW_LOG_ERROR_ONCE( "[PreviewPanel] SceneManager is missing - the edit of '%#' is not recorded", obj.getName().c_str() );
-            return false;
-        }
-        _commandStack.push( ObjectUndoUtil::makeModify( _commandStack, *pSceneManager, obj, before, after, label ) ); // 인스펙터 편집은 `_selection.recordModify` 로 같은 스택
+        _commandStack.push( ObjectUndoUtil::makeModify( _commandStack, editor::getSubsystem<SceneManager>(), obj, before, after, label ) ); // 인스펙터 편집은 `_selection.recordModify` 로 같은 스택
         return true;
     }
 
     bool EditorPreviewPanel::readDocumentIsProbeAsset( float64& outValue ) const
     {
-        GlobalVariableManager* pGvm = editor::findSubsystem<GlobalVariableManager>(); // 필수 서비스: 없으면 버그
-        if ( pGvm == nullptr )
-        {
-            SW_LOG_ERROR_ONCE( "[PreviewPanel] GlobalVariableManager is missing - the probe asset cannot be read" );
-            return false;
-        }
-        const GlobalVariableInfo* pInfo = pGvm->findVariable( "gv_editorProbeAsset" );
+        const GlobalVariableInfo* pInfo = editor::getSubsystem<GlobalVariableManager>().findVariable( "gv_editorProbeAsset" );
         if ( pInfo == nullptr )
             return false;
         const string wanted = pInfo->getValueAsString();
@@ -118,16 +106,12 @@ namespace sw::editor
 
     void EditorPreviewPanel::applyWindowFocus( bool bFocused )
     {
-        SceneManager* pSceneManager = findSubsystem<SceneManager>(); // 필수 서비스: 없으면 버그
-        Scene*        pScene        = _viewport.getScene();
+        Scene* pScene = _viewport.getScene();
         if ( bFocused && pScene != nullptr )
         {
             if ( _bFocusApplied )
                 return;
-            if ( pSceneManager != nullptr )
-                (void)pSceneManager->focusScene( pScene ); // 이 창의 씬이라 늘 알려진 씬이다
-            else
-                SW_LOG_ERROR( "[PreviewPanel] SceneManager is missing - the preview scene is not focused" );
+            (void)editor::getSubsystem<SceneManager>().focusScene( pScene ); // 이 창의 씬이라 늘 알려진 씬이다
             setFocusedCommandStack( &_commandStack );
             if ( _selection.isPreviewScope() )
                 setFocusedSelection( &_selection ); // 포커스를 잃어도 남는다 — 인스펙터가 이 선택을 고친다(`getFocusedSelection`)
@@ -139,7 +123,9 @@ namespace sw::editor
         // 이 창이 건 것만 푼다 — 그 사이 다른 창이 자기 것을 걸었으면 그대로 둔다.
         if ( getFocusedCommandStack() == &_commandStack )
             setFocusedCommandStack( nullptr );
-        const bool bOwnSceneFocused = pSceneManager != nullptr && pScene != nullptr && pSceneManager->getFocusedScene() == pScene;
+        // 소멸자 · 종료에서도 오는 길이라 씬 관리자가 먼저 내려갔을 수 있다 — 초점 씬을 풀 대상이 없을 뿐 오류가 아니다.
+        SceneManager* pSceneManager    = findSubsystem<SceneManager>(); // 종료 순서에 따라 이미 없을 수 있다
+        const bool    bOwnSceneFocused = pSceneManager != nullptr && pScene != nullptr && pSceneManager->getFocusedScene() == pScene;
         if ( bOwnSceneFocused )
             pSceneManager->clearSceneFocus();
         _bFocusApplied = false;

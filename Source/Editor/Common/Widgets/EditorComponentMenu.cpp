@@ -45,12 +45,10 @@ namespace sw::editor
         const EditorListFilter compFilter{ search.c_str() };
         const bool             bHasFilter = compFilter.isActive();
 
-        auto* pRegistry = editor::findSubsystem<TypeRegistry>(); // 필수 서비스: 없으면 버그
-        if ( pRegistry == nullptr )
-            SW_LOG_ERROR_ONCE( "No TypeRegistry - the component menu cannot resolve type names" );
-        bool          bAdded{ false };
-        hashed_string firstMatch{};
-        auto          addType = [&]( const hashed_string& typeName )
+        const TypeRegistry& registry = editor::getSubsystem<TypeRegistry>();
+        bool                bAdded{ false };
+        hashed_string       firstMatch{};
+        auto                addType = [&]( const hashed_string& typeName )
         {
             if ( EditorSceneCommands::addComponent( pObj, typeName ) == nullptr )
                 outbFailed = true;
@@ -75,7 +73,7 @@ namespace sw::editor
             uint32 matchCount{ 0 };
             for ( const hashed_string& typeName : listType )
             {
-                const TypeInfo* pTypeInfo = ( pRegistry != nullptr ) ? pRegistry->findType( typeName ) : nullptr;
+                const TypeInfo* pTypeInfo = registry.findType( typeName );
                 if ( pTypeInfo != nullptr && pTypeInfo->isHiddenInMenu() )
                     continue;
                 const utf8* pDisplayName = ( pTypeInfo != nullptr ) ? pTypeInfo->getDisplayName() : typeName.c_str();
@@ -98,7 +96,7 @@ namespace sw::editor
         map<string, vector<pair<hashed_string, const TypeInfo*>>> mapCategorized;
         for ( const hashed_string& typeName : listType )
         {
-            const TypeInfo* pTypeInfo = ( pRegistry != nullptr ) ? pRegistry->findType( typeName ) : nullptr;
+            const TypeInfo* pTypeInfo = registry.findType( typeName );
             if ( pTypeInfo != nullptr && pTypeInfo->isHiddenInMenu() )
                 continue;
             string category{ ( pTypeInfo != nullptr && pTypeInfo->getCategory().empty() == false ) ? pTypeInfo->getCategory() : string_view{ "General" } };

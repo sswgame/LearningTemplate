@@ -353,15 +353,13 @@ namespace sw::editor
 
     void AudioEventBrowserPanel::drawContent()
     {
-        IAudioService* pAudio = editor::findSubsystem<IAudioService>(); // 필수 서비스: 없으면 버그(전용 서버도 널 서비스가 있다)
-        if ( pAudio == nullptr )
-            SW_LOG_ERROR_ONCE( "[AudioEvents] IAudioService is missing - the event browser shows the not-running hint" );
-        if ( pAudio == nullptr || pAudio->isInitialized() == false )
+        IAudioService& audio = editor::getSubsystem<IAudioService>(); // 전용 서버도 널 서비스가 있어 늘 있다
+        if ( audio.isInitialized() == false )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorAudioEvents", "NoService" ) );
             return;
         }
-        AudioEngine& engine = pAudio->getEngine();
+        AudioEngine& engine = audio.getEngine();
         engine.collectEventNames( _listEventName );
         engine.getInstanceStatuses( _listInstanceStatus );
         const AudioEngineStats stats = engine.getStats();
@@ -376,7 +374,7 @@ namespace sw::editor
         {
             if ( ImGui::BeginTabItem( SW_LOCKEY( "EditorAudioEvents", "TabProperties" ) ) )
             {
-                drawEventDetail( *pAudio );
+                drawEventDetail( audio );
                 ImGui::EndTabItem();
             }
             if ( ImGui::BeginTabItem( SW_LOCKEY( "EditorAudioEvents", "TabPlaying" ) ) )
