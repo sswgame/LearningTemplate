@@ -50,7 +50,9 @@ from common.Parallel import mapConcurrent  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 from common.Process import runProcess  # noqa: E402
 from common.Search import collectRepositoryFiles  # noqa: E402
+from lint.AcronymSpellingRules import inspectSource as inspectAcronymSource  # noqa: E402
 from lint.LintFixer import FixerFileKind, FixPass, LintFixer, addFileArguments, selectFixerTargetFiles  # noqa: E402
+from lint.SourceScan import FileFindings, SourceFile  # noqa: E402
 from common.HostTools import findWindowsSdkPath  # noqa: E402
 
 #: 이번 실행이 고르는 약어(`--acronym`) — 변환(FixPass)이 읽는다. 조각 테스트는 기본값(전체)으로 돈다.
@@ -63,16 +65,14 @@ _kPathTextSuffix: tuple[str, ...] = (*registry.kCodeSuffix, ".cmake", ".md", ".j
 _kExternalCacheRel = "build/AcronymSpelling/ExternalNames.txt"
 
 
-def transformTypeNamesInternal(text: str) -> tuple[str, bool]:
+def inspectTypeNamesInternal(source: SourceFile) -> FileFindings:
     """대문자로 시작하는 이름(타입 · 이름공간 · 열거형)."""
-    newText, mapRename = registry.respellCode(text, _kState["acronyms"], bValueNames=False)
-    return newText, bool(mapRename)
+    return inspectAcronymSource(source, _kState["acronyms"], bValueNames=False)
 
 
-def transformValueNamesInternal(text: str) -> tuple[str, bool]:
+def inspectValueNamesInternal(source: SourceFile) -> FileFindings:
     """소문자 · `_` 로 시작하는 이름(함수 · 변수 · 멤버)."""
-    newText, mapRename = registry.respellCode(text, _kState["acronyms"], bTypeNames=False)
-    return newText, bool(mapRename)
+    return inspectAcronymSource(source, _kState["acronyms"], bTypeNames=False)
 
 
 # --- 외부 이름 ------------------------------------------------------------------
@@ -501,14 +501,14 @@ class FormatAcronymSpellingFixer(LintFixer):
     listScopeRelDir = kLintTargetRelDirs
     fileKind = FixerFileKind(suffixes=registry.kCodeSuffix, excludedDirNames=kNotOurCodeDirNames)
     listPass = (
-        FixPass(transformTypeNamesInternal,
+        FixPass(inspect=inspectTypeNamesInternal,
                 problem="타입 · 이름공간 · 열거형 이름의 약어가 Pascal 철자입니다(UiSystem → UISystem)",
                 done="타입 이름의 약어를 대문자로 고쳤습니다",
                 badSample="class UiSystem;\nenum class EGpuMode { Cpu, Gpu };\n",
                 fixedSample="class UISystem;\nenum class EGPUMode { CPU, GPU };\n",
                 goodSample='class UISystem;\nclass ImGuiLayer;\nconst char* kName = "UiSystem"; // UiSystem\n#include "UI/UiSystem.h"\n'
                            "#define SW_UI_ENABLED 1\nVkPhysicalDeviceIDProperties props;\nstd::Idle x;\nclass Guid;\n"),
-        FixPass(transformValueNamesInternal,
+        FixPass(inspect=inspectValueNamesInternal,
                 problem="함수 · 변수 · 멤버 이름의 약어가 Pascal 철자입니다(updateUi → updateUI)",
                 done="함수 · 변수 이름의 약어를 대문자로 고쳤습니다",
                 badSample="void updateUi();\nint _pGpuScene = getOwnerId();\n",

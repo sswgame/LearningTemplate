@@ -294,20 +294,27 @@ def _compileProductRe() -> re.Pattern[str]:
     return re.compile("|".join(variants) if variants else r"(?!x)x")
 
 
+def findNameSites(text: str, acronyms: tuple[str, ...] = kSelectable, masked: str | None = None) -> list[NameSite]:
+    """
+    우리 이름 가운데 약어 후보가 든 자리 — `iterateNameSites` 에서 남의 이름(`isExternalName`)을 뺀 것. 게이트(막을 약어 고르기)와
+    코드모드(고치기)가 **같은 이 목록**을 본다.
+    """
+    return [site for site in iterateNameSites(text, acronyms, masked) if not isExternalName(site.name, site.qualifier)]
+
+
 def respellCode(text: str, acronyms: tuple[str, ...] = kSelectable, *,
-                bTypeNames: bool = True, bValueNames: bool = True) -> tuple[str, dict[str, str]]:
+                bTypeNames: bool = True, bValueNames: bool = True, masked: str | None = None) -> tuple[str, dict[str, str]]:
     """
     C++ 글 하나의 이름을 새 철자로 고칩니다. (새 글, {옛 이름: 새 이름}) 를 돌려준다.
     `bTypeNames` 는 대문자로 시작하는 이름(타입 · 이름공간 · 열거형), `bValueNames` 는 소문자 · `_` 로 시작하는 이름(함수 · 변수 · 멤버).
+    `masked` 는 이미 가린 글(`maskCode(text, …)` — 함께 도는 게이트가 나눠 쓰는 것). 없으면 여기서 가린다.
     """
     listPiece: list[str] = []
     mapRename: dict[str, str] = {}
     cursor = 0
-    for site in iterateNameSites(text, acronyms):
+    for site in findNameSites(text, acronyms, masked):
         bType = site.name[0].isupper()
         if (bType and not bTypeNames) or (not bType and not bValueNames):
-            continue
-        if isExternalName(site.name, site.qualifier):
             continue
         newName = respellName(site.name, acronyms)
         if newName == site.name:
@@ -328,7 +335,7 @@ def respellPathPart(part: str, acronyms: tuple[str, ...] = kSelectable) -> str:
 
 
 __all__ = [
-    "NameSite", "ProductName", "changedAcronyms", "checkRegistry", "compileAcronymRe", "findAdjacentAcronyms", "isExternalName",
+    "NameSite", "ProductName", "changedAcronyms", "checkRegistry", "compileAcronymRe", "findAdjacentAcronyms", "findNameSites", "isExternalName",
     "iterateNameSites", "kAcronym", "kCodeSuffix", "kDataRelDir", "kDataSuffix", "kEnforced", "kExternalName", "kExternalNamespace",
     "kExternalPrefixRe", "kNotAcronym", "kProductName", "kSelectable", "maskCode", "resolveAcronyms", "respellCode", "respellName", "respellPathPart", "splitIntoAcronyms",
     "toPascal",

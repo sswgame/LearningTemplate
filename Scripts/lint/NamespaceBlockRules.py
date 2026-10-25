@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import re
 
+from lint.SourceScan import FileFindings, SourceFile, fixedTextOf
+
 _kNamespaceRe = re.compile(r"^(\s*)namespace(?:\s+([\w:]+))?\s*(\{)?\s*$")
 _kTypeRe = re.compile(r"^\s*(?:template\s*<[^;{]*>\s*)?(?:class|struct)\s+(?:SW_\w+\s+|alignas\s*\([^)]*\)\s+)*(\w+)(?:\s+final)?\s*(?::[^;{]*)?\{?\s*$")
 _kTemplateLineRe = re.compile(r"^\s*template\s*<.*>\s*$")
@@ -158,10 +160,23 @@ def splitNamespaceBlocks(text: str) -> tuple[str, list[tuple[int, str, str, int]
     return "\n".join(listOut).replace("\n", newline), listSplit
 
 
-def fixText(text: str) -> tuple[str, bool]:
-    """픽서 변환(`FixPass.transform`)."""
-    newText, listSplit = splitNamespaceBlocks(text)
-    return newText, bool(listSplit)
+def inspectSource(source: SourceFile) -> FileFindings:
+    """
+    파일 하나의 판정과 고친 글 — 게이트 `CheckNamespaceBlocks.checkSourceFile` 과 픽서(`fixText`)가 **같은 이 함수**를 부른다.
+    원본 글(`rawText`)을 나눈다: 줄 끝(CRLF)과 BOM 은 `splitNamespaceBlocks` 가 지킨다.
+    """
+    if source.decodeError:
+        return FileFindings(listViolation=[f"{source.relative}:1: 읽지 못해 검사할 수 없습니다 ({source.decodeError}) — 파일을 UTF-8 로 저장하십시오"])
+    newText, listSplit = splitNamespaceBlocks(source.rawText)
+    return FileFindings(
+        listViolation=[f"{source.relative}:{split[3] + 1}: 한 namespace 블록에 클래스 · 구조체 정의가 여럿입니다 — 정의마다 블록을 나누세요 "
+                       f"(`py -3 Scripts/lint/fixer/FormatNamespaceBlocks.py --files {source.relative}`)" for split in listSplit],
+        fixedText=newText if listSplit else None)
+
+
+def fixText(text: str, relativePath: str) -> tuple[str, bool]:
+    """픽서 변환(`FixPass.transform`, 경로 필요) — 게이트와 같은 `inspectSource`."""
+    return fixedTextOf(inspectSource, text, relativePath)
 
 
 #: 픽서의 조각 — 게이트의 첫 자가 테스트 조각(한 블록에 클래스 둘)과 정의마다 나눈 결과.

@@ -1,18 +1,21 @@
 # 공유 훑기로 못 옮긴 소스 게이트와 픽서
 
-> 상태: 구현대기 · 선행: 없음 · 영역: quality · 옛번호: C-48 · 진행: 0/4
+> 상태: 측정대기 · 선행: 없음 · 영역: quality · 옛번호: C-48 · 진행: 4/4
 
 파일마다 보는 소스 게이트 28 개는 `SourceScan` · `RunSourceGates`(CTest · CI 의 `CheckSourceFiles`)로 옮겼다(2026-10-17). 추가 줄 · 기준선은 `LintGate.BaselineSourceGate` · `SourceScan.LineScope` 로 옮겼다(2026-10-18).
 이 문서는 못 옮긴 게이트와 픽서(`FormatBranchBraces` 등 — 파일마다 따로 읽고 주석을 가리는 같은 틀)를 나눈다. 목표는 공유 드라이버가 **판정 단위(줄 끝 · 인코딩 · 파일 집합)를 형식으로** 갖게 해서, 게이트마다 같은 읽기 · 가리기를 다시 짓지 않게 하는 것이다.
 
 ## 1. 사실
 
-- `SourceFile`(`Scripts/lint/SourceScan.py`)은 읽은 글의 줄 끝을 `\n` 하나로 맞추고(`checkTargetInternal`) UTF-8 로만 읽는다(디코드 오류는 `decodeError`). 줄 끝 · BOM 을 따로 다뤄야 하는 게이트는 이 형식에 담을 칸이 없다.
-- 못 옮긴 이유별 게이트:
-  - 줄 끝 · `utf-8-sig` 를 따로 다루고 픽서와 판정이 나뉨: `CheckNamespaceBlocks`(+ `FormatNamespaceBlocks`, 공유 함수 `splitNamespaceBlocks`), `CheckIncludeOrder`(+ `FormatIncludeOrder`).
-  - C++ 와 CMake 두 파일 집합: `CheckThirdPartyIsolation`, `CheckSuppressionReasons`.
-  - 키트 폴더별 규칙: `CheckKitNamespaces`.
-- 픽서(`Scripts/lint/fixer/Format*.py`)는 판정과 같은 함수를 부르지만 파일 읽기 · 쓰기 · 주석 가리기는 각자 한다.
+구현했다(S1~S6). 남은 것은 아래 3절의 측정이다. 새 파일별 게이트 · 픽서는 이 문서의 해법을 쓴다.
+
+- `SourceFile` 은 원본 글(`rawText`)과 줄 끝(`lineEnding`) · BOM(`hasBom`) · BOM 을 뗀 글(`bodyText`) · 원본 형식으로 되돌리는 `restore()` · 걸린 집합 이름(`setName`)을 든다. `text` 는 지금처럼 줄 끝을 맞춘 글이다.
+- 게이트의 파일 집합은 `LintGate.sourceScanSets`(`SourceScanSet` 목록 — 뿌리 · 확장자/파일 이름 · 제외 폴더 · 이름으로 고르는 파일 `relativeFiles` · `--files` 와 무관하게 전체를 읽는 `bAlwaysWhole`)다. 한 집합이면 `sourceScanRoots` · `sourceSuffixes` 가 클래스를 만들 때 집합 한 칸으로 바뀐다. 한 파일이 집합 둘에 걸리면 선언 순서의 첫 집합이 갖는다. 요약 문구만 바꾸는 게이트는 `describeSourceScan` 을 재정의한다.
+- `FileFindings.fixedText` 에 원본 형식으로 되돌린 완성 글을 담는다. 게이트(`checkSourceFile`)와 픽서(`SourceScan.fixedTextOf`)가 같은 판정 함수(`NamespaceBlockRules.inspectSource` · `IncludeOrderRules.inspectSource`)를 부른다.
+- 옮긴 게이트: `CheckNamespaceBlocks` · `CheckIncludeOrder`(S1, `rawText` · `bodyText`), `CheckThirdPartyIsolation` · `CheckSuppressionReasons`(S2, 집합 `cpp`/`cmake`), `CheckKitNamespaces`(S4, 집합 `kit`/`game`/`framework`/`other`). 옮기기 전 `fixText` 와 옮긴 뒤 `fixText` 의 결과는 트리의 파일 변형(원본 · CRLF · BOM · include 뒤섞기) 3152 건에서 바이트 동일했다.
+- 같은 틀로 옮긴 픽서 넷(S5): `FormatBranchBraces`(`BranchBraceRules` 의 `inspectIfBraces` · `inspectCaseBraces` · `inspectCaseConsistency` + 반복문 패스는 `LoopBraceRules.inspectSource`) · `FormatForwardDeclarations`(`ForwardDeclarationRules`) · `FormatAcronymSpelling`(`AcronymSpellingRules`) · `FormatCmakeIndent`(`CmakeIndentRules`). `FixPass(inspect=…)` 가 판정 함수를 변환으로 쓰고 줄 끝 · BOM 은 `SourceFile.restore` 가 지킨다 — 규칙 안의 CRLF 가정(`lineSuffix` · `rstrip("\r")` · 줄 끝 세기)이 사라졌다. 짝 게이트가 있는 둘은 같은 함수를 부른다: `CheckLoopBraces` ↔ `LoopBraceRules.inspectSource`(위반과 고친 글이 한 함수의 두 출력), `CheckAcronymSpelling` ↔ 코드모드는 `AcronymRegistry.findNameSites`(남의 이름을 뺀 이름 자리 목록). 옮기기 전과 후의 픽서 사슬 결과는 트리 파일 변형(원본 · CRLF · BOM · 되돌린 변형 넷: 줄 끝 한 가지인 변형 · LF · CRLF · BOM) 104,685 건에서 해시와 적중 패스가 모두 같았다(변형이 고쳐야 할 것을 만들어 BranchBraces 2,645 · Acronym 2,835 · ForwardDecl 545 · CmakeIndent 98 파일이 실제로 고쳐진다). 규칙 둘이 쓰던 리터럴 가리기(`BranchBraceRules.maskLiteralsAndCommentsInternal`)는 따옴표를 남기는 모양이라 공유 가림(`SourceFile.masked`)과 다르다 — 바꾸면 인자를 줄바꿈한 문자열 줄이 빈 줄로 읽혀 문장 수가 달라진다.
+- `scan()` 에서 `selectTargetFiles` · `readFiles` 로 직접 걷던 게이트도 옮겼다(S6): `CheckScriptCommonHelpers` · `CheckScriptLayout`(파이썬), `CheckGlobalVariableKinds`(정의 · 참조를 파일마다 모아 끝맺음에서 대 본다), `CheckModuleTargets`(파일마다 include 만 읽고 끝맺음에서 소속으로 푼다), `CheckCmakeConventions` · `CheckNoDelayLoad`(CMake, 루트의 `CMakeLists.txt` 는 `relativeFiles`), `CheckPythonConventions` · `CheckPythonMinimumVersion`, `CheckShaderConventions`, `CheckDataFileReferences`(대상 `.xxx` 목록은 `prepareSourceScan` 이 이름으로 구해 넘기고 참조 파일을 읽는다), 그리고 `--files` 가 있어도 `Scripts/` 전체의 import 그래프가 필요한 `CheckScriptEntryPoints` · `CheckScriptLayers`(`SourceScanSet.bAlwaysWhole` + `selectedRelatives` 로 읽기는 전체, 보고는 고른 파일). 옮기기 전과 후의 전체 훑기 출력(종료 코드 · 요약의 파일 수 · 위반)과 `--files` 훑기 출력이 열두 게이트 모두 글자까지 같았다. 소스 게이트는 41 개에서 53 개로 늘었다.
+- 옮기지 않은 것과 까닭: `CheckNameReferences`(파일 하나가 정의 · 사용 · 게임별 모음 세 역할을 하고 XML 데이터를 경로로 읽는다 — 집합마다 첫 집합이 파일을 갖는 틀에 안 맞는다), `CheckDataDrivenStructure`(파일 집합이 규칙 데이터와 `git ls-files` 에서 온다), `CheckCodeConventions`(자체 프로세스 분할 · 서른 규칙 · 카테고리 보고 · 저장소 밖 `--files`), `CheckResourceCasing` · `CheckTextureFolders` · `CheckExecutableBits`(파일 이름 · 모드만 본다 — 드라이버가 리소스 바이너리까지 읽게 된다), `CheckTextFilesAreText`(원본 바이트가 필요하다), `CheckDocPaths`(문서 사이 색인), `CheckHeaderSelfContained`(헤더마다 컴파일), `CheckRenderOwnership`(고정 파일 둘 — 없으면 오류로 알려야 한다), `CheckTestSuites` · `CheckSourceGlob` · `CheckCmakeReadme` · `CheckResourceCredits` 등 폴더 목록 · 표를 대 보는 게이트.
 
 ## 2. 해법
 
@@ -20,14 +23,11 @@
 - 게이트의 파일 집합을 `sourceScanRoots` 하나가 아니라 집합별 `SourceScanSet`(뿌리 · 확장자 · 제외)의 목록으로 선언하게 하고, `checkSourceFile` 이 어느 집합에서 온 파일인지 `SourceFile.setName` 으로 안다.
 - 픽서는 같은 드라이버를 쓴다: 훑기가 `FileFindings` 에 "고친 글"(`fixedText`)을 담을 수 있게 해서, 판정과 고치기가 한 함수의 두 모드가 된다.
 
-## 3. 단위
+## 3. 남은 확인
 
-| 단위 | 내용 | 건드릴 폴더 | 선행 | 검증 | 측정 |
-|---|---|---|---|---|---|
-| S1 | `SourceFile` 에 `rawText` · `lineEnding` · `hasBom` 을 더하고 `CheckNamespaceBlocks` · `CheckIncludeOrder` 의 판정을 옮긴다 | `Scripts/lint/` | 없음 | 두 게이트의 selftest + `py -3 -m Scripts lint-suite` + 전체 훑기 결과가 옮기기 전과 같은 위반 목록 | 필요합니다. `RunSourceGates` 의 게이트별 초 전후 |
-| S2 | 파일 집합 목록(`SourceScanSet`)을 형식으로 두고 `CheckThirdPartyIsolation` · `CheckSuppressionReasons` 를 옮긴다 | `Scripts/lint/` | S1 | 두 게이트의 selftest + 전체 훑기 결과 동일 | 필요 없음 |
-| S3 | 픽서가 드라이버를 쓰게 한다(`fixedText`): `FormatNamespaceBlocks` · `FormatIncludeOrder` 부터 | `Scripts/lint/fixer/`, `Scripts/lint/SourceScan.py` | S1 | 픽서 selftest + 같은 입력의 고친 글이 옮기기 전과 바이트 동일 | 필요 없음 |
-| S4 | `CheckKitNamespaces` 를 옮긴다(키트 폴더 규칙을 집합 선언으로) | `Scripts/lint/gate/` | S2 | selftest + 전체 훑기 동일 | 필요 없음 |
+| 내용 | 측정 |
+|---|---|
+| 통합이 `RunSourceGates` 의 게이트별 초를 옮기기 전(main)과 한 번 비교한다. 이 작업자는 옮긴 뒤 한 번만 쟀다: 게이트 41 개 38.8 s, `CheckNamespaceBlocks` 8.64 s(다른 작업자와 동시 실행이라 잡음이 크다). S6 게이트의 혼자 실행 초(옮기기 전 → 후, 한 번씩이라 잡음 큼): `CheckModuleTargets` 10.0 → 1.2, `CheckShaderConventions` 5.1 → 1.5, `CheckScriptEntryPoints` 3.7 → 0.8, `CheckPythonMinimumVersion` 3.6 → 1.9, `CheckPythonConventions` 3.5 → 1.4. 게이트 53 개 `RunSourceGates` 17.6 s | 필요합니다 |
 
 ## 4. 사용자 결정
 

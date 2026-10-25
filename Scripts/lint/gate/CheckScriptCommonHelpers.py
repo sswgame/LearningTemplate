@@ -22,7 +22,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
-from lint.LintGate import GateResult, LintGate  # noqa: E402
+from lint.LintGate import LintGate  # noqa: E402
+from lint.SourceScan import FileFindings, SourceFile, SourceScanResult  # noqa: E402
 
 
 @dataclass(frozen=True)
@@ -72,24 +73,28 @@ class CheckScriptCommonHelpersGate(LintGate):
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
         self.addFilesArgument(parser)
 
-    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        listPath = self.selectTargetFiles(repositoryRoot, args.files, listScanRoot=("Scripts",), suffixes=(".py",))
+    sourceScanRoots = ("Scripts",)
+    sourceSuffixes = (".py",)
+
+    def checkSourceFile(self, source: SourceFile, args: argparse.Namespace) -> FileFindings | None:
+        relPath = source.relative
+        if relPath.startswith("Scripts/common/"):
+            return None
         listViolation: list[str] = []
-        for path, text in self.readFiles(listPath):
-            relPath = path.relative_to(repositoryRoot).as_posix()
-            if relPath.startswith("Scripts/common/"):
-                continue
-            for rule in _kRule:
-                listKey = [key for key in (f"{rule.name}:{relPath}", _kAllRulePrefix + relPath) if key in self.mapExemption]
-                for key in listKey:
-                    self.seeExemption(key)
-                for lineNumber, line in enumerate(text.splitlines(), 1):
-                    if rule.pattern.search(line) and not line.lstrip().startswith("#"):
-                        if listKey:
-                            self.useExemption(listKey[0])
-                            continue
-                        listViolation.append(f"{relPath}:{lineNumber}: {rule.name} — {rule.instead} 를 쓴다")
-        return GateResult(listViolation=listViolation, summary=f"{len(listPath)} scripts · {len(_kRule)} rules")
+        for rule in _kRule:
+            listKey = [key for key in (f"{rule.name}:{relPath}", _kAllRulePrefix + relPath) if key in self.mapExemption]
+            for key in listKey:
+                self.seeExemption(key)
+            for lineNumber, line in enumerate(source.listLine, 1):
+                if rule.pattern.search(line) and not line.lstrip().startswith("#"):
+                    if listKey:
+                        self.useExemption(listKey[0])
+                        continue
+                    listViolation.append(f"{relPath}:{lineNumber}: {rule.name} — {rule.instead} 를 쓴다")
+        return FileFindings(listViolation=listViolation)
+
+    def describeSourceScan(self, result: SourceScanResult) -> str:
+        return f"{result.fileCount} scripts · {len(_kRule)} rules"
 
 
 main = CheckScriptCommonHelpersGate.run

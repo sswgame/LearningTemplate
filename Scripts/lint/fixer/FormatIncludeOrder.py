@@ -4,6 +4,7 @@
 Scripts/lint/fixer/FormatIncludeOrder.py
 
 include 순서 · 중복을 고친다 — 규칙과 판정은 `lint/IncludeOrderRules.py` 한 자리(게이트 `CheckIncludeOrder` 도 읽는다, 이 픽서는 그 변환을 부른다). 게이트는 검사만 한다.
+고친 글은 게이트가 쓰는 같은 `inspectSource` 의 `FileFindings.fixedText` 다(`SourceScan.fixedTextOf`) — 판정과 고치기가 갈리지 않는다.
 
   py -3 Scripts/lint/fixer/FormatIncludeOrder.py --files Source/Engine/Scene/Scene.cpp   # 그 파일만
   py -3 Scripts/lint/fixer/FormatIncludeOrder.py --check                                  # 고치지 않고 검사만(Git 변경 파일, 없으면 전체)

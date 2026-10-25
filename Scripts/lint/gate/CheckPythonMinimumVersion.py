@@ -49,7 +49,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common.Constants import kMinimumPythonVersion, kNotOurCodeDirNames  # noqa: E402
-from lint.LintGate import GateError, GateResult, LintGate  # noqa: E402
+from lint.LintGate import LintGate  # noqa: E402
+from lint.SourceScan import FileFindings, SourceFile, SourceScanResult, SourceScanSet  # noqa: E402
 
 #: 정본은 `common.Constants.kMinimumPythonVersion` 이다(CI 러너 ubuntu-22.04 의 `python3`). 여기서 파싱되지 않으면 리눅스 CI 가 멈춘다.
 kMinimumVersion = kMinimumPythonVersion
@@ -63,20 +64,13 @@ def describeMinimumVersionInternal() -> str:
     return f"{kMinimumVersion[0]}.{kMinimumVersion[1]}"
 
 
-def findNewerSyntaxInternal(path: Path, repositoryRoot: Path) -> list[str]:
-    """@brief 파일 하나에서 `kMinimumVersion` 이 거절할 f-string 식을 찾습니다."""
-    try:
-        source = path.read_text(encoding="utf-8")
-    except FileNotFoundError:
-        return []
-    except OSError as exception:
-        raise GateError(f"읽기 실패: {path}: {exception}") from exception
-
+def findNewerSyntaxInternal(relativePath: str, source: str) -> list[str]:
+    """@brief 파일 하나(저장소 기준 경로 · 글)에서 `kMinimumVersion` 이 거절할 f-string 식을 찾습니다."""
     try:
         tree = ast.parse(source)
     except SyntaxError as error:
         # 지금 인터프리터조차 못 읽는 파일이다 — 버전 문제 이전에 그것부터 말해 준다.
-        return [f"{path.relative_to(repositoryRoot).as_posix()}:{error.lineno} -> 파싱 실패: {error.msg}"]
+        return [f"{relativePath}:{error.lineno} -> 파싱 실패: {error.msg}"]
 
     listViolation: list[str] = []
     for node in ast.walk(tree):
@@ -91,7 +85,6 @@ def findNewerSyntaxInternal(path: Path, repositoryRoot: Path) -> list[str]:
             if segment is None:
                 continue
 
-            relativePath = path.relative_to(repositoryRoot).as_posix()
             if "\\" in segment:
                 listViolation.append(
                     f"{relativePath}:{part.value.lineno} -> f-string 식 안의 백슬래시는 "
@@ -131,22 +124,25 @@ class CheckPythonMinimumVersionGate(LintGate):
                 )
             },
         },
+        {
+            "name": "여러 줄에 걸친 f-string 식",
+            "expectedViolation": "Scripts/Probe/MultiLine.py:2 -> 여러 줄에 걸친 f-string 식은 Python 3.10 에서 SyntaxError 입니다",
+            "files": {"Scripts/Probe/MultiLine.py": 'kValue = 1\nkText = f"{kValue +\n    1}"\n'},
+        },
     ]
 
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
         self.addFilesArgument(parser)
 
-    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        listPath = self.selectTargetFiles(repositoryRoot, args.files, suffixes=(".py",), excludedDirNames=_kExcludedDirName)
+    sourceScanSets = (SourceScanSet("python", ("",), (".py",), excludedDirNames=_kExcludedDirName),)
 
-        listViolation: list[str] = []
-        for path in listPath:
-            listViolation.extend(findNewerSyntaxInternal(path, repositoryRoot))
+    def checkSourceFile(self, source: SourceFile, args: argparse.Namespace) -> FileFindings | None:
+        if source.decodeError:
+            return FileFindings(error=source.decodeError)   # 못 읽은 파일을 건너뛰면 검사가 그 파일을 본 척한다
+        return FileFindings(listViolation=findNewerSyntaxInternal(source.relative, source.text))
 
-        return GateResult(
-            listViolation=listViolation,
-            summary=f"{len(listPath)} python files parsed for Python {describeMinimumVersionInternal()}",
-        )
+    def describeSourceScan(self, result: SourceScanResult) -> str:
+        return f"{result.fileCount} python files parsed for Python {describeMinimumVersionInternal()}"
 
 
 main = CheckPythonMinimumVersionGate.run

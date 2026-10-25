@@ -30,6 +30,7 @@ from common.Parallel import flatMapConcurrent  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 from common.Search import collectRepositoryFiles, collectSourceFiles, getLintSearchDirs, resolveFileArguments  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
+from lint.SourceScan import FileFindings, SourceFile, fixedTextOf  # noqa: E402
 
 
 def addFileArguments(parser: argparse.ArgumentParser) -> None:
@@ -130,6 +131,8 @@ class FixPass:
     텍스트 변환 한 가지.
 
     - `transform` : `(텍스트) -> (새 텍스트, 바뀌었는가)`
+    - `inspect`   : `transform` 대신 쓰는 형식 — 게이트의 `checkSourceFile` 이 부르는 같은 판정 함수(`SourceFile -> FileFindings`). 고친 글은
+                    `FileFindings.fixedText` 이고, 줄 끝 · BOM 은 `SourceFile.restore` 가 지킨다(`SourceScan.fixedTextOf`). 둘 중 하나만 적는다
     - `problem`   : `--check` 에서 이 변환이 걸렸을 때 할 말 (무엇이 어긋났는가)
     - `done`      : 실제로 고쳤을 때 할 말
     - `badSample` : 이 변환이 **반드시 고쳐야 하는** 조각
@@ -149,17 +152,22 @@ class FixPass:
     게이트처럼 "빨간 줄" 이 뜨는 게 아니라 소스가 조용히 바뀐다.
     """
 
-    transform: Callable[..., tuple[str, bool]]
-    problem: str
-    done: str
-    badSample: str
-    fixedSample: str
-    goodSample: str
+    transform: Callable[..., tuple[str, bool]] | None = None
+    problem: str = ""
+    done: str = ""
+    badSample: str = ""
+    fixedSample: str = ""
+    goodSample: str = ""
     bNeedsPath: bool = False
     samplePath: str = ""
+    inspect: Callable[[SourceFile], FileFindings] | None = None
 
     def __post_init__(self) -> None:
         """조각 셋은 필수다 — 비었거나 고친 결과가 원래 조각과 같으면 픽서를 만들 때 `TypeError` 로 멈춘다(`CheckFixersAreAlive` 가 돌릴 증거가 없다)."""
+        if (self.transform is None) == (self.inspect is None):
+            raise TypeError(f"FixPass '{self.done}': `transform` 과 `inspect` 중 하나만 적습니다")
+        if not self.problem or not self.done:
+            raise TypeError(f"FixPass '{self.done}': `problem` 과 `done` 은 필수입니다")
         for fieldName in ("badSample", "fixedSample", "goodSample"):
             if not getattr(self, fieldName):
                 raise TypeError(f"FixPass '{self.done}': `{fieldName}` 이 비었습니다 — 조각 셋(badSample · fixedSample · goodSample)은 필수입니다")
@@ -167,7 +175,9 @@ class FixPass:
             raise TypeError(f"FixPass '{self.done}': `fixedSample` 이 `badSample` 과 같습니다 — 고친 결과를 적습니다")
 
     def apply(self, text: str, relativePath: str) -> tuple[str, bool]:
-        """변환 한 번 — 경로가 필요한 변환에는 저장소 기준 경로를 함께 넘긴다."""
+        """변환 한 번 — `inspect` 면 게이트와 같은 판정 함수의 고친 글을, 아니면 `transform` 을(경로가 필요한 변환에는 저장소 기준 경로를 함께 넘긴다)."""
+        if self.inspect is not None:
+            return fixedTextOf(self.inspect, text, relativePath)
         return self.transform(text, relativePath) if self.bNeedsPath else self.transform(text)
 
 

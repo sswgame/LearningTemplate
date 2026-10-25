@@ -9,8 +9,8 @@
 
 | 필요한 것 | 자리 |
 | --- | --- |
-| 파일마다 따로 보는 C++ · 셰이더 검사 | **소스 게이트** — `LintGate.sourceScanRoots` · `sourceSuffixes` + `checkSourceFile`(+ 필요하면 `finishSourceScan`). 걷기 · 읽기 · 가리기(`SourceFile.masked` · `noComment`)를 함께 도는 게이트와 나눠 쓰고, CTest · CI 는 `CheckSourceFiles` 하나로 돈다 |
-| `--files` · 대상 파일 고르기 · 읽기(소스 게이트가 아닐 때) | `LintGate.addFilesArgument` · `selectTargetFiles` · `readFiles(mustContain=…)` |
+| 파일마다 따로 보는 C++ · 파이썬 · CMake · 셰이더 검사 | **소스 게이트** — `LintGate.sourceScanRoots` · `sourceSuffixes`(집합 하나) 또는 `sourceScanSets`(`SourceScanSet` 목록 — C++ 와 CMake, 키트 폴더와 게임 폴더처럼 집합마다 규칙이 다르면 `SourceFile.setName` 으로 가른다) + `checkSourceFile`(+ 필요하면 `finishSourceScan`, 요약 문구만이면 `describeSourceScan`). 걷기 · 읽기 · 가리기(`SourceFile.masked` · `noComment`)를 함께 도는 게이트와 나눠 쓰고, CTest · CI 는 `CheckSourceFiles` 하나로 돈다. 원본의 줄 끝 · BOM 은 `SourceFile.rawText` · `lineEnding` · `hasBom` · `restore()`, 고친 글은 `FileFindings.fixedText`(픽서는 `FixPass(inspect=…)` 로 같은 판정 함수를 변환으로 쓴다). 파일 사이를 대 보는 게이트는 파일마다 `FileFindings.value` 로 모아 `finishSourceScan` 에서 합치고, 저장소 루트의 파일 하나는 `SourceScanSet.relativeFiles`, 파일 사이의 관계(import 그래프)를 알아야 하면 `bAlwaysWhole` + `selectedRelatives` |
+| `--files` · 대상 파일 고르기 · 읽기(소스 게이트가 아닐 때) | `LintGate.addFilesArgument` · `selectTargetFiles` · `readFiles(mustContain=…)` — 파일 이름만 보는 검사(`CheckResourceCasing`), 파일 하나를 이름으로 읽는 검사, 규칙 데이터가 파일 집합을 정하는 검사(`CheckDataDrivenStructure`), 한 파일이 역할 여럿인 검사(`CheckNameReferences`)만 여기 남는다 |
 | 파일 전체에 대는 "있기나 한가" 정규식 | `common.CodeText.findFast` — 머리 lookbehind · `\b` 를 뗀 식으로 먼저 거른다(그런 식은 `re` 가 접두 훑기를 못 써 39 MB 에 1 s) |
 | 예외(이유 · 낡음 검사 포함) | `lint/rules/<게이트>.toml` 의 `[exemption]` → `LintGate.mapExemption` · `seeExemption` · `useExemption` |
 | 게이트가 읽는 목록 · 표(티어 · 어휘 · 허용 파일) | `lint/rules/<게이트>.toml` 의 다른 키 → 클래스 `ruleSchema` + 모듈 수준 `LintGate.readRules` |
@@ -18,8 +18,16 @@
 | include 줄 · 층 폴더 · include 가 가리키는 파일 | `common.CodeText.iterIncludes` · `firstFolderAfter` · `IncludeResolver` |
 | 파일마다 무거운 정규식 | `common.Parallel.flatMapInProcesses`(스레드는 GIL 에 막힌다) |
 
-예: `CheckCoreNetworkLayers` 는 `selectTargetFiles` → `readFiles` → `iterIncludes` · `firstFolderAfter` 로 층 표 하나를 대조하고,
-`CheckModuleTargets` 는 `IncludeResolver` 로 include 를 소속 모듈로 푼다. 자기 테스트 조각(`selfTestCases`)이 없으면 `CheckLintsAreAlive` 가 실패한다.
+예: `CheckCoreNetworkLayers` 는 `checkSourceFile` 에서 `iterIncludes` · `firstFolderAfter` 로 층 표 하나를 대조하고,
+`CheckModuleTargets` 는 파일마다 include 만 읽어 오고 끝맺음에서 `IncludeResolver` 로 소속 모듈로 푼다. 자기 테스트 조각(`selfTestCases`)이 없으면 `CheckLintsAreAlive` 가 실패한다.
+조각은 임시 트리에 **바이트 그대로** 쓰인다(`\r\n` · BOM 이 든 조각이 실제 파일과 같다). 픽서도 조각 셋(`badSample` · `fixedSample` · `goodSample`)을 CRLF · BOM 형식으로 다시 돌려 글자까지 견준다(`CheckFixersAreAlive`).
+
+## 픽서
+
+픽서는 `lint/fixer/Format<무엇>.py` 에 `LintFixer` 하위 클래스를 두고 `listPass` 에 `FixPass` 를 적는다. 판정과 고침은 **한 함수**다 —
+`lint/<무엇>Rules.py` 에 파일 하나(`SourceFile`)를 받아 위반(`listViolation`)과 고친 완성 글(`fixedText`, 원본의 줄 끝 · BOM 으로 되돌린 것)을 함께 돌려주는
+`inspectSource` 를 두고, 짝 게이트가 있으면 게이트의 `checkSourceFile` 이 같은 함수를 부르고(`CheckLoopBraces` ↔ `LoopBraceRules.inspectSource`), 픽서는
+`FixPass(inspect=…)` 로 부른다. 줄 끝 · BOM · 디코드를 규칙마다 다시 짓지 않는다(규칙은 줄 끝이 `\n` 인 `SourceFile.text` 만 본다).
 
 ## 규칙 데이터 — `lint/rules/` 와 `RuleData`
 

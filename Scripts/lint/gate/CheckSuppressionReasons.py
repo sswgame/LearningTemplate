@@ -25,8 +25,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common.Constants import kLintTargetRelDirs  # noqa: E402
-from common.Paths import normalizePath  # noqa: E402
 from lint.LintGate import GateResult, LintGate  # noqa: E402
+from lint.SourceScan import FileFindings, SourceFile, SourceScanResult, SourceScanSet, joinFindings  # noqa: E402
 
 _kCppSuffixes = (".h", ".hpp", ".inl", ".c", ".cc", ".cpp", ".cxx")
 _kListCmakeRoot = ("cmake/Modules/Compiler",)
@@ -109,21 +109,20 @@ class CheckSuppressionReasonsGate(LintGate):
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
         self.addFilesArgument(parser)
 
-    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        listViolation: list[str] = []
-        countCpp = 0
-        countCmake = 0
-        listCpp = self.selectTargetFiles(repositoryRoot, args.files, listScanRoot=kLintTargetRelDirs, suffixes=_kCppSuffixes)
-        for path, text in self.readFiles(listCpp, mustContain=None):
-            violations, count = findCppViolations(normalizePath(str(path.relative_to(repositoryRoot))), text)
-            listViolation += violations
-            countCpp += count
-        listCmake = self.selectTargetFiles(repositoryRoot, args.files, listScanRoot=_kListCmakeRoot, suffixes=(".cmake",))
-        for path, text in self.readFiles(listCmake):
-            violations, count = findCmakeViolations(normalizePath(str(path.relative_to(repositoryRoot))), text)
-            listViolation += violations
-            countCmake += count
-        return GateResult(listViolation=listViolation, summary=f"C++ 억제 {countCpp} · CMake 경고 끄기 {countCmake}")
+    sourceScanSets = (SourceScanSet("cpp", kLintTargetRelDirs, _kCppSuffixes), SourceScanSet("cmake", _kListCmakeRoot, (".cmake",)))
+
+    def checkSourceFile(self, source: SourceFile, args: argparse.Namespace) -> FileFindings | None:
+        find = findCmakeViolations if source.setName == "cmake" else findCppViolations
+        listViolation, count = find(source.relative, source.text)
+        return FileFindings(listViolation=listViolation, value=(source.setName, count))
+
+    def finishSourceScan(self, repositoryRoot: Path, args: argparse.Namespace, result: SourceScanResult) -> GateResult:
+        listViolation, _ = joinFindings(result.listFindings)
+        mapCount = {"cpp": 0, "cmake": 0}
+        for findings in result.listFindings:
+            setName, count = findings.value
+            mapCount[setName] += count
+        return GateResult(listViolation=listViolation, summary=f"C++ 억제 {mapCount['cpp']} · CMake 경고 끄기 {mapCount['cmake']}")
 
 
 main = CheckSuppressionReasonsGate.run

@@ -32,7 +32,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common.Constants import kNotOurDirNames  # noqa: E402
-from lint.LintGate import GateResult, LintGate  # noqa: E402
+from lint.LintGate import LintGate  # noqa: E402
+from lint.SourceScan import FileFindings, SourceFile, SourceScanResult, SourceScanSet  # noqa: E402
 
 #: `function(name ...)` · `macro(name ...)` 선언.
 _kDefinitionRe = re.compile(r'^\s*(function|macro)\s*\(\s*([A-Za-z0-9_]+)', re.IGNORECASE)
@@ -96,9 +97,8 @@ _kExcludedDirName = kNotOurDirNames | {"vcpkg-port"}
 _kReservedVariablePrefix = ("CMAKE_", "CTEST_", "CPACK_", "ENV", "SW_", "VCPKG_", "Python3_", "_CMAKE_")
 
 
-def checkCmakeFileInternal(path: Path, repositoryRoot: Path) -> list[str]:
-    """파일 하나를 줄 단위로 봅니다."""
-    relPath = path.relative_to(repositoryRoot).as_posix()
+def checkCmakeFileInternal(relPath: str, text: str) -> list[str]:
+    """파일 하나(저장소 기준 경로 · 글)를 줄 단위로 봅니다."""
     gate = CheckCmakeConventionsGate
     if relPath in gate.mapExemption:
         gate.seeExemption(relPath)
@@ -106,7 +106,7 @@ def checkCmakeFileInternal(path: Path, repositoryRoot: Path) -> list[str]:
     bInFunction = False
     setReported: set[str] = set()
 
-    for lineNumber, line in enumerate(path.read_text(encoding="utf-8", errors="ignore").splitlines(), start=1):
+    for lineNumber, line in enumerate(text.splitlines(), start=1):
         if _kCommentRe.match(line):
             continue
 
@@ -229,15 +229,13 @@ class CheckCmakeConventionsGate(LintGate):
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
         self.addFilesArgument(parser)
 
-    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        listPath = self.selectTargetFiles(repositoryRoot, args.files, suffixes=(".cmake",), fileNames=("CMakeLists.txt",),
-                                          excludedDirNames=_kExcludedDirName)
+    sourceScanSets = (SourceScanSet("cmake", ("",), (".cmake",), ("CMakeLists.txt",), excludedDirNames=_kExcludedDirName),)
 
-        listViolation: list[str] = []
-        for path in listPath:
-            listViolation.extend(checkCmakeFileInternal(path, repositoryRoot))
+    def checkSourceFile(self, source: SourceFile, args: argparse.Namespace) -> FileFindings | None:
+        return FileFindings(listViolation=checkCmakeFileInternal(source.relative, source.text))
 
-        return GateResult(listViolation=listViolation, summary=f"{len(listPath)} cmake files scanned")
+    def describeSourceScan(self, result: SourceScanResult) -> str:
+        return f"{result.fileCount} cmake files scanned"
 
 
 main = CheckCmakeConventionsGate.run

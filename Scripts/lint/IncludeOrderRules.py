@@ -15,6 +15,7 @@ from pathlib import Path
 from common.Constants import kCppSourceExtensions, kLintTargetBaseDirNames
 from common.Paths import getProjectRoot
 from common.Search import collectRepositoryFiles
+from lint.SourceScan import FileFindings, SourceFile, fixedTextOf
 
 _kIncludeRe = re.compile(r'^\s*#\s*include\s+([<"])([^>"]+)[>"]', re.MULTILINE)
 
@@ -289,17 +290,28 @@ def computeIncludeOrderInternal(text: str, relativeFilePath: str,
 _s_mapHeaderLookup: dict[Path, tuple[dict[str, str], dict[str, str], dict[str, str]]] = {}
 
 
+def inspectSource(source: SourceFile, headerMaps: tuple[dict[str, str], dict[str, str], dict[str, str]]) -> FileFindings:
+    """
+    파일 하나의 판정과 고친 글 — 게이트 `CheckIncludeOrder.checkSourceFile` 과 픽서(`fixText`)가 **같은 이 함수**를 부른다.
+    BOM 을 뗀 글(`bodyText`)로 판정하고, 고친 글은 원본의 BOM · 줄 끝으로 되돌린다(`restore`). 줄 끝만 섞인 파일은 위반이 아니지만
+    고친 글은 줄 끝을 하나로 맞춘다(전부터 픽서가 그랬다).
+    """
+    if source.decodeError:
+        return FileFindings(listViolation=[f"[CheckIncludeOrder] 읽기 실패: {source.relative}: {source.decodeError}"])
+    newBody, listViolation = computeIncludeOrderInternal(source.bodyText, source.relative, *headerMaps)
+    if newBody != source.bodyText:
+        listViolation.append(f"{source.relative}: Include 순서/중복 문제가 발견되었습니다. "
+                             f"(`py -3 Scripts/lint/fixer/FormatIncludeOrder.py --files {source.relative}` 로 고친다)")
+    restored = source.restore(newBody)
+    return FileFindings(listViolation=listViolation, fixedText=restored if restored != source.rawText else None)
+
+
 def fixText(text: str, relativeFilePath: str) -> tuple[str, bool]:
-    """픽서 변환(`FixPass.transform`, 경로 필요) — 줄끝(CRLF)은 지킨다. 헤더 조회표는 이 저장소의 것이다."""
+    """픽서 변환(`FixPass.transform`, 경로 필요) — 게이트와 같은 `inspectSource`. 헤더 조회표는 이 저장소의 것이다."""
     repositoryRoot = getProjectRoot().resolve()
     if repositoryRoot not in _s_mapHeaderLookup:
         _s_mapHeaderLookup[repositoryRoot] = buildHeaderLookupMap(repositoryRoot)
-    newline = "\r\n" if "\r\n" in text else "\n"
-    bom = "\ufeff" if text.startswith("\ufeff") else ""   # 게이트처럼 BOM 을 떼고 판정하고, 있던 BOM 은 돌려놓는다
-    plainText = text.removeprefix(bom).replace("\r\n", "\n")
-    newText, _ = computeIncludeOrderInternal(plainText, relativeFilePath, *_s_mapHeaderLookup[repositoryRoot])
-    newText = bom + newText.replace("\n", newline)
-    return newText, newText != text
+    return fixedTextOf(lambda source: inspectSource(source, _s_mapHeaderLookup[repositoryRoot]), text, relativeFilePath)
 
 
 #: 픽서의 조각 — 게이트의 첫 자가 테스트 조각(Engine 이 Core 보다 앞)과 그것을 고친 결과.

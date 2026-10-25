@@ -41,7 +41,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 from common.CodeText import blankCommentsAndLiterals, blankMatch, lineOf  # noqa: E402
 from common.Constants import kShaderSourceExtensions  # noqa: E402
 from common.RuleData import kKindTextList  # noqa: E402
-from lint.LintGate import GateResult, LintGate  # noqa: E402
+from lint.LintGate import LintGate  # noqa: E402
+from lint.SourceScan import FileFindings, SourceFile, SourceScanResult, SourceScanSet  # noqa: E402
 
 #: **문자열로 묶인 이름** — C++ · 파이프라인 XML 이 이 철자로 부르므로 셰이더 쪽에서만 바꿀 수 없다. 규칙 검사에서 뺀다.
 #: 이유 없는 예외는 두지 않는다. 전역 · cbuffer 멤버(`g_*`)는 여기 적지 않는다 — 그 철자 규칙(`g_` + PascalCase)만 본다.
@@ -463,18 +464,15 @@ class CheckShaderConventionsGate(LintGate):
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
         self.addFilesArgument(parser)
 
-    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        listPath = self.selectTargetFiles(repositoryRoot, args.files, suffixes=kShaderSourceExtensions)
-        listViolation: list[str] = []
-        for path in listPath:
-            relPath = path.relative_to(repositoryRoot).as_posix()
-            try:
-                text = path.read_text(encoding="utf-8")
-            except OSError as exception:
-                listViolation.append(f"{relPath}:1 읽을 수 없습니다: {exception}")
-                continue
-            listViolation.extend(checkShaderTextInternal(text, relPath))
-        return GateResult(listViolation=listViolation, summary=f"{len(listPath)} shader files scanned")
+    sourceScanSets = (SourceScanSet("shader", ("",), tuple(sorted(kShaderSourceExtensions))),)
+
+    def checkSourceFile(self, source: SourceFile, args: argparse.Namespace) -> FileFindings | None:
+        if source.decodeError:
+            return FileFindings(error=source.decodeError)   # 못 읽은 셰이더를 건너뛰면 검사가 그 파일을 본 척한다
+        return FileFindings(listViolation=checkShaderTextInternal(source.text, source.relative))
+
+    def describeSourceScan(self, result: SourceScanResult) -> str:
+        return f"{result.fileCount} shader files scanned"
 
 
 main = CheckShaderConventionsGate.run

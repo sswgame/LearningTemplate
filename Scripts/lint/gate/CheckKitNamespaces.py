@@ -34,6 +34,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 from common.CodeText import blankComments, lineOf  # noqa: E402
 from common.Constants import kLintTargetRelDirs  # noqa: E402
 from lint.LintGate import GateResult, LintGate  # noqa: E402
+from lint.SourceScan import FileFindings, SourceFile, SourceScanResult, SourceScanSet, joinFindings  # noqa: E402
 
 _kTagRe = re.compile(r"\b(k[A-Z]\w*Tag)\s*=\s*(?:sw::)?FourCcUtil::make\s*\(\s*\"([^\"\n]{4})\"\s*\)")
 _kHexTagRe = re.compile(r"\b(k[A-Z]\w*Tag)\s*=\s*0x[0-9A-Fa-f]{8}u?\s*;")
@@ -147,6 +148,25 @@ class CheckKitNamespacesGate(LintGate):
             },
         },
         {
+            # 집합 `framework`(키트 밖 GameFramework)는 로그 범주(규칙 7)를 게임과 나눈다.
+            "name": "키트 밖 GameFramework 와 게임이 같은 로그 범주를 쓴다",
+            "expectedViolation": "로그 범주 'Probe' 가 GameFramework · Games 의 파일 둘 이상에 있습니다: Source/GameFramework/Base/Probe/Probe.cpp:1 · Source/Games/ProbeGame/ProbeGame.cpp:1",
+            "files": {
+                "Source/GameFramework/Base/Probe/Probe.cpp": "SW_LOG_CALLER( \"Probe\" );\n",
+                "Source/Games/ProbeGame/ProbeGame.cpp": "SW_LOG_CALLER( \"Probe\" );\n",
+            },
+        },
+        {
+            # 집합 `other`(엔진 · 도구 · 테스트)는 상태 표(규칙 1)만 본다 — 로그 범주 · 키 읽기는 보지 않는다.
+            "name": "엔진 파일은 상태 표 중복만 보고 같은 로그 범주는 보지 않는다",
+            "expectedViolation": "상태 표 'FARM' 가 둘 이상입니다: Source/Engine/Probe/A.cpp:1 · Source/Engine/Probe/B.cpp:1",
+            "unexpectedViolation": "로그 범주 'Probe'",
+            "files": {
+                "Source/Engine/Probe/A.cpp": "static constexpr uint32 kStateTag = FourCcUtil::make( \"FARM\" );\nSW_LOG_CALLER( \"Probe\" );\n",
+                "Source/Engine/Probe/B.cpp": "static constexpr uint32 kStateTag = FourCcUtil::make( \"FARM\" );\nSW_LOG_CALLER( \"Probe\" );\n",
+            },
+        },
+        {
             "name": "게임이 키를 직접 읽는다",
             "expectedViolation": "게임이 키를 직접 읽습니다(wasKeyPressed()",
             "files": {
@@ -155,91 +175,111 @@ class CheckKitNamespacesGate(LintGate):
         },
     ]
 
+    # 파일 집합이 규칙을 가른다(`SourceFile.setName`) — 좁은 폴더를 앞에, 나머지를 거두는 집합을 뒤에 둔다(첫 집합이 갖는다).
+    #   kit: 키트(규칙 2 · 3 · 5 · 6 · 8 + 7 · 1) · game: 게임(규칙 9 + 7 · 1) · framework: 키트 밖 GameFramework(규칙 7 · 1) · other: 그 밖(규칙 1)
+    sourceScanSets = (
+        SourceScanSet("kit", ("Source/GameFramework/Kits",), (".h", ".cpp")),
+        SourceScanSet("game", ("Source/Games",), (".h", ".cpp")),
+        SourceScanSet("framework", ("Source/GameFramework",), (".h", ".cpp")),
+        SourceScanSet("other", kLintTargetRelDirs, (".h", ".cpp")),
+    )
+
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
         pass
 
-    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        listFile = self.selectTargetFiles(repositoryRoot, None, listScanRoot=kLintTargetRelDirs, suffixes=(".h", ".cpp"))
+    def checkSourceFile(self, source: SourceFile, args: argparse.Namespace) -> FileFindings | None:
+        relativePath = source.relative
+        text = source.text
+        listTagSite: list[tuple[str, str]] = []
+        listLogCallerSite: list[tuple[str, str]] = []
+        listViolation: list[str] = []
+        # 1) 상태 표
+        if "Tag" in text:
+            code1 = blankComments(text)
+            for match in _kTagRe.finditer(code1):
+                listTagSite.append((match.group(2), f"{relativePath}:{lineOf(code1, match.start())}"))
+            for match in _kHexTagRe.finditer(code1):
+                listViolation.append(f"{relativePath}:{lineOf(code1, match.start())}: {match.group(1)} 를 16 진 리터럴로 적었습니다 — "
+                                     f"FourCcUtil::make( \"ABCD\" ) 로")
+        bKit = source.setName == "kit"
+        bGame = source.setName == "game"
+        if bKit is False and bGame is False and source.setName != "framework":
+            return FileFindings(listViolation=listViolation, value=(listTagSite, listLogCallerSite))
+        # 주석 속 예시는 보지 않는다(글자 리터럴은 남긴다).
+        code = blankComments(text)
+        # 7) 로그 범주 — GameFramework · Games
+        for match in _kLogCallerRe.finditer(code):
+            listLogCallerSite.append((match.group(1), f"{relativePath}:{lineOf(code, match.start())}"))
+        # 9) 게임도 키를 직접 읽지 않는다
+        if bGame:
+            for match in _kRawKeyRe.finditer(code):
+                listViolation.append(f"{relativePath}:{lineOf(code, match.start())}: 게임이 키를 직접 읽습니다({match.group(0).strip()}) — "
+                                     f"팩의 입력 맵(data/<게임>.input.xml) 액션으로 읽으세요")
+        if bKit is False:
+            return FileFindings(listViolation=listViolation, value=(listTagSite, listLogCallerSite))
+        # 2) · 3) 키트
+        for match in _kRawKeyRe.finditer(code):
+            listViolation.append(f"{relativePath}:{lineOf(code, match.start())}: 키트가 키를 직접 읽습니다({match.group(0).strip()}) — "
+                                 f"입력 맵 액션을 키트 설정 칸으로 받으세요")
+        # 5) 기반 공유 상태를 값으로 든다(헤더의 멤버)
+        if relativePath.endswith(".h"):
+            for key in self.mapExemption:
+                if key.rsplit(":", 1)[0] == relativePath:
+                    self.seeExemption(key)
+            for match in _kHeldStateRe.finditer(code):
+                member = match.group(2)
+                listOwner = _kOwnerTypeRe.findall(code, 0, match.start())
+                ownerName = listOwner[-1] if listOwner else ""
+                if ownerName.endswith(_kDefinitionSuffixes):
+                    continue
+                if f"{relativePath}:{member}" in self.mapExemption:
+                    self.useExemption(f"{relativePath}:{member}")
+                    continue
+                listViolation.append(f"{relativePath}:{lineOf(code, match.start())}: 키트가 공유 상태 {match.group(1)} 를 값으로 듭니다({member}) — "
+                                     f"`const SessionStateRefs&` 로 빌리세요(정말 제 것이면 rules/CheckKitNamespaces.toml 의 [exemption] 에 까닭과 함께)")
+        # 6) 빌린 객체의 알림
+        for match in _kBorrowedDrainRe.finditer(code):
+            listViolation.append(f"{relativePath}:{lineOf(code, match.start())}: 키트가 빌린 객체의 알림을 꺼냅니다 — "
+                                 f"알림은 게임 화면의 것이다, 상태(getStatus …)를 보세요")
+        # 8) 전역 변수
+        for match in _kGlobalVariableRe.finditer(code):
+            listViolation.append(f"{relativePath}:{lineOf(code, match.start())}: 키트가 전역 변수를 정의합니다 — "
+                                 f"스위치는 게임 · 엔진에, 키트는 설정 칸으로 받으세요")
+        for match in _kActionLiteralRe.finditer(code):
+            listViolation.append(f"{relativePath}:{lineOf(code, match.start())}: 키트가 입력 맵 액션 이름을 글자로 박았습니다 — "
+                                 f"키트 설정 칸(hashed_string)으로 받으세요")
+        kitName = findKitNameInternal(relativePath)
+        for match in _kCustomPropertyRe.finditer(code):
+            key = match.group(1)
+            if kitName and not key.startswith(kitName + "."):
+                listViolation.append(f"{relativePath}:{lineOf(code, match.start())}: 게임 설정 칸 '{key}' 에 키트 접두가 없습니다 — "
+                                     f"'{kitName}.{key}'")
+        for match in _kFactionLiteralRe.finditer(code):
+            factionID = next(group for group in match.groups() if group is not None)
+            prefix = factionID.split(".", 1)[0] if "." in factionID else ""
+            if kitName and (prefix == "" or prefix.islower() is False or prefix not in kitName.lower()):
+                listViolation.append(f"{relativePath}:{lineOf(code, match.start())}: 평판 세력 '{factionID}' 에 키트 접두가 없습니다 — "
+                                     f"'<{kitName} 의 소문자 낱말>.{factionID}'")
+        return FileFindings(listViolation=listViolation, value=(listTagSite, listLogCallerSite))
+
+    def finishSourceScan(self, repositoryRoot: Path, args: argparse.Namespace, result: SourceScanResult) -> GateResult:
+        # 규칙 1 · 7 은 파일 사이의 중복이다 — 파일 순서대로 모은 자리 목록에서 둘 이상인 것을 찾는다.
         mapTagToSite: dict[str, list[str]] = defaultdict(list)
         mapLogCallerToSite: dict[str, list[str]] = defaultdict(list)
-        listViolation: list[str] = []
-        for path in listFile:
-            relativePath = path.relative_to(repositoryRoot).as_posix()
-            text = path.read_text(encoding="utf-8", errors="replace")
-            # 1) 상태 표
-            if "Tag" in text:
-                code1 = blankComments(text)
-                for match in _kTagRe.finditer(code1):
-                    mapTagToSite[match.group(2)].append(f"{relativePath}:{lineOf(code1, match.start())}")
-                for match in _kHexTagRe.finditer(code1):
-                    listViolation.append(f"{relativePath}:{lineOf(code1, match.start())}: {match.group(1)} 를 16 진 리터럴로 적었습니다 — "
-                                         f"FourCcUtil::make( \"ABCD\" ) 로")
-            bKit  = relativePath.startswith(_kKitPrefix)
-            bGame = relativePath.startswith(_kGamePrefix)
-            if bKit is False and bGame is False and relativePath.startswith(_kGameFrameworkPrefix) is False:
-                continue
-            # 주석 속 예시는 보지 않는다(글자 리터럴은 남긴다).
-            code = blankComments(text)
-            # 7) 로그 범주 — GameFramework · Games
-            for match in _kLogCallerRe.finditer(code):
-                mapLogCallerToSite[match.group(1)].append(f"{relativePath}:{lineOf(code, match.start())}")
-            # 9) 게임도 키를 직접 읽지 않는다
-            if bGame:
-                for match in _kRawKeyRe.finditer(code):
-                    listViolation.append(f"{relativePath}:{lineOf(code, match.start())}: 게임이 키를 직접 읽습니다({match.group(0).strip()}) — "
-                                         f"팩의 입력 맵(data/<게임>.input.xml) 액션으로 읽으세요")
-            if bKit is False:
-                continue
-            # 2) · 3) 키트
-            for match in _kRawKeyRe.finditer(code):
-                listViolation.append(f"{relativePath}:{lineOf(code, match.start())}: 키트가 키를 직접 읽습니다({match.group(0).strip()}) — "
-                                     f"입력 맵 액션을 키트 설정 칸으로 받으세요")
-            # 5) 기반 공유 상태를 값으로 든다(헤더의 멤버)
-            if relativePath.endswith(".h"):
-                for key in self.mapExemption:
-                    if key.rsplit(":", 1)[0] == relativePath:
-                        self.seeExemption(key)
-                for match in _kHeldStateRe.finditer(code):
-                    member = match.group(2)
-                    listOwner = _kOwnerTypeRe.findall(code, 0, match.start())
-                    ownerName = listOwner[-1] if listOwner else ""
-                    if ownerName.endswith(_kDefinitionSuffixes):
-                        continue
-                    if f"{relativePath}:{member}" in self.mapExemption:
-                        self.useExemption(f"{relativePath}:{member}")
-                        continue
-                    listViolation.append(f"{relativePath}:{lineOf(code, match.start())}: 키트가 공유 상태 {match.group(1)} 를 값으로 듭니다({member}) — "
-                                         f"`const SessionStateRefs&` 로 빌리세요(정말 제 것이면 rules/CheckKitNamespaces.toml 의 [exemption] 에 까닭과 함께)")
-            # 6) 빌린 객체의 알림
-            for match in _kBorrowedDrainRe.finditer(code):
-                listViolation.append(f"{relativePath}:{lineOf(code, match.start())}: 키트가 빌린 객체의 알림을 꺼냅니다 — "
-                                     f"알림은 게임 화면의 것이다, 상태(getStatus …)를 보세요")
-            # 8) 전역 변수
-            for match in _kGlobalVariableRe.finditer(code):
-                listViolation.append(f"{relativePath}:{lineOf(code, match.start())}: 키트가 전역 변수를 정의합니다 — "
-                                     f"스위치는 게임 · 엔진에, 키트는 설정 칸으로 받으세요")
-            for match in _kActionLiteralRe.finditer(code):
-                listViolation.append(f"{relativePath}:{lineOf(code, match.start())}: 키트가 입력 맵 액션 이름을 글자로 박았습니다 — "
-                                     f"키트 설정 칸(hashed_string)으로 받으세요")
-            kitName = findKitNameInternal(relativePath)
-            for match in _kCustomPropertyRe.finditer(code):
-                key = match.group(1)
-                if kitName and not key.startswith(kitName + "."):
-                    listViolation.append(f"{relativePath}:{lineOf(code, match.start())}: 게임 설정 칸 '{key}' 에 키트 접두가 없습니다 — "
-                                         f"'{kitName}.{key}'")
-            for match in _kFactionLiteralRe.finditer(code):
-                factionID = next(group for group in match.groups() if group is not None)
-                prefix = factionID.split(".", 1)[0] if "." in factionID else ""
-                if kitName and (prefix == "" or prefix.islower() is False or prefix not in kitName.lower()):
-                    listViolation.append(f"{relativePath}:{lineOf(code, match.start())}: 평판 세력 '{factionID}' 에 키트 접두가 없습니다 — "
-                                         f"'<{kitName} 의 소문자 낱말>.{factionID}'")
+        for findings in result.listFindings:
+            listTagSite, listLogCallerSite = findings.value
+            for tagText, site in listTagSite:
+                mapTagToSite[tagText].append(site)
+            for callerName, site in listLogCallerSite:
+                mapLogCallerToSite[callerName].append(site)
+        listViolation, _ = joinFindings(result.listFindings)
         for tagText, listSite in sorted(mapTagToSite.items()):
             if len(listSite) > 1:
                 listViolation.append(f"상태 표 '{tagText}' 가 둘 이상입니다: {' · '.join(listSite)}")
         for callerName, listSite in sorted(mapLogCallerToSite.items()):
             if len(listSite) > 1:
                 listViolation.append(f"로그 범주 '{callerName}' 가 GameFramework · Games 의 파일 둘 이상에 있습니다: {' · '.join(listSite)}")
-        return GateResult(listViolation=listViolation, summary=f"{len(listFile)} files, {len(mapTagToSite)} state tags")
+        return GateResult(listViolation=listViolation, summary=f"{result.fileCount} files, {len(mapTagToSite)} state tags")
 
 
 main = CheckKitNamespacesGate.run

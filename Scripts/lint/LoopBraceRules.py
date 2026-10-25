@@ -1,7 +1,7 @@
 """
 Scripts/lint/LoopBraceRules.py
 
-반복문 중괄호 규칙 — `findUnbracedLoops`(판정)와 `insertLoopBraces`(고침). 게이트 `CheckLoopBraces` 와 픽서 `FormatBranchBraces` 가 같이 읽는다.
+반복문 중괄호 규칙 — `findUnbracedLoops`(판정)와 `braceLoopsInternal`(고침), 둘을 묶은 `inspectSource`. 게이트 `CheckLoopBraces` 와 픽서 `FormatBranchBraces` 가 같이 읽는다.
 
 판정을 린트 틀 층(층 1)에 두는 까닭: 게이트 · 픽서 · 보고서(층 2)가 서로의 모듈을 import 하면 명령끼리 의존한다.
 (`docs/plans/ScriptsStructure.md`, 층 게이트 `CheckScriptLayers`) 규칙은 여기 한 자리고, 층 2 는 모두 이 모듈을 읽는다.
@@ -13,6 +13,7 @@ import re
 from dataclasses import dataclass
 
 from common.CodeText import blankComments, blankCommentsAndLiterals
+from lint.SourceScan import FileFindings, SourceFile
 
 _kLoopHeadRe = re.compile(r"\b(for|while)\s*\(")
 _kDoRe = re.compile(r"\bdo\b")
@@ -205,12 +206,9 @@ def findUnbracedLoops(text: str, masked: str | None = None, noComment: str | Non
     return listLoop
 
 
-def insertLoopBraces(text: str) -> tuple[str, bool]:
-    """중괄호 없는 반복문 본문을 중괄호로 감싼 글과 수정 여부(픽서 `FormatBranchBraces` 의 반복문 패스). 들여쓰기는 뒤의 clang-format 이 맞춘다."""
-    listLoop = [loop for loop in findUnbracedLoops(text) if loop.bFixable]
-    if not listLoop:
-        return text, False
-    eol = "\r\n" if text.count("\r\n") * 2 > text.count("\n") else "\n"
+def braceLoopsInternal(text: str, listLoop: list[UnbracedLoop]) -> str:
+    """`listLoop`(고칠 수 있는 반복문들 — `findUnbracedLoops(text)` 의 결과)의 본문을 중괄호로 감싼 글. 줄 끝은 `\\n` 이다. 들여쓰기는 뒤의 clang-format 이 맞춘다."""
+    eol = "\n"
     listEdit: list[tuple[int, int, str]] = []  # (위치, 지울 글자 수, 넣을 글) — 모은 차례가 바깥 반복문 → 안쪽 반복문
     for loop in listLoop:
         headLine = text[loop.headLineStart:].split("\n", 1)[0]
@@ -234,4 +232,21 @@ def insertLoopBraces(text: str) -> tuple[str, bool]:
     result = text
     for _, (position, removeCount, insert) in sorted(enumerate(listEdit), key=lambda item: (item[1][0], -item[0]), reverse=True):
         result = result[:position] + insert + result[position + removeCount:]
-    return result, True
+    return result
+
+
+def inspectSource(source: SourceFile) -> FileFindings:
+    """
+    파일 하나의 판정과 고친 글 — 게이트 `CheckLoopBraces.checkSourceFile` 과 픽서(`FormatBranchBraces` 의 반복문 패스)가 **같은 이 함수**를 부른다.
+    위반은 중괄호 없는 반복문 전부(픽서가 못 고치는 것은 "손으로" 라고 적는다), 고친 글은 고칠 수 있는 것만 감싼 완성 글이다(줄 끝 · BOM 은 `SourceFile.restore`).
+    """
+    listLoop = findUnbracedLoops(source.text, source.masked, source.noComment)
+    if not listLoop:
+        return FileFindings()
+    listLine = source.text.split("\n")
+    listViolation: list[str] = []
+    for loop in listLoop:
+        manual = "" if loop.bFixable else " (픽서가 고치지 않는다 — 손으로)"
+        listViolation.append(f"{source.relative}:{loop.lineNumber}: {loop.keyword} 본문에 중괄호가 없습니다{manual} | {listLine[loop.lineNumber - 1].strip()}")
+    listFixable = [loop for loop in listLoop if loop.bFixable]
+    return FileFindings(listViolation=listViolation, fixedText=source.restore(braceLoopsInternal(source.text, listFixable)) if listFixable else None)

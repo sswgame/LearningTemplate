@@ -25,7 +25,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
-from lint.LintGate import GateResult, LintGate  # noqa: E402
+from lint.LintGate import LintGate  # noqa: E402
+from lint.SourceScan import FileFindings, SourceFile, SourceScanResult  # noqa: E402
 
 
 @dataclass(frozen=True)
@@ -134,12 +135,14 @@ class CheckScriptLayoutGate(LintGate):
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
         self.addFilesArgument(parser)
 
-    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        listPath = self.selectTargetFiles(repositoryRoot, args.files, listScanRoot=("Scripts",), suffixes=(".py",))
-        listViolation: list[str] = []
-        for path, text in self.readFiles(listPath):
-            listViolation.extend(checkScriptInternal(path.relative_to(repositoryRoot).as_posix(), text))
-        return GateResult(listViolation=listViolation, summary=f"{len(listPath)} scripts · {len(_kRule)} folders")
+    sourceScanRoots = ("Scripts",)
+    sourceSuffixes = (".py",)
+
+    def checkSourceFile(self, source: SourceFile, args: argparse.Namespace) -> FileFindings | None:
+        return FileFindings(listViolation=checkScriptInternal(source.relative, source.text))
+
+    def describeSourceScan(self, result: SourceScanResult) -> str:
+        return f"{result.fileCount} scripts · {len(_kRule)} folders"
 
 
 main = CheckScriptLayoutGate.run
