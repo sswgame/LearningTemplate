@@ -12,6 +12,7 @@
 #include "Engine/Graphics/RHI/Support/RHIReleaseQueue.h"
 #include "Engine/Graphics/RHI/Support/RHIShaderRequest.h"
 #include "Engine/Graphics/RHI/Support/RHITimestamp.h"
+#include "Engine/Graphics/RHI/Support/RHITransferUtil.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIRequiredVersion.h"
 #include "Engine/Resource/ResourcePaths.h"
 
@@ -828,4 +829,75 @@ SW_TEST_CASE( RHITextureRegionUploadTest, ValidationAcceptsInsideAndRejectsTheRe
     SW_EXPECT_FALSE( sw::validateTextureRegionUpload( sw::RHIFormat::R8_UNORM, 64, 32, 2, 2, bad, rowBytes ) );
     SW_EXPECT_FALSE( sw::validateTextureRegionUpload( sw::RHIFormat::BC4_UNORM, 64, 32, 2, 2, good, rowBytes ) );
     SW_EXPECT_FALSE( sw::validateTextureRegionUpload( sw::RHIFormat::D24_UNORM_S8_UINT, 64, 32, 2, 2, good, rowBytes ) );
+}
+
+/**
+ * @brief [RHITransferTest] 티켓과 제출 결과의 모양: 시리얼 0 은 무효이고, Busy · Rejected 는 티켓을 주지 않는다.
+ */
+SW_TEST_CASE( RHITransferTest, TicketAndSubmitShape )
+{
+    SW_EXPECT_FALSE( sw::RHITransferTicket{}.isValid() );
+    SW_EXPECT_TRUE( sw::RHITransferTicket{ 1 }.isValid() );
+    SW_EXPECT_TRUE( sw::RHITransferTicket{ 7 } == sw::RHITransferTicket{ 7 } );
+    SW_EXPECT_TRUE( sw::RHITransferTicket{ 7 } != sw::RHITransferTicket{ 8 } );
+
+    SW_EXPECT_TRUE( sw::RHITransferSubmit::accepted( 5 ).isAccepted() );
+    SW_EXPECT_FALSE( sw::RHITransferSubmit::accepted( 0 ).isAccepted() ); // 시리얼 0 은 받아들인 것으로 치지 않는다
+    SW_EXPECT_FALSE( sw::RHITransferSubmit::busy().isAccepted() );
+    SW_EXPECT_FALSE( sw::RHITransferSubmit::busy()._ticket.isValid() );
+    SW_EXPECT_FALSE( sw::RHITransferSubmit::rejected().isAccepted() );
+    SW_EXPECT_FALSE( sw::RHITransferSubmit{}.isAccepted() ); // 기본값은 Rejected
+}
+
+/**
+ * @brief [RHITransferTest] 폴링 대기: Pending 이 몇 번 돈 뒤 Complete, Failed 는 곧바로 돌아오고, 시간이 다 되면 Pending 으로 돌아온다.
+ */
+SW_TEST_CASE( RHITransferTest, WaitWhilePendingStopsOnCompleteFailedAndTimeout )
+{
+    int32 pollCount{ 0 };
+    SW_EXPECT_TRUE( sw::RHITransferUtil::waitWhilePending( [&pollCount]()
+    { return ++pollCount >= 3 ? sw::RHITransferStatus::Complete : sw::RHITransferStatus::Pending; } ) ==
+                    sw::RHITransferStatus::Complete );
+    SW_EXPECT_EQUAL( 3, pollCount );
+
+    pollCount = 0;
+    SW_EXPECT_TRUE( sw::RHITransferUtil::waitWhilePending( [&pollCount]()
+    { ++pollCount; return sw::RHITransferStatus::Failed; } ) == sw::RHITransferStatus::Failed );
+    SW_EXPECT_EQUAL( 1, pollCount );
+
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a transfer that never finishes is reported as an error and returns Pending" );
+        SW_EXPECT_TRUE( sw::RHITransferUtil::waitWhilePending( []()
+        { return sw::RHITransferStatus::Pending; }, 0 ) == sw::RHITransferStatus::Pending );
+    }
+}
+
+/**
+ * @brief [RHITransferTest] 제출 재시도: Busy 는 다시 제출하고, Rejected 는 다시 시도하지 않으며, 시간이 다 되면 Rejected 로 끝난다.
+ */
+SW_TEST_CASE( RHITransferTest, SubmitWhileBusyRetriesBusyButNotRejected )
+{
+    int32                       submitCount{ 0 };
+    const sw::RHITransferSubmit accepted = sw::RHITransferUtil::submitWhileBusy( [&submitCount]()
+    {
+        return ++submitCount >= 3 ? sw::RHITransferSubmit::accepted( 9 ) : sw::RHITransferSubmit::busy();
+    } );
+    SW_EXPECT_TRUE( accepted.isAccepted() );
+    SW_EXPECT_EQUAL( 3, submitCount );
+
+    submitCount                          = 0;
+    const sw::RHITransferSubmit rejected = sw::RHITransferUtil::submitWhileBusy( [&submitCount]()
+    {
+        ++submitCount;
+        return sw::RHITransferSubmit::rejected();
+    } );
+    SW_EXPECT_FALSE( rejected.isAccepted() );
+    SW_EXPECT_EQUAL( 1, submitCount );
+
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a submit that stays Busy is reported as an error and ends as Rejected" );
+        const sw::RHITransferSubmit stuck = sw::RHITransferUtil::submitWhileBusy( []()
+        { return sw::RHITransferSubmit::busy(); }, 0 );
+        SW_EXPECT_TRUE( stuck._result == sw::RHISubmitResult::Rejected );
+    }
 }

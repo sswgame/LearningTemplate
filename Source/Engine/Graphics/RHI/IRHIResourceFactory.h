@@ -165,35 +165,60 @@ namespace sw
          */
         virtual RHIFormat getTextureFormat( RHITextureHandle texture ) const = 0;
 
+        // ------------------------------------------------------------------------------
+        // 전송: 제출 → 티켓 → 폴링 (docs/plans/RhiAsyncUploads.md 2.2)
+        // ------------------------------------------------------------------------------
+        // 규칙: 이 인터페이스에는 GPU 완료를 기다리는 가상 함수를 새로 만들지 않는다. 기다리는 변형은 Engine 의 `RHITransferUtil::...AndWait` 헬퍼이고
+        //       vtable 밖에 있다. 소비자는 `pollTransfer` 가 `Complete` 를 돌려준 뒤에야 텍스처를 bindless 에 등록한다.
+        // 계약 (제출 함수 공통):
+        //   1. 반환하기 전에 소스 메모리를 복사한다. 호출자는 바로 버퍼를 재사용한다.
+        //   2. GPU 완료를 기다리지 않는다. 스테이징이 모자라면 `Busy`(티켓 무효)로 돌아오고 호출자가 다음 프레임에 다시 제출한다.
+        //      검사에 걸리면 `Rejected` 이고 이유를 로그로 남기며 다시 시도하지 않는다.
+        //   3. 순서: 제출한 전송은 그 뒤에 제출되는 모든 프레임 커맨드보다 먼저 실행된다. 같은 프레임에 이미 기록한 앞선 드로우가 어느 내용을 보는지는
+        //      정해져 있지 않으므로 호출자는 업로드를 그리기 기록 전에 제출한다. 같은 텍스처에 대한 제출끼리는 제출 순서대로 실행된다.
+        //   4. 스레드: `RHICapabilities::_bThreadSafeResourceCreation` 이 참이면 어느 스레드에서나 제출한다. 거짓(GL)이면 컨텍스트를 가진 스레드에서만 제출한다.
+
         /**
-         * @brief 2D 텍스처에 픽셀을 올립니다. 밉 0 부터 차례로, 행은 빈틈없이(DDS 배치) 받습니다.
-         * @details 로드 시점용 동기 경로다. DX12 는 열어 둔 복사 리스트에 기록해 두고 프레임 리스트 앞에 끼워 제출하며
-         *          (flushPendingUploads), Vulkan 은 제출하고 기다린다. DX11 과 GL 은 즉시 컨텍스트에 들어간다.
-         *          어느 쪽이든 뒤이은 드로우보다 먼저 실행된다. 매 프레임 갱신하는 용도가 아니다.
-         *          createTexture2D 가 _bIsShaderResource 로 만든 컬러 포맷(비압축, BC)만 받고, 깊이와 Unknown 은
+         * @brief 2D 텍스처에 픽셀을 올리도록 제출합니다. 밉 0 부터 차례로, 행은 빈틈없이(DDS 배치) 받습니다.
+         * @details createTexture2D 가 _bIsShaderResource 로 만든 컬러 포맷(비압축, BC)만 받고, 깊이와 Unknown 은
          *          받지 않는다(getRHIFormatBlockInfo 참고). 밉 크기와 오프셋 규칙은 resolveTextureUploadMips 한 곳이 정한다.
-         * @return 포맷이 업로드할 수 없는 것이거나 데이터가 모자라면 false 입니다.
+         *          매 프레임 갱신하는 용도가 아니다.
+         * @return `Accepted` 면 티켓으로 `pollTransfer` 한다. 포맷이 업로드할 수 없는 것이거나 데이터가 모자라면 `Rejected` 다.
          */
-        virtual bool uploadTexture2D( RHITextureHandle texture, const RHITextureUploadDesc& desc ) = 0;
+        [[nodiscard]] virtual RHITransferSubmit submitTextureUpload( RHITextureHandle texture, const RHITextureUploadDesc& desc ) = 0;
 
         /**
-         * @brief 2D 텍스처의 밉 하나, 면 하나의 사각형 구간에 픽셀을 올립니다(비압축 컬러 포맷만). 나머지 픽셀은 그대로 둡니다.
-         * @details 동기 규약은 uploadTexture2D 와 같다. 뒤이은 드로우보다 먼저 실행된다(DX12 는 같은 업로드 슬롯의 복사 리스트,
-         *          Vulkan 은 일회성 커맨드를 제출하고 기다리고, DX11 과 GL 은 즉시 컨텍스트). 글리프 아틀라스처럼 **가끔, 작게** 바뀌는 텍스처용이고,
-         *          매 프레임 큰 구간을 올리는 용도가 아니다. 검사(포맷, 범위, 데이터 크기)는 validateTextureRegionUpload 한 곳이 한다.
-         * @return 검사에 걸리면 false 입니다(이유는 로그에 남깁니다).
+         * @brief 2D 텍스처의 밉 하나, 면 하나의 사각형 구간에 픽셀을 올리도록 제출합니다(비압축 컬러 포맷만). 나머지 픽셀은 그대로 둡니다.
+         * @details 글리프 아틀라스처럼 **가끔, 작게** 바뀌는 텍스처용이고, 매 프레임 큰 구간을 올리는 용도가 아니다.
+         *          검사(포맷, 범위, 데이터 크기)는 validateTextureRegionUpload 한 곳이 한다.
+         * @return 검사에 걸리면 `Rejected` 입니다(이유는 로그에 남깁니다).
          */
-        [[nodiscard]] virtual bool uploadTexture2DRegion( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc ) = 0;
+        [[nodiscard]] virtual RHITransferSubmit submitTextureRegionUpload( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc ) = 0;
 
         /**
-         * @brief 텍스처의 면(`arraySlice`: 배열 원소 또는 큐브 면, 2D 는 0) 하나의 밉 하나를 CPU 로 읽어 옵니다. 행은 빈틈없이(업로드와 같은 배치,
+         * @brief 텍스처의 면(`arraySlice`: 배열 원소 또는 큐브 면, 2D 는 0) 하나의 밉 하나를 CPU 로 읽도록 요청합니다. 행은 빈틈없이(업로드와 같은 배치,
          *        BC 는 블록 행) 채웁니다.
-         * @details GPU 를 기다리는 **동기** 경로다. 테스트, 도구, 스크린샷 용도이지 프레임 경로가 아니다.
-         *          outLayout 에 밉 크기와 행 바이트가 채워진다(_pData 는 outBytes.data() 를 가리키지 않는다).
-         *          깊이 텍스처는 네 백엔드 모두 `kRHIDepthReadbackFormat` 배치(텍셀마다 0..1 깊이 float32, 스텐실 없음)로 채운다.
-         * @return 포맷이 대상이 아니거나 밉이나 면이 범위 밖이면 false 입니다.
+         * @param outLayout 밉 크기와 행 바이트입니다. **제출 시점에 바로 채웁니다**(_pData 는 쓰지 않는다). 결과 바이트는 `takeTextureReadback` 이 준다.
+         * @details 깊이 텍스처는 네 백엔드 모두 `kRHIDepthReadbackFormat` 배치(텍셀마다 0..1 깊이 float32, 스텐실 없음)로 채운다.
+         *          요청 시점까지 제출된 이 텍스처의 쓰기가 읽기에 보인다(순서 규칙 3).
+         * @return 포맷이 대상이 아니거나 밉이나 면이 범위 밖이면 `Rejected` 다.
          */
-        virtual bool readbackTexture2D( RHITextureHandle texture, uint32 mip, uint32 arraySlice, vector<uint8>& outBytes, RHITextureMipSpan& outLayout ) = 0;
+        [[nodiscard]] virtual RHITransferSubmit submitTextureReadback( RHITextureHandle texture, uint32 mip, uint32 arraySlice, RHITextureMipSpan& outLayout ) = 0;
+
+        /**
+         * @brief 제출한 전송의 진행 상태를 값싸게 묻습니다. 기다리지 않습니다.
+         * @details `Complete` 는 완료 워터마크 이상으로 판정하므로 `Complete` 를 본 뒤 같은 티켓을 다시 물어도 `Complete` 이고, 티켓을 해제하는 함수는 없다.
+         *          무효 티켓은 `Failed` 다. 어느 스레드에서나 부를 수 있다(GL 은 컨텍스트를 빌려 묻는다).
+         */
+        [[nodiscard]] virtual RHITransferStatus pollTransfer( RHITransferTicket ticket ) = 0;
+
+        /**
+         * @brief 완료된 읽기 결과를 **한 번** 가져갑니다.
+         * @param ticket `submitTextureReadback` 이 돌려준 티켓입니다. `pollTransfer` 가 `Complete` 를 돌려준 뒤에 부릅니다.
+         * @param outBytes 결과 바이트입니다(제출 때 받은 `outLayout` 의 배치).
+         * @return 읽기 티켓이 아니거나, 아직 `Complete` 가 아니거나, 이미 가져갔으면 false 입니다(이유는 로그).
+         */
+        [[nodiscard]] virtual bool takeTextureReadback( RHITransferTicket ticket, vector<uint8>& outBytes ) = 0;
 
         // ------------------------------------------------------------------------------
         // Bindless: 텍스처/버퍼/UAV 등록과 해제

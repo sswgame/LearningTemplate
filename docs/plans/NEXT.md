@@ -69,7 +69,7 @@
 
 **다음 세션의 첫 일과 병렬로 띄울 묶음**
 - 첫 일(순서): ① 사용자가 허락하면 push 뒤 `py -3 -m Scripts ci-jobs --summary`. ② `gpu-verifier` 로 아래 `## 000000` 절의 GPU 확인 + 위 "실행해서 봐야 하는 것" 중 GPU 가 필요한 것(네 백엔드 × Empty · 에디터 · Shooter3D · NileCity, 자동화 시나리오). ③ [ArchitectureSeams](ArchitectureSeams.md) 0 단계.
-- 병렬로 띄울 묶음(파일 소유가 겹치지 않을 때, 작업자 여섯 안팎 — 빌드하지 않고 커밋만): A. 에디터 범위 밖 · 워커에서 에디터 서비스를 찾는 남은 곳 점검(통합 J ③ · ④ 의 같은 모양). B. `hostgpu` 격리 H1~H4(실행이 필요해 통합 · gpu-verifier 와 같이). C. `RhiAsyncUploads.md` 의 U1~U14 중 GPU 없이 되는 것. D. `PackedTypes.md` P3(리플렉션 접점) · P4(G 버퍼 법선 — 재쿠킹 · GPU 확인 동반). E. 애니메이션 유닛 사슬 설계 비교(먼저 측정). F. 캐시 계약(`ResourcePaths` 음성 결과 · 세대). G. 측정대기 계획 문서 59 개의 판정(GPU 확인 뒤).
+- 병렬로 띄울 묶음(파일 소유가 겹치지 않을 때, 작업자 여섯 안팎 — 빌드하지 않고 커밋만): A. 에디터 범위 밖 · 워커에서 에디터 서비스를 찾는 남은 곳 점검(통합 J ③ · ④ 의 같은 모양). B. `hostgpu` 격리 H1~H4(실행이 필요해 통합 · gpu-verifier 와 같이). C. `RhiAsyncUploads.md` — U1(계약 · ABI 34 · `RHITransferUtil`)은 `wt/rhiasync` 에서 끝났다. 남은 U2~U13 은 모두 GPU 검증이 필요하다(U3~U6 백엔드 구현 · U7 계약 테스트 · U8~U9 소비자 이전 · U10 머티리얼 · U11~U12 PSO · U13 리사이즈 `waitIdle` 제거). U14 는 GPU 없이 되지만 U13 뒤다. U1 은 옛 가상 함수 세 개를 지워 백엔드 · 호출처가 U3~U9 병합 전에는 컴파일되지 않으니 U1 과 U3~U9 는 한 번들로 병합한다. U11 의 `findMaterialPSO` 주석은 이미 정정돼 있다. D. `PackedTypes.md` P3(리플렉션 접점) · P4(G 버퍼 법선 — 재쿠킹 · GPU 확인 동반). E. 애니메이션 유닛 사슬 설계 비교(먼저 측정). F. 캐시 계약(`ResourcePaths` 음성 결과 · 세대). G. 측정대기 계획 문서 59 개의 판정(GPU 확인 뒤).
 
 **교훈(이번 통합)**: ⑧ 게이트가 생기기 전 기준에서 갈라진 브랜치는 병합 뒤 그 게이트를 넘는다(이번 `CheckMutableStatics` 다섯) — 작업자 지시문에 "기준 커밋 뒤에 생긴 게이트" 를 적거나 통합이 병합 직후 전체 게이트를 한 번 돈다. ⑨ PowerShell 5.1 은 BOM 없는 `.ps1` 의 한국어를 CP949 로 읽는다 — 커밋 메시지 같은 한국어 문자열은 스크립트 파일에 넣지 말고 `git commit -F <UTF-8 파일>` 로 넘긴다. ⑩ 오래 쓴 빌드 폴더는 낡은 산출물(게임 팩)로 테스트를 통과시킨다 — 배포 구성 검증은 새 워크트리에서 한 번 돈다(`08_Verification.md` 3절).
 

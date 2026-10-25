@@ -92,7 +92,9 @@ namespace sw
      *            (DX12 · Vulkan `beginFrame` 의 링 슬롯 대기, DX11 · GL `endFrame` 의 링 대기). Present 를 하지 않는 반복에도 적용된다.
      *          - `IRHIResourceFactory::readReadbackBuffer`: 기다리지 않는다. 복사를 기록한 프레임이 끝난 뒤(위 콜백)에만 부르고, 읽기 버퍼가 아닌 핸들과
      *            버퍼를 넘는 크기는 오류를 남기고 false 다(`ReadReadbackBufferRejectsWhatIsNotAReadbackBuffer`).
-     *          - `IRHIResourceFactory::readbackTexture2D`: GPU 를 기다리는 동기 경로다(`TextureReadbackMatchesUpload`).
+     *          - `IRHIResourceFactory::submitTexture*` 와 `pollTransfer`: 제출은 소스를 복사하고 기다리지 않으며(스테이징이 모자라면 `Busy`), 제출한 전송은 그 뒤의 모든
+     *            프레임 커맨드보다 먼저 실행된다. `Complete` 는 완료 워터마크 이상이라 다시 물어도 `Complete` 이고, 잃은 장치는 `Failed` 다.
+     *            기다리는 변형은 vtable 밖의 `RHITransferUtil::...AndWait` 뿐이다(`TextureReadbackMatchesUpload`, 계약 테스트는 U7).
      *          - `IRHITimestampProvider::readTimestamps`: 기다리지 않고 마지막으로 모은 프레임을 준다. 묶음을 다시 쓰기 직전에 지난 결과를 모으는 자리(`beginFrame`)에서만
      *            GPU 를 기다린다(DX12 · Vulkan 펜스, DX11 쿼리 상한 대기, GL 은 준비된 슬롯만 읽는다). `GPUTimestampsMarkUnwrittenSlotsAllBackends`.
      *          - 백버퍼 크기 변경: 백버퍼를 가리키는 GPU 참조가 끝난 뒤에 놓는다(DX12 `waitForPreviousFrame`, Vulkan 재생성 때 `vkDeviceWaitIdle`, DX11 은 런타임이 참조 중인 버퍼를 지키고 GL 은 해당 없음).
