@@ -129,12 +129,12 @@ namespace sw
         void onUnregister( GameObjectManager& manager ) override;
 
         /** @brief 카메라 역할을 설정합니다. */
-        void setRole( CameraRole role ) { _role = role; }
+        void setRole( CameraRole role );
         /** @brief 카메라 역할을 반환합니다. */
         CameraRole getRole() const { return _role; }
 
         /** @brief 수직 시야각(라디안)을 설정합니다. */
-        void setFieldOfViewY( float32 fovRadians ) { _fovY = fovRadians; }
+        void setFieldOfViewY( float32 fovRadians );
         /** @brief 수직 시야각(라디안)을 반환합니다. */
         float32 getFieldOfViewY() const { return _fovY; }
 
@@ -159,7 +159,7 @@ namespace sw
         bool isOrthographic() const { return _bOrthographic; }
 
         /** @brief 우선순위를 설정합니다. */
-        void setPriority( int32 priority ) { _priority = priority; }
+        void setPriority( int32 priority );
         /** @brief 우선순위를 반환합니다. */
         int32 getPriority() const { return _priority; }
 
@@ -226,6 +226,8 @@ namespace sw
     private:
         /** @brief 렌더 텍스처 출력이면 그 크기를 텍스처 캐시에 알립니다(`engine::declareRenderTarget` — 텍스처 캐시가 묶는다). */
         void declareRenderTexture() const;
+        /** @brief 선택 규칙의 입력(역할 · 우선순위 · 출력 대상)이 바뀐 것을 소속 레지스트리의 변경 일련번호에 알립니다(`CameraRegistry::getRegistrySerial`). */
+        void noteSelectionInputChanged() const;
 
     private:
         PROPERTY( Category = "Projection", DisplayName = "Field Of View", Tooltip = "Vertical FOV (radians)", Min = 0.1, Max = 3.14, Units = rad )

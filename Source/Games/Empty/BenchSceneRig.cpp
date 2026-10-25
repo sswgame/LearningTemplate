@@ -118,6 +118,11 @@ namespace sw
         return static_cast<uint32>( MathUtil::max( gv_benchRig, 0 ) );
     }
 
+    int32 BenchScene::getRigView()
+    {
+        return gv_benchRigView;
+    }
+
     void BenchScene::spawnRigSlope( Scene* pScene, GameObjectManager& objects, float32 halfWidth )
     {
         // 기울어진 바닥입니다. 물리용 정적 상자(발 디딤의 광선이 맞는 대상)와, 같은 위치와 크기의 큐브(화면에 보이는 것)로 이루어집니다.
@@ -285,7 +290,7 @@ namespace sw
 
         const float32 halfExtent = MathUtil::max( _settings._rigMinHalfExtent, halfWidth );
         spawnLight( pScene, halfExtent );
-        frameRigCameras( pScene );
+        applyFraming( pScene, FramingMode::Rig );
         SW_LOG_INFO( "[Bench] Placed %# rig knights on the slope (rig %#).", characterCount, bRig ? "on" : "off" );
     }
 
@@ -297,6 +302,8 @@ namespace sw
         const float32 halfSpan = 0.5f * static_cast<float32>( count ) * _settings._rigSpacing;
         for ( CameraComponent* pCamera : pScene->getObjectManager()->getCameraRegistry().getAll() )
         {
+            if ( isFramedCamera( pCamera ) == false )
+                continue;
             if ( count <= 1 )
             {
                 // 한 명 — 상반신 · 다리가 함께 들어오게 비스듬히 가까이(손잡이 · 시선 · 망토 · 발이 한 화면).

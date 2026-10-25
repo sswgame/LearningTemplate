@@ -306,8 +306,8 @@ namespace sw
         , _ragdollHalfExtent{ 0.0f }
         , _ragdollFrame{ 0 }
         , _rigLookTarget{}
-        , _bCharacterFraming{ SW_FALSE }
-        , _bFaceFraming{ SW_FALSE }
+        , _framedInput{}
+        , _framingMode{ FramingMode::Grid }
         , _reserved{ 0 }
     {
     }
@@ -390,12 +390,13 @@ namespace sw
         _listInstanceBatch.clear(); // 소멸자가 레지스트리에서 빠진다
         _instanceCubeCount = 0;
         _listBenchExtra.clear();
-        _bCharacterFraming = SW_FALSE;
-        _bFaceFraming      = SW_FALSE;
         _listRigBody.clear();
         _rigLookTarget = {};
         _listChurnInstance.clear();
-        _keyLight = {};
+        // 정리한 뒤에는 맞출 장면이 없습니다. 격자 모드로 되돌리고 입력도 지금 값으로 맞춰 두어 update 가 헛맞춤을 하지 않게 합니다.
+        _framingMode = FramingMode::Grid;
+        _framedInput = captureFramingInput( pScene );
+        _keyLight    = {};
     }
 
     Scene* BenchScene::ensureBenchScene()
@@ -545,7 +546,7 @@ namespace sw
         spawnBenchLights( pScene, halfExtent );
         spawnGround( pScene, halfExtent );
         _benchGridSide = side;
-        frameCameras( pScene, side, _settings._cubeSpacing );
+        applyFraming( pScene, FramingMode::Grid );
         spawnBenchViews( pScene, halfExtent );
     }
 
@@ -656,8 +657,7 @@ namespace sw
         const float32 halfExtent = computeCharacterHalfExtent( characterCount );
         spawnLight( pScene, halfExtent );
         spawnGround( pScene, halfExtent );
-        _bCharacterFraming = SW_TRUE;
-        frameCharacterCameras( pScene, halfExtent );
+        applyFraming( pScene, FramingMode::Character );
         SW_LOG_INFO( "[Bench] In scene '%#', placed %# skinned characters (%#).", pScene->getName(), characterCount, _settings._knightMesh.c_str() );
     }
 
@@ -717,8 +717,7 @@ namespace sw
                 _listBenchExtra.push_back( pFirst->getHandle() );
         }
         spawnLight( pScene, _settings._combatHalfExtent );
-        _bCharacterFraming = SW_TRUE;
-        frameCharacterCameras( pScene, _settings._combatHalfExtent );
+        applyFraming( pScene, FramingMode::Combat );
         SW_LOG_INFO( "[Bench] In scene '%#', set up the combat staging (KayKit skeletons, swords, floor).", pScene->getName() );
     }
 
@@ -773,7 +772,7 @@ namespace sw
         spawnLight( pScene, halfExtent );
         spawnGround( pScene, halfExtent );
         _ragdollHalfExtent = halfExtent;
-        frameCharacterCameras( pScene, halfExtent );
+        applyFraming( pScene, FramingMode::Ragdoll );
         SW_LOG_INFO( "[Bench] In scene '%#', placed a ragdoll crowd of %# in a %#x%# grid (period %# frames).", pScene->getName(), ragdollCount, columns, rows, gv_benchRagdollPeriod );
     }
 
@@ -865,8 +864,7 @@ namespace sw
         }
 
         spawnLight( pScene, _settings._faceLightHalfExtent );
-        _bFaceFraming = SW_TRUE;
-        frameFaceCameras( pScene );
+        applyFraming( pScene, FramingMode::Face );
         SW_LOG_INFO( "[Bench] In scene '%#', spawned %# test heads (%#).", pScene->getName(), faceCount, _settings._faceMesh.c_str() );
     }
 
@@ -884,6 +882,8 @@ namespace sw
         const float32 distance = computeFaceCameraDistance( static_cast<uint32>( MathUtil::max( gv_benchFaces, 1 ) ) );
         for ( CameraComponent* pCamera : pScene->getObjectManager()->getCameraRegistry().getAll() )
         {
+            if ( isFramedCamera( pCamera ) == false )
+                continue;
             pCamera->setLocalPosition( float3{ 0.0f, _settings._faceHeight, -distance } );
             pCamera->lookAt( float3{ 0.0f, _settings._faceHeight, 0.0f } );
         }
@@ -906,6 +906,8 @@ namespace sw
         const float32 depth          = static_cast<float32>( ( characterCount + columns - 1 ) / columns - 1 ) * _settings._characterSpacing;
         for ( CameraComponent* pCamera : pScene->getObjectManager()->getCameraRegistry().getAll() )
         {
+            if ( isFramedCamera( pCamera ) == false )
+                continue;
             const float32 tanHalf  = MathUtil::tan( pCamera->getFieldOfViewY() * 0.5f );
             const float32 distance = ( tanHalf > MathUtil::kEpsilon ) ? ( halfExtent * _settings._characterFrameMargin / tanHalf ) : ( halfExtent * 3.0f );
             if ( depth <= 0.0f )
@@ -1202,6 +1204,8 @@ namespace sw
         // 그리므로(App::getSceneViewCamera), 게임 카메라만 옮기면 씬 뷰에서는 아무것도 안 보인다.
         for ( CameraComponent* pCam : pObjects->getCameraRegistry().getAll() )
         {
+            if ( isFramedCamera( pCam ) == false )
+                continue;
             frameOneCamera( pCam, side, spacing );
         }
     }
@@ -1238,16 +1242,96 @@ namespace sw
         Scene*        pScene        = pSceneManager != nullptr ? pSceneManager->getActiveScene() : nullptr;
         if ( pScene == nullptr )
             return;
-        if ( _bFaceFraming == SW_TRUE )
-            frameFaceCameras( pScene );
-        else if ( _listRigBody.empty() == false )
-            frameRigCameras( pScene );
-        else if ( _listRagdoll.empty() == false )
-            frameCharacterCameras( pScene, _ragdollHalfExtent );
-        else if ( _bCharacterFraming == SW_TRUE )
-            frameCharacterCameras( pScene, computeCharacterHalfExtent( static_cast<uint32>( MathUtil::max( gv_benchCharacters, 1 ) ) ) );
-        else
-            frameCameras( pScene, _benchGridSide, _settings._cubeSpacing );
+        applyFraming( pScene, _framingMode );
+    }
+
+    bool BenchScene::isFramedCamera( const CameraComponent* pCamera )
+    {
+        // 캡처 카메라(`spawnBenchViews`)는 자기 자리와 출력이 있어 맞춤이 옮기지 않습니다. 카메라를 옮기는 곳은 맞춤 한 곳입니다.
+        return pCamera != nullptr && pCamera->getRole() != CameraRole::Capture;
+    }
+
+    uint32 BenchScene::getCameraSerial( const Scene* pScene )
+    {
+        if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
+            return 0;
+        return pScene->getObjectManager()->getCameraRegistry().getRegistrySerial();
+    }
+
+    FramingInput BenchScene::captureFramingInput( const Scene* pScene ) const
+    {
+        // 모드마다 그 맞춤 함수가 읽는 값만 채웁니다(나머지는 0). 새 입력을 읽게 되면 FramingInput 에 필드를 더하고 여기서 채웁니다.
+        FramingInput input;
+        input.mode         = _framingMode;
+        input.cameraSerial = getCameraSerial( pScene );
+        switch ( _framingMode )
+        {
+            case FramingMode::Grid:
+            {
+                input.gridSide = _benchGridSide;
+                break;
+            }
+            case FramingMode::Character:
+            case FramingMode::Combat:
+            case FramingMode::Ragdoll:
+            {
+                // 줄 · 격자의 깊이를 gv_benchCharacters · gv_benchCharacterColumns 에서 계산합니다(frameCharacterCameras).
+                input.characters = gv_benchCharacters;
+                input.columns    = gv_benchCharacterColumns;
+                break;
+            }
+            case FramingMode::Face:
+            {
+                input.faces = gv_benchFaces;
+                break;
+            }
+            case FramingMode::Rig:
+            {
+                input.rigCount = static_cast<uint32>( _listRigBody.size() );
+                input.rigView  = getRigView();
+                break;
+            }
+        }
+        return input;
+    }
+
+    void BenchScene::applyFraming( Scene* pScene, FramingMode requested )
+    {
+        _framingMode = selectFramingMode( _framingMode, requested );
+        _framedInput = captureFramingInput( pScene );
+        switch ( _framingMode )
+        {
+            case FramingMode::Grid:
+            {
+                frameCameras( pScene, _benchGridSide, _settings._cubeSpacing );
+                break;
+            }
+            case FramingMode::Character:
+            {
+                frameCharacterCameras( pScene, computeCharacterHalfExtent( static_cast<uint32>( MathUtil::max( gv_benchCharacters, 1 ) ) ) );
+                break;
+            }
+            case FramingMode::Combat:
+            {
+                frameCharacterCameras( pScene, _settings._combatHalfExtent );
+                break;
+            }
+            case FramingMode::Ragdoll:
+            {
+                frameCharacterCameras( pScene, _ragdollHalfExtent );
+                break;
+            }
+            case FramingMode::Face:
+            {
+                frameFaceCameras( pScene );
+                break;
+            }
+            case FramingMode::Rig:
+            {
+                frameRigCameras( pScene );
+                break;
+            }
+        }
     }
 
     void BenchScene::update( float32 deltaTime )
@@ -1268,6 +1352,10 @@ namespace sw
         GameObjectManager* pObjects      = ( pScene != nullptr ) ? pScene->getObjectManager() : nullptr;
         if ( pObjects == nullptr )
             return;
+
+        // 시나리오가 `-gv_bench…` 를 도중에 바꾸면 카메라가 따라간다. 맞춤은 장면을 세울 때와 지연 뒤 두 번뿐이라 늦은 변경이 반영되지 않았다.
+        if ( captureFramingInput( pScene ) != _framedInput )
+            applyFraming( pScene, _framingMode );
 
         updateProbes( pObjects );
         updateMaterialChurn( pObjects );

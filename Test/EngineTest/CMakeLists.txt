@@ -24,6 +24,11 @@ else()
 	list(APPEND swEngineTestExcludeIncluding "OnlineLoadBot/")
 endif()
 
+# 템플릿 벤치(Games/Empty)는 새 게임을 시작할 때 지우는 폴더다 — 그 순수 구조(BenchFraming.h)를 쓰는 테스트는 폴더가 없으면 빠진다.
+if(NOT EXISTS "${CMAKE_SOURCE_DIR}/Source/Games/Empty/BenchFraming.h")
+	list(APPEND swEngineTestExcludeIncluding "Games/Empty/")
+endif()
+
 # 에디터 확장의 화면 없는 모델(Admin · Base · MeshModifiers · CharacterEditor · NetSimulation)은 ImGui 를 몰라 EngineTest 가 직접 컴파일한다 — 확장 DLL 은 링크하지 않는다.
 # 목록은 각 확장 폴더의 CMakeLists.txt 가 `sw_addEditorExtensionModel` 로 선언한다(여기 적지 않는다). 키트가 꺼진 확장의 소스는 올라오지 않는다.
 sw_getEditorExtensionModelSources(swEngineTestExtensionSource)
