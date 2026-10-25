@@ -1346,19 +1346,15 @@ namespace sw
             }
 
             /**
-             * @brief `MaxCount = 상수 이름` 의 상수를 선언에서 찾아 값을 `_maxCount` 에 넣습니다. 숫자로 적었으면(`_maxCountName` 이 비었으면) 할 일이 없습니다.
-             * @details 상한의 기준을 C++ 상수 하나로 둡니다. 생성기가 그 값을 읽으므로 코덱 · 정규 문자열(스키마 해시) · `PropertyMetadata::_maxCount` 가
-             *          모두 같은 수를 봅니다. 상수를 바꾸면 그 헤더를 읽는 생성물이 다시 만들어집니다(depfile).
-             *          이름 찾기는 C++ 를 좁게 따릅니다. 필드가 든 타입과 그 바깥 타입을 안쪽부터 보고, 그다음 바깥 네임스페이스 경로를 안쪽부터 붙여
-             *          번역 단위 맨 위에서 찾습니다(네임스페이스는 여러 블록에 걸쳐 열리므로 맨 위에서 모든 블록을 봅니다). 기반 클래스 · using 은 보지 않습니다.
-             *          찾지 못했거나 정수 상수가 아니거나 1 이상의 32 비트 값이 아니면 생성 오류입니다 — 상한을 조용히 빼면 그 필드는 코덱 없이 넘어갑니다.
+             * @brief 상수 이름(`kMaxSlotCount`, `LedgerConstant::kMaxMemoSize`)이 가리키는 변수 선언을 찾습니다. 없으면 null 커서입니다.
+             * @details `MaxCount` 와 `Min` · `Max` 가 같은 규칙으로 씁니다. 이름 찾기는 C++ 를 좁게 따릅니다. 필드가 든 타입과 그 바깥 타입을 안쪽부터 보고,
+             *          그다음 바깥 네임스페이스 경로를 안쪽부터 붙여 번역 단위 맨 위에서 찾습니다(네임스페이스는 여러 블록에 걸쳐 열리므로 맨 위에서 모든 블록을 봅니다).
+             *          기반 클래스 · using 은 보지 않습니다.
              */
-            [[nodiscard]] static bool resolveMaxCountName( const CXCursor memberCursor, ParsedPropertyInfo& prop, const string_view owner )
+            static CXCursor findNamedConstant( const CXCursor memberCursor, const string_view name )
             {
-                if ( prop._maxCountName.empty() )
-                    return true;
                 vector<string> listPart;
-                string_view    rest = prop._maxCountName;
+                string_view    rest = name;
                 for ( size_t separator = rest.find( "::" ); separator != string_view::npos; separator = rest.find( "::" ) )
                 {
                     listPart.emplace_back( rest.substr( 0, separator ) );
@@ -1393,6 +1389,20 @@ namespace sw
                     listPath.insert( listPath.end(), listPart.begin(), listPart.end() );
                     found = findConstantIn( translationUnit, listPath );
                 }
+                return found;
+            }
+
+            /**
+             * @brief `MaxCount = 상수 이름` 의 상수를 선언에서 찾아 값을 `_maxCount` 에 넣습니다. 숫자로 적었으면(`_maxCountName` 이 비었으면) 할 일이 없습니다.
+             * @details 상한의 기준을 C++ 상수 하나로 둡니다. 생성기가 그 값을 읽으므로 코덱 · 정규 문자열(스키마 해시) · `PropertyMetadata::_maxCount` 가
+             *          모두 같은 수를 봅니다. 상수를 바꾸면 그 헤더를 읽는 생성물이 다시 만들어집니다(depfile). 이름 찾기는 `findNamedConstant` 입니다.
+             *          찾지 못했거나 정수 상수가 아니거나 1 이상의 32 비트 값이 아니면 생성 오류입니다 — 상한을 조용히 빼면 그 필드는 코덱 없이 넘어갑니다.
+             */
+            [[nodiscard]] static bool resolveMaxCountName( const CXCursor memberCursor, ParsedPropertyInfo& prop, const string_view owner )
+            {
+                if ( prop._maxCountName.empty() )
+                    return true;
+                const CXCursor found = findNamedConstant( memberCursor, prop._maxCountName );
                 if ( clang_Cursor_isNull( found ) != 0 )
                 {
                     SW_LOG_ERROR( "ERROR: PROPERTY() '%#': MaxCount constant '%#' is not declared in this type or an enclosing scope", owner,
@@ -1428,6 +1438,105 @@ namespace sw
                 prop._maxCount     = static_cast<uint32>( value );
                 prop._bHasMaxCount = SW_TRUE;
                 return true;
+            }
+
+            /**
+             * @brief `Min` · `Max` 글의 상수 이름 항(`kMaxLevel`, `-LedgerConstant::kMaxX`)을 상수의 값으로 바꾸고 숫자 경계를 채웁니다.
+             * @details 필드 이름 항은 `_` 로 시작하므로(필드 이름 규칙) 그 밖의 이름이 상수입니다. 상수를 바꾸면 코덱 · 스키마 해시 · 인스펙터 범위가 함께 바뀝니다.
+             *          정수나 실수 상수만 받고, 못 찾거나 숫자가 아니면 생성 오류입니다 — 경계를 조용히 빼면 범위 검사가 사라집니다.
+             */
+            [[nodiscard]] static bool resolveRangeConstants( const CXCursor memberCursor, ParsedPropertyInfo& prop, const string_view owner )
+            {
+                struct Side
+                {
+                    ParsedRangeExpr* _pExpr;
+                    bool             _bMax;
+                    string_view      _label;
+                };
+                const Side listSide[] = {
+                    {&prop._minRangeExpr, false, "Min"},
+                    {&prop._maxRangeExpr,  true, "Max"}
+                };
+                for ( const Side& side : listSide )
+                {
+                    string      resolved;
+                    bool        bChanged = false;
+                    string_view rest     = side._pExpr->_text;
+                    for ( size_t comma = 0; comma != string_view::npos; )
+                    {
+                        comma                       = rest.find( ',' );
+                        const string_view term      = StringUtil::trim( rest.substr( 0, comma ) );
+                        rest                        = comma == string_view::npos ? string_view() : rest.substr( comma + 1 );
+                        const bool        bNegative = term.empty() == false && term.front() == '-';
+                        const string_view name      = bNegative ? StringUtil::trim( term.substr( 1 ) ) : term;
+                        float32           number{ 0.0f };
+                        const bool        bConstant = name.empty() == false && name.front() != '_' && StringUtil::parseFloat( term, number ) == false;
+                        if ( resolved.empty() == false )
+                            resolved += ", ";
+                        if ( bConstant == false )
+                        {
+                            resolved += term;
+                            continue;
+                        }
+                        const CXCursor found = findNamedConstant( memberCursor, name );
+                        if ( clang_Cursor_isNull( found ) != 0 )
+                        {
+                            SW_LOG_ERROR( "ERROR: PROPERTY() '%#': %# constant '%#' is not declared in this type or an enclosing scope", owner, side._label, name );
+                            return false;
+                        }
+                        float64            value  = 0.0;
+                        bool               bValid = false;
+                        const CXEvalResult result = clang_Cursor_Evaluate( found );
+                        if ( result != nullptr )
+                        {
+                            const CXEvalResultKind kind = clang_EvalResult_getKind( result );
+                            if ( kind == CXEval_Float )
+                            {
+                                value  = clang_EvalResult_getAsDouble( result );
+                                bValid = true;
+                            }
+                            else if ( kind == CXEval_Int )
+                            {
+                                value  = clang_EvalResult_isUnsignedInt( result ) != 0 ? static_cast<float64>( clang_EvalResult_getAsUnsigned( result ) )
+                                                                                       : static_cast<float64>( clang_EvalResult_getAsLongLong( result ) );
+                                bValid = true;
+                            }
+                            clang_EvalResult_dispose( result );
+                        }
+                        if ( bValid == false )
+                        {
+                            SW_LOG_ERROR( "ERROR: PROPERTY() '%#': %# constant '%#' must be an integer or floating-point constant", owner, side._label, name );
+                            return false;
+                        }
+                        utf8       buffer[40]{};
+                        const auto converted = std::to_chars( buffer, buffer + sizeof( buffer ), bNegative ? -value : value );
+                        resolved.append( buffer, converted.ptr );
+                        bChanged = true;
+                    }
+                    if ( bChanged == false )
+                        continue;
+                    side._pExpr->_text = resolved;
+                    float32 parsed{ 0.0f };
+                    if ( StringUtil::parseFloat( resolved, parsed ) == false )
+                        continue;
+                    if ( side._bMax )
+                    {
+                        prop._maxRange     = parsed;
+                        prop._bHasMaxRange = SW_TRUE;
+                    }
+                    else
+                    {
+                        prop._minRange     = parsed;
+                        prop._bHasMinRange = SW_TRUE;
+                    }
+                }
+                return true;
+            }
+
+            /** @brief 애노테이션이 상수 이름으로 적은 값(`MaxCount` · `Min` · `Max`)을 선언에서 찾아 값으로 풉니다. */
+            [[nodiscard]] static bool resolvePropertyConstants( const CXCursor memberCursor, ParsedPropertyInfo& prop, const string_view owner )
+            {
+                return resolveMaxCountName( memberCursor, prop, owner ) && resolveRangeConstants( memberCursor, prop, owner );
             }
 
             /** @brief 필드 선언에서 PROPERTY 메타를 수집합니다. 멀티캐스트 델리게이트면 이벤트로 수집합니다. */
@@ -1478,7 +1587,7 @@ namespace sw
                 }
 
                 const string owner = makeMemberOwnerName( collector._pType->_fullyQualifiedName, prop._memberName );
-                if ( applyAnnotation( spelling, prop, session, owner ) == false || resolveMaxCountName( cursor, prop, owner ) == false )
+                if ( applyAnnotation( spelling, prop, session, owner ) == false || resolvePropertyConstants( cursor, prop, owner ) == false )
                 {
                     collector._bHasError = SW_TRUE;
                     return;
@@ -1552,7 +1661,7 @@ namespace sw
                 // libclang 에는 없다 — 쓰지 말 것.
                 prop._typeName = session._typeNameMap.normalize( takeString( clang_getTypeSpelling( valueType ) ) );
 
-                if ( applyAnnotation( spelling, prop, session, owner ) == false || resolveMaxCountName( cursor, prop, owner ) == false )
+                if ( applyAnnotation( spelling, prop, session, owner ) == false || resolvePropertyConstants( cursor, prop, owner ) == false )
                 {
                     collector._bHasError = SW_TRUE;
                     return;

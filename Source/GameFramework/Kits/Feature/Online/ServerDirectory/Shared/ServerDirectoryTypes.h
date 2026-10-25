@@ -151,7 +151,7 @@ namespace sw
         string _region{};
         PROPERTY()
         uint32 _buildVersion{ 0 }; ///< 0이면 빌드 버전을 따지지 않는다
-        PROPERTY( Min = 1, Max = 64 )
+        PROPERTY( Min = 1, Max = ServerDirectoryLimit::kMaxSeatCount )
         int32 _seatCount{ 1 }; ///< 함께 들어갈 인원이다. 파티가 해당한다. 상한은 `ServerDirectoryLimit::kMaxSeatCount` 와 같다
     };
 } // namespace sw

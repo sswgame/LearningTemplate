@@ -138,7 +138,7 @@ namespace sw
         REFLECT_BODY();
         PROPERTY( MaxCount = EconomyProtocol::kMaxCursorSize )
         string _cursor{}; ///< 앞 응답의 `_nextCursor` 이다. 처음에는 빈 문자열이다
-        PROPERTY( Min = 1, Max = 100 )
+        PROPERTY( Min = 1, Max = EconomyProtocol::kMaxHistoryCount )
         int32 _maxCount{ 20 };
     };
 } // namespace sw
@@ -215,7 +215,7 @@ namespace sw
         static constexpr int32           kMaxProductIDSize      = 64;
         static constexpr int32           kMaxReceiptPayloadSize = 16384; ///< 영수증 한 장의 크기이다. Apple JWS 는 수 KB 이다
         static constexpr int32           kMaxCursorSize         = 512;
-        static constexpr int32           kMaxHistoryCount       = 100; ///< 내역 응답 한 번의 항목 수이며 요청의 `_maxCount` 상한(`Max = 100`, 범위 키는 상수를 받지 못한다)과 같은 값이다
+        static constexpr int32           kMaxHistoryCount       = 100; ///< 내역 응답 한 번의 항목 수이며 요청의 `_maxCount` 상한(`Max`)이기도 하다
 
         /** @brief 공통 오류 코드(`OnlineError`)를 결과로 바꿉니다. 로그인 없음, 손상된 본문, 충돌은 각각 대응하는 결과로, 나머지(전송, 저장소, 시한)는 Unavailable 로 바꿉니다. */
         static EconomyResult fromErrorCode( uint16 errorCode );

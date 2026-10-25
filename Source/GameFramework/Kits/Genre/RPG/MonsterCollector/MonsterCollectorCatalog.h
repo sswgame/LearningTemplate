@@ -85,7 +85,7 @@ namespace sw
 
         PROPERTY( Name = "move", Required )
         hashed_string _moveID{};
-        PROPERTY( Min = 1, Max = 100 )
+        PROPERTY( Min = 1, Max = MonsterCollectorCatalog::kMaxLevel )
         int32 _level{ 1 };
     };
 } // namespace sw
@@ -237,9 +237,9 @@ namespace sw
 
         PROPERTY( Name = "species", Required )
         hashed_string _speciesID{};
-        PROPERTY( Name = "min", Required, Min = 1, Max = 100 )
+        PROPERTY( Name = "min", Required, Min = 1, Max = MonsterCollectorCatalog::kMaxLevel )
         int32 _minLevel{ 2 };
-        PROPERTY( Name = "max", Required, Min = "_minLevel", Max = 100 )
+        PROPERTY( Name = "max", Required, Min = "_minLevel", Max = MonsterCollectorCatalog::kMaxLevel )
         int32 _maxLevel{ 2 };
         PROPERTY( Min = 0 )
         int32 _weight{ 1 };

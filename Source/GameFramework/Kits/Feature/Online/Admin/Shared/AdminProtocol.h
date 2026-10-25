@@ -179,7 +179,7 @@ namespace sw
         int64 _startMs{ 0 };
         PROPERTY()
         int64 _endMs{ 0 };
-        PROPERTY( Min = 1, Max = 100 )
+        PROPERTY( Min = 1, Max = AdminProtocol::kMaxListCount )
         int32 _maxCount{ 20 }; ///< 상한은 `AdminProtocol::kMaxListCount` 와 같다
         PROPERTY()
         ServiceSanctionKind _sanctionKind{ ServiceSanctionKind::ChatMute };

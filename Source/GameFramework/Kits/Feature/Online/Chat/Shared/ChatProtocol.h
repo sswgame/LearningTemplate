@@ -125,7 +125,7 @@ namespace sw
         string _channelID{}; ///< 채널 id 이거나 귓속말 기록 키이다
         PROPERTY( MaxCount = ChatProtocol::kMaxCursorSize )
         string _cursor{}; ///< 상한은 `ChatProtocol::kMaxCursorSize` 와 같다
-        PROPERTY( Min = 0, Max = 50 )
+        PROPERTY( Min = 0, Max = ChatLimit::kMaxHistoryPage )
         int32 _maxCount{ 0 }; ///< 상한은 `ChatLimit::kMaxHistoryPage` 와 같다
     };
 } // namespace sw

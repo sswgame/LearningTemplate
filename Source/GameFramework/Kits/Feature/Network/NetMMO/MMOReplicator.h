@@ -30,6 +30,7 @@
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
+#include "Core/Network/Connection/NetConnection.h"
 #include "Core/Network/Message/NetMessage.h"
 #include "Core/Network/Replication/NetInterestGrid.h"
 #include "Core/Network/Replication/NetParallel.h"
@@ -117,7 +118,7 @@ namespace sw
     /**
      * @brief 복제 설정입니다. 범위는 칸의 `PROPERTY( Min · Max )` 이고, 벗어난 값은 `MMOReplicator::initialize` 가 오류로 거절합니다(`ConfigRangeUtil`).
      * @details 나가는 반경 >= 들어오는 반경은 칸 사이의 관계라 `initialize` 가 따로 본다. 예전에는 작은 나가는 반경을 조용히 들어오는 반경으로 올렸다(폴백 금지 원칙).
-     *          예산의 `Max` 는 리터럴만 받으므로 `NetConnection::kMaxSingleMessageSize` 와 같은 값을 적는다. 경계 값 테스트(`MMORefusesOutOfRangeSettings`)가 둘이 어긋나지 않는지 본다.
+     *          예산의 `Max` 는 `NetConnection::kMaxSingleMessageSize` 상수 이름이라 연결의 한 메시지 상한과 어긋나지 않는다.
      */
     REFLECT()
     struct SW_KIT_API MMOReplicatorConfig
@@ -129,7 +130,7 @@ namespace sw
         float32 _leaveRadius{ 70.0f }; ///< 이 밖으로 나가야 보이지 않게 된다. `_enterRadius` 이상이어야 한다(히스테리시스)
         PROPERTY( Min = 0 )
         float32 _changedBoost{ 4.0f }; ///< 상태가 바뀐 엔티티의 우선도 배율
-        PROPERTY( Min = 1, Max = 1024 )
+        PROPERTY( Min = 1, Max = NetConnection::kMaxSingleMessageSize )
         int32 _updateBudgetBytes{ 600 }; ///< 관찰자 한 명당 틱마다 보내는 갱신 메시지 바이트(1 ~ `NetConnection::kMaxSingleMessageSize`). 종류 바이트와 틱을 포함한다. 연결 상한이 더 작으면 그 값을 쓴다
         PROPERTY( Min = 1 )
         int32 _maxEnterPerTick{ 32 }; ///< 한 틱에 새로 보이게 하는 엔티티 수의 상한. 텔레포트 직후에 몰리지 않게 하며, 신뢰 메시지 하나에 묶고 64 KB를 넘는 나머지는 다음 틱에 보낸다

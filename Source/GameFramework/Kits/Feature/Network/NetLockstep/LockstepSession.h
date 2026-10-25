@@ -47,14 +47,13 @@ namespace sw
 {
     /**
      * @brief 락스텝 설정입니다. 범위는 칸의 `PROPERTY( Min · Max )` 이고, 벗어난 값은 `LockstepSession::initialize` 가 오류로 거절합니다(`ConfigRangeUtil`).
-     * @details 예전에는 지연을 범위 안으로 조용히 맞췄다(폴백 금지 원칙). `Max` 는 리터럴만 받으므로 `LockstepSession::kMaxInputDelay` 와 같은 값을 적는다.
-     *          경계 값 테스트(`LockstepRefusesOutOfRangeSettings`)가 둘이 어긋나지 않는지 본다.
+     * @details 예전에는 지연을 범위 안으로 조용히 맞췄다(폴백 금지 원칙). `Max` 는 `LockstepSession::kMaxInputDelay` 상수 이름이라 세션의 지연 상한과 어긋나지 않는다.
      */
     REFLECT()
     struct SW_KIT_API LockstepConfig
     {
         REFLECT_BODY();
-        PROPERTY( Min = 0, Max = 64 )
+        PROPERTY( Min = 0, Max = LockstepSession::kMaxInputDelay )
         int32 _inputDelay{ 2 }; ///< 내 입력을 이만큼 뒤 틱에 예약한다(0 ~ `LockstepSession::kMaxInputDelay`). 그동안 입력이 망을 건넌다
     };
 } // namespace sw

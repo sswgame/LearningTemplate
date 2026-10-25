@@ -76,7 +76,7 @@ namespace sw
         uint32 _seasonID{ 0 }; ///< kGetSeasonResult
         PROPERTY( Min = 0 )
         int32 _offset{ 0 }; ///< kGetTop
-        PROPERTY( Min = 0, Max = 100 )
+        PROPERTY( Min = 0, Max = LeaderboardLimit::kMaxPage )
         int32 _count{ 0 }; ///< kGetTop 에서는 개수이고 kGetAround 에서는 반경이다. 상한은 `LeaderboardLimit::kMaxPage` 와 같다
         PROPERTY( MaxCount = LeaderboardLimit::kMaxScoresOfCount )
         vector<AccountID> _listAccountID{}; ///< kGetScoresOf 의 계정들이다. 클라이언트가 친구 목록에 자기를 더해 보낸다. 상한은 `LeaderboardLimit::kMaxScoresOfCount` 와 같다

@@ -49,8 +49,7 @@ namespace sw
 {
     /**
      * @brief 모드 하나의 규칙입니다. 게임이 등록하는 데이터입니다. 범위는 칸의 `PROPERTY( Min · Max )` 이고, 벗어난 모드는 `MatchMaker::initialize` 가 오류로 거절합니다(`ConfigRangeUtil`).
-     * @details 예전에는 팀 수와 팀 인원을 조용히 1 ~ 16 으로 맞췄다(폴백 금지 원칙). `Max` 는 리터럴만 받으므로 `MatchmakingLimit` 과 같은 값을 적는다.
-     *          경계 값 테스트(`MatchMakerTest.RefusesOutOfRangeMode`)가 둘이 어긋나지 않는지 본다.
+     * @details 예전에는 팀 수와 팀 인원을 조용히 1 ~ 16 으로 맞췄다(폴백 금지 원칙). `Max` 는 `MatchmakingLimit` 상수 이름이라 상한과 어긋나지 않는다.
      */
     REFLECT()
     struct SW_KIT_API MatchModeDefinition
@@ -64,9 +63,9 @@ namespace sw
         int64 _regionRelaxMs{ 30000 }; ///< 앵커나 후보가 이만큼 기다렸으면 지역을 따지지 않는다
         PROPERTY()
         int64 _maxWaitMs{ 120000 }; ///< 넘으면 티켓을 뺀다. 매칭에 실패한 것이며 다시 줄을 서야 한다
-        PROPERTY( Min = 1, Max = 16 )
+        PROPERTY( Min = 1, Max = MatchmakingLimit::kMaxTeamCount )
         int32 _teamCount{ 2 }; ///< 1 ~ `MatchmakingLimit::kMaxTeamCount`
-        PROPERTY( Min = 1, Max = 16 )
+        PROPERTY( Min = 1, Max = MatchmakingLimit::kMaxTeamSize )
         int32 _teamSize{ 3 }; ///< 1 ~ `MatchmakingLimit::kMaxTeamSize`
         PROPERTY()
         int32 _baseRatingWindow{ 100 }; ///< 실력 허용 범위는 기본값에 초당 넓힘을 기다린 초만큼 곱해 더한 값이며 상한이 있다
@@ -240,7 +239,7 @@ namespace sw
         uint64 _partyID{ 0 };
         PROPERTY()
         uint64 _queuedTicketID{ 0 }; ///< 줄을 서 있으면 그 티켓이다. 낸 서버 id 를 32비트 왼쪽으로 민 값에 순번을 합친 것이다
-        PROPERTY( Min = 0, Max = 8 )
+        PROPERTY( Min = 0, Max = PartyLobbyLimit::kMaxPartySize )
         int32 _maxMemberCount{ 4 };
 
         AccountID getLeaderID() const { return _listMemberID.empty() ? kInvalidAccountID : _listMemberID.front(); }
@@ -313,7 +312,7 @@ namespace sw
         uint64 _lobbyID{ 0 };
         PROPERTY()
         int64 _createdMs{ 0 };
-        PROPERTY( Min = 0, Max = 32 )
+        PROPERTY( Min = 0, Max = PartyLobbyLimit::kMaxLobbySize )
         int32 _maxMemberCount{ 8 };
         PROPERTY()
         LobbyState _state{ LobbyState::Open };

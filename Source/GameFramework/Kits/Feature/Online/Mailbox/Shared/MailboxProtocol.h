@@ -123,7 +123,7 @@ namespace sw
         string _mailKey{}; ///< 상한은 `OnlineLimit::kMaxKeySize` 와 같다
         PROPERTY( MaxCount = OnlineLimit::kMaxKeySize )
         string _cursor{}; ///< List 에서 쓴다. 앞 응답의 `_nextCursor` 이며 처음에는 빈 문자열이다
-        PROPERTY( Min = 1, Max = 50 )
+        PROPERTY( Min = 1, Max = MailboxProtocol::kMaxListCount )
         int32 _maxCount{ 20 }; ///< 상한은 `MailboxProtocol::kMaxListCount` 와 같다
     };
 } // namespace sw
