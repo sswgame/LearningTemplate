@@ -93,24 +93,19 @@ namespace sw::editor
 
             static void runFrame( EditorContext& /*context*/ )
             {
-                EditorReflectionProbeBakeSession* pSession = editor::findSubsystem<EditorReflectionProbeBakeSession>();
-                if ( pSession != nullptr )
-                    pSession->update();
+                editor::getSubsystem<EditorReflectionProbeBakeSession>().update(); // 필수 - 에디터 서브시스템이다
             }
 
             [[nodiscard]] static bool readBakeRunCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const EditorReflectionProbeBakeSession* pSession      = editor::findSubsystem<EditorReflectionProbeBakeSession>();
-                const SceneManager*                     pSceneManager = editor::findSubsystem<SceneManager>();
-                const bool                              bReadable     = pSession != nullptr && pSceneManager != nullptr;
-                outValue                                              = static_cast<float64>( bReadable ? pSession->getFinishedRunCount( pSceneManager->getSceneGeneration() ) : 0u );
+                const EditorReflectionProbeBakeSession& session = editor::getSubsystem<EditorReflectionProbeBakeSession>();
+                outValue                                        = static_cast<float64>( session.getFinishedRunCount( editor::getSubsystem<SceneManager>().getSceneGeneration() ) );
                 return true;
             }
 
             [[nodiscard]] static bool readBakeRunning( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const EditorReflectionProbeBakeSession* pSession = editor::findSubsystem<EditorReflectionProbeBakeSession>();
-                outValue                                         = ( pSession != nullptr && pSession->isRunning() ) ? 1.0 : 0.0;
+                outValue = editor::getSubsystem<EditorReflectionProbeBakeSession>().isRunning() ? 1.0 : 0.0;
                 return true;
             }
 
@@ -154,12 +149,16 @@ namespace sw::editor
 
     void EditorReflectionProbeBakeSession::start()
     {
-        Scene*             pScene        = editor::getActiveScene();
-        GameObjectManager* pManager      = editor::getActiveObjectManager();
-        SceneManager*      pSceneManager = editor::findSubsystem<SceneManager>();
-        const bool         bNoScene      = pScene == nullptr || pManager == nullptr || pSceneManager == nullptr || EditorContext::get() == nullptr;
-        if ( bNoScene || _run.isRunning() )
+        Scene*             pScene       = editor::getActiveScene();
+        GameObjectManager* pManager     = editor::getActiveObjectManager();
+        SceneManager&      sceneManager = editor::getSubsystem<SceneManager>();
+        if ( pScene == nullptr || pManager == nullptr )
+        {
+            SW_LOG_WARNING( "Reflection probe bake refused: there is no active scene" );
             return;
+        }
+        if ( _run.isRunning() )
+            return; // 이미 도는 중 - 명령이 꺼져 있어야 하는 경우라 조용히 둔다
         vector<ReflectionProbeComponent*> listProbe;
         EditorReflectionProbeBakeSessionInternal::collectProbes( *pManager, listProbe );
         _listObjectID.clear();
@@ -172,7 +171,7 @@ namespace sw::editor
         _bakedCount     = 0;
         _lastError.clear();
         _bDeferFirstSlice = true;
-        _run.begin( pSceneManager->getSceneGeneration() );
+        _run.begin( sceneManager.getSceneGeneration() );
         if ( _listObjectID.empty() )
             finish( false );
     }
@@ -224,14 +223,14 @@ namespace sw::editor
             reportFailure( "a reflection probe was removed before it was baked" );
             return;
         }
-        EditorContext* pContext = EditorContext::get();
-        IRHIDevice*    pDevice  = pContext != nullptr ? pContext->getSubsystem<EditorRenderViews>().getRHIDevice() : nullptr;
+        IRHIDevice* pDevice = editor::getSubsystem<EditorRenderViews>().getRHIDevice(); // 뷰 서브시스템은 필수, 장치는 헤드리스에서 없을 수 있다
         if ( pDevice == nullptr )
         {
             reportFailure( "no graphics device" );
             return;
         }
         // 프로브 하나씩 굽는다 — 굽기마다 렌더 스레드를 비우고 이 스레드가 컨텍스트를 잡았다 놓으므로 프레임 사이에 컨텍스트를 쥐고 있지 않는다.
+        // 선택 조회(②): 렌더 스레드 없이 동기로 굽는 구성이 있어 `bakeProbes` 가 nullptr 렌더 스레드를 받는다.
         RenderThreadSubsystem*            pRenderThreadSubsystem = editor::findSubsystem<RenderThreadSubsystem>();
         vector<ReflectionProbeComponent*> listProbe;
         listProbe.push_back( pProbe );

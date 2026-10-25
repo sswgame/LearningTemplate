@@ -169,6 +169,7 @@ namespace sw::editor
             return;
         }
 
+        // 선택 조회(②): 스택이나 씬 관리자가 없는 곳은 종료 뒤 · 테스트 · 도구뿐이다. 기록은 못 남겨도 dirty 는 표시한다.
         CommandStack* pStack        = EditorTransactionInternal::getCommandStack();
         SceneManager* pSceneManager = editor::findSubsystem<SceneManager>();
         if ( pStack == nullptr || pSceneManager == nullptr )
@@ -199,6 +200,7 @@ namespace sw::editor
             return;
         }
 
+        // 선택 조회(②): `recordModify` 와 같다.
         CommandStack* pStack = EditorTransactionInternal::getCommandStack();
         if ( pStack == nullptr || pSceneManager == nullptr )
         {
@@ -221,9 +223,13 @@ namespace sw::editor
     void EditorTransaction::push( Delegate<void()> undo, Delegate<void()> redo, string_view label,
                                   string_view coalesceKey )
     {
+        // 선택 조회(②): 스택이 없는 곳은 종료 뒤 · 테스트 · 도구뿐이다. 되돌리기 기록은 남기지 못하지만 편집 자체는 이미 끝났으므로 로그만 남기고 넘어간다.
         CommandStack* pStack = editor::findSubsystem<CommandStack>();
         if ( pStack == nullptr )
+        {
+            SW_LOG_TRACE( "No CommandStack - the undo record '%#' is not kept", string{ label }.c_str() );
             return;
+        }
 
         CommandStack::Command cmd;
         cmd._label = string{ label };

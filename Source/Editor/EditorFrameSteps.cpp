@@ -66,9 +66,7 @@ namespace sw::editor
                 SW_EDITOR_PROFILE_SCOPE( "GT.Editor.step.panels" );
                 context.getSubsystem<EditorPanelManager>().drawOpenPanels();
                 // 패널이 처음 나타나며 가져간 포커스보다 나중에 실행해야 한다
-                EditorDockLayout* pDockLayout = context.findSubsystem<EditorDockLayout>();
-                if ( pDockLayout != nullptr )
-                    pDockLayout->updateDefaultTabSelection();
+                context.getSubsystem<EditorDockLayout>().updateDefaultTabSelection(); // 필수 - 아래 패널 관리자와 같은 컨텍스트 서브시스템이다
                 context.getSubsystem<EditorPopupManager>().drawOpenPopups();
                 EditorNotificationManager& notificationManager = context.getSubsystem<EditorNotificationManager>();
                 notificationManager.update( ImGui::GetIO().DeltaTime );
@@ -86,15 +84,16 @@ namespace sw::editor
             static void runWindowTitle( EditorContext& context )
             {
                 SW_EDITOR_PROFILE_SCOPE( "GT.Editor.step.windowTitle" );
-                MainWindowSubsystem*      pWindowHost   = editor::findSubsystem<MainWindowSubsystem>();
-                IWindow*                  pWindow       = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
-                const PackEngineSettings* pPackSettings = editor::findSubsystem<const PackEngineSettings>();
-                if ( pWindow == nullptr || pPackSettings == nullptr )
+                // 선택(②): 창 호스트 · 창은 헤드리스 실행에 없다. 없으면 제목을 쓸 곳이 없다.
+                MainWindowSubsystem* pWindowHost = editor::findSubsystem<MainWindowSubsystem>();
+                IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+                if ( pWindow == nullptr )
                     return;
-                const Scene* pScene    = editor::getActiveScene();
-                const string scenePath = pScene == nullptr ? string{} : ( pScene->getSourcePath().empty() ? pScene->getName() : pScene->getSourcePath() );
-                const bool   bDirty    = context.getSubsystem<EditorWorkspace>().isSceneDirty() || context.getSubsystem<EditorPanelManager>().countDirtyDocuments() > 0;
-                const utf8*  pPlayState{ nullptr };
+                const PackEngineSettings* pPackSettings = &editor::getSubsystem<const PackEngineSettings>(); // 필수 - 창이 있으면 팩 설정도 있다
+                const Scene*              pScene        = editor::getActiveScene();
+                const string              scenePath     = pScene == nullptr ? string{} : ( pScene->getSourcePath().empty() ? pScene->getName() : pScene->getSourcePath() );
+                const bool                bDirty        = context.getSubsystem<EditorWorkspace>().isSceneDirty() || context.getSubsystem<EditorPanelManager>().countDirtyDocuments() > 0;
+                const utf8*               pPlayState{ nullptr };
                 if ( EditorPlaySession::isStopped() == false )
                     pPlayState = EditorPlaySession::isSimulating() ? "Simulating" : ( EditorPlaySession::isPaused() ? "Paused" : "Playing" );
                 const string title = EditorWindowTitleUtil::makeTitle( pPackSettings->_windowTitle, scenePath, bDirty, pPlayState );

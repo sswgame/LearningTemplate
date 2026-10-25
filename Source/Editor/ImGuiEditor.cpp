@@ -101,8 +101,7 @@ namespace sw::editor
             /** @brief 무인 자동화가 사람의 장치 입력을 막는 중이면 true 입니다. 이때 플랫폼 백엔드가 ImGui 에 넣는 실제 커서와 키를 지웁니다. */
             static bool isOsDeviceInputBlocked()
             {
-                const InputManager* pInput = editor::findSubsystem<InputManager>();
-                return pInput != nullptr && pInput->isOsDeviceInputBlocked();
+                return editor::getSubsystem<const InputManager>().isOsDeviceInputBlocked(); // 필수 - 에디터 프레임마다 묻는다
             }
 
             /** @brief 뷰의 렌더 타깃 핸들 · 크기 · 창 안 자리를 호스트 형식으로 씁니다. @p pView 가 없으면 빈 값이며, 이번 프레임에 그 뷰를 그리지 않았다는 뜻입니다. */
@@ -140,11 +139,14 @@ namespace sw::editor
                 shared_ptr<RenderPassAsset>  pPass   = args.get<shared_ptr<RenderPassAsset>>( 0 );
                 shared_ptr<SplashLoadResult> pResult = args.get<shared_ptr<SplashLoadResult>>( 1 );
                 // `findSubsystem<T>()` 는 nullptr 을 반환할 수 있다. 이 둘은 워커 스레드에서 도는 스플래시 로드라, 서비스 연결이 아직
-                // 없거나 이미 끊긴 시점에 걸리면 조용히 크래시한다. 그때는 결과가 false 로 남아 기동이 멈춘다.
+                // 없거나 이미 끊긴 시점에 걸리면 조용히 크래시한다. 그때는 결과가 false 로 남아 기동이 멈춘다(워커라 `getSubsystem` 의 assert 대신 오류 로그로 알린다).
                 const EngineDefaultAssets* pEngineDefaultAssets = editor::findSubsystem<const EngineDefaultAssets>();
                 const bool                 bNotReady            = pPass == nullptr || pResult == nullptr || pEngineDefaultAssets == nullptr;
                 if ( bNotReady )
+                {
+                    SW_LOG_ERROR( "Splash: DefaultRenderPass is not loaded - an argument or the EngineDefaultAssets service is missing" );
                     return;
+                }
                 SW_LOG_TRACE( "Splash: reading DefaultRenderPass.xml" );
                 pResult->_bRenderPassLoaded = pPass->loadFromXMLFile( pEngineDefaultAssets->_defaultRenderPass.get() );
                 if ( pResult->_bRenderPassLoaded == false )
@@ -158,7 +160,10 @@ namespace sw::editor
                 const EngineDefaultAssets*      pEngineDefaultAssets = editor::findSubsystem<const EngineDefaultAssets>();
                 const bool                      bNotReady            = pPipeline == nullptr || pResult == nullptr || pEngineDefaultAssets == nullptr;
                 if ( bNotReady )
+                {
+                    SW_LOG_ERROR( "Splash: ForwardPipeline is not loaded - an argument or the EngineDefaultAssets service is missing" );
                     return;
+                }
                 SW_LOG_TRACE( "Splash: reading ForwardPipeline.xml" );
                 pResult->_bForwardPipelineLoaded = pPipeline->loadFromXMLFile( pEngineDefaultAssets->_defaultForwardPipeline.get() );
                 if ( pResult->_bForwardPipelineLoaded == false )
@@ -168,6 +173,7 @@ namespace sw::editor
             /** @brief 인스턴스가 종료하기 전에 선택 · 미저장 표시를 엔진(`EditSessionState`)에 맡깁니다. 다음 인스턴스가 `resumeEditSession` 으로 찾아갑니다. */
             static void storeEditSession( EditorContext& context )
             {
+                // 선택 조회(②): 종료 경로라 호스트가 서비스 결합을 먼저 풀었을 수 있다. 그때는 다음 인스턴스가 이어받을 상태가 없다.
                 EditSessionState* pSession      = editor::findSubsystem<EditSessionState>();
                 SceneManager*     pSceneManager = editor::findSubsystem<SceneManager>();
                 if ( pSession == nullptr || pSceneManager == nullptr )
@@ -193,16 +199,13 @@ namespace sw::editor
              */
             static bool resumeEditSession( EditorContext& context )
             {
-                EditSessionState* pSession      = editor::findSubsystem<EditSessionState>();
-                SceneManager*     pSceneManager = editor::findSubsystem<SceneManager>();
-                if ( pSession == nullptr || pSceneManager == nullptr )
-                    return false;
-                const bool       bResumed   = pSession->hasSnapshot();
-                const uint64     generation = pSceneManager->getSceneGeneration();
-                EditorWorkspace& workspace  = context.getSubsystem<EditorWorkspace>();
+                EditSessionState& session    = editor::getSubsystem<EditSessionState>(); // 필수 - 기동 경로다
+                const bool        bResumed   = session.hasSnapshot();
+                const uint64      generation = editor::getSubsystem<SceneManager>().getSceneGeneration();
+                EditorWorkspace&  workspace  = context.getSubsystem<EditorWorkspace>();
                 workspace.setObservedSceneGeneration( generation );
                 EditSessionState::Snapshot snapshot{};
-                if ( pSession->take( generation, snapshot ) == false )
+                if ( session.take( generation, snapshot ) == false )
                     return bResumed;
                 if ( snapshot._bSceneDirty )
                     workspace.markSceneDirty();
@@ -229,12 +232,17 @@ namespace sw::editor
              */
             static void releaseModuleUndoCommands()
             {
+                // 선택 조회(②): 종료 경로라 스택이 먼저 풀렸을 수 있다. 없으면 이 모듈이 넣은 명령도 없다.
                 CommandStack* pCommandStack = editor::findSubsystem<CommandStack>();
                 const void*   pBegin{ nullptr };
                 const void*   pEnd{ nullptr };
-                if ( pCommandStack == nullptr ||
-                     ModuleImageUtil::findLoadedImageRange( reinterpret_cast<const void*>( &ImGuiEditorInternal::releaseModuleUndoCommands ), pBegin, pEnd ) == false )
+                if ( pCommandStack == nullptr )
                     return;
+                if ( ModuleImageUtil::findLoadedImageRange( reinterpret_cast<const void*>( &ImGuiEditorInternal::releaseModuleUndoCommands ), pBegin, pEnd ) == false )
+                {
+                    SW_LOG_ERROR( "Could not find the editor module image range - its undo commands stay on the stack" );
+                    return;
+                }
                 pCommandStack->setObjectEditListener( {} );
                 const uint32 droppedCount = pCommandStack->removeCodeWithin( pBegin, pEnd );
                 if ( droppedCount > 0 )
@@ -667,9 +675,7 @@ namespace sw::editor
             SW_LOG_TRACE( "No shortcut overrides yet - default shortcuts" );
         EditorCommandGUI::registerDefaults();
         // 리로드 전에 기록한 오브젝트 편집을 되돌려도 이 모듈이 선택과 씬 dirty 상태를 맞춘다.
-        CommandStack* pCommandStack = editor::findSubsystem<CommandStack>();
-        if ( pCommandStack != nullptr )
-            EditorTransaction::bindObjectEditListener( *pCommandStack );
+        EditorTransaction::bindObjectEditListener( editor::getSubsystem<CommandStack>() ); // 필수 - 기동 경로다
         EditorExtensionRegistryDump::dumpIfRequested();
         _dockLayout.loadPanelVisibility();
         const bool bResumedSession = ImGuiEditorInternal::resumeEditSession( *_editorContext );
@@ -703,6 +709,7 @@ namespace sw::editor
     {
         // Undo 스택에서는 이 모듈의 코드를 가진 명령과 편집 리스너만 제거한다. 오브젝트 편집은 엔진 데이터 명령이므로 남는다.
         // 호스트가 이미지를 내리지 않고 인스턴스만 다시 만들면(백엔드 교체) 모듈 명령도 남긴다 — 다음 인스턴스가 되돌릴 수 있다.
+        // 선택 조회(②): 종료 경로 - 서비스 결합이 먼저 풀렸으면 모듈 이미지를 유지하는 표시도 없다(내리는 쪽으로 간주).
         const EditSessionState* pEditSession = editor::findSubsystem<EditSessionState>();
         if ( pEditSession == nullptr || pEditSession->isModuleImageKept() == false )
             ImGuiEditorInternal::releaseModuleUndoCommands();
@@ -727,15 +734,14 @@ namespace sw::editor
 
     void ImGuiEditor::shutdownWindowCloseQuery()
     {
+        // 선택 조회(②): 종료 경로 - 창이 이미 닫혔으면 되돌릴 핸들러도 제목도 없다.
         MainWindowSubsystem* pWindowHost   = editor::findSubsystem<MainWindowSubsystem>();
         IWindow*             pActiveWindow = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
         if ( pActiveWindow == nullptr )
             return;
         pActiveWindow->setCloseQueryHandler( {} );
         // 에디터를 종료하면 창 제목은 팩 설정 그대로 돌아간다. 창 제목의 출처는 팩 설정(`<Engine _windowTitle>`) 하나뿐이다.
-        const PackEngineSettings* pPackSettings = editor::findSubsystem<const PackEngineSettings>();
-        if ( pPackSettings != nullptr )
-            pActiveWindow->setTitle( pPackSettings->_windowTitle.c_str() );
+        pActiveWindow->setTitle( editor::getSubsystem<const PackEngineSettings>()._windowTitle.c_str() ); // 창이 살아 있으면 팩 설정도 있다
     }
 
     void ImGuiEditor::shutdown()

@@ -32,6 +32,8 @@ namespace sw::editor
     {
         /** @brief App 이 넘긴 호스트 서비스 범위입니다(`bindEditorService`). 없으면 nullptr 입니다. */
         SW_EDITOR_API const ISubsystemLocator* findHostServices();
+        /** @brief 필수 서비스가 없을 때 오류 로그를 남기고 `SW_ASSERT` 로 멈춥니다(`getSubsystem<T>` 가 부릅니다). @p pLookup 은 어느 조회였는지 알리는 문자열입니다. */
+        SW_EDITOR_API void reportMissingRequiredService( const utf8* pLookup );
     } // namespace internal
 
     /**
@@ -85,12 +87,17 @@ namespace sw::editor
         return locateSubsystem<T>( internal::findHostServices() );
     }
 
-    /** @brief 반드시 있어야 하는 에디터 · 호스트 서비스 @p T 입니다(`findSubsystem<T>()` 와 같은 순서). 없으면 부른 쪽의 잘못이라 `SW_ASSERT` 로 멈춥니다. */
+    /**
+     * @brief 반드시 있어야 하는 에디터 · 호스트 서비스 @p T 입니다(`findSubsystem<T>()` 와 같은 순서). 없으면 부른 쪽의 잘못이라 오류 로그와 `SW_ASSERT` 로 멈춥니다.
+     * @details 에디터가 떠 있으면 늘 있는 서비스(워크스페이스, 씬 관리자, 알림 관리자…)는 `findSubsystem` 으로 받아 nullptr 에서 조용히 돌아가지 말고 이것으로 받는다.
+     *          테스트나 도구에서 정말 없을 수 있는 것만 `findSubsystem` 으로 받고, 그 자리에 왜 선택인지 한 줄 적는다.
+     */
     template <typename T>
     T& getSubsystem()
     {
         T* pFound = findSubsystem<T>();
-        SW_ASSERT( pFound != nullptr );
+        if ( pFound == nullptr )
+            internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
         return *pFound;
     }
 

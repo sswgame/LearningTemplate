@@ -20,9 +20,7 @@ namespace sw::editor
         {
             static void runBake()
             {
-                EditorReflectionProbeBakeSession* pSession = editor::findSubsystem<EditorReflectionProbeBakeSession>();
-                if ( pSession != nullptr )
-                    pSession->start();
+                editor::getSubsystem<EditorReflectionProbeBakeSession>().start(); // 필수 - 에디터 서브시스템이다
             }
 
             /** @brief 편집 상태에서만 켠다 — 플레이 중에 구우면 플레이가 움직인 오브젝트를 찍는다. 편집 허용 답(플레이 중 · 베이크 중)은 레지스트리가 함께 묻는다(`EditorCommandEdit::Scene`). */
