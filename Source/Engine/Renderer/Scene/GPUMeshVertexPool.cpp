@@ -50,7 +50,7 @@ namespace sw
         const bool bChanged      = sweepUnlistedMeshes( retireStamp ) || bMarkedChange;
         if ( _mapEntry.empty() )
         {
-            // 풀을 끄거나(gv_vertexPool=0) 씬이 비었다 — 버퍼를 놓는다. 배치는 자기 정점 버퍼로 돌아간다.
+            // 풀을 끄거나(gv_vertexPool=false) 씬이 비었다 — 버퍼를 놓는다. 배치는 자기 정점 버퍼로 돌아간다.
             const bool bHadBuffer = _vertexBuffer != 0;
             release( pDevice );
             return bChanged || bHadBuffer;

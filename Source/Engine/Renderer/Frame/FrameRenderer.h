@@ -40,6 +40,8 @@
 #include "Engine/Renderer/Scene/GPUVertexAnimationPool.h"
 #include "Engine/Renderer/Vfx/VfxParticleRenderer.h"
 
+#include <optional>
+
 namespace sw
 {
     struct FogSettings;
@@ -70,22 +72,22 @@ namespace sw
 
     /**
      * @brief 진단 · 테스트가 코드에서 전역 변수(`gv_morphDiag` · `gv_drawMerge` · `gv_vertexPool`)와 렌더러 시계를 덮어쓰는 값 하나입니다.
-     * @details 음수는 "덮어쓰지 않음" 이라 전역 변수(시각은 렌더러 시계)를 따른다. 언리얼 뷰 패밀리의 `FEngineShowFlags` 처럼 값 하나로 주고받는다(기억에 의존한 비교).
+     * @details `std::nullopt`(시각은 음수)가 "덮어쓰지 않음" 이라 전역 변수(시각은 렌더러 시계)를 따른다. 언리얼 뷰 패밀리의 `FEngineShowFlags` 처럼 값 하나로 주고받는다(기억에 의존한 비교).
      *          배포본의 렌더러는 이 값을 갖지 않고(`FrameRenderer::setDebugOverrides` 가 없다) 늘 전역 변수를 따른다.
      */
     struct FrameDebugOverrides
     {
         /**
-         * @brief GPU 메시 모프 진단 모드입니다. 값 체계는 `-gv_morphDiag` 와 같습니다(0 평소 / 1 강제 켬 / 2 디스패치 생략 / 3 번호표).
+         * @brief GPU 메시 모프 진단 모드입니다. `-gv_morphDiag` 와 같은 `MeshMorphDiagMode` 입니다(Normal / ForceOn / SkipDispatch / IndexTag).
          * @details 모드 2는 컴퓨트 없이 레스트 버퍼를 정점 셰이더에 물리며, 정답은 레스트 포즈와 같은 이미지다. 그래서 이 모드 하나로
          *          "정점 셰이더의 풀 읽기가 네 백엔드에서 같은가" 를 픽셀로 단언할 수 있다. OpenGL 드라이버가 early-return 형태의
          *          `MorphPool::computeElement` 를 잘못 컴파일해 원소를 하나 어긋나게 읽으면 이 단언에 걸린다(binding.hlsli 주석 참고).
          */
-        int32 _meshMorphDiag{ -1 };
-        /// @brief 1 이면 같은 PSO 와 머티리얼의 연속 배치를 멀티 드로우 하나로 묶고, 0 이면 배치마다 드로우를 부릅니다(`gv_drawMerge`). 멀티 드로우가 없는 백엔드(DX11)는 늘 배치마다입니다.
-        int32 _drawMerge{ -1 };
-        /// @brief 1 이면 씬 메시 정점을 한 풀 버퍼에 모으고, 0 이면 메시마다 자기 정점 버퍼로 그립니다(`gv_vertexPool`, 진단과 A/B 비교용).
-        int32 _vertexPool{ -1 };
+        std::optional<MeshMorphDiagMode> _meshMorphDiag{};
+        /// @brief true 면 같은 PSO 와 머티리얼의 연속 배치를 멀티 드로우 하나로 묶고, false 면 배치마다 드로우를 부릅니다(`gv_drawMerge`). 멀티 드로우가 없는 백엔드(DX11)는 늘 배치마다입니다.
+        std::optional<bool> _drawMerge{};
+        /// @brief true 면 씬 메시 정점을 한 풀 버퍼에 모으고, false 면 메시마다 자기 정점 버퍼로 그립니다(`gv_vertexPool`, 진단과 A/B 비교용).
+        std::optional<bool> _vertexPool{};
         /**
          * @brief 시간으로 구동하는 컴퓨트(인스턴스 애니메이션, 메시 모프)가 읽는 절대 시간(초)을 고정합니다.
          * @details 모프 변위는 sin(시간)이라 벽시계로 캡처하면 시각에 따라 이미지가 달라지고, 부하가 걸린 실행에서 픽셀 단언이 흔들린다.
@@ -1185,7 +1187,9 @@ namespace sw
          */
         void prepareMeshMorphPool();
         /** @brief 지금 적용되는 모프 진단 모드입니다. 오버라이드가 있으면 그 값을, 없으면 `gv_morphDiag` 를 씁니다. */
-        int32 getEffectiveMeshMorphDiag() const;
+        MeshMorphDiagMode getEffectiveMeshMorphDiag() const;
+        /** @brief `gv_morphDiag` 가 모드 열거자인지 봅니다. 에디터 · 콘솔이 숫자로 넣은 범위 밖 값이면 오류를 남기고 false 입니다(`initialize` 가 멈춘다). */
+        [[nodiscard]] static bool isMeshMorphDiagValid();
         /** @brief 시간으로 구동하는 컴퓨트가 읽을 절대 시간(초)입니다. `setAnimationTimeOverride` 로 받은 값(0 이상, 배포본에는 없음)을 쓰고, 없으면 `_animationTimer` 의 누적 시간을 씁니다. */
         float32 getAnimationTime() const;
         /** @brief 씬 배치를 멀티 드로우로 묶을지 반환합니다. `setDrawMergeEnabled` 로 받은 값을 쓰고, 없으면 전역 `gv_drawMerge` 를 씁니다. */

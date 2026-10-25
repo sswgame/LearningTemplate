@@ -231,6 +231,8 @@
 
 [5-3_CorePlatform.md](decisions/5-3_CorePlatform.md) — 40 KB.
 
+- **Core 의 `CrashTestKind` 는 `ENUM()` 으로 만들지 않고, `gv_crashTest`(1..5)는 숫자 코드 `int32` 로 남긴다**(2026-10-25, gvnum). 리플렉션 파서(`ReflectionParser`)가 Core 를 링크하고 Core 에는 리플렉션 단계(`sw_addReflectionStep`)가 없어 Core 헤더의 `ENUM()` 은 읽히지 않는다 — 열거자 이름 표가 Engine 쪽 생성 코드에만 있으므로 전역 변수의 명령줄이 이름으로 고를 수 없다. 방법은 둘이고 지금은 하지 않는다: (1) 파서가 Core 를 읽게 하려면 파서 ↔ Core 순환을 끊는 큰 구조 변경이 필요하고, (2) `CrashTestKind` 를 Engine 으로 옮기면 Core 의 `CrashHandler::crashForTest` 가 Engine 타입을 알게 되어 층이 거꾸로 선다. 이 변수는 검증 전용 테스트 변수(`SW_TEST_GLOBAL_VARIABLE`)이고 값이 `CrashTestKind` 열거자 번호 그대로라 위험은 숫자 코드의 일반 위험(열거자 순서가 바뀌면 뜻이 달라짐)이다. 파서가 Core 를 지원하게 되면 그때 enum 으로 바꾼다.
+
 ### 5-4. 데이터, 직렬화, 설정
 
 [5-4_DataConfig.md](decisions/5-4_DataConfig.md) — 43 KB.

@@ -533,7 +533,7 @@ ctest --test-dir build/Ninja-Release -L load                     # 부하 스위
 - **에디터 UI 는 `-gv_screenshotEditor=<경로>.png`**(`-gv_screenshotEditorFrame=N`) 나 시나리오 단계 `<CaptureEditorUI file="….png" maxMagentaFraction="0"/>` 로 찍는다. 주 출력이 아니라 ImGui 패널 · 플로팅 창까지 든 에디터 화면이고, 창 전경 · 가림과 무관하다(원리는 [에디터 UX 기반](plans/EditorUX.md) 6 절).
   "가끔 튄다" 는 한 장으로 안 잡힌다 — `-gv_screenshotCount=30 -gv_screenshotInterval=2` 로 연속으로 찍어(`_000` … 이 붙는다) 장을 나란히 본다.
 - **"조용한 프레임" 버그는 벤치가 가린다**(회전 큐브라 매 프레임 dirty). 에디터 정지 화면으로 본다: `-EnableEditor -gv_benchMeshes=1 -gv_screenshot -gv_screenshotFrame=60`.
-  그리는 것이 의심스러우면 `-gv_gpuCulling=0` · `-gv_drawMerge=0` · `-gv_vertexPool=0` 으로 경로를 하나씩 뗀다.
+  그리는 것이 의심스러우면 `-gv_gpuCulling=false` · `-gv_drawMerge=false` · `-gv_vertexPool=false` 으로 경로를 하나씩 뗀다.
 - **백엔드 교체는 시나리오로 재현한다**: `-scenario=engine/automation/rhiswap/swapother.scenario.xml`(한 번 건너기 — 단계 `SwapBackend`, 시점은 단계의 프레임이 정한다). 투명 큐브가 카나리아다. 텍스처 경로는 `-gv_defaultMaterial=engine/materials/benchtextured.material`.
   전역 변수는 `GlobalVariableInfo::setValueAsInt` 로 넣는다 — **C++ 대입은 변경 콜백을 부르지 않는다.**
 - **실제 백엔드는 로그 `Initializing RHI with backend: <이름>` 으로 확인한다**(설정값에 덮여 "네 백엔드 확인" 이 DX12 네 번이던 적이 있다). "인자가 적혔는가" 는

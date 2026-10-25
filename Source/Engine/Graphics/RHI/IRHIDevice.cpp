@@ -323,7 +323,8 @@ namespace sw
     SW_GLOBAL_VARIABLE( RHIBackBufferFormat, gv_rhiBackBufferFormat, RHIBackBufferFormat::RGBA8, "요청 백버퍼 포맷: RGBA8=R8G8B8A8_UNORM, BGRA8=B8G8R8A8_UNORM (실제 채택값은 getBackBufferFormat)" );
     // 소프트웨어 어댑터(WARP · CPU Vulkan)로 띄운다 — GPU 없는 CI 러너와 같은 래스터라이저를 이 PC 에서 고른다. 환경 변수 SW_RHI_SOFTWARE_ADAPTER=1 도 같다
     // (ctest 가 인자 없이 켠다). 언제 켤지는 엔진이 정하고, 어떻게 고를지는 백엔드가 안다.
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_rhiSoftwareAdapter, 0, "소프트웨어 어댑터로 띄운다: 0=하드웨어, 1=WARP(DX11 · DX12) · CPU 디바이스(Vulkan)" );
+    // 켜고 끄는 값이라 종류가 아니라 bool 이다(`-gv_rhiSoftwareAdapter=true`, `=1` 도 받는다).
+    SW_TEST_GLOBAL_VARIABLE( bool, gv_rhiSoftwareAdapter, false, "소프트웨어 어댑터로 띄운다: false=하드웨어, true=WARP(DX11 · DX12) · CPU 디바이스(Vulkan)" );
     // 업로드 스테이징 용량. 64 MiB 는 측정값이 아니라 4096² BC7 밉 체인(약 21 MiB) 몇 장을 동시에 담는 추정이다(RhiAsyncUploads 2.2, M1 이 조정한다).
     // GL · Vulkan 링보다 큰 업로드 하나는 링이 빌 때 혼자 일회성 버퍼로 들어간다(gv_rhiStagingSingleMaxMegabytes 까지). DX11 은 스테이징을 업로드마다 만들어, 이보다 큰 업로드 하나가
     // 예산 전부를 잡고 혼자 들어간다.
@@ -389,9 +390,15 @@ namespace sw
         swapChainDesc._directUploadMaxBytes = gv_rhiDirectUploadMaxKilobytes > 0 ? static_cast<uint64>( gv_rhiDirectUploadMaxKilobytes ) * constant::kBytesPerKilobyte : 0u;
         swapChainDesc._stagingSoloMaxBytes  = gv_rhiStagingSingleMaxMegabytes > 0 ? static_cast<uint64>( gv_rhiStagingSingleMaxMegabytes ) * constant::kBytesPerMegabyte : 0u;
         {
-            const utf8* pSoftwareEnv        = std::getenv( "SW_RHI_SOFTWARE_ADAPTER" );
-            const bool  bSoftwareEnv        = pSoftwareEnv != nullptr && StringUtil::equals( pSoftwareEnv, "1" );
-            swapChainDesc._bSoftwareAdapter = gv_rhiSoftwareAdapter == 1 || bSoftwareEnv;
+            const utf8* pSoftwareEnv = std::getenv( "SW_RHI_SOFTWARE_ADAPTER" );
+            bool        bSoftwareEnv = false;
+            // 환경 변수도 명령줄과 같은 켬/끔 토큰만 받는다. 알 수 없는 값은 끔으로 읽지 않고 멈춘다.
+            if ( pSoftwareEnv != nullptr && StringUtil::tryParseBool( pSoftwareEnv, bSoftwareEnv ) == false )
+            {
+                SW_LOG_ERROR( "SW_RHI_SOFTWARE_ADAPTER=\"%#\" is not a boolean (use 1, 0, true, false, yes, no, on or off)", pSoftwareEnv );
+                return false;
+            }
+            swapChainDesc._bSoftwareAdapter = gv_rhiSoftwareAdapter || bSoftwareEnv;
         }
         _bSoftwareAdapter = false;
         if ( engine::areEngineServicesBound() )

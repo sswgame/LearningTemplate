@@ -49,13 +49,13 @@ namespace sw
      * @brief `-gv_drawMerge=0` 이면 같은 PSO 와 머티리얼의 연속 배치를 멀티 드로우 하나로 묶지 않고 배치마다 한 번씩 부릅니다.
      * @details 묶은 이미지와 묶지 않은 이미지가 같아야 한다. 다르면 배치 테이블(g_SwBatches)이나 드로우 ID 가 틀린 것이다. 기본은 묶는 것이다.
      */
-    SW_GLOBAL_VARIABLE( int32, gv_drawMerge, 1, "씬 배치 멀티 드로우 묶기 (0=배치마다 호출, 진단용)" );
+    SW_GLOBAL_VARIABLE( bool, gv_drawMerge, true, "씬 배치 멀티 드로우 묶기 (false=배치마다 호출, 진단용)" );
 
     /**
      * @brief `-gv_vertexPool=0` 이면 씬 메시 정점을 한 풀 버퍼에 모으지 않고 메시마다 자기 정점 버퍼로 그립니다.
      * @details 풀을 켠 이미지와 끈 이미지는 같아야 한다. 다르면 간접 인자의 startVertex 나 SV_VertexID 의 API 차이를 잘못 다룬 것이다.
      */
-    SW_GLOBAL_VARIABLE( int32, gv_vertexPool, 1, "씬 메시 정점 풀 (0=메시마다 정점 버퍼, 진단용)" );
+    SW_GLOBAL_VARIABLE( bool, gv_vertexPool, true, "씬 메시 정점 풀 (false=메시마다 정점 버퍼, 진단용)" );
 
 #if !defined( SW_SHIPPING )
     /**
@@ -191,6 +191,14 @@ namespace sw
             _renderPipelineAssetCache.reset();
             _status        = FrameRendererStatus::Failed;
             _statusMessage = "RenderPipelineAssetCache initialize failed";
+            SW_LOG_ERROR( "initialize: %#", _statusMessage );
+            return false;
+        }
+
+        if ( isMeshMorphDiagValid() == false )
+        {
+            _status        = FrameRendererStatus::Failed;
+            _statusMessage = "-gv_morphDiag is not a mesh morph diagnostic mode";
             SW_LOG_ERROR( "initialize: %#", _statusMessage );
             return false;
         }
@@ -409,10 +417,10 @@ namespace sw
     bool FrameRenderer::isDrawMergeEnabled() const
     {
 #if !defined( SW_SHIPPING )
-        if ( _debugOverrides._drawMerge >= 0 )
-            return _debugOverrides._drawMerge != 0;
+        if ( _debugOverrides._drawMerge.has_value() )
+            return *_debugOverrides._drawMerge;
 #endif
-        return gv_drawMerge != 0;
+        return gv_drawMerge;
     }
 
     bool FrameRenderer::submitGraph( IRHIDevice* pDevice )
@@ -780,12 +788,12 @@ namespace sw
         _gpuScene.setIndirectCountsFilledByGPU( usesGPUGeneratedCommands() );
         // 모프 풀 오프셋은 배치 테이블에 실려 업로드 시점에 완성되어 있어야 한다.
         prepareMeshMorphPool();
-        int32 vertexPool = gv_vertexPool;
+        bool bVertexPool = gv_vertexPool;
 #if !defined( SW_SHIPPING )
-        if ( _debugOverrides._vertexPool >= 0 )
-            vertexPool = _debugOverrides._vertexPool;
+        if ( _debugOverrides._vertexPool.has_value() )
+            bVertexPool = *_debugOverrides._vertexPool;
 #endif
-        _gpuScene.setVertexPoolEnabled( vertexPool != 0 );
+        _gpuScene.setVertexPoolEnabled( bVertexPool );
         _gpuScene.upload( pDevice );
         // 라이트 버퍼는 뷰가 정해진 뒤에 올린다 — 뷰마다 라이트 그리드가 붙는다(주 시점과 이번 프레임에 그리는 추가 뷰).
         updateLightBuffer( pDevice );

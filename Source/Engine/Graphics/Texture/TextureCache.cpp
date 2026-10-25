@@ -115,7 +115,7 @@ namespace sw
      * @brief `-gv_textureStreaming=0` — 비동기로 읽는 텍스처를 처음부터 밉 사슬 전부로 업로드합니다(밉 스트리밍을 끈다). 비교 측정 · 진단용입니다.
      * @details 켜져 있으면 비동기 로드는 아래쪽 밉만 먼저 업로드하고 위쪽 밉은 렌더 스레드가 프레임 예산 안에서 뒤에 업로드한다(`TextureCache::updateStreaming`).
      */
-    SW_GLOBAL_VARIABLE( int32, gv_textureStreaming, 1, "Upload async-loaded textures with their low mips first and stream the top mips in later (0 = upload every mip at once)" );
+    SW_GLOBAL_VARIABLE( bool, gv_textureStreaming, true, "Upload async-loaded textures with their low mips first and stream the top mips in later (false = upload every mip at once)" );
 
     struct TextureCache::Impl
     {
@@ -310,7 +310,7 @@ namespace sw
             source = TextureLoadBlock::Source::CPUBytes;
         shared_ptr<TextureLoadBlock> pBlock = sw::make_shared<TextureLoadBlock>( key, pDevice, source, pTexture, _impl );
         // 비동기 로드(씬의 머티리얼)는 아래쪽 밉부터 — 위쪽 밉은 렌더 스레드가 뒤에 업로드한다. 동기 로드(도구 · 미리보기)는 받는 자리에서 밉 전부를 쓴다.
-        const bool bStreamed = start == AssetLoadStart::Async && gv_textureStreaming != 0;
+        const bool bStreamed = start == AssetLoadStart::Async && gv_textureStreaming;
         pBlock->_residency   = bStreamed ? TextureResidency::StreamingBase : TextureResidency::Full;
         if ( source == TextureLoadBlock::Source::RenderTarget )
         {
