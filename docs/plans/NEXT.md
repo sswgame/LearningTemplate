@@ -26,7 +26,11 @@
 
 ## 0000000000. 2026-10-25 통합 L 대기 — 병합 안 된 브랜치 24 개와 도는 에이전트 (위 절 다음에 읽는다)
 
-**상태**: main 은 `eb2a1fa59`(통합 K)까지 push 했다. CI 실행 `40160506131` 은 끝나지 않았다 — `py -3 -m Scripts ci-jobs --summary` 로 먼저 본다(Linux 쪽 `CookJobTest.RegistryCookFollowsTheMetaListing` · `SceneCookTest.*` · Wayland `UIDeterminismTest.*` 가 통합 K 의 Linux 수정 확인 대상). 아래 브랜치는 전부 **병합 · 빌드 · 테스트 안 했다**(린트만). 워크트리 `D:/w/<이름>` 은 병합 전이라 지우지 않는다.
+**CI 결과(실행 `40160506131`, 통합 K = `eb2a1fa59`)**: 통합 K 의 수정은 통했다 — Linux Debug · Shipping · ASan · Dedicated Server 와 Windows 전부 success(증분 쿠킹 · `UIDeterminism` 해결). **남은 실패 둘**: ① `Build Linux Debug Wayland` — `EngineTest_SoftwareRender` 의 `TestWindow.cpp:385` INCR 클립보드 읽기(`read == text`)와 `TestX11DevConsole.cpp:33`(`console != nullptr`, "iso10646-1 X 글꼴 없음?") → 러너 환경(X 글꼴) 가능성이 큼, 먼저 CI 로그와 `allowedlogs.json` 규칙을 확인. ② `Build Linux TSan` — `EngineTest` 에서 `ThreadSanitizer: data race`(`free`·`pthread_mutex_lock`), 전에는 Setup 시간 초과(exit 124)로 테스트까지 못 갔으니 **이번에 처음 드러난 경합일 수 있다** → `py -3 -m Scripts ci-jobs 40160506131 --annotations` 와 `gh run view --log-failed --job 121070948871` 로 스택을 보고 어느 코드인지 확인(이번 병합 대기 브랜치와는 무관한 main 의 기존 결함). 통합 L 의 첫 일 ①.
+
+**상태**: main 은 `eb2a1fa59`(통합 K)까지 push 했다(그 뒤 로컬 문서 커밋 9 개).
+
+**다음 세션이 병렬로 띄울 묶음(작업자 여섯 안팎, 파일 소유가 겹치지 않게, 병합 · 검증 뒤)**: A. CI 실패 둘(Wayland X 글꼴 · TSan 경합)의 원인 분석과 수정. B. `Core_objects` 가 `ReflectionParser.exe` 에도 링크돼 Core `.cpp` 하나에 코드젠 64 개가 다시 도는 문제(0 단계 측정의 근본 원인, 위험 작고 이득 큼) + 5a(Debug 링크 GHASH 켜고 끈 측정). C. 비동기 로드 `raw this` use-after-free(`RenderPipelineAsset`/`RenderPassAsset::loadFromXMLFileAsync`) + `AsyncFileIO::waitIdle` 워커 교착. D. uint64 해시 단독 키(`ResourcePakReader::_mapEntry`, `GPUMaterialRegistry`, `RenderPSOCache::_mapMaterialPSO`, `GPUSceneBuilder::_mapShaderRepresentative`, `ShaderBindingLayout::_mapKeyToIndex`)와 `UIAnimatedProperty`·`ReflectionInvoke`·`PropertyRoleUtil` 의 `kint8..kfloat64` 위치 가정을 `getBuiltinClass` 로. E. 3.2 래퍼 걷기(병합 뒤라 충돌이 없다). F. `hostgpu` 격리 H1~H4 + RHI B0 U5·U6·U8·U9 는 `gpu-verifier` 와 같이(GPU 필요). G. [Roadmap](Roadmap.md) 의 `[병렬 가능]` 항목(카메라 디렉터 · 직교 리그, 미리보기 창, 오디오, 키트 조립 둘째 게임 등)과 측정대기 계획 문서 판정은 위 병합 · 검증이 끝난 뒤 새로 정한다. 아래 브랜치는 전부 **병합 · 빌드 · 테스트 안 했다**(린트만). 워크트리 `D:/w/<이름>` 은 병합 전이라 지우지 않는다.
 
 **병합 순서(위에 얹힌 사슬을 먼저)**
 - 문서 분할: `arch1x`(`docs/09_Decisions.md` → `docs/decisions/5-N_*.md`, `StatusBoard.md` 생성 파일, `integ-gate`). **가장 먼저 병합**하고 이후 브랜치의 결정 문구(`fixn` 의 불리언 인자 규칙, `cachec` 의 IAssetCache 결정, `arch2a` 의 EditorCore + Model 폴더 규칙, `fixl`/`fixr` 의 결정)를 영역 파일에 옮긴다. 병합 뒤 `status-board --write`.
