@@ -31,6 +31,7 @@ namespace sw
     class RagdollComponent;
     class Scene;
     class SkeletalMeshComponent;
+    class Skeleton;
     class SocketSet;
 
     /**
@@ -97,6 +98,11 @@ namespace sw
         void spawnRigLookTarget( Scene* pScene, GameObjectManager& objects );
         /** @brief 리그 데모의 기사 한 명을 스폰합니다. 몸, 무기, 망토 유닛과 리그를 붙입니다. */
         void spawnRigKnight( GameObjectManager& objects, uint32 index, float32 origin, bool bRig, const shared_ptr<SocketSet>& weaponSockets );
+        /**
+         * @brief 본 하나("root")짜리 데이터 스켈레톤을 만듭니다. 리그(`PoseModifierComponent`)는 암묵 스켈레톤을 받은 유닛에 묶이지 않으므로(`SkeletalMeshComponent::hasDataSkeleton`),
+         *        스킨 없는 무기 유닛은 이것을 `setSkeleton` 으로 받아야 리그가 루트 본을 움직인다.
+         */
+        static shared_ptr<const Skeleton> createSingleBoneSkeleton();
         /** @brief 기사에게 붙는 무기 유닛을 만들고 그 유닛 컴포넌트를 반환합니다(만들지 못하면 nullptr). 리그가 오른손 소켓 위치를 따라갑니다. */
         SkeletalMeshComponent* spawnRigWeapon( GameObjectManager& objects, GameObject* pKnight, SkeletalMeshComponent* pBody, bool bRig );
         /** @brief 기사에게 붙는 망토 유닛을 만듭니다. 루트 뼈는 가슴 위치를 따라가고, 나머지 사슬 뼈는 스프링으로 움직입니다. */

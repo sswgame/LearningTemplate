@@ -690,6 +690,7 @@ namespace sw
         PoseModifierComponent* pWeaponRig  = ( pWeapon != nullptr ) ? pWeapon->addComponent<PoseModifierComponent>() : nullptr;
         if ( pWeaponUnit == nullptr || pWeaponRig == nullptr )
             return;
+        pWeaponUnit->setSkeleton( createSingleBoneSkeleton() ); // 리그는 데이터 스켈레톤을 받은 유닛에만 묶인다
         pWeaponRig->setRigPath( _settings._rigWeaponRig.c_str() );
         pWeaponRig->bindUnit( "Body", pDeepest );
         _listBenchExtra.push_back( pWeaponUnit->getHandle() );
