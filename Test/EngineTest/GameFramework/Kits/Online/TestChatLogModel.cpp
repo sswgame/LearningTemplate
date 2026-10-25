@@ -78,3 +78,30 @@ SW_TEST_CASE( ChatLogModelTest, EveryRejectionHasAStatusText )
     }
     SW_EXPECT_TRUE( ChatScreen::makeStatusText( ChatResult::RateLimited, 2500 ).find( "2500" ) != string::npos );
 }
+
+/**
+ * @brief [ChatLogModelTest] 한 클라이언트에 모델 둘을 붙이면 둘째는 어서션과 false 로 거절되고, 첫째가 떼어지면 다시 붙일 수 있으며, 클라이언트가 먼저 소멸해도 안전하다
+ */
+SW_TEST_CASE( ChatLogModelTest, SecondModelOnTheSameClientIsRefused )
+{
+    ChatClient   client;
+    ChatLogModel first;
+    ChatLogModel second;
+    SW_ASSERT_TRUE( first.initialize( &client ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a second model cannot attach to a client whose message buffer is already drained" );
+        test::ScopedAssertCapture assertCapture;
+        SW_EXPECT_FALSE( second.initialize( &client ) );
+        if ( test::ScopedAssertCapture::kAssertsAreActive )
+            SW_EXPECT_EQUAL( 1u, assertCapture.getCount() );
+    }
+    SW_EXPECT_TRUE( first.initialize( &client ) ); // 같은 모델이 다시 붙이는 것은 된다
+    SW_EXPECT_TRUE( first.initialize( nullptr ) ); // 떼면 다른 모델이 붙을 수 있다
+    SW_EXPECT_TRUE( second.initialize( &client ) );
+
+    ChatLogModel orphan; // 클라이언트보다 오래 산다 — 표를 놓다가 죽지 않아야 한다
+    {
+        ChatClient shortLived;
+        SW_ASSERT_TRUE( orphan.initialize( &shortLived ) );
+    }
+}

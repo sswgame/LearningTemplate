@@ -122,3 +122,23 @@ SW_TEST_CASE( FriendListModelTest, AFailedReplyClearsTheStaleList )
     SW_EXPECT_EQUAL( uint32( 0 ), model.getPendingRequestCount() );
     SW_EXPECT_TRUE( model.getResult() == SocialResult::Unavailable );
 }
+
+/**
+ * @brief [FriendListModelTest] 한 클라이언트에 모델 둘을 붙이면 둘째는 어서션과 false 로 거절되고, 첫째가 떼어지면 다시 붙일 수 있다
+ */
+SW_TEST_CASE( FriendListModelTest, SecondModelOnTheSameClientIsRefused )
+{
+    SocialClient    client;
+    FriendListModel first;
+    FriendListModel second;
+    SW_ASSERT_TRUE( first.initialize( &client ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a second model cannot attach to a client whose notification buffer is already drained" );
+        test::ScopedAssertCapture assertCapture;
+        SW_EXPECT_FALSE( second.initialize( &client ) );
+        if ( test::ScopedAssertCapture::kAssertsAreActive )
+            SW_EXPECT_EQUAL( 1u, assertCapture.getCount() );
+    }
+    SW_EXPECT_TRUE( first.initialize( nullptr ) );
+    SW_EXPECT_TRUE( second.initialize( &client ) );
+}

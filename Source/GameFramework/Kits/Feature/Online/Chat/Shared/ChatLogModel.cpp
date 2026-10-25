@@ -14,12 +14,22 @@ namespace sw
     {
     }
 
+    bool ChatLogModel::initialize( ChatClient* pClient )
+    {
+        _drainLease.release();
+        _pClient = nullptr;
+        if ( pClient != nullptr && pClient->claimMessages( _drainLease ) == false )
+            return false;
+        _pClient = pClient;
+        return true;
+    }
+
     void ChatLogModel::update()
     {
         if ( _pClient == nullptr )
             return;
         _listDrained.clear();
-        _pClient->drainMessages( _listDrained );
+        _pClient->drainMessages( _drainLease, _listDrained );
         for ( const ChatMessage& message : _listDrained )
         {
             appendMessage( message );

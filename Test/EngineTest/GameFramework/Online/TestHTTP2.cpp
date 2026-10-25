@@ -2,7 +2,9 @@
 #include "pch.h"
 
 #include "GameFramework/Base/Online/HTTP/HTTP2Frame.h"
+#include "GameFramework/Base/Online/HTTP/HTTPTypes.h"
 #include "GameFramework/Base/Online/HTTP/Hpack.h"
+#include "GameFramework/Base/Online/HTTP/HpackStaticTable.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -135,6 +137,55 @@ SW_TEST_CASE( HTTP2Test, HpackEncoderRoundTripsThroughTheDecoder )
     },
                                            untouched ) );
     SW_EXPECT_TRUE( untouched.empty() );
+}
+
+/**
+ * @brief [HTTP2Test] 정적 표는 RFC 7541 부록 A 의 61 줄이다 — 생성 파일의 개수와 처음 · 끝 · 값이 있는 줄 · 이름만 있는 줄을 색인 표현으로 읽어 RFC 와 대조한다(전체 줄 대조는 생성기가 RFC 본문에서 한다)
+ */
+SW_TEST_CASE( HTTP2Test, HpackStaticTableMatchesTheRfcAppendixA )
+{
+    SW_EXPECT_EQUAL( uint32( 61 ), HpackStatic::kEntryCount );
+    struct Expected
+    {
+        uint8       _index;
+        const utf8* _pName;
+        const utf8* _pValue;
+    };
+    const Expected arrExpected[] = {
+        { 1,                  ":authority",              ""},
+        { 7,                     ":scheme",         "https"},
+        {14,                     ":status",           "500"},
+        {16,             "accept-encoding", "gzip, deflate"},
+        {20, "access-control-allow-origin",              ""},
+        {40,           "if-modified-since",              ""},
+        {56,   "strict-transport-security",              ""},
+        {61,            "www-authenticate",              ""},
+    };
+    for ( const Expected& expected : arrExpected )
+    {
+        HpackDecoder        decoder;
+        vector<HpackHeader> listHeader;
+        string              error;
+        const uint8         arrBlock[] = { static_cast<uint8>( 0x80 | expected._index ) };
+        SW_ASSERT_TRUE( decoder.decode( arrBlock, sizeof( arrBlock ), listHeader, error ) );
+        SW_ASSERT_EQUAL( size_t( 1 ), listHeader.size() );
+        SW_EXPECT_TRUE( listHeader[0]._name == expected._pName && listHeader[0]._value == expected._pValue );
+    }
+}
+
+/**
+ * @brief [HTTP2Test] 응답 줄의 사유 문구는 RFC 9110 의 이름이고, 표에 없는 코드는 일반 문구로 쓴다
+ */
+SW_TEST_CASE( HTTP2Test, HTTPReasonPhrasesMatchTheRfc )
+{
+    SW_EXPECT_TRUE( string_view( HTTPWriteUtil::getReasonPhrase( 200 ) ) == "OK" );
+    SW_EXPECT_TRUE( string_view( HTTPWriteUtil::getReasonPhrase( 302 ) ) == "Found" );
+    SW_EXPECT_TRUE( string_view( HTTPWriteUtil::getReasonPhrase( 400 ) ) == "Bad Request" );
+    SW_EXPECT_TRUE( string_view( HTTPWriteUtil::getReasonPhrase( 401 ) ) == "Unauthorized" );
+    SW_EXPECT_TRUE( string_view( HTTPWriteUtil::getReasonPhrase( 403 ) ) == "Forbidden" );
+    SW_EXPECT_TRUE( string_view( HTTPWriteUtil::getReasonPhrase( 404 ) ) == "Not Found" );
+    SW_EXPECT_TRUE( string_view( HTTPWriteUtil::getReasonPhrase( 500 ) ) == "Internal Server Error" );
+    SW_EXPECT_TRUE( string_view( HTTPWriteUtil::getReasonPhrase( 503 ) ) == "Service Unavailable" );
 }
 
 /**

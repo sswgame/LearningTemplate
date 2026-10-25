@@ -153,12 +153,22 @@ namespace sw
         }
     }
 
+    bool FriendListModel::initialize( SocialClient* pClient )
+    {
+        _drainLease.release();
+        _pClient = nullptr;
+        if ( pClient != nullptr && pClient->claimNotifications( _drainLease ) == false )
+            return false;
+        _pClient = pClient;
+        return true;
+    }
+
     void FriendListModel::update()
     {
         if ( _pClient == nullptr )
             return;
         _listDrained.clear();
-        _pClient->drainNotifications( _listDrained );
+        _pClient->drainNotifications( _drainLease, _listDrained );
         for ( const SocialNotification& notification : _listDrained )
         {
             applyNotification( notification );
