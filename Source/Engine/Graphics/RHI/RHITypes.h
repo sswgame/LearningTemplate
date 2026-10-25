@@ -904,6 +904,8 @@ namespace sw
         [[nodiscard]] static constexpr RHITransferSubmit busy() noexcept { return RHITransferSubmit{ RHISubmitResult::Busy, RHITransferTicket{} }; }
         /** @brief 검사에 걸려 거절한 결과입니다. */
         [[nodiscard]] static constexpr RHITransferSubmit rejected() noexcept { return RHITransferSubmit{ RHISubmitResult::Rejected, RHITransferTicket{} }; }
+        /** @brief 링 할당이 받아들이지 못한 결과(`Busy` 또는 `Rejected`)를 제출 결과로 돌려줍니다. `Accepted` 는 부르는 쪽이 시리얼로 만든다(`accepted`). */
+        [[nodiscard]] static constexpr RHITransferSubmit fromUnaccepted( RHISubmitResult result ) noexcept { return result == RHISubmitResult::Busy ? busy() : rejected(); }
     };
 
     /**

@@ -5,7 +5,7 @@
 새로 생기거나 바뀌거나 사라진 경로를 찍고, `Test/AppTest/HostWriteLocations.json` 에 없는 위치가 있으면 진다.
 (docs/plans/HostGpuIsolation.md H1 — 잠금을 풀기 전에 2절 표에 빠진 쓰기 위치를 찾는다.)
 
-    py -3 -m Scripts.qa.WriteSnapshot --app build/Ninja-Shipping/Bin/App.exe -- -game=NileCity -gv_bench=1
+    py -3 -m Scripts.qa.WriteSnapshot --app build/Ninja-Shipping/Bin/App.exe -- -game=NileCity
     py -3 -m Scripts.qa.WriteSnapshot --app <App> --label editor.assetmanage -- -EnableEditor -scenario=editor.assetmanage
 
 `--` 뒤는 App 인자다. 작업 폴더는 App 이 있는 `Bin` 이다. 보는 곳: `Bin/Saved`, `Resource`, 프로젝트 루트 `Saved`,

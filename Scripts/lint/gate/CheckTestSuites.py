@@ -55,7 +55,7 @@
  10) 활성이 아닌 게임 팩의 원본을 읽는 일반 케이스는 `SW_TEST_REQUIRES_FEATURE( SourceResources )` 를 선언한다.
      Shipping 은 활성 게임(`game/empty`)의 구운 팩만 두고 낱개 원본을 읽지 않는다. 케이스 본문이나 그 케이스가 쓰는 같은 파일의 상수에
      `game/<다른 게임>/` 리터럴이 있는데 선언이 없으면 CI Linux Shipping 에서 진다 — 사람이 기억하던 것을 이 검사가 기억한다.
-     "다른 게임" 은 `Resource/game/` 에 실제로 있는 폴더에서 `_kPackLiteralAllow`(활성 게임 · 임시 폴더 픽스처)를 뺀 것이다 —
+     "다른 게임" 은 `Resource/game/` 에 실제로 있는 폴더에서 `_kPackLiteralKnownNames`(활성 게임 · 임시 폴더 픽스처)를 뺀 것이다 —
      디스크에 닿지 않는 순수 문자열 픽스처(`game/prefabs/…`, `game/a/…`)는 걸리지 않는다. 부하 스위트는 보지 않는다.
 
      shortcut: 문자열 리터럴만 본다 — 경로를 이어 붙이거나(`"game/" + name`) 헤더 · 다른 파일의 상수 · 도우미 함수 안에서 읽는 것은 못 본다.
@@ -111,7 +111,7 @@ _kPackLiteralRe = re.compile(r"(?<![\w])game/(\w+)\b")
 _kDeclaredNameRe = re.compile(r"(\w+)\s*(?:\[\s*\])?\s*[={]")
 
 # 규칙 10 에서 `game/<이름>/` 리터럴을 봐도 되는 이름 — 나머지 실제 게임 팩은 `SourceResources` 선언이 있어야 읽는다.
-_kPackLiteralAllow: dict[str, str] = {
+_kPackLiteralKnownNames: dict[str, str] = {
     "empty": "활성 게임 — Shipping 도 구운 팩으로 갖고 있다",
     "test": "임시 폴더 픽스처 이름(디스크의 실제 팩이 아니다)",
     "x": "임시 폴더 픽스처 이름(디스크의 실제 팩이 아니다)",
@@ -359,7 +359,7 @@ def listForeignPacks(rootDir: Path) -> set[str]:
     packRoot = rootDir / _kPackRoot
     if packRoot.is_dir() is False:
         return set()
-    return {entry.name for entry in packRoot.iterdir() if entry.is_dir()} - set(_kPackLiteralAllow)
+    return {entry.name for entry in packRoot.iterdir() if entry.is_dir()} - set(_kPackLiteralKnownNames)
 
 
 def findCaseBodies(code: str, maskedCode: str) -> list[tuple[re.Match, int, int]]:
