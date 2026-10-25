@@ -122,6 +122,28 @@ SW_TEST_CASE( EditorInspectorCommandsTest, AdoptRefusesWhenAReferenceListElement
 }
 
 /**
+ * @brief [EditorInspectorCommandsTest] 구조체 칸 안의 `SceneObjectReference` 가 옮길 자식을 가리켜도 거절하고, 지우면 옮긴다
+ */
+SW_TEST_CASE( EditorInspectorCommandsTest, AdoptRefusesWhenAStructFieldReferencePointsAtAChild )
+{
+    AdoptScene fixture;
+    auto*      pProbe = fixture._pHolder->addComponent<editortest::SceneReferenceStructHolderProbeComponent>();
+    SW_ASSERT_NOT_NULL( pProbe );
+    SW_ASSERT_TRUE( SceneObjectReferenceUtil::makeReference( *fixture._pMain, fixture._pLamp->getObjectID(), pProbe->_box._inner ) );
+
+    const EditorInspectorCommands::AdoptResult result = EditorInspectorCommands::adoptChildPrefabInstances( fixture._pRoot );
+    SW_EXPECT_TRUE( result.isRejected() );
+    SW_EXPECT_EQUAL( uint32( 0 ), result._adoptedCount );
+    SW_EXPECT_TRUE( result._rejectReason.find( "._box" ) != string::npos );
+    SW_EXPECT_FALSE( fixture._pMain->getObjectManager()->getSubsystem<PrefabInstanceRegistry>().isAttachedNestedPart( fixture._pLamp ) );
+
+    pProbe->_box._inner                              = SceneObjectReference{};
+    const EditorInspectorCommands::AdoptResult retry = EditorInspectorCommands::adoptChildPrefabInstances( fixture._pRoot );
+    SW_EXPECT_FALSE( retry.isRejected() );
+    SW_EXPECT_EQUAL( uint32( 1 ), retry._adoptedCount );
+}
+
+/**
  * @brief [EditorInspectorCommandsTest] 미리보기 씬의 컴포넌트가 옮길 자식을 가리켜도 거절한다
  * @details 훑을 씬 목록은 `SceneManager::collectAllScenes` 한 곳이라 로드된 씬만 보던 때는 이 참조를 놓쳤다.
  */

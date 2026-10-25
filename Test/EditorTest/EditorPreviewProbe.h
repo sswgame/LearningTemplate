@@ -84,6 +84,33 @@ namespace sw::editortest
 
 namespace sw::editortest
 {
+    /** @brief 참조 칸 하나를 품은 구조체입니다(구조체 안의 칸도 참조로 세는지 보는 테스트용). */
+    REFLECT()
+    struct SceneReferenceBoxProbe
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        SceneObjectReference _inner;
+    };
+} // namespace sw::editortest
+
+namespace sw::editortest
+{
+    /** @brief 참조 칸을 품은 구조체 칸 하나를 가진 컴포넌트입니다. */
+    REFLECT()
+    class SceneReferenceStructHolderProbeComponent : public Component
+    {
+    public:
+        REFLECT_BODY();
+
+        PROPERTY()
+        SceneReferenceBoxProbe _box;
+    };
+} // namespace sw::editortest
+
+namespace sw::editortest
+{
     /** @brief 환경설정 저장소 테스트용 섹션입니다(EditorPreferencesStoreTest). */
     REFLECT()
     struct EditorPreferencesProbe

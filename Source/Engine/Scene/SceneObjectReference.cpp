@@ -11,6 +11,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionContainers.h"
 #include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 
@@ -39,36 +40,97 @@ namespace sw
 
     namespace
     {
-        /** @brief 컨테이너(중첩 포함)의 원소 · 맵 키와 값 중 `SceneObjectReference` 를 모읍니다. 컨테이너를 고치면 포인터가 무효가 됩니다. */
-        void collectContainerReferences( const void* pContainer, const NestedContainerInfo& shape, vector<const SceneObjectReference*>& outListReference )
+        /**
+         * @brief 필드 하나의 값 아래에 든 `SceneObjectReference` 를 모읍니다(필드 자체, 구조체 안의 칸, 컨테이너 원소 · 맵 키와 값, 그 중첩). 값을 고치면 포인터가 무효가 됩니다.
+         * @details `ReflectedValueWalk` 를 쓰지 않은 이유: 그 걷기는 바이트로 복사할 수 있는 잎을 제자리에서 바꾸는 쓰기 도구이고 `SceneObjectReference` 는 문자열을 가져 잎이 될 수 없다.
+         *          여기는 읽기만 하므로 같은 모양(구조체 · 컨테이너 단계)을 읽기 전용으로 내려간다.
+         *          구조체 타입은 레지스트리로 찾는다(레지스트리가 없으면 구조체 안은 볼 수 없어 `bMissingRegistry` 로 알린다).
+         */
+        class ReferenceCollector
         {
-            if ( pContainer == nullptr || shape._wrapper == nullptr )
-                return;
-            if ( ISequenceContainerWrapper* pSequence = shape._wrapper->asSequence() )
+        public:
+            ReferenceCollector( const TypeRegistry* pRegistry, vector<const SceneObjectReference*>& outListReference )
+                : _pRegistry{ pRegistry }
+                , _outListReference{ outListReference }
             {
-                const size_t elementCount = pSequence->getSize( pContainer );
-                for ( size_t elementIndex = 0; elementIndex < elementCount; ++elementIndex )
+            }
+
+            void collectProperty( const void* pOwner, const PropertyInfo& prop )
+            {
+                if ( prop._bIsBitField == SW_TRUE )
+                    return;
+                const void* pValue = prop.getRawPtr( pOwner );
+                if ( prop._bIsContainer == SW_TRUE )
                 {
-                    const void* pElement = pSequence->getElementConst( pContainer, elementIndex );
-                    if ( shape._elementNested != nullptr )
-                        collectContainerReferences( pElement, *shape._elementNested, outListReference );
-                    else if ( SceneObjectReferenceUtil::isReferenceTypeName( shape._elementTypeName ) && pElement != nullptr )
-                        outListReference.push_back( static_cast<const SceneObjectReference*>( pElement ) );
+                    if ( prop._containerWrapper != nullptr )
+                        collectContainer( pValue, prop.getContainerShape() );
+                }
+                else
+                {
+                    collectValue( pValue, prop._typeName );
                 }
             }
-            else if ( IMapContainerWrapper* pMap = shape._wrapper->asMap() )
+
+            bool bMissingRegistry{ false };
+
+        private:
+            void collectValue( const void* pValue, const hashed_string& typeName )
             {
-                pMap->forEach( pContainer, MapForEachDelegate::create( [&]( const void* pKey, const void* pValue )
+                if ( pValue == nullptr || typeName.empty() )
+                    return;
+                if ( SceneObjectReferenceUtil::isReferenceTypeName( typeName ) )
                 {
-                    if ( SceneObjectReferenceUtil::isReferenceTypeName( shape._keyTypeName ) && pKey != nullptr )
-                        outListReference.push_back( static_cast<const SceneObjectReference*>( pKey ) );
-                    if ( shape._elementNested != nullptr )
-                        collectContainerReferences( pValue, *shape._elementNested, outListReference );
-                    else if ( SceneObjectReferenceUtil::isReferenceTypeName( shape._elementTypeName ) && pValue != nullptr )
-                        outListReference.push_back( static_cast<const SceneObjectReference*>( pValue ) );
-                } ) );
+                    _outListReference.push_back( static_cast<const SceneObjectReference*>( pValue ) );
+                    return;
+                }
+                if ( _pRegistry == nullptr )
+                {
+                    bMissingRegistry = true;
+                    return;
+                }
+                // 구조체 값의 주소는 그 구조체 타입의 객체 주소다. 내장 값 타입(숫자 · 문자열 등)은 구조체가 아니다.
+                const TypeInfo* pStruct = _pRegistry->findType( typeName );
+                if ( pStruct == nullptr || pStruct->isPrimitive() )
+                    return;
+                for ( const PropertyInfo& inner : pStruct->getPropertiesWithBase() )
+                {
+                    collectProperty( pValue, inner );
+                }
             }
-        }
+
+            void collectContainer( const void* pContainer, const NestedContainerInfo& shape )
+            {
+                if ( pContainer == nullptr || shape._wrapper == nullptr )
+                    return;
+                if ( ISequenceContainerWrapper* pSequence = shape._wrapper->asSequence() )
+                {
+                    const size_t elementCount = pSequence->getSize( pContainer );
+                    for ( size_t elementIndex = 0; elementIndex < elementCount; ++elementIndex )
+                    {
+                        collectElement( pSequence->getElementConst( pContainer, elementIndex ), shape );
+                    }
+                }
+                else if ( IMapContainerWrapper* pMap = shape._wrapper->asMap() )
+                {
+                    pMap->forEach( pContainer, MapForEachDelegate::create( [&]( const void* pKey, const void* pValue )
+                    {
+                        collectValue( pKey, shape._keyTypeName );
+                        collectElement( pValue, shape );
+                    } ) );
+                }
+            }
+
+            void collectElement( const void* pElement, const NestedContainerInfo& shape )
+            {
+                if ( shape._elementNested != nullptr )
+                    collectContainer( pElement, *shape._elementNested );
+                else
+                    collectValue( pElement, shape._elementTypeName );
+            }
+
+            const TypeRegistry*                  _pRegistry;
+            vector<const SceneObjectReference*>& _outListReference;
+        };
     } // namespace
 
     bool SceneObjectReferenceUtil::findReferenceTo( const SceneManager& sceneManager, const Scene& targetScene, uint64 objectID, string& outHolder )
@@ -80,6 +142,7 @@ namespace sw
         vector<const Scene*> listScene;
         sceneManager.collectAllScenes( listScene );
         vector<const SceneObjectReference*> listReference;
+        ReferenceCollector                  collector( sceneManager.getEngineServices()._pTypeRegistry, listReference );
         for ( const Scene* scene : listScene )
         {
             if ( scene->getObjectManager() == nullptr )
@@ -96,15 +159,7 @@ namespace sw
                         if ( outHolder.empty() == false )
                             return;
                         listReference.clear();
-                        if ( prop._bIsContainer == SW_TRUE )
-                        {
-                            if ( prop._containerWrapper != nullptr )
-                                collectContainerReferences( prop.getRawPtr( static_cast<const void*>( pComponent ) ), prop.getContainerShape(), listReference );
-                        }
-                        else if ( isReferenceTypeName( prop._typeName ) )
-                        {
-                            listReference.push_back( prop.getValuePtr<SceneObjectReference>( pComponent ) );
-                        }
+                        collector.collectProperty( static_cast<const void*>( pComponent ), prop );
                         const auto pointsAtTarget = [&]( const SceneObjectReference* pValue )
                         {
                             return pValue != nullptr && pValue->_fileID == fileID && isSameScenePath( pValue->_scenePath, targetScene.getSourcePath() );
@@ -118,6 +173,8 @@ namespace sw
             if ( outHolder.empty() == false )
                 return true;
         }
+        if ( collector.bMissingRegistry )
+            SW_LOG_ERROR( "findReferenceTo could not look inside struct fields - the scene manager has no type registry" );
         return false;
     }
 
