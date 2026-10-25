@@ -581,7 +581,12 @@ namespace sw
 
     uint64 Scene::getOrAssignFileID( uint64 objectID ) const
     {
-        if ( _objectManager == nullptr || _objectManager->resolveGameObject( GameObjectHandle::make( objectID ) ) == nullptr )
+        const GameObject* pObject = _objectManager != nullptr ? _objectManager->resolveGameObject( GameObjectHandle::make( objectID ) ) : nullptr;
+        if ( pObject == nullptr )
+            return 0;
+        // 인스턴스가 다시 스폰하는 중첩 부품은 씬이 엔티티로 저장하지 않는다(`classifyNestedParts`) — 파일 id 를 줘도 다음 로드에 대상이 없다.
+        // 프리팹 쪽에서 오브젝트가 씬 파일 밖으로 옮겨진 모양이라 참조를 만들 수 없게 막는다(CrossFileObjectReference C3).
+        if ( _objectManager->getSubsystem<PrefabInstanceRegistry>().isAttachedNestedPart( pObject ) )
             return 0;
         const auto mapIt = _mapObjectIDToFileID.find( objectID );
         if ( mapIt != _mapObjectIDToFileID.end() )

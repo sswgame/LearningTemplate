@@ -33,7 +33,8 @@
 ### SilentFallbackAudit.RenderTargetFormat
 `FrameRenderer::fillPassRenderTargetFormats` 는 고정 포맷도 출력 선언도 없으면 RGBA8 이다. 엔진 PSO 를 패스 종류 표로 모두 만들기 때문에(`FrameRenderer` 의 PSO 등록), 파이프라인에 없는 패스 종류도 이 길로 PSO 를 얻는다.
 오류로 바꾸려면 파이프라인에 없는 패스 종류의 PSO 를 만들지 않아야 한다(`kRequiresPassDesc` 를 그래픽스 패스 전체로). Present · Canvas 의 기본 PSO, Tonemap 대체(`_psoFallbackType`)가 그 PSO 를 쓰는지 먼저 본다.
-`FrameRendererUtil::collectColorOutputFormats` 도 출력은 있는데 첨부를 못 찾으면 넘긴 수로 물러나고, `GPUScene::uploadMaterialGroups` 는 stride 가 0 이면 버퍼 크기를 stride 로 쓴다. 네 백엔드 GPU 확인이 필요하다.
+`FrameRendererUtil::collectColorOutputFormats` 도 출력은 있는데 첨부를 못 찾으면 넘긴 수로 물러난다. 네 백엔드 GPU 확인이 필요하다.
+(닫음: `GPUScene::computeMaterialGroupStride` 의 `getBuffer().size()` 는 폴백이 아니다 — 셰이더 레이아웃을 못 맞춘 레거시 `MaterialCB`(`getElementStride()` 가 0 이고 바이트는 있음)의 정상 길이다. 레이아웃을 맞추다 실패해 바이트도 없으면 그 머티리얼은 건너뛰고 오류는 `ensureShaderLayout` 이 이미 남기며, 합친 stride 가 0 이면 `uploadMaterialGroup` 이 올리지 않는다. 이 문서의 나머지 세 항목은 코드로 다시 보았고 서술이 맞다.)
 
 ### SilentFallbackAudit.EmulatedSlotTable
 에뮬 백엔드(DX11 · GL)의 엔진 텍스처 슬롯 표가 두 곳이다 — `binding.hlsli` 의 `Bindless::sampleIndex`(11-2 절)와 `FrameRenderer::commitBindlessTextureBindings`. 표를 C++ 상수(`ShaderBindingSlots`) 하나에서 내고 셰이더는 생성된 정의를 읽게 한다. 셰이더 담당과 함께 하고 DX11 · GL 화면으로 확인한다.

@@ -74,7 +74,7 @@ namespace sw
         void collectSavedIDMap( ObjectSavedIDMap& outMap ) const;
         /**
          * @brief 오브젝트의 파일 id 를 반환합니다. 아직 없으면(새로 만든 오브젝트) 지금 줍니다 — `collectSavedIDMap` 과 같은 규칙(이 씬이 쓴 어느 id 보다 크다)입니다.
-         * @details 파일을 넘는 참조(`SceneObjectReference`)가 대상을 적을 때 씁니다. 없는 오브젝트면 0 입니다. 다음 저장이 그 id 를 그대로 씁니다.
+         * @details 파일을 넘는 참조(`SceneObjectReference`)가 대상을 적을 때 씁니다. 없는 오브젝트나, 인스턴스가 다시 스폰하는 중첩 프리팹 부품(씬이 엔티티로 저장하지 않는다)이면 0 입니다. 다음 저장이 그 id 를 그대로 씁니다.
          */
         [[nodiscard]] uint64 getOrAssignFileID( uint64 objectID ) const;
         /** @brief 파일 id 의 살아 있는 오브젝트 id 입니다. 이 씬에 없으면(지운 오브젝트 · 내려간 스트리밍 셀) 0 입니다. */
