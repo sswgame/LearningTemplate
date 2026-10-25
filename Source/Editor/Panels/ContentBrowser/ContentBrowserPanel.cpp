@@ -151,7 +151,7 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( listArgument.size() != 1 || pContext == nullptr )
                     return false;
-                const string folderAbs = ResourcePaths::makeAbsolutePath( FileUtil::normalizePath( listArgument[0] ) );
+                const string folderAbs = ResourcePaths::findLooseFile( FileUtil::normalizePath( listArgument[0] ) ).getDiskPath();
                 if ( FileUtil::isDirectory( folderAbs ) == false || pContext->getSubsystem<EditorPanelManager>().setPanelOpen<ContentBrowserPanel>( true ) == false )
                     return false;
                 ContentBrowserPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<ContentBrowserPanel>();
@@ -662,7 +662,7 @@ namespace sw::editor
             return;
         string resourceID;
         if ( EditorWidgets::tryAcceptAssetPayload( resourceID ) )
-            (void)moveAssetToFolder( ResourcePaths::makeAbsolutePath( resourceID ), folderAbs ); // 실패는 moveAsset 이 알린다
+            (void)moveAssetToFolder( ResourcePaths::findLooseFile( resourceID ).getDiskPath(), folderAbs ); // 실패는 moveAsset 이 알린다
         ImGui::EndDragDropTarget();
     }
 

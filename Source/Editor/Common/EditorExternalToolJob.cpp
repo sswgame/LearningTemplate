@@ -3,6 +3,7 @@
 #include "Editor/Common/EditorExternalToolJob.h"
 
 #include "Core/Concurrency/thread.h"
+#include "Core/File/FileUtil.h"
 #include "Core/Process/Process.h"
 
 namespace sw::editor
@@ -66,6 +67,9 @@ namespace sw::editor
                 result._listLine.push_back( line );
             }
             result._exitCode = pProcess->waitForExit();
+            // 끝난 도구가 파일을 만들거나 지웠을 수 있다 — 이 프로세스의 경로 캐시가 옛 "없음" · "있음" 을 돌려주지 않게 알린다(`Process` 는 `File` 보다 아래 층이라 스스로 알리지 못한다).
+            FileUtil::noteFileCreated();
+            FileUtil::noteFileRemoved();
         }
         publish( pState, generation, std::move( result ) );
     }

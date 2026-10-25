@@ -71,7 +71,7 @@ namespace sw
 
     uint64 CookInput::computeCurrentHash() const
     {
-        const string absPath = ResourcePaths::makeAbsolutePath( _resourceID );
+        const string absPath = ResourcePaths::findLooseFile( _resourceID ).getDiskPath(); // 읽기다 — 없는 입력은 빈 경로(해시 0)
         if ( _kind == CookInputKind::Listing )
             return CookJob::computeListingHash( absPath, _extension );
         return absPath.empty() ? 0 : ContentHash::computeFile( absPath );

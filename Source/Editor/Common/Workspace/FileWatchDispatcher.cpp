@@ -152,6 +152,9 @@ namespace sw
         if ( listEvent.empty() )
             return;
 
+        // 감시 트리의 파일이 바뀌었다 — 바깥 도구(git, 바깥 편집기, 기다리지 않은 쿠커 자식)가 만들거나 지운 파일은 이 프로세스의 `FileUtil` 이 몰라 경로 캐시의
+        // "없음" · "있음" 이 낡았을 수 있다. 받는 쪽이 새 경로를 묻기 전에 한 번 비운다(사건마다가 아니라 한 번 비울 때 몇 건이든 같다).
+        ResourcePaths::clearPathCache();
         dispatchEvents( listEvent );
     }
 

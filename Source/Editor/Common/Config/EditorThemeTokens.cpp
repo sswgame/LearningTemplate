@@ -104,7 +104,7 @@ namespace sw::editor
     {
         EditorThemeConfig config{};
         string            error;
-        if ( loadThemeFile( ResourcePaths::makeAbsolutePath( resourceID ), config, error ) )
+        if ( loadThemeFile( ResourcePaths::findLooseFile( resourceID ).getDiskPath(), config, error ) )
             return true;
         SW_LOG_ERROR( "Theme tokens were not loaded: %#", error.c_str() );
         return false;

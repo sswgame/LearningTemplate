@@ -40,13 +40,14 @@ namespace sw
 
             /**
              * @brief 푼 경로 캐시의 한 칸입니다. `_path` 가 비면 "디스크에 없다" 를 기억한 칸(음성 결과)입니다.
-             * @details 없는 파일은 나중에 생길 수 있으므로 음성 칸은 `_creationEpoch`(기억한 때 `FileUtil::getCreationEpoch`)가 지금과 같은 동안만 믿는다.
-             *          이 프로세스가 파일을 만들면 에포크가 올라 모든 음성 칸이 한꺼번에 낡는다. 양성 칸은 검색 목록이 바뀔 때(`clearPathCache`)만 버린다.
+             * @details 없는 파일은 나중에 생길 수 있으므로 음성 칸은 기억한 때의 `FileUtil::getCreationEpoch` 가 지금과 같은 동안만 믿는다. 있는 파일은 나중에 지워질 수 있으므로
+             *          양성 칸은 기억한 때의 `FileUtil::getRemovalEpoch` 가 지금과 같은 동안만 믿는다(`_epoch` 는 칸의 종류에 맞는 쪽 값이다). 이 프로세스가 파일을 만들면(지우면)
+             *          에포크가 올라 모든 음성(양성) 칸이 한꺼번에 낡는다. 검색 목록이 바뀔 때(`clearPathCache`)는 모든 칸을 버린다.
              */
             struct ResolvedEntry
             {
                 string _path{};
-                uint64 _creationEpoch{ 0 };
+                uint64 _epoch{ 0 };
             };
 
             /**
@@ -57,7 +58,11 @@ namespace sw
             {
                 uint64 _layoutGeneration{ 0 };
                 uint64 _creationEpoch{ 0 };
+                uint64 _removalEpoch{ 0 };
             };
+
+            /** @brief 칸이 믿을 만한지 가르는 에포크입니다. 음성 칸(@p path 가 빔)은 만든 횟수, 양성 칸은 지운 횟수입니다. */
+            static uint64 selectEpoch( const string& path, uint64 creationEpoch, uint64 removalEpoch ) { return path.empty() ? creationEpoch : removalEpoch; }
 
             /** @brief 푼 경로 캐시입니다. 엔진 수명 범위가 소유해 엔진 종료 때 저장소째 사라집니다(처음 넣을 때 만들어진다). 접근은 `_s_pathCache._mutex` 아래에서만 한다. */
             inline static ScopeOwned<unordered_map<string, ResolvedEntry>> _s_mapResolvedPath{};
@@ -79,13 +84,14 @@ namespace sw
             static PathCacheStamp captureStamp()
             {
                 std::scoped_lock<mutex> lock( _s_pathCache._mutex );
-                return PathCacheStamp{ _s_pathCache._layoutGeneration, FileUtil::getCreationEpoch() };
+                return PathCacheStamp{ _s_pathCache._layoutGeneration, FileUtil::getCreationEpoch(), FileUtil::getRemovalEpoch() };
             }
 
-            /** @brief 캐시에서 찾습니다. 찾았으면 true 이고 @p outPath 가 비면 "없음" 입니다. 낡은 음성 칸은 없는 것으로 칩니다. */
+            /** @brief 캐시에서 찾습니다. 찾았으면 true 이고 @p outPath 가 비면 "없음" 입니다. 기억한 뒤 파일이 만들어졌거나(음성 칸) 지워진(양성 칸) 낡은 칸은 없는 것으로 칩니다. */
             [[nodiscard]] static bool lookupResolved( const string& cacheKey, string& outPath )
             {
-                const uint64                                      epoch = FileUtil::getCreationEpoch();
+                const uint64                                      creationEpoch = FileUtil::getCreationEpoch();
+                const uint64                                      removalEpoch  = FileUtil::getRemovalEpoch();
                 std::scoped_lock<mutex>                           lock( _s_pathCache._mutex );
                 const unordered_map<string, ResolvedEntry>* const pMapResolved = _s_mapResolvedPath.find();
                 if ( pMapResolved == nullptr )
@@ -93,8 +99,8 @@ namespace sw
                 const auto it = pMapResolved->find( cacheKey );
                 if ( it == pMapResolved->end() )
                     return false;
-                if ( it->second._path.empty() && it->second._creationEpoch != epoch )
-                    return false; // 기억한 뒤 파일이 만들어졌다 — 다시 훑는다
+                if ( it->second._epoch != selectEpoch( it->second._path, creationEpoch, removalEpoch ) )
+                    return false; // 기억한 뒤 파일이 만들어지거나 지워졌다 — 다시 훑는다
                 outPath = it->second._path;
                 return true;
             }
@@ -111,12 +117,22 @@ namespace sw
                 // nullptr 은 엔진 수명 범위가 닫힌 뒤다(Debug 는 `getOrCreate` 가 단언한다) — 캐시할 곳이 없을 뿐 찾은 경로는 그대로 돌려준다.
                 if ( pMapResolved == nullptr )
                     return;
-                const auto inserted                   = pMapResolved->try_emplace( std::move( cacheKey ) );
-                inserted.first->second._path          = path;
-                inserted.first->second._creationEpoch = stamp._creationEpoch;
+                const auto inserted           = pMapResolved->try_emplace( std::move( cacheKey ) );
+                inserted.first->second._path  = path;
+                inserted.first->second._epoch = selectEpoch( path, stamp._creationEpoch, stamp._removalEpoch );
                 if ( inserted.second )
                     getPathStats().addItemCount( 1 );
             }
+
+            /**
+             * @brief 이 플랫폼의 파일 시스템이 대소문자를 구분하는지입니다. Linux 만 구분합니다 — Windows 는 소문자로 이어도 같은 폴더라 새 경로를 디스크 표기에 맞출 일이 없습니다.
+             * @details `findLooseFile` 의 `SW_PLATFORM_LINUX` 재시도와 같은 기준입니다. 쓰기 쪽(`resolveWritePath`)은 이 값으로 분기해 Windows 에서도 같은 코드가 컴파일됩니다.
+             */
+#if defined( SW_PLATFORM_LINUX )
+            static constexpr bool kCaseSensitiveFileSystem = true;
+#else
+            static constexpr bool kCaseSensitiveFileSystem = false;
+#endif
 
             /** @brief `mountDiskDomain` 으로 붙인 도메인 하나입니다. */
             struct MountedDiskDomain
@@ -530,9 +546,7 @@ namespace sw
         }
 
         // NRVO 가 걸리도록 이름 있는 값 하나로 모아 한 번만 반환한다.
-        string result = findLooseFile( path ).getDiskPath();
-        if ( result.empty() )
-            result = makeAbsolutePath( path );
+        string result = resolveWritePath( path );
         if ( result.empty() )
             result = string{ path };
         return result;
@@ -575,24 +589,39 @@ namespace sw
         return id;
     }
 
-    string ResourcePaths::makeAbsolutePath( string_view relativePath )
+    string ResourcePaths::resolveWritePath( string_view resourceID )
     {
-        if ( relativePath.empty() )
+        if ( resourceID.empty() )
             return {};
 
-        if ( FileUtil::isAbsolutePath( relativePath ) )
-            return FileUtil::normalizeSeparators( relativePath );
+        if ( FileUtil::isAbsolutePath( resourceID ) )
+            return FileUtil::normalizeSeparators( resourceID );
 
-        string result = findLooseFile( relativePath ).getDiskPath();
-        if ( result.empty() )
+        // 루트 밖으로 나가는 id 는 풀지 않는다(`findLooseFile` 과 같은 규칙).
+        if ( hasParentDirectoryComponent( resourceID ) )
+            return {};
+
+        // 이미 있는 파일이면 그 디스크 경로가 답이다(덮어쓸 자리).
+        string result = findLooseFile( resourceID ).getDiskPath();
+        if ( result.empty() == false )
+            return result;
+
+        const string lowerID = FileUtil::normalizePath( resourceID );
+        string       domainRoot;
+        string       keyUnderRoot;
+        if ( ResourcePathsInternal::mapGlobalIDToRoot( lowerID, domainRoot, keyUnderRoot ) == false )
+            return result;
+
+        // 붙인 디스크 도메인의 폴더는 대소문자가 섞일 수 있다. 대소문자를 구분하는 파일 시스템에서 소문자 키를 그대로 이으면 이미 있는 폴더 옆에 대소문자만 다른 새 폴더가 생기므로,
+        // 있는 성분은 디스크 표기를 쓰고 없는 성분부터는 id 의 표기를 쓴다. 리소스 트리의 도메인은 소문자 규칙이라 훑지 않고 새 성분도 소문자다(Windows 도 그대로 소문자로 잇는다).
+        string mountedRoot;
+        string mountedKey;
+        if ( ResourcePathsInternal::kCaseSensitiveFileSystem && ResourcePathsInternal::findMountedDiskDomain( lowerID, mountedRoot, mountedKey ) )
         {
-            const string lowerRel = FileUtil::normalizePath( relativePath );
-            string       domainRoot;
-            string       keyUnderRoot;
-            if ( ResourcePathsInternal::mapGlobalIDToRoot( lowerRel, domainRoot, keyUnderRoot ) )
-                result = FileUtil::joinPath( domainRoot, keyUnderRoot );
+            const string normalizedID = FileUtil::normalizeSeparators( resourceID );
+            return FileUtil::makePathIgnoringCase( mountedRoot, normalizedID.substr( normalizedID.find( '/' ) + 1 ) );
         }
-        return result;
+        return FileUtil::joinPath( domainRoot, keyUnderRoot );
     }
 
     LooseFilePath ResourcePaths::findLooseDomainFolder( string_view domainName, string_view subFolder )

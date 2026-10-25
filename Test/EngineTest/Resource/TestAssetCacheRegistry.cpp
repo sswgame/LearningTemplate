@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Diagnostics/CacheStats.h"
 #include "Core/Log/Logger.h"
 #include "Core/Module/ModuleImageUtil.h"
 #include "Core/Module/ModuleUnloadListener.h"
@@ -104,6 +105,20 @@ SW_TEST_CASE( AssetCacheRegistryTest, BuiltInCachesAreReachableThroughTheRegistr
     SW_EXPECT_TRUE( resources.findAssetCache( "PrimitiveMesh" ) == &sw::MeshUtil::getPrimitiveCache() );
     SW_EXPECT_TRUE( resources.findAssetCache( "SlicedSpriteMesh" ) == &sw::SpriteMeshBuilder::getSlicedMeshCache() );
     SW_EXPECT_TRUE( resources.findAssetCache( "SpriteTextureInstance" ) == &sw::SpriteRenderUtil::getTextureInstanceCache() );
+}
+
+/**
+ * @brief [AssetCacheRegistryTest] 계측 레지스트리(`CacheStats`)의 칸은 상한의 4분의 3 안에 든다
+ * @details 칸이 넘치면 그 캐시는 세어지지 않고 오류 로그만 남는다(`kMaxCacheCount`). 내장 캐시를 모두 세운 뒤의 칸 수가 상한에 가까워지면 상한을 늘릴 때가 된 것이다 —
+ *          캐시가 하나 늘 때마다 넘치는 순간에야 알게 되지 않도록 여유를 지킨다.
+ */
+SW_TEST_CASE( AssetCacheRegistryTest, CacheStatsRegistryKeepsHeadroom )
+{
+    sw::AssetManager resources; // 내장 캐시를 모두 세운다 — 종류 이름의 칸이 올라간다
+
+    sw::vector<sw::CacheStatsSnapshot> listSnapshot;
+    sw::CacheStats::collect( listSnapshot );
+    SW_EXPECT_TRUE_MSG( listSnapshot.size() <= sw::CacheStats::kMaxCacheCount * 3u / 4u, "raise CacheStats::kMaxCacheCount before the registry fills up" );
 }
 
 /**

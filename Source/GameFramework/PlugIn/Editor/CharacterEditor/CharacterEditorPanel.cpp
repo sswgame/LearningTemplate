@@ -746,7 +746,7 @@ namespace sw::editor
         if ( _clipFolder.empty() )
             return;
         // 클립 목록은 디스크의 폴더를 훑어 얻는다 — 에디터는 원본 트리에서 도는 도구다(배포 팩에는 폴더 목록이 없어 목록이 빈다).
-        const string   diskFolder = ResourcePaths::makeAbsolutePath( string_view( _clipFolder.c_str() ) );
+        const string   diskFolder = ResourcePaths::findLooseFile( string_view( _clipFolder.c_str() ) ).getDiskPath();
         vector<string> listFile;
         if ( diskFolder.empty() || FileUtil::collectFiles( diskFolder, string( AnimationClip::kExtension ), listFile, false ) == false )
             return;

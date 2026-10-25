@@ -41,8 +41,6 @@
 #include "TestFramework/Harness/TestHostRuntime.h"
 #include "TestFramework/TestFramework.h"
 
-#include <fstream>
-
 // RenderPassTest — 파이프라인 XML · 렌더 그래프 위상 · 검증. GPU 디바이스를 만들지 않는다(nogpu).
 
 SW_TEST_CASE( RenderPassTest, XMLSerializationRoundtrip )
@@ -150,9 +148,8 @@ SW_TEST_CASE( RenderPassTest, PipelineRejectsLegacyRenderPassDescRoot )
 {
     SW_TEST_DEFENSIVE_SCOPE( "Testing legacy root XML rejection" );
     const sw::string testPath = test::makeTempPath( "test_legacy_pipeline.xml" );
-    {
-        std::ofstream out( testPath.c_str() );
-        out << R"(<?xml version="1.0" encoding="utf-8"?>
+    // 파일은 `FileUtil` 로 만든다 — 경로 캐시가 "없음" 을 기억했다면 만든 횟수(`getCreationEpoch`)가 올라야 새 파일이 보인다.
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( testPath, R"(<?xml version="1.0" encoding="utf-8"?>
 <RenderPassDesc>
 	<_name>LegacyForward</_name>
 	<_passes>
@@ -162,8 +159,7 @@ SW_TEST_CASE( RenderPassTest, PipelineRejectsLegacyRenderPassDescRoot )
 		</item>
 	</_passes>
 </RenderPassDesc>
-)";
-    }
+)" ) );
 
     sw::RenderPipelineAsset loaded;
     SW_EXPECT_FALSE( loaded.loadFromXMLFile( ::test::makeTempResourceID( testPath ) ) );

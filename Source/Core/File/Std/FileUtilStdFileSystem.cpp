@@ -189,7 +189,8 @@ namespace sw
             return true;
 
         std::error_code errorCode;
-        std::filesystem::create_directories( FileUtilStdInternal::toPath( directoryPath ), errorCode );
+        if ( std::filesystem::create_directories( FileUtilStdInternal::toPath( directoryPath ), errorCode ) )
+            noteFileCreated(); // 폴더를 만들었다(없는 폴더를 기억한 캐시가 버린다)
         // 성공은 오류 코드가 아니라 "폴더가 있는가" 로만 가른다. 병렬 쿠킹 · 임포트가 같은 폴더를 동시에 만들 때 libstdc++ · libc++ 의 `create_directories` 는
         // 다른 스레드가 먼저 만든 경쟁에서 오류 코드를 줄 수 있다(MSVC STL 은 주지 않는다). 폴더가 이미 있으면 성공이고, 같은 이름의 파일이 막고 있으면 여전히 실패다.
         if ( isDirectory( directoryPath ) == false )
@@ -356,7 +357,8 @@ namespace sw
         if ( path.empty() )
             return true;
         std::error_code errorCode;
-        std::filesystem::remove( FileUtilStdInternal::toPath( path ), errorCode );
+        if ( std::filesystem::remove( FileUtilStdInternal::toPath( path ), errorCode ) )
+            noteFileRemoved(); // 지웠다(있는 파일을 기억한 캐시가 버린다)
         if ( exists( path ) == false )
             return true;
         SW_LOG_WARNING( "Could not remove '%#': %#", path, errorCode ? FileUtilStdInternal::describe( errorCode ).c_str() : "still there" );
@@ -368,7 +370,8 @@ namespace sw
         if ( path.empty() )
             return true;
         std::error_code errorCode;
-        std::filesystem::remove( FileUtilStdInternal::toPath( path ), errorCode );
+        if ( std::filesystem::remove( FileUtilStdInternal::toPath( path ), errorCode ) )
+            noteFileRemoved();
         return exists( path ) == false;
     }
 
@@ -377,7 +380,8 @@ namespace sw
         if ( path.empty() )
             return true;
         std::error_code errorCode;
-        std::filesystem::remove_all( FileUtilStdInternal::toPath( path ), errorCode );
+        if ( std::filesystem::remove_all( FileUtilStdInternal::toPath( path ), errorCode ) > 0 )
+            noteFileRemoved(); // 일부만 지웠어도 지운 항목의 옛 경로는 낡았다
         if ( isDirectory( path ) == false )
             return true;
         SW_LOG_WARNING( "Could not remove directory '%#': %#", path, errorCode ? FileUtilStdInternal::describe( errorCode ).c_str() : "still there" );

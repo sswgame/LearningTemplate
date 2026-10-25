@@ -216,13 +216,21 @@ namespace sw
          */
         static bool getFileStamp( string_view fileName, FileStamp& outStamp );
         /**
-         * @brief 이 프로세스가 파일을 만들었거나 바꿔 끼운 횟수입니다(`writeFile` · `writeTextFile` · `copyFile` 이 성공할 때마다 오릅니다).
+         * @brief 이 프로세스가 파일 · 폴더를 만들었거나 바꿔 끼운 횟수입니다(`writeFile` · `writeTextFile` · `copyFile` 이 성공할 때, `ensureDirectoryExists` 가 폴더를 만들 때마다 오릅니다).
          * @details "없는 파일" 을 기억하는 캐시(`ResourcePaths`)가 이 값이 바뀌면 기억을 버립니다 — 파일이 생겼는데 옛 "없음" 을 돌려주지 않게. 이 값을 보는 쪽은
-         *          값이 같은 동안만 "없음" 을 믿는다. 다른 프로세스(쿠커 자식, git)가 만든 파일은 보이지 않는다.
+         *          값이 같은 동안만 "없음" 을 믿는다. 다른 프로세스(git, 바깥 편집기, 쿠커 자식)가 만든 파일은 보이지 않는다 — 에디터는 파일 감시 사건이 비우고(`FileWatchDispatcher`),
+         *          자식 프로세스를 기다린 뒤 그 산출물을 경로로 묻는 코드는 기다린 뒤에 `noteFileCreated` 를 부른다(`Process` 는 `File` 보다 아래 층이라 알리지 못한다).
          */
         static uint64 getCreationEpoch();
-        /** @brief 파일을 만들었음을 알립니다(`getCreationEpoch` 을 올립니다). 이 클래스 밖에서 파일을 만드는 코드(플랫폼 계층)만 부릅니다. */
+        /** @brief 파일 · 폴더를 만들었음을 알립니다(`getCreationEpoch` 을 올립니다). 이 클래스 밖에서 파일을 만드는 코드(플랫폼 계층 · 자식 프로세스를 기다리는 쪽)만 부릅니다. */
         static void noteFileCreated();
+        /**
+         * @brief 이 프로세스가 파일 · 폴더를 지운 횟수입니다(`removeFile` · `tryRemoveFile` · `removeDirectory` 가 지웠을 때 오릅니다).
+         * @details "있는 파일" 을 기억하는 캐시(`ResourcePaths`)가 이 값이 바뀌면 기억을 버립니다 — 지운 파일의 옛 경로를 돌려주지 않게. `getCreationEpoch` 의 짝입니다.
+         */
+        static uint64 getRemovalEpoch();
+        /** @brief 파일 · 폴더를 지웠음을 알립니다(`getRemovalEpoch` 을 올립니다). 이 클래스 밖에서 지우는 코드만 부릅니다. */
+        static void noteFileRemoved();
         /** @brief 파일을 복사합니다(대상이 있으면 덮어씁니다). 실패하면 로그를 남기고 false 입니다. */
         [[nodiscard]] static bool copyFile( string_view source, string_view destination );
         /** @brief 파일을 삭제합니다. 없었거나 삭제했으면 true 이고, 지우지 못했으면 경로와 이유를 알리고 false 입니다. */
@@ -305,6 +313,16 @@ namespace sw
          * @return `root` 로 시작하는 `/` 구분 경로, 못 찾으면 빈 문자열
          */
         [[nodiscard]] static string findPathIgnoringCase( string_view root, string_view lowerRelative );
+        /**
+         * @brief **쓰기용**입니다. @p relative 를 @p root 아래의 경로로 잇되, 이미 디스크에 있는 성분은 그 표기를 쓰고 없는 성분부터는 @p relative 의 표기를 그대로 씁니다.
+         * @details 대소문자를 구분하는 파일 시스템에서 소문자 id 를 그대로 이으면 대소문자만 다른 새 폴더가 생긴다(`Saved/Automation` 이 있는데 `saved/automation` 을 만든다).
+         *          `findPathIgnoringCase` 는 읽기용이라 다 있어야 답하고, 이 함수는 있는 데까지 풀고 나머지를 이어 새 파일 자리를 돌려준다. 이름만 대소문자가 다른 항목이 여럿이면
+         *          정렬 순으로 앞선 것이다. 없는 성분 아래는 훑지 않는다.
+         * @param root 실제 표기의 절대 폴더
+         * @param relative `/` 또는 `\` 구분 상대 경로(대소문자 무관, `..` 없음)
+         * @return `root` 로 시작하는 `/` 구분 경로. 성분이 모두 없어도 `root` 아래에 이어 붙인 경로다.
+         */
+        [[nodiscard]] static string makePathIgnoringCase( string_view root, string_view relative );
         /**
          * @brief 디렉터리에서 확장자 필터에 맞는 파일을 모읍니다.
          * @details 실제 파일 시스템을 훑어 얻은 경로라 **대소문자를 그대로 돌려줍니다**(구분자만 `/` 로 바꿉니다). 그대로 열 수
