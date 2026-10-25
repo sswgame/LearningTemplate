@@ -45,7 +45,8 @@
     - 패치 · 델타 배포 [PatchDeltaDelivery](PatchDeltaDelivery.md): 출시는 스팀 기준이라 P6 은 스팀 전용이면 취소하고 P4 · P5 는 스팀 밖과 콘텐츠 핫픽스용으로 내린다. P7(팩 레이아웃 안정성 점검)이 남은 일이다. [단독: P7 측정은 Release 에서 혼자]
 11. **병렬 · 비동기 트랙의 남은 단위**(2026-10-25 통합 I 에서 들어온 설계)
     - `hostgpu` 의 AppBin 잠금 풀기 [HostGpuIsolation](HostGpuIsolation.md) H1 → H4. [단독: H1 은 앱을 돌려 쓰기 위치를 스냅샷한다 — 통합 · gpu-verifier]
-    - RHI 비동기 업로드 [RhiAsyncUploads](RhiAsyncUploads.md) — B0 골격 번들(계약 + 네 백엔드 + 호출처)을 한 번에 병합한 뒤 U5 ~ U14 를 단위별로. [단독: RHI ABI 버전을 한 번 올려 백엔드 DLL 이 모두 다시 빌드됨]
+    - RHI 비동기 업로드 [RhiAsyncUploads](RhiAsyncUploads.md) — B0 골격 번들은 통합 L 에서 들어갔다. U5(DX12) · U6(Vulkan) · U7(테스트) · U8(텍스처 소비자) · U9(구간 갱신 · 되읽기 소비자) · U11(PSO 상태)을 단위별로, 그 뒤 U10 · U12 ~ U14. [병렬 가능: 단위마다 소유 폴더가 다르다(계획 문서 표), GPU 확인은 통합]
+    - 애니메이션 성분 단위 평가 [AnimationComponentChain](AnimationComponentChain.md) — U3 · U4 는 통합 L 에서 들어갔다(Debug `race` 통과). 남은 것은 4 절 측정(K = 0 · 2 · 4 대조군, 무기 L = 3). [단독: 측정은 Release 에서 혼자]
     - 저장 전용 압축 타입 [PackedTypes](PackedTypes.md) P4(G 버퍼 법선 — 설계는 문서에 있고 코드는 GPU 확인과 재쿠킹을 하는 통합이 쓴다) → P5 → P6. [단독: P4 는 셰이더 재베이크]
 
 ## 지금 하지 않는 것

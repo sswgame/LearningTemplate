@@ -899,7 +899,7 @@
       "source": "docs/09_Decisions.md 5-5", "result_doc": "docs/plans/CameraRendererIntegration.md 1절"
     },
     {
-      "id": "rhi-transfer-b0-gpu", "title": "RHI 전송 계약 B0(제출 · 폴링 · 업로드 · 구간 갱신 · 되읽기 · 캡처, 네 백엔드)", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true, "timeout_minutes": 45,
+      "id": "rhi-transfer-b0-gpu", "title": "RHI 전송 계약 B0(제출 · 폴링 · 업로드 · 구간 갱신 · 되읽기 · 캡처, 네 백엔드)", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": false, "timeout_minutes": 45,
       "filter": "RHIDeviceTest.UploadTexture2DAllBackends,RHIDeviceTest.TextureReadbackMatchesUpload,RHIDeviceTest.SlicedTexturesTargetUploadAndReadBackPerSlice,RHIDeviceTest.RegionUploadReadsBackOnEveryBackend,RHIDeviceTest.RegionUploadRejectsOutOfRange,RHIDeviceTest.ComputeTextureUavWriteIsReadable,RHIDeviceTest.ComputeEntryPointOtherThanCSMainRuns,RenderPassGPUTest.PresentCaptureFollowsOffscreenOutput",
       "extra_args": ["--host_suites=all"],
       "source": "docs/plans/RhiAsyncUploads.md 3절 B0", "result_doc": "docs/plans/RhiAsyncUploads.md 3절",

@@ -19,7 +19,6 @@
 | - | [ImportRuleOverlap](docs/plans/ImportRuleOverlap.md) — 임포트 규칙의 겹침 막기 | 구현대기 | 0/3 | 없음 | editor | C-44 |
 | - | [RuntimeQualityAdjust](docs/plans/RuntimeQualityAdjust.md) — 부하 검증의 남은 것과 자동 품질 조정 | 구현대기 | 0/4 | 없음 | quality | C-29 |
 | - | [SourceScanGates](docs/plans/SourceScanGates.md) — 공유 훑기로 못 옮긴 소스 게이트와 픽서 | 구현대기 | 0/4 | 없음 | quality | C-48 |
-| - | [AnimationComponentChain](docs/plans/AnimationComponentChain.md) — 애니메이션 평가를 연결 성분 단위로 옮기기 | 구현중 | 0/4 | 없음 | gameplay | 없음 |
 | - | [CharacterAppearanceIntegration](docs/plans/CharacterAppearanceIntegration.md) — 캐릭터 외형의 통합 · 쿠킹 · 장비 잇기 | 구현중 | 5/6 | 없음 | gameplay | D4-8 |
 | - | [ClusteredLighting](docs/plans/ClusteredLighting.md) — 클러스터드 라이팅 구현 단위 (`D2-13`) | 구현중 | 5/6 | 없음 | graphics | D2-13 |
 | - | [CrossFileObjectReference](docs/plans/CrossFileObjectReference.md) — 씬 · 프리팹 파일을 넘는 오브젝트 참조 | 구현중 | 2/3 | 없음 | engine | G-5 |
@@ -41,6 +40,7 @@
 | - | [WildWestHorseMount](docs/plans/WildWestHorseMount.md) — WildWest 승마의 말 모델 | 구현중 | 2/3 | 없음 | gameplay | D4-15 |
 | - | [AbilitySystemExtensions](docs/plans/AbilitySystemExtensions.md) — 어빌리티 시스템의 다음 조각 | 측정대기 | 5/5 | 없음 | gameplay | D4-11 |
 | - | [AnimationAdvancedFeatures](docs/plans/AnimationAdvancedFeatures.md) — 애니메이션 고급 기능 | 측정대기 | 4/4 | 없음 | gameplay | D4-16 |
+| - | [AnimationComponentChain](docs/plans/AnimationComponentChain.md) — 애니메이션 평가를 연결 성분 단위로 옮기기 | 측정대기 | 4/4 | 없음 | gameplay | 없음 |
 | - | [AnimationLodAndCrowd](docs/plans/AnimationLodAndCrowd.md) — 애니메이션 LOD 와 군중 공유의 남은 것 | 측정대기 | 4/4 | 없음 | gameplay | D4-6 |
 | - | [AppStructure](docs/plans/AppStructure.md) — App 구조 정리 (2026-10-22) | 측정대기 | 7/7 | 없음 | engine | 없음 |
 | - | [AsyncResourceLoading](docs/plans/AsyncResourceLoading.md) — 리소스 비동기 로드와 디더 등장 계획 (2026-10-20) | 측정대기 | 7/7 | 없음 | engine | 없음 |

@@ -1,6 +1,6 @@
 # 애니메이션 평가를 연결 성분 단위로 옮기기
 
-> 상태: 구현중 · 선행: 없음 · 영역: gameplay · 옛번호: 없음 · 진행: 표
+> 상태: 측정대기 · 선행: 없음 · 영역: gameplay · 옛번호: 없음 · 진행: 표
 
 `AnimationSystem` 은 "단계 먼저, 그 안에서 레벨" 순서로 레벨마다 `engine::runParallelByCost` 의 전체 대기를 해서, 의존 깊이가 L 이면 한 프레임에 최대 5L 번 기다렸다(시간 단계 1 + 포즈 단계 넷, 각각 L 레벨).
 이 문서는 의존으로 이어진 유닛을 연결 성분으로 모아 성분 안은 직렬로, 성분 사이는 한 번에 병렬로 돌려 전체 대기를 2 번(시간 단계 1 + 포즈 단계 합친 1)으로 줄이는 일을 단위로 나눈다.
@@ -22,10 +22,12 @@
 
 | 단계 | 내용 | 상태 |
 |---|---|---|
-| U1 | 정합 테스트(`SkeletalAnimationTest.FollowerReadsLeaderFinalPoseAfterAttachmentPhase` · `PoseModifierTest.FollowerReadsLeaderPoseAfterRig`), 계측 카운터(`componentCount` · `maxComponentSize`), 벤치 변수(`-gv_benchCharacterFollowers` · `-gv_benchCharacterWeapon`) | 코드 작성(빌드 · 실행 미확인). 정합 테스트 둘은 옛 순서에서 실패해야 하고 지금 순서에서 통과해야 한다 |
-| U2 | 연결 성분을 짓는다(`AnimationComponentSet`, union-find + 성분별 위상 순서) | 코드와 `SkeletalAnimationTest.Components*` 테스트 작성(빌드 미확인) |
-| U3 | `runPhase` 를 성분 단위로 옮긴다: 시간 단계는 유닛 위로 한 번, 포즈 단계 넷은 성분마다 유닛 먼저로 묶어 `runParallelByCost` 한 번. 게임 스레드 순회는 성분 순서, 되감기 훅 순회는 `AnimationOrderedList::forEach` | 코드 작성(빌드 · 실행 미확인). 새 테스트 `SkeletalAnimationTest.PosePhasesRunUnitFirstInsideComponentAfterEveryTimePhase` · `RetargetTest.ComponentFollowsSourceFinalPoseAfterPostProcess` |
-| U4 | 레벨 제거(`getLevels` · `hasDependencyCycle` · `_listLevelSlot` · `levelCount` 카운터). 외톨이 해제 지름길은 성분 목록에서 유닛 하나짜리 성분을 뺀다(`AnimationComponentSet::removeSingletons`). `getLevels` 를 쓰던 테스트는 성분 API 로 옮기고, 성분 테스트와 겹치던 `SystemLevelsMatchFreshBuildAfterUnregister` 는 지웠다 | 코드 작성(빌드 · 실행 미확인) |
+| U1 | 정합 테스트(`SkeletalAnimationTest.FollowerReadsLeaderFinalPoseAfterAttachmentPhase` · `PoseModifierTest.FollowerReadsLeaderPoseAfterRig`), 계측 카운터(`componentCount` · `maxComponentSize`), 벤치 변수(`-gv_benchCharacterFollowers` · `-gv_benchCharacterWeapon`) | 끝남 |
+| U2 | 연결 성분을 짓는다(`AnimationComponentSet`, union-find + 성분별 위상 순서) | 끝남 |
+| U3 | `runPhase` 를 성분 단위로 옮긴다: 시간 단계는 유닛 위로 한 번, 포즈 단계 넷은 성분마다 유닛 먼저로 묶어 `runParallelByCost` 한 번. 게임 스레드 순회는 성분 순서, 되감기 훅 순회는 `AnimationOrderedList::forEach` | 끝남 |
+| U4 | 레벨 제거(`getLevels` · `hasDependencyCycle` · `_listLevelSlot` · `levelCount` 카운터). 외톨이 해제 지름길은 성분 목록에서 유닛 하나짜리 성분을 뺀다(`AnimationComponentSet::removeSingletons`). `getLevels` 를 쓰던 테스트는 성분 API 로 옮기고, 성분 테스트와 겹치던 `SystemLevelsMatchFreshBuildAfterUnregister` 는 지웠다 | 끝남 |
+
+U1 ~ U4 는 통합 L(2026-10-25)에서 빌드하고 Debug `nogpu` · `race` 로 확인했다 — 정합 테스트 둘과 새 테스트 둘이 통과하고, 선언 없는 교차 유닛 읽기는 `race` 에서 걸리지 않았다.
 
 후보(단위로 세우지 않음): 큰 성분(리더 하나에 수십 유닛)이 직렬 임계 경로가 되면 성분 안의 형제 유닛(같은 위 유닛만 가진 부품들)을 다시 병렬로 나눈다. `GT.Animation.maxComponentSize` 와 4절의 측정으로 필요가 보일 때 착수한다.
 

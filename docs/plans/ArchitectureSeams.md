@@ -89,7 +89,7 @@
 
 링크 · 증분 · 기동 시간은 0 단계가 쟀다(2026-10-25). GHASH 효과는 5a 가 잰다. `EditorCore` 후보 폴더의 ImGui 사용은 직접 include 만 셌다(전이 include 는 미확인). dllexport 정의로 컴파일한 OBJECT 를 테스트 실행 파일에 넣었을 때 clang-cl 과 Linux Clang 에서 문제가 없는지. 언리얼 · 유니티 렌더러 구조와 ADR 관행은 기억에 기댄 것이라 결정 근거로 쓰지 않았다.
 
-## 6. 3 단계 진행 (2026-10-25, 코드만 — 빌드 · 테스트 전)
+## 6. 3 단계 진행 (2026-10-25, 통합 L 에서 빌드 · nogpu · 백엔드 교체 시나리오 확인)
 
 끝난 커밋 단위(되돌리기는 커밋 하나씩): ① `CheckServiceAccess` 가 정적 사본의 참조를 내주는 `static const T& getActive()` 도 센다(예외 표 종류 `PendingScopeMove` = 이전 대기), ② `EngineConfig` 를 `ConfigManager` 소유로(정적 사본 · `setPrimary` 제거), ③ `GameConfig` 정적 사본 제거, ④ `Render2DSettings` 를 `Render2DSettingsSubsystem` 소유로. 서비스 표에 행 셋(`EngineConfig` · `GameConfig` · `Render2DSettings`)이 늘었다. 전역 가변 정적 래칫은 231 파일 · 상한 합 494 에서 227 파일 · 489 가 됐다. 결정은 [결정 기록 5-4](../decisions/5-4_DataConfig.md) 의 끝 항목이다.
 
