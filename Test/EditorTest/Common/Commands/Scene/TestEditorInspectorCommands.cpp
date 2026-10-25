@@ -7,10 +7,12 @@
 #include "EditorTest/EditorPreviewProbe.h"
 #include "EditorTest/EditorTestServices.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabInstanceRegistry.h"
+#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Scene/SceneObjectReference.h"
@@ -35,6 +37,7 @@ namespace
         GameObject*               _pHolder{ nullptr };
         ScopedSceneManagerService _scopedScene{ _sceneManager };
         ScopedWorkspaceService    _scopedWorkspace{ _workspace };
+        ScopedTypeRegistryService _scopedRegistry{ engine::getSubsystem<TypeRegistry>() }; // 참조 검사가 구조체 칸까지 내려가려고 쓴다
 
         AdoptScene()
         {

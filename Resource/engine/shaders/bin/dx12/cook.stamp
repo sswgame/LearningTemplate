@@ -33,6 +33,7 @@ SWCOOK 5
 16ae8efe60795dae sprite2d.hlsl?batchdata.hlsli
 16ae8efe60795dae sprite2dlit.hlsl?batchdata.hlsli
 16ae8efe60795dae ssao.hlsl?batchdata.hlsli
+16ae8efe60795dae surfacelit.hlsl?batchdata.hlsli
 16ae8efe60795dae taa.hlsl?batchdata.hlsli
 16ae8efe60795dae terrain.hlsl?batchdata.hlsli
 16ae8efe60795dae tonemap.hlsl?batchdata.hlsli
@@ -69,6 +70,7 @@ SWCOOK 5
 290a618172c57239 sprite2d.hlsl?lightgridcommon.hlsli
 290a618172c57239 sprite2dlit.hlsl?lightgridcommon.hlsli
 290a618172c57239 ssao.hlsl?lightgridcommon.hlsli
+290a618172c57239 surfacelit.hlsl?lightgridcommon.hlsli
 290a618172c57239 taa.hlsl?lightgridcommon.hlsli
 290a618172c57239 terrain.hlsl?lightgridcommon.hlsli
 290a618172c57239 tonemap.hlsl?lightgridcommon.hlsli
@@ -90,6 +92,7 @@ SWCOOK 5
 45b869a5e8eedd94 shadowdepth.hlsl?lightdata.hlsli
 45b869a5e8eedd94 sprite2d.hlsl?lightdata.hlsli
 45b869a5e8eedd94 sprite2dlit.hlsl?lightdata.hlsli
+45b869a5e8eedd94 surfacelit.hlsl?lightdata.hlsli
 45b869a5e8eedd94 terrain.hlsl?lightdata.hlsli
 45b869a5e8eedd94 toon.hlsl?lightdata.hlsli
 45b869a5e8eedd94 vfxsimulate.hlsl?lightdata.hlsli
@@ -101,6 +104,7 @@ SWCOOK 5
 4b11a8aacef885b3 shadowdepth.hlsl?materialshadermain.hlsli
 4b11a8aacef885b3 sprite2d.hlsl?materialshadermain.hlsli
 4b11a8aacef885b3 sprite2dlit.hlsl?materialshadermain.hlsli
+4b11a8aacef885b3 surfacelit.hlsl?materialshadermain.hlsli
 4b11a8aacef885b3 terrain.hlsl?materialshadermain.hlsli
 4b11a8aacef885b3 toon.hlsl?materialshadermain.hlsli
 4b11a8aacef885b3 water.hlsl?materialshadermain.hlsli
@@ -136,6 +140,7 @@ SWCOOK 5
 645e405601714e5d sprite2d.hlsl?instancedata.hlsli
 645e405601714e5d sprite2dlit.hlsl?instancedata.hlsli
 645e405601714e5d ssao.hlsl?instancedata.hlsli
+645e405601714e5d surfacelit.hlsl?instancedata.hlsli
 645e405601714e5d taa.hlsl?instancedata.hlsli
 645e405601714e5d terrain.hlsl?instancedata.hlsli
 645e405601714e5d tonemap.hlsl?instancedata.hlsli
@@ -165,6 +170,7 @@ SWCOOK 5
 950fb88d8f14e420 fog.hlsl?fogcommon.hlsli
 950fb88d8f14e420 volumetricfog.hlsl?fogcommon.hlsli
 97497890b5995fbc autoexposure.hlsl
+97892aba7a9c3910 surfacelit.hlsl
 9bf2ae0ee30a014d vfxmeshinstance.hlsl
 a5175c4a2459d369 sprite2dlit.hlsl?lighting2d.hlsli
 a5a381820ea5452d postchain.hlsl
@@ -201,6 +207,7 @@ ab37247694eea95c sky.hlsl?bindingslots.hlsli
 ab37247694eea95c sprite2d.hlsl?bindingslots.hlsli
 ab37247694eea95c sprite2dlit.hlsl?bindingslots.hlsli
 ab37247694eea95c ssao.hlsl?bindingslots.hlsli
+ab37247694eea95c surfacelit.hlsl?bindingslots.hlsli
 ab37247694eea95c taa.hlsl?bindingslots.hlsli
 ab37247694eea95c terrain.hlsl?bindingslots.hlsli
 ab37247694eea95c tonemap.hlsl?bindingslots.hlsli
@@ -219,6 +226,7 @@ bda31ef542e29853 gbuffer.hlsl?lighting.hlsli
 bda31ef542e29853 shadowdepth.hlsl?lighting.hlsli
 bda31ef542e29853 sprite2d.hlsl?lighting.hlsli
 bda31ef542e29853 sprite2dlit.hlsl?lighting.hlsli
+bda31ef542e29853 surfacelit.hlsl?lighting.hlsli
 bda31ef542e29853 terrain.hlsl?lighting.hlsli
 bda31ef542e29853 toon.hlsl?lighting.hlsli
 bda31ef542e29853 water.hlsl?lighting.hlsli
@@ -247,6 +255,7 @@ ca6bc2e4b863419f sky.hlsl?binding.hlsli
 ca6bc2e4b863419f sprite2d.hlsl?binding.hlsli
 ca6bc2e4b863419f sprite2dlit.hlsl?binding.hlsli
 ca6bc2e4b863419f ssao.hlsl?binding.hlsli
+ca6bc2e4b863419f surfacelit.hlsl?binding.hlsli
 ca6bc2e4b863419f taa.hlsl?binding.hlsli
 ca6bc2e4b863419f terrain.hlsl?binding.hlsli
 ca6bc2e4b863419f tonemap.hlsl?binding.hlsli
@@ -262,6 +271,7 @@ e829dde8aada5e39 gbuffer.hlsl?materialshader.hlsli
 e829dde8aada5e39 shadowdepth.hlsl?materialshader.hlsli
 e829dde8aada5e39 sprite2d.hlsl?materialshader.hlsli
 e829dde8aada5e39 sprite2dlit.hlsl?materialshader.hlsli
+e829dde8aada5e39 surfacelit.hlsl?materialshader.hlsli
 e829dde8aada5e39 terrain.hlsl?materialshader.hlsli
 e829dde8aada5e39 toon.hlsl?materialshader.hlsli
 e829dde8aada5e39 water.hlsl?materialshader.hlsli
@@ -298,6 +308,7 @@ fdafc6cabbf49590 sky.hlsl?common.hlsli
 fdafc6cabbf49590 sprite2d.hlsl?common.hlsli
 fdafc6cabbf49590 sprite2dlit.hlsl?common.hlsli
 fdafc6cabbf49590 ssao.hlsl?common.hlsli
+fdafc6cabbf49590 surfacelit.hlsl?common.hlsli
 fdafc6cabbf49590 taa.hlsl?common.hlsli
 fdafc6cabbf49590 terrain.hlsl?common.hlsli
 fdafc6cabbf49590 tonemap.hlsl?common.hlsli

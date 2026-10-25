@@ -96,7 +96,7 @@ b68cd5262943406d 030b0c861dc1e907 surfaces/weathered_brown_planks/weathered_brow
 641def83fc7fb8f4 2cab8d3950ff6e80 surfaces/weathered_brown_planks/weathered_brown_planks_rough.jpg
 dcd2e17960ac3fe4 b2e11e1945ab720d terrain/terrain_detail.png
 d81acdf72d9073ea 3678afde892e9ad7 ui/kenney_cursor/basic/arrow_e.png
-604f2dafcf56d5c7 03705753c2930157 ui/kenney_cursor/basic/arrow_n.png
+c2ed75c9a23a2855 72bfae87329e6987 ui/kenney_cursor/basic/arrow_n.png
 58e04434a4f45abd aae3457e4e422cb7 ui/kenney_cursor/basic/arrow_ne.png
 8111ec25e74b3c9f 9edefddfc3a7b833 ui/kenney_cursor/basic/arrow_nw.png
 c644c3ab619c6a5b 1b61f0ca8e13f0b7 ui/kenney_cursor/basic/arrow_s.png
@@ -146,12 +146,12 @@ d862ee0bce27e707 1e5c97445adf66d7 ui/kenney_cursor/basic/gauntlet_point.png
 2837d35019ed943c 49e92972c753853f ui/kenney_cursor/basic/hand_open.png
 c7b63c647f4c81dc e43af6227bb486c3 ui/kenney_cursor/basic/hand_point.png
 13dbdbfe6de0fbfa 98867e89203a9a93 ui/kenney_cursor/basic/hand_point_e.png
-843f723d4ff0cf35 e57b4a9123686d7d ui/kenney_cursor/basic/hand_point_n.png
+7ce3fda533671c47 5dfc59a6315c1f0b ui/kenney_cursor/basic/hand_point_n.png
 0ee549ad2140a85d 15a9859d26f69aef ui/kenney_cursor/basic/hand_small_closed.png
 1eaeb532e18edda4 f6249116d49fc087 ui/kenney_cursor/basic/hand_small_open.png
 51604fc2ecd43cbc 45c1e2915d24d00f ui/kenney_cursor/basic/hand_small_point.png
 df2a52f5d4e6a291 be79a8d0065accb3 ui/kenney_cursor/basic/hand_small_point_e.png
-b2b556e806f8fb8b 1253a923dc82dd75 ui/kenney_cursor/basic/hand_small_point_n.png
+16b99412a7195e99 4753e737bbc90713 ui/kenney_cursor/basic/hand_small_point_n.png
 6a930c553f0bcb23 cd2ac66cb62f5c73 ui/kenney_cursor/basic/hand_thin_closed.png
 5c718fc0fae815de 4b68885c4cc32b4f ui/kenney_cursor/basic/hand_thin_open.png
 1447ca374a13c899 52a3d3b74a79fd0b ui/kenney_cursor/basic/hand_thin_point.png
@@ -176,7 +176,7 @@ c75c562bbb702d2f 1a50f3d3d49b8dbf ui/kenney_cursor/basic/message_dots_square.png
 f21f408a2fbe342e 1be7c81670d64657 ui/kenney_cursor/basic/message_round.png
 260baf378f16586d 885cc3df4b44ce2f ui/kenney_cursor/basic/message_square.png
 30e26b955d567e11 25e656b310e39a1b ui/kenney_cursor/basic/navigation_e.png
-863a0bee2e8b46d2 bdaa25eebd1eb591 ui/kenney_cursor/basic/navigation_n.png
+902df7432d3c20f4 7ac1d36bb74d943f ui/kenney_cursor/basic/navigation_n.png
 cc7d089b6dcaf610 0eb787f8eddef003 ui/kenney_cursor/basic/navigation_ne.png
 a1eb717e51f4a32e 907fedb1515372af ui/kenney_cursor/basic/navigation_nw.png
 fdb828f807ee080c 24052ba3082c0c87 ui/kenney_cursor/basic/navigation_s.png
@@ -278,7 +278,7 @@ af003a0c586dd2be 31657d72df7fc32f ui/kenney_cursor/basic/tracking_vertical_right
 a25d90b411906e4e c3ccb42cbdbd4833 ui/kenney_cursor/basic/zoom_out.png
 06062148f6fb48b7 577a26d7a78e0d93 ui/kenney_cursor/basic/zoom_reset.png
 73d1f13bab95a526 716a5b5db722363f ui/kenney_cursor/outline/arrow_e.png
-066ff75246a3595d 7323b39a0790e56a ui/kenney_cursor/outline/arrow_n.png
+d684c171fb59f26f 4198fab2c5ea4f46 ui/kenney_cursor/outline/arrow_n.png
 3b9aea05f0c180b0 f71abf7fb3dc83d6 ui/kenney_cursor/outline/arrow_ne.png
 814fe9f963fbba2f 5db840eb6d6ed032 ui/kenney_cursor/outline/arrow_nw.png
 6803ab3204af1362 e621c462506d5277 ui/kenney_cursor/outline/arrow_s.png
@@ -328,12 +328,12 @@ dbfe4530156b01bd 9044f91973aedcf8 ui/kenney_cursor/outline/drawing_picker.png
 e8ccf012fb22c696 54aa347aa6669016 ui/kenney_cursor/outline/hand_open.png
 394bb4c645094699 9dcdee29accbf38a ui/kenney_cursor/outline/hand_point.png
 edffb7e7de91de6b e3fe198139e94b6b ui/kenney_cursor/outline/hand_point_e.png
-09173faea09f8fbc c44f71623dbf239d ui/kenney_cursor/outline/hand_point_n.png
+7ee564310518f95a 35f619758f57b6a3 ui/kenney_cursor/outline/hand_point_n.png
 c57e49e2901d0230 d15aebb663ee0e77 ui/kenney_cursor/outline/hand_small_closed.png
 2ee6e4d9ef979c3a ecda9cb4319f947f ui/kenney_cursor/outline/hand_small_open.png
 2cc272294bdf2364 7024c74db7eb9777 ui/kenney_cursor/outline/hand_small_point.png
 43605921a879d29c 5fd8e7b169c83992 ui/kenney_cursor/outline/hand_small_point_e.png
-d33d6cb97173bee5 179e29e2bc01cb0b ui/kenney_cursor/outline/hand_small_point_n.png
+0d752969c3c15377 a141edac6a75f743 ui/kenney_cursor/outline/hand_small_point_n.png
 04686f66f3a847a2 750178dbcb175eba ui/kenney_cursor/outline/hand_thin_closed.png
 cb7c9a80102e5074 31d6ca99ce76df1f ui/kenney_cursor/outline/hand_thin_open.png
 1ac78e0c5cf2638a c311567b8553f542 ui/kenney_cursor/outline/hand_thin_point.png
@@ -358,7 +358,7 @@ b3132d47fb090921 f187c98726ca237e ui/kenney_cursor/outline/message_dots_square.p
 2134219b54e055ad 90b7c9ede442cdc7 ui/kenney_cursor/outline/message_round.png
 3be22ecff9a50181 bf19566698fd9cee ui/kenney_cursor/outline/message_square.png
 1f9a7c101c20f8e4 948e63586af6328a ui/kenney_cursor/outline/navigation_e.png
-0b5319f486600724 38ea417c0dbfc0d1 ui/kenney_cursor/outline/navigation_n.png
+4797480d9645a7a2 ac0fdfa515f553bf ui/kenney_cursor/outline/navigation_n.png
 99842fb4191e8352 5ec3e1463159321a ui/kenney_cursor/outline/navigation_ne.png
 f90424889846f31b b4ac28bedf820986 ui/kenney_cursor/outline/navigation_nw.png
 e881c8e5ed523881 c2daad55e37bd7b6 ui/kenney_cursor/outline/navigation_s.png
@@ -512,7 +512,7 @@ f6a1afd7ea3036be 0f32bc6ed7639613 ui/kenney_input_prompts/keyboard_mouse/keyboar
 e694c0a46d03de38 6b452fe3cf81de34 ui/kenney_input_prompts/keyboard_mouse/keyboard_l.png
 10a5bc24858c4723 c908acd5004bbfb4 ui/kenney_input_prompts/keyboard_mouse/keyboard_m.png
 003a68fea8e66ff5 93d20aa5a0391d34 ui/kenney_input_prompts/keyboard_mouse/keyboard_minus.png
-6516e54928bca2f6 45f06c8473be8122 ui/kenney_input_prompts/keyboard_mouse/keyboard_n.png
+9d79f53c000e3708 5764328b9c187684 ui/kenney_input_prompts/keyboard_mouse/keyboard_n.png
 b9f11b993670ddd9 2c93c0b3e0bdd2bc ui/kenney_input_prompts/keyboard_mouse/keyboard_o.png
 c942a8c1cc7d0705 13a6875a5f3ce11b ui/kenney_input_prompts/keyboard_mouse/keyboard_p.png
 2417d413f14eeb26 687c810566003e1b ui/kenney_input_prompts/keyboard_mouse/keyboard_page_down.png
@@ -603,7 +603,7 @@ b30485e44949be7c 9e5309120b0c55f4 ui/kenney_input_prompts/xbox_series/xbox_stick
 a18dca3470c3f6a8 385651c778c89834 ui/kenney_input_prompts/xbox_series/xbox_stick_r_up.png
 0f5196c4833a9fc1 08d3e43a5036e87a ui/kenney_ui/blue/arrow_basic_e.png
 338c3cece01cc646 f6661333f6bca991 ui/kenney_ui/blue/arrow_basic_e_small.png
-ce629cedc34b048a 14e41fd861b16b2c ui/kenney_ui/blue/arrow_basic_n.png
+475120b01235648c 6225defc51e9c98d ui/kenney_ui/blue/arrow_basic_n.png
 4ecfc05bf2de459e 927e4649fb407d29 ui/kenney_ui/blue/arrow_basic_n_small.png
 614841f1ecda4cd8 077620df791e73a8 ui/kenney_ui/blue/arrow_basic_s.png
 eb784466154fa9ab 390e4091e9ea39ab ui/kenney_ui/blue/arrow_basic_s_small.png
@@ -611,7 +611,7 @@ eb784466154fa9ab 390e4091e9ea39ab ui/kenney_ui/blue/arrow_basic_s_small.png
 22b45e3d7e6a3485 62511ce9aa858bc8 ui/kenney_ui/blue/arrow_basic_w_small.png
 190c56509c46f1e5 4e87fae13975c906 ui/kenney_ui/blue/arrow_decorative_e.png
 194f4e78f6023aa6 0bd8f2fea40cff09 ui/kenney_ui/blue/arrow_decorative_e_small.png
-65f5360abcdfe061 dfde8286a85c1a14 ui/kenney_ui/blue/arrow_decorative_n.png
+3efc7b21fe571253 210309d6d9f27cf2 ui/kenney_ui/blue/arrow_decorative_n.png
 b3a3fc50ce814eab c94062fd41bcb122 ui/kenney_ui/blue/arrow_decorative_n_small.png
 595998d2f7ab2d3b 9911ea1c6cc9053c ui/kenney_ui/blue/arrow_decorative_s.png
 263ae2001406a8d9 722e2597112d9e07 ui/kenney_ui/blue/arrow_decorative_s_small.png
@@ -709,7 +709,7 @@ c4a9701201200618 fffd116ede9cc836 ui/kenney_ui/extra/input_rectangle.png
 87757f5c49607c2a 24a04f890a9fa278 ui/kenney_ui/extra/input_square.png
 b10f2607a665f9e0 cf89cb46efc3f869 ui/kenney_ui/green/arrow_basic_e.png
 d4d6ba22a64c09c9 37dcb7c00dd93586 ui/kenney_ui/green/arrow_basic_e_small.png
-58c053f298e12dac 9faf407449e4f994 ui/kenney_ui/green/arrow_basic_n.png
+5d038d5f765610ca e311ee4bef3259b0 ui/kenney_ui/green/arrow_basic_n.png
 20edad1e2426deb5 42b69e29d8520d44 ui/kenney_ui/green/arrow_basic_n_small.png
 06b388a7a9df8d03 d882bd223f1de0be ui/kenney_ui/green/arrow_basic_s.png
 570aa2cb8405ee81 2ad4057c065e0cda ui/kenney_ui/green/arrow_basic_s_small.png
@@ -717,7 +717,7 @@ e0363e5964f70819 aac099d0ddbe62d2 ui/kenney_ui/green/arrow_basic_w.png
 0662cf1bd9aa6f0a 4d44e0e0adc96eee ui/kenney_ui/green/arrow_basic_w_small.png
 1edbb6835c7faa96 02207373880d76d4 ui/kenney_ui/green/arrow_decorative_e.png
 bb9e41394c382b31 7fbd516cc1bc2bb4 ui/kenney_ui/green/arrow_decorative_e_small.png
-629d7b242b32ad56 b39473ca39bf3694 ui/kenney_ui/green/arrow_decorative_n.png
+2ff8634e2db0bb68 68206d0665614257 ui/kenney_ui/green/arrow_decorative_n.png
 895f469659d0663a dd9226964f29b488 ui/kenney_ui/green/arrow_decorative_n_small.png
 de0a6558e9f23ff5 a73d150f11cb79d1 ui/kenney_ui/green/arrow_decorative_s.png
 676cdacec9403cf1 5abafb0da4879178 ui/kenney_ui/green/arrow_decorative_s_small.png
@@ -791,7 +791,7 @@ f8316855548fd752 1cdfee8cff8dc486 ui/kenney_ui/green/star.png
 39f106c4c672a19c 15a42e0fdae72dc0 ui/kenney_ui/green/star_outline_depth.png
 5511845bab389c54 57aad9c18f310770 ui/kenney_ui/grey/arrow_basic_e.png
 167e67de5b4a037e d3dadab07d3f0322 ui/kenney_ui/grey/arrow_basic_e_small.png
-96dbe7dda7fde3b4 0be2f3e495b26f14 ui/kenney_ui/grey/arrow_basic_n.png
+8e264804aa51a532 32d1ac64f7b7ebff ui/kenney_ui/grey/arrow_basic_n.png
 a56c459857274337 3ef64b2e9bbd91d1 ui/kenney_ui/grey/arrow_basic_n_small.png
 fa6f722f4c246766 080ffa9d4f5c53ec ui/kenney_ui/grey/arrow_basic_s.png
 f05e76c095c230be 3de024490f00629d ui/kenney_ui/grey/arrow_basic_s_small.png
@@ -799,7 +799,7 @@ f05e76c095c230be 3de024490f00629d ui/kenney_ui/grey/arrow_basic_s_small.png
 156b7522bb0a5660 6d5be408d7be9158 ui/kenney_ui/grey/arrow_basic_w_small.png
 f7080fa03b7be3d7 a1e1b7c91688611a ui/kenney_ui/grey/arrow_decorative_e.png
 ab80a6a0fc0685a8 29e62b0309e6d793 ui/kenney_ui/grey/arrow_decorative_e_small.png
-1d406dcae6653098 eeb11888d866d2bd ui/kenney_ui/grey/arrow_decorative_n.png
+b4c9f79098be3766 016a360e290284f7 ui/kenney_ui/grey/arrow_decorative_n.png
 40c22975639553a9 78f50e138ce4074e ui/kenney_ui/grey/arrow_decorative_n_small.png
 cf1bc0d111ab31de 7ebb01e44002cf9f ui/kenney_ui/grey/arrow_decorative_s.png
 b624c689e91bd476 ac9fcea1247bb0e7 ui/kenney_ui/grey/arrow_decorative_s_small.png
@@ -873,7 +873,7 @@ fd2460a72ed1bf56 5c0b234aafff5411 ui/kenney_ui/grey/star.png
 39f106c4c672a19c 15a42e0fdae72dc0 ui/kenney_ui/grey/star_outline_depth.png
 c9445b9b0a81064d 32bb2275f0df4417 ui/kenney_ui/red/arrow_basic_e.png
 d821c7749707ccb5 b68ab1eada2414bf ui/kenney_ui/red/arrow_basic_e_small.png
-37a52985909bab8a 75496143d1b37eb3 ui/kenney_ui/red/arrow_basic_n.png
+b093ad47df860b8c 810614745d81a0b9 ui/kenney_ui/red/arrow_basic_n.png
 9528c972fcea6904 3a8d3c67602f19ff ui/kenney_ui/red/arrow_basic_n_small.png
 9c4d1006caadcb4a 3676010d2496b89e ui/kenney_ui/red/arrow_basic_s.png
 367efe6b402e61f7 175bc82dac9a1fc7 ui/kenney_ui/red/arrow_basic_s_small.png
@@ -881,7 +881,7 @@ d821c7749707ccb5 b68ab1eada2414bf ui/kenney_ui/red/arrow_basic_e_small.png
 44506067ad33029b 06771d9e94793260 ui/kenney_ui/red/arrow_basic_w_small.png
 9f31d09669a39798 aea78ad5cc660275 ui/kenney_ui/red/arrow_decorative_e.png
 b54cc27631e7d550 4e4c1d09653e89cf ui/kenney_ui/red/arrow_decorative_e_small.png
-44e93462fe815f9b 7e3aadd39699ca73 ui/kenney_ui/red/arrow_decorative_n.png
+fa4ac11900342669 77f46450cfec25f7 ui/kenney_ui/red/arrow_decorative_n.png
 0c83042231b02c7e 3048600720bdbe5c ui/kenney_ui/red/arrow_decorative_n_small.png
 8fc1d18fcc3c58d4 8681add75d1c0938 ui/kenney_ui/red/arrow_decorative_s.png
 8a3fac0c768cce16 7fa0c678de1d9daf ui/kenney_ui/red/arrow_decorative_s_small.png
@@ -955,7 +955,7 @@ c8ea765f1b39e9d1 92a2e720d46fb25d ui/kenney_ui/red/slide_vertical_grey.png
 39f106c4c672a19c 15a42e0fdae72dc0 ui/kenney_ui/red/star_outline_depth.png
 4c822887b22a701a 7e1776cebf65cd6f ui/kenney_ui/yellow/arrow_basic_e.png
 0034c5649c5846fa 6cd4b29dc670b0fd ui/kenney_ui/yellow/arrow_basic_e_small.png
-0b23c7b38a5403c6 1857751bd52c8239 ui/kenney_ui/yellow/arrow_basic_n.png
+0620cafe366289d8 d30edcf7e2d79014 ui/kenney_ui/yellow/arrow_basic_n.png
 4362c5b6a55adfbe ea156a2c3d68cb4f ui/kenney_ui/yellow/arrow_basic_n_small.png
 2049d5e089c47e21 1e3a59c636d38a68 ui/kenney_ui/yellow/arrow_basic_s.png
 6646c6632628e60e 5665965181fc312d ui/kenney_ui/yellow/arrow_basic_s_small.png
@@ -963,7 +963,7 @@ c8ea765f1b39e9d1 92a2e720d46fb25d ui/kenney_ui/red/slide_vertical_grey.png
 b797b38ff95e7286 4732b0208cb85d30 ui/kenney_ui/yellow/arrow_basic_w_small.png
 88379133c74bc49a 8e78881d87ba8ce4 ui/kenney_ui/yellow/arrow_decorative_e.png
 452aaf1a2f51f608 f42f3163ae484bb6 ui/kenney_ui/yellow/arrow_decorative_e_small.png
-4dbf5b127c23de42 f9c779678f168b86 ui/kenney_ui/yellow/arrow_decorative_n.png
+319a19f7954c59a4 28f8095bff090176 ui/kenney_ui/yellow/arrow_decorative_n.png
 aad35f5bb1e26b13 9f76ffc829f42aea ui/kenney_ui/yellow/arrow_decorative_n_small.png
 bdadcd46cdc3cb54 c13a176c2aeba05f ui/kenney_ui/yellow/arrow_decorative_s.png
 ae571098019cec7a 4b51859734ab6430 ui/kenney_ui/yellow/arrow_decorative_s_small.png
