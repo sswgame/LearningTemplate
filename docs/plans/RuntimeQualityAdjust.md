@@ -1,6 +1,6 @@
 # 부하 검증의 남은 것과 자동 품질 조정
 
-> 상태: 구현대기 · 선행: 없음 · 영역: quality · 옛번호: C-29 · 진행: 0/4
+> 상태: 구현중 · 선행: 없음 · 영역: quality · 옛번호: C-29 · 진행: 1/4
 
 부하 검증(2026-10-15)이 들어갔다(쓰는 법은 [검증과 측정](../08_Verification.md) "부하 검증" 절, 결정은 [결정 기록](../09_Decisions.md) 5-2 끝). 첫 측정이 드러낸 것과 남은 것을 단위로 나눈다.
 
@@ -21,12 +21,11 @@
 |---|---|---|---|---|---|
 | Q1 | 쿠킹 팩을 올린 Release(`--cooked-dir`)로 부하 시나리오를 돌리는 길을 만들고, 그 기동에서 Shipping 에 없는 일 셋(섀도 복사 · 낱개 매니페스트 · 셰이더 원본 해시)을 빼고 잰다. 매니페스트는 한 파일로 묶는 안을 낸다 | `Scripts/`, `Test/`, `cmake/` | 없음 | `-L load` 의 LowEnd 기동 열기 수 전후 | 필요합니다. 이 PC 의 Release 에서 혼자 |
 | Q2 | 13 ~ 20 ms 한 프레임이 어느 구간인지 Tracy(`gv_profileTracePath`)로 그 프레임을 본다 | `Source/Engine/Profiling/` | 없음 | 트레이스에서 구간 이름이 나옴 | 필요합니다. Release 에서 혼자 |
-| Q3 | 자동 품질 조정 — 렌더 스케일부터(`gv_renderScale`) 프레임 시간이 예산(16.7 ms)을 깰 때 단계를 내리는 조정기 | `Source/Engine/Renderer/` | 착수 조건 | 무거운 장면이 예산을 깨는 시나리오 | 필요합니다 |
 | Q4 | 실제 저사양 기기로 한 번 재서 흉내(LowEnd)와의 차이를 [검증과 측정](../08_Verification.md) 에 적는다 | `docs/` | 실기 | 같은 시나리오의 기기 값과 흉내 값 | 필요합니다. 실기 |
 
 ## 3. 착수 조건과 막힌 것
 
-- Q3 은 무거운 게임 장면이 예산(16.7 ms)을 깰 때 시작한다. 지금은 모든 프로필이 예산의 1/10 안팎이라 이득이 보이지 않는다. 깨면 렌더 스케일부터 들인다.
+- Q3(자동 렌더 배율)은 들어갔다: `RenderScaleAdjuster`(순수 계산, `RenderScaleAdjusterTest`)를 `RenderPacketBuilder` 가 프레임 델타로 먹여 화면에 나가는 뷰(주 시점 · 화면 사각형, `RenderViewCollector` 의 `autoScale`)의 배율에 곱한다. 렌더 텍스처 뷰는 사용자 렌더 스케일처럼 자기 크기가 데이터라 곱하지 않는다. 씬 직접 경로(`FrameRenderer::execute`, 테스트 · 초상화 베이크)는 프레임 시계가 없고 출력이 결정적이어야 해 일부러 1 을 넘긴다. 호스트 타깃 뷰(`appendHostView`, 에디터 씬 뷰)도 같은 규칙을 어기지 않는다: 이미지를 타깃 크기 그대로 보여 주므로 `gv_renderScale` · 자동 배율을 곱하지 않는다(헤더에 적었고 `DirectPathAndHostViewSkipAutoScale` 이 지킨다), 직접 경로의 1 은 `kDirectPathAutoScale` 상수다. Present 업샘플이 없는 뷰(호스트 타깃 · 렌더 텍스처)는 카메라 출력 배율이 1 이 아니면 풀만 작아지고 이미지가 늘어나므로, `makeSettings` 가 배율을 아예 옮기지 않고 두 입구가 `hasUnitResolutionScale` 로 오류를 남기며 그 뷰를 거절한다(조용히 1 로 바꾸지 않는다, `UnscaledViewKindsRejectResolutionScale` 이 지킨다). 프레임 예산 때문에 해상도를 조용히 낮추는 다른 길은 `Source/Engine/Renderer` 에 없다(뷰 예산은 뷰를 미룰 뿐 해상도를 안 낮춘다). 기본은 꺼짐(`-gv_autoRenderScale=1` 로 켠다, 예산 `gv_autoRenderScaleBudgetMs`, 하한 `gv_autoRenderScaleMin`). 틀린 설정은 오류를 찍고 끈다. 실제 효과는 매니페스트 id `load-auto-render-scale` 이 잰다(모든 프로필이 예산의 1/10 안팎이면 전환이 없으니 예산을 낮춰 강제로 깨 본다). 기본을 켤지는 그 측정 뒤에 정한다.
 - Q4 는 실제 저사양 기기가 있어야 한다(외부 조건).
 
 ## 4. 사용자 결정

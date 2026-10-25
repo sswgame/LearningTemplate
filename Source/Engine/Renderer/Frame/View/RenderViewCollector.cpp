@@ -1,4 +1,4 @@
-#include "pch.h"
+﻿#include "pch.h"
 
 #include "Engine/Renderer/Frame/View/RenderViewCollector.h"
 
@@ -37,6 +37,8 @@ namespace sw
         {
             /// 정수 업스케일 배율의 상한입니다(`CameraRenderOutput::_upscaleZoom` 의 Max 와 같다 — 넘는 값은 데이터 오류라 자른다).
             static constexpr uint32 kMaxUpscaleZoom = 16;
+            /// 배율이 1 인지 보는 허용 오차입니다(부동소수 저장 오차만 받는다).
+            static constexpr float32 kUnitScaleTolerance = 1.0e-4f;
             /// 백만 픽셀 단위 예산을 픽셀 수로 바꾸는 비율입니다.
             static constexpr float64 kPixelsPerMegapixel = 1.0e6;
             /// 보임을 측정하는 화면의 최대 수입니다(주 시점 + 화면 사각형 뷰).
@@ -45,13 +47,14 @@ namespace sw
             /**
              * @brief 카메라 하나의 뷰 설정입니다 — 출력 설정, 후처리 값, 피사계 심도 렌즈 값, 컷 표시(읽고 지운다).
              * @details 세 뷰(주 시점 · 추가 뷰 · 호스트 뷰)가 모두 이 함수로 만든다. 카메라에서 뷰로 가는 값이 늘면 여기 한 곳에만 더한다.
+             *          해상도 배율(`_resolutionScale`)은 일부러 옮기지 않는다 — Present 가 출력 크기로 업샘플하는 화면 출력 뷰만 `applyScreenRenderScale` 로 넣고,
+             *          업샘플이 없는 뷰(렌더 텍스처 · 호스트 타깃)는 1 이어야 하며 아니면 `hasUnitResolutionScale` 이 거절한다.
              */
             static RenderViewSettings makeSettings( CameraComponent& camera )
             {
                 const CameraRenderOutput& output = camera.getRenderOutput();
                 RenderViewSettings        settings;
                 settings._screenRect       = output._screenRect;
-                settings._resolutionScale  = MathUtil::clamp( output._resolutionScale, 0.1f, 2.0f );
                 settings._postProcess      = camera.getPostProcess();
                 settings._depthOfField     = camera.getDepthOfField();
                 const bool bPerspective    = camera.isOrthographic() == false && camera.getFieldOfViewY() > 0.0f;
@@ -64,12 +67,25 @@ namespace sw
             }
 
             /**
-             * @brief 화면에 나가는 뷰(주 시점 · 화면 사각형)의 내부 해상도에 사용자 렌더 스케일(`gv_renderScale`, 옵션 메뉴 graphics.renderScale)을 곱합니다.
-             * @details Present 가 출력 크기로 선형 업샘플한다. 렌더 텍스처 뷰는 자기 크기가 데이터라 곱하지 않고, 정수 업스케일 뷰는 배율을 보지 않는다.
+             * @brief 화면에 나가는 뷰(주 시점 · 화면 사각형)의 내부 해상도에 사용자 렌더 스케일(`gv_renderScale`, 옵션 메뉴 graphics.renderScale)과 자동 렌더 배율(@p autoScale, `RenderScaleAdjuster`)을 곱합니다.
+             * @details Present 가 출력 크기로 선형 업샘플한다. 렌더 텍스처 뷰는 자기 크기가 데이터라 둘 다 곱하지 않고(자동 배율도 같은 규칙이다), 정수 업스케일 뷰는 배율을 보지 않는다.
              */
-            static float32 applyUserRenderScale( float32 cameraScale )
+            static float32 applyScreenRenderScale( float32 cameraScale, float32 autoScale )
             {
-                return MathUtil::clamp( cameraScale * static_cast<float32>( gv_renderScale ), 0.1f, 2.0f );
+                return MathUtil::clamp( cameraScale * static_cast<float32>( gv_renderScale ) * autoScale, 0.1f, 2.0f );
+            }
+
+            /**
+             * @brief Present 업샘플이 없는 뷰(렌더 텍스처 · 호스트 타깃)의 카메라 출력 배율이 1 인지 봅니다. 아니면 오류를 남기고 false 를 돌려준다.
+             * @details 풀만 작아지고 이미지는 타깃 크기로 늘어나므로 조용히 1 로 바꾸지 않고 그 뷰를 거절한다(데이터 오류를 드러낸다).
+             */
+            static bool hasUnitResolutionScale( const CameraComponent& camera, string_view viewKind )
+            {
+                const float32 scale = camera.getRenderOutput()._resolutionScale;
+                if ( MathUtil::abs( scale - 1.0f ) <= kUnitScaleTolerance )
+                    return true;
+                SW_LOG_ERROR( "Camera %# has resolution scale %# on a %# view, which has no present upsample - the view is not drawn (use 1)", camera.getComponentID(), scale, viewKind );
+                return false;
             }
 
             /**
@@ -109,12 +125,12 @@ namespace sw
 
 namespace sw
 {
-    RenderViewSettings RenderViewCollector::makeMainSettings( CameraComponent* pMainCamera )
+    RenderViewSettings RenderViewCollector::makeMainSettings( CameraComponent* pMainCamera, float32 autoScale )
     {
         if ( pMainCamera == nullptr )
             return RenderViewSettings{};
         RenderViewSettings settings = RenderViewCollectorInternal::makeSettings( *pMainCamera );
-        settings._resolutionScale   = RenderViewCollectorInternal::applyUserRenderScale( settings._resolutionScale );
+        settings._resolutionScale   = RenderViewCollectorInternal::applyScreenRenderScale( pMainCamera->getRenderOutput()._resolutionScale, autoScale );
         return settings;
     }
 
@@ -142,7 +158,7 @@ namespace sw
     }
 
     void RenderViewCollector::collectExtraViews( const GameObjectManager& manager, const CameraComponent* pMainCamera, const float4x4& mainViewProj,
-                                                 const float3& mainPosition, uint32 outputWidth, uint32 outputHeight, float64 now, const RenderViewBudget& budget,
+                                                 const float3& mainPosition, uint32 outputWidth, uint32 outputHeight, float32 autoScale, float64 now, const RenderViewBudget& budget,
                                                  RenderViewScheduler& scheduler, const OcclusionTileSnapshot* pMainOcclusion, vector<RenderViewRequest>& outListView )
     {
         outListView.clear();
@@ -166,6 +182,8 @@ namespace sw
             {
                 if ( output._renderTexture.empty() )
                     continue;
+                if ( RenderViewCollectorInternal::hasUnitResolutionScale( *pCamera, "render texture" ) == false )
+                    continue;
                 request._outputKind            = RenderViewOutputKind::RenderTexture;
                 request._renderTexture         = hashed_string( string_view{ output._renderTexture } );
                 request._outputWidth           = MathUtil::max( 1u, output._renderTextureWidth );
@@ -178,7 +196,7 @@ namespace sw
                 if ( outputWidth == 0 || outputHeight == 0 )
                     continue;
                 request._outputKind                = RenderViewOutputKind::ScreenRect;
-                request._settings._resolutionScale = RenderViewCollectorInternal::applyUserRenderScale( request._settings._resolutionScale );
+                request._settings._resolutionScale = RenderViewCollectorInternal::applyScreenRenderScale( output._resolutionScale, autoScale );
                 request._outputWidth               = MathUtil::max( 1u, static_cast<uint32>( static_cast<float32>( outputWidth ) * output._screenRect._z + 0.5f ) );
                 request._outputHeight              = MathUtil::max( 1u, static_cast<uint32>( static_cast<float32>( outputHeight ) * output._screenRect._w + 0.5f ) );
             }
@@ -232,6 +250,8 @@ namespace sw
     void RenderViewCollector::appendHostView( CameraComponent& camera, const HostViewTarget& target, RenderViewMode viewMode, vector<RenderViewRequest>& inoutListView )
     {
         if ( target.isValid() == false )
+            return;
+        if ( RenderViewCollectorInternal::hasUnitResolutionScale( camera, "host target" ) == false )
             return;
         RenderViewRequest request;
         request._settings             = RenderViewCollectorInternal::makeSettings( camera );

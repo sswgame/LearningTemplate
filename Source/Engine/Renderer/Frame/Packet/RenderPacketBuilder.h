@@ -25,6 +25,7 @@ namespace sw
     class GPUSceneBuilder;
     class GPUUploadQueue;
     class IRHIDevice;
+    class RenderScaleAdjuster;
     class RenderViewScheduler;
     class RHI;
     class Scene;
@@ -97,6 +98,9 @@ namespace sw
         void populateScenePreviews( RenderFramePacket& packet, const HostViewTargets& views, const SceneManager& sceneManager );
 
     private:
+        /** @brief 자동 렌더 배율(`gv_autoRenderScale`)에 이번 프레임 시간(초)을 넣고 주 시점 배율에 곱할 값을 돌려줍니다. 꺼져 있으면 1 입니다. */
+        float32 updateAutoRenderScale( float32 deltaTime );
+
         /** @brief 미리보기 씬 하나의 GT 쪽 스냅샷 빌더입니다. 씬 키로 찾습니다. */
         struct ScenePreviewBuilder
         {
@@ -121,6 +125,9 @@ namespace sw
         unique_ptr<RenderViewScheduler> _renderViewScheduler;
         /** @brief 스케줄러의 시각(초)입니다. 프레임 델타의 누적입니다. */
         float64 _renderViewClock;
+        /** @brief 주 시점 자동 렌더 배율 조정기입니다(`gv_autoRenderScale`). 처음 켤 때 만듭니다. */
+        unique_ptr<RenderScaleAdjuster> _renderScaleAdjuster;
+        bool                            _bAutoRenderScaleActive;
         /** @brief 애니메이션 LOD · 메시 LOD 에 넘기는 이번 프레임의 뷰(주 시점 + 그리는 추가 뷰)입니다. 프레임마다 재사용합니다. */
         vector<AnimationLODView> _listLODView;
         /** @brief 그림자를 켠 점광과 스폿의 라이트 원소 번호입니다(`collectSceneLights` → `ShadowSetupUtil::populateFrame`). 프레임마다 재사용합니다. */

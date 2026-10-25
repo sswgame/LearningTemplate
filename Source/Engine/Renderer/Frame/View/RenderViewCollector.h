@@ -31,8 +31,11 @@ namespace sw
      */
     struct SW_API RenderViewCollector
     {
-        /** @brief 주 시점 카메라의 출력 설정입니다(사각형, 배율, 끌 기능). 컷 표시는 여기서 읽고 지웁니다(`CameraComponent::consumeCut`). nullptr 이면 기본값입니다. */
-        static RenderViewSettings makeMainSettings( CameraComponent* pMainCamera );
+        /// 자동 렌더 배율을 쓰지 않는 경로(씬 직접 경로 `FrameRenderer::execute`: 테스트 · 초상화 베이크)가 넘기는 값입니다. 프레임 시계가 없고 출력이 결정적이어야 해 배율을 곱하지 않는다.
+        static constexpr float32 kDirectPathAutoScale = 1.0f;
+
+        /** @brief 주 시점 카메라의 출력 설정입니다(사각형, 배율, 끌 기능). @p autoScale 은 자동 렌더 배율(`RenderScaleAdjuster`, 꺼졌거나 쓰지 않는 경로는 1)이다. 컷 표시는 여기서 읽고 지웁니다(`CameraComponent::consumeCut`). nullptr 이면 기본값입니다. */
+        static RenderViewSettings makeMainSettings( CameraComponent* pMainCamera, float32 autoScale );
         /** @brief 출력 크기와 사각형의 화면 비율입니다(크기를 모르면 16:9). */
         static float32 computeAspect( const RenderViewSettings& settings, uint32 outputWidth, uint32 outputHeight );
         /** @brief 렌더 텍스처 뷰의 한 프레임 예산입니다(`-gv_renderViewBudget` 뷰 수, `-gv_renderViewMegapixelBudget` 픽셀 합). */
@@ -42,15 +45,19 @@ namespace sw
          * @param mainViewProj 주 시점의 뷰-투영(보이는가 판정의 절두체와 화면 크기).
          * @param mainPosition 주 시점의 눈 위치(화면 크기 판정).
          * @param outputWidth  주 출력의 크기(화면 사각형 뷰의 픽셀 크기를 정한다). 0 이면 화면 사각형 뷰는 건너뛴다.
+         * @param autoScale    자동 렌더 배율. 화면 사각형 뷰의 내부 해상도에 곱한다(주 시점과 같은 규칙). 렌더 텍스처 뷰는 자기 크기가 데이터라 곱하지 않는다.
          * @param now          스케줄러 시각(초).
          * @param pMainOcclusion 주 시점의 가림 타일 사본(`FrameRenderer::getOcclusionSnapshot`). nullptr 이면 가려짐을 보지 않는다. 호출하는 동안 살려 둔다.
          */
         static void collectExtraViews( const GameObjectManager& manager, const CameraComponent* pMainCamera, const float4x4& mainViewProj, const float3& mainPosition,
-                                       uint32 outputWidth, uint32 outputHeight, float64 now, const RenderViewBudget& budget, RenderViewScheduler& scheduler,
+                                       uint32 outputWidth, uint32 outputHeight, float32 autoScale, float64 now, const RenderViewBudget& budget, RenderViewScheduler& scheduler,
                                        const OcclusionTileSnapshot* pMainOcclusion, vector<RenderViewRequest>& outListView );
         /**
          * @brief 호스트 타깃 뷰(에디터 씬 뷰) 요청을 @p inoutListView 끝에 더합니다. 예산과 갱신 주기와 무관하게 매 프레임 그립니다.
          * @details 목록이 가득 찼으면(`kMaxExtraRenderView`) 마지막 추가 뷰 위치를 씁니다. 호스트 뷰는 빠지면 패널이 멈춰 보입니다.
+         *          호스트 타깃은 화면 출력 뷰가 아니다: 이미지가 타깃 크기 그대로 보이고(늘이지 않는다, `HostViewTarget`) Present 의 업샘플이 없으므로
+         *          `gv_renderScale` · 자동 렌더 배율을 곱하지 않는다(`applyScreenRenderScale` 은 화면 출력 뷰 전용). 내부 해상도는 타깃 크기 그대로(배율 1)다.
+         *          카메라 출력의 `_resolutionScale` 이 1 이 아니면 풀만 작아지고 이미지가 늘어나므로 오류를 남기고 이 뷰를 더하지 않는다(렌더 텍스처 뷰도 같다).
          * @param viewMode 이 뷰의 보기 모드(씬 뷰 툴바, `FrameRenderer::getSceneViewMode`).
          */
         static void appendHostView( CameraComponent& camera, const HostViewTarget& target, RenderViewMode viewMode, vector<RenderViewRequest>& inoutListView );

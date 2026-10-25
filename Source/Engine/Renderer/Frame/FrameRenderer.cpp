@@ -568,8 +568,8 @@ namespace sw
         _pDevice            = pDevice;
         _outputRenderTarget = 0;
         // 주 시점의 출력 설정(사각형, 배율, 끌 기능, 컷)은 패킷 경로와 같은 규칙으로 카메라에서 읽는다.
-        _mainView._settings           = RenderViewCollector::makeMainSettings( pMainCamera );
-        _mainView._settings._viewMode = getViewMode(); // 직접 경로(테스트)는 주 출력 모드를 쓴다. 패킷 경로는 Engine 가 싣는다.
+        _mainView._settings           = RenderViewCollector::makeMainSettings( pMainCamera, RenderViewCollector::kDirectPathAutoScale ); // 자동 렌더 배율은 패킷 경로(RenderPacketBuilder)만 쓴다: 직접 경로(테스트 · 초상화 베이크)는 프레임 시계가 없고 출력이 결정적이어야 한다
+        _mainView._settings._viewMode = getViewMode();                                                                                   // 직접 경로(테스트)는 주 출력 모드를 쓴다. 패킷 경로는 Engine 가 싣는다.
         // 씬 직접 경로(에디터, 테스트)도 패킷 경로와 **같은 라이트 버퍼**를 쓴다. 경로마다 조명이
         // 다르면 에디터에서 본 이미지와 게임 화면이 달라진다.
         collectSceneLights( pScene, _listScratchLight, &_listScratchShadowLightIndex, &_listScratchLightProbe, &_listScratchLightCookie, &_listScratchRealtimeProbe );
@@ -624,7 +624,7 @@ namespace sw
         const shared_ptr<const OcclusionTileSnapshot> occlusionSnapshot = _occlusionMailbox.getLatest();
         if ( scene.getObjectManager() != nullptr )
         {
-            RenderViewCollector::collectExtraViews( *scene.getObjectManager(), pMainCamera, view( RenderViewType::Main )._viewProj, cameraPos, _outputWidth, _outputHeight,
+            RenderViewCollector::collectExtraViews( *scene.getObjectManager(), pMainCamera, view( RenderViewType::Main )._viewProj, cameraPos, _outputWidth, _outputHeight, RenderViewCollector::kDirectPathAutoScale,
                                                     static_cast<float64>( getAnimationTime() ), RenderViewCollector::getDefaultBudget(), _directViewScheduler,
                                                     occlusionSnapshot.get(), _listDirectViewScratch );
         }
