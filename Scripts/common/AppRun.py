@@ -27,9 +27,11 @@ from .BuildTree import BuildTree
 from .CookContract import CookContractSpec
 from .Paths import getProjectRoot
 from .ProcessLimits import ProcessLimits
+from .Timeline import appendTimelineLineFromEnv, summarizeAppArguments
 
 #: 백엔드 명령줄 이름 → App 스위치. 표는 Config/Engine/CookContract.json 의 `command_line_name`(표 순서).
 kBackendSwitch: dict[str, str] = CookContractSpec.load().mapBackendSwitch
+_kBackendSwitchSet = frozenset(kBackendSwitch.values())
 
 
 def addAppRunArguments(parser: argparse.ArgumentParser, *, bMultipleBackends: bool, defaultBackend: str = "dx12") -> None:
@@ -231,6 +233,8 @@ def runApp(appPath: Path, listArgument: list[str], *, cwd: Path | None = None, t
         result.listErrorLine.append(f"cannot launch {appPath}: {error}")
         return result
     result.bLaunched = True
+    appendTimelineLineFromEnv("앱시작", f"pid={process.pid} {Path(appPath).parent.parent.name}/{Path(appPath).name} "
+                              + summarizeAppArguments(listArgument, _kBackendSwitchSet))
 
     def readOutputInternal() -> None:
         assert process.stdout is not None
@@ -260,6 +264,7 @@ def runApp(appPath: Path, listArgument: list[str], *, cwd: Path | None = None, t
     result.exitCode = process.returncode
     result.seconds = time.monotonic() - startSeconds
     result.bBackendUnusable = result.exitCode == kAppRhiUnusableExitCode
+    appendTimelineLineFromEnv("앱끝", f"pid={process.pid} 종료 {result.exitCode}{' 시간초과' if result.bTimedOut else ''} {result.seconds:.0f}초")
     for line in result.listLine:
         if "[Error]" in line:
             result.listErrorLine.append(line)

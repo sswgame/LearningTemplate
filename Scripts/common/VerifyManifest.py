@@ -405,6 +405,7 @@ class ItemResult:
     seconds: float
     logPath: str
     finishedAt: str
+    startedAt: str = ""   # 초 단위 ISO(`2026-10-26T00:50:13`). 돌지 않은 항목은 빈 글
 
 
 #: 결과 상태 — 통과 · 실패 · 건너뜀(돌리지 않았다: 명령이 없다 · wsl · 도구가 건너뜀) · 막힘(돌 수 없었다: 빌드 실패 · 잠금 시한 넘김).
@@ -481,9 +482,9 @@ def escapeCellInternal(text: str) -> str:
 
 
 def formatResultTable(manifest: VerifyManifest, listResult: list[ItemResult], environment: str) -> str:
-    """결과 표 하나(항목 · 값 · 한계 · 통과/실패 · 측정 환경 · 날짜 · 옮길 곳). 파일 순서대로, 실행하지 않은 항목도 이유와 함께 든다."""
+    """결과 표 하나(항목 · 값 · 한계 · 통과/실패 · 측정 환경 · 시작(HH:MM:SS) · 날짜 · 옮길 곳). 파일 순서대로, 실행하지 않은 항목도 이유와 함께 든다."""
     mapResult = {result.itemId: result for result in listResult}
-    listLine = ["| 항목 | 값 | 한계 | 통과/실패 | 측정 환경 | 날짜 | 옮길 곳 |", "|---|---|---|---|---|---|---|"]
+    listLine = ["| 항목 | 값 | 한계 | 통과/실패 | 측정 환경 | 시작 | 날짜 | 옮길 곳 |", "|---|---|---|---|---|---|---|---|"]
     for item in manifest.listItem:
         result = mapResult.get(item.itemId)
         if result is None:
@@ -491,7 +492,7 @@ def formatResultTable(manifest: VerifyManifest, listResult: list[ItemResult], en
         status = f"{result.status}({result.detail})" if result.detail else result.status
         listLine.append("| " + " | ".join(escapeCellInternal(cell) for cell in (
             f"`{item.itemId}` {item.title}", result.valueText, formatLimitText(item), status, f"{environment} · {item.config} · gpu {item.gpu}",
-            result.finishedAt, item.resultDoc)) + " |")
+            result.startedAt[11:] or "-", result.finishedAt, item.resultDoc)) + " |")
     return "\n".join(listLine)
 
 

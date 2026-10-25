@@ -20,7 +20,9 @@ kScriptsRoot = Path(__file__).resolve().parents[2] / "Scripts"
 sys.path.insert(0, str(kScriptsRoot))
 
 from common.ConflictSchedule import runConflictSchedule  # noqa: E402
+from common.AppRun import runApp  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
+from common.Timeline import kTimelineEnvName, kTimelineItemEnvName, summarizeAppArguments  # noqa: E402
 from common.VerifyManifest import (ItemResult, VerifyItem, VerifyManifestError, buildItemCommand, checkVerifyPending, extractMetricValues, findPendingLineViolations,  # noqa: E402
                                    findReferencedIds, formatResultTable, groupByGpuMode, interpretOutcome, judgeMetrics, kStatusBlocked,
                                    kStatusFailed, kStatusPassed, kStatusSkipped, makeNotRunResult, makeResult, orderItems, parseManifest,
@@ -215,6 +217,38 @@ class OutcomeTest(unittest.TestCase):
         self.assertEqual(3, len(listRow))
         self.assertIn("PC X · Release · gpu exclusive", listRow[2])
         self.assertIn("p50 ≤ 100 us", listRow[2])
+        self.assertIn("| - | 2026-10-24 10:00 |", listRow[2])   # 시작 열: 돌지 않은 항목은 `-`
+        listResult[0].startedAt = "2026-10-24T00:50:13"
+        self.assertIn("| 00:50:13 | 2026-10-24 10:00 |", formatResultTable(self.manifest, listResult, "PC X").splitlines()[2])
+
+
+class TimelineTest(unittest.TestCase):
+    def testSummaryKeepsOnlyGameScenarioBackendAndGvArguments(self) -> None:
+        listArgument = ["-game=Foo", "-dx12", "-scenario=a.xml", "-gv_benchMeshes=8000", "-vsync=0", "--cooked-dir=x"]
+        self.assertEqual("-game=Foo -dx12 -scenario=a.xml -gv_benchMeshes=8000", summarizeAppArguments(listArgument, frozenset({"-dx12"})))
+
+    def testRunAppAppendsStartAndEndLinesOnlyWhenEnvIsSet(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "timeline.log"
+            runApp(Path(sys.executable), ["-c", "pass"])   # 환경 변수 없음: 쓰지 않는다
+            self.assertFalse(path.exists())
+            with mock.patch.dict("os.environ", {kTimelineEnvName: str(path), kTimelineItemEnvName: "perf-x"}):
+                runApp(Path(sys.executable), ["-c", "pass"])
+            listLine = path.read_text(encoding="utf-8").splitlines()
+            self.assertEqual(2, len(listLine))
+            self.assertRegex(listLine[0], r"^\d\d:\d\d:\d\d 앱시작 perf-x pid=\d+ ")
+            self.assertRegex(listLine[1], r"^\d\d:\d\d:\d\d 앱끝 perf-x pid=\d+ 종료 0 ")
+
+    def testRunItemWritesStartEndLinesAndStartedAt(self) -> None:
+        item = parseManifest(makeData(makeItem("some-test", "test", "Debug", "none", filter="X.*"))).listItem[0]
+        with tempfile.TemporaryDirectory() as folder:
+            outputDir = Path(folder)
+            with mock.patch.object(RunVerifyBatch, "buildItemCommand", return_value=[sys.executable, "-c", "pass"]):
+                result = RunVerifyBatch.runItemInternal(item, "Ninja-Debug", outputDir, "me", outputDir)
+            listLine = (outputDir / "timeline.log").read_text(encoding="utf-8").splitlines()
+            self.assertRegex(listLine[0], r"^\d\d:\d\d:\d\d 시작 some-test Debug$")
+            self.assertRegex(listLine[1], r"^\d\d:\d\d:\d\d 끝 some-test Debug 통과 \d+초$")
+            self.assertRegex(result.startedAt, r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d$")
 
 
 class PendingLineTest(unittest.TestCase):

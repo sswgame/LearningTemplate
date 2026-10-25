@@ -22,7 +22,8 @@
 `ctest` · `test` 항목끼리와 GPU 공유 항목뿐이다. `--jobs 1` 이면 옛 순서 그대로다. 결과 표 · `result.json` 은 겹침과 무관하게 매니페스트 순서이고, 항목 출력은
 `logs/<id>.log` 로 따로 간다. 한 항목이 져도 나머지를 끝까지 돌려 모은다.
 
-결과는 `build/verify-batch/<시각>/` 의 `result.md`(표 하나) · `result.json` · `logs/<id>.log` 에 남고 표는 끝에 한 번 더 찍는다. 종료 코드는 실패나 막힘이 있으면 1 이다.
+결과는 `build/verify-batch/<시각>/` 의 `result.md`(표 하나) · `result.json` · `logs/<id>.log` · `timeline.log` 에 남고 표는 끝에 한 번 더 찍는다.
+`timeline.log` 는 `HH:MM:SS 시작|끝|앱시작|앱끝 <항목 id> <내용>` 한 줄씩이다(항목 시작 · 끝, 항목이 `AppRun.runApp` 으로 띄운 App 의 pid · 게임 · 시나리오 · 백엔드 · `-gv_*`). 종료 코드는 실패나 막힘이 있으면 1 이다.
 빌드 · 쿠킹 · 골든 다시 뜨기는 작업 트리를 바꾼다(골든은 `Test/QA/Golden` 의 기준 파일) — 돌린 뒤 `git status` 로 본다.
 """
 
@@ -49,6 +50,7 @@ from common.Host import runGit  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 from common.Process import runProcess  # noqa: E402
 from common.SharedLock import acquire, getSharedSlotCount, kDefaultWaitSeconds, kMapSharedSlotCount, releaseHeld  # noqa: E402
+from common.Timeline import appendTimelineLine, kTimelineEnvName, kTimelineItemEnvName  # noqa: E402
 from common.VerifyManifest import (ItemResult, VerifyItem, VerifyManifest, VerifyManifestError, buildItemCommand, checkVerifyPending,  # noqa: E402
                                    formatReport, groupByGpuMode, interpretOutcome, kMapLockByGpuMode, kStatusBlocked, kStatusFailed,
                                    makeNotRunResult, makeResult, orderItems, readManifest, resolveCoveredResult)
@@ -56,6 +58,8 @@ from common.Worktree import findMainRoot  # noqa: E402
 
 #: 결과를 남기는 폴더(저장소 기준) — `build/` 아래라 추적되지 않는다.
 kResultRelDir = "build/verify-batch"
+#: 결과 폴더의 시각표 — 항목 시작 · 끝과 항목이 띄운 App 의 시작 · 끝이 시각순으로 한 줄씩 든다(`common/Timeline.py`).
+kTimelineFileName = "timeline.log"
 #: 혼자 돌아야 하는 종류 — 빌드 · 쿠킹 · 골든은 작업 트리를 바꾸고 측정은 CPU 를 다른 일이 쓰면 값이 오염된다(이유는 `09_Decisions.md` 검증 묶음 병렬 행).
 kAloneKindSet = frozenset({"build", "cook", "golden", "measure"})
 #: `--jobs` 기본값 — 항목이 자식 프로세스라 코어 수만큼 띄우면 서로 경합한다(`common/Parallel.py` 머리말). 잠금 없는 일 하나와 GPU 잠금 일 하나가 겹칠 만큼만 둔다.
@@ -120,11 +124,18 @@ def runItemInternal(item: VerifyItem, preset: str, repositoryRoot: Path, owner: 
     except VerifyManifestError as error:
         return makeResult(item.itemId, kStatusFailed, str(error), formatNow())
     printLineInternal(f"[VerifyBatch] 시작 {item.itemId} ({item.kind}, {item.config}): {' '.join(command)}")
+    timelinePath = outputDir / kTimelineFileName
+    startedAt = datetime.datetime.now().isoformat(timespec="seconds")
+    appendTimelineLine(timelinePath, "시작", item.itemId, item.config)
     startTime = time.perf_counter()
-    process = runProcess(command, cwd=repositoryRoot, timeoutSeconds=item.timeoutMinutes * 60.0, stdoutPath=logPath)
+    # 하위 스크립트의 App 실행(`AppRun.runApp`)이 같은 시각표에 줄을 더하도록 경로 · 항목 id 를 환경 변수로 넘긴다(항목이 겹쳐 돌아도 항목마다 따로).
+    process = runProcess(command, cwd=repositoryRoot, timeoutSeconds=item.timeoutMinutes * 60.0, stdoutPath=logPath,
+                         env={**os.environ, kTimelineEnvName: str(timelinePath), kTimelineItemEnvName: item.itemId})
     seconds = time.perf_counter() - startTime
     outputText = logPath.read_text(encoding="utf-8", errors="replace") if process.bLaunched and logPath.is_file() else process.output
     result = interpretOutcome(item, process.returnCode, process.bLaunched, process.bTimedOut, outputText, seconds, logPath.as_posix(), formatNow())
+    result.startedAt = startedAt
+    appendTimelineLine(timelinePath, "끝", item.itemId, f"{item.config} {result.status} {seconds:.0f}초")
     printLineInternal(f"[VerifyBatch] 끝 {item.itemId}: {result.status} {result.detail} ({seconds:.0f} 초)")
     return result
 
@@ -239,7 +250,7 @@ def writeResultFiles(manifest: VerifyManifest, listResult: list[ItemResult], out
     report = formatReport(manifest, listResult, f"검증 묶음 결과 {formatNow()}", environment)
     (outputDir / "result.md").write_text(report, encoding="utf-8")
     listRecord = [{"id": result.itemId, "status": result.status, "detail": result.detail, "value": result.valueText, "seconds": round(result.seconds, 1),
-                   "log": result.logPath, "finished_at": result.finishedAt} for result in listResult]
+                   "log": result.logPath, "started_at": result.startedAt, "finished_at": result.finishedAt} for result in listResult]
     (outputDir / "result.json").write_text(json.dumps({"environment": environment, "results": listRecord}, ensure_ascii=False, indent=2), encoding="utf-8")
     return report
 
