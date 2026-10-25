@@ -318,6 +318,9 @@ namespace sw
         /// @brief 업로드 스테이징 링의 용량(바이트)입니다(`gv_rhiStagingRingMegabytes`). 링을 쓰는 백엔드(지금은 GL)가 읽고, 0 이면 그 백엔드가 초기화를 거절합니다. 실행마다 정하는 설정이라 리플렉션하지 않는다.
         uint64 _stagingRingBytes{ 0 };
 
+        /// @brief 텍스처 되읽기 링의 용량(바이트)입니다(`gv_rhiReadbackRingMegabytes`). 링을 쓰는 백엔드(지금은 GL)가 읽고, 0 이면 그 백엔드가 초기화를 거절합니다. 리플렉션하지 않는다.
+        uint64 _readbackRingBytes{ 0 };
+
         /**
          * @brief Win32 표면의 `HWND` 를 @p outHandle 에 `void*` 로 담고 true 입니다. 창이 없으면(핸들이 nullptr, 오프스크린) @p outHandle 이 nullptr 이고 true 입니다.
          * @details `_pWindowHandle` 은 창 시스템마다 뜻이 다른 `void*` 라서(`_surfaceKind`) DX · WGL 백엔드가 직접 `HWND` 로 읽으면 안 된다.

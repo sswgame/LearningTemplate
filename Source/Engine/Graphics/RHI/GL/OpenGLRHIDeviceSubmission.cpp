@@ -257,6 +257,37 @@ namespace sw
         return RHISubmitResult::Rejected;
     }
 
+    RHISubmitResult OpenGLRHIDevice::allocateReadbackSpan( uint64 sizeBytes, RHIStagingSpan& outSpan )
+    {
+        if ( _readbackRingBuffer == 0 )
+        {
+            SW_LOG_ERROR( "submitTextureReadback: the GL readback ring is unavailable (needs OpenGL 4.4 / ARB_buffer_storage); the readback is rejected" );
+            return RHISubmitResult::Rejected;
+        }
+        // 워터마크는 버린 되읽기(markSubmitted)의 구간만 돌려준다 — 그래서 차 있으면 펜스를 한 번 모아 본다. 가져갈 되읽기의 구간은 take 가 free 로 놓는다.
+        RHIStagingAllocateResult result = _readbackRing.allocate( sizeBytes, _transferSerials.getWatermark(), outSpan );
+        if ( result == RHIStagingAllocateResult::Full && tryRetireFinishedTransfers() )
+            result = _readbackRing.allocate( sizeBytes, _transferSerials.getWatermark(), outSpan );
+        switch ( result )
+        {
+            case RHIStagingAllocateResult::Allocated:
+            {
+                return RHISubmitResult::Accepted;
+            }
+            case RHIStagingAllocateResult::Full:
+            {
+                return RHISubmitResult::Busy; // 앞선 되읽기를 가져가거나 버리면 빈다 — 호출자가 다시 제출한다(계약 2)
+            }
+            case RHIStagingAllocateResult::TooLarge:
+            {
+                SW_LOG_ERROR( "submitTextureReadback: %# bytes do not fit the %#-byte readback ring; raise gv_rhiReadbackRingMegabytes to read it", sizeBytes,
+                              _readbackRing.getCapacityBytes() );
+                return RHISubmitResult::Rejected;
+            }
+        }
+        return RHISubmitResult::Rejected;
+    }
+
     void OpenGLRHIDevice::retireFrameOnGPU()
     {
         ScopedOpenGLContext contextScope( this );

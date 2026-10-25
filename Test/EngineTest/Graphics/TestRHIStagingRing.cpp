@@ -5,7 +5,7 @@
 
 #include "TestFramework/TestFramework.h"
 
-// 업로드 스테이징 링(RHIStagingRing)의 장부 규칙을 GPU 없이 본다. 그 링을 쓰는 GL 업로드는 TestRHIStagingRingGPU.cpp 가 실제 디바이스로 본다.
+// 업로드 · 되읽기 링(RHIStagingRing)의 장부 규칙을 GPU 없이 본다. 그 링을 쓰는 GL 업로드 · 되읽기는 TestRHIStagingRingGPU.cpp 가 실제 디바이스로 본다.
 
 namespace
 {
@@ -132,4 +132,32 @@ SW_TEST_CASE( RHIStagingRingTest, LostDeviceRejectsInsteadOfBusyWhenTheRingIsFul
     SW_EXPECT_TRUE( serials.isLost() );
     SW_EXPECT_TRUE( serials.classifyStagingAllocation( fullAfterLoss ) == sw::RHISubmitResult::Rejected );
     SW_EXPECT_TRUE( serials.classifyStagingAllocation( sw::RHIStagingAllocateResult::Allocated ) == sw::RHISubmitResult::Rejected ); // 잡은 구간은 호출자가 놓는다
+}
+
+/**
+ * @brief [RHIStagingRingTest] 되읽기 링의 구간은 GPU 가 끝나도 돌아오지 않고, CPU 가 가져갈 때(`free`)나 버린 읽기의 펜스가 지날 때(`markSubmitted`) 돌아온다
+ * @details GL 되읽기는 제출 때 시리얼을 붙이지 않는다 — 워터마크만 보고 돌려받으면 아직 복사하지 않은 결과를 다음 읽기가 덮는다.
+ */
+SW_TEST_CASE( RHIStagingRingTest, ReadbackSpansReturnWhenTakenOrWhenTheDiscardedReadFinishes )
+{
+    sw::RHIStagingRing ring;
+    ring.initialize( 512, 256 );
+
+    sw::RHIStagingSpan taken{};
+    sw::RHIStagingSpan discarded{};
+    SW_ASSERT_TRUE( isAllocated( ring.allocate( 256, 0, taken ) ) );
+    SW_ASSERT_TRUE( isAllocated( ring.allocate( 256, 0, discarded ) ) );
+
+    sw::RHIStagingSpan probe{};
+    SW_EXPECT_TRUE( ring.allocate( 16, 100, probe ) == sw::RHIStagingAllocateResult::Full ); // 워터마크가 한참 지나도 가져가지 않은 구간은 남는다(Busy)
+
+    ring.markSubmitted( discarded, 7 ); // 뒤 구간을 버렸다 — 맨 앞이 아직 읽히지 않아 돌아오지 않는다
+    ring.freeCompleted( 7 );
+    SW_EXPECT_EQUAL( static_cast<uint32>( 2 ), ring.getLiveCount() );
+
+    ring.free( taken ); // CPU 가 결과를 복사했다
+    ring.freeCompleted( 6 );
+    SW_EXPECT_EQUAL( static_cast<uint32>( 1 ), ring.getLiveCount() ); // 버린 읽기의 펜스(7)가 아직이다
+    ring.freeCompleted( 7 );
+    SW_EXPECT_EQUAL( static_cast<uint32>( 0 ), ring.getLiveCount() );
 }

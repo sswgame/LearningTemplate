@@ -185,6 +185,11 @@ namespace sw
 
         if ( initializeStagingRing( desc._stagingRingBytes ) == false )
             return false;
+        if ( initializeReadbackRing( desc._readbackRingBytes ) == false )
+        {
+            shutdownStagingRing(); // _bInitialized 전이라 shutdownInternal 이 링을 지우지 않는다
+            return false;
+        }
 
         _bInitialized = SW_TRUE;
 
@@ -295,33 +300,68 @@ namespace sw
             return true;
         }
 
-        // 구간 시작 정렬. PBO 오프셋은 픽셀 성분 크기(최대 float 4 바이트)와 BC 블록(16 바이트)의 배수면 되지만, 복사 대상이 캐시 줄 경계에서 시작하도록 넉넉히 둔다.
-        constexpr uint64     kSpanAlignmentBytes = 256;
-        constexpr GLbitfield kMapFlags           = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT;
-        GLuint               name{ 0 };
-        glGenBuffers( 1, &name );
-        void* pMapped = nullptr;
-        if ( name != 0 )
-        {
-            // GL_COPY_WRITE_BUFFER 로 만들어 다른 바인딩을 건드리지 않는다. COHERENT 라 복사한 바이트는 뒤에 낸 GL 명령에 보인다(flush 가 필요 없다).
-            glBindBuffer( GL_COPY_WRITE_BUFFER, name );
-            glBufferStorage( GL_COPY_WRITE_BUFFER, static_cast<GLsizeiptr>( capacityBytes ), nullptr, kMapFlags );
-            pMapped = glMapBufferRange( GL_COPY_WRITE_BUFFER, 0, static_cast<GLsizeiptr>( capacityBytes ), kMapFlags );
-            glBindBuffer( GL_COPY_WRITE_BUFFER, 0 );
-        }
+        // COHERENT 라 복사한 바이트는 뒤에 낸 GL 명령에 보인다(flush 가 필요 없다).
+        uint8* pMapped = createPersistentRingBuffer( capacityBytes, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT, _stagingRingBuffer );
         if ( pMapped == nullptr )
         {
             SW_LOG_ERROR( "The OpenGL staging ring (%# bytes) could not be created or mapped (gv_rhiStagingRingMegabytes)", capacityBytes );
-            if ( name != 0 )
-                glDeleteBuffers( 1, &name );
             return false;
         }
 
-        _stagingRingBuffer  = name;
-        _pStagingRingMapped = static_cast<uint8*>( pMapped );
-        _stagingRing.initialize( capacityBytes, kSpanAlignmentBytes );
+        _pStagingRingMapped = pMapped;
+        _stagingRing.initialize( capacityBytes, kTransferRingAlignmentBytes );
         getMemoryLedger().recordAllocation( RHIMemoryKey::makeDeviceObject( &_stagingRing ), RHIMemoryKind::Staging, capacityBytes );
         return true;
+    }
+
+    bool OpenGLRHIDevice::initializeReadbackRing( uint64 capacityBytes )
+    {
+        if ( capacityBytes == 0 )
+        {
+            SW_LOG_ERROR( "The OpenGL backend needs a readback ring capacity (gv_rhiReadbackRingMegabytes must be positive)" );
+            return false;
+        }
+        // 업로드 링과 같은 GL 4.4 조건이다. 없으면 텍스처 되읽기를 모두 Rejected 로 돌려준다 — 컨텍스트를 쥔 채 동기로 읽는 두 번째 경로를 두지 않는다
+        // (RHICapabilities::_bPersistentReadbackRing).
+        if ( glad_glBufferStorage == nullptr )
+        {
+            SW_LOG_ERROR( "OpenGL 4.4 (ARB_buffer_storage) is unavailable - there is no readback ring and every texture readback is rejected" );
+            return true;
+        }
+
+        // GPU 가 쓰고 CPU 가 읽는 버퍼다. COHERENT 라 펜스가 신호한 뒤에는 GPU 가 쓴 바이트가 매핑에 보인다(glMemoryBarrier 가 필요 없다).
+        uint8* pMapped = createPersistentRingBuffer( capacityBytes, GL_MAP_READ_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT, _readbackRingBuffer );
+        if ( pMapped == nullptr )
+        {
+            SW_LOG_ERROR( "The OpenGL readback ring (%# bytes) could not be created or mapped (gv_rhiReadbackRingMegabytes)", capacityBytes );
+            return false;
+        }
+
+        _pReadbackRingMapped = pMapped;
+        _readbackRing.initialize( capacityBytes, kTransferRingAlignmentBytes );
+        getMemoryLedger().recordAllocation( RHIMemoryKey::makeDeviceObject( &_readbackRing ), RHIMemoryKind::Staging, capacityBytes );
+        return true;
+    }
+
+    uint8* OpenGLRHIDevice::createPersistentRingBuffer( uint64 capacityBytes, uint32 mapFlags, uint32& outBuffer )
+    {
+        outBuffer = 0;
+        GLuint name{ 0 };
+        glGenBuffers( 1, &name );
+        if ( name == 0 )
+            return nullptr;
+        // GL_COPY_WRITE_BUFFER 로 만들어 다른 바인딩을 건드리지 않는다.
+        glBindBuffer( GL_COPY_WRITE_BUFFER, name );
+        glBufferStorage( GL_COPY_WRITE_BUFFER, static_cast<GLsizeiptr>( capacityBytes ), nullptr, mapFlags );
+        void* pMapped = glMapBufferRange( GL_COPY_WRITE_BUFFER, 0, static_cast<GLsizeiptr>( capacityBytes ), mapFlags );
+        glBindBuffer( GL_COPY_WRITE_BUFFER, 0 );
+        if ( pMapped == nullptr )
+        {
+            glDeleteBuffers( 1, &name );
+            return nullptr;
+        }
+        outBuffer = name;
+        return static_cast<uint8*>( pMapped );
     }
 
     void OpenGLRHIDevice::shutdownStagingRing()
@@ -335,6 +375,18 @@ namespace sw
         _stagingRing.shutdown();
         _stagingRingBuffer  = 0;
         _pStagingRingMapped = nullptr;
+    }
+
+    void OpenGLRHIDevice::shutdownReadbackRing()
+    {
+        if ( _readbackRingBuffer == 0 )
+            return;
+        GLuint name = _readbackRingBuffer;
+        glDeleteBuffers( 1, &name );
+        getMemoryLedger().recordFree( RHIMemoryKey::makeDeviceObject( &_readbackRing ) );
+        _readbackRing.shutdown();
+        _readbackRingBuffer  = 0;
+        _pReadbackRingMapped = nullptr;
     }
 
     void OpenGLRHIDevice::detachCommandRecordingInternal()
@@ -508,6 +560,7 @@ namespace sw
             _computeRootConstantUbo = 0;
         }
         shutdownStagingRing();
+        shutdownReadbackRing();
 
         if ( _platformContext != nullptr )
         {

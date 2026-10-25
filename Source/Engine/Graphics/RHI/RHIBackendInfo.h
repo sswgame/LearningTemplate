@@ -122,6 +122,7 @@ namespace sw
             caps._bThreadSafeResourceCreation = SW_FALSE;
             caps._bWireframeFill              = SW_TRUE;
             caps._bPersistentStagingRing      = SW_TRUE; // 후보. 런타임은 OpenGLRHIDevice::getCapabilities 가 링을 만들었는지(GL 4.4)로 덮는다
+            caps._bPersistentReadbackRing     = SW_TRUE; // 위와 같다
             return caps;
         }
     };

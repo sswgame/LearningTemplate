@@ -118,14 +118,30 @@ namespace sw
             static const void* toPixelOffset( uint64 offsetBytes ) { return reinterpret_cast<const void*>( static_cast<uintptr_t>( offsetBytes ) ); }
         };
 
-        /** @class ScopedTightPack @brief 되읽기 동안 `GL_PACK_ALIGNMENT` 를 1 로 걸고 소멸자에서 기본값(4)으로 되돌립니다. 읽는 쪽 버퍼의 행이 빈틈없이 이어지기 때문입니다. */
-        class ScopedTightPack
+        /**
+         * @class ScopedStagingPack
+         * @brief 되읽기 링으로 읽는 동안 팩 상태(`GL_PIXEL_PACK_BUFFER` = 되읽기 링, `GL_PACK_ALIGNMENT` = 1)를 걸고, 소멸자에서 GL 기본값(0, 4)으로 되돌립니다.
+         * @details 가드 밖의 팩 상태는 늘 기본값이다. PBO 가 걸린 채 클라이언트 포인터로 읽는 호출(`glReadPixels` 등)이 나가면 GL 이 그 포인터를 PBO 오프셋으로 받아
+         *          링의 엉뚱한 자리에 쓴다. 행 정렬 1 은 결과 버퍼의 행이 빈틈없이 이어지기 때문이다(`RHITextureMipSpan::_rowBytes`).
+         */
+        class ScopedStagingPack
         {
         public:
-            ScopedTightPack() { glPixelStorei( GL_PACK_ALIGNMENT, 1 ); }
-            ~ScopedTightPack() { glPixelStorei( GL_PACK_ALIGNMENT, kGlDefaultPixelStoreAlignment ); }
-            ScopedTightPack( const ScopedTightPack& )            = delete;
-            ScopedTightPack& operator=( const ScopedTightPack& ) = delete;
+            explicit ScopedStagingPack( GLuint readbackBuffer )
+            {
+                glBindBuffer( GL_PIXEL_PACK_BUFFER, readbackBuffer );
+                glPixelStorei( GL_PACK_ALIGNMENT, 1 );
+            }
+            ~ScopedStagingPack()
+            {
+                glPixelStorei( GL_PACK_ALIGNMENT, kGlDefaultPixelStoreAlignment );
+                glBindBuffer( GL_PIXEL_PACK_BUFFER, 0 );
+            }
+            ScopedStagingPack( const ScopedStagingPack& )            = delete;
+            ScopedStagingPack& operator=( const ScopedStagingPack& ) = delete;
+
+            /** @brief 링 안의 바이트 오프셋을 PBO 가 걸린 읽기 명령의 데이터 인자로 바꿉니다(GL 은 그 자리에 포인터 대신 오프셋을 받는다). */
+            static void* toPixelOffset( uint64 offsetBytes ) { return reinterpret_cast<void*>( static_cast<uintptr_t>( offsetBytes ) ); }
         };
 
         /** @brief 텍스처 GL 이름과 면 FBO 이름들을 지웁니다. 0 인 이름은 건너뜁니다. 해제 큐에서 GL 컨텍스트가 있는 쪽에서 부릅니다. */
@@ -601,11 +617,16 @@ namespace sw
             SW_LOG_ERROR( "takeTextureReadback: ticket %# has not completed", ticket._serial );
             return false;
         }
-        if ( _pDevice->_readbackTable.take( ticket._serial, outBytes ) == false )
+        RHIStagingSpan span{};
+        if ( _pDevice->_readbackTable.take( ticket._serial, span ) == false )
         {
             SW_LOG_ERROR( "takeTextureReadback: ticket %# is not a pending texture readback (an upload ticket, or already taken or discarded)", ticket._serial );
             return false;
         }
+        // 펜스가 지났으므로 GPU 가 구간에 쓴 바이트가 COHERENT 매핑에 보인다. 복사는 컨텍스트 밖에서 하고, 다 읽은 구간을 링에 돌려준다.
+        outBytes.resize( static_cast<size_t>( span._sizeBytes ) );
+        Memory::copy( outBytes.data(), _pDevice->_pReadbackRingMapped + span._offsetBytes, static_cast<size_t>( span._sizeBytes ) );
+        _pDevice->_readbackRing.free( span );
         return true;
     }
 
@@ -613,8 +634,11 @@ namespace sw
     {
         if ( ticket._deviceGeneration != _pDevice->_transferSerials.getGeneration() )
             return;
-        vector<uint8> listDiscarded;
-        (void)_pDevice->_readbackTable.take( ticket._serial, listDiscarded ); // 없으면 업로드 티켓이거나 이미 가져감 · 버림이다 — 계약상 아무 일도 하지 않는다
+        RHIStagingSpan span{};
+        if ( _pDevice->_readbackTable.take( ticket._serial, span ) == false )
+            return; // 업로드 티켓이거나 이미 가져감 · 버림이다 — 계약상 아무 일도 하지 않는다
+        // Pending 이면 GPU 가 아직 구간에 쓰는 중이다 — 구간은 이 티켓의 펜스가 지난 뒤에 돌아온다.
+        _pDevice->_readbackRing.markSubmitted( span, ticket._serial );
     }
 
     RHIFormat OpenGLRHIResourceFactory::getTextureFormat( RHITextureHandle texture ) const
@@ -648,43 +672,38 @@ namespace sw
             return RHITransferSubmit::rejected();
         }
 
+        // 결과는 되읽기 링 구간으로 받는다. 링보다 큰 읽기 하나는 Rejected, 앞선 되읽기를 아직 가져가지 않아 차 있으면 Busy 다(allocateReadbackSpan 이 이유를 로그로 남긴다).
+        RHIStagingSpan        readback{};
+        const RHISubmitResult allocation = _pDevice->allocateReadbackSpan( outLayout._sizeBytes, readback );
+        if ( allocation != RHISubmitResult::Accepted )
+            return allocation == RHISubmitResult::Busy ? RHITransferSubmit::busy() : RHITransferSubmit::rejected();
+
         ScopedOpenGLContext contextScope( _pDevice );
         if ( _pDevice->isGraphicsContextCurrent() == false )
         {
+            _pDevice->_readbackRing.free( readback );
             SW_LOG_ERROR( "submitTextureReadback: the GL context could not be acquired; submit again later" );
             return RHITransferSubmit::busy();
         }
-        // GL 의 읽기는 제출 시점에 동기로 읽어 둔다(glGetTexImage 가 앞선 명령을 끝내고 돌아온다). 그래서 앞서 제출된 쓰기가 보이고(계약 3), 티켓은 앞선 전송이 모두 끝나는 즉시 Complete 다.
-        // 비동기 읽기(PBO + 펜스)는 이 계획 밖이다.
-        vector<uint8>         readBytes( outLayout._sizeBytes, 0 );
-        const ScopedTightPack tightPack;
-        if ( pRecord->_target == GL_TEXTURE_2D )
+        // 컨텍스트를 빌린 동안에는 읽기 명령(링 PBO 오프셋)과 펜스만 낸다 — GPU 가 끝나기를 기다리지 않는다. 앞서 낸 명령 뒤에 실행되므로 앞서 제출된 쓰기가 보인다(계약 3).
+        // 바이트는 펜스가 지난 뒤 takeTextureReadback 이 컨텍스트 밖에서 복사한다. 2D 도 DSA 3D 창(z = 0)으로 읽어 텍스처 바인딩을 건드리지 않는다.
         {
-            glBindTexture( GL_TEXTURE_2D, pRecord->_texture );
-            if ( isRHIFormatBlockCompressed( pRecord->_format ) )
-                glGetCompressedTexImage( GL_TEXTURE_2D, static_cast<GLint>( mip ), readBytes.data() );
-            else
-                glGetTexImage( GL_TEXTURE_2D, static_cast<GLint>( mip ), pixelFormat, pixelType, readBytes.data() );
-            glBindTexture( GL_TEXTURE_2D, 0 );
-        }
-        else
-        {
-            // 면 하나만 읽는다(z = 면 — 큐브 맵도 DSA 에서는 면이 z 다).
-            const GLsizei bufferBytes = static_cast<GLsizei>( readBytes.size() );
+            const ScopedStagingPack pack( _pDevice->_readbackRingBuffer );
+            void*                   pPixels     = ScopedStagingPack::toPixelOffset( readback._offsetBytes );
+            const GLsizei           bufferBytes = static_cast<GLsizei>( readback._sizeBytes );
             if ( isRHIFormatBlockCompressed( pRecord->_format ) )
             {
                 glGetCompressedTextureSubImage( pRecord->_texture, static_cast<GLint>( mip ), 0, 0, static_cast<GLint>( arraySlice ),
-                                                static_cast<GLsizei>( outLayout._width ), static_cast<GLsizei>( outLayout._height ), 1, bufferBytes, readBytes.data() );
+                                                static_cast<GLsizei>( outLayout._width ), static_cast<GLsizei>( outLayout._height ), 1, bufferBytes, pPixels );
             }
             else
             {
                 glGetTextureSubImage( pRecord->_texture, static_cast<GLint>( mip ), 0, 0, static_cast<GLint>( arraySlice ), static_cast<GLsizei>( outLayout._width ),
-                                      static_cast<GLsizei>( outLayout._height ), 1, pixelFormat, pixelType, bufferBytes,
-                                      readBytes.data() );
+                                      static_cast<GLsizei>( outLayout._height ), 1, pixelFormat, pixelType, bufferBytes, pPixels );
             }
         }
-        const uint64 serial = _pDevice->endTransfer( false );
-        _pDevice->_readbackTable.add( serial, std::move( readBytes ) );
+        const uint64 serial = _pDevice->endTransfer( true );
+        _pDevice->_readbackTable.add( serial, readback );
         return _pDevice->_transferSerials.makeAccepted( serial );
     }
 

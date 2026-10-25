@@ -51,6 +51,13 @@ namespace sw
          *          (클라이언트 메모리에서 바로 올리는 두 번째 경로를 두지 않는다). DX11 은 `UpdateSubresource` 라 거짓, DX12 · Vulkan 은 자기 링(U5 · U6)이 생길 때 참으로 바꾼다.
          */
         uint8 _bPersistentStagingRing{ SW_FALSE };
+        /**
+         * @brief 텍스처 되읽기가 영속 매핑 되읽기 링으로 받는지입니다. 참이면 제출은 GPU 에 읽기 명령과 펜스만 내고, 결과 바이트는 펜스가 지난 뒤 `takeTextureReadback` 이
+         *        GPU 컨텍스트 밖에서 복사합니다. 링보다 큰 읽기 하나는 `Rejected`, 앞선 읽기를 아직 가져가거나 버리지 않아 링이 차 있으면 `Busy` 입니다(`gv_rhiReadbackRingMegabytes`).
+         * @details GL 만 쓴다. `GL_ARB_buffer_storage`(GL 4.4 코어)가 없으면 이 값이 거짓이고 **텍스처 되읽기는 모두 이유를 로그로 남기고 `Rejected`** 다
+         *          (컨텍스트를 쥔 채 동기로 읽는 두 번째 경로를 두지 않는다). DX11 · DX12 · Vulkan 은 읽기마다 자기 스테이징을 만들어 거짓이다.
+         */
+        uint8 _bPersistentReadbackRing{ SW_FALSE };
 
         /** @brief 기본값(컴퓨트만 켠 보수적 기본)으로 만듭니다. */
         RHICapabilities() noexcept = default;

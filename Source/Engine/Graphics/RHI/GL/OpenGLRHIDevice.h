@@ -137,11 +137,12 @@ namespace sw
         /** @brief VS 가 GPUScene 인스턴스 버퍼를 SSBO(g_SwInstances, t4)로 읽을 수 있어 true 입니다(glBindBufferBase). */
         bool supportsInstancedSceneDraw() const override { return true; }
 
-        /** @brief 정적 능력 테이블에 런타임 값을 덮습니다. 스테이징 링은 초기화가 실제로 만들었을 때만 참입니다(`GL_ARB_buffer_storage`, GL 4.4). */
+        /** @brief 정적 능력 테이블에 런타임 값을 덮습니다. 업로드 · 되읽기 링은 초기화가 실제로 만들었을 때만 참입니다(`GL_ARB_buffer_storage`, GL 4.4). */
         RHICapabilities getCapabilities() const override
         {
-            RHICapabilities caps         = RHIAvailability::query( RHIBackend::OpenGL );
-            caps._bPersistentStagingRing = _stagingRingBuffer != 0 ? SW_TRUE : SW_FALSE;
+            RHICapabilities caps          = RHIAvailability::query( RHIBackend::OpenGL );
+            caps._bPersistentStagingRing  = _stagingRingBuffer != 0 ? SW_TRUE : SW_FALSE;
+            caps._bPersistentReadbackRing = _readbackRingBuffer != 0 ? SW_TRUE : SW_FALSE;
             return caps;
         }
 
@@ -240,6 +241,26 @@ namespace sw
          *         (옮기는 규칙은 `RHITransferSerials::classifyStagingAllocation` 한 곳).
          */
         [[nodiscard]] RHISubmitResult allocateStagingSpan( uint64 sizeBytes, const utf8* pCaller, RHIStagingSpan& outSpan );
+        /**
+         * @brief 텍스처 되읽기 링(`GL_MAP_READ_BIT` 영속 매핑 PBO)을 만듭니다. 초기화 끝에 컨텍스트를 쥔 채 부릅니다.
+         * @return `GL_ARB_buffer_storage`(GL 4.4)가 없어 링을 만들지 않았어도 true 입니다(그때 되읽기는 모두 `Rejected`). 용량 설정이 0 이거나 GL 이 버퍼를 만들지 못하면 false 입니다.
+         */
+        [[nodiscard]] bool initializeReadbackRing( uint64 capacityBytes );
+        /// @brief 업로드 · 되읽기 링 구간 시작의 정렬입니다. PBO 오프셋은 픽셀 성분(최대 float 4 바이트)과 BC 블록(16 바이트)의 배수면 되지만, CPU 복사가 캐시 줄 경계에서 시작하도록 넉넉히 둔다.
+        static constexpr uint64 kTransferRingAlignmentBytes = 256;
+        /** @brief 되읽기 링의 버퍼를 지웁니다. `shutdownStagingRing` 과 같은 때에 부릅니다. 가져가지 않은 되읽기의 구간은 버려진다. */
+        void shutdownReadbackRing();
+        /**
+         * @brief 영속 매핑 링 버퍼 하나를 만들고 매핑합니다(`glBufferStorage` + `glMapBufferRange`, 저장소 플래그 = @p mapFlags).
+         * @return 매핑 주소입니다. 만들거나 매핑하지 못하면 버퍼를 지우고 nullptr 이며 @p outBuffer 는 0 입니다.
+         */
+        [[nodiscard]] uint8* createPersistentRingBuffer( uint64 capacityBytes, uint32 mapFlags, uint32& outBuffer );
+        /**
+         * @brief 되읽기 바이트 @p sizeBytes 를 담을 링 구간을 잡습니다. 컨텍스트가 없어도 부를 수 있습니다.
+         * @details 되읽기 구간은 GPU 완료가 아니라 CPU 가 다 읽었을 때(`takeTextureReadback`) 돌아온다. 버린 읽기의 구간만 펜스가 지나면 돌아오므로, 차 있으면 펜스를 한 번 모은 뒤 다시 본다.
+         * @return 잡았으면 `Accepted`, 앞선 되읽기를 아직 가져가지 않아 차 있으면 `Busy`, 링이 없거나 링보다 크면 이유를 로그로 남기고 `Rejected` 입니다.
+         */
+        [[nodiscard]] RHISubmitResult allocateReadbackSpan( uint64 sizeBytes, RHIStagingSpan& outSpan );
 
         /** @brief 컴퓨트 루트 상수 UBO 를 확보합니다. */
         bool ensureComputeRootConstantUbo();
@@ -442,21 +463,26 @@ namespace sw
         RHITransferSerials _transferSerials;
         /// @brief 제출한 전송마다 펜스(`GLsync`, `void*`)를 제출 순서대로 쌓습니다. 이미 끝난 제출(동기로 읽어 둔 되읽기)은 nullptr 입니다. 앞에서부터 끝난 것만 워터마크를 올립니다.
         RHITransferFenceQueue<void*> _transferQueue;
-        /// @brief 아직 가져가지 않은 텍스처 읽기의 결과 바이트입니다(제출 시점에 동기로 읽어 둔 것).
-        RHIPendingReadbackTable<vector<uint8>> _readbackTable;
+        /// @brief 아직 가져가지 않은 텍스처 읽기가 결과를 받는 되읽기 링 구간입니다. 바이트는 펜스가 지난 뒤 `takeTextureReadback` 이 컨텍스트 밖에서 복사한다.
+        RHIPendingReadbackTable<RHIStagingSpan> _readbackTable;
         /// @brief 업로드 스테이징 링의 구간 장부입니다. 구간은 전송 시리얼이 워터마크를 지나면 돌아옵니다(`_transferSerials`).
         RHIStagingRing _stagingRing;
         /// @brief 링의 영속 매핑 주소입니다(`GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT`). 어느 스레드에서나 장부가 내준 구간에만 씁니다. 링이 없으면 nullptr 입니다.
         uint8* _pStagingRingMapped;
+        /// @brief 텍스처 되읽기 링의 구간 장부입니다. 구간은 시리얼이 아니라 `takeTextureReadback`(`free`) · `discardTextureReadback`(`markSubmitted`)으로 돌아옵니다.
+        RHIStagingRing _readbackRing;
+        /// @brief 되읽기 링의 영속 매핑 주소입니다(`GL_MAP_READ_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT`). 펜스가 지난 구간만 읽습니다. 링이 없으면 nullptr 입니다.
+        const uint8* _pReadbackRingMapped;
 
         sw::unique_ptr<OpenGLRHICommandContext>  _frameStreamContext;
         sw::unique_ptr<OpenGLRHIResourceFactory> _resourceImpl;
 
         // 8바이트보다 작은 필드는 끝에 모은다. 큰 필드 사이에 끼면 필드마다 패딩이 생긴다.
         uint32                 _computeRootConstantUbo;
-        uint32                 _stagingRingBuffer; ///< 스테이징 링 PBO 이름. 0 이면 링이 없다(GL 4.4 미만) — 업로드는 Rejected 다
-        int8                   _lastVsync;         ///< -1이면 아직 정하지 않았고, 0/1은 마지막으로 적용한 값이다.
-        uint8                  _bTimestampEnabled; ///< 엔진이 켜기 전에는 쿼리도 만들지 않는다.
+        uint32                 _stagingRingBuffer;  ///< 스테이징 링 PBO 이름. 0 이면 링이 없다(GL 4.4 미만) — 업로드는 Rejected 다
+        uint32                 _readbackRingBuffer; ///< 되읽기 링 PBO 이름. 0 이면 링이 없다(GL 4.4 미만) — 텍스처 되읽기는 Rejected 다
+        int8                   _lastVsync;          ///< -1이면 아직 정하지 않았고, 0/1은 마지막으로 적용한 값이다.
+        uint8                  _bTimestampEnabled;  ///< 엔진이 켜기 전에는 쿼리도 만들지 않는다.
         uint8                  _bTimestampReady;
         uint8                  _bInitialized   : 1;
         uint8                  _bNvxMemoryInfo : 1; ///< GL_NVX_gpu_memory_info 가 있다(총량과 남은 양).

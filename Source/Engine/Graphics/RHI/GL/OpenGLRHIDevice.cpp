@@ -55,10 +55,13 @@ namespace sw
         , _readbackTable{}
         , _stagingRing{}
         , _pStagingRingMapped{ nullptr }
+        , _readbackRing{}
+        , _pReadbackRingMapped{ nullptr }
         , _frameStreamContext{ nullptr }
         , _resourceImpl{ nullptr }
         , _computeRootConstantUbo{ 0 }
         , _stagingRingBuffer{ 0 }
+        , _readbackRingBuffer{ 0 }
         , _lastVsync{ -1 }
         , _bTimestampEnabled{ SW_FALSE }
         , _bTimestampReady{ SW_FALSE }
