@@ -49,9 +49,7 @@ L3 의 단순한 중복 합치기는 `mech-worker` 에 맡길 수 있습니다. 
 | `Source/GameFramework/Base` | 14 | `CameraModeInternal::evaluateView` (`Actor/Camera/CameraMode.cpp:171`) 213 · 4 · 4 · 0 | 3 |
 |  |  | `AppearanceResolver::resolve` (`Gameplay/Appearance/AppearanceResolver.cpp:565`) 204 · 4 · 0 · 3 | 2 · 3 |
 |  |  | `GimmickCircuit::populate` (`Gameplay/Gimmick/GimmickCircuit.cpp:93`) 189 · 4 · 3 · 0 | 2 · 3 |
-| `Source/Engine/Object` | 5 | `SceneAudio::update` (`Component/Audio/SceneAudio.cpp:131`) 136 · 3 · 1 · 0 | 3 |
-|  |  | `DirectionalLightComponent::computeShadowProjectionForView` (`Component/3D/DirectionalLightComponent.cpp:285`) 127 · 2 · 3 · 0 | 3 |
-|  |  | `TickRegistry::applyStageDelta` (`GameObject/Tick/TickRegistry.cpp:609`) 119 · 5 · 3 · 4 | 4 |
+| `Source/Engine/Object` | 2 | 폴더 `Component/Audio` · `Component/3D` · `GameObject/Tick` 는 `wt/plangfxq` 에서 나눠 100 줄 초과가 없다(2026-10-25 재확인, 최대 97 줄 `TickRegistry::refreshObject`) | 끝남 |
 |  |  | `NetRequestServer::handleFrame` (`Message/NetRequest.cpp:353`) 133 · 4 · 5 · 0 | 3 |
 |  |  | `NetConnection::writePacket` (`Connection/NetConnection.cpp:262`) 117 · 2 · 0 · 48 | 3 |
 | `Source/Engine` | 3 | `Engine::initialize` (`Engine.cpp:183`) 250 · 3 · 8 · 0 | 유지(순서가 곧 의미) |
