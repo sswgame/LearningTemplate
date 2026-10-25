@@ -36,11 +36,14 @@ _kStaticBoolRe = re.compile(r"^\s*static\s+bool\s+\w+\s*(?:[={;])")
 
 # 변수 선언 한 줄 — `[static] 형 이름 [= nullptr | {}];`. 초기값이 비어 있거나 0 · false · nullptr 인 것만(값을 가진 선언은 지연 초기화가 아니다).
 _kDeclRe = re.compile(
-    r"^[ \t]*(?P<static>static\s+)?(?:inline\s+)?(?P<rest>[A-Za-z_][^;=(){}]*?)"
+    r"^[ \t]*(?:inline\s+)?(?P<static>static\s+)?(?:inline\s+)?(?P<rest>[A-Za-z_][^;=(){}]*?)"
     r"\s*(?P<init>=\s*(?:nullptr|NULL|false|0)\s*|=\s*\{\s*\}\s*|\{\s*(?:nullptr|false|0)?\s*\})?;[ \t]*$")
 _kStopWords = frozenset({"return", "using", "typedef", "friend", "extern", "goto", "delete", "else", "case", "throw", "new", "co_return"})
 _kContainerRe = re.compile(r"^(?:std::)?(?:unique_ptr|shared_ptr|optional|vector|map|unordered_map|set|unordered_set|string|deque|list)\b")
-_kLockRe = re.compile(r"lock|mutex|call_once|compare_exchange|atomic|critical", re.IGNORECASE)
+# 잠금 · 원자 구문을 가리키는 낱말만 본다. 부분 문자열로 찾으면 `bLockWanted` · `getLockMode`(마우스 잠금) 같은 이름이 잠금으로 읽혀 위반이 가려졌다
+# (`InputManagerX11` 의 `s_bWaylandLockReported` 가 그렇게 빠졌다). 낱말 경계를 두고 잠금 형식 이름만 센다.
+_kLockRe = re.compile(
+    r"\b(?:\w*_lock\w*|lock_\w+|lock|unlock|try_lock|\w*[Ss]coped\w*|\w*[Ss]pin\w*|\w*[Mm]utex\w*|\w*[Aa]tomic\w*|call_once|once_flag|compare_exchange\w*|critical\w*)\b")
 _kIfRe = re.compile(r"\bif\s*(?:\(|constexpr)")
 _kNamespaceRe = re.compile(r"\bnamespace\b|\bextern\b")
 _kTypeBodyRe = re.compile(r"\b(?:class|struct|union|enum)\b")
@@ -188,6 +191,9 @@ class CheckLazyInitStaticFlagGate(BaselineSourceGate):
          "unexpectedViolation": "Source/Probe/H.cpp",
          "files": {"Source/Probe/G.cpp": "void load()\n{\n    static bool s_bTried{ false };\n}\n",
                    "Source/Probe/H.cpp": "Loader* get()\n{\n    static Loader* s_p = nullptr;\n    std::lock_guard guard( g_mutex );\n    if ( s_p == nullptr )\n    {\n        s_p = makeLoader();\n    }\n    return s_p;\n}\n"},
+         "args": ["--baseline", "0"]},
+        {"name": "이름에 Lock 이 든 변수는 잠금이 아니다(inline static · 뒤따르는 대입)", "expectedViolation": "1  Source/Probe/I.cpp",
+         "files": {"Source/Probe/I.cpp": "namespace\n{\ninline static bool s_bLockReported{ false };\n}\nvoid sync( bool bLockWanted )\n{\n    if ( bLockWanted && s_bLockReported == false )\n        report();\n    s_bLockReported = s_bLockReported || bLockWanted;\n}\n"},
          "args": ["--baseline", "0"]},
     ]
 

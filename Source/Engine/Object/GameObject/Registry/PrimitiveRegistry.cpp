@@ -76,7 +76,7 @@ namespace sw
             VectorUtil::removeAtSwap( _listAssetWaiter, waiterIndex );
             break;
         }
-        (void)VectorUtil::removeSingleSwap( _listLODPrimitive, pComp ); // LOD 메시가 아니었으면 목록에 없다
+        (void)_listLODPrimitive.remove( pComp ); // LOD 메시가 아니었으면 목록에 없다
         const uint32 slot = pComp->getPrimitiveIndex();
         // 슬롯이 정말 이 레지스트리의 것인지 확인한다. 인덱스는 컴포넌트가 들고 있어서, 다른 레지스트리가
         // 실수로 불리면 남의 목록을 그럴듯한 인덱스로 훼손할 수 있다.
@@ -129,14 +129,13 @@ namespace sw
     {
         SW_ASSERT( pPrimitive != nullptr );
         std::scoped_lock<mutex> lock{ _mutex };
-        if ( VectorUtil::contains( _listLODPrimitive, pPrimitive ) == false )
-            _listLODPrimitive.push_back( pPrimitive );
+        (void)_listLODPrimitive.add( pPrimitive ); // 이미 걸려 있으면 무시한다
     }
 
     void PrimitiveRegistry::removeLODPrimitive( ScenePrimitive* pPrimitive )
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        (void)VectorUtil::removeSingleSwap( _listLODPrimitive, pPrimitive ); // 걸려 있지 않았으면 할 일이 없다
+        (void)_listLODPrimitive.remove( pPrimitive ); // 걸려 있지 않았으면 할 일이 없다
     }
 
     void PrimitiveRegistry::updateAssetWaiters( float32 deltaSeconds )

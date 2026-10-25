@@ -598,6 +598,8 @@
   지우기는 `VectorUtil::removeIf`(순서 보존 · 한 번 훑기, 언리얼 `RemoveAll`), 중복 거르기는 집합이다. UI 의 재생 · 트윈 · 알림 · 전환 채널을 고쳤다. 같은 속성을 쓰는 애니메이션은 목록 순서대로 써서 마지막이 이기므로 swap-pop 은 아니다.
   전환 중 위젯 목록(`WidgetTree::_uniqueStyleTransition`)은 `unordered_set` 이다 — `sparse_set` 은 위젯 번호(프로세스 전체 증가 카운터)의 최댓값만큼 sparse 배열이 자라 맞지 않았다. 형식으로 못 막는 틈(표준 vector 멤버 호출)에만 게이트 `CheckIndexLoopErase` 를 기준선 래칫으로 둔다.
 
+- **유일한 포인터 목록은 순서가 의미 없으면 `IndexedPtrList`(O(1) 등록 · 해제, swap-remove 로 순서가 바뀜), 등록 순서가 처리 순서이면 `AnimationOrderedList`(빈 칸 표시 후 접기, `forEach` 가 순회 중 등록 · 해제를 견딤)다**(2026-10-25, 통합 J). `AnimationSystem` LOD 클라이언트는 예산 판정이 등록 순서를 따르고 적용 훅이 순회 중 해제를 부르므로 후자, `PrimitiveRegistry` LOD 목록은 전자다. 언리얼은 순서 없는 `RemoveAtSwap` 과 순서 있는 `RemoveAt` 을 호출자가 고르게 하는데, 이 저장소는 그 선택을 컨테이너 형식으로 고정한다.
+
 ### 5-4. 데이터, 직렬화, 설정
 
 - **엔진 데이터에는 별칭을 두지 않습니다**(2026-10-03). 실제로 출시한 게임 데이터가 없으므로, 이름을 바꾸면 데이터를 다시 씁니다. 옛 `SaveGame` 파일도 읽지 않습니다. 계약은 Serialization README 에 있습니다.

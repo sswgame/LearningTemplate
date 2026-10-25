@@ -152,10 +152,10 @@ namespace sw
                 const bool      bSettled = slot._bLoaded || slot._bFailed; // 이미 올라 있거나 짓지 못한 셀이다
                 if ( bSettled )
                     continue;
-                if ( VectorUtil::contains( _listScratchLoad, indexIt->second ) == false )
-                    _listScratchLoad.push_back( indexIt->second );
+                _listScratchLoad.push_back( indexIt->second ); // 원점 반경이 겹치면 같은 셀이 여럿 들어온다 — 아래에서 한 번에 거른다
             }
         }
+        VectorUtil::sortUnique( _listScratchLoad ); // 모양이 `contains` + `push_back` 이면 셀 수의 제곱이 든다
         if ( _listScratchLoad.empty() )
             return;
 

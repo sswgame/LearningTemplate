@@ -76,6 +76,12 @@ Base 에 남긴 것: 계산한 키로 정렬하는 람다(`TimingJudge` 폭 합,
 왜 필요한가: `wt/ownership`(2026-10-24)이 맨 `sw_new` 를 `make_unique` 로, 거친 `Memory::allocate` 블록을 `MemoryBlock` 으로 바꾸고 `Style/RawNew` · `CheckRawAllocation` 이 새 맨 할당을 막게 했습니다. 남은 틈은 외부 라이브러리 할당 콜백과, 리플렉션이 생성자를 불러 만든 인스턴스(블록 + `TypeInfo::_destroyInstance` 짝)입니다. 후자는 `void*` 를 맨 손으로 들고 `destroyInstance` 를 손으로 짝지어 부르는 모양이라 누수 · 이중 해제가 형식에 안 보입니다.
 남은 것: 블록과 `const TypeInfo*` 를 함께 쥐고 소멸자가 `_destroyInstance` 후 블록을 푸는 이동 전용 소유 형식을 `Engine/Reflection` 에 두고 `CheckRawAllocation.toml` 의 `ProjectSettingsDocument.cpp`(`_pCurrent` · `_pDefault` · `createInstance` 호출 8곳) · `UIDocumentLoader.cpp`(`createWidget`)를 그 형식으로 옮긴 뒤 두 줄을 지웁니다. `GameObject.cpp` 의 컴포넌트 저장소는 풀 항목이 짝이라 따로 봅니다. `hashed_string.h` 의 청크 표(`atomic<Entry*>`)는 락 없이 읽는 표라 소유 형식을 담지 못하니, 표가 소유하는 `atomic` 소유 칸 형식이 필요한지 함께 따집니다.
 
+### WhenAnyHiddenEdge
+제목: `whenAny` 트리거 → 후속 간선을 사이클 검사가 보게 하기
+옛번호: 없음
+왜 필요한가: `whenAny` 는 입력마다 트리거 태스크를 두고 트리거가 후속의 의존 수를 직접 내려서(`resolveDependency`) 후속 목록의 간선이 아닙니다. 그래서 `runBefore` 의 사이클 검사가 "입력 → 트리거 → 후속 → 입력" 을 못 보고 `waitAll` 이 멈춥니다(`TaskTypes.h` 의 알려진 빈틈).
+남은 것: 설계 후보 둘 중 하나를 고릅니다. (가) 후속 노드에 "선행 중 하나면 된다" 표시(`_bAnyOfPredecessors` + 한 번만 내리는 `exchange` 칸)를 두고 `whenAny` 가 입력에서 후속으로 보통 `runBefore` 간선을 겁니다. 간선은 목록에 있어 검사가 보고, 완료 경로는 이 표시가 있는 후속에서 처음 온 하나만 의존 수를 내립니다 — 보정 없이 건너뛰기만 하므로 경쟁이 없지만, `runBefore` 가 의존 수를 올리는 규칙(표시가 있으면 올리지 않기)과 완료 경로의 분기가 `TaskNode` 의 모든 후속에 한 분기를 더합니다. (나) 트리거에서 후속으로 거는 목록 간선은 그대로 두고, 사이클 검사만 `whenAny` 후속 노드를 "입력들의 후속" 으로 취급하도록 노드에 `_listAnyInput`(입력 핸들 목록)을 두어 `canReachThroughSuccessors` 가 따라가게 합니다. 완료 경로는 그대로이고 검사만 늘지만 입력 목록이 노드 크기와 수명(참조)을 늘립니다. (가) 가 같은 모양의 간선을 모두 보이게 하므로 낫고, 완료 경로의 한 분기 비용은 `TaskManagerBenchTest.SmallTaskThroughput` 으로 잰 뒤 정합니다. 구현은 하지 않았습니다(완료 경로의 락 없는 코드는 빌드 · 테스트 없이 바꾸지 않습니다).
+
 ## 조건부
 
 ### PerfConditionalCandidates

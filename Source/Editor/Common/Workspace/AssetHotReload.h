@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
@@ -184,6 +185,9 @@ namespace sw::editor
         vector<ImportRequest>            _listQueuedImport;               ///< 아직 잡에 싣지 않은 원본(중복 없음)
         vector<ImportRequest>            _listRunningImport;              ///< 지금 도는 잡의 원본
         vector<string>                   _listDeferredFile;               ///< 임포트가 도는 동안 미룬 바뀐 파일(중복 없음)
+        unordered_set<string>            _uniqueSetQueuedImportKey;       ///< `_listQueuedImport` 의 중복 검사 키(소문자 경로). 목록과 같이 바꾼다
+        unordered_set<string>            _uniqueSetRunningImportKey;      ///< `_listRunningImport` 의 중복 검사 키
+        unordered_set<string>            _uniqueSetDeferredFile;          ///< `_listDeferredFile` 의 중복 검사 집합
         bool                             _bImportInFlight;                ///< 잡을 시작했고 결과를 아직 안 가져왔다
         uint64                           _finishedImportCount;            ///< 끝난 원본 임포트의 누적 수
         int64                            _fenceImportDeadlineNanoseconds; ///< 울타리가 임포트를 기다리다 포기하는 단조 시계 시각(기다리지 않으면 0)

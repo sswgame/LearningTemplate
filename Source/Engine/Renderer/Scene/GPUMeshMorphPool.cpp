@@ -4,6 +4,7 @@
 
 #include "Core/Container/IndexFreeList.h"
 #include "Core/Container/VectorUtil.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/Log/Logger.h"
 
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -98,15 +99,16 @@ namespace sw
     void GPUMeshMorphPool::rebuildSkinSources( IRHIDevice* pDevice, const vector<Mesh*>& listSkinMesh )
     {
         // 원본 = 스킨 데이터 번호. 사본(`Mesh::createSkinInstance`)은 원본의 번호를 나누므로 레스트 · 가중치가 한 벌만 올라간다.
-        vector<uint64>      listDataID;
-        vector<const Mesh*> listSource;
+        vector<uint64>        listDataID;
+        vector<const Mesh*>   listSource;
+        unordered_set<uint64> uniqueSetDataID; // 중복 검사는 해시로 한다(스킨 메시가 많아도 O(N))
         for ( const Mesh* pMesh : listSkinMesh )
         {
             const bool bSkipSkinMesh = pMesh == nullptr || pMesh->hasSkin() == false || pMesh->getVertexCount() == 0;
             if ( bSkipSkinMesh )
                 continue;
             const uint64 dataID = pMesh->getSkinDataID();
-            if ( VectorUtil::contains( listDataID, dataID ) )
+            if ( uniqueSetDataID.insert( dataID ).second == false )
                 continue;
             listDataID.push_back( dataID );
             listSource.push_back( pMesh );
