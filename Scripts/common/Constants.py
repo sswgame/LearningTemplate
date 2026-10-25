@@ -179,6 +179,7 @@ kNotOurDirNames: frozenset[str] = frozenset({
     "Ninja",
     "_cache",
     "_deps",
+    "graphify-out",  # graphify 가 코드 폴더(`Source/`) 안에 남기는 그래프 산출물(.gitignore 대상) — 폴더마다 빌드 소속을 묻는 게이트가 이 폴더를 소속 없는 코드로 본다
     "worktrees",  # 에이전트 격리 워크트리(`.claude/worktrees/<이름>/`) — 저장소 전체의 사본이라 훑으면 같은 파일이 여러 번 잡힌다
 })
 

@@ -11,6 +11,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "Scripts"))
 
+from common.Constants import kNotOurDirNames  # noqa: E402
 from common.Search import collectRepositoryFiles, naturalVersionKey, resolveFileArguments  # noqa: E402
 
 
@@ -33,6 +34,15 @@ class CommonSearchTest(unittest.TestCase):
     def testExcludedFolderIsMatchedByNameNotSubstring(self) -> None:
         listFile = self.relative(collectRepositoryFiles(self.root, ("Source",), suffixes=(".h",)))
         self.assertEqual(listFile, ["Source/A.h", "Source/Builder/D.h", "Source/rebuild/B.h"])
+
+    def testGraphifyOutputFolderIsNotOurCode(self) -> None:
+        # graphify 가 Source/ 아래에 남기는 그래프 산출물 — 폴더마다 빌드 소속을 묻는 게이트(ServerBuild)와 걷기가 같은 이름 집합을 읽는다.
+        path = self.root / "Source" / "graphify-out" / "cache" / "E.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("{}\n", encoding="utf-8")
+        listFile = self.relative(collectRepositoryFiles(self.root, ("Source",), suffixes=(".h", ".json")))
+        self.assertNotIn("Source/graphify-out/cache/E.json", listFile)
+        self.assertIn("graphify-out", kNotOurDirNames)
 
     def testFileArgumentsUseTheSameRule(self) -> None:
         listArgument = ["Source/A.h", "Source/build/C.h", "Source/rebuild/B.h"]
