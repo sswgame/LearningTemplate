@@ -46,6 +46,10 @@ namespace sw::editor
             {
                 ParkLayoutPreview preview;
                 (void)preview.refresh(); // 결과는 아래 isLoaded 로 확인한다
+                // 모든 게임 모듈을 올리는 구성(SW_GAMES=ALL)에서는 이 확장이 ThemePark 키트를 쓰지 않는 게임의 에디터에도 오른다 — 그 게임 팩에는 공원 배치가 없다(isMissing).
+                // 배치가 있는 게임(ThemeParkTycoon)에서만 읽기를 확인한다. 거기서는 `KitExtensionSelfTestsPassInTheirGame` 이 이 시험이 통과하는지 본다.
+                if ( preview.isMissing() )
+                    return EditorSelfTestStep::Done;
                 context.expect( preview.isLoaded() && preview.getRides().empty() == false, "rides.xml did not load through the ThemePark kit" );
                 vector<EditorWorldSegment> listSegment;
                 preview.appendSegments( listSegment );

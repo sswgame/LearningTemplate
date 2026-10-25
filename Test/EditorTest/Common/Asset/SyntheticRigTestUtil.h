@@ -29,7 +29,7 @@ namespace test
         sw::editor::ModelImportResult      _import;     ///< 임포터 결과 그대로
         sw::shared_ptr<sw::Skeleton>       _skeleton;   ///< 캐릭터가 나누는 스켈레톤
         sw::shared_ptr<sw::Mesh>           _mesh;       ///< 스킨 · 모프를 포함한 원본 메시
-        sw::string                         _clipFolder; ///< 클립을 쓴 임시 폴더(`<클립 이름>.animclip`)
+        sw::string                         _clipFolder; ///< 클립을 쓴 임시 폴더의 리소스 id(`testtemp/…`, 파일은 `<클립 이름>.animclip`)
         sw::shared_ptr<const sw::RigAsset> _rig;        ///< 옆 `.rig.xml`
     };
 
@@ -61,13 +61,16 @@ namespace test
         outRig._mesh->setVertices( outRig._import._mesh._listVertex );
         outRig._mesh->setSkin( outRig._import._mesh._listSkinVertex, outRig._import._mesh._skinBoneCount );
         outRig._mesh->setMorphTargets( outRig._import._mesh._listMorphTarget );
-        outRig._clipFolder = test::makeTempDirectory( outRig._stem.c_str() );
+        const sw::string clipDiskFolder = test::makeTempDirectory( outRig._stem.c_str() );
         for ( const sw::editor::ModelImportClip& imported : outRig._import._listClip )
         {
-            const sw::string clipPath = sw::FileUtil::joinPath( outRig._clipFolder, imported._fileStem + sw::string( sw::AnimationClip::kExtension ) );
+            const sw::string clipPath = sw::FileUtil::joinPath( clipDiskFolder, imported._fileStem + sw::string( sw::AnimationClip::kExtension ) );
             if ( imported._clip.saveToFile( clipPath ) == false )
                 return false;
         }
+        outRig._clipFolder = test::makeTempResourceID( clipDiskFolder ); // 애니메이터는 리소스 id 만 받는다(계획 DiskPathVsResourceId)
+        if ( outRig._clipFolder.empty() )
+            return false;
         // 리그도 `.glb` 처럼 그 옆 디스크 파일을 임포터처럼 파일로 읽는다. 둘 다 쿠킹에서 빠지는 원본(`rigs_raw`)이라 `ResourceIO` 로 읽으면 배포본(팩만 읽고
         // 절대 경로의 낱개 읽기도 거절한다)에서 찾지 못한다. 한 경로에서 둘을 끌어내므로 임포트 입력과 리그 입력이 다른 곳을 볼 수 없다.
         const sw::string rigPath = glbPath.substr( 0, glbPath.size() - 4 ) + ".rig.xml";
