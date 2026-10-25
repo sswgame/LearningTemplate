@@ -1000,6 +1000,7 @@ SW_TEST_CASE( ResourcePakTest, CollectResourcesListsPackOnlyFolder )
  */
 SW_TEST_CASE( ResourcePakTest, CollectResourcesUnionsLooseFolderAndPacks )
 {
+    SW_TEST_REQUIRES_FEATURE( SourceResources ); // 활성이 아닌 게임(shooter3d)의 원본 폴더는 구운 팩(Shipping)에 없다
     const sw::GlobalVfsScope vfsScope;
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
