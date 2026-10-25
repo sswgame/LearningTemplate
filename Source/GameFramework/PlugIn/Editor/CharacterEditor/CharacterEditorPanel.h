@@ -227,6 +227,7 @@ namespace sw::editor
         uint32                                _previewDatabaseRevision; ///< 몸에 마지막으로 입힌 외형 데이터의 세대(`AppearanceDatabase::getRevision`)
         bool                                  _bPreviewBodyDressed;     ///< 몸에 한 번이라도 입혔다 — 세대가 같아도 첫 입히기는 한다
         bool                                  _bModelsWereDirty;        ///< 지난 그리기에 소켓 · 포즈 모델이 미저장이었다(되돌리기로 저장 상태에 돌아오면 dirty 를 내린다)
+        bool                                  _bCustomizationOpen;      ///< 꾸미기 머리글이 펼쳐져 있다 — 뷰포트가 슬라이더 몇 줄 자리를 남긴다
         bool                                  _bCustomizationActive;    ///< 꾸미기 슬라이더를 끄는 중이다(`drawCustomizationSliders`) — 미리보기 몸 다시 입히기를 놓을 때까지 미룬다
         uint32                                _seenFitRevision;         ///< 확인 표시에 올린 피팅 결과의 세대(`CharacterAppearanceComponent::getFitResultRevision`)
         EditorPreviewGizmo                    _gizmo;                   ///< 고른 본의 기즈모(`syncBoneGizmo`)

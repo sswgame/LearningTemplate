@@ -61,6 +61,7 @@ namespace sw::editor
             static constexpr float32     kPresetListHeight         = 90.0f;
             static constexpr float32     kExplanationListHeight    = 130.0f;
             static constexpr float32     kPreviewHeight            = 260.0f;  ///< 미리보기 뷰포트 높이(96 DPI 픽셀)
+            static constexpr float32     kCustomizationReserve     = 150.0f;  ///< 꾸미기 머리글이 펼쳐졌을 때 뷰포트 아래에 남기는 높이(머리글 + 슬라이더 몇 줄, 96 DPI 픽셀)
             static constexpr float32     kPreviewFrameRadius       = 1.4f;    ///< 미리보기 카메라가 담는 반지름(m) — 사람 키 하나
             static constexpr float32     kSocketAxisLength         = 0.08f;   ///< 미리보기 소켓 축 길이(m)
             static constexpr float32     kSelectedSocketAxisLength = 0.18f;   ///< 고른 소켓의 축 길이(m)
@@ -234,6 +235,7 @@ namespace sw::editor
         , _previewDatabaseRevision{ 0 }
         , _bPreviewBodyDressed{ false }
         , _bModelsWereDirty{ false }
+        , _bCustomizationOpen{ true }
         , _bCustomizationActive{ false }
         , _seenFitRevision{ 0 }
         , _gizmo{}
@@ -464,8 +466,11 @@ namespace sw::editor
         _published._previewAssembleCount = pAppearance != nullptr ? pAppearance->getAssembleCount() : 0u;
         const float2  available          = float2{ ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y };
         const float32 minHeight          = CharacterEditorPanelInternal::kPreviewHeight * EditorThemeUtil::getDpiScale();
+        // 뷰포트가 남은 높이를 모두 차지하면 슬라이더가 늘 접힌 아래로 밀려 스크롤 없이는 닿지 못한다 — 펼쳐졌을 때는 아래 몇 줄 자리를 남긴다.
+        const float32 reserve        = _bCustomizationOpen ? CharacterEditorPanelInternal::kCustomizationReserve * EditorThemeUtil::getDpiScale() : 0.0f;
+        const float32 viewportHeight = available._y - reserve;
         syncBoneGizmo();
-        drawPreviewViewport( float2{ available._x, available._y > minHeight ? available._y : minHeight }, _gizmo.hasMouse() );
+        drawPreviewViewport( float2{ available._x, viewportHeight > minHeight ? viewportHeight : minHeight }, _gizmo.hasMouse() );
         _gizmo.draw( *this );
         EditorSelfTestMarks::note( "charactereditor.previewScene" );
         if ( pAppearance != nullptr )
@@ -480,7 +485,8 @@ namespace sw::editor
             _seenFitRevision = pAppearance->getFitResultRevision();
         }
         // 슬라이더는 뷰포트 아래에 둔다 — 모습이 바뀌는 것을 보며 끈다.
-        if ( ImGui::CollapsingHeader( "Customize (release a slider to refit)", ImGuiTreeNodeFlags_DefaultOpen ) )
+        _bCustomizationOpen = ImGui::CollapsingHeader( "Customize (release a slider to refit)", ImGuiTreeNodeFlags_DefaultOpen );
+        if ( _bCustomizationOpen )
             drawCustomizationSliders( selection );
         else
             _bCustomizationActive = false;
@@ -1292,7 +1298,8 @@ namespace sw::editor
         }
         CustomizationValueSet normalized;
         CustomizationUtil::normalize( *pSchema, selection._customization, normalized, nullptr );
-        bool          bAnyActive = false;
+        bool          bAnyActive   = false;
+        bool          bFirstSlider = true;
         hashed_string category{};
         bool          bFirst = true;
         for ( const CustomizationParamDef& param : pSchema->_listParameter )
@@ -1325,7 +1332,9 @@ namespace sw::editor
                     bAnyActive = bAnyActive || ImGui::IsItemActive();
                     if ( ImGui::IsItemDeactivatedAfterEdit() )
                         _appearance.endContinuousEdit();
-                    EditorSelfTestMarks::note( "charactereditor.slider.last" ); // 마지막으로 그린 슬라이더 — 자동화가 누를 자리
+                    if ( bFirstSlider )
+                        EditorSelfTestMarks::note( "charactereditor.slider.first" ); // 첫 슬라이더 — 자동화가 누를 자리(마지막 것은 스키마가 길면 접힌 아래다)
+                    bFirstSlider = false;
                     break;
                 }
                 case CustomizationKind::Color:

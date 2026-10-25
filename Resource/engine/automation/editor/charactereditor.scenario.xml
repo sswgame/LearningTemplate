@@ -44,7 +44,7 @@
 	<At frame="610"><Expect probe="Editor.CharacterEditorPreviewClipPlaying" atLeast="1"/></At>
 	<At frame="650"><CaptureEditorUI file="charactereditor/clip.png"/></At>
 	<!-- 꾸미기 슬라이더(스키마가 있는 프리셋이면 뷰포트 아래에 나온다): 눌러 값을 바꾸고 놓으면 몸이 다시 입혀진다 — 눈으로 본다 -->
-	<At frame="660"><EditorClick mark="charactereditor.slider.last"/></At>
+	<At frame="660"><EditorClick mark="charactereditor.slider.first"/></At>
 	<At frame="720"><CaptureEditorUI file="charactereditor/slider.png"/></At>
 	<!-- 제약 리그 미리보기(팩 데이터의 rig): 켜면 몸에 후처리 리그가 걸린다 — 눈으로 본다 -->
 	<At frame="730"><EditorClick mark="charactereditor.rigPreview"/></At>
