@@ -149,6 +149,8 @@ frame 900 <ExpectVisited> #3: AI.State(FarmAutoFarmer) never went through 'Till 
 
 새 단계는 `SW_AUTOMATION_STEP( id, "이름", 실행, 검사, 입력 전 여부 )` 로 등록합니다. 입력으로 옮겨지는 단계는 `SW_AUTOMATION_STEP_WITH_HOOKS` 의 준비 함수에서 `runner.getInputScript()` 에 이벤트를 넣습니다.
 속성은 검사 함수에서 모두 확인합니다. 모르는 속성은 읽기 오류로 만들어 오타가 기본값으로 조용히 바뀌지 않게 합니다.
+검사 함수는 순수 함수라 실행기 없이 부를 수 있습니다. `AutomationScenarioDataTest`(nogpu)가 모든 시나리오 파일의 단계를 이 함수로 훑습니다. 검사가 등록표에 이름을 묻는 단계(탐침 · 전역 변수 · 개발 명령)는 그 모듈이 올라온 프로세스에서만 답이 나오므로,
+부르기 전에 `AutomationStepValidation::findUnresolvedDependency` 로 "틀렸다" 와 "이 프로세스가 모른다" 를 가립니다. 검사 함수가 새 등록표를 묻게 되면 거기에도 더합니다.
 
 AI 의 상태를 시나리오에서 보려면 `AIControllerComponent` 파생의 `think` 에서 상태가 바뀔 때 `setStateName( "Chase" )` 를 부르고, 판단 값은 `getBlackboard()` 에 둡니다. 탐침 `AI.State` 와 `AI.Blackboard` 가 그것을 읽습니다.
 게임 로직 단계와 탐침(시계, 판 상태의 돈 · 퀘스트, 일정, AI, 빙의, 탑승)의 정의는 `GameFramework/Base/Gameplay/Automation/GameplayAutomationSteps.cpp` 에 있습니다.

@@ -964,14 +964,12 @@ namespace sw
         /** @brief 붙잡는 동안 같은 프레임의 다른 단계가 여러 번 돌거나(입력 전 단계) 조건보다 먼저 돌지 않게, 기다림은 그 프레임에 혼자 둔다. */
         static bool prepareWaitUntil( AutomationStepContext& context, const AutomationStep& step, string& outError )
         {
-            AutomationRunner& runner = asRunner( context );
-            for ( const AutomationStep& otherStep : runner._scenario.getSteps() )
+            AutomationRunner&     runner     = asRunner( context );
+            const AutomationStep* pOtherStep = runner._scenario.findOtherStepAtSameFrame( step );
+            if ( pOtherStep != nullptr )
             {
-                if ( &otherStep != &step && otherStep._frameIndex == step._frameIndex )
-                {
-                    outError = step.describe() + ": <WaitUntil> must be the only step at its frame (move " + otherStep.describe() + ")";
-                    return false;
-                }
+                outError = step.describe() + ": <WaitUntil> must be the only step at its frame (move " + pOtherStep->describe() + ")";
+                return false;
             }
             return true;
         }

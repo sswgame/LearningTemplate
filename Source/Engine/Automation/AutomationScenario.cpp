@@ -239,6 +239,16 @@ namespace sw
     {
     }
 
+    const AutomationStep* AutomationScenario::findOtherStepAtSameFrame( const AutomationStep& step ) const
+    {
+        for ( const AutomationStep& otherStep : _listStep )
+        {
+            if ( &otherStep != &step && otherStep._frameIndex == step._frameIndex )
+                return &otherStep;
+        }
+        return nullptr;
+    }
+
     bool AutomationScenario::loadFromPath( string_view path, string& outError )
     {
         XMLDocument doc;

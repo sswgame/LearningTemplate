@@ -131,6 +131,8 @@ namespace sw
         AutomationStartCondition      getStartCondition() const { return _startCondition; }
         VirtualInputMode              getInputMode() const { return _inputMode; }
         const vector<AutomationStep>& getSteps() const { return _listStep; }
+        /** @brief @p step 과 같은 프레임에 있는 다른 단계 하나를 반환합니다. 없으면 nullptr 입니다(`WaitUntil` 은 그 프레임에 혼자 있어야 한다 — 실행기 준비와 실행기 없는 검사가 함께 쓴다). */
+        const AutomationStep* findOtherStepAtSameFrame( const AutomationStep& step ) const;
         /** @brief 실행기와 테스트만 읽는 선언 묶음입니다(`AutomationTestOptions`). 시나리오의 단계 형식과 섞이지 않게 따로 둔다. */
         const AutomationTestOptions& getTestOptions() const { return _testOptions; }
 

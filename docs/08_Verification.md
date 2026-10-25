@@ -493,6 +493,8 @@ ctest --test-dir build/Ninja-Release -L load                     # 부하 스위
   녹화(`-scenario-record` · `-scenario-record-probes`)를 다시 돌려 같은 검사점이 나오는지는 `AppScenarioTest.RecordedPlayReplaysOnEveryBackend` 가 본다. 형식은 `Source/Engine/Automation/README.md`.
   시나리오는 선언하지 않은 `[Warning]` · `[Error]` 한 줄 · 빠진 현지화 키 하나로 진다(로그 게이트). 일부러 내는 줄은 그 시나리오에 `<ExpectLog contains="…">`, 고칠 수 없는 줄만 `Resource/engine/automation/allowedlogs.json` 에 이유와 함께 둔다.
   게이트에 걸린 줄은 실패 메시지의 `unexpected log:` 줄과 `Saved/Automation/<이름>_<백엔드>.log` 에 있다.
+- **시나리오 단계 속성은 앱 없이(nogpu) 먼저 본다** — `AutomationScenarioDataTest.EveryScenarioStepPassesItsValidation` 가 모든 `*.scenario.xml` 의 단계를 등록된 검사 함수(`_pValidate`)로 훑는다(새 시나리오는 자동으로 든다).
+  에디터 · 게임 모듈이 등록하는 단계 · 탐침 · 개발 명령은 이 프로세스에 없어 부르지 못하고, 통과가 아니라 "못 본 단계" 로 합계와 이유별(`[ScenarioData] not seen …` 로그 줄)로 남는다 — 그 몫은 GPU 검증의 시작 프레임 검사가 본다. 준비 함수(`_pPrepare`: 입력 맵 · 창이 필요한 검사)도 못 본다.
   `materialpreview` 가 GL 체인에서 한 번 진 적이 있다(미리보기 평균 R-B 가 옛 값 — 이후 0/23 재현 없음). 다시 지면 탐침 `Editor.MaterialDocumentIsProbeAsset` · `Editor.MaterialSwitchPending` 의 값으로 문서가 안 바뀐 것인지 계산이 안 따라온 것인지 가른다.
 - **에디터 시나리오 백엔드 사례는 한 체크아웃에서 하나씩 돌린다** — `AppScenarioTest.EditorScenariosPassOn<백엔드>` 는 리소스 트리(`assetmanage/probe.material` 이름 바꾸기 · 새 머티리얼 · `editor/automationtemp/`)를 고친다.
   같은 워크트리에서 두 백엔드를 동시에 돌리면 서로의 파일을 지우고 남겨 assetmanage · chainreloadgame(고아 에셋 경고) · flowterrain · flowimport 가 함께 진다(2026-10-20, 네 백엔드 모두 실패, 하나씩 돌리면 DX12 · Vulkan · DX11 통과).
