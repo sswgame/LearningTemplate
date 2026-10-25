@@ -22,6 +22,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
+from common.ExitCode import ExitCode  # noqa: E402
 
 _kProcessAllAccess = 0x1F0FFF
 _kThreadAllAccess = 0x1F03FF
@@ -148,7 +149,7 @@ class StackSampler:
 def main(listArgument: list[str] | None = None) -> int:
     if sys.platform != "win32":
         print("SampleStacks.py is Windows only (DbgHelp)", file=sys.stderr)
-        return 2
+        return ExitCode.CheckInvalid
     parser = argparse.ArgumentParser(description="살아 있는 프로세스의 스택을 여러 번 떠서 함수별로 모은다")
     parser.add_argument("pid", type=int)
     parser.add_argument("--samples", type=int, default=200, help="뜨는 횟수(회마다 모든 스레드)")
@@ -176,7 +177,7 @@ def main(listArgument: list[str] | None = None) -> int:
         time.sleep(args.interval_ms / 1000.0)
     if stackCount == 0:
         print("no stack was captured (access denied, or the process exited)", file=sys.stderr)
-        return 1
+        return ExitCode.Violation
     print(f"{stackCount} stacks from {args.samples} rounds")
     print(f"{'self':>7} {'self%':>6}  function")
     for name, count in selfCount.most_common(args.top):
@@ -184,7 +185,7 @@ def main(listArgument: list[str] | None = None) -> int:
     print(f"{'incl':>7} {'incl%':>6}  function")
     for name, count in inclusiveCount.most_common(args.top):
         print(f"{count:7d} {100.0 * count / stackCount:5.1f}%  {name}")
-    return 0
+    return ExitCode.Passed
 
 
 if __name__ == "__main__":

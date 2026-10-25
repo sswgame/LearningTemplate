@@ -29,6 +29,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common.Constants import kLintTargetRelDirs  # noqa: E402
 from common.Search import collectRepositoryFiles, readTextFiles  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
 from lint.DiscardReasonRules import findFallibleDiscards  # noqa: E402
 from lint.LintReport import LintReport, ReportContext  # noqa: E402
 
@@ -83,7 +84,7 @@ class RunDiscardReasonsReport(LintReport):
         if args.out:
             Path(args.out).write_text("\n".join(listRow) + "\n", encoding="utf-8")
             print(f"\n[RunDiscardReasons] 줄 목록: {args.out}")
-        return 0
+        return ExitCode.Passed
 
 
 main = RunDiscardReasonsReport.run

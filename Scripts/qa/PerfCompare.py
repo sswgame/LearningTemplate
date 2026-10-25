@@ -27,6 +27,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from common.AppRun import addAppRunArguments, kBackendSwitch, kBenchRowRe, parseProfileTable, runApp  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
 
 
 @dataclass(frozen=True)
@@ -212,7 +213,7 @@ def main(listArgument: list[str] | None = None) -> int:
     if args.list:
         for case in kListCase:
             print(f"{case.name:16} {case.kind:4} {case.mode:6} {case.note}")
-        return 0
+        return ExitCode.Passed
 
     listSelected = [case for case in kListCase if args.cases is None or case.name in args.cases]
     listRow: list[tuple[str, str, str, str, str]] = []
@@ -238,7 +239,7 @@ def main(listArgument: list[str] | None = None) -> int:
     print(formatTableInternal(listRow))
     for skipped in listSkipped:
         print(f"[PerfCompare] skipped {skipped}")
-    return 0 if listRow else 1
+    return ExitCode.Passed if listRow else ExitCode.Violation
 
 
 if __name__ == "__main__":

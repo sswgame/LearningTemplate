@@ -23,6 +23,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 from common.Paths import getProjectRoot  # noqa: E402
 from common.MarkdownSections import extractSection, formatOutline  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
 
 kListSearchDir = ("", "docs", "docs/plans", "docs/decisions")
 
@@ -60,22 +61,22 @@ def main(argv: list[str] | None = None) -> int:
     path = resolveDoc(root, args.file)
     if path is None:
         print(f"[doc] 오류: `{args.file}` 문서가 없습니다(저장소 기준 경로 또는 docs/ 아래 이름)", file=sys.stderr)
-        return 1
+        return ExitCode.Violation
     areaPath = resolveDecisionArea(path, args.section)
     if areaPath is not None:
         print(f"[doc] {areaPath.relative_to(root).as_posix()} 전체", file=sys.stderr)
         print(areaPath.read_text(encoding="utf-8"), end="")
-        return 0
+        return ExitCode.Passed
     listLine = path.read_text(encoding="utf-8").splitlines()
     if not args.section:
         print(formatOutline(listLine))
-        return 0
+        return ExitCode.Passed
     try:
         print("\n".join(extractSection(listLine, args.section)))
     except ValueError as error:
         print(f"[doc] 오류: {error}", file=sys.stderr)
-        return 1
-    return 0
+        return ExitCode.Violation
+    return ExitCode.Passed
 
 
 if __name__ == "__main__":

@@ -37,6 +37,7 @@ from common.Host import runGit  # noqa: E402
 from common.Parallel import getCpuCount, mapConcurrent  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 from common.Process import runProcess  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
 from lint.LintCatalog import LintTarget, discoverLintTargets  # noqa: E402
 
 #: 요약 줄에 보이는 가장 느린 린트 수.
@@ -199,7 +200,7 @@ def main(argv: list[str] | None = None) -> int:
 
     for timing in listFailed:
         print(f"\n[RunLintSuite] {timing.name} 실패 (종료 코드 {timing.returnCode}):\n{timing.outputTail}", file=sys.stderr)
-    return 1 if listFailed else 0
+    return ExitCode.Violation if listFailed else ExitCode.Passed
 
 
 if __name__ == "__main__":

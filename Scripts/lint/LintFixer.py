@@ -29,6 +29,7 @@ from common.Host import getModifiedCppFiles  # noqa: E402
 from common.Parallel import flatMapConcurrent  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 from common.Search import collectRepositoryFiles, collectSourceFiles, getLintSearchDirs, resolveFileArguments  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
 
 
 def addFileArguments(parser: argparse.ArgumentParser) -> None:
@@ -269,13 +270,13 @@ class LintFixer:
         listFile = selectFixerTargetFiles(args, getProjectRoot(), self.tag, self.fileKind)
         if not listFile:
             print(f"[{self.tag}] 대상 파일이 없습니다.", file=sys.stderr)
-            return 0
+            return ExitCode.Passed
 
         listMessage = self.processFiles(listFile, checkOnly=args.check)
         for message in listMessage:
             print(message)
 
-        return 1 if (args.check and listMessage) else 0
+        return ExitCode.Violation if (args.check and listMessage) else ExitCode.Passed
 
 
 def findFixerClass(module: ModuleType) -> type[LintFixer] | None:

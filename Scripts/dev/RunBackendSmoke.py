@@ -27,6 +27,7 @@ from common.BuildTree import addBuildTreeArguments, BuildTree  # noqa: E402
 from common.CookContract import CookContractSpec  # noqa: E402
 from common.Process import runProcess  # noqa: E402
 from common.AppRun import kBackendSwitch  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
 
 kArrBackgroundColor = (31, 38, 46)  # forwardpipeline.xml SceneColor clearColor 0.12,0.15,0.18
 
@@ -62,7 +63,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     appPath = tree.appExecutable
     if appPath is None:
         print(f"App 실행 파일이 없습니다: {binDir}")
-        return 2
+        return ExitCode.CheckInvalid
     outDir = args.out or tree.path / "smoke"
     outDir.mkdir(parents=True, exist_ok=True)
 
@@ -91,7 +92,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         nonBackgroundCount = stats[1] if stats else "-"
         print("%-7s %-10s %5d %7d %-20s %s" % (kind, name, returnCode, errorCount, mean, nonBackgroundCount))
     print(f"PPM/log: {outDir}")
-    return 1 if bFailed else 0
+    return ExitCode.Violation if bFailed else ExitCode.Passed
 
 
 if __name__ == "__main__":

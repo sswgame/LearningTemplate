@@ -28,6 +28,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from common.Paths import getProjectRoot  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
 
 #: 토큰 키의 원본 표 — 그룹 → 키 이름(앞 `_` 없이). 변수 이름 매핑 · 키 집합 검사 · 수 범위 검사가 모두 이 표를 쓴다.
 #: 같은 키 집합이 C++ 쪽 구조체(리플렉션 멤버)와 다크 세트에도 있다 — 하나를 바꾸면 셋을 같이 바꾼다(검사 `check` 가 다크 세트와 견준다).
@@ -490,10 +491,10 @@ def runImport(args: argparse.Namespace, root: Path) -> int:
     if listError:
         for message in listError:
             print(f"[editor-theme] error: {message}")
-        return 1
+        return ExitCode.Violation
     writeTokens(outPath, base)
     print(f"[editor-theme] {len(listApplied)} values applied, {len(listWarning)} warnings -> {outPath}")
-    return 0
+    return ExitCode.Passed
 
 
 def runExport(args: argparse.Namespace, root: Path) -> int:
@@ -502,13 +503,13 @@ def runExport(args: argparse.Namespace, root: Path) -> int:
     if listError:
         for message in listError:
             print(f"[editor-theme] error: {message}")
-        return 1
+        return ExitCode.Violation
     outPath = resolvePathInternal(root, args.out)
     outPath.parent.mkdir(parents=True, exist_ok=True)
     with open(outPath, "w", encoding="utf-8", newline="") as file:
         file.write(json.dumps(toDtcg(listData), indent=2, ensure_ascii=False) + "\n")
     print(f"[editor-theme] {len(listData)} sets -> {outPath}")
-    return 0
+    return ExitCode.Passed
 
 
 def runCheck(args: argparse.Namespace, root: Path) -> int:
@@ -557,7 +558,7 @@ def main(argv: list[str] | None = None) -> int:
         return args.handler(args, root)
     except ThemeError as error:
         print(f"[editor-theme] error: {error}")
-        return 1
+        return ExitCode.Violation
 
 
 if __name__ == "__main__":

@@ -39,6 +39,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common.Constants import kNotOurDirNames  # noqa: E402
 from common.Search import collectRepositoryFiles  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
 from lint.LintReport import LintReport, ReportContext  # noqa: E402
 
 kDefaultMaxSentenceLength = 120
@@ -232,7 +233,7 @@ class RunDocStyleReport(LintReport):
             print("[RunDocStyle] 조어 — 낱말별 횟수")
             for term, count in totalTerm.most_common():
                 print(f"  {count:5d}  {term}")
-        return 0
+        return ExitCode.Passed
 
 
 main = RunDocStyleReport.run

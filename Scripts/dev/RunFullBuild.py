@@ -39,6 +39,7 @@ from common.BuildTree import kDefaultPreset  # noqa: E402
 from common.LogDigest import getLogPath, printDigest  # noqa: E402
 from common.SharedLock import getSharedSlotCount, kDefaultWaitSeconds, runHolding  # noqa: E402
 from common.Worktree import findMainRoot  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
 
 #: 검증 빌드가 잡는 잠금 자원(공유 칸 — 동시 빌드 한도).
 kBuildLockResource = "build"
@@ -60,14 +61,14 @@ def runFullBuild(repositoryRoot: Path, args: argparse.Namespace) -> int:
     listDirty = listUncommittedFiles(repositoryRoot)
     if listDirty:
         print(f"[FullBuild] 커밋하지 않은 변경이 있어 짓지 않습니다 — 증거는 커밋 트리에 붙는다: {', '.join(listDirty[:10])}", file=sys.stderr)
-        return 2
+        return ExitCode.CheckInvalid
     treeHash = readTreeHash(repositoryRoot, "HEAD")
     inputHash = readBuildInputHash(repositoryRoot, "HEAD")
     tree = BuildTree.fromPreset(args.preset, repositoryRoot)
     if not tree.bConfigured:
         print(f"[FullBuild] 구성되지 않은 빌드 폴더입니다: {tree.path} — `cmake --preset {args.preset}` 를 먼저(vcpkg 잠금을 잡고) 돌립니다",
               file=sys.stderr)
-        return 2
+        return ExitCode.CheckInvalid
     lockArgs = argparse.Namespace(resource=kBuildLockResource, owner=args.owner, shared=True, slots=getSharedSlotCount(kBuildLockResource),
                                   purpose=f"full-build {args.preset} {inputHash[:12]}", wait=args.wait, belowNormal=args.belowNormal)
     startTime = time.time()
@@ -81,13 +82,13 @@ def runFullBuild(repositoryRoot: Path, args: argparse.Namespace) -> int:
         return returnCode
     if listUncommittedFiles(repositoryRoot) or readTreeHash(repositoryRoot, "HEAD") != treeHash:
         print("[FullBuild] 빌드하는 동안 트리가 바뀌었습니다 — 지은 것이 지금 커밋과 같다고 말할 수 없어 증거를 남기지 않습니다.", file=sys.stderr)
-        return 2
+        return ExitCode.CheckInvalid
     record = {"inputs": inputHash, "tree": treeHash, "commit": runGit(["rev-parse", "HEAD"], cwd=repositoryRoot).stdout.strip(), "preset": args.preset,
               "targets": list(kTestBuildTargets), "worktree": str(repositoryRoot), "owner": args.owner,
               "startTime": startTime, "endTime": time.time()}
     path = writeEvidence(getEvidenceDirectory(repositoryRoot), inputHash, record)
     print(f"[FullBuild] 전체 빌드 성공 — 증거 {path}")
-    return 0
+    return ExitCode.Passed
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -108,7 +109,7 @@ def main(argv: list[str] | None = None) -> int:
         return runFullBuild(repositoryRoot, args)
     except RuntimeError as error:
         print(f"[FullBuild] {error}", file=sys.stderr)
-        return 2
+        return ExitCode.CheckInvalid
 
 
 if __name__ == "__main__":

@@ -12,6 +12,7 @@
 
 #include "Engine/Automation/AutomationCaptureUtil.h"
 #include "Engine/Automation/AutomationEnvironmentSteps.h"
+#include "Engine/Automation/AutomationExitCode.h"
 #include "Engine/Automation/AutomationImageMetric.h"
 #include "Engine/Automation/AutomationStepRegistry.h"
 #include "Engine/Automation/AutomationThresholdBasis.h"
@@ -1092,7 +1093,7 @@ namespace sw
         {
             AutomationRunner& runner = asRunner( context );
             (void)step;
-            runner.finish( AutomationResult::Passed, "<Pass/>" );
+            runner.finish( AutomationOutcome::Passed, "<Pass/>" );
             return true;
         }
 
@@ -1102,7 +1103,7 @@ namespace sw
             const string*     pReason = step.findAttribute( "reason" );
             const string_view reason  = pReason != nullptr ? string_view{ *pReason } : string_view{ "<Fail/>" };
             runner.recordFailure( step, reason );
-            runner.finish( AutomationResult::Failed, reason );
+            runner.finish( AutomationOutcome::Failed, reason );
             return true;
         }
 
@@ -1110,7 +1111,7 @@ namespace sw
         {
             AutomationRunner& runner  = asRunner( context );
             const string*     pReason = step.findAttribute( "reason" );
-            runner.finish( AutomationResult::Skipped, pReason != nullptr ? string_view{ *pReason } : string_view{ "<Skip/>" } );
+            runner.finish( AutomationOutcome::Skipped, pReason != nullptr ? string_view{ *pReason } : string_view{ "<Skip/>" } );
             return true;
         }
 
@@ -1235,7 +1236,7 @@ namespace sw
         , _clockHoldFrameCount{ 0 }
         , _clockHoldStartSeconds{ 0.0 }
         , _clockHolderName{}
-        , _result{ AutomationResult::Running }
+        , _result{ AutomationOutcome::Running }
         , _bStarted{ SW_FALSE }
         , _bEnded{ SW_FALSE }
         , _bClockHeld{ SW_FALSE }
@@ -1253,7 +1254,7 @@ namespace sw
         if ( _scenario.loadFromPath( scenarioPath, error ) == false )
         {
             SW_LOG_ERROR( "[Scenario] could not load '%#': %#", string( scenarioPath ).c_str(), error.c_str() );
-            finish( AutomationResult::LoadError, error );
+            finish( AutomationOutcome::LoadError, error );
             return;
         }
         _outputDirectory = "Saved/Automation/" + _scenario.getName();
@@ -1271,7 +1272,7 @@ namespace sw
         string error;
         if ( _scenario.parse( xmlText, "<text>", error ) == false )
         {
-            finish( AutomationResult::LoadError, error );
+            finish( AutomationOutcome::LoadError, error );
             return false;
         }
         _outputDirectory = "Saved/Automation/" + _scenario.getName();
@@ -1280,13 +1281,13 @@ namespace sw
 
     bool AutomationRunner::prepareScratchFolders()
     {
-        for ( const AutomationScratchFolder& folder : _scenario.getScratchFolders() )
+        for ( const AutomationScratchFolder& folder : _scenario.getTestOptions()._listScratchFolder )
         {
             string error;
             if ( AutomationScratch::prepare( folder, error ) == false )
             {
                 SW_LOG_ERROR( "[Scenario] %#: scratch folder %# could not be prepared: %#", _scenario.getName().c_str(), folder._scratchID.c_str(), error.c_str() );
-                finish( AutomationResult::LoadError, error );
+                finish( AutomationOutcome::LoadError, error );
                 return false;
             }
             SW_LOG_INFO( "[Scenario] %#: %# copied to %# (fresh for this run)", _scenario.getName().c_str(), folder._sourceID.c_str(), folder._scratchID.c_str() );
@@ -1299,7 +1300,7 @@ namespace sw
         const AutomationStep* pMissingStep = AutomationRunnerInternal::findStepMissingFromThisBuild( _scenario );
         if ( pMissingStep == nullptr )
             return false;
-        finish( AutomationResult::Skipped, pMissingStep->describe() + ": dev commands are compiled out of this build" );
+        finish( AutomationOutcome::Skipped, pMissingStep->describe() + ": dev commands are compiled out of this build" );
         return true;
     }
 
@@ -1312,7 +1313,7 @@ namespace sw
 
     void AutomationRunner::onFrameBegin( InputManager& input )
     {
-        if ( _result != AutomationResult::Running )
+        if ( _result != AutomationOutcome::Running )
             return;
         if ( _bStarted == SW_FALSE )
         {
@@ -1330,7 +1331,7 @@ namespace sw
             }
             // 전경이 필요한 시나리오는 첫 프레임부터 창을 전경으로 가져오고, 얻을 때까지 시작하지 않는다 — 게임이 시작하며 켜는 상태(1인칭 커서 잠금)가
             // 전경에서 켜지게. 시작 뒤의 단계로는 늦다(게임의 첫 틱이 먼저 돈다). 시작 시한까지 얻지 못하면 이 세션에서 볼 수 없는 시나리오라 건너뛴다.
-            const bool bForegroundMissing = _scenario.requiresForeground() && AutomationWindowUtil::bringToForeground() == false;
+            const bool bForegroundMissing = _scenario.getTestOptions()._bRequiresForeground && AutomationWindowUtil::bringToForeground() == false;
             // 앞 시나리오(체인)가 남긴 백그라운드 작업이 끝나야 시작한다 — 그 결과 줄이 이 시나리오 창에 떨어지지 않게. 시작 시한은 세지 않는다(벽시계 시한이 본다).
             if ( holdClockForBackgroundWork( input ) )
                 return;
@@ -1339,16 +1340,16 @@ namespace sw
                 if ( ++_waitFrameCount <= _scenario.getStartTimeoutFrames() )
                     return;
                 if ( bReady )
-                    finish( AutomationResult::Skipped, "the window could not become the foreground window in this session" );
+                    finish( AutomationOutcome::Skipped, "the window could not become the foreground window in this session" );
                 else
-                    finish( AutomationResult::TimedOut, "the start condition never became true" );
+                    finish( AutomationOutcome::TimedOut, "the start condition never became true" );
                 return;
             }
             _pInputManager = &input;
             string error;
             if ( prepare( error ) == false )
             {
-                finish( AutomationResult::LoadError, error );
+                finish( AutomationOutcome::LoadError, error );
                 return;
             }
             _bStarted = SW_TRUE;
@@ -1370,13 +1371,13 @@ namespace sw
             const AutomationStepRegistration* pRegistration    = AutomationStepRegistry::find( listStep[stepIndex]._kind );
             const bool                        bRunsBeforeInput = pRegistration != nullptr && pRegistration->_bBeforeInput && pRegistration->_pRun != nullptr;
             if ( bRunsBeforeInput && pRegistration->_pRun( *this, listStep[stepIndex] ) == false )
-                finish( AutomationResult::LoadError, listStep[stepIndex].describe() + ": the step could not run" );
+                finish( AutomationOutcome::LoadError, listStep[stepIndex].describe() + ": the step could not run" );
         }
     }
 
-    AutomationResult AutomationRunner::onFrameEnd( InputManager& input )
+    AutomationOutcome AutomationRunner::onFrameEnd( InputManager& input )
     {
-        const bool bRunsSteps = _result == AutomationResult::Running && _bStarted == SW_TRUE && _bClockHeld == SW_FALSE; // 시계 잡기 조건이 붙잡은 프레임은 단계를 돌리지 않는다
+        const bool bRunsSteps = _result == AutomationOutcome::Running && _bStarted == SW_TRUE && _bClockHeld == SW_FALSE; // 시계 잡기 조건이 붙잡은 프레임은 단계를 돌리지 않는다
         if ( bRunsSteps )
         {
             sampleWatches();
@@ -1384,7 +1385,7 @@ namespace sw
             // `<=` 이므로 스크린샷을 기다리느라 밀린 단계는 다음 프레임에 이어서 돈다.
             while ( true )
             {
-                const bool bNextStepDue = _nextStepIndex < listStep.size() && listStep[_nextStepIndex]._frameIndex <= _frameIndex && _result == AutomationResult::Running;
+                const bool bNextStepDue = _nextStepIndex < listStep.size() && listStep[_nextStepIndex]._frameIndex <= _frameIndex && _result == AutomationOutcome::Running;
                 if ( bNextStepDue == false )
                     break;
                 const AutomationStep&             step          = listStep[_nextStepIndex];
@@ -1401,43 +1402,43 @@ namespace sw
                 const bool   bRunsNow        = pRegistration != nullptr && pRegistration->_bBeforeInput == false && pRegistration->_pRun != nullptr;
                 const uint32 requestedBefore = _screenshotRequestedCount;
                 if ( pRegistration == nullptr || ( bRunsNow && pRegistration->_pRun( *this, step ) == false ) )
-                    finish( AutomationResult::LoadError, step.describe() + ": the step could not run" );
+                    finish( AutomationOutcome::LoadError, step.describe() + ": the step could not run" );
                 // 사진은 다음 렌더 패킷이 찍는다 — 같은 프레임에 뒤 단계가 돌면 그 변화가 사진에 들어간다. 사진을 요청한 프레임은 여기서 닫고 뒤 단계는 다음 프레임에 돈다.
                 if ( _screenshotRequestedCount != requestedBefore )
                     break;
             }
-            const bool bExitDeadlineExceeded = _result == AutomationResult::Running && _exitDeadlineSeconds > 0.0 &&
+            const bool bExitDeadlineExceeded = _result == AutomationOutcome::Running && _exitDeadlineSeconds > 0.0 &&
                                                _exitDeadlineSeconds < static_cast<float64>( MonotonicClock::nowMicroseconds() ) * 1.0e-6;
             if ( bExitDeadlineExceeded )
-                finish( AutomationResult::Failed, "the window was asked to close but the loop kept running past ExpectExitWithin" );
+                finish( AutomationOutcome::Failed, "the window was asked to close but the loop kept running past ExpectExitWithin" );
             // 끝난 프레임은 세지 않는다. 보고의 프레임은 끝낸 단계의 프레임이다. `WaitUntil` 이 붙잡은 프레임도 세지 않는다(뒤 단계가 그만큼 밀린다).
-            if ( _result == AutomationResult::Running && _holdFrameCount == 0 )
+            if ( _result == AutomationOutcome::Running && _holdFrameCount == 0 )
                 ++_frameIndex;
             // 창 닫기를 기다리는 동안은 프레임 시한을 보지 않는다(벽시계 시한이 본다). 부하 시나리오는 측정 창이 끝내므로 벽시계 그물만 본다.
-            const bool bFrameTimeoutReached = _result == AutomationResult::Running && _exitDeadlineSeconds <= 0.0 && _loadDeadlineSeconds <= 0.0 &&
+            const bool bFrameTimeoutReached = _result == AutomationOutcome::Running && _exitDeadlineSeconds <= 0.0 && _loadDeadlineSeconds <= 0.0 &&
                                               _frameIndex > _scenario.getTimeoutFrames();
             if ( bFrameTimeoutReached )
-                finish( AutomationResult::TimedOut, "timeoutFrames reached without <Pass/>" );
-            const bool bLoadDeadlineExceeded = _result == AutomationResult::Running && _loadDeadlineSeconds > 0.0 &&
+                finish( AutomationOutcome::TimedOut, "timeoutFrames reached without <Pass/>" );
+            const bool bLoadDeadlineExceeded = _result == AutomationOutcome::Running && _loadDeadlineSeconds > 0.0 &&
                                                _loadDeadlineSeconds < static_cast<float64>( MonotonicClock::nowMicroseconds() ) * 1.0e-6;
             if ( bLoadDeadlineExceeded )
-                finish( AutomationResult::TimedOut, "the <Load> measurement window did not close in time (was -gv_profileFrames also given?)" );
+                finish( AutomationOutcome::TimedOut, "the <Load> measurement window did not close in time (was -gv_profileFrames also given?)" );
         }
-        if ( _result != AutomationResult::Running )
+        if ( _result != AutomationOutcome::Running )
             endRun( &input );
         return _result;
     }
 
     void AutomationRunner::startLoadWindow()
     {
-        const AutomationLoad& load = _scenario.getLoad();
+        const AutomationLoad& load = _scenario.getTestOptions()._load;
         if ( load._bDeclared == false )
             return;
         // 측정 창은 시나리오가 시작한 프레임부터다(로딩을 빼고 측정한다). 끝은 측정 보고가 낸 종료 요청이다(`FrameProfileSession` 이 늦게 건 목표를 읽는다).
         const int32 seconds = static_cast<int32>( MathUtil::ceil( load._durationSeconds ) );
         if ( engine::getSubsystem<GlobalVariableManager>().setValueFromString( "gv_profileSeconds", to_string( seconds ) ) == false )
         {
-            finish( AutomationResult::LoadError, "<Load> could not set gv_profileSeconds (a build without the frame profiler?)" );
+            finish( AutomationOutcome::LoadError, "<Load> could not set gv_profileSeconds (a build without the frame profiler?)" );
             return;
         }
         // 멈춤 그물 — 워밍업(60 프레임)과 느린 기계를 넉넉히 덮는다.
@@ -1447,26 +1448,26 @@ namespace sw
                      load._network.c_str() );
     }
 
-    AutomationResult AutomationRunner::onWindowClosed( InputManager* pInput )
+    AutomationOutcome AutomationRunner::onWindowClosed( InputManager* pInput )
     {
-        if ( _result == AutomationResult::Running )
+        if ( _result == AutomationOutcome::Running )
         {
             if ( _exitDeadlineSeconds > 0.0 )
             {
                 const float64 nowSeconds = static_cast<float64>( MonotonicClock::nowMicroseconds() ) * 1.0e-6;
                 if ( nowSeconds <= _exitDeadlineSeconds )
-                    finish( AutomationResult::Passed, "the window closed within ExpectExitWithin" );
+                    finish( AutomationOutcome::Passed, "the window closed within ExpectExitWithin" );
                 else
-                    finish( AutomationResult::Failed, "the window closed after the ExpectExitWithin deadline" );
+                    finish( AutomationOutcome::Failed, "the window closed after the ExpectExitWithin deadline" );
             }
             else if ( _loadDeadlineSeconds > 0.0 && _nextStepIndex >= _scenario.getSteps().size() )
             {
                 // 부하 시나리오의 정상 끝 — 측정 창이 닫혀 엔진이 종료를 요청했다(보고가 남았는지는 실행기가 출력으로 본다).
-                finish( AutomationResult::Passed, "the <Load> measurement window closed" );
+                finish( AutomationOutcome::Passed, "the <Load> measurement window closed" );
             }
             else
             {
-                finish( AutomationResult::Failed, "the window closed before the scenario ended" );
+                finish( AutomationOutcome::Failed, "the window closed before the scenario ended" );
             }
         }
         endRun( pInput );
@@ -1487,58 +1488,34 @@ namespace sw
         {
             case AutomationStepEnd::Pass:
             {
-                finish( AutomationResult::Passed, reason );
+                finish( AutomationOutcome::Passed, reason );
                 return;
             }
             case AutomationStepEnd::Fail:
             {
-                finish( AutomationResult::Failed, reason );
+                finish( AutomationOutcome::Failed, reason );
                 return;
             }
             case AutomationStepEnd::Skip:
             {
-                finish( AutomationResult::Skipped, reason );
+                finish( AutomationOutcome::Skipped, reason );
                 return;
             }
         }
     }
 
-    void AutomationRunner::finish( AutomationResult result, string_view reason )
+    void AutomationRunner::finish( AutomationOutcome result, string_view reason )
     {
-        if ( _result != AutomationResult::Running )
+        if ( _result != AutomationOutcome::Running )
             return;
-        _result       = ( result == AutomationResult::Passed && _listFailure.empty() == false ) ? AutomationResult::Failed : result;
+        _result       = ( result == AutomationOutcome::Passed && _listFailure.empty() == false ) ? AutomationOutcome::Failed : result;
         _finishReason = string( reason );
-    }
-
-    const utf8* AutomationRunner::getResultName( AutomationResult result )
-    {
-        switch ( result )
-        {
-            case AutomationResult::Running:
-                return "RUNNING";
-            case AutomationResult::Passed:
-                return "PASS";
-            case AutomationResult::Failed:
-                return "FAIL";
-            case AutomationResult::LoadError:
-                return "LOAD ERROR";
-            case AutomationResult::TimedOut:
-                return "TIMEOUT";
-            case AutomationResult::Skipped:
-                return "SKIP";
-            case AutomationResult::Unconfirmed:
-                return "UNCONFIRMED";
-            case AutomationResult::UnhandledLog:
-                return "UNHANDLED LOG";
-        }
-        return "UNKNOWN";
     }
 
     bool AutomationRunner::prepare( string& outError )
     {
         // 기동 때 정해지는 값(첫 씬 · 렌더 파이프라인)은 시나리오가 바꿀 수 없다 — 띄운 명령줄이 선언과 다르면 다른 화면을 단언하게 되므로 멈춘다.
-        for ( const AutomationAttribute& variable : _scenario.getLaunchVariables() )
+        for ( const AutomationAttribute& variable : _scenario.getTestOptions()._listLaunchVariable )
         {
             const GlobalVariableInfo* pInfo           = engine::areEngineServicesBound() ? engine::getSubsystem<GlobalVariableManager>().findVariable( variable._name ) : nullptr;
             bool                      bMatched        = false;
@@ -1625,8 +1602,8 @@ namespace sw
         if ( _bStarted == SW_TRUE )
             _inputScript.delayEventsFrom( input.getVirtualFrameIndex(), 1 );
         if ( nowSeconds - _clockHoldStartSeconds > AutomationRunnerInternal::kClockHoldTimeoutSeconds )
-            finish( AutomationResult::TimedOut, _clockHolderName + " held the scenario clock for more than " +
-                                                    to_string( static_cast<uint32>( AutomationRunnerInternal::kClockHoldTimeoutSeconds ) ) + " s" );
+            finish( AutomationOutcome::TimedOut, _clockHolderName + " held the scenario clock for more than " +
+                                                     to_string( static_cast<uint32>( AutomationRunnerInternal::kClockHoldTimeoutSeconds ) ) + " s" );
         return true;
     }
 
@@ -1996,7 +1973,7 @@ namespace sw
         {
             _listFailure.push_back( "unhandled log: " + line );
         }
-        _result       = AutomationResult::UnhandledLog;
+        _result       = AutomationOutcome::UnhandledLog;
         _finishReason = to_string( _listUnhandledLog.size() ) + " unhandled Warning/Error log line(s), " + to_string( judgement._missingIDCount ) +
                         " without a log id - fix the cause, declare the line with <ExpectLog>, or add its log id with scope, reason and plan to " +
                         string( AutomationLogPolicy::kAllowListPath ) + " (a line without a log id needs SW_LOG_WARNING_ID / SW_LOG_ERROR_ID first)";
@@ -2010,20 +1987,20 @@ namespace sw
         if ( pInput != nullptr && pInput->getVirtualInput() == &_inputScript )
             pInput->detachVirtualInput();
         _logCapture.stop();
-        if ( _result == AutomationResult::Passed )
+        if ( _result == AutomationOutcome::Passed )
             applyLogGate();
-        if ( _result == AutomationResult::Passed && _listUnconfirmed.empty() == false )
-            _result = AutomationResult::Unconfirmed;
-        if ( _result == AutomationResult::Passed )
+        if ( _result == AutomationOutcome::Passed && _listUnconfirmed.empty() == false )
+            _result = AutomationOutcome::Unconfirmed;
+        if ( _result == AutomationOutcome::Passed )
         {
             SW_LOG_INFO( "[Scenario] PASS %# (%# frame(s))", _scenario.getName().c_str(), _frameIndex );
         }
-        else if ( _result == AutomationResult::Unconfirmed )
+        else if ( _result == AutomationOutcome::Unconfirmed )
         {
             SW_LOG_INFO( "[Scenario] UNCONFIRMED %# (%# frame(s)): every assertion held, but %# threshold(s) are provisional - move the measured values into measured=\"...\"",
                          _scenario.getName().c_str(), _frameIndex, static_cast<uint32>( _listUnconfirmed.size() ) );
         }
-        else if ( _result == AutomationResult::Skipped )
+        else if ( _result == AutomationOutcome::Skipped )
         {
             SW_LOG_WARNING( "[Scenario] SKIP %#: %#", _scenario.getName().c_str(), _finishReason.c_str() );
         }
@@ -2035,12 +2012,12 @@ namespace sw
                 detail += "\n    ";
                 detail += failure;
             }
-            SW_LOG_ERROR( "[Scenario] %# %# at frame %#: %#", getResultName( _result ), _scenario.getName().c_str(), _frameIndex, detail.c_str() );
+            SW_LOG_ERROR( "[Scenario] %# %# at frame %#: %#", getAutomationOutcomeName( _result ), _scenario.getName().c_str(), _frameIndex, detail.c_str() );
         }
         AutomationReportParams report{};
         report._scenarioName      = _scenario.getName();
-        report._pResultName       = getResultName( _result );
-        report._exitCode          = static_cast<int32>( _result );
+        report._pResultName       = getAutomationOutcomeName( _result );
+        report._exitCode          = getAutomationExitCode( _result );
         report._frameCount        = _frameIndex;
         report._reason            = _finishReason;
         report._pListFailure      = &_listFailure;

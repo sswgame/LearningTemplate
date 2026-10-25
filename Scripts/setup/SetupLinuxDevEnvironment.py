@@ -28,6 +28,7 @@ from typing import Sequence
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from common.Process import runProcess  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
 
 _kMarker = "Template engine linux-dev"
 
@@ -230,7 +231,7 @@ def setupLinuxDevEnvironment(home: Path | None = None) -> int:
     """
     if not isLinuxInternal():
         print("[SetupLinuxDevEnvironment] skip (not Linux)")
-        return 0
+        return ExitCode.Passed
 
     setupDebuginfod(home=home)
     checkFileDialogTools()
@@ -238,7 +239,7 @@ def setupLinuxDevEnvironment(home: Path | None = None) -> int:
     checkDebugger()
     checkGraphicsDevPackages()
     checkBundledLinker()
-    return 0
+    return ExitCode.Passed
 
 
 def parseArgs(argv: Sequence[str] | None = None) -> argparse.Namespace:

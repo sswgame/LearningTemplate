@@ -160,10 +160,10 @@ def main(listArgument: list[str] | None = None) -> int:
     table = loadGameTable(repositoryRoot)
     if not gameName or gameName not in table["games"]:
         print(f"[Golden] 모르는 게임 '{gameName}' — Test/QA/Games.json 에 더하십시오", file=sys.stderr)
-        return 1
+        return ExitCode.Violation
     if not args.app.is_file():
         print(f"[Golden] App 이 없습니다: {args.app}", file=sys.stderr)
-        return 1
+        return ExitCode.Violation
     # 같은 빌드가 게임 전부를 짓는다(`SW_GAMES`) — 그릴 게임은 App 의 `-game=` 으로 고른다(Shipping 은 구운 게임 하나라 보지 않는다).
     game = dict(table["games"][gameName], extra_arguments=[f"-game={gameName}", *args.extra_arg])
     goldenDir = repositoryRoot / kGoldenRelativeDir / gameName
@@ -186,11 +186,11 @@ def main(listArgument: list[str] | None = None) -> int:
             print(f"[Golden] {gameName} {backend:5} {status.upper():8} {message}", flush=True)
 
     if any(status == "fail" for status in mapStatus.values()):
-        return 1
+        return ExitCode.Violation
     if not any(status in ("pass", "recorded") for status in mapStatus.values()):
         print(f"[Golden] {gameName}: 견준 것이 없다", flush=True)
         return ExitCode.Skipped
-    return 0
+    return ExitCode.Passed
 
 
 if __name__ == "__main__":

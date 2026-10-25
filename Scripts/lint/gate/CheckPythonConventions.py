@@ -42,7 +42,9 @@ _kSetLexicalOsPathFunction: frozenset[str] = frozenset(_kRuleData["lexical_os_pa
 _kSetLegacyTypingName: frozenset[str] = frozenset(_kRuleData["legacy_typing_name"])
 
 #: 모양 규칙의 이름 — 위반 줄의 머리이자 예외 키(`<규칙>:<경로>`)의 앞부분이다.
-_kStyleRule = ("docstring", "future", "annotation", "typing", "encoding", "osPath", "exit", "mainGuard", "argparse")
+_kStyleRule = ("docstring", "future", "annotation", "typing", "encoding", "osPath", "exit", "exitCode", "mainGuard", "argparse")
+#: 종료 코드를 담는 변수 이름 — `exitCode = 0` 후 `return exitCode` 모양을 잡는다. 이름이 확정된 것만 본다(정수 값을 내는 다른 함수와 구분되지 않아서).
+_kExitCodeVariableNames = frozenset({"exitCode", "returnCode", "resultCode"})
 #: 예외 표에서 모든 모양 규칙을 빼는 키의 앞말.
 _kAllStyleRulePrefix = "*:"
 #: 글 모드로 여는 `open` 의 모드 글자 — `b` 가 없다.
@@ -205,9 +207,13 @@ class StyleScanInternal:
         for node in self.tree.body:
             if isMainGuardInternal(node):
                 self.checkMainGuard(node)
+        # exitCode 는 `Scripts/` 만 본다 — 세션 훅(`.claude/hooks`)과 `Tools/` 의 스크립트는 `Scripts/common` 을 import 하지 못하는 자리다.
+        setExitFunction = collectExitFunctionNamesInternal(self.tree) if self.relPath.startswith("Scripts/") else set()
         for node in ast.walk(self.tree):
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 self.checkAnnotation(node)
+                if node.name in setExitFunction:
+                    self.checkExitLiteral(node)
             elif isinstance(node, ast.Call):
                 self.checkCall(node)
             elif isinstance(node, ast.ImportFrom):
@@ -240,6 +246,22 @@ class StyleScanInternal:
                 return
         self.addViolation("mainGuard", node.lineno, "`__main__` 가드의 몸은 `sys.exit(main())` 한 줄입니다(테스트는 `unittest.main()`)")
 
+    def checkExitLiteral(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
+        """종료 코드를 내는 함수(`main` · `sys.exit(f())` 의 `f`)는 숫자가 아니라 `ExitCode` 값을 돌려준다."""
+        # 변수에 담았다 돌려주는 모양은 이름이 `exitCode` · `returnCode` · `resultCode` 로 확정된 것만 본다 — 아무 이름이나 보면 정수 값을 내는 함수와 구분되지 않는다.
+        for statement in ast.walk(node):
+            if isinstance(statement, (ast.Assign, ast.AnnAssign)) and statement.value is not None:
+                listTarget = statement.targets if isinstance(statement, ast.Assign) else [statement.target]
+                for target in listTarget:
+                    if isinstance(target, ast.Name) and target.id in _kExitCodeVariableNames:
+                        for value in flattenConditionalInternal(statement.value):
+                            if isIntLiteralInternal(value):
+                                self.addViolation("exitCode", statement.lineno, f"`{target.id} = {value.value}` — 종료 코드 변수는 `ExitCode` 값을 담습니다")  # type: ignore[attr-defined]
+            elif isinstance(statement, ast.Return) and statement.value is not None:
+                for value in flattenConditionalInternal(statement.value):
+                    if isIntLiteralInternal(value):
+                        self.addViolation("exitCode", statement.lineno, f"`return {value.value}` — 종료 코드는 `ExitCode` 값으로 돌려줍니다")  # type: ignore[attr-defined]
+
     def checkAnnotation(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
         """매개변수(`self` · `cls` 빼고)와 반환 타입을 모두 적는다."""
         arguments = node.args
@@ -256,6 +278,9 @@ class StyleScanInternal:
     def checkCall(self, node: ast.Call) -> None:
         func = node.func
         setKeyword = {keyword.arg for keyword in node.keywords}
+        if (self.relPath.startswith("Scripts/") and isDottedNameInternal(func, "sys.exit") and len(node.args) == 1
+                and isIntLiteralInternal(node.args[0])):
+            self.addViolation("exitCode", node.lineno, f"`sys.exit({node.args[0].value})` — 종료 코드는 `ExitCode` 값으로 씁니다")  # type: ignore[attr-defined]
         name = func.id if isinstance(func, ast.Name) else (func.attr if isinstance(func, ast.Attribute) else "")
         if name == "ArgumentParser" and "description" not in setKeyword:
             self.addViolation("argparse", node.lineno, "`ArgumentParser` 에 `description=` 이 없습니다")
@@ -306,6 +331,28 @@ def isDottedNameInternal(node: ast.expr, dottedName: str) -> bool:
             return False
         node = node.value
     return isinstance(node, ast.Name) and node.id == listPart[0]
+
+
+def isIntLiteralInternal(node: ast.expr) -> bool:
+    """정수 리터럴인가(`True` · `False` 는 아니다)."""
+    return isinstance(node, ast.Constant) and type(node.value) is int
+
+
+def flattenConditionalInternal(node: ast.expr) -> list[ast.expr]:
+    """`a if c else (b if d else e)` 의 갈래 값 `a` · `b` · `e` 를 모은다. 조건식이 아니면 `[node]`."""
+    if isinstance(node, ast.IfExp):
+        return [*flattenConditionalInternal(node.body), *flattenConditionalInternal(node.orelse)]
+    return [node]
+
+
+def collectExitFunctionNamesInternal(tree: ast.Module) -> set[str]:
+    """종료 코드를 돌려주는 함수 이름 — `main` 과 `sys.exit(f(...))` 의 `f`."""
+    setName = {"main"}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Call) and isDottedNameInternal(node.func, "sys.exit") and len(node.args) == 1 and isinstance(node.args[0], ast.Call):
+            callee = node.args[0].func
+            setName.add(callee.id if isinstance(callee, ast.Name) else getattr(callee, "attr", ""))
+    return setName
 
 
 def isFutureAnnotationsInternal(node: ast.stmt) -> bool:
@@ -394,6 +441,26 @@ class CheckPythonConventionsGate(LintGate):
         {"name": "encoding 없는 read_text", "expectedViolation": "Scripts/Probe/NoEncodingPath.py:6 [encoding] `read_text()` 에 `encoding=` 이 없습니다", "files": {"Scripts/Probe/NoEncodingPath.py": _kProbeHead + "from pathlib import Path\n\nkText = Path('a').read_text()\n"}},
         {"name": "os.path.join", "expectedViolation": "Scripts/Probe/OsPath.py:6 [osPath] `os.path.join`", "files": {"Scripts/Probe/OsPath.py": _kProbeHead + "import os\n\nkPath = os.path.join('a', 'b')\n"}},
         {"name": "raise SystemExit", "expectedViolation": "Scripts/Probe/RaiseExit.py:5 [exit] `raise SystemExit`", "files": {"Scripts/Probe/RaiseExit.py": _kProbeHead + "def probe() -> None:\n    raise SystemExit(1)\n"}},
+        {
+            "name": "main 이 숫자 종료 코드를 돌려줌",
+            "expectedViolation": "Scripts/Probe/ExitLiteral.py:5 [exitCode] `return 2` — 종료 코드는 `ExitCode` 값으로 돌려줍니다",
+            "files": {"Scripts/Probe/ExitLiteral.py": _kProbeHead + "def main() -> int:\n    return 2\n"},
+        },
+        {
+            "name": "main 이 숫자를 담은 종료 코드 변수를 돌려줌",
+            "expectedViolation": "Scripts/Probe/ExitVariable.py:5 [exitCode] `exitCode = 0` — 종료 코드 변수는 `ExitCode` 값을 담습니다",
+            "files": {"Scripts/Probe/ExitVariable.py": _kProbeHead + "def main() -> int:\n    exitCode = 0\n    return exitCode\n"},
+        },
+        {
+            "name": "main 이 중첩 조건식의 숫자를 돌려줌",
+            "expectedViolation": "Scripts/Probe/ExitNested.py:5 [exitCode] `return 0`",
+            "files": {"Scripts/Probe/ExitNested.py": _kProbeHead + "def main() -> int:\n    return 2 if kProbeFlag else (1 if kProbeFlag else 0)\n"},
+        },
+        {
+            "name": "sys.exit 에 숫자",
+            "expectedViolation": "Scripts/Probe/ExitCall.py:6 [exitCode] `sys.exit(1)`",
+            "files": {"Scripts/Probe/ExitCall.py": _kProbeHead + "import sys\n\nsys.exit(1)\n"},
+        },
         {
             "name": "__main__ 가드 모양",
             "expectedViolation": "Scripts/Probe/Guard.py:8 [mainGuard] `__main__` 가드의 몸은 `sys.exit(main())` 한 줄입니다(테스트는 `unittest.main()`)",

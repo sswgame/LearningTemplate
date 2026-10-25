@@ -17,14 +17,14 @@
 
 - 인게임에서 시나리오 · 탐침 · `VirtualInputScript` 를 읽는 곳은 현재 0 이다. 탐침을 읽는 곳은 실행기와 테스트뿐이다. 자동화가 아닌 사용은 에디터 `InputMapPanel` 의 `InputReplay` 하나다.
 - Shipping 에 폴더 전체가 들어가고 `-scenario` 가 Shipping App 에서 열려 있다(`App.cpp:310-331`). 결정 기록 5-3 "자동화는 Shipping 에서도 쓴다"와 맞는 의도된 상태다.
-- Shipping 가드 기준이 파일마다 다르다 — `SwapBackend` 는 `SW_SHIPPING`, `DevCommand` 는 `SW_DEV_COMMANDS_ENABLED`, 나머지는 가드가 없다.
-- `-cook-scenes`(`HeadlessSubsystem.cpp:254`)에는 `SW_SHIPPING` 가드가 없다. 다른 곳에서 막는지는 **확인하지 못했다**.
+- Shipping 가드 기준은 `SW_DEV_COMMANDS_ENABLED` 로 통일했다(2026-10-25) — `SwapBackend`(`RHIBackendSwitcherAutomation.cpp`)가 `SW_SHIPPING` 이던 것을 맞췄다. 나머지 단계는 가드가 없는 것이 의도다(Shipping 에서도 쓴다).
+- `-cook-scenes`(`HeadlessSubsystem.cpp` `runCookTask`)에는 `SW_SHIPPING` 가드가 없고, 다른 곳에서도 막지 않는다(2026-10-25 코드 확인). 의도된 상태다 — 쿠킹은 `-cooked-dir` 로 준 폴더에만 쓰는 오프라인 도구이고 `CookAssets` 빌드 타깃과 배포 패키징이 배포 구성 App 으로 부르며, `-cook-shaders` · `-bake-retarget` · `-make-patch` 도 같은 헤드리스 단계로 가드가 없다.
 
 ## 3. 형식 결함 셋
 
 1. **단계 함수 형식 `AutomationStepFunction` 이 `AutomationRunner&` 를 받는다.** 그래서 단계를 등록하는 쪽(UI · GameFramework · Editor · App)이 로그 게이트 · 보고 · 종료 코드 헤더를 끌어온다. → 좁은 문맥 인터페이스를 받게 한다(단계 ②).
 2. **시나리오 형식(`AutomationScenario.h:135-148`)에 테스트 전용 필드가 있다** — Scratch · Launch · Load · isolated · editor · requireForeground. → 테스트 쪽 구조로 옮긴다(단계 ③).
-3. **실행 결과 열거형이 곧 App 종료 코드다.** → `AutomationResult` 와 종료 코드는 Session 으로 옮긴다(단계 ③).
+3. **실행 결과 열거형이 곧 App 종료 코드다.** → (③ 일부에서 고침) 열거형 `AutomationOutcome` 에서 숫자를 빼고 종료 코드 표는 `AutomationExitCode.h` 한 곳에 둔다.
 
 ## 4. 계층 방향 결함
 
@@ -41,12 +41,12 @@
 |---|---|---|---|---|---|
 | ① 탐침 | 탐침 레지스트리를 티어 9.5 로 내리고, Terrain · Character 탐침을 기능 폴더로 옮긴다(기능이 자기 탐침을 등록) | Automation README, `CheckEngineLayers.toml` | 이 문서, Automation README, 티어 테이블 | 층 게이트 4종, 시나리오 네 백엔드 회귀 | 완료 |
 | ② 단계 | 단계 함수 형식이 `AutomationRunner&` 대신 좁은 문맥 인터페이스를 받게 한다 | 이 문서 3절 | 이 문서, Automation README | 등록자(UI · GameFramework · Editor · App)가 로그 게이트 · 보고 · 종료 코드 헤더를 더는 include 하지 않는다 | 완료(코드) — `AutomationStepContext` 도입, 단계 함수 형식 셋이 문맥을 받고 `AutomationRunner` 가 구현한다. 단계는 종료 코드 대신 `AutomationStepEnd` 로 끝낸다. 실행기 상태를 만지는 엔진 단계만 문맥을 실행기로 되돌려 쓴다. 확인 대기: 매니페스트 id `automation-step-context-tests` |
-| ③ 시나리오 | 형식에서 테스트 전용 필드를 테스트 쪽 구조로 빼고, 실행기를 타임라인과 판정으로 나누고, `AutomationResult` 와 종료 코드를 Session 으로 옮긴다. 폴더가 둘로 갈라진다 | 이 문서 1절 · 3절 | 이 문서, Automation README, 새 `Engine/Scenario` README | 네 백엔드 시나리오 회귀(실행기 분할이 시계 잡기 · 사진 대기 순서를 건드릴 수 있다) | 남음 |
+| ③ 시나리오 | 형식에서 테스트 전용 필드를 테스트 쪽 구조로 빼고, 실행기를 타임라인과 판정으로 나누고, `AutomationResult` 와 종료 코드를 Session 으로 옮긴다. 폴더가 둘로 갈라진다 | 이 문서 1절 · 3절 | 이 문서, Automation README, 새 `Engine/Scenario` README | 네 백엔드 시나리오 회귀(실행기 분할이 시계 잡기 · 사진 대기 순서를 건드릴 수 있다) | 부분 완료(코드) — `AutomationOutcome`(숫자 없음) · `AutomationExitCode.h`(종료 코드 표) 로 결과 형식과 종료 코드를 갈랐고, 테스트 전용 선언을 `AutomationTestOptions` 한 묶음(`getTestOptions()`)으로 모았다. 남음: 실행기를 타임라인과 판정으로 나누기, 폴더 이동(`Engine/Scenario`). 확인 대기: 매니페스트 id `automation-step-context-tests` |
 | ④ 구성 분리(조건부) | 실제 배포 때 Shipping 에서 테스트 쪽을 빼는 구성 분리를 다시 본다. 결정 기록 5-3 과 부딪히고, GPU 검증이 Shipping 으로 돌아가는 제약이 있다. 측정: Shipping App 크기 · 기동 시간을 Automation 소스 유무로 비교 | 결정 기록 5-3, [GpuVerification](GpuVerification.md) | 결정 기록 | 크기 · 기동 시간 측정값 | 남음(조건부 — 실제 배포 때) |
 
 ## 6. 위험과 확인하지 못한 것
 
 - 실행기 분할(③)이 시계 잡기 · 사진 대기 순서를 건드린다 — 네 백엔드 시나리오 회귀로 확인한다.
 - ① 의 시나리오 네 백엔드 회귀는 작업자가 돌리지 않았다(탐침 정의 위치만 옮겨 동작은 같다 — 통합 검증이 본다).
-- `-cook-scenes` 의 Shipping 차단 여부, Shipping 가드 기준 통일 여부, `Profiler.TraceRecording` 의 같은 구조 여부.
-- ③ 은 이번에 손대지 않았다(2026-10-24). 단계 ② 로 단계 함수는 이미 좁은 문맥만 보므로, ③ 의 첫 걸음은 `AutomationResult` 를 실행기 헤더에서 Session 으로 옮기는 것이다 — 실행기가 `onFrameEnd` 로 돌려주는 값이라 먼저 실행기 쪽 결과 형식(끝난 까닭 · 실패 목록)을 정하고 Session 이 종료 코드로 번역하게 해야 하며, 호출부(Engine · Session · 테스트 여섯 파일)가 한꺼번에 바뀐다. 폴더 이동(`Engine/Scenario`)은 파일 서른 개 안팎의 include 가 바뀌어 병렬 작업자의 파일과 겹치므로, 컴파일 확인이 가능한 단독 작업으로 한다.
+- `Profiler.TraceRecording` 의 같은 구조 여부. (`-cook-scenes` 차단 여부와 가드 기준 통일은 확인하고 고쳤다.)
+- ③ 은 결과 형식과 선언 묶음까지 했다(2026-10-25). 남은 것은 실행기 분할(`AutomationRunner.cpp` 2000 줄 — 타임라인 · 입력 단계 쪽과 판정 · 보고 쪽)과 폴더 이동(`Engine/Scenario`, 파일 서른 개 안팎의 include)이다. 둘 다 컴파일 확인이 가능한 단독 작업으로 하고, 시계 잡기 · 사진 대기 순서는 네 백엔드 시나리오 회귀로 본다. `kAutomationExitCodeRunning` 은 이제 `IEngineFrameObserver::kRunning` 그 자체다. 종료 코드 숫자는 `AutomationExitCode.h` 한 곳이며 `AppTestUtil` 은 `getAutomationExitCode` 를 부르고 `RunScenarioLogs.py` 는 그 헤더를 읽는다(`TestScenarioLogs.py` 가 지킨다). "이 기계에서 RHI 를 못 씀" 종료 코드(77)도 C++ `RHIInitResult.h` 가 정본이고 `AppRun.py` 와 `Test/PythonTest/CMakeLists.txt`(변수 `SW_RHI_UNUSABLE_EXIT_CODE`, 못 찾으면 `FATAL_ERROR`)가 그 줄을 읽으며, `TestQaRunners` 가 `ExitCode.Skipped` 와 같은지, `Test/` 아래 `SKIP_RETURN_CODE` 에 숫자 리터럴이 없는지 본다.

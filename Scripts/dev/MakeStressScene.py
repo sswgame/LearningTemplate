@@ -27,6 +27,7 @@ import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 from common.Paths import getProjectRoot
+from common.ExitCode import ExitCode  # noqa: E402
 
 # `MeshUtil::createPrimitive` 가 아는 이름들. 정점 수가 서로 달라야 섞는 의미가 있다.
 _kListShape = ("Cube", "Sphere", "Cylinder", "Capsule", "Cone", "Quad")
@@ -166,11 +167,11 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.count <= 0:
         print("--count 는 1 이상이어야 합니다.")
-        return 2
+        return ExitCode.CheckInvalid
     shapeCount = max(1, min(args.shapes, len(_kListShape)))
     if not 0 <= args.point_lights <= _kMaxFrameLight:
         print("--point-lights 는 0 이상 %d 이하여야 합니다(SW_MAX_FRAME_LIGHT)." % _kMaxFrameLight)
-        return 2
+        return ExitCode.CheckInvalid
 
     root = getProjectRoot()
     outPath = (
@@ -189,7 +190,7 @@ def main(argv: list[str] | None = None) -> int:
     print("  엔티티 %d개 (메시 %d + 카메라 1 + 방향광 1 + 점광 %d), 도형 %d종, %.1f KB"
           % (args.count + 2 + args.point_lights, args.count, args.point_lights, shapeCount, len(text) / 1024.0))
     print("  이 파일은 커밋하지 마세요 — 재고 나서 지웁니다.")
-    return 0
+    return ExitCode.Passed
 
 
 if __name__ == "__main__":

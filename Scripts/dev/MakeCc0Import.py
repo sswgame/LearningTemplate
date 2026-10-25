@@ -41,6 +41,7 @@ import zipfile
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))   # Scripts
 from common.Paths import getProjectRoot  # noqa: E402 — import 하면 콘솔이 UTF-8 이 된다
+from common.ExitCode import ExitCode  # noqa: E402
 
 _kRepositoryRoot = getProjectRoot()
 _kEngineRoot = _kRepositoryRoot / "Resource" / "engine"
@@ -176,7 +177,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"[MakeCc0Import] {error}", file=sys.stderr)
     if not listError and args.command == "verify":
         print(f"[MakeCc0Import] OK (팩 {len(manifest['packs'])} · 파일 {sum(len(pack['files']) for pack in manifest['packs'])})")
-    return 1 if listError else 0
+    return ExitCode.Violation if listError else ExitCode.Passed
 
 
 if __name__ == "__main__":

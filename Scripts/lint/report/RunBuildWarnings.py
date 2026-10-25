@@ -52,6 +52,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 from common.TranslationUnits import TranslationUnitSweep
+from common.ExitCode import ExitCode  # noqa: E402
 from lint.LintReport import LintReport, ReportContext  # noqa: E402
 
 # "path(line,col): warning: 본문 [-Wname]" / GNU 드라이버의 "path:line:col: warning: ..." 둘 다 받는다.
@@ -217,14 +218,14 @@ def computeExitCode(failOn: str, totalWarning: int, totalError: int, listSkipped
     하나라도 있거나, **검사한 TU 가 없는 프리셋**이 있으면 1 이다. 컴파일 DB 를 못 찾아 아무것도 안 본 실행이 초록으로 지나가면 안 된다.
     """
     if not failOn:
-        return 0
+        return ExitCode.Passed
     if listSkippedPreset:
-        return 1
+        return ExitCode.Violation
     if totalError > 0:
-        return 1
+        return ExitCode.Violation
     if failOn == "warning" and totalWarning > 0:
-        return 1
-    return 0
+        return ExitCode.Violation
+    return ExitCode.Passed
 
 
 class RunBuildWarningsReport(LintReport):

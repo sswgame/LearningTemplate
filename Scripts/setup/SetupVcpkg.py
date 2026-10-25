@@ -35,6 +35,7 @@ from common.Paths import platformKey, platformScriptCommand
 from common.Process import runProcess
 from common.Search import isVcpkgRoot
 from common.ToolLocator import ToolSpec, findToolRoot
+from common.ExitCode import ExitCode  # noqa: E402
 
 kVcpkgToolSpec = ToolSpec(
     name="SetupVcpkg",
@@ -266,9 +267,9 @@ def main(argv: list[str] | None = None) -> int:
     resolvedPath = setupVcpkg(allowBootstrap=parsedArgs.install)
     if resolvedPath:
         print(resolvedPath.as_posix())
-        return 0
+        return ExitCode.Passed
     sys.stderr.write("[SetupVcpkg Error] vcpkg not found\n")
-    return 1
+    return ExitCode.Violation
 
 
 if __name__ == "__main__":

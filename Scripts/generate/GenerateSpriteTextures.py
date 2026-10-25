@@ -23,6 +23,7 @@ from typing import Sequence
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts — common
 
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
+from common.ExitCode import ExitCode  # noqa: E402
 
 kQuadrantSize = 64       # 테스트 텍스처 한 변(텍셀). 칸 하나가 32x32 — 선형 필터가 이웃 칸을 끌어오는 띠가 프레임 폭의 1/32 에 그친다
 kQuadrantColors = ((255, 0, 0, 255), (0, 255, 0, 255), (0, 0, 255, 255), (255, 255, 255, 255))  # 왼위 · 오위 · 왼아래 · 오아래
@@ -113,7 +114,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--root", default=str(Path(__file__).resolve().parents[2]), help="repository root")
     args = parser.parse_args(argv)
     generate(args.root)
-    return 0
+    return ExitCode.Passed
 
 
 if __name__ == "__main__":

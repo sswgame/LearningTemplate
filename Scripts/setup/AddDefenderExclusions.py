@@ -15,6 +15,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from common.ExitCode import ExitCode
 from common.Paths import getProjectRoot
 from common.Process import runProcess
 
@@ -36,7 +37,7 @@ def requestAdminElevation() -> None:
     if ret <= 32:
         print("[오류] 관리자 권한이 승인되지 않았습니다.")
         input("\n엔터 키를 누르면 종료합니다...")
-    sys.exit(0)
+    sys.exit(ExitCode.Passed)
 
 
 def runPowerShellInternal(command: str) -> None:
@@ -98,15 +99,15 @@ def main(argv: list[str] | None = None) -> int:
     argparse.ArgumentParser(description="Windows Defender 실시간 감시에서 이 저장소 · 빌드 도구를 뺀다(관리자 권한을 요청한다) — 인자 없음").parse_args(argv)
     if sys.platform != "win32":
         print("[안내] 이 스크립트는 Windows 전용입니다.")
-        return 0
+        return ExitCode.Passed
 
     if not isUserAdmin():
         print("[안내] 관리자 권한(UAC)을 요청합니다...")
         requestAdminElevation()
-        return 0
+        return ExitCode.Passed
 
     addDefenderExclusions()
-    return 0
+    return ExitCode.Passed
 
 
 if __name__ == "__main__":

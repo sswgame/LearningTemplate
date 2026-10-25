@@ -15,6 +15,8 @@
 
 #include "Engine/Compression/EngineCompressionCodecUtil.h"
 #include "Engine/Config/GameSelection.h"
+#include "Engine/Graphics/RHI/RHIInitResult.h"
+#include "Engine/Renderer/RenderThread.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -552,7 +554,7 @@ SW_TEST_CASE( AppSmokeTest, ScreenshotQuitEndsTheAppAfterTheShot )
 }
 
 /**
- * @brief [AppSmokeTest] `-gv_screenshotQuit` 은 사진 파일을 쓰지 못하면 0 이 아닌 종료 코드(14)로 끝낸다
+ * @brief [AppSmokeTest] `-gv_screenshotQuit` 은 사진 파일을 쓰지 못하면 0 이 아닌 종료 코드(`RenderThread::kCaptureWriteFailedExitCode`)로 끝낸다
  * @details 폴더를 파일 경로로 주어 쓰기를 실패시킨다. 종료 코드를 직접 봐야 해서 `runApp`(원본)을 쓰고, 백엔드를 쓸 수 없으면(77) 건너뛴다.
  */
 SW_TEST_CASE( AppSmokeTest, ScreenshotQuitReportsAnUnwritableShot )
@@ -562,12 +564,11 @@ SW_TEST_CASE( AppSmokeTest, ScreenshotQuitReportsAnUnwritableShot )
     arguments += blockedPath;
     arguments += "\"";
     constexpr uint32             kQuitDeadlineSeconds = 60;
-    constexpr int32              kBackendUnusableCode = 77;
     const test::ProcessRunResult run                  = test::AppTestUtil::runApp( arguments, kQuitDeadlineSeconds, []( Process&, const string& ) {} );
-    if ( run._bLaunched == false || ( run._bTimedOut == false && run._exitCode == kBackendUnusableCode ) )
+    if ( run._bLaunched == false || ( run._bTimedOut == false && run._exitCode == kRHIUnusableHereExitCode ) )
         SW_TEST_SKIP( "App could not be launched or DX12 is not usable on this machine" );
     SW_EXPECT_TRUE_MSG( run._bTimedOut == false, "-gv_screenshotQuit 로 띄운 App 이 쓰기에 실패하고도 끝나지 않았습니다" );
-    SW_EXPECT_EQUAL( 14, run._exitCode );
+    SW_EXPECT_EQUAL( RenderThread::kCaptureWriteFailedExitCode, run._exitCode );
 }
 
 /**

@@ -383,13 +383,13 @@ def main(argv: list[str] | None = None) -> int:
     repository = args.repo or findRepository(getProjectRoot())
     if not repository:
         print("[ListCiJobs] origin 이 GitHub 저장소가 아닙니다 — --repo owner/name 을 주세요.", file=sys.stderr)
-        return 2
+        return ExitCode.CheckInvalid
     if not (args.runs or args.run or args.job or args.summary):
         parser.print_help()
-        return 1
+        return ExitCode.Violation
 
     client = GithubClient(None if args.no_cache else Path(tempfile.gettempdir()) / kCacheFolderName)
-    exitCode = 0
+    exitCode = ExitCode.Passed
     try:
         if args.summary:
             runsUrl = (f"{kApiRoot}/repos/{repository}/actions/workflows/{kSummaryWorkflow}/runs"
@@ -431,7 +431,7 @@ def main(argv: list[str] | None = None) -> int:
         return ExitCode.LimitReached
     except OSError as error:
         print(f"[ListCiJobs] GitHub API 를 읽지 못했습니다(네트워크 · 없는 id): {error}", file=sys.stderr)
-        return 1
+        return ExitCode.Violation
     finally:
         print(f"[ListCiJobs] {client.describeQuota()}", file=sys.stderr)
     return exitCode

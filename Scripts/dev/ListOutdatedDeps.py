@@ -29,6 +29,7 @@ from common.Config import loadSearchPaths  # noqa: E402
 from common.Host import runGit  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 from common.Constants import kKeyVcpkgInstalledRel  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
 
 #: 기준선과 따로 올리는 것(docs/09_Decisions.md 5-2) — 최신이 이 접두로 시작하면 "따로" 로 적는다.
 kHeldBackPrefix: dict[str, tuple[str, str]] = {
@@ -161,7 +162,7 @@ def main(argv: list[str] | None = None) -> int:
     vcpkgRoot = projectRoot / "Tools" / "vcpkg"
     if not (vcpkgRoot / ".git").exists():
         print(f"[deps-outdated] {vcpkgRoot} is not a git checkout", file=sys.stderr)
-        return 2
+        return ExitCode.CheckInvalid
     if not args.no_fetch:
         fetch = runGit(["-C", str(vcpkgRoot), "fetch", "--quiet", "origin", "master"])
         if not fetch.bSucceeded:
@@ -187,7 +188,7 @@ def main(argv: list[str] | None = None) -> int:
     widthLatest = max((len(row.latest) for row in listRow), default=4)
     for row in listRow:
         print(f"  {row.name:<{widthName}}  {row.current:<{widthCurrent}}  {row.latest:<{widthLatest}}  {row.source:<8}  {row.note}")
-    return 0
+    return ExitCode.Passed
 
 
 if __name__ == "__main__":

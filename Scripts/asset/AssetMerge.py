@@ -32,6 +32,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from common.XmlAssetMerge import XmlAsset, diffAssets, mergeAssets, parseXmlAsset, serializeXmlAsset  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
 
 
 def readAssetInternal(path: Path) -> XmlAsset:
@@ -48,11 +49,11 @@ def runDiffInternal(beforePath: Path, afterPath: Path, label: str | None = None)
     title = label or f"{beforePath} -> {afterPath}"
     if not listChange:
         print(f"{title}: no semantic changes")
-        return 0
+        return ExitCode.Passed
     print(f"{title}: {len(listChange)} change(s)")
     for change in listChange:
         print(f"  {change.describe()}")
-    return 1
+    return ExitCode.Violation
 
 
 def runMergeInternal(basePath: Path, oursPath: Path, theirsPath: Path, outputPath: Path, prefer: str | None, label: str) -> int:
@@ -60,7 +61,7 @@ def runMergeInternal(basePath: Path, oursPath: Path, theirsPath: Path, outputPat
         base, ours, theirs = readAssetInternal(basePath), readAssetInternal(oursPath), readAssetInternal(theirsPath)
     except (ElementTree.ParseError, OSError, UnicodeDecodeError) as error:
         print(f"[AssetMerge] {label}: cannot read the three versions as XML ({error}) - leaving it to a manual merge", file=sys.stderr)
-        return 2
+        return ExitCode.CheckInvalid
     merged, listConflict = mergeAssets(base, ours, theirs, prefer)
     bCrlf = b"\r\n" in oursPath.read_bytes()
     writeTextInternal(outputPath, serializeXmlAsset(merged), bCrlf)
@@ -68,10 +69,10 @@ def runMergeInternal(basePath: Path, oursPath: Path, theirsPath: Path, outputPat
         print(f"[AssetMerge] {label}: {len(listConflict)} conflict(s) - search the file for 'MERGE CONFLICT':", file=sys.stderr)
         for conflict in listConflict:
             print(f"  {conflict.describe()}", file=sys.stderr)
-        return 1
+        return ExitCode.Violation
     resolved = f", {len(listConflict)} conflict(s) resolved as {prefer}" if listConflict else ""
     print(f"[AssetMerge] {label}: merged{resolved}")
-    return 0
+    return ExitCode.Passed
 
 
 def main(listArgument: list[str] | None = None) -> int:
@@ -105,12 +106,12 @@ def main(listArgument: list[str] | None = None) -> int:
     listGitArgument = args.listGitArgument
     if len(listGitArgument) < 5:
         print("[AssetMerge] git-diff expects: path old-file old-hex old-mode new-file ...", file=sys.stderr)
-        return 2
+        return ExitCode.CheckInvalid
     try:
         runDiffInternal(Path(listGitArgument[1]), Path(listGitArgument[4]), listGitArgument[0])
     except (ElementTree.ParseError, OSError, UnicodeDecodeError) as error:
         print(f"{listGitArgument[0]}: not comparable as XML ({error})")
-    return 0
+    return ExitCode.Passed
 
 
 if __name__ == "__main__":

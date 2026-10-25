@@ -27,6 +27,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 from common.Paths import getProjectRoot  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
 
 _kBom = "﻿"
 _kAllowedControl = {"\t", "\n", "\r"}
@@ -175,9 +176,9 @@ def main(argv: list[str] | None = None) -> int:
         writeAllInternal(mapText)
     except EditError as error:
         print(f"[edit-file] 오류(아무것도 쓰지 않음): {error}", file=sys.stderr)
-        return 1
+        return ExitCode.Violation
     print(f"[edit-file] {len(mapText)}개 파일 {len(listChange)}곳 고침: -{removed} +{added} 줄")
-    return 0
+    return ExitCode.Passed
 
 
 if __name__ == "__main__":

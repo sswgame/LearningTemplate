@@ -25,6 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 from common.Paths import getProjectRoot  # noqa: E402
 from common.RuleData import RuleDataError  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
 from lint.LintCatalog import discoverSourceGateScripts  # noqa: E402
 from lint.LintGate import GateError  # noqa: E402
 from lint.SourceScan import scanSourceGates  # noqa: E402
@@ -44,7 +45,7 @@ def main(argv: list[str] | None = None) -> int:
     listScript = [script for script in discoverSourceGateScripts() if not setOnly or script.name in setOnly]
     if setOnly - {script.name for script in listScript}:
         print(f"[RunSourceGates] 소스 게이트가 아닙니다: {', '.join(sorted(setOnly - {script.name for script in listScript}))}", file=sys.stderr)
-        return 2
+        return ExitCode.CheckInvalid
 
     start = time.perf_counter()
     mapReturnCode: dict[str, int] = {}
@@ -58,8 +59,8 @@ def main(argv: list[str] | None = None) -> int:
                 gate.prepareSourceScan(repositoryRoot, gateArgs)
             except (GateError, RuleDataError) as exception:
                 print(f"[{gate.name}] {exception}", file=sys.stderr)
-                returnCode = 2
-        if returnCode != 0:
+                returnCode = ExitCode.CheckInvalid
+        if returnCode != ExitCode.Passed:
             mapReturnCode[gate.name] = returnCode
             continue
         listJob.append((gate, gateArgs))
@@ -68,7 +69,7 @@ def main(argv: list[str] | None = None) -> int:
         listResult = scanSourceGates(repositoryRoot, listJob)
     except OSError as exception:
         print(f"[RunSourceGates] {exception}", file=sys.stderr)
-        return 2
+        return ExitCode.CheckInvalid
 
     listTiming: list[tuple[float, str]] = []
     for (gate, gateArgs), result in zip(listJob, listResult):
@@ -77,7 +78,7 @@ def main(argv: list[str] | None = None) -> int:
             gateResult = gate.finishSourceScanChecked(repositoryRoot, gateArgs, result)
         except (GateError, RuleDataError) as exception:
             print(f"[{gate.name}] {exception}", file=sys.stderr)
-            mapReturnCode[gate.name] = 2
+            mapReturnCode[gate.name] = ExitCode.CheckInvalid
             continue
         mapReturnCode[gate.name] = gate.endRun(repositoryRoot, gateArgs, gateResult)
         sys.stdout.flush()
@@ -87,7 +88,7 @@ def main(argv: list[str] | None = None) -> int:
     slowest = ", ".join(f"{name} {seconds:.2f} s" for seconds, name in listTiming[:_kSlowestShown])
     print(f"[RunSourceGates] 게이트 {len(listScript)}개 · {time.perf_counter() - start:.1f} s — 검사 시간(프로세스 합) 상위: {slowest}")
     listCode = list(mapReturnCode.values())
-    return 2 if 2 in listCode else (1 if 1 in listCode else 0)
+    return ExitCode.CheckInvalid if ExitCode.CheckInvalid in listCode else (ExitCode.Violation if ExitCode.Violation in listCode else ExitCode.Passed)
 
 
 if __name__ == "__main__":

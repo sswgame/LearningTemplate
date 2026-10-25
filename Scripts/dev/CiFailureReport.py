@@ -27,6 +27,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import common  # noqa: E402 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 from common.Process import runProcess  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
 
 kNewline = "\n"
 _kAnsi = re.compile(r"\x1b\[[0-9;]*m")
@@ -155,7 +156,7 @@ def reportTests(ctestDir: Path) -> int:
                           kNewline.join(["--- result: " + result] + listMarked + ["--- last RUN: " + (listRun[-1] if listRun else "(none)"), "--- tail:"] + listTail))
     for stack in collectCrashStacksInternal(ctestDir):
         emitErrorInternal("crash stack", stack)
-    return 0
+    return ExitCode.Passed
 
 
 def reportConfigure(logPath: Path) -> int:
@@ -171,10 +172,10 @@ def reportConfigure(logPath: Path) -> int:
     if not listLogPath:
         # vcpkg 가 로그를 가리키지 않았다(cmake 자체 오류) — 구성 출력의 끝을 올린다.
         emitErrorInternal("configure", kNewline.join(text.splitlines()[-_kLogTailLineCount:]))
-        return 0
+        return ExitCode.Passed
     for path in listLogPath[:_kMaxLogCount]:
         emitErrorInternal("vcpkg " + path.name, kNewline.join(readTextInternal(path).splitlines()[-_kLogTailLineCount:]))
-    return 0
+    return ExitCode.Passed
 
 
 def reportBuild(logPath: Path) -> int:
@@ -182,7 +183,7 @@ def reportBuild(logPath: Path) -> int:
     listHit = [index for index, line in enumerate(lines) if _kBuildErrorMarker.search(line) is not None]
     if not listHit:
         emitErrorInternal("build", kNewline.join(lines[-_kLogTailLineCount:]))
-        return 0
+        return ExitCode.Passed
     # `-k 0` 로 지으면 같은 파일의 오류가 쏟아진다 — 파일마다 첫 오류 하나만 올려 열 덩어리 안에 여러 파일이 들게 한다.
     listBlock: list[str] = []
     setSeenFile: set[str] = set()
@@ -202,7 +203,7 @@ def reportBuild(logPath: Path) -> int:
         lastEnd = end - 1
     for position, block in enumerate(listBlock):
         emitErrorInternal(f"build {position + 1}/{len(listBlock)}", block)
-    return 0
+    return ExitCode.Passed
 
 
 def reportFuzz(logPath: Path, target: str) -> int:
@@ -212,7 +213,7 @@ def reportFuzz(logPath: Path, target: str) -> int:
     listBase64 = [line[:_kMaxStackChars] for line in lines if line.startswith("Base64:")]
     body = listPicked + listBase64[-1:] if listPicked else lines[-_kLogTailLineCount:]
     emitErrorInternal(f"fuzz {target}", kNewline.join(body))
-    return 0
+    return ExitCode.Passed
 
 
 def reportLoad(resultsPath: Path) -> int:
@@ -223,7 +224,7 @@ def reportLoad(resultsPath: Path) -> int:
         listResult = []
     if not listResult:
         emitErrorInternal("load", f"no load results in {resultsPath} - the load run did not finish")
-        return 0
+        return ExitCode.Passed
     for result in listResult[:_kMaxTestCount]:
         if result.get("verdict") != "fail":
             continue
@@ -232,7 +233,7 @@ def reportLoad(resultsPath: Path) -> int:
         body = (["--- failures:"] + result.get("failures", []) + result.get("budget_failures", []) + result.get("baseline_regressions", []) +
                 ["--- metrics (median, min..max over runs):"] + listMetric + ["--- command:", " ".join(result.get("command", []))])
         emitErrorInternal(f"load {result.get('scenario')} x {result.get('profile')}{' (emulated)' if result.get('emulated') else ''}", kNewline.join(body))
-    return 0
+    return ExitCode.Passed
 
 
 def main(listArgument: list[str] | None = None) -> int:

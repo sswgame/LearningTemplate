@@ -22,6 +22,7 @@ from typing import Sequence
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts — common
 
 from common.GeneratedFile import writeGeneratedFile  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
 
 # 핫 리로드가 갈아 끼우지 않는 쪽의 헤더다 — Core · Engine, 모듈과 호스트의 계약(RuntimeAPI), 공용 모듈(GameFramework — 섀도 복사 없이 한 번
 # 올리고 다시 올리지 않는다). 키트(GameFramework/Kits)는 스스로 리로드되는 모듈이라 뺀다. X 매크로 표(.xxx)도 넣는다 — `EngineServiceList.xxx` 가
@@ -79,7 +80,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     text = makeHeaderTextInternal(computeStampInternal(Path(os.path.normpath(Path(args.root).absolute()))))
     # 빌드마다 도는 단계라 바뀐 때만 한 줄 찍는다. 줄끝은 LF(어느 체크아웃에서나 같은 바이트).
     writeGeneratedFile(Path(args.out), text, tag="GenerateEngineAbiStamp", newline="\n", bReportUnchanged=False)
-    return 0
+    return ExitCode.Passed
 
 
 if __name__ == "__main__":

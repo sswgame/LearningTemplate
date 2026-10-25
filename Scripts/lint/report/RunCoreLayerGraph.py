@@ -36,6 +36,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common.Paths import normalizePath  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
 from lint.LayerGraph import computeTiers, findComponents, listEdgeNodes  # noqa: E402
 from lint.LayerRules import readCoreLayerRules  # noqa: E402
 from lint.LintReport import LintReport, ReportContext  # noqa: E402
@@ -174,7 +175,7 @@ class RunCoreLayerGraphReport(LintReport):
         for layer in sorted(mapTier, key=lambda name: (mapTier[name], name)):
             marker = "" if mapGateTier.get(layer) == mapTier[layer] else f"   <- 게이트 표는 {mapGateTier.get(layer)}" + (" (이유 있음)" if layer in mapReason else "")
             print(f"  {mapTier[layer]:2d}  {layer:16s} -> {', '.join(sorted(mapEdge.get(layer, {})))}{marker}")
-        return 0
+        return ExitCode.Passed
 
 
 main = RunCoreLayerGraphReport.run

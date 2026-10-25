@@ -25,6 +25,7 @@ from pathlib import Path
 
 from .BuildTree import BuildTree
 from .CookContract import CookContractSpec
+from .Paths import getProjectRoot
 from .ProcessLimits import ProcessLimits
 
 #: 백엔드 명령줄 이름 → App 스위치. 표는 Config/Engine/CookContract.json 의 `command_line_name`(표 순서).
@@ -40,9 +41,20 @@ def addAppRunArguments(parser: argparse.ArgumentParser, *, bMultipleBackends: bo
     else:
         parser.add_argument("--backend", default=defaultBackend, choices=list(kBackendSwitch), help="돌릴 백엔드")
 
-#: App 이 "이 기계에서는 이 백엔드를 못 돌린다"(빌드에 없다 · 드라이버가 기능을 안 준다)로 끝날 때의 종료 코드
-#: (`kRHIUnusableHereExitCode`, `Source/Engine/Graphics/RHI/RHIInitResult.h` 와 같다).
-kAppRhiUnusableExitCode = 77
+#: App 이 "이 기계에서는 이 백엔드를 못 돌린다"(빌드에 없다 · 드라이버가 기능을 안 준다)로 끝날 때의 종료 코드의 정본(C++ 헤더).
+kRhiUnusableHeaderRelPath = "Source/Engine/Graphics/RHI/RHIInitResult.h"
+_kRhiUnusableCodeRe = re.compile(r"constexpr\s+int32\s+kRHIUnusableHereExitCode\s*=\s*(\d+)\s*;")
+
+
+def readRhiUnusableExitCode(headerPath: Path) -> int:
+    """`RHIInitResult.h` 의 `kRHIUnusableHereExitCode` 값을 읽는다. 줄을 못 찾으면 오류로 멈춘다(폴백 없음)."""
+    found = _kRhiUnusableCodeRe.search(headerPath.read_text(encoding="utf-8"))
+    if found is None:
+        sys.exit(f"{headerPath}: kRHIUnusableHereExitCode 의 정의 줄을 찾지 못했다 — 줄 모양이 바뀌었나")
+    return int(found.group(1))
+
+
+kAppRhiUnusableExitCode = readRhiUnusableExitCode(getProjectRoot() / kRhiUnusableHeaderRelPath)
 
 #: 프로파일 표의 한 줄 — `[Profile] <구간>  avg  p50  p99  min  max  per_frame`(`FrameProfiler::report`).
 _kProfileRowRe = re.compile(r"\[Profile\]\s+(\S+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\.(\d)\s*$")

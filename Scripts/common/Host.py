@@ -14,6 +14,7 @@ from typing import Sequence
 
 from .ClangFormat import resolveClangFormat
 from .Constants import kCppAllExtensions
+from .ExitCode import ExitCode
 from .Parallel import runUntilNonZero
 from .Paths import getProjectRoot, normalizePath
 from .Process import ProcessResult, runProcess
@@ -207,7 +208,7 @@ def runClangFormatBatch(files: Sequence[Path | str],
         모든 배치가 성공하면 0, 실패 시 해당 프로세스 종료 코드 반환
     """
     if not files:
-        return 0
+        return ExitCode.Passed
     projectRoot = cwd or getProjectRoot()
     clangFormatExe = clangFormatPath or resolveClangFormat()
     if not clangFormatExe:
@@ -215,7 +216,7 @@ def runClangFormatBatch(files: Sequence[Path | str],
             "[FormatClangFormat] clang-format을 찾을 수 없습니다. "
             "'py -3 Scripts/setup/SetupEnvironment.py'를 먼저 실행해주세요.\n"
         )
-        return 1
+        return ExitCode.Violation
 
     filePathStrings = [str(f) for f in files]
     batches = [

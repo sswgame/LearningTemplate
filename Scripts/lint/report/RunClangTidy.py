@@ -30,6 +30,7 @@ import pathlib
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
+from common.ExitCode import ExitCode
 from common.Paths import getProjectRoot
 from common.Process import runProcess
 from common.TranslationUnits import TranslationUnitSweep
@@ -79,7 +80,7 @@ def findClangTidy() -> str:
     print("[RunClangTidy] 찾아본 곳:")
     for candidate in candidates:
         print(f"  - {candidate}")
-    sys.exit(2)
+    sys.exit(ExitCode.CheckInvalid)
 
 
 def runOne(tidyExe: str, buildDir: Path, sourceFile: str) -> str:
@@ -157,7 +158,7 @@ class RunClangTidyReport(LintReport):
         sweep = TranslationUnitSweep(tree, tag="RunClangTidy")
         if not sweep.bHasDatabase:
             sweep.reportMissingDatabase()
-            return 2
+            return ExitCode.CheckInvalid
 
         # 같은 .cpp 가 여러 타깃의 DB 항목으로 들어오므로 **파일 단위로 유일화**해서 넘긴다 —
         # clang-tidy 에게 필요한 것은 파일 경로뿐이고, 같은 파일을 두 번 보면 지적도 두 번 나온다.
@@ -166,7 +167,7 @@ class RunClangTidyReport(LintReport):
             print(f"[RunClangTidy] 컴파일 DB 의 TU {len(sweep.listMissingFile)}개가 디스크에 없어 건너뜁니다(낡은 DB). 첫 파일: {sweep.listMissingFile[0]}")
         if not listUnit:
             print("[RunClangTidy] 검사할 TU 가 없습니다.")
-            return 0
+            return ExitCode.Passed
 
         print(f"[RunClangTidy] {len(listUnit)}개 TU, 병렬 {context.jobs} ({tree.name})")
         diagnosticText = sweep.run(
@@ -183,7 +184,7 @@ class RunClangTidyReport(LintReport):
 
         # 지적이 있어도 실패로 만들지 않는다. 정적 분석은 판단이 필요한 자료이고, 게이트는
         # CheckCodeConventions.py 가 맡는다. 게이트로 쓰려면 .clang-tidy 의 WarningsAsErrors 를 켠다.
-        return 0
+        return ExitCode.Passed
 
 
 main = RunClangTidyReport.run

@@ -20,6 +20,7 @@ from lint.fixer import FormatForwardDeclarations
 from lint.fixer import FormatIncludeOrder
 from lint.fixer import FormatNamespaceBlocks
 from common.Constants import kShaderSourceExtensions
+from common.ExitCode import ExitCode
 from common.Host import getModifiedCppFiles, runClangFormatBatch
 from common.Paths import getProjectRoot
 
@@ -38,7 +39,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if not modifiedFiles and not modifiedShaders:
         print("[FormatModified] 변경된 C++ · 셰이더 소스 파일이 없습니다.")
-        return 0
+        return ExitCode.Passed
 
     print(f"[FormatModified] {len(modifiedFiles)}개의 수정된 C++ 파일, {len(modifiedShaders)}개의 수정된 셰이더 발견.")
 
@@ -80,7 +81,7 @@ def main(argv: list[str] | None = None) -> int:
         return resultCode
 
     print("\n[FormatModified] 성공적으로 모든 수정된 파일의 포맷팅을 완료했습니다!")
-    return 0
+    return ExitCode.Passed
 
 
 if __name__ == "__main__":

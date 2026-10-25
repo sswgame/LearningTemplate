@@ -106,8 +106,8 @@ namespace sw
             GameView = 1u << 0, ///< `-gv_screenshot` — 렌더 스레드가 찍는다.
             EditorUI = 1u << 1, ///< `-gv_screenshotEditor` — 에디터가 찍는다.
         };
-        /** @brief `-gv_screenshotQuit` 이 앱을 끝낼 때, 사진 파일을 쓰지 못한 경우의 종료 코드입니다(다 썼으면 0). */
-        static constexpr int32 kCaptureWriteFailedExitCode = 14;
+        /** @brief `-gv_screenshotQuit` 이 앱을 끝낼 때, 사진 파일을 쓰지 못한 경우의 종료 코드입니다(다 썼으면 0). 시나리오 종료 코드 표(10~15, `AutomationExitCode.h`)와 겹치지 않는 값이다 — 14 는 시나리오의 미확정이라 같이 쓰면 판정이 섞인다. */
+        static constexpr int32 kCaptureWriteFailedExitCode = 16;
         /** @brief `getCaptureExitCode` 가 "아직 끝낼 때가 아니다" 로 돌려주는 값입니다. */
         static constexpr int32 kNoCaptureExitCode = -1;
         /** @brief 이 종류의 사진을 찍겠다고 알립니다. 첫 사진이 끝나기 전(첫 프레임)에 부릅니다. 어느 스레드에서 불러도 됩니다. */

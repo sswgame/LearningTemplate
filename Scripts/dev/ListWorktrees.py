@@ -24,6 +24,7 @@ from common.Host import runGit  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 
 from common.Worktree import describeWorktreeOwner, findMainRoot, getWorktreeGitDirectory, readWorktreeOwner  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
 
 
 @dataclass(frozen=True)
@@ -56,7 +57,7 @@ def main(argv: list[str] | None = None) -> int:
     listed = runGit(["worktree", "list", "--porcelain"], cwd=mainRoot)
     if not listed.bSucceeded:
         print(f"[ListWorktrees] git worktree list 가 실패했습니다.\n{listed.output.strip()}", file=sys.stderr)
-        return 2
+        return ExitCode.CheckInvalid
     now = time.time()
     for entry in parseWorktreeList(listed.stdout):
         if entry.path.resolve() == mainRoot.resolve():
@@ -67,7 +68,7 @@ def main(argv: list[str] | None = None) -> int:
         except (RuntimeError, ValueError) as error:
             ownerText = f"주인을 확인하지 못함 — {error}"
         print(f"{entry.path}  [{entry.branch}]  {ownerText}")
-    return 0
+    return ExitCode.Passed
 
 
 if __name__ == "__main__":

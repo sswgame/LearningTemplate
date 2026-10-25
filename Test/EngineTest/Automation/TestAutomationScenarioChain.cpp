@@ -43,16 +43,16 @@ SW_TEST_CASE( AutomationScenarioChainTest, AllStagesMustPass )
     SW_EXPECT_TRUE( chain.isActive() );
     SW_EXPECT_TRUE( chain.isChain() );
     SW_EXPECT_STREQ( "a.xml", chain.getCurrentPath().c_str() );
-    SW_EXPECT_TRUE( chain.getFinalResult() == sw::AutomationResult::Running );
+    SW_EXPECT_TRUE( chain.getFinalResult() == sw::AutomationOutcome::Running );
 
-    SW_EXPECT_TRUE( chain.onStageEnded( sw::AutomationResult::Passed ) );
+    SW_EXPECT_TRUE( chain.onStageEnded( sw::AutomationOutcome::Passed ) );
     SW_EXPECT_EQUAL( size_t{ 1 }, chain.getStageIndex() );
     SW_EXPECT_STREQ( "b.xml", chain.getCurrentPath().c_str() );
-    SW_EXPECT_TRUE( chain.onStageEnded( sw::AutomationResult::Passed ) );
+    SW_EXPECT_TRUE( chain.onStageEnded( sw::AutomationOutcome::Passed ) );
     SW_EXPECT_STREQ( "c.xml", chain.getCurrentPath().c_str() );
-    SW_EXPECT_FALSE( chain.onStageEnded( sw::AutomationResult::Passed ) ); // 마지막 — 이어 갈 단계가 없다
+    SW_EXPECT_FALSE( chain.onStageEnded( sw::AutomationOutcome::Passed ) ); // 마지막 — 이어 갈 단계가 없다
     SW_EXPECT_FALSE( chain.isActive() );
-    SW_EXPECT_TRUE( chain.getFinalResult() == sw::AutomationResult::Passed );
+    SW_EXPECT_TRUE( chain.getFinalResult() == sw::AutomationOutcome::Passed );
     SW_EXPECT_EQUAL( size_t{ 0 }, chain.getSkippedStageCount() );
     SW_EXPECT_TRUE( chain.getCurrentPath().empty() );
 }
@@ -64,17 +64,17 @@ SW_TEST_CASE( AutomationScenarioChainTest, UnconfirmedStageDoesNotStopTheChain )
 {
     sw::AutomationScenarioChain chain;
     chain.begin( { "a.xml", "b.xml", "c.xml" } );
-    SW_EXPECT_TRUE( chain.onStageEnded( sw::AutomationResult::Unconfirmed ) );
-    SW_EXPECT_TRUE( chain.onStageEnded( sw::AutomationResult::Passed ) );
-    SW_EXPECT_FALSE( chain.onStageEnded( sw::AutomationResult::Passed ) );
-    SW_EXPECT_TRUE( chain.getFinalResult() == sw::AutomationResult::Unconfirmed );
+    SW_EXPECT_TRUE( chain.onStageEnded( sw::AutomationOutcome::Unconfirmed ) );
+    SW_EXPECT_TRUE( chain.onStageEnded( sw::AutomationOutcome::Passed ) );
+    SW_EXPECT_FALSE( chain.onStageEnded( sw::AutomationOutcome::Passed ) );
+    SW_EXPECT_TRUE( chain.getFinalResult() == sw::AutomationOutcome::Unconfirmed );
     SW_EXPECT_EQUAL( size_t{ 1 }, chain.getUnconfirmedResultCount() );
     SW_EXPECT_EQUAL( size_t{ 0 }, chain.getFailedStageCount() );
 
     chain.begin( { "a.xml", "b.xml" } );
-    SW_EXPECT_TRUE( chain.onStageEnded( sw::AutomationResult::Unconfirmed ) );
-    SW_EXPECT_FALSE( chain.onStageEnded( sw::AutomationResult::Failed ) );
-    SW_EXPECT_TRUE( chain.getFinalResult() == sw::AutomationResult::Failed );
+    SW_EXPECT_TRUE( chain.onStageEnded( sw::AutomationOutcome::Unconfirmed ) );
+    SW_EXPECT_FALSE( chain.onStageEnded( sw::AutomationOutcome::Failed ) );
+    SW_EXPECT_TRUE( chain.getFinalResult() == sw::AutomationOutcome::Failed );
 }
 
 /**
@@ -84,15 +84,15 @@ SW_TEST_CASE( AutomationScenarioChainTest, FirstNonPassingStageStopsTheChain )
 {
     sw::AutomationScenarioChain chain;
     chain.begin( { "a.xml", "b.xml", "c.xml", "d.xml" } );
-    SW_EXPECT_TRUE( chain.onStageEnded( sw::AutomationResult::Passed ) );
-    SW_EXPECT_FALSE( chain.onStageEnded( sw::AutomationResult::TimedOut ) ); // 2/4 에서 졌다
+    SW_EXPECT_TRUE( chain.onStageEnded( sw::AutomationOutcome::Passed ) );
+    SW_EXPECT_FALSE( chain.onStageEnded( sw::AutomationOutcome::TimedOut ) ); // 2/4 에서 졌다
     SW_EXPECT_FALSE( chain.isActive() );
-    SW_EXPECT_TRUE( chain.getFinalResult() == sw::AutomationResult::TimedOut );
+    SW_EXPECT_TRUE( chain.getFinalResult() == sw::AutomationOutcome::TimedOut );
     SW_EXPECT_EQUAL( size_t{ 2 }, chain.getSkippedStageCount() );
-    SW_EXPECT_FALSE( chain.onStageEnded( sw::AutomationResult::Failed ) ); // 끝난 체인은 결과를 바꾸지 않는다
-    SW_EXPECT_TRUE( chain.getFinalResult() == sw::AutomationResult::TimedOut );
+    SW_EXPECT_FALSE( chain.onStageEnded( sw::AutomationOutcome::Failed ) ); // 끝난 체인은 결과를 바꾸지 않는다
+    SW_EXPECT_TRUE( chain.getFinalResult() == sw::AutomationOutcome::TimedOut );
 
-    const sw::string line = chain.describeStageEnd( 1, sw::AutomationResult::TimedOut, "engine.reload" );
+    const sw::string line = chain.describeStageEnd( 1, sw::AutomationOutcome::TimedOut, "engine.reload" );
     SW_EXPECT_TRUE( line.find( "stage 2/4" ) != sw::string::npos );
     SW_EXPECT_TRUE( line.find( "TIMEOUT" ) != sw::string::npos );
     SW_EXPECT_TRUE( line.find( "engine.reload" ) != sw::string::npos );
@@ -106,19 +106,19 @@ SW_TEST_CASE( AutomationScenarioChainTest, SkippedStopsTheChainAndAnEmptyListIsD
 {
     sw::AutomationScenarioChain chain;
     chain.begin( { "a.xml", "b.xml" } );
-    SW_EXPECT_FALSE( chain.onStageEnded( sw::AutomationResult::Skipped ) );
-    SW_EXPECT_TRUE( chain.getFinalResult() == sw::AutomationResult::Skipped );
+    SW_EXPECT_FALSE( chain.onStageEnded( sw::AutomationOutcome::Skipped ) );
+    SW_EXPECT_TRUE( chain.getFinalResult() == sw::AutomationOutcome::Skipped );
 
     sw::AutomationScenarioChain single;
     single.begin( { "only.xml" } );
     SW_EXPECT_FALSE( single.isChain() );
-    SW_EXPECT_FALSE( single.onStageEnded( sw::AutomationResult::Failed ) );
-    SW_EXPECT_TRUE( single.getFinalResult() == sw::AutomationResult::Failed );
+    SW_EXPECT_FALSE( single.onStageEnded( sw::AutomationOutcome::Failed ) );
+    SW_EXPECT_TRUE( single.getFinalResult() == sw::AutomationOutcome::Failed );
 
     sw::AutomationScenarioChain empty;
     empty.begin( {} );
     SW_EXPECT_FALSE( empty.isActive() );
-    SW_EXPECT_TRUE( empty.getFinalResult() == sw::AutomationResult::Passed );
+    SW_EXPECT_TRUE( empty.getFinalResult() == sw::AutomationOutcome::Passed );
 }
 
 /**
@@ -128,40 +128,40 @@ SW_TEST_CASE( AutomationScenarioChainTest, KeepGoingCollectsEveryFailure )
 {
     sw::AutomationScenarioChain chain;
     chain.begin( { "a.xml", "b.xml", "c.xml", "d.xml" }, true );
-    SW_EXPECT_TRUE( chain.onStageEnded( sw::AutomationResult::Failed ) ); // 실패했어도 이어 간다
+    SW_EXPECT_TRUE( chain.onStageEnded( sw::AutomationOutcome::Failed ) ); // 실패했어도 이어 간다
     SW_EXPECT_STREQ( "b.xml", chain.getCurrentPath().c_str() );
-    SW_EXPECT_TRUE( chain.onStageEnded( sw::AutomationResult::Passed ) );
-    SW_EXPECT_TRUE( chain.onStageEnded( sw::AutomationResult::TimedOut ) );
-    SW_EXPECT_FALSE( chain.onStageEnded( sw::AutomationResult::Passed ) );    // 마지막
-    SW_EXPECT_TRUE( chain.getFinalResult() == sw::AutomationResult::Failed ); // 처음 통과하지 못한 단계(a)의 결과
+    SW_EXPECT_TRUE( chain.onStageEnded( sw::AutomationOutcome::Passed ) );
+    SW_EXPECT_TRUE( chain.onStageEnded( sw::AutomationOutcome::TimedOut ) );
+    SW_EXPECT_FALSE( chain.onStageEnded( sw::AutomationOutcome::Passed ) );    // 마지막
+    SW_EXPECT_TRUE( chain.getFinalResult() == sw::AutomationOutcome::Failed ); // 처음 통과하지 못한 단계(a)의 결과
     SW_EXPECT_EQUAL( size_t{ 2 }, chain.getFailedStageCount() );
     SW_EXPECT_EQUAL( size_t{ 0 }, chain.getSkippedStageCount() );
 
     // 건너뜀은 그 단계만의 일이다 — 실패로 세지 않고 뒤 단계를 돌린다. 실패가 없으면 체인은 통과이고, 전부 건너뛰었을 때만 건너뜀이다.
     sw::AutomationScenarioChain skipped;
     skipped.begin( { "a.xml", "b.xml", "c.xml" }, true );
-    SW_EXPECT_TRUE( skipped.onStageEnded( sw::AutomationResult::LoadError ) );
-    SW_EXPECT_TRUE( skipped.onStageEnded( sw::AutomationResult::Skipped ) );
-    SW_EXPECT_FALSE( skipped.onStageEnded( sw::AutomationResult::Passed ) );
-    SW_EXPECT_TRUE( skipped.getFinalResult() == sw::AutomationResult::LoadError );
+    SW_EXPECT_TRUE( skipped.onStageEnded( sw::AutomationOutcome::LoadError ) );
+    SW_EXPECT_TRUE( skipped.onStageEnded( sw::AutomationOutcome::Skipped ) );
+    SW_EXPECT_FALSE( skipped.onStageEnded( sw::AutomationOutcome::Passed ) );
+    SW_EXPECT_TRUE( skipped.getFinalResult() == sw::AutomationOutcome::LoadError );
     SW_EXPECT_EQUAL( size_t{ 1 }, skipped.getFailedStageCount() );
     SW_EXPECT_EQUAL( size_t{ 1 }, skipped.getSkippedResultCount() );
 
     sw::AutomationScenarioChain someSkipped;
     someSkipped.begin( { "a.xml", "b.xml" }, true );
-    SW_EXPECT_TRUE( someSkipped.onStageEnded( sw::AutomationResult::Skipped ) );
-    SW_EXPECT_FALSE( someSkipped.onStageEnded( sw::AutomationResult::Passed ) );
-    SW_EXPECT_TRUE( someSkipped.getFinalResult() == sw::AutomationResult::Passed );
+    SW_EXPECT_TRUE( someSkipped.onStageEnded( sw::AutomationOutcome::Skipped ) );
+    SW_EXPECT_FALSE( someSkipped.onStageEnded( sw::AutomationOutcome::Passed ) );
+    SW_EXPECT_TRUE( someSkipped.getFinalResult() == sw::AutomationOutcome::Passed );
 
     sw::AutomationScenarioChain allSkipped;
     allSkipped.begin( { "a.xml", "b.xml" }, true );
-    SW_EXPECT_TRUE( allSkipped.onStageEnded( sw::AutomationResult::Skipped ) );
-    SW_EXPECT_FALSE( allSkipped.onStageEnded( sw::AutomationResult::Skipped ) );
-    SW_EXPECT_TRUE( allSkipped.getFinalResult() == sw::AutomationResult::Skipped );
+    SW_EXPECT_TRUE( allSkipped.onStageEnded( sw::AutomationOutcome::Skipped ) );
+    SW_EXPECT_FALSE( allSkipped.onStageEnded( sw::AutomationOutcome::Skipped ) );
+    SW_EXPECT_TRUE( allSkipped.getFinalResult() == sw::AutomationOutcome::Skipped );
 
     sw::AutomationScenarioChain lastFails;
     lastFails.begin( { "a.xml", "b.xml" }, true );
-    SW_EXPECT_TRUE( lastFails.onStageEnded( sw::AutomationResult::Passed ) );
-    SW_EXPECT_FALSE( lastFails.onStageEnded( sw::AutomationResult::Failed ) );
-    SW_EXPECT_TRUE( lastFails.getFinalResult() == sw::AutomationResult::Failed );
+    SW_EXPECT_TRUE( lastFails.onStageEnded( sw::AutomationOutcome::Passed ) );
+    SW_EXPECT_FALSE( lastFails.onStageEnded( sw::AutomationOutcome::Failed ) );
+    SW_EXPECT_TRUE( lastFails.getFinalResult() == sw::AutomationOutcome::Failed );
 }

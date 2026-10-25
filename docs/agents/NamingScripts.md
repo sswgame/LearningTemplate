@@ -30,7 +30,7 @@ The single source is `kMinimumPythonVersion` in `Scripts/common/Constants.py`; i
 - Types are written `X | None` and with built-in generics (`list[str]`, `dict[str, int]`), never `typing.Optional` · `Union` · `List` · `Dict` · `Tuple` · `Set` `[typing]`.
 - Text file I/O names its encoding — `open(…, encoding="utf-8")`, `read_text(encoding="utf-8")`, `write_text(…, encoding="utf-8")`; binary I/O (`"rb"`, `read_bytes`) needs none `[encoding]`.
 - Paths are `pathlib.Path`. `os.path` is used only for the string operations pathlib lacks: `normpath`, `relpath`, `commonpath`, `commonprefix`, `expandvars`, `splitext` `[osPath]`.
-- A script exits with `sys.exit(…)`, never `raise SystemExit(…)` `[exit]`. Its `__main__` guard is the single line `sys.exit(main())` — a test file's is `unittest.main()` `[mainGuard]`;
+- A script exits with `sys.exit(…)`, never `raise SystemExit(…)` `[exit]`. Its `__main__` guard is the single line `sys.exit(main())` — a test file's is `unittest.main()` `[mainGuard]`; under `Scripts/`, `main` (and any `f` in `sys.exit(f())`) returns `ExitCode` values, never a bare number `[exitCode]`;
   `main` takes `argv` and returns the exit code (`CheckScriptEntryPoints.py`).
 - `argparse.ArgumentParser` gets a `description=` `[argparse]`.
 - Not checked by a gate: child processes go through `common.Process.runProcess` under `Scripts/` (`CheckScriptCommonHelpers.py`); console output is plain `print` (there is no logging wrapper —

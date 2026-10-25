@@ -23,6 +23,7 @@ from lint.fixer import FormatBranchBraces
 from lint.fixer import FormatForwardDeclarations
 from lint.LintFixer import FixerFileKind, addFileArguments, selectFixerTargetFiles
 from common.Constants import kShaderSourceExtensions
+from common.ExitCode import ExitCode
 from common.Host import runClangFormatBatch
 from common.Paths import getProjectRoot
 
@@ -45,7 +46,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if not fileList:
         sys.stderr.write("[FormatClangFormat] 포맷팅 대상 C++ · 셰이더 파일이 없습니다.\n")
-        return 0
+        return ExitCode.Passed
 
     FormatForwardDeclarations.FormatForwardDeclarationsFixer().processFiles(listCpp, checkOnly=False)
     FormatBranchBraces.FormatBranchBracesFixer().processFiles(listCpp, checkOnly=False)

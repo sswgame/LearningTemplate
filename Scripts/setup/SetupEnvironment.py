@@ -50,6 +50,7 @@ from common.Constants import (
 )
 from common.Paths import getProjectRoot, normalizePath
 from common.Search import getOrFindCached, isVcpkgRoot
+from common.ExitCode import ExitCode  # noqa: E402
 from common.HostTools import (
     findDxcDlls,
     findMsvcPath,
@@ -293,7 +294,7 @@ def main(argv: list[str] | None = None) -> int:
 
     manager = EnvironmentSetupManager(force_refresh=args.force)
     manager.run()
-    return 0
+    return ExitCode.Passed
 
 
 if __name__ == "__main__":

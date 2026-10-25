@@ -13,7 +13,7 @@ namespace sw
     enum class AutomationThresholdBasisKind : uint8
     {
         Measured,    ///< 잰 값이 근거입니다. `measured="2026-10-22 dx12:0.095 vk:0.095"` — 날짜와 백엔드별 잰 값이 있어야 읽힙니다.
-        Provisional, ///< 아직 재지 않은 어림값입니다. `provisional="이유"` — 시나리오가 통과해도 종료 코드는 `AutomationResult::Unconfirmed` 이고 잰 값을 `measured` 로 옮기기 전까지 미확정으로 보고합니다.
+        Provisional, ///< 아직 재지 않은 어림값입니다. `provisional="이유"` — 시나리오가 통과해도 종료 코드는 `AutomationOutcome::Unconfirmed` 이고 잰 값을 `measured` 로 옮기기 전까지 미확정으로 보고합니다.
     };
 
     /**

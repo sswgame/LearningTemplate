@@ -23,6 +23,7 @@ from typing import Sequence
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts — common
 
 from common.GeneratedFile import writeGeneratedFile  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
 
 #: 포트를 짓는 데만 쓰는 vcpkg 도우미 포트의 이름 접두입니다 — 산출물에 들어가지 않는다.
 kBuildHelperPrefix = "vcpkg-"
@@ -192,7 +193,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     statusPath = Path(args.installed) / "vcpkg" / "status"
     if statusPath.is_file() is False:
         print(f"[ThirdPartyNotices] no vcpkg status file: {statusPath}", file=sys.stderr)
-        return 1
+        return ExitCode.Violation
     mapDepends = readStatusDependsInternal(statusPath, args.triplet)
     listPort = collectPortsInternal(readManifestPortsInternal(args.manifest, args.triplet), mapDepends)
     listVendored = collectVendoredLicensesInternal(args.vendored_root)
@@ -200,7 +201,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     writeGeneratedFile(Path(args.out), text, tag="ThirdPartyNotices", summary=f"{len(listPort) + len(listVendored)} libraries", newline="\n",
                        bReportUnchanged=False)
-    return 0
+    return ExitCode.Passed
 
 
 if __name__ == "__main__":

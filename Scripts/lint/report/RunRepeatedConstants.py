@@ -44,6 +44,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 from common.CodeText import blankComments  # noqa: E402
 from common.Paths import normalizePath  # noqa: E402
 from common.Search import readTextFiles  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
 from lint.LintReport import LintReport, ReportContext  # noqa: E402
 
 kListScanRoot = ("Source", "Tools/ReflectionParser")
@@ -188,7 +189,7 @@ class RunRepeatedConstantsReport(LintReport):
             printSection("4b) hashed_string 리터럴 반복(2 파일 이상)", rows, args.top)
 
         print("\n  고르기 전에 **'같은 이유로 같은 값인가'** 를 먼저 물어보세요. 계약이면 한 곳으로, 우연이면 그대로 둡니다(docs/agents/Constants.md 상수 절).")
-        return 0  # 보고만 한다.
+        return ExitCode.Passed  # 보고만 한다.
 
 
 main = RunRepeatedConstantsReport.run

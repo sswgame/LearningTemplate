@@ -23,6 +23,8 @@ scenario.xml ──► AutomationScenario(<At> 시점 → 프레임) ──► A
 **단계.** `<At>` 아래의 요소 하나가 단계입니다. 단계 종류는 `AutomationStepRegistry` 에 등록되고, 엔진 단계도 같은 레지스트리에 있습니다. 실행기는 단계 이름으로 분기하지 않습니다.
 단계 함수는 실행기(`AutomationRunner`)가 아니라 좁은 문맥 인터페이스 `AutomationStepContext`(`AutomationStepContext.h`)를 받습니다 — 실패 적기 · 시계 잡기 · 산출물 경로 · 가상 입력 · 시나리오 끝내기만 담았습니다. 단계를 등록하는 쪽(UI · GameFramework · Editor · App)은 로그 게이트 · 보고 · 종료 코드 헤더(`AutomationRunner.h`)를 include 하지 않고, 시나리오를 끝낼 때도 종료 코드가 아니라 `AutomationStepEnd`(Pass · Fail · Skip)로 말합니다. 실행기 안 상태를 만지는 엔진 단계(`AutomationRunner.cpp`)만 문맥을 실행기로 되돌려 씁니다.
 
+**결과와 종료 코드.** 실행기는 끝난 까닭을 숫자 없는 열거형 `AutomationOutcome`(`AutomationOutcome.h`, 이름은 `getAutomationOutcomeName`)으로 돌려주고, 프로세스 종료 코드 표는 `AutomationExitCode.h` 의 `getAutomationExitCode` 한 곳에만 있습니다. 체인 · 세션 · 테스트는 결과 이름으로 말하고 정수로 캐스팅하지 않습니다. 시나리오의 Scratch · Launch · Load · `isolated` · `editor` · `requireForeground` 선언은 `AutomationScenario::getTestOptions()` 의 `AutomationTestOptions` 한 묶음으로만 나옵니다 — 폴더를 가를 때 이 묶음이 테스트 쪽으로 가는 경계입니다.
+
 **탐침.** 시나리오가 읽는 이름 붙은 값입니다. 씬 탐침은 인자 없이 수를 내고(`Farm.FarmerX`), 질의 탐침은 `target` 과 `key` 를 받아 수나 글을 냅니다(`AI.State target="FarmAutoFarmer"` → `Till`).
 글 값은 `is` 로 비교하고, 수 값은 `equals`, `near`, `atLeast`, `atMost` 로 비교합니다.
 

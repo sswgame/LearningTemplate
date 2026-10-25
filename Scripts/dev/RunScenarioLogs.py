@@ -38,10 +38,25 @@ from common.Paths import getProjectRoot  # noqa: E402
 kAllowListRelPath = "Resource/engine/automation/allowedlogs.json"
 #: 초안이 사람이 채울 칸에 넣는 글(C++ `AutomationLogPolicy::kPlaceholderText` 와 같다 — 이 글이 남으면 목록을 읽지 못한다).
 kPlaceholderText = "TODO"
+#: 종료 코드 표의 정본(C++ `getAutomationExitCode`) — 숫자를 이 스크립트에 다시 쓰지 않고 헤더의 `case AutomationOutcome::X: return N;` 줄에서 읽는다.
+kExitCodeHeaderRelPath = "Source/Engine/Automation/AutomationExitCode.h"
+_kExitCodeCaseRe = re.compile(r"case\s+AutomationOutcome::(\w+)\s*:\s*return\s+(\d+)\s*;")
+
+
+def readOutcomeExitCodes(headerPath: Path) -> dict[str, int]:
+    """`AutomationExitCode.h` 에서 결과 이름 → 종료 코드를 읽는다. 표를 못 읽으면 오류로 멈춘다(폴백 없음)."""
+    mapCode = {name: int(number) for name, number in _kExitCodeCaseRe.findall(headerPath.read_text(encoding="utf-8"))}
+    for name in ("Passed", "Unconfirmed", "UnhandledLog"):
+        if name not in mapCode:
+            sys.exit(f"{headerPath}: AutomationOutcome::{name} 의 종료 코드 줄을 찾지 못했다 — case 줄 모양이 바뀌었나")
+    return mapCode
+
+
+_mapOutcomeExitCode = readOutcomeExitCodes(getProjectRoot() / kExitCodeHeaderRelPath)
 #: 시나리오가 끝까지 돈 종료 코드 — 통과 · 미확정 · 처리하지 않은 로그. 그 밖(실패 · 읽기 오류 · 시간 초과)은 로그 게이트까지 가지 못해 맞은 id 를 모른다.
-kRanToEndExitCodes: tuple[int, ...] = (0, 14, 15)
-#: 처리하지 않은 로그로 끝난 시나리오의 종료 코드(C++ `AutomationResult::UnhandledLog`).
-kUnhandledLogExitCode = 15
+kRanToEndExitCodes: tuple[int, ...] = (_mapOutcomeExitCode["Passed"], _mapOutcomeExitCode["Unconfirmed"], _mapOutcomeExitCode["UnhandledLog"])
+#: 처리하지 않은 로그로 끝난 시나리오의 종료 코드(C++ `AutomationOutcome::UnhandledLog`).
+kUnhandledLogExitCode = _mapOutcomeExitCode["UnhandledLog"]
 #: `unhandledLogs` 줄의 id 부분 — `[Warning] [호출자] (id=영역.사건) 본문`. id 가 없는 줄은 `(no log id)` 라 맞지 않는다.
 _kUnhandledIdRe = re.compile(r"\(id=([A-Za-z0-9_.]+)\)")
 #: 보고를 찾을 폴더(저장소 기준) — 시나리오 실행의 작업 폴더가 `Bin` 이라 보고가 `Bin/Saved/Automation` 에 쌓인다.

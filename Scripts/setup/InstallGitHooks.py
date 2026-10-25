@@ -15,6 +15,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from common.Paths import getProjectRoot
+from common.ExitCode import ExitCode  # noqa: E402
 
 
 def installPreCommitHook(projectRoot: Path | None = None) -> bool:
@@ -94,8 +95,8 @@ def main(argv: list[str] | None = None) -> int:
     argparse.ArgumentParser(description="Git pre-commit 훅(PreCommitLint) · pre-push 훅(전체 빌드 증거)을 설치한다 — 인자 없음").parse_args(argv)
     if not installPreCommitHook() or not installPrePushHook():
         print("[InstallGitHooks] .git 디렉터리를 찾을 수 없습니다.", file=sys.stderr)
-        return 1
-    return 0
+        return ExitCode.Violation
+    return ExitCode.Passed
 
 
 if __name__ == "__main__":

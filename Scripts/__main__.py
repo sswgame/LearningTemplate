@@ -27,6 +27,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))   # Scripts — import 
 
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 from common.ScriptCatalog import readScriptSummaries  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
 
 
 @dataclass(frozen=True)
@@ -114,7 +115,7 @@ def printScriptList(listArgument: list[str]) -> int:
         listSummary = readScriptSummaries(Path(__file__).resolve().parent, folder)
     except FileNotFoundError as error:
         print(f"[Scripts] {error}", file=sys.stderr)
-        return 1
+        return ExitCode.Violation
     mapModuleToCommand = {command.modulePath: command.name for command in _kSubcommand}
     mapFolderToCommand = {f"lint.{folderName}": commandName for commandName, folderName in _kFolderCommand.items()}
     currentGroup = None
@@ -131,7 +132,7 @@ def printScriptList(listArgument: list[str]) -> int:
         else:
             usage = ""
         print(f"  {entry.relPath.rpartition('/')[2]:<36} {entry.summary}{usage}")
-    return 0
+    return ExitCode.Passed
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -149,7 +150,7 @@ def main(argv: list[str] | None = None) -> int:
     listArgument = list(sys.argv[1:] if argv is None else argv)
     if not listArgument:
         parser.print_help()
-        return 1
+        return ExitCode.Violation
     if listArgument[0] == "--list":
         return printScriptList(listArgument[1:])
 

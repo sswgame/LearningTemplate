@@ -25,6 +25,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
+from common.ExitCode import ExitCode  # noqa: E402
 
 _kHashLinePattern = re.compile(r"\[DestructionHash\] side=(server|client) id=(\d+) events=(\d+) hash=([0-9a-fA-F]{16})")
 
@@ -96,10 +97,10 @@ def main(argv: list[str]) -> int:
         listClient = [(path, parseHashLog(readLogInternal(path))) for path in arguments.clientLog]
     except (OSError, ValueError) as error:
         print(f"[CompareDestructionHashLogs] cannot read the logs: {error}")
-        return 2
+        return ExitCode.CheckInvalid
     if server.side != "server":
         print(f"[CompareDestructionHashLogs] {arguments.serverLog} has no server hash lines")
-        return 1
+        return ExitCode.Violation
     bSame = True
     for path, client in listClient:
         if client.side != "client":
@@ -111,7 +112,7 @@ def main(argv: list[str]) -> int:
         for problem in listProblem:
             print(f"  {problem}")
         bSame = bSame and not listProblem
-    return 0 if bSame else 1
+    return ExitCode.Passed if bSame else ExitCode.Violation
 
 
 if __name__ == "__main__":

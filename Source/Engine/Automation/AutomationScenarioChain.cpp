@@ -55,7 +55,7 @@ namespace sw
         _bKeepGoing  = bKeepGoing;
         _bBegun      = true;
         _bFinished   = _listPath.empty();
-        _finalResult = _listPath.empty() ? AutomationResult::Passed : AutomationResult::Running;
+        _finalResult = _listPath.empty() ? AutomationOutcome::Passed : AutomationOutcome::Running;
     }
 
     const string& AutomationScenarioChain::getCurrentPath() const
@@ -63,23 +63,23 @@ namespace sw
         return _stageIndex < _listPath.size() && _bFinished == false ? _listPath[_stageIndex] : AutomationScenarioChainInternal::s_emptyPath;
     }
 
-    bool AutomationScenarioChain::onStageEnded( AutomationResult result )
+    bool AutomationScenarioChain::onStageEnded( AutomationOutcome result )
     {
         if ( isActive() == false )
             return false;
         const bool bHasNext = _stageIndex + 1 < _listPath.size();
-        if ( result == AutomationResult::Unconfirmed )
+        if ( result == AutomationOutcome::Unconfirmed )
         {
             ++_unconfirmedResultCount; // 단언은 맞았고 어림값 문턱이 들었을 뿐이다 — 실패가 아니고 뒤 단계는 돈다
         }
-        else if ( _bKeepGoing && result == AutomationResult::Skipped )
+        else if ( _bKeepGoing && result == AutomationOutcome::Skipped )
         {
             ++_skippedResultCount; // 이 단계만 못 돈 것이다 — 실패가 아니고 뒤 단계는 돈다
         }
-        else if ( result != AutomationResult::Passed )
+        else if ( result != AutomationOutcome::Passed )
         {
             ++_failedStageCount;
-            if ( _firstNonPassResult == AutomationResult::Passed )
+            if ( _firstNonPassResult == AutomationOutcome::Passed )
                 _firstNonPassResult = result;
             if ( _bKeepGoing == false || bHasNext == false )
             {
@@ -96,18 +96,18 @@ namespace sw
         }
         _bFinished = true;
         // 실패가 없고 모든 단계가 건너뜀이면 체인도 건너뜀이다(돌린 것이 하나도 없다). 미확정 단계가 하나라도 있으면 체인도 미확정이다.
-        _finalResult = _firstNonPassResult != AutomationResult::Passed ? _firstNonPassResult
-                     : _skippedResultCount == _listPath.size()         ? AutomationResult::Skipped
-                     : _unconfirmedResultCount > 0                     ? AutomationResult::Unconfirmed
-                                                                       : AutomationResult::Passed;
+        _finalResult = _firstNonPassResult != AutomationOutcome::Passed ? _firstNonPassResult
+                     : _skippedResultCount == _listPath.size()          ? AutomationOutcome::Skipped
+                     : _unconfirmedResultCount > 0                      ? AutomationOutcome::Unconfirmed
+                                                                        : AutomationOutcome::Passed;
         return false;
     }
 
-    string AutomationScenarioChain::describeStageEnd( size_t stageIndex, AutomationResult result, string_view scenarioName ) const
+    string AutomationScenarioChain::describeStageEnd( size_t stageIndex, AutomationOutcome result, string_view scenarioName ) const
     {
-        string text = "chain stage " + to_string( stageIndex + 1 ) + "/" + to_string( _listPath.size() ) + " " + AutomationRunner::getResultName( result ) + " (" +
+        string text = "chain stage " + to_string( stageIndex + 1 ) + "/" + to_string( _listPath.size() ) + " " + getAutomationOutcomeName( result ) + " (" +
                       string( scenarioName ) + ")";
-        if ( result != AutomationResult::Passed && _skippedStageCount > 0 )
+        if ( result != AutomationOutcome::Passed && _skippedStageCount > 0 )
             text += " - " + to_string( _skippedStageCount ) + " later stage(s) skipped";
         return text;
     }

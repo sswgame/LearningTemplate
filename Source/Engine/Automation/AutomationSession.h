@@ -10,6 +10,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/ISubsystem.h"
 
+#include "Engine/Automation/AutomationOutcome.h"
 #include "Engine/Automation/ScenarioRecorder.h"
 #include "Engine/Utility/EngineFrameObserver.h"
 
@@ -84,8 +85,8 @@ namespace sw
     private:
         /** @brief 체인의 지금 단계 시나리오를 새 실행기로 시작합니다. */
         void startStage( uint32 completedScreenshotCount );
-        /** @brief 단계 하나가 끝났을 때 부릅니다(`AutomationResult` 값). 통과했고 다음 단계가 있으면 그것을 시작하고 `kRunning`, 아니면 체인의 종료 코드입니다. */
-        [[nodiscard]] int32 onStageEnded( int32 resultCode, uint32 completedScreenshotCount );
+        /** @brief 단계 하나가 끝났을 때 부릅니다(`AutomationOutcome`). 통과했고 다음 단계가 있으면 그것을 시작하고 `kRunning`, 아니면 체인의 종료 코드(`getAutomationExitCode`)입니다. */
+        [[nodiscard]] int32 onStageEnded( AutomationOutcome result, uint32 completedScreenshotCount );
         /** @brief 녹화를 시작할 프레임인지 보고(활성 씬이 플레이 중이고 시작 차단이 없다) 시작합니다. */
         void startRecordingWhenReady();
         /** @brief 녹화를 멈추고 검사점을 읽어 파일을 씁니다. 녹화 중이 아니면 아무것도 하지 않습니다. */

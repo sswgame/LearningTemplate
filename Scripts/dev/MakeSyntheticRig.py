@@ -50,6 +50,7 @@ from xml.sax.saxutils import quoteattr
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 from common.GltfBufferWriter import BufferWriter
 from common.Paths import getProjectRoot
+from common.ExitCode import ExitCode  # noqa: E402
 
 #: 위상 이름 — 인자 `--topology` 가 고른다.
 kTopologies = ("biped", "quadruped", "multileg", "serpent")
@@ -593,16 +594,16 @@ def main(argv: list[str] | None = None) -> int:
                 outPath = outDir / (makeRepresentativeName(topology, bones) + ".glb")
                 glbSize, rigSize = writeRig(outPath, makeRepresentativeOptions(topology, bones))
                 print(f"wrote {outPath} ({glbSize} bytes) + .rig.xml ({rigSize} bytes)")
-            return 0
+            return ExitCode.Passed
         if args.topology is None or args.bones is None or args.out is None:
             raise ValueError("--topology, --bones and --out are required (or --representatives)")
         options = RigOptions(args.topology, args.bones, args.morphs, args.clips, args.clip_seconds, args.vertices_per_bone, args.seed)
         glbSize, rigSize = writeRig(args.out, options)
         print(f"wrote {args.out} ({glbSize} bytes) + .rig.xml ({rigSize} bytes)")
-        return 0
+        return ExitCode.Passed
     except ValueError as error:
         print(f"error: {error}", file=sys.stderr)
-        return 2
+        return ExitCode.CheckInvalid
 
 
 if __name__ == "__main__":

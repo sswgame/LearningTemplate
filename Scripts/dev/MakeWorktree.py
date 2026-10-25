@@ -30,6 +30,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 from common.Host import runGit  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
 from common.Worktree import (WorktreeOwner, createDirectoryLink, findMainRoot, getWorktreeGitDirectory, kOwnerPidEnvironment,  # noqa: E402
                              kOwnerSessionEnvironment, kWorktreeFolderName, listDifferentTriplets, listSharedLinks, makePlan,
                              resolveOwnerProcessId, writeWorktreeOwner)
@@ -55,7 +56,7 @@ def main(argv: list[str] | None = None) -> int:
                              "주인 기록이 없으면 다른 세션이 이 워크트리를 쓰는 중인지 알 수 없다")
     except (RuntimeError, ValueError) as error:
         print(f"[MakeWorktree] {error}", file=sys.stderr)
-        return 2
+        return ExitCode.CheckInvalid
     owner = WorktreeOwner(owner=args.owner or args.name, pid=ownerPid, session=os.environ.get(kOwnerSessionEnvironment, ""),
                           startTime=time.time())
 
@@ -64,10 +65,10 @@ def main(argv: list[str] | None = None) -> int:
     for linkPath, targetPath in listLink:
         print(f"  링크 {linkPath.relative_to(plan.worktreePath).as_posix()} -> {targetPath}")
     if args.dry_run:
-        return 0
+        return ExitCode.Passed
     if plan.worktreePath.exists():
         print(f"[MakeWorktree] 이미 있습니다: {plan.worktreePath}", file=sys.stderr)
-        return 1
+        return ExitCode.Violation
 
     if plan.base.startswith("origin/"):
         fetched = runGit(["fetch", "origin"], cwd=mainRoot)
@@ -76,7 +77,7 @@ def main(argv: list[str] | None = None) -> int:
     added = runGit(["worktree", "add", str(plan.worktreePath), "-b", plan.branch, plan.base], cwd=mainRoot)
     if not added.bSucceeded:
         print(f"[MakeWorktree] git worktree add 가 실패했습니다.\n{added.output.strip()}", file=sys.stderr)
-        return 1
+        return ExitCode.Violation
     writeWorktreeOwner(getWorktreeGitDirectory(plan.worktreePath), owner)
     print(f"  주인 {owner.owner} (pid {owner.pid}, 세션 {owner.session or '없음'})")
 
@@ -86,7 +87,7 @@ def main(argv: list[str] | None = None) -> int:
         print("[MakeWorktree] 경고: vcpkg 트리플릿 파일의 바이트가 main 과 다릅니다(줄끝) — 두 트리가 서로의 vcpkg 스탬프를 어긋남으로 봅니다.\n"
               "  그 파일을 지우고 `git checkout -- <파일>` 로 다시 받으세요: " + ", ".join(listDifferent), file=sys.stderr)
     print(f"[MakeWorktree] 완료: {plan.worktreePath}")
-    return 0 if bAllLinked else 1
+    return ExitCode.Passed if bAllLinked else ExitCode.Violation
 
 
 if __name__ == "__main__":

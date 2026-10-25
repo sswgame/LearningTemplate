@@ -37,8 +37,8 @@ SW_TEST_CASE( AutomationScratchTest, FolderDeclarationsAreChecked )
     sw::AutomationScenario scenario;
     sw::string             error;
     SW_ASSERT_TRUE( scenario.parse( "<Scenario name=\"s\"><Scratch from=\"engine/automation/editor/assetmanage\" as=\"scratch/s\"/><At frame=\"1\"><Pass/></At></Scenario>", "scratchOk", error ) );
-    SW_ASSERT_EQUAL( size_t{ 1 }, scenario.getScratchFolders().size() );
-    SW_EXPECT_TRUE( scenario.getScratchFolders()[0]._scratchID == "scratch/s" );
+    SW_ASSERT_EQUAL( size_t{ 1 }, scenario.getTestOptions()._listScratchFolder.size() );
+    SW_EXPECT_TRUE( scenario.getTestOptions()._listScratchFolder[0]._scratchID == "scratch/s" );
     SW_EXPECT_FALSE( scenario.parse( "<Scenario name=\"s\"><Scratch from=\"engine/automation/editor/assetmanage\" as=\"engine/s\"/></Scenario>", "scratchBad", error ) );
 }
 
@@ -100,8 +100,8 @@ SW_TEST_CASE( AutomationScratchTest, MigratedEditorScenariosNameTheSourceFolderO
         sw::AutomationScenario scenario;
         sw::string             error;
         SW_ASSERT_TRUE_MSG( scenario.parse( text, migrated._pScenario, error ), error.c_str() );
-        SW_ASSERT_EQUAL( size_t{ 1 }, scenario.getScratchFolders().size() );
-        SW_EXPECT_TRUE( scenario.getScratchFolders()[0]._sourceID == migrated._pSourceFolder );
+        SW_ASSERT_EQUAL( size_t{ 1 }, scenario.getTestOptions()._listScratchFolder.size() );
+        SW_EXPECT_TRUE( scenario.getTestOptions()._listScratchFolder[0]._sourceID == migrated._pSourceFolder );
 
         // 주석을 뺀 글에서 원본 폴더는 `<Scratch from>` 에 한 번뿐이다.
         sw::string body = text;
