@@ -22,7 +22,7 @@ namespace
 SW_TEST_CASE( RHIStagingRingTest, AllocatesAlignedSpansAndWrapsAfterTheFrontCompletes )
 {
     sw::RHIStagingAllocator ring;
-    ring.initialize( 1024, 256 );
+    ring.initialize( 1024, 256, 0 );
 
     sw::RHIStagingSpan a{};
     sw::RHIStagingSpan b{};
@@ -67,7 +67,7 @@ SW_TEST_CASE( RHIStagingRingTest, AllocatesAlignedSpansAndWrapsAfterTheFrontComp
 SW_TEST_CASE( RHIStagingRingTest, ReturnsEachSpanWhenItsOwnSerialCompletes )
 {
     sw::RHIStagingAllocator ring;
-    ring.initialize( 512, 16 );
+    ring.initialize( 512, 16, 0 );
 
     sw::RHIStagingSpan first{};
     sw::RHIStagingSpan second{};
@@ -109,7 +109,7 @@ SW_TEST_CASE( RHIStagingRingTest, ReturnsEachSpanWhenItsOwnSerialCompletes )
 SW_TEST_CASE( RHIStagingRingTest, AnUntakenReadbackPinsOnlyItsOwnBytes )
 {
     sw::RHIStagingAllocator ring;
-    ring.initialize( 1024, 256 );
+    ring.initialize( 1024, 256, 0 );
 
     sw::RHIStagingSpan held{};
     SW_ASSERT_TRUE( isAllocated( ring.allocate( 256, 0, held ) ) ); // 가져가지 않고 쥐는 읽기
@@ -143,7 +143,7 @@ SW_TEST_CASE( RHIStagingRingTest, AnUntakenReadbackPinsOnlyItsOwnBytes )
 SW_TEST_CASE( RHIStagingRingTest, ReadbackSpansReturnWhenTakenOrWhenTheDiscardedReadFinishes )
 {
     sw::RHIStagingAllocator ring;
-    ring.initialize( 512, 256 );
+    ring.initialize( 512, 256, 0 );
 
     sw::RHIStagingSpan taken{};
     sw::RHIStagingSpan discarded{};
@@ -161,4 +161,72 @@ SW_TEST_CASE( RHIStagingRingTest, ReadbackSpansReturnWhenTakenOrWhenTheDiscarded
 
     ring.free( taken ); // CPU 가 결과를 복사했다
     SW_EXPECT_EQUAL( static_cast<uint32>( 0 ), ring.getLiveCount() );
+}
+
+/**
+ * @brief [RHIStagingRingTest] 링보다 큰 한 장은 링이 비었을 때만 단독 구간으로 받고, 그동안 다른 요청은 Full, 단독 상한을 넘으면 TooLarge 다
+ * @details 링이 비지 않아 Full 을 받은 단독 요청은 예약을 남겨 새 링 요청도 Full 로 돌린다(작은 업로드가 끊이지 않아 큰 한 장이 굶지 않게).
+ *          단독 구간은 링 구간과 같이 시리얼이 워터마크를 지나면 돌아오고, 돌아오면 링 요청을 다시 받는다.
+ */
+SW_TEST_CASE( RHIStagingRingTest, ASingleRequestLargerThanTheRingWaitsForAnEmptyRing )
+{
+    constexpr int64         kLongReservationMicroseconds = 60ll * 1000 * 1000; // 테스트가 도는 동안 끝나지 않는 예약
+    sw::RHIStagingAllocator ring;
+    ring.initialize( 1024, 256, 4096, kLongReservationMicroseconds );
+
+    sw::RHIStagingSpan small{};
+    sw::RHIStagingSpan probe{};
+    SW_ASSERT_TRUE( isAllocated( ring.allocate( 256, 0, small ) ) );
+    SW_EXPECT_TRUE( ring.allocate( 2048, 0, probe ) == sw::RHIStagingAllocateResult::Full );     // 진행 중인 구간이 있다 — 기다리면 받는다
+    SW_EXPECT_TRUE( ring.allocate( 16, 0, probe ) == sw::RHIStagingAllocateResult::Full );       // 단독 요청이 기다린다 — 자리가 있어도 새 링 요청은 받지 않는다
+    SW_EXPECT_TRUE( ring.allocate( 4097, 0, probe ) == sw::RHIStagingAllocateResult::TooLarge ); // 단독 상한을 넘으면 기다려도 못 받는다
+
+    ring.markSubmitted( small, 1 );
+    sw::RHIStagingSpan solo{};
+    SW_ASSERT_TRUE( isAllocated( ring.allocate( 2048, 1, solo ) ) ); // 워터마크 1 — 링이 비었다
+    SW_EXPECT_TRUE( solo._bSolo != SW_FALSE );
+    SW_EXPECT_EQUAL( static_cast<uint64>( 0 ), solo._offsetBytes );
+    SW_EXPECT_EQUAL( static_cast<uint64>( 2048 ), solo._sizeBytes );
+    SW_EXPECT_TRUE( ring.hasLiveSolo() );
+    SW_EXPECT_EQUAL( static_cast<uint32>( 1 ), ring.getLiveCount() );
+
+    SW_EXPECT_TRUE( ring.allocate( 16, 1, probe ) == sw::RHIStagingAllocateResult::Full );   // 단독 구간이 사는 동안은 링 요청도
+    SW_EXPECT_TRUE( ring.allocate( 4096, 1, probe ) == sw::RHIStagingAllocateResult::Full ); // 다른 단독 요청도 받지 않는다 — 최고점은 max(링, 한 장)
+
+    ring.markSubmitted( solo, 2 );
+    ring.freeCompleted( 1 );
+    SW_EXPECT_TRUE( ring.hasLiveSolo() );                             // 아직 GPU 가 읽는다
+    SW_ASSERT_TRUE( isAllocated( ring.allocate( 1024, 2, probe ) ) ); // 워터마크 2 — 단독 구간이 돌아오고 링 전체를 다시 받는다(예약은 단독 구간을 내줄 때 끝났다)
+    SW_EXPECT_TRUE( probe._bSolo == SW_FALSE );
+    SW_EXPECT_TRUE( ring.hasLiveSolo() == false );
+    SW_EXPECT_EQUAL( static_cast<uint32>( 1 ), ring.getLiveCount() );
+}
+
+/**
+ * @brief [RHIStagingRingTest] 다시 오지 않는 단독 요청의 예약은 끝나 링 요청을 다시 받고, `free` 한 단독 구간은 바로 돌아오며, 단독 상한 0 이면 링보다 큰 한 장은 TooLarge 다
+ * @details 예약 시간 0 은 포기한 단독 요청이 예약 시간을 다 쓴 뒤와 같다. 되읽기는 단독 구간도 CPU 가 가져갈 때(`free`) 돌아온다.
+ */
+SW_TEST_CASE( RHIStagingRingTest, AnAbandonedSingleRequestStopsBlockingTheRing )
+{
+    sw::RHIStagingAllocator ring;
+    ring.initialize( 1024, 256, 4096, 0 );
+
+    sw::RHIStagingSpan held{};
+    sw::RHIStagingSpan probe{};
+    SW_ASSERT_TRUE( isAllocated( ring.allocate( 256, 0, held ) ) ); // 가져가지 않은 되읽기 — 링이 비지 않는다
+    SW_EXPECT_TRUE( ring.allocate( 2048, 0, probe ) == sw::RHIStagingAllocateResult::Full );
+    SW_ASSERT_TRUE( isAllocated( ring.allocate( 256, 0, probe ) ) ); // 예약이 끝났다 — 단독 요청이 다시 오지 않으면 링 요청이 막히지 않는다
+    ring.free( probe );
+    ring.free( held );
+
+    sw::RHIStagingSpan solo{};
+    SW_ASSERT_TRUE( isAllocated( ring.allocate( 3000, 0, solo ) ) );
+    ring.free( solo ); // 가져간 되읽기 — 시리얼 없이 바로 돌아온다
+    SW_EXPECT_TRUE( ring.hasLiveSolo() == false );
+    SW_EXPECT_EQUAL( static_cast<uint32>( 0 ), ring.getLiveCount() );
+    SW_ASSERT_TRUE( isAllocated( ring.allocate( 1024, 0, probe ) ) );
+    ring.free( probe );
+
+    ring.initialize( 1024, 256, 0 );
+    SW_EXPECT_TRUE( ring.allocate( 1025, 0, probe ) == sw::RHIStagingAllocateResult::TooLarge ); // 단독 구간을 받지 않는 장부
 }

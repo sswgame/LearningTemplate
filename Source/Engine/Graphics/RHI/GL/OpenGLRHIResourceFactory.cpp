@@ -471,7 +471,8 @@ namespace sw
         }
 
         // 밉은 `desc._pData` 안에 빈틈없이 이어져 있다(resolveTextureUploadMips) — 링에는 마지막 밉의 끝까지 한 번에 복사하고, 밉마다 링 오프셋으로 올린다.
-        // 링 한 바퀴보다 큰 업로드는 기다려도 못 받으므로 Rejected 다(allocateStagingSpan 이 이유와 설정 이름을 로그로 남긴다). 나눠 올리는 두 번째 경로는 두지 않는다.
+        // 링보다 큰 업로드는 링이 빌 때 혼자 일회성 버퍼(단독 구간)로 들어가고, 단독 상한까지 넘으면 Rejected 다(allocateStagingSpan 이 이유와 설정 이름을 로그로 남긴다).
+        // 나눠 올리는 경로는 두지 않는다 — 앞 조각의 GPU 완료를 제출 안에서 기다려야 한다.
         const RHITextureMipSpan& lastMip     = arrMip[mipCount - 1];
         const uint64             stagedBytes = static_cast<uint64>( lastMip._offsetBytes ) + lastMip._sizeBytes;
         RHIStagingSpan           staging{};
@@ -479,7 +480,7 @@ namespace sw
         if ( allocation != RHISubmitResult::Accepted )
             return allocation == RHISubmitResult::Busy ? RHITransferSubmit::busy() : RHITransferSubmit::rejected();
         // 복사는 컨텍스트 밖에서 한다(계약 1: 반환 전에 소스를 복사한다). 컨텍스트를 빌리는 시간은 PBO 바인딩, 텍스처 명령, 펜스뿐이다.
-        Memory::copy( _pDevice->_pStagingRingMapped + staging._offsetBytes, desc._pData, static_cast<size_t>( stagedBytes ) );
+        Memory::copy( _pDevice->getStagingBytes( staging ), desc._pData, static_cast<size_t>( stagedBytes ) );
 
         // 컨텍스트를 빌려 올린다(어느 스레드에서나 제출할 수 있다 — 계약 4). 렌더 스레드가 프레임 끝까지 쥐고 있으면 기다리다 못 얻을 수 있고, 그때는 나중에 다시 시도하면 된다.
         ScopedOpenGLContext contextScope( _pDevice );
@@ -494,7 +495,7 @@ namespace sw
         const GLenum glFormat    = toGlFormat( pRecord->_format );
         const GLenum glType      = toGlType( pRecord->_format );
         {
-            const ScopedStagingUnpack unpack( _pDevice->_stagingRingBuffer );
+            const ScopedStagingUnpack unpack( _pDevice->getStagingBuffer( staging ) );
             if ( pRecord->_target == GL_TEXTURE_2D )
             {
                 glBindTexture( GL_TEXTURE_2D, pRecord->_texture );
@@ -562,7 +563,7 @@ namespace sw
         const RHISubmitResult allocation = _pDevice->allocateStagingSpan( stagedBytes, "submitTextureRegionUpload", staging );
         if ( allocation != RHISubmitResult::Accepted )
             return allocation == RHISubmitResult::Busy ? RHITransferSubmit::busy() : RHITransferSubmit::rejected();
-        Memory::copy( _pDevice->_pStagingRingMapped + staging._offsetBytes, desc._pData, static_cast<size_t>( stagedBytes ) );
+        Memory::copy( _pDevice->getStagingBytes( staging ), desc._pData, static_cast<size_t>( stagedBytes ) );
 
         ScopedOpenGLContext contextScope( _pDevice );
         if ( _pDevice->isGraphicsContextCurrent() == false )
@@ -574,7 +575,7 @@ namespace sw
         const GLenum glFormat = toGlFormat( pRecord->_format );
         const GLenum glType   = toGlType( pRecord->_format );
         {
-            const ScopedStagingUnpack unpack( _pDevice->_stagingRingBuffer );
+            const ScopedStagingUnpack unpack( _pDevice->getStagingBuffer( staging ) );
             const void*               pPixels = ScopedStagingUnpack::toPixelOffset( staging._offsetBytes );
             if ( pRecord->_target == GL_TEXTURE_2D )
             {
@@ -623,7 +624,7 @@ namespace sw
         }
         // 펜스가 지났으므로 GPU 가 구간에 쓴 바이트가 COHERENT 매핑에 보인다. 복사는 컨텍스트 밖에서 하고, 다 읽은 구간을 링에 돌려준다.
         outBytes.resize( static_cast<size_t>( span._sizeBytes ) );
-        Memory::copy( outBytes.data(), _pDevice->_pReadbackRingMapped + span._offsetBytes, static_cast<size_t>( span._sizeBytes ) );
+        Memory::copy( outBytes.data(), _pDevice->getReadbackBytes( span ), static_cast<size_t>( span._sizeBytes ) );
         _pDevice->_readbackRing.free( span );
         return true;
     }
@@ -670,7 +671,8 @@ namespace sw
             return RHITransferSubmit::rejected();
         }
 
-        // 결과는 되읽기 링 구간으로 받는다. 링보다 큰 읽기 하나는 Rejected, 앞선 되읽기를 아직 가져가지 않아 차 있으면 Busy 다(allocateReadbackSpan 이 이유를 로그로 남긴다).
+        // 결과는 되읽기 링 구간으로 받는다. 링보다 큰 읽기 하나는 링이 빌 때 혼자 일회성 버퍼로, 단독 상한까지 넘으면 Rejected, 앞선 되읽기를 아직 가져가지 않아 차 있으면 Busy 다
+        // (allocateReadbackSpan 이 이유를 로그로 남긴다).
         RHIStagingSpan        readback{};
         const RHISubmitResult allocation = _pDevice->allocateReadbackSpan( outLayout._sizeBytes, readback );
         if ( allocation != RHISubmitResult::Accepted )
@@ -686,7 +688,7 @@ namespace sw
         // 컨텍스트를 빌린 동안에는 읽기 명령(링 PBO 오프셋)과 펜스만 낸다 — GPU 가 끝나기를 기다리지 않는다. 앞서 낸 명령 뒤에 실행되므로 앞서 제출된 쓰기가 보인다(계약 3).
         // 바이트는 펜스가 지난 뒤 takeTextureReadback 이 컨텍스트 밖에서 복사한다. 2D 도 DSA 3D 창(z = 0)으로 읽어 텍스처 바인딩을 건드리지 않는다.
         {
-            const ScopedStagingPack pack( _pDevice->_readbackRingBuffer );
+            const ScopedStagingPack pack( _pDevice->getReadbackBuffer( readback ) );
             void*                   pPixels     = ScopedStagingPack::toPixelOffset( readback._offsetBytes );
             const GLsizei           bufferBytes = static_cast<GLsizei>( readback._sizeBytes );
             if ( isRHIFormatBlockCompressed( pRecord->_format ) )

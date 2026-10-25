@@ -319,6 +319,9 @@ namespace sw
         uint64 _stagingRingBytes{ 0 };
         /// @brief 텍스처 되읽기 링의 용량(바이트)입니다(`gv_rhiReadbackRingMegabytes`). 링을 쓰는 백엔드(지금은 GL)가 읽고, 0 이면 그 백엔드가 초기화를 거절합니다. 리플렉션하지 않는다.
         uint64 _readbackRingBytes{ 0 };
+        /// @brief 링보다 큰 전송 한 장을 링 밖의 일회성 버퍼로 받는 상한(바이트)입니다(`gv_rhiStagingSingleMaxMegabytes`). 링을 쓰는 백엔드(지금은 GL)가 업로드 · 되읽기 링에 같이 쓰고,
+        ///        0 이면 링보다 큰 한 장은 `Rejected` 입니다. 리플렉션하지 않는다.
+        uint64 _stagingSoloMaxBytes{ 0 };
     };
 } // namespace sw
 

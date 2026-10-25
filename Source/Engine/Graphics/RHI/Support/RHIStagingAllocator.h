@@ -15,8 +15,9 @@ namespace sw
     /** @brief 링에서 잡은 구간 하나입니다. `RHIStagingAllocator::allocate` 가 채우고, 같은 값을 `markSubmitted` 나 `free` 에 한 번만 돌려줍니다. */
     struct RHIStagingSpan
     {
-        uint64 _offsetBytes{ 0 }; ///< 링 시작에서의 오프셋. 링의 정렬 단위의 배수다
-        uint64 _sizeBytes{ 0 };   ///< 요청한 크기. 0 이면 잡지 못한 구간이다
+        uint64 _offsetBytes{ 0 };  ///< 링 시작에서의 오프셋. 링의 정렬 단위의 배수다. 단독 구간은 0 이다
+        uint64 _sizeBytes{ 0 };    ///< 요청한 크기. 0 이면 잡지 못한 구간이다
+        uint8  _bSolo{ SW_FALSE }; ///< 링보다 큰 요청이 링 밖에 받은 단독 구간이다 — 백엔드는 이 구간만을 위해 만든 버퍼(크기 `_sizeBytes`)를 쓴다
     };
 } // namespace sw
 
@@ -25,9 +26,9 @@ namespace sw
     /** @brief `RHIStagingAllocator::allocate` 의 결과입니다. 제출 함수가 `RHISubmitResult` 로 옮깁니다(계약 2). */
     enum class RHIStagingAllocateResult : uint8
     {
-        Allocated, ///< 구간을 잡았다
-        Full,      ///< 지금은 자리가 없지만 앞선 전송이 끝나면 생긴다 → `Busy`
-        TooLarge,  ///< 링 용량보다 커서 기다려도 못 받는다(또는 0 바이트) → `Rejected`
+        Allocated, ///< 구간을 잡았다(`RHIStagingSpan::_bSolo` 면 링 밖의 단독 구간)
+        Full,      ///< 지금은 자리가 없지만 앞선 전송이 끝나면 생긴다(단독 구간이 있거나, 단독 요청이 링이 비기를 기다린다) → `Busy`
+        TooLarge,  ///< 링 용량과 단독 상한을 모두 넘어 기다려도 못 받는다(또는 0 바이트) → `Rejected`
     };
 } // namespace sw
 
@@ -42,28 +43,41 @@ namespace sw
      *          그 티켓을 쥔 스레드의 다음 읽기(`readbackTexture2DAndWait`)가 영원히 `Busy` 다. 그래도 쥔 구간들이 남은 자리를 다 차지하면 `Full`(`Busy`)이다.
      *          빈 자리는 정렬 단위를 한 칸으로 하는 `SpanAllocator`(가장 잘 맞는 빈 구간, 이웃 합치기, 시리얼을 번호로 쓰는 미뤄 돌려받기)가 쥔다.
      *          자기 뮤텍스는 잎(leaf)이라 백엔드의 어느 락 안에서나 부른다. 할당과 복사는 GPU 컨텍스트 밖에서 하고, 시리얼은 제출 뒤에 `markSubmitted` 로 붙인다.
+     *
+     *          **링보다 큰 요청 한 장(단독 구간).** `initialize` 의 단독 상한이 0 보다 크면, 링 용량보다 크고 상한 이하인 요청은 링에 산 구간이 하나도 없을 때만
+     *          링 밖의 단독 구간(`_bSolo`)으로 받는다. 백엔드는 그 크기의 일회성 버퍼를 만들어 쓰고, 장부가 구간을 돌려받은 뒤 지운다. 단독 구간이 살아 있는 동안
+     *          다른 요청은 모두 `Full` 이다 — 그래서 스테이징 메모리 최고점은 max(링 용량, 가장 큰 한 장)이다. 상한을 넘으면 `TooLarge` 다.
+     *          링이 비지 않아 `Full` 을 받은 단독 요청은 예약을 남겨, 예약 시간(`soloReservationMicroseconds`) 동안 새 링 요청도 `Full` 로 돌려 링이 비게 한다
+     *          (작은 업로드가 끊이지 않아 큰 한 장이 굶는 것을 막는다). 단독 요청이 다시 올 때마다 예약이 연장되고, 다시 오지 않으면(호출자가 포기) 예약이 끝나 링 요청을 다시 받는다.
      */
     class SW_API RHIStagingAllocator
     {
     public:
+        /// @brief 단독 요청의 예약 시간 기본값(마이크로초)입니다. 측정값이 아니라 추정이다: 프레임마다 다시 내는 호출자(10 fps 이상)가 끊김 없이 예약을 이어 가고,
+        /// 포기한 요청이 링 요청을 막는 시간은 짧게 둔다.
+        static constexpr int64 kSoloReservationMicroseconds = 250 * 1000;
+
         RHIStagingAllocator();
 
         RHIStagingAllocator( const RHIStagingAllocator& )            = delete;
         RHIStagingAllocator& operator=( const RHIStagingAllocator& ) = delete;
 
         /**
-         * @brief 용량과 정렬 단위를 정하고 장부를 비웁니다.
+         * @brief 용량과 정렬 단위, 단독 구간 규칙을 정하고 장부를 비웁니다.
          * @param capacityBytes 링 전체 크기입니다. 정렬 단위의 배수로 내려 씁니다. 0 이면 모든 할당이 `TooLarge` 입니다.
          * @param alignmentBytes 구간 시작 오프셋의 정렬 단위이자 장부의 한 칸입니다. 2 의 거듭제곱이어야 하고, 칸 수(`capacityBytes / alignmentBytes`)는 uint32 에 담겨야 합니다.
+         * @param soloMaxBytes 링보다 큰 요청 한 장을 단독 구간으로 받을 상한입니다. 0 이면 단독 구간을 받지 않는다(백엔드가 일회성 버퍼를 만들 수 없을 때).
+         * @param soloReservationMicroseconds `Full` 을 받은 단독 요청이 링 요청을 막는 시간입니다. 0 이면 예약하지 않는다.
          */
-        void initialize( uint64 capacityBytes, uint64 alignmentBytes );
+        void initialize( uint64 capacityBytes, uint64 alignmentBytes, uint64 soloMaxBytes, int64 soloReservationMicroseconds = kSoloReservationMicroseconds );
         /** @brief 장부를 비우고 용량을 0 으로 되돌립니다. 링 메모리를 놓기 전에 부릅니다. */
         void shutdown();
 
         /**
          * @brief @p sizeBytes 를 담을 구간을 잡습니다. 먼저 @p completedSerial 이하로 끝난 구간을 모두 돌려받습니다.
          * @param completedSerial 전송 완료 워터마크입니다(`RHITransferSerials::getWatermark`).
-         * @return `Allocated` 면 @p outSpan 이 유효합니다. `Full` 과 `TooLarge` 면 @p outSpan 은 빈 구간입니다.
+         * @return `Allocated` 면 @p outSpan 이 유효합니다(링보다 크면 단독 구간). `Full` 과 `TooLarge` 면 @p outSpan 은 빈 구간입니다.
+         *         단독 구간도 링 구간과 같이 `markSubmitted` 나 `free` 로 한 번 돌려줍니다.
          */
         [[nodiscard]] RHIStagingAllocateResult allocate( uint64 sizeBytes, uint64 completedSerial, RHIStagingSpan& outSpan );
 
@@ -79,21 +93,32 @@ namespace sw
         /** @brief @p completedSerial 이하로 끝난 구간을 모두 돌려받습니다. 기다리지 않습니다. */
         void freeCompleted( uint64 completedSerial );
 
-        /** @brief 쓸 수 있는 용량입니다(정렬 단위의 배수로 내린 값). 이보다 큰 할당은 `TooLarge` 입니다. */
+        /** @brief 링에 쓸 수 있는 용량입니다(정렬 단위의 배수로 내린 값). 이보다 큰 할당은 단독 구간이거나 `TooLarge` 입니다. */
         [[nodiscard]] uint64 getCapacityBytes() const;
-        /** @brief 아직 돌려받지 않은 구간 수입니다(시리얼을 붙였지만 워터마크가 아직 지나지 않은 구간 포함). */
+        /** @brief 단독 구간 한 장의 상한입니다. 0 이면 단독 구간을 받지 않습니다. */
+        [[nodiscard]] uint64 getSoloMaxBytes() const;
+        /** @brief 아직 돌려받지 않은 구간 수입니다(시리얼을 붙였지만 워터마크가 아직 지나지 않은 구간과 단독 구간 포함). */
         [[nodiscard]] uint32 getLiveCount() const;
+        /** @brief 단독 구간을 아직 돌려받지 않았는지 묻습니다. 거짓이면 백엔드가 단독 구간의 버퍼를 지워도 됩니다(먼저 `freeCompleted` 로 끝난 구간을 돌려받는다). */
+        [[nodiscard]] bool hasLiveSolo() const;
 
     private:
         /** @brief 바이트 크기를 장부의 칸 수로 올림합니다. */
         [[nodiscard]] uint32 toSlotCount( uint64 sizeBytes ) const;
         /** @brief `_mutex` 를 쥔 채 부릅니다. */
         void freeCompletedLocked( uint64 completedSerial );
+        /** @brief 단독 구간을 돌려받습니다. `_mutex` 를 쥔 채 부릅니다. */
+        void releaseSoloLocked();
 
         mutable mutex _mutex;
         SpanAllocator _slots; ///< 한 칸 = `_alignmentBytes`. 시리얼을 붙인 구간은 시리얼을 번호로 미뤄 돌려받는다
         uint64        _capacityBytes;
         uint64        _alignmentBytes;
+        uint64        _soloMaxBytes;                  ///< 단독 구간 한 장의 상한. 0 이면 단독 구간을 받지 않는다
+        uint64        _soloSizeBytes;                 ///< 살아 있는 단독 구간의 크기. 0 이면 없다
+        uint64        _soloSerial;                    ///< 단독 구간에 붙인 시리얼. 0 이면 아직 붙이지 않았다
+        int64         _soloReservationMicroseconds;   ///< `Full` 을 받은 단독 요청이 링 요청을 막는 시간
+        int64         _soloReservedUntilMicroseconds; ///< 이 시각(`MonotonicClock`) 전까지 링 요청은 `Full` 이다. 0 이면 예약이 없다
         uint32        _liveCount;
     };
 } // namespace sw

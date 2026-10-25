@@ -229,22 +229,25 @@ namespace sw
         [[nodiscard]] bool tryRetireFinishedTransfers();
         /**
          * @brief 업로드 스테이징 링(영속 매핑 PBO)을 만듭니다. 초기화 끝에 컨텍스트를 쥔 채 부릅니다.
+         * @param soloMaxBytes 링보다 큰 업로드 한 장을 일회성 버퍼로 받는 상한입니다(`RHIStagingAllocator::initialize`).
          * @return `GL_ARB_buffer_storage`(GL 4.4)가 없어 링을 만들지 않았어도 true 입니다(그때 업로드는 모두 `Rejected`). 용량 설정이 0 이거나 GL 이 버퍼를 만들지 못하면 false 입니다.
          */
-        [[nodiscard]] bool initializeStagingRing( uint64 capacityBytes );
+        [[nodiscard]] bool initializeStagingRing( uint64 capacityBytes, uint64 soloMaxBytes );
         /** @brief 링의 매핑을 풀고 버퍼를 지웁니다. 컨텍스트를 쥔 채, 전송이 모두 끝난 뒤(`waitIdle` 다음) 부릅니다. */
         void shutdownStagingRing();
         /**
          * @brief 업로드 바이트 @p sizeBytes 를 담을 링 구간을 잡습니다. 컨텍스트가 없어도 부를 수 있습니다(복사는 컨텍스트 밖에서 한다).
          * @details 링이 차 있으면 끝난 펜스를 한 번 모아(컨텍스트를 잠깐 빌린다) 다시 시도한다 — 프레임을 돌리지 않는 동기 대기(`submitWhileBusy`)도 링을 비우게 한다(계약 7).
-         * @return 잡았으면 `Accepted`, 지금 차 있으면 `Busy`, 링이 없거나 링보다 크면 이유를 로그로 남기고 `Rejected` 입니다.
+         *          링보다 큰 한 장은 장부가 단독 구간을 내주면 그 크기의 일회성 영속 매핑 버퍼를 만든다(`attachSoloBuffer`, 컨텍스트를 잠깐 빌린다).
+         * @return 잡았으면 `Accepted`, 지금 차 있으면 `Busy`, 링이 없거나 링과 단독 상한을 모두 넘으면 이유를 로그로 남기고 `Rejected` 입니다.
          */
         [[nodiscard]] RHISubmitResult allocateStagingSpan( uint64 sizeBytes, const utf8* pCaller, RHIStagingSpan& outSpan );
         /**
          * @brief 텍스처 되읽기 링(`GL_MAP_READ_BIT` 영속 매핑 PBO)을 만듭니다. 초기화 끝에 컨텍스트를 쥔 채 부릅니다.
+         * @param soloMaxBytes 링보다 큰 읽기 한 장을 일회성 버퍼로 받는 상한입니다(`RHIStagingAllocator::initialize`).
          * @return `GL_ARB_buffer_storage`(GL 4.4)가 없어 링을 만들지 않았어도 true 입니다(그때 되읽기는 모두 `Rejected`). 용량 설정이 0 이거나 GL 이 버퍼를 만들지 못하면 false 입니다.
          */
-        [[nodiscard]] bool initializeReadbackRing( uint64 capacityBytes );
+        [[nodiscard]] bool initializeReadbackRing( uint64 capacityBytes, uint64 soloMaxBytes );
         /// @brief 업로드 · 되읽기 링 구간 시작의 정렬입니다. PBO 오프셋은 픽셀 성분(최대 float 4 바이트)과 BC 블록(16 바이트)의 배수면 되지만, CPU 복사가 캐시 줄 경계에서 시작하도록 넉넉히 둔다.
         static constexpr uint64 kTransferRingAlignmentBytes = 256;
         /** @brief 되읽기 링의 버퍼를 지웁니다. `shutdownStagingRing` 과 같은 때에 부릅니다. 가져가지 않은 되읽기의 구간은 버려진다. */
@@ -257,9 +260,36 @@ namespace sw
         /**
          * @brief 되읽기 바이트 @p sizeBytes 를 담을 링 구간을 잡습니다. 컨텍스트가 없어도 부를 수 있습니다.
          * @details 되읽기 구간은 GPU 완료가 아니라 CPU 가 다 읽었을 때(`takeTextureReadback`) 돌아온다. 버린 읽기의 구간만 펜스가 지나면 돌아오므로, 차 있으면 펜스를 한 번 모은 뒤 다시 본다.
-         * @return 잡았으면 `Accepted`, 앞선 되읽기를 아직 가져가지 않아 차 있으면 `Busy`, 링이 없거나 링보다 크면 이유를 로그로 남기고 `Rejected` 입니다.
+         *          링보다 큰 한 장은 업로드와 같이 단독 구간과 일회성 버퍼로 받는다.
+         * @return 잡았으면 `Accepted`, 앞선 되읽기를 아직 가져가지 않아 차 있으면 `Busy`, 링이 없거나 링과 단독 상한을 모두 넘으면 이유를 로그로 남기고 `Rejected` 입니다.
          */
         [[nodiscard]] RHISubmitResult allocateReadbackSpan( uint64 sizeBytes, RHIStagingSpan& outSpan );
+
+        /// @brief 링보다 큰 전송 한 장(단독 구간, `RHIStagingSpan::_bSolo`)이 쓰는 일회성 영속 매핑 버퍼입니다. 링마다 하나다 — 장부가 단독 구간을 한 번에 하나만 내준다.
+        struct OpenGLSoloTransferBuffer
+        {
+            uint8* _pMapped{ nullptr }; ///< 영속 매핑 주소. 버퍼가 없으면 nullptr
+            uint32 _buffer{ 0 };        ///< GL 버퍼 이름. 0 이면 없다
+        };
+        /**
+         * @brief 장부가 내준 단독 구간 @p span 에 그 크기의 영속 매핑 버퍼를 만들어 붙입니다. 컨텍스트를 빌린다(이미 쥐었으면 그대로).
+         * @details 앞선 단독 구간의 버퍼가 아직 남아 있으면(장부는 이미 돌려받았다) 먼저 지운다. 만든 버퍼는 메모리 장부의 Staging 에 올린다.
+         * @return 붙였으면 `Accepted`. 컨텍스트를 얻지 못하면 `Busy`, 버퍼를 만들지 못하면 `Rejected` 이고 두 경우 모두 구간을 장부에 돌려준다.
+         */
+        [[nodiscard]] RHISubmitResult attachSoloBuffer( RHIStagingAllocator& ring, OpenGLSoloTransferBuffer& rSolo, const RHIStagingSpan& span, uint32 mapFlags,
+                                                        const utf8* pCaller );
+        /** @brief 단독 버퍼를 지우고 메모리 장부에서 내립니다. 컨텍스트를 쥔 채 부릅니다. 버퍼가 없으면 아무것도 하지 않습니다. */
+        void deleteSoloBuffer( OpenGLSoloTransferBuffer& rSolo );
+        /** @brief 장부가 단독 구간을 돌려받았으면 그 버퍼를 지웁니다. 컨텍스트를 쥔 채 `retireFinishedTransfers` 가 부릅니다. */
+        void deleteIdleSoloBuffer( RHIStagingAllocator& ring, OpenGLSoloTransferBuffer& rSolo, uint64 completedSerial );
+        /** @brief 업로드 구간 @p span 의 바이트를 쓸 매핑 주소입니다(단독 구간이면 단독 버퍼의 시작). */
+        [[nodiscard]] uint8* getStagingBytes( const RHIStagingSpan& span ) const;
+        /** @brief 업로드 구간 @p span 을 담은 GL 버퍼 이름입니다(`GL_PIXEL_UNPACK_BUFFER` 로 건다). */
+        [[nodiscard]] uint32 getStagingBuffer( const RHIStagingSpan& span ) const;
+        /** @brief 되읽기 구간 @p span 의 바이트를 읽을 매핑 주소입니다(단독 구간이면 단독 버퍼의 시작). */
+        [[nodiscard]] const uint8* getReadbackBytes( const RHIStagingSpan& span ) const;
+        /** @brief 되읽기 구간 @p span 을 담은 GL 버퍼 이름입니다(`GL_PIXEL_PACK_BUFFER` 로 건다). */
+        [[nodiscard]] uint32 getReadbackBuffer( const RHIStagingSpan& span ) const;
 
         /** @brief 컴퓨트 루트 상수 UBO 를 확보합니다. */
         bool ensureComputeRootConstantUbo();
@@ -473,6 +503,10 @@ namespace sw
         RHIStagingAllocator _readbackRing;
         /// @brief 되읽기 링의 영속 매핑 주소입니다(`GL_MAP_READ_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT`). 펜스가 지난 구간만 읽습니다. 링이 없으면 nullptr 입니다.
         const uint8* _pReadbackRingMapped;
+        /// @brief 업로드 링보다 큰 한 장의 일회성 버퍼입니다. 컨텍스트를 쥔 스레드만 만들고 지우며, 장부가 단독 구간을 내준 동안은 바뀌지 않는다.
+        OpenGLSoloTransferBuffer _stagingSolo;
+        /// @brief 되읽기 링보다 큰 한 장의 일회성 버퍼입니다. 규칙은 `_stagingSolo` 와 같다.
+        OpenGLSoloTransferBuffer _readbackSolo;
 
         sw::unique_ptr<OpenGLRHICommandContext>  _frameStreamContext;
         sw::unique_ptr<OpenGLRHIResourceFactory> _resourceImpl;

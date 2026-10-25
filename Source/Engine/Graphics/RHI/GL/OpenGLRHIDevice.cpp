@@ -58,6 +58,8 @@ namespace sw
         , _pStagingRingMapped{ nullptr }
         , _readbackRing{}
         , _pReadbackRingMapped{ nullptr }
+        , _stagingSolo{}
+        , _readbackSolo{}
         , _frameStreamContext{ nullptr }
         , _resourceImpl{ nullptr }
         , _computeRootConstantUbo{ 0 }
