@@ -3,7 +3,7 @@
 """
 Scripts/common/StatusBoard.py
 
-최상단 README 의 '지금 진행 상황' 표를 데이터에서 만들고, 로드맵의 링크가 맞는지 본다. 명령(`dev/RunStatusBoard.py` · `dev/ListPlans.py --check`)과
+저장소 루트 `StatusBoard.md` 의 '지금 진행 상황' 표를 데이터에서 만들고, 로드맵의 링크가 맞는지 본다. 명령(`dev/RunStatusBoard.py` · `dev/ListPlans.py --check`)과
 게이트(`CheckStatusBoard`)가 같이 쓴다.
 
 입력은 계획 문서 머리 줄과 후보 절(`common/Plans.py`), 로드맵의 `## 지금 순서` 번호 목록이다.
@@ -13,7 +13,7 @@ Scripts/common/StatusBoard.py
 링크가 가리키는 문서가 `docs/plans` 에 없으면 오류로 멈춘다(조용히 건너뛰지 않는다).
 표에는 상태 `끝` · `참고` · `후보` 문서를 싣지 않는다(후보는 표 아래 한 줄에 개수만). 순위는 로드맵에 나온 번호 순서이고 나오지 않은 문서는 `-` 다.
 
-README 안의 표는 두 표지 사이다: `<!-- status-board:start -->` ~ `<!-- status-board:end -->`. 표지 밖은 건드리지 않는다.
+파일 안의 표는 두 표지 사이다: `<!-- status-board:start -->` ~ `<!-- status-board:end -->`. 표지 밖은 건드리지 않는다.
 """
 
 from __future__ import annotations
@@ -29,7 +29,8 @@ from common.Plans import PlanDoc, kCandidateStatus, kListPlanStatus, kPlansRelDi
 kBoardStart = "<!-- status-board:start -->"
 kBoardEnd = "<!-- status-board:end -->"
 kRoadmapRelPath = f"{kPlansRelDir}/Roadmap.md"
-kReadmeName = "README.md"
+#: 생성 파일. README 에 두면 계획 문서를 고친 모든 브랜치가 README 를 다시 만들어 병합마다 충돌한다 — 통합 담당만 이 파일을 다시 만든다.
+kBoardFileName = "StatusBoard.md"
 
 #: 표에서 뺄 상태 — 할 일이 없는 문서와 시작 전 후보.
 _kHiddenStatus: tuple[str, ...] = ("끝", "참고", kCandidateStatus)

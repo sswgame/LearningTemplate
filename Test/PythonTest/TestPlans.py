@@ -121,13 +121,13 @@ kRoadmapText = (
     "2. **[이펙트](Vfx.md)** 를 먼저, [결정](../09_Decisions.md) 참고.\n   - 이어지는 줄에 [보류](Hold.md) 가 있어도 첫 링크가 문서다.\n   1. 하위 번호 목록도 같은 항목이다.\n"
     "3. [참고](Ref.md) 는 표에서 빠진다.\n\n## 다음\n\n4. [보류](Hold.md)\n"
 )
-kReadmeText = "# R\n\n소개\n\n## 지금 진행 상황\n\n<!-- status-board:start -->\n<!-- status-board:end -->\n\n끝\n"
+kBoardText = "# R\n\n소개\n\n## 지금 진행 상황\n\n<!-- status-board:start -->\n<!-- status-board:end -->\n\n끝\n"
 
 
 def makeRepositoryInternal(root: Path) -> None:
     writePlansInternal(root, {"Vfx.md": kGoodText, "Hold.md": kHoldText, "Ref.md": kRefText, "Candidates-engine.md": kCandidateText,
                               "Roadmap.md": kRoadmapText})
-    (root / "README.md").write_text(kReadmeText, encoding="utf-8")
+    (root / "StatusBoard.md").write_text(kBoardText, encoding="utf-8")
     (root / "docs" / "09_Decisions.md").write_text("# 결정\n", encoding="utf-8")  # 로드맵이 링크하는 계획 밖 문서 — 링크 점검이 있는 파일로 본다
 
 
@@ -195,23 +195,23 @@ class StatusBoardTest(unittest.TestCase):
     def testWriteThenCheckThenStale(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             makeRepositoryInternal(Path(temp))
-            readme = Path(temp) / "README.md"
-            self.assertEqual(1, runBoardInternal(temp, ["--check", str(readme)])[0])
-            self.assertEqual(0, runBoardInternal(temp, ["--write", str(readme)])[0])
-            text = readme.read_text(encoding="utf-8")
+            board = Path(temp) / "StatusBoard.md"
+            self.assertEqual(1, runBoardInternal(temp, ["--check", str(board)])[0])
+            self.assertEqual(0, runBoardInternal(temp, ["--write", str(board)])[0])
+            text = board.read_text(encoding="utf-8")
             self.assertTrue(text.startswith("# R\n\n소개\n") and text.rstrip().endswith("끝"))
-            self.assertEqual(0, runBoardInternal(temp, ["--check", str(readme)])[0])
-            readme.write_text(text.replace("구현중", "설계"), encoding="utf-8")
-            code, _, err = runBoardInternal(temp, ["--check", str(readme)])
+            self.assertEqual(0, runBoardInternal(temp, ["--check", str(board)])[0])
+            board.write_text(text.replace("구현중", "설계"), encoding="utf-8")
+            code, _, err = runBoardInternal(temp, ["--check", str(board)])
             self.assertEqual(1, code)
             self.assertIn("구현중", err)
 
     def testWriteWithoutMarkersStops(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             makeRepositoryInternal(Path(temp))
-            readme = Path(temp) / "README.md"
-            readme.write_text("# R\n", encoding="utf-8")
-            self.assertEqual(1, runBoardInternal(temp, ["--write", str(readme)])[0])
+            board = Path(temp) / "StatusBoard.md"
+            board.write_text("# R\n", encoding="utf-8")
+            self.assertEqual(1, runBoardInternal(temp, ["--write", str(board)])[0])
 
     def testRoadmapLinkToMissingPlanOrMissingRoadmapStops(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -228,9 +228,23 @@ class StatusBoardTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             makeRepositoryInternal(Path(temp))
             gate = CheckStatusBoard.CheckStatusBoardGate()
-            self.assertIn("README.md: 표가 낡았습니다", gate.scan(Path(temp), argparse.Namespace()).listViolation)
-            runBoardInternal(temp, ["--write", str(Path(temp) / "README.md")])
+            self.assertIn("StatusBoard.md: 표가 낡았습니다", gate.scan(Path(temp), argparse.Namespace()).listViolation)
+            runBoardInternal(temp, ["--write", str(Path(temp) / "StatusBoard.md")])
             self.assertEqual([], gate.scan(Path(temp), argparse.Namespace()).listViolation)
+
+    def testGateSkipsBoardFreshnessWhenOnlyPlansAreStaged(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            makeRepositoryInternal(Path(temp))
+            gate = CheckStatusBoard.CheckStatusBoardGate()
+            self.assertEqual([], gate.scan(Path(temp), argparse.Namespace(files=["docs/plans/Vfx.md"])).listViolation)
+            self.assertIn("StatusBoard.md: 표가 낡았습니다", gate.scan(Path(temp), argparse.Namespace(files=["StatusBoard.md"])).listViolation)
+
+    def testWriteWithoutFileTargetsRootStatusBoard(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            makeRepositoryInternal(Path(temp))
+            self.assertEqual(0, runBoardInternal(temp, ["--write"])[0])
+            self.assertEqual(0, runBoardInternal(temp, ["--check"])[0])
+            self.assertIn("[Vfx](docs/plans/Vfx.md)", (Path(temp) / "StatusBoard.md").read_text(encoding="utf-8"))
 
 
 class PlansCheckAndFindTest(unittest.TestCase):

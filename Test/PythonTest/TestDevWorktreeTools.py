@@ -18,7 +18,7 @@ from dev import CiFailureReport  # noqa: E402
 from dev import ListCiJobs  # noqa: E402
 from dev import ListWorktrees  # noqa: E402
 from dev import RemoveWorktree  # noqa: E402
-from dev import RunFullBuild  # noqa: E402
+from common import BuildEvidence  # noqa: E402
 from common import SharedLock, Worktree  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
 
@@ -197,8 +197,8 @@ class FullBuildEvidenceTest(unittest.TestCase):
     def testOnlyPushesToMainNeedEvidence(self) -> None:
         pushInput = (f"refs/heads/main {'a' * 40} refs/heads/main {'b' * 40}\n"
                      f"refs/heads/wt/x {'c' * 40} refs/heads/wt/x {'d' * 40}\n"
-                     f"(delete) {RunFullBuild.kZeroHash} refs/heads/main {'e' * 40}\n")
-        listNeeded = RunFullBuild.listPushedTreesNeedingEvidence(pushInput, lambda commit: "tree-of-" + commit[:1])
+                     f"(delete) {BuildEvidence.kZeroHash} refs/heads/main {'e' * 40}\n")
+        listNeeded = BuildEvidence.listPushedTreesNeedingEvidence(pushInput, lambda commit: "tree-of-" + commit[:1])
         self.assertEqual(listNeeded, [("refs/heads/main", "tree-of-a")])
 
     @staticmethod
@@ -211,11 +211,11 @@ class FullBuildEvidenceTest(unittest.TestCase):
                     "cmake/README.md": "6" * 40, ".claude/settings.json": "7" * 40, ".claude/agents/scout.md": "8" * 40,
                     "Scripts/dev/RunFullBuild.py": "a" * 40, "Scripts/lint/gate/CheckX.py": "b" * 40, "Scripts/__main__.py": "c" * 40,
                     "Test/PythonTest/TestX.py": "d" * 40}
-        self.assertEqual(RunFullBuild.hashBuildInputs(self.makeLsTree(base)), RunFullBuild.hashBuildInputs(self.makeLsTree(docsOnly)))
+        self.assertEqual(BuildEvidence.hashBuildInputs(self.makeLsTree(base)), BuildEvidence.hashBuildInputs(self.makeLsTree(docsOnly)))
 
     def testBuildInputsChangeTheEvidenceKey(self) -> None:
         base = {"Source/Core/A.cpp": "1" * 40, "docs/Config/ConfigReference.json": "2" * 40}
-        keyBase = RunFullBuild.hashBuildInputs(self.makeLsTree(base))
+        keyBase = BuildEvidence.hashBuildInputs(self.makeLsTree(base))
         for changed in ({**base, "Source/Core/A.cpp": "9" * 40},
                         {**base, "docs/Config/ConfigReference.json": "9" * 40},
                         {**base, "Source/Kits/README.md": "9" * 40},
@@ -223,7 +223,7 @@ class FullBuildEvidenceTest(unittest.TestCase):
                         {**base, "Scripts/setup/SetupVcpkg.py": "9" * 40},
                         {**base, "Scripts/common/Constants.py": "9" * 40},
                         {**base, "Test/PythonTest/CMakeLists.txt": "9" * 40}):
-            self.assertNotEqual(keyBase, RunFullBuild.hashBuildInputs(self.makeLsTree(changed)))
+            self.assertNotEqual(keyBase, BuildEvidence.hashBuildInputs(self.makeLsTree(changed)))
 
 
 class ListCiJobsTest(unittest.TestCase):
