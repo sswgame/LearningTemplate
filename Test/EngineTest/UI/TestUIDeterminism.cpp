@@ -4,6 +4,7 @@
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Process/ProcessEnvironment.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
@@ -118,7 +119,8 @@ namespace
 
         static bool isUpdatingGolden()
         {
-            const utf8* pUpdate = std::getenv( "SW_UPDATE_GOLDEN" );
+            sw::string  pUpdateText;
+            const utf8* pUpdate = sw::ProcessEnvironment::tryRead( "SW_UPDATE_GOLDEN", pUpdateText ) ? pUpdateText.c_str() : nullptr;
             return pUpdate != nullptr && pUpdate[0] == '1';
         }
 

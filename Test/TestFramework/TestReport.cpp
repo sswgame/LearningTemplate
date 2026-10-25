@@ -3,6 +3,7 @@
 #include "TestFramework/TestReport.h"
 
 #include "Core/Common/BuildInfo.h"
+#include "Core/Process/ProcessEnvironment.h"
 
 #include "TestFramework/TestCatalog.h"
 #include "TestFramework/TestRunOptions.h"
@@ -329,7 +330,8 @@ namespace test
         std::fprintf( stdout, "%s Reproduce (%s build, %s):\n", _pLinePrefix, sw::build::kConfigName, sw::FileUtil::getFileNamePart( buildFolder ).c_str() );
         std::fprintf( stdout, "%s   cd \"%s\" && \"%s\" %s\n", _pLinePrefix, sw::FileUtil::joinPath( buildFolder, "Bin" ).c_str(), executablePath.c_str(),
                       options.makeReproductionArguments( filter, bSeedUsed ).c_str() );
-        const utf8* pCtestName = std::getenv( "SW_TEST_CTEST_NAME" );
+        sw::string  pCtestNameText;
+        const utf8* pCtestName = sw::ProcessEnvironment::tryRead( "SW_TEST_CTEST_NAME", pCtestNameText ) ? pCtestNameText.c_str() : nullptr;
         if ( pCtestName != nullptr )
             std::fprintf( stdout, "%s   ctest --test-dir \"%s\" -R \"^%s$\" --output-on-failure\n", _pLinePrefix, buildFolder.c_str(), pCtestName );
         if ( options._repeatCount <= 1 )

@@ -11,6 +11,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Memory/MemoryTag.h"
 #include "Core/Process/Process.h"
+#include "Core/Process/ProcessEnvironment.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Compression/EngineCompressionCodecUtil.h"
@@ -1058,7 +1059,8 @@ SW_TEST_CASE( AppSmokeTest, BenchFrameMatchesGoldenImage )
     const string goldenDirectory = findGoldenDirectory();
     SW_ASSERT_TRUE_MSG( goldenDirectory.empty() == false, "Test/AppTest/Golden not found - is the working directory build/<preset>/Bin?" );
 
-    const utf8* pUpdate = std::getenv( "SW_UPDATE_GOLDEN" );
+    sw::string  pUpdateText;
+    const utf8* pUpdate = sw::ProcessEnvironment::tryRead( "SW_UPDATE_GOLDEN", pUpdateText ) ? pUpdateText.c_str() : nullptr;
     const bool  bUpdate = pUpdate != nullptr && pUpdate[0] == '1';
 
     uint32 checkedCount = 0;
@@ -1192,7 +1194,8 @@ SW_TEST_CASE( AppSmokeTest, ShippingSceneMatchesGoldenImage )
 
     const string imageName  = string( "shippingframe_" ) + kBackendName;
     const string goldenPath = FileUtil::joinPath( goldenDirectory, imageName + kGoldenPlatformSuffix + ".ppm.z" );
-    const utf8*  pUpdate    = std::getenv( "SW_UPDATE_GOLDEN" );
+    sw::string   pUpdateText;
+    const utf8*  pUpdate = sw::ProcessEnvironment::tryRead( "SW_UPDATE_GOLDEN", pUpdateText ) ? pUpdateText.c_str() : nullptr;
     if ( pUpdate != nullptr && pUpdate[0] == '1' )
     {
         vector<uint8> goldenBytes;

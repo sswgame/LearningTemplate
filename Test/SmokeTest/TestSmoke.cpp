@@ -9,6 +9,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Module/ModuleImageUtil.h"
 #include "Core/Process/Process.h"
+#include "Core/Process/ProcessEnvironment.h"
 #include "Core/String/RegistrationList.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Task/TaskManager.h"
@@ -1868,7 +1869,7 @@ SW_TEST_CASE( ModuleAPITest, GameFrameworkKitsModuleTypeRegistration )
  */
 SW_TEST_CASE( ModuleAPITest, SharedModuleChildKeepsItsRegistrations )
 {
-    if ( std::getenv( "SW_SHARED_MODULE_CHILD" ) == nullptr )
+    if ( sw::ProcessEnvironment::isSet( "SW_SHARED_MODULE_CHILD" ) == false )
         SW_TEST_SKIP( "child only — GameFrameworkRegistersUnderItsOwnName launches it" );
 
     sw::LiveReloadManager manager;
@@ -1928,7 +1929,7 @@ SW_TEST_CASE( ModuleAPITest, GameFrameworkRegistersUnderItsOwnName )
  */
 SW_TEST_CASE( ModuleAPITest, ModulePropertyChildChecksEveryType )
 {
-    if ( std::getenv( "SW_MODULE_PROPERTY_CHILD" ) == nullptr )
+    if ( sw::ProcessEnvironment::isSet( "SW_MODULE_PROPERTY_CHILD" ) == false )
         SW_TEST_SKIP( "child only — EveryModulePropertyHasATypeTheSerializersCanCarry launches it" );
 
     const utf8* const     arrKit[] = { "GF_Overworld", "GF_ActionCombat" };
@@ -2142,7 +2143,7 @@ SW_TEST_CASE( ArchitectureTest, RegistrationListsFollowTheEditorModuleLoadReload
  */
 SW_TEST_CASE( ModuleAPITest, UnloadChildReleasesTheChannelsItsImageCreated )
 {
-    if ( std::getenv( "SW_UNLOAD_CHANNEL_CHILD" ) == nullptr )
+    if ( sw::ProcessEnvironment::isSet( "SW_UNLOAD_CHANNEL_CHILD" ) == false )
         SW_TEST_SKIP( "child only — UnloadReleasesTheChannelsTheImageCreated launches it" );
 
     void* const hFramework = sw::loadModule( "GameFramework" );

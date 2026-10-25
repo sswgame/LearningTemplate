@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""`Source/` 가 환경 변수를 `getenv` · `GetEnvironmentVariable` 로 직접 읽는 곳을 잡는다 — 읽기는 `Core/Process/ProcessEnvironment.h` 하나다.
+"""`Source/` · `Test/` · `Tools/` 가 환경 변수를 `getenv` · `GetEnvironmentVariable` 로 직접 읽는 곳을 잡는다 — 읽기는 `Core/Process/ProcessEnvironment.h` 하나다.
 
 환경 변수에는 없음 · 빈 값 · 값 있음 세 상태가 있는데, 직접 읽으면 빈 값을 없음으로 읽는 곳과 있음으로 읽는 곳이 갈린다(빈 `HOME` 으로 상대 경로를 만드는 따위).
 대신 쓸 것(같은 헤더):
@@ -9,7 +9,6 @@
     ProcessEnvironment::tryReadNonEmpty( name, out )   값이 있을 때만 true — 빈 값은 없음과 같다
 
 `getenv` · `secure_getenv` · `GetEnvironmentVariable(A|W)` 이름 자체를 막는다. 주석 · 문자열 안의 언급은 보지 않는다.
-테스트 코드(`Test/`)와 도구(`Tools/`)는 보지 않는다 — 자식 프로세스에 환경을 걸고 읽는 시험이 많아 따로 옮긴다.
 예외는 `Scripts/lint/rules/CheckProcessEnvironment.toml` 의 `[exemption]` 한 곳이다. 예외 파일이 더는 읽지 않으면 그 줄은 낡은 예외로 실패한다(`LintGate` 기반이 본다).
 
   python Scripts/lint/gate/CheckProcessEnvironment.py [--root <repo>] [--files a.cpp b.h]
@@ -25,10 +24,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common.CodeText import findFast  # noqa: E402
+from common.Constants import kLintTargetRelDirs  # noqa: E402
 from lint.LintGate import LintGate  # noqa: E402
 from lint.SourceScan import FileFindings, SourceFile  # noqa: E402
 
-_kListScanRoot = ("Source",)
+_kListScanRoot = kLintTargetRelDirs
 _kSuffixes = (".h", ".hpp", ".inl", ".c", ".cc", ".cpp", ".cxx", ".tpl")
 
 _kEnvironmentReadRe = re.compile(r"(?<![\w$])(getenv|secure_getenv|GetEnvironmentVariable[AW]?)(?![\w$])")
@@ -55,7 +55,7 @@ def findEnvironmentReads(source: SourceFile) -> list[str]:
 class CheckProcessEnvironmentGate(LintGate):
     """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다 — 규칙과 증거가 한 자리에 있다."""
 
-    description = "Source 가 환경 변수를 getenv 가 아니라 ProcessEnvironment 로 읽는지 검사"
+    description = "엔진 · 테스트 · 도구 코드가 환경 변수를 getenv 가 아니라 ProcessEnvironment 로 읽는지 검사"
     buildComment = "Checking that code reads environment variables through ProcessEnvironment..."
     timeoutSeconds = 30
     preCommitPattern = tuple(f"{root}/*" for root in _kListScanRoot)
@@ -78,6 +78,16 @@ class CheckProcessEnvironmentGate(LintGate):
                 "Source/Probe/ProbeHome.cpp": (
                     "#include <cstdlib>\n"
                     "const char* probe() { return std::getenv( \"HOME\" ); }\n"
+                ),
+            },
+        },
+        {
+            "name": "테스트가 getenv 로 자식 역할 표식을 읽는다(Test 폴더)",
+            "expectedViolation": "Test/Probe/ProbeChild.cpp:2: getenv",
+            "files": {
+                "Test/Probe/ProbeChild.cpp": (
+                    "#include <cstdlib>\n"
+                    "bool probe() { return std::getenv( \"SW_PROBE_CHILD\" ) != nullptr; }\n"
                 ),
             },
         },

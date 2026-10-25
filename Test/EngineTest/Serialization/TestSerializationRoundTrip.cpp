@@ -8,6 +8,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Process/ProcessEnvironment.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -185,7 +186,8 @@ SW_TEST_CASE( SerializationRoundTripTest, EveryResourceComponentRewritesToTheSam
 SW_TEST_CASE( SerializationRoundTripTest, DumpEveryResourceObjectState )
 {
     SW_TEST_REQUIRES_FEATURE( SourceResources ); // 환경 건너뜀보다 먼저 — 배포 구성에서 스위트가 "아무것도 검증 안 함" 으로 판정되지 않게 한다
-    const utf8* pDumpDir = std::getenv( "SW_SERIALIZATION_DUMP_DIR" );
+    sw::string  pDumpDirText;
+    const utf8* pDumpDir = sw::ProcessEnvironment::tryRead( "SW_SERIALIZATION_DUMP_DIR", pDumpDirText ) ? pDumpDirText.c_str() : nullptr;
     if ( pDumpDir == nullptr || pDumpDir[0] == 0 )
         SW_TEST_SKIP( "SW_SERIALIZATION_DUMP_DIR is not set" );
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );

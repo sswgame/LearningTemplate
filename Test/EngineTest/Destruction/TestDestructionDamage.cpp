@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/Process/ProcessEnvironment.h"
+
 #include "Engine/Destruction/DestructionDamage.h"
 #include "Engine/Destruction/DestructionProfile.h"
 #include "Engine/Destruction/DestructionState.h"
@@ -242,7 +244,8 @@ SW_TEST_CASE( DestructionDamageTest, EventLogHashMatchesTheRecordedValueOnEveryB
         (void)state.applyDamage( event, change ); // 바뀜 여부는 보지 않는다 — 아래 상태 해시로 비교한다
         listHash.push_back( state.computeStateHash() );
     }
-    const utf8* pPrint = std::getenv( "SW_DESTRUCTION_PRINT_GOLDEN" );
+    sw::string  pPrintText;
+    const utf8* pPrint = sw::ProcessEnvironment::tryRead( "SW_DESTRUCTION_PRINT_GOLDEN", pPrintText ) ? pPrintText.c_str() : nullptr;
     if ( pPrint != nullptr && pPrint[0] == '1' )
     {
         for ( size_t index = 0; index < listHash.size(); ++index )

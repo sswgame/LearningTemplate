@@ -5,6 +5,7 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Process/ProcessEnvironment.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Common/Common.h"
@@ -484,9 +485,10 @@ namespace sw
         {
             if ( llvmPath.empty() )
             {
-                const utf8* pEnvLlvm = std::getenv( jsonkey::kEnvLlvmDir );
+                sw::string  pEnvLlvmText;
+                const utf8* pEnvLlvm = sw::ProcessEnvironment::tryRead( jsonkey::kEnvLlvmDir, pEnvLlvmText ) ? pEnvLlvmText.c_str() : nullptr;
                 if ( pEnvLlvm == nullptr )
-                    pEnvLlvm = std::getenv( jsonkey::kEnvLlvmHome );
+                    pEnvLlvm = sw::ProcessEnvironment::tryRead( jsonkey::kEnvLlvmHome, pEnvLlvmText ) ? pEnvLlvmText.c_str() : nullptr;
                 if ( pEnvLlvm != nullptr )
                     llvmPath = pEnvLlvm;
             }

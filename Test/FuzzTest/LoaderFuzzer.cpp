@@ -2,6 +2,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Process/ProcessEnvironment.h"
 
 #include "EngineTest/LoaderFuzzTargets.h"
 
@@ -33,7 +34,8 @@ namespace
 
         static bool isSet( const utf8* pName )
         {
-            const utf8* pValue = std::getenv( pName );
+            sw::string  pValueText;
+            const utf8* pValue = sw::ProcessEnvironment::tryRead( pName, pValueText ) ? pValueText.c_str() : nullptr;
             return pValue != nullptr && pValue[0] == '1';
         }
 
@@ -71,7 +73,8 @@ extern "C" int32 LLVMFuzzerInitialize( int32* pArgc, FuzzerArgumentList* pArgume
         s_runtime.stop();
         std::exit( 2 );
     }
-    const utf8*                   pTargetName = std::getenv( "SW_FUZZ_TARGET" );
+    sw::string                    pTargetNameText;
+    const utf8*                   pTargetName = sw::ProcessEnvironment::tryRead( "SW_FUZZ_TARGET", pTargetNameText ) ? pTargetNameText.c_str() : nullptr;
     const test::LoaderFuzzTarget* pTarget     = pTargetName != nullptr ? test::findLoaderFuzzTarget( pTargetName ) : nullptr;
     if ( pTarget == nullptr )
     {
@@ -80,7 +83,8 @@ extern "C" int32 LLVMFuzzerInitialize( int32* pArgc, FuzzerArgumentList* pArgume
         std::exit( 2 );
     }
     LoaderFuzzerInternal::getTarget() = pTarget;
-    const utf8* pSeedFolder           = std::getenv( "SW_FUZZ_DUMP_SEEDS" );
+    sw::string  pSeedFolderText;
+    const utf8* pSeedFolder = sw::ProcessEnvironment::tryRead( "SW_FUZZ_DUMP_SEEDS", pSeedFolderText ) ? pSeedFolderText.c_str() : nullptr;
     if ( pSeedFolder != nullptr )
     {
         LoaderFuzzerInternal::dumpSeeds( *pTarget, pSeedFolder );

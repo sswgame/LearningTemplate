@@ -4,6 +4,7 @@
 
 #include "Core/Console/DevCommandsEnabled.h"
 #include "Core/Memory/MemoryTag.h"
+#include "Core/Process/ProcessEnvironment.h"
 
 #include "TestFramework/TestRegistry.h"
 
@@ -99,7 +100,8 @@ namespace test
 
     sw::string getEnvironmentValue( const utf8* pEnvironmentName )
     {
-        const utf8* pValue = std::getenv( pEnvironmentName );
+        sw::string  pValueText;
+        const utf8* pValue = sw::ProcessEnvironment::tryRead( pEnvironmentName, pValueText ) ? pValueText.c_str() : nullptr;
         return pValue == nullptr ? sw::string{} : sw::string( pValue );
     }
 

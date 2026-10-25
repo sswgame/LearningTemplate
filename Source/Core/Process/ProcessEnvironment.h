@@ -27,6 +27,8 @@ namespace sw
         [[nodiscard]] static bool tryReadNonEmpty( string_view name, string& outValue );
         /** @brief 변수 @p name 을 @p value 로 정합니다(이미 있으면 바꿉니다). 이름이 비었거나 `=` 를 품었거나 OS 가 거절하면 false 입니다. */
         [[nodiscard]] static bool trySet( string_view name, string_view value );
+        /** @brief 변수 @p name 이 정해져 있는지(빈 값 포함)만 묻습니다 — 값이 필요 없는 "자식 역할이다" 같은 표식 검사용입니다. */
+        [[nodiscard]] static bool isSet( string_view name );
         /** @brief 변수 @p name 을 지웁니다(없던 변수도 true). 이름이 비었거나 `=` 를 품었거나 OS 가 거절하면 false 입니다. */
         [[nodiscard]] static bool tryUnset( string_view name );
     };
