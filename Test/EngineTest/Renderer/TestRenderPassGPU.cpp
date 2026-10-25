@@ -8905,7 +8905,9 @@ SW_TEST_CASE( RenderPassGPUTest, CanvasDrawsOnEveryBackend )
 
         test::RHITestImage window;
         const uint32       validationBefore = device->getValidationMessageCount();
-        bOk                                 = renderSceneFrameReadingBackBuffer( renderer, device.get(), stage._scene, window );
+        // 새 아틀라스 페이지는 첫 업로드가 끝난 이후 프레임에 등록돼 그려진다(전송 계약 10, 프레임 안에서 기다리지 않는다). 그래서 한 프레임으로 업로드를 내고
+        // (`renderSceneFrame` 이 GPU 를 비운다) 다음 프레임을 읽는다.
+        bOk = renderSceneFrame( renderer, device.get(), stage._scene ) && renderSceneFrameReadingBackBuffer( renderer, device.get(), stage._scene, window );
         // 캔버스는 메시 없이 사각형마다 정점 여섯을 그린다. 장치 공용 대체 정점 버퍼가 그만큼 담지 못하면 슬롯 0 을 범위 밖까지 읽는다(Debug DX12 디버그 레이어가 센다).
         const uint32 validationAdded = device->getValidationMessageCount() - validationBefore;
         SW_EXPECT_TRUE_MSG( validationAdded == 0, ( label + "캔버스 프레임이 검증 경고 " + sw::to_string( validationAdded ) + " 개를 냈다" ).c_str() );

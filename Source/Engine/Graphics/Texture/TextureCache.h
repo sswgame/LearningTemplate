@@ -164,9 +164,10 @@ namespace sw
          */
         void requestRegionUpdate( string_view relativePath, uint32 x, uint32 y, uint32 width, uint32 height, vector<uint8> rgbaBytes );
         /**
-         * @brief 맡겨 둔 구간 업로드를 모두 실행합니다(렌더 스레드, 프레임 기록 전, `FrameRenderer::executePacket`).
+         * @brief 맡겨 둔 구간 업로드를 냅니다(렌더 스레드, 프레임 기록 전, `FrameRenderer::executePacket`). GPU 완료를 기다리지 않습니다.
          * @details @p pDevice 가 nullptr 이면 CPU 텍스처의 원본만 고치고 나머지는 버립니다(GPU 없는 테스트).
-         * @return 반영한 구간 수입니다.
+         *          RHI 가 `Busy` 를 돌려주면 그 구간부터 이번 차례의 나머지를 다음 프레임으로 미루고(순서 유지), `Rejected` 는 오류를 남기고 버립니다.
+         * @return 반영한 구간 수입니다(원본만 고친 것과 받아들여진 제출).
          */
         uint32 flushRegionUpdates( IRHIDevice* pDevice );
         /** @brief 참조를 하나 놓습니다. 0 이 되면 GPU 자원까지 해제합니다. */

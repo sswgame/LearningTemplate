@@ -111,10 +111,11 @@ namespace sw
         /** @brief CPU 픽셀 원본을 GPU 에 업로드합니다(렌더 스레드). 이미 업로드되어 있으면 true 입니다. */
         [[nodiscard]] bool loadFromCPUBytes( IRHIDevice* pDevice );
         /**
-         * @brief CPU 픽셀 원본의 사각형을 @p desc(RGBA8 행)로 바꾸고, GPU 에 올라가 있으면 그 구간도 업로드합니다(렌더 스레드).
-         * @return 원본이 없거나 범위나 크기가 틀리거나 업로드가 실패하면 false 입니다.
+         * @brief CPU 픽셀 원본의 사각형을 @p desc(RGBA8 행)로 바꾸고, GPU 에 올라가 있으면 그 구간의 업로드를 냅니다(렌더 스레드). GPU 완료를 기다리지 않습니다.
+         * @return 원본만 고쳤거나 업로드가 받아들여졌으면 `Accepted` 입니다. `Busy` 면 원본은 고쳤고 GPU 구간은 못 냈으므로 호출자가 다음 프레임에 같은 호출을 다시 합니다.
+         *         원본이 없거나 범위나 크기가 틀리거나 RHI 가 거절하면 `Rejected` 입니다.
          */
-        [[nodiscard]] bool writeCPUBytes( IRHIDevice* pDevice, const RHITextureRegionUploadDesc& desc );
+        [[nodiscard]] RHISubmitResult writeCPUBytes( IRHIDevice* pDevice, const RHITextureRegionUploadDesc& desc );
         /** @brief CPU 픽셀 원본을 가진 텍스처이면 true 입니다. */
         bool                 hasCPUBytes() const { return _cpuBytes.empty() == false; }
         const vector<uint8>& getCPUBytes() const { return _cpuBytes; }

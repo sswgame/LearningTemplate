@@ -362,7 +362,7 @@ namespace sw
         return true;
     }
 
-    bool Texture2D::writeCPUBytes( IRHIDevice* pDevice, const RHITextureRegionUploadDesc& desc )
+    RHISubmitResult Texture2D::writeCPUBytes( IRHIDevice* pDevice, const RHITextureRegionUploadDesc& desc )
     {
         const size_t rowBytes     = static_cast<size_t>( desc._width ) * 4;
         const bool   bInsideX     = desc._x + desc._width <= _width;
@@ -370,7 +370,7 @@ namespace sw
         const bool   bEnoughBytes = desc._pData != nullptr && desc._sizeBytes >= rowBytes * desc._height;
         const bool   bValidRegion = bInsideX && bInsideY && bEnoughBytes && desc._mip == 0;
         if ( hasCPUBytes() == false || bValidRegion == false )
-            return false;
+            return RHISubmitResult::Rejected;
         const uint8* pSource = static_cast<const uint8*>( desc._pData );
         for ( uint32 row = 0; row < desc._height; ++row )
         {
@@ -380,8 +380,11 @@ namespace sw
         // GPU 에 없으면 원본만 고친다 — 다음에 올릴 때(`loadFromCPUBytes`) 이 내용이 올라간다.
         const bool bResidentOnDevice = pDevice != nullptr && isRHIValid() && _pDevice == pDevice;
         if ( bResidentOnDevice == false )
-            return true;
-        return RHITransferUtil::uploadTexture2DRegionAndWait( *pDevice->getResourceFactory(), _handle, desc );
+            return RHISubmitResult::Accepted;
+        // 등록된 텍스처의 구간 갱신이라 완료를 기다리지 않는다 — 같은 텍스처의 전송은 낸 순서대로, 뒤에 낼 프레임 커맨드보다 먼저 실행된다(전송 계약 3).
+        // 전송 중 파괴는 백엔드가 해제를 미룬다(계약 6). 다시 칠하면 원본이 이미 고쳐져 있으므로 `Busy` 의 재시도는 같은 호출을 다시 하면 된다.
+        const RHITransferSubmit submit = pDevice->getResourceFactory()->submitTextureRegionUpload( getHandle(), desc );
+        return submit._result;
     }
 
     void Texture2D::forgetRHI( IRHIDevice* pDevice )
