@@ -2,7 +2,11 @@
 
 #include "Core/Console/DevCommandRegistry.h"
 #include "Core/String/fixed_string.h"
+#include "Core/Time/MonotonicClock.h"
 
+#include "Editor/Common/Config/EditorSettingsRegistry.h"
+#include "Editor/Common/Config/EditorSyncPreferences.h"
+#include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorNetPlaySession.h"
@@ -35,6 +39,12 @@ namespace sw::editor
 
             /** @brief 탭과 `netplay.sync` 가 같이 쓰는 비교입니다(창을 닫았다 열어도 남는다). 에디터 범위의 상태 저장소가 소유한다. */
             static EditorStateHashCompare& getCompare() { return getEditorState<EditorStateHashCompare>(); }
+
+            /** @brief 클라이언트 답을 기다리는 상한(밀리초)입니다. 값은 환경설정 섹션 `EditorSyncPreferences` 가 준다. */
+            static int64 getReplyTimeoutMilliseconds()
+            {
+                return static_cast<int64>( getPreferences<EditorSyncPreferences>()._clientReplyTimeoutSeconds * static_cast<float32>( constant::kMillisecondsPerSecond ) );
+            }
 
             static EditorNetPlaySession* findSession()
             {
@@ -177,6 +187,8 @@ namespace sw::editor
         };
     } // namespace
 
+    SW_EDITOR_SETTINGS( EditorSyncPreferences, "multiplayer_sync", "Editor/Multiplayer Sync", 370, nullptr );
+
     SW_AUTOMATION_PROBE( editorNetPlaySyncCommonTicks, "Editor.NetPlaySyncCommonTicks", "Ticks both state hash histories of the multiplayer Sync tab held at the last comparison",
                          &MultiplayerSyncTabInternal::readCommonTicks );
     SW_AUTOMATION_PROBE( editorNetPlaySyncDiverged, "Editor.NetPlaySyncDiverged", "1 when the multiplayer Sync tab's last comparison found a divergent tick",
@@ -231,6 +243,9 @@ namespace sw::editor
         uint32                                _arrObjectPendingCount[EditorStateHashCompare::kSourceCount];   ///< 물을 때의 그 프로세스 오브젝트 해시 답 수
         uint64                                _arrObjectTick[EditorStateHashCompare::kSourceCount];           ///< 슬롯마다 받은 오브젝트 해시의 틱
         vector<SceneObjectHash>               _arrObjectList[EditorStateHashCompare::kSourceCount];           ///< 슬롯마다 받은 오브젝트별 해시
+        Stopwatch                             _arrPendingWatch[EditorStateHashCompare::kSourceCount];         ///< 슬롯마다 이력 질의를 보낸 뒤 지난 시간 — 상한(`getReplyTimeoutMilliseconds`)을 넘으면 오류로 끝낸다
+        Stopwatch                             _objectWatch;                                                   ///< 오브젝트 해시 질의를 보낸 뒤 지난 시간(위와 같다)
+        string                                _errorText;                                                     ///< 마지막 질의 오류(시간 초과 포함). 새 질의가 시작되면 비운다
     };
 } // namespace sw::editor
 
@@ -247,6 +262,9 @@ namespace sw::editor
         , _arrObjectPendingCount{}
         , _arrObjectTick{}
         , _arrObjectList{}
+        , _arrPendingWatch{}
+        , _objectWatch{}
+        , _errorText{}
     {
         static_assert( EditorStateHashCompare::kSourceCount == 2, "the pending client table is initialized for two sources" );
     }
@@ -272,6 +290,8 @@ namespace sw::editor
                 {
                     _arrPendingProcess[sourceIndex]     = processIndex;
                     _arrPendingReportCount[sourceIndex] = status._stateHashReportCount;
+                    _arrPendingWatch[sourceIndex].restart();
+                    _errorText.clear();
                 }
                 else
                 {
@@ -299,7 +319,16 @@ namespace sw::editor
             }
             const EditorNetPlayProcessStatus status = pSession->getProcessStatus( processIndex );
             if ( status._stateHashReportCount == _arrPendingReportCount[sourceIndex] )
+            {
+                // 클라이언트는 잘못된 질문에 오류 줄로 답하고 그 답은 이력 답 수를 늘리지 않는다 - 상한 없이 기다리면 영원히 대기 상태로 남는다.
+                if ( _arrPendingWatch[sourceIndex].getElapsedMilliseconds() >= MultiplayerSyncTabInternal::getReplyTimeoutMilliseconds() )
+                {
+                    _arrPendingProcess[sourceIndex] = -1;
+                    _errorText                      = "Timed out waiting for " + status._label + "'s history (no valid answer within " + to_string( MultiplayerSyncTabInternal::getReplyTimeoutMilliseconds() ) + " ms)";
+                    SW_LOG_WARNING( "Sync %#", _errorText );
+                }
                 continue;
+            }
             _arrPendingProcess[sourceIndex] = -1;
             if ( MultiplayerSyncTabInternal::loadClientReport( sourceIndex, status ) == false )
                 SW_LOG_WARNING( "Sync could not take %#'s history: %#", status._label, MultiplayerSyncTabInternal::getCompare().getLastError() );
@@ -344,6 +373,8 @@ namespace sw::editor
 #endif
         }
         _bObjectRequest = true;
+        _errorText.clear();
+        _objectWatch.restart();
         if ( bWaiting == false )
             pollObjectReplies();
     }
@@ -375,7 +406,19 @@ namespace sw::editor
             _arrObjectPendingProcess[sourceIndex] = -1;
         }
         if ( bAllIn == false )
+        {
+            if ( _objectWatch.getElapsedMilliseconds() >= MultiplayerSyncTabInternal::getReplyTimeoutMilliseconds() )
+            {
+                _bObjectRequest = false;
+                for ( int32 sourceIndex = 0; sourceIndex < EditorStateHashCompare::kSourceCount; ++sourceIndex )
+                {
+                    _arrObjectPendingProcess[sourceIndex] = -1;
+                }
+                _errorText = "Timed out waiting for the object hashes (no valid answer within " + to_string( MultiplayerSyncTabInternal::getReplyTimeoutMilliseconds() ) + " ms)";
+                SW_LOG_WARNING( "Sync %#", _errorText );
+            }
             return;
+        }
         _bObjectRequest                 = false;
         EditorStateHashCompare& compare = MultiplayerSyncTabInternal::getCompare();
         if ( compare.compareObjects( _arrObjectTick[0], _arrObjectList[0], _arrObjectTick[1], _arrObjectList[1] ) == false )
@@ -447,6 +490,8 @@ namespace sw::editor
             drawSource( sourceIndex );
         }
         ImGui::Separator();
+        if ( _errorText.empty() == false )
+            EditorThemeUtil::textError( _errorText.c_str() );
         EditorStateHashCompare& compare = MultiplayerSyncTabInternal::getCompare();
         if ( ImGui::Button( "Compare" ) && compare.compare() == false )
             SW_LOG_WARNING( "Sync could not compare: %#", compare.getLastError() );

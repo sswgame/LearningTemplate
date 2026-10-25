@@ -6,6 +6,7 @@
 #include "Core/Network/NetTypes.h"
 
 #include <algorithm>
+#include <limits>
 
 namespace sw
 {
@@ -96,20 +97,34 @@ namespace sw
                 }
             }
 
-            /** @brief ` replicas=<이름>:<수>:<바이트>,…` 를 붙입니다. 이름이 형식에 맞지 않는 항목은 싣지 않습니다(줄 구분자를 깨지 않게). */
-            static void appendReplicas( string& inoutText, const vector<NetStatsReplicaEntry>& listEntry )
+            /** @brief 잘림 표시 ` truncated=<20자리 길이>` 의 최대 바이트입니다(복제 셈을 담을 때 미리 비워 둔다). */
+            static constexpr size_t kTruncatedMarkerBytes = 32;
+
+            /**
+             * @brief ` replicas=<이름>:<수>:<바이트>,…` 를 붙입니다. 이름이 형식에 맞지 않는 항목은 싣지 않습니다(줄 구분자를 깨지 않게).
+             * @details 줄이 @p maxBytes 를 넘지 않게 항목을 앞에서부터 담고, 담지 못한 항목이 있으면 true 를 반환합니다(부른 쪽이 잘림 표시를 붙인다).
+             */
+            [[nodiscard]] static bool appendReplicas( string& inoutText, const vector<NetStatsReplicaEntry>& listEntry, size_t maxBytes )
             {
                 inoutText += " replicas=";
-                bool bFirst = true;
+                bool bFirst   = true;
+                bool bDropped = false;
                 for ( const NetStatsReplicaEntry& entry : listEntry )
                 {
                     if ( NetStatsReport::isValidReplicaName( entry._name ) == false )
                         continue;
+                    const string item = entry._name + ":" + to_string( entry._updateCount ) + ":" + to_string( entry._byteCount );
+                    if ( inoutText.size() + ( bFirst ? 0u : 1u ) + item.size() > maxBytes )
+                    {
+                        bDropped = true;
+                        continue;
+                    }
                     if ( bFirst == false )
                         inoutText += ',';
                     bFirst = false;
-                    inoutText += entry._name + ":" + to_string( entry._updateCount ) + ":" + to_string( entry._byteCount );
+                    inoutText += item;
                 }
+                return bDropped;
             }
 
             [[nodiscard]] static bool tryParseReplicas( string_view value, vector<NetStatsReplicaEntry>& outListEntry )
@@ -170,7 +185,13 @@ namespace sw
         NetStatsReportInternal::appendFloat( text, "lossPercent", _lossPercent );
         NetStatsReportInternal::appendKinds( text, "kinds", _listKindEntry );
         NetStatsReportInternal::appendKinds( text, "sentKinds", _listSentKindEntry );
-        NetStatsReportInternal::appendReplicas( text, _listReplicaEntry );
+        // 종류 칸은 각 `kMaxKindEntry` 개라 머리는 상한에 한참 못 미친다. 길이가 열린 칸은 복제 셈(이름 길이 제한 없음)뿐이라 거기서만 줄인다.
+        string fullText = text;
+        (void)NetStatsReportInternal::appendReplicas( fullText, _listReplicaEntry, std::numeric_limits<size_t>::max() );
+        if ( fullText.size() <= kMaxLineBytes )
+            return fullText;
+        (void)NetStatsReportInternal::appendReplicas( text, _listReplicaEntry, kMaxLineBytes - NetStatsReportInternal::kTruncatedMarkerBytes );
+        text += " truncated=" + to_string( static_cast<uint64>( fullText.size() ) );
         return text;
     }
 
@@ -208,6 +229,8 @@ namespace sw
                 bValid = NetStatsReportInternal::tryParseKinds( value, parsed._listKindEntry );
             else if ( key == "sentKinds" )
                 bValid = NetStatsReportInternal::tryParseKinds( value, parsed._listSentKindEntry );
+            else if ( key == "truncated" )
+                bValid = StringUtil::parseUint64( value, parsed._truncatedLineBytes );
             else if ( key == "replicas" )
                 bValid = NetStatsReportInternal::tryParseReplicas( value, parsed._listReplicaEntry );
             else
