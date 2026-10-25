@@ -114,6 +114,72 @@ namespace sw
                     SW_LOG_ERROR( "%#: <%#> names the unknown task '%#' (registered: %#)", _sourceName, node.getName(), task->c_str(), BehaviorTaskRegistry::get().joinNames().c_str() );
                 return function;
             }
+            /** @brief Repeat 한 개를 읽어 더합니다. `count` 가 없거나 음수면 @p inoutbValid 를 false 로 둡니다. */
+            int32 addRepeat( const XMLNode& node, int32 parent, bool& inoutbValid )
+            {
+                const std::optional<int32> countValue = node.readRequiredAttribute<int32>( "count" );
+                inoutbValid                           = countValue.has_value() && inoutbValid;
+                if ( countValue.has_value() && *countValue < 0 )
+                {
+                    SW_LOG_ERROR( "%#: <Repeat> attribute 'count' must not be negative (%#)", _sourceName, *countValue );
+                    inoutbValid = false;
+                }
+                return _tree.addRepeat( parent, countValue.value_or( 0 ) );
+            }
+            /** @brief `seconds` 하나로 만드는 노드(Cooldown · TimeLimit · Wait)를 읽어 더합니다. */
+            int32 addTimed( const XMLNode& node, BehaviorNodeType type, int32 parent, bool& inoutbValid )
+            {
+                float32 seconds{ 0.0f };
+                inoutbValid = readSeconds( node, "seconds", seconds ) && inoutbValid;
+                switch ( type )
+                {
+                    case BehaviorNodeType::Cooldown:
+                        return _tree.addCooldown( parent, seconds );
+                    case BehaviorNodeType::TimeLimit:
+                        return _tree.addTimeLimit( parent, seconds );
+                    default:
+                        return _tree.addWait( parent, seconds );
+                }
+            }
+            /** @brief BlackboardCondition 한 개를 읽어 더합니다. */
+            int32 addBlackboardCondition( const XMLNode& node, int32 parent, bool& inoutbValid )
+            {
+                using Internal                        = BehaviorTreeAssetInternal;
+                const std::optional<string> key       = node.readRequiredAttribute<string>( "key" );
+                BlackboardCompare           compare   = BlackboardCompare::IsSet;
+                BehaviorAbortMode           abortMode = BehaviorAbortMode::None;
+                std::optional<float32>      compareValue;
+                inoutbValid = key.has_value() && inoutbValid;
+                inoutbValid = readEnumName( node, "compare", Internal::kCompareTable, compare ) && inoutbValid;
+                inoutbValid = readEnumName( node, "abort", Internal::kAbortTable, abortMode ) && inoutbValid;
+                inoutbValid = node.readOptionalAttribute<float32>( "value", compareValue ) && inoutbValid;
+                return _tree.addBlackboardCondition( parent, hashed_string( key.value_or( string{} ) ), compare, compareValue.value_or( 0.0f ), abortMode );
+            }
+            /** @brief Action · Condition 한 개를 읽어 더합니다. 함수가 없으면 노드를 더하지 않고 -1 입니다(함수 없는 잎이 트리에 남지 않게 한다). */
+            int32 addTask( const XMLNode& node, BehaviorNodeType type, int32 parent, bool& inoutbValid )
+            {
+                string                     name;
+                const BehaviorTaskFunction function = readTask( node );
+                inoutbValid                         = function != nullptr && inoutbValid;
+                inoutbValid                         = readName( node, name ) && inoutbValid;
+                if ( function == nullptr )
+                    return -1;
+                return type == BehaviorNodeType::Action ? _tree.addAction( parent, name.c_str(), function ) : _tree.addCondition( parent, name.c_str(), function );
+            }
+            /** @brief MoveTo 한 개를 읽어 더합니다. */
+            int32 addMoveTo( const XMLNode& node, int32 parent, bool& inoutbValid )
+            {
+                const std::optional<string> key = node.readRequiredAttribute<string>( "key" );
+                std::optional<float32>      repathDistance;
+                inoutbValid = key.has_value() && inoutbValid;
+                inoutbValid = node.readOptionalAttribute<float32>( "repathDistance", repathDistance ) && inoutbValid;
+                if ( repathDistance.has_value() && *repathDistance < 0.0f )
+                {
+                    SW_LOG_ERROR( "%#: <MoveTo> attribute 'repathDistance' must not be negative (%#)", _sourceName, *repathDistance );
+                    inoutbValid = false;
+                }
+                return _tree.addMoveTo( parent, hashed_string( key.value_or( string{} ) ), repathDistance.value_or( 0.5f ) );
+            }
 
             BehaviorTree& _tree;
             string_view   _sourceName;
@@ -134,15 +200,16 @@ namespace sw
                 return false;
             }
 
-            bool   bValid = true;
-            int32  index  = -1;
-            string name;
+            bool       bValid = checkAttributes( node, type );
+            int32      index  = -1;
+            string     name;
+            const bool bNamed = type == BehaviorNodeType::Selector || type == BehaviorNodeType::Sequence;
+            if ( bNamed )
+                bValid = readName( node, name ) && bValid;
             switch ( type )
             {
                 case BehaviorNodeType::Selector:
                 {
-                    bValid = checkAttributes( node, type );
-                    bValid = readName( node, name ) && bValid;
                     std::optional<bool> bReactive;
                     bValid = node.readOptionalAttribute<bool>( "reactive", bReactive ) && bValid;
                     index  = _tree.addSelector( parent, name.c_str(), bReactive.value_or( false ) );
@@ -150,99 +217,45 @@ namespace sw
                 }
                 case BehaviorNodeType::Sequence:
                 {
-                    bValid = checkAttributes( node, type );
-                    bValid = readName( node, name ) && bValid;
-                    index  = _tree.addSequence( parent, name.c_str() );
+                    index = _tree.addSequence( parent, name.c_str() );
                     break;
                 }
                 case BehaviorNodeType::Inverter:
                 {
-                    bValid = checkAttributes( node, type );
-                    index  = _tree.addInverter( parent );
+                    index = _tree.addInverter( parent );
                     break;
                 }
                 case BehaviorNodeType::ForceSuccess:
                 {
-                    bValid = checkAttributes( node, type );
-                    index  = _tree.addForceSuccess( parent );
+                    index = _tree.addForceSuccess( parent );
                     break;
                 }
                 case BehaviorNodeType::Repeat:
                 {
-                    bValid                                = checkAttributes( node, type );
-                    const std::optional<int32> countValue = node.readRequiredAttribute<int32>( "count" );
-                    bValid                                = countValue.has_value() && bValid;
-                    if ( countValue.has_value() && *countValue < 0 )
-                    {
-                        SW_LOG_ERROR( "%#: <Repeat> attribute 'count' must not be negative (%#)", _sourceName, *countValue );
-                        bValid = false;
-                    }
-                    index = _tree.addRepeat( parent, countValue.value_or( 0 ) );
+                    index = addRepeat( node, parent, bValid );
                     break;
                 }
                 case BehaviorNodeType::Cooldown:
-                {
-                    float32 seconds{ 0.0f };
-                    bValid = checkAttributes( node, type );
-                    bValid = readSeconds( node, "seconds", seconds ) && bValid;
-                    index  = _tree.addCooldown( parent, seconds );
-                    break;
-                }
                 case BehaviorNodeType::TimeLimit:
+                case BehaviorNodeType::Wait:
                 {
-                    float32 seconds{ 0.0f };
-                    bValid = checkAttributes( node, type );
-                    bValid = readSeconds( node, "seconds", seconds ) && bValid;
-                    index  = _tree.addTimeLimit( parent, seconds );
+                    index = addTimed( node, type, parent, bValid );
                     break;
                 }
                 case BehaviorNodeType::BlackboardCondition:
                 {
-                    bValid                                = checkAttributes( node, type );
-                    const std::optional<string> key       = node.readRequiredAttribute<string>( "key" );
-                    BlackboardCompare           compare   = BlackboardCompare::IsSet;
-                    BehaviorAbortMode           abortMode = BehaviorAbortMode::None;
-                    std::optional<float32>      compareValue;
-                    bValid = key.has_value() && bValid;
-                    bValid = readEnumName( node, "compare", Internal::kCompareTable, compare ) && bValid;
-                    bValid = readEnumName( node, "abort", Internal::kAbortTable, abortMode ) && bValid;
-                    bValid = node.readOptionalAttribute<float32>( "value", compareValue ) && bValid;
-                    index  = _tree.addBlackboardCondition( parent, hashed_string( key.value_or( string{} ) ), compare, compareValue.value_or( 0.0f ), abortMode );
+                    index = addBlackboardCondition( node, parent, bValid );
                     break;
                 }
                 case BehaviorNodeType::Action:
                 case BehaviorNodeType::Condition:
                 {
-                    bValid                              = checkAttributes( node, type );
-                    const BehaviorTaskFunction function = readTask( node );
-                    bValid                              = function != nullptr && bValid;
-                    bValid                              = readName( node, name ) && bValid;
-                    // 함수가 없으면 노드를 더하지 않는다 - 함수 없는 잎이 트리에 남지 않게 한다.
-                    if ( function != nullptr )
-                        index = type == BehaviorNodeType::Action ? _tree.addAction( parent, name.c_str(), function ) : _tree.addCondition( parent, name.c_str(), function );
-                    break;
-                }
-                case BehaviorNodeType::Wait:
-                {
-                    float32 seconds{ 0.0f };
-                    bValid = checkAttributes( node, type );
-                    bValid = readSeconds( node, "seconds", seconds ) && bValid;
-                    index  = _tree.addWait( parent, seconds );
+                    index = addTask( node, type, parent, bValid );
                     break;
                 }
                 case BehaviorNodeType::MoveTo:
                 {
-                    bValid                          = checkAttributes( node, type );
-                    const std::optional<string> key = node.readRequiredAttribute<string>( "key" );
-                    std::optional<float32>      repathDistance;
-                    bValid = key.has_value() && bValid;
-                    bValid = node.readOptionalAttribute<float32>( "repathDistance", repathDistance ) && bValid;
-                    if ( repathDistance.has_value() && *repathDistance < 0.0f )
-                    {
-                        SW_LOG_ERROR( "%#: <MoveTo> attribute 'repathDistance' must not be negative (%#)", _sourceName, *repathDistance );
-                        bValid = false;
-                    }
-                    index = _tree.addMoveTo( parent, hashed_string( key.value_or( string{} ) ), repathDistance.value_or( 0.5f ) );
+                    index = addMoveTo( node, parent, bValid );
                     break;
                 }
             }

@@ -199,176 +199,204 @@ namespace sw
 
     uint32 ScheduleCatalog::loadElement( const XMLNode& node, string_view sourceName )
     {
-        using Internal    = ScheduleCatalogInternal;
         const utf8* pName = node.getName();
         if ( StringUtil::equals( pName, "Calendar", true ) )
         {
-            Internal::warnUnknownAttributes( node, Internal::kArrCalendarAttribute, false, sourceName );
-            ScheduleCondition::parseNameList( node.getAttributeText( "days" ), _vocabulary._listWeekday );
-            ScheduleCondition::parseNameList( node.getAttributeText( "seasons" ), _vocabulary._listSeason );
-            ScheduleCondition::parseNameList( node.getAttributeText( "weathers" ), _vocabulary._listWeather );
+            loadCalendar( node, sourceName );
             return 0;
         }
         const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
         if ( pID == nullptr )
             return 0;
         if ( StringUtil::equals( pName, "Place", true ) )
-        {
-            Internal::warnUnknownAttributes( node, Internal::kArrPlaceAttribute, false, sourceName );
-            // 위치 없는 장소를 원점에 두지 않는다 — 읽히지 않으면 오류를 알리고 장소를 더하지 않는다(그 장소를 가리키는 약속이 "unknown place" 로 걸러진다).
-            SchedulePlaceDef place;
-            float3           position{};
-            const bool       bValidPosition = GameDataXML::readRequiredFloat3( node, "position", sourceName, position );
-
-            place._id               = hashed_string( pID );
-            place._area             = hashed_string( node.getAttributeText( "area" ) );
-            place._position         = position;
-            const bool bValidRadius = GameDataXML::readOptionalNumber( node, "radius", sourceName, 0.0f, MathUtil::kMaxFloat, place._radius );
-            if ( bValidPosition && bValidRadius )
-                (void)_placeCatalog.add( place );
-            else
-                SW_LOG_ERROR( "%#: place '%#' has invalid fields - skipped", sourceName, pID );
-        }
+            loadPlace( node, sourceName, pID );
         else if ( StringUtil::equals( pName, "Spot", true ) )
-        {
-            Internal::warnUnknownAttributes( node, Internal::kArrSpotAttribute, false, sourceName );
-            ScheduleSpotDef spot;
-            spot._id                  = hashed_string( pID );
-            spot._kind                = hashed_string( node.getAttributeText( "kind" ) );
-            spot._area                = hashed_string( node.getAttributeText( "area" ) );
-            const bool bValidCapacity = GameDataXML::readOptionalNumber( node, "capacity", sourceName, 1, MathUtil::kMaxInt32, spot._capacity );
-            const bool bValidPosition = GameDataXML::readRequiredFloat3( node, "position", sourceName, spot._position );
-            if ( bValidCapacity == false || bValidPosition == false )
-                SW_LOG_ERROR( "%#: spot '%#' has invalid fields - skipped", sourceName, pID );
-            else if ( spot._kind.empty() )
-                SW_LOG_ERROR( "%#: spot '%#' has no kind - skipped", sourceName, pID );
-            else
-                (void)_spotCatalog.add( spot );
-        }
+            loadSpot( node, sourceName, pID );
         else if ( StringUtil::equals( pName, "Interrupt", true ) )
-        {
-            Internal::warnUnknownAttributes( node, Internal::kArrInterruptAttribute, false, sourceName );
-            ScheduleInterruptDef interrupt;
-            interrupt._id = hashed_string( pID );
-            bool bValid   = GameDataXML::readOptionalNumber( node, "priority", sourceName, MathUtil::kMinInt32, MathUtil::kMaxInt32, interrupt._priority );
-            bValid        = GameDataXML::readOptionalNumber( node, "timeout", sourceName, 0, MathUtil::kMaxInt32, interrupt._timeoutMinutes ) && bValid;
-            if ( bValid )
-                (void)_interruptCatalog.add( interrupt );
-            else
-                SW_LOG_ERROR( "%#: interrupt '%#' has invalid fields - skipped", sourceName, pID );
-        }
+            loadInterrupt( node, sourceName, pID );
         else if ( StringUtil::equals( pName, "Appointment", true ) )
-        {
-            Internal::warnUnknownAttributes( node, Internal::kArrAppointmentAttribute, true, sourceName );
-            ScheduleAppointmentDef appointment;
-            appointment._id          = hashed_string( pID );
-            appointment._place       = hashed_string( node.getAttributeText( "place" ) );
-            bool bValid              = true;
-            appointment._startMinute = Internal::readClock( node, "start", -1, sourceName, pID, bValid );
-            appointment._endMinute   = Internal::readClock( node, "end", -1, sourceName, pID, bValid );
-            bValid                   = GameDataXML::readOptionalNumber( node, "wait", sourceName, 0, MathUtil::kMaxInt32, appointment._waitMinutes ) && bValid;
-            bValid                   = GameDataXML::readOptionalNumber( node, "priority", sourceName, MathUtil::kMinInt32, MathUtil::kMaxInt32, appointment._priority ) && bValid;
-            bValid                   = appointment._condition.readFromNode( node, _vocabulary, sourceName, pID ) && bValid;
-            if ( findPlace( appointment._place ) == nullptr )
-            {
-                SW_LOG_ERROR( "%#: appointment '%#' has an unknown place '%#' - skipped", sourceName, pID, appointment._place.c_str() );
-                bValid = false;
-            }
-            if ( bValid && ( appointment._startMinute < 0 || appointment._endMinute <= appointment._startMinute ) )
-            {
-                SW_LOG_ERROR_ID( "Schedule.AppointmentTimeOrder", "%#: appointment '%#' needs start < end - skipped", sourceName, pID );
-                bValid = false;
-            }
-            if ( bValid )
-                (void)_appointmentCatalog.add( appointment );
-        }
+            loadAppointment( node, sourceName, pID );
         else if ( StringUtil::equals( pName, "Archetype", true ) )
-        {
-            Internal::warnUnknownAttributes( node, Internal::kArrArchetypeAttribute, false, sourceName );
-            ScheduleArchetypeDef archetype;
-            archetype._id     = hashed_string( pID );
-            archetype._parent = hashed_string( node.getAttributeText( "parent" ) );
-            for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
-            {
-                if ( StringUtil::equals( child.getName(), "Routine", true ) == false )
-                {
-                    SW_LOG_WARNING( "%#: archetype '%#' has unknown element <%#>", sourceName, pID, child.getName() );
-                    continue;
-                }
-                ScheduleRoutineDef routine;
-                if ( readRoutine( child, sourceName, pID, routine ) )
-                    archetype._listRoutine.push_back( routine );
-            }
-            (void)_archetypeCatalog.add( archetype );
-        }
+            loadArchetype( node, sourceName, pID );
         else if ( StringUtil::equals( pName, "Npc", true ) )
-        {
-            Internal::warnUnknownAttributes( node, Internal::kArrNpcAttribute, false, sourceName );
-            ScheduleNpcDef npc;
-            npc._id           = hashed_string( pID );
-            npc._archetype    = hashed_string( node.getAttributeText( "archetype" ) );
-            npc._home         = hashed_string( node.getAttributeText( "home" ) );
-            npc._idleActivity = hashed_string( node.findAttribute( "idle" ) != nullptr ? node.getAttributeText( "idle" ) : string_view( "StayHome" ) );
-            if ( GameDataXML::readOptionalNumber( node, "speed", sourceName, ScheduleNpcDef::kMinUnitsPerMinute, MathUtil::kMaxFloat, npc._unitsPerMinute ) == false )
-            {
-                SW_LOG_ERROR( "%#: npc '%#' has an invalid speed - skipped", sourceName, pID );
-                return 0;
-            }
-            Internal::parseTagList( node.getAttributeText( "tags" ), npc._listTag );
-            if ( npc._home.empty() == false && findPlace( npc._home ) == nullptr )
-                SW_LOG_WARNING( "%#: npc '%#' has an unknown home '%#'", sourceName, pID, npc._home.c_str() );
-            const ScheduleActivityDef* pIdle = getActivityRegistry().findActivity( npc._idleActivity );
-            if ( pIdle == nullptr || pIdle->_target != ScheduleActivityTarget::Home )
-            {
-                SW_LOG_ERROR( "%#: npc '%#' has idle activity '%#' that is not a home activity - skipped", sourceName, pID, npc._idleActivity.c_str() );
-                return 0;
-            }
-            for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
-            {
-                if ( StringUtil::equals( child.getName(), "Routine", true ) == false )
-                {
-                    SW_LOG_WARNING( "%#: npc '%#' has unknown element <%#>", sourceName, pID, child.getName() );
-                    continue;
-                }
-                ScheduleRoutineDef routine;
-                if ( readRoutine( child, sourceName, pID, routine ) )
-                    npc._listRoutine.push_back( routine );
-            }
-            (void)_npcCatalog.add( npc );
-            return 1;
-        }
+            return loadNpc( node, sourceName, pID ) ? 1 : 0;
         else
-        {
-            Internal::warnUnknownAttributes( node, Internal::kArrEventAttribute, true, sourceName );
-            ScheduleEventDef event;
-            event._id   = hashed_string( pID );
-            bool bValid = GameDataXML::readOptionalNumber( node, "priority", sourceName, MathUtil::kMinInt32, MathUtil::kMaxInt32, event._priority );
-            ScheduleCondition::parseNameList( node.getAttributeText( "npcs" ), event._listNpc );
-            ScheduleCondition::parseNameList( node.getAttributeText( "archetypes" ), event._listArchetype );
-            bValid = event._condition.readFromNode( node, _vocabulary, sourceName, pID ) && bValid;
-            if ( bValid == false )
-            {
-                SW_LOG_ERROR( "%#: event '%#' has invalid fields - skipped", sourceName, pID );
-                return 0;
-            }
-            for ( const hashed_string& archetypeID : event._listArchetype )
-            {
-                if ( findArchetype( archetypeID ) == nullptr )
-                    SW_LOG_WARNING( "%#: event '%#' has an unknown archetype '%#'", sourceName, pID, archetypeID.c_str() );
-            }
-            for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
-            {
-                if ( StringUtil::equals( child.getName(), "Block", true ) == false )
-                {
-                    SW_LOG_WARNING( "%#: event '%#' has unknown element <%#>", sourceName, pID, child.getName() );
-                    continue;
-                }
-                readBlock( child, sourceName, pID, false, event._listBlock );
-            }
-            warnOverlappingBlocks( event._listBlock, sourceName, pID );
-            (void)_eventCatalog.add( event );
-        }
+            loadEvent( node, sourceName, pID );
         return 0;
+    }
+
+    void ScheduleCatalog::loadCalendar( const XMLNode& node, string_view sourceName )
+    {
+        using Internal = ScheduleCatalogInternal;
+        Internal::warnUnknownAttributes( node, Internal::kArrCalendarAttribute, false, sourceName );
+        ScheduleCondition::parseNameList( node.getAttributeText( "days" ), _vocabulary._listWeekday );
+        ScheduleCondition::parseNameList( node.getAttributeText( "seasons" ), _vocabulary._listSeason );
+        ScheduleCondition::parseNameList( node.getAttributeText( "weathers" ), _vocabulary._listWeather );
+    }
+
+    void ScheduleCatalog::loadPlace( const XMLNode& node, string_view sourceName, const utf8* pID )
+    {
+        using Internal = ScheduleCatalogInternal;
+        Internal::warnUnknownAttributes( node, Internal::kArrPlaceAttribute, false, sourceName );
+        // 위치 없는 장소를 원점에 두지 않는다 — 읽히지 않으면 오류를 알리고 장소를 더하지 않는다(그 장소를 가리키는 약속이 "unknown place" 로 걸러진다).
+        SchedulePlaceDef place;
+        float3           position{};
+        const bool       bValidPosition = GameDataXML::readRequiredFloat3( node, "position", sourceName, position );
+
+        place._id               = hashed_string( pID );
+        place._area             = hashed_string( node.getAttributeText( "area" ) );
+        place._position         = position;
+        const bool bValidRadius = GameDataXML::readOptionalNumber( node, "radius", sourceName, 0.0f, MathUtil::kMaxFloat, place._radius );
+        if ( bValidPosition && bValidRadius )
+            (void)_placeCatalog.add( place );
+        else
+            SW_LOG_ERROR( "%#: place '%#' has invalid fields - skipped", sourceName, pID );
+    }
+
+    void ScheduleCatalog::loadSpot( const XMLNode& node, string_view sourceName, const utf8* pID )
+    {
+        using Internal = ScheduleCatalogInternal;
+        Internal::warnUnknownAttributes( node, Internal::kArrSpotAttribute, false, sourceName );
+        ScheduleSpotDef spot;
+        spot._id                  = hashed_string( pID );
+        spot._kind                = hashed_string( node.getAttributeText( "kind" ) );
+        spot._area                = hashed_string( node.getAttributeText( "area" ) );
+        const bool bValidCapacity = GameDataXML::readOptionalNumber( node, "capacity", sourceName, 1, MathUtil::kMaxInt32, spot._capacity );
+        const bool bValidPosition = GameDataXML::readRequiredFloat3( node, "position", sourceName, spot._position );
+        if ( bValidCapacity == false || bValidPosition == false )
+            SW_LOG_ERROR( "%#: spot '%#' has invalid fields - skipped", sourceName, pID );
+        else if ( spot._kind.empty() )
+            SW_LOG_ERROR( "%#: spot '%#' has no kind - skipped", sourceName, pID );
+        else
+            (void)_spotCatalog.add( spot );
+    }
+
+    void ScheduleCatalog::loadInterrupt( const XMLNode& node, string_view sourceName, const utf8* pID )
+    {
+        using Internal = ScheduleCatalogInternal;
+        Internal::warnUnknownAttributes( node, Internal::kArrInterruptAttribute, false, sourceName );
+        ScheduleInterruptDef interrupt;
+        interrupt._id = hashed_string( pID );
+        bool bValid   = GameDataXML::readOptionalNumber( node, "priority", sourceName, MathUtil::kMinInt32, MathUtil::kMaxInt32, interrupt._priority );
+        bValid        = GameDataXML::readOptionalNumber( node, "timeout", sourceName, 0, MathUtil::kMaxInt32, interrupt._timeoutMinutes ) && bValid;
+        if ( bValid )
+            (void)_interruptCatalog.add( interrupt );
+        else
+            SW_LOG_ERROR( "%#: interrupt '%#' has invalid fields - skipped", sourceName, pID );
+    }
+
+    void ScheduleCatalog::loadAppointment( const XMLNode& node, string_view sourceName, const utf8* pID )
+    {
+        using Internal = ScheduleCatalogInternal;
+        Internal::warnUnknownAttributes( node, Internal::kArrAppointmentAttribute, true, sourceName );
+        ScheduleAppointmentDef appointment;
+        appointment._id          = hashed_string( pID );
+        appointment._place       = hashed_string( node.getAttributeText( "place" ) );
+        bool bValid              = true;
+        appointment._startMinute = Internal::readClock( node, "start", -1, sourceName, pID, bValid );
+        appointment._endMinute   = Internal::readClock( node, "end", -1, sourceName, pID, bValid );
+        bValid                   = GameDataXML::readOptionalNumber( node, "wait", sourceName, 0, MathUtil::kMaxInt32, appointment._waitMinutes ) && bValid;
+        bValid                   = GameDataXML::readOptionalNumber( node, "priority", sourceName, MathUtil::kMinInt32, MathUtil::kMaxInt32, appointment._priority ) && bValid;
+        bValid                   = appointment._condition.readFromNode( node, _vocabulary, sourceName, pID ) && bValid;
+        if ( findPlace( appointment._place ) == nullptr )
+        {
+            SW_LOG_ERROR( "%#: appointment '%#' has an unknown place '%#' - skipped", sourceName, pID, appointment._place.c_str() );
+            bValid = false;
+        }
+        if ( bValid && ( appointment._startMinute < 0 || appointment._endMinute <= appointment._startMinute ) )
+        {
+            SW_LOG_ERROR_ID( "Schedule.AppointmentTimeOrder", "%#: appointment '%#' needs start < end - skipped", sourceName, pID );
+            bValid = false;
+        }
+        if ( bValid )
+            (void)_appointmentCatalog.add( appointment );
+    }
+
+    void ScheduleCatalog::readRoutineChildren( const XMLNode& node, string_view sourceName, string_view ownerKind, string_view ownerID, vector<ScheduleRoutineDef>& outListRoutine ) const
+    {
+        for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
+        {
+            if ( StringUtil::equals( child.getName(), "Routine", true ) == false )
+            {
+                SW_LOG_WARNING( "%#: %# '%#' has unknown element <%#>", sourceName, ownerKind, ownerID, child.getName() );
+                continue;
+            }
+            ScheduleRoutineDef routine;
+            if ( readRoutine( child, sourceName, ownerID, routine ) )
+                outListRoutine.push_back( routine );
+        }
+    }
+
+    void ScheduleCatalog::loadArchetype( const XMLNode& node, string_view sourceName, const utf8* pID )
+    {
+        using Internal = ScheduleCatalogInternal;
+        Internal::warnUnknownAttributes( node, Internal::kArrArchetypeAttribute, false, sourceName );
+        ScheduleArchetypeDef archetype;
+        archetype._id     = hashed_string( pID );
+        archetype._parent = hashed_string( node.getAttributeText( "parent" ) );
+        readRoutineChildren( node, sourceName, "archetype", pID, archetype._listRoutine );
+        (void)_archetypeCatalog.add( archetype );
+    }
+
+    bool ScheduleCatalog::loadNpc( const XMLNode& node, string_view sourceName, const utf8* pID )
+    {
+        using Internal = ScheduleCatalogInternal;
+        Internal::warnUnknownAttributes( node, Internal::kArrNpcAttribute, false, sourceName );
+        ScheduleNpcDef npc;
+        npc._id           = hashed_string( pID );
+        npc._archetype    = hashed_string( node.getAttributeText( "archetype" ) );
+        npc._home         = hashed_string( node.getAttributeText( "home" ) );
+        npc._idleActivity = hashed_string( node.findAttribute( "idle" ) != nullptr ? node.getAttributeText( "idle" ) : string_view( "StayHome" ) );
+        if ( GameDataXML::readOptionalNumber( node, "speed", sourceName, ScheduleNpcDef::kMinUnitsPerMinute, MathUtil::kMaxFloat, npc._unitsPerMinute ) == false )
+        {
+            SW_LOG_ERROR( "%#: npc '%#' has an invalid speed - skipped", sourceName, pID );
+            return false;
+        }
+        Internal::parseTagList( node.getAttributeText( "tags" ), npc._listTag );
+        if ( npc._home.empty() == false && findPlace( npc._home ) == nullptr )
+            SW_LOG_WARNING( "%#: npc '%#' has an unknown home '%#'", sourceName, pID, npc._home.c_str() );
+        const ScheduleActivityDef* pIdle = getActivityRegistry().findActivity( npc._idleActivity );
+        if ( pIdle == nullptr || pIdle->_target != ScheduleActivityTarget::Home )
+        {
+            SW_LOG_ERROR( "%#: npc '%#' has idle activity '%#' that is not a home activity - skipped", sourceName, pID, npc._idleActivity.c_str() );
+            return false;
+        }
+        readRoutineChildren( node, sourceName, "npc", pID, npc._listRoutine );
+        (void)_npcCatalog.add( npc );
+        return true;
+    }
+
+    void ScheduleCatalog::loadEvent( const XMLNode& node, string_view sourceName, const utf8* pID )
+    {
+        using Internal = ScheduleCatalogInternal;
+        Internal::warnUnknownAttributes( node, Internal::kArrEventAttribute, true, sourceName );
+        ScheduleEventDef event;
+        event._id   = hashed_string( pID );
+        bool bValid = GameDataXML::readOptionalNumber( node, "priority", sourceName, MathUtil::kMinInt32, MathUtil::kMaxInt32, event._priority );
+        ScheduleCondition::parseNameList( node.getAttributeText( "npcs" ), event._listNpc );
+        ScheduleCondition::parseNameList( node.getAttributeText( "archetypes" ), event._listArchetype );
+        bValid = event._condition.readFromNode( node, _vocabulary, sourceName, pID ) && bValid;
+        if ( bValid == false )
+        {
+            SW_LOG_ERROR( "%#: event '%#' has invalid fields - skipped", sourceName, pID );
+            return;
+        }
+        for ( const hashed_string& archetypeID : event._listArchetype )
+        {
+            if ( findArchetype( archetypeID ) == nullptr )
+                SW_LOG_WARNING( "%#: event '%#' has an unknown archetype '%#'", sourceName, pID, archetypeID.c_str() );
+        }
+        for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
+        {
+            if ( StringUtil::equals( child.getName(), "Block", true ) == false )
+            {
+                SW_LOG_WARNING( "%#: event '%#' has unknown element <%#>", sourceName, pID, child.getName() );
+                continue;
+            }
+            readBlock( child, sourceName, pID, false, event._listBlock );
+        }
+        warnOverlappingBlocks( event._listBlock, sourceName, pID );
+        (void)_eventCatalog.add( event );
     }
 
     bool ScheduleCatalog::readRoutine( const XMLNode& node, string_view sourceName, string_view ownerName, ScheduleRoutineDef& outRoutine ) const
