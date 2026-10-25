@@ -189,12 +189,15 @@
 - 자동 분리: autosplit
 - 해상도 배율: qualityadj → qualityadj2 → hostview → hostscale
 - 서버 디버깅: serverdbg → serverdbg2 → serverdbg3 → serverdbg4 (한 줄 답 상한 3500, `sync-tab-object-diff-scenario` 시나리오 프레임 간격은 통합이 맞춘다)
+- 카메라 컷: camcut → camcut2 (`GameObjectManager::getUpdateSerial()` 추가로 광범위 재빌드. 렌더 스레드 `_bCut` 소비 — `FrameRenderer.cpp:562` `makeMainSettings` 가 어느 스레드인지 확인)
+- 경로 매처 테스트: pathpat5 (pathpat4 위)
 - 임포트 규칙 · 경로 패턴: importrule → importrule2 → pathpat2 → pathpat3 → pathpat4 (pathpat4 는 매처를 Core 로 옮긴다 — 컴파일 확인이 가장 큰 위험)
 - 소스 스캔 게이트: scangates → scangates2
 - 서버 빌드 목록: x11scope → serverlist → modtargets (wlserver 와 겹침 확인)
 - 프리팹: prefabmove → … → prefabmove6 (`findReferenceTo` 가 TypeRegistry 필수, 거절 로그는 경고 — 하네스가 실패로 잡는지 본다)
-- Online: onlinekits → onlinetables → onlinedrain2 → drainsweep ; onlinekits → onlinemax → maxkits → minmaxconst → rangeconst2 (두 가지가 Online 헤더에서 겹친다. `Min`/`Max` 상수 이름 코드젠이 들어가므로 **파서(`Tools/ReflectionParser`)를 가장 먼저 짓고 온라인 스키마 해시 테스트로 해시가 그대로인지 본다**)
-- 에디터 서비스 무음 null: svcnullA → svcnullB (B 의 치환 목록은 A 병합 뒤 필수 조회로 한 번에 바꾼다)
+- Online: onlinekits → onlinetables → onlinedrain2 → drainsweep (`OnlineDrainGate` 가 Core `DrainGate` 로 올라가 이름이 바뀐다. OnlineKits.md 102행 근처 충돌 가능) ; onlinekits → onlinemax → maxkits → minmaxconst → rangeconst2 (두 가지가 Online 헤더에서 겹친다. `Min`/`Max` 상수 이름 코드젠이 들어가므로 **파서(`Tools/ReflectionParser`)를 가장 먼저 짓고 온라인 스키마 해시 테스트로 해시가 그대로인지 본다**)
+- 에디터 서비스 무음 null — 두 가닥, 둘 다 prefabmove6 위: ① svcnullA → svcnullD → svcnullE → svcnullG → svcnullI ② svcnullB → svcnullC → svcnullF → svcnullH → svcnullJ. 가닥 ① 을 먼저 병합하고, 가닥 ② 의 `// 필수 서비스: 없으면 버그` 줄(grep)을 `editor::getSubsystem` 으로 한 번에 치환한다. `refuseSceneEdit` 경고는 ① 의 상태 억제와 ② 의 `SW_LOG_WARNING_ONCE`(`Core/Log/LogOnce.h` 에 `CallSite` 추가) 중 하나로 통일한다.
+  - **가장 큰 위험**: svcnullE 가 `assertEditorThread` 를 Release 에서도 켰다(어기면 오류 로그 + abort). 병합 직후 Release/Shipping `nogpu` 와 에디터 자동화 시나리오로 먼저 확인한다. `TestEditorInspectorCommands` 의 `PrefabCommandsRefuseWithAReasonWhileSceneEditsAreHeld`(로그 3건)도 본다.
 - 단독 한 개씩: charint(E6 `surfacelit`), msdf, modrp, xfileref, wlserver, unreadcands, maxcountconst
 
 **통합 몫(작업자가 못 한 것)**
@@ -205,10 +208,16 @@
 5. 수정된 `Tools/OnlineLoadBot` 컴파일(전엔 깨져 있었다 — 어느 게이트에도 안 들어 있다면 넣는다).
 6. 예전부터 남은 통합 몫: `complex-text-install`(ThirdPartyGaps T2/T3b), SilentFallbackAudit 의 RenderTargetFormat PSO 경로 열거(임시 로그 + 네 백엔드), 글리프 MSDF 측정, module-pass-scenario 문턱 0.02, Q3 자동 배율 실측.
 
+**이 세션에서 훅으로 막은 것**: `.claude/hooks/GuardCommands.py` 가 `python - <<EOF` · `bash -c` 로 감싼 것 · `cat/tee > 파일 <<EOF` 와 `find /` 를 실행 전에 거절한다. 작업자 지시문 첫 줄에도 적는다. 이 세션에 훅 이전 구간에서 작업자 7 명이 heredoc 편집을 했고 `python -` 7 개가 CPU 를 돌았다.
+
+**사용자 결정 대기**: push 여부(마지막 CI 는 Build Linux Shipping(Clang) 실패였고, Wayland smoke · X11 INCR · TSan 은 push 뒤 처음 돈다), `D:/w` 바로 아래 작업자 산출물(`e.py`, `kh_*.log`, `vb.bak` 등) 삭제 허락, 말 모델(WildWestHorseMount W3) CC0 에셋과 라이선스.
+
 **같은 결함 후보로 남긴 것(후속 작업자 후보)**
 - `NetStatsReport` 의 `net.stats` 줄 길이 상한, Sync 탭 클라이언트 질의 시간 초과(오류 응답을 영원히 기다린다).
 - 프리팹 참조 검사: 프리팹 파일 XML 안 덮어쓰기 값 · 씬 수준 데이터(참조를 담을 자리가 아직 없어 하지 않음).
-- `PackCooker` 매처는 pathpat4 가 맞춘다. 에디터 서비스 null 은 svcnullA · B 범위 밖(Editor 밖 폴더)이 남았다.
+- 에디터 `EditorContext::get()` 가 null 을 허용해 252 곳 중 그리기 경로가 얼마인지 svcnullJ 가 센다. 그 수로 `get()` → `find()`/`require()` 이름 분리를 판단한다. `getSubsystem` 은 Release 에서 단언이 빠져 null 역참조가 된다(폴백 금지 원칙으로는 Release 에서도 멈추게 해야 한다).
+- `ConfigReference.py` 는 다른 헤더의 상수를 못 푼다(같은 파일만, 못 찾으면 멈춤). 한 줄 답 상한(serverdbg4)은 `net.stats` 줄에 아직 안 걸려 있다.
+- 마지막 작업자 셋(`dx11rbwait`: DX11 `DO_NOT_WAIT` 전수, `crowdfix`: `shooter3d.crowd` 의 `CrowdSharedUnits` 가 1, `vfxgl`: GL 에서 `vfxgpulights` 가 안 보임)은 base 가 main(a8f380c83)이다. 끝났는지는 `git branch --list "wt/dx11rbwait" "wt/crowdfix" "wt/vfxgl"` 와 각 브랜치 `git log -3` 로 본다. 앞의 둘은 main 에서도 지는 결함이다(통합 N 이 main(1d9680081)을 따로 지어 확인).
 - RHI 파일 후보: DX11 allocateUploadStaging 의 RHIStagingAllocator 합치기, Vulkan 프레임 밖 펜스 대기, 큐 소유권 이동, DX11 Map(DO_NOT_WAIT) vs 장치 소실, DX11 Present 실패 로그 반복, GL 비트필드.
 
 **사용자 결정 대기**: 말 모델(WildWestHorseMount W3)의 CC0 에셋과 라이선스 선택뿐이다. push 는 통합 N 이 main 에 들어간 뒤 사용자에게 먼저 묻는다.
