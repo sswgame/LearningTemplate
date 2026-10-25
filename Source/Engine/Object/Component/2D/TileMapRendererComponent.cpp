@@ -246,10 +246,20 @@ namespace sw
 
     void TileMapRendererComponent::releaseChunks()
     {
-        for ( unique_ptr<SpriteInstanceBatch>& pBatch : _listChunkBatch )
+        // 레지스트리에서 한 번에 뺀다(청크마다 빼면 항목 목록을 청크 수만큼 접는다). 오너가 매니저에서 빠졌으면 배치마다 소멸자 경로가 뺀다.
+        GameObject*        pOwner   = getOwner();
+        GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getManager() : nullptr;
+        if ( pManager != nullptr )
         {
-            if ( pBatch != nullptr )
-                pBatch->shutdown();
+            SpriteInstanceBatch::shutdownAll( *pManager, _listChunkBatch );
+        }
+        else
+        {
+            for ( unique_ptr<SpriteInstanceBatch>& pBatch : _listChunkBatch )
+            {
+                if ( pBatch != nullptr )
+                    pBatch->shutdown();
+            }
         }
         _listChunkBatch.clear();
     }

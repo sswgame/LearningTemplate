@@ -179,3 +179,99 @@ SW_TEST_CASE( NetObjectTableTest, CapturingManySceneObjectsInTwoPassesKeepsNameH
         SW_EXPECT_TRUE( listCollected[numberedScene + spawnedIndex] == listSpawned[spawnedIndex] );
     }
 }
+
+/**
+ * @brief [NetObjectTableTest] 생성 번호를 등록 · 해제 · 재등록 · 순서 없이 묶어도 번호 → 오브젝트와 오브젝트 → 번호가 늘 서로 맞는다 (오브젝트 2 천 개)
+ * @details 오브젝트 → 번호 해시 표(`_mapSpawnedNetID`)는 번호 순서 목록과 함께 고친다. 하나 건너 해제하면 해제된 쪽은 번호 없음이고 남은 쪽은 그대로이며, 재등록은 옛 번호를
+ *          되살리지 않고 새 번호를 받는다. 클라이언트 쪽은 번호를 순서 없이(거꾸로) 묶어도 `collectObjects` 가 번호 오름차순이고 번호로 찾은 오브젝트가 묶은 오브젝트다.
+ */
+SW_TEST_CASE( NetObjectTableTest, SpawnedIDMapStaysConsistentThroughRegisterUnregisterAndRebind )
+{
+    constexpr uint32 kObjectCount = 2000;
+
+    GameObjectManager   serverManager;
+    NetObjectTable&     serverTable = serverManager.getSubsystem<NetObjectTable>();
+    vector<GameObject*> listObject;
+    vector<uint32>      listID;
+    for ( uint32 objectIndex = 0; objectIndex < kObjectCount; ++objectIndex )
+    {
+        fixed_string<constant::kMaxBuffer32> nameBuf{};
+        formatstring( nameBuf.data(), nameBuf.capacity(), "Spawned%#", objectIndex );
+        GameObject* pObject = serverManager.createGameObject( hashed_string( nameBuf.c_str() ) );
+        SW_ASSERT_NOT_NULL( pObject );
+        listObject.push_back( pObject );
+        listID.push_back( serverTable.registerSpawned( *pObject ) );
+    }
+
+    // 하나 건너 해제한다 — 해제된 쪽은 번호도 오브젝트도 없고, 남은 쪽은 그대로다.
+    const uint32 revisionBefore = serverTable.getSpawnedRevision();
+    for ( uint32 objectIndex = 0; objectIndex < kObjectCount; objectIndex += 2 )
+    {
+        serverTable.unregisterSpawned( *listObject[objectIndex] );
+        serverTable.unregisterSpawned( *listObject[objectIndex] ); // 두 번째는 할 일이 없다
+    }
+    SW_EXPECT_TRUE( serverTable.getSpawnedRevision() != revisionBefore );
+    bool bConsistent = true;
+    for ( uint32 objectIndex = 0; objectIndex < kObjectCount; ++objectIndex )
+    {
+        const bool bRemoved = objectIndex % 2 == 0;
+        bConsistent         = bConsistent && serverTable.findID( *listObject[objectIndex] ) == ( bRemoved ? 0u : listID[objectIndex] );
+        bConsistent         = bConsistent && serverTable.findObject( listID[objectIndex] ) == ( bRemoved ? nullptr : listObject[objectIndex] );
+    }
+    SW_EXPECT_TRUE( bConsistent );
+
+    // 재등록 — 옛 번호가 아니라 새 번호(늘 더 크다)를 받고, 옛 번호는 계속 비어 있다.
+    bool bReissued = true;
+    for ( uint32 objectIndex = 0; objectIndex < kObjectCount; objectIndex += 2 )
+    {
+        const uint32 newID = serverTable.registerSpawned( *listObject[objectIndex] );
+        bReissued          = bReissued && newID != listID[objectIndex] && newID > listID[kObjectCount - 1];
+        bReissued          = bReissued && serverTable.findID( *listObject[objectIndex] ) == newID && serverTable.findObject( newID ) == listObject[objectIndex];
+        bReissued          = bReissued && serverTable.findObject( listID[objectIndex] ) == nullptr;
+    }
+    SW_EXPECT_TRUE( bReissued );
+    vector<GameObject*> listServerCollected;
+    serverTable.collectObjects( listServerCollected );
+    SW_EXPECT_EQUAL( kObjectCount, static_cast<uint32>( listServerCollected.size() ) );
+
+    // 클라이언트 — 번호를 거꾸로 묶는다. 목록은 번호 오름차순이고 양방향 조회가 맞는다.
+    GameObjectManager   clientManager;
+    NetObjectTable&     clientTable = clientManager.getSubsystem<NetObjectTable>();
+    vector<GameObject*> listClientObject;
+    for ( uint32 objectIndex = 0; objectIndex < kObjectCount; ++objectIndex )
+    {
+        fixed_string<constant::kMaxBuffer32> nameBuf{};
+        formatstring( nameBuf.data(), nameBuf.capacity(), "Local%#", objectIndex );
+        GameObject* pObject = clientManager.createGameObject( hashed_string( nameBuf.c_str() ) );
+        SW_ASSERT_NOT_NULL( pObject );
+        listClientObject.push_back( pObject );
+    }
+    bool bBound = true;
+    for ( uint32 reverseIndex = 0; reverseIndex < kObjectCount; ++reverseIndex )
+    {
+        const uint32 objectIndex = kObjectCount - 1 - reverseIndex;
+        bBound                   = bBound && clientTable.bindSpawned( listID[objectIndex], *listClientObject[objectIndex] );
+    }
+    SW_EXPECT_TRUE( bBound );
+    vector<GameObject*> listClientCollected;
+    clientTable.collectObjects( listClientCollected );
+    SW_ASSERT_EQUAL( kObjectCount, static_cast<uint32>( listClientCollected.size() ) );
+    bool bOrdered = true;
+    for ( uint32 objectIndex = 0; objectIndex < kObjectCount; ++objectIndex )
+    {
+        bOrdered = bOrdered && listClientCollected[objectIndex] == listClientObject[objectIndex]; // 번호가 오름차순이면 만든 순서와 같다
+        bOrdered = bOrdered && clientTable.findID( *listClientObject[objectIndex] ) == listID[objectIndex];
+        bOrdered = bOrdered && clientTable.findObject( listID[objectIndex] ) == listClientObject[objectIndex];
+    }
+    SW_EXPECT_TRUE( bOrdered );
+
+    // 모두 떼면 표가 비고 같은 오브젝트를 같은 번호로 다시 묶을 수 있다(해시 표에 낡은 칸이 남지 않는다).
+    for ( GameObject* pObject : listClientObject )
+    {
+        clientTable.unregisterSpawned( *pObject );
+    }
+    clientTable.collectObjects( listClientCollected );
+    SW_EXPECT_TRUE( listClientCollected.empty() );
+    SW_EXPECT_TRUE( clientTable.bindSpawned( listID[0], *listClientObject[0] ) );
+    SW_EXPECT_EQUAL( listID[0], clientTable.findID( *listClientObject[0] ) );
+}

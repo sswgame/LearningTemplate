@@ -54,6 +54,11 @@ namespace sw
                                        string_view normalMapPath = {} );
         /** @brief 레지스트리에서 빼고 머티리얼을 놓습니다. 멱등입니다. */
         void shutdown();
+        /**
+         * @brief 배치 여럿을 @p manager 의 레지스트리에서 한 번에 빼고 놓습니다(`shutdown` 을 배치마다 부르면 레지스트리 목록을 배치 수만큼 접는다). nullptr 칸은 건너뜁니다.
+         * @details 목록 자체는 비우지 않는다. 이 레지스트리에 들지 않은 배치는 각자의 `shutdown` 이 처리한다(멱등).
+         */
+        static void shutdownAll( GameObjectManager& manager, vector<unique_ptr<SpriteInstanceBatch>>& listBatch );
         /** @brief 항목이 있으면 true 입니다. */
         bool isInitialized() const { return _batch != nullptr; }
 
