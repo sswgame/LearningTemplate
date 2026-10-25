@@ -2,7 +2,7 @@
  * @file EditorContextLifecycle.cpp
  * @brief EditorContext 의 생성 · 초기화 · 종료입니다. 에디터 UI 매니저들을 실제로 만드는 곳입니다.
  *
- * @details EditorContext::get() 과 한 파일에 두지 않습니다. 그러면 **컨텍스트를 조회하기만 해도** 패널 · 팝업 ·
+ * @details 컨텍스트 조회(`editor::getSubsystem<EditorContext>()` · `EditorContext.cpp`)와 한 파일에 두지 않습니다. 그러면 **컨텍스트를 조회하기만 해도** 패널 · 팝업 ·
  *          인스펙터 매니저가 모두 링크에 끌려옵니다(그 끝은 ImGui 입니다). 생성 · 소멸(매니저 타입이 완전해야 하는 쪽)만
  *          이 TU 에 두어, EditorContext 를 조회만 하는 코드(EditorSceneCommands 단위 테스트 등)가 UI 없이 링크되게 합니다.
  *          모든 매니저를 만드는 조립점이라 셸과 같은 `Source/Editor` 바로 아래(최상위 층)에 둡니다. `Common/Workspace` 는
@@ -50,7 +50,7 @@ namespace sw::editor
     EditorContext::EditorContext()
         : _scope{}
     {
-        // 범위가 자기 주인을 안다 — `EditorContext::get()` 은 지금 에디터 범위에서 이것을 찾는다(활성 컨텍스트 정적 포인터를 따로 두지 않는다).
+        // 범위가 자기 주인을 안다 — `editor::getSubsystem<EditorContext>()` 는 지금 에디터 범위에서 이것을 찾는다(활성 컨텍스트 정적 포인터를 따로 두지 않는다).
         (void)_scope.bind( this ); // 새 범위라 겹치지 않는다
     }
 

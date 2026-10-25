@@ -52,7 +52,7 @@ namespace sw::editor
             /** @brief 에디터 컨텍스트가 없으면 nullptr 입니다(탐침은 에디터 없는 호스트에도 등록돼 있다). 컨텍스트가 있는데 서비스가 없으면 버그라 멈춘다. */
             static AssetHotReload* findHotReload()
             {
-                EditorContext* pContext = EditorContext::get();
+                EditorContext* pContext = editor::findSubsystem<EditorContext>();
                 return pContext != nullptr ? &pContext->getSubsystem<AssetHotReload>() : nullptr;
             }
 
@@ -343,7 +343,7 @@ namespace sw::editor
         const AssetReloadRoute route = EditorAssetTypeRegistry::findReloadRoute( relPath );
         if ( route._pfnImportSource != nullptr && route._importThread == AssetImportThread::Worker )
         {
-            if ( EditorContext* pContext = EditorContext::get(); pContext != nullptr )
+            if ( EditorContext* pContext = editor::findSubsystem<EditorContext>(); pContext != nullptr )
                 pContext->getSubsystem<EditorAssetValidation>().requestValidation( relPath );
             requestSourceImport( relPath, route._pfnImportSource );
             return;
@@ -362,7 +362,7 @@ namespace sw::editor
     void AssetHotReload::handleChangedFile( const string& relativePath )
     {
         // 바뀐 파일(에디터 저장 · 임포트 산출물 · 바깥 도구의 쓰기)마다 검증 규칙을 돌린다 — 결과는 로그로 남는다.
-        if ( EditorContext* pContext = EditorContext::get(); pContext != nullptr )
+        if ( EditorContext* pContext = editor::findSubsystem<EditorContext>(); pContext != nullptr )
             pContext->getSubsystem<EditorAssetValidation>().requestValidation( relativePath );
 
         // 대상이 아닌 파일은 NotTracked, 등록되지 않은 캐시는 Failed(오류를 남겼다) — 어느 쪽이든 감시는 이어 간다.
@@ -495,7 +495,7 @@ namespace sw::editor
         if ( pResources == nullptr )
             return ReloadOutcome::NotTracked;
         // 디바이스는 **지금 것을** 넘긴다 — 캐시가 마지막으로 본 디바이스는 백엔드 교체 뒤 사라졌을 수 있다.
-        EditorContext* pContext = EditorContext::get();
+        EditorContext* pContext = editor::findSubsystem<EditorContext>();
         IRHIDevice*    pDevice  = ( pContext != nullptr ) ? pContext->getSubsystem<EditorRenderViews>().getRHIDevice() : nullptr;
         if ( route._pCacheKindName[0] == '\0' )
         {

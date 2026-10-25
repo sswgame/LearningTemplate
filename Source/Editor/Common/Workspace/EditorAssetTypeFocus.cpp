@@ -8,11 +8,9 @@ namespace sw::editor
 {
     string_view EditorAssetTypeRegistry::matchingFocusedPath( EditorAssetType kind )
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
-            return {};
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
 
-        const string& focused = pContext->getSubsystem<EditorWorkspace>().getFocusedAssetPath();
+        const string& focused = editorContext.getSubsystem<EditorWorkspace>().getFocusedAssetPath();
         if ( matches( kind, focused ) == false )
             return {};
         return focused;
@@ -20,14 +18,9 @@ namespace sw::editor
 
     bool EditorAssetTypeRegistry::consumeWorkspaceFocusKey( string& ioLastKey, uint64 extraToken )
     {
-        EditorContext* pContext = EditorContext::get();
-        string         scanKey;
-        if ( pContext != nullptr )
-        {
-            scanKey = pContext->getSubsystem<EditorWorkspace>().getFocusedAssetPath();
-            scanKey += '|';
-            scanKey += to_string( extraToken );
-        }
+        string scanKey = editor::getSubsystem<EditorContext>().getSubsystem<EditorWorkspace>().getFocusedAssetPath();
+        scanKey += '|';
+        scanKey += to_string( extraToken );
         if ( scanKey == ioLastKey )
             return false;
         ioLastKey = std::move( scanKey );

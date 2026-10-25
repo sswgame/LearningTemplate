@@ -110,7 +110,7 @@ namespace sw::editor
             /** @brief 시계 잡기 조건 — 저장 검증(2 단계가 돌린다)이 아직 로그로 남기지 않은 결과가 있으면 참입니다. 에디터가 없으면 잡지 않습니다. */
             static bool isAssetValidationBusy()
             {
-                EditorContext*               pContext    = EditorContext::get();
+                EditorContext*               pContext    = editor::findSubsystem<EditorContext>();
                 const EditorAssetValidation* pValidation = pContext != nullptr ? pContext->findSubsystem<EditorAssetValidation>() : nullptr;
                 return pValidation != nullptr && pValidation->isBusy();
             }

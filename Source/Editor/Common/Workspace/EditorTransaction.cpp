@@ -34,7 +34,7 @@ namespace sw::editor
              */
             static void markActiveSceneDirty()
             {
-                EditorContext*   pContext   = EditorContext::get();
+                EditorContext*   pContext   = editor::findSubsystem<EditorContext>();
                 EditorWorkspace* pWorkspace = ( pContext != nullptr ) ? &pContext->getSubsystem<EditorWorkspace>() : editor::findSubsystem<EditorWorkspace>();
                 if ( pWorkspace != nullptr )
                     pWorkspace->markSceneDirty();
@@ -46,7 +46,7 @@ namespace sw::editor
              */
             static void onObjectEdit( const CommandStack::ObjectEditNotice& notice )
             {
-                EditorContext* pContext = EditorContext::get();
+                EditorContext* pContext = editor::findSubsystem<EditorContext>();
                 GameObject*    pTarget  = editor::findGameObject( GameObjectHandle::make( notice._objectID ) );
                 if ( pContext != nullptr && pTarget != nullptr )
                 {
