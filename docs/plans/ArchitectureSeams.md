@@ -85,3 +85,12 @@
 ## 5. 확인하지 못한 것
 
 링크 · 증분 · 기동 시간(0 단계가 잰다). `EditorCore` 후보 폴더의 ImGui 사용은 직접 include 만 셌다(전이 include 는 미확인). dllexport 정의로 컴파일한 OBJECT 를 테스트 실행 파일에 넣었을 때 clang-cl 과 Linux Clang 에서 문제가 없는지. 언리얼 · 유니티 렌더러 구조와 ADR 관행은 기억에 기댄 것이라 결정 근거로 쓰지 않았다.
+
+## 6. 3 단계 진행 (2026-10-25, 코드만 — 빌드 · 테스트 전)
+
+끝난 커밋 단위(되돌리기는 커밋 하나씩): ① `CheckServiceAccess` 가 정적 사본의 참조를 내주는 `static const T& getActive()` 도 센다(예외 표 종류 `PendingScopeMove` = 이전 대기), ② `EngineConfig` 를 `ConfigManager` 소유로(정적 사본 · `setPrimary` 제거), ③ `GameConfig` 정적 사본 제거, ④ `Render2DSettings` 를 `Render2DSettingsSubsystem` 소유로. 서비스 표에 행 셋(`EngineConfig` · `GameConfig` · `Render2DSettings`)이 늘었다. 전역 가변 정적 래칫은 231 파일 · 상한 합 494 에서 227 파일 · 489 가 됐다. 결정은 [결정 기록](../09_Decisions.md) 5-4 의 끝 항목이다.
+
+다음 커밋 단위:
+- **`GameConfig::getActive()` 전달 창구 지우기** - 에디터 호출처 열 파일(`EditorDataTableCommands` · `EditorGlobalVariableCommands` · `EditorSceneFileCommands` · `EditorCommandGUI` · `LocalizationTools` · `ContentBrowserPanel` · `PackagingPanel` · `ProjectSettingsPanel` · `EditorSelfTestPanelCases`)과 게임 프레임워크 셋(`GameInstanceBase.cpp` → `game::getSubsystem<GameConfig>()`, `CharacterEditorPanel.cpp` · `ParkLayoutPreview.cpp` → `editor::findSubsystem<GameConfig>()`)을 범위 창구로 옮긴다. `GameInstanceBase` 를 옮길 때 `TestGameFramework` 의 `_hostServices` 에 `GameConfig` 를 걸어야 한다. 끝나면 `GameConfig.cpp` 를 지우고 `CheckServiceAccess.toml` 의 `GameConfig` 줄을 지운다.
+- **`EditorThemeUtil::getActiveTheme`** - 에디터 컨텍스트 소유로(예외 표 `PendingScopeMove`). 에디터 작업자 몫.
+- **래칫 큰 몫(상한 합 489)** - `Test/EngineTest` 98 · `Test/CoreTest` 44 · `Core/Diagnostics` 37(`CrashPath` 가 맞는 것이 많다 - 예외 표로 올릴 후보) · `Engine/Graphics` 30 · `Engine/Input` 19. 테스트의 정적 칸 대부분(`TestTask` 24 등)은 사용자 자료 없는 함수 포인터 작업 API 때문이라, 작업 제출에 사용자 자료나 호출 가능 객체를 받는 길을 먼저 연 뒤에 옮긴다. 모양이 비슷한 `GameTimeScale`(정지 요청 수 · 비배율 경과)은 정적 API 의 호출처가 넓어 서비스로 옮기는 별도 단위다.

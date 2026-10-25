@@ -31,4 +31,4 @@
 - A4 · A7 의 실행 확인: 매니페스트 id `app-backend-swap-smoke`(GPU, DX11 · DX12)와 `backend-swap-scenarios`(`rhiswap/swapbackends` · `swapother` · `editor/previewswap`). 표준 입력 `quit`(에디터 멀티 프로세스 재생)과 Server 의 `quit` · `stop` · `status` 는 `standard-input-commands`.
 - 예외 표에 남긴 활성 창구: `MemoryProfiler` · `CompressionCodecRegistry`(Core 층 — 엔진 범위를 모른다), `ProfilerBackend`(잠금 없이 렌더 · 작업 스레드가 읽는다). (`IWindow` 는 A7 에서 범위로 옮겨 예외 표에서 지웠다.)
   `GameInstanceBase::findActiveObjectManager` · `GameAutoplay::findActive` 는 이름만 같고 정적 포인터를 들지 않는다.
-- 같은 모양의 다른 가족: 설정 활성본 `EngineConfig::getActive` · `GameConfig::getActive` · `Render2DSettings::getActive`(참조를 돌려주는 정적 사본). 게이트는 포인터만 본다. 범위로 옮길지는 이 문서 밖의 일이다.
+- 같은 모양의 다른 가족: 설정 활성본 `EngineConfig::getActive` · `GameConfig::getActive` · `Render2DSettings::getActive`(참조를 돌려주는 정적 사본)는 [ArchitectureSeams](ArchitectureSeams.md) 3 단계가 범위 소유로 옮겼다(2026-10-25 - 정적 사본 없이 서비스 표 `engine::getSubsystem<T>()`, `CheckServiceAccess` 가 참조 반환 `getActive` 도 센다). 남은 것은 에디터 · 게임 프레임워크 호출처를 위한 `GameConfig::getActive()` 전달 창구와 `EditorThemeUtil::getActiveTheme` 이다.

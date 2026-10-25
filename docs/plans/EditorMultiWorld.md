@@ -37,7 +37,7 @@
 
 - `SceneManager`(`Engine/Scene/SceneManager.h`)는 `_listLoadedScene`(vector<unique_ptr<Scene>>)을 가지고 있으며, 그중 `_pActiveScene` 하나가 틱 · 렌더 대상입니다.
 - `Scene` 은 `GameObjectManager` 를 소유합니다(`getObjectManager()`).
-- 물리는 **이미 씬별**입니다. `ScenePhysics` 는 씬 서비스(`SW_SCENE_SERVICE`)라 `GameObjectManager` 마다 하나 생기고, `getScene3D()` 가 처음 부를 때 `PhysicsSystem::createScene3D()` 로 자기 `IPhysicsScene3D` 를 만듭니다. 고정 스텝은 `FixedStepAccumulator` 이고 스텝 크기는 전역 `EngineConfig::getActive()._fixedDeltaTime` 입니다.
+- 물리는 **이미 씬별**입니다. `ScenePhysics` 는 씬 서비스(`SW_SCENE_SERVICE`)라 `GameObjectManager` 마다 하나 생기고, `getScene3D()` 가 처음 부를 때 `PhysicsSystem::createScene3D()` 로 자기 `IPhysicsScene3D` 를 만듭니다. 고정 스텝은 `FixedStepAccumulator` 이고 스텝 크기는 엔진 범위의 `engine::getSubsystem<EngineConfig>()._fixedDeltaTime` 입니다(정적 활성본은 없앴다 - 미리보기 씬 정책의 덮어쓰기는 `setFixedStepOverride`).
 - 시간 배율은 전역 `GameTimeScale`(`Engine/Config/GameTimeScale.h`) 하나입니다.
 - 카메라 선택은 `GameObjectManager::getCameraRegistry()` 로 씬별입니다.
 
