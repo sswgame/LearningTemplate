@@ -9,6 +9,7 @@
  */
 #pragma once
 #include "Core/Common/Macros.h"
+#include "Core/Container/string.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/ISubsystem.h"
 
@@ -48,7 +49,17 @@ namespace sw
         /** @brief 주 창입니다. 아직 없으면 nullptr 입니다. 소유하지 않은 관찰 포인터로만 쓴다(이 서브시스템이 내려가면 무효). */
         IWindow* getWindow() const { return _window.get(); }
 
+        /**
+         * @brief 평소 창 제목(실행 정보를 붙이기 전의 제목)을 정합니다. 에디터가 프레임마다 씬 · 미저장 표시를 넣어 만든 제목을 여기에 건다.
+         * @details 창에 직접 `setTitle` 하지 않는다 — 엔진이 프레임 끝에 이 제목 뒤에 시나리오 실행 정보를 붙여(`AutomationRunTitleTracker`) 창에 걸기 때문에,
+         *          제목 주인이 하나다. 한 번도 정하지 않으면(빈 글) 엔진은 창이 처음 가진 제목을 평소 제목으로 쓴다.
+         */
+        void setBaseTitle( string_view title ) { _baseTitle = title; }
+        /** @brief 정한 평소 창 제목입니다. 정한 적이 없으면 빈 글입니다. */
+        const string& getBaseTitle() const { return _baseTitle; }
+
     private:
         unique_ptr<IWindow> _window;
+        string              _baseTitle;
     };
 } // namespace sw

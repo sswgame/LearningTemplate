@@ -749,7 +749,9 @@ namespace sw::editor
             return;
         pActiveWindow->setCloseQueryHandler( {} );
         // 에디터를 종료하면 창 제목은 팩 설정 그대로 돌아간다. 창 제목의 출처는 팩 설정(`<Engine _windowTitle>`) 하나뿐이다.
-        pActiveWindow->setTitle( editor::getSubsystem<const PackEngineSettings>()._windowTitle.c_str() ); // 창이 살아 있으면 팩 설정도 있다
+        const string& gameTitle = editor::getSubsystem<const PackEngineSettings>()._windowTitle; // 창이 살아 있으면 팩 설정도 있다
+        pWindowHost->setBaseTitle( gameTitle );                                                  // 엔진이 프레임 끝에 거는 평소 제목도 같이 돌려, 되덮지 않게 한다
+        pActiveWindow->setTitle( gameTitle.c_str() );
     }
 
     void ImGuiEditor::shutdown()

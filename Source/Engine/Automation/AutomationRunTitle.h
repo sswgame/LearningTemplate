@@ -51,13 +51,14 @@ namespace sw
 {
     class CommandLineManager;
     class IEngineFrameObserver;
-    class IWindow;
+    class MainWindowSubsystem;
 
     /**
      * @class AutomationRunTitleTracker
      * @brief 엔진이 프레임 끝마다 부르면, 시나리오 단계가 바뀔 때와 `kTitleRefreshFrames` 프레임마다만 창 제목을 바꿉니다(바뀔 때만 시스템 호출).
      * @details 시나리오가 없고 벤치 인자(`-gv_bench*`)만 있으면 벤치 요약을 적습니다. 처음 부를 때 벤치 인자가 있으면 `[Bench]` 로그 한 줄을 남깁니다.
-     *          제목의 주인이 따로 있으면(에디터가 프레임마다 제목을 건다) 건드리지 않습니다 — 지금 제목이 처음 제목도 내가 건 제목도 아니면 물러납니다.
+     *          창 제목을 거는 곳은 여기 하나입니다. 평소 제목은 `MainWindowSubsystem::setBaseTitle`(에디터가 프레임마다 씬 · 미저장 표시를 넣어 정한다)이고,
+     *          정한 적이 없으면 창이 처음 가진 제목입니다. 실행 중이면 그 뒤에 `AutomationRunTitleUtil::makeWindowTitle` 로 실행 정보를 붙이고, 아니면 평소 제목 그대로 겁니다.
      *          창이 없는 호스트(헤드리스 · 전용 서버)는 창 포인터가 nullptr 이라 제목 갱신만 건너뛰고 로그는 남깁니다. 게임 스레드에서만 씁니다.
      */
     class SW_API AutomationRunTitleTracker
@@ -70,20 +71,21 @@ namespace sw
         AutomationRunTitleTracker& operator=( const AutomationRunTitleTracker& ) = delete;
 
         /**
-         * @param pWindow 메인 창(없으면 nullptr)
+         * @param pWindowHost 주 창 서비스(없으면 nullptr — 창 없는 실행)
          * @param pCommandLine 명령줄(벤치 인자를 읽는다. 없으면 nullptr)
          * @param backendName 지금 RHI 백엔드 이름(없으면 빈 글)
          * @param listObserver 프레임 관찰자(시나리오 세션이 실행 정보를 낸다)
          */
-        void onFrameEnd( IWindow* pWindow, const CommandLineManager* pCommandLine, string_view backendName, const vector<IEngineFrameObserver*>& listObserver );
+        void onFrameEnd( const MainWindowSubsystem* pWindowHost, const CommandLineManager* pCommandLine, string_view backendName, const vector<IEngineFrameObserver*>& listObserver );
 
     private:
-        string _baseTitle;
-        string _lastTitle;
+        string _initialTitle; ///< 창이 처음 가진 제목(호스트가 평소 제목을 정하지 않았을 때의 평소 제목)
+        string _lastBase;     ///< 마지막으로 창에 건 때의 평소 제목(바뀌면 바로 다시 건다)
         string _benchSummary;
         string _lastStepKind;
         uint32 _frame;
         uint32 _lastStepNumber;
         bool   _bInitialized;
+        bool   _bRunShown; ///< 지금 창 제목에 실행 정보가 붙어 있다
     };
 } // namespace sw

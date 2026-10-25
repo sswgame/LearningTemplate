@@ -56,6 +56,18 @@ SW_TEST_CASE( AutomationRunTitleTest, WindowTitlePrefixesBaseTitle )
 }
 
 /**
+ * @brief [AutomationRunTitleTest] 에디터가 만든 제목(이미 구분 글이 든 것)도 그대로 앞에 두고 요약만 붙인다
+ */
+SW_TEST_CASE( AutomationRunTitleTest, WindowTitleKeepsComposedEditorTitle )
+{
+    sw::AutomationRunTitleInput input;
+    input._baseTitle    = "Game \xE2\x80\x94 scene* \xE2\x80\x94 SW Editor";
+    input._scenarioName = "editor/x";
+    input._frame        = 2;
+    SW_EXPECT_STREQ( "Game \xE2\x80\x94 scene* \xE2\x80\x94 SW Editor \xE2\x80\x94 editor/x \xC2\xB7 f2", sw::AutomationRunTitleUtil::makeWindowTitle( input ).c_str() );
+}
+
+/**
  * @brief [AutomationRunTitleTest] 긴 제목은 한계 안으로 줄이고 UTF-8 글자 중간을 자르지 않는다
  */
 SW_TEST_CASE( AutomationRunTitleTest, LongTitleIsTruncatedOnCharacterBoundary )

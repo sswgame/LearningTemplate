@@ -80,7 +80,7 @@ namespace sw::editor
                 EditorSelfTestRunner::runFrame();
             }
 
-            /** @brief 5) 창 제목에 게임, 씬, 미저장, 플레이 상태를 반영합니다. 같은 제목이면 `IWindow::setTitle` 이 바로 반환하므로 프레임마다 불러도 됩니다. */
+            /** @brief 5) 창 제목에 게임, 씬, 미저장, 플레이 상태를 반영합니다. 여기서는 평소 제목만 정하고(`MainWindowSubsystem::setBaseTitle`), 창에 거는 것은 엔진이 프레임 끝에 한다. */
             static void runWindowTitle( EditorContext& context )
             {
                 SW_EDITOR_PROFILE_SCOPE( "GT.Editor.step.windowTitle" );
@@ -97,7 +97,7 @@ namespace sw::editor
                 if ( EditorPlaySession::isStopped() == false )
                     pPlayState = EditorPlaySession::isSimulating() ? "Simulating" : ( EditorPlaySession::isPaused() ? "Paused" : "Playing" );
                 const string title = EditorWindowTitleUtil::makeTitle( pPackSettings->_windowTitle, scenePath, bDirty, pPlayState );
-                pWindow->setTitle( title.c_str() );
+                pWindowHost->setBaseTitle( title ); // 창에 거는 일은 엔진이 한다 — 시나리오 실행 정보를 이 제목 뒤에 붙여 건다(AutomationRunTitleTracker)
             }
 
             /** @brief 6) 끝난 스크린샷 요청의 토스트를 띄웁니다. */

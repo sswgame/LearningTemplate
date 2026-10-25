@@ -9,6 +9,7 @@
 
 #include "Engine/Utility/EngineFrameObserver.h"
 #include "Engine/Window/IWindow.h"
+#include "Engine/Window/MainWindowSubsystem.h"
 
 #include <algorithm>
 
@@ -93,21 +94,23 @@ namespace sw
     SW_LOG_CALLER( "Automation" );
 
     AutomationRunTitleTracker::AutomationRunTitleTracker()
-        : _baseTitle{}
-        , _lastTitle{}
+        : _initialTitle{}
+        , _lastBase{}
         , _benchSummary{}
         , _lastStepKind{}
         , _frame{ 0 }
         , _lastStepNumber{ 0 }
         , _bInitialized{ false }
+        , _bRunShown{ false }
     {
     }
 
     AutomationRunTitleTracker::~AutomationRunTitleTracker() = default;
 
-    void AutomationRunTitleTracker::onFrameEnd( IWindow* pWindow, const CommandLineManager* pCommandLine, string_view backendName,
+    void AutomationRunTitleTracker::onFrameEnd( const MainWindowSubsystem* pWindowHost, const CommandLineManager* pCommandLine, string_view backendName,
                                                 const vector<IEngineFrameObserver*>& listObserver )
     {
+        IWindow* const pWindow = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
         if ( _bInitialized == false )
         {
             _bInitialized = true;
@@ -129,7 +132,7 @@ namespace sw
             if ( _benchSummary.empty() == false )
                 SW_LOG_INFO( "[Bench] backend %# args %#", string{ backendName }.c_str(), _benchSummary.c_str() );
             if ( pWindow != nullptr )
-                _baseTitle = pWindow->getTitle();
+                _initialTitle = pWindow->getTitle();
         }
         ++_frame;
 
@@ -148,35 +151,38 @@ namespace sw
         const bool bBench = bScenario == false && _benchSummary.empty() == false;
         if ( pWindow == nullptr )
             return;
+        // 제목 주인은 이 함수 하나다 — 평소 제목은 호스트가 들고(에디터가 프레임마다 정한다), 정한 적이 없으면 창이 처음 가진 제목이다.
+        const string& hostBaseTitle = pWindowHost->getBaseTitle();
+        const string& baseTitle     = hostBaseTitle.empty() ? _initialTitle : hostBaseTitle;
+        const bool    bBaseChanged  = baseTitle != _lastBase;
         if ( bScenario == false && bBench == false )
         {
-            if ( _lastTitle.empty() == false )
+            if ( _bRunShown || bBaseChanged )
             {
-                pWindow->setTitle( _baseTitle.c_str() ); // 시나리오가 끝났다 — 평소 제목으로 돌린다
-                _lastTitle.clear();
+                pWindow->setTitle( baseTitle.c_str() ); // 시나리오가 없거나 끝났다 — 평소 제목 그대로다
+                _lastBase = baseTitle;
                 _lastStepKind.clear();
+                _bRunShown = false;
             }
             return;
         }
         const bool bStepChanged = bScenario && ( stepNumber != _lastStepNumber || stepKind != _lastStepKind );
         const bool bRefreshDue  = _frame % AutomationRunTitleUtil::kTitleRefreshFrames == 0;
-        const bool bUpToDate    = bStepChanged == false && bRefreshDue == false && _lastTitle.empty() == false;
+        const bool bUpToDate    = bStepChanged == false && bRefreshDue == false && bBaseChanged == false && _bRunShown;
         if ( bUpToDate )
             return;
-        const string_view currentTitle = pWindow->getTitle();
-        if ( currentTitle != string_view{ _baseTitle } && currentTitle != string_view{ _lastTitle } )
-            return; // 제목의 주인이 따로 있다(에디터) — 덮어쓰지 않는다
-        input._baseTitle    = _baseTitle;
+        _lastBase           = baseTitle;
+        input._baseTitle    = _lastBase;
         input._scenarioName = scenarioName;
         input._backendName  = backendName;
         input._stepKind     = stepKind;
         input._benchSummary = _benchSummary;
         input._stepNumber   = stepNumber;
         input._frame        = frame;
-        _lastTitle          = AutomationRunTitleUtil::makeWindowTitle( input );
         _lastStepNumber     = stepNumber;
         _lastStepKind       = stepKind;
-        pWindow->setTitle( _lastTitle.c_str() );
+        _bRunShown          = true;
+        pWindow->setTitle( AutomationRunTitleUtil::makeWindowTitle( input ).c_str() );
     }
 
     string AutomationRunTitleUtil::truncateUtf8( string_view text, uint32 maxBytes )

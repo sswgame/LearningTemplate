@@ -9,6 +9,7 @@ namespace sw
 {
     MainWindowSubsystem::MainWindowSubsystem()
         : _window{ nullptr }
+        , _baseTitle{}
     {
     }
 

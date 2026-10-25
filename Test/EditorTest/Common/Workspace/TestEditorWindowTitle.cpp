@@ -2,6 +2,8 @@
 
 #include "Editor/Common/Workspace/EditorWindowTitle.h"
 
+#include "Engine/Automation/AutomationRunTitle.h"
+
 #include "TestFramework/TestFramework.h"
 
 using namespace sw;
@@ -45,4 +47,22 @@ SW_TEST_CASE( EditorWindowTitleTest, PlayStateIsAppended )
 SW_TEST_CASE( EditorWindowTitleTest, NoSceneIsNamed )
 {
     SW_EXPECT_EQUAL( EditorWindowTitleUtil::makeTitle( "Empty", "", false, nullptr ), string{ "Empty \xE2\x80\x94 (no scene) \xE2\x80\x94 SW Editor" } );
+}
+
+/**
+ * @brief [EditorWindowTitleTest] 에디터 제목 뒤에 시나리오 실행 정보가 붙고, 미저장 표시는 그대로 읽힌다(엔진 추적기와 같은 함수)
+ */
+SW_TEST_CASE( EditorWindowTitleTest, RunInfoIsAppendedAfterEditorTitle )
+{
+    const string            editorTitle = EditorWindowTitleUtil::makeTitle( "Empty", "game/empty/maps/a.scene.xml", true, "Playing" );
+    AutomationRunTitleInput input;
+    input._baseTitle      = editorTitle;
+    input._scenarioName   = "editor/dock";
+    input._backendName    = "dx12";
+    input._stepKind       = "Expect";
+    input._stepNumber     = 4;
+    input._frame          = 90;
+    const string runTitle = AutomationRunTitleUtil::makeWindowTitle( input );
+    SW_EXPECT_EQUAL( runTitle, string{ "Empty \xE2\x80\x94 a* \xE2\x80\x94 SW Editor (Playing) \xE2\x80\x94 editor/dock \xC2\xB7 dx12 \xC2\xB7 step 4 Expect \xC2\xB7 f90" } );
+    SW_EXPECT_TRUE( EditorWindowTitleUtil::isDirtyTitle( runTitle ) );
 }
