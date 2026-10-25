@@ -100,8 +100,8 @@ namespace sw
         FramingInput captureFramingInput( const Scene* pScene ) const;
         /** @brief 맞춤이 옮기는 카메라인지 반환합니다. 캡처 카메라(`spawnBenchViews`)는 아닙니다. */
         static bool isFramedCamera( const CameraComponent* pCamera );
-        /** @brief @p pScene 에서 맞춤이 옮기는 카메라의 수입니다. */
-        static uint32 countFramedCameras( const Scene* pScene );
+        /** @brief @p pScene 의 카메라 레지스트리 변경 일련번호입니다(없으면 0). 수가 아니라 번호라 한 프레임의 교체도 잡습니다. */
+        static uint32 getCameraSerial( const Scene* pScene );
         /** @brief 격자 둘레의 광원, 바닥, 카메라, 뷰를 만듭니다. 두 격자 경로가 함께 씁니다. */
         void finishGrid( Scene* pScene, uint32 side );
         /** @brief 리그 데모의 기울어진 바닥을 만듭니다. 물리용 상자와, 같은 위치와 크기의 큐브로 이루어집니다. */
@@ -153,6 +153,8 @@ namespace sw
         void frameRigCameras( Scene* pScene );
         /** @brief `-gv_benchRig` 값입니다(스위치는 BenchSceneRig.cpp 가 선언합니다). */
         static uint32 getRigCharacterCount();
+        /** @brief `-gv_benchRigView` 값입니다(스위치는 BenchSceneRig.cpp 가 선언하므로 BenchScene.cpp 의 맞춤 입력은 이 함수로 읽습니다). */
+        static int32 getRigView();
 
         /** @brief 인덱스로부터 결정적인 밝은 색을 만듭니다. */
         static float4 makeBenchColor( uint32 index );

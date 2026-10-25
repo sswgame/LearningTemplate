@@ -118,6 +118,11 @@ namespace sw
         return static_cast<uint32>( MathUtil::max( gv_benchRig, 0 ) );
     }
 
+    int32 BenchScene::getRigView()
+    {
+        return gv_benchRigView;
+    }
+
     void BenchScene::spawnRigSlope( Scene* pScene, GameObjectManager& objects, float32 halfWidth )
     {
         // 기울어진 바닥입니다. 물리용 정적 상자(발 디딤의 광선이 맞는 대상)와, 같은 위치와 크기의 큐브(화면에 보이는 것)로 이루어집니다.

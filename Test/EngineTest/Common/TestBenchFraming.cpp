@@ -26,8 +26,8 @@ SW_TEST_CASE( BenchFramingTest, EveryFieldChangeIsDetected )
     changed.mode             = sw::FramingMode::Face;
     SW_EXPECT_TRUE( changed != base );
 
-    changed             = base;
-    changed.cameraCount = 1;
+    changed              = base;
+    changed.cameraSerial = 1;
     SW_EXPECT_TRUE( changed != base );
 
     changed          = base;

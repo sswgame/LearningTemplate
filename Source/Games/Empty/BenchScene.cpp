@@ -1251,25 +1251,19 @@ namespace sw
         return pCamera != nullptr && pCamera->getRole() != CameraRole::Capture;
     }
 
-    uint32 BenchScene::countFramedCameras( const Scene* pScene )
+    uint32 BenchScene::getCameraSerial( const Scene* pScene )
     {
         if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
             return 0;
-        uint32 count = 0;
-        for ( const CameraComponent* pCamera : pScene->getObjectManager()->getCameraRegistry().getAll() )
-        {
-            if ( isFramedCamera( pCamera ) )
-                ++count;
-        }
-        return count;
+        return pScene->getObjectManager()->getCameraRegistry().getRegistrySerial();
     }
 
     FramingInput BenchScene::captureFramingInput( const Scene* pScene ) const
     {
         // 모드마다 그 맞춤 함수가 읽는 값만 채웁니다(나머지는 0). 새 입력을 읽게 되면 FramingInput 에 필드를 더하고 여기서 채웁니다.
         FramingInput input;
-        input.mode        = _framingMode;
-        input.cameraCount = countFramedCameras( pScene );
+        input.mode         = _framingMode;
+        input.cameraSerial = getCameraSerial( pScene );
         switch ( _framingMode )
         {
             case FramingMode::Grid:
@@ -1294,7 +1288,7 @@ namespace sw
             case FramingMode::Rig:
             {
                 input.rigCount = static_cast<uint32>( _listRigBody.size() );
-                input.rigView  = gv_benchRigView;
+                input.rigView  = getRigView();
                 break;
             }
         }

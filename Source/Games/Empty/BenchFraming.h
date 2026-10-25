@@ -34,13 +34,13 @@ namespace sw
     struct FramingInput
     {
         FramingMode mode{ FramingMode::Grid };
-        uint32      cameraCount{ 0 }; ///< 씬의 카메라 수. 맞춘 뒤에 생긴 카메라(늦게 만들어지는 에디터 씬 뷰 카메라)도 맞추게 합니다.
-        uint32      gridSide{ 0 };    ///< 격자 한 변의 큐브 수(Grid).
-        int32       characters{ 0 };  ///< `-gv_benchCharacters`(Character · Combat · Ragdoll 의 깊이 계산이 읽습니다).
-        int32       columns{ 0 };     ///< `-gv_benchCharacterColumns`(위와 같음).
-        int32       faces{ 0 };       ///< `-gv_benchFaces`(Face).
-        uint32      rigCount{ 0 };    ///< 리그 기사 수(Rig).
-        int32       rigView{ 0 };     ///< `-gv_benchRigView`(Rig).
+        uint32      cameraSerial{ 0 }; ///< 씬 카메라 레지스트리의 변경 일련번호. 맞춘 뒤에 생기거나 교체된 카메라(늦게 만들어지는 에디터 씬 뷰 카메라)도 맞추게 합니다.
+        uint32      gridSide{ 0 };     ///< 격자 한 변의 큐브 수(Grid).
+        int32       characters{ 0 };   ///< `-gv_benchCharacters`(Character · Combat · Ragdoll 의 깊이 계산이 읽습니다).
+        int32       columns{ 0 };      ///< `-gv_benchCharacterColumns`(위와 같음).
+        int32       faces{ 0 };        ///< `-gv_benchFaces`(Face).
+        uint32      rigCount{ 0 };     ///< 리그 기사 수(Rig).
+        int32       rigView{ 0 };      ///< `-gv_benchRigView`(Rig).
 
         bool operator==( const FramingInput& other ) const { return std::memcmp( this, &other, sizeof( FramingInput ) ) == 0; }
         bool operator!=( const FramingInput& other ) const { return operator==( other ) == false; }
