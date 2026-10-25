@@ -28,6 +28,14 @@ _kManifestSuffix = ".module.json"
 _kGuardPattern = re.compile(r'^if\(\s*SW_TARGET_TYPE\s+STREQUAL\s+"(Server|Client)"\s*\)\s*(?:sw_\w+\([^)]*\)\s*)*return\(\)', re.MULTILINE)
 
 
+_kTargetBoth = frozenset({"Client", "Server"})
+#: 폴더 가드 · 매니페스트로 읽히지 않는 **파일 단위** 예외 — (저장소 기준 파일, 짓는 타깃, 이유). 가드는 폴더 단위라 이 줄만 손으로 둔다.
+_kFileTargetException: tuple[tuple[str, frozenset[str], str], ...] = (
+    ("Source/RuntimeAPI/Export/EditorModuleExports.h", frozenset({"Client"}),
+     "에디터 모듈 쪽 접착제(에디터 진입점 매크로) — EditorModule 의 `.cpp` 만 include 한다(파일 머리 주석). RuntimeAPI 폴더는 둘 다 짓는다."),
+)
+
+
 class ServerBuildError(Exception):
     """매니페스트를 읽지 못하는 것처럼 소속을 정할 수 없는 상태입니다."""
 
@@ -35,22 +43,25 @@ class ServerBuildError(Exception):
 @dataclass(frozen=True)
 class ServerBuildMap:
     """
-    - `listOwner`       : (끝이 `/` 인 저장소 기준 폴더, 서버가 짓는가).
+    - `listOwner`       : (저장소 기준 폴더 — 끝이 `/` — 또는 파일, 그것을 짓는 타깃 집합 ⊆ {Client, Server}).
     - `listUnclassified`: 소속을 알 수 없는 `Source/<X>/` 폴더(끝이 `/`).
     """
 
-    listOwner: tuple[tuple[str, bool], ...]
+    listOwner: tuple[tuple[str, frozenset[str]], ...]
     listUnclassified: tuple[str, ...]
+
+    def findTargets(self, relative: str) -> tuple[str, frozenset[str]] | None:
+        """저장소 기준 경로의 가장 깊은 소속 (폴더 또는 파일, 타깃 집합). 소속이 없으면(`Tools/` 등) None."""
+        best: tuple[str, frozenset[str]] | None = None
+        for owner in self.listOwner:
+            if relative.startswith(owner[0]) and (best is None or len(owner[0]) > len(best[0])):
+                best = owner
+        return best
 
     def isServerBuilt(self, relative: str) -> bool:
         """저장소 기준 경로가 서버가 짓는 폴더 안인가. 소속이 없으면(`Tools/` 등) False."""
-        bestLength = -1
-        bBuilt = False
-        for folder, bServer in self.listOwner:
-            if relative.startswith(folder) and len(folder) > bestLength:
-                bestLength = len(folder)
-                bBuilt = bServer
-        return bBuilt
+        found = self.findTargets(relative)
+        return found is not None and "Server" in found[1]
 
 
 def readGuardedTarget(cmakeText: str) -> str | None:
@@ -59,8 +70,8 @@ def readGuardedTarget(cmakeText: str) -> str | None:
     return match.group(1) if match else None
 
 
-def _readManifestOwners(repositoryRoot: Path) -> list[tuple[str, bool]]:
-    listOwner: list[tuple[str, bool]] = []
+def _readManifestOwners(repositoryRoot: Path) -> list[tuple[str, frozenset[str]]]:
+    listOwner: list[tuple[str, frozenset[str]]] = []
     for path in collectRepositoryFiles(repositoryRoot, ("Source",), suffixes=(".json",)):
         if path.name.endswith(_kManifestSuffix) is False:
             continue
@@ -71,13 +82,13 @@ def _readManifestOwners(repositoryRoot: Path) -> list[tuple[str, bool]]:
             raise ServerBuildError(f"{relative}: JSON 을 읽지 못했습니다 ({error})") from error
         if isinstance(listTarget, list) is False or len(listTarget) == 0:
             raise ServerBuildError(f"{relative}: `_listTarget` 이 없습니다")
-        listOwner.append((relative[: relative.rfind("/") + 1], "Server" in listTarget))
+        listOwner.append((relative[: relative.rfind("/") + 1], frozenset(str(word) for word in listTarget)))
     return listOwner
 
 
-def _readCMakeOwners(repositoryRoot: Path, topFolder: str) -> list[tuple[str, bool]]:
-    """`<topFolder>/<X>/CMakeLists.txt` 마다 가드로 소속을 정합니다."""
-    listOwner: list[tuple[str, bool]] = []
+def _readCMakeOwners(repositoryRoot: Path, topFolder: str) -> list[tuple[str, frozenset[str]]]:
+    """`<topFolder>/<X>/CMakeLists.txt` 마다 가드로 소속을 정합니다(가드가 짓지 않는 타깃을 뺀 나머지)."""
+    listOwner: list[tuple[str, frozenset[str]]] = []
     top = repositoryRoot / topFolder
     if top.is_dir() is False:
         return listOwner
@@ -85,7 +96,8 @@ def _readCMakeOwners(repositoryRoot: Path, topFolder: str) -> list[tuple[str, bo
         cmakePath = child / "CMakeLists.txt"
         if child.name in kNotOurDirNames or cmakePath.is_file() is False:
             continue
-        listOwner.append((f"{topFolder}/{child.name}/", readGuardedTarget(cmakePath.read_text(encoding="utf-8", errors="replace")) != "Server"))
+        guarded = readGuardedTarget(cmakePath.read_text(encoding="utf-8", errors="replace"))
+        listOwner.append((f"{topFolder}/{child.name}/", _kTargetBoth - {guarded} if guarded else _kTargetBoth))
     return listOwner
 
 
@@ -96,6 +108,7 @@ def readServerBuildMap(repositoryRoot: Path) -> ServerBuildMap:
     setManifestFolder = {folder for folder, _ in listManifest}
     listOwner = listManifest + [owner for owner in _readCMakeOwners(repositoryRoot, "Source") + _readCMakeOwners(repositoryRoot, "Test")
                                 if owner[0] not in setManifestFolder]
+    listOwner += [(path, setTarget) for path, setTarget, _reason in _kFileTargetException]
     listUnclassified: list[str] = []
     source = repositoryRoot / "Source"
     if source.is_dir():

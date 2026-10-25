@@ -11,8 +11,9 @@
      configure 에서 서거나, 의존을 맞추려고 서버 모듈을 클라이언트로 넓히게 된다.
   4) include 방향 — 파일이 들어가는 타깃(소속 모듈의 `_listTarget`)마다 그 파일이 include 한 헤더의 소속 모듈도 들어가야 한다.
      헤더 전용(인라인 · 템플릿) 서버 코드는 링크 오류 없이 클라이언트에 들어간다 — CMake 의 켜짐 검사가 못 보는 유일한 길이다.
-     매니페스트 밖 폴더: `Source/Core` · `Source/Engine` · `Source/RuntimeAPI` 는 둘 다(에디터 진입점 접착제만 Client), `Source/App` 은 Client,
-     App · Server 가 같이 쓰는 `Source/ModuleHost` 는 둘 다, `Source/Server` 는 Server.
+     매니페스트 밖 폴더의 대상은 이 게이트가 갖지 않고 `common/ServerBuild.py` 가 `Source/<X>/CMakeLists.txt` 머리의 `SW_TARGET_TYPE` 가드에서
+     읽는다(가드 없음 = 둘 다, `Server` 가드 = Client 뿐, `Client` 가드 = Server 뿐). 파일 단위 예외(에디터 진입점 접착제)도 거기 있다.
+     소속을 알 수 없는 새 `Source/<X>/` 폴더는 위반이다.
      소속은 그 파일을 품은 가장 깊은 매니페스트 폴더다(`Source/Engine/Graphics/RHI/Modules/DX12/` 은 RHI_DX12).
      `Test/` · `Tools/` 는 보지 않는다 — 테스트 소스는 CMake 가 꺼진 모듈의 것을 뺀다(`sw_excludeSourcesOfInactiveKits`).
 
@@ -32,10 +33,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 from common.CodeText import IncludeResolver, iterIncludes  # noqa: E402
 from common.Paths import normalizePath  # noqa: E402
 from common.Search import collectRepositoryFiles  # noqa: E402
+from common.ServerBuild import ServerBuildError, ServerBuildMap, readServerBuildMap  # noqa: E402
 from lint.LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 _kTargetWords = ("Client", "Server")
-_kBoth = frozenset(_kTargetWords)
 _kManifestSuffix = ".module.json"
 #: 대상이 이름 접두로 정해지는 키트 — (접두, 그 접두가 뜻하는 대상).
 _kListNamePrefixTarget = (
@@ -47,18 +48,6 @@ _kClientOnlyKinds = ("Editor", "RHI", "EditorExtension")
 #: 에디터 확장 모듈의 이름 — GameFramework · 키트의 것은 `GF_EditorPlugIn_<이름>`, 게임의 것은 `SWGameEditor`(언리얼 플러그인의 `<X>Editor` 모듈과 같은 자리).
 _kEditorExtensionPrefix = "GF_EditorPlugIn_"
 _kGameEditorExtensionName = "SWGameEditor"
-#: 매니페스트가 없는 폴더의 대상입니다.
-_kListFolderTarget = (
-    ("Source/App/", frozenset({"Client"})),
-    # ModuleHost(모듈 호스트 · 매니페스트 해석 · 핫 리로드) — App · Server 가 같이 링크한다(Source/ModuleHost/CMakeLists.txt).
-    ("Source/ModuleHost/", _kBoth),
-    ("Source/Server/", frozenset({"Server"})),
-    ("Source/Core/", _kBoth),
-    ("Source/Engine/", _kBoth),
-    ("Source/RuntimeAPI/", _kBoth),
-    # 에디터 모듈 쪽 접착제(에디터 진입점 매크로) — EditorModule 의 `.cpp` 만 include 한다(파일 머리 주석).
-    ("Source/RuntimeAPI/Export/EditorModuleExports.h", frozenset({"Client"})),
-)
 _kSourceSuffixes = (".h", ".hpp", ".inl", ".c", ".cc", ".cpp", ".cxx")
 
 
@@ -165,8 +154,11 @@ def findOwner(listOwner: list[TargetOwner], relative: str) -> TargetOwner | None
     return best
 
 
-def findIncludeViolations(repositoryRoot: Path, listOwner: list[TargetOwner]) -> list[str]:
-    listAllOwner = listOwner + [TargetOwner(label=folder.rstrip("/"), folder=folder, setTarget=setTarget) for folder, setTarget in _kListFolderTarget]
+def findIncludeViolations(repositoryRoot: Path, listOwner: list[TargetOwner], buildMap: ServerBuildMap) -> list[str]:
+    # 매니페스트 밖 폴더의 대상은 손 표가 아니라 CMake 가드(`common.ServerBuild`)에서 온다. 매니페스트 폴더는 위 목록이 이미 갖는다.
+    setManifestFolder = {owner.folder for owner in listOwner}
+    listAllOwner = listOwner + [TargetOwner(label=folder.rstrip("/"), folder=folder, setTarget=setTarget)
+                                for folder, setTarget in buildMap.listOwner if folder.startswith("Source/") and folder not in setManifestFolder]
     resolver = IncludeResolver(repositoryRoot, "Source")
     listPath = LintGate.selectTargetFiles(repositoryRoot, None, listScanRoot=("Source",), suffixes=_kSourceSuffixes)
     listViolation: list[str] = []
@@ -279,9 +271,36 @@ class CheckModuleTargetsGate(LintGate):
             "name": "App(클라이언트)이 서버 실행 파일 헤더를 include 한다",
             "expectedViolation": "Source/App/Probe.cpp:1: \"Server/ServerConsole.h\" -> Source/App(Client) 가 Source/Server(Server) 의 헤더를 include 합니다",
             "files": {
+                "Source/App/CMakeLists.txt": 'if(SW_TARGET_TYPE STREQUAL "Server")\n\treturn()\nendif()\n',
                 "Source/App/Probe.cpp": '#include "Server/ServerConsole.h"\nint probe() { return 0; }\n',
+                "Source/Server/CMakeLists.txt": 'if(SW_TARGET_TYPE STREQUAL "Client")\n\treturn()\nendif()\n',
                 "Source/Server/ServerConsole.h": "#pragma once\nint serverConsoleProbe();\n",
             },
+        },
+        {
+            "name": "CMake 가드가 없는 폴더(둘 다 짓는다)의 코드가 App(클라이언트 전용) 헤더를 include 한다",
+            "expectedViolation": "Source/Core/Probe.cpp:1: \"App/Window.h\" -> Source/Core(Client·Server) 가 Source/App(Client) 의 헤더를 include 합니다",
+            "files": {
+                "Source/Core/CMakeLists.txt": "# 가드 없음\n",
+                "Source/Core/Probe.cpp": '#include "App/Window.h"\nint probe() { return 0; }\n',
+                "Source/App/CMakeLists.txt": 'if(SW_TARGET_TYPE STREQUAL "Server")\n\treturn()\nendif()\n',
+                "Source/App/Window.h": "#pragma once\nint windowProbe();\n",
+            },
+        },
+        {
+            "name": "둘 다 짓는 RuntimeAPI 의 코드가 파일 단위 예외(에디터 접착제, Client 뿐) 헤더를 include 한다",
+            "expectedViolation": "Source/RuntimeAPI/Probe.cpp:1: \"RuntimeAPI/Export/EditorModuleExports.h\" -> Source/RuntimeAPI(Client·Server) 가 "
+                                 "Source/RuntimeAPI/Export/EditorModuleExports.h(Client) 의 헤더를 include 합니다",
+            "files": {
+                "Source/RuntimeAPI/CMakeLists.txt": "# 가드 없음\n",
+                "Source/RuntimeAPI/Probe.cpp": '#include "RuntimeAPI/Export/EditorModuleExports.h"\nint probe() { return 0; }\n',
+                "Source/RuntimeAPI/Export/EditorModuleExports.h": "#pragma once\n",
+            },
+        },
+        {
+            "name": "빌드 소속을 알 수 없는 새 Source 폴더",
+            "expectedViolation": "Source/NewThing/: 빌드 소속을 알 수 없는 폴더입니다",
+            "files": {"Source/NewThing/Probe.cpp": "int probe() { return 0; }\n"},
         },
     ]
 
@@ -290,7 +309,15 @@ class CheckModuleTargetsGate(LintGate):
         if not listOwner and not listViolation and (repositoryRoot / "Source" / "Engine").is_dir():
             raise GateError("Source/ 아래 모듈 매니페스트를 하나도 찾지 못했습니다 — 경로를 확인합니다")
         listViolation.extend(findDependencyViolations(mapOwnerByName, listDependencyRow))
-        listViolation.extend(findIncludeViolations(repositoryRoot, listOwner))
+        try:
+            buildMap = readServerBuildMap(repositoryRoot)
+        except ServerBuildError as error:
+            if not listViolation:   # 깨진 매니페스트는 위에서 이미 위반으로 적었다 — 그 밖의 이유일 때만 멈춘다.
+                raise GateError(str(error)) from error
+            return GateResult(listViolation=listViolation, summary="")
+        listViolation.extend(f"{folder}: 빌드 소속을 알 수 없는 폴더입니다 — CMakeLists.txt(필요하면 머리의 SW_TARGET_TYPE 가드) 나 모듈 매니페스트를 둡니다"
+                             for folder in buildMap.listUnclassified)
+        listViolation.extend(findIncludeViolations(repositoryRoot, listOwner, buildMap))
         return GateResult(listViolation=listViolation, summary=f"모듈 {len(listOwner)} 개의 대상 이름 · 방향이 맞다")
 
 
