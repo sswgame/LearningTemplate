@@ -660,7 +660,9 @@ namespace sw
             pList->ResourceBarrier( 1, &barrier );
         }
         // 이 복사는 열린 리스트에 있다. 프레임 끝이나 이 티켓의 폴링이 내보낸다. 읽기 버퍼는 보관표가 쥐고 있다가 `takeTextureReadback` 이 Map 한다.
+        // 원본 텍스처도 복사가 끝나기 전에는 해제되지 않게 전송 시리얼에 매단다(destroyTexture 가 해제를 미룬다).
         const uint64 serial = _pDevice->issueTransferSerial();
+        _pDevice->noteTextureTransfer( texture, serial );
 
         D3D12RHIDevice::TextureReadbackRecord record;
         record._readback  = std::move( readback );

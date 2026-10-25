@@ -546,9 +546,9 @@ namespace sw
         void signalExportedTransfers();
         /** @brief 전송 펜스가 지난 묶음의 시리얼까지 완료 워터마크를 올립니다. 기다리지 않습니다. 어느 스레드에서나 부릅니다. */
         void retireCompletedTransfers();
-        /** @brief 이 텍스처에 마지막으로 제출한 쓰기 전송의 시리얼을 기록합니다(bindless 등록 보호와 파괴 지연이 읽는다). */
+        /** @brief 이 텍스처에 마지막으로 제출한 전송(업로드 또는 읽기 원본)의 시리얼을 기록합니다(bindless 등록 보호와 파괴 지연이 읽는다). */
         void noteTextureTransfer( RHITextureHandle texture, uint64 serial );
-        /** @brief 이 텍스처에 마지막으로 제출한 쓰기 전송의 시리얼입니다. 없으면 0 입니다. */
+        /** @brief 이 텍스처에 마지막으로 제출한 전송의 시리얼입니다. 없으면 0 입니다. */
         [[nodiscard]] uint64 findTextureTransferSerial( RHITextureHandle texture );
         /** @brief 텍스처를 파괴할 때 전송 시리얼 칸을 지웁니다. */
         void eraseTextureTransfer( RHITextureHandle texture );
