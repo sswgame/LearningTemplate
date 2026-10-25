@@ -603,7 +603,7 @@ SW_TEST_CASE( SkeletalAnimationTest, UnitListKeepsRegistrationOrderAfterBulkRemo
     }
     SW_EXPECT_FALSE( unitList.remove( listFake[0] ) ); // 이미 뺐다
     SW_EXPECT_EQUAL( static_cast<uint32>( listExpected.size() ), unitList.getCount() );
-    SW_EXPECT_TRUE( TestSkeletalAnimationInternal::isSameUnits( listExpected, unitList.getUnits() ) );
+    SW_EXPECT_TRUE( TestSkeletalAnimationInternal::isSameUnits( listExpected, unitList.getItems() ) );
     bool bIndexMatches = true;
     for ( uint32 unitIndex = 0; unitIndex < static_cast<uint32>( listExpected.size() ); ++unitIndex )
     {
@@ -617,7 +617,7 @@ SW_TEST_CASE( SkeletalAnimationTest, UnitListKeepsRegistrationOrderAfterBulkRemo
     listExpected.push_back( listFake[0] );
     SW_ASSERT_TRUE( unitList.remove( listFake[1] ) );
     SW_ASSERT_EQUAL( 1u, static_cast<uint32>( VectorUtil::removeFirst( listExpected, listFake[1] ) ) );
-    SW_EXPECT_TRUE( TestSkeletalAnimationInternal::isSameUnits( listExpected, unitList.getUnits() ) );
+    SW_EXPECT_TRUE( TestSkeletalAnimationInternal::isSameUnits( listExpected, unitList.getItems() ) );
     SW_EXPECT_EQUAL( static_cast<uint32>( listExpected.size() ) - 1u, unitList.findIndex( listFake[0] ) );
 }
 
