@@ -18,8 +18,12 @@
 #include "Engine/Bootstrap/NamePoolSubsystem.h"
 #include "Engine/Bootstrap/StaticStorageSubsystem.h"
 #include "Engine/Config/ConfigManager.h"
+#include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/Config/GameConfig.h"
 #include "Engine/Config/PackEngineSettings.h"
+#include "Engine/Graphics/2D/Render2DSettings.h"
+#include "Engine/Graphics/2D/Render2DSettingsSubsystem.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"
 #include "Engine/Graphics/Debug/VisualLogger.h"
@@ -186,11 +190,14 @@ namespace sw::engine
         }
 #endif
         parts._pInputManager = &startup.addSubsystem( sw::make_unique<InputManager>() );
-        // 설정 표는 Config 서브시스템이다 — 엔진 · 게임 설정을 읽고 주 표로 알린다(Resource 가 그 뒤에 서서 팩 루트를 안다).
+        // 설정 표는 Config 서브시스템이다 — 엔진 · 게임 설정을 읽어 자기 자리에 둔다(Resource 가 그 뒤에 서서 팩 루트를 안다).
         {
             SW_MEMORY_SCOPE( EngineMisc );
             parts._pConfigManager = &startup.addSubsystem( sw::make_unique<ConfigManager>() );
         }
+        // 호스트 설정 둘은 Config 가 소유한다 - 읽는 것은 Config 의 초기화이고, 서비스 표(`engine::getSubsystem<EngineConfig>()`)는 이 자리의 주소를 묶는다.
+        (void)startup.bind( &parts._pConfigManager->getHostEngineConfig() ); // 새 범위 - 겹치지 않는다
+        (void)startup.bind( &parts._pConfigManager->getHostGameConfig() );   // 새 범위 - 겹치지 않는다
         {
             SW_MEMORY_SCOPE( Asset );
             startup.addSubsystem( sw::make_unique<AssetManager>() );
@@ -202,6 +209,9 @@ namespace sw::engine
         // 활성 팩의 `<Engine>` 요소(창 제목 · 스키마 · UI 규칙) — 팩을 마운트한 뒤에 읽는다. 창 · 사용자 설정 · UI 가 이 뒤에 선다.
         const PackEngineSettingsSubsystem& packSettings = startup.addSubsystem( sw::make_unique<PackEngineSettingsSubsystem>() );
         (void)startup.bind( &packSettings.getSettings() ); // 새 범위 — 겹치지 않는다
+        // 2D 렌더 설정(정렬 레이어 · 투명 정렬 축)은 엔진 파일이다 - 마운트한 뒤에 읽는다. 2D 컴포넌트를 읽는 단계(헤드리스 쿠킹 · 렌더러)가 이 뒤에 선다.
+        const Render2DSettingsSubsystem& render2DSettings = startup.addSubsystem( sw::make_unique<Render2DSettingsSubsystem>() );
+        (void)startup.bind( &render2DSettings.getSettings() ); // 새 범위 — 겹치지 않는다
         {
             SW_MEMORY_SCOPE( Audio );
             // 전용 서버는 장치를 열지 않는다 — 씬 컴포넌트가 드는 오디오 서비스는 그대로 있고 소리 요청을 받아 버린다.

@@ -14,6 +14,7 @@
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/Graphics/2D/Render2DSettingsSubsystem.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
@@ -89,7 +90,7 @@ namespace sw
             /** @brief 팩에 담을 셰이더 바이너리 폴더입니다 — 명령줄 백엔드(`-dx12` …), 없으면 엔진 설정의 `_defaultRHI` 입니다. */
             static string resolveShaderFolder( const CommandLineManager& commandLine )
             {
-                RHIBackend backend = EngineConfig::getActive()._window._defaultRHI;
+                RHIBackend backend = engine::getSubsystem<EngineConfig>()._window._defaultRHI;
                 RHIBackend commandLineBackend{};
                 if ( RHIBackendUtil::findCommandLineBackend( commandLine, commandLineBackend ) )
                     backend = commandLineBackend;
@@ -163,7 +164,7 @@ namespace sw
                 if ( commandLine.isArgumentProvided( CommandLineArgument::GAME ) )
                 {
                     // 팩 폴더 이름은 게임 이름과 다를 수 있어(ThemeParkTycoon → themepark) 게임 설정의 팩 루트(`game/<폴더>`)에서 읽는다.
-                    const string packRoot  = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( GameConfig::getActive()._packRoot.get() ) );
+                    const string packRoot  = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( engine::getSubsystem<GameConfig>()._packRoot.get() ) );
                     params._gamePackFolder = FileUtil::getFileNamePart( packRoot );
                 }
                 uint32 packCount = 0;
@@ -460,8 +461,9 @@ namespace sw
 
     span<const utf8* const> HeadlessSubsystem::getSubsystemDependencies() const
     {
-        static constexpr const utf8* kArrDependency[] = { EngineDefaultAssetsSubsystem::kSubsystemName, ModuleTypesSubsystem::kSubsystemName, SceneManager::kSubsystemName,
-                                                          ShaderCache::kSubsystemName };
+        // 2D 렌더 설정은 씬 쿠킹의 컴포넌트 검증(정렬 레이어 이름)이 읽는다.
+        static constexpr const utf8* kArrDependency[] = { EngineDefaultAssetsSubsystem::kSubsystemName, ModuleTypesSubsystem::kSubsystemName, Render2DSettingsSubsystem::kSubsystemName,
+                                                          SceneManager::kSubsystemName, ShaderCache::kSubsystemName };
         return kArrDependency;
     }
 

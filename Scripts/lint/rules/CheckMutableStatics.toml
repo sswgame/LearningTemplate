@@ -104,10 +104,7 @@
 "Source/Engine/Common/EngineServices.cpp" = 3
 "Source/Engine/Common/RenderTargetDeclaration.cpp" = 1
 # Source/Engine/Config — 이전 대기
-"Source/Engine/Config/ConfigManager.cpp" = 1
-"Source/Engine/Config/EngineConfig.cpp" = 1
 "Source/Engine/Config/GameAutoplay.cpp" = 1
-"Source/Engine/Config/GameConfig.cpp" = 1
 "Source/Engine/Config/GameSelection.cpp" = 1
 "Source/Engine/Config/GameTimeScale.cpp" = 2
 # Source/Engine/Destruction — 이전 대기
@@ -115,7 +112,6 @@
 # Source/Engine/Environment — 이전 대기
 "Source/Engine/Environment/Terrain/TerrainComponent.cpp" = 1
 # Source/Engine/Graphics — 이전 대기
-"Source/Engine/Graphics/2D/Render2DSettings.cpp" = 2
 "Source/Engine/Graphics/2D/SpriteMeshBuilder.cpp" = 1
 "Source/Engine/Graphics/Canvas/DebugDrawCanvas.cpp" = 1
 "Source/Engine/Graphics/Material/MaterialPermutation.cpp" = 1

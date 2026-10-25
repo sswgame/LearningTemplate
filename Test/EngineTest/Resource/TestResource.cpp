@@ -307,14 +307,16 @@ SW_TEST_CASE( ResourceTest, ResourcePathCaseInsensitiveLookupAndLowerCaseNormali
 
     // 4. 팩 상대 키(Mixed case) 조회 검증
     //    게임 콘텐츠에 의존하지 않도록 팩 루트를 엔진 팩으로 지정해 검사한다.
-    const sw::GameConfig oldActive = sw::GameConfig::getActive();
-    sw::GameConfig::setActive( test::makeGameConfig( "engine" ) );
+    {
+        sw::GameConfig                    enginePack = test::makeGameConfig( "engine" );
+        test::ScopedEngineServiceOverride scope;
+        SW_ASSERT_TRUE( scope.bindObject( &enginePack ) );
+        SW_ASSERT_TRUE( scope.bind() == nullptr );
 
-    const sw::string pathMixedPack = sw::ResourcePaths::findLooseFile( "Pipeline/ForwardPipeline.xml" ).getDiskPath();
-    SW_EXPECT_FALSE( pathMixedPack.empty() );
-    SW_EXPECT_TRUE( sw::FileUtil::exists( pathMixedPack ) );
-
-    sw::GameConfig::setActive( oldActive );
+        const sw::string pathMixedPack = sw::ResourcePaths::findLooseFile( "Pipeline/ForwardPipeline.xml" ).getDiskPath();
+        SW_EXPECT_FALSE( pathMixedPack.empty() );
+        SW_EXPECT_TRUE( sw::FileUtil::exists( pathMixedPack ) );
+    }
 
     // 5. 다른 엔진 리소스의 대문자 키 조회 검증
     const sw::string pathUpperOther = sw::ResourcePaths::findLooseFile( "ENGINE/PIPELINE/DEFERREDPIPELINE.XML" ).getDiskPath();

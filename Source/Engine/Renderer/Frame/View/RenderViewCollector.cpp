@@ -6,6 +6,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
@@ -188,7 +189,7 @@ namespace sw
             const float32 aspect         = drawnWidth / drawnHeight;
             request._viewProj            = pCamera->getViewProjectionMatrix( aspect );
             request._position            = pCamera->getCameraPosition();
-            request._transparentSortAxis = Render2DSettings::getActive().computeTransparentSortAxis( pCamera->isOrthographic(), pCamera->getCameraForward() );
+            request._transparentSortAxis = engine::getSubsystem<Render2DSettings>().computeTransparentSortAxis( pCamera->isOrthographic(), pCamera->getCameraForward() );
 
             RenderViewScheduler::Candidate& candidate = arrCandidate[candidateCount];
             candidate._viewID                         = request._viewID;
@@ -243,7 +244,7 @@ namespace sw
         request._outputHeight         = target._height;
         request._viewProj             = camera.getViewProjectionMatrix( static_cast<float32>( target._width ) / static_cast<float32>( target._height ) );
         request._position             = camera.getCameraPosition();
-        request._transparentSortAxis  = Render2DSettings::getActive().computeTransparentSortAxis( camera.isOrthographic(), camera.getCameraForward() );
+        request._transparentSortAxis  = engine::getSubsystem<Render2DSettings>().computeTransparentSortAxis( camera.isOrthographic(), camera.getCameraForward() );
         request._bRender              = SW_TRUE;
         if ( inoutListView.size() >= kMaxExtraRenderView )
             inoutListView.back() = request;

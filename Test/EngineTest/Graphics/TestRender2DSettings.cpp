@@ -2,7 +2,9 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
+#include "Engine/Graphics/2D/Render2DSettingsSubsystem.h"
 #include "Engine/Resource/ResourcePaths.h"
 
 #include "TestFramework/TestFramework.h"
@@ -123,19 +125,21 @@ SW_TEST_CASE( Render2DSettingsTest, EngineTableHasWorldUIAboveDefault )
 }
 
 /**
- * @brief [Render2DSettingsTest] 활성 표는 한 번 읽혀 같은 자리에 있고, 다시 읽어도 그 자리를 갱신한다
- * @details 활성 표는 엔진 수명 범위가 소유한다(`ScopeOwned`). 조회는 잠그지 않으므로 다시 읽기가 자리를 옮기면 앞서 받은 참조가 무효가 된다.
+ * @brief [Render2DSettingsTest] 서비스 표의 표는 기동에서 한 번 읽혀 같은 자리에 있고, 다시 읽어도 그 자리를 갱신한다
+ * @details 표는 서브시스템 `Render2DSettings` 가 소유한다. 조회는 잠그지 않으므로 다시 읽기가 자리를 옮기면 앞서 받은 참조가 무효가 된다.
  */
 SW_TEST_CASE( Render2DSettingsTest, ActiveTableKeepsItsAddressAcrossReload )
 {
-    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
-    const sw::Render2DSettings& active     = sw::Render2DSettings::getActive();
+    const sw::Render2DSettings& active     = sw::engine::getSubsystem<sw::Render2DSettings>();
     const uint32                layerCount = active.getSortingLayerCount();
     SW_ASSERT_TRUE( layerCount > 1u );
 
-    SW_ASSERT_TRUE( sw::Render2DSettings::reloadActive() );
-    const sw::Render2DSettings& reloaded = sw::Render2DSettings::getActive();
+    sw::Render2DSettingsSubsystem* const pOwner = sw::engine::findSubsystem<sw::Render2DSettingsSubsystem>();
+    SW_ASSERT_NOT_NULL( pOwner );
+    SW_ASSERT_TRUE( pOwner->reload() );
+    const sw::Render2DSettings& reloaded = sw::engine::getSubsystem<sw::Render2DSettings>();
     SW_EXPECT_TRUE( &reloaded == &active );
+    SW_EXPECT_TRUE( &pOwner->getSettings() == &active );
     SW_EXPECT_EQUAL( layerCount, reloaded.getSortingLayerCount() );
     SW_EXPECT_TRUE( reloaded.findSortingLayer( sw::hashed_string( "Default" ) ) >= 0 );
     SW_EXPECT_EQUAL( static_cast<uint32>( reloaded.findSortingLayer( sw::hashed_string( "Default" ) ) ), reloaded.getDefaultSortingLayer() );

@@ -66,7 +66,7 @@ namespace sw
          *               아무것도 읽지 못합니다.
          * @return 팩을 하나라도 마운트했으면 true 입니다(느슨한 `Resource/` 트리만 있으면 false).
          *
-         * @details **`GameConfig::setActive` 뒤에 불러야 한다.** "game" 토큰은 `GameConfig._packRoot`
+         * @details **호스트 게임 프리셋(`ConfigManager` 가 `GameConfig` 를 읽은 뒤)에 불러야 한다.** "game" 토큰은 `GameConfig._packRoot`
          *          로 풀리므로, 그 전에 부르면 게임 도메인이 통째로 빠진 채 팩이 로드되고 GUID 테이블도
          *          engine 과 common 만 채워진다.
          *

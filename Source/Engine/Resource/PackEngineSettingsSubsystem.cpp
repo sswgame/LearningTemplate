@@ -2,6 +2,7 @@
 
 #include "Engine/Resource/PackEngineSettingsSubsystem.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Config/PackEngineSettings.h"
@@ -24,7 +25,7 @@ namespace sw
     SubsystemInitResult PackEngineSettingsSubsystem::initializeSubsystem()
     {
         // 창 제목 · 스키마 · UI 규칙은 팩에만 있다 — 못 읽으면 대신 쓸 값이 없으므로 기동을 멈춘다(이유는 loadFromPack 이 남긴다).
-        const DataPath& packRoot = GameConfig::getActive()._packRoot;
+        const DataPath& packRoot = engine::getSubsystem<GameConfig>()._packRoot;
         if ( _settings->loadFromPack( packRoot ) == false )
         {
             SW_LOG_ERROR( "Pack engine settings of '%#' could not be read - stopping startup", packRoot.c_str() );

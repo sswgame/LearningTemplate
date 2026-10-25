@@ -2417,7 +2417,7 @@ SW_TEST_CASE( GPUSceneTest, SortingLayerOrdersTransparentBeforeDepth )
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     TransparentSortFixture fixture;
     SW_ASSERT_TRUE( fixture.initialize() );
-    const sw::Render2DSettings& settings = sw::Render2DSettings::getActive();
+    const sw::Render2DSettings& settings = sw::engine::getSubsystem<sw::Render2DSettings>();
     uint32                      foregroundKey{ 0 };
     uint32                      worldUIKey{ 0 };
     uint32                      defaultMinusOneKey{ 0 };
@@ -2455,7 +2455,7 @@ SW_TEST_CASE( GPUSceneTest, EqualDepthTransparentOrderIsStableUnderViewAxis )
     TransparentSortFixture fixture;
     SW_ASSERT_TRUE( fixture.initialize() );
     uint32 worldUIKey{ 0 };
-    SW_ASSERT_TRUE( sw::Render2DSettings::getActive().resolveSortKey( sw::hashed_string( "WorldUI" ), 0, worldUIKey ) );
+    SW_ASSERT_TRUE( sw::engine::getSubsystem<sw::Render2DSettings>().resolveSortKey( sw::hashed_string( "WorldUI" ), 0, worldUIKey ) );
 
     SW_ASSERT_NOT_NULL( fixture.addMesh( "SpriteLeft", sw::float3{ -1.0f, 0.0f, 0.0f }, 0 ) );
     SW_ASSERT_NOT_NULL( fixture.addMesh( "SpriteRight", sw::float3{ 1.0f, 0.0f, 0.0f }, 0 ) );
@@ -2484,7 +2484,7 @@ SW_TEST_CASE( GPUSceneTest, EqualDepthTransparentOrderIsStableUnderViewAxis )
 
     // 시선 축(+Z)으로 측정하면 둘의 깊이가 같아 등록 순서(왼쪽 먼저)로 가르고, 카메라를 옮겨도 그대로다.
     sw::GPUSceneBuilder axisBuilder;
-    axisBuilder.setTransparentSortAxis( sw::Render2DSettings::getActive().computeTransparentSortAxis( true, sw::float3{ 0.0f, 0.0f, 1.0f } ) );
+    axisBuilder.setTransparentSortAxis( sw::engine::getSubsystem<sw::Render2DSettings>().computeTransparentSortAxis( true, sw::float3{ 0.0f, 0.0f, 1.0f } ) );
     const sw::float3 arrCameraPos[] = {
         cameraLeft, cameraRight, sw::float3{ 0.0f, 3.0f, -8.0f }
     };

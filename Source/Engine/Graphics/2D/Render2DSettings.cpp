@@ -3,15 +3,11 @@
 #include "Engine/Graphics/2D/Render2DSettings.h"
 
 #include "Core/Common/StdHeaders.h"
-#include "Core/Concurrency/atomic.h"
-#include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Memory/LifetimeScope.h"
 
 #include "Engine/Resource/ResourceDataKind.h"
 #include "Engine/Resource/ResourceIO.h"
-#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLNameCheck.h"
 
@@ -47,51 +43,7 @@ namespace sw
                 outValue = float3{ arrValue[0], arrValue[1], arrValue[2] };
                 return true;
             }
-
-            /**
-             * @brief 활성 표의 저장소입니다. 읽기 · 다시 읽기만 잠그고, 읽힌 뒤의 조회는 잠그지 않습니다.
-             * @details 엔진 기동 뒤 처음 읽혀 채워지고, 엔진 수명 범위가 닫히면(엔진 종료) 소멸합니다(`s_render2DActiveStorage`).
-             */
-            struct ActiveStorage
-            {
-                Render2DSettings _settings;
-                mutex            _loadMutex;
-                atomic<bool>     _bLoaded;
-            };
-
-            /** @brief 활성 표의 저장소입니다. 엔진 수명이 끝난 뒤면 단언하고, 읽지 않은 빈 표를 돌려줍니다. */
-            static ActiveStorage& getStorage();
-
-            /**
-             * @brief 엔진 파일(기준 하나)을 읽어 @p outSettings 에 넣습니다. 못 읽으면 오류를 남기고 false 이며 표는 그대로입니다.
-             * @details 첫 읽기가 리소스 루트를 잡기 전에 올 수 있다(엔진 기동 없이 도는 테스트) — 루트를 못 잡는 것도 실패다.
-             */
-            [[nodiscard]] static bool loadActive( Render2DSettings& outSettings )
-            {
-                if ( ResourcePaths::initialize() == false )
-                {
-                    SW_LOG_ERROR( "2D render settings cannot be read - resource paths are not initialized" );
-                    return false;
-                }
-                Render2DSettings engineSettings;
-                if ( engineSettings.loadFromResource( Render2DSettings::getEngineSettingsPath() ) == false )
-                    return false;
-                outSettings = engineSettings;
-                return true;
-            }
         };
-
-        ScopeOwned<Render2DSettingsInternal::ActiveStorage> s_render2DActiveStorage;
-
-        Render2DSettingsInternal::ActiveStorage& Render2DSettingsInternal::getStorage()
-        {
-            ActiveStorage* const pStorage = s_render2DActiveStorage.getOrCreate();
-            if ( pStorage != nullptr )
-                return *pStorage;
-            // 엔진 종료 뒤의 접근이다(단언은 `getOrCreate` 가 했다). 파일을 읽지 않는 기본 표로 답한다.
-            static ActiveStorage s_closedFallback;
-            return s_closedFallback;
-        }
     } // namespace
 
     Render2DSettings::Render2DSettings()
@@ -286,34 +238,6 @@ namespace sw
                 return _sortAxis;
         }
         return float3{ 0.0f, 0.0f, 0.0f };
-    }
-
-    const Render2DSettings& Render2DSettings::getActive()
-    {
-        Render2DSettingsInternal::ActiveStorage& storage = Render2DSettingsInternal::getStorage();
-        if ( storage._bLoaded.load( std::memory_order_acquire ) == false )
-        {
-            std::lock_guard<mutex> lock( storage._loadMutex );
-            if ( storage._bLoaded.load( std::memory_order_relaxed ) == false )
-            {
-                // 렌더러 초기화(`reloadActive`)가 먼저 읽는다. 여기로 오는 것은 렌더러 없이 표를 보는 도구 · 테스트다.
-                // 못 읽으면 단언하고 빈 표(레이어 없음 — 이름 있는 레이어는 모두 "모르는 레이어" 오류)로 답한다. 기본 표를 지어내지 않는다.
-                const bool bLoaded = Render2DSettingsInternal::loadActive( storage._settings );
-                SW_LOG_ASSERT( bLoaded, "2D render settings '%#' could not be loaded", getEngineSettingsPath() );
-                storage._bLoaded.store( true, std::memory_order_release );
-            }
-        }
-        return storage._settings;
-    }
-
-    bool Render2DSettings::reloadActive()
-    {
-        Render2DSettingsInternal::ActiveStorage& storage = Render2DSettingsInternal::getStorage();
-        std::lock_guard<mutex>                   lock( storage._loadMutex );
-        if ( Render2DSettingsInternal::loadActive( storage._settings ) == false )
-            return false;
-        storage._bLoaded.store( true, std::memory_order_release );
-        return true;
     }
 
     /** @brief 2D 렌더 설정 데이터 파일 종류입니다(스키마 테스트와 카탈로그 편집기가 이 줄로 파일을 읽는다). */

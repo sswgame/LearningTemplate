@@ -312,7 +312,7 @@ namespace sw
         context._buildConfig = build::kConfigName;
         context._platform    = build::kPlatformName;
         context._buildID     = ModuleBuildID::find( nullptr )._id;
-        context._game        = FileUtil::getFileNamePart( FileUtil::trimTrailingSlashes( GameConfig::getActive()._packRoot.get() ) );
+        context._game        = FileUtil::getFileNamePart( FileUtil::trimTrailingSlashes( engine::getSubsystem<GameConfig>()._packRoot.get() ) );
         const string folder  = gv_telemetryFolder.empty() ? FileUtil::joinPath( FileUtil::getDirectoryPart( userSettings.getUserFilePath() ), "telemetry" )
                                                           : string( gv_telemetryFolder );
 

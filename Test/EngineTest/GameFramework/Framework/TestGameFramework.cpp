@@ -2908,7 +2908,6 @@ SW_TEST_CASE( GameFrameworkTest, BootstrapGameSettingsIsBoundAndApplied )
     // 실행 설정 · 서비스 · 전역 기본값 경로는 테스트가 빠져나가도 되돌린다.
     struct ScopedRunState
     {
-        GameConfig   _oldConfig{ GameConfig::getActive() };
         string       _oldGameSettingsPath{ Component::getDefaultGameSettingsPath() };
         InputManager _input;
 
@@ -2926,7 +2925,6 @@ SW_TEST_CASE( GameFrameworkTest, BootstrapGameSettingsIsBoundAndApplied )
             game::unbindGameService();
             _input.shutdown();
             Component::setDefaultGameSettingsPath( _oldGameSettingsPath );
-            GameConfig::setActive( _oldConfig );
         }
         ScopedRunState( const ScopedRunState& )            = delete;
         ScopedRunState& operator=( const ScopedRunState& ) = delete;

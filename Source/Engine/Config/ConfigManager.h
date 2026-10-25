@@ -64,16 +64,21 @@ namespace sw
 
 namespace sw
 {
+    struct EngineConfig;
+    struct GameConfig;
+
     /**
      * @class ConfigManager
      * @brief 호스트 설정(EngineConfig, GameConfig 등)의 테이블입니다. 파일에서 읽은 설정은 그 경로를 기억해 실행 중에 다시 읽을 수 있습니다
      *        (`reloadConfigFile`. 에디터의 설정 파일 감시가 부릅니다).
+     * @details 호스트 설정 둘(`EngineConfig` · `GameConfig`)의 **소유자**는 이 표다. 서비스 표(`engine::getSubsystem<EngineConfig>()`)가 기동 초기화 전에 주소를
+     *          묶어야 해서, 값이 읽히기 전부터 자리(`getHostEngineConfig` · `getHostGameConfig`)가 있고 읽으면 그 자리에 담긴다 — 다시 읽기도 제자리라
+     *          주소는 이 표가 사는 동안 바뀌지 않는다. 정적 사본(`setActive`)을 따로 두지 않으므로 표가 둘이면 설정도 둘이다.
      */
     class SW_API ConfigManager : public ISubsystem
     {
     public:
-        ConfigManager() = default;
-        /** @brief 이 표가 주 표(`setPrimary`)면 알림을 거둡니다 — 사라진 표를 게임 모듈이 찾지 않는다. */
+        ConfigManager();
         ~ConfigManager() override;
         ConfigManager( const ConfigManager& )            = delete;
         ConfigManager& operator=( const ConfigManager& ) = delete;
@@ -81,7 +86,14 @@ namespace sw
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
         static constexpr const utf8* kSubsystemName = "Config";
         /**
-         * @brief 기동 순서의 자리 — 프로젝트 루트를 기준으로 엔진 · 게임 설정(EngineConfig · GameConfig)을 읽어 활성으로 두고, 이 표를 주 표로 알립니다.
+         * @brief 호스트가 서비스 표에 걸 엔진 설정의 자리입니다(`engine::getSubsystem<EngineConfig>()` 가 이것을 돌려준다).
+         * @details 값은 `initializeSubsystem` 이 읽은 뒤에야 쓸 수 있다 — 그 전에는 빈 형식(0)이다. 주소는 이 표가 사는 동안 같다.
+         */
+        [[nodiscard]] EngineConfig& getHostEngineConfig() const { return *_pHostEngineConfig; }
+        /** @brief 호스트가 서비스 표에 걸 게임 프리셋의 자리입니다. 읽기 전에 쓰면 Debug 어서션(`DataPath` 가 비어 있다). 나머지는 `getHostEngineConfig` 와 같다. */
+        [[nodiscard]] GameConfig& getHostGameConfig() const { return *_pHostGameConfig; }
+        /**
+         * @brief 기동 순서의 자리 — 프로젝트 루트를 기준으로 엔진 · 게임 설정(EngineConfig · GameConfig)을 읽어 호스트 자리에 둡니다.
          * @details 틀린 설정 파일은 실패다(키 이름은 이미 오류로 남았다) — 기본값으로 뜨면 고친 값이 무시된 것을 아무도 모른다. Dev 는 고른 게임(`-game=`)의
          *          파일만 읽는다. 배포 구성은 생성된 JSON 을 읽으며, 그것이 역직렬화되지 않으면(정적 링크에서 리플렉션 등록기가 빠졌다) 실패로 드러낸다.
          */
@@ -144,15 +156,16 @@ namespace sw
         uint32 getReloadableCount() const { return static_cast<uint32>( _mapSource.size() ); }
 
         /**
-         * @brief 호스트가 기동 때 만든 테이블입니다(에디터가 설정 파일 감시에 씁니다). 없으면 nullptr 입니다.
-         * @details 테이블은 `Engine` 가 보관하고, 만든 직후 `setPrimary` 로 알리고 해제하기 전에 회수한다. 서비스 목록에 올리지 않은 것은 게임 모듈이 볼
-         *          이유가 없기 때문이다.
+         * @brief 호스트가 기동 때 만든 테이블입니다(에디터가 설정 파일 감시에 씁니다). 엔진 범위가 서 있지 않으면 nullptr 입니다.
+         * @details 테이블은 엔진 기동 범위의 서브시스템이고 이 함수는 그 범위에서 찾는다(`engine::findSubsystem<ConfigManager>()`) — 따로 든 정적 포인터가 없다.
+         *          서비스 목록에 올리지 않은 것은 게임 모듈이 볼 이유가 없기 때문이다.
          */
         static ConfigManager* findPrimary();
-        /** @brief 호스트의 테이블을 알립니다. 해제할 때 nullptr 를 넘깁니다. */
-        static void setPrimary( ConfigManager* pManager );
 
-        /** @brief 설정 하나를 JSON 본문에서 엄격하게(`readConfigJSON`) 읽어 등록합니다. 틀리면 테이블을 바꾸지 않습니다. */
+        /**
+         * @brief 설정 하나를 JSON 본문에서 엄격하게(`readConfigJSON`) 읽어 등록합니다. 틀리면 테이블을 바꾸지 않습니다.
+         * @details 이미 같은 타입이 있으면(호스트 자리 포함) 그 객체에 값으로 덮어쓴다 — 서비스 표가 쥔 주소가 바뀌지 않는다.
+         */
         template <typename T>
         [[nodiscard]] bool loadConfigFromJSON( const string& jsonStr, const utf8* pSourceLabel = "json" )
         {
@@ -161,7 +174,21 @@ namespace sw
             unique_ptr<T> newConfig = make_unique<T>();
             if ( readConfigJSON( *newConfig, jsonStr, pSourceLabel ) == false )
                 return false;
-            _mapConfig[getConfigKey<T>()] = std::move( newConfig );
+            const uint32 key  = getConfigKey<T>();
+            auto         iter = _mapConfig.find( key );
+            if ( iter != _mapConfig.end() )
+            {
+                *static_cast<T*>( iter->second.get() ) = std::move( *newConfig );
+            }
+            else if ( unique_ptr<IConfig>* pHostSlot = findHostSlot( *T::StaticType() ); pHostSlot != nullptr )
+            {
+                *static_cast<T*>( pHostSlot->get() ) = std::move( *newConfig ); // 서비스 표가 이 주소를 쥐고 있다 — 새 객체로 바꾸지 않고 자리에 담는다
+                _mapConfig[key]                      = std::move( *pHostSlot );
+            }
+            else
+            {
+                _mapConfig[key] = std::move( newConfig );
+            }
             SW_LOG_INFO( "Config loaded successfully from %#", pSourceLabel );
             return true;
         }
@@ -360,8 +387,18 @@ namespace sw
             return false;
         }
 
+        /**
+         * @brief 아직 표에 올리지 않은 호스트 설정(`EngineConfig` · `GameConfig`)의 자리입니다. 그 타입이 아니면 nullptr 입니다.
+         * @details 첫 읽기가 끝나면 자리의 객체가 표(`_mapConfig`)로 옮겨가 자리는 비지만, 객체의 주소는 그대로다.
+         */
+        unique_ptr<IConfig>* findHostSlot( const TypeInfo& type );
+
         unordered_map<uint32, unique_ptr<IConfig>> _mapConfig;
-        unordered_map<uint32, ReloadSource>        _mapSource; ///< 파일에서 읽은 설정에서 경로와 다시 읽는 함수로 가는 맵이다
+        unique_ptr<IConfig>                        _pEngineSlot;       ///< 호스트 엔진 설정의 객체 - 읽기 전까지 여기 있고 읽은 뒤 `_mapConfig` 가 쥔다
+        unique_ptr<IConfig>                        _pGameSlot;         ///< 호스트 게임 프리셋의 객체 - `_pEngineSlot` 과 같다
+        EngineConfig*                              _pHostEngineConfig; ///< `_pEngineSlot` 의 객체 주소 - 표를 옮겨도 같다
+        GameConfig*                                _pHostGameConfig;   ///< `_pGameSlot` 의 객체 주소
+        unordered_map<uint32, ReloadSource>        _mapSource;         ///< 파일에서 읽은 설정에서 경로와 다시 읽는 함수로 가는 맵이다
         ConfigReloadedDelegate                     _onConfigReloaded;
         /// @brief 상대 Config 경로의 기준 디렉터리입니다. 비어 있으면 작업 디렉터리와 실행 파일 위치만 봅니다.
         string _rootDirectory;

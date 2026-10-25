@@ -194,14 +194,8 @@ namespace sw
             return false;
         }
 
-        // 2D 정렬 레이어 표는 엔진 필수 데이터다. 주 렌더러가 기동 때 읽고, 못 읽으면 초기화가 실패한다(미리보기 렌더러는 같은 표를 쓴다).
-        if ( _bScenePreview == SW_FALSE && Render2DSettings::reloadActive() == false )
-        {
-            _status        = FrameRendererStatus::Failed;
-            _statusMessage = "2D render settings (render2d.xml) could not be loaded";
-            SW_LOG_ERROR( "initialize: %#", _statusMessage );
-            return false;
-        }
+        // 2D 정렬 레이어 표는 엔진 필수 데이터다. 서브시스템 Render2DSettings 가 기동 때 읽고(못 읽으면 기동이 멈춘다) 렌더러 서브시스템이 그 뒤에 선다 -
+        // 주 렌더러와 미리보기 렌더러는 서비스 표의 같은 표를 읽는다.
 
         // 커맨드라인이 주 출력의 보기 모드를 정했으면 여기서 받는다(에디터 씬 뷰는 툴바가 따로 정한다).
         // 범위 밖 번호는 Lit 으로 바꾸지 않고 초기화를 멈춘다 — 검증 실행이 다른 모드를 찍고 통과하면 안 된다.
@@ -633,7 +627,7 @@ namespace sw
         }
         // 패킷 경로와 **같은 경로**다. 빌더가 스냅샷을 만들고 RT 쪽이 받는다. 렌더 스레드 쪽 GPUScene 에는 씬을 읽는 메서드가 없다.
         // 주 카메라의 정렬 축도 패킷 경로(Engine)처럼 설정한다. 직교 카메라는 시선 축을, 원근 카메라는 거리를 쓴다.
-        _sceneBuilder.setTransparentSortAxis( Render2DSettings::getActive().computeTransparentSortAxis( pMainCamera->isOrthographic(), pMainCamera->getCameraForward() ) );
+        _sceneBuilder.setTransparentSortAxis( engine::getSubsystem<Render2DSettings>().computeTransparentSortAxis( pMainCamera->isOrthographic(), pMainCamera->getCameraForward() ) );
         _sceneBuilder.populateFromScene( pScene, cameraPos );
         _sceneBuilder.computeViewTransparentOrders( _listDirectViewScratch );
         prepareExtraViews( _listDirectViewScratch );

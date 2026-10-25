@@ -175,7 +175,7 @@ namespace sw
             // 안개도 씬이 갖는다. 카메라가 물속이면 물의 안개가 컴포넌트의 값을 덮는다(FogComponent::findFog).
             packet._bHasFog = ( pActiveObjects != nullptr && FogComponent::findFog( *pActiveObjects, pCam->getCameraPosition(), packet._fog ) ) ? SW_TRUE : SW_FALSE;
             // 투명 정렬의 깊이 — 직교 카메라는 시선 축(같은 Z 의 스프라이트가 카메라를 따라 앞뒤가 바뀌지 않게), 원근은 거리(render2d.xml).
-            _gpuSceneBuilder->setTransparentSortAxis( Render2DSettings::getActive().computeTransparentSortAxis( pCam->isOrthographic(), pCam->getCameraForward() ) );
+            _gpuSceneBuilder->setTransparentSortAxis( engine::getSubsystem<Render2DSettings>().computeTransparentSortAxis( pCam->isOrthographic(), pCam->getCameraForward() ) );
             _bMissingCameraReported = false;
         }
         else if ( _bMissingCameraReported == false )
