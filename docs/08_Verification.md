@@ -502,6 +502,10 @@ ctest --test-dir build/Ninja-Release -L load                     # 부하 스위
   게이트에 걸린 줄은 실패 메시지의 `unexpected log:` 줄과 `Saved/Automation/<이름>_<백엔드>.log` 에 있다.
   창 제목에서 시나리오를 본다 — 시나리오 · 벤치 실행 중 제목은 `<게임 제목> — <시나리오> · <백엔드> · step <번호> <단계> · f<프레임>`(벤치는 `bench <gv_bench 인자> · <백엔드> · f<프레임>`)이다. 에디터도 같다 — 앞부분이 `<게임> — <씬>[*] — SW Editor` 이고 제목은 엔진(`AutomationRunTitleTracker`) 한 곳만 건다. 캡처한 화면의 제목으로 어느 실행인지 읽고, 로그는 `[Scenario] <이름> step <번호> <단계> frame <F>` · `finished <결과> frames <N>` 줄로 같은 정보를 남긴다.
   `materialpreview` 가 GL 체인에서 한 번 진 적이 있다(미리보기 평균 R-B 가 옛 값 — 이후 0/23 재현 없음). 다시 지면 탐침 `Editor.MaterialDocumentIsProbeAsset` · `Editor.MaterialSwitchPending` 의 값으로 문서가 안 바뀐 것인지 계산이 안 따라온 것인지 가른다.
+- **시나리오 단계 속성은 앱 없이(nogpu) 먼저 본다** — `AutomationScenarioDataTest.EveryScenarioStepPassesItsValidation` 가 모든 `*.scenario.xml` 의 단계를 등록된 검사 함수(`_pValidate`)로 훑는다(새 시나리오는 자동으로 든다).
+  에디터 · App 의 단계는 검사 함수만 ImGui · 렌더를 모르는 파일에 두고 `SW_AUTOMATION_STEP_VALIDATOR` 로 따로 올려(`EditorScenarioStepValidation.cpp` · `AutomationBackendSteps.cpp`) 모듈 없이 본다.
+  모듈이 안 올라온 탐침 · 개발 명령 · `Variable` 의 변수 이름은 이름만 받아 주는 대역으로 올려 나머지 속성을 보므로 **이름이 있는지와 탐침의 `target` · `key` 요구는 린트 `CheckNameReferences` 가 소스를 읽어 본다**.
+  테스트가 보지 못하는 것은 `[ScenarioData] not seen …` 로그 줄에 이유별로 남는다(통과로 세지 않는다). 준비 함수(`_pPrepare`)에서만 보는 것 — `Action` 의 입력 맵 액션 이름, 누를 수 없는 슬롯, `EditorKey` 의 ImGui 키 이름, `EditorExpectObject` 의 컴포넌트 타입 이름 — 은 GPU 검증의 시작 프레임이 본다.
 - **에디터 시나리오 백엔드 사례는 한 체크아웃에서 하나씩 돌린다** — `AppScenarioTest.EditorScenariosPassOn<백엔드>` 는 리소스 트리(`assetmanage/probe.material` 이름 바꾸기 · 새 머티리얼 · `editor/automationtemp/`)를 고친다.
   같은 워크트리에서 두 백엔드를 동시에 돌리면 서로의 파일을 지우고 남겨 assetmanage · chainreloadgame(고아 에셋 경고) · flowterrain · flowimport 가 함께 진다(2026-10-20, 네 백엔드 모두 실패, 하나씩 돌리면 DX12 · Vulkan · DX11 통과).
   GPU 공유 칸의 병렬은 워크트리가 다를 때만 쓰고, 진 뒤에는 `git status` 로 리소스 트리를 되돌린다.

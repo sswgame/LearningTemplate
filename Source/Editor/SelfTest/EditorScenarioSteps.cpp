@@ -40,6 +40,7 @@
 #include "Editor/Panels/Settings/ModulesPanel.h"
 #include "Editor/Panels/Settings/PreferencesPanel.h"
 #include "Editor/Panels/Settings/ShortcutsPanel.h"
+#include "Editor/SelfTest/EditorScenarioStepValidation.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorViewportBillboard.h"
@@ -95,18 +96,11 @@ namespace sw::editor
             /** @brief 창과 도크 사각형을 비교할 때의 픽셀 허용치입니다. */
             static constexpr float32 kPixelTolerance = 1.0f;
 
-            /** @brief 속성이 @p listAllowed 안에만 있고 @p pRequired 가 있는지 검사합니다. 순수 검사입니다(기록을 켜는 일은 `prepareMarks`). */
-            static bool validate( const AutomationStep& step, std::initializer_list<string_view> listAllowed, const utf8* pRequired, string& outError )
-            {
-                if ( step.hasOnlyAttributes( listAllowed, outError ) == false )
-                    return false;
-                if ( pRequired != nullptr && step.findAttribute( pRequired ) == nullptr )
-                {
-                    outError = step.describe() + ": needs " + pRequired + "=\"…\"";
-                    return false;
-                }
-                return true;
-            }
+            using Validation       = EditorScenarioStepValidation;
+            using PressState       = EditorPressState;
+            using ClickArgs        = EditorClickArgs;
+            using DragArgs         = EditorDragArgs;
+            using ExpectObjectArgs = EditorExpectObjectArgs;
 
             /**
              * @brief 위젯 레이블 기록을 시작합니다(모든 에디터 단계의 준비 함수). 레이블은 기록을 켠 뒤에 그린 위젯만 기록됩니다.
@@ -121,135 +115,20 @@ namespace sw::editor
                 return false;
             }
 
-            /** @brief 음이 아닌 정수 속성을 읽습니다. 없으면 @p inoutValue 를 둡니다(기본값은 아래 단계 인자 구조체의 초기값). 형식이 틀리면 false 이고 값은 그대로입니다. */
-            [[nodiscard]] static bool readCount( const AutomationStep& step, string_view name, uint32& inoutValue )
-            {
-                const string* pText = step.findAttribute( name );
-                int32         value = 0;
-                if ( pText == nullptr )
-                    return true;
-                if ( StringUtil::parseInt( string_view{ *pText }, value ) == false || value < 0 )
-                    return false;
-                inoutValue = static_cast<uint32>( value );
-                return true;
-            }
-
             // ------------------------------------------------------------------------------
             // EditorClick, EditorText, EditorKey: ImGui 입력
             // ------------------------------------------------------------------------------
-            /** @brief `mods` 속성("ctrl", "shift", "ctrl+shift" 등)을 수정자 키 목록으로 해석합니다. 없으면 빈 목록이고, 모르는 이름이면 false 입니다. */
-            [[nodiscard]] static bool parseModifiers( const AutomationStep& step, vector<int32>& outListKey )
+            /** @brief `mods` 마스크(`EditorModifierBit`)를 ImGui 수정자 키 목록으로 바꿉니다. 읽기와 모르는 이름 검사는 `Validation::parseModifiers` 가 한다. */
+            [[nodiscard]] static vector<int32> makeImGuiModifiers( uint8 modifierMask )
             {
-                outListKey.clear();
-                const string* pMods = step.findAttribute( "mods" );
-                if ( pMods == nullptr )
-                    return true;
-                const string_view mods{ *pMods };
-                size_t            begin = 0;
-                while ( begin <= mods.size() )
-                {
-                    const size_t      plus  = mods.find( '+', begin );
-                    const size_t      end   = plus == string_view::npos ? mods.size() : plus;
-                    const string_view token = mods.substr( begin, end - begin );
-                    if ( StringUtil::equals( token, "ctrl", true ) )
-                        outListKey.push_back( ImGuiMod_Ctrl );
-                    else if ( StringUtil::equals( token, "shift", true ) )
-                        outListKey.push_back( ImGuiMod_Shift );
-                    else if ( StringUtil::equals( token, "alt", true ) )
-                        outListKey.push_back( ImGuiMod_Alt );
-                    else
-                        return false;
-                    if ( plus == string_view::npos )
-                        break;
-                    begin = plus + 1;
-                }
-                return true;
-            }
-
-            /** @brief `state` 속성("down", "up")을 읽습니다. 없으면 누르고 놓는 한 번(`PressState::Tap`)이고, 모르는 값이면 false 입니다. */
-            enum class PressState : uint8
-            {
-                Tap,
-                Down,
-                Up,
-            };
-
-            [[nodiscard]] static bool readPressState( const AutomationStep& step, PressState& inoutState )
-            {
-                const string* pState = step.findAttribute( "state" );
-                if ( pState == nullptr )
-                    return true;
-                PressState& outState = inoutState;
-                if ( StringUtil::equals( string_view{ *pState }, "down", true ) )
-                    outState = PressState::Down;
-                else if ( StringUtil::equals( string_view{ *pState }, "up", true ) )
-                    outState = PressState::Up;
-                else
-                    return false;
-                return true;
-            }
-
-            // --- 단계 인자: 검사 함수와 실행 함수가 같은 읽기(`parse*`) 하나를 쓴다. 검사가 읽어 본 뒤 실행이 결과를 버리며 다시 읽던 것을 없앤다.
-            //     실행 때 읽기가 실패하면(검사 뒤 단계가 바뀐 핫 리로드) 버리지 않고 실패로 적는다. 기본값은 구조체의 초기값 하나다.
-
-            /** @brief `EditorClick` 의 인자입니다. */
-            struct ClickArgs
-            {
-                vector<int32> _listModifier{};
-                float2        _anchor{ 0.5f, 0.5f }; ///< 레이블 안의 위치(0..1) — 적지 않으면 가운데
-                int32         _button{ 0 };
-                PressState    _state{ PressState::Tap };
-            };
-
-            [[nodiscard]] static bool parseClick( const AutomationStep& step, ClickArgs& outArgs, string& outError )
-            {
-                if ( readAnchor( step, outArgs._anchor ) == false )
-                {
-                    outError = step.describe() + ": anchor must be 'x,y' in 0..1 (0.5,0.5 is the centre), got '" + *step.findAttribute( "anchor" ) + "'";
-                    return false;
-                }
-                if ( readPressState( step, outArgs._state ) == false )
-                {
-                    outError = step.describe() + ": state must be down or up, got '" + *step.findAttribute( "state" ) + "'";
-                    return false;
-                }
-                if ( parseModifiers( step, outArgs._listModifier ) == false )
-                {
-                    outError = step.describe() + ": mods must be ctrl, shift or alt joined with '+', got '" + *step.findAttribute( "mods" ) + "'";
-                    return false;
-                }
-                const string* pButton = step.findAttribute( "button" );
-                if ( pButton != nullptr && ( StringUtil::parseInt( string_view{ *pButton }, outArgs._button ) == false || outArgs._button < 0 || outArgs._button > 4 ) )
-                {
-                    outError = step.describe() + ": button must be 0..4, got '" + *pButton + "'";
-                    return false;
-                }
-                return true;
-            }
-
-            static bool validateClick( const AutomationStep& step, string& outError )
-            {
-                ClickArgs args;
-                return validate( step, { "mark", "button", "mods", "state", "anchor" }, "mark", outError ) && parseClick( step, args, outError );
-            }
-
-            static bool validateText( const AutomationStep& step, string& outError ) { return validate( step, { "value" }, "value", outError ); }
-
-            /** @brief `anchor="x,y"`(레이블 안의 위치 0..1)를 읽습니다. 없으면 @p outAnchor 를 두고 true 를 반환하며, 형식이 틀리면 false 입니다. */
-            [[nodiscard]] static bool readAnchor( const AutomationStep& step, float2& outAnchor )
-            {
-                const string* pAnchor = step.findAttribute( "anchor" );
-                if ( pAnchor == nullptr )
-                    return true;
-                const size_t comma = pAnchor->find( ',' );
-                float64      x{ 0.0 };
-                float64      y{ 0.0 };
-                const bool   bInvalidAnchor = comma == string::npos || StringUtil::parseDouble( string_view{ *pAnchor }.substr( 0, comma ), x ) == false ||
-                                            StringUtil::parseDouble( string_view{ *pAnchor }.substr( comma + 1 ), y ) == false || x < 0.0 || x > 1.0 || y < 0.0 || y > 1.0;
-                if ( bInvalidAnchor )
-                    return false;
-                outAnchor = float2{ static_cast<float32>( x ), static_cast<float32>( y ) };
-                return true;
+                vector<int32> listKey;
+                if ( ( modifierMask & EditorModifierBit::kCtrl ) != 0 )
+                    listKey.push_back( ImGuiMod_Ctrl );
+                if ( ( modifierMask & EditorModifierBit::kShift ) != 0 )
+                    listKey.push_back( ImGuiMod_Shift );
+                if ( ( modifierMask & EditorModifierBit::kAlt ) != 0 )
+                    listKey.push_back( ImGuiMod_Alt );
+                return listKey;
             }
 
             /**
@@ -290,15 +169,15 @@ namespace sw::editor
                 const string& mark = *step.findAttribute( "mark" );
                 ClickArgs     args;
                 string        error;
-                if ( parseClick( step, args, error ) == false )
+                if ( Validation::parseClick( step, args, error ) == false )
                 {
                     runner.recordFailure( step, error ); // 검사 뒤 단계가 바뀌었다(핫 리로드)
                     return true;
                 }
-                const int32          button       = args._button;
-                const float2         anchor       = args._anchor;
-                const vector<int32>& listModifier = args._listModifier;
-                const PressState     state        = args._state;
+                const int32         button       = args._button;
+                const float2        anchor       = args._anchor;
+                const vector<int32> listModifier = makeImGuiModifiers( args._modifierMask );
+                const PressState    state        = args._state;
                 if ( reportClippedMark( runner, step, mark ) )
                     return true;
                 if ( EditorSelfTestInput::moveMouseToMark( mark, anchor ) == false )
@@ -344,52 +223,6 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief `EditorDrag` 의 인자입니다. 없는 이동량 · 버튼은 0 입니다. */
-            struct DragArgs
-            {
-                vector<int32> _listModifier{};
-                float64       _deltaX{ 0.0 };
-                float64       _deltaY{ 0.0 };
-                float64       _buttonNumber{ 0.0 };
-            };
-
-            [[nodiscard]] static bool parseDrag( const AutomationStep& step, DragArgs& outArgs, string& outError )
-            {
-                const std::pair<const utf8*, float64*> arrNumber[] = {
-                    {    "dx",       &outArgs._deltaX},
-                    {    "dy",       &outArgs._deltaY},
-                    {"button", &outArgs._buttonNumber},
-                };
-                for ( const std::pair<const utf8*, float64*>& entry : arrNumber )
-                {
-                    const string* pValue = step.findAttribute( entry.first );
-                    if ( pValue != nullptr && StringUtil::parseDouble( string_view{ *pValue }, *entry.second ) == false )
-                    {
-                        outError = step.describe() + ": " + entry.first + " must be a number, got '" + *pValue + "'";
-                        return false;
-                    }
-                }
-                if ( parseModifiers( step, outArgs._listModifier ) == false )
-                {
-                    outError = step.describe() + ": mods must be ctrl, shift or alt joined with '+', got '" + *step.findAttribute( "mods" ) + "'";
-                    return false;
-                }
-                return true;
-            }
-
-            static bool validateDrag( const AutomationStep& step, string& outError )
-            {
-                if ( validate( step, { "mark", "toMark", "dx", "dy", "button", "mods" }, "mark", outError ) == false )
-                    return false;
-                if ( step.findAttribute( "toMark" ) != nullptr && ( step.findAttribute( "dx" ) != nullptr || step.findAttribute( "dy" ) != nullptr ) )
-                {
-                    outError = step.describe() + ": give either toMark or dx/dy, not both";
-                    return false;
-                }
-                DragArgs args;
-                return parseDrag( step, args, outError );
-            }
-
             /**
              * @brief 레이블 가운데를 누르고 (dx, dy) 픽셀만큼 드래그해 놓습니다. 키와 핸들 드래그에 씁니다. 프레임마다 커서를 다시 넣으며, 넣지 않은 프레임에는 플랫폼이 실제 커서를 넣습니다.
              * @details 누름, 절반 이동, 끝 이동, 놓기를 네 프레임에 나눈다. 수정자는 누르기 전에 누르고 놓은 뒤에 해제한다.
@@ -407,16 +240,16 @@ namespace sw::editor
                     return true;
                 DragArgs args;
                 string   error;
-                if ( parseDrag( step, args, error ) == false )
+                if ( Validation::parseDrag( step, args, error ) == false )
                 {
                     runner.recordFailure( step, error ); // 검사 뒤 단계가 바뀌었다(핫 리로드)
                     return true;
                 }
-                float64              deltaX       = args._deltaX;
-                float64              deltaY       = args._deltaY;
-                const int32          button       = static_cast<int32>( args._buttonNumber );
-                const vector<int32>& listModifier = args._listModifier;
-                const float2         start{ ( found._min._x + found._max._x ) * 0.5f, ( found._min._y + found._max._y ) * 0.5f };
+                float64             deltaX       = args._deltaX;
+                float64             deltaY       = args._deltaY;
+                const int32         button       = static_cast<int32>( args._buttonNumber );
+                const vector<int32> listModifier = makeImGuiModifiers( args._modifierMask );
+                const float2        start{ ( found._min._x + found._max._x ) * 0.5f, ( found._min._y + found._max._y ) * 0.5f };
                 // `toMark` 는 끝을 다른 위젯의 가운데로 잡는다 — 끌어 놓기(Hierarchy 행을 다른 행에, 에셋을 슬롯에)의 받는 쪽을 픽셀 거리로 세지 않는다.
                 if ( const string* pToMark = step.findAttribute( "toMark" ); pToMark != nullptr )
                 {
@@ -453,25 +286,6 @@ namespace sw::editor
                 return true;
             }
 
-            static bool validateHover( const AutomationStep& step, string& outError )
-            {
-                if ( validate( step, { "mark", "anchor", "release" }, nullptr, outError ) == false )
-                    return false;
-                const bool bRelease = step.findAttribute( "release" ) != nullptr;
-                if ( bRelease == ( step.findAttribute( "mark" ) != nullptr ) )
-                {
-                    outError = step.describe() + ": give either mark (and anchor) or release=\"true\"";
-                    return false;
-                }
-                float2 anchor{ 0.5f, 0.5f };
-                if ( readAnchor( step, anchor ) == false )
-                {
-                    outError = step.describe() + ": anchor must be 'x,y' in 0..1";
-                    return false;
-                }
-                return true;
-            }
-
             /**
              * @brief 버튼을 누르지 않고 커서를 레이블 위치(`anchor`)에 붙잡아 둡니다(호버). `release="true"` 가 나올 때까지 프레임마다 그 위치를 다시 넣으며,
              *        넣지 않은 프레임에는 플랫폼이 실제 커서를 넣습니다. 레이블이 없으면 실패를 기록합니다.
@@ -485,7 +299,7 @@ namespace sw::editor
                 }
                 const string& mark = *step.findAttribute( "mark" );
                 float2        anchor{ 0.5f, 0.5f }; // 적지 않으면 가운데
-                if ( readAnchor( step, anchor ) == false )
+                if ( Validation::readAnchor( step, anchor ) == false )
                 {
                     runner.recordFailure( step, "anchor must be 'x,y' in 0..1" ); // 검사 뒤 단계가 바뀌었다(핫 리로드)
                     return true;
@@ -501,25 +315,21 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief "Ctrl+Z" 를 ImGuiKey 목록으로 해석합니다. 마지막이 키이고 앞은 수정자입니다. 모르는 이름이면 false 입니다. */
+            /** @brief "Ctrl+Z" 를 ImGuiKey 목록으로 해석합니다. 마지막이 키이고 앞은 수정자입니다. 모르는 이름이면 false 입니다(낱말 가르기는 `Validation::splitKeyChord`). */
             [[nodiscard]] static bool parseKeyChord( string_view chord, vector<int32>& outListKey )
             {
                 outListKey.clear();
-                size_t begin = 0;
-                while ( begin <= chord.size() )
+                vector<string_view> listToken;
+                if ( Validation::splitKeyChord( chord, listToken ) == false )
+                    return false;
+                for ( const string_view token : listToken )
                 {
-                    const size_t      plus  = chord.find( '+', begin );
-                    const size_t      end   = plus == string_view::npos ? chord.size() : plus;
-                    const string_view token = chord.substr( begin, end - begin );
-                    int32             key   = 0;
-                    if ( token.empty() || EditorSelfTestInput::findKeyByName( token, key ) == false )
+                    int32 key = 0;
+                    if ( EditorSelfTestInput::findKeyByName( token, key ) == false )
                         return false;
                     outListKey.push_back( key );
-                    if ( plus == string_view::npos )
-                        break;
-                    begin = plus + 1;
                 }
-                return outListKey.empty() == false;
+                return true;
             }
 
             /** @brief `EditorKey` 의 인자입니다. */
@@ -534,7 +344,7 @@ namespace sw::editor
                 const string* pKey = step.requireAttribute( "key", outError );
                 if ( pKey == nullptr )
                     return false;
-                if ( readPressState( step, outArgs._state ) == false )
+                if ( Validation::readPressState( step, outArgs._state ) == false )
                 {
                     outError = step.describe() + ": state must be down or up, got '" + *step.findAttribute( "state" ) + "'";
                     return false;
@@ -547,10 +357,11 @@ namespace sw::editor
                 return true;
             }
 
-            static bool validateKey( const AutomationStep& step, string& outError )
+            /** @brief 키 단계의 준비 함수입니다 - 위젯 기록을 켜고, 키 이름이 ImGui 가 아는 이름인지 봅니다(속성과 낱말 모양은 `Validation::validateKey` 가 이미 봤다). */
+            static bool prepareKey( AutomationStepContext& runner, const AutomationStep& step, string& outError )
             {
                 KeyArgs args;
-                return validate( step, { "key", "state" }, "key", outError ) && parseKey( step, args, outError );
+                return prepareMarks( runner, step, outError ) && parseKey( step, args, outError );
             }
 
             /** @brief 수정자를 누르고 키를 눌렀다 놓은 뒤 수정자를 거꾸로 해제합니다. ImGui 가 이벤트를 프레임에 나눠 처리하므로 한 단계로 충분합니다. */
@@ -584,38 +395,21 @@ namespace sw::editor
             // ------------------------------------------------------------------------------
             // EditorExpectObject: 활성 씬에 그 이름의 오브젝트가 몇 개인지 센다. 그 컴포넌트를 가진 것만 셀 수도 있다
             // ------------------------------------------------------------------------------
-            /** @brief `EditorExpectObject` 의 인자입니다. 적지 않으면 한 개, 선택 검사 없음입니다. */
-            struct ExpectObjectArgs
+            /** @brief 개수 단계의 준비 함수입니다 - 위젯 기록을 켜고, `component` 가 아는 컴포넌트 타입인지 봅니다(속성과 수 형식은 `Validation::validateExpectObject` 가 이미 봤다). */
+            static bool prepareExpectObject( AutomationStepContext& runner, const AutomationStep& step, string& outError )
             {
-                uint32 _expectedCount{ 1 };
-                uint32 _selected{ 0 }; ///< 1 이면 그 오브젝트가 선택돼 있어야 한다
-            };
-
-            [[nodiscard]] static bool parseExpectObject( const AutomationStep& step, ExpectObjectArgs& outArgs, string& outError )
-            {
-                const bool bInvalidCountArguments = readCount( step, "count", outArgs._expectedCount ) == false || readCount( step, "selected", outArgs._selected ) == false ||
-                                                    outArgs._selected > 1;
-                if ( bInvalidCountArguments )
-                {
-                    outError = step.describe() + ": count must be a whole number and selected 0 or 1";
-                    return false;
-                }
-                return true;
-            }
-
-            static bool validateExpectObject( const AutomationStep& step, string& outError )
-            {
-                ExpectObjectArgs args;
-                if ( validate( step, { "name", "count", "component", "selected" }, "name", outError ) == false || parseExpectObject( step, args, outError ) == false )
+                if ( prepareMarks( runner, step, outError ) == false )
                     return false;
                 const string* pComponent = step.findAttribute( "component" );
-                TypeRegistry* pRegistry  = editor::findSubsystem<TypeRegistry>();
-                if ( pComponent != nullptr && pRegistry == nullptr ) // 필수 서비스: 없으면 버그
+                if ( pComponent == nullptr )
+                    return true;
+                TypeRegistry* pRegistry = editor::findSubsystem<TypeRegistry>();
+                if ( pRegistry == nullptr ) // 필수 서비스: 없으면 버그
                 {
                     outError = step.describe() + ": TypeRegistry is missing, so component type '" + *pComponent + "' cannot be checked";
                     return false;
                 }
-                if ( pComponent != nullptr && pRegistry->findType( hashed_string( *pComponent ) ) == nullptr )
+                if ( pRegistry->findType( hashed_string( *pComponent ) ) == nullptr )
                 {
                     outError = step.describe() + ": unknown component type '" + *pComponent + "'";
                     return false;
@@ -627,7 +421,7 @@ namespace sw::editor
             {
                 ExpectObjectArgs args;
                 string           error;
-                if ( parseExpectObject( step, args, error ) == false )
+                if ( Validation::parseExpectObject( step, args, error ) == false )
                 {
                     runner.recordFailure( step, error ); // 검사 뒤 단계가 바뀌었다(핫 리로드)
                     return true;
@@ -707,23 +501,10 @@ namespace sw::editor
                 collectVisibleLeaves( pNode->ChildNodes[1], outListLeaf );
             }
 
-            static bool validateDockLayout( const AutomationStep& step, string& outError )
-            {
-                if ( validate( step, { "minNodeSize" }, nullptr, outError ) == false )
-                    return false;
-                uint32 value = 0;
-                if ( readCount( step, "minNodeSize", value ) == false )
-                {
-                    outError = step.describe() + ": minNodeSize must be pixels";
-                    return false;
-                }
-                return true;
-            }
-
             static bool runDockLayout( AutomationStepContext& runner, const AutomationStep& step )
             {
                 uint32 minNodeSide = 0; // 적지 않으면 아래의 기본 최소 변
-                if ( readCount( step, "minNodeSize", minNodeSide ) == false )
+                if ( Validation::readCount( step, "minNodeSize", minNodeSide ) == false )
                 {
                     runner.recordFailure( step, "minNodeSize must be pixels" ); // 검사 뒤 단계가 바뀌었다(핫 리로드)
                     return true;
@@ -2013,20 +1794,20 @@ namespace sw::editor
         };
     } // namespace
 
-    SW_AUTOMATION_STEP_WITH_HOOKS( editorClick, "EditorClick", &EditorScenarioStepsInternal::runClick, &EditorScenarioStepsInternal::validateClick,
+    SW_AUTOMATION_STEP_WITH_HOOKS( editorClick, EditorScenarioStepValidation::kClickKind, &EditorScenarioStepsInternal::runClick, &EditorScenarioStepValidation::validateClick,
                                    &EditorScenarioStepsInternal::prepareMarks, &EditorScenarioStepsInternal::holdUntilMarked, false );
-    SW_AUTOMATION_STEP_WITH_HOOKS( editorDrag, "EditorDrag", &EditorScenarioStepsInternal::runDrag, &EditorScenarioStepsInternal::validateDrag,
+    SW_AUTOMATION_STEP_WITH_HOOKS( editorDrag, EditorScenarioStepValidation::kDragKind, &EditorScenarioStepsInternal::runDrag, &EditorScenarioStepValidation::validateDrag,
                                    &EditorScenarioStepsInternal::prepareMarks, &EditorScenarioStepsInternal::holdUntilMarked, false );
-    SW_AUTOMATION_STEP_WITH_HOOKS( editorHover, "EditorHover", &EditorScenarioStepsInternal::runHover, &EditorScenarioStepsInternal::validateHover,
+    SW_AUTOMATION_STEP_WITH_HOOKS( editorHover, EditorScenarioStepValidation::kHoverKind, &EditorScenarioStepsInternal::runHover, &EditorScenarioStepValidation::validateHover,
                                    &EditorScenarioStepsInternal::prepareMarks, &EditorScenarioStepsInternal::holdUntilMarked, false );
-    SW_AUTOMATION_STEP_WITH_HOOKS( editorText, "EditorText", &EditorScenarioStepsInternal::runText, &EditorScenarioStepsInternal::validateText,
+    SW_AUTOMATION_STEP_WITH_HOOKS( editorText, EditorScenarioStepValidation::kTextKind, &EditorScenarioStepsInternal::runText, &EditorScenarioStepValidation::validateText,
                                    &EditorScenarioStepsInternal::prepareMarks, nullptr, false );
-    SW_AUTOMATION_STEP_WITH_HOOKS( editorKey, "EditorKey", &EditorScenarioStepsInternal::runKey, &EditorScenarioStepsInternal::validateKey,
-                                   &EditorScenarioStepsInternal::prepareMarks, nullptr, false );
-    SW_AUTOMATION_STEP_WITH_HOOKS( editorExpectObject, "EditorExpectObject", &EditorScenarioStepsInternal::runExpectObject,
-                                   &EditorScenarioStepsInternal::validateExpectObject, &EditorScenarioStepsInternal::prepareMarks, nullptr, false );
-    SW_AUTOMATION_STEP_WITH_HOOKS( editorExpectDockLayout, "EditorExpectDockLayout", &EditorScenarioStepsInternal::runDockLayout,
-                                   &EditorScenarioStepsInternal::validateDockLayout, &EditorScenarioStepsInternal::prepareMarks, nullptr, false );
+    SW_AUTOMATION_STEP_WITH_HOOKS( editorKey, EditorScenarioStepValidation::kKeyKind, &EditorScenarioStepsInternal::runKey, &EditorScenarioStepValidation::validateKey,
+                                   &EditorScenarioStepsInternal::prepareKey, nullptr, false );
+    SW_AUTOMATION_STEP_WITH_HOOKS( editorExpectObject, EditorScenarioStepValidation::kExpectObjectKind, &EditorScenarioStepsInternal::runExpectObject,
+                                   &EditorScenarioStepValidation::validateExpectObject, &EditorScenarioStepsInternal::prepareExpectObject, nullptr, false );
+    SW_AUTOMATION_STEP_WITH_HOOKS( editorExpectDockLayout, EditorScenarioStepValidation::kDockLayoutKind, &EditorScenarioStepsInternal::runDockLayout,
+                                   &EditorScenarioStepValidation::validateDockLayout, &EditorScenarioStepsInternal::prepareMarks, nullptr, false );
 
     SW_AUTOMATION_PROBE( editorPlayState, "Editor.PlayState", "Play session state: 0 stopped, 1 playing, 2 paused", &EditorScenarioStepsInternal::readPlayState );
     SW_AUTOMATION_PROBE( editorPlaySimulating, "Editor.PlaySimulating", "While a session runs: 1 simulating (ejected or Simulate), 0 the player is possessed",

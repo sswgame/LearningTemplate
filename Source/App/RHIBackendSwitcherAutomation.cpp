@@ -19,6 +19,7 @@
     #include "Core/Container/StringUtil.h"
 
     #include "Engine/Probe/AutomationProbe.h"
+    #include "Engine/Automation/AutomationBackendSteps.h"
     #include "Engine/Automation/AutomationScenario.h"
     #include "Engine/Automation/AutomationStepContext.h"
     #include "Engine/Automation/AutomationStepRegistry.h"
@@ -34,61 +35,6 @@ namespace sw
     {
         struct RHIBackendSwitcherAutomationInternal
         {
-            /** @brief 명령줄 철자(`dx11`, `dx12`, `vulkan`, `opengl`)와 열거자 이름을 대소문자 없이 받습니다. */
-            [[nodiscard]] static bool tryParseBackend( string_view text, RHIBackend& outBackend )
-            {
-                struct NameRow
-                {
-                    const utf8* _pName;
-                    RHIBackend  _backend;
-                };
-                static constexpr NameRow kArrName[] = {
-                    {     "dx11", RHIBackend::DirectX11},
-                    {"directx11", RHIBackend::DirectX11},
-                    {     "dx12", RHIBackend::DirectX12},
-                    {"directx12", RHIBackend::DirectX12},
-                    {   "vulkan",    RHIBackend::Vulkan},
-                    {       "vk",    RHIBackend::Vulkan},
-                    {   "opengl",    RHIBackend::OpenGL},
-                    {       "gl",    RHIBackend::OpenGL},
-                };
-                for ( const NameRow& row : kArrName )
-                {
-                    if ( StringUtil::equals( text, row._pName, true ) )
-                    {
-                        outBackend = row._backend;
-                        return true;
-                    }
-                }
-                return false;
-            }
-
-            static bool validateSwapBackend( const AutomationStep& step, string& outError )
-            {
-                for ( const AutomationAttribute& attribute : step._listAttribute )
-                {
-                    if ( string_view{ attribute._name } != "backend" )
-                    {
-                        outError = step.describe() + ": unknown attribute '" + attribute._name + "'";
-                        return false;
-                    }
-                }
-                const string* pBackend = step.findAttribute( "backend" );
-                RHIBackend    backend{};
-                const bool    bRelative = pBackend != nullptr && ( *pBackend == kOtherBackend || *pBackend == kStartBackend );
-                if ( pBackend == nullptr || ( bRelative == false && tryParseBackend( *pBackend, backend ) == false ) )
-                {
-                    outError = step.describe() + ": needs backend=\"dx11|dx12|vulkan|opengl|other|start\"";
-                    return false;
-                }
-                return true;
-            }
-
-            /** @brief `backend="other"` — 지금과 다른 백엔드(DirectX 12 가 아니면 DirectX 12, DirectX 12 면 DirectX 11)입니다. Windows 에서 늘 있는 둘이라 어느 백엔드로 시작해도 건넌다. */
-            static constexpr const utf8* kOtherBackend = "other";
-            /** @brief `backend="start"` — 시나리오가 시작할 때의 백엔드입니다. `other` 로 건넌 뒤 돌아와 체인의 다음 시나리오가 같은 백엔드에서 돌게 한다. */
-            static constexpr const utf8* kStartBackend = "start";
-
             /** @brief 준비 함수가 시나리오가 시작할 때의 백엔드를 교체기에 적습니다(`RHIBackendSwitcher::recordStartBackend`). 교체기는 백엔드 교체 · 모듈 리로드에서 내려가지 않는 App 의 객체다. */
             static bool prepareSwapBackend( AutomationStepContext& /*runner*/, const AutomationStep& /*step*/, string& outError )
             {
@@ -113,9 +59,9 @@ namespace sw
                 }
                 const string& requested = *step.findAttribute( "backend" );
                 RHIBackend    backend{};
-                if ( requested == kOtherBackend )
+                if ( requested == AutomationBackendSteps::kOtherBackend )
                     backend = committed == RHIBackend::DirectX12 ? RHIBackend::DirectX11 : RHIBackend::DirectX12;
-                else if ( requested == kStartBackend )
+                else if ( requested == AutomationBackendSteps::kStartBackend )
                 {
                     if ( pSwitcher->findStartBackend( backend ) == false )
                     {
@@ -124,7 +70,7 @@ namespace sw
                     }
                 }
                 else
-                    (void)tryParseBackend( requested, backend ); // 검사에서 확인했다
+                    (void)AutomationBackendSteps::tryParseBackend( requested, backend ); // 검사에서 확인했다
                 if ( committed == backend && pSwitcher->isSwapPending() == false )
                 {
                     SW_LOG_INFO( "%# -> already on %#", step.describe().c_str(), RHI::getBackendTypeName( backend ) );
@@ -186,8 +132,8 @@ namespace sw
 
     SW_DEV_COMMAND( rhiRemoveDevice, "rhi.removeDevice", "rhi.removeDevice", "Remove the GPU device as a TDR would (DirectX 12; Vulkan marks it lost) to check that frames and shutdown do not hang",
                     &RHIBackendSwitcherAutomationInternal::runRemoveDevice );
-    SW_AUTOMATION_STEP_WITH_HOOKS( swapBackend, "SwapBackend", &RHIBackendSwitcherAutomationInternal::runSwapBackend,
-                                   &RHIBackendSwitcherAutomationInternal::validateSwapBackend, &RHIBackendSwitcherAutomationInternal::prepareSwapBackend, nullptr, false );
+    SW_AUTOMATION_STEP_WITH_HOOKS( swapBackend, AutomationBackendSteps::kSwapBackendKind, &RHIBackendSwitcherAutomationInternal::runSwapBackend,
+                                   &AutomationBackendSteps::validateSwapBackend, &RHIBackendSwitcherAutomationInternal::prepareSwapBackend, nullptr, false );
     SW_AUTOMATION_PROBE( rhiBackend, "RHI.Backend", "Backend the device runs on: 0 DirectX11, 1 DirectX12, 2 Vulkan, 3 OpenGL",
                          &RHIBackendSwitcherAutomationInternal::readCommittedBackend );
     SW_AUTOMATION_PROBE( rhiSwapPending, "RHI.SwapPending", "1 from a backend swap request (SwapBackend, gv_rhiBackend) until the end-of-frame swap has run",
