@@ -3,7 +3,7 @@
  * @brief 렌더러가 그린 이미지를 CPU 로 읽어 내는 함수 모음입니다. Present 결과 캡처 텍스처, 트랜지언트 첨부, 임의 2D 텍스처를 읽고 파일로 씁니다.
  * @details 테스트의 픽셀 비교, `-gv_screenshot` 덤프, 실행 중 스크린샷(`RenderThread::requestScreenshot`)이 씁니다. 언리얼이 스크린샷과 프레임 그랩
  *          (`FScreenshotRequest`, `FFrameGrabber`)을 장면 렌더러 밖에 두는 것과 같은 구조입니다.
- *          **읽기는 프레임 경로가 아닙니다.** 모두 GPU 를 기다리므로(`readbackTexture2D`) 프레임 안에서 부르면 파이프라인이 멈춥니다.
+ *          **읽기는 프레임 경로가 아닙니다.** 모두 GPU 를 기다리므로(`readbackTexture2DAndWait`) 프레임 안에서 부르면 파이프라인이 멈춥니다.
  *          창 캡처는 백엔드마다 되고 안 되고가 갈려서, 네 백엔드를 같은 기준으로 비교하려면 이쪽을 씁니다(Graphics/README "백엔드 시각 검증").
  *
  *          Present 캡처: 백버퍼는 핸들이 없어 읽을 수 없고 트랜지언트만 읽을 수 있다. 주의: Present 가 **읽는** 첨부를 캡처하면 톤맵과 Present 에 합친

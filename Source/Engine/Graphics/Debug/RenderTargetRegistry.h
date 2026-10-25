@@ -50,7 +50,7 @@ namespace sw
     /**
      * @struct RenderTargetReadback
      * @brief 렌더 타깃 하나를 CPU 로 읽은 결과입니다(에디터 렌더 타깃 창의 채널 보기, 깊이 보기, 픽셀 값에 씁니다).
-     * @details 바이트 배치는 `IRHIResourceFactory::readbackTexture2D` 그대로입니다. 깊이는 `kRHIDepthReadbackFormat`(0..1 float32)입니다.
+     * @details 바이트 배치는 `RHITransferUtil::readbackTexture2DAndWait` 그대로입니다. 깊이는 `kRHIDepthReadbackFormat`(0..1 float32)입니다.
      */
     struct RenderTargetReadback
     {

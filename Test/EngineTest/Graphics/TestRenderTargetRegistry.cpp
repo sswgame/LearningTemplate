@@ -9,7 +9,7 @@ using namespace sw;
 /**
  * @brief [RenderTargetRegistryTest] 공개한 핸들만 `isPublished` 이고, 목록을 비우거나 갈아 끼우면 옛 핸들은 아니다
  * @details 창 크기가 바뀌면 트랜지언트를 놓기 전에 목록을 먼저 비운다. 렌더 스레드는 이것으로 UI 가 요청한 죽은 핸들을 읽기 전에 걸러,
- *          Vulkan 에서 `readbackTexture2D: texture … or the device is not usable` 오류가 나지 않게 한다.
+ *          Vulkan 에서 `submitTextureReadback: texture … or the device is not usable` 오류가 나지 않게 한다.
  */
 SW_TEST_CASE( RenderTargetRegistryTest, OnlyPublishedHandlesAreReadable )
 {
