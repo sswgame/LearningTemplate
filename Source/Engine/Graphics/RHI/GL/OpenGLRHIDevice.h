@@ -18,7 +18,7 @@
 #include "Engine/Graphics/RHI/IRHITimestampProvider.h"
 #include "Engine/Graphics/RHI/Support/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Support/RHIReleaseQueue.h"
-#include "Engine/Graphics/RHI/Support/RHIStagingRing.h"
+#include "Engine/Graphics/RHI/Support/RHIStagingAllocator.h"
 #include "Engine/Graphics/RHI/Support/RHITimestamp.h"
 #include "Engine/Graphics/RHI/Support/RHITransferSerials.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
@@ -466,11 +466,11 @@ namespace sw
         /// @brief 아직 가져가지 않은 텍스처 읽기가 결과를 받는 되읽기 링 구간입니다. 바이트는 펜스가 지난 뒤 `takeTextureReadback` 이 컨텍스트 밖에서 복사한다.
         RHIPendingReadbackTable<RHIStagingSpan> _readbackTable;
         /// @brief 업로드 스테이징 링의 구간 장부입니다. 구간은 전송 시리얼이 워터마크를 지나면 돌아옵니다(`_transferSerials`).
-        RHIStagingRing _stagingRing;
+        RHIStagingAllocator _stagingRing;
         /// @brief 링의 영속 매핑 주소입니다(`GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT`). 어느 스레드에서나 장부가 내준 구간에만 씁니다. 링이 없으면 nullptr 입니다.
         uint8* _pStagingRingMapped;
         /// @brief 텍스처 되읽기 링의 구간 장부입니다. 구간은 시리얼이 아니라 `takeTextureReadback`(`free`) · `discardTextureReadback`(`markSubmitted`)으로 돌아옵니다.
-        RHIStagingRing _readbackRing;
+        RHIStagingAllocator _readbackRing;
         /// @brief 되읽기 링의 영속 매핑 주소입니다(`GL_MAP_READ_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT`). 펜스가 지난 구간만 읽습니다. 링이 없으면 nullptr 입니다.
         const uint8* _pReadbackRingMapped;
 

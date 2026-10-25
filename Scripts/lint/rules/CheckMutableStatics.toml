@@ -10,6 +10,7 @@
 "Test/EditorTest/Common/Workspace/TestAssetHotReloadImport.cpp:g_importGate" = "임포트 잡의 임포터는 사용자 자료 없는 함수 포인터(`EditorAssetImportItem::_pfnImport`)라 워커 안 가짜 임포터의 신호를 정적 칸에 둘 수밖에 없다(테스트 한 곳, 케이스가 reset 하고 직렬로 돈다)"
 "Source/Engine/Graphics/RHI/RHI.cpp:s_lastGeneration" = "장치 세대는 백엔드 인스턴스보다 오래 살아야 백엔드를 바꾼 뒤 옛 티켓을 가려낸다. 세대를 발급받는 쪽(장치)이 소유자가 될 수 없고, 함수 안 원자 하나라 상수 초기화다"
 "Source/Engine/Graphics/RHI/Support/RHITransferUtil.cpp:s_forbidBlockingDepth" = "RT 셋업 구간 표시는 호출 사슬 어디서든 `...AndWait` 가 읽는 스레드별 상태다. 인자로 넘길 길이 없고(깊은 호출처 수십 곳), 스레드마다 따로라 경쟁도 없다"
+"Source/Engine/Graphics/RHI/Support/RHITransferUtil.cpp:s_heldReadbackCount" = "이 스레드가 쥔 읽기 티켓 수는 제출하는 `...AndWait` 가 호출 사슬 어디서든 읽는 스레드별 상태다. 인자로 넘길 길이 없고 스레드마다 따로라 경쟁도 없다"
 "Source/Core/Diagnostics/CacheStats.cpp:s_registry" = "캐시 계측 칸은 함수 정적 캐시(약한 intern 표 등 서비스 범위 밖)와 여러 DLL 이 핸들 포인터로 쥐고 엔진을 다시 세워도 살아야 해서 프로세스에 하나다 — 소멸자가 없는 정적 배열이라 정적 소멸 뒤 기록도 안전하다(언리얼 stat 등록부와 같은 자리)"
 
 # [pending] — 이전 대기 표(래칫). 신규 위반부터 막고 기존 위반은 영역별로 소유자 있는 객체로 옮기며 줄여 간다(사용자 결정, 2026-10-25).

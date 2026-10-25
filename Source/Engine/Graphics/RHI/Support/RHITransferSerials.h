@@ -60,8 +60,12 @@ namespace sw
         /** @brief 시리얼이 워터마크 이하이면 true 입니다. */
         [[nodiscard]] bool isComplete( uint64 serial ) const { return serial != 0 && serial <= getWatermark(); }
 
-        /** @brief 장치 손실을 알립니다. 이후 끝나지 않은 티켓은 `Failed` 입니다. 이미 `Complete` 인 티켓은 그대로 `Complete` 입니다. */
-        void markLost();
+        /**
+         * @brief 장치 손실을 알립니다. 이후 끝나지 않은 티켓은 `Failed` 입니다. 이미 `Complete` 인 티켓은 그대로 `Complete` 입니다.
+         * @details 장치를 잃었다는 사실의 저장소는 여기 하나다 — 백엔드는 자기 손실 플래그를 따로 두지 않고(두면 한쪽만 표시해 제출 진입의 `isLost` 가 놓친다) 이 값을 읽는다.
+         * @return 이번 호출이 처음 표시했으면 true, 이미 잃은 상태였으면 false 입니다(처음 본 쪽만 로그를 남길 때 씁니다).
+         */
+        bool markLost();
 
         /**
          * @brief 티켓을 판정합니다. 무효 티켓, 다른 세대의 티켓, 발급한 적 없는 시리얼은 오류를 남기고 `Failed` 입니다.

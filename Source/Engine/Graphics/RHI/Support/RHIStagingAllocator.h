@@ -1,5 +1,5 @@
 /**
- * @file RHIStagingRing.h
+ * @file RHIStagingAllocator.h
  * @brief 고정 용량 스테이징 버퍼(업로드 링 · 되읽기 링)의 구간 장부입니다(구간 할당과 구간마다의 회수). GPU 메모리는 백엔드가 쥐고, 이 장부는 오프셋만 다룹니다(docs/plans/RhiAsyncUploads.md 2.2 "스테이징 링").
  * @details 백엔드마다 다른 것은 링 메모리(GL 영속 매핑 PBO, DX12 업로드 힙, Vulkan 호스트 가시 버퍼)뿐이고, 구간을 어디에 잡고 언제 돌려받는지는 여기 한 곳이 정한다.
  *          그래서 GPU 없이 단위 테스트로 장부의 규칙(가득 참, 구간마다의 회수, 빈 자리 재사용)을 확인할 수 있다.
@@ -12,7 +12,7 @@
 
 namespace sw
 {
-    /** @brief 링에서 잡은 구간 하나입니다. `RHIStagingRing::allocate` 가 채우고, 같은 값을 `markSubmitted` 나 `free` 에 한 번만 돌려줍니다. */
+    /** @brief 링에서 잡은 구간 하나입니다. `RHIStagingAllocator::allocate` 가 채우고, 같은 값을 `markSubmitted` 나 `free` 에 한 번만 돌려줍니다. */
     struct RHIStagingSpan
     {
         uint64 _offsetBytes{ 0 }; ///< 링 시작에서의 오프셋. 링의 정렬 단위의 배수다
@@ -22,7 +22,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief `RHIStagingRing::allocate` 의 결과입니다. 제출 함수가 `RHISubmitResult` 로 옮깁니다(계약 2). */
+    /** @brief `RHIStagingAllocator::allocate` 의 결과입니다. 제출 함수가 `RHISubmitResult` 로 옮깁니다(계약 2). */
     enum class RHIStagingAllocateResult : uint8
     {
         Allocated, ///< 구간을 잡았다
@@ -34,7 +34,7 @@ namespace sw
 namespace sw
 {
     /**
-     * @class RHIStagingRing
+     * @class RHIStagingAllocator
      * @brief 고정 용량 버퍼에서 구간을 잡고, 구간마다 따로 돌려받습니다. 돌려받은 자리는 버퍼 어디에 있든 다음 할당이 다시 씁니다.
      * @details **회수는 구간 단위다.** 시리얼을 붙인 구간(`markSubmitted`)은 그 시리얼이 완료 워터마크 이하가 되면 돌아온다. 워터마크는 연속으로 끝난 시리얼의 끝이므로
      *          할당 순서와 시리얼 순서가 달라도(스레드 A 가 먼저 잡고 B 가 먼저 제출) 그 구간을 GPU 가 다 쓴 것이 보장된다. 시리얼 없이 놓은 구간(`free`)은 바로 돌아온다.
@@ -43,13 +43,13 @@ namespace sw
      *          빈 자리는 정렬 단위를 한 칸으로 하는 `SpanAllocator`(가장 잘 맞는 빈 구간, 이웃 합치기, 시리얼을 번호로 쓰는 미뤄 돌려받기)가 쥔다.
      *          자기 뮤텍스는 잎(leaf)이라 백엔드의 어느 락 안에서나 부른다. 할당과 복사는 GPU 컨텍스트 밖에서 하고, 시리얼은 제출 뒤에 `markSubmitted` 로 붙인다.
      */
-    class SW_API RHIStagingRing
+    class SW_API RHIStagingAllocator
     {
     public:
-        RHIStagingRing();
+        RHIStagingAllocator();
 
-        RHIStagingRing( const RHIStagingRing& )            = delete;
-        RHIStagingRing& operator=( const RHIStagingRing& ) = delete;
+        RHIStagingAllocator( const RHIStagingAllocator& )            = delete;
+        RHIStagingAllocator& operator=( const RHIStagingAllocator& ) = delete;
 
         /**
          * @brief 용량과 정렬 단위를 정하고 장부를 비웁니다.

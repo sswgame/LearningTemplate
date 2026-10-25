@@ -168,8 +168,7 @@ namespace sw
             // glFinish 가 낸 전송도 모두 끝냈다. 펜스를 놓고 워터마크를 올린다.
             _transferQueue.retireAll( []( void*& pSync )
             {
-                if ( pSync != nullptr )
-                    glDeleteSync( static_cast<GLsync>( pSync ) );
+                glDeleteSync( static_cast<GLsync>( pSync ) ); // 펜스 없는 항목(glFenceSync 실패)은 0 이라 GL 이 무시한다
                 pSync = nullptr;
             } );
         }
@@ -181,12 +180,9 @@ namespace sw
         // 펜스는 앞선 모든 명령의 끝을 알린다. glFlush 로 명령을 GPU 로 내보내야 프레임을 돌리지 않아도 신호가 선다.
         void* pSync = glFenceSync( GL_SYNC_GPU_COMMANDS_COMPLETE, 0 );
         glFlush();
-        if ( pSync == nullptr )
-        {
-            // 펜스가 없으면 이 전송이 끝났는지 알 길이 없다 — 끝난 것으로 치지 않고 장치 손실로 둔다(티켓은 Failed, 이후 제출은 Rejected).
+        // 펜스가 없으면 이 전송이 끝났는지 알 길이 없다 — 끝난 것으로 치지 않고 장치 손실로 둔다(티켓은 Failed, 이후 제출은 Rejected).
+        if ( pSync == nullptr && _transferSerials.markLost() )
             SW_LOG_ERROR( "endTransfer: glFenceSync returned no fence; treating the GL device as lost" );
-            _transferSerials.markLost();
-        }
         const uint64 serial = _transferQueue.enqueue( pSync );
         retireFinishedTransfers(); // 앞서 낸 전송 가운데 끝난 것을 모은다(이 스레드가 컨텍스트를 쥐고 있다)
         return serial;
@@ -201,8 +197,9 @@ namespace sw
             const GLenum waitResult = glClientWaitSync( static_cast<GLsync>( pSync ), 0, 0 );
             if ( waitResult == GL_WAIT_FAILED )
             {
-                SW_LOG_ERROR( "pollTransfer: glClientWaitSync failed on a transfer fence" );
-                _transferSerials.markLost();
+                // 실패한 항목은 큐 맨 앞에 남아 매 프레임 다시 여기로 온다 — 처음 표시한 때만 로그를 남긴다.
+                if ( _transferSerials.markLost() )
+                    SW_LOG_ERROR( "pollTransfer: glClientWaitSync failed on a transfer fence" );
                 return false;
             }
             return waitResult != GL_TIMEOUT_EXPIRED;

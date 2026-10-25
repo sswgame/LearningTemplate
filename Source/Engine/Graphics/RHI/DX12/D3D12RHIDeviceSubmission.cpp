@@ -216,9 +216,10 @@ namespace sw
         const HRESULT signalHr      = _commandQueue->Signal( _transferFence.Get(), fenceToSignal );
         if ( FAILED( signalHr ) )
         {
-            SW_LOG_ERROR( "Transfer fence Signal failed hr=0x%# (DeviceRemoved=0x%#)", static_cast<uint32>( signalHr ),
-                          static_cast<uint32>( _device ? _device->GetDeviceRemovedReason() : S_OK ) );
-            _transferSerials.markLost();
+            // 표시한 뒤에도 서명하지 않은 시리얼이 남아 다음 호출이 다시 여기로 온다 — 처음 표시한 때만 로그를 남긴다.
+            if ( _transferSerials.markLost() )
+                SW_LOG_ERROR( "Transfer fence Signal failed hr=0x%# (DeviceRemoved=0x%#)", static_cast<uint32>( signalHr ),
+                              static_cast<uint32>( _device ? _device->GetDeviceRemovedReason() : S_OK ) );
             return;
         }
         _transferFenceValue = fenceToSignal;

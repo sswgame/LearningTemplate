@@ -33,9 +33,9 @@ namespace sw
         _watermark.fetch_max( serial, std::memory_order_acq_rel );
     }
 
-    void RHITransferSerials::markLost()
+    bool RHITransferSerials::markLost()
     {
-        _bLost.store( SW_TRUE, std::memory_order_release );
+        return _bLost.exchange( SW_TRUE, std::memory_order_acq_rel ) == SW_FALSE;
     }
 
     RHITransferStatus RHITransferSerials::classify( RHITransferTicket ticket ) const

@@ -1,12 +1,12 @@
 #include "pch.h"
 
-#include "Engine/Graphics/RHI/Support/RHIStagingRing.h"
+#include "Engine/Graphics/RHI/Support/RHIStagingAllocator.h"
 
 #include "Core/Math/MathUtil.h"
 
 namespace sw
 {
-    RHIStagingRing::RHIStagingRing()
+    RHIStagingAllocator::RHIStagingAllocator()
         : _mutex{}
         , _slots{}
         , _capacityBytes{ 0 }
@@ -15,7 +15,7 @@ namespace sw
     {
     }
 
-    void RHIStagingRing::initialize( uint64 capacityBytes, uint64 alignmentBytes )
+    void RHIStagingAllocator::initialize( uint64 capacityBytes, uint64 alignmentBytes )
     {
         SW_ASSERT( MathUtil::isPowerOfTwo( alignmentBytes ) );
         const uint64 slotCount = capacityBytes / alignmentBytes;
@@ -27,7 +27,7 @@ namespace sw
         _liveCount      = 0;
     }
 
-    void RHIStagingRing::shutdown()
+    void RHIStagingAllocator::shutdown()
     {
         std::scoped_lock<mutex> lock{ _mutex };
         _slots.reset( 0 );
@@ -35,7 +35,7 @@ namespace sw
         _liveCount     = 0;
     }
 
-    RHIStagingAllocateResult RHIStagingRing::allocate( uint64 sizeBytes, uint64 completedSerial, RHIStagingSpan& outSpan )
+    RHIStagingAllocateResult RHIStagingAllocator::allocate( uint64 sizeBytes, uint64 completedSerial, RHIStagingSpan& outSpan )
     {
         outSpan = RHIStagingSpan{};
         std::scoped_lock<mutex> lock{ _mutex };
@@ -52,7 +52,7 @@ namespace sw
         return RHIStagingAllocateResult::Allocated;
     }
 
-    void RHIStagingRing::markSubmitted( const RHIStagingSpan& span, uint64 serial )
+    void RHIStagingAllocator::markSubmitted( const RHIStagingSpan& span, uint64 serial )
     {
         SW_ASSERT( serial != 0 );
         SW_ASSERT( span._sizeBytes != 0 );
@@ -60,7 +60,7 @@ namespace sw
         _slots.freeDeferred( static_cast<uint32>( span._offsetBytes / _alignmentBytes ), toSlotCount( span._sizeBytes ), serial );
     }
 
-    void RHIStagingRing::free( const RHIStagingSpan& span )
+    void RHIStagingAllocator::free( const RHIStagingSpan& span )
     {
         SW_ASSERT( span._sizeBytes != 0 );
         std::scoped_lock<mutex> lock{ _mutex };
@@ -71,30 +71,30 @@ namespace sw
             --_liveCount;
     }
 
-    void RHIStagingRing::freeCompleted( uint64 completedSerial )
+    void RHIStagingAllocator::freeCompleted( uint64 completedSerial )
     {
         std::scoped_lock<mutex> lock{ _mutex };
         freeCompletedLocked( completedSerial );
     }
 
-    uint64 RHIStagingRing::getCapacityBytes() const
+    uint64 RHIStagingAllocator::getCapacityBytes() const
     {
         std::scoped_lock<mutex> lock{ _mutex };
         return _capacityBytes;
     }
 
-    uint32 RHIStagingRing::getLiveCount() const
+    uint32 RHIStagingAllocator::getLiveCount() const
     {
         std::scoped_lock<mutex> lock{ _mutex };
         return _liveCount;
     }
 
-    uint32 RHIStagingRing::toSlotCount( uint64 sizeBytes ) const
+    uint32 RHIStagingAllocator::toSlotCount( uint64 sizeBytes ) const
     {
         return static_cast<uint32>( MathUtil::align( sizeBytes, _alignmentBytes ) / _alignmentBytes );
     }
 
-    void RHIStagingRing::freeCompletedLocked( uint64 completedSerial )
+    void RHIStagingAllocator::freeCompletedLocked( uint64 completedSerial )
     {
         const uint32 deferredBefore = _slots.getDeferredSpanCount();
         _slots.retireDeferred( completedSerial );
