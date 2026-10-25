@@ -1,0 +1,29 @@
+<UIDocument _schemaVersion="1">
+	<!-- 채팅 견본 문서(온라인 키트 U1). C++ 화면은 `ChatScreen` 이다. 줄 글은 코드가 `Lines` 패널에 `Line.<번호>` 이름으로 채운다. 문서 경로와 채널은 호출하는 게임이 `ChatScreen::open` 에 준다. -->
+	<UIScreenDesc _bPausesGame="false" _defaultFocus="Input" />
+	<SafeZonePanel>
+		<CanvasPanel>
+			<BorderPanel _name="Window" _styleClass="window">
+				<_slot _anchorMin="0,1"
+				       _anchorMax="0,1"
+				       _offsetMax="0,0"
+				       _bAutoSize="true"
+				       _growHorizontal="Both"
+				       _growVertical="Both" />
+				<BoxPanel _spacing="8" _orientation="Vertical">
+					<BoxPanel _name="Lines" _spacing="2" _orientation="Vertical" />
+					<TextWidget _name="Status" _text="" />
+					<BoxPanel _spacing="8" _orientation="Horizontal">
+						<TextInputWidget _name="Input" />
+						<ButtonWidget _name="Send" _styleClass="primary" _command="Send">
+							<TextWidget _text="Send" />
+						</ButtonWidget>
+						<ButtonWidget _name="Close" _command="Close">
+							<TextWidget _text="Close" />
+						</ButtonWidget>
+					</BoxPanel>
+				</BoxPanel>
+			</BorderPanel>
+		</CanvasPanel>
+	</SafeZonePanel>
+</UIDocument>

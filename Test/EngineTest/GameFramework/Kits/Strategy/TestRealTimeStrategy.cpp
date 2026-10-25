@@ -46,6 +46,7 @@ namespace
         RTSCatalog       _catalog;
         RTSWorld         _world;
         vector<RTSEvent> _listEvent;
+        DrainLease       _eventLease;   ///< 이벤트를 꺼내는 표(`initialize` 가 쥔다)
         Wallet           _arrWallet[4]; ///< 플레이어마다 빌려 주는 지갑
         int32            _walletCount{ 0 };
 
@@ -53,7 +54,7 @@ namespace
         {
             if ( _catalog.loadFromXMLText( kRTSTestXML, "RealTimeStrategyTest" ) == false )
                 return false;
-            if ( _world.initialize( &_catalog, width, height, RTSSettings{} ) == false )
+            if ( _world.initialize( &_catalog, width, height, RTSSettings{} ) == false || _world.claimEvents( _eventLease ) == false )
                 return false;
             return true;
         }
@@ -78,7 +79,7 @@ namespace
             for ( float32 time = 0.0f; time < seconds; time += 0.1f )
             {
                 _world.update( 0.1f );
-                _world.drainEvents( _listEvent );
+                _world.drainEvents( _eventLease, _listEvent );
             }
         }
 
@@ -570,7 +571,7 @@ SW_TEST_CASE( RealTimeStrategyTest, AIGrowsEconomyBuildsArmyAndWinsByRazingBuild
         scene._world.update( 0.1f );
         ai.update( 0.1f );
         vector<RTSEvent> listEvent;
-        scene._world.drainEvents( listEvent );
+        scene._world.drainEvents( scene._eventLease, listEvent );
         for ( const RTSEvent& event : listEvent )
         {
             ai.notify( event );

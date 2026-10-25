@@ -341,9 +341,9 @@ namespace sw
         }
     }
 
-    void RTSWorld::drainEvents( vector<RTSEvent>& outListEvent )
+    void RTSWorld::drainEvents( const DrainLease& lease, vector<RTSEvent>& outListEvent )
     {
-        _eventBuffer.drainTo( outListEvent );
+        _eventBuffer.drainTo( lease, outListEvent );
     }
 
     void RTSWorld::stepFixed( float32 deltaTime )

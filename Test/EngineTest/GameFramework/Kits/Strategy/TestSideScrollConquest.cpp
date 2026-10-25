@@ -166,10 +166,12 @@ SW_TEST_CASE( SideScrollConquestTest, BuildingsWorkersProductionAndTrainingRespe
     SW_EXPECT_TRUE( world.trainUnit( 2, "spearman" ) == ConquestResult::PopulationCap );
 
     vector<ConquestEvent> listEvent;
-    world.drainEvents( listEvent );
+    DrainLease            lease;
+    SW_ASSERT_TRUE( world.claimEvents( lease ) );
+    world.drainEvents( lease, listEvent );
     listEvent.clear();
     runWorld( world, 5.5f ); // 기병(5 초) 하나만 나온다
-    world.drainEvents( listEvent );
+    world.drainEvents( lease, listEvent );
     SW_EXPECT_TRUE( hasEvent( listEvent, ConquestEvent::Kind::UnitTrained ) );
     SW_EXPECT_EQUAL( 1, world.getSquadSize() );
     SW_EXPECT_EQUAL( 1, countUnits( world, "cavalry", ConquestTeam::Player ) );
@@ -293,6 +295,8 @@ SW_TEST_CASE( SideScrollConquestTest, GatesBlockRamsBreachLaddersBypassAndCaptur
     // 충차가 성문(그다음 성벽)을 부수고 기병이 수비대를 쓸면 점령 — 적 거점이 없으니 승리.
     ConquestWorld siege;
     siege.initialize( &catalog );
+    DrainLease siegeLease;
+    SW_ASSERT_TRUE( siege.claimEvents( siegeLease ) );
     (void)siege.spawnUnit( "ram", ConquestTeam::Player, 50.0f, ConquestOrder::Charge ); // 테스트 준비 — 결과는 아래 단언이 전투 결과로 확인한다
     for ( int32 index = 0; index < 4; ++index )
     {
@@ -303,7 +307,7 @@ SW_TEST_CASE( SideScrollConquestTest, GatesBlockRamsBreachLaddersBypassAndCaptur
     {
         runWorld( siege, 1.0f );
     }
-    siege.drainEvents( listEvent );
+    siege.drainEvents( siegeLease, listEvent );
     SW_EXPECT_TRUE( hasEvent( listEvent, ConquestEvent::Kind::GateBroken ) );
     SW_EXPECT_TRUE( hasEvent( listEvent, ConquestEvent::Kind::SiteCaptured ) );
     SW_EXPECT_TRUE( siege.findSite( "keep" )->_owner == ConquestTeam::Player );
@@ -338,10 +342,12 @@ SW_TEST_CASE( SideScrollConquestTest, TerritoryRaisesIncomeAndCounterAttackWaves
 
     // 30 초 웨이브는 지금 크기(4)로 가장 오른쪽 적 거점에서 나온다.
     vector<ConquestEvent> listEvent;
-    world.drainEvents( listEvent );
+    DrainLease            lease;
+    SW_ASSERT_TRUE( world.claimEvents( lease ) );
+    world.drainEvents( lease, listEvent );
     listEvent.clear();
     runWorld( world, 30.0f - world.getElapsed() + 0.05f );
-    world.drainEvents( listEvent );
+    world.drainEvents( lease, listEvent );
     SW_EXPECT_TRUE( hasEvent( listEvent, ConquestEvent::Kind::WaveSpawned ) );
     SW_EXPECT_EQUAL( 4, countUnits( world, "raider", ConquestTeam::Enemy ) );
 

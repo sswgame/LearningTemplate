@@ -86,8 +86,12 @@ SW_TEST_CASE( SocialStreamTest, FriendRequestNotificationAndGuildRoundTrip )
     test::OnlineTestServer  server( network, &database, &cacheDatabase, &hub, 1 );
     social.start( server );
 
-    SocialClient            clientOfFirst;
-    SocialClient            clientOfSecond;
+    SocialClient clientOfFirst;
+    SocialClient clientOfSecond;
+    DrainLease   leaseOfFirst;
+    DrainLease   leaseOfSecond;
+    SW_ASSERT_TRUE( clientOfFirst.claimNotifications( leaseOfFirst ) );
+    SW_ASSERT_TRUE( clientOfSecond.claimNotifications( leaseOfSecond ) );
     test::OnlineTestClients clients( network );
     const int32             firstIndex  = clients.connect( server._port, { &clientOfFirst } );
     const int32             secondIndex = clients.connect( server._port, { &clientOfSecond } );
@@ -114,7 +118,7 @@ SW_TEST_CASE( SocialStreamTest, FriendRequestNotificationAndGuildRoundTrip )
     test::updateAll( { &server }, clients, 10 );
     SW_EXPECT_TRUE( recorder.getLast()._reply._result == SocialResult::Ok );
     vector<SocialNotification> listNotificationOfSecond;
-    clientOfSecond.drainNotifications( listNotificationOfSecond );
+    clientOfSecond.drainNotifications( leaseOfSecond, listNotificationOfSecond );
     SW_ASSERT_EQUAL( listNotificationOfSecond.size(), size_t( 1 ) );
     SW_EXPECT_TRUE( listNotificationOfSecond[0]._kind == SocialNotificationKind::FriendRequested );
     SW_EXPECT_EQUAL( listNotificationOfSecond[0]._otherID, AccountID( 1 ) );
@@ -124,10 +128,10 @@ SW_TEST_CASE( SocialStreamTest, FriendRequestNotificationAndGuildRoundTrip )
     test::updateAll( { &server }, clients, 20 );
     SW_EXPECT_TRUE( recorder.getLast()._reply._result == SocialResult::Ok );
     vector<SocialNotification> listNotificationOfFirst;
-    clientOfFirst.drainNotifications( listNotificationOfFirst );
+    clientOfFirst.drainNotifications( leaseOfFirst, listNotificationOfFirst );
     SW_EXPECT_EQUAL( countSocialNotificationKind( listNotificationOfFirst, SocialNotificationKind::FriendAdded ), 1 );
     listNotificationOfSecond.clear();
-    clientOfSecond.drainNotifications( listNotificationOfSecond );
+    clientOfSecond.drainNotifications( leaseOfSecond, listNotificationOfSecond );
     SW_EXPECT_EQUAL( countSocialNotificationKind( listNotificationOfSecond, SocialNotificationKind::FriendAdded ), 1 ); // 수락한 쪽도 안다
     (void)clientOfFirst.listLinks( recorder.makeDelegate() );
     test::updateAll( { &server }, clients, 30 );
@@ -136,7 +140,7 @@ SW_TEST_CASE( SocialStreamTest, FriendRequestNotificationAndGuildRoundTrip )
     (void)clientOfSecond.setPresence( SocialPresenceStatus::InGame, "arena", recorder.makeDelegate() );
     test::updateAll( { &server }, clients, 40 );
     listNotificationOfFirst.clear();
-    clientOfFirst.drainNotifications( listNotificationOfFirst );
+    clientOfFirst.drainNotifications( leaseOfFirst, listNotificationOfFirst );
     SW_ASSERT_EQUAL( listNotificationOfFirst.size(), size_t( 1 ) );
     SW_EXPECT_TRUE( listNotificationOfFirst[0]._kind == SocialNotificationKind::PresenceChanged );
     SW_EXPECT_STREQ( listNotificationOfFirst[0]._presence._activity.c_str(), "arena" );
@@ -154,7 +158,7 @@ SW_TEST_CASE( SocialStreamTest, FriendRequestNotificationAndGuildRoundTrip )
     (void)clientOfFirst.inviteToGuild( 2, recorder.makeDelegate() );
     test::updateAll( { &server }, clients, 60 );
     listNotificationOfSecond.clear();
-    clientOfSecond.drainNotifications( listNotificationOfSecond );
+    clientOfSecond.drainNotifications( leaseOfSecond, listNotificationOfSecond );
     SW_ASSERT_EQUAL( listNotificationOfSecond.size(), size_t( 1 ) );
     SW_EXPECT_TRUE( listNotificationOfSecond[0]._kind == SocialNotificationKind::GuildInvited );
     SW_EXPECT_EQUAL( listNotificationOfSecond[0]._guildID, guildID );
@@ -170,13 +174,13 @@ SW_TEST_CASE( SocialStreamTest, FriendRequestNotificationAndGuildRoundTrip )
     (void)clientOfSecond.block( 1, recorder.makeDelegate() );
     test::updateAll( { &server }, clients, 90 );
     listNotificationOfSecond.clear();
-    clientOfSecond.drainNotifications( listNotificationOfSecond );
+    clientOfSecond.drainNotifications( leaseOfSecond, listNotificationOfSecond );
     (void)clientOfFirst.requestFriend( 2, recorder.makeDelegate() );
     test::updateAll( { &server }, clients, 100 );
     SW_EXPECT_EQUAL( recorder.getLast()._errorCode, OnlineError::kOk );
     SW_EXPECT_TRUE( recorder.getLast()._reply._result == SocialResult::Ok );
     listNotificationOfSecond.clear();
-    clientOfSecond.drainNotifications( listNotificationOfSecond );
+    clientOfSecond.drainNotifications( leaseOfSecond, listNotificationOfSecond );
     SW_EXPECT_EQUAL( countSocialNotificationKind( listNotificationOfSecond, SocialNotificationKind::FriendRequested ), 0 );
 
     // 5) 다른 서버에 붙은 계정에게 신청 — 알림은 접속 상태 창구로

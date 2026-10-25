@@ -1,8 +1,10 @@
-// HTTP/2 프레임과 HPACK — RFC 7541 부록 C 의 허프만 없는 예, 부호기 왕복, 프레임 머리 · SETTINGS · WINDOW_UPDATE 의 바이트와 범위 거절.
+// HTTP/2 프레임과 HPACK — RFC 7541 부록 C 의 허프만 없는 예와 허프만 예(C.4.1, C.6.1), 부호기 왕복, 프레임 머리 · SETTINGS · WINDOW_UPDATE 의 바이트와 범위 거절.
 #include "pch.h"
 
 #include "GameFramework/Base/Online/HTTP/HTTP2Frame.h"
+#include "GameFramework/Base/Online/HTTP/HTTPTypes.h"
 #include "GameFramework/Base/Online/HTTP/Hpack.h"
+#include "GameFramework/Base/Online/HTTP/HpackStaticTable.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -45,7 +47,7 @@ SW_TEST_CASE( HTTP2Test, HpackDecodesTheRfcLiteralExamples )
 }
 
 /**
- * @brief [HTTP2Test] 허프만 문자열 · 표 밖 색인 · 잘린 블록 · 색인 0 · 알린 상한보다 큰 표 크기 갱신은 읽은 척하지 않고 거절한다
+ * @brief [HTTP2Test] 틀린 허프만 문자열 · 표 밖 색인 · 잘린 블록 · 색인 0 · 알린 상한보다 큰 표 크기 갱신은 읽은 척하지 않고 거절한다
  */
 SW_TEST_CASE( HTTP2Test, HpackRefusesWhatItCannotReadInsteadOfGuessing )
 {
@@ -53,11 +55,16 @@ SW_TEST_CASE( HTTP2Test, HpackRefusesWhatItCannotReadInsteadOfGuessing )
     vector<HpackHeader> listHeader;
     string              error;
 
-    // C.4.1 의 첫 요청 — :authority 값이 허프만이다(아직 읽지 못한다).
-    const uint8 arrHuffman[] = { 0x82, 0x86, 0x84, 0x41, 0x8c, 0xf1, 0xe3, 0xc2, 0xe5, 0xf2, 0x3a, 0x6b, 0xa0, 0xab, 0x90, 0xf4, 0xff };
-    SW_EXPECT_FALSE( decoder.decode( arrHuffman, sizeof( arrHuffman ), listHeader, error ) );
+    // 기호 '0' 은 5 비트 00000 이다. 패딩이 000 이면(1 이어야 한다) 거절하고, 패딩이 8 비트 넘게 길어도 거절한다.
+    const uint8 arrBadPadding[] = { 0x40, 0x81, 0x00 };
+    SW_EXPECT_FALSE( decoder.decode( arrBadPadding, sizeof( arrBadPadding ), listHeader, error ) );
     SW_EXPECT_TRUE( listHeader.empty() );
     SW_EXPECT_FALSE( error.empty() );
+    const uint8 arrLongPadding[] = { 0x40, 0x82, 0x07, 0xff };
+    SW_EXPECT_FALSE( decoder.decode( arrLongPadding, sizeof( arrLongPadding ), listHeader, error ) );
+    // 길이 5 에 EOS(30 비트 모두 1)를 품은 문자열
+    const uint8 arrEndOfString[] = { 0x40, 0x85, 0xff, 0xff, 0xff, 0xff, 0xfc };
+    SW_EXPECT_FALSE( decoder.decode( arrEndOfString, sizeof( arrEndOfString ), listHeader, error ) );
 
     const uint8 arrFarIndex[] = { 0xff, 0x40 }; // 색인 127 + 64 = 191 — 동적 표가 비어 있다
     SW_EXPECT_FALSE( decoder.decode( arrFarIndex, sizeof( arrFarIndex ), listHeader, error ) );
@@ -67,6 +74,32 @@ SW_TEST_CASE( HTTP2Test, HpackRefusesWhatItCannotReadInsteadOfGuessing )
     SW_EXPECT_FALSE( decoder.decode( arrCut, sizeof( arrCut ), listHeader, error ) );
     const uint8 arrBigUpdate[] = { 0x3f, 0xe2, 0x1f }; // 표 크기 4097 = 31 + 98 + 31 * 128 (상한 4096 을 하나 넘는다)
     SW_EXPECT_FALSE( decoder.decode( arrBigUpdate, sizeof( arrBigUpdate ), listHeader, error ) );
+}
+
+/**
+ * @brief [HTTP2Test] RFC 7541 C.4.1 의 첫 요청과 C.6.1 의 첫 응답 — 허프만으로 쓴 값을 풀어 헤더 목록과 동적 표 크기가 RFC 와 같다
+ */
+SW_TEST_CASE( HTTP2Test, HpackDecodesTheRfcHuffmanExamples )
+{
+    HpackDecoder        requestDecoder;
+    vector<HpackHeader> listHeader;
+    string              error;
+
+    const uint8 arrRequest[] = { 0x82, 0x86, 0x84, 0x41, 0x8c, 0xf1, 0xe3, 0xc2, 0xe5, 0xf2, 0x3a, 0x6b, 0xa0, 0xab, 0x90, 0xf4, 0xff };
+    SW_ASSERT_TRUE( requestDecoder.decode( arrRequest, sizeof( arrRequest ), listHeader, error ) );
+    SW_ASSERT_EQUAL( size_t( 4 ), listHeader.size() );
+    SW_EXPECT_TRUE( listHeader[3]._name == ":authority" && listHeader[3]._value == "www.example.com" );
+    SW_EXPECT_EQUAL( uint32( 57 ), requestDecoder.getDynamicTableSize() );
+
+    HpackDecoder responseDecoder( 256 ); // C.6 은 표 크기 상한 256 으로 돈다
+    const uint8  arrResponse[] = { 0x48, 0x82, 0x64, 0x02, 0x58, 0x85, 0xae, 0xc3, 0x77, 0x1a, 0x4b, 0x61, 0x96, 0xd0, 0x7a, 0xbe, 0x94, 0x10, 0x54, 0xd4, 0x44, 0xa8, 0x20, 0x05, 0x95, 0x04, 0x0b, 0x81, 0x66, 0xe0, 0x82, 0xa6, 0x2d, 0x1b, 0xff, 0x6e, 0x91, 0x9d, 0x29, 0xad, 0x17, 0x18, 0x63, 0xc7, 0x8f, 0x0b, 0x97, 0xc8, 0xe9, 0xae, 0x82, 0xae, 0x43, 0xd3 };
+    SW_ASSERT_TRUE( responseDecoder.decode( arrResponse, sizeof( arrResponse ), listHeader, error ) );
+    SW_ASSERT_EQUAL( size_t( 4 ), listHeader.size() );
+    SW_EXPECT_TRUE( listHeader[0]._name == ":status" && listHeader[0]._value == "302" );
+    SW_EXPECT_TRUE( listHeader[1]._name == "cache-control" && listHeader[1]._value == "private" );
+    SW_EXPECT_TRUE( listHeader[2]._name == "date" && listHeader[2]._value == "Mon, 21 Oct 2013 20:13:21 GMT" );
+    SW_EXPECT_TRUE( listHeader[3]._name == "location" && listHeader[3]._value == "https://www.example.com" );
+    SW_EXPECT_EQUAL( uint32( 222 ), responseDecoder.getDynamicTableSize() );
 }
 
 /**
@@ -104,6 +137,55 @@ SW_TEST_CASE( HTTP2Test, HpackEncoderRoundTripsThroughTheDecoder )
     },
                                            untouched ) );
     SW_EXPECT_TRUE( untouched.empty() );
+}
+
+/**
+ * @brief [HTTP2Test] 정적 표는 RFC 7541 부록 A 의 61 줄이다 — 생성 파일의 개수와 처음 · 끝 · 값이 있는 줄 · 이름만 있는 줄을 색인 표현으로 읽어 RFC 와 대조한다(전체 줄 대조는 생성기가 RFC 본문에서 한다)
+ */
+SW_TEST_CASE( HTTP2Test, HpackStaticTableMatchesTheRfcAppendixA )
+{
+    SW_EXPECT_EQUAL( uint32( 61 ), HpackStatic::kEntryCount );
+    struct Expected
+    {
+        uint8       _index;
+        const utf8* _pName;
+        const utf8* _pValue;
+    };
+    const Expected arrExpected[] = {
+        { 1,                  ":authority",              ""},
+        { 7,                     ":scheme",         "https"},
+        {14,                     ":status",           "500"},
+        {16,             "accept-encoding", "gzip, deflate"},
+        {20, "access-control-allow-origin",              ""},
+        {40,           "if-modified-since",              ""},
+        {56,   "strict-transport-security",              ""},
+        {61,            "www-authenticate",              ""},
+    };
+    for ( const Expected& expected : arrExpected )
+    {
+        HpackDecoder        decoder;
+        vector<HpackHeader> listHeader;
+        string              error;
+        const uint8         arrBlock[] = { static_cast<uint8>( 0x80 | expected._index ) };
+        SW_ASSERT_TRUE( decoder.decode( arrBlock, sizeof( arrBlock ), listHeader, error ) );
+        SW_ASSERT_EQUAL( size_t( 1 ), listHeader.size() );
+        SW_EXPECT_TRUE( listHeader[0]._name == expected._pName && listHeader[0]._value == expected._pValue );
+    }
+}
+
+/**
+ * @brief [HTTP2Test] 응답 줄의 사유 문구는 RFC 9110 의 이름이고, 표에 없는 코드는 일반 문구로 쓴다
+ */
+SW_TEST_CASE( HTTP2Test, HTTPReasonPhrasesMatchTheRfc )
+{
+    SW_EXPECT_TRUE( string_view( HTTPWriteUtil::getReasonPhrase( 200 ) ) == "OK" );
+    SW_EXPECT_TRUE( string_view( HTTPWriteUtil::getReasonPhrase( 302 ) ) == "Found" );
+    SW_EXPECT_TRUE( string_view( HTTPWriteUtil::getReasonPhrase( 400 ) ) == "Bad Request" );
+    SW_EXPECT_TRUE( string_view( HTTPWriteUtil::getReasonPhrase( 401 ) ) == "Unauthorized" );
+    SW_EXPECT_TRUE( string_view( HTTPWriteUtil::getReasonPhrase( 403 ) ) == "Forbidden" );
+    SW_EXPECT_TRUE( string_view( HTTPWriteUtil::getReasonPhrase( 404 ) ) == "Not Found" );
+    SW_EXPECT_TRUE( string_view( HTTPWriteUtil::getReasonPhrase( 500 ) ) == "Internal Server Error" );
+    SW_EXPECT_TRUE( string_view( HTTPWriteUtil::getReasonPhrase( 503 ) ) == "Service Unavailable" );
 }
 
 /**

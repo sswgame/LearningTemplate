@@ -201,8 +201,9 @@ namespace sw
 
         /** @brief 시간을 진행합니다. 내부에서는 고정 걸음으로 나눠 처리합니다. */
         void update( float32 deltaTime );
-        /** @brief 쌓인 이벤트를 꺼냅니다. */
-        void drainEvents( vector<CityEvent>& outListEvent );
+        /** @brief 쌓인 이벤트를 꺼낼 쪽을 정합니다(둘째 쪽은 false). 꺼내기는 이 표가 있어야 한다 — 같은 월드를 붙인 화면 · 시스템이 서로의 이벤트를 가져가지 못한다. */
+        [[nodiscard]] bool claimEvents( DrainLease& outLease ) { return _eventBuffer.claim( outLease ); }
+        void               drainEvents( const DrainLease& lease, vector<CityEvent>& outListEvent );
 
         const CityTile*             findTile( int32 x, int32 y ) const;
         const vector<CityBuilding>& getBuildings() const { return _listBuilding; }

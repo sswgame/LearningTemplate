@@ -105,9 +105,13 @@ SW_TEST_CASE( ChatStreamTest, ChannelChatBetweenTwoClientsWithEchoAndErrors )
     chat._directory._mapName[1] = "alice";
     chat._directory._mapName[2] = "bob";
 
-    ChatClient              aliceChat;
-    ChatClient              bobChat;
-    ChatClient              guestChat;
+    ChatClient aliceChat;
+    ChatClient bobChat;
+    ChatClient guestChat;
+    DrainLease aliceLease;
+    DrainLease bobLease;
+    SW_ASSERT_TRUE( aliceChat.claimMessages( aliceLease ) );
+    SW_ASSERT_TRUE( bobChat.claimMessages( bobLease ) );
     test::OnlineTestClients clients( network );
     const int32             alice = clients.connect( server._port, { &aliceChat } );
     const int32             bob   = clients.connect( server._port, { &bobChat } );
@@ -135,11 +139,11 @@ SW_TEST_CASE( ChatStreamTest, ChannelChatBetweenTwoClientsWithEchoAndErrors )
     SW_EXPECT_TRUE( aliceRecorder._listReply[1]._reply._result == ChatResult::Ok );
     SW_EXPECT_STREQ( aliceRecorder._listReply[1]._reply._message._text.c_str(), "hello bob" );
     vector<ChatMessage> listBobMessage;
-    bobChat.drainMessages( listBobMessage );
+    bobChat.drainMessages( bobLease, listBobMessage );
     SW_ASSERT_EQUAL( listBobMessage.size(), size_t( 1 ) );
     SW_EXPECT_STREQ( listBobMessage[0]._senderName.c_str(), "alice" );
     vector<ChatMessage> listAliceMessage;
-    aliceChat.drainMessages( listAliceMessage );
+    aliceChat.drainMessages( aliceLease, listAliceMessage );
     SW_EXPECT_EQUAL( listAliceMessage.size(), size_t( 1 ) ); // 보낸 이의 다른 창
 
     (void)bobChat.send( "custom.nowhere", "hi", bobRecorder.makeDelegate() );
@@ -172,8 +176,10 @@ SW_TEST_CASE( ChatStreamTest, WhisperHistoryAndMuteAcrossTwoServers )
     secondChat._directory._mapName[2] = "bob";
     first._presence.setOnline( AccountIdentity{ "bob", 2, SW_FALSE }, second.getServerID() ); // 계정 서버(K14)가 쓴 접속 상태
 
-    ChatClient              aliceChat;
-    ChatClient              bobChat;
+    ChatClient aliceChat;
+    ChatClient bobChat;
+    DrainLease bobLease;
+    SW_ASSERT_TRUE( bobChat.claimMessages( bobLease ) );
     test::OnlineTestClients clients( network );
     const int32             alice = clients.connect( first._port, { &aliceChat } );
     const int32             bob   = clients.connect( second._port, { &bobChat } );
@@ -191,7 +197,7 @@ SW_TEST_CASE( ChatStreamTest, WhisperHistoryAndMuteAcrossTwoServers )
     SW_ASSERT_EQUAL( aliceRecorder._listReply.size(), size_t( 1 ) );
     SW_EXPECT_TRUE( aliceRecorder._listReply[0]._reply._result == ChatResult::Ok );
     vector<ChatMessage> listBobMessage;
-    bobChat.drainMessages( listBobMessage );
+    bobChat.drainMessages( bobLease, listBobMessage );
     SW_ASSERT_EQUAL( listBobMessage.size(), size_t( 1 ) ); // 접속 상태 → 버스 chat.server.<2> → 알림
     SW_EXPECT_STREQ( listBobMessage[0]._text.c_str(), "hi bob" );
     SW_EXPECT_EQUAL( listBobMessage[0]._senderID, AccountID( 1 ) );
@@ -223,6 +229,6 @@ SW_TEST_CASE( ChatStreamTest, WhisperHistoryAndMuteAcrossTwoServers )
     SW_EXPECT_TRUE( aliceRecorder._listReply[2]._reply._result == ChatResult::Muted );
     SW_EXPECT_EQUAL( aliceRecorder._listReply[2]._reply._retryAfterMs, int64( 100000 - 40 ) );
     listBobMessage.clear();
-    bobChat.drainMessages( listBobMessage );
+    bobChat.drainMessages( bobLease, listBobMessage );
     SW_EXPECT_EQUAL( listBobMessage.size(), size_t( 0 ) );
 }

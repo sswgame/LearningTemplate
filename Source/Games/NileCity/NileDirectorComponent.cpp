@@ -290,6 +290,8 @@ namespace sw
         _wallet.clear();
         _wallet.add( citySettings._currency, _startingMoney );
         _city.initialize( &_catalog, NileCityPlanner::kMapWidth, NileCityPlanner::kMapHeight, citySettings, makeRefs() );
+        if ( _city.claimEvents( _cityEventLease ) == false )
+            return false; // 이 디렉터의 표뿐이라 일어날 수 없다 — 둘째 소비자가 생기면 게이트가 어서션을 남긴다
         const NileCityLayout layout = makeCityLayout();
         NileCityPlanner::paintTerrain( _city, layout );
         if ( _planner.reset( layout, _autoPlanPath ) == false )
@@ -852,7 +854,7 @@ namespace sw
     void NileDirectorComponent::drainEvents()
     {
         _listEvent.clear(); // drainEvents 는 뒤에 붙인다
-        _city.drainEvents( _listEvent );
+        _city.drainEvents( _cityEventLease, _listEvent );
         bool bHouseEvolved = false;
         for ( const CityEvent& event : _listEvent )
         {

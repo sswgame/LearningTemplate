@@ -220,7 +220,9 @@ namespace sw
         /** @brief 파일럿과 기체에 경험치를 줍니다. */
         void grantXp( int32 unitIndex, int64 amount );
         void pushEvent( const SRPGEvent& event ) { _eventBuffer.push( event ); }
-        void drainEvents( vector<SRPGEvent>& outListEvent );
+        /** @brief 이벤트를 꺼낼 쪽을 정합니다(둘째 쪽은 false). 꺼내기는 이 표가 있어야 한다 — 같은 월드를 붙인 화면 · 시스템이 서로의 이벤트를 가져가지 못한다. */
+        [[nodiscard]] bool claimEvents( DrainLease& outLease ) { return _eventBuffer.claim( outLease ); }
+        void               drainEvents( const DrainLease& lease, vector<SRPGEvent>& outListEvent );
 
         /**
          * @brief 크기, 셀마다 지형 정의 id, 유닛(기체와 파일럿 id, 탄, 레벨 둘, 셀, HP, EN, 기력, 회피, 명단 슬롯, 팀, 차례 비트), 차례(`TurnOrder`), 난수,

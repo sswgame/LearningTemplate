@@ -43,3 +43,38 @@ SW_TEST_CASE( EventBufferTest, SwapsIntoAnEmptyListAndAppendsToAFullOne )
     buffer.drainTo( listOther );
     SW_EXPECT_TRUE( listOther.empty() );
 }
+
+/**
+ * @brief [EventBufferTest] 꺼내기 표를 쥔 쪽만 꺼내고, 복사본은 표 없는 새 큐이며, 표를 놓으면 다음 표가 받는다
+ */
+SW_TEST_CASE( EventBufferTest, LeaseHolderDrainsAndCopiesCarryNoLease )
+{
+    EventBuffer<int32> buffer;
+    DrainLease         first;
+    DrainLease         second;
+    SW_ASSERT_TRUE( buffer.claim( first ) );
+    SW_EXPECT_TRUE( buffer.claim( first ) ); // 이미 쥔 표는 다시 받아도 true
+
+    buffer.push( 1 );
+    buffer.push( 2 );
+    vector<int32> listEvent;
+    buffer.drainTo( first, listEvent );
+    SW_ASSERT_EQUAL( static_cast<size_t>( 2 ), listEvent.size() );
+    SW_EXPECT_TRUE( buffer.isEmpty() );
+
+    // 복사본은 쌓인 알림만 물려받고 표는 아무도 안 쥔다.
+    buffer.push( 3 );
+    EventBuffer<int32> copy = buffer;
+    DrainLease         copyLease;
+    SW_ASSERT_TRUE( copy.claim( copyLease ) );
+    listEvent.clear();
+    copy.drainTo( copyLease, listEvent );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), listEvent.size() );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), buffer.getCount() ); // 원본은 그대로
+
+    first.release();
+    SW_ASSERT_TRUE( buffer.claim( second ) );
+    listEvent.clear();
+    buffer.drainTo( second, listEvent );
+    SW_EXPECT_EQUAL( 3, listEvent[0] );
+}

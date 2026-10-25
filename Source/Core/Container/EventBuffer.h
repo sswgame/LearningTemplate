@@ -3,7 +3,9 @@
  * @brief 시뮬레이션이 한 걸음 동안 쌓고 게임이 프레임마다 가져가는 알림 버퍼입니다(`drainEvents` 의 몸통).
  */
 #pragma once
+#include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/DrainGate.h"
 #include "Core/Container/vector.h"
 
 namespace sw
@@ -23,19 +25,44 @@ namespace sw
     class EventBuffer
     {
     public:
+        EventBuffer() = default;
+        // 복사 · 이동은 쌓인 알림만 옮긴다 — 꺼내기 권한 표(`_gate`)는 복사본에 따라가지 않는다(복사본은 아무도 안 쥔 새 큐).
+        EventBuffer( const EventBuffer& other )
+            : _listPending{ other._listPending } {}
+        EventBuffer( EventBuffer&& other ) noexcept
+            : _listPending{ std::move( other._listPending ) } {}
+        EventBuffer& operator=( const EventBuffer& other )
+        {
+            _listPending = other._listPending;
+            return *this;
+        }
+        EventBuffer& operator=( EventBuffer&& other ) noexcept
+        {
+            _listPending = std::move( other._listPending );
+            return *this;
+        }
+
         void push( const T& event ) { _listPending.push_back( event ); }
         void push( T&& event ) { _listPending.push_back( std::move( event ) ); }
 
-        /** @brief 쌓인 알림을 @p outList 끝에 넘기고 비웁니다. @p outList 가 비어 있으면 저장소를 맞바꿉니다(복사 없음). */
+        /**
+         * @brief 꺼내는 쪽을 @p outLease 하나로 정합니다. 이미 다른 표가 쥐고 있으면 false 입니다(어서션도 남깁니다). 표를 쥔 큐는 표 없는 `drainTo` 가 어서션에 걸립니다.
+         * @details 여러 화면 · 시스템이 같은 규칙 모델을 붙일 수 있는 큐는 이 표로 막는다. 소유 컴포넌트 하나가 비우는 큐는 표 없는 `drainTo` 를 그대로 쓴다.
+         */
+        [[nodiscard]] bool claim( DrainLease& outLease ) { return _gate.claim( outLease ); }
+
+        /** @brief 표를 쥔 쪽이 꺼냅니다. @p lease 가 이 큐의 표가 아니면 어서션입니다. 나머지는 표 없는 `drainTo` 와 같습니다. */
+        void drainTo( const DrainLease& lease, vector<T>& outList )
+        {
+            SW_ASSERT( _gate.isHeldBy( lease ) && "Claim the drain queue before draining it" );
+            moveTo( outList );
+        }
+
+        /** @brief 쌓인 알림을 @p outList 끝에 넘기고 비웁니다. @p outList 가 비어 있으면 저장소를 맞바꿉니다(복사 없음). 표를 쥔 큐에는 쓸 수 없습니다. */
         void drainTo( vector<T>& outList )
         {
-            if ( outList.empty() )
-            {
-                outList.swap( _listPending ); // 비어 있던 저장소(용량 그대로)가 이쪽으로 온다
-                return;
-            }
-            outList.insert( outList.end(), _listPending.begin(), _listPending.end() );
-            _listPending.clear();
+            SW_ASSERT( _gate.hasHolder() == false && "This drain queue is gated; drain it with the lease" );
+            moveTo( outList );
         }
 
         /** @brief 쌓인 알림을 버립니다(용량은 둔다). */
@@ -48,6 +75,18 @@ namespace sw
         const vector<T>& getPending() const { return _listPending; }
 
     private:
+        void moveTo( vector<T>& outList )
+        {
+            if ( outList.empty() )
+            {
+                outList.swap( _listPending ); // 비어 있던 저장소(용량 그대로)가 이쪽으로 온다
+                return;
+            }
+            outList.insert( outList.end(), _listPending.begin(), _listPending.end() );
+            _listPending.clear();
+        }
+
         vector<T> _listPending;
+        DrainGate _gate;
     };
 } // namespace sw

@@ -235,8 +235,9 @@ namespace sw
 
         CityCatalog                          _catalog;
         CitySimulation                       _city;
-        Wallet                               _wallet; ///< 도시 금고. 키트 하나만 쓰는 게임이라 디렉터가 보관하고 빌려 준다.
-        WorldClock                           _clock;  ///< 달력. 하루가 한 달이다(계절 열둘 x 하루). 디렉터가 보관하고 시간을 흘린다.
+        DrainLease                           _cityEventLease; ///< 도시 이벤트를 꺼내는 표(이 디렉터 하나만 꺼낸다).
+        Wallet                               _wallet;         ///< 도시 금고. 키트 하나만 쓰는 게임이라 디렉터가 보관하고 빌려 준다.
+        WorldClock                           _clock;          ///< 달력. 하루가 한 달이다(계절 열둘 x 하루). 디렉터가 보관하고 시간을 흘린다.
         NileCityPlanner                      _planner;
         vector<CityEvent>                    _listEvent;
         vector<WorldClockEvent>              _listClockEvent; ///< 이번 틱의 달력 알림(스크래치).

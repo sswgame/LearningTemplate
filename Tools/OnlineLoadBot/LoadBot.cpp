@@ -119,6 +119,9 @@ namespace sw
         _leaderboardClient.initialize( &_client );
         _matchmakingClient.initialize( &_client );
         _liveOpsClient.initialize( &_client );
+        const bool bClaimed = _chatClient.claimMessages( _chatLease ) && _socialClient.claimNotifications( _socialLease ) && _matchmakingClient.claimNotifications( _matchmakingLease );
+        if ( bClaimed == false )
+            SW_LOG_ERROR( "Load bot %# could not claim its notification buffers", botIndex );
         const bool bRegistered = _client.registerClientService( &_accountClient ) && _client.registerClientService( &_directoryClient ) &&
                                  _client.registerClientService( &_chatClient ) && _client.registerClientService( &_socialClient ) &&
                                  _client.registerClientService( &_leaderboardClient ) && _client.registerClientService( &_matchmakingClient ) &&
@@ -478,15 +481,15 @@ namespace sw
     void LoadBot::drainNotifications()
     {
         _listChatMessage.clear();
-        _chatClient.drainMessages( _listChatMessage );
+        _chatClient.drainMessages( _chatLease, _listChatMessage );
         _listPartySnapshot.clear();
-        _matchmakingClient.drainPartyUpdates( _listPartySnapshot );
+        _matchmakingClient.drainPartyUpdates( _matchmakingLease, _listPartySnapshot );
         _listPartyInvite.clear();
-        _matchmakingClient.drainInvites( _listPartyInvite );
+        _matchmakingClient.drainInvites( _matchmakingLease, _listPartyInvite );
         _listLobbySnapshot.clear();
-        _matchmakingClient.drainLobbyUpdates( _listLobbySnapshot );
+        _matchmakingClient.drainLobbyUpdates( _matchmakingLease, _listLobbySnapshot );
         _listSocialNotification.clear();
-        _socialClient.drainNotifications( _listSocialNotification );
+        _socialClient.drainNotifications( _socialLease, _listSocialNotification );
         for ( const SocialNotification& notification : _listSocialNotification )
         {
             if ( notification._kind == SocialNotificationKind::FriendRequested ) // 받은 신청은 바로 수락한다(측정하지 않는다)
@@ -529,7 +532,7 @@ namespace sw
     void LoadBot::pollMatchResult( int64 nowMs )
     {
         _listMatchAssignment.clear();
-        _matchmakingClient.drainMatchResults( _listMatchAssignment );
+        _matchmakingClient.drainMatchResults( _matchmakingLease, _listMatchAssignment );
         if ( _listMatchAssignment.empty() == false )
         {
             const MatchAssignment& assignment = _listMatchAssignment.front();
