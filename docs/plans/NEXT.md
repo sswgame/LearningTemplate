@@ -16,7 +16,66 @@
 | 에이전트에게 맡길 때 · 토큰 | [에이전트와 토큰](../12_Agents.md), [작업자 규칙](WorkerRules.md) |
 | 환경 · 도구 함정 | [함정](../14_Pitfalls.md) |
 
-## 000000000000. 2026-10-25 통합 M — `cifixl4`(CI 실패 수정 + 창 핸들 try 접근)와 `rhiu9`(프레임 경로 전송 대기 제거)가 main 에 들어감(push 안 함) (이것부터 읽는다)
+## 0000000000000. 2026-10-25 통합 N 대기 — RHI 후속 브랜치 18 개 중 6 개가 `integ-n` 에 선행 병합됨, 12 개는 아직 (이것부터 읽는다)
+
+**상태**: main 은 통합 M(`40a8af930`)에 문서 커밋 하나(작업 방식 선행 통합 규칙)를 얹은 곳이다. push 안 했다. 통합 M 의 UI 예제 전후는 DX12 프레임 10.9 → 3.4 ms, DX11 12.5 → 3.4 ms, GL 11.9 → 4.1 ms 로 풀렸고 Vulkan 만 그대로다(U6 전까지 제출 안 펜스 대기). **Vulkan 은 `vku6` 가 풀 것이다.**
+
+**선행 통합 `integ-n`**(워크트리 `D:/w/integ-n`, 브랜치 `wt/integ-n`, 마지막 `b14e66a28`): 통합 M 위에 `dx11ctx` → `glpbo` → `glpbo2` → `glrb` → `cifixl5` → `vkwsi` 를 병합하고 컴파일 오류를 고쳐 놓았다(`-k 0` 빌드 · lint · nogpu 만, GPU 는 안 돌림). 도는 중이던 통합 담당이 끝났는지는 `git log main..wt/integ-n` 으로 본다.
+
+**아직 `integ-n` 에 안 들어간 브랜치(끝남, 각각 커밋 1 ~ 2 개, 린트만 통과)**
+| 브랜치 | 기준 | 한 줄 |
+|---|---|---|
+| `dx11up` | dx11ctx | DX11 큰 업로드(256 KiB 초과)의 소스 복사를 잠금 밖으로, `TransferProbe` |
+| `dx11rb` | dx11up | 예산보다 큰 업로드 단독 수용, 되읽기 행 복사를 잠금 밖으로, Staging 주석 |
+| `dx11loss` | dx11up | DX11 장치 손실 표시 일관화(`isDeviceRemoved`, `markDeviceLost`). **`glpbo2`·`lostrej` 의 `isLost`/bool `markLost` 가 먼저 있어야 컴파일** |
+| `dx11ctx2` | dx11ctx | `withNativeContext` 콜백, DX11 ImGui 를 렌더 스레드 컨텍스트로, DX12 펜스 경쟁, 타임스탬프 플래그 atomic |
+| `gltsflag` | dx11ctx2 | GL 타임스탬프 플래그 atomic |
+| `lostrej` | glpbo2 | `markLost` bool, Vulkan · DX12 손실 표시와 제출 진입 `Rejected` |
+| `vku6` | lostrej | **Vulkan 전송 비동기화(U6)**: 호스트 가시 링 둘, 펜스 폴링, 일회성 제출 삭제 |
+| `glrb2` | glrb | 스테이징 장부를 `SpanAllocator` 위로(구간 단위 회수), GL 죽은 코드 정리 |
+| `glrb3` | glrb2 | 쥔 티켓 + `AndWait` 단언, 손실 로그 한 번만, 장부 이름 `RHIStagingAllocator` |
+| `bigup` | glrb3 | 링보다 큰 한 장을 단독 구간으로 수용(`soloMaxBytes`, ABI 37) |
+| `bbfmt` | vkwsi | 백버퍼 포맷 · 라이트 컬링 · 뷰 모드를 enum 으로, 명령줄 숫자는 오류 |
+| `gvnum` → `gvnum2` | bbfmt | morphDiag enum, 켬/끔 gv 여섯을 bool, `FrameDebugOverrides` optional |
+
+**병합 순서와 충돌**: 위 표의 기준 사슬을 따른다. 충돌 지점은 `RHIModuleAbi.h`(ABI 번호를 순서대로 하나의 값으로), `RHITypes.h` 의 `RHISwapChainDesc` 끝(`_stagingRingBytes`, `_directUploadMaxBytes`, `_readbackRingBytes`, `_stagingSoloMaxBytes` 가 모두 여기), `IRHIDevice.cpp` 의 gv 설명, `docs/Config`(재생성), `docs/decisions/5-5_GraphicsRHI.md` 끝(항목을 모두 남긴다), `RhiAsyncUploads.md`, `VerifyBatch.json`, `OpenGLRHIDevice.h/.cpp`, `D3D11RHIDevice.h/.cpp`, `D3D11RHIResourceFactory.cpp` 의 제출 진입 줄(`dx11rb` · `dx11loss`).
+- `glrb3` 가 `RHIStagingRing` 을 `RHIStagingAllocator` 로 바꿨으므로 `glpbo` · `glpbo2` · `lostrej` · `vku6` · `integ-n` 의 사용처를 새 이름으로 맞춘다.
+- `bigup` 의 `RHIStagingAllocator::initialize` 에 세 번째 인자 `soloMaxBytes` 가 생겼다. **`vku6` 는 옛 시그니처로 부르므로** 병합 때 `desc._stagingSoloMaxBytes` 를 넘기고, `Allocated` + `span._bSolo` 이면 그 크기의 호스트 가시 버퍼를 만들어 쓰고 `hasLiveSolo()` 가 거짓이면 지우게 맞춘다(Vulkan 과 DX12 에 붙이는 법은 `bigup` 보고의 5단계: 초기화 → 단독이면 별도 버퍼 → `markSubmitted` → `freeCompleted` → `Full`=Busy / `TooLarge`=Rejected).
+- `gvnum` 이 결정 한 줄을 `docs/09_Decisions.md` 5-3 끝에 넣었다. 분리 파일 `docs/decisions/5-3_CorePlatform.md` 로 옮긴다.
+- 새 `ENUM()` 헤더(`FrameMeshDeformState.h`)가 있으므로 CMake 를 다시 구성한다.
+
+**병합 뒤 통합이 돌릴 것**
+1. `-k 0` 빌드. 컴파일 위험 목록: 각 브랜치 보고(`git log` 의 커밋 본문과 `5-5_GraphicsRHI.md` 항목) — 특히 `sw::atomic` 암시적 변환(`_fenceValue`, Vulkan `_currentFrame`), `ScopedLock` 값 반환, `TransferProbe` 이동 전용 값, `SpanAllocator` 포함, `ENUM()` 파서, `getNativeContext` protected override, Linux 전용 Vulkan WSI switch.
+2. Debug · Shipping · Shipping-Server nogpu/lint/race. **TSan 에서 `fixw` 의 abort 오탐 여부는 CI 로 본다.**
+3. GPU(Release, 네 백엔드, 혼자): 매니페스트 `rhi-transfer-gl1-staging-ring` · `rhi-transfer-gl-readback-ring` · `rhi-transfer-dx11-staged-upload` · `rhi-transfer-vk-u6` · `rhi-native-context-guard` · `rhi-completion-contract-gpu`, `RHIDeviceTest.LostDeviceRejectsTransferSubmitsAtEntry`, `uidemo` 네 백엔드(Vulkan 프레임이 DX12 수준으로 내려왔는지).
+4. **DX11 에디터를 실제로 띄워 ImGui(폰트 · 플로팅 창 · 크기 변경의 `ResizeBuffers`)를 눈으로 본다** — `dx11ctx2` 가 ImGui DX11 을 UI 스레드에서 렌더 스레드(present 훅)로 옮겼다. 시나리오가 아직 없으니 `uiaudit` 캡처로 한다.
+5. **Vulkan 검증 레이어 오류 0 은 Debug 에서만 확인된다**(Release 는 레이어가 꺼짐). `rhi-transfer-vk-u6` 의 필터와 `uidemo` 를 Debug 로 한 번 더 돌려 `Validation Error` · VUID 줄이 0 인지 본다.
+6. push 후 CI: Wayland 스모크 종료 코드 0, `WindowTest.X11ClipboardRoundTripsBetweenWindowsIncludingIncr`, `X11DevConsoleTest`, TSan `EngineTest_NoGPU_Shard1`, `fixs` 의 Linux 전용 테스트.
+
+**동작이 바뀌는 곳(사용자에게 알린다)**
+- 회전 스냅 설정이 라디안으로 바뀌어 옛 도 단위 값(15)은 거절된다(통합 L).
+- 명령줄: `-gv_rhiBackBufferFormat` = `RGBA8|BGRA8`, `-gv_lightCulling` = `None|CPU|GPU`, `-gv_viewMode` = 이름, `-gv_morphDiag` = `Normal|ForceOn|SkipDispatch|IndexTag`, `-gv_rhiBackend`/`-gv_vfxSimulation` 도 숫자 인자는 오류. 켬/끔 gv 는 `0/1` 이 그대로 통한다.
+- 새 아틀라스 페이지는 첫 업로드가 끝난 다음 프레임부터 그려진다.
+- DX11 · GL 업로드가 스테이징 예산 `gv_rhiStagingRingMegabytes`(64) 와 단독 상한 `gv_rhiStagingSingleMaxMegabytes`(512)를 따른다. 메모리가 GL 에서 64 MiB × 2, Vulkan 에서 호스트 가시 64 MiB × 2 더 든다.
+
+**남은 후보(아직 안 한 것, 모두 근거 있음)**
+- 프레임 경로의 남은 GPU 왕복: 새 텍스처 업로드 `TextureCache::acquire`/`completePendingLoads`/`updateStreaming`(U8), 렌더 타깃 읽기 `RenderThread.cpp:756`(U9 나머지). 설계 결론은 "렌더 스레드 전용 전송 감시 목록(티켓 + 완료 델리게이트)을 한 곳에 두고 U8 · U9 를 그 위에 짓는다"이며 Core 태스크 핸들에 연결하는 안은 기각했다(외부 사건으로 완료되는 노드가 없고 폴링 스레드가 컨텍스트 스레드여야 한다). 구현 순서: 감시 목록 + nogpu 테스트 → U8 → U9 나머지 → U10 · U13 → M1 측정.
+- `...AndWait` 금지 단언이 두 함수에만 걸려 있어 U10 전까지 `completePendingLoads` · `updateStreaming` · 동기 `acquire` 가 GPU 왕복을 남긴다.
+- DX11 `allocateUploadStaging` 이 `bigup` 의 장부 규칙을 따로 구현했다(절대 상한 · 굶주림 예약 없음). `RHIStagingAllocator` 로 옮기면 하나가 된다.
+- Vulkan: `updateStructuredBufferRegions` 프레임 밖 경로의 일회성 제출 펜스 대기, 전송 작업 수 상한, 되읽기 링 `HOST_CACHED` 선택, PSO 생성의 워커 안전(`_mapPipelineRenderPass` · `RHIHandleTable` 락 없음, U12), 전송 큐 소유권 전이 없음(그래픽스 큐 하나).
+- 켬/끔 `int32` gv 열한 개 안팎(`gv_socketPartPool`, `gv_environmentAnimate`, `gv_animationRewind` · `Lod`, `gv_assetLoadProfile` · `Report`, `gv_automationHashDump`, `gv_memoryReport`, `gv_devConsoleOpen` 등)은 `0/1` 로 정상 동작해 결함이 아니라 표기 일관성이다. `gv_memoryTracking`(-1/0/1), `gv_meshLodForce`(-1 = 화면 크기)는 optional 후보. `gv_crashTest` 는 Core 에서 `ENUM()` 이 리플렉션 표에 안 들어가 보류(5-3 에 이유).
+- `gv_*` 의 `setValueFromString` 은 숫자를 계속 받는다(값 왕복 · `AutomationRunner` 비교 때문). 에디터 · 콘솔 · 프리셋 · 사용자 설정 경로.
+- 사용자 설정 쪽 숫자 코드: `gv_upscaler`, `gv_colorVisionMode`, `gv_subtitleSize`, `gv_debugHUDCorner`, `gv_postQuality` — 설정 XML 의 숫자와 셰이더 상수가 얽혀 있어 같이 바꿔야 한다.
+- `D3D11RHIResourceFactory` 의 `Map(DO_NOT_WAIT)` 실패를 장치 손실과 구분하지 않을 가능성, DX11 `Present failed` 로그가 손실 뒤 매 프레임 반복(읽지 않음 / 읽음).
+- GL 의 `_bInitialized` · `_bNvxMemoryInfo` · `_bAtiMemInfo` 비트필드(초기화 · 종료에서만 쓰여 두었다), 되읽기 링을 쥔 다른 스레드의 티켓은 못 센다.
+- 창 핸들: Win32 호출처가 `getNativeHandle` 대신 `tryGetWin32Handle` 로 모두 옮겨졌다. Windows 에서 `WM_MOUSELEAVE` 이벤트(`NativeWindowEvent::tryGetWin32Window`)가 실제로 오는지, 에디터 보조 뷰포트(창 밖으로 뺀 패널)의 GL · Vulkan Win32 경로는 어느 시나리오도 안 지난다.
+- 아키텍처 이음매 5a(링크 GHASH A/B)와 `Core_objects` 의 `ReflectionParser.exe` 재링크 문제(0 단계 판정, 위 절)는 이 묶음이 끝난 조용한 때 통합 혼자.
+
+**정리할 것**
+- 워크트리 `D:/w` 에 병합 전 브랜치의 워크트리가 남아 있다(위 표). 병합이 끝난 것은 `py -3 -m Scripts worktree-remove` 로 지운다. 병합 안 된 것은 지우지 않는다. `D:/w` 바로 아래 `*.txt` · `*.log` · `*.py` 파일(`e.py`, `edit.py`, `eq.py`, `fix.py`, `kh_*.log`, `sv_*.log` 등)은 어느 작업자의 산출물인지 확인한 뒤 지운다(검증 출력을 워크트리 밖 공유 위치에 쌓지 않는 규칙).
+- 남은 프로세스: 이 세션에서 실수로 뜬 `py -3 -`(표준입력 대기) 프로세스를 세 개 종료했다. 새 세션 시작 때 `Get-Process python, py` 로 같은 모양이 남았는지 한 번 본다.
+
+## 000000000000. 2026-10-25 통합 M — `cifixl4`(CI 실패 수정 + 창 핸들 try 접근)와 `rhiu9`(프레임 경로 전송 대기 제거)가 main 에 들어감(push 안 함) (위 절 다음에 읽는다)
 
 **상태**: `D:/w/integ-m` 에서 `wt/cifixl4`(사슬 cifixl → cifixl4) → `wt/rhiu9` 순으로 병합해 main 에 fast-forward 로 넣었다. **push 하지 않았다**(사용자 확인 대기). 충돌은 `Roadmap.md` 한 줄뿐이었고(양쪽을 합침), 두 브랜치가 커밋 메시지에만 남긴 결정은 [5-3](../decisions/5-3_CorePlatform.md)(창 핸들은 `try...` 로만) · [5-5](../decisions/5-5_GraphicsRHI.md)(프레임 경로 전송은 티켓 + `pollTransfer`)에 옮겼다. 컴파일 오류 0(`-k 0`) — 지시서가 꼽은 위험(`RHISwapChainDesc` 리플렉션 구조체 안의 `[[nodiscard]]` 멤버, `WGL_WindowData`, `const RHITransferSubmit`, `string_view` 인자)은 모두 통과했다. 통합이 고친 것: `uidemo.scenario.xml` 의 임시 문턱을 측정값(`all:0.1710`)으로 옮겨 종료 14(UNCONFIRMED)가 0 이 됐다.
 
