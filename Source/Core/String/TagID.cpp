@@ -20,8 +20,9 @@ namespace sw
              */
             static inline ScopeOwned<unordered_map<uint64, const utf8*>> s_mapIDToStr;
 
-            static void registerTag( uint64 tagID, const utf8* pStr )
+            static void registerTag( uint64 tagID, const hashed_string& name )
             {
+                const utf8* const pStr = name.c_str();
                 if ( tagID == 0 || pStr == nullptr )
                     return;
                 unordered_map<uint64, const utf8*>* const pMap = s_mapIDToStr.getOrCreate();
@@ -29,9 +30,9 @@ namespace sw
                     return;
                 std::unique_lock<std::shared_mutex> lock{ s_mutex };
                 const auto [iter, bInserted] = pMap->try_emplace( tagID, pStr );
-                // 이름 풀이 같은 글자(대소문자 무시)를 한 포인터로 모으므로, 같은 id 에 다른 포인터가 오면 서로 다른 두 이름의 64 비트 해시가 부딪힌 것이다.
-                // 덮어쓰면 한 태그가 다른 태그의 이름으로 조용히 바뀐다 — 처음 등록을 지키고 개발 빌드에서 멈춘다.
-                SW_ASSERT( bInserted || iter->second == pStr );
+                // 이름 풀은 철자마다 따로 글자를 두므로(`Player` · `player` 는 같은 이름, 다른 포인터) 포인터가 아니라 이름 같음(대소문자 무시)으로 본다.
+                // 같은 id 에 다른 이름이 오면 64 비트 해시가 부딪힌 것이다 — 덮어쓰면 한 태그가 다른 태그의 이름으로 조용히 바뀌므로 처음 등록을 지키고 개발 빌드에서 멈춘다.
+                SW_ASSERT( bInserted || hashed_string{ string_view{ iter->second } } == name );
                 (void)iter;
                 (void)bInserted;
             }
@@ -60,12 +61,12 @@ namespace sw
 
     TagID TagID::request( string_view str )
     {
-        // intern 이 대소문자를 무시하므로 `Player` 와 `player` 는 같은 문자열을 돌려받는다. ID 도 같은 규칙이라(`computeID`)
+        // intern 의 같음이 대소문자를 무시하므로 `Player` 와 `player` 는 같은 이름이다(글자는 철자마다 따로). ID 도 같은 규칙이라(`computeID`)
         // 둘은 같은 태그가 된다.
         const hashed_string hashedName{ str };
         const uint64        tagID = computeID( str.data(), str.size() );
 
-        TagRegistryInternal::registerTag( tagID, hashedName.c_str() );
+        TagRegistryInternal::registerTag( tagID, hashedName );
         return TagID{ tagID, hashedName.c_str() };
     }
 } // namespace sw

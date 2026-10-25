@@ -1277,8 +1277,11 @@ SW_TEST_CASE( TaskManagerTest, ParentCannotRunBeforeItsOwnDescendant )
  */
 SW_TEST_CASE( TaskManagerTest, DependencyAcrossManagersIsRejected )
 {
-    sw::TaskManager firstManager;
-    sw::TaskManager secondManager;
+    // 매니저는 전역 큐를 안에 품어 하나가 수백 KB 다 — 둘을 스택에 두면 Debug 메인 스레드 스택(1 MB)이 넘친다.
+    const auto       pFirstManager  = sw::make_unique<sw::TaskManager>();
+    const auto       pSecondManager = sw::make_unique<sw::TaskManager>();
+    sw::TaskManager& firstManager   = *pFirstManager;
+    sw::TaskManager& secondManager  = *pSecondManager;
     SW_ASSERT_TRUE( firstManager.initialize( 1 ) );
     SW_ASSERT_TRUE( secondManager.initialize( 1 ) );
 
