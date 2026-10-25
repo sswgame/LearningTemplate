@@ -28,7 +28,7 @@ namespace sw
         {
             inline static mutex _s_pathCacheMutex{};
             /** @brief 푼 경로 캐시입니다. 엔진 수명 범위가 소유해 엔진 종료 때 저장소째 사라집니다(처음 넣을 때 만들어진다). */
-            inline static ScopeOwned<unordered_map<uint64, string>> _s_mapResolvedPath{};
+            inline static ScopeOwned<unordered_map<string, string>> _s_mapResolvedPath{};
 
             /** @brief `mountDiskDomain` 으로 붙인 도메인 하나입니다. */
             struct MountedDiskDomain
@@ -95,27 +95,34 @@ namespace sw
                                "ResourcePaths::%# writes lock-free globals and must run in a serial phase (not on a worker or inside a parallel body)", pAPIName );
             }
 
+            /** @brief `readBasePriority` 의 결과입니다. 오류 문장은 부르는 쪽이 정적 초기화 가드 밖에서 로그합니다. */
+            struct BasePriority
+            {
+                vector<string> _listPriority; ///< 읽은 우선순위 목록. 읽지 못하면 비어 있다.
+                string         _error;        ///< 읽지 못한 이유. 비어 있으면 성공
+            };
+
             /**
-             * @brief 구성 때 베이크한 `EngineConfig.json` 사본의 `_listResourcePriority` 입니다. 읽지 못하면 오류를 남기고 빈 목록입니다.
+             * @brief 구성 때 베이크한 `EngineConfig.json` 사본의 `_listResourcePriority` 입니다. 읽지 못하면 오류 문장을 담고 빈 목록입니다.
              * @details 빈 목록은 "읽지 못함" 의 표식이다 — `initialize()` 가 보고 실패로 멈춘다(빈 검색 목록으로 계속하지 않는다).
              */
-            static vector<string> readBasePriority()
+            static BasePriority readBasePriority()
             {
-                vector<string> listPriority;
-                JSONDocument   document;
+                BasePriority result;
+                JSONDocument document;
                 if ( document.parse( shipping_host::kEngineConfigJSON, "EngineConfig.json (configure-time copy)" ) == false )
                 {
-                    SW_LOG_ERROR( "EngineConfig.json (configure-time copy) could not be parsed: %#", document.getLastError() );
-                    return listPriority;
+                    result._error = string( "EngineConfig.json (configure-time copy) could not be parsed: " ) + document.getLastError();
+                    return result;
                 }
                 const JSONValue priority = document.getRoot().get( "_listResourcePriority", false );
                 for ( size_t index = 0; index < priority.size(); ++index )
                 {
-                    listPriority.push_back( priority.at( index ).asString() );
+                    result._listPriority.push_back( priority.at( index ).asString() );
                 }
-                if ( listPriority.empty() )
-                    SW_LOG_ERROR( "EngineConfig.json has no _listResourcePriority - resource paths cannot be initialized" );
-                return listPriority;
+                if ( result._listPriority.empty() )
+                    result._error = "EngineConfig.json has no _listResourcePriority - resource paths cannot be initialized";
+                return result;
             }
 
             /**
@@ -316,7 +323,11 @@ namespace sw
             if ( _s_listSearchPriority.empty() )
                 _s_listSearchPriority = getDefaultSearchPriority();
             if ( _s_listSearchPriority.empty() )
-                return; // 검색 목록 없이는 어떤 리소스도 찾지 못한다 — 플래그를 켜지 않아 initialize() 가 false 를 반환한다(오류는 readBasePriority 가 남겼다).
+            {
+                // 읽지 못한 이유를 여기서 남긴다(읽는 함수는 정적 초기화 가드 안이라 로그하지 않는다). 가드 안에서 만든 값이므로 다시 읽어도 같은 문장이다.
+                SW_LOG_ERROR( "%#", ResourcePathsInternal::readBasePriority()._error );
+                return; // 검색 목록 없이는 어떤 리소스도 찾지 못한다 — 플래그를 켜지 않아 initialize() 가 false 를 반환한다.
+            }
 
             setSearchPriority( _s_listSearchPriority );
 
@@ -346,16 +357,20 @@ namespace sw
         if ( hasParentDirectoryComponent( filePath ) )
             return {};
 
-        uint64 cacheKeyHash = HashUtil::computeStringHash64( filePath );
+        // 원문 키다 — 해시만 비교하면 충돌한 다른 파일의 경로를 조용히 돌려준다. `\n` 은 파일 id 에 들어갈 수 없어 둘을 가르는 구분자다.
+        string cacheKey( filePath );
         if ( folderName.empty() == false )
-            cacheKeyHash = HashUtil::computeStringHash64( folderName, true, cacheKeyHash );
+        {
+            cacheKey += '\n';
+            cacheKey += folderName;
+        }
 
         {
             std::scoped_lock<mutex>                    lock( ResourcePathsInternal::_s_pathCacheMutex );
-            const unordered_map<uint64, string>* const pMapResolved = ResourcePathsInternal::_s_mapResolvedPath.find();
+            const unordered_map<string, string>* const pMapResolved = ResourcePathsInternal::_s_mapResolvedPath.find();
             if ( pMapResolved != nullptr )
             {
-                const auto it = pMapResolved->find( cacheKeyHash );
+                const auto it = pMapResolved->find( cacheKey );
                 if ( it != pMapResolved->end() )
                     return LooseFilePath( it->second );
             }
@@ -397,10 +412,10 @@ namespace sw
             // 캐시는 에셋 색인의 몫이다 — 부르는 쪽(스플래시 · 모듈 · 워커)의 태그가 아니라 Asset 으로 센다(재해시가 어디서 일어나든).
             SW_MEMORY_SCOPE( Asset );
             std::scoped_lock<mutex>              lock( ResourcePathsInternal::_s_pathCacheMutex );
-            unordered_map<uint64, string>* const pMapResolved = ResourcePathsInternal::_s_mapResolvedPath.getOrCreate();
+            unordered_map<string, string>* const pMapResolved = ResourcePathsInternal::_s_mapResolvedPath.getOrCreate();
             // nullptr 은 엔진 수명 범위가 닫힌 뒤다(Debug 는 `getOrCreate` 가 단언한다) — 캐시할 곳이 없을 뿐 찾은 경로는 그대로 돌려준다.
             if ( pMapResolved != nullptr )
-                pMapResolved->insert_or_assign( cacheKeyHash, found );
+                pMapResolved->insert_or_assign( std::move( cacheKey ), found );
         }
 
         return LooseFilePath( std::move( found ) );
@@ -651,17 +666,18 @@ namespace sw
     {
         // 값의 출처는 `Config/Engine/EngineConfig.json` 하나다. 기동의 이 시점에는 설정을 아직 읽지 않았으므로 구성 때 베이크한 같은 파일의 사본에서
         // 이 칸만 읽는다(리플렉션이 서기 전이라 JSON 문서로). 실행 중 값은 설정을 읽은 뒤 `AssetManager::mountContent` 가 다시 넣는다.
-        static const vector<string> s_listDefaultPriority = ResourcePathsInternal::readBasePriority();
-        return s_listDefaultPriority;
+        // 오류 로그는 함수 정적 초기화 가드 안에서 남기지 않는다 — 로거가 가드를 쥔 채 되돌아 들어오면 교착이다. 오류 문장은 `initialize()` 가 가드 밖에서 남긴다.
+        static const ResourcePathsInternal::BasePriority s_basePriority = ResourcePathsInternal::readBasePriority();
+        return s_basePriority._listPriority;
     }
 
     void ResourcePaths::clearPathCache()
     {
         std::scoped_lock<mutex> lock( ResourcePathsInternal::_s_pathCacheMutex );
         // `clear()` 는 버킷 · 밀집 배열을 남긴다 — 검색 목록이 바뀐 뒤의 캐시가 자란 만큼 남지 않게 저장소까지 놓는다. 종료 때의 반납은 엔진 수명 범위가 한다.
-        unordered_map<uint64, string>* const pMapResolved = ResourcePathsInternal::_s_mapResolvedPath.find();
+        unordered_map<string, string>* const pMapResolved = ResourcePathsInternal::_s_mapResolvedPath.find();
         if ( pMapResolved != nullptr )
-            *pMapResolved = unordered_map<uint64, string>{};
+            *pMapResolved = unordered_map<string, string>{};
     }
 
     string ResourcePaths::makeSaveFolderPath( string_view absoluteFolder )

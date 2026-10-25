@@ -28,7 +28,12 @@ namespace sw
                 if ( pMap == nullptr )
                     return;
                 std::unique_lock<std::shared_mutex> lock{ s_mutex };
-                ( *pMap )[tagID] = pStr;
+                const auto [iter, bInserted] = pMap->try_emplace( tagID, pStr );
+                // 이름 풀이 같은 글자(대소문자 무시)를 한 포인터로 모으므로, 같은 id 에 다른 포인터가 오면 서로 다른 두 이름의 64 비트 해시가 부딪힌 것이다.
+                // 덮어쓰면 한 태그가 다른 태그의 이름으로 조용히 바뀐다 — 처음 등록을 지키고 개발 빌드에서 멈춘다.
+                SW_ASSERT( bInserted || iter->second == pStr );
+                (void)iter;
+                (void)bInserted;
             }
 
             static const utf8* findString( uint64 tagID )

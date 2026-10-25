@@ -815,6 +815,7 @@ namespace sw
             return true;
         }
 
+        // 엔진 전체 대기가 맞다 — 태스크가 어느 모듈의 코드를 부르는지 기록하지 않아 낸 쪽으로 가를 수 없다(`ModuleHost::drainRenderWorkers` 의 같은 주석).
         if ( engine::areEngineServicesBound() && engine::getSubsystem<TaskManager>().waitAll( kDrainTimeoutMs ) == false )
         {
             markGraphBroken( "task drain timeout before unload" );

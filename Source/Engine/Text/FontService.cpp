@@ -2,7 +2,6 @@
 
 #include "Engine/Text/FontService.h"
 
-#include "Core/Common/HashUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
@@ -26,13 +25,6 @@ namespace sw
     {
         struct FontServiceInternal
         {
-            /** @brief 경고 키를 나누는 시드입니다. 패밀리 경고와 코드 포인트 경고가 같은 수로 겹치지 않게 합니다. */
-            static constexpr uint64 kFamilyWarningSeed    = 1;
-            static constexpr uint64 kCodepointWarningSeed = 2;
-
-            /** @brief 이름 해시(대소문자 무시)입니다. */
-            static uint64 hashName( string_view name, uint64 seed = 0 ) { return HashUtil::computeStringHash64( name.data(), name.size(), true, seed ); }
-
             /**
              * @brief 캐시 맵의 키를 원문으로 짓는 구분자입니다. 이름 · 경로에 나올 수 없는 제어 문자입니다.
              * @details 맵 키를 64 비트 해시 하나로 두면 두 키가 부딪힐 때 다른 패밀리 · 파일의 면을 조용히 돌려준다. 원문 문자열을 키로 두면 부딪혀도 값 비교로 갈린다.
@@ -65,6 +57,24 @@ namespace sw
                 string key( lowerPath );
                 key += kKeySeparator;
                 key += to_string( faceIndex );
+                return key;
+            }
+
+            /** @brief 한 번만 남기는 경고의 키(패밀리 이름, 대소문자 무시)입니다. 원문이라 부딪혀 다른 경고를 삼키지 않는다. */
+            static string makeFamilyWarningKey( string_view family )
+            {
+                string key = "family";
+                key += kKeySeparator;
+                key += StringUtil::toLower( string( family ).c_str() );
+                return key;
+            }
+
+            /** @brief 한 번만 남기는 경고의 키(글리프 없는 코드 포인트)입니다. */
+            static string makeCodepointWarningKey( uint32 codepoint )
+            {
+                string key = "codepoint";
+                key += kKeySeparator;
+                key += to_string( codepoint );
                 return key;
             }
 
@@ -258,7 +268,7 @@ namespace sw
                 return chain._arrFace[index];
             }
         }
-        if ( markWarnedOnce( HashUtil::combine( FontServiceInternal::kCodepointWarningSeed, codepoint ) ) )
+        if ( markWarnedOnce( FontServiceInternal::makeCodepointWarningKey( codepoint ) ) )
             SW_LOG_WARNING( "[Text] No font in the fallback chain has a glyph for codepoint %# - it draws as a box (install a system font that covers it)", codepoint );
         return chain._arrFace[0];
     }
@@ -339,7 +349,7 @@ namespace sw
             opened = OpenedFamilyFace{};
             // 카탈로그의 시스템 패밀리는 설치가 기계마다 다르다. 없으면 대체 연쇄의 다음 패밀리를 쓰는 것이 정상이라 Info 로 남긴다.
             // 카탈로그에 없거나 저장소 폰트를 열지 못한 것은 데이터 잘못이라 Warning 으로 남긴다.
-            if ( markWarnedOnce( FontServiceInternal::hashName( family, FontServiceInternal::kFamilyWarningSeed ) ) )
+            if ( markWarnedOnce( FontServiceInternal::makeFamilyWarningKey( family ) ) )
             {
                 if ( pSystemFamily != nullptr )
                     SW_LOG_INFO( "[Text] System font family '%#' is not installed on this machine - the next family in the fallback chain is used", string( family ).c_str() );
@@ -387,12 +397,9 @@ namespace sw
         return face;
     }
 
-    bool FontService::markWarnedOnce( uint64 key )
+    bool FontService::markWarnedOnce( const string& key )
     {
-        if ( _uniqueWarned.find( key ) != _uniqueWarned.end() )
-            return false;
-        _uniqueWarned.insert( key );
-        return true;
+        return _uniqueWarned.insert( key ).second;
     }
 
 } // namespace sw

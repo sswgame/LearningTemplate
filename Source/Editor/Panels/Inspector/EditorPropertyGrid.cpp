@@ -954,7 +954,8 @@ namespace sw::editor
                 ImGui::TextColored( EditorColorUtil::toImVec4( EditorPropertyGridInternal::kCallInEditorText ), "[Editor]" );
             }
             EditorWidgets::drawTooltip( method._metadata->_tooltip.c_str() );
-            const uint64                    slotKey  = static_cast<uint64>( pTypeInfo->_fullyQualifiedName.getHash() ) * 31u + static_cast<uint64>( method._hashName.getHash() );
+            // 키는 타입 · 메서드 이름 원문이다(해시 조합은 부딪히면 다른 메서드의 인자 슬롯을 쓴다).
+            const string                    slotKey  = string( pTypeInfo->_fullyQualifiedName.c_str() ) + '\x1F' + method._hashName.c_str();
             vector<InspectorMethodArgSlot>& listSlot = _mapMethodArgSlot[slotKey];
             const bool                      bArgsOk  = InspectorBuiltinValueUtil::prepareMethodArgs( method, listSlot );
             for ( uint32 paramIndex = 0; paramIndex < static_cast<uint32>( listSlot.size() ); ++paramIndex )

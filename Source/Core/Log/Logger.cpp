@@ -2,7 +2,6 @@
 
 #include "Core/Log/Logger.h"
 
-#include "Core/Common/HashUtil.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
@@ -19,12 +18,24 @@ namespace sw
         atomic<ILogSink*> s_globalSink{ nullptr };
 
         /**
-         * @brief 호출자 표의 키 — 경로의 **마지막 두 조각**(상위 폴더/파일 이름)의 해시입니다. 구분자는 슬래시와 역슬래시를 같게 봅니다.
+         * @brief 호출자 표의 키 — 경로의 **마지막 두 조각**(상위 폴더/파일 이름) 원문입니다. 구분자는 슬래시와 역슬래시를 같게 봅니다.
          * @details 파일 이름만 쓰면 다른 폴더의 같은 이름 파일(기반 폴더의 `X.cpp` 와 어느 키트의 `X.cpp`)이
          *          같은 키라, 나중에 등록된 이름이 두 파일의 로그에 모두 붙는다. 전체 경로는 쓰지 않는다 — 같은 헤더라도 TU 마다 `__FILE__` 의
-         *          앞부분(절대 · 상대 · 구분자)이 다를 수 있다.
+         *          앞부분(절대 · 상대 · 구분자)이 다를 수 있다. 해시가 아니라 원문을 비교한다 — 해시가 부딪혀도 다른 파일의 Caller 이름을 붙이지 않는다.
+         *          버퍼보다 길면 앞을 버리고 꼬리(파일 이름 쪽)를 남긴다.
          */
-        uint64 computeCallerKey( string_view filePath )
+        struct CallerKey
+        {
+            utf8   _arrText[constant::kMaxBuffer128]{ 0 };
+            size_t _length{ 0 };
+
+            bool operator==( const CallerKey& other ) const
+            {
+                return _length == other._length && Memory::compare( _arrText, other._arrText, _length ) == 0;
+            }
+        };
+
+        CallerKey computeCallerKey( string_view filePath )
         {
             size_t cut            = filePath.size();
             int32  separatorCount = 0;
@@ -35,21 +46,22 @@ namespace sw
                     break;
                 --cut;
             }
-            utf8         arrSuffix[constant::kMaxBuffer256];
-            const size_t length = MathUtil::min( filePath.size() - cut, sizeof( arrSuffix ) );
-            for ( size_t index = 0; index < length; ++index )
+            CallerKey key;
+            key._length = MathUtil::min( filePath.size() - cut, sizeof( key._arrText ) );
+            cut         = filePath.size() - key._length;
+            for ( size_t index = 0; index < key._length; ++index )
             {
                 const utf8 character = filePath[cut + index];
-                arrSuffix[index]     = character == '\\' ? '/' : character;
+                key._arrText[index]  = character == '\\' ? '/' : character;
             }
-            return HashUtil::computeStringHash64( string_view{ arrSuffix, length } );
+            return key;
         }
 
         /** @brief 경로 키(`computeCallerKey`)별 로그 Caller 이름 항목입니다(힙 할당 없음). */
         struct CallerEntry
         {
-            uint64 _fileHash{ 0 };
-            utf8   _arrCallerName[constant::kMaxBuffer64]{ 0 };
+            CallerKey _key{};
+            utf8      _arrCallerName[constant::kMaxBuffer64]{ 0 };
         };
 
         /**
@@ -130,12 +142,12 @@ namespace sw
 
     void Logger::registerCaller( string_view filePath, string_view callerName ) noexcept
     {
-        const uint64            fileHash = computeCallerKey( filePath );
+        const CallerKey         fileKey = computeCallerKey( filePath );
         std::scoped_lock<mutex> lock{ s_callerMutex };
 
         for ( size_t index = 0; index < s_callerEntryCount; ++index )
         {
-            if ( s_arrCallerEntry[index]._fileHash == fileHash )
+            if ( s_arrCallerEntry[index]._key == fileKey )
             {
                 const size_t copyLen = MathUtil::min( callerName.size(), sizeof( s_arrCallerEntry[index]._arrCallerName ) - 1 );
                 Memory::copy( s_arrCallerEntry[index]._arrCallerName, callerName.data(), copyLen );
@@ -146,8 +158,8 @@ namespace sw
 
         if ( s_callerEntryCount < kMaxCallerEntries )
         {
-            s_arrCallerEntry[s_callerEntryCount]._fileHash = fileHash;
-            const size_t copyLen                           = MathUtil::min( callerName.size(), sizeof( s_arrCallerEntry[s_callerEntryCount]._arrCallerName ) - 1 );
+            s_arrCallerEntry[s_callerEntryCount]._key = fileKey;
+            const size_t copyLen                      = MathUtil::min( callerName.size(), sizeof( s_arrCallerEntry[s_callerEntryCount]._arrCallerName ) - 1 );
             Memory::copy( s_arrCallerEntry[s_callerEntryCount]._arrCallerName, callerName.data(), copyLen );
             s_arrCallerEntry[s_callerEntryCount]._arrCallerName[copyLen] = '\0';
             ++s_callerEntryCount;
@@ -160,11 +172,11 @@ namespace sw
     {
         if ( StringUtil::isNullOrEmpty( pFile ) )
             return nullptr;
-        const uint64            fileHash = computeCallerKey( string_view{ pFile } );
+        const CallerKey         fileKey = computeCallerKey( string_view{ pFile } );
         std::scoped_lock<mutex> lock{ s_callerMutex };
         for ( size_t index = 0; index < s_callerEntryCount; ++index )
         {
-            if ( s_arrCallerEntry[index]._fileHash == fileHash )
+            if ( s_arrCallerEntry[index]._key == fileKey )
                 return s_arrCallerEntry[index]._arrCallerName;
         }
         return nullptr;
