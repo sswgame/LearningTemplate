@@ -10,6 +10,7 @@ import io
 import sys
 import tempfile
 import unittest
+import unittest.mock
 from pathlib import Path
 
 kScriptsRoot = Path(__file__).resolve().parents[2] / "Scripts"
@@ -18,6 +19,7 @@ sys.path.insert(0, str(kScriptsRoot))
 from lint.gate import CheckDocPaths  # noqa: E402
 from lint.gate import CheckStatusBoard  # noqa: E402
 from dev import ListPlans  # noqa: E402
+from lint.LongFunctionTable import checkLongFunctionTable  # noqa: E402
 from dev import RunStatusBoard  # noqa: E402
 from common.MarkdownAnchor import collectAnchors  # noqa: E402
 from common.StatusBoard import StatusBoardError, parseRoadmap  # noqa: E402
@@ -140,9 +142,25 @@ def runBoardInternal(root: str, listArg: list[str]) -> tuple[int, str, str]:
 
 def runPlansInternal(root: str, listArg: list[str]) -> tuple[int, str, str]:
     out, err = io.StringIO(), io.StringIO()
-    with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+    # 긴 함수 표 점검은 저장소의 C++ 소스를 훑는다 — 임시 계획 폴더에는 소스가 없으므로 이 도우미에서는 끄고 `LongFunctionTableTest` 가 따로 본다.
+    with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err), unittest.mock.patch.object(ListPlans, "checkLongFunctionTable", return_value=[]):
         code = ListPlans.main(["--root", root, *listArg])
     return code, out.getvalue(), err.getvalue()
+
+
+class LongFunctionTableTest(unittest.TestCase):
+    def testMissingDocIsReported(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            self.assertEqual(1, len(checkLongFunctionTable(Path(temp))))
+
+    def testRowWithoutMatchingFunctionIsStale(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            doc = Path(temp) / "docs" / "plans" / "LongFunctions.md"
+            doc.parent.mkdir(parents=True)
+            doc.write_text("# 긴 함수\n\n## 3. 목록\n\n| `Source/Gone.cpp` | `Gone::run` | 유지 |\n", encoding="utf-8")
+            listViolation = checkLongFunctionTable(Path(temp))
+            self.assertEqual(1, len(listViolation))
+            self.assertIn("Gone::run", listViolation[0])
 
 
 class CandidateTest(unittest.TestCase):
