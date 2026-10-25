@@ -4,6 +4,7 @@
 
 #include "Core/Common/HashUtil.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Config/GameConfig.h"
@@ -240,6 +241,7 @@ namespace sw
             {
                 vector<SceneDocument::SceneObjectNode> listBase;
                 vector<SceneDocument::StreamingCell>   listCell;
+                unordered_map<int64, size_t>           mapCellIndex;
                 for ( size_t entityIndex = 0; entityIndex < inoutDoc._listSceneObjectNode.size(); ++entityIndex )
                 {
                     SceneDocument::SceneObjectNode& entity = inoutDoc._listSceneObjectNode[entityIndex];
@@ -249,14 +251,21 @@ namespace sw
                         listBase.push_back( std::move( entity ) );
                         continue;
                     }
-                    auto cellIt = std::find_if( listCell.begin(), listCell.end(), [&record]( const SceneDocument::StreamingCell& cell )
-                    { return cell._cell == record._cell; } );
-                    if ( cellIt == listCell.end() )
+                    // 셀 키 → 목록 인덱스 — 엔티티마다 셀 목록을 훑지 않는다(엔티티 수 × 셀 수).
+                    const int64 cellKey   = ( static_cast<int64>( record._cell._z ) << 32 ) | static_cast<int64>( static_cast<uint32>( record._cell._x ) );
+                    const auto  found     = mapCellIndex.find( cellKey );
+                    size_t      cellIndex = 0;
+                    if ( found == mapCellIndex.end() )
                     {
+                        cellIndex = listCell.size();
+                        mapCellIndex.emplace( cellKey, cellIndex );
                         listCell.push_back( SceneDocument::StreamingCell{ record._cell, {} } );
-                        cellIt = listCell.end() - 1;
                     }
-                    cellIt->_listSceneObjectNode.push_back( std::move( entity ) );
+                    else
+                    {
+                        cellIndex = found->second;
+                    }
+                    listCell[cellIndex]._listSceneObjectNode.push_back( std::move( entity ) );
                 }
                 std::sort( listCell.begin(), listCell.end(), []( const SceneDocument::StreamingCell& lhs, const SceneDocument::StreamingCell& rhs )
                 { return lhs._cell._z != rhs._cell._z ? lhs._cell._z < rhs._cell._z : lhs._cell._x < rhs._cell._x; } );

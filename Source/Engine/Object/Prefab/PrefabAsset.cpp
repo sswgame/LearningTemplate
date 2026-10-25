@@ -4,6 +4,7 @@
 
 #include "Core/Common/FourCcUtil.h"
 #include "Core/Container/VectorUtil.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/Diagnostics/CacheStats.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
@@ -1724,9 +1725,9 @@ namespace sw
         string       out  = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( cookedDir ) );
         out += '/';
 
-        vector<string>    listWrittenKey;
-        CookTally         tally;
-        const CookJobDesc desc = makeCookJobDesc();
+        unordered_set<string> uniqueSetWrittenKey; // 중복 판정만 한다 — 출력 순서는 정렬된 `listFile` 가 정한다
+        CookTally             tally;
+        const CookJobDesc     desc = makeCookJobDesc();
         for ( const string& filePath : listFile )
         {
             const string normalized = FileUtil::normalizeSeparators( filePath );
@@ -1739,7 +1740,7 @@ namespace sw
             const string outputID   = AssetCookPath::toCookedPath( normalized.substr( root.size() + 1 ) );
             const string outputPath = out + outputID;
             const string outputKey  = StringUtil::toLower( outputPath.c_str() );
-            if ( VectorUtil::contains( listWrittenKey, outputKey ) )
+            if ( uniqueSetWrittenKey.contains( outputKey ) )
             {
                 SW_LOG_WARNING( "Prefab cook: '%#' would overwrite the cooked file another source already wrote ('%#') - skipped", normalized, outputPath );
                 ++outFailedCount;
@@ -1766,7 +1767,7 @@ namespace sw
                 ++outFailedCount;
                 continue;
             }
-            listWrittenKey.push_back( outputKey );
+            uniqueSetWrittenKey.insert( outputKey );
             tally.add( outcome );
         }
         SW_LOG_INFO( "Prefab cook: %# reused from the DDC, %# cooked", tally._reusedCount, tally._cookedCount );

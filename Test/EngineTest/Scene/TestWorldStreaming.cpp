@@ -143,6 +143,55 @@ SW_TEST_CASE( WorldStreamingTest, CookerSplitsEntitiesIntoCells )
 }
 
 /**
+ * @brief [WorldStreamingTest] 셀이 엇갈려 섞인 엔티티도 셀마다 한 번만 만들고, 셀은 z · x 오름차순, 셀 안은 문서 순서다
+ * @details 셀 키→인덱스 맵으로 바꾼 묶기가 옛 선형 탐색과 같은 결과인지 고정한다(음수 좌표 포함).
+ */
+SW_TEST_CASE( WorldStreamingTest, CookerGroupsInterleavedEntitiesPerCellInDocumentOrder )
+{
+    using Internal = sw::WorldStreamingTestInternal;
+    sw::SceneManager manager;
+    SW_ASSERT_TRUE( manager.initialize() );
+
+    sw::SceneDocument doc{};
+    doc._name          = "InterleavedTown";
+    doc._worldSettings = Internal::makeStreamingSettings();
+    doc._listSceneObjectNode.push_back( Internal::makeEntity( 1, "A", "1,0,1" ) );   // (0,0)
+    doc._listSceneObjectNode.push_back( Internal::makeEntity( 2, "B", "25,0,-3" ) ); // (2,-1)
+    doc._listSceneObjectNode.push_back( Internal::makeEntity( 3, "C", "2,0,2" ) );   // (0,0)
+    doc._listSceneObjectNode.push_back( Internal::makeEntity( 4, "D", "-5,0,25" ) ); // (-1,2)
+    doc._listSceneObjectNode.push_back( Internal::makeEntity( 5, "E", "26,0,-4" ) ); // (2,-1)
+    doc._listSceneObjectNode.push_back( Internal::makeEntity( 6, "F", "-5,0,1" ) );  // (-1,0)
+    doc._listSceneObjectNode.push_back( Internal::makeEntity( 7, "G", "3,0,3" ) );   // (0,0)
+
+    SW_ASSERT_TRUE( sw::SceneCooker::splitStreamingCells( manager.getEngineServices(), doc, "InterleavedTown" ) );
+    SW_EXPECT_TRUE( doc._listSceneObjectNode.empty() );
+    SW_ASSERT_EQUAL( size_t( 4 ), doc._listStreamingCell.size() );
+
+    struct ExpectedCell
+    {
+        sw::WorldCellCoord _cell;
+        sw::vector<uint64> _listFileID;
+    };
+    const ExpectedCell arrExpected[] = {
+        {sw::WorldCellCoord{ 2, -1 },    { 2, 5 }},
+        {sw::WorldCellCoord{ -1, 0 },       { 6 }},
+        { sw::WorldCellCoord{ 0, 0 }, { 1, 3, 7 }},
+        {sw::WorldCellCoord{ -1, 2 },       { 4 }},
+    };
+    for ( size_t cellIndex = 0; cellIndex < 4; ++cellIndex )
+    {
+        const sw::SceneDocument::StreamingCell& cell = doc._listStreamingCell[cellIndex];
+        SW_EXPECT_TRUE( cell._cell == arrExpected[cellIndex]._cell );
+        SW_ASSERT_EQUAL( arrExpected[cellIndex]._listFileID.size(), cell._listSceneObjectNode.size() );
+        for ( size_t nodeIndex = 0; nodeIndex < cell._listSceneObjectNode.size(); ++nodeIndex )
+        {
+            SW_EXPECT_EQUAL( arrExpected[cellIndex]._listFileID[nodeIndex], cell._listSceneObjectNode[nodeIndex]._fileID );
+        }
+    }
+    manager.shutdown();
+}
+
+/**
  * @brief [WorldStreamingTest] 다른 셀의 엔티티를 가리키면 쿠킹이 멈춘다 — 대상을 늘 올라 있게 하면 통과한다
  */
 SW_TEST_CASE( WorldStreamingTest, CrossCellReferenceFailsTheCook )

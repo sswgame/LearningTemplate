@@ -12,6 +12,7 @@
 
 #include "Engine/Animation/Graph/AnimationGraphAsset.h"
 #include "Engine/Animation/Graph/AnimationGraphPlayer.h"
+#include "Engine/Animation/Skeletal/CurveAccumulator.h"
 #include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Animation/Skeletal/PoseInertializer.h"
 #include "Engine/Object/Component/Component.h"
@@ -418,8 +419,7 @@ namespace sw
         vector<AnimationFiredNotify>                                  _listFiredNotify;
         vector<const IAnimationPlayable*>                             _listActivePlayable; ///< 받는 쪽에 넘길 재생 중인 항목이다(재사용)
         vector<IRootMotionModifier*>                                  _listRootMotionModifier;
-        vector<hashed_string>                                         _listCurveName;  ///< 이번 프레임 커브 이름
-        vector<float32>                                               _listCurveValue; ///< `_listCurveName` 과 인덱스가 같은 값
+        CurveAccumulator                                              _curves; ///< 이번 프레임 커브(이름 → 값)
         Pose                                                          _scratchPose;
         Pose                                                          _scratchTrackPose;
         Pose                                                          _scratchLayerPose;
