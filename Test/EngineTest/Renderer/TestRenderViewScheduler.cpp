@@ -11,6 +11,7 @@
 #include "Engine/Renderer/Frame/View/RenderViewCollector.h"
 #include "Engine/Renderer/Frame/View/RenderViewScheduler.h"
 #include "Engine/Scene/Scene.h"
+#include "Engine/UserSettings/UserSettingsVariables.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -66,7 +67,7 @@ namespace
             _pMonitor->setLocalPosition( position );
             vector<RenderViewRequest> listView;
             const float4x4            mainViewProj = _pMainCamera->getViewProjectionMatrix( 16.0f / 9.0f );
-            RenderViewCollector::collectExtraViews( *_scene.getObjectManager(), _pMainCamera, mainViewProj, _pMainCamera->getCameraPosition(), 1280, 720, now,
+            RenderViewCollector::collectExtraViews( *_scene.getObjectManager(), _pMainCamera, mainViewProj, _pMainCamera->getCameraPosition(), 1280, 720, 1.0f, now,
                                                     RenderViewBudget{}, scheduler, _pOcclusion, listView );
             return listView.size() == 1 ? listView[0] : RenderViewRequest{};
         }
@@ -330,11 +331,11 @@ SW_TEST_CASE( RenderViewCollectorTest, CameraPostProcessAndCutReachTheViewSettin
     capturePost._saturation = 0.0f;
     stage._pCapture->setPostProcess( capturePost );
 
-    const RenderViewSettings mainSettings = RenderViewCollector::makeMainSettings( stage._pMainCamera );
+    const RenderViewSettings mainSettings = RenderViewCollector::makeMainSettings( stage._pMainCamera, 1.0f );
     SW_EXPECT_NEAR_EQUAL( 1.5f, mainSettings._postProcess._exposureCompensation, 1e-6f );
     SW_EXPECT_NEAR_EQUAL( 2.39f, mainSettings._postProcess._letterboxAspectRatio, 1e-6f );
     SW_EXPECT_TRUE( mainSettings._bCut == SW_TRUE );
-    SW_EXPECT_TRUE( RenderViewCollector::makeMainSettings( stage._pMainCamera )._bCut == SW_FALSE );
+    SW_EXPECT_TRUE( RenderViewCollector::makeMainSettings( stage._pMainCamera, 1.0f )._bCut == SW_FALSE );
 
     RenderViewScheduler     scheduler;
     const RenderViewRequest request = stage.collectAt( float3{ 0.0f, 0.0f, 10.0f }, scheduler, 0.0 );
@@ -355,13 +356,13 @@ SW_TEST_CASE( RenderViewCollectorTest, CameraDepthOfFieldReachesTheViewSettings 
     mainLens._aperture      = 1.4f;
     stage._pMainCamera->setDepthOfField( mainLens );
 
-    const RenderViewSettings mainSettings = RenderViewCollector::makeMainSettings( stage._pMainCamera );
+    const RenderViewSettings mainSettings = RenderViewCollector::makeMainSettings( stage._pMainCamera, 1.0f );
     SW_EXPECT_NEAR_EQUAL( 3.5f, mainSettings._depthOfField._focusDistance, 1e-6f );
     SW_EXPECT_NEAR_EQUAL( 1.4f, mainSettings._depthOfField._aperture, 1e-6f );
     // 착란원의 화면 크기는 시야각에서 나온 투영 배율을 함께 쓴다(원근이면 1 / tan( fovY / 2 ), 직교면 0 — 피사계 심도 없음).
     SW_EXPECT_NEAR_EQUAL( 1.0f / MathUtil::tan( stage._pMainCamera->getFieldOfViewY() * 0.5f ), mainSettings._projectionScaleY, 1e-5f );
     stage._pMainCamera->setOrthographic( true );
-    SW_EXPECT_NEAR_EQUAL( 0.0f, RenderViewCollector::makeMainSettings( stage._pMainCamera )._projectionScaleY, 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, RenderViewCollector::makeMainSettings( stage._pMainCamera, 1.0f )._projectionScaleY, 1e-6f );
     stage._pMainCamera->setOrthographic( false );
 
     RenderViewScheduler     scheduler;
@@ -370,6 +371,44 @@ SW_TEST_CASE( RenderViewCollectorTest, CameraDepthOfFieldReachesTheViewSettings 
     const CameraDepthOfFieldValues defaults;
     SW_EXPECT_NEAR_EQUAL( defaults._focusDistance, request._settings._depthOfField._focusDistance, 1e-6f );
     SW_EXPECT_NEAR_EQUAL( defaults._aperture, request._settings._depthOfField._aperture, 1e-6f );
+}
+
+/**
+ * @brief [RenderViewCollectorTest] 자동 렌더 배율은 화면에 나가는 뷰(주 시점 · 화면 사각형)의 내부 해상도에 곱해지고 렌더 텍스처 뷰에는 곱해지지 않는다
+ * @details 사용자 렌더 스케일(`gv_renderScale`)과 같은 규칙이다. 렌더 텍스처 뷰는 자기 크기가 데이터다.
+ */
+SW_TEST_CASE( RenderViewCollectorTest, AutoRenderScaleFollowsScreenViewsOnly )
+{
+    RenderViewCollectorTestScene stage;
+    SW_ASSERT_TRUE( stage.populate( 0.0f ) );
+    const float32 userScale = static_cast<float32>( gv_renderScale );
+    SW_EXPECT_NEAR_EQUAL( userScale * 0.6f, RenderViewCollector::makeMainSettings( stage._pMainCamera, 0.6f )._resolutionScale, 1e-5f );
+    SW_EXPECT_NEAR_EQUAL( userScale, RenderViewCollector::makeMainSettings( stage._pMainCamera, 1.0f )._resolutionScale, 1e-5f );
+
+    const float4x4 mainViewProj = stage._pMainCamera->getViewProjectionMatrix( 16.0f / 9.0f );
+    const float3   mainPos      = stage._pMainCamera->getCameraPosition();
+    {
+        // 렌더 텍스처 뷰: 배율 1 과 같다.
+        RenderViewScheduler       scheduler;
+        vector<RenderViewRequest> listView;
+        RenderViewCollector::collectExtraViews( *stage._scene.getObjectManager(), stage._pMainCamera, mainViewProj, mainPos, 1280, 720, 0.6f, 0.0, RenderViewBudget{}, scheduler,
+                                                nullptr, listView );
+        SW_ASSERT_EQUAL( 1u, static_cast<uint32>( listView.size() ) );
+        SW_EXPECT_NEAR_EQUAL( 1.0f, listView[0]._settings._resolutionScale, 1e-5f );
+    }
+    {
+        // 화면 사각형 뷰: 주 시점과 같이 곱해진다.
+        CameraRenderOutput output;
+        output._target     = CameraOutputTarget::ScreenRect;
+        output._screenRect = float4{ 0.5f, 0.0f, 0.5f, 0.5f };
+        stage._pCapture->setRenderOutput( output );
+        RenderViewScheduler       scheduler;
+        vector<RenderViewRequest> listView;
+        RenderViewCollector::collectExtraViews( *stage._scene.getObjectManager(), stage._pMainCamera, mainViewProj, mainPos, 1280, 720, 0.6f, 0.0, RenderViewBudget{}, scheduler,
+                                                nullptr, listView );
+        SW_ASSERT_EQUAL( 1u, static_cast<uint32>( listView.size() ) );
+        SW_EXPECT_NEAR_EQUAL( userScale * 0.6f, listView[0]._settings._resolutionScale, 1e-5f );
+    }
 }
 
 /**

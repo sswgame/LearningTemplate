@@ -64,12 +64,12 @@ namespace sw
             }
 
             /**
-             * @brief 화면에 나가는 뷰(주 시점 · 화면 사각형)의 내부 해상도에 사용자 렌더 스케일(`gv_renderScale`, 옵션 메뉴 graphics.renderScale)을 곱합니다.
-             * @details Present 가 출력 크기로 선형 업샘플한다. 렌더 텍스처 뷰는 자기 크기가 데이터라 곱하지 않고, 정수 업스케일 뷰는 배율을 보지 않는다.
+             * @brief 화면에 나가는 뷰(주 시점 · 화면 사각형)의 내부 해상도에 사용자 렌더 스케일(`gv_renderScale`, 옵션 메뉴 graphics.renderScale)과 자동 렌더 배율(@p autoScale, `RenderScaleAdjuster`)을 곱합니다.
+             * @details Present 가 출력 크기로 선형 업샘플한다. 렌더 텍스처 뷰는 자기 크기가 데이터라 둘 다 곱하지 않고(자동 배율도 같은 규칙이다), 정수 업스케일 뷰는 배율을 보지 않는다.
              */
-            static float32 applyUserRenderScale( float32 cameraScale )
+            static float32 applyScreenRenderScale( float32 cameraScale, float32 autoScale )
             {
-                return MathUtil::clamp( cameraScale * static_cast<float32>( gv_renderScale ), 0.1f, 2.0f );
+                return MathUtil::clamp( cameraScale * static_cast<float32>( gv_renderScale ) * autoScale, 0.1f, 2.0f );
             }
 
             /**
@@ -109,12 +109,12 @@ namespace sw
 
 namespace sw
 {
-    RenderViewSettings RenderViewCollector::makeMainSettings( CameraComponent* pMainCamera )
+    RenderViewSettings RenderViewCollector::makeMainSettings( CameraComponent* pMainCamera, float32 autoScale )
     {
         if ( pMainCamera == nullptr )
             return RenderViewSettings{};
         RenderViewSettings settings = RenderViewCollectorInternal::makeSettings( *pMainCamera );
-        settings._resolutionScale   = RenderViewCollectorInternal::applyUserRenderScale( settings._resolutionScale );
+        settings._resolutionScale   = RenderViewCollectorInternal::applyScreenRenderScale( settings._resolutionScale, autoScale );
         return settings;
     }
 
@@ -142,7 +142,7 @@ namespace sw
     }
 
     void RenderViewCollector::collectExtraViews( const GameObjectManager& manager, const CameraComponent* pMainCamera, const float4x4& mainViewProj,
-                                                 const float3& mainPosition, uint32 outputWidth, uint32 outputHeight, float64 now, const RenderViewBudget& budget,
+                                                 const float3& mainPosition, uint32 outputWidth, uint32 outputHeight, float32 autoScale, float64 now, const RenderViewBudget& budget,
                                                  RenderViewScheduler& scheduler, const OcclusionTileSnapshot* pMainOcclusion, vector<RenderViewRequest>& outListView )
     {
         outListView.clear();
@@ -178,7 +178,7 @@ namespace sw
                 if ( outputWidth == 0 || outputHeight == 0 )
                     continue;
                 request._outputKind                = RenderViewOutputKind::ScreenRect;
-                request._settings._resolutionScale = RenderViewCollectorInternal::applyUserRenderScale( request._settings._resolutionScale );
+                request._settings._resolutionScale = RenderViewCollectorInternal::applyScreenRenderScale( request._settings._resolutionScale, autoScale );
                 request._outputWidth               = MathUtil::max( 1u, static_cast<uint32>( static_cast<float32>( outputWidth ) * output._screenRect._z + 0.5f ) );
                 request._outputHeight              = MathUtil::max( 1u, static_cast<uint32>( static_cast<float32>( outputHeight ) * output._screenRect._w + 0.5f ) );
             }

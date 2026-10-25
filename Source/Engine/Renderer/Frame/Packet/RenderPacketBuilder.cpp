@@ -213,8 +213,8 @@ namespace sw
         if ( pCam != nullptr )
         {
             // 주 시점의 출력 설정(사각형 · 배율 · 끌 기능)과 컷 표시. 비율은 사각형의 것이다(분할 화면의 한 칸).
-            packet._mainView                  = RenderViewCollector::makeMainSettings( pCam );
-            packet._mainView._resolutionScale = MathUtil::max( 0.1f, packet._mainView._resolutionScale * updateAutoRenderScale( deltaTime ) );
+            const float32 autoRenderScale = updateAutoRenderScale( deltaTime ); // 화면에 나가는 뷰(주 시점 · 화면 사각형)가 같은 값을 쓴다
+            packet._mainView              = RenderViewCollector::makeMainSettings( pCam, autoRenderScale );
             packet.setMainView( pCam->getViewProjectionMatrix( RenderViewCollector::computeAspect( packet._mainView, outputWidth, outputHeight ) ), pCam->getCameraPosition() );
             // 안개도 씬이 갖는다. 카메라가 물속이면 물의 안개가 컴포넌트의 값을 덮는다(FogComponent::findFog).
             packet._bHasFog = ( pActiveObjects != nullptr && FogComponent::findFog( *pActiveObjects, pCam->getCameraPosition(), packet._fog ) ) ? SW_TRUE : SW_FALSE;
@@ -241,7 +241,7 @@ namespace sw
         {
             // 주 시점 가림 타일 사본 — 렌더러가 몇 프레임 늦게 되읽은 것이다(가림 컬링이 꺼졌으면 nullptr).
             const shared_ptr<const OcclusionTileSnapshot> pOcclusion = pFrameRenderer != nullptr ? pFrameRenderer->getOcclusionSnapshot() : nullptr;
-            RenderViewCollector::collectExtraViews( *pActiveScene->getObjectManager(), pCam, packet._viewProj, packet._cameraPos, outputWidth, outputHeight, _renderViewClock,
+            RenderViewCollector::collectExtraViews( *pActiveScene->getObjectManager(), pCam, packet._viewProj, packet._cameraPos, outputWidth, outputHeight, autoRenderScale, _renderViewClock,
                                                     RenderViewCollector::getDefaultBudget(), *_renderViewScheduler, pOcclusion.get(), packet._listView );
         }
         // 씬 뷰 — 주 출력이면 게임 화면의 일부(화면 사각형 뷰)를 빼고, 게임 뷰와 함께면 자기 RT 에 그리는 추가 뷰로 싣는다.
