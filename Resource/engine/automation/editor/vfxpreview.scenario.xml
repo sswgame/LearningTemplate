@@ -4,7 +4,7 @@
   미리보기 씬의 VfxComponent 로 재생하고, 렌더러가 그 씬을 창의 렌더 타깃에 그린다(투명 패스의 입자 빌보드 — particle.hlsl).
   탐침: Editor.VfxPreviewDocumentIsProbeAsset(문서 교체) → Editor.VfxPreviewParticleCount(일정이 입자를 만든다 — 표본의 두 방출기는 기본 GPU 시뮬레이션이라 살아 있는 수는 GPU 에만 있다) → Editor.VfxPreviewSceneFrames(그렸다).
   눈 확인: -gv_editorPreviewScreenshot=<경로>.ppm 를 주면 미리보기 타깃을 찍는다(바닥 위 원점에서 주황 불꽃이 솟고 회색 연기가 오른다).
-  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/vfxpreview.scenario.xml -dx12 (-vk · -dx11 · -opengl 도 같다)
+  실행: py -3 -m Scripts scenario vfxpreview (백엔드 vk · dx11 · opengl 도 같다)
 -->
 <Scenario name="editor.vfxpreview" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="Immediately" input="exclusive">
 	<At frame="20"><ResizeWindow width="1920" height="1080"/><Variable name="gv_editorUiScale" value="1"/></At>

@@ -2,7 +2,7 @@
 <!--
   에디터 시나리오 — 카탈로그 편집기(Panels/Catalog): 데이터 파일 종류 레지스트리에 올라온 카탈로그 파일이 목록에 서고, 첫 파일을 열면 원소별 표로 보이며,
   셀 편집 · 되돌리기 · 행 더하기 · 되돌리기 단추가 돌고, 그 종류의 실제 로더로 검증이 통과한다. 파일은 저장하지 않는다(저장소의 데이터를 건드리지 않는다).
-  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/catalogeditor.scenario.xml -dx12
+  실행: py -3 -m Scripts scenario catalogeditor
 -->
 <Scenario name="editor.catalogeditor" isolated="true" fixedDelta="0.0166667" timeoutFrames="1400" startAfter="Immediately" input="exclusive">
 	<At frame="20"><ResizeWindow width="1920" height="1080"/><Variable name="gv_editorUiScale" value="1"/></At>

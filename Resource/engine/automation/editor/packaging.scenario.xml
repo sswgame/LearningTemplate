@@ -3,7 +3,7 @@
   에디터 시나리오 — 패키징 창(T4): Skip build 와 Skip cook 을 켜고 Package 를 누르면 Scripts/dev/MakePackage.py 가 새 프로세스로 돌아
   이 에디터의 Bin 을 Saved/Packages/<게임>-Client 에 스테이징하고 검사한다(빌드 · 쿠킹이 없어 수 초). 끝나면 Editor.PackagingState 가 2(성공)다.
   실제 Shipping 패키징은 PythonTest_TestMakePackage 와 손 실행(Scripts/dev/MakePackage.py 를 Client 타깃으로)으로 본다.
-  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/packaging.scenario.xml -dx12
+  실행: py -3 -m Scripts scenario packaging
 -->
 <Scenario name="editor.packaging" requireForeground="true" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="Immediately" input="exclusive">
 	<At frame="20"><ResizeWindow width="1920" height="1080"/><Variable name="gv_editorUiScale" value="1"/></At>

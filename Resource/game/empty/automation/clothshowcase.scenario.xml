@@ -3,7 +3,7 @@
   천 쇼케이스 — 윗변 고정 커튼이 정적 구에 걸치고, 양 끝 고정 깃발이 처진다(계획 ClothFollowups C1 · C2).
   프레임 30 과 프레임 180 의 그림을 찍어 천이 움직였는지(처짐 · 걸침) 본다. 앞면 · 뒷면 감김, 접힌 곳 음영, 커튼이 구에 걸치는지는 캡처를 눈으로 본다
   (gpu-verifier 의 네 백엔드 캡처 — 매니페스트 id cloth-showcase-capture). 풀 재채움 수(`RT.GPUScene.vertexPool` · `_repackCount`)는 같은 실행의 프로파일 줄에서 읽는다.
-  실행: App.exe -game=Empty -dx12 -gv_firstScene=game/empty/maps/clothshowcase.scene.xml -scenario=game/empty/automation/clothshowcase.scenario.xml
+  실행: py -3 -m Scripts scenario clothshowcase
         (AppScenarioTest 는 <Launch> 를 읽어 인자를 붙인다)
 -->
 <Scenario name="game.empty.clothshowcase" fixedDelta="0.0166667" timeoutFrames="400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">

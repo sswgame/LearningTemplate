@@ -8,11 +8,13 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import os
 import sys
 import time
 from pathlib import Path
+from typing import Iterator
 
 from .ExitCode import ExitCode
 from .Process import isProcessAlive, runProcess
@@ -218,6 +220,22 @@ def releaseHeld(mainRoot: Path, args: argparse.Namespace) -> int:
     if args.shared:
         return releaseShared(mainRoot, args)
     return 0 if release(getLockDirectory(mainRoot, args.resource), args.owner) else 1
+
+
+@contextlib.contextmanager
+def holdLock(mainRoot: Path, resource: str, bShared: bool, owner: str, purpose: str, waitSeconds: int) -> Iterator[int]:
+    """
+    자원을 잡고 `with` 안의 일을 하는 동안 쥔다 — `Passed`(0)를 내주고 끝나면(예외여도) 놓는다. 못 잡으면 그 종료 코드(`LimitReached`)를 내주고 놓을 것이 없다.
+    소유 프로세스는 이 프로세스다. 칸 수는 자원이 정한다(`kMapSharedSlotCount`).
+    """
+    args = argparse.Namespace(resource=resource, owner=owner, purpose=purpose, shared=bShared, pid=os.getpid(), wait=waitSeconds,
+                              slots=getSharedSlotCount(resource) if bShared else kMapSharedSlotCount.get(resource, 0), belowNormal=False)
+    code = acquire(mainRoot, args)
+    try:
+        yield int(code)
+    finally:
+        if code == ExitCode.Passed:
+            releaseHeld(mainRoot, args)
 
 
 def runHolding(mainRoot: Path, args: argparse.Namespace, listCommand: list[str], logPath: Path | None = None) -> int:

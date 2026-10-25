@@ -7,7 +7,7 @@
   경로 없는 기본 문서(상태 폴더의 AnimationGraphData.xml)에 쓰면 체인의 뒤 시나리오(graphaddnode)가 노드 셋으로 시작한다.
   기본 문서는 노드 둘 · 전이 하나라 테스트 그래프는 전이를 둘로 두어 열렸는지 가린다(Quick Open 은 파일 목록이 온 뒤에 열므로 WaitUntil 로 기다린다).
   끝에서 추가한 노드를 지우고 저장해 테스트 그래프를 처음 모양으로 돌려 둔다 — 다시 실행해도 같은 상태로 시작하고 작업 트리가 더러워지지 않는다.
-  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/animgraphedit.scenario.xml -dx12
+  실행: py -3 -m Scripts scenario animgraphedit
 -->
 <Scenario name="editor.animgraphedit" fixedDelta="0.0166667" timeoutFrames="1100" startAfter="Immediately" input="exclusive">
 	<At frame="20"><ResizeWindow width="1920" height="1080"/><Variable name="gv_editorUiScale" value="1"/></At>

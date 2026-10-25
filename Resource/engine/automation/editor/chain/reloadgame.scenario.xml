@@ -2,7 +2,7 @@
 <!--
   에디터 체인 사이의 게임 모듈 리로드 — 편집 중에 SWGame 을 다시 올린 뒤 에디터가 멀쩡한지 본다: 그래프가 막히지 않았고, 의존 모듈이 지금 이미지에 묶였고, 씬 · 도크가 그대로다.
   `engine/automation/editor/*.scenario.xml` 을 한 프로세스로 묶을 때 시나리오 사이에 끼운다(실제 개발 중 리로드와 같은 조건). 혼자 돌려도 통과한다.
-  실행: App.exe -EnableEditor -scenario=engine/automation/editor/chain/reloadgame.scenario.xml -dx12
+  실행: py -3 -m Scripts scenario reloadgame
 -->
 <Scenario name="editor.chainreloadgame" fixedDelta="0.0166667" timeoutFrames="9000" startAfter="Immediately" input="exclusive">
 	<At frame="0"><DevCommand line="module.reload SWGame"/></At>

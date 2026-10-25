@@ -4,7 +4,7 @@
   결정적: 하늘만 보는 무대(maps/skyshowcase), 고정 프레임 시간. 구름 무늬는 머티리얼 시계로 흐르지만 같은 프레임이 같은 그림이다.
   문턱 근거: 첫 측정(2026-10-25, Release, 측정 커밋 00a6fc842, 네 백엔드 차이 1e-6 이하, 해 46° · 구름 포함 전체 화면)은 평균 R − B -0.0086, 평균 휘도 0.5954 다.
   처음 적은 어림값(R − B 가 -0.02 이하)은 흰 구름 덩이가 평균을 0 쪽으로 끌어올려 틀렸다. 지금 문턱은 잰 값의 절반(R − B)과 3분의 2(휘도)다 — 해가 낮은 노을은 R − B 가 양수라 가르고, 하늘이 안 그려지면 휘도가 크게 떨어진다.
-  실행: App.exe -game=Empty -dx12 -gv_firstScene=game/empty/maps/skyshowcase.scene.xml -scenario=game/empty/automation/sky.scenario.xml
+  실행: py -3 -m Scripts scenario sky
         (AppScenarioTest 는 <Launch> 를 읽어 인자를 붙인다. Shipping 은 개발 명령이 없어 건너뛴다)
 -->
 <Scenario name="game.empty.sky" fixedDelta="0.0166667" timeoutFrames="300" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">

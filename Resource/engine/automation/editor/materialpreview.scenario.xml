@@ -5,7 +5,7 @@
   미리보기는 렌더 타깃이 아니라 패널이 머티리얼 값으로 CPU 에서 셰이딩해 ImGui 그리기 목록에 그린다(MaterialPreviewShading) — 그래서 "값이 안 따라온다" 의 가능한 까닭은 둘이다.
   (1) 문서가 바뀌지 않았다(Quick Open 의 Enter 가 목록 도착 전에 눌렸거나, 미저장 확인이 새 문서를 막았다) (2) 문서는 바뀌었는데 미리보기 계산이 따라오지 않았다.
   두 까닭을 시나리오가 나눠 보도록 문서 교체를 먼저 기다린다(Editor.MaterialDocumentIsProbeAsset) — 졌을 때 어느 쪽인지 보고서의 실패 줄이 말한다.
-  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/materialpreview.scenario.xml -dx12 (-gl 도 같다)
+  실행: py -3 -m Scripts scenario materialpreview (백엔드 gl 도 같다)
 -->
 <Scenario name="editor.materialpreview" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="Immediately" input="exclusive">
 	<At frame="20"><ResizeWindow width="1920" height="1080"/><Variable name="gv_editorUiScale" value="1"/></At>

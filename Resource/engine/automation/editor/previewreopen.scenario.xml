@@ -12,7 +12,7 @@
   Quick Open 의 파일 목록은 일 스레드가 벽시계로 모으는데, 목록이 오는 동안 자동화 시계를 잡는다(QuickLauncherPopup 의 SW_AUTOMATION_CLOCK_HOLDER) — 프레임이 빠른 DX11 에서도 Enter 가 문서를 같은 프레임에 연다.
   ③ 마지막에 에디터가 정상이다 — 계층 패널이 그려져 그 검색 칸(hierarchy.filter)을 누를 수 있고, 로그 게이트가 [Warning] · [Error] 가 없음을 본다.
   GPU 쪽 오류는 이 시나리오가 직접 보지 못하고 로그 줄로 본다. 검증 레이어는 Debug 빌드(DX12 디버그 레이어 · Vulkan 검증 레이어, Release 에는 없다)에서만 켜지고 오류가 [Warning] · [Error] 줄로 나와 로그 게이트가 진다.
-  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/previewreopen.scenario.xml -dx12 (-vk · -dx11 · -gl 도 같다)
+  실행: py -3 -m Scripts scenario previewreopen (백엔드 vk · dx11 · gl 도 같다)
 -->
 <Scenario name="editor.previewreopen" fixedDelta="0.0166667" timeoutFrames="6000" startAfter="Immediately" input="exclusive">
 	<At frame="0"><DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/></At>

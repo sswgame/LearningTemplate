@@ -4,9 +4,10 @@
   궁수의 PairedAnimationComponent(_bStartOnPlay)가 플레이 첫 틱 뒤에 세션을 시작하고, 활 · 화살 역할은 외형 부품(아이템 bow_long)의 프리팹이 데이터로 든다.
   0.6 초의 공유 알림 ReleaseArrow 가 활의 알림 표에서 투사체 프리팹(prefabs/props/arrow_projectile.prefab.xml)을 시위 본 자리에 스폰한다.
   씬이 따로라 AppScenarioTest 의 자동 수집(automation/ 바로 아래)에서 빠진다. 활 · 화살 메시는 Scripts/dev/MakeBowProps.py 를 App 으로 임포트해야 있다.
-  App.exe -game=Shooter3D -dx12 "-gv_firstScene=game/shooter3d/maps/bowshowcase.scene.xml" -scenario=game/shooter3d/automation/showcase/bowshoot.scenario.xml
+  실행: py -3 -m Scripts scenario bowshoot   (씬은 아래 <Launch> 가 정한다)
 -->
 <Scenario name="shooter3d.bowshoot" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/shooter3d/maps/bowshowcase.scene.xml"/>
 	<At frame="0"><Variable name="gv_shooterAutoPlay" value="0"/></At>
 	<At frame="5"><Expect probe="Appearance.SlotItem" target="Archer" key="MainHand" is="bow_long"/></At>
 	<!-- WaitUntil 은 그 프레임의 유일한 단계여야 한다. -->

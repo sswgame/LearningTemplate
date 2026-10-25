@@ -6,7 +6,7 @@
   ③ X 를 누르면 창이 닫히지 않고 확인이 뜬다. Cancel 은 열어 둔다. ④ 다시 X 후 Don't Save 는 편집을 버리고 닫는다.
   ⑤ 다시 열면 디스크의 프리팹이라 깨끗하고, 이때의 X 는 묻지 않고 닫는다.
   X 단추 이름표(panel.close.<제목>)는 창이 떠 있든 도킹됐든 보이는 창에 있다.
-  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/prefabwindow.scenario.xml -dx12
+  실행: py -3 -m Scripts scenario prefabwindow
 -->
 <Scenario name="editor.prefabwindow" fixedDelta="0.0166667" timeoutFrames="1200" startAfter="Immediately" input="exclusive">
 	<At frame="0"><DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/></At>

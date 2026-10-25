@@ -3,7 +3,7 @@
   엔진 시나리오 — 런타임 UI 를 가상 패드로만 몬다(어느 게임 프리셋에서나 돈다): 옵션 메뉴를 열고 어깨 단추로 탭을, DPad 로 행을 옮기고 B 로 닫는다.
   ExpectUI 판정은 nogpu UINavigationScriptTest 와 같은 함수(UIAutomationSteps::isExpectUIMet)다. 행 이름은 엔진 스키마(engine/settings/engine.settings.xml) 순서.
   탭 줄은 창 너비에 따라 접히므로(WrapPanel) 탭 사이는 DPad 가 아니라 어깨 단추로 옮긴다 — 탭을 바꾸면 첫 행에 포커스가 간다.
-  실행: App.exe -scenario=engine/automation/uinavigation.scenario.xml -dx12   (AppScenarioTest 가 백엔드마다 돈다)
+  실행: py -3 -m Scripts scenario uinavigation   (AppScenarioTest 가 백엔드마다 돈다)
 -->
 <Scenario name="engine.uinavigation" fixedDelta="0.0166667" timeoutFrames="300" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<At frame="0"><Variable name="gv_uiOptionsMenu" value="1"/></At>

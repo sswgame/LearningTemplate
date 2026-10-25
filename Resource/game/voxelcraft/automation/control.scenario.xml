@@ -2,7 +2,7 @@
 <!--
   VoxelCraft 조종 시나리오 — 입력 층(가상 키 · 마우스) → 플레이어 조종자(입력 맵) → 폰의 의도 → 몸(걷기 · 핫바 · 시선 · 부수기),
   자동 플레이 스위치를 켜고 끄면 플레이어 폰의 빙의가 AI 조종자 ↔ 플레이어 조종자로 오간다.
-  실행(작업 폴더 build/Ninja-Debug/Bin): App.exe -game=VoxelCraft -scenario=game/voxelcraft/automation/control.scenario.xml
+  실행: py -3 -m Scripts scenario game/voxelcraft/automation/control.scenario.xml
 -->
 <Scenario name="voxelcraft.control" fixedDelta="0.0166667" timeoutFrames="1200" startAfter="ScenePlaying" input="exclusive">
 	<At frame="0"><Variable name="gv_voxelAutoPlay" value="0"/></At>

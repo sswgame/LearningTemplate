@@ -4,7 +4,7 @@
   1) 창을 열면 화면에 나가는 타깃을 고르고 CPU 스냅샷을 읽는다(Editor.RenderTargetSnapshotReady).
   2) SceneDepth 를 고르면 깊이를 읽어 선형화한 회색으로 보이고, 미리보기 위의 마우스 아래 깊이가 0 ~ 1 로 읽힌다. Linearize 를 끄면 원래 깊이로 본다.
   3) SceneColor 에서 G 채널을 고르면 그 채널을 회색으로 보이고, 픽셀 값도 읽힌다. Refresh 는 다시 읽는다.
-  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/rendertargetview.scenario.xml -dx12 (-dx11 · -vk · -gl 도 같다)
+  실행: py -3 -m Scripts scenario rendertargetview (백엔드 dx11 · vk · gl 도 같다)
 -->
 <Scenario name="editor.rendertargetview" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
 	<At frame="5"><DevCommand line="layout.reset"/></At>

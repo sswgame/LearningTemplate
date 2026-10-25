@@ -8,7 +8,7 @@
   시야 거리의 dx12 값 0.307 은 결함의 값이라 기록하지 않았다 — DX12 의 PSO 가 깊이 클립을 꺼 둔 채라 먼 평면 밖 기하가 남았다(D3D12RHIResourceFactoryPipeline: DepthClipEnable).
   고친 뒤 dx12 도 다른 백엔드와 같아야 하며, 다시 재서 dx12 값을 `measured` 에 더한다.
   UI 는 그대로인지 · 렌더 텍스처 모니터가 색각 보정을 두 번 받지 않는지 · 텍스처 품질(재시작) · 이펙트 품질은 이 무대로 볼 수 없어 눈 확인 항목(usersettings-visual-review)이 맡는다.
-  실행: App.exe -game=Empty -dx12 -gv_firstScene=game/empty/maps/rendertest3d.scene.xml -gv_deferred=1 -scenario=game/empty/automation/useroptions.scenario.xml
+  실행: py -3 -m Scripts scenario useroptions
         (AppScenarioTest 는 <Launch> 를 읽어 인자를 붙인다)
 -->
 <Scenario name="game.empty.useroptions" fixedDelta="0.0166667" timeoutFrames="400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">

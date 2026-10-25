@@ -4,7 +4,7 @@
   ① Hierarchy 에서 고른 오브젝트가 씬 뷰 외곽선과 인스펙터의 대상이 된다. Ctrl+클릭은 선택에 더한다.
   ② 인스펙터로 이름을 바꾼 뒤 포커스를 콘텐츠 브라우저로 옮겨 Ctrl+Z 를 눌러도 씬 편집이 되돌려지고, 씬 뷰에 포커스를 두고 다시 실행해도 같다.
   ③ Hierarchy 에서 Delete 로 지우면 선택이 비고, 되돌리면 같은 id 로 돌아와 다시 골라진다 — 씬 내용 해시가 지우기 전과 같다.
-  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/flowselection.scenario.xml -dx12
+  실행: py -3 -m Scripts scenario flowselection
 -->
 <Scenario name="editor.flowselection" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
 	<At frame="0"><DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/></At>

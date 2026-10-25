@@ -4,7 +4,7 @@
   netplay.sync objects server 는 서버 칸(두 칸이 모두 채널에서 읽은 세션 서버의 state.objects)을, netplay.sync objects client 는 클라이언트 칸(A 는 서버 채널,
   B 는 첫 클라이언트의 표준 입력 답 state.objectline)을 비교한다. 두 쪽의 틱이 같아야 하므로 서버를 pause 하고 클라이언트가 마지막 틱을 받을 때까지 프레임을 둔다.
   같은 서버를 두 번 읽은 서버 칸은 다른 오브젝트가 없어야 한다. 클라이언트 칸은 클라이언트만 가진 오브젝트가 있을 수 있어 비교가 끝까지 갔는지(목록이 떴는지)만 본다.
-  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/netsyncobjects.scenario.xml -dx12
+  실행: py -3 -m Scripts scenario netsyncobjects
 -->
 <Scenario name="editor.netsyncobjects" isolated="true" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
 	<At frame="20">

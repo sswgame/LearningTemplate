@@ -7,7 +7,7 @@
   (EditorAssetTypeRegistry::findPanelKindForPath 는 가장 긴 접미사가 이긴다). 없는 파일이라 기본 문서(노드 Idle · Walk)로 열리고, 여는 길은
   markDocumentLoaded 로 더러움을 걷으므로 연 직후 DirtyDocumentCount 는 0 이다. 끝에서 asset.removeTemp 로 지운다.
   asset.open 의 패널 열기는 처음 여는 창이라 포커스를 못 잡을 수 있어 panel.focus 를 따로 보낸다(다음 프레임에 SetWindowFocus).
-  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/animgraphsave.scenario.xml -dx12
+  실행: py -3 -m Scripts scenario animgraphsave
 -->
 <Scenario name="editor.animgraphsave" fixedDelta="0.0166667" timeoutFrames="400" startAfter="Immediately" input="exclusive">
 	<At frame="20"><ResizeWindow width="1920" height="1080"/><Variable name="gv_editorUiScale" value="1"/></At>

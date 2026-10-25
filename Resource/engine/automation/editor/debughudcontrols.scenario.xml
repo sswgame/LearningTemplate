@@ -4,7 +4,7 @@
   섹션 체크 상자가 섹션을 켠다(Editor.DebugHUDShownSections — 기본 켜짐 넷 + physics). 씬 뷰 HUD 상자는 같은 섹션을 그리고
   (Editor.SceneViewHUDSections), 툴바 HUD 단추로 뷰마다 끄고 켠다. 환경설정의 Editor/Debug HUD 쪽에서 게임 HUD 를 다시 끈다.
   HUD 상태는 엔진 사용자 설정이라 사용자 파일에 남는다 — 처음과 끝에 기본값(꺼짐 · physics 꺼짐)으로 둔다.
-  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/debughudcontrols.scenario.xml -dx12
+  실행: py -3 -m Scripts scenario debughudcontrols
 -->
 <Scenario name="editor.debughudcontrols" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
 	<At frame="5"><DevCommand line="hud off"/><DevCommand line="hud physics off"/></At>

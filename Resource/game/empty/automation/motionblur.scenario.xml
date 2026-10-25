@@ -5,7 +5,7 @@
   64 프레임 간격으로 되풀이해 두 사진의 카메라 · 지난 카메라 · TAA 기록이 같다 — 차이는 블러뿐이다.
   첫 사진이 자리 잡기(로드 · 페이드)를 기다린 뒤로는 찍는 프레임이 정해져야 하므로 기다리지 않는다(waitForSettle="false").
   프레임 N 에 요청한 사진은 프레임 N+1 의 그림이다 — 같은 프레임에 옮긴 카메라가 그 그림의 카메라, 그 앞 그림의 카메라가 지난 카메라다.
-  실행: App.exe -game=Empty -dx12 -gv_firstScene=game/empty/maps/rendertest3d.scene.xml -gv_deferred=1 -scenario=game/empty/automation/motionblur.scenario.xml
+  실행: py -3 -m Scripts scenario motionblur
         (AppScenarioTest 는 <Launch> 를 읽어 인자를 붙인다. Shipping 은 개발 명령이 없어 건너뛴다)
 -->
 <Scenario name="game.empty.motionblur" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">

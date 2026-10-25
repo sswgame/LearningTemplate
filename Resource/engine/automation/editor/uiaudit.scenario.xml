@@ -3,7 +3,7 @@
   에디터 시나리오 — UX 감사용 캡처. 패널마다 앞으로 꺼내 에디터 UI 전체를 PNG 로 찍는다(`CaptureEditorUI`).
   마젠타(빠진 텍스처 · 디버그 색)는 어느 패널에서도 0 이어야 한다. 패널은 찍은 뒤 닫아 다음 패널을 가리지 않는다. 잘린 창 수는 실패로 보지 않고 로그(`Editor UI capture`)에 이름과 함께 남긴다.
   결과 그림은 `ux-reviewer` 에이전트가 docs/plans/EditorUX.md 체크리스트로 본다.
-  실행: App.exe -EnableEditor -scenario=engine/automation/editor/uiaudit.scenario.xml -dx12
+  실행: py -3 -m Scripts scenario uiaudit
 -->
 <Scenario name="editor.uiaudit" isolated="true" fixedDelta="0.0166667" timeoutFrames="3000" startAfter="Immediately" input="exclusive">
 	<At frame="60"><ResizeWindow width="1600" height="900"/></At>

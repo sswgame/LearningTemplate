@@ -5,7 +5,7 @@
   눈으로 볼 것: ① 1인칭에서 아래를 보면 몸 · 다리가 보이고 머리 · 투구 · 몸의 총이 없다(근평면에 목 단면이 걸리면 HideHead 를 neck 까지 넓힌다). ② 3인칭에서 머리가 돌아온다.
   ③ 소총 · 산탄총 · 권총마다 왼손이 총열 아래 SupportHand 에 붙는다(기사 세트의 방패가 왼손에 함께 있어 가리면 총을 든 프리셋에서 방패 칸을 비울지 정한다). 팔꿈치가 어색하면 pole.
   MouseDelta 의 부호(아래를 보는 쪽)는 입력 맵의 Look 배율에 달렸으니 두 방향을 다 찍는다.
-  실행: App.exe -game=Shooter3D -scenario=game/shooter3d/automation/bodyviews.scenario.xml -dx12
+  실행: py -3 -m Scripts scenario bodyviews
 -->
 <Scenario name="shooter3d.bodyviews" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_cameraPreset" value="firstperson"/>

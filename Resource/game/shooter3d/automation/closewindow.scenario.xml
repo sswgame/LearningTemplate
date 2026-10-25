@@ -5,7 +5,7 @@
   만지지 말 것. 전경을 못 얻는 세션(원격 · 잠긴 화면 · 다른 창이 전경을 쥠)이면 13(건너뜀), Windows 밖에서도 13.
   전경은 루트 속성(requireForeground)이라 실행기가 시작을 기다리는 동안 가져온다 — 카메라가 잠금을 켜는 첫 틱보다 먼저 전경이어야 바로 잡는다
   (전경이 아닐 때 켠 잠금은 클라이언트를 눌러야 잡는다 — InputManager::setMouseLockMode).
-  실행: App.exe -scenario=game/shooter3d/automation/closewindow.scenario.xml -dx12
+  실행: py -3 -m Scripts scenario closewindow
 -->
 <Scenario name="shooter3d.closewindow" requireForeground="true" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="mixed">
 	<At frame="0"><Variable name="gv_shooterAutoPlay" value="0"/></At>

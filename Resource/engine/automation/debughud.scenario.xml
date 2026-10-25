@@ -3,7 +3,7 @@
   엔진 시나리오 — 디버그 HUD(Dev 전용): 마스터 단축키 Ctrl+F3 로 켜고, 개발 명령 hud 로 섹션 · 모서리를 바꾸고, 설정 창을 열어 B(UI.Back)로 닫고, 다시 Ctrl+F3 로 끈다.
   탐침은 HUD 화면이 실제로 그린 것을 본다 — DebugHUD.SectionShown(gv_debugHUDProbeSection 의 섹션 상자) · DebugHUD.Corner(패널이 놓인 4 분면).
   HUD 상태는 사용자 설정이라 사용자 파일에 남는다 — 끝에서 기본값(꺼짐 · 기본 섹션 · 왼위 · 0.85)으로 되돌려 파일에 남는 값이 없게 한다.
-  실행: App.exe -scenario=engine/automation/debughud.scenario.xml -dx12   (AppScenarioTest 가 백엔드마다 돈다)
+  실행: py -3 -m Scripts scenario debughud   (AppScenarioTest 가 백엔드마다 돈다)
 -->
 <Scenario name="engine.debughud" fixedDelta="0.0166667" timeoutFrames="300" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<At frame="0">

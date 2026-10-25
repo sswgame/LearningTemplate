@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   에디터 시나리오 — Play 전의 편집 내역이 Stop 뒤에도 남아 되돌릴 수 있다(panel-audit D4). 저장 안 된 씬이라 Play 를 누르면 확인 상자가 뜬다.
-  실행: App.exe -EnableEditor -scenario=engine/automation/editor/undosurvivesplay.scenario.xml -dx12
+  실행: py -3 -m Scripts scenario undosurvivesplay
 -->
 <Scenario name="editor.undosurvivesplay" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
 	<At frame="30"><DevCommand line="layout.reset"/></At>

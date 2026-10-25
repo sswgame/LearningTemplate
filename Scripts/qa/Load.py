@@ -46,6 +46,7 @@ from common.BuildTree import BuildTree  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
 from common.AppRun import kBackendSwitch, computeSlopePerMinute, loadGameTable, parseProfileTable, parseProfileWall, runApp  # noqa: E402
 from common.ProcessLimits import ProcessLimits  # noqa: E402
+from common.ScenarioFile import readLoadSpec  # noqa: E402
 
 kLoadFolder = "Test/Load"
 kMegabyte = 1024.0 * 1024.0
@@ -146,18 +147,10 @@ def parseDeclaration(repositoryRoot: Path, name: str, relativePath: str, mapGame
             declaration = LoadDeclaration(name, driver, path, testFilter=root.attrib["test"])
     else:
         raise ValueError(f"{relativePath}: root must be <Scenario> or <LoadScenario>")
-    listLoad = root.findall("Load")
-    if len(listLoad) != 1:
-        raise ValueError(f"{relativePath}: needs exactly one <Load>")
-    mapField = {"clients": "clientCount", "meshes": "meshCount", "movers": "moverCount", "durationSeconds": "durationSeconds",
-                "rampUpSeconds": "rampUpSeconds", "network": "network"}
-    for key, value in listLoad[0].attrib.items():
-        if key not in mapField:
-            raise ValueError(f"{relativePath}: <Load> unknown attribute '{key}'")
-        current = getattr(declaration, mapField[key])
-        setattr(declaration, mapField[key], value if isinstance(current, str) else type(current)(float(value)))
-    if declaration.durationSeconds <= 0:
-        raise ValueError(f"{relativePath}: <Load> needs durationSeconds > 0")
+    # `<Load>` 의 읽기 규칙은 `common/ScenarioFile.readLoadSpec` 한 자리다(`scenario` 명령이 같은 선언을 본다).
+    spec = readLoadSpec(relativePath, root)
+    declaration.durationSeconds, declaration.rampUpSeconds, declaration.network = spec.durationSeconds, spec.rampUpSeconds, spec.network
+    declaration.clientCount, declaration.meshCount, declaration.moverCount = spec.clientCount, spec.meshCount, spec.moverCount
     if declaration.driver == "loadbot" and declaration.network:
         raise ValueError(f"{relativePath}: the loadbot driver has no network emulation (TCP) - remove network")
     if declaration.driver == "cluster" and declaration.clientCount <= 0:

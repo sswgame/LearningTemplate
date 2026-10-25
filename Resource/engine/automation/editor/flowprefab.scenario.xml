@@ -6,7 +6,7 @@
   ③ 첫 인스턴스의 반경(_radius)을 인스펙터로 7 로 고치고 Apply Overrides(prefab.applyOverrides)로 프리팹에 쓴다.
   ④ LanternB 의 반경이 7 이 되고(퍼짐) 세기는 3 으로 남아야 한다(덮어쓴 값 유지). 되돌리기 한 번이면 LanternB 가 퍼지기 전 값으로 돌아온다.
   ⑤ 씬을 저장하고 새 씬 → 다시 열기 뒤에도 두 인스턴스의 값이 그대로다(씬은 덮어쓴 값만 저장하고 프리팹 원형에 얹는다).
-  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/flowprefab.scenario.xml -dx12
+  실행: py -3 -m Scripts scenario flowprefab
 -->
 <Scenario name="editor.flowprefab" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="Immediately" input="exclusive">
 	<At frame="0"><DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/></At>

@@ -4,7 +4,7 @@
   EngineConfig 를 고르면 바탕 층(값이 파일에만 있다)이라 모든 키를 쓰는 문서다. _maxFrameDeltaTime 을 0.2 로 바꾸면 페이지가 바뀜 상태가 되고, Revert 를 누르면 돌아온다.
   끝으로 활성 팩의 <Engine> 요소 페이지(PackEngineSettings)를 열어 캡처한다.
   저장하지 않으므로 저장소의 Config 파일과 팩 파일은 건드리지 않는다. 저장과 호스트 다시 읽기는 EditorTest 의 ProjectSettingsDocument 테스트가 임시 폴더에서 본다.
-  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/projectconfigedit.scenario.xml -dx12
+  실행: py -3 -m Scripts scenario projectconfigedit
 -->
 <Scenario name="editor.projectconfigedit" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
 	<At frame="20"><ResizeWindow width="1920" height="1080"/><Variable name="gv_editorUiScale" value="1"/></At>

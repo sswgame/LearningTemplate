@@ -3,7 +3,7 @@
   에디터 시나리오 — Hierarchy 형제 순서와 폴더: TestSprite(셋째 줄)를 고르고 scene.moveSiblingUp 으로 한 칸 올리면 둘째 줄이 되고, 되돌리면 셋째 줄로 돌아온다.
   scene.moveSiblingDown 은 한 칸 내려 간다. scene.createFolder 는 빈 폴더 오브젝트를 하나 만들고(오브젝트 수 +1) 되돌리기 한 줄로 사라진다.
   (끌어 놓기는 ImGui 끌기 · 놓기라 EditorTest 의 EditorSiblingOrderTest 가 놓는 자리 판정과 옮기기를 본다.)
-  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/hierarchyorder.scenario.xml -dx12
+  실행: py -3 -m Scripts scenario hierarchyorder
 -->
 <Scenario name="editor.hierarchyorder" fixedDelta="0.0166667" timeoutFrames="500" startAfter="Immediately" input="exclusive">
 	<At frame="20"><ResizeWindow width="1920" height="1080"/><Variable name="gv_editorUiScale" value="1"/></At>

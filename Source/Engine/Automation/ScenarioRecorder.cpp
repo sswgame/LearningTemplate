@@ -6,6 +6,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Automation/AutomationScenario.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputSlotUtil.h"
 #include "Engine/Input/Map/InputMap.h"
@@ -22,7 +23,7 @@ namespace sw
     {
         struct ScenarioRecorderInternal
         {
-            static constexpr string_view kOutputFolder   = "Saved/Automation/";
+            static constexpr string_view kOutputFolder   = kAutomationOutputFolder; // 뒤에 '/' 를 붙여 비교한다
             static constexpr string_view kScenarioSuffix = ".scenario.xml";
             static constexpr uint32      kTailFrameCount = 10; ///< 마지막 입력 뒤 `Pass` 까지의 프레임입니다.
             static constexpr uint32      kTimeoutMargin  = 60;
@@ -637,10 +638,11 @@ namespace sw
 
     bool ScenarioRecorder::isAllowedOutputPath( string_view path )
     {
-        using Internal = ScenarioRecorderInternal;
-        if ( path.size() <= Internal::kOutputFolder.size() + Internal::kScenarioSuffix.size() )
+        using Internal          = ScenarioRecorderInternal;
+        const size_t folderSize = Internal::kOutputFolder.size() + 1; // 뒤의 '/' 까지
+        if ( path.size() <= folderSize + Internal::kScenarioSuffix.size() )
             return false;
-        if ( path.substr( 0, Internal::kOutputFolder.size() ) != Internal::kOutputFolder )
+        if ( path.substr( 0, folderSize - 1 ) != Internal::kOutputFolder || path[folderSize - 1] != '/' )
             return false;
         if ( path.substr( path.size() - Internal::kScenarioSuffix.size() ) != Internal::kScenarioSuffix )
             return false;

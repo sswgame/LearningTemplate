@@ -6,9 +6,10 @@
   Terrain.WrittenEditCount 가 교체 뒤에도 1 이고, 그림이 편집 전과 다르며 편집 직후와 거의 같아야 한다.
   처음에 한 번 건너는 것은 도킹 배치를 안정시키기 위해서다 — imgui.ini 가 노드 크기를 정수로 저장해 첫 리로드에서 씬 뷰 너비가 1 픽셀 바뀔 수 있고, 크기가 다르면 그림을 견줄 수 없다.
   네 백엔드가 모두 있는 PC 에서만 통과하므로 AppScenarioTest 가 줍지 않는 이 하위 폴더에 둔다.
-  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/rhiswap/terrainedits.scenario.xml -dx12
+  루트의 editor="true" 가 에디터를 켠 실행(-EnableEditor 와 빈 에디터 상태 폴더)을 뜻한다 — scenario 명령과 AppScenarioTest 가 그 인자를 붙인다.
+  실행: py -3 -m Scripts scenario terrainedits
 -->
-<Scenario name="rhiswap.terrainedits" fixedDelta="0.0166667" timeoutFrames="3000" startAfter="Immediately" input="exclusive">
+<Scenario name="rhiswap.terrainedits" fixedDelta="0.0166667" timeoutFrames="3000" startAfter="Immediately" input="exclusive" editor="true">
 	<At frame="1"><Variable name="gv_environmentAnimate" value="0"/></At>
 	<At frame="20"><ResizeWindow width="1920" height="1080"/><Variable name="gv_editorUiScale" value="1"/></At>
 	<At frame="25"><DevCommand line="panel.resetOptional"/><DevCommand line="layout.reset"/></At>

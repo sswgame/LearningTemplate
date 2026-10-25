@@ -4,7 +4,7 @@
   ① 게임 뷰를 앞에 두고 Lit 기준을 찍는다. ② 씬 뷰를 앞에 두고 Lit 을 찍은 뒤, 툴바 콤보(viewport.viewMode)로 모드를 하나씩 골라 찍는다 —
   모두 씬 뷰 Lit 과 다르다. ③ Normals 로 둔 채 게임 뷰를 앞에 두고 찍으면 ①과 같다(게임 뷰는 Lit 그대로, Editor.GameViewMode 0).
   스크린샷은 주 출력이다 — 게임 뷰가 보이면 게임 뷰, 씬 뷰만 보이면 씬 뷰.
-  실행: App.exe -EnableEditor -scenario=engine/automation/editor/viewmodes.scenario.xml -gv_editorStateDir=<빈 폴더> -dx12   (AppScenarioTest 가 백엔드마다 돈다)
+  실행: py -3 -m Scripts scenario viewmodes   (AppScenarioTest 가 백엔드마다 돈다)
 -->
 <Scenario name="editor.viewmodes" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
 	<At frame="5"><DevCommand line="layout.reset"/></At>

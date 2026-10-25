@@ -3,7 +3,7 @@
   Shooter3D 스프링 망토(ShooterCharacterIntegration S7) — 기사의 망토(itemvisuals.xml 의 cape_knight, kind="Skinned" 에 자기 스켈레톤 · 리그 knight_cape.rig.xml)가
   몸이 움직일 때 뒤처져 흔들리는지 3인칭 사진으로 본다. 서 있는 사진 · 달리기 시작 · 달리다 멈춘 직후(관성으로 앞으로 쏠린다)를 찍는다.
   망토가 아직 정적 프리팹(knight_cape.prefab.xml)이면 사진 셋이 같은 모양이다 — S7 의 임포트 · 데이터 전환(MakeSkinnedCape.py → App 의 모델 임포트 → itemvisuals)이 먼저다.
-  실행: App.exe -game=Shooter3D -scenario=game/shooter3d/automation/cape.scenario.xml -dx12
+  실행: py -3 -m Scripts scenario cape
 -->
 <Scenario name="shooter3d.cape" fixedDelta="0.0166667" timeoutFrames="500" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_cameraPreset" value="orbit"/>

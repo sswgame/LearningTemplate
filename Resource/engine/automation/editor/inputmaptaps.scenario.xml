@@ -3,7 +3,7 @@
   에디터 시나리오 — 입력 맵 패널의 바인딩 줄: HoldThreshold 를 고르면 시간 칸이, MultiTap 을 고르면 횟수(taps) 칸이 같은 바인딩 줄 아래에 나온다.
   패널 기본 크기(960 x 640)에서 콤보 · 시간 · Negate 가 잘리지 않는 것은 캡처로 확인했다(후보 EditorCaptureFollowUps). 여기서는 트리거가 실제로 바뀌는 것만 본다.
   콤보는 항목을 여덟 개까지만 보이므로 마지막 항목(MultiTap)은 키보드(아래 화살표 열 번)로 고른다.
-  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/inputmaptaps.scenario.xml -dx12
+  실행: py -3 -m Scripts scenario inputmaptaps
 -->
 <Scenario name="editor.inputmaptaps" fixedDelta="0.0166667" timeoutFrames="400" startAfter="Immediately" input="exclusive">
 	<At frame="20"><ResizeWindow width="1920" height="1080"/><Variable name="gv_editorUiScale" value="1"/></At>

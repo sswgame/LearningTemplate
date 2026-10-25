@@ -17,6 +17,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
 
+#include "Engine/Automation/AutomationScenario.h"
 #include "Engine/Automation/ScenarioRecorder.h"
 #include "Engine/Config/GameTimeScale.h"
 #include "Engine/Input/InputManager.h"
@@ -32,7 +33,7 @@ namespace sw::editor
         struct EditorScenarioRecordCommandsInternal
         {
             /// @brief 메뉴 커맨드가 쓰는 출력 경로입니다.
-            static constexpr const utf8* kDefaultOutputPath = "Saved/Automation/Recorded/recorded.scenario.xml";
+            [[nodiscard]] static string makeDefaultOutputPath() { return string( kAutomationOutputFolder ) + "/Recorded/recorded.scenario.xml"; }
 
             /** @brief 녹화가 프레임 사이에 들고 있는 상태입니다. 에디터 범위의 상태 저장소가 소유한다. */
             struct RecordState
@@ -91,7 +92,7 @@ namespace sw::editor
             static void runToggle()
             {
                 string     reply;
-                const bool bOk = getState()._recorder.isRecording() ? stopRecording( reply ) : startRecording( kDefaultOutputPath, reply );
+                const bool bOk = getState()._recorder.isRecording() ? stopRecording( reply ) : startRecording( makeDefaultOutputPath(), reply );
                 if ( bOk )
                     SW_LOG_INFO( "%#", reply.c_str() );
                 else

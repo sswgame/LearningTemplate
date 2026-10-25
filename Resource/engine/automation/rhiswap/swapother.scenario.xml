@@ -4,7 +4,7 @@
   `AppSmokeTest.BackendSwapFollowsTheNewDevice` · `BackendSwapRebuildsGameBeforeEditor` 가 이 시나리오로 교체를 건다(로그의 교체 줄과 인스턴스 재생성 순서를 본다).
   교체를 거는 길은 단계 `SwapBackend` 하나다 — 메뉴 · 콘솔과 같은 길(gv_rhiBackend 변경 → 프레임 끝의 RHIBackendSwitcher::applyIfPending)이고, "N 번째 프레임" 명령줄 스위치는 두지 않는다.
   DirectX 11 · 12 가 둘 다 있어야 해서 AppScenarioTest 가 줍지 않는 이 하위 폴더에 둔다.
-  실행: App.exe -dx12(또는 -dx11) -scenario=engine/automation/rhiswap/swapother.scenario.xml (-EnableEditor 를 붙이면 에디터 인스턴스도 다시 선다)
+  실행: py -3 -m Scripts scenario swapother (백엔드 dx11 도 같다. 에디터 인스턴스까지 다시 세우려면 app-arg 옵션(이름 앞에 하이픈 둘)에 -EnableEditor 를 준다)
 -->
 <Scenario name="rhiswap.swapother" fixedDelta="0.0166667" timeoutFrames="1200" startAfter="Immediately" input="exclusive">
 	<At frame="10"><SwapBackend backend="other"/></At>
