@@ -522,7 +522,7 @@ def findManifestProblems(repositoryRoot: Path, manifest: VerifyManifest) -> list
 
 
 def findTestCaseInternal(repositoryRoot: Path, name: str) -> bool:
-    """`Suite.Case`(`*` 허용) 에 맞는 테스트 케이스 선언이 Test/ 의 .cpp 에 있는가. 모양이 아니면(전체를 뜻하는 `*` 등) 있다고 본다.
+    r"""`Suite.Case`(`*` 허용) 에 맞는 테스트 케이스 선언이 Test/ 의 .cpp 에 있는가. 모양이 아니면(전체를 뜻하는 `*` 등) 있다고 본다.
 
     뜻은 옛 정규식 `\bSuite\s*,\s*Case\b`(`Case=*` 이면 `\bSuite\b`)와 같다. 본문은 `readTestIndexInternal` 이 한 번만 훑어 색인한다.
     """
