@@ -2,7 +2,7 @@
 
 > 질문: 지금 어디까지 왔고, 다음 세션이 처음에 할 일은 무엇인가?
 > 독자: 새로 시작하는 세션(에이전트와 사람).
-> 결론: main 에 **통합 O(작업자 브랜치 체인 60 개 + 후속 묶음 6 개와 premerge)를 검증해 넣었다** — push 여부와 해시는 `## 00000000000000` 절 끝에 있다. 다음 세션의 첫 일은 ① 그 절의 "넘기는 것"(DX12 Debug 디버그 레이어 확인, 쇼케이스 시나리오, 몫 6, crowd · vfxgl 실험)을 한 번의 GPU 단계로 돌기, ② `wt/svcsweep`(에디터 필수 서비스 치환) 병합, ③ push 한 main 의 CI 결과 확인(`py -3 -m Scripts ci-jobs --summary`)이다.
+> 결론: main 에 **통합 O(작업자 브랜치 체인 60 개 + 후속 묶음 6 개와 premerge)를 검증해 넣었다** — **push 하지 않았다**(main `8610c4691` 까지 fast-forward 했고 push 는 권한 분류기가 거부했다. 사용자가 허락하면 `git push origin main`). 다음 세션의 첫 일은 ① 그 절의 "넘기는 것"(DX12 Debug 디버그 레이어 확인, 쇼케이스 시나리오, 몫 6, crowd · vfxgl 실험)을 한 번의 GPU 단계로 돌기, ② `wt/svcsweep`(에디터 필수 서비스 치환) 병합, ③ 사용자가 push 를 허락하면 push 하고 CI 결과 확인(`py -3 -m Scripts ci-jobs --summary`)이다.
 
 이 문서는 지금 상태만 둡니다. 한 일은 `git log` 가 원본이고, 설계는 계획 문서, 순서는 [Roadmap](Roadmap.md)에 있습니다.
 
@@ -16,7 +16,7 @@
 | 에이전트에게 맡길 때 · 토큰 | [에이전트와 토큰](../12_Agents.md), [작업자 규칙](WorkerRules.md) |
 | 환경 · 도구 함정 | [함정](../14_Pitfalls.md) |
 
-## 00000000000000. 2026-10-25 통합 O — 작업자 브랜치 체인과 후속 묶음이 main 에 들어감 (이것부터 읽는다)
+## 00000000000000. 2026-10-25 통합 O — 작업자 브랜치 체인과 후속 묶음이 main 에 들어감 (main `8610c4691` fast-forward 완료, **push 하지 않았다** — 권한 분류기가 거부) (이것부터 읽는다)
 
 **상태**: `D:/w/integ-o`(`wt/integ-o`)에 체인 전부(종료 코드 · 해상도 배율 · 서버 디버깅 · 카메라 컷 · 경로 패턴 · 임포트 규칙 · 소스 스캔 게이트 · 서버 빌드 목록 · 프리팹 · Online 두 가닥 · 에디터 서비스 두 가닥 · 단독 여덟)을 하나씩 `--no-ff` 로 병합했고, 이어서 shipgatelint 체인 · hostiso · wlwin · longwhy 체인 · longai · rhiu5 와 그것들을 한 데 모은 `wt/premerge`(rhiu5b · 예외 표 toml 이동 포함)를 병합했다. 충돌은 첫 묶음 여섯 파일(`VerifyBatch.json` · `LintFixer.py` · `CheckModuleTargets.py`(두 곳) · `CrossFileObjectReference.md` · `ServerBusTestTypes.h` · `ReflectionFormats.md`), 후속 묶음 셋(`VerifyBatch.json` 다시 · `ListPlans.py` · `RunFunctionSize.py`), premerge 셋(`CheckTestSuites.py` · `RHITypes.h` · `StatusBoard.md`)이었다. 양쪽 항목 · import 를 남기거나(VerifyBatch, LintFixer, ListPlans), 더 나중 사실을 남기고(문서 둘), 상수 모양 `BusTestLimit` 하나로 합치고(ServerBusTestTypes), premerge 쪽을 골랐다(내가 고친 `fromUnaccepted` · 예외 표 이름이 그쪽에 더 나은 모양으로 이미 있었다).
 **범위를 동결해 하지 않은 것**: 에디터 서비스 가닥 ② 의 `// 필수 서비스: 없으면 버그` 줄 일괄 치환은 별도 브랜치 `wt/svcsweep`(f834953e0, `D:/w/svcsweep`)에 끝내 두고 **병합하지 않았다**. 약 50 곳의 `findSubsystem` + 널 분기를 `editor::getSubsystem` 으로 바꾸고, 종료 경로(미리보기 패널 포커스 해제 · 썸네일 캐시 해제 · UI 미리보기 닫기 · 커맨드 스택)는 `find` 로 남겼다. 시나리오 단계 · 자체 테스트(`Source/Editor/SelfTest/`) 약 20 곳은 시나리오 실패로 멈추므로 안 바꿨다. 빌드 · 테스트를 돌리지 않았다 — 다음 통합이 병합하고 `EditorTest` 를 돈다(서비스가 없는 테스트 범위는 `ScopedTypeRegistryService` 같은 도우미로 걸어야 한다).
@@ -28,7 +28,7 @@
 - 통합 몫: 1) `.pending` 열다섯 개를 `Resource/` 로 옮기고 `App --cook-shaders`(surfacelit 744 개 · 덩달아 구워진 highlightoutline 32 개 바이너리) 2) `App --import-textures`(DDS 19 개 + `import.stamp` 만 바뀜, `TestAssetValidation.py` 5.0 s) 3) ko 번역 4 키(`-gather-text` → `ko.po` → `-import-po`, `-check-text` 모두 최신) 4) `lint-suite` 30/30 5) `OnlineLoadBot` 컴파일(`all` 에 들어 있어 빌드가 본다). 몫 6 · 시나리오 실행은 건너뜀.
 - **같은 결함 후보**: 작업자가 빌드 없이 쌓는 한 위 컴파일 오류 모양(라이브러리 함수의 반환형 가정, 표준 기능 가정, 에디터의 엔진 전용 헤더, 다른 브랜치가 옮긴 이름)이 병합마다 반복된다 — 작업자 지시문에 "`formatstring` 은 버퍼 쓰기, C++17, 에디터는 `EngineServices.h` 금지" 한 줄을 더하거나 이 모양을 린트로 막을 후보.
 
-**검증(이 PC, Debug)**: `integ-gate`(`-k 0` 빌드 + `ctest -L "nogpu|lint"` 103 항목)를 열 번 돌렸다(아래 표). 마지막 두 실패(`CheckStatusBoard` 상태판, `EngineTest_NoGPU_Shard2` 의 렌더 패스 장부 테스트)를 고친 뒤 그 둘만 다시 돌려 통과했고, 최종 증거는 표의 마지막 줄. `lint-suite` 30/30, `plans --check` 0건. 컴파일러 경고는 마지막 증분 빌드에서 0 이고 앞 빌드들은 오류 요약만 보았다(경고 전수 조사는 사용자 요청 때만).
+**검증(이 PC, Debug)**: `integ-gate`(`-k 0` 빌드 + `ctest -L "nogpu|lint"` 103 항목)를 열 번 돌렸다(아래 표). 마지막 두 실패(`CheckStatusBoard` 상태판, `EngineTest_NoGPU_Shard2` 의 렌더 패스 장부 테스트)를 고친 뒤 그 둘만 다시 돌려 통과했고, 마지막으로 전체를 한 번 더 돌려 통과했다(`-k 0` 빌드 + `nogpu|lint` 104/104, 125.6 s, 합계 2 분 8 초, `integ-gate check` 통과). `lint-suite` 30/30, `plans --check` 0건. 컴파일러 경고는 마지막 증분 빌드에서 0 이고 앞 빌드들은 오류 요약만 보았다(경고 전수 조사는 사용자 요청 때만).
 
 **소요(실측, 이 PC)**
 
@@ -52,11 +52,13 @@
 | `--import-textures` · `TestAssetValidation.py` | 1 회 | 3.3 s · 5.0 s |
 | 글 수집 · PO 왕복(`-check-text` · `-gather-text` · `-export-po` · `-import-po`) | 각 1 회 | 각 수 초 |
 | 빌드 · 테스트 · 쿠킹 대기 합계(위 줄들의 합) | — | 약 21 분 (`integ-gate` 열 회차 약 19 분 + 쿠킹 1.2 분) |
-| 문서 갱신(NEXT · 결정 · 계획) · 최종 증거 · push | 1 회 | (아래 끝 줄) |
+| 문서 갱신(NEXT · 결정 · 계획 · 상태판, 표 작성 포함) | 1 회 | 약 14 분 (22:30 ~ 22:44) |
+| 최종 `integ-gate`(증분 빌드 + ctest 104 항목) | 1 회 통과 | 합계 128.0 s (22:44 ~ 22:46) |
+| main fast-forward + `git push origin main` | ff 성공, push 거부 | ff 1 s 안팎. push 는 권한 분류기가 즉시 거부해 **하지 않았다**(사용자 허락 필요) |
 
 **통합이 끝내지 않고 넘기는 것(다음 통합 몫, 한 줄씩)**: `host-write-snapshot` 실행(App 을 시나리오마다 띄움) · `rhi-transfer-dx12-u5` 와 `rhi-native-context-guard` 를 DX12 Debug 에서 돌려 디버그 레이어 오류 0 확인(텍스처 상태 배리어 · 얼로케이터 재사용) · `netsyncobjects` 시나리오 · `surface-shader-check`(쇼케이스 시나리오 네 백엔드 + 사진) · `crowd` · `vfxgl` 실험(아래 00 절) · 몫 6(`complex-text-install`, RenderTargetFormat PSO 열거, 글리프 MSDF 측정, module-pass 문턱 0.02, Q3 자동 배율 실측) · Release/Shipping `nogpu` 와 에디터 자동화 시나리오로 svcnullE 의 Release 스레드 확인 · Shipping 빌드와 `-L hostgpu` · 리눅스(Wayland 리스너 시그니처 — wlwin 은 로컬에서 컴파일하지 못했다) · `wt/svcsweep` 병합.
 
-## 0000000000000. 2026-10-25 통합 N — RHI 후속 브랜치 19 개가 main 에 들어감(push 안 함, 사용자 확인 대기) (이것부터 읽는다)
+## 0000000000000. 2026-10-25 통합 N — RHI 후속 브랜치 19 개가 main 에 들어감(통합 O 와 함께 main 에 있고 push 는 아직) (위 절 다음에 읽는다)
 
 **상태**: `wt/integ-n` 을 main 으로 fast-forward 했다. **push 하지 않았다** — 사용자에게 먼저 묻는다. 들어간 브랜치: 선행 6 개(`dx11ctx` · `glpbo` · `glpbo2` · `glrb` · `cifixl5` · `vkwsi`)와 `dx11up` · `dx11rb` · `dx11ctx2` · `gltsflag` · `lostrej` · `dx11loss` · `glrb2` · `glrb3` · `bigup` · `vku6` · `bbfmt` · `gvnum` · `gvnum2`. RHI ABI 는 41 이다(병합마다 38 → 41).
 
@@ -236,4 +238,4 @@
 
 **사용자 결정 대기**: 말 모델(WildWestHorseMount W3)의 CC0 에셋과 라이선스 선택뿐이다. `D:/w` 바로 아래 작업자 산출물(`e.py`, `kh_*.log`, `vb.bak` 등)은 사용자가 지우거나 허락한다.
 
-**다음 세션의 첫 일**: ① 맨 위 절의 "넘기는 것"(DX12 Debug 디버그 레이어 확인, 쇼케이스 시나리오 네 백엔드, `netsyncobjects`, host-write-snapshot, 몫 6, crowd · vfxgl 실험)을 한 번의 GPU 단계로 돈다. ② `wt/svcsweep` 을 병합하고 `EditorTest` 를 돈다. ③ push 한 main 의 CI 결과(`py -3 -m Scripts ci-jobs --summary`)를 본다. ④ 그 사이 `[병렬 가능]` 인 Linux · GPU 검증, Vfx 실행 확인, 카메라 디렉터, 미리보기 창, 오디오, 런타임 UI 묶음은 파일이 겹치지 않으니 작업자를 따로 띄울 수 있다([Roadmap](Roadmap.md)). 작업자 지시문 첫 줄에 "python/py heredoc 편집 금지, `find /` 금지" 를 적는다(`.claude/hooks/GuardCommands.py` 가 막는다).
+**다음 세션의 첫 일**: ① 맨 위 절의 "넘기는 것"(DX12 Debug 디버그 레이어 확인, 쇼케이스 시나리오 네 백엔드, `netsyncobjects`, host-write-snapshot, 몫 6, crowd · vfxgl 실험)을 한 번의 GPU 단계로 돈다. ② `wt/svcsweep` 을 병합하고 `EditorTest` 를 돈다. ③ 사용자가 push 를 허락했으면 push 하고 그 CI 결과(`py -3 -m Scripts ci-jobs --summary`)를 본다. ④ 그 사이 `[병렬 가능]` 인 Linux · GPU 검증, Vfx 실행 확인, 카메라 디렉터, 미리보기 창, 오디오, 런타임 UI 묶음은 파일이 겹치지 않으니 작업자를 따로 띄울 수 있다([Roadmap](Roadmap.md)). 작업자 지시문 첫 줄에 "python/py heredoc 편집 금지, `find /` 금지" 를 적는다(`.claude/hooks/GuardCommands.py` 가 막는다).
