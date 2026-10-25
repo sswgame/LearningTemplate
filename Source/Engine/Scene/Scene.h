@@ -77,6 +77,8 @@ namespace sw
          * @details 파일을 넘는 참조(`SceneObjectReference`)가 대상을 적을 때 씁니다. 없는 오브젝트나, 인스턴스가 다시 스폰하는 중첩 프리팹 부품(씬이 엔티티로 저장하지 않는다)이면 0 입니다. 다음 저장이 그 id 를 그대로 씁니다.
          */
         [[nodiscard]] uint64 getOrAssignFileID( uint64 objectID ) const;
+        /** @brief 오브젝트에 이미 준 파일 id 입니다. 주지 않았으면 0 입니다(`getOrAssignFileID` 와 달리 새로 주지 않는다 — 참조가 있는지 묻는 쪽이 씁니다). */
+        [[nodiscard]] uint64 findFileID( uint64 objectID ) const;
         /** @brief 파일 id 의 살아 있는 오브젝트 id 입니다. 이 씬에 없으면(지운 오브젝트 · 내려간 스트리밍 셀) 0 입니다. */
         [[nodiscard]] uint64 findObjectIDByFileID( uint64 fileID ) const;
 

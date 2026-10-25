@@ -7,6 +7,7 @@
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Scene/SceneObjectReference.h"
 
 namespace sw::editortest
 {
@@ -49,6 +50,20 @@ namespace sw::editortest
         }
 
         int32 _previewCount = 0;
+    };
+} // namespace sw::editortest
+
+namespace sw::editortest
+{
+    /** @brief 씬 파일을 넘는 오브젝트 참조 칸 하나를 가진 컴포넌트입니다(프리팹 만들기가 참조된 오브젝트를 옮기지 않는지 보는 테스트용). */
+    REFLECT()
+    class SceneReferenceHolderProbeComponent : public Component
+    {
+    public:
+        REFLECT_BODY();
+
+        PROPERTY()
+        SceneObjectReference _target;
     };
 } // namespace sw::editortest
 

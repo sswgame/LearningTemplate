@@ -596,6 +596,12 @@ namespace sw
         return nextFileID;
     }
 
+    uint64 Scene::findFileID( uint64 objectID ) const
+    {
+        const auto mapIt = _mapObjectIDToFileID.find( objectID );
+        return mapIt != _mapObjectIDToFileID.end() ? mapIt->second : 0;
+    }
+
     uint64 Scene::computeNextFileID() const
     {
         // 새 id 는 이 씬이 지금껏 쓴 어느 파일 id 보다 크다. 사라진 오브젝트나 해석하지 못한 엔티티의 id 를 다시 주면 그것을 가리키던 참조가

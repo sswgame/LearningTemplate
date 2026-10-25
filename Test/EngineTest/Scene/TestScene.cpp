@@ -24,6 +24,7 @@
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
+#include "Engine/Object/Prefab/PrefabInstanceRegistry.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Renderer/Light/GPULightBuffer.h"
 #include "Engine/Resource/AssetManager.h"
@@ -368,6 +369,48 @@ SW_TEST_CASE( SceneTest, CrossSceneReferenceResolvesThroughFileID )
     sw::GameObject* pWindow = pSublevel->getObjectManager()->createGameObject( sw::hashed_string( "Window" ) );
     SW_ASSERT_NOT_NULL( pWindow );
     SW_EXPECT_TRUE( pSublevel->getOrAssignFileID( pWindow->getObjectID() ) > doorFileID );
+
+    manager.shutdown();
+}
+
+/**
+ * @brief [SceneTest] 다시 스폰되는 중첩 프리팹 부품은 파일 id 를 받지 않아 씬 파일 참조를 만들 수 없고, 일반 오브젝트와 풀린 부품은 받는다
+ * @details 부품은 씬이 엔티티로 저장하지 않고 바깥 인스턴스가 다시 스폰한다 — 파일 id 를 주면 그 참조가 다음 로드에 `ObjectMissing` 이 된다(`Scene::getOrAssignFileID` 가드).
+ */
+SW_TEST_CASE( SceneTest, NestedPartGetsNoFileIDWhileOrdinaryObjectsDo )
+{
+    sw::SceneManager manager;
+    SW_ASSERT_TRUE( manager.initialize() );
+    sw::Scene* pScene = manager.createScene( "Nested" );
+    SW_ASSERT_NOT_NULL( pScene );
+    pScene->setSourcePath( "game/test/maps/nested.scene.xml" );
+    sw::GameObjectManager& objects = *pScene->getObjectManager();
+
+    sw::GameObject* pPost  = objects.createGameObject( sw::hashed_string( "Post" ) );
+    sw::GameObject* pLamp  = objects.createGameObject( sw::hashed_string( "Lamp" ) );
+    sw::GameObject* pCrate = objects.createGameObject( sw::hashed_string( "Crate" ) );
+    SW_ASSERT_TRUE( pPost != nullptr && pLamp != nullptr && pCrate != nullptr );
+    objects.mergePendingAdds();
+
+    sw::PrefabInstanceRegistry& registry = objects.getSubsystem<sw::PrefabInstanceRegistry>();
+    registry.registerNestedPart( pLamp->getObjectID(), pPost->getObjectID(), "game/prefabs/lamp.prefab.xml", "0" );
+    SW_ASSERT_TRUE( registry.isAttachedNestedPart( pLamp ) );
+
+    // 가드가 켜지는 경우 — 부품은 0 이고, 참조도 만들 수 없으며, 파일 id 표에도 남지 않는다.
+    SW_EXPECT_EQUAL( uint64( 0 ), pScene->getOrAssignFileID( pLamp->getObjectID() ) );
+    SW_EXPECT_EQUAL( uint64( 0 ), pScene->findFileID( pLamp->getObjectID() ) );
+    sw::SceneObjectReference reference;
+    SW_EXPECT_FALSE( sw::SceneObjectReferenceUtil::makeReference( *pScene, pLamp->getObjectID(), reference ) );
+    SW_EXPECT_FALSE( reference.isSet() );
+
+    // 일반 오브젝트와 바깥 인스턴스 자신은 받는다.
+    SW_EXPECT_TRUE( pScene->getOrAssignFileID( pCrate->getObjectID() ) != 0 );
+    SW_EXPECT_TRUE( pScene->getOrAssignFileID( pPost->getObjectID() ) != 0 );
+    SW_EXPECT_TRUE( sw::SceneObjectReferenceUtil::makeReference( *pScene, pCrate->getObjectID(), reference ) );
+
+    // 부품 기록을 거두면(인스턴스 밖으로 옮김 · 풀기) 씬이 그 오브젝트를 저장하므로 파일 id 를 받는다.
+    registry.unregisterNestedPart( pLamp->getObjectID() );
+    SW_EXPECT_TRUE( pScene->getOrAssignFileID( pLamp->getObjectID() ) != 0 );
 
     manager.shutdown();
 }

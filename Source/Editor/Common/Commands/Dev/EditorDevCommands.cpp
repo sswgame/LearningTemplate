@@ -433,7 +433,12 @@ namespace sw::editor
                     return false;
                 }
                 (void)FileUtil::ensureDirectoryExists( FileUtil::getDirectoryPart( absolutePath ) );
-                (void)EditorInspectorCommands::adoptChildPrefabInstances( pObject ); // 옮긴 수는 로그가 알린다
+                const EditorInspectorCommands::AdoptResult adopted = EditorInspectorCommands::adoptChildPrefabInstances( pObject ); // 옮긴 수는 로그가 알린다
+                if ( adopted.isRejected() )
+                {
+                    outReply = adopted._rejectReason;
+                    return false;
+                }
                 PrefabAsset asset;
                 asset.setFromGameObject( pObject );
                 if ( asset.saveToFile( absolutePath ) == false )

@@ -69,6 +69,12 @@ namespace sw
          * @return 씬에 원본 경로가 없거나(저장한 적 없는 씬) 오브젝트가 없으면 false 이고 @p outReference 는 비웁니다.
          */
         [[nodiscard]] static bool makeReference( const Scene& scene, uint64 objectID, SceneObjectReference& outReference );
+        /**
+         * @brief 올라와 있는 씬들의 컴포넌트 중에 @p targetScene 의 오브젝트 @p objectID 를 가리키는 `SceneObjectReference` 가 있는지 봅니다. 있으면 첫 하나를 @p outHolder 에 적습니다("씬/오브젝트.컴포넌트.프로퍼티").
+         * @details 오브젝트를 씬 파일 밖으로 옮기기(다시 스폰되는 쪽으로 넘기기) 전에 부른다 — 옮기면 그 파일 id 가 다음 로드에 사라져 참조가 끊긴다.
+         *          파일 id 를 준 적 없는 오브젝트는 참조가 있을 수 없어 false 이고, 이 함수는 파일 id 를 새로 주지 않는다.
+         */
+        [[nodiscard]] static bool findReferenceTo( const SceneManager& sceneManager, const Scene& targetScene, uint64 objectID, string& outHolder );
         /** @brief 올라와 있는 씬들(`SceneManager::getLoadedScenes`)에서 참조를 해석합니다. 찾으면 @p outObjectID 를 채웁니다. */
         [[nodiscard]] static SceneObjectResolveResult resolve( const SceneManager& sceneManager, const SceneObjectReference& reference, uint64& outObjectID );
         /** @brief 씬 하나에서 해석합니다. 씬의 원본 경로가 참조의 경로와 다르면 `SceneNotLoaded` 입니다. */
