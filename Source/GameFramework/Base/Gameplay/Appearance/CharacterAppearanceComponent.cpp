@@ -735,6 +735,43 @@ namespace sw
         return false;
     }
 
+    GameObject* CharacterAppearanceComponent::spawnSkinnedPart( GameObjectManager& manager, SkeletalMeshComponent& body, SceneComponent* pBodyScene, const ResolvedPart& part )
+    {
+        // 스킨드 부품이다. 몸의 자식이 되고 위치는 몸과 같다. 자기 리그가 없으면 몸을 리더로 따르고(옷, 머리카락), 있으면 자기 스켈레톤을
+        // 그 리그가 움직인다(스프링 망토 — 리그의 `Body` 유닛이 이 몸이다).
+        const TComponentHandle<SkeletalMeshComponent> bodyHandle{ &body };
+        GameObject*                                   pObject  = manager.createGameObject( part._partName );
+        SkeletalMeshComponent*                        pSkinned = pObject->addComponent<SkeletalMeshComponent>();
+        pSkinned->setSkeletonPath( part._skeleton.empty() ? string_view( body.getSkeletonPath() ) : string_view( part._skeleton.c_str() ) );
+        pSkinned->setMeshID( part._asset.c_str() );
+        if ( part._material.empty() == false )
+            pSkinned->setMaterialPath( part._material.c_str() );
+        if ( part._rig.empty() )
+        {
+            // 군중 공유는 몸을 따른다 — 몸이 묶음을 나누면 부품도 같은 클립 · 위상의 자기 묶음을 나눈다(`AnimationCrowd::joinFollowerBucket`). 값의 기준은 몸 프리팹이다.
+            pSkinned->setShareCrowdPose( body.isShareCrowdPose() );
+            pSkinned->setLeaderPose( manager.resolveComponent( bodyHandle ) );
+        }
+        else
+        {
+            PoseModifierComponent* pRig = pObject->addComponent<PoseModifierComponent>();
+            pRig->setRigPath( part._rig.c_str() );
+            pRig->bindUnit( hashed_string( kBodyRigUnit ), manager.resolveComponent( bodyHandle ) );
+            // 소켓을 적었으면 부품을 몸 바인드 포즈의 그 소켓 자리에 둔다 — 리그가 돌지 않는 곳(플레이 없는 미리보기)에서도 제자리에 보인다.
+            // 회전은 두지 않는다(리그가 뼈를 그 자리로 끈다).
+            float4x4   restInUnit;
+            uint32     restUnit    = AppearanceSocketRig::kNoUnit;
+            const bool bRestPlaced = part._placement.isEmpty() == false && _rig.computePlacement( part._placement, _bodyBindBones, restInUnit, restUnit );
+            if ( bRestPlaced && restUnit == AppearanceSocketRig::kBodyUnit )
+                pSkinned->setLocalPosition( restInUnit.getTranslation() );
+            else if ( part._placement.isEmpty() == false )
+                SW_LOG_WARNING( "Appearance '%#' rigged part '%#' names no active body socket - it rests at the body origin", _presetID.c_str(), part._partName.c_str() );
+        }
+        if ( pBodyScene != nullptr )
+            (void)pSkinned->attachToComponent( pBodyScene, AttachRule::KeepRelative ); // 붙일 수 없는 부모이면 false 이고, 그 부위는 제자리에 남는다
+        return pObject;
+    }
+
     void CharacterAppearanceComponent::syncParts( GameObjectManager& manager, SkeletalMeshComponent& body, int32 bodyPart,
                                                   const vector<AppearanceDetachEvent>& listDetachEvent )
     {
@@ -777,9 +814,8 @@ namespace sw
         }
         _listSpawnedPart = std::move( listKeep );
 
-        AssetManager*                                 pAssetManager = game::findSubsystem<AssetManager>();
-        SceneComponent*                               pBodyScene    = body.getOwner() != nullptr ? body.getOwner()->getPrimarySceneComponent() : nullptr;
-        const TComponentHandle<SkeletalMeshComponent> bodyHandle{ &body };
+        AssetManager*   pAssetManager = game::findSubsystem<AssetManager>();
+        SceneComponent* pBodyScene    = body.getOwner() != nullptr ? body.getOwner()->getPrimarySceneComponent() : nullptr;
         for ( size_t partIndex = 0; partIndex < _state.getResolved()._listPart.size(); ++partIndex )
         {
             const ResolvedPart& part      = _state.getResolved()._listPart[partIndex];
@@ -810,37 +846,7 @@ namespace sw
             }
             else if ( part._kind == AppearancePartKind::Skinned )
             {
-                // 스킨드 부품이다. 몸의 자식이 되고 위치는 몸과 같다. 자기 리그가 없으면 몸을 리더로 따르고(옷, 머리카락), 있으면 자기 스켈레톤을
-                // 그 리그가 움직인다(스프링 망토 — 리그의 `Body` 유닛이 이 몸이다).
-                pObject                         = manager.createGameObject( part._partName );
-                SkeletalMeshComponent* pSkinned = pObject->addComponent<SkeletalMeshComponent>();
-                pSkinned->setSkeletonPath( part._skeleton.empty() ? string_view( body.getSkeletonPath() ) : string_view( part._skeleton.c_str() ) );
-                pSkinned->setMeshID( part._asset.c_str() );
-                if ( part._material.empty() == false )
-                    pSkinned->setMaterialPath( part._material.c_str() );
-                if ( part._rig.empty() )
-                {
-                    // 군중 공유는 몸을 따른다 — 몸이 묶음을 나누면 부품도 같은 클립 · 위상의 자기 묶음을 나눈다(`AnimationCrowd::joinFollowerBucket`). 값의 기준은 몸 프리팹이다.
-                    pSkinned->setShareCrowdPose( body.isShareCrowdPose() );
-                    pSkinned->setLeaderPose( manager.resolveComponent( bodyHandle ) );
-                }
-                else
-                {
-                    PoseModifierComponent* pRig = pObject->addComponent<PoseModifierComponent>();
-                    pRig->setRigPath( part._rig.c_str() );
-                    pRig->bindUnit( hashed_string( kBodyRigUnit ), manager.resolveComponent( bodyHandle ) );
-                    // 소켓을 적었으면 부품을 몸 바인드 포즈의 그 소켓 자리에 둔다 — 리그가 돌지 않는 곳(플레이 없는 미리보기)에서도 제자리에 보인다.
-                    // 회전은 두지 않는다(리그가 뼈를 그 자리로 끈다).
-                    float4x4   restInUnit;
-                    uint32     restUnit    = AppearanceSocketRig::kNoUnit;
-                    const bool bRestPlaced = part._placement.isEmpty() == false && _rig.computePlacement( part._placement, _bodyBindBones, restInUnit, restUnit );
-                    if ( bRestPlaced && restUnit == AppearanceSocketRig::kBodyUnit )
-                        pSkinned->setLocalPosition( restInUnit.getTranslation() );
-                    else if ( part._placement.isEmpty() == false )
-                        SW_LOG_WARNING( "Appearance '%#' rigged part '%#' names no active body socket - it rests at the body origin", _presetID.c_str(), part._partName.c_str() );
-                }
-                if ( pBodyScene != nullptr )
-                    (void)pSkinned->attachToComponent( pBodyScene, AttachRule::KeepRelative ); // 붙일 수 없는 부모이면 false 이고, 그 부위는 제자리에 남는다
+                pObject              = spawnSkinnedPart( manager, body, pBodyScene, part );
                 spawned._bSocketPart = SW_FALSE;
             }
             if ( pObject == nullptr )
@@ -1128,6 +1134,45 @@ namespace sw
         return false;
     }
 
+    bool CharacterAppearanceComponent::applyUnitMeshes( GameObjectManager& manager, SkeletalMeshComponent* pBodyUnit, bool bMerged, const vector<shared_ptr<Mesh>>& listSource,
+                                                        const vector<shared_ptr<Mesh>>& listBaked )
+    {
+        bool bAnyBaked = false;
+        for ( size_t index = 0; index < _listMeshAssemblyLoad.size(); ++index )
+        {
+            const uint32 partIndex = _listMeshAssemblyLoad[index]._partIndex;
+            // 합쳐진 부품(몸 포함)은 호출 앞에서 걸었다.
+            bool bInMerge = bMerged && static_cast<int32>( partIndex ) == _bodyPart;
+            for ( const SpawnedPart& spawned : _listSpawnedPart )
+            {
+                bInMerge = bInMerge || ( bMerged && spawned._bMerged == SW_TRUE && spawned._partIndex == partIndex );
+            }
+            if ( bInMerge )
+                continue;
+            SkeletalMeshComponent* pUnit = findSkinnedUnit( manager, partIndex );
+            shared_ptr<Mesh>       mesh  = listBaked[index] != nullptr ? listBaked[index] : listSource[index];
+            bAnyBaked                    = bAnyBaked || listBaked[index] != nullptr;
+            // 합쳤던 몸이 합치지 않게 되면 구간 이름을 풀고 원본(또는 베이크한 사본)으로 되돌린다.
+            const bool bUnmerge = pUnit != nullptr && pUnit == pBodyUnit && _bMeshMerged == SW_TRUE;
+            if ( bUnmerge )
+            {
+                pUnit->setSectionName( hashed_string{} );
+                _bMeshMerged = SW_FALSE;
+            }
+            // 지난번에도 원본이었고 이번에도 원본이면 건드리지 않는다(사본 · 군중 묶음을 다시 만들지 않게).
+            const bool bUnchanged = listBaked[index] == nullptr && _bMeshAssembled == SW_FALSE && bUnmerge == false;
+            const bool bApplies   = pUnit != nullptr && mesh != nullptr;
+            if ( bApplies && bUnchanged == false )
+                pUnit->setSkinSourceMesh( std::move( mesh ) );
+            for ( SpawnedPart& spawned : _listSpawnedPart )
+            {
+                if ( spawned._partIndex == partIndex && spawned._bSocketPart == SW_FALSE )
+                    spawned._bBaked = listBaked[index] != nullptr ? SW_TRUE : SW_FALSE;
+            }
+        }
+        return bAnyBaked;
+    }
+
     void CharacterAppearanceComponent::applyMeshAssembly()
     {
         // 틱이 이 걸기를 예약한 뒤 같은 틱 뒤에 다시 조립했으면(새 요청) 새 것이 아직 읽는 중이다 — 다음 틱이 건다.
@@ -1198,40 +1243,8 @@ namespace sw
         // 합치는 부품이 있으면 몸과 합친 부품의 메시를 하나로 합쳐 몸 유닛에 건다. 합치지 못하면 오류를 남기고(몸 원본만 그려진다) 아래 부품별 길로 간다.
         SkeletalMeshComponent* pBodyUnit = _bodyPart >= 0 ? findSkinnedUnit( *pManager, static_cast<uint32>( _bodyPart ) ) : nullptr;
         const bool             bMerged   = hasMergedParts() && pBodyUnit != nullptr && applyMergedMeshes( *pManager, *pBodyUnit, listSource, listBaked, bakeKey );
-        bool                   bAnyBaked = bMerged;
-        for ( size_t index = 0; index < _listMeshAssemblyLoad.size(); ++index )
-        {
-            const uint32 partIndex = _listMeshAssemblyLoad[index]._partIndex;
-            // 합쳐진 부품(몸 포함)은 위에서 걸었다.
-            bool bInMerge = bMerged && static_cast<int32>( partIndex ) == _bodyPart;
-            for ( const SpawnedPart& spawned : _listSpawnedPart )
-            {
-                bInMerge = bInMerge || ( bMerged && spawned._bMerged == SW_TRUE && spawned._partIndex == partIndex );
-            }
-            if ( bInMerge )
-                continue;
-            SkeletalMeshComponent* pUnit = findSkinnedUnit( *pManager, partIndex );
-            shared_ptr<Mesh>       mesh  = listBaked[index] != nullptr ? listBaked[index] : listSource[index];
-            bAnyBaked                    = bAnyBaked || listBaked[index] != nullptr;
-            // 합쳤던 몸이 합치지 않게 되면 구간 이름을 풀고 원본(또는 베이크한 사본)으로 되돌린다.
-            const bool bUnmerge = pUnit != nullptr && pUnit == pBodyUnit && _bMeshMerged == SW_TRUE;
-            if ( bUnmerge )
-            {
-                pUnit->setSectionName( hashed_string{} );
-                _bMeshMerged = SW_FALSE;
-            }
-            // 지난번에도 원본이었고 이번에도 원본이면 건드리지 않는다(사본 · 군중 묶음을 다시 만들지 않게).
-            const bool bUnchanged = listBaked[index] == nullptr && _bMeshAssembled == SW_FALSE && bUnmerge == false;
-            const bool bApplies   = pUnit != nullptr && mesh != nullptr;
-            if ( bApplies && bUnchanged == false )
-                pUnit->setSkinSourceMesh( std::move( mesh ) );
-            for ( SpawnedPart& spawned : _listSpawnedPart )
-            {
-                if ( spawned._partIndex == _listMeshAssemblyLoad[index]._partIndex && spawned._bSocketPart == SW_FALSE )
-                    spawned._bBaked = listBaked[index] != nullptr ? SW_TRUE : SW_FALSE;
-            }
-        }
-        _bMeshAssembled = bAnyBaked ? SW_TRUE : SW_FALSE;
+        const bool             bAnyBaked = applyUnitMeshes( *pManager, pBodyUnit, bMerged, listSource, listBaked ) || bMerged;
+        _bMeshAssembled                  = bAnyBaked ? SW_TRUE : SW_FALSE;
         applyVisibility( *pManager );
         // 영역 수는 피팅 표의 영역 수다(표가 없으면 영역이 없다). 합친 구간 컴포넌트가 이제 생겼으니 표면도 다시 올린다.
         rebuildSurfaceState( pTables != nullptr ? static_cast<uint32>( pTables->getRegions().size() ) : 0 );
