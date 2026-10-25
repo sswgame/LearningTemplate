@@ -321,6 +321,31 @@ SW_TEST_CASE( EditorPlaySessionTest, PauseFromStoppedThenPlayStartsTheWorld )
 }
 
 /**
+ * @brief [EditorPlaySessionTest] 상태가 바뀌면 거절 로그 억제 기록을 비워 다음 플레이의 첫 같은 거절도 로그로 남는다
+ * @details 같은 편집의 연속 거절은 한 번만 남긴다. 거절 뒤 편집 호출 없이 Stop → Play 하면 기록이 남아 다음 플레이의 첫 거절 로그가 사라지던 결함이다.
+ */
+SW_TEST_CASE( EditorPlaySessionTest, StateChangeResetsRefusedEditLogSuppression )
+{
+    SceneManager sceneManager;
+    SW_ASSERT_NOT_NULL( sceneManager.createEmptyActiveScene( "EditedLevel" ) );
+    ScopedSceneManagerService scopedScene{ sceneManager };
+    ScopedPlaySessionService  scopedPlaySession;
+    PlaySessionData*          pData = EditorPlaySession::findData();
+    SW_ASSERT_NOT_NULL( pData );
+
+    test::ScopedLogCollector logs;
+    EditorPlaySession::setState( *pData, PlaySessionState::Playing );
+    SW_EXPECT_TRUE( EditorPlaySession::refuseSceneEdit( "Rename GameObject" ) );
+    SW_EXPECT_TRUE( EditorPlaySession::refuseSceneEdit( "Rename GameObject" ) );
+    SW_EXPECT_EQUAL( uint32( 1 ), logs.countWithID( "Editor.SceneEditRefused" ) ); // 연속 거절은 한 번만
+
+    EditorPlaySession::setState( *pData, PlaySessionState::Stopped );
+    EditorPlaySession::setState( *pData, PlaySessionState::Playing );
+    SW_EXPECT_TRUE( EditorPlaySession::refuseSceneEdit( "Rename GameObject" ) );
+    SW_EXPECT_EQUAL( uint32( 2 ), logs.countWithID( "Editor.SceneEditRefused" ) ); // 상태가 바뀐 뒤 첫 거절은 다시 남는다
+}
+
+/**
  * @brief [EditorPlaySessionTest] 씬을 여는 중에 누른 Play 는 미뤄졌다가 로드가 끝난 프레임에 그 씬으로 시작한다
  * @details 로드 중에 바로 시작하면 스냅샷이 곧 내려갈 씬을 찍고 플레이 중에 로드가 끝나 씬이 바뀐다. 언리얼 `RequestPlaySession` 처럼 요청을 걸어
  *          두고 로드가 끝난 다음 틱에 시작한다. 이 테스트가 돌 수 있게 상태 전환 본체가 상태를 인자로 받는다(EditorTest 는 EditorContext 를 만들 수 없다).

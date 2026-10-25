@@ -331,17 +331,18 @@ namespace sw::editor
                 pData->_lastRefusedAction.clear(); // 다시 허용되면 다음 거절은 새로 남긴다
             return false;
         }
+        // 서비스가 없으면 "정지" 이고 막는 작업도 없어 위에서 허용으로 반환했다. 여기에 오면 거절 상태(플레이 중이거나 막는 작업)가 있으니 서비스가 있다.
+        SW_ASSERT( pData != nullptr );
+        if ( pData == nullptr )
+            return true;
         const bool bHeld = areSceneEditsHeld();
         // 매 프레임 부르는 경로(기즈모 드래그 등)가 줄마다 경고를 쏟지 않게, 같은 편집이 같은 이유로 연속 거절되면 첫 한 번만 남긴다.
-        if ( pData != nullptr )
-        {
-            const bool bSameAsLast = pData->_lastRefusedAction == pAction && ( pData->_bLastRefusedByHold != 0 ) == bHeld;
-            if ( bSameAsLast )
-                return true;
-            pData->_lastRefusedAction  = pAction;
-            pData->_bLastRefusedByHold = bHeld ? SW_TRUE : SW_FALSE;
-        }
-        const utf8* pReason = bHeld ? "a long-running task (light probe bake) holds scene edits" : "the play session is not stopped";
+        const bool bSameAsLast = pData->_lastRefusedAction == pAction && ( pData->_bLastRefusedByHold != 0 ) == bHeld;
+        if ( bSameAsLast )
+            return true;
+        pData->_lastRefusedAction  = pAction;
+        pData->_bLastRefusedByHold = bHeld ? SW_TRUE : SW_FALSE;
+        const utf8* pReason        = bHeld ? "a long-running task (light probe bake) holds scene edits" : "the play session is not stopped";
         SW_LOG_WARNING_ID( "Editor.SceneEditRefused", "%# refused: scene edits are not allowed - %#", pAction, pReason );
         return true;
     }
@@ -564,6 +565,7 @@ namespace sw::editor
         pData->_pendingStepCount        = 0;
         const PlaySessionState previous = pData->_state;
         pData->_state                   = state;
+        pData->_lastRefusedAction.clear(); // 상태가 바뀌면 거절 기록을 비운다. Stop 뒤 다음 플레이의 첫 같은 거절도 로그로 남아야 한다
 
         // 편집 내역은 Play 동안 맡겨 두고 Stop 뒤에 되찾는다(아래 분기). 플레이 중의 편집은 Stop 이 스냅샷으로 되돌리므로 그동안의 기록은 버린다.
         // 플레이와 일시정지 사이에서는 비우기만 한다.
