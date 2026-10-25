@@ -31,17 +31,17 @@ namespace sw
     SW_GLOBAL_VARIABLE( int32, gv_gpuCulling, 1, "GPU 컬링 컴퓨트 디스패치 (0=건너뜀, 진단용)" );
 
     /**
-     * @brief `-gv_morphDiag=<0|1|2|3>` 은 GPU 메시 모프 경로를 백엔드 능력 테이블과 **상관없이** 돌려 봅니다.
-     * @details 0은 평소대로(`RHICapabilities::_bGPUMeshMorph` 를 따름), 1은 능력 테이블을 무시하고 켬,
-     *          2는 켜되 **컴퓨트 디스패치를 건너뛰고 레스트 버퍼를 정점 셰이더에 그대로 바인딩**,
-     *          3은 2에 더해 풀 원소의 노멀 위치에 **원소 번호**를 기록한다.
+     * @brief `-gv_morphDiag=<Normal|ForceOn|SkipDispatch|IndexTag>` 는 GPU 메시 모프 경로를 백엔드 능력 테이블과 **상관없이** 돌려 봅니다(`MeshMorphDiagMode`).
+     * @details Normal 은 평소대로(`RHICapabilities::_bGPUMeshMorph` 를 따름), ForceOn 은 능력 테이블을 무시하고 켬,
+     *          SkipDispatch 는 켜되 **컴퓨트 디스패치를 건너뛰고 레스트 버퍼를 정점 셰이더에 그대로 바인딩**,
+     *          IndexTag 는 SkipDispatch 에 더해 풀 원소의 노멀 위치에 **원소 번호**를 기록한다.
      *
-     *          2의 정답은 **레스트 포즈와 같은 이미지**다. 컴퓨트가 아예 돌지 않기 때문이다. 그래서
-     *          2만으로 "컴퓨트가 범인인가" 를 가를 수 있다.
-     *          3은 거기서 한 걸음 더 간다. 원소 번호를 읽으면 "제 원소를 가리켰는가" 를 위치 값과 **따로**
+     *          SkipDispatch 의 정답은 **레스트 포즈와 같은 이미지**다. 컴퓨트가 아예 돌지 않기 때문이다. 그래서
+     *          SkipDispatch 만으로 "컴퓨트가 범인인가" 를 가를 수 있다.
+     *          IndexTag 는 거기서 한 걸음 더 간다. 원소 번호를 읽으면 "제 원소를 가리켰는가" 를 위치 값과 **따로**
      *          볼 수 있어서, 인덱싱이 틀린 것인지 내용이 틀린 것인지 이미지 한 장으로 가를 수 있다.
      */
-    SW_GLOBAL_VARIABLE( int32, gv_morphDiag, 0, "메시 모프 진단 (0 평소 / 1 강제 켬 / 2 디스패치 생략 / 3 번호표)" );
+    SW_GLOBAL_VARIABLE( MeshMorphDiagMode, gv_morphDiag, MeshMorphDiagMode::Normal, "메시 모프 진단 (Normal 평소 / ForceOn 강제 켬 / SkipDispatch 디스패치 생략 / IndexTag 번호표)" );
 
     bool FrameRenderer::usesGPUGeneratedCommands() const
     {
@@ -90,13 +90,30 @@ namespace sw
         }
     }
 
-    int32 FrameRenderer::getEffectiveMeshMorphDiag() const
+    MeshMorphDiagMode FrameRenderer::getEffectiveMeshMorphDiag() const
     {
 #if !defined( SW_SHIPPING )
-        if ( _debugOverrides._meshMorphDiag >= 0 )
-            return _debugOverrides._meshMorphDiag;
+        if ( _debugOverrides._meshMorphDiag.has_value() )
+            return *_debugOverrides._meshMorphDiag;
 #endif
         return gv_morphDiag;
+    }
+
+    bool FrameRenderer::isMeshMorphDiagValid()
+    {
+        // 모든 열거자를 나열한다 — 열거자를 더하면 여기서 컴파일 경고가 난다. 범위 밖 값은 Normal 로 바꾸지 않고 알린다.
+        switch ( gv_morphDiag )
+        {
+            case MeshMorphDiagMode::Normal:
+            case MeshMorphDiagMode::ForceOn:
+            case MeshMorphDiagMode::SkipDispatch:
+            case MeshMorphDiagMode::IndexTag:
+            {
+                return true;
+            }
+        }
+        SW_LOG_ERROR( "gv_morphDiag has no mode for the value %# (Normal, ForceOn, SkipDispatch or IndexTag)", static_cast<uint32>( gv_morphDiag ) );
+        return false;
     }
 
     float32 FrameRenderer::getAnimationTime() const
@@ -110,13 +127,13 @@ namespace sw
 
     void FrameRenderer::prepareMeshMorphPool()
     {
-        const int32 morphDiag = getEffectiveMeshMorphDiag();
+        const MeshMorphDiagMode morphDiag = getEffectiveMeshMorphDiag();
         // 백엔드가 못 하면 풀을 만들지도 않는다. 배치의 base 가 kInvalidBase 로 남아 셰이더가
         // 레스트 포즈로 그린다(언리얼의 스킨 캐시 폴백과 같다). 자세한 사연은 RHICapabilities.h 를 참고한다.
         _deform._bMorphBindsRest = SW_FALSE;
         if ( _pDevice == nullptr )
             return;
-        if ( _pDevice->getCapabilities()._bGPUMeshMorph == SW_FALSE && morphDiag == 0 )
+        if ( _pDevice->getCapabilities()._bGPUMeshMorph == SW_FALSE && morphDiag == MeshMorphDiagMode::Normal )
             return;
 
         // 풀은 **배치가 가진 메시**에서 만든다. 스냅샷 배치가 소유권을 가지고 있으므로 이 프레임 동안 살아 있다.
@@ -178,25 +195,25 @@ namespace sw
 
     void FrameRenderer::dispatchMeshMorph()
     {
-        const int32 morphDiag = getEffectiveMeshMorphDiag();
+        const MeshMorphDiagMode morphDiag = getEffectiveMeshMorphDiag();
         if ( _pDevice == nullptr || _pCmd == nullptr )
             return;
-        if ( _pDevice->getCapabilities()._bGPUMeshMorph == SW_FALSE && morphDiag == 0 )
+        if ( _pDevice->getCapabilities()._bGPUMeshMorph == SW_FALSE && morphDiag == MeshMorphDiagMode::Normal )
             return;
         if ( _deform._meshMorphPool.isDispatchable() == false )
             return;
 
-        // 진단 2: 컴퓨트를 돌리지 않고 레스트 버퍼를 그대로 정점 셰이더에 바인딩한다(위 gv 주석 참고).
-        if ( morphDiag == 2 )
+        // 진단 SkipDispatch: 컴퓨트를 돌리지 않고 레스트 버퍼를 그대로 정점 셰이더에 바인딩한다(위 gv 주석 참고).
+        if ( morphDiag == MeshMorphDiagMode::SkipDispatch )
         {
             _deform._bMorphBindsRest = SW_TRUE;
             return;
         }
 
-        // 진단 3: 레스트 버퍼에 **위치는 진짜 값, 노멀 위치에는 원소 번호**를 기록해 올리고 컴퓨트를
+        // 진단 IndexTag: 레스트 버퍼에 **위치는 진짜 값, 노멀 위치에는 원소 번호**를 기록해 올리고 컴퓨트를
         //         건너뛴다. 그러면 이미지 한 장으로 "정점 셰이더가 제 원소를 가리켰는가"(원소 번호)와 "그 원소의
         //         위치가 정점 스트림과 같은가" 를 **따로** 볼 수 있다. 값만 비교해서는 둘을 가를 수 없다.
-        if ( morphDiag == 3 )
+        if ( morphDiag == MeshMorphDiagMode::IndexTag )
         {
             // 메시마다 풀 구간(baseOf)에 쓴다 — 구간은 목록 순서로 이어져 있지 않다(C-43 부분 갱신).
             for ( const Mesh* pMesh : _deform._listScratchMorphMesh )
@@ -256,9 +273,10 @@ namespace sw
     {
         if ( _pDevice == nullptr || _pCmd == nullptr )
             return;
-        const int32 morphDiag = getEffectiveMeshMorphDiag();
-        // 진단 2와 3은 레스트 버퍼를 그대로 바인딩해 "컴퓨트 없이" 를 본다. 스키닝도 돌리지 않는다(바인드 포즈).
-        const bool bSkipMorphSkinning = ( _pDevice->getCapabilities()._bGPUMeshMorph == SW_FALSE && morphDiag == 0 ) || morphDiag == 2 || morphDiag == 3;
+        const MeshMorphDiagMode morphDiag = getEffectiveMeshMorphDiag();
+        // 진단 SkipDispatch 와 IndexTag 는 레스트 버퍼를 그대로 바인딩해 "컴퓨트 없이" 를 본다. 스키닝도 돌리지 않는다(바인드 포즈).
+        const bool bSkipMorphSkinning = ( _pDevice->getCapabilities()._bGPUMeshMorph == SW_FALSE && morphDiag == MeshMorphDiagMode::Normal ) ||
+                                        morphDiag == MeshMorphDiagMode::SkipDispatch || morphDiag == MeshMorphDiagMode::IndexTag;
         if ( bSkipMorphSkinning )
             return;
         if ( _deform._meshMorphPool.isSkinDispatchable() == false )

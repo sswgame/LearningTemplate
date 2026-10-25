@@ -3178,7 +3178,7 @@ SW_TEST_CASE( RenderPassGPUTest, RenderTargetsArePublishedForTheEditor )
 /**
  * @brief GPU 메시 모프의 **정점 셰이더 풀 읽기**가 네 백엔드에서 같은지 픽셀로 봅니다.
  * @details 세 장을 찍는다 — (A) 모프 안 켬(레스트), (B) 모프 켜되 컴퓨트 없이 **레스트 버퍼를 그대로 풀에
- *          물림**(`FrameDebugOverrides::_meshMorphDiag = 2`), (C) 진짜 모프. B 의 정답은 A 와 **같은 그림**이다: 풀 원소 i 가
+ *          물림**(`FrameDebugOverrides::_meshMorphDiag = MeshMorphDiagMode::SkipDispatch`), (C) 진짜 모프. B 의 정답은 A 와 **같은 그림**이다: 풀 원소 i 가
  *          정점 i 의 레스트 값이므로 정점 셰이더가 제 원소를 읽으면 레스트와 픽셀이 같아야 한다.
  *          OpenGL 드라이버가 early-return 모양의 `MorphPool::computeElement` 를 잘못 컴파일하면 정점마다 **한 칸 앞
  *          원소**를 읽고, 그것이 정확히 B≠A 로 나타난다(binding.hlsli 주석). C 는 "모프가 실제로 걸리는가"
@@ -3270,7 +3270,7 @@ SW_TEST_CASE( RenderPassGPUTest, MorphPoolIdentityMatchesRest )
         if ( bOk )
         {
             // (A) 레스트 — 모프를 요청하지 않은 메시는 입력 스트림 그대로 그려진다.
-            overrides._meshMorphDiag = 0;
+            overrides._meshMorphDiag = sw::MeshMorphDiagMode::Normal;
             renderer.setDebugOverrides( overrides );
             const Snapshot rest = snapshot( renderer, *device, scene );
             SW_EXPECT_TRUE_MSG( rest._bOk && rest._drawnCount > 0, ( label + ": 레스트 그림을 못 읽었다" ).c_str() );
@@ -3280,7 +3280,7 @@ SW_TEST_CASE( RenderPassGPUTest, MorphPoolIdentityMatchesRest )
             {
                 mesh->setGPUMorphEnabled( true );
             }
-            overrides._meshMorphDiag = 2;
+            overrides._meshMorphDiag = sw::MeshMorphDiagMode::SkipDispatch;
             renderer.setDebugOverrides( overrides );
             const Snapshot identity = snapshot( renderer, *device, scene );
             SW_EXPECT_TRUE_MSG( identity._bOk, ( label + ": 풀 항등 그림을 못 읽었다" ).c_str() );
@@ -3299,7 +3299,7 @@ SW_TEST_CASE( RenderPassGPUTest, MorphPoolIdentityMatchesRest )
             }
 
             // (C) 진짜 모프 — 컴퓨트가 정점을 밀었으니 레스트와 **달라야** 한다. 같으면 모프가 아예 안 걸린 것이다.
-            overrides._meshMorphDiag = 1;
+            overrides._meshMorphDiag = sw::MeshMorphDiagMode::ForceOn;
             renderer.setDebugOverrides( overrides );
             const Snapshot morphed = snapshot( renderer, *device, scene );
             SW_EXPECT_TRUE_MSG( morphed._bOk, ( label + ": 모프 그림을 못 읽었다" ).c_str() );
@@ -3314,7 +3314,7 @@ SW_TEST_CASE( RenderPassGPUTest, MorphPoolIdentityMatchesRest )
                                       ") — 컴퓨트 결과가 정점 셰이더에 닿지 않는다" )
                                         .c_str() );
             }
-            overrides._meshMorphDiag = -1;
+            overrides._meshMorphDiag.reset();
             renderer.setDebugOverrides( overrides );
         }
     }
@@ -7473,7 +7473,7 @@ SW_TEST_CASE( RenderPassGPUTest, SoftwareAdapterSwitchStartsWarp )
     SW_ASSERT_TRUE( pSwitch != nullptr );
     for ( const sw::RHIBackend backend : { sw::RHIBackend::DirectX12, sw::RHIBackend::DirectX11 } )
     {
-        SW_EXPECT_TRUE( pSwitch->setValueAsInt( 1 ) );
+        SW_EXPECT_TRUE( pSwitch->setValueAsBool( true ) );
         bool bSoftware = false;
         bool bReady    = false;
         {
@@ -7483,9 +7483,9 @@ SW_TEST_CASE( RenderPassGPUTest, SoftwareAdapterSwitchStartsWarp )
             bReady    = device.isReady();
             bSoftware = bReady && device->isRunningOnSoftwareAdapter();
         }
-        SW_EXPECT_TRUE( pSwitch->setValueAsInt( 0 ) );
+        SW_EXPECT_TRUE( pSwitch->setValueAsBool( false ) );
         SW_EXPECT_TRUE_MSG( bReady, "the WARP device did not start" );
-        SW_EXPECT_TRUE_MSG( bSoftware, "gv_rhiSoftwareAdapter=1 did not put the device on the software adapter" );
+        SW_EXPECT_TRUE_MSG( bSoftware, "gv_rhiSoftwareAdapter=true did not put the device on the software adapter" );
         // 환경 변수(SW_RHI_SOFTWARE_ADAPTER=1)로 테스트 전체를 WARP 로 돌리는 실행이면 "끄면 하드웨어" 는 볼 수 없다.
         const utf8*         pEnv     = std::getenv( "SW_RHI_SOFTWARE_ADAPTER" );
         const bool          bEnvWarp = pEnv != nullptr && sw::StringUtil::equals( pEnv, "1" );

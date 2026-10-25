@@ -601,6 +601,8 @@
 
 - **유일한 포인터 목록은 순서가 의미 없으면 `IndexedPtrList`(O(1) 등록 · 해제, swap-remove 로 순서가 바뀜), 등록 순서가 처리 순서이면 `AnimationOrderedList`(빈 칸 표시 후 접기, `forEach` 가 순회 중 등록 · 해제를 견딤)다**(2026-10-25, 통합 J). `AnimationSystem` LOD 클라이언트는 예산 판정이 등록 순서를 따르고 적용 훅이 순회 중 해제를 부르므로 후자, `PrimitiveRegistry` LOD 목록은 전자다. 언리얼은 순서 없는 `RemoveAtSwap` 과 순서 있는 `RemoveAt` 을 호출자가 고르게 하는데, 이 저장소는 그 선택을 컨테이너 형식으로 고정한다.
 
+- **Core 의 `CrashTestKind` 는 `ENUM()` 으로 만들지 않고, `gv_crashTest`(1..5)는 숫자 코드 `int32` 로 남긴다**(2026-10-25, gvnum). 리플렉션 파서(`ReflectionParser`)가 Core 를 링크하고 Core 에는 리플렉션 단계(`sw_addReflectionStep`)가 없어 Core 헤더의 `ENUM()` 은 읽히지 않는다 — 열거자 이름 표가 Engine 쪽 생성 코드에만 있으므로 전역 변수의 명령줄이 이름으로 고를 수 없다. 방법은 둘이고 지금은 하지 않는다: (1) 파서가 Core 를 읽게 하려면 파서 ↔ Core 순환을 끊는 큰 구조 변경이 필요하고, (2) `CrashTestKind` 를 Engine 으로 옮기면 Core 의 `CrashHandler::crashForTest` 가 Engine 타입을 알게 되어 층이 거꾸로 선다. 이 변수는 검증 전용 테스트 변수(`SW_TEST_GLOBAL_VARIABLE`)이고 값이 `CrashTestKind` 열거자 번호 그대로라 위험은 숫자 코드의 일반 위험(열거자 순서가 바뀌면 뜻이 달라짐)이다. 파서가 Core 를 지원하게 되면 그때 enum 으로 바꾼다.
+
 ### 5-4. 데이터, 직렬화, 설정
 
 - **엔진 데이터에는 별칭을 두지 않습니다**(2026-10-03). 실제로 출시한 게임 데이터가 없으므로, 이름을 바꾸면 데이터를 다시 씁니다. 옛 `SaveGame` 파일도 읽지 않습니다. 계약은 Serialization README 에 있습니다.

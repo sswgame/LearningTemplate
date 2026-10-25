@@ -306,7 +306,8 @@ namespace sw
     SW_GLOBAL_VARIABLE( RHIBackBufferFormat, gv_rhiBackBufferFormat, RHIBackBufferFormat::RGBA8, "요청 백버퍼 포맷: RGBA8=R8G8B8A8_UNORM, BGRA8=B8G8R8A8_UNORM (실제 채택값은 getBackBufferFormat)" );
     // 소프트웨어 어댑터(WARP · CPU Vulkan)로 띄운다 — GPU 없는 CI 러너와 같은 래스터라이저를 이 PC 에서 고른다. 환경 변수 SW_RHI_SOFTWARE_ADAPTER=1 도 같다
     // (ctest 가 인자 없이 켠다). 언제 켤지는 엔진이 정하고, 어떻게 고를지는 백엔드가 안다.
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_rhiSoftwareAdapter, 0, "소프트웨어 어댑터로 띄운다: 0=하드웨어, 1=WARP(DX11 · DX12) · CPU 디바이스(Vulkan)" );
+    // 켜고 끄는 값이라 종류가 아니라 bool 이다(`-gv_rhiSoftwareAdapter=true`, `=1` 도 받는다).
+    SW_TEST_GLOBAL_VARIABLE( bool, gv_rhiSoftwareAdapter, false, "소프트웨어 어댑터로 띄운다: false=하드웨어, true=WARP(DX11 · DX12) · CPU 디바이스(Vulkan)" );
 
     bool IRHIDevice::initialize()
     {
@@ -353,7 +354,7 @@ namespace sw
         {
             const utf8* pSoftwareEnv        = std::getenv( "SW_RHI_SOFTWARE_ADAPTER" );
             const bool  bSoftwareEnv        = pSoftwareEnv != nullptr && StringUtil::equals( pSoftwareEnv, "1" );
-            swapChainDesc._bSoftwareAdapter = gv_rhiSoftwareAdapter == 1 || bSoftwareEnv;
+            swapChainDesc._bSoftwareAdapter = gv_rhiSoftwareAdapter || bSoftwareEnv;
         }
         _bSoftwareAdapter = false;
         if ( engine::areEngineServicesBound() )

@@ -3998,10 +3998,10 @@
   },
   {
    "name": "gv_morphDiag",
-   "type": "int32",
-   "default": "0",
+   "type": "MeshMorphDiagMode",
+   "default": "Normal",
    "kind": "일반",
-   "description": "메시 모프 진단 (0 평소 / 1 강제 켬 / 2 디스패치 생략 / 3 번호표)",
+   "description": "메시 모프 진단 (Normal 평소 / ForceOn 강제 켬 / SkipDispatch 디스패치 생략 / IndexTag 번호표)",
    "source": "Source/Engine/Renderer/Frame/FrameRendererCompute.cpp"
   },
   {
@@ -4238,10 +4238,10 @@
   },
   {
    "name": "gv_rhiSoftwareAdapter",
-   "type": "int32",
-   "default": "0",
+   "type": "bool",
+   "default": "false",
    "kind": "테스트",
-   "description": "소프트웨어 어댑터로 띄운다: 0=하드웨어, 1=WARP(DX11 · DX12) · CPU 디바이스(Vulkan)",
+   "description": "소프트웨어 어댑터로 띄운다: false=하드웨어, true=WARP(DX11 · DX12) · CPU 디바이스(Vulkan)",
    "source": "Source/Engine/Graphics/RHI/IRHIDevice.cpp"
   },
   {

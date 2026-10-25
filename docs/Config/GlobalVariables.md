@@ -122,7 +122,7 @@
 | `gv_gpuUploadQueue` | `int32` | `1` | 일반 | GPU 업로드를 워커로 앞당긴다 (0=렌더 스레드가 그 자리에서 만든다) | [GPUUploadQueue.cpp](../../Source/Engine/Graphics/Upload/GPUUploadQueue.cpp) |
 | `gv_rhiBackBufferFormat` | `RHIBackBufferFormat` | `RGBA8` | 일반 | 요청 백버퍼 포맷: RGBA8=R8G8B8A8_UNORM, BGRA8=B8G8R8A8_UNORM (실제 채택값은 getBackBufferFormat) | [IRHIDevice.cpp](../../Source/Engine/Graphics/RHI/IRHIDevice.cpp) |
 | `gv_rhiBackend` | `RHIBackend` | `SW_RHI_BACKEND_DEFAULT` | 일반 | Current RHI Backend | [RHI.cpp](../../Source/Engine/Graphics/RHI/RHI.cpp) |
-| `gv_rhiSoftwareAdapter` | `int32` | `0` | 테스트 | 소프트웨어 어댑터로 띄운다: 0=하드웨어, 1=WARP(DX11 · DX12) · CPU 디바이스(Vulkan) | [IRHIDevice.cpp](../../Source/Engine/Graphics/RHI/IRHIDevice.cpp) |
+| `gv_rhiSoftwareAdapter` | `bool` | `false` | 테스트 | 소프트웨어 어댑터로 띄운다: false=하드웨어, true=WARP(DX11 · DX12) · CPU 디바이스(Vulkan) | [IRHIDevice.cpp](../../Source/Engine/Graphics/RHI/IRHIDevice.cpp) |
 | `gv_textureMipDrop` | `int32` | `0` | 일반 | 텍스처를 읽을 때 버리는 위쪽 밉 수 (사용자 설정 graphics.textureQuality 의 targetValue, 다시 시작해야 반영) | [Texture2D.cpp](../../Source/Engine/Graphics/Texture/Texture2D.cpp) |
 | `gv_textureStreaming` | `int32` | `1` | 일반 | Upload async-loaded textures with their low mips first and stream the top mips in later (0 = upload every mip at once) | [TextureCache.cpp](../../Source/Engine/Graphics/Texture/TextureCache.cpp) |
 | `gv_validateBindlessIndex` | `int32` | `kDefaultLevel` | 테스트 | 셰이더에 넘기는 bindless 인덱스 검사 — 0 끔, 1 죽은 번호(Debug 기본), 2 '없음' 번호가 가는 자리까지 | [BindlessIndexValidator.cpp](../../Source/Engine/Graphics/RHI/Support/BindlessIndexValidator.cpp) |
@@ -176,7 +176,7 @@
 | `gv_dumpRenderGraph` | `bool` | `false` | 테스트 | 렌더 그래프를 컴파일할 때마다 레벨 · 패스 · 읽고 쓰는 자원을 로그로 남긴다 | [FrameRendererPassExecute.cpp](../../Source/Engine/Renderer/Frame/FrameRendererPassExecute.cpp) |
 | `gv_gpuCulling` | `int32` | `1` | 일반 | GPU 컬링 컴퓨트 디스패치 (0=건너뜀, 진단용) | [FrameRendererCompute.cpp](../../Source/Engine/Renderer/Frame/FrameRendererCompute.cpp) |
 | `gv_lightCulling` | `LightGridProducer` | `GPU` | 테스트 | 라이트 컬링 (None=그리드 없이 목록 전체, CPU=CPU 클러스터 그리드, GPU=GPU 클러스터 그리드) | [FrameRenderer.cpp](../../Source/Engine/Renderer/Frame/FrameRenderer.cpp) |
-| `gv_morphDiag` | `int32` | `0` | 일반 | 메시 모프 진단 (0 평소 / 1 강제 켬 / 2 디스패치 생략 / 3 번호표) | [FrameRendererCompute.cpp](../../Source/Engine/Renderer/Frame/FrameRendererCompute.cpp) |
+| `gv_morphDiag` | `MeshMorphDiagMode` | `Normal` | 일반 | 메시 모프 진단 (Normal 평소 / ForceOn 강제 켬 / SkipDispatch 디스패치 생략 / IndexTag 번호표) | [FrameRendererCompute.cpp](../../Source/Engine/Renderer/Frame/FrameRendererCompute.cpp) |
 | `gv_occlusionCulling` | `bool` | `false` | 일반 | GPU 컬링의 가림 판정 — 지난 프레임 장면 깊이의 타일 최대 깊이 뒤의 인스턴스를 거른다 (컬링이 있는 백엔드) | [FrameRendererOcclusion.cpp](../../Source/Engine/Renderer/Frame/FrameRendererOcclusion.cpp) |
 | `gv_renderPipeline` | `string` | — | 일반 | 이 파이프라인 XML 로 그린다 (비우면 gv_deferred · 팩 설정 · 기본 포워드) | [FrameRenderer.cpp](../../Source/Engine/Renderer/Frame/FrameRenderer.cpp) |
 | `gv_renderViewBudget` | `int32` | `4` | 일반 | 한 프레임에 그리는 렌더 텍스처 뷰(CCTV · 백미러)의 최대 수 (0 = 제한 없음) | [RenderViewCollector.cpp](../../Source/Engine/Renderer/Frame/View/RenderViewCollector.cpp) |
