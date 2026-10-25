@@ -10,15 +10,20 @@
 
 from __future__ import annotations
 
+import json
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Sequence
+from unittest import mock
 
 kRepositoryRoot = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(kRepositoryRoot / "Scripts"))
 
-from common.HeaderSelfContained import findHeaderProbeProblem, findSeedEntry, makeSeedIndex, makeSyntaxOnlyCommand  # noqa: E402
+from common import HeaderSelfContained  # noqa: E402
+from common.HeaderSelfContained import (findHeaderProbeProblem, findHeadersNotSelfContained, findSeedEntry, makeSeedIndex,  # noqa: E402
+                                        makeSyntaxOnlyCommand, selectProbeBuildDir)
 from lint.LintCatalog import discoverLintScripts, discoverLintTargets  # noqa: E402
 
 kProbe = Path("probe.cpp")
@@ -100,6 +105,63 @@ class HeaderProbeProblemTest(unittest.TestCase):
             (buildDir / "generated" / "Engine").mkdir(parents=True)
             (buildDir / "generated" / "Engine" / "FlagOps.gen.h").write_text("#pragma once\n// generated\n", encoding="utf-8")
             self.assertEqual("", findHeaderProbeProblem(buildDir))
+
+
+def writeBuiltFolderInternal(buildDir: Path) -> None:
+    buildDir.mkdir(parents=True, exist_ok=True)
+    (buildDir / "compile_commands.json").write_text("[]", encoding="utf-8")
+    (buildDir / "generated" / "Engine").mkdir(parents=True)
+    (buildDir / "generated" / "Engine" / "FlagOps.gen.h").write_text("#pragma once\n// generated\n", encoding="utf-8")
+
+
+class SelectProbeBuildDirTest(unittest.TestCase):
+    def testWorktreeWithoutBuildFallsBackToMainBuild(self) -> None:
+        with tempfile.TemporaryDirectory() as rootName:
+            mainBuild = Path(rootName) / "main" / "build"
+            writeBuiltFolderInternal(mainBuild)
+            self.assertEqual((mainBuild, ""), selectProbeBuildDir([Path(rootName) / "wt" / "build", mainBuild]))
+
+    def testOwnBuildWinsOverMain(self) -> None:
+        with tempfile.TemporaryDirectory() as rootName:
+            listBuild = [Path(rootName) / "wt", Path(rootName) / "main"]
+            for build in listBuild:
+                writeBuiltFolderInternal(build)
+            self.assertEqual((listBuild[0], ""), selectProbeBuildDir(listBuild))
+
+    def testNowhereReportsTheFirstCandidateAndItsProblem(self) -> None:
+        with tempfile.TemporaryDirectory() as rootName:
+            listBuild = [Path(rootName) / "wt", Path(rootName) / "main"]
+            buildDir, problem = selectProbeBuildDir(listBuild)
+            self.assertEqual(listBuild[0], buildDir)
+            self.assertIn("compile_commands.json", problem)
+
+
+class WorktreeRehomeTest(unittest.TestCase):
+    def testHeaderIsProbedWithFlagsMovedToTheWorktree(self) -> None:
+        with tempfile.TemporaryDirectory() as rootName:
+            root = Path(rootName).resolve()
+            mainRoot, worktree = root / "main", root / "wt"
+            buildDir = mainRoot / "build"
+            buildDir.mkdir(parents=True)
+            (worktree / "Source" / "Engine").mkdir(parents=True)
+            header = worktree / "Source" / "Engine" / "A.h"
+            header.write_text("#pragma once\n", encoding="utf-8")
+            mainSource = (mainRoot / "Source" / "Engine" / "A.cpp").as_posix()
+            (buildDir / "compile_commands.json").write_text(json.dumps([{
+                "directory": buildDir.as_posix(), "file": mainSource,
+                "command": f"clang++ -I{(mainRoot / 'Source').as_posix()} -c {mainSource}"}]), encoding="utf-8")
+            listSeenCommand: list[str] = []
+
+            def fakeCompile(entry: dict, probeSource: Path, probeBuildDir: Path, listExtraFlag: Sequence[str] = ()) -> tuple[bool, str]:
+                listSeenCommand.append(entry["command"].replace("\\", "/").lower())
+                return False, "A.h:1:1: error: unknown type name 'Foo'"
+
+            with tempfile.TemporaryDirectory() as probeDirName, mock.patch.object(HeaderSelfContained, "compileSyntaxOnly", fakeCompile):
+                listFailure = findHeadersNotSelfContained(worktree, buildDir, [header], Path(probeDirName), workerCount=1, mainRoot=mainRoot)
+            self.assertEqual([("Engine/A.h", "unknown type name 'Foo'")], listFailure)
+            self.assertEqual(1, len(listSeenCommand))
+            self.assertIn((worktree / "Source").as_posix().lower(), listSeenCommand[0])
+            self.assertNotIn((mainRoot / "Source").as_posix().lower(), listSeenCommand[0])
 
 
 class LintCatalogCtestSkipTest(unittest.TestCase):
