@@ -2,9 +2,9 @@
  * @file CharacterSurfaceBinding.h
  * @brief 몸 표면 상태(`CharacterSurfaceState` — 젖음 · 흙 · 피 · 찢김)를 부품의 머티리얼 파라미터와 UV 마스크 텍스처로 옮깁니다.
  * @details 상태는 숫자와 마스크일 뿐이라 그리려면 머티리얼에 올라가야 한다. 이 파일이 이름 규칙(머티리얼이 선언해야 읽히는 파라미터 이름)과 올리는 일을 맡는다.
- *          - 채널 스칼라 `Surface_<채널>`: 모든 영역에서 가장 큰 값(캐릭터 전체의 젖음 · 흙 정도).
- *          - 영역 벡터 `SurfaceRegion<영역>_<덩어리>`: 영역의 채널 값을 채널 순서로 네 개씩 묶은 float4(덩어리 0 은 채널 0..3). 영역 번호는 피팅 표의 영역 순서다.
- *          - 마스크 텍스처 `Surface_<채널>_Mask`: 부품 × 채널의 UV 공간 마스크(맞은 위치 스탬프 · 찢김). CPU 텍스처(`TextureCache::createCPUTexture`, 경로 `cpu/surface/…`)이고
+ *          - 채널 스칼라 `_surface<채널>`: 모든 영역에서 가장 큰 값(캐릭터 전체의 젖음 · 흙 정도).
+ *          - 영역 벡터 `_surfaceRegion<영역>Chunk<덩어리>`: 영역의 채널 값을 채널 순서로 네 개씩 묶은 float4(덩어리 0 은 채널 0..3). 영역 번호는 피팅 표의 영역 순서다.
+ *          - 마스크 텍스처 `_surface<채널>Mask`: 부품 × 채널의 UV 공간 마스크(맞은 위치 스탬프 · 찢김). CPU 텍스처(`TextureCache::createCPUTexture`, 경로 `cpu/surface/…`)이고
  *            값은 R 채널(최댓값을 255 로)이다. 마스크가 바뀌면 같은 텍스처의 픽셀만 갈아 끼운다.
  *          머티리얼이 선언하지 않은 이름은 인스턴스 덮어쓰기로만 남고 그려지는 데는 영향이 없다(염색 파라미터와 같다). 파라미터를 읽어 그리는 머티리얼 셰이더는 따로 둔다.
  */
@@ -30,11 +30,11 @@ namespace sw
         /** @brief 영역 벡터 하나에 묶는 채널 수입니다(float4). */
         static constexpr uint32 kChannelsPerVector = 4;
 
-        /** @brief 채널 스칼라(모든 영역의 최댓값) 이름 `Surface_<채널>` 입니다. */
+        /** @brief 채널 스칼라(모든 영역의 최댓값) 이름 `_surface<채널>` 입니다. */
         static hashed_string makeChannel( const hashed_string& channel );
-        /** @brief 마스크 텍스처 파라미터 이름 `Surface_<채널>_Mask` 입니다. */
+        /** @brief 마스크 텍스처 파라미터 이름 `_surface<채널>Mask` 입니다. */
         static hashed_string makeMask( const hashed_string& channel );
-        /** @brief 영역 벡터 이름 `SurfaceRegion<영역>_<덩어리>` 입니다. */
+        /** @brief 영역 벡터 이름 `_surfaceRegion<영역>Chunk<덩어리>` 입니다. */
         static hashed_string makeRegion( uint32 region, uint32 chunk );
         /** @brief 마스크 CPU 텍스처 경로 `cpu/surface/<소유자>/<부품>/<채널>` 입니다. 소유자 키가 다르면 경로가 겹치지 않는다. */
         static string makeMaskTexturePath( uint64 ownerKey, uint32 part, const hashed_string& channel );

@@ -1,0 +1,63 @@
+<Scene formatVersion="2" name="SurfaceShowcase">
+	<WorldSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</WorldSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _componentName="CameraComponent" _bActive="true" _localPosition="0,1,-6" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachOwnerID="0" _attachComponent="None" _fovY="0.8" _nearZ="0.1" _farZ="100" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _componentName="DirectionalLightComponent" _bActive="true" _localPosition="0,0,0" _localRotation="0.6,2.6,0" _localScale="1,1,1" _attachOwner="None" _attachOwnerID="0" _attachComponent="None" _color="1,1,1" _intensity="1.0" _ambient="0.3" _shadowExtent="6" _shadowDistance="20" _bCastShadow="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Ground">
+			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent" _bActive="true" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="8,1,8" _attachOwner="None" _attachOwnerID="0" _attachComponent="None" _meshID="plane" _materialPath="game/empty/materials/toonshowcase_ground.material" _boundsRadius="6" _blendMode="Opaque" _gpuSpinSeed="0" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="BaseSphere">
+			<GameObject _schemaVersion="0" _name="BaseSphere" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent" _bActive="true" _localPosition="-3.2,1,0" _localRotation="0,0,0" _localScale="1.2,1.2,1.2" _attachOwner="None" _attachOwnerID="0" _attachComponent="None" _meshID="sphere" _materialPath="game/empty/materials/surfaceshowcase_base.material" _boundsRadius="0.6" _blendMode="Opaque" _gpuSpinSeed="0" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="WetSphere">
+			<GameObject _schemaVersion="0" _name="WetSphere" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent" _bActive="true" _localPosition="-1.6,1,0" _localRotation="0,0,0" _localScale="1.2,1.2,1.2" _attachOwner="None" _attachOwnerID="0" _attachComponent="None" _meshID="sphere" _materialPath="game/empty/materials/surfaceshowcase_wet.material" _boundsRadius="0.6" _blendMode="Opaque" _gpuSpinSeed="0" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="6" name="DirtSphere">
+			<GameObject _schemaVersion="0" _name="DirtSphere" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent" _bActive="true" _localPosition="0,1,0" _localRotation="0,0,0" _localScale="1.2,1.2,1.2" _attachOwner="None" _attachOwnerID="0" _attachComponent="None" _meshID="sphere" _materialPath="game/empty/materials/surfaceshowcase_dirt.material" _boundsRadius="0.6" _blendMode="Opaque" _gpuSpinSeed="0" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="7" name="BloodSphere">
+			<GameObject _schemaVersion="0" _name="BloodSphere" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent" _bActive="true" _localPosition="1.6,1,0" _localRotation="0,0,0" _localScale="1.2,1.2,1.2" _attachOwner="None" _attachOwnerID="0" _attachComponent="None" _meshID="sphere" _materialPath="game/empty/materials/surfaceshowcase_blood.material" _boundsRadius="0.6" _blendMode="Opaque" _gpuSpinSeed="0" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="8" name="TearSphere">
+			<GameObject _schemaVersion="0" _name="TearSphere" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent" _bActive="true" _localPosition="3.2,1,0" _localRotation="0,0,0" _localScale="1.2,1.2,1.2" _attachOwner="None" _attachOwnerID="0" _attachComponent="None" _meshID="sphere" _materialPath="game/empty/materials/surfaceshowcase_tear.material" _boundsRadius="0.6" _blendMode="Opaque" _gpuSpinSeed="0" _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

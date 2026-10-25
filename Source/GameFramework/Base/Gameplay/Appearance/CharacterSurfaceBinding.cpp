@@ -32,17 +32,17 @@ namespace sw
 {
     hashed_string SurfaceParameterNames::makeChannel( const hashed_string& channel )
     {
-        return hashed_string( ( string( "Surface_" ) + channel.c_str() ).c_str() );
+        return hashed_string( ( string( "_surface" ) + channel.c_str() ).c_str() );
     }
 
     hashed_string SurfaceParameterNames::makeMask( const hashed_string& channel )
     {
-        return hashed_string( ( string( "Surface_" ) + channel.c_str() + "_Mask" ).c_str() );
+        return hashed_string( ( string( "_surface" ) + channel.c_str() + "Mask" ).c_str() );
     }
 
     hashed_string SurfaceParameterNames::makeRegion( uint32 region, uint32 chunk )
     {
-        return hashed_string( ( string( "SurfaceRegion" ) + to_string( region ) + "_" + to_string( chunk ) ).c_str() );
+        return hashed_string( ( string( "_surfaceRegion" ) + to_string( region ) + "Chunk" + to_string( chunk ) ).c_str() );
     }
 
     string SurfaceParameterNames::makeMaskTexturePath( uint64 ownerKey, uint32 part, const hashed_string& channel )

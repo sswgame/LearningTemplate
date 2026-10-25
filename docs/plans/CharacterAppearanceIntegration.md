@@ -1,6 +1,6 @@
 # 캐릭터 외형의 통합 · 쿠킹 · 장비 잇기
 
-> 상태: 구현중 · 선행: 없음 · 영역: gameplay · 옛번호: D4-8 · 진행: 5/6
+> 상태: 측정대기 · 선행: 없음 · 영역: gameplay · 옛번호: D4-8 · 진행: 6/6
 
 형상 쪽(`Source/Engine/Character`, README "외형 조립 순서")과 GPU 모프 풀(`Mesh::setGPUMorphEnabled`), 장비 해석 데이터 · 해석기(`GameFramework/Base/Gameplay/Appearance`)와 외형 컴포넌트(`CharacterAppearanceComponent`)는 들어갔습니다. 이어 붙이는 일이 남았습니다.
 스켈레톤 에셋(`.skeleton.xml`)의 편집 창은 [EditorCharacterEditor](EditorCharacterEditor.md) 입니다.
@@ -14,7 +14,7 @@
 | E3 | 쿠킹 — 임포트 규칙 `body_surface` · `body_surface_distance` 가 장비 메시에 몸의 스킨 · 체형 모프를 옮긴다(`ModelImporter::transferBodySurface` → `CharacterMeshUtil::transferBodySurface`, 먼 정점은 임포트 오류). **아틀라스 굽기**(아래 "E3 가 한 것") | 코드 · 테스트(`CharacterMeshUtilTest` · `OutfitAtlasTest` · `OutfitAtlasBakerTest`), 실제 장비 임포트 · 굽기 미확인 |
 | E4 | 데이터 핫 리로드 — `AppearanceDataWatcher` 가 외형 폴더(낱개 파일)를 감시하고 `AppearanceDatabase::reloadFromFolder`(임시로 먼저 읽어 검사를 통과할 때만 바꾼다)를 부르면, 구독한 외형 컴포넌트(`registerReloaded`)가 다시 조립한다(Shooter3D 가 건다) | 코드, 빌드 · 실행 미확인 |
 | E5 | 장비 해석의 나머지 — 부품 풀(병합에서 씬 서비스 `SocketPartPool` 하나로 합쳤다 — [ShooterCharacterIntegration](ShooterCharacterIntegration.md) S6, 결정 기록 5-8), 결과 키로 구운 메시 캐시(`AppearanceBakedMeshCache`, 다시 조립하는 동안 이전 외형 유지), 몸 영역 이름을 피팅 표에서(`AppearanceDatabase::loadFromFolder` → `finishLoad`), 프리셋 참조를 따라 미리 올릴 경로(`AppearancePreloadUtil`), **시퀀서 외형 항목**(아래 "E5 가 한 것"). 편집 창의 프리셋 저장 · 썸네일 · 규칙 설명은 [EditorCharacterEditor](EditorCharacterEditor.md) 에서 끝났다 | 코드 · 테스트(`SequencerTest` · `SequenceAppearanceTest`), 빌드 미확인 |
-| E6 | 표면 셰이더 — 표면 상태가 올리는 이름(`Surface_<채널>` · `SurfaceRegion<영역>_<덩어리>` · `Surface_<채널>_Mask`)을 읽어 젖음(어둡게 + 거칠기) · 흙 · 피 · 찢김(알파 컷)을 그리는 머티리얼과 셰이더 | 남음 — 아래 "남은 것" |
+| E6 | 표면 셰이더 — 표면 상태가 올리는 이름(`_surface<채널>` · `_surface<채널>Mask`)을 읽어 젖음(어둡게 + 거칠기) · 흙 · 피 · 상처 · 찢김(알파 컷)을 그리는 머티리얼 셰이더 `surfacelit.hlsl` + `surfacelit.material`(아래 "E6 가 한 것") | 코드 · 데이터 작성(쿠킹 · 화면 미확인) |
 
 ## E2 가 한 것
 
@@ -37,6 +37,17 @@
 - **시퀀서 외형 항목**: 엔진 트랙 종류 `SequenceTrackKind` 가 GameFramework 를 모르는 문제는, 카메라 컷을 `CinematicCameraComponent` 가 받는 것과 같은 나눔으로 풀었다. 항목 종류 표에 `SequenceItemKind::Appearance` 를 더했다(시작 프레임을 지날 때 이벤트로 알림 `_bFiresOnCross`, 대상 · 프리셋 이름이 비면 읽기 오류 `_bNeedsPreset`).
   GameFramework 의 `SequenceAppearanceComponent`(시퀀스 플레이어와 같은 오브젝트)가 이벤트를 받아 항목의 대상 오브젝트의 `CharacterAppearanceComponent::setPreset( _preset, 대상의 시드 )` 를 부른다 — 같은 캐릭터가 프리셋만 갈아입는다. 대상이 없거나 외형 컴포넌트가 없으면 오류를 남기고 아무것도 바꾸지 않는다.
 
+## E6 가 한 것
+
+- **이름 규칙을 셰이더 필드 규칙에 맞췄다**: 셰이더의 머티리얼 필드는 `_camelCase` 이고 `.material` 프로퍼티 이름과 C++ 파라미터 이름이 그 필드 이름과 같아야 한다(NamingScripts "Struct fields"). 옛 `Surface_<채널>` · `Surface_<채널>_Mask` · `SurfaceRegion<영역>_<덩어리>` 는 필드가 될 수 없어,
+  `SurfaceParameterNames` 를 `_surface<채널>` · `_surface<채널>Mask` · `_surfaceRegion<영역>Chunk<덩어리>` 로 바꿨다(셰이더에 예외 항목을 두는 대신 이름 쪽을 고쳤다. `CharacterSurfaceBindingTest.ParameterNamesFollowTheContract` 도 같이).
+- **`surfacelit.hlsl` / `engine/materials/surfacelit.material`**: forwardlit 의 PBR(같은 `Lighting::shadeLights`)에 얹는다. 필드는 채널 스칼라 `_surfaceWet · Dirt · Blood · Wound · Tear` 와 마스크 `_surfaceDirtMask · BloodMask · WoundMask · TearMask`(`default.surfacechannels.xml` 의 다섯 채널). 다른 채널을 쓰려면 구조체와 머티리얼에 같은 이름을 더한다.
+  젖음은 몸 전체(스칼라)에 알베도를 0.55 배로 어둡게 하고 거칠기를 낮춘다. 흙 · 피 · 상처는 마스크가 자리를 정하는 덮개이며 색과 거칠기를 바꾼다. 찢김은 마스크가 넘긴 자리를 알파 컷(`MATERIAL_ALPHA_CUTOFF` 를 머티리얼이 늘 켠다)으로 구멍 낸다 — 깊이 · 그림자 패스도 같은 표면 훅이라 그림자도 뚫린다.
+  마스크가 흰색으로 읽히는 인스턴스(표면 상태 없음 · bindless 에뮬 백엔드)에서 스칼라가 0 이면 효과가 없도록 스칼라로 문을 건다.
+- **영역 번호 칸은 두지 않았다**: 부위별로 다르게 그리는 일은 영역 벡터가 아니라 마스크(맞은 UV 자리, `stampHit`)가 한다 — 정점 속성(정점 색 알파 · 추가 UV)을 새로 정하지 않아 메시 임포트 형식이 그대로다. 영역 벡터는 계속 인스턴스에 오르지만 이 셰이더는 읽지 않는다(영역별 덮개가 필요하면 그때 칸을 정한다).
+- **쇼케이스**: `game/empty/maps/surfaceshowcase.scene.xml` + `automation/surfaceshowcase.scenario.xml`(지금은 `docs/plans/pending/surfacelit/` 에 있다 — 아래 "남은 것"; 구 다섯 — 기본 · 젖음 · 흙 · 피 · 찢김, 색 기울기 단언은 어림값 `provisional` 이라 첫 실행은 UNCONFIRMED, 사진은 눈으로).
+  한계: 캐릭터 머티리얼(`kaykit_*`)은 아직 forwardlit 이다 — 게임에서 켜려면 그 머티리얼을 `surfacelit` 으로 바꾸고 `Surface Channels` 를 정하는 데이터 일이 따로다. 알파 컷 머티리얼이라 깊이 프리패스가 머티리얼 셰이더로 그려지므로 켠 캐릭터 수만큼 프리패스 비용이 늘 수 있다.
+
 ## 남은 것
 
 - 확인(통합에서 확인): 매니페스트 id `appearance-preload-test`(체형 축 `bodyShapes` 읽기 · 미리 올리기), 매니페스트 id `editor-charactereditor-scenario`(슬라이더 · 피팅 확인 · 썸네일 · 기즈모 · 리그 화면).
@@ -44,9 +55,7 @@
 - E2 · E3 · E5 확인(통합에서 확인): 매니페스트 id `mesh-merge-test`(`CharacterMeshUtilTest` — 병합 · 훅 UV), 매니페스트 id `surface-binding-test`(`CharacterSurfaceBindingTest` — 이름 규칙 · 마스크 픽셀 · 상태 번호), 매니페스트 id `outfit-atlas-test`(`OutfitAtlasTest` — 배치 · 훅 · 합성),
   매니페스트 id `outfit-atlas-baker-test`(`OutfitAtlasBakerTest` — 명세 읽기), 매니페스트 id `sequence-appearance-test`(`SequenceAppearanceTest` — 외형 항목이 프리셋을 바꿈), 매니페스트 id `sequencer-test`(`SequencerTest` — 외형 항목 이벤트 · 읽기 오류).
   화면: 매니페스트 id `appearance-merge-parts-check`(합칠 스킨드 부품이 든 차림을 만들어 `Merge Parts` 를 켜고 `Appearance.MergedSections` 와 사진으로 부품이 제 머티리얼로 그려지는지 본다 — 그 차림의 데이터가 아직 없다), 매니페스트 id `outfit-atlas-bake-run`(실제 장비 부품으로 명세를 만들어 `appearance.bakeatlas` 를 돌린다 — 명세와 부품 텍스처가 사람 일이다).
-- **E6(표면 셰이더)**: 이름 규칙대로 읽어 그리는 머티리얼 셰이더(`engine/shaders/` 의 새 파일 + `engine/materials/` 의 새 머티리얼)가 남았다. 새 셰이더는 네 백엔드의 쿠킹된 바이너리(`engine/shaders/bin/`)가 같이 들어가야 하는데, 이 일은 빌드로만 만들 수 있고 이 단계는 빌드를 하지 않는다 — 병합 뒤 통합에서
-  셰이더를 쓰고 쿠킹한다. 정점 영역 칸(영역 벡터를 영역마다 고르는 정점 속성)은 지금 영역 값이 캐릭터 전체 스칼라(`Surface_<채널>`)와 영역 벡터로만 나가므로, 부위별로 다르게 그리려면 셰이더가 읽을 영역 번호 칸(정점 색 알파나 UV 마스크)을 정해야 한다 — 그 선택도 E6 이다.
-  확인: 매니페스트 id `surface-shader-check`.
+- **E6(표면 셰이더)** **먼저** `docs/plans/pending/surfacelit/Resource/` 의 `.pending` 파일 열다섯 개를 `Resource/` 아래 같은 경로로 옮기고(`.pending` 제거, 셰이더 커밋 훅이 쿠킹 바이너리를 요구해 작업자는 소스를 이 폴더에 맡겼다) 폴더를 지운다. 확인(통합에서 확인): 새 셰이더 `surfacelit.hlsl` 의 네 백엔드 쿠킹 바이너리(`engine/shaders/bin/`)는 빌드로만 만들어진다 — 병합 뒤 통합이 쿠킹하고 셰이더 컴파일 오류와 `ShaderBindingValidatorTest` 를 본다. 그다음 매니페스트 id `surface-shader-check`(쇼케이스 시나리오 네 백엔드 + 사진, 문턱 `provisional` → `measured`).
 - 에셋 핫 리로드(옛 E4b)는 들어갔다 — 소켓은 엔진 공유 캐시(`SharedAssetCache<SocketSet>`)를 쥐고, 원본 메시 · 피팅 표 · 피팅 데이터는 다시 읽은 횟수 · 내용 번호로 다시 조립한다(`CharacterAppearanceComponent::onTick`). 체형 축 파일(`bodyShapes`)은 읽는다. 표면 채널 파일은 `Surface Channels` 프로퍼티로 읽는다(고치면 프로퍼티를 다시 정해야 반영). 레퍼런스 포즈 파일은 외형 조립이 읽지 않는다.
 - 애니메이션 시스템이 본이 움직인 프레임에만 `SocketBindingComponent::updateSocketTransform` 를 부르는 일은 단계 작업(`CharacterAppearanceSocketTask`)이 이미 한다.
 - 나중: 천 시뮬레이션(Jolt 소프트 바디)이 같은 겹 정보를 충돌체로(Mutable 의 Clip with Mesh · Clip Deform).
