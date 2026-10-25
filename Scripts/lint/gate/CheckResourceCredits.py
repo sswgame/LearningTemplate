@@ -27,7 +27,6 @@ Scripts/lint/gate/CheckResourceCredits.py
 from __future__ import annotations
 
 import argparse
-import fnmatch
 import hashlib
 import json
 import re
@@ -36,6 +35,7 @@ from pathlib import Path, PurePosixPath
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
+from common.PathPattern import matchesPattern  # noqa: E402
 from common.Search import collectRepositoryFiles  # noqa: E402
 from lint.LintGate import GateResult, LintGate  # noqa: E402
 
@@ -70,16 +70,6 @@ def readCreditRowsInternal(text: str) -> list[tuple[list[str], str]]:
             continue
         listRow.append((_kBacktickRe.findall(listCell[0].split("→")[0]), listCell[-1]))
     return listRow
-
-
-def matchPathPatternInternal(listPart: list[str], listPatternPart: list[str]) -> bool:
-    """경로 마디 단위 맞춤 — 마디 안은 fnmatch, `**` 는 마디 0개 이상."""
-    if not listPatternPart:
-        return not listPart
-    if listPatternPart[0] == "**":
-        return any(matchPathPatternInternal(listPart[index:], listPatternPart[1:]) for index in range(len(listPart) + 1))
-    return (bool(listPart) and fnmatch.fnmatchcase(listPart[0], listPatternPart[0])
-            and matchPathPatternInternal(listPart[1:], listPatternPart[1:]))
 
 
 def checkSourceManifestInternal(repositoryRoot: Path, manifestRelPath: str, listAllPath: list[str]) -> list[str]:
@@ -208,6 +198,12 @@ class CheckResourceCreditsGate(LintGate):
                 mapDomainToRow[relPath[:-len("/" + _kCreditsFileName)]] = readCreditRowsInternal(text)
 
         listViolation: list[str] = []
+        # 리소스 id · 경로 패턴은 대소문자를 가리지 않는다(`ResourcePaths::normalizePath`, `PathPattern`) — 대소문자만 다른 두 파일은 한 이름으로 겹친다.
+        mapLowerToPath: dict[str, str] = {}
+        for relPath in listAllPath:
+            first = mapLowerToPath.setdefault(relPath.lower(), relPath)
+            if first != relPath:
+                listViolation.append(f"{relPath}: {first} 와 대소문자만 다릅니다 — 리소스 id 와 규칙 패턴이 한 이름으로 읽습니다")
         countAsset = 0
         for relPath in listAllPath:
             if not isCreditedAssetInternal(relPath, setAllPath):
@@ -220,9 +216,9 @@ class CheckResourceCreditsGate(LintGate):
             if domain not in mapDomainToRow:
                 listViolation.append(f"{relPath}: 도메인 {domain} 에 {_kCreditsFileName} 가 없습니다")
                 continue
-            listPart = relPath[len(domain) + 1:].split("/")
+            domainRelative = relPath[len(domain) + 1:]
             listMatch = [(listPattern, licenseCell) for listPattern, licenseCell in mapDomainToRow[domain]
-                         if any(matchPathPatternInternal(listPart, pattern.split("/")) for pattern in listPattern)]
+                         if any(matchesPattern(pattern, domainRelative) for pattern in listPattern)]
             if not listMatch:
                 listViolation.append(f"{relPath}: {domain}/{_kCreditsFileName} 표에 없습니다")
             elif len(listMatch) > 1:
