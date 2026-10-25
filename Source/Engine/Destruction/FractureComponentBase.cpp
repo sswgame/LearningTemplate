@@ -1169,9 +1169,9 @@ namespace sw
 
     float3 FractureComponentBase::computeImpactVelocity( const DestructionGroup& group, const FractureGroupRuntime& runtime, const DestructionDamageEvent& event, DestructionRandom& random ) const
     {
-        float3 center{};
-        (void)_state.computeGroupMass( group, center );
-        float3 push = event._kind == DestructionDamageKind::Radial ? ( center - event._position ) : event._direction;
+        float3        center{};
+        const float32 groupMass = _state.computeGroupMass( group, center ); // 질량과 중심은 한 번 훑어 함께 나온다
+        float3        push      = event._kind == DestructionDamageKind::Radial ? ( center - event._position ) : event._direction;
         if ( push.getLengthSquared() < 1.0e-8f )
             push = float3{ 0.0f, 1.0f, 0.0f };
         push = push.normalize();
@@ -1180,8 +1180,7 @@ namespace sw
         float32 falloff = 1.0f;
         if ( event._kind == DestructionDamageKind::Radial && event._radius > 0.0f )
             falloff = MathUtil::max( 0.0f, 1.0f - float3::getDistance( center, event._position ) / event._radius );
-        float3        mass3{};
-        const float32 mass = _state.computeGroupMass( group, mass3 ) * _objectScale * _objectScale * _objectScale;
+        const float32 mass = groupMass * _objectScale * _objectScale * _objectScale;
         return float3::transform( push, runtime._rotation ) * ( event._impulse * falloff / MathUtil::max( mass, 1.0f ) );
     }
 
@@ -1424,23 +1423,37 @@ namespace sw
         // 예산: 이 오브젝트(프로필의 maxBodies)나 전역(gv_destructionMaxDebrisBodies)을 넘으면 오래된 것부터, 작은 것을 먼저 사라지게 한다.
         const uint32 globalLimit = static_cast<uint32>( MathUtil::max( 0, static_cast<int32>( gv_destructionMaxDebrisBodies ) ) );
         uint32       globalCount = getScenePhysics() != nullptr ? getScenePhysics()->getDebrisBodyCount() : 0u;
+        // 사라질 순서는 (큰 덩어리 여부, 생성 순서, 목록 위치)의 오름차순이다. 한 번 지울 때 바뀌는 것은 지운 덩어리뿐이라 한 번 정렬해 앞에서부터 꺼내면
+        // 매번 전체를 훑는 것과 같은 순서이며(생성 순서가 같으면 앞선 목록 위치가 먼저), 초과분이 커도 O(N log N) 이다.
+        vector<uint32> listEvictOrder;
+        if ( liveBodyCount > _profile._maxDebrisBody || globalCount > globalLimit )
+        {
+            for ( uint32 index = 0; index < static_cast<uint32>( _listRuntime.size() ); ++index )
+            {
+                const FractureGroupRuntime& runtime = _listRuntime[index];
+                if ( runtime._body.isValid() && runtime._bFading == SW_FALSE )
+                    listEvictOrder.push_back( index );
+            }
+            std::sort( listEvictOrder.begin(), listEvictOrder.end(), [this]( uint32 lhs, uint32 rhs )
+            {
+                const FractureGroupRuntime& left        = _listRuntime[lhs];
+                const FractureGroupRuntime& right       = _listRuntime[rhs];
+                const bool                  bLeftLarge  = left._volume >= _profile._keepCollisionVolume;
+                const bool                  bRightLarge = right._volume >= _profile._keepCollisionVolume;
+                if ( bLeftLarge != bRightLarge )
+                    return bLeftLarge == false;
+                if ( left._spawnOrder != right._spawnOrder )
+                    return left._spawnOrder < right._spawnOrder;
+                return lhs < rhs;
+            } );
+        }
+        size_t evictCursor = 0;
         while ( liveBodyCount > _profile._maxDebrisBody || globalCount > globalLimit )
         {
-            FractureGroupRuntime* pOldest = nullptr;
-            for ( FractureGroupRuntime& runtime : _listRuntime )
-            {
-                if ( runtime._body.isValid() == false || runtime._bFading == SW_TRUE )
-                    continue;
-                const bool bSmaller = pOldest != nullptr && runtime._volume < _profile._keepCollisionVolume && pOldest->_volume >= _profile._keepCollisionVolume;
-                const bool bOlder   = pOldest != nullptr && runtime._spawnOrder < pOldest->_spawnOrder &&
-                                    ( runtime._volume < _profile._keepCollisionVolume ) == ( pOldest->_volume < _profile._keepCollisionVolume );
-                const bool bReplaceOldestCandidate = pOldest == nullptr || bSmaller || bOlder;
-                if ( bReplaceOldestCandidate )
-                    pOldest = &runtime;
-            }
-            if ( pOldest == nullptr )
+            if ( evictCursor >= listEvictOrder.size() )
                 break;
-            pOldest->_bFading = SW_TRUE;
+            FractureGroupRuntime* pOldest = &_listRuntime[listEvictOrder[evictCursor++]];
+            pOldest->_bFading             = SW_TRUE;
             listDestroy.push_back( pOldest->_body );
             changeDebrisBodyCount( -1 );
             pOldest->_body = PhysicsBodyHandle{};

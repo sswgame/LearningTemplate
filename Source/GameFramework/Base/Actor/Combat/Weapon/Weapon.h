@@ -34,8 +34,9 @@ namespace sw
         static constexpr float32 kMinRange        = 0.1f;  ///< `range` 의 하한(m)
 
         hashed_string _id{};
-        hashed_string _ammoID{}; ///< 예비탄으로 쓰는 아이템 id. 인벤토리와 연결하는 게임이 읽는다. 비면 무기 자체 예비탄을 쓴다
-        string        _name{};
+        hashed_string _ammoID{};             ///< 예비탄으로 쓰는 아이템 id. 인벤토리와 연결하는 게임이 읽는다. 비면 무기 자체 예비탄을 쓴다
+        hashed_string _itemID{};             ///< 이 무기를 나타내는 장비 아이템 id. 표시 이름과 외형은 그 아이템이 정한다(이름을 무기 표에 또 적지 않는다). 아이템 표를 쓰지 않는 게임은 비운다
+        string        _name{};               ///< 로그용 이름. 데이터에 `name` 이 없으면 id 다
         float32       _fireInterval{ 0.1f }; ///< 발사 사이 최소 간격(s)
         float32       _reloadTime{ 1.8f };
         float32       _damage{ 10.0f }; ///< 한 발(산탄이면 한 알)의 피해

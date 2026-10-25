@@ -55,7 +55,7 @@ namespace sw
 
     SceneAudio::SceneAudio( GameObjectManager& manager )
         : _listener{ "SceneAudio.Listener" }
-        , _emitter{ "SceneAudio.Emitter" }
+        , _emitter{}
         , _zone{ "SceneAudio.ReverbZone" }
         , _listEmitterSnapshot{}
         , _listZoneValue{}
@@ -99,7 +99,12 @@ namespace sw
     void SceneAudio::addEmitter( AudioEmitterComponent* pEmitter )
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        (void)_emitter.addLogged( pEmitter, "Audio emitter" );
+        if ( pEmitter == nullptr )
+        {
+            reportRegistrationRejected( RegistrationResult::NullItem, "Audio emitter", string_view{} );
+            return;
+        }
+        (void)_emitter.add( pEmitter ); // 이미 올라 있으면 할 일이 없다
     }
 
     void SceneAudio::removeEmitter( AudioEmitterComponent* pEmitter )
@@ -191,7 +196,7 @@ namespace sw
     {
         // 에미터 자리 · 속도.
         _listEmitterSnapshot.clear();
-        for ( AudioEmitterComponent* pEmitter : _emitter.getItems() )
+        for ( AudioEmitterComponent* pEmitter : _emitter.items() )
         {
             if ( SceneAudioInternal::isUsable( pEmitter ) == false )
                 continue;

@@ -1019,11 +1019,6 @@
 							<item>game/shooter3d/models/blaster_h.mesh</item>
 							<item>game/shooter3d/models/blaster_a.mesh</item>
 						</_listWeaponModel>
-						<_listWeaponItem>
-							<item>blaster_rifle</item>
-							<item>blaster_shotgun</item>
-							<item>blaster_pistol</item>
-						</_listWeaponItem>
 					</ShooterPlayerComponent>
 				</_listComponent>
 			</GameObject>
