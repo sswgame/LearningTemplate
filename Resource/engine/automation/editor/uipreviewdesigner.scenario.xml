@@ -70,7 +70,6 @@
 	<At frame="465"><EditorClick mark="uipreview.reload"/></At>
 	<At frame="490">
 		<Expect probe="Editor.UIPreviewDirty" equals="0"/>
-		<ExpectLog contains="[Error]" count="0"/>
 	</At>
 	<At frame="495"><DevCommand line="panel.close ui_preview"/></At>
 	<At frame="500"><Variable name="gv_editorUiScale" value="0"/><Pass/></At>

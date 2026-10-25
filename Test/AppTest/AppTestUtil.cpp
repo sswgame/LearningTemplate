@@ -368,6 +368,9 @@ namespace test
                 const sw::string* pContains = step._kind == "ExpectLog" ? step.findAttribute( "contains" ) : nullptr;
                 if ( pContains != nullptr )
                     policy.declareExpected( *pContains );
+                const sw::string* pID = step._kind == "ExpectLog" ? step.findAttribute( "id" ) : nullptr;
+                if ( pID != nullptr )
+                    policy.declareExpectedID( *pID );
             }
         } );
         sw::StringUtil::forEachLine( output, [&policy, &listLine]( sw::string_view line )

@@ -566,8 +566,14 @@ namespace sw
 
             static bool validateExpectLog( const AutomationStep& step, string& outError )
             {
-                if ( step.hasOnlyAttributes( { "contains", "count", "atLeast", "since" }, outError ) == false || step.requireAttribute( "contains", outError ) == nullptr )
+                if ( step.hasOnlyAttributes( { "id", "contains", "count", "atLeast", "since" }, outError ) == false )
                     return false;
+                // 로그 id 가 있는 줄은 id 로 센다(문구가 바뀌어도 단언이 따라온다). contains 는 id 없는 줄에만 쓴다 — 둘 중 정확히 하나.
+                if ( ( step.findAttribute( "id" ) != nullptr ) == ( step.findAttribute( "contains" ) != nullptr ) )
+                {
+                    outError = step.describe() + ": needs exactly one of id · contains (id for lines written with SW_LOG_*_ID, contains only for lines without a log id)";
+                    return false;
+                }
                 if ( countComparisons( step, { "count", "atLeast" } ) == false )
                 {
                     outError = step.describe() + ": needs exactly one of count · atLeast";
@@ -1545,8 +1551,12 @@ namespace sw
         _logPolicy.selectScenario( _scenario.getName() );
         for ( const AutomationStep& step : _scenario.getSteps() )
         {
-            if ( step._kind == "ExpectLog" )
-                _logPolicy.declareExpected( *step.findAttribute( "contains" ) ); // 검사 함수가 contains 를 요구했다
+            if ( step._kind != "ExpectLog" )
+                continue;
+            if ( const string* pID = step.findAttribute( "id" ); pID != nullptr )
+                _logPolicy.declareExpectedID( *pID );
+            else
+                _logPolicy.declareExpected( *step.findAttribute( "contains" ) ); // 검사 함수가 id · contains 중 하나를 요구했다
         }
         prepareWatches();
         _listRemembered.clear();
@@ -1865,7 +1875,9 @@ namespace sw
 
     void AutomationRunner::runExpectLog( const AutomationStep& step )
     {
-        const string&                           needle = *step.findAttribute( "contains" );
+        const string*                           pID     = step.findAttribute( "id" );
+        const string&                           needle  = pID != nullptr ? *pID : *step.findAttribute( "contains" ); // 검사 함수가 둘 중 하나를 요구했다
+        const utf8*                             pTarget = pID != nullptr ? "ExpectLog id '" : "ExpectLog '";
         string                                  error;
         AutomationRunnerInternal::ExpectLogArgs args;
         if ( AutomationRunnerInternal::parseExpectLog( step, args, error ) == false )
@@ -1873,15 +1885,15 @@ namespace sw
             recordFailure( step, error ); // 검사 뒤 단계가 바뀌었다(핫 리로드)
             return;
         }
-        const uint32 matchCount = _logCapture.countMatchingLines( needle, args._since );
+        const uint32 matchCount = pID != nullptr ? _logCapture.countLinesWithID( needle, args._since ) : _logCapture.countMatchingLines( needle, args._since );
         if ( args._bExactCount )
         {
             if ( matchCount != args._expected )
-                recordFailure( step, "ExpectLog '" + needle + "' count == " + to_string( args._expected ) + ", got " + to_string( matchCount ) );
+                recordFailure( step, string( pTarget ) + needle + "' count == " + to_string( args._expected ) + ", got " + to_string( matchCount ) );
             return;
         }
         if ( matchCount < args._expected )
-            recordFailure( step, "ExpectLog '" + needle + "' count >= " + to_string( args._expected ) + ", got " + to_string( matchCount ) );
+            recordFailure( step, string( pTarget ) + needle + "' count >= " + to_string( args._expected ) + ", got " + to_string( matchCount ) );
     }
 
     void AutomationRunner::runExpectImage( const AutomationStep& step )

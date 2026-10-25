@@ -35,7 +35,6 @@
 	<At frame="260">
 		<Expect probe="Editor.RenderTargetPixelRed" atLeast="0"/>
 		<Expect probe="Editor.RenderTargetPixelRed" atMost="1"/>
-		<ExpectLog contains="[Error]" count="0"/>
 	</At>
 	<At frame="270"><Variable name="gv_editorUiScale" value="0"/><Pass/></At>
 </Scenario>

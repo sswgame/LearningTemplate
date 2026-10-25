@@ -51,7 +51,6 @@
 		<Expect probe="Module.BindingsOk" equals="1"/>
 		<Expect probe="Module.GraphBroken" equals="0"/>
 		<Expect probe="Scene.ObjectCount" atLeast="1"/>
-		<ExpectLog contains="[Error]" count="0"/>
 		<Pass/>
 	</At>
 </Scenario>

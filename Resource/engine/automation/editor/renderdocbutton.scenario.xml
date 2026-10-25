@@ -10,7 +10,6 @@
 	<At frame="70"><EditorClick mark="toolbar.renderDoc"/></At>
 	<At frame="110">
 		<ExpectLog contains="RenderDoc capture requested" count="0"/>
-		<ExpectLog contains="[Error]" count="0"/>
 		<Expect probe="Editor.RenderDocAvailable" equals="0"/>
 		<Pass/>
 	</At>

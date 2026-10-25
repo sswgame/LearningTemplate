@@ -57,6 +57,8 @@ namespace sw
         void setFrameIndex( uint32 frameIndex ) { _frameIndex.store( frameIndex, std::memory_order_relaxed ); }
         /** @brief 프레임 @p sinceFrame 이후 줄 가운데 @p needle 을 포함한 줄 수입니다. */
         uint32 countMatchingLines( const string& needle, uint32 sinceFrame ) const;
+        /** @brief 프레임 @p sinceFrame 이후 줄 가운데 종류 id 가 @p id 인 줄 수입니다(문구가 바뀌어도 같은 사건을 센다). */
+        uint32 countLinesWithID( const string& id, uint32 sinceFrame ) const;
         /** @brief 모은 줄을 모두 @p policy 로 판정해 처리하지 않은 줄 · 허용 항목이 맞은 id 를 돌려줍니다. */
         AutomationLogJudgement judgeLines( const AutomationLogPolicy& policy ) const;
         /** @brief 모은 줄 가운데 @p needle 을 담은 줄이 있으면 true 입니다(프레임 무관). */

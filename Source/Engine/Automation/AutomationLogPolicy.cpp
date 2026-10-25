@@ -171,8 +171,16 @@ namespace sw
         _listExpected.push_back( string( contains ) );
     }
 
+    void AutomationLogPolicy::declareExpectedID( string_view id )
+    {
+        if ( id.empty() )
+            return;
+        _listExpectedID.push_back( string( id ) );
+    }
+
     void AutomationLogPolicy::clearScope()
     {
+        _listExpectedID.clear();
         _listScenario.clear();
         _listSuite.clear();
         _listExpected.clear();
@@ -187,6 +195,12 @@ namespace sw
     {
         return VectorUtil::containsIf( _listExpected, [&]( const string& expected )
         { return text.find( string_view( expected ) ) != string_view::npos; } );
+    }
+
+    bool AutomationLogPolicy::isDeclaredID( string_view id ) const
+    {
+        return id.empty() == false && VectorUtil::containsIf( _listExpectedID, [&]( const string& expected )
+        { return string_view( expected ) == id; } );
     }
 
     const AutomationAllowedLog* AutomationLogPolicy::findAllowed( string_view id ) const
@@ -204,7 +218,7 @@ namespace sw
     {
         if ( isGatedLevel( level ) == false || isExemptMessage( message ) )
             return AutomationLogVerdict::NotGated;
-        if ( isDeclared( message ) )
+        if ( isDeclaredID( id ) || isDeclared( message ) )
             return AutomationLogVerdict::Declared;
         if ( id.empty() )
             return AutomationLogVerdict::MissingID;

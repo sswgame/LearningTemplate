@@ -64,6 +64,18 @@ namespace sw
         return matchCount;
     }
 
+    uint32 AutomationLogCapture::countLinesWithID( const string& id, uint32 sinceFrame ) const
+    {
+        uint32                  matchCount = 0;
+        std::scoped_lock<mutex> lock{ _mutex };
+        for ( const AutomationLogLine& line : _listLogLine )
+        {
+            if ( line._frameIndex >= sinceFrame && line._id == id )
+                ++matchCount;
+        }
+        return matchCount;
+    }
+
     AutomationLogJudgement AutomationLogCapture::judgeLines( const AutomationLogPolicy& policy ) const
     {
         AutomationLogJudgement  judgement;

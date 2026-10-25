@@ -233,6 +233,8 @@ SW_TEST_CASE( AutomationScenarioTest, UnknownStepOrAttributeIsALoadError )
         R"(<WaitUntil probe="Test.Ready" equals="1" timeoutFrames="-1"/>)",
         R"(<WaitUntil probe="Test.Ready" equals="1" frames="3"/>)",
         R"(<WaitUntil probe="Test.Ready" equals="1"/><Pass/>)",
+        R"(<ExpectLog id="Probe.A" contains="x" atLeast="1"/>)", // id · contains 는 정확히 하나
+        R"(<ExpectLog atLeast="1"/>)",
     };
     sw::InputManager input;
     SW_ASSERT_TRUE( input.initialize() );
@@ -711,6 +713,30 @@ SW_TEST_CASE( AutomationScenarioTest, ExpectLogCountsLinesSinceAFrame )
 }
 
 /**
+ * @brief [AutomationScenarioTest] ExpectLog 는 로그 id 로도 센다 — 문구가 달라도 같은 id 의 줄이고, 선언한 id 의 Warning 은 로그 게이트도 통과한다
+ */
+SW_TEST_CASE( AutomationScenarioTest, ExpectLogCountsLinesByID )
+{
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    sw::AutomationRunner runner;
+    SW_ASSERT_TRUE( runner.startFromText( R"(<Scenario name="t" startAfter="Immediately">
+        <At frame="2"><ExpectLog id="Probe.IdCounted" count="3"/><ExpectLog id="Probe.IdNever" count="0"/><Pass/></At>
+      </Scenario>)" ) );
+    sw::AutomationOutcome result = sw::AutomationOutcome::Running;
+    for ( uint32 frame = 0; frame < 20 && result == sw::AutomationOutcome::Running; ++frame )
+    {
+        runner.onFrameBegin( input );
+        input.beginFrame( 1.0f / 60.0f );
+        SW_LOG_WARNING_ID( "Probe.IdCounted", "[AutoProbe] wording %# of the counted line", frame ); // 문구에 상관없이 id 로 센다
+        result = runner.onFrameEnd( input );
+        input.endFrame();
+    }
+    SW_EXPECT_TRUE_MSG( result == sw::AutomationOutcome::Passed, runner.getFinishReason().c_str() );
+    input.shutdown();
+}
+
+/**
  * @brief [AutomationScenarioTest] 로그 게이트 — 처리하지 않은 Warning 을 남긴 시나리오는 `<Pass/>` 에 닿아도 UnhandledLog(15)로 끝나고, 방어 구간 줄은 보지 않는다
  * @details 게이트를 걸리게 할 줄은 방어 구간 밖에서 남겨야 하므로 테스트 로그에 `[AutoProbe] undeclared` 경고 한 줄이 남는다. 이 줄은 로그 id 가 없어
  *          허용 목록으로 가릴 수도 없다. 로그 id 는 있으나 허용 항목이 없는 줄(`Probe.Unlisted`)도 같은 코드로 끝난다.
@@ -851,6 +877,9 @@ SW_TEST_CASE( AutomationScenarioTest, LogPolicyJudgesByIDAndScope )
     SW_EXPECT_TRUE( policy.classify( sw::LogLevel::Error, "", "[Expected Defensive Test] broken file" ) == Verdict::NotGated );
     policy.declareExpected( "deliberate" );
     SW_EXPECT_TRUE( policy.classify( sw::LogLevel::Warning, "", "a deliberate warning" ) == Verdict::Declared );
+    policy.declareExpectedID( "Font.Declared" );
+    SW_EXPECT_TRUE( policy.classify( sw::LogLevel::Warning, "Font.Declared", "any wording" ) == Verdict::Declared ); // id 로 선언하면 문구와 무관하다
+    SW_EXPECT_TRUE( policy.classify( sw::LogLevel::Warning, "Font.Declaredx", "any wording" ) == Verdict::NotAllowed );
 
     sw::AutomationLogPolicy otherScenario;
     SW_ASSERT_TRUE_MSG( otherScenario.parseAllowList( R"({ "allowed": [ { "id": "Font.NoGlyph", "scenario": "alpha", "reason": "r", "plan": "p" } ] })", "other.json", error ), error.c_str() );

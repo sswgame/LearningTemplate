@@ -50,7 +50,7 @@ cd build/Ninja-Debug/Bin
 ```
 
 **시나리오 통과 기준.** 시나리오는 종료 코드 0 이고 처리하지 않은 `[Warning]` · `[Error]` 줄이 없을 때만 통과다. 처리하지 않은 줄이 하나라도 남으면 실행기가 15(`UnhandledLog`)로 끝나며 미확정(14)보다 항상 앞선다.
-줄이 처리됐다는 것은 ① 그 시나리오의 `<ExpectLog contains="…">` 가 선언한 줄이거나 ② 로그 id(`SW_LOG_WARNING_ID` · `SW_LOG_ERROR_ID`)가 붙은 줄이 `Resource/engine/automation/allowedlogs.json` 의 항목(id · 시나리오 하나 · 사유 · 처리 계획 문서)에 있다는 뜻이다. **id 없는 줄은 목록으로 가릴 수 없다** — 소스에 id 를 붙이거나 고친다.
+줄이 처리됐다는 것은 ① 그 시나리오의 `<ExpectLog id="…">`(로그 id 가 있는 줄) 또는 `<ExpectLog contains="…">`(id 없는 줄)가 선언한 줄이거나 ② 로그 id(`SW_LOG_WARNING_ID` · `SW_LOG_ERROR_ID`)가 붙은 줄이 `Resource/engine/automation/allowedlogs.json` 의 항목(id · 시나리오 하나 · 사유 · 처리 계획 문서)에 있다는 뜻이다. **id 없는 줄은 목록으로 가릴 수 없다** — 소스에 id 를 붙이거나 고친다.
 목록의 칸이 비었거나 `TODO` 이면 모든 시나리오가 읽기 오류(11)로 선다. 호스트 테스트 스위트(`hostgpu`)는 같은 목록의 `suite` 항목을 쓴다. 보고에는 이렇게 쓴다 — 허용 목록에 없는 Warning · Error 가 하나라도 있으면 "통과" 가 아니라 "실패(UnhandledLog)" 다.
 시나리오를 돌린 뒤에는 `py -3 -m Scripts scenario-logs --check` 로 목록에 있으나 더 나오지 않는 항목(지운다)과 15 로 끝난 보고를 센다. 처음 목록을 채울 때는 `--regen` 이 초안(사유 · 계획이 `TODO`)을 만든다. 절차와 이유는 [GPU 검증](plans/GpuVerification.md) 4절이다.
 
@@ -491,7 +491,7 @@ ctest --test-dir build/Ninja-Release -L load                     # 부하 스위
 - **게임 로직은 기반 탐침으로 단언하고 결정성은 백엔드끼리 비교한다** — 입력은 액션 이름(`Action` · `ActionAxis`), NPC 일정은 `AdvanceGameTime` + `Schedule.*`, AI 는 `AI.State` + `ExpectVisited`,
   "N 초 안에" 는 `WaitUntil timeoutSeconds`. 시나리오 끝에 `<Record probe="Scene.TransformHash"/>` 같은 기록을 두면 `AppScenarioTest` 가 네 백엔드의 `records` 를 비교해 다른 줄을 로그로 낸다.
   녹화(`-scenario-record` · `-scenario-record-probes`)를 다시 돌려 같은 검사점이 나오는지는 `AppScenarioTest.RecordedPlayReplaysOnEveryBackend` 가 본다. 형식은 `Source/Engine/Automation/README.md`.
-  시나리오는 선언하지 않은 `[Warning]` · `[Error]` 한 줄 · 빠진 현지화 키 하나로 진다(로그 게이트). 일부러 내는 줄은 그 시나리오에 `<ExpectLog contains="…">`, 고칠 수 없는 줄만 `Resource/engine/automation/allowedlogs.json` 에 이유와 함께 둔다.
+  시나리오는 선언하지 않은 `[Warning]` · `[Error]` 한 줄 · 빠진 현지화 키 하나로 진다(로그 게이트). 일부러 내는 줄은 그 시나리오에 `<ExpectLog id="…">`(id 없는 줄만 `contains="…"`; 린트 `CheckExpectLogPhrases` 가 id · 문구가 소스에 있는지 본다 — 문구가 바뀌어 `count="0"` 이 거짓 통과하는 것을 막는다), 고칠 수 없는 줄만 `Resource/engine/automation/allowedlogs.json` 에 이유와 함께 둔다.
   게이트에 걸린 줄은 실패 메시지의 `unexpected log:` 줄과 `Saved/Automation/<이름>_<백엔드>.log` 에 있다.
   `materialpreview` 가 GL 체인에서 한 번 진 적이 있다(미리보기 평균 R-B 가 옛 값 — 이후 0/23 재현 없음). 다시 지면 탐침 `Editor.MaterialDocumentIsProbeAsset` · `Editor.MaterialSwitchPending` 의 값으로 문서가 안 바뀐 것인지 계산이 안 따라온 것인지 가른다.
 - **에디터 시나리오 백엔드 사례는 한 체크아웃에서 하나씩 돌린다** — `AppScenarioTest.EditorScenariosPassOn<백엔드>` 는 리소스 트리(`assetmanage/probe.material` 이름 바꾸기 · 새 머티리얼 · `editor/automationtemp/`)를 고친다.

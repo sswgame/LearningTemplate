@@ -94,6 +94,8 @@ namespace sw
         void selectSuite( string_view name );
         /** @brief 시나리오의 `<ExpectLog contains="…">` 선언 하나를 더합니다. 빈 글은 무시합니다. */
         void declareExpected( string_view contains );
+        /** @brief 시나리오의 `<ExpectLog id="…">` 선언 하나를 더합니다. 그 id 의 줄은 문구와 무관하게 통과입니다. 빈 글은 무시합니다. */
+        void declareExpectedID( string_view id );
         /** @brief 켠 범위와 `<ExpectLog>` 선언을 지웁니다. 허용 목록은 그대로 둡니다(케이스마다 범위를 다시 정하는 호스트 판정기가 씁니다). */
         void clearScope();
 
@@ -103,6 +105,8 @@ namespace sw
         static bool isExemptMessage( string_view message );
         /** @brief @p text 가 `<ExpectLog>` 선언 하나라도 담으면 true 입니다. */
         bool isDeclared( string_view text ) const;
+        /** @brief @p id 가 `<ExpectLog id>` 선언 하나와 같으면 true 입니다. 빈 id(id 없는 줄)는 항상 false 입니다. */
+        bool isDeclaredID( string_view id ) const;
 
         /** @brief 줄 하나를 판정합니다. @p id 가 비었으면 id 없는 줄입니다. */
         AutomationLogVerdict classify( LogLevel level, string_view id, string_view message ) const;
@@ -119,6 +123,7 @@ namespace sw
 
         vector<AutomationAllowedLog> _listAllowed{};
         vector<string>               _listExpected{};
+        vector<string>               _listExpectedID{};
         vector<string>               _listScenario{};
         vector<string>               _listSuite{};
         bool                         _bLoaded{ false };
