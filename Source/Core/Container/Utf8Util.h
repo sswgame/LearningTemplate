@@ -18,6 +18,23 @@ namespace sw
         /** @brief UTF-8 글자 하나의 최대 바이트 수입니다. */
         static constexpr uint32 kMaxCharacterBytes = 4;
 
+        /**
+         * @brief 선두 바이트가 알리는 시퀀스 길이(1 ~ 4)입니다. 선두가 될 수 없는 바이트(이어지는 바이트 · 0xF8 이상)는 0 입니다.
+         * @details 시퀀스 길이 규칙은 여기 하나다. 값 범위(overlong · 서로게이트 · U+10FFFF 초과)는 이 길이를 쓰는 디코더(`StringUtil.cpp` 의 `decodeUtf8Sequence`)가 판정한다.
+         */
+        [[nodiscard]] static constexpr uint32 getSequenceLength( uint8 leadByte )
+        {
+            if ( ( leadByte & 0x80u ) == 0x00u )
+                return 1;
+            if ( ( leadByte & 0xE0u ) == 0xC0u )
+                return 2;
+            if ( ( leadByte & 0xF0u ) == 0xE0u )
+                return 3;
+            if ( ( leadByte & 0xF8u ) == 0xF0u )
+                return kMaxCharacterBytes;
+            return 0;
+        }
+
         /** @brief 글자의 이어지는 바이트(10xxxxxx)인가입니다. 글자의 선두 바이트(ASCII 포함)와 잘못된 바이트(0xF8 이상)는 false 입니다. */
         template <typename TChar>
         [[nodiscard]] static constexpr bool isContinuation( TChar value )
