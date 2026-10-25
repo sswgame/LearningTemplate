@@ -1035,6 +1035,11 @@
       "covered": ["engine/automation/editor/uiaudit.scenario.xml", "engine/automation/editor/previewswap.scenario.xml"], "covered_by": "app-scenarios-release",
       "source": "docs/decisions/5-5_GraphicsRHI.md withNativeContext 항목", "result_doc": "docs/plans/RhiAsyncUploads.md U5",
       "note": "에디터 UI 가 네 백엔드에서 그대로 그려지는지(DX11 은 텍스처 갱신 · 보조 뷰포트를 렌더 스레드가 그린다) 캡처로 본다. DX11 은 플로팅 창을 띄우고 크기를 바꿔 ResizeBuffers 실패 · 렌더 타깃 깨짐이 없는지 본다(이것을 한 명령으로 도는 시나리오는 아직 없다). DX12 는 rhi-transfer-b0-gpu 와 함께 돌려 'GPU has not reached fence' 경고 · DEVICE_HUNG 이 없는지 본다."
+    },
+    {
+      "id": "host-write-snapshot", "title": "HostGpuIsolation H1 — 시나리오마다 Scripts/qa/WriteSnapshot.py 로 App 을 돌려 HostWriteLocations.json 에 없는 쓰기 위치를 찾는다", "kind": "test", "config": "Shipping", "platform": "windows", "gpu": "shared", "pending": true,
+      "need_command": "시나리오(엔진 · 게임 팩 · 에디터)마다 `py -3 -m Scripts.qa.WriteSnapshot --app <App> --label <이름> -- <그 시나리오 인자>` 를 도는 반복이 매니페스트에 없다. 에디터 시나리오는 -EnableEditor 가 든 인자로 따로 돈다",
+      "source": "docs/plans/HostGpuIsolation.md 5절 H1", "result_doc": "docs/plans/HostGpuIsolation.md 2절 표"
     }
   ]
 }
