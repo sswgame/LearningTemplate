@@ -45,7 +45,7 @@ namespace sw
         , _depthOfField{}
         , _lensShift{ 0.0f, 0.0f }
         , _bOrthographic{ false }
-        , _bCutPending{ SW_FALSE }
+        , _cutPending{ 0 }
     {
     }
 

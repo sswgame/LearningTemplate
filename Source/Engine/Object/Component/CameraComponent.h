@@ -86,6 +86,14 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 카메라 컷 표시를 읽는 쪽입니다. 읽는 쪽마다 표시가 따로라 한 쪽이 읽어도 다른 쪽의 표시는 남습니다. */
+    enum class CameraCutReader : uint8
+    {
+        Render, ///< 렌더 뷰를 만드는 쪽(`RenderViewCollector`) — 시간 누적(TAA 기록)을 버린다
+        Follow, ///< 이 카메라를 뷰 타깃으로 따라가는 카메라 매니저 — 자기 화면도 끊는다
+        Count
+    };
+
     /**
      * @class CameraComponent
      * @brief GameObject 에 붙는 카메라입니다. 트랜스폼은 SceneComponent 에서 가져옵니다.
@@ -204,14 +212,15 @@ namespace sw
 
         /**
          * @brief 이 카메라의 화면이 이번 프레임에 **끊어** 바뀌었다고 표시합니다(언리얼의 `bCameraCut`). 렌더러가 시간 누적(TAA 기록)을 버립니다.
-         * @details 블렌드 없는 프리셋과 뷰 타깃 전환이 부른다. 게임 스레드에서 쓰고 패킷을 만드는 쪽이 `consumeCut` 으로 한 번 읽어 지운다.
+         * @details 블렌드 없는 프리셋과 뷰 타깃 전환이 부른다. 읽는 쪽(`CameraCutReader`)마다 표시가 따로라, 소비자가 몇이든 각자 한 번씩 이 컷을 본다.
          */
-        void markCut() { _bCutPending = SW_TRUE; }
-        /** @brief 컷 표시를 읽고 지웁니다. */
-        bool consumeCut()
+        void markCut() { _cutPending = ( 1u << static_cast<uint32>( CameraCutReader::Count ) ) - 1u; }
+        /** @brief 이 읽는 쪽의 컷 표시를 읽고 지웁니다. 다른 읽는 쪽의 표시는 건드리지 않습니다. */
+        bool consumeCut( CameraCutReader reader )
         {
-            const bool bCut = _bCutPending == SW_TRUE;
-            _bCutPending    = SW_FALSE;
+            const uint8 bit  = static_cast<uint8>( 1u << static_cast<uint32>( reader ) );
+            const bool  bCut = ( _cutPending & bit ) != 0;
+            _cutPending      = static_cast<uint8>( _cutPending & ~bit );
             return bCut;
         }
 
@@ -243,6 +252,6 @@ namespace sw
         float2 _lensShift;
         PROPERTY( Category = "Projection", DisplayName = "Orthographic", Tooltip = "Toggle orthographic projection" )
         bool  _bOrthographic;
-        uint8 _bCutPending; ///< `markCut` 이 켜고 `consumeCut` 이 지운다(저장하지 않는다)
+        uint8 _cutPending; ///< `CameraCutReader` 별 비트. `markCut` 이 모두 켜고 `consumeCut` 이 자기 비트만 지운다(저장하지 않는다)
     };
 } // namespace sw

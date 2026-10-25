@@ -424,7 +424,7 @@ SW_TEST_CASE( CameraModeTest, ViewTargetBlendContinuesFromTheCurrentPose )
     pCameraManager->updateCamera( 0.016f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, pOutput->getWorldPosition()._x, 1.0e-5f );
     SW_EXPECT_FALSE( pCameraManager->isBlending() ); // 처음 타깃은 바로 붙는다
-    (void)pOutput->consumeCut();
+    (void)pOutput->consumeCut( CameraCutReader::Render );
 
     pCameraManager->setViewTarget( pB->getHandle(), CameraModeTestInternal::makeLinear( 1.0f ) );
     pCameraManager->updateCamera( 0.5f );
@@ -435,7 +435,7 @@ SW_TEST_CASE( CameraModeTest, ViewTargetBlendContinuesFromTheCurrentPose )
     pCameraManager->updateCamera( 0.001f );
     SW_EXPECT_NEAR_EQUAL( 5.0f, pOutput->getWorldPosition()._x, 0.02f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, pOutput->getWorldPosition()._y, 0.02f );
-    SW_EXPECT_FALSE( pOutput->consumeCut() );
+    SW_EXPECT_FALSE( pOutput->consumeCut( CameraCutReader::Render ) );
 
     pCameraManager->updateCamera( 1.0f );
     SW_EXPECT_FALSE( pCameraManager->isBlending() );
@@ -448,8 +448,8 @@ SW_TEST_CASE( CameraModeTest, ViewTargetBlendContinuesFromTheCurrentPose )
     pCameraManager->setViewTarget( pA->getHandle(), cut );
     pCameraManager->updateCamera( 0.016f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, pOutput->getWorldPosition()._y, 1.0e-4f );
-    SW_EXPECT_TRUE( pOutput->consumeCut() );
-    SW_EXPECT_FALSE( pOutput->consumeCut() );
+    SW_EXPECT_TRUE( pOutput->consumeCut( CameraCutReader::Render ) );
+    SW_EXPECT_FALSE( pOutput->consumeCut( CameraCutReader::Render ) );
 
     // 용도별 목록 — 보조 셋, 플레이어 시점 하나.
     vector<CameraComponent*> listAuxiliary;
@@ -505,21 +505,41 @@ SW_TEST_CASE( CameraModeTest, DirectorComponentMarksTheCameraCutOnce )
                                                              "camera-cut-mark-test" ) );
     pDirector->setInputEnabled( false );
     manager.beginPlay();
-    SW_EXPECT_FALSE( pCamera->consumeCut() ); // 처음 켠 프리셋은 컷이 아니다(지난 화면이 없다)
+    SW_EXPECT_FALSE( pCamera->consumeCut( CameraCutReader::Render ) ); // 처음 켠 프리셋은 컷이 아니다(지난 화면이 없다)
 
     SW_ASSERT_TRUE( pDirector->activatePreset( hashed_string( "b" ), CameraModeTestInternal::makeLinear( 0.5f ) ) );
     pDirector->updateCamera( 0.016f );
-    SW_EXPECT_FALSE( pCamera->consumeCut() ); // 블렌드 전환은 화면이 이어진다
+    SW_EXPECT_FALSE( pCamera->consumeCut( CameraCutReader::Render ) ); // 블렌드 전환은 화면이 이어진다
     pDirector->updateCamera( 1.0f );
 
     BlendCurveDef cut;
     cut._curve = BlendCurve::Cut;
     SW_ASSERT_TRUE( pDirector->activatePreset( hashed_string( "a" ), cut ) );
     pDirector->updateCamera( 0.016f );
-    SW_EXPECT_TRUE( pCamera->consumeCut() );
+    SW_EXPECT_TRUE( pCamera->consumeCut( CameraCutReader::Render ) );
     pDirector->updateCamera( 0.016f );
-    SW_EXPECT_FALSE( pCamera->consumeCut() ); // 한 프레임만 표시한다
+    SW_EXPECT_FALSE( pCamera->consumeCut( CameraCutReader::Render ) ); // 한 프레임만 표시한다
     manager.endPlay();
+}
+
+/**
+ * @brief [CameraModeTest] 컷 표시는 읽는 쪽마다 따로라, 한 쪽이 먼저 읽어도 다른 쪽이 같은 컷을 본다(렌더러와 카메라 매니저가 같은 카메라를 읽는 경우)
+ */
+SW_TEST_CASE( CameraModeTest, CutIsSeenByEveryReader )
+{
+    GameObjectManager manager;
+    GameObject*       pObject = manager.createGameObject( hashed_string( "CutReaders" ) );
+    SW_ASSERT_NOT_NULL( pObject );
+    CameraComponent* pCamera = pObject->addComponent<CameraComponent>();
+    SW_ASSERT_NOT_NULL( pCamera );
+    SW_EXPECT_FALSE( pCamera->consumeCut( CameraCutReader::Render ) );
+    SW_EXPECT_FALSE( pCamera->consumeCut( CameraCutReader::Follow ) );
+
+    pCamera->markCut();
+    SW_EXPECT_TRUE( pCamera->consumeCut( CameraCutReader::Follow ) ); // 매니저가 먼저 읽어도
+    SW_EXPECT_TRUE( pCamera->consumeCut( CameraCutReader::Render ) ); // 렌더러가 같은 컷을 본다
+    SW_EXPECT_FALSE( pCamera->consumeCut( CameraCutReader::Follow ) );
+    SW_EXPECT_FALSE( pCamera->consumeCut( CameraCutReader::Render ) ); // 다음 프레임에는 둘 다 없다
 }
 
 /**

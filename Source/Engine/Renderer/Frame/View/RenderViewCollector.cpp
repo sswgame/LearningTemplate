@@ -59,7 +59,7 @@ namespace sw
                 settings._upscaleZoom      = static_cast<uint8>( MathUtil::min( output._upscaleZoom, kMaxUpscaleZoom ) );
                 settings._bShadows         = output._bShadows ? SW_TRUE : SW_FALSE;
                 settings._bPostProcess     = output._bPostProcess ? SW_TRUE : SW_FALSE;
-                settings._bCut             = camera.consumeCut() ? SW_TRUE : SW_FALSE;
+                settings._bCut             = camera.consumeCut( CameraCutReader::Render ) ? SW_TRUE : SW_FALSE;
                 return settings;
             }
 
