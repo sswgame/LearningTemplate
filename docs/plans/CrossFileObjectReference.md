@@ -17,4 +17,4 @@
 |---|---|---|
 | C1 | 참조 형식 · 해석 · `Scene::getOrAssignFileID` · `findObjectIDByFileID` · 테스트 `SceneTest.CrossSceneReferenceResolvesThroughFileID` | 끝(2026-10-23 Debug 빌드 경고 0, `SceneTest` 전체 통과) |
 | C2 | 에디터 인스펙터에서 다른 씬의 오브젝트를 고르는 위젯(`SceneObjectReference` 칸)과 그 에디터 시나리오 | 끝(코드 · 시나리오, 실행 확인은 매니페스트 id `scene-reference-scenario`) — `SceneObjectReferencePropertyDrawer`(올라와 있는 씬의 오브젝트 콤보, 저장한 적 없는 씬은 이유를 보이고 건너뜀), 테스트 컴포넌트 `EditorSceneReferenceProbeComponent`, 탐침 `Editor.SelectedSceneReference`, 시나리오 `editor/scenereference` |
-| C3 | 오브젝트를 파일 사이로 옮겨도 이어지는 영속 GUID | 남음(조건부 — 잘라 붙이기로 오브젝트를 파일 사이에서 옮기는 일이 생길 때. 지금은 파일 id 가 영속 키라 요구가 없다) |
+| C3 | 오브젝트를 파일 사이로 옮겨도 이어지는 영속 GUID | 남음(조건부 — 잘라 붙이기로 오브젝트를 파일 사이에서 옮기는 일이 생길 때. 지금은 파일 id 가 영속 키라 요구가 없다. 2026-10-25 코드 확인: 에디터에 파일 사이로 옮기는 명령이 없다 — `EditorSceneCommands::pasteObjects` · `duplicate` 는 새 오브젝트를 만들고 잘라내기는 없다. 그래서 C3 은 착수하지 않는다) |
