@@ -102,9 +102,10 @@ SW_TEST_CASE( AutomationRunnerWatchTest, WallTimeoutAttributeMustBePositive )
     SW_EXPECT_EQUAL( sw::AutomationScenario::kDefaultWallTimeoutSeconds, scenario.getWallTimeoutSeconds() );
     SW_ASSERT_TRUE_MSG( scenario.parse( R"(<Scenario name="t" wallTimeoutSeconds="12.5"><At frame="0"><Pass/></At></Scenario>)", "", error ), error.c_str() );
     SW_EXPECT_EQUAL( 12.5f, scenario.getWallTimeoutSeconds() );
+    SW_ASSERT_TRUE_MSG( scenario.parse( R"(<Scenario name="t" wallTimeoutSeconds="169"><At frame="0"><Pass/></At></Scenario>)", "", error ), error.c_str() ); // 시계 보류(170) 바로 아래
 
-    SW_TEST_DEFENSIVE_SCOPE( "a limit that is not positive would switch the watch off" );
-    for ( const utf8* pBadValue : { "0", "-3", "soon" } )
+    SW_TEST_DEFENSIVE_SCOPE( "a limit that is not positive would switch the watch off, and one at the clock-hold timeout or above outlasts the process kill" );
+    for ( const utf8* pBadValue : { "0", "-3", "soon", "170", "400" } )
     {
         const sw::string       text = sw::string( R"(<Scenario name="t" wallTimeoutSeconds=")" ) + pBadValue + R"("><At frame="0"><Pass/></At></Scenario>)";
         sw::AutomationScenario bad;

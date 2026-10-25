@@ -49,13 +49,7 @@ namespace sw
     {
         struct AutomationRunnerInternal
         {
-            /** @brief `<ExpectImage>` 가 스크린샷을 기다리는 최대 프레임입니다. 렌더 큐 깊이보다 넉넉하게 잡습니다. */
-            static constexpr uint32 kMaxImageWaitFrames = 30;
-            /**
-             * @brief 스크린샷이 에셋 일(읽는 중 · 나타나는 중인 메시, 올리기를 기다리는 텍스처)을 기다리는 최대 프레임 수입니다. 넘기면 실패로 적고 그대로 찍는다.
-             * @details 고정 프레임 시간(60 Hz)에서 10 초다 — 첫 프레임에 큰 씬의 텍스처 수백 장이 워커에 줄을 서도 넉넉하다.
-             */
-            static constexpr uint32 kMaxAssetSettleFrames = 600;
+            // 시한 상수(기다리는 프레임 · 초)는 `AutomationTimeLimits` 한 곳에 있다.
             /**
              * @brief 에셋 일이 0 이 된 뒤 스크린샷 전에 더 기다리는 프레임 수입니다. 올린 텍스처의 새 SRV 는 다음 씬 빌드가 머티리얼에 넣고(`Material::refreshTextureBindings`),
              *        그 스냅샷이 렌더 큐(깊이 2)를 지나야 화면에 나온다.
@@ -63,10 +57,6 @@ namespace sw
             static constexpr uint32 kAssetSettleTrailFrames = 3;
             /** @brief `darkFraction` 의 기본 임계값(영역 중앙값에 곱한다)입니다. */
             static constexpr float32 kDefaultDarkRatio = 0.7f;
-            /** @brief `CloseWindow` 의 기본 종료 시한(초)입니다. */
-            static constexpr float32 kDefaultExitWithinSeconds = 10.0f;
-            /** @brief `WaitUntil` 의 기본 시한(프레임)입니다. 부하가 걸린 기계에서 에디터가 에셋을 여는 데 드는 시간보다 넉넉하게 잡습니다. */
-            static constexpr uint32 kDefaultWaitTimeoutFrames = 1200;
             /** @brief 단조 시계의 지금 시각(초)입니다. 벽시계 감시와 시한이 같은 시계를 읽는다. */
             [[nodiscard]] static float64 readNowSeconds() { return static_cast<float64>( MonotonicClock::nowMicroseconds() ) * 1.0e-6; }
 
@@ -169,7 +159,7 @@ namespace sw
             /** @brief `WaitUntil` 의 시한입니다. `timeoutSeconds` 를 적었으면 초, 아니면 프레임입니다. */
             struct WaitTimeoutArgs
             {
-                uint32  _timeoutFrames{ kDefaultWaitTimeoutFrames };
+                uint32  _timeoutFrames{ AutomationTimeLimits::kDefaultWaitTimeoutFrames };
                 float32 _timeoutSeconds{ 0.0f };
                 bool    _bSeconds{ false };
             };
@@ -308,10 +298,10 @@ namespace sw
                 return readFloat( step, "ratio", outArgs._ratio, outError ) && parseNumberComparison( step, kImageNearTolerance, outArgs._comparison, outError );
             }
 
-            /** @brief 종료 시한 단계의 초입니다. 없으면 `kDefaultExitWithinSeconds` 입니다. */
+            /** @brief 종료 시한 단계의 초입니다. 없으면 `AutomationTimeLimits::kDefaultExitWithinSeconds` 입니다. */
             [[nodiscard]] static bool parseExitSeconds( const AutomationStep& step, const utf8* pName, float32& outSeconds, string& outError )
             {
-                outSeconds = kDefaultExitWithinSeconds;
+                outSeconds = AutomationTimeLimits::kDefaultExitWithinSeconds;
                 return readFloat( step, pName, outSeconds, outError );
             }
 
@@ -1145,7 +1135,7 @@ namespace sw
             const bool bSettled             = AutomationCaptureUtil::isReadyForCapture( runner.findActiveObjectManager() );
             runner._assetSettledFrameCount  = bSettled ? runner._assetSettledFrameCount + 1 : 0;
             const bool               bReady = runner._assetSettledFrameCount > AutomationRunnerInternal::kAssetSettleTrailFrames;
-            const AutomationStepHold hold   = runner.holdUntilReady( step, input, bReady, AutomationRunnerInternal::kMaxAssetSettleFrames );
+            const AutomationStepHold hold   = runner.holdUntilReady( step, input, bReady, AutomationTimeLimits::kMaxAssetSettleFrames );
             if ( hold == AutomationStepHold::Run )
             {
                 if ( bReady == false )
@@ -1167,7 +1157,7 @@ namespace sw
             const bool bPending = runner._listPendingScreenshot.empty() == false || runner._screenshotCompletedCount < runner._screenshotRequestedCount;
             if ( bPending == false )
                 return AutomationStepHold::Run;
-            if ( ++runner._imageWaitFrameCount <= AutomationRunnerInternal::kMaxImageWaitFrames )
+            if ( ++runner._imageWaitFrameCount <= AutomationTimeLimits::kMaxImageWaitFrames )
                 return AutomationStepHold::Hold;
             runner.recordFailure( step, "the screenshot never completed (is there a renderer?)" );
             return AutomationStepHold::Skip;
@@ -1490,8 +1480,7 @@ namespace sw
             return;
         }
         // 멈춤 그물 — 워밍업(60 프레임)과 느린 기계를 넉넉히 덮는다.
-        constexpr float64 kLoadDeadlineSlackSeconds = 120.0;
-        _loadDeadlineSeconds                        = static_cast<float64>( MonotonicClock::nowMicroseconds() ) * 1.0e-6 + 2.0 * static_cast<float64>( seconds ) + kLoadDeadlineSlackSeconds;
+        _loadDeadlineSeconds = AutomationRunnerInternal::readNowSeconds() + 2.0 * static_cast<float64>( seconds ) + AutomationTimeLimits::kLoadDeadlineSlackSeconds;
         SW_LOG_INFO( "[Scenario] load window %# s (clients %#, meshes %#, movers %#, network '%#')", seconds, load._clientCount, load._meshCount, load._moverCount,
                      load._network.c_str() );
     }

@@ -128,6 +128,8 @@ frame 900 <ExpectVisited> #3: AI.State(FarmAutoFarmer) never went through 'Till 
 원본에 없는 게임 · 실제 백엔드 · 시나리오 · `<Launch>` 변수만 세션과 실행기가 채웁니다.
 
 **행 감시.** 벽시계 상한은 프레임이 도는 동안만 보므로, 프레임 자체가 멈춘 행(교착)은 감시 스레드(`AutomationHangWatchdog`)가 잡습니다. 세션이 켠 실행(`armHangWatchdog`)만 시나리오를 읽은 뒤 스레드를 하나 띄우고(부하 시나리오 제외), `endRun` 이 내립니다.
+시나리오 진입점은 `App::startAutomationSession` → `AutomationSession::begin` → `startStage` 하나뿐이고 `startStage` 가 항상 켭니다. 전용 서버 · 헤드리스 호스트(`HeadlessSubsystem`)는 세션을 세우지 않아 시나리오를 돌리지 않으므로 켤 곳이 없습니다.
+세션 없이 실행기를 손으로 돌리는 테스트(`startFromText`)는 켜지 않습니다 — 감시는 프로세스를 `_Exit(12)` 로 끝내므로 테스트 프로세스가 죽는다. 체인의 프로세스 시한은 `AutomationTimeLimits::getChainKillSeconds`(단일 시한 + 단계 수 × 5 초)이고, 시나리오의 `wallTimeoutSeconds` 는 시계 보류 시한(170 초) 미만이어야 읽힙니다.
 실행기는 단계 전환 때와 30 프레임마다 고정 크기 스냅샷(`AutomationHangPayload` — 이름 · 백엔드 · 마지막 자리 · 프레임 · 시작 시각 · 재현 명령 · 보고 경로)을 버전 번호 seqlock(`AutomationHangSnapshot`)으로 올립니다.
 상한 + 유예(`AutomationTimeLimits::kHangGraceSeconds` 5 초)가 지나도 `endRun` 이 안 불리면 감시가 할당 · 잠금 없이 스냅샷으로 보고(`hang: true`, 종료 코드 12)를 OS 원시 호출로 쓰고, 크래시 컨텍스트 · 빵부스러기 파일과 stderr 한 줄을 남긴 뒤 프로세스를 12 로 끝냅니다.
 시한들의 대소 관계(감시 + 유예 < 시계 보류 170 초 < 프로세스 시한 180 초)는 `AutomationTimeLimits.h` 한 곳에서 `static_assert` 로 못 박습니다.
