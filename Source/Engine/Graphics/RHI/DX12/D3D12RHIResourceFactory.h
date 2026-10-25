@@ -113,10 +113,11 @@ namespace sw
          * @details 얼로케이터는 펜스 구간이 바뀔 때만 Reset 합니다. 같은 구간의 앞선 복사가 GPU 에서 도는 중일 수
          *          있습니다. 성공하면 `_pDevice->_arrStructuredUploadSlot[outSlotIndex]._copyCommandList` 에 기록합니다.
          *          리스트는 **닫지 않습니다.** 프레임 끝(또는 큐 대기 직전)에 `D3D12RHIDevice::flushPendingUploads` 가
-         *          한 번 닫아 제출합니다. updateStructuredBufferRegions · submitTexture* 공용입니다. 부르는 쪽이 `_uploadSlotMutex` 를 쥡니다.
+         *          한 번 닫아 제출합니다. updateStructuredBufferRegions 전용입니다(텍스처 전송은 `D3D12RHIDevice::beginTransferJob` 과 스테이징 링을 쓴다).
+         *          부르는 쪽이 `_uploadSlotMutex` 를 쥡니다.
          */
         bool acquireUploadStaging( uint64 sizeBytes, uint64 alignment, uint32& outSlotIndex, uint64& outOffset, void*& pOutMapped );
-        /** @brief 현재 프레임 링 슬롯의 복사 리스트만 엽니다. 스테이징 없이 열며, readback 처럼 소스가 다른 곳에 있을 때 씁니다. */
+        /** @brief 현재 프레임 링 슬롯의 복사 리스트를 엽니다(`acquireUploadStaging` 이 부른다). 부르는 쪽이 `_uploadSlotMutex` 를 쥡니다. */
         [[nodiscard]] bool openUploadSlot( uint32& outSlotIndex );
 
     public:

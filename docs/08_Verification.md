@@ -146,7 +146,7 @@ cd build/Ninja-Debug/Bin
   | --- | --- | --- |
   | `GT.Material.waitIdle` | `Engine::submitRenderPacket` | 새 머티리얼 첫 사용 때 GT 가 `RenderThread::waitIdle`(RT + GPU)을 기다린 시간 |
   | `RT.Upload.waitIdle` | `VulkanOneShotCommands::endSubmitAndWait` | Vulkan 업로드 · 리드백의 제출 락 + `vkQueueWaitIdle`(스레드는 호출한 쪽) |
-  | `RT.Upload.flush` | `D3D12RHIDevice::flushPendingUploads` | DX12 복사 리스트 닫기 · 제출(위와 견주는 값 — 기다리지는 않는다) |
+  | `RT.Upload.flush` | `D3D12RHIDevice::flushPendingUploads` | DX12 구조 버퍼 갱신 복사 리스트 닫기 · 제출(위와 견주는 값 — 기다리지는 않는다. 텍스처 전송은 이 스코프를 거치지 않고 제출 때 큐에 바로 나간다) |
   | `RT.PSO.create` | `FrameRendererPSO.cpp` 의 `createPipelineStateTimed` | 패스 · 머티리얼 변형 · 파티클 PSO 의 동기 생성(셰이더 컴파일 포함) |
   | `GT.Load.sync` | `AssetLoadBlock::startLoad` 의 `OnCallingThread` 분기 | 프리팹 · 머티리얼 · 텍스처 · 메시 · 셰이더 동기 로드(호출 스레드가 GT 가 아니면 이름과 달리 그 스레드 몫) |
   | `GT.Settings.save` | `UserSettingsManager::saveUserFile` | 사용자 설정 쓰기(교체 재시도 sleep 포함, 서비스 묶이기 전에는 재지 않는다) |
