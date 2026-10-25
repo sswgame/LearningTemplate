@@ -36,7 +36,8 @@ kMaxSedRangeLines = 300  # 이 줄 수 이하의 `sed -n 'a,bp'` 는 절 읽기�
 kRecursiveDeletePattern = re.compile(
     r"(?i)(\bRemove-Item\b.*-Recurse|\brm\b\s+-[a-z]*r|\brmdir\b.*\s/s\b|\brd\b.*\s/s\b|\bgit\s+worktree\s+remove\b|\bshutil\.rmtree\b)")
 kNoVerifyPattern = re.compile(r"(?i)\bgit\b[^\n;&|]*\bcommit\b[^\n;&|]*--no-verify\b")
-kInterpreterHeredocPattern = re.compile(r"(?i)\b(?:python3?|py)(?:\s+-3)?(?:\s+-)?\s*<<")
+kInterpreterHeredocPattern = re.compile(
+    r"(?i)(?:\b(?:python3?|py)(?:\s+-3)?(?:\s+-)?\s*<<|\b(?:cat|tee)\b[^\n|;&<]*>>?\s*[^\s<>|;&]+\s*<<)")
 kShellWrapperPattern = re.compile(r"(?i)(?:\b(?:bash|sh|zsh|dash|pwsh|powershell(?:\.exe)?)\b[^\n|;&]*\s-(?:\w*c|Command)\b|\beval\b|\bcmd(?:\.exe)?\s+/c\b)")
 kRootFindPattern =re.compile(r"(?i)(?:^|[;&|('\"]|&&)\s*find\s+/(?:\s|$)")
 kQuotedPattern = re.compile(r"\"[^\"\n]*\"|'[^'\n]*'")
