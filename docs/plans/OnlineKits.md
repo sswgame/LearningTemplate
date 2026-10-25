@@ -47,7 +47,7 @@
 | I4 | 분개, 감사, 우편, 멱등, 구매 기록의 보존 기간 정리 | I3 | 끝남(빌드 미확인) |
 | I5 | 접속하지 않은 계정의 이름 찾기 | 없음 | 끝남(빌드 미확인) |
 | I6 | GM 전용 호스트 포트를 서버 설정에(`_adminServicePort` · `_adminListenAddress`, 서비스의 노출 `getExposure` 로 리슨을 가른다 — 아래 3절 I6) | 없음 | 끝남(2026-10-23 Debug 빌드 경고 0 · 테스트 통과. GM 도구의 GM 포트 접속은 2026-10-24 코드로 들어감 — 빌드 전. 확인 대기: 매니페스트 id `admin-gm-port-real`) |
-| U1 | 클라이언트 UI 위젯(채팅, 서버 고르기, 친구 목록) | B1, C1 | 일부(서버 고르기 화면 — `ServerListModel` · `ServerPickerScreen` · `Resource/common/ui/online/serverpicker.ui.xml`, 2026-10-24 빌드 전. 채팅 · 친구 목록은 남음 — 아래 3절 U1. 확인 대기: 매니페스트 id `server-picker-tests`) |
+| U1 | 클라이언트 UI 위젯(채팅, 서버 고르기, 친구 목록) | B1, C1 | 일부(서버 고르기 · 친구 목록 · 채팅 화면(모델 + 화면 + 견본 문서) 코드가 들어감, 2026-10-24 · 25 빌드 전. GM 도구 설정 화면은 남음 — 아래 3절 U1. 확인 대기: 매니페스트 id `server-picker-tests`) |
 | M1 | 측정: 친구 접속 상태 팬아웃(친구 200 명), `ChatService.send` p99 | 부하 봇 | 남음(시나리오 `friend_presence_fanout` · `chat_send_p99` 들어감 — 돌려 숫자를 남기는 일만 남았다) |
 
 ## 4. 결정 (2026-10-22, 권고안 — 사용자 지시로 되묻지 않고 정했다)
@@ -158,7 +158,9 @@ GM 전용 호스트 포트를 서버 설정에 — 2026-10-23 들어감. 계약�
 클라이언트 UI 위젯(채팅, 서버 고르기, 친구 목록). 모양은 "모델 + 화면"이다 — 모델(`ServerListModel`)이 클라이언트 응답을 받아 목록 · 상태 · 판(revision)을 들고, 화면(`UIScreen` 파생)이 모델을 읽어 줄을 만든다. 화면이 요청을 직접 보내지 않으므로 응답 델리게이트가 화면 수명에 묶이지 않는다.
 - **서버 고르기(2026-10-24, 빌드 전)**: `Kits/Feature/Online/ServerDirectory/Shared/ServerListModel` · `ServerPickerScreen`. 문서 경로는 게임이 `ServerPickerScreen::open( ui, 경로, 모델, 종류, 고른 뒤 델리게이트 )` 에 준다(코드에 기본 경로가 없다). 견본 문서는 `Resource/common/ui/online/serverpicker.ui.xml`(패널 `Servers`, 글 `Status`, 명령 `Refresh` · `Close`). `Open` 이 아닌 서버의 단추는 꺼진다. 목록을 못 받으면 낡은 목록을 비우고 이유를 `Status` 에 적는다. 테스트 `ServerListModelTest`.
 - **시나리오는 아직 없다**: 화면을 띄울 게임 장면과 서버 목록을 채우는 가짜 클라이언트(응답 주입)가 필요하다 — 서버 디렉터리 서버 키트를 한 프로세스에 띄우는 시나리오 시설이 먼저다(F5 의 두 프로세스 시나리오와 같은 시설).
-- **남음**: 채팅(`ChatClient` 의 채널 · 메시지 꺼내기 → 모델 + 입력 줄 화면), 친구 목록(`SocialClient` 의 친구 응답 → 모델 + 화면). 같은 모양으로 쓴다. 계정 이름 · 비밀번호를 받는 GM 도구 설정 화면도 이 일이다.
+- **친구 목록(2026-10-25, 빌드 전)**: `Kits/Feature/Online/Social/Shared/FriendListModel` · `FriendListScreen` · 견본 `Resource/common/ui/online/friendlist.ui.xml`(패널 `Friends`, 글 `Status`, 명령 `Refresh` · `Close`). 관계 목록 → 접속 상태 두 요청이 끝나야 `Loaded`, 어느 쪽이든 실패하면 목록을 비우고 `Failed`. 접속 중인 친구가 앞이고 접속 상태 알림은 줄에 바로 반영, 친구 변화 알림은 목록을 다시 묻는다(처음 받은 뒤에만). 받은 신청은 개수만 보인다. 테스트 `FriendListModelTest`.
+- **채팅(2026-10-25, 빌드 전)**: `Kits/Feature/Online/Chat/Shared/ChatLogModel` · `ChatScreen` · 견본 `chat.ui.xml`(패널 `Lines`, 글 `Status`, 입력 `Input`, 명령 `Send` · `Close`). 받은 메시지를 200 줄까지 쌓고(`deque`) 화면은 한 채널의 최근 15 줄을 보인다. 보낸 사람도 채널 알림으로 자기 글을 받으므로 보내기 성공을 기록에 따로 더하지 않는다. 입력 줄은 요청을 보낼 때 비우고, 거절 이유(금칙어 · 도배 · 채팅 금지 …)는 `Status` 에 적는다. 채널 입장은 게임의 몫이다. 귓속말 입력은 없다. 테스트 `ChatLogModelTest`.
+- **남음**: 계정 이름 · 비밀번호를 받는 GM 도구 설정 화면. 친구 신청 수락 · 삭제 단추와 귓속말은 쓰는 게임이 생길 때.
 
 ### F2
 
