@@ -2,11 +2,14 @@
 
 #include "Engine/Physics/Jolt/JoltJobSystem.h"
 
+#include "Core/Log/Logger.h"
 #include "Core/Task/TaskManager.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Common/EngineServices.h"
 
 #include <algorithm>
+#include <cstdlib>
 #include <thread>
 
 namespace sw
@@ -46,8 +49,19 @@ namespace sw
             pJob->Execute();
             pJob->Release();
         }
+        // 끝없이 양보하며 도는 대기는 나간 태스크가 영영 안 돌면(큐가 비워진 태스크 매니저 · 멈춘 잡) 종료를 영영 막는다. 시간 제한을 두고 넘으면 오류로 멈춘다:
+        // 나간 태스크가 이 객체를 쥐고 있어 그냥 지우면 해제된 메모리를 만지는 정의 안 된 동작이 된다. 폴백(그냥 지우고 이어 가기)은 두지 않는다.
+        constexpr int64 kDrainTimeoutMs = 30000;
+        const Stopwatch stopwatch;
         while ( _pendingTaskCount.load( std::memory_order_acquire ) != 0 )
         {
+            if ( stopwatch.getElapsedMilliseconds() >= kDrainTimeoutMs )
+            {
+                SW_LOG_ERROR( "JoltJobSystem destroyed but %# job task(s) never finished within %# ms - aborting instead of hanging",
+                              _pendingTaskCount.load( std::memory_order_acquire ), kDrainTimeoutMs );
+                Logger::flushGlobalForCrash();
+                std::abort();
+            }
             std::this_thread::yield();
         }
     }

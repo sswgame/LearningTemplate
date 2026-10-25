@@ -116,24 +116,51 @@ namespace sw
     string TaskNodePool::describeFirstUnfinished()
     {
 #if !defined( SW_SHIPPING )
-        std::scoped_lock<mutex> lock{ _slabMutex };
-        for ( const MemoryBlock& slab : _listSlab )
+        // 이름은 **참조를 잡은 뒤에** 읽는다. 참조가 있는 노드는 풀로 돌아가 이름을 지우거나 다시 쓰이지 않는다. 제출됐다(`_bScheduled`, 이름은 제출 전에 정해진다)는 것도
+        // 참조를 잡은 **뒤에** 다시 확인한다 — 잡기 전에 노드가 돌아가 새 태스크로 다시 만들어졌다면 아직 제출 전이라 걸러지고, 제출된 것이면 이름은 이미 확정이다.
+        TaskNode*         pHeld{ nullptr };
+        string            name;
+        vector<TaskNode*> listRejected; // 잡았다가 거른 노드. 잠금 밖에서 놓는다
         {
-            const TaskNode* pSlab = slab.getAs<TaskNode>();
-            if ( pSlab == nullptr )
-                continue;
-            for ( uint32 index = 0; index < kSlabSize; ++index )
+            std::scoped_lock<mutex> lock{ _slabMutex };
+            for ( const MemoryBlock& slab : _listSlab )
             {
-                const TaskNode& node        = pSlab[index];
-                const bool      bLive       = node._refCount.load( std::memory_order_acquire ) > 0 && node._pendingChildren.load( std::memory_order_acquire ) > 0;
-                const bool      bHasName    = node._arrName[0] != '\0';
-                const bool      bUnfinished = bLive && bHasName;
-                if ( bUnfinished )
-                    return string( node._arrName );
+                TaskNode* pSlab = slab.getAs<TaskNode>();
+                if ( pSlab == nullptr )
+                    continue;
+                for ( uint32 index = 0; index < kSlabSize && pHeld == nullptr; ++index )
+                {
+                    TaskNode& node = pSlab[index];
+                    if ( node._bScheduled.load( std::memory_order_acquire ) == false || node._pendingChildren.load( std::memory_order_acquire ) <= 0 )
+                        continue;
+                    if ( node.tryRetain() == false )
+                        continue;
+                    const bool bStillUnfinished = node._bScheduled.load( std::memory_order_acquire ) && node._pendingChildren.load( std::memory_order_acquire ) > 0;
+                    if ( bStillUnfinished && node._arrName[0] != '\0' )
+                    {
+                        name  = string( node._arrName );
+                        pHeld = &node;
+                    }
+                    else
+                    {
+                        listRejected.push_back( &node );
+                    }
+                }
+                if ( pHeld != nullptr )
+                    break;
             }
         }
-#endif
+        // 잠금 밖에서 놓는다 — 마지막 참조면 풀로 돌려주며 같은 잠금을 잡을 수 있다(비재귀 뮤텍스).
+        for ( TaskNode* pRejected : listRejected )
+        {
+            pRejected->release();
+        }
+        if ( pHeld != nullptr )
+            pHeld->release();
+        return name;
+#else
         return string();
+#endif
     }
 
     StageNode* TaskNodePool::allocateStage()

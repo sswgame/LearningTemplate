@@ -15,6 +15,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Task/TaskHandleTracker.h"
 #include "Core/Task/TaskManager.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -1609,5 +1610,85 @@ SW_TEST_CASE( TaskManagerTest, RunParallelByCostSplitsWhenClockSaysCostly )
     }
     SW_EXPECT_FALSE( bRestInOneBlock );
     SW_EXPECT_TRUE( listCall.size() >= 3u );
+    manager.shutdown();
+}
+
+#if !defined( SW_SHIPPING )
+/**
+ * @brief [TaskManagerTest] describeUnfinishedTask 는 도는 태스크의 이름을 대고, 끝나면 빈 문자열이다
+ */
+SW_TEST_CASE( TaskManagerTest, DescribeUnfinishedTaskNamesTheRunningTask )
+{
+    sw::TaskManager manager;
+    SW_ASSERT_TRUE( manager.initialize( kWorkerCount ) );
+
+    sw::atomic<bool> bStarted{ false };
+    sw::atomic<bool> bRelease{ false };
+    sw::TaskHandle   handle = manager.emplaceTask( "StuckProbe", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&bStarted, &bRelease]()
+      {
+        bStarted.store( true, std::memory_order_release );
+        const sw::Stopwatch stopwatch;
+        while ( bRelease.load( std::memory_order_acquire ) == false && stopwatch.getElapsedMilliseconds() < kWaitTimeoutMs )
+        {
+            std::this_thread::yield();
+        }
+    } ) );
+    handle.submit();
+
+    const sw::Stopwatch startWatch;
+    while ( bStarted.load( std::memory_order_acquire ) == false && startWatch.getElapsedMilliseconds() < kWaitTimeoutMs )
+    {
+        std::this_thread::yield();
+    }
+    SW_ASSERT_TRUE( bStarted.load( std::memory_order_acquire ) );
+    SW_EXPECT_TRUE( manager.describeUnfinishedTask() == "StuckProbe" );
+
+    bRelease.store( true, std::memory_order_release );
+    SW_EXPECT_TRUE( manager.waitAll( kWaitTimeoutMs ) );
+    handle = sw::TaskHandle{};
+    SW_EXPECT_TRUE( manager.describeUnfinishedTask().empty() );
+
+    manager.shutdown();
+}
+
+/**
+ * @brief [TaskManagerTest] describeUnfinishedTask 는 만들기만 하고 제출하지 않은 태스크를 잡지 않는다
+ */
+SW_TEST_CASE( TaskManagerTest, DescribeUnfinishedTaskIgnoresUnsubmittedTask )
+{
+    sw::TaskManager manager;
+    SW_ASSERT_TRUE( manager.initialize( kWorkerCount ) );
+
+    sw::TaskHandle handle = manager.emplaceTask( "NeverSubmitted", SW_DELEGATE_LAMBDA( sw::TaskDelegate, []() {} ) );
+    SW_EXPECT_TRUE( manager.describeUnfinishedTask().empty() );
+
+    handle = sw::TaskHandle{}; // 제출 없이 놓으면 취소로 완료 처리된다
+    SW_EXPECT_TRUE( manager.waitAll( kWaitTimeoutMs ) );
+    manager.shutdown();
+}
+#endif
+
+/**
+ * @brief [TaskManagerTest] 메인 스레드가 추적기로 MainThread 태스크를 기다려도 교착하지 않는다
+ * @details waitIdle 이 메인 큐를 직접 비워 주기 때문이다(dispatchMainThreadTasks 를 부르는 쪽이 따로 없어도 끝난다).
+ */
+SW_TEST_CASE( TaskManagerTest, TrackerWaitIdleOnMainThreadRunsMainAffinityTask )
+{
+    sw::TaskManager manager;
+    SW_ASSERT_TRUE( manager.initialize( kWorkerCount ) );
+
+    sw::atomic<bool>      bRanOnMain{ false };
+    sw::TaskHandleTracker tracker;
+    sw::TaskHandle        handle = manager.emplaceTask( "MainTracked", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&manager, &bRanOnMain]()
+           {
+        bRanOnMain.store( manager.isMainThread(), std::memory_order_release );
+    } ),
+                                                        sw::TaskThreadAffinity::MainThread );
+    tracker.track( handle );
+    handle.submit();
+
+    SW_EXPECT_TRUE( tracker.waitIdle( kWaitTimeoutMs, "TrackerWaitIdleTest" ) );
+    SW_EXPECT_TRUE( bRanOnMain.load( std::memory_order_acquire ) );
+
     manager.shutdown();
 }
