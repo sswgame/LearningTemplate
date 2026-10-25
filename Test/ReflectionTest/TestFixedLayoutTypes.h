@@ -76,13 +76,17 @@ namespace sw
     struct FixedContainerSample
     {
         REFLECT_BODY();
+        static constexpr int32 kMaxValueCount = 4;
+        static constexpr int32 kMaxNameSize   = 16;
+        static constexpr int32 kMaxKindCount  = 8;
+        static constexpr int32 kMaxBitCount   = 8;
         PROPERTY()
         EFixedSampleKind _kind = EFixedSampleKind::Idle;
-        PROPERTY( MaxCount = 4, Min = 0, Max = 1000 )
+        PROPERTY( MaxCount = kMaxValueCount, Min = 0, Max = 1000 )
         vector<int32> _listValue;
         PROPERTY()
         EFixedSampleFlag _flags = EFixedSampleFlag::None;
-        PROPERTY( MaxCount = 16 )
+        PROPERTY( MaxCount = kMaxNameSize )
         string _name;
         PROPERTY( Min = -8, Max = 8 )
         int32 _arrSlot[3] = {};
@@ -90,9 +94,9 @@ namespace sw
         array<float32, 2> _arrWeight = {};
         PROPERTY( Step = 0.01, Min = "-10, 0, -10", Max = "10, 5, 10" )
         float3 _position;
-        PROPERTY( MaxCount = 8 )
+        PROPERTY( MaxCount = kMaxKindCount )
         vector<EFixedSampleKind> _listKind;
-        PROPERTY( MaxCount = 8 )
+        PROPERTY( MaxCount = kMaxBitCount )
         DynamicBitset _listBit; ///< 불 목록입니다. `vector<bool>` 은 막혀 있어(`VectorElementCheck`) 비트를 값으로 다루는 `DynamicBitset` 을 씁니다.
     };
 } // namespace sw
