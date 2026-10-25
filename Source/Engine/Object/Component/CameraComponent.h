@@ -212,17 +212,16 @@ namespace sw
 
         /**
          * @brief 이 카메라의 화면이 이번 프레임에 **끊어** 바뀌었다고 표시합니다(언리얼의 `bCameraCut`). 렌더러가 시간 누적(TAA 기록)을 버립니다.
-         * @details 블렌드 없는 프리셋과 뷰 타깃 전환이 부른다. 읽는 쪽(`CameraCutReader`)마다 표시가 따로라, 소비자가 몇이든 각자 한 번씩 이 컷을 본다.
+         * @details 블렌드 없는 프리셋과 뷰 타깃 전환이 부른다(게임 스레드, 틱 또는 틱 뒤 큐). 컷은 세운 씬 프레임 번호(`GameObjectManager::getUpdateSerial`)와
+         *          세운 차례를 갖고, 읽는 쪽(`CameraCutReader`)마다 마지막으로 본 차례를 따로 적는다. 그래서 소비자가 몇이든 각자 한 번씩 이 컷을 보고,
+         *          읽는 쪽이 없는 채로 두 프레임이 지난 컷은 저절로 무효가 되어 나중에 이 카메라를 잡는 쪽이 가짜 컷을 보지 않는다(프레임 훅이 필요 없다).
          */
-        void markCut() { _cutPending = ( 1u << static_cast<uint32>( CameraCutReader::Count ) ) - 1u; }
-        /** @brief 이 읽는 쪽의 컷 표시를 읽고 지웁니다. 다른 읽는 쪽의 표시는 건드리지 않습니다. */
-        bool consumeCut( CameraCutReader reader )
-        {
-            const uint8 bit  = static_cast<uint8>( 1u << static_cast<uint32>( reader ) );
-            const bool  bCut = ( _cutPending & bit ) != 0;
-            _cutPending      = static_cast<uint8>( _cutPending & ~bit );
-            return bCut;
-        }
+        void markCut();
+        /**
+         * @brief 이 읽는 쪽이 아직 보지 않은 컷이 있으면 true 로 보고 본 것으로 적습니다. 다른 읽는 쪽의 기록은 건드리지 않습니다.
+         * @details 컷을 세운 프레임과 그다음 프레임까지 유효하다 — 렌더 뷰는 같은 프레임 끝(패킷)에, 뷰 타깃을 따르는 매니저는 다음 프레임 틱에 읽는다.
+         */
+        bool consumeCut( CameraCutReader reader );
 
     private:
         /** @brief 렌더 텍스처 출력이면 그 크기를 텍스처 캐시에 알립니다(`engine::declareRenderTarget` — 텍스처 캐시가 묶는다). */
@@ -251,7 +250,9 @@ namespace sw
         PROPERTY( Category = "Lens", DisplayName = "Lens Shift", Tooltip = "Projection centre shift as a fraction of the screen; +x moves the view right, +y up" )
         float2 _lensShift;
         PROPERTY( Category = "Projection", DisplayName = "Orthographic", Tooltip = "Toggle orthographic projection" )
-        bool  _bOrthographic;
-        uint8 _cutPending; ///< `CameraCutReader` 별 비트. `markCut` 이 모두 켜고 `consumeCut` 이 자기 비트만 지운다(저장하지 않는다)
+        bool   _bOrthographic;
+        uint64 _cutFrame;                                                       ///< 마지막 `markCut` 의 씬 프레임 번호입니다(저장하지 않는다)
+        uint32 _cutStamp;                                                       ///< `markCut` 을 부를 때마다 오르는 차례입니다(0 은 컷 없음)
+        uint32 _arrCutSeenStamp[static_cast<uint32>( CameraCutReader::Count )]; ///< 읽는 쪽마다 마지막으로 본 차례입니다
     };
 } // namespace sw

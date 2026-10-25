@@ -177,6 +177,12 @@ namespace sw
         /** @brief 플레이를 끝냅니다 — 시작했던 컴포넌트마다 onEndPlay 를 한 번 부르고, 시작을 기다리던 줄을 비웁니다. */
         void endPlay() { _store.endPlay(); }
 
+        /**
+         * @brief `update` 를 시작한 횟수입니다(게임 스레드의 씬 프레임 번호). 한 프레임의 틱 · 틱 뒤 큐 · 그 뒤 패킷 만들기가 같은 값을 봅니다.
+         * @details "이번 프레임에 세워진 표시인가"를 비트 비우기 없이 번호 비교로 정하게 한다(`CameraComponent::markCut`).
+         */
+        uint64 getUpdateSerial() const { return _updateSerial; }
+
         /** @brief 플레이 중(`beginPlay` 뒤, `endPlay` 전)이면 true 입니다. 이때 붙는 컴포넌트는 다음 틱 단계에서 onBeginPlay 를 받습니다. */
         bool hasBegunPlay() const { return _store.hasBegunPlay(); }
         /**
@@ -582,6 +588,8 @@ namespace sw
         SceneEngineServices _services;
         /** @brief `FrameSystems` 단계가 도는 중이면 true 입니다. */
         bool _bRunningFrameSystems;
+        /** @brief `update` 를 시작한 횟수입니다(`getUpdateSerial`). */
+        uint64 _updateSerial;
         /** @brief false 면 `Physics` 단계를 건너뜁니다(`setPhysicsStepEnabled`). */
         bool _bPhysicsStepEnabled;
     };

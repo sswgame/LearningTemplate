@@ -543,6 +543,35 @@ SW_TEST_CASE( CameraModeTest, CutIsSeenByEveryReader )
 }
 
 /**
+ * @brief [CameraModeTest] 읽는 쪽이 없는 채로 프레임이 지난 컷은 낡아서, 나중에 그 카메라를 읽어도 가짜 컷이 아니다. 같은 프레임 · 다음 프레임의 읽기는 컷이다
+ */
+SW_TEST_CASE( CameraModeTest, StaleCutIsNotSeenByLateReader )
+{
+    GameObjectManager manager;
+    GameObject*       pObject = manager.createGameObject( hashed_string( "StaleCut" ) );
+    SW_ASSERT_NOT_NULL( pObject );
+    CameraComponent* pCamera = pObject->addComponent<CameraComponent>();
+    SW_ASSERT_NOT_NULL( pCamera );
+    manager.update( 0.016f );
+
+    pCamera->markCut();
+    manager.update( 0.016f );
+    manager.update( 0.016f ); // 읽는 쪽이 아무도 없는 채로 프레임이 지난다
+    manager.update( 0.016f );
+    SW_EXPECT_FALSE( pCamera->consumeCut( CameraCutReader::Render ) ); // 새로 읽는 쪽에게 낡은 컷은 컷이 아니다
+    SW_EXPECT_FALSE( pCamera->consumeCut( CameraCutReader::Follow ) );
+
+    pCamera->markCut(); // 같은 프레임에서는 둘 다 컷을 본다
+    SW_EXPECT_TRUE( pCamera->consumeCut( CameraCutReader::Render ) );
+    SW_EXPECT_TRUE( pCamera->consumeCut( CameraCutReader::Follow ) );
+
+    pCamera->markCut(); // 다음 프레임에 읽는 쪽(뷰 타깃을 따르는 매니저)도 컷을 본다
+    manager.update( 0.016f );
+    SW_EXPECT_TRUE( pCamera->consumeCut( CameraCutReader::Follow ) );
+    SW_EXPECT_FALSE( pCamera->consumeCut( CameraCutReader::Follow ) );
+}
+
+/**
  * @brief [CameraModeTest] XY 평면 따라가기(2D)는 초점의 X · Y 를 따르고 Z 는 카메라 평면에 두며, 이동 키는 화면 위(+Y) · 오른쪽(+X)으로 민다
  * @details 땅(XZ) 기준 모드로 2D 씬을 풀면 카메라가 초점 위(+Y)로 올라가 평면을 옆에서 본다.
  */
