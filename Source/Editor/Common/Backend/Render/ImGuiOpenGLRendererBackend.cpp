@@ -4,6 +4,8 @@
 
 #include "Core/Common/PlatformOsHeaders.h"
 
+#include "Editor/Common/Backend/IImGuiPlatformBackend.h"
+
 #include "Engine/Graphics/RHI/IRHIContextThreadBinding.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 
@@ -14,7 +16,8 @@
 
 struct WGL_WindowData
 {
-    HDC _hDC;
+    HWND _hWnd; ///< 만들 때 읽은 창입니다. 해제는 이 값으로 합니다(뷰포트 핸들을 다시 읽지 않는다)
+    HDC  _hDC;
 };
 
 static HGLRC s_MainWindowRC{ nullptr };
@@ -23,6 +26,8 @@ static HGLRC s_MainWindowRC{ nullptr };
     #define GLX_GLXEXT_LEGACY
     #include <GL/glx.h>
     #include "Core/Common/X11MacroUndef.h"
+
+    #include "Engine/Window/IWindow.h"
 
 struct GLX_WindowData
 {
@@ -69,8 +74,16 @@ namespace
 
     void Hook_Renderer_CreateWindow( ImGuiViewport* pViewport )
     {
+        // 뷰포트 핸들은 Win32 플랫폼 백엔드일 때만 HWND 다 — 아니면 오류를 남기고 이 뷰포트에는 GL 자원을 만들지 않는다(다른 핸들로 대신하지 않는다).
+        HWND hWnd = static_cast<HWND>( sw::editor::IImGuiPlatformBackend::tryGetViewportWin32Handle( pViewport ) );
+        if ( hWnd == nullptr )
+        {
+            SW_LOG_ERROR( "The ImGui OpenGL viewport window needs a Win32 viewport window with a handle" );
+            return;
+        }
         WGL_WindowData* pData = sw::make_unique<WGL_WindowData>().release(); // ImGui 뷰포트가 쥔다. `Hook_Renderer_DestroyWindow` 가 푼다
-        CreateDeviceWGL( static_cast<HWND>( pViewport->PlatformHandle ), pData );
+        pData->_hWnd          = hWnd;
+        CreateDeviceWGL( hWnd, pData );
         pViewport->RendererUserData = pData;
     }
 
@@ -79,7 +92,7 @@ namespace
         if ( pViewport->RendererUserData != nullptr )
         {
             WGL_WindowData* pData = static_cast<WGL_WindowData*>( pViewport->RendererUserData );
-            CleanupDeviceWGL( static_cast<HWND>( pViewport->PlatformHandle ), pData );
+            CleanupDeviceWGL( pData->_hWnd, pData );
             sw_delete( pData );
             pViewport->RendererUserData = nullptr;
         }
@@ -110,9 +123,16 @@ namespace
         const bool bCannotCreateViewportWindow = s_MainDisplay == nullptr || s_MainContext == nullptr || pViewport == nullptr;
         if ( bCannotCreateViewportWindow )
             return;
+        // 뷰포트 핸들을 창 ID 로 읽는 것은 X11 플랫폼 백엔드일 때뿐이다 — 아니면 오류를 남기고 이 뷰포트에는 GL 자원을 만들지 않는다.
+        sw::X11SurfaceHandles x11Surface;
+        if ( sw::editor::IImGuiPlatformBackend::tryGetViewportX11Surface( pViewport, x11Surface ) == false )
+        {
+            SW_LOG_ERROR( "The ImGui OpenGL viewport window needs an X11 viewport window with a display connection" );
+            return;
+        }
         GLX_WindowData* pData = sw::make_unique<GLX_WindowData>().release(); // ImGui 뷰포트가 쥔다. 파괴 훅이 푼다
         pData->_pDisplay      = s_MainDisplay;
-        pData->_win           = static_cast<Window>( reinterpret_cast<uintptr_t>( pViewport->PlatformHandleRaw ) );
+        pData->_win           = static_cast<Window>( x11Surface._window );
 
         XWindowAttributes attrs{};
         XVisualInfo*      pVi{ nullptr };
@@ -196,10 +216,14 @@ namespace sw::editor
         ImGuiIO& io = ImGui::GetIO();
         if ( ( io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable ) && _pRHIDevice != nullptr )
         {
+            // GLX 디바이스의 getNativeDevice 는 컨텍스트를 만든 Display* 다(GlxPlatformContext). 값이 없으면 현재 문맥의 연결로 대신하지 않고 오류로 멈춘다.
             // 검사는 지역 변수에서 하고 정적 칸에는 값을 한 번만 쓴다 — 검사 뒤 채우기(`lazyFill`) 모양이 아니다.
             Display* pMainDisplay = static_cast<Display*>( _pRHIDevice->getNativeDevice() );
             if ( pMainDisplay == nullptr )
-                pMainDisplay = glXGetCurrentDisplay();
+            {
+                SW_LOG_ERROR( "The OpenGL device has no GLX display connection, so ImGui viewports cannot be enabled" );
+                return false;
+            }
             s_MainDisplay                      = pMainDisplay;
             s_MainContext                      = static_cast<GLXContext>( _pRHIDevice->getNativeContext() );
             ImGuiPlatformIO& platform_io       = ImGui::GetPlatformIO();

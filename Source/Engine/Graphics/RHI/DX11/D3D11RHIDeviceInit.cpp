@@ -32,7 +32,14 @@ namespace sw
     // 길이 유지(긴 함수 정리 기준): 디바이스 · 스왑체인 · 상태 객체 생성의 순서가 곧 의미라 나누지 않는다.
     bool D3D11RHIDevice::initializeInternal( const RHISwapChainDesc& desc )
     {
-        _pHWnd            = static_cast<HWND>( desc._pWindowHandle );
+        // 이 백엔드는 Win32 전용이다 — 핸들이 Win32 표면의 것이 아니면 HWND 로 읽지 않고 오류로 멈춘다.
+        void* pWindowHandle{ nullptr };
+        if ( desc.tryGetWin32Handle( pWindowHandle ) == false )
+        {
+            SW_LOG_ERROR( "The D3D11 swap chain needs a Win32 surface" );
+            return false;
+        }
+        _pHWnd            = static_cast<HWND>( pWindowHandle );
         _backBufferFormat = desc._format;
         // D3D11 에는 자원의 할당 크기를 물을 API 가 없다. 장부는 서술로 계산한 논리 크기다.
         getMemoryLedger().setSizeBasis( RHIMemorySizeBasis::Logical );

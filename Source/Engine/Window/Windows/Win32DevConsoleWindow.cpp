@@ -203,7 +203,7 @@ namespace sw
 
     unique_ptr<IDevConsoleWindow> IDevConsoleWindow::createPlatform( IWindow& owner )
     {
-        HWND hOwner = static_cast<HWND>( owner.getNativeHandle() );
+        HWND hOwner = static_cast<HWND>( owner.tryGetWin32Handle() );
         if ( hOwner == nullptr )
             return nullptr;
         unique_ptr<Win32DevConsoleWindow> pWindow = make_unique<Win32DevConsoleWindow>( hOwner );

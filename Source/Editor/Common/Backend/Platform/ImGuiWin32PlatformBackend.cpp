@@ -5,6 +5,8 @@
 #include "Editor/Common/Backend/IImGuiPlatformBackend.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
+    #include "Core/Container/StringUtil.h"
+
     #include "Engine/Config/RHIBackendType.h"
     #include "Engine/Window/IWindow.h"
     #include "Engine/Window/NativeWindowEvent.h"
@@ -16,16 +18,27 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler( HWND hWnd, UINT ms
 
 namespace sw::editor
 {
+    SW_LOG_CALLER( "ImGuiWin32" );
+
     class ImGuiWin32PlatformBackend : public IImGuiPlatformBackend
     {
     public:
+        /** @brief `imgui_impl_win32` 가 `ImGuiIO::BackendPlatformName` 에 거는 이름입니다. `tryGetViewportWin32Handle` 이 활성 플랫폼 백엔드의 종류를 이 이름으로 알아본다. */
+        static constexpr const utf8* kPlatformName = "imgui_impl_win32";
+
         bool initialize( IWindow* pWindow, RHIBackend backendType ) override
         {
             if ( pWindow == nullptr )
                 return false;
 
-            HWND hWnd = static_cast<HWND>( pWindow->getNativeHandle() );
-            _hWnd     = hWnd;
+            // 이 백엔드는 Win32 전용이다 — Win32 창이 아니거나 핸들이 없으면 다른 창 시스템의 핸들을 넘기지 않고 오류로 멈춘다.
+            HWND hWnd = static_cast<HWND>( pWindow->tryGetWin32Handle() );
+            if ( hWnd == nullptr )
+            {
+                SW_LOG_ERROR( "The ImGui Win32 platform backend needs a Win32 window with a handle" );
+                return false;
+            }
+            _hWnd = hWnd;
             if ( backendType == RHIBackend::OpenGL )
                 return ImGui_ImplWin32_InitForOpenGL( hWnd );
             return ImGui_ImplWin32_Init( hWnd );
@@ -70,6 +83,18 @@ namespace sw::editor
     unique_ptr<IImGuiPlatformBackend> IImGuiPlatformBackend::createPlatformBackend()
     {
         return make_unique<ImGuiWin32PlatformBackend>();
+    }
+
+    void* IImGuiPlatformBackend::tryGetViewportWin32Handle( const ImGuiViewport* pViewport )
+    {
+        if ( pViewport == nullptr || ImGui::GetCurrentContext() == nullptr )
+            return nullptr;
+        // 뷰포트 핸들은 활성 플랫폼 백엔드가 채운 것이다 — Win32 백엔드가 아니면 `PlatformHandle` 이 HWND 가 아니다.
+        const utf8* pPlatformName = ImGui::GetIO().BackendPlatformName;
+        if ( pPlatformName == nullptr || StringUtil::equals( pPlatformName, ImGuiWin32PlatformBackend::kPlatformName ) == false )
+            return nullptr;
+        // imgui_impl_win32 는 두 칸에 같은 HWND 를 건다. Raw 가 비면 생성 도중이라 값이 없는 것이다.
+        return pViewport->PlatformHandleRaw;
     }
 } // namespace sw::editor
 #endif

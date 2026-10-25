@@ -27,7 +27,14 @@ namespace sw
     // 길이 유지(긴 함수 정리 기준): 픽셀 포맷 · 임시 컨텍스트 · 실제 컨텍스트 생성의 순서가 곧 의미라 나누지 않는다.
     bool WglPlatformContext::initialize( const RHISwapChainDesc& desc, OpenGLContextHandles& outHandles )
     {
-        HWND hWnd = static_cast<HWND>( desc._pWindowHandle );
+        // WGL 은 Win32 창에만 문맥을 건다 — 핸들이 Win32 표면의 것이 아니면 HWND 로 읽지 않고 오류로 멈춘다.
+        void* pWindowHandle{ nullptr };
+        if ( desc.tryGetWin32Handle( pWindowHandle ) == false )
+        {
+            SW_LOG_ERROR( "OpenGL on Windows needs a Win32 window (WGL) - this surface is not Win32" );
+            return false;
+        }
+        HWND hWnd = static_cast<HWND>( pWindowHandle );
         HDC  hDC  = GetDC( hWnd );
 
         PIXELFORMATDESCRIPTOR pfd = {};

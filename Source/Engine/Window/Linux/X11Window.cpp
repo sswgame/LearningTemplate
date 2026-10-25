@@ -70,6 +70,19 @@ namespace sw
                 return false;
             }
 
+            /**
+             * @brief 창 @p win 의 큐에 이미 든 PropertyNotify 를 모두 버립니다.
+             * @details 주인이 INCR 표지를 쓰면 PropertyNotify(새 값)가 `SelectionNotify` 보다 먼저 온다. 버리지 않으면 표지를 지운 뒤 첫 조각을 기다리는 루프가 이 낡은 알림을 첫 조각으로 받아
+             *          아직 없는 속성을 길이 0 조각(끝 신호)으로 읽고 빈 글로 끝낸다. 낡은 알림은 모두 `SelectionNotify` 앞에 있어, 그것을 받은 뒤 표지를 지우기 전에 버리면 첫 조각의 알림은 남는다.
+             */
+            static void discardQueuedPropertyEvents( Display* pDisplay, Window win )
+            {
+                XEvent stale{};
+                while ( XCheckTypedWindowEvent( pDisplay, win, PropertyNotify, &stale ) != 0 )
+                {
+                }
+            }
+
             /** @brief 창 속성 @p property 를 읽고 지웁니다(INCR 은 지워야 다음 조각이 온다). 8 비트 형식이면 바이트를 @p outBytes 에 담습니다. 읽지 못하면 false 입니다. */
             static bool takeProperty( Display* pDisplay, Window win, Atom property, Atom& outType, string& outBytes )
             {
@@ -401,6 +414,7 @@ namespace sw
         if ( reply.xselection.property == 0 )
             return false; // 주인이 UTF-8 글을 주지 않았다(이미지 등)
 
+        X11ClipboardWait::discardQueuedPropertyEvents( pDisplay, win ); // INCR 표지를 쓴 낡은 알림을 첫 조각으로 오인하지 않는다
         string bytes;
         Atom   type = 0;
         if ( X11ClipboardWait::takeProperty( pDisplay, win, property, type, bytes ) == false )
@@ -436,6 +450,8 @@ namespace sw
                 outText.clear();
                 return false;
             }
+            if ( chunkType == 0 )
+                continue; // 속성이 없다 — 조각이 아니다. 끝 신호는 길이 0 인 속성이다
             if ( chunk.empty() )
                 return true;
             outText += chunk;

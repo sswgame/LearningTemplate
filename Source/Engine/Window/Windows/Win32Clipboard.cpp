@@ -46,7 +46,7 @@ namespace sw
             {
                 const MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
                 const IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
-                return pWindow != nullptr ? static_cast<HWND>( pWindow->getNativeHandle() ) : nullptr;
+                return pWindow != nullptr ? static_cast<HWND>( pWindow->tryGetWin32Handle() ) : nullptr;
             }
         };
     } // namespace

@@ -90,6 +90,25 @@ namespace sw
         return true;
     }
 
+    void* IWindow::tryGetWin32Handle() const
+    {
+        return getSurfaceKind() == NativeSurfaceKind::Win32 ? getNativeHandle() : nullptr;
+    }
+
+    bool IWindow::tryGetX11Surface( X11SurfaceHandles& outHandles ) const
+    {
+        outHandles = X11SurfaceHandles{};
+        if ( getSurfaceKind() != NativeSurfaceKind::X11 )
+            return false;
+        X11SurfaceHandles handles;
+        handles._pDisplay = getNativeDisplay();
+        handles._window   = static_cast<uint64>( reinterpret_cast<uintptr_t>( getNativeHandle() ) );
+        if ( handles._pDisplay == nullptr || handles._window == 0 )
+            return false;
+        outHandles = handles;
+        return true;
+    }
+
     void IWindow::requestClose()
     {
         _bShouldClose = SW_TRUE;

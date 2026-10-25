@@ -59,7 +59,7 @@ namespace sw
                     if ( InterlockedDecrement( &_refCount ) == 0 )
                         sw_delete( this );
                 }
-                HWND getHwnd() const { return _pWindow != nullptr ? static_cast<HWND>( _pWindow->getNativeHandle() ) : nullptr; }
+                HWND getHwnd() const { return _pWindow != nullptr ? static_cast<HWND>( _pWindow->tryGetWin32Handle() ) : nullptr; }
                 /** @brief 지금 접근성 트리입니다(UI 가 갱신된 뒤 처음 물으면 새로 뽑는다). UI 시스템이 내려갔으면 nullptr 입니다. */
                 const UIAccessibilitySnapshot* findSnapshot()
                 {

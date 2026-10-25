@@ -29,6 +29,10 @@ SW_TEST_CASE( X11DevConsoleTest, OverlayDrawsLatinLineAndSurvivesUtf8Lines )
     window->showWindow( true );
     (void)window->processMessages();
 
+    sw::X11SurfaceHandles x11Surface;
+    if ( window->tryGetX11Surface( x11Surface ) == false )
+        SW_TEST_SKIP( "the platform window is not an X11 window (the console overlay is X11 only)" );
+
     sw::unique_ptr<sw::IDevConsoleWindow> console = sw::IDevConsoleWindow::createPlatform( *window );
     SW_ASSERT_TRUE_MSG( console != nullptr, "the console overlay could not be created (no iso10646-1 X font?)" );
     console->setVisible( true );
@@ -36,10 +40,9 @@ SW_TEST_CASE( X11DevConsoleTest, OverlayDrawsLatinLineAndSurvivesUtf8Lines )
     const sw::vector<uint8>      listError{ 0, 0 };
     console->present( listLine, listError );
 
-    Display* pDisplay = static_cast<Display*>( window->getNativeDisplay() );
-    SW_ASSERT_NOT_NULL( pDisplay );
+    Display* pDisplay = static_cast<Display*>( x11Surface._pDisplay );
     XSync( pDisplay, 0 ); // X11MacroUndef.h 가 매크로 False 를 지운다 — 값 0
-    const ::Window owner = static_cast<::Window>( reinterpret_cast<uintptr_t>( window->getNativeHandle() ) );
+    const ::Window owner = static_cast<::Window>( x11Surface._window );
     ::Window       rootWindow{ 0 };
     ::Window       parentWindow{ 0 };
     ::Window*      pChildren{ nullptr };

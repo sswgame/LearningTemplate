@@ -192,7 +192,7 @@ SW_TEST_CASE( WindowTest, MinimizingDoesNotForgetTheWindowSize )
     const uint32 heightBefore = window->getHeight();
     SW_ASSERT_TRUE( widthBefore > 0 && heightBefore > 0 );
 
-    HWND hWnd = static_cast<HWND>( window->getNativeHandle() );
+    HWND hWnd = static_cast<HWND>( window->tryGetWin32Handle() );
     SW_ASSERT_TRUE( hWnd != nullptr );
 
     ShowWindow( hWnd, SW_MINIMIZE );
@@ -225,7 +225,8 @@ SW_TEST_CASE( WindowTest, NestedResizeEndsAtTheLastSize )
     sw::unique_ptr<sw::IWindow> window = sw::IWindow::createPlatformWindow();
     SW_ASSERT_TRUE( window != nullptr );
     SW_ASSERT_TRUE( window->initializeWindow( "NestedResizeTestWindow", 320, 240 ) );
-    const HWND hWnd = static_cast<sw::Win32Window*>( window.get() )->getHwnd();
+    const HWND hWnd = static_cast<HWND>( window->tryGetWin32Handle() );
+    SW_ASSERT_TRUE( hWnd != nullptr );
 
     sw::vector<sw::pair<uint32, uint32>> listResize;
     window->setResizeCallback( SW_DELEGATE_LAMBDA( sw::WindowResizeDelegate, [&listResize, hWnd]( uint32 width, uint32 height )
@@ -276,7 +277,8 @@ SW_TEST_CASE( WindowTest, MouseLockLeavesTheCloseButtonReachable )
     SW_ASSERT_TRUE( windowHost.adopt( window ) ); // 입력 관리자가 범위에서 주 창을 찾는다
     pWindow->showWindow( true );
 
-    const HWND hWnd = static_cast<sw::Win32Window*>( pWindow )->getHwnd();
+    const HWND hWnd = static_cast<HWND>( pWindow->tryGetWin32Handle() );
+    SW_ASSERT_TRUE( hWnd != nullptr );
     SetForegroundWindow( hWnd );
     (void)pWindow->processMessages();
 
@@ -318,7 +320,8 @@ SW_TEST_CASE( WindowTest, TitleReachesTheOsAsUtf16 )
     sw::unique_ptr<sw::IWindow> window = sw::IWindow::createPlatformWindow();
     SW_ASSERT_TRUE( window != nullptr );
     SW_ASSERT_TRUE( window->initializeWindow( kTitle, 320, 240 ) );
-    const HWND hWnd = static_cast<sw::Win32Window*>( window.get() )->getHwnd();
+    const HWND hWnd = static_cast<HWND>( window->tryGetWin32Handle() );
+    SW_ASSERT_TRUE( hWnd != nullptr );
 
     const auto readTitle = [hWnd]() -> sw::string
     {
@@ -400,8 +403,12 @@ SW_TEST_CASE( WindowTest, X11ClipboardRoundTripsBetweenWindowsIncludingIncr )
     SW_ASSERT_TRUE( firstBase != nullptr && secondBase != nullptr );
     if ( firstBase->initializeWindow( "ClipboardFirst", 200, 100 ) == false || secondBase->initializeWindow( "ClipboardSecond", 200, 100 ) == false )
         SW_TEST_SKIP( "no X server to open windows on" );
-    sw::X11Window& first  = static_cast<sw::X11Window&>( *firstBase );
-    sw::X11Window& second = static_cast<sw::X11Window&>( *secondBase );
+    sw::X11Window* pFirst  = sw::X11Window::tryCast( firstBase.get() );
+    sw::X11Window* pSecond = sw::X11Window::tryCast( secondBase.get() );
+    if ( pFirst == nullptr || pSecond == nullptr )
+        SW_TEST_SKIP( "the platform window is not an X11 window (the clipboard is X11 only)" );
+    sw::X11Window& first  = *pFirst;
+    sw::X11Window& second = *pSecond;
 
     const sw::string small = "복사 → paste 한글 日本語 end";
     expectClipboardRoundTrip( first, second, small, "small text first -> second" );

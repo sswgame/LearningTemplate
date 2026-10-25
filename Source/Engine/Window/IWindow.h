@@ -30,6 +30,16 @@ namespace sw
         BorderlessFullscreen, ///< 창이 놓인 모니터를 덮는 테두리 없는 창. 크기는 모니터 크기입니다.
     };
 
+    /** @brief X11 창의 서버 연결과 창 ID 입니다. `IWindow::tryGetX11Surface` 가 X11 창일 때만 채웁니다. */
+    struct X11SurfaceHandles
+    {
+        void*  _pDisplay{ nullptr }; ///< X11 `Display*`
+        uint64 _window{ 0 };         ///< X11 `Window`
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @class IWindow
      * @brief 애플리케이션의 주 화면이나 보조 화면을 추상화하는 기본 인터페이스입니다.
@@ -83,10 +93,20 @@ namespace sw
          */
         virtual bool processMessages() = 0;
 
-        /** @brief 네이티브 윈도우 핸들을 반환합니다. */
-        virtual void* getNativeHandle() const = 0;
-        /** @brief 네이티브 디스플레이 연결을 반환합니다. 없으면 nullptr. */
-        virtual void* getNativeDisplay() const { return nullptr; }
+        /**
+         * @brief Win32 창이면 `HWND` 를 `void*` 로 반환하고, 아니면(X11 · Wayland) 또는 핸들이 아직 없으면 nullptr 입니다. 호출처가 `static_cast<HWND>` 로 읽는다.
+         * @details 핸들 포인터는 창 시스템마다 뜻이 다르다(X11 은 창 ID, Wayland 는 `wl_surface*`). `HWND` 로 읽는 호출이 종류를 확인하지 않으면 다른 창 시스템의 값을 Win32 호출에 넘긴다.
+         *          그래서 핸들만 꺼내는 길(`getNativeHandle`)은 보호 구역에만 두고, Win32 호출은 종류 확인과 값 확인이 함께 있는 이 함수로만 얻는다(`tryGetX11Surface` 와 같은 모양).
+         *          반환값을 버리면 안 되고, nullptr 이면 호출처가 건너뛰거나 오류로 멈춘다(다른 핸들로 대신하지 않는다).
+         */
+        [[nodiscard]] void* tryGetWin32Handle() const;
+        /**
+         * @brief X11 창이면 서버 연결(`Display*`)과 창 ID 를 @p outHandles 에 담고 true 입니다.
+         * @details 연결 포인터는 창 시스템마다 다른 것이다(Wayland 는 `wl_display*`). 이를 `Display*` 로 읽으면 `DefaultScreen` 에서 죽는다(CI Wayland 스모크 SIGSEGV).
+         *          그래서 연결만 따로 꺼내는 길(`getNativeDisplay`)은 보호 구역에만 두고, X11 호출은 종류 확인과 값 확인이 함께 있는 이 함수로만 얻는다.
+         * @return X11 창이 아니거나(Wayland · Win32) 연결 · 창 ID 가 아직 없으면 false 이며 @p outHandles 는 비어 있다.
+         */
+        [[nodiscard]] bool tryGetX11Surface( X11SurfaceHandles& outHandles ) const;
         /** @brief 클라이언트 너비를 반환합니다. */
         virtual uint32 getWidth() const { return _width; }
         /** @brief 클라이언트 높이를 반환합니다. */
@@ -221,6 +241,18 @@ namespace sw
         static unique_ptr<IWindow> createPlatformWindow();
 
     protected:
+        /**
+         * @brief 네이티브 윈도우 핸들을 반환합니다. 어느 창 시스템의 것인지는 `getSurfaceKind` 가 말한다(Win32 `HWND` · X11 창 ID · Wayland `wl_surface*`).
+         * @details 보호 구역이다 — 바깥에서 `HWND` 나 X11 `Window` 로 읽을 수 있으면 종류를 확인하지 않은 호출이 다시 생긴다. 바깥은 `tryGetWin32Handle` · `tryGetX11Surface` 나 `getSurfaceHandle`(종류와 함께 읽는 RHI) 를 쓴다.
+         */
+        virtual void* getNativeHandle() const = 0;
+
+        /**
+         * @brief 네이티브 디스플레이 연결을 반환합니다. 없으면 nullptr. 어느 창 시스템의 것인지는 `getSurfaceKind` 가 말한다.
+         * @details 보호 구역이다 — 바깥에서 `Display*` 로 읽을 수 있으면 Wayland 의 `wl_display*` 를 읽는 호출이 다시 생긴다. 바깥은 `tryGetX11Surface` 나 `getSurfaceDisplay`(종류와 함께 읽는 RHI) 를 쓴다.
+         */
+        virtual void* getNativeDisplay() const { return nullptr; }
+
         /** @brief 실제로 창을 띄우거나 내립니다. 의도 기록은 기반이 이미 했습니다. */
         virtual void applyWindowVisibility( bool bShow ) { (void)bShow; }
 

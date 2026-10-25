@@ -199,11 +199,16 @@ namespace sw
 
     unique_ptr<IDevConsoleWindow> IDevConsoleWindow::createPlatform( IWindow& owner )
     {
-        Display*       pDisplay    = static_cast<Display*>( owner.getNativeDisplay() );
-        const ::Window ownerWindow = static_cast<::Window>( reinterpret_cast<uintptr_t>( owner.getNativeHandle() ) );
-        if ( pDisplay == nullptr || ownerWindow == 0 )
+        // 이 콘솔은 X11 자식 창이다 — Wayland 창에서는 만들지 않고, 콘솔은 그리지 않은 채 입력만 받는다(Wayland 연결을 Display* 로 읽으면 죽는다: `IWindow::tryGetX11Surface`).
+        X11SurfaceHandles x11Surface;
+        if ( owner.tryGetX11Surface( x11Surface ) == false )
+        {
+            SW_LOG_INFO( "Dev console: the X11 console window is not created without an X11 owner window - input only" );
             return nullptr;
-        unique_ptr<X11DevConsoleWindow> pWindow = make_unique<X11DevConsoleWindow>( pDisplay, ownerWindow );
+        }
+        Display*                        pDisplay    = static_cast<Display*>( x11Surface._pDisplay );
+        const ::Window                  ownerWindow = static_cast<::Window>( x11Surface._window );
+        unique_ptr<X11DevConsoleWindow> pWindow     = make_unique<X11DevConsoleWindow>( pDisplay, ownerWindow );
         if ( pWindow->initialize() == false )
         {
             SW_LOG_WARNING( "Dev console: could not create the console window (no X window, GC or iso10646-1 font)" );

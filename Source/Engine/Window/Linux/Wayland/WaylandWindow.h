@@ -22,6 +22,12 @@ namespace sw
         WaylandWindow();
         ~WaylandWindow() override;
 
+        /**
+         * @brief @p pWindow 가 Wayland 창이면 `WaylandWindow*`, 아니면(nullptr · X11 · Win32) nullptr 입니다.
+         * @details 엔진은 RTTI 를 끄므로 종류(`getSurfaceKind`) 확인과 캐스트를 이 함수 한 곳에 둔다(`X11Window::tryCast` 와 같은 모양) — 다른 창 시스템의 창을 `WaylandWindow*` 로 읽는 `static_cast` 를 바깥에 두지 않는다.
+         */
+        static WaylandWindow* tryCast( IWindow* pWindow ) { return pWindow != nullptr && pWindow->getSurfaceKind() == NativeSurfaceKind::Wayland ? static_cast<WaylandWindow*>( pWindow ) : nullptr; }
+
         /** @brief 컴포지터에 붙어 최상위 창을 만듭니다. 컴포지터가 없거나 xdg-shell · 합성기가 없으면 오류를 남기고 false 입니다. */
         bool initializeWindow( const utf8* pTitle, uint32 width, uint32 height ) override;
         void destroy() override;
@@ -39,13 +45,14 @@ namespace sw
         /** @brief 전체 화면은 `xdg_toplevel_set_fullscreen`, 창 모드는 크기를 정하고 크기 통보를 보냅니다. */
         bool setDisplayMode( WindowDisplayMode mode, uint32 width, uint32 height ) override;
 
-        void* getNativeHandle() const override;
-        void* getNativeDisplay() const override;
-
         /** @brief 포인터가 이 창 위에 있을 때 커서를 숨기거나 기본 커서로 되돌립니다(wl_pointer_set_cursor · 커서 테마). */
         void setCursorVisible( bool bVisible );
 
     protected:
+        // 핸들 읽기는 기반의 보호 구역이다 — 바깥은 `getSurfaceHandle` · `getSurfaceDisplay` 를 종류(`getSurfaceKind`)와 함께 읽는다(여기서 다시 public 으로 열지 않는다).
+        void* getNativeHandle() const override;
+        void* getNativeDisplay() const override;
+
         /** @brief Wayland 클라이언트는 창 자리를 모른다 — 할 일이 없다. */
         void captureRestorePosition() override {}
         /** @brief 위와 같다. */

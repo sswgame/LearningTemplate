@@ -12,7 +12,14 @@ namespace sw
 
     bool D3D12RHISwapChain::initialize( IDXGIFactory4* pFactory, ID3D12CommandQueue* pQueue, const RHISwapChainDesc& desc )
     {
-        _pHWnd       = static_cast<HWND>( desc._pWindowHandle );
+        // 이 백엔드는 Win32 전용이다 — 핸들이 Win32 표면의 것이 아니면 HWND 로 읽지 않고(창 없음으로 대신하지도 않고) 오류로 멈춘다.
+        void* pWindowHandle{ nullptr };
+        if ( desc.tryGetWin32Handle( pWindowHandle ) == false )
+        {
+            SW_LOG_ERROR( "The D3D12 swap chain needs a Win32 surface" );
+            return false;
+        }
+        _pHWnd       = static_cast<HWND>( pWindowHandle );
         _width       = desc._width;
         _height      = desc._height;
         _bufferCount = desc._bufferCount;

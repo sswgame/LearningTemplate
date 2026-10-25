@@ -4,6 +4,8 @@
 
 #include "Core/Common/PlatformOsHeaders.h"
 
+#include "Editor/Common/Backend/IImGuiPlatformBackend.h"
+
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHISamplerPreset.h"
 
@@ -15,6 +17,8 @@
     #include <vulkan/vulkan_win32.h>
 #elif defined( SW_PLATFORM_LINUX )
     #include "Core/Common/X11Headers.h"
+
+    #include "Engine/Window/IWindow.h"
 
     #include <X11/Xlib-xcb.h>
     #include <vulkan/vulkan_xcb.h>
@@ -118,17 +122,31 @@ namespace sw::editor
             static int32 createViewportSurface( ImGuiViewport* pVp, ImU64 vulkanInstance, const void* pVkAllocators, ImU64* pOutVkSurface )
             {
 #if defined( SW_PLATFORM_WINDOWS )
+                // 뷰포트 핸들을 HWND 로 읽는 것은 Win32 플랫폼 백엔드일 때뿐이다 — 아니면 오류를 남기고 표면을 만들지 않는다.
+                HWND hWnd = static_cast<HWND>( IImGuiPlatformBackend::tryGetViewportWin32Handle( pVp ) );
+                if ( hWnd == nullptr )
+                {
+                    SW_LOG_ERROR( "The ImGui Vulkan viewport surface needs a Win32 viewport window with a handle" );
+                    return static_cast<int32>( VK_ERROR_INITIALIZATION_FAILED );
+                }
                 VkWin32SurfaceCreateInfoKHR create_info = {};
                 create_info.sType                       = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-                create_info.hwnd                        = static_cast<HWND>( pVp->PlatformHandleRaw );
+                create_info.hwnd                        = hWnd;
                 create_info.hinstance                   = GetModuleHandleW( nullptr );
                 VkResult result                         = vkCreateWin32SurfaceKHR( reinterpret_cast<VkInstance>( vulkanInstance ), &create_info, static_cast<const VkAllocationCallbacks*>( pVkAllocators ), reinterpret_cast<VkSurfaceKHR*>( pOutVkSurface ) );
                 return result;
 #elif defined( SW_PLATFORM_LINUX )
                 const VkInstance             instance    = reinterpret_cast<VkInstance>( vulkanInstance );
                 const VkAllocationCallbacks* pAllocators = static_cast<const VkAllocationCallbacks*>( pVkAllocators );
-                Display*                     pDpy        = static_cast<Display*>( pVp->PlatformHandle );
-                const xcb_window_t           window      = static_cast<xcb_window_t>( reinterpret_cast<uintptr_t>( pVp->PlatformHandleRaw ) );
+                // 뷰포트 핸들을 Display* 로 읽는 것은 X11 플랫폼 백엔드일 때뿐이다(Wayland 의 PlatformHandle 은 wl_display* 라 읽으면 죽는다).
+                X11SurfaceHandles x11Surface;
+                if ( IImGuiPlatformBackend::tryGetViewportX11Surface( pVp, x11Surface ) == false )
+                {
+                    SW_LOG_ERROR( "The ImGui Vulkan viewport surface needs an X11 viewport window with a display connection (a Wayland viewport is not supported)" );
+                    return static_cast<int32>( VK_ERROR_INITIALIZATION_FAILED );
+                }
+                Display*           pDpy   = static_cast<Display*>( x11Surface._pDisplay );
+                const xcb_window_t window = static_cast<xcb_window_t>( x11Surface._window );
 
                 PFN_vkCreateXlibSurfaceKHR pCreateXlib = reinterpret_cast<PFN_vkCreateXlibSurfaceKHR>(
                     vkGetInstanceProcAddr( instance, "vkCreateXlibSurfaceKHR" ) );
@@ -143,7 +161,7 @@ namespace sw::editor
 
                 PFN_vkCreateXcbSurfaceKHR pCreateXcb = reinterpret_cast<PFN_vkCreateXcbSurfaceKHR>(
                     vkGetInstanceProcAddr( instance, "vkCreateXcbSurfaceKHR" ) );
-                if ( pCreateXcb == nullptr || pDpy == nullptr )
+                if ( pCreateXcb == nullptr )
                     return static_cast<int32>( VK_ERROR_EXTENSION_NOT_PRESENT );
 
                 xcb_connection_t* pConnection = XGetXCBConnection( pDpy );
