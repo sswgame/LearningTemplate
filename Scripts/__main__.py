@@ -75,6 +75,7 @@ _kSubcommand: tuple[Subcommand, ...] = (
     Subcommand("worktree-make", "dev.MakeWorktree", "작업 단위용 git 워크트리를 만들고 도구 · vcpkg 폴더를 main 체크아웃과 나눠 쓰게 연결한다"),
     Subcommand("worktree-remove", "dev.RemoveWorktree", "워크트리를 나눠 쓰는 링크를 먼저 끊고 지운다(브랜치 wt/<이름> 도) — 다른 세션이 쓰는 중이면 건너뛴다"),
     Subcommand("worktree-list", "dev.ListWorktrees", "워크트리마다 브랜치와 주인(살아 있는지)을 보인다"),
+    Subcommand("syntax-check", "dev.RunSyntaxCheck", "바꾼 C++ 파일만 -fsyntax-only 로 검사한다(메인 빌드 폴더의 컴파일 DB 플래그를 워크트리 경로로 옮겨 쓴다) — 작업자에게 허용된 유일한 컴파일"),
     Subcommand("shared-lock", "dev.RunSharedLock", "워크트리가 나눠 쓰는 자원(vcpkg 설치 폴더 · 빌드 칸 · GPU)을 쓰기 전에 사용 중인지 묻고 잡는 잠금(status · acquire · release · run)"),
     Subcommand("full-build", "dev.RunFullBuild", "빌드 칸을 잡고 all AllTests 전체 빌드 — 성공하면 그 트리의 증거를 남긴다(main push 가 요구한다)"),
     Subcommand("integ-gate", "dev.RunIntegrationGate", "main 앞의 통합 증거 — `-k 0` 빌드와 ctest nogpu · lint 의 통과 · 실패 요약 JSON 을 남기고(run) 요구한다(check · check-push)"),
