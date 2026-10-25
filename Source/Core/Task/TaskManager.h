@@ -245,6 +245,15 @@ namespace sw
         void ensureMainThread() const;
         /** @brief 현재 스레드가 이 풀의 워커인지 확인합니다. */
         bool isWorkerThread() const;
+        /**
+         * @brief 현재 스레드가 어느 매니저든 그 풀의 워커인지 확인합니다. 매니저 인스턴스 없이 부르는 가드(전역 쓰기 단언)용입니다.
+         */
+        static bool isOnPoolWorkerThread();
+        /**
+         * @brief 현재 스레드가 병렬 본문(`runParallel` · `runParallelByCost` · `emplaceParallel*` 의 본문)을 실행 중인지 확인합니다.
+         * @details 병렬 단계 중에는 락 없는 전역(`ResourcePaths` 의 검색 목록 · 루트)을 바꾸지 않는다는 계약의 Debug 가드가 읽는다.
+         */
+        static bool isInParallelBody();
 
         /**
          * @brief 태스크 본문을 실행할 수 있는 스레드의 최대 수입니다. 워커 수 + 기다리는 동안 다른 일을 돕는 스레드 분(`kMaxHelperThreadCount`).

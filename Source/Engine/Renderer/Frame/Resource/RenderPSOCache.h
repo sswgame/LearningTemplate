@@ -108,7 +108,7 @@ namespace sw
         bool hasMaterialPSO( uint64 key ) const;
         /** @brief 변형을 둡니다(있으면 덮어씁니다). */
         void setMaterialPSO( uint64 key, const MaterialPSOEntry& entry );
-        /** @brief 그 키의 변형 PSO 입니다. 없거나 0 이면 0 이고, 부르는 쪽은 패스 PSO 로 그립니다. */
+        /** @brief 그 키의 변형 PSO 입니다. 없거나 0 이면 0 이고, 부르는 쪽은 그 배치를 그리지 않습니다(패스 PSO 로 바꿔 그리면 머티리얼 · 보기 모드가 다른 그림이 된다). */
         RHIPipelineStateHandle findMaterialPSO( uint64 key ) const;
 
         // ------------------------------------------------------------------------------

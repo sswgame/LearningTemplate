@@ -22,9 +22,17 @@ namespace sw
 
     namespace
     {
-        thread_local int32  t_currentWorkerIndex = -1; ///< 현재 워커 스레드의 인덱스. 워커가 아니면 -1
-        thread_local int32  t_helperScratchSlot  = -1; ///< 워커가 아닌 스레드가 받은 도우미 스크래치 번호(0..). 아직 없으면 -1
-        thread_local uint32 t_helperSlotOwnerID  = 0;  ///< 위 번호를 준 매니저의 `_instanceID`. 매니저를 다시 만들면 옛 번호를 쓰지 않는다
+        thread_local int32 t_currentWorkerIndex = -1; ///< 현재 워커 스레드의 인덱스. 워커가 아니면 -1
+        /**
+         * @brief 스레드마다 하나인 태스크 관리 상태입니다. 정적 칸을 늘리지 않으려고 한 구조체로 모았습니다(`CheckMutableStatics`).
+         */
+        struct ThreadTaskState
+        {
+            int32  _helperScratchSlot = -1; ///< 워커가 아닌 스레드가 받은 도우미 스크래치 번호(0..). 아직 없으면 -1
+            uint32 _helperSlotOwnerID = 0;  ///< 위 번호를 준 매니저의 `_instanceID`. 매니저를 다시 만들면 옛 번호를 쓰지 않는다
+            uint32 _parallelBodyDepth = 0;  ///< 이 스레드에서 지금 실행 중인 병렬 본문(`ParallelTaskScope`)의 겹침 깊이. 0 이면 병렬 본문 밖
+        };
+        thread_local ThreadTaskState t_threadState{};
         /// @brief 매니저 인스턴스 번호를 나눠 주는 카운터입니다(0 은 "없음").
         atomic<uint32>         s_nextInstanceID{ 1 };
         thread_local TaskNode* t_pCurrentRunningTask = nullptr; ///< 현재 스레드에서 실행 중인 태스크 노드
@@ -63,12 +71,22 @@ namespace sw
         constexpr uintptr_t kTicketTagBit = 1;
 
         /**
+         * @brief 한 스레드에서 병렬 본문이 겹칠 수 있는 깊이의 상한입니다(중첩 `runParallel` + 합류 대기 중 돕는 본문).
+         * @details 워커 스레드의 스택 크기는 따로 지정하지 않아(플랫폼 기본) 본문 한 겹이 쓰는 스택에 비례한 상한을 정할 근거가 없다. 합법적인 중첩은
+         *          2 ~ 3 겹이라 넉넉히 잡았고, 넘으면 Debug 에서 멈춰 호출 모양을 고치게 한다(스택 소진은 원인이 안 남는 크래시다).
+         */
+        constexpr uint32 kMaxParallelBodyDepth = 16;
+
+        /**
          * @brief 병렬 그룹의 본문을 도는 동안 "지금 실행 중인 태스크" 를 비워 두는 RAII 스코프입니다. 끝나면 바깥 값을 되돌립니다.
          * @details 병렬 본문은 어느 태스크의 본문도 아니다. 이 스레드가 **돕고 있던** 태스크를 그대로 물려받으면 본문에서 만든 태스크가
          *          엉뚱한 태스크의 자식이 된다(씬 로드 태스크가 게임 틱의 소리 재생 태스크를 기다리는 식 — 어느 스레드가 티켓을 가져가느냐에
          *          따라 부모가 달라진다). 본문에서 만든 태스크는 최상위다. 티켓 하나(청크 여러 개)마다 한 번 세우므로 청크당 비용은 없습니다.
          *
-         *          "병렬 본문 안인가" 표시는 두지 않는다. 틱 중 구조 변경은 단언이 아니라 구조 변경 큐로 미룬다(`GameObjectManager::deferStructuralChange`).
+         *          겹침 깊이(`_parallelBodyDepth`)를 센다. 용도는 둘이다 — ① `TaskManager::isInParallelBody` 로 병렬 단계 중 쓰면 안 되는 전역(`ResourcePaths` 의
+         *          검색 목록 · 루트)의 쓰기를 Debug 에서 단언한다. 틱 중 구조 변경은 단언이 아니라 구조 변경 큐로 미룬다(`GameObjectManager::deferStructuralChange`).
+         *          ② 중첩 `runParallel` 이 한도(`kMaxParallelBodyDepth`)를 넘으면 Debug 에서 단언한다 — 본문이 다시 병렬 for 를 부르고, 합류를 기다리며 돕는 스레드가
+         *          다른 그룹의 본문을 그 위에 쌓으므로 워커 스택 깊이가 호출 모양에 묶인다.
          */
         struct ParallelTaskScope
         {
@@ -76,9 +94,13 @@ namespace sw
                 : _pPreviousRunningTask{ t_pCurrentRunningTask }
             {
                 t_pCurrentRunningTask = nullptr;
+                ++t_threadState._parallelBodyDepth;
+                SW_LOG_ASSERT( t_threadState._parallelBodyDepth <= kMaxParallelBodyDepth,
+                               "Nested parallel bodies exceed %# - worker stack depth is unbounded (runParallel inside runParallel ...)", kMaxParallelBodyDepth );
             }
             ~ParallelTaskScope()
             {
+                --t_threadState._parallelBodyDepth;
                 t_pCurrentRunningTask = _pPreviousRunningTask;
             }
             ParallelTaskScope( const ParallelTaskScope& )            = delete;
@@ -345,9 +367,9 @@ namespace sw
     {
         if ( t_currentWorkerIndex >= 0 )
             return static_cast<uint32>( t_currentWorkerIndex );
-        if ( t_helperScratchSlot < 0 || t_helperSlotOwnerID != _instanceID )
+        if ( t_threadState._helperScratchSlot < 0 || t_threadState._helperSlotOwnerID != _instanceID )
         {
-            t_helperSlotOwnerID = _instanceID;
+            t_threadState._helperSlotOwnerID = _instanceID;
             // 돌려받은 슬롯부터 다시 쓴다(가장 낮은 비트).
             uint32 freeMask = _helperSlotFreeMask.load( std::memory_order_acquire );
             while ( freeMask != 0 )
@@ -360,8 +382,8 @@ namespace sw
                     {
                         ++slot;
                     }
-                    t_helperScratchSlot = static_cast<int32>( slot );
-                    return getWorkerCount() + static_cast<uint32>( t_helperScratchSlot );
+                    t_threadState._helperScratchSlot = static_cast<int32>( slot );
+                    return getWorkerCount() + static_cast<uint32>( t_threadState._helperScratchSlot );
                 }
             }
 
@@ -371,25 +393,35 @@ namespace sw
                 // 넘치면 마지막 슬롯을 나눠 쓴다. 스크래치가 겹칠 수 있으므로 로그로 알린다. 끝나는 스레드가 슬롯을 돌려주므로 동시에 살아 있는 비워커 스레드가
                 // 이만큼일 때만 닿는다.
                 SW_LOG_ERROR( "More than %# non-worker threads execute tasks at once — scratch slots collide (raise kMaxHelperThreadCount)", kMaxHelperThreadCount );
-                t_helperScratchSlot = static_cast<int32>( kMaxHelperThreadCount - 1 );
+                t_threadState._helperScratchSlot = static_cast<int32>( kMaxHelperThreadCount - 1 );
             }
             else
-                t_helperScratchSlot = static_cast<int32>( assigned );
+                t_threadState._helperScratchSlot = static_cast<int32>( assigned );
         }
-        return getWorkerCount() + static_cast<uint32>( t_helperScratchSlot );
+        return getWorkerCount() + static_cast<uint32>( t_threadState._helperScratchSlot );
     }
 
     void TaskManager::releaseCurrentThreadHelperSlot()
     {
-        if ( t_helperScratchSlot < 0 || t_helperSlotOwnerID != _instanceID )
+        if ( t_threadState._helperScratchSlot < 0 || t_threadState._helperSlotOwnerID != _instanceID )
             return;
         // 넘쳐서 나눠 쓰던 마지막 슬롯은 다른 스레드도 쓰고 있을 수 있으므로 돌려주지 않는다.
         const bool bShared = _helperSlotCount.load( std::memory_order_relaxed ) > kMaxHelperThreadCount &&
-                             t_helperScratchSlot == static_cast<int32>( kMaxHelperThreadCount - 1 );
+                             t_threadState._helperScratchSlot == static_cast<int32>( kMaxHelperThreadCount - 1 );
         if ( bShared == false )
-            _helperSlotFreeMask.fetch_or( 1u << static_cast<uint32>( t_helperScratchSlot ), std::memory_order_acq_rel );
-        t_helperScratchSlot = -1;
-        t_helperSlotOwnerID = 0;
+            _helperSlotFreeMask.fetch_or( 1u << static_cast<uint32>( t_threadState._helperScratchSlot ), std::memory_order_acq_rel );
+        t_threadState._helperScratchSlot = -1;
+        t_threadState._helperSlotOwnerID = 0;
+    }
+
+    bool TaskManager::isInParallelBody()
+    {
+        return t_threadState._parallelBodyDepth > 0;
+    }
+
+    bool TaskManager::isOnPoolWorkerThread()
+    {
+        return t_currentWorkerIndex >= 0;
     }
 
     atomic<uint32>& TaskManager::getWaiterWord( uint32 slotIndex )

@@ -125,7 +125,11 @@ namespace sw
          * @details 핸들을 버리면 해제할 수 없으므로 `[[nodiscard]]` 입니다.
          */
         [[nodiscard]] static DelegateHandle registerGlobalListener( const LogWrittenDelegate& listener );
-        /** @brief 전역 싱크에서 리스너를 해제합니다. 싱크가 이미 없으면 리스너도 싱크와 함께 사라졌으므로 할 일이 없습니다(종료 순서에서 정상). */
+        /**
+         * @brief 전역 싱크에서 리스너를 해제합니다. 싱크가 이미 없으면 리스너도 싱크와 함께 사라졌으므로 할 일이 없습니다(종료 순서에서 정상).
+         * @details 진행 중인 방송이 끝날 때까지 기다린다(최대 2 초). 그래서 리스너 콜백이 얻는 락을 **쥔 채** 해제하지 않는다 — 콜백이 그 락을 기다리면 2 초 뒤 stderr 경고로 풀린다.
+         *          리스너 콜백 안에서 부르는 해제는 기다리지 않는다(자기 방송을 기다리지 않게 막아 두었다).
+         */
         static void unregisterGlobalListener( const DelegateHandle& handle );
         /** @brief 전역 싱크에서 호출 스텁이 [@p pBegin, @p pEnd) 안에 있는 리스너를 모두 해제하고, 해제한 수를 반환합니다. 싱크가 없으면 0 입니다. */
         static uint32 releaseGlobalListenerCodeWithin( const void* pBegin, const void* pEnd );

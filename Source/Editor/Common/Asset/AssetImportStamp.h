@@ -96,7 +96,11 @@ namespace sw::editor
          * @details 읽는 대상이 같은 실행에서 임포트될 수 있으면 그 결과가 먼저 나와야 하므로 데이터로 드러낸다. 조용히 두면 병렬 구간에서 읽는 쪽이 옛 결과를 본다.
          */
         virtual bool hasOrderDependency( [[maybe_unused]] string_view resourcePath ) const { return false; }
-        /** @brief 원본 하나를 결과 경로로 임포트합니다. 병렬로 불리므로 이 임포터의 공유 상태를 바꾸지 않습니다. */
+        /**
+         * @brief 원본 하나를 결과 경로로 임포트합니다.
+         * @details 스레드 계약: 워커에서 서로 다른 원본에 대해 동시에 불린다(같은 결과 경로를 쓰는 원본은 한 스레드가 순서대로). 이 임포터의 공유 상태, `ResourcePaths` 의 전역 쓰기,
+         *          에디터 서비스 범위(`findEditorScope`)를 건드리지 않는다.
+         */
         [[nodiscard]] virtual bool importSource( string_view sourcePath, string_view importedPath, string_view resourcePath ) const = 0;
     };
 } // namespace sw::editor

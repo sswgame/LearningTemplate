@@ -128,6 +128,8 @@ namespace sw
          * @param listPriority 우선순위 토큰 목록(예: "game", "common", "engine", "editor", "dlc/expansion1")
          * @return 우선순위를 다시 설정했으면 true 입니다.
          * @note 기존 경로 해석 캐시는 저절로 비워집니다.
+         * @warning 검색 목록 · 루트 · 호스트 제외 그룹은 락 없이 읽는다. 쓰는 API(`setSearchPriority` · `exchangeRootFolderPath` · `setHostTarget`)는 병렬 단계(워커 · 병렬 본문) 밖,
+         *          메인 스레드의 직렬 구간에서만 부른다 — 어기면 로그 단언이 남는다.
          */
         static bool setSearchPriority( const vector<string>& listPriority );
 
