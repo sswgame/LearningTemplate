@@ -27,6 +27,7 @@ from typing import Iterator
 from xml.etree import ElementTree
 
 from .CodeText import blankCommentsAndLiterals, blankMatch
+from .CppConstants import ConstantError, ConstantResolver, hasConstantName
 from .CookContract import kCookContractConfigRelative
 from .PathPattern import matchesPattern
 from .ConfigCatalog import (ConfigFileEntry, kKeyStyleJsonMember, kKeyStyleKeyTable, kKeyStyleXmlElementBare, kKeyStyleXmlMember,
@@ -194,6 +195,7 @@ _kDeclRe = re.compile(r"^(?P<type>.+?)\s+(?P<name>_\w+)\s*(?::\s*\d+\s*)?(?P<ini
 class SourceIndex:
     """`Source/` 의 리플렉션 구조체 · enum 자리입니다(이름 → (파일, 글))."""
 
+    resolver: ConstantResolver
     mapStruct: dict[str, tuple[str, str, re.Match]] = field(default_factory=dict)
     mapEnum: dict[str, tuple[str, str, re.Match]] = field(default_factory=dict)
 
@@ -256,7 +258,7 @@ class SourceTreeReader:
 
 def buildSourceIndex(reader: SourceTreeReader) -> SourceIndex:
     """`Source/` 의 헤더에서 `REFLECT` 구조체와 `enum class` 자리를 모읍니다. 같은 이름이 둘이면 먼저 본 것(경로 순)을 씁니다."""
-    index = SourceIndex()
+    index = SourceIndex(resolver=ConstantResolver(reader.root, reader.readText))
     for relative, text in reader.iterFiles(("Source",), (".h",)):
         if "REFLECT" not in text and "enum class" not in text:
             continue
@@ -311,24 +313,19 @@ def formatDefaultInternal(initText: str, mapMacro: dict[str, str]) -> str:
     return ", ".join(listItem)
 
 
-def resolveRangeConstantInternal(rangeText: str | None, fileText: str, typeName: str) -> str | None:
-    """`Min` · `Max` 가 C++ 상수 이름(`kMaxWorkerCount2D`, `-Limit::kMax`)이면 같은 파일의 `constexpr` 값으로 바꿉니다.
+def resolveRangeConstantInternal(rangeText: str | None, relative: str, resolver: ConstantResolver, typeName: str) -> str | None:
+    """`Min` · `Max` 가 C++ 상수 이름이나 산식(`kMaxWorkerCount2D`, `-Limit::kMax`, `Net::kMax * 2`)이면 숫자 글로 바꿉니다.
 
     에디터가 읽는 메타데이터 JSON 의 min · max 는 숫자 글이어야 하므로 이름이 남으면 안 됩니다(생성기 `AstVisitor::resolveRangeConstants` 와 같은 규칙:
-    `_` 로 시작하는 이름은 필드). 같은 파일에서 찾지 못하면 멈춥니다 — 이름이 그대로 JSON 에 들어가면 에디터가 숫자로 읽지 못합니다.
+    `_` 로 시작하는 이름은 필드). 상수는 그 헤더와 include 로 닿는 헤더에서 찾는다(`CppConstants`). 못 풀면 멈춥니다 — 이름이 그대로 JSON 에
+    들어가면 에디터가 숫자로 읽지 못합니다.
     """
-    if not rangeText:
+    if not rangeText or not hasConstantName(rangeText):
         return rangeText
-    match = re.fullmatch(r"(-?)\s*((?:\w+::)*)([A-Za-z]\w*)", rangeText.strip())
-    if match is None:
-        return rangeText
-    valueMatch = re.search(r"constexpr\s+[\w:]+\s+" + re.escape(match.group(3)) + r"\s*=\s*(-?\d+(?:\.\d+)?)f?\s*;", fileText)
-    if valueMatch is None:
-        raise ValueError(f"{typeName}: Min/Max 상수 '{rangeText}' 를 같은 파일의 constexpr 숫자 상수에서 찾지 못했습니다(문서 생성기는 다른 헤더의 상수를 풀지 못합니다 — 상수를 설정 구조체와 같은 파일에 두세요)")
-    value = valueMatch.group(1)
-    if match.group(1):
-        value = value[1:] if value.startswith("-") else "-" + value
-    return value
+    try:
+        return resolver.resolveExpression(relative, rangeText)
+    except ConstantError as error:
+        raise ValueError(f"{typeName}: Min/Max '{rangeText}' — {error}") from error
 
 
 def parseStructInternal(name: str, index: SourceIndex, mapMacro: dict[str, str]) -> TypeDoc | None:
@@ -381,8 +378,8 @@ def parseStructInternal(name: str, index: SourceIndex, mapMacro: dict[str, str])
         typeDoc.listField.append(FieldDoc(
             name=declMatch.group("name"), typeName=re.sub(r"\s+", " ", declMatch.group("type")).strip(),
             defaultText=formatDefaultInternal(declMatch.group("init") or "", mapMacro),
-            minText=resolveRangeConstantInternal(mapMeta.get("Min"), text, name),
-            maxText=resolveRangeConstantInternal(mapMeta.get("Max"), text, name), units=mapMeta.get("Units"),
+            minText=resolveRangeConstantInternal(mapMeta.get("Min"), relative, index.resolver, name),
+            maxText=resolveRangeConstantInternal(mapMeta.get("Max"), relative, index.resolver, name), units=mapMeta.get("Units"),
             description=description))
     return typeDoc
 
