@@ -54,6 +54,9 @@ namespace sw
         atomic<uint32>               _pendingCount;   ///< `_listPendingKey` 의 크기. 0 이면 `initializePending` 이 잠그지 않는다(매 프레임 불린다)
         atomic<uint32>               _psoWarmCount;   ///< `_listPSOWarmKey` 의 크기. 0 이면 `takePSOWarmMaterials` 가 잠그지 않는다(매 프레임 불린다)
         std::shared_mutex            _mutex;
+        /// @brief 디바이스로 머티리얼을 초기화하는 구간(`DeviceInitScope`)을 지금 쥔 스레드입니다. 비어 있으면 아무도 안 쥐었습니다.
+        atomic<std::thread::id> _initOwner;
+        uint32                  _initDepth; ///< 쥔 스레드의 중첩 깊이입니다. 쥔 스레드만 읽고 씁니다
 
         Impl()
             : _mapEntry{}
@@ -62,8 +65,50 @@ namespace sw
             , _pendingCount{ 0 }
             , _psoWarmCount{ 0 }
             , _mutex{}
+            , _initOwner{ std::thread::id{} }
+            , _initDepth{ 0 }
         {
         }
+
+        /**
+         * @brief 디바이스로 머티리얼을 초기화하는 구간을 한 스레드가 쥐게 합니다. 다른 스레드가 쥐고 있으면 오류를 남기고 멈춥니다(모든 구성).
+         * @details 초기화는 `_mutex` 밖에서 한다(GL 은 렌더 스레드의 프레임 끝을 기다리는데 렌더 스레드가 `_mutex` 를 잡는다). 그래서 같은 머티리얼을 두 스레드가
+         *          동시에 초기화하는 것을 막던 것이 이 구간뿐이다. 호출처는 모두 게임 스레드(`Scene::initialize` · `initializePending` · 에디터 `reload`)이고
+         *          비용은 원자 비교 한 번이라 Release 에서도 확인한다. 같은 스레드의 중첩은 허용한다.
+         */
+        struct DeviceInitScope
+        {
+            Impl& _impl;
+
+            explicit DeviceInitScope( Impl& impl )
+                : _impl{ impl }
+            {
+                const std::thread::id self = std::this_thread::get_id();
+                std::thread::id       expected{};
+                if ( _impl._initOwner.compare_exchange_strong( expected, self ) )
+                {
+                    _impl._initDepth = 1;
+                    return;
+                }
+                if ( expected == self )
+                {
+                    ++_impl._initDepth;
+                    return;
+                }
+                SW_LOG_ERROR( "Materials are initialized on two threads at once - initialize them on the game thread (MaterialCache::acquire with a device, reload, initializePending)" );
+                Logger::flushGlobalForCrash(); // 비동기 싱크가 보관하고 있는 위 한 줄을 멈추기 전에 내보낸다
+                std::abort();
+            }
+
+            ~DeviceInitScope()
+            {
+                if ( --_impl._initDepth == 0 )
+                    _impl._initOwner.store( std::thread::id{} );
+            }
+
+            DeviceInitScope( const DeviceInitScope& )            = delete;
+            DeviceInitScope& operator=( const DeviceInitScope& ) = delete;
+        };
     };
 
     MaterialCache::MaterialCache()
@@ -105,10 +150,15 @@ namespace sw
 
         // 초기화(파일 읽기 · 버퍼 생성 · 등록)는 잠금 밖에서 한다. GL 은 이 일이 렌더 스레드의 프레임 끝까지 기다리는데, 렌더 스레드는 프레임 안에서
         // `takePSOWarmMaterials` 로 이 잠금을 잡는다. 소유를 하나 빌려 그 사이 참조가 0 이 되어도 머티리얼이 살아 있게 한다(`initializePending` 과 같다).
-        // 디바이스를 주고 부르는 곳은 게임 스레드 하나라 같은 머티리얼을 둘이 초기화하지 않는다.
+        // 같은 머티리얼을 두 스레드가 동시에 초기화하는 것은 `DeviceInitScope` 가 오류로 멈춘다.
         const shared_ptr<Material> material = entry._material;
         lock.unlock();
-        if ( material->initialize( pDevice, key ) )
+        bool bInitialized{ false };
+        {
+            const Impl::DeviceInitScope initScope{ *_impl };
+            bInitialized = material->initialize( pDevice, key );
+        }
+        if ( bInitialized )
             return material.get();
 
         SW_LOG_ERROR( "Failed to initialize Material %#", key.c_str() );
@@ -184,7 +234,8 @@ namespace sw
         if ( bNoPendingMaterials )
             return;
 
-        vector<string> listKey;
+        const Impl::DeviceInitScope initScope{ *_impl };
+        vector<string>              listKey;
         {
             std::unique_lock<std::shared_mutex> lock{ _impl->_mutex };
             listKey.swap( _impl->_listPendingKey );
@@ -245,6 +296,7 @@ namespace sw
         if ( pDevice == nullptr )
             return;
 
+        const Impl::DeviceInitScope initScope{ *_impl };
         if ( material->isRHIValid() )
         {
             // 아직 이전 프레임(들)이 GPU 에서 이 Material 의 bindless 상수버퍼 인덱스를 참조하고

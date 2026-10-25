@@ -108,7 +108,8 @@ namespace sw::editor
             }
             else
             {
-                pResource->destroyTexture( texture );
+                // 이 분기는 에디터(게임) 스레드가 부른다. 렌더 스레드가 기록 중일 수 있어 직접 부수지 않고 기록 밖으로 미룬다(`IRHIDevice::releaseHandle`).
+                pDevice->releaseHandle( RHIHandleKind::Texture, texture );
             }
         }
         _snapshotTexture = 0;

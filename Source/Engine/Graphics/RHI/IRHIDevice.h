@@ -435,6 +435,13 @@ namespace sw
         void assertRegistryMutableNow( const utf8* pWhat ) const;
 
         /**
+         * @brief `assertRegistryMutableNow` 와 같은 확인을 **모든 구성에서** 하고, 어기면 오류를 남기고 멈춥니다.
+         * @details 어긴 호출이 곧 다른 스레드의 기록 상태를 쓰는 데이터 경쟁이 되는 곳(DX11 `forget*InRecordingStates`)에 씁니다. 비용은 원자 읽기 한 번이라
+         *          Release 에서도 확인합니다. 어긴 호출은 한 프레임 낡은 바인딩으로 그리거나(죽은 핸들을 "이미 묶임"으로 오인) 조용히 어긋나므로 멈추는 쪽이 낫습니다.
+         */
+        void requireRegistryMutableNow( const utf8* pWhat ) const;
+
+        /**
          * @brief 병렬 기록 중에 배리어가 나왔음을 **진단으로만** 남깁니다(디버그 전용, 8회까지).
          * @details 배리어는 레벨 프롤로그(`RenderGraph::setLevelPrologue`)가 단일 스레드에서 미리
          *          발행하는 것이 원칙이다. 다만 프롤로그는 그래프가 **선언한** 입출력만 알 수 있어서

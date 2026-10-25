@@ -113,6 +113,15 @@ namespace sw
 
     SW_LOG_CALLER( "RHI" );
 
+    void IRHIDevice::requireRegistryMutableNow( const utf8* pWhat ) const
+    {
+        if ( _bParallelRecording.load( std::memory_order_relaxed ) == false )
+            return;
+        SW_LOG_ERROR( "%# tries to change the resource table during parallel pass recording - release it through IRHIDevice::releaseHandle (see setParallelRecording)", pWhat );
+        Logger::flushGlobalForCrash(); // 비동기 싱크가 보관하고 있는 위 한 줄을 멈추기 전에 내보낸다
+        std::abort();
+    }
+
     void IRHIDevice::waitIdle()
     {
         // 렌더 스레드가 떠 있으면 그 스레드만 이 장치로 기록 · 제출한다. 다른 스레드가 장치 대기(펜스 Signal · 해제 큐 비우기)를 끼워 넣으려면
