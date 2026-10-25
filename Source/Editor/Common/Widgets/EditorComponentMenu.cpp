@@ -5,6 +5,7 @@
 #include "Core/Container/map.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Log/LogOnce.h"
 
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
@@ -46,7 +47,7 @@ namespace sw::editor
 
         auto* pRegistry = editor::findSubsystem<TypeRegistry>(); // 필수 서비스: 없으면 버그
         if ( pRegistry == nullptr )
-            SW_LOG_ERROR( "No TypeRegistry - the component menu cannot resolve type names" );
+            SW_LOG_ERROR_ONCE( "No TypeRegistry - the component menu cannot resolve type names" );
         bool          bAdded{ false };
         hashed_string firstMatch{};
         auto          addType = [&]( const hashed_string& typeName )

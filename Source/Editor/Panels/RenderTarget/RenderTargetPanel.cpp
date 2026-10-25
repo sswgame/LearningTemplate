@@ -3,6 +3,7 @@
 #include "Editor/Panels/RenderTarget/RenderTargetPanel.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
@@ -132,7 +133,7 @@ namespace sw::editor
         RenderTargetRegistry* pRegistry = editor::findSubsystem<RenderTargetRegistry>();
         if ( pRegistry == nullptr ) // 필수 서비스: 없으면 버그
         {
-            SW_LOG_ERROR( "[RenderTarget] RenderTargetRegistry is missing - the target list cannot be refreshed" );
+            SW_LOG_ERROR_ONCE( "[RenderTarget] RenderTargetRegistry is missing - the target list cannot be refreshed" );
             _listTarget.clear();
             return;
         }
@@ -175,7 +176,7 @@ namespace sw::editor
         const RenderTargetInfo* pSelected = findByName( _listTarget, _selectedName );
         if ( pRegistry == nullptr ) // 필수 서비스: 없으면 버그
         {
-            SW_LOG_ERROR( "[RenderTarget] RenderTargetRegistry is missing - the snapshot cannot be read" );
+            SW_LOG_ERROR_ONCE( "[RenderTarget] RenderTargetRegistry is missing - the snapshot cannot be read" );
             return;
         }
         const bool bTargetNotReadable = pSelected == nullptr || RenderTargetViewUtil::isDecodableFormat( pSelected->_format, pSelected->_bDepth != SW_FALSE ) == false;

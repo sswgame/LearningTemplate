@@ -6,6 +6,7 @@
 #include "Core/Container/formatString.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Log/LogOnce.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/fixed_string.h"
@@ -431,7 +432,7 @@ namespace sw::editor
     {
         UISystem* pUI = editor::findSubsystem<UISystem>(); // 필수 서비스: 없으면 버그
         if ( pUI == nullptr && _screen != kInvalidUIScreenHandle )
-            SW_LOG_ERROR( "[UIPreview] UISystem is missing - the offscreen screen cannot be released" );
+            SW_LOG_ERROR_ONCE( "[UIPreview] UISystem is missing - the offscreen screen cannot be released" );
         if ( pUI != nullptr && _screen != kInvalidUIScreenHandle )
         {
             UIScreen* pScreen = pUI->getOffscreenScreens().findScreen( _screen );

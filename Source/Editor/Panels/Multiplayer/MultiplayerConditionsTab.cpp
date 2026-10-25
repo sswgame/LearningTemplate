@@ -2,6 +2,7 @@
 
 #include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Transport/NetEmulation.h"
 #include "Core/Time/MonotonicClock.h"
@@ -353,7 +354,7 @@ namespace sw::editor
             _bPresetTableAttempted                    = true;
             const EngineDefaultAssets* pDefaultAssets = editor::findSubsystem<const EngineDefaultAssets>(); // 필수 서비스: 없으면 버그
             if ( pDefaultAssets == nullptr )
-                SW_LOG_ERROR( "[MultiplayerConditions] EngineDefaultAssets is missing - the network presets are not read" );
+                SW_LOG_ERROR_ONCE( "[MultiplayerConditions] EngineDefaultAssets is missing - the network presets are not read" );
             _bPresetTableFailed = pDefaultAssets == nullptr || _presetTable.loadFromResource( pDefaultAssets->_netEmulationPresets.get() ) == false;
         }
         if ( _bPresetTableFailed )

@@ -728,11 +728,9 @@ namespace sw::editor
 
     void EditorCommandGUI::drawMainMenus()
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
-            return;
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
 
-        const EditorCommandRegistry& registry = pContext->getSubsystem<EditorCommandRegistry>();
+        const EditorCommandRegistry& registry = editorContext.getSubsystem<EditorCommandRegistry>();
         for ( const EditorMenu& menu : registry.getMenus() )
         {
             if ( menu._parentPath != commandmenu::kMainMenuBar )

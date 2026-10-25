@@ -49,10 +49,8 @@ namespace sw::editor
 
     void ShortcutsPanel::drawContent()
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
-            return;
-        EditorCommandRegistry& registry = pContext->getSubsystem<EditorCommandRegistry>();
+        EditorContext&         editorContext = editor::getSubsystem<EditorContext>();
+        EditorCommandRegistry& registry      = editorContext.getSubsystem<EditorCommandRegistry>();
 
         pollShortcutCapture( registry );
 

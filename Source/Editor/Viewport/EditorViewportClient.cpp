@@ -2,6 +2,7 @@
 
 #include "Editor/Viewport/EditorViewportClient.h"
 
+#include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 
@@ -118,11 +119,9 @@ namespace sw::editor
         ImGuiIO& io = ImGui::GetIO();
         if ( io.KeyCtrl || io.KeyAlt )
             return;
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
-            return;
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
         // 기즈모 모드는 유니티, 언리얼, Godot 모두 W, E, R 이다. Q 와 Space 는 다음 모드로 순환한다(Space 는 언리얼).
-        EditorWorkspace& ws = pContext->getSubsystem<EditorWorkspace>();
+        EditorWorkspace& ws = editorContext.getSubsystem<EditorWorkspace>();
         if ( io.KeyShift == false )
         {
             if ( ImGui::IsKeyPressed( ImGuiKey_W, false ) )
@@ -225,7 +224,7 @@ namespace sw::editor
             visualizerArgs._pListCollider   = ( pSnapshotManager != nullptr ) ? &pSnapshotManager->getSubsystem<sw::ScenePhysics>().getColliders2D() : nullptr;
             visualizerArgs._pDebugDrawQueue = findSubsystem<DebugDrawQueue>(); // 필수 서비스: 없으면 버그 — 시각화기가 큐 없이 건너뛴다
             if ( visualizerArgs._pDebugDrawQueue == nullptr )
-                SW_LOG_ERROR( "[ViewportClient] DebugDrawQueue is missing - the debug draw visualizers are skipped" );
+                SW_LOG_ERROR_ONCE( "[ViewportClient] DebugDrawQueue is missing - the debug draw visualizers are skipped" );
             visualizerArgs._pObjectManager = pSnapshotManager;
             visualizerArgs._bGizmoDragging = _gizmo.isDragging();
             visualizerArgs._bFlat2D        = EditorVisualizerGeometryUtil::isFlat2DView( pCamera->isOrthographic(), pCamera->getViewMatrix() );

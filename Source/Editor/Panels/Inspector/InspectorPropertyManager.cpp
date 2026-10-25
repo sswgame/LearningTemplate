@@ -7,6 +7,7 @@
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/SlotHandle.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/PackedTypes.h"
@@ -539,7 +540,7 @@ namespace sw::editor
 
                 const TypeRegistry* pRegistry = findSubsystem<TypeRegistry>(); // 필수 서비스: 없으면 버그
                 if ( pRegistry == nullptr )
-                    SW_LOG_ERROR( "[Inspector] TypeRegistry is missing - the component picker of '%#' is unavailable", prop._name.c_str() );
+                    SW_LOG_ERROR_ONCE( "[Inspector] TypeRegistry is missing - the component picker of '%#' is unavailable", prop._name.c_str() );
                 const TypeInfo*          pTargetType = pRegistry != nullptr ? InspectorComponentPickerUtil::findTargetType( *pRegistry, prop ) : nullptr;
                 const GameObject*        pOwner      = grid.getEditOwner();
                 const GameObjectManager* pManager    = pOwner != nullptr ? pOwner->getManager() : nullptr;
@@ -972,7 +973,7 @@ namespace sw::editor
         // 타입 핸들 인자 — 프로퍼티와 같은 선택기다. 칸의 값은 타입 없는 핸들이고(`_typeName` 이 `ComponentHandle`), 호출 썽크가 대상 타입을 다시 확인한다.
         const TypeRegistry* pRegistry = findSubsystem<TypeRegistry>(); // 필수 서비스: 없으면 버그
         if ( pRegistry == nullptr )
-            SW_LOG_ERROR( "[Inspector] TypeRegistry is missing - the component picker of a method argument is unavailable" );
+            SW_LOG_ERROR_ONCE( "[Inspector] TypeRegistry is missing - the component picker of a method argument is unavailable" );
         const TypeInfo* pTargetType = pRegistry != nullptr ? InspectorComponentPickerUtil::findTargetType( *pRegistry, parameter._handleTargetTypeName ) : nullptr;
         const bool      bPickable   = pTargetType != nullptr && pManager != nullptr && slot._value.getPtr<ComponentHandle>() != nullptr;
         if ( bPickable == false )

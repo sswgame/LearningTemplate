@@ -2,6 +2,7 @@
 
 #include "Editor/Panels/MapCheck/MapCheckPanel.h"
 
+#include "Core/Log/LogOnce.h"
 #include "Core/String/fixed_string.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -73,7 +74,7 @@ namespace sw::editor
                 SceneManager* pSceneManager = editor::findSubsystem<SceneManager>();
                 if ( pSceneManager == nullptr ) // 필수 서비스: 없으면 버그
                 {
-                    SW_LOG_ERROR( "[MapCheck] SceneManager is missing - the scene-change toast is skipped" );
+                    SW_LOG_ERROR_ONCE( "[MapCheck] SceneManager is missing - the scene-change toast is skipped" );
                     return;
                 }
                 const uint64 generation = pSceneManager->getSceneGeneration();

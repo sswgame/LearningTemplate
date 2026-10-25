@@ -470,16 +470,14 @@ namespace sw::editor
 
             static void drawSceneComponentNode( GameObject* pObj, SceneComponent* pSceneComp, GameObjectManager* pManager )
             {
-                EditorContext* pContext = EditorContext::get();
-                if ( pContext == nullptr )
-                    return;
+                EditorContext& editorContext = editor::getSubsystem<EditorContext>();
 
                 if ( pObj == nullptr || pSceneComp == nullptr )
                     return;
 
                 ImGui::PushID( static_cast<int32>( pSceneComp->getComponentID() ) );
 
-                EditorWorkspace& ws        = pContext->getSubsystem<EditorWorkspace>();
+                EditorWorkspace& ws        = editorContext.getSubsystem<EditorWorkspace>();
                 const bool       bSelected = ( ws.getSelectedObjectID() == pObj->getObjectID() &&
                                          ws.getSelectedComponentID() == pSceneComp->getComponentID() );
 
@@ -705,9 +703,7 @@ namespace sw::editor
                                             uint64& renamingObjectID, fixed_string<constant::kMaxBuffer256>& renameBuffer,
                                             bool& bFocusRenameInput )
             {
-                EditorContext* pContext = EditorContext::get();
-                if ( pContext == nullptr )
-                    return;
+                EditorContext& editorContext = editor::getSubsystem<EditorContext>();
 
                 if ( pObj == nullptr || pManager == nullptr )
                     return;
@@ -723,7 +719,7 @@ namespace sw::editor
 
                 ImGui::PushID( static_cast<int32>( objectID ) );
 
-                drawRowToggles( pContext, pObj, objectID );
+                drawRowToggles( &editorContext, pObj, objectID );
 
                 fixed_string<constant::kMaxBuffer256> arrLabel;
                 buildObjectLabel( pObj, objectID, arrLabel );
@@ -738,7 +734,7 @@ namespace sw::editor
                 if ( pRevealTarget != nullptr && isAncestorOf( pObj, pRevealTarget ) )
                     ImGui::SetNextItemOpen( true );
                 // 프리팹 인스턴스는 이름을 파랗게 표시한다(유니티 Hierarchy).
-                const bool bPrefabInstance = pContext->getSubsystem<EditorWorkspace>().findPrefabPath( pObj ).empty() == false;
+                const bool bPrefabInstance = editorContext.getSubsystem<EditorWorkspace>().findPrefabPath( pObj ).empty() == false;
                 if ( bPrefabInstance )
                     ImGui::PushStyleColor( ImGuiCol_Text, EditorColorUtil::toImVec4( HierarchyPanelInternal::kPrefabInstanceText ) );
                 // SpanAvailWidth 를 쓰면 선택 배경과 클릭 영역이 앞의 가시성 토글 오른쪽부터 시작한다. SpanFullWidth 는 창 왼쪽부터 칠해서 토글을 덮는다.
@@ -759,7 +755,7 @@ namespace sw::editor
                 if ( EditorSelfTestMarks::isEnabled() )
                     EditorSelfTestMarks::note( ( string( "hierarchy.row." ) + pObj->getName().c_str() ).c_str() );
 
-                handleRowClick( pContext, pObj, pManager, rowState, objectID );
+                handleRowClick( &editorContext, pObj, pManager, rowState, objectID );
                 drawInlineRename( pObj, objectID, renamingObjectID, renameBuffer, bFocusRenameInput );
 
                 drawGameObjectContextMenu( pObj, pManager );
@@ -767,7 +763,7 @@ namespace sw::editor
 
                 if ( bOpen )
                 {
-                    drawOpenNodeChildren( pContext, pObj, pManager, pFilter, renamingObjectID, renameBuffer, bFocusRenameInput );
+                    drawOpenNodeChildren( &editorContext, pObj, pManager, pFilter, renamingObjectID, renameBuffer, bFocusRenameInput );
                     ImGui::TreePop();
                 }
 
@@ -953,9 +949,7 @@ namespace sw::editor
 
     void HierarchyPanel::handleHierarchyShortcuts( GameObjectManager* pManager )
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
-            return;
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
 
         // 단축키는 Ctrl+D 복제, Ctrl+C 와 Ctrl+V 복사와 붙여 넣기, Ctrl+A 모두 선택, ↑↓ 이동, F2 이름 바꾸기, Delete 삭제다
         if ( ImGui::IsWindowFocused( ImGuiFocusedFlags_ChildWindows ) && ImGui::GetIO().WantTextInput == false )
@@ -1004,7 +998,7 @@ namespace sw::editor
                 GameObject*  pNext = pManager->findGameObjectByID( listRow[next] );
                 if ( pNext != nullptr )
                 {
-                    pContext->getSubsystem<EditorWorkspace>().selectGameObject( pNext, SelectionMode::Replace );
+                    editorContext.getSubsystem<EditorWorkspace>().selectGameObject( pNext, SelectionMode::Replace );
                     rowState._anchorObjectID    = pNext->getObjectID();
                     rowState._bClickedThisFrame = true; // 키로 선택한 것이므로 펼쳐 보이기 대상이 아니다
                 }

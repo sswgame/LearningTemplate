@@ -77,9 +77,7 @@ namespace sw::editor
     void EditorViewportGizmo::draw( EditorSelection& selection, const float32* pView, const float32* pProj, const float2& canvasPos, const float2& canvasSize,
                                     const ViewportToolbarSettings& settings )
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
-            return;
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
         if ( EditorPlaySession::areSceneEditsAllowed() == false )
         {
             endDrag();
@@ -116,7 +114,7 @@ namespace sw::editor
         // beginFrame 이 프레임마다 끈다. 캔버스가 이번 프레임에 그려졌고 편집이 허용될 때(위에서 걸렀다)만 켠다. 꺼 둔 상태이면 그리기만 하고 조작을 받지 않는다.
         ImGuizmo::Enable( true );
 
-        const EditorWorkspace&                        ws    = pContext->getSubsystem<EditorWorkspace>();
+        const EditorWorkspace&                        ws    = editorContext.getSubsystem<EditorWorkspace>();
         const EditorViewportGizmoInternal::GizmoSetup setup = EditorViewportGizmoInternal::makeSetup( ws.getGizmoOperation(), ws.isGizmoLocalSpace(), settings );
         const float32*                                pSnap = setup.hasSnap() ? setup._arrSnap : nullptr;
         const uint32                                  op    = static_cast<uint32>( setup._operation );

@@ -6,8 +6,10 @@
  *          케이스마다 `beginScope` 를 불러 범위를 케이스로 맞춥니다. 게임 · 에디터 · 서버는 범위를 열지 않으므로 프로세스가 하나의 범위입니다.
  */
 #pragma once
+#include "Core/Common/HashUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Log/Logger.h"
 
 namespace sw
 {
@@ -22,6 +24,7 @@ namespace sw
         UnknownEnumerator,  ///< 저장된 열거자 이름을 모름(열거형 × 열거자 이름 해시)
         BusMessageRejected, ///< 서버 버스가 받은 메시지를 읽지 못해 버림(타입 × 결과 × 받은 버전)
         PushRelayRejected,  ///< 릴레이한 푸시를 이 빌드가 변환하지 못해 버림(열거형 × 열거자 × 이유)
+        CallSite,           ///< `SW_LOG_ERROR_ONCE` · `SW_LOG_WARNING_ONCE` — 호출 지점(파일 × 줄)마다 한 번
         Count
     };
 
@@ -44,5 +47,28 @@ namespace sw
         [[nodiscard]] static uint64 getAttemptCount( LogOnceKind kind );
         /** @brief 새 범위를 엽니다 — 모든 종류의 알린 키를 잊습니다. 테스트 하니스가 케이스마다 부릅니다. */
         static void beginScope();
+        /** @brief 호출 지점의 키입니다(파일 경로 해시 × 줄). `SW_LOG_*_ONCE` 가 `CallSite` 종류의 키로 쓴다. */
+        [[nodiscard]] static constexpr uint64 makeSiteKey( const utf8* pFile, size_t fileLength, int32 line ) noexcept
+        {
+            return HashUtil::combine( HashUtil::computeStringHash64( pFile, fileLength, false ), static_cast<uint64>( line ) );
+        }
     };
 } // namespace sw
+
+/**
+ * @brief 이 호출 지점에서 처음 부를 때만 Error 를 남깁니다. 프레임마다 도는 길의 "필수 서비스 없음" 처럼 같은 줄이 쏟아질 곳에 씁니다.
+ * @details 호출 지점마다 정적 플래그를 두지 않고 `LogOnce` 의 범위 상태(스레드 안전, 테스트 케이스마다 초기화)를 쓴다. 인자는 `SW_LOG_ERROR` 와 같다.
+ */
+#define SW_LOG_ERROR_ONCE( ... )                                                                                                                \
+    do                                                                                                                                          \
+    {                                                                                                                                           \
+        if ( ::sw::LogOnce::tryClaim( ::sw::LogOnceKind::CallSite, ::sw::LogOnce::makeSiteKey( __FILE__, sizeof( __FILE__ ) - 1, __LINE__ ) ) ) \
+            SW_LOG_ERROR( __VA_ARGS__ );                                                                                                        \
+    } while ( 0 )
+/** @brief `SW_LOG_ERROR_ONCE` 의 Warning 판입니다. */
+#define SW_LOG_WARNING_ONCE( ... )                                                                                                              \
+    do                                                                                                                                          \
+    {                                                                                                                                           \
+        if ( ::sw::LogOnce::tryClaim( ::sw::LogOnceKind::CallSite, ::sw::LogOnce::makeSiteKey( __FILE__, sizeof( __FILE__ ) - 1, __LINE__ ) ) ) \
+            SW_LOG_WARNING( __VA_ARGS__ );                                                                                                      \
+    } while ( 0 )

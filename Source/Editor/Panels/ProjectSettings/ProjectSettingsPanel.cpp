@@ -3,6 +3,7 @@
 #include "Editor/Panels/ProjectSettings/ProjectSettingsPanel.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/Log/LogOnce.h"
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Config/EditorPaths.h"
@@ -112,7 +113,7 @@ namespace sw::editor
         _pSelected              = nullptr;
         TypeRegistry* pRegistry = editor::findSubsystem<TypeRegistry>(); // 필수 서비스: 없으면 버그
         if ( pRegistry == nullptr )
-            SW_LOG_ERROR( "[ProjectSettings] TypeRegistry is missing - no settings page can find its type" );
+            SW_LOG_ERROR_ONCE( "[ProjectSettings] TypeRegistry is missing - no settings page can find its type" );
 
         // 활성 팩의 `<Engine>` 요소(창 제목 · 렌더 파이프라인 · 스키마 · UI 규칙) — 게임의 엔진 설정은 프리셋이 아니라 팩 gamesettings.xml 에 있다.
         // 유니티 · 언리얼의 Project Settings 처럼 열린 프로젝트(활성 게임) 하나만 고친다.
@@ -159,7 +160,7 @@ namespace sw::editor
         page._bOpened           = true;
         TypeRegistry* pRegistry = editor::findSubsystem<TypeRegistry>(); // 필수 서비스: 없으면 버그
         if ( pRegistry == nullptr )
-            SW_LOG_ERROR( "[ProjectSettings] TypeRegistry is missing - the page '%#' is not opened", page._entry._page.c_str() );
+            SW_LOG_ERROR_ONCE( "[ProjectSettings] TypeRegistry is missing - the page '%#' is not opened", page._entry._page.c_str() );
         const TypeInfo* pType = pRegistry != nullptr ? pRegistry->findType( hashed_string( page._entry._typeName.c_str() ) ) : nullptr;
         if ( pType == nullptr )
         {

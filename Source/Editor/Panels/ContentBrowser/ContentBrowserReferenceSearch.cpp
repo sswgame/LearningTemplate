@@ -4,6 +4,7 @@
 
 #include "Core/Common/StdHeaders.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Log/LogOnce.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Editor/Common/Workspace/AssetHotReload.h"
@@ -101,7 +102,7 @@ namespace sw::editor
         // (`request` 는 nullptr 를 받으면 한 워커가 차례로 읽는다 — 스캔은 되지만 느리다).
         TaskManager* pTaskManager = editor::findSubsystem<TaskManager>(); // 필수 서비스: 없으면 버그
         if ( pTaskManager == nullptr )
-            SW_LOG_ERROR( "Reference index: TaskManager is missing - the scan reads text assets serially" );
+            SW_LOG_ERROR_ONCE( "Reference index: TaskManager is missing - the scan reads text assets serially" );
         _job.request( ResourcePaths::getRootFolderPath(), pTaskManager );
     }
 

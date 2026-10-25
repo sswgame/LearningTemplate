@@ -2,6 +2,7 @@
 
 #include "Editor/Panels/Scene/WorldCellsPanel.h"
 
+#include "Core/Log/LogOnce.h"
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/GUI/EditorColorUtil.h"
@@ -117,7 +118,7 @@ namespace sw::editor
         SceneManager* pSceneManager = editor::findSubsystem<SceneManager>();
         if ( pSceneManager == nullptr ) // 필수 서비스: 없으면 버그. 활성 씬이 없는 것(아래)은 실제로 있을 수 있다.
         {
-            SW_LOG_ERROR( "[WorldCells] SceneManager is missing - the streaming preview cannot be built" );
+            SW_LOG_ERROR_ONCE( "[WorldCells] SceneManager is missing - the streaming preview cannot be built" );
             return false;
         }
         if ( pScene == nullptr )

@@ -3,6 +3,7 @@
 #include "Editor/Panels/InputMap/InputMapPanel.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Log/LogOnce.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/fixed_string.h"
@@ -167,7 +168,7 @@ namespace sw::editor
 
         InputManager* pInput = findSubsystem<InputManager>();
         if ( pInput == nullptr ) // 필수 서비스: 없으면 버그
-            SW_LOG_ERROR( "[InputMap] InputManager is missing - the input map is not attached to it" );
+            SW_LOG_ERROR_ONCE( "[InputMap] InputManager is missing - the input map is not attached to it" );
         else if ( _inputMap.getInputManager() != pInput )
             _inputMap.setInputManager( pInput );
 
@@ -694,7 +695,7 @@ namespace sw::editor
         InputManager* pInput = findSubsystem<InputManager>(); // 필수 서비스: 없으면 버그
         if ( pInput == nullptr )
         {
-            SW_LOG_ERROR( "[InputMap] InputManager is missing - the device monitor tab is not drawn" );
+            SW_LOG_ERROR_ONCE( "[InputMap] InputManager is missing - the device monitor tab is not drawn" );
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorInputMap", "NoInputManager" ) );
             return;
         }
@@ -721,7 +722,7 @@ namespace sw::editor
         InputManager* pInput = findSubsystem<InputManager>();
         if ( pInput == nullptr ) // 필수 서비스: 없으면 버그
         {
-            SW_LOG_ERROR( "[InputMap] InputManager is missing - the keyboard monitor is not drawn" );
+            SW_LOG_ERROR_ONCE( "[InputMap] InputManager is missing - the keyboard monitor is not drawn" );
             return;
         }
 
@@ -757,7 +758,7 @@ namespace sw::editor
         InputManager* pInput = findSubsystem<InputManager>();
         if ( pInput == nullptr ) // 필수 서비스: 없으면 버그
         {
-            SW_LOG_ERROR( "[InputMap] InputManager is missing - the mouse monitor is not drawn" );
+            SW_LOG_ERROR_ONCE( "[InputMap] InputManager is missing - the mouse monitor is not drawn" );
             return;
         }
 
@@ -800,7 +801,7 @@ namespace sw::editor
         InputManager* pInput = findSubsystem<InputManager>();
         if ( pInput == nullptr ) // 필수 서비스: 없으면 버그
         {
-            SW_LOG_ERROR( "[InputMap] InputManager is missing - the gamepad monitor is not drawn" );
+            SW_LOG_ERROR_ONCE( "[InputMap] InputManager is missing - the gamepad monitor is not drawn" );
             return;
         }
 
@@ -910,7 +911,7 @@ namespace sw::editor
         InputManager* pInput = findSubsystem<InputManager>(); // 필수 서비스: 없으면 버그
         if ( pInput == nullptr )
         {
-            SW_LOG_ERROR( "[InputMap] InputManager is missing - the input simulator tab is not drawn" );
+            SW_LOG_ERROR_ONCE( "[InputMap] InputManager is missing - the input simulator tab is not drawn" );
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorInputMap", "NoInputManager" ) );
             return;
         }

@@ -3,6 +3,7 @@
 #include "Editor/Panels/Settings/UserSettingsPanel.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Log/LogOnce.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/GUI/EditorChrome.h"
@@ -32,7 +33,7 @@ namespace sw::editor
     {
         UserSettingsManager* pSettings = editor::findSubsystem<UserSettingsManager>(); // 필수 서비스: 없으면 버그
         if ( pSettings == nullptr )
-            SW_LOG_ERROR( "[UserSettings] UserSettingsManager is missing - the settings are not drawn" );
+            SW_LOG_ERROR_ONCE( "[UserSettings] UserSettingsManager is missing - the settings are not drawn" );
         if ( pSettings == nullptr || pSettings->getCategories().empty() )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorSettings", "UserSettingsNotLoaded" ) );

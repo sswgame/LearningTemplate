@@ -79,14 +79,12 @@ namespace sw::editor
          */
         void trackActiveItemEdit( const utf8* pLabel )
         {
-            EditorContext* pContext = EditorContext::get();
-            if ( pContext == nullptr )
-                return;
-            unordered_map<ImGuiID, PendingEdit>& mapPending = getPendingEdits();
+            EditorContext&                       editorContext = editor::getSubsystem<EditorContext>();
+            unordered_map<ImGuiID, PendingEdit>& mapPending    = getPendingEdits();
 
             const ImGuiID id = ImGui::GetItemID();
             if ( ImGui::IsItemActivated() )
-                mapPending[id] = captureSelectionBeforeEdit( *pContext, pLabel );
+                mapPending[id] = captureSelectionBeforeEdit( editorContext, pLabel );
 
             if ( ImGui::IsItemDeactivatedAfterEdit() == false )
                 return;

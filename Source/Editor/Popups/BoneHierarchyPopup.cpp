@@ -140,9 +140,7 @@ namespace sw::editor
     // ------------------------------------------------------------------------------
     void BoneHierarchyPopup::drawContent()
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
-            return;
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
 
         if ( EditorChrome::beginPanel( getPopupTitle(), &_bOpen ) == false )
         {
@@ -150,7 +148,7 @@ namespace sw::editor
             return;
         }
 
-        EditorWorkspace& ws   = pContext->getSubsystem<EditorWorkspace>();
+        EditorWorkspace& ws   = editorContext.getSubsystem<EditorWorkspace>();
         const string     name = ws.getSelectedObjectName();
         if ( name.empty() || ws.getSelectedObjectID() == 0 )
         {

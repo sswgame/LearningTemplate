@@ -7,6 +7,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Log/LogOnce.h"
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Commands/Dev/EditorGlobalVariableCommands.h"
@@ -108,7 +109,7 @@ namespace sw::editor
                 TypeRegistry* pRegistry  = editor::findSubsystem<TypeRegistry>(); // 필수 서비스: 없으면 버그
                 if ( pRegistry == nullptr )
                 {
-                    SW_LOG_ERROR( "[GlobalVariables] TypeRegistry is missing - the enum variable is drawn as an integer" );
+                    SW_LOG_ERROR_ONCE( "[GlobalVariables] TypeRegistry is missing - the enum variable is drawn as an integer" );
                     return drawInt32Widget( info );
                 }
                 const EnumInfo* pEnumInfo =
@@ -224,7 +225,7 @@ namespace sw::editor
         if ( pGvm != nullptr )
             pGvm->resetAllToDefault();
         else
-            SW_LOG_ERROR( "[GlobalVariables] GlobalVariableManager is missing - the revert did nothing" ); // 필수 서비스: 없으면 버그
+            SW_LOG_ERROR_ONCE( "[GlobalVariables] GlobalVariableManager is missing - the revert did nothing" ); // 필수 서비스: 없으면 버그
     }
 
     void GlobalVariablesPanel::markSessionDirty()
@@ -237,7 +238,7 @@ namespace sw::editor
         GlobalVariableManager* pGvm = editor::findSubsystem<GlobalVariableManager>();
         if ( pGvm == nullptr ) // 필수 서비스: 없으면 버그
         {
-            SW_LOG_ERROR( "[GlobalVariables] GlobalVariableManager is missing - the panel cannot draw" );
+            SW_LOG_ERROR_ONCE( "[GlobalVariables] GlobalVariableManager is missing - the panel cannot draw" );
             return;
         }
 

@@ -78,18 +78,12 @@ namespace sw::editor
 
     void EditorMenuBar::drawAssetsMenu()
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
-            return;
-
         if ( ImGui::BeginMenu( "Assets" ) )
         {
             EditorAssetTypeRegistry::forEachToolPanel( []( EditorAssetType kind, const utf8* pTitle )
             {
-                // 람다는 바깥의 `pContext` 를 캡처하지 않는다. 여기서 다시 받아 다시 확인한다.
-                EditorContext* pMenuContext = EditorContext::get();
-                if ( pMenuContext != nullptr && ImGui::MenuItem( pTitle ) )
-                    pMenuContext->getSubsystem<EditorWorkspace>().requestOpenDocumentPanel( kind );
+                if ( ImGui::MenuItem( pTitle ) )
+                    editor::getSubsystem<EditorWorkspace>().requestOpenDocumentPanel( kind );
             } );
             ImGui::EndMenu();
         }
@@ -97,14 +91,12 @@ namespace sw::editor
 
     void EditorMenuBar::drawPanelMenu( EditorDockLayout& dockLayout )
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
-            return;
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
 
         if ( ImGui::BeginMenu( "Panel" ) )
         {
             ImGui::SeparatorText( "Panels" );
-            for ( const EditorPanelEntry& entry : pContext->getSubsystem<EditorPanelManager>().getPanels() )
+            for ( const EditorPanelEntry& entry : editorContext.getSubsystem<EditorPanelManager>().getPanels() )
             {
                 if ( entry._pInstance == nullptr || entry._category != EditorPanelCategory::Core )
                     continue;
@@ -114,7 +106,7 @@ namespace sw::editor
             }
 
             ImGui::SeparatorText( "Tools" );
-            for ( const EditorPanelEntry& entry : pContext->getSubsystem<EditorPanelManager>().getPanels() )
+            for ( const EditorPanelEntry& entry : editorContext.getSubsystem<EditorPanelManager>().getPanels() )
             {
                 if ( entry._pInstance == nullptr || entry._category == EditorPanelCategory::Core )
                     continue;
@@ -318,14 +310,12 @@ namespace sw::editor
 
     void EditorMenuBar::processOpenPanelRequests()
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
-            return;
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
 
         EditorPanelOpenRequest request;
-        if ( pContext->getSubsystem<EditorWorkspace>().consumeOpenPanel( request ) == false )
+        if ( editorContext.getSubsystem<EditorWorkspace>().consumeOpenPanel( request ) == false )
             return;
-        const EditorPanelManager& panelManager = pContext->getSubsystem<EditorPanelManager>();
+        const EditorPanelManager& panelManager = editorContext.getSubsystem<EditorPanelManager>();
         IEditorPanel*             pPanel       = request._documentKind != EditorAssetType::Unknown ? panelManager.findDocumentPanel( request._documentKind ) : panelManager.findPanelByID( request._panelID );
         if ( pPanel == nullptr )
         {
@@ -354,21 +344,19 @@ namespace sw::editor
         EditorSceneFileCommands::syncAfterSceneGenerationChange();
         processPendingSceneLoad();
 
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
-            return;
-        if ( pContext->getSubsystem<EditorWorkspace>().getPendingSceneAction() == EditorPendingSceneAction::None )
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+        if ( editorContext.getSubsystem<EditorWorkspace>().getPendingSceneAction() == EditorPendingSceneAction::None )
             return;
 
         if ( ImGui::IsPopupOpen( "##UnsavedSceneAction" ) == false )
             ImGui::OpenPopup( "##UnsavedSceneAction" );
 
         const utf8* pMessage = "You have unsaved changes. Continue?";
-        if ( pContext->getSubsystem<EditorWorkspace>().getPendingSceneAction() == EditorPendingSceneAction::New )
+        if ( editorContext.getSubsystem<EditorWorkspace>().getPendingSceneAction() == EditorPendingSceneAction::New )
             pMessage = "Scene has unsaved changes. Create a new scene anyway?";
-        else if ( pContext->getSubsystem<EditorWorkspace>().getPendingSceneAction() == EditorPendingSceneAction::Load )
+        else if ( editorContext.getSubsystem<EditorWorkspace>().getPendingSceneAction() == EditorPendingSceneAction::Load )
             pMessage = "Scene has unsaved changes. Open another scene anyway?";
-        else if ( pContext->getSubsystem<EditorWorkspace>().getPendingSceneAction() == EditorPendingSceneAction::Quit )
+        else if ( editorContext.getSubsystem<EditorWorkspace>().getPendingSceneAction() == EditorPendingSceneAction::Quit )
             pMessage = "You have unsaved changes. Exit anyway?";
 
         const EditorUnsavedChoice choice = EditorWidgets::drawUnsavedChangesModal( "##UnsavedSceneAction", pMessage );

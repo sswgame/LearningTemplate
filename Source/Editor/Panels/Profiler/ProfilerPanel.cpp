@@ -5,6 +5,7 @@
 #include "Core/Common/Defines.h"
 #include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Log/LogOnce.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/fixed_string.h"
@@ -365,7 +366,7 @@ namespace sw::editor
             if ( pProfiler != nullptr )
                 pProfiler->setEnabled( bCollect );
             else
-                SW_LOG_ERROR( "[Profiler] FrameProfiler is missing - the Collect toggle has no effect" );
+                SW_LOG_ERROR_ONCE( "[Profiler] FrameProfiler is missing - the Collect toggle has no effect" );
         }
         ImGui::SameLine();
         const uint64 capturedFrames = MathUtil::min( _scopeHistory.getCapturedFrameCount(), static_cast<uint64>( UINT32_MAX ) );
@@ -539,7 +540,7 @@ namespace sw::editor
         FrameProfiler* pProfiler = editor::findSubsystem<FrameProfiler>(); // 필수 서비스: 없으면 버그
         if ( pProfiler == nullptr )
         {
-            SW_LOG_ERROR( "[Profiler] FrameProfiler is missing - the timeline tab is not drawn" );
+            SW_LOG_ERROR_ONCE( "[Profiler] FrameProfiler is missing - the timeline tab is not drawn" );
             ImGui::TextDisabled( "Engine profiler is not available" );
             return;
         }
@@ -1240,7 +1241,7 @@ namespace sw::editor
         FrameProfiler* pProfiler = editor::findSubsystem<FrameProfiler>(); // 필수 서비스: 없으면 버그
         if ( pProfiler == nullptr )
         {
-            SW_LOG_ERROR( "[Profiler] FrameProfiler is missing - the call tree tab is not drawn" );
+            SW_LOG_ERROR_ONCE( "[Profiler] FrameProfiler is missing - the call tree tab is not drawn" );
             ImGui::TextDisabled( "Engine profiler is not available" );
             return;
         }

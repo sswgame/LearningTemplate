@@ -3,6 +3,7 @@
 #include "Editor/Panels/Scene/GameViewPanel.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/Backend/ImGuiKeyForward.h"
@@ -87,7 +88,7 @@ namespace sw::editor
         InputManager* pInput = findSubsystem<InputManager>();
         if ( pInput == nullptr ) // 필수 서비스: 없으면 버그
         {
-            SW_LOG_ERROR( "[GameView] InputManager is missing - detached keyboard input is not forwarded" );
+            SW_LOG_ERROR_ONCE( "[GameView] InputManager is missing - detached keyboard input is not forwarded" );
             return;
         }
         const bool bDetached = ImGui::GetWindowViewport() != ImGui::GetMainViewport();
@@ -122,7 +123,7 @@ namespace sw::editor
         InputManager* pInput = findSubsystem<InputManager>();
         if ( pInput == nullptr ) // 필수 서비스: 없으면 버그
         {
-            SW_LOG_ERROR( "[GameView] InputManager is missing - detached pointer input is not forwarded" );
+            SW_LOG_ERROR_ONCE( "[GameView] InputManager is missing - detached pointer input is not forwarded" );
             return;
         }
         const ImGuiViewport* pMainViewport = ImGui::GetMainViewport();
@@ -164,15 +165,13 @@ namespace sw::editor
 
     void GameViewPanel::drawContent()
     {
-        EditorContext* pEditorContext = EditorContext::get();
-        if ( pEditorContext == nullptr )
-            return;
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
 
         // Play 중 게임 입력은 이 패널 위에서만 게임으로 간다(`ImGuiEditor::processEvent`). 씬 뷰 위의 입력은 에디터 카메라 담당이다.
-        pEditorContext->getSubsystem<EditorRenderViews>().setGameViewFocused( ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows ) );
-        if ( pEditorContext->getSubsystem<EditorRenderViews>().isGameViewFocused() )
+        editorContext.getSubsystem<EditorRenderViews>().setGameViewFocused( ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows ) );
+        if ( editorContext.getSubsystem<EditorRenderViews>().isGameViewFocused() )
             EditorScreenshotCommands::noteFocusedView( EditorViewKind::Game );
-        pEditorContext->getSubsystem<EditorRenderViews>().setGameViewHovered( ImGui::IsWindowHovered( ImGuiHoveredFlags_RootAndChildWindows ) );
+        editorContext.getSubsystem<EditorRenderViews>().setGameViewHovered( ImGui::IsWindowHovered( ImGuiHoveredFlags_RootAndChildWindows ) );
 
         drawToolbar();
 
@@ -182,9 +181,9 @@ namespace sw::editor
         const uint32         height    = static_cast<uint32>( rect._size._y );
         if ( width > 1 && height > 1 )
         {
-            const EditorViewTarget& view = pEditorContext->getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Game );
+            const EditorViewTarget& view = editorContext.getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Game );
             if ( EditorViewTargetUtil::needsResize( view._width, view._height, width, height ) )
-                pEditorContext->getSubsystem<EditorRenderViews>().ensureViewTargetSize( EditorViewKind::Game, width, height );
+                editorContext.getSubsystem<EditorRenderViews>().ensureViewTargetSize( EditorViewKind::Game, width, height );
         }
         // 레터박스 — 남는 쪽은 비워 둔다. 이미지는 RT 크기 그대로(늘이지 않는다).
         const ImVec2 origin = ImGui::GetCursorScreenPos();
@@ -192,11 +191,11 @@ namespace sw::editor
         const ImVec2 imageSize{ rect._size._x, rect._size._y };
         // 이 패널이 보이는 프레임만 게임 뷰를 그린다(접힘 · 닫힘 · 다른 탭이면 drawContent 가 불리지 않는다 — 게임 뷰 RT 요청 0).
         // 이미지 자리도 함께 알린다 — 런타임 UI 가 창 픽셀 포인터를 게임 뷰 픽셀로 옮긴다(`HostViewTarget::_windowX`).
-        pEditorContext->getSubsystem<EditorRenderViews>().markViewDrawn( EditorViewKind::Game, float2{ imagePos.x - ImGui::GetMainViewport()->Pos.x, imagePos.y - ImGui::GetMainViewport()->Pos.y } );
+        editorContext.getSubsystem<EditorRenderViews>().markViewDrawn( EditorViewKind::Game, float2{ imagePos.x - ImGui::GetMainViewport()->Pos.x, imagePos.y - ImGui::GetMainViewport()->Pos.y } );
         forwardDetachedPointer();
         forwardDetachedKeyboard();
         ImGui::SetCursorScreenPos( imagePos );
-        const void* pTextureID        = pEditorContext->getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Game )._pTextureID;
+        const void* pTextureID        = editorContext.getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Game )._pTextureID;
         const bool  bCanDrawGameImage = pTextureID != nullptr && imageSize.x > 1.0f && imageSize.y > 1.0f;
         if ( bCanDrawGameImage )
         {

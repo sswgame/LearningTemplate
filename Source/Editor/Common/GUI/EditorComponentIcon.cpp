@@ -3,6 +3,7 @@
 #include "Editor/Common/GUI/EditorComponentIcon.h"
 
 #include "Core/Container/unordered_map.h"
+#include "Core/Log/LogOnce.h"
 
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -121,7 +122,7 @@ namespace sw::editor
         const TypeRegistry* pRegistry = editor::findSubsystem<TypeRegistry>();     // 필수 서비스: 없으면 버그
         EditorStateStore*   pStore    = editor::findSubsystem<EditorStateStore>(); // 필수 서비스: 없으면 버그
         if ( pRegistry == nullptr || pStore == nullptr )
-            SW_LOG_ERROR( "[ComponentIcon] TypeRegistry or EditorStateStore is missing - the icon rows are not cached" );
+            SW_LOG_ERROR_ONCE( "[ComponentIcon] TypeRegistry or EditorStateStore is missing - the icon rows are not cached" );
         const bool bCacheable = pType != nullptr && pRegistry != nullptr && pStore != nullptr; // 캐시는 줄을 바꾸지 않는다 — 놓을 저장소가 없으면 캐시 없이 찾는다
         if ( bCacheable == false )
             return EditorComponentIconInternal::findRowUncached( pType );

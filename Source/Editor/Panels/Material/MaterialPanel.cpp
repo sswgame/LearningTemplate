@@ -6,6 +6,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/formatString.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Log/LogOnce.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/fixed_string.h"
@@ -507,7 +508,7 @@ namespace sw::editor
         if ( pResources != nullptr && pContext != nullptr )
             pResources->getAssetCache<MaterialCache>().reload( getLoadedAssetPath(), pContext->getSubsystem<EditorRenderViews>().getRHIDevice() );
         else
-            SW_LOG_ERROR( "[MaterialPanel] AssetManager or EditorContext is missing - the saved material is not reloaded" );
+            SW_LOG_ERROR_ONCE( "[MaterialPanel] AssetManager or EditorContext is missing - the saved material is not reloaded" );
         applyLivePreview();
         _status = SW_LOCKEY( "EditorMaterial", "SavedStatus" );
         clearDocumentDirty();

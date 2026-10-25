@@ -8,6 +8,7 @@
 
 #include "Core/Console/DevCommandRegistry.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Log/LogOnce.h"
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
@@ -109,7 +110,7 @@ namespace sw::editor
                 if ( pInput != nullptr )
                     getState()._recorder.update( *pInput, GameTimeScale::getUnscaledDeltaTime() );
                 else
-                    SW_LOG_ERROR( "[ScenarioRecord] InputManager is missing - the input is not recorded" );
+                    SW_LOG_ERROR_ONCE( "[ScenarioRecord] InputManager is missing - the input is not recorded" );
             }
         };
     } // namespace

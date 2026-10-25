@@ -5,6 +5,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
@@ -454,7 +455,7 @@ namespace sw::editor
         EditorWidgets::drawPanelStatus( _status.c_str() );
         DebugDrawQueue* pQueue = findSubsystem<DebugDrawQueue>(); // 필수 서비스: 없으면 버그
         if ( pQueue == nullptr )
-            SW_LOG_ERROR( "[RigDebug] DebugDrawQueue is missing - the bone markers are not drawn" );
+            SW_LOG_ERROR_ONCE( "[RigDebug] DebugDrawQueue is missing - the bone markers are not drawn" );
         const bool bCanDrawBoneMarkers = _bDrawMarkers == SW_TRUE && pQueue != nullptr && pUnit != nullptr && listSelectedBone.empty() == false;
         if ( bCanDrawBoneMarkers )
             RigDebugPanelInternal::drawBoneMarkers( *pQueue, *pUnit, listSelectedBone );

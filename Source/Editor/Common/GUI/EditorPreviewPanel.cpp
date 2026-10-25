@@ -3,6 +3,7 @@
 #include "Editor/Common/GUI/EditorPreviewPanel.h"
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Log/LogOnce.h"
 #include "Core/Log/Logger.h"
 
 #include "Editor/Common/Workspace/EditorService.h"
@@ -92,7 +93,7 @@ namespace sw::editor
         SceneManager* pSceneManager = findSubsystem<SceneManager>(); // 필수 서비스: 없으면 버그
         if ( pSceneManager == nullptr )
         {
-            SW_LOG_ERROR( "[PreviewPanel] SceneManager is missing - the edit of '%#' is not recorded", obj.getName().c_str() );
+            SW_LOG_ERROR_ONCE( "[PreviewPanel] SceneManager is missing - the edit of '%#' is not recorded", obj.getName().c_str() );
             return false;
         }
         _commandStack.push( ObjectUndoUtil::makeModify( _commandStack, *pSceneManager, obj, before, after, label ) ); // 인스펙터 편집은 `_selection.recordModify` 로 같은 스택
@@ -104,7 +105,7 @@ namespace sw::editor
         GlobalVariableManager* pGvm = editor::findSubsystem<GlobalVariableManager>(); // 필수 서비스: 없으면 버그
         if ( pGvm == nullptr )
         {
-            SW_LOG_ERROR( "[PreviewPanel] GlobalVariableManager is missing - the probe asset cannot be read" );
+            SW_LOG_ERROR_ONCE( "[PreviewPanel] GlobalVariableManager is missing - the probe asset cannot be read" );
             return false;
         }
         const GlobalVariableInfo* pInfo = pGvm->findVariable( "gv_editorProbeAsset" );

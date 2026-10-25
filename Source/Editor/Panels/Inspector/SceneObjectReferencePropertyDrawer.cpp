@@ -9,6 +9,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Log/LogOnce.h"
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/GUI/EditorThemeUtil.h"
@@ -49,7 +50,7 @@ namespace sw::editor
                 const SceneManager* pSceneManager = editor::findSubsystem<SceneManager>(); // 필수 서비스: 없으면 버그
                 if ( pSceneManager == nullptr )
                 {
-                    SW_LOG_ERROR( "[SceneObjectReference] SceneManager is missing - the reference of '%#' is not drawn", prop._name.c_str() );
+                    SW_LOG_ERROR_ONCE( "[SceneObjectReference] SceneManager is missing - the reference of '%#' is not drawn", prop._name.c_str() );
                     ImGui::TextDisabled( "(no scene manager)" );
                     return true;
                 }

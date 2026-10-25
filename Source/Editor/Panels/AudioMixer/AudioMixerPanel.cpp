@@ -4,6 +4,7 @@
 
 #include "Core/Common/Defines.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
@@ -239,7 +240,7 @@ namespace sw::editor
         Internal::ProbeState& probe  = Internal::getProbeState();
         IAudioService*        pAudio = editor::findSubsystem<IAudioService>(); // 필수 서비스: 없으면 버그(전용 서버도 널 서비스가 있다)
         if ( pAudio == nullptr )
-            SW_LOG_ERROR( "[AudioMixer] IAudioService is missing - the mixer shows the not-running hint" );
+            SW_LOG_ERROR_ONCE( "[AudioMixer] IAudioService is missing - the mixer shows the not-running hint" );
         if ( pAudio == nullptr || pAudio->isInitialized() == false )
         {
             EditorWidgets::drawEmptyHint( "The audio service is not running" );

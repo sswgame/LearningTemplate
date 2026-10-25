@@ -4,6 +4,7 @@
 
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Log/LogOnce.h"
 #include "Core/Memory/MemoryBlock.h"
 #include "Core/Task/TaskTypes.h"
 
@@ -548,11 +549,9 @@ namespace sw::editor
 
     void EditorPropertyGrid::drawPropertyWidgetBody( const MutableObjectAddress instance, const PropertyInfo& prop )
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
-            return;
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
 
-        IInspectorProperty* pProperty = pContext->getSubsystem<InspectorPropertyManager>().find( prop._typeName.c_str() );
+        IInspectorProperty* pProperty = editorContext.getSubsystem<InspectorPropertyManager>().find( prop._typeName.c_str() );
         if ( pProperty != nullptr )
         {
             if ( pProperty->draw( instance, prop, *this ) )
@@ -564,7 +563,7 @@ namespace sw::editor
         auto* pRegistry = editor::findSubsystem<TypeRegistry>();
         if ( pRegistry == nullptr ) // 필수 서비스: 없으면 버그
         {
-            SW_LOG_ERROR( "[PropertyGrid] TypeRegistry is missing - the enum property is not drawn" );
+            SW_LOG_ERROR_ONCE( "[PropertyGrid] TypeRegistry is missing - the enum property is not drawn" );
             return;
         }
 
@@ -598,7 +597,7 @@ namespace sw::editor
         auto* pRegistry = editor::findSubsystem<TypeRegistry>();
         if ( pRegistry == nullptr ) // 필수 서비스: 없으면 버그
         {
-            SW_LOG_ERROR( "[PropertyGrid] TypeRegistry is missing - the enum value is not written" );
+            SW_LOG_ERROR_ONCE( "[PropertyGrid] TypeRegistry is missing - the enum value is not written" );
             return;
         }
 
@@ -1046,7 +1045,7 @@ namespace sw::editor
         TypeRegistry* pTypeRegistry = editor::findSubsystem<TypeRegistry>();
         if ( pTypeRegistry == nullptr ) // 필수 서비스: 없으면 버그
         {
-            SW_LOG_ERROR( "[PropertyGrid] TypeRegistry is missing - the method is not invoked" );
+            SW_LOG_ERROR_ONCE( "[PropertyGrid] TypeRegistry is missing - the method is not invoked" );
             return;
         }
 

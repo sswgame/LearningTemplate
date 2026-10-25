@@ -114,7 +114,7 @@
   ③ **엔진 수명 범위(`ScopeOwned<T>`)**: 정적 함수가 부르는 캐시 · 표 — 메시 캐시 상태(공유 표 · 읽는 중인 로드 · 경고한 경로를 한 `State` 로), 물리 메시 셰이프의 읽기 함수, 공유 에셋 표(`SharedAssetCache<T>` 종류마다),
   내장 도형 · 9-슬라이스 · 스프라이트 텍스처 인스턴스 캐시, 셰이더 리플렉션 매니페스트(잠금 · 표 · 세대를 한 `ManifestState` 로), 게임 데이터 캐시(상호작용 · 원소 규칙)와 그 레지스트리, 일정 시스템 목록, "memory" 저장소 데이터.
   엔진이 내려가면 저장소째 사라지고 엔진을 다시 세우면 빈 채로 시작한다. 범위가 닫힌 뒤의 접근은 `getOrCreate` 가 단언하고, 읽는 쪽은 nullptr 을 그 자리에서 정한 뜻(없음 · 0)으로 받는다.
-  ④ **"한 번만 알림" + 횟수**: 서버 버스 · 푸시 릴레이의 거절은 `LogOnce`(종류 `BusMessageRejected` · `PushRelayRejected`)의 `tryClaim` 한 호출이 세고(`getAttemptCount`) 한 번만 알린다 — 잠금 · 집합 · 카운터를 곳곳에 두지 않는다.
+  ④ **"한 번만 알림" + 횟수**: 서버 버스 · 푸시 릴레이의 거절은 `LogOnce`(종류 `BusMessageRejected` · `PushRelayRejected`)의 `tryClaim` 한 호출이 세고(`getAttemptCount`) 한 번만 알린다 — 잠금 · 집합 · 카운터를 곳곳에 두지 않는다. 프레임마다 도는 길의 "필수 서비스 없음" 처럼 호출 지점마다 한 번이면 되는 줄은 `SW_LOG_ERROR_ONCE` · `SW_LOG_WARNING_ONCE`(종류 `CallSite`, 키는 파일 × 줄)를 쓴다.
   ⑤ **링크 때 등록 표**: `TickBatchRegistry` 는 등록 줄(`Entry`)을 등록 객체(`TickBatchRegistration<T>`)의 멤버로 두고 침입 연결 목록으로 잇는다(할당 없음, 머리는 상수 초기화). 엔진 범위가 서기 전에 올라가고 엔진을 다시 세워도 남아야 해서 `ScopeOwned` 로는 옮길 수 없다.
   ⑥ **호출 사슬 상태는 스레드가 소유**: 프리팹 펼치기의 순환 검사 스택 셋은 한 `PrefabThreadChain`(`thread_local` 한 변수)으로 모았다.
   ⑦ **Core 의 아래 층 · 핫 경로 칸은 상수 초기화되는 이름공간 변수 하나**(접근자 없음): 단언 대화상자 상태(`Macros.cpp`), 모듈 위치 바꾸기(`ModuleImageUtil`), 네트워크 흐름 링(`NetFlowLog`), 시나리오 사본 횟수(`AutomationScratch`), 고른 게임 이름(`GameSelection`).

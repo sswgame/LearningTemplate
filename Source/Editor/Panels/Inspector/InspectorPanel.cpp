@@ -112,9 +112,7 @@ namespace sw::editor
 
     void InspectorPanel::drawSelectionSection()
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
-            return;
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
 
         EditorWidgets::drawSectionHeader( "Selection" );
         // 잠그면 선택이 바뀌어도 현재 오브젝트를 계속 보여 준다. 유니티 Inspector 의 자물쇠에 해당하며, 언리얼에서는 Details 창을 여러 개 여는 것과 같은 용도다.
@@ -122,7 +120,7 @@ namespace sw::editor
         const bool bLocked = _lockedObjectID != 0;
         if ( EditorWidgets::drawToggleIconButton( "##inspectorLock", bLocked, editoricon::kLock, editoricon::kUnlock, SW_LOCKEY( "EditorInspector", "LockedToObject" ),
                                                   SW_LOCKEY( "EditorInspector", "FollowingSelection" ) ) )
-            _lockedObjectID = bLocked ? 0 : pContext->getSubsystem<EditorWorkspace>().getSelectedObjectID();
+            _lockedObjectID = bLocked ? 0 : editorContext.getSubsystem<EditorWorkspace>().getSelectedObjectID();
         EditorSelfTestMarks::note( "inspector.lock" );
 
         // 미리보기 창의 선택을 겨누면 그 창 씬의 오브젝트를 보인다. 잠금은 메인 선택의 오브젝트에만 쓴다.
@@ -134,7 +132,7 @@ namespace sw::editor
             return;
         }
 
-        EditorWorkspace&    ws = pContext->getSubsystem<EditorWorkspace>();
+        EditorWorkspace&    ws = editorContext.getSubsystem<EditorWorkspace>();
         vector<GameObject*> listSelected;
         editor::getMainSceneSelection().getSelectedObjects( listSelected );
         if ( listSelected.size() > 1 && _lockedObjectID == 0 )
@@ -692,9 +690,7 @@ namespace sw::editor
 
     void InspectorPanel::drawComponentSection( Component* pComp, IRHIDevice* pRHIDevice )
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
-            return;
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
 
         ImGui::TextDisabled( "ID: %u", static_cast<uint32>( pComp->getComponentID() ) );
 
@@ -708,7 +704,7 @@ namespace sw::editor
         // 확장은 이 타입과 그 기반 타입들에 등록된 것 전부다(기반에서 파생 순서). 각자 자기 영역을 그리고 직접 그린 리플렉션 프로퍼티만 감춘다. 나머지 리플렉션
         // 프로퍼티는 상속한 것까지 아래에서 그린다(언리얼 Details 의 `IDetailCustomization` 과 `HideProperty`).
         vector<IInspectorComponent*> listInspector;
-        pContext->getSubsystem<InspectorComponentManager>().collectForType( *pTypeInfo, listInspector );
+        editorContext.getSubsystem<InspectorComponentManager>().collectForType( *pTypeInfo, listInspector );
         vector<hashed_string> listDrawnName;
         for ( IInspectorComponent* pInspector : listInspector )
         {
