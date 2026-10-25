@@ -38,6 +38,13 @@ namespace sw
         /** @brief 다음 시리얼을 발급합니다. 백엔드의 큐 제출 락 안에서, 제출을 낸 직후에 부릅니다. */
         [[nodiscard]] uint64 issue();
 
+        /**
+         * @brief 이미 GPU 에서 끝난 제출의 시리얼을 발급하고 곧바로 워터마크를 올립니다. 제출 안에서 완료를 기다리는 임시 구현(Vulkan B0)이 씁니다.
+         * @details 발급과 워터마크를 한 락 안에서 하므로 발급된 시리얼은 모두 끝난 상태다 — `Complete` 가 앞선 시리얼도 끝났다는 뜻이어야 하는 규칙이 선다.
+         *          `issue` 와 한 백엔드에서 섞어 쓰지 않는다(섞으면 끝나지 않은 앞선 시리얼을 워터마크가 덮는다).
+         */
+        [[nodiscard]] uint64 issueCompleted();
+
         /** @brief 발급한 시리얼과 세대로 `Accepted` 결과를 만듭니다. */
         [[nodiscard]] RHITransferSubmit makeAccepted( uint64 serial ) const { return RHITransferSubmit::accepted( serial, _generation ); }
 
@@ -75,6 +82,7 @@ namespace sw
         atomic<uint64> _watermark;
         uint32         _generation;
         atomic<uint8>  _bLost;
+        mutex          _issueCompletedMutex; ///< `issueCompleted` 의 발급과 워터마크 올리기를 한 덩어리로 묶는다.
     };
 } // namespace sw
 

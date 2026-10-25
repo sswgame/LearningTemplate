@@ -115,6 +115,8 @@ namespace sw
         , _dummyUBOMemory{ nullptr }
         , _pipelineStates{}
         , _pipelineCache{ nullptr }
+        , _transferSerials{}
+        , _readbackTable{}
         , _frameStreamContext{ nullptr }
         , _resourceImpl{ nullptr }
         , _lastSubmittedEventMarker{}

@@ -576,19 +576,26 @@ namespace sw
         return handle;
     }
 
-    bool VulkanRHIResourceFactory::uploadTexture2D( RHITextureHandle texture, const RHITextureUploadDesc& desc )
+    // 임시 구현(RhiAsyncUploads B0): 제출한 일회성 커맨드의 펜스를 이 안에서 기다리고 곧바로 `Complete` 티켓을 준다. 비동기화(업로드 링, 제출 뒤에도 사는 전송 작업 객체, 연속 구간 워터마크)는 U6 에서 한다.
+    RHITransferSubmit VulkanRHIResourceFactory::submitTextureUpload( RHITextureHandle texture, const RHITextureUploadDesc& desc )
     {
         VulkanRHIDevice::VulkanTextureRecord* pRecord                   = _pDevice->resolveTexture( texture );
         const bool                            bTextureUploadUnavailable = pRecord == nullptr || pRecord->_image == VK_NULL_HANDLE || _pDevice->_device == VK_NULL_HANDLE ||
                                                _pDevice->_graphicsQueue == VK_NULL_HANDLE || _pDevice->_oneShotCommandPool == VK_NULL_HANDLE;
         if ( bTextureUploadUnavailable )
-            return false;
+        {
+            SW_LOG_ERROR( "submitTextureUpload: texture %# or the device is not usable", texture );
+            return RHITransferSubmit::rejected();
+        }
         if ( pRecord->_bDepthStencil != SW_FALSE )
-            return false;
+        {
+            SW_LOG_ERROR( "submitTextureUpload: texture %# is a depth texture", texture );
+            return RHITransferSubmit::rejected();
+        }
         if ( desc._arraySlice >= pRecord->_arrayLayers )
         {
-            SW_LOG_ERROR( "uploadTexture2D: slice %# is out of range (%# slices)", desc._arraySlice, pRecord->_arrayLayers );
-            return false;
+            SW_LOG_ERROR( "submitTextureUpload: slice %# is out of range (%# slices)", desc._arraySlice, pRecord->_arrayLayers );
+            return RHITransferSubmit::rejected();
         }
 
         RHITextureMipSpan arrMip[constant::kMaxTextureMipCount]{};
@@ -596,21 +603,20 @@ namespace sw
                                                                pRecord->_mipLevels, arrMip, constant::kMaxTextureMipCount );
         if ( mipCount == 0 )
         {
-            SW_LOG_ERROR( "uploadTexture2D: unsupported format or not enough data (%# bytes for %#×%#, %# mips)",
+            SW_LOG_ERROR( "submitTextureUpload: unsupported format or not enough data (%# bytes for %#×%#, %# mips)",
                           desc._sizeBytes, pRecord->_width, pRecord->_height, pRecord->_mipLevels );
-            return false;
+            return RHITransferSubmit::rejected();
         }
         const uint32 usedBytes = arrMip[mipCount - 1]._offsetBytes + arrMip[mipCount - 1]._sizeBytes;
 
-        // 호스트 가시 스테이징 버퍼에 통째로 올린 뒤 일회성 커맨드버퍼로 밉마다 복사한다. 로드 시점 경로라
-        // 큐가 비기를 기다리는 값싼 동기 방식을 택했다(executeCommandListImmediate 와 같은 이유).
+        // 호스트 가시 스테이징 버퍼에 통째로 올린 뒤 일회성 커맨드버퍼로 밉마다 복사한다(소스는 여기서 복사된다 — 계약 1).
         const RHIBufferHandle                staging  = _pDevice->createVulkanBuffer( usedBytes, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, desc._pData );
         VulkanRHIDevice::VulkanBufferRecord* pStaging = _pDevice->resolveAllocatedBuffer( staging );
         if ( pStaging == nullptr || pStaging->_buffer == VK_NULL_HANDLE )
         {
             destroyBuffer( staging );
-            SW_LOG_ERROR( "uploadTexture2D: failed to create the staging buffer (%# bytes)", usedBytes );
-            return false;
+            SW_LOG_ERROR( "submitTextureUpload: failed to create the staging buffer (%# bytes)", usedBytes );
+            return RHITransferSubmit::rejected();
         }
 
         VulkanOneShotCommands oneShot{ _pDevice->_device, _pDevice->_oneShotCommandPool, _pDevice->_oneShotMutex, _pDevice->_graphicsQueue,
@@ -618,8 +624,8 @@ namespace sw
         if ( oneShot.isValid() == false )
         {
             destroyBuffer( staging );
-            SW_LOG_ERROR( "uploadTexture2D: failed to allocate the one-shot command buffer" );
-            return false;
+            SW_LOG_ERROR( "submitTextureUpload: failed to allocate the one-shot command buffer" );
+            return RHITransferSubmit::rejected();
         }
         const VkCommandBuffer cmd = oneShot.get();
 
@@ -660,34 +666,39 @@ namespace sw
 
         if ( bSubmitted == false )
         {
-            _pDevice->reportQueueResult( static_cast<int32>( oneShot.getLastResult() ), "uploadTexture2D: one-shot submit" );
-            return false;
+            _pDevice->reportQueueResult( static_cast<int32>( oneShot.getLastResult() ), "submitTextureUpload: one-shot submit" );
+            return RHITransferSubmit::rejected();
         }
-        pRecord->_layout = static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
-        return true;
+        pRecord->_layout    = static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+        const uint64 serial = _pDevice->_transferSerials.issueCompleted();
+        pRecord->_lastTransferSerial.store( serial );
+        return _pDevice->_transferSerials.makeAccepted( serial );
     }
 
-    bool VulkanRHIResourceFactory::uploadTexture2DRegion( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc )
+    RHITransferSubmit VulkanRHIResourceFactory::submitTextureRegionUpload( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc )
     {
         VulkanRHIDevice::VulkanTextureRecord* pRecord                         = _pDevice->resolveTexture( texture );
         const bool                            bTextureRegionUploadUnavailable = pRecord == nullptr || pRecord->_image == VK_NULL_HANDLE || _pDevice->_device == VK_NULL_HANDLE ||
                                                      _pDevice->_graphicsQueue == VK_NULL_HANDLE || _pDevice->_oneShotCommandPool == VK_NULL_HANDLE || pRecord->_bDepthStencil != SW_FALSE;
         if ( bTextureRegionUploadUnavailable )
-            return false;
+        {
+            SW_LOG_ERROR( "submitTextureRegionUpload: texture %# is missing, a depth texture, or the device is not usable", texture );
+            return RHITransferSubmit::rejected();
+        }
         uint32 rowBytes{ 0 };
         if ( validateTextureRegionUpload( static_cast<RHIFormat>( pRecord->_rhiFormat ), pRecord->_width, pRecord->_height, pRecord->_mipLevels,
                                           pRecord->_arrayLayers, desc, rowBytes ) == false )
-            return false;
+            return RHITransferSubmit::rejected();
 
-        // 전체 업로드와 같은 길: 빈틈없는 행 그대로 스테이징 → 일회성 커맨드 → 제출하고 기다린다(가끔 · 작게 바뀌는 텍스처용).
+        // 전체 업로드와 같은 길: 빈틈없는 행 그대로 스테이징 → 일회성 커맨드 → 제출하고 펜스를 기다린다(가끔 · 작게 바뀌는 텍스처용, 임시 구현 — U6 이 비동기화한다).
         const uint32                         usedBytes = rowBytes * desc._height;
         const RHIBufferHandle                staging   = _pDevice->createVulkanBuffer( usedBytes, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, desc._pData );
         VulkanRHIDevice::VulkanBufferRecord* pStaging  = _pDevice->resolveAllocatedBuffer( staging );
         if ( pStaging == nullptr || pStaging->_buffer == VK_NULL_HANDLE )
         {
             destroyBuffer( staging );
-            SW_LOG_ERROR( "uploadTexture2DRegion: failed to create the staging buffer (%# bytes)", usedBytes );
-            return false;
+            SW_LOG_ERROR( "submitTextureRegionUpload: failed to create the staging buffer (%# bytes)", usedBytes );
+            return RHITransferSubmit::rejected();
         }
 
         VulkanOneShotCommands oneShot{ _pDevice->_device, _pDevice->_oneShotCommandPool, _pDevice->_oneShotMutex, _pDevice->_graphicsQueue,
@@ -695,8 +706,8 @@ namespace sw
         if ( oneShot.isValid() == false )
         {
             destroyBuffer( staging );
-            SW_LOG_ERROR( "uploadTexture2DRegion: failed to allocate the one-shot command buffer" );
-            return false;
+            SW_LOG_ERROR( "submitTextureRegionUpload: failed to allocate the one-shot command buffer" );
+            return RHITransferSubmit::rejected();
         }
         const VkCommandBuffer cmd = oneShot.get();
 
@@ -732,11 +743,42 @@ namespace sw
         destroyBuffer( staging );
         if ( bSubmitted == false )
         {
-            _pDevice->reportQueueResult( static_cast<int32>( oneShot.getLastResult() ), "uploadTexture2DRegion: one-shot submit" );
+            _pDevice->reportQueueResult( static_cast<int32>( oneShot.getLastResult() ), "submitTextureRegionUpload: one-shot submit" );
+            return RHITransferSubmit::rejected();
+        }
+        pRecord->_layout    = static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+        const uint64 serial = _pDevice->_transferSerials.issueCompleted();
+        pRecord->_lastTransferSerial.store( serial );
+        return _pDevice->_transferSerials.makeAccepted( serial );
+    }
+
+    RHITransferStatus VulkanRHIResourceFactory::pollTransfer( RHITransferTicket ticket )
+    {
+        // 임시 구현(B0)의 제출은 끝난 뒤에 시리얼을 발급하므로 발급된 티켓은 모두 워터마크 아래다. 판정은 공용 부품이 한다.
+        return _pDevice->_transferSerials.classify( ticket );
+    }
+
+    bool VulkanRHIResourceFactory::takeTextureReadback( RHITransferTicket ticket, vector<uint8>& outBytes )
+    {
+        if ( pollTransfer( ticket ) != RHITransferStatus::Complete )
+        {
+            SW_LOG_ERROR( "takeTextureReadback: ticket %# has not completed", ticket._serial );
             return false;
         }
-        pRecord->_layout = static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+        if ( _pDevice->_readbackTable.take( ticket._serial, outBytes ) == false )
+        {
+            SW_LOG_ERROR( "takeTextureReadback: ticket %# is not a pending texture readback (an upload ticket, or already taken or discarded)", ticket._serial );
+            return false;
+        }
         return true;
+    }
+
+    void VulkanRHIResourceFactory::discardTextureReadback( RHITransferTicket ticket )
+    {
+        if ( ticket._deviceGeneration != _pDevice->_transferSerials.getGeneration() )
+            return;
+        vector<uint8> discardedBytes;
+        (void)_pDevice->_readbackTable.take( ticket._serial, discardedBytes ); // 없으면 업로드 티켓이거나 이미 가져감 · 버림이다 — 계약상 아무 일도 하지 않는다
     }
 
     RHIFormat VulkanRHIResourceFactory::getTextureFormat( RHITextureHandle texture ) const
@@ -781,31 +823,32 @@ namespace sw
         return true;
     }
 
-    bool VulkanRHIResourceFactory::readbackTexture2D( RHITextureHandle texture, uint32 mip, uint32 arraySlice, vector<uint8>& outBytes, RHITextureMipSpan& outLayout )
+    // 임시 구현(RhiAsyncUploads B0): 제출 안에서 펜스를 기다려 결과까지 읽어 두고 곧바로 `Complete` 티켓을 준다. 비동기화는 U6 에서 한다.
+    RHITransferSubmit VulkanRHIResourceFactory::submitTextureReadback( RHITextureHandle texture, uint32 mip, uint32 arraySlice, RHITextureMipSpan& outLayout )
     {
-        // **여기의 실패는 모두 소리를 낸다**(형제인 uploadTexture2D 와 같다). 리드백은 오프스크린 렌더 문제가
-        // 드러나는 경로라 "false 인데 이유가 없다" 가 곧 긴 추적이 된다.
+        // **여기의 실패는 모두 소리를 낸다**(형제인 submitTextureUpload 와 같다). 리드백은 오프스크린 렌더 문제가
+        // 드러나는 경로라 "거절인데 이유가 없다" 가 곧 긴 추적이 된다.
         VulkanRHIDevice::VulkanTextureRecord* pRecord                     = _pDevice->resolveTexture( texture );
         const bool                            bTextureReadbackUnavailable = pRecord == nullptr || pRecord->_image == VK_NULL_HANDLE || _pDevice->_device == VK_NULL_HANDLE ||
                                                  _pDevice->_graphicsQueue == VK_NULL_HANDLE || _pDevice->_oneShotCommandPool == VK_NULL_HANDLE;
         if ( bTextureReadbackUnavailable )
         {
-            SW_LOG_ERROR( "readbackTexture2D: texture %# or the device is not usable", texture );
-            return false;
+            SW_LOG_ERROR( "submitTextureReadback: texture %# or the device is not usable", texture );
+            return RHITransferSubmit::rejected();
         }
         if ( mip >= pRecord->_mipLevels || arraySlice >= pRecord->_arrayLayers )
         {
-            SW_LOG_ERROR( "readbackTexture2D: mip %# / slice %# is out of range (%# mips, %# slices)", mip, arraySlice, pRecord->_mipLevels, pRecord->_arrayLayers );
-            return false;
+            SW_LOG_ERROR( "submitTextureReadback: mip %# / slice %# is out of range (%# mips, %# slices)", mip, arraySlice, pRecord->_mipLevels, pRecord->_arrayLayers );
+            return RHITransferSubmit::rejected();
         }
         // 깊이는 깊이 aspect 만 복사한다(텍셀마다 4 바이트). D24 는 아래 24비트가 깊이라 0..1 float32 로 바꾸고, D32 계열은 이미 float32 다(kRHIDepthReadbackFormat).
         const bool      bDepth       = pRecord->_bDepthStencil != SW_FALSE;
         const RHIFormat layoutFormat = bDepth ? kRHIDepthReadbackFormat : static_cast<RHIFormat>( pRecord->_rhiFormat );
         if ( computeRHITextureMipLayout( layoutFormat, pRecord->_width, pRecord->_height, mip, outLayout ) == false )
         {
-            SW_LOG_ERROR( "readbackTexture2D: unsupported format %# for %#x%# mip %#",
+            SW_LOG_ERROR( "submitTextureReadback: unsupported format %# for %#x%# mip %#",
                           pRecord->_rhiFormat, pRecord->_width, pRecord->_height, mip );
-            return false;
+            return RHITransferSubmit::rejected();
         }
 
         const RHIBufferHandle                staging  = _pDevice->createVulkanBuffer( outLayout._sizeBytes, VK_BUFFER_USAGE_TRANSFER_DST_BIT, nullptr );
@@ -813,8 +856,8 @@ namespace sw
         if ( pStaging == nullptr || pStaging->_buffer == VK_NULL_HANDLE )
         {
             destroyBuffer( staging );
-            SW_LOG_ERROR( "readbackTexture2D: failed to create the staging buffer (%# bytes)", outLayout._sizeBytes );
-            return false;
+            SW_LOG_ERROR( "submitTextureReadback: failed to create the staging buffer (%# bytes)", outLayout._sizeBytes );
+            return RHITransferSubmit::rejected();
         }
 
         VulkanOneShotCommands oneShot{ _pDevice->_device, _pDevice->_oneShotCommandPool, _pDevice->_oneShotMutex, _pDevice->_graphicsQueue,
@@ -822,8 +865,8 @@ namespace sw
         if ( oneShot.isValid() == false )
         {
             destroyBuffer( staging );
-            SW_LOG_ERROR( "readbackTexture2D: failed to allocate the one-shot command buffer" );
-            return false;
+            SW_LOG_ERROR( "submitTextureReadback: failed to allocate the one-shot command buffer" );
+            return RHITransferSubmit::rejected();
         }
         const VkCommandBuffer cmd = oneShot.get();
 
@@ -859,31 +902,37 @@ namespace sw
 
         const bool bSubmitted = oneShot.endSubmitAndWait();
 
-        bool bOk = false;
+        vector<uint8> readBytes;
+        bool          bOk = false;
         if ( bSubmitted )
         {
             void* pMapped{ nullptr };
             if ( vkMapMemory( _pDevice->_device, pStaging->_memory, 0, outLayout._sizeBytes, 0, &pMapped ) == VK_SUCCESS && pMapped != nullptr )
             {
-                outBytes.assign( outLayout._sizeBytes, 0 );
-                Memory::copy( outBytes.data(), pMapped, outLayout._sizeBytes );
+                readBytes.assign( outLayout._sizeBytes, 0 );
+                Memory::copy( readBytes.data(), pMapped, outLayout._sizeBytes );
                 vkUnmapMemory( _pDevice->_device, pStaging->_memory );
                 if ( bDepth && static_cast<VkFormat>( pRecord->_format ) == VK_FORMAT_D24_UNORM_S8_UINT )
-                    convertRHIDepth24ToFloat( outBytes.data(), outLayout._width * outLayout._height );
+                    convertRHIDepth24ToFloat( readBytes.data(), outLayout._width * outLayout._height );
                 bOk = true;
             }
             else
             {
-                SW_LOG_ERROR( "readbackTexture2D: failed to map the staging memory (%# bytes)", outLayout._sizeBytes );
+                SW_LOG_ERROR( "submitTextureReadback: failed to map the staging memory (%# bytes)", outLayout._sizeBytes );
             }
             pRecord->_layout = static_cast<uint32>( layoutAfter );
         }
         else
         {
-            _pDevice->reportQueueResult( static_cast<int32>( oneShot.getLastResult() ), "readbackTexture2D: one-shot submit" );
+            _pDevice->reportQueueResult( static_cast<int32>( oneShot.getLastResult() ), "submitTextureReadback: one-shot submit" );
         }
         destroyBuffer( staging );
-        return bOk;
+        if ( bOk == false )
+            return RHITransferSubmit::rejected();
+
+        const uint64 serial = _pDevice->_transferSerials.issueCompleted();
+        _pDevice->_readbackTable.add( serial, std::move( readBytes ) );
+        return _pDevice->_transferSerials.makeAccepted( serial );
     }
 
     void VulkanRHIResourceFactory::destroyTexture( RHITextureHandle texture )
