@@ -186,24 +186,22 @@ namespace sw::editor
         // 컴파일이 끝나는 순간을 잡는다(Compiling -> Success / Failed)
         if ( lastObservedState == BuildState::Compiling && bCompiling == false )
         {
-            const string   targetName  = compiler.getTargetName();
-            const string   displayName = targetName.empty() ? string{ SW_LOCKEY( "EdCommon", "LiveCodingAllModules" ) } : targetName;
-            const float32  duration    = compiler.getLastDurationSec();
-            EditorContext* pContext    = EditorContext::get();
-            if ( pContext == nullptr )
-                return;
+            const string   targetName    = compiler.getTargetName();
+            const string   displayName   = targetName.empty() ? string{ SW_LOCKEY( "EdCommon", "LiveCodingAllModules" ) } : targetName;
+            const float32  duration      = compiler.getLastDurationSec();
+            EditorContext& editorContext = editor::getSubsystem<EditorContext>();
 
             if ( state == BuildState::Success )
             {
                 fixed_string<constant::kMaxBuffer32> secondsBuf;
                 formatstring( secondsBuf.data(), secondsBuf.capacity(), "%#", Fmt( static_cast<float64>( duration ), Format().precision( 2 ) ) );
                 const string content = SW_LOCKEYFORMAT( "EdCommon", "LiveCodingSucceeded", TextArgumentList().addText( "target", displayName ).addText( "seconds", secondsBuf.c_str() ) );
-                pContext->getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "LiveCodingSucceededTitle" ), content, NotificationType::Success, 4.0f );
+                editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "LiveCodingSucceededTitle" ), content, NotificationType::Success, 4.0f );
             }
             else if ( state == BuildState::Failed )
             {
                 const string content = SW_LOCKEYFORMAT( "EdCommon", "LiveCodingFailed", TextArgumentList().addText( "target", displayName ).addInteger( "code", compiler.getLastExitCode() ) );
-                pContext->getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "LiveCodingFailedTitle" ), content, NotificationType::Error, 6.0f );
+                editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "LiveCodingFailedTitle" ), content, NotificationType::Error, 6.0f );
             }
         }
 
@@ -267,7 +265,7 @@ namespace sw::editor
             ImGui::SameLine();
         }
 
-        EditorContext* pContext = EditorContext::get();
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
 
         // 패널 · 확장이 더한 상태 항목(맵 검사 수 …) — 메뉴 막대는 무엇인지 모르고 순서대로 그린다.
         const uint32 statusItemCount = EditorExtensionRegistry<EditorStatusBarItemRegistration>::getCount();
@@ -277,7 +275,7 @@ namespace sw::editor
             ImGui::SameLine();
         }
 
-        IRHIDevice* pRHIDevice = ( pContext != nullptr ) ? pContext->getSubsystem<EditorRenderViews>().getRHIDevice() : nullptr;
+        IRHIDevice* pRHIDevice = editorContext.getSubsystem<EditorRenderViews>().getRHIDevice();
         const utf8* pBackend   = ( pRHIDevice != nullptr ) ? pRHIDevice->getBackendName() : "n/a";
         ImGui::TextDisabled( "RHI %s | %.0f FPS", pBackend, static_cast<float64>( ImGui::GetIO().Framerate ) );
         if ( ImGui::IsItemHovered() )
@@ -328,12 +326,10 @@ namespace sw::editor
 
     void EditorMenuBar::processPendingSceneLoad()
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
-            return;
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
 
         string scenePath;
-        if ( pContext->getSubsystem<EditorWorkspace>().consumeLoadScene( scenePath ) == false )
+        if ( editorContext.getSubsystem<EditorWorkspace>().consumeLoadScene( scenePath ) == false )
             return;
 
         (void)EditorSceneFileCommands::tryOpenScene( scenePath ); // 실패는 tryOpenScene 이 알린다

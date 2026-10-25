@@ -81,12 +81,10 @@ namespace sw::editor
             // ------------------------------------------------------------------------------
             static void onOpenSceneDialogResult( const vector<string>& listPath )
             {
-                EditorContext* pContext = EditorContext::get();
-                if ( pContext == nullptr )
-                    return;
+                EditorContext& editorContext = editor::getSubsystem<EditorContext>();
 
                 if ( listPath.empty() == false )
-                    pContext->getSubsystem<EditorWorkspace>().requestLoadScene( listPath[0] );
+                    editorContext.getSubsystem<EditorWorkspace>().requestLoadScene( listPath[0] );
             }
 
             /// @brief 테이블은 `void()` 를 요구하는데 `tryCreateNewScene` 은 `bool` 을 반환합니다. 이 차이를 맞추려고 둡니다.
@@ -163,12 +161,12 @@ namespace sw::editor
 
             static void commandPlay()
             {
-                EditorContext* pContext               = EditorContext::get();
-                const bool     bWarnUnsavedBeforePlay = pContext != nullptr && pContext->getSubsystem<EditorWorkspace>().isSceneDirty() && EditorPlaySession::isStopped();
+                EditorContext& editorContext          = editor::getSubsystem<EditorContext>();
+                const bool     bWarnUnsavedBeforePlay = editorContext.getSubsystem<EditorWorkspace>().isSceneDirty() && EditorPlaySession::isStopped();
                 if ( bWarnUnsavedBeforePlay )
                 {
-                    pContext->getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyPlayTitle" ), SW_LOCKEY( "EdCommon", "NotifyPlayUnsaved" ),
-                                                                              NotificationType::Warning );
+                    editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyPlayTitle" ), SW_LOCKEY( "EdCommon", "NotifyPlayUnsaved" ),
+                                                                                  NotificationType::Warning );
                     return;
                 }
                 EditorPlaySession::play();
@@ -184,11 +182,11 @@ namespace sw::editor
             /** @brief 인스펙터에서 고른 컴포넌트입니다. 컴포넌트 고르기는 메인 워크스페이스의 것이라 메인 씬의 선택에서 찾는다. */
             static Component* selectedComponent()
             {
-                EditorContext* pContext = EditorContext::get();
-                GameObject*    pObj     = pContext != nullptr ? editor::getMainSceneSelection().getPrimaryObject() : nullptr;
-                if ( pContext == nullptr || pObj == nullptr )
+                EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+                GameObject*    pObj          = editor::getMainSceneSelection().getPrimaryObject();
+                if ( pObj == nullptr )
                     return nullptr;
-                const uint64 componentID = pContext->getSubsystem<EditorWorkspace>().getSelectedComponentID();
+                const uint64 componentID = editorContext.getSubsystem<EditorWorkspace>().getSelectedComponentID();
                 if ( componentID == 0 )
                     return nullptr;
                 return pObj->findComponentByID( componentID );
@@ -196,43 +194,42 @@ namespace sw::editor
 
             static void warn( const utf8* pTitle, const utf8* pDetail )
             {
-                EditorContext* pContext = EditorContext::get();
-                if ( pContext != nullptr )
-                    pContext->getSubsystem<EditorNotificationManager>().push( pTitle, pDetail, NotificationType::Warning );
+                EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+                editorContext.getSubsystem<EditorNotificationManager>().push( pTitle, pDetail, NotificationType::Warning );
             }
 
             static void commandPasteComponentValues()
             {
-                EditorContext* pContext = EditorContext::get();
-                Component*     pComp    = selectedComponent();
-                if ( pContext == nullptr || pComp == nullptr )
+                EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+                Component*     pComp         = selectedComponent();
+                if ( pComp == nullptr )
                 {
                     warn( SW_LOCKEY( "EdCommon", "NotifyPasteTitle" ), SW_LOCKEY( "EdCommon", "NotifySelectComponent" ) );
                     return;
                 }
-                if ( pContext->getSubsystem<EditorWorkspace>().hasCopiedComponent() == false )
+                if ( editorContext.getSubsystem<EditorWorkspace>().hasCopiedComponent() == false )
                 {
                     warn( SW_LOCKEY( "EdCommon", "NotifyPasteTitle" ), SW_LOCKEY( "EdCommon", "NotifyClipboardEmpty" ) );
                     return;
                 }
-                (void)EditorTransformCommands::pasteCopiedComponentValues( pContext->getSubsystem<EditorWorkspace>(), pComp ); // 실패는 붙여넣기 함수가 로그로 알린다
+                (void)EditorTransformCommands::pasteCopiedComponentValues( editorContext.getSubsystem<EditorWorkspace>(), pComp ); // 실패는 붙여넣기 함수가 로그로 알린다
             }
 
             static void commandPasteComponentAsNew()
             {
-                EditorContext* pContext = EditorContext::get();
-                GameObject*    pObj     = primaryObject();
-                if ( pContext == nullptr || pObj == nullptr )
+                EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+                GameObject*    pObj          = primaryObject();
+                if ( pObj == nullptr )
                 {
                     warn( SW_LOCKEY( "EdCommon", "NotifyPasteTitle" ), SW_LOCKEY( "EdCommon", "NotifySelectObject" ) );
                     return;
                 }
-                if ( pContext->getSubsystem<EditorWorkspace>().hasCopiedComponent() == false )
+                if ( editorContext.getSubsystem<EditorWorkspace>().hasCopiedComponent() == false )
                 {
                     warn( SW_LOCKEY( "EdCommon", "NotifyPasteTitle" ), SW_LOCKEY( "EdCommon", "NotifyClipboardEmpty" ) );
                     return;
                 }
-                (void)EditorTransformCommands::pasteCopiedComponentAsNew( pContext->getSubsystem<EditorWorkspace>(), pObj ); // 실패는 붙여넣기 함수가 로그로 알린다
+                (void)EditorTransformCommands::pasteCopiedComponentAsNew( editorContext.getSubsystem<EditorWorkspace>(), pObj ); // 실패는 붙여넣기 함수가 로그로 알린다
             }
 
             static void onLoadPresetDialogResult( const vector<string>& listPath )
@@ -316,11 +313,11 @@ namespace sw::editor
             /** @brief 선택한 오브젝트를 스폰한 프리팹의 경로입니다. 프리팹 인스턴스가 아니면 비어 있습니다. 놓인 프리팹 테이블은 메인 씬의 것이라 메인 선택을 본다. */
             static string findSelectedPrefabPath( GameObject*& pOutObj )
             {
-                EditorContext* pContext = EditorContext::get();
-                pOutObj                 = ( pContext != nullptr ) ? editor::getMainSceneSelection().getPrimaryObject() : nullptr;
+                EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+                pOutObj                      = editor::getMainSceneSelection().getPrimaryObject();
                 if ( pOutObj == nullptr )
                     return {};
-                return string{ pContext->getSubsystem<EditorWorkspace>().findPrefabPath( pOutObj ) };
+                return string{ editorContext.getSubsystem<EditorWorkspace>().findPrefabPath( pOutObj ) };
             }
 
             static void commandApplyPrefabOverrides()
@@ -652,15 +649,8 @@ namespace sw::editor
 
     uint32 EditorCommandGUIInternal::rebuild( const void* pExcludeBegin, const void* pExcludeEnd )
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
-        {
-            // 조용히 반환하면 메뉴가 통째로 비고 단축키가 동작하지 않는다. 실제 기동 검증이 이 줄을 잡는다.
-            SW_LOG_ERROR( "No EditorContext to register commands in - menus and shortcuts will be empty" );
-            return 0;
-        }
-
-        EditorCommandRegistry& registry = pContext->getSubsystem<EditorCommandRegistry>();
+        // 컨텍스트가 없으면 메뉴가 통째로 비고 단축키가 동작하지 않는다 — 조용히 반환하지 않고 필수 서비스 조회가 모든 구성에서 멈춘다.
+        EditorCommandRegistry& registry = editor::getSubsystem<EditorContext>().getSubsystem<EditorCommandRegistry>();
         registry.clear();
         EditorCommandGUIInternal::GUIState& guiState = getEditorState<EditorCommandGUIInternal::GUIState>();
         guiState._syncedGeneration                   = EditorExtensionRegistry<EditorCommandRegistration>::getList().getGeneration();
@@ -706,13 +696,13 @@ namespace sw::editor
 
     void EditorCommandGUI::processHotkeys()
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr || getEditorState<EditorCommandGUIInternal::GUIState>()._bHotkeysSuspended )
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+        if ( getEditorState<EditorCommandGUIInternal::GUIState>()._bHotkeysSuspended )
             return;
         if ( ImGui::GetIO().WantTextInput )
             return;
 
-        const EditorCommandRegistry& registry = pContext->getSubsystem<EditorCommandRegistry>();
+        const EditorCommandRegistry& registry = editorContext.getSubsystem<EditorCommandRegistry>();
         for ( const EditorCommandDesc& desc : registry.getCommands() )
         {
             const bool bPressed = ( EditorCommandGUIInternal::isShortcutPressed( desc._shortcut ) ||
@@ -745,11 +735,9 @@ namespace sw::editor
 
     void EditorCommandGUI::drawMenuItems( string_view menuPath )
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
-            return;
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
 
-        const EditorCommandRegistry& registry = pContext->getSubsystem<EditorCommandRegistry>();
+        const EditorCommandRegistry& registry = editorContext.getSubsystem<EditorCommandRegistry>();
         const EditorMenu*            pMenu    = registry.findMenu( menuPath );
         if ( pMenu != nullptr )
             EditorCommandGUIInternal::drawMenu( registry, *pMenu );

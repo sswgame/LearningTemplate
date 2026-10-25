@@ -123,9 +123,8 @@ namespace sw::editor
 
     void EditorDocumentPanel::requestOpenDocument( string_view assetPath )
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext != nullptr )
-            pContext->getSubsystem<EditorWorkspace>().setFocusedAssetPath( string{ assetPath }.c_str() );
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+        editorContext.getSubsystem<EditorWorkspace>().setFocusedAssetPath( string{ assetPath }.c_str() );
     }
 
     void EditorDocumentPanel::drawUnsavedDocumentPopup()
@@ -159,8 +158,8 @@ namespace sw::editor
 
         _bConfirmSwitch = SW_FALSE;
         _pendingFocusPath.clear();
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext != nullptr && _loadedAssetPath.empty() == false )
-            pContext->getSubsystem<EditorWorkspace>().setFocusedAssetPath( _loadedAssetPath.c_str() );
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+        if ( _loadedAssetPath.empty() == false )
+            editorContext.getSubsystem<EditorWorkspace>().setFocusedAssetPath( _loadedAssetPath.c_str() );
     }
 } // namespace sw::editor

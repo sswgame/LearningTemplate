@@ -138,9 +138,9 @@ namespace sw::editor
     bool EditorDockLayout::saveNamedLayout( string_view name, string_view folder )
     {
         // get() 을 쓰는 이유: 메뉴 · 셀프테스트 · 명령(EditorUIDevCommands)이 부르므로 컨텍스트 없이 불릴 수 있어 false 로 알린다.
-        EditorContext* pContext = EditorContext::get();
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
         string         safeName;
-        const bool     bCannotSaveLayout = pContext == nullptr || ImGui::GetCurrentContext() == nullptr || EditorLayoutStore::sanitizeName( name, safeName ) == false;
+        const bool     bCannotSaveLayout = ImGui::GetCurrentContext() == nullptr || EditorLayoutStore::sanitizeName( name, safeName ) == false;
         if ( bCannotSaveLayout )
             return false;
         const string targetFolder = folder.empty() ? EditorLayoutStore::getDefaultFolder() : string( folder );
@@ -148,7 +148,7 @@ namespace sw::editor
             return false;
 
         EditorPanelVisibility visibility;
-        for ( const EditorPanelEntry& entry : pContext->getSubsystem<EditorPanelManager>().getPanels() )
+        for ( const EditorPanelEntry& entry : editorContext.getSubsystem<EditorPanelManager>().getPanels() )
         {
             if ( entry._pInstance != nullptr )
                 visibility._mapOpen[entry._id] = entry._pInstance->isOpen();
@@ -245,15 +245,13 @@ namespace sw::editor
     void EditorDockLayout::loadPanelVisibility()
     {
         // get() 을 쓰는 이유: 에디터 초기화 중에 불려 컨텍스트가 아직 활성이 아닐 수 있다.
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
-            return;
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
 
         // 진단 스위치가 켜져 있으면 저장된 가시성을 읽지 않는다. 도구 패널은 기본이 닫힘이고
         // windows.json 도 닫힘으로 기억하므로, 등록 시점에 열어 두어도 여기서 곧바로 닫힌다.
         if ( isOpeningAllPanels() )
         {
-            for ( const EditorPanelEntry& entry : pContext->getSubsystem<EditorPanelManager>().getPanels() )
+            for ( const EditorPanelEntry& entry : editorContext.getSubsystem<EditorPanelManager>().getPanels() )
             {
                 if ( entry._pInstance != nullptr )
                     entry._pInstance->setOpen( true );
@@ -273,7 +271,7 @@ namespace sw::editor
         if ( isPanelOverrideActive() )
         {
             bool bFound = false;
-            for ( const EditorPanelEntry& entry : pContext->getSubsystem<EditorPanelManager>().getPanels() )
+            for ( const EditorPanelEntry& entry : editorContext.getSubsystem<EditorPanelManager>().getPanels() )
             {
                 if ( entry._pInstance == nullptr )
                     continue;
@@ -301,7 +299,7 @@ namespace sw::editor
             return;
         }
 
-        for ( const EditorPanelEntry& entry : pContext->getSubsystem<EditorPanelManager>().getPanels() )
+        for ( const EditorPanelEntry& entry : editorContext.getSubsystem<EditorPanelManager>().getPanels() )
         {
             if ( entry._pInstance == nullptr )
                 continue;
@@ -317,16 +315,14 @@ namespace sw::editor
     void EditorDockLayout::save()
     {
         // get() 을 쓰는 이유: 에디터 종료(ImGuiEditor 종료 경로)에서 불려 컨텍스트가 이미 비활성일 수 있다.
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
-            return;
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
 
         // 스위치로 정한 가시성(전부 열기, 하나만 열기)을 사용자의 레이아웃으로 굳히지 않는다. 스위치를 한 번 켰다고
         // 다음 실행부터 모든 패널이 열리거나 그 패널 하나만 열려서는 안 된다.
         if ( _panelVisibilityPath.empty() == false && isPanelOverrideActive() == false )
         {
             EditorPanelVisibility visibility;
-            for ( const EditorPanelEntry& entry : pContext->getSubsystem<EditorPanelManager>().getPanels() )
+            for ( const EditorPanelEntry& entry : editorContext.getSubsystem<EditorPanelManager>().getPanels() )
             {
                 if ( entry._pInstance == nullptr )
                     continue;
@@ -466,9 +462,8 @@ namespace sw::editor
         // 씬 뷰와 게임 뷰는 같은 영역의 탭이다(유니티 기본). 앞 탭은 Scene(`CenterFront`)이다. 붙인 순서로는 정해지지 않는다. ImGui 는 새 탭 가운데
         // 마지막 것을 고르기 때문이다. 그래서 패널을 그린 뒤 `updateDefaultTabSelection` 이 포커스로 고른다.
         const EditorDockLayoutInternal::DefaultDockNodes nodes{ dockLeft, dockRight, dockMain, dockBottom };
-        const EditorContext*                             pContext = EditorContext::get();
-        SW_ASSERT( pContext != nullptr ); // 도크스페이스는 에디터 프레임 안에서만 열린다
-        for ( const EditorPanelEntry& entry : pContext->getSubsystem<EditorPanelManager>().getPanels() )
+        const EditorContext&                             editorContext = editor::getSubsystem<EditorContext>();
+        for ( const EditorPanelEntry& entry : editorContext.getSubsystem<EditorPanelManager>().getPanels() )
         {
             const ImGuiID slotDockID = entry._pInstance != nullptr ? EditorDockLayoutInternal::findSlotDockID( entry._pInstance->getDefaultDockSlot(), nodes ) : 0;
             if ( slotDockID != 0 )

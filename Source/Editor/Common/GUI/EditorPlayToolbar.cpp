@@ -119,13 +119,13 @@ namespace sw::editor
             /** @brief Play/Sim/Pause/Step/Stop 단추를 그립니다. */
             static void drawTransportControls()
             {
-                const PlaySessionState currentState = EditorPlaySession::getState();
-                EditorContext*         pContext     = EditorContext::get();
-                const bool             bSceneDirty  = ( pContext != nullptr && pContext->getSubsystem<EditorWorkspace>().isSceneDirty() );
-                const bool             bSimulating  = EditorPlaySession::isSimulating();
+                const PlaySessionState currentState  = EditorPlaySession::getState();
+                EditorContext&         editorContext = editor::getSubsystem<EditorContext>();
+                const bool             bSceneDirty   = ( editorContext.getSubsystem<EditorWorkspace>().isSceneDirty() );
+                const bool             bSimulating   = EditorPlaySession::isSimulating();
 
                 // Net Mode 고르기는 에디터 안 재생이 멈췄을 때만 — 재생 중에 바꾸면 Stop 단추가 사라진다.
-                const bool bNetPlayControlsHandled = pContext != nullptr && EditorPlaySession::isStopped() && drawNetPlayControls( *pContext );
+                const bool bNetPlayControlsHandled = EditorPlaySession::isStopped() && drawNetPlayControls( editorContext );
                 if ( bNetPlayControlsHandled )
                     return;
                 if ( EditorPlaySession::isPlayQueued() )
@@ -195,8 +195,8 @@ namespace sw::editor
                 {
                     EditorPlaySession::stop();
                     GameObjectManager* pObjectManager = editor::getActiveObjectManager();
-                    if ( pObjectManager != nullptr && pContext != nullptr )
-                        pContext->getSubsystem<EditorWorkspace>().remapSelectionByObjectName( pObjectManager );
+                    if ( pObjectManager != nullptr )
+                        editorContext.getSubsystem<EditorWorkspace>().remapSelectionByObjectName( pObjectManager );
                 }
                 EditorSelfTestMarks::note( "toolbar.stop" );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "PlayStop" ) );
@@ -286,9 +286,8 @@ namespace sw::editor
     void EditorPlayToolbar::draw()
     {
         // 멀티 프로세스 재생의 로그 · 종료 알림은 툴바가 프레임마다 모은다(Multiplayer 창을 닫아도).
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext != nullptr )
-            pContext->getSubsystem<EditorNetPlaySession>().update();
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+        editorContext.getSubsystem<EditorNetPlaySession>().update();
 
         ImGuiViewport*             pViewport = ImGui::GetMainViewport();
         const ImGuiStyle&          style     = ImGui::GetStyle();
