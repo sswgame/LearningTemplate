@@ -163,18 +163,12 @@ namespace sw
 
     RHIRenderPassHandle D3D12RHIResourceFactory::createRenderPass( const RHIRenderPassDesc& desc )
     {
-        D3D12RHIDevice::D3D12RenderPassRecord record{};
-        record._desc   = desc;
-        record._bAlive = SW_TRUE;
-        _pDevice->_listRenderPass.push_back( record );
-        return _pDevice->_listRenderPass.size();
+        return _pDevice->_renderPassLedger.add( desc );
     }
 
     void D3D12RHIResourceFactory::destroyRenderPass( RHIRenderPassHandle pass )
     {
-        if ( pass == 0 || pass > _pDevice->_listRenderPass.size() )
-            return;
-        _pDevice->_listRenderPass[pass - 1]._bAlive = SW_FALSE;
+        _pDevice->_renderPassLedger.retire( pass );
     }
 } // namespace sw
 #endif

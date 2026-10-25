@@ -157,7 +157,7 @@ namespace sw
                         {
                             return pValue != nullptr && pValue->_fileID == fileID && isSameScenePath( pValue->_scenePath, targetScene.getSourcePath() );
                         };
-                        if ( std::ranges::none_of( listReference, pointsAtTarget ) )
+                        if ( std::none_of( listReference.begin(), listReference.end(), pointsAtTarget ) )
                             return;
                         outHolder = scene->getName() + "/" + pObject->getName().c_str() + "." + pType->_name.c_str() + "." + prop._name.c_str();
                     }, true );

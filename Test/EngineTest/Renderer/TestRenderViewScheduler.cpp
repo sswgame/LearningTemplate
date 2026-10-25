@@ -3,6 +3,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -382,7 +383,9 @@ SW_TEST_CASE( RenderViewCollectorTest, AutoRenderScaleFollowsScreenViewsOnly )
 {
     RenderViewCollectorTestScene stage;
     SW_ASSERT_TRUE( stage.populate( 0.0f ) );
-    const float32 userScale = static_cast<float32>( gv_renderScale );
+    const GlobalVariableInfo* pUserScale = engine::getSubsystem<GlobalVariableManager>().findVariable( "gv_renderScale" ); // 엔진은 DLL 이라 변수는 이름으로 읽는다
+    SW_ASSERT_TRUE( pUserScale != nullptr );
+    const float32 userScale = pUserScale->getValueAsFloat();
     SW_EXPECT_NEAR_EQUAL( userScale * 0.6f, RenderViewCollector::makeMainSettings( stage._pMainCamera, 0.6f )._resolutionScale, 1e-5f );
     SW_EXPECT_NEAR_EQUAL( userScale, RenderViewCollector::makeMainSettings( stage._pMainCamera, 1.0f )._resolutionScale, 1e-5f );
 

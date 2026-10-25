@@ -42,6 +42,7 @@ namespace sw
     class FitTables;
     class GameObjectManager;
     class MeshSectionComponent;
+    class SceneComponent;
     class SkeletalMeshComponent;
 
     /**
@@ -264,6 +265,8 @@ namespace sw
          * @param listDetachEvent 이번 해석에서 떨어져 나간 부품입니다. 없어진 것 가운데 여기 있는 소켓 부품은 지우지 않고 물리로 뗍니다.
          */
         void syncParts( GameObjectManager& manager, SkeletalMeshComponent& body, int32 bodyPart, const vector<AppearanceDetachEvent>& listDetachEvent );
+        /** @brief 스킨드 부품 오브젝트를 만들어 몸에 잇고 돌려줍니다(`syncParts` 의 일부). @p pBodyScene 이 없으면 붙이지 않습니다. */
+        GameObject* spawnSkinnedPart( GameObjectManager& manager, SkeletalMeshComponent& body, SceneComponent* pBodyScene, const ResolvedPart& part );
         /**
          * @brief 해석에서 빠진 부품 @p spawned 가 이번에 떨어져 나간 소켓 부품이면 물리로 떼고 true 입니다. 떼어 낸 오브젝트는 더 이상 이 컴포넌트의 것이 아닙니다.
          * @return 떨어져 나간 부품이 아니거나 뗄 수 없으면(물리 바디 없음 — 알린다) false 이고, 부르는 쪽이 지웁니다.
@@ -307,6 +310,13 @@ namespace sw
         bool isMeshAssemblyLoading() const;
         /** @brief 읽은 것으로 베이크한 메시를 지어 몸과 스킨드 부품 유닛의 스킨 원본으로 겁니다(바꿀 것이 없는 부품은 원본). 틱 밖, 게임 스레드입니다. */
         void applyMeshAssembly();
+        /**
+         * @brief 합치지 않은 부품의 유닛마다 베이크한 사본(없으면 원본)을 스킨 원본으로 걸고 부품의 베이크 여부를 적습니다. `applyMeshAssembly` 의 일부입니다.
+         * @param bMerged 합친 메시를 이미 몸 유닛에 걸었으면 true — 합친 부품은 건너뜁니다.
+         * @return 합치지 않은 부품 가운데 베이크한 사본이 있으면 true 입니다.
+         */
+        [[nodiscard]] bool applyUnitMeshes( GameObjectManager& manager, SkeletalMeshComponent* pBodyUnit, bool bMerged, const vector<shared_ptr<Mesh>>& listSource,
+                                            const vector<shared_ptr<Mesh>>& listBaked );
         /** @brief 베이크한 메시의 재료(원본 메시 · 피팅 표 · 피팅 데이터)가 다시 읽혔으면 true 입니다. */
         bool isMeshAssemblyStale() const;
         /** @brief 부품 번호의 스킨드 유닛입니다(몸이면 이 오브젝트의 유닛). 없으면 nullptr 입니다. */

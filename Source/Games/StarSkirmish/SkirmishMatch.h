@@ -142,6 +142,7 @@ namespace sw
         void huntRemaining( int32 player );
 
         RTSWorld              _world;
+        DrainLease            _eventLease; ///< 월드의 이벤트를 꺼내는 표(이 매치 하나만 꺼낸다)
         RTSCommanderAI        _arrAI[kPlayerCount];
         Wallet                _arrWallet[kPlayerCount]; ///< 플레이어마다 광물 · 가스 — 키트 하나만 쓰는 게임이라 매치가 들고 월드에 빌려 준다
         vector<RTSEvent>      _listEvent;               ///< 화면이 꺼내 갈 사본

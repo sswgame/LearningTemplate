@@ -2,7 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Chat/Shared/ChatScreen.h"
 
-#include "Core/Container/formatString.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/Log/Logger.h"
 
 #include "Engine/UI/Base/PanelWidget.h"
@@ -70,11 +70,11 @@ namespace sw
             }
             case ChatResult::Muted:
             {
-                return formatstring( "You are muted (%# s left)", retryAfterMs / 1000 );
+                return "You are muted (" + to_string( retryAfterMs / 1000 ) + " s left)";
             }
             case ChatResult::RateLimited:
             {
-                return formatstring( "Too fast, wait %# ms", retryAfterMs );
+                return "Too fast, wait " + to_string( retryAfterMs ) + " ms";
             }
             case ChatResult::Repeated:
             {
@@ -182,8 +182,8 @@ namespace sw
             if ( listLine[index]._channelID != _channelID )
                 continue;
             unique_ptr<TextWidget> row = make_unique<TextWidget>();
-            row->setName( hashed_string( formatstring( "%#%#", Internal::kRowPrefix, rowIndex ) ) );
-            row->setText( formatstring( "[%#] %#", listLine[index]._senderName, listLine[index]._text ) );
+            row->setName( hashed_string( string{ Internal::kRowPrefix } + to_string( static_cast<uint64>( rowIndex ) ) ) );
+            row->setText( "[" + listLine[index]._senderName + "] " + listLine[index]._text );
             (void)pLines->addChild( std::move( row ) );
             ++rowIndex;
         }

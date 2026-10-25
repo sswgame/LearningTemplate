@@ -113,6 +113,7 @@ SW_TEST_CASE( ResourceTest, GetResourcePathEmptyWhenMissingUnderDomains )
  */
 SW_TEST_CASE( ResourceTest, PackFolderIDResolvesToTheFolder )
 {
+    SW_TEST_REQUIRES_FEATURE( SourceResources ); // 활성이 아닌 게임(shooter3d)의 원본 폴더는 구운 팩(Shipping)에 없다
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     const sw::string folder = sw::ResourcePaths::findLooseFile( "game/shooter3d" ).getDiskPath();
     SW_EXPECT_TRUE_MSG( sw::FileUtil::isDirectory( folder ), folder.c_str() );

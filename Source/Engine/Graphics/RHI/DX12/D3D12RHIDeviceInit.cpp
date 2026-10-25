@@ -234,10 +234,12 @@ namespace sw
         if ( FAILED( _device->CreateFence( 0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS( _fence.GetAddressOf() ) ) ) )
             return false;
         _fenceValue = 1;
-        // 전송 전용 펜스: 복사 리스트가 내보내진 묶음마다 올린다. 프레임 펜스와 따로라 전송 완료를 프레임 없이도 알 수 있다(RhiAsyncUploads).
+        // 전송 전용 펜스: 전송 작업(복사 리스트 하나)을 낼 때마다 한 값을 올린다. 프레임 펜스와 따로라 전송 완료를 프레임 없이도 알 수 있다(RhiAsyncUploads).
         if ( FAILED( _device->CreateFence( 0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS( _transferFence.GetAddressOf() ) ) ) )
             return false;
         _transferFenceValue = 0;
+        if ( initializeTransfers( desc ) == false )
+            return false;
 
         if ( createGlobalResources() == false )
             return false;
@@ -257,7 +259,7 @@ namespace sw
     {
         _mapOffscreenTexture.clear();
         _pipelineStates.clear();
-        _listRenderPass.clear();
+        _renderPassLedger.clear();
         _listRegisteredBindless.clear();
         _listFreeBindless.clear();
         _listRegisteredUAV.clear();
@@ -295,16 +297,10 @@ namespace sw
         }
         _frameStreamState._bRecording = SW_FALSE;
         _bBindlessRootSignature       = SW_FALSE;
+        // 전송 작업 · 스테이징 링 · 전송을 기다리던 해제는 큐와 펜스를 놓기 전에 정리한다(GPU 는 종료 2단계에서 쉬었다).
+        shutdownTransfers();
         _fence.Reset();
         _transferFence.Reset();
-        {
-            std::scoped_lock<mutex> lock{ _transferMutex };
-            _listSignaledTransfer.clear();
-            _mapTextureTransferSerial.clear();
-        }
-        _openTransferSerial       = 0;
-        _unsignaledTransferSerial = 0;
-        _exportedTransferSerial   = 0;
         _commandQueue.Reset();
         _memoryAdapter.Reset();
         Microsoft::WRL::ComPtr<ID3D12InfoQueue1> infoQueue1;

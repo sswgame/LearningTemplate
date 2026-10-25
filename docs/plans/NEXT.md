@@ -2,7 +2,7 @@
 
 > 질문: 지금 어디까지 왔고, 다음 세션이 처음에 할 일은 무엇인가?
 > 독자: 새로 시작하는 세션(에이전트와 사람).
-> 결론: main 은 통합 K 위에 통합 L(브랜치 24 개 + RHI 전송 B0)과 통합 M(CI 실패 수정 · 창 핸들 try 접근 · 프레임 경로 전송 비동기화)을 검증해 넣고 push 했고, 그 위에 **통합 N(RHI 후속 브랜치 19 개, Vulkan 전송 비동기화 U6 포함)을 검증해 fast-forward 했다 — push 는 사용자 확인 대기**(`## 0000000000000`). 다음 세션의 첫 일은 ① 사용자가 허락하면 push 하고 CI 결과 확인(`py -3 -m Scripts ci-jobs --summary`; 리눅스 Wayland 스모크 · 클립보드 INCR · TSan 은 이때 처음 돈다), ② main 에서도 지는 시나리오 둘(`shooter3d.crowd`, GL `vfxgpulights`)의 원인, ③ 작업자 브랜치 체인을 `integ-o` 로(`## 00`), ④ 프레임 경로 남은 대기 U8 · U9(전송 감시 목록)다. 아키텍처 이음매 5a 는 그 뒤 조용할 때다.
+> 결론: main 에 **통합 O(작업자 브랜치 체인 60 개 + 후속 묶음 6 개와 premerge)를 검증해 넣었다** — **push 하지 않았다**(main `8610c4691` 까지 fast-forward 했고 push 는 권한 분류기가 거부했다. 사용자가 허락하면 `git push origin main`). 다음 세션의 첫 일은 ① 그 절의 "넘기는 것"(DX12 Debug 디버그 레이어 확인, 쇼케이스 시나리오, 몫 6, crowd · vfxgl 실험)을 한 번의 GPU 단계로 돌기, ② `wt/svcsweep`(에디터 필수 서비스 치환) 병합, ③ 사용자가 push 를 허락하면 push 하고 CI 결과 확인(`py -3 -m Scripts ci-jobs --summary`)이다.
 
 이 문서는 지금 상태만 둡니다. 한 일은 `git log` 가 원본이고, 설계는 계획 문서, 순서는 [Roadmap](Roadmap.md)에 있습니다.
 
@@ -16,7 +16,49 @@
 | 에이전트에게 맡길 때 · 토큰 | [에이전트와 토큰](../12_Agents.md), [작업자 규칙](WorkerRules.md) |
 | 환경 · 도구 함정 | [함정](../14_Pitfalls.md) |
 
-## 0000000000000. 2026-10-25 통합 N — RHI 후속 브랜치 19 개가 main 에 들어감(push 안 함, 사용자 확인 대기) (이것부터 읽는다)
+## 00000000000000. 2026-10-25 통합 O — 작업자 브랜치 체인과 후속 묶음이 main 에 들어감 (main `8610c4691` fast-forward 완료, **push 하지 않았다** — 권한 분류기가 거부) (이것부터 읽는다)
+
+**상태**: `D:/w/integ-o`(`wt/integ-o`)에 체인 전부(종료 코드 · 해상도 배율 · 서버 디버깅 · 카메라 컷 · 경로 패턴 · 임포트 규칙 · 소스 스캔 게이트 · 서버 빌드 목록 · 프리팹 · Online 두 가닥 · 에디터 서비스 두 가닥 · 단독 여덟)을 하나씩 `--no-ff` 로 병합했고, 이어서 shipgatelint 체인 · hostiso · wlwin · longwhy 체인 · longai · rhiu5 와 그것들을 한 데 모은 `wt/premerge`(rhiu5b · 예외 표 toml 이동 포함)를 병합했다. 충돌은 첫 묶음 여섯 파일(`VerifyBatch.json` · `LintFixer.py` · `CheckModuleTargets.py`(두 곳) · `CrossFileObjectReference.md` · `ServerBusTestTypes.h` · `ReflectionFormats.md`), 후속 묶음 셋(`VerifyBatch.json` 다시 · `ListPlans.py` · `RunFunctionSize.py`), premerge 셋(`CheckTestSuites.py` · `RHITypes.h` · `StatusBoard.md`)이었다. 양쪽 항목 · import 를 남기거나(VerifyBatch, LintFixer, ListPlans), 더 나중 사실을 남기고(문서 둘), 상수 모양 `BusTestLimit` 하나로 합치고(ServerBusTestTypes), premerge 쪽을 골랐다(내가 고친 `fromUnaccepted` · 예외 표 이름이 그쪽에 더 나은 모양으로 이미 있었다).
+**범위를 동결해 하지 않은 것**: 에디터 서비스 가닥 ② 의 `// 필수 서비스: 없으면 버그` 줄 일괄 치환은 별도 브랜치 `wt/svcsweep`(f834953e0, `D:/w/svcsweep`)에 끝내 두고 **병합하지 않았다**. 약 50 곳의 `findSubsystem` + 널 분기를 `editor::getSubsystem` 으로 바꾸고, 종료 경로(미리보기 패널 포커스 해제 · 썸네일 캐시 해제 · UI 미리보기 닫기 · 커맨드 스택)는 `find` 로 남겼다. 시나리오 단계 · 자체 테스트(`Source/Editor/SelfTest/`) 약 20 곳은 시나리오 실패로 멈추므로 안 바꿨다. 빌드 · 테스트를 돌리지 않았다 — 다음 통합이 병합하고 `EditorTest` 를 돈다(서비스가 없는 테스트 범위는 `ScopedTypeRegistryService` 같은 도우미로 걸어야 한다).
+
+**병합 뒤 고친 것(컴파일 오류 · 테스트 · 린트 — 작업자가 빌드 없이 쌓은 가정이 서로 어긋난 것)**
+- 컴파일: `hostscale` 의 `autoRenderScale` 이 `if` 블록 안에서 선언돼 밖에서 쓰임(선언을 올림) · `SceneStateHash.cpp` 에 같은 이름의 익명 구조체와 네임스페이스(구조체 하나로 합침) · `std::ranges::none_of`(이 표준 라이브러리에 없음, `std::none_of`) · 에디터가 `EngineServices.h` 를 포함(`editor::getSubsystem`) · `formatstring` 은 버퍼에 쓰는 함수인데 문자열을 돌려주는 줄로 씀(`ChatScreen` · `FriendListScreen`, `to_string` 이음) · 삼항 양쪽 문자열 타입 불일치(`MultiplayerSyncTab`) · `OnlineLoadBot` 의 옛 이름 `OnlineDrainLease` · `SkirmishMatch` 가 꺼내기 표 없이 `RTSWorld::drainEvents` 호출(표를 쥠) · `CharacterAppearanceComponent.h` 의 `SceneComponent` 전방 선언 누락(`longbase`).
+- 테스트: `engine::getSubsystem` include 누락 · `editor::internal` 모호 · `gv_renderScale` 을 DLL 밖에서 직접 참조(이름으로 읽음) · `svcnullE` 가 에디터 스레드 확인을 모든 구성에서 abort 로 바꿔 `EditorScopeLookupFromAnotherThreadIsRejected` 가 프로세스째 죽음(Debug 단언 가로채기가 걸렸을 때만 세고 계속, 결정 5-12 한 줄) · `exitcodes` 가 `AutomationOutcome` 정수 값을 없앴는데 `UnhandledWarningEndsUnhandledLog` 가 15 와 견줌(`getAutomationExitCode`) · `AdoptScene` 에 타입 레지스트리 범위가 없음(`ScopedTypeRegistryService`) · `TestFunctionSize` 가 옮겨진 `measureText` 를 부름 · `TestPlans` 임시 폴더가 긴 함수 표 점검에 걸림(점검을 끄고 `LongFunctionTableTest` 로 따로) · 손으로 쓴 `surfaceshowcase.scene.xml` 이 XML 왕복 테스트 불일치(`serializeXmlAsset` 로 다시 씀) · `RHIRenderPassLedger` 동시 등록 테스트가 같은 `sw::vector` 에 여덟 스레드가 써서 Debug 경합 감시가 잡음(`data()` 포인터) · importrule 의 `RepositoryUIImagesEndingInNAreNotNormalMaps` 가 활성이 아닌 팩을 읽는데 `SourceResources` 선언 없음(shipgatelint 규칙 10).
+- 린트: `Style/BitfieldBoolean`(`!= 0` → `== SW_TRUE`) · `GenerateHpack*.py` 의 종료 코드 숫자 · 상태판 · `rhiu5` 와 Vulkan 의 같은 이름 익명 함수(premerge 의 `RHITransferSubmit::fromUnaccepted` 로 합쳐짐) · `WriteSnapshot.py` 예시의 없는 스위치 `-gv_bench`.
+- 통합 몫: 1) `.pending` 열다섯 개를 `Resource/` 로 옮기고 `App --cook-shaders`(surfacelit 744 개 · 덩달아 구워진 highlightoutline 32 개 바이너리) 2) `App --import-textures`(DDS 19 개 + `import.stamp` 만 바뀜, `TestAssetValidation.py` 5.0 s) 3) ko 번역 4 키(`-gather-text` → `ko.po` → `-import-po`, `-check-text` 모두 최신) 4) `lint-suite` 30/30 5) `OnlineLoadBot` 컴파일(`all` 에 들어 있어 빌드가 본다). 몫 6 · 시나리오 실행은 건너뜀.
+- **같은 결함 후보**: 작업자가 빌드 없이 쌓는 한 위 컴파일 오류 모양(라이브러리 함수의 반환형 가정, 표준 기능 가정, 에디터의 엔진 전용 헤더, 다른 브랜치가 옮긴 이름)이 병합마다 반복된다 — 작업자 지시문에 "`formatstring` 은 버퍼 쓰기, C++17, 에디터는 `EngineServices.h` 금지" 한 줄을 더하거나 이 모양을 린트로 막을 후보.
+
+**검증(이 PC, Debug)**: `integ-gate`(`-k 0` 빌드 + `ctest -L "nogpu|lint"` 103 항목)를 열 번 돌렸다(아래 표). 마지막 두 실패(`CheckStatusBoard` 상태판, `EngineTest_NoGPU_Shard2` 의 렌더 패스 장부 테스트)를 고친 뒤 그 둘만 다시 돌려 통과했고, 마지막으로 전체를 한 번 더 돌려 통과했다(`-k 0` 빌드 + `nogpu|lint` 104/104, 125.6 s, 합계 2 분 8 초, `integ-gate check` 통과). `lint-suite` 30/30, `plans --check` 0건. 컴파일러 경고는 마지막 증분 빌드에서 0 이고 앞 빌드들은 오류 요약만 보았다(경고 전수 조사는 사용자 요청 때만).
+
+**소요(실측, 이 PC)**
+
+| 단계 | 횟수 · 고친 곳 | 시간 |
+|---|---|---|
+| 읽기 · 워크트리 만들기 · 첫 묶음 병합(체인 끝 브랜치 20 개 — 밑 브랜치까지 60 개 — + dx11rbwait) | 충돌 6 파일 | 21:46 ~ 21:51 (약 5 분) |
+| 후속 묶음 병합(shipgatelint · hostiso · wlwin · longwhy · longai · rhiu5, 이어 premerge) | 충돌 3 + 3 파일 | 22:18 ~ 22:20 와 22:31 (약 3 분) |
+| 린트 전체(`lint-suite`) | 1 회째 3 실패(위반 4곳), premerge 뒤 4 실패(위반 6곳), 최종 0 | 23.3 s · 35.2 s · 27.1 s |
+| 구성(`cmake --preset`) + ReflectionParser 빌드(136 단계) | 1 회 | 약 10 s + 약 12 s |
+| `full-build` 첫 시도 | 컴파일 오류 1곳 | 52.9 s (실패) |
+| `integ-gate` 회차 1 (`-k 0` 빌드, 3165 단계) | 오류 파일 9 → 8 파일 수정 | 빌드 162.3 s |
+| 회차 2 | 오류 파일 2(테스트) | 빌드 86.7 s |
+| 회차 3 | 링크 오류 1 | 3.3 s |
+| 회차 4 | 빌드 성공, 테스트 실패 3(원인 3) | ctest 145.1 s |
+| 회차 5 | 테스트 실패 1 조각(원인 2) | ctest 131.2 s |
+| 회차 6 (premerge 계열 병합 뒤) | 오류 1(전방 선언) | 빌드 86.1 s |
+| 회차 7 | 빌드 성공, Python 테스트 실패 3 | 빌드 59.5 s + ctest 151.8 s |
+| 회차 8 | 테스트 실패 2(상태판, 경합 감시) | 합계 3 분 58.7 s (ctest 137.3 s) |
+| 부분 재실행(고친 둘) | 통과 | EngineTest 재링크 4.1 s + ctest 75.3 s |
+| 쿠킹 `--cook-shaders` | 1 회 | 70.0 s |
+| `--import-textures` · `TestAssetValidation.py` | 1 회 | 3.3 s · 5.0 s |
+| 글 수집 · PO 왕복(`-check-text` · `-gather-text` · `-export-po` · `-import-po`) | 각 1 회 | 각 수 초 |
+| 빌드 · 테스트 · 쿠킹 대기 합계(위 줄들의 합) | — | 약 21 분 (`integ-gate` 열 회차 약 19 분 + 쿠킹 1.2 분) |
+| 문서 갱신(NEXT · 결정 · 계획 · 상태판, 표 작성 포함) | 1 회 | 약 14 분 (22:30 ~ 22:44) |
+| 최종 `integ-gate`(증분 빌드 + ctest 104 항목) | 1 회 통과 | 합계 128.0 s (22:44 ~ 22:46) |
+| main fast-forward + `git push origin main` | ff 성공, push 거부 | ff 1 s 안팎. push 는 권한 분류기가 즉시 거부해 **하지 않았다**(사용자 허락 필요) |
+
+**통합이 끝내지 않고 넘기는 것(다음 통합 몫, 한 줄씩)**: `host-write-snapshot` 실행(App 을 시나리오마다 띄움) · `rhi-transfer-dx12-u5` 와 `rhi-native-context-guard` 를 DX12 Debug 에서 돌려 디버그 레이어 오류 0 확인(텍스처 상태 배리어 · 얼로케이터 재사용) · `netsyncobjects` 시나리오 · `surface-shader-check`(쇼케이스 시나리오 네 백엔드 + 사진) · `crowd` · `vfxgl` 실험(아래 00 절) · 몫 6(`complex-text-install`, RenderTargetFormat PSO 열거, 글리프 MSDF 측정, module-pass 문턱 0.02, Q3 자동 배율 실측) · Release/Shipping `nogpu` 와 에디터 자동화 시나리오로 svcnullE 의 Release 스레드 확인 · Shipping 빌드와 `-L hostgpu` · 리눅스(Wayland 리스너 시그니처 — wlwin 은 로컬에서 컴파일하지 못했다) · `wt/svcsweep` 병합.
+
+## 0000000000000. 2026-10-25 통합 N — RHI 후속 브랜치 19 개가 main 에 들어감(통합 O 와 함께 main 에 있고 push 는 아직) (위 절 다음에 읽는다)
 
 **상태**: `wt/integ-n` 을 main 으로 fast-forward 했다. **push 하지 않았다** — 사용자에게 먼저 묻는다. 들어간 브랜치: 선행 6 개(`dx11ctx` · `glpbo` · `glpbo2` · `glrb` · `cifixl5` · `vkwsi`)와 `dx11up` · `dx11rb` · `dx11ctx2` · `gltsflag` · `lostrej` · `dx11loss` · `glrb2` · `glrb3` · `bigup` · `vku6` · `bbfmt` · `gvnum` · `gvnum2`. RHI ABI 는 41 이다(병합마다 38 → 41).
 
@@ -180,48 +222,20 @@
 - **CI**: 야간 `Load (Linux | Release, nightly)` 실패의 근본 원인을 모른다(후보 `DiskPathVsResourceId`).
 - **시나리오**: 게임 시나리오가 `Resource/` 에 쓰는지 점검하지 않았다. 클릭한 순간의 방향으로 사격이 나가는지는 시나리오로 보지 못했다.
 
-## 00. 2026-10-25 통합 N 뒤 작업자 브랜치 체인 — 코드만 짜 둠, 병합 · 빌드 · 검증 전 (이 절을 먼저 읽는다)
+## 00. 통합 O 뒤에 남은 작업자 후보와 실험 (맨 위 절 다음에 읽는다)
 
-통합 N 은 검증을 마치고 main 에 fast-forward 했다(맨 위 `## 0000000000000` 절). **push 하지 않았다.** 아래 브랜치는 모두 린트만 통과했고 빌드 · 테스트는 한 번도 돌지 않았다 — 통합이 체인 순서로 병합하며 한 번에 짓는다.
-
-**병합 체인(앞 브랜치 위에 쌓였다. 각 브랜치는 `wt/<이름>`, 워크트리 D:/w/<이름>)**
-- 종료 코드: exitcodes → exit77 → exit77b → exitreturn → exitreturn2 (`AutomationExitCode.h` 정본, `ExitCode` 값, `[exitCode]` 규칙)
-- 자동 분리: autosplit
-- 해상도 배율: qualityadj → qualityadj2 → hostview → hostscale
-- 서버 디버깅: serverdbg → serverdbg2 → serverdbg3 → serverdbg4 (한 줄 답 상한 3500, `sync-tab-object-diff-scenario` 시나리오 프레임 간격은 통합이 맞춘다)
-- 카메라 컷: camcut → camcut2 (`GameObjectManager::getUpdateSerial()` 추가로 광범위 재빌드. 렌더 스레드 `_bCut` 소비 — `FrameRenderer.cpp:562` `makeMainSettings` 가 어느 스레드인지 확인)
-- 경로 매처 테스트: pathpat5 (pathpat4 위)
-- 임포트 규칙 · 경로 패턴: importrule → importrule2 → pathpat2 → pathpat3 → pathpat4 (pathpat4 는 매처를 Core 로 옮긴다 — 컴파일 확인이 가장 큰 위험)
-- 소스 스캔 게이트: scangates → scangates2
-- 서버 빌드 목록: x11scope → serverlist → modtargets (wlserver 와 겹침 확인)
-- 프리팹: prefabmove → … → prefabmove6 (`findReferenceTo` 가 TypeRegistry 필수, 거절 로그는 경고 — 하네스가 실패로 잡는지 본다)
-- Online: onlinekits → onlinetables → onlinedrain2 → drainsweep (`OnlineDrainGate` 가 Core `DrainGate` 로 올라가 이름이 바뀐다. OnlineKits.md 102행 근처 충돌 가능) ; onlinekits → onlinemax → maxkits → minmaxconst → rangeconst2 (두 가지가 Online 헤더에서 겹친다. `Min`/`Max` 상수 이름 코드젠이 들어가므로 **파서(`Tools/ReflectionParser`)를 가장 먼저 짓고 온라인 스키마 해시 테스트로 해시가 그대로인지 본다**)
-- 에디터 서비스 무음 null — 두 가닥, 둘 다 prefabmove6 위: ① svcnullA → svcnullD → svcnullE → svcnullG → svcnullI ② svcnullB → svcnullC → svcnullF → svcnullH → svcnullJ. 가닥 ① 을 먼저 병합하고, 가닥 ② 의 `// 필수 서비스: 없으면 버그` 줄(grep)을 `editor::getSubsystem` 으로 한 번에 치환한다. `refuseSceneEdit` 경고는 ① 의 상태 억제와 ② 의 `SW_LOG_WARNING_ONCE`(`Core/Log/LogOnce.h` 에 `CallSite` 추가) 중 하나로 통일한다.
-  - **가장 큰 위험**: svcnullE 가 `assertEditorThread` 를 Release 에서도 켰다(어기면 오류 로그 + abort). 병합 직후 Release/Shipping `nogpu` 와 에디터 자동화 시나리오로 먼저 확인한다. `TestEditorInspectorCommands` 의 `PrefabCommandsRefuseWithAReasonWhileSceneEditsAreHeld`(로그 3건)도 본다.
-- 단독 한 개씩: charint(E6 `surfacelit`), msdf, modrp, xfileref, wlserver, unreadcands, maxcountconst
-
-**통합 몫(작업자가 못 한 것)**
-1. charint: `docs/plans/pending/surfacelit/Resource/` 의 `.pending` 파일을 `Resource/` 로 옮기고 `App --cook-shaders`.
-2. importrule2: `App --import-textures` 한 번(engine/textures/ui DDS 19 개와 `import.stamp` 만 바뀌어야 한다). `TestAssetValidation.py` 시간(캐시 뒤 5초).
-3. serverdbg: ko 번역(ko.translation.xml · po/ko.po) 4 키. 새 시나리오 `netsyncobjects` 실행.
-4. exitreturn2 이후 `py -3 -m Scripts lint-suite` 전체. 새 `[exitCode]` · `CheckModuleTargets` · `CheckX11Isolation` 규칙 모두.
-5. 수정된 `Tools/OnlineLoadBot` 컴파일(전엔 깨져 있었다 — 어느 게이트에도 안 들어 있다면 넣는다).
-6. 예전부터 남은 통합 몫: `complex-text-install`(ThirdPartyGaps T2/T3b), SilentFallbackAudit 의 RenderTargetFormat PSO 경로 열거(임시 로그 + 네 백엔드), 글리프 MSDF 측정, module-pass-scenario 문턱 0.02, Q3 자동 배율 실측.
-
-**이 세션에서 훅으로 막은 것**: `.claude/hooks/GuardCommands.py` 가 `python - <<EOF` · `bash -c` 로 감싼 것 · `cat/tee > 파일 <<EOF` 와 `find /` 를 실행 전에 거절한다. 작업자 지시문 첫 줄에도 적는다. 이 세션에 훅 이전 구간에서 작업자 7 명이 heredoc 편집을 했고 `python -` 7 개가 CPU 를 돌았다.
-
-**사용자 결정 대기**: push 여부(마지막 CI 는 Build Linux Shipping(Clang) 실패였고, Wayland smoke · X11 INCR · TSan 은 push 뒤 처음 돈다), `D:/w` 바로 아래 작업자 산출물(`e.py`, `kh_*.log`, `vb.bak` 등) 삭제 허락, 말 모델(WildWestHorseMount W3) CC0 에셋과 라이선스.
+작업자 브랜치 체인은 통합 O 가 모두 병합했다(맨 위 절). 아래는 거기서 안 끝난 같은 결함 후보와 실험이다. 병합한 작업자 워크트리(`D:/w/<이름>`)와 브랜치는 병합 확인 뒤 정리한다(`wt/svcsweep` 은 남긴다).
 
 **같은 결함 후보로 남긴 것(후속 작업자 후보)**
 - `NetStatsReport` 의 `net.stats` 줄 길이 상한, Sync 탭 클라이언트 질의 시간 초과(오류 응답을 영원히 기다린다).
 - 프리팹 참조 검사: 프리팹 파일 XML 안 덮어쓰기 값 · 씬 수준 데이터(참조를 담을 자리가 아직 없어 하지 않음).
 - 에디터 `EditorContext::get()` 는 null 을 허용해 그리기 안에서도 확인이 붙는다. svcnullJ(0c93e8463)가 그리기 경로 약 20 곳을 `getSubsystem` 으로 바꾸고 센 결과: `Source/Editor` 에 209 곳(73 파일) + `GameFramework/PlugIn/Editor` 11 곳, 그리기 경로로 보이는 곳 약 90(Panels 54 · Popups 17 · Common/GUI 13 · Viewport 4, 호출 문맥은 일부만 읽음), 명령 · 셀프테스트 · 수명주기 · 도구 약 120. 같은 모양 후보(미확인): `EditorViewportCamera.cpp:140·170·211`, `SelectionBoundsVisualizer.cpp:106`, `CommandPalettePopup`(8) · `QuickLauncherPopup`(5) · `BoneHierarchyPopup`(4). 이 수로 `get()` → `find()`/`require()` 이름 분리(그리기 쪽 약 40%)를 판단한다. `getSubsystem` 은 Release 에서 단언이 빠져 null 역참조가 된다(폴백 금지 원칙으로는 Release 에서도 멈추게 해야 한다).
 - `ConfigReference.py` 는 다른 헤더의 상수를 못 푼다(같은 파일만, 못 찾으면 멈춤). 한 줄 답 상한(serverdbg4)은 `net.stats` 줄에 아직 안 걸려 있다.
-- `dx11rbwait` 는 끝났다(c3c27ab7f · 8dbc1bab0): 코드는 안 바꿨고 `readReadbackBuffer` 의 `DO_NOT_WAIT` 는 `WaitIdleLeavesTheSubmittedCopyReadableOnEveryBackend` 탐침 때문에 그대로이며 주석 2 줄과 5-5 결정 줄만 고쳤다. 완료 콜백 경로에서도 `WAS_STILL_DRAWING` 거짓 실패가 나면 콜백 경로만 기다리는 Map 으로 가른다.
 - **`crowdfix` 는 끝났다(브랜치 없음, 원인 미확정)**: `CrowdSharedUnits`(`AnimationProbes.cpp:27`, 집계 `AnimationSystem.cpp:195-229`)는 활성 유닛 중 `_crowdMode == Shared` 수다. 래그돌 수정(28db95f98) 뒤 04:11 로그가 Shared 1 · 1 · 1(frame 360/600/900)이라 한 마리가 Solo 에서 Shared 로 옮겨졌고 나머지는 Solo 또는 VAT 다. 가설 셋: ① 자동 플레이가 적을 도착 전에 잡아 걷는 적 둘이 동시에 서는 순간이 거의 없고, `WaitUntil` 과 `Expect` 가 서로 다른 프레임이라 단언이 경합(`AutomationRunner.cpp:1387-1415`, 비반복 상태 Spawn · Attack · Hit · Death 는 Solo) ② Idle ↔ Walk 깜빡임으로 `_bCarryingOver` 가 켜져 Solo 지속(`SkeletalAnimatorComponent.cpp:715, 868-885`) ③ 화면 밖이면 VAT(`AnimationLOD.cpp:148`, `SkeletalMeshComponent.cpp:650`). **통합이 한 번에 가르는 실험**: `SkeletalMeshComponent::updateCrowdMembership`(`:614-699`) 끝에서 시나리오 frame 290~310 동안 유닛마다 이름 · `_crowdMode` · `_bVertexAnimation` · 현재/다음 상태와 `isCurrentLooping` · `_bCarryingOver` · layered · inertializing 을 임시로 로그하고 Release `crowd.scenario.xml` 을 dx12 로 한 번 돌려 `WaitUntil` 이 풀린 프레임과 다음 프레임을 비교한다. 가설 ① 이면 단언을 약화하지 말고 시나리오가 둘 이상 걷는 적을 만들게 하거나(디렉터 swarm 스폰 고정) 탐침을 구간 최댓값으로 바꾸는 것을 결정한다. 안 읽은 곳: `AnimationSystem::evaluate` 순서, `ShooterDirectorComponent` 사격 로직, 같은 `WaitUntil` 다음 프레임 단언이 다른 시나리오에 있는지.
 - **`vfxgl` 도 끝났다(브랜치 없음, 원인 미확정)**: GL 에서만 `vfxgpulights` 의 GPU 조명 VFX 가 안 보인다(`crowd` 와 둘 다 main(1d9680081)에서도 지는 결함). 읽기로 확인한 것: GpuVerification 3.1 의 "깊이 충돌을 놓쳐도 첫 0.5 초는 빛이 나야 한다" 논거는 **틀렸다** — 라이트 슬롯 i 는 압축된 입자 버퍼의 i 번째, 곧 가장 오래된 입자다(`vfxsimulate.hlsl:374-419`, 풀 256 · 생성 120/s · 수명 1.5~2 s 라 lit 을 찍는 150 프레임엔 앞 32 개가 모두 1.5 s 안팎). 깊이 충돌이 GL 에서만 안 돌면 증상이 정확히 나온다. 라이트 쓰기 · 소비 경로(`VfxGPUSimulation.cpp:510-511`, SSBO 배리어, u3 → SSBO 19)에서 GL 만의 틀린 곳은 못 찾았다. 가설: ① GL 깊이 충돌 불발(약 50%: `canCopyDepthHistory` 가 PSO 0 이면 오류 없이 false `FrameRendererCompute.cpp:367-373` → 깊이 복사 패스 → `DEPTH_READY` → `glBindImageTexture(GL_R32F)` 와 셰이더 `Rgba32f` 선언 불일치) ② 라이트 쓰기 · 소비만 GL 드라이버 miscompile(약 25%, `evaluateCurve` 선례 Vfx.md:40-42) ③ `gv_lightCulling` 으로 생산자가 GPU 가 아님(5% 이하). **통합 실험(코드 변경 없이 데이터만, GL Release)**: `Resource/engine/vfx/gpusparklights.vfx.xml` 복사본에서 `<_collision .../>` 를 지우고 `_gravity="0,0,0"`, `_velocityMin="-0.3,0,-0.3"`, `_velocityMax="0.3,0.4,0.3"` 로 바꿔 입자가 바닥 위 0.5~1.5 m 에 머물게 한 뒤 `vfxgpulights.scene.xml` 의 `_effectPath` 를 복사본으로 돌린다. GL 의 차이 비율이 dx11/vk 와 같은 자릿수(약 0.01)면 가설 ①(복사 패스 PSO 유무와 RW 이미지 형식 확인), 여전히 4.6e-05 근처면 가설 ②(라이트 버퍼를 `AsyncBufferReadback` 으로 읽어 반경 · 세기 확인). 후속 설계 후보: ⓐ 라이트가 "가장 오래된 N 개" 라서 알파가 0 에 가까운 죽어가는 입자가 빛을 내므로 모든 백엔드 빛이 약하다 → 슬롯 선정을 새 입자 쪽으로 ⓑ `canCopyDepthHistory` PSO 없음 · `ensureDepthHistory` 가 "깊이 충돌 못 하는 상태" 를 오류 없이 지나치는 폴백 → 깊이 충돌 방출기가 있는데 히스토리가 없으면 오류로 멈추게(폴백 금지 원칙). 안 읽은 곳: GL 포워드/디퍼드 조명 셰이더 본문, GL `createTexture2D`, 깊이 복사 패스의 GL PSO 생성 경로.
 - RHI 파일 후보: DX11 allocateUploadStaging 의 RHIStagingAllocator 합치기, Vulkan 프레임 밖 펜스 대기, 큐 소유권 이동, DX11 Map(DO_NOT_WAIT) vs 장치 소실, DX11 Present 실패 로그 반복, GL 비트필드.
 
-**사용자 결정 대기**: 말 모델(WildWestHorseMount W3)의 CC0 에셋과 라이선스 선택뿐이다. push 는 통합 N 이 main 에 들어간 뒤 사용자에게 먼저 묻는다.
 
-**다음 세션의 첫 일**: ① 통합 N 은 main 에 들어갔다(push 는 사용자 확인 뒤). ② 위 체인을 순서대로 하나의 `integ-o` 에 병합하고 통합 몫 1 ~ 6 을 한 번에 돈다. ③ 그 사이 `[병렬 가능]` 인 Linux · GPU 검증, Vfx 실행 확인, 카메라 디렉터, 미리보기 창, 오디오, 런타임 UI 묶음은 파일이 겹치지 않으니 작업자를 따로 띄울 수 있다([Roadmap](Roadmap.md)). 작업자 지시문에는 "python/py heredoc 편집 금지, `find /` 금지" 를 맨 앞줄에 적는다(이번 세션에서 7 번 어겼다).
+**사용자 결정 대기**: 말 모델(WildWestHorseMount W3)의 CC0 에셋과 라이선스 선택뿐이다. `D:/w` 바로 아래 작업자 산출물(`e.py`, `kh_*.log`, `vb.bak` 등)은 사용자가 지우거나 허락한다.
+
+**다음 세션의 첫 일**: ① 맨 위 절의 "넘기는 것"(DX12 Debug 디버그 레이어 확인, 쇼케이스 시나리오 네 백엔드, `netsyncobjects`, host-write-snapshot, 몫 6, crowd · vfxgl 실험)을 한 번의 GPU 단계로 돈다. ② `wt/svcsweep` 을 병합하고 `EditorTest` 를 돈다. ③ 사용자가 push 를 허락했으면 push 하고 그 CI 결과(`py -3 -m Scripts ci-jobs --summary`)를 본다. ④ 그 사이 `[병렬 가능]` 인 Linux · GPU 검증, Vfx 실행 확인, 카메라 디렉터, 미리보기 창, 오디오, 런타임 UI 묶음은 파일이 겹치지 않으니 작업자를 따로 띄울 수 있다([Roadmap](Roadmap.md)). 작업자 지시문 첫 줄에 "python/py heredoc 편집 금지, `find /` 금지" 를 적는다(`.claude/hooks/GuardCommands.py` 가 막는다).

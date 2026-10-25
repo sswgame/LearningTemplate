@@ -45,7 +45,7 @@
   젖음은 몸 전체(스칼라)에 알베도를 0.55 배로 어둡게 하고 거칠기를 낮춘다. 흙 · 피 · 상처는 마스크가 자리를 정하는 덮개이며 색과 거칠기를 바꾼다. 찢김은 마스크가 넘긴 자리를 알파 컷(`MATERIAL_ALPHA_CUTOFF` 를 머티리얼이 늘 켠다)으로 구멍 낸다 — 깊이 · 그림자 패스도 같은 표면 훅이라 그림자도 뚫린다.
   마스크가 흰색으로 읽히는 인스턴스(표면 상태 없음 · bindless 에뮬 백엔드)에서 스칼라가 0 이면 효과가 없도록 스칼라로 문을 건다.
 - **영역 번호 칸은 두지 않았다**: 부위별로 다르게 그리는 일은 영역 벡터가 아니라 마스크(맞은 UV 자리, `stampHit`)가 한다 — 정점 속성(정점 색 알파 · 추가 UV)을 새로 정하지 않아 메시 임포트 형식이 그대로다. 영역 벡터는 계속 인스턴스에 오르지만 이 셰이더는 읽지 않는다(영역별 덮개가 필요하면 그때 칸을 정한다).
-- **쇼케이스**: `game/empty/maps/surfaceshowcase.scene.xml` + `automation/surfaceshowcase.scenario.xml`(지금은 `docs/plans/pending/surfacelit/` 에 있다 — 아래 "남은 것"; 구 다섯 — 기본 · 젖음 · 흙 · 피 · 찢김, 색 기울기 단언은 어림값 `provisional` 이라 첫 실행은 UNCONFIRMED, 사진은 눈으로).
+- **쇼케이스**: `game/empty/maps/surfaceshowcase.scene.xml` + `automation/surfaceshowcase.scenario.xml`(통합 O 가 `Resource/` 로 옮겼다 — 아래 "남은 것"; 구 다섯 — 기본 · 젖음 · 흙 · 피 · 찢김, 색 기울기 단언은 어림값 `provisional` 이라 첫 실행은 UNCONFIRMED, 사진은 눈으로).
   한계: 캐릭터 머티리얼(`kaykit_*`)은 아직 forwardlit 이다 — 게임에서 켜려면 그 머티리얼을 `surfacelit` 으로 바꾸고 `Surface Channels` 를 정하는 데이터 일이 따로다. 알파 컷 머티리얼이라 깊이 프리패스가 머티리얼 셰이더로 그려지므로 켠 캐릭터 수만큼 프리패스 비용이 늘 수 있다.
 
 ## 남은 것
@@ -55,7 +55,7 @@
 - E2 · E3 · E5 확인(통합에서 확인): 매니페스트 id `mesh-merge-test`(`CharacterMeshUtilTest` — 병합 · 훅 UV), 매니페스트 id `surface-binding-test`(`CharacterSurfaceBindingTest` — 이름 규칙 · 마스크 픽셀 · 상태 번호), 매니페스트 id `outfit-atlas-test`(`OutfitAtlasTest` — 배치 · 훅 · 합성),
   매니페스트 id `outfit-atlas-baker-test`(`OutfitAtlasBakerTest` — 명세 읽기), 매니페스트 id `sequence-appearance-test`(`SequenceAppearanceTest` — 외형 항목이 프리셋을 바꿈), 매니페스트 id `sequencer-test`(`SequencerTest` — 외형 항목 이벤트 · 읽기 오류).
   화면: 매니페스트 id `appearance-merge-parts-check`(합칠 스킨드 부품이 든 차림을 만들어 `Merge Parts` 를 켜고 `Appearance.MergedSections` 와 사진으로 부품이 제 머티리얼로 그려지는지 본다 — 그 차림의 데이터가 아직 없다), 매니페스트 id `outfit-atlas-bake-run`(실제 장비 부품으로 명세를 만들어 `appearance.bakeatlas` 를 돌린다 — 명세와 부품 텍스처가 사람 일이다).
-- **E6(표면 셰이더)** **먼저** `docs/plans/pending/surfacelit/Resource/` 의 `.pending` 파일 열다섯 개를 `Resource/` 아래 같은 경로로 옮기고(`.pending` 제거, 셰이더 커밋 훅이 쿠킹 바이너리를 요구해 작업자는 소스를 이 폴더에 맡겼다) 폴더를 지운다. 확인(통합에서 확인): 새 셰이더 `surfacelit.hlsl` 의 네 백엔드 쿠킹 바이너리(`engine/shaders/bin/`)는 빌드로만 만들어진다 — 병합 뒤 통합이 쿠킹하고 셰이더 컴파일 오류와 `ShaderBindingValidatorTest` 를 본다. 그다음 매니페스트 id `surface-shader-check`(쇼케이스 시나리오 네 백엔드 + 사진, 문턱 `provisional` → `measured`).
+- **E6(표면 셰이더)** 파일 열다섯 개는 통합 O 가 `Resource/` 로 옮기고 `App --cook-shaders` 로 네 백엔드 쿠킹 바이너리(`engine/shaders/bin/`, surfacelit 744 개 · highlightoutline 32 개)를 구웠다. 남은 확인(통합에서 확인): 매니페스트 id `surface-shader-check`(쇼케이스 시나리오 네 백엔드 + 사진, 문턱 `provisional` → `measured`).
 - 에셋 핫 리로드(옛 E4b)는 들어갔다 — 소켓은 엔진 공유 캐시(`SharedAssetCache<SocketSet>`)를 쥐고, 원본 메시 · 피팅 표 · 피팅 데이터는 다시 읽은 횟수 · 내용 번호로 다시 조립한다(`CharacterAppearanceComponent::onTick`). 체형 축 파일(`bodyShapes`)은 읽는다. 표면 채널 파일은 `Surface Channels` 프로퍼티로 읽는다(고치면 프로퍼티를 다시 정해야 반영). 레퍼런스 포즈 파일은 외형 조립이 읽지 않는다.
 - 애니메이션 시스템이 본이 움직인 프레임에만 `SocketBindingComponent::updateSocketTransform` 를 부르는 일은 단계 작업(`CharacterAppearanceSocketTask`)이 이미 한다.
 - 나중: 천 시뮬레이션(Jolt 소프트 바디)이 같은 겹 정보를 충돌체로(Mutable 의 Clip with Mesh · Clip Deform).

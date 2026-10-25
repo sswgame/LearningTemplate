@@ -57,7 +57,7 @@ namespace sw
         , _mapCbMapped{}
         , _constantBufferMirror{}
         , _pipelineStates{}
-        , _listRenderPass{}
+        , _renderPassLedger{}
         , _swapChain{}
         , _bBindlessRootSignature{ SW_FALSE }
         , _reservedPassFlags{ 0 }
@@ -80,14 +80,16 @@ namespace sw
         , _transferSerials{}
         , _transferFence{ nullptr }
         , _transferFenceValue{ 0 }
-        , _openTransferSerial{ 0 }
-        , _unsignaledTransferSerial{ 0 }
-        , _exportedTransferSerial{ 0 }
-        , _transferMutex{}
-        , _listSignaledTransfer{}
+        , _transferSubmitMutex{}
+        , _transferFenceQueue{ _transferSerials }
+        , _uploadRing{}
+        , _transferJobMutex{}
+        , _listFreeTransferJob{}
+        , _textureTransferMutex{}
         , _mapTextureTransferSerial{}
         , _readbackTable{}
         , _releaseQueue{ constant::kGPUReleaseFrameLatency }
+        , _transferReleaseQueue{}
         , _frameStreamContext{ nullptr }
         , _resourceImpl{ nullptr }
     {
@@ -304,11 +306,9 @@ namespace sw
         return info.SizeInBytes == UINT64_MAX ? kRHIMemoryUnknownBytes : static_cast<uint64>( info.SizeInBytes );
     }
 
-    void D3D12RHIDevice::releaseTrackedResourceDeferred( Microsoft::WRL::ComPtr<ID3D12Resource> owned, const RHIMemoryKey& key, bool bAfterUnfinishedTransfer )
+    void D3D12RHIDevice::releaseTrackedResourceDeferred( Microsoft::WRL::ComPtr<ID3D12Resource> owned, const RHIMemoryKey& key )
     {
-        // 끝나지 않은 전송이 있으면 한 값 더 기다린다: 프레임 제출과 Signal 사이에 연 복사는 다음 구간의 Signal 에서야 끝난다(`openUploadSlot` 의 `_resetFence` 와 같은 사정).
-        const uint64 currentFence = _fenceValue.load();
-        const uint64 releaseFence = bAfterUnfinishedTransfer ? currentFence + 1 : currentFence;
+        const uint64 releaseFence = _fenceValue.load();
         // 키 공간은 템플릿 인자로 갈라 람다를 델리게이트의 인라인 칸(24 바이트)에 맞춘다.
         if ( key._space == RHIMemoryKeySpace::Texture )
             _releaseQueue.enqueueGPULedgerRelease<RHIMemoryKeySpace::Texture>( owned, getMemoryLedger(), key._id, releaseFence );

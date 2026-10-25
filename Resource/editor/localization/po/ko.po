@@ -972,72 +972,72 @@ msgctxt "EditorAudioEvents.EditedEvent"
 msgid "Edited Event"
 msgstr "고치는 이벤트"
 
-#: Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp
+#: Source/Editor/Panels/AudioEvents/Model/AudioEventBrowserUtil.cpp
 msgctxt "EditorAudioEvents.FieldBus"
 msgid "Bus"
 msgstr "버스"
 
-#: Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp
+#: Source/Editor/Panels/AudioEvents/Model/AudioEventBrowserUtil.cpp
 msgctxt "EditorAudioEvents.FieldClipCount"
 msgid "Clips"
 msgstr "클립 수"
 
-#: Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp
+#: Source/Editor/Panels/AudioEvents/Model/AudioEventBrowserUtil.cpp
 msgctxt "EditorAudioEvents.FieldContainer"
 msgid "Container"
 msgstr "컨테이너"
 
-#: Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp
+#: Source/Editor/Panels/AudioEvents/Model/AudioEventBrowserUtil.cpp
 msgctxt "EditorAudioEvents.FieldCooldown"
 msgid "Cooldown"
 msgstr "쿨다운"
 
-#: Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp
+#: Source/Editor/Panels/AudioEvents/Model/AudioEventBrowserUtil.cpp
 msgctxt "EditorAudioEvents.FieldFade"
 msgid "Fade"
 msgstr "페이드"
 
-#: Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp
+#: Source/Editor/Panels/AudioEvents/Model/AudioEventBrowserUtil.cpp
 msgctxt "EditorAudioEvents.FieldLoop"
 msgid "Loop"
 msgstr "반복"
 
-#: Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp
+#: Source/Editor/Panels/AudioEvents/Model/AudioEventBrowserUtil.cpp
 msgctxt "EditorAudioEvents.FieldMaxInstances"
 msgid "Max instances"
 msgstr "최대 인스턴스"
 
-#: Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp
+#: Source/Editor/Panels/AudioEvents/Model/AudioEventBrowserUtil.cpp
 msgctxt "EditorAudioEvents.FieldParameterCount"
 msgid "Parameter curves"
 msgstr "파라미터 곡선 수"
 
-#: Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp
+#: Source/Editor/Panels/AudioEvents/Model/AudioEventBrowserUtil.cpp
 msgctxt "EditorAudioEvents.FieldPitch"
 msgid "Pitch"
 msgstr "피치"
 
-#: Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp
+#: Source/Editor/Panels/AudioEvents/Model/AudioEventBrowserUtil.cpp
 msgctxt "EditorAudioEvents.FieldPriority"
 msgid "Priority"
 msgstr "우선순위"
 
-#: Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp
+#: Source/Editor/Panels/AudioEvents/Model/AudioEventBrowserUtil.cpp
 msgctxt "EditorAudioEvents.FieldRadius"
 msgid "Radius"
 msgstr "반경"
 
-#: Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp
+#: Source/Editor/Panels/AudioEvents/Model/AudioEventBrowserUtil.cpp
 msgctxt "EditorAudioEvents.FieldSteal"
 msgid "Steal policy"
 msgstr "뺏기 규칙"
 
-#: Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp
+#: Source/Editor/Panels/AudioEvents/Model/AudioEventBrowserUtil.cpp
 msgctxt "EditorAudioEvents.FieldVirtual"
 msgid "Virtual mode"
 msgstr "가상화 방식"
 
-#: Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp
+#: Source/Editor/Panels/AudioEvents/Model/AudioEventBrowserUtil.cpp
 msgctxt "EditorAudioEvents.FieldVolume"
 msgid "Volume"
 msgstr "볼륨"
@@ -1103,11 +1103,21 @@ msgid "Post Event"
 msgstr "이벤트 재생"
 
 #: Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp
+msgctxt "EditorAudioEvents.PublishCost"
+msgid "Publish cost (avg / peak)"
+msgstr "게시 비용 (평균 / 최대)"
+
+#: Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp
+msgctxt "EditorAudioEvents.PublishCostTip"
+msgid "Time the audio thread spends per block copying instances and voices for this window"
+msgstr "오디오 스레드가 이 창을 위해 블록마다 인스턴스와 보이스를 복사하는 시간"
+
+#: Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel.cpp
 msgctxt "EditorAudioEvents.RealVoices"
 msgid "Real voices"
 msgstr "실제 보이스"
 
-#: Source/Editor/Panels/AudioEvents/AudioEventBrowserUtil.cpp
+#: Source/Editor/Panels/AudioEvents/Model/AudioEventBrowserUtil.cpp
 msgctxt "EditorAudioEvents.RemainingLoop"
 msgid "loop"
 msgstr "반복"
@@ -1156,6 +1166,76 @@ msgstr "* 저장하지 않은 변경"
 msgctxt "EditorAudioEvents.VirtualVoices"
 msgid "Virtual voices"
 msgstr "가상 보이스"
+
+#: Source/Editor/Panels/AudioGraph/AudioGraphPanel.cpp
+msgctxt "EditorAudioGraph.BrokenLinks"
+msgid "The graph has links to missing nodes or a cycle - it is not processed"
+msgstr "그래프에 없는 노드를 가리키는 연결이나 순환이 있어 처리하지 않습니다"
+
+#: Source/Editor/Panels/AudioGraph/AudioGraphPanel.cpp
+msgctxt "EditorAudioGraph.CanvasFailed"
+msgid "The node canvas could not be drawn"
+msgstr "노드 캔버스를 그리지 못했습니다"
+
+#: Source/Editor/Panels/AudioGraph/AudioGraphPanel.cpp
+msgctxt "EditorAudioGraph.NoGraph"
+msgid "Open an audio graph (.audiograph.json) to edit it"
+msgstr "편집할 오디오 그래프(.audiograph.json)를 여세요"
+
+#: Source/Editor/Panels/AudioGraph/AudioGraphPanel.cpp
+msgctxt "EditorAudioGraph.Open"
+msgid "Open"
+msgstr "열기"
+
+#: Source/Editor/Panels/AudioGraph/AudioGraphPanel.cpp
+msgctxt "EditorAudioGraph.PathHint"
+msgid "Audio graph resource id"
+msgstr "오디오 그래프 리소스 id"
+
+#: Source/Editor/Panels/AudioGraph/AudioGraphPanel.cpp
+msgctxt "EditorAudioGraph.Preview"
+msgid "Preview"
+msgstr "미리 듣기"
+
+#: Source/Editor/Panels/AudioGraph/AudioGraphPanel.cpp
+msgctxt "EditorAudioGraph.PreviewTip"
+msgid "Play the graph through the editor audio device"
+msgstr "에디터 오디오 장치로 그래프를 재생합니다"
+
+#: Source/Editor/Panels/AudioGraph/AudioGraphPanel.cpp
+msgctxt "EditorAudioGraph.ProcessingOrder"
+msgid "Processing order"
+msgstr "처리 순서"
+
+#: Source/Editor/Panels/AudioGraph/AudioGraphPanel.cpp
+msgctxt "EditorAudioGraph.Save"
+msgid "Save"
+msgstr "저장"
+
+#: Source/Editor/Panels/AudioGraph/AudioGraphPanel.cpp
+msgctxt "EditorAudioGraph.SaveTip"
+msgid "Write the graph to its file"
+msgstr "그래프를 파일에 씁니다"
+
+#: Source/Editor/Panels/AudioGraph/AudioGraphPanel.cpp
+msgctxt "EditorAudioGraph.SelectNodeHint"
+msgid "Select a node to edit its settings"
+msgstr "설정을 편집할 노드를 고르세요"
+
+#: Source/Editor/Panels/AudioGraph/AudioGraphPanel.cpp
+msgctxt "EditorAudioGraph.SetOutput"
+msgid "Set as output"
+msgstr "출력으로 지정"
+
+#: Source/Editor/Panels/AudioGraph/AudioGraphPanel.cpp
+msgctxt "EditorAudioGraph.StopPreview"
+msgid "Stop preview"
+msgstr "미리 듣기 멈춤"
+
+#: Source/Editor/Panels/AudioGraph/AudioGraphPanel.cpp
+msgctxt "EditorAudioGraph.Unsaved"
+msgid "Unsaved changes"
+msgstr "* 저장하지 않은 변경"
 
 #: Source/Editor/Panels/BugIt/BugItPanel.cpp
 msgctxt "EditorBugIt.Capture"
@@ -2279,6 +2359,11 @@ msgid "No messages received yet"
 msgstr "아직 받은 메시지가 없습니다"
 
 #: Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp
+msgctxt "EditorMultiplayer.ProfilerNoReplicas"
+msgid "The process reports no replication counters (a replication kit raises them with GameNetSession::setReplicaStats)"
+msgstr "프로세스가 복제 셈을 보고하지 않습니다(복제 키트가 GameNetSession::setReplicaStats 로 올립니다)"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp
 msgctxt "EditorMultiplayer.ProfilerNoSession"
 msgid "Start a multiplayer session (Net Mode on the toolbar) to see its traffic"
 msgstr "멀티플레이 세션을 시작하면(툴바의 Net Mode) 트래픽이 보입니다"
@@ -2292,6 +2377,16 @@ msgstr "받은 바이트 / 초 (최근 1 초, 모든 연결)"
 msgctxt "EditorMultiplayer.ProfilerReceivedPackets"
 msgid "Received packets per second"
 msgstr "받은 패킷 / 초"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp
+msgctxt "EditorMultiplayer.ProfilerReplicas"
+msgid "Replication by name (per second)"
+msgstr "이름별 복제 (초당)"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp
+msgctxt "EditorMultiplayer.ProfilerReplicasHelp"
+msgid "Updates and bytes a replication kit counted per second, from the difference of the last two net.stats reports; the share is of the listed bytes"
+msgstr "복제 키트가 센 갱신 수와 바이트를 마지막 두 net.stats 보고의 차로 초당 값으로 보입니다. 비율은 표에 나온 바이트에 대한 몫입니다"
 
 #: Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp
 msgctxt "EditorMultiplayer.ProfilerResent"
@@ -2354,6 +2449,11 @@ msgid "Stop every process and merge the recorded traces"
 msgstr "모든 프로세스를 멈추고 기록한 트레이스를 합칩니다"
 
 #: Source/Editor/Panels/Multiplayer/MultiplayerSyncTab.cpp
+msgctxt "EditorMultiplayer.SyncClient"
+msgid "Read this client's state hash history (the latest ticks it recorded under the server tick numbers)"
+msgstr "이 클라이언트의 상태 해시 기록을 읽습니다(서버 틱 번호로 기록한 최근 틱)"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerSyncTab.cpp
 msgctxt "EditorMultiplayer.SyncCompare"
 msgid "Find the earliest tick both histories hold with different state hashes (scene transforms: name, active, world position)"
 msgstr "두 기록이 모두 가진 틱 가운데 상태 해시가 다른 가장 이른 틱을 찾습니다(씬 트랜스폼: 이름, 활성, 월드 위치)"
@@ -2362,6 +2462,11 @@ msgstr "두 기록이 모두 가진 틱 가운데 상태 해시가 다른 가장
 msgctxt "EditorMultiplayer.SyncFile"
 msgid "Load a saved history, or save this one in the same format (<tick> <hex hash> per line)"
 msgstr "저장한 기록을 불러오거나, 이 기록을 같은 형식(줄마다 <틱> <16진 해시>)으로 저장합니다"
+
+#: Source/Editor/Panels/Multiplayer/MultiplayerSyncTab.cpp
+msgctxt "EditorMultiplayer.SyncObjects"
+msgid "Ask both slots (a server read over a debug channel, or a session client) for their current per-object hashes and list the objects that differ (pause the server near the divergent tick first; the two answers must carry the same tick)"
+msgstr "두 칸(디버그 채널로 읽은 서버, 또는 세션 클라이언트)에 지금의 오브젝트별 해시를 물어 다른 오브젝트를 나열합니다(어긋난 틱 가까이에서 서버를 먼저 멈춥니다. 두 답은 같은 틱이어야 합니다)"
 
 #: Source/Editor/Panels/Multiplayer/MultiplayerSyncTab.cpp
 msgctxt "EditorMultiplayer.SyncReadServer"
@@ -3742,3 +3847,53 @@ msgstr "흉내 낼 플레이어 UI 배율 설정(0.5~2)입니다."
 msgctxt "EditorUIPreview.WaitingForTexture"
 msgid "Waiting for the render thread to create the preview texture..."
 msgstr "렌더 스레드가 미리보기 텍스처를 만들기를 기다리는 중..."
+
+#: Source/Editor/Panels/Scene/WorldCellsPanel.cpp
+msgctxt "EditorWorldCells.AlwaysLoadedTip"
+msgid "Select the entities the cook keeps in the base list (always loaded, or without a position)."
+msgstr "쿠킹이 기본 목록에 두는 엔티티(늘 올라 있거나 자리가 없는 것)를 고릅니다."
+
+#: Source/Editor/Panels/Scene/WorldCellsPanel.cpp
+msgctxt "EditorWorldCells.CookedScene"
+msgid "This scene was built from a cooked file and is already split into cells. Open the scene file to preview the split."
+msgstr "이 씬은 쿠킹본에서 지어져 이미 셀로 나뉘어 있습니다. 나눔을 미리 보려면 씬 파일을 엽니다."
+
+#: Source/Editor/Panels/Scene/WorldCellsPanel.cpp
+msgctxt "EditorWorldCells.NoActiveScene"
+msgid "No active scene."
+msgstr "활성 씬이 없습니다."
+
+#: Source/Editor/Panels/Scene/WorldCellsPanel.cpp
+msgctxt "EditorWorldCells.NoGameCamera"
+msgid "No game camera - the load and unload column needs one."
+msgstr "게임 카메라가 없습니다 - 올림 · 내림 열은 게임 카메라가 있어야 합니다."
+
+#: Source/Editor/Panels/Scene/WorldCellsPanel.cpp
+msgctxt "EditorWorldCells.NoPreview"
+msgid "Press Preview Split to split the scene into cells as the cook would."
+msgstr "Preview Split 을 눌러 쿠킹처럼 씬을 셀로 나눠 봅니다."
+
+#: Source/Editor/Panels/Scene/WorldCellsPanel.cpp
+msgctxt "EditorWorldCells.NotStreaming"
+msgid "The active scene does not stream. Turn on streaming in its World Settings to split it into cells."
+msgstr "활성 씬은 스트리밍하지 않습니다. 셀로 나누려면 월드 설정에서 스트리밍을 켭니다."
+
+#: Source/Editor/Panels/Scene/WorldCellsPanel.cpp
+msgctxt "EditorWorldCells.PreviewTip"
+msgid "Split the scene into cells exactly as the scene cook does, and list the cells or the references that would fail the cook. Same as 'world.cells'."
+msgstr "씬 쿠킹과 똑같이 씬을 셀로 나눠 셀 목록이나 쿠킹을 실패시킬 참조를 보입니다. 'world.cells' 와 같습니다."
+
+#: Source/Editor/Panels/Scene/WorldCellsPanel.cpp
+msgctxt "EditorWorldCells.SplitFailed"
+msgid "The scene could not be split - see the log."
+msgstr "씬을 나누지 못했습니다 - 로그를 봅니다."
+
+#: Source/Editor/Panels/Scene/WorldCellsPanel.cpp
+msgctxt "EditorWorldCells.ViolationHeader"
+msgid "Cross-cell references that fail the cook:"
+msgstr "쿠킹을 실패시키는 셀을 넘는 참조:"
+
+#: Source/Editor/Panels/Scene/WorldCellsPanel.cpp
+msgctxt "EditorWorldCells.ViolationTip"
+msgid "Selects both objects. Mark the target always loaded or move it into the same cell."
+msgstr "두 오브젝트를 고릅니다. 대상을 늘 올라 있게 표시하거나 같은 셀로 옮깁니다."

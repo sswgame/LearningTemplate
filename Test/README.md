@@ -370,6 +370,8 @@ hostgpu 항목(호스트 조각 · 레이스 묶음)은 `--required_backends=<�
   CI 분류와 `--test_filter` 가 모두 스위트 단위라서 이름이 흔들리면 둘이 흔들립니다. `CheckTestSuites.py` 가 강제합니다.
 - **호스트 스위트 파일에 다른 스위트를 두지 마세요.** 섞여 있으면 새 케이스를 옆 스위트에 붙이기 쉽고, 그 순간 GPU가 필요한 케이스가 CI로 들어갑니다.
   `SW_TEST_REQUIRES_HOST` 는 정책에서 `hostSplit` 인 실행 파일의 폴더에 있어야 효력이 있습니다. 그렇지 않으면 아무도 읽지 않아 CI가 그 스위트를 돌립니다. 이것도 `CheckTestSuites.py` 가 확인합니다.
+- **활성이 아닌 게임 팩(`game/shooter3d/…`)의 원본을 읽는 케이스는 맨 앞에 `SW_TEST_REQUIRES_FEATURE( SourceResources )` 를 선언합니다.** Shipping 은 활성 게임(empty)의 구운 팩만 두고 낱개 원본을 읽지 않습니다.
+  `CheckTestSuites` 규칙 10 이 케이스 본문과 같은 파일 상수의 `game/<실제 팩>/` 리터럴을 보고 선언이 없으면 거절합니다. 경로 문자열만 다루고 디스크를 읽지 않는 케이스는 `Scripts/lint/rules/CheckTestSuites.toml` 의 `[exemption]`(`pathOnly:스위트.케이스`)에 사유와 함께 둡니다.
 - **실행 파일 폴더(`Bin`)나 소스 트리에 파일을 쓰지 마세요.** `ctest -j` 로 나란히 도는 다른 프로세스가 같은 트리를 읽습니다. 넣었다 바로 지워도 그 사이에 폴더를 훑은 프로세스가 집니다
   (셰이더 쿠킹 스탬프가 임시 헤더를 보고 "낡음" 으로 판정했다). 루트 아래 구조가 필요하면 `test::ScopedTempResourceRoot`, 그 밖에는 `makeTempPath` · `makeTempDirectory` 를 씁니다.
 - **테스트 도우미의 실패 가능 bool 도 `[[nodiscard]]` 입니다.** `parsePpm` · `readCounters` · `createPackFile` 의 false 를 버리면 테스트가 통과한 척 이어집니다.

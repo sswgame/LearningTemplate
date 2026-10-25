@@ -110,6 +110,8 @@ namespace sw
 
     App::~App() = default;
 
+    // 길이를 나누지 않는다: 호스트 범위 → 엔진 → 헤드리스 작업 → 자동화 → 설정 감시 순의 시동 열이라 순서가 곧 뜻이다.
+    // `Engine::initialize` 와 같은 이유다.
     bool App::initialize( int32 argc, utf8* pArgv[] )
     {
         _initializeStartMicro = MonotonicClock::nowMicroseconds();

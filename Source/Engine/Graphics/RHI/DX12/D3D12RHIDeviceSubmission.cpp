@@ -23,6 +23,8 @@ namespace sw
     void D3D12RHIDevice::waitIdleInternal()
     {
         waitForPreviousFrame();
+        // 전송은 같은 큐에서 프레임 펜스보다 먼저 끝났다 — 워터마크를 올려야 전송을 기다리던 텍스처 해제가 `_releaseQueue` 로 넘어와 아래 비우기에 든다.
+        retireCompletedTransfers();
         _releaseQueue.flushAll();
     }
 
@@ -153,12 +155,11 @@ namespace sw
         if ( _bImmediateSubmit == false || _listPendingSubmit.empty() )
             return;
 
-        // 여기까지 기록된 업로드 복사가 이 리스트들보다 먼저 가야 한다. 앞에 끼운다. **실행까지 업로드 락을 쥔다** — 닫아서 대기열에 넣은 복사
-        // 리스트를 실행 전에 다른 스레드의 업로드가 `Reset` 하면 그 복사가 사라진다.
+        // 여기까지 기록된 구조 버퍼 갱신 복사가 이 리스트들보다 먼저 가야 한다. 앞에 끼운다. **실행까지 업로드 락을 쥔다** — 닫아서 대기열에 넣은 복사
+        // 리스트를 실행 전에 다른 스레드의 갱신이 `Reset` 하면 그 복사가 사라진다.
         std::scoped_lock<mutex> uploadLock{ _uploadSlotMutex };
         flushPendingUploads( false );
         _commandQueue->ExecuteCommandLists( static_cast<UINT>( _listPendingSubmit.size() ), _listPendingSubmit.data() );
-        signalExportedTransfers(); // 내보낸 복사가 실행됐으니 전송 펜스를 올린다
         _listPendingSubmit.clear();
     }
 
@@ -188,81 +189,6 @@ namespace sw
                 _listPendingSubmit.insert( _listPendingSubmit.begin(), slot._copyCommandList.Get() );
             }
         }
-
-        // 열려 있던 전송이 이 호출로 내보내진다. 마지막 시리얼까지가 한 묶음이고, 전송 펜스는 리스트가 실행된 뒤에 올린다.
-        if ( _openTransferSerial != 0 )
-        {
-            _exportedTransferSerial   = _openTransferSerial;
-            _unsignaledTransferSerial = _openTransferSerial;
-            _openTransferSerial       = 0;
-        }
-        if ( bExecuteNow )
-            signalExportedTransfers();
-    }
-
-    uint64 D3D12RHIDevice::issueTransferSerial()
-    {
-        const uint64 serial = _transferSerials.issue();
-        _openTransferSerial = serial;
-        return serial;
-    }
-
-    void D3D12RHIDevice::signalExportedTransfers()
-    {
-        const bool bNothingToSignal = _unsignaledTransferSerial == 0 || _commandQueue == nullptr || _transferFence == nullptr;
-        if ( bNothingToSignal )
-            return;
-        const UINT64  fenceToSignal = _transferFenceValue + 1;
-        const HRESULT signalHr      = _commandQueue->Signal( _transferFence.Get(), fenceToSignal );
-        if ( FAILED( signalHr ) )
-        {
-            // 표시한 뒤에도 서명하지 않은 시리얼이 남아 다음 호출이 다시 여기로 온다 — 처음 표시한 때만 로그를 남긴다.
-            if ( _transferSerials.markLost() )
-                SW_LOG_ERROR( "Transfer fence Signal failed hr=0x%# (DeviceRemoved=0x%#)", static_cast<uint32>( signalHr ),
-                              static_cast<uint32>( _device ? _device->GetDeviceRemovedReason() : S_OK ) );
-            return;
-        }
-        _transferFenceValue = fenceToSignal;
-        {
-            std::scoped_lock<mutex> lock{ _transferMutex };
-            _listSignaledTransfer.push_back( SignaledTransfer{ fenceToSignal, _unsignaledTransferSerial } );
-        }
-        _unsignaledTransferSerial = 0;
-    }
-
-    void D3D12RHIDevice::retireCompletedTransfers()
-    {
-        if ( _transferFence == nullptr )
-            return;
-        const uint64            completedFence = _transferFence->GetCompletedValue();
-        uint64                  doneSerial{ 0 };
-        std::scoped_lock<mutex> lock{ _transferMutex };
-        while ( _listSignaledTransfer.empty() == false && _listSignaledTransfer.front()._fenceValue <= completedFence )
-        {
-            doneSerial = _listSignaledTransfer.front()._maxSerial;
-            _listSignaledTransfer.pop_front();
-        }
-        if ( doneSerial != 0 )
-            _transferSerials.advanceWatermark( doneSerial );
-    }
-
-    void D3D12RHIDevice::noteTextureTransfer( RHITextureHandle texture, uint64 serial )
-    {
-        std::scoped_lock<mutex> lock{ _transferMutex };
-        _mapTextureTransferSerial[texture] = serial;
-    }
-
-    uint64 D3D12RHIDevice::findTextureTransferSerial( RHITextureHandle texture )
-    {
-        std::scoped_lock<mutex> lock{ _transferMutex };
-        const auto              foundIt = _mapTextureTransferSerial.find( texture );
-        return foundIt != _mapTextureTransferSerial.end() ? foundIt->second : 0;
-    }
-
-    void D3D12RHIDevice::eraseTextureTransfer( RHITextureHandle texture )
-    {
-        std::scoped_lock<mutex> lock{ _transferMutex };
-        _mapTextureTransferSerial.erase( texture );
     }
 
     bool D3D12RHIDevice::debugRemoveDevice()
@@ -412,6 +338,8 @@ namespace sw
         const uint64 completedFence = _fence->GetCompletedValue();
         _releaseQueue.tickCompleted( completedFence );
         recycleCompletedOnlineBlocks( completedFence );
+        // 프레임을 돌리는 동안 폴링하는 쪽이 없어도 끝난 전송의 작업 · 스테이징 구간 · 전송을 기다리던 해제가 돌아오게 한다(기다리지 않는다).
+        retireCompletedTransfers();
     }
 
     ID3D12CommandAllocator* D3D12RHIDevice::currentAllocator()
@@ -647,6 +575,8 @@ namespace sw
         _pActiveFrameList->RSSetScissorRects( 1, &scissorRect );
     }
 
+    // 길이를 나누지 않는다: 닫기 · 타임스탬프 해석 · 제출 · 펜스 · Present 의 프레임 끝 순서가 곧 뜻이고,
+    // 업로드 리스트를 프레임 리스트 앞에 끼우는 규칙이 한곳에 있어야 한다.
     void D3D12RHIDevice::endFrame( bool vsync, bool bPresent )
     {
         if ( bPresent )
@@ -693,8 +623,9 @@ namespace sw
                 releaseOnlineBlocksDeferred( _frameStreamState );
             }
 
-            // 열어 둔 업로드 복사 리스트를 프레임 리스트 앞에 끼우고 한 번에 제출한다. **실행까지 업로드 락을 쥔다** — 닫아서 대기열에 넣은 복사
-            // 리스트를 실행 전에 게임 스레드의 업로드가 `Reset` 하면 GPUScene 복사가 사라진다(submitPendingIfImmediate 와 같은 이유).
+            // 열어 둔 구조 버퍼 갱신 복사 리스트를 프레임 리스트 앞에 끼우고 한 번에 제출한다. **실행까지 업로드 락을 쥔다** — 닫아서 대기열에 넣은 복사
+            // 리스트를 실행 전에 다른 스레드의 갱신이 `Reset` 하면 GPUScene 복사가 사라진다(submitPendingIfImmediate 와 같은 이유).
+            // 텍스처 전송은 제출 때 이미 큐에 나갔다 — 이 프레임 리스트들보다 먼저 실행된다(계약 3).
             {
                 std::scoped_lock<mutex> uploadLock{ _uploadSlotMutex };
                 flushPendingUploads( false );
@@ -707,7 +638,6 @@ namespace sw
                     _commandQueue->ExecuteCommandLists( static_cast<UINT>( _listPendingSubmit.size() ),
                                                         _listPendingSubmit.data() );
                 }
-                signalExportedTransfers(); // 내보낸 복사가 실행됐으니 전송 펜스를 올린다
                 _listPendingSubmit.clear();
             }
             _pActiveFrameList = nullptr;

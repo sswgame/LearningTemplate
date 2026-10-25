@@ -17,6 +17,7 @@ namespace sw
     class CommandStack;
     class GlobalVariableManager;
     class SceneManager;
+    class TypeRegistry;
 } // namespace sw
 
 namespace sw::editor
@@ -171,6 +172,28 @@ namespace sw::editor
 
         ScopedGlobalVariableManagerService( const ScopedGlobalVariableManagerService& )            = delete;
         ScopedGlobalVariableManagerService& operator=( const ScopedGlobalVariableManagerService& ) = delete;
+
+    private:
+        SubsystemScope    _scope;       ///< 이 서비스만 든 범위
+        ScopedEditorScope _activeScope; ///< 사는 동안 지금 에디터 범위로 건다(앞 범위를 상위로 잇는다)
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    /** @brief 스코프 동안 타입 레지스트리를 지역 서비스로 걸어 둡니다 — `editor::getSubsystem<TypeRegistry>()` 를 쓰는 명령이 테스트의 레지스트리를 봅니다. */
+    class ScopedTypeRegistryService
+    {
+    public:
+        explicit ScopedTypeRegistryService( TypeRegistry& registry )
+            : _scope{}
+            , _activeScope{ _scope }
+        {
+            (void)_scope.bind( &registry ); // 새 범위라 겹치지 않는다
+        }
+
+        ScopedTypeRegistryService( const ScopedTypeRegistryService& )            = delete;
+        ScopedTypeRegistryService& operator=( const ScopedTypeRegistryService& ) = delete;
 
     private:
         SubsystemScope    _scope;       ///< 이 서비스만 든 범위

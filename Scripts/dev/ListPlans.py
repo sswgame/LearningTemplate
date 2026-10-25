@@ -10,7 +10,7 @@
     py -3 -m Scripts plans --file Vfx           # 그 문서의 머리 줄과 절 제목 목록(`Vfx.md` 도 된다)
     py -3 -m Scripts plans --file Vfx --section V2   # 제목에 `V2` 가 든 절의 본문만(다음 같은 수준 제목 전까지)
     py -3 -m Scripts plans --find C-30          # 옛 번호가 어느 문서 · 절로 옮겨졌는지(이름이면 위치)
-    py -3 -m Scripts plans --check              # 로드맵의 링크가 맞는지, 진행 n/n 인데 구현 중인 문서가 없는지, 대기 줄이 검증 묶음 id 를 가리키는지(틀리면 종료 1)
+    py -3 -m Scripts plans --check              # 로드맵의 링크가 맞는지, 진행 n/n 인데 구현 중인 문서가 없는지, 대기 줄이 검증 묶음 id 를 가리키는지, 긴 함수 표가 코드와 맞는지(틀리면 종료 1)
 
 머리 줄 모양은 `common/Plans.py` 가 원본이다. 머리 줄이 없거나 틀린 문서가 있으면 건너뛰지 않고 파일 이름과 함께 멈춘다.
 """
@@ -30,6 +30,7 @@ from common.MarkdownSections import extractSection  # noqa: E402
 from common.StatusBoard import checkRoadmap  # noqa: E402
 from common.VerifyManifest import checkVerifyPending  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
+from lint.LongFunctionTable import checkLongFunctionTable  # noqa: E402
 
 
 def displayWidthInternal(text: str) -> int:
@@ -105,7 +106,10 @@ def main(argv: list[str] | None = None) -> int:
         listPendingViolation = checkVerifyPending(args.root or getProjectRoot())
         print("\n".join(listPendingViolation))
         print(f"검증 묶음 위반 {len(listPendingViolation)} 건")
-        return ExitCode.Violation if listViolation or listPendingViolation else ExitCode.Passed
+        listLongViolation = checkLongFunctionTable(args.root or getProjectRoot())
+        print("\n".join(listLongViolation))
+        print(f"긴 함수 표 위반 {len(listLongViolation)} 건")
+        return ExitCode.Violation if listViolation or listPendingViolation or listLongViolation else ExitCode.Passed
 
     if args.fileName:
         stem = args.fileName.removesuffix(".md").lower()

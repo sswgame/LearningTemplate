@@ -174,7 +174,7 @@ SW_TEST_CASE( EditorServiceTest, RequiredLookupReturnsServiceAndReportsWhenMissi
 
     SW_TEST_DEFENSIVE_SCOPE( "a required editor service is missing" );
     test::ScopedAssertCapture assertCapture;
-    internal::reportMissingRequiredService( "test lookup" );
+    editor::internal::reportMissingRequiredService( "test lookup" );
     if ( test::ScopedAssertCapture::kAssertsAreActive )
         SW_EXPECT_EQUAL( 1u, assertCapture.getCount() );
 }

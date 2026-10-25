@@ -370,10 +370,14 @@ SW_TEST_CASE( AssetImportParallelTest, EditorScopeLookupFromAnotherThreadIsRejec
         SW_EXPECT_TRUE( sw::editor::findEditorScope() == &scope ); // 등록한 스레드에서는 통과한다
         SW_EXPECT_EQUAL( 0u, assertCapture.getCount() );
 
-        std::thread worker( &Internal::lookupScopeOnThisThread, &pSeenByWorker );
-        worker.join();
+        // 어기면 모든 구성에서 오류 로그를 남기고 멈춘다. 멈춤을 가로채 세는 것은 Debug 에만 있어서, 프로세스 안에서 볼 수 있는 구성에서만 부른다.
         if ( test::ScopedAssertCapture::kAssertsAreActive )
+        {
+            SW_TEST_DEFENSIVE_SCOPE( "the editor scope is read off the editor thread" );
+            std::thread worker( &Internal::lookupScopeOnThisThread, &pSeenByWorker );
+            worker.join();
             SW_EXPECT_EQUAL( 1u, assertCapture.getCount() );
+        }
     }
 
     // 범위를 걷은 뒤에는 다른 스레드도 읽을 수 있다 — 단언이 더 늘지 않는다.

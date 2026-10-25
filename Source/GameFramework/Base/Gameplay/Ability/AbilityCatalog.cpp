@@ -32,6 +32,37 @@ namespace sw
                 }
             }
 
+            /** @brief 이펙트의 태그 자식과 `<GrantAbility>` 를 읽고 즉시 이펙트에 줄 동안 항목이 없는지 확인합니다. 어긋나면 오류를 남기고 false 입니다. */
+            [[nodiscard]] static bool readEffectTagsAndGrants( const XMLNode& node, const utf8* pID, string_view sourceName, GameplayEffectDef& outDef )
+            {
+                readTagChildren( node, "AssetTag", outDef._assetTags );
+                readTagChildren( node, "GrantedTag", outDef._grantedTags );
+                readTagChildren( node, "RequiredTag", outDef._applicationRequiredTags );
+                readTagChildren( node, "BlockedTag", outDef._applicationBlockedTags );
+                readTagChildren( node, "RemoveEffectsWithTag", outDef._removeEffectsWithTags );
+                readTagChildren( node, "Cue", outDef._cueTags );
+                readTagChildren( node, "OngoingRequiredTag", outDef._ongoingRequiredTags );
+                for ( XMLNode grantNode = node.findChild( "GrantAbility" ); grantNode; grantNode = grantNode.findNextSibling( "GrantAbility" ) )
+                {
+                    hashed_string abilityID;
+                    if ( GameDataXML::readRequiredName( grantNode, "id", sourceName, abilityID ) == false )
+                    {
+                        SW_LOG_ERROR( "%#: effect '%#' has a <GrantAbility> without an id - skipped", sourceName, pID );
+                        return false;
+                    }
+                    outDef._listGrantedAbility.push_back( abilityID );
+                }
+                // 즉시 이펙트는 걸려 있지 않으므로 줄 동안이 없다 — 적은 것을 조용히 버리지 않고 오류로 둔다.
+                const bool bInstantWithLasting = outDef._durationPolicy == EffectDurationPolicy::Instant &&
+                                                 ( outDef._listGrantedAbility.empty() == false || outDef._ongoingRequiredTags.getTagCount() > 0 );
+                if ( bInstantWithLasting )
+                {
+                    SW_LOG_ERROR( "%#: effect '%#' is Instant but has <GrantAbility> or <OngoingRequiredTag> - skipped", sourceName, pID );
+                    return false;
+                }
+                return true;
+            }
+
             /** @brief `<Modifier>` 하나를 읽습니다. 어트리뷰트가 없거나 열거형 이름을 알 수 없으면 경고를 남기고 false 를 반환합니다. */
             [[nodiscard]] static bool readModifier( const XMLNode& node, const utf8* pEffectID, string_view sourceName, GameplayEffectModifier& outModifier )
             {
@@ -402,32 +433,7 @@ namespace sw
             outDef._listExecution.push_back( std::move( pExecution ) );
         }
 
-        AbilityCatalogInternal::readTagChildren( node, "AssetTag", outDef._assetTags );
-        AbilityCatalogInternal::readTagChildren( node, "GrantedTag", outDef._grantedTags );
-        AbilityCatalogInternal::readTagChildren( node, "RequiredTag", outDef._applicationRequiredTags );
-        AbilityCatalogInternal::readTagChildren( node, "BlockedTag", outDef._applicationBlockedTags );
-        AbilityCatalogInternal::readTagChildren( node, "RemoveEffectsWithTag", outDef._removeEffectsWithTags );
-        AbilityCatalogInternal::readTagChildren( node, "Cue", outDef._cueTags );
-        AbilityCatalogInternal::readTagChildren( node, "OngoingRequiredTag", outDef._ongoingRequiredTags );
-        for ( XMLNode grantNode = node.findChild( "GrantAbility" ); grantNode; grantNode = grantNode.findNextSibling( "GrantAbility" ) )
-        {
-            hashed_string abilityID;
-            if ( GameDataXML::readRequiredName( grantNode, "id", sourceName, abilityID ) == false )
-            {
-                SW_LOG_ERROR( "%#: effect '%#' has a <GrantAbility> without an id - skipped", sourceName, pID );
-                return false;
-            }
-            outDef._listGrantedAbility.push_back( abilityID );
-        }
-        // 즉시 이펙트는 걸려 있지 않으므로 줄 동안이 없다 — 적은 것을 조용히 버리지 않고 오류로 둔다.
-        const bool bInstantWithLasting = outDef._durationPolicy == EffectDurationPolicy::Instant &&
-                                         ( outDef._listGrantedAbility.empty() == false || outDef._ongoingRequiredTags.getTagCount() > 0 );
-        if ( bInstantWithLasting )
-        {
-            SW_LOG_ERROR( "%#: effect '%#' is Instant but has <GrantAbility> or <OngoingRequiredTag> - skipped", sourceName, pID );
-            return false;
-        }
-        return true;
+        return AbilityCatalogInternal::readEffectTagsAndGrants( node, pID, sourceName, outDef );
     }
 
     bool AbilityCatalog::readCue( const XMLNode& node, string_view sourceName, GameplayCueDef& outDef )

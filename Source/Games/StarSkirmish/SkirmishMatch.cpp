@@ -64,6 +64,8 @@ namespace sw
     {
         if ( _world.initialize( pCatalog, kMapSize, kMapSize, RTSSettings{} ) == false )
             return false;
+        if ( _world.claimEvents( _eventLease ) == false )
+            return false; // 이 매치의 표뿐이라 일어날 수 없다 — 둘째 소비자가 생기면 게이트가 어서션을 남긴다
         _settings = matchSettings;
         // 맵 배치가 놓는 유닛이 카탈로그에 없으면 조용히 건너뛰지 않고 판을 열지 않는다. 본진 건물 · 일꾼은 디렉터 데이터의 id 를 쓰고, 자원 id 는 맵 배치의 일부다.
         bool bLayoutKnown = true;
@@ -256,7 +258,7 @@ namespace sw
         }
         // `RTSWorld::drainEvents` 는 뒤에 붙인다(바꿔 넣지 않는다) — 비우지 않으면 지난 알림을 AI 에 다시 넘긴다.
         _listFrameEvent.clear();
-        _world.drainEvents( _listFrameEvent );
+        _world.drainEvents( _eventLease, _listFrameEvent );
         for ( const RTSEvent& event : _listFrameEvent )
         {
             for ( int32 player = 0; player < kPlayerCount; ++player )

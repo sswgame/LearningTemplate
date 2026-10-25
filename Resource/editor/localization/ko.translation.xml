@@ -1119,6 +1119,9 @@
 		<entry key="EditorMultiplayer.ProfilerNoKinds"
 		       text="아직 받은 메시지가 없습니다"
 		       sourceHash="d8b7c54f7554458b" />
+		<entry key="EditorMultiplayer.ProfilerNoReplicas"
+		       text="프로세스가 복제 셈을 보고하지 않습니다(복제 키트가 GameNetSession::setReplicaStats 로 올립니다)"
+		       sourceHash="cd1a2a86f8ab15c9" />
 		<entry key="EditorMultiplayer.ProfilerNoSession"
 		       text="멀티플레이 세션을 시작하면(툴바의 Net Mode) 트래픽이 보입니다"
 		       sourceHash="98335b41a9d883a3" />
@@ -1126,6 +1129,10 @@
 		       text="받은 바이트 / 초 (최근 1 초, 모든 연결)"
 		       sourceHash="90f3f291bab2fdbf" />
 		<entry key="EditorMultiplayer.ProfilerReceivedPackets" text="받은 패킷 / 초" sourceHash="87737fc2254e7748" />
+		<entry key="EditorMultiplayer.ProfilerReplicas" text="이름별 복제 (초당)" sourceHash="cca5a9d9064c9a27" />
+		<entry key="EditorMultiplayer.ProfilerReplicasHelp"
+		       text="복제 키트가 센 갱신 수와 바이트를 마지막 두 net.stats 보고의 차로 초당 값으로 보입니다. 비율은 표에 나온 바이트에 대한 몫입니다"
+		       sourceHash="5d77ca3061a868df" />
 		<entry key="EditorMultiplayer.ProfilerResent"
 		       text="다시 보낸 신뢰 메시지 / 초"
 		       sourceHash="aaf42fcd05234ae5" />
@@ -1167,6 +1174,9 @@
 		<entry key="EditorMultiplayer.SyncFile"
 		       text="저장한 기록을 불러오거나, 이 기록을 같은 형식(줄마다 &lt;틱> &lt;16진 해시>)으로 저장합니다"
 		       sourceHash="34704f9d5a724b3a" />
+		<entry key="EditorMultiplayer.SyncObjects"
+		       text="두 칸(디버그 채널로 읽은 서버, 또는 세션 클라이언트)에 지금의 오브젝트별 해시를 물어 다른 오브젝트를 나열합니다(어긋난 틱 가까이에서 서버를 먼저 멈춥니다. 두 답은 같은 틱이어야 합니다)"
+		       sourceHash="e3810baa43b50923" />
 		<entry key="EditorMultiplayer.SyncReadServer"
 		       text="다른 서버의 기록을 디버그 채널로 읽습니다(그 서버는 -gv_stateHashHistory 로 돌아야 합니다)"
 		       sourceHash="6cc468820cd249ee" />
