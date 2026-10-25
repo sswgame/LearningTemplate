@@ -111,7 +111,7 @@ namespace sw::editor
             [[nodiscard]] static bool readHalfExtentX( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 outValue                           = 0.0;
-                EditorContext*            pContext = EditorContext::get();
+                EditorContext*            pContext = editor::findSubsystem<EditorContext>();
                 const GameObject*         pObject  = pContext != nullptr ? editor::getMainSceneSelection().getPrimaryObject() : nullptr;
                 const RigidBodyComponent* pBody    = pObject != nullptr ? pObject->getComponent<RigidBodyComponent>() : nullptr;
                 if ( pBody != nullptr && pBody->getShapes().empty() == false )
