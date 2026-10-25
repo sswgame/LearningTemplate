@@ -323,29 +323,23 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 3) 네이티브 핸들: 디바이스, 컨텍스트, 스왑체인, 큐
         // ------------------------------------------------------------------------------
-        /** @brief 네이티브 디바이스 포인터(ID3D12Device, VkDevice 등)를 반환합니다. */
-        virtual void* getNativeDevice() const = 0;
-
-        /** @brief 네이티브 컨텍스트 포인터(ID3D11DeviceContext, EGLContext 등)를 반환합니다. */
-        virtual void* getNativeContext() const = 0;
-
-        /** @brief 네이티브 커맨드 큐 포인터를 반환합니다. */
-        virtual void* getNativeCommandQueue() const = 0;
-
         /**
-         * @brief 외부 라이브러리를 초기화할 때 쓸 네이티브 핸들 묶음을 채웁니다.
-         * @details 비가상 함수다. 버전 대조는 Engine 이 이 한 곳에서 하고, 백엔드는 `queryNativeHandlesInternal` 만 채운다.
-         *          `inoutHandles` 의 `_version` 과 `_byteSize` 가 이 엔진의 `kRHINativeHandlesVersion`, `sizeof( RHINativeHandles )` 와 다르면
-         *          (따로 빌드한 모듈이 다른 버전의 구조체를 보낸 경우) 아무것도 쓰지 않고 false 를 반환한다. 백엔드가 디바이스를 내놓지 못해도 false 다.
+         * @brief 이 디바이스가 @p expectedBackend 이면 외부 라이브러리를 초기화할 때 쓸 네이티브 핸들 묶음을 채웁니다.
+         * @details 비가상 함수다. 버전 대조와 종류 확인은 Engine 이 이 한 곳에서 하고, 백엔드는 `queryNativeHandlesInternal` 만 채운다.
+         *          핸들은 백엔드마다 뜻이 다른 `void*` 라서(`_pDevice` 는 `ID3D11Device*` · `ID3D12Device*` · `VkDevice` · GL 표시 장치) 종류를 확인하지 않고
+         *          캐스트하면 다른 백엔드의 값을 읽는다. 그래서 핸들만 꺼내는 길(`getNativeDevice` 등)은 보호 구역에만 두고 바깥은 이 함수로만 읽는다
+         *          — `IWindow::tryGetWin32Handle` 의 디바이스판이다. @p expectedBackend 는 호출처가 캐스트할 타입의 백엔드 상수로 적는다(`getBackendType()` 을 넘기지 않는다).
+         * @return `inoutHandles` 의 `_version` 과 `_byteSize` 가 이 엔진의 `kRHINativeHandlesVersion`, `sizeof( RHINativeHandles )` 와 다르면(따로 빌드한 모듈이
+         *         다른 버전의 구조체를 보낸 경우), 백엔드가 @p expectedBackend 가 아니면, 백엔드가 디바이스를 내놓지 못하면 아무것도 쓰지 않고 false 다.
          */
-        [[nodiscard]] bool queryNativeHandles( RHINativeHandles& inoutHandles ) const;
+        [[nodiscard]] bool queryNativeHandles( RHIBackend expectedBackend, RHINativeHandles& inoutHandles ) const;
 
         /**
-         * @brief 네이티브 텍스처를 포인터 형태로 반환합니다. 없는 핸들이면 nullptr 입니다.
+         * @brief 이 디바이스가 @p expectedBackend 이면 네이티브 텍스처를 포인터 형태로 반환합니다. 다른 백엔드이거나 없는 핸들이면 nullptr 입니다.
          * @details D3D12 는 `ID3D12Resource*`, D3D11 은 `ID3D11Texture2D*`, Vulkan 은 이미지 뷰, OpenGL 은 텍스처 이름(GLuint)을 포인터 폭으로 넓힌 값이다.
-         * @note 에디터 MODULE 이 RHI_* 디바이스 MODULE 의 구체 타입에 링크하지 않도록 가상 함수로 둡니다.
+         *          뜻이 백엔드마다 달라 종류 확인과 값 조회를 이 함수 한 곳에 모은다(`queryNativeHandles` 와 같은 모양). 반환값을 버리면 안 되고, nullptr 이면 호출처가 그 텍스처를 건너뛴다.
          */
-        virtual void* getNativeTexturePointer( RHITextureHandle texture ) const = 0;
+        [[nodiscard]] void* tryGetNativeTexturePointer( RHIBackend expectedBackend, RHITextureHandle texture ) const;
 
         /** @brief 스왑체인을 만들 표면을 저장합니다. `initialize` 가 핸들과 크기를 여기서 읽습니다. */
         void setRenderSurface( IRenderSurface* pSurface ) { _pSurface = pSurface; }
@@ -473,6 +467,24 @@ namespace sw
          *          더 내놓을 것이 있는 백엔드(Vulkan 의 인스턴스, 물리 디바이스, 큐 패밀리, 렌더 패스)가 재정의한다.
          */
         [[nodiscard]] virtual bool queryNativeHandlesInternal( RHINativeHandles& outHandles ) const;
+
+        /**
+         * @brief 네이티브 디바이스 포인터(ID3D12Device, VkDevice 등)를 반환합니다. 뜻은 `getBackendType` 이 정한다.
+         * @details 보호 구역이다 — 바깥에서 백엔드 타입으로 캐스트할 수 있으면 종류를 확인하지 않은 호출이 다시 생긴다. 바깥은 `queryNativeHandles` 를 쓴다.
+         */
+        virtual void* getNativeDevice() const = 0;
+
+        /** @brief 네이티브 컨텍스트 포인터(ID3D11DeviceContext, HGLRC, 현재 커맨드 리스트 · 버퍼 등)를 반환합니다. 보호 구역이다(`getNativeDevice` 와 같은 이유). */
+        virtual void* getNativeContext() const = 0;
+
+        /** @brief 네이티브 커맨드 큐 포인터를 반환합니다. 보호 구역이다(`getNativeDevice` 와 같은 이유). */
+        virtual void* getNativeCommandQueue() const = 0;
+
+        /**
+         * @brief 네이티브 텍스처를 포인터 형태로 반환합니다. 없는 핸들이면 nullptr 입니다. 보호 구역이다 — 바깥은 `tryGetNativeTexturePointer` 를 쓴다.
+         * @note 에디터 MODULE 이 RHI_* 디바이스 MODULE 의 구체 타입에 링크하지 않도록 가상 함수로 둡니다.
+         */
+        virtual void* getNativeTexturePointer( RHITextureHandle texture ) const = 0;
         /**
          * @brief 백엔드가 드라이버의 GPU 메모리 사용량과 예산을 채웁니다. `outBudget` 은 모든 항목이 "모름" 인 기본값으로 전달됩니다.
          * @details 물을 수 없으면(API 나 확장이 없음) false 를 반환한다. 아는 항목만 플래그를 켜고, 모르는 항목은 임의로 채우지 않는다.

@@ -21,16 +21,19 @@ namespace sw::editor
         if ( _pRHIDevice == nullptr )
             return false;
 
-        ID3D11Device*        pDevice  = static_cast<ID3D11Device*>( _pRHIDevice->getNativeDevice() );
-        ID3D11DeviceContext* pContext = static_cast<ID3D11DeviceContext*>( _pRHIDevice->getNativeContext() );
-        if ( pDevice != nullptr && pContext != nullptr )
+        // 핸들은 백엔드마다 뜻이 다른 `void*` 다 — D3D11 디바이스인지와 값이 있는지를 `queryNativeHandles` 한 곳에서 확인한다.
+        RHINativeHandles handles{};
+        const bool       bHandlesUnavailable = _pRHIDevice->queryNativeHandles( RHIBackend::DirectX11, handles ) == false || handles._pContext == nullptr;
+        if ( bHandlesUnavailable )
         {
-            const bool bOk = ImGui_ImplDX11_Init( pDevice, pContext );
-            if ( bOk )
-                _viewportSizeGuard.install();
-            return bOk;
+            SW_LOG_ERROR( "The ImGui DX11 renderer needs a D3D11 device with a device and an immediate context" );
+            return false;
         }
-        return true;
+
+        const bool bOk = ImGui_ImplDX11_Init( static_cast<ID3D11Device*>( handles._pDevice ), static_cast<ID3D11DeviceContext*>( handles._pContext ) );
+        if ( bOk )
+            _viewportSizeGuard.install();
+        return bOk;
     }
 
     void ImGuiDX11RendererBackend::shutdown()
@@ -68,13 +71,14 @@ namespace sw::editor
         if ( texture == 0 || _pRHIDevice == nullptr )
             return nullptr;
 
-        ID3D11Texture2D* pTex = static_cast<ID3D11Texture2D*>( _pRHIDevice->getNativeTexturePointer( texture ) );
+        ID3D11Texture2D* pTex = static_cast<ID3D11Texture2D*>( _pRHIDevice->tryGetNativeTexturePointer( RHIBackend::DirectX11, texture ) );
         if ( pTex == nullptr )
             return nullptr;
 
-        ID3D11Device* pDevice = static_cast<ID3D11Device*>( _pRHIDevice->getNativeDevice() );
-        if ( pDevice == nullptr )
+        RHINativeHandles handles{};
+        if ( _pRHIDevice->queryNativeHandles( RHIBackend::DirectX11, handles ) == false )
             return nullptr;
+        ID3D11Device* pDevice = static_cast<ID3D11Device*>( handles._pDevice );
 
         D3D11_TEXTURE2D_DESC texDesc{};
         pTex->GetDesc( &texDesc );

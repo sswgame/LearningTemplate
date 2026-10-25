@@ -69,7 +69,10 @@ namespace sw::editor
 
         bool processEvent( const NativeWindowEvent& event ) override
         {
-            HWND   hWnd = static_cast<HWND>( event._pNativeWindow );
+            // Win32 창이 낸 이벤트가 아니면 `HWND` 가 없다 — 다른 창 시스템의 핸들을 ImGui 에 넘기지 않고 처리하지 않은 것으로 돌려준다.
+            HWND hWnd = static_cast<HWND>( event.tryGetWin32Window() );
+            if ( hWnd == nullptr )
+                return false;
             UINT   uMsg = event._message;
             WPARAM wp   = event._wParam;
             LPARAM lp   = event._lParam;

@@ -123,8 +123,15 @@ namespace sw
         waitIdleInternal();
     }
 
-    bool IRHIDevice::queryNativeHandles( RHINativeHandles& inoutHandles ) const
+    bool IRHIDevice::queryNativeHandles( RHIBackend expectedBackend, RHINativeHandles& inoutHandles ) const
     {
+        // 핸들의 뜻은 백엔드마다 다르다 — 호출처가 캐스트할 백엔드가 아니면 한 칸도 쓰지 않는다.
+        if ( getBackendType() != expectedBackend )
+        {
+            SW_LOG_ERROR( "Native handle query rejected: the caller expects RHIBackend %#, the device is %#", static_cast<uint32>( expectedBackend ), getBackendName() );
+            return false;
+        }
+
         // 판 번호와 크기는 부르는 모듈이 컴파일될 때의 값이다. Engine 의 값과 다르면 두 쪽이 다른 구조체를 보고 있으므로 한 칸도 쓰지 않는다.
         const bool bSameLayout = ( inoutHandles._version == kRHINativeHandlesVersion ) && ( inoutHandles._byteSize == sizeof( RHINativeHandles ) );
         if ( bSameLayout == false )
@@ -140,6 +147,16 @@ namespace sw
             return false;
         inoutHandles = handles;
         return true;
+    }
+
+    void* IRHIDevice::tryGetNativeTexturePointer( RHIBackend expectedBackend, RHITextureHandle texture ) const
+    {
+        if ( getBackendType() != expectedBackend )
+        {
+            SW_LOG_ERROR( "Native texture query rejected: the caller expects RHIBackend %#, the device is %#", static_cast<uint32>( expectedBackend ), getBackendName() );
+            return nullptr;
+        }
+        return getNativeTexturePointer( texture );
     }
 
     bool IRHIDevice::queryNativeHandlesInternal( RHINativeHandles& outHandles ) const

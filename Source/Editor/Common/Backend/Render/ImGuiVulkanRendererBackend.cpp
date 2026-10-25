@@ -191,13 +191,9 @@ namespace sw::editor
             return false;
 
         // 이 백엔드는 Vulkan 전용이다. 핸들은 `IRHIDevice::queryNativeHandles` 로 받는다 — 모듈 경계를 넘는 것은 버전 번호가 든
-        // POD(RHINativeHandles) 하나이고 VulkanRHIDevice 의 레이아웃 · vtable 이 아니다. 버전이 다르면 Engine 이 거절한다.
-        if ( pRHIDevice->getBackendType() != RHIBackend::Vulkan )
-            return false;
-
+        // POD(RHINativeHandles) 하나이고 VulkanRHIDevice 의 레이아웃 · vtable 이 아니다. 버전이 다르거나 Vulkan 디바이스가 아니면 Engine 이 거절한다.
         RHINativeHandles vkNative{};
-        const bool       bVulkanHandlesUnavailable = pRHIDevice->queryNativeHandles( vkNative ) == false || vkNative._backend != RHIBackend::Vulkan || vkNative._pDevice == nullptr;
-        if ( bVulkanHandlesUnavailable )
+        if ( pRHIDevice->queryNativeHandles( RHIBackend::Vulkan, vkNative ) == false )
             return false;
 
         _pRHIDevice  = pRHIDevice;
@@ -310,7 +306,11 @@ namespace sw::editor
 
     void ImGuiVulkanRendererBackend::render( class IRHIDevice* pRHIDevice, ImDrawData* pDrawData )
     {
-        VkCommandBuffer cmdBuffer          = static_cast<VkCommandBuffer>( pRHIDevice->getNativeContext() );
+        // 컨텍스트 칸은 이번 프레임의 커맨드 버퍼라 프레임마다 다시 묻는다.
+        RHINativeHandles vkNative{};
+        if ( pRHIDevice == nullptr || pRHIDevice->queryNativeHandles( RHIBackend::Vulkan, vkNative ) == false )
+            return;
+        VkCommandBuffer cmdBuffer          = static_cast<VkCommandBuffer>( vkNative._pContext );
         const bool      bCanRenderDrawData = cmdBuffer != nullptr && pDrawData != nullptr && _pRHIDevice != nullptr;
         if ( bCanRenderDrawData )
             ImGui_ImplVulkan_RenderDrawData( pDrawData, cmdBuffer );
@@ -322,9 +322,8 @@ namespace sw::editor
         if ( bCannotRegisterTexture )
             return nullptr;
 
-        void* pImageViewPtr{ nullptr };
         // Vulkan 의 "네이티브 텍스처 포인터" 가 곧 VkImageView 다 — 전용 조회 함수 없이 범용 함수를 쓴다.
-        pImageViewPtr = _pRHIDevice->getNativeTexturePointer( texture );
+        void* pImageViewPtr = _pRHIDevice->tryGetNativeTexturePointer( RHIBackend::Vulkan, texture );
         if ( pImageViewPtr == nullptr )
         {
             SW_LOG_ERROR( "Failed to resolve VkImageView for RHI handle %#", texture );

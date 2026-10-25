@@ -414,10 +414,12 @@ SW_TEST_CASE( RHIDeviceTest, NativeHandlesDescribeTheDevice )
     {
         const sw::string     label = sw::string( device->getBackendName() );
         sw::RHINativeHandles handles{};
-        SW_EXPECT_TRUE_MSG( device->queryNativeHandles( handles ), ( label + ": 네이티브 핸들 조회 실패" ).c_str() );
+        SW_EXPECT_TRUE_MSG( device->queryNativeHandles( device.getBackend(), handles ), ( label + ": 네이티브 핸들 조회 실패" ).c_str() );
         SW_EXPECT_TRUE_MSG( handles._backend == device.getBackend(), ( label + ": 다른 백엔드라고 답한다" ).c_str() );
-        SW_EXPECT_TRUE_MSG( handles._pDevice != nullptr && handles._pDevice == device->getNativeDevice(), ( label + ": 디바이스 칸이 비었거나 다르다" ).c_str() );
-        SW_EXPECT_TRUE_MSG( handles._pGraphicsQueue == device->getNativeCommandQueue(), ( label + ": 큐 칸이 getNativeCommandQueue 와 다르다" ).c_str() );
+        SW_EXPECT_TRUE_MSG( handles._pDevice != nullptr, ( label + ": 디바이스 칸이 비었다" ).c_str() );
+        // 큐는 DX12 · Vulkan 만 가진다(DX11 · OpenGL 은 즉시 컨텍스트라 큐 객체가 없다).
+        const bool bHasQueue = device.getBackend() == sw::RHIBackend::DirectX12 || device.getBackend() == sw::RHIBackend::Vulkan;
+        SW_EXPECT_TRUE_MSG( ( handles._pGraphicsQueue != nullptr ) == bHasQueue, ( label + ": 큐 칸이 백엔드와 맞지 않는다" ).c_str() );
         if ( device.getBackend() == sw::RHIBackend::Vulkan )
         {
             SW_EXPECT_TRUE_MSG( handles._pInstance != nullptr && handles._pPhysicalDevice != nullptr, "Vulkan: 인스턴스 · 물리 디바이스가 비었다" );

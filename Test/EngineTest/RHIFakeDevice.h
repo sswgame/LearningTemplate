@@ -95,10 +95,6 @@ namespace test
         sw::IRHICommandContext*  getFrameStreamContext() override { return nullptr; }
         sw::RHIBackend           getBackendType() const override { return sw::RHIBackend::DirectX12; }
         const utf8*              getBackendName() const override { return "Fake"; }
-        void*                    getNativeDevice() const override { return _pNativeDevice; }
-        void*                    getNativeContext() const override { return nullptr; }
-        void*                    getNativeCommandQueue() const override { return nullptr; }
-        void*                    getNativeTexturePointer( sw::RHITextureHandle ) const override { return nullptr; }
         sw::IRHIResourceFactory* getResourceFactory() override { return nullptr; }
         bool                     supportsInstancedSceneDraw() const override { return false; }
         /** @brief 드라이버가 없으니 모든 항목이 "모름" 입니다. */
@@ -140,6 +136,14 @@ namespace test
         }
 #endif
 
+    protected:
+        // 기반처럼 보호 구역이다 — 테스트도 종류 확인이 든 `queryNativeHandles` · `tryGetNativeTexturePointer` 로 읽는다.
+        void* getNativeDevice() const override { return _pNativeDevice; }
+        void* getNativeContext() const override { return nullptr; }
+        void* getNativeCommandQueue() const override { return nullptr; }
+        void* getNativeTexturePointer( sw::RHITextureHandle ) const override { return nullptr; }
+
+    public:
         uint32                                     _maxCreatable{ 0xFFFFFFFFu }; /**< 이만큼 만든 뒤로는 만들지 못한다 */
         uint32                                     _createdCount{ 0 };           /**< 지금까지 만든 리스트 수 */
         sw::vector<FakeRHICommandList*>            _listExecuted;                /**< 제출된 순서 그대로의 리스트 */
