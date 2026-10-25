@@ -10,9 +10,9 @@
 
 #include "TestFramework/TestFramework.h"
 
-// 스테이징 링을 쓰는 GL · Vulkan 전송을 실제 디바이스로 본다. 링 장부의 규칙은 TestRHIStagingRing.cpp 가 GPU 없이 본다.
+// 스테이징 링을 쓰는 GL · Vulkan · DX12 전송을 실제 디바이스로 본다. 링 장부의 규칙은 TestRHIStagingRing.cpp 가 GPU 없이 본다.
 
-SW_TEST_REQUIRES_HOST( RHIStagingRingGPUTest, "creates a real OpenGL or Vulkan device" );
+SW_TEST_REQUIRES_HOST( RHIStagingRingGPUTest, "creates a real OpenGL, Vulkan or DirectX 12 device" );
 
 namespace
 {
@@ -74,15 +74,17 @@ namespace
     }
 
     /**
-     * @brief 링(기본 64 MiB)보다 큰 업로드 · 읽기 한 장을 일회성 버퍼(단독 구간)로 받고, 끝난 뒤 링이 작은 전송을 다시 받는지 본다(GL · Vulkan 이 같이 쓴다).
+     * @brief 링(기본 64 MiB)보다 큰 업로드 · 읽기 한 장을 일회성 버퍼(단독 구간)로 받고, 끝난 뒤 링이 작은 전송을 다시 받는지 본다(GL · Vulkan · DX12 가 같이 쓴다).
      * @details 4096×4352 RGBA8(68 MiB)은 업로드 링과 되읽기 링을 모두 넘는다 — 둘 다 `Rejected` 가 아니라 링이 빌 때 혼자 들어가야 하고(단독 상한 기본 512 MiB),
      *          읽은 바이트가 올린 바이트와 같아야 한다. 이어 4 MiB 구간 업로드와 그 텍스처의 읽기가 다시 들어가는지(단독 구간을 돌려받았는지) 본다.
      *          돌려받지 않았으면 `Busy` 가 시간 초과까지 이어져 실패한다.
+     * @param bReadbackRing 백엔드가 되읽기 링을 갖는지입니다. DX12 는 읽기마다 자기 읽기 힙 버퍼를 만들어 링이 없다(능력 비트 거짓) — 큰 읽기도 그대로 받아야 한다.
      */
-    void transferLargerThanTheRingAlone( test::RHITestDevice& device )
+    void transferLargerThanTheRingAlone( test::RHITestDevice& device, bool bReadbackRing )
     {
         SW_ASSERT_TRUE_MSG( device->getCapabilities()._bPersistentStagingRing != SW_FALSE, "the backend did not create its persistent staging ring" );
-        SW_ASSERT_TRUE_MSG( device->getCapabilities()._bPersistentReadbackRing != SW_FALSE, "the backend did not create its persistent readback ring" );
+        if ( bReadbackRing )
+            SW_ASSERT_TRUE_MSG( device->getCapabilities()._bPersistentReadbackRing != SW_FALSE, "the backend did not create its persistent readback ring" );
 
         constexpr uint32         kWidth    = 4096;
         constexpr uint32         kHeight   = 4352;
@@ -134,6 +136,59 @@ namespace
         pResource->destroyTexture( small );
         pResource->destroyTexture( texture );
     }
+
+    /**
+     * @brief 프레임을 돌리지 않고 폴링만으로 전송이 끝나고, 전송 중에 파괴한 텍스처와 끝나기 전에 버린 읽기가 오류 없이 정리된다(Vulkan · DX12 가 같이 쓴다).
+     * @details 계약 6(전송 중 파괴는 해제를 미룬다) · 7(폴링만으로 진행) · 읽기 버리기. 업로드를 내자마자 텍스처를 파괴해도 자원은 전송이 끝난 뒤에 놓여야 하고,
+     *          끝나기 전에 버린 읽기는 복사가 끝난 뒤 정리돼 다음 읽기의 값이 맞아야 한다. 끝에서 해제 큐가 비어야 한다 — 전송을 기다리던 해제가 풀리지 않으면 남는다.
+     */
+    void transfersFinishByPollingAndDeferTheirReleases( test::RHITestDevice& device )
+    {
+        constexpr uint32         kSize     = 256;
+        sw::IRHIResourceFactory* pResource = device->getResourceFactory();
+        sw::RHITextureDesc       texDesc{};
+        texDesc._width             = kSize;
+        texDesc._height            = kSize;
+        texDesc._mipLevels         = 1;
+        texDesc._format            = sw::RHIFormat::R8G8B8A8_UNORM;
+        texDesc._bIsShaderResource = SW_TRUE;
+
+        sw::vector<uint8> listPixel( static_cast<size_t>( kSize ) * kSize * 4, 0 );
+        for ( size_t byteIndex = 0; byteIndex < listPixel.size(); ++byteIndex )
+        {
+            listPixel[byteIndex] = static_cast<uint8>( byteIndex * 7 + 3 );
+        }
+        sw::RHITextureUploadDesc upload{};
+        upload._pData     = listPixel.data();
+        upload._sizeBytes = static_cast<uint32>( listPixel.size() );
+        upload._mipLevels = 1;
+
+        // 1) 내자마자 파괴한다 — 해제는 전송 뒤로 미뤄지고, 티켓은 프레임 없이 폴링만으로 끝난다.
+        const sw::RHITextureHandle doomed = pResource->createTexture2D( texDesc );
+        SW_ASSERT_TRUE( doomed != 0 );
+        const sw::RHITransferSubmit doomedSubmit = pResource->submitTextureUpload( doomed, upload );
+        SW_ASSERT_TRUE( doomedSubmit.isAccepted() );
+        pResource->destroyTexture( doomed );
+        SW_EXPECT_TRUE( sw::RHITransferUtil::waitForTransfer( *pResource, doomedSubmit._ticket ) );
+
+        // 2) 읽기를 내고 끝나기 전에 버린 뒤, 같은 텍스처를 다시 읽어 값이 맞는지 본다(버린 읽기가 다음 읽기를 망치지 않는다).
+        const sw::RHITextureHandle texture = pResource->createTexture2D( texDesc );
+        SW_ASSERT_TRUE( texture != 0 );
+        SW_ASSERT_TRUE( sw::RHITransferUtil::uploadTexture2DAndWait( *pResource, texture, upload ) );
+        sw::RHITextureMipSpan       layout{};
+        const sw::RHITransferSubmit dropped = pResource->submitTextureReadback( texture, 0, 0, layout );
+        SW_ASSERT_TRUE( dropped.isAccepted() );
+        pResource->discardTextureReadback( dropped._ticket );
+        sw::vector<uint8> readBytes;
+        SW_ASSERT_TRUE( sw::RHITransferUtil::readbackTexture2DAndWait( *pResource, texture, 0, 0, readBytes, layout ) );
+        SW_ASSERT_TRUE( readBytes.size() == listPixel.size() );
+        SW_EXPECT_TRUE_MSG( sw::Memory::compare( readBytes.data(), listPixel.data(), listPixel.size() ) == 0, "the readback after a discarded one did not match the upload" );
+        SW_EXPECT_TRUE( sw::RHITransferUtil::waitForTransfer( *pResource, dropped._ticket ) ); // 버린 티켓도 Complete 로 끝난다
+
+        pResource->destroyTexture( texture );
+        device->waitIdle(); // 미뤄 둔 해제가 모두 놓인다
+        SW_EXPECT_EQUAL( static_cast<uint32>( 0 ), device->getPendingReleaseCount() );
+    }
 } // namespace
 
 /**
@@ -173,51 +228,33 @@ SW_TEST_CASE( RHIStagingRingGPUTest, VulkanTransfersFinishByPollingAndDeferTheir
     test::RHITestDevice device( sw::RHIBackend::Vulkan );
     if ( device.isReady() == false )
         SW_TEST_SKIP( "No Vulkan device for the transfer test" );
+    transfersFinishByPollingAndDeferTheirReleases( device );
+}
 
-    constexpr uint32         kSize     = 256;
-    sw::IRHIResourceFactory* pResource = device->getResourceFactory();
-    sw::RHITextureDesc       texDesc{};
-    texDesc._width             = kSize;
-    texDesc._height            = kSize;
-    texDesc._mipLevels         = 1;
-    texDesc._format            = sw::RHIFormat::R8G8B8A8_UNORM;
-    texDesc._bIsShaderResource = SW_TRUE;
+/**
+ * @brief [RHIStagingRingGPUTest] DX12 도 업로드 링을 감고 Busy 를 지난 뒤 마지막 업로드가 그대로 읽힌다(제출이 펜스를 기다리지 않는다, RhiAsyncUploads U5)
+ * @details 24 × 4 MiB 는 기본 링 64 MiB 를 넘는다. 변이: 링 구간에 시리얼을 붙이지 않으면(`markSubmitted` 를 빼면) 구간이 돌아오지 않아 둘째 바퀴가 끝없이 Busy 이고,
+ *          전송 펜스를 거치지 않고 구간을 바로 놓으면 GPU 가 읽는 중인 구간을 다음 업로드가 덮어 마지막 비교가 질 수 있다. 읽기는 되읽기 링 없이 읽기마다 만든 버퍼로 받는다.
+ */
+SW_TEST_CASE( RHIStagingRingGPUTest, DirectX12UploadsWrapTheRingAndReadBackTheLastOne )
+{
+    test::RHITestDevice device( sw::RHIBackend::DirectX12 );
+    if ( device.isReady() == false )
+        SW_TEST_SKIP( "No DirectX 12 device for the staging ring test" );
+    uploadPastTheRingAndReadBackTheLastOne( device );
+}
 
-    sw::vector<uint8> listPixel( static_cast<size_t>( kSize ) * kSize * 4, 0 );
-    for ( size_t byteIndex = 0; byteIndex < listPixel.size(); ++byteIndex )
-    {
-        listPixel[byteIndex] = static_cast<uint8>( byteIndex * 7 + 3 );
-    }
-    sw::RHITextureUploadDesc upload{};
-    upload._pData     = listPixel.data();
-    upload._sizeBytes = static_cast<uint32>( listPixel.size() );
-    upload._mipLevels = 1;
-
-    // 1) 내자마자 파괴한다 — 해제는 전송 뒤로 미뤄지고, 티켓은 프레임 없이 폴링만으로 끝난다.
-    const sw::RHITextureHandle doomed = pResource->createTexture2D( texDesc );
-    SW_ASSERT_TRUE( doomed != 0 );
-    const sw::RHITransferSubmit doomedSubmit = pResource->submitTextureUpload( doomed, upload );
-    SW_ASSERT_TRUE( doomedSubmit.isAccepted() );
-    pResource->destroyTexture( doomed );
-    SW_EXPECT_TRUE( sw::RHITransferUtil::waitForTransfer( *pResource, doomedSubmit._ticket ) );
-
-    // 2) 읽기를 내고 끝나기 전에 버린 뒤, 같은 텍스처를 다시 읽어 값이 맞는지 본다(버린 구간을 다음 읽기가 덮어쓰지 않는다).
-    const sw::RHITextureHandle texture = pResource->createTexture2D( texDesc );
-    SW_ASSERT_TRUE( texture != 0 );
-    SW_ASSERT_TRUE( sw::RHITransferUtil::uploadTexture2DAndWait( *pResource, texture, upload ) );
-    sw::RHITextureMipSpan       layout{};
-    const sw::RHITransferSubmit dropped = pResource->submitTextureReadback( texture, 0, 0, layout );
-    SW_ASSERT_TRUE( dropped.isAccepted() );
-    pResource->discardTextureReadback( dropped._ticket );
-    sw::vector<uint8> readBytes;
-    SW_ASSERT_TRUE( sw::RHITransferUtil::readbackTexture2DAndWait( *pResource, texture, 0, 0, readBytes, layout ) );
-    SW_ASSERT_TRUE( readBytes.size() == listPixel.size() );
-    SW_EXPECT_TRUE_MSG( sw::Memory::compare( readBytes.data(), listPixel.data(), listPixel.size() ) == 0, "the readback after a discarded one did not match the upload" );
-    SW_EXPECT_TRUE( sw::RHITransferUtil::waitForTransfer( *pResource, dropped._ticket ) ); // 버린 티켓도 Complete 로 끝난다
-
-    pResource->destroyTexture( texture );
-    device->waitIdle(); // 미뤄 둔 해제가 모두 놓인다
-    SW_EXPECT_EQUAL( static_cast<uint32>( 0 ), device->getPendingReleaseCount() );
+/**
+ * @brief [RHIStagingRingGPUTest] DX12 — 프레임을 돌리지 않고 폴링만으로 전송이 끝나고, 전송 중에 파괴한 텍스처와 끝나기 전에 버린 읽기가 디버그 레이어 오류 없이 정리된다
+ * @details 계약 6 · 7 과 읽기 버리기(`transfersFinishByPollingAndDeferTheirReleases`). 이전 구조는 열린 복사 리스트를 폴링이 내보냈지만 지금은 제출이 이미 큐에 난다.
+ *          끝에서 해제 큐가 비어야 한다 — 전송을 기다리던 텍스처 해제(`_transferReleaseQueue`)가 워터마크를 지나 `_releaseQueue` 로 넘어가지 않으면 `waitIdle` 뒤에도 남는다.
+ */
+SW_TEST_CASE( RHIStagingRingGPUTest, DirectX12TransfersFinishByPollingAndDeferTheirReleases )
+{
+    test::RHITestDevice device( sw::RHIBackend::DirectX12 );
+    if ( device.isReady() == false )
+        SW_TEST_SKIP( "No DirectX 12 device for the transfer test" );
+    transfersFinishByPollingAndDeferTheirReleases( device );
 }
 
 /** @brief [RHIStagingRingGPUTest] GL 은 링보다 큰 업로드 · 읽기 한 장을 일회성 영속 매핑 버퍼로 받는다(`transferLargerThanTheRingAlone`). GL 4.4 가 있어야 한다. */
@@ -226,7 +263,19 @@ SW_TEST_CASE( RHIStagingRingGPUTest, OpenGLTransferLargerThanTheRingIsAcceptedAl
     test::RHITestDevice device( sw::RHIBackend::OpenGL );
     if ( device.isReady() == false )
         SW_TEST_SKIP( "No OpenGL device for the staging ring test" );
-    transferLargerThanTheRingAlone( device );
+    transferLargerThanTheRingAlone( device, true );
+}
+
+/**
+ * @brief [RHIStagingRingGPUTest] DX12 도 링보다 큰 업로드 한 장을 일회성 업로드 힙 버퍼로 받고, 읽기는 되읽기 링 없이 받는다(`transferLargerThanTheRingAlone`)
+ * @details 변이: 단독 구간에도 링 버퍼(`D3D12StagingRing::_buffer`)를 쓰면 링 밖을 복사해 디버그 레이어 오류가 나거나 비교가 지고, 단독 버퍼를 지우지 않으면 메모리 장부의 Staging 이 68 MiB 넘게 남는다.
+ */
+SW_TEST_CASE( RHIStagingRingGPUTest, DirectX12TransferLargerThanTheRingIsAcceptedAlone )
+{
+    test::RHITestDevice device( sw::RHIBackend::DirectX12 );
+    if ( device.isReady() == false )
+        SW_TEST_SKIP( "No DirectX 12 device for the staging ring test" );
+    transferLargerThanTheRingAlone( device, false );
 }
 
 /**
@@ -239,7 +288,7 @@ SW_TEST_CASE( RHIStagingRingGPUTest, VulkanTransferLargerThanTheRingIsAcceptedAl
     test::RHITestDevice device( sw::RHIBackend::Vulkan );
     if ( device.isReady() == false )
         SW_TEST_SKIP( "No Vulkan device for the staging ring test" );
-    transferLargerThanTheRingAlone( device );
+    transferLargerThanTheRingAlone( device, true );
 }
 
 /**

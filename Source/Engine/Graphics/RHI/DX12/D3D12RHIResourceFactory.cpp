@@ -17,6 +17,15 @@ namespace sw
 {
     SW_LOG_CALLER( "D3D12RHIResourceFactory" );
 
+    namespace
+    {
+        /** @brief 링 할당 결과를 제출 결과로 돌려줍니다(`Accepted` 는 부르는 쪽이 시리얼로 만든다). */
+        RHITransferSubmit makeUnacceptedSubmit( RHISubmitResult result )
+        {
+            return result == RHISubmitResult::Busy ? RHITransferSubmit::busy() : RHITransferSubmit::rejected();
+        }
+    } // namespace
+
     RHIBufferHandle D3D12RHIResourceFactory::createConstantBuffer( uint32 size )
     {
         const UINT                             alignedSize = MathUtil::align( size, constant::kConstantBufferAlignment );
@@ -320,8 +329,7 @@ namespace sw
             return RHITransferSubmit::rejected();
         }
 
-        std::scoped_lock<mutex> uploadLock{ _pDevice->_uploadSlotMutex };
-
+        // 프레임 제출 락(`_uploadSlotMutex`)은 잡지 않는다 — 풋프린트 계산, 소스 복사, 리스트 기록은 호출 스레드의 일이고 큐에 내는 순간만 전송 제출 락이 직렬화한다.
         const D3D12_RESOURCE_DESC resourceDesc = pTexture->GetDesc();
         if ( desc._arraySlice >= resourceDesc.DepthOrArraySize )
         {
@@ -347,32 +355,35 @@ namespace sw
         UINT64                             totalBytes{ 0 };
         _pDevice->_device->GetCopyableFootprints( &resourceDesc, firstSubresource, mipCount, 0, arrFootprint, arrRowCount, arrRowSize, &totalBytes );
 
-        uint32 slotIndex{ 0 };
-        uint64 stagingOffset{ 0 };
-        void*  pMapped{ nullptr };
-        if ( acquireUploadStaging( totalBytes, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT, slotIndex, stagingOffset, pMapped ) == false )
-        {
-            SW_LOG_ERROR( "submitTextureUpload: failed to acquire %# bytes of upload staging", totalBytes );
-            return RHITransferSubmit::rejected();
-        }
-        // 스테이징 안의 실제 위치로 풋프린트를 다시 받는다(BaseOffset).
-        _pDevice->_device->GetCopyableFootprints( &resourceDesc, firstSubresource, mipCount, stagingOffset, arrFootprint, arrRowCount, arrRowSize, &totalBytes );
+        D3D12RHIDevice::D3D12StagingRing& ring = _pDevice->_uploadRing;
+        RHIStagingSpan                    span{};
+        const RHISubmitResult             allocateResult = _pDevice->allocateStagingSpan( ring, totalBytes, "submitTextureUpload", span );
+        if ( allocateResult != RHISubmitResult::Accepted )
+            return makeUnacceptedSubmit( allocateResult );
+        // 링 안의 실제 위치로 풋프린트를 다시 받는다(BaseOffset). 구간 시작이 배치 오프셋 정렬(512)의 배수라 서브리소스 오프셋도 규칙을 지킨다.
+        _pDevice->_device->GetCopyableFootprints( &resourceDesc, firstSubresource, mipCount, span._offsetBytes, arrFootprint, arrRowCount, arrRowSize, &totalBytes );
 
-        // 소스를 스테이징으로 복사한다(계약 1). 이 뒤로 호출자는 버퍼를 재사용해도 된다.
+        // 소스를 스테이징으로 복사한다(계약 1). 이 뒤로 호출자는 버퍼를 재사용해도 된다. 큐 락 밖의 일이다.
+        uint8* const pRingBase = ring.getSpanMappedBase( span );
         for ( uint32 mip = 0; mip < mipCount; ++mip )
         {
-            const RHITextureMipSpan&                  span      = arrMip[mip];
+            const RHITextureMipSpan&                  mipSpan   = arrMip[mip];
             const D3D12_PLACED_SUBRESOURCE_FOOTPRINT& footprint = arrFootprint[mip];
-            uint8*                                    pDstBase  = static_cast<uint8*>( pMapped ) + footprint.Offset;
-            const uint32                              rowBytes  = MathUtil::min( span._rowBytes, static_cast<uint32>( arrRowSize[mip] ) );
+            uint8*                                    pDstBase  = pRingBase + footprint.Offset;
+            const uint32                              rowBytes  = MathUtil::min( mipSpan._rowBytes, static_cast<uint32>( arrRowSize[mip] ) );
             for ( uint32 row = 0; row < arrRowCount[mip]; ++row )
             {
-                Memory::copy( pDstBase + static_cast<uint64>( row ) * footprint.Footprint.RowPitch, span._pData + static_cast<uint64>( row ) * span._rowBytes, rowBytes );
+                Memory::copy( pDstBase + static_cast<uint64>( row ) * footprint.Footprint.RowPitch, mipSpan._pData + static_cast<uint64>( row ) * mipSpan._rowBytes, rowBytes );
             }
         }
 
-        D3D12RHIDevice::StructuredUploadSlot& slot  = _pDevice->_arrStructuredUploadSlot[slotIndex];
-        ID3D12GraphicsCommandList*            pList = slot._copyCommandList.Get();
+        D3D12RHIDevice::D3D12TransferJob job{};
+        if ( _pDevice->beginTransferJob( job ) == false )
+        {
+            ring._ledger.free( span );
+            return RHITransferSubmit::rejected();
+        }
+        ID3D12GraphicsCommandList* pList = job._list.Get();
 
         // 추적 상태에서 출발해 같은 상태로 돌아간다(getTrackedTextureState).
         const D3D12_RESOURCE_STATES stateBefore = _pDevice->getTrackedTextureState( texture );
@@ -396,7 +407,7 @@ namespace sw
             dst.SubresourceIndex = firstSubresource + arrMip[mip]._mip;
 
             D3D12_TEXTURE_COPY_LOCATION src{};
-            src.pResource       = slot._uploadHeap.Get();
+            src.pResource       = ring.getSpanResource( span );
             src.Type            = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
             src.PlacedFootprint = arrFootprint[mip];
             pList->CopyTextureRegion( &dst, 0, 0, 0, &src, nullptr );
@@ -408,8 +419,14 @@ namespace sw
             barrier.Transition.StateAfter  = stateBefore;
             pList->ResourceBarrier( 1, &barrier );
         }
-        // 제출은 프레임 끝(또는 큐 대기 직전, 또는 이 티켓을 폴링할 때)에 한 번이다. D3D12RHIDevice::flushPendingUploads. 시리얼은 같은 락 안에서 기록 직후에 매긴다.
-        const uint64 serial = _pDevice->issueTransferSerial();
+        // 기록이 끝났다. 즉시 큐에 내고 전송 펜스를 올린다(기다리지 않는다). 시리얼은 큐 제출과 같은 락 안에서 매겨진다.
+        const uint64 serial = _pDevice->submitTransferJob( std::move( job ), "submitTextureUpload" );
+        if ( serial == 0 )
+        {
+            ring._ledger.free( span );
+            return RHITransferSubmit::rejected();
+        }
+        ring._ledger.markSubmitted( span, serial );
         _pDevice->noteTextureTransfer( texture, serial );
         return _pDevice->_transferSerials.makeAccepted( serial );
     }
@@ -424,9 +441,6 @@ namespace sw
             return RHITransferSubmit::rejected();
         }
 
-        // 슬롯 · 얼로케이터 규칙은 전체 업로드와 같은 것 하나다(acquireUploadStaging) — 같은 프레임에 업로드가 여럿이어도 슬롯을 두 번 Reset 하지 않는다.
-        std::scoped_lock<mutex> uploadLock{ _pDevice->_uploadSlotMutex };
-
         const D3D12_RESOURCE_DESC resourceDesc = pTexture->GetDesc();
         uint32                    rowBytes{ 0 };
         if ( validateTextureRegionUpload( fromDxgiFormat( resourceDesc.Format ), static_cast<uint32>( resourceDesc.Width ), resourceDesc.Height,
@@ -434,25 +448,27 @@ namespace sw
             return RHITransferSubmit::rejected();
 
         // 복사 원본은 행 피치 256 정렬 풋프린트여야 한다 — 구간 크기로 손수 짓는다(GetCopyableFootprints 는 서브리소스 전체를 준다).
-        const uint32 rowPitch = MathUtil::align( rowBytes, static_cast<uint32>( D3D12_TEXTURE_DATA_PITCH_ALIGNMENT ) );
-        uint32       slotIndex{ 0 };
-        uint64       stagingOffset{ 0 };
-        void*        pMapped{ nullptr };
-        if ( acquireUploadStaging( static_cast<uint64>( rowPitch ) * desc._height, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT, slotIndex, stagingOffset, pMapped ) == false )
-        {
-            SW_LOG_ERROR( "submitTextureRegionUpload: failed to acquire %# bytes of upload staging", static_cast<uint64>( rowPitch ) * desc._height );
-            return RHITransferSubmit::rejected();
-        }
+        const uint32                      rowPitch = MathUtil::align( rowBytes, static_cast<uint32>( D3D12_TEXTURE_DATA_PITCH_ALIGNMENT ) );
+        D3D12RHIDevice::D3D12StagingRing& ring     = _pDevice->_uploadRing;
+        RHIStagingSpan                    span{};
+        const RHISubmitResult             allocateResult = _pDevice->allocateStagingSpan( ring, static_cast<uint64>( rowPitch ) * desc._height, "submitTextureRegionUpload", span );
+        if ( allocateResult != RHISubmitResult::Accepted )
+            return makeUnacceptedSubmit( allocateResult );
 
-        uint8*       pDstBase = static_cast<uint8*>( pMapped ) + stagingOffset;
+        uint8*       pDstBase = ring.getSpanMappedBase( span ) + span._offsetBytes;
         const uint8* pSrcBase = static_cast<const uint8*>( desc._pData );
         for ( uint32 row = 0; row < desc._height; ++row )
         {
             Memory::copy( pDstBase + static_cast<uint64>( row ) * rowPitch, pSrcBase + static_cast<uint64>( row ) * rowBytes, rowBytes );
         }
 
-        D3D12RHIDevice::StructuredUploadSlot& slot  = _pDevice->_arrStructuredUploadSlot[slotIndex];
-        ID3D12GraphicsCommandList*            pList = slot._copyCommandList.Get();
+        D3D12RHIDevice::D3D12TransferJob job{};
+        if ( _pDevice->beginTransferJob( job ) == false )
+        {
+            ring._ledger.free( span );
+            return RHITransferSubmit::rejected();
+        }
+        ID3D12GraphicsCommandList* pList = job._list.Get();
 
         // 추적 상태에서 출발해 같은 상태로 돌아간다(전체 업로드와 같다).
         const D3D12_RESOURCE_STATES stateBefore = _pDevice->getTrackedTextureState( texture );
@@ -473,9 +489,9 @@ namespace sw
         dst.SubresourceIndex = desc._mip + desc._arraySlice * resourceDesc.MipLevels; // D3D12CalcSubresource 와 같은 순서
 
         D3D12_TEXTURE_COPY_LOCATION src{};
-        src.pResource                          = slot._uploadHeap.Get();
+        src.pResource                          = ring.getSpanResource( span );
         src.Type                               = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-        src.PlacedFootprint.Offset             = stagingOffset;
+        src.PlacedFootprint.Offset             = span._offsetBytes;
         src.PlacedFootprint.Footprint.Format   = resourceDesc.Format;
         src.PlacedFootprint.Footprint.Width    = desc._width;
         src.PlacedFootprint.Footprint.Height   = desc._height;
@@ -489,13 +505,20 @@ namespace sw
             barrier.Transition.StateAfter  = stateBefore;
             pList->ResourceBarrier( 1, &barrier );
         }
-        const uint64 serial = _pDevice->issueTransferSerial();
+        const uint64 serial = _pDevice->submitTransferJob( std::move( job ), "submitTextureRegionUpload" );
+        if ( serial == 0 )
+        {
+            ring._ledger.free( span );
+            return RHITransferSubmit::rejected();
+        }
+        ring._ledger.markSubmitted( span, serial );
         _pDevice->noteTextureTransfer( texture, serial );
         return _pDevice->_transferSerials.makeAccepted( serial );
     }
 
     RHITransferStatus D3D12RHIResourceFactory::pollTransfer( RHITransferTicket ticket )
     {
+        // 판정은 공용 부품이 한다. 아직이면 끝난 전송을 한 번 걷고 다시 본다 — 제출은 이미 큐에 났으므로 프레임을 돌리지 않아도 되풀이하면 끝에 이른다(계약 7).
         const RHITransferStatus status = _pDevice->_transferSerials.classify( ticket );
         if ( status != RHITransferStatus::Pending )
             return status;
@@ -504,12 +527,6 @@ namespace sw
         {
             _pDevice->_transferSerials.markLost();
             return _pDevice->_transferSerials.classify( ticket );
-        }
-        {
-            // 아직 내보내지 않은 전송(열린 복사 리스트)은 폴링이 내보낸다 — 프레임을 돌리지 않아도 되풀이하면 끝에 이른다(계약 7). 내보내면서 전송 펜스도 올린다.
-            std::scoped_lock<mutex> uploadLock{ _pDevice->_uploadSlotMutex };
-            if ( ticket._serial > _pDevice->_exportedTransferSerial )
-                _pDevice->flushPendingUploads( true );
         }
         _pDevice->retireCompletedTransfers();
         return _pDevice->_transferSerials.classify( ticket );
@@ -556,9 +573,11 @@ namespace sw
         D3D12RHIDevice::TextureReadbackRecord record;
         if ( _pDevice->_readbackTable.take( ticket._serial, record ) == false )
             return; // 업로드 티켓이거나 이미 가져감 · 버림이다 — 계약상 아무 일도 하지 않는다
-        // 복사 리스트가 아직 열려 있거나 GPU 에서 도는 중일 수 있어 읽기 버퍼를 지금 놓으면 안 된다. 프레임 펜스를 한 값 더 기다렸다가 놓는다
-        // (열린 복사는 다음 구간의 Signal 에서야 끝난다 — releaseTrackedResourceDeferred 와 같은 사정).
-        _pDevice->_releaseQueue.enqueueGPUKeepAlive( std::move( record._readback ), _pDevice->_fenceValue.load() + 1 );
+        // 복사가 아직 GPU 에서 도는 중일 수 있어 읽기 버퍼를 지금 놓으면 안 된다. 전송이 끝나면(워터마크가 이 시리얼을 지나면) 놓는다.
+        // 이미 끝났다면 바로 놓는다.
+        if ( _pDevice->_transferSerials.isComplete( ticket._serial ) )
+            return;
+        _pDevice->_transferReleaseQueue.enqueueGPUKeepAlive( std::move( record._readback ), ticket._serial );
     }
 
     RHIFormat D3D12RHIResourceFactory::getTextureFormat( RHITextureHandle texture ) const
@@ -587,8 +606,7 @@ namespace sw
             return RHITransferSubmit::rejected();
         }
 
-        std::scoped_lock<mutex> uploadLock{ _pDevice->_uploadSlotMutex };
-
+        // 읽기 힙 버퍼 생성, 풋프린트 계산, 리스트 기록은 호출 스레드의 일이다 — 프레임 제출 락(`_uploadSlotMutex`)을 잡지 않는다.
         const D3D12_RESOURCE_DESC resourceDesc = pTexture->GetDesc();
         if ( mip >= resourceDesc.MipLevels || arraySlice >= resourceDesc.DepthOrArraySize )
         {
@@ -623,13 +641,13 @@ namespace sw
             return RHITransferSubmit::rejected();
         }
 
-        uint32 slotIndex{ 0 };
-        if ( openUploadSlot( slotIndex ) == false )
+        D3D12RHIDevice::D3D12TransferJob job{};
+        if ( _pDevice->beginTransferJob( job ) == false )
         {
             SW_LOG_ERROR( "submitTextureReadback: failed to open the copy command list" );
             return RHITransferSubmit::rejected();
         }
-        ID3D12GraphicsCommandList* pList = _pDevice->_arrStructuredUploadSlot[slotIndex]._copyCommandList.Get();
+        ID3D12GraphicsCommandList* pList = job._list.Get();
 
         const D3D12_RESOURCE_STATES stateBefore = _pDevice->getTrackedTextureState( texture );
 
@@ -660,9 +678,12 @@ namespace sw
             barrier.Transition.StateAfter  = stateBefore;
             pList->ResourceBarrier( 1, &barrier );
         }
-        // 이 복사는 열린 리스트에 있다. 프레임 끝이나 이 티켓의 폴링이 내보낸다. 읽기 버퍼는 보관표가 쥐고 있다가 `takeTextureReadback` 이 Map 한다.
+        // 기록이 끝났다. 즉시 큐에 내고 전송 펜스를 올린다(기다리지 않는다). 읽기 버퍼는 보관표가 쥐고 있다가 `takeTextureReadback` 이 Map 한다.
+        // 읽기 버퍼는 읽기마다 만든다(되읽기 링이 없다, 능력 비트 `_bPersistentReadbackRing` 거짓) — 링이 아니므로 `Busy` 가 없다.
+        const uint64 serial = _pDevice->submitTransferJob( std::move( job ), "submitTextureReadback" );
+        if ( serial == 0 )
+            return RHITransferSubmit::rejected();
         // 원본 텍스처도 복사가 끝나기 전에는 해제되지 않게 전송 시리얼에 매단다(destroyTexture 가 해제를 미룬다).
-        const uint64 serial = _pDevice->issueTransferSerial();
         _pDevice->noteTextureTransfer( texture, serial );
 
         D3D12RHIDevice::TextureReadbackRecord record;
@@ -781,7 +802,7 @@ namespace sw
             }
         }
 
-        _pDevice->releaseTrackedResourceDeferred( std::move( owned ), RHIMemoryKey::makeBuffer( buffer ), false );
+        _pDevice->releaseTrackedResourceDeferred( std::move( owned ), RHIMemoryKey::makeBuffer( buffer ) );
     }
 
     RHIBufferHandle D3D12RHIResourceFactory::createReadbackBuffer( uint32 elementSize, uint32 elementCount )
@@ -1059,7 +1080,12 @@ namespace sw
         const uint64 lastTransferSerial = _pDevice->findTextureTransferSerial( texture );
         _pDevice->eraseTextureTransfer( texture );
         const bool bUnfinishedTransfer = lastTransferSerial != 0 && _pDevice->_transferSerials.isComplete( lastTransferSerial ) == false;
-        _pDevice->releaseTrackedResourceDeferred( std::move( owned ), RHIMemoryKey::makeTexture( texture ), bUnfinishedTransfer );
+        if ( bUnfinishedTransfer )
+        {
+            _pDevice->releaseTextureAfterTransfer( std::move( owned ), texture, lastTransferSerial );
+            return;
+        }
+        _pDevice->releaseTrackedResourceDeferred( std::move( owned ), RHIMemoryKey::makeTexture( texture ) );
     }
 } // namespace sw
 #endif
