@@ -2,6 +2,7 @@ SWCOOK 5
 142ba5315267711b cctvmonitor.hlsl?engine:common.hlsli
 16ae8efe60795dae cctvmonitor.hlsl?engine:batchdata.hlsli
 290a618172c57239 cctvmonitor.hlsl?engine:lightgridcommon.hlsli
+38b79117a2d60dd9 cctvmonitor.hlsl?engine:binding.hlsli
 45b869a5e8eedd94 cctvmonitor.hlsl?engine:lightdata.hlsli
 4b11a8aacef885b3 cctvmonitor.hlsl?engine:materialshadermain.hlsli
 645e405601714e5d cctvmonitor.hlsl?engine:instancedata.hlsli
@@ -9,5 +10,4 @@ SWCOOK 5
 ab37247694eea95c cctvmonitor.hlsl?engine:bindingslots.hlsli
 b536aa3df9bce513 @toolchain
 bda31ef542e29853 cctvmonitor.hlsl?engine:lighting.hlsli
-dc95878725b01019 cctvmonitor.hlsl?engine:binding.hlsli
 e829dde8aada5e39 cctvmonitor.hlsl?engine:materialshader.hlsli
