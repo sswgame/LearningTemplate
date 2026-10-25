@@ -614,7 +614,7 @@ class CheckTestSuitesGate(LintGate):
 
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
         errors, suiteCount, caseCount = check(repositoryRoot)
-        return GateResult(listViolation=errors, summary=f"{suiteCount} suites, {caseCount} cases")
+        return GateResult(listViolation=errors, checkedCount=suiteCount, summary=f"{suiteCount} suites, {caseCount} cases")
 
 
 main = CheckTestSuitesGate.run

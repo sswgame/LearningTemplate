@@ -21,6 +21,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from lint.LintGate import GateError, GateResult, LintGate  # noqa: E402
 
+from common.ExitCode import ExitCode  # noqa: E402
 from common.AssetValidation import RuleConfigError, kAssetRuleConfigRelative, loadRules, validate  # noqa: E402
 
 #: 규칙 표(저장소 루트 기준).
@@ -68,6 +69,12 @@ class CheckAssetRulesGate(LintGate):
                 "Resource/game/probe/maps/b.scene.xml": '<Scene><entities><entity id="2" name="A"/><entity id="2" name="B"/></entities></Scene>',
             },
         },
+        {
+            "name": "Resource 폴더가 없으면 불성립(통과가 아니다)",
+            "expectedViolation": "UNAVAILABLE (Resource 폴더 없음",
+            "expectedExitCode": ExitCode.PrerequisiteMissing,
+            "files": {_kRulePath: selfTestRulesInternal("references-exist")},
+        },
     ]
 
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
@@ -80,7 +87,7 @@ class CheckAssetRulesGate(LintGate):
             raise GateError(str(error)) from error
         resourceRoot = repositoryRoot / "Resource"
         if not resourceRoot.is_dir():
-            return GateResult(summary="no Resource/ folder")
+            return GateResult.unavailable("Resource 폴더 없음 — 검증할 에셋이 없다(--root 가 저장소인지 본다)")   # 통과가 아니다: 에셋을 하나도 보지 않았다
 
         listTarget = None
         if args.files:

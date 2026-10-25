@@ -289,7 +289,7 @@ class CheckScriptEntryPointsGate(LintGate):
 
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
         listViolation, entryPointCount = findViolations(repositoryRoot, args.files)
-        return GateResult(listViolation=listViolation, summary=f"{entryPointCount} entry points reach common")
+        return GateResult(listViolation=listViolation, checkedCount=entryPointCount, summary=f"{entryPointCount} entry points reach common")
 
 
 main = CheckScriptEntryPointsGate.run

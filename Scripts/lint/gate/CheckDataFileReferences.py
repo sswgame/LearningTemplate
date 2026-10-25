@@ -32,6 +32,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common.Constants import kLintProductRelDirs, kNotOurCodeDirNames  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
 from common.Parallel import mapConcurrent  # noqa: E402
 from lint.LintGate import GateError, GateResult, LintGate  # noqa: E402
 
@@ -73,13 +74,20 @@ class CheckDataFileReferencesGate(LintGate):
                 "Source/Engine/Probe/Probe.cpp": '#include "pch.h"\n',
             },
         },
+        {
+            "name": ".xxx 가 하나도 없으면 불성립(통과가 아니다)",
+            "expectedViolation": "UNAVAILABLE (대상 없음",
+            "expectedExitCode": ExitCode.PrerequisiteMissing,
+            "files": {"Source/Engine/Probe/Probe.cpp": '#include "pch.h"\n'},
+        },
     ]
 
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
         dataFiles = self.selectTargetFiles(repositoryRoot, None, listScanRoot=_kScanRoots, suffixes=(_kDataSuffix,),
                                            excludedDirNames=_kExcludedDirName)
         if not dataFiles:
-            return GateResult(summary="검사할 .xxx 파일이 없습니다")
+            # 통과가 아니다 — 하나도 보지 않았다. 이 저장소에는 .xxx 가 있으므로 0 개는 --root 가 틀렸거나 폴더를 옮긴 것이다.
+            return GateResult.unavailable(f"대상 없음 — {' · '.join(_kScanRoots)} 아래에 {_kDataSuffix} 파일이 하나도 없다(--root 확인, 게이트가 필요 없어졌다면 지운다)")
 
         # 대상 파일의 `resolve()` 와 저장소 기준 경로는 **미리 한 번만** 구한다 — 안쪽 루프에서 구하면
         # 참조 파일 × 대상 파일만큼의 파일시스템 질의가 되어 파일이 늘수록 제곱으로 느려진다.

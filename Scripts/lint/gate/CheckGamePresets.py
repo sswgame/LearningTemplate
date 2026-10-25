@@ -204,7 +204,7 @@ class CheckGamePresetsGate(LintGate):
 
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
         violations, gameCount = findGamePresetViolations(repositoryRoot)
-        return GateResult(listViolation=violations, summary=f"게임 {gameCount}개")
+        return GateResult(listViolation=violations, checkedCount=gameCount, summary=f"게임 {gameCount}개")
 
 
 main = CheckGamePresetsGate.run

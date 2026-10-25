@@ -11,6 +11,8 @@
 적어 두고, 이 장치가 임시 트리에 그것을 써서 린트를 돌린다. 종료 1(위반)이 나오고 **출력에 조각의 `expectedViolation` 문구가 있어야**
 통과다 — 종료 2(입력을 못 읽음 · 게이트 내부 오류)는 조각과 무관하게 나오므로 실패로 센다. 종료 코드만 보면 노린 위반이 빠져도 같은 조각의
 다른 위반으로 통과한다(`expectedViolation` 이 없는 조각은 `LintGate` 가 클래스를 만들 때 막는다). 조각에는 게이트가 읽는 입력 파일까지 갖춘다.
+**건너뜀 · 불성립 경로도 증거가 있다** — 조각의 `expectedExitCode` 가 5(불성립) · 77(건너뜀)이면 그 종료 코드와 사유 문구를 본다. 필수 입력이 없을 때
+게이트가 조용히 0 으로 끝나는 경로(통과로 보이는 건너뜀)는 이 조각이 잡는다.
 게이트마다 하위 프로세스 하나(`--cases-of <게이트>`)가 그 게이트의 조각을 차례로 진입점(`XxxGate.run`)으로 돈다 — 조각마다 프로세스를 띄우면
 기동 · import 가 조각 수(수백)만큼 든다. 예외 기록은 `run` 이 조각마다 비우고, 게이트끼리는 프로세스가 갈려 모듈 상태가 섞이지 않는다.
 조각 표를 여기 모아 두지 않는 이유는 하나다 — **표가 둘이면 언제든 어긋난다.**
@@ -42,6 +44,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
+from common.ExitCode import ExitCode  # noqa: E402
 from common.Parallel import getProcessWorkerCount, mapConcurrent  # noqa: E402
 from common.Process import runProcess  # noqa: E402
 from lint.LintCatalog import LintScript, discoverLintScripts  # noqa: E402
@@ -174,14 +177,15 @@ class CheckLintsAreAliveGate(LintGate):
             if args.verbose:
                 print(f"  [{script.name}/{caseName}] exit={code}")
             lastLine = output.strip().splitlines()[-1] if output.strip() else '(없음)'
-            if code != 1:
-                # 종료 1(위반)만 "잡았다" 로 센다. 종료 2 는 게이트가 입력을 못 읽거나 예외로 죽은 것이라 조각이 무엇이든 같은 결과다 —
-                # 0 이 아니라는 이유로 살아 있다고 세면 죽은 게이트가 숨는다.
-                verdict = "위반을 넣었는데 통과했습니다" if code == 0 else f"위반 대신 종료 {code}(게이트 내부 오류)로 끝났습니다"
+            expectedCode = case.get("expectedExitCode", ExitCode.Violation)
+            if code != expectedCode:
+                # 노린 종료 코드(기본 1 = 위반)만 "잡았다" 로 센다. 종료 2 는 게이트가 입력을 못 읽거나 예외로 죽은 것이라 조각이 무엇이든 같은 결과다 —
+                # 0 이 아니라는 이유로 살아 있다고 세면 죽은 게이트가 숨는다. 불성립(5) · 건너뜀(77) 조각은 그 경로가 통과(0)로 새지 않는지 본다.
+                verdict = "위반을 넣었는데 통과했습니다" if code == 0 else f"노린 종료 {int(expectedCode)} 대신 종료 {code} 로 끝났습니다"
                 errors.append(f"{script.name}/{caseName}: {verdict} — 이 검사는 죽었습니다\n      출력: {lastLine}")
             elif case["expectedViolation"] not in output:
-                # 종료 1 이어도 노린 위반이 아닐 수 있다 — 같은 조각이 낸 다른 위반(입력 부족 · 낡은 예외)이 노린 규칙의 죽음을 가린다.
-                errors.append(f"{script.name}/{caseName}: 종료 1 이지만 노린 위반 '{case['expectedViolation']}' 이 출력에 없습니다"
+                # 노린 종료 코드여도 노린 위반이 아닐 수 있다 — 같은 조각이 낸 다른 위반(입력 부족 · 낡은 예외)이 노린 규칙의 죽음을 가린다.
+                errors.append(f"{script.name}/{caseName}: 종료 {int(expectedCode)} 이지만 노린 문구 '{case['expectedViolation']}' 이 출력에 없습니다"
                               f" — 이 규칙은 죽었습니다\n      출력: {lastLine}")
             elif case.get("unexpectedViolation") and case["unexpectedViolation"] in output:
                 # 잡히면 안 되는 모양(오탐)이 잡혔다.

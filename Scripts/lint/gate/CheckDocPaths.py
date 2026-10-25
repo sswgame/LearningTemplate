@@ -342,7 +342,7 @@ class CheckDocPathsGate(LintGate):
                     continue
                 listViolation.append(f"{where} '{written}' 가 없습니다")
 
-        return GateResult(listViolation=listViolation, summary=f"{len(listDocument)} documents")
+        return GateResult(listViolation=listViolation, checkedCount=len(listDocument), summary=f"{len(listDocument)} documents")
 
 
 main = CheckDocPathsGate.run

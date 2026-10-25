@@ -291,7 +291,7 @@ class CheckModuleTargetsGate(LintGate):
             raise GateError("Source/ 아래 모듈 매니페스트를 하나도 찾지 못했습니다 — 경로를 확인합니다")
         listViolation.extend(findDependencyViolations(mapOwnerByName, listDependencyRow))
         listViolation.extend(findIncludeViolations(repositoryRoot, listOwner))
-        return GateResult(listViolation=listViolation, summary=f"모듈 {len(listOwner)} 개의 대상 이름 · 방향이 맞다")
+        return GateResult(listViolation=listViolation, checkedCount=len(listOwner), summary=f"모듈 {len(listOwner)} 개의 대상 이름 · 방향이 맞다")
 
 
 main = CheckModuleTargetsGate.run

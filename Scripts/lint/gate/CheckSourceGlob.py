@@ -38,6 +38,7 @@ from common.Constants import (  # noqa: E402
     kDirSourceGames,
     kDirSourceServer,
 )
+from common.ExitCode import ExitCode  # noqa: E402
 from common.Search import collectSourceFiles  # noqa: E402
 from lint.LintGate import GateResult, LintGate  # noqa: E402
 
@@ -56,7 +57,9 @@ class CheckSourceGlobGate(LintGate):
     """
     빌드가 실제로 컴파일하는 목록과 디스크의 소스를 대조한다.
 
-    본 검사는 **빌드 트리의 compile_commands.json** 과 대조한다(빌드 없이 돌리면 스스로 "소스 목록만 보고" 하고 0 을 돌려준다).
+    본 검사는 **빌드 트리의 compile_commands.json** 과 대조한다. 빌드 트리가 없으면 아무것도 대조하지 못한 것이다 — 통과가 아니라 **불성립(종료 5)** 이다
+    (통합에서는 실패. `RunLintSuite` 는 `--build-dir` 없이 돌릴 때 이 게이트를 아예 돌리지 않고 "건너뜀" 칸에 센다). 유니티 묶음으로 지은 트리(CI 프리셋)는
+    묶음 파일이 `#include` 한 소스로 풀어 대조한다(`BuildTree.readCompiledSourceFiles`) — 묶음이라는 이유로 건너뛰지 않는다.
     고르는 빌드 폴더는 `--build-dir`(CTest 가 `${CMAKE_BINARY_DIR}` 를 넘긴다) · `--preset`, 없으면 `.clangd` 가 가리키는 트리다(`BuildTree`).
     자가 테스트는 임시 트리에 `build/compile_commands.json` 을 직접 써서 `--build-dir build` 로 돌린다 — "짓지 않는 소스" 목록이 있어도 거기 없는
     빠진 소스는 잡는지 본다(목록이 게이트를 눈멀게 하지 않는지).
@@ -96,6 +99,14 @@ class CheckSourceGlobGate(LintGate):
             },
             "args": ["--build-dir", "build"],
         },
+        {
+            # 컴파일 DB 가 없으면 대조한 것이 없다 — 위반 0건의 통과로 보이면 안 된다.
+            "name": "컴파일 DB 가 없으면 불성립(통과가 아니다)",
+            "expectedViolation": "UNAVAILABLE (컴파일 DB 없음",
+            "expectedExitCode": ExitCode.PrerequisiteMissing,
+            "files": {"Source/Engine/Probe.cpp": "// 대조할 DB 가 없다\n"},
+            "args": ["--build-dir", "build"],
+        },
     ]
 
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
@@ -106,26 +117,16 @@ class CheckSourceGlobGate(LintGate):
 
         scanDirs = [repositoryRoot / rel for rel in _kScanRoots]
         sources = collectSourceFiles(scanDirs, extensions=kCppSourceExtensions)
+        self.noteSelection(len(sources))   # 소스가 하나도 없으면(--root 가 저장소가 아니다) 기반이 불성립으로 바꾼다
         summary = f"{len(sources)} sources scanned under Source/"
 
         tree = BuildTree.fromArguments(args, repositoryRoot)
         try:
-            data = tree.readCompileDatabase()
-        except BuildTreeError:
-            return GateResult(
-                listViolation=violations,
-                listNote=["compile_commands.json 없음 — 소스 목록만 보고합니다"],
-                summary=summary,
-            )
-
-        # Unity 빌드는 소스를 unity_N_cxx.cxx 로 묶어 컴파일하므로 개별 .cpp 가 DB 에 없다.
-        # 그 빌드 트리에서는 이 검사가 성립하지 않는다 — 없다고 답하는 대신 성립하지 않는다고 말한다.
-        if any("unity_" in entry["file"] for entry in data):
-            return GateResult(
-                listViolation=violations,
-                listNote=[f"{tree.name} 은 Unity 빌드라 개별 소스가 DB 에 없습니다 — 검사를 건너뜁니다"],
-                summary=summary,
-            )
+            # 유니티 묶음(CI 프리셋)은 묶음 파일이 `#include` 한 소스로 풀어서 읽는다 — 묶음 이름만 있는 DB 로는 개별 소스가 지어지는지 알 수 없다.
+            listCompiled = tree.readCompiledSourceFiles()
+        except BuildTreeError as error:
+            # 컴파일 DB 가 없으면 소스를 하나도 대조하지 못했다 — 통과가 아니라 불성립이다(종료 5).
+            return GateResult.unavailable(f"컴파일 DB 없음 — {error}")
 
         listNote: list[str] = []
         unbuiltSources = tree.readUnbuiltSources()
@@ -135,8 +136,8 @@ class CheckSourceGlobGate(LintGate):
             unbuiltSources = set()
 
         compiledFiles: set[str] = set()
-        for entry in data:
-            filePath = Path(entry["file"]).resolve()
+        for compiledPath in listCompiled:
+            filePath = Path(compiledPath).resolve()
             try:
                 compiledFiles.add(filePath.relative_to(repositoryRoot).as_posix().lower())
             except ValueError:

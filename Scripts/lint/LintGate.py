@@ -49,6 +49,15 @@ class CheckSomethingGate(LintGate):
 파일별 일을 `common.Parallel.flatMapInProcesses` 로 나눈다(`CheckCodeConventions`) — 스레드는 GIL 에 막힌다. 파일 읽기가 대부분이면
 `mapConcurrent` · `readTextFiles` 로 충분하다(`common/Parallel.py` 머리말).
 
+**검사하지 못한 것을 통과로 내지 않는다.** 게이트의 결과는 통과 · 건너뜀 · 불성립 · 위반이고 종료 코드부터 다르다(`lint/GateVerdict.py` 표).
+조건이 안 맞아 아무것도 보지 못했을 때 `GateResult(summary="SKIPPED …")` 나 `listNote` 만 달고 `OK` 를 내지 말고 둘 중 하나를 낸다.
+
+- `GateResult.unavailable("분류 — 상세")` : 필수 입력(빌드 폴더 · 컴파일 DB · 도구)이 없다. 통합에서는 실패, 훅에서만 허용된다. 환경 탓이든 `--root` 탓이든 같다.
+- `GateResult.skipped("분류 — 상세")` : `--files` 로 좁힌 훑기에 이 게이트가 볼 것이 없다(병합 커밋 · 대상 아닌 파일). **전체 훑기에서는 쓰지 못한다.**
+- 대상 파일을 `selectTargetFiles`(또는 `noteSelection` · `GateResult.checkedCount`)로 세는 게이트는 0 개를 보고 위반이 없을 때 기반이 알아서 위 둘로 바꾼다.
+  "0개를 검사했고 위반 없음" 이 `OK` 로 보이는 일이 없다. 소스 게이트는 본 파일 수가 자동으로 `checkedCount` 다.
+- 불성립 · 건너뜀을 내는 경로도 `selfTestCases` 에 조각(`expectedExitCode`)으로 든다 — `CheckLintsAreAlive` 가 그 경로가 살아 있는지 본다.
+
 `gate/` 에 놓으면 `CheckLintsAreAlive` 가 알아서 집어 가고(목록이 아니라 자리가 규칙이다),
 증거(`selfTestCases`)를 들고 있지 않으면 그 자리에서 실패한다.
 """
@@ -70,11 +79,15 @@ from common.Paths import getProjectRoot  # noqa: E402
 from common.Search import collectRepositoryFiles, readTextFiles, resolveFileArguments  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
 from common.RuleData import RuleDataError, kExemptionKey, kKindInteger, kKindReason, kRuleDataRelDir, readRuleFile  # noqa: E402
+from lint.GateVerdict import formatOutcomeLine  # noqa: E402
 from lint.SourceScan import FileFindings, LineScope, SourceFile, SourceScanResult, joinFindings, parseAddedLines, scanSourceGates  # noqa: E402
 
 
 #: 음성 테스트 조각(`LintGate.selfTestCases`)이 가질 수 있는 키. `name` · `expectedViolation` 은 필수다.
-kSelfTestCaseKeys = frozenset({"name", "expectedViolation", "unexpectedViolation", "files", "args", "repoFiles", "git"})
+kSelfTestCaseKeys = frozenset({"name", "expectedViolation", "unexpectedViolation", "files", "args", "repoFiles", "git", "expectedExitCode"})
+
+#: 조각의 `expectedExitCode` 로 쓸 수 있는 값 — 위반(기본), 불성립, 건너뜀. 통과(0)는 "살아 있다" 의 증거가 아니라 쓰지 못한다.
+kSelfTestExitCodes = frozenset({ExitCode.Violation, ExitCode.PrerequisiteMissing, ExitCode.Skipped})
 
 
 def checkSelfTestCase(className: str, case: dict) -> None:
@@ -91,14 +104,17 @@ def checkSelfTestCase(className: str, case: dict) -> None:
     listUnknown = sorted(set(case) - kSelfTestCaseKeys)
     if listUnknown:
         raise TypeError(f"{className}/{caseName}: selfTestCases 조각의 모르는 키 {listUnknown} — 쓸 수 있는 키: {sorted(kSelfTestCaseKeys)}")
+    if "expectedExitCode" in case and case["expectedExitCode"] not in kSelfTestExitCodes:
+        raise TypeError(f"{className}/{caseName}: expectedExitCode 는 {sorted(int(code) for code in kSelfTestExitCodes)} 중 하나다(통과 0 은 증거가 아니다)")
 
 
 class GateError(Exception):
     """
-    검사가 **성립하지 않는다** — 위반(1)이 아니라 오류(2)로 끝냅니다.
+    검사가 **서지 않는다**(규칙 데이터 · 입력 파일이 깨졌다) — 위반(1)이 아니라 오류(2)로 끝냅니다.
 
     "위반이 없다" 와 "검사할 수 없었다" 는 다른 답이다. 후자를 0 으로 돌려주면 게이트가 조용히
-    죽고, 1 로 돌려주면 코드를 고쳐도 통과하지 않는다.
+    죽고, 1 로 돌려주면 코드를 고쳐도 통과하지 않는다. 필수 입력이 **없는** 것(빌드 폴더 · 도구 · 훑을 파일)은 오류가 아니라
+    `GateResult.unavailable` 이다 — 훅에서는 허용되는 종류라 종료 코드를 따로 둔다.
     """
 
 
@@ -111,11 +127,36 @@ class GateResult:
     - `listNote`     : 찍기만 하고 **실패시키지 않는다**(경고·참고).
     - `summary`      : 위반이 없을 때 `OK (...)` 괄호 안에 들어갈 문구. 무엇을 얼마나 봤는지 적는다 —
                        "0건" 과 "아무것도 안 봤다" 를 구분해 주는 것이 이 한 줄이다.
+    - `skipReason`   : **건너뜀(정상)** — `--files` 로 좁힌 훑기에 이 게이트가 볼 것이 없다. 종료 77. 전체 훑기에서는 쓰지 못한다(`endRun` 이 막는다).
+    - `unavailableReason`: **불성립** — 필수 입력(빌드 폴더 · 도구 · 훑을 파일)이 없어 검사를 하지 못했다. 종료 5. 통합에서는 실패이고 훅에서만 허용된다.
+                       사유는 `분류 — 상세` 꼴로 쓴다(실행기가 분류로 센다, `lint/GateVerdict.py`). 둘 다 `GateResult.skipped(…)` · `unavailable(…)` 로 만든다 —
+                       `OK (SKIPPED …)` 처럼 요약 문구로 건너뜀을 흉내 내면 통과와 같은 줄로 보인다.
+    - `checkedCount` : 이 게이트가 실제로 본 대상 수. 알면 채운다 — 비어 있고(`None`) `selectTargetFiles` 도 쓰지 않았다면 기반은 세지 않는다.
+                       0 이면 기반이 건너뜀(`--files`) · 불성립(전체 훑기)으로 바꾼다("0개를 검사했고 위반 없음" 이 통과로 보이지 않게).
     """
 
     listViolation: list[str] = field(default_factory=list)
     listNote: list[str] = field(default_factory=list)
     summary: str = ""
+    skipReason: str = ""
+    unavailableReason: str = ""
+    checkedCount: int | None = None
+
+    def __post_init__(self) -> None:
+        if self.skipReason and self.unavailableReason:
+            raise ValueError("GateResult: 건너뜀과 불성립을 함께 낼 수 없다")
+        if (self.skipReason or self.unavailableReason) and self.listViolation:
+            raise ValueError("GateResult: 위반이 있는 결과는 건너뜀 · 불성립이 아니다 — 검사했다")
+
+    @classmethod
+    def skipped(cls, reason: str, listNote: list[str] | None = None) -> GateResult:
+        """건너뜀(정상) — `--files` 로 좁힌 훑기에 볼 것이 없다. `reason` 은 `분류 — 상세`."""
+        return cls(listNote=list(listNote or []), skipReason=reason)
+
+    @classmethod
+    def unavailable(cls, reason: str, listNote: list[str] | None = None) -> GateResult:
+        """불성립 — 필수 입력이 없어 검사를 하지 못했다. `reason` 은 `분류 — 상세`."""
+        return cls(listNote=list(listNote or []), unavailableReason=reason)
 
 
 class LintGate:
@@ -134,6 +175,8 @@ class LintGate:
                            죽는다) · `git`(참이면 임시 트리를 git 저장소로 만든다). 모르는 키도 오류다.
                            `expectedViolation` 이 없으면 클래스를 만들 때 `TypeError` 로 멈춘다 — 종료 코드만 보면 노린 위반이 빠져도
                            같은 조각의 다른 위반(입력 부족 · 낡은 예외)으로 통과한다.
+                           `expectedExitCode`(선택, 기본 1) — 불성립(5) · 건너뜀(77) 경로를 증명하는 조각이 쓴다. 그때 `expectedViolation` 은 출력의 `UNAVAILABLE (…)` ·
+                           `SKIPPED (…)` 사유 문구다(통과 0 은 쓰지 못한다 — 아무것도 안 잡는 게이트와 구분되지 않는다).
                            `unexpectedViolation`(선택) — 출력에 **없어야 하는** 문구. 오탐 방지: 진짜 위반 하나와 잡히면 안 되는 모양을 한 조각에
                            함께 넣고, 잡히면 안 되는 쪽의 위반 문구를 여기 적는다.
     - `selfTestSkipReason`: 조각을 만들 수 없는 이유. 이유 없는 예외는 없다.
@@ -178,7 +221,9 @@ class LintGate:
     #                                  (지운 토큰도 잡는다). 이 줄이 있으면 `preCommitPattern` 은 "무조건 도는 파일" 이 되고 비워도 항상 돌지 않는다.
     #                                  게이트가 읽는 것이 파일 전체의 어떤 토큰일 때(`REFLECT` · `GLOBAL_VARIABLE`) — 좁힌 근거는 게이트 옆에 적는다.
     # - `preCommitChangedLinePattern`: 같은 모양인데 **바뀐 줄**(`git diff --cached -U0` 의 + · - 줄)만 본다. 위반이 그 줄 하나로 생기는 게이트용.
-    # - `preCommitSkipReason`  : 훅에서 돌 수 없는 이유. 이유 없는 예외는 없다.
+    # - `preCommitSkipReason`  : 훅에서 돌 수 없는 이유. 이유 없는 예외는 없다. **이것은 정상 건너뜀이다** — 훅 요약에 `건너뜀 N(사유 분류별)` 로 세어지고(`PreCommitLint`),
+    #                            그 게이트는 통합(`lint-suite` · CTest)에서 그대로 돌아 트리 전체를 본다(그래서 `ctestSkipReason` 과 함께 들 수 없다). `분류 — 상세` 꼴로 쓴다.
+    #                            훅에서 돌되 필수 입력이 없는 경우(빌드 폴더)는 이것이 아니라 `GateResult.unavailable` 이다 — 이쪽은 통합에서 실패한다.
     preCommitPattern: tuple[str, ...] = ()
     preCommitContentPattern: tuple[tuple[str, str], ...] = ()
     preCommitChangedLinePattern: tuple[tuple[str, str], ...] = ()
@@ -202,6 +247,8 @@ class LintGate:
     _ruleDataError: str = ""
     _setSeenExemption: set[str] = set()
     _setUsedExemption: set[str] = set()
+    #: 이번 훑기에서 `noteSelection` 이 적은 대상 수들(`beginRun` 이 비운다). 소스 게이트는 쓰지 않는다 — 훑기가 파일 수를 `GateResult.checkedCount` 로 준다.
+    _listSelectionCount: list[int] = []
 
     # --- 소스 게이트 -------------------------------------------------------------
     #
@@ -265,6 +312,8 @@ class LintGate:
             cls.name = cls.__name__.removesuffix("Gate")
         if cls.sourceScanRoots and not cls.sourceSuffixes:
             raise TypeError(f"{cls.__name__}: sourceScanRoots 를 채운 소스 게이트는 sourceSuffixes 도 적는다")
+        if cls.preCommitSkipReason and cls.ctestSkipReason:
+            raise TypeError(f"{cls.__name__}: preCommitSkipReason 과 ctestSkipReason 을 함께 들 수 없다 — 훅에서도 CTest 에서도 안 도는 게이트는 CI 잡 말고는 어디서도 안 돈다")
         if cls.sourceScanRoots and "scan" in cls.__dict__:
             raise TypeError(f"{cls.__name__}: 소스 게이트(sourceScanRoots)는 scan() 이 아니라 checkSourceFile() 을 쓴다")
         for case in cls.__dict__.get("selfTestCases", []):
@@ -307,11 +356,14 @@ class LintGate:
         return self.finishSourceScanChecked(repositoryRoot, args, listResult[0])
 
     def finishSourceScanChecked(self, repositoryRoot: Path, args: argparse.Namespace, result: SourceScanResult) -> GateResult:
-        """파일에서 검사가 서지 않았으면(`FileFindings.error`) `GateError`, 아니면 `finishSourceScan`."""
+        """파일에서 검사가 서지 않았으면(`FileFindings.error`) `GateError`, 아니면 `finishSourceScan`. 본 파일 수를 `checkedCount` 로 단다."""
         listError = [findings.error for findings in result.listFindings if findings.error]
         if listError:
             raise GateError(" · ".join(listError))
-        return self.finishSourceScan(repositoryRoot, args, result)
+        gateResult = self.finishSourceScan(repositoryRoot, args, result)
+        if gateResult.checkedCount is None:
+            gateResult.checkedCount = result.fileCount
+        return gateResult
 
     # --- 기반이 주는 것 --------------------------------------------------------
 
@@ -333,6 +385,7 @@ class LintGate:
         cls = type(self)
         cls._setSeenExemption = set()
         cls._setUsedExemption = set()
+        LintGate._listSelectionCount = []
         if self._ruleDataError:
             print(f"[{self.name}] {self._ruleDataError}", file=sys.stderr)
             return ExitCode.CheckInvalid
@@ -354,8 +407,37 @@ class LintGate:
             return ExitCode.CheckInvalid
         return self.endRun(repositoryRoot, args, result)
 
+    def judgeOutcome(self, args: argparse.Namespace, result: GateResult) -> GateResult:
+        """
+        위반이 없는 결과가 **아무것도 보지 않았다면** 통과로 두지 않습니다 — `--files` 로 좁힌 훑기는 건너뜀, 전체 훑기는 불성립.
+        게이트가 스스로 건너뜀 · 불성립을 냈으면 그대로 두되, 전체 훑기의 건너뜀은 막는다(전체 훑기에 볼 것이 없다는 것은 정상이 아니라 입력이 없는 것이다).
+        """
+        bFiles = bool(getattr(args, "files", None))
+        if result.skipReason and not bFiles:
+            return GateResult.unavailable(f"전체 훑기에 건너뜀은 없다 — {result.skipReason}", result.listNote)
+        if result.skipReason or result.unavailableReason or result.listViolation:
+            return result
+        count = result.checkedCount if result.checkedCount is not None else (sum(LintGate._listSelectionCount) if LintGate._listSelectionCount else None)
+        if count != 0:
+            return result
+        if bFiles:
+            return GateResult.skipped("대상 파일 없음 — --files 의 파일 가운데 이 게이트가 보는 것이 없다", result.listNote)
+        return GateResult.unavailable("훑을 파일 없음 — 대상 폴더에 파일이 하나도 없다(--root 가 저장소인지, 폴더를 옮기지 않았는지 본다)", result.listNote)
+
+    def reportOutcome(self, result: GateResult) -> int:
+        """건너뜀 · 불성립 결과를 찍고 종료 코드를 돌려줍니다 — 통과의 `OK` 줄과 다른 줄, 다른 종료 코드."""
+        if result.listNote:
+            print(f"[{self.name}] {self.noteHeader} {len(result.listNote)}건:")
+            self.printListInternal(result.listNote, self.maxNoteShown)
+        bUnavailable = bool(result.unavailableReason)
+        print(formatOutcomeLine(self.name, bUnavailable, result.unavailableReason or result.skipReason), file=sys.stderr if bUnavailable else sys.stdout)
+        return ExitCode.PrerequisiteMissing if bUnavailable else ExitCode.Skipped
+
     def endRun(self, repositoryRoot: Path, args: argparse.Namespace, result: GateResult) -> int:
-        """훑은 뒤 — 낡은 예외를 더하고, 표 크기를 요약에 붙여 찍고, 종료 코드를 돌려줍니다."""
+        """훑은 뒤 — 건너뜀 · 불성립을 가르고, 낡은 예외를 더하고, 표 크기를 요약에 붙여 찍고, 종료 코드를 돌려줍니다."""
+        result = self.judgeOutcome(args, result)
+        if result.skipReason or result.unavailableReason:
+            return self.reportOutcome(result)   # 아무것도 보지 않았으니 낡은 예외를 따지지 않는다
         if not getattr(args, "files", None):
             result.listViolation += self.findStaleExemptionsInternal(repositoryRoot)
         if self.mapExemption:
@@ -422,10 +504,21 @@ class LintGate:
         """
         listScanRoot = tuple(listScanRoot)
         if not listFileArgument:
-            return collectRepositoryFiles(repositoryRoot, listScanRoot, suffixes=suffixes, fileNames=fileNames,
-                                          excludedDirNames=excludedDirNames, bAnySuffix=bAnySuffix)
-        return resolveFileArguments(repositoryRoot, listFileArgument, listScanRoot=listScanRoot, suffixes=suffixes, fileNames=fileNames,
-                                    excludedDirNames=excludedDirNames, bAnySuffix=bAnySuffix)
+            listPath = collectRepositoryFiles(repositoryRoot, listScanRoot, suffixes=suffixes, fileNames=fileNames,
+                                              excludedDirNames=excludedDirNames, bAnySuffix=bAnySuffix)
+        else:
+            listPath = resolveFileArguments(repositoryRoot, listFileArgument, listScanRoot=listScanRoot, suffixes=suffixes, fileNames=fileNames,
+                                            excludedDirNames=excludedDirNames, bAnySuffix=bAnySuffix)
+        LintGate.noteSelection(len(listPath))
+        return listPath
+
+    @staticmethod
+    def noteSelection(count: int) -> None:
+        """
+        이번 훑기가 대상으로 고른 파일 수를 적습니다(`selectTargetFiles` 가 부른다). 직접 고르는 게이트는 이것을 부른다 — 적힌 수가 전부 0 이고 위반도 없으면
+        `endRun` 이 통과로 두지 않는다(`GateResult.checkedCount`).
+        """
+        LintGate._listSelectionCount.append(count)
 
     @staticmethod
     def readFiles(listPath: Iterable[Path], *, encoding: str = "utf-8", errors: str = "replace",
@@ -523,7 +616,7 @@ class BaselineSourceGate(LintGate):
 
     def finishSourceScan(self, repositoryRoot: Path, args: argparse.Namespace, result: SourceScanResult) -> GateResult:
         if args.bMergeSkip:
-            return GateResult(summary="merge commit — skipped (the other side was checked on its own commit)")
+            return GateResult.skipped("병합 커밋 — 상대 쪽 줄은 그 브랜치 커밋 때 검사됐다")
         fileCount = sum(1 for findings in result.listFindings if findings.value is not None)
         listAll: list[CountedFinding] = [finding for findings in result.listFindings for finding in (findings.value or ())]
         listDescribed = [f"{finding.relative}:{finding.firstLine}: {finding.message} | {finding.text}" for finding in listAll]

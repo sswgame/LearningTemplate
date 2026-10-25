@@ -389,7 +389,7 @@ class CheckNameReferencesGate(LintGate):
         scenarioViolation, scenarioCount = findScenarioViolations(repositoryRoot)
         listViolation += scenarioViolation
         codeSummary = ", ".join(f"{rule} {count}곳" for rule, count in mapCheckedCount.items())
-        return GateResult(listViolation=sorted(set(listViolation)),
+        return GateResult(listViolation=sorted(set(listViolation)), checkedCount=len(uniqueDefined),
                           summary=f"전역 변수 정의 {len(uniqueDefined)}개 · 이름 사용 {len(listUse)}곳, 코드의 이름 {codeSummary}, 시나리오 {scenarioCount}개")
 
 

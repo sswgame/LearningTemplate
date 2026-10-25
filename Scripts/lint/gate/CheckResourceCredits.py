@@ -234,7 +234,7 @@ class CheckResourceCreditsGate(LintGate):
         listManifest = [relPath for relPath in listAllPath if relPath.endswith(_kSourceManifestSuffix)]
         for manifestRelPath in listManifest:
             listViolation += checkSourceManifestInternal(repositoryRoot, manifestRelPath, listAllPath)
-        return GateResult(listViolation=listViolation,
+        return GateResult(listViolation=listViolation, checkedCount=countAsset,
                           summary=f"원본 자산 {countAsset} · 크레딧 표 {len(mapDomainToRow)} · 출처 목록 {len(listManifest)}")
 
 
