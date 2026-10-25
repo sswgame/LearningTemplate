@@ -28,6 +28,16 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 옛 · 새 빌드 본문이 같이 쓰는 `MaxCount` 의 기준입니다. 옛 빌드 셋의 상한이 따로 어긋나지 않게 이름 하나로 둡니다. */
+    struct BusTestLimit
+    {
+        static constexpr int32 kMaxLabelSize = 16;
+        static constexpr int32 kMaxItemCount = 4;
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 두 빌드가 함께 쓰는 중첩 원소입니다. */
     REFLECT()
     struct BusTestItem
@@ -46,9 +56,9 @@ namespace sw
     {
         REFLECT_BODY();
         static constexpr uint32 kBusVersion = 1;
-        PROPERTY( MaxCount = 16 )
+        PROPERTY( MaxCount = BusTestLimit::kMaxLabelSize )
         string _label{};
-        PROPERTY( MaxCount = 4 )
+        PROPERTY( MaxCount = BusTestLimit::kMaxItemCount )
         vector<BusTestItem> _listItem{};
         PROPERTY()
         uint64 _accountID{ 0 };
@@ -66,9 +76,9 @@ namespace sw
     {
         REFLECT_BODY();
         static constexpr uint32 kBusVersion = 1;
-        PROPERTY( MaxCount = 16 )
+        PROPERTY( MaxCount = BusTestLimit::kMaxLabelSize )
         string _label{};
-        PROPERTY( MaxCount = 4 )
+        PROPERTY( MaxCount = BusTestLimit::kMaxItemCount )
         vector<BusTestItem> _listItem{};
         PROPERTY()
         uint64 _accountID{ 0 };
@@ -88,9 +98,9 @@ namespace sw
     {
         REFLECT_BODY();
         static constexpr uint32 kBusVersion = 2;
-        PROPERTY( MaxCount = 16 )
+        PROPERTY( MaxCount = BusTestLimit::kMaxLabelSize )
         string _label{};
-        PROPERTY( MaxCount = 4 )
+        PROPERTY( MaxCount = BusTestLimit::kMaxItemCount )
         vector<BusTestItem> _listItem{};
         PROPERTY()
         uint64 _accountID{ 0 };

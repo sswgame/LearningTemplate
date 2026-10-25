@@ -146,6 +146,7 @@ namespace
 
     sw::FixedContainerSample makeContainerSample()
     {
+        static_assert( sizeof( "sixteen-chars-ok" ) - 1 == sw::FixedContainerSample::kMaxNameSize );
         sw::FixedContainerSample sample;
         sample._kind       = sw::EFixedSampleKind::Run;
         sample._listValue  = { 0, 1000, 5, 7 }; // MaxCount 개, 범위 경계

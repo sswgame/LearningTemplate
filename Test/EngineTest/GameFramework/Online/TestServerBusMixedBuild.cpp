@@ -145,7 +145,7 @@ SW_TEST_CASE( ServerBusMixedBuildTest, AValueOutsideTheDeclaredRangeIsRejected )
 
     // 쓰는 쪽도 범위 밖 값은 발행하지 않는다.
     BusTestNoticeOld tooLong;
-    tooLong._label = string( 17, 'x' );
+    tooLong._label = string( BusTestLimit::kMaxLabelSize + 1, 'x' );
     vector<uint8> bytes;
     {
         test::ScopedLogSuppressor suppressor;
