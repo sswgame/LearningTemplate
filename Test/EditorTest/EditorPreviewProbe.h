@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -64,6 +65,20 @@ namespace sw::editortest
 
         PROPERTY()
         SceneObjectReference _target;
+    };
+} // namespace sw::editortest
+
+namespace sw::editortest
+{
+    /** @brief 씬 오브젝트 참조 목록 칸(`vector<SceneObjectReference>`) 하나를 가진 컴포넌트입니다(컨테이너 칸도 참조로 세는지 보는 테스트용). */
+    REFLECT()
+    class SceneReferenceListHolderProbeComponent : public Component
+    {
+    public:
+        REFLECT_BODY();
+
+        PROPERTY()
+        vector<SceneObjectReference> _listTarget;
     };
 } // namespace sw::editortest
 

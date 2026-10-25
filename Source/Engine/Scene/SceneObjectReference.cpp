@@ -9,9 +9,12 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/ReflectionContainers.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
+
+#include <algorithm>
 
 namespace sw
 {
@@ -28,16 +31,58 @@ namespace sw
         return true;
     }
 
+    bool SceneObjectReferenceUtil::isReferenceTypeName( const hashed_string& typeName )
+    {
+        static const hashed_string s_referenceType( "SceneObjectReference" );
+        return typeName == s_referenceType;
+    }
+
+    namespace
+    {
+        /** @brief 컨테이너(중첩 포함)의 원소 · 맵 키와 값 중 `SceneObjectReference` 를 모읍니다. 컨테이너를 고치면 포인터가 무효가 됩니다. */
+        void collectContainerReferences( const void* pContainer, const NestedContainerInfo& shape, vector<const SceneObjectReference*>& outListReference )
+        {
+            if ( pContainer == nullptr || shape._wrapper == nullptr )
+                return;
+            if ( ISequenceContainerWrapper* pSequence = shape._wrapper->asSequence() )
+            {
+                const size_t elementCount = pSequence->getSize( pContainer );
+                for ( size_t elementIndex = 0; elementIndex < elementCount; ++elementIndex )
+                {
+                    const void* pElement = pSequence->getElementConst( pContainer, elementIndex );
+                    if ( shape._elementNested != nullptr )
+                        collectContainerReferences( pElement, *shape._elementNested, outListReference );
+                    else if ( SceneObjectReferenceUtil::isReferenceTypeName( shape._elementTypeName ) && pElement != nullptr )
+                        outListReference.push_back( static_cast<const SceneObjectReference*>( pElement ) );
+                }
+            }
+            else if ( IMapContainerWrapper* pMap = shape._wrapper->asMap() )
+            {
+                pMap->forEach( pContainer, MapForEachDelegate::create( [&]( const void* pKey, const void* pValue )
+                {
+                    if ( SceneObjectReferenceUtil::isReferenceTypeName( shape._keyTypeName ) && pKey != nullptr )
+                        outListReference.push_back( static_cast<const SceneObjectReference*>( pKey ) );
+                    if ( shape._elementNested != nullptr )
+                        collectContainerReferences( pValue, *shape._elementNested, outListReference );
+                    else if ( SceneObjectReferenceUtil::isReferenceTypeName( shape._elementTypeName ) && pValue != nullptr )
+                        outListReference.push_back( static_cast<const SceneObjectReference*>( pValue ) );
+                } ) );
+            }
+        }
+    } // namespace
+
     bool SceneObjectReferenceUtil::findReferenceTo( const SceneManager& sceneManager, const Scene& targetScene, uint64 objectID, string& outHolder )
     {
         outHolder.clear();
         const uint64 fileID = targetScene.findFileID( objectID );
         if ( fileID == 0 || targetScene.getSourcePath().empty() )
             return false;
-        static const hashed_string s_referenceType( "SceneObjectReference" );
-        for ( const unique_ptr<Scene>& scene : sceneManager.getLoadedScenes() )
+        vector<const Scene*> listScene;
+        sceneManager.collectAllScenes( listScene );
+        vector<const SceneObjectReference*> listReference;
+        for ( const Scene* scene : listScene )
         {
-            if ( scene == nullptr || scene->getObjectManager() == nullptr )
+            if ( scene->getObjectManager() == nullptr )
                 continue;
             scene->getObjectManager()->forEachGameObject( [&]( GameObject* pObject )
             {
@@ -48,11 +93,23 @@ namespace sw
                         continue;
                     pType->forEachProperty( [&]( const PropertyInfo& prop )
                     {
-                        if ( outHolder.empty() == false || prop._typeName != s_referenceType )
+                        if ( outHolder.empty() == false )
                             return;
-                        const SceneObjectReference* pValue          = prop.getValuePtr<SceneObjectReference>( pComponent );
-                        const bool                  bPointsAtTarget = pValue != nullptr && pValue->_fileID == fileID && isSameScenePath( pValue->_scenePath, targetScene.getSourcePath() );
-                        if ( bPointsAtTarget == false )
+                        listReference.clear();
+                        if ( prop._bIsContainer == SW_TRUE )
+                        {
+                            if ( prop._containerWrapper != nullptr )
+                                collectContainerReferences( prop.getRawPtr( static_cast<const void*>( pComponent ) ), prop.getContainerShape(), listReference );
+                        }
+                        else if ( isReferenceTypeName( prop._typeName ) )
+                        {
+                            listReference.push_back( prop.getValuePtr<SceneObjectReference>( pComponent ) );
+                        }
+                        const auto pointsAtTarget = [&]( const SceneObjectReference* pValue )
+                        {
+                            return pValue != nullptr && pValue->_fileID == fileID && isSameScenePath( pValue->_scenePath, targetScene.getSourcePath() );
+                        };
+                        if ( std::ranges::none_of( listReference, pointsAtTarget ) )
                             return;
                         outHolder = scene->getName() + "/" + pObject->getName().c_str() + "." + pType->_name.c_str() + "." + prop._name.c_str();
                     }, true );

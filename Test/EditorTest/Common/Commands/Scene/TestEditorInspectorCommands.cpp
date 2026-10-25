@@ -96,3 +96,53 @@ SW_TEST_CASE( EditorInspectorCommandsTest, AdoptRefusesWhenASceneReferencePoints
     SW_EXPECT_FALSE( retry.isRejected() );
     SW_EXPECT_EQUAL( uint32( 1 ), retry._adoptedCount );
 }
+
+/**
+ * @brief [EditorInspectorCommandsTest] `vector<SceneObjectReference>` 칸의 원소가 옮길 자식을 가리켜도 거절하고, 원소를 지우면 옮긴다
+ */
+SW_TEST_CASE( EditorInspectorCommandsTest, AdoptRefusesWhenAReferenceListElementPointsAtAChild )
+{
+    AdoptScene fixture;
+    auto*      pProbe = fixture._pHolder->addComponent<editortest::SceneReferenceListHolderProbeComponent>();
+    SW_ASSERT_NOT_NULL( pProbe );
+    pProbe->_listTarget.resize( 2 ); // 앞 원소는 비워 두고 뒤 원소만 가리킨다
+    SW_ASSERT_TRUE( SceneObjectReferenceUtil::makeReference( *fixture._pMain, fixture._pLamp->getObjectID(), pProbe->_listTarget[1] ) );
+
+    const EditorInspectorCommands::AdoptResult result = EditorInspectorCommands::adoptChildPrefabInstances( fixture._pRoot );
+    SW_EXPECT_TRUE( result.isRejected() );
+    SW_EXPECT_EQUAL( uint32( 0 ), result._adoptedCount );
+    SW_EXPECT_TRUE( result._rejectReason.find( "Level/Holder." ) != string::npos );
+    SW_EXPECT_TRUE( result._rejectReason.find( "._listTarget" ) != string::npos );
+    SW_EXPECT_FALSE( fixture._pMain->getObjectManager()->getSubsystem<PrefabInstanceRegistry>().isAttachedNestedPart( fixture._pLamp ) );
+
+    pProbe->_listTarget.clear();
+    const EditorInspectorCommands::AdoptResult retry = EditorInspectorCommands::adoptChildPrefabInstances( fixture._pRoot );
+    SW_EXPECT_FALSE( retry.isRejected() );
+    SW_EXPECT_EQUAL( uint32( 1 ), retry._adoptedCount );
+}
+
+/**
+ * @brief [EditorInspectorCommandsTest] 미리보기 씬의 컴포넌트가 옮길 자식을 가리켜도 거절한다
+ * @details 훑을 씬 목록은 `SceneManager::collectAllScenes` 한 곳이라 로드된 씬만 보던 때는 이 참조를 놓쳤다.
+ */
+SW_TEST_CASE( EditorInspectorCommandsTest, AdoptRefusesWhenAPreviewSceneReferencePointsAtAChild )
+{
+    AdoptScene fixture;
+    Scene*     pPreview = fixture._sceneManager.createPreviewScene( "Preview" );
+    SW_ASSERT_NOT_NULL( pPreview );
+    GameObject* pPreviewHolder = pPreview->getObjectManager()->createGameObject( hashed_string( "PreviewHolder" ) );
+    pPreview->getObjectManager()->mergePendingAdds();
+    auto* pProbe = pPreviewHolder->addComponent<editortest::SceneReferenceHolderProbeComponent>();
+    SW_ASSERT_NOT_NULL( pProbe );
+    SW_ASSERT_TRUE( SceneObjectReferenceUtil::makeReference( *fixture._pMain, fixture._pLamp->getObjectID(), pProbe->_target ) );
+
+    const EditorInspectorCommands::AdoptResult result = EditorInspectorCommands::adoptChildPrefabInstances( fixture._pRoot );
+    SW_EXPECT_TRUE( result.isRejected() );
+    SW_EXPECT_EQUAL( uint32( 0 ), result._adoptedCount );
+    SW_EXPECT_TRUE( result._rejectReason.find( "PreviewHolder." ) != string::npos );
+
+    pProbe->_target                                  = SceneObjectReference{};
+    const EditorInspectorCommands::AdoptResult retry = EditorInspectorCommands::adoptChildPrefabInstances( fixture._pRoot );
+    SW_EXPECT_FALSE( retry.isRejected() );
+    SW_EXPECT_EQUAL( uint32( 1 ), retry._adoptedCount );
+}

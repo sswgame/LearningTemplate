@@ -689,6 +689,21 @@ namespace sw
         return kInvalidSceneKey;
     }
 
+    void SceneManager::collectAllScenes( vector<const Scene*>& outListScene ) const
+    {
+        outListScene.clear();
+        for ( const unique_ptr<Scene>& scene : _listLoadedScene )
+        {
+            if ( scene != nullptr )
+                outListScene.push_back( scene.get() );
+        }
+        for ( const PreviewSceneEntry& entry : _listPreviewScene )
+        {
+            if ( entry._scene != nullptr )
+                outListScene.push_back( entry._scene.get() );
+        }
+    }
+
     Scene* SceneManager::findPreviewScene( uint32 key ) const
     {
         if ( key == kInvalidSceneKey )
