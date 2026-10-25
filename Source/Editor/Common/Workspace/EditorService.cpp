@@ -76,21 +76,6 @@ namespace sw::editor
         s_pHostServices = nullptr;
     }
 
-    namespace internal
-    {
-        void reportMissingRequiredService( const utf8* pLookup )
-        {
-            SW_LOG_ERROR( "Required editor service is missing: %#", pLookup );
-#if defined( SW_DEBUG )
-            if ( sw::internal::tryCaptureAssert() )
-                return; // 단언 가로채기를 건 테스트(`ScopedAssertCapture`)만 멈추지 않고 개수를 센다 — 가로채기는 Debug 에만 있다
-#endif
-            // `SW_ASSERT( false )` 는 Release 에서 사라져 호출자의 `*pFound` 가 널 역참조로 이어졌다. 필수 서비스가 없는 것은 모든 구성에서 멈출 결함이다.
-            Logger::flushGlobalForCrash(); // 비동기 싱크가 보관하고 있는 위 한 줄을 멈추기 전에 내보낸다
-            std::abort();
-        }
-    } // namespace internal
-
     SubsystemScope* findEditorScope()
     {
         assertEditorThread();
@@ -171,7 +156,8 @@ namespace sw::editor
     EditorSelection& getMainSceneSelection()
     {
         EditorSelection* pSelection = findMainSceneSelectionInScope();
-        SW_ASSERT( pSelection != nullptr );
+        if ( pSelection == nullptr )
+            ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE ); // Release 에서도 멈춘다
         return *pSelection;
     }
 

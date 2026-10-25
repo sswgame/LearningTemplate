@@ -15,7 +15,8 @@ namespace sw
         const GlobalVariableInfo& findCameraUserSettingVariable( GlobalVariableManager& variables, string_view name )
         {
             const GlobalVariableInfo* pVariable = variables.findVariable( name );
-            SW_ASSERT( pVariable != nullptr );
+            if ( pVariable == nullptr )
+                ::sw::internal::reportMissingRequiredService( name.data() ); // 등록이 빠진 결함 — Release 에서도 멈춘다
             return *pVariable;
         }
     } // namespace

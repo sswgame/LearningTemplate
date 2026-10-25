@@ -46,8 +46,9 @@
   `get()` 은 null 을 허용해 그리기 · 패널 · 명령 안에서도 널 확인이 붙었고(조용히 건너뛰어 결함을 가린다), 필수 서비스 조회의 부재 보고는 `SW_ASSERT` 라 Release 에서 사라져 널 역참조가 됐다.
   판정은 호출 문맥이다: 컨텍스트가 있어야 도는 곳(그리기 · 패널 · 팝업 · 메뉴 · 에디터 UI 에서만 불리는 명령)은 `getSubsystem`(널 확인을 지운다), 없는 채로 계속하는 정상 경로 —
   컨텍스트 없이 도는 EditorTest 가 부르는 함수(복제 · 붙여넣기 · 핫 리로드 · 트랜잭션), 종료 · 해제 경로(썸네일 캐시 · 미리보기 텍스처 해제), 에디터 없는 호스트에도 등록돼 있는 탐침 · 자동화 시계 조건,
-  실패를 `false` 로 알리는 개발 명령, 컨텍스트가 없으면 `expect` 로 실패를 기록하는 셀프테스트 — 은 `findSubsystem` 이다. 부재 보고(`internal::reportMissingRequiredService`)는 `assertEditorThread` 와 같이 모든 구성에서 오류 로그를 남기고
-  `abort` 하며 Debug 에서 단언 가로채기를 건 테스트만 센다(`EditorContext::getSubsystem` 도 같은 길). 이름을 `find()`/`require()` 짝 멤버로 새로 만들지 않고 이미 있는 한 어휘(결정 5-3 `getSubsystem`/`findSubsystem`)를 쓴 이유:
+  실패를 `false` 로 알리는 개발 명령, 컨텍스트가 없으면 `expect` 로 실패를 기록하는 셀프테스트 — 은 `findSubsystem` 이다. 부재 보고는 Core 의 `sw::internal::reportMissingRequiredService` 하나로 모았다(2026-10-26 — 이 함수가 모든 구성에서 오류를 stderr 에 먼저 쓰고 `abort` 하며
+  Debug 에서 단언 가로채기를 건 테스트만 센다. `editor::getSubsystem` · `EditorContext::getSubsystem` · `SubsystemScope::get`(씬·게임 인스턴스 서브시스템) · `engine::getSubsystem` · `game::getSubsystem` 이 모두 이것을 쓴다.
+  전엔 `SW_ASSERT` 가 Release 에서 사라지고 `SW_LOG_ASSERT`(`engine::` 의 보고)는 Release 에서 로그만 남기고 이어 가 둘 다 널 역참조가 됐다). 이름을 `find()`/`require()` 짝 멤버로 새로 만들지 않고 이미 있는 한 어휘(결정 5-3 `getSubsystem`/`findSubsystem`)를 쓴 이유:
   `static EditorContext& require()` 는 `CheckServiceAccess` 가 전역 단일체 창구(자기 타입 참조를 돌려주는 정적 멤버)로 막고, 같은 조회의 두 번째 철자가 생기면 옛 이름처럼 새 코드가 쓰는 길을 가린다. 옛 이름이 다시 생기는 것은
   `CheckServiceAccess` 의 `RetiredWindow` 가 막는다. 언리얼의 `GEditor->GetEditorSubsystem<T>()` 는 늘 포인터를 돌려주고 호출 지점이 `check` 로 필수를 표시하는 쪽이라, 이름으로 필수와 선택을 가르는 이 어휘가 더 낫다.
 - **임포터(`Editor/Common/Asset`)를 라이브러리로 떼지 않습니다**(2026-10-11). 명령 줄 임포트(`App --import-*` · `--check-*`)는 App 이 에디터 모듈을 인스턴스 없이 로드해 C-ABI 진입점 `importEditorAssets` 를 부르고,

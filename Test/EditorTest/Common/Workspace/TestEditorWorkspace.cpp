@@ -178,7 +178,7 @@ SW_TEST_CASE( EditorServiceTest, RequiredLookupReturnsServiceAndReportsWhenMissi
     if ( test::ScopedAssertCapture::kAssertsAreActive )
     {
         SW_TEST_DEFENSIVE_SCOPE( "a required editor service is missing" );
-        editor::internal::reportMissingRequiredService( "test lookup" );
+        sw::internal::reportMissingRequiredService( "test lookup" ); // 에디터 · 게임 · 엔진 · 범위 조회가 함께 쓰는 Core 의 보고 함수
         SW_EXPECT_EQUAL( 1u, assertCapture.getCount() );
     }
 }

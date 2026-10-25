@@ -272,7 +272,8 @@ namespace sw
         IAssetCache* pCache = _registeredAssetCache.findByName( assetKindName );
         if ( pCache == nullptr || isBuiltInAssetCache( pCache ) == false )
             SW_LOG_ERROR( "Built-in asset cache '%#' is not registered - its .cpp needs SW_BUILT_IN_ASSET_CACHE", assetKindName );
-        SW_ASSERT( pCache != nullptr );
+        if ( pCache == nullptr )
+            ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE ); // 위 오류가 어느 종류인지 남겼다 — Release 에서도 멈춘다
         return *pCache;
     }
 

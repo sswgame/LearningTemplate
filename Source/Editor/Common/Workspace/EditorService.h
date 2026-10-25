@@ -32,12 +32,6 @@ namespace sw::editor
     {
         /** @brief App 이 넘긴 호스트 서비스 범위입니다(`bindEditorService`). 없으면 nullptr 입니다. */
         SW_EDITOR_API const ISubsystemLocator* findHostServices();
-        /**
-         * @brief 필수 서비스가 없을 때 오류 로그를 남기고 모든 구성에서 멈춥니다(`getSubsystem<T>` · `EditorContext::require` 가 부릅니다). @p pLookup 은 어느 조회였는지 알리는 문자열입니다.
-         * @details `SW_ASSERT` 는 Release 에서 사라져 부른 쪽의 `*pFound` 가 널 역참조가 된다. 그래서 `assertEditorThread` 와 같이 `abort` 한다.
-         *          Debug 에서 테스트가 단언 가로채기(`ScopedAssertCapture`)를 걸었을 때만 멈추지 않고 개수를 센다(그 테스트는 반환 뒤에 결과를 읽지 않는다).
-         */
-        SW_EDITOR_API void reportMissingRequiredService( const utf8* pLookup );
     } // namespace internal
 
     /**
@@ -103,7 +97,7 @@ namespace sw::editor
     {
         T* pFound = findSubsystem<T>();
         if ( pFound == nullptr )
-            internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
+            ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE ); // Core 의 공용 보고 — 모든 구성에서 오류 로그 후 멈춘다(Debug 가로채기 테스트만 세고 반환)
         return *pFound;
     }
 

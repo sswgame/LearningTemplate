@@ -81,7 +81,8 @@ def findUncheckedStores(relative: str, lines: list[str]) -> list[str]:
     return violations
 
 # 같은 함정이 곳곳에 있다 — 엔진 · 게임 · 에디터의 `findSubsystem`.
-# 게임 쪽은 `SW_ASSERT( false )` 를 거치는데 **그 단정은 Shipping 에서 사라진다.**
+# `SW_ASSERT` 는 Debug 가 아니면 사라지므로 **없으면 nullptr 인 계약**은 단정으로 지킬 수 없다. 반대쪽 `getSubsystem` 은 이제 엔진 · 게임 · 에디터 · 범위가 모두
+# `sw::internal::reportMissingRequiredService`(Core/Common/Macros.h — 모든 구성에서 오류를 남기고 abort)를 부르므로 같은 함정이 닫혀 있다.
 _kListScanRoot = ( "Source/Engine", "Source/Editor", "Source/GameFramework", "Source/Games" )
 
 
