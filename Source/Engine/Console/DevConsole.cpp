@@ -7,6 +7,7 @@
     #include "Core/GlobalVariable/GlobalVariableManager.h"
     #include "Core/Log/Logger.h"
     #include "Core/Container/StringUtil.h"
+    #include "Core/Network/DebugReplyLine.h"
 
     #include "Engine/Common/EngineServices.h"
 
@@ -233,10 +234,12 @@ namespace sw
         const bool             bError = result != DevConsoleResult::Ok;
         if ( reply.empty() == false )
             appendOutput( reply, bError );
+        // 로그로 나가는 답은 한 줄 답의 상한을 넘지 않는다 - 개별 명령이 상한을 기억하지 않아도 되고 새 명령도 우회하지 못한다(넘으면 ` truncated=<원래 길이>` 표시). 오버레이에는 전체가 남는다.
+        const string loggedReply = DebugReplyLine::makeFixed( reply );
         if ( bError )
-            SW_LOG_WARNING( "> %# : %#", string( trimmed ).c_str(), reply.c_str() );
+            SW_LOG_WARNING( "> %# : %#", string( trimmed ).c_str(), loggedReply.c_str() );
         else
-            SW_LOG_INFO( "> %# : %#", string( trimmed ).c_str(), reply.c_str() );
+            SW_LOG_INFO( "> %# : %#", string( trimmed ).c_str(), loggedReply.c_str() );
         return result;
     }
 
