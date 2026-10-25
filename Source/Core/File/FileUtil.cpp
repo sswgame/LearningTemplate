@@ -25,19 +25,21 @@ namespace sw
 
     namespace
     {
+        /** @brief 프로세스에 하나인 파일 쓰기 카운터 묶음입니다(정적 가변 변수 한 칸으로 묶어 둔다 — `FileUtil` 은 정적 함수 묶음이라 소유 객체가 없다).
+         *  @details 감싸는 클래스 밖에 둔다 — 안에 두면 기본 멤버 초기화가 감싸는 클래스 정의가 끝나기 전에 필요해 `static inline` 멤버를 만들 수 없다. */
+        struct FileWriteCounters
+        {
+            /** @brief 임시 파일 이름을 겹치지 않게 하는 번호입니다(같은 프로세스의 여러 스레드가 같은 파일을 동시에 저장해도 서로 밟지 않게). */
+            atomic<uint32> _tempFileSerial{ 0 };
+            /** @brief 파일 · 폴더를 만든 횟수입니다(`FileUtil::getCreationEpoch`). */
+            atomic<uint64> _creationEpoch{ 0 };
+            /** @brief 파일 · 폴더를 지운 횟수입니다(`FileUtil::getRemovalEpoch`). */
+            atomic<uint64> _removalEpoch{ 0 };
+        };
+
         struct FileUtilInternal
         {
-            /** @brief 프로세스에 하나인 파일 쓰기 카운터 묶음입니다(정적 가변 변수 한 칸으로 묶어 둔다 — `FileUtil` 은 정적 함수 묶음이라 소유 객체가 없다). */
-            struct WriteCounters
-            {
-                /** @brief 임시 파일 이름을 겹치지 않게 하는 번호입니다(같은 프로세스의 여러 스레드가 같은 파일을 동시에 저장해도 서로 밟지 않게). */
-                atomic<uint32> _tempFileSerial{ 0 };
-                /** @brief 파일 · 폴더를 만든 횟수입니다(`FileUtil::getCreationEpoch`). */
-                atomic<uint64> _creationEpoch{ 0 };
-                /** @brief 파일 · 폴더를 지운 횟수입니다(`FileUtil::getRemovalEpoch`). */
-                atomic<uint64> _removalEpoch{ 0 };
-            };
-            static inline WriteCounters s_writeCounters{};
+            static inline FileWriteCounters s_writeCounters{};
 
             /**
              * @brief 폴더 @p directory 안에서 이름이 @p component 와 대소문자만 다른 항목의 디스크 표기를 찾습니다.

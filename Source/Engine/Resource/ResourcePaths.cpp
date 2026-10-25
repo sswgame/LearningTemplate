@@ -26,17 +26,19 @@ namespace sw
 {
     namespace
     {
+        /**
+         * @brief 푼 경로 캐시의 잠금과 배치 세대입니다. 세대는 검색 목록 · 루트 · 마운트가 바뀔 때마다 오른다(`clearPathCache`, 잠금 아래).
+         * @details 세대가 표(`_s_mapResolvedPath`)의 수명과 따로라(표는 엔진 수명 범위가 닫히면 사라진다) 표가 없을 때도 읽을 수 있다.
+         *          `ResourcePathsInternal` 밖에 둔다 — 안에 두면 기본 멤버 초기화가 감싸는 클래스 정의가 끝나기 전에 필요해 `inline static` 멤버를 만들 수 없다.
+         */
+        struct PathCacheGuard
+        {
+            mutex  _mutex{};
+            uint64 _layoutGeneration{ 0 };
+        };
+
         struct ResourcePathsInternal
         {
-            /**
-             * @brief 푼 경로 캐시의 잠금과 배치 세대입니다. 세대는 검색 목록 · 루트 · 마운트가 바뀔 때마다 오른다(`clearPathCache`, 잠금 아래).
-             * @details 세대가 표(`_s_mapResolvedPath`)의 수명과 따로라(표는 엔진 수명 범위가 닫히면 사라진다) 표가 없을 때도 읽을 수 있다.
-             */
-            struct PathCacheGuard
-            {
-                mutex  _mutex{};
-                uint64 _layoutGeneration{ 0 };
-            };
             inline static PathCacheGuard _s_pathCache{};
 
             /**

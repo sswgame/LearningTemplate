@@ -120,17 +120,17 @@ SW_TEST_CASE( ProfilerTraceExportTest, CommandWordUsesOneBoolSpellingTable )
     SW_EXPECT_TRUE( sw::ProfilerTraceExport::parseCommandWord( "save", bOn ) == Word::Save );
     SW_EXPECT_TRUE( sw::ProfilerTraceExport::parseCommandWord( "record", bOn ) == Word::Record );
     SW_EXPECT_TRUE( sw::ProfilerTraceExport::parseCommandWord( "merge", bOn ) == Word::Merge );
-    for ( const sw::utf8* pText : { "on", "ON", "1", "true", "yes" } )
+    for ( const utf8* pText : { "on", "ON", "1", "true", "yes" } )
     {
         bOn = false;
         SW_EXPECT_TRUE_MSG( sw::ProfilerTraceExport::parseCommandWord( pText, bOn ) == Word::Switch && bOn, pText );
     }
-    for ( const sw::utf8* pText : { "off", "Off", "0", "false", "no" } )
+    for ( const utf8* pText : { "off", "Off", "0", "false", "no" } )
     {
         bOn = true;
         SW_EXPECT_TRUE_MSG( sw::ProfilerTraceExport::parseCommandWord( pText, bOn ) == Word::Switch && bOn == false, pText );
     }
-    for ( const sw::utf8* pText : { "", "2", "start", "Save" } )
+    for ( const utf8* pText : { "", "2", "start", "Save" } )
     {
         SW_EXPECT_TRUE_MSG( sw::ProfilerTraceExport::parseCommandWord( pText, bOn ) == Word::Unknown, pText );
     }

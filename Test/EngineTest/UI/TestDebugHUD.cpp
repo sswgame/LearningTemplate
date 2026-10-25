@@ -173,7 +173,7 @@ SW_TEST_CASE( DebugHUDTest, RegistryOrdersAndRejects )
 /** @brief [DebugHUDTest] `hud <낱말>` 의 첫 낱말은 불리언 철자 표로 먼저 읽히므로, 그 철자 전부와 명령 낱말이 섹션 이름 예약어다 */
 SW_TEST_CASE( DebugHUDTest, BoolSpellingsAndCommandWordsAreReservedNames )
 {
-    for ( const sw::utf8* pName : { "on", "OFF", "1", "0", "true", "False", "yes", "no", "list", "corner", "opacity", "WINDOW" } )
+    for ( const utf8* pName : { "on", "OFF", "1", "0", "true", "False", "yes", "no", "list", "corner", "opacity", "WINDOW" } )
     {
         SW_EXPECT_TRUE_MSG( sw::DebugHUDRegistry::isReservedName( pName ), pName );
     }
