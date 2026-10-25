@@ -2,7 +2,7 @@
 
 > 질문: 지금 어디까지 왔고, 다음 세션이 처음에 할 일은 무엇인가?
 > 독자: 새로 시작하는 세션(에이전트와 사람).
-> 결론: main 은 통합 I(브랜치 27 개)에 이어 통합 J(결함 수정 `fixa`~`fixh` 8 개 + 통합이 찾아 고친 결함 넷 — 에디터가 기동하자마자 멈추던 것 둘 포함)와 통합 K(CI 실행 40147477351 의 실패 둘 — `cifixui` · `cifixcook`)까지 검증했고 **push 하지 않았다**(사용자 확인 대기). 남은 것은 push 뒤 CI(리눅스 쿠킹 수정은 CI 만 확인한다), GPU 확인(`## 000000` 목록 + 통합 I 의 "실행해서 봐야 하는 것"), 그다음 아키텍처 이음매([ArchitectureSeams](ArchitectureSeams.md))다.
+> 결론: main 은 통합 I(브랜치 27 개)에 이어 통합 J(결함 수정 `fixa`~`fixh` 8 개 + 통합이 찾아 고친 결함 넷 — 에디터가 기동하자마자 멈추던 것 둘 포함)와 통합 K(CI 실행 40147477351 의 실패 둘 — `cifixui` · `cifixcook`)까지 검증했고 **push 하지 않았다**(사용자 확인 대기). 남은 것은 push 뒤 CI(리눅스 쿠킹 수정은 CI 만 확인한다), GPU 확인(`## 000000` 목록 + 통합 I 의 "실행해서 봐야 하는 것"), 그다음 아키텍처 이음매([ArchitectureSeams](ArchitectureSeams.md))다 — 0 단계(측정 기준선)는 끝났다(`## 00000000000`).
 
 이 문서는 지금 상태만 둡니다. 한 일은 `git log` 가 원본이고, 설계는 계획 문서, 순서는 [Roadmap](Roadmap.md)에 있습니다.
 
@@ -16,7 +16,15 @@
 | 에이전트에게 맡길 때 · 토큰 | [에이전트와 토큰](../12_Agents.md), [작업자 규칙](WorkerRules.md) |
 | 환경 · 도구 함정 | [함정](../14_Pitfalls.md) |
 
-## 0000000000. 2026-10-25 통합 L 대기 — 병합 안 된 브랜치 24 개와 도는 에이전트 (이것부터 읽는다)
+## 00000000000. 2026-10-25 아키텍처 이음매 0 단계 — 빌드 · 기동 기준선을 다시 쟀다(문서만, push 안 함) (이것부터 읽는다)
+
+**상태**: main `eb2a1fa59` 를 새 워크트리 `arch0` 에서 빌드 칸 독점으로 쟀다(워크트리 · 브랜치는 지웠다). 표는 [08 검증](../08_Verification.md) "아키텍처 이음매 0 단계 기준선". Debug 콜드 풀 빌드 266.5 s(Lean 236.3 s), `.cpp` 증분 2.4 ~ 13.9 s, `FrameRenderer.h` 증분 18.5 s · 27 TU, Dev 기동 중앙값 5.3 s(`ModuleTypes` 2.1 s).
+
+**판정**: DLL 링크가 `.cpp` 증분의 29 ~ 61 %(Engine `.cpp` 52 ~ 61 %)로 30 % 기준을 넘는다. 그러나 5 단계(`Engine_Render` OBJECT)는 같은 `Engine.dll` 에 링크돼 링크를 줄이지 못하므로 링크 이유로는 열지 않고, 새 5a(Debug `-gcodeview-ghash` + `/DEBUG:GHASH` A/B)를 먼저 한다. 6 단계는 팬아웃 27 TU 중 16 개가 `FrameRenderer*.cpp` 자신이라 빌드 이득이 작다 — 병합 충돌 이유로만, 1 ~ 4 단계 뒤에.
+
+**남은 일**: 5a 측정(통합 혼자, CMake 옵션 두 줄 — 통합 L 병합 뒤 조용할 때). ArchitectureSeams 3.3 에 새 후보 둘 — Core `.cpp` 하나가 `ReflectionParser.exe` 재링크로 코드젠 64 개를 다시 돌리는 것(13.9 s), 기동의 `ModuleTypes` 2.1 s 나눠 재기.
+
+## 0000000000. 2026-10-25 통합 L 대기 — 병합 안 된 브랜치 24 개와 도는 에이전트 (위 절 다음에 읽는다)
 
 **상태**: main 은 `eb2a1fa59`(통합 K)까지 push 했다. CI 실행 `40160506131` 은 끝나지 않았다 — `py -3 -m Scripts ci-jobs --summary` 로 먼저 본다(Linux 쪽 `CookJobTest.RegistryCookFollowsTheMetaListing` · `SceneCookTest.*` · Wayland `UIDeterminismTest.*` 가 통합 K 의 Linux 수정 확인 대상). 아래 브랜치는 전부 **병합 · 빌드 · 테스트 안 했다**(린트만). 워크트리 `D:/w/<이름>` 은 병합 전이라 지우지 않는다.
 
@@ -32,9 +40,9 @@
 - 캐시: `cachec` → `fixs`(진행 중일 수 있음).
 - 애니메이션: `anim1` → `anim2`(U3 전환 — 진행 중일 수 있음).
 - 건드린 파일이 겹쳐 충돌 예상: `Scripts/lint/rules/CheckMutableStatics.toml`(`fixi` · `cachec` · `fixp` · `arch3` — 병합 뒤 `--regen-baseline`), `cmake/Engine/TestTargets.cmake` · `UnbuiltSources.cmake`(`fixl` · `arch2c`), `Test/EngineTest/CMakeLists.txt`(`arch2c` · `fixl` · `fixp`), `Source/Editor/CMakeLists.txt`(`arch2a` · `fixp`), `README.md`/`StatusBoard.md`.
-- **병합하지 않는다**: `rhiasync`(옛 동기 가상 함수 3 개를 지워 B0 번들 전까지 컴파일 안 됨) — `rhiasync2`(계약 수정 + B0 골격, 진행 중)와 함께 GPU 검증 담당(`gpu-verifier`)과 같이 다룬다. `arch3`(정적 상태 · 설정 소유, 진행 중 · 커밋 3 + 작업 파일 15), `arch0`(0 단계 측정, 진행 중)은 끝났는지 `git log main..wt/<이름>` 과 `git -C D:/w/<이름> status` 로 확인한다.
+- **병합하지 않는다**: `rhiasync`(옛 동기 가상 함수 3 개를 지워 B0 번들 전까지 컴파일 안 됨) — `rhiasync2`(계약 수정 + B0 골격, 진행 중)와 함께 GPU 검증 담당(`gpu-verifier`)과 같이 다룬다. `arch3`(정적 상태 · 설정 소유, 진행 중 · 커밋 3 + 작업 파일 15)은 끝났는지 `git log main..wt/<이름>` 과 `git -C D:/w/<이름> status` 로 확인한다.
 
-**첫 일(순서)**: ① `ci-jobs --summary`. ② 끝난 브랜치를 위 순서로 `integrator` 한 명이 병합 → `-k 0` 빌드(컴파일 위험은 각 브랜치 보고에 있다: 새 IAssetCache 생성자 → 전체 재빌드, `sw_linkEditorCore` 의 FlagOps 충돌, `std::erase_if`/`unordered_map` 해시, 리플렉션 재생성(`ShooterPlayerComponent`)) → Debug · Shipping · Shipping-Server `nogpu`/`lint`/`race` → **에디터 실제 기동 확인**(교훈 ⑪, 통합 J 의 규칙) → 기동 시나리오 네 백엔드. ③ 안 끝난 에이전트의 결과 수집. ④ `gpu-verifier`: `## 000000` 목록 + `hostgpu` 격리 H1~H4 + RHI B0. ⑤ [ArchitectureSeams](ArchitectureSeams.md) 0 단계 결과(`arch0`)로 5 · 6 단계를 열지 정한다.
+**첫 일(순서)**: ① `ci-jobs --summary`. ② 끝난 브랜치를 위 순서로 `integrator` 한 명이 병합 → `-k 0` 빌드(컴파일 위험은 각 브랜치 보고에 있다: 새 IAssetCache 생성자 → 전체 재빌드, `sw_linkEditorCore` 의 FlagOps 충돌, `std::erase_if`/`unordered_map` 해시, 리플렉션 재생성(`ShooterPlayerComponent`)) → Debug · Shipping · Shipping-Server `nogpu`/`lint`/`race` → **에디터 실제 기동 확인**(교훈 ⑪, 통합 J 의 규칙) → 기동 시나리오 네 백엔드. ③ 안 끝난 에이전트의 결과 수집. ④ `gpu-verifier`: `## 000000` 목록 + `hostgpu` 격리 H1~H4 + RHI B0. ⑤ [ArchitectureSeams](ArchitectureSeams.md) 5a(GHASH 링크 A/B) — 0 단계 판정은 위 절.
 
 **알려진 불확실**: 애니메이션 정합 테스트 둘(`FollowerReadsLeaderFinalPoseAfterAttachmentPhase`, `PoseModifierTest.FollowerReadsLeaderPoseAfterRig`)은 `anim1` 만 병합하면 빨갛다(결함 재현 테스트) — `anim2`(U3)와 함께 병합한다. `fixn` 의 `overlay.show <바> 2` 거절, `profile.trace 1|0|true|false` 수용은 동작 변화다. `fixj` 의 `SceneAudio._emitter` 는 순회 순서가 보존되지 않는다. `fixr` 의 `describeFirstUnfinished` 는 진단 근사값이라 TSan 에서 걸릴 수 있다. `IRHIDevice.cpp:317` 환경변수 `equals(pSoftwareEnv, "1")` 손 비교는 `rhiasync2` 가 끝나면 `tryParseBool` 로.
 

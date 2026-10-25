@@ -319,6 +319,29 @@ cd build/Ninja-Debug/Bin
   헤더 시나리오가 풀 빌드와 같다 — Core 기본 헤더 하나를 고치면 사실상 전 TU 를 다시 컴파일한다(2 단계 헤더 다이어트의 근거).
   워크트리 콜드가 풀 빌드보다 느린 것은 구성 시간이 더해지기 때문이다. Release 는 측정하지 않았다(풀 1 회 192.3 s 만 있다).
 
+- **아키텍처 이음매 0 단계 기준선**(2026-10-25, PC `SW` · Ryzen 7 6800H 논리 코어 16, main `eb2a1fa59`, 새 워크트리, 타깃 `all`(테스트 제외), 빌드 칸 독점 · 다른 빌드 없음, [ArchitectureSeams](plans/ArchitectureSeams.md) 2 절).
+  단계 분류는 빌드 전후 `.ninja_log` 차이를 명령 해시로 한 번씩 센 값이다(DLL 과 임포트 라이브러리, 코드젠의 여러 출력을 한 명령으로). 링크 비율 = DLL · EXE 링크 시간 합 ÷ 증분 벽시계(링크는 증분의 마지막 직렬 단계라 벽시계 몫으로 본다).
+
+  | 시나리오 | Debug 벽시계(s) | Debug 명령 · TU | Debug 링크(s, 비율) | Lean 벽시계(s) | Lean 명령 · TU | Lean 링크(s, 비율) |
+  |---|---:|---|---:|---:|---|---:|
+  | 구성(빈 폴더) | 17.1 | | | 13.4 | | |
+  | 콜드 풀 빌드(2 회) | 270.7 · 262.4 → **266.5** | TU 2,733(CPU 3,911 s) · PCH 33(100 s) | 링크 90 개 CPU 205 s(5 %) | 238.6 · 234.0 → **236.3** | TU 2,117(CPU 3,469 s) · PCH 27 | 링크 14 개 CPU 43 s |
+  | `Core/Compression/CompressionStream.cpp` | **13.9** | 68 · TU 1 + 리플렉션 코드젠 64(CPU 153 s) | 5.3(38 %) | **7.0** | 10 · 코드젠 6 | 3.2(45 %) |
+  | `Engine/.../GameObjectManager.cpp` | **8.3**(1 차 4.5) | 3 · TU 1(2.3 s) | 4.3(52 %, 1 차 60 %) | **3.9** | 3 · TU 1 | 2.4(61 %) |
+  | `Engine/.../FrameRenderer.cpp` | **9.4**(1 차 7.9) | 3 · TU 1(3.4 s) | 2.7(29 %, 1 차 34 %) | **6.0** | 3 · TU 1 | 2.3(39 %) |
+  | `GameFramework/.../BehaviorTree.cpp` | **2.7** | 4 · TU 1 | 1.2(45 %) | **1.7** | 4 · TU 1 | 0.8(46 %) |
+  | `Editor/.../EditorPanelManager.cpp` | **3.0** | 4 · TU 1 | 1.0(32 %) | **1.7** | 4 · TU 1 | 0.7(42 %) |
+  | `Games/Shooter3D/Shooter3DGame.cpp` | **2.4** | 3 · TU 1 | 0.3(14 %) | 0.5 | Lean 은 Shooter3D 를 짓지 않음(활성 게임 Empty) | — |
+  | 헤더 `Renderer/Frame/FrameRenderer.h`(1,344 줄) | **18.5** | 33 · **TU 27**(CPU 128 s) | 3.7(20 %) | **14.7** | 33 · TU 27 | 3.4(23 %) |
+  | 헤더 `GameFramework/.../BehaviorTree.h`(작은 헤더) | **4.7** | 24 · TU 15 + 코드젠 2 | 1.8(39 %) | **4.1** | 13 · TU 7 | 1.2(30 %) |
+
+  증분은 각 3 회 중앙값이다(두 번 잰 줄은 둘째 값 — 같은 PC 에서 증분이 회차마다 ±3 s 흔들렸다). `Engine.dll` 링크 한 번은 2.3 ~ 5.8 s(중앙값 약 2.7 s, 10-16 의 1.9 s 보다 길다)이고,
+  `Engine.dll` 26 MB · `Engine.pdb` 125 MB, 링크는 `lld-link /debug /INCREMENTAL:NO` 에 GHASH 없음이다. 모든 증분에 `cmake.verify_globs`(0.2 ~ 0.8 s)가 붙는다.
+  `FrameRenderer.h` 팬아웃 27 TU 의 내역: `FrameRenderer*.cpp` 분할 파일 16 개(클래스 자신) + 바깥 11 개(`Engine.cpp` · `EngineSubsystemSet.cpp` · `RenderThread.cpp` · `LiveShaderSubsystem.cpp` · `RenderPacketBuilder.cpp` · Capture 셋 · 에디터 셋 — `EditorViewportToolbar` · `TestRunnerPanel` · `EditorScenarioSteps`). 전부 직접 include 다.
+  Core `.cpp` 하나가 13.9 s 인 것은 `Core_objects` 가 `ReflectionParser.exe` 에도 링크되고, 파서 실행 파일이 바뀌면 리플렉션 코드젠 명령 64 개(Lean 6 개)가 모두 다시 돌기 때문이다.
+  Dev 기동(Debug `App.exe`, 게임 Empty, DX12, `-gv_screenshot=<경로> -gv_screenshotQuit=1`, `Startup phases:` total, 데우기 1 회 5,850 ms 뒤 5 회): 4,128 · 2,926 · 8,330 · 5,869 · 5,290 ms → **중앙값 5,290 ms**(거의 전부 `engine` 단계).
+  서브시스템 중앙값: `ModuleTypes` 2,150 · `FrameRenderer` 815 · `Audio` 767 · `Resource` 396 · `RHI` 275 · `Reflection` 88 ms(`FrameRenderer` · `RHI` 는 한 회에 3,470 · 1,870 ms 로 튄다). 경고 · 오류 0.
+
 - **OS 헤더를 PCH 에서 뺀 효과**(2026-10-11, PC `SW`, Debug, `EngineMinimal.h` 가 `Windows.h` 묶음을 더는 넣지 않음): PCH 없이 `-fsyntax-only` 한 번역 단위의 중앙값(5 회)이 `GameObjectManager.cpp` 2.63 → 2.18 s ·
   `Scene.cpp` 2.74 → 2.24 s · `AudioClip.cpp` 2.56 → 2.11 s · `AnimationClip.cpp` 2.66 → 2.06 s(약 −19 %, TU 하나에 −0.5 s). PCH 를 켠 개발 풀 빌드는 131.5 → 127 s(−3 %)로 작다 — 이득은 PCH 를 끄는 구성(Windows CI)에서 크다.
   `Scripts` 없이 측정하는 법: `compile_commands.json` 의 명령에서 `/Yu` · `/Fp` · PCH 강제 포함 · `/Fo` 를 빼고 `-fsyntax-only -include Source/Engine/pch.h` 를 붙여 5 회 돌린다.

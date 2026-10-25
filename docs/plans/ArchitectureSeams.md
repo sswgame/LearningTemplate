@@ -4,9 +4,9 @@
 
 > 질문: 프로젝트가 커진 지금 아키텍처를 다시 설계해야 하는가, 한다면 무엇을 어떤 순서로 바꾸는가?
 > 독자: 통합 담당과 다음 구조 작업을 맡을 작업자.
-> 결론: 큰 틀(Core → Engine → GameFramework 기반 → 키트 → 게임, Editor · 플러그인, RuntimeAPI · ModuleHost)은 다시 짜지 않는다. 의존 그래프는 DAG 이고 방향은 언리얼 · Godot 과 같다. 고칠 곳은 이음매 다섯과, 그 단계에 같이 하는 리팩토링 트랙(중복 기능 통합 · 불필요한 래핑 걷기)이다. Engine · GameFramework 의 링크 단위 분할은 0 단계 재측정 전까지 하지 않는다.
+> 결론: 큰 틀(Core → Engine → GameFramework 기반 → 키트 → 게임, Editor · 플러그인, RuntimeAPI · ModuleHost)은 다시 짜지 않는다. 의존 그래프는 DAG 이고 방향은 언리얼 · Godot 과 같다. 고칠 곳은 이음매 다섯과, 그 단계에 같이 하는 리팩토링 트랙(중복 기능 통합 · 불필요한 래핑 걷기)이다. Engine · GameFramework 의 링크 단위 분할은 하지 않는다 — 0 단계 재측정(2026-10-25)에서 링크가 `.cpp` 증분의 29 ~ 61 % 로 커졌지만 먼저 링크 옵션(5a, GHASH)을 재고, 그래도 30 % 를 넘을 때 다시 본다.
 
-2026-10-25 설계 검토(`design-reviewer`, 근거 수준은 항목마다 표시)의 결론을 옮긴 것이다. 근거는 코드 · 측정 · 추정으로 가른다. 아래 수치는 검토 시점(main `4d43a7c11`) 값이라 낡을 수 있고, 0 단계가 다시 잰다.
+2026-10-25 설계 검토(`design-reviewer`, 근거 수준은 항목마다 표시)의 결론을 옮긴 것이다. 근거는 코드 · 측정 · 추정으로 가른다. 아래 수치는 검토 시점(main `4d43a7c11`) 값이고, 빌드 · 기동 수치는 0 단계(2026-10-25, main `eb2a1fa59`)가 다시 쟀다.
 
 ## 1. 고칠 이음매
 
@@ -15,7 +15,7 @@
 | 1 | 검증 처리량이 병목이다. 측정대기 계획 문서 59/101, 검증 항목 212 개가 쌓였고, 작업자가 빌드하지 않아 의미 충돌이 통합 빌드에서야 드러난다 | 구조 변경이 확인되지 않은 채 쌓인다 | 코드 |
 | 2 | 테스트 대상이 소스를 손으로 고른다. EditorTest 는 Editor `.cpp` 130 경로를 나열하고 리플렉션 단계를 따로 둔다. EngineTest 는 플러그인 소스 13 경로를 직접 컴파일한다. SmokeTest · EditorUITest · FuzzTest 에도 손 목록이 있다 | 30 일에 120 커밋이 몰린 충돌 지점, "목록은 하나" 원칙 위반 | 코드 |
 | 3 | 대형 단일 문서와 생성물이 병합 충돌을 부른다. 결정 기록 373 KB(30 일 326 커밋), README 진행 표, `NEXT.md`, `ConfigReference.json` | 통합 G 에서 충돌 셋. 30 KB 훅 때문에 절 단위로만 읽는다 | 코드 |
-| 4 | 측정 기준선이 낡았다. "분할하지 않음" 결정이 10 월 초 ~ 중순의 작은 워크로드에 기댄다(Engine.dll 링크 1.9 s, 콜드 풀 빌드 115 s, GF 기반 약 58k 줄 — 지금 GF 기반은 약 9.4 만 줄) | 옳은 분할을 "이득 없음" 으로 덮고 있을 수 있다 | 코드 |
+| 4 | (0 단계로 다시 쟀다, 2026-10-25) 옛 기준선(Engine.dll 링크 1.9 s, 콜드 풀 빌드 115 s, GF 기반 약 58k 줄)은 실제로 낡았다. 지금 Debug 콜드 풀 빌드 266.5 s(Lean 236.3 s), `Engine.dll` 링크 한 번 2.3 ~ 5.8 s(중앙값 약 2.7 s), GF 기반 9.43 만 줄. 링크는 Engine · GF · 에디터 `.cpp` 증분의 29 ~ 61 % 다 | 링크 몫은 커졌지만 층 DLL 분할 전에 링크 옵션(GHASH)이 먼저다 — 아래 5 단계 판정 | 측정([08 검증](../08_Verification.md) "아키텍처 이음매 0 단계 기준선") |
 | 5 | 전역 가변 정적 상태가 남았다(292 파일에 628 개, 래칫 진행 중). `getActive` 류가 정적 사본의 참조를 돌려주는 것을 게이트가 못 본다 | 핫 리로드 · 다중 월드 · 테스트 격리 | 코드 |
 | 6 | 서버에서 렌더러를 빼는 일을 폴더 정규식 · `SW_WITH_CLIENT_CODE` · 리플렉션 제외 정규식이 나눠 맡는다 | 중하. 이미 동작하고 틈은 링크 오류로 드러난다 | 코드 |
 | 7 | 변경이 `FrameRenderer` 에 몰린다(헤더 1,344 줄, 값 멤버 117 개, 10 일에 40 커밋) | 병합 충돌과 단일 책임. 빌드 팬아웃은 작다 | 코드 |
@@ -29,7 +29,7 @@
 
 | 단계 | 내용 | 확인 | 롤백 |
 |---|---|---|---|
-| 0 | 측정 기준선(Ninja-Debug 와 Lean, 콜드 풀 빌드, 증분 5 곳, 헤더 증분 2 곳, `.ninja_log` 링크 시간, Dev 기동 비용). 통합 혼자, 빌드가 겹치면 무효 | `08_Verification.md` 형식 표. DLL 링크가 증분의 30 % 를 넘으면 5 단계를 연다 | 해당 없음 |
+| 0 (끝남, 2026-10-25) | 측정 기준선(Ninja-Debug 와 Lean, 콜드 풀 빌드, 증분 5 곳, 헤더 증분 2 곳, `.ninja_log` 링크 시간, Dev 기동 비용). 통합 혼자, 빌드가 겹치면 무효 | [08 검증](../08_Verification.md) "아키텍처 이음매 0 단계 기준선" 표. 판정: DLL 링크가 `.cpp` 증분의 29 ~ 61 %(Engine `.cpp` 52 ~ 61 %)라 30 % 기준을 넘는다. 그러나 5 단계의 `Engine_Render` OBJECT 는 여전히 `Engine.dll` 에 링크되므로 링크 시간을 줄이지 않는다 → 5 단계는 링크 이유로는 열지 않고 5a 를 먼저 한다. `FrameRenderer.h` 팬아웃은 27 TU(18.5 s) | 해당 없음 |
 | 1a | 결정 기록 5 절을 영역별 파일로 나눈다. 본문에는 1 ~ 4 절과 목록만 둔다 | `CheckDocPaths`, lint-suite | 커밋 revert |
 | 1b | README 진행 표를 생성 파일로 빼고 `CheckStatusBoard` 대상을 바꾼다 | `CheckStatusBoard`, `plans --check` | revert |
 | 2a | `EditorCore` OBJECT(ImGui 없음)를 만든다. 대상은 폴더 규칙(`Editor/Common` 의 Asset · Commands · Config · Localization · SourceControl · Workspace). EditorModule 과 EditorTest 가 같은 오브젝트를 받고 EditorTest 의 손 목록 79 줄을 지운다 | 전 프리셋 구성, EditorTest, 에디터 시나리오 | revert |
@@ -37,8 +37,9 @@
 | 2c | `sw_addEditorExtensionModel()` 이 전역 속성에 모델 오브젝트를 올리고 EngineTest 가 읽는다. 손 목록 13 줄과 SmokeTest · EditorUITest · FuzzTest 의 손 목록을 같은 방식으로 지운다 | EngineTest 전체 | revert |
 | 3 | 래칫을 줄이고 정적 사본 참조 접근자를 게이트에 넣는다. `EngineConfig` · `GameConfig` · `Render2DSettings` 를 범위 소유로 옮긴다 | `-L lint`, 설정 핫 리로드 테스트, 큐브 20k 벤치 | 파일별 revert |
 | 4 | 통합이 main 으로 올리기 전에 `-k 0` 빌드와 `ctest -L nogpu|lint` 증거 파일을 요구하고, GPU 항목은 정해진 시각에 `verify-batch` 로 몰아 돌린다 | 스크립트 자가 테스트 | revert |
-| 5 (조건부) | 0 단계에서 링크가 큰 몫이거나 서버에서 뺄 폴더가 렌더러 밖으로 늘면 `Engine_Render` OBJECT 분할 | 네 백엔드 × Dev · Shipping · Server | revert |
-| 6 | 렌더 기능 객체를 엔진 내부 기능 목록으로 옮겨 `FrameRenderer` 헤더 변경을 줄인다(이미 반쯤 쓰는 `RealtimeProbeUpdater` · `VfxParticleRenderer` 값 멤버 패턴). 0 단계 측정 뒤에 정한다 | 렌더 GPU 테스트, 큐브 벤치 RT p50 · p99 | revert |
+| 5a | Debug 링크 옵션 A/B: 컴파일 `/clang:-gcodeview-ghash` + 링크 `/DEBUG:GHASH`(지금 `lld-link /debug` 에 GHASH 없음, `Engine.pdb` 125 MB). 같은 날 번갈아 `GameObjectManager.cpp` 증분의 `Engine.dll` 링크 시간과 콜드 풀 빌드를 잰다. 링크가 줄지 않거나 여전히 증분의 30 % 를 넘으면 그때 층 DLL 분할을 다시 본다 | 0 단계 표와 같은 방법(`.ninja_log` 명령 해시), Debug 경고 0 · `nogpu` | 옵션 revert |
+| 5 (조건부, 링크 이유로는 열지 않음) | 서버에서 뺄 폴더가 렌더러 밖으로 늘면 `Engine_Render` OBJECT 분할. 0 단계 판정: OBJECT 는 같은 DLL 에 링크되어 링크 시간을 줄이지 못한다 | 네 백엔드 × Dev · Shipping · Server | revert |
+| 6 (빌드 이유로는 낮음) | 렌더 기능 객체를 엔진 내부 기능 목록으로 옮겨 `FrameRenderer` 헤더 변경을 줄인다(이미 반쯤 쓰는 `RealtimeProbeUpdater` · `VfxParticleRenderer` 값 멤버 패턴). 0 단계: 헤더 증분 18.5 s · 27 TU 중 16 개는 `FrameRenderer*.cpp` 자신이라 줄일 수 있는 것은 바깥 11 TU(`Engine.cpp` 포함)뿐이다. 하면 이유는 병합 충돌(10 일 40 커밋)이고, 1 ~ 4 단계 뒤에 한다 | 렌더 GPU 테스트, 큐브 벤치 RT p50 · p99, 헤더 증분 TU 수 | revert |
 
 ## 3. 리팩토링 트랙(이행 단계와 같이 한다)
 
@@ -76,6 +77,8 @@
 - 층 표의 "서로 include 하지 않는다" 주석을 금지 간선 키로 바꿔 게이트가 보게 한다(코어 규칙 `coreBannedLayer` 와 같은 구조).
 - 긴 함수 분리는 새 대형 변경이 들어간 파일부터 같은 방식(단계 함수)으로 이어간다.
 - `FrameRenderer` 정리는 6 단계.
+- (0 단계에서 찾음) Core `.cpp` 하나를 고치면 `ReflectionParser.exe` 가 다시 링크되고 리플렉션 코드젠 명령 64 개가 모두 다시 돌아 증분이 13.9 s 다(Lean 7.0 s). 파서가 내는 결과가 같으면 출력을 다시 쓰지 않는 `restat` 류, 또는 파서가 `Core_objects` 전체 대신 필요한 부분만 링크하는 쪽을 본다(임포트 라이브러리를 바뀔 때만 갱신한 것과 같은 모양).
+- (0 단계에서 찾음) Dev 기동 중앙값 5.3 s 중 `ModuleTypes` 가 2.1 s 로 가장 크다 — 무엇에 쓰는지(모듈 DLL 적재인지 타입 등록인지) 먼저 나눠 잰다.
 
 ## 4. 사용자 결정이 필요한 것
 
@@ -84,4 +87,4 @@
 
 ## 5. 확인하지 못한 것
 
-링크 · 증분 · 기동 시간(0 단계가 잰다). `EditorCore` 후보 폴더의 ImGui 사용은 직접 include 만 셌다(전이 include 는 미확인). dllexport 정의로 컴파일한 OBJECT 를 테스트 실행 파일에 넣었을 때 clang-cl 과 Linux Clang 에서 문제가 없는지. 언리얼 · 유니티 렌더러 구조와 ADR 관행은 기억에 기댄 것이라 결정 근거로 쓰지 않았다.
+링크 · 증분 · 기동 시간은 0 단계가 쟀다(2026-10-25). GHASH 효과는 5a 가 잰다. `EditorCore` 후보 폴더의 ImGui 사용은 직접 include 만 셌다(전이 include 는 미확인). dllexport 정의로 컴파일한 OBJECT 를 테스트 실행 파일에 넣었을 때 clang-cl 과 Linux Clang 에서 문제가 없는지. 언리얼 · 유니티 렌더러 구조와 ADR 관행은 기억에 기댄 것이라 결정 근거로 쓰지 않았다.
