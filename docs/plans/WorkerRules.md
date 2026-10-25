@@ -60,7 +60,7 @@ py -3 -m Scripts worktree-make <이름> --base main
 - Release 빌드 폴더는 `-DSW_GAMES=ALL` 로 구성돼 있습니다(구성은 `shared-lock acquire vcpkg --owner <이름>` 안에서). 게임 모듈만: `cmake --build build/Ninja-Release --target SWGame_<게임>`.
 - 테스트 실행 파일은 필터로 돌립니다. PATH 에 `build\Ninja-Debug\Bin` 을 넣고 `TestBin\<이름>.exe --test_filter=...`. 빌드가 겹쳐 시간 제한에 걸리면 단독으로 다시 돌려 구분합니다.
 - 벤치: `cd build/Ninja-Release/Bin && ../TestBin/EngineTest.exe --test_filter=GameObjectBenchTest.<이름> --load_suites=only --host_suites=all`. 합성 A/B: `py -3 -m Scripts perf-compare --app build/Ninja-Release/Bin/App.exe --cases tickCostMovers tickCostSmallScene tickCostChurn tickCostRagdolls --runs 5`.
-- 시나리오: `App.exe -game=<게임> -dx12 -scenario=game/<게임>/automation/<이름>.scenario.xml`(종료 코드 0 = 통과, 15 = 처리하지 않은 Warning · Error 가 남음 — [검증과 측정](../08_Verification.md) 1절 "시나리오 통과 기준"). GPU 잠금은 [작업 방식](../11_Workflow.md) 2절.
+- 시나리오: `py -3 -m Scripts scenario <이름 조각> --backend dx12|all --config Release` — **시나리오를 직접 `App.exe` 로 조립하지 말고 이 명령을 쓴다**(`<Launch>` 인자 · 게임 · 보고를 시나리오 파일에서 그대로 붙이고 GPU 공유 칸을 잡는다. 종료 코드 0 = 통과, 15 = 처리하지 않은 Warning · Error 가 남음 — [검증과 측정](../08_Verification.md) 1절 "시나리오 통과 기준"). GPU 잠금은 [작업 방식](../11_Workflow.md) 2절.
 - 셰이더를 바꾸거나 병합이 `reflection.manifest` 에서 충돌하면 `App.exe --cook-shaders` 후 `ShaderCookRequestTest` 가 알리는 낡은 바이너리를 지웁니다(한 번에 8 개씩 알립니다. 0 이 될 때까지 반복).
 - 린트가 막으면 `py -3 Scripts/lint/fixer/FormatModified.py`, 설정 문서는 `py -3 Scripts/generate/GenerateConfigReference.py`.
 - 빌드 로그 경고 세기와 낡은 바이너리 함정은 [함정](../14_Pitfalls.md) "빌드 · 환경"에 있습니다.
