@@ -23,41 +23,14 @@ else()
 	list(APPEND swEngineTestExclude "/TestOnlineLoadBot(Load)?\\.cpp$")
 endif()
 
-# 에디터 확장(GF_EditorPlugIn_Admin)의 화면 없는 부분(제공자 · 세션)은 ImGui 를 몰라 EngineTest 가 직접 컴파일한다 — 확장 DLL 은 링크하지 않는다.
-# 키트가 꺼지면 그 키트의 테스트 파일이 빠지므로(`sw_excludeSourcesOfInactiveKits`) 이 소스도 같이 뺀다.
-set(swEngineTestExtensionSource "")
-if(TARGET GF_Admin)
-	set(swAdminEditorDirectory "${CMAKE_SOURCE_DIR}/Source/GameFramework/PlugIn/Editor/Admin")
-	list(APPEND swEngineTestExtensionSource "${swAdminEditorDirectory}/AdminCommandProvider.cpp" "${swAdminEditorDirectory}/AdminToolSession.cpp" "${swAdminEditorDirectory}/AdminToolConnection.cpp")
-endif()
-# 기믹 회로 그래프 편집 모델(GF_EditorPlugIn_Base)도 같다 - 화면 없는 모델과 컴포넌트 다리만 직접 컴파일한다.
-set(swGimmickGraphDirectory "${CMAKE_SOURCE_DIR}/Source/GameFramework/PlugIn/Editor/Base/Gimmick")
-list(APPEND swEngineTestExtensionSource "${swGimmickGraphDirectory}/GimmickGraphModel.cpp" "${swGimmickGraphDirectory}/GimmickGraphBridge.cpp")
-# 행동 트리 편집 창의 편집 모델도 같다(화면 없는 읽기 · 쓰기 · 노드 편집 규칙).
-list(APPEND swEngineTestExtensionSource "${CMAKE_SOURCE_DIR}/Source/GameFramework/PlugIn/Editor/Base/AI/BehaviorTreeEditModel.cpp")
-# 어빌리티 디버그 창의 행 모델도 같다.
-list(APPEND swEngineTestExtensionSource "${CMAKE_SOURCE_DIR}/Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugModel.cpp")
-# NPC 일정 디버그 창의 표 행 변환(GF_EditorPlugIn_Base)도 화면 없는 부분만 직접 컴파일한다.
-list(APPEND swEngineTestExtensionSource "${CMAKE_SOURCE_DIR}/Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleTimelineRows.cpp")
-# 메시 모디파이어(GF_EditorPlugIn_MeshModifiers)의 순수 로직 — 스택 틀(Stack/)과 모디파이어(Modifiers/)를 폴더째 모은다.
-# 모디파이어를 더해도 이 줄을 고치지 않는다(병렬로 더하는 작업이 이 목록에서 부딪히지 않게). 등록은 각 .cpp 의 SW_MESH_MODIFIER 가 한다.
-file(GLOB swMeshModifierSource CONFIGURE_DEPENDS
-	"${CMAKE_SOURCE_DIR}/Source/GameFramework/PlugIn/Editor/MeshModifiers/Stack/*.cpp"
-	"${CMAKE_SOURCE_DIR}/Source/GameFramework/PlugIn/Editor/MeshModifiers/Modifiers/*.cpp")
-list(APPEND swEngineTestExtensionSource ${swMeshModifierSource})
-# 캐릭터 편집(GF_EditorPlugIn_CharacterEditor)의 화면 없는 편집 모델(Model/)도 폴더째 모은다.
-file(GLOB swCharacterEditorModelSource CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/Source/GameFramework/PlugIn/Editor/CharacterEditor/Model/*.cpp")
-list(APPEND swEngineTestExtensionSource ${swCharacterEditorModelSource})
-# 한 프로세스 재생의 본보기 게임(GF_EditorPlugIn_NetSimulation 의 Sample/)은 화면 없는 게임 로직이라 직접 컴파일한다 — 게임 목록에 올리는 일(NetSimSampleRegistration.cpp)은 확장 DLL 의 몫이라 뺀다.
-# 하니스 키트(GF_NetSimulation) 위에 있어 그 키트가 켜졌을 때만 컴파일한다(꺼지면 그 키트의 테스트 파일과 함께 빠진다).
-if(TARGET GF_NetSimulation)
-	list(APPEND swEngineTestExtensionSource "${CMAKE_SOURCE_DIR}/Source/GameFramework/PlugIn/Editor/NetSimulation/Sample/NetSimSampleGame.cpp")
-endif()
-# 텍스처 표본기가 이미지 디코드를 맡기는 Editor 의 ImageUtil(stb_image 를 감싼다)도 직접 컴파일한다 - EditorModule 은 링크하지 않는다.
+# 에디터 확장의 화면 없는 모델(Admin · Base · MeshModifiers · CharacterEditor · NetSimulation)은 ImGui 를 몰라 EngineTest 가 직접 컴파일한다 — 확장 DLL 은 링크하지 않는다.
+# 목록은 각 확장 폴더의 CMakeLists.txt 가 `sw_addEditorExtensionModel` 로 선언한다(여기 적지 않는다). 키트가 꺼진 확장의 소스는 올라오지 않는다.
+sw_getEditorExtensionModelSources(swEngineTestExtensionSource)
+# 아래 Editor 소스는 EditorModule 에 속하지만 화면이 없어 같은 방식으로 직접 컴파일한다 - EditorModule 은 링크하지 않는다.
+# 텍스처 표본기가 이미지 디코드를 맡기는 ImageUtil(stb_image 를 감싼다)과 에디터 테마 토큰(editor/theme/*.tokens.json)의 순수 로더 · 데이터 종류 등록 줄(스키마 테스트가 실제 로더로 읽는다).
 # stb include 는 `stb` 타깃을 직접 링크해 얻는다(아래 LIBS) — 다른 타깃이 끌어오는 vcpkg include 폴더는 구성마다 있거나 없다.
-list(APPEND swEngineTestExtensionSource "${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/ImageUtil.cpp")
-# 에디터 테마 토큰(editor/theme/*.tokens.json)의 순수 로더와 데이터 종류 등록 줄도 직접 컴파일한다 - 스키마 테스트가 그 파일을 실제 로더로 읽는다.
 list(APPEND swEngineTestExtensionSource
+	"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/ImageUtil.cpp"
 	"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Config/EditorThemeTokens.cpp"
 	"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Config/EditorThemeTokensDataKind.cpp")
 
