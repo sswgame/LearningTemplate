@@ -3,6 +3,8 @@
 #include "Editor/Common/Widgets/EditorAssetFilter.h"
 #include "Editor/Viewport/Model/EditorViewportMouseClaim.h"
 
+#include "EditorTest/EditorTestServices.h"
+
 #include "TestFramework/TestFramework.h"
 
 using namespace sw;
@@ -13,7 +15,8 @@ using namespace sw::editor;
  */
 SW_TEST_CASE( EditorViewportMouseClaimTest, AcquireAndRelease )
 {
-    int32 ownerA = 0;
+    const ScopedEditorStateService stateService; // 소유자 상태는 에디터 범위의 저장소에 있어 이 테스트 몫을 건다
+    int32                          ownerA = 0;
     EditorViewportMouseClaim::release( &ownerA );
     SW_EXPECT_FALSE( EditorViewportMouseClaim::isClaimed() );
 
@@ -31,8 +34,9 @@ SW_TEST_CASE( EditorViewportMouseClaimTest, AcquireAndRelease )
  */
 SW_TEST_CASE( EditorViewportMouseClaimTest, NewOwnerReplacesOld )
 {
-    int32 ownerA = 0;
-    int32 ownerB = 0;
+    const ScopedEditorStateService stateService; // 소유자 상태는 에디터 범위의 저장소에 있어 이 테스트 몫을 건다
+    int32                          ownerA = 0;
+    int32                          ownerB = 0;
     EditorViewportMouseClaim::acquire( &ownerA );
     EditorViewportMouseClaim::acquire( &ownerB );
     SW_EXPECT_FALSE( EditorViewportMouseClaim::isClaimedBy( &ownerA ) );
@@ -51,7 +55,8 @@ SW_TEST_CASE( EditorViewportMouseClaimTest, NewOwnerReplacesOld )
  */
 SW_TEST_CASE( EditorViewportMouseClaimTest, UnrenewedClaimExpiresAtNextFrame )
 {
-    int32 owner = 0;
+    const ScopedEditorStateService stateService; // 소유자 상태는 에디터 범위의 저장소에 있어 이 테스트 몫을 건다
+    int32                          owner = 0;
     EditorViewportMouseClaim::beginFrame( 100 );
     EditorViewportMouseClaim::acquire( &owner ); // 프레임 100 의 그리기에서 잡았다
     SW_EXPECT_TRUE( EditorViewportMouseClaim::isClaimedBy( &owner ) );
@@ -72,7 +77,8 @@ SW_TEST_CASE( EditorViewportMouseClaimTest, UnrenewedClaimExpiresAtNextFrame )
  */
 SW_TEST_CASE( EditorViewportMouseClaimTest, SameFrameNumberCountsOnce )
 {
-    int32 owner = 0;
+    const ScopedEditorStateService stateService; // 소유자 상태는 에디터 범위의 저장소에 있어 이 테스트 몫을 건다
+    int32                          owner = 0;
     EditorViewportMouseClaim::beginFrame( 200 );
     EditorViewportMouseClaim::acquire( &owner );
     EditorViewportMouseClaim::beginFrame( 201 ); // 첫 번째 뷰포트

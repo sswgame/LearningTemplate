@@ -88,7 +88,6 @@
 # Source/Editor/Panels — 이전 대기
 "Source/Editor/Panels/Catalog/CatalogPanel.cpp" = 3
 # Source/Editor/Viewport — 이전 대기
-"Source/Editor/Viewport/Model/EditorViewportMouseClaim.cpp" = 3
 "Source/Editor/Viewport/ViewportInputOverlay.cpp" = 1
 # Source/Engine/Animation — 이전 대기
 "Source/Engine/Animation/Rig/RigAsset.cpp" = 2
@@ -253,7 +252,7 @@
 # Test/EditorTest — 이전 대기
 "Test/EditorTest/Common/Commands/TestEditorCommandRegistry.cpp" = 2
 "Test/EditorTest/Common/Workspace/TestEditorExtensionSubsystems.cpp" = 1
-"Test/EditorTest/Panels/ContentBrowser/Model/TestContentBrowserLogic.cpp" = 1
+"Test/EditorTest/Panels/ContentBrowser/TestContentBrowserLogic.cpp" = 1
 # Test/EngineTest — 이전 대기
 "Test/EngineTest/Automation/TestAutomationGameplaySteps.cpp" = 3
 "Test/EngineTest/Automation/TestAutomationScenario.cpp" = 8
