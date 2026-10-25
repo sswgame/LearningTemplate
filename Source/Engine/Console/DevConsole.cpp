@@ -250,9 +250,7 @@ namespace sw
         head += " : ";
         return DebugReplyLine::makeCapped( std::move( head ), [reply]( string& inoutText, size_t maxBytes )
         {
-            if ( inoutText.size() >= maxBytes )
-                return;
-            inoutText.append( reply.substr( 0, maxBytes - inoutText.size() ) );
+            DebugReplyLine::appendWithinBytes( inoutText, reply, maxBytes );
         } );
     }
 

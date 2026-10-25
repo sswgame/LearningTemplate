@@ -89,6 +89,20 @@ namespace sw
          * @details 잘못된 바이트는 U+FFFD 로 읽고 한 바이트 이상 넘깁니다(무한 반복이 없습니다). 오프셋이 끝이면 0 을 돌려주고 옮기지 않습니다.
          */
         static uint32 decodeUtf8( string_view text, size_t& inoutOffset );
+        /**
+         * @brief @p text 를 바이트 @p cut 에서 자를 때 글자 한가운데가 아닌 가장 가까운 앞 경계(글자 시작)를 돌려줍니다.
+         * @details @p cut 이 @p text 길이 이상이면 길이를 돌려준다. UTF-8 글자는 최대 4 바이트라 이어지는 바이트(10xxxxxx)를 세 번까지만 물린다(잘못된 UTF-8 을 끝없이 거슬러 가지 않는다).
+         */
+        [[nodiscard]] static constexpr size_t floorToUtf8Boundary( string_view text, size_t cut )
+        {
+            if ( cut >= text.size() )
+                return text.size();
+            for ( int32 step = 0; step < 3 && cut > 0 && ( static_cast<uint8>( text[cut] ) & 0xC0 ) == 0x80; ++step )
+            {
+                --cut;
+            }
+            return cut;
+        }
         /** @brief 코드 포인트 하나를 UTF-8 로 @p inoutText 끝에 덧붙입니다. */
         static void appendUtf8( string& inoutText, uint32 codepoint );
         /**

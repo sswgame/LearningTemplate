@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Network/DebugReplyLine.h"
 #include "Core/Network/Transport/NetEmulation.h"
 
@@ -95,4 +96,36 @@ SW_TEST_CASE( DebugReplyLineTest, TheEmulationReportLineStaysWithinTheLimit )
     SW_EXPECT_TRUE( line.find( DebugReplyLine::kTruncatedMarker ) == string::npos );
     NetEmulationReport parsed;
     SW_EXPECT_TRUE( NetEmulationReport::tryParseLine( line, parsed ) );
+}
+
+/**
+ * @brief [DebugReplyLineTest] 다바이트 글자(한글 3 바이트 · 이모지 4 바이트)가 상한 경계에 걸려도 반 토막이 남지 않고 표시의 길이는 원래 바이트 길이다
+ * @details 앞에 붙이는 ASCII 길이를 0 ~ 3 으로 바꿔 경계가 글자의 모든 위치에 오게 한다.
+ */
+SW_TEST_CASE( DebugReplyLineTest, MultiByteCharactersAreNeverSplitAtTheLimit )
+{
+    const string arrUnit[] = { "가", "😀" };
+    for ( const string& unit : arrUnit )
+    {
+        for ( size_t padding = 0; padding < 4; ++padding )
+        {
+            string text( padding, 'a' );
+            while ( text.size() <= DebugReplyLine::kMaxBytes + 40 )
+            {
+                text += unit;
+            }
+            const string line = DebugReplyLine::makeFixed( text );
+            const size_t mark = line.find( DebugReplyLine::kTruncatedMarker );
+            SW_ASSERT_TRUE( mark != string::npos );
+            SW_EXPECT_TRUE( DebugReplyLine::fits( line.size() ) );
+            SW_EXPECT_TRUE( StringUtil::isValidUtf8( line.substr( 0, mark ).c_str() ) );
+            SW_EXPECT_EQUAL( line.substr( mark + string( DebugReplyLine::kTruncatedMarker ).size() ), to_string( static_cast<uint64>( text.size() ) ) );
+
+            // 꼬리를 글자 경계로 자르는 길도 같다.
+            string tail( 10 + padding, 'a' );
+            DebugReplyLine::appendWithinBytes( tail, text, tail.size() + 4 );
+            SW_EXPECT_TRUE( StringUtil::isValidUtf8( tail.c_str() ) );
+            SW_EXPECT_TRUE( tail.size() <= 10 + padding + 4 );
+        }
+    }
 }

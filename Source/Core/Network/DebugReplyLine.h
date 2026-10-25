@@ -54,11 +54,23 @@ namespace sw
                 return fullText;
             constexpr size_t kBodyBytes = kMaxBytes - kTruncatedMarkerBytes;
             if ( head.size() > kBodyBytes )
-                head.resize( kBodyBytes );
+                head.resize( StringUtil::floorToUtf8Boundary( head, kBodyBytes ) );
             appendTail( head, kBodyBytes );
             head += kTruncatedMarker;
             head += to_string( static_cast<uint64>( fullText.size() ) );
             return head;
+        }
+
+        /**
+         * @brief @p piece 를 @p inoutText 길이가 @p maxBytes 를 넘지 않는 만큼만, 글자 경계에서 잘라 덧붙입니다(한글 · 이모지가 반 토막으로 남지 않는다).
+         * @details 항목 단위로 담을 수 없는 꼬리(자유 글)의 `appendTail` 이 쓴다. 바이트로 직접 자르지 않는다.
+         */
+        static void appendWithinBytes( string& inoutText, string_view piece, size_t maxBytes )
+        {
+            if ( inoutText.size() >= maxBytes )
+                return;
+            const size_t room = maxBytes - inoutText.size();
+            inoutText.append( piece.substr( 0, StringUtil::floorToUtf8Boundary( piece, room ) ) );
         }
 
         /** @brief 길이가 정해진 줄(꼬리가 없다)에도 같은 상한 · 잘림 표시를 적용합니다. 정해진 길이가 상한을 넘는 일은 없어야 하지만 넘으면 말없이 나가지 않고 표시가 붙는다. */
