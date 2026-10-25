@@ -9,6 +9,7 @@
 #include "Core/Container/SlotHandle.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MatrixMath.h"
+#include "Core/Math/PackedTypes.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/TagID.h"
@@ -290,42 +291,87 @@ namespace sw
                 } );
             }
 
+            /**
+             * @brief 원소 @p kCount 개를 쉼표로 이은 글로 씁니다(`1,0.5,0`). 벡터 · 행렬 · 압축 타입의 글 처리기가 한 형식을 씁니다.
+             * @details 행렬(16 칸)은 64 바이트에 담기지 않는다 — 칸 수에 맞는 버퍼를 고른다.
+             */
+            template <typename TElem, int32 kCount>
+            static string writeNumberList( const TElem* pElem )
+            {
+                StringBuilder<( kCount > 4 ) ? constant::kMaxBuffer512 : constant::kMaxBuffer64> sb;
+                for ( int32 axisIndex = 0; axisIndex < kCount; ++axisIndex )
+                {
+                    if ( axisIndex > 0 )
+                        sb.append( ',' );
+                    sb.append( pElem[axisIndex] );
+                }
+                return string{ sb.c_str(), sb.size() };
+            }
+
+            /** @brief 쉼표로 이은 글에서 원소 정확히 @p kCount 개를 읽습니다. 모자라거나 남거나 숫자가 아니면 false 이고, 그때까지 읽은 원소는 @p pOut 에 남습니다. */
+            template <typename TElem, int32 kCount>
+            [[nodiscard]] static bool readNumberList( string_view strView, TElem* pOut )
+            {
+                size_t start{ 0 };
+                for ( int32 axisIndex = 0; axisIndex < kCount; ++axisIndex )
+                {
+                    const size_t      sep   = strView.find( ',', start );
+                    const string_view token = strView.substr( start, sep == string_view::npos ? string_view::npos : sep - start );
+                    if ( parseScalarValue<TElem>( token, pOut[axisIndex] ) == false )
+                        return false;
+                    if ( sep == string_view::npos )
+                    {
+                        if ( axisIndex != kCount - 1 )
+                            return false;
+                        break;
+                    }
+                    start = sep + 1;
+                }
+                return true;
+            }
+
             template <typename TVec, typename TElem, int32 kCount>
             static void registerVectorTextHandler( SerializeContext& context, const hashed_string& typeName )
             {
                 context.registerTextHandler(
                     typeName,
                     []( const void* pPtr )
+                { return writeNumberList<TElem, kCount>( reinterpret_cast<const TElem*>( pPtr ) ); },
+                    []( void* pPtr, string_view strView )
+                { return readNumberList<TElem, kCount>( strView, reinterpret_cast<TElem*>( pPtr ) ); } );
+            }
+
+            /**
+             * @brief 압축 타입(`ReflectBuiltins.xxx` 의 `packed` 줄)의 글 처리기를 둡니다. 형식은 성분 실수의 쉼표 목록(`0.5,1,0.25`)입니다.
+             * @details 쓸 때는 `toFloats` 로 푼 값이 왕복에 안전한 자릿수로 나가고, 읽을 때는 범위를 넘는 성분을 거절합니다(정수 필드가 범위를 넘는 글을 거절하는 것과
+             *          같다 — `unorm8` 에 "5" 가 말없이 1 이 되지 않는다). 거절하면 값은 그대로입니다. 한 번 푼 값은 다시 같은 비트가 됩니다(`PackedValueTraits.h` 의 예외 둘 제외).
+             *          무한대 · NaN 글은 실수 읽기(`StringUtil::parseFloat`)가 유한한 값만 받으므로 `half` 의 무한대는 글로 왕복하지 못합니다(이진은 비트 그대로).
+             */
+            template <typename T>
+            static void registerPackedTextHandler( SerializeContext& context, const utf8* pTypeName )
+            {
+                context.registerTextHandler(
+                    hashed_string( pTypeName ),
+                    []( const void* pPtr )
                 {
-                    // 행렬(16 칸)은 64 바이트에 담기지 않는다 — 칸 수에 맞는 버퍼를 고른다.
-                    const auto*                                                                      pElem = reinterpret_cast<const TElem*>( pPtr );
-                    StringBuilder<( kCount > 4 ) ? constant::kMaxBuffer512 : constant::kMaxBuffer64> sb;
-                    for ( int32 axisIndex = 0; axisIndex < kCount; ++axisIndex )
-                    {
-                        if ( axisIndex > 0 )
-                            sb.append( ',' );
-                        sb.append( pElem[axisIndex] );
-                    }
-                    return string{ sb.c_str(), sb.size() };
+                    const PackedFloats floats = PackedValueTraits<T>::toFloats( *static_cast<const T*>( pPtr ) );
+                    return writeNumberList<float32, static_cast<int32>( PackedValueTraits<T>::kComponentCount )>( floats._arrValue );
                 },
                     []( void* pPtr, string_view strView )
                 {
-                    auto*  pOut = reinterpret_cast<TElem*>( pPtr );
-                    size_t start{ 0 };
-                    for ( int32 axisIndex = 0; axisIndex < kCount; ++axisIndex )
+                    constexpr int32 kCount = static_cast<int32>( PackedValueTraits<T>::kComponentCount );
+                    // `readNumberList` 는 마지막 칸 뒤에 남은 칸을 보지 않으므로 쉼표 수로 개수가 정확한지 먼저 본다("0.5,1,2" 를 half2 가 받지 않게).
+                    if ( std::count( strView.begin(), strView.end(), ',' ) != kCount - 1 )
+                        return false;
+                    PackedFloats floats{};
+                    if ( readNumberList<float32, kCount>( strView, floats._arrValue ) == false )
+                        return false;
+                    if ( isPackedFloatsInRange<T>( floats ) == false )
                     {
-                        const size_t      sep   = strView.find( ',', start );
-                        const string_view token = strView.substr( start, sep == string_view::npos ? string_view::npos : sep - start );
-                        if ( parseScalarValue<TElem>( token, pOut[axisIndex] ) == false )
-                            return false;
-                        if ( sep == string_view::npos )
-                        {
-                            if ( axisIndex != kCount - 1 )
-                                return false;
-                            break;
-                        }
-                        start = sep + 1;
+                        SW_LOG_WARNING( "'%#' is out of range for a packed value - the field keeps its current value", StringUtil::trim( strView ) );
+                        return false;
                     }
+                    *static_cast<T*>( pPtr ) = PackedValueTraits<T>::fromFloats( floats );
                     return true;
                 } );
             }
@@ -487,6 +533,7 @@ namespace sw
 #define SW_BUILTIN_TEXT_stoull( Canon, CppType ) SerializeContextInternal::registerNumericTextHandler<CppType>( context, hashed_string( PredefinedNameType::NameType_##Canon ) );
 #define SW_BUILTIN_TEXT_stof( Canon, CppType )   SerializeContextInternal::registerNumericTextHandler<CppType>( context, hashed_string( PredefinedNameType::NameType_##Canon ) );
 #define SW_BUILTIN_TEXT_stod( Canon, CppType )   SerializeContextInternal::registerNumericTextHandler<CppType>( context, hashed_string( PredefinedNameType::NameType_##Canon ) );
+#define SW_BUILTIN_TEXT_packed( Canon, CppType ) SerializeContextInternal::registerPackedTextHandler<CppType>( context, #Canon );
 
 #define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, TextConv, Ns, ... ) SW_BUILTIN_TEXT_##TextConv( Canon, CppType )
 #define SW_REFLECT_BUILTIN_CONTAINER( ... )
@@ -501,6 +548,7 @@ namespace sw
 #undef SW_BUILTIN_TEXT_stoull
 #undef SW_BUILTIN_TEXT_stof
 #undef SW_BUILTIN_TEXT_stod
+#undef SW_BUILTIN_TEXT_packed
 
         context.registerTextHandler( hashed_string( PredefinedNameType::NameType_bool ), SW_DELEGATE_FUNCTION( TextWriteFn, &Internal::writeBoolText ),
                                      SW_DELEGATE_FUNCTION( TextReadFn, &Internal::readBoolText ) );

@@ -9,6 +9,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
+#include "Core/Math/PackedTypes.h"
 #include "Core/Module/ModuleUnloadListener.h"
 #include "Core/String/TagID.h"
 
@@ -349,6 +350,27 @@ namespace sw::editor
                     value = SlotHandle::make( arrPart[0], arrPart[1] );
                     return true;
                 }
+            }
+            else if constexpr ( kWidget == InspectorValueWidget::Packed )
+            {
+                // 성분 실수로 풀어 편집하고 `fromFloats` 로 다시 담는다. 바뀐 프레임에만 다시 담으므로 편집하지 않은 값은 비트가 그대로다.
+                // 범위(`kRangeMin` · `kRangeMax`)로 제한하므로 위젯이 `fromFloats` 의 자르기 · 무한대에 닿지 않는다.
+                using Traits        = PackedValueTraits<T>;
+                PackedFloats floats = Traits::toFloats( value );
+                if ( ImGui::DragScalarN( pLabel, ImGuiDataType_Float, floats._arrValue, static_cast<int32>( Traits::kComponentCount ), Traits::kDragSpeed, &Traits::kRangeMin,
+                                         &Traits::kRangeMax, "%.4f" ) == false )
+                    return false;
+                value = Traits::fromFloats( floats );
+                return true;
+            }
+            else if constexpr ( kWidget == InspectorValueWidget::Direction )
+            {
+                // 저장된 좌표 (u, v) 가 아니라 방향으로 편집한다. 영벡터를 만들면 +z 로 간다(`OctahedralNormal::fromNormal`).
+                float3 direction = value.toNormal();
+                if ( ImGui::DragFloat3( pLabel, &direction._x, 0.01f ) == false )
+                    return false;
+                value = OctahedralNormal::fromNormal( direction );
+                return true;
             }
             else
             {

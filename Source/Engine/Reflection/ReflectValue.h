@@ -6,6 +6,7 @@
  *          (`ReflectTypeOps::_pConvert`). 같은 타입이면 그대로, 숫자끼리는 형 변환, 글이면 그 타입으로 읽습니다.
  */
 #pragma once
+#include "Core/Math/PackedTypesFwd.h"
 #include "Core/Task/TaskTypes.h"
 
 #include "Engine/EngineMinimal.h"
@@ -30,7 +31,8 @@ namespace sw
     /**
      * @brief `ReflectBuiltins.xxx` 의 C++ 타입 칸을 값이 실제로 쓰는 타입으로 바꿉니다.
      * @details 문자열 줄의 칸은 `std::string` 이지만 프로퍼티 · 생성 호출기(`args.get<string>`)는 `sw::string` 입니다
-     *          (STL 컨테이너 빌드가 아니면 둘은 다른 타입이고 크기도 다릅니다).
+     *          (STL 컨테이너 빌드가 아니면 둘은 다른 타입이고 크기도 다릅니다). 압축 타입 줄(`sw::half` · `sw::unorm8x4` …)은 이름만 선언된
+     *          채로 쓰입니다(`PackedTypesFwd.h`) — 값 크기가 필요한 번역 단위는 `Core/Math/PackedTypes.h` 를 include 합니다.
      */
     template <typename T>
     struct ReflectBuiltinCppType

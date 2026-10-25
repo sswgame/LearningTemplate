@@ -4,6 +4,7 @@
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/SlotHandle.h"
 #include "Core/Math/MatrixMath.h"
+#include "Core/Math/PackedTypes.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/TagID.h"
 
@@ -137,6 +138,32 @@ SW_TEST_CASE( InspectorBuiltinValueTest, MethodArgKeepsExactCppType )
 #include "Engine/Reflection/ReflectBuiltins.xxx"
 #undef SW_REFLECT_BUILTIN_TYPE
 #undef SW_REFLECT_BUILTIN_CONTAINER
+}
+
+/**
+ * @brief [InspectorBuiltinValueTest] 저장 전용 압축 타입은 성분 실수 위젯(`Packed`)을 쓰고 옥타헤드럴 법선만 방향 위젯(`Direction`)을 쓴다
+ * @details 반환값 표시는 `PackedValueTraits` 의 성분을 쓰므로 성분 수만큼 값이 나오고, 옥타헤드럴 법선은 저장 좌표가 아니라 편집 위젯과 같은 방향으로 보인다.
+ */
+SW_TEST_CASE( InspectorBuiltinValueTest, PackedTypesUseComponentWidgetAndFormat )
+{
+    for ( const utf8* pTypeName : { "half", "half2", "half3", "half4", "unorm8", "unorm16", "snorm8", "snorm16", "unorm8x4", "snorm8x4", "unorm16x2", "snorm16x2", "snorm16x4", "RGB10A2" } )
+    {
+        const InspectorBuiltinValue* pRow = InspectorBuiltinValueUtil::findBuiltin( pTypeName );
+        SW_ASSERT_NOT_NULL( pRow );
+        SW_EXPECT_TRUE_MSG( pRow->_widget == InspectorValueWidget::Packed, pTypeName );
+    }
+    const InspectorBuiltinValue* pNormalRow = InspectorBuiltinValueUtil::findBuiltin( "OctahedralNormal" );
+    SW_ASSERT_NOT_NULL( pNormalRow );
+    SW_EXPECT_TRUE( pNormalRow->_widget == InspectorValueWidget::Direction );
+
+    fixed_string<constant::kMaxBuffer128> buf;
+    SW_EXPECT_TRUE( InspectorBuiltinValueUtil::formatMethodResult( TaskValue{ half::fromFloat( 0.5f ) }, "half", buf.data(), buf.capacity() ) );
+    SW_EXPECT_STREQ( "0.500000", buf.c_str() );
+    SW_EXPECT_TRUE( InspectorBuiltinValueUtil::formatMethodResult( TaskValue{ unorm8x4{} }, "unorm8x4", buf.data(), buf.capacity() ) );
+    SW_EXPECT_STREQ( "(0.000000, 0.000000, 0.000000, 0.000000)", buf.c_str() );
+    // 기본 옥타헤드럴 좌표 (0, 0) 은 +z 방향이다.
+    SW_EXPECT_TRUE( InspectorBuiltinValueUtil::formatMethodResult( TaskValue{ OctahedralNormal{} }, "OctahedralNormal", buf.data(), buf.capacity() ) );
+    SW_EXPECT_STREQ( "(0.000000, 0.000000, 1.000000)", buf.c_str() );
 }
 
 /**

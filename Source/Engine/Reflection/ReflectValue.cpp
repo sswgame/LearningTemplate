@@ -9,6 +9,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/formatString.h"
 #include "Core/Math/MatrixMath.h"
+#include "Core/Math/PackedTypes.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/TagID.h"
 #include "Core/String/fixed_string.h"
@@ -100,6 +101,17 @@ namespace sw
                 {
                     out._text  = value.isValid() ? string( value.getString() ) : string();
                     out._bText = true;
+                }
+                else if constexpr ( kIsPackedValue<T> )
+                {
+                    // 성분이 하나인 압축 타입(half · unorm · snorm)만 숫자로 읽힌다. 무한대 · NaN 은 정수 변환이 정의되지 않으므로 숫자로 읽지 않는다(인자 변환이 거절).
+                    if constexpr ( PackedValueTraits<T>::kComponentCount == 1 )
+                    {
+                        const float32 asFloat = PackedValueTraits<T>::toFloats( value )._arrValue[0];
+                        if ( isPackedFloatsInRange<T>( PackedFloats{ { asFloat } } ) )
+                            setNumber( out, static_cast<float64>( asFloat ), static_cast<float64>( asFloat ) == static_cast<float64>( static_cast<int64>( asFloat ) ),
+                                       static_cast<int64>( asFloat ) );
+                    }
                 }
             }
 
@@ -198,6 +210,27 @@ namespace sw
                     outValue = TaskValue{ quaternion( arrValue[0], arrValue[1], arrValue[2], arrValue[3] ) };
                     return true;
                 }
+                else if constexpr ( kIsPackedValue<T> )
+                {
+                    // 압축 타입은 성분 실수로 받는다. 성분이 하나면 숫자도 받고, 여럿이면 벡터처럼 글(`0.5, 1, 0.25`)만 받는다.
+                    // 범위를 넘으면 거절한다 — `fromFloats` 는 자르거나(unorm) 무한대로 보내므로(half) 조용히 다른 값이 되지 않게 한다.
+                    using Traits = PackedValueTraits<T>;
+                    PackedFloats floats{};
+                    if ( Traits::kComponentCount == 1 && source._bNumber )
+                    {
+                        // float32 로 줄이기 전에 float64 에서 거른다(범위를 넘는 float64 를 float32 로 바꾸면 값이 정의되지 않는다).
+                        const bool bInRange = static_cast<float64>( Traits::kRangeMin ) <= source._floatValue && source._floatValue <= static_cast<float64>( Traits::kRangeMax );
+                        if ( bInRange == false )
+                            return false;
+                        floats._arrValue[0] = static_cast<float32>( source._floatValue );
+                    }
+                    else if ( source._bText == false || StringUtil::parseExactFloats( source._text, kVectorSeparators, floats._arrValue, Traits::kComponentCount ) == false )
+                        return false;
+                    if ( isPackedFloatsInRange<T>( floats ) == false )
+                        return false;
+                    outValue = TaskValue{ Traits::fromFloats( floats ) };
+                    return true;
+                }
                 else
                 {
                     // 행렬 · 핸들은 같은 타입으로만 받는다(같은 타입은 부르는 쪽이 이미 그대로 넘겼다).
@@ -237,8 +270,24 @@ namespace sw
                     formatstring( buf.data(), buf.capacity(), "%#/%#", value.objectID(), value.componentID() );
                 else if constexpr ( std::is_same_v<T, GameObjectHandle> )
                     formatstring( buf.data(), buf.capacity(), "%#", value.objectID() );
+                else if constexpr ( kIsPackedValue<T> )
+                {
+                    // 저장된 값을 정확히 나타내는 성분 실수입니다(`PackedValueTraits`). 옥타헤드럴 법선은 방향이 아니라 저장된 좌표 (u, v) 입니다.
+                    const PackedFloats floats = PackedValueTraits<T>::toFloats( value );
+                    if constexpr ( PackedValueTraits<T>::kComponentCount == 1 )
+                        formatstring( buf.data(), buf.capacity(), "%#", floats._arrValue[0] );
+                    else if constexpr ( PackedValueTraits<T>::kComponentCount == 2 )
+                        formatstring( buf.data(), buf.capacity(), "%#, %#", floats._arrValue[0], floats._arrValue[1] );
+                    else if constexpr ( PackedValueTraits<T>::kComponentCount == 3 )
+                        formatstring( buf.data(), buf.capacity(), "%#, %#, %#", floats._arrValue[0], floats._arrValue[1], floats._arrValue[2] );
+                    else
+                        formatstring( buf.data(), buf.capacity(), "%#, %#, %#, %#", floats._arrValue[0], floats._arrValue[1], floats._arrValue[2], floats._arrValue[3] );
+                }
                 else
+                {
+                    static_assert( std::is_same_v<T, float4x4>, "ReflectValue: 이 내장 타입의 글 서식이 없다 - formatBuiltin 에 분기를 더한다" );
                     formatstring( buf.data(), buf.capacity(), "<%#>", "float4x4" );
+                }
                 return string( buf.c_str() );
             }
 

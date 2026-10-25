@@ -984,8 +984,8 @@
       "source": "docs/plans/DesignerDataToolsAudit.md D2", "result_doc": "docs/plans/DesignerDataToolsAudit.md 상태를 끝으로"
     },
     {
-      "id": "packed-types-test", "title": "저장 전용 압축 타입 테스트(half 65536 비트 전수 왕복 · unorm/snorm 전수 왕복 · 옥타헤드럴 법선 오차 상한과 셰이더 식 일치 · RGB10A2)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
-      "filter": "HalfTest.*,NormalizedIntTest.*,OctahedralNormalTest.*,RGB10A2Test.*",
+      "id": "packed-types-test", "title": "저장 전용 압축 타입 테스트(half 65536 비트 전수 왕복 · unorm/snorm 전수 왕복 · 옥타헤드럴 법선 오차 상한과 셰이더 식 일치 · RGB10A2 · 리플렉션 접점: 성분 특성 · 이진/글 직렬화 왕복 · 인자 변환 · 인스펙터 위젯 분기)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
+      "filter": "HalfTest.*,NormalizedIntTest.*,OctahedralNormalTest.*,RGB10A2Test.*,PackedValueTraitsTest.*,PackedValueSerializationTest.*,InspectorBuiltinValueTest.*",
       "source": "docs/plans/PackedTypes.md P1", "result_doc": "docs/plans/PackedTypes.md"
     }
   ]
