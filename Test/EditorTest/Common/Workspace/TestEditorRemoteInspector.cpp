@@ -62,6 +62,9 @@ SW_TEST_CASE( EditorRemoteInspectorTest, MalformedTreeAnswerIsRejected )
     SW_EXPECT_FALSE( EditorRemoteInspector::parseObjectRows( "no active scene", listRow ) );
     SW_EXPECT_FALSE( EditorRemoteInspector::parseObjectRows( "objects 1\n7 Crate active=1 components=Transform\n", listRow ) );
     SW_EXPECT_FALSE( EditorRemoteInspector::parseObjectRows( "objects 1\nx Crate parent=- active=1 components=Transform\n", listRow ) );
+    // 켬 · 끔 칸이 불리언 철자 표(`StringUtil::tryParseBool`)가 읽지 못하는 값이면 거절한다 — 모르는 글자를 조용히 꺼짐으로 읽지 않는다.
+    SW_EXPECT_FALSE( EditorRemoteInspector::parseObjectRows( "objects 1\n7 Crate parent=- active=2 components=Transform\n", listRow ) );
+    SW_EXPECT_FALSE( EditorRemoteInspector::parseObjectRows( "objects 1\n7 Crate parent=- active= components=Transform\n", listRow ) );
 }
 
 /**

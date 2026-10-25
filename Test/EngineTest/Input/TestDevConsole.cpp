@@ -192,6 +192,38 @@ SW_TEST_CASE( DevConsoleTest, ExecutesVariablesAndCommands )
 }
 
 /**
+ * @brief [DevConsoleTest] 개발 명령의 선택 불리언 인자(`hud on` · `cheat.god OFF` · `hud <섹션> yes`)는 한 함수가 읽는다
+ * @details 인자가 없으면 호출자의 기본값(뒤집기)이 남고, 1/0/true/false/yes/no/on/off(대소문자 무관)를 읽으며, 그 밖의 글은 거절한다(값은 그대로).
+ *          `hud` · `cheat.god` · `overlay.show` 가 이 함수로 읽는다 — 명령마다 `== "on"` 을 손으로 비교하던 때는 철자가 명령마다 달랐다.
+ */
+SW_TEST_CASE( DevConsoleTest, OptionalBoolArgumentUsesOneSpellingTable )
+{
+    bool bValue{ true };
+    SW_EXPECT_TRUE( readOptionalBoolArgument( vector<string>{}, 0, bValue ) );
+    SW_EXPECT_TRUE( bValue );                                                       // 인자가 없으면 건드리지 않는다
+    SW_EXPECT_TRUE( readOptionalBoolArgument( vector<string>{ "x" }, 1, bValue ) ); // 자리가 범위 밖이면 없는 것이다
+    for ( const utf8* pText : { "1", "true", "TRUE", "yes", "On", "on" } )
+    {
+        bValue = false;
+        SW_EXPECT_TRUE_MSG( readOptionalBoolArgument( vector<string>{ pText }, 0, bValue ) && bValue, pText );
+    }
+    for ( const utf8* pText : { "0", "false", "False", "no", "OFF", "off" } )
+    {
+        bValue = true;
+        SW_EXPECT_TRUE_MSG( readOptionalBoolArgument( vector<string>{ pText }, 0, bValue ) && bValue == false, pText );
+    }
+    for ( const utf8* pText : { "2", "", "ture", "list" } )
+    {
+        bValue = true;
+        SW_EXPECT_FALSE_MSG( readOptionalBoolArgument( vector<string>{ pText }, 0, bValue ), pText );
+        SW_EXPECT_TRUE_MSG( bValue, pText ); // 읽지 못하면 값은 그대로
+    }
+    const vector<string> listSectionArgument{ "corner", "1" };
+    bValue = false;
+    SW_EXPECT_TRUE( readOptionalBoolArgument( listSectionArgument, 1, bValue ) && bValue ); // 둘째 자리(`hud <섹션> on`)
+}
+
+/**
  * @brief [DevConsoleTest] 자동완성은 첫 낱말에 명령 · 변수를, `set`/`get` 뒤에 변수를 내고, 하나면 채우고 여럿이면 공통 접두어까지 늘린다
  */
 SW_TEST_CASE( DevConsoleTest, CompletesCommandsAndVariables )

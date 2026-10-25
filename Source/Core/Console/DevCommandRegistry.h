@@ -7,6 +7,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Console/DevCommandsEnabled.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/String/RegistrationList.h"
@@ -29,6 +30,18 @@ namespace sw
         const utf8*    _pHelp;  ///< 설명 한 줄입니다.
         DevCommandFunc _pFunc;
     };
+
+    /**
+     * @brief 개발 명령의 선택 불리언 인자(`hud on`, `cheat.god off` 등)를 읽습니다. 철자 표는 `StringUtil::tryParseBool` 하나입니다.
+     * @details 명령마다 `== "on"` 을 손으로 비교하면 철자(`1`, `true`, 대소문자)가 명령마다 갈라졌다. 인자 읽기는 이 함수로만 한다.
+     * @param index    읽을 인자의 자리입니다.
+     * @param outValue 인자가 없으면 건드리지 않으므로(호출자의 뒤집기 기본값이 남는다) 미리 기본값을 넣어 두세요. 읽지 못하면 그대로 둡니다.
+     * @return 인자가 없거나(기본값을 쓴다) 불리언으로 읽었으면 true, 있는데 읽지 못하면 false(사용법으로 거절)입니다.
+     */
+    [[nodiscard]] inline bool readOptionalBoolArgument( const vector<string>& listArgument, size_t index, bool& outValue )
+    {
+        return index >= listArgument.size() || StringUtil::tryParseBool( listArgument[index], outValue );
+    }
 } // namespace sw
 
 namespace sw

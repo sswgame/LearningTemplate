@@ -110,6 +110,33 @@ SW_TEST_CASE( ProfilerTraceExportTest, EmptyInputIsStillValidJSON )
 }
 
 /**
+ * @brief [ProfilerTraceExportTest] `profile.trace` 첫 낱말 — 하위 명령(save · record · merge)은 그 글자 그대로, 켬 · 끔은 불리언 철자 표 하나로 읽는다
+ * @details 하위 명령 철자가 불리언 철자와 겹치지 않는다(겹치면 어느 쪽으로 읽을지 갈린다). 모르는 글은 Unknown 이다.
+ */
+SW_TEST_CASE( ProfilerTraceExportTest, CommandWordUsesOneBoolSpellingTable )
+{
+    using Word = sw::ProfilerTraceExport::CommandWord;
+    bool bOn{ false };
+    SW_EXPECT_TRUE( sw::ProfilerTraceExport::parseCommandWord( "save", bOn ) == Word::Save );
+    SW_EXPECT_TRUE( sw::ProfilerTraceExport::parseCommandWord( "record", bOn ) == Word::Record );
+    SW_EXPECT_TRUE( sw::ProfilerTraceExport::parseCommandWord( "merge", bOn ) == Word::Merge );
+    for ( const sw::utf8* pText : { "on", "ON", "1", "true", "yes" } )
+    {
+        bOn = false;
+        SW_EXPECT_TRUE_MSG( sw::ProfilerTraceExport::parseCommandWord( pText, bOn ) == Word::Switch && bOn, pText );
+    }
+    for ( const sw::utf8* pText : { "off", "Off", "0", "false", "no" } )
+    {
+        bOn = true;
+        SW_EXPECT_TRUE_MSG( sw::ProfilerTraceExport::parseCommandWord( pText, bOn ) == Word::Switch && bOn == false, pText );
+    }
+    for ( const sw::utf8* pText : { "", "2", "start", "Save" } )
+    {
+        SW_EXPECT_TRUE_MSG( sw::ProfilerTraceExport::parseCommandWord( pText, bOn ) == Word::Unknown, pText );
+    }
+}
+
+/**
  * @brief [ProfilerTraceExportTest] 잘린 캡처는 머리말과 전역 표식으로 알린다
  */
 SW_TEST_CASE( ProfilerTraceExportTest, TruncatedCaptureIsMarked )

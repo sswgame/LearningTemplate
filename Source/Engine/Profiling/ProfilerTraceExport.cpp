@@ -940,6 +940,17 @@ namespace sw
         outReply = report + " -> " + path;
         return true;
     }
+
+    ProfilerTraceExport::CommandWord ProfilerTraceExport::parseCommandWord( string_view word, bool& outRecordingOn )
+    {
+        if ( word == "save" )
+            return CommandWord::Save;
+        if ( word == "record" )
+            return CommandWord::Record;
+        if ( word == "merge" )
+            return CommandWord::Merge;
+        return StringUtil::tryParseBool( word, outRecordingOn ) ? CommandWord::Switch : CommandWord::Unknown;
+    }
 } // namespace sw
 
     #if SW_DEV_COMMANDS_ENABLED
@@ -952,14 +963,15 @@ namespace sw
         {
             if ( engine::areEngineServicesBound() == false )
                 return false;
-            if ( listArgument.empty() || ( listArgument[0] != "save" && listArgument[0] != "record" && listArgument[0] != "on" &&
-                                           listArgument[0] != "off" && listArgument[0] != "merge" ) )
+            bool       bOn{ false };
+            const auto word = listArgument.empty() ? ProfilerTraceExport::CommandWord::Unknown : ProfilerTraceExport::parseCommandWord( listArgument[0], bOn );
+            if ( word == ProfilerTraceExport::CommandWord::Unknown )
             {
                 outReply = "usage: profile.trace on|off | save [<path>] [<frames>] | record <seconds> [<path>] [<eventBudgetPerThread>] | merge "
                            "<out> <in1> <in2> [...]";
                 return false;
             }
-            if ( listArgument[0] == "merge" )
+            if ( word == ProfilerTraceExport::CommandWord::Merge )
             {
                 // 프로세스마다 저장한 파일(서버 · 클라이언트)을 한 타임라인으로 — 첫 입력이 시간 기준이다.
                 if ( listArgument.size() < 4 )
@@ -970,11 +982,10 @@ namespace sw
                 const vector<string> listInputPath( listArgument.begin() + 2, listArgument.end() );
                 return ProfilerTraceExport::mergeTraceFiles( listInputPath, listArgument[1], outReply );
             }
-            if ( listArgument[0] == "on" || listArgument[0] == "off" )
+            if ( word == ProfilerTraceExport::CommandWord::Switch )
             {
                 // 링 버퍼 기록을 켜고 끈다(에디터 Timeline 탭의 Record 와 같다) — bugit 이 최근 프레임을 trace.trace.json 으로 같이 담는다.
                 FrameProfiler& profiler = engine::getSubsystem<FrameProfiler>();
-                const bool     bOn      = listArgument[0] == "on";
                 if ( bOn )
                 {
                     profiler.setEnabled( true );
@@ -984,7 +995,7 @@ namespace sw
                 outReply = bOn ? "timeline recording on" : "timeline recording off";
                 return true;
             }
-            if ( listArgument[0] == "record" )
+            if ( word == ProfilerTraceExport::CommandWord::Record )
             {
                 if ( listArgument.size() < 2 )
                 {

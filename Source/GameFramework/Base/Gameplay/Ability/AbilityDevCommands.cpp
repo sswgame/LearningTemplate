@@ -113,7 +113,7 @@ namespace sw
             {
                 const bool bExplicit = listArgument.size() == 1;
                 bool       bArgumentOn{ false };
-                if ( listArgument.size() > 1 || ( bExplicit && StringUtil::tryParseBool( listArgument[0], bArgumentOn ) == false ) )
+                if ( listArgument.size() > 1 || readOptionalBoolArgument( listArgument, 0, bArgumentOn ) == false )
                     return false;
                 vector<AbilitySystemComponent*> listComponent;
                 if ( collectAbilitySystems( listComponent, outReply ) == false )

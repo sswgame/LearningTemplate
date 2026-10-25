@@ -422,9 +422,11 @@ endfunction()
 #
 # 모델은 ImGui 를 몰라 확장 DLL 을 링크하지 않고도 테스트가 컴파일할 수 있다. 그 목록을 테스트 쪽 CMake 에 손으로 적으면 모델을 더할 때
 # 두 곳을 고쳐야 해서(목록은 하나 — 확장 폴더 안) 확장의 CMakeLists.txt 가 선언하고 테스트는 `sw_getEditorExtensionModelSources` 로 읽는다.
-# 확장의 `sw_addEditorExtension` 보다 먼저 부른다 — 그 함수는 배포 · 꺼진 구성에서 return 하는데, 테스트는 그 구성에서도 모델을 컴파일해 왔다.
+# `sw_addEditorExtension` 과 부르는 순서는 상관없다 — 둘 다 `function` 이라 안의 return() 이 부른 CMakeLists 를 끝내지 않는다.
+# 배포 구성에서 `sw_addEditorExtension` 이 확장 DLL 을 만들지 않아도 테스트는 그 구성에서 모델을 컴파일해 왔으므로, 이 함수는 배포 구성에서도 올린다.
 #
-#   TARGET_NAME  확장 모듈 이름(GF_EditorPlugIn_<이름>) — 매니페스트의 키트 의존이 하나라도 꺼져 있으면 올리지 않는다(그 키트 헤더를 쓰는 소스라 못 짓는다)
+#   TARGET_NAME  확장 모듈 이름(GF_EditorPlugIn_<이름>) — 매니페스트의 KIND 가 EditorExtension 이고 그 폴더가 지금 폴더여야 한다(아니면 오류 — 오타가 키트가 꺼진 구성에서만 드러나지 않게).
+#                매니페스트의 키트 의존이 하나라도 꺼져 있으면 올리지 않는다(그 키트 헤더를 쓰는 소스라 못 짓는다)
 #   SOURCES      확장 폴더 기준 .cpp 경로 또는 `*` 가 든 패턴(폴더째). 하나도 못 찾는 패턴 · 없는 파일은 오류다
 #
 # 소스 경로만 올린다(오브젝트가 아니다) — 정의 · include · PCH · 로그 태그는 컴파일하는 테스트 타깃의 것이 그대로 적용된다(확장 DLL 의 내보내기 정의와 섞이지 않는다).
@@ -433,6 +435,18 @@ function(sw_addEditorExtensionModel TARGET_NAME)
 	cmake_parse_arguments(ARG "" "" "SOURCES" ${ARGN})
 	if(NOT ARG_SOURCES OR ARG_UNPARSED_ARGUMENTS)
 		message(FATAL_ERROR "sw_addEditorExtensionModel(${TARGET_NAME}): SOURCES 만 받는다 (받은 값: ${ARGN})")
+	endif()
+
+	# 키트 검사로 return 하기 전에 이름부터 확인한다 — 키트가 꺼진 구성에서도 오타가 드러난다.
+	get_property(moduleKind GLOBAL PROPERTY SW_MODULE_${TARGET_NAME}_KIND)
+	get_property(moduleDirectory GLOBAL PROPERTY SW_MODULE_${TARGET_NAME}_DIR)
+	if(NOT moduleKind STREQUAL "EditorExtension")
+		message(FATAL_ERROR "sw_addEditorExtensionModel(${TARGET_NAME}): 매니페스트에 KIND 가 EditorExtension 인 '${TARGET_NAME}' 이 없다 (KIND: '${moduleKind}')")
+	endif()
+	get_filename_component(moduleDirectoryReal "${moduleDirectory}" REALPATH)
+	get_filename_component(currentDirectoryReal "${CMAKE_CURRENT_SOURCE_DIR}" REALPATH)
+	if(NOT moduleDirectoryReal STREQUAL currentDirectoryReal)
+		message(FATAL_ERROR "sw_addEditorExtensionModel(${TARGET_NAME}): 모듈 폴더(${moduleDirectory})가 부른 CMakeLists 의 폴더(${CMAKE_CURRENT_SOURCE_DIR})와 다르다")
 	endif()
 
 	get_property(listDependency GLOBAL PROPERTY SW_MODULE_${TARGET_NAME}_DEPENDENCIES)

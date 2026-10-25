@@ -25,7 +25,7 @@
 
 ## 2. 이행 단계
 
-각 단계는 따로 빌드되고 커밋 하나 또는 묶음 하나로 되돌릴 수 있다. 파일이 겹치지 않아 1a · 1b · 2a · 3 · 4 는 동시에 띄울 수 있다. 2b · 2c 는 2a 뒤에, 0 · 5 · 6 은 혼자 한다.
+각 단계는 따로 빌드되고 커밋 하나 또는 묶음 하나로 되돌릴 수 있다. 파일이 겹치지 않아 1a · 1b · 2a · 3 · 4 는 동시에 띄울 수 있다. 2b 는 2a 뒤에(2c 는 2a 와 독립으로 먼저 끝났고 남은 목록만 2a 뒤), 0 · 5 · 6 은 혼자 한다.
 
 | 단계 | 내용 | 확인 | 롤백 |
 |---|---|---|---|
@@ -34,7 +34,7 @@
 | 1b | README 진행 표를 생성 파일로 빼고 `CheckStatusBoard` 대상을 바꾼다 | `CheckStatusBoard`, `plans --check` | revert |
 | 2a | `EditorCore` OBJECT(ImGui 없음)를 만든다. 대상은 폴더 규칙(`Editor/Common` 의 Asset · Commands · Config · Localization · SourceControl · Workspace). EditorModule 과 EditorTest 가 같은 오브젝트를 받고 EditorTest 의 손 목록 79 줄을 지운다 | 전 프리셋 구성, EditorTest, 에디터 시나리오 | revert |
 | 2b | Panels · Viewport 의 헤드리스 파일(약 37 개)을 패널별 `Model` 하위 폴더로 옮겨 폴더 규칙에 더한다 | EditorTest | 폴더별 revert |
-| 2c | `sw_addEditorExtensionModel()` 이 전역 속성에 모델 오브젝트를 올리고 EngineTest 가 읽는다. 손 목록 13 줄과 SmokeTest · EditorUITest · FuzzTest 의 손 목록을 같은 방식으로 지운다 | EngineTest 전체 | revert |
+| 2c | (2a 와 독립으로 갈라져 먼저 끝냈다) `sw_addEditorExtensionModel()` 이 전역 속성에 모델 **소스 경로**를 올리고 EngineTest 가 읽는다(오브젝트가 아니다 — 정의 · include · PCH 가 컴파일하는 테스트 타깃 것이어야 해서, 사유는 `ModuleTargets.cmake` 함수 주석). 손 목록 13 줄을 지웠다. 같은 일로 SmokeTest 의 핫 리로드 소스는 ModuleHost CMake 가 한 번 선언한 목록(정본)에서, EditorUITest 의 Platform 소스는 GLOB 으로, 테스트 하네스 기동 소스는 `sw_addTestHostRuntime` 한 곳에서 파생한다. **남은 것(2a 의 EditorCore 링크 뒤)**: `ImGuiOsInputFilter` · `ImGuiKeyForward` 의 손 목록, `TestResourceDataSchema` 의 데이터 종류 문자열 파서(못 바꾸는 이유는 함수 주석), EngineTest 의 Editor 소스 3개(`ImageUtil` · `EditorThemeTokens` · `EditorThemeTokensDataKind`) | EngineTest 전체 | revert |
 | 3 | 래칫을 줄이고 정적 사본 참조 접근자를 게이트에 넣는다. `EngineConfig` · `GameConfig` · `Render2DSettings` 를 범위 소유로 옮긴다 | `-L lint`, 설정 핫 리로드 테스트, 큐브 20k 벤치 | 파일별 revert |
 | 4 | 통합이 main 으로 올리기 전에 `-k 0` 빌드와 `ctest -L nogpu|lint` 증거 파일을 요구하고, GPU 항목은 정해진 시각에 `verify-batch` 로 몰아 돌린다 | 스크립트 자가 테스트 | revert |
 | 5 (조건부) | 0 단계에서 링크가 큰 몫이거나 서버에서 뺄 폴더가 렌더러 밖으로 늘면 `Engine_Render` OBJECT 분할 | 네 백엔드 × Dev · Shipping · Server | revert |
