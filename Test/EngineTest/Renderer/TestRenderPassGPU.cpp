@@ -5340,7 +5340,7 @@ SW_TEST_CASE( RenderPassGPUTest, CPUAndGPUParticleSimulationsDrawTheSameImage )
 
 /**
  * @brief [RenderPassGPUTest] 라이트 컬링 세 방식(그리드 없음 · CPU 그리드 · GPU 그리드)이 같은 그림을 그린다 — 네 백엔드 모두
- * @details 그리드는 비용만 바꾸고 그림은 바꾸지 않는다(ClusteredLighting.md). 큐브 둘레에 점광 · 스폿 여럿을 흩어 두고 `gv_lightCulling` 0 · 1 · 2 의
+ * @details 그리드는 비용만 바꾸고 그림은 바꾸지 않는다(ClusteredLighting.md). 큐브 둘레에 점광 · 스폿 여럿을 흩어 두고 `gv_lightCulling` None · CPU · GPU 의
  *          Present 캡처를 비교한다. 클러스터 경계에서 라이트가 빠지면(범위 식이 셋 중 하나에서 갈렸다) 그 픽셀이 어두워져 다르다. GPU 생산자는 클러스터 안의
  *          라이트 순서가 원자 연산의 순서라 더하기 순서가 달라 마지막 비트가 다를 수 있다 — 색 거리 `kSamePathMinDistance` 아래라 다른 화소로 세지 않는다.
  *          판정은 다른 화소 0 이다(라이트 하나가 빠지면 그 클러스터의 화소가 모두 어두워진다).

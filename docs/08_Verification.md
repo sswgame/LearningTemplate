@@ -75,12 +75,12 @@ cd build/Ninja-Debug/Bin
 씬 · 프리팹 에셋은 **엔진 직렬화기로 만든다**(손으로 쓴 XML 은 깨진다).
 
 **렌더 결과는 픽셀로 측정한다.** `-gv_screenshot=out.ppm`(`-gv_screenshotFrame=N`)은 톤맵까지 든 최종 화면이다. 눈으로 보지 말고
-배경과 다른 픽셀 수 · 채널 평균을 센다. `-gv_viewMode=<0|1|2>`(Lit · Unlit · Wireframe)는 에디터 없이도 고른다.
+배경과 다른 픽셀 수 · 채널 평균을 센다. `-gv_viewMode=<이름>`(Lit · Unlit · Wireframe 등 `RenderViewMode` 의 열거자 이름, 숫자는 오류)는 에디터 없이도 고른다.
 **벤치는 `-gv_benchAnimate=0` 이어야 결정적이다**(네 백엔드 0 바이트 차이). 애니메이션을 켠 채 차이를 주장하려면 같은 조건
 두 판으로 잡음 바닥을 먼저 측정한다.
 
 ```powershell
-./App.exe -dx12 -gv_benchMeshes=8 -gv_benchAnimate=0 -gv_profileFrames=20 -gv_viewMode=2 "-gv_screenshot=wire.ppm"
+./App.exe -dx12 -gv_benchMeshes=8 -gv_benchAnimate=0 -gv_profileFrames=20 -gv_viewMode=Wireframe "-gv_screenshot=wire.ppm"
 ```
 
 **사진만 찍고 끝낼 때는 `-gv_screenshotQuit`.** `-gv_screenshot` · `-gv_screenshotEditor` 는 사진을 쓰고도 앱을 끝내지 않는다(`-gv_profileFrames=N` 이나 시나리오가 끝내거나, 호출자가 표준 입력으로 `quit` 을 보내야 한다).

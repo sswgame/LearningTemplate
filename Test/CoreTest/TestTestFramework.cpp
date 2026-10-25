@@ -853,7 +853,7 @@ SW_TEST_CASE( TestFrameworkTest, ReproductionArgumentsRebuildTheRun )
     test::TestRunOptions plainOptions;
     utf8                 programName[]      = "probe";
     utf8                 hostArgument[]     = "--host_suites=exclude";
-    utf8                 engineArgument[]   = "-gv_rhiBackend=2";
+    utf8                 engineArgument[]   = "-gv_rhiBackend=Vulkan";
     utf8                 seedArgument[]     = "--test_seed=42";
     utf8*                arrPlainArgument[] = { programName, hostArgument, engineArgument, seedArgument };
     (void)plainOptions.parse( 4, arrPlainArgument ); // 남은 인자(엔진 명령줄)는 아래에서 `_listEngineArgument` 로 본다
@@ -861,7 +861,7 @@ SW_TEST_CASE( TestFrameworkTest, ReproductionArgumentsRebuildTheRun )
     SW_EXPECT_TRUE_MSG( sw::StringUtil::contains( plain, "\"--test_filter=AlphaTest.One:BetaTest.Two\"" ), plain.c_str() );
     SW_EXPECT_TRUE_MSG( sw::StringUtil::contains( plain, "--host_suites=exclude" ), plain.c_str() );
     SW_EXPECT_TRUE_MSG( sw::StringUtil::contains( plain, "--test_seed=42" ), plain.c_str() );
-    SW_EXPECT_TRUE_MSG( sw::StringUtil::contains( plain, "-gv_rhiBackend=2" ), plain.c_str() );
+    SW_EXPECT_TRUE_MSG( sw::StringUtil::contains( plain, "-gv_rhiBackend=Vulkan" ), plain.c_str() );
 
     test::TestRunOptions shuffledOptions;
     utf8                 filterArgument[]      = "--test_filter=AlphaTest.*";

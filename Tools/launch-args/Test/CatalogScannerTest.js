@@ -112,8 +112,12 @@ test('the SW profile on this repository: every macro call under Source is in the
     assert.equal(catalog.listGlobalVariable.length, expectedCount);
 
     const findVariable = (name) => catalog.listGlobalVariable.find((variable) => variable.name === name);
-    assert.equal(findVariable('gv_viewMode').valueKind, ValueKind.Integer);
-    assert.equal(findVariable('gv_viewMode').moduleName, 'Engine');
+    assert.equal(findVariable('gv_benchMeshes').valueKind, ValueKind.Integer);
+    const viewMode = findVariable('gv_viewMode');
+    assert.equal(viewMode.valueKind, ValueKind.Enum, 'the view mode is an enum variable, picked by enumerator name');
+    assert.equal(viewMode.moduleName, 'Engine');
+    assert.equal(viewMode.listEnumerator[0], 'Lit');
+    assert.ok(viewMode.listEnumerator.includes('Wireframe'));
     const rhiBackend = findVariable('gv_rhiBackend');
     assert.equal(rhiBackend.valueKind, ValueKind.Enum);
     assert.deepEqual(rhiBackend.listEnumerator, ['DirectX11', 'DirectX12', 'Vulkan', 'OpenGL']);

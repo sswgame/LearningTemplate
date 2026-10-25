@@ -3974,10 +3974,10 @@
   },
   {
    "name": "gv_lightCulling",
-   "type": "int32",
-   "default": "2",
+   "type": "LightGridProducer",
+   "default": "GPU",
    "kind": "테스트",
-   "description": "라이트 컬링 (0=그리드 없이 목록 전체, 1=CPU 클러스터 그리드, 2=GPU 클러스터 그리드)",
+   "description": "라이트 컬링 (None=그리드 없이 목록 전체, CPU=CPU 클러스터 그리드, GPU=GPU 클러스터 그리드)",
    "source": "Source/Engine/Renderer/Frame/FrameRenderer.cpp"
   },
   {
@@ -4230,10 +4230,10 @@
   },
   {
    "name": "gv_rhiBackBufferFormat",
-   "type": "int32",
-   "default": "0",
+   "type": "RHIBackBufferFormat",
+   "default": "RGBA8",
    "kind": "일반",
-   "description": "요청 백버퍼 포맷: 0=R8G8B8A8_UNORM, 1=B8G8R8A8_UNORM (실제 채택값은 getBackBufferFormat)",
+   "description": "요청 백버퍼 포맷: RGBA8=R8G8B8A8_UNORM, BGRA8=B8G8R8A8_UNORM (실제 채택값은 getBackBufferFormat)",
    "source": "Source/Engine/Graphics/RHI/IRHIDevice.cpp"
   },
   {
@@ -4742,10 +4742,10 @@
   },
   {
    "name": "gv_viewMode",
-   "type": "int32",
-   "default": "0",
+   "type": "RenderViewMode",
+   "default": "Lit",
    "kind": "일반",
-   "description": "주 출력 보기 모드 (0 Lit / 1 Unlit / 2 Wireframe / 3 Normals / 4 Depth / 5 Overdraw / 6 LightingOnly / 7 Roughness / 8 Metallic / 9 Mipmaps / 10 LightComplexity / 11 ShadedWireframe)",
+   "description": "주 출력 보기 모드 (Lit / Unlit / Wireframe / Normals / Depth / Overdraw / LightingOnly / Roughness / Metallic / Mipmaps / LightComplexity / ShadedWireframe)",
    "source": "Source/Engine/Renderer/Frame/FrameRenderer.cpp"
   },
   {

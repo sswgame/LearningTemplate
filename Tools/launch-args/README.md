@@ -2,7 +2,7 @@
 
 ## 이것은 무엇이고 왜 있나
 
-게임이나 에디터를 띄울 때마다 `-dx12 -EnableEditor -gv_viewMode=2 …` 같은 인자를 손으로 적고 있었다면, 이 확장이 그 일을 대신합니다.
+게임이나 에디터를 띄울 때마다 `-dx12 -EnableEditor -gv_viewMode=Wireframe …` 같은 인자를 손으로 적고 있었다면, 이 확장이 그 일을 대신합니다.
 
 - 엔진 소스에 정의된 **전역 변수(`-gv_*`)와 명령줄 인자를 목록으로 보여 줍니다.** 설명, 기본값, 타입이 함께 나옵니다.
 - 체크하고 값을 고르면 VS Code의 **CMake Tools 디버그와 실행**, 그리고 **`launch.json` 의 CodeLLDB 구성(F5)** 에 그대로 넘어갑니다.
@@ -34,8 +34,8 @@ py -3 Tools/launch-args/Scripts/ExtensionTool.py install
 1. CMake Tools 상태 표시줄에서 **구성 프리셋**(예: `Ninja-Debug`)과 **실행 대상**(예: `App`)을 평소처럼 고릅니다.
 2. 활동 막대의 **Launch Args** 를 엽니다.
 3. **인자** 탭의 `RHI 백엔드` 에서 `DirectX12 (-dx12)` 를 고르고, `-EnableEditor` 를 체크합니다.
-4. **전역 변수** 탭의 검색창에 `viewMode` 를 치고, `gv_viewMode` 의 값을 `2` 로 바꿉니다. 값을 고치면 자동으로 체크됩니다.
-5. 위쪽 **명령줄** 상자에 `-dx12 -EnableEditor -gv_viewMode=2` 가 보이는지 확인합니다.
+4. **전역 변수** 탭의 검색창에 `viewMode` 를 치고, `gv_viewMode` 의 값을 `Wireframe` 으로 바꿉니다. 값을 고치면 자동으로 체크됩니다.
+5. 위쪽 **명령줄** 상자에 `-dx12 -EnableEditor -gv_viewMode=Wireframe` 가 보이는지 확인합니다.
 6. **CMake Tools 로 디버그** 버튼을 누르면 이 인자로 App이 뜹니다. 평소처럼 CMake Tools의 디버그나, Run and Debug의 "App (CodeLLDB · 사이드바 인자)" 구성을 써도 됩니다.
 
 인자를 빼고 싶으면 체크를 풀거나 **모두 빼기** 를 누릅니다.
@@ -49,7 +49,7 @@ py -3 Tools/launch-args/Scripts/ExtensionTool.py install
 |---|---|
 | 에디터를 DX12로 | 인자 `-dx12`, `-EnableEditor` 체크 |
 | 특정 씬으로 에디터 시작 | 위에 더해 `gv_editorStartupScene` = `game/empty/maps/editortest.scene.xml` |
-| 와이어프레임으로 보기 | `gv_viewMode` = `2` |
+| 와이어프레임으로 보기 | `gv_viewMode` = `Wireframe` |
 | 벤치 큐브 8개를 결정적으로 | `gv_benchMeshes` = `8`, `gv_benchAnimate` = `0` |
 | 40 프레임 뒤 자동 종료 | `gv_profileFrames` = `40` |
 | 스크린샷 찍기 | `gv_screenshot` = `out.ppm`. 실행은 패널 버튼으로(아래 "문제 해결") |
@@ -100,10 +100,10 @@ py -3 Tools/launch-args/Scripts/ExtensionTool.py install
 ### 항목 한 줄 읽는 법
 
 ```text
-☑ gv_viewMode   [int32]                 ← 체크하면 넘깁니다. 오른쪽은 타입
-  [ 2          ]  ↺                     ← 값, 기본값으로 되돌리기
-  기본값 0                              ← 소스의 기본값. 플래그는 "주지 않음"
-  씬 보기 방식 (0 Lit / 1 Unlit / 2 Wireframe)   ← 소스에 적힌 설명
+☑ gv_viewMode   [RenderViewMode]        ← 체크하면 넘깁니다. 오른쪽은 타입
+  [ Wireframe  ]  ↺                     ← 값, 기본값으로 되돌리기
+  기본값 Lit                            ← 소스의 기본값. 플래그는 "주지 않음"
+  씬 보기 방식 (Lit / Unlit / Wireframe)   ← 소스에 적힌 설명
   Shipping 에서는 등록되지 않는 테스트용 변수입니다  ← 지금 빌드에서의 주의(있을 때만)
 ```
 

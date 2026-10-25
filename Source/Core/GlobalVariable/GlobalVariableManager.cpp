@@ -165,7 +165,11 @@ namespace sw
             }
         };
 
-        /** @brief enum 변수의 처리입니다. int32 로 읽고 쓰며 실제 크기(`_typeSize`)만큼만 씁니다. 글은 숫자(`2`) 또는 열거자 이름(`Vulkan`)이다. */
+        /**
+         * @brief enum 변수의 처리입니다. int32 로 읽고 쓰며 실제 크기(`_typeSize`)만큼만 씁니다.
+         * @details 글은 열거자 이름(`Vulkan`)이다. 숫자(`2`)는 에디터 · 프리셋 · 사용자 설정이 값을 주고받는 안쪽 글(`formatValue` 도 숫자)이라
+         *          `parseValue` 가 받지만, 사람이 치는 명령줄은 받지 않는다(`GlobalVariableInfo::setValueFromCommandLine`).
+         */
         struct GlobalVariableEnumOps
         {
             static string formatValue( const GlobalVariableInfo& info )
@@ -206,11 +210,13 @@ namespace sw
 
             [[nodiscard]] static bool readCommandLineArgument( const CommandLineManager& commandLine, GlobalVariableInfo& info, string& outPendingText )
             {
-                // 숫자는 바로 적용하고, 파서가 아직 없어 못 읽은 이름은 `applyPendingEnumText` 까지 받아 둔다.
+                // 이름은 파서가 있으면 바로 적용하고, 아직 없으면 `applyPendingEnumText` 까지 받아 둔다. 숫자는 적용하지 않고 같은 길로 보내
+                // `setValueFromCommandLine` 이 거절 이유와 함께 알린다(명령줄은 열거자 이름만 받는다).
                 string text;
                 if ( commandLine.getArgument( info._name, text ) == false || text.empty() )
                     return false;
-                if ( parseValue( info, text ) )
+                int32 number{ 0 };
+                if ( StringUtil::parseInt( text, number ) == false && parseValue( info, text ) )
                     return true;
                 outPendingText = std::move( text );
                 return false;
@@ -404,6 +410,19 @@ namespace sw
         return true;
     }
 
+    bool GlobalVariableInfo::setValueFromCommandLine( string_view strValue )
+    {
+        // 사람이 쓰는 명령줄은 열거자 이름만 받는다. 숫자는 열거자를 더하거나 순서를 바꾸면 뜻이 달라지고, 변수의 크기보다 큰 수는 조용히 잘려 다른 열거자가 된다.
+        int32 number{ 0 };
+        if ( _type == GlobalVariableType::Enum && StringUtil::parseInt( strValue, number ) )
+        {
+            SW_LOG_ERROR( "-%#=%# : %# takes an enumerator name of %#, not a number (a number changes meaning when enumerators are added or reordered)",
+                          _name.c_str(), string{ strValue }.c_str(), _name.c_str(), _enumType.c_str() );
+            return false;
+        }
+        return setValueFromString( strValue );
+    }
+
     /**
      * @brief 등록할 때 지정한 기본값(_defaultValue)으로 되돌립니다.
      */
@@ -524,7 +543,7 @@ namespace sw
                 //
                 // 변경 알림은 여기서 따로 부르지 않는다. setValueFromString 이 거치는 setValueAs* 네 함수가 모두 이미
                 // _onValueChanged 를 부른다(여기서 한 번 더 부르면 모듈 변수만 콜백이 **두 번** 온다).
-                if ( iter->second->setValueFromString( pendingValue ) == false )
+                if ( iter->second->setValueFromCommandLine( pendingValue ) == false )
                 {
                     SW_LOG_WARNING( "-%#=%# : the value does not match the variable type. Ignored",
                                     strName.c_str(), pendingValue.c_str() );
@@ -643,9 +662,9 @@ namespace sw
         for ( const auto& [name, text] : _mapPendingEnumText )
         {
             GlobalVariableInfo* pInfo = findVariable( name );
-            if ( pInfo == nullptr || pInfo->setValueFromString( text ) == false )
+            if ( pInfo == nullptr || pInfo->setValueFromCommandLine( text ) == false )
             {
-                SW_LOG_ERROR( "-%#=%# : %# has no enumerator of that name", name.c_str(), text.c_str(), pInfo != nullptr ? pInfo->_enumType.c_str() : "the variable" );
+                SW_LOG_ERROR( "-%#=%# : not applied, %# has no enumerator of that name", name.c_str(), text.c_str(), pInfo != nullptr ? pInfo->_enumType.c_str() : "the variable" );
                 bAllApplied = false;
             }
         }

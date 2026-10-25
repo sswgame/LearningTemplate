@@ -13,6 +13,7 @@
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Object/Component/CameraDepthOfFieldValues.h"
 #include "Engine/Object/Component/CameraPostProcessValues.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Renderer/Light/ShadowSetup.h"
 
 namespace sw
@@ -50,8 +51,10 @@ namespace sw
      * @details 렌더 상태(채우기, 블렌드, 깊이)와 셰이더 퍼뮤테이션(조명 항)을 함께 가르는 값이라 어느 한쪽에만 둘 수 없다.
      *          뷰마다 갖는 설정(`RenderViewSettings::_viewMode`)이고, 배치 PSO 를 고를 때 머티리얼 퍼뮤테이션과 **같은 단계**에서 적용된다.
      *          그래서 와이어프레임이 머티리얼 변형을 잃지 않는다. 언리얼 뷰포트(뷰 패밀리)마다의 View Mode, 유니티 Scene 뷰의 Draw Mode 와 같다.
-     * @note 에디터 전용이 아니다. 헤드리스에서도 `-gv_viewMode=<n>` 로 주 출력의 모드를 골라 스크린샷으로 검증한다.
+     * @note 에디터 전용이 아니다. 헤드리스에서도 `-gv_viewMode=<이름>`(예: `Wireframe`)으로 주 출력의 모드를 골라 스크린샷으로 검증한다. 리플렉션 enum 이라
+     *       이름으로 고르고 숫자는 받지 않는다. `Count` 는 개수 표식이라 모드가 아니다(`isRenderViewModeIndex` 가 거른다).
      */
+    ENUM( Count = Count )
     enum class RenderViewMode : uint8
     {
         Lit = 0,      ///< 조명과 그림자를 모두 계산한 기본 화면
@@ -66,7 +69,7 @@ namespace sw
         Mipmaps,      ///< 머티리얼 텍스처를 읽는 밉 단계를 색으로 보인다(유니티 Scene 뷰 Mipmaps). 확대는 파랑, 밉 0 초록, 1 노랑, 2 주황, 3 이상 빨강.
         /**
          * @brief 픽셀마다 조명 식이 도는 라이트 수(라이트 그리드의 전역 구간 + 그 클러스터 목록)를 색 띠로 보인다(언리얼 Light Complexity, 유니티 Forward+ 디버그 보기).
-         * @details 0 은 검정, 그 뒤로 파랑 · 초록 · 노랑 · 빨강(binding.hlsli kViewModeLightComplexityMax 이상)이다. 그리드가 없으면(gv_lightCulling 0) 목록 전체의 수다.
+         * @details 0 은 검정, 그 뒤로 파랑 · 초록 · 노랑 · 빨강(binding.hlsli kViewModeLightComplexityMax 이상)이다. 그리드가 없으면(gv_lightCulling=None) 목록 전체의 수다.
          *          G버퍼가 표면에서 셈하므로 디퍼드 조명 패스에 보기 모드 변형이 필요 없다.
          */
         LightComplexity,
@@ -113,7 +116,7 @@ namespace sw
     static_assert( sizeof( kArrRenderViewModeInfo ) / sizeof( kArrRenderViewModeInfo[0] ) == static_cast<size_t>( RenderViewMode::Count ),
                    "보기 모드 표와 열거형의 개수가 다릅니다" );
 
-    /** @brief 정수가 보기 모드 번호(0 .. Count - 1)인지 봅니다. 밖에서 들어온 번호(`-gv_viewMode`)는 이것으로 거른 뒤에만 `RenderViewMode` 로 바꿉니다. */
+    /** @brief 정수가 보기 모드 번호(0 .. Count - 1)인지 봅니다. 번호로 들어온 값(`Count` 표식, 에디터 · 콘솔이 넣은 `gv_viewMode`)은 이것으로 거른 뒤에만 `RenderViewMode` 로 바꿉니다. */
     inline bool isRenderViewModeIndex( int32 value )
     {
         return value >= 0 && value < static_cast<int32>( RenderViewMode::Count );

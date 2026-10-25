@@ -146,6 +146,12 @@ namespace sw
 
         /** @brief 문자열을 파싱해 *_pData 에 쓰고 콜백을 부릅니다. */
         bool setValueFromString( string_view strValue );
+        /**
+         * @brief 명령줄에서 받은 글을 `setValueFromString` 처럼 쓰되, enum 변수는 숫자를 오류로 거절합니다(열거자 이름만 받는다).
+         * @details 숫자는 열거자를 더하거나 순서를 바꾸면 뜻이 달라지고, 변수 크기를 넘으면 조용히 잘려 다른 열거자가 된다. 에디터 · 프리셋 ·
+         *          사용자 설정이 주고받는 안쪽 글은 `setValueFromString` 이라 숫자를 계속 받는다.
+         */
+        bool setValueFromCommandLine( string_view strValue );
         /** @brief *_pData 를 _defaultValue 로 되돌립니다. */
         void resetToDefault();
     };
@@ -181,8 +187,8 @@ namespace sw
 
         /**
          * @brief 커맨드라인 인자 값으로 전역 변수들을 갱신합니다.
-         * @details enum 변수는 숫자 또는 열거자 이름을 받는다. 이름은 파서가 등록된 뒤에 적용하므로(`applyPendingEnumText`) 그때까지 받아만 둔다.
-         *          명령줄은 리플렉션 등록보다 먼저 파싱되기 때문이다.
+         * @details enum 변수는 열거자 이름만 받는다(숫자는 `applyPendingEnumText` 가 오류로 알린다). 이름은 파서가 등록된 뒤에 적용하므로
+         *          그때까지 받아만 둔다. 명령줄은 리플렉션 등록보다 먼저 파싱되기 때문이다.
          */
         void updateFromCommandLine( const CommandLineManager* pCmdLineManager );
 
@@ -194,8 +200,8 @@ namespace sw
         void setEnumTextParser( const GlobalVariableEnumTextParser& parser );
 
         /**
-         * @brief 명령줄에서 숫자가 아닌 글로 받아 둔 enum 변수 값을 지금 적용합니다. 파서를 건 뒤에 부릅니다.
-         * @return 모르는 열거자가 하나라도 있으면 false 입니다(오류로 알리고, 그 값은 적용하지 않습니다).
+         * @brief 명령줄에서 받아 둔 enum 변수 값(열거자 이름)을 지금 적용합니다. 파서를 건 뒤에 부릅니다.
+         * @return 모르는 열거자나 숫자가 하나라도 있으면 false 입니다(오류로 알리고, 그 값은 적용하지 않습니다).
          */
         [[nodiscard]] bool applyPendingEnumText();
 
@@ -320,6 +326,7 @@ namespace sw
 //
 // 타입은 `bool`, `int32`, `float32`, `sw::string`, enum 이다(`GlobalVariableTraits`). enum 은 리플렉션에 등록된 이름 그대로 적는다
 // (`#type` 이 그 문자열이 된다. `sw::RHIBackend` 처럼 한정하면 찾지 못한다). 기본값은 변수 초기화에만 쓰고, 등록자는 그 변수에서 읽는다.
+// 종류 · 모드를 고르는 설정은 숫자 코드(`int32` 0 · 1 · 2)로 두지 않고 enum 으로 둔다: 명령줄은 열거자 이름(`-gv_rhiBackend=Vulkan`)만 받고 숫자는 오류다.
 // Shipping 에서 빠진 테스트용 변수를 `const` 로 만들지 않는다: 같은 TU 에서 컴파일 시간 상수가 되면 그 값을 루프 상한으로 쓰는 벤치
 // 코드가 Shipping 에서만 `-Wtautological-unsigned-zero-compare` 경고를 낸다. 등록만 빼고 보통 변수로 둔다.
 //
