@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Config/RHIBackendType.h"
@@ -422,7 +423,7 @@ namespace sw
          * @note 값의 출처는 `RenderGraph::executeParallel` 이다. 백엔드는 MODULE DLL 로 따로
          *       빌드되므로 전역 변수를 export 하지 않는다. 정책은 Engine, 메커니즘은 디바이스가 맡는다.
          */
-        void setParallelRecording( bool bEnable ) { _bParallelRecording = bEnable; }
+        void setParallelRecording( bool bEnable ) { _bParallelRecording.store( bEnable, std::memory_order_relaxed ); }
 
         /**
          * @brief 지금 리소스 테이블(bindless 레지스트리, 텍스처 레코드)을 바꿔도 되는 시점인지 확인합니다.
@@ -512,16 +513,18 @@ namespace sw
         IRHITimestampProvider* _pTimestampProvider;
         /// @brief 컨텍스트 스레드 바인딩 능력입니다(findContextThreadBinding 참고). 능력을 가진 백엔드가 생성자에서 자기를 적습니다.
         IRHIContextThreadBinding* _pContextThreadBinding;
-        RenderThreadDrainFunction _pfnRenderThreadDrain;
-        void*                     _pRenderThreadDrainContext;
-        std::thread::id           _renderThreadID;
-        uint32                    _backBufferWidth;
-        uint32                    _backBufferHeight;
-        bool                      _bPreferredVSync;
+        /// @brief 렌더 스레드 비우기 함수 등록입니다(`setRenderThreadDrain`). 렌더 스레드를 세우고 풀 때 쓰고 `releaseHandle` · `waitIdle` 이 아무 스레드에서나 읽으므로 atomic 입니다.
+        /// @details 세울 때는 컨텍스트와 id 를 먼저 쓰고 함수를 release 로 마지막에, 풀 때는 함수를 먼저 지웁니다. 읽는 쪽은 함수를 acquire 로 먼저 읽습니다.
+        atomic<RenderThreadDrainFunction> _pfnRenderThreadDrain;
+        atomic<void*>                     _pRenderThreadDrainContext;
+        atomic<std::thread::id>           _renderThreadID;
+        uint32                            _backBufferWidth;
+        uint32                            _backBufferHeight;
+        bool                              _bPreferredVSync;
         /// @brief 프레임 스트림을 자를 때마다 곧바로 제출할지 나타냅니다(setImmediateSubmit 참고).
         bool _bImmediateSubmit;
-        /// @brief 지금이 병렬 패스 기록 구간인지 나타냅니다(setParallelRecording 참고).
-        bool _bParallelRecording;
+        /// @brief 지금이 병렬 패스 기록 구간인지 나타냅니다(setParallelRecording 참고). 렌더 스레드가 쓰고 등록 · 해제를 감시하는 다른 스레드가 읽으므로 atomic 입니다.
+        atomic<bool> _bParallelRecording;
         /// @brief 백엔드가 실제로 소프트웨어 어댑터(WARP, CPU Vulkan)를 쓰는지 나타냅니다. 백엔드가 `initializeInternal` 에서 실제 어댑터를 보고 기록합니다.
         bool _bSoftwareAdapter;
         /// @brief 마지막 `initialize` 의 결과입니다(getInitResult 참고).

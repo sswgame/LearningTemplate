@@ -150,7 +150,7 @@ namespace sw
 #if !defined( SW_SHIPPING )
         /**
          * @brief 텍스처 · 버퍼 등록 표의 그 자리에 핸들이 있으면 true 입니다(GL 은 인덱스를 텍스처 유닛 · 버퍼 바인딩으로 흉내 낸다).
-         * @note GL 의 등록 표에는 잠금이 없다. 기록 중에는 등록 표가 바뀌지 않는다는 규칙(`assertRegistryMutableNow`)에 기대어 읽는다.
+         * @note GL 의 등록 표에는 잠금이 없다. 표는 GL 컨텍스트를 쥔 스레드만 읽고 쓴다 — 등록 · 해제 · 파괴가 `ScopedOpenGLContext` 안에서 표를 바꾸고, 읽는 쪽은 프레임을 기록하는 스레드다.
          */
         bool isBindlessIndexLive( RHIBindlessIndexSpace space, RHIDescriptorIndex index ) const override;
 #endif
