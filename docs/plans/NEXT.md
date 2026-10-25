@@ -26,10 +26,11 @@
 - 에디터 코어: `arch2a`(2a + 2b) → `fixp`(EngineTest 가 EditorCore 링크, gen stem 중복 FATAL, 테스트 미러 33 개 이동). `fixi`(에디터 후보), `fixk`(게이트) → `fixq`(곡선 · 셀 · 프리팹 O(N²)).
 - 게임플레이 데이터: `fixj` → `fixo` → `fixt`(진행 중일 수 있음).
 - 태스크 대기: `fixm` → `fixr`.
+- PackedTypes: `packed`(P3 끝남 · 커밋 `253fde28b`; P4 법선 RG16 은 설계만 — 알파 "그려졌다" 표시를 머티리얼 칸 알파로 옮겨야 하고 `R16G16_SNORM` 렌더 타깃 지원은 네 백엔드에서 확인 필요, GPU 검증과 같이). 충돌: `PackedTypes.md` · `Roadmap.md` · `VerifyBatch.json` 의 `packed-types-test`. 같은 결함 후보: `readNumberList` 가 남는 칸을 안 봄(`float3` 가 `1,2,3,4` 를 받음), `readSource` 의 `static_cast<int64>(NaN/Inf)`(지금 고칠 만함).
 - 캐시: `cachec` → `fixs`(진행 중일 수 있음).
 - 애니메이션: `anim1` → `anim2`(U3 전환 — 진행 중일 수 있음).
 - 건드린 파일이 겹쳐 충돌 예상: `Scripts/lint/rules/CheckMutableStatics.toml`(`fixi` · `cachec` · `fixp` · `arch3` — 병합 뒤 `--regen-baseline`), `cmake/Engine/TestTargets.cmake` · `UnbuiltSources.cmake`(`fixl` · `arch2c`), `Test/EngineTest/CMakeLists.txt`(`arch2c` · `fixl` · `fixp`), `Source/Editor/CMakeLists.txt`(`arch2a` · `fixp`), `README.md`/`StatusBoard.md`.
-- **병합하지 않는다**: `rhiasync`(옛 동기 가상 함수 3 개를 지워 B0 번들 전까지 컴파일 안 됨) — `rhiasync2`(계약 수정 + B0 골격, 진행 중)와 함께 GPU 검증 담당(`gpu-verifier`)과 같이 다룬다. `arch3`(정적 상태 · 설정 소유, 진행 중 · 커밋 3 + 작업 파일 15), `packed`(PackedTypes P3, 진행 중 · 작업 파일 19, 커밋 없음), `arch0`(0 단계 측정, 진행 중)은 끝났는지 `git log main..wt/<이름>` 과 `git -C D:/w/<이름> status` 로 확인한다.
+- **병합하지 않는다**: `rhiasync`(옛 동기 가상 함수 3 개를 지워 B0 번들 전까지 컴파일 안 됨) — `rhiasync2`(계약 수정 + B0 골격, 진행 중)와 함께 GPU 검증 담당(`gpu-verifier`)과 같이 다룬다. `arch3`(정적 상태 · 설정 소유, 진행 중 · 커밋 3 + 작업 파일 15), `arch0`(0 단계 측정, 진행 중)은 끝났는지 `git log main..wt/<이름>` 과 `git -C D:/w/<이름> status` 로 확인한다.
 
 **첫 일(순서)**: ① `ci-jobs --summary`. ② 끝난 브랜치를 위 순서로 `integrator` 한 명이 병합 → `-k 0` 빌드(컴파일 위험은 각 브랜치 보고에 있다: 새 IAssetCache 생성자 → 전체 재빌드, `sw_linkEditorCore` 의 FlagOps 충돌, `std::erase_if`/`unordered_map` 해시, 리플렉션 재생성(`ShooterPlayerComponent`)) → Debug · Shipping · Shipping-Server `nogpu`/`lint`/`race` → **에디터 실제 기동 확인**(교훈 ⑪, 통합 J 의 규칙) → 기동 시나리오 네 백엔드. ③ 안 끝난 에이전트의 결과 수집. ④ `gpu-verifier`: `## 000000` 목록 + `hostgpu` 격리 H1~H4 + RHI B0. ⑤ [ArchitectureSeams](ArchitectureSeams.md) 0 단계 결과(`arch0`)로 5 · 6 단계를 열지 정한다.
 
