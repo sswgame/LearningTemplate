@@ -13,6 +13,7 @@ QA 러너 셋(`Scripts/qa/GoldenImages.py` · `Soak.py` · `PerfRegression.py`)�
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import os
 import re
@@ -27,9 +28,11 @@ from .BuildTree import BuildTree
 from .CookContract import CookContractSpec
 from .Paths import getProjectRoot
 from .ProcessLimits import ProcessLimits
+from .Timeline import appendAppEndLine, appendAppStartLine, summarizeAppArguments
 
 #: 백엔드 명령줄 이름 → App 스위치. 표는 Config/Engine/CookContract.json 의 `command_line_name`(표 순서).
 kBackendSwitch: dict[str, str] = CookContractSpec.load().mapBackendSwitch
+_kBackendSwitchSet = frozenset(kBackendSwitch.values())
 
 
 def addAppRunArguments(parser: argparse.ArgumentParser, *, bMultipleBackends: bool, defaultBackend: str = "dx12") -> None:
@@ -220,17 +223,29 @@ def runApp(appPath: Path, listArgument: list[str], *, cwd: Path | None = None, t
     result = AppRunResult()
     workingDirectory = Path(cwd) if cwd is not None else Path(appPath).resolve().parent
     startSeconds = time.monotonic()
+    limits = limits or ProcessLimits()
+    mergedEnvironment = {**os.environ, **environment} if environment else None
     try:
-        limits = limits or ProcessLimits()
-        mergedEnvironment = {**os.environ, **environment} if environment else None
         process = subprocess.Popen([str(appPath), *listArgument], cwd=str(workingDirectory), stdout=subprocess.PIPE,
                                    stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, text=True, encoding="utf-8", errors="replace",
                                    creationflags=limits.makeCreationFlags(), preexec_fn=limits.makePreexec(), env=mergedEnvironment)
-        jobHandle = limits.attach(process)  # noqa: F841 — 프로세스가 끝날 때까지 쥔다(닫으면 Job 이 자식을 끝낸다)
-    except (OSError, RuntimeError) as error:
+    except OSError as error:
         result.listErrorLine.append(f"cannot launch {appPath}: {error}")
         return result
+    with contextlib.ExitStack() as stack:   # Job 핸들은 이 블록이 끝나는 모든 길에서 닫는다(Popen 뒤에야 붙일 수 있다)
+        try:
+            stack.enter_context(limits.attach(process))
+        except RuntimeError as error:
+            result.listErrorLine.append(f"cannot launch {appPath}: {error}")
+            return result
+        return superviseApp(process, appPath, listArgument, result, startSeconds, timeoutSeconds, sampleIntervalSeconds, echo)
+
+
+def superviseApp(process: subprocess.Popen, appPath: Path, listArgument: list[str], result: AppRunResult, startSeconds: float,
+                 timeoutSeconds: float, sampleIntervalSeconds: float, echo: bool) -> AppRunResult:
+    """띄운 프로세스가 끝날 때까지(시간 초과면 죽여서) 출력을 읽고 자원을 재어 @p result 를 채웁니다."""
     result.bLaunched = True
+    appendAppStartLine(process.pid, appPath, summarizeAppArguments(listArgument, _kBackendSwitchSet))
 
     def readOutputInternal() -> None:
         assert process.stdout is not None
@@ -257,9 +272,12 @@ def runApp(appPath: Path, listArgument: list[str], *, cwd: Path | None = None, t
         time.sleep(0.05 if sampleIntervalSeconds <= 0.0 else min(0.25, sampleIntervalSeconds))
     process.wait()
     reader.join(timeout=10.0)
+    if not reader.is_alive():   # 읽는 중에 닫으면 막힌다(손자 프로세스가 파이프를 쥔 경우)
+        process.stdout.close()   # 안 닫으면 ResourceWarning(파이프 핸들이 가비지 수집까지 남는다)
     result.exitCode = process.returncode
     result.seconds = time.monotonic() - startSeconds
     result.bBackendUnusable = result.exitCode == kAppRhiUnusableExitCode
+    appendAppEndLine(process.pid, result.exitCode, result.seconds, result.bTimedOut)
     for line in result.listLine:
         if "[Error]" in line:
             result.listErrorLine.append(line)
