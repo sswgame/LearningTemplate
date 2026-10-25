@@ -322,6 +322,15 @@ namespace sw::editor
         return EditorSessionPolicy::areSceneEditsAllowed( isStopped(), areSceneEditsHeld() );
     }
 
+    bool EditorPlaySession::refuseSceneEdit( const utf8* pAction )
+    {
+        if ( areSceneEditsAllowed() )
+            return false;
+        const utf8* pReason = areSceneEditsHeld() ? "a long-running task (light probe bake) holds scene edits" : "the play session is not stopped";
+        SW_LOG_WARNING_ID( "Editor.SceneEditRefused", "%# refused: scene edits are not allowed - %#", pAction, pReason );
+        return true;
+    }
+
     void EditorPlaySession::holdSceneEdits()
     {
         PlaySessionData* pData = EditorPlaySessionInternal::data();

@@ -59,7 +59,7 @@ namespace sw::editor
     GameObject* EditorAssetCommands::spawnPrefab( GameObjectManager* pManager, const utf8* pPath, GameObject* pParent,
                                                   const utf8* pUndoLabel )
     {
-        if ( EditorPlaySession::areSceneEditsAllowed() == false )
+        if ( EditorPlaySession::refuseSceneEdit( "Spawn prefab" ) )
             return nullptr;
         GameObject* pSpawned = spawnPrefabWithoutUndo( pManager, pPath, pParent );
         if ( pSpawned == nullptr )
@@ -110,7 +110,7 @@ namespace sw::editor
 
     GameObject* EditorAssetCommands::spawnSprite( GameObjectManager* pManager, const utf8* pPath, const float3& worldPos )
     {
-        if ( EditorPlaySession::areSceneEditsAllowed() == false )
+        if ( EditorPlaySession::refuseSceneEdit( "Spawn sprite" ) )
             return nullptr;
         if ( pManager == nullptr || StringUtil::isNullOrEmpty( pPath ) )
             return nullptr;
@@ -146,7 +146,7 @@ namespace sw::editor
 
     GameObject* EditorAssetCommands::spawnMesh( GameObjectManager* pManager, const utf8* pPath, const float3& worldPos )
     {
-        if ( EditorPlaySession::areSceneEditsAllowed() == false )
+        if ( EditorPlaySession::refuseSceneEdit( "Spawn mesh" ) )
             return nullptr;
         if ( pManager == nullptr || StringUtil::isNullOrEmpty( pPath ) )
             return nullptr;

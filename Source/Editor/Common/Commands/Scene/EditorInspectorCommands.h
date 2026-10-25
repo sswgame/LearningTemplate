@@ -48,8 +48,9 @@ namespace sw::editor
          * @brief 오브젝트와 프리팹 연결을 끊습니다.
          * @details 중첩 부품이면 그 부품만 끊을 수 없다(바깥 인스턴스가 다시 스폰해 두 벌이 된다). 대신 맨 바깥에 놓인 인스턴스를 한 겹 푼다 —
          *          그 바로 아래 부품은 저마다 자기 프리팹의 인스턴스로 씬에 남는다(유니티 Unpack Prefab). 어느 인스턴스를 풀었는지 로그로 알린다.
+         *          끊었으면 true 입니다. 플레이 중이라 편집이 막혔거나 풀 인스턴스가 없으면 이유를 경고 로그로 남기고 false 입니다.
          */
-        static void unlinkPrefab( GameObject* pObj );
+        [[nodiscard]] static bool unlinkPrefab( GameObject* pObj );
         /**
          * @brief @p pRoot 아래의 프리팹 인스턴스 자식을 @p pRoot 의 중첩 프리팹 부품(`PrefabInstanceRegistry`)으로 옮기고 옮긴 수를 반환합니다.
          * @details 새 프리팹을 만들기 직전에 부른다 — 프리팹 본문은 루트 오브젝트 하나와 중첩 인스턴스 노드뿐이라, 옮기지 않은 자식 인스턴스는

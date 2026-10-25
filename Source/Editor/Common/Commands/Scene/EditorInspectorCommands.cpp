@@ -31,7 +31,7 @@ namespace sw::editor
 
     bool EditorInspectorCommands::applyToPrefab( GameObject* pObj, string_view prefabPath )
     {
-        if ( EditorPlaySession::areSceneEditsAllowed() == false )
+        if ( EditorPlaySession::refuseSceneEdit( "Apply to prefab" ) )
             return false;
         if ( pObj == nullptr || prefabPath.empty() )
             return false;
@@ -123,7 +123,7 @@ namespace sw::editor
 
     bool EditorInspectorCommands::revertToPrefab( GameObject* pObj, string_view prefabPath )
     {
-        if ( EditorPlaySession::areSceneEditsAllowed() == false )
+        if ( EditorPlaySession::refuseSceneEdit( "Revert to prefab" ) )
             return false;
         if ( pObj == nullptr || prefabPath.empty() )
             return false;
@@ -144,12 +144,12 @@ namespace sw::editor
         return true;
     }
 
-    void EditorInspectorCommands::unlinkPrefab( GameObject* pObj )
+    bool EditorInspectorCommands::unlinkPrefab( GameObject* pObj )
     {
-        if ( EditorPlaySession::areSceneEditsAllowed() == false )
-            return;
+        if ( EditorPlaySession::refuseSceneEdit( "Unlink prefab" ) )
+            return false;
         if ( pObj == nullptr )
-            return;
+            return false;
 
         EditorWorkspace& workspace = editor::getSubsystem<EditorWorkspace>(); // 필수 - 에디터 명령이다
         // 부품은 바깥 프리팹 인스턴스가 다시 스폰한다. 부품만 연결을 끊으면 다음 로드에 같은 부품이 하나 더 생긴다. 유니티도 중첩 자식만 따로 풀지 못한다.
@@ -162,12 +162,13 @@ namespace sw::editor
         if ( pTarget == nullptr || workspace.getPlacedPrefabPath( *pTarget ).empty() )
         {
             SW_LOG_WARNING( "'%#' has no placed prefab instance to unlink", pObj->getName().c_str() );
-            return;
+            return false;
         }
         if ( pTarget != pObj )
             SW_LOG_INFO( "'%#' is a nested prefab part - its outermost instance '%#' is unpacked one level", pObj->getName().c_str(), pTarget->getName().c_str() );
         workspace.setPlacedPrefabPath( *pTarget, "" );
         workspace.markSceneDirty();
+        return true;
     }
 
     GameObject* EditorInspectorCommands::findOuterInstance( const GameObject* pPart )

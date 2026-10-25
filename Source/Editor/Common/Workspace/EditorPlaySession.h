@@ -165,6 +165,13 @@ namespace sw::editor
         /** @brief 플레이 세션이 정지(Stop) 상태일 때만 씬 오브젝트를 편집할 수 있습니다(`EditorSessionPolicy`). */
         static bool areSceneEditsAllowed();
         /**
+         * @brief 씬 편집이 막혀 있으면 거절 이유를 경고 로그(`Editor.SceneEditRefused`)로 남기고 true 를 반환합니다. 편집 명령이 맨 앞에서 묻습니다.
+         * @details 명령이 조용히 반환하면 사용자도 호출자도 왜 아무 일도 없었는지 알 수 없다 — 거절 이유를 한 자리에서 남긴다.
+         *          이벤트마다 한 번 불리는 명령(버튼 · 드롭)용이다. 프레임마다 묻는 UI 잠금은 `areSceneEditsAllowed` 를 쓴다.
+         * @param pAction 거절된 동작의 이름(로그에 들어간다)
+         */
+        [[nodiscard]] static bool refuseSceneEdit( const utf8* pAction );
+        /**
          * @brief 씬 편집을 막습니다(짝이 되는 `releaseSceneEdits` 까지). 씬을 읽으며 여러 프레임에 걸쳐 도는 작업(라이트 프로브 베이크)이 부른다.
          * @details 편집 경로는 모두 `areSceneEditsAllowed` 를 묻는다 — 막는 동안 그 답이 false 라 인스펙터 · 기즈모 · 붓이 잠긴다. 플레이 시작은 막지 않는다
          *          (작업이 정지 상태가 아니면 스스로 멈춘다).

@@ -138,9 +138,9 @@ namespace sw::editor
             {
                 shared_ptr<RenderPassAsset>  pPass   = args.get<shared_ptr<RenderPassAsset>>( 0 );
                 shared_ptr<SplashLoadResult> pResult = args.get<shared_ptr<SplashLoadResult>>( 1 );
-                // `findSubsystem<T>()` 는 nullptr 을 반환할 수 있다. 이 둘은 워커 스레드에서 도는 스플래시 로드라, 서비스 연결이 아직
-                // 없거나 이미 끊긴 시점에 걸리면 조용히 크래시한다. 그때는 결과가 false 로 남아 기동이 멈춘다(워커라 `getSubsystem` 의 assert 대신 오류 로그로 알린다).
-                const EngineDefaultAssets* pEngineDefaultAssets = editor::findSubsystem<const EngineDefaultAssets>();
+                // 워커 스레드에서 도는 작업이라 `editor::` 서비스 조회(에디터 스레드 전용)를 하지 않는다. 호출 스레드가 찾은 서비스를 인자로 받는다.
+                // 없으면 결과가 false 로 남아 기동이 멈춘다.
+                const EngineDefaultAssets* pEngineDefaultAssets = args.get<const EngineDefaultAssets*>( 2 );
                 const bool                 bNotReady            = pPass == nullptr || pResult == nullptr || pEngineDefaultAssets == nullptr;
                 if ( bNotReady )
                 {
@@ -157,7 +157,7 @@ namespace sw::editor
             {
                 shared_ptr<RenderPipelineAsset> pPipeline            = args.get<shared_ptr<RenderPipelineAsset>>( 0 );
                 shared_ptr<SplashLoadResult>    pResult              = args.get<shared_ptr<SplashLoadResult>>( 1 );
-                const EngineDefaultAssets*      pEngineDefaultAssets = editor::findSubsystem<const EngineDefaultAssets>();
+                const EngineDefaultAssets*      pEngineDefaultAssets = args.get<const EngineDefaultAssets*>( 2 ); // 워커라 조회하지 않고 인자로 받는다
                 const bool                      bNotReady            = pPipeline == nullptr || pResult == nullptr || pEngineDefaultAssets == nullptr;
                 if ( bNotReady )
                 {
@@ -630,15 +630,23 @@ namespace sw::editor
 
         const shared_ptr<ImGuiEditorInternal::SplashLoadResult> pResult = sw::make_shared<ImGuiEditorInternal::SplashLoadResult>();
 
+        // 서비스 조회는 에디터 스레드(이 스레드)에서 하고 워커에는 인자로 넘긴다. 없으면 워커를 띄우지 않고 멈춘다.
+        const EngineDefaultAssets* pEngineDefaultAssets = editor::findSubsystem<const EngineDefaultAssets>();
+        if ( pEngineDefaultAssets == nullptr )
+        {
+            SW_LOG_ERROR( "EngineDefaultAssets service is not bound - cannot load splash resources" );
+            return SubsystemInitResult::Failed;
+        }
+
         TaskHandle hDefault = pTaskManager->emplaceTask(
             "EditorSplash_DefaultRenderPass",
             SW_DELEGATE_FUNCTION( TaskArgsDelegate, ImGuiEditorInternal::loadSplashDefaultRenderPass ),
-            MakeTaskArgs( defaultPass, pResult ) );
+            MakeTaskArgs( defaultPass, pResult, pEngineDefaultAssets ) );
 
         TaskHandle hForward = pTaskManager->emplaceTask(
             "EditorSplash_ForwardPipeline",
             SW_DELEGATE_FUNCTION( TaskArgsDelegate, ImGuiEditorInternal::loadSplashForwardPipeline ),
-            MakeTaskArgs( forwardPipeline, pResult ) );
+            MakeTaskArgs( forwardPipeline, pResult, pEngineDefaultAssets ) );
 
         TaskStageHandle stage = pTaskManager->createStage( "EditorSplashLoad" );
         stage.addTask( hDefault ).addTask( hForward );

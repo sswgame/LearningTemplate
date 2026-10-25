@@ -399,7 +399,7 @@ namespace sw::editor
 
         ImGui::SameLine();
         if ( ImGui::Button( "Unlink" ) )
-            EditorInspectorCommands::unlinkPrefab( pObj ); // 부품이면 맨 바깥 인스턴스를 한 겹 푼다
+            (void)EditorInspectorCommands::unlinkPrefab( pObj ); // 거절 이유는 명령이 경고 로그로 남긴다. 부품이면 맨 바깥 인스턴스를 한 겹 푼다
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "UnlinkPrefab" ) );
 
         // 중첩 부품이면 바깥 인스턴스의 프리팹에도 적용할 수 있다 — 부품의 수정이 바깥 프리팹의 노드 오버라이드(`<Part>` 포함)가 된다.
