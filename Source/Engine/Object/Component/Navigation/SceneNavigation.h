@@ -233,7 +233,7 @@ namespace sw
         vector<NavMeshAgentComponent*>       _listAgent;
         vector<NavMeshSurfaceComponent*>     _listSurface;
         vector<NavMeshObstacleComponent*>    _listObstacle;
-        vector<NavMeshLinkComponent*>        _listLink;
+        vector<NavMeshLinkComponent*>        _listLink;            ///< 링크 컴포넌트(등록 · 해제는 `_navIndex` 로 O(1)). 순회는 매 갱신 `applyLinkStates` 의 켜짐 표지 확인과 `findLink`(에이전트가 링크에 오른 첫 갱신) 뿐이다. 링크는 문 · 사다리 · 점프 지점이라 씬당 수십 ~ 수백이어서 선형으로 충분하다. 수천이 되면 껐다 켠 링크만 모으는 목록과 id 색인으로 바꾼다
         RegistrationList<INavGeometrySource> _listGeometrySource;  ///< 등록 순서(빼도 순서 유지) — 한 주인을 여러 소스가 맡으면 먼저 등록한 것이 이긴다. 순서가 뜻이라 순서를 버리는 `IndexedPtrList` 로 바꾸지 않는다(소스가 수천이 되면 순서 보존 색인이 필요하다)
         vector<hashed_string>                _listFailedAgentType; ///< 모르는 종류 — 오류를 한 번만
         NavTileRebaker                       _tileRebaker;

@@ -76,6 +76,7 @@ cd build/Ninja-Debug/Bin
 
 ## 데이터
 
+- `Resource/game/starskirmish/data/unitmodels.xml` 이 유닛 id 마다 키트 모델과 폭을 든다(units.xml 의 모든 유닛이 한 줄씩 있어야 판이 열린다).
 - `Resource/game/starskirmish/data/units.xml` 에 자원 셋, 건물 아홉, 유닛 일곱이 있습니다. 엔진 밖 하니스로 확인한 결과, AI 대 AI 는 422초에 1번(운영)이 이기고,
   사람이 아무것도 하지 않으면 284초에 집니다.
 - 유닛 종류와 모델의 대응 테이블은 `SkirmishUnitComponent` 에 있습니다.

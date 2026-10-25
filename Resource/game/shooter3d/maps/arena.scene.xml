@@ -1038,7 +1038,14 @@
 					                          _pacingSeed="1"
 					                          _effectPoolSize="32"
 					                          _tracerPoolSize="24"
+					                          _eliteEnemyPreset="SkeletonWarrior"
 					                          _bAutoPlay="false">
+						<_listEnemyPreset>
+							<item>SkeletonMinion</item>
+							<item>SkeletonRaider</item>
+							<item>SkeletonRogue</item>
+							<item>SkeletonRaider</item>
+						</_listEnemyPreset>
 						<_listSpawnPoint>
 							<item>42</item>
 							<item>43</item>

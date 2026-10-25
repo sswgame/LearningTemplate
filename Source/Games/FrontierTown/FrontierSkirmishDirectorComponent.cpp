@@ -23,9 +23,9 @@ namespace sw
 {
     FrontierSkirmishDirectorComponent::FrontierSkirmishDirectorComponent()
         : _unitPrefab{}
-        , _workerUnit{ "worker" }
-        , _soldierUnit{ "marine" }
-        , _barracksUnit{ "barracks" }
+        , _workerUnit{}
+        , _soldierUnit{}
+        , _barracksUnit{}
         , _barracksX{ 20 }
         , _barracksY{ 20 }
         , _workerStart{ 2.5f, 0.0f, 2.5f }
@@ -86,6 +86,18 @@ namespace sw
             SW_LOG_WARNING( "[Frontier] the skirmish cannot start - the RTS unit catalog is not loaded" );
             return false;
         }
+        // 유닛 id 는 씬 데이터가 정본이다(C++ 에 기본값이 없다). 비었거나 카탈로그에 없으면 조용히 건너뛰지 않고 판을 열지 않는다.
+        const RTSCatalog* pCatalog    = game::findSubsystem<RTSCatalog>();
+        bool              bUnitsKnown = true;
+        for ( const string* pUnitID : { &_workerUnit, &_soldierUnit, &_barracksUnit } )
+        {
+            if ( pCatalog != nullptr && pCatalog->find( hashed_string( *pUnitID ) ) != nullptr )
+                continue;
+            SW_LOG_ERROR( "[Frontier] the skirmish unit '%#' is empty or not in the RTS unit catalog - the skirmish cannot start", pUnitID->c_str() );
+            bUnitsKnown = false;
+        }
+        if ( bUnitsKnown == false )
+            return false;
         if ( pState->isFreshGame() )
         {
             _worker  = _world.spawnUnit( hashed_string( _workerUnit ), 0, _workerStart );

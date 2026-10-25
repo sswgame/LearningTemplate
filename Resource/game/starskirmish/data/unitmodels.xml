@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- StarSkirmish 의 유닛 id → Kenney Space Kit 모델(SkirmishUnitModelCatalog). units.xml 의 모든 유닛이 한 줄씩 있어야 한다(없으면 판을 열지 않는다).
+     model = game/starskirmish/models/<이름>.mesh 의 이름, width = 모델의 가로 폭(가장 넓은 수평 축, m).
+     키트 모델은 크기가 제각각이라(안테나 0.75 · 격납고 3.3) 모델마다 폭을 두고 Footprint Fill · Unit Fill 로 늘린다. -->
+<SkirmishUnitModels>
+  <!-- 자원 -->
+  <Model id="minerals" model="rock_crystals" width="0.85"/>
+  <Model id="rich_minerals" model="rock_crystals" width="0.85"/>
+  <Model id="geyser" model="crater" width="0.83"/>
+
+  <!-- 건물 -->
+  <Model id="command_center" model="hangar_large_a" width="3.0"/>
+  <Model id="supply_depot" model="machine_generator" width="0.7"/>
+  <Model id="refinery" model="structure" width="1.0"/>
+  <Model id="barracks" model="hangar_small_a" width="2.0"/>
+  <Model id="academy" model="machine_wireless" width="0.75"/>
+  <Model id="factory" model="hangar_round_a" width="3.27"/>
+  <Model id="starport" model="platform_large" width="2.0"/>
+  <Model id="bunker" model="turret_double" width="0.9"/>
+  <Model id="missile_turret" model="turret_single" width="0.72"/>
+
+  <!-- 유닛 -->
+  <Model id="worker" model="craft_miner" width="2.6"/>
+  <Model id="marine" model="craft_speeder_a" width="2.1"/>
+  <Model id="firebat" model="craft_speeder_b" width="2.03"/>
+  <Model id="vulture" model="craft_racer" width="2.03"/>
+  <Model id="tank" model="craft_cargo_a" width="2.45"/>
+  <Model id="goliath" model="craft_speeder_b" width="2.03"/>
+  <Model id="wraith" model="craft_racer" width="2.03"/>
+</SkirmishUnitModels>
