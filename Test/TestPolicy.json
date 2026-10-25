@@ -122,8 +122,8 @@
       "softwareRenderCases": [
         "RHIDeviceTest.DeviceCreationAllBackends.*",
         "RHIDeviceTest.BackendSweepVisitsEveryBackendThatStandsUp",
-        "RHIDeviceTest.CommandListCreationAndExecution",
-        "RHIDeviceTest.BindlessResourceLifecycle",
+        "RHIDeviceTest.CommandListCreationAndExecution.*",
+        "RHIDeviceTest.BindlessResourceLifecycle.*",
         "RHIDeviceTest.UploadTexture2DAllBackends.*",
         "WindowTest.X11ClipboardRoundTripsBetweenWindowsIncludingIncr",
         "X11DevConsoleTest.OverlayDrawsLatinLineAndSurvivesUtf8Lines"

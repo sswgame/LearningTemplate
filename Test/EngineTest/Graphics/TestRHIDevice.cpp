@@ -494,7 +494,7 @@ SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, UnifiedPipelineStateAndRenderPassAllB
 /**
  * @brief [RHIDeviceTest] 바인들리스 리소스 수명
  */
-SW_TEST_CASE( RHIDeviceTest, BindlessResourceLifecycle )
+SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, BindlessResourceLifecycle, test::listRHIBackendParameter, 0.4 )
 {
     // 이 호스트에 없는 백엔드(리눅스의 DX)는 `RHITestDevice` 가 창을 띄우기 전에 거른다 — 목록을 플랫폼마다 가를 필요가 없다.
     test::RHITestDevice rhiDevice( { sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::OpenGL, sw::RHIBackend::Vulkan } );
@@ -1458,7 +1458,7 @@ SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, TextureFormatQueryAndBackBufferFormat
 /**
  * @brief [RHIDeviceTest] 커맨드 리스트 생성과 실행
  */
-SW_TEST_CASE( RHIDeviceTest, CommandListCreationAndExecution )
+SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, CommandListCreationAndExecution, test::listRHIBackendParameter, 0.4 )
 {
     test::RHITestDevice rhiDevice( { sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::OpenGL } );
     if ( rhiDevice.isReady() == false )

@@ -51,7 +51,10 @@ namespace test
         RHITestDevice() = default;
         /** @brief 이 백엔드로 세운다. 실패하면 `isReady()` 가 false 다. */
         explicit RHITestDevice( sw::RHIBackend backend );
-        /** @brief 목록에서 **처음으로 서는** 백엔드로 세운다. 다 실패하면 `isReady()` 가 false 다. */
+        /**
+         * @brief 목록에서 **처음으로 서는** 백엔드로 세운다. 다 실패하면 `isReady()` 가 false 다.
+         * @details 백엔드마다 가른 케이스(`SW_TEST_CASE_PER_PARAMETER( …, listRHIBackendParameter, … )`) 안에서는 목록이 그 케이스의 백엔드 하나로 좁아진다(목록에 없으면 서지 않는다).
+         */
         explicit RHITestDevice( std::initializer_list<sw::RHIBackend> listBackend );
         ~RHITestDevice();
 

@@ -66,7 +66,9 @@ namespace test
 
     RHITestDevice::RHITestDevice( std::initializer_list<sw::RHIBackend> listBackend )
     {
-        for ( const sw::RHIBackend backend : listBackend )
+        sw::vector<sw::RHIBackend> listCandidate( listBackend.begin(), listBackend.end() );
+        restrictToCaseBackend( listCandidate ); // 백엔드마다 가른 케이스면 그 백엔드만(목록에 없으면 서지 않는다)
+        for ( const sw::RHIBackend backend : listCandidate )
         {
             if ( initialize( backend ) )
                 return;
