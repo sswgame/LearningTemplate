@@ -38,16 +38,13 @@ namespace sw::editor
             static void collectProbes( GameObjectManager& manager, vector<ReflectionProbeComponent*>& outListProbe )
             {
                 outListProbe.clear();
-                if ( EditorContext::get() != nullptr )
+                vector<GameObject*> listSelected;
+                editor::getMainSceneSelection().getSelectedObjects( listSelected );
+                for ( GameObject* pObject : listSelected )
                 {
-                    vector<GameObject*> listSelected;
-                    editor::getMainSceneSelection().getSelectedObjects( listSelected );
-                    for ( GameObject* pObject : listSelected )
-                    {
-                        ReflectionProbeComponent* pProbe = ( pObject != nullptr ) ? pObject->getComponent<ReflectionProbeComponent>() : nullptr;
-                        if ( pProbe != nullptr )
-                            outListProbe.push_back( pProbe );
-                    }
+                    ReflectionProbeComponent* pProbe = ( pObject != nullptr ) ? pObject->getComponent<ReflectionProbeComponent>() : nullptr;
+                    if ( pProbe != nullptr )
+                        outListProbe.push_back( pProbe );
                 }
                 if ( outListProbe.empty() == false )
                     return;
@@ -265,12 +262,10 @@ namespace sw::editor
     void EditorReflectionProbeBakeSession::finish( bool bCanceled )
     {
         _run.end();
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
-            return;
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
         if ( _bakedCount > 0 )
-            pContext->getSubsystem<EditorWorkspace>().markSceneDirty(); // 프로브의 경로가 바뀌었다 — 저장해야 남는다
-        EditorNotificationManager& notification = pContext->getSubsystem<EditorNotificationManager>();
+            editorContext.getSubsystem<EditorWorkspace>().markSceneDirty(); // 프로브의 경로가 바뀌었다 — 저장해야 남는다
+        EditorNotificationManager& notification = editorContext.getSubsystem<EditorNotificationManager>();
         const uint32               probeCount   = getProbeCount();
         utf8                       arrMessage[constant::kMaxBuffer512];
         if ( probeCount == 0 )

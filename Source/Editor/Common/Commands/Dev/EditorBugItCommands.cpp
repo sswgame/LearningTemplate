@@ -21,14 +21,12 @@ namespace sw::editor
         void runReportBug()
         {
             string         directory;
-            const bool     bCaptured = BugItReport::capture( BugItReport::makeInputs( "editor" ), directory );
-            EditorContext* pContext  = EditorContext::get();
-            if ( pContext == nullptr )
-                return;
+            const bool     bCaptured     = BugItReport::capture( BugItReport::makeInputs( "editor" ), directory );
+            EditorContext& editorContext = editor::getSubsystem<EditorContext>();
             if ( bCaptured )
-                pContext->getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyBugReportSaved" ), directory, NotificationType::Success );
+                editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyBugReportSaved" ), directory, NotificationType::Success );
             else
-                pContext->getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyBugReportTitle" ), SW_LOCKEY( "EdCommon", "NotifyBugReportFailed" ), NotificationType::Error );
+                editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyBugReportTitle" ), SW_LOCKEY( "EdCommon", "NotifyBugReportFailed" ), NotificationType::Error );
         }
     } // namespace
 

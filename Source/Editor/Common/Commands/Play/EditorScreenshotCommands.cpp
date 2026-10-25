@@ -44,14 +44,12 @@ namespace sw::editor
 
     void EditorScreenshotCommands::captureSceneView()
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
-            return;
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
         // 씬 뷰 RT 는 에디터가 만든 R8G8B8A8_UNORM 이다(`EditorContext::ensureViewTargetSize`).
-        const uint64 renderTarget = pContext->getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Scene )._renderTarget;
+        const uint64 renderTarget = editorContext.getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Scene )._renderTarget;
         if ( renderTarget == 0 )
         {
-            pContext->getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyScreenshotTitle" ), SW_LOCKEY( "EdCommon", "NotifyScreenshotNoSceneView" ), NotificationType::Warning );
+            editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyScreenshotTitle" ), SW_LOCKEY( "EdCommon", "NotifyScreenshotNoSceneView" ), NotificationType::Warning );
             return;
         }
         EditorScreenshotCommandsInternal::request( ScreenshotPathUtil::makeDefaultPathNow(), static_cast<RHITextureHandle>( renderTarget ) );
@@ -77,13 +75,11 @@ namespace sw::editor
             return;
         captureState._waitSerial = invalid_index::kUint32;
 
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
-            return;
-        const string path = RenderThread::getLastScreenshotPath();
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+        const string   path          = RenderThread::getLastScreenshotPath();
         if ( path.empty() )
-            pContext->getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyScreenshotTitle" ), SW_LOCKEY( "EdCommon", "NotifyScreenshotFailed" ), NotificationType::Error );
+            editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyScreenshotTitle" ), SW_LOCKEY( "EdCommon", "NotifyScreenshotFailed" ), NotificationType::Error );
         else
-            pContext->getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyScreenshotSaved" ), path, NotificationType::Success );
+            editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyScreenshotSaved" ), path, NotificationType::Success );
     }
 } // namespace sw::editor

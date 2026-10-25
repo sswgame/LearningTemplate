@@ -31,18 +31,17 @@ namespace sw::editor
 
             static bool canKeepChanges()
             {
-                EditorContext* pContext = EditorContext::get();
-                return isSessionRunning() && pContext != nullptr && editor::getMainSceneSelection().getSelectedObjectCount() > 0;
+                return isSessionRunning() && editor::getMainSceneSelection().getSelectedObjectCount() > 0;
             }
 
             static void runToggleEject() { EditorPlayCommands::toggleEject(); }
 
             static void runKeepChanges()
             {
-                const uint32   keptCount = EditorPlayCommands::keepSelectedChanges();
-                EditorContext* pContext  = EditorContext::get();
-                if ( pContext != nullptr && keptCount > 0 )
-                    pContext->getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyKeepSimulationTitle" ), SW_LOCKEY( "EdCommon", "NotifyKeepSimulation" ), NotificationType::Info );
+                const uint32   keptCount     = EditorPlayCommands::keepSelectedChanges();
+                EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+                if ( keptCount > 0 )
+                    editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyKeepSimulationTitle" ), SW_LOCKEY( "EdCommon", "NotifyKeepSimulation" ), NotificationType::Info );
             }
 
             static void runLaunchStandalone() { (void)EditorPlayCommands::launchStandalone(); } // 실패는 알림 · 로그가 알린다
@@ -68,9 +67,9 @@ namespace sw::editor
 
     void EditorPlayCommands::update()
     {
-        PlaySessionData* pData    = EditorPlaySession::findData();
-        EditorContext*   pContext = EditorContext::get();
-        if ( pData == nullptr || pContext == nullptr )
+        PlaySessionData* pData         = EditorPlaySession::findData();
+        EditorContext&   editorContext = editor::getSubsystem<EditorContext>();
+        if ( pData == nullptr )
             return;
         if ( pData->_state == PlaySessionState::Stopped )
         {
@@ -79,7 +78,7 @@ namespace sw::editor
             if ( pData->_bMaximizedForPlay == SW_TRUE )
             {
                 pData->_bMaximizedForPlay = SW_FALSE;
-                if ( pContext->getSubsystem<IEditorPanelHost>().restoreMaximizedLayout() == false )
+                if ( editorContext.getSubsystem<IEditorPanelHost>().restoreMaximizedLayout() == false )
                     SW_LOG_WARNING( "The layout before Maximize On Play is gone - use Panel > Reset Layout" );
             }
             return;
@@ -89,14 +88,14 @@ namespace sw::editor
         pData->_bOptionsApplied = SW_TRUE;
         // Simulate 는 씬 뷰로 지켜보는 세션이라 게임 뷰를 키우지 않는다(유니티 Maximize On Play 도 게임 뷰의 플레이에만).
         if ( getPreferences<EditorPlayPreferences>()._bMaximizeOnPlay && pData->_bSimulate == SW_FALSE )
-            pData->_bMaximizedForPlay = pContext->getSubsystem<IEditorPanelHost>().maximizePanel( editorpanel::kGameView ) ? SW_TRUE : SW_FALSE;
+            pData->_bMaximizedForPlay = editorContext.getSubsystem<IEditorPanelHost>().maximizePanel( editorpanel::kGameView ) ? SW_TRUE : SW_FALSE;
     }
 
     void EditorPlayCommands::toggleEject()
     {
-        EditorContext*   pContext             = EditorContext::get();
+        EditorContext&   editorContext        = editor::getSubsystem<EditorContext>();
         PlaySessionData* pData                = EditorPlaySession::findData();
-        const bool       bNoActivePlaySession = pContext == nullptr || pData == nullptr || pData->_state == PlaySessionState::Stopped;
+        const bool       bNoActivePlaySession = pData == nullptr || pData->_state == PlaySessionState::Stopped;
         if ( bNoActivePlaySession )
             return;
         if ( EditorPlaySession::isPlayerActive( *pData ) )
@@ -105,27 +104,26 @@ namespace sw::editor
             if ( pData->_bMaximizedForPlay == SW_TRUE )
             {
                 pData->_bMaximizedForPlay = SW_FALSE;
-                (void)pContext->getSubsystem<IEditorPanelHost>().restoreMaximizedLayout(); // 없으면 지금 배치 그대로 씬 뷰를 연다
+                (void)editorContext.getSubsystem<IEditorPanelHost>().restoreMaximizedLayout(); // 없으면 지금 배치 그대로 씬 뷰를 연다
             }
             EditorPlaySession::simulate();
             pData->_bEjected = SW_TRUE;
-            (void)pContext->getSubsystem<IEditorPanelHost>().focusPanel( editorpanel::kSceneView ); // 패널이 없으면 세션만 바뀐다
+            (void)editorContext.getSubsystem<IEditorPanelHost>().focusPanel( editorpanel::kSceneView ); // 패널이 없으면 세션만 바뀐다
             return;
         }
         if ( pData->_bEjected == SW_TRUE )
         {
             EditorPlaySession::play();
             pData->_bEjected = SW_FALSE;
-            (void)pContext->getSubsystem<IEditorPanelHost>().focusPanel( editorpanel::kGameView ); // 패널이 없으면 세션만 바뀐다
+            (void)editorContext.getSubsystem<IEditorPanelHost>().focusPanel( editorpanel::kGameView ); // 패널이 없으면 세션만 바뀐다
         }
     }
 
     uint32 EditorPlayCommands::keepSelectedChanges()
     {
         // 플레이 세션은 메인 월드에서 돈다 — 남길 변경은 메인 씬의 선택이다.
-        EditorContext*   pContext             = EditorContext::get();
         PlaySessionData* pData                = EditorPlaySession::findData();
-        const bool       bNoActivePlaySession = pContext == nullptr || pData == nullptr || pData->_state == PlaySessionState::Stopped;
+        const bool       bNoActivePlaySession = pData == nullptr || pData->_state == PlaySessionState::Stopped;
         if ( bNoActivePlaySession )
             return 0;
         vector<GameObject*> listSelected;
@@ -140,18 +138,17 @@ namespace sw::editor
 
     bool EditorPlayCommands::launchStandalone()
     {
-        EditorContext* pContext       = EditorContext::get();
+        EditorContext& editorContext  = editor::getSubsystem<EditorContext>();
         const Scene*   pScene         = editor::getActiveScene();
-        const bool     bSceneNotSaved = pContext == nullptr || pScene == nullptr || pScene->getSourcePath().empty();
+        const bool     bSceneNotSaved = pScene == nullptr || pScene->getSourcePath().empty();
         if ( bSceneNotSaved )
         {
-            if ( pContext != nullptr )
-                pContext->getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyPlayNewWindowTitle" ), SW_LOCKEY( "EdCommon", "NotifyPlayNewWindowSaveFirst" ), NotificationType::Warning );
+            editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyPlayNewWindowTitle" ), SW_LOCKEY( "EdCommon", "NotifyPlayNewWindowSaveFirst" ), NotificationType::Warning );
             return false;
         }
         // 새 창은 디스크의 씬을 연다(언리얼 Standalone 처럼) — 저장하지 않은 편집은 들어가지 않는다고 알린다.
-        if ( pContext->getSubsystem<EditorWorkspace>().isSceneDirty() )
-            pContext->getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyPlayNewWindowTitle" ), SW_LOCKEY( "EdCommon", "NotifyPlayNewWindowUnsaved" ), NotificationType::Warning );
+        if ( editorContext.getSubsystem<EditorWorkspace>().isSceneDirty() )
+            editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyPlayNewWindowTitle" ), SW_LOCKEY( "EdCommon", "NotifyPlayNewWindowUnsaved" ), NotificationType::Warning );
         const string command = makeStandaloneCommand( FileUtil::getExecutablePath(), pScene->getSourcePath(), getPreferences<EditorPlayPreferences>()._standaloneArguments );
         if ( Process::launchDetached( command ) == false )
         {
