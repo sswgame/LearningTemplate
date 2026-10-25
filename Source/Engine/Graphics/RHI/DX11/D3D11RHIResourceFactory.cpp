@@ -51,20 +51,20 @@ namespace sw
 
     void D3D11RHIResourceFactory::updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size )
     {
-        const bool bInvalidConstantBufferUpdate = buffer == 0 || pData == nullptr || _pDevice->_deviceContext == nullptr;
+        const bool bInvalidConstantBufferUpdate = buffer == 0 || pData == nullptr || _pDevice->_immediateContext.isValid() == false;
         if ( bInvalidConstantBufferUpdate )
             return;
         ID3D11Buffer* pResource = _pDevice->resolveBuffer( buffer );
         if ( pResource == nullptr )
             return;
-        // 기록 밖(에셋 · 머티리얼 파라미터)의 갱신이다 — 즉시 컨텍스트에 쓴다. 즉시 컨텍스트는 스레드 안전하지 않으므로 잠근다.
+        // 기록 밖(에셋 · 머티리얼 파라미터)의 갱신이다 — 즉시 컨텍스트에 쓴다. Map 과 Unmap 사이에 렌더 스레드의 드로우가 끼지 않게 잠근다.
         // 기록 중의 갱신은 리스트의 Deferred Context 로 가는 `IRHICommandList::updateConstantBuffer` 다.
-        D3D11_MAPPED_SUBRESOURCE mapped{};
-        std::scoped_lock<mutex>  lock{ _pDevice->_immediateContextMutex };
-        if ( SUCCEEDED( _pDevice->_deviceContext->Map( pResource, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped ) ) )
+        D3D11_MAPPED_SUBRESOURCE                mapped{};
+        const D3D11ImmediateContext::ScopedLock context = _pDevice->_immediateContext.lock();
+        if ( SUCCEEDED( context->Map( pResource, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped ) ) )
         {
             Memory::copy( mapped.pData, pData, size );
-            _pDevice->_deviceContext->Unmap( pResource, 0 );
+            context->Unmap( pResource, 0 );
         }
     }
 
@@ -152,15 +152,15 @@ namespace sw
     void D3D11RHIResourceFactory::updateStructuredBufferRegions( RHIBufferHandle buffer, const void* pBaseSource,
                                                                  const RHIBufferCopyRegion* pRegions, uint32 regionCount )
     {
-        const bool bInvalidBufferRegionUpdate = buffer == 0 || pBaseSource == nullptr || pRegions == nullptr || regionCount == 0 || _pDevice->_deviceContext == nullptr;
+        const bool bInvalidBufferRegionUpdate = buffer == 0 || pBaseSource == nullptr || pRegions == nullptr || regionCount == 0 || _pDevice->_immediateContext.isValid() == false;
         if ( bInvalidBufferRegionUpdate )
             return;
         ID3D11Buffer* pResource = _pDevice->resolveBuffer( buffer );
         if ( pResource == nullptr )
             return;
 
-        const uint8*            pBase = static_cast<const uint8*>( pBaseSource );
-        std::scoped_lock<mutex> lock{ _pDevice->_immediateContextMutex };
+        const uint8*                            pBase   = static_cast<const uint8*>( pBaseSource );
+        const D3D11ImmediateContext::ScopedLock context = _pDevice->_immediateContext.lock();
         for ( uint32 regionIndex = 0; regionIndex < regionCount; ++regionIndex )
         {
             const RHIBufferCopyRegion& region = pRegions[regionIndex];
@@ -175,7 +175,7 @@ namespace sw
                 pResource->GetDesc( &desc );
                 if ( region._sizeBytes >= desc.ByteWidth )
                 {
-                    _pDevice->_deviceContext->UpdateSubresource( pResource, 0, nullptr, pBase, region._sizeBytes, 0 );
+                    context->UpdateSubresource( pResource, 0, nullptr, pBase, region._sizeBytes, 0 );
                     continue;
                 }
             }
@@ -188,7 +188,7 @@ namespace sw
             box.bottom = 1;
             box.front  = 0;
             box.back   = 1;
-            _pDevice->_deviceContext->UpdateSubresource( pResource, 0, &box, pBase + region._srcOffset, region._sizeBytes, 0 );
+            context->UpdateSubresource( pResource, 0, &box, pBase + region._srcOffset, region._sizeBytes, 0 );
         }
     }
 
@@ -201,7 +201,7 @@ namespace sw
     {
         // 정점 버퍼도 DEFAULT 사용 버퍼다(createFilledBuffer) — 즉시 컨텍스트의 UpdateSubresource 상자 갱신이 그대로 맞고, 순서는 드라이버가 맞춘다.
         // 범위는 여기서 본다. 상자가 버퍼를 넘으면 D3D11 은 호출을 조용히 버린다.
-        ID3D11Buffer* pResource = ( buffer != 0 && _pDevice->_deviceContext != nullptr ) ? _pDevice->resolveBuffer( buffer ) : nullptr;
+        ID3D11Buffer* pResource = ( buffer != 0 && _pDevice->_immediateContext.isValid() ) ? _pDevice->resolveBuffer( buffer ) : nullptr;
         if ( pResource == nullptr || pRegions == nullptr )
             return;
         D3D11_BUFFER_DESC desc{};
@@ -303,7 +303,7 @@ namespace sw
     bool D3D11RHIResourceFactory::readReadbackBuffer( RHIBufferHandle readback, uint32 sizeBytes, void* pDestination )
     {
         ID3D11Buffer* pBuffer     = _pDevice->resolveBuffer( readback );
-        const bool    bUnreadable = pBuffer == nullptr || pDestination == nullptr || sizeBytes == 0 || _pDevice->_deviceContext == nullptr;
+        const bool    bUnreadable = pBuffer == nullptr || pDestination == nullptr || sizeBytes == 0 || _pDevice->_immediateContext.isValid() == false;
         if ( bUnreadable )
             return false;
         D3D11_BUFFER_DESC bufferDesc{};
@@ -314,20 +314,20 @@ namespace sw
             SW_LOG_ERROR( "readReadbackBuffer: buffer %# is not a readback buffer of at least %# bytes", readback, sizeBytes );
             return false;
         }
-        // 즉시 컨텍스트는 스레드 안전하지 않다. 기다리지 않는다 — GPU 가 아직이면(콜백 계약 밖) 실패로 돌려준다.
-        D3D11_MAPPED_SUBRESOURCE mapped{};
-        std::scoped_lock<mutex>  lock{ _pDevice->_immediateContextMutex };
-        if ( FAILED( _pDevice->_deviceContext->Map( pBuffer, 0, D3D11_MAP_READ, D3D11_MAP_FLAG_DO_NOT_WAIT, &mapped ) ) || mapped.pData == nullptr )
+        // Map 에서 Unmap 까지 한 덩어리로 잠근다. 기다리지 않는다 — GPU 가 아직이면(콜백 계약 밖) 실패로 돌려준다.
+        D3D11_MAPPED_SUBRESOURCE                mapped{};
+        const D3D11ImmediateContext::ScopedLock context = _pDevice->_immediateContext.lock();
+        if ( FAILED( context->Map( pBuffer, 0, D3D11_MAP_READ, D3D11_MAP_FLAG_DO_NOT_WAIT, &mapped ) ) || mapped.pData == nullptr )
             return false;
         Memory::copy( pDestination, mapped.pData, sizeBytes );
-        _pDevice->_deviceContext->Unmap( pBuffer, 0 );
+        context->Unmap( pBuffer, 0 );
         return true;
     }
 
     RHITransferSubmit D3D11RHIResourceFactory::submitTextureUpload( RHITextureHandle texture, const RHITextureUploadDesc& desc )
     {
         D3D11RHIDevice::TextureRecord* pRecord               = _pDevice->resolveTexture( texture );
-        const bool                     bTextureNotUploadable = pRecord == nullptr || pRecord->_texture == nullptr || _pDevice->_deviceContext == nullptr;
+        const bool                     bTextureNotUploadable = pRecord == nullptr || pRecord->_texture == nullptr || _pDevice->_immediateContext.isValid() == false;
         if ( bTextureNotUploadable )
         {
             SW_LOG_ERROR( "submitTextureUpload: texture %# or the device context is not usable", texture );
@@ -359,17 +359,17 @@ namespace sw
 
         // UpdateSubresource 는 소스를 그 자리에서 복사하고(계약 1) 즉시 컨텍스트 큐에 순서대로 들어가므로 앞서 제출된 프레임 뒤, 뒤이은 드로우 앞에서 실행된다(계약 3).
         // 끝은 큐 뒤에 단 이벤트 쿼리가 알린다. 시리얼은 같은 락 안에서 매긴다(계약 5).
-        std::scoped_lock<mutex>             lock{ _pDevice->_immediateContextMutex };
-        Microsoft::WRL::ComPtr<ID3D11Query> query = _pDevice->acquireTransferQuery();
+        const D3D11ImmediateContext::ScopedLock context = _pDevice->_immediateContext.lock();
+        Microsoft::WRL::ComPtr<ID3D11Query>     query   = _pDevice->acquireTransferQuery( context );
         if ( query == nullptr )
             return RHITransferSubmit::rejected();
         for ( uint32 mip = 0; mip < mipCount; ++mip )
         {
             const RHITextureMipSpan& span        = arrMip[mip];
             const UINT               subresource = D3D11CalcSubresource( span._mip, desc._arraySlice, texDesc.MipLevels );
-            _pDevice->_deviceContext->UpdateSubresource( pRecord->_texture.Get(), subresource, nullptr, span._pData, span._rowBytes, span._sizeBytes );
+            context->UpdateSubresource( pRecord->_texture.Get(), subresource, nullptr, span._pData, span._rowBytes, span._sizeBytes );
         }
-        const uint64 serial = _pDevice->endTransfer( std::move( query ) );
+        const uint64 serial = _pDevice->endTransfer( context, std::move( query ) );
         pRecord->_lastTransferSerial.store( serial );
         return _pDevice->_transferSerials.makeAccepted( serial );
     }
@@ -377,7 +377,7 @@ namespace sw
     RHITransferSubmit D3D11RHIResourceFactory::submitTextureRegionUpload( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc )
     {
         D3D11RHIDevice::TextureRecord* pRecord                     = _pDevice->resolveTexture( texture );
-        const bool                     bTextureRegionNotUploadable = pRecord == nullptr || pRecord->_texture == nullptr || _pDevice->_deviceContext == nullptr || pRecord->_bDepth != SW_FALSE;
+        const bool                     bTextureRegionNotUploadable = pRecord == nullptr || pRecord->_texture == nullptr || _pDevice->_immediateContext.isValid() == false || pRecord->_bDepth != SW_FALSE;
         if ( bTextureRegionNotUploadable )
         {
             SW_LOG_ERROR( "submitTextureRegionUpload: texture %# is missing, a depth texture, or the device context is not usable", texture );
@@ -391,14 +391,14 @@ namespace sw
             return RHITransferSubmit::rejected();
 
         // 박스는 밉 안의 픽셀 좌표다(끝은 포함하지 않는다). 즉시 컨텍스트 큐에 순서대로 들어가 앞서 제출된 프레임 뒤, 뒤이은 드로우 앞에서 실행된다.
-        const D3D11_BOX                     box{ desc._x, desc._y, 0, desc._x + desc._width, desc._y + desc._height, 1 };
-        const UINT                          subresource = D3D11CalcSubresource( desc._mip, desc._arraySlice, texDesc.MipLevels );
-        std::scoped_lock<mutex>             lock{ _pDevice->_immediateContextMutex };
-        Microsoft::WRL::ComPtr<ID3D11Query> query = _pDevice->acquireTransferQuery();
+        const D3D11_BOX                         box{ desc._x, desc._y, 0, desc._x + desc._width, desc._y + desc._height, 1 };
+        const UINT                              subresource = D3D11CalcSubresource( desc._mip, desc._arraySlice, texDesc.MipLevels );
+        const D3D11ImmediateContext::ScopedLock context     = _pDevice->_immediateContext.lock();
+        Microsoft::WRL::ComPtr<ID3D11Query>     query       = _pDevice->acquireTransferQuery( context );
         if ( query == nullptr )
             return RHITransferSubmit::rejected();
-        _pDevice->_deviceContext->UpdateSubresource( pRecord->_texture.Get(), subresource, &box, desc._pData, rowBytes, rowBytes * desc._height );
-        const uint64 serial = _pDevice->endTransfer( std::move( query ) );
+        context->UpdateSubresource( pRecord->_texture.Get(), subresource, &box, desc._pData, rowBytes, rowBytes * desc._height );
+        const uint64 serial = _pDevice->endTransfer( context, std::move( query ) );
         pRecord->_lastTransferSerial.store( serial );
         return _pDevice->_transferSerials.makeAccepted( serial );
     }
@@ -406,12 +406,12 @@ namespace sw
     RHITransferStatus D3D11RHIResourceFactory::pollTransfer( RHITransferTicket ticket )
     {
         const RHITransferStatus status = _pDevice->_transferSerials.classify( ticket );
-        if ( status != RHITransferStatus::Pending || _pDevice->_deviceContext == nullptr )
+        if ( status != RHITransferStatus::Pending || _pDevice->_immediateContext.isValid() == false )
             return status;
         // 즉시 컨텍스트에 묻는다(플래그 0 이라 명령을 GPU 로 내보낸다). 프레임을 돌리지 않아도 되풀이하면 끝에 이른다.
         {
-            std::scoped_lock<mutex> lock{ _pDevice->_immediateContextMutex };
-            _pDevice->retireFinishedTransfers();
+            const D3D11ImmediateContext::ScopedLock context = _pDevice->_immediateContext.lock();
+            _pDevice->retireFinishedTransfers( context );
         }
         return _pDevice->_transferSerials.classify( ticket );
     }
@@ -431,9 +431,9 @@ namespace sw
         }
 
         // 이벤트 쿼리가 복사 뒤를 지났으므로 기다리지 않고 읽는다(DO_NOT_WAIT). 여기서 아직이라고 하면 쿼리 순서가 어긋난 것이라 오류다.
-        std::scoped_lock<mutex>  lock{ _pDevice->_immediateContextMutex };
-        D3D11_MAPPED_SUBRESOURCE mapped{};
-        const HRESULT            hr = _pDevice->_deviceContext->Map( readback._staging.Get(), 0, D3D11_MAP_READ, D3D11_MAP_FLAG_DO_NOT_WAIT, &mapped );
+        const D3D11ImmediateContext::ScopedLock context = _pDevice->_immediateContext.lock();
+        D3D11_MAPPED_SUBRESOURCE                mapped{};
+        const HRESULT                           hr = context->Map( readback._staging.Get(), 0, D3D11_MAP_READ, D3D11_MAP_FLAG_DO_NOT_WAIT, &mapped );
         if ( FAILED( hr ) || mapped.pData == nullptr )
         {
             SW_LOG_ERROR( "takeTextureReadback: Map of the staging texture failed hr=0x%# for a completed ticket %#", static_cast<uint32>( hr ), ticket._serial );
@@ -446,7 +446,7 @@ namespace sw
             Memory::copy( outBytes.data() + static_cast<uint64>( row ) * readback._rowBytes,
                           static_cast<const uint8*>( mapped.pData ) + static_cast<uint64>( row ) * mapped.RowPitch, readback._rowBytes );
         }
-        _pDevice->_deviceContext->Unmap( readback._staging.Get(), 0 );
+        context->Unmap( readback._staging.Get(), 0 );
         if ( readback._bDepth != SW_FALSE )
             convertRHIDepth24ToFloat( outBytes.data(), readback._width * readback._height );
         return true;
@@ -477,7 +477,7 @@ namespace sw
     RHITransferSubmit D3D11RHIResourceFactory::submitTextureReadback( RHITextureHandle texture, uint32 mip, uint32 arraySlice, RHITextureMipSpan& outLayout )
     {
         D3D11RHIDevice::TextureRecord* pRecord             = _pDevice->resolveTexture( texture );
-        const bool                     bTextureNotReadable = pRecord == nullptr || pRecord->_texture == nullptr || _pDevice->_device == nullptr || _pDevice->_deviceContext == nullptr;
+        const bool                     bTextureNotReadable = pRecord == nullptr || pRecord->_texture == nullptr || _pDevice->_device == nullptr || _pDevice->_immediateContext.isValid() == false;
         if ( bTextureNotReadable )
         {
             SW_LOG_ERROR( "submitTextureReadback: texture %# or the device is not usable", texture );
@@ -522,13 +522,12 @@ namespace sw
         readback._sizeBytes = outLayout._sizeBytes;
         readback._bDepth    = bDepth ? SW_TRUE : SW_FALSE;
 
-        std::scoped_lock<mutex>             lock{ _pDevice->_immediateContextMutex };
-        Microsoft::WRL::ComPtr<ID3D11Query> query = _pDevice->acquireTransferQuery();
+        const D3D11ImmediateContext::ScopedLock context = _pDevice->_immediateContext.lock();
+        Microsoft::WRL::ComPtr<ID3D11Query>     query   = _pDevice->acquireTransferQuery( context );
         if ( query == nullptr )
             return RHITransferSubmit::rejected();
-        _pDevice->_deviceContext->CopySubresourceRegion( readback._staging.Get(), 0, 0, 0, 0, pRecord->_texture.Get(),
-                                                         D3D11CalcSubresource( mip, arraySlice, texDesc.MipLevels ), nullptr );
-        const uint64 serial = _pDevice->endTransfer( std::move( query ) );
+        context->CopySubresourceRegion( readback._staging.Get(), 0, 0, 0, 0, pRecord->_texture.Get(), D3D11CalcSubresource( mip, arraySlice, texDesc.MipLevels ), nullptr );
+        const uint64 serial = _pDevice->endTransfer( context, std::move( query ) );
         _pDevice->_readbackTable.add( serial, std::move( readback ) );
         return _pDevice->_transferSerials.makeAccepted( serial );
     }

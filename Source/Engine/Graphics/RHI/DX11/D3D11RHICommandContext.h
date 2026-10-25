@@ -16,6 +16,7 @@ namespace sw
      * @brief 실제 D3D11 API 호출을 내는 구현체입니다. `_pContext` 로 "어떤 `ID3D11DeviceContext` 에
      *        기록할지" 를 주입받습니다. 디바이스의 즉시 컨텍스트(프레임 스트림)와, `D3D11RHICommandList`(리스트별
      *        네이티브 Deferred Context)가 각자 자신의 `ID3D11DeviceContext*` 로 이 클래스를 구성해 재사용합니다.
+     * @note 즉시 컨텍스트로 만든 것(프레임 스트림)은 렌더 스레드만 씁니다. 다른 스레드의 즉시 컨텍스트 사용은 `D3D11ImmediateContext::lock()` 으로 직렬화됩니다.
      */
     class D3D11RHICommandContext : public IRHICommandContext
     {
@@ -42,7 +43,7 @@ namespace sw
         void draw( uint32 vertexCount, uint32 startVertex = 0 ) override;
         void drawInstanced( uint32 vertexCount, uint32 instanceCount, uint32 startVertex = 0, uint32 startInstance = 0 ) override;
         void bindConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot ) override;
-        /** @brief 이 컨텍스트에 `Map(WRITE_DISCARD)` 합니다. Deferred Context 면 런타임이 리스트 단위로 버저닝하고, 즉시 컨텍스트(프레임 스트림)면 `_immediateContextMutex` 를 잡습니다. */
+        /** @brief 이 컨텍스트에 `Map(WRITE_DISCARD)` 합니다. Deferred Context 면 런타임이 리스트 단위로 버저닝하고, 즉시 컨텍스트(프레임 스트림)면 다른 스레드의 팩토리 갱신과 같은 버퍼를 다툴 수 있어 `D3D11ImmediateContext::lock()` 으로 묶습니다. */
         void updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size ) override;
         void bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot ) override;
         void bindComputeConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot ) override;

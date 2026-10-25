@@ -71,7 +71,8 @@ namespace sw
             D3D_FEATURE_LEVEL_10_0,
         };
 
-        Microsoft::WRL::ComPtr<IDXGISwapChain> createdSwapChain;
+        Microsoft::WRL::ComPtr<IDXGISwapChain>      createdSwapChain;
+        Microsoft::WRL::ComPtr<ID3D11DeviceContext> createdContext;
         // 소프트웨어 어댑터(WARP) — CI 러너와 같은 래스터라이저(gv_rhiSoftwareAdapter).
         const D3D_DRIVER_TYPE driverType = desc._bSoftwareAdapter ? D3D_DRIVER_TYPE_WARP : D3D_DRIVER_TYPE_HARDWARE;
         HRESULT               hr         = D3D11CreateDeviceAndSwapChain( nullptr,
@@ -85,13 +86,16 @@ namespace sw
                                                                           createdSwapChain.GetAddressOf(),
                                                                           _device.GetAddressOf(),
                                                                           &featureLevel,
-                                                                          _deviceContext.GetAddressOf() );
+                                                                          createdContext.GetAddressOf() );
 
         if ( FAILED( hr ) )
         {
             SW_LOG_ERROR( "Failed to create Direct3D 11 Device and SwapChain! HRESULT: %#", hr );
             return false;
         }
+        // 즉시 컨텍스트는 렌더 스레드와 전송 · 폴링 스레드가 함께 쓴다. 런타임 보호를 켜지 못하면 초기화를 실패시킨다(폴백 없음).
+        if ( _immediateContext.initialize( std::move( createdContext ) ) == false )
+            return false;
 
         // 메모리 질의는 디바이스가 실제로 쓰는 어댑터에 한다. DXGI 1.4 가 없으면 드라이버 값은 "모름" 이다.
         {
@@ -185,7 +189,8 @@ namespace sw
                 staticDesc.MaxLOD         = D3D11_FLOAT32_MAX;
                 _device->CreateSamplerState( &staticDesc, _arrStaticSampler[samplerIndex].GetAddressOf() );
             }
-            bindStaticSamplers( _deviceContext.Get() );
+            const D3D11ImmediateContext::ScopedLock context = _immediateContext.lock();
+            bindStaticSamplers( context.get() );
         }
 
         // 풀스크린 삼각형 정점 버퍼. 메시 VB 없이 그리는 패스(Present/Bloom/Outline/Tonemap 등)는 draw() 가 이것을 건다.
@@ -204,7 +209,8 @@ namespace sw
         }
 
         SW_LOG_INFO( "Direct3D 11 RHI Backend Device Initialized Successfully (FLIP_DISCARD)." );
-        _frameStreamContext = sw::make_unique<D3D11RHICommandContext>( this, _deviceContext.Get() );
+        // 프레임 스트림은 렌더 스레드만 쓰고 호출마다 런타임 보호를 받는다. 다른 스레드의 묶음(`lock()`)은 그 호출 사이에 끼지 않는다.
+        _frameStreamContext = sw::make_unique<D3D11RHICommandContext>( this, _immediateContext.getPerCallProtected() );
         return true;
     }
 
@@ -241,7 +247,7 @@ namespace sw
         _transferQueue.retireAll( []( Microsoft::WRL::ComPtr<ID3D11Query>& query )
         { query.Reset(); } );
         _listFreeTransferQuery.clear();
-        _deviceContext.Reset();
+        _immediateContext.shutdown();
         _memoryAdapter.Reset();
         _device.Reset();
     }
@@ -263,10 +269,11 @@ namespace sw
                 pLiveList->releaseRecordedState();
             }
         }
-        if ( _deviceContext != nullptr )
+        if ( _immediateContext.isValid() )
         {
-            _deviceContext->ClearState();
-            _deviceContext->Flush();
+            const D3D11ImmediateContext::ScopedLock context = _immediateContext.lock();
+            context->ClearState();
+            context->Flush();
         }
         if ( _swapChain.resize( width, height ) == false )
             return;
@@ -276,7 +283,7 @@ namespace sw
     bool D3D11RHIDevice::bindGraphicsContext()
     {
         // 즉시 컨텍스트에는 MakeCurrent 가 없다. 묶을 것이 없으므로 컨텍스트가 있는지만 답한다.
-        return _deviceContext != nullptr;
+        return _immediateContext.isValid();
     }
 } // namespace sw
 #endif

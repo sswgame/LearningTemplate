@@ -12,6 +12,7 @@
 
 #include "Engine/Common/EnginePlatformHeaders.h"
 #include "Engine/Config/RHIBackendType.h"
+#include "Engine/Graphics/RHI/DX11/D3D11ImmediateContext.h"
 #include "Engine/Graphics/RHI/DX11/D3D11RHISwapChain.h"
 #include "Engine/Graphics/RHI/IRHIContextThreadBinding.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -185,10 +186,10 @@ namespace sw
         /** @brief ID3D11Device 포인터를 반환합니다. */
         void* getNativeDevice() const override { return _device.Get(); }
 
-        /** @brief 즉시 컨텍스트(ID3D11DeviceContext) 포인터를 반환합니다. */
-        void* getNativeContext() const override { return _deviceContext.Get(); }
+        /** @brief 즉시 컨텍스트(ID3D11DeviceContext) 포인터를 반환합니다. 런타임의 다중 스레드 보호가 호출 하나씩을 지킵니다(`D3D11ImmediateContext`). */
+        void* getNativeContext() const override { return _immediateContext.getPerCallProtected(); }
 
-        /** @brief 즉시 컨텍스트가 있는지 답합니다. MakeCurrent 가 없어 바인딩할 것은 없습니다. 즉시 컨텍스트는 소유 스레드에서만 씁니다. */
+        /** @brief 즉시 컨텍스트가 있는지 답합니다. MakeCurrent 가 없어 바인딩할 것은 없습니다. 다른 스레드와의 직렬화는 `D3D11ImmediateContext` 가 맡습니다. */
         bool bindGraphicsContext() override;
         /** @brief MakeCurrent 가 없어 놓을 것이 없습니다. 소유 스레드를 바꾸는 것은 부르는 쪽(RenderThread)의 순서가 정합니다. */
         void unbindGraphicsContext() override {}
@@ -222,15 +223,15 @@ namespace sw
          */
         void retireFrameOnGPU();
 
-        /** @brief 전송 하나의 완료를 알릴 이벤트 쿼리를 풀에서 꺼내거나 만듭니다. 즉시 컨텍스트 잠금 안에서 부릅니다. 못 만들면 nullptr 입니다(이유는 로그). */
-        Microsoft::WRL::ComPtr<ID3D11Query> acquireTransferQuery();
+        /** @brief 전송 하나의 완료를 알릴 이벤트 쿼리를 풀에서 꺼내거나 만듭니다. 풀은 즉시 컨텍스트 잠금이 지키므로 가드를 받습니다. 못 만들면 nullptr 입니다(이유는 로그). */
+        Microsoft::WRL::ComPtr<ID3D11Query> acquireTransferQuery( const D3D11ImmediateContext::ScopedLock& context );
         /**
-         * @brief 방금 낸 전송 뒤에 이벤트 쿼리를 끝으로 달고 시리얼을 발급합니다. 즉시 컨텍스트 잠금 안에서, 전송 명령을 낸 직후에 부릅니다(시리얼은 제출 순서대로 같은 락 안에서 매긴다).
+         * @brief 방금 낸 전송 뒤에 이벤트 쿼리를 끝으로 달고 시리얼을 발급합니다. 전송 명령을 낸 그 가드로, 명령 직후에 부릅니다(시리얼은 제출 순서대로 같은 락 안에서 매긴다).
          * @return 발급한 시리얼입니다.
          */
-        uint64 endTransfer( Microsoft::WRL::ComPtr<ID3D11Query> query );
-        /** @brief 앞에서부터 끝난 전송을 풀로 돌려주고 워터마크를 올립니다. `Flush` 로 GPU 에 내보내되 기다리지 않습니다. 즉시 컨텍스트 잠금 안에서 부릅니다. */
-        void retireFinishedTransfers();
+        uint64 endTransfer( const D3D11ImmediateContext::ScopedLock& context, Microsoft::WRL::ComPtr<ID3D11Query> query );
+        /** @brief 앞에서부터 끝난 전송을 풀로 돌려주고 워터마크를 올립니다. `GetData`(플래그 0)가 GPU 에 내보내되 기다리지 않습니다. */
+        void retireFinishedTransfers( const D3D11ImmediateContext::ScopedLock& context );
 
         /// @brief 버퍼와 그 SRV 입니다. SRV 는 셰이더가 버퍼로 읽는 것(구조 버퍼와 인다이렉트 인자 버퍼)에만 있습니다.
         struct BufferRecord
@@ -360,10 +361,13 @@ namespace sw
             uint8             _reserved : 7;
         };
 
-        Microsoft::WRL::ComPtr<ID3D11Device>        _device;
-        Microsoft::WRL::ComPtr<IDXGIAdapter3>       _memoryAdapter; ///< 디바이스가 쓰는 어댑터. GPU 메모리 사용량과 예산을 질의하는 데 쓴다.
-        Microsoft::WRL::ComPtr<ID3D11DeviceContext> _deviceContext;
-        RHIFormat                                   _backBufferFormat; ///< 스왑체인 백버퍼 포맷(DXGI 는 요청값 그대로)
+        Microsoft::WRL::ComPtr<ID3D11Device>  _device;
+        Microsoft::WRL::ComPtr<IDXGIAdapter3> _memoryAdapter; ///< 디바이스가 쓰는 어댑터. GPU 메모리 사용량과 예산을 질의하는 데 쓴다.
+        /// @brief 즉시 컨텍스트입니다. 여러 호출과 그것에 딸린 상태(전송 큐 · 쿼리 풀 · 프레임 링 · 타임스탬프)는 `lock()` 가드 안에서만 다룹니다.
+        /// @details 기록 중의 상수 버퍼 갱신은 `IRHICommandList::updateConstantBuffer` 로 리스트의 Deferred Context 에 간다. 드로우마다 불리는 그 경로가
+        ///          즉시 컨텍스트로 오면 병렬 기록의 워커들이 한 버퍼를 덮어써서 패스 CB 가 옆 패스 값으로 바뀐다.
+        D3D11ImmediateContext _immediateContext;
+        RHIFormat             _backBufferFormat; ///< 스왑체인 백버퍼 포맷(DXGI 는 요청값 그대로)
         /// @brief 창 하나의 백버퍼입니다. 백버퍼 RTV, 크기, Present 가 모두 여기 모여 있습니다.
         D3D11RHISwapChain _swapChain;
 
@@ -380,14 +384,6 @@ namespace sw
         /// 인덱스로 이 목록들을 읽는 동안 register/unregister 가 push_back 으로 재할당을 일으키면
         /// 기록 스레드가 쓰레기를 읽습니다. 읽기는 공유 락이라 병렬 기록을 직렬화하지 않습니다.
         mutable std::shared_mutex _bindlessMutex;
-
-        /// @brief **즉시 컨텍스트(`_deviceContext`)를 건드리는 모든 코드가 잡아야 하는 락입니다.**
-        /// @details `ID3D11DeviceContext` 는 스레드 안전하지 않습니다. 안전한 것은 `ID3D11Device` 뿐입니다.
-        ///          기록은 리스트마다 Deferred Context 라 안전하지만, `IRHIResourceFactory` 의 갱신(`updateConstantBuffer` 의
-        ///          `Map(WRITE_DISCARD)` 등)과 프레임 스트림 컨텍스트는 즉시 컨텍스트로 나가므로 여기서 잠급니다. 기록 중의
-        ///          상수 버퍼 갱신은 `IRHICommandList::updateConstantBuffer` 로 리스트의 Deferred Context 에 갑니다. 드로우마다
-        ///          불리는 그 경로가 즉시 컨텍스트로 오면 병렬 기록의 워커들이 한 버퍼를 덮어써서 패스 CB 가 옆 패스 값으로 바뀝니다.
-        mutable mutex _immediateContextMutex;
 
         /**
          * @struct D3D11TimestampFrame
@@ -470,9 +466,9 @@ namespace sw
 
         /// @brief 전송 티켓의 시리얼 발급기와 완료 워터마크입니다(DX11 은 즉시 컨텍스트 하나라 제출 순서가 곧 실행 순서입니다).
         RHITransferSerials _transferSerials;
-        /// @brief 제출한 전송마다 이벤트 쿼리 하나를 제출 순서대로 쌓습니다. 앞에서부터 끝난 것만 워터마크를 올립니다. 쿼리는 `_immediateContextMutex` 안에서만 만지고 풀(`_listFreeTransferQuery`)로 돌려 씁니다.
+        /// @brief 제출한 전송마다 이벤트 쿼리 하나를 제출 순서대로 쌓습니다. 앞에서부터 끝난 것만 워터마크를 올립니다. 쿼리는 `_immediateContext.lock()` 가드 안에서만 만지고 풀(`_listFreeTransferQuery`)로 돌려 씁니다.
         RHITransferFenceQueue<Microsoft::WRL::ComPtr<ID3D11Query>> _transferQueue;
-        /// @brief 끝난 이벤트 쿼리 풀입니다. `_immediateContextMutex` 로 보호합니다.
+        /// @brief 끝난 이벤트 쿼리 풀입니다. `_immediateContext.lock()` 가드로 보호합니다.
         vector<Microsoft::WRL::ComPtr<ID3D11Query>> _listFreeTransferQuery;
         /// @brief 아직 가져가지 않은 텍스처 읽기입니다(시리얼로 찾습니다).
         RHIPendingReadbackTable<TextureReadbackRecord> _readbackTable;

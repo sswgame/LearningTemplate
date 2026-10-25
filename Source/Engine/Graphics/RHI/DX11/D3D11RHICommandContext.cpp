@@ -414,15 +414,24 @@ namespace sw
         ID3D11Buffer* pResource = _pDevice->resolveBuffer( buffer );
         if ( pResource == nullptr )
             return;
-        // 리스트의 Deferred Context 는 이 리스트만 쓰므로 잠그지 않는다. 즉시 컨텍스트는 다른 스레드의 갱신과 공유하므로 잠근다.
-        std::unique_lock<mutex> lock{ _pDevice->_immediateContextMutex, std::defer_lock };
-        if ( _pContext == _pDevice->_deviceContext.Get() )
-            lock.lock();
         D3D11_MAPPED_SUBRESOURCE mapped{};
-        if ( SUCCEEDED( _pContext->Map( pResource, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped ) ) )
+        // 리스트의 Deferred Context 는 이 리스트만 쓰므로 잠그지 않는다. 프레임 스트림(즉시 컨텍스트)은 다른 스레드의
+        // `IRHIResourceFactory::updateConstantBuffer` 가 같은 버퍼를 Map 할 수 있어 Map · Unmap 짝을 같은 가드로 묶는다.
+        const bool bFrameStream = _pState == &_pDevice->_recordingState;
+        if ( bFrameStream == false )
+        {
+            if ( SUCCEEDED( _pContext->Map( pResource, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped ) ) )
+            {
+                Memory::copy( mapped.pData, pData, size );
+                _pContext->Unmap( pResource, 0 );
+            }
+            return;
+        }
+        const D3D11ImmediateContext::ScopedLock context = _pDevice->_immediateContext.lock();
+        if ( SUCCEEDED( context->Map( pResource, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped ) ) )
         {
             Memory::copy( mapped.pData, pData, size );
-            _pContext->Unmap( pResource, 0 );
+            context->Unmap( pResource, 0 );
         }
     }
 

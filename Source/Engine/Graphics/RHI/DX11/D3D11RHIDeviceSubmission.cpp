@@ -35,19 +35,19 @@ namespace sw
             /** @brief `waitIdle` 과 프레임 링 대기가 GPU 를 기다리는 상한입니다. 넘으면 오류를 남기고 이어간다(끝나지 않은 일이 있다는 뜻이라 조용히 넘기지 않는다). */
             static constexpr uint32 kIdleWaitTimeoutMilliseconds = 10000;
 
-            /** @brief 이벤트 쿼리를 한 번 묻습니다. 아직이면 false, 끝났거나 묻지 못하면(장치 제거) true 입니다. 즉시 컨텍스트 잠금 안에서 부릅니다. */
-            static bool isEventQueryDone( ID3D11DeviceContext* pContext, ID3D11Query* pQuery, UINT getDataFlags )
+            /** @brief 이벤트 쿼리를 한 번 묻습니다. 아직이면 false, 끝났거나 묻지 못하면(장치 제거) true 입니다. */
+            static bool isEventQueryDone( const D3D11ImmediateContext::ScopedLock& context, ID3D11Query* pQuery, UINT getDataFlags )
             {
                 BOOL          bDone = FALSE;
-                const HRESULT hr    = pContext->GetData( pQuery, &bDone, sizeof( bDone ), getDataFlags );
+                const HRESULT hr    = context->GetData( pQuery, &bDone, sizeof( bDone ), getDataFlags );
                 return hr != S_FALSE && ( FAILED( hr ) || bDone != FALSE );
             }
 
-            /** @brief GPU 가 이벤트 쿼리를 지날 때까지 묻습니다. 시한 안에 지났으면 true, 넘기면 false 입니다. 즉시 컨텍스트 잠금 안에서 부릅니다. */
-            static bool waitForEventQuery( ID3D11DeviceContext* pContext, ID3D11Query* pQuery, uint32 timeoutMilliseconds )
+            /** @brief GPU 가 이벤트 쿼리를 지날 때까지 묻습니다. 시한 안에 지났으면 true, 넘기면 false 입니다. */
+            static bool waitForEventQuery( const D3D11ImmediateContext::ScopedLock& context, ID3D11Query* pQuery, uint32 timeoutMilliseconds )
             {
                 const Deadline deadline = Deadline::afterMilliseconds( timeoutMilliseconds );
-                while ( isEventQueryDone( pContext, pQuery, 0 ) == false )
+                while ( isEventQueryDone( context, pQuery, 0 ) == false )
                 {
                     if ( deadline.isExpired() )
                         return false;
@@ -73,11 +73,13 @@ namespace sw
     {
         outGPUNanos = 0;
         // 주파수는 프레임 disjoint 가 준다 — 아직 한 프레임도 읽지 않았으면 틱을 나노초로 바꿀 근거가 없다.
-        const bool bTimestampUnavailable = _device == nullptr || _deviceContext == nullptr || _lastTimestampFrequency == 0;
-        if ( bTimestampUnavailable )
+        if ( _device == nullptr || _immediateContext.isValid() == false )
             return false;
 
-        std::scoped_lock<mutex> lock{ _immediateContextMutex };
+        // 주파수는 렌더 스레드의 `collectTimestampsForSlot` 이 같은 가드 안에서 쓴다.
+        const D3D11ImmediateContext::ScopedLock context = _immediateContext.lock();
+        if ( _lastTimestampFrequency == 0 )
+            return false;
         if ( _clockQuery == nullptr )
         {
             D3D11_QUERY_DESC stampDesc{};
@@ -88,11 +90,11 @@ namespace sw
 
         // D3D11 에는 "지금 GPU 시계" 를 묻는 API 가 없다. 타임스탬프 하나를 내고 GPU 가 그것을 지날 때까지 묻는다 — 돌아오는 순간의 값이 곧
         // 지금이다(관찰 지연만큼 이르다). 큐에 쌓인 프레임만큼 기다리므로 컨텍스트를 열 때 한 번만 부른다(`isGPUClockReadCheap` false).
-        _deviceContext->End( _clockQuery.Get() );
-        _deviceContext->Flush();
+        context->End( _clockQuery.Get() );
+        context->Flush();
         const Deadline deadline = Deadline::afterMilliseconds( D3D11RHIDeviceSubmissionInternal::kClockReadTimeoutMilliseconds );
         uint64         tick{ 0 };
-        while ( _deviceContext->GetData( _clockQuery.Get(), &tick, sizeof( tick ), 0 ) != S_OK )
+        while ( context->GetData( _clockQuery.Get(), &tick, sizeof( tick ), 0 ) != S_OK )
         {
             if ( deadline.isExpired() )
                 return false;
@@ -152,16 +154,16 @@ namespace sw
         if ( bNoTimestampFrameToRead )
             return;
 
-        std::scoped_lock<mutex> lock{ _immediateContextMutex };
+        const D3D11ImmediateContext::ScopedLock context = _immediateContext.lock();
         // **GetData 는 즉시 컨텍스트 전용이다.** Deferred Context 에서 End 한 쿼리도 여기서만 읽는다.
         // **이 묶음은 곧 다시 End 하므로 지금 읽지 못하면 영영 잃는다.** 한 번만 묻고(DONOTFLUSH) 물러나면 GPU 가 몇 프레임 뒤처진 무거운
         // 그래프(디퍼드 15 패스)에서 프레임 뒤쪽 패스의 칸이 늘 준비 전이라 GPU 표에서 Tonemap · Present · Canvas 가 빠졌다. 그래서 묶음마다
         // 상한(kClockReadTimeoutMilliseconds)까지 기다려 읽는다 — DX12 · Vulkan 이 묶음을 다시 쓰기 전에 펜스를 기다리는 것과 같은 자리다.
         // 프로파일러가 켜졌을 때만 오는 경로다(`_bTimestampEnabled`).
         const Deadline deadline     = Deadline::afterMilliseconds( D3D11RHIDeviceSubmissionInternal::kClockReadTimeoutMilliseconds );
-        auto           waitForQuery = [this, &deadline]( ID3D11Query* pQuery, void* pData, uint32 byteSize ) -> bool
+        auto           waitForQuery = [&context, &deadline]( ID3D11Query* pQuery, void* pData, uint32 byteSize ) -> bool
         {
-            while ( _deviceContext->GetData( pQuery, pData, byteSize, 0 ) != S_OK )
+            while ( context->GetData( pQuery, pData, byteSize, 0 ) != S_OK )
             {
                 if ( deadline.isExpired() )
                     return false;
@@ -197,27 +199,27 @@ namespace sw
 
     void D3D11RHIDevice::beginFrame()
     {
-        if ( _deviceContext == nullptr || _swapChain.isValid() == false )
+        if ( _immediateContext.isValid() == false || _swapChain.isValid() == false )
             return;
 
         // 이 묶음은 곧 다시 쓴다. 덮어쓰기 전에 지난 바퀴의 결과를 한 번만 묻는다.
         ensureTimestampResources();
         collectTimestampsForSlot();
+        const D3D11ImmediateContext::ScopedLock context = _immediateContext.lock();
         if ( _bTimestampEnabled != SW_FALSE && _bTimestampReady != SW_FALSE )
         {
             _arrTimestampFrame[_timestampFrameIndex]._writtenMask = 0;
             _timestampWrittenMask.store( 0, std::memory_order_relaxed );
 
-            std::scoped_lock<mutex> timestampLock{ _immediateContextMutex };
             // disjoint 는 프레임 전체를 감싼다. 그 사이에 즉시 컨텍스트가 커맨드 리스트를 실행한다.
-            _deviceContext->Begin( _arrTimestampFrame[_timestampFrameIndex]._disjoint.Get() );
+            context->Begin( _arrTimestampFrame[_timestampFrameIndex]._disjoint.Get() );
             _bTimestampFrameOpen = SW_TRUE;
         }
 
         // FLIP_DISCARD 는 백버퍼를 돌려 쓴다. Present 가 보여 줄 그 버퍼에 그리도록 매 프레임 다시 잡는다.
         _swapChain.acquireNextImage( _device.Get() );
         // 정적 샘플러 세트는 컨텍스트 상태라 ClearState 로 사라질 수 있다. 프레임마다 다시 건다(값싸다).
-        bindStaticSamplers( _deviceContext.Get() );
+        bindStaticSamplers( context.get() );
         if ( _swapChain.getBackBufferRtv() == nullptr )
             return;
 
@@ -238,10 +240,9 @@ namespace sw
         viewport.TopLeftX = kDefaultViewportX;
         viewport.TopLeftY = kDefaultViewportY;
         // 래스터라이저 상태가 가위를 늘 켜 두므로 뷰포트와 같은 가위를 함께 건다(IRHICommandList::setViewport 규약).
-        const D3D11_RECT        scissor{ 0, 0, static_cast<LONG>( _swapChain.getWidth() ), static_cast<LONG>( _swapChain.getHeight() ) };
-        std::scoped_lock<mutex> lock{ _immediateContextMutex };
-        _deviceContext->RSSetViewports( 1, &viewport );
-        _deviceContext->RSSetScissorRects( 1, &scissor );
+        const D3D11_RECT scissor{ 0, 0, static_cast<LONG>( _swapChain.getWidth() ), static_cast<LONG>( _swapChain.getHeight() ) };
+        context->RSSetViewports( 1, &viewport );
+        context->RSSetScissorRects( 1, &scissor );
     }
 
     void D3D11RHIDevice::endFrame( bool vsync, bool bPresent )
@@ -254,8 +255,8 @@ namespace sw
         {
             D3D11TimestampFrame& frame = _arrTimestampFrame[_timestampFrameIndex];
             {
-                std::scoped_lock<mutex> timestampLock{ _immediateContextMutex };
-                _deviceContext->End( frame._disjoint.Get() );
+                const D3D11ImmediateContext::ScopedLock context = _immediateContext.lock();
+                context->End( frame._disjoint.Get() );
             }
             frame._writtenMask   = _timestampWrittenMask.load( std::memory_order_relaxed );
             frame._bPending      = ( frame._writtenMask != 0 ) ? SW_TRUE : SW_FALSE;
@@ -281,14 +282,15 @@ namespace sw
 
     void D3D11RHIDevice::waitIdleInternal()
     {
-        if ( _deviceContext != nullptr )
+        if ( _immediateContext.isValid() )
         {
-            std::scoped_lock<mutex> lock{ _immediateContextMutex };
+            const D3D11ImmediateContext::ScopedLock context = _immediateContext.lock();
             // Flush 는 명령을 GPU 로 보낼 뿐 끝나기를 기다리지 않는다. 이벤트 쿼리를 내고 GPU 가 거기를 지날 때까지 묻는다.
             // 기다리지 않으면 아래 해제 큐 콜백(비동기 되읽기의 Map 등)이 GPU 가 끝나기 전에 돌아 "끝난 뒤" 라는 약속이 깨진다.
-            _deviceContext->End( _idleQuery.Get() );
-            _deviceContext->Flush();
-            if ( D3D11RHIDeviceSubmissionInternal::waitForEventQuery( _deviceContext.Get(), _idleQuery.Get(),
+            // 기다리는 동안 다른 스레드의 즉시 컨텍스트 호출도 멈춘다 — 쿼리 뒤에 새 전송이 끼면 아래 `retireAll` 이 끝나지 않은 전송을 끝났다고 본다.
+            context->End( _idleQuery.Get() );
+            context->Flush();
+            if ( D3D11RHIDeviceSubmissionInternal::waitForEventQuery( context, _idleQuery.Get(),
                                                                       D3D11RHIDeviceSubmissionInternal::kIdleWaitTimeoutMilliseconds ) == false )
                 SW_LOG_ERROR( "waitIdle: the GPU did not finish within %# ms", D3D11RHIDeviceSubmissionInternal::kIdleWaitTimeoutMilliseconds );
             _completedFrameSerial = _frameSerial; // GPU 가 쉰다 — 낸 프레임이 모두 끝났다
@@ -301,24 +303,24 @@ namespace sw
 
     void D3D11RHIDevice::retireFrameOnGPU()
     {
-        if ( _deviceContext == nullptr )
+        if ( _immediateContext.isValid() == false )
             return;
         uint64 completedSerial{ 0 };
         {
-            std::scoped_lock<mutex> lock{ _immediateContextMutex };
-            const uint64            serial = _frameSerial + 1;
-            const uint32            slot   = static_cast<uint32>( ( serial - 1 ) % constant::kMaxFrameCountInFlight );
+            const D3D11ImmediateContext::ScopedLock context = _immediateContext.lock();
+            const uint64                            serial  = _frameSerial + 1;
+            const uint32                            slot    = static_cast<uint32>( ( serial - 1 ) % constant::kMaxFrameCountInFlight );
             // 링이 한 바퀴 돌았다. 이 칸은 프레임 serial - kMaxFrameCountInFlight 의 것이니, 그 프레임이 끝나야 쿼리를 다시 쓴다.
             const bool bRingFull = serial - _completedFrameSerial > constant::kMaxFrameCountInFlight;
             if ( bRingFull )
             {
-                if ( D3D11RHIDeviceSubmissionInternal::waitForEventQuery( _deviceContext.Get(), _arrFrameDoneQuery[slot].Get(),
+                if ( D3D11RHIDeviceSubmissionInternal::waitForEventQuery( context, _arrFrameDoneQuery[slot].Get(),
                                                                           D3D11RHIDeviceSubmissionInternal::kIdleWaitTimeoutMilliseconds ) == false )
                     SW_LOG_ERROR( "endFrame: the GPU did not finish frame %# within %# ms", serial - constant::kMaxFrameCountInFlight,
                                   D3D11RHIDeviceSubmissionInternal::kIdleWaitTimeoutMilliseconds );
                 _completedFrameSerial = serial - constant::kMaxFrameCountInFlight;
             }
-            _deviceContext->End( _arrFrameDoneQuery[slot].Get() );
+            context->End( _arrFrameDoneQuery[slot].Get() );
             _frameSerial = serial;
 
             // 이미 끝난 프레임을 오래된 순서로 모은다. Present 가 명령을 보냈으므로 여기서는 Flush 하지 않고 묻기만 한다.
@@ -326,7 +328,7 @@ namespace sw
             {
                 const uint64       next      = _completedFrameSerial + 1;
                 ID3D11Query* const pNextDone = _arrFrameDoneQuery[( next - 1 ) % constant::kMaxFrameCountInFlight].Get();
-                if ( D3D11RHIDeviceSubmissionInternal::isEventQueryDone( _deviceContext.Get(), pNextDone, D3D11_ASYNC_GETDATA_DONOTFLUSH ) == false )
+                if ( D3D11RHIDeviceSubmissionInternal::isEventQueryDone( context, pNextDone, D3D11_ASYNC_GETDATA_DONOTFLUSH ) == false )
                     break;
                 _completedFrameSerial = next;
             }
@@ -336,8 +338,9 @@ namespace sw
         _releaseQueue.tickCompleted( completedSerial );
     }
 
-    Microsoft::WRL::ComPtr<ID3D11Query> D3D11RHIDevice::acquireTransferQuery()
+    Microsoft::WRL::ComPtr<ID3D11Query> D3D11RHIDevice::acquireTransferQuery( const D3D11ImmediateContext::ScopedLock& context )
     {
+        (void)context; // 풀이 이 가드로 지켜진다는 증명으로만 받는다
         if ( _listFreeTransferQuery.empty() == false )
         {
             Microsoft::WRL::ComPtr<ID3D11Query> query = std::move( _listFreeTransferQuery.back() );
@@ -355,21 +358,20 @@ namespace sw
         return query;
     }
 
-    uint64 D3D11RHIDevice::endTransfer( Microsoft::WRL::ComPtr<ID3D11Query> query )
+    uint64 D3D11RHIDevice::endTransfer( const D3D11ImmediateContext::ScopedLock& context, Microsoft::WRL::ComPtr<ID3D11Query> query )
     {
-        _deviceContext->End( query.Get() );
+        context->End( query.Get() );
         return _transferQueue.enqueue( std::move( query ) );
     }
 
-    void D3D11RHIDevice::retireFinishedTransfers()
+    void D3D11RHIDevice::retireFinishedTransfers( const D3D11ImmediateContext::ScopedLock& context )
     {
-        ID3D11DeviceContext* pContext = _deviceContext.Get();
         // 플래그 0 으로 묻는다 — 명령을 GPU 로 내보내므로 프레임을 돌리지 않아도 되풀이 폴링이 끝에 이른다.
         _transferQueue.retireDone(
-            [this, pContext]( Microsoft::WRL::ComPtr<ID3D11Query>& query )
+            [this, &context]( Microsoft::WRL::ComPtr<ID3D11Query>& query )
         {
             BOOL          bDone = FALSE;
-            const HRESULT hr    = pContext->GetData( query.Get(), &bDone, sizeof( bDone ), 0 );
+            const HRESULT hr    = context->GetData( query.Get(), &bDone, sizeof( bDone ), 0 );
             if ( FAILED( hr ) )
             {
                 SW_LOG_ERROR( "pollTransfer: GetData on the transfer query failed hr=0x%# (device removed?)", static_cast<uint32>( hr ) );
@@ -445,7 +447,7 @@ namespace sw
 
     void D3D11RHIDevice::executeCommandList( IRHICommandList* pCmdList )
     {
-        if ( pCmdList == nullptr || _deviceContext == nullptr )
+        if ( pCmdList == nullptr || _immediateContext.isValid() == false )
             return;
         auto*              pNative = static_cast<D3D11RHICommandList*>( pCmdList );
         ID3D11CommandList* pList   = pNative->getNativeCommandList();
@@ -454,14 +456,14 @@ namespace sw
         // DX11 은 스트림을 자를 필요가 없다. 기록 대상(Deferred Context)과 제출 대상(Immediate
         // Context)이 처음부터 분리돼 있어서, 이 호출은 Immediate Context 스트림의 '지금 이 지점'에
         // 그대로 끼워진다. DX12/Vulkan 이 세그먼트를 잘라 얻는 순서 보장을 공짜로 갖는다.
-        std::scoped_lock<mutex> lock{ _immediateContextMutex };
-        _deviceContext->ExecuteCommandList( pList, FALSE );
+        const D3D11ImmediateContext::ScopedLock context = _immediateContext.lock();
+        context->ExecuteCommandList( pList, FALSE );
 
         // 남은 차이는 제출 시점뿐이다. Immediate Context 는 커맨드를 모아뒀다가 드라이버가 정한
         // 때(보통 Present)에 GPU 로 보내므로, 오류가 나면 어느 리스트 때문인지 알 수 없다.
         // 즉시 모드에서는 리스트마다 밀어내 그 경계에서 오류가 드러나게 한다.
         if ( _bImmediateSubmit )
-            _deviceContext->Flush();
+            context->Flush();
     }
 } // namespace sw
 #endif
