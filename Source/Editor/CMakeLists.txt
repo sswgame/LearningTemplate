@@ -43,6 +43,7 @@ endfunction()
 
 set(listEditorRootSource "")
 set(listEditorPartSource "")
+set(listEditorViewModelRegex "")   # 뷰 층 안 `Model` 폴더의 절대 경로 정규식(코어 리플렉션 입력 · EditorModule 훑기 제외에 같이 쓴다)
 foreach(tier IN LISTS SW_EDITOR_TIER_LIST)
 	set(swEditorTierModelSource_${tier} "")
 	set(swEditorTierViewSource_${tier} "")
@@ -57,8 +58,12 @@ foreach(tier IN LISTS SW_EDITOR_TIER_LIST)
 			# 뷰 층 안의 `Model` 폴더(`Panels/<패널>/Model` · `Viewport/Model`)는 ImGui 를 모르는 헤드리스 파일이라 같은 티어의 모델 부분이 짓는다.
 			set(layerModelSource ${swEditorLayer_${layerKey}Source})
 			set(layerViewSource ${swEditorLayer_${layerKey}Source})
-			list(FILTER layerModelSource INCLUDE REGEX "/Source/Editor/${layer}/([^/]+/)*Model/")
-			list(FILTER layerViewSource EXCLUDE REGEX "/Source/Editor/${layer}/([^/]+/)*Model/")
+			set(layerModelRegex "/Source/Editor/${layer}/([^/]+/)*Model/")
+			if(NOT layer STREQUAL "Common")   # Common 은 바로 아래 파일만 가져(하위 폴더는 listEditorModelLayer 가 코어로 담는다) 여기 Model 폴더가 없다
+				list(APPEND listEditorViewModelRegex "${layerModelRegex}")
+			endif()
+			list(FILTER layerModelSource INCLUDE REGEX "${layerModelRegex}")
+			list(FILTER layerViewSource EXCLUDE REGEX "${layerModelRegex}")
 			list(APPEND swEditorTierModelSource_${tier} ${layerModelSource})
 			list(APPEND swEditorTierViewSource_${tier} ${layerViewSource})
 		endif()
@@ -132,7 +137,7 @@ endfunction()
 # 1-1) EditorCore: ImGui 를 모르는 층(`listEditorModelLayer`)의 오브젝트. EditorModule 과 EditorTest 가 **같은 오브젝트**를 받는다.
 #      소스 목록은 위 층 표 한 곳(`swEditorTierModelSource_<N>`)에서 나오고, 테스트는 손으로 나열하지 않는다(폴더에 파일을 더하면 둘 다 받는다).
 #      - 티어마다 부분(`EditorTier<N>Model`)을 따로 짓는다 — 티어 N 부분은 N 보다 위 층 헤더 자리에 `#error` 껍데기가 놓여 층 방향을 컴파일이 지킨다.
-#      - 리플렉션(`EditorCoreReflect`)은 `listEditorModelLayer` 폴더의 REFLECT · ENUM 헤더 전부(뷰 층 `Model` 폴더의 REFLECT 헤더는 소비자가 각자 코드젠한다 — 층별 정규식으로 하위 폴더만 담을 수 없다)의 `.gen.cpp` 를 한 번만 짓는다. EditorModule 은 이 폴더들을 자기 리플렉션 입력에서
+#      - 리플렉션(`EditorCoreReflect`)은 `listEditorModelLayer` 폴더와 뷰 층 `Model` 폴더의 REFLECT · ENUM 헤더 전부(위 `listEditorReflectCore` - 입력을 폴더 정규식으로 못 정해 같은 조건으로 구성 때 모은다)의 `.gen.cpp` 를 한 번만 짓는다. 소비자는 이 헤더를 자기 리플렉션 입력에 넣지 않는다. EditorModule 은 이 폴더들을 자기 리플렉션 입력에서
 #        뺀다(같은 `StaticType()` 이 두 곳에 정의되지 않게). FlagOps 우산과 gen 폴더는 `sw_linkEditorCore` 가 소비자에게 같은 값으로 준다.
 #      - 소비자가 EditorModule(Dev 의 SHARED)이면 오브젝트는 DLL 이미지에 들어가고, EditorTest 면 실행 파일에 들어간다(SW_EDITOR_API 는 둘 다 `SW_EDITOR_EXPORTS`
 #        로 지어져 DLL 에서는 내보내고, 테스트 실행 파일에서는 소비자 TU 의 빈 매크로와 같은 이름으로 그냥 풀린다).
@@ -143,27 +148,53 @@ set(editorModelImGuiBlock "${CMAKE_BINARY_DIR}/generated/sw/EditorModelForbidsIm
 file(GENERATE OUTPUT "${editorModelImGuiBlock}" CONTENT
 	"// EditorModel: generated - the editor model layer (Source/Editor/CMakeLists.txt listEditorModelLayer) must not include ImGui\n#error \"EditorModel (ImGui-free editor layer) includes an ImGui header. Move the ImGui code to a view file outside listEditorModelLayer.\"\n")
 
-# EditorCore 에 속한 / 속하지 않은 폴더의 정규식(후보 헤더의 절대 경로에 맞춘다). 층 표와 `listEditorModelLayer` 에서만 만든다.
+# EditorCore 에 속한 폴더의 정규식(후보 헤더의 절대 경로에 맞춘다). `listEditorModelLayer` 의 폴더만 만든다(층 표의 나머지는 코어 밖이다).
 set(listEditorCoreRegex "")
-set(listEditorNonCoreRegex "")
-foreach(tier IN LISTS SW_EDITOR_TIER_LIST)
-	foreach(layer IN LISTS SW_EDITOR_TIER_${tier}_LAYERS)
-		if(layer STREQUAL "<root>")
-			set(layerRegex "/Source/Editor/[^/]*$")
-		elseif(layer STREQUAL "Common")
-			set(layerRegex "/Source/Editor/Common/[^/]*$")
-		else()
-			set(layerRegex "/Source/Editor/${layer}/")
-		endif()
-		if(layer IN_LIST listEditorModelLayer)
-			list(APPEND listEditorCoreRegex "${layerRegex}")
-		else()
-			list(APPEND listEditorNonCoreRegex "${layerRegex}")
-		endif()
-	endforeach()
+foreach(layer IN LISTS listEditorModelLayer)
+	list(APPEND listEditorCoreRegex "/Source/Editor/${layer}/")
 endforeach()
 list(JOIN listEditorCoreRegex "|" editorCoreRegex)
-list(JOIN listEditorNonCoreRegex "|" editorNonCoreRegex)
+list(JOIN listEditorViewModelRegex "|" editorViewModelRegex)
+# 코어 리플렉션이 받는 폴더 = 코어 폴더 + 뷰 층 `Model` 폴더. EditorModule 은 이 둘을 자기 훑기에서 뺀다.
+set(editorCoreReflectRegex "${editorCoreRegex}|${editorViewModelRegex}")
+
+# REFLECT · ENUM 이 든 헤더(`sw_addReflectionStep` 의 자동 훑기와 같은 조건)를 모은다. 코어 리플렉션은 폴더 정규식 하나로 "코어 폴더 + 뷰 층 Model 폴더" 를 훑을 수 없어(CMake 정규식에 부정 전방탐색이 없다)
+# 여기서 같은 조건으로 입력 목록을 만들어 명시한다 — 새 REFLECT 헤더는 구성 때 저절로 들어온다.
+set(listEditorReflectCore "")
+set(listEditorReflectModule "")
+foreach(header IN LISTS listEditorAllSource)
+	if(NOT header MATCHES "\\.(h|hpp)$")
+		continue()
+	endif()
+	file(STRINGS "${header}" listReflectLine REGEX "^[ \t]*(REFLECT\\(|ENUM\\(|REFLECT_CONTAINER\\()")
+	if(NOT listReflectLine)
+		continue()
+	endif()
+	if(header MATCHES "${editorCoreReflectRegex}")
+		list(APPEND listEditorReflectCore "${header}")
+	else()
+		list(APPEND listEditorReflectModule "${header}")
+	endif()
+endforeach()
+
+# 코어(EditorCoreReflect)와 EditorModule 은 서로 다른 gen 폴더에 `<이름>.gen.cpp` · `.gen.h` 를 쓰고 둘 다 include 경로에 있다. 같은 이름의 REFLECT 헤더가 양쪽에 하나씩 있으면
+# 각 타깃의 중복 검사(`sw_addReflectionStep`)는 통과하지만 `.gen.h` 가 서로를 가린다 — 두 목록에 걸쳐 이름(확장자 뺀 것) 중복을 구성에서 막는다.
+set(listEditorReflectStem "")
+foreach(header IN LISTS listEditorReflectCore listEditorReflectModule)
+	get_filename_component(stem "${header}" NAME_WE)
+	if(stem IN_LIST listEditorReflectStem)
+		set(listSameStem "")
+		foreach(other IN LISTS listEditorReflectCore listEditorReflectModule)
+			get_filename_component(otherStem "${other}" NAME_WE)
+			if(otherStem STREQUAL stem)
+				list(APPEND listSameStem "  ${other}")
+			endif()
+		endforeach()
+		list(JOIN listSameStem "\n" sameStemText)
+		message(FATAL_ERROR "[Reflection] Editor: two reflected headers share the name '${stem}' (core and EditorModule reflect into separate folders but both are on the include path, so ${stem}.gen.h would shadow). Rename one:\n${sameStemText}")
+	endif()
+	list(APPEND listEditorReflectStem "${stem}")
+endforeach()
 
 # 코어 부분 하나가 받는 공통 설정. EditorModule 과 같은 정의 · 로그 태그 · 유니티 묶음을 받아 DLL 에 들어가도 달라지지 않는다.
 function(sw_applyEditorCoreSettings TARGET_NAME)
@@ -207,11 +238,15 @@ if(NOT SW_TARGET_TYPE STREQUAL "Server")
 	# 리플렉션: 코어 헤더의 `.gen.cpp`. 입력은 폴더를 훑어 정한다(새 REFLECT 헤더를 손 목록에 빠뜨리는 일이 없다).
 	sw_skipWithoutReflectionParser(EditorCoreReflect swSkipCoreReflect)
 	if(NOT swSkipCoreReflect)
+		if(NOT listEditorReflectCore)
+			# HEADERS 가 비면 sw_addReflectionStep 이 조용히 Source/Editor 전체를 훑는다 - 코어가 EditorModule 과 같은 타입을 두 번 정의하게 되므로 여기서 멈춘다.
+			message(FATAL_ERROR "[Reflection] EditorCoreReflect: no REFLECT header found in the EditorCore folders (empty HEADERS would make sw_addReflectionStep scan every editor header)")
+		endif()
 		add_library(EditorCoreReflect OBJECT)
 		sw_applyEditorCoreSettings(EditorCoreReflect)
 		sw_addReflectionStep(EditorCoreReflect
+			HEADERS ${listEditorReflectCore}
 			INCLUDES "${CMAKE_SOURCE_DIR}/Source"
-			EXCLUDE_REGEX "${editorNonCoreRegex}"
 		)
 		list(APPEND listEditorCoreTarget EditorCoreReflect)
 	endif()
@@ -267,7 +302,7 @@ sw_addModuleLibrary(EditorModule
 	UNITY_BATCH 8
 	# REFLECTION_HEADERS 를 주지 않는다 — 리플렉션 입력은 폴더를 훑어 REFLECT · ENUM 매크로가 있는 헤더로 정한다(손 목록에 빠뜨리면 StaticType 링크 오류).
 	# 코어 폴더의 헤더는 뺀다 — 그쪽은 EditorCoreReflect 가 한 번만 짓는다(두 곳에 있으면 StaticType 이 중복 정의된다).
-	REFLECTION_EXCLUDE "${editorCoreRegex}"
+	REFLECTION_EXCLUDE "${editorCoreReflectRegex}"
 )
 
 # EditorCore 의 오브젝트와 FlagOps 우산을 받는다. View 부분이 아래에서 이 타깃의 컴파일 옵션을 복사하므로 부분을 만들기 전에 부른다.
