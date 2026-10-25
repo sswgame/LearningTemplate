@@ -214,3 +214,38 @@
 - **확인 항목**: 클라이언트 근접 피해 소실(meleeunify) · 활의 가는 줄과 투사체 방향 · `PoseModifierComponent::setSocketTable` 호출처 없음([ShooterCharacterIntegration](ShooterCharacterIntegration.md)).
 - **CI**: 야간 `Load (Linux | Release, nightly)` 실패의 근본 원인을 모른다(후보 `DiskPathVsResourceId`).
 - **시나리오**: 게임 시나리오가 `Resource/` 에 쓰는지 점검하지 않았다. 클릭한 순간의 방향으로 사격이 나가는지는 시나리오로 보지 못했다.
+
+## 00. 2026-10-25 통합 N 뒤 작업자 브랜치 체인 — 코드만 짜 둠, 병합 · 빌드 · 검증 전 (이 절을 먼저 읽는다)
+
+통합 N(`wt/integ-n`, D:/w/integ-n)은 13 개 병합과 통합 수정 3 건(2c7865d25 · b30c2bb41 · 641abbf06) 위에서 Debug 게이트 119/119 · race 4 · Shipping · Shipping-Server `nogpu` 를 지났고, 남은 것은 GPU Release 네 백엔드(혼자), DX11 에디터 uiaudit 캡처, Vulkan Debug validation 이다. main 에는 아직 안 들어갔다. **push 하지 않았다.** 아래 브랜치는 모두 린트만 통과했고 빌드 · 테스트는 한 번도 돌지 않았다 — 통합이 체인 순서로 병합하며 한 번에 짓는다.
+
+**병합 체인(앞 브랜치 위에 쌓였다. 각 브랜치는 `wt/<이름>`, 워크트리 D:/w/<이름>)**
+- 종료 코드: exitcodes → exit77 → exit77b → exitreturn → exitreturn2 (`AutomationExitCode.h` 정본, `ExitCode` 값, `[exitCode]` 규칙)
+- 자동 분리: autosplit
+- 해상도 배율: qualityadj → qualityadj2 → hostview → hostscale
+- 서버 디버깅: serverdbg → serverdbg2 → serverdbg3 → serverdbg4 (한 줄 답 상한 3500, `sync-tab-object-diff-scenario` 시나리오 프레임 간격은 통합이 맞춘다)
+- 임포트 규칙 · 경로 패턴: importrule → importrule2 → pathpat2 → pathpat3 → pathpat4 (pathpat4 는 매처를 Core 로 옮긴다 — 컴파일 확인이 가장 큰 위험)
+- 소스 스캔 게이트: scangates → scangates2
+- 서버 빌드 목록: x11scope → serverlist → modtargets (wlserver 와 겹침 확인)
+- 프리팹: prefabmove → … → prefabmove6 (`findReferenceTo` 가 TypeRegistry 필수, 거절 로그는 경고 — 하네스가 실패로 잡는지 본다)
+- Online: onlinekits → onlinetables → onlinedrain2 → drainsweep ; onlinekits → onlinemax → maxkits → minmaxconst → rangeconst2 (두 가지가 Online 헤더에서 겹친다. `Min`/`Max` 상수 이름 코드젠이 들어가므로 **파서(`Tools/ReflectionParser`)를 가장 먼저 짓고 온라인 스키마 해시 테스트로 해시가 그대로인지 본다**)
+- 에디터 서비스 무음 null: svcnullA → svcnullB (B 의 치환 목록은 A 병합 뒤 필수 조회로 한 번에 바꾼다)
+- 단독 한 개씩: charint(E6 `surfacelit`), msdf, modrp, xfileref, wlserver, unreadcands, maxcountconst
+
+**통합 몫(작업자가 못 한 것)**
+1. charint: `docs/plans/pending/surfacelit/Resource/` 의 `.pending` 파일을 `Resource/` 로 옮기고 `App --cook-shaders`.
+2. importrule2: `App --import-textures` 한 번(engine/textures/ui DDS 19 개와 `import.stamp` 만 바뀌어야 한다). `TestAssetValidation.py` 시간(캐시 뒤 5초).
+3. serverdbg: ko 번역(ko.translation.xml · po/ko.po) 4 키. 새 시나리오 `netsyncobjects` 실행.
+4. exitreturn2 이후 `py -3 -m Scripts lint-suite` 전체. 새 `[exitCode]` · `CheckModuleTargets` · `CheckX11Isolation` 규칙 모두.
+5. 수정된 `Tools/OnlineLoadBot` 컴파일(전엔 깨져 있었다 — 어느 게이트에도 안 들어 있다면 넣는다).
+6. 예전부터 남은 통합 몫: `complex-text-install`(ThirdPartyGaps T2/T3b), SilentFallbackAudit 의 RenderTargetFormat PSO 경로 열거(임시 로그 + 네 백엔드), 글리프 MSDF 측정, module-pass-scenario 문턱 0.02, Q3 자동 배율 실측.
+
+**같은 결함 후보로 남긴 것(후속 작업자 후보)**
+- `NetStatsReport` 의 `net.stats` 줄 길이 상한, Sync 탭 클라이언트 질의 시간 초과(오류 응답을 영원히 기다린다).
+- 프리팹 참조 검사: 프리팹 파일 XML 안 덮어쓰기 값 · 씬 수준 데이터(참조를 담을 자리가 아직 없어 하지 않음).
+- `PackCooker` 매처는 pathpat4 가 맞춘다. 에디터 서비스 null 은 svcnullA · B 범위 밖(Editor 밖 폴더)이 남았다.
+- RHI 파일 후보: DX11 allocateUploadStaging 의 RHIStagingAllocator 합치기, Vulkan 프레임 밖 펜스 대기, 큐 소유권 이동, DX11 Map(DO_NOT_WAIT) vs 장치 소실, DX11 Present 실패 로그 반복, GL 비트필드.
+
+**사용자 결정 대기**: 말 모델(WildWestHorseMount W3)의 CC0 에셋과 라이선스 선택뿐이다. push 는 통합 N 이 main 에 들어간 뒤 사용자에게 먼저 묻는다.
+
+**다음 세션의 첫 일**: ① `git -C D:/w/integ-n log -3` 로 통합 N 이 끝났는지 본다(끝났으면 main 을 fast-forward 하고 이 절 위의 "통합 N 대기" 절을 지운다). ② 위 체인을 순서대로 하나의 `integ-o` 에 병합하고 통합 몫 1 ~ 6 을 한 번에 돈다. ③ 그 사이 `[병렬 가능]` 인 Linux · GPU 검증, Vfx 실행 확인, 카메라 디렉터, 미리보기 창, 오디오, 런타임 UI 묶음은 파일이 겹치지 않으니 작업자를 따로 띄울 수 있다([Roadmap](Roadmap.md)). 작업자 지시문에는 "python/py heredoc 편집 금지, `find /` 금지" 를 맨 앞줄에 적는다(이번 세션에서 7 번 어겼다).
