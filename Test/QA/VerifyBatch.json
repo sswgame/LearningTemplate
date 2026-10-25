@@ -734,8 +734,8 @@
       "source": "docs/plans/OnlineKits.md U1", "result_doc": "docs/plans/OnlineKits.md U1"
     },
     {
-      "id": "net-stats-replicas-tests", "title": "net.stats 의 replicas= 칸(복제 키트 셈 창구) 왕복과 형식 거절", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 10,
-      "filter": "NetStatsReportTest.*",
+      "id": "net-stats-replicas-tests", "title": "net.stats 의 replicas= 칸(복제 키트 셈 창구) 왕복과 형식 거절, 한 줄 답 상한(DebugReplyLine)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 10,
+      "filter": "NetStatsReportTest.*,DebugReplyLineTest.*",
       "source": "docs/plans/ServerDebug.md S5", "result_doc": "docs/plans/ServerDebug.md S5 남은 것"
     },
     {

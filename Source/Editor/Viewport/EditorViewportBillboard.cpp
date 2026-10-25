@@ -2,6 +2,7 @@
 
 #include "Editor/Viewport/EditorViewportBillboard.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/String/fixed_string.h"
 
@@ -111,8 +112,8 @@ namespace sw::editor
                 const uint32 codePoint = EditorComponentIcon::decodeGlyph( pGlyph );
                 if ( codePoint == 0 )
                     return 0;
-                const size_t sequenceLength = codePoint < 0x80 ? 1u : ( codePoint < 0x800 ? 2u : 3u );
-                return std::char_traits<utf8>::length( pGlyph ) == sequenceLength ? codePoint : 0u;
+                uint32 wholeCodePoint = 0;
+                return StringUtil::tryDecodeSingleCodepoint( string_view( pGlyph ), wholeCodePoint ) ? codePoint : 0u;
             }
 
             /** @brief 빌보드를 그립니다(배지 + 글리프, 이름 `viewport.billboard.<오브젝트 이름>`). */

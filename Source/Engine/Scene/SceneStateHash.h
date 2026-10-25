@@ -62,16 +62,11 @@ namespace sw
         /**
          * @brief 틱을 단 오브젝트 목록을 한 줄(`kObjectReportLinePrefix <tick> <16자리 16진 해시>:<이름>,…`)로 씁니다.
          * @details 이름의 공백 · 쉼표 · ':' · '%' · 제어 문자는 `%XX`(대문자 16진)로 쓴다 — 로그 꼬리(공백 뒤)와 구분자에 섞이지 않게. 오브젝트가 없으면 목록 자리가 `-` 다.
+         *          줄 길이 상한은 `DebugReplyLine::kMaxBytes` 하나다(`StateHashHistory::writeReportLine` 도 같다). 이 줄들은 목록을 줄여 담을 수 없는 형식이라 잘림 표시 대신,
+         *          넘으면 쓰는 쪽이 오류로 멈추고(`DebugReplyLine::fits`) 읽는 쪽도 넘는 줄을 거절한다.
          */
         [[nodiscard]] static bool writeObjectReportLine( uint64 tick, const vector<SceneObjectHash>& listObject, string& outLine );
-        /**
-         * @brief 한 줄 판(`writeObjectReportLine` · `StateHashHistory::writeReportLine`)의 최대 바이트(머리 포함, 로그 머리 · 꼬리 제외)입니다. 쓰는 쪽과 읽는 쪽이 이 상수 하나를 본다.
-         * @details 답은 자식의 로그 한 줄로 나가 부모의 파이프 읽기를 거친다. 가장 작은 상한은 POSIX 파이프 읽기의 줄 버퍼(`PosixProcess` 의 `fgets`, `kMaxBuffer4096` → 4095 바이트)이고,
-         *          로그 줄 버퍼(`AsyncLogSink` 의 8192 바이트, 머리 · 꼬리 포함)와 Windows 파이프 읽기(상한 없이 이어 붙임)는 그보다 넉넉하다. 로그 머리(시각 · 태그 · 호출자 · 문맥)가 붙을 몫을 빼고 3500 으로 잡았다.
-         *          넘는 줄은 쓰는 쪽이 오류로 멈춘다 — 로그 버퍼가 조용히 자르거나 POSIX 읽기가 한 줄을 둘로 쪼개 다음 줄과 섞이는 일을 만들지 않는다. 읽는 쪽도 넘는 줄은 거절한다.
-         */
-        static constexpr size_t kMaxReportLineBytes = 3500;
-        /** @brief @p line 에서 `kObjectReportLinePrefix` 를 찾아 틱과 목록을 읽습니다. 머리가 없거나 항목 형식이 다르거나 `kMaxReportLineBytes` 를 넘으면 false 이고 목록을 비웁니다. */
+        /** @brief @p line 에서 `kObjectReportLinePrefix` 를 찾아 틱과 목록을 읽습니다. 머리가 없거나 항목 형식이 다르거나 `DebugReplyLine::kMaxBytes` 를 넘으면 false 이고 목록을 비웁니다. */
         [[nodiscard]] static bool tryParseObjectReportLine( string_view line, uint64& outTick, vector<SceneObjectHash>& outListObject );
         /**
          * @brief 두 목록에서 (이름, 해시) 짝이 한쪽에만 있는 오브젝트의 이름을 이름 순으로 중복 없이 채웁니다. 이름이 같은 오브젝트가 여럿이면 개수까지 견줍니다.
@@ -122,12 +117,12 @@ namespace sw
         /** @brief 샘플을 한 줄(`kReportLinePrefix <tick>:<16자리 16진 해시>,…`)로 씁니다. 표준 입력 명령의 답이 로그 한 줄로 나가는 길(멀티 프로세스 재생)에 쓴다. */
         [[nodiscard]] static bool writeReportLine( const vector<StateHashSample>& listSample, string& outText );
         /**
-         * @brief 한 줄 판에 실을 수 있는 샘플 수의 상한입니다. 샘플 하나는 가장 길 때 `<20자리 틱>:<16자리 해시>,` 로 38 바이트라 머리와 합쳐 `SceneStateHash::kMaxReportLineBytes` 안에 든다.
+         * @brief 한 줄 판에 실을 수 있는 샘플 수의 상한입니다. 샘플 하나는 가장 길 때 `<20자리 틱>:<16자리 해시>,` 로 38 바이트라 머리와 합쳐 `DebugReplyLine::kMaxBytes` 안에 든다.
          *          `state.hashline` 은 이보다 많이 묻으면 거절하고, Sync 탭은 이 수만큼 묻는다.
          */
         static constexpr uint32 kMaxReportLineSamples = 90;
         /**
-         * @brief @p line 에서 `kReportLinePrefix` 를 찾아 뒤의 샘플을 읽습니다. 머리가 없으면 false 이고, 머리 뒤 첫 덩이의 항목이 하나라도 형식이 다르거나 줄이 `SceneStateHash::kMaxReportLineBytes` 를 넘으면 목록을 비우고 false 입니다.
+         * @brief @p line 에서 `kReportLinePrefix` 를 찾아 뒤의 샘플을 읽습니다. 머리가 없으면 false 이고, 머리 뒤 첫 덩이의 항목이 하나라도 형식이 다르거나 줄이 `DebugReplyLine::kMaxBytes` 를 넘으면 목록을 비우고 false 입니다.
          * @details 샘플이 없으면 머리 뒤가 `-` 다(빈 이력도 답이다).
          */
         [[nodiscard]] static bool tryParseReportLine( string_view line, vector<StateHashSample>& outListSample );

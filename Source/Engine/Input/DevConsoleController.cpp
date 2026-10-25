@@ -2,6 +2,8 @@
 
 #include "Engine/Input/DevConsoleController.h"
 
+#include "Core/Container/Utf8Util.h"
+
 #if SW_DEV_COMMANDS_ENABLED
 
     #include "Core/Log/Logger.h"
@@ -38,7 +40,7 @@ namespace sw
                 {
                     const uint8 last = static_cast<uint8>( inoutText.back() );
                     inoutText.pop_back();
-                    if ( ( last & 0xC0 ) != 0x80 )
+                    if ( Utf8Util::isContinuation( last ) == false )
                         return;
                 }
             }

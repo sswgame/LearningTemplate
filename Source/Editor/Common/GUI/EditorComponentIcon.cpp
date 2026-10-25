@@ -2,6 +2,7 @@
 
 #include "Editor/Common/GUI/EditorComponentIcon.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Log/LogOnce.h"
 
@@ -174,14 +175,11 @@ namespace sw::editor
     {
         if ( pGlyph == nullptr )
             return 0;
-        const auto* pByte = reinterpret_cast<const uint8*>( pGlyph );
-        if ( pByte[0] < 0x80 )
-            return pByte[0];
-        if ( ( pByte[0] & 0xE0 ) == 0xC0 && pByte[1] != 0 )
-            return ( static_cast<uint32>( pByte[0] & 0x1F ) << 6 ) | ( pByte[1] & 0x3F );
-        const bool bThreeByteSequence = ( pByte[0] & 0xF0 ) == 0xE0 && pByte[1] != 0 && pByte[2] != 0;
-        if ( bThreeByteSequence )
-            return ( static_cast<uint32>( pByte[0] & 0x0F ) << 12 ) | ( static_cast<uint32>( pByte[1] & 0x3F ) << 6 ) | ( pByte[2] & 0x3F );
-        return 0;
+        constexpr uint32 kMaxBasicPlaneCodepoint = 0xFFFF; // 아이콘 글리프 범위(`kArrGlyphRange`)는 기본 다국어 평면이다
+        size_t           offset                  = 0;
+        uint32           codepoint               = 0;
+        if ( StringUtil::tryDecodeUtf8( string_view( pGlyph ), offset, codepoint ) == false || codepoint > kMaxBasicPlaneCodepoint )
+            return 0;
+        return codepoint;
     }
 } // namespace sw::editor

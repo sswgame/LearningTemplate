@@ -7,6 +7,7 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/Utf8Util.h"
 #include "Core/Container/string.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/Math.h"
@@ -382,10 +383,7 @@ namespace sw
                 return cut;
             if constexpr ( sizeof( T ) == 1 )
             {
-                for ( uint32 step = 0; step < 3 && cut > 0 && ( static_cast<uint8>( pSource[cut] ) & 0xC0 ) == 0x80; ++step )
-                {
-                    --cut;
-                }
+                cut = static_cast<uint32>( Utf8Util::backOffToCharacterStart( pSource, cut ) );
             }
             else if constexpr ( sizeof( T ) == 2 )
             {

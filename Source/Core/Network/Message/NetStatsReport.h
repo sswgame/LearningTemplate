@@ -74,6 +74,7 @@ namespace sw
         float32                      _rttMilliseconds{ 0.0f }; ///< 연결들의 평활 RTT 중 가장 큰 값(ms)
         float32                      _lossPercent{ 0.0f };     ///< 연결들이 측정한 손실 중 가장 큰 값(%)
         int32                        _connectionCount{ 0 };
+        uint64                       _truncatedLineBytes{ 0 }; ///< 읽은 줄이 `DebugReplyLine::kMaxBytes` 때문에 복제 셈을 잘라 냈으면 잘리기 전 길이, 아니면 0(`makeLine` 은 이 값을 쓰지 않고 새로 잰다)
 
         /**
          * @brief 받은 쪽(라우터) · 보낸 쪽(호스트) 종류별 셈에서 바이트가 큰 종류 `kMaxKindEntry` 개씩으로 `_listKindEntry` · `_listSentKindEntry` 를 채웁니다.
@@ -85,7 +86,7 @@ namespace sw
         {
             return direction == NetStatsKindDirection::Sent ? _listSentKindEntry : _listKindEntry;
         }
-        /** @brief 보고 한 줄을 만듭니다. */
+        /** @brief 보고 한 줄을 만듭니다. `DebugReplyLine::kMaxBytes` 를 넘지 않으며(`DebugReplyLine::makeCapped`), 복제 셈을 일부 뺐으면 줄 끝에 ` truncated=<원래 길이>` 가 붙습니다. */
         string makeLine() const;
         /** @brief @p line 에서 `kLinePrefix` 를 찾아 뒤의 값을 읽습니다. 머리가 없거나 아는 키의 값이 숫자가 아니면 false 이고 @p outReport 를 바꾸지 않습니다. 모르는 키는 건너뜁니다. */
         [[nodiscard]] static bool tryParseLine( string_view line, NetStatsReport& outReport );

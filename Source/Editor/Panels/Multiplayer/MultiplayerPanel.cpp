@@ -208,13 +208,11 @@ namespace sw::editor
 
     void MultiplayerPanel::drawContent()
     {
-        EditorNetPlaySession* pSession = MultiplayerPanelInternal::findSession();
-        if ( pSession == nullptr )
-            return;
+        EditorNetPlaySession& session = editor::getSubsystem<EditorContext>().getSubsystem<EditorNetPlaySession>();
         syncTabs();
         MultiplayerTabContext context;
-        context._pSession           = pSession;
-        context._targetProcessIndex = drawTargetPicker( *pSession );
+        context._pSession           = &session;
+        context._targetProcessIndex = drawTargetPicker( session );
         if ( ImGui::BeginTabBar( "##MultiplayerTabs" ) )
         {
             for ( TabEntry& entry : _listTab )

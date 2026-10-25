@@ -59,16 +59,19 @@ namespace sw
              */
             static constexpr Utf8LeadInfo classifyUtf8LeadByte( const uint8 leadByte ) noexcept
             {
-                if ( ( leadByte & 0x80 ) == 0x00 )
-                    return { 1, leadByte, 0x0 };
-                if ( ( leadByte & 0xE0 ) == 0xC0 )
-                    return { 2, static_cast<uint32>( leadByte & 0x1F ), 0x80 };
-                if ( ( leadByte & 0xF0 ) == 0xE0 )
-                    return { 3, static_cast<uint32>( leadByte & 0x0F ), 0x800 };
-                if ( ( leadByte & 0xF8 ) == 0xF0 )
-                    return { 4, static_cast<uint32>( leadByte & 0x07 ), kUtf16LowBoundary };
-
-                return { 0, 0, 0 };
+                switch ( Utf8Util::getSequenceLength( leadByte ) ) // 길이 규칙은 Utf8Util 하나, 여기는 길이별 초기 비트와 최소 코드 포인트만
+                {
+                    case 1:
+                        return { 1, leadByte, 0x0 };
+                    case 2:
+                        return { 2, static_cast<uint32>( leadByte & 0x1F ), 0x80 };
+                    case 3:
+                        return { 3, static_cast<uint32>( leadByte & 0x0F ), 0x800 };
+                    case 4:
+                        return { 4, static_cast<uint32>( leadByte & 0x07 ), kUtf16LowBoundary };
+                    default:
+                        return { 0, 0, 0 };
+                }
             }
 
             /**
@@ -120,29 +123,11 @@ namespace sw
                         continue;
                     }
 
-                    // 2 ~ 4바이트 멀티바이트 UTF-8 시퀀스를 검증한다
-                    const Utf8LeadInfo lead = classifyUtf8LeadByte( byte0 );
-                    if ( lead._sequenceLength == 0 || pos + lead._sequenceLength > length )
+                    // 2 ~ 4바이트 멀티바이트 시퀀스는 디코더와 같은 한 해석(`decodeUtf8Sequence`)으로 검증한다 - 검증기와 디코더가 다르게 판정하지 않는다.
+                    const DecodedCodepoint decoded = decodeUtf8Sequence( reinterpret_cast<const utf8*>( pData ) + pos, length - pos );
+                    if ( decoded._bValid == false )
                         return false;
-
-                    uint32 codepoint = lead._initialBits;
-                    for ( size_t byteIndex = 1; byteIndex < lead._sequenceLength; ++byteIndex )
-                    {
-                        const uint8 continuationByte = pData[pos + byteIndex];
-                        if ( ( continuationByte & 0xC0 ) != 0x80 )
-                            return false;
-                        codepoint = ( codepoint << 6 ) | ( continuationByte & 0x3F );
-                    }
-
-                    // overlong 인코딩, UTF-16 서로게이트, 유니코드 최댓값 초과를 검사한다
-                    const bool bIsOverlong       = codepoint < lead._minCodepoint;
-                    const bool bIsSurrogate      = ( codepoint >= kSurrogateBegin ) && ( codepoint <= kSurrogateEnd );
-                    const bool bIsOutOfRange     = codepoint > kMaxUnicodeCodepoint;
-                    const bool bInvalidCodepoint = bIsOverlong || bIsSurrogate || bIsOutOfRange;
-                    if ( bInvalidCodepoint )
-                        return false;
-
-                    pos += lead._sequenceLength;
+                    pos += decoded._byteCount;
                 }
                 return true;
             }
@@ -175,7 +160,7 @@ namespace sw
                 {
                     // 잘렸거나 연속 바이트가 아니면 거기까지를 한 글자로 치고, 그 바이트부터 다시 읽는다(삼키지 않는다).
                     const bool bTruncated = byteIndex >= remaining;
-                    if ( bTruncated || ( static_cast<uint8>( pData[byteIndex] ) & 0xC0 ) != 0x80 )
+                    if ( bTruncated || Utf8Util::isContinuation( pData[byteIndex] ) == false )
                         return { kReplacementCodepoint, byteIndex, false };
                     codepoint = ( codepoint << 6 ) | ( static_cast<uint8>( pData[byteIndex] ) & 0x3F );
                 }
@@ -1172,7 +1157,7 @@ namespace sw
                 ++line;
                 column = 1;
             }
-            else if ( ( byte & 0xC0 ) != 0x80 ) // 이어지는 바이트(10xxxxxx)는 세지 않는다 — 열은 글자 수다
+            else if ( Utf8Util::isContinuation( byte ) == false ) // 이어지는 바이트(10xxxxxx)는 세지 않는다 — 열은 글자 수다
             {
                 ++column;
             }
@@ -1188,6 +1173,38 @@ namespace sw
         const StringUtilInternal::DecodedCodepoint decoded = StringUtilInternal::decodeUtf8Sequence( text.data() + inoutOffset, text.size() - inoutOffset );
         inoutOffset += decoded._byteCount;
         return decoded._codepoint;
+    }
+
+    bool StringUtil::tryDecodeUtf8( string_view text, size_t& inoutOffset, uint32& outCodepoint )
+    {
+        if ( inoutOffset >= text.size() )
+        {
+            outCodepoint = StringUtilInternal::kReplacementCodepoint;
+            return false;
+        }
+        const StringUtilInternal::DecodedCodepoint decoded = StringUtilInternal::decodeUtf8Sequence( text.data() + inoutOffset, text.size() - inoutOffset );
+        inoutOffset += decoded._byteCount;
+        outCodepoint = decoded._codepoint;
+        return decoded._bValid;
+    }
+
+    bool StringUtil::tryDecodeSingleCodepoint( string_view text, uint32& outCodepoint )
+    {
+        size_t offset = 0;
+        return tryDecodeUtf8( text, offset, outCodepoint ) && offset == text.size();
+    }
+
+    void StringUtil::utf8ToUcs2( string_view text, vector<uint16>& outListUnit )
+    {
+        constexpr uint32 kMaxUcs2Codepoint = 0xFFFF;
+        outListUnit.clear();
+        size_t offset = 0;
+        while ( offset < text.size() )
+        {
+            uint32     codepoint = 0;
+            const bool bValid    = tryDecodeUtf8( text, offset, codepoint );
+            outListUnit.push_back( static_cast<uint16>( bValid && codepoint <= kMaxUcs2Codepoint ? codepoint : StringUtilInternal::kReplacementCodepoint ) );
+        }
     }
 
     void StringUtil::appendUtf8( string& inoutText, uint32 codepoint )

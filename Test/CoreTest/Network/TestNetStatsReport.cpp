@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Network/DebugReplyLine.h"
 #include "Core/Network/Message/NetStatsReport.h"
 
 #include "TestFramework/TestFramework.h"
@@ -88,4 +89,30 @@ SW_TEST_CASE( NetStatsReportTest, ReplicaStatsRoundTripAndBadNamesAreNotWritten 
     NetStatsReport emptyReplicas;
     SW_ASSERT_TRUE( NetStatsReport::tryParseLine( NetStatsReport{}.makeLine(), emptyReplicas ) );
     SW_EXPECT_TRUE( emptyReplicas._listReplicaEntry.empty() );
+}
+
+/**
+ * @brief [NetStatsReportTest] 줄이 상한을 넘으면 복제 셈을 빼고 잘린 사실과 원래 길이를 줄에 싣는다(말없이 자르지 않는다)
+ */
+SW_TEST_CASE( NetStatsReportTest, OverlongLineIsCappedAndMarkedTruncated )
+{
+    NetStatsReport report;
+    const string   longName( 400, 'a' );
+    for ( int32 index = 0; index < 20; ++index )
+    {
+        report._listReplicaEntry.push_back( NetStatsReplicaEntry{ longName + to_string( index ), 1, 1 } );
+    }
+    const string line = report.makeLine();
+    SW_EXPECT_TRUE( line.size() <= DebugReplyLine::kMaxBytes );
+
+    NetStatsReport parsed;
+    SW_ASSERT_TRUE( NetStatsReport::tryParseLine( line, parsed ) );
+    SW_EXPECT_TRUE( parsed._truncatedLineBytes > DebugReplyLine::kMaxBytes );
+    SW_EXPECT_TRUE( parsed._listReplicaEntry.size() < report._listReplicaEntry.size() );
+
+    NetStatsReport small;
+    small._listReplicaEntry.push_back( NetStatsReplicaEntry{ "entities", 1, 1 } );
+    NetStatsReport smallParsed;
+    SW_ASSERT_TRUE( NetStatsReport::tryParseLine( small.makeLine(), smallParsed ) );
+    SW_EXPECT_EQUAL( smallParsed._truncatedLineBytes, uint64{ 0 } );
 }
