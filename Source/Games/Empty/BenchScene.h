@@ -17,6 +17,9 @@
 
 #include "Games/Empty/BenchSceneSettings.h"
 
+#include <cstring>
+#include <type_traits>
+
 namespace sw
 {
     class CameraComponent;
@@ -34,6 +37,46 @@ namespace sw
     class Skeleton;
     class SocketSet;
 
+    /** @brief 벤치가 카메라를 맞추는 보기 모드입니다. 여러 벤치를 함께 켜면 열거 순서가 높은 모드가 정합니다. `despawn` 이 격자로 되돌립니다. */
+    enum class FramingMode : uint32
+    {
+        Grid,      ///< 큐브 격자(기본).
+        Character, ///< `-gv_benchCharacters` 캐릭터 줄(또는 격자).
+        Combat,    ///< `-gv_benchCombat` 전투 연출.
+        Ragdoll,   ///< `-gv_benchRagdolls` 래그돌 군중.
+        Rig,       ///< `-gv_benchRig` 후처리 리그 기사.
+        Face,      ///< `-gv_benchFaces` 테스트 머리 줄.
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @struct FramingInput
+     * @brief 카메라 맞춤이 읽는 입력 값을 모은 구조입니다. 마지막으로 맞춘 값과 달라지면 다시 맞춥니다.
+     * @details 맞춤이 새 입력(`-gv_bench…`)을 읽게 되면 여기에 필드를 더하고 `captureFramingInput` 이 채웁니다. 비교는 바이트 단위라
+     *          필드를 더해도 비교에서 빠지지 않습니다. 모든 필드가 정수라 빈틈 · 부동소수점이 없음을 아래 `static_assert` 가 지킵니다
+     *          (부동소수점을 더하면 컴파일이 멈춥니다. 정수로 바꾸어 담습니다). 읽지 않는 필드는 0 으로 두어 상관없는 값이 맞춤을 부르지 않게 합니다.
+     */
+    struct FramingInput
+    {
+        FramingMode mode{ FramingMode::Grid };
+        uint32      gridSide{ 0 };   ///< 격자 한 변의 큐브 수(Grid).
+        int32       characters{ 0 }; ///< `-gv_benchCharacters`(Character · Combat · Ragdoll 의 깊이 계산이 읽습니다).
+        int32       columns{ 0 };    ///< `-gv_benchCharacterColumns`(위와 같음).
+        int32       faces{ 0 };      ///< `-gv_benchFaces`(Face).
+        uint32      rigCount{ 0 };   ///< 리그 기사 수(Rig).
+        int32       rigView{ 0 };    ///< `-gv_benchRigView`(Rig).
+
+        bool operator==( const FramingInput& other ) const { return std::memcmp( this, &other, sizeof( FramingInput ) ) == 0; }
+        bool operator!=( const FramingInput& other ) const { return operator==( other ) == false; }
+    };
+    static_assert( std::has_unique_object_representations_v<FramingInput>, "FramingInput 은 빈틈 · 부동소수점 없이 정수 필드만 가져야 바이트 비교가 맞다." );
+
+} // namespace sw
+
+namespace sw
+{
     /**
      * @class BenchScene
      * @brief 큐브 격자를 만들고 매 프레임 흔들어 렌더 경로를 실제로 실행합니다.
@@ -70,8 +113,8 @@ namespace sw
         /** @brief 벤치가 씬을 만들어 두었으면 true 를 반환합니다. */
         bool isActive() const
         {
-            return _listBenchMesh.empty() == false || _listInstanceBatch.empty() == false || _bCharacterFraming == SW_TRUE || _bFaceFraming == SW_TRUE ||
-                   _listRigBody.empty() == false;
+            return _listBenchMesh.empty() == false || _listInstanceBatch.empty() == false || _framingMode == FramingMode::Character ||
+                   _framingMode == FramingMode::Combat || _framingMode == FramingMode::Face || _listRigBody.empty() == false;
         }
 
     private:
@@ -88,8 +131,15 @@ namespace sw
         /** @brief 큐브마다 오브젝트를 만들어 격자를 채웁니다. 큐브별 머티리얼과 투명 비율은 이 경로에만 있습니다. */
         void spawnCubeGrid( GameObjectManager* pObjects, Material* pSceneMaterial, uint32 meshCount, uint32 side, float32 origin, uint32 transparentPercent,
                             const vector<shared_ptr<MaterialInstance>>& listTransparentMaterial );
-        /** @brief 지금 만든 벤치(얼굴, 리그, 래그돌, 캐릭터, 격자)에 맞춰 카메라를 다시 맞춥니다. */
+        /** @brief 지금 만든 벤치(얼굴, 리그, 래그돌, 캐릭터, 격자)에 맞춰 활성 씬의 카메라를 다시 맞춥니다. */
         void refreshFraming();
+        /**
+         * @brief @p requested 가 지금 모드보다 높으면 모드를 올리고, 모드에 맞는 맞춤 함수를 불러 @p pScene 의 카메라를 맞추고 그때의 입력을 `_framedInput` 에 적습니다.
+         * @details 모든 모드의 맞춤은 이 한 곳을 지납니다. 스폰은 자기 모드를 @p requested 로 넘깁니다.
+         */
+        void applyFraming( Scene* pScene, FramingMode requested );
+        /** @brief 지금의 보기 모드와 그 모드의 맞춤이 읽는 입력 값(`-gv_bench…`)을 모읍니다. */
+        FramingInput captureFramingInput() const;
         /** @brief 격자 둘레의 광원, 바닥, 카메라, 뷰를 만듭니다. 두 격자 경로가 함께 씁니다. */
         void finishGrid( Scene* pScene, uint32 side );
         /** @brief 리그 데모의 기울어진 바닥을 만듭니다. 물리용 상자와, 같은 위치와 크기의 큐브로 이루어집니다. */
@@ -261,11 +311,10 @@ namespace sw
         uint32 _ragdollFrame;
         /** @brief 리그 데모의 시선 목표(작은 구). */
         TComponentHandle<MeshComponent> _rigLookTarget;
-        /** @brief 리그 데모 카메라를 마지막으로 맞출 때의 `-gv_benchRigView` 값입니다. 달라지면(시나리오가 도중에 바꾼 경우) 다시 맞춥니다. */
-        int32 _framedRigView;
-        /** @brief 캐릭터 벤치를 스폰했으면 1 입니다. 카메라를 캐릭터 기준으로 맞춥니다. */
-        uint8                  _bCharacterFraming : 1;
-        uint8                  _bFaceFraming      : 1; ///< 테스트 머리 줄을 스폰했다(카메라를 머리 높이로 맞춘다).
-        [[maybe_unused]] uint8 _reserved          : 5;
+        /** @brief 마지막으로 카메라를 맞출 때의 입력입니다. `captureFramingInput()` 이 이와 달라지면(시나리오가 `-gv_bench…` 를 도중에 바꾼 경우) `update` 가 다시 맞춥니다. */
+        FramingInput _framedInput;
+        /** @brief 지금의 보기 모드입니다. 스폰이 정하고 `despawn` 이 격자로 되돌립니다. */
+        FramingMode            _framingMode;
+        [[maybe_unused]] uint8 _reserved : 7;
     };
 } // namespace sw
