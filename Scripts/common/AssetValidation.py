@@ -12,6 +12,8 @@
 실제 로더로 끝까지 읽어 보는 검사(모르는 키 · 타입 · 열거값)는 이미 `ResourceDataSchemaTest` 가 하므로 여기서 다시 하지 않는다.
 에디터는 저장 · 임포트 직후 같은 스크립트를 그 파일 하나에 부른다(`EditorAssetValidation`).
 
+**패턴은 경로 마디 단위다(`common/PathPattern.py`, 임포트 규칙의 `AssetImportPathFilter` 와 같은 뜻).** `/` 없는 패턴은 파일 이름에만 맞고, `*` 는 폴더를 넘지 않으며 마디 `**` 만 넘는다.
+
 검사 목록(`check` 이름):
   naming               파일 이름 정규식 · 폴더별 허용 접미사
   texture              DDS 머리 — 최대 크기 · 2 의 거듭제곱 · 밉 유무 · 허용 형식
@@ -34,7 +36,6 @@
 
 from __future__ import annotations
 
-import fnmatch
 import json
 import re
 import struct
@@ -44,6 +45,7 @@ from pathlib import Path
 from typing import Callable, Iterator
 
 from .Constants import kShaderSourceExtensions
+from .PathPattern import matchesPattern
 
 #: 심각도 — 앞일수록 무겁다. 게이트는 `error` 만 막는다.
 kSeverityOrder: tuple[str, ...] = ("error", "warning", "info")
@@ -114,9 +116,9 @@ class Rule:
     excludeReason: str = ""  # 제외가 있으면 그 까닭 — 이유 없는 제외는 규칙 표를 읽지 못한다
 
     def matches(self, relPath: str) -> bool:
-        if not any(fnmatch.fnmatchcase(relPath, pattern) for pattern in self.listIncludePattern):
+        if not any(matchesPattern(pattern, relPath) for pattern in self.listIncludePattern):
             return False
-        return not any(fnmatch.fnmatchcase(relPath, pattern) for pattern in self.listExcludePattern)
+        return not any(matchesPattern(pattern, relPath) for pattern in self.listExcludePattern)
 
 
 @dataclass
@@ -142,7 +144,7 @@ class ValidationContext:
         """리소스 패턴 중 하나에 맞는 파일들(패턴 묶음마다 한 번만 훑는다)."""
         key = tuple(listPattern)
         if key not in self._mapPatternCache:
-            self._mapPatternCache[key] = [path for path in self.listAllPath if any(fnmatch.fnmatchcase(path, pattern) for pattern in listPattern)]
+            self._mapPatternCache[key] = [path for path in self.listAllPath if any(matchesPattern(pattern, path) for pattern in listPattern)]
         return self._mapPatternCache[key]
 
     def hasDirectory(self, relPath: str) -> bool:
@@ -858,8 +860,8 @@ def validate(listRule: list[Rule], resourceRoot: Path, repositoryRoot: Path, lis
     if listTarget is None:
         for rule in listRule:
             for pattern in rule.listExcludePattern:
-                bCovers = any(fnmatch.fnmatchcase(relPath, pattern) and
-                              any(fnmatch.fnmatchcase(relPath, include) for include in rule.listIncludePattern) for relPath in listAllPath)
+                bCovers = any(matchesPattern(pattern, relPath) and
+                              any(matchesPattern(include, relPath) for include in rule.listIncludePattern) for relPath in listAllPath)
                 if bCovers is False:
                     listFinding.append(Finding("<rules>", rule.name, "error",
                                                f"exclude pattern '{pattern}' matches no file the rule includes - remove the stale exception"))

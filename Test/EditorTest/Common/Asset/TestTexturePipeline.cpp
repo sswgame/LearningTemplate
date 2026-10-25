@@ -626,6 +626,27 @@ namespace sw::editor
     }
 
     /**
+     * @brief [EditorTexturePipelineTest] UI 폴더의 `_n` 으로 끝나는 이미지(화살표 · 커서 · 북쪽 표시)는 노멀 맵이 아니라 UI 텍스처다
+     * @details 저장소 설정 그대로 본다 — `Normal_Maps` 가 UI 폴더(`ui/` · `gui/` · `icons/`)를 제외한다. UI 밖의 `_n` 은 그대로 노멀 맵이다.
+     */
+    SW_TEST_CASE( EditorTexturePipelineTest, RepositoryUIImagesEndingInNAreNotNormalMaps )
+    {
+        SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+        TextureImportConfig config;
+        SW_ASSERT_TRUE( config.loadFromFile( TextureImporter::makeDefaultImportConfigPath() ) == ConfigReadResult::Loaded );
+
+        for ( const sw::string& path : sw::vector<sw::string>{ "engine/textures_raw/ui/kenney_ui/blue/arrow_basic_n.png", "engine/textures_raw/ui/kenney_cursor/basic/arrow_n.png",
+                                                               "engine/textures_raw/ui/kenney_input_prompts/keyboard_mouse/keyboard_n.png" } )
+        {
+            const TextureImportRuleMatch match = config.findMatchingRule( path );
+            SW_EXPECT_FALSE_MSG( match.hasError(), match._error.c_str() );
+            SW_EXPECT_EQUAL( sw::string( "UI_Textures" ), match._rule._name );
+            SW_EXPECT_TRUE( match._rule._format == TextureImportFormat::B8G8R8A8 );
+        }
+        SW_EXPECT_EQUAL( sw::string( "Normal_Maps" ), config.findMatchingRule( "game/shooter3d/textures_raw/hero_n.png" )._rule._name );
+    }
+
+    /**
      * @brief [EditorTexturePipelineTest] 맨 끝의 조건 없는 규칙은 **정상**이다 — 경고하지 않는다
      * @details `Fallback_Default` 처럼 마지막에 두는 캐치올은 이 설정의 정상적인 쓰임이다. 진단이
      *          "조건이 없다" 만 보고 짖으면 멀쩡한 설정마다 경고가 떠서 아무도 안 읽게 된다 —
