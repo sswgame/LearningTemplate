@@ -80,6 +80,7 @@ namespace sw
     struct MechArenaSnapshot
     {
         REFLECT_BODY();
+        static constexpr uint32 kMaxListSize = 255; ///< 세 목록(팀 게이지, 조종사, 탄)의 길이 상한
         PROPERTY( Min = 1, Max = 100000 )
         float32 _arenaHalfSize{ 200.0f }; ///< 위치 양자화 범위입니다. 쓰는 쪽의 설정이며 바이트에 함께 실립니다
         PROPERTY( Min = 1, Max = 100000 )
@@ -88,11 +89,11 @@ namespace sw
         float32 _remainingTime{ 0.0f };
         PROPERTY()
         uint32 _tick{ 0 };
-        PROPERTY( MaxCount = 255 )
+        PROPERTY( MaxCount = kMaxListSize )
         vector<int32> _listTeamGauge{};
-        PROPERTY( MaxCount = 255 )
+        PROPERTY( MaxCount = kMaxListSize )
         vector<MechPilotSnapshot> _listPilot{};
-        PROPERTY( MaxCount = 255 )
+        PROPERTY( MaxCount = kMaxListSize )
         vector<MechProjectileSnapshot> _listProjectile{};
         PROPERTY( Min = -1, Max = 255 )
         int32 _winningTeam{ -1 };

@@ -67,15 +67,16 @@ namespace sw
     struct HorrorSnapshot
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 255 )
+        static constexpr uint32 kMaxListSize = 255; ///< 생존자, 발전기, 탈출구, 판자, 창틀 목록의 길이 상한
+        PROPERTY( MaxCount = kMaxListSize )
         vector<HorrorSurvivorSnapshot> _listSurvivor{};
-        PROPERTY( MaxCount = 255 )
+        PROPERTY( MaxCount = kMaxListSize )
         vector<HorrorGeneratorSnapshot> _listGenerator{};
-        PROPERTY( MaxCount = 255, Step = 0.001, Min = 0, Max = 1 )
+        PROPERTY( MaxCount = kMaxListSize, Step = 0.001, Min = 0, Max = 1 )
         vector<float32> _listGateProgress{};
-        PROPERTY( MaxCount = 255 )
+        PROPERTY( MaxCount = kMaxListSize )
         vector<PalletState> _listPalletState{};
-        PROPERTY( MaxCount = 255, Min = 0, Max = 1 )
+        PROPERTY( MaxCount = kMaxListSize, Min = 0, Max = 1 )
         vector<uint8> _listWindowBlocked{};
         PROPERTY( Step = 0.01, Min = -1000, Max = 1000 )
         float3 _killerPosition{};

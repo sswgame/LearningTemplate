@@ -95,7 +95,8 @@ namespace sw
     {
     public:
         REFLECT_BODY();
-        static constexpr int32 kSimultaneousFrames = 2; ///< 버튼 둘을 이 틱 안에 누르면 동시
+        static constexpr int32  kSimultaneousFrames = 2;   ///< 버튼 둘을 이 틱 안에 누르면 동시
+        static constexpr uint32 kMaxFrameCount      = 240; ///< 고정 배치형이 싣는 고리 버퍼 용량의 상한
 
         explicit InputCommandBuffer( int32 capacity = 60 );
 
@@ -118,8 +119,8 @@ namespace sw
     private:
         bool matchesStep( const InputCommandStep& step, int32 framesAgo, int32 facing ) const;
 
-        PROPERTY( MaxCount = 240 )
-        vector<InputFrame> _listFrame; ///< 고리 버퍼. 길이는 늘 용량이고, 240 은 고정 배치형이 싣는 용량의 상한이다
+        PROPERTY( MaxCount = kMaxFrameCount )
+        vector<InputFrame> _listFrame; ///< 고리 버퍼. 길이는 늘 용량이다
         int32              _capacity;
         PROPERTY( Min = 0 )
         int32 _head; ///< 다음에 쓸 위치

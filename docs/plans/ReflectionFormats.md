@@ -362,6 +362,8 @@ id 슬롯이 다른 타입으로 재사용되는 경우는 지금도 Debug 단�
 - 없음. `getComponent<` 413 건의 틱 안 비율(옛 단계 0)은 세지 않고 닫았습니다(7.3).
 - 온라인 숫자 `MaxCount` 는 `wt/onlinemax` 에서 모두 상수 이름으로 바꿨습니다(8.1 위험 4). 같은 값이 여러 곳이면 상수 하나로 모았고(`AdminProtocol`, `EconomyProtocol`, `LoginConstant`, `MatchmakingLimit` 등), 서로 다른 키트의 같은 값(관리자 `kMaxMessageKeySize` · 서버 목록 `ServerDirectoryLimit::kMaxMessageKeySize`)은 키트끼리 포함할 수 없어 각자 두었습니다.
   같은 헤더에 같은 값의 상수가 있으면 알리는 게이트는 두지 않았습니다. 값이 우연히 같은 상수(해시 32 바이트와 이름 32 바이트 등)가 많아 오탐이 진짜 후보보다 많았기 때문입니다. `Min` · `Max` 의 반복 리터럴(예: `Max = 100`)은 상수를 받지 못해 그대로입니다(3.8).
+- 기믹 · 장르 키트와 서버 버스 테스트 타입의 숫자 `MaxCount` 도 `wt/maxkits` 에서 상수 이름으로 바꿨습니다(`MechArenaSnapshot::kMaxListSize`, `HorrorSnapshot::kMaxListSize`, `InputCommandBuffer::kMaxFrameCount`, `RoundSeries::kMaxParticipantCount`, `BusTestLimit`). 채팅의 `ChatLimit::kMaxTextSize` · `kMaxReasonSize` 는 같은 값인 `ServiceReportConstant` 와 `static_assert` 로 맞춥니다(Base 는 키트를 포함할 수 없어 키트 쪽에 둠).
+- 숫자 리터럴 `MaxCount` 를 생성 오류로 거절하는 것은 하지 않았습니다. 리터럴은 문서화된 입력 형식(3.5)이고, 고정 배치형 테스트 타입(`TestFixedLayoutTypes.h`)과 파서 테스트 문자열(`TestReflectionParser.cpp`, 잘못된 값 `2.5` 거절 포함)이 일부러 리터럴 경로를 확인하므로, 거절하면 그 테스트의 모양을 다시 짜야 해 작은 변경이 아닙니다.
 
 ## 9. 단계
 

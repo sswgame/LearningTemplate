@@ -28,6 +28,17 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 본문 타입들의 `MaxCount` 상수입니다(숫자 리터럴을 쓰지 않습니다). */
+    namespace BusTestLimit
+    {
+        static constexpr uint32 kMaxLabelSize     = 16; ///< 옛 빌드의 글 길이 상한
+        static constexpr uint32 kMaxWideLabelSize = 64; ///< 넓힌 빌드의 글 길이 상한
+        static constexpr uint32 kMaxItemCount     = 4;
+    } // namespace BusTestLimit
+} // namespace sw
+
+namespace sw
+{
     /** @brief 두 빌드가 함께 쓰는 중첩 원소입니다. */
     REFLECT()
     struct BusTestItem
@@ -46,9 +57,9 @@ namespace sw
     {
         REFLECT_BODY();
         static constexpr uint32 kBusVersion = 1;
-        PROPERTY( MaxCount = 16 )
+        PROPERTY( MaxCount = BusTestLimit::kMaxLabelSize )
         string _label{};
-        PROPERTY( MaxCount = 4 )
+        PROPERTY( MaxCount = BusTestLimit::kMaxItemCount )
         vector<BusTestItem> _listItem{};
         PROPERTY()
         uint64 _accountID{ 0 };
@@ -66,9 +77,9 @@ namespace sw
     {
         REFLECT_BODY();
         static constexpr uint32 kBusVersion = 1;
-        PROPERTY( MaxCount = 16 )
+        PROPERTY( MaxCount = BusTestLimit::kMaxLabelSize )
         string _label{};
-        PROPERTY( MaxCount = 4 )
+        PROPERTY( MaxCount = BusTestLimit::kMaxItemCount )
         vector<BusTestItem> _listItem{};
         PROPERTY()
         uint64 _accountID{ 0 };
@@ -88,9 +99,9 @@ namespace sw
     {
         REFLECT_BODY();
         static constexpr uint32 kBusVersion = 2;
-        PROPERTY( MaxCount = 16 )
+        PROPERTY( MaxCount = BusTestLimit::kMaxLabelSize )
         string _label{};
-        PROPERTY( MaxCount = 4 )
+        PROPERTY( MaxCount = BusTestLimit::kMaxItemCount )
         vector<BusTestItem> _listItem{};
         PROPERTY()
         uint64 _accountID{ 0 };
@@ -107,7 +118,7 @@ namespace sw
     {
         REFLECT_BODY();
         static constexpr uint32 kBusVersion = 1;
-        PROPERTY( MaxCount = 64 )
+        PROPERTY( MaxCount = BusTestLimit::kMaxWideLabelSize )
         string _label{};
         PROPERTY()
         uint64 _accountID{ 0 };

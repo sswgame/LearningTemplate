@@ -94,7 +94,8 @@ namespace sw
     {
     public:
         REFLECT_BODY();
-        static constexpr int32 kNoWinner = -1; ///< 우승자 없음을 뜻한다(끝나지 않았거나 무승부). `reportRoundWinner` 에서는 무승부 라운드를 뜻한다
+        static constexpr int32  kNoWinner            = -1; ///< 우승자 없음을 뜻한다(끝나지 않았거나 무승부). `reportRoundWinner` 에서는 무승부 라운드를 뜻한다
+        static constexpr uint32 kMaxParticipantCount = 64; ///< 고정 배치형이 싣는 참가자 수의 상한
 
         RoundSeries();
 
@@ -135,8 +136,8 @@ namespace sw
         RoundSeriesOutcome finishRound();
 
         RoundSeriesSettings _settings;
-        PROPERTY( MaxCount = 64 )
-        vector<int32> _listTotal; ///< 참가자마다 총점. 64 는 고정 배치형이 싣는 참가자 수의 상한이다
+        PROPERTY( MaxCount = kMaxParticipantCount )
+        vector<int32> _listTotal; ///< 참가자마다 총점
         PROPERTY( Min = 0 )
         int32 _roundIndex;
         PROPERTY( Min = 0 )
