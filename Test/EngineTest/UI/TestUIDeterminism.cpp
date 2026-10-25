@@ -38,8 +38,9 @@ namespace
 {
     struct UIDeterminismTestUtil
     {
-        static constexpr float32 kFrameSeconds = 1.0f / 60.0f;
-        static constexpr uint32  kSettleFrames = 60; ///< 여는 애니메이션(0.2 초)이 끝날 만큼
+        static constexpr float32 kFrameSeconds   = 1.0f / 60.0f;
+        static constexpr uint32  kSettleFrames   = 60;  ///< 여는 애니메이션(0.2 초)이 끝날 만큼
+        static constexpr uint32  kMaxGlyphFrames = 600; ///< 미룬 글리프가 다 나타나기를 기다리는 프레임 상한
 
         /** @brief 해상도 · UI 배율 한 조건입니다. */
         struct Condition
@@ -221,18 +222,25 @@ namespace
 
         void runFrame()
         {
+            _fonts._fontService->getGlyphCache().beginFrame(); // 엔진이 없으니 프레임 시계를 직접 올린다 — 안 올리면 글리프 래스터화 예산이 되살아나지 않는다
             _input.beginFrame( UIDeterminismTestUtil::kFrameSeconds );
             _ui.processInput( UIDeterminismTestUtil::kFrameSeconds );
             _ui.update( UIDeterminismTestUtil::kFrameSeconds, _viewport );
             _input.endFrame();
         }
 
+        /** @brief 여는 애니메이션이 끝날 만큼 돌린 뒤, 글리프 래스터화 예산(4 ms — 느린 빌드에서는 프레임마다 다르게 찬다) 때문에 미룬 글리프가 없어질 때까지 더 돈다. */
         void settle()
         {
             for ( uint32 frame = 0; frame < UIDeterminismTestUtil::kSettleFrames; ++frame )
             {
                 runFrame();
             }
+            for ( uint32 frame = 0; frame < UIDeterminismTestUtil::kMaxGlyphFrames && _ui.getDeferredGlyphCount() > 0; ++frame )
+            {
+                runFrame();
+            }
+            SW_EXPECT_EQUAL( 0u, _ui.getDeferredGlyphCount() );
         }
 
         /** @brief 견본을 엽니다. 연 화면의 핸들입니다. */
