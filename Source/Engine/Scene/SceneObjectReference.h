@@ -22,6 +22,7 @@ namespace sw
     class GameObject;
     class Scene;
     class SceneManager;
+    class TypeRegistry;
 
     /** @brief `SceneObjectReferenceUtil::resolve` 의 결과입니다. */
     enum class SceneObjectResolveResult : uint8
@@ -73,9 +74,10 @@ namespace sw
         /**
          * @brief 올라와 있는 모든 씬(로드된 씬 + 미리보기 씬, `SceneManager::collectAllScenes`)의 컴포넌트 중에 @p targetScene 의 오브젝트 @p objectID 를 가리키는 `SceneObjectReference` 칸(`vector<SceneObjectReference>` 같은 컨테이너 칸과 리플렉션 구조체 안의 칸 포함)이 있는지 봅니다. 있으면 첫 하나를 @p outHolder 에 적습니다("씬/오브젝트.컴포넌트.프로퍼티").
          * @details 오브젝트를 씬 파일 밖으로 옮기기(다시 스폰되는 쪽으로 넘기기) 전에 부른다 — 옮기면 그 파일 id 가 다음 로드에 사라져 참조가 끊긴다.
+         *          @p typeRegistry 는 구조체 안의 칸을 보려고 필수로 받는다(없을 때 구조체 안을 건너뛰고 통과시키는 길을 두지 않는다).
          *          파일 id 를 준 적 없는 오브젝트는 참조가 있을 수 없어 false 이고, 이 함수는 파일 id 를 새로 주지 않는다.
          */
-        [[nodiscard]] static bool findReferenceTo( const SceneManager& sceneManager, const Scene& targetScene, uint64 objectID, string& outHolder );
+        [[nodiscard]] static bool findReferenceTo( const SceneManager& sceneManager, const TypeRegistry& typeRegistry, const Scene& targetScene, uint64 objectID, string& outHolder );
         /** @brief 리플렉션 타입 이름이 `SceneObjectReference` 인지 봅니다(이 타입 이름 비교는 여기 한 곳이다). */
         [[nodiscard]] static bool isReferenceTypeName( const hashed_string& typeName );
         /** @brief 올라와 있는 씬들(`SceneManager::getLoadedScenes`)에서 참조를 해석합니다. 찾으면 @p outObjectID 를 채웁니다. */

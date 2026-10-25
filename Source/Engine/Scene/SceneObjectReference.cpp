@@ -44,13 +44,13 @@ namespace sw
          * @brief 필드 하나의 값 아래에 든 `SceneObjectReference` 를 모읍니다(필드 자체, 구조체 안의 칸, 컨테이너 원소 · 맵 키와 값, 그 중첩). 값을 고치면 포인터가 무효가 됩니다.
          * @details `ReflectedValueWalk` 를 쓰지 않은 이유: 그 걷기는 바이트로 복사할 수 있는 잎을 제자리에서 바꾸는 쓰기 도구이고 `SceneObjectReference` 는 문자열을 가져 잎이 될 수 없다.
          *          여기는 읽기만 하므로 같은 모양(구조체 · 컨테이너 단계)을 읽기 전용으로 내려간다.
-         *          구조체 타입은 레지스트리로 찾는다(레지스트리가 없으면 구조체 안은 볼 수 없어 `bMissingRegistry` 로 알린다).
+         *          구조체 타입은 레지스트리로 찾는다. 레지스트리는 필수 참조라 "없어서 구조체 안을 못 보는" 상태가 만들어지지 않는다.
          */
         class ReferenceCollector
         {
         public:
-            ReferenceCollector( const TypeRegistry* pRegistry, vector<const SceneObjectReference*>& outListReference )
-                : _pRegistry{ pRegistry }
+            ReferenceCollector( const TypeRegistry& registry, vector<const SceneObjectReference*>& outListReference )
+                : _registry{ registry }
                 , _outListReference{ outListReference }
             {
             }
@@ -71,8 +71,6 @@ namespace sw
                 }
             }
 
-            bool bMissingRegistry{ false };
-
         private:
             void collectValue( const void* pValue, const hashed_string& typeName )
             {
@@ -83,13 +81,8 @@ namespace sw
                     _outListReference.push_back( static_cast<const SceneObjectReference*>( pValue ) );
                     return;
                 }
-                if ( _pRegistry == nullptr )
-                {
-                    bMissingRegistry = true;
-                    return;
-                }
                 // 구조체 값의 주소는 그 구조체 타입의 객체 주소다. 내장 값 타입(숫자 · 문자열 등)은 구조체가 아니다.
-                const TypeInfo* pStruct = _pRegistry->findType( typeName );
+                const TypeInfo* pStruct = _registry.findType( typeName );
                 if ( pStruct == nullptr || pStruct->isPrimitive() )
                     return;
                 for ( const PropertyInfo& inner : pStruct->getPropertiesWithBase() )
@@ -128,12 +121,12 @@ namespace sw
                     collectValue( pElement, shape._elementTypeName );
             }
 
-            const TypeRegistry*                  _pRegistry;
+            const TypeRegistry&                  _registry;
             vector<const SceneObjectReference*>& _outListReference;
         };
     } // namespace
 
-    bool SceneObjectReferenceUtil::findReferenceTo( const SceneManager& sceneManager, const Scene& targetScene, uint64 objectID, string& outHolder )
+    bool SceneObjectReferenceUtil::findReferenceTo( const SceneManager& sceneManager, const TypeRegistry& typeRegistry, const Scene& targetScene, uint64 objectID, string& outHolder )
     {
         outHolder.clear();
         const uint64 fileID = targetScene.findFileID( objectID );
@@ -142,7 +135,7 @@ namespace sw
         vector<const Scene*> listScene;
         sceneManager.collectAllScenes( listScene );
         vector<const SceneObjectReference*> listReference;
-        ReferenceCollector                  collector( sceneManager.getEngineServices()._pTypeRegistry, listReference );
+        ReferenceCollector                  collector( typeRegistry, listReference );
         for ( const Scene* scene : listScene )
         {
             if ( scene->getObjectManager() == nullptr )
@@ -173,8 +166,6 @@ namespace sw
             if ( outHolder.empty() == false )
                 return true;
         }
-        if ( collector.bMissingRegistry )
-            SW_LOG_ERROR( "findReferenceTo could not look inside struct fields - the scene manager has no type registry" );
         return false;
     }
 
