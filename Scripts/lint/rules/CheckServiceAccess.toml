@@ -18,6 +18,7 @@ CrashPath = "크래시 핸들러 · 전역 할당 훅이 읽는 저장소 — �
 ScopeOwnedHotPath = "범위(엔진 · 게임)가 소유한 저장소의 창구 — 핫 패스나 Core 층이 범위 조회 없이 잠금 없이 읽는다"
 Stateless = "상태 없는 함수 묶음 — 서비스가 아니라 순수 함수 · 드라이버다"
 ScopeRoot = "소유 범위의 뿌리 — 값(`ScopeOwned<T>`)이 자기를 어디에 등록할지 정하는 칸이라 엔진 범위(서브시스템)보다 먼저 서야 한다(Core 층)"
+PendingScopeMove = "이전 대기(영구 예외가 아니다) — 정적 사본의 참조를 내주는 `getActive` 를, 소유자가 값을 들고 범위에 거는 서비스 표 창구로 옮기는 중이다. 옮기면 줄을 지운다(ArchitectureSeams 3 단계)"
 
 # 헤더에서 `static … getInstance()` 나 정적 활성 창구 `static T* findActive…()` · `getActive…()` 를 가져도 되는 타입 → 예외 종류.
 # 새 서비스는 서브시스템으로 만들어 범위에 넣고, "지금 도는 것" 은 소유자가 범위에 빌려 건다(`SubsystemScope::bind`).
@@ -42,3 +43,8 @@ SceneTransformStorage = "ScopeOwnedHotPath" # 엔진 수명 범위가 소유하�
 ValidationIssueLog = "ScopeOwnedHotPath"    # 범위가 소유하는 표 — 파괴 경로도 부르므로 범위 조회를 거치지 않는다. 월드 소유로 옮기는 일은 Candidates-engine 의 ValidationIssueLogWorldOwned
 BehaviorTaskRegistry = "LinkTimeRegistry" # 게임 · 키트 모듈 이미지의 정적 등록자(`SW_BEHAVIOR_TASK`)가 채우는 작업 이름 표
 GameInstanceBase = "Stateless"      # 활성 창구 아님 — findActiveObjectManager 는 게임 범위를 올라가 찾는 편의 함수이고 정적 포인터를 들지 않는다
+TradeStoreLogic = "Stateless"       # 활성 창구 아님 — getActiveTable 은 "활성 거래 링크" 저장소 표의 이름 상수다(정적 사본이 아니다)
+EditorThemeUtil = "PendingScopeMove" # 에디터가 현재 테마 사본을 정적으로 든다(`getActiveTheme`). 에디터 컨텍스트 소유로 옮기는 일은 에디터 작업자의 몫
+EngineConfig = "PendingScopeMove"   # ConfigManager 소유로 옮기는 중(ArchitectureSeams 3 단계 — 첫 커밋 단위)
+GameConfig = "PendingScopeMove"     # 같은 이전의 둘째 단위
+Render2DSettings = "PendingScopeMove" # 같은 이전의 셋째 단위

@@ -19,7 +19,9 @@
     읽기 전용 참조(`const T&`)와 포인터의 참조(`T*&`)는 섞인 상태를 내주는 창구가 아니라 상수 표 · 링크 때 목록 머리라 세지 않는다.
     **이 항목이 보지 않는 곳**: `.cpp` 의 익명 · `…Internal` 이름공간 접근자 · 네임스페이스 수준 변수 · 클래스의 `static` 가변 멤버 · `thread_local` — 접근자의 이름과 장소를 가리지 않고
     정적 저장 기간의 가변 변수 전체를 `CheckMutableStatics` 가 막는다(헤더의 접근자는 두 게이트가 다 본다).
-  - `ServiceAccess/ActiveWindow`: 헤더의 정적 활성 창구 `static T* findActive…()` · `static T* getActive…()`(포인터를 돌려주는 것). 정적 포인터 칸에 "지금 도는 것" 을
+  - `ServiceAccess/ActiveWindow`: 헤더의 정적 활성 창구 `static T* findActive…()` · `static T* getActive…()`(포인터를 돌려주는 것)와, **정적 사본의 참조**를 내주는
+    `static const T& getActive…()` · `static T& getActive…()`(`T*&` 는 링크 때 목록 머리라 뺀다). 참조 쪽은 `EngineConfig::getActive()` 처럼 `setActive` 가 덮는 정적 사본을
+    읽기 참조로 내주는 모양이라 읽기 전용이어도 사본 칸이 전역이다 — 소유자가 값을 들고 범위에 걸어 서비스 표가 찾게 한다. 정적 포인터 칸에 "지금 도는 것" 을
     적어 두는 모양이라 단일체와 같이 수명이 숨고, 둘째 인스턴스 · 내려간 인스턴스를 가리킨다(App 의 교체기 · 엔진의 셸 액션 · 디버그 HUD 가 이 모양이었다).
     소유자가 객체를 범위에 빌려 걸고(`SubsystemScope::bind`) 쓰는 쪽이 `findSubsystem<T>()` 로 찾는다.
     **형식으로 막지 못하는 틈이라 게이트를 둔다** — 정적 멤버 함수와 정적 변수는 언어가 늘 허락하고, 범위 창구는 쓰는 쪽이 고르는 길이라 타입이 강제할 수 없다.
@@ -75,6 +77,9 @@ _kEngineNamedAccessorRe = re.compile(r"(?<![\w$])engine::(get[A-Z]\w*)\s*\(")
 # `static T& getInstance()` 와 `static T& get()` — 둘 다 전역 단일체 창구다. `get` 은 참조를 돌려주는 인자 없는 것만 본다(`&` 필수).
 _kStaticGetInstanceRe = re.compile(r"\bstatic\b[^;{}()=]*?(?:\bgetInstance\s*\(|&\s*get\s*\(\s*\))")
 _kStaticActiveWindowRe = re.compile(r"\bstatic\b[^;{}()=]*?\*\s*((?:find|get)\w*Active\w*)\s*\(\s*\)")
+# 같은 활성 창구가 **참조**로 내주는 모양 — `static const T& getActive()` 는 정적 사본(`static T s_active`)의 읽기 참조다. 읽기 전용이어도 사본은 전역 가변 칸이고
+# (`setActive` 가 덮는다) 쓰는 쪽이 늘 그 칸을 본다. `T*&`(링크 때 목록 머리)는 아래에서 거른다.
+_kStaticActiveReferenceRe = re.compile(r"\bstatic\b([^;{}()=]*?)&\s*((?:find|get)\w*Active\w*)\s*\(\s*\)")
 # 이름이 무엇이든(`instance()` · `shared()` · `global()` …) 단일체 창구인 두 모양 — 이름이 아니라 모양을 본다.
 #   (가) 자기 타입의 참조를 돌려주는 인자 없는 정적 멤버(선언이든 정의든): `static T& anything()` 를 T 클래스 안에서.
 #   (나) 인자 없이 참조를 돌려주고 몸에 함수 안 정적 지역(`static T s; … return s;`)을 두는 정의 — 클래스 안 · 밖 · 정적 여부와 무관하다.
@@ -237,6 +242,16 @@ def findSingletons(relative: str, text: str, code: str) -> list[str]:
             continue
         listViolation.append(f"{relative}:{lineNumber}: [{_kActiveWindowCategory}] {typeName}::{match.group(1)}() — 정적 활성 창구입니다. "
                              f"소유자가 범위에 걸고(SubsystemScope::bind) findSubsystem<T>() 로 찾으십시오 | {listOriginalLine[lineNumber - 1].strip()}")
+    for match in _kStaticActiveReferenceRe.finditer(code):
+        typeName = classNameAtInternal(code, match.start())
+        if typeName == "" or "*" in match.group(1):
+            continue   # 클래스 밖의 정적 자유 함수는 .cpp 안의 도우미이고, `T*&` 는 링크 때 목록 머리다
+        lineNumber = lineOfInternal(code, match.start())
+        if typeName in gate.mapExemption:
+            gate.useExemption(typeName)
+            continue
+        listViolation.append(f"{relative}:{lineNumber}: [{_kActiveWindowCategory}] {typeName}::{match.group(2)}() — 정적 사본의 참조를 내주는 활성 창구입니다. "
+                             f"소유자가 값을 들고 범위에 걸어(SubsystemScope::bind) 서비스 표(getSubsystem<T>())가 찾게 하십시오 | {listOriginalLine[lineNumber - 1].strip()}")
     return listViolation
 
 
@@ -317,6 +332,13 @@ class CheckServiceAccessGate(LintGate):
             "expectedViolation": "Source/Probe/ProbeActive.h:4: [ServiceAccess/ActiveWindow] ProbeActive::findActive()",
             "files": {
                 "Source/Probe/ProbeActive.h": "class ProbeActive\n{\npublic:\n    static ProbeActive* findActive();\n};\n",
+            },
+        },
+        {
+            "name": "정적 사본의 읽기 참조를 내주는 활성 창구(getActive)",
+            "expectedViolation": "Source/Probe/ProbeActiveCopy.h:4: [ServiceAccess/ActiveWindow] ProbeActiveCopy::getActive()",
+            "files": {
+                "Source/Probe/ProbeActiveCopy.h": "struct ProbeActiveCopy\n{\npublic:\n    static const ProbeActiveCopy& getActive();\n};\n",
             },
         },
         {
