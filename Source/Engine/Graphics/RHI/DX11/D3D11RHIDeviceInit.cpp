@@ -36,6 +36,14 @@ namespace sw
         _backBufferFormat = desc._format;
         // D3D11 에는 자원의 할당 크기를 물을 API 가 없다. 장부는 서술로 계산한 논리 크기다.
         getMemoryLedger().setSizeBasis( RHIMemorySizeBasis::Logical );
+        // 큰 업로드는 스테이징 예산 안에서만 받는다. 0 이면 큰 업로드를 하나도 받지 못하므로 기본값으로 바꾸지 않고 초기화를 멈춘다.
+        if ( desc._stagingRingBytes == 0 )
+        {
+            SW_LOG_ERROR( "The upload staging budget is 0 (gv_rhiStagingRingMegabytes) - Direct3D 11 does not start" );
+            return false;
+        }
+        _uploadStagingBudgetBytes = desc._stagingRingBytes;
+        _directUploadMaxBytes     = desc._directUploadMaxBytes;
 
         // DX12 와 같게 FLIP_DISCARD 를 쓴다(DXGI 의 HWND 규칙). 한 HWND 에 플립 모델 스왑체인을 한 번 만든 뒤에는,
         // 같은 창에 DISCARD/blt 체인을 만들어 Present 해도 사용자가 보는 화면이 갱신되지 않을 수 있다
@@ -244,8 +252,8 @@ namespace sw
         _frameSerial          = 0;
         _completedFrameSerial = 0;
         // 낸 전송의 쿼리와 아직 가져가지 않은 읽기는 장치와 함께 놓는다(COM 이 GPU 가 쓰는 동안 자원을 붙들어 준다).
-        _transferQueue.retireAll( []( Microsoft::WRL::ComPtr<ID3D11Query>& query )
-        { query.Reset(); } );
+        _transferQueue.retireAll( []( TransferProbe& probe )
+        { probe._query.Reset(); } );
         _listFreeTransferQuery.clear();
         _immediateContext.shutdown();
         _memoryAdapter.Reset();

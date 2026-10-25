@@ -102,6 +102,9 @@ namespace sw
         , _transferQueue{ _transferSerials }
         , _listFreeTransferQuery{}
         , _readbackTable{}
+        , _uploadStagingBytesInFlight{ 0 }
+        , _uploadStagingBudgetBytes{ 0 }
+        , _directUploadMaxBytes{ 0 }
         , _frameStreamContext{ nullptr }
         , _resourceImpl{ nullptr }
     {
@@ -291,6 +294,146 @@ namespace sw
         getMemoryLedger().recordAllocation( RHIMemoryKey::makeTexture( handle ), RHIMemoryLedger::classifyTexture( desc ),
                                             RHIMemoryLedger::computeTextureLogicalBytes( desc ) );
         return handle;
+    }
+
+    D3D11RHIDevice::UploadStaging::UploadStaging()
+        : _texture{}
+        , _pDevice{ nullptr }
+        , _bytes{ 0 }
+    {
+    }
+
+    D3D11RHIDevice::UploadStaging::UploadStaging( D3D11RHIDevice& device, uint64 bytes )
+        : _texture{}
+        , _pDevice{ &device }
+        , _bytes{ bytes }
+    {
+    }
+
+    D3D11RHIDevice::UploadStaging::~UploadStaging()
+    {
+        release();
+    }
+
+    D3D11RHIDevice::UploadStaging::UploadStaging( UploadStaging&& other ) noexcept
+        : _texture{ std::move( other._texture ) }
+        , _pDevice{ std::exchange( other._pDevice, nullptr ) }
+        , _bytes{ std::exchange( other._bytes, uint64{ 0 } ) }
+    {
+    }
+
+    D3D11RHIDevice::UploadStaging& D3D11RHIDevice::UploadStaging::operator=( UploadStaging&& other ) noexcept
+    {
+        if ( this == &other )
+            return *this;
+        release();
+        _texture = std::move( other._texture );
+        _pDevice = std::exchange( other._pDevice, nullptr );
+        _bytes   = std::exchange( other._bytes, uint64{ 0 } );
+        return *this;
+    }
+
+    void D3D11RHIDevice::UploadStaging::attachTexture( Microsoft::WRL::ComPtr<ID3D11Texture2D> texture )
+    {
+        SW_ASSERT( _pDevice != nullptr && _texture == nullptr && texture != nullptr );
+        _texture = std::move( texture );
+        // 장부 크기는 소스 바이트(논리 크기)다 — 드라이버가 행 간격을 늘린 실제 할당은 물을 API 가 없다.
+        _pDevice->getMemoryLedger().recordAllocation( RHIMemoryKey::makeDeviceObject( _texture.Get() ), RHIMemoryKind::Staging, _bytes );
+    }
+
+    void D3D11RHIDevice::UploadStaging::release()
+    {
+        if ( _pDevice == nullptr )
+            return;
+        if ( _texture != nullptr )
+        {
+            // 주소가 다른 자원에 다시 쓰이기 전에 장부에서 내린다.
+            _pDevice->getMemoryLedger().recordFree( RHIMemoryKey::makeDeviceObject( _texture.Get() ) );
+            _texture.Reset();
+        }
+        _pDevice->_uploadStagingBytesInFlight.fetch_sub( _bytes, std::memory_order_acq_rel );
+        _pDevice = nullptr;
+        _bytes   = 0;
+    }
+
+    D3D11RHIDevice::UploadStaging D3D11RHIDevice::allocateUploadStaging( uint64 bytes )
+    {
+        SW_ASSERT( bytes <= _uploadStagingBudgetBytes );
+        // 두 번째 시도는 끝난 전송을 모은 뒤다. 모으는 일은 즉시 컨텍스트 잠금이 필요해 예산이 찼을 때만 한다.
+        for ( uint32 attempt = 0; attempt < 2; ++attempt )
+        {
+            if ( attempt != 0 )
+            {
+                const D3D11ImmediateContext::ScopedLock context = _immediateContext.lock();
+                retireFinishedTransfers( context );
+            }
+            uint64 inFlightBytes = _uploadStagingBytesInFlight.load( std::memory_order_acquire );
+            while ( bytes <= _uploadStagingBudgetBytes - inFlightBytes )
+            {
+                if ( _uploadStagingBytesInFlight.compare_exchange_weak( inFlightBytes, inFlightBytes + bytes, std::memory_order_acq_rel, std::memory_order_acquire ) )
+                    return UploadStaging{ *this, bytes };
+            }
+        }
+        return UploadStaging{};
+    }
+
+    RHITransferSubmit D3D11RHIDevice::submitStagedUpload( const utf8* pCaller, TextureRecord& record, UINT width, UINT height, UINT mipCount,
+                                                          const D3D11_SUBRESOURCE_DATA* pArrInitialData, UINT firstDestinationSubresource, UINT destinationX,
+                                                          UINT destinationY )
+    {
+        uint64 uploadBytes{ 0 };
+        for ( UINT mip = 0; mip < mipCount; ++mip )
+        {
+            uploadBytes += pArrInitialData[mip].SysMemSlicePitch;
+        }
+        if ( uploadBytes > _uploadStagingBudgetBytes )
+        {
+            SW_LOG_ERROR( "%#: an upload of %# bytes is larger than the whole upload staging budget (%# bytes, gv_rhiStagingRingMegabytes)", pCaller, uploadBytes,
+                          _uploadStagingBudgetBytes );
+            return RHITransferSubmit::rejected();
+        }
+        UploadStaging staging = allocateUploadStaging( uploadBytes );
+        if ( staging.isReserved() == false )
+            return RHITransferSubmit::busy(); // 앞선 업로드를 GPU 가 끝내면 예산이 돌아온다 — 호출자가 다음 프레임에 다시 낸다
+
+        // 즉시 컨텍스트 잠금 밖이다. 장치 호출은 스레드 안전하고, 초기 데이터 복사(큰 텍스처는 수십 MiB)가 여기서 끝난다.
+        // 스테이징은 대상과 같은 포맷이라 CopySubresourceRegion 이 그대로 받는다. 큐브 · 배열 플래그는 한 면만 담으므로 두지 않는다.
+        D3D11_TEXTURE2D_DESC destinationDesc{};
+        record._texture->GetDesc( &destinationDesc );
+        D3D11_TEXTURE2D_DESC stagingDesc{};
+        stagingDesc.Width              = width;
+        stagingDesc.Height             = height;
+        stagingDesc.MipLevels          = mipCount;
+        stagingDesc.ArraySize          = 1;
+        stagingDesc.Format             = destinationDesc.Format;
+        stagingDesc.SampleDesc.Count   = 1;
+        stagingDesc.SampleDesc.Quality = 0;
+        stagingDesc.Usage              = D3D11_USAGE_STAGING;
+        stagingDesc.BindFlags          = 0;
+        stagingDesc.CPUAccessFlags     = D3D11_CPU_ACCESS_WRITE;
+        stagingDesc.MiscFlags          = 0;
+        Microsoft::WRL::ComPtr<ID3D11Texture2D> stagingTexture;
+        const HRESULT                           hr = _device->CreateTexture2D( &stagingDesc, pArrInitialData, stagingTexture.GetAddressOf() );
+        if ( FAILED( hr ) )
+        {
+            SW_LOG_ERROR( "%#: CreateTexture2D of the %#×%# staging texture (%# mips, %# bytes) failed hr=0x%#", pCaller, width, height, mipCount, uploadBytes,
+                          static_cast<uint32>( hr ) );
+            return RHITransferSubmit::rejected();
+        }
+        staging.attachTexture( std::move( stagingTexture ) );
+
+        // 잠금 안에서는 GPU 복사 명령과 끝을 알리는 쿼리만 낸다. 시리얼은 같은 잠금 안에서 매긴다(계약 5).
+        const D3D11ImmediateContext::ScopedLock context = _immediateContext.lock();
+        Microsoft::WRL::ComPtr<ID3D11Query>     query   = acquireTransferQuery( context );
+        if ( query == nullptr )
+            return RHITransferSubmit::rejected();
+        for ( UINT mip = 0; mip < mipCount; ++mip )
+        {
+            context->CopySubresourceRegion( record._texture.Get(), firstDestinationSubresource + mip, destinationX, destinationY, 0, staging.getTexture(), mip, nullptr );
+        }
+        const uint64 serial = endTransfer( context, std::move( query ), std::move( staging ) );
+        record._lastTransferSerial.store( serial );
+        return _transferSerials.makeAccepted( serial );
     }
 
     bool D3D11RHIDevice::queryGPUMemoryBudgetInternal( RHIMemoryBudget& outBudget )

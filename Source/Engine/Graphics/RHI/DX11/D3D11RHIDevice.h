@@ -223,13 +223,61 @@ namespace sw
          */
         void retireFrameOnGPU();
 
+        /**
+         * @class UploadStaging
+         * @brief 큰 업로드 하나가 쓰는 스테이징 텍스처와, 그것이 업로드 스테이징 예산(`_uploadStagingBytesInFlight`)에서 잡은 바이트입니다. 옮길 수만 있습니다.
+         * @details 전송 큐 항목(`TransferProbe`)이 GPU 가 복사를 끝낼 때까지 쥐고, 소멸자가 예산과 GPU 메모리 장부(Staging)를 돌려준다. 제출 도중의 이른 반환도
+         *          같은 소멸자로 돌려주므로 예산이 새는 길이 없다.
+         */
+        class UploadStaging
+        {
+        public:
+            /** @brief 아무것도 잡지 않은 값입니다(`isReserved() == false`). */
+            UploadStaging();
+            /** @brief @p device 의 예산에서 이미 잡은 @p bytes 를 맡습니다. `allocateUploadStaging` 만 부릅니다. */
+            UploadStaging( D3D11RHIDevice& device, uint64 bytes );
+            ~UploadStaging();
+            UploadStaging( UploadStaging&& other ) noexcept;
+            UploadStaging& operator=( UploadStaging&& other ) noexcept;
+            UploadStaging( const UploadStaging& )            = delete;
+            UploadStaging& operator=( const UploadStaging& ) = delete;
+
+            /** @brief 예산을 잡았으면 true 입니다. */
+            bool isReserved() const { return _pDevice != nullptr; }
+            /** @brief 만든 스테이징 텍스처를 맡기고 GPU 메모리 장부의 Staging 에 올립니다. `isReserved()` 일 때 한 번만 부릅니다. */
+            void             attachTexture( Microsoft::WRL::ComPtr<ID3D11Texture2D> texture );
+            ID3D11Texture2D* getTexture() const { return _texture.Get(); }
+
+        private:
+            /** @brief 텍스처를 장부에서 내리고 놓은 뒤 예산을 돌려줍니다. 비어 있으면 아무것도 하지 않습니다. */
+            void release();
+
+            Microsoft::WRL::ComPtr<ID3D11Texture2D> _texture;
+            D3D11RHIDevice*                         _pDevice;
+            uint64                                  _bytes;
+        };
+
+        /// @brief 전송 큐 항목 하나입니다. 완료를 알리는 이벤트 쿼리와, 스테이징으로 올린 업로드면 그 스테이징(전송이 끝나 큐에서 빠질 때 놓인다)입니다.
+        struct TransferProbe
+        {
+            Microsoft::WRL::ComPtr<ID3D11Query> _query;
+            UploadStaging                       _staging;
+        };
+
+        /**
+         * @brief 업로드 스테이징 예산에서 @p bytes 를 잡습니다. 모자라면 끝난 전송을 한 번 모은 뒤(즉시 컨텍스트 잠금을 잠깐 잡는다) 다시 잡습니다.
+         * @return 그래도 모자라면 빈 값입니다 — 앞선 업로드를 GPU 가 끝내면 생기므로 부르는 쪽은 `Busy` 를 돌려준다. @p bytes 는 예산 이하여야 합니다(넘는 요청은 부르는 쪽이 `Rejected`).
+         */
+        [[nodiscard]] UploadStaging allocateUploadStaging( uint64 bytes );
+
         /** @brief 전송 하나의 완료를 알릴 이벤트 쿼리를 풀에서 꺼내거나 만듭니다. 풀은 즉시 컨텍스트 잠금이 지키므로 가드를 받습니다. 못 만들면 nullptr 입니다(이유는 로그). */
         Microsoft::WRL::ComPtr<ID3D11Query> acquireTransferQuery( const D3D11ImmediateContext::ScopedLock& context );
         /**
          * @brief 방금 낸 전송 뒤에 이벤트 쿼리를 끝으로 달고 시리얼을 발급합니다. 전송 명령을 낸 그 가드로, 명령 직후에 부릅니다(시리얼은 제출 순서대로 같은 락 안에서 매긴다).
+         * @param staging 스테이징으로 올린 업로드면 그 스테이징입니다. 전송이 끝날 때까지 큐 항목이 쥡니다.
          * @return 발급한 시리얼입니다.
          */
-        uint64 endTransfer( const D3D11ImmediateContext::ScopedLock& context, Microsoft::WRL::ComPtr<ID3D11Query> query );
+        uint64 endTransfer( const D3D11ImmediateContext::ScopedLock& context, Microsoft::WRL::ComPtr<ID3D11Query> query, UploadStaging staging = UploadStaging{} );
         /** @brief 앞에서부터 끝난 전송을 풀로 돌려주고 워터마크를 올립니다. `GetData`(플래그 0)가 GPU 에 내보내되 기다리지 않습니다. */
         void retireFinishedTransfers( const D3D11ImmediateContext::ScopedLock& context );
 
@@ -337,6 +385,18 @@ namespace sw
          * @details D3D11 에는 할당 크기를 물을 API 가 없어 서술로 계산한 논리 크기를 기록한다(장부 기준은 Logical).
          */
         RHITextureHandle storeTexture( TextureRecord record, const RHITextureDesc& desc );
+        /**
+         * @brief 큰 업로드 하나를 스테이징 텍스처로 올립니다. 소스 복사는 즉시 컨텍스트 잠금 밖에서, 잠금 안에서는 복사 명령과 끝을 알리는 쿼리만 냅니다.
+         * @details 스테이징(대상과 같은 포맷, @p width × @p height, 밉 @p mipCount 개)은 장치(`ID3D11Device`, 스레드 안전)가 초기 데이터로 만든다 — 그 생성이 소스를
+         *          복사한다(계약 1). 그 뒤 잠금 하나 안에서 스테이징의 밉 i 를 대상의 서브리소스 `firstDestinationSubresource + i` 의 (`destinationX`, `destinationY`) 로
+         *          `CopySubresourceRegion` 하고 이벤트 쿼리를 단다. 즉시 컨텍스트 큐에 순서대로 들어가므로 `UpdateSubresource` 와 같은 순서 계약(계약 3)을 지킨다.
+         * @param pCaller 로그에 남길 제출 함수 이름입니다.
+         * @param pArrInitialData 스테이징 밉마다 하나(@p mipCount 개)입니다. `SysMemSlicePitch` 의 합이 예산에서 잡는 바이트입니다.
+         * @return 예산보다 큰 업로드와 생성 실패는 `Rejected`(이유는 로그), 예산이 지금 차 있으면 `Busy`, 받으면 `Accepted` 이고 @p record 의 마지막 전송 시리얼을 올립니다.
+         */
+        [[nodiscard]] RHITransferSubmit submitStagedUpload( const utf8* pCaller, TextureRecord& record, UINT width, UINT height, UINT mipCount,
+                                                            const D3D11_SUBRESOURCE_DATA* pArrInitialData, UINT firstDestinationSubresource, UINT destinationX,
+                                                            UINT destinationY );
 
         /** @brief setComputeRootConstants 의 실제 용량(dword)입니다. 네 백엔드 공통 안전값은
          *         shaderslot::kRootConstantDwords(DX12 와 Vulkan 의 루트 상수, 푸시 상수 크기)입니다. */
@@ -466,12 +526,19 @@ namespace sw
 
         /// @brief 전송 티켓의 시리얼 발급기와 완료 워터마크입니다(DX11 은 즉시 컨텍스트 하나라 제출 순서가 곧 실행 순서입니다).
         RHITransferSerials _transferSerials;
-        /// @brief 제출한 전송마다 이벤트 쿼리 하나를 제출 순서대로 쌓습니다. 앞에서부터 끝난 것만 워터마크를 올립니다. 쿼리는 `_immediateContext.lock()` 가드 안에서만 만지고 풀(`_listFreeTransferQuery`)로 돌려 씁니다.
-        RHITransferFenceQueue<Microsoft::WRL::ComPtr<ID3D11Query>> _transferQueue;
+        /// @brief 제출한 전송마다 이벤트 쿼리 하나(와 있으면 업로드 스테이징)를 제출 순서대로 쌓습니다. 앞에서부터 끝난 것만 워터마크를 올리고 스테이징을 놓습니다.
+        ///        쿼리는 `_immediateContext.lock()` 가드 안에서만 만지고 풀(`_listFreeTransferQuery`)로 돌려 씁니다.
+        RHITransferFenceQueue<TransferProbe> _transferQueue;
         /// @brief 끝난 이벤트 쿼리 풀입니다. `_immediateContext.lock()` 가드로 보호합니다.
         vector<Microsoft::WRL::ComPtr<ID3D11Query>> _listFreeTransferQuery;
         /// @brief 아직 가져가지 않은 텍스처 읽기입니다(시리얼로 찾습니다).
         RHIPendingReadbackTable<TextureReadbackRecord> _readbackTable;
+        /// @brief GPU 가 아직 복사 중인 업로드 스테이징의 바이트 합입니다(`UploadStaging` 이 잡고 놓습니다). `_uploadStagingBudgetBytes` 를 넘지 않습니다.
+        atomic<uint64> _uploadStagingBytesInFlight;
+        /// @brief 업로드 스테이징 예산(바이트, `RHISwapChainDesc::_stagingRingBytes`)입니다. 이보다 큰 업로드 하나는 `Rejected` 입니다.
+        uint64 _uploadStagingBudgetBytes;
+        /// @brief 이 크기(바이트, `RHISwapChainDesc::_directUploadMaxBytes`) 이하의 업로드는 스테이징 없이 즉시 컨텍스트의 `UpdateSubresource` 로 올립니다.
+        uint64 _directUploadMaxBytes;
 
         sw::unique_ptr<D3D11RHICommandContext>  _frameStreamContext;
         sw::unique_ptr<D3D11RHIResourceFactory> _resourceImpl;
