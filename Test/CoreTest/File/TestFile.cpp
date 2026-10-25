@@ -686,3 +686,24 @@ SW_TEST_CASE( FileTest, FindPathIgnoringCaseReturnsTheDiskSpelling )
     SW_EXPECT_TRUE( sw::FileUtil::findPathIgnoringCase( root, "mixeddir/sub/missing.txt" ).empty() );
     SW_EXPECT_TRUE( sw::FileUtil::findPathIgnoringCase( root, "nodir/sub/file.txt" ).empty() );
 }
+
+/**
+ * @brief [FileTest] makePathIgnoringCase 는 있는 성분은 디스크 표기로, 없는 성분부터는 받은 표기 그대로 잇는다
+ * @details 쓰기용이다 — 소문자 id 를 그대로 이으면 대소문자를 구분하는 파일 시스템(Linux)에서 이미 있는 폴더 옆에 대소문자만 다른 새 폴더가 생긴다.
+ */
+SW_TEST_CASE( FileTest, MakePathIgnoringCaseKeepsExistingSpellingAndAppendsTheRest )
+{
+    const sw::string root = test::makeTempDirectory( "SwMakePathCaseRoot" );
+    SW_ASSERT_TRUE( sw::FileUtil::ensureDirectoryExists( root + "/MixedDir/Sub" ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( root + "/MixedDir/Sub/File.TXT", "x" ) );
+    const sw::string base = sw::FileUtil::normalizeSeparators( root );
+
+    // 있는 파일: 디스크 표기로 풀려 같은 파일을 가리킨다(둘째 쓰기가 옆 파일을 만들지 않는다).
+    SW_EXPECT_EQUAL( base + "/MixedDir/Sub/File.TXT", sw::FileUtil::makePathIgnoringCase( root, "mixeddir/sub/file.txt" ) );
+    // 새 파일: 있는 폴더는 디스크 표기이고 파일 이름은 받은 표기다. 구분자는 `\` 도 받는다.
+    SW_EXPECT_EQUAL( base + "/MixedDir/Sub/New.Txt", sw::FileUtil::makePathIgnoringCase( root, "MIXEDDIR\\sub/New.Txt" ) );
+    // 새 폴더: 없는 성분부터는 받은 표기를 그대로 잇고 그 아래는 훑지 않는다.
+    SW_EXPECT_EQUAL( base + "/MixedDir/Fresh/Deep/x.txt", sw::FileUtil::makePathIgnoringCase( root, "mixeddir/Fresh/Deep/x.txt" ) );
+    SW_EXPECT_EQUAL( base + "/NoDir/a.txt", sw::FileUtil::makePathIgnoringCase( root, "NoDir/a.txt" ) );
+    SW_EXPECT_EQUAL( base, sw::FileUtil::makePathIgnoringCase( root, "" ) );
+}

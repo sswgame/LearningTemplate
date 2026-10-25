@@ -39,7 +39,7 @@ namespace sw
                 if ( FileUtil::exists( path ) || FileUtil::isDirectory( path ) )
                     return FileUtil::normalizeSeparators( path );
                 // 전역 id(`game/shooter3d/…`)는 활성 게임과 상관없이 그 위치다. 도구는 모든 팩을 다룬다 — 붙인 도메인도 같은 입구로 푼다.
-                const string resolved = ResourcePaths::makeAbsolutePath( path );
+                const string resolved = ResourcePaths::findLooseFile( path ).getDiskPath();
                 if ( resolved.empty() == false && ( FileUtil::exists( resolved ) || FileUtil::isDirectory( resolved ) ) )
                     return FileUtil::normalizeSeparators( resolved );
                 return string( path );

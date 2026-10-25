@@ -32,10 +32,32 @@ namespace sw
             {
                 /** @brief 임시 파일 이름을 겹치지 않게 하는 번호입니다(같은 프로세스의 여러 스레드가 같은 파일을 동시에 저장해도 서로 밟지 않게). */
                 atomic<uint32> _tempFileSerial{ 0 };
-                /** @brief 파일을 만든 횟수입니다(`FileUtil::getCreationEpoch`). */
+                /** @brief 파일 · 폴더를 만든 횟수입니다(`FileUtil::getCreationEpoch`). */
                 atomic<uint64> _creationEpoch{ 0 };
+                /** @brief 파일 · 폴더를 지운 횟수입니다(`FileUtil::getRemovalEpoch`). */
+                atomic<uint64> _removalEpoch{ 0 };
             };
             static inline WriteCounters s_writeCounters{};
+
+            /**
+             * @brief 폴더 @p directory 안에서 이름이 @p component 와 대소문자만 다른 항목의 디스크 표기를 찾습니다.
+             * @details 이름만 대소문자가 다른 항목이 여럿이어도 같은 답이 나오게, 소문자가 같은 항목 중 정렬 순으로 앞선 것을 고른다.
+             * @return 찾으면 true 이고 @p outName 이 디스크 표기입니다. 폴더를 열지 못했거나 항목이 없으면 false 입니다.
+             */
+            [[nodiscard]] static bool findEntryIgnoringCase( const string& directory, string_view component, string& outName )
+            {
+                const string lowerComponent = FileUtil::normalizePath( component );
+                outName.clear();
+                (void)FileUtil::forEachDirectoryEntry( directory, false, [&outName, &lowerComponent]( const DirectoryEntry& entry )
+                {
+                    const size_t      nameStart = entry._path.rfind( '/' );
+                    const string_view name      = nameStart == string_view::npos ? entry._path : entry._path.substr( nameStart + 1 );
+                    if ( FileUtil::normalizePath( name ) == lowerComponent && ( outName.empty() || name < string_view( outName ) ) )
+                        outName = string( name );
+                    return true;
+                } ); // 폴더를 열지 못하면 항목이 없는 것과 같다 — 아래가 outName 이 비었는지로 가른다
+                return outName.empty() == false;
+            }
 
             /** @brief 실패한 쓰기의 임시 파일을 지웁니다. 지우지 못하면 경고합니다 — 원본 옆에 `.tmp<pid>_<번호>` 가 남습니다. */
             static void discardTempFile( const string& tempPath )
@@ -651,6 +673,16 @@ namespace sw
         FileUtilInternal::s_writeCounters._creationEpoch.fetch_add( 1, std::memory_order_release );
     }
 
+    uint64 FileUtil::getRemovalEpoch()
+    {
+        return FileUtilInternal::s_writeCounters._removalEpoch.load( std::memory_order_acquire );
+    }
+
+    void FileUtil::noteFileRemoved()
+    {
+        FileUtilInternal::s_writeCounters._removalEpoch.fetch_add( 1, std::memory_order_release );
+    }
+
     bool FileUtil::writeFile( string_view fileName, const uint8* pData, const uint64 size )
     {
         if ( size == 0 || pData == nullptr )
@@ -800,19 +832,36 @@ namespace sw
             start                       = end + 1;
             if ( component.empty() )
                 continue;
-            // 이름만 대소문자가 다른 항목이 여럿이어도 같은 답이 나오게, 소문자가 같은 항목 중 정렬 순으로 앞선 것을 고른다.
             string match;
-            (void)forEachDirectoryEntry( current, false, [&match, component]( const DirectoryEntry& entry )
-            {
-                const size_t      nameStart = entry._path.rfind( '/' );
-                const string_view name      = nameStart == string_view::npos ? entry._path : entry._path.substr( nameStart + 1 );
-                if ( normalizePath( name ) == component && ( match.empty() || name < string_view( match ) ) )
-                    match = string( name );
-                return true;
-            } );
-            if ( match.empty() )
+            if ( FileUtilInternal::findEntryIgnoringCase( current, component, match ) == false )
                 return {};
             current = joinPath( current, match );
+        }
+        return current;
+    }
+
+    string FileUtil::makePathIgnoringCase( string_view root, string_view relative )
+    {
+        string current  = trimTrailingSlashes( normalizeSeparators( root ) );
+        bool   bPresent = true; // 앞 성분까지 디스크에 있다 — 없는 성분 아래는 있을 수 없어 더 훑지 않는다
+        size_t start    = 0;
+        while ( start < relative.size() )
+        {
+            size_t end = relative.find_first_of( "/\\", start );
+            if ( end == string_view::npos )
+                end = relative.size();
+            const string_view component = relative.substr( start, end - start );
+            start                       = end + 1;
+            if ( component.empty() )
+                continue;
+            string match;
+            if ( bPresent && FileUtilInternal::findEntryIgnoringCase( current, component, match ) )
+            {
+                current = joinPath( current, match );
+                continue;
+            }
+            bPresent = false;
+            current  = joinPath( current, component );
         }
         return current;
     }

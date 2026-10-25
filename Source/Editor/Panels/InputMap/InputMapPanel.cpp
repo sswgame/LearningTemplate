@@ -973,7 +973,7 @@ namespace sw::editor
         ImGui::SameLine();
         if ( ImGui::Button( "Save Replay" ) )
         {
-            const string diskPath = ResourcePaths::makeAbsolutePath( _replayFilePath.get() ); // 파일은 디스크 경로로만 열린다 — 리소스 id 를 작업 디렉터리 상대로 읽지 않는다
+            const string diskPath = ResourcePaths::resolveWritePath( _replayFilePath.get() ); // 파일은 디스크 경로로만 열린다 — 리소스 id 를 작업 디렉터리 상대로 쓰지 않는다
             if ( diskPath.empty() || _replay.saveToFile( diskPath ) == false )
                 SW_LOG_ERROR( "Could not save input replay '%#'", _replayFilePath.c_str() );
         }
@@ -984,7 +984,7 @@ namespace sw::editor
         {
             if ( pInput != nullptr && pInput->getVirtualInput() == &_replay )
                 pInput->detachVirtualInput();
-            const string diskPath = ResourcePaths::makeAbsolutePath( _replayFilePath.get() );
+            const string diskPath = ResourcePaths::findLooseFile( _replayFilePath.get() ).getDiskPath();
             if ( diskPath.empty() || _replay.loadFromFile( diskPath ) == false )
                 SW_LOG_ERROR( "Could not load input replay '%#'", _replayFilePath.c_str() );
         }

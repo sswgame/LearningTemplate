@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/Diagnostics/CacheStats.h"
+
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
@@ -71,6 +73,19 @@ namespace
             maxX = point._x > maxX ? point._x : maxX;
         }
         return maxX;
+    }
+
+    /** @brief `[CacheStats]` 의 물리 셰이프 줄입니다. 칸이 아직 없으면 `_name` 이 빕니다. */
+    sw::CacheStatsSnapshot readMeshShapeStats()
+    {
+        sw::vector<sw::CacheStatsSnapshot> listSnapshot;
+        sw::CacheStats::collect( listSnapshot );
+        for ( const sw::CacheStatsSnapshot& snapshot : listSnapshot )
+        {
+            if ( snapshot._name == "PhysicsMeshShape" )
+                return snapshot;
+        }
+        return {};
     }
 
     /** @brief 읽기 함수를 잠시 바꾸고, 끝나면 엔진이 넣어 둔 것(`MeshCache`)과 빈 표로 돌립니다(같은 프로세스의 다른 테스트에 남기지 않는다). */
@@ -217,6 +232,46 @@ SW_TEST_CASE( PhysicsMeshShapeTest, MissingMeshOrLoaderIsRejected )
         SW_EXPECT_TRUE( sw::PhysicsMeshShapeCache::acquire( ::test::makeTempResourceID( missing ) ) == nullptr );
         SW_EXPECT_EQUAL( static_cast<size_t>( 0 ), sw::PhysicsMeshShapeCache::getCachedCount() );
     }
+}
+
+/**
+ * @brief [PhysicsMeshShapeTest] 표의 조회는 `[CacheStats]` 의 "PhysicsMeshShape" 줄에 적중 · 실패 · 항목 수로 센다
+ * @details `IAssetCache` 가 아니라(엔진의 에셋 관리자 없이도 서는 정적 표) 계측 선언을 강제하는 생성자가 없다 — 줄이 있는지는 이 테스트가 지킨다.
+ */
+SW_TEST_CASE( PhysicsMeshShapeTest, LookupsAreCountedInTheCacheStats )
+{
+    const ScopedMeshLoader loader{ sw::PhysicsMeshShapeCache::getLoadFunction() };
+    const sw::string       meshPath = writeCubeMesh();
+
+    SW_ASSERT_NOT_NULL( sw::PhysicsMeshShapeCache::acquire( meshPath ).get() ); // 처음이라 읽는다 — 실패(miss) 하나와 항목 하나
+    const sw::CacheStatsSnapshot first = readMeshShapeStats();
+    SW_ASSERT_FALSE( first._name.empty() );
+    SW_EXPECT_TRUE( first._bItemCountKnown );
+    SW_EXPECT_EQUAL( static_cast<int64>( sw::PhysicsMeshShapeCache::getCachedCount() ), first._itemCount );
+
+    SW_ASSERT_NOT_NULL( sw::PhysicsMeshShapeCache::acquire( meshPath ).get() ); // 같은 경로는 표가 답한다 — 적중(hit) 하나
+    const sw::CacheStatsSnapshot second = readMeshShapeStats();
+    SW_EXPECT_EQUAL( first._hitCount + 1u, second._hitCount );
+    SW_EXPECT_EQUAL( first._missCount, second._missCount );
+    SW_EXPECT_EQUAL( first._itemCount, second._itemCount );
+}
+
+/**
+ * @brief [PhysicsMeshShapeTest] 읽지 못한 경로는 파일이 만들어진 뒤에는 다시 읽는다 — "없음" 을 영원히 기억하지 않는다
+ * @details 임포트가 끝나기 전에 셰이프를 물었다가 파일이 생긴 뒤에도 같은 실패를 돌려주면 표를 비울 때까지 바디가 안 선다. 기억은 만든 횟수(`FileUtil::getCreationEpoch`)가 같은 동안만 믿는다.
+ */
+SW_TEST_CASE( PhysicsMeshShapeTest, FailedPathIsReadAgainOnceAFileHasBeenCreated )
+{
+    SW_TEST_DEFENSIVE_SCOPE( "a mesh shape file that does not exist yet" );
+    const ScopedMeshLoader loader{ sw::PhysicsMeshShapeCache::getLoadFunction() };
+    const sw::string       meshID = test::makeTempResourceID( test::makeTempPath( "late_physics.mesh" ) );
+    SW_ASSERT_FALSE( meshID.empty() );
+
+    SW_EXPECT_TRUE( sw::PhysicsMeshShapeCache::acquire( meshID ) == nullptr ); // 아직 없다 — 실패를 기억한다
+    SW_EXPECT_TRUE( sw::PhysicsMeshShapeCache::acquire( meshID ) == nullptr ); // 파일이 만들어지지 않았으니 다시 읽지 않는다(오류도 한 번)
+    (void)writeCubeMesh( "late_physics.mesh" );                                // 임포트가 끝났다
+    SW_EXPECT_TRUE( sw::PhysicsMeshShapeCache::acquire( meshID ) != nullptr );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), sw::PhysicsMeshShapeCache::getCachedCount() );
 }
 
 /**

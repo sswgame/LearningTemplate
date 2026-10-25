@@ -5,7 +5,6 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/unordered_map.h"
-#include "Core/Container/unordered_set.h"
 #include "Core/Diagnostics/CacheStats.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Memory/LifetimeScope.h"
@@ -37,12 +36,14 @@ namespace sw
              *          (런타임에 만들어지는 경로 · 키가 없고, 같은 경로는 한 항목). 항목은 메시를 합친 점 · 인덱스(원본 메시 정점보다 작다)이고 씬을 바꿔도 같은 메시를 다시 읽지
              *          않으려고 남깁니다 — 씬 교체 때 비우면 재방문마다 파일 읽기와 합치기를 다시 한다. 비우는 때는 메시가 다시 읽힐 때(`MeshCache::reload`)와 종료(`MeshCache::clear`)뿐이다.
              *          읽지 못한 경로 기억도 같은 한계(콘텐츠의 깨진 경로 수)다. 크기는 `[CacheStats] PhysicsMeshShape` 줄의 항목 수로 보고, 콘텐츠가 수천 메시로 자라 문제가 되면 그때 바이트 상한을 둔다.
+             *          **읽지 못한 경로는 영원히 믿지 않는다.** 파일이 나중에 생길 수 있으므로(임포트가 끝난 뒤, 바깥 도구가 쓴 뒤) 기억한 때의 `FileUtil::getCreationEpoch` 가 지금과
+             *          같은 동안만 믿고, 바뀌었으면 다시 읽어 본다(경로 캐시 `ResourcePaths` 의 "없음" 과 같은 규칙). 다시 읽어도 못 읽으면 오류는 다시 남기지 않는다.
              */
             struct Table
             {
                 mutex                                                         _mutex;
                 unordered_map<string, shared_ptr<const PhysicsMeshShapeData>> _mapPathToData;
-                unordered_set<string>                                         _uniqueFailedPath;
+                unordered_map<string, uint64>                                 _mapFailedPathToEpoch; ///< 읽지 못한 경로 → 그때의 만든 횟수
                 /** @brief 삼각형 목록을 읽는 함수입니다(`setLoadFunction`). 표와 함께 엔진 수명 범위가 소유한다 — 메시 캐시가 서면 다시 건다. */
                 atomic<PhysicsMeshShapeCache::LoadTriangleListFunction> _pfnLoad{ nullptr };
 
@@ -87,6 +88,8 @@ namespace sw
             return result;
         PhysicsMeshShapeCacheInternal::Table& table = *pTable;
         const string                          key   = PhysicsMeshShapeCacheInternal::makeKey( path );
+        // 만든 횟수는 읽기 전에 잡는다 — 읽는 동안 파일이 만들어졌으면 이 결과로 남기는 "읽지 못함" 은 다음 조회에서 낡은 것으로 버려진다.
+        const uint64 creationEpoch = FileUtil::getCreationEpoch();
         {
             std::scoped_lock<mutex>                                                             lock{ table._mutex };
             const unordered_map<string, shared_ptr<const PhysicsMeshShapeData>>::const_iterator found = table._mapPathToData.find( key );
@@ -95,9 +98,10 @@ namespace sw
                 PhysicsMeshShapeCacheInternal::getStats().recordHit();
                 return found->second;
             }
-            if ( table._uniqueFailedPath.count( key ) != 0 )
+            const unordered_map<string, uint64>::const_iterator failed = table._mapFailedPathToEpoch.find( key );
+            if ( failed != table._mapFailedPathToEpoch.end() && failed->second == creationEpoch )
             {
-                PhysicsMeshShapeCacheInternal::getStats().recordHit(); // 읽지 못한 경로를 기억한 답도 적중이다(같은 파일을 다시 읽지 않는다)
+                PhysicsMeshShapeCacheInternal::getStats().recordHit(); // 읽지 못한 경로를 기억한 답도 적중이다(파일이 만들어지지 않은 동안 같은 파일을 다시 읽지 않는다)
                 return result;
             }
         }
@@ -110,7 +114,9 @@ namespace sw
         if ( bLoaded == false )
         {
             std::scoped_lock<mutex> lock{ table._mutex };
-            if ( table._uniqueFailedPath.insert( key ).second )
+            const auto              failedInserted = table._mapFailedPathToEpoch.try_emplace( key, creationEpoch );
+            failedInserted.first->second           = creationEpoch; // 다시 읽어도 못 읽었다 — 새 횟수로 기억한다(오류는 처음 한 번만 남긴다)
+            if ( failedInserted.second )
             {
                 if ( pfnLoad == nullptr )
                     SW_LOG_ERROR( "Physics shape mesh '%#' needs a load function - PhysicsMeshShapeCache::setLoadFunction was never called", path );
@@ -123,7 +129,8 @@ namespace sw
         shared_ptr<PhysicsMeshShapeData> loaded = make_shared<PhysicsMeshShapeData>();
         makeShapeData( span<const float3>{ listPosition.data(), listPosition.size() }, *loaded );
 
-        std::scoped_lock<mutex>                 lock{ table._mutex };
+        std::scoped_lock<mutex> lock{ table._mutex };
+        (void)table._mapFailedPathToEpoch.erase( key ); // 이제 읽혔다 — 앞서 못 읽은 기억은 버린다
         shared_ptr<const PhysicsMeshShapeData>& slot = table._mapPathToData[key];
         if ( slot == nullptr )
         {
@@ -189,8 +196,8 @@ namespace sw
             return;
         std::scoped_lock<mutex> lock{ pTable->_mutex };
         PhysicsMeshShapeCacheInternal::getStats().addItemCount( -static_cast<int64>( pTable->_mapPathToData.size() ) );
-        pTable->_mapPathToData    = unordered_map<string, shared_ptr<const PhysicsMeshShapeData>>{};
-        pTable->_uniqueFailedPath = unordered_set<string>{};
+        pTable->_mapPathToData        = unordered_map<string, shared_ptr<const PhysicsMeshShapeData>>{};
+        pTable->_mapFailedPathToEpoch = unordered_map<string, uint64>{};
         PhysicsMeshShapeCacheInternal::getStats().recordClear();
     }
 

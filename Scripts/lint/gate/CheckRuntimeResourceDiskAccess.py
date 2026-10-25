@@ -4,7 +4,7 @@
 
 리소스 폴더 나열은 `ResourceIO::collectResources`, 읽기는 `ResourceIO::read*` 하나다 — 둘 다 마운트된 팩과 낱개 파일 허용 정책을 본다.
 디스크로 훑으면(`FileUtil::collectFiles` · `collectFolders` · `isDirectory`) 팩으로 쿠킹한 빌드에서 폴더가 조용히 비어 보이고, 디스크 경로로 풀면
-(`ResourcePaths::findLooseFile` · `findLooseDomainFolder` · `makeAbsolutePath`, `LooseFilePath::getDiskPath`) 같은 결함이 읽기 쪽에서 난다.
+(`ResourcePaths::findLooseFile` · `findLooseDomainFolder` · `resolveWritePath`, `LooseFilePath::getDiskPath`) 같은 결함이 읽기 쪽에서 난다.
 
 형식이 먼저 막는다 — `findLoose*` 의 결과(`LooseFilePath`)는 `string` 으로 저절로 바뀌지 않는다. 그래도 남는 틈이 둘이라 이 게이트를 둔다.
 ① `FileUtil` 의 훑기 함수는 평범한 문자열을 받아야 한다(Saved · 설정 · 로그 · 쿠커 · 에디터의 정당한 디스크 폴더). 그래서 형식으로는 리소스 폴더만
@@ -39,7 +39,7 @@ _kExcludedPrefix = f"{kDirSourceGameFramework}/PlugIn/"
 
 _kDiskAccessRe = re.compile(
     r"(FileUtil::(?:collectFiles|collectFolders|isDirectory)"
-    r"|ResourcePaths::(?:findLooseFile|findLooseDomainFolder|makeAbsolutePath)"
+    r"|ResourcePaths::(?:findLooseFile|findLooseDomainFolder|resolveWritePath)"
     r"|\.getDiskPath\s*\("
     r"|\bload\w*FromDiskFile\s*\()")
 

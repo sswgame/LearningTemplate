@@ -16,23 +16,6 @@
 
 namespace sw
 {
-    namespace
-    {
-        string absoluteForRelative( string_view relativePath )
-        {
-            string result = ResourcePaths::findLooseFile( relativePath ).getDiskPath();
-            if ( result.empty() )
-            {
-                // 쓰기 쪽: 도메인을 포함한 전역 ID 만으로 절대 경로를 만든다.
-                result = ResourcePaths::makeAbsolutePath( relativePath );
-            }
-            return result;
-        }
-    } // namespace
-} // namespace sw
-
-namespace sw
-{
     SW_LOG_CALLER( "AssetDatabase" );
 
     string AssetDatabase::toRelativePath( string_view absolutePath )
@@ -423,7 +406,7 @@ namespace sw
     bool AssetDatabase::writeMetaFile( string_view relativePath, const UUID& guid, bool bImported ) const
     {
         const string metaRel = metaPathFor( relativePath );
-        const string absMeta = absoluteForRelative( metaRel );
+        const string absMeta = ResourcePaths::resolveWritePath( metaRel ); // 쓸 자리다 — .meta 는 아직 없을 수 있다
         if ( absMeta.empty() )
         {
             SW_LOG_WARNING( "Cannot resolve meta path for %#", relativePath );

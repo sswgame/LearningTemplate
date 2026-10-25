@@ -137,7 +137,7 @@ namespace sw::editor
                     return true;
                 }
                 // 리소스 id(`engine/automation/...`)면 리소스 트리의 그 파일이다. 그래서 시나리오가 작업 폴더를 몰라도 된다.
-                const string resourcePath = ResourcePaths::makeAbsolutePath( path );
+                const string resourcePath = ResourcePaths::findLooseFile( path ).getDiskPath();
                 if ( FileUtil::exists( resourcePath ) )
                 {
                     outAbsolutePath = resourcePath;
@@ -257,7 +257,7 @@ namespace sw::editor
                     outReply = "asset.openScratch takes one resource id under " + scratchPrefix;
                     return false;
                 }
-                const string absolutePath = ResourcePaths::makeAbsolutePath( FileUtil::normalizePath( listArgument[0] ) );
+                const string absolutePath = ResourcePaths::findLooseFile( FileUtil::normalizePath( listArgument[0] ) ).getDiskPath();
                 if ( absolutePath.empty() || FileUtil::exists( absolutePath ) == false )
                 {
                     outReply = "no scratch asset '" + listArgument[0] + "' (does the scenario declare <Scratch>?)";

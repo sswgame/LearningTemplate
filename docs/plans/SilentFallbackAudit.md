@@ -19,7 +19,7 @@
 
 - **함수 안 정적 컨테이너**: 엔진 `DebugDrawCanvas` · `ModuleTypeRegistry` · `SystemFontLocator`, 에디터 여덟, 게임 프레임워크 `ServerBus` · `OnlinePushRelay` · `MeshModifiersVisualizer` 가 `ScopeOwned<T>` 로 옮겼다. 엔진 수명 범위가 소유하니 종료 누수 보고 전에 비고, 범위가 닫힌 뒤 부르면 `getOrCreate()` 가 nullptr 라 그 호출은 일을 건너뛴다.
   등록 표(`NavGeometryContributor` · `ISceneService` · `BuiltInAssetCache` · `NetSimGameRegistry` · `EditorExtensionRegistry`)는 옮기지 않았다 — 정적 초기화에서 채워 프로세스 끝까지 살아야 하고, 범위는 그 뒤에야 열린다.
-- **에디터 리소스 id → 디스크 경로**: `CatalogPanel` · `ContentBrowserPanel` · `InspectorPropertyManager` · `EditorDevCommands` · `EditorSceneFileCommands` · `LocalizationTools` 가 루트에 id 를 직접 붙이지 않고 `ResourcePaths::makeAbsolutePath` 를 쓴다(못 정하면 빈 문자열이라 각 자리에서 건너뛴다).
+- **에디터 리소스 id → 디스크 경로**: `CatalogPanel` · `ContentBrowserPanel` · `InspectorPropertyManager` · `EditorDevCommands` · `EditorSceneFileCommands` · `LocalizationTools` 가 루트에 id 를 직접 붙이지 않고 읽기는 `ResourcePaths::findLooseFile`, 쓰기는 `resolveWritePath` 를 쓴다(못 정하면 빈 문자열이라 각 자리에서 건너뛴다).
   루트를 그대로 쓰는 자리(임포터 · 폴더 목록 · 리소스 색인 · 감시자 · 글꼴)는 디스크 루트 자체가 필요해서 남겼다.
 - **외형 데이터베이스 수명**: `CharacterAppearanceState` · `CharacterAppearanceComponent` · `AppearanceDataWatcher` 가 `AppearanceDatabase` 를 날 포인터로 쥐지 않는다. 데이터베이스가 `getInstanceID()`(1부터 세는 원자 번호, 복사 금지)를 갖고, 상태는 번호만 기억하며 갱신 때마다 지금 데이터베이스를 인자로 받는다.
   번호가 달라지면 상태가 스스로 다시 만든다 — 서비스가 내려갔다 올라와도 허공을 가리키지 않는다. 모양: 빌려 쥐던 것을 쓸 때 건네는 값으로 바꿨다.

@@ -46,13 +46,16 @@ namespace sw
         static LooseFilePath findLooseFile( string_view filePath, string_view folderName = "" );
 
         /**
-         * @brief 논리 경로를 절대 경로로 바꿉니다(파일이 아직 없어도 도메인 루트 기준으로 조합합니다).
-         * @param relativePath 전역 ID 또는 이미 있는 팩 상대 키
-         * @return 절대 경로입니다. 전역 ID 가 아니면서 파일도 없으면 빈 문자열입니다.
-         * @details 저장과 .meta 생성에 씁니다. 전역 ID(`engine/`/`common/`/`game/<pack>/`/`editor/`…)만 파일이 없어도 경로를 정할 수 있습니다.
-         *          팩 상대 키는 이미 있는 경우에만 findLooseFile 결과를 반환합니다.
+         * @brief 리소스 id 의 파일을 **쓸 자리**의 절대 경로를 정합니다(파일이 아직 없어도 도메인 루트 기준으로 조합합니다). 읽기용은 `findLooseFile` 입니다.
+         * @param resourceID 절대 경로, 전역 ID, 이미 있는 팩 상대 키 중 무엇이든 받습니다(절대 경로는 구분자만 맞춥니다).
+         * @return 이미 있는 파일이면 그 디스크 경로입니다. 없으면 도메인 루트 아래에 이은 경로이고, 전역 ID 도 붙인 도메인 id 도 아니거나 `..` 로 올라가면 빈 문자열입니다.
+         * @details 저장과 .meta 생성에 씁니다. 전역 ID(`engine/`/`common/`/`game/<pack>/`/`editor/`…)와 붙인 디스크 도메인(`mountDiskDomain`)만 파일이 없어도 경로를 정할 수 있습니다.
+         *          팩 상대 키는 이미 있는 경우에만 `findLooseFile` 결과를 반환합니다.
+         *          **대소문자.** 리소스 id 는 소문자인데 붙인 디스크 도메인의 폴더는 대소문자가 섞일 수 있다. 대소문자를 구분하는 파일 시스템(Linux)에서는 이미 있는 폴더
+         *          성분은 디스크 표기를 쓰고(`Saved/Automation` 이 있으면 `saved/automation/x` 도 그 안에 쓴다), 없는 성분부터는 id 의 표기를 씁니다. 리소스 트리의 도메인은
+         *          소문자 규칙이라 모든 플랫폼에서 소문자로 잇습니다. 읽기용 `findLooseFile` 이 붙인 디스크 도메인에서 푸는 규칙과 짝입니다.
          */
-        static string makeAbsolutePath( string_view relativePath );
+        static string resolveWritePath( string_view resourceID );
 
         /**
          * @brief 아직 없는 파일을 **쓰기 위한** 절대 경로를 정합니다.
@@ -62,7 +65,7 @@ namespace sw
          *          찾으므로 새 파일에는 빈 문자열을 반환하고, 그러면 부르는 쪽이 상대 경로로 파일을 써서
          *          `Resource/` 가 아니라 **실행 파일의 작업 디렉터리**에 떨어진다. 예를 들어 `PrefabAsset` 이 이 방식으로 저장하면
          *          에셋은 Bin 아래로, `.meta` 는 `Resource/` 아래로 갈라진다.
-         *          해석 순서를 여기 한 번만 적어 두고 모든 세이버가 같이 쓴다.
+         *          해석 순서를 여기 한 번만 적어 두고 모든 세이버가 같이 쓴다(`resolveWritePath` 에 리소스 트리 밖으로 나가는 경로의 거절과 마지막 물러남을 더한 것이다).
          */
         static string getWritePath( string_view path );
 
@@ -146,7 +149,11 @@ namespace sw
         /** @brief EngineConfig 리플렉션 기본값에 정의된 기본 검색 우선순위 목록을 반환합니다. */
         static const vector<string>& getDefaultSearchPriority();
 
-        /** @brief 캐시해 둔 리소스 경로 해석 결과를 모두 비우고 그 저장소까지 해제합니다(검색 목록이 바뀔 때). 종료 때의 반납은 캐시를 소유한 엔진 수명 범위가 합니다. */
+        /**
+         * @brief 캐시해 둔 리소스 경로 해석 결과를 모두 비우고 그 저장소까지 해제합니다. 종료 때의 반납은 캐시를 소유한 엔진 수명 범위가 합니다.
+         * @details 부르는 때: 검색 목록이 바뀔 때, 에디터의 파일 감시가 리소스 트리의 변경을 알릴 때(`FileWatchDispatcher`). 이 프로세스의 `FileUtil` 이 만들거나 지운 파일은
+         *          부르지 않아도 된다 — 캐시 칸이 `FileUtil::getCreationEpoch` · `getRemovalEpoch` 로 스스로 낡음을 안다. 바깥 프로세스가 바꾼 파일만 이 호출이 필요하다.
+         */
         static void clearPathCache();
 
         /**

@@ -145,7 +145,7 @@ namespace sw
              */
             [[nodiscard]] static bool checkFolderMatchesList( string_view folder, const vector<string>& listStem, string& outError )
             {
-                const string diskFolder = FileUtil::isDirectory( folder ) ? string( folder ) : ResourcePaths::makeAbsolutePath( folder );
+                const string diskFolder = FileUtil::isDirectory( folder ) ? string( folder ) : ResourcePaths::findLooseFile( folder ).getDiskPath();
                 if ( diskFolder.empty() || FileUtil::isDirectory( diskFolder ) == false )
                     return true;
                 vector<string> listFilePath;
@@ -227,7 +227,7 @@ namespace sw
 
     bool SQLMigrationRunner::collectDialectDriverNames( string_view folder, vector<string>& inoutListName, string& outError )
     {
-        const string diskFolder = FileUtil::isDirectory( folder ) ? string( folder ) : ResourcePaths::makeAbsolutePath( folder );
+        const string diskFolder = FileUtil::isDirectory( folder ) ? string( folder ) : ResourcePaths::findLooseFile( folder ).getDiskPath();
         if ( diskFolder.empty() || FileUtil::isDirectory( diskFolder ) == false )
             return true;
         vector<string> listFilePath;

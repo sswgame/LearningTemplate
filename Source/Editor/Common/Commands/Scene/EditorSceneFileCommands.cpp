@@ -271,7 +271,7 @@ namespace sw::editor
         // 버전 관리가 읽기 전용으로 둔 파일(git LFS lockable, 잠그기 전)에는 쓰지 않고 이유를 알린다. 쓰기 실패 로그만으로는 "잠가야 한다" 는 사실이 드러나지 않는다.
         Scene*         pScene     = pSceneManager->getActiveScene();
         const string   targetPath = path.empty() && pScene != nullptr ? pScene->getSourcePath() : string{ path };
-        const string   targetAbs  = FileUtil::isAbsolutePath( targetPath ) ? targetPath : ResourcePaths::makeAbsolutePath( targetPath );
+        const string   targetAbs  = FileUtil::isAbsolutePath( targetPath ) ? targetPath : ResourcePaths::findLooseFile( targetPath ).getDiskPath();
         EditorContext* pContext   = EditorContext::get();
         if ( targetPath.empty() == false && FileUtil::isReadOnlyFile( targetAbs ) )
         {

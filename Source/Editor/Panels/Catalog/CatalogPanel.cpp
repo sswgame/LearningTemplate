@@ -87,9 +87,6 @@ namespace sw::editor
             }
 
             static constexpr float32 kFileListWidth = 300.0f; ///< 96 DPI 기준입니다
-
-            /** @brief 리소스 id 의 디스크 경로입니다. 붙인 도메인과 게임 폴더를 거치므로 루트에 직접 붙이지 않는다(못 정하면 빈 문자열). */
-            static string makeAbsolutePath( const string& resourceID ) { return ResourcePaths::makeAbsolutePath( resourceID ); }
         };
     } // namespace
 } // namespace sw::editor
@@ -331,7 +328,7 @@ namespace sw::editor
 
     void CatalogPanel::openFile( const string& resourceID )
     {
-        const string absolutePath = CatalogPanelInternal::makeAbsolutePath( resourceID );
+        const string absolutePath = ResourcePaths::findLooseFile( resourceID ).getDiskPath(); // 붙인 도메인과 게임 폴더를 거치므로 루트에 직접 붙이지 않는다(없으면 빈 문자열)
         string       text;
         // 읽지 못하면 고르지 않는다 — 앞 파일의 글을 가진 채 고르면 저장할 때 앞 파일의 내용을 이 파일에 쓴다.
         if ( FileUtil::readTextFile( absolutePath, text ) == false )
@@ -366,7 +363,7 @@ namespace sw::editor
             _statusText = "Fix the XML before saving";
             return false;
         }
-        const string absolutePath = CatalogPanelInternal::makeAbsolutePath( _selectedID );
+        const string absolutePath = ResourcePaths::resolveWritePath( _selectedID );
         if ( FileUtil::writeTextFile( absolutePath, _document.getText() ) == false )
         {
             SW_LOG_ERROR( "Could not write catalog file '%#'", absolutePath.c_str() );
@@ -426,7 +423,7 @@ namespace sw::editor
     {
         if ( _selectedID.empty() )
             return;
-        const string absolutePath = CatalogPanelInternal::makeAbsolutePath( _selectedID );
+        const string absolutePath = ResourcePaths::resolveWritePath( _selectedID );
         if ( FileUtil::writeTextFile( absolutePath, _previousFileText ) == false )
         {
             SW_LOG_ERROR( "Could not restore catalog file '%#'", absolutePath.c_str() );

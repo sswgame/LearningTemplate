@@ -664,19 +664,86 @@ SW_TEST_CASE( ResourceTest, DynamicDomainFolderPathResolution )
 }
 
 /**
- * @brief [ResourceTest] ResourcePaths::makeAbsolutePath 절대 경로 전달 시 그대로 반환 및 도메인 오인 방지 검증
+ * @brief [ResourceTest] ResourcePaths::resolveWritePath 절대 경로 전달 시 그대로 반환 및 도메인 오인 방지 검증
  */
 SW_TEST_CASE( ResourceTest, AbsolutePathPreservation )
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
     const sw::string posixAbs = "/home/runner/work/scene.xml";
-    SW_EXPECT_STREQ( posixAbs.c_str(), sw::ResourcePaths::makeAbsolutePath( posixAbs ).c_str() );
+    SW_EXPECT_STREQ( posixAbs.c_str(), sw::ResourcePaths::resolveWritePath( posixAbs ).c_str() );
 
     const sw::string winAbs = "C:/Projects/Game/scene.xml";
-    SW_EXPECT_STREQ( winAbs.c_str(), sw::ResourcePaths::makeAbsolutePath( winAbs ).c_str() );
+    SW_EXPECT_STREQ( winAbs.c_str(), sw::ResourcePaths::resolveWritePath( winAbs ).c_str() );
 
     SW_EXPECT_TRUE( sw::ResourcePaths::findLooseFile( posixAbs ).getDiskPath().empty() );
+    SW_EXPECT_TRUE( sw::ResourcePaths::resolveWritePath( "engine/../../escape.txt" ).empty() ); // 루트 밖으로 나가는 id 는 쓸 자리를 정하지 않는다
+}
+
+/**
+ * @brief [ResourceTest] 붙인 디스크 도메인에 id 로 쓰는 경로는 이미 있는 폴더의 디스크 표기를 쓰고, 없는 폴더부터는 id 의 표기를 쓴다
+ * @details 소문자 id 를 그대로 이으면 대소문자를 구분하는 파일 시스템(Linux)에서 `Saved/Automation` 옆에 `saved/automation` 이 새로 생긴다. Windows 는 소문자로 이어도 같은 폴더다.
+ */
+SW_TEST_CASE( ResourceTest, WritePathKeepsTheDiskSpellingOfExistingFolders )
+{
+    const sw::string directory = sw::FileUtil::normalizeSeparators( test::makeTempDirectory( "WritePathMixed" ) );
+    SW_ASSERT_TRUE( sw::FileUtil::ensureDirectoryExists( directory + "/Saved/Automation" ) );
+    const sw::string diskFile = directory + "/Saved/Automation/Out.txt";
+    const sw::string diskID   = test::makeTempResourceID( diskFile );
+    SW_ASSERT_FALSE( diskID.empty() );
+
+    // 소문자 id: 있는 폴더 둘은 디스크 표기이고 아직 없는 파일 이름은 id 의 표기다.
+    const sw::string lowerID   = sw::FileUtil::normalizePath( diskID );
+    const sw::string writePath = sw::ResourcePaths::resolveWritePath( lowerID );
+    SW_EXPECT_TRUE( sw::FileUtil::pathsEqualNormalized( diskFile, writePath ) );
+#if defined( SW_PLATFORM_LINUX )
+    SW_EXPECT_EQUAL( directory + "/Saved/Automation/out.txt", writePath );
+#endif
+
+    // 없는 폴더부터는 id 의 표기를 쓴다(소문자로 바꾸지 않는다). Windows 는 소문자로 잇는다 — 같은 폴더다.
+    const sw::string freshID   = test::makeTempResourceID( directory + "/Saved/Fresh/Deep" ) + "/New.txt";
+    const sw::string freshPath = sw::ResourcePaths::resolveWritePath( freshID );
+    SW_EXPECT_TRUE( sw::FileUtil::pathsEqualNormalized( directory + "/Saved/Fresh/Deep/New.txt", freshPath ) );
+#if defined( SW_PLATFORM_LINUX )
+    SW_EXPECT_EQUAL( directory + "/Saved/Fresh/Deep/New.txt", freshPath );
+#endif
+
+    // 쓴 뒤에는 같은 id 를 대소문자만 다르게 물어도 같은 파일이다(둘째 쓰기가 옆 폴더를 만들지 않는다).
+    SW_ASSERT_TRUE( sw::FileUtil::ensureParentDirectoryExists( writePath ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( writePath, "first" ) );
+    SW_EXPECT_TRUE( sw::FileUtil::pathsEqualNormalized( writePath, sw::ResourcePaths::resolveWritePath( diskID ) ) );
+    SW_EXPECT_TRUE( sw::FileUtil::pathsEqualNormalized( writePath, sw::ResourcePaths::resolveWritePath( lowerID ) ) );
+#if defined( SW_PLATFORM_LINUX )
+    sw::vector<sw::string> listFolder;
+    SW_ASSERT_TRUE( sw::FileUtil::collectFolders( directory, listFolder, false ) );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), listFolder.size() ); // `Saved` 하나뿐이다
+#endif
+}
+
+/**
+ * @brief [ResourceTest] 경로 캐시는 이 프로세스가 만들거나 지운 파일 · 폴더를 낡은 답으로 돌려주지 않는다
+ * @details "없음" 은 파일이 생기면(`FileUtil::getCreationEpoch`), "있음" 은 파일이 지워지면(`getRemovalEpoch`) 버린다. 폴더도 같다.
+ */
+SW_TEST_CASE( ResourceTest, PathCacheDropsAnswersWhenThisProcessCreatesOrRemovesFiles )
+{
+    const sw::string directory = sw::FileUtil::normalizeSeparators( test::makeTempDirectory( "PathCacheEpoch" ) );
+    const sw::string filePath  = directory + "/Late.txt";
+    const sw::string fileID    = test::makeTempResourceID( filePath );
+    const sw::string folderID  = test::makeTempResourceID( directory + "/LateFolder" );
+    SW_ASSERT_FALSE( fileID.empty() );
+    SW_ASSERT_FALSE( folderID.empty() );
+
+    SW_EXPECT_TRUE( sw::ResourcePaths::findLooseFile( fileID ).isEmpty() ); // "없음" 을 기억한다
+    SW_EXPECT_TRUE( sw::ResourcePaths::findLooseFile( folderID ).isEmpty() );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( filePath, "late" ) );
+    SW_ASSERT_TRUE( sw::FileUtil::ensureDirectoryExists( directory + "/LateFolder" ) );
+    SW_EXPECT_FALSE( sw::ResourcePaths::findLooseFile( fileID ).isEmpty() );
+    SW_EXPECT_FALSE( sw::ResourcePaths::findLooseFile( folderID ).isEmpty() );
+
+    SW_ASSERT_TRUE( sw::FileUtil::removeFile( filePath ) ); // "있음" 을 기억한 칸이 낡는다
+    SW_ASSERT_TRUE( sw::FileUtil::removeDirectory( directory + "/LateFolder" ) );
+    SW_EXPECT_TRUE( sw::ResourcePaths::findLooseFile( fileID ).isEmpty() );
+    SW_EXPECT_TRUE( sw::ResourcePaths::findLooseFile( folderID ).isEmpty() );
 }
 
 /**

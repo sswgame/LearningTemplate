@@ -52,4 +52,4 @@ C 는 B 뒤에도 같은 결함이 다시 나올 때 합니다. 디스크 입구
   같이 고친 것 — "없는 파일" 을 디스크 경로로 리소스 입구에 넘기던 테스트 셋(`AssetStreamingTest.PreloadSetWalksEveryPathWithinTheBudget` · `SpriteComponentTest.ClipSelectsTheFrameAndLendsItsAtlas` · `TerrainTest.DedicatedServerAnswersLayerQueries`). OS 경로 거절도 같은 실패라 통과하면서 다른 것을 보고 있었다. 파일을 쓰지 않는 경로라 D1 의 정적 조사(쓰기와 읽기에 같은 변수)가 놓쳤다.
 - 확인 대기: 매니페스트 id `cook-scenes-shipping`, `editor-document-open-save`.
 - 2026-10-22 Release hostgpu: 시나리오의 `Saved/` 경로가 OS 경로로 리소스 입구에 닿던 곳을 고쳤다 — `ResourcePaths::toResourceID` 가 붙인 디스크 도메인 폴더 아래의 절대 경로를 `<도메인>/…` id 로 바꾸고, `EditorSceneFileCommands::loadScene` 은 id 로 못 바꾸면 OS 경로로 읽던 폴백 대신 오류다. `prefab.create` · `prefab.spawn` 은 그 id 로 캐시 · 놓인 프리팹 표를 쓰고, 캐릭터 창의 프리셋 내보내기는 쓰기 = 디스크 경로, 다시 읽기 = id 다. 저장 뒤 자산 검증(`EditorAssetValidation`)은 붙인 도메인의 파일을 저장소 규칙으로 보지 않는다.
-- 리눅스: 붙인 도메인의 새 파일 쓰기 경로(`ResourcePaths::makeAbsolutePath`)는 키를 소문자로 붙인다 — 대소문자가 섞인 케이스 폴더에 id 로 **쓰는** 테스트가 있으면 디스크 경로로 쓴다.
+- 리눅스: 붙인 도메인의 새 파일 쓰기 경로(`ResourcePaths::resolveWritePath`)는 이미 있는 폴더는 디스크 표기를, 없는 폴더부터는 id 의 표기를 쓴다 — 소문자로 이어 같은 폴더 옆에 대소문자만 다른 새 폴더를 만들지 않는다. 다만 id 를 `toResourceID` 로 만들었다면 표기가 이미 소문자라, 새 폴더를 id 로 쓰고 디스크 경로(원래 표기)로 읽는 테스트는 읽지 못한다.
