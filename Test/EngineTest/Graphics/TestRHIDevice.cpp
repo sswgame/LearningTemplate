@@ -2185,6 +2185,65 @@ SW_TEST_CASE( RHIDeviceTest, VulkanLostDeviceStopsWaitingOnTheGPU )
 }
 
 /**
+ * @brief [RHIDeviceTest] 장치를 잃은 뒤(`debugRemoveDevice`)의 전송 제출은 진입에서 `Rejected` 이다 — `Accepted` 를 주고 폴링에서야 `Failed` 가 되지 않는다(DX12 · Vulkan)
+ * @details 계약 2(docs/plans/RhiAsyncUploads.md). 제거를 흉내 낼 수 없는 백엔드(`debugRemoveDevice` 가 false)는 건너뛴다. 잃기 전에는 같은 제출이 받아들여지는 것도 본다.
+ *          변이: 제출 함수의 진입 검사(`isDeviceLost`)를 빼면 Vulkan 의 이 케이스가 진다 — 손실 표시만으로는 일회성 제출이 막히지 않고 `Accepted` 를 받는다.
+ */
+SW_TEST_CASE( RHIDeviceTest, LostDeviceRejectsTransferSubmitsAtEntry )
+{
+    constexpr uint32 kPixelCount = 4 * 4;
+    uint8            arrPixel[kPixelCount * 4]{};
+
+    uint32                removableCount{ 0 };
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string         label     = sw::string( device->getBackendName() );
+        sw::IRHIResourceFactory* pResource = device->getResourceFactory();
+
+        sw::RHITextureDesc texDesc{};
+        texDesc._width                     = 4;
+        texDesc._height                    = 4;
+        texDesc._format                    = sw::RHIFormat::R8G8B8A8_UNORM;
+        texDesc._bIsShaderResource         = SW_TRUE;
+        const sw::RHITextureHandle texture = pResource->createTexture2D( texDesc );
+        SW_ASSERT_TRUE( texture != 0 );
+
+        sw::RHITextureUploadDesc upload{};
+        upload._pData     = arrPixel;
+        upload._sizeBytes = sizeof( arrPixel );
+        upload._mipLevels = 1;
+        sw::RHITextureRegionUploadDesc region{};
+        region._pData     = arrPixel;
+        region._sizeBytes = sizeof( arrPixel );
+        region._width     = 4;
+        region._height    = 4;
+
+        // 잃기 전에는 같은 제출이 받아들여진다. 한 번 올려 둔 스테이징이 있어야 제출 진입 검사가 없을 때 DX12 가 Accepted 를 돌려준다(새 스테이징을 못 만들어서가 아니라).
+        SW_EXPECT_TRUE_MSG( sw::RHITransferUtil::uploadTexture2DAndWait( *pResource, texture, upload ), ( label + ": 손실 전 업로드가 실패했다" ).c_str() );
+        device->waitIdle(); // 손실 전에 GPU 를 비운다 — 손실 뒤의 종료는 기다리지 않고 자원을 부순다
+        if ( device->debugRemoveDevice() == false )
+        {
+            pResource->destroyTexture( texture );
+            continue;
+        }
+        ++removableCount;
+
+        SW_TEST_DEFENSIVE_SCOPE( "transfer submits on a removed device are rejected at entry" );
+        sw::RHITextureMipSpan layout{};
+        SW_EXPECT_TRUE_MSG( pResource->submitTextureUpload( texture, upload )._result == sw::RHISubmitResult::Rejected, ( label + ": 손실 뒤 업로드가 거절되지 않았다" ).c_str() );
+        SW_EXPECT_TRUE_MSG( pResource->submitTextureRegionUpload( texture, region )._result == sw::RHISubmitResult::Rejected,
+                            ( label + ": 손실 뒤 구간 업로드가 거절되지 않았다" ).c_str() );
+        SW_EXPECT_TRUE_MSG( pResource->submitTextureReadback( texture, 0, 0, layout )._result == sw::RHISubmitResult::Rejected, ( label + ": 손실 뒤 되읽기가 거절되지 않았다" ).c_str() );
+        pResource->destroyTexture( texture );
+        device->waitIdle();
+    }
+
+    if ( removableCount == 0 )
+        SW_TEST_SKIP( "No RHI backend could simulate a device loss" );
+}
+
+/**
  * @brief [RHIDeviceTest] 텍스처 · 버퍼를 만들면 GPU 메모리 장부의 그 줄이 크기만큼 오르고, 지운 뒤 해제 지연을 지나면 원래대로 돌아온다(네 백엔드)
  * @details 샘플링 텍스처는 Texture, 렌더 타깃은 RenderTarget, 트랜지언트 풀 표시가 붙은 것은 TransientPool, 구조버퍼는 Buffer 줄이다. 오른 양은
  *          적어도 논리 크기(너비 × 높이 × 텍셀 바이트)다 — DX12 · Vulkan 은 드라이버의 할당 크기라 더 클 수 있다. 장부는 자원을 **실제로 놓을 때**

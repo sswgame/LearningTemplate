@@ -271,7 +271,21 @@ namespace sw
             return false;
         SW_LOG_WARNING( "Removing the D3D12 device on request (rhi.removeDevice) - every later GPU call fails as after a TDR" );
         device5->RemoveDevice();
+        _transferSerials.markLost(); // 제거 직후부터 제출 진입이 Rejected 를 준다(다음 질의를 기다리지 않는다)
         return true;
+    }
+
+    bool D3D12RHIDevice::isDeviceRemoved()
+    {
+        if ( _device == nullptr || SUCCEEDED( _device->GetDeviceRemovedReason() ) )
+            return false;
+        _transferSerials.markLost();
+        return true;
+    }
+
+    bool D3D12RHIDevice::isDeviceLost()
+    {
+        return _transferSerials.isLost() || isDeviceRemoved();
     }
 
     void D3D12RHIDevice::waitForPreviousFrame()
@@ -279,7 +293,7 @@ namespace sw
         if ( _commandQueue == nullptr || _fence == nullptr )
             return;
 
-        if ( _device != nullptr && FAILED( _device->GetDeviceRemovedReason() ) )
+        if ( isDeviceRemoved() )
             return;
 
         // 업로드 내보내기와 Signal · 올리기를 한 락 안에서 한다(`_fenceValue` 의 설명). 기다리는 것은 락 밖에서다.
@@ -304,7 +318,7 @@ namespace sw
         if ( waitForFenceValue( fenceToWait ) == false )
             return;
 
-        if ( _device == nullptr || SUCCEEDED( _device->GetDeviceRemovedReason() ) )
+        if ( isDeviceRemoved() == false )
             _swapChain.acquireNextImage();
     }
 
@@ -313,7 +327,7 @@ namespace sw
         if ( _fence == nullptr )
             return;
 
-        if ( _device != nullptr && FAILED( _device->GetDeviceRemovedReason() ) )
+        if ( isDeviceRemoved() )
             return;
 
         const uint64 completed = _fence->GetCompletedValue();
@@ -355,7 +369,7 @@ namespace sw
         while ( bReached && WaitForSingleObject( fenceEvent, 2000 ) != WAIT_OBJECT_0 )
         {
             waitedSeconds += 2;
-            if ( _device != nullptr && FAILED( _device->GetDeviceRemovedReason() ) )
+            if ( isDeviceRemoved() )
             {
                 SW_LOG_ERROR( "Fence %# never completed — the device was removed (hr=0x%#)", fenceValue,
                               static_cast<uint32>( _device->GetDeviceRemovedReason() ) );
@@ -375,7 +389,7 @@ namespace sw
         if ( _commandQueue == nullptr || _fence == nullptr )
             return;
 
-        if ( _device != nullptr && FAILED( _device->GetDeviceRemovedReason() ) )
+        if ( isDeviceRemoved() )
             return;
 
         // Signal 과 올리기를 업로드 락 안에서 한 덩어리로 한다. 다른 스레드의 업로드가 그 사이에 `_fenceValue` 를 읽고 복사를 실행하면
@@ -715,6 +729,10 @@ namespace sw
             if ( FAILED( presentHr ) )
             {
                 [[maybe_unused]] const HRESULT removed = _device->GetDeviceRemovedReason();
+                // Present 가 장치 제거 · 리셋으로 실패하면(DXGI_ERROR_DEVICE_REMOVED / DEVICE_RESET) 전송 손실로 표시한다. 디버그 전용인 flushDebugMessages 에 맡기지 않는다.
+                const bool bPresentLostDevice = presentHr == DXGI_ERROR_DEVICE_REMOVED || presentHr == DXGI_ERROR_DEVICE_RESET || FAILED( removed );
+                if ( bPresentLostDevice )
+                    _transferSerials.markLost();
                 // 디바이스 제거는 자동 복구가 없어서 한 번 일어나면 이후 매 프레임 여기로 들어온다.
                 // 첫 발견 때만 로그를 남기고 그 뒤로는 조용히 건너뛰어 로그 폭주를 막는다.
                 if ( _bDeviceRemovedLogged.load( std::memory_order_relaxed ) == SW_FALSE )

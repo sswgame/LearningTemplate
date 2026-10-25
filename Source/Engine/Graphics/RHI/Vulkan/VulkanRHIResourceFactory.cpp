@@ -581,10 +581,11 @@ namespace sw
     {
         VulkanRHIDevice::VulkanTextureRecord* pRecord                   = _pDevice->resolveTexture( texture );
         const bool                            bTextureUploadUnavailable = pRecord == nullptr || pRecord->_image == VK_NULL_HANDLE || _pDevice->_device == VK_NULL_HANDLE ||
-                                               _pDevice->_graphicsQueue == VK_NULL_HANDLE || _pDevice->_oneShotCommandPool == VK_NULL_HANDLE;
+                                               _pDevice->_graphicsQueue == VK_NULL_HANDLE || _pDevice->_oneShotCommandPool == VK_NULL_HANDLE || _pDevice->isDeviceLost();
         if ( bTextureUploadUnavailable )
         {
-            SW_LOG_ERROR( "submitTextureUpload: texture %# or the device is not usable", texture );
+            // 장치를 잃었으면 진입에서 Rejected 다(계약 2) — 잃은 장치의 큐는 제출을 받지 못하고 펜스는 끝나지 않는다.
+            SW_LOG_ERROR( "submitTextureUpload: texture %# or the device is not usable (uninitialized or lost)", texture );
             return RHITransferSubmit::rejected();
         }
         if ( pRecord->_bDepthStencil != SW_FALSE )
@@ -679,10 +680,11 @@ namespace sw
     {
         VulkanRHIDevice::VulkanTextureRecord* pRecord                         = _pDevice->resolveTexture( texture );
         const bool                            bTextureRegionUploadUnavailable = pRecord == nullptr || pRecord->_image == VK_NULL_HANDLE || _pDevice->_device == VK_NULL_HANDLE ||
-                                                     _pDevice->_graphicsQueue == VK_NULL_HANDLE || _pDevice->_oneShotCommandPool == VK_NULL_HANDLE || pRecord->_bDepthStencil != SW_FALSE;
+                                                     _pDevice->_graphicsQueue == VK_NULL_HANDLE || _pDevice->_oneShotCommandPool == VK_NULL_HANDLE || pRecord->_bDepthStencil != SW_FALSE ||
+                                                     _pDevice->isDeviceLost();
         if ( bTextureRegionUploadUnavailable )
         {
-            SW_LOG_ERROR( "submitTextureRegionUpload: texture %# is missing, a depth texture, or the device is not usable", texture );
+            SW_LOG_ERROR( "submitTextureRegionUpload: texture %# is missing, a depth texture, or the device is not usable (uninitialized or lost)", texture );
             return RHITransferSubmit::rejected();
         }
         uint32 rowBytes{ 0 };
@@ -830,10 +832,10 @@ namespace sw
         // 드러나는 경로라 "거절인데 이유가 없다" 가 곧 긴 추적이 된다.
         VulkanRHIDevice::VulkanTextureRecord* pRecord                     = _pDevice->resolveTexture( texture );
         const bool                            bTextureReadbackUnavailable = pRecord == nullptr || pRecord->_image == VK_NULL_HANDLE || _pDevice->_device == VK_NULL_HANDLE ||
-                                                 _pDevice->_graphicsQueue == VK_NULL_HANDLE || _pDevice->_oneShotCommandPool == VK_NULL_HANDLE;
+                                                 _pDevice->_graphicsQueue == VK_NULL_HANDLE || _pDevice->_oneShotCommandPool == VK_NULL_HANDLE || _pDevice->isDeviceLost();
         if ( bTextureReadbackUnavailable )
         {
-            SW_LOG_ERROR( "submitTextureReadback: texture %# or the device is not usable", texture );
+            SW_LOG_ERROR( "submitTextureReadback: texture %# or the device is not usable (uninitialized or lost)", texture );
             return RHITransferSubmit::rejected();
         }
         if ( mip >= pRecord->_mipLevels || arraySlice >= pRecord->_arrayLayers )

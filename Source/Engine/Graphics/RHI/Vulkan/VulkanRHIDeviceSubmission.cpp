@@ -64,7 +64,7 @@ namespace sw
             return;
         // 장치 손실은 처음 본 쪽만 알린다. 그 뒤의 호출은 모두 같은 값을 돌려주므로 프레임마다 로그가 쌓인다.
         const bool bDeviceLost = vkResult == VK_ERROR_DEVICE_LOST;
-        if ( bDeviceLost && _bDeviceLost.exchange( SW_TRUE ) == SW_TRUE )
+        if ( bDeviceLost && _transferSerials.markLost() == false )
             return;
 
         fixed_string<constant::kMaxBuffer64> lastMarker;
@@ -86,7 +86,7 @@ namespace sw
             return false;
         SW_LOG_WARNING( "Marking the Vulkan device lost on request (rhi.removeDevice) - Vulkan cannot remove a device, so this is the state after the first "
                         "VK_ERROR_DEVICE_LOST: no more submits, waits or presents" );
-        _bDeviceLost.store( SW_TRUE, std::memory_order_release );
+        _transferSerials.markLost(); // 이미 잃은 장치여도 같은 상태다
         return true;
     }
 
@@ -185,7 +185,7 @@ namespace sw
     {
         outGPUNanos                            = 0;
         const bool bTimestampDeviceUnavailable = _device == VK_NULL_HANDLE || _physicalDevice == VK_NULL_HANDLE || _graphicsQueue == VK_NULL_HANDLE ||
-                                                 _oneShotCommandPool == VK_NULL_HANDLE;
+                                                 _oneShotCommandPool == VK_NULL_HANDLE || isDeviceLost();
         if ( bTimestampDeviceUnavailable )
             return false;
 
@@ -215,10 +215,16 @@ namespace sw
             vkCmdResetQueryPool( oneShot.get(), _clockQueryPool, 0, 1 );
             vkCmdWriteTimestamp( oneShot.get(), VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, _clockQueryPool, 0 );
             if ( oneShot.endSubmitAndWait() == false )
+            {
+                reportQueueResult( static_cast<int32>( oneShot.getLastResult() ), "readGPUClockNanos: one-shot submit" );
                 return false;
+            }
         }
-        uint64 tick{ 0 };
-        if ( vkGetQueryPoolResults( _device, _clockQueryPool, 0, 1, sizeof( tick ), &tick, sizeof( tick ), VK_QUERY_RESULT_64_BIT ) != VK_SUCCESS )
+        uint64         tick{ 0 };
+        const VkResult clockResult = vkGetQueryPoolResults( _device, _clockQueryPool, 0, 1, sizeof( tick ), &tick, sizeof( tick ), VK_QUERY_RESULT_64_BIT );
+        if ( clockResult == VK_ERROR_DEVICE_LOST )
+            reportQueueResult( static_cast<int32>( clockResult ), "readGPUClockNanos: vkGetQueryPoolResults" );
+        if ( clockResult != VK_SUCCESS )
             return false;
         outGPUNanos = RHITimestamp::convertTickToNanos( tick, static_cast<float64>( properties.limits.timestampPeriod ) );
         return true;
@@ -266,6 +272,8 @@ namespace sw
         const VkResult result =
             vkGetQueryPoolResults( _device, _timestampPool, base, constant::kMaxGPUTimestampSlot, sizeof( arrResult ), arrResult,
                                    sizeof( uint64 ) * 2, VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT );
+        if ( result == VK_ERROR_DEVICE_LOST )
+            reportQueueResult( static_cast<int32>( result ), "collectTimestampsForSlot: vkGetQueryPoolResults" );
         if ( result != VK_SUCCESS && result != VK_NOT_READY )
             return;
 
@@ -363,6 +371,8 @@ namespace sw
 
             // Suboptimal 은 "창과 어긋났지만 이번 프레임은 그릴 수 있다" 는 뜻이다. 위에서 이미 한 번 다시
             // 만들어 봤으므로 그대로 진행한다.
+            if ( status == VulkanSwapChainStatus::DeviceLost ) // 다시 획득한 쪽에서 잃었음을 본 경우(위의 검사는 첫 획득만 본다)
+                reportQueueResult( static_cast<int32>( VK_ERROR_DEVICE_LOST ), "beginFrame: vkAcquireNextImageKHR (retry)" );
             if ( status != VulkanSwapChainStatus::Success && status != VulkanSwapChainStatus::Suboptimal )
                 return;
 
@@ -377,7 +387,7 @@ namespace sw
         if ( imageIndex >= _listImagesInFlight.size() )
             return;
         if ( _listImagesInFlight[imageIndex] != VK_NULL_HANDLE )
-            vkWaitForFences( _device, 1, &_listImagesInFlight[imageIndex], VK_TRUE, UINT64_MAX );
+            reportQueueResult( static_cast<int32>( vkWaitForFences( _device, 1, &_listImagesInFlight[imageIndex], VK_TRUE, UINT64_MAX ) ), "beginFrame: vkWaitForFences (image in flight)" );
         _listImagesInFlight[imageIndex] = _listInFlightFence[_currentFrame];
 
         vkResetFences( _device, 1, &_listInFlightFence[_currentFrame] );

@@ -191,8 +191,12 @@ namespace sw
          *        뒤와 같은 상태(`isDeviceLost`)를 만든다. 그 뒤로 제출 · 대기 · 표시를 하지 않고 프레임을 건너뛰며, 종료는 기다리지 않고 끝난다.
          */
         bool debugRemoveDevice() override;
-        /** @brief 큐 호출이 `VK_ERROR_DEVICE_LOST` 를 돌려줬거나 `debugRemoveDevice` 가 불렸으면 true 입니다. 어느 스레드에서 읽어도 된다. */
-        bool isDeviceLost() const { return _bDeviceLost.load( std::memory_order_acquire ) != SW_FALSE; }
+        /**
+         * @brief 큐 호출이 `VK_ERROR_DEVICE_LOST` 를 돌려줬거나 `debugRemoveDevice` 가 불렸으면 true 입니다. 어느 스레드에서 읽어도 된다.
+         * @details 저장소는 `_transferSerials` 의 손실 표시 하나다. 세운 뒤에는 펜스 · 큐 · 장치 대기를 부르지 않는다. 사양은 손실 뒤의 대기가 유한 시간에 돌아온다고 하지만
+         *          TDR 중의 드라이버 안 대기는 그 보장 밖이다(DX12 가 `GetDeviceRemovedReason` 을 보고 대기를 건너뛰는 것과 같다). 전송 제출 함수도 진입에서 이 값을 보고 `Rejected` 를 돌려준다(계약 2).
+         */
+        bool isDeviceLost() const { return _transferSerials.isLost(); }
 
         /** @brief 크기를 기록하고, 스왑체인 재생성은 beginFrame 까지 미룹니다. */
         void resizeInternal( uint32 width, uint32 height ) override;
@@ -744,11 +748,5 @@ namespace sw
         /// @brief 제출 순서에 마지막으로 들어간 패스 이름입니다(디바이스 손실 로그용). `_submittedMarkerMutex` 가 지킵니다.
         fixed_string<constant::kMaxBuffer64> _lastSubmittedEventMarker;
         mutable mutex                        _submittedMarkerMutex;
-        /**
-         * @brief 장치를 잃었는가(`isDeviceLost`). 처음 세운 쪽만 결함 정보를 남긴다 — 손실 뒤의 모든 호출이 같은 덤프를 반복하지 않게 한다.
-         * @details 세운 뒤에는 펜스 · 큐 · 장치 대기를 부르지 않는다. 사양은 손실 뒤의 대기가 유한 시간에 돌아온다고 하지만 TDR 중의 드라이버 안 대기는
-         *          그 보장 밖이다(DX12 가 `GetDeviceRemovedReason` 을 보고 대기를 건너뛰는 것과 같다).
-         */
-        atomic<uint8> _bDeviceLost;
     };
 } // namespace sw

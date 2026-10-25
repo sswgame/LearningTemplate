@@ -161,3 +161,17 @@ SW_TEST_CASE( RHIStagingRingTest, ReadbackSpansReturnWhenTakenOrWhenTheDiscarded
     ring.freeCompleted( 7 );
     SW_EXPECT_EQUAL( static_cast<uint32>( 0 ), ring.getLiveCount() );
 }
+
+/**
+ * @brief [RHIStagingRingTest] 손실 표시는 처음 표시한 호출만 true 를 돌려준다 — 손실 상태의 저장소가 이 표시 하나라서 "처음 본 쪽만 로그를 남긴다" 가 여기서 선다
+ * @details Vulkan 은 자기 손실 플래그를 따로 두었다가 전송 시리얼에 표시하지 않아 제출 진입의 `isLost` 가 손실을 놓쳤다. 지금은 `VulkanRHIDevice::isDeviceLost` 가 이 표시를 읽는다.
+ */
+SW_TEST_CASE( RHIStagingRingTest, MarkLostReportsOnlyTheFirstMark )
+{
+    sw::RHITransferSerials serials;
+    SW_EXPECT_FALSE( serials.isLost() );
+    SW_EXPECT_TRUE( serials.markLost() );
+    SW_EXPECT_TRUE( serials.isLost() );
+    SW_EXPECT_FALSE( serials.markLost() ); // 이미 잃은 상태다
+    SW_EXPECT_TRUE( serials.isLost() );
+}
