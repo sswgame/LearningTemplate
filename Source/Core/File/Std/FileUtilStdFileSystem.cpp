@@ -347,6 +347,7 @@ namespace sw
             SW_LOG_ERROR( "copyFile '%#' -> '%#' failed: %#", source, destination, FileUtilStdInternal::describe( errorCode ).c_str() );
             return false;
         }
+        noteFileCreated(); // 복사는 대상 파일을 만든다(없는 파일을 기억한 캐시가 버린다)
         return bCopied;
     }
 

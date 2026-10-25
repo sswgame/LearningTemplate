@@ -63,6 +63,9 @@ namespace sw
     class SharedAssetCache final : public IAssetCache
     {
     public:
+        /** @brief 종류 이름의 계측 칸을 올립니다(`CacheTracking::counted`). 정의는 `SharedAssetCacheDefinition.h` 라 인스턴스화하는 .cpp 에만 있습니다. */
+        SharedAssetCache();
+
         /**
          * @brief 경로의 에셋 로드를 요청합니다. 표에 있으면 준비된 핸들, 없으면 워커가 읽습니다(엔진 태스크가 없으면 이 자리에서). 워커에서 불러도 됩니다.
          * @details 실패는 기억하지 않으므로 파일이 생기면 다음 요청이 읽습니다(오류는 읽는 함수가 남깁니다).

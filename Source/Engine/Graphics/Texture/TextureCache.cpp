@@ -43,7 +43,7 @@ namespace sw
         /** @brief 텍스처 캐시의 계측 칸입니다(`CacheStats`). 캐시는 에셋 매니저마다 하나지만 칸은 프로세스에 하나라 매니저를 다시 세워도 이어 센다. */
         const CacheStatsHandle& getTextureCacheStats()
         {
-            static const CacheStatsHandle s_stats = CacheStats::registerCache( TextureCache::kAssetKindName );
+            static const CacheStatsHandle s_stats = CacheStats::getOrCreate( TextureCache::kAssetKindName );
             return s_stats;
         }
 
@@ -223,7 +223,8 @@ namespace sw
     };
 
     TextureCache::TextureCache()
-        : _impl{ sw::make_shared<Impl>() }
+        : IAssetCache{ CacheTracking::counted( kAssetKindName ) }
+        , _impl{ sw::make_shared<Impl>() }
     {
         // 컴포넌트 모델 코어(카메라)는 이 헤더를 모르므로 Engine/Common 의 창구로 크기를 알린다 — 처리 함수는 상태가 없어 다시 묶어도 같다.
         engine::bindRenderTargetDeclaration( &forwardRenderTargetDeclaration );

@@ -27,8 +27,15 @@ namespace sw
     {
         struct FileUtilInternal
         {
-            /** @brief 임시 파일 이름을 겹치지 않게 하는 번호입니다(같은 프로세스의 여러 스레드가 같은 파일을 동시에 저장해도 서로 밟지 않게). */
-            static inline atomic<uint32> s_tempFileSerial{ 0 };
+            /** @brief 프로세스에 하나인 파일 쓰기 카운터 묶음입니다(정적 가변 변수 한 칸으로 묶어 둔다 — `FileUtil` 은 정적 함수 묶음이라 소유 객체가 없다). */
+            struct WriteCounters
+            {
+                /** @brief 임시 파일 이름을 겹치지 않게 하는 번호입니다(같은 프로세스의 여러 스레드가 같은 파일을 동시에 저장해도 서로 밟지 않게). */
+                atomic<uint32> _tempFileSerial{ 0 };
+                /** @brief 파일을 만든 횟수입니다(`FileUtil::getCreationEpoch`). */
+                atomic<uint64> _creationEpoch{ 0 };
+            };
+            static inline WriteCounters s_writeCounters{};
 
             /** @brief 실패한 쓰기의 임시 파일을 지웁니다. 지우지 못하면 경고합니다 — 원본 옆에 `.tmp<pid>_<번호>` 가 남습니다. */
             static void discardTempFile( const string& tempPath )
@@ -58,7 +65,7 @@ namespace sw
                     .append( ".tmp" )
                     .append( processID )
                     .append( '_' )
-                    .append( s_tempFileSerial.fetch_add( 1, std::memory_order_relaxed ) );
+                    .append( s_writeCounters._tempFileSerial.fetch_add( 1, std::memory_order_relaxed ) );
                 const string tempPath{ tempPathBuilder.c_str() };
 
                 FILE* pFile = PlatformFileUtil::openFile( tempPath.c_str(), "wb" );
@@ -84,7 +91,10 @@ namespace sw
                 for ( uint32 attemptIndex = 0; attemptIndex < kReplaceAttemptCount; ++attemptIndex )
                 {
                     if ( PlatformFileUtil::replaceFile( tempPath.c_str(), filePath.c_str() ) )
+                    {
+                        FileUtil::noteFileCreated();
                         return true;
+                    }
                     std::this_thread::sleep_for( std::chrono::milliseconds( 20 ) );
                 }
                 SW_LOG_ERROR( "Failed to replace %# with the newly written file — the original file was left untouched", filePath.c_str() );
@@ -629,6 +639,16 @@ namespace sw
         outStamp._writeTime = static_cast<uint64>( fileStat.st_mtim.tv_sec ) * static_cast<uint64>( constant::kNanosecondsPerSecond ) + static_cast<uint64>( fileStat.st_mtim.tv_nsec );
         return true;
 #endif
+    }
+
+    uint64 FileUtil::getCreationEpoch()
+    {
+        return FileUtilInternal::s_writeCounters._creationEpoch.load( std::memory_order_acquire );
+    }
+
+    void FileUtil::noteFileCreated()
+    {
+        FileUtilInternal::s_writeCounters._creationEpoch.fetch_add( 1, std::memory_order_release );
     }
 
     bool FileUtil::writeFile( string_view fileName, const uint8* pData, const uint64 size )

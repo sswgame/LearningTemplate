@@ -13,18 +13,66 @@
  *          **무효화 사유.** 키가 결과를 정하는 모든 입력(글 · 스타일 · 너비 · 지금 면 연쇄 · 리치 구간)을 해시로 담으므로 입력이 바뀌면 키가 바뀌어 낡은 항목은 조회되지 않고
  *          세대 교대로 사라집니다. 그래서 문화권 · 폰트 교체 알림에 연결하지 않습니다(`TextLayoutEngine::measure` 의 주석). 직접 비우는 것은 `clear` 뿐입니다.
  *
- *          **키는 해시 하나입니다(값 비교 없음).** 64 비트 해시가 부딪히면 서로 다른 글이 같은 크기를 받아 조용히 틀립니다. 상한 8192 개에서 한 세대가 차는 동안 부딪힐
- *          확률은 약 2^-39(8192² / 2^65 ≈ 1.8e-12)이고 결과는 줄 높이가 아니라 크기 몇 픽셀이 어긋나는 것입니다. 값 비교로 바꾸려면 항목마다 글 사본이 필요해 메모리가
- *          글 길이만큼 늡니다 — 측정으로 부딪힘이 보이면 두 번째 독립 해시를 항목에 넣는 안으로 간다.
+ *          **키는 해시 후 원문 확인입니다.** 표 키는 64 비트 해시지만 항목이 글 사본과 문맥 해시를 함께 들고, 조회가 해시로 칸을 찾은 뒤 둘이 같은지 확인한다(`TextMeasureKey`).
+ *          해시가 부딪혀도 다른 글의 크기를 돌려주지 않고 실패로 센다(그 칸은 다음 `insert` 가 덮어쓴다). 값 비교의 비용은 **넣을 때** 글 복사 한 번(넣는 자리는 실패 경로라 방금 글을
+ *          통째로 배치했으니 복사는 잡음 수준)과 **적중할 때** `memcmp` 한 번(해시가 이미 글을 한 번 훑었다)이다. 메모리는 항목마다 글 길이만큼 늘고
+ *          상한 안(세대당 4096 개 × 2)이라 글이 길어도 수 MB 이내다. 문맥(스타일 · 너비 · 면 연쇄 · 리치 구간)은 사본 대신 64 비트 해시로 확인한다 — 글이 같고 문맥 해시만
+ *          부딪혀야 틀리고(2^-64), 사본을 들면 `TextLayoutStyle` 전체와 구간 목록을 복사해야 한다.
  *
  *          스레드: 게임 스레드에서만 씁니다(`TextLayoutEngine` 이 게임 스레드 전용).
  */
 #pragma once
+#include "Core/Common/HashUtil.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Diagnostics/CacheStats.h"
 #include "Core/Math/VectorMath.h"
+
+namespace sw
+{
+    /**
+     * @class TextMeasureKey
+     * @brief 측정 캐시의 조회 키입니다. 글과 문맥 해시로만 만들 수 있어, 해시만 들고 조회하는 길이 없습니다.
+     * @details 표 키(`getHash`)는 글을 문맥 해시로 시드해 훑은 64 비트 값이고, 칸을 찾은 뒤 글 · 문맥 해시가 같은지 `TextMeasureCache` 가 확인합니다.
+     *          글은 **보기**만 들므로 키보다 글이 오래 살아야 합니다(조회 · 넣기 호출 동안만).
+     */
+    class TextMeasureKey
+    {
+    public:
+        /**
+         * @param text        측정하는 글입니다(키가 쓰이는 동안 살아 있어야 합니다).
+         * @param contextHash 글 밖에서 결과를 정하는 입력(스타일 · 너비 · 면 연쇄 · 리치 구간)을 섞은 해시입니다.
+         */
+        TextMeasureKey( string_view text, uint64 contextHash )
+            : _hash{ HashUtil::computeStringHash64( text.data(), text.size(), false, contextHash ) }
+            , _text{ text }
+            , _contextHash{ contextHash }
+        {
+        }
+
+        /**
+         * @brief 해시를 직접 정합니다 — 부딪힘을 일부러 만드는 테스트의 자리입니다. 생산 코드는 위 생성자를 씁니다.
+         */
+        static TextMeasureKey fromHashForTest( uint64 hash, string_view text, uint64 contextHash ) { return TextMeasureKey{ hash, text, contextHash }; }
+
+        uint64      getHash() const { return _hash; }
+        string_view getText() const { return _text; }
+        uint64      getContextHash() const { return _contextHash; }
+
+    private:
+        TextMeasureKey( uint64 hash, string_view text, uint64 contextHash )
+            : _hash{ hash }
+            , _text{ text }
+            , _contextHash{ contextHash }
+        {
+        }
+
+        uint64      _hash;
+        string_view _text;
+        uint64      _contextHash;
+    };
+} // namespace sw
 
 namespace sw
 {
@@ -54,53 +102,63 @@ namespace sw
 
         /**
          * @brief 키의 크기를 찾습니다. 없으면 nullptr 입니다. 이전 세대에서 찾으면 현재로 승격합니다.
-         * @details 돌려준 포인터는 다음 `find` · `insert` · `clear` 까지만 유효합니다(승격이나 세대 교대가 표를 바꾼다).
+         * @details 해시가 같아도 글 · 문맥 해시가 다르면(해시 부딪힘) 없는 것으로 칩니다 — 실패로 센다.
+         *          돌려준 포인터는 다음 `find` · `insert` · `clear` 까지만 유효합니다(승격이나 세대 교대가 표를 바꾼다).
          */
-        const float2* find( uint64 key )
+        const float2* find( const TextMeasureKey& key )
         {
-            const auto currentIter = _mapCurrent.find( key );
+            const uint64 hash        = key.getHash();
+            const auto   currentIter = _mapCurrent.find( hash );
             if ( currentIter != _mapCurrent.end() )
             {
+                if ( isSameKey( currentIter->second, key ) == false )
+                {
+                    _stats.recordMiss(); // 부딪힘: 이 해시는 다른 글의 칸이다. 같은 해시가 이전 세대에도 있을 수 없다(넣을 때 이전의 같은 해시를 지운다)
+                    return nullptr;
+                }
                 _stats.recordHit();
-                return &currentIter->second;
+                return &currentIter->second._size;
             }
-            const auto previousIter = _mapOlder.find( key );
-            if ( previousIter == _mapOlder.end() )
+            const auto previousIter = _mapOlder.find( hash );
+            if ( previousIter == _mapOlder.end() || isSameKey( previousIter->second, key ) == false )
             {
                 _stats.recordMiss();
                 return nullptr;
             }
             _stats.recordHit();
-            const float2 size = previousIter->second;
+            Entry entry = std::move( previousIter->second );
             _mapOlder.erase( previousIter );
             _stats.addItemCount( -1 ); // 아래 insertCurrent 가 다시 하나를 더한다 — 승격은 항목 수를 바꾸지 않는다
-            return &insertCurrent( key, size );
+            return &insertCurrent( hash, std::move( entry ) )._size;
         }
 
-        /** @brief 키의 크기를 현재 세대에 넣습니다. 현재가 차 있으면 먼저 세대를 교대합니다. 이미 있는 키면 값을 덮어씁니다. */
-        void insert( uint64 key, const float2& size )
+        /**
+         * @brief 키의 크기를 현재 세대에 넣습니다. 현재가 차 있으면 먼저 세대를 교대합니다. 같은 해시의 칸이 있으면(같은 키든 부딪힌 다른 키든) 새 키와 값으로 덮어씁니다.
+         */
+        void insert( const TextMeasureKey& key, const float2& size )
         {
-            const auto previousIter = _mapOlder.find( key );
+            const uint64 hash         = key.getHash();
+            const auto   previousIter = _mapOlder.find( hash );
             if ( previousIter != _mapOlder.end() )
             {
                 _mapOlder.erase( previousIter );
                 _stats.addItemCount( -1 );
             }
-            const auto currentIter = _mapCurrent.find( key );
+            const auto currentIter = _mapCurrent.find( hash );
             if ( currentIter != _mapCurrent.end() )
             {
-                currentIter->second = size;
+                currentIter->second = makeEntry( key, size );
                 return;
             }
-            insertCurrent( key, size );
+            (void)insertCurrent( hash, makeEntry( key, size ) );
         }
 
         /** @brief 두 세대를 모두 비웁니다. 비우기 횟수를 하나 셉니다. */
         void clear()
         {
             _stats.addItemCount( -static_cast<int64>( getCount() ) );
-            _mapCurrent = unordered_map<uint64, float2>{};
-            _mapOlder   = unordered_map<uint64, float2>{};
+            _mapCurrent = unordered_map<uint64, Entry>{};
+            _mapOlder   = unordered_map<uint64, Entry>{};
             _stats.recordClear();
         }
 
@@ -110,22 +168,41 @@ namespace sw
         size_t getGenerationCapacity() const { return _generationCapacity; }
 
     private:
-        /** @brief 새 키를 현재 세대에 넣고 그 값을 돌려줍니다. 현재가 가득이면 이전을 버리고 현재를 이전으로 넘긴 뒤 넣습니다. */
-        float2& insertCurrent( uint64 key, const float2& size )
+        /** @brief 칸 하나입니다. 해시로 찾은 뒤 글 · 문맥 해시가 같을 때만 `_size` 가 답입니다. */
+        struct Entry
+        {
+            string _text{};
+            uint64 _contextHash{ 0 };
+            float2 _size{};
+        };
+
+        static Entry makeEntry( const TextMeasureKey& key, const float2& size )
+        {
+            Entry entry{};
+            entry._text        = string( key.getText() );
+            entry._contextHash = key.getContextHash();
+            entry._size        = size;
+            return entry;
+        }
+
+        static bool isSameKey( const Entry& entry, const TextMeasureKey& key ) { return entry._contextHash == key.getContextHash() && string_view{ entry._text } == key.getText(); }
+
+        /** @brief 새 칸을 현재 세대에 넣고 그 값을 돌려줍니다. 현재가 가득이면 이전을 버리고 현재를 이전으로 넘긴 뒤 넣습니다. */
+        Entry& insertCurrent( uint64 hash, Entry&& entry )
         {
             if ( _generationCapacity <= _mapCurrent.size() )
             {
                 _stats.addItemCount( -static_cast<int64>( _mapOlder.size() ) );
                 _mapOlder   = std::move( _mapCurrent );
-                _mapCurrent = unordered_map<uint64, float2>{};
+                _mapCurrent = unordered_map<uint64, Entry>{};
             }
             _stats.addItemCount( 1 );
-            return _mapCurrent.emplace( key, size ).first->second;
+            return _mapCurrent.emplace( hash, std::move( entry ) ).first->second;
         }
 
-        unordered_map<uint64, float2> _mapCurrent; ///< 현재 세대입니다. 새로 잰 것과 승격한 것이 들어옵니다.
-        unordered_map<uint64, float2> _mapOlder;   ///< 이전 세대입니다. 다음 교대에 통째로 버려집니다.
-        size_t                        _generationCapacity;
-        CacheStatsHandle              _stats;
+        unordered_map<uint64, Entry> _mapCurrent; ///< 현재 세대입니다. 새로 잰 것과 승격한 것이 들어옵니다.
+        unordered_map<uint64, Entry> _mapOlder;   ///< 이전 세대입니다. 다음 교대에 통째로 버려집니다.
+        size_t                       _generationCapacity;
+        CacheStatsHandle             _stats;
     };
 } // namespace sw

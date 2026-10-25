@@ -6,6 +6,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
+#include "Core/Diagnostics/CacheStats.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/LifetimeScope.h"
@@ -27,9 +28,96 @@ namespace sw
     {
         struct ResourcePathsInternal
         {
-            inline static mutex _s_pathCacheMutex{};
-            /** @brief 푼 경로 캐시입니다. 엔진 수명 범위가 소유해 엔진 종료 때 저장소째 사라집니다(처음 넣을 때 만들어진다). */
-            inline static ScopeOwned<unordered_map<string, string>> _s_mapResolvedPath{};
+            /**
+             * @brief 푼 경로 캐시의 잠금과 배치 세대입니다. 세대는 검색 목록 · 루트 · 마운트가 바뀔 때마다 오른다(`clearPathCache`, 잠금 아래).
+             * @details 세대가 표(`_s_mapResolvedPath`)의 수명과 따로라(표는 엔진 수명 범위가 닫히면 사라진다) 표가 없을 때도 읽을 수 있다.
+             */
+            struct PathCacheGuard
+            {
+                mutex  _mutex{};
+                uint64 _layoutGeneration{ 0 };
+            };
+            inline static PathCacheGuard _s_pathCache{};
+
+            /**
+             * @brief 푼 경로 캐시의 한 칸입니다. `_path` 가 비면 "디스크에 없다" 를 기억한 칸(음성 결과)입니다.
+             * @details 없는 파일은 나중에 생길 수 있으므로 음성 칸은 `_creationEpoch`(기억한 때 `FileUtil::getCreationEpoch`)가 지금과 같은 동안만 믿는다.
+             *          이 프로세스가 파일을 만들면 에포크가 올라 모든 음성 칸이 한꺼번에 낡는다. 양성 칸은 검색 목록이 바뀔 때(`clearPathCache`)만 버린다.
+             */
+            struct ResolvedEntry
+            {
+                string _path{};
+                uint64 _creationEpoch{ 0 };
+            };
+
+            /**
+             * @brief 해석을 시작한 때의 세대입니다. **저장은 이 값을 들고서만 할 수 있습니다**(`storeResolved`) — 해석하는 동안 검색 목록이 바뀌었으면(`clearPathCache`) 옛 목록으로 푼
+             *        결과를 새 캐시에 넣지 않는다. 찾기 전에 한 번 잡고(`captureStamp`) 찾은 뒤 저장에 넘긴다.
+             */
+            struct PathCacheStamp
+            {
+                uint64 _layoutGeneration{ 0 };
+                uint64 _creationEpoch{ 0 };
+            };
+
+            /** @brief 푼 경로 캐시입니다. 엔진 수명 범위가 소유해 엔진 종료 때 저장소째 사라집니다(처음 넣을 때 만들어진다). 접근은 `_s_pathCache._mutex` 아래에서만 한다. */
+            inline static ScopeOwned<unordered_map<string, ResolvedEntry>> _s_mapResolvedPath{};
+
+            /** @brief 푼 경로 캐시의 계측 칸입니다(`ResourcePath`: 적중 = 캐시가 답함, 실패 = 디스크를 훑음). */
+            static const CacheStatsHandle& getPathStats()
+            {
+                static const CacheStatsHandle s_stats = CacheStats::getOrCreate( "ResourcePath" );
+                return s_stats;
+            }
+            /** @brief 음성 결과의 계측 칸입니다(`ResourcePathMissing`: 적중 = 기억한 "없음" 으로 답함, 실패 = 디스크를 훑었더니 없었음). 실패가 많고 적중이 적으면 음성 캐시가 헛돈다. */
+            static const CacheStatsHandle& getMissingStats()
+            {
+                static const CacheStatsHandle s_stats = CacheStats::getOrCreate( "ResourcePathMissing" );
+                return s_stats;
+            }
+
+            /** @brief 해석을 시작하는 지금의 세대를 잡습니다. 찾기 전에 한 번 잡는다. */
+            static PathCacheStamp captureStamp()
+            {
+                std::scoped_lock<mutex> lock( _s_pathCache._mutex );
+                return PathCacheStamp{ _s_pathCache._layoutGeneration, FileUtil::getCreationEpoch() };
+            }
+
+            /** @brief 캐시에서 찾습니다. 찾았으면 true 이고 @p outPath 가 비면 "없음" 입니다. 낡은 음성 칸은 없는 것으로 칩니다. */
+            [[nodiscard]] static bool lookupResolved( const string& cacheKey, string& outPath )
+            {
+                const uint64                                      epoch = FileUtil::getCreationEpoch();
+                std::scoped_lock<mutex>                           lock( _s_pathCache._mutex );
+                const unordered_map<string, ResolvedEntry>* const pMapResolved = _s_mapResolvedPath.find();
+                if ( pMapResolved == nullptr )
+                    return false;
+                const auto it = pMapResolved->find( cacheKey );
+                if ( it == pMapResolved->end() )
+                    return false;
+                if ( it->second._path.empty() && it->second._creationEpoch != epoch )
+                    return false; // 기억한 뒤 파일이 만들어졌다 — 다시 훑는다
+                outPath = it->second._path;
+                return true;
+            }
+
+            /** @brief 푼 결과(@p path 가 비면 "없음")를 저장합니다. @p stamp 의 검색 목록 세대가 이미 낡았으면 저장하지 않습니다. */
+            static void storeResolved( string&& cacheKey, const string& path, const PathCacheStamp& stamp )
+            {
+                // 캐시는 에셋 색인의 몫이다 — 부르는 쪽(스플래시 · 모듈 · 워커)의 태그가 아니라 Asset 으로 센다(재해시가 어디서 일어나든).
+                SW_MEMORY_SCOPE( Asset );
+                std::scoped_lock<mutex> lock( _s_pathCache._mutex );
+                if ( stamp._layoutGeneration != _s_pathCache._layoutGeneration )
+                    return;
+                unordered_map<string, ResolvedEntry>* const pMapResolved = _s_mapResolvedPath.getOrCreate();
+                // nullptr 은 엔진 수명 범위가 닫힌 뒤다(Debug 는 `getOrCreate` 가 단언한다) — 캐시할 곳이 없을 뿐 찾은 경로는 그대로 돌려준다.
+                if ( pMapResolved == nullptr )
+                    return;
+                const auto inserted                   = pMapResolved->try_emplace( std::move( cacheKey ) );
+                inserted.first->second._path          = path;
+                inserted.first->second._creationEpoch = stamp._creationEpoch;
+                if ( inserted.second )
+                    getPathStats().addItemCount( 1 );
+            }
 
             /** @brief `mountDiskDomain` 으로 붙인 도메인 하나입니다. */
             struct MountedDiskDomain
@@ -79,7 +167,7 @@ namespace sw
             /**
              * @brief `initialize()` 본문을 프로세스당 한 번만 돌립니다.
              * @details 늦게 온 스레드는 첫 호출이 **끝날 때까지 막힙니다.** 그래서 초기화 도중의 빈 경로를
-             *          보는 일이 없습니다. 이 안에서 `_s_pathCacheMutex` 를 다시 잡는데,
+             *          보는 일이 없습니다. 이 안에서 `_s_pathCache._mutex` 를 다시 잡는데,
              *          반대 순서로 잡는 곳은 없습니다.
              */
             inline static std::once_flag _s_initOnce{};
@@ -366,16 +454,19 @@ namespace sw
             cacheKey += folderName;
         }
 
+        // 세대는 찾기 전에 잡는다 — 찾는 동안 검색 목록이 바뀌었거나 파일이 만들어졌으면 이 결과는 낡은 채로 저장되지 못하거나(목록) 다음 조회에서 버려진다(음성).
+        const ResourcePathsInternal::PathCacheStamp stamp = ResourcePathsInternal::captureStamp();
         {
-            std::scoped_lock<mutex>                    lock( ResourcePathsInternal::_s_pathCacheMutex );
-            const unordered_map<string, string>* const pMapResolved = ResourcePathsInternal::_s_mapResolvedPath.find();
-            if ( pMapResolved != nullptr )
+            string cached;
+            if ( ResourcePathsInternal::lookupResolved( cacheKey, cached ) )
             {
-                const auto it = pMapResolved->find( cacheKey );
-                if ( it != pMapResolved->end() )
-                    return LooseFilePath( it->second );
+                ResourcePathsInternal::getPathStats().recordHit();
+                if ( cached.empty() )
+                    ResourcePathsInternal::getMissingStats().recordHit();
+                return LooseFilePath( std::move( cached ) );
             }
         }
+        ResourcePathsInternal::getPathStats().recordMiss();
 
         const string lowerFile   = FileUtil::normalizePath( filePath );
         const string lowerFolder = folderName.empty() ? string{} : FileUtil::normalizePath( folderName );
@@ -419,16 +510,10 @@ namespace sw
 #endif
         }
 
-        if ( found.empty() == false )
-        {
-            // 캐시는 에셋 색인의 몫이다 — 부르는 쪽(스플래시 · 모듈 · 워커)의 태그가 아니라 Asset 으로 센다(재해시가 어디서 일어나든).
-            SW_MEMORY_SCOPE( Asset );
-            std::scoped_lock<mutex>              lock( ResourcePathsInternal::_s_pathCacheMutex );
-            unordered_map<string, string>* const pMapResolved = ResourcePathsInternal::_s_mapResolvedPath.getOrCreate();
-            // nullptr 은 엔진 수명 범위가 닫힌 뒤다(Debug 는 `getOrCreate` 가 단언한다) — 캐시할 곳이 없을 뿐 찾은 경로는 그대로 돌려준다.
-            if ( pMapResolved != nullptr )
-                pMapResolved->insert_or_assign( std::move( cacheKey ), found );
-        }
+        if ( found.empty() )
+            ResourcePathsInternal::getMissingStats().recordMiss();
+        // 없음도 저장한다(음성 결과) — 같은 없는 파일을 묻는 호출(선택적 파일 · 팩에만 있는 에셋)이 매번 모든 검색 루트를 훑지 않게.
+        ResourcePathsInternal::storeResolved( std::move( cacheKey ), found, stamp );
 
         return LooseFilePath( std::move( found ) );
     }
@@ -685,11 +770,17 @@ namespace sw
 
     void ResourcePaths::clearPathCache()
     {
-        std::scoped_lock<mutex> lock( ResourcePathsInternal::_s_pathCacheMutex );
+        std::scoped_lock<mutex> lock( ResourcePathsInternal::_s_pathCache._mutex );
         // `clear()` 는 버킷 · 밀집 배열을 남긴다 — 검색 목록이 바뀐 뒤의 캐시가 자란 만큼 남지 않게 저장소까지 놓는다. 종료 때의 반납은 엔진 수명 범위가 한다.
-        unordered_map<string, string>* const pMapResolved = ResourcePathsInternal::_s_mapResolvedPath.find();
+        // 세대를 올려, 이 순간 이전의 검색 목록으로 풀던 호출이 결과를 새 캐시에 넣지 못하게 한다(`storeResolved`).
+        ++ResourcePathsInternal::_s_pathCache._layoutGeneration;
+        unordered_map<string, ResourcePathsInternal::ResolvedEntry>* const pMapResolved = ResourcePathsInternal::_s_mapResolvedPath.find();
         if ( pMapResolved != nullptr )
-            *pMapResolved = unordered_map<string, string>{};
+        {
+            ResourcePathsInternal::getPathStats().addItemCount( -static_cast<int64>( pMapResolved->size() ) );
+            ResourcePathsInternal::getPathStats().recordClear();
+            *pMapResolved = unordered_map<string, ResourcePathsInternal::ResolvedEntry>{};
+        }
     }
 
     string ResourcePaths::makeSaveFolderPath( string_view absoluteFolder )

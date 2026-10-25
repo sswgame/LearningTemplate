@@ -76,7 +76,6 @@ namespace sw
         const utf8*                                   _pAssetKindName;
         const utf8*                                   _pAssetLabel;
         UITextAssetParseFunction                      _pParse;
-        CacheStatsHandle                              _stats; ///< 이 종류의 계측 칸(`CacheStats`). 캐시는 UI 시스템마다 있어 같은 이름의 칸을 이어 쓴다.
         uint32                                        _parseCount;
     };
 } // namespace sw

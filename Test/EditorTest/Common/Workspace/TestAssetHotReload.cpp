@@ -24,6 +24,11 @@ namespace
     class HeldPathProbeCache final : public sw::IAssetCache
     {
     public:
+        HeldPathProbeCache()
+            : sw::IAssetCache{ sw::CacheTracking::uncounted( "test probe without lookups" ) }
+        {
+        }
+
         const utf8* getAssetKindName() const override { return "HeldPathProbe"; }
         bool        isCached( sw::string_view relativePath ) const override { return relativePath == "data/held.interactions.xml"; }
         void        reload( sw::string_view, sw::IRHIDevice* ) override { ++_reloadCount; }

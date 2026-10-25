@@ -55,6 +55,11 @@
   세지 못하는 캐시: 조회가 없는 어댑터(`AudioReloadCache` · `LocalizationReloadCache`)는 보고에 `no counters` 로 보이고, `ResourcePaths` 의 캐시는 이 변경의 범위 밖이다.
   텍스트 측정 캐시(`TextMeasureCache`)는 옛 "4096 개가 차면 전체 비우기" 를 세대 용량 4096 의 두 세대 교대로 바꿨다(항목은 최대 8192, 자주 쓰는 항목은 승격으로 남는다). 키는 면 연쇄를 담아 문화권 · 폰트 교체를 이미 따르므로 변경 알림에 연결하지 않는다(해시 단독 키라는 한계는 파일 머리말에 적었다).
   물리 셰이프 캐시(`PhysicsMeshShapeCache`)는 상한을 두지 않는다 — 경로가 콘텐츠의 메시 파일 수로 닫혀 있고 씬 교체 때 비우면 재방문마다 다시 읽기 때문이다(항목 수는 `[CacheStats]` 로 본다).
+- **`IAssetCache` 는 계측 선언 없이 지을 수 없고, 경로 캐시는 "없음" 도 기억하되 세대가 낡음을 막습니다**(2026-10-25, 캐시 계약). ① 위 항목의 "`IAssetCache` 를 고치지 않는다" 를 뒤집는다: 모든 구현이 계측을 따르게 하는 길이 형식뿐이라(손으로 지키면 새 캐시가 잊는다) 생성자가
+  `CacheTracking`(`counted( 종류 이름 )` 또는 `uncounted( 사유 )`)을 받는다. 레이아웃이 바뀌므로 엔진과 게임 · 키트 모듈은 함께 다시 빌드한다(모듈이 옛 엔진 DLL 에 붙는 구성은 없다). 조회가 없는 어댑터는 사유를 적고 보고에 `no counters (<사유>)` 로 보인다.
+  ② `ResourcePaths::findLooseFile` 의 캐시는 음성 결과(디스크에 없음)를 같은 표에 둔다. 낡음은 둘로 막는다 — 검색 목록 · 루트 · 마운트가 바뀌면 `clearPathCache` 가 올리는 **배치 세대**(해석을 시작할 때 잡은 세대가 달라졌으면 결과를 저장하지 못한다),
+  이 프로세스가 파일을 만들면 오르는 **`FileUtil::getCreationEpoch`**(음성 칸은 기억한 때의 에포크가 같을 때만 믿는다). 다른 프로세스(쿠커 자식 · git)가 만든 파일은 에포크가 못 본다 — 그런 파일을 먼저 묻고 나중에 읽는 흐름은 `clearPathCache` 를 부른다.
+  계측 칸 `ResourcePath`(적중 = 캐시가 답, 실패 = 디스크를 훑음)와 `ResourcePathMissing`(적중 = 기억한 "없음" 으로 답, 실패 = 훑었더니 없었음)으로 효과를 본다. ③ `TextMeasureCache` 는 해시 단독 키를 버리고 **해시 후 원문 확인**(`TextMeasureKey`: 글 사본 + 문맥 해시)이다.
 - **씬마다 하나인 기능 서비스는 기능 폴더가 등록하고 `GameObjectManager` 는 레지스트리만 봅니다**(2026-10-12, 엔진 분할 2 단계). 서비스 .cpp 에 `SW_SCENE_SERVICE( SceneNavigation, Navigation )` 한 줄을 두면 매니저가 생성자에서 만들고, 그 줄의 프레임 단계에서 `update` 를, `clear` 에서 `onSceneCleared` 를 부르며, 찾는 창구는 `getSubsystem<T>()` 입니다(`Object/GameObject/Service/ISceneService.h`).
   씬 서비스는 서브시스템이고 매니저의 씬 범위(`SubsystemScope`, 부모는 엔진 범위)가 소유한다(2026-10-14, C-27 ①) — 선언한 의존으로 세우고 같은 단계의 갱신도 그 순서다.
   언리얼 `UWorldSubsystem` · `UTickableWorldSubsystem` 과 같은 자리로 알고 있다. 프레임 단계 갱신(`update`)은 서브시스템 계약 밖의 씬 서비스 몫이다 —
