@@ -297,6 +297,8 @@ namespace sw
         const float32 halfSpan = 0.5f * static_cast<float32>( count ) * _settings._rigSpacing;
         for ( CameraComponent* pCamera : pScene->getObjectManager()->getCameraRegistry().getAll() )
         {
+            if ( isFramedCamera( pCamera ) == false )
+                continue;
             if ( count <= 1 )
             {
                 // 한 명 — 상반신 · 다리가 함께 들어오게 비스듬히 가까이(손잡이 · 시선 · 망토 · 발이 한 화면).

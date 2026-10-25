@@ -882,6 +882,8 @@ namespace sw
         const float32 distance = computeFaceCameraDistance( static_cast<uint32>( MathUtil::max( gv_benchFaces, 1 ) ) );
         for ( CameraComponent* pCamera : pScene->getObjectManager()->getCameraRegistry().getAll() )
         {
+            if ( isFramedCamera( pCamera ) == false )
+                continue;
             pCamera->setLocalPosition( float3{ 0.0f, _settings._faceHeight, -distance } );
             pCamera->lookAt( float3{ 0.0f, _settings._faceHeight, 0.0f } );
         }
@@ -904,6 +906,8 @@ namespace sw
         const float32 depth          = static_cast<float32>( ( characterCount + columns - 1 ) / columns - 1 ) * _settings._characterSpacing;
         for ( CameraComponent* pCamera : pScene->getObjectManager()->getCameraRegistry().getAll() )
         {
+            if ( isFramedCamera( pCamera ) == false )
+                continue;
             const float32 tanHalf  = MathUtil::tan( pCamera->getFieldOfViewY() * 0.5f );
             const float32 distance = ( tanHalf > MathUtil::kEpsilon ) ? ( halfExtent * _settings._characterFrameMargin / tanHalf ) : ( halfExtent * 3.0f );
             if ( depth <= 0.0f )
@@ -1200,6 +1204,8 @@ namespace sw
         // 그리므로(App::getSceneViewCamera), 게임 카메라만 옮기면 씬 뷰에서는 아무것도 안 보인다.
         for ( CameraComponent* pCam : pObjects->getCameraRegistry().getAll() )
         {
+            if ( isFramedCamera( pCam ) == false )
+                continue;
             frameOneCamera( pCam, side, spacing );
         }
     }
@@ -1239,13 +1245,31 @@ namespace sw
         applyFraming( pScene, _framingMode );
     }
 
+    bool BenchScene::isFramedCamera( const CameraComponent* pCamera )
+    {
+        // 캡처 카메라(`spawnBenchViews`)는 자기 자리와 출력이 있어 맞춤이 옮기지 않습니다. 카메라를 옮기는 곳은 맞춤 한 곳입니다.
+        return pCamera != nullptr && pCamera->getRole() != CameraRole::Capture;
+    }
+
+    uint32 BenchScene::countFramedCameras( const Scene* pScene )
+    {
+        if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
+            return 0;
+        uint32 count = 0;
+        for ( const CameraComponent* pCamera : pScene->getObjectManager()->getCameraRegistry().getAll() )
+        {
+            if ( isFramedCamera( pCamera ) )
+                ++count;
+        }
+        return count;
+    }
+
     FramingInput BenchScene::captureFramingInput( const Scene* pScene ) const
     {
         // 모드마다 그 맞춤 함수가 읽는 값만 채웁니다(나머지는 0). 새 입력을 읽게 되면 FramingInput 에 필드를 더하고 여기서 채웁니다.
         FramingInput input;
-        input.mode = _framingMode;
-        if ( pScene != nullptr && pScene->getObjectManager() != nullptr )
-            input.cameraCount = static_cast<uint32>( pScene->getObjectManager()->getCameraRegistry().getAll().size() );
+        input.mode        = _framingMode;
+        input.cameraCount = countFramedCameras( pScene );
         switch ( _framingMode )
         {
             case FramingMode::Grid:

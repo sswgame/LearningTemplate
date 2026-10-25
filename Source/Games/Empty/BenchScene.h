@@ -98,6 +98,10 @@ namespace sw
         void applyFraming( Scene* pScene, FramingMode requested );
         /** @brief 지금의 보기 모드, 그 모드의 맞춤이 읽는 입력 값(`-gv_bench…`), @p pScene 의 카메라 수를 모읍니다. 카메라 수를 담아 맞춘 뒤에 생긴 카메라를 놓치지 않습니다. */
         FramingInput captureFramingInput( const Scene* pScene ) const;
+        /** @brief 맞춤이 옮기는 카메라인지 반환합니다. 캡처 카메라(`spawnBenchViews`)는 아닙니다. */
+        static bool isFramedCamera( const CameraComponent* pCamera );
+        /** @brief @p pScene 에서 맞춤이 옮기는 카메라의 수입니다. */
+        static uint32 countFramedCameras( const Scene* pScene );
         /** @brief 격자 둘레의 광원, 바닥, 카메라, 뷰를 만듭니다. 두 격자 경로가 함께 씁니다. */
         void finishGrid( Scene* pScene, uint32 side );
         /** @brief 리그 데모의 기울어진 바닥을 만듭니다. 물리용 상자와, 같은 위치와 크기의 큐브로 이루어집니다. */
