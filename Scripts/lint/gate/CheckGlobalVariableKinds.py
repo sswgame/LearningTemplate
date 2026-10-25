@@ -213,7 +213,7 @@ class CheckGlobalVariableKindsGate(LintGate):
         if (repositoryRoot / "Source").is_dir() and (repositoryRoot / ".git").exists():
             # 목록은 저장소 전체의 정의와 대어 본다(자체 테스트의 조각 저장소에는 목록이 맞지 않는다).
             violations += findUnlistedShipped(listDefinition, self.readRules(self.name, self.ruleSchema)["shipped"])
-        return GateResult(listViolation=violations,
+        return GateResult(listViolation=violations, checkedCount=len(listDefinition),
                           summary=f"정의 {len(listDefinition)}개 · 참조 {len(listExtern)}개")
 
 

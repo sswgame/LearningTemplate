@@ -8,7 +8,8 @@
 걷기 · 읽기 · 가리기는 늘지 않고 그 게이트의 검사 시간만 는다. 출력은 게이트를 혼자 돌릴 때와 같은 줄이고 게이트 순서(파일 이름순)다.
 끝에 게이트마다 `checkSourceFile` 이 쓴 초(프로세스 합)를 찍는다 — 느린 게이트가 함께 도는 묶음 안에 숨지 않게.
 
-종료 코드: 검사가 서지 않은 게이트가 있으면 2, 위반이 있으면 1, 아니면 0. 게이트 하나만 볼 때는 그 게이트를 그대로 돌린다
+종료 코드: 검사가 서지 않은 게이트가 있으면 2, 위반이 있으면 1, 필수 입력이 없어 검사를 못 한(불성립) 게이트가 있으면 5, 아니면 0
+(`GateVerdict.mergeExitCodes`). 게이트 하나만 볼 때는 그 게이트를 그대로 돌린다
 (`py -3 -m Scripts gate CheckXxx` — 같은 훑기를 게이트 하나로 부른다).
 
   py -3 Scripts/lint/RunSourceGates.py [--root <repo>] [--gates CheckA,CheckB]
@@ -26,6 +27,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 from common.Paths import getProjectRoot  # noqa: E402
 from common.RuleData import RuleDataError  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
+from lint.GateVerdict import mergeExitCodes  # noqa: E402
 from lint.LintCatalog import discoverSourceGateScripts  # noqa: E402
 from lint.LintGate import GateError  # noqa: E402
 from lint.SourceScan import scanSourceGates  # noqa: E402
@@ -87,8 +89,7 @@ def main(argv: list[str] | None = None) -> int:
     listTiming.sort(reverse=True)
     slowest = ", ".join(f"{name} {seconds:.2f} s" for seconds, name in listTiming[:_kSlowestShown])
     print(f"[RunSourceGates] 게이트 {len(listScript)}개 · {time.perf_counter() - start:.1f} s — 검사 시간(프로세스 합) 상위: {slowest}")
-    listCode = list(mapReturnCode.values())
-    return ExitCode.CheckInvalid if ExitCode.CheckInvalid in listCode else (ExitCode.Violation if ExitCode.Violation in listCode else ExitCode.Passed)
+    return mergeExitCodes(list(mapReturnCode.values()))
 
 
 if __name__ == "__main__":

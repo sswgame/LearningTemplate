@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from functools import cached_property
 from pathlib import Path
 from typing import Any, Iterator, Sequence
@@ -24,6 +25,9 @@ kCMakeCacheFileName = "CMakeCache.txt"
 #: CMake 가 "이 구성이 일부러 짓지 않는 소스" 를 적는 자리(빌드 폴더 기준) — CMake 의 `SW_UNBUILT_SOURCE_LIST`.
 kUnbuiltSourceListRelPath = "generated/sw/config/UnbuiltSources.txt"
 kAppExecutableNames: tuple[str, ...] = ("App.exe", "App")
+#: CMake 유니티 묶음 파일(`<빌드>/…/Unity/unity_0_cxx.cxx` · `unity_0_c.c`)과 그 안의 `#include "<소스 절대 경로>"` 줄.
+_kUnityBundleRe = re.compile(r"/unity_\d+_(?:cxx\.cxx|c\.c)$")
+_kUnityIncludeRe = re.compile(r'^\s*#include\s+"([^"]+)"', re.MULTILINE)
 #: 테스트까지 짓는 타깃 — 기본 `all` 은 테스트 실행 파일을 짓지 않는다(`Test/` 는 `EXCLUDE_FROM_ALL`, `cmake/Engine/TestTargets.cmake` 의 `AllTests`).
 kTestBuildTargets: tuple[str, ...] = ("all", "AllTests")
 
@@ -173,6 +177,27 @@ class BuildTree:
             return json.loads(self.compileDatabasePath.read_text(encoding="utf-8"))
         except (OSError, ValueError) as error:
             raise BuildTreeError(f"{self.compileDatabasePath.as_posix()} 를 읽지 못했다: {error}") from error
+
+    def readCompiledSourceFiles(self) -> list[str]:
+        """
+        이 구성이 컴파일하는 소스 파일 경로(컴파일 DB 의 `file`). **유니티 묶음은 풀어서** 묶음 파일(`unity_N_cxx.cxx`)이 아니라 그 안이
+        `#include` 한 소스를 낸다 — CI 프리셋은 묶음으로 짓고, 묶음 이름만 보면 개별 소스가 지어지는지 알 수 없다.
+        DB 가 없거나 깨졌거나 묶음 파일을 읽지 못하면 `BuildTreeError`.
+        """
+        listFile: list[str] = []
+        for entry in self.readCompileDatabase():
+            filePath = Path(entry["file"])
+            if not filePath.is_absolute():
+                filePath = Path(entry.get("directory", self.path)) / filePath
+            if _kUnityBundleRe.search(filePath.as_posix()) is None:
+                listFile.append(str(filePath))
+                continue
+            try:
+                text = filePath.read_text(encoding="utf-8", errors="replace")
+            except OSError as error:
+                raise BuildTreeError(f"유니티 묶음 {filePath.as_posix()} 를 읽지 못했다: {error} — 그 프리셋을 다시 configure 한다") from error
+            listFile += _kUnityIncludeRe.findall(text)
+        return listFile
 
     def readUnbuiltSources(self) -> set[str] | None:
         """이 구성이 일부러 짓지 않는 소스(저장소 기준 경로, 소문자). 목록 파일이 없으면 None — 그 목록 전에 구성한 트리다."""

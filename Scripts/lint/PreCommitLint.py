@@ -25,6 +25,10 @@ C++ 파일 하나짜리 커밋도 그 합만큼 걸린다. 파일 단위 게이�
 **통과한 것은 찍지 않는다.** 에이전트와 세션이 훅 출력을 매번 입력으로 다시 읽는다. 기본 출력은 통과 · 건너뜀 게이트의 줄을 모두 접어 한 줄
 요약(`formatGateSummary`)으로 보이고, 실패한 게이트는 머리말과 상세를 그대로 찍는다. 이 프로세스에서 도는 게이트도 출력을 붙잡아 두었다가
 실패일 때만 찍는다. 전부 보려면 `--verbose`(인자 — 환경 변수 같은 숨은 스위치는 없다). 훅이 부르는 `Scripts lint` 는 요약이 기본이다.
+
+**건너뜀과 불성립은 통과와 다른 칸이다**(`GateVerdict.py`). 요약은 `통과 · 건너뜀 N(사유별) · 불성립(허용) N · 실패` 로 센다. 불성립 — 빌드 폴더가 없어
+헤더 단독 검사를 못 하는 것처럼 필수 입력이 없어 검사를 하지 못한 게이트 — 은 빌드 없는 PC 의 커밋을 막지 않도록 훅에서만 허용하고,
+**접지 않고 사유와 함께 한 줄로 찍는다.** 통합(`lint-suite` · CTest)에서는 같은 게이트의 불성립이 실패다.
 """
 
 from __future__ import annotations
@@ -43,6 +47,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
+from lint.GateVerdict import (kUnknownReason, kVerdictFailed, kVerdictPassed, kVerdictSkipped, kVerdictUnavailable,
+                              formatReasonCounts, readOutcomeReason, verdictOfExitCode)
 from lint.LintCatalog import LintScript, discoverLintScripts
 from lint.StagedScope import selectFileScopedStaged
 from lint.fixer import FormatBranchBraces
@@ -189,7 +195,7 @@ def selectGatesForStaged(projectRoot: Path, listStaged: list[Path], listFileScop
             else:
                 bTriggered = probe.isTriggered(listRelative, gateClass.preCommitContentPattern, gateClass.preCommitChangedLinePattern)
             if not bTriggered:
-                listPlan.append(GateRunPlan(script, skipReason="해당 파일 변경 없음 (내용 규칙에 맞는 변경 없음)"))
+                listPlan.append(GateRunPlan(script, skipReason="해당 파일 변경 없음 — 내용 규칙에 맞는 변경 없음"))
                 continue
         elif gateClass.preCommitPattern and not listMatched:
             listPlan.append(GateRunPlan(script, skipReason="해당 파일 변경 없음"))
@@ -198,7 +204,7 @@ def selectGatesForStaged(projectRoot: Path, listStaged: list[Path], listFileScop
         if gateClass.preCommitFileArgument:
             listMatched = listMatchingStagedInternal(listFileScoped, projectRoot, gateClass.preCommitPattern)
             if not listMatched:
-                listPlan.append(GateRunPlan(script, skipReason="병합 커밋: 부모와 내용이 다른 해당 파일 없음"))
+                listPlan.append(GateRunPlan(script, skipReason="병합 커밋 — 부모와 내용이 다른 해당 파일 없음"))
                 continue
 
         listArgument = ["--root", str(projectRoot)]
@@ -208,40 +214,69 @@ def selectGatesForStaged(projectRoot: Path, listStaged: list[Path], listFileScop
     return listPlan
 
 
-kGatePassed = "passed"
-kGateSkipped = "skipped"
-kGateFailed = "failed"
+kGatePassed = kVerdictPassed
+kGateSkipped = kVerdictSkipped
+kGateUnavailable = kVerdictUnavailable
+kGateFailed = kVerdictFailed
 
 
 @dataclass(frozen=True)
 class GateOutcome:
-    """게이트 하나의 결과 — 요약 한 줄(`formatGateSummary`)의 재료."""
+    """게이트 하나의 결과 — 요약 한 줄(`formatGateSummary`)의 재료. `reason` 은 건너뜀 · 불성립의 사유(`분류 — 상세`)."""
 
     name: str
     status: str
     seconds: float = 0.0
+    reason: str = ""
 
 
 def formatGateSummary(listOutcome: list[GateOutcome]) -> str:
-    """게이트 결과들 → 한 줄 요약. 통과 · 건너뜀 · 실패 수와 가장 오래 걸린 게이트(건너뛴 것은 뺀다)."""
+    """
+    게이트 결과들 → 한 줄 요약. 통과 · 건너뜀 · 불성립 · 실패 수와 가장 오래 걸린 게이트(건너뛴 것은 뺀다).
+    건너뜀 · 불성립은 통과와 **다른 칸**이고 사유 분류별로 센다(`건너뜀 60(해당 파일 변경 없음 55 · …)`). 불성립은 0 이면 칸을 두지 않는다.
+    """
     passedCount = sum(1 for outcome in listOutcome if outcome.status == kGatePassed)
-    skippedCount = sum(1 for outcome in listOutcome if outcome.status == kGateSkipped)
+    listSkipped = [outcome for outcome in listOutcome if outcome.status == kGateSkipped]
+    listUnavailable = [outcome for outcome in listOutcome if outcome.status == kGateUnavailable]
     failedCount = sum(1 for outcome in listOutcome if outcome.status == kGateFailed)
     listRan = [outcome for outcome in listOutcome if outcome.status != kGateSkipped]
     slowest = max(listRan, key=lambda outcome: outcome.seconds) if listRan else None
     tail = f" (가장 긴 것 {slowest.name} {slowest.seconds:.2f} s)" if slowest else ""
-    return f"[PreCommitLint] 게이트 {len(listOutcome)}개: 통과 {passedCount} · 건너뜀 {skippedCount} · 실패 {failedCount}{tail}"
+
+    def describeInternal(listItem: list[GateOutcome]) -> str:
+        return f"({formatReasonCounts([outcome.reason for outcome in listItem])})" if any(outcome.reason for outcome in listItem) else ""
+
+    unavailablePart = f" · 불성립(훅이라 허용) {len(listUnavailable)}{describeInternal(listUnavailable)}" if listUnavailable else ""
+    return (f"[PreCommitLint] 게이트 {len(listOutcome)}개: 통과 {passedCount} · 건너뜀 {len(listSkipped)}{describeInternal(listSkipped)}"
+            f"{unavailablePart} · 실패 {failedCount}{tail}")
+
+
+class _TeeStream:
+    """쓴 글을 원래 스트림에도 흘리고 모아 둔다 — `--verbose` 에서도 게이트가 찍은 건너뜀 · 불성립 사유를 읽기 위해."""
+
+    def __init__(self, stream: io.TextIOBase) -> None:
+        self._stream = stream
+        self.buffer = io.StringIO()
+
+    def write(self, text: str) -> int:
+        self.buffer.write(text)
+        return self._stream.write(text)
+
+    def flush(self) -> None:
+        self._stream.flush()
 
 
 def runGateInProcessInternal(plan: GateRunPlan, bVerbose: bool) -> tuple[int, str, float]:
     """
-    게이트를 이 프로세스에서 돌려 (종료 코드, 붙잡은 출력, 걸린 초). `bVerbose` 면 출력을 붙잡지 않고 그대로 흘린다(출력은 빈 문자열).
+    게이트를 이 프로세스에서 돌려 (종료 코드, 붙잡은 출력, 걸린 초). `bVerbose` 면 출력을 그대로 흘리면서 한 벌 모아 둔다 — 사유를 읽어야 한다.
     붙잡는 동안 예외가 나면 그때까지의 출력을 먼저 찍고 예외를 다시 던진다.
     """
     start = time.perf_counter()
     if bVerbose:
-        returnCode = plan.script.gateClass.run(plan.listArgument)
-        return returnCode, "", time.perf_counter() - start
+        tee = _TeeStream(sys.stdout)
+        with contextlib.redirect_stdout(tee), contextlib.redirect_stderr(tee):
+            returnCode = plan.script.gateClass.run(plan.listArgument)
+        return returnCode, tee.buffer.getvalue(), time.perf_counter() - start
     buffer = io.StringIO()
     try:
         with contextlib.redirect_stdout(buffer), contextlib.redirect_stderr(buffer):
@@ -284,26 +319,35 @@ def runGatesInternal(projectRoot: Path, listStaged: list[Path], listFileScoped: 
         for plan in listPlan:
             head = f"[{mapIndex[plan.script.name]}/{len(listScript)}] {plan.script.name}"
             if plan.skipReason:
-                listOutcome.append(GateOutcome(plan.script.name, kGateSkipped))
+                listOutcome.append(GateOutcome(plan.script.name, kGateSkipped, reason=plan.skipReason))
                 if bVerbose:
                     print(f"\n{head} ... 건너뜀 ({plan.skipReason})")
                 continue
             future = mapFuture.get(plan.script.name)
+            bStreamed = future is None and bVerbose   # 이 프로세스에서 돈 게이트의 verbose 출력은 이미 흘렀다
             if future is None:
                 if bVerbose:
                     print(f"\n{head} ...", flush=True)
                 returnCode, output, seconds = runGateInProcessInternal(plan, bVerbose)
             else:
                 returnCode, output, seconds = future.result()
-            listOutcome.append(GateOutcome(plan.script.name, kGatePassed if returnCode == 0 else kGateFailed, seconds))
-            if bVerbose or returnCode != 0:
-                # 실패한 게이트는 머리말과 상세를 그대로 보인다. 이 프로세스에서 돈 게이트의 verbose 출력은 이미 흘렀다(output 이 비어 있다).
+            status = verdictOfExitCode(returnCode)
+            reason = readOutcomeReason(output) if status in (kGateSkipped, kGateUnavailable) else ""
+            listOutcome.append(GateOutcome(plan.script.name, status, seconds, reason))
+            if status == kGateUnavailable:
+                # 불성립은 훅에서 허용하되 **접지 않는다** — 통과와 같은 줄로 보이면 검사를 안 한 것을 아무도 모른다(헤더 자립 게이트가 그랬다).
+                print(f"{head} ... 불성립(빌드 없는 PC 라 허용): {reason or kUnknownReason}")
+                if bVerbose and not bStreamed:
+                    sys.stdout.write(output)
+            elif bVerbose or status == kGateFailed:
+                # 실패한 게이트는 머리말과 상세를 그대로 보인다.
                 if not bVerbose:
                     print(f"\n{head} ... 실패")
-                sys.stdout.write(output)
+                if not bStreamed:
+                    sys.stdout.write(output)
             sys.stdout.flush()
             sys.stderr.flush()
-            if returnCode != 0:
+            if status == kGateFailed:
                 bFailed = True
     if listOutcome:
         print(("\n" if bVerbose else "") + formatGateSummary(listOutcome))

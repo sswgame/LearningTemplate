@@ -190,6 +190,7 @@ class CheckRenderOwnershipGate(LintGate):
         errors, checkedCount = checkTransportedHeaders(repositoryRoot)
         return GateResult(
             listViolation=errors,
+            checkedCount=checkedCount,
             summary=f"{checkedCount} structs in {len(_kTransportedHeaders)} headers",
         )
 

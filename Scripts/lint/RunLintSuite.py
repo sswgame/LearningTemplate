@@ -5,7 +5,11 @@
 
 CTest 의 `lint` 라벨은 configure 한 빌드 폴더가 있어야 돈다. CI 린트 잡은 빌드 폴더 없이 빨리 끝나야 하므로 이 스크립트가 CTest 와
 **같은 목록 · 같은 인자**(`LintCatalog.discoverLintTargets`)를 린트마다 하위 프로세스 하나로 돌린다 — CTest 항목 하나와 같은 모양이다.
-빌드 폴더가 있어야 하는 린트(인자에 `${CMAKE_BINARY_DIR}`)는 `--build-dir` 이 없으면 건너뛴다.
+빌드 폴더가 있어야 하는 린트(인자에 `${CMAKE_BINARY_DIR}`)는 `--build-dir` 이 없으면 돌리지 못하고, **통과가 아니라 "건너뜀" 칸에 센다**
+(요약의 `건너뜀 N(사유별)`). 통합 검증은 `--strict` 로 건너뜀도 실패로 세거나 `--build-dir` 를 준다.
+
+**결과 칸.** 린트 하나의 결과는 통과 · 건너뜀 · 불성립 · 실패다(`GateVerdict.py` — 종료 코드 0 · 77 · 5 · 그 밖). 불성립은 필수 입력(빌드 폴더 · 컴파일 DB · 도구)이
+없어 검사를 하지 못한 것이고 **여기서는 실패다**(빌드 없는 PC 의 커밋 훅에서만 허용). 통과 줄과 같아 보이던 "건너뜀" 이 요약에 사유와 함께 세어진다.
 
 **시간 상한.** 린트마다 CTest TIMEOUT(`timeoutSeconds`)이 이미 있다. 그 **절반**을 넘기면 경고한다 — 느린 기계에서 곧 시간 초과로 질
 린트다. 상한을 따로 적은 표는 두지 않는다(표가 둘이면 어긋난다).
@@ -33,15 +37,21 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
+from common.ExitCode import ExitCode  # noqa: E402
 from common.Host import runGit  # noqa: E402
 from common.Parallel import getCpuCount, mapConcurrent  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 from common.Process import runProcess  # noqa: E402
-from common.ExitCode import ExitCode  # noqa: E402
+from lint.GateVerdict import (kVerdictFailed, kVerdictPassed, kVerdictSkipped, kVerdictUnavailable, formatReasonCounts,  # noqa: E402
+                              readOutcomeReason, verdictOfExitCode)
 from lint.LintCatalog import LintTarget, discoverLintTargets  # noqa: E402
 
 #: 요약 줄에 보이는 가장 느린 린트 수.
 kSlowestCount = 3
+#: 빌드 폴더가 필요한 린트(인자에 `${CMAKE_BINARY_DIR}`)를 `--build-dir` 없이 돌리지 못한 사유(분류 — 상세).
+kNoBuildDirReason = "빌드 폴더 없음 — 이 린트는 --build-dir 가 있어야 돈다"
+#: GitHub 단계 요약 표의 결과 칸.
+kStepSummaryLabel = {kVerdictPassed: "OK", kVerdictSkipped: "SKIPPED", kVerdictUnavailable: "UNAVAILABLE", kVerdictFailed: "FAIL"}
 #: 경고 임계값 — CTest TIMEOUT 의 이 비율을 넘기면 경고한다.
 kWarnTimeoutRatio = 0.5
 #: 훅 시간 경고 임계값(초) — staged 파일 수 → 상한. CI 리눅스 러너 기록(실행 38893227125: 1개 5.81 s · 10개 6.35 s)의 1.5 배다.
@@ -54,13 +64,21 @@ _kEmptyBlobArgument = ["hash-object", "-w", "--stdin"]
 
 @dataclass
 class LintTiming:
-    """린트 하나를 돌린 결과."""
+    """
+    린트 하나를 돌린 결과. `reason` 은 건너뜀 · 불성립의 사유(`분류 — 상세`)다. 종류(`verdict`)는 종료 코드에서 나온다 —
+    통과(0) · 건너뜀(77) · 불성립(5) · 그 밖은 실패(`GateVerdict.verdictOfExitCode`).
+    """
 
     name: str
     seconds: float
     returnCode: int
     timeoutSeconds: int
     outputTail: str
+    reason: str = ""
+
+    @property
+    def verdict(self) -> str:
+        return verdictOfExitCode(self.returnCode)
 
 
 def resolveArgumentsInternal(target: LintTarget, repositoryRoot: Path, buildDir: Path | None) -> list[str] | None:
@@ -82,19 +100,35 @@ def runLintInternal(target: LintTarget, repositoryRoot: Path, listArgument: list
     result = runProcess([sys.executable, repositoryRoot / target.scriptRelPath, *listArgument], cwd=repositoryRoot, env=environment,
                         bMergeStderr=True)
     seconds = time.perf_counter() - start
-    return LintTiming(target.name, seconds, result.returnCode, target.timeoutSeconds, "\n".join(result.stdout.strip().splitlines()[-15:]))
+    return LintTiming(target.name, seconds, result.returnCode, target.timeoutSeconds, "\n".join(result.stdout.strip().splitlines()[-15:]),
+                      readOutcomeReason(result.stdout))
+
+
+def makeNotRunTiming(target: LintTarget) -> LintTiming:
+    """빌드 폴더가 필요한데 `--build-dir` 가 없어 **돌리지 않은** 린트 — 통과가 아니라 건너뜀 칸에 센다."""
+    return LintTiming(target.name, 0.0, ExitCode.Skipped, target.timeoutSeconds, "", kNoBuildDirReason)
 
 
 def formatLintLineInternal(timing: LintTiming) -> str:
-    return f"  {timing.name:34} {timing.seconds:6.2f} s  (TIMEOUT {timing.timeoutSeconds:3})  {'OK' if timing.returnCode == 0 else 'FAIL'}"
+    return (f"  {timing.name:34} {timing.seconds:6.2f} s  (TIMEOUT {timing.timeoutSeconds:3})  "
+            f"{kStepSummaryLabel[timing.verdict]}{f' ({timing.reason})' if timing.reason else ''}")
 
 
 def formatSummaryInternal(listTiming: list[LintTiming], totalSeconds: float) -> str:
-    """기본 출력의 한 줄 — 개수 · 통과 · 실패 · 총 시간 · 가장 느린 셋. 순수 함수."""
-    failedCount = sum(1 for timing in listTiming if timing.returnCode != 0)
+    """
+    기본 출력의 한 줄 — 개수 · 통과 · 건너뜀(사유별) · 불성립 · 실패 · 총 시간 · 가장 느린 셋. 순수 함수.
+    건너뜀 · 불성립은 통과와 **다른 칸**이다. 건너뜀 · 불성립 칸은 0 이면 두지 않고, 불성립은 실패와 같이 종료 코드를 1 로 만든다.
+    """
+    listSkipped = [timing for timing in listTiming if timing.verdict == kVerdictSkipped]
+    listUnavailable = [timing for timing in listTiming if timing.verdict == kVerdictUnavailable]
+    failedCount = sum(1 for timing in listTiming if timing.verdict == kVerdictFailed)
+    passedCount = len(listTiming) - len(listSkipped) - len(listUnavailable) - failedCount
     listSlowest = sorted(listTiming, key=lambda timing: -timing.seconds)[:kSlowestCount]
     slowest = ", ".join(f"{timing.name} {timing.seconds:.1f} s" for timing in listSlowest)
-    return (f"[RunLintSuite] {len(listTiming)}개: 통과 {len(listTiming) - failedCount} · 실패 {failedCount} · 총 {totalSeconds:.1f} s (동시 실행)"
+    skippedPart = f" · 건너뜀 {len(listSkipped)}({formatReasonCounts([timing.reason for timing in listSkipped])})" if listSkipped else ""
+    unavailablePart = (f" · 불성립(실패로 센다) {len(listUnavailable)}({formatReasonCounts([timing.reason for timing in listUnavailable])})"
+                       if listUnavailable else "")
+    return (f"[RunLintSuite] {len(listTiming)}개: 통과 {passedCount}{skippedPart}{unavailablePart} · 실패 {failedCount} · 총 {totalSeconds:.1f} s (동시 실행)"
             + (f" · 가장 느린 {slowest}" if slowest else ""))
 
 
@@ -140,7 +174,7 @@ def writeStepSummaryInternal(listTiming: list[LintTiming], totalSeconds: float, 
     if not summaryPath:
         return
     lines = [f"### 린트 시간 (총 {totalSeconds:.1f} s, 동시 실행)", "", "| 린트 | 초 | TIMEOUT | 결과 |", "|---|---:|---:|---|"]
-    lines += [f"| {timing.name} | {timing.seconds:.2f} | {timing.timeoutSeconds} | {'OK' if timing.returnCode == 0 else 'FAIL'} |"
+    lines += [f"| {timing.name} | {timing.seconds:.2f} | {timing.timeoutSeconds} | {kStepSummaryLabel[timing.verdict]}{f' ({timing.reason})' if timing.reason else ''} |"
               for timing in listTiming]
     for fileCount, seconds in mapHookSeconds.items():
         lines.append(f"\n커밋 훅(staged {fileCount}개): {'-' if seconds is None else f'{seconds:.2f} s'}")
@@ -155,15 +189,19 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--json", type=Path, default=None, help="시간 기록을 JSON 으로")
     parser.add_argument("--verbose", action="store_true", help="린트마다 한 줄을 모두 보인다(기본은 한 줄 요약과 실패 상세)")
     parser.add_argument("--hook-sample", default="", help="커밋 훅을 staged 파일 수별로 잰다 (예: 1,10)")
+    parser.add_argument("--strict", action="store_true",
+                        help="건너뜀도 실패로 센다 — 통합 검증용. 빌드 폴더 없이 돌려 못 돈 린트가 있으면 실패한다(--build-dir 를 준다)")
     args = parser.parse_args(argv)
     repositoryRoot = (args.root or getProjectRoot()).resolve()
     buildDir = None if args.build_dir is None else (args.build_dir if args.build_dir.is_absolute() else repositoryRoot / args.build_dir)
 
     listJob: list[tuple[LintTarget, list[str]]] = []
+    listNotRun: list[LintTiming] = []
     for target in discoverLintTargets():
         listArgument = resolveArgumentsInternal(target, repositoryRoot, buildDir)
         if listArgument is None:
-            print(f"[RunLintSuite] {target.name} 건너뜀 (빌드 폴더가 필요하다 — --build-dir)")
+            print(f"[RunLintSuite] {target.name} 건너뜀 ({kNoBuildDirReason})")
+            listNotRun.append(makeNotRunTiming(target))
             continue
         listJob.append((target, listArgument))
 
@@ -172,9 +210,12 @@ def main(argv: list[str] | None = None) -> int:
     listTiming = list(mapConcurrent(lambda job: runLintInternal(job[0], repositoryRoot, job[1]), listJob,
                                     workerCount=max(1, getCpuCount() // 2)))
     totalSeconds = time.perf_counter() - start
+    listTiming += listNotRun
     listTiming.sort(key=lambda timing: -timing.seconds)
 
-    listFailed = [timing for timing in listTiming if timing.returnCode != 0]
+    # 불성립(필수 입력이 없어 검사를 못 했다)은 통합에서 실패다 — 훅과 달리 허용하지 않는다. `--strict` 면 건너뜀도 실패다.
+    listFailed = [timing for timing in listTiming
+                  if timing.verdict in (kVerdictFailed, kVerdictUnavailable) or (args.strict and timing.verdict == kVerdictSkipped)]
     for timing in listTiming:
         if args.verbose:
             print(formatLintLineInternal(timing))
@@ -199,7 +240,8 @@ def main(argv: list[str] | None = None) -> int:
     writeStepSummaryInternal(listTiming, totalSeconds, mapHookSeconds)
 
     for timing in listFailed:
-        print(f"\n[RunLintSuite] {timing.name} 실패 (종료 코드 {timing.returnCode}):\n{timing.outputTail}", file=sys.stderr)
+        label = {kVerdictUnavailable: "불성립", kVerdictSkipped: "건너뜀(--strict)"}.get(timing.verdict, "실패")
+        print(f"\n[RunLintSuite] {timing.name} {label} (종료 코드 {timing.returnCode}):\n{timing.outputTail or timing.reason}", file=sys.stderr)
     return ExitCode.Violation if listFailed else ExitCode.Passed
 
 

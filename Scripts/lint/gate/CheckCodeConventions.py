@@ -108,6 +108,7 @@ def runConventionsCheckInternal(rootDir: Path | None, specificFiles: list[str] |
                         break
 
             listTarget.append((filePath, relRootDir))
+        LintGate.noteSelection(len(listTarget))   # 고른 파일이 0 이면 통과가 아니라 건너뜀(`LintGate.judgeOutcome`)
         # 커밋 훅이 파일을 수백 개 넘기는 경우(큰 커밋)도 전체 스캔과 같이 프로세스 덩어리로 나눈다 — 적으면 이 프로세스에서 돈다.
         allViolations.extend(flatMapInProcesses(checkFileTargetInternal, listTarget))
         return allViolations
@@ -115,6 +116,7 @@ def runConventionsCheckInternal(rootDir: Path | None, specificFiles: list[str] |
     # 전체 스캔의 대상 고르기는 게이트 · 픽서와 같은 걷기(`collectRepositoryFiles` — 빌드 산출물 · 내려받은 도구로 내려가지 않는다).
     filesToScan = collectRepositoryFiles(projectRoot, kLintTargetRelDirs, suffixes=kCppAllExtensions,
                                          excludedDirNames=kNotOurDirNames | _kExcludedDirNames)
+    LintGate.noteSelection(len(filesToScan))   # 전체 훑기에 파일이 0 이면 통과가 아니라 불성립(`LintGate.judgeOutcome`)
     # 파일별 검사는 파이썬 정규식이 대부분이라 스레드로는 한 코어다 — 프로세스 덩어리로 나눈다(`flatMapInProcesses`).
     # 교차 파일 검사의 파일별 몫(읽기 · 줄 훑기 · 클래스 스캔)도 같은 워커가 한 번에 한다 — 부모에는 합치기만 남는다.
     listFacts: list[CrossFileFacts] = []

@@ -12,7 +12,7 @@ TU 를 `-fsyntax-only` 로 컴파일한다.
 | 쓰는 곳 | 범위 | 실패하면 |
 | --- | --- | --- |
 | `report/RunHeaderSelfContained.py` | 트리 전체 · 폴더 | 보고만(`--fail-on-violation` 이면 1 — CI 정기 잡) |
-| `gate/CheckHeaderSelfContained.py` | 커밋 훅의 staged 헤더 | 커밋을 막는다(빌드 폴더가 없으면 건너뛴다) |
+| `gate/CheckHeaderSelfContained.py` | 커밋 훅의 staged 헤더 | 커밋을 막는다(워크트리는 메인의 컴파일 DB 를 옮겨 쓴다. DB 가 어디에도 없을 때만 SKIPPED) |
 | `report/RunForwardDeclarationCandidates.py --verify-unused` | include 한 줄을 뺀 사본 | 후보 분류 |
 | `report/RunIncludeCost.py` | TU 전부(헤더가 아니라 소스를 PCH 없이) + `-ftime-trace` | 보고만 — 헤더별 누적 파싱 시간 |
 | `common/SyntaxCheck.py` (`dev/RunSyntaxCheck.py`) | 작업자가 바꾼 파일(소스 · 헤더 탐침) | 종료 코드 1 — 컴파일 오류를 파일:줄로 |
@@ -37,6 +37,7 @@ from typing import Sequence
 from .Parallel import getProcessWorkerCount, mapConcurrent
 from .Paths import normalizePath
 from .BuildTree import BuildTree, BuildTreeError
+from .CompileDatabaseRehome import rehomeDatabase
 
 __all__ = [
     "kHeaderScanRoot",
@@ -51,6 +52,7 @@ __all__ = [
     "makeSeedIndex",
     "makeSyntaxOnlyCommand",
     "runSyntaxOnly",
+    "selectProbeBuildDir",
 ]
 
 #: 헤더를 찾는 자리이자 include 철자의 기준(`Source/` 아래 상대 경로가 저장소의 include 철자다).
@@ -88,6 +90,23 @@ def findHeaderProbeProblem(buildDir: Path) -> str:
     except OSError:
         return f"{normalizePath(flagOps)} 가 없습니다 — 그 프리셋을 한 번 빌드하세요"
     return ""
+
+
+def selectProbeBuildDir(listCandidate: Sequence[Path]) -> tuple[Path, str]:
+    """
+    후보 빌드 폴더(앞이 우선) 가운데 단독 컴파일을 할 수 있는 첫 폴더 → (폴더, ""). 하나도 없으면 첫 후보와 그 이유.
+    작업자 워크트리는 자기 폴더가 비어 있으니 `[워크트리의 폴더, 메인의 같은 폴더]` 로 부른다.
+    """
+    if not listCandidate:
+        raise ValueError("후보 빌드 폴더가 없다")
+    firstProblem = ""
+    for index, candidate in enumerate(listCandidate):
+        problem = findHeaderProbeProblem(candidate)
+        if not problem:
+            return candidate, ""
+        if index == 0:
+            firstProblem = problem
+    return listCandidate[0], firstProblem
 
 
 def makeSeedIndex(database: Sequence[dict], buildDir: Path | None = None, repositoryRoot: Path | None = None) -> list[tuple[str, dict]]:
@@ -210,13 +229,18 @@ def makeIncludeSpelling(repositoryRoot: Path, headerPath: Path) -> str | None:
 
 
 def findHeadersNotSelfContained(repositoryRoot: Path, buildDir: Path, listHeader: Sequence[Path], probeDir: Path,
-                                workerCount: int | None = None) -> list[tuple[str, str]]:
+                                workerCount: int | None = None, mainRoot: Path | None = None) -> list[tuple[str, str]]:
     """
     헤더마다 단독 컴파일해 서지 못하는 것의 (include 철자, 첫 오류) 를 철자 순으로 돌려준다.
 
     `probeDir` 은 부르는 쪽이 만든 임시 폴더다. 빌드 폴더가 쓸 수 없는 상태인지는 먼저 `findHeaderProbeProblem` 으로 볼 것.
+    `mainRoot` 를 주면 `buildDir` 은 그 메인 저장소의 빌드 폴더이고 `repositoryRoot` 는 워크트리다 — 컴파일 DB 의 소스 쪽 경로를
+    워크트리로 옮겨 쓴다(`CompileDatabaseRehome`). 주지 않으면 DB 를 그대로 쓴다.
     """
-    listSeed = makeSeedIndex(loadCompileDatabase(buildDir), buildDir, repositoryRoot)
+    database = loadCompileDatabase(buildDir)
+    if mainRoot is not None:
+        database = rehomeDatabase(database, mainRoot, repositoryRoot)
+    listSeed = makeSeedIndex(database, buildDir, repositoryRoot)
     if not listSeed:
         # 플래그를 빌려 올 TU 가 없으면 아무 헤더도 검사하지 못한다 — 빈 결과("모두 선다")로 돌려주지 않는다.
         raise BuildTreeError(f"{normalizePath(buildDir)} 의 컴파일 DB 에 헤더 검사에 쓸 TU 가 없습니다")

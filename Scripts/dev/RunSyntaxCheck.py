@@ -27,7 +27,8 @@ from common.BuildTree import addBuildTreeArguments, BuildTree, BuildTreeError  #
 from common.ExitCode import ExitCode  # noqa: E402
 from common.HeaderSelfContained import findHeaderProbeProblem, loadCompileDatabase  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
-from common.SyntaxCheck import listChangedSourceFiles, planSyntaxJobs, rehomeDatabase, runSyntaxJobs  # noqa: E402
+from common.CompileDatabaseRehome import rehomeDatabase  # noqa: E402
+from common.SyntaxCheck import listChangedSourceFiles, planSyntaxJobs, runSyntaxJobs  # noqa: E402
 from common.Worktree import findMainRoot  # noqa: E402
 
 kTag = "[SyntaxCheck]"

@@ -260,8 +260,7 @@ class CheckFunctionVocabularyGate(LintGate):
         return FileFindings(listViolation=scanFileInternal(source))
 
     def finishSourceScan(self, repositoryRoot: Path, args: argparse.Namespace, result: SourceScanResult) -> GateResult:
-        if result.fileCount == 0:
-            return GateResult(summary="검사할 헤더가 없습니다")
+        # 본 헤더가 0 개면 위반이 없어도 통과가 아니다 — 기반이 알아서 건너뜀(--files) · 불성립(전체 훑기)으로 바꾼다(`LintGate.judgeOutcome`).
         violations, _ = joinFindings(result.listFindings)
         return GateResult(listViolation=violations, summary=f"{result.fileCount} headers scanned")
 

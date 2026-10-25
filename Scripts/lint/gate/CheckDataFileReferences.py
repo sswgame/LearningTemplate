@@ -32,6 +32,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common.Constants import kLintProductRelDirs, kNotOurCodeDirNames  # noqa: E402
+from common.ExitCode import ExitCode  # noqa: E402
 from common.Search import collectRepositoryFiles  # noqa: E402
 from lint.LintGate import GateResult, LintGate  # noqa: E402
 from lint.SourceScan import FileFindings, SourceFile, SourceScanResult  # noqa: E402
@@ -91,6 +92,12 @@ class CheckDataFileReferencesGate(LintGate):
                 "cmake/Probe.cmake": "set(kList Source/Engine/Probe/UsedByCmake.xxx)\n",
             },
         },
+        {
+            "name": ".xxx 가 하나도 없으면 불성립(통과가 아니다)",
+            "expectedViolation": "UNAVAILABLE (대상 없음",
+            "expectedExitCode": ExitCode.PrerequisiteMissing,
+            "files": {"Source/Engine/Probe/Probe.cpp": '#include "pch.h"\n'},
+        },
     ]
 
     # 읽는 쪽은 참조 파일(`.xxx` 자신도 그 안이다)이고, 대상(`.xxx`)은 이름만 있으면 된다 — 대상 목록은 훑기 전에 구해 자식 프로세스에 넘긴다.
@@ -146,7 +153,8 @@ class CheckDataFileReferencesGate(LintGate):
 
     def finishSourceScan(self, repositoryRoot: Path, args: argparse.Namespace, result: SourceScanResult) -> GateResult:
         if not args.dataEntries:
-            return GateResult(summary="검사할 .xxx 파일이 없습니다")
+            # 통과가 아니다 — 하나도 보지 않았다. 이 저장소에는 .xxx 가 있으므로 0 개는 --root 가 틀렸거나 폴더를 옮긴 것이다.
+            return GateResult.unavailable(f"대상 없음 — {' · '.join(_kScanRoots)} 아래에 {_kDataSuffix} 파일이 하나도 없다(--root 확인, 게이트가 필요 없어졌다면 지운다)")
         referenced: set[Path] = set()
         for findings in result.listFindings:
             referenced.update(findings.value or ())

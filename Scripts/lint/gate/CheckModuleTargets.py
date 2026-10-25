@@ -334,7 +334,7 @@ class CheckModuleTargetsGate(LintGate):
                              for folder in buildMap.listUnclassified)
         listViolation.extend(findIncludeViolations(repositoryRoot, listOwner, [(findings.relative, findings.value) for findings in result.listFindings
                                                                                 if findings.value], buildMap))
-        return GateResult(listViolation=listViolation, summary=f"모듈 {len(listOwner)} 개의 대상 이름 · 방향이 맞다")
+        return GateResult(listViolation=listViolation, checkedCount=len(listOwner), summary=f"모듈 {len(listOwner)} 개의 대상 이름 · 방향이 맞다")
 
 
 main = CheckModuleTargetsGate.run

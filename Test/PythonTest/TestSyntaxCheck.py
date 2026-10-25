@@ -20,9 +20,9 @@ from pathlib import Path
 kRepositoryRoot = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(kRepositoryRoot / "Scripts"))
 
+from common.CompileDatabaseRehome import rehomeDatabase  # noqa: E402
 from common.Host import runGit  # noqa: E402
-from common.SyntaxCheck import (SyntaxJob, listChangedSourceFiles, parseDiagnostics, planSyntaxJobs, rehomeDatabase,  # noqa: E402
-                                runSyntaxJobs)
+from common.SyntaxCheck import SyntaxJob, listChangedSourceFiles, parseDiagnostics, planSyntaxJobs, runSyntaxJobs  # noqa: E402
 from dev.RunSyntaxCheck import main as syntaxCheckMain  # noqa: E402
 
 kFakeCompiler = """import sys

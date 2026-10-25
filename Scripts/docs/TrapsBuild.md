@@ -17,7 +17,7 @@
   짝 `.cpp` 하나뿐인 후보는 include 가 그 `.cpp` 로 옮겨 갈 뿐이라 0, 값으로 거쳐 받던 헤더 · 인라인 멤버 접근 · 인라인 생성자의 `unique_ptr` 소멸자는 깨진다.
   강제 include `FlagOps.gen.h` 의 `*.gen.h` 는 `Core/Common/BitFlagTrait.h`(`<type_traits>` 만)만 든다 — 여기에 무엇을 더하면 모든 TU 의 누락이 가려진다.
 - **헤더 자립은 정기 실행 + 커밋 훅이 나눠 막는다** — CI `header-self-contained.yml`(매일 · 수동)이 `RunHeaderSelfContained --fail-on-violation` 으로 트리 전체를,
-  게이트 `CheckHeaderSelfContained` 가 커밋 훅에서 빌드 폴더가 있을 때 staged 헤더만 본다(`ctestSkipReason` 으로 CTest 린트에서 빠진다 — 전 트리 3~10 분). 판정은
+  게이트 `CheckHeaderSelfContained` 가 커밋 훅에서 staged 헤더만 본다(워크트리는 메인의 컴파일 DB 를 빌려 소스 쪽 경로만 옮긴다 — `CompileDatabaseRehome`. DB 가 어디에도 없으면 `OK (SKIPPED …)` 로 통과를 갈라 보인다)(`ctestSkipReason` 으로 CTest 린트에서 빠진다 — 전 트리 3~10 분). 판정은
   `common/HeaderSelfContained.py` 한 자리. 유니티 빌드(CI 프리셋)의 컴파일 DB 는 TU 가 빌드 폴더 안이라 `CMakeFiles` 앞을 소스 경로로 옮겨 씨앗 TU 를 고른다(안 그러면
   모든 헤더가 첫 TU 의 플래그를 받는다). 구성만 한 폴더(`FlagOps.gen.h` 자리 표시자)는 검사 불가로 친다 — 가짜 오류 수십 건.
 - **`CheckCodeConventions` 알아 둘 것** — 명명 판정은 `kMapContainerVocabulary` × `kMapNamingSubject` 표 하나. `Style/BitfieldBoolean` · `Naming/DuplicateInternalHelper` ·

@@ -327,7 +327,7 @@ class CheckScriptEntryPointsGate(LintGate):
         listViolation, entryPointCount = findViolations([findings.relative for findings in result.listFindings],
                                                         [findings.value for findings in result.listFindings],
                                                         selectedRelatives(repositoryRoot, self, args))
-        return GateResult(listViolation=listViolation, summary=f"{entryPointCount} entry points reach common")
+        return GateResult(listViolation=listViolation, checkedCount=entryPointCount, summary=f"{entryPointCount} entry points reach common")
 
 
 main = CheckScriptEntryPointsGate.run

@@ -16,6 +16,7 @@ from unittest import mock
 kRepositoryRoot = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(kRepositoryRoot / "Scripts"))
 
+from common.ExitCode import ExitCode  # noqa: E402
 from lint.LintCatalog import LintScript, discoverLintScripts, discoverLintTargets, discoverSourceGateScripts  # noqa: E402
 from lint.LintGate import LintGate  # noqa: E402
 from lint import PreCommitLint  # noqa: E402
@@ -204,6 +205,54 @@ class PreCommitLintSummaryTest(unittest.TestCase):
         self.assertIn("  - Source/A.cpp:3 위반 상세", output)
         self.assertIn("실패 1", output)
         self.assertNotIn("[PassA] OK", output)
+
+    def testSummaryCountsSkipAndUnavailableAsTheirOwnColumnsByReason(self) -> None:
+        line = formatGateSummary([GateOutcome("A", PreCommitLint.kGatePassed, 0.5),
+                                  GateOutcome("B", PreCommitLint.kGateSkipped, reason="해당 파일 변경 없음"),
+                                  GateOutcome("C", PreCommitLint.kGateSkipped, reason="해당 파일 변경 없음 — 내용 규칙에 맞는 변경 없음"),
+                                  GateOutcome("D", PreCommitLint.kGateSkipped, reason="병합 커밋 — 부모와 같다"),
+                                  GateOutcome("E", PreCommitLint.kGateUnavailable, 0.1, "빌드 폴더 준비 안 됨 — 컴파일 DB 가 없습니다")])
+        self.assertEqual(line, "[PreCommitLint] 게이트 5개: 통과 1 · 건너뜀 3(해당 파일 변경 없음 2 · 병합 커밋 1)"
+                               " · 불성립(훅이라 허용) 1(빌드 폴더 준비 안 됨 1) · 실패 0 (가장 긴 것 A 0.50 s)")
+
+    def testUnavailableGateIsAllowedInTheHookButNeverFolded(self) -> None:
+        # 헤더 자립 게이트가 빌드 없는 PC 에서 낸 불성립 — 커밋을 막지 않되 통과 줄과 같아 보이면 안 된다.
+        reasonLine = "[NoBuild] UNAVAILABLE (빌드 폴더 준비 안 됨 — 컴파일 DB 가 없습니다: build/Ninja-Debug)"
+        bFailed, output = self.runHook([self.makeGate("PassA", 0, "[PassA] OK"), self.makeGate("NoBuild", ExitCode.PrerequisiteMissing, reasonLine)], False)
+        self.assertFalse(bFailed)
+        self.assertIn("[2/2] NoBuild ... 불성립(빌드 없는 PC 라 허용): 빌드 폴더 준비 안 됨 — 컴파일 DB 가 없습니다: build/Ninja-Debug", output)
+        self.assertIn("불성립(훅이라 허용) 1(빌드 폴더 준비 안 됨 1)", output)
+        self.assertIn("통과 1", output)
+
+    def testSkippedGateIsCountedWithItsReasonAndDoesNotFail(self) -> None:
+        bFailed, output = self.runHook([self.makeGate("Skip", ExitCode.Skipped, "[Skip] SKIPPED (병합 커밋 — 부모와 같다)")], False)
+        self.assertFalse(bFailed)
+        self.assertIn("통과 0 · 건너뜀 1(병합 커밋 1) · 실패 0", output)
+        self.assertNotIn("[1/1] Skip", output)
+
+    def testHookOnlySkipGateIsANormalSkipCountedByReasonCategory(self) -> None:
+        # `preCommitSkipReason` 게이트(트리 전체 대조 — 통합이 대신 본다)는 정상 건너뜀이다: 불성립 칸이 아니라 건너뜀 칸에 사유 분류로 센다.
+        script = makeScript("TreeWide", preCommitSkipReason="트리 전체 대조 — CI 린트 잡이 push 마다 본다")
+        listPlan = selectGatesForStaged(kRepositoryRoot, [kRepositoryRoot / "Source/A.cpp"], [kRepositoryRoot / "Source/A.cpp"], [script])
+        buffer = io.StringIO()
+        with mock.patch.object(PreCommitLint, "discoverLintScripts", return_value=[script]), \
+                mock.patch.object(PreCommitLint, "selectGatesForStaged", return_value=listPlan), \
+                mock.patch.object(PreCommitLint, "StagedContentProbe", return_value=None), \
+                contextlib.redirect_stdout(buffer):
+            bFailed = PreCommitLint.runGatesInternal(kRepositoryRoot, [], [], False)
+        self.assertFalse(bFailed)
+        self.assertIn("건너뜀 1(트리 전체 대조 1)", buffer.getvalue())
+        self.assertNotIn("불성립", buffer.getvalue())
+
+    def testUnknownExitCodeIsAFailureNotAPass(self) -> None:
+        bFailed, output = self.runHook([self.makeGate("Odd", 9, "이상한 종료")], False)
+        self.assertTrue(bFailed)
+        self.assertIn("실패 1", output)
+
+    def testVerboseStillReadsTheReasonOfAnUnavailableGate(self) -> None:
+        bFailed, output = self.runHook([self.makeGate("NoBuild", ExitCode.PrerequisiteMissing, "[NoBuild] UNAVAILABLE (도구 없음 — clang 이 없다)")], True)
+        self.assertFalse(bFailed)
+        self.assertIn("불성립(훅이라 허용) 1(도구 없음 1)", output)
 
     def testVerboseShowsEveryGateLine(self) -> None:
         # 이 프로세스에서 도는 게이트의 출력은 verbose 에서 붙잡히지 않고 그대로 흐른다 — 여기서는 redirect 한 버퍼로 들어온다.
