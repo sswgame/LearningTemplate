@@ -105,6 +105,7 @@ namespace sw
         return true;
     }
 
+    // 길이를 나누지 않는다: 확장 · 레이어를 확인한 뒤 생성하는 백엔드 API 호출 순서가 곧 뜻이다(창 시스템 길 분기는 짧다).
     bool VulkanRHIDevice::createInstance()
     {
         VkApplicationInfo appInfo{};
