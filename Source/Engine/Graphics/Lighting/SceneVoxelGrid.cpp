@@ -192,6 +192,8 @@ namespace sw
         }
     }
 
+    // 길이를 나누지 않는다: 슬랩 판정 · 시작 칸 · 칸 걷기가 지역 변수(`tNear` · 칸 · 축 · 경계 거리)를 모두 공유하는 한 알고리즘이고,
+    // 103 줄로 경계라 단계 결과 구조체를 둘 만큼의 이득이 없다.
     bool SceneVoxelGrid::traceRay( const float3& origin, const float3& direction, float32 maxDistance, SceneVoxelHit& outHit ) const
     {
         using Internal = SceneVoxelGridInternal;
