@@ -1834,11 +1834,6 @@
 				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorInputMap.NoInputManager" source="InputManager service is not available.">
-			<origins>
-				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
-			</origins>
-		</entry>
 		<entry key="EditorInputMap.NotRebindableTip"
 		       source="This binding kind (axis, stick, mouse delta ...) is not one key - edit the XML">
 			<origins>
@@ -2778,11 +2773,6 @@
 		</entry>
 		<entry key="EditorProfiler.SpikeThreshold"
 		       source="GT.Frame above this pauses capturing (and a running play session) on that frame">
-			<origins>
-				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EditorProfiler.TaskManagerInactive" source="TaskManager is not active.">
 			<origins>
 				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
 			</origins>

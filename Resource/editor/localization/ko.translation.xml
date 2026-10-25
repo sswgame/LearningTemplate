@@ -803,9 +803,6 @@
 		<entry key="EditorInputMap.NoGamepad"
 		       text="포트 0에 연결된 게임패드가 없습니다."
 		       sourceHash="e044f78a07f3850c" />
-		<entry key="EditorInputMap.NoInputManager"
-		       text="InputManager 서비스를 쓸 수 없습니다."
-		       sourceHash="3c0854c2b31a63f5" />
 		<entry key="EditorInputMap.NotRebindableTip"
 		       text="이 바인딩 종류(축, 스틱, 마우스 델타 ...)는 키 하나가 아닙니다. XML 을 직접 편집합니다."
 		       sourceHash="b61c9c76a53b952a" />
@@ -1265,9 +1262,6 @@
 		<entry key="EditorProfiler.SpikeThreshold"
 		       text="GT.Frame 이 이 값을 넘으면 그 프레임에서 캡처(와 실행 중인 플레이 세션)를 멈춥니다"
 		       sourceHash="f80566dcd66780d9" />
-		<entry key="EditorProfiler.TaskManagerInactive"
-		       text="TaskManager 가 동작하지 않습니다."
-		       sourceHash="89c3229e63e577b8" />
 		<entry key="EditorProfiler.TimelineRecord"
 		       text="스레드마다 프로파일 스코프를 링 버퍼(스레드당 이벤트 8192 개)에 기록합니다 - 녹화 중에만"
 		       sourceHash="8191cc28644dfc70" />

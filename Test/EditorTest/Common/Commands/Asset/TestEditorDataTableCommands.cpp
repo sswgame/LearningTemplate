@@ -4,7 +4,10 @@
 
 #include "Editor/Common/Commands/Asset/EditorDataTableCommands.h"
 
+#include "EditorTest/EditorTestServices.h"
+
 #include "Engine/Localization/LocalizationDocuments.h"
+#include "Engine/Localization/LocalizationManager.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -34,10 +37,12 @@ namespace
  */
 SW_TEST_CASE( EditorDataTableCommandsTest, SaveDoesNotOverwriteATranslationFileItCouldNotRead )
 {
-    const string folder        = test::makeTempDirectory( "localization" );
-    const string kBrokenKorean = "<TranslationTable culture=\"ko\"><entries><entry key=\"greeting\" text=\"안녕하세요\" /></entries>\n";
-    const string projectPath   = writeProject( folder, kBrokenKorean );
-    const string koPath        = FileUtil::joinPath( folder, "ko.translation.xml" );
+    LocalizationManager                      localization; // 저장이 실행 중 글을 다시 읽도록 알리는 필수 서비스
+    ScopedEditorService<LocalizationManager> localizationService( localization );
+    const string                             folder        = test::makeTempDirectory( "localization" );
+    const string                             kBrokenKorean = "<TranslationTable culture=\"ko\"><entries><entry key=\"greeting\" text=\"안녕하세요\" /></entries>\n";
+    const string                             projectPath   = writeProject( folder, kBrokenKorean );
+    const string                             koPath        = FileUtil::joinPath( folder, "ko.translation.xml" );
 
     LocalizationSheet sheet;
     {
@@ -75,8 +80,10 @@ SW_TEST_CASE( EditorDataTableCommandsTest, SaveDoesNotOverwriteATranslationFileI
  */
 SW_TEST_CASE( EditorDataTableCommandsTest, EditedTranslationIsCurrentAndSourceEditMakesOthersStale )
 {
-    const string folder      = test::makeTempDirectory( "localization_states" );
-    const string projectPath = writeProject(
+    LocalizationManager                      localization;
+    ScopedEditorService<LocalizationManager> localizationService( localization );
+    const string                             folder      = test::makeTempDirectory( "localization_states" );
+    const string                             projectPath = writeProject(
         folder, R"(<TranslationTable culture="ko"><entries><entry key="greeting" text="안녕" translatorComment="반말로" /></entries></TranslationTable>)" );
 
     LocalizationSheet sheet;

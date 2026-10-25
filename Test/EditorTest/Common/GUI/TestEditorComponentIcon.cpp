@@ -3,6 +3,8 @@
 #include "Editor/Common/GUI/EditorComponentIcon.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 
+#include "EditorTest/EditorTestServices.h"
+
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionCore.h"
 
@@ -19,9 +21,11 @@ using namespace sw::editor;
  */
 SW_TEST_CASE( EditorComponentIconTest, DerivedTypeWinsOverBaseRow )
 {
-    const TypeRegistry& registry   = engine::getSubsystem<TypeRegistry>();
-    const TypeInfo*     pPointType = registry.findType( hashed_string( "PointLightComponent" ) );
-    const TypeInfo*     pSpotType  = registry.findType( hashed_string( "SpotLightComponent" ) );
+    TypeRegistry&             registry = engine::getSubsystem<TypeRegistry>();
+    ScopedEditorStateService  stateService;                // findRow 가 줄 캐시를 이 저장소에 두고
+    ScopedTypeRegistryService registryService( registry ); // 타입 세대를 이 레지스트리에서 읽는다(둘 다 필수 서비스)
+    const TypeInfo*           pPointType = registry.findType( hashed_string( "PointLightComponent" ) );
+    const TypeInfo*           pSpotType  = registry.findType( hashed_string( "SpotLightComponent" ) );
     SW_ASSERT_TRUE( pPointType != nullptr && pSpotType != nullptr );
     SW_EXPECT_TRUE( string_view{ EditorComponentIcon::findRow( pPointType )._pGlyph } == editoricon::kLightPoint );
     SW_EXPECT_TRUE( string_view{ EditorComponentIcon::findRow( pSpotType )._pGlyph } == editoricon::kLightSpot );
