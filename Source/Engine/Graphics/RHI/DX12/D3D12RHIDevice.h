@@ -237,14 +237,6 @@ namespace sw
         /** @brief ID3D12Device 포인터를 반환합니다. */
         void* getNativeDevice() const override { return _device.Get(); }
 
-        /**
-         * @brief 지금 기록 중인 ID3D12GraphicsCommandList 포인터(프레임 스트림의 활성 세그먼트)를 반환합니다.
-         * @details 에디터 ImGui 백엔드가 이 리스트에 직접 드로우를 기록한다. _commandList 는 '첫 세그먼트' 일
-         *          뿐이고 커맨드 리스트가 제출될 때마다 닫힌다. 주의: 그것을 그대로 반환하면 닫힌 리스트에
-         *          기록하게 되어 UI 가 통째로 사라진다.
-         */
-        void* getNativeContext() const override { return _pActiveFrameList != nullptr ? _pActiveFrameList : _commandList.Get(); }
-
         /** @brief ID3D12CommandQueue 포인터를 반환합니다. */
         void* getNativeCommandQueue() const override { return _commandQueue.Get(); }
 
@@ -263,7 +255,7 @@ namespace sw
         void beginFrame() override;
         void endFrame( bool vsync = true, bool bPresent = true ) override;
 
-        void               setTimestampEnabled( bool bEnabled ) override { _bTimestampEnabled = bEnabled ? SW_TRUE : SW_FALSE; }
+        void               setTimestampEnabled( bool bEnabled ) override { _bTimestampEnabled.store( bEnabled ? SW_TRUE : SW_FALSE, std::memory_order_relaxed ); }
         uint32             getTimestampSlotCount() const override;
         [[nodiscard]] bool readTimestamps( RHITimestampFrame& outFrame ) override;
         [[nodiscard]] bool readGPUClockNanos( int64& outGPUNanos ) override;
@@ -278,6 +270,15 @@ namespace sw
         {
             _timestampWrittenMask.fetch_or( makeGPUTimestampSlotBit( slotIndex ), std::memory_order_relaxed );
         }
+
+    protected:
+        /**
+         * @brief 지금 기록 중인 ID3D12GraphicsCommandList 포인터(프레임 스트림의 활성 세그먼트)입니다. 밖으로는 `withNativeContext` 로만 나갑니다.
+         * @details 에디터 ImGui 백엔드가 렌더 스레드(present 훅)에서 이 리스트에 직접 드로우를 기록한다. 리스트와 `_pActiveFrameList` 는 렌더 스레드만 쓰므로
+         *          잡을 잠금이 없다. _commandList 는 '첫 세그먼트' 일 뿐이고 커맨드 리스트가 제출될 때마다 닫힌다. 주의: 그것을 그대로 반환하면 닫힌 리스트에
+         *          기록하게 되어 UI 가 통째로 사라진다.
+         */
+        void* getNativeContext() const override { return _pActiveFrameList != nullptr ? _pActiveFrameList : _commandList.Get(); }
 
     private:
         /** @brief 쿼리 힙과 읽기 버퍼를 한 번만 만듭니다. */
@@ -641,16 +642,17 @@ namespace sw
         /// @brief 창 하나의 백버퍼 묶음입니다. 백버퍼, 인덱스, 리소스 상태, Present 가 모두 여기 모여 있습니다.
         D3D12RHISwapChain _swapChain;
 
-        uint8 _bBindlessRootSignature : 1; ///< 루트 시그니처(텍스처 배열 테이블 포함)를 만드는 데 성공했다. 네이티브 bindless 텍스처 샘플링이 가능하다.
+        uint8                  _bBindlessRootSignature : 1; ///< 루트 시그니처(텍스처 배열 테이블 포함)를 만드는 데 성공했다. 네이티브 bindless 텍스처 샘플링이 가능하다.
+        [[maybe_unused]] uint8 _reservedPassFlags      : 7;
         /// @brief 디바이스 제거(DEVICE_HUNG/REMOVED) 상태를 이미 한 번 로그로 남겼으면 true 입니다. 매
         /// 프레임 flushDebugMessages() 가 똑같은 검증 메시지 수십 줄을 끝없이 반복 출력하는 것을 막습니다.
-        uint8                  _bDeviceRemovedLogged : 1;
-        [[maybe_unused]] uint8 _reservedPassFlags    : 6;
-        /// @brief blitTexture 포맷이나 크기 불일치 경고를 한 번만 남기기 위한 래치입니다.
-        uint8 _bBlitMismatchLogged;
-        uint8 _bOnlineHeapExhaustedLogged; ///< 온라인 힙이 바닥났다는 경고를 한 번만 남기기 위한 래치입니다.
-        /// @brief 엔진이 켜기 전에는 힙도 만들지 않습니다. 계측에는 비용이 듭니다.
-        uint8          _bTimestampEnabled;
+        /// 렌더 스레드 · 기록 워커(리스트 생성) · PSO 생성이 함께 읽고 쓰므로 atomic 입니다(비트필드면 옆 비트와 한 바이트를 고쳐 쓴다).
+        atomic<uint8> _bDeviceRemovedLogged;
+        /// @brief blitTexture 포맷이나 크기 불일치 경고를 한 번만 남기기 위한 래치입니다. 병렬 기록 워커가 함께 쓰므로 atomic 입니다.
+        atomic<uint8> _bBlitMismatchLogged;
+        uint8         _bOnlineHeapExhaustedLogged; ///< 온라인 힙이 바닥났다는 경고를 한 번만 남기기 위한 래치입니다.
+        /// @brief 엔진이 켜기 전에는 힙도 만들지 않습니다. 계측에는 비용이 듭니다. `setTimestampEnabled` 는 어느 스레드에서나 부를 수 있어 atomic 입니다.
+        atomic<uint8>  _bTimestampEnabled;
         atomic<uint32> _validationMessageCount;   ///< 디버그 레이어가 알린 경고 이상의 메시지 수(`onValidationMessage`)
         DWORD          _validationCallbackCookie; ///< `RegisterMessageCallback` 이 준 번호입니다. 0 이면 등록하지 않았다.
 
@@ -678,9 +680,11 @@ namespace sw
         /// @brief 지금까지 새로 만든 (리스트, 얼로케이터) 쌍 수입니다. 풀이 끝없이 늘어나는지 확인하기 위한 계측입니다.
         atomic<uint32> _cmdListEntryCreated;
 
-        HANDLE                              _fenceEvent;
         Microsoft::WRL::ComPtr<ID3D12Fence> _fence;
-        UINT64                              _fenceValue;
+        /// @brief 이번 프레임이 Signal 할 프레임 펜스 값입니다. 렌더 스레드가 Signal 과 함께 올리고, 다른 스레드(업로드 · 해제)가 읽으므로 atomic 입니다.
+        /// @details Signal 과 올리기는 `_uploadSlotMutex` 안에서 한 덩어리로 한다. 업로드가 같은 락 안에서 이 값을 읽고 복사를 실행하므로
+        ///          "복사가 끝나는 펜스" 가 Signal 순서와 어긋나지 않는다(락 밖이면 Signal(V) 뒤에 실행된 복사가 V 를 받는다).
+        atomic<uint64> _fenceValue;
 
         /// @brief `flushPendingUploads` 가 한 번에 내보낸 전송 묶음입니다. 전송 펜스가 `_fenceValue` 에 이르면 시리얼 `_maxSerial` 까지 끝난 것입니다.
         struct SignaledTransfer

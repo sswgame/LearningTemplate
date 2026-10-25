@@ -292,10 +292,15 @@ namespace sw::editor
 
     void ImGuiVulkanRendererBackend::render( class IRHIDevice* pRHIDevice, ImDrawData* pDrawData )
     {
-        VkCommandBuffer cmdBuffer          = static_cast<VkCommandBuffer>( pRHIDevice->getNativeContext() );
-        const bool      bCanRenderDrawData = cmdBuffer != nullptr && pDrawData != nullptr && _pRHIDevice != nullptr;
-        if ( bCanRenderDrawData )
-            ImGui_ImplVulkan_RenderDrawData( pDrawData, cmdBuffer );
+        if ( pDrawData == nullptr || _pRHIDevice == nullptr )
+            return;
+        // 프레임 스트림의 열린 세그먼트에 기록한다. 렌더 스레드(present 훅)만 쓰는 버퍼라 콜백 밖으로 들고 나가지 않는다.
+        pRHIDevice->withNativeContext( SW_DELEGATE_LAMBDA( RHINativeContextVisitor, [pDrawData]( void* pContext )
+        {
+            VkCommandBuffer cmdBuffer = static_cast<VkCommandBuffer>( pContext );
+            if ( cmdBuffer != nullptr )
+                ImGui_ImplVulkan_RenderDrawData( pDrawData, cmdBuffer );
+        } ) );
     }
 
     void* ImGuiVulkanRendererBackend::registerTexture( RHITextureHandle texture )

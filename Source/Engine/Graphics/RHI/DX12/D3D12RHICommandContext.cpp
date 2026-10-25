@@ -358,9 +358,9 @@ namespace sw
                                              srcDesc.MipLevels != dstDesc.MipLevels;
             if ( bBlitFormatMismatch )
             {
-                if ( _pDevice->_bBlitMismatchLogged == SW_FALSE )
+                // 병렬 기록 워커가 함께 오므로 확인과 표시를 한 번의 교환으로 한다.
+                if ( _pDevice->_bBlitMismatchLogged.exchange( SW_TRUE, std::memory_order_relaxed ) == SW_FALSE )
                 {
-                    _pDevice->_bBlitMismatchLogged = SW_TRUE;
                     SW_LOG_ERROR( "blitTexture: CopyResource not possible - src(fmt=%# %#x%#) dst(fmt=%# %#x%#). Skipping the copy.",
                                   static_cast<uint32>( srcDesc.Format ), static_cast<uint32>( srcDesc.Width ), static_cast<uint32>( srcDesc.Height ),
                                   static_cast<uint32>( dstDesc.Format ), static_cast<uint32>( dstDesc.Width ), static_cast<uint32>( dstDesc.Height ) );

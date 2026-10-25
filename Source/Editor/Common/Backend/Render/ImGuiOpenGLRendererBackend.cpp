@@ -185,7 +185,9 @@ namespace sw::editor
         // "OpenGL 디바이스일 때만 GL 뷰포트 훅을 건다" 도 함께 맞는다(아래 Linux 분기와 같다).
         if ( ( io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable ) && _pRHIDevice != nullptr )
         {
-            s_MainWindowRC                     = static_cast<HGLRC>( _pRHIDevice->getNativeContext() );
+            // HGLRC 는 렌더 스레드가 보조 뷰포트를 그린 뒤 메인 창으로 되돌아갈 때(wglMakeCurrent) 쓰는 이름이다. 그 훅은 렌더 스레드에서만 돈다.
+            _pRHIDevice->withNativeContext( SW_DELEGATE_LAMBDA( RHINativeContextVisitor, []( void* pContext )
+            { s_MainWindowRC = static_cast<HGLRC>( pContext ); } ) );
             ImGuiPlatformIO& platform_io       = ImGui::GetPlatformIO();
             platform_io.Renderer_CreateWindow  = Hook_Renderer_CreateWindow;
             platform_io.Renderer_DestroyWindow = Hook_Renderer_DestroyWindow;
@@ -200,8 +202,9 @@ namespace sw::editor
             Display* pMainDisplay = static_cast<Display*>( _pRHIDevice->getNativeDevice() );
             if ( pMainDisplay == nullptr )
                 pMainDisplay = glXGetCurrentDisplay();
-            s_MainDisplay                      = pMainDisplay;
-            s_MainContext                      = static_cast<GLXContext>( _pRHIDevice->getNativeContext() );
+            s_MainDisplay = pMainDisplay;
+            _pRHIDevice->withNativeContext( SW_DELEGATE_LAMBDA( RHINativeContextVisitor, []( void* pContext )
+            { s_MainContext = static_cast<GLXContext>( pContext ); } ) );
             ImGuiPlatformIO& platform_io       = ImGui::GetPlatformIO();
             platform_io.Renderer_CreateWindow  = Hook_Renderer_CreateWindow_GLX;
             platform_io.Renderer_DestroyWindow = Hook_Renderer_DestroyWindow_GLX;

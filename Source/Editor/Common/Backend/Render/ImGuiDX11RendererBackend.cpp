@@ -21,16 +21,21 @@ namespace sw::editor
         if ( _pRHIDevice == nullptr )
             return false;
 
-        ID3D11Device*        pDevice  = static_cast<ID3D11Device*>( _pRHIDevice->getNativeDevice() );
-        ID3D11DeviceContext* pContext = static_cast<ID3D11DeviceContext*>( _pRHIDevice->getNativeContext() );
-        if ( pDevice != nullptr && pContext != nullptr )
+        ID3D11Device* pDevice = static_cast<ID3D11Device*>( _pRHIDevice->getNativeDevice() );
+        if ( pDevice == nullptr )
+            return true;
+
+        // ImGui 는 받은 즉시 컨텍스트를 들고 있다. 그것을 쓰는 호출(newFrame · processTextureUpdates · render · 보조 뷰포트)은
+        // 렌더 스레드에서만 한다(`requiresRenderThreadContext`). 즉시 컨텍스트의 파이프라인 상태는 프레임 스트림과 하나라 다른 스레드가 쓰면 섞인다.
+        bool bInitialized{ false };
+        _pRHIDevice->withNativeContext( SW_DELEGATE_LAMBDA( RHINativeContextVisitor, [pDevice, &bInitialized]( void* pContext )
         {
-            const bool bOk = ImGui_ImplDX11_Init( pDevice, pContext );
-            if ( bOk )
-                _viewportSizeGuard.install();
-            return bOk;
-        }
-        return true;
+            if ( pContext != nullptr )
+                bInitialized = ImGui_ImplDX11_Init( pDevice, static_cast<ID3D11DeviceContext*>( pContext ) );
+        } ) );
+        if ( bInitialized )
+            _viewportSizeGuard.install();
+        return bInitialized;
     }
 
     void ImGuiDX11RendererBackend::shutdown()
@@ -53,14 +58,35 @@ namespace sw::editor
 
     void ImGuiDX11RendererBackend::processTextureUpdates()
     {
-        updatePendingTextures( &ImGui_ImplDX11_UpdateTexture );
+        if ( _pRHIDevice == nullptr )
+            return;
+        // UpdateSubresource 묶음이 다른 스레드의 전송 · 폴링과 섞이지 않게 즉시 컨텍스트 잠금 안에서 한다.
+        _pRHIDevice->withNativeContext( SW_DELEGATE_LAMBDA( RHINativeContextVisitor, []( void* /*pContext*/ )
+        { updatePendingTextures( &ImGui_ImplDX11_UpdateTexture ); } ) );
     }
 
     void ImGuiDX11RendererBackend::render( class IRHIDevice* pRHIDevice, ImDrawData* pDrawData )
     {
         (void)pRHIDevice;
-        if ( pDrawData != nullptr && _pRHIDevice != nullptr )
-            ImGui_ImplDX11_RenderDrawData( pDrawData );
+        if ( pDrawData == nullptr || _pRHIDevice == nullptr )
+            return;
+        // ImGui 가 상태를 백업 · 설정 · 복원하는 묶음을 즉시 컨텍스트 잠금 안에서 한다(컨텍스트는 Init 에서 받은 것을 쓴다).
+        _pRHIDevice->withNativeContext( SW_DELEGATE_LAMBDA( RHINativeContextVisitor, [pDrawData]( void* /*pContext*/ )
+        { ImGui_ImplDX11_RenderDrawData( pDrawData ); } ) );
+    }
+
+    void ImGuiDX11RendererBackend::renderPlatformWindows()
+    {
+        if ( _pRHIDevice == nullptr )
+            return;
+        _pRHIDevice->withNativeContext( SW_DELEGATE_LAMBDA( RHINativeContextVisitor, []( void* pContext )
+        {
+            ImGui::RenderPlatformWindowsDefault();
+            // 보조 뷰포트의 백버퍼를 컨텍스트에 걸어 두지 않는다. UI 스레드의 창 크기 변경(ResizeBuffers)은 컨텍스트에 걸린 백버퍼가 있으면
+            // 실패하는데, 렌더 스레드는 다음 렌더 패스까지 렌더 타깃을 다시 걸지 않는다.
+            if ( pContext != nullptr )
+                static_cast<ID3D11DeviceContext*>( pContext )->OMSetRenderTargets( 0, nullptr, nullptr );
+        } ) );
     }
 
     void* ImGuiDX11RendererBackend::registerTexture( RHITextureHandle texture )
@@ -133,6 +159,9 @@ namespace sw::editor
     {
     }
     void ImGuiDX11RendererBackend::render( class IRHIDevice* /*pRHIDevice*/, ImDrawData* /*pDrawData*/ )
+    {
+    }
+    void ImGuiDX11RendererBackend::renderPlatformWindows()
     {
     }
     void* ImGuiDX11RendererBackend::registerTexture( RHITextureHandle /*texture*/ )

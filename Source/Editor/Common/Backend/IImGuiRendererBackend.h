@@ -70,11 +70,17 @@ namespace sw::editor
 
         /**
          * @brief 프레임 GPU 작업(newFrame, 텍스처 갱신, 보조 뷰포트 렌더)을 렌더 스레드에서 해야 하면 true 입니다.
-         * @details OpenGL 처럼 GPU 컨텍스트가 스레드 전용(wglMakeCurrent)인 백엔드는 UI 스레드에서 컨텍스트를 잡을 수 없다.
-         *          이 값이 true 이면 ImGuiEditor 가 해당 호출들을 present 훅(렌더 스레드)으로 옮겨 실행한다. DX12, DX11, Vulkan 은
-         *          false 이다.
+         * @details OpenGL 처럼 GPU 컨텍스트가 스레드 전용(wglMakeCurrent)인 백엔드는 UI 스레드에서 컨텍스트를 잡을 수 없다. DX11 은 즉시 컨텍스트의
+         *          파이프라인 상태를 렌더 스레드의 프레임 스트림과 나눠 쓰므로 같은 쪽이다.
+         *          이 값이 true 이면 ImGuiEditor 가 해당 호출들을 present 훅(렌더 스레드)으로 옮겨 실행한다. DX12, Vulkan 은 false 이다.
          */
         virtual bool requiresRenderThreadContext() const { return false; }
+
+        /**
+         * @brief 보조(플로팅) 뷰포트를 렌더하고 present 합니다. `requiresRenderThreadContext()` 가 true 면 렌더 스레드(present 훅)에서, 아니면 UI 스레드에서 부릅니다.
+         * @details 기본은 `ImGui::RenderPlatformWindowsDefault` 다. 컨텍스트를 렌더 스레드의 프레임 스트림과 나눠 쓰는 백엔드(DX11)는 그 잠금과 뒷정리를 더한다.
+         */
+        virtual void renderPlatformWindows();
 
         /**
          * @brief UI 스레드가 ImGui 백엔드 코드로 GPU 큐에 제출하고 대기하는 동안 잡는 락입니다. 보조 뷰포트의 생성, 렌더, 파괴와 텍스처 업로드가 해당합니다.

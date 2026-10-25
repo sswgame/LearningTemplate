@@ -87,7 +87,7 @@ namespace sw
             return false;
         const uint32                          slotIndex       = _pDevice->_frameRing.currentIndex();
         D3D12RHIDevice::StructuredUploadSlot& slot            = _pDevice->_arrStructuredUploadSlot[slotIndex];
-        bool                                  bNewFencePeriod = ( slot._resetFence != _pDevice->_fenceValue );
+        bool                                  bNewFencePeriod = ( slot._resetFence != _pDevice->_fenceValue.load() );
 
         // 같은 펜스 구간에 이미 열려 있으면 이어서 기록한다. 리스트를 닫고 다시 여는 것도, 제출도 프레임에 한 번이다.
         if ( slot._bListOpen != SW_FALSE && bNewFencePeriod == false )
@@ -100,7 +100,7 @@ namespace sw
         if ( slot._bListOpen != SW_FALSE )
         {
             _pDevice->flushPendingUploads( true );
-            bNewFencePeriod = ( slot._resetFence != _pDevice->_fenceValue );
+            bNewFencePeriod = ( slot._resetFence != _pDevice->_fenceValue.load() );
         }
 
         if ( slot._copyAllocator == nullptr )
@@ -136,7 +136,7 @@ namespace sw
         }
         if ( bNewFencePeriod )
             slot._uploadOffset = 0;
-        slot._resetFence = _pDevice->_fenceValue;
+        slot._resetFence = _pDevice->_fenceValue.load();
 
         if ( slot._copyCommandList == nullptr )
         {
@@ -557,7 +557,7 @@ namespace sw
             return; // 업로드 티켓이거나 이미 가져감 · 버림이다 — 계약상 아무 일도 하지 않는다
         // 복사 리스트가 아직 열려 있거나 GPU 에서 도는 중일 수 있어 읽기 버퍼를 지금 놓으면 안 된다. 프레임 펜스를 한 값 더 기다렸다가 놓는다
         // (열린 복사는 다음 구간의 Signal 에서야 끝난다 — releaseTrackedResourceDeferred 와 같은 사정).
-        _pDevice->_releaseQueue.enqueueGPUKeepAlive( std::move( record._readback ), _pDevice->_fenceValue + 1 );
+        _pDevice->_releaseQueue.enqueueGPUKeepAlive( std::move( record._readback ), _pDevice->_fenceValue.load() + 1 );
     }
 
     RHIFormat D3D12RHIResourceFactory::getTextureFormat( RHITextureHandle texture ) const

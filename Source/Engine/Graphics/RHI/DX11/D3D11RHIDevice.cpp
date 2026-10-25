@@ -2,6 +2,8 @@
 
 #include "Engine/Graphics/RHI/DX11/D3D11RHIDevice.h"
 
+#include "Core/Delegate/Delegate.h"
+
 #include "Engine/Graphics/RHI/DX11/D3D11RHICommandContext.h"
 #include "Engine/Graphics/RHI/DX11/D3D11RHICommandList.h"
 #include "Engine/Graphics/RHI/DX11/D3D11RHIResourceFactory.h"
@@ -173,6 +175,17 @@ namespace sw
     {
         const TextureRecord* pRecord = resolveTexture( texture );
         return pRecord != nullptr ? pRecord->_texture.Get() : nullptr;
+    }
+
+    void D3D11RHIDevice::withNativeContextInternal( const RHINativeContextVisitor& visitor ) const
+    {
+        if ( _immediateContext.isValid() == false )
+        {
+            visitor( nullptr );
+            return;
+        }
+        const D3D11ImmediateContext::ScopedLock context = _immediateContext.lock();
+        visitor( context.get() );
     }
 
     bool D3D11RHIDevice::ensureRootConstantCb( D3D11RecordingState& state )

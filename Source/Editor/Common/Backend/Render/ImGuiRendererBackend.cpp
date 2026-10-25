@@ -25,6 +25,11 @@ namespace sw::editor
         }
     }
 
+    void IImGuiRendererBackend::renderPlatformWindows()
+    {
+        ImGui::RenderPlatformWindowsDefault();
+    }
+
     void IImGuiRendererBackend::flushDrawReleases( IRHIDevice* pRHIDevice )
     {
         if ( pRHIDevice != nullptr )

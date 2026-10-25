@@ -234,7 +234,6 @@ namespace sw
         if ( FAILED( _device->CreateFence( 0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS( _fence.GetAddressOf() ) ) ) )
             return false;
         _fenceValue = 1;
-        _fenceEvent = CreateEventW( nullptr, FALSE, FALSE, nullptr );
         // 전송 전용 펜스: 복사 리스트가 내보내진 묶음마다 올린다. 프레임 펜스와 따로라 전송 완료를 프레임 없이도 알 수 있다(RhiAsyncUploads).
         if ( FAILED( _device->CreateFence( 0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS( _transferFence.GetAddressOf() ) ) ) )
             return false;
@@ -315,12 +314,6 @@ namespace sw
         _validationCallbackCookie = 0;
         infoQueue1.Reset();
         _device.Reset();
-
-        if ( _fenceEvent != nullptr )
-        {
-            CloseHandle( _fenceEvent );
-            _fenceEvent = nullptr;
-        }
 
         _fenceValue        = 0;
         _rtvDescriptorSize = 0;

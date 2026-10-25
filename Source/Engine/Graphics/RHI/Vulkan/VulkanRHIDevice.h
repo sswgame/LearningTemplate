@@ -205,7 +205,7 @@ namespace sw
         /** @brief 프레임을 닫습니다(vkQueueSubmit, bPresent 면 vkQueuePresentKHR). */
         void endFrame( bool vsync, bool bPresent = true ) override;
 
-        void               setTimestampEnabled( bool bEnabled ) override { _bTimestampEnabled = bEnabled ? SW_TRUE : SW_FALSE; }
+        void               setTimestampEnabled( bool bEnabled ) override { _bTimestampEnabled.store( bEnabled ? SW_TRUE : SW_FALSE, std::memory_order_relaxed ); }
         uint32             getTimestampSlotCount() const override;
         [[nodiscard]] bool readTimestamps( RHITimestampFrame& outFrame ) override;
         [[nodiscard]] bool readGPUClockNanos( int64& outGPUNanos ) override;
@@ -215,6 +215,13 @@ namespace sw
         VkQueryPool getTimestampPool() const { return _timestampPool; }
         /** @brief 이번 프레임이 쓰는 쿼리 구간의 시작 인덱스입니다. */
         uint32 getTimestampBase() const { return _currentFrame * constant::kMaxGPUTimestampSlot; }
+
+    protected:
+        /**
+         * @brief 지금 열려 있는 프레임 세그먼트의 VkCommandBuffer 입니다. 프레임 밖이면 null 입니다. 밖으로는 `withNativeContext` 로만 나갑니다.
+         * @details 프레임 세그먼트는 렌더 스레드만 기록하므로 잡을 잠금이 없다(큐 제출은 `_queueMutex` 가 따로 지킨다).
+         */
+        void* getNativeContext() const override { return currentCommandBuffer(); }
 
     private:
         /** @brief 쿼리 풀을 한 번만 만듭니다. */
@@ -259,13 +266,6 @@ namespace sw
 
         /** @brief 네이티브 VkDevice 핸들을 반환합니다. */
         void* getNativeDevice() const override { return _device; }
-
-        /** @brief 지금 열려 있는 프레임 세그먼트의 VkCommandBuffer 를 반환합니다. 프레임 밖이면 null 입니다. */
-        void* getNativeContext() const override
-        {
-            VkCommandBuffer cmd = currentCommandBuffer();
-            return cmd;
-        }
 
         /** @brief 네이티브 VkQueue 핸들을 반환합니다. */
         void* getNativeCommandQueue() const override { return _graphicsQueue; }
@@ -672,9 +672,9 @@ namespace sw
         // 1바이트 필드는 위 비트필드 뒤에 모은다. 8바이트 필드 사이에 끼면 필드마다 패딩이 생긴다.
         uint8 _bSwapChainRecreateFailing; ///< 재생성 실패를 한 번만 알린다(성공하면 내린다). 실패하면 프레임마다 다시 시도한다.
         /// @brief 이번 프레임의 acquire 세마포어 대기가 아직 소비되지 않았는지 여부입니다(첫 제출에서만 바인딩합니다).
-        uint8 _bFrameAcquireWaitPending;
-        uint8 _bTimestampEnabled;                                       ///< 엔진이 켜기 전에는 풀도 만들지 않는다.
-        uint8 _arrTimestampSubmitted[constant::kMaxFrameCountInFlight]; ///< 링 슬롯마다 타임스탬프 쿼리를 제출했는가
+        uint8         _bFrameAcquireWaitPending;
+        atomic<uint8> _bTimestampEnabled;                                       ///< 엔진이 켜기 전에는 풀도 만들지 않는다. `setTimestampEnabled` 는 어느 스레드에서나 부를 수 있어 atomic 이다.
+        uint8         _arrTimestampSubmitted[constant::kMaxFrameCountInFlight]; ///< 링 슬롯마다 타임스탬프 쿼리를 제출했는가
 
         VkSampler _defaultSampler;
 

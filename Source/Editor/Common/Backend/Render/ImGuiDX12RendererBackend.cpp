@@ -130,14 +130,19 @@ namespace sw::editor
             }
         }
 
-        ID3D12GraphicsCommandList* pCmdList           = static_cast<ID3D12GraphicsCommandList*>( pRHIDevice->getNativeContext() );
-        const bool                 bCanRecordDrawData = pCmdList != nullptr && pDrawData != nullptr && _d3d12SrvHeap != nullptr;
-        if ( bCanRecordDrawData )
+        if ( pDrawData == nullptr || _d3d12SrvHeap == nullptr )
+            return;
+        // 프레임 스트림의 활성 세그먼트에 기록한다. 렌더 스레드(present 훅)만 쓰는 리스트라 콜백 밖으로 들고 나가지 않는다.
+        ID3D12DescriptorHeap* const pSrvHeap = _d3d12SrvHeap.Get();
+        pRHIDevice->withNativeContext( SW_DELEGATE_LAMBDA( RHINativeContextVisitor, [pDrawData, pSrvHeap]( void* pContext )
         {
-            ID3D12DescriptorHeap* heaps[] = { _d3d12SrvHeap.Get() };
+            ID3D12GraphicsCommandList* pCmdList = static_cast<ID3D12GraphicsCommandList*>( pContext );
+            if ( pCmdList == nullptr )
+                return;
+            ID3D12DescriptorHeap* heaps[] = { pSrvHeap };
             pCmdList->SetDescriptorHeaps( 1, heaps );
             ImGui_ImplDX12_RenderDrawData( pDrawData, pCmdList );
-        }
+        } ) );
     }
 
     void* ImGuiDX12RendererBackend::registerTexture( RHITextureHandle texture )

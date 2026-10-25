@@ -12,7 +12,7 @@ namespace sw
 
     void FrameResourceRing::reset()
     {
-        _frameIndex = constant::kMaxFrameCountInFlight - 1;
+        _frameIndex.store( constant::kMaxFrameCountInFlight - 1, std::memory_order_release );
         for ( uint64& fenceValue : _arrFenceValue )
         {
             fenceValue = 0;
@@ -21,11 +21,11 @@ namespace sw
 
     bool FrameResourceRing::beginFrame( uint64 completedFenceValue )
     {
-        const uint32 nextIndex = ( _frameIndex + 1 ) % constant::kMaxFrameCountInFlight;
+        const uint32 nextIndex = ( _frameIndex.load( std::memory_order_relaxed ) + 1 ) % constant::kMaxFrameCountInFlight;
         if ( _arrFenceValue[nextIndex] > completedFenceValue )
             return false;
 
-        _frameIndex = nextIndex;
+        _frameIndex.store( nextIndex, std::memory_order_release );
         return true;
     }
 

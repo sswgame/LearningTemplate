@@ -60,8 +60,8 @@ namespace sw
         , _listRenderPass{}
         , _swapChain{}
         , _bBindlessRootSignature{ SW_FALSE }
-        , _bDeviceRemovedLogged{ SW_FALSE }
         , _reservedPassFlags{ 0 }
+        , _bDeviceRemovedLogged{ SW_FALSE }
         , _bBlitMismatchLogged{ SW_FALSE }
         , _bOnlineHeapExhaustedLogged{ SW_FALSE }
         , _bTimestampEnabled{ SW_FALSE }
@@ -75,7 +75,6 @@ namespace sw
         , _cbvDescriptorSize{ 0 }
         , _allocatedDescriptorsCount{ 0 }
         , _cmdListEntryCreated{ 0 }
-        , _fenceEvent{ nullptr }
         , _fence{ nullptr }
         , _fenceValue{ 0 }
         , _transferSerials{}
@@ -243,7 +242,7 @@ namespace sw
         // 벡터를 복사하지 않고 통째로 묶음에 옮긴다. 상태는 풀에서 온 빈 벡터를 받아 다음 기록에 그대로 쓴다.
         std::scoped_lock<mutex> lock{ _onlineBlockMutex };
         OnlineBlockRecycleBatch batch{};
-        batch._fence = _fenceValue;
+        batch._fence = _fenceValue.load();
         if ( _listOnlineRecyclePool.empty() == false )
         {
             batch._listBlock.swap( _listOnlineRecyclePool.back() );
@@ -308,7 +307,8 @@ namespace sw
     void D3D12RHIDevice::releaseTrackedResourceDeferred( Microsoft::WRL::ComPtr<ID3D12Resource> owned, const RHIMemoryKey& key, bool bAfterUnfinishedTransfer )
     {
         // 끝나지 않은 전송이 있으면 한 값 더 기다린다: 프레임 제출과 Signal 사이에 연 복사는 다음 구간의 Signal 에서야 끝난다(`openUploadSlot` 의 `_resetFence` 와 같은 사정).
-        const uint64 releaseFence = bAfterUnfinishedTransfer ? _fenceValue + 1 : _fenceValue;
+        const uint64 currentFence = _fenceValue.load();
+        const uint64 releaseFence = bAfterUnfinishedTransfer ? currentFence + 1 : currentFence;
         // 키 공간은 템플릿 인자로 갈라 람다를 델리게이트의 인라인 칸(24 바이트)에 맞춘다.
         if ( key._space == RHIMemoryKeySpace::Texture )
             _releaseQueue.enqueueGPULedgerRelease<RHIMemoryKeySpace::Texture>( owned, getMemoryLedger(), key._id, releaseFence );
@@ -388,7 +388,7 @@ namespace sw
         // 디바이스가 이미 제거된 상태로 한 번 로그를 남겼으면, 프레임마다 똑같은 검증 메시지
         // 수십 줄 + DRED 덤프를 무한 반복하지 않는다. 자동 복구가 없어서 그 이후 매 프레임
         // 여기로 다시 들어오는데, 정보량 없이 로그만 무한히 쌓인다.
-        const bool bAlreadyDeviceRemoved = _bDeviceRemovedLogged != 0;
+        const bool bAlreadyDeviceRemoved = _bDeviceRemovedLogged.load( std::memory_order_relaxed ) != SW_FALSE;
 
         Microsoft::WRL::ComPtr<ID3D12InfoQueue> infoQueue;
         if ( SUCCEEDED( _device.As( &infoQueue ) ) && infoQueue != nullptr )
@@ -411,7 +411,7 @@ namespace sw
 
         if ( _device != nullptr && FAILED( _device->GetDeviceRemovedReason() ) )
         {
-            _bDeviceRemovedLogged = SW_TRUE;
+            _bDeviceRemovedLogged.store( SW_TRUE, std::memory_order_relaxed );
             Microsoft::WRL::ComPtr<ID3D12DeviceRemovedExtendedData> dred;
             if ( SUCCEEDED( _device.As( &dred ) ) && dred != nullptr )
             {
