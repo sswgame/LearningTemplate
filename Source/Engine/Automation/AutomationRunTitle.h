@@ -51,7 +51,7 @@ namespace sw
 {
     class CommandLineManager;
     class IEngineFrameObserver;
-    class MainWindowSubsystem;
+    class IWindowTitleTarget;
 
     /**
      * @class AutomationRunTitleTracker
@@ -71,12 +71,12 @@ namespace sw
         AutomationRunTitleTracker& operator=( const AutomationRunTitleTracker& ) = delete;
 
         /**
-         * @param pWindowHost 주 창 서비스(없으면 nullptr — 창 없는 실행)
+         * @param pTitleTarget 제목을 거는 이음매(`MainWindowSubsystem::getTitleTarget`, 없으면 nullptr — 창 없는 실행)
          * @param pCommandLine 명령줄(벤치 인자를 읽는다. 없으면 nullptr)
          * @param backendName 지금 RHI 백엔드 이름(없으면 빈 글)
          * @param listObserver 프레임 관찰자(시나리오 세션이 실행 정보를 낸다)
          */
-        void onFrameEnd( const MainWindowSubsystem* pWindowHost, const CommandLineManager* pCommandLine, string_view backendName, const vector<IEngineFrameObserver*>& listObserver );
+        void onFrameEnd( IWindowTitleTarget* pTitleTarget, const CommandLineManager* pCommandLine, string_view backendName, const vector<IEngineFrameObserver*>& listObserver );
 
     private:
         string _initialTitle; ///< 창이 처음 가진 제목(호스트가 평소 제목을 정하지 않았을 때의 평소 제목)

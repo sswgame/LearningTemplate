@@ -800,7 +800,7 @@ namespace sw
             MainWindowSubsystem* const pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
             const bool                 bBackendUp  = _pRHI != nullptr && _pRHI->hasDevice();
             const utf8* const          pBackend    = bBackendUp ? RHI::getBackendTypeName( _pRHI->getCommittedBackend() ) : "";
-            _runTitle.onFrameEnd( pWindowHost, getCommandLineManager(), pBackend, _listFrameObserver );
+            _runTitle.onFrameEnd( pWindowHost != nullptr ? pWindowHost->getTitleTarget() : nullptr, getCommandLineManager(), pBackend, _listFrameObserver );
         }
         // `-gv_screenshotQuit`: 요청한 사진을 모두 찍었으면 그 결과(0 또는 쓰기 실패)로 끝낸다. 관찰자(시나리오)의 코드가 먼저 요청됐으면 그것이 이긴다.
 #if defined( SW_WITH_CLIENT_CODE )

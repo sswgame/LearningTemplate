@@ -8,8 +8,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Utility/EngineFrameObserver.h"
-#include "Engine/Window/IWindow.h"
-#include "Engine/Window/MainWindowSubsystem.h"
+#include "Engine/Window/IWindowTitleTarget.h"
 
 #include <algorithm>
 
@@ -107,10 +106,9 @@ namespace sw
 
     AutomationRunTitleTracker::~AutomationRunTitleTracker() = default;
 
-    void AutomationRunTitleTracker::onFrameEnd( const MainWindowSubsystem* pWindowHost, const CommandLineManager* pCommandLine, string_view backendName,
+    void AutomationRunTitleTracker::onFrameEnd( IWindowTitleTarget* pTitleTarget, const CommandLineManager* pCommandLine, string_view backendName,
                                                 const vector<IEngineFrameObserver*>& listObserver )
     {
-        IWindow* const pWindow = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
         if ( _bInitialized == false )
         {
             _bInitialized = true;
@@ -131,8 +129,8 @@ namespace sw
             }
             if ( _benchSummary.empty() == false )
                 SW_LOG_INFO( "[Bench] backend %# args %#", string{ backendName }.c_str(), _benchSummary.c_str() );
-            if ( pWindow != nullptr )
-                _initialTitle = pWindow->getTitle();
+            if ( pTitleTarget != nullptr )
+                _initialTitle = pTitleTarget->getCurrentTitle();
         }
         ++_frame;
 
@@ -149,17 +147,17 @@ namespace sw
                 break;
         }
         const bool bBench = bScenario == false && _benchSummary.empty() == false;
-        if ( pWindow == nullptr )
+        if ( pTitleTarget == nullptr )
             return;
         // 제목 주인은 이 함수 하나다 — 평소 제목은 호스트가 들고(에디터가 프레임마다 정한다), 정한 적이 없으면 창이 처음 가진 제목이다.
-        const string& hostBaseTitle = pWindowHost->getBaseTitle();
+        const string& hostBaseTitle = pTitleTarget->getBaseTitle();
         const string& baseTitle     = hostBaseTitle.empty() ? _initialTitle : hostBaseTitle;
         const bool    bBaseChanged  = baseTitle != _lastBase;
         if ( bScenario == false && bBench == false )
         {
             if ( _bRunShown || bBaseChanged )
             {
-                pWindow->setTitle( baseTitle.c_str() ); // 시나리오가 없거나 끝났다 — 평소 제목 그대로다
+                pTitleTarget->applyWindowTitle( baseTitle.c_str() ); // 시나리오가 없거나 끝났다 — 평소 제목 그대로다
                 _lastBase = baseTitle;
                 _lastStepKind.clear();
                 _bRunShown = false;
@@ -182,7 +180,7 @@ namespace sw
         _lastStepNumber     = stepNumber;
         _lastStepKind       = stepKind;
         _bRunShown          = true;
-        pWindow->setTitle( AutomationRunTitleUtil::makeWindowTitle( input ).c_str() );
+        pTitleTarget->applyWindowTitle( AutomationRunTitleUtil::makeWindowTitle( input ).c_str() );
     }
 
     string AutomationRunTitleUtil::truncateUtf8( string_view text, uint32 maxBytes )

@@ -1,8 +1,62 @@
 #include "pch.h"
 
 #include "Engine/Automation/AutomationRunTitle.h"
+#include "Engine/Utility/EngineFrameObserver.h"
+#include "Engine/Window/IWindowTitleTarget.h"
 
 #include "TestFramework/TestFramework.h"
+
+namespace
+{
+    /** @brief 창 대신 제목 거는 횟수와 마지막 제목을 세는 가짜 이음매입니다. */
+    class FakeTitleTarget final : public sw::IWindowTitleTarget
+    {
+    public:
+        const sw::utf8*   getCurrentTitle() const override { return _current.c_str(); }
+        const sw::string& getBaseTitle() const override { return _base; }
+        void              applyWindowTitle( const sw::utf8* pTitle ) override
+        {
+            ++_applyCount;
+            _current = pTitle;
+        }
+
+        sw::string _current{ "Game" };
+        sw::string _base{};
+        int32      _applyCount{ 0 };
+    };
+
+    /** @brief 시나리오가 도는 것처럼 보이게 하는 가짜 관찰자입니다. */
+    class FakeRunObserver final : public sw::IEngineFrameObserver
+    {
+    public:
+        void               onFrameBegin( const sw::EngineFrameContext& ) override {}
+        int32              onFrameEnd( const sw::EngineFrameContext& ) override { return kRunning; }
+        int32              onWindowClosed( const sw::EngineFrameContext& ) override { return kRunning; }
+        void               onBuildRenderPacket( sw::EngineRenderPacketContext& ) override {}
+        [[nodiscard]] bool tryGetRunStatus( sw::string& outScenarioName, sw::string& outStepKind, sw::uint32& outStepNumber, sw::uint32& outFrame ) const override
+        {
+            if ( _bRunning == false )
+                return false;
+            outScenarioName = "boot";
+            outStepKind     = "Expect";
+            outStepNumber   = _stepNumber;
+            outFrame        = 1;
+            return true;
+        }
+
+        bool       _bRunning{ true };
+        sw::uint32 _stepNumber{ 1 };
+    };
+
+    void tickFrames( sw::AutomationRunTitleTracker& tracker, FakeTitleTarget& target, FakeRunObserver& observer, int32 count )
+    {
+        sw::vector<sw::IEngineFrameObserver*> listObserver{ &observer };
+        for ( int32 index = 0; index < count; ++index )
+        {
+            tracker.onFrameEnd( &target, nullptr, "dx12", listObserver );
+        }
+    }
+} // namespace
 
 // 시나리오 · 벤치 실행 정보 글 — 창 제목과 단계 로그가 같은 함수로 만든 글을 쓴다(창이나 로그 없이 글자만 본다).
 
@@ -106,4 +160,84 @@ SW_TEST_CASE( AutomationRunTitleTest, BenchSummaryKeepsOnlyBenchArgumentsSorted 
     listPair.push_back( "gv_benchCharacters=50" );
     SW_EXPECT_STREQ( "gv_benchCharacters=50 gv_benchMeshes=1000", sw::AutomationRunTitleUtil::makeBenchSummary( listPair ).c_str() );
     SW_EXPECT_TRUE( sw::AutomationRunTitleUtil::makeBenchSummary( {} ).empty() );
+}
+
+/**
+ * @brief [AutomationRunTitleTest] 같은 단계에서는 처음 한 번과 kTitleRefreshFrames 프레임마다만 제목을 건다
+ */
+SW_TEST_CASE( AutomationRunTitleTest, TrackerSetsTitleOnlyOnFirstFrameAndRefreshInterval )
+{
+    sw::AutomationRunTitleTracker tracker;
+    FakeTitleTarget               target;
+    FakeRunObserver               observer;
+    tickFrames( tracker, target, observer, static_cast<int32>( sw::AutomationRunTitleUtil::kTitleRefreshFrames ) - 1 );
+    SW_EXPECT_EQUAL( 1, target._applyCount );
+    tickFrames( tracker, target, observer, 1 ); // 30 번째 프레임
+    SW_EXPECT_EQUAL( 2, target._applyCount );
+}
+
+/**
+ * @brief [AutomationRunTitleTest] 단계가 바뀌면 새로 고침 시점이 아니어도 바로 건다
+ */
+SW_TEST_CASE( AutomationRunTitleTest, TrackerSetsTitleImmediatelyWhenStepChanges )
+{
+    sw::AutomationRunTitleTracker tracker;
+    FakeTitleTarget               target;
+    FakeRunObserver               observer;
+    tickFrames( tracker, target, observer, 3 );
+    SW_EXPECT_EQUAL( 1, target._applyCount );
+    observer._stepNumber = 2;
+    tickFrames( tracker, target, observer, 1 );
+    SW_EXPECT_EQUAL( 2, target._applyCount );
+}
+
+/**
+ * @brief [AutomationRunTitleTest] 평소 제목이 바뀌면 실행 중에도 바로 새 평소 제목 뒤에 실행 정보를 붙여 건다
+ */
+SW_TEST_CASE( AutomationRunTitleTest, TrackerFollowsBaseTitleChangeDuringRun )
+{
+    sw::AutomationRunTitleTracker tracker;
+    FakeTitleTarget               target;
+    FakeRunObserver               observer;
+    target._base = "Game \xE2\x80\x94 a \xE2\x80\x94 SW Editor";
+    tickFrames( tracker, target, observer, 2 );
+    SW_EXPECT_EQUAL( 1, target._applyCount );
+    target._base = "Game \xE2\x80\x94 a* \xE2\x80\x94 SW Editor";
+    tickFrames( tracker, target, observer, 1 );
+    SW_EXPECT_EQUAL( 2, target._applyCount );
+    SW_EXPECT_TRUE( target._current.find( "a* \xE2\x80\x94 SW Editor \xE2\x80\x94 boot" ) != sw::string::npos );
+}
+
+/**
+ * @brief [AutomationRunTitleTest] 시나리오가 없으면 평소 제목을 한 번만 걸고, 끝나면 평소 제목으로 한 번 되돌린다
+ */
+SW_TEST_CASE( AutomationRunTitleTest, TrackerRestoresBaseTitleOnceWhenRunEnds )
+{
+    sw::AutomationRunTitleTracker tracker;
+    FakeTitleTarget               target;
+    FakeRunObserver               observer;
+    observer._bRunning = false;
+    tickFrames( tracker, target, observer, 5 );
+    SW_EXPECT_EQUAL( 1, target._applyCount ); // 처음 평소 제목 하나뿐 — 같은 제목을 다시 걸지 않는다
+    SW_EXPECT_STREQ( "Game", target._current.c_str() );
+    observer._bRunning = true;
+    tickFrames( tracker, target, observer, 2 );
+    SW_EXPECT_EQUAL( 2, target._applyCount );
+    SW_EXPECT_TRUE( target._current != "Game" );
+    observer._bRunning = false;
+    tickFrames( tracker, target, observer, 4 );
+    SW_EXPECT_EQUAL( 3, target._applyCount );
+    SW_EXPECT_STREQ( "Game", target._current.c_str() );
+}
+
+/**
+ * @brief [AutomationRunTitleTest] 창이 없으면(이음매 nullptr) 아무것도 걸지 않고 멈추지 않는다
+ */
+SW_TEST_CASE( AutomationRunTitleTest, TrackerWithoutWindowDoesNothing )
+{
+    sw::AutomationRunTitleTracker         tracker;
+    FakeRunObserver                       observer;
+    sw::vector<sw::IEngineFrameObserver*> listObserver{ &observer };
+    tracker.onFrameEnd( nullptr, nullptr, "dx12", listObserver );
+    SW_EXPECT_EQUAL( size_t{ 1 }, listObserver.size() ); // 위 호출이 죽지 않고 돌아왔다
 }

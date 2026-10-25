@@ -147,12 +147,18 @@ namespace sw
         uint32 getMinimumClientWidth() const { return _minClientWidth; }
         /** @brief `setMinimumClientSize` 의 세로 크기입니다. 0 이면 제한이 없습니다. */
         uint32 getMinimumClientHeight() const { return _minClientHeight; }
+
+    private:
+        /** 제목을 거는 길을 하나로 만든다 — 호출할 수 있는 곳은 `MainWindowSubsystem`(엔진의 제목 추적기가 `IWindowTitleTarget` 으로 부른다) 뿐이다. 다른 곳은 컴파일 오류다. */
+        friend class MainWindowSubsystem;
         /**
          * @brief 창 제목을 바꿉니다(UTF-8). 같은 제목이거나 빈 제목이면 아무것도 하지 않습니다. **창 스레드(메인 스레드)에서만 부릅니다.**
          * @details 제목은 `_arrTitle` 에 남아 `recreate` 가 같은 제목으로 다시 만듭니다(빈 제목은 `recreate` 가 거절하므로 받지 않습니다).
          *          `kTitleCapacity` 를 넘는 제목은 오류를 남기고 받지 않습니다(지금 제목이 그대로 남습니다).
          */
         void setTitle( const utf8* pTitle );
+
+    public:
         /**
          * @brief 다음 `initializeWindow` 가 창 틀의 왼쪽 위를 놓을 화면 좌표를 정합니다. 부르지 않으면 플랫폼이 놓습니다(Win32 `CW_USEDEFAULT`).
          * @details 다시 만들기(`recreate`)는 그때의 창 위치를 다시 잡으므로 이 값은 처음 만들 때만 뜻이 있다.

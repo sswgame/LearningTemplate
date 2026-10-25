@@ -13,6 +13,8 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/ISubsystem.h"
 
+#include "Engine/Window/IWindowTitleTarget.h"
+
 namespace sw
 {
     class IWindow;
@@ -21,7 +23,7 @@ namespace sw
      * @class MainWindowSubsystem
      * @brief 주 창 하나의 소유자입니다. 창을 만드는 일은 하지 않는다 — 만드는 쪽(RHI 가 창이 없을 때 만든 기본 창, App 이 직접 만든 창)이 `adopt` 로 넘긴다.
      */
-    class SW_API MainWindowSubsystem final : public ISubsystem
+    class SW_API MainWindowSubsystem final : public ISubsystem, private IWindowTitleTarget
     {
     public:
         /** @brief 서브시스템 이름입니다(창을 쓰는 서브시스템이 의존 항목으로 가리킨다). */
@@ -56,9 +58,14 @@ namespace sw
          */
         void setBaseTitle( string_view title ) { _baseTitle = title; }
         /** @brief 정한 평소 창 제목입니다. 정한 적이 없으면 빈 글입니다. */
-        const string& getBaseTitle() const { return _baseTitle; }
+        const string& getBaseTitle() const override { return _baseTitle; }
+        /** @brief 제목을 거는 이음매입니다(엔진의 `AutomationRunTitleTracker` 전용). 창이 없으면 nullptr 입니다. `IWindow::setTitle` 은 이 서브시스템만 부를 수 있다. */
+        IWindowTitleTarget* getTitleTarget() { return _window != nullptr ? this : nullptr; }
 
     private:
+        const utf8* getCurrentTitle() const override;
+        void        applyWindowTitle( const utf8* pTitle ) override;
+
         unique_ptr<IWindow> _window;
         string              _baseTitle;
     };
