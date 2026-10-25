@@ -31,55 +31,11 @@ namespace sw::editor
                 }
             }
 
-            /** @brief 경로를 `/` 마디로 나눕니다(빈 마디는 버립니다). 뷰는 @p path 가 살아 있는 동안만 유효합니다. */
-            static void splitSegments( string_view path, vector<string_view>& outListSegment )
+            /** @brief 패턴 목록 중 하나가 @p normalized 경로에 맞는지 봅니다(마디 매칭은 `StringUtil::matchesPathPattern`). */
+            static bool matchesAnyPattern( const vector<string>& listPattern, string_view normalized )
             {
-                outListSegment.clear();
-                size_t start = 0;
-                while ( start <= path.size() )
-                {
-                    size_t end = path.find( '/', start );
-                    if ( end == string_view::npos )
-                        end = path.size();
-                    if ( end > start )
-                        outListSegment.push_back( path.substr( start, end - start ) );
-                    start = end + 1;
-                }
-            }
-
-            /** @brief 패턴 마디 @p patternIndex 부터가 경로 마디 @p textIndex 부터에 모두 맞는지 봅니다. 마디 `**` 만 폴더를 넘습니다. */
-            static bool matchesSegments( const vector<string_view>& listPattern, size_t patternIndex, const vector<string_view>& listText, size_t textIndex )
-            {
-                while ( patternIndex < listPattern.size() )
-                {
-                    if ( listPattern[patternIndex] == "**" )
-                    {
-                        for ( size_t skipIndex = textIndex; skipIndex <= listText.size(); ++skipIndex )
-                        {
-                            if ( matchesSegments( listPattern, patternIndex + 1, listText, skipIndex ) )
-                                return true;
-                        }
-                        return false;
-                    }
-                    if ( textIndex >= listText.size() || StringUtil::matchesWildcard( listPattern[patternIndex], listText[textIndex] ) == false )
-                        return false;
-                    ++patternIndex;
-                    ++textIndex;
-                }
-                return textIndex == listText.size();
-            }
-
-            /** @brief 패턴 목록 중 하나가 맞는지 봅니다. `/` 없는 패턴은 파일 이름에, 있는 패턴은 경로 마디에 맞춥니다. */
-            static bool matchesAnyPattern( const vector<string>& listPattern, string_view fileName, const vector<string_view>& listTextSegment )
-            {
-                vector<string_view> listPatternSegment;
                 return VectorUtil::containsIf( listPattern, [&]( const string& pattern )
-                {
-                    if ( pattern.find( '/' ) == string::npos )
-                        return StringUtil::matchesWildcard( pattern, fileName );
-                    splitSegments( pattern, listPatternSegment );
-                    return matchesSegments( listPatternSegment, 0, listTextSegment, 0 );
-                } );
+                { return StringUtil::matchesPathPattern( pattern, normalized ); } );
             }
 
             /** @brief 경로 목록 중 하나(폴더 마디의 연속)가 디렉터리 안에 마디 경계로 들어 있는지 봅니다. @p dirHaystack 은 앞뒤에 `/` 를 붙인 디렉터리입니다. */
@@ -127,19 +83,15 @@ namespace sw::editor
     bool AssetImportPathFilter::matchesPath( string_view relativePath ) const
     {
         const string normalized  = FileUtil::normalizeSeparators( relativePath );
-        const string fileName    = FileUtil::getFileNamePart( normalized );
         const string dirHaystack = "/" + FileUtil::getDirectoryPart( normalized ) + "/";
-
-        vector<string_view> listTextSegment;
-        AssetImportPathFilterInternal::splitSegments( normalized, listTextSegment );
 
         if ( AssetImportPathFilterInternal::containsAnyPath( _listExcludePath, dirHaystack ) )
             return false;
-        if ( AssetImportPathFilterInternal::matchesAnyPattern( _listExcludePattern, fileName, listTextSegment ) )
+        if ( AssetImportPathFilterInternal::matchesAnyPattern( _listExcludePattern, normalized ) )
             return false;
         if ( _listIncludePath.empty() == false && AssetImportPathFilterInternal::containsAnyPath( _listIncludePath, dirHaystack ) == false )
             return false;
-        if ( _listIncludePattern.empty() == false && AssetImportPathFilterInternal::matchesAnyPattern( _listIncludePattern, fileName, listTextSegment ) == false )
+        if ( _listIncludePattern.empty() == false && AssetImportPathFilterInternal::matchesAnyPattern( _listIncludePattern, normalized ) == false )
             return false;
         return true;
     }

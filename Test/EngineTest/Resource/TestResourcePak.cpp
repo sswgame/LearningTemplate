@@ -1539,3 +1539,18 @@ SW_TEST_CASE( StringUtilTest, MatchesWildcard )
     SW_EXPECT_FALSE( sw::StringUtil::matchesWildcard( "a?c", "ac" ) );
     SW_EXPECT_FALSE( sw::StringUtil::matchesWildcard( "", "a" ) );
 }
+
+/**
+ * @brief [StringUtilTest] 경로 패턴은 마디 매칭이다 — `/` 없는 패턴은 파일 이름에, `*` 는 폴더를 넘지 않고 마디 `**` 만 넘는다
+ */
+SW_TEST_CASE( StringUtilTest, MatchesPathPattern )
+{
+    SW_EXPECT_TRUE( sw::StringUtil::matchesPathPattern( "*.meta", "a/b/X.PNG.META" ) );
+    SW_EXPECT_TRUE( sw::StringUtil::matchesPathPattern( "thumbs.db", "a/Thumbs.db" ) );
+    SW_EXPECT_FALSE( sw::StringUtil::matchesPathPattern( "*.meta", "a.metadata" ) );
+    SW_EXPECT_TRUE( sw::StringUtil::matchesPathPattern( "a/*.png", "a/x.png" ) );
+    SW_EXPECT_FALSE( sw::StringUtil::matchesPathPattern( "a/*.png", "a/b/x.png" ) );
+    SW_EXPECT_TRUE( sw::StringUtil::matchesPathPattern( "a/**/*.png", "a/b/c/x.png" ) );
+    SW_EXPECT_TRUE( sw::StringUtil::matchesPathPattern( "a/**/*.png", "a/x.png" ) );
+    SW_EXPECT_FALSE( sw::StringUtil::matchesPathPattern( "a/**/*.png", "b/a/x.png" ) );
+}

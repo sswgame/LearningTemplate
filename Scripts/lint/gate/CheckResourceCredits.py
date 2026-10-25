@@ -116,6 +116,17 @@ def isCreditedAssetInternal(relPath: str, setAllPath: set[str]) -> bool:
     return not any(path.startswith(rawStem + ".") for path in setAllPath)
 
 
+def findCaseOnlyDuplicatesInternal(listPath: list[str]) -> list[str]:
+    """소문자로 같은 경로 쌍마다 위반 문장 하나(목록의 뒤에 온 경로 기준). 대소문자 구분 없는 파일 시스템에서는 두 파일을 만들 수 없어 경로 목록으로 시험한다."""
+    mapLowerToPath: dict[str, str] = {}
+    listViolation: list[str] = []
+    for relPath in listPath:
+        first = mapLowerToPath.setdefault(relPath.lower(), relPath)
+        if first != relPath:
+            listViolation.append(f"{relPath}: {first} 와 대소문자만 다릅니다 — 리소스 id 와 규칙 패턴이 한 이름으로 읽습니다")
+    return listViolation
+
+
 class CheckResourceCreditsGate(LintGate):
     """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다."""
 
@@ -197,13 +208,8 @@ class CheckResourceCreditsGate(LintGate):
                 text = (repositoryRoot / relPath).read_text(encoding="utf-8")
                 mapDomainToRow[relPath[:-len("/" + _kCreditsFileName)]] = readCreditRowsInternal(text)
 
-        listViolation: list[str] = []
         # 리소스 id · 경로 패턴은 대소문자를 가리지 않는다(`ResourcePaths::normalizePath`, `PathPattern`) — 대소문자만 다른 두 파일은 한 이름으로 겹친다.
-        mapLowerToPath: dict[str, str] = {}
-        for relPath in listAllPath:
-            first = mapLowerToPath.setdefault(relPath.lower(), relPath)
-            if first != relPath:
-                listViolation.append(f"{relPath}: {first} 와 대소문자만 다릅니다 — 리소스 id 와 규칙 패턴이 한 이름으로 읽습니다")
+        listViolation: list[str] = findCaseOnlyDuplicatesInternal(listAllPath)
         countAsset = 0
         for relPath in listAllPath:
             if not isCreditedAssetInternal(relPath, setAllPath):
