@@ -14,7 +14,6 @@
 		<Expect probe="Editor.HasPanel" key="behavior_tree" equals="1"/>
 		<Expect probe="Editor.HasPanel" key="charactereditor.main" equals="1"/>
 		<Expect probe="Editor.HasPanel" key="meshmodifiers.stack" equals="1"/>
-		<ExpectLog contains="[Error]" count="0"/>
 	</At>
 	<At frame="70"><Pass/></At>
 </Scenario>

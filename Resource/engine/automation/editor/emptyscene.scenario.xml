@@ -12,7 +12,6 @@
 	</At>
 	<At frame="61">
 		<ExpectImage file="emptyscene.ppm" metric="meanLuma" atLeast="0.05" provisional="측정값 기록 없음(GPU 통과만 확인) - 다음 GPU 실행의 metric 줄로 정한다"/>
-		<ExpectLog contains="[Error]" count="0"/>
 	</At>
 	<At frame="65"><Pass/></At>
 </Scenario>

@@ -24,7 +24,7 @@
 	<At frame="185"><ExpectLog contains="Catalog undo" count="1"/></At>
 	<!-- 행을 더하면 행 수가 늘고, 되돌리기(Revert)가 저장된 글로 돌린다 -->
 	<At frame="190"><EditorClick mark="catalog.addrow.first"/></At>
-	<At frame="210"><ExpectLog contains="Catalog Added row to " count="1"/></At>
+	<At frame="210"><ExpectLog contains="Catalog Added row to" count="1"/></At>
 	<At frame="215"><EditorClick mark="catalog.revert"/></At>
 	<At frame="235"><ExpectLog contains="Catalog reverted " count="1"/></At>
 	<!-- 저장된 파일을 그 종류의 로더로 읽어 경고가 없으면 통과다 -->

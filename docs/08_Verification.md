@@ -50,7 +50,7 @@ cd build/Ninja-Debug/Bin
 ```
 
 **시나리오 통과 기준.** 시나리오는 종료 코드 0 이고 처리하지 않은 `[Warning]` · `[Error]` 줄이 없을 때만 통과다. 처리하지 않은 줄이 하나라도 남으면 실행기가 15(`UnhandledLog`)로 끝나며 미확정(14)보다 항상 앞선다.
-줄이 처리됐다는 것은 ① 그 시나리오의 `<ExpectLog contains="…">` 가 선언한 줄이거나 ② 로그 id(`SW_LOG_WARNING_ID` · `SW_LOG_ERROR_ID`)가 붙은 줄이 `Resource/engine/automation/allowedlogs.json` 의 항목(id · 시나리오 하나 · 사유 · 처리 계획 문서)에 있다는 뜻이다. **id 없는 줄은 목록으로 가릴 수 없다** — 소스에 id 를 붙이거나 고친다.
+줄이 처리됐다는 것은 ① 그 시나리오의 `<ExpectLog id="…">`(로그 id 가 있는 줄) 또는 `<ExpectLog contains="…">`(id 없는 줄)가 선언한 줄이거나 ② 로그 id(`SW_LOG_WARNING_ID` · `SW_LOG_ERROR_ID`)가 붙은 줄이 `Resource/engine/automation/allowedlogs.json` 의 항목(id · 시나리오 하나 · 사유 · 처리 계획 문서)에 있다는 뜻이다. **선언은 줄을 정확히 가린다** — id 가 있는 줄은 `id` 로만, id 없는 줄은 `contains` 가 본문 전체와 같을 때만 가리고(부분 문자열은 다른 줄까지 가려 규칙을 무력화하므로 안 된다) `count="0"` 은 선언이 아니다. **id 없는 줄은 목록으로 가릴 수 없다** — 소스에 id 를 붙이거나 고친다.
 목록의 칸이 비었거나 `TODO` 이면 모든 시나리오가 읽기 오류(11)로 선다. 호스트 테스트 스위트(`hostgpu`)는 같은 목록의 `suite` 항목을 쓴다. 보고에는 이렇게 쓴다 — 허용 목록에 없는 Warning · Error 가 하나라도 있으면 "통과" 가 아니라 "실패(UnhandledLog)" 다.
 **시한과 종료 코드 12.** 프레임 시한(`timeoutFrames`)은 시나리오 시계를 붙잡은 프레임(`WaitUntil` · 시계 잡기 조건)을 세지 않으므로, 실행기가 시나리오 한 편의 벽시계 상한(`wallTimeoutSeconds`, 적지 않으면 150 초, 양수만)을 따로 본다. 넘으면 12(`TimedOut`)로 끝나고 보고를 쓴다.
 이유에 어느 단계에서 얼마나 붙잡혔는지가 든다. 프로세스 시한(`AppTestUtil::kScenarioTimeoutSeconds` 180 초)이 먼저 죽이면 보고가 없으므로 이 상한이 그보다 짧아야 한다. 부하 시나리오(`<Load>`)는 측정 창 그물이 따로 있어 이 상한을 보지 않는다. 프레임 자체가 멈춘 행(교착)은 행 감시 스레드가 상한 + 유예(5 초) 뒤에 잡는다 — 미리 채워 둔 스냅샷으로 보고(`"hang": true`)를 쓰고 종료 코드 12 로 프로세스를 끝낸다. 시한 순서(감시 + 유예 < 시계 보류 170 초 < 프로세스 시한 180 초)는 `AutomationTimeLimits.h` 의 `static_assert` 가 지킨다.
@@ -514,7 +514,7 @@ ctest --test-dir build/Ninja-Release -L load                     # 부하 스위
 - **게임 로직은 기반 탐침으로 단언하고 결정성은 백엔드끼리 비교한다** — 입력은 액션 이름(`Action` · `ActionAxis`), NPC 일정은 `AdvanceGameTime` + `Schedule.*`, AI 는 `AI.State` + `ExpectVisited`,
   "N 초 안에" 는 `WaitUntil timeoutSeconds`. 시나리오 끝에 `<Record probe="Scene.TransformHash"/>` 같은 기록을 두면 `AppScenarioTest` 가 네 백엔드의 `records` 를 비교해 다른 줄을 로그로 낸다.
   녹화(`-scenario-record` · `-scenario-record-probes`)를 다시 돌려 같은 검사점이 나오는지는 `AppScenarioTest.RecordedPlayReplaysOnEveryBackend` 가 본다. 형식은 `Source/Engine/Automation/README.md`.
-  시나리오는 선언하지 않은 `[Warning]` · `[Error]` 한 줄 · 빠진 현지화 키 하나로 진다(로그 게이트). 일부러 내는 줄은 그 시나리오에 `<ExpectLog contains="…">`, 고칠 수 없는 줄만 `Resource/engine/automation/allowedlogs.json` 에 이유와 함께 둔다.
+  시나리오는 선언하지 않은 `[Warning]` · `[Error]` 한 줄 · 빠진 현지화 키 하나로 진다(로그 게이트). 일부러 내는 줄은 그 시나리오에 `<ExpectLog id="…">`(id 없는 줄만 `contains="…"`; 린트 `CheckExpectLogPhrases` 가 id · 문구가 소스에 있는지 본다 — 문구가 바뀌어 `count="0"` 이 거짓 통과하는 것을 막는다), 고칠 수 없는 줄만 `Resource/engine/automation/allowedlogs.json` 에 이유와 함께 둔다.
   게이트에 걸린 줄은 실패 메시지의 `unexpected log:` 줄과 `Saved/Automation/<이름>_<백엔드>.log` 에 있다.
   창 제목에서 시나리오를 본다 — 시나리오 · 벤치 실행 중 제목은 `<게임 제목> — <시나리오> · <백엔드> · step <번호> <단계> · f<프레임>`(벤치는 `bench <gv_bench 인자> · <백엔드> · f<프레임>`)이다. 에디터도 같다 — 앞부분이 `<게임> — <씬>[*] — SW Editor` 이고 제목은 엔진(`AutomationRunTitleTracker`) 한 곳만 건다. 캡처한 화면의 제목으로 어느 실행인지 읽고, 로그는 `[Scenario] <이름> step <번호> <단계> frame <F>` · `finished <결과> frames <N>` 줄로 같은 정보를 남긴다.
   `materialpreview` 가 GL 체인에서 한 번 진 적이 있다(미리보기 평균 R-B 가 옛 값 — 이후 0/23 재현 없음). 다시 지면 탐침 `Editor.MaterialDocumentIsProbeAsset` · `Editor.MaterialSwitchPending` 의 값으로 문서가 안 바뀐 것인지 계산이 안 따라온 것인지 가른다.

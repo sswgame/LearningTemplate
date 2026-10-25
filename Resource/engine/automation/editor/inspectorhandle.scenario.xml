@@ -75,7 +75,6 @@
 	<At frame="445"><EditorClick mark="inspector.method.invoke.assignTarget"/></At>
 	<At frame="470">
 		<Expect probe="Editor.SelectedHandle" is="TestMesh / MeshComponent#0"/>
-		<ExpectLog contains="[Error]" count="0"/>
 		<Variable name="gv_editorUiScale" value="0"/>
 		<Pass/>
 	</At>

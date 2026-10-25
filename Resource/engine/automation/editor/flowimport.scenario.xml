@@ -32,7 +32,6 @@
 	<At frame="120">
 		<EditorExpectObject name="FlickerLight" component="PointLightComponent" count="1"/>
 		<Expect probe="Editor.SceneDirty" equals="0"/>
-		<ExpectLog contains="[Error]" count="0"/>
 	</At>
 	<At frame="125"><DevCommand line="editor scene.new"/></At>
 	<At frame="140"><DevCommand line="asset.removeImportFolder editor/automationtemp/editor.flowimport"/></At>

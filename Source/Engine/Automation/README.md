@@ -151,7 +151,7 @@ frame 900 <ExpectVisited> #3: AI.State(FarmAutoFarmer) never went through 'Till 
 실행기는 시나리오 구간의 줄과, 프로세스 전체에서 빠진 현지화 키(`LocalizationManager::getMissingKeys`)를 봅니다. `AppScenarioTest` 는 같은 판정을 프로세스 출력 전체(기동 · 종료 포함)에 다시 겁니다.
 줄 하나가 처리됐다는 것은 둘 중 하나입니다.
 
-- 시나리오가 일부러 내는 줄은 그 시나리오에 `<ExpectLog contains="…">` 로 선언합니다(줄 수 단언과 짝입니다).
+- 시나리오가 일부러 내는 줄은 그 시나리오에 `<ExpectLog id="…">`(로그 id 가 있는 줄 — 문구가 바뀌어도 따라온다)나 `<ExpectLog contains="…">`(id 없는 줄만)로 선언합니다(줄 수 단언과 짝입니다). 선언은 줄을 정확히 가립니다: id 있는 줄은 `id` 로만, id 없는 줄은 `contains` 가 본문 전체와 같을 때만 가리며 부분 문자열은 다른 줄을 가리지 못합니다(`count="0"` 은 선언이 아닙니다). `id` 와 `contains` 는 정확히 하나입니다. `contains` 는 로그 본문만 보므로 `[Error]` 같은 수준 꼬리표는 센 글이 아닙니다. 린트 `CheckExpectLogPhrases` 가 id · 문구가 소스에 실제로 있는지 봅니다(한계는 그 게이트 머리말).
 - 고칠 수 없는 줄은 `Resource/engine/automation/allowedlogs.json` 의 항목으로 허용합니다. 항목은 **로그 id**(`SW_LOG_WARNING_ID` · `SW_LOG_ERROR_ID`), **범위**(`scenario` 나 `suite` 중 정확히 하나 — 전역 허용은 없다),
   **사유**(`reason`), **처리 계획 문서 이름**(`plan`)이 모두 있어야 읽힙니다. 하나라도 비었거나 `TODO` 이면, id 에 와일드카드가 있거나 같은 항목이 두 번이면 시나리오가 읽기 오류(11)로 섭니다.
 

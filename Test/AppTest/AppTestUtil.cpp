@@ -495,9 +495,17 @@ namespace test
             policy.selectScenario( scenario.getName() );
             for ( const sw::AutomationStep& step : scenario.getSteps() )
             {
-                const sw::string* pContains = step._kind == "ExpectLog" ? step.findAttribute( "contains" ) : nullptr;
+                if ( step._kind != "ExpectLog" )
+                    continue;
+                const sw::string* pCount = step.findAttribute( "count" );
+                if ( pCount != nullptr && *pCount == "0" )
+                    continue; // count="0" 은 "없어야 한다" 는 단언이지 선언이 아니다
+                const sw::string* pContains = step.findAttribute( "contains" );
                 if ( pContains != nullptr )
                     policy.declareExpected( *pContains );
+                const sw::string* pID = step.findAttribute( "id" );
+                if ( pID != nullptr )
+                    policy.declareExpectedID( *pID );
             }
         } );
         sw::StringUtil::forEachLine( output, [&policy, &listLine]( sw::string_view line )

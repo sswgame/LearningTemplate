@@ -233,6 +233,8 @@ SW_TEST_CASE( AutomationScenarioTest, UnknownStepOrAttributeIsALoadError )
         R"(<WaitUntil probe="Test.Ready" equals="1" timeoutFrames="-1"/>)",
         R"(<WaitUntil probe="Test.Ready" equals="1" frames="3"/>)",
         R"(<WaitUntil probe="Test.Ready" equals="1"/><Pass/>)",
+        R"(<ExpectLog id="Probe.A" contains="x" atLeast="1"/>)", // id · contains 는 정확히 하나
+        R"(<ExpectLog atLeast="1"/>)",
     };
     sw::InputManager input;
     SW_ASSERT_TRUE( input.initialize() );
@@ -694,7 +696,7 @@ SW_TEST_CASE( AutomationScenarioTest, ExpectLogCountsLinesSinceAFrame )
     SW_ASSERT_TRUE( input.initialize() );
     sw::AutomationRunner runner;
     SW_ASSERT_TRUE( runner.startFromText( R"(<Scenario name="t" startAfter="Immediately">
-        <At frame="2"><ExpectLog contains="[AutoProbe] tick" count="3"/></At>
+        <At frame="2"><ExpectLog contains="[AutoProbe] tick" count="3"/><ExpectLog id="Probe.Tick" atLeast="0"/></At>
         <At frame="4"><ExpectLog contains="[AutoProbe] tick" count="2" since="3"/><ExpectLog contains="[AutoProbe]" atLeast="5"/><Pass/></At>
       </Scenario>)" ) );
     sw::AutomationOutcome result = sw::AutomationOutcome::Running;
@@ -702,11 +704,65 @@ SW_TEST_CASE( AutomationScenarioTest, ExpectLogCountsLinesSinceAFrame )
     {
         runner.onFrameBegin( input );
         input.beginFrame( 1.0f / 60.0f );
-        SW_LOG_WARNING( "[AutoProbe] tick %#", frame ); // Warning — Info 는 Shipping 에서 호출째 사라져 셀 줄이 없다
+        SW_LOG_WARNING_ID( "Probe.Tick", "[AutoProbe] tick %#", frame ); // Warning — Info 는 Shipping 에서 호출째 사라져 셀 줄이 없다
         result = runner.onFrameEnd( input );
         input.endFrame();
     }
     SW_EXPECT_TRUE_MSG( result == sw::AutomationOutcome::Passed, runner.getFinishReason().c_str() );
+    input.shutdown();
+}
+
+/**
+ * @brief [AutomationScenarioTest] ExpectLog 는 로그 id 로도 센다 — 문구가 달라도 같은 id 의 줄이고, 선언한 id 의 Warning 은 로그 게이트도 통과한다
+ */
+SW_TEST_CASE( AutomationScenarioTest, ExpectLogCountsLinesByID )
+{
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    sw::AutomationRunner runner;
+    SW_ASSERT_TRUE( runner.startFromText( R"(<Scenario name="t" startAfter="Immediately">
+        <At frame="2"><ExpectLog id="Probe.IdCounted" count="3"/><ExpectLog id="Probe.IdNever" count="0"/><Pass/></At>
+      </Scenario>)" ) );
+    sw::AutomationOutcome result = sw::AutomationOutcome::Running;
+    for ( uint32 frame = 0; frame < 20 && result == sw::AutomationOutcome::Running; ++frame )
+    {
+        runner.onFrameBegin( input );
+        input.beginFrame( 1.0f / 60.0f );
+        SW_LOG_WARNING_ID( "Probe.IdCounted", "[AutoProbe] wording %# of the counted line", frame ); // 문구에 상관없이 id 로 센다
+        result = runner.onFrameEnd( input );
+        input.endFrame();
+    }
+    SW_EXPECT_TRUE_MSG( result == sw::AutomationOutcome::Passed, runner.getFinishReason().c_str() );
+    input.shutdown();
+}
+
+/**
+ * @brief [AutomationScenarioTest] 짧은 ExpectLog 문구는 다른 Warning 줄을 가리지 못한다 — 선언은 본문 전체가 같은 줄만 가린다
+ * @details 센 줄 수(부분 문자열)는 맞아도 id 없는 Warning 은 처리하지 않은 줄이라 UnhandledLog(15)로 끝난다. `count="0"` 은 선언이 아니다.
+ */
+SW_TEST_CASE( AutomationScenarioTest, ShortExpectLogPhraseDoesNotHideOtherWarnings )
+{
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    sw::AutomationRunner runner;
+    SW_ASSERT_TRUE( runner.startFromText( R"(<Scenario name="t" startAfter="Immediately">
+        <At frame="2"><ExpectLog contains="[AutoProbe]" atLeast="1"/><ExpectLog contains="[AutoProbe] exact line" atLeast="1"/><Pass/></At>
+      </Scenario>)" ) );
+    sw::AutomationOutcome result = sw::AutomationOutcome::Running;
+    for ( uint32 frame = 0; frame < 20 && result == sw::AutomationOutcome::Running; ++frame )
+    {
+        runner.onFrameBegin( input );
+        input.beginFrame( 1.0f / 60.0f );
+        if ( frame == 1 )
+        {
+            SW_LOG_WARNING( "[AutoProbe] exact line" );       // 본문 전체가 선언과 같다 — 가린다
+            SW_LOG_WARNING( "[AutoProbe] exact line again" ); // 선언 문구를 담았을 뿐인 다른 줄 — 가리지 못한다
+        }
+        result = runner.onFrameEnd( input );
+        input.endFrame();
+    }
+    SW_EXPECT_TRUE_MSG( result == sw::AutomationOutcome::UnhandledLog, runner.getFinishReason().c_str() );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( runner.getUnhandledLogs().size() ) );
     input.shutdown();
 }
 
@@ -849,8 +905,14 @@ SW_TEST_CASE( AutomationScenarioTest, LogPolicyJudgesByIDAndScope )
     SW_EXPECT_TRUE( policy.classify( sw::LogLevel::Info, "", "plain info" ) == Verdict::NotGated );
     SW_EXPECT_TRUE( policy.classify( sw::LogLevel::Error, "", "[Scenario] FAIL t" ) == Verdict::NotGated );
     SW_EXPECT_TRUE( policy.classify( sw::LogLevel::Error, "", "[Expected Defensive Test] broken file" ) == Verdict::NotGated );
-    policy.declareExpected( "deliberate" );
-    SW_EXPECT_TRUE( policy.classify( sw::LogLevel::Warning, "", "a deliberate warning" ) == Verdict::Declared );
+    policy.declareExpected( "a deliberate warning" );
+    SW_EXPECT_TRUE( policy.classify( sw::LogLevel::Warning, "", "a deliberate warning" ) == Verdict::Declared );                       // 본문 전체가 같을 때만 가린다
+    SW_EXPECT_TRUE( policy.classify( sw::LogLevel::Warning, "", "a deliberate warning about something else" ) == Verdict::MissingID ); // 선언 문구를 담은 다른 줄은 가리지 못한다
+    SW_EXPECT_TRUE( policy.classify( sw::LogLevel::Warning, "", "deliberate" ) == Verdict::MissingID );
+    SW_EXPECT_TRUE( policy.classify( sw::LogLevel::Warning, "Font.Other", "a deliberate warning" ) == Verdict::NotAllowed ); // id 가 있는 줄은 문구로 선언할 수 없다
+    policy.declareExpectedID( "Font.Declared" );
+    SW_EXPECT_TRUE( policy.classify( sw::LogLevel::Warning, "Font.Declared", "any wording" ) == Verdict::Declared ); // id 로 선언하면 문구와 무관하다
+    SW_EXPECT_TRUE( policy.classify( sw::LogLevel::Warning, "Font.Declaredx", "any wording" ) == Verdict::NotAllowed );
 
     sw::AutomationLogPolicy otherScenario;
     SW_ASSERT_TRUE_MSG( otherScenario.parseAllowList( R"({ "allowed": [ { "id": "Font.NoGlyph", "scenario": "alpha", "reason": "r", "plan": "p" } ] })", "other.json", error ), error.c_str() );
