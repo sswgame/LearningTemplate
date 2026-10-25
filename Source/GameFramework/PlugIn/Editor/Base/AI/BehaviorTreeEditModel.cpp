@@ -49,6 +49,89 @@ namespace sw::editor
                 text.append( reason.data(), reason.size() );
                 return text;
             }
+
+            /** @brief 노드 원소의 속성을 @p inoutValue(`_type` 은 채워져 있다)로 읽습니다. 없거나 깨진 속성이 하나라도 있으면 false 입니다(오류는 로그에 남는다). */
+            [[nodiscard]] static bool readAttributes( const XMLNode& node, BehaviorTreeEditNode& inoutValue )
+            {
+                std::optional<string>  text;
+                std::optional<float32> number;
+                std::optional<bool>    flag;
+                bool                   bRead = node.readOptionalAttribute<string>( "name", text );
+                if ( text.has_value() )
+                    inoutValue._name = *text;
+                switch ( inoutValue._type )
+                {
+                    case BehaviorNodeType::Selector:
+                    {
+                        bRead                 = node.readOptionalAttribute<bool>( "reactive", flag ) && bRead;
+                        inoutValue._bReactive = flag.value_or( false );
+                        break;
+                    }
+                    case BehaviorNodeType::Repeat:
+                    {
+                        const std::optional<int32> count = node.readRequiredAttribute<int32>( "count" );
+                        bRead                            = count.has_value() && bRead;
+                        inoutValue._count                = count.value_or( 0 );
+                        if ( inoutValue._count < 0 )
+                            bRead = false;
+                        break;
+                    }
+                    case BehaviorNodeType::Cooldown:
+                    case BehaviorNodeType::TimeLimit:
+                    case BehaviorNodeType::Wait:
+                    {
+                        const std::optional<float32> seconds = node.readRequiredAttribute<float32>( "seconds" );
+                        bRead                                = seconds.has_value() && bRead;
+                        inoutValue._seconds                  = seconds.value_or( 0.0f );
+                        if ( inoutValue._seconds < 0.0f )
+                            bRead = false;
+                        break;
+                    }
+                    case BehaviorNodeType::BlackboardCondition:
+                    {
+                        const std::optional<string> key = node.readRequiredAttribute<string>( "key" );
+                        bRead                           = key.has_value() && bRead;
+                        inoutValue._key                 = key.value_or( string{} );
+                        std::optional<string> compareText;
+                        std::optional<string> abortText;
+                        bRead             = node.readOptionalAttribute<string>( "compare", compareText ) && bRead;
+                        bRead             = node.readOptionalAttribute<string>( "abort", abortText ) && bRead;
+                        bRead             = node.readOptionalAttribute<float32>( "value", number ) && bRead;
+                        inoutValue._value = number.value_or( 0.0f );
+                        if ( compareText.has_value() && BehaviorTreeNames::parse( *compareText, inoutValue._compare ) == false )
+                            bRead = false;
+                        if ( abortText.has_value() && BehaviorTreeNames::parse( *abortText, inoutValue._abort ) == false )
+                            bRead = false;
+                        break;
+                    }
+                    case BehaviorNodeType::Action:
+                    case BehaviorNodeType::Condition:
+                    {
+                        const std::optional<string> task = node.readRequiredAttribute<string>( "task" );
+                        bRead                            = task.has_value() && bRead;
+                        inoutValue._task                 = task.value_or( string{} );
+                        break;
+                    }
+                    case BehaviorNodeType::MoveTo:
+                    {
+                        const std::optional<string> key = node.readRequiredAttribute<string>( "key" );
+                        bRead                           = key.has_value() && bRead;
+                        inoutValue._key                 = key.value_or( string{} );
+                        bRead                           = node.readOptionalAttribute<float32>( "repathDistance", number ) && bRead;
+                        inoutValue._repathDistance      = number.value_or( 0.5f );
+                        if ( inoutValue._repathDistance < 0.0f )
+                            bRead = false;
+                        break;
+                    }
+                    case BehaviorNodeType::Sequence:
+                    case BehaviorNodeType::Inverter:
+                    case BehaviorNodeType::ForceSuccess:
+                    {
+                        break;
+                    }
+                }
+                return bRead;
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -336,84 +419,7 @@ namespace sw::editor
 
         BehaviorTreeEditNode value{};
         value._type = type;
-        std::optional<string>  text;
-        std::optional<float32> number;
-        std::optional<bool>    flag;
-        bool                   bRead = node.readOptionalAttribute<string>( "name", text );
-        if ( text.has_value() )
-            value._name = *text;
-        switch ( type )
-        {
-            case BehaviorNodeType::Selector:
-            {
-                bRead            = node.readOptionalAttribute<bool>( "reactive", flag ) && bRead;
-                value._bReactive = flag.value_or( false );
-                break;
-            }
-            case BehaviorNodeType::Repeat:
-            {
-                const std::optional<int32> count = node.readRequiredAttribute<int32>( "count" );
-                bRead                            = count.has_value() && bRead;
-                value._count                     = count.value_or( 0 );
-                if ( value._count < 0 )
-                    bRead = false;
-                break;
-            }
-            case BehaviorNodeType::Cooldown:
-            case BehaviorNodeType::TimeLimit:
-            case BehaviorNodeType::Wait:
-            {
-                const std::optional<float32> seconds = node.readRequiredAttribute<float32>( "seconds" );
-                bRead                                = seconds.has_value() && bRead;
-                value._seconds                       = seconds.value_or( 0.0f );
-                if ( value._seconds < 0.0f )
-                    bRead = false;
-                break;
-            }
-            case BehaviorNodeType::BlackboardCondition:
-            {
-                const std::optional<string> key = node.readRequiredAttribute<string>( "key" );
-                bRead                           = key.has_value() && bRead;
-                value._key                      = key.value_or( string{} );
-                std::optional<string> compareText;
-                std::optional<string> abortText;
-                bRead        = node.readOptionalAttribute<string>( "compare", compareText ) && bRead;
-                bRead        = node.readOptionalAttribute<string>( "abort", abortText ) && bRead;
-                bRead        = node.readOptionalAttribute<float32>( "value", number ) && bRead;
-                value._value = number.value_or( 0.0f );
-                if ( compareText.has_value() && BehaviorTreeNames::parse( *compareText, value._compare ) == false )
-                    bRead = false;
-                if ( abortText.has_value() && BehaviorTreeNames::parse( *abortText, value._abort ) == false )
-                    bRead = false;
-                break;
-            }
-            case BehaviorNodeType::Action:
-            case BehaviorNodeType::Condition:
-            {
-                const std::optional<string> task = node.readRequiredAttribute<string>( "task" );
-                bRead                            = task.has_value() && bRead;
-                value._task                      = task.value_or( string{} );
-                break;
-            }
-            case BehaviorNodeType::MoveTo:
-            {
-                const std::optional<string> key = node.readRequiredAttribute<string>( "key" );
-                bRead                           = key.has_value() && bRead;
-                value._key                      = key.value_or( string{} );
-                bRead                           = node.readOptionalAttribute<float32>( "repathDistance", number ) && bRead;
-                value._repathDistance           = number.value_or( 0.5f );
-                if ( value._repathDistance < 0.0f )
-                    bRead = false;
-                break;
-            }
-            case BehaviorNodeType::Sequence:
-            case BehaviorNodeType::Inverter:
-            case BehaviorNodeType::ForceSuccess:
-            {
-                break;
-            }
-        }
-        if ( bRead == false )
+        if ( Internal::readAttributes( node, value ) == false )
         {
             outError = Internal::makeNodeError( node, "has a missing or invalid attribute - see the log" );
             return -1;
