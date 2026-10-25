@@ -8,6 +8,8 @@
 
 2026-10-25 코드 읽기로 정리했습니다. 이 문서의 표는 코드에서 찾은 쓰기 위치이고, 실행으로 확인한 것은 없습니다(작업자는 빌드 · 실행을 하지 않습니다). 빠진 위치는 H1 의 스냅샷 점검이 잡습니다.
 
+**H1 코드는 있고 실행이 남았습니다(통합에서 확인):** 매니페스트 id `host-write-snapshot`. 도구는 `Scripts/qa/WriteSnapshot.py`, 알려진 위치 표는 `Test/AppTest/HostWriteLocations.json`(2절 표와 같은 W 번호)이다. 표에 없는 쓰기가 나오면 이 문서 2절과 그 JSON 에 같이 적는다. 점검하지 않는 위치: W9 `Bin/Modules` 섀도 복사본(pid 로 구분됨), W12 `GoldenDiff` · `Golden`(`Bin` 밖).
+
 ## 1. 지금 구조
 
 - `Test/TestPolicy.json` 의 `AppTest.hostResourceLock = "AppBin"` 이 `AppTest_HostOnly_Shard1..5` 와 Debug 의 `AppTest_Race` 에 `RESOURCE_LOCK` 을 단다. `Test/PythonTest/CMakeLists.txt` 의 `QaGoldenImages` 도 같은 잠금이다.

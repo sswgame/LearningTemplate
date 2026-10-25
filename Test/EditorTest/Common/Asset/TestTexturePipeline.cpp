@@ -631,6 +631,7 @@ namespace sw::editor
      */
     SW_TEST_CASE( EditorTexturePipelineTest, RepositoryUIImagesEndingInNAreNotNormalMaps )
     {
+        SW_TEST_REQUIRES_FEATURE( SourceResources ); // game/shooter3d/ 팩은 Shipping 에 없다
         SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
         TextureImportConfig config;
         SW_ASSERT_TRUE( config.loadFromFile( TextureImporter::makeDefaultImportConfigPath() ) == ConfigReadResult::Loaded );

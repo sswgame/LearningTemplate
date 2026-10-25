@@ -1059,6 +1059,11 @@
       "id": "import-rule-overlap-test", "title": "임포트 규칙 겹침 막기(모델 · 텍스처 규칙의 마디 단위 매칭 · 겹침 오류 · 저장소 원본이 규칙 하나에만 맞음 · 같은 원본을 두 번 임포트하면 같은 바이트)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 30,
       "filter": "ModelImporterTest.*,EditorTexturePipelineTest.*,TextureImportStampTest.*",
       "source": "docs/plans/ImportRuleOverlap.md I1 ~ I3", "result_doc": "docs/plans/ImportRuleOverlap.md 상태를 끝으로"
+    },
+    {
+      "id": "host-write-snapshot", "title": "HostGpuIsolation H1 — 시나리오마다 Scripts/qa/WriteSnapshot.py 로 App 을 돌려 HostWriteLocations.json 에 없는 쓰기 위치를 찾는다", "kind": "test", "config": "Shipping", "platform": "windows", "gpu": "shared", "pending": true,
+      "need_command": "시나리오(엔진 · 게임 팩 · 에디터)마다 `py -3 -m Scripts.qa.WriteSnapshot --app <App> --label <이름> -- <그 시나리오 인자>` 를 도는 반복이 매니페스트에 없다. 에디터 시나리오는 -EnableEditor 가 든 인자로 따로 돈다",
+      "source": "docs/plans/HostGpuIsolation.md 5절 H1", "result_doc": "docs/plans/HostGpuIsolation.md 2절 표"
     }
   ]
 }
