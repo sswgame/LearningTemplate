@@ -16,7 +16,28 @@
 | 에이전트에게 맡길 때 · 토큰 | [에이전트와 토큰](../12_Agents.md), [작업자 규칙](WorkerRules.md) |
 | 환경 · 도구 함정 | [함정](../14_Pitfalls.md) |
 
-## 000000000. 2026-10-25 통합 K — CI 실패 수정 2 개가 main 에 들어감(push 안 함) (이것부터 읽는다)
+## 0000000000. 2026-10-25 통합 L 대기 — 병합 안 된 브랜치 24 개와 도는 에이전트 (이것부터 읽는다)
+
+**상태**: main 은 `eb2a1fa59`(통합 K)까지 push 했다. CI 실행 `40160506131` 은 끝나지 않았다 — `py -3 -m Scripts ci-jobs --summary` 로 먼저 본다(Linux 쪽 `CookJobTest.RegistryCookFollowsTheMetaListing` · `SceneCookTest.*` · Wayland `UIDeterminismTest.*` 가 통합 K 의 Linux 수정 확인 대상). 아래 브랜치는 전부 **병합 · 빌드 · 테스트 안 했다**(린트만). 워크트리 `D:/w/<이름>` 은 병합 전이라 지우지 않는다.
+
+**병합 순서(위에 얹힌 사슬을 먼저)**
+- 문서 분할: `arch1x`(`docs/09_Decisions.md` → `docs/decisions/5-N_*.md`, `StatusBoard.md` 생성 파일, `integ-gate`). **가장 먼저 병합**하고 이후 브랜치의 결정 문구(`fixn` 의 불리언 인자 규칙, `cachec` 의 IAssetCache 결정, `arch2a` 의 EditorCore + Model 폴더 규칙, `fixl`/`fixr` 의 결정)를 영역 파일에 옮긴다. 병합 뒤 `status-board --write`.
+- 테스트 소스 목록: `arch2c` → `fixl` → `fixn`(= fixl + dup31 병합 + 검토 권고). `dup31` 은 `fixn` 에 이미 병합돼 있다.
+- 에디터 코어: `arch2a`(2a + 2b) → `fixp`(EngineTest 가 EditorCore 링크, gen stem 중복 FATAL, 테스트 미러 33 개 이동). `fixi`(에디터 후보), `fixk`(게이트) → `fixq`(곡선 · 셀 · 프리팹 O(N²)).
+- 게임플레이 데이터: `fixj` → `fixo` → `fixt`(진행 중일 수 있음).
+- 태스크 대기: `fixm` → `fixr`.
+- 캐시: `cachec` → `fixs`(진행 중일 수 있음).
+- 애니메이션: `anim1` → `anim2`(U3 전환 — 진행 중일 수 있음).
+- 건드린 파일이 겹쳐 충돌 예상: `Scripts/lint/rules/CheckMutableStatics.toml`(`fixi` · `cachec` · `fixp` · `arch3` — 병합 뒤 `--regen-baseline`), `cmake/Engine/TestTargets.cmake` · `UnbuiltSources.cmake`(`fixl` · `arch2c`), `Test/EngineTest/CMakeLists.txt`(`arch2c` · `fixl` · `fixp`), `Source/Editor/CMakeLists.txt`(`arch2a` · `fixp`), `README.md`/`StatusBoard.md`.
+- **병합하지 않는다**: `rhiasync`(옛 동기 가상 함수 3 개를 지워 B0 번들 전까지 컴파일 안 됨) — `rhiasync2`(계약 수정 + B0 골격, 진행 중)와 함께 GPU 검증 담당(`gpu-verifier`)과 같이 다룬다. `arch3`(정적 상태 · 설정 소유, 진행 중 · 커밋 3 + 작업 파일 15), `packed`(PackedTypes P3, 진행 중 · 작업 파일 19, 커밋 없음), `arch0`(0 단계 측정, 진행 중)은 끝났는지 `git log main..wt/<이름>` 과 `git -C D:/w/<이름> status` 로 확인한다.
+
+**첫 일(순서)**: ① `ci-jobs --summary`. ② 끝난 브랜치를 위 순서로 `integrator` 한 명이 병합 → `-k 0` 빌드(컴파일 위험은 각 브랜치 보고에 있다: 새 IAssetCache 생성자 → 전체 재빌드, `sw_linkEditorCore` 의 FlagOps 충돌, `std::erase_if`/`unordered_map` 해시, 리플렉션 재생성(`ShooterPlayerComponent`)) → Debug · Shipping · Shipping-Server `nogpu`/`lint`/`race` → **에디터 실제 기동 확인**(교훈 ⑪, 통합 J 의 규칙) → 기동 시나리오 네 백엔드. ③ 안 끝난 에이전트의 결과 수집. ④ `gpu-verifier`: `## 000000` 목록 + `hostgpu` 격리 H1~H4 + RHI B0. ⑤ [ArchitectureSeams](ArchitectureSeams.md) 0 단계 결과(`arch0`)로 5 · 6 단계를 열지 정한다.
+
+**알려진 불확실**: 애니메이션 정합 테스트 둘(`FollowerReadsLeaderFinalPoseAfterAttachmentPhase`, `PoseModifierTest.FollowerReadsLeaderPoseAfterRig`)은 `anim1` 만 병합하면 빨갛다(결함 재현 테스트) — `anim2`(U3)와 함께 병합한다. `fixn` 의 `overlay.show <바> 2` 거절, `profile.trace 1|0|true|false` 수용은 동작 변화다. `fixj` 의 `SceneAudio._emitter` 는 순회 순서가 보존되지 않는다. `fixr` 의 `describeFirstUnfinished` 는 진단 근사값이라 TSan 에서 걸릴 수 있다. `IRHIDevice.cpp:317` 환경변수 `equals(pSoftwareEnv, "1")` 손 비교는 `rhiasync2` 가 끝나면 `tryParseBool` 로.
+
+**아직 고치지 않은 같은 결함 후보(소유 밖이거나 막 나온 것)**: `SkeletalAnimatorComponent.cpp:778` `_listRootMotionModifier` contains+push_back, `SocketBindingComponent`/`MotionWarpingComponent`/`LocomotionWarpingComponent` 가 위 유닛의 최종 포즈를 읽는 계약(U3 뒤 검증), `stem` 중복 검사를 `sw_addReflectionStep` 전역으로, 테스트 실행 파일이 소스를 직접 컴파일하는 곳(`SmokeTest` 의 `EditorModuleHost.cpp`, `EditorUITest` Backend 4 개), `whenAny` 숨은 간선((가) 안은 `SmallTaskThroughput` 으로 분기 비용을 먼저 잰다), `TextMeasureCache` 문맥 해시 2^-64 잔여, `GPUUploadQueue`·`AsyncFileIO`·`JoltJobSystem`·`NavTileRebaker`·`MaterialXML`·`RenderPipelineAsset`·`RenderPassAsset` 의 자체 대기 경로(읽지 않음), `EditorViewportPreview::applyMaterial` 의 `ensureMeta` 동기 비용(측정 안 함), 3.2 래퍼 걷기(범위가 넓어 병합 뒤 다음 묶음), `hostgpu` 격리 H1~H4.
+
+## 000000000. 2026-10-25 통합 K — CI 실패 수정 2 개가 main 에 들어감(push 함) (위 절 다음에 읽는다)
 
 **상태**: `cifixui`(UI 결정성 고정물이 글리프 캐시 프레임 시계를 올린다) · `cifixcook`(Linux 에서 소문자 id 를 붙인 디스크 도메인의 실제 표기로 푼다 — `FileUtil::findPathIgnoringCase`)를 `D:/w/integk` 에서 병합해 main 에 fast-forward 로 넣었다. 충돌 없음. **push 하지 않았다**. 워크트리 · 브랜치는 지웠다. 통합이 같은 모양 하나를 고쳤다: 엔진 없이 UISystem + 가짜 글꼴을 돌리는 `TestUIAccessibility` · `TestUILocalization` · `TestUITextInput` 의 프레임 함수도 시계를 안 올렸다 — `FakeFontServiceFixture::beginFrame` 도우미로 네 테스트가 같은 순서를 쓴다.
 
