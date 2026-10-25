@@ -210,11 +210,12 @@ namespace sw
         // 주 출력의 크기 — 게임 뷰 RT 면 그 크기, 백버퍼 경로면 스왑체인 크기다(화면 사각형 뷰 · 주 시점 사각형의 비율이 이것을 본다).
         const uint32 outputWidth  = packet._viewportWidth > 0 ? packet._viewportWidth : rhi.getDevice().getBackBufferWidth();
         const uint32 outputHeight = packet._viewportHeight > 0 ? packet._viewportHeight : rhi.getDevice().getBackBufferHeight();
+        // 화면에 나가는 뷰(주 시점 · 화면 사각형)가 같은 값을 쓴다. 주 시점이 없는 프레임에도 화면 사각형 뷰는 실리므로 카메라와 상관없이 프레임마다 한 번 갱신한다.
+        const float32 autoRenderScale = updateAutoRenderScale( deltaTime );
         if ( pCam != nullptr )
         {
             // 주 시점의 출력 설정(사각형 · 배율 · 끌 기능)과 컷 표시. 비율은 사각형의 것이다(분할 화면의 한 칸).
-            const float32 autoRenderScale = updateAutoRenderScale( deltaTime ); // 화면에 나가는 뷰(주 시점 · 화면 사각형)가 같은 값을 쓴다
-            packet._mainView              = RenderViewCollector::makeMainSettings( pCam, autoRenderScale );
+            packet._mainView = RenderViewCollector::makeMainSettings( pCam, autoRenderScale );
             packet.setMainView( pCam->getViewProjectionMatrix( RenderViewCollector::computeAspect( packet._mainView, outputWidth, outputHeight ) ), pCam->getCameraPosition() );
             // 안개도 씬이 갖는다. 카메라가 물속이면 물의 안개가 컴포넌트의 값을 덮는다(FogComponent::findFog).
             packet._bHasFog = ( pActiveObjects != nullptr && FogComponent::findFog( *pActiveObjects, pCam->getCameraPosition(), packet._fog ) ) ? SW_TRUE : SW_FALSE;
