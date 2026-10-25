@@ -292,6 +292,9 @@ namespace sw
                                                                       D3D11RHIDeviceSubmissionInternal::kIdleWaitTimeoutMilliseconds ) == false )
                 SW_LOG_ERROR( "waitIdle: the GPU did not finish within %# ms", D3D11RHIDeviceSubmissionInternal::kIdleWaitTimeoutMilliseconds );
             _completedFrameSerial = _frameSerial; // GPU 가 쉰다 — 낸 프레임이 모두 끝났다
+            // 낸 전송도 모두 끝났다. 쿼리를 풀로 돌려주고 워터마크를 올린다.
+            _transferQueue.retireAll( [this]( Microsoft::WRL::ComPtr<ID3D11Query>& query )
+            { _listFreeTransferQuery.push_back( std::move( query ) ); } );
         }
         _releaseQueue.flushAll();
     }
@@ -331,6 +334,52 @@ namespace sw
         }
         // 콜백은 즉시 컨텍스트 잠금 밖에서 부른다 — 비동기 되읽기의 콜백이 같은 잠금을 잡고 Map 한다.
         _releaseQueue.tickCompleted( completedSerial );
+    }
+
+    Microsoft::WRL::ComPtr<ID3D11Query> D3D11RHIDevice::acquireTransferQuery()
+    {
+        if ( _listFreeTransferQuery.empty() == false )
+        {
+            Microsoft::WRL::ComPtr<ID3D11Query> query = std::move( _listFreeTransferQuery.back() );
+            _listFreeTransferQuery.pop_back();
+            return query;
+        }
+        D3D11_QUERY_DESC eventDesc{};
+        eventDesc.Query = D3D11_QUERY_EVENT;
+        Microsoft::WRL::ComPtr<ID3D11Query> query;
+        if ( FAILED( _device->CreateQuery( &eventDesc, query.GetAddressOf() ) ) )
+        {
+            SW_LOG_ERROR( "acquireTransferQuery: failed to create the event query that marks a transfer's end" );
+            return nullptr;
+        }
+        return query;
+    }
+
+    uint64 D3D11RHIDevice::endTransfer( Microsoft::WRL::ComPtr<ID3D11Query> query )
+    {
+        _deviceContext->End( query.Get() );
+        return _transferQueue.enqueue( std::move( query ) );
+    }
+
+    void D3D11RHIDevice::retireFinishedTransfers()
+    {
+        ID3D11DeviceContext* pContext = _deviceContext.Get();
+        // 플래그 0 으로 묻는다 — 명령을 GPU 로 내보내므로 프레임을 돌리지 않아도 되풀이 폴링이 끝에 이른다.
+        _transferQueue.retireDone(
+            [this, pContext]( Microsoft::WRL::ComPtr<ID3D11Query>& query )
+        {
+            BOOL          bDone = FALSE;
+            const HRESULT hr    = pContext->GetData( query.Get(), &bDone, sizeof( bDone ), 0 );
+            if ( FAILED( hr ) )
+            {
+                SW_LOG_ERROR( "pollTransfer: GetData on the transfer query failed hr=0x%# (device removed?)", static_cast<uint32>( hr ) );
+                _transferSerials.markLost();
+                return false;
+            }
+            return hr != S_FALSE && bDone != FALSE;
+        },
+            [this]( Microsoft::WRL::ComPtr<ID3D11Query>& query )
+        { _listFreeTransferQuery.push_back( std::move( query ) ); } );
     }
 
     void D3D11RHIDevice::enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate )

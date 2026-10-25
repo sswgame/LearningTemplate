@@ -324,21 +324,27 @@ namespace sw
         return true;
     }
 
-    bool D3D11RHIResourceFactory::uploadTexture2D( RHITextureHandle texture, const RHITextureUploadDesc& desc )
+    RHITransferSubmit D3D11RHIResourceFactory::submitTextureUpload( RHITextureHandle texture, const RHITextureUploadDesc& desc )
     {
         D3D11RHIDevice::TextureRecord* pRecord               = _pDevice->resolveTexture( texture );
         const bool                     bTextureNotUploadable = pRecord == nullptr || pRecord->_texture == nullptr || _pDevice->_deviceContext == nullptr;
         if ( bTextureNotUploadable )
-            return false;
+        {
+            SW_LOG_ERROR( "submitTextureUpload: texture %# or the device context is not usable", texture );
+            return RHITransferSubmit::rejected();
+        }
         if ( pRecord->_bDepth != SW_FALSE )
-            return false;
+        {
+            SW_LOG_ERROR( "submitTextureUpload: texture %# is a depth texture", texture );
+            return RHITransferSubmit::rejected();
+        }
 
         D3D11_TEXTURE2D_DESC texDesc{};
         pRecord->_texture->GetDesc( &texDesc );
         if ( desc._arraySlice >= texDesc.ArraySize )
         {
-            SW_LOG_ERROR( "uploadTexture2D: slice %# is out of range (%# slices)", desc._arraySlice, texDesc.ArraySize );
-            return false;
+            SW_LOG_ERROR( "submitTextureUpload: slice %# is out of range (%# slices)", desc._arraySlice, texDesc.ArraySize );
+            return RHITransferSubmit::rejected();
         }
 
         RHITextureMipSpan arrMip[constant::kMaxTextureMipCount]{};
@@ -346,41 +352,113 @@ namespace sw
                                                                texDesc.MipLevels, arrMip, constant::kMaxTextureMipCount );
         if ( mipCount == 0 )
         {
-            SW_LOG_ERROR( "uploadTexture2D: unsupported format or not enough data (%# bytes for %#×%#, %# mips)",
+            SW_LOG_ERROR( "submitTextureUpload: unsupported format or not enough data (%# bytes for %#×%#, %# mips)",
                           desc._sizeBytes, texDesc.Width, texDesc.Height, texDesc.MipLevels );
-            return false;
+            return RHITransferSubmit::rejected();
         }
 
-        // UpdateSubresource 는 즉시 컨텍스트 큐에 순서대로 들어가므로 뒤이은 드로우보다 먼저 실행된다.
-        std::scoped_lock<mutex> lock{ _pDevice->_immediateContextMutex };
+        // UpdateSubresource 는 소스를 그 자리에서 복사하고(계약 1) 즉시 컨텍스트 큐에 순서대로 들어가므로 앞서 제출된 프레임 뒤, 뒤이은 드로우 앞에서 실행된다(계약 3).
+        // 끝은 큐 뒤에 단 이벤트 쿼리가 알린다. 시리얼은 같은 락 안에서 매긴다(계약 5).
+        std::scoped_lock<mutex>             lock{ _pDevice->_immediateContextMutex };
+        Microsoft::WRL::ComPtr<ID3D11Query> query = _pDevice->acquireTransferQuery();
+        if ( query == nullptr )
+            return RHITransferSubmit::rejected();
         for ( uint32 mip = 0; mip < mipCount; ++mip )
         {
             const RHITextureMipSpan& span        = arrMip[mip];
             const UINT               subresource = D3D11CalcSubresource( span._mip, desc._arraySlice, texDesc.MipLevels );
             _pDevice->_deviceContext->UpdateSubresource( pRecord->_texture.Get(), subresource, nullptr, span._pData, span._rowBytes, span._sizeBytes );
         }
-        return true;
+        const uint64 serial = _pDevice->endTransfer( std::move( query ) );
+        pRecord->_lastTransferSerial.store( serial );
+        return _pDevice->_transferSerials.makeAccepted( serial );
     }
 
-    bool D3D11RHIResourceFactory::uploadTexture2DRegion( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc )
+    RHITransferSubmit D3D11RHIResourceFactory::submitTextureRegionUpload( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc )
     {
         D3D11RHIDevice::TextureRecord* pRecord                     = _pDevice->resolveTexture( texture );
         const bool                     bTextureRegionNotUploadable = pRecord == nullptr || pRecord->_texture == nullptr || _pDevice->_deviceContext == nullptr || pRecord->_bDepth != SW_FALSE;
         if ( bTextureRegionNotUploadable )
-            return false;
+        {
+            SW_LOG_ERROR( "submitTextureRegionUpload: texture %# is missing, a depth texture, or the device context is not usable", texture );
+            return RHITransferSubmit::rejected();
+        }
 
         D3D11_TEXTURE2D_DESC texDesc{};
         pRecord->_texture->GetDesc( &texDesc );
         uint32 rowBytes{ 0 };
         if ( validateTextureRegionUpload( fromDxgiFormat( texDesc.Format ), texDesc.Width, texDesc.Height, texDesc.MipLevels, texDesc.ArraySize, desc, rowBytes ) == false )
-            return false;
+            return RHITransferSubmit::rejected();
 
-        // 박스는 밉 안의 픽셀 좌표다(끝은 포함하지 않는다). 즉시 컨텍스트 큐에 순서대로 들어가 뒤이은 드로우보다 먼저 실행된다.
-        const D3D11_BOX         box{ desc._x, desc._y, 0, desc._x + desc._width, desc._y + desc._height, 1 };
-        const UINT              subresource = D3D11CalcSubresource( desc._mip, desc._arraySlice, texDesc.MipLevels );
-        std::scoped_lock<mutex> lock{ _pDevice->_immediateContextMutex };
+        // 박스는 밉 안의 픽셀 좌표다(끝은 포함하지 않는다). 즉시 컨텍스트 큐에 순서대로 들어가 앞서 제출된 프레임 뒤, 뒤이은 드로우 앞에서 실행된다.
+        const D3D11_BOX                     box{ desc._x, desc._y, 0, desc._x + desc._width, desc._y + desc._height, 1 };
+        const UINT                          subresource = D3D11CalcSubresource( desc._mip, desc._arraySlice, texDesc.MipLevels );
+        std::scoped_lock<mutex>             lock{ _pDevice->_immediateContextMutex };
+        Microsoft::WRL::ComPtr<ID3D11Query> query = _pDevice->acquireTransferQuery();
+        if ( query == nullptr )
+            return RHITransferSubmit::rejected();
         _pDevice->_deviceContext->UpdateSubresource( pRecord->_texture.Get(), subresource, &box, desc._pData, rowBytes, rowBytes * desc._height );
+        const uint64 serial = _pDevice->endTransfer( std::move( query ) );
+        pRecord->_lastTransferSerial.store( serial );
+        return _pDevice->_transferSerials.makeAccepted( serial );
+    }
+
+    RHITransferStatus D3D11RHIResourceFactory::pollTransfer( RHITransferTicket ticket )
+    {
+        const RHITransferStatus status = _pDevice->_transferSerials.classify( ticket );
+        if ( status != RHITransferStatus::Pending || _pDevice->_deviceContext == nullptr )
+            return status;
+        // 즉시 컨텍스트에 묻는다(플래그 0 이라 명령을 GPU 로 내보낸다). 프레임을 돌리지 않아도 되풀이하면 끝에 이른다.
+        {
+            std::scoped_lock<mutex> lock{ _pDevice->_immediateContextMutex };
+            _pDevice->retireFinishedTransfers();
+        }
+        return _pDevice->_transferSerials.classify( ticket );
+    }
+
+    bool D3D11RHIResourceFactory::takeTextureReadback( RHITransferTicket ticket, vector<uint8>& outBytes )
+    {
+        if ( pollTransfer( ticket ) != RHITransferStatus::Complete )
+        {
+            SW_LOG_ERROR( "takeTextureReadback: ticket %# has not completed", ticket._serial );
+            return false;
+        }
+        D3D11RHIDevice::TextureReadbackRecord readback;
+        if ( _pDevice->_readbackTable.take( ticket._serial, readback ) == false )
+        {
+            SW_LOG_ERROR( "takeTextureReadback: ticket %# is not a pending texture readback (an upload ticket, or already taken or discarded)", ticket._serial );
+            return false;
+        }
+
+        // 이벤트 쿼리가 복사 뒤를 지났으므로 기다리지 않고 읽는다(DO_NOT_WAIT). 여기서 아직이라고 하면 쿼리 순서가 어긋난 것이라 오류다.
+        std::scoped_lock<mutex>  lock{ _pDevice->_immediateContextMutex };
+        D3D11_MAPPED_SUBRESOURCE mapped{};
+        const HRESULT            hr = _pDevice->_deviceContext->Map( readback._staging.Get(), 0, D3D11_MAP_READ, D3D11_MAP_FLAG_DO_NOT_WAIT, &mapped );
+        if ( FAILED( hr ) || mapped.pData == nullptr )
+        {
+            SW_LOG_ERROR( "takeTextureReadback: Map of the staging texture failed hr=0x%# for a completed ticket %#", static_cast<uint32>( hr ), ticket._serial );
+            return false;
+        }
+        outBytes.assign( readback._sizeBytes, 0 );
+        const uint32 rowCount = readback._sizeBytes / readback._rowBytes;
+        for ( uint32 row = 0; row < rowCount; ++row )
+        {
+            Memory::copy( outBytes.data() + static_cast<uint64>( row ) * readback._rowBytes,
+                          static_cast<const uint8*>( mapped.pData ) + static_cast<uint64>( row ) * mapped.RowPitch, readback._rowBytes );
+        }
+        _pDevice->_deviceContext->Unmap( readback._staging.Get(), 0 );
+        if ( readback._bDepth != SW_FALSE )
+            convertRHIDepth24ToFloat( outBytes.data(), readback._width * readback._height );
         return true;
+    }
+
+    void D3D11RHIResourceFactory::discardTextureReadback( RHITransferTicket ticket )
+    {
+        if ( ticket._deviceGeneration != _pDevice->_transferSerials.getGeneration() )
+            return;
+        // 진행 중인 복사가 쓰는 스테이징은 COM 참조가 GPU 가 끝날 때까지 붙들어 준다. 표에서 빼고 참조를 놓으면 된다.
+        D3D11RHIDevice::TextureReadbackRecord readback;
+        (void)_pDevice->_readbackTable.take( ticket._serial, readback ); // 없으면 업로드 티켓이거나 이미 가져감 · 버림이다 — 계약상 아무 일도 하지 않는다
     }
 
     RHIFormat D3D11RHIResourceFactory::getTextureFormat( RHITextureHandle texture ) const
@@ -396,24 +474,33 @@ namespace sw
         return fromDxgiFormat( texDesc.Format );
     }
 
-    bool D3D11RHIResourceFactory::readbackTexture2D( RHITextureHandle texture, uint32 mip, uint32 arraySlice, vector<uint8>& outBytes, RHITextureMipSpan& outLayout )
+    RHITransferSubmit D3D11RHIResourceFactory::submitTextureReadback( RHITextureHandle texture, uint32 mip, uint32 arraySlice, RHITextureMipSpan& outLayout )
     {
         D3D11RHIDevice::TextureRecord* pRecord             = _pDevice->resolveTexture( texture );
         const bool                     bTextureNotReadable = pRecord == nullptr || pRecord->_texture == nullptr || _pDevice->_device == nullptr || _pDevice->_deviceContext == nullptr;
         if ( bTextureNotReadable )
-            return false;
+        {
+            SW_LOG_ERROR( "submitTextureReadback: texture %# or the device is not usable", texture );
+            return RHITransferSubmit::rejected();
+        }
 
         D3D11_TEXTURE2D_DESC texDesc{};
         pRecord->_texture->GetDesc( &texDesc );
         if ( mip >= texDesc.MipLevels || arraySlice >= texDesc.ArraySize )
-            return false;
-        // 깊이는 typeless(R24G8)로 만들어져 있다. 같은 포맷의 스테이징으로 통째로 복사하고 아래에서 0..1 float32 로 바꾼다(kRHIDepthReadbackFormat).
+        {
+            SW_LOG_ERROR( "submitTextureReadback: mip %# / slice %# is out of range (%# mips, %# slices)", mip, arraySlice, texDesc.MipLevels, texDesc.ArraySize );
+            return RHITransferSubmit::rejected();
+        }
+        // 깊이는 typeless(R24G8)로 만들어져 있다. 같은 포맷의 스테이징으로 통째로 복사하고 가져갈 때 0..1 float32 로 바꾼다(kRHIDepthReadbackFormat).
         const bool      bDepth       = pRecord->_bDepth != SW_FALSE;
         const RHIFormat layoutFormat = bDepth ? kRHIDepthReadbackFormat : fromDxgiFormat( texDesc.Format );
         if ( computeRHITextureMipLayout( layoutFormat, texDesc.Width, texDesc.Height, mip, outLayout ) == false )
-            return false;
+        {
+            SW_LOG_ERROR( "submitTextureReadback: unsupported format for %#x%# mip %#", texDesc.Width, texDesc.Height, mip );
+            return RHITransferSubmit::rejected();
+        }
 
-        // 밉 하나 크기의 스테이징 텍스처로 복사한 뒤 Map 한다. Map 이 GPU 를 기다린다.
+        // 밉 하나 크기의 스테이징 텍스처로 복사하고, 이벤트 쿼리가 그 복사 뒤를 지나면 가져갈 수 있다(`takeTextureReadback` 이 DO_NOT_WAIT 로 Map 한다).
         D3D11_TEXTURE2D_DESC stagingDesc = texDesc;
         stagingDesc.Width                = outLayout._width;
         stagingDesc.Height               = outLayout._height;
@@ -423,28 +510,27 @@ namespace sw
         stagingDesc.BindFlags            = 0;
         stagingDesc.CPUAccessFlags       = D3D11_CPU_ACCESS_READ;
         stagingDesc.MiscFlags            = 0;
-        Microsoft::WRL::ComPtr<ID3D11Texture2D> staging;
-        if ( FAILED( _pDevice->_device->CreateTexture2D( &stagingDesc, nullptr, staging.GetAddressOf() ) ) )
-            return false;
-
-        std::scoped_lock<mutex> lock{ _pDevice->_immediateContextMutex };
-        _pDevice->_deviceContext->CopySubresourceRegion( staging.Get(), 0, 0, 0, 0, pRecord->_texture.Get(), D3D11CalcSubresource( mip, arraySlice, texDesc.MipLevels ),
-                                                         nullptr );
-
-        D3D11_MAPPED_SUBRESOURCE mapped{};
-        if ( FAILED( _pDevice->_deviceContext->Map( staging.Get(), 0, D3D11_MAP_READ, 0, &mapped ) ) )
-            return false;
-        outBytes.assign( outLayout._sizeBytes, 0 );
-        const uint32 rowCount = outLayout._sizeBytes / outLayout._rowBytes;
-        for ( uint32 row = 0; row < rowCount; ++row )
+        D3D11RHIDevice::TextureReadbackRecord readback;
+        if ( FAILED( _pDevice->_device->CreateTexture2D( &stagingDesc, nullptr, readback._staging.GetAddressOf() ) ) )
         {
-            Memory::copy( outBytes.data() + static_cast<uint64>( row ) * outLayout._rowBytes,
-                          static_cast<const uint8*>( mapped.pData ) + static_cast<uint64>( row ) * mapped.RowPitch, outLayout._rowBytes );
+            SW_LOG_ERROR( "submitTextureReadback: failed to create the staging texture (%#x%#)", outLayout._width, outLayout._height );
+            return RHITransferSubmit::rejected();
         }
-        _pDevice->_deviceContext->Unmap( staging.Get(), 0 );
-        if ( bDepth )
-            convertRHIDepth24ToFloat( outBytes.data(), outLayout._width * outLayout._height );
-        return true;
+        readback._width     = outLayout._width;
+        readback._height    = outLayout._height;
+        readback._rowBytes  = outLayout._rowBytes;
+        readback._sizeBytes = outLayout._sizeBytes;
+        readback._bDepth    = bDepth ? SW_TRUE : SW_FALSE;
+
+        std::scoped_lock<mutex>             lock{ _pDevice->_immediateContextMutex };
+        Microsoft::WRL::ComPtr<ID3D11Query> query = _pDevice->acquireTransferQuery();
+        if ( query == nullptr )
+            return RHITransferSubmit::rejected();
+        _pDevice->_deviceContext->CopySubresourceRegion( readback._staging.Get(), 0, 0, 0, 0, pRecord->_texture.Get(),
+                                                         D3D11CalcSubresource( mip, arraySlice, texDesc.MipLevels ), nullptr );
+        const uint64 serial = _pDevice->endTransfer( std::move( query ) );
+        _pDevice->_readbackTable.add( serial, std::move( readback ) );
+        return _pDevice->_transferSerials.makeAccepted( serial );
     }
 
     // 길이 유지(긴 함수 정리 기준): 서술 채우기 · 리소스 생성 · 뷰의 순서가 곧 의미라 나누지 않는다.

@@ -19,6 +19,7 @@
 #include "Engine/Graphics/RHI/Support/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Support/RHIReleaseQueue.h"
 #include "Engine/Graphics/RHI/Support/RHITimestamp.h"
+#include "Engine/Graphics/RHI/Support/RHITransferSerials.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
 #include <shared_mutex>
@@ -221,6 +222,16 @@ namespace sw
          */
         void retireFrameOnGPU();
 
+        /** @brief 전송 하나의 완료를 알릴 이벤트 쿼리를 풀에서 꺼내거나 만듭니다. 즉시 컨텍스트 잠금 안에서 부릅니다. 못 만들면 nullptr 입니다(이유는 로그). */
+        Microsoft::WRL::ComPtr<ID3D11Query> acquireTransferQuery();
+        /**
+         * @brief 방금 낸 전송 뒤에 이벤트 쿼리를 끝으로 달고 시리얼을 발급합니다. 즉시 컨텍스트 잠금 안에서, 전송 명령을 낸 직후에 부릅니다(시리얼은 제출 순서대로 같은 락 안에서 매긴다).
+         * @return 발급한 시리얼입니다.
+         */
+        uint64 endTransfer( Microsoft::WRL::ComPtr<ID3D11Query> query );
+        /** @brief 앞에서부터 끝난 전송을 풀로 돌려주고 워터마크를 올립니다. `Flush` 로 GPU 에 내보내되 기다리지 않습니다. 즉시 컨텍스트 잠금 안에서 부릅니다. */
+        void retireFinishedTransfers();
+
         /// @brief 버퍼와 그 SRV 입니다. SRV 는 셰이더가 버퍼로 읽는 것(구조 버퍼와 인다이렉트 인자 버퍼)에만 있습니다.
         struct BufferRecord
         {
@@ -242,8 +253,10 @@ namespace sw
             uint32                                                 _height;
             uint32                                                 _arraySize; ///< 면 수
             RHITextureDimension                                    _dimension;
-            uint8                                                  _bDepth   : 1;
-            uint8                                                  _reserved : 7;
+            /// @brief 이 텍스처에 마지막으로 제출한 쓰기 전송(업로드)의 시리얼입니다. 0 이면 전송한 적이 없습니다. bindless 등록이 이 전송이 끝났는지 확인합니다(`RHITransferSerials::isTextureReadyToRegister`).
+            atomic<uint64> _lastTransferSerial;
+            uint8          _bDepth   : 1;
+            uint8          _reserved : 7;
             /** @brief 빈 텍스처 레코드로 만듭니다. */
             TextureRecord()
                 : _listSliceRtv{}
@@ -252,6 +265,7 @@ namespace sw
                 , _height{ 0 }
                 , _arraySize{ 1 }
                 , _dimension{ RHITextureDimension::Texture2D }
+                , _lastTransferSerial{ 0 }
                 , _bDepth{ SW_FALSE }
                 , _reserved{ 0 } {}
 
@@ -442,6 +456,26 @@ namespace sw
         vector<D3D11RHICommandList*> _listLiveCmd;
 
         RHIReleaseQueue _releaseQueue;
+
+        /// @brief 읽기 하나가 들고 있는 것입니다. 복사한 스테이징 텍스처와, 결과 바이트를 꺼낼 때 필요한 배치입니다(`takeTextureReadback` 이 `Map( DO_NOT_WAIT )` 로 읽습니다).
+        struct TextureReadbackRecord
+        {
+            Microsoft::WRL::ComPtr<ID3D11Texture2D> _staging;
+            uint32                                  _width{ 0 };
+            uint32                                  _height{ 0 };
+            uint32                                  _rowBytes{ 0 };
+            uint32                                  _sizeBytes{ 0 };
+            uint8                                   _bDepth{ SW_FALSE };
+        };
+
+        /// @brief 전송 티켓의 시리얼 발급기와 완료 워터마크입니다(DX11 은 즉시 컨텍스트 하나라 제출 순서가 곧 실행 순서입니다).
+        RHITransferSerials _transferSerials;
+        /// @brief 제출한 전송마다 이벤트 쿼리 하나를 제출 순서대로 쌓습니다. 앞에서부터 끝난 것만 워터마크를 올립니다. 쿼리는 `_immediateContextMutex` 안에서만 만지고 풀(`_listFreeTransferQuery`)로 돌려 씁니다.
+        RHITransferFenceQueue<Microsoft::WRL::ComPtr<ID3D11Query>> _transferQueue;
+        /// @brief 끝난 이벤트 쿼리 풀입니다. `_immediateContextMutex` 로 보호합니다.
+        vector<Microsoft::WRL::ComPtr<ID3D11Query>> _listFreeTransferQuery;
+        /// @brief 아직 가져가지 않은 텍스처 읽기입니다(시리얼로 찾습니다).
+        RHIPendingReadbackTable<TextureReadbackRecord> _readbackTable;
 
         sw::unique_ptr<D3D11RHICommandContext>  _frameStreamContext;
         sw::unique_ptr<D3D11RHIResourceFactory> _resourceImpl;
