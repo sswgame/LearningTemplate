@@ -25,6 +25,7 @@
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import json
 import re
 import sys
@@ -40,8 +41,8 @@ from common.Paths import getProjectRoot  # noqa: E402
 from common.Process import ProcessResult, runProcess  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
 
-#: `--test_list` 가 고른 케이스를 찍는 줄(`  Suite.Case`).
-_kListedCaseRe = re.compile(r"^  ([A-Z]\w*Test)\.(\w+)\s*$")
+#: `--test_list` 가 고른 케이스를 찍는 줄(`  Suite.Case`). 매개변수 · 생성 케이스는 이름에 `.` 이 더 든다(`Suite.Case.dx12` · `AppScenarioTest.<게임>.<시나리오>.<백엔드>`).
+_kListedCaseRe = re.compile(r"^  ([A-Z]\w*Test)\.(\w+(?:\.\w+)*)\s*$")
 
 
 class RunTestsError(RuntimeError):
@@ -70,6 +71,15 @@ def listSelectedCases(executable: Path, workingDir: Path, pattern: str, listExtr
     result = requireSucceededInternal(runProcess([executable, "--test_list", f"--test_filter={pattern}", *listExtra], cwd=workingDir),
                                       f"`{executable.name} --test_list`")
     return [f"{match.group(1)}.{match.group(2)}" for line in result.stdout.splitlines() if (match := _kListedCaseRe.match(line))]
+
+
+def findUnmatchedPieces(pattern: str, listCase: list[str]) -> list[str]:
+    """
+    필터의 고르는 조각(`,` · `:` 로 나눈 것, `-` 뒤 빼기는 뺀다) 가운데 어느 케이스도 고르지 않는 것. 필터 전체가 하나라도 고르면 실행은 서므로,
+    케이스가 매개변수별(`Suite.Case.dx12`)로 쪼개지거나 이름이 바뀌어 한 조각만 비면 그 확인이 조용히 빠진다 — 조각마다 본다.
+    """
+    positive = pattern.split("-", 1)[0]
+    return [piece for piece in re.split(r"[,:]", positive) if piece and not any(fnmatch.fnmatchcase(caseName, piece) for caseName in listCase)]
 
 
 def listChangedFiles(root: Path, base: str | None) -> list[str] | None:
@@ -178,6 +188,11 @@ def runPatternInternal(tree: BuildTree, args: argparse.Namespace, listPassthroug
     listSelection = sorted((item for item in listSelection if item[1]), key=lambda item: item[0].name)
     if not listSelection:
         print(f"[RunTests] '{args.pattern}' 가 고르는 케이스가 어느 실행 파일에도 없습니다 ({len(listExecutable)} 개를 물었다)", file=sys.stderr)
+        return ExitCode.Violation
+    listUnmatched = findUnmatchedPieces(args.pattern, [caseName for _, listCase in listSelection for caseName in listCase])
+    if listUnmatched:
+        print(f"[RunTests] 필터 조각 {len(listUnmatched)} 개가 아무 케이스도 고르지 않습니다(이름이 바뀌었거나 매개변수별 `.<매개변수>` 로 쪼개졌다 — `.*` 를 붙인다): "
+              f"{', '.join(listUnmatched)}", file=sys.stderr)
         return ExitCode.Violation
 
     for executable, listCase in listSelection:

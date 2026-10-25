@@ -13,7 +13,7 @@
 	<At frame="150">
 		<EditorExpectObject name="ZeroRadiusLight"/>
 		<Expect probe="Editor.PanelOpen" equals="0"/>
-		<ExpectLog contains="Radius is 0" atLeast="1"/>
+		<ExpectLog id="ObjectValidation.Issue" atLeast="1"/>
 	</At>
 	<!-- 단추는 누름과 뗌을 다른 프레임에 나눠야 눌린다 -->
 	<At frame="155"><EditorClick mark="statusBar.mapCheck" state="down"/></At>

@@ -12,7 +12,7 @@
 	<At frame="120">
 		<EditorExpectObject name="ProbeVolume"/>
 		<!-- 픽스처 볼륨은 일부러 굽지 않았다 — 열 때 검증 경고("is not baked")를 낸다(lightprobebake 시나리오와 같다) -->
-		<ExpectLog contains="Light probe volume is not baked" atLeast="1"/>
+		<ExpectLog id="ObjectValidation.Issue" atLeast="1"/>
 		<Expect probe="Editor.LightProbeBakeRunning" equals="0"/>
 		<Expect probe="Editor.LightProbeBakeCount" equals="0"/>
 	</At>
