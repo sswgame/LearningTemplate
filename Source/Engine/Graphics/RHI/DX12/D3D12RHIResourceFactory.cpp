@@ -17,15 +17,6 @@ namespace sw
 {
     SW_LOG_CALLER( "D3D12RHIResourceFactory" );
 
-    namespace
-    {
-        /** @brief 링 할당 결과를 제출 결과로 돌려줍니다(`Accepted` 는 부르는 쪽이 시리얼로 만든다). */
-        RHITransferSubmit makeUnacceptedSubmit( RHISubmitResult result )
-        {
-            return result == RHISubmitResult::Busy ? RHITransferSubmit::busy() : RHITransferSubmit::rejected();
-        }
-    } // namespace
-
     RHIBufferHandle D3D12RHIResourceFactory::createConstantBuffer( uint32 size )
     {
         const UINT                             alignedSize = MathUtil::align( size, constant::kConstantBufferAlignment );
@@ -359,7 +350,7 @@ namespace sw
         RHIStagingSpan                    span{};
         const RHISubmitResult             allocateResult = _pDevice->allocateStagingSpan( ring, totalBytes, "submitTextureUpload", span );
         if ( allocateResult != RHISubmitResult::Accepted )
-            return makeUnacceptedSubmit( allocateResult );
+            return RHITransferSubmit::fromUnaccepted( allocateResult );
         // 링 안의 실제 위치로 풋프린트를 다시 받는다(BaseOffset). 구간 시작이 배치 오프셋 정렬(512)의 배수라 서브리소스 오프셋도 규칙을 지킨다.
         _pDevice->_device->GetCopyableFootprints( &resourceDesc, firstSubresource, mipCount, span._offsetBytes, arrFootprint, arrRowCount, arrRowSize, &totalBytes );
 
@@ -453,7 +444,7 @@ namespace sw
         RHIStagingSpan                    span{};
         const RHISubmitResult             allocateResult = _pDevice->allocateStagingSpan( ring, static_cast<uint64>( rowPitch ) * desc._height, "submitTextureRegionUpload", span );
         if ( allocateResult != RHISubmitResult::Accepted )
-            return makeUnacceptedSubmit( allocateResult );
+            return RHITransferSubmit::fromUnaccepted( allocateResult );
 
         uint8*       pDstBase = ring.getSpanMappedBase( span ) + span._offsetBytes;
         const uint8* pSrcBase = static_cast<const uint8*>( desc._pData );

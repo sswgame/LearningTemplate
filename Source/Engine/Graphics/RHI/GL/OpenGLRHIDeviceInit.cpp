@@ -487,7 +487,7 @@ namespace sw
             }
         } );
         _pipelineStates.clear();
-        _listRenderPass.clear();
+        _renderPassLedger.clear();
 
         _gpuBuffers.forEach( []( uint32& glBuf )
         {

@@ -61,12 +61,6 @@ namespace sw
         {
             return ( ( value + alignment - 1 ) / alignment ) * alignment;
         }
-
-        /** @brief 링 할당 결과를 제출 결과로 돌려줍니다(`Accepted` 는 부르는 쪽이 시리얼로 만든다). */
-        RHITransferSubmit makeUnacceptedSubmit( RHISubmitResult result )
-        {
-            return result == RHISubmitResult::Busy ? RHITransferSubmit::busy() : RHITransferSubmit::rejected();
-        }
     } // namespace
 
     RHIBufferHandle VulkanRHIResourceFactory::createConstantBuffer( uint32 size )
@@ -644,7 +638,7 @@ namespace sw
         RHIStagingSpan                      span{};
         const RHISubmitResult               allocateResult = _pDevice->allocateStagingSpan( ring, ringBytes, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, "submitTextureUpload", span );
         if ( allocateResult != RHISubmitResult::Accepted )
-            return makeUnacceptedSubmit( allocateResult );
+            return RHITransferSubmit::fromUnaccepted( allocateResult );
 
         // 소스 복사는 전송 락 밖에서 한다(계약 1: 반환 전에 소스를 복사한다).
         VkBufferImageCopy arrRegion[constant::kMaxTextureMipCount]{};
@@ -739,7 +733,7 @@ namespace sw
         RHIStagingSpan                      span{};
         const RHISubmitResult               allocateResult = _pDevice->allocateStagingSpan( ring, usedBytes + copyAlignment, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, "submitTextureRegionUpload", span );
         if ( allocateResult != RHISubmitResult::Accepted )
-            return makeUnacceptedSubmit( allocateResult );
+            return RHITransferSubmit::fromUnaccepted( allocateResult );
         const uint64 ringOffset = alignUpToMultiple( span._offsetBytes, copyAlignment );
         Memory::copy( ring.getSpanMappedBase( span ) + ringOffset, desc._pData, static_cast<size_t>( usedBytes ) );
 
@@ -923,7 +917,7 @@ namespace sw
         RHIStagingSpan                      span{};
         const RHISubmitResult               allocateResult = _pDevice->allocateStagingSpan( ring, outLayout._sizeBytes + copyAlignment, VK_BUFFER_USAGE_TRANSFER_DST_BIT, "submitTextureReadback", span );
         if ( allocateResult != RHISubmitResult::Accepted )
-            return makeUnacceptedSubmit( allocateResult );
+            return RHITransferSubmit::fromUnaccepted( allocateResult );
         const uint64 ringOffset = alignUpToMultiple( span._offsetBytes, copyAlignment );
 
         std::scoped_lock<mutex>            transferLock{ _pDevice->_transferMutex };

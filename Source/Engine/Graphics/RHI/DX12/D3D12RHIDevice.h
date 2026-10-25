@@ -20,6 +20,7 @@
 #include "Engine/Graphics/RHI/Support/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
 #include "Engine/Graphics/RHI/Support/RHIReleaseQueue.h"
+#include "Engine/Graphics/RHI/Support/RHIRenderPassLedger.h"
 #include "Engine/Graphics/RHI/Support/RHIStagingAllocator.h"
 #include "Engine/Graphics/RHI/Support/RHITimestamp.h"
 #include "Engine/Graphics/RHI/Support/RHITransferSerials.h"
@@ -487,14 +488,6 @@ namespace sw
         static constexpr uint32 kNullTextureBindlessIndex = 0;
         static_assert( kOnlineBlockDescriptorCount >= kMaxSlotTableSize, "온라인 블록이 슬롯 테이블 하나보다 작다" );
 
-        /// @brief 렌더 패스 서술 캐시입니다.
-        struct D3D12RenderPassRecord
-        {
-            RHIRenderPassDesc _desc{};
-            uint8             _bAlive   : 1;
-            uint8             _reserved : 7;
-        };
-
         /// @brief 힙 슬롯에 등록된 버퍼와 텍스처입니다.
         struct BindlessResourceRecord
         {
@@ -591,7 +584,7 @@ namespace sw
         void destroyMappedStagingBuffer( Microsoft::WRL::ComPtr<ID3D12Resource>& rBuffer, uint8*& pMapped );
         /**
          * @brief @p ring 에서 구간을 잡습니다. 차 있으면 끝난 전송을 한 번 걷은 뒤 다시 봅니다. 기다리지 않습니다.
-         * @details 할당 결과를 제출 결과로 옮기는 곳은 `RHITransferSerials::classifyStagingAllocation` 하나다(잃은 장치면 Full 도 Rejected). 단독 구간이면 그 크기의
+         * @details 할당 결과를 제출 결과로 옮기고 못 받은 구간을 놓고 이유를 남기는 곳은 `RHIStagingRingUtil::settleAllocation` 하나다(잃은 장치면 Full 도 Rejected). 단독 구간이면 그 크기의
          *          일회성 버퍼를 만들어 붙인다(앞선 단독 버퍼가 남아 있으면 먼저 지운다 — 장부가 새 단독 구간을 내줬다면 앞 구간은 이미 돌아왔다).
          *          Rejected 면 이유를 로그로 남기고 잡은 구간은 놓는다. 어느 스레드에서나, 전송 제출 락 밖에서 부른다.
          */
@@ -721,7 +714,7 @@ namespace sw
         RHIConstantBufferMirror                                 _constantBufferMirror; ///< 한 번 쓴 상수 버퍼를 나머지 링 슬롯에도 채운다.
 
         RHIHandleTable<D3D12PipelineStateRecord> _pipelineStates;
-        vector<D3D12RenderPassRecord>            _listRenderPass;
+        RHIRenderPassLedger                      _renderPassLedger; ///< 렌더 패스 핸들 장부. 자기 뮤텍스로 직렬화해 어느 스레드에서나 부른다.
 
         /// @brief 창 하나의 백버퍼 묶음입니다. 백버퍼, 인덱스, 리소스 상태, Present 가 모두 여기 모여 있습니다.
         D3D12RHISwapChain _swapChain;
