@@ -66,10 +66,13 @@ namespace sw
          */
         [[nodiscard]] RHIStagingAllocateResult allocate( uint64 sizeBytes, uint64 completedSerial, RHIStagingSpan& outSpan );
 
-        /** @brief 구간을 실은 전송의 시리얼을 붙입니다. 워터마크가 이 시리얼을 지나면 구간이 돌아옵니다. */
+        /**
+         * @brief 구간을 실은 전송의 시리얼을 붙입니다. 워터마크가 이 시리얼을 지나면 구간이 돌아옵니다.
+         * @details 되읽기 링은 제출 때 붙이지 않는다(GPU 가 끝나도 CPU 가 아직 읽지 않았다). 결과를 버릴 때(`discardTextureReadback`)만 붙여 GPU 가 그 구간에 다 쓴 뒤 돌려받는다.
+         */
         void markSubmitted( const RHIStagingSpan& span, uint64 serial );
 
-        /** @brief 제출하지 못한 구간을 놓습니다(컨텍스트를 얻지 못해 `Busy` 를 돌려주는 경우). 맨 앞에 오면 돌려받습니다. */
+        /** @brief 더 쓰지 않는 구간을 놓습니다: 제출하지 못한 업로드 구간(컨텍스트를 얻지 못해 `Busy`), CPU 가 다 읽은 되읽기 구간(`takeTextureReadback`). 맨 앞에 오면 돌려받습니다. */
         void free( const RHIStagingSpan& span );
 
         /** @brief @p completedSerial 이하로 끝난 구간을 앞에서부터 돌려받습니다. 기다리지 않습니다. */

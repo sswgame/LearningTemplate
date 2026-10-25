@@ -317,6 +317,8 @@ namespace sw
 
         /// @brief 업로드 스테이징 링의 용량(바이트)입니다(`gv_rhiStagingRingMegabytes`). 링을 쓰는 백엔드(지금은 GL)가 읽고, 0 이면 그 백엔드가 초기화를 거절합니다. 실행마다 정하는 설정이라 리플렉션하지 않는다.
         uint64 _stagingRingBytes{ 0 };
+        /// @brief 텍스처 되읽기 링의 용량(바이트)입니다(`gv_rhiReadbackRingMegabytes`). 링을 쓰는 백엔드(지금은 GL)가 읽고, 0 이면 그 백엔드가 초기화를 거절합니다. 리플렉션하지 않는다.
+        uint64 _readbackRingBytes{ 0 };
     };
 } // namespace sw
 

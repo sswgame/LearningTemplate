@@ -93,7 +93,7 @@ W2 의 Vulkan 업로드는 큐 락 `_queueMutex` 를 잡은 채 `vkQueueWaitIdle
 | 백엔드 | 지금 | 새 계약 구현 | 난이도 |
 |---|---|---|---|
 | DX11 | `UpdateSubresource`(즉시 컨텍스트, 잠금) | 같은 호출 뒤 티켓마다 이벤트 쿼리 하나(풀). `pollTransfer` 가 `GetData` | 낮음. 호출 스레드의 드라이버 복사 비용은 그대로 |
-| GL | 영속 매핑 PBO 링(`ARB_buffer_storage`, GL 4.4)에 컨텍스트 밖에서 복사하고, 컨텍스트를 빌려 PBO 오프셋으로 `glTexSubImage*` · `glCompressedTexSubImage*` | 업로드 뒤 `glFenceSync` 와 `glFlush`, 링 구간은 그 시리얼이 워터마크를 지나면 돌아온다. `pollTransfer` 는 컨텍스트를 기다리지 않고 원자 워터마크를 읽으며, 컨텍스트를 쥐었거나 비어 있을 때만 `glClientWaitSync( 0 )` 으로 워터마크를 올린다. GL 4.4 가 없으면 링이 없고(`RHICapabilities::_bPersistentStagingRing` 거짓) 업로드는 모두 `Rejected` | 끝남(GL-1). 비 RT 스레드의 제출은 가능하나 컨텍스트 점유 경합(`GPUUploadQueue.cpp` 주석)이 있어 프레임 경로 밖에서만. PBO 비동기 되읽기는 이 계획 밖 |
+| GL | 영속 매핑 PBO 링(`ARB_buffer_storage`, GL 4.4)에 컨텍스트 밖에서 복사하고, 컨텍스트를 빌려 PBO 오프셋으로 `glTexSubImage*` · `glCompressedTexSubImage*` | 업로드 뒤 `glFenceSync` 와 `glFlush`, 링 구간은 그 시리얼이 워터마크를 지나면 돌아온다. `pollTransfer` 는 컨텍스트를 기다리지 않고 원자 워터마크를 읽으며, 컨텍스트를 쥐었거나 비어 있을 때만 `glClientWaitSync( 0 )` 으로 워터마크를 올린다. GL 4.4 가 없으면 링이 없고(`RHICapabilities::_bPersistentStagingRing` 거짓) 업로드는 모두 `Rejected` | 끝남(GL-1). 비 RT 스레드의 제출은 가능하나 컨텍스트 점유 경합(`GPUUploadQueue.cpp` 주석)이 있어 프레임 경로 밖에서만. 텍스처 되읽기는 영속 매핑 PBO 되읽기 링(`GL_MAP_READ_BIT`)에 `GL_PIXEL_PACK_BUFFER` 오프셋으로 `glGetTextureSubImage` 와 펜스만 내고, `takeTextureReadback` 이 펜스가 지난 뒤 컨텍스트 밖에서 복사한다. 구간은 가져가거나 버린 읽기의 펜스가 지나면 돌아오며, 링보다 큰 읽기는 `Rejected`, 가져가지 않은 읽기로 차 있으면 `Busy`, GL 4.4 가 없으면 `_bPersistentReadbackRing` 거짓에 모두 `Rejected`(`gv_rhiReadbackRingMegabytes`, 매니페스트 id `rhi-transfer-gl-readback-ring`) |
 | DX12 | 프레임 슬롯의 업로드 힙과 복사 리스트가 프레임 리스트 앞에 끼는 구조, 얼로케이터 펜스 대기 | 전용 업로드 링, 복사 리스트와 얼로케이터 풀, 전용 `ID3D12Fence`. 제출은 즉시 `ExecuteCommandLists` 하고 `Signal` | 중간. `_uploadSlotMutex` 가 업로드와 프레임 제출에 같이 걸려 있어 범위를 줄여야 하고, 텍스처 상태 추적 갱신과 RT 기록이 겹치는지 점검해야 한다 |
 | Vulkan | 일회성 커맨드 버퍼를 만들고 `vkQueueWaitIdle` | 업로드 링, 펜스 풀, 제출 뒤에도 살아 있는 전송 작업 객체(펜스 통과 후 회수). 시리얼과 워터마크 | 높음, 이득이 가장 큼. `VulkanOneShotCommands` 가 소멸자에서 커맨드 버퍼를 해제하는 구조를 바꾸고, 레코드의 `_layout` 갱신 시점을 정해야 한다 |
 
@@ -168,7 +168,7 @@ DX12 의 인덱스 반환 지연(`deferFreeBindlessIndex`)과 Vulkan 의 해제 
 **B0 의 구현 수준과 알려진 비용.**
 
 - DX11: 이벤트 쿼리(풀) + 스테이징 복사 + `Map( DO_NOT_WAIT )`. 최종에 가깝습니다.
-- GL: 업로드는 스테이징 링(아래 GL-1) + `glFenceSync` + `glFlush`, 되읽기는 제출 시점에 동기로 읽어 두고 앞선 전송이 모두 끝나는 즉시 `Complete` 입니다. PBO 비동기 읽기는 이 계획 밖입니다.
+- GL: 업로드는 스테이징 링(아래 GL-1) + `glFenceSync` + `glFlush`, 되읽기는 PBO 되읽기 링 + 펜스이고 펜스가 지나면 `Complete` 입니다(2.2 백엔드 표 GL).
 - DX12: 열린 복사 리스트가 내보내질 때(프레임 끝, 폴링, 즉시 제출) 그때까지의 시리얼을 한 묶음으로 전송 전용 `ID3D12Fence` 에 매답니다. 폴링이 아직 내보내지 않은 시리얼을 내보내고 펜스를 올리므로 프레임을 돌리지 않아도 끝에 이릅니다. 업로드 링과 얼로케이터 풀은 U5 입니다.
 - Vulkan: 제출 안에서 U2 의 펜스(`VkFence`)를 기다리고 곧바로 `Complete` 티켓을 줍니다. 헤더와 주석에 "임시, U6"을 적었습니다.
 - 비용: 이전에 GPU 를 기다리지 않던 DX11, DX12, GL 의 프레임 경로 호출처가 `...AndWait` 로 바뀌어 **GPU 왕복이 새로 생겼고**, 런타임 UI 예제가 눈에 띄게 느려졌습니다(사용자 확인). 가장 잦은 둘은 비동기로 바꿨습니다.
@@ -177,7 +177,7 @@ DX12 의 인덱스 반환 지연(`deferFreeBindlessIndex`)과 Vulkan 의 해제 
   - 두 함수의 제출 구간은 `ScopedForbidBlockingTransfer` 로 표시해 `...AndWait` 가 다시 들어오면 Debug 단언이 걸립니다. 셋업 구간 전체의 표시는 그 구간을 소유한 U10 의 몫입니다.
   - 남은 대기는 새 텍스처 업로드(`completePendingLoads` · `updateStreaming` · 동기 `acquire`, 프레임당 상한 있음, U8)와 `RenderThread` 렌더 타깃 읽기(요청이 있을 때만, U9)입니다. Vulkan 은 U6 전까지 제출 안에서 펜스를 기다립니다.
 
-**끝난 단위: GL-1(GL 스테이징 링).** 텍스처 업로드(밉 전체, BC 포함)와 구간 갱신은 영속 매핑 PBO 링(`GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT`)에 제출 스레드가 컨텍스트 밖에서 복사하고, 컨텍스트를 빌리는 시간은 `GL_PIXEL_UNPACK_BUFFER` 바인딩, 밉마다 PBO 오프셋의 `glTexSubImage*` · `glCompressedTexSubImage*`, 펜스 하나뿐입니다. 언팩 상태(PBO 바인딩, `GL_UNPACK_ALIGNMENT` 1)와 되읽기의 `GL_PACK_ALIGNMENT` 1 은 RAII 가드(`ScopedStagingUnpack` · `ScopedTightPack`)가 GL 기본값(0, 4)으로 되돌립니다. 규칙은 셋입니다. 링 용량보다 큰 업로드 하나는 `Rejected` 이고 설정 이름을 로그로 알립니다(나눠 올리지 않고 단독 버퍼도 두지 않는다 — 계약 2 의 "상한보다 큰 요청"). 링이 지금 차 있으면 끝난 펜스를 한 번 모은 뒤에도 차 있을 때 `Busy` 입니다(프레임을 돌리지 않는 `submitWhileBusy` 도 링을 비운다, 계약 7). GL 4.4 가 없으면 링이 없고 `_bPersistentStagingRing` 이 거짓이며 초기화가 오류를 남기고 업로드는 모두 `Rejected` 입니다(클라이언트 메모리에서 바로 올리는 두 번째 경로는 두지 않는다). WGL 은 4.6 · 4.5 · 4.3 · 4.1 · 3.3, GLX 는 4.6 부터 3.3 까지 내려가며 컨텍스트를 만들므로 4.4 미만 컨텍스트가 실제로 생길 수 있지만, 초기화가 DSA(`glBindTextureUnit`, 4.5)를 확인 없이 부르고 `ARB_gl_spirv` 가 없으면 거절하므로 그런 드라이버에서 GL 백엔드가 서는 경우는 사실상 없습니다 **[코드]**. 확인은 매니페스트 id `rhi-transfer-gl1-staging-ring` 입니다.
+**끝난 단위: GL-1(GL 스테이징 링).** 텍스처 업로드(밉 전체, BC 포함)와 구간 갱신은 영속 매핑 PBO 링(`GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT`)에 제출 스레드가 컨텍스트 밖에서 복사하고, 컨텍스트를 빌리는 시간은 `GL_PIXEL_UNPACK_BUFFER` 바인딩, 밉마다 PBO 오프셋의 `glTexSubImage*` · `glCompressedTexSubImage*`, 펜스 하나뿐입니다. 언팩 상태(PBO 바인딩, `GL_UNPACK_ALIGNMENT` 1)와 되읽기의 팩 상태(되읽기 링 바인딩, `GL_PACK_ALIGNMENT` 1)는 RAII 가드(`ScopedStagingUnpack` · `ScopedStagingPack`)가 GL 기본값(0, 4)으로 되돌립니다. 규칙은 셋입니다. 링 용량보다 큰 업로드 하나는 `Rejected` 이고 설정 이름을 로그로 알립니다(나눠 올리지 않고 단독 버퍼도 두지 않는다 — 계약 2 의 "상한보다 큰 요청"). 링이 지금 차 있으면 끝난 펜스를 한 번 모은 뒤에도 차 있을 때 `Busy` 입니다(프레임을 돌리지 않는 `submitWhileBusy` 도 링을 비운다, 계약 7). GL 4.4 가 없으면 링이 없고 `_bPersistentStagingRing` 이 거짓이며 초기화가 오류를 남기고 업로드는 모두 `Rejected` 입니다(클라이언트 메모리에서 바로 올리는 두 번째 경로는 두지 않는다). WGL 은 4.6 · 4.5 · 4.3 · 4.1 · 3.3, GLX 는 4.6 부터 3.3 까지 내려가며 컨텍스트를 만들므로 4.4 미만 컨텍스트가 실제로 생길 수 있지만, 초기화가 DSA(`glBindTextureUnit`, 4.5)를 확인 없이 부르고 `ARB_gl_spirv` 가 없으면 거절하므로 그런 드라이버에서 GL 백엔드가 서는 경우는 사실상 없습니다 **[코드]**. 확인은 매니페스트 id `rhi-transfer-gl1-staging-ring` 입니다.
 
 **파일 소유(겹치지 않게).** `Source/Engine/Graphics/RHI/` 아래의 폴더는 하나의 작업자만 맡습니다.
 

@@ -293,6 +293,9 @@ namespace sw
     // 업로드 스테이징 링 용량. 64 MiB 는 측정값이 아니라 4096² BC7 밉 체인(약 21 MiB) 몇 장을 동시에 담는 추정이다(RhiAsyncUploads 2.2, M1 이 조정한다).
     // 링보다 큰 업로드 하나는 기다려도 못 받으므로 Rejected 다 — 그런 텍스처를 올려야 하면 이 값을 올린다.
     SW_GLOBAL_VARIABLE( int32, gv_rhiStagingRingMegabytes, 64, "업로드 스테이징 링 용량(MiB). 이보다 큰 텍스처 업로드 하나는 Rejected 다(지금은 GL 만 쓴다)" );
+    // 텍스처 되읽기 링 용량. 64 MiB 는 측정값이 아니라 4K RGBA16F 렌더 타깃 한 장(약 63.3 MiB)을 담는 추정이다. 구간은 결과를 가져가거나 버릴 때 돌아오므로
+    // 가져가지 않은 읽기가 쌓이면 Busy, 링보다 큰 읽기 하나는 Rejected 다.
+    SW_GLOBAL_VARIABLE( int32, gv_rhiReadbackRingMegabytes, 64, "텍스처 되읽기 링 용량(MiB). 이보다 큰 텍스처 읽기 하나는 Rejected 다(지금은 GL 만 쓴다)" );
 
     bool IRHIDevice::initialize()
     {
@@ -316,7 +319,8 @@ namespace sw
         swapChainDesc._format         = ( gv_rhiBackBufferFormat == 1 ) ? RHIFormat::B8G8R8A8_UNORM : constant::kBackBufferFormat;
         swapChainDesc._bVSync         = _bPreferredVSync;
         // 0 이하는 0 으로 넘긴다 — 링을 쓰는 백엔드가 0 을 오류로 거절한다(기본값으로 바꿔 주지 않는다).
-        swapChainDesc._stagingRingBytes = gv_rhiStagingRingMegabytes > 0 ? static_cast<uint64>( gv_rhiStagingRingMegabytes ) * constant::kBytesPerMegabyte : 0u;
+        swapChainDesc._stagingRingBytes  = gv_rhiStagingRingMegabytes > 0 ? static_cast<uint64>( gv_rhiStagingRingMegabytes ) * constant::kBytesPerMegabyte : 0u;
+        swapChainDesc._readbackRingBytes = gv_rhiReadbackRingMegabytes > 0 ? static_cast<uint64>( gv_rhiReadbackRingMegabytes ) * constant::kBytesPerMegabyte : 0u;
         {
             const utf8* pSoftwareEnv        = std::getenv( "SW_RHI_SOFTWARE_ADAPTER" );
             const bool  bSoftwareEnv        = pSoftwareEnv != nullptr && StringUtil::equals( pSoftwareEnv, "1" );
