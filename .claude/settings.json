@@ -4,6 +4,8 @@
       "Bash(py -3 -m Scripts ci-jobs *)",
       "Bash(py -3 -m Scripts plans *)",
       "Bash(py -3 -m Scripts worktree-list)",
+      "Bash(py -3 -m Scripts syntax-check *)",
+      "Bash(py -3 -m Scripts scenario *)",
       "Bash(git merge-base *)"
     ]
   },
