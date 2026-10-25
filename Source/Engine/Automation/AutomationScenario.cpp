@@ -232,6 +232,7 @@ namespace sw
         , _name{}
         , _sourcePath{}
         , _fixedDelta{ AutomationScenarioInternal::kDefaultFixedDelta }
+        , _wallTimeoutSeconds{ kDefaultWallTimeoutSeconds }
         , _timeoutFrames{ AutomationScenarioInternal::kDefaultTimeoutFrames }
         , _startTimeoutFrames{ AutomationScenarioInternal::kDefaultStartTimeoutFrames }
         , _startCondition{ AutomationStartCondition::ScenePlaying }
@@ -276,6 +277,14 @@ namespace sw
             return Internal::readUint( pText, "timeoutFrames", _timeoutFrames, outReason );
         if ( name == "startTimeoutFrames" )
             return Internal::readUint( pText, "startTimeoutFrames", _startTimeoutFrames, outReason );
+        if ( name == "wallTimeoutSeconds" )
+        {
+            // 0 이나 음수로 상한을 끄지 못한다 — 끝나지 않는 시나리오가 테스트의 프로세스 시한(보고 없는 kill)까지 가는 것이 이 값이 막는 결함이다.
+            const bool bOk = StringUtil::parseFloat( string_view{ pText }, _wallTimeoutSeconds ) && _wallTimeoutSeconds > 0.0f;
+            if ( bOk == false )
+                outReason = string( "wallTimeoutSeconds must be a positive number of seconds, got '" ) + pText + "'";
+            return bOk;
+        }
         if ( name == "startAfter" )
         {
             const string_view value = pText;

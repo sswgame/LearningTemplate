@@ -74,6 +74,38 @@ namespace sw
         return line;
     }
 
+    string AutomationRunTitleUtil::makeReproduceCommand( const AutomationReproduceInput& input )
+    {
+        if ( input._scenarioArgument.empty() )
+            return string{};
+        // 공백이나 점이 든 인자는 감싼다 — PowerShell 이 `-scenario=a.b.xml` 을 점에서 쪼갠다.
+        const auto appendArgument = []( string& inoutCommand, string_view argument )
+        {
+            inoutCommand += ' ';
+            const bool bNeedsQuote = argument.find_first_of( " ." ) != string_view::npos;
+            if ( bNeedsQuote )
+                inoutCommand += '"';
+            inoutCommand += argument;
+            if ( bNeedsQuote )
+                inoutCommand += '"';
+        };
+        string command = "App.exe";
+        if ( input._game.empty() == false )
+            appendArgument( command, "-game=" + input._game );
+        if ( input._backendName.empty() == false )
+            appendArgument( command, "-gv_rhiBackend=" + input._backendName );
+        if ( input._bEditor )
+            appendArgument( command, "-EnableEditor" );
+        appendArgument( command, "-scenario=" + input._scenarioArgument );
+        if ( input._bKeepGoing )
+            appendArgument( command, "-scenario-keep-going" );
+        for ( const string& extra : input._listExtraArgument )
+        {
+            appendArgument( command, extra );
+        }
+        return command;
+    }
+
     string AutomationRunTitleUtil::makeBenchSummary( vector<string> listPair )
     {
         constexpr string_view kPrefix = "gv_bench";

@@ -13,7 +13,7 @@
 ## 머릿속 그림
 
 ```
-scenario.xml ──► AutomationScenario(<At> 시점 → 프레임) ──► AutomationRunner ──► 보고 JSON(failures · metrics · records)
+scenario.xml ──► AutomationScenario(<At> 시점 → 프레임) ──► AutomationRunner ──► 보고 JSON(failures · metrics · records · 실행 환경 · reproduce)
                                                              │
                      시작 프레임: 단계마다 검사 · 준비 ───────┤  입력 단계 → VirtualInputScript → InputManager(장치 층)
                      프레임마다: 씬 틱 뒤 단계 실행 ─────────┤  단언 단계 → AutomationProbes(씬 탐침 · 질의 탐침)
@@ -28,8 +28,8 @@ scenario.xml ──► AutomationScenario(<At> 시점 → 프레임) ──► A
 **탐침.** 시나리오가 읽는 이름 붙은 값입니다. 씬 탐침은 인자 없이 수를 내고(`Farm.FarmerX`), 질의 탐침은 `target` 과 `key` 를 받아 수나 글을 냅니다(`AI.State target="FarmAutoFarmer"` → `Till`).
 글 값은 `is` 로 비교하고, 수 값은 `equals`, `near`, `atLeast`, `atMost` 로 비교합니다.
 
-**시나리오 프레임.** 프레임 0 은 시작 조건이 처음 참인 프레임입니다(`startAfter="ScenePlaying"` 이면 씬이 플레이를 시작하고 로딩 화면이 사라진 첫 프레임).
-`WaitUntil` 이 기다리는 동안은 시나리오 프레임을 세지 않으므로 뒤 단계가 그만큼 밀립니다. 시간은 늘 고정 프레임 시간(`fixedDelta`)으로 흐릅니다.
+**시나리오 프레임.** 프레임 0 은 시작 조건이 처음 참인 프레임입니다(`startAfter="ScenePlaying"` 이면 씬이 플레이를 시작하고 로딩 화면이 사라진 첫 프레임, `Immediately` 이면 씬이 플레이 중일 필요는 없지만 시작 차단 조건이 풀린 첫 프레임).
+`WaitUntil` 이 기다리는 동안은 시나리오 프레임을 세지 않으므로 뒤 단계가 그만큼 밀립니다. 붙잡힌 프레임은 `timeoutFrames` 에도 세지 않으므로, 붙잡힌 채 끝나지 않는 시나리오는 **벽시계 상한**(루트 `wallTimeoutSeconds`, 기본 `AutomationScenario::kDefaultWallTimeoutSeconds` 150 초)이 12(시간 초과)로 끝내고 보고를 씁니다. 부하 시나리오는 자기 그물이 있어 보지 않습니다. 시간은 늘 고정 프레임 시간(`fixedDelta`)으로 흐릅니다.
 고정 프레임 시간은 엔진 프레임만 묶습니다. 자식 프로세스의 네트워크 재전송 같은 벽시계 일은 프레임 수로 기다리지 않고, 시한을 받는 대기 명령(`netplay.waitResent`)으로 기다립니다.
 프레임 비용(`GT.Frame` 몇 ms)에도 기대지 않습니다. 구성마다 다르므로 스파이크가 필요하면 `profile.stall <ms>` 로 만듭니다. 에디터 코드의 경과는 모두 엔진 경과(`GameTimeScale::getUnscaledDeltaTime`)입니다. `ImGuiEditor::beginFrame` 이 `ImGui::NewFrame` 앞에서 `io.DeltaTime` 을 그 값으로 덮어쓰므로 미리보기 패널(`SequencerPanel` · `AnimationGraphPanel` · `DialogueGraphPanel` · `InputMapPanel`)과 시나리오 녹화도 같은 시간을 읽습니다. 벽시계는 프로파일러 성능 탭만 자기 시계로 읽습니다.
 
@@ -123,7 +123,12 @@ frame 900 <ExpectVisited> #3: AI.State(FarmAutoFarmer) never went through 'Till 
 녹화를 다시 돌리면 같은 입력과 같은 고정 틱이므로 같은 값이 나와야 합니다. 다시 돌릴 때는 디스크 경로가 아니라 id 를 줍니다 — 시나리오 실행은 작업 폴더의 `Saved` 를 디스크 도메인 `saved` 로 붙이므로
 `Saved/Automation/Recorded/a.scenario.xml` 은 `-scenario=saved/Automation/Recorded/a.scenario.xml` 입니다(`ScenarioRecorder::makeReplayID`, 녹화를 마칠 때 로그에도 찍힌다). `AppScenarioTest.RecordedPlayReplaysOnEveryBackend` 가 이 왕복을 네 백엔드에서 확인합니다.
 
+**보고의 실행 환경.** 보고 JSON 은 결과 칸 외에 `backend` · `game` · `startedAt` · `startedAtUnixMs` · `wallMilliseconds` · `wallLimitMilliseconds` · `lastStep` · `reproduce` 를 담아, 보고 한 장으로 어디서 어떻게 돌았고 어떻게 다시 돌리는지 알게 합니다.
+`reproduce` 는 세션(`AutomationSession::begin`)이 모은 게임 · 백엔드 · 에디터 · `-scenario` 목록과 시나리오의 `<Launch>` 변수로 지은 App 명령줄입니다(`AutomationRunTitleUtil::makeReproduceCommand`). 원본 명령줄이 아니므로 그 밖의 인자는 빠질 수 있습니다.
+필드는 읽는 쪽(`Scripts` 의 보고 읽기, `AppTestUtil::readReportRecords`)이 있어 더하기만 하고, `records` 는 끝에 둡니다. 실행기는 단계가 바뀔 때와 30 프레임마다 시나리오 · 백엔드 · 단계 · 프레임을 크래시 컨텍스트의 `Scenario` 키에 적고(`CrashHandler::setContextValue`), 단계 전환을 빵부스러기로 남깁니다.
+
 **로그 게이트.** `<Pass/>` 에 닿은 시나리오도 처리하지 않은 `[Warning]` · `[Error]` 를 남겼으면 종료 코드 15(`UnhandledLog`)로 끝납니다(`AutomationLogPolicy`). 단언이 모두 맞아도, 어림값 문턱이 있어도(14) 마찬가지입니다.
+이미 진 실행(10 · 12 …)은 코드를 바꾸지 않지만 같은 게이트를 지나, 처리하지 않은 줄이 보고의 `unhandledLogs[]` 에 남습니다.
 실행기는 시나리오 구간의 줄과, 프로세스 전체에서 빠진 현지화 키(`LocalizationManager::getMissingKeys`)를 봅니다. `AppScenarioTest` 는 같은 판정을 프로세스 출력 전체(기동 · 종료 포함)에 다시 겁니다.
 줄 하나가 처리됐다는 것은 둘 중 하나입니다.
 

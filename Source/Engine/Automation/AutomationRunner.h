@@ -12,6 +12,7 @@
 #include "Engine/Automation/AutomationLogPolicy.h"
 #include "Engine/Automation/AutomationOutcome.h"
 #include "Engine/Automation/AutomationReportWriter.h"
+#include "Engine/Automation/AutomationRunTitle.h"
 #include "Engine/Automation/AutomationScenario.h"
 #include "Engine/Automation/AutomationStepContext.h"
 #include "Engine/Input/Virtual/VirtualInputScript.h"
@@ -41,6 +42,17 @@ namespace sw
 
         AutomationRunner( const AutomationRunner& )            = delete;
         AutomationRunner& operator=( const AutomationRunner& ) = delete;
+
+        /**
+         * @brief 재현 명령(보고의 `reproduce`)의 재료를 정합니다 — 세션이 게임 · 백엔드 · 에디터 · 시나리오 목록을 채워 시작 전에 넘깁니다.
+         * @details 시나리오 인자(`_scenarioArgument`)가 비어 있으면(세션 없이 돌리는 테스트) 보고의 `reproduce` 는 빈 글입니다. 이 시나리오의 `<Launch>` 선언 변수는 보고를 쓸 때 실행기가 더한다.
+         */
+        void setReproduceInput( AutomationReproduceInput input ) { _reproduceInput = std::move( input ); }
+        /**
+         * @brief 지금 RHI 백엔드의 이름(`DirectX12` · `Vulkan` …, 창 있는 호스트의 `gv_rhiBackend`)입니다. 엔진 서비스가 없거나 창이 없으면(디바이스를 만들지 않은 호스트) 빈 글입니다.
+         * @details 렌더러(`FrameRenderer`)는 이 층보다 위라 읽지 않는다 — 백엔드 교체가 `gv_rhiBackend` 를 갱신하므로 같은 값이다.
+         */
+        [[nodiscard]] static string findBackendName();
 
         /** @brief 시나리오 파일(리소스 경로 또는 절대 경로)을 읽습니다. 읽지 못하면 결과가 LoadError 이고 다음 `onFrameEnd` 에서 끝납니다. */
         void startFromPath( string_view scenarioPath, string_view reportPath );
@@ -189,7 +201,8 @@ namespace sw
         /** @brief 끝 정리를 합니다. 가상 입력과 로그 수집을 떼고 요약 줄과 보고를 씁니다. 한 번만 돕니다. */
         void endRun( InputManager* pInput );
         /**
-         * @brief 로그 게이트입니다. 통과한 시나리오가 처리하지 않은 Warning · Error 를 남겼거나 현지화 키가 빠졌으면 결과를 `UnhandledLog`(15)로 바꿉니다.
+         * @brief 로그 게이트입니다. 시작한 시나리오의 처리하지 않은 Warning · Error 줄과 빠진 현지화 키를 모아 보고(`unhandledLogs`)에 싣습니다 — 결과가 실패여도 싣는다.
+         *        통과(`Passed`)한 시나리오는 그 줄이 있으면 결과를 `UnhandledLog`(15)로 바꾸고, 이미 진 시나리오의 결과는 그대로 둡니다(원인은 단언 · 시한이다).
          * @details 처리는 `AutomationLogPolicy`(전역 허용 목록의 이 시나리오 항목 + 이 시나리오의 `<ExpectLog>`)가 정한다. id 없는 줄은 허용 목록으로 가릴 수 없다.
          *          빠진 현지화 키는 `LocalizationManager::getMissingKeys` 로 프로세스 전체를 본다(키마다 경고를 한 번만 남기므로 시나리오 앞 기동 구간에 남은 줄도
          *          여기서 잡는다 — id 가 없는 줄이라 `<ExpectLog>` 로만 가릴 수 있다). 허용 항목이 맞은 id 는 `_listAllowedLogID` 에 남아 보고에 적힌다.
@@ -197,42 +210,60 @@ namespace sw
         void applyLogGate();
         /** @brief 부하 시나리오(`<Load>`)면 시작 프레임에 측정 창(`gv_profileSeconds`)을 열고 멈춤 그물 시각을 잡습니다. 아니면 아무것도 하지 않습니다. */
         void startLoadWindow();
+        /** @brief 벽시계 감시를 시작합니다(시나리오를 읽기 시작할 때 한 번). 시작 시각(단조 시계 · 유닉스 · 지역 달력 글)을 잡습니다. */
+        void markWallStart();
+        /**
+         * @brief 시작부터 `wallTimeoutSeconds` 가 지났으면 시간 초과(12)로 끝냅니다. 부하 시나리오는 자기 그물이 있어 보지 않습니다.
+         * @details 프레임 시한(`timeoutFrames`)은 붙잡은 프레임(`holdUntilReady` · 시계 잡기)을 세지 않아, 붙잡힌 채로는 영영 끝나지 않고 테스트의 프로세스 시한(보고 없는 kill)까지 간다.
+         *          이 감시는 프레임이 도는 동안만 본다(프레임 자체가 멈춘 행은 못 잡는다).
+         */
+        void finishIfWallClockExceeded();
+        /** @brief 지금 자리 한 줄(`시나리오 · 백엔드 · step N 단계 · f프레임` — 창 제목과 같은 글)입니다. */
+        string describeRunPosition() const;
+        /** @brief 크래시 보고에 싣는 자리(`Scenario` 키 — 시나리오 · 백엔드 · 단계 · 프레임)를 갱신합니다. 크래시 · 행 뒤 덤프가 어느 시나리오의 어느 단계였는지 알려 준다. */
+        void updateCrashContext( string_view note = {} );
 
-        AutomationScenario      _scenario;
-        VirtualInputScript      _inputScript;
-        AutomationLogCapture    _logCapture;            ///< 시나리오 동안의 로그 줄(`<ExpectLog>`, 로그 게이트)
-        AutomationLogPolicy     _logPolicy;             ///< 로그 게이트의 허용 목록(전역 + `<ExpectLog>`)
-        AutomationReportWriter  _reportWriter;          ///< 보고 경로 · 지표 줄 · JSON 보고 쓰기
-        vector<string>          _listFailure;           ///< "frame 40 <Expect> #7: Shooter3D.WeaponIndex == 1, got 2"
-        vector<string>          _listUnconfirmed;       ///< 맞았지만 어림값 문턱인 `<ExpectImage>` ("frame 40 <ExpectImage> #7: meanLuma >= 0.05 held with 0.2 …")
-        vector<string>          _listUnhandledLog;      ///< 로그 게이트가 처리하지 않았다고 본 줄(`[Warning] [호출자] (id=…) 본문`)
-        vector<string>          _listAllowedLogID;      ///< 이 실행에서 허용 항목이 맞은 로그 id(`scenario-logs --check` 가 낡은 항목을 세는 근거)
-        vector<string>          _listPendingScreenshot; ///< 아직 렌더 패킷에 싣지 않은 스크린샷 경로입니다.
-        vector<ProbeWatch>      _listWatch;             ///< `<ExpectVisited>` 가 보는 탐침 이력
-        vector<RememberedValue> _listRemembered;        ///< `<Remember>` 가 남긴 값
-        string                  _outputDirectory;
-        string                  _finishReason;
-        string                  _currentStepKind;        ///< 마지막으로 시작한 실행 단계(입력 단계는 제외)
-        GameObjectManager*      _pObjectManagerOverride; ///< `setObjectManager` 로 정한 매니저입니다(nullptr 이면 활성 씬).
-        InputManager*           _pInputManager;          ///< 시작 프레임에 받은 입력 관리자(`onFrameBegin`)
-        float64                 _exitDeadlineSeconds;    ///< `ExpectExitWithin` 이 정한 벽시계 시한입니다(단조 시계 초). 0 이면 기다리지 않습니다.
-        float64                 _loadDeadlineSeconds;    ///< 부하 시나리오(`<Load>`)의 멈춤 그물 — 측정 창이 이때까지 끝내지 못하면 시간 초과다(단조 시계 초). 0 이면 부하 시나리오가 아니다.
-        size_t                  _nextStepIndex;
-        uint32                  _frameIndex;
-        uint32                  _currentStepNumber; ///< `_currentStepKind` 의 파일 순번
-        uint32                  _waitFrameCount;    ///< 시작 조건을 기다린 프레임 수입니다.
-        uint32                  _screenshotRequestedCount;
-        uint32                  _screenshotCompletedCount;
-        uint32                  _imageWaitFrameCount;    ///< `<ExpectImage>` 가 스크린샷을, `<Screenshot>` 이 에셋 일을 기다린 프레임 수입니다(단계마다 0 부터).
-        uint32                  _assetSettledFrameCount; ///< `<Screenshot>` 앞에서 에셋 일이 0 인 채로 지난 프레임 수입니다(`holdScreenshot`)
-        uint32                  _holdFrameCount;         ///< 지금 단계(`<WaitUntil>` · 마크를 기다리는 에디터 입력)가 시나리오 시계를 붙잡은 프레임(`holdUntilReady`, 그동안 `_frameIndex` 는 그대로다)
-        uint32                  _clockHoldFrameCount;    ///< 시계 잡기 조건이 이어서 붙잡은 프레임(`holdClockForBackgroundWork`)
-        float64                 _clockHoldStartSeconds;  ///< 그 붙잡기가 시작된 단조 시계 초
-        string                  _clockHolderName;        ///< 붙잡은 조건의 이름(로그)
-        AutomationOutcome       _result;
-        uint8                   _bStarted   : 1;
-        uint8                   _bEnded     : 1;
-        uint8                   _bClockHeld : 1; ///< 이 프레임을 시계 잡기 조건이 붙잡았다(`onFrameBegin` 이 정하고 `onFrameEnd` 가 단계를 건너뛴다)
-        [[maybe_unused]] uint8  _reserved   : 5;
+        AutomationScenario       _scenario;
+        VirtualInputScript       _inputScript;
+        AutomationLogCapture     _logCapture;            ///< 시나리오 동안의 로그 줄(`<ExpectLog>`, 로그 게이트)
+        AutomationLogPolicy      _logPolicy;             ///< 로그 게이트의 허용 목록(전역 + `<ExpectLog>`)
+        AutomationReportWriter   _reportWriter;          ///< 보고 경로 · 지표 줄 · JSON 보고 쓰기
+        vector<string>           _listFailure;           ///< "frame 40 <Expect> #7: Shooter3D.WeaponIndex == 1, got 2"
+        vector<string>           _listUnconfirmed;       ///< 맞았지만 어림값 문턱인 `<ExpectImage>` ("frame 40 <ExpectImage> #7: meanLuma >= 0.05 held with 0.2 …")
+        vector<string>           _listUnhandledLog;      ///< 로그 게이트가 처리하지 않았다고 본 줄(`[Warning] [호출자] (id=…) 본문`)
+        vector<string>           _listAllowedLogID;      ///< 이 실행에서 허용 항목이 맞은 로그 id(`scenario-logs --check` 가 낡은 항목을 세는 근거)
+        vector<string>           _listPendingScreenshot; ///< 아직 렌더 패킷에 싣지 않은 스크린샷 경로입니다.
+        vector<ProbeWatch>       _listWatch;             ///< `<ExpectVisited>` 가 보는 탐침 이력
+        vector<RememberedValue>  _listRemembered;        ///< `<Remember>` 가 남긴 값
+        string                   _outputDirectory;
+        string                   _finishReason;
+        string                   _currentStepKind;        ///< 마지막으로 시작한 실행 단계(입력 단계는 제외)
+        string                   _startedAt;              ///< 벽시계 시작 지역 시각 글(`2026-10-26 14:03:11`). 얻지 못하면 빈 글
+        AutomationReproduceInput _reproduceInput;         ///< 보고의 재현 명령 재료(`setReproduceInput`). 이 시나리오의 `<Launch>` 변수는 보고를 쓸 때 더한다
+        GameObjectManager*       _pObjectManagerOverride; ///< `setObjectManager` 로 정한 매니저입니다(nullptr 이면 활성 씬).
+        InputManager*            _pInputManager;          ///< 시작 프레임에 받은 입력 관리자(`onFrameBegin`)
+        float64                  _exitDeadlineSeconds;    ///< `ExpectExitWithin` 이 정한 벽시계 시한입니다(단조 시계 초). 0 이면 기다리지 않습니다.
+        float64                  _loadDeadlineSeconds;    ///< 부하 시나리오(`<Load>`)의 멈춤 그물 — 측정 창이 이때까지 끝내지 못하면 시간 초과다(단조 시계 초). 0 이면 부하 시나리오가 아니다.
+        float64                  _wallStartSeconds;       ///< 시나리오를 읽기 시작한 단조 시계 초(벽시계 감시의 기준)
+        float64                  _wallEndSeconds;         ///< 끝맺은 단조 시계 초(끝나기 전에는 0)
+        int64                    _startedUnixMs;          ///< 같은 시각의 유닉스 밀리초(보고용)
+        size_t                   _nextStepIndex;
+        uint32                   _frameIndex;
+        uint32                   _currentStepNumber; ///< `_currentStepKind` 의 파일 순번
+        uint32                   _waitFrameCount;    ///< 시작 조건을 기다린 프레임 수입니다.
+        uint32                   _screenshotRequestedCount;
+        uint32                   _screenshotCompletedCount;
+        uint32                   _imageWaitFrameCount;    ///< `<ExpectImage>` 가 스크린샷을, `<Screenshot>` 이 에셋 일을 기다린 프레임 수입니다(단계마다 0 부터).
+        uint32                   _assetSettledFrameCount; ///< `<Screenshot>` 앞에서 에셋 일이 0 인 채로 지난 프레임 수입니다(`holdScreenshot`)
+        uint32                   _holdFrameCount;         ///< 지금 단계(`<WaitUntil>` · 마크를 기다리는 에디터 입력)가 시나리오 시계를 붙잡은 프레임(`holdUntilReady`, 그동안 `_frameIndex` 는 그대로다)
+        uint32                   _clockHoldFrameCount;    ///< 시계 잡기 조건이 이어서 붙잡은 프레임(`holdClockForBackgroundWork`)
+        uint32                   _seenFrameCount;         ///< `onFrameEnd` 가 불린 횟수(붙잡힌 프레임도 센다 — 크래시 자리를 갱신하는 박자)
+        float64                  _clockHoldStartSeconds;  ///< 그 붙잡기가 시작된 단조 시계 초
+        string                   _clockHolderName;        ///< 붙잡은 조건의 이름(로그)
+        AutomationOutcome        _result;
+        uint8                    _bStarted   : 1;
+        uint8                    _bEnded     : 1;
+        uint8                    _bClockHeld : 1; ///< 이 프레임을 시계 잡기 조건이 붙잡았다(`onFrameBegin` 이 정하고 `onFrameEnd` 가 단계를 건너뛴다)
+        [[maybe_unused]] uint8   _reserved   : 5;
     };
 } // namespace sw

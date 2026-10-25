@@ -2,6 +2,7 @@
 
 #include "Engine/Automation/AutomationSession.h"
 
+#include "Core/CommandLine/CommandLineManager.h"
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
@@ -11,6 +12,7 @@
 #include "Engine/Automation/AutomationScenarioChain.h"
 #include "Engine/Automation/AutomationStepRegistry.h"
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Config/GameSelection.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
@@ -29,6 +31,7 @@ namespace sw
         , _recordPath{}
         , _reportPath{}
         , _workingFolder{}
+        , _reproduceInput{}
         , _screenshotBaseline{ 0 }
     {
     }
@@ -107,6 +110,14 @@ namespace sw
     {
         _reportPath    = string( reportPath );
         _workingFolder = FileUtil::getCurrentPath();
+        // 재현 명령의 재료 — 이 실행을 같은 게임 · 백엔드 · 에디터 · 시나리오 목록으로 다시 띄우는 데 필요한 것을 지금(엔진이 선 뒤) 모은다.
+        _reproduceInput                   = AutomationReproduceInput{};
+        _reproduceInput._game             = GameSelection::getName();
+        _reproduceInput._backendName      = AutomationRunner::findBackendName();
+        _reproduceInput._scenarioArgument = string( scenarioArgument );
+        _reproduceInput._bKeepGoing       = bKeepGoing;
+        if ( engine::areEngineServicesBound() )
+            (void)engine::getSubsystem<CommandLineManager>().getArgument( CommandLineArgument::ENABLE_EDITOR, _reproduceInput._bEditor ); // 적지 않았으면 false 그대로
         // 녹화(`Saved/Automation/…`)를 id(`saved/…`)로 다시 돌릴 수 있게 붙인다. 못 붙이면 오류가 남고 그 id 를 읽는 단계만 읽기 오류로 진다.
         (void)ScenarioRecorder::mountSavedDomain( _workingFolder );
         _pChain = make_unique<AutomationScenarioChain>();
@@ -135,6 +146,7 @@ namespace sw
         }
 
         _pRunner = make_unique<AutomationRunner>();
+        _pRunner->setReproduceInput( _reproduceInput );
         _pRunner->startFromPath( _pChain->getCurrentPath(), AutomationScenarioChain::makeStageReportPath( _reportPath, _pChain->getStageIndex(), _pChain->getStageCount() ) );
         _screenshotBaseline = completedScreenshotCount;
         if ( _pRunner->isActive() )

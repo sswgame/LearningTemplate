@@ -16,7 +16,7 @@ namespace sw
     /** @brief 시나리오의 프레임 0 이 언제인가입니다. */
     enum class AutomationStartCondition : uint8
     {
-        Immediately = 0, ///< 시나리오를 시작한 뒤 첫 프레임입니다.
+        Immediately = 0, ///< 시나리오를 시작한 뒤 첫 프레임입니다. 씬이 플레이 중일 필요는 없지만 시작 차단 조건(로딩 화면 · 감시 울타리)이 풀려야 한다 — 차단된 채 시작하지 않는다.
         ScenePlaying,    ///< 활성 씬의 오브젝트 매니저가 플레이를 시작했고 로딩 화면(UI Loading 층)이 걷힌 첫 프레임(기본)
     };
 } // namespace sw
@@ -116,6 +116,13 @@ namespace sw
     class SW_API AutomationScenario
     {
     public:
+        /**
+         * @brief 시나리오 한 편의 벽시계 상한(초)의 기본값입니다 — `wallTimeoutSeconds` 를 적지 않은 시나리오가 받는 값입니다(다른 시한의 기본값과 같은 자리).
+         * @details 프레임 시한(`timeoutFrames`)은 시계를 붙잡은 프레임(`WaitUntil` · 시계 잡기 조건)을 세지 않아 붙잡힌 채로는 영영 끝나지 않는다. 이 값은 그 틈을 막는 실시간 총량이고,
+         *          테스트 쪽 프로세스 시한(`AppTestUtil::kScenarioTimeoutSeconds` 180 초)보다 짧아야 그 시한이 죽이기 전에 실행기가 보고를 쓴다.
+         */
+        static constexpr float32 kDefaultWallTimeoutSeconds = 150.0f;
+
         AutomationScenario();
 
         /** @brief 리소스 경로 또는 절대 경로에서 읽습니다. 형식 오류면 false 이고 @p outError 에 `경로: 이유` 를 씁니다. */
@@ -123,11 +130,13 @@ namespace sw
         /** @brief XML 글에서 읽습니다. */
         [[nodiscard]] bool parse( string_view xmlText, string_view sourceName, string& outError );
 
-        const string&                 getName() const { return _name; }
-        const string&                 getSourcePath() const { return _sourcePath; }
-        float32                       getFixedDelta() const { return _fixedDelta; }
-        uint32                        getTimeoutFrames() const { return _timeoutFrames; }
-        uint32                        getStartTimeoutFrames() const { return _startTimeoutFrames; }
+        const string& getName() const { return _name; }
+        const string& getSourcePath() const { return _sourcePath; }
+        float32       getFixedDelta() const { return _fixedDelta; }
+        uint32        getTimeoutFrames() const { return _timeoutFrames; }
+        uint32        getStartTimeoutFrames() const { return _startTimeoutFrames; }
+        /** @brief 시나리오 시작(읽기)부터 끝까지 지나도 되는 벽시계 시간(초)입니다. 넘으면 실행기가 시간 초과(12)로 끝내고 보고를 씁니다. 부하 시나리오(`<Load>`)는 자기 그물이 있어 보지 않는다. */
+        float32                       getWallTimeoutSeconds() const { return _wallTimeoutSeconds; }
         AutomationStartCondition      getStartCondition() const { return _startCondition; }
         VirtualInputMode              getInputMode() const { return _inputMode; }
         const vector<AutomationStep>& getSteps() const { return _listStep; }
@@ -149,6 +158,7 @@ namespace sw
         string                   _name;
         string                   _sourcePath;
         float32                  _fixedDelta;
+        float32                  _wallTimeoutSeconds;
         uint32                   _timeoutFrames;
         uint32                   _startTimeoutFrames;
         AutomationStartCondition _startCondition;

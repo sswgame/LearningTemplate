@@ -26,6 +26,25 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @struct AutomationReproduceInput
+     * @brief 이 실행을 다시 띄우는 App 명령줄(재현 명령)의 재료입니다. 보고 JSON 의 `reproduce` 가 이것으로 만든 글입니다.
+     * @details 실행기가 아는 인자만 담는다 — 게임 · 백엔드 · 에디터 · 시나리오 · `<Launch>` 선언 변수. 원본 명령줄을 담은 것이 아니므로
+     *          그 밖의 인자(`-gv_` 개발 변수 따위)는 빠져 있을 수 있다.
+     */
+    struct AutomationReproduceInput
+    {
+        string         _game{};              ///< `-game=` 값. 비면 적지 않는다
+        string         _backendName{};       ///< RHI 백엔드 이름(`DirectX12` · `Vulkan` …, `-gv_rhiBackend=` 값). 비면 적지 않는다(창 없는 호스트)
+        string         _scenarioArgument{};  ///< `-scenario=` 값(쉼표 목록 그대로). 비면 재현 명령을 만들지 않는다
+        vector<string> _listExtraArgument{}; ///< `-gv_name=value` 처럼 앞의 `-` 까지 든 인자
+        bool           _bEditor{ false };
+        bool           _bKeepGoing{ false };
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @struct AutomationRunTitleUtil @brief 실행 정보 글 만들기입니다. */
     struct SW_API AutomationRunTitleUtil
     {
@@ -42,6 +61,11 @@ namespace sw
         [[nodiscard]] static string makeStepLogLine( string_view scenarioName, uint32 stepNumber, string_view stepKind, uint32 frame );
         /** @brief `gv_bench` 로 시작하는 `이름=값` 글만 골라 이름순으로 공백으로 이어 한 줄로 씁니다. */
         [[nodiscard]] static string makeBenchSummary( vector<string> listPair );
+        /**
+         * @brief 재현 명령 `App.exe -game=<게임> -gv_rhiBackend=<백엔드> [-EnableEditor] "-scenario=<목록>" [-scenario-keep-going] <추가 인자>` 를 씁니다. 시나리오 인자가 없으면 빈 글입니다.
+         * @details 공백이나 점이 든 인자는 큰따옴표로 감싼다(PowerShell 은 점이 든 인자를 쪼갠다).
+         */
+        [[nodiscard]] static string makeReproduceCommand( const AutomationReproduceInput& input );
         /** @brief 글이 @p maxBytes 를 넘으면 UTF-8 글자 경계에서 자르고 `…` 를 붙입니다. */
         [[nodiscard]] static string truncateUtf8( string_view text, uint32 maxBytes );
     };
