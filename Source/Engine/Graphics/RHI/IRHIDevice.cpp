@@ -307,12 +307,16 @@ namespace sw
     // 소프트웨어 어댑터(WARP · CPU Vulkan)로 띄운다 — GPU 없는 CI 러너와 같은 래스터라이저를 이 PC 에서 고른다. 환경 변수 SW_RHI_SOFTWARE_ADAPTER=1 도 같다
     // (ctest 가 인자 없이 켠다). 언제 켤지는 엔진이 정하고, 어떻게 고를지는 백엔드가 안다.
     SW_TEST_GLOBAL_VARIABLE( int32, gv_rhiSoftwareAdapter, 0, "소프트웨어 어댑터로 띄운다: 0=하드웨어, 1=WARP(DX11 · DX12) · CPU 디바이스(Vulkan)" );
-    // 업로드 스테이징 링 용량. 64 MiB 는 측정값이 아니라 4096² BC7 밉 체인(약 21 MiB) 몇 장을 동시에 담는 추정이다(RhiAsyncUploads 2.2, M1 이 조정한다).
-    // 링보다 큰 업로드 하나는 기다려도 못 받으므로 Rejected 다 — 그런 텍스처를 올려야 하면 이 값을 올린다.
-    SW_GLOBAL_VARIABLE( int32, gv_rhiStagingRingMegabytes, 64, "업로드 스테이징 링 용량(MiB). 이보다 큰 텍스처 업로드 하나는 Rejected 다(지금은 GL 만 쓴다)" );
+    // 업로드 스테이징 용량. 64 MiB 는 측정값이 아니라 4096² BC7 밉 체인(약 21 MiB) 몇 장을 동시에 담는 추정이다(RhiAsyncUploads 2.2, M1 이 조정한다).
+    // 이보다 큰 업로드 하나는 기다려도 못 받으므로 Rejected 다 — 그런 텍스처를 올려야 하면 이 값을 올린다.
+    SW_GLOBAL_VARIABLE( int32, gv_rhiStagingRingMegabytes, 64, "업로드 스테이징 용량(MiB): GL 은 링 크기, DX11 은 복사 중인 스테이징 텍스처 합의 상한. 이보다 큰 텍스처 업로드 하나는 Rejected 다" );
     // 텍스처 되읽기 링 용량. 64 MiB 는 측정값이 아니라 4K RGBA16F 렌더 타깃 한 장(약 63.3 MiB)을 담는 추정이다. 구간은 결과를 가져가거나 버릴 때 돌아오므로
     // 가져가지 않은 읽기가 쌓이면 Busy, 링보다 큰 읽기 하나는 Rejected 다.
     SW_GLOBAL_VARIABLE( int32, gv_rhiReadbackRingMegabytes, 64, "텍스처 되읽기 링 용량(MiB). 이보다 큰 텍스처 읽기 하나는 Rejected 다(지금은 GL 만 쓴다)" );
+    // DX11 은 이 크기 이하의 업로드를 스테이징 없이 UpdateSubresource 로 올린다(소스 복사가 즉시 컨텍스트 잠금 안에서 일어난다).
+    // 256 KiB 는 측정값이 아니라 추정이다: 잠금 안의 복사가 수십 µs(메모리 복사 5 ~ 10 GB/s)라 프레임(16.6 ms)에 비해 작고, 스테이징 한 장의 생성 · 추가 복사 명령의
+    // 고정 비용과 비슷한 자리다. 글리프 아틀라스 구간 갱신(수 KB)과 256² RGBA8 이하 텍스처가 이 아래로 간다. M1(RhiAsyncUploads 측정)이 조정한다.
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_rhiDirectUploadMaxKilobytes, 256, "이 크기(KiB) 이하의 텍스처 업로드는 스테이징 없이 바로 올린다(지금은 DX11 만 쓴다). 0 이면 모두 스테이징" );
 
     bool IRHIDevice::initialize()
     {
@@ -335,9 +339,10 @@ namespace sw
         swapChainDesc._bufferCount    = kBackBufferCount;
         swapChainDesc._format         = ( gv_rhiBackBufferFormat == 1 ) ? RHIFormat::B8G8R8A8_UNORM : constant::kBackBufferFormat;
         swapChainDesc._bVSync         = _bPreferredVSync;
-        // 0 이하는 0 으로 넘긴다 — 링을 쓰는 백엔드가 0 을 오류로 거절한다(기본값으로 바꿔 주지 않는다).
-        swapChainDesc._stagingRingBytes  = gv_rhiStagingRingMegabytes > 0 ? static_cast<uint64>( gv_rhiStagingRingMegabytes ) * constant::kBytesPerMegabyte : 0u;
-        swapChainDesc._readbackRingBytes = gv_rhiReadbackRingMegabytes > 0 ? static_cast<uint64>( gv_rhiReadbackRingMegabytes ) * constant::kBytesPerMegabyte : 0u;
+        // 0 이하는 0 으로 넘긴다 — 스테이징 · 링을 쓰는 백엔드가 0 을 오류로 거절한다(기본값으로 바꿔 주지 않는다).
+        swapChainDesc._stagingRingBytes     = gv_rhiStagingRingMegabytes > 0 ? static_cast<uint64>( gv_rhiStagingRingMegabytes ) * constant::kBytesPerMegabyte : 0u;
+        swapChainDesc._readbackRingBytes    = gv_rhiReadbackRingMegabytes > 0 ? static_cast<uint64>( gv_rhiReadbackRingMegabytes ) * constant::kBytesPerMegabyte : 0u;
+        swapChainDesc._directUploadMaxBytes = gv_rhiDirectUploadMaxKilobytes > 0 ? static_cast<uint64>( gv_rhiDirectUploadMaxKilobytes ) * constant::kBytesPerKilobyte : 0u;
         {
             const utf8* pSoftwareEnv        = std::getenv( "SW_RHI_SOFTWARE_ADAPTER" );
             const bool  bSoftwareEnv        = pSoftwareEnv != nullptr && StringUtil::equals( pSoftwareEnv, "1" );

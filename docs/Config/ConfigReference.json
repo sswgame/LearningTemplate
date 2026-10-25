@@ -4245,6 +4245,14 @@
    "source": "Source/Engine/Graphics/RHI/RHI.cpp"
   },
   {
+   "name": "gv_rhiDirectUploadMaxKilobytes",
+   "type": "int32",
+   "default": "256",
+   "kind": "테스트",
+   "description": "이 크기(KiB) 이하의 텍스처 업로드는 스테이징 없이 바로 올린다(지금은 DX11 만 쓴다). 0 이면 모두 스테이징",
+   "source": "Source/Engine/Graphics/RHI/IRHIDevice.cpp"
+  },
+  {
    "name": "gv_rhiImmediateSubmit",
    "type": "bool",
    "default": "false",
@@ -4273,7 +4281,7 @@
    "type": "int32",
    "default": "64",
    "kind": "일반",
-   "description": "업로드 스테이징 링 용량(MiB). 이보다 큰 텍스처 업로드 하나는 Rejected 다(지금은 GL 만 쓴다)",
+   "description": "업로드 스테이징 용량(MiB): GL 은 링 크기, DX11 은 복사 중인 스테이징 텍스처 합의 상한. 이보다 큰 텍스처 업로드 하나는 Rejected 다",
    "source": "Source/Engine/Graphics/RHI/IRHIDevice.cpp"
   },
   {

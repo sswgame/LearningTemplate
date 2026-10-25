@@ -929,6 +929,12 @@
       "note": "nogpu 의 RHIStagingRingTest.ReadbackSpansReturnWhenTakenOrWhenTheDiscardedReadFinishes 는 ctest-nogpu 가 돈다. 화면은 App.exe -gl -scenario=engine/automation/uidemo.scenario.xml -gv_screenshot=<경로>.ppm 으로 캡처 경로를, 에디터는 -EnableEditor -gl -scenario=engine/automation/editor/uiaudit.scenario.xml 로 렌더 타깃 패널 읽기를 돌려 Error · Warning 0 과 그림이 깨지지 않는지 본다. 로그에 'readback ring is unavailable' · 'do not fit the' · 'GL debug' 오류가 없어야 한다. 장부(RHIMemoryLedger)의 Staging 항목이 업로드 64 MiB + 되읽기 64 MiB 로 보이는지도 본다."
     },
     {
+      "id": "rhi-transfer-dx11-staged-upload", "title": "DX11 큰 업로드가 장치가 만든 스테이징 텍스처로 올라간다(밉 체인 · 면 · 큰 구간 · 예산 Busy, 작은 업로드는 UpdateSubresource 그대로)", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true, "timeout_minutes": 45,
+      "filter": "D3D11StagedUploadTest.*,RHIDeviceTest.UploadTexture2DAllBackends,RHIDeviceTest.TextureReadbackMatchesUpload,RHIDeviceTest.SlicedTexturesTargetUploadAndReadBackPerSlice,RHIDeviceTest.RegionUploadReadsBackOnEveryBackend,RHIDeviceTest.RegionUploadRejectsOutOfRange,RenderPassGPUTest.CanvasDrawsOnEveryBackend,AppUITest.DemoScreenMatchesAcrossBackends", "extra_args": ["--host_suites=all"],
+      "source": "docs/plans/RhiAsyncUploads.md 2.2 백엔드별 구현 DX11", "result_doc": "docs/decisions/5-5_GraphicsRHI.md",
+      "note": "화면은 텍스처가 많은 게임 하나를 -dx11 -scenario 로 돌려 Error · Warning 0 과 텍스처가 빠지거나 깨지지 않는지 본다(BC 밉 체인이 스테이징 경로를 지난다). 로그에 'staging texture' · 'larger than the whole upload staging budget' · 'device was removed' 오류가 없어야 한다. 장부(RHIMemoryLedger)의 Staging 항목이 로드 중에 오르고 끝나면 0 으로 돌아오는지 -gv_profileFrames 보고로 본다. -gv_rhiDirectUploadMaxKilobytes=0 으로 같은 게임을 돌리면 모든 업로드가 스테이징을 지난다."
+    },
+    {
       "id": "occlusion-snapshot-tests", "title": "가림 타일 사본 판정 · 우편함 · 수집기의 가려짐 판정", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
       "filter": "OcclusionTileQueryTest.*,OcclusionTileMailboxTest.*,RenderViewCollectorTest.*",
       "source": "docs/plans/CameraRendererIntegration.md S4", "result_doc": "docs/plans/CameraRendererIntegration.md 1절"

@@ -333,6 +333,13 @@ namespace sw
             SW_LOG_ERROR( "submitTextureUpload: texture %# or the device context is not usable", texture );
             return RHITransferSubmit::rejected();
         }
+        // 장치를 잃은 뒤에는 전송이 끝나지 않아 스테이징 예산도 돌아오지 않는다 — Busy 를 영원히 되풀이하지 않게 진입에서 거절한다(계약 2).
+        const HRESULT removedReason = _pDevice->_device->GetDeviceRemovedReason();
+        if ( FAILED( removedReason ) )
+        {
+            SW_LOG_ERROR( "submitTextureUpload: the device was removed hr=0x%#", static_cast<uint32>( removedReason ) );
+            return RHITransferSubmit::rejected();
+        }
         if ( pRecord->_bDepth != SW_FALSE )
         {
             SW_LOG_ERROR( "submitTextureUpload: texture %# is a depth texture", texture );
@@ -357,7 +364,27 @@ namespace sw
             return RHITransferSubmit::rejected();
         }
 
-        // UpdateSubresource 는 소스를 그 자리에서 복사하고(계약 1) 즉시 컨텍스트 큐에 순서대로 들어가므로 앞서 제출된 프레임 뒤, 뒤이은 드로우 앞에서 실행된다(계약 3).
+        uint64 uploadBytes{ 0 };
+        for ( uint32 mip = 0; mip < mipCount; ++mip )
+        {
+            uploadBytes += arrMip[mip]._sizeBytes;
+        }
+        if ( uploadBytes > _pDevice->_directUploadMaxBytes )
+        {
+            // 큰 업로드는 소스 복사를 즉시 컨텍스트 잠금 밖(스테이징 생성)으로 뺀다. 렌더 스레드의 ExecuteCommandList · Present 가 그 복사를 기다리지 않는다.
+            D3D11_SUBRESOURCE_DATA arrInitialData[constant::kMaxTextureMipCount]{};
+            for ( uint32 mip = 0; mip < mipCount; ++mip )
+            {
+                arrInitialData[mip].pSysMem          = arrMip[mip]._pData;
+                arrInitialData[mip].SysMemPitch      = arrMip[mip]._rowBytes;
+                arrInitialData[mip].SysMemSlicePitch = arrMip[mip]._sizeBytes;
+            }
+            return _pDevice->submitStagedUpload( "submitTextureUpload", *pRecord, texDesc.Width, texDesc.Height, mipCount, arrInitialData,
+                                                 D3D11CalcSubresource( 0, desc._arraySlice, texDesc.MipLevels ), 0, 0 );
+        }
+
+        // 작은 업로드(`_directUploadMaxBytes` 이하)는 UpdateSubresource 가 소스를 그 자리에서 복사한다(계약 1). 잠금 안의 복사가 짧아 스테이징 생성보다 싸다.
+        // 즉시 컨텍스트 큐에 순서대로 들어가므로 앞서 제출된 프레임 뒤, 뒤이은 드로우 앞에서 실행된다(계약 3).
         // 끝은 큐 뒤에 단 이벤트 쿼리가 알린다. 시리얼은 같은 락 안에서 매긴다(계약 5).
         const D3D11ImmediateContext::ScopedLock context = _pDevice->_immediateContext.lock();
         Microsoft::WRL::ComPtr<ID3D11Query>     query   = _pDevice->acquireTransferQuery( context );
@@ -383,6 +410,13 @@ namespace sw
             SW_LOG_ERROR( "submitTextureRegionUpload: texture %# is missing, a depth texture, or the device context is not usable", texture );
             return RHITransferSubmit::rejected();
         }
+        // 장치를 잃은 뒤에는 전송이 끝나지 않아 스테이징 예산도 돌아오지 않는다 — Busy 를 영원히 되풀이하지 않게 진입에서 거절한다(계약 2).
+        const HRESULT removedReason = _pDevice->_device->GetDeviceRemovedReason();
+        if ( FAILED( removedReason ) )
+        {
+            SW_LOG_ERROR( "submitTextureRegionUpload: the device was removed hr=0x%#", static_cast<uint32>( removedReason ) );
+            return RHITransferSubmit::rejected();
+        }
 
         D3D11_TEXTURE2D_DESC texDesc{};
         pRecord->_texture->GetDesc( &texDesc );
@@ -390,14 +424,23 @@ namespace sw
         if ( validateTextureRegionUpload( fromDxgiFormat( texDesc.Format ), texDesc.Width, texDesc.Height, texDesc.MipLevels, texDesc.ArraySize, desc, rowBytes ) == false )
             return RHITransferSubmit::rejected();
 
-        // 박스는 밉 안의 픽셀 좌표다(끝은 포함하지 않는다). 즉시 컨텍스트 큐에 순서대로 들어가 앞서 제출된 프레임 뒤, 뒤이은 드로우 앞에서 실행된다.
+        const UINT   subresource = D3D11CalcSubresource( desc._mip, desc._arraySlice, texDesc.MipLevels );
+        const uint32 uploadBytes = rowBytes * desc._height;
+        if ( uploadBytes > _pDevice->_directUploadMaxBytes )
+        {
+            // 큰 구간은 소스 복사를 즉시 컨텍스트 잠금 밖(스테이징 생성)으로 뺀다. 스테이징은 구간 크기 한 장이고 (x, y) 에 복사한다.
+            const D3D11_SUBRESOURCE_DATA initialData{ desc._pData, rowBytes, uploadBytes };
+            return _pDevice->submitStagedUpload( "submitTextureRegionUpload", *pRecord, desc._width, desc._height, 1, &initialData, subresource, desc._x, desc._y );
+        }
+
+        // 작은 구간(글리프 아틀라스 등)은 UpdateSubresource 로 바로 올린다. 박스는 밉 안의 픽셀 좌표다(끝은 포함하지 않는다).
+        // 즉시 컨텍스트 큐에 순서대로 들어가 앞서 제출된 프레임 뒤, 뒤이은 드로우 앞에서 실행된다.
         const D3D11_BOX                         box{ desc._x, desc._y, 0, desc._x + desc._width, desc._y + desc._height, 1 };
-        const UINT                              subresource = D3D11CalcSubresource( desc._mip, desc._arraySlice, texDesc.MipLevels );
-        const D3D11ImmediateContext::ScopedLock context     = _pDevice->_immediateContext.lock();
-        Microsoft::WRL::ComPtr<ID3D11Query>     query       = _pDevice->acquireTransferQuery( context );
+        const D3D11ImmediateContext::ScopedLock context = _pDevice->_immediateContext.lock();
+        Microsoft::WRL::ComPtr<ID3D11Query>     query   = _pDevice->acquireTransferQuery( context );
         if ( query == nullptr )
             return RHITransferSubmit::rejected();
-        context->UpdateSubresource( pRecord->_texture.Get(), subresource, &box, desc._pData, rowBytes, rowBytes * desc._height );
+        context->UpdateSubresource( pRecord->_texture.Get(), subresource, &box, desc._pData, rowBytes, uploadBytes );
         const uint64 serial = _pDevice->endTransfer( context, std::move( query ) );
         pRecord->_lastTransferSerial.store( serial );
         return _pDevice->_transferSerials.makeAccepted( serial );
