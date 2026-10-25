@@ -16,8 +16,8 @@ namespace test
         /** @brief 실행 시작에 케이스를 더하는 함수 — `SW_TEST_CASE_GENERATOR` 가 등록합니다. 받은 목록에 `addCase` 로 더합니다. */
         using CaseGenerator = void ( * )( TestCatalog& catalog );
 
-        /** @brief 매개변수 목록을 돌려주는 함수 — 실행 시작에 한 번 불립니다(`SW_TEST_CASE_PER_PARAMETER`). 값은 프로그램 수명의 글(리터럴)이어야 한다. */
-        using ParameterListFunc = sw::vector<const utf8*> ( * )();
+        /** @brief 매개변수 목록을 돌려주는 함수 — 실행 시작에 한 번 불립니다(`SW_TEST_CASE_PER_PARAMETER`). 값은 케이스가 복사해 쥔다(동적으로 만든 이름도 된다). */
+        using ParameterListFunc = sw::vector<sw::string> ( * )();
         /** @brief 매개변수 하나로 도는 케이스 본문입니다. */
         using ParameterCaseFunc = void ( * )( const utf8* pParameter );
 
@@ -164,7 +164,7 @@ namespace test
 
 /**
  * @brief 매개변수(보통 백엔드 스위치) 하나마다 케이스 하나로 도는 케이스를 정의합니다 — 케이스 이름은 `Suite.<TestName>.<매개변수 이름>`(`dx12` · `vk` …).
- * @param parameterListFunc `sw::vector<const utf8*> ()` — 매개변수 목록(리터럴). 실행 시작에 한 번 불린다(엔진이 선 뒤).
+ * @param parameterListFunc `sw::vector<sw::string> ()` — 매개변수 목록(백엔드 스위치 · 게임 이름 …). 실행 시작에 한 번 불린다(엔진이 선 뒤).
  * @param expectedSeconds   케이스 하나의 예상 비용(초, 0 = 모름) — 샤드 배정이 `--test_costs` 에 없는 케이스에 쓴다. 모아 도는 한 케이스의 옛 비용을 매개변수 수로 나눈다.
  * @details 본문은 `void ( const utf8* pParameter )` 다. 한 판이 못 돌면(`SW_TEST_SKIP`) 그 매개변수의 케이스만 건너뛴다. 하나가 져도 다른 매개변수의 케이스는 돈다.
  *          `--test_filter=Suite.<TestName>.*`(정책의 `raceCases` 도 같은 모양)으로 묶음을, `Suite.<TestName>.gl` 로 하나를 고른다. 이름은 `CheckTestSuites` 가 `Suite.TestName` 으로 읽는다.

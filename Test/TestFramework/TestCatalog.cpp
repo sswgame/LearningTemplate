@@ -132,12 +132,12 @@ namespace test
         _bGeneratorsExpanded = true;
         for ( const ParameterizedCase& family : _listParameterized )
         {
-            for ( const utf8* pParameter : family._listFunc() )
+            for ( const sw::string& parameter : family._listFunc() )
             {
                 const ParameterCaseFunc caseFunc = family._caseFunc;
-                addCase( family._suiteName.c_str(), ( family._testName + "." + makeParameterLabel( pParameter ) ).c_str(), [caseFunc, pParameter]()
+                addCase( family._suiteName.c_str(), ( family._testName + "." + makeParameterLabel( parameter.c_str() ) ).c_str(), [caseFunc, parameter]()
                 {
-                    caseFunc( pParameter );
+                    caseFunc( parameter.c_str() );
                 }, family._expectedSeconds );
             }
         }

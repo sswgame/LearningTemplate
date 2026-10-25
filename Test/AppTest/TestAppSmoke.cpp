@@ -163,28 +163,28 @@ namespace
      *          App 이 0 이 아닌 코드로 끝난다. 그래서 배포본은 스위치 없이 "이 빌드가 가진 것" 하나(케이스 이름 `default`)로 돌린다.
      *          스위치는 쿠킹 표의 줄마다 명령줄 이름이다 — 백엔드가 늘면 여기도 같이 는다.
      */
-    sw::vector<const utf8*> collectBackendSwitches()
+    sw::vector<sw::string> collectBackendSwitches()
     {
 #if defined( SW_SHIPPING )
-        return sw::vector<const utf8*>{ "" };
+        return sw::vector<sw::string>{ "" };
 #else
     #define SW_APP_SMOKE_BACKEND_SWITCH( Backend, ShaderFolder, ShaderTarget, Argument, CommandLineName ) "-" CommandLineName,
-        return sw::vector<const utf8*>{ SW_RHI_BACKEND_TABLE( SW_APP_SMOKE_BACKEND_SWITCH ) };
+        return sw::vector<sw::string>{ SW_RHI_BACKEND_TABLE( SW_APP_SMOKE_BACKEND_SWITCH ) };
     #undef SW_APP_SMOKE_BACKEND_SWITCH
 #endif
     }
 
 #if !defined( SW_SHIPPING )
     /** @brief 에디터를 켠 기동을 확인할 백엔드 스위치입니다(`EditorModeStartsAndExitsCleanly.<백엔드>`). */
-    sw::vector<const utf8*> collectEditorBackendSwitches()
+    sw::vector<sw::string> collectEditorBackendSwitches()
     {
-        return sw::vector<const utf8*>{ "-dx12", "-gl" };
+        return sw::vector<sw::string>{ "-dx12", "-gl" };
     }
 
     /** @brief 백엔드 교체를 걸 시작 백엔드입니다(`BackendSwap*.<시작 백엔드>`) — 시나리오 `swapother` 가 DirectX 12 ↔ 11 로 바꾼다. */
-    sw::vector<const utf8*> collectBackendSwapStarts()
+    sw::vector<sw::string> collectBackendSwapStarts()
     {
-        return sw::vector<const utf8*>{ "-dx12", "-dx11" };
+        return sw::vector<sw::string>{ "-dx12", "-dx11" };
     }
 
     /**

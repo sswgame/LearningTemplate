@@ -76,6 +76,17 @@ namespace
 #endif
         }
 
+        /** @brief `collectBackendSwitches` 를 매개변수 묶음(`SW_TEST_CASE_PER_PARAMETER`)의 목록 모양(글)으로 바꾼 것입니다. */
+        static sw::vector<sw::string> collectBackendParameters()
+        {
+            sw::vector<sw::string> listParameter;
+            for ( const utf8* pSwitch : collectBackendSwitches() )
+            {
+                listParameter.emplace_back( pSwitch );
+            }
+            return listParameter;
+        }
+
         /** @brief 시나리오 경로의 묶음 이름(파일 이름의 첫 `.` 앞 — `vfxgpulights`)입니다. 케이스 이름과 에디터 묶음 이름에 쓴다. */
         static sw::string getGroupName( const sw::string& scenarioPath )
         {
@@ -224,7 +235,7 @@ namespace
             if ( test::isBuildFeatureAvailable( test::BuildFeature::SourceResources ) == false )
                 return; // 게임 팩 프리셋(Config/Game)과 Bin/Games 는 Shipping 에 없다
             sw::vector<sw::pair<sw::string, sw::vector<sw::string>>> listPackScenario;
-            size_t                                                   packScenarioCount = 0;
+            size_t                                                   packScenarioCount = 0; // 활성 게임 몫도 센다 — 옛 286 s 가 그 몫을 포함해 쟀으므로 케이스당 비용은 그대로 둔다
             for ( const sw::string& gameName : test::AppTestUtil::collectBuiltGamePacks() )
             {
                 const sw::string packRoot = test::AppTestUtil::readPackRoot( gameName );
@@ -242,8 +253,20 @@ namespace
             }
             for ( const auto& [gameName, listPack] : listPackScenario )
             {
+                if ( isActiveGame( gameName ) )
+                    continue; // 위 목록이 이미 같은 시나리오를 같은 모듈 경로로 돈다(`isActiveGame`)
                 addScenarioCases( catalog, gameName + ".", listPack, "-game=" + gameName, kGamePackScenarioTotalSeconds / static_cast<float64>( packScenarioCount * backendCount ) );
             }
+        }
+
+        /**
+         * @brief @p gameName 이 빌드의 활성 게임이면 true 입니다 — 활성 게임의 팩 시나리오는 게임 팩 구간이 아니라 활성 게임 구간(`collectGameScenarioPaths`)이 돈다.
+         * @details `GameSelection::select` 는 `-game=<활성 게임>` 을 인자 없는 실행과 같게 푼다(둘 다 `Bin/Modules/SWGame`, 팩 폴더로 가지 않는다). 시나리오 폴더도 같다
+         *          (`readPackRoot( getName() )/automation`). 같은 판을 `-game=` 만 붙여 한 번 더 돌면 같은 것을 두 번 확인하는 낭비라 게임 팩 구간에서 뺀다.
+         */
+        static bool isActiveGame( const sw::string& gameName )
+        {
+            return gameName == sw::GameSelection::getName();
         }
 
         /** @brief 시나리오를 백엔드마다 돌려 종료 코드 0 을 단언하고 기록 줄(`<Record>`)을 백엔드끼리 견줍니다. 돌린(건너뛰지 않은) 수를 돌려줍니다. */
@@ -440,9 +463,14 @@ SW_TEST_CASE( AppScenarioTest, ScenarioListIsNotEmpty )
 SW_TEST_CASE( AppScenarioTest, EveryGamePackScenarioPassesOnEveryBackend )
 {
     SW_TEST_REQUIRES_FEATURE( SourceResources ); // 게임 팩 프리셋(Config/Game)과 Bin/Games 는 Shipping 에 없다
-    const sw::vector<sw::string> listGame = test::AppTestUtil::collectBuiltGamePacks();
+    sw::vector<sw::string> listGame;
+    for ( const sw::string& gameName : test::AppTestUtil::collectBuiltGamePacks() )
+    {
+        if ( AppScenarioTestInternal::isActiveGame( gameName ) == false )
+            listGame.push_back( gameName ); // 활성 게임은 활성 게임 구간이 돈다
+    }
     if ( listGame.empty() )
-        SW_TEST_SKIP( "no game packs in Bin/Games (Shipping or SW_GAMES is empty)" );
+        SW_TEST_SKIP( "no game packs besides the active game in Bin/Games (Shipping or SW_GAMES is empty)" );
     size_t scenarioCount = 0;
     for ( const sw::string& gameName : listGame )
     {
@@ -474,6 +502,8 @@ SW_TEST_CASE( AppScenarioTest, RecordsMatchAcrossBackends )
     {
         for ( const sw::string& gameName : test::AppTestUtil::collectBuiltGamePacks() )
         {
+            if ( AppScenarioTestInternal::isActiveGame( gameName ) )
+                continue; // 활성 게임의 시나리오는 위 구간이 이미 `<Record>` 를 견줬다
             const sw::string packRoot = test::AppTestUtil::readPackRoot( gameName );
             SW_EXPECT_TRUE_MSG( packRoot.empty() == false, ( "no _packRoot in the preset of " + gameName ).c_str() );
             if ( packRoot.empty() )
@@ -499,7 +529,7 @@ SW_TEST_CASE( AppScenarioTest, RecordsMatchAcrossBackends )
  * @details 녹화는 시나리오가 낸 가상 입력과 끝 프레임의 탐침 값(`-scenario-record-probes`)을 담는다. 같은 입력 · 같은 고정 틱이면 같은 상태가 나와야 한다(결정적 재생).
  *          HarvestValley 팩의 `actions` 시나리오를 쓴다(농부 위치, 간 타일 수, 빙의). 팩을 빌드하지 않은 구성(Shipping)은 건너뛴다. 예상 비용은 옛 한 케이스 24 s 를 넷으로 나눈 값이다.
  */
-SW_TEST_CASE_PER_PARAMETER( AppScenarioTest, RecordedPlayReplaysOnEveryBackend, AppScenarioTestInternal::collectBackendSwitches, 6.0 )
+SW_TEST_CASE_PER_PARAMETER( AppScenarioTest, RecordedPlayReplaysOnEveryBackend, AppScenarioTestInternal::collectBackendParameters, 6.0 )
 {
     SW_TEST_REQUIRES_FEATURE( SourceResources ); // 게임 팩 프리셋(Config/Game)과 Bin/Games 는 Shipping 에 없다
     const sw::vector<sw::string> listGame = test::AppTestUtil::collectBuiltGamePacks();
@@ -532,7 +562,7 @@ SW_TEST_CASE_PER_PARAMETER( AppScenarioTest, RecordedPlayReplaysOnEveryBackend, 
  *          리로드 뒤 새 이미지로 그리는지 본다. 한 프로세스를 공유하는 것은 체인 안의 단계끼리라 백엔드로 나눠도 목적이 그대로다(프로세스는 백엔드마다 하나였다).
  *          개발 명령이 없는 구성(Shipping)은 13 으로 건너뛴다. 예상 비용은 옛 한 케이스 16 s 를 넷으로 나눈 값이다.
  */
-SW_TEST_CASE_PER_PARAMETER( AppScenarioTest, ChainedScenariosShareOneProcess, AppScenarioTestInternal::collectBackendSwitches, 4.0 )
+SW_TEST_CASE_PER_PARAMETER( AppScenarioTest, ChainedScenariosShareOneProcess, AppScenarioTestInternal::collectBackendParameters, 4.0 )
 {
     const sw::vector<sw::string> listScenario{ "engine/automation/hotreload.scenario.xml", "engine/automation/runner.scenario.xml", "engine/automation/hotreload.scenario.xml" };
     sw::string                   scenarioLines;

@@ -116,9 +116,9 @@ namespace
     }
 
     /** @brief 매개변수 묶음 시험의 목록 — 스위치 · 빈 글 · 일반 글. */
-    sw::vector<const utf8*> listProbeParameter()
+    sw::vector<sw::string> listProbeParameter()
     {
-        return sw::vector<const utf8*>{ "-dx12", "", "plain" };
+        return sw::vector<sw::string>{ "-dx12", "", "plain" };
     }
 
     /** @brief 매개변수 묶음 시험의 본문 — 이름만 보므로 하는 일이 없다. */
