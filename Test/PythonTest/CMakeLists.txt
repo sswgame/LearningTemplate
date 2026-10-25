@@ -3,6 +3,15 @@
 # @brief 파이썬 도구의 단위 테스트(nogpu)과 빌드된 App 을 돌리는 QA 러너(hostgpu · soak · perf)
 # ==============================================================================
 
+# "이 기계에서 RHI 를 못 씀" 종료 코드 — 정본은 C++ 헤더 한 곳이고 CTest 의 건너뜀 판정(SKIP_RETURN_CODE)도 그 값을 읽는다.
+set(swRhiUnusableHeader "${CMAKE_SOURCE_DIR}/Source/Engine/Graphics/RHI/RHIInitResult.h")
+set_property(DIRECTORY "${CMAKE_SOURCE_DIR}" APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${swRhiUnusableHeader}")
+file(READ "${swRhiUnusableHeader}" swRhiUnusableHeaderText)
+if(NOT swRhiUnusableHeaderText MATCHES "constexpr[ \t]+int32[ \t]+kRHIUnusableHereExitCode[ \t]*=[ \t]*([0-9]+)[ \t]*;")
+	message(FATAL_ERROR "${swRhiUnusableHeader}: kRHIUnusableHereExitCode 의 정의 줄을 찾지 못했다 — 줄 모양이 바뀌었나")
+endif()
+set(SW_RHI_UNUSABLE_EXIT_CODE "${CMAKE_MATCH_1}")
+
 # ------------------------------------------------------------------------------
 # 1) 단위 테스트 — 이 폴더의 `Test*.py` 하나 = CTest 항목 하나(`PythonTest_<이름>`)
 #
@@ -37,7 +46,7 @@ if(TARGET App)
 		TIMEOUT 900
 		GPU
 		RESOURCE_LOCK AppBin
-		SKIP_RETURN_CODE 77
+		SKIP_RETURN_CODE ${SW_RHI_UNUSABLE_EXIT_CODE}
 	)
 
 	# soak 은 프로파일 표(Info 로그)를 읽는다 — Shipping 은 Info 로그를 빼고 지으므로 등록하지 않는다.
@@ -49,7 +58,7 @@ if(TARGET App)
 			LABELS "soak;qa"
 			TIMEOUT 600
 			RUN_SERIAL
-			SKIP_RETURN_CODE 77
+			SKIP_RETURN_CODE ${SW_RHI_UNUSABLE_EXIT_CODE}
 		)
 	endif()
 
@@ -61,7 +70,7 @@ if(TARGET App)
 			LABELS "perf;qa"
 			TIMEOUT 900
 			RUN_SERIAL
-			SKIP_RETURN_CODE 77
+			SKIP_RETURN_CODE ${SW_RHI_UNUSABLE_EXIT_CODE}
 		)
 	endif()
 endif()

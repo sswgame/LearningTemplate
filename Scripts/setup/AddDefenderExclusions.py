@@ -15,6 +15,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from common.ExitCode import ExitCode
 from common.Paths import getProjectRoot
 from common.Process import runProcess
 
@@ -36,7 +37,7 @@ def requestAdminElevation() -> None:
     if ret <= 32:
         print("[오류] 관리자 권한이 승인되지 않았습니다.")
         input("\n엔터 키를 누르면 종료합니다...")
-    sys.exit(0)
+    sys.exit(ExitCode.Passed)
 
 
 def runPowerShellInternal(command: str) -> None:

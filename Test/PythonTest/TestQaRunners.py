@@ -159,9 +159,13 @@ class RhiUnusableExitCodeTest(unittest.TestCase):
         self.assertEqual(kAppRhiUnusableExitCode, readRhiUnusableExitCode(kRepositoryRoot / "Source/Engine/Graphics/RHI/RHIInitResult.h"))
         self.assertEqual(int(ExitCode.Skipped), kAppRhiUnusableExitCode)
         cmakeText = (kRepositoryRoot / "Test/PythonTest/CMakeLists.txt").read_text(encoding="utf-8")
-        listCode = re.findall(r"SKIP_RETURN_CODE\s+(\d+)", cmakeText)
+        # CMake 는 같은 헤더 줄을 읽어 변수 하나로 쓴다 — `SKIP_RETURN_CODE` 에 숫자 리터럴이 다시 생기면 멈춘다.
+        self.assertIn("kRHIUnusableHereExitCode", cmakeText)
+        listCode = re.findall(r"SKIP_RETURN_CODE\s+(\S+)", cmakeText)
         self.assertTrue(listCode)
-        self.assertEqual({str(kAppRhiUnusableExitCode)}, set(listCode))
+        self.assertEqual({"${SW_RHI_UNUSABLE_EXIT_CODE}"}, set(listCode))
+        for cmakePath in (kRepositoryRoot / "Test").rglob("CMakeLists.txt"):
+            self.assertNotRegex(cmakePath.read_text(encoding="utf-8"), r"SKIP_RETURN_CODE\s+\d", str(cmakePath))
 
     def testMissingDefinitionStopsLoudly(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

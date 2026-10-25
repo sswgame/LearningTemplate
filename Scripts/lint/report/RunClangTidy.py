@@ -30,6 +30,7 @@ import pathlib
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
+from common.ExitCode import ExitCode
 from common.Paths import getProjectRoot
 from common.Process import runProcess
 from common.TranslationUnits import TranslationUnitSweep
@@ -79,7 +80,7 @@ def findClangTidy() -> str:
     print("[RunClangTidy] 찾아본 곳:")
     for candidate in candidates:
         print(f"  - {candidate}")
-    sys.exit(2)
+    sys.exit(ExitCode.CheckInvalid)
 
 
 def runOne(tidyExe: str, buildDir: Path, sourceFile: str) -> str:
