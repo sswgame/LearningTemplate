@@ -223,7 +223,7 @@ namespace sw
             }
         }
 
-        // `-gv_rhiBackend=<n>` 도 **명시적 지정**이다. 짧은 플래그만 보면 전역 변수로 고른 백엔드를
+        // `-gv_rhiBackend=<이름>` 도 **명시적 지정**이다. 짧은 플래그만 보면 전역 변수로 고른 백엔드를
         // EngineConfig 기본값이 로그 없이 덮어쓴다. 값 자체는 updateFromCommandLine 이 이미 전역
         // 변수에 넣어 두었으므로 여기서는 그것을 읽는다.
         if ( commandLineManager.isArgumentProvided( "gv_rhiBackend" ) )

@@ -229,6 +229,42 @@ SW_TEST_CASE( GlobalVariableTest, EnumTakesEnumeratorNamesFromTheCommandLine )
 }
 
 /**
+ * @brief [GlobalVariableTest] enum 변수는 명령줄에서 숫자를 오류로 거절하고, 값을 바꾸지 않는다
+ * @details 숫자는 열거자 순서가 바뀌면 뜻이 달라지고 변수 크기를 넘으면 잘려 다른 열거자가 된다. 에디터 · 프리셋이 쓰는 `setValueFromString` 은 숫자를 계속 받는다.
+ */
+SW_TEST_CASE( GlobalVariableTest, EnumRejectsNumbersOnTheCommandLine )
+{
+    SW_TEST_DEFENSIVE_SCOPE( "a number given to an enum variable on the command line is reported" );
+    sw::GlobalVariableManager manager;
+    int32                     numberValue{ 0 };
+    SW_ASSERT_TRUE( manager.registerVariable( "gv_testEnumNumber", sw::GlobalVariableType::Enum, &numberValue, int32{ 0 }, "", "TestMode" ) );
+
+    sw::CommandLineManager cmd;
+    cmd.initialize();
+    manager.registerToCommandLine( &cmd );
+    utf8  arg0[] = "CoreTest";
+    utf8  arg1[] = "gv_testEnumNumber=2";
+    utf8* argv[] = { arg0, arg1 };
+    cmd.parse( 2, argv );
+    manager.updateFromCommandLine( &cmd );
+    SW_EXPECT_EQUAL( 0, numberValue ); // 숫자는 파서가 없어도 있어도 바로 적용하지 않는다
+
+    manager.setEnumTextParser( SW_DELEGATE_LAMBDA( sw::GlobalVariableEnumTextParser, []( sw::string_view, sw::string_view, int32& ) -> bool
+    {
+        return false;
+    } ) );
+    SW_EXPECT_FALSE( manager.applyPendingEnumText() );
+    SW_EXPECT_EQUAL( 0, numberValue );
+
+    sw::GlobalVariableInfo* pInfo = manager.findVariable( "gv_testEnumNumber" );
+    SW_ASSERT_NOT_NULL( pInfo );
+    SW_EXPECT_FALSE( pInfo->setValueFromCommandLine( "1" ) );
+    SW_EXPECT_EQUAL( 0, numberValue );
+    SW_EXPECT_TRUE( pInfo->setValueFromString( "1" ) ); // 안쪽 글(에디터 · 프리셋)은 숫자를 받는다
+    SW_EXPECT_EQUAL( 1, numberValue );
+}
+
+/**
  * @brief [GlobalVariableTest] 미등록 변수 조회 및 안전성 검증
  */
 SW_TEST_CASE( GlobalVariableTest, NonExistentVariableHandling )

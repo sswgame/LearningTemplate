@@ -59,20 +59,21 @@ namespace sw
 
 #if !defined( SW_SHIPPING )
     /**
-     * @brief 라이트 컬링 방식입니다. 0 이면 라이트 그리드 없이 픽셀마다 목록 전체를 돕니다(비교 기준), 1 이면 CPU 가 만든 클러스터 그리드, 2 이면 GPU 컴퓨트가 만든 그리드입니다.
+     * @brief 라이트 컬링 방식입니다. `-gv_lightCulling=None` 이면 라이트 그리드 없이 픽셀마다 목록 전체를 돕니다(비교 기준), `CPU` 면 CPU 가 만든 클러스터 그리드, `GPU` 면 GPU 컴퓨트가 만든 그리드입니다.
      * @details 학습용으로 세 방식을 나란히 보게 둔다(결정 기록 5-12 D2-13). 기본값은 Shipping 과 같은 GPU 다. Shipping 은 변수를 두지 않고 GPU 로 고정한다
-     *          (`FrameRenderer::selectLightGridProducer`).
+     *          (`FrameRenderer::selectLightGridProducer`). 명령줄은 열거자 이름만 받는다(숫자는 오류).
      */
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_lightCulling, 2, "라이트 컬링 (0=그리드 없이 목록 전체, 1=CPU 클러스터 그리드, 2=GPU 클러스터 그리드)" );
+    SW_TEST_GLOBAL_VARIABLE( LightGridProducer, gv_lightCulling, LightGridProducer::GPU, "라이트 컬링 (None=그리드 없이 목록 전체, CPU=CPU 클러스터 그리드, GPU=GPU 클러스터 그리드)" );
 #endif
 
     /**
-     * @brief `-gv_viewMode=<n>` 은 주 출력(게임 창)의 보기 모드입니다(0 Lit, 1 Unlit, 2 Wireframe, 3 Normals, 4 Depth, 5 Overdraw, 6 LightingOnly, 7 Roughness, 8 Metallic, 9 Mipmaps, 10 LightComplexity, 11 ShadedWireframe).
+     * @brief `-gv_viewMode=<이름>` 은 주 출력(게임 창)의 보기 모드입니다(Lit, Unlit, Wireframe, Normals, Depth, Overdraw, LightingOnly, Roughness, Metallic, Mipmaps, LightComplexity, ShadedWireframe).
      * @details 에디터 씬 뷰 툴바와 같은 값을 가리킨다(`RenderViewMode`). 여기 있는 이유는 **검증**이다.
      *          뷰 모드가 정말로 픽셀을 바꾸는지 `-gv_screenshot` 으로 확인하려면 에디터를 띄우지 않고
      *          모드를 고를 수 있어야 한다. 없으면 이 기능은 사람 눈으로만 확인되는 기능이 된다.
+     *          명령줄은 열거자 이름만 받는다(숫자는 오류).
      */
-    SW_GLOBAL_VARIABLE( int32, gv_viewMode, 0, "주 출력 보기 모드 (0 Lit / 1 Unlit / 2 Wireframe / 3 Normals / 4 Depth / 5 Overdraw / 6 LightingOnly / 7 Roughness / 8 Metallic / 9 Mipmaps / 10 LightComplexity / 11 ShadedWireframe)" );
+    SW_GLOBAL_VARIABLE( RenderViewMode, gv_viewMode, RenderViewMode::Lit, "주 출력 보기 모드 (Lit / Unlit / Wireframe / Normals / Depth / Overdraw / LightingOnly / Roughness / Metallic / Mipmaps / LightComplexity / ShadedWireframe)" );
 
     FrameRenderer::FrameRenderer()
         : _pDevice{ nullptr }
@@ -204,8 +205,8 @@ namespace sw
         }
 
         // 커맨드라인이 주 출력의 보기 모드를 정했으면 여기서 받는다(에디터 씬 뷰는 툴바가 따로 정한다).
-        // 범위 밖 번호는 Lit 으로 바꾸지 않고 초기화를 멈춘다 — 검증 실행이 다른 모드를 찍고 통과하면 안 된다.
-        if ( isRenderViewModeIndex( gv_viewMode ) == false )
+        // 모드가 아닌 값(`Count` 표식, 에디터 · 콘솔이 숫자로 넣은 범위 밖 값)은 Lit 으로 바꾸지 않고 초기화를 멈춘다 — 검증 실행이 다른 모드를 찍고 통과하면 안 된다.
+        if ( isRenderViewModeIndex( static_cast<int32>( gv_viewMode ) ) == false )
         {
             _status        = FrameRendererStatus::Failed;
             _statusMessage = "-gv_viewMode=" + to_string( static_cast<int64>( gv_viewMode ) ) + " is not a view mode (0 .. " +
@@ -213,8 +214,8 @@ namespace sw
             SW_LOG_ERROR( "initialize: %#", _statusMessage );
             return false;
         }
-        if ( gv_viewMode > 0 )
-            setViewMode( static_cast<RenderViewMode>( gv_viewMode ) );
+        if ( gv_viewMode != RenderViewMode::Lit )
+            setViewMode( gv_viewMode );
 
         // 동기 경로(execute)는 렌더러 자신의 빌더가 배치를 만든다. 패킷 경로의 빌더(Engine)에는 Engine 가 같은 값을 준다.
         _sceneBuilder.setMergeBatchesAcrossMaterials( pDevice->supportsNativeBindlessSampling() );
@@ -754,13 +755,13 @@ namespace sw
     LightGridProducer FrameRenderer::selectLightGridProducer()
     {
 #if defined( SW_SHIPPING )
-        const int32 requested = 2;
+        const LightGridProducer requested = LightGridProducer::GPU;
 #else
-        const int32 requested = gv_lightCulling;
+        const LightGridProducer requested = gv_lightCulling;
 #endif
-        if ( requested == 0 )
+        if ( requested == LightGridProducer::None )
             return LightGridProducer::None;
-        if ( requested == 1 )
+        if ( requested == LightGridProducer::CPU )
             return LightGridProducer::CPU;
         // GPU 생산자는 컴퓨트 PSO 가 있어야 한다. 없으면 그리드 버퍼를 채울 쪽이 없다 — 채우지 않은 버퍼를 읽게 두지 않고 그리드 없이 그린다(그림은 같고 비용만 다르다).
         if ( getEnginePSO( RenderPassType::LightGrid ) != 0 )

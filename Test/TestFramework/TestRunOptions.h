@@ -44,7 +44,7 @@ namespace test
 
         /**
          * @brief 테스트 전용 인자를 가져가고 나머지(엔진 명령줄)를 돌려줍니다. 첫 원소는 실행 파일 경로다.
-         * @details 엔진 인자는 `_listEngineArgument` 에도 남는다 — 재현 명령이 그대로 붙인다(`-gv_rhiBackend=2` 같은 것).
+         * @details 엔진 인자는 `_listEngineArgument` 에도 남는다 — 재현 명령이 그대로 붙인다(`-gv_rhiBackend=Vulkan` 같은 것).
          */
         sw::vector<utf8*> parse( int32 argc, utf8* argv[] );
         /** @brief 테스트 실행 파일이 받는 인자를 표준 출력에 찍습니다. */

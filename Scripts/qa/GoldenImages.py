@@ -151,7 +151,7 @@ def main(listArgument: list[str] | None = None) -> int:
     parser.add_argument("--record", action="store_true", help="견주지 않고 새 기준을 뜬다")
     parser.add_argument("--runs", type=int, default=3, help="기준을 뜰 때 백엔드마다 돌리는 횟수(흩어짐이 허용 오차를 정한다)")
     parser.add_argument("--diff-dir", type=Path, default=None, help="실패한 캡처를 남길 폴더")
-    parser.add_argument("--extra-arg", action="append", default=[], help="이번 실행에만 더할 App 인자(기준에 안 남는다) — 예: -gv_viewMode=2 로 깨진 화면이 지는지 본다")
+    parser.add_argument("--extra-arg", action="append", default=[], help="이번 실행에만 더할 App 인자(기준에 안 남는다) — 예: -gv_viewMode=Wireframe 으로 깨진 화면이 지는지 본다")
     args = parser.parse_args(listArgument)
 
     repositoryRoot = getProjectRoot()

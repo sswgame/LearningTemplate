@@ -451,7 +451,7 @@ namespace sw
             return;
         _bWarnedGPULightRefused = SW_TRUE;
         // 대신 생산자를 GPU 로 바꾸지 않는다 — 생산자는 데이터와 빌드(gv_lightCulling)가 정했다. 요청한 방출기의 빛만 그리지 않는다.
-        SW_LOG_ERROR( "GPU particle lights (%# slots) need the GPU light grid producer (gv_lightCulling 2) - the lights are not drawn", requestedSlotCount );
+        SW_LOG_ERROR( "GPU particle lights (%# slots) need the GPU light grid producer (gv_lightCulling=GPU) - the lights are not drawn", requestedSlotCount );
     }
 
     const RHIStructuredBufferSlot* GPULightBuffer::findProbeBuffer() const

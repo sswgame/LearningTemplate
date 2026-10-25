@@ -26,6 +26,7 @@
 #include "Engine/Graphics/RHI/RHIStructuredBufferSlot.h"
 #include "Engine/Graphics/Shader/Binding/GPULight.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Renderer/Light/LightGrid.h"
 
 namespace sw
@@ -88,7 +89,9 @@ namespace sw
     /**
      * @enum LightGridProducer
      * @brief 라이트 그리드를 누가 만드는지입니다. 개발 빌드는 `gv_lightCulling` 이 고르고 Shipping 은 GPU 로 고정합니다(결정 기록 5-12 D2-13).
+     * @details 리플렉션 enum 이라 명령줄이 이름으로 고른다(`-gv_lightCulling=CPU`). 숫자는 받지 않는다.
      */
+    ENUM()
     enum class LightGridProducer : uint8
     {
         None, ///< 그리드 없이 목록 전체를 돈다(비교 기준)

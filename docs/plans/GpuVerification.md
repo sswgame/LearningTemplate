@@ -99,7 +99,7 @@ GPU 확인(main d679388a5 의 Shipping)에서 나온 거짓 실패 세 가지를
   쿠킹된 `vfxsimulate_cs.spv` 를 직접 읽어 GL 판과 Vulkan 판을 견줬다 — 라이트 버퍼(u3)의 원소 배치(stride 80 · 오프셋 0/16/32/48/64)와 저장 수(1)가 같고 GL 바인딩은 SSBO 19(= 16 + 3)로 계약과 맞다.
   GL 실행 로그에는 GL 오류 · 경고가 없고, 불똥은 그려진다(캡처에 60 여 개의 점) — 시뮬레이션은 돈다. 라이트만 없다. 그래서 `Vfx.md` 의 후보 "R32 실수 RW 텍스처 읽기"는 주원인으로 보기 어렵다: 깊이를 못 읽어 충돌을 놓쳐도 불똥은 바닥 위에서 첫 0.5 초 동안 빛을 내야 하는데 gl 은 0 이다.
   남은 후보와 가리는 법(통합, GPU): ① 시뮬레이션 직후 라이트 버퍼의 GPU 구간을 비동기 되읽기(`AsyncBufferReadback`)로 읽어 반경 · 세기가 써졌는지 본다(써졌으면 그리드 · 조명 쪽, 안 써졌으면 컴퓨트 쪽이다).
-  ② `-gv_lightCulling 1`(CPU 생산자)은 GPU 구간을 거절하고 오류를 남기므로 쓸 수 없다. ③ 같은 SPIR-V 가 Vulkan 에서 맞으므로 드라이버 컴파일 차이(NVIDIA GL SPIR-V 경로)라면 `resolveDepthCollision` 의 이른 반환 일곱 개를 한 출구로 바꾼 판(이 저장소가 이미 `evaluateCurve` 로 한 우회)을 패치로 시험한다.
+  ② `-gv_lightCulling=CPU`(CPU 생산자)은 GPU 구간을 거절하고 오류를 남기므로 쓸 수 없다. ③ 같은 SPIR-V 가 Vulkan 에서 맞으므로 드라이버 컴파일 차이(NVIDIA GL SPIR-V 경로)라면 `resolveDepthCollision` 의 이른 반환 일곱 개를 한 출구로 바꾼 판(이 저장소가 이미 `evaluateCurve` 로 한 우회)을 패치로 시험한다.
   (낡은 바이너리 탓은 아니다 — 같은 실행의 dx11 · dx12 · vk 가 같은 소스의 새 바이너리로 맞는 값을 냈다. 이 판단은 그 세 값이 맞다는 데서 나온 추론이다.)
 - **R32F 이미지 형식 불일치(발견, 영향 미확인).** 쿠킹된 컴퓨트 SPIR-V 의 RW 이미지는 모두 `Rgba32f` 로 선언되는데(`RWTexture2D<float4>`), 깊이 히스토리는 R32F 텍스처이고 GL 은 `glBindImageTexture` 에 `GL_R32F` 를 준다. GL 명세는 이 불일치의 읽기 값을 정하지 않는다(같은 불일치로 RGBA8 텍스처에 쓰는 `RHIDeviceTest.ComputeTextureUavWriteIsReadable` 가 GL 에서 통과하는지는 이번에 확인하지 못했다).
   이 틈이 가림 타일 · 깊이 충돌을 GL 에서 틀리게 만드는지는 GPU 로 가린다 — 고치려면 슬롯마다 `[[vk::image_format]]` 을 다르게 줘야 하는데 셰이더 소스라 패치로 넘긴다.

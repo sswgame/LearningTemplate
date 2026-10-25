@@ -299,11 +299,11 @@ namespace sw
     {
     }
 
-    // 요청 백버퍼 포맷. 언리얼 r.DefaultBackBufferPixelFormat 과 같은 자리다. 0 = R8G8B8A8(계약 기본), 1 = B8G8R8A8.
+    // 요청 백버퍼 포맷. 언리얼 r.DefaultBackBufferPixelFormat 과 같은 자리다. RGBA8 = R8G8B8A8(계약 기본), BGRA8 = B8G8R8A8.
     // 백엔드가 실제로 채택한 값은 getBackBufferFormat() 이 답한다(DX 는 요청대로, Vulkan 은 서피스와 협상, GL 은 창 픽셀
     // 포맷이라 항상 기본). 백버퍼를 타깃으로 하는 PSO 는 그 값으로 만들어야 한다. 이 변수는 그 경로를 다른 포맷으로
-    // 실제 돌려 보는 스위치이기도 하다(`-gv_rhiBackBufferFormat=1`).
-    SW_GLOBAL_VARIABLE( int32, gv_rhiBackBufferFormat, 0, "요청 백버퍼 포맷: 0=R8G8B8A8_UNORM, 1=B8G8R8A8_UNORM (실제 채택값은 getBackBufferFormat)" );
+    // 실제 돌려 보는 스위치이기도 하다(`-gv_rhiBackBufferFormat=BGRA8`). 명령줄은 열거자 이름만 받는다(숫자는 오류).
+    SW_GLOBAL_VARIABLE( RHIBackBufferFormat, gv_rhiBackBufferFormat, RHIBackBufferFormat::RGBA8, "요청 백버퍼 포맷: RGBA8=R8G8B8A8_UNORM, BGRA8=B8G8R8A8_UNORM (실제 채택값은 getBackBufferFormat)" );
     // 소프트웨어 어댑터(WARP · CPU Vulkan)로 띄운다 — GPU 없는 CI 러너와 같은 래스터라이저를 이 PC 에서 고른다. 환경 변수 SW_RHI_SOFTWARE_ADAPTER=1 도 같다
     // (ctest 가 인자 없이 켠다). 언제 켤지는 엔진이 정하고, 어떻게 고를지는 백엔드가 안다.
     SW_TEST_GLOBAL_VARIABLE( int32, gv_rhiSoftwareAdapter, 0, "소프트웨어 어댑터로 띄운다: 0=하드웨어, 1=WARP(DX11 · DX12) · CPU 디바이스(Vulkan)" );
@@ -316,6 +316,27 @@ namespace sw
         if ( _pSurface == nullptr )
             return false;
 
+        // 요청 포맷은 모든 열거자를 나열한 switch 로 고른다. 범위 밖 값(에디터 · 콘솔이 숫자를 넣은 경우)은 기본 포맷으로 대신하지 않고 멈춘다.
+        RHIFormat requestedFormat = RHIFormat::Unknown;
+        switch ( gv_rhiBackBufferFormat )
+        {
+            case RHIBackBufferFormat::RGBA8:
+            {
+                requestedFormat = constant::kBackBufferFormat;
+                break;
+            }
+            case RHIBackBufferFormat::BGRA8:
+            {
+                requestedFormat = RHIFormat::B8G8R8A8_UNORM;
+                break;
+            }
+        }
+        if ( requestedFormat == RHIFormat::Unknown )
+        {
+            SW_LOG_ERROR( "gv_rhiBackBufferFormat has no back buffer format for the value %# (RGBA8 or BGRA8)", static_cast<uint32>( gv_rhiBackBufferFormat ) );
+            return false;
+        }
+
         constexpr uint32 kBackBufferCount = 3;
 
         RHISwapChainDesc swapChainDesc{};
@@ -327,7 +348,7 @@ namespace sw
         _backBufferWidth              = swapChainDesc._width;
         _backBufferHeight             = swapChainDesc._height;
         swapChainDesc._bufferCount    = kBackBufferCount;
-        swapChainDesc._format         = ( gv_rhiBackBufferFormat == 1 ) ? RHIFormat::B8G8R8A8_UNORM : constant::kBackBufferFormat;
+        swapChainDesc._format         = requestedFormat;
         swapChainDesc._bVSync         = _bPreferredVSync;
         {
             const utf8* pSoftwareEnv        = std::getenv( "SW_RHI_SOFTWARE_ADAPTER" );

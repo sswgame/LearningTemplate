@@ -12,7 +12,7 @@
 네 백엔드의 평균이 서로 1.0 이내이고 non-bg 픽셀 수가 0 이 아니면 정상이다.
 
 백엔드는 쿠킹 표(Config/Engine/CookContract.json)의 줄마다 명령줄 이름 플래그(-dx11 / -dx12 / -vk / -gl)로 고른다.
-`-gv_rhiBackend=<이름|숫자>`(예: `Vulkan`)도 같은 RHIBackendUtil::findCommandLineBackend 를 지난다.
+`-gv_rhiBackend=<이름>`(예: `Vulkan`, 숫자는 오류)도 같은 RHIBackendUtil::findCommandLineBackend 를 지난다.
 """
 from __future__ import annotations
 

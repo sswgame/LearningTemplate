@@ -317,7 +317,7 @@ py -3 -m Scripts perf --app build/Ninja-Release/Bin/App.exe [--record]
 - 기준은 `Test/QA/Golden/<게임>/<백엔드>.png` 와 `.json` 입니다. 160×90 PNG라 작고 사람이 열어 볼 수 있습니다. 지금 Empty, NileCity, StarSkirmish, Shooter3D에 네 백엔드씩 있습니다.
 - 게임마다의 자동 플레이 인자와 캡처 프레임은 `Test/QA/Games.json` 에 있습니다. 기준이 없는 게임과 돌지 못하는 백엔드는 건너뜁니다(77, CTest Skipped).
 - 네 모서리가 두 색으로 갈리는 장면(1인칭에서 위는 하늘, 아래는 땅)은 배경이 없다고 보고 화면 전체를 전경으로 측정합니다.
-- 판정이 실제로 실패를 잡는지는 `--extra-arg=-gv_viewMode=2`(와이어프레임)나 `--extra-arg=-gv_benchMeshes=0` 으로 일부러 망가진 이미지를 만들어 봅니다. 이 실행은 기준에 남지 않습니다.
+- 판정이 실제로 실패를 잡는지는 `--extra-arg=-gv_viewMode=Wireframe`나 `--extra-arg=-gv_benchMeshes=0` 으로 일부러 망가진 이미지를 만들어 봅니다. 이 실행은 기준에 남지 않습니다.
 - 실패한 실행의 App 출력은 `%TEMP%/sw_golden_<백엔드>_<회차>_app.log` 에 있습니다.
 
 **soak** 는 `-gv_profileSeconds=<초>` 로 App이 그 시간 동안 돌고 스스로 끝나게 하고, 바깥에서 프라이빗 메모리, 작업 집합, 핸들, GDI와 USER 개체 수를 측정합니다.
