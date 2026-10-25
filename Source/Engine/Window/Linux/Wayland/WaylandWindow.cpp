@@ -2,12 +2,14 @@
 
 #include "Engine/Window/Linux/Wayland/WaylandWindow.h"
 
+#include "Core/Common/Defines.h"
 #include "Core/Container/vector.h"
 
 #include "Engine/Window/Linux/Wayland/WaylandInputEvent.h"
 #include "Engine/Window/NativeWindowEvent.h"
 
 #if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE ) && defined( SW_WITH_WAYLAND )
+    #include <fcntl.h>
     #include <linux/input-event-codes.h>
     #include <poll.h>
     #include <sys/mman.h>
@@ -18,6 +20,8 @@
 
     #include "xdg-shell-client-protocol.h" // 구성 때 wayland-scanner 가 만든다(cmake/Modules/Platform/Linux.cmake)
 
+    #include <cerrno>
+    #include <csignal>
     #include <cstring>
 #endif
 
@@ -27,6 +31,17 @@ namespace sw
 } // namespace sw
 
 #if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE ) && defined( SW_WITH_WAYLAND )
+namespace sw
+{
+    /** @brief 바인드한 `wl_output` 하나와 그 정수 배율입니다. `_bEntered` 는 창(wl_surface)이 이 출력에 걸쳐 있는지입니다. */
+    struct WaylandOutput
+    {
+        wl_output* _pOutput{ nullptr };
+        int32      _scale{ 1 };
+        bool       _bEntered{ false };
+    };
+} // namespace sw
+
 namespace sw
 {
     /** @brief 라이브러리 객체와 리스너가 쌓은 것입니다. 리스너는 C 콜백이라 이 값의 주소를 사용자 값으로 받는다. */
@@ -49,7 +64,20 @@ namespace sw
         wl_cursor_theme* _pCursorTheme{ nullptr };
         wl_surface*      _pCursorSurface{ nullptr };
 
-        vector<WaylandInputEvent> _listPendingInput;     ///< 리스너가 쌓고 `processMessages` 가 넘긴다
+        wl_data_device_manager* _pDataDeviceManager{ nullptr };
+        wl_data_device*         _pDataDevice{ nullptr };
+        wl_data_source*         _pDataSource{ nullptr };      ///< 우리가 내놓은 선택(없으면 nullptr). 글은 `_clipboardText`
+        wl_data_offer*          _pSelectionOffer{ nullptr };  ///< 다른 프로그램이 내놓은 현재 선택
+        wl_data_offer*          _pIntroducedOffer{ nullptr }; ///< 방금 소개된 제안(`selection` 이 오기 전까지 형식을 모은다)
+        string                  _clipboardText;
+
+        vector<WaylandOutput>     _listOutput;                   ///< 바인드한 출력과 그 배율
+        vector<WaylandInputEvent> _listPendingInput;             ///< 리스너가 쌓고 `processMessages` 가 넘긴다
+        uint32                    _inputSerial{ 0 };             ///< 마지막 키 · 버튼 · 들어옴의 일련번호(선택을 내놓을 때 컴포지터가 요구한다)
+        bool                      _bIntroducedHasUtf8{ false };  ///< `_pIntroducedOffer` 가 text/plain;charset=utf-8 을 내놓는지
+        bool                      _bIntroducedHasPlain{ false }; ///< 위와 같이 text/plain
+        bool                      _bSelectionHasUtf8{ false };   ///< `_pSelectionOffer` 가 내놓는 형식(선택이 된 순간 소개 때 모은 값을 옮긴다)
+        bool                      _bSelectionHasPlain{ false };
         uint32                    _pointerSerial{ 0 };   ///< 마지막 포인터 들어옴의 일련번호(커서를 바꿀 때 쓴다)
         int32                     _configuredWidth{ 0 }; ///< 컴포지터가 정한 크기(0 이면 클라이언트가 정한다)
         int32                     _configuredHeight{ 0 };
@@ -58,6 +86,37 @@ namespace sw
         bool                      _bCursorVisible{ true };
 
         void pushInput( const WaylandInputEvent& event ) { _listPendingInput.push_back( event ); }
+
+        WaylandOutput* findOutput( const wl_output* pOutput )
+        {
+            for ( WaylandOutput& output : _listOutput )
+            {
+                if ( output._pOutput == pOutput )
+                    return &output;
+            }
+            return nullptr;
+        }
+
+        /** @brief 소개됐지만 선택이 되지 않은 제안(끌어다 놓기 따위)을 버립니다. */
+        void dropIntroducedOffer()
+        {
+            if ( _pIntroducedOffer != nullptr && _pIntroducedOffer != _pSelectionOffer )
+                wl_data_offer_destroy( _pIntroducedOffer );
+            _pIntroducedOffer    = nullptr;
+            _bIntroducedHasUtf8  = false;
+            _bIntroducedHasPlain = false;
+        }
+
+        void dropSelectionOffer()
+        {
+            if ( _pSelectionOffer != nullptr )
+                wl_data_offer_destroy( _pSelectionOffer );
+            if ( _pIntroducedOffer == _pSelectionOffer )
+                _pIntroducedOffer = nullptr;
+            _pSelectionOffer    = nullptr;
+            _bSelectionHasUtf8  = false;
+            _bSelectionHasPlain = false;
+        }
     };
 } // namespace sw
 
@@ -75,6 +134,16 @@ namespace sw
             static constexpr uint32 kSeatVersion       = 5;
             static constexpr uint32 kShmVersion        = 1;
             static constexpr uint32 kWmBaseVersion     = 1;
+            static constexpr uint32 kOutputVersion     = 2; ///< 2 에서 `scale` 이벤트가 생긴다
+            /** @brief 1 로 바인드해 끌어다 놓기(판 3) 이벤트가 오지 않게 한다 — 선택(클립보드)만 쓴다. */
+            static constexpr uint32 kDataDeviceManagerVersion = 1;
+            /** @brief 클립보드 글 형식입니다(우선순위 순서). */
+            static constexpr const utf8* kMimeUtf8  = "text/plain;charset=utf-8";
+            static constexpr const utf8* kMimePlain = "text/plain";
+            /** @brief 클립보드 읽기 · 쓰기가 상대를 기다리는 한 번의 한도(ms)입니다(X11 의 200 ms 와 같다). */
+            static constexpr int32 kClipboardWaitMs = 200;
+            /** @brief 클립보드 글 한 번에 받는 최대 바이트입니다(끝없이 보내는 상대를 끊는다). */
+            static constexpr size_t kClipboardMaxBytes = 16u * constant::kBytesPerMegabyte;
             /** @brief 휠 한 칸에 해당하는 축 값입니다(컴포지터 관례 — 마우스 휠 한 칸이 10). */
             static constexpr float32 kAxisUnitsPerNotch = 10.0f;
             /** @brief 기본 커서 테마 크기(픽셀)입니다. */
@@ -91,6 +160,209 @@ namespace sw
                     state._pWmBase = static_cast<xdg_wm_base*>( wl_registry_bind( pRegistry, name, &xdg_wm_base_interface, kWmBaseVersion ) );
                 else if ( std::strcmp( pInterface, wl_seat_interface.name ) == 0 )
                     state._pSeat = static_cast<wl_seat*>( wl_registry_bind( pRegistry, name, &wl_seat_interface, version < kSeatVersion ? version : kSeatVersion ) );
+                else if ( std::strcmp( pInterface, wl_data_device_manager_interface.name ) == 0 )
+                    state._pDataDeviceManager = static_cast<wl_data_device_manager*>( wl_registry_bind( pRegistry, name, &wl_data_device_manager_interface, kDataDeviceManagerVersion ) );
+                else if ( std::strcmp( pInterface, wl_output_interface.name ) == 0 )
+                {
+                    WaylandOutput output;
+                    output._pOutput = static_cast<wl_output*>( wl_registry_bind( pRegistry, name, &wl_output_interface, version < kOutputVersion ? version : kOutputVersion ) );
+                    state._listOutput.push_back( output );
+                    wl_output_add_listener( output._pOutput, &s_outputListener, &state );
+                }
+            }
+
+            static void onOutputGeometry( void* pData, wl_output* pOutput, int32 x, int32 y, int32 physicalWidth, int32 physicalHeight, int32 subpixel, const utf8* pMake, const utf8* pModel, int32 transform )
+            {
+                (void)pData;
+                (void)pOutput;
+                (void)x;
+                (void)y;
+                (void)physicalWidth;
+                (void)physicalHeight;
+                (void)subpixel;
+                (void)pMake;
+                (void)pModel;
+                (void)transform;
+            }
+
+            static void onOutputMode( void* pData, wl_output* pOutput, uint32 flags, int32 width, int32 height, int32 refresh )
+            {
+                (void)pData;
+                (void)pOutput;
+                (void)flags;
+                (void)width;
+                (void)height;
+                (void)refresh;
+            }
+
+            static void onOutputDone( void* pData, wl_output* pOutput )
+            {
+                (void)pData;
+                (void)pOutput;
+            }
+
+            static void onOutputScale( void* pData, wl_output* pOutput, int32 factor )
+            {
+                State&         state  = *static_cast<State*>( pData );
+                WaylandOutput* pEntry = state.findOutput( pOutput );
+                if ( pEntry != nullptr && factor > 0 )
+                    pEntry->_scale = factor;
+            }
+
+            static void onSurfaceEnter( void* pData, wl_surface* pSurface, wl_output* pOutput )
+            {
+                (void)pSurface;
+                State&         state  = *static_cast<State*>( pData );
+                WaylandOutput* pEntry = state.findOutput( pOutput );
+                if ( pEntry != nullptr )
+                    pEntry->_bEntered = true;
+            }
+
+            static void onSurfaceLeave( void* pData, wl_surface* pSurface, wl_output* pOutput )
+            {
+                (void)pSurface;
+                State&         state  = *static_cast<State*>( pData );
+                WaylandOutput* pEntry = state.findOutput( pOutput );
+                if ( pEntry != nullptr )
+                    pEntry->_bEntered = false;
+            }
+
+            static void onDataOfferMime( void* pData, wl_data_offer* pOffer, const utf8* pMime )
+            {
+                State& state = *static_cast<State*>( pData );
+                if ( pOffer != state._pIntroducedOffer )
+                    return; // 낡은 제안의 형식이다 — 버려진 뒤에는 오지 않지만 순서가 뒤집힌 알림을 믿지 않는다
+                if ( std::strcmp( pMime, kMimeUtf8 ) == 0 )
+                    state._bIntroducedHasUtf8 = true;
+                else if ( std::strcmp( pMime, kMimePlain ) == 0 )
+                    state._bIntroducedHasPlain = true;
+            }
+
+            static void onDataOfferSourceActions( void* pData, wl_data_offer* pOffer, uint32 sourceActions )
+            {
+                (void)pData;
+                (void)pOffer;
+                (void)sourceActions; // 판 1 로 바인드해 오지 않는다 — 끌어다 놓기는 하지 않는다
+            }
+
+            static void onDataOfferAction( void* pData, wl_data_offer* pOffer, uint32 action )
+            {
+                (void)pData;
+                (void)pOffer;
+                (void)action;
+            }
+
+            static void onDataDeviceOffer( void* pData, wl_data_device* pDevice, wl_data_offer* pOffer )
+            {
+                (void)pDevice;
+                State& state = *static_cast<State*>( pData );
+                state.dropIntroducedOffer();
+                state._pIntroducedOffer = pOffer;
+                wl_data_offer_add_listener( pOffer, &s_dataOfferListener, &state );
+            }
+
+            static void onDataDeviceEnter( void* pData, wl_data_device* pDevice, uint32 serial, wl_surface* pSurface, wl_fixed_t x, wl_fixed_t y, wl_data_offer* pOffer )
+            {
+                (void)pData;
+                (void)pDevice;
+                (void)serial;
+                (void)pSurface;
+                (void)x;
+                (void)y;
+                (void)pOffer; // 끌어다 놓기는 받지 않는다(제안은 다음 `data_offer` 가 버린다)
+            }
+
+            static void onDataDeviceLeave( void* pData, wl_data_device* pDevice )
+            {
+                (void)pData;
+                (void)pDevice;
+            }
+
+            static void onDataDeviceMotion( void* pData, wl_data_device* pDevice, uint32 time, wl_fixed_t x, wl_fixed_t y )
+            {
+                (void)pData;
+                (void)pDevice;
+                (void)time;
+                (void)x;
+                (void)y;
+            }
+
+            static void onDataDeviceDrop( void* pData, wl_data_device* pDevice )
+            {
+                (void)pData;
+                (void)pDevice;
+            }
+
+            static void onDataDeviceSelection( void* pData, wl_data_device* pDevice, wl_data_offer* pOffer )
+            {
+                (void)pDevice;
+                State& state = *static_cast<State*>( pData );
+                if ( pOffer == state._pSelectionOffer )
+                    return;
+                state.dropSelectionOffer();
+                if ( pOffer == nullptr )
+                    return; // 선택이 비었다
+                state._pSelectionOffer    = pOffer;
+                state._bSelectionHasUtf8  = state._bIntroducedHasUtf8;
+                state._bSelectionHasPlain = state._bIntroducedHasPlain;
+            }
+
+            static void onDataSourceTarget( void* pData, wl_data_source* pSource, const utf8* pMime )
+            {
+                (void)pData;
+                (void)pSource;
+                (void)pMime;
+            }
+
+            static void onDataSourceSend( void* pData, wl_data_source* pSource, const utf8* pMime, int32 fd )
+            {
+                State&     state      = *static_cast<State*>( pData );
+                const bool bKnownMime = std::strcmp( pMime, kMimeUtf8 ) == 0 || std::strcmp( pMime, kMimePlain ) == 0;
+                if ( pSource != state._pDataSource || bKnownMime == false )
+                {
+                    close( fd );
+                    return;
+                }
+                // 상대가 느리면 주 스레드가 오래 서지 않도록 막지 않는 쓰기로 `kClipboardWaitMs` 안에 못 쓰면 포기한다.
+                // 상대가 읽기를 닫았으면 쓰기가 SIGPIPE 로 프로세스를 죽인다 — 오류 코드로 받도록 무시로 둔다(프로세스 전역, `PosixProcess.cpp` 와 같다).
+                (void)signal( SIGPIPE, SIG_IGN );
+                const int32 flags = fcntl( fd, F_GETFL, 0 );
+                if ( flags != -1 )
+                    fcntl( fd, F_SETFL, flags | O_NONBLOCK );
+                const utf8* pCursor    = state._clipboardText.data();
+                size_t      remaining  = state._clipboardText.size();
+                bool        bCompleted = true;
+                while ( remaining > 0 )
+                {
+                    const ssize_t written = write( fd, pCursor, remaining );
+                    if ( written > 0 )
+                    {
+                        pCursor += written;
+                        remaining -= static_cast<size_t>( written );
+                        continue;
+                    }
+                    pollfd     waitEntry{ fd, POLLOUT, 0 };
+                    const bool bWouldBlock = written == -1 && ( errno == EAGAIN || errno == EWOULDBLOCK );
+                    if ( bWouldBlock == false || poll( &waitEntry, 1, kClipboardWaitMs ) <= 0 )
+                    {
+                        bCompleted = false;
+                        break;
+                    }
+                }
+                close( fd );
+                if ( bCompleted == false )
+                    SW_LOG_WARNING( "Wayland clipboard: the reader stopped taking the text - %# bytes were not sent", static_cast<uint64>( remaining ) );
+            }
+
+            static void onDataSourceCancelled( void* pData, wl_data_source* pSource )
+            {
+                State& state = *static_cast<State*>( pData );
+                if ( pSource == state._pDataSource )
+                {
+                    state._pDataSource = nullptr; // 다른 프로그램이 선택을 가져갔다
+                    state._clipboardText.clear();
+                }
+                wl_data_source_destroy( pSource );
             }
 
             static void onRegistryGlobalRemove( void* pData, wl_registry* pRegistry, uint32 name )
@@ -161,9 +433,9 @@ namespace sw
             static void onKeyboardEnter( void* pData, wl_keyboard* pKeyboard, uint32 serial, wl_surface* pSurface, wl_array* pKeys )
             {
                 (void)pKeyboard;
-                (void)serial;
                 (void)pSurface;
                 (void)pKeys;
+                static_cast<State*>( pData )->_inputSerial = serial;
                 WaylandInputEvent event;
                 event._kind = WaylandInputKind::FocusGained;
                 static_cast<State*>( pData )->pushInput( event );
@@ -182,9 +454,9 @@ namespace sw
             static void onKeyboardKey( void* pData, wl_keyboard* pKeyboard, uint32 serial, uint32 time, uint32 key, uint32 keyState )
             {
                 (void)pKeyboard;
-                (void)serial;
                 (void)time;
-                State& state = *static_cast<State*>( pData );
+                State& state       = *static_cast<State*>( pData );
+                state._inputSerial = serial;
                 if ( state._pXkbState == nullptr )
                     return;
                 // evdev 키 번호 + 8 이 XKB 키 코드다(xkbcommon 규약).
@@ -263,8 +535,8 @@ namespace sw
             static void onPointerButton( void* pData, wl_pointer* pPointer, uint32 serial, uint32 time, uint32 button, uint32 buttonState )
             {
                 (void)pPointer;
-                (void)serial;
                 (void)time;
+                static_cast<State*>( pData )->_inputSerial = serial;
                 WaylandInputEvent event;
                 event._kind   = buttonState == WL_POINTER_BUTTON_STATE_PRESSED ? WaylandInputKind::PointerDown : WaylandInputKind::PointerUp;
                 event._button = button;
@@ -383,6 +655,55 @@ namespace sw
                 return listener;
             }
 
+            static wl_output_listener makeOutputListener()
+            {
+                wl_output_listener listener{};
+                listener.geometry = &onOutputGeometry;
+                listener.mode     = &onOutputMode;
+                listener.done     = &onOutputDone;
+                listener.scale    = &onOutputScale;
+                return listener;
+            }
+
+            static wl_surface_listener makeSurfaceListener()
+            {
+                // 판 4 로 바인드해 판 6 의 선호 배율 이벤트는 오지 않는다.
+                wl_surface_listener listener{};
+                listener.enter = &onSurfaceEnter;
+                listener.leave = &onSurfaceLeave;
+                return listener;
+            }
+
+            static wl_data_offer_listener makeDataOfferListener()
+            {
+                wl_data_offer_listener listener{};
+                listener.offer          = &onDataOfferMime;
+                listener.source_actions = &onDataOfferSourceActions;
+                listener.action         = &onDataOfferAction;
+                return listener;
+            }
+
+            static wl_data_device_listener makeDataDeviceListener()
+            {
+                wl_data_device_listener listener{};
+                listener.data_offer = &onDataDeviceOffer;
+                listener.enter      = &onDataDeviceEnter;
+                listener.leave      = &onDataDeviceLeave;
+                listener.motion     = &onDataDeviceMotion;
+                listener.drop       = &onDataDeviceDrop;
+                listener.selection  = &onDataDeviceSelection;
+                return listener;
+            }
+
+            static wl_data_source_listener makeDataSourceListener()
+            {
+                wl_data_source_listener listener{};
+                listener.target    = &onDataSourceTarget;
+                listener.send      = &onDataSourceSend;
+                listener.cancelled = &onDataSourceCancelled;
+                return listener;
+            }
+
             static wl_seat_listener makeSeatListener()
             {
                 wl_seat_listener listener{};
@@ -392,22 +713,32 @@ namespace sw
             }
 
             // 리스너는 객체가 사는 동안 그 자리에 있어야 한다 — 정적 상수로 둔다(상태를 갖지 않는다).
-            static const wl_registry_listener  s_registryListener;
-            static const xdg_wm_base_listener  s_wmBaseListener;
-            static const xdg_surface_listener  s_xdgSurfaceListener;
-            static const xdg_toplevel_listener s_toplevelListener;
-            static const wl_keyboard_listener  s_keyboardListener;
-            static const wl_pointer_listener   s_pointerListener;
-            static const wl_seat_listener      s_seatListener;
+            static const wl_registry_listener    s_registryListener;
+            static const xdg_wm_base_listener    s_wmBaseListener;
+            static const xdg_surface_listener    s_xdgSurfaceListener;
+            static const xdg_toplevel_listener   s_toplevelListener;
+            static const wl_keyboard_listener    s_keyboardListener;
+            static const wl_pointer_listener     s_pointerListener;
+            static const wl_seat_listener        s_seatListener;
+            static const wl_output_listener      s_outputListener;
+            static const wl_surface_listener     s_surfaceListener;
+            static const wl_data_offer_listener  s_dataOfferListener;
+            static const wl_data_device_listener s_dataDeviceListener;
+            static const wl_data_source_listener s_dataSourceListener;
         };
 
-        const wl_registry_listener  WaylandWindowInternal::s_registryListener   = WaylandWindowInternal::makeRegistryListener();
-        const xdg_wm_base_listener  WaylandWindowInternal::s_wmBaseListener     = WaylandWindowInternal::makeWmBaseListener();
-        const xdg_surface_listener  WaylandWindowInternal::s_xdgSurfaceListener = WaylandWindowInternal::makeXdgSurfaceListener();
-        const xdg_toplevel_listener WaylandWindowInternal::s_toplevelListener   = WaylandWindowInternal::makeToplevelListener();
-        const wl_keyboard_listener  WaylandWindowInternal::s_keyboardListener   = WaylandWindowInternal::makeKeyboardListener();
-        const wl_pointer_listener   WaylandWindowInternal::s_pointerListener    = WaylandWindowInternal::makePointerListener();
-        const wl_seat_listener      WaylandWindowInternal::s_seatListener       = WaylandWindowInternal::makeSeatListener();
+        const wl_registry_listener    WaylandWindowInternal::s_registryListener   = WaylandWindowInternal::makeRegistryListener();
+        const xdg_wm_base_listener    WaylandWindowInternal::s_wmBaseListener     = WaylandWindowInternal::makeWmBaseListener();
+        const xdg_surface_listener    WaylandWindowInternal::s_xdgSurfaceListener = WaylandWindowInternal::makeXdgSurfaceListener();
+        const xdg_toplevel_listener   WaylandWindowInternal::s_toplevelListener   = WaylandWindowInternal::makeToplevelListener();
+        const wl_keyboard_listener    WaylandWindowInternal::s_keyboardListener   = WaylandWindowInternal::makeKeyboardListener();
+        const wl_pointer_listener     WaylandWindowInternal::s_pointerListener    = WaylandWindowInternal::makePointerListener();
+        const wl_seat_listener        WaylandWindowInternal::s_seatListener       = WaylandWindowInternal::makeSeatListener();
+        const wl_output_listener      WaylandWindowInternal::s_outputListener     = WaylandWindowInternal::makeOutputListener();
+        const wl_surface_listener     WaylandWindowInternal::s_surfaceListener    = WaylandWindowInternal::makeSurfaceListener();
+        const wl_data_offer_listener  WaylandWindowInternal::s_dataOfferListener  = WaylandWindowInternal::makeDataOfferListener();
+        const wl_data_device_listener WaylandWindowInternal::s_dataDeviceListener = WaylandWindowInternal::makeDataDeviceListener();
+        const wl_data_source_listener WaylandWindowInternal::s_dataSourceListener = WaylandWindowInternal::makeDataSourceListener();
 
         void WaylandWindowInternal::onSeatCapabilities( void* pData, wl_seat* pSeat, uint32 capabilities )
         {
@@ -477,8 +808,14 @@ namespace sw
         xdg_wm_base_add_listener( state._pWmBase, &Internal::s_wmBaseListener, &state );
         if ( state._pSeat != nullptr )
             wl_seat_add_listener( state._pSeat, &Internal::s_seatListener, &state );
+        if ( state._pSeat != nullptr && state._pDataDeviceManager != nullptr )
+        {
+            state._pDataDevice = wl_data_device_manager_get_data_device( state._pDataDeviceManager, state._pSeat );
+            wl_data_device_add_listener( state._pDataDevice, &Internal::s_dataDeviceListener, &state );
+        }
 
-        state._pSurface    = wl_compositor_create_surface( state._pCompositor );
+        state._pSurface = wl_compositor_create_surface( state._pCompositor );
+        wl_surface_add_listener( state._pSurface, &Internal::s_surfaceListener, &state );
         state._pXdgSurface = xdg_wm_base_get_xdg_surface( state._pWmBase, state._pSurface );
         xdg_surface_add_listener( state._pXdgSurface, &Internal::s_xdgSurfaceListener, &state );
         state._pToplevel = xdg_surface_get_toplevel( state._pXdgSurface );
@@ -517,6 +854,18 @@ namespace sw
     void WaylandWindow::destroy()
     {
         State& state = *_pState;
+        state.dropIntroducedOffer();
+        state.dropSelectionOffer();
+        if ( state._pDataSource != nullptr )
+            wl_data_source_destroy( state._pDataSource );
+        if ( state._pDataDevice != nullptr )
+            wl_data_device_destroy( state._pDataDevice );
+        if ( state._pDataDeviceManager != nullptr )
+            wl_data_device_manager_destroy( state._pDataDeviceManager );
+        for ( const WaylandOutput& output : state._listOutput )
+        {
+            wl_output_destroy( output._pOutput );
+        }
         if ( state._pCursorSurface != nullptr )
             wl_surface_destroy( state._pCursorSurface );
         if ( state._pCursorTheme != nullptr )
@@ -648,6 +997,88 @@ namespace sw
         return _pState->_pDisplay;
     }
 
+    float32 WaylandWindow::getContentScale() const
+    {
+        int32 scale = 1;
+        for ( const WaylandOutput& output : _pState->_listOutput )
+        {
+            if ( output._bEntered && output._scale > scale )
+                scale = output._scale;
+        }
+        return static_cast<float32>( scale );
+    }
+
+    bool WaylandWindow::readClipboardText( string& outText )
+    {
+        using Internal = WaylandWindowInternal;
+        State& state   = *_pState;
+        if ( state._pDataSource != nullptr )
+        {
+            outText = state._clipboardText; // 우리가 주인이다 — 컴포지터를 거치지 않는다
+            return true;
+        }
+        const utf8* pMime = state._bSelectionHasUtf8 ? Internal::kMimeUtf8 : ( state._bSelectionHasPlain ? Internal::kMimePlain : nullptr );
+        if ( state._pSelectionOffer == nullptr || pMime == nullptr )
+            return false; // 선택이 없거나 글 형식이 없다(이미지 등)
+
+        int32 arrPipeEnd[2]{ -1, -1 };
+        if ( pipe( arrPipeEnd ) != 0 )
+        {
+            SW_LOG_WARNING( "Wayland clipboard: a pipe could not be made - nothing pasted" );
+            return false;
+        }
+        wl_data_offer_receive( state._pSelectionOffer, pMime, arrPipeEnd[1] );
+        close( arrPipeEnd[1] ); // 보내기 요청이 쓰기 끝을 복제해 들고 있다
+        wl_display_flush( state._pDisplay );
+
+        string bytes;
+        bool   bCompleted = false;
+        utf8   arrBuffer[4096];
+        while ( bytes.size() <= Internal::kClipboardMaxBytes )
+        {
+            pollfd waitEntry{ arrPipeEnd[0], POLLIN, 0 };
+            if ( poll( &waitEntry, 1, Internal::kClipboardWaitMs ) <= 0 )
+                break;
+            const ssize_t count = read( arrPipeEnd[0], arrBuffer, sizeof( arrBuffer ) );
+            if ( count < 0 )
+                break;
+            if ( count == 0 )
+            {
+                bCompleted = true;
+                break;
+            }
+            bytes.append( arrBuffer, static_cast<size_t>( count ) );
+        }
+        close( arrPipeEnd[0] );
+        if ( bCompleted == false )
+        {
+            SW_LOG_WARNING( "Wayland clipboard: the owner did not finish sending within %# ms (%# bytes received) - nothing pasted", Internal::kClipboardWaitMs, static_cast<uint64>( bytes.size() ) );
+            return false;
+        }
+        outText = std::move( bytes );
+        return true;
+    }
+
+    bool WaylandWindow::writeClipboardText( string_view text )
+    {
+        using Internal = WaylandWindowInternal;
+        State& state   = *_pState;
+        // 선택을 내놓으려면 사용자 입력에서 온 일련번호가 있어야 한다(컴포지터가 거절한다).
+        // 데이터 장치는 관리자가 있을 때만 만들어진다(`initializeWindow`) — 장치 하나로 둘을 본다.
+        if ( state._pDataDevice == nullptr || state._inputSerial == 0 )
+            return false;
+        wl_data_source* const pSource = wl_data_device_manager_create_data_source( state._pDataDeviceManager );
+        wl_data_source_add_listener( pSource, &Internal::s_dataSourceListener, &state );
+        wl_data_source_offer( pSource, Internal::kMimeUtf8 );
+        wl_data_source_offer( pSource, Internal::kMimePlain );
+        // 이전 원천은 컴포지터가 `cancelled` 로 알려 콜백이 지운다(현재 원천이 아니라 글을 건드리지 않는다).
+        state._pDataSource = pSource;
+        state._clipboardText.assign( text.data(), text.size() );
+        wl_data_device_set_selection( state._pDataDevice, pSource, state._inputSerial );
+        wl_display_flush( state._pDisplay );
+        return true;
+    }
+
     void WaylandWindow::setCursorVisible( bool bVisible )
     {
         State& state          = *_pState;
@@ -752,6 +1183,23 @@ namespace sw
     void* WaylandWindow::getNativeDisplay() const
     {
         return nullptr;
+    }
+
+    float32 WaylandWindow::getContentScale() const
+    {
+        return 1.0f;
+    }
+
+    bool WaylandWindow::readClipboardText( string& outText )
+    {
+        (void)outText;
+        return false;
+    }
+
+    bool WaylandWindow::writeClipboardText( string_view text )
+    {
+        (void)text;
+        return false;
     }
 
     void WaylandWindow::setCursorVisible( bool bVisible )

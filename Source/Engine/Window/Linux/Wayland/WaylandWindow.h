@@ -9,6 +9,7 @@
  *          OpenGL 은 GLX 라 이 창에 붙지 않는다(EGL 길이 없다) — Vulkan 만 그린다(`VK_KHR_wayland_surface`).
  */
 #pragma once
+#include "Core/Container/string.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Window/IWindow.h"
@@ -40,8 +41,15 @@ namespace sw
         void applyWindowVisibility( bool bShow ) override;
         /** @brief 컴포지터가 창을 한 번 배치(configure)했으면 true 입니다. */
         bool isVisible() const override;
-        /** @brief 화면 배율입니다. 지금은 1 입니다(wl_output 배율 · fractional-scale 을 읽지 않는다). */
-        float32 getContentScale() const override { return 1.0f; }
+        /**
+         * @brief 화면 배율입니다. 창이 걸친 `wl_output` 들의 정수 배율(`wl_output.scale`) 중 가장 큰 값이고, 걸친 출력이 없으면 1 입니다.
+         * @details 알려 주기만 한다 — 버퍼 배율은 바꾸지 않아 컴포지터가 확대한다. 소수 배율(wp_fractional_scale_v1)은 프로토콜 생성 목록(CMake)에 없어 읽지 않는다.
+         */
+        float32 getContentScale() const override;
+        /** @brief 클립보드(`wl_data_device` 선택)의 글을 @p outText 에 담습니다. 선택이 없거나 글 형식이 없거나 200 ms 안에 답이 없으면 false 입니다. */
+        [[nodiscard]] bool readClipboardText( string& outText );
+        /** @brief @p text 를 클립보드 선택으로 내놓습니다. 글은 창이 들고 다른 프로그램이 청할 때(`wl_data_source.send`) 보냅니다. 입력 일련번호가 아직 없거나 데이터 장치가 없으면 false 입니다. */
+        [[nodiscard]] bool writeClipboardText( string_view text );
         /** @brief 전체 화면은 `xdg_toplevel_set_fullscreen`, 창 모드는 크기를 정하고 크기 통보를 보냅니다. */
         bool setDisplayMode( WindowDisplayMode mode, uint32 width, uint32 height ) override;
 
