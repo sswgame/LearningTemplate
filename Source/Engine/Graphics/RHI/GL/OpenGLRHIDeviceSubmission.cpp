@@ -8,6 +8,7 @@
 #include "Engine/Graphics/RHI/GL/OpenGLRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/GL/Platform/IOpenGLPlatformContext.h"
 #include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
+#include "Engine/Graphics/RHI/Support/RHIStagingRingUtil.h"
 #include "Engine/Graphics/RHI/Support/RHITimestamp.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 
@@ -304,28 +305,12 @@ namespace sw
         RHIStagingAllocateResult result = _stagingRing.allocate( sizeBytes, _transferSerials.getWatermark(), outSpan );
         if ( result == RHIStagingAllocateResult::Full && tryRetireFinishedTransfers() )
             result = _stagingRing.allocate( sizeBytes, _transferSerials.getWatermark(), outSpan );
-        // 결과 옮기기는 RHITransferSerials 한 곳이다 — 장치를 잃었으면(펜스 확인이 GL_WAIT_FAILED) 링이 다시 비지 않으므로 Full 도 Busy 가 아니라 Rejected 다(계약 2).
-        const RHISubmitResult submitResult = _transferSerials.classifyStagingAllocation( result );
-        if ( submitResult == RHISubmitResult::Accepted )
-        {
-            if ( outSpan._bSolo == SW_FALSE )
-                return RHISubmitResult::Accepted;
-            return attachSoloBuffer( _stagingRing, _stagingSolo, outSpan, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT, pCaller );
-        }
-        if ( submitResult == RHISubmitResult::Busy )
-            return RHISubmitResult::Busy; // 앞선 전송이 끝나면 빈다 — 호출자가 다시 제출한다(계약 2)
-        if ( result == RHIStagingAllocateResult::Allocated )
-            _stagingRing.free( outSpan );
-        if ( result == RHIStagingAllocateResult::TooLarge )
-        {
-            SW_LOG_ERROR( "%#: %# bytes exceed the %#-byte staging ring and the %#-byte single upload limit; raise gv_rhiStagingSingleMaxMegabytes to upload it", pCaller,
-                          sizeBytes, _stagingRing.getCapacityBytes(), _stagingRing.getSoloMaxBytes() );
-        }
-        else
-        {
-            SW_LOG_ERROR( "%#: the GL device is lost; the staging ring no longer drains and the upload is rejected", pCaller );
-        }
-        return RHISubmitResult::Rejected;
+        // 결과 옮기기 · 못 받은 구간 놓기 · 이유 로그는 세 백엔드가 같이 쓰는 한 곳이다 — 장치를 잃었으면(펜스 확인이 GL_WAIT_FAILED) 링이 다시 비지 않으므로 Full 도 Rejected 다(계약 2).
+        // Busy 는 앞선 전송이 끝나면 비므로 호출자가 다시 제출한다.
+        const RHISubmitResult submitResult = RHIStagingRingUtil::settleAllocation( _stagingRing, _transferSerials, result, sizeBytes, "GL", pCaller, outSpan );
+        if ( submitResult != RHISubmitResult::Accepted || outSpan._bSolo == SW_FALSE )
+            return submitResult;
+        return attachSoloBuffer( _stagingRing, _stagingSolo, outSpan, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT, pCaller );
     }
 
     RHISubmitResult OpenGLRHIDevice::allocateReadbackSpan( uint64 sizeBytes, RHIStagingSpan& outSpan )

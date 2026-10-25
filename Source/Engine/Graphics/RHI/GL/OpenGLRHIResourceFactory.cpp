@@ -480,7 +480,7 @@ namespace sw
         RHIStagingSpan           staging{};
         const RHISubmitResult    allocation = _pDevice->allocateStagingSpan( stagedBytes, "submitTextureUpload", staging );
         if ( allocation != RHISubmitResult::Accepted )
-            return allocation == RHISubmitResult::Busy ? RHITransferSubmit::busy() : RHITransferSubmit::rejected();
+            return RHITransferSubmit::fromUnaccepted( allocation );
         // 복사는 컨텍스트 밖에서 한다(계약 1: 반환 전에 소스를 복사한다). 컨텍스트를 빌리는 시간은 PBO 바인딩, 텍스처 명령, 펜스뿐이다.
         Memory::copy( _pDevice->getStagingBytes( staging ), desc._pData, static_cast<size_t>( stagedBytes ) );
 
@@ -565,7 +565,7 @@ namespace sw
         RHIStagingSpan        staging{};
         const RHISubmitResult allocation = _pDevice->allocateStagingSpan( stagedBytes, "submitTextureRegionUpload", staging );
         if ( allocation != RHISubmitResult::Accepted )
-            return allocation == RHISubmitResult::Busy ? RHITransferSubmit::busy() : RHITransferSubmit::rejected();
+            return RHITransferSubmit::fromUnaccepted( allocation );
         Memory::copy( _pDevice->getStagingBytes( staging ), desc._pData, static_cast<size_t>( stagedBytes ) );
 
         ScopedOpenGLContext contextScope( _pDevice );
@@ -679,7 +679,7 @@ namespace sw
         RHIStagingSpan        readback{};
         const RHISubmitResult allocation = _pDevice->allocateReadbackSpan( outLayout._sizeBytes, readback );
         if ( allocation != RHISubmitResult::Accepted )
-            return allocation == RHISubmitResult::Busy ? RHITransferSubmit::busy() : RHITransferSubmit::rejected();
+            return RHITransferSubmit::fromUnaccepted( allocation );
 
         ScopedOpenGLContext contextScope( _pDevice );
         if ( _pDevice->isGraphicsContextCurrent() == false )

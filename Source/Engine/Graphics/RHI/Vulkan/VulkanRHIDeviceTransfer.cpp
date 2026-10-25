@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
+#include "Engine/Graphics/RHI/Support/RHIStagingRingUtil.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDeviceInternal.h"
 
@@ -151,35 +152,16 @@ namespace sw
             retireFinishedTransfers();
             result = ring._ledger.allocate( sizeBytes, _transferSerials.getWatermark(), outSpan );
         }
-        // 잃은 장치면 워터마크가 멈춰 링이 다시 비지 않는다 — Full 도 Busy 가 아니라 Rejected 다(계약 2).
-        const RHISubmitResult submitResult = _transferSerials.classifyStagingAllocation( result );
-        if ( submitResult == RHISubmitResult::Accepted )
-        {
-            if ( outSpan._bSolo == SW_FALSE )
-                return RHISubmitResult::Accepted;
-            // 장부가 단독 구간을 내줬다면 앞선 단독 구간은 이미 돌아왔다 — 남은 버퍼(아직 회수가 지우지 않은 것)를 GPU 가 더 쓰지 않는다.
-            std::scoped_lock<mutex> soloLock{ ring._soloMutex };
-            destroyMappedStagingBuffer( ring._soloBuffer, ring._soloMemory, ring._pSoloMapped );
-            if ( createMappedStagingBuffer( outSpan._sizeBytes, usageFlags, "single transfer", ring._soloBuffer, ring._soloMemory, ring._pSoloMapped ) )
-                return RHISubmitResult::Accepted;
-            ring._ledger.free( outSpan );
-            SW_LOG_ERROR( "%#: a %#-byte single transfer buffer could not be created; the transfer is rejected", pCaller, outSpan._sizeBytes );
-            return RHISubmitResult::Rejected;
-        }
-        if ( submitResult == RHISubmitResult::Busy )
-            return RHISubmitResult::Busy;
-        if ( result == RHIStagingAllocateResult::Allocated )
-            ring._ledger.free( outSpan );
-        if ( result == RHIStagingAllocateResult::TooLarge )
-        {
-            SW_LOG_ERROR( "%#: %# bytes exceed the %#-byte Vulkan staging ring and the %#-byte single transfer limit; raise gv_rhiStagingSingleMaxMegabytes to transfer it",
-                          pCaller, sizeBytes, ring._ledger.getCapacityBytes(), ring._ledger.getSoloMaxBytes() );
-        }
-        else
-        {
-            SW_LOG_ERROR( "%#: the Vulkan device is lost; the staging ring no longer drains and the transfer is rejected", pCaller );
-        }
-        return RHISubmitResult::Rejected;
+        // 결과 옮기기 · 못 받은 구간 놓기 · 이유 로그는 세 백엔드가 같이 쓰는 한 곳이다(잃은 장치면 Full 도 Rejected, 계약 2).
+        const RHISubmitResult submitResult = RHIStagingRingUtil::settleAllocation( ring._ledger, _transferSerials, result, sizeBytes, "Vulkan", pCaller, outSpan );
+        if ( submitResult != RHISubmitResult::Accepted || outSpan._bSolo == SW_FALSE )
+            return submitResult;
+        // 장부가 단독 구간을 내줬다면 앞선 단독 구간은 이미 돌아왔다 — 남은 버퍼(아직 회수가 지우지 않은 것)를 GPU 가 더 쓰지 않는다.
+        std::scoped_lock<mutex> soloLock{ ring._soloMutex };
+        destroyMappedStagingBuffer( ring._soloBuffer, ring._soloMemory, ring._pSoloMapped );
+        if ( createMappedStagingBuffer( outSpan._sizeBytes, usageFlags, "single transfer", ring._soloBuffer, ring._soloMemory, ring._pSoloMapped ) )
+            return RHISubmitResult::Accepted;
+        return RHIStagingRingUtil::rejectSoloBufferFailure( ring._ledger, outSpan, "Vulkan", pCaller );
     }
 
     void VulkanRHIDevice::destroyIdleSoloBuffer( VulkanStagingRing& ring )

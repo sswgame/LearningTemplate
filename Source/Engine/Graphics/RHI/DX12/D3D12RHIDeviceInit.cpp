@@ -259,7 +259,7 @@ namespace sw
     {
         _mapOffscreenTexture.clear();
         _pipelineStates.clear();
-        _listRenderPass.clear();
+        _renderPassLedger.clear();
         _listRegisteredBindless.clear();
         _listFreeBindless.clear();
         _listRegisteredUAV.clear();

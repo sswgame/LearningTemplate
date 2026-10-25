@@ -19,6 +19,7 @@
 #include "Engine/Graphics/RHI/IRHITimestampProvider.h"
 #include "Engine/Graphics/RHI/Support/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Support/RHIReleaseQueue.h"
+#include "Engine/Graphics/RHI/Support/RHIRenderPassLedger.h"
 #include "Engine/Graphics/RHI/Support/RHITimestamp.h"
 #include "Engine/Graphics/RHI/Support/RHITransferSerials.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
@@ -453,14 +454,6 @@ namespace sw
             Microsoft::WRL::ComPtr<ID3D11DepthStencilState> _depthStencilState;
         };
 
-        /// @brief 렌더 패스 서술 캐시입니다.
-        struct D3D11RenderPassRecord
-        {
-            RHIRenderPassDesc _desc{};
-            uint8             _bAlive   : 1;
-            uint8             _reserved : 7;
-        };
-
         Microsoft::WRL::ComPtr<ID3D11Device>  _device;
         Microsoft::WRL::ComPtr<IDXGIAdapter3> _memoryAdapter; ///< 디바이스가 쓰는 어댑터. GPU 메모리 사용량과 예산을 질의하는 데 쓴다.
         /// @brief 즉시 컨텍스트입니다. 여러 호출과 그것에 딸린 상태(전송 큐 · 쿼리 풀 · 프레임 링 · 타임스탬프)는 `lock()` 가드 안에서만 다룹니다.
@@ -540,7 +533,7 @@ namespace sw
         vector<uint32>                                            _listUavFree;
 
         RHIHandleTable<D3D11PipelineStateRecord> _pipelineStates;
-        vector<D3D11RenderPassRecord>            _listRenderPass;
+        RHIRenderPassLedger                      _renderPassLedger; ///< 렌더 패스 핸들 장부. 자기 뮤텍스로 직렬화해 어느 스레드에서나 부른다.
 
         Microsoft::WRL::ComPtr<ID3D11DepthStencilState> _depthEnabledState;
         Microsoft::WRL::ComPtr<ID3D11DepthStencilState> _depthDisabledState;

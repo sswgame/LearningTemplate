@@ -57,7 +57,7 @@ namespace sw
         , _mapCbMapped{}
         , _constantBufferMirror{}
         , _pipelineStates{}
-        , _listRenderPass{}
+        , _renderPassLedger{}
         , _swapChain{}
         , _bBindlessRootSignature{ SW_FALSE }
         , _reservedPassFlags{ 0 }

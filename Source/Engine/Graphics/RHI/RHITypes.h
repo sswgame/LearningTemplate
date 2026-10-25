@@ -904,6 +904,16 @@ namespace sw
         [[nodiscard]] static constexpr RHITransferSubmit busy() noexcept { return RHITransferSubmit{ RHISubmitResult::Busy, RHITransferTicket{} }; }
         /** @brief 검사에 걸려 거절한 결과입니다. */
         [[nodiscard]] static constexpr RHITransferSubmit rejected() noexcept { return RHITransferSubmit{ RHISubmitResult::Rejected, RHITransferTicket{} }; }
+        /**
+         * @brief 스테이징 할당이 `Accepted` 가 아닐 때 그 결과를 제출 결과로 옮깁니다. `Busy` 는 `busy()`, 나머지는 `rejected()` 입니다.
+         * @details 네 백엔드가 `allocateStagingSpan` 의 결과를 이 한 함수로 옮긴다. `Accepted` 는 티켓이 필요해 부르는 쪽이 시리얼로 만든다(`RHITransferSerials::makeAccepted`) —
+         *          `Accepted` 를 넘기면 Debug 에서 단언이 걸리고 `rejected()` 를 돌려준다(티켓 없는 `Accepted` 가 호출자에게 새지 않는다).
+         */
+        [[nodiscard]] static RHITransferSubmit fromUnaccepted( RHISubmitResult result ) noexcept
+        {
+            SW_ASSERT( result != RHISubmitResult::Accepted );
+            return result == RHISubmitResult::Busy ? busy() : rejected();
+        }
     };
 
     /**
