@@ -217,7 +217,12 @@ namespace sw
                 vector<SceneObjectHash> listObject;
                 if ( collectTickedObjects( outReply, tick, listObject ) == false )
                     return false;
-                SceneStateHash::writeObjectReportLine( tick, listObject, outReply );
+                if ( SceneStateHash::writeObjectReportLine( tick, listObject, outReply ) == false )
+                {
+                    outReply = "the object report does not fit one line (" + to_string( listObject.size() ) + " objects, limit " + to_string( SceneStateHash::kMaxReportLineBytes ) +
+                               " bytes) - use state.objects";
+                    return false;
+                }
                 return true;
             }
 
@@ -269,6 +274,11 @@ namespace sw
                 const bool bHasCount = listArgument.size() == 1 && StringUtil::parseUint64( listArgument[0], count );
                 if ( bHasCount == false || count == 0 )
                     return false;
+                if ( count > StateHashHistory::kMaxReportLineSamples )
+                {
+                    outReply = "count " + to_string( count ) + " does not fit one line (at most " + to_string( StateHashHistory::kMaxReportLineSamples ) + ") - use state.hashes";
+                    return false;
+                }
                 const StateHashHistory* pHistory = findRecordingHistory( outReply );
                 if ( pHistory == nullptr )
                     return false;
@@ -279,7 +289,11 @@ namespace sw
                     const uint64 fromTick = latest._tick + 1 > count ? latest._tick + 1 - count : 0;
                     pHistory->collect( fromTick, static_cast<uint32>( count ), listSample );
                 }
-                StateHashHistory::writeReportLine( listSample, outReply );
+                if ( StateHashHistory::writeReportLine( listSample, outReply ) == false )
+                {
+                    outReply = "the hash history does not fit one line (limit " + to_string( SceneStateHash::kMaxReportLineBytes ) + " bytes) - use state.hashes";
+                    return false;
+                }
                 return true;
             }
         };

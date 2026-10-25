@@ -28,8 +28,8 @@ namespace sw::editor
             static constexpr float32 kFieldWidthInFonts = 10.0f;
             /** @brief 경로 칸의 너비(글자 크기 배수)입니다. */
             static constexpr float32 kPathWidthInFonts = 20.0f;
-            /** @brief 클라이언트에게 묻는 최근 틱 수입니다. 답은 로그 한 줄(틱마다 약 22 바이트)이라 세션 서버 이력(3600 틱)보다 짧게 묻는다. */
-            static constexpr int32 kClientHistoryTicks = 512;
+            /** @brief 클라이언트에게 묻는 최근 틱 수입니다. 답은 로그 한 줄이라 한 줄 상한(`SceneStateHash::kMaxReportLineBytes`)에 드는 수까지만 묻는다(더 많이 물으면 클라이언트가 오류로 답한다). 세션 서버 이력(3600 틱)보다 짧다. */
+            static constexpr int32 kClientHistoryTicks = static_cast<int32>( StateHashHistory::kMaxReportLineSamples );
             /** @brief 슬롯 이름입니다(탭 · 명령 답). */
             static constexpr const utf8* kArrSourceName[EditorStateHashCompare::kSourceCount] = { "A", "B" };
 
@@ -93,12 +93,65 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief 탐침 `Editor.NetPlaySyncObjectsCompared` — 마지막 "Which objects differ" 가 끝까지 갔으면 1 입니다(목록이 비어도 비교는 한 것). */
+            [[nodiscard]] static bool readObjectsCompared( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                outValue = getCompare().hasObjectComparison() ? 1.0 : 0.0;
+                return true;
+            }
+
+            /** @brief 탐침 `Editor.NetPlaySyncDifferingObjects` — 마지막 "Which objects differ" 가 짚은 다른 오브젝트 수입니다. */
+            [[nodiscard]] static bool readDifferingObjects( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                outValue = static_cast<float64>( getCompare().getDifferingObjects().size() );
+                return true;
+            }
+
+            /**
+             * @brief `netplay.sync objects server|client` — 탭의 "Which objects differ" 와 같은 비교를 합니다. 서버 칸은 두 칸을 세션 서버로 두고 채널에서 다시 읽고(`compareObjectsFromChannels`),
+             *        클라이언트 칸은 A 를 세션 서버(채널), B 를 첫 클라이언트(표준 입력의 마지막 `state.objectline` 답)로 두고 `compareObjects` 로 견준다.
+             * @details 두 쪽의 틱이 같아야 하므로 서버를 `pause` 하고 클라이언트가 마지막 틱을 받은 뒤에 부른다. 클라이언트 칸은 먼저 `netplay.command client1 state.objectline` 로 답을 받아 둔다(탭은 단추에서 묻고 답을 기다린다).
+             */
+            static bool runObjects( const string& side, string& outReply )
+            {
+                const bool bServer = side == "server";
+                if ( bServer == false && side != "client" )
+                    return false;
+                EditorStateHashCompare& compare = getCompare();
+                bool                    bDone   = false;
+                if ( loadSessionServer( 0, outReply ) == false )
+                    return true;
+                if ( bServer )
+                {
+                    bDone = loadSessionServer( 1, outReply ) && compare.compareObjectsFromChannels();
+                }
+                else
+                {
+                    EditorNetPlaySession*      pSession   = findSession();
+                    const bool                 bHasClient = pSession != nullptr && pSession->isRunning() && pSession->getProcessCount() > 1;
+                    EditorNetPlayProcessStatus status     = bHasClient ? pSession->getProcessStatus( 1 ) : EditorNetPlayProcessStatus{};
+                    if ( bHasClient == false || status._objectHashReportCount == 0 )
+                    {
+                        outReply = "netplay sync objects client has no state.objectline answer yet - ask with netplay.command client1 state.objectline first";
+                        return true;
+                    }
+                    uint64                  serverTick = 0;
+                    vector<SceneObjectHash> listServer;
+                    bDone = compare.readObjectsFromChannel( 0, serverTick, listServer ) && compare.compareObjects( serverTick, listServer, status._objectHashTick, status._listObjectHash );
+                }
+                outReply = bDone ? "netplay sync objects tick " + to_string( compare.getObjectTick() ) + ": " + to_string( compare.getDifferingObjects().size() ) + " differing object(s)"
+                                 : compare.getLastError();
+                return true;
+            }
+
             /**
              * @brief `netplay.sync save <경로>` — 세션 전용 서버의 이력을 A 에 담아 파일로 씁니다. `netplay.sync compare <경로>` — 세션 서버를 A, 파일을 B 로 담아 비교합니다.
              * @details 탭의 "Session server" · "Load file" · "Save" · "Compare" 와 같은 길이다. 시나리오는 이 명령과 탐침 `Editor.NetPlaySync*` 로 확인한다.
              */
             static bool runSync( const vector<string>& listArgument, string& outReply )
             {
+                if ( listArgument.size() == 2 && listArgument[0] == "objects" )
+                    return runObjects( listArgument[1], outReply );
                 const bool bSave    = listArgument.size() == 2 && listArgument[0] == "save";
                 const bool bCompare = listArgument.size() == 2 && listArgument[0] == "compare";
                 if ( bSave == false && bCompare == false )
@@ -128,8 +181,12 @@ namespace sw::editor
                          &MultiplayerSyncTabInternal::readCommonTicks );
     SW_AUTOMATION_PROBE( editorNetPlaySyncDiverged, "Editor.NetPlaySyncDiverged", "1 when the multiplayer Sync tab's last comparison found a divergent tick",
                          &MultiplayerSyncTabInternal::readDiverged );
-    SW_DEV_COMMAND( NetPlaySync, "netplay.sync", "netplay.sync save|compare <path>",
-                    "Save the session server's per-tick state hash history to a file, or compare it with a saved one (first divergent tick)",
+    SW_AUTOMATION_PROBE( editorNetPlaySyncObjectsCompared, "Editor.NetPlaySyncObjectsCompared", "1 when the Sync tab's last 'Which objects differ' compared the two object hash lists",
+                         &MultiplayerSyncTabInternal::readObjectsCompared );
+    SW_AUTOMATION_PROBE( editorNetPlaySyncDifferingObjects, "Editor.NetPlaySyncDifferingObjects", "Objects the Sync tab's last 'Which objects differ' found different",
+                         &MultiplayerSyncTabInternal::readDifferingObjects );
+    SW_DEV_COMMAND( NetPlaySync, "netplay.sync", "netplay.sync save|compare <path> | netplay.sync objects server|client",
+                    "Save the session server's per-tick state hash history to a file, or compare it with a saved one (first divergent tick), or list the objects that differ (Which objects differ)",
                     &MultiplayerSyncTabInternal::runSync );
 } // namespace sw::editor
 

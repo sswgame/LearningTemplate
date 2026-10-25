@@ -653,6 +653,11 @@
       "source": "docs/plans/ServerDebug.md S7", "result_doc": "docs/plans/ServerDebug.md S7 남은 것"
     },
     {
+      "id": "sync-tab-object-diff-scenario", "title": "editor/netsyncobjects 시나리오(Sync 탭 Which objects differ — 서버 칸 · 클라이언트 칸 목록이 뜸)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "covered": ["engine/automation/editor/netsyncobjects.scenario.xml"], "covered_by": "app-scenarios-release",
+      "source": "docs/plans/ServerDebug.md S7", "result_doc": "docs/plans/ServerDebug.md S7 남은 것"
+    },
+    {
       "id": "profiler-replica-rate-tests", "title": "Profiler 탭의 복제 셈 초당 값 · 비율 계산", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 10,
       "filter": "EditorNetProfilerTest.*",
       "source": "docs/plans/ServerDebug.md S5", "result_doc": "docs/plans/ServerDebug.md S5 남은 것"

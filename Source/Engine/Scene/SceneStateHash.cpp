@@ -6,6 +6,7 @@
 #include "Core/Common/HashUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Log/Logger.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -48,6 +49,11 @@ namespace sw
 
 namespace sw
 {
+    SW_LOG_CALLER( "SceneStateHash" );
+
+    // 샘플 하나는 가장 길 때 `<20자리 틱>:<16자리 해시>,` = 38 바이트다.
+    static_assert( 38u * StateHashHistory::kMaxReportLineSamples + 32u <= SceneStateHash::kMaxReportLineBytes, "kMaxReportLineSamples 가 한 줄 상한 안에 들어야 한다" );
+
     uint64 SceneStateHash::compute( const GameObjectManager& manager )
     {
         vector<SceneStateHashInternal::Entry> listEntry;
@@ -226,7 +232,7 @@ namespace sw
         }
     } // namespace SceneStateHashInternal
 
-    void SceneStateHash::writeObjectReportLine( uint64 tick, const vector<SceneObjectHash>& listObject, string& outLine )
+    bool SceneStateHash::writeObjectReportLine( uint64 tick, const vector<SceneObjectHash>& listObject, string& outLine )
     {
         outLine = kObjectReportLinePrefix;
         outLine += ' ';
@@ -235,7 +241,7 @@ namespace sw
         if ( listObject.empty() )
         {
             outLine += '-';
-            return;
+            return true;
         }
         for ( size_t index = 0; index < listObject.size(); ++index )
         {
@@ -261,6 +267,13 @@ namespace sw
                 }
             }
         }
+        if ( outLine.size() > kMaxReportLineBytes )
+        {
+            SW_LOG_ERROR_ID( "State.ReportLineTooLong", "SceneStateHash: the object report line is %# bytes for %# objects, over the %# byte line limit - not written", outLine.size(), listObject.size(), kMaxReportLineBytes );
+            outLine.clear();
+            return false;
+        }
+        return true;
     }
 
     bool SceneStateHash::tryParseObjectReportLine( string_view line, uint64& outTick, vector<SceneObjectHash>& outListObject )
@@ -276,6 +289,8 @@ namespace sw
             return false;
         body = StringUtil::trim( body.substr( tickEnd + 1 ) );
         body = body.substr( 0, body.find_first_of( " \t" ) ); // 로그 꼬리는 읽지 않는다
+        if ( static_cast<size_t>( body.data() + body.size() - ( line.data() + prefixAt ) ) > kMaxReportLineBytes )
+            return false; // 쓰는 쪽이 만들 수 없는 길이 — 잘린 줄이거나 다른 글이다
         if ( body != "-" )
         {
             size_t itemStart = 0;
@@ -419,14 +434,14 @@ namespace sw
         }
     }
 
-    void StateHashHistory::writeReportLine( const vector<StateHashSample>& listSample, string& outText )
+    bool StateHashHistory::writeReportLine( const vector<StateHashSample>& listSample, string& outText )
     {
         outText = kReportLinePrefix;
         outText += ' ';
         if ( listSample.empty() )
         {
             outText += '-';
-            return;
+            return true;
         }
         string block;
         writeReport( listSample, block ); // `<tick> <hash>\n` 줄들 — 한 줄 판은 공백을 ':' 로, 줄 끝을 ',' 로 바꾼다
@@ -439,6 +454,14 @@ namespace sw
         }
         block.pop_back(); // 마지막 ','
         outText += block;
+        if ( outText.size() > SceneStateHash::kMaxReportLineBytes )
+        {
+            SW_LOG_ERROR_ID( "State.ReportLineTooLong", "StateHashHistory: the hash line is %# bytes for %# samples, over the %# byte line limit - not written", outText.size(), listSample.size(),
+                             SceneStateHash::kMaxReportLineBytes );
+            outText.clear();
+            return false;
+        }
+        return true;
     }
 
     bool StateHashHistory::tryParseReportLine( string_view line, vector<StateHashSample>& outListSample )
@@ -449,6 +472,8 @@ namespace sw
         outListSample.clear();
         string_view body = StringUtil::trim( line.substr( prefixAt + string_view( kReportLinePrefix ).size() ) );
         body             = body.substr( 0, body.find_first_of( " \t" ) ); // 로그 꼬리는 읽지 않는다
+        if ( static_cast<size_t>( body.data() + body.size() - ( line.data() + prefixAt ) ) > SceneStateHash::kMaxReportLineBytes )
+            return false; // 쓰는 쪽이 만들 수 없는 길이 — 잘린 줄이거나 다른 글이다
         if ( body == "-" )
             return true;
         size_t itemStart = 0;
