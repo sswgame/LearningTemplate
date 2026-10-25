@@ -9,7 +9,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Editor/Common/GUI/IEditorPanel.h"
-#include "Editor/Panels/Packaging/PackagingProgressParser.h"
+#include "Editor/Panels/Packaging/Model/PackagingProgressParser.h"
 
 namespace sw::editor
 {

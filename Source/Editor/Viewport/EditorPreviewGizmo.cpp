@@ -5,9 +5,9 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/GUI/EditorPreviewPanel.h"
-#include "Editor/Viewport/EditorPreviewPick.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
-#include "Editor/Viewport/EditorViewportRayPick.h"
+#include "Editor/Viewport/Model/EditorPreviewPick.h"
+#include "Editor/Viewport/Model/EditorViewportRayPick.h"
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"

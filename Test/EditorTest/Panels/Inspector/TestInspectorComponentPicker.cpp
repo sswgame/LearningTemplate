@@ -4,7 +4,7 @@
 
 #if !defined( SW_SHIPPING )
 
-    #include "Editor/Panels/Inspector/InspectorComponentPicker.h"
+    #include "Editor/Panels/Inspector/Model/InspectorComponentPicker.h"
 
     #include "EditorTest/EditorPreviewProbe.h"
 

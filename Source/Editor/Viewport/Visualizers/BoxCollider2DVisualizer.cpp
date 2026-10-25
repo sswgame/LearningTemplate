@@ -9,7 +9,7 @@
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
-#include "Editor/Viewport/EditorVisualizerGeometry.h"
+#include "Editor/Viewport/Model/EditorVisualizerGeometry.h"
 
 #include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"

@@ -5,8 +5,8 @@
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Viewport/EditorPreviewPick.h"
-#include "Editor/Viewport/EditorViewportRayPick.h"
+#include "Editor/Viewport/Model/EditorPreviewPick.h"
+#include "Editor/Viewport/Model/EditorViewportRayPick.h"
 
 #include "EditorTest/EditorTestServices.h"
 

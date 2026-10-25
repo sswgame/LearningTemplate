@@ -14,7 +14,7 @@
 #include "Editor/Common/GUI/IEditorPanel.h"
 #include "Editor/Common/Widgets/EditableResourcePath.h"
 #include "Editor/Panels/Inspector/EditorPropertyGrid.h"
-#include "Editor/Panels/UIPreview/UIPreviewLogic.h"
+#include "Editor/Panels/UIPreview/Model/UIPreviewLogic.h"
 
 #include "Engine/UI/Base/UIFocusManager.h"
 #include "Engine/UI/Base/UIPointerState.h"

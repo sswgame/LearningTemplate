@@ -8,7 +8,7 @@
 
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Panels/Inspector/IInspectorComponent.h"
-#include "Editor/Panels/Inspector/InspectorComponentManager.h"
+#include "Editor/Panels/Inspector/Model/InspectorComponentManager.h"
 
 #include "Engine/Localization/LocText.h"
 #include "Engine/Object/Component/CameraComponent.h"

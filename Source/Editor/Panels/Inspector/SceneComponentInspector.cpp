@@ -8,8 +8,8 @@
 
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Panels/Inspector/IInspectorComponent.h"
-#include "Editor/Panels/Inspector/InspectorComponentManager.h"
-#include "Editor/Panels/Inspector/InspectorPropertyLayout.h"
+#include "Editor/Panels/Inspector/Model/InspectorComponentManager.h"
+#include "Editor/Panels/Inspector/Model/InspectorPropertyLayout.h"
 
 #include "Engine/Object/Component/SceneComponent.h"
 

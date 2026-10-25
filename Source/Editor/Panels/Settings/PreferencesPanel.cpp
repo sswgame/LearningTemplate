@@ -13,7 +13,7 @@
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
-#include "Editor/Panels/Inspector/InspectorPropertyLayout.h"
+#include "Editor/Panels/Inspector/Model/InspectorPropertyLayout.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Localization/LocText.h"

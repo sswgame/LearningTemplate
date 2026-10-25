@@ -9,7 +9,7 @@
 #include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Panels/Inspector/InspectorPropertyLayout.h"
+#include "Editor/Panels/Inspector/Model/InspectorPropertyLayout.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 

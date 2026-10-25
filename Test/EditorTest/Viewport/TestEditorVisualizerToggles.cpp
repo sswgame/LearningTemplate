@@ -1,7 +1,7 @@
 #include "pch.h"
 
 #include "Editor/Viewport/EditorViewportVisualizer.h"
-#include "Editor/Viewport/EditorVisualizerToggles.h"
+#include "Editor/Viewport/Model/EditorVisualizerToggles.h"
 
 #include "TestFramework/TestFramework.h"
 

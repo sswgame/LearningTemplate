@@ -13,7 +13,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Editor/Common/EditorExports.h"
-#include "Editor/Panels/Inspector/InspectorBuiltinValue.h"
+#include "Editor/Panels/Inspector/Model/InspectorBuiltinValue.h"
 
 #include "Engine/Reflection/TextAddress.h"
 

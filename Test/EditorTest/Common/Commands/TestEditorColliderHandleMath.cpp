@@ -2,7 +2,7 @@
 
 #include "Core/Math/MatrixMath.h"
 
-#include "Editor/Viewport/EditorColliderHandleMath.h"
+#include "Editor/Viewport/Model/EditorColliderHandleMath.h"
 
 #include "TestFramework/TestFramework.h"
 

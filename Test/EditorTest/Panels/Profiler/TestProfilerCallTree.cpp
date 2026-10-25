@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Panels/Profiler/ProfilerCallTree.h"
+#include "Editor/Panels/Profiler/Model/ProfilerCallTree.h"
 
 #include "TestFramework/TestFramework.h"
 

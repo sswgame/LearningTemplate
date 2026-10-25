@@ -16,7 +16,7 @@
 #include "Editor/Common/Commands/Scene/EditorMultiEdit.h"
 #include "Editor/Common/GUI/IEditorPanel.h"
 #include "Editor/Panels/Inspector/EditorPropertyGrid.h"
-#include "Editor/Panels/Inspector/InspectorFavorites.h"
+#include "Editor/Panels/Inspector/Model/InspectorFavorites.h"
 
 namespace sw
 {

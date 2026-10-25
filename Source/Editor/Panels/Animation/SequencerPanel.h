@@ -7,7 +7,7 @@
 
 #include "Editor/Common/GUI/EditorDocumentPanel.h"
 #include "Editor/Common/Widgets/EditorCurveEditor.h"
-#include "Editor/Panels/Animation/SequenceTimingUtil.h"
+#include "Editor/Panels/Animation/Model/SequenceTimingUtil.h"
 
 #include "Engine/Sequencer/SequenceAsset.h"
 

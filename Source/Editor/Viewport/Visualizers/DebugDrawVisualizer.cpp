@@ -9,7 +9,7 @@
 #include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
-#include "Editor/Viewport/EditorVisualizerGeometry.h"
+#include "Editor/Viewport/Model/EditorVisualizerGeometry.h"
 
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 

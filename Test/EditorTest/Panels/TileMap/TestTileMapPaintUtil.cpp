@@ -2,7 +2,7 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Editor/Panels/TileMap/TileMapPaintUtil.h"
+#include "Editor/Panels/TileMap/Model/TileMapPaintUtil.h"
 
 #include "TestFramework/TestFramework.h"
 

@@ -24,10 +24,10 @@
 #include "Editor/Panels/ContentBrowser/ContentBrowserPanel.h"
 #include "Editor/Panels/Inspector/EditorPropertyGrid.h"
 #include "Editor/Panels/Inspector/IInspectorProperty.h"
-#include "Editor/Panels/Inspector/InspectorBuiltinValue.h"
-#include "Editor/Panels/Inspector/InspectorComponentPicker.h"
-#include "Editor/Panels/Inspector/InspectorPropertyLayout.h"
 #include "Editor/Panels/Inspector/InspectorPropertyUndo.h"
+#include "Editor/Panels/Inspector/Model/InspectorBuiltinValue.h"
+#include "Editor/Panels/Inspector/Model/InspectorComponentPicker.h"
+#include "Editor/Panels/Inspector/Model/InspectorPropertyLayout.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Localization/LocText.h"

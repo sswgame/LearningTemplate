@@ -11,8 +11,8 @@
 
 #include "Editor/Common/GUI/IEditorPanel.h"
 #include "Editor/Panels/Inspector/EditorPropertyGrid.h"
-#include "Editor/Panels/ProjectSettings/ProjectSettingsCatalog.h"
-#include "Editor/Panels/ProjectSettings/ProjectSettingsDocument.h"
+#include "Editor/Panels/ProjectSettings/Model/ProjectSettingsCatalog.h"
+#include "Editor/Panels/ProjectSettings/Model/ProjectSettingsDocument.h"
 
 namespace sw
 {

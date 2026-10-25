@@ -3,7 +3,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 
-#include "Editor/Panels/RenderTarget/RenderTargetViewUtil.h"
+#include "Editor/Panels/RenderTarget/Model/RenderTargetViewUtil.h"
 
 #include "TestFramework/TestFramework.h"
 

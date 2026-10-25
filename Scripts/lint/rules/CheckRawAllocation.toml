@@ -6,7 +6,7 @@
 "Source/Editor/ImGuiEditor.cpp" = "ImGui 의 할당 · 해제 콜백(ImGui::SetAllocatorFunctions) — 콜백이 void* 를 돌려주고 ImGui 가 소유한다"
 "Source/Editor/Common/Asset/ImageUtil.cpp" = "이미지 라이브러리의 할당 · 재할당 · 해제 콜백 — 라이브러리가 소유한다"
 "Source/Editor/Common/Asset/ModelImportGeometry.cpp" = "cgltf 의 할당 · 해제 콜백(cgltf_options) — 라이브러리가 소유한다"
-"Source/Editor/Panels/ProjectSettings/ProjectSettingsDocument.cpp" = "리플렉션이 만든 형식 소거 인스턴스(생성자 호출 · _destroyInstance 짝) — 인스턴스 소유 형식이 없다(후보 Candidates-engine.md 의 \"리플렉션 인스턴스 소유 형식\")"
+"Source/Editor/Panels/ProjectSettings/Model/ProjectSettingsDocument.cpp" = "리플렉션이 만든 형식 소거 인스턴스(생성자 호출 · _destroyInstance 짝) — 인스턴스 소유 형식이 없다(후보 Candidates-engine.md 의 \"리플렉션 인스턴스 소유 형식\")"
 "Source/Core/String/hashed_string.h" = "락 없이 읽는 엔트리 청크 표(atomic<Entry*>)에 올리는 블록 — 표가 atomic 포인터라 소유 형식을 담을 수 없다"
 "Source/Engine/Animation/Codec/ACL/ACLAnimationCodec.cpp" = "ACL 의 allocator 인터페이스(allocate · deallocate 가상 함수) — 라이브러리가 소유한다"
 "Source/Engine/Compression/ZlibCompressionCodec.cpp" = "zlib 의 zalloc · zfree 콜백 — 라이브러리가 소유한다"

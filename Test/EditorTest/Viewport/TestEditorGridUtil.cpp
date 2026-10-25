@@ -2,7 +2,7 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Editor/Viewport/EditorGridUtil.h"
+#include "Editor/Viewport/Model/EditorGridUtil.h"
 
 #include "TestFramework/TestFramework.h"
 

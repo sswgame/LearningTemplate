@@ -1,7 +1,7 @@
 // 카탈로그 표 편집기의 원문 편집 — 훑기(주석 · 처리 명령 · CDATA · 엔티티), 속성 값 바꾸기 · 더하기 · 빼기, 원소 더하기 · 빼기가 주석과 들여쓰기를 건드리지 않는지.
 #include "pch.h"
 
-#include "Editor/Panels/Catalog/CatalogXMLText.h"
+#include "Editor/Panels/Catalog/Model/CatalogXMLText.h"
 
 #include "TestFramework/TestFramework.h"
 

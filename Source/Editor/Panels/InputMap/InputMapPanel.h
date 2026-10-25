@@ -9,7 +9,7 @@
 
 #include "Editor/Common/GUI/IEditorPanel.h"
 #include "Editor/Common/Widgets/EditableResourcePath.h"
-#include "Editor/Panels/InputMap/InputMapConflicts.h"
+#include "Editor/Panels/InputMap/Model/InputMapConflicts.h"
 
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/Virtual/InputReplay.h"

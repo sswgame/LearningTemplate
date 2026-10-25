@@ -13,10 +13,10 @@
 #include "Editor/Common/Commands/EditorBackgroundIO.h"
 #include "Editor/Common/GUI/EditorThumbnailCache.h"
 #include "Editor/Common/GUI/IEditorPanel.h"
-#include "Editor/Panels/ContentBrowser/ContentBrowserFileActions.h"
-#include "Editor/Panels/ContentBrowser/ContentBrowserImportQueue.h"
-#include "Editor/Panels/ContentBrowser/ContentBrowserLogic.h"
 #include "Editor/Panels/ContentBrowser/ContentBrowserReferenceSearch.h"
+#include "Editor/Panels/ContentBrowser/Model/ContentBrowserFileActions.h"
+#include "Editor/Panels/ContentBrowser/Model/ContentBrowserImportQueue.h"
+#include "Editor/Panels/ContentBrowser/Model/ContentBrowserLogic.h"
 
 struct ImDrawList;
 

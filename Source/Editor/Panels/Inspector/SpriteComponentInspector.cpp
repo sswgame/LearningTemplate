@@ -8,7 +8,7 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/Inspector/IInspectorComponent.h"
-#include "Editor/Panels/Inspector/InspectorComponentManager.h"
+#include "Editor/Panels/Inspector/Model/InspectorComponentManager.h"
 
 #include "Engine/Object/Component/2D/SpriteComponent.h"
 

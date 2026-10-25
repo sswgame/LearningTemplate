@@ -15,7 +15,7 @@
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorService.h"
-#include "Editor/Panels/TileMap/TileMapPaintUtil.h"
+#include "Editor/Panels/TileMap/Model/TileMapPaintUtil.h"
 
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"

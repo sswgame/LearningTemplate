@@ -2,8 +2,8 @@
 
 #include "Core/File/FileUtil.h"
 
-#include "Editor/Panels/ProjectSettings/ProjectSettingsCatalog.h"
-#include "Editor/Panels/ProjectSettings/ProjectSettingsDocument.h"
+#include "Editor/Panels/ProjectSettings/Model/ProjectSettingsCatalog.h"
+#include "Editor/Panels/ProjectSettings/Model/ProjectSettingsDocument.h"
 
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"

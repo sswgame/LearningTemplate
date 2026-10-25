@@ -18,7 +18,7 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorService.h"
-#include "Editor/Panels/Material/MaterialPreviewShading.h"
+#include "Editor/Panels/Material/Model/MaterialPreviewShading.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Graphics/Material/Material.h"

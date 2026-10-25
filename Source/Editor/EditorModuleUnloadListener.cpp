@@ -10,8 +10,8 @@
 #include "Editor/Common/Workspace/EditorDefaultObjects.h"
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 #include "Editor/Common/Workspace/EditorRenderViews.h"
-#include "Editor/Panels/Inspector/InspectorComponentManager.h"
 #include "Editor/Panels/Inspector/InspectorPropertyManager.h"
+#include "Editor/Panels/Inspector/Model/InspectorComponentManager.h"
 
 namespace sw::editor
 {

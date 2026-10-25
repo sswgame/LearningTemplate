@@ -2,7 +2,7 @@
 
 #include "Core/File/FileUtil.h"
 
-#include "Editor/Viewport/EditorViewportOverlayLayout.h"
+#include "Editor/Viewport/Model/EditorViewportOverlayLayout.h"
 
 #include "TestFramework/TestFramework.h"
 

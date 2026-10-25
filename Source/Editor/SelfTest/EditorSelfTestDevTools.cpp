@@ -32,9 +32,9 @@
 #include "Editor/Panels/Scene/SceneViewPanel.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
-#include "Editor/Viewport/EditorGridUtil.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
-#include "Editor/Viewport/EditorVisualizerGeometry.h"
+#include "Editor/Viewport/Model/EditorGridUtil.h"
+#include "Editor/Viewport/Model/EditorVisualizerGeometry.h"
 
 #include "Engine/Config/GameAutoplay.h"
 #include "Engine/Config/GameTimeScale.h"

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Panels/Console/ConsoleLogRows.h"
+#include "Editor/Panels/Console/Model/ConsoleLogRows.h"
 
 #include "TestFramework/TestFramework.h"
 
