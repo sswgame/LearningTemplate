@@ -142,7 +142,7 @@ namespace sw::editor
             /** @brief 열린 Output Log 패널입니다. 없으면 nullptr 입니다. */
             static ConsolePanel* findPanel()
             {
-                EditorContext* pContext = EditorContext::get();
+                EditorContext* pContext = editor::findSubsystem<EditorContext>();
                 return pContext != nullptr ? pContext->getSubsystem<EditorPanelManager>().findPanel<ConsolePanel>() : nullptr;
             }
 

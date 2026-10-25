@@ -61,15 +61,13 @@ namespace sw::editor
     bool BugItPanel::captureNow()
     {
         string     directory;
-        const bool bCaptured    = BugItReport::capture( BugItReport::makeInputs( _note ), directory );
-        _bRowsDirty             = true;
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
-            return bCaptured;
+        const bool bCaptured         = BugItReport::capture( BugItReport::makeInputs( _note ), directory );
+        _bRowsDirty                  = true;
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
         if ( bCaptured )
-            pContext->getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyBugReportSaved" ), directory, NotificationType::Success );
+            editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyBugReportSaved" ), directory, NotificationType::Success );
         else
-            pContext->getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyBugReportTitle" ), SW_LOCKEY( "EdCommon", "NotifyBugReportFailed" ), NotificationType::Error );
+            editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyBugReportTitle" ), SW_LOCKEY( "EdCommon", "NotifyBugReportFailed" ), NotificationType::Error );
         return bCaptured;
     }
 

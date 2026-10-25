@@ -157,9 +157,8 @@ namespace sw::editor
             /** @brief 단일 선택(주 선택)된 오브젝트를 형제 사이에서 한 단계 옮깁니다. 커맨드(`scene.moveSiblingUp` · `Down`)가 씁니다. */
             static void moveSelectionStep( bool bDown )
             {
-                EditorContext*     pContext = EditorContext::get();
                 GameObjectManager* pManager = editor::getActiveObjectManager();
-                GameObject*        pObject  = pContext != nullptr ? editor::getMainSceneSelection().getPrimaryObject() : nullptr;
+                GameObject*        pObject  = editor::getMainSceneSelection().getPrimaryObject();
                 if ( pManager != nullptr && pObject != nullptr )
                     (void)EditorSiblingOrder::moveStep( *pManager, pObject, bDown, findEditorCameraObject() ); // 끝이면 아무것도 하지 않는다
             }
@@ -177,11 +176,10 @@ namespace sw::editor
             /** @brief 주 선택이 폴더면 그 안에, 아니면 루트에 정리용 폴더를 만듭니다(언리얼 아웃라이너의 새 폴더). */
             static void runCreateFolder()
             {
-                EditorContext*     pContext = EditorContext::get();
                 GameObjectManager* pManager = editor::getActiveObjectManager();
                 if ( pManager == nullptr )
                     return;
-                GameObject* pSelected = pContext != nullptr ? editor::getMainSceneSelection().getPrimaryObject() : nullptr;
+                GameObject* pSelected = editor::getMainSceneSelection().getPrimaryObject();
                 GameObject* pParent   = pSelected != nullptr && EditorSiblingOrder::isFolder( *pSelected ) ? pSelected : nullptr;
                 (void)EditorSiblingOrder::createFolder( *pManager, pParent ); // 편집이 막혔으면 nullptr 이고 아무것도 바뀌지 않는다
             }

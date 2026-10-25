@@ -121,10 +121,8 @@ namespace sw::editor
 
     void InspectorPropertyUndo::recordImmediateEdit( const PropertyInfo& prop )
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
-            return;
-        getFinishedEdits().push_back( captureSelectionBeforeEdit( *pContext, InspectorPropertyLayout::getPropertyLabel( prop ) ) );
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+        getFinishedEdits().push_back( captureSelectionBeforeEdit( editorContext, InspectorPropertyLayout::getPropertyLabel( prop ) ) );
     }
 
     void InspectorPropertyUndo::commitFinishedEdits()

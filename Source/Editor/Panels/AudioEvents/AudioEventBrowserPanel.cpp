@@ -32,9 +32,8 @@ namespace sw::editor
         {
             static void openPanel()
             {
-                EditorContext* pContext = EditorContext::get();
-                if ( pContext != nullptr )
-                    (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen<AudioEventBrowserPanel>( true ); // 패널은 이 파일에 등록되어 있다
+                EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+                (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen<AudioEventBrowserPanel>( true ); // 패널은 이 파일에 등록되어 있다
             }
 
             /** @brief 사용률 막대 하나를 그립니다. 상한에 닿으면 경고색입니다. */

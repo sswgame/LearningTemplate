@@ -128,7 +128,7 @@ namespace sw::editor
             /** @brief 열린 패널의 탐침 값을 읽습니다. 닫혔거나 문서가 없으면 false 입니다. */
             [[nodiscard]] static const UIPreviewProbe* findProbe()
             {
-                EditorContext* pContext = EditorContext::get();
+                EditorContext* pContext = editor::findSubsystem<EditorContext>();
                 if ( pContext == nullptr )
                     return nullptr;
                 const UIPreviewPanel* pPanel            = pContext->getSubsystem<EditorPanelManager>().findPanel<UIPreviewPanel>();
@@ -421,7 +421,7 @@ namespace sw::editor
     {
         if ( _pTextureID == nullptr )
             return;
-        EditorContext* pContext = EditorContext::get();
+        EditorContext* pContext = editor::findSubsystem<EditorContext>();
         if ( pContext != nullptr && pContext->getSubsystem<EditorRenderViews>().getRendererBackend() != nullptr )
             pContext->getSubsystem<EditorRenderViews>().getRendererBackend()->unregisterTexture( _pTextureID );
         _pTextureID = nullptr;
@@ -616,11 +616,11 @@ namespace sw::editor
         if ( texture == _texture && _pTextureID != nullptr )
             return;
         releaseTexture();
-        EditorContext* pContext               = EditorContext::get();
-        const bool     bCannotRegisterTexture = texture == 0 || pContext == nullptr || pContext->getSubsystem<EditorRenderViews>().getRendererBackend() == nullptr;
+        EditorRenderViews& renderViews            = editor::getSubsystem<EditorContext>().getSubsystem<EditorRenderViews>();
+        const bool         bCannotRegisterTexture = texture == 0 || renderViews.getRendererBackend() == nullptr;
         if ( bCannotRegisterTexture )
             return; // 렌더 스레드가 아직 만들지 않았다(다음 프레임)
-        _pTextureID = pContext->getSubsystem<EditorRenderViews>().getRendererBackend()->registerTexture( texture );
+        _pTextureID = renderViews.getRendererBackend()->registerTexture( texture );
         _texture    = _pTextureID != nullptr ? texture : 0;
     }
 

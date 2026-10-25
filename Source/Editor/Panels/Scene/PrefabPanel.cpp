@@ -33,9 +33,6 @@ namespace sw::editor
             /** @brief 오버라이드를 볼 프리팹 인스턴스 — 메인 씬에 놓인 인스턴스다(언리얼 레벨의 프리팹 · 블루프린트 인스턴스 패널처럼 레벨 선택). */
             static GameObject* getPrefabTargetInstance()
             {
-                EditorContext* pContext = EditorContext::get();
-                if ( pContext == nullptr )
-                    return nullptr;
                 return editor::getMainSceneSelection().getPrimaryObject();
             }
         };
@@ -68,17 +65,13 @@ namespace sw::editor
 
     void PrefabPanel::drawContent()
     {
-        EditorContext* pContext = EditorContext::get();
-        const utf8*    pScanPath{ nullptr };
-        uint64         objectID{ 0 };
-        if ( pContext != nullptr )
-        {
-            GameObject* pPrimary       = editor::getMainSceneSelection().getPrimaryObject();
-            objectID                   = pPrimary != nullptr ? pPrimary->getObjectID() : 0;
-            const string_view matching = EditorAssetTypeRegistry::matchingFocusedPath( EditorAssetType::Prefab );
-            if ( matching.empty() == false )
-                pScanPath = matching.data();
-        }
+        const utf8* pScanPath{ nullptr };
+        uint64      objectID{ 0 };
+        GameObject* pPrimary       = editor::getMainSceneSelection().getPrimaryObject();
+        objectID                   = pPrimary != nullptr ? pPrimary->getObjectID() : 0;
+        const string_view matching = EditorAssetTypeRegistry::matchingFocusedPath( EditorAssetType::Prefab );
+        if ( matching.empty() == false )
+            pScanPath = matching.data();
         if ( EditorAssetTypeRegistry::consumeWorkspaceFocusKey( _lastScanKey, objectID ) )
             scanPrefabOverrides( pScanPath );
 

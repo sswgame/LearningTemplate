@@ -208,10 +208,10 @@ namespace sw::editor
             /** @brief 리소스 id 의 폴더를 콘텐츠 브라우저로 엽니다. */
             static void revealInContentBrowser( string_view resourcePath )
             {
-                EditorContext* pContext = EditorContext::get();
-                if ( pContext == nullptr || pContext->getSubsystem<EditorPanelManager>().setPanelOpen<ContentBrowserPanel>( true ) == false )
+                EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+                if ( editorContext.getSubsystem<EditorPanelManager>().setPanelOpen<ContentBrowserPanel>( true ) == false )
                     return;
-                ContentBrowserPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<ContentBrowserPanel>();
+                ContentBrowserPanel* pPanel = editorContext.getSubsystem<EditorPanelManager>().findPanel<ContentBrowserPanel>();
                 if ( pPanel == nullptr )
                     return;
                 const string fileAbs = ResourcePaths::findLooseFile( FileUtil::normalizePath( resourcePath ) ).getDiskPath();

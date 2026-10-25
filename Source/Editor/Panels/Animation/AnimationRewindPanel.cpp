@@ -44,11 +44,11 @@ namespace sw::editor
             /** @brief 고른 오브젝트의 스켈레탈 유닛 핸들입니다(없으면 무효). */
             static ComponentHandle findSelectedUnit( Scene* pScene )
             {
-                EditorContext* pContext        = EditorContext::get();
-                const bool     bNoSceneObjects = pContext == nullptr || pScene == nullptr || pScene->getObjectManager() == nullptr;
+                EditorContext& editorContext   = editor::getSubsystem<EditorContext>();
+                const bool     bNoSceneObjects = pScene == nullptr || pScene->getObjectManager() == nullptr;
                 if ( bNoSceneObjects )
                     return ComponentHandle{};
-                const uint64                 objectID = pContext->getSubsystem<EditorWorkspace>().getSelectedObjectID();
+                const uint64                 objectID = editorContext.getSubsystem<EditorWorkspace>().getSelectedObjectID();
                 GameObject*                  pObject  = objectID != 0 ? pScene->getObjectManager()->findGameObjectByID( objectID ) : nullptr;
                 const SkeletalMeshComponent* pUnit    = pObject != nullptr ? pObject->getComponent<SkeletalMeshComponent>() : nullptr;
                 return pUnit != nullptr ? pUnit->getHandle() : ComponentHandle{};

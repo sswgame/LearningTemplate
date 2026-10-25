@@ -1086,8 +1086,8 @@ namespace sw::editor
 
     void ProfilerPanel::drawGPUMemoryTab()
     {
-        EditorContext* pContext = EditorContext::get();
-        IRHIDevice*    pDevice  = ( pContext != nullptr ) ? pContext->getSubsystem<EditorRenderViews>().getRHIDevice() : nullptr;
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+        IRHIDevice*    pDevice       = editorContext.getSubsystem<EditorRenderViews>().getRHIDevice();
         if ( pDevice == nullptr )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorProfiler", "NoRHIDevice" ) );

@@ -68,7 +68,7 @@ namespace sw::editor
 
             static const PackagingPanel* findPanel()
             {
-                EditorContext* pContext = EditorContext::get();
+                EditorContext* pContext = editor::findSubsystem<EditorContext>();
                 if ( pContext == nullptr )
                     return nullptr;
                 return pContext->getSubsystem<EditorPanelManager>().findPanel<PackagingPanel>();

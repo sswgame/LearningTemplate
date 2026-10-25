@@ -52,7 +52,7 @@ namespace sw::editor
 
             [[nodiscard]] static bool readFlagCells( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                EditorContext* pContext = EditorContext::get();
+                EditorContext* pContext = editor::findSubsystem<EditorContext>();
                 if ( pContext == nullptr )
                     return false;
                 const TileMapPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<TileMapPanel>();
@@ -64,7 +64,7 @@ namespace sw::editor
 
             [[nodiscard]] static bool readDataLayerCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                EditorContext* pContext = EditorContext::get();
+                EditorContext* pContext = editor::findSubsystem<EditorContext>();
                 if ( pContext == nullptr )
                     return false;
                 const TileMapPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<TileMapPanel>();
@@ -76,7 +76,7 @@ namespace sw::editor
 
             [[nodiscard]] static bool readDataCells( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                EditorContext* pContext = EditorContext::get();
+                EditorContext* pContext = editor::findSubsystem<EditorContext>();
                 if ( pContext == nullptr )
                     return false;
                 const TileMapPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<TileMapPanel>();
@@ -88,7 +88,7 @@ namespace sw::editor
 
             [[nodiscard]] static bool readPaintTool( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                EditorContext* pContext = EditorContext::get();
+                EditorContext* pContext = editor::findSubsystem<EditorContext>();
                 if ( pContext == nullptr )
                     return false;
                 const TileMapPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<TileMapPanel>();

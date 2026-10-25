@@ -51,9 +51,8 @@ namespace sw::editor
 
             static void openPanel()
             {
-                EditorContext* pContext = EditorContext::get();
-                if ( pContext != nullptr )
-                    (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen<ProjectSettingsPanel>( true ); // 패널은 이 파일에 등록되어 있다
+                EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+                (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen<ProjectSettingsPanel>( true ); // 패널은 이 파일에 등록되어 있다
             }
 
             [[nodiscard]] static bool readPageCount( const GameObjectManager* /*pManager*/, float64& outValue )

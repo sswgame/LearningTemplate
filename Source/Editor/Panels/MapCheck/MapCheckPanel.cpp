@@ -153,8 +153,7 @@ namespace sw::editor
 
     bool MapCheckPanel::selectRowObject( uint32 rowIndex ) const
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr || rowIndex >= _listRow.size() )
+        if ( rowIndex >= _listRow.size() )
             return false;
         GameObject* pObject = MapCheckPanelInternal::findIssueObject( _listRow[rowIndex] );
         if ( pObject == nullptr )
