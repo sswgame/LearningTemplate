@@ -409,7 +409,7 @@ namespace sw
         if ( bAlreadyDeviceRemoved )
             return;
 
-        if ( _device != nullptr && FAILED( _device->GetDeviceRemovedReason() ) )
+        if ( isDeviceRemoved() )
         {
             _bDeviceRemovedLogged = SW_TRUE;
             Microsoft::WRL::ComPtr<ID3D12DeviceRemovedExtendedData> dred;

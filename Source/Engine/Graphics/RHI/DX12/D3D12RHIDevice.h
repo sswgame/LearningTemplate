@@ -546,6 +546,14 @@ namespace sw
         void signalExportedTransfers();
         /** @brief 전송 펜스가 지난 묶음의 시리얼까지 완료 워터마크를 올립니다. 기다리지 않습니다. 어느 스레드에서나 부릅니다. */
         void retireCompletedTransfers();
+        /**
+         * @brief 런타임에 장치 제거 이유(`GetDeviceRemovedReason`)를 묻고, 제거됐으면 전송 손실로 표시합니다(`RHITransferSerials::markLost`). 어느 스레드에서나 부릅니다.
+         * @details DXGI_ERROR_DEVICE_REMOVED · DEVICE_RESET · DEVICE_HUNG 등 제거 이유가 실패인 모든 경우가 이 한 곳으로 표시된다 — 호출 결과를 보는 자리마다 따로 표시하면 빠뜨린 자리의 티켓이
+         *          손실 뒤에도 `Pending` 으로 남는다. 장치가 없으면 false 입니다.
+         */
+        bool isDeviceRemoved();
+        /** @brief 장치를 잃었으면 true 입니다(이미 표시했거나 `isDeviceRemoved`). 전송 제출 함수가 진입에서 보고 `Rejected` 를 돌려줍니다(계약 2). */
+        bool isDeviceLost();
         /** @brief 이 텍스처에 마지막으로 제출한 전송(업로드 또는 읽기 원본)의 시리얼을 기록합니다(bindless 등록 보호와 파괴 지연이 읽는다). */
         void noteTextureTransfer( RHITextureHandle texture, uint64 serial );
         /** @brief 이 텍스처에 마지막으로 제출한 전송의 시리얼입니다. 없으면 0 입니다. */
