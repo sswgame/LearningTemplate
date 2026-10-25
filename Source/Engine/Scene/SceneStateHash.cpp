@@ -185,6 +185,123 @@ namespace sw
         return true;
     }
 
+    namespace SceneStateHashInternal
+    {
+        constexpr const utf8* kUpperHexDigit = "0123456789ABCDEF";
+
+        /** @brief 줄 구분 · 로그 꼬리 구분에 쓰는 글자와 제어 문자, '%' 자신은 `%XX` 로 씁니다. */
+        bool needsEscape( utf8 ch )
+        {
+            return ch == '%' || ch == ',' || ch == ':' || static_cast<uint8>( ch ) <= 0x20 || static_cast<uint8>( ch ) == 0x7F;
+        }
+
+        int32 hexValue( utf8 ch )
+        {
+            if ( '0' <= ch && ch <= '9' )
+                return ch - '0';
+            if ( 'A' <= ch && ch <= 'F' )
+                return ch - 'A' + 10;
+            return -1;
+        }
+
+        /** @brief `%XX` 를 푼 이름입니다. 잘못된 `%` 이면 false 입니다. */
+        bool unescapeName( string_view escaped, string& outName )
+        {
+            outName.clear();
+            for ( size_t index = 0; index < escaped.size(); ++index )
+            {
+                if ( escaped[index] != '%' )
+                {
+                    outName += escaped[index];
+                    continue;
+                }
+                const int32 high = index + 2 < escaped.size() ? hexValue( escaped[index + 1] ) : -1;
+                const int32 low  = index + 2 < escaped.size() ? hexValue( escaped[index + 2] ) : -1;
+                if ( high < 0 || low < 0 )
+                    return false;
+                outName += static_cast<utf8>( high * 16 + low );
+                index += 2;
+            }
+            return true;
+        }
+    } // namespace SceneStateHashInternal
+
+    void SceneStateHash::writeObjectReportLine( uint64 tick, const vector<SceneObjectHash>& listObject, string& outLine )
+    {
+        outLine = kObjectReportLinePrefix;
+        outLine += ' ';
+        outLine += to_string( tick );
+        outLine += ' ';
+        if ( listObject.empty() )
+        {
+            outLine += '-';
+            return;
+        }
+        for ( size_t index = 0; index < listObject.size(); ++index )
+        {
+            if ( index > 0 )
+                outLine += ',';
+            for ( int32 nibble = 15; nibble >= 0; --nibble )
+            {
+                outLine += "0123456789abcdef"[( listObject[index]._hash >> ( nibble * 4 ) ) & 0xF];
+            }
+            outLine += ':';
+            for ( const utf8 ch : listObject[index]._name )
+            {
+                if ( SceneStateHashInternal::needsEscape( ch ) )
+                {
+                    const uint8 code = static_cast<uint8>( ch );
+                    outLine += '%';
+                    outLine += SceneStateHashInternal::kUpperHexDigit[code >> 4];
+                    outLine += SceneStateHashInternal::kUpperHexDigit[code & 0xF];
+                }
+                else
+                {
+                    outLine += ch;
+                }
+            }
+        }
+    }
+
+    bool SceneStateHash::tryParseObjectReportLine( string_view line, uint64& outTick, vector<SceneObjectHash>& outListObject )
+    {
+        outListObject.clear();
+        const size_t prefixAt = line.find( kObjectReportLinePrefix );
+        if ( prefixAt == string_view::npos )
+            return false;
+        string_view  body    = StringUtil::trim( line.substr( prefixAt + string_view( kObjectReportLinePrefix ).size() ) );
+        const size_t tickEnd = body.find( ' ' );
+        uint64       tick    = 0;
+        if ( tickEnd == string_view::npos || StringUtil::parseUint64( body.substr( 0, tickEnd ), tick ) == false )
+            return false;
+        body = StringUtil::trim( body.substr( tickEnd + 1 ) );
+        body = body.substr( 0, body.find_first_of( " \t" ) ); // 로그 꼬리는 읽지 않는다
+        if ( body != "-" )
+        {
+            size_t itemStart = 0;
+            while ( itemStart <= body.size() )
+            {
+                size_t itemEnd = body.find( ',', itemStart );
+                if ( itemEnd == string_view::npos )
+                    itemEnd = body.size();
+                const string_view item  = body.substr( itemStart, itemEnd - itemStart );
+                const size_t      colon = item.find( ':' );
+                SceneObjectHash   object;
+                const bool        bHasHash = colon == 16 && StringUtil::parseUint64( item.substr( 0, colon ), object._hash, 16 );
+                const bool        bHasName = bHasHash && colon + 1 < item.size() && SceneStateHashInternal::unescapeName( item.substr( colon + 1 ), object._name );
+                if ( bHasName == false )
+                {
+                    outListObject.clear();
+                    return false;
+                }
+                outListObject.push_back( std::move( object ) );
+                itemStart = itemEnd + 1;
+            }
+        }
+        outTick = tick;
+        return true;
+    }
+
     bool SceneStateHash::findDifferingObjects( const vector<SceneObjectHash>& listLeft, const vector<SceneObjectHash>& listRight, vector<string>& outListName )
     {
         outListName.clear();

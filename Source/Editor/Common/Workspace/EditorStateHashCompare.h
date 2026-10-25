@@ -67,7 +67,23 @@ namespace sw::editor
          * @details 어긋난 틱 근처에서 두 서버를 `pause` 한 채 부른다(이력에 오브젝트별 해시를 쌓지 않는 까닭 — 틱 × 오브젝트가 크다). 채널에서 읽은 칸이 아니거나 한쪽 답이 오브젝트 목록이 아니면 false 이고 이유는 `getLastError` 다.
          */
         [[nodiscard]] bool compareObjectsFromChannels();
+        /** @brief 칸 @p sourceIndex 를 읽은 디버그 채널의 서버에 `state.objects` 를 다시 물어 틱과 오브젝트별 해시를 받습니다. 채널에서 읽은 칸이 아니거나 답이 목록이 아니면 false 이고 이유는 `getLastError` 다. */
+        [[nodiscard]] bool readObjectsFromChannel( int32 sourceIndex, uint64& outTick, vector<SceneObjectHash>& outListObject );
 #endif
+        /**
+         * @brief 칸 @p sourceIndex 가 세션 클라이언트 프로세스 @p processIndex 에서 읽은 것임을 적습니다(`loadFromReport` 뒤에 부른다 — 칸이 다시 채워지면 지워진다).
+         * @details 클라이언트는 디버그 채널이 없어 오브젝트 해시를 표준 입력(`state.objectline`)으로 받는다. 누가 어느 프로세스에 물을지는 부르는 쪽(탭)이 이 번호로 안다.
+         */
+        void setClientOrigin( int32 sourceIndex, int32 processIndex );
+        /** @brief 칸이 세션 클라이언트에서 읽은 것이면 그 프로세스 번호, 아니면 -1 입니다. */
+        int32 getClientOrigin( int32 sourceIndex ) const;
+        /** @brief 칸이 디버그 채널에서 읽은 것이면 true 입니다. */
+        bool hasChannelOrigin( int32 sourceIndex ) const;
+        /**
+         * @brief 틱을 단 오브젝트 해시 두 목록을 견줘 다른 오브젝트 이름을 채웁니다. 두 틱이 다르면 거절합니다(다른 시각의 해시를 견주지 않는다).
+         * @details `compareObjectReports` 와 탭의 클라이언트 칸(표준 입력으로 받은 목록)이 같이 쓰는 하나의 규칙이다.
+         */
+        [[nodiscard]] bool compareObjects( uint64 leftTick, const vector<SceneObjectHash>& listLeft, uint64 rightTick, const vector<SceneObjectHash>& listRight );
         /**
          * @brief 두 오브젝트 목록 글(`state.objects` 답)을 견줘 다른 오브젝트 이름을 채웁니다.
          * @details 답마다 첫 줄에 서버 틱이 있고, 두 틱이 다르면 거절합니다(다른 시각의 해시를 견주지 않는다). 형식이 다른 글이어도 false 이고 결과는 그대로입니다.
@@ -113,6 +129,7 @@ namespace sw::editor
 
         EditorStateHashSource     _arrSource[kSourceCount];
         ChannelOrigin             _arrChannel[kSourceCount];
+        int32                     _arrClientProcess[kSourceCount];
         EditorStateHashComparison _comparison;
         vector<string>            _listDifferingObject;
         string                    _lastError;

@@ -156,12 +156,24 @@ namespace sw::editor
         void drawClientSources( int32 sourceIndex );
         /** @brief 기다리는 클라이언트 답이 왔으면 칸에 담습니다. 프레임마다 부릅니다. */
         void pollClientReplies();
+        /**
+         * @brief "Which objects differ" 를 시작합니다. 채널에서 읽은 칸은 바로 받고, 클라이언트에서 읽은 칸은 표준 입력에 `state.objectline` 을 물어 답을 기다린다(`pollObjectReplies`).
+         * @details 두 칸의 답이 모이면 틱 머리 검증을 거치는 `EditorStateHashCompare::compareObjects` 하나로 견준다(서버 칸과 같은 규칙).
+         */
+        void startObjectCompare();
+        /** @brief 기다리는 클라이언트의 오브젝트 해시 답이 왔으면 담고, 두 칸이 모두 모였으면 견줍니다. 프레임마다 부릅니다. */
+        void pollObjectReplies();
 
-        fixed_string<constant::kMaxPathSize>  _arrPath[EditorStateHashCompare::kSourceCount];               ///< 슬롯마다 파일 경로(편집 필드)
-        fixed_string<constant::kMaxBuffer64>  _arrAddress[EditorStateHashCompare::kSourceCount];            ///< 슬롯마다 채널 주소(편집 필드)
-        fixed_string<constant::kMaxBuffer128> _arrToken[EditorStateHashCompare::kSourceCount];              ///< 슬롯마다 채널 토큰(편집 필드)
-        int32                                 _arrPendingProcess[EditorStateHashCompare::kSourceCount];     ///< 슬롯마다 답을 기다리는 클라이언트 프로세스 번호(-1 이면 없다)
-        uint32                                _arrPendingReportCount[EditorStateHashCompare::kSourceCount]; ///< 물을 때의 그 프로세스 이력 답 수 — 늘면 새 답이다
+        fixed_string<constant::kMaxPathSize>  _arrPath[EditorStateHashCompare::kSourceCount];                 ///< 슬롯마다 파일 경로(편집 필드)
+        fixed_string<constant::kMaxBuffer64>  _arrAddress[EditorStateHashCompare::kSourceCount];              ///< 슬롯마다 채널 주소(편집 필드)
+        fixed_string<constant::kMaxBuffer128> _arrToken[EditorStateHashCompare::kSourceCount];                ///< 슬롯마다 채널 토큰(편집 필드)
+        int32                                 _arrPendingProcess[EditorStateHashCompare::kSourceCount];       ///< 슬롯마다 답을 기다리는 클라이언트 프로세스 번호(-1 이면 없다)
+        uint32                                _arrPendingReportCount[EditorStateHashCompare::kSourceCount];   ///< 물을 때의 그 프로세스 이력 답 수 — 늘면 새 답이다
+        bool                                  _bObjectRequest;                                                ///< "Which objects differ" 가 클라이언트 답을 기다리는 중이다
+        int32                                 _arrObjectPendingProcess[EditorStateHashCompare::kSourceCount]; ///< 슬롯마다 오브젝트 해시 답을 기다리는 클라이언트 프로세스 번호(-1 이면 안 기다린다)
+        uint32                                _arrObjectPendingCount[EditorStateHashCompare::kSourceCount];   ///< 물을 때의 그 프로세스 오브젝트 해시 답 수
+        uint64                                _arrObjectTick[EditorStateHashCompare::kSourceCount];           ///< 슬롯마다 받은 오브젝트 해시의 틱
+        vector<SceneObjectHash>               _arrObjectList[EditorStateHashCompare::kSourceCount];           ///< 슬롯마다 받은 오브젝트별 해시
     };
 } // namespace sw::editor
 
@@ -173,6 +185,11 @@ namespace sw::editor
         , _arrToken{}
         , _arrPendingProcess{ -1, -1 }
         , _arrPendingReportCount{}
+        , _bObjectRequest{ false }
+        , _arrObjectPendingProcess{ -1, -1 }
+        , _arrObjectPendingCount{}
+        , _arrObjectTick{}
+        , _arrObjectList{}
     {
         static_assert( EditorStateHashCompare::kSourceCount == 2, "the pending client table is initialized for two sources" );
     }
@@ -229,7 +246,83 @@ namespace sw::editor
             _arrPendingProcess[sourceIndex] = -1;
             if ( MultiplayerSyncTabInternal::loadClientReport( sourceIndex, status ) == false )
                 SW_LOG_WARNING( "Sync could not take %#'s history: %#", status._label, MultiplayerSyncTabInternal::getCompare().getLastError() );
+            else
+                MultiplayerSyncTabInternal::getCompare().setClientOrigin( sourceIndex, processIndex );
         }
+    }
+
+    void MultiplayerSyncTab::startObjectCompare()
+    {
+        EditorStateHashCompare& compare  = MultiplayerSyncTabInternal::getCompare();
+        EditorNetPlaySession*   pSession = MultiplayerSyncTabInternal::findSession();
+        _bObjectRequest                  = false;
+        bool bWaiting                    = false;
+        for ( int32 sourceIndex = 0; sourceIndex < EditorStateHashCompare::kSourceCount; ++sourceIndex )
+        {
+            _arrObjectPendingProcess[sourceIndex] = -1;
+            const int32 processIndex              = compare.getClientOrigin( sourceIndex );
+            if ( processIndex >= 0 )
+            {
+                // 클라이언트는 디버그 채널이 없다 - 표준 입력의 한 줄 답(`state.objectline`)을 기다린다.
+                const bool bSessionRunning = pSession != nullptr && pSession->isRunning();
+                if ( bSessionRunning == false || pSession->sendProcessCommand( processIndex, "state.objectline" ) == false )
+                {
+                    SW_LOG_WARNING( "Sync could not ask slot %# for its object hashes (the session or the process is gone)", sourceIndex );
+                    return;
+                }
+                _arrObjectPendingProcess[sourceIndex] = processIndex;
+                _arrObjectPendingCount[sourceIndex]   = pSession->getProcessStatus( processIndex )._objectHashReportCount;
+                bWaiting                              = true;
+                continue;
+            }
+#if SW_DEV_COMMANDS_ENABLED
+            if ( compare.readObjectsFromChannel( sourceIndex, _arrObjectTick[sourceIndex], _arrObjectList[sourceIndex] ) == false )
+            {
+                SW_LOG_WARNING( "Sync could not compare objects: %#", compare.getLastError() );
+                return;
+            }
+#else
+            SW_LOG_WARNING( "Sync has no debug channel in this build - object hashes come only from session clients" );
+            return;
+#endif
+        }
+        _bObjectRequest = true;
+        if ( bWaiting == false )
+            pollObjectReplies();
+    }
+
+    void MultiplayerSyncTab::pollObjectReplies()
+    {
+        if ( _bObjectRequest == false )
+            return;
+        EditorNetPlaySession* pSession = MultiplayerSyncTabInternal::findSession();
+        bool                  bAllIn   = true;
+        for ( int32 sourceIndex = 0; sourceIndex < EditorStateHashCompare::kSourceCount; ++sourceIndex )
+        {
+            const int32 processIndex = _arrObjectPendingProcess[sourceIndex];
+            if ( processIndex < 0 )
+                continue;
+            if ( pSession == nullptr || pSession->isRunning() == false )
+            {
+                _bObjectRequest = false; // 세션이 끝났다 - 답이 올 곳이 없다
+                return;
+            }
+            const EditorNetPlayProcessStatus status = pSession->getProcessStatus( processIndex );
+            if ( status._objectHashReportCount == _arrObjectPendingCount[sourceIndex] )
+            {
+                bAllIn = false;
+                continue;
+            }
+            _arrObjectTick[sourceIndex]           = status._objectHashTick;
+            _arrObjectList[sourceIndex]           = status._listObjectHash;
+            _arrObjectPendingProcess[sourceIndex] = -1;
+        }
+        if ( bAllIn == false )
+            return;
+        _bObjectRequest                 = false;
+        EditorStateHashCompare& compare = MultiplayerSyncTabInternal::getCompare();
+        if ( compare.compareObjects( _arrObjectTick[0], _arrObjectList[0], _arrObjectTick[1], _arrObjectList[1] ) == false )
+            SW_LOG_WARNING( "Sync could not compare objects: %#", compare.getLastError() );
     }
 
     void MultiplayerSyncTab::drawSource( int32 sourceIndex )
@@ -291,6 +384,7 @@ namespace sw::editor
     void MultiplayerSyncTab::drawTab( const MultiplayerTabContext& /*context*/ )
     {
         pollClientReplies();
+        pollObjectReplies();
         for ( int32 sourceIndex = 0; sourceIndex < EditorStateHashCompare::kSourceCount; ++sourceIndex )
         {
             drawSource( sourceIndex );
@@ -307,8 +401,8 @@ namespace sw::editor
         }
 #if SW_DEV_COMMANDS_ENABLED
         // 어긋난 틱 근처에서 두 서버를 pause 한 채 누른다 — 두 서버의 현재 오브젝트 해시를 다시 받아 다른 오브젝트를 짚는다.
-        if ( ImGui::Button( "Which objects differ" ) && compare.compareObjectsFromChannels() == false )
-            SW_LOG_WARNING( "Sync could not compare objects: %#", compare.getLastError() );
+        if ( ImGui::Button( "Which objects differ" ) )
+            startObjectCompare();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "SyncObjects" ) );
         if ( compare.hasObjectComparison() )
         {

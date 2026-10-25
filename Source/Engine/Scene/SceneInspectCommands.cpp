@@ -200,7 +200,30 @@ namespace sw
             {
                 if ( listArgument.empty() == false )
                     return false;
-                // 첫 줄의 틱은 이력의 가장 최근 틱이다 — 이력이 없으면 어느 틱의 해시인지 말할 수 없어 답하지 않는다.
+                uint64                  tick = 0;
+                vector<SceneObjectHash> listObject;
+                if ( collectTickedObjects( outReply, tick, listObject ) == false )
+                    return false;
+                SceneStateHash::writeTickedObjectReport( tick, listObject, outReply );
+                return true;
+            }
+
+            /** @brief `state.objectline` — `state.objects` 와 같은 값(틱 + 오브젝트별 해시)을 한 줄(`SceneStateHash::writeObjectReportLine`)로 답합니다. 표준 입력으로 묻는 에디터 Sync 탭의 클라이언트 칸이 쓴다. */
+            static bool runStateObjectLine( const vector<string>& listArgument, string& outReply )
+            {
+                if ( listArgument.empty() == false )
+                    return false;
+                uint64                  tick = 0;
+                vector<SceneObjectHash> listObject;
+                if ( collectTickedObjects( outReply, tick, listObject ) == false )
+                    return false;
+                SceneStateHash::writeObjectReportLine( tick, listObject, outReply );
+                return true;
+            }
+
+            /** @brief 두 `state.objects*` 명령이 같이 쓰는 값입니다. 첫 값의 틱은 이력의 가장 최근 틱이다 — 이력이 없으면 어느 틱의 해시인지 말할 수 없어 답하지 않는다(이유는 @p outReply). */
+            static bool collectTickedObjects( string& outReply, uint64& outTick, vector<SceneObjectHash>& outListObject )
+            {
                 const StateHashHistory* pHistory = findRecordingHistory( outReply );
                 if ( pHistory == nullptr )
                     return false;
@@ -216,9 +239,8 @@ namespace sw
                     outReply = "no active scene";
                     return false;
                 }
-                vector<SceneObjectHash> listObject;
-                SceneStateHash::collectObjects( *pManager, listObject );
-                SceneStateHash::writeTickedObjectReport( latest._tick, listObject, outReply );
+                outTick = latest._tick;
+                SceneStateHash::collectObjects( *pManager, outListObject );
                 return true;
             }
 
@@ -274,6 +296,8 @@ namespace sw
                     &SceneInspectCommandsInternal::runStateHashes );
     SW_DEV_COMMAND( StateHashLine, "state.hashline", "state.hashline <count>", "Print the latest <count> recorded state hashes on one line (the editor Sync tab reads client histories this way)",
                     &SceneInspectCommandsInternal::runStateHashLine );
+    SW_DEV_COMMAND( StateObjectLine, "state.objectline", "state.objectline", "Print the state.objects hashes with their tick on one line (the editor Sync tab reads client object hashes this way)",
+                    &SceneInspectCommandsInternal::runStateObjectLine );
 } // namespace sw
 
 #endif

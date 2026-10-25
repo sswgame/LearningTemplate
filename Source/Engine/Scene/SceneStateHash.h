@@ -57,6 +57,15 @@ namespace sw
         static void writeTickedObjectReport( uint64 tick, const vector<SceneObjectHash>& listObject, string& outText );
         /** @brief `writeTickedObjectReport` 의 글을 되읽습니다. 첫 줄이 틱이 아니거나 목록 형식이 다르면 false 이고 목록을 비웁니다. */
         [[nodiscard]] static bool parseTickedObjectReport( string_view text, uint64& outTick, vector<SceneObjectHash>& outListObject );
+        /** @brief 한 줄 판의 머리입니다. 표준 입력 명령(`state.objectline`)의 답이 로그 한 줄로 나가는 길에서 에디터가 이 머리를 찾아 거둡니다(Sync 탭의 클라이언트 칸). */
+        static constexpr const utf8* kObjectReportLinePrefix = "State object hashes:";
+        /**
+         * @brief 틱을 단 오브젝트 목록을 한 줄(`kObjectReportLinePrefix <tick> <16자리 16진 해시>:<이름>,…`)로 씁니다.
+         * @details 이름의 공백 · 쉼표 · ':' · '%' · 제어 문자는 `%XX`(대문자 16진)로 쓴다 — 로그 꼬리(공백 뒤)와 구분자에 섞이지 않게. 오브젝트가 없으면 목록 자리가 `-` 다.
+         */
+        static void writeObjectReportLine( uint64 tick, const vector<SceneObjectHash>& listObject, string& outLine );
+        /** @brief @p line 에서 `kObjectReportLinePrefix` 를 찾아 틱과 목록을 읽습니다. 머리가 없거나 항목 형식이 다르면 false 이고 목록을 비웁니다. */
+        [[nodiscard]] static bool tryParseObjectReportLine( string_view line, uint64& outTick, vector<SceneObjectHash>& outListObject );
         /**
          * @brief 두 목록에서 (이름, 해시) 짝이 한쪽에만 있는 오브젝트의 이름을 이름 순으로 중복 없이 채웁니다. 이름이 같은 오브젝트가 여럿이면 개수까지 견줍니다.
          * @return 하나라도 다르면 true

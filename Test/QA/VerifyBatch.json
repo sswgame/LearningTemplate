@@ -659,7 +659,7 @@
     },
     {
       "id": "game-net-session-replica-stats-tests", "title": "net.stats 복제 셈 창구(setReplicaStats)가 올린 값을 그대로 · 상한까지 싣는다", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 10,
-      "filter": "GameNetSessionTest.ReplicaStatsAreReportedAsUploadedLargestBytesFirstUpToTheCap",
+      "filter": "GameNetSessionTest.ReplicaStats*",
       "source": "docs/plans/ServerDebug.md S5", "result_doc": "docs/plans/ServerDebug.md S5 남은 것"
     },
     {

@@ -96,3 +96,35 @@ SW_TEST_CASE( StateHashReportLineTest, ATickedObjectReportRoundTripsAndRejectsAM
     SW_EXPECT_FALSE( SceneStateHash::parseTickedObjectReport( "tick x\n", tick, parsed ) );
     SW_EXPECT_TRUE( parsed.empty() );
 }
+
+/**
+ * @brief [StateHashReportLineTest] 한 줄 판 오브젝트 목록은 공백 · 쉼표 · 콜론 · 퍼센트가 든 이름도 로그 꼬리가 붙은 채 되읽히고, 항목이 틀리면 거절한다
+ * @details 표준 입력 명령의 답은 로그 한 줄로만 나가므로(클라이언트 칸이 이 길로 읽는다) 여러 줄 판을 쓸 수 없다.
+ */
+SW_TEST_CASE( StateHashReportLineTest, AnObjectLineRoundTripsAwkwardNamesInsideALogLine )
+{
+    const vector<SceneObjectHash> listObject = {
+        SceneObjectHash{ "Door 1", 0x1111ull},
+        SceneObjectHash{"a,b:c%d", 0x2222ull}
+    };
+    string line;
+    SceneStateHash::writeObjectReportLine( 42, listObject, line );
+    SW_EXPECT_TRUE( line.find( '\n' ) == string::npos );
+    uint64                  tick = 0;
+    vector<SceneObjectHash> parsed;
+    SW_ASSERT_TRUE( SceneStateHash::tryParseObjectReportLine( "[12:00:00][Info] " + line + " (client)", tick, parsed ) );
+    SW_EXPECT_EQUAL( uint64( 42 ), tick );
+    SW_ASSERT_EQUAL( size_t( 2 ), parsed.size() );
+    SW_EXPECT_TRUE( parsed[0]._name == "Door 1" && parsed[0]._hash == 0x1111ull );
+    SW_EXPECT_TRUE( parsed[1]._name == "a,b:c%d" && parsed[1]._hash == 0x2222ull );
+
+    SceneStateHash::writeObjectReportLine( 7, {}, line );
+    SW_ASSERT_TRUE( SceneStateHash::tryParseObjectReportLine( line, tick, parsed ) );
+    SW_EXPECT_TRUE( parsed.empty() );
+    SW_EXPECT_EQUAL( uint64( 7 ), tick );
+
+    SW_EXPECT_FALSE( SceneStateHash::tryParseObjectReportLine( "no prefix 1 2", tick, parsed ) );
+    SW_EXPECT_FALSE( SceneStateHash::tryParseObjectReportLine( string( SceneStateHash::kObjectReportLinePrefix ) + " 5 zz:Door", tick, parsed ) );
+    SW_EXPECT_FALSE( SceneStateHash::tryParseObjectReportLine( string( SceneStateHash::kObjectReportLinePrefix ) + " 5 00000000000000aa:Do%2", tick, parsed ) );
+    SW_EXPECT_TRUE( parsed.empty() );
+}
