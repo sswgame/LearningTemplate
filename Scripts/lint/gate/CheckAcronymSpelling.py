@@ -137,9 +137,7 @@ class CheckAcronymSpellingGate(LintGate):
     def checkTextInternal(relPath: str, text: str, setEnforced: set[str], counterPending: Counter, blankedText: str) -> list[str]:
         listViolation: list[str] = []
         masked = registry.maskCode(text, blankedText)
-        for site in registry.iterateNameSites(text, registry.kAcronym, masked=masked):
-            if registry.isExternalName(site.name, site.qualifier):
-                continue
+        for site in registry.findNameSites(text, registry.kAcronym, masked):   # 코드모드(`FormatAcronymSpelling`)와 같은 이름 자리 목록
             for acronym in registry.changedAcronyms(site.name):
                 if acronym in setEnforced:
                     listViolation.append(f"{relPath}:{lineOf(text, site.start)}: '{site.name}' → "

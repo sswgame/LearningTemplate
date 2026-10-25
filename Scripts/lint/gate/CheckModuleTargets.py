@@ -33,6 +33,7 @@ from common.CodeText import IncludeResolver, iterIncludes  # noqa: E402
 from common.Paths import normalizePath  # noqa: E402
 from common.Search import collectRepositoryFiles  # noqa: E402
 from lint.LintGate import GateError, GateResult, LintGate  # noqa: E402
+from lint.SourceScan import FileFindings, SourceFile, SourceScanResult  # noqa: E402
 
 _kTargetWords = ("Client", "Server")
 _kBoth = frozenset(_kTargetWords)
@@ -165,10 +166,10 @@ def findOwner(listOwner: list[TargetOwner], relative: str) -> TargetOwner | None
     return best
 
 
-def findIncludeViolations(repositoryRoot: Path, listOwner: list[TargetOwner]) -> list[str]:
+def findIncludeViolations(repositoryRoot: Path, listOwner: list[TargetOwner], listFileInclude: list[tuple[str, list[tuple[int, str]]]]) -> list[str]:
+    """`listFileInclude` 는 파일(저장소 기준 경로)마다 따옴표 include 의 (줄 번호, 적힌 경로) — 공유 훑기가 파일마다 읽어 온 것이다."""
     listAllOwner = listOwner + [TargetOwner(label=folder.rstrip("/"), folder=folder, setTarget=setTarget) for folder, setTarget in _kListFolderTarget]
     resolver = IncludeResolver(repositoryRoot, "Source")
-    listPath = LintGate.selectTargetFiles(repositoryRoot, None, listScanRoot=("Source",), suffixes=_kSourceSuffixes)
     listViolation: list[str] = []
     # 소속은 대개 폴더가 정한다 — include 마다 모듈 전부를 훑지 않게 폴더별로 한 번만 찾는다. 파일 하나를 가리키는 줄(`/` 로 끝나지 않는
     # `folder`)에 맞는 파일만 그때마다 찾는다.
@@ -183,12 +184,11 @@ def findIncludeViolations(repositoryRoot: Path, listOwner: list[TargetOwner]) ->
             mapOwnerByDirectory[directory] = findOwner(listAllOwner, directory)
         return mapOwnerByDirectory[directory]
 
-    for path, text in LintGate.readFiles(listPath, mustContain="#"):
-        relative = path.relative_to(repositoryRoot).as_posix()
+    for relative, listInclude in listFileInclude:
         owner = findOwnerCached(relative)
         if owner is None:
             continue
-        for lineNumber, rawInclude in iterIncludes(text, bQuotedOnly=True):
+        for lineNumber, rawInclude in listInclude:
             includePath = normalizePath(rawInclude)
             includedRelative = resolver.resolveInclude(relative, includePath)
             if includedRelative is None:
@@ -285,12 +285,27 @@ class CheckModuleTargetsGate(LintGate):
         },
     ]
 
-    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        listOwner, mapOwnerByName, listDependencyRow, listViolation = readManifests(repositoryRoot)
-        if not listOwner and not listViolation and (repositoryRoot / "Source" / "Engine").is_dir():
+    sourceScanRoots = ("Source",)
+    sourceSuffixes = _kSourceSuffixes
+
+    def prepareSourceScan(self, repositoryRoot: Path, args: argparse.Namespace) -> None:
+        # 매니페스트가 없으면 소속을 몰라 include 방향을 못 본다 — 소스를 훑기 전에 멈춘다.
+        args.manifests = readManifests(repositoryRoot)
+        if not args.manifests[0] and not args.manifests[3] and (repositoryRoot / "Source" / "Engine").is_dir():
             raise GateError("Source/ 아래 모듈 매니페스트를 하나도 찾지 못했습니다 — 경로를 확인합니다")
+
+    def checkSourceFile(self, source: SourceFile, args: argparse.Namespace) -> FileFindings | None:
+        # 소속은 매니페스트를 다 읽어야 알므로 파일마다는 include 만 읽고, 푸는 일은 `finishSourceScan` 이 한다.
+        if "#" not in source.text:
+            return None
+        return FileFindings(value=list(iterIncludes(source.text, bQuotedOnly=True)))
+
+    def finishSourceScan(self, repositoryRoot: Path, args: argparse.Namespace, result: SourceScanResult) -> GateResult:
+        listOwner, mapOwnerByName, listDependencyRow, listViolation = args.manifests
+        listViolation = list(listViolation)
         listViolation.extend(findDependencyViolations(mapOwnerByName, listDependencyRow))
-        listViolation.extend(findIncludeViolations(repositoryRoot, listOwner))
+        listViolation.extend(findIncludeViolations(repositoryRoot, listOwner, [(findings.relative, findings.value) for findings in result.listFindings
+                                                                                if findings.value]))
         return GateResult(listViolation=listViolation, summary=f"모듈 {len(listOwner)} 개의 대상 이름 · 방향이 맞다")
 
 

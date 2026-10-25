@@ -47,6 +47,9 @@ class CheckSomethingGate(LintGate):
 
 파일 집합이 둘 이상(C++ 와 CMake, 키트 폴더와 게임 폴더)이면 `sourceScanRoots` 대신 `sourceScanSets = ( SourceScanSet( "cpp", roots, suffixes ), SourceScanSet( "cmake", … ) )`
 를 적고 `source.setName` 으로 가른다. 원본의 줄 끝 · BOM 을 지켜야 하면 `source.rawText` · `lineEnding` · `hasBom` · `restore()`, 고칠 수 있으면 `FileFindings.fixedText`.
+C++ 가 아닌 파일(파이썬 · CMake · 셰이더)도 같다. 루트의 파일 하나는 `SourceScanSet( "top", (), relativeFiles=( "CMakeLists.txt", ) )`, 파일 사이의 관계를 알아야 해서
+`--files` 가 있어도 전체를 읽어야 하면 `bAlwaysWhole=True`(보고할 파일은 `selectedRelatives`). 파일마다 모은 것을 대 보는 게이트는 `FileFindings.value` 에 담고
+`finishSourceScan` 에서 합친다. 요약 문구만 바꾸려면 `describeSourceScan` 만 재정의한다.
 
 파일 사이의 관계를 보거나 파일마다가 아닌 일을 하는 게이트는 `scan()` 을 쓴다. 그런 게이트가 파일마다 파이썬 정규식을 오래 돌린다면
 파일별 일을 `common.Parallel.flatMapInProcesses` 로 나눈다(`CheckCodeConventions`) — 스레드는 GIL 에 막힌다. 파일 읽기가 대부분이면
@@ -234,10 +237,14 @@ class LintGate:
         """소스 게이트가 파일 하나를 봅니다."""
         raise NotImplementedError
 
+    def describeSourceScan(self, result: SourceScanResult) -> str:
+        """위반이 없을 때 `OK (...)` 괄호 안의 문구 — 기본은 `sourceSummary`(없으면 본 파일 수). 파일 수 · 규칙 수를 적는 게이트가 재정의한다."""
+        return self.sourceSummary or f"{result.fileCount} files"
+
     def finishSourceScan(self, repositoryRoot: Path, args: argparse.Namespace, result: SourceScanResult) -> GateResult:
         """파일마다의 결과를 게이트 결과로 모읍니다."""
         listViolation, listNote = joinFindings(result.listFindings)
-        return GateResult(listViolation=listViolation, listNote=listNote, summary=self.sourceSummary or f"{result.fileCount} files")
+        return GateResult(listViolation=listViolation, listNote=listNote, summary=self.describeSourceScan(result))
 
     @classmethod
     def isSourceGate(cls) -> bool:

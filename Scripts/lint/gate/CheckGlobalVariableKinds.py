@@ -33,10 +33,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common.CodeText import blankMatch  # noqa: E402
 from common.Constants import kLintTargetRelDirs  # noqa: E402
-from common.Paths import normalizePath  # noqa: E402
-from common.Search import collectSourceFiles  # noqa: E402
 from common.RuleData import kKindReason  # noqa: E402
 from lint.LintGate import GateResult, LintGate  # noqa: E402
+from lint.SourceScan import FileFindings, SourceFile, SourceScanResult  # noqa: E402
 
 #: 배포본에 남겨도 되는 테스트용 변수 → 배포 실행 파일을 조종하는 곳(`rules/CheckGlobalVariableKinds.toml` 의 `[shipped]`).
 _kRuleSchema = {"shipped": kKindReason}
@@ -91,31 +90,28 @@ def findClosingParenInternal(text: str, openIndex: int) -> int:
     return -1
 
 
-def collectUses(repositoryRoot: Path) -> tuple[list[GlobalVariableUse], list[GlobalVariableUse]]:
-    """저장소의 전역 변수 정의 목록과 참조 목록을 모읍니다."""
+def collectFileUses(relative: str, rawText: str) -> tuple[list[GlobalVariableUse], list[GlobalVariableUse]]:
+    """파일 하나의 전역 변수 정의 목록과 참조 목록입니다."""
     listDefinition: list[GlobalVariableUse] = []
     listExtern: list[GlobalVariableUse] = []
-    listPath = collectSourceFiles([repositoryRoot / r for r in _kListScanRoot], {".cpp", ".h", ".inl"})
     # 매크로 이름이 없는 파일은 주석 · 문자열을 지워 봐야 나올 것이 없다 — 천여 파일 중 수십 개만 남는다.
-    for path, rawText in LintGate.readFiles(listPath, mustContain="GLOBAL_VARIABLE"):
-        relative = normalizePath(str(path.relative_to(repositoryRoot)))
-        if "/ThirdParty/" in f"/{relative}":
-            continue
-        text = stripNonCodeInternal(rawText)
+    if "GLOBAL_VARIABLE" not in rawText or "/ThirdParty/" in f"/{relative}":
+        return listDefinition, listExtern
+    text = stripNonCodeInternal(rawText)
 
-        for match in _kCallRe.finditer(text):
-            closeIndex = findClosingParenInternal(text, match.end() - 1)
-            if closeIndex < 0:
-                continue
-            listArgument = [argument.strip() for argument in text[match.end():closeIndex].split(",")]
-            if len(listArgument) < 2 or _kIdentifierRe.fullmatch(listArgument[1]) is None:
-                continue
-            lineNumber = text.count("\n", 0, match.start()) + 1
-            use = GlobalVariableUse(name=listArgument[1],
-                                    typeName=normalizeTypeInternal(listArgument[0]),
-                                    macro=match.group(1),
-                                    location=f"{relative}:{lineNumber}")
-            (listExtern if use.macro == _kExternMacro else listDefinition).append(use)
+    for match in _kCallRe.finditer(text):
+        closeIndex = findClosingParenInternal(text, match.end() - 1)
+        if closeIndex < 0:
+            continue
+        listArgument = [argument.strip() for argument in text[match.end():closeIndex].split(",")]
+        if len(listArgument) < 2 or _kIdentifierRe.fullmatch(listArgument[1]) is None:
+            continue
+        lineNumber = text.count("\n", 0, match.start()) + 1
+        use = GlobalVariableUse(name=listArgument[1],
+                                typeName=normalizeTypeInternal(listArgument[0]),
+                                macro=match.group(1),
+                                location=f"{relative}:{lineNumber}")
+        (listExtern if use.macro == _kExternMacro else listDefinition).append(use)
     return listDefinition, listExtern
 
 
@@ -183,13 +179,36 @@ class CheckGlobalVariableKindsGate(LintGate):
                 "Source/Probe/ProbeKeep.h": "SW_EXTERN_GLOBAL_VARIABLE( ProbeOtherMode, gv_probeKeep );\n",
             },
         },
+        {
+            # 정의와 참조는 파일이 다르다(공유 훑기가 파일마다 모아 끝맺음에서 대 본다). 주석 안의 참조와 ThirdParty 의 참조는 세지 않는다.
+            "name": "주석 · ThirdParty 안의 어긋난 참조는 보지 않는다",
+            "expectedViolation": "[Global Variable Kind] Source/Probe/Real.h:1: gv_probeSkip 을(를) bool 로 참조하지만",
+            "unexpectedViolation": "Skipped",
+            "files": {
+                "Source/Probe/Def.cpp": "SW_TEST_GLOBAL_VARIABLE( int32, gv_probeSkip, 0, \"probe\" );\n",
+                "Source/Probe/Real.h": "SW_EXTERN_GLOBAL_VARIABLE( bool, gv_probeSkip );\n",
+                "Source/Probe/SkippedComment.h": "// SW_EXTERN_GLOBAL_VARIABLE( float32, gv_probeSkip );\nint skipped = 0;\n",
+                "Source/Probe/ThirdParty/Skipped.h": "SW_EXTERN_GLOBAL_VARIABLE( float32, gv_probeSkip );\n",
+            },
+        },
     ]
 
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
         pass
 
-    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        listDefinition, listExtern = collectUses(repositoryRoot)
+    sourceScanRoots = _kListScanRoot
+    sourceSuffixes = (".cpp", ".h", ".inl")
+
+    def checkSourceFile(self, source: SourceFile, args: argparse.Namespace) -> FileFindings | None:
+        # 정의와 참조는 다른 파일에 있다 — 파일마다는 모아서 돌려주고 `finishSourceScan` 이 대 본다.
+        return FileFindings(value=collectFileUses(source.relative, source.text))
+
+    def finishSourceScan(self, repositoryRoot: Path, args: argparse.Namespace, result: SourceScanResult) -> GateResult:
+        listDefinition: list[GlobalVariableUse] = []
+        listExtern: list[GlobalVariableUse] = []
+        for findings in result.listFindings:
+            listDefinition += findings.value[0]
+            listExtern += findings.value[1]
         violations = findKindMismatches(listDefinition, listExtern)
         if (repositoryRoot / "Source").is_dir() and (repositoryRoot / ".git").exists():
             # 목록은 저장소 전체의 정의와 대어 본다(자체 테스트의 조각 저장소에는 목록이 맞지 않는다).

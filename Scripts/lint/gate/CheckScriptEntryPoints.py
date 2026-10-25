@@ -29,11 +29,13 @@ from __future__ import annotations
 import argparse
 import ast
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from lint.LintGate import GateResult, LintGate  # noqa: E402
+from lint.SourceScan import FileFindings, SourceFile, SourceScanResult, SourceScanSet, selectedRelatives  # noqa: E402
 
 #: 콘솔을 UTF-8 로 맞추는 패키지 — import 하는 것만으로 맞춰진다.
 _kInitializingPackage = "common"
@@ -118,91 +120,95 @@ def collectModuleLevelImportsInternal(listStatement: list[ast.stmt], outListName
                         collectModuleLevelImportsInternal([child], outListName)
 
 
+@dataclass(frozen=True)
+class ScriptModuleInfo:
+    """
+    파이썬 파일 하나에서 읽은 것(자식 프로세스에서 부모로 피클해 온다). 파싱하지 못했으면 `parseError` 만 있다.
+
+    - `listImport`           : 모듈 수준 import 의 점 이름
+    - `bEntryPoint`          : `__main__.py` 이거나 `if __name__ == "__main__":` 이 있는가
+    - `listArgumentProblem` · `listSysPathProblem`: 이 파일 자신의 문제(`줄: 글`)
+    """
+
+    parseError: str = ""
+    listImport: tuple[str, ...] = ()
+    bEntryPoint: bool = False
+    listArgumentProblem: tuple[str, ...] = ()
+    listSysPathProblem: tuple[str, ...] = ()
+
+
+def readScriptInternal(source: SourceFile) -> ScriptModuleInfo:
+    """파일 하나를 읽는다 — 모듈 사이의 관계(`common` 에 닿는가)는 `ScriptModuleGraph` 가 모은 정보로 답한다."""
+    try:
+        tree = ast.parse(source.text, filename=source.relative)
+    except SyntaxError as exception:
+        return ScriptModuleInfo(parseError=f"{source.relative}:1 파싱할 수 없습니다: {exception}")
+    listName: list[str] = []
+    collectModuleLevelImportsInternal(tree.body, listName)
+    bEntryPoint = source.path.name == "__main__.py" or any(isMainGuardInternal(node) for node in tree.body)
+    depth = source.relative.count("/") - 1   # `Scripts/` 아래 폴더 깊이
+    return ScriptModuleInfo(listImport=tuple(listName), bEntryPoint=bEntryPoint, listArgumentProblem=tuple(findArgumentProblemsInternal(tree)),
+                            listSysPathProblem=tuple(findSysPathProblemsInternal(tree, source.text, depth, bEntryPoint)))
+
+
 class ScriptModuleGraph:
-    """`Scripts/` 의 파이썬 모듈과 그 모듈 수준 import — 어느 모듈이 `common` 에 닿는지 답한다."""
+    """`Scripts/` 의 파이썬 모듈과 그 모듈 수준 import — 어느 모듈이 `common` 에 닿는지 답한다. 모듈은 저장소 기준 경로(`Scripts/lint/LintGate.py`)로 부른다."""
 
-    def __init__(self, repositoryRoot: Path, listPath: list[Path]) -> None:
-        self._scriptRoot = (repositoryRoot / _kScriptRoot).resolve()
-        self._mapPathToImport: dict[Path, list[str]] = {}
-        self._mapPathToEntryPoint: dict[Path, bool] = {}
-        self._mapPathToReach: dict[Path, bool] = {}
-        self._mapPathToArgumentProblem: dict[Path, list[str]] = {}
-        self._mapPathToSysPathProblem: dict[Path, list[str]] = {}
-        self.listParseError: list[str] = []
-        for path, text in LintGate.readFiles(listPath):
-            resolved = path.resolve()
-            try:
-                tree = ast.parse(text, filename=str(path))
-            except SyntaxError as exception:
-                self.listParseError.append(f"{path.relative_to(repositoryRoot).as_posix()}:1 파싱할 수 없습니다: {exception}")
-                continue
-            listName: list[str] = []
-            collectModuleLevelImportsInternal(tree.body, listName)
-            self._mapPathToImport[resolved] = listName
-            self._mapPathToEntryPoint[resolved] = path.name == "__main__.py" or any(isMainGuardInternal(node) for node in tree.body)
-            self._mapPathToArgumentProblem[resolved] = findArgumentProblemsInternal(tree)
-            depth = len(resolved.relative_to(self._scriptRoot).parts) - 1
-            self._mapPathToSysPathProblem[resolved] = findSysPathProblemsInternal(tree, text, depth, self._mapPathToEntryPoint[resolved])
+    def __init__(self, mapInfo: dict[str, ScriptModuleInfo]) -> None:
+        self._mapInfo = mapInfo
+        self._mapReach: dict[str, bool] = {}
 
-    def isEntryPoint(self, path: Path) -> bool:
-        return self._mapPathToEntryPoint.get(path.resolve(), False)
-
-    def findArgumentProblems(self, path: Path) -> list[str]:
-        return self._mapPathToArgumentProblem.get(path.resolve(), [])
-
-    def findSysPathProblems(self, path: Path) -> list[str]:
-        return self._mapPathToSysPathProblem.get(path.resolve(), [])
-
-    def reachesCommon(self, path: Path) -> bool:
+    def reachesCommon(self, relative: str) -> bool:
         """이 모듈을 읽으면 `common` 이 import 되는가(모듈 수준 import 를 따라간다)."""
-        return self.reachesCommonInternal(path.resolve(), set())
+        return self.reachesCommonInternal(relative, set())
 
-    def reachesCommonInternal(self, path: Path, uniqueVisiting: set[Path]) -> bool:
-        if path in self._mapPathToReach:
-            return self._mapPathToReach[path]
-        if path in uniqueVisiting:
+    def reachesCommonInternal(self, relative: str, uniqueVisiting: set[str]) -> bool:
+        if relative in self._mapReach:
+            return self._mapReach[relative]
+        if relative in uniqueVisiting:
             return False
-        uniqueVisiting.add(path)
+        uniqueVisiting.add(relative)
         bReach = False
-        for name in self._mapPathToImport.get(path, []):
+        for name in self._mapInfo[relative].listImport if relative in self._mapInfo else ():
             if name.split(".")[0] == _kInitializingPackage:
                 bReach = True
                 break
             target = self.findLocalModuleInternal(name)
-            if target is not None and target != path and self.reachesCommonInternal(target, uniqueVisiting):
+            if target is not None and target != relative and self.reachesCommonInternal(target, uniqueVisiting):
                 bReach = True
                 break
-        uniqueVisiting.discard(path)
-        self._mapPathToReach[path] = bReach
+        uniqueVisiting.discard(relative)
+        self._mapReach[relative] = bReach
         return bReach
 
-    def findLocalModuleInternal(self, dottedName: str) -> Path | None:
+    def findLocalModuleInternal(self, dottedName: str) -> str | None:
         """점 이름에 맞는 `Scripts/` 안 파일. import 루트는 `Scripts/` 하나라 점 이름이 곧 경로다(맨 이름 import 는 `CheckScriptLayers` 가 막는다)."""
-        listPart = dottedName.split(".")
-        for candidate in (self._scriptRoot.joinpath(*listPart).with_suffix(".py"), self._scriptRoot.joinpath(*listPart, "__init__.py")):
-            if candidate in self._mapPathToImport:
+        stem = f"{_kScriptRoot}/{dottedName.replace('.', '/')}"
+        for candidate in (f"{stem}.py", f"{stem}/__init__.py"):
+            if candidate in self._mapInfo and not self._mapInfo[candidate].parseError:
                 return candidate
         return None
 
 
-def findViolations(repositoryRoot: Path, listFileArgument: list[str] | None) -> tuple[list[str], int]:
-    """위반 줄과 본 진입점 수. import 를 따라가야 하므로 모듈 표는 늘 `Scripts/` 전체로 만든다."""
-    listAll = LintGate.selectTargetFiles(repositoryRoot, None, listScanRoot=(_kScriptRoot,), suffixes=(".py",))
-    graph = ScriptModuleGraph(repositoryRoot, listAll)
-    listTarget = listAll if not listFileArgument else LintGate.selectTargetFiles(
-        repositoryRoot, listFileArgument, listScanRoot=(_kScriptRoot,), suffixes=(".py",))
-    listViolation = list(graph.listParseError)
+def findViolations(listRelative: list[str], listInfo: list[ScriptModuleInfo], setTarget: frozenset[str] | None) -> tuple[list[str], int]:
+    """
+    위반 줄과 본 진입점 수. import 를 따라가야 하므로 모듈 표는 늘 `Scripts/` 전체(`listRelative`)로 만들고, 보고는 `--files` 로 고른 `setTarget` 만 한다(None 이면 전부).
+    파싱하지 못한 파일은 대상이 아니어도 알린다.
+    """
+    graph = ScriptModuleGraph(dict(zip(listRelative, listInfo)))
+    listViolation = [info.parseError for info in listInfo if info.parseError]
     entryPointCount = 0
-    for path in listTarget:
-        listViolation.extend(f"{path.relative_to(repositoryRoot).as_posix()}:{problem}" for problem in graph.findSysPathProblems(path))
-        if not graph.isEntryPoint(path):
+    for relative, info in zip(listRelative, listInfo):
+        if info.parseError or (setTarget is not None and relative not in setTarget):
+            continue
+        listViolation.extend(f"{relative}:{problem}" for problem in info.listSysPathProblem)
+        if not info.bEntryPoint:
             continue
         entryPointCount += 1
-        if not graph.reachesCommon(path):
-            listViolation.append(f"{path.relative_to(repositoryRoot).as_posix()}: 진입점이 모듈 수준에서 common 을 import 하지 않습니다"
+        if not graph.reachesCommon(relative):
+            listViolation.append(f"{relative}: 진입점이 모듈 수준에서 common 을 import 하지 않습니다"
                                  " — Windows 콘솔(cp949)에서 한국어 출력이 UnicodeEncodeError 로 죽습니다")
-        listViolation.extend(f"{path.relative_to(repositoryRoot).as_posix()}:{problem} — 프로그램에서 인자를 넘길 수 없다"
-                             for problem in graph.findArgumentProblems(path))
+        listViolation.extend(f"{relative}:{problem} — 프로그램에서 인자를 넘길 수 없다" for problem in info.listArgumentProblem)
     return listViolation, entryPointCount
 
 
@@ -282,13 +288,45 @@ class CheckScriptEntryPointsGate(LintGate):
             "expectedViolation": "Scripts/__main__.py: 진입점이 모듈 수준에서 common 을 import 하지 않습니다",
             "files": {"Scripts/__main__.py": "import argparse\n\nargparse.ArgumentParser(description='도구 — 목록').print_help()\n"},
         },
+        {
+            # `--files` 는 보고할 파일만 줄인다 — 이웃 모듈(`ProbeCommonHelper`)은 `--files` 에 없어도 읽어 import 그래프를 만든다.
+            "name": "--files 로 고른 진입점만 보고하고 이웃은 전체에서 읽는다",
+            "expectedViolation": "Scripts/report/ProbeBad.py: 진입점이 모듈 수준에서 common 을 import 하지 않습니다",
+            "unexpectedViolation": "ProbeViaHelper.py",
+            "args": ["--files", "Scripts/report/ProbeBad.py", "Scripts/report/ProbeViaHelper.py"],
+            "files": {
+                "Scripts/report/ProbeCommonHelper.py": "import common\n",
+                "Scripts/report/ProbeViaHelper.py": "import sys\nfrom report import ProbeCommonHelper\n\n\ndef main(argv=None):\n    return 0\n\n\n"
+                                                    "if __name__ == \"__main__\":\n    sys.exit(main())\n",
+                "Scripts/report/ProbeBad.py": "import sys\n\n\ndef main(argv=None):\n    return 0\n\n\nif __name__ == \"__main__\":\n    sys.exit(main())\n",
+                "Scripts/report/ProbeOther.py": "import sys\n\n\ndef main(argv=None):\n    return 0\n\n\nif __name__ == \"__main__\":\n    sys.exit(main())\n",
+            },
+        },
+        {
+            "name": "--files 에 없는 진입점은 보고하지 않는다",
+            "expectedViolation": "Scripts/report/ProbeBad.py: 진입점이 모듈 수준에서 common 을 import 하지 않습니다",
+            "unexpectedViolation": "ProbeOther.py",
+            "args": ["--files", "Scripts/report/ProbeBad.py"],
+            "files": {
+                "Scripts/report/ProbeBad.py": "import sys\n\n\ndef main(argv=None):\n    return 0\n\n\nif __name__ == \"__main__\":\n    sys.exit(main())\n",
+                "Scripts/report/ProbeOther.py": "import sys\n\n\ndef main(argv=None):\n    return 0\n\n\nif __name__ == \"__main__\":\n    sys.exit(main())\n",
+            },
+        },
     ]
 
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
         self.addFilesArgument(parser)
 
-    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        listViolation, entryPointCount = findViolations(repositoryRoot, args.files)
+    # import 를 따라가야 하므로 `--files` 가 있어도 `Scripts/` 전체를 읽는다(`bAlwaysWhole`) — 보고만 고른 파일로 줄인다.
+    sourceScanSets = (SourceScanSet("script", (_kScriptRoot,), (".py",), bAlwaysWhole=True),)
+
+    def checkSourceFile(self, source: SourceFile, args: argparse.Namespace) -> FileFindings | None:
+        return FileFindings(value=readScriptInternal(source))
+
+    def finishSourceScan(self, repositoryRoot: Path, args: argparse.Namespace, result: SourceScanResult) -> GateResult:
+        listViolation, entryPointCount = findViolations([findings.relative for findings in result.listFindings],
+                                                        [findings.value for findings in result.listFindings],
+                                                        selectedRelatives(repositoryRoot, self, args))
         return GateResult(listViolation=listViolation, summary=f"{entryPointCount} entry points reach common")
 
 

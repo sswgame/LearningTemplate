@@ -18,7 +18,11 @@
 파일마다 집합을 비우고 부른 뒤 `FileFindings` 에 담아 돌려주고, 부모가 합쳐 게이트 클래스에 다시 넣는다.
 
 **원본 글 · 고치기.** `SourceFile.text` 는 줄 끝을 맞춘 글이고, 원본(`rawText` · `lineEnding` · `hasBom`)은 따로 남는다. 고칠 수 있는 게이트는
-`FileFindings.fixedText` 에 원본 형식으로 되돌린 완성 글을 담고, 픽서는 같은 판정 함수를 `fixedTextOf` 로 변환 삼는다.
+`FileFindings.fixedText` 에 원본 형식으로 되돌린 완성 글을 담고, 픽서는 같은 판정 함수를 `fixedTextOf` 로 변환 삼는다(`FixPass(inspect=…)` 가 그 연결이다).
+
+**파일 집합의 모양.** C++ 만이 아니다 — 파이썬 · CMake · 셰이더 게이트도 `SourceScanSet` 으로 집합을 선언한다. 저장소 루트의 파일 한두 개는 걷지 않고 이름으로
+고르고(`relativeFiles`), 파일 사이의 관계(import 그래프)를 알아야 하는 게이트는 `--files` 가 있어도 집합 전체를 읽고(`bAlwaysWhole`) 보고할 파일만
+`selectedRelatives` 로 거른다. 파일 사이를 대 보는 게이트는 파일마다 `FileFindings.value` 로 모아 `finishSourceScan` 에서 합친다.
 
 **추가한 줄.** 커밋 훅에서 이번 커밋이 추가한 줄만 세는 게이트는 그 범위를 `LineScope`(`parseAddedLines`)로 받는다 — 덩어리 머리 해석 ·
 병합 커밋 건너뛰기 · 기준선 비교를 게이트마다 베끼지 않는다(`LintGate.BaselineSourceGate`).
@@ -88,8 +92,8 @@ class SourceFile:
         return self.text.removeprefix("﻿")
 
     def restore(self, bodyText: str) -> str:
-        """정규화한 글(`bodyText` 모양)을 원본의 BOM · 줄 끝으로 되돌린다."""
-        return ("﻿" if self.hasBom else "") + bodyText.replace("\n", self.lineEnding)
+        """정규화한 글(`bodyText` 나 `text` 모양 — 줄 끝이 `\\n`)을 원본의 BOM · 줄 끝으로 되돌린다. 글머리의 BOM 은 떼고 원본에 있을 때만 붙인다."""
+        return ("﻿" if self.hasBom else "") + bodyText.removeprefix("﻿").replace("\n", self.lineEnding)
 
     @cached_property
     def masked(self) -> str:
@@ -152,9 +156,12 @@ class SourceScanSet:
     파일이 어느 집합에서 왔는지는 `SourceFile.setName` 으로 안다(C++ 와 CMake 처럼 파일 종류마다 규칙이 다른 게이트, 키트 · 게임 · 기반 폴더마다 규칙이 다른 게이트).
 
     - `name`  : 집합 이름(게이트 안에서 겹치지 않는다). 집합이 하나뿐인 게이트는 비워도 된다
-    - `roots` : 걸을 뿌리(저장소 기준 폴더, `""` 은 전체)
-    - `suffixes` · `fileNames`: 확장자(대소문자 무시) 또는 파일 이름 — 하나는 적는다
+    - `roots` : 걸을 뿌리(저장소 기준 폴더, `""` 은 전체). `relativeFiles` 만 쓰는 집합은 `()`
+    - `suffixes` · `fileNames`: 확장자(대소문자 무시) 또는 파일 이름 — 뿌리를 걸을 때 하나는 적는다
     - `excludedDirNames`: 내려가지 않을 폴더 이름
+    - `relativeFiles`: 걷지 않고 이름으로 고르는 파일(저장소 기준 경로 — 저장소 루트의 `CMakeLists.txt` 처럼 폴더 전체를 걸을 까닭이 없는 파일). 없는 파일은 뺀다
+    - `bAlwaysWhole`: 참이면 `--files` 가 있어도 이 집합은 전체를 읽는다 — 파일 사이의 관계(import 그래프)를 알아야 하는 게이트용.
+                      어느 파일이 `--files` 로 골라졌는지는 `selectedRelatives` 가 답하고, 고른 파일만 보고하는 일은 게이트의 `finishSourceScan` 이 한다
 
     한 파일이 집합 둘에 걸리면 **선언 순서의 첫 집합**이 갖는다(그 게이트에게는 파일이 한 번만 온다) — 좁은 집합을 앞에, 나머지를 거두는 집합을 뒤에 적는다.
     """
@@ -164,11 +171,13 @@ class SourceScanSet:
     suffixes: tuple[str, ...] = ()
     fileNames: tuple[str, ...] = ()
     excludedDirNames: frozenset[str] = kNotOurDirNames
+    relativeFiles: tuple[str, ...] = ()
+    bAlwaysWhole: bool = False
 
     def __post_init__(self) -> None:
-        if not self.roots:
+        if not self.roots and not self.relativeFiles:
             raise TypeError(f"SourceScanSet '{self.name}': roots 가 비었습니다 — 전체를 걸으려면 ('',) 를 적습니다")
-        if not self.suffixes and not self.fileNames:
+        if self.roots and not self.suffixes and not self.fileNames:
             raise TypeError(f"SourceScanSet '{self.name}': suffixes 나 fileNames 를 적습니다 — 확장자도 이름도 없으면 아무 파일도 고르지 못합니다")
 
     def accepts(self, path: Path) -> bool:
@@ -185,25 +194,52 @@ class SourceTarget:
     tupleSetName: tuple[str, ...]
 
 
-def selectGateFilesInternal(repositoryRoot: Path, gate: Any, args: argparse.Namespace, mapWalk: dict[tuple, list[Path]]) -> dict[Path, str]:
+def selectSetFilesInternal(repositoryRoot: Path, scanSet: SourceScanSet, listFileArgument: list[str] | None, mapWalk: dict[tuple, list[Path]]) -> list[Path]:
     """
-    게이트 하나가 볼 파일(경로 → 걸린 집합 이름, 선언 순서의 첫 집합). `--files` 면 `resolveFileArguments`, 아니면 뿌리 · 제외 폴더가 같은 걷기를 나눠 쓴다 —
+    집합 하나의 파일. `--files`(`listFileArgument`)가 있으면 `resolveFileArguments`, 없으면 뿌리 · 제외 폴더가 같은 걷기를 나눠 쓴다 —
     `LintGate.selectTargetFiles` 와 같은 결과다(확장자만 걸은 뒤 거른다). 빈 `--files`(인자 없이 준 것)는 "볼 파일 없음" 이다 — 전체 훑기로 읽지 않는다.
     """
-    listFileArgument = getattr(args, "files", None)
-    mapPathToSet: dict[Path, str] = {}
-    for scanSet in gate.sourceScanSets:
+    listPath: list[Path] = []
+    if scanSet.roots:
         if listFileArgument is not None:
-            listPath = resolveFileArguments(repositoryRoot, listFileArgument, listScanRoot=scanSet.roots, suffixes=scanSet.suffixes,
-                                            fileNames=scanSet.fileNames, excludedDirNames=scanSet.excludedDirNames)
+            listPath += resolveFileArguments(repositoryRoot, listFileArgument, listScanRoot=scanSet.roots, suffixes=scanSet.suffixes,
+                                             fileNames=scanSet.fileNames, excludedDirNames=scanSet.excludedDirNames)
         else:
             key = (scanSet.roots, scanSet.excludedDirNames)
             if key not in mapWalk:
                 mapWalk[key] = collectRepositoryFiles(repositoryRoot, key[0], excludedDirNames=key[1], bAnySuffix=True)
-            listPath = [path for path in mapWalk[key] if scanSet.accepts(path)]
-        for path in listPath:
+            listPath += [path for path in mapWalk[key] if scanSet.accepts(path)]
+    if scanSet.relativeFiles:
+        if listFileArgument is not None:
+            setWanted = set(scanSet.relativeFiles)
+            listPath += [path for path in resolveFileArguments(repositoryRoot, listFileArgument, bAnySuffix=True)
+                         if path.relative_to(repositoryRoot.resolve()).as_posix() in setWanted]
+        else:
+            listPath += [repositoryRoot / relative for relative in scanSet.relativeFiles if (repositoryRoot / relative).is_file()]
+    return listPath
+
+
+def selectGateFilesInternal(repositoryRoot: Path, gate: Any, args: argparse.Namespace, mapWalk: dict[tuple, list[Path]]) -> dict[Path, str]:
+    """게이트 하나가 볼 파일(경로 → 걸린 집합 이름, 선언 순서의 첫 집합). `bAlwaysWhole` 집합은 `--files` 가 있어도 전체다."""
+    listFileArgument = getattr(args, "files", None)
+    mapPathToSet: dict[Path, str] = {}
+    for scanSet in gate.sourceScanSets:
+        for path in selectSetFilesInternal(repositoryRoot, scanSet, None if scanSet.bAlwaysWhole else listFileArgument, mapWalk):
             mapPathToSet.setdefault(path, scanSet.name)
     return mapPathToSet
+
+
+def selectedRelatives(repositoryRoot: Path, gate: Any, args: argparse.Namespace) -> frozenset[str] | None:
+    """
+    `--files` 가 고른 파일(저장소 기준 POSIX 경로, 게이트의 집합 전부의 합). `--files` 가 없으면 None 이다 — 전부가 대상.
+    `bAlwaysWhole` 집합의 게이트가 전체를 읽은 뒤 보고할 파일만 거를 때 쓴다.
+    """
+    listFileArgument = getattr(args, "files", None)
+    if listFileArgument is None:
+        return None
+    mapWalk: dict[tuple, list[Path]] = {}
+    return frozenset(path.relative_to(repositoryRoot).as_posix()
+                     for scanSet in gate.sourceScanSets for path in selectSetFilesInternal(repositoryRoot, scanSet, listFileArgument, mapWalk))
 
 
 def collectSourceTargets(repositoryRoot: Path, listJob: list[tuple[Any, argparse.Namespace]]) -> list[SourceTarget]:
@@ -336,4 +372,4 @@ def fixedTextOf(inspect: Callable[[SourceFile], FileFindings], text: str, relati
 
 
 __all__ = ["FileFindings", "LineScope", "SourceFile", "SourceScanResult", "SourceScanSet", "SourceTarget", "collectSourceTargets", "fixedTextOf",
-           "joinFindings", "parseAddedLines", "scanSourceGates"]
+           "joinFindings", "parseAddedLines", "scanSourceGates", "selectedRelatives"]

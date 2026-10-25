@@ -76,7 +76,8 @@ def runCaseInternal(gateClass: type[LintGate], case: dict) -> tuple[int, str]:
         for relPath, content in case.get("files", {}).items():
             target = tempRoot / relPath
             target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_text(content, encoding="utf-8")
+            # 바이트 그대로 쓴다 — `write_text` 는 윈도우에서 `\n` 을 CRLF 로 바꿔 `\r\n` 이 든 조각(줄 끝 · BOM 을 지키는 게이트)이 실제와 달라진다.
+            target.write_bytes(content.encode("utf-8"))
         with contextlib.redirect_stdout(output), contextlib.redirect_stderr(output):
             try:
                 code = gateClass.run(["--root", str(tempRoot), *case.get("args", [])])

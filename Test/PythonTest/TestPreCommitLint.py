@@ -16,7 +16,7 @@ from unittest import mock
 kRepositoryRoot = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(kRepositoryRoot / "Scripts"))
 
-from lint.LintCatalog import LintScript, discoverLintScripts, discoverLintTargets  # noqa: E402
+from lint.LintCatalog import LintScript, discoverLintScripts, discoverLintTargets, discoverSourceGateScripts  # noqa: E402
 from lint.LintGate import LintGate  # noqa: E402
 from lint import PreCommitLint  # noqa: E402
 from lint.PreCommitLint import GateOutcome, StagedContentProbe, formatGateSummary, selectGatesForStaged  # noqa: E402
@@ -133,10 +133,15 @@ class PreCommitLintContentRuleTest(unittest.TestCase):
 
     def testTreeWideCrossFileGatesAreLeftToCi(self) -> None:
         # 훅의 바닥이던 트리 전체 대조 게이트는 훅에서 돌지 않는다 — 그 대신 CI 린트 잡(RunLintSuite)과 ctest -L lint 의 목록에 남아 있어야 한다.
+        # 소스 게이트(공유 훑기)는 게이트마다가 아니라 `CheckSourceFiles` 한 항목으로 등록된다 — 그 묶음에 들어 있는지 본다.
         listRegistered = {target.name for target in discoverLintTargets()}
+        setSourceGate = {script.name for script in discoverSourceGateScripts()}
         for gateName in ("CheckNameReferences", "CheckKitNamespaces"):
             self.assertIn("CI", self.plan(gateName, ["Source/A.cpp"], {"Source/A.cpp": "SW_LOG_CALLER( \"x\" ); gv_x"}, {}))
-            self.assertIn(gateName, listRegistered)
+            if gateName in setSourceGate:
+                self.assertIn("CheckSourceFiles", listRegistered)
+            else:
+                self.assertIn(gateName, listRegistered)
 
     def testRenderOwnershipRunsOnlyForItsHeaders(self) -> None:
         self.assertTrue(self.plan("CheckRenderOwnership", ["Source/Engine/Scene/A.cpp"], {}, {}))

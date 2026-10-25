@@ -17,7 +17,6 @@ lld 20 의 x64 지연 로드 썽크(`__tailMerge_<dll>`)는 xmm0~3 을 `__delayL
 
 from __future__ import annotations
 
-import argparse
 import re
 import sys
 from pathlib import Path
@@ -25,7 +24,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common.Constants import kLintTargetRelDirs  # noqa: E402
-from lint.LintGate import GateResult, LintGate  # noqa: E402
+from lint.LintGate import LintGate  # noqa: E402
+from lint.SourceScan import FileFindings, SourceFile, SourceScanResult, SourceScanSet  # noqa: E402
 
 #: 지연 로드를 켜는 CMake 낱말 — 링커 옵션과 그 헬퍼 라이브러리.
 _kDelayLoadRe = re.compile(r"DELAYLOAD\s*:|\bdelayimp\b", re.IGNORECASE)
@@ -64,24 +64,31 @@ class CheckNoDelayLoadGate(LintGate):
                 "Source/Probe/CMakeLists.txt": "target_link_libraries(Probe PRIVATE delayimp)\n",
             },
         },
+        {
+            # 저장소 루트의 CMakeLists.txt 는 폴더 집합이 아니라 이름으로 고르는 집합(`relativeFiles`)이 읽는다.
+            "name": "저장소 루트 CMakeLists.txt",
+            "expectedViolation": "CMakeLists.txt:2: target_link_options(Probe PRIVATE /DELAYLOAD:probe.dll)",
+            "files": {
+                "CMakeLists.txt": "# /DELAYLOAD:commented.dll 는 주석이라 보지 않는다\ntarget_link_options(Probe PRIVATE /DELAYLOAD:probe.dll)\n",
+            },
+        },
     ]
 
-    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        listPath = [path for path in self.selectTargetFiles(repositoryRoot, None, listScanRoot=kLintTargetRelDirs + ("cmake",),
-                                                           suffixes=(".txt", ".cmake"))
-                    if path.name == "CMakeLists.txt" or path.suffix == ".cmake"]
-        topLevel = repositoryRoot / "CMakeLists.txt"
-        if topLevel.is_file():
-            listPath.append(topLevel)
+    # 저장소 루트의 `CMakeLists.txt` 는 폴더를 걸을 까닭이 없다 — 이름으로 고르는 집합(`relativeFiles`)이다.
+    sourceScanSets = (SourceScanSet("tree", kLintTargetRelDirs + ("cmake",), (".cmake",), ("CMakeLists.txt",)),
+                      SourceScanSet("top", (), relativeFiles=("CMakeLists.txt",)))
+
+    def checkSourceFile(self, source: SourceFile, args: argparse.Namespace) -> FileFindings | None:
         listViolation: list[str] = []
-        for path in listPath:
-            relativePath = path.relative_to(repositoryRoot).as_posix()
-            for lineNumber, line in enumerate(path.read_text(encoding="utf-8", errors="replace").splitlines(), start=1):
-                if line.lstrip().startswith("#"):
-                    continue
-                if _kDelayLoadRe.search(line):
-                    listViolation.append(f"{relativePath}:{lineNumber}: {line.strip()}")
-        return GateResult(listViolation=listViolation, summary=f"CMake 파일 {len(listPath)}개")
+        for lineNumber, line in enumerate(source.listLine, start=1):
+            if line.lstrip().startswith("#"):
+                continue
+            if _kDelayLoadRe.search(line):
+                listViolation.append(f"{source.relative}:{lineNumber}: {line.strip()}")
+        return FileFindings(listViolation=listViolation)
+
+    def describeSourceScan(self, result: SourceScanResult) -> str:
+        return f"CMake 파일 {result.fileCount}개"
 
 
 main = CheckNoDelayLoadGate.run

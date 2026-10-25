@@ -31,12 +31,14 @@ from __future__ import annotations
 import argparse
 import ast
 import sys
-from pathlib import Path
+from dataclasses import dataclass, field
+from pathlib import Path, PurePosixPath
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common.RuleData import kKindInteger  # noqa: E402
 from lint.LintGate import GateResult, LintGate  # noqa: E402
+from lint.SourceScan import FileFindings, SourceFile, SourceScanResult, SourceScanSet, selectedRelatives  # noqa: E402
 
 _kScriptRoot = "Scripts"
 #: 명령 층 — 이 층의 모듈끼리는 import 하지 않는다.
@@ -56,25 +58,25 @@ def tierOfModule(dottedName: str) -> int | None:
     return None
 
 
+def moduleNameOf(relative: str) -> str:
+    """파일(저장소 기준 경로) → `Scripts/` 기준 점 이름(`Scripts/lint/gate/CheckX.py` → `lint.gate.CheckX`, `Scripts/dev/__init__.py` → `dev`)."""
+    listPart = list(PurePosixPath(relative).with_suffix("").parts[1:])
+    if listPart[-1] == "__init__" and len(listPart) > 1:
+        listPart.pop()
+    return ".".join(listPart)
+
+
 class ScriptTree:
     """`Scripts/` 의 모듈 이름 표 — 점 이름이 파일인지, 맨 이름이 어느 파일 이름과 같은지 답한다."""
 
-    def __init__(self, scriptRoot: Path, listPath: list[Path]) -> None:
-        self._scriptRoot = scriptRoot
+    def __init__(self, listRelative: list[str]) -> None:
         self.uniqueModule: set[str] = set()
         self.uniqueBareName: set[str] = set()
-        for path in listPath:
-            dottedName = self.moduleNameOf(path)
-            self.uniqueModule.add(dottedName)
+        for relative in listRelative:
+            path = PurePosixPath(relative)
+            self.uniqueModule.add(moduleNameOf(relative))
             self.uniqueBareName.add(path.stem if path.stem != "__init__" else path.parent.name)
         self.uniqueTopLevel = {name.split(".")[0] for name in self.uniqueModule}
-
-    def moduleNameOf(self, path: Path) -> str:
-        """파일 → `Scripts/` 기준 점 이름(`lint/gate/CheckX.py` → `lint.gate.CheckX`, `dev/__init__.py` → `dev`)."""
-        listPart = list(path.relative_to(self._scriptRoot).with_suffix("").parts)
-        if listPart[-1] == "__init__" and len(listPart) > 1:
-            listPart.pop()
-        return ".".join(listPart)
 
     def resolveImported(self, base: str, listAlias: list[str]) -> list[str]:
         """`from base import a, b` 가 실제로 기대는 모듈 — `a` 가 하위 모듈이면 `base.a`, 아니면 `base`."""
@@ -100,18 +102,35 @@ def collectImportsInternal(tree: ast.Module, moduleName: str, bPackage: bool) ->
     return listImport
 
 
-def findViolationsInFile(tree: ScriptTree, relPath: str, path: Path, text: str) -> list[str]:
-    """파일 하나의 층 위반."""
+@dataclass
+class ScriptImports:
+    """파일 하나가 import 하는 것(자식 프로세스에서 부모로 피클해 온다). 파싱하지 못했으면 `parseError`(위반 줄) 만 있다."""
+
+    parseError: str = ""
+    moduleName: str = ""
+    listImport: list[tuple[int, str, list[str]]] = field(default_factory=list)
+
+
+def readImportsInternal(source: SourceFile) -> ScriptImports:
+    """파일 하나의 import 를 읽는다 — 층 판정은 모든 모듈의 이름 표(`ScriptTree`)가 필요해 끝맺음에서 한다."""
     try:
-        syntax = ast.parse(text, filename=relPath)
+        syntax = ast.parse(source.text, filename=source.relative)
     except SyntaxError as error:
-        return [f"{relPath}:{error.lineno}: 파싱할 수 없습니다: {error.msg}"]
-    moduleName = tree.moduleNameOf(path)
+        return ScriptImports(parseError=f"{source.relative}:{error.lineno}: 파싱할 수 없습니다: {error.msg}")
+    moduleName = moduleNameOf(source.relative)
+    return ScriptImports(moduleName=moduleName, listImport=collectImportsInternal(syntax, moduleName, source.path.stem == "__init__"))
+
+
+def findViolationsInFile(tree: ScriptTree, relPath: str, imports: ScriptImports) -> list[str]:
+    """파일 하나의 층 위반."""
+    if imports.parseError:
+        return [imports.parseError]
+    moduleName = imports.moduleName
     selfTier = tierOfModule(moduleName)
     if selfTier is None:
         return [f"{relPath}: 모듈 '{moduleName}' 의 층이 표(rules/CheckScriptLayers.toml 의 [tier])에 없습니다 — 새 폴더는 층을 정해 넣습니다"]
     listViolation: list[str] = []
-    for lineNumber, writtenName, listCandidate in collectImportsInternal(syntax, moduleName, path.stem == "__init__"):
+    for lineNumber, writtenName, listCandidate in imports.listImport:
         base = listCandidate[0]
         first = base.split(".")[0]
         if first == _kScriptRoot:
@@ -180,24 +199,44 @@ class CheckScriptLayersGate(LintGate):
             "expectedViolation": "Scripts/lint/Probe.py:2: 'lint.gate.CheckProbe' -> 층 1('lint.Probe')가 위 층 2 를 import 합니다",
             "files": {"Scripts/lint/Probe.py": "def probe() -> None:\n    from .gate import CheckProbe\n", "Scripts/lint/gate/CheckProbe.py": "kProbe = 1\n"},
         },
+        {
+            # `--files` 는 판정할 파일만 줄인다 — 맨 이름이 어느 파일 이름인지는 `--files` 에 없는 `Scripts/lint/LintGate.py` 까지 읽어야 안다.
+            "name": "--files 로 골라도 모듈 이름 표는 전체에서 만든다",
+            "expectedViolation": "Scripts/lint/gate/CheckProbe.py:2: 'LintGate' — 맨 이름 import 입니다",
+            "unexpectedViolation": "Scripts/common/Probe.py",
+            "args": ["--files", "Scripts/lint/gate/CheckProbe.py"],
+            "files": {
+                "Scripts/lint/gate/CheckProbe.py": "import sys\nfrom LintGate import LintGate\n",
+                "Scripts/lint/LintGate.py": "kProbe = 1\n",
+                "Scripts/common/Probe.py": "from lint.LintGate import LintGate\n",
+            },
+        },
     ]
 
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
         self.addFilesArgument(parser)
 
-    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        scriptRoot = repositoryRoot / _kScriptRoot
-        listAll = self.selectTargetFiles(repositoryRoot, None, listScanRoot=(_kScriptRoot,), suffixes=(".py",))
-        tree = ScriptTree(scriptRoot, listAll)
-        listTarget = listAll if not args.files else self.selectTargetFiles(repositoryRoot, args.files, listScanRoot=(_kScriptRoot,), suffixes=(".py",))
+    # 모듈 이름 표는 `Scripts/` 전체로 만든다 — `--files` 가 있어도 전체를 읽고(`bAlwaysWhole`) 판정만 고른 파일로 줄인다.
+    sourceScanSets = (SourceScanSet("script", (_kScriptRoot,), (".py",), bAlwaysWhole=True),)
+
+    def checkSourceFile(self, source: SourceFile, args: argparse.Namespace) -> FileFindings | None:
+        return FileFindings(value=readImportsInternal(source))
+
+    def finishSourceScan(self, repositoryRoot: Path, args: argparse.Namespace, result: SourceScanResult) -> GateResult:
+        tree = ScriptTree([findings.relative for findings in result.listFindings])
+        setTarget = selectedRelatives(repositoryRoot, self, args)
         listViolation: list[str] = []
-        for path, text in self.readFiles(listTarget):
-            relPath = path.relative_to(repositoryRoot).as_posix()
+        targetCount = 0
+        for findings in result.listFindings:
+            relPath = findings.relative
+            if setTarget is not None and relPath not in setTarget:
+                continue
+            targetCount += 1
             for key in self.mapExemption:
                 if key.startswith(relPath + "|"):
                     self.seeExemption(key)
-            listViolation.extend(findViolationsInFile(tree, relPath, path, text))
-        return GateResult(listViolation=listViolation, summary=f"Scripts 모듈 {len(listTarget)} 개가 층을 지킨다")
+            listViolation.extend(findViolationsInFile(tree, relPath, findings.value))
+        return GateResult(listViolation=listViolation, summary=f"Scripts 모듈 {targetCount} 개가 층을 지킨다")
 
 
 main = CheckScriptLayersGate.run

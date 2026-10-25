@@ -34,9 +34,29 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 from lint.LintCatalog import discoverLintScripts  # noqa: E402
-from lint.LintFixer import findFixerClass  # noqa: E402
+from lint.LintFixer import FixPass, findFixerClass  # noqa: E402
 from lint.LintGate import GateError, GateResult, LintGate  # noqa: E402
 
+
+
+#: 글머리 BOM — 파일 형식 조각(`checkFileFormInternal`)이 조각 앞에 붙인다.
+_kBom = "﻿"
+
+
+def checkFileFormInternal(label: str, fixPass: FixPass) -> list[str]:
+    """
+    **파일의 형식**(줄 끝 CRLF · 글머리 BOM)이 달라도 같은 조각을 같게 고치는지 — 픽서는 파일을 `newline=""` 로 읽어 고쳐 쓰므로, 고친 글이
+    줄 끝 · BOM 을 바꾸거나(파일 전체가 바뀐 것으로 보인다) 형식 때문에 규칙이 어긋나면 안 된다. 조각 셋을 형식만 바꿔 다시 돌려 글자까지 견준다.
+    """
+    errors: list[str] = []
+    for form, convert in (("CRLF", lambda text: text.replace("\n", "\r\n")), ("BOM", lambda text: _kBom + text)):
+        fixed, _ = fixPass.apply(convert(fixPass.badSample), fixPass.samplePath)
+        if fixed != convert(fixPass.fixedSample):
+            errors.append(f"{label}: {form} 형식의 파일에서 고친 결과가 달라집니다 — 받은 결과 {fixed!r}")
+        kept, bChanged = fixPass.apply(convert(fixPass.goodSample), fixPass.samplePath)
+        if bChanged or kept != convert(fixPass.goodSample):
+            errors.append(f"{label}: {form} 형식의 파일에서 건드리면 안 되는 조각을 고쳤습니다")
+    return errors
 
 
 class CheckFixersAreAliveGate(LintGate):
@@ -93,6 +113,8 @@ class CheckFixersAreAliveGate(LintGate):
                     print(f"  [{label}] goodSample changed={bChanged}")
                 if bChanged or kept != fixPass.goodSample:
                     errors.append(f"{label}: 건드리면 안 되는 조각을 고쳤습니다 — 규칙이 너무 넓습니다")
+
+                errors += checkFileFormInternal(label, fixPass)
 
         return GateResult(listViolation=errors, summary=f"{checkedPasses} passes across {len(listScript)} files")
 

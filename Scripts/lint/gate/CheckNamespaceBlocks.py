@@ -45,12 +45,21 @@ class CheckNamespaceBlocksGate(LintGate):
     violationHeader = "한 namespace 블록에 정의 여럿"
     selfTestCases = [
         {
-            # 원본(`rawText`)을 나눈다 — BOM 이 있어도 줄 번호가 어긋나지 않는다(이 조각은 임시 트리에 쓸 때 윈도우에서 줄 끝이 CRLF 가 된다).
+            # 원본(`rawText`)을 나눈다 — BOM 이 있어도 줄 번호가 어긋나지 않는다. 조각은 바이트 그대로 임시 트리에 쓰인다(`CheckLintsAreAlive`).
             "name": "BOM 이 있어도 한 블록에 클래스 둘",
             "expectedViolation": "Source/Engine/Probe/ProbeBom.h:9: 한 namespace 블록에 클래스 · 구조체 정의가 여럿입니다",
             "files": {
                 "Source/Engine/Probe/ProbeBom.h": (
                     "﻿#pragma once\n\nnamespace sw\n{\n    class Alpha\n    {\n    };\n\n    class Beta\n    {\n    };\n} // namespace sw\n"
+                ),
+            },
+        },
+        {
+            "name": "줄 끝이 CRLF 인 파일의 한 블록에 클래스 둘",
+            "expectedViolation": "Source/Engine/Probe/ProbeCrlf.h:9: 한 namespace 블록에 클래스 · 구조체 정의가 여럿입니다",
+            "files": {
+                "Source/Engine/Probe/ProbeCrlf.h": (
+                    "#pragma once\r\n\r\nnamespace sw\r\n{\r\n    class Alpha\r\n    {\r\n    };\r\n\r\n    class Beta\r\n    {\r\n    };\r\n} // namespace sw\r\n"
                 ),
             },
         },

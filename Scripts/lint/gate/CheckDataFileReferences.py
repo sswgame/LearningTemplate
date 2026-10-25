@@ -32,8 +32,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common.Constants import kLintProductRelDirs, kNotOurCodeDirNames  # noqa: E402
-from common.Parallel import mapConcurrent  # noqa: E402
-from lint.LintGate import GateError, GateResult, LintGate  # noqa: E402
+from common.Search import collectRepositoryFiles  # noqa: E402
+from lint.LintGate import GateResult, LintGate  # noqa: E402
+from lint.SourceScan import FileFindings, SourceFile, SourceScanResult  # noqa: E402
 
 # 검사 대상 확장자 — X-macro 목록 파일.
 _kDataSuffix = ".xxx"
@@ -52,6 +53,9 @@ _kExcludedDirName = kNotOurCodeDirNames
 _kIncludeRootDir = "Source"
 
 _kIncludeRe = re.compile(r'#\s*include\s*"([^"]+)"')
+
+#: 이 스크립트 자신 — 참조로 세지 않는다(위 독스트링이 죽은 사본의 경로를 예시로 적는다).
+_kSelfPath = Path(__file__).resolve()
 
 
 class CheckDataFileReferencesGate(LintGate):
@@ -73,71 +77,81 @@ class CheckDataFileReferencesGate(LintGate):
                 "Source/Engine/Probe/Probe.cpp": '#include "pch.h"\n',
             },
         },
+        {
+            # 참조는 세 길이다(Source 기준 include · 같은 폴더 include · 저장소 경로가 글에 그대로). 파일마다 읽은 참조가 끝맺음에서 합쳐진다.
+            "name": "include · 같은 폴더 include · CMake 글에서 참조된 .xxx 는 위반이 아니다",
+            "expectedViolation": "Source/Engine/Probe/Orphan.xxx",
+            "unexpectedViolation": "Source/Engine/Probe/Used",
+            "files": {
+                "Source/Engine/Probe/Orphan.xxx": "PROBE_ENTRY(Alpha)\n",
+                "Source/Engine/Probe/UsedByInclude.xxx": "PROBE_ENTRY(Beta)\n",
+                "Source/Engine/Probe/UsedBySibling.xxx": "PROBE_ENTRY(Gamma)\n",
+                "Source/Engine/Probe/UsedByCmake.xxx": "PROBE_ENTRY(Delta)\n",
+                "Source/Engine/Probe/Probe.cpp": '#include "Engine/Probe/UsedByInclude.xxx"\n#include "UsedBySibling.xxx"\n',
+                "cmake/Probe.cmake": "set(kList Source/Engine/Probe/UsedByCmake.xxx)\n",
+            },
+        },
     ]
 
-    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        dataFiles = self.selectTargetFiles(repositoryRoot, None, listScanRoot=_kScanRoots, suffixes=(_kDataSuffix,),
-                                           excludedDirNames=_kExcludedDirName)
-        if not dataFiles:
-            return GateResult(summary="검사할 .xxx 파일이 없습니다")
+    # 읽는 쪽은 참조 파일(`.xxx` 자신도 그 안이다)이고, 대상(`.xxx`)은 이름만 있으면 된다 — 대상 목록은 훑기 전에 구해 자식 프로세스에 넘긴다.
+    sourceScanRoots = _kReferenceRoots
+    sourceSuffixes = _kReferenceSuffix
+    sourceExcludedDirNames = _kExcludedDirName
 
+    def prepareSourceScan(self, repositoryRoot: Path, args: argparse.Namespace) -> None:
         # 대상 파일의 `resolve()` 와 저장소 기준 경로는 **미리 한 번만** 구한다 — 안쪽 루프에서 구하면
         # 참조 파일 × 대상 파일만큼의 파일시스템 질의가 되어 파일이 늘수록 제곱으로 느려진다.
-        dataEntries = [(dataFile.resolve(), dataFile.relative_to(repositoryRoot).as_posix()) for dataFile in dataFiles]
+        dataFiles = collectRepositoryFiles(repositoryRoot, _kScanRoots, suffixes=(_kDataSuffix,), excludedDirNames=_kExcludedDirName)
+        args.repositoryRoot = repositoryRoot
+        args.dataEntries = [(dataFile.resolve(), dataFile.relative_to(repositoryRoot).as_posix()) for dataFile in dataFiles]
 
+    def checkSourceFile(self, source: SourceFile, args: argparse.Namespace) -> FileFindings | None:
+        """
+        참조 파일 하나가 가리키는 대상 파일들(`FileFindings.value`, 해석된 경로)을 돌려줍니다.
+
+        @note 어느 참조 파일이 가리켰는지는 돌려주지 않는다 — 쓰이는 것은 "참조되었는가" 뿐이고,
+              동시에 훑으므로 "누가 먼저 가리켰나" 는 실행마다 달라진다. 값을 남기면 그 비결정성이
+              메시지로 새어 나간다.
+        """
         # 이 스크립트 자신은 참조로 세지 않는다. 위 독스트링이 죽은 사본의 경로를 **예시로** 적고
         # 있어서, 그것을 참조로 인정하면 그 파일이 되살아나도 검사가 통과한다.
-        selfPath = Path(__file__).resolve()
+        # 걷는 루트가 이미 `resolve()` 된 저장소 루트다(`LintGate.main`) — 파일마다 `resolve()` 하지 않는다.
+        if source.path == _kSelfPath:
+            return None
+        repositoryRoot: Path = args.repositoryRoot
+        text = source.text
+        found: list[Path] = []
 
-        def scanReferenceFileInternal(referenceFile: Path) -> list[Path]:
-            """
-            참조 파일 하나가 가리키는 대상 파일들을 돌려줍니다. 읽지 못하면 `GateError` 입니다.
+        # 1) / 2) include 해석
+        for includePath in _kIncludeRe.findall(text):
+            if includePath.endswith(_kDataSuffix) is False:
+                continue
+            normalizedInclude = includePath.replace("\\", "/")
 
-            @note 어느 참조 파일이 가리켰는지는 돌려주지 않는다 — 쓰이는 것은 "참조되었는가" 뿐이고,
-                  동시에 훑으므로 "누가 먼저 가리켰나" 는 실행마다 달라진다. 값을 남기면 그 비결정성이
-                  메시지로 새어 나간다.
-            """
-            # 걷는 루트가 이미 `resolve()` 된 저장소 루트다(`LintGate.main`) — 파일마다 `resolve()` 하지 않는다.
-            if referenceFile == selfPath:
-                return []
-            try:
-                text = referenceFile.read_text(encoding="utf-8", errors="replace")
-            except OSError as exception:
-                raise GateError(f"읽기 실패: {referenceFile}: {exception}") from exception
+            # Source/ 를 루트로 본 경로
+            candidate = repositoryRoot / _kIncludeRootDir / normalizedInclude
+            if candidate.is_file():
+                found.append(candidate.resolve())
 
-            referenceRelative = referenceFile.relative_to(repositoryRoot).as_posix()
-            found: list[Path] = []
+            # 포함하는 파일과 같은 디렉터리 기준 경로
+            sibling = (source.path.parent / normalizedInclude).resolve()
+            if sibling.is_file():
+                found.append(sibling)
 
-            # 1) / 2) include 해석
-            for includePath in _kIncludeRe.findall(text):
-                if includePath.endswith(_kDataSuffix) is False:
-                    continue
-                normalizedInclude = includePath.replace("\\", "/")
+        # 3) 저장소 기준 경로가 텍스트에 그대로 있는 경우 (cmake/py/json 이 경로로 읽는다)
+        for resolved, dataRelative in args.dataEntries:
+            if dataRelative != source.relative and dataRelative in text:
+                found.append(resolved)
+        return FileFindings(value=found)
 
-                # Source/ 를 루트로 본 경로
-                candidate = repositoryRoot / _kIncludeRootDir / normalizedInclude
-                if candidate.is_file():
-                    found.append(candidate.resolve())
-
-                # 포함하는 파일과 같은 디렉터리 기준 경로
-                sibling = (referenceFile.parent / normalizedInclude).resolve()
-                if sibling.is_file():
-                    found.append(sibling)
-
-            # 3) 저장소 기준 경로가 텍스트에 그대로 있는 경우 (cmake/py/json 이 경로로 읽는다)
-            for resolved, dataRelative in dataEntries:
-                if dataRelative != referenceRelative and dataRelative in text:
-                    found.append(resolved)
-            return found
-
-        referenceFiles = self.selectTargetFiles(repositoryRoot, None, listScanRoot=_kReferenceRoots, suffixes=_kReferenceSuffix,
-                                                excludedDirNames=_kExcludedDirName)
+    def finishSourceScan(self, repositoryRoot: Path, args: argparse.Namespace, result: SourceScanResult) -> GateResult:
+        if not args.dataEntries:
+            return GateResult(summary="검사할 .xxx 파일이 없습니다")
         referenced: set[Path] = set()
-        for found in mapConcurrent(scanReferenceFileInternal, referenceFiles):
-            referenced.update(found)
-
-        violations = sorted(dataRelative for resolved, dataRelative in dataEntries if resolved not in referenced)
-        return GateResult(listViolation=violations, summary=f"{len(dataFiles)} data files, all referenced")
+        for findings in result.listFindings:
+            referenced.update(findings.value or ())
+        violations = sorted(dataRelative for resolved, dataRelative in args.dataEntries if resolved not in referenced)
+        return GateResult(listViolation=violations, summary=f"{len(args.dataEntries)} data files, all referenced")
 
 
 main = CheckDataFileReferencesGate.run

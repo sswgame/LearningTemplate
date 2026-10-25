@@ -27,12 +27,13 @@ import argparse
 import ast
 import re
 import sys
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common.RuleData import kKindTextList  # noqa: E402
-from lint.LintGate import GateResult, LintGate  # noqa: E402
+from lint.LintGate import LintGate  # noqa: E402
+from lint.SourceScan import FileFindings, SourceFile, SourceScanResult, SourceScanSet  # noqa: E402
 
 _kRuleSchema = {"lexical_os_path_function": kKindTextList, "legacy_typing_name": kKindTextList}
 _kRuleData = LintGate.readRules("CheckPythonConventions", _kRuleSchema, requiredKeys=tuple(_kRuleSchema))
@@ -321,9 +322,9 @@ def isMainGuardInternal(node: ast.stmt) -> bool:
             and isinstance(test.comparators[0], ast.Constant) and test.comparators[0].value == "__main__")
 
 
-def checkPythonFileInternal(path: Path, repositoryRoot: Path) -> list[str]:
-    """파일 하나를 파싱해 규칙을 적용합니다."""
-    relPath = path.relative_to(repositoryRoot).as_posix()
+def checkPythonFileInternal(relPath: str, text: str) -> list[str]:
+    """파일 하나(저장소 기준 경로 · 글)를 파싱해 규칙을 적용합니다."""
+    path = PurePosixPath(relPath)
     listViolation: list[str] = []
 
     stem = path.stem
@@ -335,8 +336,8 @@ def checkPythonFileInternal(path: Path, repositoryRoot: Path) -> list[str]:
         )
 
     try:
-        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
-    except (OSError, SyntaxError) as exception:
+        tree = ast.parse(text, filename=relPath)
+    except SyntaxError as exception:
         # 파싱이 안 되는 파이썬은 **위반이 아니라 오류다** — 조용히 넘기면 린트가 눈을 감는다.
         listViolation.append(f"{relPath}:1 파싱할 수 없습니다: {exception}")
         return listViolation
@@ -409,16 +410,17 @@ class CheckPythonConventionsGate(LintGate):
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
         self.addFilesArgument(parser)
 
-    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        # 저장소 전체를 본다. `Scripts/` 와 `Tools/` 만 훑으면 다른 데 놓인 파이썬이 조용히
-        # 규칙 밖에 있게 된다 — 이 저장소가 린트에서 반복해 배운 것이 "목록이 아니라 자리" 다.
-        listPath = self.selectTargetFiles(repositoryRoot, args.files, suffixes=(".py",))
+    # 저장소 전체를 본다. `Scripts/` 와 `Tools/` 만 훑으면 다른 데 놓인 파이썬이 조용히
+    # 규칙 밖에 있게 된다 — 이 저장소가 린트에서 반복해 배운 것이 "목록이 아니라 자리" 다.
+    sourceScanSets = (SourceScanSet("python", ("",), (".py",)),)
 
-        listViolation: list[str] = []
-        for path in listPath:
-            listViolation.extend(checkPythonFileInternal(path, repositoryRoot))
+    def checkSourceFile(self, source: SourceFile, args: argparse.Namespace) -> FileFindings | None:
+        if source.decodeError:
+            return FileFindings(error=source.decodeError)   # 못 읽은 파이썬은 위반이 아니라 오류다(종료 2)
+        return FileFindings(listViolation=checkPythonFileInternal(source.relative, source.text))
 
-        return GateResult(listViolation=listViolation, summary=f"{len(listPath)} python files scanned")
+    def describeSourceScan(self, result: SourceScanResult) -> str:
+        return f"{result.fileCount} python files scanned"
 
 
 main = CheckPythonConventionsGate.run
