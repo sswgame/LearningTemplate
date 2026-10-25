@@ -775,6 +775,7 @@ namespace sw
 
     void SkeletalAnimatorComponent::registerRootMotionModifier( IRootMotionModifier* pModifier )
     {
+        // 수정자는 캐릭터 하나에 붙은 컴포넌트가 하나씩 올린다(수 개 이하). 호출 순서가 등록 순서라 vector 를 두며 선형 중복 검사는 비용이 없다.
         if ( pModifier != nullptr && VectorUtil::contains( _listRootMotionModifier, pModifier ) == false )
             _listRootMotionModifier.push_back( pModifier );
     }

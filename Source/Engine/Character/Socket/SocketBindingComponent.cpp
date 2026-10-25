@@ -141,6 +141,7 @@ namespace sw
 
     bool SocketBindingComponent::computeSocketWorld( float4x4& outWorldTransform ) const
     {
+        // 본 포즈를 읽지 않는다 — 소켓 자리(`_socketInHolder`)는 고정 오프셋이고 holder 의 월드 변환만 곱한다. 게임 스레드 틱에서 불리므로 애니메이션 단계 순서와 무관하다.
         const GameObject* pHolder = resolveHolder();
         if ( pHolder == nullptr || pHolder->getPrimarySceneComponent() == nullptr )
             return false;

@@ -126,6 +126,7 @@ namespace sw
     void MotionWarpingComponent::warpRootMotion( const SkeletalAnimatorComponent& animator, RootMotionFrame& inoutFrame )
     {
         (void)animator;
+        // 불리는 때는 모든 단계가 끝난 뒤 게임 스레드의 루트 모션 적용이다. 읽는 것은 오브젝트 루트의 월드 변환과 클립 데이터뿐이고 어떤 유닛의 본 포즈도 읽지 않는다.
         const GameObject*     pOwner = getOwner();
         const SceneComponent* pRoot  = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
         const bool            bWarp  = pRoot != nullptr && inoutFrame._pClip != nullptr && inoutFrame._bClipWrapped == SW_FALSE;

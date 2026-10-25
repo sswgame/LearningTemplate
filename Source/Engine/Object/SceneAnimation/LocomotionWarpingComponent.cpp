@@ -166,6 +166,7 @@ namespace sw
     {
         if ( isOrientingPose() == false )
             return;
+        // 후처리 단계에서 읽는 것은 자기 유닛의 모델 공간(기본 포즈 단계가 끝난 값)뿐이라 위 유닛 의존 선언이 필요 없다. 쓴 로컬 포즈의 모델 공간은 후처리 끝에 유닛이 다시 구한다.
         const Skeleton&         skeleton  = unit.getSkeleton();
         const vector<float4x4>& listModel = unit.getModelSpaceTransforms();
         Pose&                   pose      = unit.getLocalPose();
