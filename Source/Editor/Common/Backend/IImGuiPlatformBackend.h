@@ -6,11 +6,14 @@
 #include "Core/Common/Types.h"
 #include "Core/Memory/Memory.h"
 
+struct ImGuiViewport;
+
 namespace sw
 {
     enum class RHIBackend : uint32;
 
     struct NativeWindowEvent;
+    struct X11SurfaceHandles;
 
     class IWindow;
 } // namespace sw
@@ -45,5 +48,13 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         /** @brief 현재 플랫폼용 ImGui 플랫폼 백엔드를 생성합니다. */
         static unique_ptr<IImGuiPlatformBackend> createPlatformBackend();
+
+        /**
+         * @brief 뷰포트 창이 X11 창이면 서버 연결(`Display*`)과 창 ID 를 @p outHandles 에 담고 true 입니다. 정의는 리눅스 X11 백엔드에 있습니다.
+         * @details 뷰포트의 `PlatformHandle` 은 플랫폼 백엔드마다 뜻이 다른 `void*` 라서(Wayland 는 `wl_display*`) 렌더러가 직접 `Display*` 로 읽으면 안 된다.
+         *          활성 플랫폼 백엔드가 X11 인지(`ImGuiIO::BackendPlatformName`)와 값이 있는지를 한 곳에서 확인한다 — `IWindow::tryGetX11Surface` 의 뷰포트판이다.
+         * @return X11 백엔드가 아니거나(Wayland 등) 연결 · 창 ID 가 비어 있으면 false 이며 @p outHandles 는 비어 있다.
+         */
+        [[nodiscard]] static bool tryGetViewportX11Surface( const ImGuiViewport* pViewport, X11SurfaceHandles& outHandles );
     };
 } // namespace sw::editor

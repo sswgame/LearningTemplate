@@ -192,7 +192,7 @@ SW_TEST_CASE( WindowTest, MinimizingDoesNotForgetTheWindowSize )
     const uint32 heightBefore = window->getHeight();
     SW_ASSERT_TRUE( widthBefore > 0 && heightBefore > 0 );
 
-    HWND hWnd = static_cast<HWND>( window->getNativeHandle() );
+    HWND hWnd = static_cast<HWND>( window->tryGetWin32Handle() );
     SW_ASSERT_TRUE( hWnd != nullptr );
 
     ShowWindow( hWnd, SW_MINIMIZE );

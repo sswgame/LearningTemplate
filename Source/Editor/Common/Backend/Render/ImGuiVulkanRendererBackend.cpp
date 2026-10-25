@@ -16,6 +16,10 @@
 #elif defined( SW_PLATFORM_LINUX )
     #include "Core/Common/X11Headers.h"
 
+    #include "Editor/Common/Backend/IImGuiPlatformBackend.h"
+
+    #include "Engine/Window/IWindow.h"
+
     #include <X11/Xlib-xcb.h>
     #include <vulkan/vulkan_xcb.h>
     #include <vulkan/vulkan_xlib.h>
@@ -127,8 +131,15 @@ namespace sw::editor
 #elif defined( SW_PLATFORM_LINUX )
                 const VkInstance             instance    = reinterpret_cast<VkInstance>( vulkanInstance );
                 const VkAllocationCallbacks* pAllocators = static_cast<const VkAllocationCallbacks*>( pVkAllocators );
-                Display*                     pDpy        = static_cast<Display*>( pVp->PlatformHandle );
-                const xcb_window_t           window      = static_cast<xcb_window_t>( reinterpret_cast<uintptr_t>( pVp->PlatformHandleRaw ) );
+                // 뷰포트 핸들을 Display* 로 읽는 것은 X11 플랫폼 백엔드일 때뿐이다(Wayland 의 PlatformHandle 은 wl_display* 라 읽으면 죽는다).
+                X11SurfaceHandles x11Surface;
+                if ( IImGuiPlatformBackend::tryGetViewportX11Surface( pVp, x11Surface ) == false )
+                {
+                    SW_LOG_ERROR( "The ImGui Vulkan viewport surface needs an X11 viewport window with a display connection (a Wayland viewport is not supported)" );
+                    return static_cast<int32>( VK_ERROR_INITIALIZATION_FAILED );
+                }
+                Display*           pDpy   = static_cast<Display*>( x11Surface._pDisplay );
+                const xcb_window_t window = static_cast<xcb_window_t>( x11Surface._window );
 
                 PFN_vkCreateXlibSurfaceKHR pCreateXlib = reinterpret_cast<PFN_vkCreateXlibSurfaceKHR>(
                     vkGetInstanceProcAddr( instance, "vkCreateXlibSurfaceKHR" ) );
@@ -143,7 +154,7 @@ namespace sw::editor
 
                 PFN_vkCreateXcbSurfaceKHR pCreateXcb = reinterpret_cast<PFN_vkCreateXcbSurfaceKHR>(
                     vkGetInstanceProcAddr( instance, "vkCreateXcbSurfaceKHR" ) );
-                if ( pCreateXcb == nullptr || pDpy == nullptr )
+                if ( pCreateXcb == nullptr )
                     return static_cast<int32>( VK_ERROR_EXTENSION_NOT_PRESENT );
 
                 xcb_connection_t* pConnection = XGetXCBConnection( pDpy );

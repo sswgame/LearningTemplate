@@ -16,6 +16,8 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler( HWND hWnd, UINT ms
 
 namespace sw::editor
 {
+    SW_LOG_CALLER( "ImGuiWin32" );
+
     class ImGuiWin32PlatformBackend : public IImGuiPlatformBackend
     {
     public:
@@ -24,8 +26,14 @@ namespace sw::editor
             if ( pWindow == nullptr )
                 return false;
 
-            HWND hWnd = static_cast<HWND>( pWindow->getNativeHandle() );
-            _hWnd     = hWnd;
+            // 이 백엔드는 Win32 전용이다 — Win32 창이 아니거나 핸들이 없으면 다른 창 시스템의 핸들을 넘기지 않고 오류로 멈춘다.
+            HWND hWnd = static_cast<HWND>( pWindow->tryGetWin32Handle() );
+            if ( hWnd == nullptr )
+            {
+                SW_LOG_ERROR( "The ImGui Win32 platform backend needs a Win32 window with a handle" );
+                return false;
+            }
+            _hWnd = hWnd;
             if ( backendType == RHIBackend::OpenGL )
                 return ImGui_ImplWin32_InitForOpenGL( hWnd );
             return ImGui_ImplWin32_Init( hWnd );

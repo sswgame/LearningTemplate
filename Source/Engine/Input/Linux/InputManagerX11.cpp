@@ -575,9 +575,10 @@ namespace sw
         IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
         if ( pWindow == nullptr )
             return;
-        if ( X11InputInternal::isWaylandWindow( pWindow ) )
+        WaylandWindow* pWaylandWindow = WaylandWindow::tryCast( pWindow );
+        if ( pWaylandWindow != nullptr )
         {
-            static_cast<WaylandWindow*>( pWindow )->setCursorVisible( bVisible ); // 종류를 위에서 확인했다
+            pWaylandWindow->setCursorVisible( bVisible );
             return;
         }
 

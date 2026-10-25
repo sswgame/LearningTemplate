@@ -4,6 +4,7 @@
 
 #if defined( SW_PLATFORM_LINUX )
     #include "Core/Common/X11Headers.h"
+    #include "Core/Container/StringUtil.h"
     #include "Core/Time/GameTimer.h"
 
     #include "Engine/Window/IWindow.h"
@@ -18,6 +19,9 @@ namespace sw::editor
     class ImGuiX11PlatformBackend : public IImGuiPlatformBackend
     {
     public:
+        /** @brief `ImGuiIO::BackendPlatformName` 에 거는 이름입니다. `tryGetViewportX11Surface` 가 활성 플랫폼 백엔드의 종류를 이 이름으로 알아본다. */
+        static constexpr const utf8* kPlatformName = "imgui_impl_x11";
+
         ImGuiX11PlatformBackend()
             : _pDisplay{ nullptr }
             , _mainWindow{ 0 }
@@ -50,7 +54,7 @@ namespace sw::editor
             ImGui::GetIO().BackendPlatformUserData = this; // 활성 백엔드의 주인은 ImGui 컨텍스트다(thunk 가 거기서 찾는다) - 프로세스 정적 포인터를 두지 않는다
 
             ImGuiIO& io            = ImGui::GetIO();
-            io.BackendPlatformName = "imgui_impl_x11";
+            io.BackendPlatformName = kPlatformName;
             io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;
             io.BackendFlags |= ImGuiBackendFlags_PlatformHasViewports;
 
@@ -478,6 +482,24 @@ namespace sw::editor
     unique_ptr<IImGuiPlatformBackend> IImGuiPlatformBackend::createPlatformBackend()
     {
         return make_unique<ImGuiX11PlatformBackend>();
+    }
+
+    bool IImGuiPlatformBackend::tryGetViewportX11Surface( const ImGuiViewport* pViewport, X11SurfaceHandles& outHandles )
+    {
+        outHandles = X11SurfaceHandles{};
+        if ( pViewport == nullptr || ImGui::GetCurrentContext() == nullptr )
+            return false;
+        // 뷰포트 핸들은 활성 플랫폼 백엔드가 채운 것이다 — X11 백엔드가 아니면 `PlatformHandle` 이 Display* 가 아니다(Wayland 는 wl_display*).
+        const utf8* pPlatformName = ImGui::GetIO().BackendPlatformName;
+        if ( pPlatformName == nullptr || StringUtil::equals( pPlatformName, ImGuiX11PlatformBackend::kPlatformName ) == false )
+            return false;
+        X11SurfaceHandles handles;
+        handles._pDisplay = pViewport->PlatformHandle;
+        handles._window   = static_cast<uint64>( reinterpret_cast<uintptr_t>( pViewport->PlatformHandleRaw ) );
+        if ( handles._pDisplay == nullptr || handles._window == 0 )
+            return false;
+        outHandles = handles;
+        return true;
     }
 } // namespace sw::editor
 #endif

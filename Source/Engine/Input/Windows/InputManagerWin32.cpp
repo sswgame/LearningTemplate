@@ -140,7 +140,7 @@ namespace sw
             IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
             if ( pWindow == nullptr )
                 return false;
-            HWND pHwnd = static_cast<HWND>( pWindow->getNativeHandle() );
+            HWND pHwnd = static_cast<HWND>( pWindow->tryGetWin32Handle() );
             if ( pHwnd == nullptr || ( lParam & GCS_COMPSTR ) == 0 )
                 return false;
             HIMC hImc = ImmGetContext( pHwnd );
@@ -178,7 +178,7 @@ namespace sw
             IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
             if ( pWindow == nullptr )
                 return;
-            HWND pHwnd = static_cast<HWND>( pWindow->getNativeHandle() );
+            HWND pHwnd = static_cast<HWND>( pWindow->tryGetWin32Handle() );
             if ( pHwnd != nullptr )
                 SetCapture( pHwnd );
         }
@@ -443,7 +443,7 @@ namespace sw
                 IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
                 if ( pWindow != nullptr )
                 {
-                    HWND pHwnd = static_cast<HWND>( pWindow->getNativeHandle() );
+                    HWND pHwnd = static_cast<HWND>( pWindow->tryGetWin32Handle() );
                     if ( pHwnd != nullptr )
                         ScreenToClient( pHwnd, &cursorPoint );
                 }
@@ -467,7 +467,7 @@ namespace sw
     {
         MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
         IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
-        HWND                 pHwnd       = pWindow != nullptr ? static_cast<HWND>( pWindow->getNativeHandle() ) : nullptr;
+        HWND                 pHwnd       = pWindow != nullptr ? static_cast<HWND>( pWindow->tryGetWin32Handle() ) : nullptr;
         if ( pHwnd == nullptr )
             return;
         const LPCWSTR pCursorName = getWin32CursorNameInternal( _cursorShape );
@@ -487,7 +487,7 @@ namespace sw
         if ( pWindow == nullptr )
             return;
 
-        HWND pHwnd = static_cast<HWND>( pWindow->getNativeHandle() );
+        HWND pHwnd = static_cast<HWND>( pWindow->tryGetWin32Handle() );
         // 전경이 아닌 창은 커서를 가두지 않는다. ClipCursor 는 화면 전체에 걸리기 때문이다.
         if ( pHwnd == nullptr || GetForegroundWindow() != pHwnd )
         {
@@ -515,7 +515,7 @@ namespace sw
         IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
         if ( pWindow == nullptr )
             return;
-        HWND pHwnd = static_cast<HWND>( pWindow->getNativeHandle() );
+        HWND pHwnd = static_cast<HWND>( pWindow->tryGetWin32Handle() );
         // 다른 창을 쓰는 동안 커서를 빼앗지 않는다.
         if ( pHwnd == nullptr || GetForegroundWindow() != pHwnd )
             return;
@@ -546,7 +546,7 @@ namespace sw
     {
         MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
         IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
-        HWND                 pHwnd       = pWindow != nullptr ? static_cast<HWND>( pWindow->getNativeHandle() ) : nullptr;
+        HWND                 pHwnd       = pWindow != nullptr ? static_cast<HWND>( pWindow->tryGetWin32Handle() ) : nullptr;
         if ( pHwnd == nullptr )
             return _bWindowFocused == SW_TRUE;
         return GetForegroundWindow() == pHwnd;

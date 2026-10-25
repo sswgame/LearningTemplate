@@ -90,6 +90,11 @@ namespace sw
         return true;
     }
 
+    void* IWindow::tryGetWin32Handle() const
+    {
+        return getSurfaceKind() == NativeSurfaceKind::Win32 ? getNativeHandle() : nullptr;
+    }
+
     bool IWindow::tryGetX11Surface( X11SurfaceHandles& outHandles ) const
     {
         outHandles = X11SurfaceHandles{};

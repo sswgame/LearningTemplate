@@ -306,7 +306,7 @@ SW_TEST_CASE( UiaClientTest, ClientReadsAndDrivesTheMenuThroughTheRealWindow )
     sw::atomic<bool>     bClientDone{ false };
     sw::thread           client( [&]()
     {
-        runUiaClient( static_cast<HWND>( window->getNativeHandle() ), pRecorder, &observed );
+        runUiaClient( static_cast<HWND>( window->tryGetWin32Handle() ), pRecorder, &observed );
         bClientDone.store( true );
     } );
 

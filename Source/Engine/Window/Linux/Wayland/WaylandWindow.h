@@ -22,6 +22,12 @@ namespace sw
         WaylandWindow();
         ~WaylandWindow() override;
 
+        /**
+         * @brief @p pWindow 가 Wayland 창이면 `WaylandWindow*`, 아니면(nullptr · X11 · Win32) nullptr 입니다.
+         * @details 엔진은 RTTI 를 끄므로 종류(`getSurfaceKind`) 확인과 캐스트를 이 함수 한 곳에 둔다(`X11Window::tryCast` 와 같은 모양) — 다른 창 시스템의 창을 `WaylandWindow*` 로 읽는 `static_cast` 를 바깥에 두지 않는다.
+         */
+        static WaylandWindow* tryCast( IWindow* pWindow ) { return pWindow != nullptr && pWindow->getSurfaceKind() == NativeSurfaceKind::Wayland ? static_cast<WaylandWindow*>( pWindow ) : nullptr; }
+
         /** @brief 컴포지터에 붙어 최상위 창을 만듭니다. 컴포지터가 없거나 xdg-shell · 합성기가 없으면 오류를 남기고 false 입니다. */
         bool initializeWindow( const utf8* pTitle, uint32 width, uint32 height ) override;
         void destroy() override;
