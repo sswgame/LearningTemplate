@@ -669,3 +669,20 @@ SW_TEST_CASE( FileTest, RegularFileExcludesDirectories )
     SW_EXPECT_TRUE( sw::FileUtil::exists( filePath ) );
     SW_EXPECT_TRUE( sw::FileUtil::exists( dirPath ) );
 }
+
+/**
+ * @brief [FileTest] findPathIgnoringCase 는 소문자 키를 실제 디스크 표기로 풀고, 없으면 빈 문자열이다
+ * @details 대소문자를 구분하는 파일 시스템(Linux)에서 소문자 id 로 기록한 입력을 다시 열려면 이 풀이가 필요하다.
+ */
+SW_TEST_CASE( FileTest, FindPathIgnoringCaseReturnsTheDiskSpelling )
+{
+    const sw::string root = test::makeTempDirectory( "SwIgnoreCaseRoot" );
+    SW_ASSERT_TRUE( sw::FileUtil::ensureDirectoryExists( root + "/MixedDir/Sub" ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( root + "/MixedDir/Sub/File.TXT", "x" ) );
+
+    const sw::string found = sw::FileUtil::findPathIgnoringCase( root, "mixeddir/sub/file.txt" );
+    SW_EXPECT_EQUAL( sw::FileUtil::normalizeSeparators( root ) + "/MixedDir/Sub/File.TXT", found );
+    SW_EXPECT_TRUE( sw::FileUtil::exists( found ) );
+    SW_EXPECT_TRUE( sw::FileUtil::findPathIgnoringCase( root, "mixeddir/sub/missing.txt" ).empty() );
+    SW_EXPECT_TRUE( sw::FileUtil::findPathIgnoringCase( root, "nodir/sub/file.txt" ).empty() );
+}

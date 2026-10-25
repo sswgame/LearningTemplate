@@ -396,6 +396,17 @@ namespace sw
                     rawKey = FileUtil::normalizeSeparators( raw ).substr( slash + 1 );
                 found = ResourcePathsInternal::tryUnderRoot( domainRoot, rawKey, folderName );
             }
+            // 붙인 디스크 도메인의 폴더는 대소문자가 섞일 수 있고, 기록해 둔 id(쿠킹 입력 등)는 소문자뿐이라 원래 표기가 없다 — 폴더를 훑어 소문자가 같은 항목으로 푼다.
+            // 리소스 트리의 도메인은 소문자 규칙이라 훑지 않는다(없는 파일을 묻는 호출이 훑기를 부르지 않게).
+            string mountedRoot;
+            string mountedKey;
+            if ( found.empty() && ResourcePathsInternal::findMountedDiskDomain( lowerFile, mountedRoot, mountedKey ) )
+            {
+                const string lowerKey = lowerFolder.empty() ? mountedKey : FileUtil::joinPath( lowerFolder, mountedKey );
+                const string hit      = FileUtil::findPathIgnoringCase( mountedRoot, lowerKey );
+                if ( hit.empty() == false && FileUtil::exists( hit ) )
+                    found = FileUtil::normalizeSeparators( hit );
+            }
 #endif
         }
         else
