@@ -30,7 +30,9 @@ namespace sw::editor
 
     void UserSettingsPanel::drawContent()
     {
-        UserSettingsManager* pSettings = editor::findSubsystem<UserSettingsManager>();
+        UserSettingsManager* pSettings = editor::findSubsystem<UserSettingsManager>(); // 필수 서비스: 없으면 버그
+        if ( pSettings == nullptr )
+            SW_LOG_ERROR( "[UserSettings] UserSettingsManager is missing - the settings are not drawn" );
         if ( pSettings == nullptr || pSettings->getCategories().empty() )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorSettings", "UserSettingsNotLoaded" ) );

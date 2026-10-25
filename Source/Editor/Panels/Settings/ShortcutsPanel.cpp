@@ -216,9 +216,8 @@ namespace sw::editor
 
     uint32 ShortcutsPanel::getPendingConflictCount()
     {
-        const EditorPanelManager* pManager = editor::findSubsystem<EditorPanelManager>();
-        const ShortcutsPanel*     pPanel   = pManager != nullptr ? pManager->findPanel<ShortcutsPanel>() : nullptr;
-        return ( pPanel != nullptr && pPanel->_conflictCommandID.empty() == false ) ? 1u : 0u; // 패널이 없으면 묻는 충돌도 없다
+        const ShortcutsPanel* pPanel = editor::getSubsystem<EditorPanelManager>().findPanel<ShortcutsPanel>(); // 필수 서비스: 없으면 버그(getSubsystem 이 멈춘다)
+        return ( pPanel != nullptr && pPanel->_conflictCommandID.empty() == false ) ? 1u : 0u;                 // 패널이 없으면 묻는 충돌도 없다
     }
 
     void ShortcutsPanel::finishCapture()

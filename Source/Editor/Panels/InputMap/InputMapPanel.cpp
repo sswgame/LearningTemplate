@@ -691,9 +691,10 @@ namespace sw::editor
 
     void InputMapPanel::drawDeviceMonitorTab()
     {
-        InputManager* pInput = findSubsystem<InputManager>();
+        InputManager* pInput = findSubsystem<InputManager>(); // 필수 서비스: 없으면 버그
         if ( pInput == nullptr )
         {
+            SW_LOG_ERROR( "[InputMap] InputManager is missing - the device monitor tab is not drawn" );
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorInputMap", "NoInputManager" ) );
             return;
         }
@@ -906,9 +907,10 @@ namespace sw::editor
 
     void InputMapPanel::drawInputSimulatorTab()
     {
-        InputManager* pInput = findSubsystem<InputManager>();
+        InputManager* pInput = findSubsystem<InputManager>(); // 필수 서비스: 없으면 버그
         if ( pInput == nullptr )
         {
+            SW_LOG_ERROR( "[InputMap] InputManager is missing - the input simulator tab is not drawn" );
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorInputMap", "NoInputManager" ) );
             return;
         }
@@ -972,7 +974,7 @@ namespace sw::editor
 
     void InputMapPanel::drawInputReplayTab()
     {
-        InputManager* pInput = findSubsystem<InputManager>();
+        InputManager* pInput = findSubsystem<InputManager>(); // 필수 서비스: 없으면 버그
 
         ImGui::Text( "Input Replay Recorder & Deterministic QA Playback" );
         ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorInputMap", "ReplayHint" ) );
@@ -1003,6 +1005,7 @@ namespace sw::editor
 
         if ( pInput == nullptr )
         {
+            SW_LOG_ERROR( "[InputMap] InputManager is missing - the replay controls are not drawn" );
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorInputMap", "NoInputManager" ) );
             return;
         }

@@ -104,8 +104,13 @@ namespace sw::editor
             /** @brief 리플렉션 enum 테이블이 있으면 열거자 콤보, 없으면 정수 드래그입니다. */
             static bool drawEnumWidget( GlobalVariableInfo& info )
             {
-                const int32     currentVal = info.getValueAsInt();
-                TypeRegistry*   pRegistry  = editor::findSubsystem<TypeRegistry>();
+                const int32   currentVal = info.getValueAsInt();
+                TypeRegistry* pRegistry  = editor::findSubsystem<TypeRegistry>(); // 필수 서비스: 없으면 버그
+                if ( pRegistry == nullptr )
+                {
+                    SW_LOG_ERROR( "[GlobalVariables] TypeRegistry is missing - the enum variable is drawn as an integer" );
+                    return drawInt32Widget( info );
+                }
                 const EnumInfo* pEnumInfo =
                     ( pRegistry != nullptr && info._enumType.empty() == false )
                         ? pRegistry->findEnum( hashed_string( info._enumType.c_str() ) )

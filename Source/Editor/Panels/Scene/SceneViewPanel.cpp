@@ -88,10 +88,12 @@ namespace sw::editor
     {
         if ( ImGui::BeginPopup( "##DebugDrawCategories" ) == false )
             return;
-        DebugDrawQueue* pQueue = findSubsystem<DebugDrawQueue>();
+        DebugDrawQueue* pQueue = findSubsystem<DebugDrawQueue>(); // 필수 서비스: 없으면 버그
         _listDebugCategory.clear();
         if ( pQueue != nullptr )
             pQueue->collectCategories( _listDebugCategory );
+        else
+            SW_LOG_ERROR( "[SceneView] DebugDrawQueue is missing - the debug draw categories are not listed" );
         if ( _listDebugCategory.empty() )
             ImGui::TextDisabled( "No debug draw yet." );
         for ( const hashed_string& category : _listDebugCategory )

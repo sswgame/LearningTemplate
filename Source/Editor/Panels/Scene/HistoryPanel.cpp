@@ -152,9 +152,10 @@ namespace sw::editor
 
     void HistoryPanel::drawContent()
     {
-        CommandStack* pCmdStack = editor::findSubsystem<CommandStack>();
+        CommandStack* pCmdStack = editor::findSubsystem<CommandStack>(); // 필수 서비스: 없으면 버그
         if ( pCmdStack == nullptr )
         {
+            SW_LOG_ERROR( "[History] CommandStack is missing - the history is not drawn" );
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorScene", "CommandStackUnavailable" ) );
             return;
         }

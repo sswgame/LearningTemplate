@@ -244,9 +244,11 @@ namespace sw::editor
             /** @brief 패널이 지금 연 문서가 `gv_editorProbeAsset`(리소스 id)이면 1 입니다 — 문서 교체와 미리보기 계산을 나눠 보는 길입니다. */
             [[nodiscard]] static bool readDocumentIsProbeAsset( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const MaterialPanel*      pPanel = findOpenPanel();
-                GlobalVariableManager*    pGvm   = editor::findSubsystem<GlobalVariableManager>();
-                const GlobalVariableInfo* pInfo  = pGvm != nullptr ? pGvm->findVariable( "gv_editorProbeAsset" ) : nullptr;
+                const MaterialPanel*   pPanel = findOpenPanel();
+                GlobalVariableManager* pGvm   = editor::findSubsystem<GlobalVariableManager>(); // 필수 서비스: 없으면 버그
+                if ( pGvm == nullptr )
+                    SW_LOG_ERROR( "[MaterialPanel] GlobalVariableManager is missing - the probe asset cannot be read" );
+                const GlobalVariableInfo* pInfo = pGvm != nullptr ? pGvm->findVariable( "gv_editorProbeAsset" ) : nullptr;
                 if ( pPanel == nullptr || pInfo == nullptr )
                     return false;
                 const string wanted = pInfo->getValueAsString();
@@ -508,10 +510,12 @@ namespace sw::editor
             _status = SW_LOCKEY( "EditorMaterial", "SaveFailedStatus" );
             return false;
         }
-        AssetManager*  pResources = editor::findSubsystem<AssetManager>();
-        EditorContext* pContext   = EditorContext::get();
+        AssetManager*  pResources = editor::findSubsystem<AssetManager>(); // 필수 서비스: 없으면 버그
+        EditorContext* pContext   = EditorContext::get();                  // 필수: 없으면 버그
         if ( pResources != nullptr && pContext != nullptr )
             pResources->getAssetCache<MaterialCache>().reload( getLoadedAssetPath(), pContext->getSubsystem<EditorRenderViews>().getRHIDevice() );
+        else
+            SW_LOG_ERROR( "[MaterialPanel] AssetManager or EditorContext is missing - the saved material is not reloaded" );
         applyLivePreview();
         _status = SW_LOCKEY( "EditorMaterial", "SavedStatus" );
         clearDocumentDirty();

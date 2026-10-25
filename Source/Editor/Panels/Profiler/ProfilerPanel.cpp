@@ -536,9 +536,10 @@ namespace sw::editor
 
     void ProfilerPanel::drawTimelineTab()
     {
-        FrameProfiler* pProfiler = editor::findSubsystem<FrameProfiler>();
+        FrameProfiler* pProfiler = editor::findSubsystem<FrameProfiler>(); // 필수 서비스: 없으면 버그
         if ( pProfiler == nullptr )
         {
+            SW_LOG_ERROR( "[Profiler] FrameProfiler is missing - the timeline tab is not drawn" );
             ImGui::TextDisabled( "Engine profiler is not available" );
             return;
         }
@@ -1184,6 +1185,7 @@ namespace sw::editor
 
     void ProfilerPanel::drawMemoryTab()
     {
+        // 없을 수 있다: Shipping 은 진단을 켠 때만 메모리 프로파일러를 만든다(DiagnosticsSubsystem) — 안내 문구가 맞다.
         MemoryProfiler* pProfiler = editor::findSubsystem<MemoryProfiler>();
         if ( pProfiler == nullptr )
         {
@@ -1234,9 +1236,10 @@ namespace sw::editor
 
     void ProfilerPanel::drawCallTreeTab()
     {
-        FrameProfiler* pProfiler = editor::findSubsystem<FrameProfiler>();
+        FrameProfiler* pProfiler = editor::findSubsystem<FrameProfiler>(); // 필수 서비스: 없으면 버그
         if ( pProfiler == nullptr )
         {
+            SW_LOG_ERROR( "[Profiler] FrameProfiler is missing - the call tree tab is not drawn" );
             ImGui::TextDisabled( "Engine profiler is not available" );
             return;
         }

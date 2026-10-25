@@ -150,9 +150,8 @@ namespace sw::editor
 
     uint32 PreferencesPanel::getVisibleSectionCount()
     {
-        const EditorPanelManager* pManager = editor::findSubsystem<EditorPanelManager>();
-        const PreferencesPanel*   pPanel   = pManager != nullptr ? pManager->findPanel<PreferencesPanel>() : nullptr;
-        return pPanel != nullptr ? pPanel->_visibleSectionCount : 0u; // 패널이 없으면 보인 섹션도 없다
+        const PreferencesPanel* pPanel = editor::getSubsystem<EditorPanelManager>().findPanel<PreferencesPanel>(); // 필수 서비스: 없으면 버그(getSubsystem 이 멈춘다)
+        return pPanel != nullptr ? pPanel->_visibleSectionCount : 0u;                                              // 패널이 없으면 보인 섹션도 없다
     }
 
     void PreferencesPanel::onPropertyEdited( const PropertyInfo& /*prop*/ )

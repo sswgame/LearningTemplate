@@ -542,7 +542,8 @@ namespace sw::editor
         if ( ContentBrowserPanelInternal::tryGetContentChangeSerial( serial ) )
         {
             EditorContext* pContext = EditorContext::get();
-            _referenceSearch.update( serial, pContext != nullptr ? pContext->findSubsystem<AssetHotReload>() : nullptr );
+            SW_ASSERT( pContext != nullptr ); // 번호를 꺼냈으니 컨텍스트가 있다. AssetHotReload 도 그 번호의 출처라 필수다
+            _referenceSearch.update( serial, &pContext->getSubsystem<AssetHotReload>() );
         }
     }
 

@@ -778,6 +778,17 @@ namespace sw::editor
             // ------------------------------------------------------------------------------
             // 프로브. `<Expect probe="Editor.*">` 로 읽는다
             // ------------------------------------------------------------------------------
+
+            /** @brief 프로브가 읽을 에디터 컨텍스트입니다. 프로브는 에디터가 도는 동안만 불리므로 없으면 버그입니다(필수 서비스).
+             *         프로브는 float 값만 돌려 사유를 줄 수 없어 이유를 로그로 남기고 nullptr 를 돌려줍니다. @p pProbe 는 `__func__` 입니다. */
+            [[nodiscard]] static EditorContext* getProbeContext( const utf8* pProbe )
+            {
+                EditorContext* pContext = EditorContext::get(); // 필수 서비스: 없으면 버그
+                if ( pContext == nullptr )
+                    SW_LOG_ERROR( "[Probe] EditorContext is missing - %# reads nothing", pProbe );
+                return pContext;
+            }
+
             [[nodiscard]] static bool readPlayState( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 outValue = static_cast<float64>( static_cast<uint32>( EditorPlaySession::getState() ) );
@@ -786,7 +797,7 @@ namespace sw::editor
 
             [[nodiscard]] static bool readSceneDirty( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                EditorContext* pContext = EditorContext::get();
+                EditorContext* pContext = getProbeContext( __func__ );
                 if ( pContext == nullptr )
                     return false;
                 outValue = pContext->getSubsystem<EditorWorkspace>().isSceneDirty() ? 1.0 : 0.0;
@@ -833,7 +844,7 @@ namespace sw::editor
 
             [[nodiscard]] static bool readSelectionCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                EditorContext* pContext = EditorContext::get();
+                EditorContext* pContext = getProbeContext( __func__ );
                 if ( pContext == nullptr )
                     return false;
                 outValue = static_cast<float64>( editor::getMainSceneSelection().getSelectedObjectCount() );
@@ -842,7 +853,7 @@ namespace sw::editor
 
             [[nodiscard]] static bool readHierarchyVisibleRoots( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                EditorContext*        pContext = EditorContext::get();
+                EditorContext*        pContext = getProbeContext( __func__ );
                 const HierarchyPanel* pHierarchy =
                     pContext != nullptr ? pContext->getSubsystem<EditorPanelManager>().findPanel<HierarchyPanel>() : nullptr;
                 if ( pHierarchy == nullptr )
@@ -876,7 +887,7 @@ namespace sw::editor
 
             [[nodiscard]] static bool readSelectedIsEditorCamera( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                EditorContext* pContext = EditorContext::get();
+                EditorContext* pContext = getProbeContext( __func__ );
                 if ( pContext == nullptr )
                     return false;
                 const GameObject*      pPrimary = editor::getMainSceneSelection().getPrimaryObject();
@@ -966,10 +977,12 @@ namespace sw::editor
                     listEntry.emplace_back( std::move( key ), HashUtil::computeStringHash64( state, false ) );
                 } );
                 std::sort( listEntry.begin(), listEntry.end() );
-                GlobalVariableManager*    pVariables = editor::findSubsystem<GlobalVariableManager>();
-                const GlobalVariableInfo* pDump      = pVariables != nullptr ? pVariables->findVariable( "gv_automationHashDump" ) : nullptr;
-                const bool                bDump      = pDump != nullptr && pDump->getValueAsInt() != 0;
-                uint64                    hash       = HashUtil::kFnvOffset64;
+                GlobalVariableManager* pVariables = editor::findSubsystem<GlobalVariableManager>(); // 필수 서비스: 없으면 버그
+                if ( pVariables == nullptr )
+                    SW_LOG_ERROR( "[Scenario] GlobalVariableManager is missing - the scene hash dump flag is not read" );
+                const GlobalVariableInfo* pDump = pVariables != nullptr ? pVariables->findVariable( "gv_automationHashDump" ) : nullptr;
+                const bool                bDump = pDump != nullptr && pDump->getValueAsInt() != 0;
+                uint64                    hash  = HashUtil::kFnvOffset64;
                 for ( const std::pair<string, uint64>& entry : listEntry )
                 {
                     hash = HashUtil::combine( hash, HashUtil::computeStringHash64( entry.first, false ) );
@@ -984,7 +997,7 @@ namespace sw::editor
             /** @brief 고른 오브젝트 이름(이름 순, 쉼표로 이음). 아무것도 고르지 않았으면 `(none)` 입니다. */
             static bool makeSelectedNames( string& outText )
             {
-                EditorContext* pContext = EditorContext::get();
+                EditorContext* pContext = getProbeContext( __func__ );
                 if ( pContext == nullptr )
                     return false;
                 vector<GameObject*> listSelected;
@@ -1209,7 +1222,7 @@ namespace sw::editor
             /** @brief 이번 UI 프레임에 셸이 호스트에 그 뷰의 렌더 타깃을 알렸는지 확인합니다. `ImGuiEditor::getSceneViewport` 와 `getGameViewport` 가 쓰는 판정과 같습니다. */
             [[nodiscard]] static bool readViewRequested( EditorViewKind kind, float64& outValue )
             {
-                const EditorContext* pContext = EditorContext::get();
+                const EditorContext* pContext = getProbeContext( __func__ );
                 if ( pContext == nullptr )
                     return false;
                 const bool bSceneDrawn = pContext->getSubsystem<EditorRenderViews>().wasViewDrawn( EditorViewKind::Scene );
@@ -1233,7 +1246,7 @@ namespace sw::editor
             /** @brief 이번 UI 프레임에 Scene 패널이 씬 뷰를 그렸는지 확인합니다. 앞 탭으로 보이는 경우입니다. 두 뷰가 모두 가려져도 `Editor.SceneViewRequested` 는 1 입니다. */
             [[nodiscard]] static bool readSceneViewDrawn( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const EditorContext* pContext = EditorContext::get();
+                const EditorContext* pContext = getProbeContext( __func__ );
                 if ( pContext == nullptr )
                     return false;
                 outValue = pContext->getSubsystem<EditorRenderViews>().wasViewDrawn( EditorViewKind::Scene ) ? 1.0 : 0.0;
@@ -1249,7 +1262,7 @@ namespace sw::editor
             /** @brief 씬 뷰가 `-gv_editorProbeVisualizer` 의 시각화를 켜 두었으면 1 입니다. 패널이나 그 id 의 시각화가 없으면 값을 내지 않습니다. */
             [[nodiscard]] static bool readVisualizerOn( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                EditorContext* pContext = EditorContext::get();
+                EditorContext* pContext = getProbeContext( __func__ );
                 if ( pContext == nullptr )
                     return false;
                 const SceneViewPanel*               pPanel        = pContext->getSubsystem<EditorPanelManager>().findPanel<SceneViewPanel>();
@@ -1266,7 +1279,7 @@ namespace sw::editor
              */
             [[nodiscard]] static bool readSelectedProperty( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                EditorContext* pContext = EditorContext::get();
+                EditorContext* pContext = getProbeContext( __func__ );
                 if ( pContext == nullptr )
                     return false;
                 GameObject*  pObject = editor::getMainSceneSelection().getPrimaryObject();
@@ -1293,7 +1306,7 @@ namespace sw::editor
             /** @brief 선택한 오브젝트 모두의 `-gv_editorProbeProperty` 값의 합입니다. 다중 편집이 모든 오브젝트에 적용되었는지 확인하는 데 씁니다. 숫자 프로퍼티만 읽습니다. */
             [[nodiscard]] static bool readSelectedPropertySum( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                EditorContext* pContext = EditorContext::get();
+                EditorContext* pContext = getProbeContext( __func__ );
                 const size_t   dot      = gv_editorProbeProperty.find( '.' );
                 if ( pContext == nullptr || dot == string::npos )
                     return false;
@@ -1324,7 +1337,7 @@ namespace sw::editor
             /** @brief 주 선택의 `-gv_editorProbeProperty` 커브(`FloatCurve`)의 키 수입니다. 커브가 아니면 값을 내지 않습니다. */
             [[nodiscard]] static bool readSelectedCurveKeyCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                EditorContext* pContext = EditorContext::get();
+                EditorContext* pContext = getProbeContext( __func__ );
                 const size_t   dot      = gv_editorProbeProperty.find( '.' );
                 if ( pContext == nullptr || dot == string::npos )
                     return false;
@@ -1404,7 +1417,7 @@ namespace sw::editor
             /** @brief 주 선택 오브젝트의 컴포넌트 수입니다. */
             [[nodiscard]] static bool readSelectedComponentCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                EditorContext* pContext = EditorContext::get();
+                EditorContext* pContext = getProbeContext( __func__ );
                 GameObject*    pObject  = pContext != nullptr ? editor::getMainSceneSelection().getPrimaryObject() : nullptr;
                 if ( pObject == nullptr )
                     return false;
@@ -1415,7 +1428,7 @@ namespace sw::editor
             /** @brief 씬 뷰 클라이언트를 반환합니다. 씬 뷰 패널이 없으면 nullptr 입니다. */
             static const EditorViewportClient* findSceneViewClient()
             {
-                EditorContext*        pContext = EditorContext::get();
+                EditorContext*        pContext = getProbeContext( __func__ );
                 const SceneViewPanel* pPanel   = pContext != nullptr ? pContext->getSubsystem<EditorPanelManager>().findPanel<SceneViewPanel>() : nullptr;
                 return pPanel != nullptr ? &pPanel->getViewportClient() : nullptr;
             }
@@ -1563,7 +1576,7 @@ namespace sw::editor
             /** @brief 기즈모 조작 모드입니다. 0 은 이동, 1 은 회전, 2 는 크기입니다. */
             [[nodiscard]] static bool readGizmoOperation( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                EditorContext* pContext = EditorContext::get();
+                EditorContext* pContext = getProbeContext( __func__ );
                 if ( pContext == nullptr )
                     return false;
                 outValue = static_cast<float64>( pContext->getSubsystem<EditorWorkspace>().getGizmoOperation() );
@@ -1580,7 +1593,7 @@ namespace sw::editor
             /** @brief 애니메이션 그래프 패널의 개수 하나를 읽습니다(@p count 는 패널의 개수 함수). 패널이 없으면 값을 내지 않습니다. */
             [[nodiscard]] static bool readAnimationGraphCount( uint32 ( AnimationGraphPanel::*count )() const, float64& outValue )
             {
-                EditorContext* pContext = EditorContext::get();
+                EditorContext* pContext = getProbeContext( __func__ );
                 if ( pContext == nullptr )
                     return false;
                 const AnimationGraphPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<AnimationGraphPanel>();
@@ -1613,7 +1626,7 @@ namespace sw::editor
             /** @brief `-gv_editorProbePanel` 의 패널이 열려 있으면 1 입니다. 그 id 의 패널이 없으면 값을 내지 않습니다. */
             [[nodiscard]] static bool readProbedPanelOpen( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                EditorContext* pContext = EditorContext::get();
+                EditorContext* pContext = getProbeContext( __func__ );
                 if ( pContext == nullptr )
                     return false;
                 const IEditorPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanelByID( gv_editorProbePanel );
@@ -1720,7 +1733,7 @@ namespace sw::editor
             /** @brief `-gv_editorProbePanel` 의 패널 문서에 저장하지 않은 편집이 있으면 1 입니다. 그 id 의 패널이 없으면 값을 내지 않습니다. */
             [[nodiscard]] static bool readProbedPanelDirty( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                EditorContext* pContext = EditorContext::get();
+                EditorContext* pContext = getProbeContext( __func__ );
                 if ( pContext == nullptr )
                     return false;
                 const IEditorPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanelByID( gv_editorProbePanel );
@@ -1836,7 +1849,7 @@ namespace sw::editor
             /** @brief Input Map Editor 값 하나를 읽습니다. 0 은 선택한 액션의 바인딩 수, 1 은 그 0번 바인딩의 발화 규칙, 2 는 충돌 수입니다. 패널이 없거나 선택한 액션이 없으면 값을 내지 않습니다. */
             [[nodiscard]] static bool readInputMapValue( uint32 which, float64& outValue )
             {
-                EditorContext*       pContext = EditorContext::get();
+                EditorContext*       pContext = getProbeContext( __func__ );
                 const InputMapPanel* pPanel   = pContext != nullptr ? pContext->getSubsystem<EditorPanelManager>().findPanel<InputMapPanel>() : nullptr;
                 if ( pPanel == nullptr )
                     return false;
@@ -1856,7 +1869,7 @@ namespace sw::editor
             /** @brief 프로파일러 패널 값 하나를 읽습니다. 열려 있지 않으면 값을 내지 않습니다. */
             [[nodiscard]] static bool readProfilerPanelValue( uint32 which, float64& outValue )
             {
-                EditorContext*       pContext = EditorContext::get();
+                EditorContext*       pContext = getProbeContext( __func__ );
                 const ProfilerPanel* pPanel   = pContext != nullptr ? pContext->getSubsystem<EditorPanelManager>().findPanel<ProfilerPanel>() : nullptr;
                 if ( pPanel == nullptr || pPanel->isOpen() == false )
                     return false;
@@ -1914,7 +1927,7 @@ namespace sw::editor
             /** @brief 렌더 타깃 창 값 하나를 읽습니다. 열려 있지 않으면 값을 내지 않으며, 픽셀 값은 읽은 적이 없으면 내지 않습니다. */
             [[nodiscard]] static bool readRenderTargetPanelValue( uint32 which, float64& outValue )
             {
-                EditorContext*           pContext = EditorContext::get();
+                EditorContext*           pContext = getProbeContext( __func__ );
                 const RenderTargetPanel* pPanel   = pContext != nullptr ? pContext->getSubsystem<EditorPanelManager>().findPanel<RenderTargetPanel>()
                                                                         : nullptr;
                 if ( pPanel == nullptr || pPanel->isOpen() == false )
@@ -1987,7 +2000,7 @@ namespace sw::editor
             /** @brief Sequencer 패널이 선택한 키 트랙의 키 프레임 수입니다. 패널이 닫혔거나 선택한 트랙이 없으면 값을 내지 않습니다. */
             [[nodiscard]] static bool readSequencerKeyFrameCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                EditorContext* pContext = EditorContext::get();
+                EditorContext* pContext = getProbeContext( __func__ );
                 if ( pContext == nullptr )
                     return false;
                 const SequencerPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<SequencerPanel>();
