@@ -85,7 +85,9 @@ namespace sw
     VulkanRHIRenderPassCache::VulkanRHIRenderPassCache()
         : _compositeMutex{}
         , _mapComposite{}
+        , _pipelineMutex{}
         , _mapPipelineRenderPass{}
+        , _recordMutex{}
         , _listRenderPassRecord{}
     {
     }
@@ -168,7 +170,8 @@ namespace sw
 
     VkRenderPass VulkanRHIRenderPassCache::ensurePipelineRenderPass( VkDevice device, const PipelineKey& key, const RenderPassSpec& spec )
     {
-        const auto existing = _mapPipelineRenderPass.find( key );
+        std::scoped_lock<mutex> lock{ _pipelineMutex };
+        const auto              existing = _mapPipelineRenderPass.find( key );
         if ( existing != _mapPipelineRenderPass.end() )
             return existing->second;
 
@@ -247,26 +250,24 @@ namespace sw
         RenderPassRecord record{};
         record._renderPass = renderPass;
         record._bOwned     = bOwned ? SW_TRUE : SW_FALSE;
+        std::scoped_lock<mutex> lock{ _recordMutex };
         _listRenderPassRecord.push_back( record );
         return _listRenderPassRecord.size();
     }
 
-    VulkanRHIRenderPassCache::RenderPassRecord* VulkanRHIRenderPassCache::resolveRenderPassRecord( RHIRenderPassHandle handle )
-    {
-        if ( handle == 0 || handle > _listRenderPassRecord.size() )
-            return nullptr;
-        return &_listRenderPassRecord[handle - 1];
-    }
-
     void VulkanRHIRenderPassCache::destroyRenderPassRecord( VkDevice device, RHIRenderPassHandle handle, VkRenderPass swapchainRenderPass )
     {
-        RenderPassRecord* pRecord = resolveRenderPassRecord( handle );
-        if ( pRecord == nullptr )
-            return;
-        const bool bOwnedRenderPass = pRecord->_bOwned != SW_FALSE && pRecord->_renderPass != VK_NULL_HANDLE && pRecord->_renderPass != swapchainRenderPass;
+        RenderPassRecord record{};
+        {
+            std::scoped_lock<mutex> lock{ _recordMutex };
+            if ( handle == 0 || handle > _listRenderPassRecord.size() )
+                return;
+            record                            = _listRenderPassRecord[handle - 1];
+            _listRenderPassRecord[handle - 1] = RenderPassRecord{};
+        }
+        const bool bOwnedRenderPass = record._bOwned != SW_FALSE && record._renderPass != VK_NULL_HANDLE && record._renderPass != swapchainRenderPass;
         if ( bOwnedRenderPass )
-            vkDestroyRenderPass( device, pRecord->_renderPass, nullptr );
-        *pRecord = RenderPassRecord{};
+            vkDestroyRenderPass( device, record._renderPass, nullptr );
     }
 
     void VulkanRHIRenderPassCache::destroyAll( VkDevice device, VkRenderPass swapchainRenderPass )
@@ -282,12 +283,16 @@ namespace sw
             }
             _mapComposite.clear();
         }
-        for ( auto& pair : _mapPipelineRenderPass )
         {
-            if ( pair.second != VK_NULL_HANDLE )
-                vkDestroyRenderPass( device, pair.second, nullptr );
+            std::scoped_lock<mutex> lock{ _pipelineMutex };
+            for ( auto& pair : _mapPipelineRenderPass )
+            {
+                if ( pair.second != VK_NULL_HANDLE )
+                    vkDestroyRenderPass( device, pair.second, nullptr );
+            }
+            _mapPipelineRenderPass.clear();
         }
-        _mapPipelineRenderPass.clear();
+        std::scoped_lock<mutex> lock{ _recordMutex };
         for ( RenderPassRecord& record : _listRenderPassRecord )
         {
             const bool bOwnedRenderPass = record._bOwned != SW_FALSE && record._renderPass != VK_NULL_HANDLE && record._renderPass != swapchainRenderPass;

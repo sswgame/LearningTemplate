@@ -324,26 +324,12 @@ namespace sw
         RHIStagingAllocateResult result = _readbackRing.allocate( sizeBytes, _transferSerials.getWatermark(), outSpan );
         if ( result == RHIStagingAllocateResult::Full && tryRetireFinishedTransfers() )
             result = _readbackRing.allocate( sizeBytes, _transferSerials.getWatermark(), outSpan );
-        switch ( result )
-        {
-            case RHIStagingAllocateResult::Allocated:
-            {
-                if ( outSpan._bSolo == SW_FALSE )
-                    return RHISubmitResult::Accepted;
-                return attachSoloBuffer( _readbackRing, _readbackSolo, outSpan, GL_MAP_READ_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT, "submitTextureReadback" );
-            }
-            case RHIStagingAllocateResult::Full:
-            {
-                return RHISubmitResult::Busy; // 앞선 되읽기를 가져가거나 버리면 빈다 — 호출자가 다시 제출한다(계약 2)
-            }
-            case RHIStagingAllocateResult::TooLarge:
-            {
-                SW_LOG_ERROR( "submitTextureReadback: %# bytes exceed the %#-byte readback ring and the %#-byte single readback limit; raise gv_rhiStagingSingleMaxMegabytes to read it",
-                              sizeBytes, _readbackRing.getCapacityBytes(), _readbackRing.getSoloMaxBytes() );
-                return RHISubmitResult::Rejected;
-            }
-        }
-        return RHISubmitResult::Rejected;
+        // 결과 옮기기 · 못 받은 구간 놓기 · 이유 로그는 업로드 쪽과 같은 한 곳이다 — 잃은 장치의 Full 은 Rejected 다. Busy 는 앞선 되읽기를 가져가거나 버리면 비므로 호출자가 다시 제출한다(계약 2).
+        const utf8* const     pCaller      = "submitTextureReadback";
+        const RHISubmitResult submitResult = RHIStagingRingUtil::settleAllocation( _readbackRing, _transferSerials, result, sizeBytes, "GL", pCaller, outSpan );
+        if ( submitResult != RHISubmitResult::Accepted || outSpan._bSolo == SW_FALSE )
+            return submitResult;
+        return attachSoloBuffer( _readbackRing, _readbackSolo, outSpan, GL_MAP_READ_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT, pCaller );
     }
 
     void OpenGLRHIDevice::retireFrameOnGPU()
