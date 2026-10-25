@@ -27,6 +27,7 @@
 #include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
+#include "Engine/Automation/AutomationScenario.h"
 #include "Engine/Automation/AutomationScratch.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Object/Component/CameraComponent.h"
@@ -199,7 +200,7 @@ namespace sw::editor
                 string     absolutePath;
                 string     automationFolder;
                 const bool bUnresolvedPaths = path.empty() || FileUtil::makeAbsolutePath( path, absolutePath ) == false ||
-                                              FileUtil::makeAbsolutePath( "Saved/Automation", automationFolder ) == false;
+                                              FileUtil::makeAbsolutePath( kAutomationOutputFolder, automationFolder ) == false;
                 if ( bUnresolvedPaths )
                 {
                     outReply = "could not resolve '" + path + "'";

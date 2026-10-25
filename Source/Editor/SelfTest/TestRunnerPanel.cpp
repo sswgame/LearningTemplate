@@ -2,6 +2,7 @@
 
 #include "Editor/SelfTest/TestRunnerPanel.h"
 
+#include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/String/fixed_string.h"
@@ -15,6 +16,7 @@
 #include "Editor/SelfTest/EditorSelfTest.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Automation/AutomationScenario.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Renderer/Capture/BugItReport.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
@@ -254,11 +256,15 @@ namespace sw::editor
         {
             const string& scenarioPath = _listScenarioPath[_selectedScenarioIndex];
             const bool    bEditor      = ( "/" + scenarioPath ).find( TestRunnerPanelInternal::kEditorScenarioFolder ) != string::npos;
-            const string  stateDir     = FileUtil::joinPath( TestRunnerPanelInternal::getBinDirectory(), "Saved/Automation/TestRunnerEditorState" );
+            const string  stateDir     = FileUtil::joinPath( TestRunnerPanelInternal::getBinDirectory(), string( kAutomationOutputFolder ) + "/TestRunnerEditorState" );
             string        command      = "\"" + FileUtil::getExecutablePath() + "\"" + TestRunnerPanelInternal::makeBackendArgument();
             if ( bEditor )
-                command += " -EnableEditor -gv_editorStateDir=\"" + stateDir + "\"";
-            command += " -scenario=" + scenarioPath + " -unattended";
+            {
+                command += " -" + string( getCommandLineArgumentSpelling( CommandLineArgument::ENABLE_EDITOR ) );
+                command += string( " -" ) + kAutomationEditorStateVariable + "=\"" + stateDir + "\"";
+            }
+            command += " -" + string( getCommandLineArgumentSpelling( CommandLineArgument::SCENARIO ) ) + "=" + scenarioPath;
+            command += " -" + string( getCommandLineArgumentSpelling( CommandLineArgument::UNATTENDED ) );
             if ( _pJob->request( command, TestRunnerPanelInternal::getBinDirectory() ) )
             {
                 _externalRunKind = ExternalRunKind::Scenario;

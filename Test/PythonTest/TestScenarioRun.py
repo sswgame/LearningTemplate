@@ -320,8 +320,14 @@ class ArgumentVocabularyTest(unittest.TestCase):
             text = (getProjectRoot() / relPath).read_text(encoding="utf-8").replace('"-game=HarvestValley', "")
             for literal in ('"-unattended', '"-scenario=', '"-scenario-report=', '"-EnableEditor', '"-gv_editorStateDir='):
                 self.assertNotIn(literal, text, f"{relPath}: {literal}")
-        for relPath in ("Source/Engine/Automation/AutomationRunner.cpp", "Source/Engine/Automation/ScenarioRecorder.cpp", "Test/AppTest/AppTestUtil.cpp"):
+        listEditorFile = ("Source/Editor/Common/Commands/Dev/EditorDevCommands.cpp", "Source/Editor/Common/Commands/Play/EditorScenarioRecordCommands.cpp",
+                          "Source/Editor/SelfTest/TestRunnerPanel.cpp")
+        for relPath in ("Source/Engine/Automation/AutomationRunner.cpp", "Source/Engine/Automation/ScenarioRecorder.cpp", "Test/AppTest/AppTestUtil.cpp", *listEditorFile):
             self.assertNotIn('"Saved/Automation', (getProjectRoot() / relPath).read_text(encoding="utf-8"), relPath)
+        # 에디터가 App 을 띄우는 자리(`TestRunnerPanel`)는 앞에 공백이 든 조각(`" -scenario=`)으로 적었으므로 주석이 아닌 줄에서 인자 글 자체를 찾는다.
+        listCodeLine = [line for line in (getProjectRoot() / listEditorFile[2]).read_text(encoding="utf-8").splitlines() if not line.lstrip().startswith(("//", "*", "/*"))]
+        for literal in ("-unattended", "-scenario=", "-scenario-report=", "-EnableEditor", "-gv_editorStateDir="):
+            self.assertEqual([], [line for line in listCodeLine if f'"{literal}' in line or f'" {literal}' in line], literal)   # 인자 조각으로 시작하는 글(설명 글은 제외)
 
     def testScenarioStemFollowsTheEngineRule(self) -> None:
         """엔진 `getAutomationScenarioStem`(마지막 `/` 뒤 파일 이름의 첫 `.` 앞)과 같은 값을 준다."""
