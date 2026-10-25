@@ -14,6 +14,7 @@
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/Graphics/2D/Render2DSettingsSubsystem.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
@@ -460,8 +461,9 @@ namespace sw
 
     span<const utf8* const> HeadlessSubsystem::getSubsystemDependencies() const
     {
-        static constexpr const utf8* kArrDependency[] = { EngineDefaultAssetsSubsystem::kSubsystemName, ModuleTypesSubsystem::kSubsystemName, SceneManager::kSubsystemName,
-                                                          ShaderCache::kSubsystemName };
+        // 2D 렌더 설정은 씬 쿠킹의 컴포넌트 검증(정렬 레이어 이름)이 읽는다.
+        static constexpr const utf8* kArrDependency[] = { EngineDefaultAssetsSubsystem::kSubsystemName, ModuleTypesSubsystem::kSubsystemName, Render2DSettingsSubsystem::kSubsystemName,
+                                                          SceneManager::kSubsystemName, ShaderCache::kSubsystemName };
         return kArrDependency;
     }
 

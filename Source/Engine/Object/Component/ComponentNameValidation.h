@@ -7,7 +7,7 @@
  *
  *          구현은 표를 가진 기능 폴더에 나눠 둔다(`Physics/` · `2D/` · `Navigation/` 의 `ComponentNameValidation*.cpp`) — 코어는 그 폴더를 include 하지 않는다.
  *          표의 출처는 런타임과 같다. 물리는 초기화된 `PhysicsSystem` 의 설정, 없으면(도구 · 서비스 없는 테스트) `PhysicsSystem::kSettingsPath` 를 한 번 읽은 것,
- *          정렬 레이어는 `Render2DSettings::getActive()`, 내비 영역은 `NavMeshSettings::kResourcePath` 를 한 번 읽은 것(`SceneNavigation::getSettings` 와 같은 파일)이다.
+ *          정렬 레이어는 서비스 표의 `engine::getSubsystem<Render2DSettings>()`(서비스가 없으면 비어 있지 않은 이름을 검증하지 못하고 멈춘다), 내비 영역은 `NavMeshSettings::kResourcePath` 를 한 번 읽은 것(`SceneNavigation::getSettings` 와 같은 파일)이다.
  *          주의: 한 번 읽은 파일 표는 프로세스가 끝날 때까지 그대로다 — 설정 파일을 고친 뒤의 검증은 엔진을 다시 띄워야 새 표를 본다.
  */
 #pragma once

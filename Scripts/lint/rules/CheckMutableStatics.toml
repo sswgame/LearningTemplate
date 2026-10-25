@@ -113,7 +113,6 @@
 # Source/Engine/Environment — 이전 대기
 "Source/Engine/Environment/Terrain/TerrainComponent.cpp" = 1
 # Source/Engine/Graphics — 이전 대기
-"Source/Engine/Graphics/2D/Render2DSettings.cpp" = 2
 "Source/Engine/Graphics/2D/SpriteMeshBuilder.cpp" = 1
 "Source/Engine/Graphics/Canvas/DebugDrawCanvas.cpp" = 1
 "Source/Engine/Graphics/Material/MaterialPermutation.cpp" = 1

@@ -46,4 +46,3 @@ GameInstanceBase = "Stateless"      # 활성 창구 아님 — findActiveObjectM
 TradeStoreLogic = "Stateless"       # 활성 창구 아님 — getActiveTable 은 "활성 거래 링크" 저장소 표의 이름 상수다(정적 사본이 아니다)
 EditorThemeUtil = "PendingScopeMove" # 에디터가 현재 테마 사본을 정적으로 든다(`getActiveTheme`). 에디터 컨텍스트 소유로 옮기는 일은 에디터 작업자의 몫
 GameConfig = "PendingScopeMove"     # 값은 이미 ConfigManager 소유다. 남은 것은 `getActive()` 전달 창구(서비스 표의 값을 돌려준다) - 에디터 · 게임 프레임워크 호출처가 `editor::` · `game::` 창구로 옮기면 지운다
-Render2DSettings = "PendingScopeMove" # 같은 이전의 셋째 단위

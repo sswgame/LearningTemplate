@@ -6,6 +6,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Common/EngineSubsystemHost.h"
+#include "Engine/Graphics/2D/Render2DSettingsSubsystem.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
@@ -53,8 +54,9 @@ namespace sw
 
     span<const utf8* const> FrameRendererSubsystem::getSubsystemDependencies() const
     {
-        // 렌더 파이프라인은 팩 설정(`<Engine _renderPipeline>`)이 고를 수 있다.
-        static constexpr const utf8* kArrDependency[] = { PackEngineSettingsSubsystem::kSubsystemName, RHISubsystem::kSubsystemName, TaskManager::kSubsystemName };
+        // 렌더 파이프라인은 팩 설정(`<Engine _renderPipeline>`)이 고를 수 있다. 2D 정렬 레이어 표는 엔진 파일이고 기동에서 Render2DSettings 가 읽는다.
+        static constexpr const utf8* kArrDependency[] = { PackEngineSettingsSubsystem::kSubsystemName, Render2DSettingsSubsystem::kSubsystemName, RHISubsystem::kSubsystemName,
+                                                          TaskManager::kSubsystemName };
         return kArrDependency;
     }
 

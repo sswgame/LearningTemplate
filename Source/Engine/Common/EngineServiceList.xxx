@@ -78,6 +78,9 @@ SW_ENGINE_SERVICE_CONST( struct, PackEngineSettings, Required, HostOnly )
 // 다시 읽기는 같은 자리에서 일어나 이 칸의 주소가 바뀌지 않는다. 테스트는 `ScopedEngineServiceOverride` 로 다른 값을 걸어 본다.
 SW_ENGINE_SERVICE_CONST( struct, EngineConfig, Required, HostOnly )
 SW_ENGINE_SERVICE_CONST( struct, GameConfig, Required, GameVisible )
+// 2D 렌더 설정(정렬 레이어 · 투명 정렬 축, 읽기 전용) - 소유자는 서브시스템 Render2DSettings 다. 렌더러 · 2D 컴포넌트 검증 · 서버가 같이 읽는다
+// (정적 활성본 `Render2DSettings::getActive()` 를 대신한다). 렌더러 폴더를 짓지 않는 Server 타깃에도 선다.
+SW_ENGINE_SERVICE_CONST( class, Render2DSettings, Required, HostOnly )
 
 SW_ENGINE_SERVICE_OPT( class, MemoryProfiler, HostOnly )
 // 진단 도구 둘 — 에셋 로드 기록부와 상태 해시 이력. 엔진 루프와 테스트 하네스가 서비스 범위에 넣고, 엔진 범위를 세우지 않는 호스트(도구)는 없다(그때 기록은 꺼진 것과 같다).

@@ -923,7 +923,7 @@ namespace sw
         // 키를 한 번만 구한다. 비교 함수 안에서 거리를 다시 구하면 원소마다 raw 를 무작위로 다시 읽는다(GPUTransparentSorter.h).
         // 정렬 레이어 키 0은 "기본" 표시다. 테이블의 기본 키로 바꿔야 Default 레이어의 스프라이트와 3D 투명 물체가 한 줄에 선다.
         // 키는 `_listScratchTransparentIdx` 의 지금 순서(나누기를 다시 하지 않은 프레임이면 지난 정렬 결과)로 채운다. 정렬이 그 순서에서 출발한다.
-        const uint32                   defaultSortKey   = Render2DSettings::getActive().getDefaultSortKey();
+        const uint32                   defaultSortKey   = engine::getSubsystem<Render2DSettings>().getDefaultSortKey();
         const size_t                   transparentCount = _listScratchTransparentIdx.size();
         const float3&                  sortAxis         = _transparentSorter.getAxis();
         vector<GPUTransparentSortKey>& listSortKey      = _transparentSorter.resizeKeys( transparentCount );
@@ -1050,7 +1050,7 @@ namespace sw
         // 메시 투명 후보와 같은 규칙이다. 깊이는 방출기 위치(행렬의 이동)로 측정한다 — 입자 단위 정렬은 하지 않는다(방출기 하나 = 후보 하나).
         // 레이어는 기본 키다(방출기에는 정렬 레이어가 없다).
         const vector<GPUParticleBatch>& listBatch      = _snapshot._listParticleBatch;
-        const uint32                    defaultSortKey = Render2DSettings::getActive().getDefaultSortKey();
+        const uint32                    defaultSortKey = engine::getSubsystem<Render2DSettings>().getDefaultSortKey();
         outListKey.resize( listBatch.size() );
         for ( uint32 batchIndex = 0; batchIndex < static_cast<uint32>( listBatch.size() ); ++batchIndex )
         {
@@ -1070,7 +1070,7 @@ namespace sw
         const uint32 instanceCount  = static_cast<uint32>( pInstance->size() );
         const uint32 tailBase       = MathUtil::min( _snapshot.getOpaqueInstanceCount(), instanceCount );
         const uint32 tailCount      = MathUtil::min( instanceCount - tailBase, static_cast<uint32>( _listBuiltTransparentIdx.size() ) );
-        const uint32 defaultSortKey = Render2DSettings::getActive().getDefaultSortKey();
+        const uint32 defaultSortKey = engine::getSubsystem<Render2DSettings>().getDefaultSortKey();
         outListKey.resize( listBatch.size() );
         for ( uint32 batchIndex = 0; batchIndex < static_cast<uint32>( listBatch.size() ); ++batchIndex )
         {
@@ -1114,7 +1114,7 @@ namespace sw
             return;
         SW_PROFILE_SCOPE( "GT.GPUScene.build.viewTransparentOrder" );
 
-        const uint32 defaultSortKey = Render2DSettings::getActive().getDefaultSortKey();
+        const uint32 defaultSortKey = engine::getSubsystem<Render2DSettings>().getDefaultSortKey();
         for ( const RenderViewRequest& view : listView )
         {
             if ( view._bRender == SW_FALSE )

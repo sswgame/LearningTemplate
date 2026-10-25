@@ -5,6 +5,7 @@
 #include "Core/Common/HashUtil.h"
 #include "Core/Memory/LifetimeScope.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Resource/Cache/BuiltInAssetCache.h"
@@ -93,7 +94,7 @@ namespace sw
 
     uint32 SpriteRenderUtil::resolveSortKey( const hashed_string& layerName, int32 orderInLayer, string_view ownerLabel )
     {
-        const Render2DSettings& settings = Render2DSettings::getActive();
+        const Render2DSettings& settings = engine::getSubsystem<Render2DSettings>();
         uint32                  sortKey  = 0;
         if ( settings.resolveSortKey( layerName, orderInLayer, sortKey ) == false )
             SW_LOG_ERROR( "'%#': unknown sorting layer '%#' - drawn in 'Default' (layers are listed in render2d.xml)", ownerLabel, layerName.c_str() );

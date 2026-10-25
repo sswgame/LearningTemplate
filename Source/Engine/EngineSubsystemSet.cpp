@@ -22,6 +22,8 @@
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Config/PackEngineSettings.h"
+#include "Engine/Graphics/2D/Render2DSettings.h"
+#include "Engine/Graphics/2D/Render2DSettingsSubsystem.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"
 #include "Engine/Graphics/Debug/VisualLogger.h"
@@ -207,6 +209,9 @@ namespace sw::engine
         // 활성 팩의 `<Engine>` 요소(창 제목 · 스키마 · UI 규칙) — 팩을 마운트한 뒤에 읽는다. 창 · 사용자 설정 · UI 가 이 뒤에 선다.
         const PackEngineSettingsSubsystem& packSettings = startup.addSubsystem( sw::make_unique<PackEngineSettingsSubsystem>() );
         (void)startup.bind( &packSettings.getSettings() ); // 새 범위 — 겹치지 않는다
+        // 2D 렌더 설정(정렬 레이어 · 투명 정렬 축)은 엔진 파일이다 - 마운트한 뒤에 읽는다. 2D 컴포넌트를 읽는 단계(헤드리스 쿠킹 · 렌더러)가 이 뒤에 선다.
+        const Render2DSettingsSubsystem& render2DSettings = startup.addSubsystem( sw::make_unique<Render2DSettingsSubsystem>() );
+        (void)startup.bind( &render2DSettings.getSettings() ); // 새 범위 — 겹치지 않는다
         {
             SW_MEMORY_SCOPE( Audio );
             // 전용 서버는 장치를 열지 않는다 — 씬 컴포넌트가 드는 오디오 서비스는 그대로 있고 소리 요청을 받아 버린다.

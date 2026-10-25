@@ -38,7 +38,7 @@ namespace sw
         static IAssetCache& getTextureInstanceCache();
 
         /**
-         * @brief 정렬 레이어 이름 · 레이어 안 순서를 활성 표(`Render2DSettings::getActive`)로 정렬 키로 풉니다.
+         * @brief 정렬 레이어 이름 · 레이어 안 순서를 서비스 표의 2D 렌더 설정(`engine::getSubsystem<Render2DSettings>()`)으로 정렬 키로 풉니다.
          * @details 모르는 레이어 이름은 데이터 오류라 @p ownerLabel 과 함께 오류를 남기고 `Default` 레이어로 그립니다.
          */
         static uint32 resolveSortKey( const hashed_string& layerName, int32 orderInLayer, string_view ownerLabel );

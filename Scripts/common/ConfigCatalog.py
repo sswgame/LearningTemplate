@@ -121,7 +121,7 @@ kListConfigFile: tuple[ConfigFileEntry, ...] = (
         note="Live Link Face 패킷의 판 번호와 채널 순서 — 앱 판이 바뀌면 이 파일을 고친다"),
     ConfigFileEntry(
         page="", pathPattern="Resource/engine/data/render2d.xml", layer=kLayerEngineDefault, fileFormat="xml",
-        reader="`Render2DSettings::getActive` (손으로 읽음 — 모르는 요소 · 속성은 오류)", readWhen="처음 쓸 때 · `reloadActive`",
+        reader="`Render2DSettingsSubsystem` (손으로 읽음 — 모르는 요소 · 속성은 오류)", readWhen="기동 · `reload`",
         shipping="엔진 팩에 실림", bCommitted=True, ownerDoc="Source/Engine/Graphics/2D/Render2DSettings.h",
         note="활성 게임 팩의 `data/render2d.xml` 이 있으면 통째로 대신한다"),
     ConfigFileEntry(
@@ -169,7 +169,7 @@ kListConfigFile: tuple[ConfigFileEntry, ...] = (
         note="`gamesettings.xml` 의 `<Engine>` 요소 하나(XML 속성 키) — 창 제목 · 렌더 파이프라인 · 사용자 설정과 텔레메트리 스키마 · UI 규칙. `GameSettings` 는 이 요소를 건너뛴다"),
     ConfigFileEntry(
         page="", pathPattern="Resource/game/*/data/render2d.xml", layer=kLayerPackData, fileFormat="xml",
-        reader="`Render2DSettings::getActive`", readWhen="처음 쓸 때 · `reloadActive`", shipping="게임 팩에 실림", bCommitted=True,
+        reader="`Render2DSettingsSubsystem`", readWhen="기동 · `reload`", shipping="게임 팩에 실림", bCommitted=True,
         ownerDoc="Source/Engine/Graphics/2D/Render2DSettings.h", bOptional=True, note="엔진 기본 `render2d.xml` 을 통째로 대신한다"),
     ConfigFileEntry(
         page="UserSettings", pathPattern="Resource/game/*/data/*.settings.xml", layer=kLayerPackData, fileFormat="xml",
