@@ -37,7 +37,8 @@ kRecursiveDeletePattern = re.compile(
     r"(?i)(\bRemove-Item\b.*-Recurse|\brm\b\s+-[a-z]*r|\brmdir\b.*\s/s\b|\brd\b.*\s/s\b|\bgit\s+worktree\s+remove\b|\bshutil\.rmtree\b)")
 kNoVerifyPattern = re.compile(r"(?i)\bgit\b[^\n;&|]*\bcommit\b[^\n;&|]*--no-verify\b")
 kInterpreterHeredocPattern = re.compile(r"(?i)\b(?:python3?|py)(?:\s+-3)?(?:\s+-)?\s*<<")
-kRootFindPattern = re.compile(r"(?i)(?:^|[;&|(]|&&)\s*find\s+/(?:\s|$)")
+kShellWrapperPattern = re.compile(r"(?i)(?:\b(?:bash|sh|zsh|dash|pwsh|powershell(?:\.exe)?)\b[^\n|;&]*\s-(?:\w*c|Command)\b|\beval\b|\bcmd(?:\.exe)?\s+/c\b)")
+kRootFindPattern =re.compile(r"(?i)(?:^|[;&|('\"]|&&)\s*find\s+/(?:\s|$)")
 kQuotedPattern = re.compile(r"\"[^\"\n]*\"|'[^'\n]*'")
 kWindowsPathPattern = re.compile(r"[A-Za-z]:[\\/][^\s\"'|;&<>]*")
 kMsysPathPattern = re.compile(r"(?<![\w.])/([a-zA-Z])/([^\s\"'|;&<>]*)")
@@ -106,14 +107,18 @@ def checkNoVerify(command: str) -> str:
 
 def checkInterpreterHeredoc(command: str) -> str:
     """파이썬 표준 입력 heredoc 으로 파일을 고치려 하면 막을 이유를 돌려준다(EditingTraps). 본문이 비거나 파이프가 끊기면 인터프리터가 CPU 를 돌며 남는다."""
-    if kInterpreterHeredocPattern.search(stripQuoted(command)):
+    # 셸을 다시 부르는 명령(`bash -c "..."` · `eval '...'`)은 heredoc 이 따옴표 안에 숨으므로 원문 전체를 본다.
+    # 그 밖에는 따옴표 안 글(커밋 메시지 따위)을 지워서 본다.
+    scanned = command if kShellWrapperPattern.search(stripQuoted(command)) else stripQuoted(command)
+    if kInterpreterHeredocPattern.search(scanned):
         return ("`python - <<EOF` · `py -3 - <<EOF` 같은 인터프리터 heredoc 은 금지다(docs/agents/EditingTraps.md). "
                 "파일 편집은 Edit 도구로 하고, 스크립트가 필요하면 파일로 써서 `py -3 <파일>` 로 돌린다.")
     return ""
 
 
 def checkRootFind(command: str) -> str:
-    if kRootFindPattern.search(stripQuoted(command)):
+    scanned = command if kShellWrapperPattern.search(stripQuoted(command)) else stripQuoted(command)
+    if kRootFindPattern.search(scanned):
         return "`find /` 는 디스크 전체를 훑어 CPU 를 오래 쓴다. 저장소 안이면 Grep · Glob 도구나 `find <폴더>` 로 범위를 좁힌다."
     return ""
 
