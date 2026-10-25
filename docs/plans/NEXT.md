@@ -215,9 +215,10 @@
 **같은 결함 후보로 남긴 것(후속 작업자 후보)**
 - `NetStatsReport` 의 `net.stats` 줄 길이 상한, Sync 탭 클라이언트 질의 시간 초과(오류 응답을 영원히 기다린다).
 - 프리팹 참조 검사: 프리팹 파일 XML 안 덮어쓰기 값 · 씬 수준 데이터(참조를 담을 자리가 아직 없어 하지 않음).
-- 에디터 `EditorContext::get()` 가 null 을 허용해 252 곳 중 그리기 경로가 얼마인지 svcnullJ 가 센다. 그 수로 `get()` → `find()`/`require()` 이름 분리를 판단한다. `getSubsystem` 은 Release 에서 단언이 빠져 null 역참조가 된다(폴백 금지 원칙으로는 Release 에서도 멈추게 해야 한다).
+- 에디터 `EditorContext::get()` 는 null 을 허용해 그리기 안에서도 확인이 붙는다. svcnullJ(0c93e8463)가 그리기 경로 약 20 곳을 `getSubsystem` 으로 바꾸고 센 결과: `Source/Editor` 에 209 곳(73 파일) + `GameFramework/PlugIn/Editor` 11 곳, 그리기 경로로 보이는 곳 약 90(Panels 54 · Popups 17 · Common/GUI 13 · Viewport 4, 호출 문맥은 일부만 읽음), 명령 · 셀프테스트 · 수명주기 · 도구 약 120. 같은 모양 후보(미확인): `EditorViewportCamera.cpp:140·170·211`, `SelectionBoundsVisualizer.cpp:106`, `CommandPalettePopup`(8) · `QuickLauncherPopup`(5) · `BoneHierarchyPopup`(4). 이 수로 `get()` → `find()`/`require()` 이름 분리(그리기 쪽 약 40%)를 판단한다. `getSubsystem` 은 Release 에서 단언이 빠져 null 역참조가 된다(폴백 금지 원칙으로는 Release 에서도 멈추게 해야 한다).
 - `ConfigReference.py` 는 다른 헤더의 상수를 못 푼다(같은 파일만, 못 찾으면 멈춤). 한 줄 답 상한(serverdbg4)은 `net.stats` 줄에 아직 안 걸려 있다.
-- 마지막 작업자 셋(`dx11rbwait`: DX11 `DO_NOT_WAIT` 전수, `crowdfix`: `shooter3d.crowd` 의 `CrowdSharedUnits` 가 1, `vfxgl`: GL 에서 `vfxgpulights` 가 안 보임)은 base 가 main(a8f380c83)이다. 끝났는지는 `git branch --list "wt/dx11rbwait" "wt/crowdfix" "wt/vfxgl"` 와 각 브랜치 `git log -3` 로 본다. 앞의 둘은 main 에서도 지는 결함이다(통합 N 이 main(1d9680081)을 따로 지어 확인).
+- `dx11rbwait` 는 끝났다(c3c27ab7f · 8dbc1bab0): 코드는 안 바꿨고 `readReadbackBuffer` 의 `DO_NOT_WAIT` 는 `WaitIdleLeavesTheSubmittedCopyReadableOnEveryBackend` 탐침 때문에 그대로이며 주석 2 줄과 5-5 결정 줄만 고쳤다. 완료 콜백 경로에서도 `WAS_STILL_DRAWING` 거짓 실패가 나면 콜백 경로만 기다리는 Map 으로 가른다.
+- 마지막 작업자 둘(`crowdfix`: `shooter3d.crowd` 의 `CrowdSharedUnits` 가 1, `vfxgl`: GL 에서 `vfxgpulights` 가 안 보임)은 base 가 main(a8f380c83)이다. 끝났는지는 `git branch --list "wt/dx11rbwait" "wt/crowdfix" "wt/vfxgl"` 와 각 브랜치 `git log -3` 로 본다. 앞의 둘은 main 에서도 지는 결함이다(통합 N 이 main(1d9680081)을 따로 지어 확인).
 - RHI 파일 후보: DX11 allocateUploadStaging 의 RHIStagingAllocator 합치기, Vulkan 프레임 밖 펜스 대기, 큐 소유권 이동, DX11 Map(DO_NOT_WAIT) vs 장치 소실, DX11 Present 실패 로그 반복, GL 비트필드.
 
 **사용자 결정 대기**: 말 모델(WildWestHorseMount W3)의 CC0 에셋과 라이선스 선택뿐이다. push 는 통합 N 이 main 에 들어간 뒤 사용자에게 먼저 묻는다.
