@@ -158,6 +158,33 @@ namespace sw
         return true;
     }
 
+    void SceneStateHash::writeTickedObjectReport( uint64 tick, const vector<SceneObjectHash>& listObject, string& outText )
+    {
+        outText = "tick " + to_string( tick ) + "\n";
+        writeObjectReport( listObject, outText );
+    }
+
+    bool SceneStateHash::parseTickedObjectReport( string_view text, uint64& outTick, vector<SceneObjectHash>& outListObject )
+    {
+        outListObject.clear();
+        constexpr string_view kPrefix = "tick ";
+        const size_t          lineEnd = text.find( '\n' );
+        if ( text.substr( 0, kPrefix.size() ) != kPrefix || lineEnd == string_view::npos )
+            return false;
+        string_view tickText = text.substr( kPrefix.size(), lineEnd - kPrefix.size() );
+        while ( tickText.empty() == false && tickText.back() == '\r' )
+        {
+            tickText.remove_suffix( 1 );
+        }
+        uint64 tick = 0;
+        if ( StringUtil::parseUint64( tickText, tick ) == false )
+            return false;
+        if ( parseObjectReport( text.substr( lineEnd + 1 ), outListObject ) == false )
+            return false;
+        outTick = tick;
+        return true;
+    }
+
     bool SceneStateHash::findDifferingObjects( const vector<SceneObjectHash>& listLeft, const vector<SceneObjectHash>& listRight, vector<string>& outListName )
     {
         outListName.clear();

@@ -17,14 +17,6 @@ namespace sw::editor
         {
             static size_t toSlot( EditorNetProfilerChannel channel ) { return static_cast<size_t>( channel ); }
 
-            /** @brief 누적 값 둘의 차를 초당 값으로 바꿉니다. 줄었으면(연결 통계가 새로 시작) 0 입니다. */
-            static float32 computeRate( uint64 previous, uint64 current, float64 elapsedSeconds )
-            {
-                if ( current < previous || elapsedSeconds <= 0.0 )
-                    return 0.0f;
-                return static_cast<float32>( static_cast<float64>( current - previous ) / elapsedSeconds );
-            }
-
             static bool isLargerShare( const EditorNetKindShare& left, const EditorNetKindShare& right )
             {
                 if ( left._byteCount != right._byteCount )
@@ -95,6 +87,13 @@ namespace sw::editor
 
 namespace sw::editor
 {
+    float32 EditorNetProfilerUtil::computeRate( uint64 previous, uint64 current, float64 elapsedSeconds )
+    {
+        if ( current < previous || elapsedSeconds <= 0.0 )
+            return 0.0f;
+        return static_cast<float32>( static_cast<float64>( current - previous ) / elapsedSeconds );
+    }
+
     EditorNetProfilerSample EditorNetProfilerUtil::makeSample( const NetStatsReport* pPrevious, float64 previousTimeSeconds, const NetStatsReport& report, float64 timeSeconds )
     {
         using Internal = EditorNetProfilerHistoryInternal;
@@ -108,11 +107,11 @@ namespace sw::editor
             return sample;
         const float64 elapsedSeconds = timeSeconds - previousTimeSeconds;
         sample._arrValue[Internal::toSlot( EditorNetProfilerChannel::SentPacketsPerSecond )] =
-            Internal::computeRate( pPrevious->_sentPacketCount, report._sentPacketCount, elapsedSeconds );
+            computeRate( pPrevious->_sentPacketCount, report._sentPacketCount, elapsedSeconds );
         sample._arrValue[Internal::toSlot( EditorNetProfilerChannel::ReceivedPacketsPerSecond )] =
-            Internal::computeRate( pPrevious->_receivedPacketCount, report._receivedPacketCount, elapsedSeconds );
+            computeRate( pPrevious->_receivedPacketCount, report._receivedPacketCount, elapsedSeconds );
         sample._arrValue[Internal::toSlot( EditorNetProfilerChannel::ResentMessagesPerSecond )] =
-            Internal::computeRate( pPrevious->_resentMessageCount, report._resentMessageCount, elapsedSeconds );
+            computeRate( pPrevious->_resentMessageCount, report._resentMessageCount, elapsedSeconds );
         return sample;
     }
 
@@ -156,8 +155,8 @@ namespace sw::editor
             rate._name                               = current._name;
             const NetStatsReplicaEntry* pPrevious    = VectorUtil::findBy<&NetStatsReplicaEntry::_name>( listPrevious, current._name );
             const bool                  bHasBaseline = pPrevious != nullptr && pPrevious->_updateCount <= current._updateCount && pPrevious->_byteCount <= current._byteCount;
-            rate._updatesPerSecond                   = bHasBaseline ? static_cast<float32>( static_cast<float64>( current._updateCount - pPrevious->_updateCount ) / elapsedSeconds ) : 0.0f;
-            rate._bytesPerSecond                     = bHasBaseline ? static_cast<float32>( static_cast<float64>( current._byteCount - pPrevious->_byteCount ) / elapsedSeconds ) : 0.0f;
+            rate._updatesPerSecond                   = bHasBaseline ? computeRate( pPrevious->_updateCount, current._updateCount, elapsedSeconds ) : 0.0f;
+            rate._bytesPerSecond                     = bHasBaseline ? computeRate( pPrevious->_byteCount, current._byteCount, elapsedSeconds ) : 0.0f;
             totalBytesPerSecond += static_cast<float64>( rate._bytesPerSecond );
             outListRate.push_back( rate );
         }

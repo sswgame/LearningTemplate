@@ -51,6 +51,13 @@ namespace sw
         /** @brief `writeObjectReport` 의 글을 되읽습니다. 형식이 다른 줄이 하나라도 있으면 목록을 비우고 false 입니다(다른 글을 오브젝트 목록으로 받지 않는다). */
         [[nodiscard]] static bool parseObjectReport( string_view text, vector<SceneObjectHash>& outListObject );
         /**
+         * @brief 첫 줄에 틱(`tick <번호>`)을 단 오브젝트 목록 글을 씁니다. `state.objects` 의 답 형식이다.
+         * @details 오브젝트 해시가 이력의 어느 틱에 맞는지 답이 스스로 들고 있게 한다 — 두 서버의 답이 다른 틱이면 받는 쪽이 거절한다.
+         */
+        static void writeTickedObjectReport( uint64 tick, const vector<SceneObjectHash>& listObject, string& outText );
+        /** @brief `writeTickedObjectReport` 의 글을 되읽습니다. 첫 줄이 틱이 아니거나 목록 형식이 다르면 false 이고 목록을 비웁니다. */
+        [[nodiscard]] static bool parseTickedObjectReport( string_view text, uint64& outTick, vector<SceneObjectHash>& outListObject );
+        /**
          * @brief 두 목록에서 (이름, 해시) 짝이 한쪽에만 있는 오브젝트의 이름을 이름 순으로 중복 없이 채웁니다. 이름이 같은 오브젝트가 여럿이면 개수까지 견줍니다.
          * @return 하나라도 다르면 true
          */

@@ -312,6 +312,7 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "SyncObjects" ) );
         if ( compare.hasObjectComparison() )
         {
+            ImGui::TextUnformatted( ( "tick " + to_string( compare.getObjectTick() ) ).c_str() );
             if ( compare.getDifferingObjects().empty() )
                 ImGui::TextUnformatted( "every named object matches" );
             for ( const string& name : compare.getDifferingObjects() )

@@ -229,6 +229,8 @@ namespace sw
         /**
          * @brief 복제 키트가 이름 붙인 누적 셈(갱신 수 · 바이트)을 올립니다 — 스냅숏 크기 · 오브젝트별 복제 빈도처럼 공통 원천이 없는 값의 창구입니다.
          *        같은 이름을 다시 올리면 값을 덮고(누적값이므로 키트가 자기 합을 올린다), `makeStatsReport` 가 바이트가 큰 `NetStatsReport::kMaxReplicaEntry` 개를 `replicas=` 칸에 싣는다.
+         * @details 읽는 쪽(에디터 Profiler 표 — `EditorNetProfilerUtil::computeReplicaRates`)과의 약속: 올린 값을 그대로 싣는다(키트가 다시 시작해 줄어든 값도 덮는다 — 표는 줄어듦을 0 으로 읽는다).
+         *          상위 상한 밖으로 밀렸다 돌아온 이름이나 처음 오른 이름은 표에서 한 번 0 이다(앞 보고에 없으면 기준선이 없다). 누적 값을 대신 눌러 앉히지 않는다.
          * @return 이름이 형식(`NetStatsReport::isValidReplicaName`)에 맞지 않거나, 올린 이름이 상한(`kMaxReplicaSources`)을 넘으면 false 입니다(조용히 버리지 않고 경고를 남긴다).
          */
         [[nodiscard]] bool setReplicaStats( string_view name, uint64 updateCount, uint64 byteCount );

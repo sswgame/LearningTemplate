@@ -16,6 +16,7 @@ namespace sw::editor
         , _comparison{}
         , _listDifferingObject{}
         , _lastError{}
+        , _objectTick{ 0 }
         , _bComparisonCurrent{ false }
         , _bObjectComparison{ false }
     {
@@ -122,14 +123,23 @@ namespace sw::editor
     {
         vector<SceneObjectHash> listLeft;
         vector<SceneObjectHash> listRight;
-        if ( SceneStateHash::parseObjectReport( leftText, listLeft ) == false || SceneStateHash::parseObjectReport( rightText, listRight ) == false )
+        uint64                  leftTick  = 0;
+        uint64                  rightTick = 0;
+        if ( SceneStateHash::parseTickedObjectReport( leftText, leftTick, listLeft ) == false || SceneStateHash::parseTickedObjectReport( rightText, rightTick, listRight ) == false )
         {
-            _lastError = "an answer is not an object hash list (<hex hash> <name> per line)";
+            _lastError = "an answer is not a ticked object hash list (tick <n>, then <hex hash> <name> per line)";
+            return false;
+        }
+        if ( leftTick != rightTick )
+        {
+            // 두 서버가 다른 틱에서 답했다 — 그 해시를 견주면 움직이는 오브젝트가 모두 다른 것으로 나온다. 두 서버를 pause 한 채 다시 누른다.
+            _lastError = "the two servers answered at different ticks (" + to_string( leftTick ) + " vs " + to_string( rightTick ) + ") - pause both and try again";
             return false;
         }
         vector<string> listName;
         static_cast<void>( SceneStateHash::findDifferingObjects( listLeft, listRight, listName ) );
         _listDifferingObject = std::move( listName );
+        _objectTick          = leftTick;
         _bObjectComparison   = true;
         return true;
     }

@@ -126,6 +126,11 @@ namespace sw::editor
         static constexpr const utf8* kStatsCommand = "net.stats";
 
         /**
+         * @brief 누적 값 둘의 차를 초당 값으로 바꿉니다. 줄었거나(연결 통계가 새로 시작) 시간이 흐르지 않았으면 0 입니다.
+         * @details 패킷 · 재전송 · 복제 셈이 모두 이 하나로 초당 값을 낸다(누적 값을 읽는 약속이 둘로 갈라지지 않게).
+         */
+        static float32 computeRate( uint64 previous, uint64 current, float64 elapsedSeconds );
+        /**
          * @brief 보고 하나를 표본으로 바꿉니다. 초당 값은 @p pPrevious 와의 차를 시간으로 나눈 값이고, 앞 보고가 없거나 시간이 흐르지 않았거나
          *        누적 값이 줄었으면(다시 연결해 연결 통계가 새로 시작) 0 입니다.
          */

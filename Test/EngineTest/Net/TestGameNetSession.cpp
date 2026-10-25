@@ -392,3 +392,34 @@ SW_TEST_CASE( GameNetSessionTest, AnInvalidServerConfigStopsTheLaunchInsteadOfSt
     SW_EXPECT_FALSE( bOpened );
     SW_EXPECT_FALSE( session.isActive() );
 }
+
+/**
+ * @brief [GameNetSessionTest] `net.stats` 의 복제 셈은 올린 누적 값을 그대로(줄어든 값도 덮어) 바이트 큰 순서로 상한까지만 싣는다 — 에디터 Profiler 표가 읽는 약속이다
+ * @details 표는 두 보고의 차로 초당 값을 내고 줄어든 값 · 새 이름을 0 으로 읽는다(`EditorNetProfilerUtil::computeReplicaRates`). 그래서 세션은 값을 대신 눌러 앉히지 않고(최댓값 유지 없음) 올린 그대로 싣는다.
+ */
+SW_TEST_CASE( GameNetSessionTest, ReplicaStatsAreReportedAsUploadedLargestBytesFirstUpToTheCap )
+{
+    const uint16 port = findFreePort();
+    SW_ASSERT_TRUE( port != 0 );
+    GameNetSessionParams params;
+    params._role       = GameNetRole::Server;
+    params._listenPort = port;
+    GameNetSession session;
+    SW_ASSERT_TRUE( session.initialize( params ) );
+
+    for ( int32 index = 0; index < NetStatsReport::kMaxReplicaEntry + 2; ++index )
+    {
+        SW_ASSERT_TRUE( session.setReplicaStats( "kit" + to_string( index ), 1, static_cast<uint64>( 100 + index ) ) );
+    }
+    NetStatsReport report = session.makeStatsReport();
+    SW_ASSERT_EQUAL( static_cast<size_t>( NetStatsReport::kMaxReplicaEntry ), report._listReplicaEntry.size() );
+    SW_EXPECT_TRUE( report._listReplicaEntry[0]._name == "kit9" ); // 바이트가 가장 큰 것이 앞, 가장 작은 둘(kit0 · kit1)은 상한 밖
+
+    // 키트가 다시 시작해 누적 값이 줄면 줄어든 값 그대로 싣는다 — 읽는 쪽이 줄어듦을 0 으로 읽는다.
+    SW_ASSERT_TRUE( session.setReplicaStats( "kit9", 0, 5 ) );
+    report = session.makeStatsReport();
+    SW_ASSERT_EQUAL( static_cast<size_t>( NetStatsReport::kMaxReplicaEntry ), report._listReplicaEntry.size() );
+    SW_EXPECT_TRUE( report._listReplicaEntry[0]._name == "kit8" );
+    SW_EXPECT_TRUE( report._listReplicaEntry.back()._name == "kit1" );
+    session.shutdown();
+}

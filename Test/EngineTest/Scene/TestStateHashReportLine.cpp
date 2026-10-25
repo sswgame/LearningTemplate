@@ -71,3 +71,28 @@ SW_TEST_CASE( StateHashReportLineTest, DifferingObjectsAreNamed )
     SW_EXPECT_FALSE( SceneStateHash::parseObjectReport( "not a hash line\n", parsed ) );
     SW_EXPECT_TRUE( parsed.empty() );
 }
+
+/**
+ * @brief [StateHashReportLineTest] 틱을 단 오브젝트 목록은 틱과 함께 되읽히고, 틱 머리가 없거나 숫자가 아니면 거절한다
+ */
+SW_TEST_CASE( StateHashReportLineTest, ATickedObjectReportRoundTripsAndRejectsAMissingTick )
+{
+    const vector<SceneObjectHash> listObject = {
+        SceneObjectHash{"Door", 0x1111ull},
+        SceneObjectHash{"Hero", 0x2222ull}
+    };
+    string text;
+    SceneStateHash::writeTickedObjectReport( 42, listObject, text );
+    uint64                  tick = 0;
+    vector<SceneObjectHash> parsed;
+    SW_ASSERT_TRUE( SceneStateHash::parseTickedObjectReport( text, tick, parsed ) );
+    SW_EXPECT_EQUAL( uint64( 42 ), tick );
+    SW_ASSERT_EQUAL( size_t( 2 ), parsed.size() );
+    SW_EXPECT_TRUE( parsed[1]._name == "Hero" );
+
+    string plain;
+    SceneStateHash::writeObjectReport( listObject, plain );
+    SW_EXPECT_FALSE( SceneStateHash::parseTickedObjectReport( plain, tick, parsed ) );
+    SW_EXPECT_FALSE( SceneStateHash::parseTickedObjectReport( "tick x\n", tick, parsed ) );
+    SW_EXPECT_TRUE( parsed.empty() );
+}

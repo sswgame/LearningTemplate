@@ -44,9 +44,10 @@ SW_TEST_CASE( EditorStateHashCompareTest, NamesTheObjectsWhoseHashesDiffer )
 {
     EditorStateHashCompare compare;
     SW_EXPECT_FALSE( compare.hasObjectComparison() );
-    SW_ASSERT_TRUE( compare.compareObjectReports( "00000000000000aa Door\n00000000000000bb Lamp\n00000000000000cc Gone\n",
-                                                  "00000000000000aa Door\n00000000000000b0 Lamp\n" ) );
+    SW_ASSERT_TRUE( compare.compareObjectReports( "tick 40\n00000000000000aa Door\n00000000000000bb Lamp\n00000000000000cc Gone\n",
+                                                  "tick 40\n00000000000000aa Door\n00000000000000b0 Lamp\n" ) );
     SW_EXPECT_TRUE( compare.hasObjectComparison() );
+    SW_EXPECT_EQUAL( uint64{ 40 }, compare.getObjectTick() );
     SW_ASSERT_EQUAL( size_t{ 2 }, compare.getDifferingObjects().size() );
     SW_EXPECT_TRUE( compare.getDifferingObjects()[0] == "Gone" );
     SW_EXPECT_TRUE( compare.getDifferingObjects()[1] == "Lamp" );
@@ -58,8 +59,20 @@ SW_TEST_CASE( EditorStateHashCompareTest, NamesTheObjectsWhoseHashesDiffer )
 SW_TEST_CASE( EditorStateHashCompareTest, RejectsAnObjectAnswerThatIsNotAList )
 {
     EditorStateHashCompare compare;
-    SW_ASSERT_TRUE( compare.compareObjectReports( "00000000000000aa Door\n", "00000000000000ab Door\n" ) );
-    SW_EXPECT_FALSE( compare.compareObjectReports( "no active scene", "00000000000000aa Door\n" ) );
+    SW_ASSERT_TRUE( compare.compareObjectReports( "tick 7\n00000000000000aa Door\n", "tick 7\n00000000000000ab Door\n" ) );
+    SW_EXPECT_FALSE( compare.compareObjectReports( "no active scene", "tick 7\n00000000000000aa Door\n" ) );
+    SW_EXPECT_FALSE( compare.compareObjectReports( "00000000000000aa Door\n", "00000000000000aa Door\n" ) ); // 틱 머리가 없는 답은 어느 시각인지 모른다
     SW_EXPECT_FALSE( compare.getLastError().empty() );
     SW_EXPECT_EQUAL( size_t{ 1 }, compare.getDifferingObjects().size() );
+}
+
+/**
+ * @brief [EditorStateHashCompareTest] 두 서버의 답이 다른 틱이면 견주지 않고 거절한다 — 다른 시각의 해시를 같은 시각으로 읽지 않는다
+ */
+SW_TEST_CASE( EditorStateHashCompareTest, RejectsObjectAnswersFromDifferentTicks )
+{
+    EditorStateHashCompare compare;
+    SW_EXPECT_FALSE( compare.compareObjectReports( "tick 7\n00000000000000aa Door\n", "tick 8\n00000000000000aa Door\n" ) );
+    SW_EXPECT_FALSE( compare.hasObjectComparison() );
+    SW_EXPECT_FALSE( compare.getLastError().empty() );
 }

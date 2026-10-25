@@ -68,8 +68,13 @@ namespace sw::editor
          */
         [[nodiscard]] bool compareObjectsFromChannels();
 #endif
-        /** @brief 두 오브젝트 목록 글(`state.objects` 답)을 견줘 다른 오브젝트 이름을 채웁니다. 형식이 다른 글이면 false 이고 결과는 그대로입니다. */
+        /**
+         * @brief 두 오브젝트 목록 글(`state.objects` 답)을 견줘 다른 오브젝트 이름을 채웁니다.
+         * @details 답마다 첫 줄에 서버 틱이 있고, 두 틱이 다르면 거절합니다(다른 시각의 해시를 견주지 않는다). 형식이 다른 글이어도 false 이고 결과는 그대로입니다.
+         */
         [[nodiscard]] bool compareObjectReports( string_view leftText, string_view rightText );
+        /** @brief 마지막으로 견준 오브젝트 해시의 틱입니다(두 서버가 같은 틱에서 답했을 때만 견주므로 하나다). */
+        uint64 getObjectTick() const { return _objectTick; }
         /** @brief 마지막 `compareObjects*` 가 찾은 다른 오브젝트 이름(이름 순, 중복 없음)입니다. */
         const vector<string>& getDifferingObjects() const { return _listDifferingObject; }
         /** @brief 마지막 `compareObjects*` 가 끝까지 갔으면 true 입니다(false 면 `getDifferingObjects` 가 비어 있어도 "같다" 가 아니다). */
@@ -111,6 +116,7 @@ namespace sw::editor
         EditorStateHashComparison _comparison;
         vector<string>            _listDifferingObject;
         string                    _lastError;
+        uint64                    _objectTick;
         bool                      _bComparisonCurrent;
         bool                      _bObjectComparison;
     };

@@ -200,6 +200,16 @@ namespace sw
             {
                 if ( listArgument.empty() == false )
                     return false;
+                // 첫 줄의 틱은 이력의 가장 최근 틱이다 — 이력이 없으면 어느 틱의 해시인지 말할 수 없어 답하지 않는다.
+                const StateHashHistory* pHistory = findRecordingHistory( outReply );
+                if ( pHistory == nullptr )
+                    return false;
+                StateHashSample latest;
+                if ( pHistory->tryGetLatest( latest ) == false )
+                {
+                    outReply = "state hash history has no tick yet";
+                    return false;
+                }
                 GameObjectManager* pManager = engine::findActiveObjectManager();
                 if ( pManager == nullptr )
                 {
@@ -208,8 +218,7 @@ namespace sw
                 }
                 vector<SceneObjectHash> listObject;
                 SceneStateHash::collectObjects( *pManager, listObject );
-                outReply.clear();
-                SceneStateHash::writeObjectReport( listObject, outReply );
+                SceneStateHash::writeTickedObjectReport( latest._tick, listObject, outReply );
                 return true;
             }
 
