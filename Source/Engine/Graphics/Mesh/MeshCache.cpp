@@ -66,7 +66,7 @@ namespace sw
             /** @brief 메시 캐시의 계측 칸입니다(`CacheStats`). 상태가 엔진 수명 범위로 다시 서도 칸은 프로세스 끝까지 살아 이어 센다. */
             static const CacheStatsHandle& getStats()
             {
-                static const CacheStatsHandle s_stats = CacheStats::registerCache( MeshCache::kAssetKindName );
+                static const CacheStatsHandle s_stats = CacheStats::getOrCreate( MeshCache::kAssetKindName );
                 return s_stats;
             }
 
@@ -158,6 +158,7 @@ namespace sw
 namespace sw
 {
     MeshCache::MeshCache()
+        : IAssetCache{ CacheTracking::counted( kAssetKindName ) }
     {
         PhysicsMeshShapeCache::setLoadFunction( &MeshCacheInternal::loadTrianglePositions );
     }

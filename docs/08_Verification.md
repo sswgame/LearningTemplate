@@ -137,7 +137,7 @@ cd build/Ninja-Debug/Bin
   `[Profile] wall N frames … us/frame` 와 `startup N ms` 로 본다. 중첩 합이 바깥보다 크면 표부터 의심한다.
 - **캐시 적중률은 측정 창 끝의 `[CacheStats]` 줄로 본다**(`-gv_profileFrames`). 캐시마다 한 줄 — 이름 · `items`(항목 수) · `hit` · `miss` · `rate`(적중률) · `clear`(통째로 비운 횟수)이고,
   hit / miss / clear 는 워밍업 뒤 측정 창 시작부터의 값이다. `no counters` 는 조회가 없어 세지 않는 캐시(오디오 · 현지화 어댑터)다. 캐시를 늘리거나 상한을 정할 때 이 줄의 숫자를 근거로 쓴다
-  (규칙: [결정 기록](09_Decisions.md) "캐시는 `CacheStats` 레지스트리에…"). 센 값은 `Core/Diagnostics/CacheStats.h` 의 이름별 원자 카운터이고 `IAssetCache` 는 그대로다.
+  (규칙: [결정 기록](09_Decisions.md) "캐시는 `CacheStats` 레지스트리에…"). 센 값은 `Core/Diagnostics/CacheStats.h` 의 이름별 원자 카운터이고, 모든 `IAssetCache` 는 생성자에서 `CacheTracking` 으로 칸을 올리거나 세지 않는 사유를 적는다(`no counters (<사유>)`). `ResourcePath` / `ResourcePathMissing` 줄은 경로 캐시의 적중과 음성 결과 적중이다.
 - **`RT.Frame` = `RT.BeginFrame`(펜스 대기 = GPU 백프레셔) + `RT.ExecutePacket` + `RT.Present`.** `GT.Packet.submit` 이 크면 GT 가 RT 를 기다린다. `GT.Frame` 은
   `Engine::update` 만 재고 게임 모듈은 `App::run` 의 `GT.Game.update` · `GT.Game.fixedUpdate` · `GT.Editor.updateUI` 다. 2026-09-13 이전 RT 수치는 실제보다 작다.
 - **대기 지점 스코프**(측정만 한다 — 이 값이 크면 그 대기를 비동기로 바꾸는 근거가 된다). 이름은 `<스레드>.<영역>.<동작>` 이다.

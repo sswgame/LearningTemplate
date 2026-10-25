@@ -215,6 +215,14 @@ namespace sw
          *          쌉니다(이 PC 에서 열기는 ~200 us, 이 조회는 ~75 us 입니다. 둘 다 필터 드라이버를 거칩니다).
          */
         static bool getFileStamp( string_view fileName, FileStamp& outStamp );
+        /**
+         * @brief 이 프로세스가 파일을 만들었거나 바꿔 끼운 횟수입니다(`writeFile` · `writeTextFile` · `copyFile` 이 성공할 때마다 오릅니다).
+         * @details "없는 파일" 을 기억하는 캐시(`ResourcePaths`)가 이 값이 바뀌면 기억을 버립니다 — 파일이 생겼는데 옛 "없음" 을 돌려주지 않게. 이 값을 보는 쪽은
+         *          값이 같은 동안만 "없음" 을 믿는다. 다른 프로세스(쿠커 자식, git)가 만든 파일은 보이지 않는다.
+         */
+        static uint64 getCreationEpoch();
+        /** @brief 파일을 만들었음을 알립니다(`getCreationEpoch` 을 올립니다). 이 클래스 밖에서 파일을 만드는 코드(플랫폼 계층)만 부릅니다. */
+        static void noteFileCreated();
         /** @brief 파일을 복사합니다(대상이 있으면 덮어씁니다). 실패하면 로그를 남기고 false 입니다. */
         [[nodiscard]] static bool copyFile( string_view source, string_view destination );
         /** @brief 파일을 삭제합니다. 없었거나 삭제했으면 true 이고, 지우지 못했으면 경로와 이유를 알리고 false 입니다. */

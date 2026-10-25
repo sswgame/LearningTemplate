@@ -64,12 +64,12 @@ namespace sw
     public:
         /** @param pKindName 레지스트리의 종류 이름입니다. 정적 문자열이며, 에디터 핫 리로드 경로 표가 이 이름으로 찾습니다. */
         explicit GameDataCache( const utf8* pKindName )
-            : _pKindName{ pKindName }
+            : IAssetCache{ CacheTracking::counted( pKindName ) } // 캐시는 엔진 수명 범위가 소유해 다시 만들어질 수 있다 — 같은 이름의 칸을 이어 쓴다
+            , _pKindName{ pKindName }
             , _mutex{}
             , _mapTable{}
             , _listRetired{}
             , _reloadCount{ 0 }
-            , _stats{ CacheStats::getOrCreate( pKindName ) } // 캐시는 엔진 수명 범위가 소유해 다시 만들어질 수 있다 — 같은 이름의 칸을 이어 쓴다
         {
             GameDataCacheRegistry::registerCache( this );
         }
@@ -90,10 +90,10 @@ namespace sw
             const auto              iter = _mapTable.find( key );
             if ( iter != _mapTable.end() )
             {
-                _stats.recordHit(); // 읽지 못한 경로를 기억한 빈 항목도 적중이다(같은 오류를 다시 읽지 않는다)
+                getCacheStats().recordHit(); // 읽지 못한 경로를 기억한 빈 항목도 적중이다(같은 오류를 다시 읽지 않는다)
                 return iter->second.get();
             }
-            _stats.recordMiss();
+            getCacheStats().recordMiss();
             unique_ptr<TableType> table = make_unique<TableType>();
             if ( table->loadFromResource( path ) == false )
                 table.reset();
@@ -167,7 +167,7 @@ namespace sw
                     _listRetired.push_back( RetiredTable{ std::move( table ), _reloadCount.load( std::memory_order_relaxed ) } );
             }
             _mapTable.clear();
-            _stats.recordClear();
+            getCacheStats().recordClear();
         }
 
     private:
@@ -187,6 +187,5 @@ namespace sw
 
         vector<RetiredTable> _listRetired;
         atomic<uint32>       _reloadCount;
-        CacheStatsHandle     _stats; ///< 이 종류의 계측 칸(`CacheStats`)
     };
 } // namespace sw

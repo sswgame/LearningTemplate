@@ -33,13 +33,13 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 에셋 종류 하나의 계측 칸입니다(`CacheStats`, 종류 이름으로 한 번 올린다). 센 값은 이 칸에 있고 `IAssetCache` 는 고치지 않는다.
+     * @brief 에셋 종류 하나의 계측 칸입니다(`CacheStats`, 종류 이름으로 한 번 올린다). 센 값은 이 칸에 있고 `SharedAssetCache` 의 생성자가 같은 이름으로 칸을 이어 받는다(`CacheTracking::counted`).
      * @details 표는 엔진 수명 범위가 소유해 엔진을 다시 세우면 새로 서지만, 칸은 프로세스 끝까지 살아 함수 정적 핸들이 그대로 유효하다.
      */
     template <typename AssetType>
     const CacheStatsHandle& getSharedAssetCacheStats()
     {
-        static const CacheStatsHandle s_stats = CacheStats::registerCache( SharedAssetCacheTraits<AssetType>::kKindName );
+        static const CacheStatsHandle s_stats = CacheStats::getOrCreate( SharedAssetCacheTraits<AssetType>::kKindName );
         return s_stats;
     }
 
@@ -93,6 +93,12 @@ namespace sw
     uint32 SharedAssetCache<AssetType>::getReloadCount()
     {
         return getTable().getReloadCount();
+    }
+
+    template <typename AssetType>
+    SharedAssetCache<AssetType>::SharedAssetCache()
+        : IAssetCache{ CacheTracking::counted( SharedAssetCacheTraits<AssetType>::kKindName ) }
+    {
     }
 
     template <typename AssetType>

@@ -12,14 +12,13 @@ namespace sw
     SW_LOG_CALLER( "UITextAssetCache" );
 
     UITextAssetCache::UITextAssetCache( const utf8* pAssetKindName, const utf8* pAssetLabel, UITextAssetParseFunction pParse )
-        : IAssetCache{}
+        : IAssetCache{ CacheTracking::counted( pAssetKindName ) } // 캐시는 UI 시스템마다 있어 같은 이름의 칸을 이어 쓴다
         , _mapPathToAsset{}
         , _mapPathToMemoryText{}
         , _reloadedHandler{}
         , _pAssetKindName{ pAssetKindName }
         , _pAssetLabel{ pAssetLabel }
         , _pParse{ pParse }
-        , _stats{ CacheStats::getOrCreate( pAssetKindName ) }
         , _parseCount{ 0 }
     {
     }
@@ -34,11 +33,11 @@ namespace sw
         if ( iter != _mapPathToAsset.end() )
         {
             asset = iter->second;
-            _stats.recordHit();
+            getCacheStats().recordHit();
             return asset;
         }
 
-        _stats.recordMiss();
+        getCacheStats().recordMiss();
         string text;
         if ( readText( key, path, text ) == false )
         {
@@ -91,7 +90,7 @@ namespace sw
     {
         _mapPathToAsset.clear();
         _mapPathToMemoryText.clear();
-        _stats.recordClear();
+        getCacheStats().recordClear();
     }
 
     bool UITextAssetCache::readText( const string& key, string_view path, string& outText ) const

@@ -712,23 +712,25 @@ namespace sw
         if ( text.empty() || _fontService.isInitialized() == false )
             return float2{};
         const FontFaceChain chain = _fontService.getFaceChain( style._font );
-        uint64              key   = HashUtil::computeStringHash64( text.data(), text.size(), false, Internal::hashStyle( style ) );
-        key                       = Internal::hashFloat( key, maxWidth );
+        // 글 밖에서 결과를 정하는 입력이 문맥이다. 글은 키가 따로 훑고 글 사본으로 확인한다(`TextMeasureKey` — 해시만으로는 부딪힘이 다른 글의 크기를 돌려준다).
+        uint64 context = Internal::hashStyle( style );
+        context        = Internal::hashFloat( context, maxWidth );
         for ( uint32 index = 0; index < chain._faceCount; ++index )
         {
-            key = HashUtil::combine( key, chain._arrFace[index] );
+            context = HashUtil::combine( context, chain._arrFace[index] );
         }
         if ( pListSpan != nullptr )
         {
             for ( const RichTextSpan& span : *pListSpan )
             {
-                key = HashUtil::combine( key, ( static_cast<uint64>( span._firstByte ) << 32 ) | span._byteCount );
-                key = HashUtil::combine( key, span._colorRgba );
-                key = Internal::hashFloat( key, span._sizeScale );
-                key = HashUtil::combine( key, ( static_cast<uint64>( span._bBold ) << 1 ) | span._bItalic );
+                context = HashUtil::combine( context, ( static_cast<uint64>( span._firstByte ) << 32 ) | span._byteCount );
+                context = HashUtil::combine( context, span._colorRgba );
+                context = Internal::hashFloat( context, span._sizeScale );
+                context = HashUtil::combine( context, ( static_cast<uint64>( span._bBold ) << 1 ) | span._bItalic );
             }
         }
-        const float2* pCached = _measureCache.find( key );
+        const TextMeasureKey key{ text, context };
+        const float2*        pCached = _measureCache.find( key );
         if ( pCached != nullptr )
             return *pCached;
         layout( text, style, maxWidth, _measureScratch, pListSpan );

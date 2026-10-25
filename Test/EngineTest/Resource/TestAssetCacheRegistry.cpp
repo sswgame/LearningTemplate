@@ -26,6 +26,11 @@ namespace
     class ProbeAssetCache final : public sw::IAssetCache
     {
     public:
+        ProbeAssetCache()
+            : sw::IAssetCache{ sw::CacheTracking::uncounted( "test probe without lookups" ) }
+        {
+        }
+
         const utf8* getAssetKindName() const override { return "ProbeKind"; }
         bool        isCached( sw::string_view ) const override { return _bCleared == false; }
         void        reload( sw::string_view, sw::IRHIDevice* pDevice ) override
@@ -45,6 +50,11 @@ namespace
     class ImpostorMaterialCache final : public sw::IAssetCache
     {
     public:
+        ImpostorMaterialCache()
+            : sw::IAssetCache{ sw::CacheTracking::uncounted( "test probe without lookups" ) }
+        {
+        }
+
         const utf8* getAssetKindName() const override { return "Material"; }
         bool        isCached( sw::string_view ) const override { return false; }
         void        reload( sw::string_view, sw::IRHIDevice* ) override {}

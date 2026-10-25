@@ -31,9 +31,9 @@ namespace sw
 
         /** @param pKindName 레지스트리의 종류 이름입니다(정적 문자열). */
         explicit WeakInternCache( const utf8* pKindName )
-            : _pKindName{ pKindName }
+            : IAssetCache{ CacheTracking::counted( pKindName ) } // 표는 엔진 수명 범위가 소유해 엔진을 다시 세우면 캐시도 다시 만들어진다 — 같은 칸을 이어 쓴다
+            , _pKindName{ pKindName }
             , _table{}
-            , _stats{ CacheStats::getOrCreate( pKindName ) } // 표는 엔진 수명 범위가 소유해 엔진을 다시 세우면 캐시도 다시 만들어진다 — 같은 칸을 이어 쓴다
         {
         }
 
@@ -43,10 +43,10 @@ namespace sw
             shared_ptr<ValueType> live = _table.findLive( key );
             if ( live != nullptr )
             {
-                _stats.recordHit();
+                getCacheStats().recordHit();
                 return live;
             }
-            _stats.recordMiss();
+            getCacheStats().recordMiss();
             return _table.acquire( key, create ); // 표가 한 번 더 찾는다(둘이 같은 키를 지으면 먼저 넣은 쪽을 받는다)
         }
 
@@ -69,12 +69,11 @@ namespace sw
         void clear() override
         {
             _table.clear();
-            _stats.recordClear();
+            getCacheStats().recordClear();
         }
 
     private:
         const utf8*                                  _pKindName;
         WeakInternTable<KeyType, ValueType, KeyHash> _table;
-        CacheStatsHandle                             _stats; ///< 이 종류의 계측 칸(`CacheStats`)
     };
 } // namespace sw

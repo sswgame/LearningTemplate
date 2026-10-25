@@ -18,6 +18,12 @@ namespace sw
     class SW_API LocalizationReloadCache final : public IAssetCache
     {
     public:
+        /** @brief 조회가 없는 어댑터라 적중 · 실패를 세지 않습니다(`CacheTracking::uncounted`). */
+        LocalizationReloadCache()
+            : IAssetCache{ CacheTracking::uncounted( "adapter without lookups - LocalizationManager owns the tables" ) }
+        {
+        }
+
         /** @brief 레지스트리의 종류 이름("StringTable")입니다. */
         const utf8* getAssetKindName() const override { return "StringTable"; }
         /** @brief 그 경로가 로드한 프로젝트의 파일이면 true 입니다. */

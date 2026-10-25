@@ -30,6 +30,7 @@ namespace sw
                 int64  _itemCount{ 0 };
                 bool   _bItemCountKnown{ false };
                 bool   _bCounted{ false };
+                string _uncountedReason{}; ///< `_bCounted` 가 아닐 때 캐시가 선언한 사유(`CacheTracking::uncounted`). 칸이 없는데 선언도 없으면 비어 있다(오류)
             };
 
             static bool isNameBefore( const Row& lhs, const Row& rhs ) { return lhs._name < rhs._name; }
@@ -94,6 +95,8 @@ namespace sw
                 row._name            = pKindName;
                 row._itemCount       = static_cast<int64>( pCache->getCachedCount() );
                 row._bItemCountKnown = true;
+                if ( pCache->getUncountedReason() != nullptr )
+                    row._uncountedReason = pCache->getUncountedReason();
                 listRow.push_back( std::move( row ) );
             }
         }
@@ -108,7 +111,8 @@ namespace sw
             const utf8* pItemCount = row._bItemCountKnown ? arrItemCount : "?";
             if ( row._bCounted == false )
             {
-                SW_LOG_INFO( "[CacheStats]   %#  items %#  no counters", row._name, pItemCount );
+                SW_LOG_INFO( "[CacheStats]   %#  items %#  no counters (%#)", row._name, pItemCount,
+                             row._uncountedReason.empty() ? "declared counted but has no counter slot" : row._uncountedReason.c_str() );
                 continue;
             }
             const uint64 lookupCount  = row._hitCount + row._missCount;

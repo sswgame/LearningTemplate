@@ -19,6 +19,12 @@ namespace sw
     class SW_API AudioReloadCache final : public IAssetCache
     {
     public:
+        /** @brief 조회가 없는 어댑터라 적중 · 실패를 세지 않습니다(`CacheTracking::uncounted`). */
+        AudioReloadCache()
+            : IAssetCache{ CacheTracking::uncounted( "adapter without lookups - the audio service owns the data" ) }
+        {
+        }
+
         /** @brief 레지스트리의 종류 이름("AudioData")입니다. */
         const utf8* getAssetKindName() const override { return "AudioData"; }
         /** @brief 그 경로가 지금 쓰는 믹서 그래프나 이벤트 라이브러리의 파일이면 true 입니다. */

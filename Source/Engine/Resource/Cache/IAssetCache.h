@@ -18,6 +18,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Diagnostics/CacheStats.h"
 #include "Core/Memory/Memory.h"
 
 namespace sw
@@ -25,14 +26,56 @@ namespace sw
     class IRHIDevice;
 
     /**
+     * @class CacheTracking
+     * @brief 캐시가 계측(`CacheStats`)에 어떻게 서는지의 선언입니다. `IAssetCache` 의 생성자가 이 값을 요구해, 계측을 정하지 않은 캐시는 지을 수 없습니다.
+     * @details 캐시마다 "조회 자리에서 적중 · 실패를 센다" 는 약속을 손으로 지키면 새 캐시가 잊습니다(`[CacheStats]` 에 줄이 없는 캐시가 생김).
+     *          그래서 둘 중 하나만 쓸 수 있게 한다 — 센다(`counted`, 종류 이름의 칸을 올린다) 또는 세지 않는 사유를 적는다(`uncounted`, 조회가 없는 어댑터).
+     *          칸은 종류 이름이 키이고 프로세스 끝까지 살아, 엔진을 다시 세워 캐시를 다시 지어도 같은 칸을 이어 센다.
+     */
+    class CacheTracking final
+    {
+    public:
+        /** @brief 종류 이름 @p kindName 의 칸을 올리거나 이어 받습니다. 캐시는 조회 자리에서 `IAssetCache::getCacheStats` 로 센다. */
+        static CacheTracking counted( string_view kindName ) { return CacheTracking{ CacheStats::getOrCreate( kindName ), nullptr }; }
+        /** @brief 세지 않습니다. @p pReason 은 왜 세지 않는지 적는 문자열 상수이고, 비어 있으면 안 됩니다(조회가 없는 어댑터가 쓴다). */
+        static CacheTracking uncounted( const utf8* pReason )
+        {
+            SW_ASSERT( pReason != nullptr && pReason[0] != 0 );
+            return CacheTracking{ CacheStatsHandle{}, pReason };
+        }
+
+        /** @brief 칸을 가리키는 핸들입니다(`uncounted` 면 비어 있다). */
+        const CacheStatsHandle& getHandle() const { return _handle; }
+        /** @brief 세지 않는 사유입니다(`counted` 면 nullptr). */
+        const utf8* getUncountedReason() const { return _pUncountedReason; }
+
+    private:
+        CacheTracking( const CacheStatsHandle& handle, const utf8* pReason )
+            : _handle{ handle }
+            , _pUncountedReason{ pReason }
+        {
+        }
+
+        CacheStatsHandle _handle;
+        const utf8*      _pUncountedReason;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @class IAssetCache
      * @brief 경로 키 에셋 캐시가 공통으로 답해야 하는 것들입니다.
      */
     class SW_API IAssetCache
     {
     public:
-        /** @brief 빈 인터페이스로 만듭니다. 상태는 구현이 갖습니다. */
-        IAssetCache() = default;
+        /** @brief 계측 선언(`CacheTracking`)을 받아 만듭니다. 선언 없이는 지을 수 없다. 나머지 상태는 구현이 갖습니다. */
+        explicit IAssetCache( const CacheTracking& tracking )
+            : _stats{ tracking.getHandle() }
+            , _pUncountedReason{ tracking.getUncountedReason() }
+        {
+        }
         /** @brief 파생 캐시를 포인터로 들고 지울 수 있어야 합니다. */
         virtual ~IAssetCache() = default;
 
@@ -77,5 +120,18 @@ namespace sw
 
         /** @brief 캐시를 통째로 비웁니다(종료 · 재초기화). */
         virtual void clear() = 0;
+
+        /** @brief 계측 칸을 올린 캐시인지 반환합니다. false 면 `[CacheStats]` 가 `n/a` 로 찍습니다. */
+        bool isCounted() const { return _pUncountedReason == nullptr; }
+        /** @brief 세지 않는 사유입니다(`isCounted` 면 nullptr). */
+        const utf8* getUncountedReason() const { return _pUncountedReason; }
+
+    protected:
+        /** @brief 이 캐시의 계측 칸입니다. 조회가 적중이면 `recordHit`, 새로 읽거나 지으면 `recordMiss`, `clear` 에서 `recordClear` 를 부릅니다. 세지 않는 캐시는 빈 핸들이라 기록이 아무 일도 하지 않습니다. */
+        const CacheStatsHandle& getCacheStats() const { return _stats; }
+
+    private:
+        CacheStatsHandle _stats;
+        const utf8*      _pUncountedReason;
     };
 } // namespace sw

@@ -39,7 +39,7 @@ namespace sw
             /** @brief 프리팹 캐시의 계측 칸입니다(`CacheStats`). 캐시는 에셋 매니저마다 하나지만 칸은 프로세스에 하나라 매니저를 다시 세워도 이어 센다. */
             static const CacheStatsHandle& getCacheStats()
             {
-                static const CacheStatsHandle s_stats = CacheStats::registerCache( PrefabCache::kAssetKindName );
+                static const CacheStatsHandle s_stats = CacheStats::getOrCreate( PrefabCache::kAssetKindName );
                 return s_stats;
             }
 
@@ -1090,7 +1090,8 @@ namespace sw
     }
 
     PrefabCache::PrefabCache()
-        : _mapCacheMutex{}
+        : IAssetCache{ CacheTracking::counted( kAssetKindName ) }
+        , _mapCacheMutex{}
         , _mapCache{}
         , _mapLoading{}
         , _cacheGeneration{ 0 }
