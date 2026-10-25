@@ -14,6 +14,7 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Task/TaskTypes.h"
 
@@ -25,6 +26,37 @@ namespace sw::editor
      */
     void submitEditorBackgroundJob( string_view name, const TaskArgsDelegate& delegate, const TaskArgs& args );
 
+    /**
+     * @class EditorBackgroundJobTracker
+     * @brief 에디터가 낸 백그라운드 잡의 핸들만 쥐고, 종료가 그 잡들만 기다리게 합니다.
+     * @details 엔진 전체 대기(`TaskManager::waitAll`)는 에디터가 내지 않은 태스크(영구 태스크 포함)까지 기다려 시간 제한에 걸린다.
+     *          `submitEditorBackgroundJob` 가 낸 잡을 에디터 범위의 이 추적기에 올리고(`getEditorState`), `EditorContext::shutdown` 이 `waitIdle` 로 기다린다.
+     *          잡을 내는 스레드(에디터 UI 스레드)와 기다리는 스레드가 같지만 락을 잡아 어느 스레드든 안전하다.
+     */
+    class EditorBackgroundJobTracker
+    {
+    public:
+        /** @brief 낸 잡을 올립니다. 이미 끝난 핸들은 이때 같이 정리합니다. */
+        void track( const TaskHandle& handle );
+
+        /** @brief 아직 끝나지 않은 잡의 수입니다. */
+        [[nodiscard]] uint32 getPendingCount() const;
+
+        /**
+         * @brief 올라온 잡이 모두 끝나기를 기다립니다.
+         * @param timeoutMs 최대 대기 시간(밀리초)입니다.
+         * @return 모두 끝났으면 true, 시간이 다 되면 false 입니다.
+         */
+        [[nodiscard]] bool waitIdle( uint32 timeoutMs );
+
+    private:
+        mutable mutex      _mutex;
+        vector<TaskHandle> _listHandle;
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
     /** @brief 입력이 없는 잡을 위한 빈 입력입니다. */
     struct EditorBackgroundNoInput
     {
