@@ -833,7 +833,7 @@ namespace sw
                 _localPose.setToReference( *_skeleton );
                 // 모프 가중치도 포즈와 같이 새로 만든다 — 일들(커브 · 얼굴)이 이 단계와 후처리 단계에서 더한다.
                 std::fill( _listMorphWeight.begin(), _listMorphWeight.end(), 0.0f );
-                // 리더는 의존이라 이 레벨보다 먼저 평가됐다 — 그 로컬 포즈를 읽는다.
+                // 리더는 의존이라 이 유닛보다 먼저 모든 단계를 마쳤다(`AnimationDependencyEdge`) — 부착 · 후처리(체형 비율 · IK)까지 적용된 최종 로컬 포즈를 읽는다.
                 const SkeletalMeshComponent* pLeader = findLeaderPose();
                 if ( pLeader != nullptr )
                     copyLeaderPose( *pLeader );

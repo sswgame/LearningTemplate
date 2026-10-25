@@ -183,9 +183,10 @@ SW_TEST_CASE( PoseModifierTest, CrossUnitTargetOrdersUnitsAndRejectsCycle )
         const float3 propRoot  = float3::transform( TestPoseModifierInternal::getBoneModel( *pProp, 0 ), pProp->getWorldMatrix() );
         SW_EXPECT_TRUE( TestPoseModifierInternal::isNear( handWorld, propRoot, 1e-4f ) );
     }
-    SW_EXPECT_FALSE( system.hasDependencyCycle() );
-    SW_ASSERT_EQUAL( 2u, static_cast<uint32>( system.getLevels().size() ) );
-    SW_EXPECT_TRUE( system.getLevels()[0][0] == pBody );
+    SW_EXPECT_FALSE( system.getComponents().hasCycle() );
+    SW_ASSERT_EQUAL( 1u, system.getComponents().getComponentCount() );
+    SW_ASSERT_EQUAL( 2u, system.getComponents().getUnitCount() );
+    SW_EXPECT_TRUE( system.getComponents().getUnits()[0] == pBody ); // 소품이 몸보다 먼저 등록돼도 성분 안에서는 위 유닛(몸)이 앞이다
 
     // 몸이 소품을 대상으로 하면 고리다 — 대상은 꺼지고, 시스템은 고리 없이 돈다.
     {
@@ -204,7 +205,7 @@ SW_TEST_CASE( PoseModifierTest, CrossUnitTargetOrdersUnitsAndRejectsCycle )
         SW_EXPECT_TRUE( pBody->getAnimationDependencies().empty() );
     }
     system.evaluate( 1.0f / 60.0f );
-    SW_EXPECT_FALSE( system.hasDependencyCycle() );
+    SW_EXPECT_FALSE( system.getComponents().hasCycle() );
     pBody->unregisterAnimationPhaseTask( &turn );
 }
 
