@@ -28,7 +28,7 @@ namespace sw
      * @details 간접 인자는 GPUScene 이 CPU 에서 이미 채워 두므로, 이 디스패치만 빼면 "컴퓨트가 인자를
      *          망치는가" 를 백엔드별로 가를 수 있다. 기본은 켬이다.
      */
-    SW_GLOBAL_VARIABLE( int32, gv_gpuCulling, 1, "GPU 컬링 컴퓨트 디스패치 (0=건너뜀, 진단용)" );
+    SW_GLOBAL_VARIABLE( bool, gv_gpuCulling, true, "GPU 컬링 컴퓨트 디스패치 (false=건너뜀, 진단용)" );
 
     /**
      * @brief `-gv_morphDiag=<Normal|ForceOn|SkipDispatch|IndexTag>` 는 GPU 메시 모프 경로를 백엔드 능력 테이블과 **상관없이** 돌려 봅니다(`MeshMorphDiagMode`).
@@ -47,7 +47,7 @@ namespace sw
     {
         // 컴퓨트가 드로우 커맨드를 만드는 경로를 쓰려면 인다이렉트 드로우와 컬링 디스패치가 둘 다 켜져
         // 있고 컬링 PSO 가 실제로 만들어져 있어야 한다. 셋 중 하나라도 없으면 CPU 가 채운 개수로 그린다.
-        return gv_gpuCulling != 0 && getEnginePSO( RenderPassType::GPUCull ) != 0;
+        return gv_gpuCulling && getEnginePSO( RenderPassType::GPUCull ) != 0;
     }
 
     void FrameRenderer::dispatchInstanceAnimation( uint32 instanceCount )

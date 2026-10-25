@@ -19,7 +19,7 @@ namespace sw
      * @details 이 최적화가 무엇을 바꿨는지 측정하려면 같은 실행에서 끄고 켜 비교할 수 있어야 합니다(A/B). 스레딩을 건드리는
      *          기능이라 의심스러울 때 끌 수 있는 스위치이기도 합니다. gv_useRenderThread, gv_gpuCulling 과 같은 종류입니다.
      */
-    SW_GLOBAL_VARIABLE( int32, gv_gpuUploadQueue, 1, "GPU 업로드를 워커로 앞당긴다 (0=렌더 스레드가 그 자리에서 만든다)" );
+    SW_GLOBAL_VARIABLE( bool, gv_gpuUploadQueue, true, "GPU 업로드를 워커로 앞당긴다 (false=렌더 스레드가 그 자리에서 만든다)" );
 
     void GPUUploadQueue::bindDevice( IRHIDevice* pDevice, TaskManager* pTaskManager )
     {
@@ -64,7 +64,7 @@ namespace sw
 
     uint32 GPUUploadQueue::flush()
     {
-        const bool bNothingToFlush = _listPendingMesh.empty() || _pDevice == nullptr || gv_gpuUploadQueue == 0;
+        const bool bNothingToFlush = _listPendingMesh.empty() || _pDevice == nullptr || gv_gpuUploadQueue == false;
         if ( bNothingToFlush )
         {
             _listPendingMesh.clear();

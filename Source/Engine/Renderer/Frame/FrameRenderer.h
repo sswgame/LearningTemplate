@@ -72,7 +72,7 @@ namespace sw
 
     /**
      * @brief 진단 · 테스트가 코드에서 전역 변수(`gv_morphDiag` · `gv_drawMerge` · `gv_vertexPool`)와 렌더러 시계를 덮어쓰는 값 하나입니다.
-     * @details 모프 진단은 `std::nullopt`, 나머지는 음수가 "덮어쓰지 않음" 이라 전역 변수(시각은 렌더러 시계)를 따른다. 언리얼 뷰 패밀리의 `FEngineShowFlags` 처럼 값 하나로 주고받는다(기억에 의존한 비교).
+     * @details `std::nullopt`(시각은 음수)가 "덮어쓰지 않음" 이라 전역 변수(시각은 렌더러 시계)를 따른다. 언리얼 뷰 패밀리의 `FEngineShowFlags` 처럼 값 하나로 주고받는다(기억에 의존한 비교).
      *          배포본의 렌더러는 이 값을 갖지 않고(`FrameRenderer::setDebugOverrides` 가 없다) 늘 전역 변수를 따른다.
      */
     struct FrameDebugOverrides
@@ -84,10 +84,10 @@ namespace sw
          *          `MorphPool::computeElement` 를 잘못 컴파일해 원소를 하나 어긋나게 읽으면 이 단언에 걸린다(binding.hlsli 주석 참고).
          */
         std::optional<MeshMorphDiagMode> _meshMorphDiag{};
-        /// @brief 1 이면 같은 PSO 와 머티리얼의 연속 배치를 멀티 드로우 하나로 묶고, 0 이면 배치마다 드로우를 부릅니다(`gv_drawMerge`). 멀티 드로우가 없는 백엔드(DX11)는 늘 배치마다입니다.
-        int32 _drawMerge{ -1 };
-        /// @brief 1 이면 씬 메시 정점을 한 풀 버퍼에 모으고, 0 이면 메시마다 자기 정점 버퍼로 그립니다(`gv_vertexPool`, 진단과 A/B 비교용).
-        int32 _vertexPool{ -1 };
+        /// @brief true 면 같은 PSO 와 머티리얼의 연속 배치를 멀티 드로우 하나로 묶고, false 면 배치마다 드로우를 부릅니다(`gv_drawMerge`). 멀티 드로우가 없는 백엔드(DX11)는 늘 배치마다입니다.
+        std::optional<bool> _drawMerge{};
+        /// @brief true 면 씬 메시 정점을 한 풀 버퍼에 모으고, false 면 메시마다 자기 정점 버퍼로 그립니다(`gv_vertexPool`, 진단과 A/B 비교용).
+        std::optional<bool> _vertexPool{};
         /**
          * @brief 시간으로 구동하는 컴퓨트(인스턴스 애니메이션, 메시 모프)가 읽는 절대 시간(초)을 고정합니다.
          * @details 모프 변위는 sin(시간)이라 벽시계로 캡처하면 시각에 따라 이미지가 달라지고, 부하가 걸린 실행에서 픽셀 단언이 흔들린다.

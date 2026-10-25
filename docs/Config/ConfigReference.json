@@ -3670,10 +3670,10 @@
   },
   {
    "name": "gv_drawMerge",
-   "type": "int32",
-   "default": "1",
+   "type": "bool",
+   "default": "true",
    "kind": "일반",
-   "description": "씬 배치 멀티 드로우 묶기 (0=배치마다 호출, 진단용)",
+   "description": "씬 배치 멀티 드로우 묶기 (false=배치마다 호출, 진단용)",
    "source": "Source/Engine/Renderer/Frame/FrameRenderer.cpp"
   },
   {
@@ -3918,18 +3918,18 @@
   },
   {
    "name": "gv_gpuCulling",
-   "type": "int32",
-   "default": "1",
+   "type": "bool",
+   "default": "true",
    "kind": "일반",
-   "description": "GPU 컬링 컴퓨트 디스패치 (0=건너뜀, 진단용)",
+   "description": "GPU 컬링 컴퓨트 디스패치 (false=건너뜀, 진단용)",
    "source": "Source/Engine/Renderer/Frame/FrameRendererCompute.cpp"
   },
   {
    "name": "gv_gpuUploadQueue",
-   "type": "int32",
-   "default": "1",
+   "type": "bool",
+   "default": "true",
    "kind": "일반",
-   "description": "GPU 업로드를 워커로 앞당긴다 (0=렌더 스레드가 그 자리에서 만든다)",
+   "description": "GPU 업로드를 워커로 앞당긴다 (false=렌더 스레드가 그 자리에서 만든다)",
    "source": "Source/Engine/Graphics/Upload/GPUUploadQueue.cpp"
   },
   {
@@ -4470,10 +4470,10 @@
   },
   {
    "name": "gv_textureStreaming",
-   "type": "int32",
-   "default": "1",
+   "type": "bool",
+   "default": "true",
    "kind": "일반",
-   "description": "Upload async-loaded textures with their low mips first and stream the top mips in later (0 = upload every mip at once)",
+   "description": "Upload async-loaded textures with their low mips first and stream the top mips in later (false = upload every mip at once)",
    "source": "Source/Engine/Graphics/Texture/TextureCache.cpp"
   },
   {
@@ -4670,10 +4670,10 @@
   },
   {
    "name": "gv_vertexPool",
-   "type": "int32",
-   "default": "1",
+   "type": "bool",
+   "default": "true",
    "kind": "일반",
-   "description": "씬 메시 정점 풀 (0=메시마다 정점 버퍼, 진단용)",
+   "description": "씬 메시 정점 풀 (false=메시마다 정점 버퍼, 진단용)",
    "source": "Source/Engine/Renderer/Frame/FrameRenderer.cpp"
   },
   {

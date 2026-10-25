@@ -2942,14 +2942,14 @@ SW_TEST_CASE( RenderPassGPUTest, MergedSceneDrawsMatchPerBatch )
             // 기준: 정점 풀 없이(메시마다 자기 정점 버퍼, startVertex 0) 배치마다 그린 그림. 도형이 여섯 가지라 풀의 startVertex 나
             // SV_VertexID 를 백엔드가 다르게 다루면 엉뚱한 도형이 나와 여기서 갈린다(같은 큐브만 쓰면 못 잡는다).
             sw::FrameDebugOverrides overrides{};
-            overrides._vertexPool = 0;
-            overrides._drawMerge  = 0;
+            overrides._vertexPool = false;
+            overrides._drawMerge  = false;
             renderer.setDebugOverrides( overrides );
             const Snapshot noPool = snapshot( renderer, *device, scene );
-            overrides._vertexPool = 1;
+            overrides._vertexPool = true;
             renderer.setDebugOverrides( overrides );
             const Snapshot perBatch = snapshot( renderer, *device, scene );
-            overrides._drawMerge    = 1;
+            overrides._drawMerge    = true;
             renderer.setDebugOverrides( overrides );
             const Snapshot merged = snapshot( renderer, *device, scene );
             SW_EXPECT_TRUE_MSG( noPool._bOk && noPool._drawnCount > 0, ( label + ": 풀 없이 그린 그림을 못 읽었다" ).c_str() );
@@ -7487,8 +7487,9 @@ SW_TEST_CASE( RenderPassGPUTest, SoftwareAdapterSwitchStartsWarp )
         SW_EXPECT_TRUE_MSG( bReady, "the WARP device did not start" );
         SW_EXPECT_TRUE_MSG( bSoftware, "gv_rhiSoftwareAdapter=true did not put the device on the software adapter" );
         // 환경 변수(SW_RHI_SOFTWARE_ADAPTER=1)로 테스트 전체를 WARP 로 돌리는 실행이면 "끄면 하드웨어" 는 볼 수 없다.
-        const utf8*         pEnv     = std::getenv( "SW_RHI_SOFTWARE_ADAPTER" );
-        const bool          bEnvWarp = pEnv != nullptr && sw::StringUtil::equals( pEnv, "1" );
+        const utf8* pEnv     = std::getenv( "SW_RHI_SOFTWARE_ADAPTER" );
+        bool        bEnvWarp = false;
+        SW_EXPECT_TRUE_MSG( pEnv == nullptr || sw::StringUtil::tryParseBool( pEnv, bEnvWarp ), "SW_RHI_SOFTWARE_ADAPTER is not a boolean" );
         test::RHITestDevice hardware( backend );
         if ( hardware.isReady() && bEnvWarp == false )
             SW_EXPECT_FALSE_MSG( hardware->isRunningOnSoftwareAdapter(), "the device stayed on the software adapter after the switch went off" );

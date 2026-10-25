@@ -352,8 +352,14 @@ namespace sw
         swapChainDesc._format         = requestedFormat;
         swapChainDesc._bVSync         = _bPreferredVSync;
         {
-            const utf8* pSoftwareEnv        = std::getenv( "SW_RHI_SOFTWARE_ADAPTER" );
-            const bool  bSoftwareEnv        = pSoftwareEnv != nullptr && StringUtil::equals( pSoftwareEnv, "1" );
+            const utf8* pSoftwareEnv = std::getenv( "SW_RHI_SOFTWARE_ADAPTER" );
+            bool        bSoftwareEnv = false;
+            // 환경 변수도 명령줄과 같은 켬/끔 토큰만 받는다. 알 수 없는 값은 끔으로 읽지 않고 멈춘다.
+            if ( pSoftwareEnv != nullptr && StringUtil::tryParseBool( pSoftwareEnv, bSoftwareEnv ) == false )
+            {
+                SW_LOG_ERROR( "SW_RHI_SOFTWARE_ADAPTER=\"%#\" is not a boolean (use 1, 0, true, false, yes, no, on or off)", pSoftwareEnv );
+                return false;
+            }
             swapChainDesc._bSoftwareAdapter = gv_rhiSoftwareAdapter || bSoftwareEnv;
         }
         _bSoftwareAdapter = false;
