@@ -7,9 +7,10 @@
     py -3 -m Scripts scenario game/empty/automation/fog.scenario.xml --backend all --config Release
     py -3 -m Scripts scenario fog --backend vulkan --screenshot-dir out/fog   # 사진을 백엔드별 폴더(out/fog/vk/)로 모은다
     py -3 -m Scripts scenario fog --dry-run                             # 조립한 명령만 찍는다
+    py -3 -m Scripts scenario previewsky --app-arg=-gv_deferred=1       # 선언에 없는 변형 인자를 맨 뒤에 더한다(조립이 소유한 인자와 겹치면 오류)
 
 시나리오 파일의 `<Launch>`(게임 팩의 게임 이름 · `-gv_firstScene` 같은 기동 변수)와 루트 선언(에디터 · 전경 창)에서 인자를 만들고, 거기에 `-unattended`
-`-scenario=` `-scenario-report=` 백엔드 스위치를 붙인다(`Test/AppTest/AppTestUtil` 의 조립과 같은 규칙). 백엔드마다 GPU 칸을 잡고(공유 · 전경 창이 필요한 시나리오는 독점 — 작업 방식 2 절) 한 번씩 돌려
+`-scenario=` `-scenario-report=` 백엔드 스위치를 붙인다. 인자의 글은 C++ `Test/AppTest/AppTestUtil.h` 의 상수가 정본이고 `common/ScenarioArguments.py` 가 그 줄을 읽어 온다(C++ 과 이 명령이 같은 글을 두 벌 갖지 않는다). 백엔드마다 GPU 칸을 잡고(공유 · 전경 창이 필요한 시나리오는 독점 — 작업 방식 2 절) 한 번씩 돌려
 종료 코드를 뜻으로 풀고, 보고 JSON 의 `failures[]` · `unconfirmed[]` · `unhandledLogs[]` 를 표로 보인다(처리하지 않은 로그는 줄 그대로).
 종료 코드: 0 모든 백엔드 통과, 1 하나라도 통과가 아님, 2 돌릴 수 없다(이름이 없거나 모호함 · 선언을 인자로 풀 수 없음 · 빌드 없음 …).
 
@@ -35,6 +36,7 @@ from common.BuildTree import BuildTree  # noqa: E402
 from common.CookContract import CookContractSpec  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
+from common.ScenarioArguments import kVocabulary  # noqa: E402
 from common.ScenarioFile import (ScenarioDeclaration, ScenarioFileError, findResourceRoot, findScenarioCandidates,  # noqa: E402
                                  readScenarioDeclaration)
 from common.ScenarioOutcome import (ScenarioRunReport, describeOutcomeExitCode, kExitCodeHeaderRelPath, readOutcomeExitCodes,  # noqa: E402
@@ -47,7 +49,8 @@ kDefaultTimeoutSeconds = 180
 #: 구성 이름 → 빌드 폴더 프리셋(`build/<프리셋>`).
 kMapConfigPreset: dict[str, str] = {"Release": "Ninja-Release", "Shipping": "Ninja-Shipping", "Debug": "Ninja-Debug"}
 #: App 작업 폴더(`Bin`) 아래 보고 · 산출물 폴더 — 실행기가 `Saved/Automation/<시나리오 name>/` 에 사진을 쓴다(`AutomationRunner::_outputDirectory`).
-kAutomationFolder = "Saved/Automation"
+#: 인자의 글은 C++ `AppTestUtil` 상수가 정본이다(`common/ScenarioArguments.py` 가 헤더에서 읽는다) — 여기에 다시 적지 않는다.
+kAutomationFolder = kVocabulary.automationFolder
 #: 게임 프리셋 폴더(리소스 루트의 부모 기준) · 팩 키 — `Config/Game/<게임>.json` 의 `_packRoot`.
 kGamePresetFolder = "Config/Game"
 kPackRootKey = "_packRoot"
@@ -79,6 +82,7 @@ class RunPlan:
     gameName: str          # 빈 글이면 `-game=` 를 붙이지 않는다(엔진 시나리오 · 배포 빌드)
     bShipping: bool
     timeoutSeconds: int
+    listAppArg: tuple[str, ...] = ()   # `--app-arg` — 조립한 인자 맨 뒤에 그대로 붙는다
 
     @property
     def binDir(self) -> Path:
@@ -189,7 +193,7 @@ def checkRunnable(declaration: ScenarioDeclaration, tree: BuildTree, gameName: s
 # ------------------------------------------------------------------------------
 def makeEditorStateFolder(plan: RunPlan, backend: Backend) -> Path:
     """에디터를 켠 실행의 상태 폴더 — 시나리오 · 백엔드마다 따로(`AppScenarioTest::makeEditorArguments` 와 같은 자리)."""
-    return plan.binDir / kAutomationFolder / "EditorState" / f"{plan.declaration.stem}_{backend.name}"
+    return plan.binDir / kAutomationFolder / kVocabulary.editorStateSubfolder / f"{plan.declaration.stem}_{backend.name}"
 
 
 def makeReportRelPath(plan: RunPlan, backend: Backend) -> str:
@@ -198,16 +202,39 @@ def makeReportRelPath(plan: RunPlan, backend: Backend) -> str:
 
 
 def buildArguments(plan: RunPlan, backend: Backend) -> list[str]:
-    """App 에 줄 인자. 순서: 무인 · 시나리오 · 보고 · 백엔드 · 게임 · `<Launch>` 변수 · 에디터."""
-    listArgument = ["-unattended", f"-scenario={plan.declaration.resourceId}", f"-scenario-report={makeReportRelPath(plan, backend)}"]
+    """App 에 줄 인자. 순서: 무인 · 시나리오 · 보고 · 백엔드 · 게임 · `<Launch>` 변수 · 에디터 · `--app-arg`. 글은 C++ `AppTestUtil` 상수(`kVocabulary`)다."""
+    words = kVocabulary
+    listArgument = [words.unattendedArgument, f"{words.scenarioArgumentPrefix}{plan.declaration.resourceId}",
+                    f"{words.scenarioReportArgumentPrefix}{makeReportRelPath(plan, backend)}"]
     if backend.switch:
         listArgument.append(backend.switch)
     if plan.gameName and not plan.bShipping:
-        listArgument.append(f"-game={plan.gameName}")
+        listArgument.append(f"{words.gameArgumentPrefix}{plan.gameName}")
     listArgument += plan.declaration.makeLaunchArguments()
     if plan.declaration.bEditor:
-        listArgument += ["-EnableEditor", f"-gv_editorStateDir={makeEditorStateFolder(plan, backend)}"]
-    return listArgument
+        listArgument += [words.editorArgument, f"{words.editorStateDirArgumentPrefix}{makeEditorStateFolder(plan, backend)}"]
+    return listArgument + list(plan.listAppArg)
+
+
+def findArgumentName(argument: str) -> str:
+    """인자의 이름 — 앞의 `-` 들과 `=` 뒤 값을 뗀 것(`-gv_a=1` → `gv_a`, `--cook-shaders` → `cook-shaders`)."""
+    return argument.lstrip("-").split("=", 1)[0]
+
+
+def checkAppArguments(listAppArg: list[str], declaration: ScenarioDeclaration) -> None:
+    """`--app-arg` 가 조립이 소유한 인자와 겹치면 `ScenarioRunError`(조용히 덮어쓰지 않는다). 소유한 인자: 무인 · 시나리오 · 보고 · 게임 · 백엔드 스위치 · `<Launch>` 변수 · 에디터를 켜는 시나리오의 에디터 인자."""
+    words = kVocabulary
+    setOwned = {findArgumentName(text) for text in (words.unattendedArgument, words.scenarioArgumentPrefix, words.scenarioReportArgumentPrefix, words.gameArgumentPrefix)}
+    for backend in CookContractSpec.load().listBackend:
+        setOwned.update({backend.commandLineName, backend.name.lower()})
+    setOwned.update(variable for variable, _ in declaration.listLaunch)
+    if declaration.bEditor:
+        setOwned.update(findArgumentName(text) for text in (words.editorArgument, words.editorStateDirArgumentPrefix))
+    for argument in listAppArg:
+        if not argument.startswith("-"):
+            raise ScenarioRunError(f"--app-arg '{argument}' 는 '-' 로 시작하는 App 인자여야 한다(값이 '-' 로 시작하는 인자는 --app-arg=-gv_x=1 처럼 붙여 쓴다)")
+        if findArgumentName(argument) in setOwned:
+            raise ScenarioRunError(f"--app-arg '{argument}' 는 이 명령이 조립하는 인자와 겹친다 — {findArgumentName(argument)} 은 시나리오 선언 · --backend 가 정한다(조용히 덮어쓰지 않는다)")
 
 
 # ------------------------------------------------------------------------------
@@ -341,7 +368,9 @@ def makePlan(args: argparse.Namespace, repositoryRoot: Path) -> RunPlan:
     declaration = resolveScenario(resourceRoot, args.scenario)
     gameName = resolveGameName(resourceRoot, declaration)
     checkRunnable(declaration, tree, gameName)
-    return RunPlan(declaration, appPath, resolveBackends(args.backend, tree), gameName, tree.bShipping, args.timeout)
+    listBackend = resolveBackends(args.backend, tree)
+    checkAppArguments(args.listAppArg, declaration)
+    return RunPlan(declaration, appPath, listBackend, gameName, tree.bShipping, args.timeout, tuple(args.listAppArg))
 
 
 def runPlan(plan: RunPlan, args: argparse.Namespace, repositoryRoot: Path) -> list[BackendResult]:
@@ -376,6 +405,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--app", type=Path, default=None, help="빌드된 App 실행 파일(이 App 의 Resource/ 가 시나리오를 찾는 곳이다)")
     parser.add_argument("--screenshot-dir", type=Path, default=None, help="이번 판이 쓴 사진 · 산출물을 <폴더>/<백엔드>/ 로 복사한다")
     parser.add_argument("--timeout", type=int, default=kDefaultTimeoutSeconds, help=f"백엔드 한 판의 시한(초, 기본 {kDefaultTimeoutSeconds})")
+    parser.add_argument("--app-arg", dest="listAppArg", action="append", default=[], metavar="ARG",
+                        help="App 에 그대로 더할 인자(반복 가능, 맨 뒤에 붙는다) — 값이 '-' 로 시작하므로 --app-arg=-gv_deferred=1 처럼 '=' 로 붙여 쓴다. "
+                             "시나리오 선언 · 백엔드가 정하는 인자(-scenario · -game · 백엔드 스위치 · <Launch> 변수 …)와 겹치면 오류")
     parser.add_argument("--dry-run", dest="bDryRun", action="store_true", help="조립한 명령만 찍고 돌리지 않는다")
     parser.add_argument("--owner", default="", help="GPU 잠금에 적을 소유자 이름(기본: 이 워크트리 폴더 이름)")
     parser.add_argument("--wait", type=int, default=kDefaultWaitSeconds, help=f"GPU 칸을 기다릴 최대 초(기본 {kDefaultWaitSeconds})")

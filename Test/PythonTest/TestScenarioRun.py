@@ -24,6 +24,7 @@ sys.path.insert(0, str(kScriptsRoot))
 from common.AppRun import AppRunResult, kAppRhiUnusableExitCode  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
+from common import ScenarioArguments  # noqa: E402
 from common.ScenarioFile import findScenarioCandidates, readScenarioDeclaration  # noqa: E402
 from common.ScenarioOutcome import kExitCodeHeaderRelPath, readOutcomeExitCodes  # noqa: E402
 from qa import ScenarioRun  # noqa: E402
@@ -275,6 +276,49 @@ class NameAndDeclarationTest(ScenarioRunCase):
     def testGamePresetMissingStopsWithReason(self) -> None:
         (self.root / "Config/Game/Empty.json").unlink()
         self.assertCannotRun(["motionblur"], "를 팩으로 가진 게임이")
+
+
+class AppArgumentTest(ScenarioRunCase):
+    def testAppArgumentsAreAppendedLastInOrder(self) -> None:
+        fake = FakeApp()
+        code, _, _ = self.runMain(["runner", "--app-arg=-gv_deferred=1", "--app-arg=-EnableEditor"], fake)
+        self.assertEqual(ExitCode.Passed, code)
+        self.assertEqual(["-gv_deferred=1", "-EnableEditor"], fake.listCall[0][1][-2:])
+
+    def testAppArgumentOverlappingAssembledOnesStops(self) -> None:
+        """조립이 소유한 인자(`<Launch>` 변수 · 게임 · 백엔드 · 시나리오 · 에디터 시나리오의 에디터 인자)는 조용히 덮어쓰지 않고 오류다."""
+        for listArgument, expected in ((["motionblur", "--app-arg=-gv_deferred=0"], "gv_deferred"), (["motionblur", "--app-arg=-game=Other"], "game"),
+                                       (["runner", "--app-arg=-vk"], "vk"), (["runner", "--app-arg=-scenario=x"], "scenario"),
+                                       (["runner", "--app-arg=-unattended"], "unattended"), (["addcomponent", "--app-arg=-EnableEditor"], "EnableEditor"),
+                                       (["runner", "--app-arg=notdashed"], "'-' 로 시작")):
+            fake = FakeApp()
+            code, _, err = self.runMain(listArgument, fake)
+            self.assertEqual(ExitCode.CheckInvalid, code, listArgument)
+            self.assertIn(expected, err)
+            self.assertEqual([], fake.listCall)
+
+
+class ArgumentVocabularyTest(unittest.TestCase):
+    def testVocabularyIsReadFromTheCppHeader(self) -> None:
+        """C++ `AppTestUtil` 상수가 정본이다 — 파이썬이 같은 글을 읽어 온다."""
+        words = ScenarioArguments.kVocabulary
+        self.assertEqual(("-unattended", "-scenario=", "-scenario-report=", "-EnableEditor", "-gv_editorStateDir=", "-game=", "Saved/Automation", "EditorState"),
+                         (words.unattendedArgument, words.scenarioArgumentPrefix, words.scenarioReportArgumentPrefix, words.editorArgument,
+                          words.editorStateDirArgumentPrefix, words.gameArgumentPrefix, words.automationFolder, words.editorStateSubfolder))
+
+    def testMissingConstantStopsLoudly(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            header = Path(temporary) / "AppTestUtil.h"
+            header.write_text('static constexpr const utf8* kUnattendedArgument = "-unattended";', encoding="utf-8")
+            with self.assertRaises(SystemExit):
+                ScenarioArguments.readScenarioArgumentVocabulary(header)
+
+    def testCppAssemblyUsesTheConstantsNotLiterals(self) -> None:
+        """C++ 조립 자리(`AppTestUtil.cpp` · `TestAppScenario.cpp`)가 상수를 쓰고 인자 글을 다시 적지 않는다 — 다시 적으면 정본이 둘이 된다."""
+        for relPath in ("Test/AppTest/AppTestUtil.cpp", "Test/AppTest/TestAppScenario.cpp"):
+            text = (getProjectRoot() / relPath).read_text(encoding="utf-8")
+            for literal in ('"-unattended', '"-scenario=', '"-scenario-report=', '"-EnableEditor', '"-gv_editorStateDir='):
+                self.assertNotIn(literal, text.replace('"-game=HarvestValley', ""), f"{relPath}: {literal}")
 
 
 class ShippingBuildTest(ScenarioRunCase):

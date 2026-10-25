@@ -6,7 +6,7 @@
   ② 창을 닫고 다시 열어(새 미리보기 렌더러) 한 장 더 저장한다 — 스카이 패스가 다시 선 렌더러에서도 도는지 본다.
   그림이 맞는지(위가 천정색, 지평선 쪽이 밝고, 구 뒤는 하늘, 구 위는 하늘에 덮이지 않음)는 저장한 PPM 을 눈으로 본다. 평균 색 문턱값은 GPU 로 돌려 보기 전에는 맞출 수 없어 자동 단언을 두지 않았다.
   파일: Saved/Automation/previewsky_<first|reopen>.ppm. 디퍼드에서도 빈 곳만 칠하는지는 같은 시나리오를 -gv_deferred=1 로 돌려 본다(미리보기 렌더러는 창을 열 때 파이프라인을 고른다).
-  실행: py -3 -m Scripts scenario previewsky (백엔드 vk · dx11 · gl 도 같다. 각각 -gv_deferred=1 을 더한 변형은 이 명령에 그 인자를 줄 길이 없어 App.exe 에 직접 붙인다)
+  실행: py -3 -m Scripts scenario previewsky (백엔드 vk · dx11 · gl 도 같다. 각 백엔드마다 -gv_deferred=1 을 더한 변형은 app-arg 옵션(이름 앞에 하이픈 둘)에 그 인자를 준다)
 -->
 <Scenario name="editor.previewsky" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="Immediately" input="exclusive">
 	<At frame="0"><DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/></At>

@@ -4,7 +4,7 @@
   모듈이 의존 이미지에 묶여 있고(Module.BindingsOk) 씬이 사라지지 않았는지(Scene.ObjectCount) 본다. 단계 `SwapBackend` 는 교체를 요청만 하므로(메뉴 · 콘솔과 같은 길)
   끝은 `RHI.SwapPending` 이 0 이 되는 것으로 기다린다. 어느 백엔드로 시작해도 된다.
   네 백엔드가 모두 있는 PC 에서만 통과한다 — 없는 백엔드로 건너뛰면 교체가 실패해 RHI.SwapFailedCount 가 오른다. 그래서 AppScenarioTest 가 자동으로 줍는 폴더(engine/automation)가 아니라 이 하위 폴더에 둔다.
-  실행: py -3 -m Scripts scenario swapbackends (에디터 UI 까지 교체를 건너려면 App.exe 에 -EnableEditor 를 직접 붙인다)
+  실행: py -3 -m Scripts scenario swapbackends (에디터 UI 까지 교체를 건너려면 app-arg 옵션(이름 앞에 하이픈 둘)에 -EnableEditor 를 준다)
 -->
 <Scenario name="rhiswap.swapbackends" fixedDelta="0.0166667" timeoutFrames="3000" startAfter="Immediately" input="exclusive">
 	<At frame="30"><SwapBackend backend="dx11"/></At>

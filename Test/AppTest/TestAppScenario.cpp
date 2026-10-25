@@ -92,6 +92,18 @@ namespace
             return scenario.loadFromPath( scenarioPath, error ) ? scenario.getTestOptions().makeLaunchArguments() : sw::string{};
         }
 
+        /** @brief 작업 폴더 기준 에디터 상태 폴더 경로(`Saved/Automation/EditorState/<이름>`)입니다 — 글은 `AppTestUtil` 상수이고 스크립트 `scenario` 가 같은 상수를 읽는다. */
+        static sw::string makeEditorStateRelativePath( const sw::string& name )
+        {
+            return sw::string( test::AppTestUtil::kAutomationFolder ) + "/" + test::AppTestUtil::kEditorStateSubfolder + "/" + name;
+        }
+
+        /** @brief 에디터를 켠 실행의 인자(`-EnableEditor -gv_editorStateDir=<폴더>`)입니다. */
+        static sw::string makeEditorStateArguments( const sw::string& stateFolder )
+        {
+            return sw::string( test::AppTestUtil::kEditorArgument ) + " " + test::AppTestUtil::kEditorStateDirArgumentPrefix + stateFolder;
+        }
+
         /**
          * @brief 에디터를 켠 실행의 인자 — `-EnableEditor` 와 시나리오 · 백엔드마다 비운 에디터 상태 폴더입니다(에디터 시나리오 체인과 같은 규칙).
          * @details 사용자의 `Saved/Editor`(레이아웃 · 최근 씬)를 읽으면 실행마다 시작 화면이 달라진다.
@@ -100,9 +112,9 @@ namespace
         {
             const sw::string backend = pSwitch[0] == '-' ? sw::string( pSwitch + 1 ) : sw::string( "default" );
             sw::string       stateFolder;
-            SW_EXPECT_TRUE( sw::FileUtil::makeAbsolutePath( "Saved/Automation/EditorState/" + sw::FileUtil::getFileNamePart( scenarioPath ) + "_" + backend, stateFolder ) );
+            SW_EXPECT_TRUE( sw::FileUtil::makeAbsolutePath( makeEditorStateRelativePath( sw::FileUtil::getFileNamePart( scenarioPath ) + "_" + backend ), stateFolder ) );
             SW_EXPECT_TRUE( sw::FileUtil::removeDirectory( stateFolder ) );
-            return "-EnableEditor -gv_editorStateDir=" + stateFolder;
+            return makeEditorStateArguments( stateFolder );
         }
 
         /** @brief 시나리오를 백엔드마다 돌려 종료 코드 0 을 단언합니다. 루트에 `editor="true"` 를 적은 시나리오는 에디터를 켜고 돕니다. 돌린(건너뛰지 않은) 수를 돌려줍니다. */
@@ -193,10 +205,10 @@ namespace
                     ++end;
                 }
                 sw::string stateFolder;
-                const bool bAbsolute = sw::FileUtil::makeAbsolutePath( "Saved/Automation/EditorState/" + group + "_" + ( pSwitch + 1 ), stateFolder );
+                const bool bAbsolute = sw::FileUtil::makeAbsolutePath( makeEditorStateRelativePath( group + "_" + ( pSwitch + 1 ) ), stateFolder );
                 SW_EXPECT_TRUE( bAbsolute );
                 SW_EXPECT_TRUE( sw::FileUtil::removeDirectory( stateFolder ) );
-                const sw::string arguments = "-EnableEditor -gv_editorStateDir=" + stateFolder;
+                const sw::string arguments = makeEditorStateArguments( stateFolder );
                 for ( size_t index = begin; index < end; ++index )
                 {
                     sw::string                scenarioLines;
@@ -279,9 +291,9 @@ namespace
             {
                 const sw::string backend = pSwitch[0] == '-' ? sw::string( pSwitch + 1 ) : sw::string( "default" );
                 sw::string       stateFolder;
-                SW_EXPECT_TRUE( sw::FileUtil::makeAbsolutePath( "Saved/Automation/EditorState/chain_" + backend, stateFolder ) );
+                SW_EXPECT_TRUE( sw::FileUtil::makeAbsolutePath( makeEditorStateRelativePath( "chain_" + backend ), stateFolder ) );
                 SW_EXPECT_TRUE( sw::FileUtil::removeDirectory( stateFolder ) );
-                const sw::string          arguments = "-EnableEditor -scenario-keep-going -gv_editorStateDir=" + stateFolder;
+                const sw::string          arguments = makeEditorStateArguments( stateFolder ) + " -scenario-keep-going";
                 sw::string                scenarioLines;
                 const test::AppRunOutcome outcome = test::AppTestUtil::runScenarioChain( makeChain( listChained, kReloadEvery ), "editor", pSwitch, scenarioLines, arguments );
                 if ( test::hasRunHere( outcome ) )
@@ -327,7 +339,7 @@ SW_TEST_CASE( AppScenarioTest, EveryGamePackScenarioPassesOnEveryBackend )
         if ( packRoot.empty() )
             continue;
         const sw::vector<sw::string> listScenario = AppScenarioTestInternal::collectScenarioPaths( { packRoot + "/automation" } );
-        ranCount += AppScenarioTestInternal::runEveryBackend( listScenario, "-game=" + gameName );
+        ranCount += AppScenarioTestInternal::runEveryBackend( listScenario, sw::string( test::AppTestUtil::kGameArgumentPrefix ) + gameName );
     }
     if ( ranCount == 0 )
         SW_TEST_SKIP( "no game pack scenario could run on this machine" );

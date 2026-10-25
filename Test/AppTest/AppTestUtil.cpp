@@ -47,8 +47,8 @@ namespace test
                     test::BuildFeature _feature;
                 };
                 static constexpr ArgumentFeature kArrArgumentFeature[] = {
-                    {"-EnableEditor", test::BuildFeature::DevelopmentBuild}, // 배포본에는 에디터 모듈이 없다
-                    {       "-game=",  test::BuildFeature::SourceResources}, // 활성이 아닌 게임 팩은 구운 팩에 없다
+                    {    AppTestUtil::kEditorArgument, test::BuildFeature::DevelopmentBuild}, // 배포본에는 에디터 모듈이 없다
+                    {AppTestUtil::kGameArgumentPrefix,  test::BuildFeature::SourceResources}, // 활성이 아닌 게임 팩은 구운 팩에 없다
                 };
                 for ( const ArgumentFeature& entry : kArrArgumentFeature )
                 {
@@ -161,7 +161,9 @@ namespace test
 
         sw::string command{ "\"" };
         command += executablePath;
-        command += "\" -unattended ";
+        command += "\" ";
+        command += kUnattendedArgument;
+        command += " ";
         command += arguments;
         return command;
     }
@@ -215,7 +217,7 @@ namespace test
     sw::string AppTestUtil::makeReportPath( const sw::string& scenarioPath, const utf8* pBackendSwitch )
     {
         const sw::string backend = pBackendSwitch[0] == '-' ? sw::string( pBackendSwitch + 1 ) : sw::string( "default" );
-        return "Saved/Automation/" + AppTestUtilInternal::getScenarioStem( scenarioPath ) + "_" + backend + ".json";
+        return sw::string( kAutomationFolder ) + "/" + AppTestUtilInternal::getScenarioStem( scenarioPath ) + "_" + backend + ".json";
     }
 
     sw::vector<sw::string> AppTestUtil::readReportRecords( const sw::string& reportPath )
@@ -273,9 +275,9 @@ namespace test
             return AppRunOutcome::Skipped;
 
         const sw::string backend    = pBackendSwitch[0] == '-' ? sw::string( pBackendSwitch + 1 ) : sw::string( "default" );
-        const sw::string outputBase = "Saved/Automation/" + outputStem + "_" + backend;
-        (void)sw::FileUtil::ensureDirectoryExists( "Saved/Automation" );
-        sw::string arguments = "-scenario=" + scenarioArgument + " -scenario-report=" + outputBase + ".json " + pBackendSwitch;
+        const sw::string outputBase = sw::string( kAutomationFolder ) + "/" + outputStem + "_" + backend;
+        (void)sw::FileUtil::ensureDirectoryExists( kAutomationFolder );
+        sw::string arguments = sw::string( kScenarioArgumentPrefix ) + scenarioArgument + " " + kScenarioReportArgumentPrefix + outputBase + ".json " + pBackendSwitch;
         if ( extraArguments.empty() == false )
         {
             arguments += " ";

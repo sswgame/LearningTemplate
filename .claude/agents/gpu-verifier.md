@@ -22,7 +22,7 @@ py -3 -m Scripts shared-lock status                        # 누가 잡았는지
 잠금을 못 잡으면(대기 시간 초과) 실행하지 말고 `status` 의 소유자를 보고한다.
 
 ## 실행
-- **시나리오는 `py -3 -m Scripts scenario <이름 조각> --backend dx12|dx11|vulkan|gl|all [--config Release|Shipping|Debug] [--app <App.exe>] [--screenshot-dir <폴더>]` 로 돌린다. `App.exe` 를 직접 조립하지 않는다**(`<Launch>` 의 `-gv_firstScene` 같은 기동 변수 · 게임 · 보고 인자를 시나리오 파일에서 그대로 붙인다 — 손 조립이 `-gv_firstScene` 을 빠뜨려 읽기 오류 11 이 났다). 이 명령은 백엔드마다 GPU 칸을 스스로 잡고 놓으므로(공유, 전경 창이 필요한 시나리오는 독점) 위 잠금을 따로 잡지 않는다(독점을 쥔 채 부르면 공유가 독점을 기다린다). 종료 코드 0 만 통과다 — 처리하지 않은 Warning/Error(15) · 미확정(14) · 이 기계에서 못 돎(77)은 통과가 아니고, 결과 표와 처리하지 않은 로그 줄을 그대로 보고에 옮긴다. 이름이 모호하면 후보를 보이고 멈춘다(종료 코드 2).
+- **시나리오는 `py -3 -m Scripts scenario <이름 조각> --backend dx12|dx11|vulkan|gl|all [--config Release|Shipping|Debug] [--app <App.exe>] [--screenshot-dir <폴더>]` 로 돌린다. `App.exe` 를 직접 조립하지 않는다**(`<Launch>` 의 `-gv_firstScene` 같은 기동 변수 · 게임 · 보고 인자를 시나리오 파일에서 그대로 붙인다 — 손 조립이 `-gv_firstScene` 을 빠뜨려 읽기 오류 11 이 났다). 이 명령은 백엔드마다 GPU 칸을 스스로 잡고 놓으므로(공유, 전경 창이 필요한 시나리오는 독점) 위 잠금을 따로 잡지 않는다(독점을 쥔 채 부르면 공유가 독점을 기다린다). 종료 코드 0 만 통과다 — 처리하지 않은 Warning/Error(15) · 미확정(14) · 이 기계에서 못 돎(77)은 통과가 아니고, 결과 표와 처리하지 않은 로그 줄을 그대로 보고에 옮긴다. 이름이 모호하면 후보를 보이고 멈춘다(종료 코드 2). 선언에 없는 변형 인자(`-gv_deferred=1` · 선언 없는 `-EnableEditor`)는 `--app-arg=<인자>` 로 더한다.
 - 방법은 `docs/08_Verification.md` 를 따른다. 에디터는 `-EnableEditor` 가 있어야 뜨므로, 실행 뒤 로그로 에디터 모듈이 실제로 로드됐는지 확인한다.
 - 캡처는 `-gv_screenshot=<경로>.ppm`(`-gv_screenshotFrame=N`, 연속은 `-gv_screenshotCount` · `-gv_screenshotInterval`)을 쓴다. PrintWindow 는 쓰지 않는다.
 - 셰이더를 바꾼 뒤에는 `App.exe --cook-shaders` 로 다시 굽고 잰다.
