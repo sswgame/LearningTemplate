@@ -199,6 +199,8 @@ namespace sw
          * @brief HLSL 셰이더를 컴파일합니다(디스크 캐시가 켜져 있으면 바이트코드 캐시를 씁니다).
          * @param desc 컴파일 디스크립터
          * @return 컴파일 결과(성공 여부와 바이트코드)
+         * @details 스레드 계약: 워커에서 동시에 불린다(병렬 쿠킹). 공유 상태는 읽기 전용(`ResourcePaths` 읽기)이거나 원자값이다.
+         *          서로 다른 @p desc 만 동시에 넣는다 — 같은 셰이더 변형을 두 스레드가 동시에 컴파일하면 같은 캐시 파일을 함께 쓴다.
          */
         static ShaderCompileResult compileHlsl( const ShaderCompileDesc& desc );
 

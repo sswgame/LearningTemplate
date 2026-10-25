@@ -74,7 +74,7 @@
 "Source/Core/String/fixed_string.cpp" = 1
 "Source/Core/String/hashed_string.cpp" = 3
 # Source/Core/Task — 이전 대기
-"Source/Core/Task/TaskManager.cpp" = 6
+"Source/Core/Task/TaskManager.cpp" = 5
 # Source/Core/Time — 이전 대기
 "Source/Core/Time/MonotonicClock.cpp" = 1
 # Source/Core/UUID — 이전 대기

@@ -10,6 +10,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Memory/LifetimeScope.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/AssetTypeRegistry.h"
 #include "Engine/Config/EngineConfig.h"
@@ -81,6 +82,18 @@ namespace sw
              *          반대 순서로 잡는 곳은 없습니다.
              */
             inline static std::once_flag _s_initOnce{};
+
+            /**
+             * @brief 락 없는 전역(검색 목록 · 루트 · 호스트 제외 그룹)을 쓰는 API 가 병렬 단계 중에 불리지 않았는지 단언합니다.
+             * @details 읽는 쪽(`findLooseFile` · `makeSaveFolderPath`)은 락 없이 이 칸들을 읽는다 — 워커나 병렬 본문 중에 쓰면 읽는 쪽이 깨진 벡터를 본다. 쓰기는
+             *          메인 스레드의 직렬 구간(기동 · 설정 로드 · 에디터 모드 전환)에서만 한다. `initialize()` 의 첫 호출은 `call_once` 가 직렬로 만들어 대상이 아니다.
+             * @param pAPIName 로그에 남길 API 이름
+             */
+            static void assertSerialPhase( const utf8* pAPIName )
+            {
+                SW_LOG_ASSERT( TaskManager::isInParallelBody() == false && TaskManager::isOnPoolWorkerThread() == false,
+                               "ResourcePaths::%# writes lock-free globals and must run in a serial phase (not on a worker or inside a parallel body)", pAPIName );
+            }
 
             /**
              * @brief 구성 때 베이크한 `EngineConfig.json` 사본의 `_listResourcePriority` 입니다. 읽지 못하면 오류를 남기고 빈 목록입니다.
@@ -259,7 +272,12 @@ namespace sw
         //
         // `call_once` 는 콜러블이 **예외 없이 반환하면 완료로 표시**한다. 그래서 성패는 콜러블 안에서
         // 플래그에 남기고, 반환하는 값은 그 플래그를 읽는다. 본문을 그냥 감싸기만 하면 실패가 사라진다.
-        std::call_once( ResourcePathsInternal::_s_initOnce, []()
+        //
+        // **로그는 `call_once` 밖에서 남긴다.** `call_once` 는 끝날 때까지 늦은 스레드를 막는 잠금이다. 안에서 로그를 남기면 로그 경로(리스너 · 파일 출력)가
+        // `ResourcePaths` 를 되불렀을 때 같은 스레드가 자기 `call_once` 를 다시 기다려 교착한다. 그래서 안에서는 남길 말을 지역 변수에만 적는다.
+        bool   bRootMissing = false;
+        string rootToLog;
+        std::call_once( ResourcePathsInternal::_s_initOnce, [&bRootMissing, &rootToLog]()
         {
             clearPathCache();
 
@@ -279,11 +297,13 @@ namespace sw
                 currentPath = parent;
             }
 
-            SW_LOG_ASSERT( rootPath.empty() == false, "RootFolder not found" );
             if ( rootPath.empty() )
+            {
+                bRootMissing = true;
                 return; // 플래그를 켜지 않는다. initialize() 가 false 를 반환한다.
+            }
 
-            SW_LOG_INFO( "RootFolder : %#", rootPath );
+            rootToLog = rootPath;
 
             _s_projectFolderPath = FileUtil::normalizeSeparators( FileUtil::trimTrailingSlashes( rootPath ) );
 
@@ -303,6 +323,10 @@ namespace sw
             // 여기까지 와야 상태가 모두 채워진 것이다.
             _s_bInitialize.store( true, std::memory_order_release );
         } );
+
+        SW_LOG_ASSERT( bRootMissing == false, "RootFolder not found" );
+        if ( rootToLog.empty() == false )
+            SW_LOG_INFO( "RootFolder : %#", rootToLog );
 
         return _s_bInitialize.load( std::memory_order_acquire );
     }
@@ -551,6 +575,10 @@ namespace sw
         if ( listPriority.empty() )
             return false;
 
+        // 첫 `initialize()` 는 `call_once` 안(직렬)에서 이 함수를 부른다 — 성공 표시가 서기 전이라 그 호출은 단언 대상이 아니다.
+        if ( _s_bInitialize.load( std::memory_order_acquire ) )
+            ResourcePathsInternal::assertSerialPhase( "setSearchPriority" );
+
         _s_listSearchPriority = listPriority;
 
         if ( _s_resourceRootFolderPath.empty() )
@@ -611,6 +639,7 @@ namespace sw
 
     string ResourcePaths::exchangeRootFolderPath( string_view resourceRootFolderPath )
     {
+        ResourcePathsInternal::assertSerialPhase( "exchangeRootFolderPath" );
         string previous           = _s_resourceRootFolderPath;
         _s_resourceRootFolderPath = FileUtil::normalizeSeparators( resourceRootFolderPath );
         // 검색 폴더를 새 루트에서 다시 짓는다(경로 캐시도 거기서 비운다).
@@ -725,6 +754,7 @@ namespace sw
 
     void ResourcePaths::setHostTarget( string_view buildTargetName )
     {
+        ResourcePathsInternal::assertSerialPhase( "setHostTarget" );
         _s_listHostExcludedGroup.clear();
 #define SW_ADD_HOST_EXCLUDED_GROUP( Target, Group ) \
     if ( buildTargetName == #Target )               \

@@ -33,11 +33,39 @@ namespace sw
             /** @brief 이름 해시(대소문자 무시)입니다. */
             static uint64 hashName( string_view name, uint64 seed = 0 ) { return HashUtil::computeStringHash64( name.data(), name.size(), true, seed ); }
 
-            static uint64 hashFamilyFace( string_view family, FontWeight weight, FontSlant slant )
+            /**
+             * @brief 캐시 맵의 키를 원문으로 짓는 구분자입니다. 이름 · 경로에 나올 수 없는 제어 문자입니다.
+             * @details 맵 키를 64 비트 해시 하나로 두면 두 키가 부딪힐 때 다른 패밀리 · 파일의 면을 조용히 돌려준다. 원문 문자열을 키로 두면 부딪혀도 값 비교로 갈린다.
+             */
+            static constexpr utf8 kKeySeparator = '\x1F';
+
+            /** @brief (패밀리, 굵기, 기울기) 키입니다. 패밀리 이름은 대소문자를 무시합니다. */
+            static string makeFamilyFaceKey( string_view family, FontWeight weight, FontSlant slant )
             {
-                uint64 hash = hashName( family );
-                hash        = HashUtil::combine( hash, static_cast<uint64>( weight ) );
-                return HashUtil::combine( hash, static_cast<uint64>( slant ) );
+                string key = StringUtil::toLower( string( family ).c_str() );
+                key += kKeySeparator;
+                key += to_string( static_cast<uint32>( weight ) );
+                key += kKeySeparator;
+                key += to_string( static_cast<uint32>( slant ) );
+                return key;
+            }
+
+            /** @brief (문화권, 패밀리 면) 연쇄 키입니다. */
+            static string makeChainKey( string_view culture, string_view familyFaceKey )
+            {
+                string key = StringUtil::toLower( string( culture ).c_str() );
+                key += kKeySeparator;
+                key += familyFaceKey;
+                return key;
+            }
+
+            /** @brief (소문자 경로, 면 번호) 키입니다. */
+            static string makeFileKey( string_view lowerPath, uint32 faceIndex )
+            {
+                string key( lowerPath );
+                key += kKeySeparator;
+                key += to_string( faceIndex );
+                return key;
             }
 
             /** @brief 굵기 차이입니다(무게 짝짓기에서 작은 쪽이 이기고, 같으면 무거운 쪽이 이깁니다). */
@@ -174,7 +202,7 @@ namespace sw
             return chain;
         const string      culture  = _pLocalization != nullptr ? _pLocalization->getCurrentLanguage() : string{};
         const string_view family   = spec._family.empty() ? string_view{ _catalog._defaultFamily } : string_view{ spec._family };
-        const uint64      chainKey = FontServiceInternal::hashName( culture, FontServiceInternal::hashFamilyFace( family, spec._weight, spec._slant ) );
+        const string      chainKey = FontServiceInternal::makeChainKey( culture, FontServiceInternal::makeFamilyFaceKey( family, spec._weight, spec._slant ) );
         const auto        iter     = _mapChain.find( chainKey );
         if ( iter != _mapChain.end() )
         {
@@ -244,7 +272,7 @@ namespace sw
     {
         outFauxBold                = SW_FALSE;
         outFauxItalic              = SW_FALSE;
-        const uint64 familyFaceKey = FontServiceInternal::hashFamilyFace( family, weight, slant );
+        const string familyFaceKey = FontServiceInternal::makeFamilyFaceKey( family, weight, slant );
         const auto   iter          = _mapOpenedFamilyFace.find( familyFaceKey );
         if ( iter != _mapOpenedFamilyFace.end() )
         {
@@ -329,7 +357,7 @@ namespace sw
     FontFaceID FontService::openFontFile( const string& path, uint32 faceIndex, bool bResourcePath )
     {
         const string lowerPath = StringUtil::toLower( path.c_str() );
-        const uint64 fileKey   = HashUtil::combine( FontServiceInternal::hashName( lowerPath ), faceIndex );
+        const string fileKey   = FontServiceInternal::makeFileKey( lowerPath, faceIndex );
         const auto   iter      = _mapOpenedFile.find( fileKey );
         if ( iter != _mapOpenedFile.end() )
             return iter->second;

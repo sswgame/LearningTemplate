@@ -142,12 +142,13 @@ namespace sw
             uint8      _bFauxItalic{ SW_FALSE };
         };
 
-        unique_ptr<IFontRasterizer>             _rasterizer;
-        unique_ptr<GlyphCache>                  _glyphCache; ///< 시작할 때 만들고 종료할 때 해제합니다(래스터라이저를 빌립니다).
-        FontCatalogDesc                         _catalog;
-        unordered_map<uint64, OpenedFamilyFace> _mapOpenedFamilyFace; ///< (패밀리, 굵기, 기울기)에서 연 면을 찾는 맵입니다.
-        unordered_map<uint64, FontFaceID>       _mapOpenedFile;       ///< (경로, 면 번호)에서 연 면을 찾는 맵입니다.
-        unordered_map<uint64, FontFaceChain>    _mapChain;            ///< (FontSpec, 문화권)에서 연쇄를 찾는 맵입니다.
+        unique_ptr<IFontRasterizer> _rasterizer;
+        unique_ptr<GlyphCache>      _glyphCache; ///< 시작할 때 만들고 종료할 때 해제합니다(래스터라이저를 빌립니다).
+        FontCatalogDesc             _catalog;
+        // 아래 세 맵의 키는 해시가 아니라 원문 문자열이다(`FontServiceInternal::kKeySeparator` 로 이은 값) — 해시 단독 키는 부딪히면 다른 면을 조용히 돌려준다.
+        unordered_map<string, OpenedFamilyFace> _mapOpenedFamilyFace; ///< (패밀리, 굵기, 기울기)에서 연 면을 찾는 맵입니다.
+        unordered_map<string, FontFaceID>       _mapOpenedFile;       ///< (경로, 면 번호)에서 연 면을 찾는 맵입니다.
+        unordered_map<string, FontFaceChain>    _mapChain;            ///< (FontSpec, 문화권)에서 연쇄를 찾는 맵입니다.
         unordered_map<string, vector<uint8>>    _mapMemoryFile;       ///< 등록한 메모리 폰트입니다(소문자 경로에서 바이트를 찾습니다).
         unordered_set<uint64>                   _uniqueWarned;        ///< 한 번 경고한 항목입니다(패밀리, 코드 포인트).
         const LocalizationManager*              _pLocalization;       ///< 문화권 출처(생성자 주입, 엔진 서브시스템은 `initializeSubsystem` 이 한 번 받음. nullptr = 대체 없음)
