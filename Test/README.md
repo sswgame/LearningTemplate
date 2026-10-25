@@ -228,6 +228,9 @@ DXC가 사라지거나 쿠킹된 셰이더가 없어져도 초록으로 끝나�
   파일은 그 객체의 `writeTextFile` 로 넣고 경로는 `makePath` 로 얻습니다. 루트 기준 상대 경로만 받고, 절대 경로나 `..` 는 그 자리에서 케이스를 떨어뜨립니다.
 - 폴더를 훑어 만든 목록이 케이스가 되어야 하면(시나리오 × 백엔드) `SW_TEST_CASE_GENERATOR( 스위트, 함수 )` 로 `void ( test::TestCatalog& )` 함수를 등록하고 그 안에서 `catalog.addCase( 스위트, 이름, 람다 )` 로 더합니다.
   생성기는 엔진이 선 뒤 실행 시작(`--test_list` 포함)에 한 번 불리므로 리소스 폴더를 읽어도 되고, 이름이 `--test_filter` · 샤드 비용표에 그대로 쓰입니다. 같은 파일에 `SW_TEST_CASE` 가 하나는 있어야 합니다(`CheckTestSuites`). 예: `Test/AppTest/TestAppScenario.cpp`.
+  동적 이름은 정책 파일(`TestPolicy.json`)의 비용표에 적지 못하므로 `catalog.addCase( …, 예상 초 )` 의 마지막 인자로 비용을 준다(샤드 배정이 쓴다 — 안 주면 기본 0.05 초라 한 샤드에 몰린다).
+- 백엔드 루프를 한 케이스 안에서 돌지 말고 `SW_TEST_CASE_PER_PARAMETER( 스위트, 이름, 목록 함수, 예상 초 )` 로 백엔드마다 케이스(`스위트.이름.dx12` …)를 둡니다. 본문은 `void ( const utf8* pParameter )` 이고,
+  하나가 못 돌면(`SW_TEST_SKIP`) 그 백엔드만 건너뛰며 하나가 져도 나머지는 돕니다. 정책의 `raceCases` 는 `스위트.이름.*` 로 가리키고 `CheckTestSuites` 가 이름을 확인합니다. 백엔드끼리 견주는 케이스(`DemoScreenMatchesAcrossBackends`)는 한 케이스로 둡니다.
 - 바깥 서버가 있어야 하는 테스트는 `SW_TEST_REQUIRES_ENVIRONMENT( 스위트, "변수", "까닭" );` 을 둡니다. 변수가 비면 그 스위트만 빠지고 `[ SKIP SUITE ]` 한 줄이 남습니다(실패도 "모두 건너뜀" 도 아니고, 호스트 스위트와 섞이지 않는다).
   PostgreSQL 은 `SW_TEST_POSTGRES_URL` 입니다. 구현마다 같은 케이스는 계약 매크로(`SW_SERVICE_STORE_CONTRACT_SUITE` · `SW_SQL_DRIVER_CONTRACT_SUITE` · `SW_EPHEMERAL_STORE_CONTRACT_SUITE`)로 씁니다.
   서버 없이 실패 경로만 보려면 닿지 않는 주소(`host=127.0.0.1 port=1 connect_timeout=1`)를 줍니다. 깨끗이 실패하고 멈추지 않아야 합니다.

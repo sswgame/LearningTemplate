@@ -47,7 +47,7 @@
        - `sw_addTestExecutable(<이름>)` 은 `Test/<이름>/` 에 있고 정책에 같은 이름의 줄이 있다. 줄만 있고 실행 파일이 없어도 실패다.
        - 줄의 영역(`area`)과 스크립트 테스트의 `LABELS` 는 정책의 `labels` 표에 있다(모르는 라벨은 `ctest -L` 로 고를 수 없다).
        - 비용표(`caseCosts`)가 가리키는 케이스는 그 폴더에 있다(이름을 바꾸면 비용이 조용히 사라져 샤드가 기운다).
-       - 레이스 묶음(`raceCases`, `Suite.Case` · `Suite.*`)이 가리키는 케이스 · 스위트도 그 폴더에 있다.
+       - 레이스 묶음(`raceCases`, `Suite.Case` · `Suite.*` · 매개변수 묶음 `Suite.Case.*`)이 가리키는 케이스 · 스위트도 그 폴더에 있다.
 
   9) 부하 스위트(`SW_TEST_LOAD_SUITE( 스위트, "이유" );`)는 자기 파일을 혼자 쓰고, 그 폴더의 정책 줄에 `loadSeconds` 가 있다
      (없으면 `<타깃>_Load` 항목이 없어 그 스위트는 어디서도 돌지 않는다).
@@ -84,9 +84,12 @@ _kPolicyFile = "Test/TestPolicy.json"
 
 # 줄 맨 앞만 보면 안 된다 — `namespace sw::editor { ... }` 안에 들여쓴 케이스가 있으면 그 파일이 검사에서
 # 통째로 빠진다.
-_kCaseRe = re.compile(r"^[ 	]*SW_TEST_CASE\(\s*(\w+)\s*,\s*(\w+)\s*\)", re.M)
+#
+# `SW_TEST_CASE_PER_PARAMETER( 스위트, 이름, 목록 함수, 비용 )` 는 매개변수(백엔드)마다 `이름.<매개변수>` 케이스를 실행 시작에 만든다. 이 검사에는 케이스 `스위트.이름`
+# 하나로 읽힌다 — 정책의 레이스 묶음은 `스위트.이름.*` 로 가리킨다. 동적 이름을 정책 비용표에 적지 않는다(비용은 매크로 인자다).
+_kCaseRe = re.compile(r"^[ 	]*SW_TEST_CASE(?:_PER_PARAMETER)?\(\s*(\w+)\s*,\s*(\w+)\s*[,)]", re.M)
 # 위 정규식이 놓치는 표기가 생기면 조용히 줄어들 뿐이라, 토큰을 따로 세어 대조한다.
-_kCaseTokenRe = re.compile(r"\bSW_TEST_CASE\s*\(")
+_kCaseTokenRe = re.compile(r"\bSW_TEST_CASE(?:_PER_PARAMETER)?\s*\(")
 _kSuiteNameRe = re.compile(r"^[A-Z][A-Za-z0-9]*Test$")
 _kMarkerRe = re.compile(r'^[ \t]*SW_TEST_REQUIRES_HOST\(\s*(\w+)\s*,\s*"([^"]*)"\s*\)\s*;', re.M)
 # 선언도 케이스처럼 토큰을 따로 세어 대조한다 - 여러 줄로 쪼갠 표기를 놓치면 그 스위트가 조용히 CI 로 간다.
@@ -247,7 +250,8 @@ def checkPolicy(rootDir: Path, policy: dict, cases: list[tuple[str, str, str]]) 
         folderSuites = {caseName.split(".", 1)[0] for caseName in folderCases}
         for bundleKey, bundleName in (("raceCases", "레이스 묶음"), ("softwareRenderCases", "소프트웨어 렌더러 묶음")):
             for pattern in row.get(bundleKey, []):
-                bKnown = pattern[:-2] in folderSuites if pattern.endswith(".*") else pattern in folderCases
+                # `Suite.*` 는 스위트, `Suite.Case.*` 는 매개변수 묶음(`SW_TEST_CASE_PER_PARAMETER`)의 케이스 전부다.
+                bKnown = (pattern[:-2] in folderSuites or pattern[:-2] in folderCases) if pattern.endswith(".*") else pattern in folderCases
                 if not bKnown:
                     errors.append(f"{_kPolicyFile}: `{name}` 의 {bundleName}({bundleKey})이 없는 케이스 `{pattern}` 을 가리킵니다 — 이름을 바꿨으면 묶음도 바꾸세요")
     return errors
@@ -704,6 +708,16 @@ class CheckTestSuitesGate(LintGate):
             "files": {
                 **_kCleanFixture,
                 "Test/TestPolicy.json": _kCleanPolicy.replace('"hostSplit": true}', '"hostSplit": true, "raceCases": ["RenamedProbeTest.*"]}'),
+            },
+        },
+        {
+            # 매개변수 묶음(`SW_TEST_CASE_PER_PARAMETER`)은 `Suite.Case.*` 로 가리키고, 묶음 이름을 바꾸면 그 가리킴도 잡혀야 한다.
+            "name": "레이스 묶음이 없는 매개변수 묶음을 가리킴",
+            "expectedViolation": "Test/TestPolicy.json: `EngineTest` 의 레이스 묶음(raceCases)이 없는 케이스 `PlainProbeTest.Renamed.*` 을 가리킵니다",
+            "files": {
+                **_kCleanFixture,
+                "Test/EngineTest/TestPlainProbe.cpp": "SW_TEST_CASE( PlainProbeTest, One )\n{\n}\nSW_TEST_CASE_PER_PARAMETER( PlainProbeTest, Each, listProbe, 1.0 )\n{\n}\n",
+                "Test/TestPolicy.json": _kCleanPolicy.replace('"hostSplit": true}', '"hostSplit": true, "raceCases": ["PlainProbeTest.Each.*", "PlainProbeTest.Renamed.*"]}'),
             },
         },
         {

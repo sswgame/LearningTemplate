@@ -125,6 +125,54 @@ namespace test
                 return reason;
             }
 
+            /** @brief 체인의 단계 보고 경로입니다(`<base>.<단계>.json` — 단계가 둘 이상일 때 `AutomationScenarioChain::makeStageReportPath` 가 정한다). */
+            static sw::string makeStageReportPath( const sw::string& outputBase, size_t stageNumber )
+            {
+                return outputBase + "." + sw::to_string( static_cast<uint32>( stageNumber ) ) + ".json";
+            }
+
+            /** @brief 인자(경로 하나 또는 쉼표 목록)의 시나리오 경로들입니다. */
+            static sw::vector<sw::string> splitScenarioArgument( const sw::string& scenarioArgument )
+            {
+                sw::vector<sw::string> listPath;
+                sw::StringUtil::forEachToken( scenarioArgument, ",", [&listPath]( sw::string_view token )
+                {
+                    listPath.emplace_back( token );
+                } );
+                return listPath;
+            }
+
+            /**
+             * @brief 체인의 시나리오별 하위 결과입니다 — 통과하지 못한 단계마다 결과 · 종료 코드 · 보고의 `failures[]` · `unhandledLogs[]` 줄을 나열합니다.
+             * @details 체인은 한 프로세스라 종료 코드 하나만 남지만, 단계마다 보고(`<base>.<단계>.json`)가 있다. 돌지 못한 단계(앞 단계가 멈춤 · 프로세스 사망)는 보고가 없다.
+             */
+            static sw::string describeChainStages( const sw::string& outputBase, const sw::vector<sw::string>& listPath )
+            {
+                sw::string text;
+                size_t     notPassedCount = 0;
+                for ( size_t index = 0; index < listPath.size(); ++index )
+                {
+                    const sw::string reportPath = makeStageReportPath( outputBase, index + 1 );
+                    const sw::string result     = AppTestUtil::readReportScalar( reportPath, "result" );
+                    const bool       bHeld      = result == "PASS" || result == "UNCONFIRMED" || result == "SKIP";
+                    if ( bHeld )
+                        continue;
+                    ++notPassedCount;
+                    text += "  stage " + sw::to_string( static_cast<uint32>( index + 1 ) ) + "/" + sw::to_string( static_cast<uint32>( listPath.size() ) ) + " " + listPath[index] + ": ";
+                    text += result.empty() ? sw::string( "NOT RUN (no report)" ) : result + " (exit " + AppTestUtil::readReportScalar( reportPath, "exitCode" ) + ")";
+                    text += "\n";
+                    for ( const utf8* pKey : { "failures", "unhandledLogs" } )
+                    {
+                        for ( const sw::string& line : AppTestUtil::readReportStrings( reportPath, pKey ) )
+                        {
+                            text += sw::string( "      " ) + pKey + ": " + line + "\n";
+                        }
+                    }
+                }
+                return "chain sub-results: " + sw::to_string( static_cast<uint32>( notPassedCount ) ) + " of " + sw::to_string( static_cast<uint32>( listPath.size() ) ) +
+                       " stage(s) did not pass\n" + text;
+            }
+
             /** @brief 시나리오 이름 조각(`weaponswitch`)입니다 — 로그 · 보고 파일 이름에 쓴다. */
             static sw::string getScenarioStem( sw::string_view path )
             {
@@ -264,6 +312,37 @@ namespace test
         return listLine;
     }
 
+    sw::string AppTestUtil::readReportScalar( const sw::string& reportPath, const utf8* pKey )
+    {
+        sw::string text;
+        sw::string json;
+        if ( sw::FileUtil::readTextFile( reportPath, json ) == false )
+            return text;
+        const size_t keyAt = json.find( sw::string( "\"" ) + pKey + "\":" );
+        if ( keyAt == sw::string::npos )
+            return text;
+        size_t at = keyAt + sw::string( pKey ).size() + 3;
+        while ( at < json.size() && json[at] == ' ' )
+        {
+            ++at;
+        }
+        const bool bQuoted = at < json.size() && json[at] == '"';
+        at += bQuoted ? 1 : 0;
+        // 문자열 값은 닫는 따옴표까지(보고 작성기가 `\"` · `\\` · `\n` 만 바꾼다), 숫자는 쉼표 · 줄 끝까지다.
+        for ( ; at < json.size(); ++at )
+        {
+            const utf8 ch   = json[at];
+            const bool bEnd = bQuoted ? ch == '"' : ( ch == ',' || ch == '\n' );
+            if ( bEnd )
+                break;
+            const bool bEscape = bQuoted && ch == '\\';
+            if ( bEscape && at + 1 < json.size() )
+                ++at;
+            text.push_back( json[at] );
+        }
+        return text;
+    }
+
     sw::string AppTestUtil::describeExitCode( int32 exitCode )
     {
         sw::string text = exitCode == sw::kRHIUnusableHereExitCode ? "RHI UNUSABLE HERE: the backend could not stand up on this machine"
@@ -309,7 +388,13 @@ namespace test
         const sw::string backend    = pBackendSwitch[0] == '-' ? sw::string( pBackendSwitch + 1 ) : sw::string( "default" );
         const sw::string outputBase = "Saved/Automation/" + outputStem + "_" + backend;
         (void)sw::FileUtil::ensureDirectoryExists( "Saved/Automation" );
-        (void)sw::FileUtil::tryRemoveFile( outputBase + ".json" ); // 못 띄우거나 죽은 판이 지난 실행의 보고를 남긴 것처럼 읽히지 않게 한다
+        // 못 띄우거나 죽은 판이 지난 실행의 보고를 남긴 것처럼 읽히지 않게 한다(체인은 단계마다 보고가 있다).
+        const sw::vector<sw::string> listStagePath = AppTestUtilInternal::splitScenarioArgument( scenarioArgument );
+        (void)sw::FileUtil::tryRemoveFile( outputBase + ".json" ); // 지난 실행이 없으면 지울 것이 없다 — 없는 것이 정상이라 실패를 따지지 않는다
+        for ( size_t index = 0; listStagePath.size() > 1 && index < listStagePath.size(); ++index )
+        {
+            (void)sw::FileUtil::tryRemoveFile( AppTestUtilInternal::makeStageReportPath( outputBase, index + 1 ) ); // 지난 실행의 단계 보고가 없으면 지울 것이 없다 — 실패를 따지지 않는다
+        }
         sw::string arguments = "-scenario=" + scenarioArgument + " -scenario-report=" + outputBase + ".json " + pBackendSwitch;
         if ( extraArguments.empty() == false )
         {
@@ -343,7 +428,9 @@ namespace test
         sw::string detail = "scenario " + scenarioArgument + " on backend " + backend + "\nlog: " + outputBase + ".log\n" + outScenarioLines;
         if ( result._bLaunched && ( result._bTimedOut || result._exitCode != 0 ) )
         {
-            // 보고에 적힌 실패 이유와 처리하지 않은 로그 줄 — 로그 파일을 열지 않고도 무엇이 졌는지 보이게 한다.
+            // 보고에 적힌 실패 이유와 처리하지 않은 로그 줄 — 로그 파일을 열지 않고도 무엇이 졌는지 보이게 한다. 체인은 단계(시나리오)별로 나열한다.
+            if ( listStagePath.size() > 1 )
+                detail += AppTestUtilInternal::describeChainStages( outputBase, listStagePath );
             for ( const utf8* pKey : { "failures", "unhandledLogs" } )
             {
                 for ( const sw::string& line : readReportStrings( outputBase + ".json", pKey ) )

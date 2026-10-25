@@ -103,9 +103,21 @@ namespace test
         return pValue == nullptr ? sw::string{} : sw::string( pValue );
     }
 
-    void TestCatalog::addCase( const utf8* pSuiteName, const utf8* pTestName, sw::Delegate<void()> func )
+    void TestCatalog::addCase( const utf8* pSuiteName, const utf8* pTestName, sw::Delegate<void()> func, float64 expectedSeconds )
     {
-        _listCase.push_back( { pSuiteName, pTestName, func } );
+        _listCase.push_back( { pSuiteName, pTestName, func, expectedSeconds } );
+    }
+
+    void TestCatalog::addParameterizedCase( const utf8* pSuiteName, const utf8* pTestName, ParameterListFunc listFunc, ParameterCaseFunc caseFunc, float64 expectedSeconds )
+    {
+        _listParameterized.push_back( { pSuiteName, pTestName, listFunc, caseFunc, expectedSeconds } );
+    }
+
+    sw::string TestCatalog::makeParameterLabel( const utf8* pParameter )
+    {
+        if ( pParameter[0] == '\0' )
+            return "default";
+        return pParameter[0] == '-' ? sw::string( pParameter + 1 ) : sw::string( pParameter );
     }
 
     void TestCatalog::addCaseGenerator( CaseGenerator generator )
@@ -118,6 +130,17 @@ namespace test
         if ( _bGeneratorsExpanded )
             return;
         _bGeneratorsExpanded = true;
+        for ( const ParameterizedCase& family : _listParameterized )
+        {
+            for ( const utf8* pParameter : family._listFunc() )
+            {
+                const ParameterCaseFunc caseFunc = family._caseFunc;
+                addCase( family._suiteName.c_str(), ( family._testName + "." + makeParameterLabel( pParameter ) ).c_str(), [caseFunc, pParameter]()
+                {
+                    caseFunc( pParameter );
+                }, family._expectedSeconds );
+            }
+        }
         for ( const CaseGenerator generator : _listGenerator )
         {
             generator( *this );
@@ -208,6 +231,12 @@ namespace test
     CaseGeneratorRegistrar::CaseGeneratorRegistrar( TestCatalog::CaseGenerator generator )
     {
         TestRegistry::getInstance().getCatalog().addCaseGenerator( generator );
+    }
+
+    ParameterizedCaseRegistrar::ParameterizedCaseRegistrar( const utf8* pSuiteName, const utf8* pTestName, TestCatalog::ParameterListFunc listFunc,
+                                                            TestCatalog::ParameterCaseFunc caseFunc, float64 expectedSeconds )
+    {
+        TestRegistry::getInstance().getCatalog().addParameterizedCase( pSuiteName, pTestName, listFunc, caseFunc, expectedSeconds );
     }
 
     SuiteKindRegistrar::SuiteKindRegistrar( const utf8* pSuiteName, SuiteKind kind, const utf8* pReason )

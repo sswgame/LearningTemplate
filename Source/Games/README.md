@@ -57,7 +57,7 @@ Resource/game/<게임 소문자>/               → 팩: data/gamesettings.xml, 
 | [`VoxelCraft`](VoxelCraft/README.md) | 복셀 샌드박스 | 절차 메시, 1인칭 몸, 청크 다시 만들기 |
 | [`WildWest`](WildWest/README.md) | 오픈월드 승마 | 탈것 타기 · 내리기(`Mount` · `Dismount`), 걸음새와 스태미나, 주인을 따르는 말 AI |
 
-CI 는 기본 게임 `Empty` 만 빌드합니다. 로컬 `Ninja-Debug` 는 폴더의 게임을 모두 컴파일하므로 게임 코드의 빌드 오류는 거기서 드러납니다. 실행 확인은 `App.exe -game=<게임>` 으로 합니다. 호스트 테스트 `AppScenarioTest.EveryGamePackScenarioPassesOnEveryBackend` 가 함께 지은 게임마다 그 팩의 시나리오를 `-game=` 으로 네 백엔드에서 돕니다.
+CI 는 기본 게임 `Empty` 만 빌드합니다. 로컬 `Ninja-Debug` 는 폴더의 게임을 모두 컴파일하므로 게임 코드의 빌드 오류는 거기서 드러납니다. 실행 확인은 `App.exe -game=<게임>` 으로 합니다. 호스트 테스트 `AppScenarioTest.<게임>.<시나리오>.<백엔드>`(`--test_filter=AppScenarioTest.<게임>.*`) 가 함께 지은 게임마다 그 팩의 시나리오를 `-game=` 으로 네 백엔드에서 돕니다.
 
 ## 따라 해 보기 — 게임 하나를 빌드하고 시나리오 돌리기
 

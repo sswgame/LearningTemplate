@@ -16,8 +16,20 @@ namespace test
         /** @brief 실행 시작에 케이스를 더하는 함수 — `SW_TEST_CASE_GENERATOR` 가 등록합니다. 받은 목록에 `addCase` 로 더합니다. */
         using CaseGenerator = void ( * )( TestCatalog& catalog );
 
-        /** @brief 스위트 · 이름 · 함수로 케이스를 더합니다. 이름 글은 복사하므로 동적으로 만든 이름도 된다. */
-        void addCase( const utf8* pSuiteName, const utf8* pTestName, sw::Delegate<void()> func );
+        /** @brief 매개변수 목록을 돌려주는 함수 — 실행 시작에 한 번 불립니다(`SW_TEST_CASE_PER_PARAMETER`). 값은 프로그램 수명의 글(리터럴)이어야 한다. */
+        using ParameterListFunc = sw::vector<const utf8*> ( * )();
+        /** @brief 매개변수 하나로 도는 케이스 본문입니다. */
+        using ParameterCaseFunc = void ( * )( const utf8* pParameter );
+
+        /**
+         * @brief 스위트 · 이름 · 함수로 케이스를 더합니다. 이름 글은 복사하므로 동적으로 만든 이름도 된다.
+         * @param expectedSeconds 예상 비용(초, 0 = 모름). 샤드 배정이 `--test_costs` 에 없는 케이스에 쓴다.
+         */
+        void addCase( const utf8* pSuiteName, const utf8* pTestName, sw::Delegate<void()> func, float64 expectedSeconds = 0.0 );
+        /** @brief 매개변수마다 케이스 하나인 묶음을 더합니다. 케이스 이름은 `<이름>.<매개변수 이름>`(`makeParameterLabel`)이고 `expandCaseGenerators` 가 만든다. */
+        void addParameterizedCase( const utf8* pSuiteName, const utf8* pTestName, ParameterListFunc listFunc, ParameterCaseFunc caseFunc, float64 expectedSeconds );
+        /** @brief 매개변수의 케이스 이름 조각입니다 — 스위치 `-dx12` 는 `dx12`, 빈 글은 `default`(배포본의 백엔드 스위치 없음), 그 밖은 그대로. */
+        static sw::string makeParameterLabel( const utf8* pParameter );
         /** @brief 생성기를 더합니다. 부르는 때는 정적 초기화이고, 생성기는 `expandCaseGenerators` 가 실행 시작에 한 번 부릅니다. */
         void addCaseGenerator( CaseGenerator generator );
         /**
@@ -52,8 +64,19 @@ namespace test
         int32 countDeclarationMismatch() const;
 
     private:
+        /** @brief `addParameterizedCase` 가 받아 둔 묶음. */
+        struct ParameterizedCase
+        {
+            sw::string        _suiteName;
+            sw::string        _testName;
+            ParameterListFunc _listFunc;
+            ParameterCaseFunc _caseFunc;
+            float64           _expectedSeconds;
+        };
+
         sw::vector<TestCaseInfo>              _listCase;
         sw::vector<CaseGenerator>             _listGenerator;
+        sw::vector<ParameterizedCase>         _listParameterized;
         bool                                  _bGeneratorsExpanded{ false };
         sw::map<sw::string, sw::string>       _arrMapSuiteKindReason[static_cast<size_t>( SuiteKind::Count )];
         sw::map<sw::string, EnvironmentSuite> _mapEnvironmentSuite;
@@ -78,6 +101,17 @@ namespace test
     {
     public:
         explicit CaseGeneratorRegistrar( TestCatalog::CaseGenerator generator );
+    };
+} // namespace test
+
+namespace test
+{
+    /** @brief 정적 초기화로 매개변수 묶음 케이스를 프로세스 레지스트리에 붙입니다(`SW_TEST_CASE_PER_PARAMETER`). */
+    class ParameterizedCaseRegistrar
+    {
+    public:
+        ParameterizedCaseRegistrar( const utf8* pSuiteName, const utf8* pTestName, TestCatalog::ParameterListFunc listFunc, TestCatalog::ParameterCaseFunc caseFunc,
+                                    float64 expectedSeconds );
     };
 } // namespace test
 
@@ -129,7 +163,20 @@ namespace test
 #define SW_TEST_CASE_GENERATOR( SuiteName, generatorFunc ) static test::CaseGeneratorRegistrar generatorRegistrar_##SuiteName( generatorFunc )
 
 /**
- * @brief 이 스위트는 CI 러너가 돌릴 수 없다고 선언합니다— GPU · 디스플레이 · DXC 처럼 호스트에만 있는 것이 필요할 때.
+ * @brief 매개변수(보통 백엔드 스위치) 하나마다 케이스 하나로 도는 케이스를 정의합니다 — 케이스 이름은 `Suite.<TestName>.<매개변수 이름>`(`dx12` · `vk` …).
+ * @param parameterListFunc `sw::vector<const utf8*> ()` — 매개변수 목록(리터럴). 실행 시작에 한 번 불린다(엔진이 선 뒤).
+ * @param expectedSeconds   케이스 하나의 예상 비용(초, 0 = 모름) — 샤드 배정이 `--test_costs` 에 없는 케이스에 쓴다. 모아 도는 한 케이스의 옛 비용을 매개변수 수로 나눈다.
+ * @details 본문은 `void ( const utf8* pParameter )` 다. 한 판이 못 돌면(`SW_TEST_SKIP`) 그 매개변수의 케이스만 건너뛴다. 하나가 져도 다른 매개변수의 케이스는 돈다.
+ *          `--test_filter=Suite.<TestName>.*`(정책의 `raceCases` 도 같은 모양)으로 묶음을, `Suite.<TestName>.gl` 로 하나를 고른다. 이름은 `CheckTestSuites` 가 `Suite.TestName` 으로 읽는다.
+ *          인자에 중괄호를 쓰지 않는다(린트가 본문 시작을 중괄호로 찾는다).
+ */
+#define SW_TEST_CASE_PER_PARAMETER( SuiteName, TestName, parameterListFunc, expectedSeconds )                                                                               \
+    void                                    test_##SuiteName##_##TestName( const utf8* pParameter );                                                                        \
+    static test::ParameterizedCaseRegistrar registrar_##SuiteName##_##TestName( #SuiteName, #TestName, parameterListFunc, test_##SuiteName##_##TestName, expectedSeconds ); \
+    void                                    test_##SuiteName##_##TestName( const utf8* pParameter )
+
+/**
+ * @brief 이 스위트는 CI 러너가 돌릴 수 없다고 선언합니다 — GPU · 디스플레이 · DXC 처럼 호스트에만 있는 것이 필요할 때.
  * @param SuiteName 그 스위트. **이 파일에 사는 스위트**여야 하고, 이 파일에는 다른 스위트를 두지 않는다(`CheckTestSuites`).
  * @param reason    왜 CI 가 못 돌리는지(영문 — `--test_list` 와 실행 요약에 찍힌다).
  * @details 선언이 곧 분류다. `Test/TestPolicy.json` 에서 `hostSplit` 인 실행 파일은 `<타깃>_NoGPU`(`--host_suites=exclude`,

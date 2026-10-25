@@ -39,7 +39,7 @@ namespace test
         /**
          * @brief 이 실행이 맡은 케이스 — 고른 케이스(`isSelected`) 중 이 샤드의 것을 등록 순서로.
          * @details `--test_shard=INDEX/COUNT`(또는 gtest 의 `GTEST_SHARD_INDEX` · `GTEST_TOTAL_SHARDS`)이면 **비용으로 고르게** 나눈다 —
-         *          비용은 스위트의 시간 예산(`SW_TEST_TIME_BUDGET`, 없으면 기본 비용)이고, 비싼 케이스부터 지금 가장 가벼운 샤드에 놓는다(LPT).
+         *          비용은 `--test_costs` 표(정책 파일), 없으면 생성기가 준 예상 비용(`TestCaseInfo::_expectedSeconds` — 동적 이름의 케이스), 그것도 없으면 기본 비용이고, 비싼 케이스부터 지금 가장 가벼운 샤드에 놓는다(LPT).
          *          비용이 같으면 스위트 안에서 번갈아 놓이므로 느린 스위트 하나가 한 샤드에 몰리지 않는다. 모든 샤드가 같은 표로 같은 답을 낸다.
          */
         sw::vector<const TestCaseInfo*> selectCasesForThisShard() const;

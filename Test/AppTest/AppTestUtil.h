@@ -107,6 +107,8 @@ namespace test
          * @brief 시나리오 여럿을 **한 프로세스**에서 차례로 돌립니다(`-scenario=a,b,c`). 앞 단계가 통과해야 다음으로 가고, 앞 단계가 만든 상태를 이어받습니다.
          * @param chainName 로그 · 보고 파일 이름(`Saved/Automation/chain_<이름>_<백엔드>.log` · `.<단계>.json`)
          * @return 체인의 판정 — 체인의 종료 코드(전부 통과면 0, 아니면 처음 통과하지 못한 단계의 코드)로 정한다. `[Scenario] chain stage n/m …` 줄이 @p outScenarioLines 에 모입니다.
+         * @details 통과하지 못했으면 실패 메시지에 `chain sub-results:` 로 통과하지 못한 단계(시나리오)마다 결과 · 종료 코드 · 단계 보고의 `failures[]` · `unhandledLogs[]` 를 나열한다
+         *          (단계마다 보고 `<이름>_<백엔드>.<단계>.json` 이 있다 — 한 프로세스의 이점은 두고 어느 시나리오가 졌는지 가린다). 돌지 못한 단계는 `NOT RUN` 이다.
          */
         [[nodiscard]] static AppRunOutcome runScenarioChain( const sw::vector<sw::string>& listScenarioPath, const sw::string& chainName, const utf8* pBackendSwitch,
                                                              sw::string& outScenarioLines, sw::string_view extraArguments = {} );
@@ -119,6 +121,8 @@ namespace test
         static sw::vector<sw::string> readReportRecords( const sw::string& reportPath );
         /** @brief 보고의 글 배열 @p pKey(`failures` · `unhandledLogs` · `records` …)의 줄들입니다. 파일이 없거나 그 항목이 없으면 빈 목록입니다. */
         static sw::vector<sw::string> readReportStrings( const sw::string& reportPath, const utf8* pKey );
+        /** @brief 보고의 값 하나(`result` · `exitCode` · `name`)의 글입니다 — 문자열은 따옴표 없이, 숫자는 그대로. 파일이 없거나 그 항목이 없으면 빈 글입니다. */
+        static sw::string readReportScalar( const sw::string& reportPath, const utf8* pKey );
         /** @brief App 종료 코드 @p exitCode 의 뜻입니다(`0 PASS` · `15 UNHANDLED LOG` · `77` RHI 못 섬 · 그 밖은 시나리오 코드가 아님). 실패 메시지에 붙는다. */
         static sw::string describeExitCode( int32 exitCode );
         /**

@@ -10,5 +10,5 @@
 ## K2 빌드와 실행 확인
 
 - 확인 대기: 매니페스트 id `debug-full-build`, `frontiertown-scenario`, `golden-record`.
-- `debug-full-build` 가 `FrontierTown` 의 컴파일을 본다(게임 폴더는 모두 컴파일된다). `frontiertown-scenario`(`month.scenario.xml`)는 0 으로 끝나고 끝에서 `[Frontier] ... refused` 오류 로그가 0 줄이어야 하며, 네 백엔드에서 이 팩이 통과하는지는 덮개 `app-scenarios-release`(`AppScenarioTest.EveryGamePackScenarioPassesOnEveryBackend`)가 본다.
+- `debug-full-build` 가 `FrontierTown` 의 컴파일을 본다(게임 폴더는 모두 컴파일된다). `frontiertown-scenario`(`month.scenario.xml`)는 0 으로 끝나고 끝에서 `[Frontier] ... refused` 오류 로그가 0 줄이어야 하며, 네 백엔드에서 이 팩이 통과하는지는 덮개 `app-scenarios-release`(`AppScenarioTest.<게임>.<시나리오>.<백엔드>`(`--test_filter=AppScenarioTest.<게임>.*`))가 본다.
 - 캡처(신전 · 도로 판, 병영이 서는 것, 해병이 신전을 돌아 오가는 것)는 QA 골든이 맡는다: `Test/QA/Games.json` 에 `FrontierTown` 줄이 있고 `golden-record` 가 `Test/QA/Golden/FrontierTown` 을 만든다 — 뜬 뒤 그림을 눈으로 보고 커밋한다.

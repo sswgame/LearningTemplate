@@ -487,7 +487,12 @@ ctest --test-dir build/Ninja-Release -L load                     # 부하 스위
   실행 시작에 폴더를 훑어 만들므로(`SW_TEST_CASE_GENERATOR`) 파일을 두면 케이스가 생기고 목록을 적지 않는다. 한 시나리오는 `--test_filter=AppScenarioTest.vfxgpulights.*`,
   한 백엔드는 `--test_filter=AppScenarioTest.*.gl` 로 돌리고, 하나가 져도 나머지는 돈다. 실패 메시지에는 시나리오 · 백엔드 · 종료 코드와 그 뜻(10 단언 실패 · 15 처리하지 않은 Warning/Error 줄 · 12 시간 초과 …)과
   보고의 `failures[]` · `unhandledLogs[]` 줄이 든다. 같은 이름의 시나리오가 둘이면 폴더까지 넣은 이름(`game_empty_automation_foo`)을 쓴다.
-  `<Record>` 를 가진 시나리오의 백엔드끼리 기록 비교는 `AppScenarioTest.RecordsMatchAcrossBackends` 가 한 번 더 모든 백엔드로 돌아 본다. 게임 팩 시나리오(`EveryGamePackScenarioPassesOnEveryBackend`)와 에디터 시나리오 체인은 아직 한 케이스다.
+  같은 빌드가 지은 게임 팩(`Bin/Games/<게임>/`)의 시나리오는 `-game=<게임>` 으로 도는 `AppScenarioTest.<게임>.<시나리오>.<백엔드>` 다(Shipping 에는 없다). 한 게임은 `--test_filter=AppScenarioTest.HarvestValley.*`.
+  `<Record>` 를 가진 시나리오(엔진 · 활성 게임 · 게임 팩)의 백엔드끼리 기록 비교는 `AppScenarioTest.RecordsMatchAcrossBackends` 가 한 번 더 모든 백엔드로 돌아 본다.
+  백엔드 루프가 있던 `AppScenarioTest.RecordedPlayReplaysOnEveryBackend` · `ChainedScenariosShareOneProcess` 와 `AppSmokeTest.EveryBackendStartsRendersAndExitsCleanly` · `EditorModeStartsAndExitsCleanly` ·
+  `BackendSwapFollowsTheNewDevice` · `BackendSwapRebuildsGameBeforeEditor` · `BenchFrameMatchesGoldenImage` 도 `<케이스>.<백엔드>` 로 갈렸다(`SW_TEST_CASE_PER_PARAMETER`; 한 프로세스를 이어 쓰는 것은 체인 안의 단계끼리라 목적이 그대로다).
+  `AppUITest.DemoScreenMatchesAcrossBackends` 는 백엔드끼리 견주는 것이 목적이라 한 케이스로 둔다.
+  에디터 시나리오(`EditorScenariosPassOn<백엔드>`)는 백엔드당 체인 하나(한 프로세스)라 케이스는 그대로고, 실패 메시지의 `chain sub-results:` 가 통과하지 못한 시나리오마다 결과 · 종료 코드 · `failures[]` · `unhandledLogs[]` 를 나열한다(단계별 보고 `chain_editor_<백엔드>.<단계>.json`).
   손 확인 목록을 후보 절에 적지 말고 시나리오를 쓴다 — 못 쓰는 것만 이유와 함께 손 확인으로. 값을 보려면 `Expect probe`(게임 .cpp 의
   `SW_AUTOMATION_PROBE` 한 줄), 그림은 `Screenshot` + `ExpectImage`(지표 값은 보고 JSON 에 늘 적힌다).
   "다르다 · 같다" 는 기준 캡처를 같은 시나리오에서 찍어 `differingFraction`(화소 비율)으로 쓴다 — `differentFrom`(평균 차)은 `near` 만 받는다.

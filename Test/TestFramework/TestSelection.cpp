@@ -58,8 +58,11 @@ namespace test
         listCostAndIndex.reserve( listSelected.size() );
         for ( size_t index = 0; index < listSelected.size(); ++index )
         {
-            const auto costIt = _options._mapCaseCost.find( listSelected[index]->fullName() );
-            listCostAndIndex.push_back( { costIt != _options._mapCaseCost.end() ? costIt->second : TestSelectionInternal::kDefaultCaseCostSeconds, index } );
+            // 비용표(정책 파일) → 생성기가 준 예상 비용 → 기본값 순이다.
+            const TestCaseInfo& testInfo      = *listSelected[index];
+            const auto          costIt        = _options._mapCaseCost.find( testInfo.fullName() );
+            const float64       generatedCost = testInfo._expectedSeconds > 0.0 ? testInfo._expectedSeconds : TestSelectionInternal::kDefaultCaseCostSeconds;
+            listCostAndIndex.push_back( { costIt != _options._mapCaseCost.end() ? costIt->second : generatedCost, index } );
         }
         std::stable_sort( listCostAndIndex.begin(), listCostAndIndex.end(), []( const sw::pair<float64, size_t>& lhs, const sw::pair<float64, size_t>& rhs )
         {

@@ -114,6 +114,17 @@ namespace
     {
         std::this_thread::sleep_for( std::chrono::milliseconds( 20 ) );
     }
+
+    /** @brief 매개변수 묶음 시험의 목록 — 스위치 · 빈 글 · 일반 글. */
+    sw::vector<const utf8*> listProbeParameter()
+    {
+        return sw::vector<const utf8*>{ "-dx12", "", "plain" };
+    }
+
+    /** @brief 매개변수 묶음 시험의 본문 — 이름만 보므로 하는 일이 없다. */
+    void runProbeParameter( const utf8* )
+    {
+    }
 } // namespace
 
 /**
@@ -377,7 +388,36 @@ SW_TEST_CASE( TestFrameworkTest, CaseGeneratorAddsCasesOnceAndTheyAreFilterable 
 }
 
 /**
- * @brief [TestFrameworkTest] `--test_filter` 는 gtest 와 같은 모양을 읽는다— 패턴 사이는 `:` 도 쉼표도 되고, 첫 `-` 뒤는 빼는 패턴이다
+ * @brief [TestFrameworkTest] 매개변수 묶음은 매개변수마다 `이름.<매개변수>` 케이스를 만들고, 생성기가 준 예상 비용으로 샤드를 나눈다
+ * @details 스위치 `-dx12` 는 `dx12`, 빈 글(배포본)은 `default` 다. 비용표(`--test_costs`)에 적지 못하는 동적 이름이라 예상 비용이 없으면 무거운 케이스가 한 샤드에 다른 케이스와 같이 몰린다.
+ */
+SW_TEST_CASE( TestFrameworkTest, ParameterizedCaseNamesByParameterAndShardsByExpectedCost )
+{
+    test::TestRegistry registry;
+    registry.getCatalog().addParameterizedCase( "ParamProbeTest", "Each", listProbeParameter, runProbeParameter, 2.0 );
+    registry.getCatalog().expandCaseGenerators();
+    const sw::vector<test::TestCaseInfo>& listCase = registry.getCatalog().getListCase();
+    SW_ASSERT_EQUAL( size_t{ 3 }, listCase.size() );
+    SW_EXPECT_STREQ( "Each.dx12", listCase[0]._testName );
+    SW_EXPECT_STREQ( "Each.default", listCase[1]._testName );
+    SW_EXPECT_STREQ( "Each.plain", listCase[2]._testName );
+
+    // 무거운 케이스(10 s) 하나와 2 s 짜리 다섯 — 비용대로 나누면 무거운 케이스 혼자 한 샤드를 받고 나머지가 다른 샤드로 간다(기본 비용이면 셋씩 갈린다).
+    test::TestRegistry shardRegistry;
+    shardRegistry.getCatalog().addCase( "ShardProbeTest", "heavy", {}, 10.0 );
+    for ( const utf8* pName : { "a", "b", "c", "d", "e" } )
+    {
+        shardRegistry.getCatalog().addCase( "ShardProbeTest", pName, {}, 2.0 );
+    }
+    shardRegistry.getOptions()._shardCount = 2;
+    shardRegistry.getOptions()._shardIndex = 0;
+    SW_EXPECT_EQUAL( size_t{ 1 }, shardRegistry.selectCasesForThisShard().size() );
+    shardRegistry.getOptions()._shardIndex = 1;
+    SW_EXPECT_EQUAL( size_t{ 5 }, shardRegistry.selectCasesForThisShard().size() );
+}
+
+/**
+ * @brief [TestFrameworkTest] `--test_filter` 는 gtest 와 같은 모양을 읽는다 — 패턴 사이는 `:` 도 쉼표도 되고, 첫 `-` 뒤는 빼는 패턴이다
  * @details gtest 습관대로 `A.*:B.*` 를 적으면 둘 다 골라야 한다. `:` 를 몰라 패턴 하나로 읽으면 아무것도 고르지 않는다.
  */
 SW_TEST_CASE( TestFrameworkTest, FilterReadsColonCommaAndDash )

@@ -69,21 +69,16 @@
         "AppScenarioTest.EditorScenariosPassOnVulkan": 444,
         "AppScenarioTest.EditorScenariosPassOnDirectX12": 395,
         "AppScenarioTest.EditorScenariosPassOnDirectX11": 321,
-        "AppScenarioTest.EveryGamePackScenarioPassesOnEveryBackend": 286,
-        "AppSmokeTest.BenchFrameMatchesGoldenImage": 26,
-        "AppSmokeTest.BackendSwapRebuildsGameBeforeEditor": 25,
-        "AppScenarioTest.RecordedPlayReplaysOnEveryBackend": 24,
-        "AppScenarioTest.ChainedScenariosShareOneProcess": 16,
+        "AppScenarioTest.RecordsMatchAcrossBackends": 60,
         "AppUITest.DemoScreenMatchesAcrossBackends": 16,
-        "AppSmokeTest.EveryBackendStartsRendersAndExitsCleanly": 14,
-        "AppSmokeTest.EditorSelfTestsPassInsideTheEditor": 13,
-        "AppSmokeTest.BackendSwapFollowsTheNewDevice": 11
+        "AppSmokeTest.EditorSelfTestsPassInsideTheEditor": 13
       },
+      "_hostCaseCostsReason": "백엔드마다 · 시나리오마다 나뉜 케이스(AppScenarioTest.<시나리오>.<백엔드> · <게임>.<시나리오>.<백엔드>, SW_TEST_CASE_PER_PARAMETER 의 Suite.Case.<백엔드>)는 이름이 동적이라 여기 적지 못한다 — 생성기가 케이스마다 예상 비용(TestCaseInfo::_expectedSeconds)을 준다. 값은 옛 한 덩어리 케이스의 비용(EveryScenario 98 s · EveryGamePack 286 s · RecordedPlay 24 s · Chained 16 s · EveryBackendStarts 14 s · BackendSwapRebuilds 25 s · BackendSwapFollows 11 s · BenchFrame 26 s, 2026-10-16 Debug)을 케이스 수로 나눈 것이다. RecordsMatchAcrossBackends 는 <Record> 시나리오 12 개 × 네 백엔드를 한 번 더 도는 추정(60 s)이다 — 처음 잰 값으로 고친다.",
       "raceCases": [
-        "AppSmokeTest.EveryBackendStartsRendersAndExitsCleanly",
-        "AppSmokeTest.BackendSwapFollowsTheNewDevice",
-        "AppScenarioTest.ChainedScenariosShareOneProcess",
-        "AppScenarioTest.RecordedPlayReplaysOnEveryBackend"
+        "AppSmokeTest.EveryBackendStartsRendersAndExitsCleanly.*",
+        "AppSmokeTest.BackendSwapFollowsTheNewDevice.*",
+        "AppScenarioTest.ChainedScenariosShareOneProcess.*",
+        "AppScenarioTest.RecordedPlayReplaysOnEveryBackend.*"
       ],
       "raceSeconds": 70,
       "_raceCasesReason": "네 백엔드마다 App 을 띄워 렌더 스레드 · 잡 시스템 · 기동 씬 로드, 렌더 스레드를 내렸다 다시 세우는 백엔드 교체, 렌더 중 게임 모듈 리로드 두 번, 게임플레이 녹화 · 재생을 지난다. 에디터 시나리오(케이스마다 5~8 분)는 넣지 않는다 — 측정 2026-10-16 Debug 합 65 s."

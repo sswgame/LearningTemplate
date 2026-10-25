@@ -152,10 +152,10 @@ namespace
             return test::AppTestUtil::runScenario( scenarioPath, pSwitch, scenarioLines, scenarioArguments );
         }
 
-        /** @brief 케이스 `AppScenarioTest.<시나리오>.<백엔드>` 의 본문입니다. 이 기계에서 돌지 못했으면(건너뜀 · 요구하지 않은 백엔드가 못 섬) 케이스를 건너뜁니다. */
-        static void runScenarioCase( const sw::string& scenarioPath, const utf8* pSwitch )
+        /** @brief 케이스 `AppScenarioTest.[<게임>.]<시나리오>.<백엔드>` 의 본문입니다. 이 기계에서 돌지 못했으면(건너뜀 · 요구하지 않은 백엔드가 못 섬) 케이스를 건너뜁니다. */
+        static void runScenarioCase( const sw::string& scenarioPath, const utf8* pSwitch, const sw::string& extraArguments )
         {
-            const test::AppRunOutcome outcome = runScenarioOnBackend( scenarioPath, pSwitch, {} );
+            const test::AppRunOutcome outcome = runScenarioOnBackend( scenarioPath, pSwitch, extraArguments );
             if ( test::hasRunHere( outcome ) == false )
                 SW_TEST_SKIP( outcome == test::AppRunOutcome::BackendUnusable ? "the backend cannot stand up on this machine and is not required (--required_backends)" : "the scenario skipped itself or needs a development build" );
         }
@@ -181,24 +181,68 @@ namespace
         }
 
         /**
-         * @brief 엔진 · 활성 게임 팩의 시나리오마다 백엔드마다 케이스 `AppScenarioTest.<시나리오>.<백엔드>` 를 더합니다(`SW_TEST_CASE_GENERATOR`).
-         * @details 시나리오 폴더를 훑어 만들므로 파일을 두면 케이스가 자동으로 생긴다. 케이스는 서로 독립이라 하나가 져도 나머지는 돌고(`--test_filter=AppScenarioTest.vfxgpulights.*` 로 하나만도),
-         *          시간은 케이스마다 보고된다. 백엔드 이름은 `dx11` · `dx12` · `vk` · `gl`(배포본은 `default`).
+         * @brief 시나리오마다 백엔드마다 케이스 `AppScenarioTest.<이름 머리><시나리오>.<백엔드>` 를 더합니다.
+         * @param namePrefix 이름 머리(`HarvestValley.` — 활성 게임은 빈 글)
+         * @param extraArguments 모든 판에 붙는 인자(게임 팩은 `-game=<게임>`)
+         * @param caseSeconds 케이스 하나의 예상 비용(초) — 샤드 배정이 쓴다(`TestCaseInfo::_expectedSeconds`)
          */
-        static void generateScenarioCases( test::TestCatalog& catalog )
+        static void addScenarioCases( test::TestCatalog& catalog, const sw::string& namePrefix, const sw::vector<sw::string>& listScenario, const sw::string& extraArguments,
+                                      float64 caseSeconds )
         {
-            const sw::vector<sw::string>  listScenario      = collectGameScenarioPaths();
             const sw::vector<const utf8*> listBackendSwitch = collectBackendSwitches();
             for ( const sw::string& scenarioPath : listScenario )
             {
                 const sw::string label = makeCaseLabel( scenarioPath, listScenario );
                 for ( const utf8* pSwitch : listBackendSwitch )
                 {
-                    catalog.addCase( "AppScenarioTest", ( label + "." + getBackendName( pSwitch ) ).c_str(), [scenarioPath, pSwitch]()
+                    catalog.addCase( "AppScenarioTest", ( namePrefix + label + "." + getBackendName( pSwitch ) ).c_str(), [scenarioPath, pSwitch, extraArguments]()
                     {
-                        runScenarioCase( scenarioPath, pSwitch );
-                    } );
+                        runScenarioCase( scenarioPath, pSwitch, extraArguments );
+                    }, caseSeconds );
                 }
+            }
+        }
+
+        /**
+         * @brief 케이스를 만듭니다(`SW_TEST_CASE_GENERATOR`) — 엔진 · 활성 게임의 시나리오는 `AppScenarioTest.<시나리오>.<백엔드>`, 같은 빌드가 지은 게임 팩(`Bin/Games/<게임>/`)의
+         *        시나리오는 `-game=<게임>` 으로 도는 `AppScenarioTest.<게임>.<시나리오>.<백엔드>` 입니다.
+         * @details 시나리오 폴더를 훑어 만들므로 파일을 두면 케이스가 자동으로 생긴다. 케이스는 서로 독립이라 하나가 져도 나머지는 돌고(`--test_filter=AppScenarioTest.vfxgpulights.*` 로 하나만도),
+         *          시간은 케이스마다 보고된다. 백엔드 이름은 `dx11` · `dx12` · `vk` · `gl`(배포본은 `default`). 게임 팩 케이스는 Shipping(`SourceResources` 없음)에서는 만들지 않는다.
+         *          예상 비용은 옛 한 덩어리 케이스의 비용(정책 표, Debug)을 케이스 수로 나눈 값이다.
+         */
+        static void generateScenarioCases( test::TestCatalog& catalog )
+        {
+            // 옛 `EveryScenarioPassesOnEveryBackend` 98 s · `EveryGamePackScenarioPassesOnEveryBackend` 286 s(Test/TestPolicy.json 비용표였다).
+            constexpr float64 kActiveScenarioTotalSeconds   = 98.0;
+            constexpr float64 kGamePackScenarioTotalSeconds = 286.0;
+
+            const size_t                 backendCount = collectBackendSwitches().size();
+            const sw::vector<sw::string> listScenario = collectGameScenarioPaths();
+            if ( listScenario.empty() == false )
+                addScenarioCases( catalog, {}, listScenario, {}, kActiveScenarioTotalSeconds / static_cast<float64>( listScenario.size() * backendCount ) );
+
+            if ( test::isBuildFeatureAvailable( test::BuildFeature::SourceResources ) == false )
+                return; // 게임 팩 프리셋(Config/Game)과 Bin/Games 는 Shipping 에 없다
+            sw::vector<sw::pair<sw::string, sw::vector<sw::string>>> listPackScenario;
+            size_t                                                   packScenarioCount = 0;
+            for ( const sw::string& gameName : test::AppTestUtil::collectBuiltGamePacks() )
+            {
+                const sw::string packRoot = test::AppTestUtil::readPackRoot( gameName );
+                if ( packRoot.empty() )
+                {
+                    // 케이스가 없으면 조용히 빠진다 — 이름이 있는 실패 케이스로 남긴다.
+                    catalog.addCase( "AppScenarioTest", ( gameName + ".PackRootIsMissing" ).c_str(), [gameName]()
+                    {
+                        SW_EXPECT_TRUE_MSG( false, ( "no _packRoot in the preset of " + gameName ).c_str() );
+                    } );
+                    continue;
+                }
+                listPackScenario.push_back( { gameName, collectScenarioPaths( { packRoot + "/automation" } ) } );
+                packScenarioCount += listPackScenario.back().second.size();
+            }
+            for ( const auto& [gameName, listPack] : listPackScenario )
+            {
+                addScenarioCases( catalog, gameName + ".", listPack, "-game=" + gameName, kGamePackScenarioTotalSeconds / static_cast<float64>( packScenarioCount * backendCount ) );
             }
         }
 
@@ -375,7 +419,8 @@ namespace
 } // namespace
 
 // 엔진 · 활성 게임의 시나리오는 시나리오 × 백엔드마다 독립 케이스 `AppScenarioTest.<시나리오>.<백엔드>` 다(`generateScenarioCases` — 폴더를 훑어 실행 시작에 만든다).
-// 하나가 져도 나머지는 돌고, `--test_filter=AppScenarioTest.vfxgpulights.*` 로 한 시나리오만 돌릴 수 있다. 종료 코드 0 이 통과이고 13 건너뜀 · 요구하지 않은 백엔드의 77 은 건너뜀이다.
+// 같은 빌드가 지은 게임 팩(`Bin/Games/<게임>/`, `SW_GAMES`)의 시나리오는 `-game=<게임>` 으로 도는 `AppScenarioTest.<게임>.<시나리오>.<백엔드>` 다(Shipping 에는 팩이 없어 만들지 않는다).
+// 하나가 져도 나머지는 돌고, `--test_filter=AppScenarioTest.vfxgpulights.*` · `AppScenarioTest.HarvestValley.*` 로 골라 돌릴 수 있다. 종료 코드 0 이 통과이고 13 건너뜀 · 요구하지 않은 백엔드의 77 은 건너뜀이다.
 // 로그는 `Bin/Saved/Automation/<시나리오>_<백엔드>.log`.
 SW_TEST_CASE_GENERATOR( AppScenarioTest, AppScenarioTestInternal::generateScenarioCases );
 
@@ -388,8 +433,31 @@ SW_TEST_CASE( AppScenarioTest, ScenarioListIsNotEmpty )
 }
 
 /**
- * @brief [AppScenarioTest] `<Record>` 를 가진 엔진 · 활성 게임의 시나리오는 모든 백엔드가 같은 기록 줄을 낸다
- * @details 시나리오별 케이스는 백엔드 하나씩이라 백엔드끼리 견주지 못한다. 견줌이 필요한 시나리오만 여기서 한 번 더 모든 백엔드로 돈다(종료 코드 판정은 중복이다). 그런 시나리오가 없으면 건너뛴다.
+ * @brief [AppScenarioTest] 같은 빌드가 지은 게임 팩(`Bin/Games/<게임>/`)의 시나리오 목록이 비지 않는다 — 비면 `AppScenarioTest.<게임>.<시나리오>.<백엔드>` 케이스가 하나도 생기지 않아 아무것도 안 돌고 초록이 된다
+ * @details 이름은 옛 한 덩어리 케이스의 것을 남겼다 — `Test/QA/VerifyBatch.json` 의 `game-pack-scenarios` 항목이 `covered` 로 이 이름을 가리키고 `CheckVerifyPending` 이 그 이름의 존재를 요구한다.
+ *          통합이 그 항목을 `AppScenarioTest.<게임>.*` 로 고치면 `GamePackScenarioListIsNotEmpty` 로 바꾼다. 게임 팩을 짓지 않은 빌드(Shipping · `SW_GAMES` 비움)는 건너뛴다.
+ */
+SW_TEST_CASE( AppScenarioTest, EveryGamePackScenarioPassesOnEveryBackend )
+{
+    SW_TEST_REQUIRES_FEATURE( SourceResources ); // 게임 팩 프리셋(Config/Game)과 Bin/Games 는 Shipping 에 없다
+    const sw::vector<sw::string> listGame = test::AppTestUtil::collectBuiltGamePacks();
+    if ( listGame.empty() )
+        SW_TEST_SKIP( "no game packs in Bin/Games (Shipping or SW_GAMES is empty)" );
+    size_t scenarioCount = 0;
+    for ( const sw::string& gameName : listGame )
+    {
+        const sw::string packRoot = test::AppTestUtil::readPackRoot( gameName );
+        SW_EXPECT_TRUE_MSG( packRoot.empty() == false, ( "no _packRoot in the preset of " + gameName ).c_str() );
+        if ( packRoot.empty() == false )
+            scenarioCount += AppScenarioTestInternal::collectScenarioPaths( { packRoot + "/automation" } ).size();
+    }
+    SW_EXPECT_TRUE_MSG( scenarioCount > 0, "game packs are built but none has automation scenarios (the per-game cases would not exist)" );
+}
+
+/**
+ * @brief [AppScenarioTest] `<Record>` 를 가진 시나리오(엔진 · 활성 게임 · 같은 빌드가 지은 게임 팩)는 모든 백엔드가 같은 기록 줄을 낸다
+ * @details 시나리오별 케이스는 백엔드 하나씩이라 백엔드끼리 견주지 못한다. 견줌이 필요한 시나리오만 여기서 한 번 더 모든 백엔드로 돈다(종료 코드 판정은 중복이다).
+ *          게임 팩 시나리오는 `-game=<게임>` 으로 돈다(게임 팩이 없는 구성 — Shipping — 은 그 부분만 건너뛴다). 그런 시나리오가 없으면 케이스를 건너뛴다.
  */
 SW_TEST_CASE( AppScenarioTest, RecordsMatchAcrossBackends )
 {
@@ -399,108 +467,92 @@ SW_TEST_CASE( AppScenarioTest, RecordsMatchAcrossBackends )
         if ( AppScenarioTestInternal::declaresRecord( scenarioPath ) )
             listRecordScenario.push_back( scenarioPath );
     }
-    if ( listRecordScenario.empty() )
-        SW_TEST_SKIP( "no scenario of the engine or this game declares <Record>" );
-    if ( AppScenarioTestInternal::runEveryBackend( listRecordScenario, {} ) == 0 )
+    uint32 ranCount      = listRecordScenario.empty() ? 0 : AppScenarioTestInternal::runEveryBackend( listRecordScenario, {} );
+    uint32 scenarioCount = static_cast<uint32>( listRecordScenario.size() );
+
+    if ( test::skipPartIfFeatureMissing( test::BuildFeature::SourceResources, "game pack scenarios that declare <Record>" ) == false )
+    {
+        for ( const sw::string& gameName : test::AppTestUtil::collectBuiltGamePacks() )
+        {
+            const sw::string packRoot = test::AppTestUtil::readPackRoot( gameName );
+            SW_EXPECT_TRUE_MSG( packRoot.empty() == false, ( "no _packRoot in the preset of " + gameName ).c_str() );
+            if ( packRoot.empty() )
+                continue;
+            sw::vector<sw::string> listPackRecord;
+            for ( const sw::string& scenarioPath : AppScenarioTestInternal::collectScenarioPaths( { packRoot + "/automation" } ) )
+            {
+                if ( AppScenarioTestInternal::declaresRecord( scenarioPath ) )
+                    listPackRecord.push_back( scenarioPath );
+            }
+            scenarioCount += static_cast<uint32>( listPackRecord.size() );
+            ranCount += listPackRecord.empty() ? 0 : AppScenarioTestInternal::runEveryBackend( listPackRecord, "-game=" + gameName );
+        }
+    }
+    if ( scenarioCount == 0 )
+        SW_TEST_SKIP( "no scenario of the engine, this game or a built game pack declares <Record>" );
+    if ( ranCount == 0 )
         SW_TEST_SKIP( "no scenario could run on this machine" );
 }
 
 /**
- * @brief [AppScenarioTest] 같은 빌드가 함께 지은 게임 팩(`Bin/Games/<게임>/`, `SW_GAMES`)마다 그 팩의 시나리오가 `-game=<게임>` 으로 모든 백엔드에서 통과한다
- * @details 게임마다 프리셋 빌드를 따로 두지 않고 한 빌드에서 게임 전부를 확인한다(언리얼 Gauntlet 이 프로젝트를 명령줄로 받는 것과 같다).
- *          엔진 시나리오는 활성 게임의 사례가 이미 돈다. 게임 팩을 짓지 않은 빌드(Shipping · `SW_GAMES` 비움)는 건너뛴다.
- */
-SW_TEST_CASE( AppScenarioTest, EveryGamePackScenarioPassesOnEveryBackend )
-{
-    SW_TEST_REQUIRES_FEATURE( SourceResources ); // 게임 팩 프리셋(Config/Game)과 Bin/Games 는 Shipping 에 없다
-    const sw::vector<sw::string> listGame = test::AppTestUtil::collectBuiltGamePacks();
-    if ( listGame.empty() )
-        SW_TEST_SKIP( "no game packs in Bin/Games (Shipping or SW_GAMES is empty)" );
-    uint32 ranCount = 0;
-    for ( const sw::string& gameName : listGame )
-    {
-        const sw::string packRoot = test::AppTestUtil::readPackRoot( gameName );
-        SW_EXPECT_TRUE_MSG( packRoot.empty() == false, ( "no _packRoot in the preset of " + gameName ).c_str() );
-        if ( packRoot.empty() )
-            continue;
-        const sw::vector<sw::string> listScenario = AppScenarioTestInternal::collectScenarioPaths( { packRoot + "/automation" } );
-        ranCount += AppScenarioTestInternal::runEveryBackend( listScenario, "-game=" + gameName );
-    }
-    if ( ranCount == 0 )
-        SW_TEST_SKIP( "no game pack scenario could run on this machine" );
-}
-
-/**
- * @brief [AppScenarioTest] 시나리오로 돌린 플레이를 녹화(`-scenario-record`)하고 그 녹화를 다시 돌리면 끝 프레임의 검사점이 같다 — 백엔드마다
+ * @brief [AppScenarioTest] 시나리오로 돌린 플레이를 녹화(`-scenario-record`)하고 그 녹화를 다시 돌리면 끝 프레임의 검사점이 같다 — 백엔드마다 케이스 하나(`.dx12` …)
  * @details 녹화는 시나리오가 낸 가상 입력과 끝 프레임의 탐침 값(`-scenario-record-probes`)을 담는다. 같은 입력 · 같은 고정 틱이면 같은 상태가 나와야 한다(결정적 재생).
- *          HarvestValley 팩의 `actions` 시나리오를 쓴다(농부 위치, 간 타일 수, 빙의). 팩을 빌드하지 않은 구성(Shipping)은 건너뛴다.
+ *          HarvestValley 팩의 `actions` 시나리오를 쓴다(농부 위치, 간 타일 수, 빙의). 팩을 빌드하지 않은 구성(Shipping)은 건너뛴다. 예상 비용은 옛 한 케이스 24 s 를 넷으로 나눈 값이다.
  */
-SW_TEST_CASE( AppScenarioTest, RecordedPlayReplaysOnEveryBackend )
+SW_TEST_CASE_PER_PARAMETER( AppScenarioTest, RecordedPlayReplaysOnEveryBackend, AppScenarioTestInternal::collectBackendSwitches, 6.0 )
 {
     SW_TEST_REQUIRES_FEATURE( SourceResources ); // 게임 팩 프리셋(Config/Game)과 Bin/Games 는 Shipping 에 없다
     const sw::vector<sw::string> listGame = test::AppTestUtil::collectBuiltGamePacks();
     if ( std::find( listGame.begin(), listGame.end(), sw::string( "HarvestValley" ) ) == listGame.end() )
         SW_TEST_SKIP( "the HarvestValley game pack is not built (Shipping or SW_GAMES)" );
-    constexpr const utf8* kSource  = "game/harvestvalley/automation/actions.scenario.xml";
-    constexpr const utf8* kProbes  = "Farm.FarmerX,Farm.TilledCount,Object.Z@Farmer,Pawn.Controller@Farmer";
-    uint32                ranCount = 0;
-    for ( const utf8* pSwitch : AppScenarioTestInternal::collectBackendSwitches() )
-    {
-        const sw::string backend      = pSwitch[0] == '-' ? sw::string( pSwitch + 1 ) : sw::string( "default" );
-        const sw::string recordedPath = "Saved/Automation/Recorded/roundtrip_" + backend + ".scenario.xml";
-        (void)sw::FileUtil::tryRemoveFile( recordedPath ); // 지난 실행의 녹화를 읽지 않게 지운다
-        sw::string                sourceLines;
-        const test::AppRunOutcome sourceOutcome = test::AppTestUtil::runScenario( kSource, pSwitch, sourceLines,
-                                                                                  "-game=HarvestValley -scenario-record=" + recordedPath + " -scenario-record-probes=" + kProbes );
-        if ( test::hasRunHere( sourceOutcome ) == false )
-            continue;
-        ++ranCount;
-        if ( sourceOutcome == test::AppRunOutcome::Failed )
-            continue; // 실패는 runScenario 가 기록했다 — 녹화가 없으니 다시 돌릴 것이 없다
-        SW_EXPECT_TRUE_MSG( sw::FileUtil::exists( recordedPath ), ( recordedPath + " was not written" ).c_str() );
-        sw::string replayLines;
-        // 쓰기는 디스크 경로, 읽기는 붙인 도메인의 id 다(시나리오 입구는 리소스 id 만 받는다).
-        const sw::string          replayID      = sw::ScenarioRecorder::makeReplayID( recordedPath );
-        const test::AppRunOutcome replayOutcome = test::AppTestUtil::runScenario( replayID, pSwitch, replayLines, "-game=HarvestValley" );
-        // 녹화를 낸 백엔드가 다시 돌 때 서지 못하거나 건너뛰면 왕복을 확인하지 못한 것이다.
-        SW_EXPECT_TRUE_MSG( test::hasRunHere( replayOutcome ), ( recordedPath + " " + pSwitch + " did not run after the recording run did\n" + replayLines ).c_str() );
-    }
-    if ( ranCount == 0 )
-        SW_TEST_SKIP( "no backend could run the round trip on this machine" );
+    constexpr const utf8* kSource = "game/harvestvalley/automation/actions.scenario.xml";
+    constexpr const utf8* kProbes = "Farm.FarmerX,Farm.TilledCount,Object.Z@Farmer,Pawn.Controller@Farmer";
+
+    const sw::string recordedPath = "Saved/Automation/Recorded/roundtrip_" + AppScenarioTestInternal::getBackendName( pParameter ) + ".scenario.xml";
+    (void)sw::FileUtil::tryRemoveFile( recordedPath ); // 지난 실행의 녹화를 읽지 않게 지운다
+    sw::string                sourceLines;
+    const test::AppRunOutcome sourceOutcome =
+        test::AppTestUtil::runScenario( kSource, pParameter, sourceLines, "-game=HarvestValley -scenario-record=" + recordedPath + " -scenario-record-probes=" + kProbes );
+    if ( test::hasRunHere( sourceOutcome ) == false )
+        SW_TEST_SKIP( "the backend cannot stand up on this machine or the scenario skipped itself" );
+    if ( sourceOutcome == test::AppRunOutcome::Failed )
+        return; // 실패는 runScenario 가 기록했다 — 녹화가 없으니 다시 돌릴 것이 없다
+    SW_EXPECT_TRUE_MSG( sw::FileUtil::exists( recordedPath ), ( recordedPath + " was not written" ).c_str() );
+    sw::string replayLines;
+    // 쓰기는 디스크 경로, 읽기는 붙인 도메인의 id 다(시나리오 입구는 리소스 id 만 받는다).
+    const sw::string          replayID      = sw::ScenarioRecorder::makeReplayID( recordedPath );
+    const test::AppRunOutcome replayOutcome = test::AppTestUtil::runScenario( replayID, pParameter, replayLines, "-game=HarvestValley" );
+    // 녹화를 낸 백엔드가 다시 돌 때 서지 못하거나 건너뛰면 왕복을 확인하지 못한 것이다.
+    SW_EXPECT_TRUE_MSG( test::hasRunHere( replayOutcome ), ( recordedPath + " " + pParameter + " did not run after the recording run did\n" + replayLines ).c_str() );
 }
 
 /**
- * @brief [AppScenarioTest] 시나리오를 한 프로세스에서 이어 돌린다 — 게임 모듈 리로드 → 렌더 확인 → 다시 리로드가 모든 백엔드에서 통과하고, 단계마다 보고가 남는다
+ * @brief [AppScenarioTest] 시나리오를 한 프로세스에서 이어 돌린다 — 게임 모듈 리로드 → 렌더 확인 → 다시 리로드가 통과하고, 단계마다 보고가 남는다(백엔드마다 케이스 하나)
  * @details 체인은 앞 단계의 씬 · 모듈 상태를 이어받는다(`-scenario=a,b,c`). 두 번째 리로드가 첫 번째의 완료 수에 속지 않고(`Module.ReloadPending`) 제 리로드를 기다리는지, 사이의 렌더 시나리오가
- *          리로드 뒤 새 이미지로 그리는지 본다. 프로세스는 백엔드마다 하나다. 개발 명령이 없는 구성(Shipping)은 13 으로 건너뛴다.
+ *          리로드 뒤 새 이미지로 그리는지 본다. 한 프로세스를 공유하는 것은 체인 안의 단계끼리라 백엔드로 나눠도 목적이 그대로다(프로세스는 백엔드마다 하나였다).
+ *          개발 명령이 없는 구성(Shipping)은 13 으로 건너뛴다. 예상 비용은 옛 한 케이스 16 s 를 넷으로 나눈 값이다.
  */
-SW_TEST_CASE( AppScenarioTest, ChainedScenariosShareOneProcess )
+SW_TEST_CASE_PER_PARAMETER( AppScenarioTest, ChainedScenariosShareOneProcess, AppScenarioTestInternal::collectBackendSwitches, 4.0 )
 {
     const sw::vector<sw::string> listScenario{ "engine/automation/hotreload.scenario.xml", "engine/automation/runner.scenario.xml", "engine/automation/hotreload.scenario.xml" };
-    uint32                       ranCount = 0;
-    for ( const utf8* pSwitch : AppScenarioTestInternal::collectBackendSwitches() )
-    {
-        sw::string                scenarioLines;
-        const test::AppRunOutcome outcome = test::AppTestUtil::runScenarioChain( listScenario, "reload_render_reload", pSwitch, scenarioLines );
-        if ( test::hasRunHere( outcome ) == false )
-            continue;
-        const sw::string label = sw::string( "chain " ) + pSwitch + "\n" + scenarioLines;
-        SW_EXPECT_TRUE_MSG( scenarioLines.find( "chain stage 3/3 PASS" ) != sw::string::npos, label.c_str() );
-        // 어림값 문턱이 든 단계(runner)가 있으면 체인은 PASS 대신 UNCONFIRMED 로 끝난다(실패 0 은 같다) — 둘 다 단언이 모두 맞은 끝이다.
-        const bool bChainHeld = scenarioLines.find( "chain PASS (3 stage(s), 0 failed, 0 skipped, 0 not run)" ) != sw::string::npos ||
-                                scenarioLines.find( "chain UNCONFIRMED (3 stage(s), 0 failed, 0 skipped, 0 not run)" ) != sw::string::npos;
-        SW_EXPECT_TRUE_MSG( bChainHeld, label.c_str() );
-        ++ranCount;
-    }
-    if ( ranCount == 0 )
-        SW_TEST_SKIP( "no backend could run the chain on this machine" );
+    sw::string                   scenarioLines;
+    const test::AppRunOutcome    outcome = test::AppTestUtil::runScenarioChain( listScenario, "reload_render_reload", pParameter, scenarioLines );
+    if ( test::hasRunHere( outcome ) == false )
+        SW_TEST_SKIP( "the backend cannot stand up on this machine or the chain skipped itself" );
+    const sw::string label = sw::string( "chain " ) + pParameter + "\n" + scenarioLines;
+    SW_EXPECT_TRUE_MSG( scenarioLines.find( "chain stage 3/3 PASS" ) != sw::string::npos, label.c_str() );
+    // 어림값 문턱이 든 단계(runner)가 있으면 체인은 PASS 대신 UNCONFIRMED 로 끝난다(실패 0 은 같다) — 둘 다 단언이 모두 맞은 끝이다.
+    const bool bChainHeld = scenarioLines.find( "chain PASS (3 stage(s), 0 failed, 0 skipped, 0 not run)" ) != sw::string::npos ||
+                            scenarioLines.find( "chain UNCONFIRMED (3 stage(s), 0 failed, 0 skipped, 0 not run)" ) != sw::string::npos;
+    SW_EXPECT_TRUE_MSG( bChainHeld, label.c_str() );
 }
 
 // 에디터 작업 흐름 시나리오(`engine/automation/editor` 의 `.scenario.xml`)를 에디터를 켠 실행(`-EnableEditor`)으로 돌린다. 에디터 동작을 바꿨으면 이 시나리오로 확인한다.
 // 실행마다 빈 에디터 상태 폴더(`Bin/Saved/Automation/EditorState/<묶음>_<백엔드>`)로 시작하므로 사용자의 `Saved/Editor` 를 읽지도 쓰지도 않는다.
 // `<묶음>.<n>.scenario.xml` 은 한 폴더를 이어 써 저장된 상태를 읽는 분기를 본다. 배포본에는 에디터가 없다.
 // 백엔드마다 한 케이스다 — 시나리오 60 개 × 백엔드 넷을 한 케이스에 두면 그 케이스 하나가 18 분을 넘겨 `AppTest_HostOnly` 시한(20 분)을 채웠다.
-// 케이스로 나눠야 `HOST_SHARDS` 가 조각마다 시한을 준다.
+// 케이스로 나눠야 `HOST_SHARDS` 가 조각마다 시한을 준다. 체인은 한 프로세스라 케이스 안에서 시나리오별로 가를 수 없지만, 단계(시나리오)마다 보고(`chain_editor_<백엔드>.<단계>.json`)가 남아
+// 실패 메시지가 `chain sub-results:` 로 통과하지 못한 시나리오마다 결과 · 종료 코드 · `failures[]` · `unhandledLogs[]` 를 나열한다(`AppTestUtil::runScenarioArgument`).
 
 /**
  * @brief [AppScenarioTest] 에디터 시나리오가 DX12 에서 통과한다
