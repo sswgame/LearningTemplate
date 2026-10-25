@@ -378,10 +378,9 @@ namespace sw::editor
         // 컴포넌트이면 그 타입의 기본 인스턴스(CDO)와 비교한다. 중첩 구조체와 씬 밖 객체는 메타의 기본값 텍스트만 있다.
         const MutableObjectAddress instance{ pInstance };
         const void*                pDefaultInstance   = nullptr;
-        EditorContext*             pDefaultContext    = EditorContext::get();
-        const bool                 bIsEditedComponent = _pEditTargetComponent != nullptr && pInstance == _pEditTargetComponent && pDefaultContext != nullptr;
+        const bool                 bIsEditedComponent = _pEditTargetComponent != nullptr && pInstance == _pEditTargetComponent;
         if ( bIsEditedComponent )
-            pDefaultInstance = pDefaultContext->getSubsystem<EditorDefaultObjects>().findDefault( *pTypeInfo );
+            pDefaultInstance = editor::getSubsystem<EditorContext>().getSubsystem<EditorDefaultObjects>().findDefault( *pTypeInfo );
         const ObjectAddress defaultInstance{ pDefaultInstance };
         // 바뀐 것만 보기이면 기본값과 같은 프로퍼티를 뺀다. 남은 것이 없는 카테고리는 머리째 감춘다.
         if ( _bShowModifiedOnly )

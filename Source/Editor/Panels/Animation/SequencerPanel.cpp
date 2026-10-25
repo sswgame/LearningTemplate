@@ -149,8 +149,7 @@ namespace sw::editor
              */
             static string findSelectedObjectName()
             {
-                EditorContext* pContext = EditorContext::get();
-                GameObject*    pObject  = pContext != nullptr ? editor::getMainSceneSelection().getPrimaryObject() : nullptr;
+                GameObject* pObject = editor::getMainSceneSelection().getPrimaryObject();
                 return pObject != nullptr ? string{ pObject->getName().c_str() } : string{};
             }
         };

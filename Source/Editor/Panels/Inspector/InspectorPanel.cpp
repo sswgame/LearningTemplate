@@ -402,10 +402,9 @@ namespace sw::editor
 
         // 중첩 부품이면 바깥 인스턴스의 프리팹에도 적용할 수 있다 — 부품의 수정이 바깥 프리팹의 노드 오버라이드(`<Part>` 포함)가 된다.
         const GameObject* pOuter = EditorInspectorCommands::findOuterInstance( pObj );
-        EditorContext*    pCtx   = EditorContext::get();
-        if ( pOuter != nullptr && pCtx != nullptr )
+        if ( pOuter != nullptr )
         {
-            const string_view outerPath = pCtx->getSubsystem<EditorWorkspace>().findPrefabPath( pOuter );
+            const string_view outerPath = editor::getSubsystem<EditorContext>().getSubsystem<EditorWorkspace>().findPrefabPath( pOuter );
             if ( ImGui::Button( "Apply to Outer Prefab" ) )
                 (void)EditorInspectorCommands::applyToOuterPrefab( pObj ); // 실패는 프리팹 저장이 알린다
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "ApplyToPrefab" ) );
@@ -419,8 +418,7 @@ namespace sw::editor
     void InspectorPanel::drawComponentList( GameObject* pObj, EditorWorkspace& workspace )
     {
         ImGui::SeparatorText( "Components" );
-        EditorContext* pSelEditorContext = EditorContext::get();
-        IRHIDevice*    pRHIDevice        = ( pSelEditorContext != nullptr ) ? pSelEditorContext->getSubsystem<EditorRenderViews>().getRHIDevice() : nullptr;
+        IRHIDevice* pRHIDevice = editor::getSubsystem<EditorContext>().getSubsystem<EditorRenderViews>().getRHIDevice();
         // 복사한다. 아래 루프가 컴포넌트를 제거할 수 있어 원본을 순회할 수 없다.
         const vector<Component*> listComponent( pObj->getComponents().begin(), pObj->getComponents().end() );
         for ( Component* pComp : listComponent )

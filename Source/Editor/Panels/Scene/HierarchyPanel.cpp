@@ -125,8 +125,7 @@ namespace sw::editor
                 rowState._listPreviousRow.swap( rowState._listDrawnRow );
                 rowState._listDrawnRow.clear();
 
-                EditorContext*    pContext             = EditorContext::get();
-                const GameObject* pPrimary             = pContext != nullptr ? editor::getMainSceneSelection().getPrimaryObject() : nullptr;
+                const GameObject* pPrimary             = editor::getMainSceneSelection().getPrimaryObject();
                 const uint64      primaryID            = pPrimary != nullptr ? pPrimary->getObjectID() : 0;
                 const bool        bRevealPrimaryObject = primaryID != rowState._lastPrimaryID && rowState._bClickedThisFrame == false && primaryID != 0;
                 if ( bRevealPrimaryObject )
@@ -313,15 +312,9 @@ namespace sw::editor
                 if ( ImGui::BeginPopupContextItem( "CompCtx" ) == false )
                     return;
 
-                EditorContext* pContext = EditorContext::get();
-                if ( pContext == nullptr )
-                {
-                    ImGui::EndPopup();
-                    return;
-                }
-
+                EditorContext& context = editor::getSubsystem<EditorContext>();
                 if ( ImGui::MenuItem( "Select Owner GameObject" ) )
-                    pContext->getSubsystem<EditorWorkspace>().selectGameObject( pObj );
+                    context.getSubsystem<EditorWorkspace>().selectGameObject( pObj );
 
                 const bool bEditsAllowed = EditorPlaySession::areSceneEditsAllowed();
                 if ( bEditsAllowed == false )
@@ -420,12 +413,9 @@ namespace sw::editor
                         EditorSceneCommands::unparent( pObj );
                 }
 
-                EditorContext* pContext             = EditorContext::get();
-                GameObject*    pSelected            = ( pContext != nullptr )
-                                                        ? pManager->findGameObjectByID( pContext->getSubsystem<EditorWorkspace>().getSelectedObjectID() )
-                                                        : nullptr;
-                const bool     bCanParentToSelected = pContext != nullptr && pSelected != nullptr && pSelected != pObj &&
-                                                  pContext->getSubsystem<EditorWorkspace>().getSelectedComponentID() == 0;
+                EditorWorkspace& selectedWorkspace    = editor::getSubsystem<EditorContext>().getSubsystem<EditorWorkspace>();
+                GameObject*      pSelected            = pManager->findGameObjectByID( selectedWorkspace.getSelectedObjectID() );
+                const bool       bCanParentToSelected = pSelected != nullptr && pSelected != pObj && selectedWorkspace.getSelectedComponentID() == 0;
                 if ( bCanParentToSelected )
                 {
                     if ( EditorSceneCommands::wouldCreateParentCycle( pObj, pSelected ) == false )

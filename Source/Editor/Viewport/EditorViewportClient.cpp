@@ -150,24 +150,21 @@ namespace sw::editor
 
     void EditorViewportClient::toggleMaximize()
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
-            return;
+        EditorContext& context = editor::getSubsystem<EditorContext>();
         if ( _bMaximized == SW_TRUE )
         {
             _bMaximized = SW_FALSE;
-            if ( pContext->getSubsystem<IEditorPanelHost>().restoreMaximizedLayout() == false )
+            if ( context.getSubsystem<IEditorPanelHost>().restoreMaximizedLayout() == false )
                 SW_LOG_WARNING( "The layout before maximizing is gone - use Panel > Reset Layout" );
             return;
         }
-        if ( pContext->getSubsystem<IEditorPanelHost>().maximizePanel( editorpanel::kSceneView ) )
+        if ( context.getSubsystem<IEditorPanelHost>().maximizePanel( editorpanel::kSceneView ) )
             _bMaximized = SW_TRUE;
     }
 
     void EditorViewportClient::drawOverlays( const float2& canvasMin, const float2& canvasSize )
     {
-        EditorContext* pContext      = EditorContext::get();
-        const bool     bHasSelection = pContext != nullptr && editor::getMainSceneSelection().getSelectedObjectCount() > 0;
+        const bool bHasSelection = editor::getMainSceneSelection().getSelectedObjectCount() > 0;
         _overlays.draw( canvasMin, canvasSize, _toolbarSettings, bHasSelection );
     }
 
@@ -247,9 +244,8 @@ namespace sw::editor
                 if ( pObjectManager != nullptr )
                     pObjectManager->flushSceneTransforms();
                 // 콜라이더 손잡이나 확장 도구(EditorViewportMouseClaim) 위에서는 기즈모가 마우스를 양보한다 — 손잡이는 기즈모 축 위에 놓인다.
-                EditorContext* pGizmoContext = EditorContext::get();
-                const bool     bGizmoYields  = EditorColliderHandleTool::isCapturingMouse() || EditorViewportMouseClaim::isClaimed();
-                if ( pGizmoContext != nullptr && bGizmoYields == false )
+                const bool bGizmoYields = EditorColliderHandleTool::isCapturingMouse() || EditorViewportMouseClaim::isClaimed();
+                if ( bGizmoYields == false )
                     _gizmo.draw( editor::getMainSceneSelection(), arrView, arrProj, canvasPos, canvasSize, _toolbarSettings ); // 메인 뷰포트는 메인 선택
             }
 

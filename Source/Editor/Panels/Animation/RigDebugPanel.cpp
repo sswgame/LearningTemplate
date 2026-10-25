@@ -223,8 +223,7 @@ namespace sw::editor
                 ImGuizmo::SetDrawlist( args._pDrawList );
                 ImGuizmo::SetRect( args._canvasPos._x, args._canvasPos._y, args._canvasSize._x, args._canvasSize._y );
                 ImGuizmo::Enable( true );
-                EditorContext*            pContext  = EditorContext::get();
-                const bool                bRotate   = pContext != nullptr && pContext->getSubsystem<EditorWorkspace>().getGizmoOperation() == 1;
+                const bool                bRotate   = editor::getSubsystem<EditorContext>().getSubsystem<EditorWorkspace>().getGizmoOperation() == 1;
                 const ImGuizmo::OPERATION operation = bRotate ? ImGuizmo::ROTATE : ImGuizmo::TRANSLATE;
                 if ( ImGuizmo::Manipulate( arrView, arrProj, operation, ImGuizmo::LOCAL, arrMatrix, nullptr, nullptr ) )
                 {
@@ -411,8 +410,7 @@ namespace sw::editor
 
     void RigDebugPanel::drawContent()
     {
-        EditorContext*                     pContext   = EditorContext::get();
-        const uint64                       objectID   = pContext != nullptr ? pContext->getSubsystem<EditorWorkspace>().getSelectedObjectID() : 0;
+        const uint64                       objectID   = editor::getSubsystem<EditorContext>().getSubsystem<EditorWorkspace>().getSelectedObjectID();
         RigDebugPanelInternal::TargetEdit& targetEdit = RigDebugPanelInternal::getTargetEdit();
         if ( objectID != _selectedObjectID )
         {
