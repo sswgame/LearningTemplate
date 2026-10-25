@@ -26,12 +26,13 @@ class ConstantError(ValueError):
 
 _kScopeRe = re.compile(r"\b(?P<kind>namespace|struct|class|union)\s+(?:SW_\w+\s+)?(?P<name>\w+(?:::\w+)*)?\s*(?:final\s*)?(?::[^{;]*)?$")
 _kEnumHeadRe = re.compile(r"\benum\s+(?P<scoped>class\s+|struct\s+)?(?P<name>\w+)\s*(?::[^{;]*)?$")
-_kConstexprRe = re.compile(r"(?:\b(?:static|inline|const)\s+)*\bconstexpr\s+(?:(?:static|inline|const)\s+)*[\w:]+(?:\s*<[^>]*>)?\s+(?P<name>\w+)\s*=\s*(?P<expr>.+)$",
+_kConstexprRe = re.compile(r"(?:\b(?:static|inline|const)\s+)*\bconstexpr\s+(?:(?:static|inline|const)\s+)*(?P<type>[\w:]+(?:\s*<[^>]*>)?)\s+(?P<name>\w+)\s*=\s*(?P<expr>.+)$",
                            re.DOTALL)
 _kTokenRe = re.compile(r"\s*(?:(?P<num>(?:0[xX][0-9a-fA-F']+|(?:\d[\d']*\.?\d*|\.\d+)(?:[eE][+-]?\d+)?)[uUlLfF]*)|(?P<name>[A-Za-z_]\w*(?:::[A-Za-z_]\w*)*)"
                        r"|(?P<op><<|>>|[-+*/%&|^~()]))")
 _kNumberRe = re.compile(r"(?P<body>0[xX][0-9a-fA-F']+|(?:\d[\d']*\.?\d*|\.\d+)(?:[eE][+-]?\d+)?)(?P<suffix>[uUlLfF]*)$")
-_kCastRe = re.compile(r"static_cast\s*<[^<>]*>\s*\(")
+_kArithmeticTypeRe = re.compile(r"(?:(?:std::)?u?int\d*(?:_t)?|float\d*|double|(?:std::)?size_t|(?:std::)?ptrdiff_t|auto)")
+_kCastRe =re.compile(r"static_cast\s*<[^<>]*>\s*\(")
 
 
 @dataclass
@@ -41,6 +42,8 @@ class _Symbol:
     qualified: str
     header: str
     expr: str
+    bEnum: bool = False   # enum 값 — 문서 기본값 칸에서는 이름이 뜻이라 풀지 않는다
+    bNonArithmetic: bool = False   # 산술형이 아닌 `constexpr`(enum 형의 센티널 등) — 기본값 칸에서는 이름을 남긴다
 
 
 @dataclass
@@ -100,9 +103,9 @@ def collectSymbolsInternal(header: str, text: str) -> list[_Symbol]:
                 closeIndex = _closeIndexInternal(blanked, index)
                 bScoped = enumMatch.group("scoped") is not None
                 for name, expr in _splitEnumBodyInternal(blanked[index + 1:closeIndex]):
-                    listSymbol.append(_Symbol(_joinScopeInternal(listScope, f"{enumMatch.group('name')}::{name}"), header, expr))
+                    listSymbol.append(_Symbol(_joinScopeInternal(listScope, f"{enumMatch.group('name')}::{name}"), header, expr, True))
                     if not bScoped:
-                        listSymbol.append(_Symbol(_joinScopeInternal(listScope, name), header, expr))
+                        listSymbol.append(_Symbol(_joinScopeInternal(listScope, name), header, expr, True))
                 index = closeIndex
             elif scopeMatch is not None and ("(" not in head.split(scopeMatch.group("kind"))[-1]):
                 listScope.append(scopeMatch.group("name") or "")
@@ -117,7 +120,8 @@ def collectSymbolsInternal(header: str, text: str) -> list[_Symbol]:
             if None not in listScope:
                 declMatch = _kConstexprRe.search(" ".join(blanked[bodyStart:index].split()))
                 if declMatch is not None:
-                    listSymbol.append(_Symbol(_joinScopeInternal(listScope, declMatch.group("name")), header, declMatch.group("expr").strip()))
+                    listSymbol.append(_Symbol(_joinScopeInternal(listScope, declMatch.group("name")), header, declMatch.group("expr").strip(),
+                                              bNonArithmetic=_kArithmeticTypeRe.fullmatch(declMatch.group("type")) is None))
             bodyStart = index + 1
         index += 1
     return listSymbol
@@ -197,6 +201,26 @@ def hasConstantName(text: str) -> bool:
     return False
 
 
+class _NotConstexprError(ConstantError):
+    """기본값 칸의 최상위 이름이 `constexpr` 상수가 아니다(enum 값 · 타입 · 함수 이름 등) — 이름이 곧 뜻이라 그대로 둔다."""
+
+
+def _isPlainExpressionInternal(text: str) -> bool:
+    """식 전체가 `_evaluateInternal` 이 읽는 모양(숫자 · 이름 · 연산자 · 괄호)이고 상수 이름이 하나 이상 있는가."""
+    remaining = _stripCastsInternal(text.strip())
+    position = 0
+    bName = False
+    while position < len(remaining):
+        match = _kTokenRe.match(remaining, position)
+        if match is None:
+            if remaining[position:].strip():
+                return False
+            break
+        bName = bName or bool(match.group("name"))
+        position = match.end()
+    return bName
+
+
 class ConstantResolver:
     """
     헤더의 숫자 상수를 include 를 따라가며 풉니다. 헤더 글 읽기는 부르는 쪽이 넘긴 함수로 한다(문서 한 벌 동안 파일을 한 번만 읽는다).
@@ -251,9 +275,13 @@ class ConstantResolver:
             text += f" — 풀지 못한 include: {', '.join(listUnresolved[:8])}"
         return text
 
-    def _lookupInternal(self, header: str, name: str, listStack: list[str]) -> int | float:
+    def _lookupInternal(self, header: str, name: str, listStack: list[str], bTopConstexprOnly: bool = False) -> int | float:
         listSymbol = self._findSymbolsInternal(header, name)
+        if bTopConstexprOnly:
+            listSymbol = [symbol for symbol in listSymbol if not symbol.bEnum and not symbol.bNonArithmetic]
         if not listSymbol:
+            if bTopConstexprOnly:
+                raise _NotConstexprError(self._describeSearchInternal(header, name))
             raise ConstantError(self._describeSearchInternal(header, name))
         setValue: dict[str, int | float] = {}
         for symbol in listSymbol:
@@ -266,7 +294,7 @@ class ConstantResolver:
                                 "네임스페이스나 구조체로 한정해 적습니다")
         return next(iter(setValue.values()))
 
-    def _evaluateInternal(self, header: str, expr: str, listStack: list[str]) -> int | float:
+    def _evaluateInternal(self, header: str, expr: str, listStack: list[str], bTopConstexprOnly: bool = False) -> int | float:
         listPiece: list[str] = []
         remaining = _stripCastsInternal(expr.strip())
         position = 0
@@ -278,7 +306,7 @@ class ConstantResolver:
                 raise ConstantError(f"{header}: 식 '{expr}' 의 '{remaining[position:].strip()[:20]}' 부터 읽지 못했습니다(지원하는 모양: 숫자, 상수 이름, 괄호, 사칙 · 비트 · 시프트)")
             position = match.end()
             if match.group("name"):
-                listPiece.append(f"({formatNumberInternal(self._lookupInternal(header, match.group('name'), listStack))})")
+                listPiece.append(f"({formatNumberInternal(self._lookupInternal(header, match.group('name'), listStack, bTopConstexprOnly))})")
             elif match.group("num"):
                 listPiece.append(formatNumberInternal(_parseNumberInternal(match.group("num"))))
             else:
@@ -291,6 +319,16 @@ class ConstantResolver:
     def resolveExpression(self, header: str, expr: str) -> str:
         """`header` 에서 본 식 `expr`(`kMax`, `-Limit::kMax`, `Limit::kA * 2`)을 숫자 글로 풉니다. 못 풀면 ConstantError."""
         return formatNumberInternal(self._evaluateInternal(header, expr, []))
+
+    def resolveDefaultExpression(self, header: str, expr: str) -> str | None:
+        """기본값 칸의 항목 `expr` 이 `constexpr` 상수(들)의 산식이면 숫자 글로 풉니다. 식이 아니거나(문자열 · 호출 · 쉼표) 최상위 이름이
+        enum 값 · 타입 · 함수라 상수가 아니면 None 으로 돌려 이름을 그대로 두게 한다. 상수인데 값이 모호하거나 못 풀면 ConstantError 로 멈춘다."""
+        if not _isPlainExpressionInternal(expr):
+            return None
+        try:
+            return formatNumberInternal(self._evaluateInternal(header, expr, [], True))
+        except _NotConstexprError:
+            return None
 
 
 __all__ = ["ConstantError", "ConstantResolver", "hasConstantName"]

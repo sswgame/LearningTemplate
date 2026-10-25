@@ -23,8 +23,8 @@ XML 속성(값 하나)과 자식 요소(목록, 구조체)의 이름은 아래 �
 
 | 필드 | 타입 | 기본값 | 범위 | 단위 | 설명 |
 |---|---|---|---|---|---|
-| `_gravity` | `float3` | `0.0, -kDefaultGravity, 0.0` |  | m/s2 | 3D gravity |
-| `_gravity2D` | `float2` | `0.0, -kDefaultGravity` |  | m/s2 | 2D gravity |
+| `_gravity` | `float3` | `0.0, -9.81, 0.0` |  | m/s2 | 3D gravity |
+| `_gravity2D` | `float2` | `0.0, -9.81` |  | m/s2 | 2D gravity |
 | `_subStepCount` | `uint32` | `1` | 1 ~ 16 |  | 엔진 고정 스텝(`EngineConfig::_fixedDeltaTime`) 하나에 도는 물리 스텝 수입니다. 물리 스텝 = 고정 스텝 / 이 값, 프레임당 상한도 이 배수다. |
 | `_subStepCount2D` | `uint32` | `4` | 1 ~ - |  | Box2D sub-steps per step |
 | `_workerCount2D` | `uint32` | `1` | 1 ~ 16 |  | 2D 씬 하나가 스텝에 쓰는 일꾼 수(스텝 스레드 포함)입니다. 1 이면 한 스레드이고, 2 이상이면 씬마다 전용 워커를 그만큼 하나 적게 띄웁니다(`Box2DWorkerPool`). 바디가 수천일 때만 이득이다 — 측정하는 법은 `PhysicsBenchTest.Box2DStepByWorkerCount`. 결과는 워커 수와 관계없이 같다. |

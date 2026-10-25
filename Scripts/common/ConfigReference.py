@@ -291,8 +291,11 @@ def parseMetaInternal(metaText: str) -> dict[str, str]:
     return mapMeta
 
 
-def formatDefaultInternal(initText: str, mapMacro: dict[str, str]) -> str:
-    """멤버 초기값을 문서 칸 글로 바꿉니다(`1.0f / 60.0f` → `1.0 / 60.0`, `RHIBackend::X` → `X`, `""` → 빈 글)."""
+def formatDefaultInternal(initText: str, mapMacro: dict[str, str], resolver: ConstantResolver, relative: str) -> str:
+    """멤버 초기값을 문서 칸 글로 바꿉니다(`1.0f / 60.0f` → `1.0 / 60.0`, `RHIBackend::X` → `X`, `""` → 빈 글).
+
+    항목이 `constexpr` 상수의 산식(`kDefaultSize`, `Limit::kMax / 2`)이면 `Min` · `Max` 와 같은 리졸버로 숫자 글을 쓴다(`relative` 헤더에서 본다).
+    enum 값 · 문자열 · 생성자 호출처럼 상수 산식이 아닌 항목은 이름을 그대로 둔다."""
     text = (initText or "").strip()
     if text.startswith("="):
         text = text[1:].strip()
@@ -305,9 +308,11 @@ def formatDefaultInternal(initText: str, mapMacro: dict[str, str]) -> str:
     text = text.replace("SW_TRUE", "true").replace("SW_FALSE", "false")
     for macro, value in mapMacro.items():
         text = text.replace(macro, value)
-    text = re.sub(r"\b(?:\w+::)+(\w+)", r"\1", text)
-    listItem = splitTopLevelInternal(text)
-    listItem = [item[1:-1] if len(item) >= 2 and item[0] == '"' and item[-1] == '"' else item for item in listItem]
+    listItem = []
+    for item in splitTopLevelInternal(text):
+        resolved = resolver.resolveDefaultExpression(relative, item) if hasConstantName(item) else None
+        item = resolved if resolved is not None else re.sub(r"\b(?:\w+::)+(\w+)", r"\1", item)
+        listItem.append(item[1:-1] if len(item) >= 2 and item[0] == '"' and item[-1] == '"' else item)
     if len(listItem) > 4:
         return ", ".join(listItem[:3]) + f", … ({len(listItem)} 개)"
     return ", ".join(listItem)
@@ -377,7 +382,7 @@ def parseStructInternal(name: str, index: SourceIndex, mapMacro: dict[str, str])
             description = mapMeta["Tooltip"]
         typeDoc.listField.append(FieldDoc(
             name=declMatch.group("name"), typeName=re.sub(r"\s+", " ", declMatch.group("type")).strip(),
-            defaultText=formatDefaultInternal(declMatch.group("init") or "", mapMacro),
+            defaultText=formatDefaultInternal(declMatch.group("init") or "", mapMacro, index.resolver, relative),
             minText=resolveRangeConstantInternal(mapMeta.get("Min"), relative, index.resolver, name),
             maxText=resolveRangeConstantInternal(mapMeta.get("Max"), relative, index.resolver, name), units=mapMeta.get("Units"),
             description=description))
@@ -462,7 +467,7 @@ class GlobalVariableDoc:
     source: str
 
 
-def collectGlobalVariables(reader: SourceTreeReader) -> list[GlobalVariableDoc]:
+def collectGlobalVariables(reader: SourceTreeReader, resolver: ConstantResolver) -> list[GlobalVariableDoc]:
     """`Source/` 의 전역 변수 정의를 모읍니다(이름 순). 매크로 정의 · 주석 안의 예시는 세지 않습니다."""
     listVariable: list[GlobalVariableDoc] = []
     for relative, text in reader.iterFiles(("Source",), (".h", ".cpp", ".inl")):
@@ -483,7 +488,7 @@ def collectGlobalVariables(reader: SourceTreeReader) -> list[GlobalVariableDoc]:
                 description = json.loads(description)
             listVariable.append(GlobalVariableDoc(
                 name=listArgument[1], typeName=listArgument[0].replace("sw::", ""),
-                defaultText=formatDefaultInternal(listArgument[2], {}), kind=_kMapGlobalVariableKind[match.group(1)],
+                defaultText=formatDefaultInternal(listArgument[2], {}, resolver, relative), kind=_kMapGlobalVariableKind[match.group(1)],
                 description=description, source=relative))
     listVariable.sort(key=lambda variable: variable.name.lower())
     return listVariable
@@ -988,7 +993,7 @@ def buildConfigReference(repositoryRoot: Path) -> tuple[dict[str, str], list[str
         mapOutput[f"{kConfigReferenceDir}/{entry.page}.md"] = makeEntryPage(repositoryRoot, entry, index, mapMacro, metadata)
     mapOutput[f"{kConfigReferenceDir}/UserSettings.md"] = makeUserSettingsPage(collectUserSettings(repositoryRoot),
                                                                                 findUserSettingDefaults(repositoryRoot))
-    mapOutput[f"{kConfigReferenceDir}/GlobalVariables.md"] = makeGlobalVariablePage(collectGlobalVariables(reader), metadata)
+    mapOutput[f"{kConfigReferenceDir}/GlobalVariables.md"] = makeGlobalVariablePage(collectGlobalVariables(reader, index.resolver), metadata)
     mapOutput[f"{kConfigReferenceDir}/CommandLine.md"] = makeArgumentPage(collectArguments(repositoryRoot), metadata)
     mapOutput[f"{kConfigReferenceDir}/BuildOptions.md"] = makeBuildOptionPage(collectBuildOptions(reader), metadata)
     mapOutput[f"{kConfigReferenceDir}/{kConfigReferenceJson}"] = json.dumps(metadata, ensure_ascii=False, indent=1) + "\n"

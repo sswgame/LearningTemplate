@@ -95,6 +95,26 @@ class CppConstantsTest(unittest.TestCase):
         with self.assertRaises(ConstantError):
             resolver.resolveExpression("Source/A/Top.h", "kLocal")
 
+    def testDefaultExpressionResolvesConstexprOnly(self) -> None:
+        resolver = self.makeResolverInternal({
+            "Source/A/Base.h": "namespace g { inline constexpr float kGravity = 9.81f; }\nenum class Mode { Fast, Slow };\n"
+                               "enum class Kind : unsigned char { A };\ninline constexpr Kind kKindUnset = static_cast<Kind>( 0xFF );",
+            "Source/A/Top.h": '#include "A/Base.h"'})
+        header = "Source/A/Top.h"
+        self.assertEqual(resolver.resolveDefaultExpression(header, "-g::kGravity"), "-9.81")
+        self.assertEqual(resolver.resolveDefaultExpression(header, "kGravity * 2"), "19.62")
+        self.assertIsNone(resolver.resolveDefaultExpression(header, "Mode::Fast"))       # enum 값은 이름이 뜻이다
+        self.assertIsNone(resolver.resolveDefaultExpression(header, "kKindUnset"))       # 산술형이 아닌 상수
+        self.assertIsNone(resolver.resolveDefaultExpression(header, "true"))
+        self.assertIsNone(resolver.resolveDefaultExpression(header, "Vec3( kGravity )"))  # 생성자 호출
+        self.assertIsNone(resolver.resolveDefaultExpression(header, '"name"'))
+        self.assertIsNone(resolver.resolveDefaultExpression(header, "1.0"))
+
+    def testDefaultExpressionStopsOnAmbiguousConstant(self) -> None:
+        resolver = self.makeResolverInternal({"Source/A/Top.h": "namespace a { constexpr int kMax = 1; }\nnamespace b { constexpr int kMax = 2; }"})
+        with self.assertRaises(ConstantError):
+            resolver.resolveDefaultExpression("Source/A/Top.h", "kMax")
+
     def testHasConstantName(self) -> None:
         self.assertFalse(hasConstantName("1.0f"))
         self.assertFalse(hasConstantName("-0x10"))
