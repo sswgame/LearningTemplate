@@ -180,6 +180,9 @@ namespace sw
         /** @brief 보류 중인 `gv_` 키 이름을 모두 반환합니다(오타 진단용). */
         vector<string> collectPendingGlobalNames() const;
 
+        /** @brief `parse` 가 받은 원본 인자(프로그램 이름 제외, UTF-8, 적은 순서 그대로)입니다. 재현 명령처럼 해석 전 글이 필요한 쪽이 읽습니다. */
+        const vector<string>& getOriginalArguments() const { return _listOriginalArgument; }
+
     private:
         /** @brief 인자 한 줄(예: "--width=1280", "-fullscreen")을 파싱해 표에 반영합니다. */
         void parseArgumentLine( string_view argumentLine );
@@ -212,6 +215,8 @@ namespace sw
         unordered_map<string, uint32> _mapArgument;
         /** @brief 등록된 인자가 없어 보류해 둔 `gv_` 키 → 값입니다. 모듈이 나중에 선언할 때 꺼내 씁니다. */
         unordered_map<string, string> _mapPendingGlobal;
+        /** @brief `parse` 가 받은 원본 인자입니다(`getOriginalArguments`). `initialize` 가 비웁니다. */
+        vector<string> _listOriginalArgument;
     };
 
     template <typename T>

@@ -70,6 +70,14 @@ namespace sw
         json += "  \"exitCode\": " + to_string( params._exitCode ) + ",\n";
         json += "  \"frames\": " + to_string( params._frameCount ) + ",\n";
         json += "  \"reason\": \"" + Internal::escapeJSON( params._reason ) + "\",\n";
+        json += "  \"backend\": \"" + Internal::escapeJSON( params._backendName ) + "\",\n";
+        json += "  \"game\": \"" + Internal::escapeJSON( params._gameName ) + "\",\n";
+        json += "  \"startedAt\": \"" + Internal::escapeJSON( params._startedAt ) + "\",\n";
+        json += "  \"startedAtUnixMs\": " + to_string( params._startedUnixMs ) + ",\n";
+        json += "  \"wallMilliseconds\": " + to_string( params._wallMilliseconds ) + ",\n";
+        json += "  \"wallLimitMilliseconds\": " + to_string( params._wallLimitMilliseconds ) + ",\n";
+        json += "  \"lastStep\": \"" + Internal::escapeJSON( params._lastStep ) + "\",\n";
+        json += "  \"reproduce\": \"" + Internal::escapeJSON( params._reproduce ) + "\",\n";
         json += "  \"failures\": ";
         Internal::appendStringArray( json, params._pListFailure != nullptr ? *params._pListFailure : listEmpty );
         json += ",\n  \"unconfirmed\": ";

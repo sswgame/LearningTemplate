@@ -100,6 +100,12 @@ namespace sw
      */
     SW_API void writeCrashStackFile( const utf8* pStackText );
 
+    /**
+     * @brief 파일 하나를 통째로 씁니다(덮어쓰기). **할당하지 않고 stdio 도 쓰지 않습니다** — OS 원시 호출(`CreateFileW` · `open`)만 부릅니다.
+     * @details 크래시 경로와 같은 이유로, 게임 스레드가 힙 · 스트림 락을 쥔 채 멈춘 행에서 감시 스레드가 보고를 남길 때도 이것을 씁니다. 경로는 UTF-8, 못 쓰면 조용히 돌아옵니다.
+     */
+    SW_API void writeFileWithoutAllocation( const utf8* pPath, const utf8* pText, uint32 length );
+
     /** @brief 빵부스러기(`CrashBreadcrumbStore`)를 `crash_<세션>.breadcrumbs.txt` 로 씁니다. 비어 있으면 쓰지 않습니다. **할당하지 않습니다.** */
     SW_API void writeCrashBreadcrumbFile();
 

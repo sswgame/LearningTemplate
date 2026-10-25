@@ -150,6 +150,38 @@ SW_TEST_CASE( AutomationRunTitleTest, StepLogLineMatchesAgreedFormat )
 }
 
 /**
+ * @brief [AutomationRunTitleTest] 재현 명령은 게임 · 백엔드 · 에디터 · 시나리오 목록 · 추가 인자를 순서대로 적고, 점이나 공백이 든 인자는 큰따옴표로 감싼다
+ */
+SW_TEST_CASE( AutomationRunTitleTest, ReproduceCommandListsTheArgumentsInOrder )
+{
+    sw::AutomationReproduceInput input;
+    input._game             = "Shooter3D";
+    input._backendName      = "DirectX12";
+    input._scenarioArgument = "engine/automation/a.scenario.xml,b.scenario.xml";
+    input._bEditor          = true;
+    input._bKeepGoing       = true;
+    input._listExtraArgument.push_back( "-gv_fixedFrameDelta=0.5" );
+    input._listExtraArgument.push_back( "-gv_note=a b" );
+    SW_EXPECT_STREQ( "App.exe -game=Shooter3D -gv_rhiBackend=DirectX12 -EnableEditor \"-scenario=engine/automation/a.scenario.xml,b.scenario.xml\" "
+                     "-scenario-keep-going \"-gv_fixedFrameDelta=0.5\" \"-gv_note=a b\"",
+                     sw::AutomationRunTitleUtil::makeReproduceCommand( input ).c_str() );
+
+    sw::AutomationReproduceInput bare;
+    bare._scenarioArgument = "a_scenario";
+    SW_EXPECT_STREQ( "App.exe -scenario=a_scenario", sw::AutomationRunTitleUtil::makeReproduceCommand( bare ).c_str() );
+}
+
+/**
+ * @brief [AutomationRunTitleTest] 시나리오 인자가 없으면 재현 명령을 지어내지 않는다(세션 없이 돈 실행기)
+ */
+SW_TEST_CASE( AutomationRunTitleTest, ReproduceCommandIsEmptyWithoutAScenario )
+{
+    sw::AutomationReproduceInput input;
+    input._game = "Shooter3D";
+    SW_EXPECT_TRUE( sw::AutomationRunTitleUtil::makeReproduceCommand( input ).empty() );
+}
+
+/**
  * @brief [AutomationRunTitleTest] 벤치 요약은 gv_bench 인자만 이름순으로 잇는다
  */
 SW_TEST_CASE( AutomationRunTitleTest, BenchSummaryKeepsOnlyBenchArgumentsSorted )

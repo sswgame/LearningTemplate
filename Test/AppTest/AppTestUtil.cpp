@@ -259,8 +259,7 @@ namespace test
             argument += argument.empty() ? "" : ",";
             argument += scenarioPath;
         }
-        const uint32 stageTimeoutSeconds = static_cast<uint32>( listScenarioPath.size() ) * kChainStageTimeoutSeconds;
-        const uint32 timeoutSeconds      = stageTimeoutSeconds > kScenarioTimeoutSeconds ? stageTimeoutSeconds : kScenarioTimeoutSeconds;
+        const uint32 timeoutSeconds = sw::AutomationTimeLimits::getChainKillSeconds( static_cast<uint32>( listScenarioPath.size() ) );
         return runScenarioArgument( argument, "chain_" + chainName, pBackendSwitch, outScenarioLines, extraArguments, timeoutSeconds );
     }
 

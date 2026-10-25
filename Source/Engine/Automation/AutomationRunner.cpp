@@ -4,11 +4,15 @@
 
 #include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Diagnostics/CrashContext.h"
+#include "Core/Diagnostics/CrashHandler.h"
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/Time/MonotonicClock.h"
+#include "Core/Time/WallClock.h"
 
 #include "Engine/Automation/AutomationCaptureUtil.h"
 #include "Engine/Automation/AutomationEnvironmentSteps.h"
@@ -19,6 +23,7 @@
 #include "Engine/Automation/AutomationThresholdBasis.h"
 #include "Engine/Automation/AutomationWindowSteps.h"
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Input/Devices/MouseDevice.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputSlotUtil.h"
@@ -44,13 +49,7 @@ namespace sw
     {
         struct AutomationRunnerInternal
         {
-            /** @brief `<ExpectImage>` 가 스크린샷을 기다리는 최대 프레임입니다. 렌더 큐 깊이보다 넉넉하게 잡습니다. */
-            static constexpr uint32 kMaxImageWaitFrames = 30;
-            /**
-             * @brief 스크린샷이 에셋 일(읽는 중 · 나타나는 중인 메시, 올리기를 기다리는 텍스처)을 기다리는 최대 프레임 수입니다. 넘기면 실패로 적고 그대로 찍는다.
-             * @details 고정 프레임 시간(60 Hz)에서 10 초다 — 첫 프레임에 큰 씬의 텍스처 수백 장이 워커에 줄을 서도 넉넉하다.
-             */
-            static constexpr uint32 kMaxAssetSettleFrames = 600;
+            // 시한 상수(기다리는 프레임 · 초)는 `AutomationTimeLimits` 한 곳에 있다.
             /**
              * @brief 에셋 일이 0 이 된 뒤 스크린샷 전에 더 기다리는 프레임 수입니다. 올린 텍스처의 새 SRV 는 다음 씬 빌드가 머티리얼에 넣고(`Material::refreshTextureBindings`),
              *        그 스냅샷이 렌더 큐(깊이 2)를 지나야 화면에 나온다.
@@ -58,12 +57,8 @@ namespace sw
             static constexpr uint32 kAssetSettleTrailFrames = 3;
             /** @brief `darkFraction` 의 기본 임계값(영역 중앙값에 곱한다)입니다. */
             static constexpr float32 kDefaultDarkRatio = 0.7f;
-            /** @brief `CloseWindow` 의 기본 종료 시한(초)입니다. */
-            static constexpr float32 kDefaultExitWithinSeconds = 10.0f;
-            /** @brief `WaitUntil` 의 기본 시한(프레임)입니다. 부하가 걸린 기계에서 에디터가 에셋을 여는 데 드는 시간보다 넉넉하게 잡습니다. */
-            static constexpr uint32 kDefaultWaitTimeoutFrames = 1200;
-            /** @brief 시계 잡기 조건 하나가 이어서 시계를 붙잡을 수 있는 벽시계 시한(초)입니다. 저장 검증(파이썬)은 쉬는 기계에서 몇 초, 빌드가 겹치면 30 초를 넘긴다. */
-            static constexpr float64 kClockHoldTimeoutSeconds = 180.0;
+            /** @brief 단조 시계의 지금 시각(초)입니다. 벽시계 감시와 시한이 같은 시계를 읽는다. */
+            [[nodiscard]] static float64 readNowSeconds() { return static_cast<float64>( MonotonicClock::nowMicroseconds() ) * 1.0e-6; }
 
             /**
              * @brief 이 구성에 없는 단계가 들어 있는 시나리오면 그 첫 단계를 반환합니다. 개발 명령(`DevCommand`)은 Shipping 에서 빠집니다.
@@ -164,7 +159,7 @@ namespace sw
             /** @brief `WaitUntil` 의 시한입니다. `timeoutSeconds` 를 적었으면 초, 아니면 프레임입니다. */
             struct WaitTimeoutArgs
             {
-                uint32  _timeoutFrames{ kDefaultWaitTimeoutFrames };
+                uint32  _timeoutFrames{ AutomationTimeLimits::kDefaultWaitTimeoutFrames };
                 float32 _timeoutSeconds{ 0.0f };
                 bool    _bSeconds{ false };
             };
@@ -303,10 +298,10 @@ namespace sw
                 return readFloat( step, "ratio", outArgs._ratio, outError ) && parseNumberComparison( step, kImageNearTolerance, outArgs._comparison, outError );
             }
 
-            /** @brief 종료 시한 단계의 초입니다. 없으면 `kDefaultExitWithinSeconds` 입니다. */
+            /** @brief 종료 시한 단계의 초입니다. 없으면 `AutomationTimeLimits::kDefaultExitWithinSeconds` 입니다. */
             [[nodiscard]] static bool parseExitSeconds( const AutomationStep& step, const utf8* pName, float32& outSeconds, string& outError )
             {
-                outSeconds = kDefaultExitWithinSeconds;
+                outSeconds = AutomationTimeLimits::kDefaultExitWithinSeconds;
                 return readFloat( step, pName, outSeconds, outError );
             }
 
@@ -1140,7 +1135,7 @@ namespace sw
             const bool bSettled             = AutomationCaptureUtil::isReadyForCapture( runner.findActiveObjectManager() );
             runner._assetSettledFrameCount  = bSettled ? runner._assetSettledFrameCount + 1 : 0;
             const bool               bReady = runner._assetSettledFrameCount > AutomationRunnerInternal::kAssetSettleTrailFrames;
-            const AutomationStepHold hold   = runner.holdUntilReady( step, input, bReady, AutomationRunnerInternal::kMaxAssetSettleFrames );
+            const AutomationStepHold hold   = runner.holdUntilReady( step, input, bReady, AutomationTimeLimits::kMaxAssetSettleFrames );
             if ( hold == AutomationStepHold::Run )
             {
                 if ( bReady == false )
@@ -1162,7 +1157,7 @@ namespace sw
             const bool bPending = runner._listPendingScreenshot.empty() == false || runner._screenshotCompletedCount < runner._screenshotRequestedCount;
             if ( bPending == false )
                 return AutomationStepHold::Run;
-            if ( ++runner._imageWaitFrameCount <= AutomationRunnerInternal::kMaxImageWaitFrames )
+            if ( ++runner._imageWaitFrameCount <= AutomationTimeLimits::kMaxImageWaitFrames )
                 return AutomationStepHold::Hold;
             runner.recordFailure( step, "the screenshot never completed (is there a renderer?)" );
             return AutomationStepHold::Skip;
@@ -1223,10 +1218,17 @@ namespace sw
         , _outputDirectory{}
         , _finishReason{}
         , _currentStepKind{}
+        , _startedAt{}
+        , _reproduceInput{}
+        , _hangPayload{}
+        , _hangWatchdog{}
         , _pObjectManagerOverride{ nullptr }
         , _pInputManager{ nullptr }
         , _exitDeadlineSeconds{ 0.0 }
         , _loadDeadlineSeconds{ 0.0 }
+        , _wallStartSeconds{ 0.0 }
+        , _wallEndSeconds{ 0.0 }
+        , _startedUnixMs{ 0 }
         , _nextStepIndex{ 0 }
         , _frameIndex{ 0 }
         , _currentStepNumber{ 0 }
@@ -1237,12 +1239,14 @@ namespace sw
         , _assetSettledFrameCount{ 0 }
         , _holdFrameCount{ 0 }
         , _clockHoldFrameCount{ 0 }
+        , _seenFrameCount{ 0 }
         , _clockHoldStartSeconds{ 0.0 }
         , _clockHolderName{}
         , _result{ AutomationOutcome::Running }
         , _bStarted{ SW_FALSE }
         , _bEnded{ SW_FALSE }
         , _bClockHeld{ SW_FALSE }
+        , _bHangWatchArmed{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -1252,6 +1256,7 @@ namespace sw
 
     void AutomationRunner::startFromPath( string_view scenarioPath, string_view reportPath )
     {
+        markWallStart();
         _reportWriter.setReportPath( reportPath );
         string error;
         if ( _scenario.loadFromPath( scenarioPath, error ) == false )
@@ -1267,10 +1272,12 @@ namespace sw
                      static_cast<uint32>( _scenario.getSteps().size() ), _scenario.getFixedDelta() );
         if ( _scenario.getInputMode() == VirtualInputMode::Mixed )
             SW_LOG_WARNING( "[Scenario] %# uses mixed input - do not touch the keyboard or mouse while it runs", _scenario.getName().c_str() );
+        startHangWatchdog();
     }
 
     bool AutomationRunner::startFromText( string_view xmlText, string_view reportPath )
     {
+        markWallStart();
         _reportWriter.setReportPath( reportPath );
         string error;
         if ( _scenario.parse( xmlText, "<text>", error ) == false )
@@ -1278,8 +1285,11 @@ namespace sw
             finish( AutomationOutcome::LoadError, error );
             return false;
         }
-        _outputDirectory = "Saved/Automation/" + _scenario.getName();
-        return skipIfStepsAreMissingFromThisBuild() == false && prepareScratchFolders();
+        _outputDirectory  = "Saved/Automation/" + _scenario.getName();
+        const bool bReady = skipIfStepsAreMissingFromThisBuild() == false && prepareScratchFolders();
+        if ( bReady )
+            startHangWatchdog();
+        return bReady;
     }
 
     bool AutomationRunner::prepareScratchFolders()
@@ -1318,12 +1328,17 @@ namespace sw
     {
         if ( _result != AutomationOutcome::Running )
             return;
+        finishIfWallClockExceeded();
+        if ( _result != AutomationOutcome::Running )
+            return; // 벽시계 상한을 넘었다 — 이 프레임의 `onFrameEnd` 가 끝맺는다
         if ( _bStarted == SW_FALSE )
         {
             // 씬 플레이 중이란 활성 씬이 플레이를 시작했고 시작 차단 조건이 모두 풀렸다는 뜻이다(UI 의 로딩 화면은 게임 입력을 막으므로, 그동안 넣은 입력은 폰에 닿지 않는다).
-            const GameObjectManager* pManager = findActiveObjectManager();
-            const bool               bBlocked = AutomationStepRegistry::isStartBlocked();
-            const bool               bReady   = _scenario.getStartCondition() == AutomationStartCondition::Immediately || ( pManager != nullptr && pManager->hasBegunPlay() && bBlocked == false );
+            // `Immediately` 는 씬이 플레이 중일 필요만 없앤다 — 차단 조건(로딩 화면 · 감시 울타리)은 어느 시작 조건이든 풀려야 시작한다.
+            const GameObjectManager* pManager    = findActiveObjectManager();
+            const bool               bBlocked    = AutomationStepRegistry::isStartBlocked();
+            const bool               bSceneReady = _scenario.getStartCondition() == AutomationStartCondition::Immediately || ( pManager != nullptr && pManager->hasBegunPlay() );
+            const bool               bReady      = bSceneReady && bBlocked == false;
             // 배타 시나리오는 시작 조건을 기다리는 프레임에도 사람의 장치를 버린다. 기다리는 동안 게임이 실제 마우스 위치를 읽으면(건설 커서 등)
             // 그 값이 게임 상태에 남아 같은 시나리오가 실행마다 다른 결과를 낸다. 시작할 때 다시 붙여 가상 입력 프레임을 0 부터 센다.
             const bool bBlockWhileWaiting = _scenario.getInputMode() == VirtualInputMode::Exclusive && input.getVirtualInput() != &_inputScript;
@@ -1344,6 +1359,8 @@ namespace sw
                     return;
                 if ( bReady )
                     finish( AutomationOutcome::Skipped, "the window could not become the foreground window in this session" );
+                else if ( bBlocked )
+                    finish( AutomationOutcome::TimedOut, "a start blocker (loading screen, content watch fence) never cleared within startTimeoutFrames" );
                 else
                     finish( AutomationOutcome::TimedOut, "the start condition never became true" );
                 return;
@@ -1360,6 +1377,7 @@ namespace sw
             // 배타 시나리오는 무인 실행이다. 사람이 같은 PC 에서 마우스를 움직여도 에디터 UI 까지 결과가 바뀌지 않게 장치 이벤트를 창 메시지 단계에서 버린다.
             input.setOsDeviceInputBlocked( _scenario.getInputMode() == VirtualInputMode::Exclusive );
             SW_LOG_INFO( "[Scenario] %# started after %# frame(s)", _scenario.getName().c_str(), _waitFrameCount );
+            updateCrashContext( "started" );
             startLoadWindow();
         }
         else if ( holdClockForBackgroundWork( input ) )
@@ -1380,6 +1398,12 @@ namespace sw
 
     AutomationOutcome AutomationRunner::onFrameEnd( InputManager& input )
     {
+        // 붙잡힌 프레임도 센다 — 시계를 붙잡는 동안에도 크래시 자리와 벽시계 감시가 갱신돼야 한다.
+        ++_seenFrameCount;
+        finishIfWallClockExceeded();
+        const bool bRefreshCrashContext = _bStarted == SW_TRUE && _result == AutomationOutcome::Running && _seenFrameCount % AutomationRunTitleUtil::kTitleRefreshFrames == 0;
+        if ( bRefreshCrashContext )
+            updateCrashContext();
         const bool bRunsSteps = _result == AutomationOutcome::Running && _bStarted == SW_TRUE && _bClockHeld == SW_FALSE; // 시계 잡기 조건이 붙잡은 프레임은 단계를 돌리지 않는다
         if ( bRunsSteps )
         {
@@ -1408,9 +1432,12 @@ namespace sw
                 const bool bHasRunFunction = pRegistration != nullptr && pRegistration->_pRun != nullptr;
                 if ( bHasRunFunction )
                 {
-                    _currentStepKind   = step._kind;
-                    _currentStepNumber = step._orderInFile;
-                    SW_LOG_INFO( "%#", AutomationRunTitleUtil::makeStepLogLine( _scenario.getName(), _currentStepNumber, _currentStepKind, _frameIndex ).c_str() );
+                    _currentStepKind      = step._kind;
+                    _currentStepNumber    = step._orderInFile;
+                    const string stepLine = AutomationRunTitleUtil::makeStepLogLine( _scenario.getName(), _currentStepNumber, _currentStepKind, _frameIndex );
+                    SW_LOG_INFO( "%#", stepLine.c_str() );
+                    CrashHandler::addBreadcrumb( stepLine ); // 크래시 보고에 최근 단계 전환이 남는다
+                    updateCrashContext();
                 }
                 if ( pRegistration == nullptr || ( bRunsNow && pRegistration->_pRun( *this, step ) == false ) )
                     finish( AutomationOutcome::LoadError, step.describe() + ": the step could not run" );
@@ -1453,10 +1480,127 @@ namespace sw
             return;
         }
         // 멈춤 그물 — 워밍업(60 프레임)과 느린 기계를 넉넉히 덮는다.
-        constexpr float64 kLoadDeadlineSlackSeconds = 120.0;
-        _loadDeadlineSeconds                        = static_cast<float64>( MonotonicClock::nowMicroseconds() ) * 1.0e-6 + 2.0 * static_cast<float64>( seconds ) + kLoadDeadlineSlackSeconds;
+        _loadDeadlineSeconds = AutomationRunnerInternal::readNowSeconds() + 2.0 * static_cast<float64>( seconds ) + AutomationTimeLimits::kLoadDeadlineSlackSeconds;
         SW_LOG_INFO( "[Scenario] load window %# s (clients %#, meshes %#, movers %#, network '%#')", seconds, load._clientCount, load._meshCount, load._moverCount,
                      load._network.c_str() );
+    }
+
+    void AutomationRunner::markWallStart()
+    {
+        _wallStartSeconds = AutomationRunnerInternal::readNowSeconds();
+        _startedUnixMs    = WallClock::nowUnixMilliseconds();
+        LocalCalendarTime calendar{};
+        if ( WallClock::toLocalCalendar( _startedUnixMs / 1000, calendar ) == false )
+            return; // 달력으로 못 바꾸는 플랫폼이면 지역 시각 글은 비운다(유닉스 밀리초는 남는다)
+        StringBuilder<constant::kMaxBuffer64> text;
+        text.appendFormat( "%04d-%02d-%02d %02d:%02d:%02d", calendar._year, calendar._month, calendar._day, calendar._hour, calendar._minute, calendar._second );
+        _startedAt = text.c_str();
+    }
+
+    void AutomationRunner::finishIfWallClockExceeded()
+    {
+        // 부하 시나리오는 측정 창을 닫는 그물(`_loadDeadlineSeconds`)이 따로 있어 길이가 `durationSeconds` 에 매인다.
+        const bool bWatches = _result == AutomationOutcome::Running && _scenario.getTestOptions()._load._bDeclared == false;
+        if ( bWatches == false )
+            return;
+        const float64 elapsedSeconds = AutomationRunnerInternal::readNowSeconds() - _wallStartSeconds;
+        if ( elapsedSeconds <= static_cast<float64>( _scenario.getWallTimeoutSeconds() ) )
+            return;
+        string reason = "the wall-clock limit of " + to_string( _scenario.getWallTimeoutSeconds() ) + " s (wallTimeoutSeconds) was exceeded at " + describeRunPosition();
+        if ( _bStarted == SW_FALSE )
+            reason += ", the scenario never started (" + to_string( _waitFrameCount ) + " frame(s) spent waiting for the start condition)";
+        if ( _holdFrameCount > 0 )
+            reason += ", the current step has held the scenario clock for " + to_string( _holdFrameCount ) + " frame(s)";
+        if ( _clockHoldFrameCount > 0 )
+            reason += ", " + _clockHolderName + " has held the scenario clock for " + to_string( _clockHoldFrameCount ) + " frame(s)";
+        finish( AutomationOutcome::TimedOut, reason );
+    }
+
+    string AutomationRunner::findBackendName()
+    {
+        // 창이 없는 호스트는 디바이스를 만들지 않아 `gv_rhiBackend` 가 설정 기본값일 뿐이다 — 그때는 적지 않는다.
+        if ( engine::areEngineServicesBound() == false )
+            return string{};
+        const MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
+        if ( pWindowHost == nullptr || pWindowHost->getWindow() == nullptr )
+            return string{};
+        return string{ RHI::getBackendTypeName( gv_rhiBackend ) };
+    }
+
+    string AutomationRunner::describeRunPosition() const
+    {
+        const string backendName = findBackendName();
+        // 이름이 없으면(읽기 오류) 요약이 벤치 실행으로 읽힌다 — 자리표시 이름을 쓴다.
+        const string            scenarioName = _scenario.getName().empty() ? string( "(scenario not loaded)" ) : _scenario.getName();
+        AutomationRunTitleInput input;
+        input._scenarioName = scenarioName;
+        input._backendName  = backendName;
+        input._stepKind     = _currentStepKind;
+        input._stepNumber   = _currentStepNumber;
+        input._frame        = _frameIndex;
+        return AutomationRunTitleUtil::makeSummary( input );
+    }
+
+    void AutomationRunner::updateCrashContext( string_view note )
+    {
+        const string position = describeRunPosition();
+        string       text     = position;
+        if ( note.empty() == false )
+        {
+            text += " (";
+            text += note;
+            text += ')';
+        }
+        // 키 하나가 시나리오 · 백엔드 · 단계 · 프레임을 든다. 값 길이를 넘으면 글자 경계에서 자른다(저장소가 조용히 자르면 UTF-8 중간이 깨진다).
+        CrashHandler::setContextValue( "Scenario", AutomationRunTitleUtil::truncateUtf8( text, CrashContextStore::kMaxValueLength - 1 ) );
+        publishHangSnapshot( position ); // 행 감시 스레드가 읽을 같은 자리(단계 전환 때와 30 프레임마다)
+    }
+
+    string AutomationRunner::makeReproduceCommand() const
+    {
+        AutomationReproduceInput reproduceInput = _reproduceInput;
+        for ( const AutomationAttribute& variable : _scenario.getTestOptions()._listLaunchVariable )
+        {
+            reproduceInput._listExtraArgument.push_back( "-" + variable._name + "=" + variable._value ); // `<Launch>` 변수는 명령줄에 있어야 시작한다
+        }
+        return AutomationRunTitleUtil::makeReproduceCommand( reproduceInput );
+    }
+
+    void AutomationRunner::startHangWatchdog()
+    {
+        const bool bWatches = _bHangWatchArmed == SW_TRUE && _result == AutomationOutcome::Running && _scenario.getTestOptions()._load._bDeclared == false;
+        if ( bWatches == false )
+            return;
+        // 바뀌지 않는 칸은 지금 한 번 채운다. 행에서는 이것만 읽는다(감시 스레드는 실행기 멤버를 건드리지 않는다).
+        _hangPayload = AutomationHangPayload{};
+        AutomationHangPayload::assign( _hangPayload._scenario, AutomationHangPayload::kScenarioBytes, _scenario.getName() );
+        AutomationHangPayload::assign( _hangPayload._game, AutomationHangPayload::kGameBytes, _reproduceInput._game );
+        AutomationHangPayload::assign( _hangPayload._startedAt, AutomationHangPayload::kStartedAtBytes, _startedAt );
+        AutomationHangPayload::assign( _hangPayload._reproduce, AutomationHangPayload::kReproduceBytes, makeReproduceCommand() );
+        AutomationHangPayload::assign( _hangPayload._reportPath, AutomationHangPayload::kReportPathBytes, _reportWriter.getReportPath() );
+        _hangPayload._startedUnixMs         = _startedUnixMs;
+        _hangPayload._wallLimitMilliseconds = static_cast<uint32>( static_cast<float64>( _scenario.getWallTimeoutSeconds() ) * 1000.0 );
+        // 행에서는 보고 폴더를 만들 수 없다(할당 · 잠금 없이 쓴다) — 미리 만들어 둔다.
+        const string reportDirectory = FileUtil::getDirectoryPart( _reportWriter.getReportPath() );
+        if ( reportDirectory.empty() == false )
+            (void)FileUtil::ensureDirectoryExists( reportDirectory ); // 못 만들면 행 보고만 못 쓴다 — 정상 종료의 보고는 자기 쓰기가 알린다
+        _hangWatchdog.publish( _hangPayload );                        // 감시가 뜨기 전에 한 번 채운다
+        AutomationHangWatchdog::Settings settings;
+        settings._startSeconds = _wallStartSeconds;
+        settings._limitSeconds = _scenario.getWallTimeoutSeconds();
+        settings._graceSeconds = AutomationTimeLimits::kHangGraceSeconds;
+        settings._exitCode     = getAutomationExitCode( AutomationOutcome::TimedOut );
+        _hangWatchdog.start( settings );
+    }
+
+    void AutomationRunner::publishHangSnapshot( string_view position )
+    {
+        if ( _hangWatchdog.isRunning() == false )
+            return;
+        AutomationHangPayload::assign( _hangPayload._lastStep, AutomationHangPayload::kLastStepBytes, position );
+        AutomationHangPayload::assign( _hangPayload._backend, AutomationHangPayload::kBackendBytes, findBackendName() );
+        _hangPayload._frame = _frameIndex;
+        _hangWatchdog.publish( _hangPayload );
     }
 
     AutomationOutcome AutomationRunner::onWindowClosed( InputManager* pInput )
@@ -1612,9 +1756,10 @@ namespace sw
         // 시작한 시나리오는 이 프레임을 세지 않는다. 이 프레임에 낼 입력 이벤트부터 한 프레임씩 밀어 시나리오 프레임과 맞춘다(`holdUntilReady` 와 같다).
         if ( _bStarted == SW_TRUE )
             _inputScript.delayEventsFrom( input.getVirtualFrameIndex(), 1 );
-        if ( nowSeconds - _clockHoldStartSeconds > AutomationRunnerInternal::kClockHoldTimeoutSeconds )
+        // 시한은 `AutomationTimeLimits` 한 곳에 있다(저장 검증은 쉬는 기계에서 몇 초, 빌드가 겹치면 30 초를 넘긴다).
+        if ( nowSeconds - _clockHoldStartSeconds > AutomationTimeLimits::kClockHoldTimeoutSeconds )
             finish( AutomationOutcome::TimedOut, _clockHolderName + " held the scenario clock for more than " +
-                                                     to_string( static_cast<uint32>( AutomationRunnerInternal::kClockHoldTimeoutSeconds ) ) + " s" );
+                                                     to_string( static_cast<uint32>( AutomationTimeLimits::kClockHoldTimeoutSeconds ) ) + " s" );
         return true;
     }
 
@@ -1980,6 +2125,9 @@ namespace sw
         if ( judgement.hasUnhandled() == false )
             return;
         _listUnhandledLog = std::move( judgement._listUnhandled );
+        // 이미 진 실행은 결과를 바꾸지 않는다(원인은 단언 · 시한이다). 줄은 보고의 `unhandledLogs` 에만 남겨, 진 보고도 경고 · 오류 줄을 숨기지 않게 한다.
+        if ( _result != AutomationOutcome::Passed )
+            return;
         for ( const string& line : _listUnhandledLog )
         {
             _listFailure.push_back( "unhandled log: " + line );
@@ -1994,11 +2142,14 @@ namespace sw
     {
         if ( _bEnded == SW_TRUE )
             return;
-        _bEnded = SW_TRUE;
+        _bEnded         = SW_TRUE;
+        _wallEndSeconds = AutomationRunnerInternal::readNowSeconds();
+        _hangWatchdog.stop(); // 정상 끝맺음이 보고를 쓴다 — 감시가 같은 보고를 덮거나 프로세스를 끝내지 못하게 먼저 내린다
         if ( pInput != nullptr && pInput->getVirtualInput() == &_inputScript )
             pInput->detachVirtualInput();
         _logCapture.stop();
-        if ( _result == AutomationOutcome::Passed )
+        // 시작한 시나리오는 결과와 상관없이 로그 게이트를 지난다 — 시작하지 못한 실행은 허용 목록도 로그 수집도 준비되지 않았다.
+        if ( _bStarted == SW_TRUE )
             applyLogGate();
         if ( _result == AutomationOutcome::Passed && _listUnconfirmed.empty() == false )
             _result = AutomationOutcome::Unconfirmed;
@@ -2023,6 +2174,9 @@ namespace sw
                 detail += "\n    ";
                 detail += failure;
             }
+            // 진 실행의 처리하지 않은 줄은 `failures` 에 섞지 않고 보고의 `unhandledLogs` 에 둔다 — 로그에는 있다는 사실만 적는다.
+            if ( _result != AutomationOutcome::UnhandledLog && _listUnhandledLog.empty() == false )
+                detail += "\n    (" + to_string( static_cast<uint32>( _listUnhandledLog.size() ) ) + " unhandled Warning/Error log line(s) also remain - see unhandledLogs in the report)";
             SW_LOG_ERROR( "[Scenario] %# %# at frame %#: %#", getAutomationOutcomeName( _result ), _scenario.getName().c_str(), _frameIndex, detail.c_str() );
         }
         // 결과마다 말씨가 다른 위 줄과 별개로, 시작 줄(`started after`)과 짝이 되는 같은 모양의 끝 줄을 남긴다(grep 한 번으로 시작 · 끝을 묶는다).
@@ -2037,6 +2191,21 @@ namespace sw
         report._pListUnconfirmed  = &_listUnconfirmed;
         report._pListUnhandledLog = &_listUnhandledLog;
         report._pListAllowedLog   = &_listAllowedLogID;
+        // 실행 환경 — 이 보고만으로 어디서 어떻게 돌았고 어떻게 다시 돌리는지 알게 한다.
+        const string  backendName        = findBackendName();
+        const string  lastStep           = describeRunPosition();
+        const string  reproduce          = makeReproduceCommand();
+        const bool    bWatchedByWallTime = _scenario.getTestOptions()._load._bDeclared == false;
+        const float64 wallSeconds        = _wallEndSeconds > _wallStartSeconds ? _wallEndSeconds - _wallStartSeconds : 0.0;
+        report._backendName              = backendName;
+        report._gameName                 = _reproduceInput._game;
+        report._startedAt                = _startedAt;
+        report._startedUnixMs            = _startedUnixMs;
+        report._wallMilliseconds         = static_cast<uint32>( wallSeconds * 1000.0 );
+        report._wallLimitMilliseconds    = bWatchedByWallTime ? static_cast<uint32>( static_cast<float64>( _scenario.getWallTimeoutSeconds() ) * 1000.0 ) : 0u;
+        report._lastStep                 = lastStep;
+        report._reproduce                = reproduce;
         _reportWriter.write( report );
+        updateCrashContext( string( "ended " ) + getAutomationOutcomeName( _result ) );
     }
 } // namespace sw

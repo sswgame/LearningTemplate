@@ -232,6 +232,7 @@ namespace sw
         , _name{}
         , _sourcePath{}
         , _fixedDelta{ AutomationScenarioInternal::kDefaultFixedDelta }
+        , _wallTimeoutSeconds{ kDefaultWallTimeoutSeconds }
         , _timeoutFrames{ AutomationScenarioInternal::kDefaultTimeoutFrames }
         , _startTimeoutFrames{ AutomationScenarioInternal::kDefaultStartTimeoutFrames }
         , _startCondition{ AutomationStartCondition::ScenePlaying }
@@ -276,6 +277,17 @@ namespace sw
             return Internal::readUint( pText, "timeoutFrames", _timeoutFrames, outReason );
         if ( name == "startTimeoutFrames" )
             return Internal::readUint( pText, "startTimeoutFrames", _startTimeoutFrames, outReason );
+        if ( name == "wallTimeoutSeconds" )
+        {
+            // 0 이나 음수로 상한을 끄지 못한다 — 끝나지 않는 시나리오가 테스트의 프로세스 시한(보고 없는 kill)까지 가는 것이 이 값이 막는 결함이다.
+            // 상한은 시계 보류 시한(`AutomationTimeLimits`)보다 짧아야 한다 — 그 이상이면 프로세스 시한이 먼저 죽여 보고가 없다. 모든 시나리오 파일을 읽는 데이터 테스트가 이 자리에서 잡는다.
+            const bool bParsed  = StringUtil::parseFloat( string_view{ pText }, _wallTimeoutSeconds );
+            const bool bInRange = bParsed && _wallTimeoutSeconds > 0.0f && static_cast<float64>( _wallTimeoutSeconds ) < AutomationTimeLimits::kClockHoldTimeoutSeconds;
+            if ( bInRange == false )
+                outReason = string( "wallTimeoutSeconds must be a positive number of seconds below " ) + to_string( static_cast<uint32>( AutomationTimeLimits::kClockHoldTimeoutSeconds ) ) +
+                            " (the clock-hold timeout), got '" + pText + "'";
+            return bInRange;
+        }
         if ( name == "startAfter" )
         {
             const string_view value = pText;

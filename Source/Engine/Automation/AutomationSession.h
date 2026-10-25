@@ -11,6 +11,7 @@
 #include "Core/Subsystem/ISubsystem.h"
 
 #include "Engine/Automation/AutomationOutcome.h"
+#include "Engine/Automation/AutomationRunTitle.h"
 #include "Engine/Automation/ScenarioRecorder.h"
 #include "Engine/Utility/EngineFrameObserver.h"
 
@@ -28,7 +29,8 @@ namespace sw
      *          (모듈 이미지 창구의 뒤에 서는 서브시스템이라 `shutdownDependentsOf` 로 닿는다). 한 단계가 끝나면(통과해야 다음으로 간다 — `AutomationScenarioChain`) 같은 프로세스에서 다음 시나리오의 실행기를 새로 만든다. 그 단계가 시작할 때
      *          - 프로세스의 **작업 폴더**가 처음과 같은지 보고(파일 대화상자 같은 것이 옮긴다) 다르면 경고하고 되돌린다,
      *          - `gv_fixedFrameDelta` 를 그 시나리오의 `fixedDelta` 로 맞추고,
-     *          - 렌더 스레드가 지금까지 쓴 시나리오 스크린샷 수를 기준선으로 잡는다(실행기는 자기 단계가 요청한 것만 기다린다 — 렌더 스레드의 수는 프로세스 전체로 누적된다).
+     *          - 렌더 스레드가 지금까지 쓴 시나리오 스크린샷 수를 기준선으로 잡는다(실행기는 자기 단계가 요청한 것만 기다린다 — 렌더 스레드의 수는 프로세스 전체로 누적된다),
+     *          - 시작할 때 모은 재현 명령 재료(게임 · 백엔드 · 에디터 · `-scenario` 목록)를 단계 실행기에 넘긴다(보고의 `reproduce`).
      *          게임 스레드에서만 쓴다.
      */
     class SW_API AutomationSession : public IEngineFrameObserver, public ISubsystem
@@ -101,6 +103,7 @@ namespace sw
         string                              _recordPath;         ///< `-scenario-record` 경로(비면 녹화하지 않는다)
         string                              _reportPath;         ///< `-scenario-report` 원본(단계마다 `AutomationScenarioChain::makeStageReportPath`)
         string                              _workingFolder;      ///< 시작할 때의 작업 폴더(단계마다 이 폴더에서 시작한다)
+        AutomationReproduceInput            _reproduceInput;     ///< 재현 명령 재료(게임 · 시작 때 백엔드 · 에디터 · 시나리오 목록) — 단계마다 실행기에 넘긴다
         uint32                              _screenshotBaseline; ///< 단계가 시작할 때 렌더 스레드가 이미 쓴 스크린샷 수
     };
 } // namespace sw

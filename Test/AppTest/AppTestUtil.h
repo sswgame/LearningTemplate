@@ -6,6 +6,8 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Automation/AutomationTimeLimits.h"
+
 #include "TestFramework/Harness/TestProcessRun.h"
 
 namespace test
@@ -86,12 +88,9 @@ namespace test
         /** @brief 시나리오가 아닌 App 한 판(스모크 · 쿠킹)의 프로세스 시한(초) — 멈춘 App 이 CTest 시한까지 붙잡지 않게 넉넉히 잡은 그물이다. */
         static constexpr uint32 kAppRunTimeoutSeconds = 600;
         /** @brief 시나리오 하나의 프로세스 시한(초) — 넘으면 죽이고 -1 입니다(시나리오의 프레임 시한이 먼저 끝내야 한다). */
-        static constexpr uint32 kScenarioTimeoutSeconds = 180;
-        /**
-         * @brief 체인의 단계 하나에 주는 시한(초)입니다. 체인의 시한은 이것 × 단계 수와 `kScenarioTimeoutSeconds` 가운데 큰 쪽입니다.
-         * @details 에디터 체인(125 단계, Debug)은 혼자 돌아도 2 분 남짓이라 고정 180 초로는 부하에 따라 끝 단계에서 죽었다(-1).
-         */
-        static constexpr uint32 kChainStageTimeoutSeconds = 5;
+        static constexpr uint32 kScenarioTimeoutSeconds = sw::AutomationTimeLimits::kProcessKillSeconds; // 실행기 감시 · 시계 보류 시한보다 길다는 것은 그 헤더의 static_assert 가 지킨다
+        // 체인의 프로세스 시한은 `sw::AutomationTimeLimits::getChainKillSeconds( 단계 수 )` — `kScenarioTimeoutSeconds` 에 단계 몫(5 초)을 더한 값이다.
+        // 에디터 체인(125 단계, Debug)은 혼자 돌아도 2 분 남짓이라 고정 180 초로는 부하에 따라 끝 단계에서 죽었다(-1).
 
         /**
          * @brief 자동화 시나리오 @p scenarioPath 를 백엔드 스위치 @p pBackendSwitch(`-dx12` · 빈 글 = 빌드 기본)로 돌려 판정합니다(`runAppOnBackend` 와 같은 정책).
