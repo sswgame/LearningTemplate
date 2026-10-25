@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 표면 셰이더 쇼케이스(surfaceshowcase.scene.xml)의 구 — surfacelit.material 에 Tear 값만 켠 것. 마스크 텍스처는 비워 흰색으로 읽히므로 켠 채널이 구 전체를 덮는다. -->
+<MaterialDesc formatVersion="0" name="SurfaceShowcaseTear" shaderPath="engine/shaders/surfacelit.hlsl" blendMode="Opaque">
+	<_properties>
+		<item name="_color" type="Color" shaderType="Float4" defaultValue="0.6 0.6 0.6 1.0" displayName="Base Color" group="Surface" bHdr="0" bSrgb="1"/>
+		<item name="_roughness" type="Range" shaderType="Float" defaultValue="0.5" min="0.0" max="1.0" group="Surface"/>
+		<item name="_metallic" type="Range" shaderType="Float" defaultValue="0.0" min="0.0" max="1.0" group="Surface"/>
+		<item name="_albedoMap" type="Texture2D" displayName="Albedo" group="Surface" bSrgb="1"/>
+		<item name="_surfaceWet" type="Range" shaderType="Float" defaultValue="0.0" min="0.0" max="1.0" displayName="Wet" group="Surface State"/>
+		<item name="_surfaceDirt" type="Range" shaderType="Float" defaultValue="0.0" min="0.0" max="1.0" displayName="Dirt" group="Surface State"/>
+		<item name="_surfaceBlood" type="Range" shaderType="Float" defaultValue="0.0" min="0.0" max="1.0" displayName="Blood" group="Surface State"/>
+		<item name="_surfaceWound" type="Range" shaderType="Float" defaultValue="0.0" min="0.0" max="1.0" displayName="Wound" group="Surface State"/>
+		<item name="_surfaceTear" type="Range" shaderType="Float" defaultValue="1.0" min="0.0" max="1.0" displayName="Tear" group="Surface State"/>
+		<item name="_surfaceDirtMask" type="Texture2D" displayName="Dirt Mask" group="Surface State" bSrgb="0"/>
+		<item name="_surfaceBloodMask" type="Texture2D" displayName="Blood Mask" group="Surface State" bSrgb="0"/>
+		<item name="_surfaceWoundMask" type="Texture2D" displayName="Wound Mask" group="Surface State" bSrgb="0"/>
+		<item name="_surfaceTearMask" type="Texture2D" displayName="Tear Mask" group="Surface State" bSrgb="0"/>
+	</_properties>
+	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
+		<_alwaysDefines>
+			<item>MATERIAL_DOMAIN_SURFACE</item>
+			<item>MATERIAL_ALPHA_CUTOFF</item>
+		</_alwaysDefines>
+		<_multiCompiles>
+			<item name="FogMode" selected="FOG_OFF">
+				<_options>
+					<item>FOG_OFF</item>
+					<item>FOG_LINEAR</item>
+					<item>FOG_EXP</item>
+				</_options>
+			</item>
+		</_multiCompiles>
+	</_permutations>
+</MaterialDesc>

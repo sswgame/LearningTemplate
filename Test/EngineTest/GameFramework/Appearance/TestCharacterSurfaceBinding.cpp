@@ -26,9 +26,9 @@ namespace
  */
 SW_TEST_CASE( CharacterSurfaceBindingTest, ParameterNamesFollowTheContract )
 {
-    SW_EXPECT_STREQ( "Surface_Wet", SurfaceParameterNames::makeChannel( hashed_string( "Wet" ) ).c_str() );
-    SW_EXPECT_STREQ( "Surface_Blood_Mask", SurfaceParameterNames::makeMask( hashed_string( "Blood" ) ).c_str() );
-    SW_EXPECT_STREQ( "SurfaceRegion3_1", SurfaceParameterNames::makeRegion( 3, 1 ).c_str() );
+    SW_EXPECT_STREQ( "_surfaceWet", SurfaceParameterNames::makeChannel( hashed_string( "Wet" ) ).c_str() );
+    SW_EXPECT_STREQ( "_surfaceBloodMask", SurfaceParameterNames::makeMask( hashed_string( "Blood" ) ).c_str() );
+    SW_EXPECT_STREQ( "_surfaceRegion3Chunk1", SurfaceParameterNames::makeRegion( 3, 1 ).c_str() );
     SW_EXPECT_EQUAL( "cpu/surface/42/2/Blood", SurfaceParameterNames::makeMaskTexturePath( 42, 2, hashed_string( "Blood" ) ) );
     // 소유자 키가 다르면 같은 부품 · 채널도 다른 텍스처다.
     SW_EXPECT_TRUE( SurfaceParameterNames::makeMaskTexturePath( 1, 0, hashed_string( "Blood" ) ) != SurfaceParameterNames::makeMaskTexturePath( 2, 0, hashed_string( "Blood" ) ) );
