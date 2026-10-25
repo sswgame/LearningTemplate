@@ -2,6 +2,7 @@
 
 #include "Editor/Panels/Animation/AnimationRewindPanel.h"
 
+#include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/GUI/EditorColorUtil.h"
@@ -104,7 +105,9 @@ namespace sw::editor
         const float64               viewTime  = rewind.isScrubbing() ? rewind.getScrubTime() : rewind.getLatestTime();
         const ComponentHandle       selected  = AnimationRewindPanelInternal::findSelectedUnit( pScene );
         const AnimationRewindTrack* pSelected = selected.isValid() ? rewind.findTrack( selected ) : nullptr;
-        DebugDrawQueue*             pQueue    = findSubsystem<DebugDrawQueue>();
+        DebugDrawQueue*             pQueue    = findSubsystem<DebugDrawQueue>(); // 필수 서비스: 없으면 버그
+        if ( pQueue == nullptr )
+            SW_LOG_ERROR_ONCE( "[AnimationRewind] DebugDrawQueue is missing - the skeleton is not drawn" );
         if ( _bDrawSkeleton == SW_TRUE && pQueue != nullptr )
         {
             for ( const AnimationRewindTrack& track : rewind.getTracks() )

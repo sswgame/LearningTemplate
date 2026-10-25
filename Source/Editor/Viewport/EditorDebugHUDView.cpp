@@ -3,6 +3,7 @@
 #include "Editor/Viewport/EditorDebugHUDView.h"
 
 #include "Core/Container/formatString.h"
+#include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/fixed_string.h"
 
@@ -74,9 +75,11 @@ namespace sw::editor
 
     void EditorDebugHUDView::refresh()
     {
-        const FrameProfiler* pProfiler   = editor::findSubsystem<FrameProfiler>();
-        const bool           bProfilerOn = pProfiler != nullptr && pProfiler->isEnabled();
-        _skippedProfilerSectionCount     = 0;
+        const FrameProfiler* pProfiler = editor::findSubsystem<FrameProfiler>(); // 필수 서비스: 없으면 버그
+        if ( pProfiler == nullptr )
+            SW_LOG_ERROR_ONCE( "[DebugHUDView] FrameProfiler is missing - the profiler sections are skipped" );
+        const bool bProfilerOn       = pProfiler != nullptr && pProfiler->isEnabled();
+        _skippedProfilerSectionCount = 0;
         for ( SectionSlot& slot : _listSlot )
         {
             slot._pWriter->reset();

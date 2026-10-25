@@ -3,6 +3,7 @@
 #include "Editor/Common/GUI/EditorComponentIcon.h"
 
 #include "Core/Container/unordered_map.h"
+#include "Core/Log/LogOnce.h"
 
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -118,9 +119,11 @@ namespace sw::editor
 
     EditorComponentIconRow EditorComponentIcon::findRow( const TypeInfo* pType )
     {
-        const TypeRegistry* pRegistry  = editor::findSubsystem<TypeRegistry>();
-        EditorStateStore*   pStore     = editor::findSubsystem<EditorStateStore>();
-        const bool          bCacheable = pType != nullptr && pRegistry != nullptr && pStore != nullptr; // 캐시는 줄을 바꾸지 않는다 — 놓을 저장소가 없으면 캐시 없이 찾는다
+        const TypeRegistry* pRegistry = editor::findSubsystem<TypeRegistry>();     // 필수 서비스: 없으면 버그
+        EditorStateStore*   pStore    = editor::findSubsystem<EditorStateStore>(); // 필수 서비스: 없으면 버그
+        if ( pRegistry == nullptr || pStore == nullptr )
+            SW_LOG_ERROR_ONCE( "[ComponentIcon] TypeRegistry or EditorStateStore is missing - the icon rows are not cached" );
+        const bool bCacheable = pType != nullptr && pRegistry != nullptr && pStore != nullptr; // 캐시는 줄을 바꾸지 않는다 — 놓을 저장소가 없으면 캐시 없이 찾는다
         if ( bCacheable == false )
             return EditorComponentIconInternal::findRowUncached( pType );
         // 모듈 언로드 · 리로드면 같은 주소에 다른 타입이 올 수 있다 — 타입 테이블 세대가 바뀌면 캐시를 비운다.

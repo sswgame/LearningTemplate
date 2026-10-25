@@ -40,6 +40,8 @@ namespace sw::editor
          * @brief 활성 에디터 컨텍스트입니다. 셸이 `initialize` 에서 활성으로 만들고 `shutdown` 에서 해제합니다. 없으면 nullptr 입니다.
          * @details 따로 보관하는 정적 포인터가 아니라 지금 에디터 범위(`findEditorScope`)의 주인이다. 컨텍스트가 자기 범위에 자신을 등록한다.
          *          하위 객체는 `getSubsystem<T>()` 로, 에디터와 호스트 서비스는 `EditorService.h` 의 `findSubsystem<T>()` 로 찾는다.
+         *          **그리기 · 패널 · 메뉴에서는 `editor::getSubsystem<EditorContext>()` 를 쓴다.** 그곳에서 컨텍스트가 없는 것은 버그라 멈추는 게 맞고,
+         *          `get()` 뒤의 null 확인은 조용히 건너뛰어 결함을 가린다. `get()` 은 명령 · 테스트 · 종료 · 도구처럼 컨텍스트가 없을 수 있는 곳 전용이다.
          */
         static EditorContext* get();
         /** @brief 활성 에디터 컨텍스트를 설정합니다. 그 컨텍스트의 범위가 지금 에디터 범위가 되고, `editor::findSubsystem<T>()` 가 거기서 찾습니다. */

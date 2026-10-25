@@ -58,14 +58,8 @@ namespace sw::editor
             /** @brief 창이 지금 연 문서가 `gv_editorProbeAsset`(리소스 id)이면 1 입니다. */
             [[nodiscard]] static bool readDocumentIsProbeAsset( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const VfxPreviewPanel*    pPanel = findOpenPanel();
-                GlobalVariableManager*    pGvm   = editor::findSubsystem<GlobalVariableManager>();
-                const GlobalVariableInfo* pInfo  = pGvm != nullptr ? pGvm->findVariable( "gv_editorProbeAsset" ) : nullptr;
-                if ( pPanel == nullptr || pInfo == nullptr )
-                    return false;
-                const string wanted = pInfo->getValueAsString();
-                outValue            = wanted.empty() == false && pPanel->hasDocument( wanted ) ? 1.0 : 0.0;
-                return true;
+                const VfxPreviewPanel* pPanel = findOpenPanel();
+                return pPanel != nullptr && pPanel->readDocumentIsProbeAsset( outValue );
             }
 
             [[nodiscard]] static bool readPreviewSceneFrames( const GameObjectManager* /*pManager*/, float64& outValue )

@@ -75,10 +75,7 @@ namespace sw::editor
             /** @brief 가운데 영역의 앞 탭(`EditorDockSlot::CenterFront`)을 밝힌 패널의 창 제목입니다. 없으면 nullptr 입니다. */
             static const utf8* findFrontTabTitle()
             {
-                const EditorContext* pContext = EditorContext::get();
-                if ( pContext == nullptr )
-                    return nullptr;
-                for ( const EditorPanelEntry& entry : pContext->getSubsystem<EditorPanelManager>().getPanels() )
+                for ( const EditorPanelEntry& entry : editor::getSubsystem<EditorContext>().getSubsystem<EditorPanelManager>().getPanels() )
                 {
                     const bool bFrontTab = entry._pInstance != nullptr && entry._pInstance->getDefaultDockSlot() == EditorDockSlot::CenterFront;
                     if ( bFrontTab )
@@ -140,6 +137,7 @@ namespace sw::editor
 
     bool EditorDockLayout::saveNamedLayout( string_view name, string_view folder )
     {
+        // get() 을 쓰는 이유: 메뉴 · 셀프테스트 · 명령(EditorUIDevCommands)이 부르므로 컨텍스트 없이 불릴 수 있어 false 로 알린다.
         EditorContext* pContext = EditorContext::get();
         string         safeName;
         const bool     bCannotSaveLayout = pContext == nullptr || ImGui::GetCurrentContext() == nullptr || EditorLayoutStore::sanitizeName( name, safeName ) == false;
@@ -187,10 +185,9 @@ namespace sw::editor
         _bLayoutPending = SW_FALSE;
 
         // 가시성을 먼저 적용한다. 다시 열린 패널의 창이 이번 프레임에 만들어지면서 읽은 도킹 설정을 받는다.
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext != nullptr && _pendingLayoutVisibility._mapOpen.empty() == false )
+        if ( _pendingLayoutVisibility._mapOpen.empty() == false )
         {
-            for ( const EditorPanelEntry& entry : pContext->getSubsystem<EditorPanelManager>().getPanels() )
+            for ( const EditorPanelEntry& entry : editor::getSubsystem<EditorContext>().getSubsystem<EditorPanelManager>().getPanels() )
             {
                 // 적지 않은 패널은 지금 상태 그대로다.
                 bool bOpen = entry._pInstance != nullptr && entry._pInstance->isOpen();
@@ -247,6 +244,7 @@ namespace sw::editor
 
     void EditorDockLayout::loadPanelVisibility()
     {
+        // get() 을 쓰는 이유: 에디터 초기화 중에 불려 컨텍스트가 아직 활성이 아닐 수 있다.
         EditorContext* pContext = EditorContext::get();
         if ( pContext == nullptr )
             return;
@@ -318,6 +316,7 @@ namespace sw::editor
 
     void EditorDockLayout::save()
     {
+        // get() 을 쓰는 이유: 에디터 종료(ImGuiEditor 종료 경로)에서 불려 컨텍스트가 이미 비활성일 수 있다.
         EditorContext* pContext = EditorContext::get();
         if ( pContext == nullptr )
             return;

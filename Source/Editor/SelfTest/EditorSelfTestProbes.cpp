@@ -35,10 +35,15 @@ namespace sw::editor
              */
             [[nodiscard]] static bool readSelectedEnumValue( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                EditorContext* pContext           = EditorContext::get();
-                TypeRegistry*  pRegistry          = editor::findSubsystem<TypeRegistry>();
-                const size_t   dot                = gv_editorProbeProperty.find( '.' );
-                const bool     bInvalidProbeSetup = pContext == nullptr || pRegistry == nullptr || dot == string::npos;
+                EditorContext* pContext  = EditorContext::get();
+                TypeRegistry*  pRegistry = editor::findSubsystem<TypeRegistry>();
+                if ( pRegistry == nullptr ) // 필수 서비스: 없으면 버그
+                {
+                    SW_LOG_ERROR( "[Scenario] probe Editor.SelectedEnumValue: TypeRegistry is missing" );
+                    return false;
+                }
+                const size_t dot                = gv_editorProbeProperty.find( '.' );
+                const bool   bInvalidProbeSetup = pContext == nullptr || dot == string::npos;
                 if ( bInvalidProbeSetup )
                     return false;
                 GameObject* pObject = editor::getMainSceneSelection().getPrimaryObject();

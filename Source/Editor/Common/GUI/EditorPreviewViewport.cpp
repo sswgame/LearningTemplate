@@ -3,6 +3,7 @@
 #include "Editor/Common/GUI/EditorPreviewViewport.h"
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -79,9 +80,12 @@ namespace sw::editor
     {
         if ( _pScene != nullptr )
             return true;
-        SceneManager* pSceneManager = findSubsystem<SceneManager>();
+        SceneManager* pSceneManager = findSubsystem<SceneManager>(); // 필수 서비스: 없으면 버그
         if ( pSceneManager == nullptr )
+        {
+            SW_LOG_ERROR_ONCE( "[PreviewViewport] SceneManager is missing - the preview scene '%#' is not created", string{ sceneName }.c_str() );
             return false;
+        }
         _pScene = pSceneManager->createPreviewScene( sceneName, policy );
         if ( _pScene == nullptr )
             return false;

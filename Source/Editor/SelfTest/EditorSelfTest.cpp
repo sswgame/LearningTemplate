@@ -287,6 +287,8 @@ namespace sw::editor
 
         MainWindowSubsystem* pWindowHost = editor::findSubsystem<MainWindowSubsystem>();
         IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+        if ( pWindowHost == nullptr ) // 필수 서비스: 없으면 버그. 창이 없는 실행(헤드리스)은 종료 요청할 창이 없을 뿐이다.
+            SW_LOG_ERROR( "MainWindowSubsystem is missing - the editor cannot be asked to close after the self test" );
         if ( pWindow != nullptr )
             pWindow->requestClose();
     }

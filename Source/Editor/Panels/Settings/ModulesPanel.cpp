@@ -384,8 +384,7 @@ namespace sw::editor
 
     uint32 ModulesPanel::getPreviewNewlyInactiveCount()
     {
-        const EditorPanelManager* pManager = editor::findSubsystem<EditorPanelManager>();
-        const ModulesPanel*       pPanel   = pManager != nullptr ? pManager->findPanel<ModulesPanel>() : nullptr;
+        const ModulesPanel* pPanel = editor::getSubsystem<EditorPanelManager>().findPanel<ModulesPanel>(); // 필수 서비스: 없으면 버그(getSubsystem 이 멈춘다)
         if ( pPanel == nullptr || pPanel->_pendingModule.empty() )
             return 0u; // 패널이 없거나 미리보기를 묻고 있지 않다
         return static_cast<uint32>( pPanel->_listNewlyInactive.size() );

@@ -2,6 +2,8 @@
 
 #include "Editor/Panels/AudioGraph/AudioGraphPanel.h"
 
+#include "Core/Log/LogOnce.h"
+
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
@@ -112,8 +114,10 @@ namespace sw::editor
         ImGui::EndDisabled();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAudioGraph", "SaveTip" ) );
 
-        IAudioService* pAudio      = editor::findSubsystem<IAudioService>();
-        const bool     bAudioReady = pAudio != nullptr && pAudio->isInitialized();
+        IAudioService* pAudio = editor::findSubsystem<IAudioService>(); // 필수 서비스: 없으면 버그(전용 서버도 널 서비스가 있다)
+        if ( pAudio == nullptr )
+            SW_LOG_ERROR_ONCE( "[AudioGraph] IAudioService is missing - the preview is disabled" );
+        const bool bAudioReady = pAudio != nullptr && pAudio->isInitialized();
         ImGui::SameLine();
         ImGui::BeginDisabled( bAudioReady == false || _bEditDirty );
         if ( ImGui::Button( SW_LOCKEY( "EditorAudioGraph", "Preview" ) ) )

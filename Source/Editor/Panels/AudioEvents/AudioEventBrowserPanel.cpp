@@ -2,6 +2,8 @@
 
 #include "Editor/Panels/AudioEvents/AudioEventBrowserPanel.h"
 
+#include "Core/Log/LogOnce.h"
+
 #include "Editor/Common/Commands/Asset/EditorAssetCommands.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/EditorColor.h"
@@ -351,7 +353,9 @@ namespace sw::editor
 
     void AudioEventBrowserPanel::drawContent()
     {
-        IAudioService* pAudio = editor::findSubsystem<IAudioService>();
+        IAudioService* pAudio = editor::findSubsystem<IAudioService>(); // 필수 서비스: 없으면 버그(전용 서버도 널 서비스가 있다)
+        if ( pAudio == nullptr )
+            SW_LOG_ERROR_ONCE( "[AudioEvents] IAudioService is missing - the event browser shows the not-running hint" );
         if ( pAudio == nullptr || pAudio->isInitialized() == false )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorAudioEvents", "NoService" ) );

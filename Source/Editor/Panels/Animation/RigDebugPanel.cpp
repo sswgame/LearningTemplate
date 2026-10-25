@@ -5,6 +5,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
@@ -222,8 +223,7 @@ namespace sw::editor
                 ImGuizmo::SetDrawlist( args._pDrawList );
                 ImGuizmo::SetRect( args._canvasPos._x, args._canvasPos._y, args._canvasSize._x, args._canvasSize._y );
                 ImGuizmo::Enable( true );
-                EditorContext*            pContext  = EditorContext::get();
-                const bool                bRotate   = pContext != nullptr && pContext->getSubsystem<EditorWorkspace>().getGizmoOperation() == 1;
+                const bool                bRotate   = editor::getSubsystem<EditorContext>().getSubsystem<EditorWorkspace>().getGizmoOperation() == 1;
                 const ImGuizmo::OPERATION operation = bRotate ? ImGuizmo::ROTATE : ImGuizmo::TRANSLATE;
                 if ( ImGuizmo::Manipulate( arrView, arrProj, operation, ImGuizmo::LOCAL, arrMatrix, nullptr, nullptr ) )
                 {
@@ -410,8 +410,7 @@ namespace sw::editor
 
     void RigDebugPanel::drawContent()
     {
-        EditorContext*                     pContext   = EditorContext::get();
-        const uint64                       objectID   = pContext != nullptr ? pContext->getSubsystem<EditorWorkspace>().getSelectedObjectID() : 0;
+        const uint64                       objectID   = editor::getSubsystem<EditorContext>().getSubsystem<EditorWorkspace>().getSelectedObjectID();
         RigDebugPanelInternal::TargetEdit& targetEdit = RigDebugPanelInternal::getTargetEdit();
         if ( objectID != _selectedObjectID )
         {
@@ -452,8 +451,10 @@ namespace sw::editor
         drawTargetTable( objectID, *pModifier, instance, flags );
 
         EditorWidgets::drawPanelStatus( _status.c_str() );
-        DebugDrawQueue* pQueue              = findSubsystem<DebugDrawQueue>();
-        const bool      bCanDrawBoneMarkers = _bDrawMarkers == SW_TRUE && pQueue != nullptr && pUnit != nullptr && listSelectedBone.empty() == false;
+        DebugDrawQueue* pQueue = findSubsystem<DebugDrawQueue>(); // 필수 서비스: 없으면 버그
+        if ( pQueue == nullptr )
+            SW_LOG_ERROR_ONCE( "[RigDebug] DebugDrawQueue is missing - the bone markers are not drawn" );
+        const bool bCanDrawBoneMarkers = _bDrawMarkers == SW_TRUE && pQueue != nullptr && pUnit != nullptr && listSelectedBone.empty() == false;
         if ( bCanDrawBoneMarkers )
             RigDebugPanelInternal::drawBoneMarkers( *pQueue, *pUnit, listSelectedBone );
     }

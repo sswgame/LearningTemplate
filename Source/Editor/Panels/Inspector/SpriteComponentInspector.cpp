@@ -5,7 +5,7 @@
 #include "pch.h"
 
 #include "Editor/Common/Workspace/EditorAssetType.h"
-#include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/Inspector/IInspectorComponent.h"
 #include "Editor/Panels/Inspector/Model/InspectorComponentManager.h"
@@ -24,12 +24,8 @@ namespace sw::editor
         public:
             void drawFooter( Component* /*pComponent*/, IRHIDevice* /*pRHIDevice*/ ) override
             {
-                EditorContext* pContext = EditorContext::get();
-                if ( pContext == nullptr )
-                    return;
-
                 if ( ImGui::SmallButton( "Open Sprite Clip Tool" ) )
-                    pContext->getSubsystem<EditorWorkspace>().requestOpenDocumentPanel( EditorAssetType::SpriteClip );
+                    editor::getSubsystem<EditorWorkspace>().requestOpenDocumentPanel( EditorAssetType::SpriteClip );
             }
         };
     } // namespace

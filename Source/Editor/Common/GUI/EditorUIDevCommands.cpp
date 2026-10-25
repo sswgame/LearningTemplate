@@ -47,7 +47,7 @@ namespace sw::editor
             static bool runLayoutSave( const vector<string>& listArgument, string& outReply )
             {
                 EditorContext*    pContext          = EditorContext::get();
-                EditorDockLayout* pDock             = pContext != nullptr ? pContext->findSubsystem<EditorDockLayout>() : nullptr;
+                EditorDockLayout* pDock             = pContext != nullptr ? pContext->findSubsystem<EditorDockLayout>() : nullptr; // 선택: 셸이 도킹 배치를 알리기 전과 셸 없는 테스트 호스트에는 없다
                 const bool        bSaveLayoutFailed = listArgument.size() != 1 || pDock == nullptr || pDock->saveNamedLayout( listArgument[0] ) == false;
                 if ( bSaveLayoutFailed )
                     return false;
@@ -58,7 +58,7 @@ namespace sw::editor
             static bool runLayoutLoad( const vector<string>& listArgument, string& outReply )
             {
                 EditorContext*    pContext          = EditorContext::get();
-                EditorDockLayout* pDock             = pContext != nullptr ? pContext->findSubsystem<EditorDockLayout>() : nullptr;
+                EditorDockLayout* pDock             = pContext != nullptr ? pContext->findSubsystem<EditorDockLayout>() : nullptr; // 선택: 셸이 도킹 배치를 알리기 전과 셸 없는 테스트 호스트에는 없다
                 const bool        bLoadLayoutFailed = listArgument.size() != 1 || pDock == nullptr || pDock->requestLoadNamedLayout( listArgument[0] ) == false;
                 if ( bLoadLayoutFailed )
                     return false;
@@ -103,7 +103,7 @@ namespace sw::editor
             static bool runLayoutReset( const vector<string>& listArgument, string& outReply )
             {
                 EditorContext*    pContext = EditorContext::get();
-                EditorDockLayout* pDock    = pContext != nullptr ? pContext->findSubsystem<EditorDockLayout>() : nullptr;
+                EditorDockLayout* pDock    = pContext != nullptr ? pContext->findSubsystem<EditorDockLayout>() : nullptr; // 선택: 셸이 도킹 배치를 알리기 전과 셸 없는 테스트 호스트에는 없다
                 if ( listArgument.empty() == false || pDock == nullptr )
                     return false;
                 pDock->requestResetDefault();

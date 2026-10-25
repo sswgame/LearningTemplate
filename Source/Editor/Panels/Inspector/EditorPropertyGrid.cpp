@@ -4,6 +4,7 @@
 
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Log/LogOnce.h"
 #include "Core/Memory/MemoryBlock.h"
 #include "Core/Task/TaskTypes.h"
 
@@ -377,10 +378,9 @@ namespace sw::editor
         // 컴포넌트이면 그 타입의 기본 인스턴스(CDO)와 비교한다. 중첩 구조체와 씬 밖 객체는 메타의 기본값 텍스트만 있다.
         const MutableObjectAddress instance{ pInstance };
         const void*                pDefaultInstance   = nullptr;
-        EditorContext*             pDefaultContext    = EditorContext::get();
-        const bool                 bIsEditedComponent = _pEditTargetComponent != nullptr && pInstance == _pEditTargetComponent && pDefaultContext != nullptr;
+        const bool                 bIsEditedComponent = _pEditTargetComponent != nullptr && pInstance == _pEditTargetComponent;
         if ( bIsEditedComponent )
-            pDefaultInstance = pDefaultContext->getSubsystem<EditorDefaultObjects>().findDefault( *pTypeInfo );
+            pDefaultInstance = editor::getSubsystem<EditorContext>().getSubsystem<EditorDefaultObjects>().findDefault( *pTypeInfo );
         const ObjectAddress defaultInstance{ pDefaultInstance };
         // 바뀐 것만 보기이면 기본값과 같은 프로퍼티를 뺀다. 남은 것이 없는 카테고리는 머리째 감춘다.
         if ( _bShowModifiedOnly )
@@ -548,11 +548,9 @@ namespace sw::editor
 
     void EditorPropertyGrid::drawPropertyWidgetBody( const MutableObjectAddress instance, const PropertyInfo& prop )
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
-            return;
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
 
-        IInspectorProperty* pProperty = pContext->getSubsystem<InspectorPropertyManager>().find( prop._typeName.c_str() );
+        IInspectorProperty* pProperty = editorContext.getSubsystem<InspectorPropertyManager>().find( prop._typeName.c_str() );
         if ( pProperty != nullptr )
         {
             if ( pProperty->draw( instance, prop, *this ) )
@@ -562,8 +560,11 @@ namespace sw::editor
         const bool bReadOnly = prop._metadata->_bReadOnly != SW_FALSE;
 
         auto* pRegistry = editor::findSubsystem<TypeRegistry>();
-        if ( pRegistry == nullptr )
+        if ( pRegistry == nullptr ) // 필수 서비스: 없으면 버그
+        {
+            SW_LOG_ERROR_ONCE( "[PropertyGrid] TypeRegistry is missing - the enum property is not drawn" );
             return;
+        }
 
         const EnumInfo* pEnumInfo = pRegistry->findEnum( prop._typeName );
         if ( pEnumInfo != nullptr )
@@ -593,8 +594,11 @@ namespace sw::editor
         using Internal = EditorPropertyGridInternal;
 
         auto* pRegistry = editor::findSubsystem<TypeRegistry>();
-        if ( pRegistry == nullptr )
+        if ( pRegistry == nullptr ) // 필수 서비스: 없으면 버그
+        {
+            SW_LOG_ERROR_ONCE( "[PropertyGrid] TypeRegistry is missing - the enum value is not written" );
             return;
+        }
 
         // enum 의 실제 크기(`EnumInfo::_size` 와 부호)로 읽고 쓴다. 항상 int32 로 읽고 쓰면, 엔진의 enum 은 대부분 uint8 이나
         // uint16 이므로 하나를 고를 때마다 뒤의 필드를 덮어쓰고(`CameraComponent::_role` 을 고르면 바로 뒤의 `_bOrthographic` 이 꺼진다),
@@ -1038,8 +1042,11 @@ namespace sw::editor
     {
         // `findSubsystem<T>()` 는 nullptr 을 반환할 수 있다. 역참조하기 전에 확인한다.
         TypeRegistry* pTypeRegistry = editor::findSubsystem<TypeRegistry>();
-        if ( pTypeRegistry == nullptr )
+        if ( pTypeRegistry == nullptr ) // 필수 서비스: 없으면 버그
+        {
+            SW_LOG_ERROR_ONCE( "[PropertyGrid] TypeRegistry is missing - the method is not invoked" );
             return;
+        }
 
         const TaskValue result = pTypeRegistry->invokeMethod( pInstance, pTypeInfo->_fullyQualifiedName, method._hashName, args );
         InspectorBuiltinValueUtil::formatMethodResult( result, method._returnTypeName, _lastInvokeResult.data(),

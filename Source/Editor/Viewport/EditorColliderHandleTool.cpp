@@ -142,11 +142,10 @@ namespace sw::editor
         state._drawnHandleCount = 0;
 
         // 끌고 있는 오브젝트가 있으면 그것, 아니면 단일 선택된 오브젝트입니다.
-        GameObject*    pObject  = nullptr;
-        EditorContext* pContext = EditorContext::get();
+        GameObject* pObject = nullptr;
         if ( state._bDragging )
             pObject = editor::findGameObject( state._object );
-        else if ( pContext != nullptr && editor::getMainSceneSelection().getSelectedObjectCount() == 1 )
+        else if ( editor::getMainSceneSelection().getSelectedObjectCount() == 1 )
             pObject = editor::getMainSceneSelection().getPrimaryObject();
         RigidBodyComponent* pBody               = pObject != nullptr ? pObject->getComponent<RigidBodyComponent>() : nullptr;
         const bool          bHandlesUnavailable = pBody == nullptr || args._pViewProj == nullptr || args._pDrawList == nullptr || EditorPlaySession::areSceneEditsAllowed() == false;

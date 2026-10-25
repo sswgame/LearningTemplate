@@ -6,6 +6,7 @@
 #include "Core/Container/formatString.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Log/LogOnce.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/fixed_string.h"
@@ -429,7 +430,9 @@ namespace sw::editor
 
     void UIPreviewPanel::closePreview()
     {
-        UISystem* pUI = editor::findSubsystem<UISystem>();
+        UISystem* pUI = editor::findSubsystem<UISystem>(); // 필수 서비스: 없으면 버그
+        if ( pUI == nullptr && _screen != kInvalidUIScreenHandle )
+            SW_LOG_ERROR_ONCE( "[UIPreview] UISystem is missing - the offscreen screen cannot be released" );
         if ( pUI != nullptr && _screen != kInvalidUIScreenHandle )
         {
             UIScreen* pScreen = pUI->getOffscreenScreens().findScreen( _screen );
@@ -973,12 +976,14 @@ namespace sw::editor
 
     bool UIPreviewPanel::navigateFocus( UIScreen& screen, uint32 direction )
     {
-        UISystem* pUI = editor::findSubsystem<UISystem>();
+        UISystem* pUI = editor::findSubsystem<UISystem>(); // 필수 서비스: 없으면 버그
         if ( pUI != nullptr )
         {
             _bNavigationMode = true;
             pUI->getOffscreenScreens().setNavigationMode( _screen, true );
         }
+        else
+            SW_LOG_ERROR( "[UIPreview] UISystem is missing - navigation mode cannot be switched on" );
         WidgetTree& tree = screen.getTree();
         if ( _focus.getFocusedTree() == &tree && tree.getFocusedWidget() != kInvalidWidgetID )
             return _focus.navigate( tree, static_cast<UINavigationDirection>( direction ) );

@@ -135,28 +135,28 @@ namespace sw::editor
 
             static void commandCompileGame()
             {
-                IModuleCompiler* pCompiler = findSubsystem<IModuleCompiler>();
+                IModuleCompiler* pCompiler = findSubsystem<IModuleCompiler>(); // 선택: Shipping 에는 모듈 컴파일러가 없다(ModuleHost 가 SW_SHIPPING 에서 만들지 않는다)
                 if ( pCompiler != nullptr )
                     pCompiler->compileModule( "SWGame" );
             }
 
             static void commandCompileEditor()
             {
-                IModuleCompiler* pCompiler = findSubsystem<IModuleCompiler>();
+                IModuleCompiler* pCompiler = findSubsystem<IModuleCompiler>(); // 선택: Shipping 에는 모듈 컴파일러가 없다(ModuleHost 가 SW_SHIPPING 에서 만들지 않는다)
                 if ( pCompiler != nullptr )
                     pCompiler->compileModule( "EditorAll" ); // EditorModule 과 확장 모듈을 함께 컴파일한다(sw_addEditorExtension 이 의존성을 추가한다)
             }
 
             static void commandCompileAll()
             {
-                IModuleCompiler* pCompiler = findSubsystem<IModuleCompiler>();
+                IModuleCompiler* pCompiler = findSubsystem<IModuleCompiler>(); // 선택: Shipping 에는 모듈 컴파일러가 없다(ModuleHost 가 SW_SHIPPING 에서 만들지 않는다)
                 if ( pCompiler != nullptr )
                     pCompiler->compileAll();
             }
 
             static void commandCancelBuild()
             {
-                IModuleCompiler* pCompiler = findSubsystem<IModuleCompiler>();
+                IModuleCompiler* pCompiler = findSubsystem<IModuleCompiler>(); // 선택: Shipping 에는 모듈 컴파일러가 없다(ModuleHost 가 SW_SHIPPING 에서 만들지 않는다)
                 if ( pCompiler != nullptr )
                     pCompiler->cancel();
             }
@@ -349,13 +349,13 @@ namespace sw::editor
 
             static bool isCompilerIdle()
             {
-                IModuleCompiler* pCompiler = findSubsystem<IModuleCompiler>();
+                IModuleCompiler* pCompiler = findSubsystem<IModuleCompiler>(); // 선택: Shipping 에는 모듈 컴파일러가 없다(ModuleHost 가 SW_SHIPPING 에서 만들지 않는다)
                 return pCompiler != nullptr && pCompiler->isCompiling() == false;
             }
 
             static bool isCompilerBusy()
             {
-                IModuleCompiler* pCompiler = findSubsystem<IModuleCompiler>();
+                IModuleCompiler* pCompiler = findSubsystem<IModuleCompiler>(); // 선택: Shipping 에는 모듈 컴파일러가 없다(ModuleHost 가 SW_SHIPPING 에서 만들지 않는다)
                 return pCompiler != nullptr && pCompiler->isCompiling();
             }
 
@@ -728,11 +728,9 @@ namespace sw::editor
 
     void EditorCommandGUI::drawMainMenus()
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
-            return;
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
 
-        const EditorCommandRegistry& registry = pContext->getSubsystem<EditorCommandRegistry>();
+        const EditorCommandRegistry& registry = editorContext.getSubsystem<EditorCommandRegistry>();
         for ( const EditorMenu& menu : registry.getMenus() )
         {
             if ( menu._parentPath != commandmenu::kMainMenuBar )

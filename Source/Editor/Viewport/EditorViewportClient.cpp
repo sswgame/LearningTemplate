@@ -2,6 +2,7 @@
 
 #include "Editor/Viewport/EditorViewportClient.h"
 
+#include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 
@@ -118,11 +119,9 @@ namespace sw::editor
         ImGuiIO& io = ImGui::GetIO();
         if ( io.KeyCtrl || io.KeyAlt )
             return;
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
-            return;
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
         // 기즈모 모드는 유니티, 언리얼, Godot 모두 W, E, R 이다. Q 와 Space 는 다음 모드로 순환한다(Space 는 언리얼).
-        EditorWorkspace& ws = pContext->getSubsystem<EditorWorkspace>();
+        EditorWorkspace& ws = editorContext.getSubsystem<EditorWorkspace>();
         if ( io.KeyShift == false )
         {
             if ( ImGui::IsKeyPressed( ImGuiKey_W, false ) )
@@ -151,24 +150,21 @@ namespace sw::editor
 
     void EditorViewportClient::toggleMaximize()
     {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
-            return;
+        EditorContext& context = editor::getSubsystem<EditorContext>();
         if ( _bMaximized == SW_TRUE )
         {
             _bMaximized = SW_FALSE;
-            if ( pContext->getSubsystem<IEditorPanelHost>().restoreMaximizedLayout() == false )
+            if ( context.getSubsystem<IEditorPanelHost>().restoreMaximizedLayout() == false )
                 SW_LOG_WARNING( "The layout before maximizing is gone - use Panel > Reset Layout" );
             return;
         }
-        if ( pContext->getSubsystem<IEditorPanelHost>().maximizePanel( editorpanel::kSceneView ) )
+        if ( context.getSubsystem<IEditorPanelHost>().maximizePanel( editorpanel::kSceneView ) )
             _bMaximized = SW_TRUE;
     }
 
     void EditorViewportClient::drawOverlays( const float2& canvasMin, const float2& canvasSize )
     {
-        EditorContext* pContext      = EditorContext::get();
-        const bool     bHasSelection = pContext != nullptr && editor::getMainSceneSelection().getSelectedObjectCount() > 0;
+        const bool bHasSelection = editor::getMainSceneSelection().getSelectedObjectCount() > 0;
         _overlays.draw( canvasMin, canvasSize, _toolbarSettings, bHasSelection );
     }
 
@@ -223,11 +219,13 @@ namespace sw::editor
             visualizerArgs._pListObject     = &_listSceneObject;
             visualizerArgs._pListCamera     = ( pSnapshotManager != nullptr ) ? &pSnapshotManager->getCameraRegistry().getAll() : nullptr;
             visualizerArgs._pListCollider   = ( pSnapshotManager != nullptr ) ? &pSnapshotManager->getSubsystem<sw::ScenePhysics>().getColliders2D() : nullptr;
-            visualizerArgs._pDebugDrawQueue = findSubsystem<DebugDrawQueue>();
-            visualizerArgs._pObjectManager  = pSnapshotManager;
-            visualizerArgs._bGizmoDragging  = _gizmo.isDragging();
-            visualizerArgs._bFlat2D         = EditorVisualizerGeometryUtil::isFlat2DView( pCamera->isOrthographic(), pCamera->getViewMatrix() );
-            visualizerArgs._pStats          = &_visualizerStats;
+            visualizerArgs._pDebugDrawQueue = findSubsystem<DebugDrawQueue>(); // 필수 서비스: 없으면 버그 — 시각화기가 큐 없이 건너뛴다
+            if ( visualizerArgs._pDebugDrawQueue == nullptr )
+                SW_LOG_ERROR_ONCE( "[ViewportClient] DebugDrawQueue is missing - the debug draw visualizers are skipped" );
+            visualizerArgs._pObjectManager = pSnapshotManager;
+            visualizerArgs._bGizmoDragging = _gizmo.isDragging();
+            visualizerArgs._bFlat2D        = EditorVisualizerGeometryUtil::isFlat2DView( pCamera->isOrthographic(), pCamera->getViewMatrix() );
+            visualizerArgs._pStats         = &_visualizerStats;
             // 마우스 양보는 시각화가 매 프레임 다시 잡아야 유지된다(끄는 중에 토글을 꺼 그리기 함수가 안 돌아도 풀린다). 클릭 선택은 이 그리기 뒤라 같은 프레임의 첫 클릭도 양보를 본다.
             EditorViewportMouseClaim::beginFrame( static_cast<uint64>( ImGui::GetFrameCount() ) );
             EditorViewportVisualizer::drawAll( visualizerArgs, _toolbarSettings._visualizerToggles );
@@ -246,9 +244,8 @@ namespace sw::editor
                 if ( pObjectManager != nullptr )
                     pObjectManager->flushSceneTransforms();
                 // 콜라이더 손잡이나 확장 도구(EditorViewportMouseClaim) 위에서는 기즈모가 마우스를 양보한다 — 손잡이는 기즈모 축 위에 놓인다.
-                EditorContext* pGizmoContext = EditorContext::get();
-                const bool     bGizmoYields  = EditorColliderHandleTool::isCapturingMouse() || EditorViewportMouseClaim::isClaimed();
-                if ( pGizmoContext != nullptr && bGizmoYields == false )
+                const bool bGizmoYields = EditorColliderHandleTool::isCapturingMouse() || EditorViewportMouseClaim::isClaimed();
+                if ( bGizmoYields == false )
                     _gizmo.draw( editor::getMainSceneSelection(), arrView, arrProj, canvasPos, canvasSize, _toolbarSettings ); // 메인 뷰포트는 메인 선택
             }
 

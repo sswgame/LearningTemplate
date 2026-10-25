@@ -3,6 +3,7 @@
 #include "Editor/Panels/Scene/HistoryPanel.h"
 
 #include "Core/Common/Defines.h"
+#include "Core/Log/LogOnce.h"
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/GUI/EditorChrome.h"
@@ -152,9 +153,10 @@ namespace sw::editor
 
     void HistoryPanel::drawContent()
     {
-        CommandStack* pCmdStack = editor::findSubsystem<CommandStack>();
+        CommandStack* pCmdStack = editor::findSubsystem<CommandStack>(); // 필수 서비스: 없으면 버그
         if ( pCmdStack == nullptr )
         {
+            SW_LOG_ERROR_ONCE( "[History] CommandStack is missing - the history is not drawn" );
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorScene", "CommandStackUnavailable" ) );
             return;
         }

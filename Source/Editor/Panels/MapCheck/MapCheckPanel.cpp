@@ -2,6 +2,7 @@
 
 #include "Editor/Panels/MapCheck/MapCheckPanel.h"
 
+#include "Core/Log/LogOnce.h"
 #include "Core/String/fixed_string.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -71,8 +72,11 @@ namespace sw::editor
             static void notifyOnSceneChange( EditorContext& context, const MapCheckCounts& counts )
             {
                 SceneManager* pSceneManager = editor::findSubsystem<SceneManager>();
-                if ( pSceneManager == nullptr )
+                if ( pSceneManager == nullptr ) // 필수 서비스: 없으면 버그
+                {
+                    SW_LOG_ERROR_ONCE( "[MapCheck] SceneManager is missing - the scene-change toast is skipped" );
                     return;
+                }
                 const uint64 generation = pSceneManager->getSceneGeneration();
                 if ( generation == getState()._toastSceneGeneration )
                     return;
@@ -86,10 +90,9 @@ namespace sw::editor
             /** @brief 상태줄의 맵 검사 수 — 오류가 있으면 빨강, 경고만 있으면 주황, 없으면 흐리게. 누르면 Map Check 창. */
             static void drawStatusItem()
             {
-                EditorContext*        pContext = EditorContext::get();
-                const MapCheckCounts& counts   = syncStatusCounts();
-                if ( pContext != nullptr )
-                    notifyOnSceneChange( *pContext, counts );
+                EditorContext&        context = editor::getSubsystem<EditorContext>();
+                const MapCheckCounts& counts  = syncStatusCounts();
+                notifyOnSceneChange( context, counts );
                 const Color                          color = counts._errorCount > 0   ? EditorThemeUtil::getErrorColor()
                                                            : counts._warningCount > 0 ? EditorThemeUtil::getWarningColor()
                                                                                       : EditorThemeUtil::getTextMutedColor();
@@ -99,8 +102,8 @@ namespace sw::editor
                 const bool bOpen = ImGui::SmallButton( label.c_str() );
                 ImGui::PopStyleColor();
                 EditorSelfTestMarks::note( "statusBar.mapCheck" );
-                if ( bOpen && pContext != nullptr )
-                    pContext->getSubsystem<EditorWorkspace>().requestOpenPanel<MapCheckPanel>();
+                if ( bOpen )
+                    context.getSubsystem<EditorWorkspace>().requestOpenPanel<MapCheckPanel>();
                 if ( ImGui::IsItemHovered() )
                 {
                     const string tooltipText = SW_LOCKEYFORMAT( "EditorMapCheck", "StatusTooltip", TextArgumentList().addInteger( "errorCount", counts._errorCount ).addInteger( "warningCount", counts._warningCount ) );
@@ -237,8 +240,7 @@ namespace sw::editor
         ImGui::TableSetupColumn( "Message", ImGuiTableColumnFlags_WidthStretch, 2.4f );
         ImGui::TableHeadersRow();
 
-        EditorContext*    pContext = EditorContext::get();
-        const GameObject* pPrimary = pContext != nullptr ? editor::getMainSceneSelection().getPrimaryObject() : nullptr;
+        const GameObject* pPrimary = editor::getMainSceneSelection().getPrimaryObject();
         for ( uint32 rowIndex = 0; rowIndex < static_cast<uint32>( _listRow.size() ); ++rowIndex )
         {
             const ValidationIssue& issue   = _listRow[rowIndex];

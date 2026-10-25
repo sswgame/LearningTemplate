@@ -831,7 +831,7 @@ namespace sw::editor
     AssetImportSummary ModelImporter::importAllModels( string_view resourceRoot, const ModelImportConfig& config, AssetImportMode mode )
     {
         const ModelRawImporter importer{ config };
-        return AssetImportStampUtil::importAll( resourceRoot, importer, mode, editor::findSubsystem<TaskManager>() );
+        return AssetImportStampUtil::importAll( resourceRoot, importer, mode, editor::findSubsystem<TaskManager>() ); // 선택: 없으면 이 스레드가 직렬로 임포트한다(계약)
     }
 
     string ModelImporter::makeImportedModelPath( string_view rawModelPath )

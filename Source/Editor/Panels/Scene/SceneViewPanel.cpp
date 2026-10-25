@@ -2,6 +2,7 @@
 
 #include "Editor/Panels/Scene/SceneViewPanel.h"
 
+#include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/Commands/Play/EditorScreenshotCommands.h"
@@ -33,9 +34,7 @@ namespace sw::editor
 
     void SceneViewPanel::drawContent()
     {
-        EditorContext* pEditorContext = EditorContext::get();
-        if ( pEditorContext == nullptr )
-            return;
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
 
         const bool bFocused = ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows );
         const bool bHovered = ImGui::IsWindowHovered( ImGuiHoveredFlags_RootAndChildWindows );
@@ -71,15 +70,15 @@ namespace sw::editor
         {
             const uint32            targetWidth  = static_cast<uint32>( size.x );
             const uint32            targetHeight = static_cast<uint32>( size.y );
-            const EditorViewTarget& view         = pEditorContext->getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Scene );
+            const EditorViewTarget& view         = editorContext.getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Scene );
             if ( EditorViewTargetUtil::needsResize( view._width, view._height, targetWidth, targetHeight ) )
-                pEditorContext->getSubsystem<EditorRenderViews>().ensureViewTargetSize( EditorViewKind::Scene, targetWidth, targetHeight );
+                editorContext.getSubsystem<EditorRenderViews>().ensureViewTargetSize( EditorViewKind::Scene, targetWidth, targetHeight );
         }
         // 이 패널이 보이는 프레임만 씬 뷰를 그린다(접힘 · 닫힘 · 다른 탭이면 drawContent 가 불리지 않는다).
         const ImVec2 imagePos = ImGui::GetCursorScreenPos();
-        pEditorContext->getSubsystem<EditorRenderViews>().markViewDrawn( EditorViewKind::Scene, float2{ imagePos.x - ImGui::GetMainViewport()->Pos.x, imagePos.y - ImGui::GetMainViewport()->Pos.y } );
+        editorContext.getSubsystem<EditorRenderViews>().markViewDrawn( EditorViewKind::Scene, float2{ imagePos.x - ImGui::GetMainViewport()->Pos.x, imagePos.y - ImGui::GetMainViewport()->Pos.y } );
 
-        _viewportClient.draw( pEditorContext->getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Scene )._pTextureID, float2{ size.x, size.y } );
+        _viewportClient.draw( editorContext.getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Scene )._pTextureID, float2{ size.x, size.y } );
 
         _viewportClient.drawOverlays( float2{ imagePos.x, imagePos.y }, float2{ size.x, size.y } );
     }
@@ -88,10 +87,12 @@ namespace sw::editor
     {
         if ( ImGui::BeginPopup( "##DebugDrawCategories" ) == false )
             return;
-        DebugDrawQueue* pQueue = findSubsystem<DebugDrawQueue>();
+        DebugDrawQueue* pQueue = findSubsystem<DebugDrawQueue>(); // 필수 서비스: 없으면 버그
         _listDebugCategory.clear();
         if ( pQueue != nullptr )
             pQueue->collectCategories( _listDebugCategory );
+        else
+            SW_LOG_ERROR_ONCE( "[SceneView] DebugDrawQueue is missing - the debug draw categories are not listed" );
         if ( _listDebugCategory.empty() )
             ImGui::TextDisabled( "No debug draw yet." );
         for ( const hashed_string& category : _listDebugCategory )
