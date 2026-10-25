@@ -851,7 +851,11 @@ namespace sw
         const bool             bHasPSO = _pPSOCache->findModulePassPSO( passDesc._resolvedModulePass, pso ) && pso != 0;
         // 클라이언트 엔진은 늘 서비스 범위에 넣는다 — 목록의 선택 행인 것은 렌더러가 없는 Server 타깃 때문이다.
         ModuleRenderPassRegistry* const pRegistry = engine::findSubsystem<ModuleRenderPassRegistry>();
-        SW_ASSERT( pRegistry != nullptr );
+        if ( pRegistry == nullptr ) // 단언은 Release 에서 사라져 아래가 널 역참조가 된다 — 레지스트리가 없으면 이 패스를 그리지 않고 이유를 남긴다
+        {
+            SW_LOG_ERROR( "Module pass '%#' is not drawn: the ModuleRenderPassRegistry service is not bound", passDesc._resolvedModulePass.c_str() );
+            return;
+        }
         vector<ModuleRenderPassRegistry::Constant> listConstant;
         const bool                                 bRegistered = pRegistry->copyConstants( passDesc._resolvedModulePass, listConstant );
         if ( bHasPSO == false || bRegistered == false )

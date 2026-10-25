@@ -797,7 +797,8 @@ namespace sw::editor
                 (void)pViewport;
                 EditorSelfTestContext* pContext = EditorSelfTestRunner::findRunningContext();
                 const DpiProbe*        pProbe   = pContext != nullptr ? pContext->findTestState<DpiProbe>() : nullptr;
-                SW_ASSERT( pProbe != nullptr ); // 프로브가 사라지면 소멸자가 콜백을 되돌리므로, 걸려 있는 동안에는 항상 있다
+                if ( pProbe == nullptr ) // 프로브가 사라지면 소멸자가 콜백을 되돌리므로, 걸려 있는 동안에는 항상 있다
+                    ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
                 return pProbe->_fakeScale;
             }
 

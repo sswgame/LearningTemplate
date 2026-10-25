@@ -270,9 +270,7 @@ namespace sw
             /** @brief 내장 도형 표입니다. */
             static PrimitiveCache& getPrimitiveCache()
             {
-                PrimitiveCacheHolder* const pHolder = s_primitiveCache.getOrCreate();
-                SW_ASSERT( pHolder != nullptr ); // nullptr 은 엔진 수명 범위가 닫힌 뒤의 접근이다 — 캐시를 쓸 엔진이 없다
-                return pHolder->_cache;
+                return s_primitiveCache.getRequired()._cache; // 엔진 수명 범위가 닫힌 뒤의 접근은 결함이다 — 캐시를 쓸 엔진이 없다
             }
         };
     } // namespace

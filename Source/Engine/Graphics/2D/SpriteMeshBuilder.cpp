@@ -159,9 +159,7 @@ namespace sw
             /** @brief 9-슬라이스와 타일 메시 캐시입니다. 사라진 항목은 새 항목을 넣을 때 정리한다. 크기를 끌어 바꾸는 편집은 크기마다 항목을 남기기 때문이다. */
             static SlicedMeshCache& getSlicedMeshCache()
             {
-                SlicedMeshCacheHolder* const pHolder = s_slicedMeshCache.getOrCreate();
-                SW_ASSERT( pHolder != nullptr ); // nullptr 은 엔진 수명 범위가 닫힌 뒤의 접근이다 — 캐시를 쓸 엔진이 없다
-                return pHolder->_cache;
+                return s_slicedMeshCache.getRequired()._cache; // 엔진 수명 범위가 닫힌 뒤의 접근은 결함이다 — 캐시를 쓸 엔진이 없다
             }
         };
     } // namespace

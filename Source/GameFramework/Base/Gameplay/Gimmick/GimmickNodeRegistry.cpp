@@ -709,11 +709,8 @@ namespace sw
 
     const GimmickNodeRegistry& GimmickNodeRegistry::getDefault()
     {
-        DefaultRegistryHolder* const pHolder = s_defaultRegistry.getOrCreate();
-        // 엔진 수명 범위가 닫힌 뒤의 접근이다(Debug 는 `getOrCreate` 가 먼저 단언한다) — 기본 레지스트리를 줄 곳이 없으므로 멈춘다.
-        if ( pHolder == nullptr )
-            std::abort();
-        return pHolder->_registry;
+        // 엔진 수명 범위가 닫힌 뒤의 접근이다 — 기본 레지스트리를 줄 곳이 없으므로 모든 구성에서 멈춘다(`getRequired`).
+        return s_defaultRegistry.getRequired()._registry;
     }
 
     bool GimmickNodeRegistry::registerKind( const GimmickNodeKind& kind )

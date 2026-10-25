@@ -375,7 +375,8 @@ namespace sw
             if ( role._stage == PairedAnimationRoleStage::Unbound || snapshot._listRole[roleIndex]._stage == PairedAnimationRoleStage::Waiting )
                 continue; // 기다리는 역할은 다음 갱신이 `start` 를 보고 들여보낸다
             SkeletalAnimatorComponent* pAnimator = resolveAnimator( manager, role );
-            SW_ASSERT( pAnimator != nullptr ); // `bindParticipants` 가 해석했다
+            if ( pAnimator == nullptr ) // `bindParticipants` 가 해석했다
+                ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
             const bool    bAnchor   = roleIndex == anchorIndex;
             const float32 entryTime = bAnchor ? 0.0f : snapshot._listRole[roleIndex]._entryAnchorTime;
             const float32 roleTime  = MathUtil::max( snapshot._anchorTime - entryTime, 0.0f );
@@ -416,7 +417,8 @@ namespace sw
         const PairedAnimationRoleDef& roleDef   = _def->getRoles()[roleIndex];
         RoleState&                    role      = _listRole[roleIndex];
         SkeletalAnimatorComponent*    pAnimator = resolveAnimator( manager, role );
-        SW_ASSERT( pAnimator != nullptr );
+        if ( pAnimator == nullptr )
+            ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
         startRolePlayback( *pAnimator, roleIndex, roleDef._enterBlendSeconds );
         role._entryAnchorTime = anchorTime;
 
@@ -433,7 +435,8 @@ namespace sw
         }
         // Warp — 창은 클립 시각 0 부터 `warpEnd` 까지다. 창 끝 프레임에 비율 1 이 되어 목표에 닿는다(`MotionWarpingComponent`).
         MotionWarpingComponent* pWarping = PairedAnimationSessionInternal::findSibling<MotionWarpingComponent>( *pAnimator );
-        SW_ASSERT( pWarping != nullptr );
+        if ( pWarping == nullptr )
+            ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
         pWarping->setWarpTarget( PairedAnimationSessionInternal::getWarpTargetName(), target, targetYaw );
         MotionWarpWindow window{};
         window._target       = PairedAnimationSessionInternal::getWarpTargetName();

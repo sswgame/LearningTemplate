@@ -52,7 +52,8 @@ namespace sw::editor
         {
             // 인스펙터가 겨누는 선택이다 — 미리보기 창의 선택이면 그 씬의 오브젝트다.
             EditorSelection* pFocused = editor::getFocusedSelection();
-            SW_ASSERT( pFocused != nullptr ); // 컨텍스트가 있으면 메인 선택이 있다 — 겨누는 창이 없어도 그것을 돌려준다
+            if ( pFocused == nullptr ) // 컨텍스트가 있으면 메인 선택이 있다 — 겨누는 창이 없어도 그것을 돌려준다
+                ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
             EditorSelection&    selection = *pFocused;
             vector<GameObject*> listSelected;
             selection.getSelectedObjects( listSelected );

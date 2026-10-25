@@ -35,7 +35,7 @@ namespace sw
         unordered_map<string, ModuleHeadRecord>& getModuleHeadCache()
         {
             // 모듈 등록 · 해제는 엔진 서비스가 선 동안에만 일어난다(아래가 서비스를 부른다) — 범위는 열려 있다.
-            return *s_mapModuleHead.getOrCreate();
+            return s_mapModuleHead.getRequired();
         }
 
         /**

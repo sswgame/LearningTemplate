@@ -195,7 +195,7 @@ namespace sw::internal
     void reportMissingRequiredService( const utf8* pLookup ) noexcept
     {
         utf8 arrText[kLowLevelMessageCapacity];
-        formatLowLevelMessage( arrText, kLowLevelMessageCapacity, "Required service is missing: %s", pLookup );
+        formatLowLevelMessage( arrText, kLowLevelMessageCapacity, "Required lookup is missing: %s", pLookup );
         reportLowLevel( LowLevelReportLevel::Error, __FILE__, static_cast<int32>( __LINE__ ), arrText ); // Error 는 stderr 에 먼저 동기로 쓴다 — 멈추기 전에 남는다
 #if defined( SW_DEBUG )
         if ( tryCaptureAssert() )

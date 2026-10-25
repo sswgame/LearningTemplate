@@ -38,52 +38,73 @@ from lint.SourceScan import FileFindings, SourceFile  # noqa: E402
 _kListNullableCallRe = (
     re.compile(r"\bfindSubsystem\s*<[^<>()]{1,80}>\s*\(\s*\)\s*->"),
     re.compile(r"(?:\.|->)\s*find\s*<[^<>()]{1,80}>\s*\(\s*\)\s*->"),
+    # `ScopeOwned<T>::getOrCreate()` 는 범위가 닫힌 뒤 nullptr 이다 — 닫힌 뒤가 결함인 곳은 `getRequired()` 를 쓴다.
+    re.compile(r"\.\s*getOrCreate\s*\(\s*\)\s*->"),
+    re.compile(r"\*\s*[\w:<>]+\s*\.\s*getOrCreate\s*\(\s*\)"),
 )
 
 # 둘째 문: 받아 두기만 하고 확인하지 않는 것.
 #   T* pName = findSubsystem<T>();   ·   T* pName = pContext->findSubsystem<T>();   ·   EditorContext* pName = editor::findSubsystem<EditorContext>();
 _kNullableDeclRe = re.compile(
-    r"^(\s*)(?:auto|[A-Za-z_][\w:<>,\* ]*?)\*\s+(p[A-Z]\w*)\s*=\s*"
+    r"^(\s*)(?:auto|[A-Za-z_][\w:<>,\* ]*?)\*\s+(?:const\s+)?(p[A-Z]\w*)\s*=\s*"
     r"(?:(?:(?:engine|game|editor)::)?findSubsystem\s*<"
-    r"|[\w\]\)]+\s*(?:\.|->)\s*(?:findSubsystem|find)\s*<)"
+    r"|[\w\]\)]+\s*(?:\.|->)\s*(?:findSubsystem|find)\s*<"
+    r"|[\w:<>]+\s*\.\s*getOrCreate\s*\(\s*\))"
 )
 
 # 확인으로 치는 모양. 이 중 하나가 역참조보다 먼저 나오면 통과다.
 _kCheckTemplate = (
     r"({0}\s*==\s*nullptr|{0}\s*!=\s*nullptr|nullptr\s*==\s*{0}|nullptr\s*!=\s*{0}"
     r"|if\s*\(\s*!?\s*{0}\s*\)|{0}\s*&&|&&\s*!?\s*{0}\b|{0}\s*\?"
-    r"|\|\|\s*!\s*{0}\b|!\s*{0}\s*\|\||SW_ASSERT[A-Z_]*\s*\([^)]*{0}\b)"
+    r"|\|\|\s*!\s*{0}\b|!\s*{0}\s*\|\|)"
 )
+# 단언은 확인이 아니다 — `SW_ASSERT` 는 Debug 가 아니면 사라지고 `SW_LOG_ASSERT` 는 Release 에서 로그만 남기고 이어 가므로, 그 뒤의 역참조는 Release 에서 널 역참조다.
+# 단언 줄은 확인으로 세지 않는다(`SW_ASSERT( p != nullptr )` 안의 `p != nullptr` 도).
+_kAssertLineRe = re.compile(r"^\s*(?:SW_ASSERT|SW_LOG_ASSERT|SW_LOW_LEVEL_ASSERT)[A-Z_]*\s*\(")
 _kDerefTemplate = r"(\b{0}\s*->|\*\s*{0}\b)"
 
 
+# 셋째 문: 출처가 무엇이든 포인터를 받아 두고 **단언만 건** 뒤 역참조하는 것. 단언을 걸었다는 것이 "없을 수 있다" 는 증거라 출처(서비스 조회가 아닌 `find…` · 멤버 표)를 가리지 않고,
+# 단언이 없으면 이 문은 보지 않는다(`T* p = &x;` 같은 늘 있는 포인터를 잡지 않기 위해서다).
+_kAnyPointerDeclRe = re.compile(r"^(\s*)(?:auto|[A-Za-z_][\w:<>,\* ]*?)\*\s+(?:const\s+)?(p[A-Z]\w*)\s*=\s*\S")
+
+
 def findUncheckedStores(relative: str, lines: list[str]) -> list[str]:
-    """받아 두고 확인 없이 역참조하는 곳을 모읍니다."""
+    """받아 두고 확인 없이 역참조하는 곳을 모읍니다. 단언만 있는 곳도 포함합니다."""
     violations: list[str] = []
     for index, line in enumerate(lines):
         match = _kNullableDeclRe.match(line)
-        if not match:
+        bLookup = match is not None
+        if match is None:
+            match = _kAnyPointerDeclRe.match(line)
+        if match is None:
             continue
         indent, name = match.group(1), match.group(2)
         checkRe = re.compile(_kCheckTemplate.format(re.escape(name)))
         derefRe = re.compile(_kDerefTemplate.format(re.escape(name)))
+        assertedRe = re.compile(rf"\b{re.escape(name)}\b")
+        bAsserted = False
         for scanIndex in range(index + 1, len(lines)):
             current = lines[scanIndex]
             stripped = current.strip()
             # 선언보다 얕은 들여쓰기의 `}` 면 그 블록(대개 함수)이 끝난 것이다.
             if stripped.startswith("}") and (len(current) - len(current.lstrip())) < len(indent):
                 break
+            if _kAssertLineRe.match(current) is not None:
+                bAsserted = bAsserted or assertedRe.search(current) is not None
+                continue
             if checkRe.search(current):
                 break
             if derefRe.search(current):
-                violations.append(f"[Nullable Service] {relative}:{index + 1}: {line.strip()}")
+                if bLookup or bAsserted:
+                    violations.append(f"[Nullable Service] {relative}:{index + 1}: {line.strip()}")
                 break
     return violations
 
 # 같은 함정이 곳곳에 있다 — 엔진 · 게임 · 에디터의 `findSubsystem`.
 # `SW_ASSERT` 는 Debug 가 아니면 사라지므로 **없으면 nullptr 인 계약**은 단정으로 지킬 수 없다. 반대쪽 `getSubsystem` 은 이제 엔진 · 게임 · 에디터 · 범위가 모두
 # `sw::internal::reportMissingRequiredService`(Core/Common/Macros.h — 모든 구성에서 오류를 남기고 abort)를 부르므로 같은 함정이 닫혀 있다.
-_kListScanRoot = ( "Source/Engine", "Source/Editor", "Source/GameFramework", "Source/Games" )
+_kListScanRoot = ( "Source/Core", "Source/Engine", "Source/Editor", "Source/GameFramework", "Source/Games" )
 
 
 def findDirectDereferences(source: SourceFile) -> list[str]:
@@ -104,11 +125,11 @@ class CheckNullableServiceUseGate(LintGate):
     description = "nullptr 가능 서비스 조회를 확인 없이 역참조하는 곳 검사"
     buildComment = "Checking nullable subsystem lookups dereferenced without a check..."
     timeoutSeconds = 15
-    preCommitPattern = ("Source/Engine/*", "Source/Editor/*", "Source/GameFramework/*", "Source/Games/*")
+    preCommitPattern = ("Source/Core/*", "Source/Engine/*", "Source/Editor/*", "Source/GameFramework/*", "Source/Games/*")
     preCommitFileArgument = "--files"
     sourceScanRoots = _kListScanRoot
     sourceSuffixes = (".cpp", ".h")
-    sourceSummary = "Engine · Editor · GameFramework · Games 의 서비스 조회 역참조"
+    sourceSummary = "Core · Engine · Editor · GameFramework · Games 의 서비스 조회 역참조"
     violationHeader = "확인 없이 역참조한 서비스 조회"
     hint = (
         "  findSubsystem<T>()(에디터 컨텍스트를 찾는 findSubsystem<EditorContext>() 포함)는 nullptr 을 돌려줄 수 있습니다.\n"
@@ -178,6 +199,60 @@ class CheckNullableServiceUseGate(LintGate):
                     "{\n"
                     "    CommandStack* pStack = context.findSubsystem<CommandStack>();\n"
                     "    pStack->undo();\n"
+                    "}\n"
+                ),
+            },
+        },
+        {
+            "name": "단언만 두고 역참조 — 단언은 Release 에서 사라지므로 확인이 아니다",
+            "expectedViolation": "[Nullable Service] Source/Editor/Probe/ProbeAssertOnly.cpp:3: CommandStack* pStack = editor::findSubsystem<CommandStack>();",
+            "files": {
+                "Source/Editor/Probe/ProbeAssertOnly.cpp": (
+                    "void probe()\n"
+                    "{\n"
+                    "    CommandStack* pStack = editor::findSubsystem<CommandStack>();\n"
+                    "    SW_ASSERT( pStack != nullptr );\n"
+                    "    pStack->undo();\n"
+                    "}\n"
+                ),
+            },
+        },
+        {
+            "name": "ScopeOwned::getOrCreate 뒤 단언만 두고 역참조 — 필수면 getRequired 를 쓴다",
+            "expectedViolation": "[Nullable Service] Source/Engine/Probe/ProbeOwned.cpp:3: Holder* const pHolder = s_owned.getOrCreate();",
+            "files": {
+                "Source/Engine/Probe/ProbeOwned.cpp": (
+                    "Cache& probe()\n"
+                    "{\n"
+                    "    Holder* const pHolder = s_owned.getOrCreate();\n"
+                    "    SW_ASSERT( pHolder != nullptr );\n"
+                    "    return pHolder->_cache;\n"
+                    "}\n"
+                ),
+            },
+        },
+        {
+            "name": "서비스 조회가 아닌 포인터도 단언만 걸고 역참조하면 잡는다",
+            "expectedViolation": "[Nullable Service] Source/Engine/Probe/ProbeAnyAssertOnly.cpp:3: const Entry* pEntry = _listEntry.find( tick );",
+            "files": {
+                "Source/Engine/Probe/ProbeAnyAssertOnly.cpp": (
+                    "const Entry& probe( uint32 tick )\n"
+                    "{\n"
+                    "    const Entry* pEntry = _listEntry.find( tick );\n"
+                    "    SW_ASSERT( pEntry != nullptr );\n"
+                    "    return *pEntry;\n"
+                    "}\n"
+                ),
+            },
+        },
+        {
+            "name": "ScopeOwned::getOrCreate 를 바로 역참조",
+            "expectedViolation": "[Nullable Service] Source/Engine/Probe/ProbeOwnedDirect.cpp:3: return *s_owned.getOrCreate();",
+            "files": {
+                "Source/Engine/Probe/ProbeOwnedDirect.cpp": (
+                    "Cache& probe()\n"
+                    "{\n"
+                    "    return *s_owned.getOrCreate();\n"
                     "}\n"
                 ),
             },

@@ -105,7 +105,8 @@ namespace sw
     const NetInputEntry& NetInputSendWindow::getEntry( uint32 tick ) const
     {
         const NetInputEntry* pEntry = _listEntry.find( tick );
-        SW_ASSERT( pEntry != nullptr ); // [_oldestTick, _latestTick] 는 이어 넣었고 고리 크기를 넘지 않는다 — 늘 들어 있다
+        if ( pEntry == nullptr ) // [_oldestTick, _latestTick] 는 이어 넣었고 고리 크기를 넘지 않는다 — 늘 들어 있다
+            ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
         return *pEntry;
     }
 
