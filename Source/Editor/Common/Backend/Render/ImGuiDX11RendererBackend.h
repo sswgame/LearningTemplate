@@ -6,6 +6,7 @@
 #include "Core/Container/vector.h"
 
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
+#include "Editor/Common/Backend/Render/ImGuiViewportSizeGuard.h"
 
 #include "Engine/Common/EnginePlatformHeaders.h"
 
@@ -52,6 +53,7 @@ namespace sw::editor
 #if defined( SW_PLATFORM_WINDOWS )
         IRHIDevice*                                              _pRHIDevice{ nullptr };
         vector<Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>> _listRegisteredSrv;
+        ImGuiViewportSizeGuard                                   _viewportSizeGuard; ///< DXGI 창 크기 보정 — 초기화 성공 뒤 걸고 종료에서 푼다
 #endif
     };
 } // namespace sw::editor

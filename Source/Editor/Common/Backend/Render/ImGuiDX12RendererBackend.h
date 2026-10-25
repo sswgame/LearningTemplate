@@ -7,6 +7,7 @@
 #include "Core/Container/vector.h"
 
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
+#include "Editor/Common/Backend/Render/ImGuiViewportSizeGuard.h"
 
 #include "Engine/Common/EnginePlatformHeaders.h"
 
@@ -72,7 +73,8 @@ namespace sw::editor
         /// @brief `_listFreeDescriptor` · `_nextDescriptor` 잠금입니다. UI 스레드가 할당하고, 미뤄 둔 반환은 렌더 스레드에서 불립니다.
         mutex _descriptorMutex;
         /// @brief 디바이스 제거를 이미 로그로 남겼으면 true 입니다. 복구되지 않아 프레임마다 반복되므로 한 번만 남깁니다.
-        bool _bDeviceRemovedLogged{ false };
+        bool                   _bDeviceRemovedLogged{ false };
+        ImGuiViewportSizeGuard _viewportSizeGuard; ///< DXGI 창 크기 보정 — 초기화 성공 뒤 걸고 종료에서 푼다
 #endif
     };
 } // namespace sw::editor

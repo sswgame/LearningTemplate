@@ -8,6 +8,8 @@
 
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
 
+struct ImGuiViewport;
+struct ImVec2;
 struct VkDescriptorPool_T;
 struct VkDevice_T;
 struct VkSampler_T;
@@ -53,7 +55,19 @@ namespace sw::editor
         /** @brief 등록된 ImGui 텍스처를 해제합니다. 디스크립터 세트는 그것을 그린 마지막 프레임의 GPU 완료 뒤에 풀로 돌아갑니다. */
         void unregisterTexture( void* pTextureID ) override;
 
+        /**
+         * @brief 가로챈 ImGui 렌더러 콜백(보조 뷰포트 창 생성 · 크기 변경)의 원래 함수입니다. 백엔드가 소유합니다.
+         * @details 콜백에는 사용자 포인터가 없어 설치할 때 ImGui 컨텍스트의 사용자 칸(`ImGuiIO::UserData`)에 걸고 가로채기 함수가 거기서 찾는다.
+         *          에디터 범위(상태 저장소)는 렌더러 백엔드보다 늦게 생기므로 쓰지 않는다.
+         */
+        struct ViewportGuard
+        {
+            void ( *_pOriginalCreateWindow )( ImGuiViewport* )          = nullptr;
+            void ( *_pOriginalSetWindowSize )( ImGuiViewport*, ImVec2 ) = nullptr;
+        };
+
     private:
+        ViewportGuard                          _viewportGuard;
         VkDescriptorPool_T*                    _pImguiDescriptorPool{ nullptr };
         VkDevice_T*                            _pDevice{ nullptr };
         VkSampler_T*                           _pSampler{ nullptr };

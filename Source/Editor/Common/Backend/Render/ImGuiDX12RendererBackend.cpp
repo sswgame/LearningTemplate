@@ -81,7 +81,7 @@ namespace sw::editor
         const bool bInitialized = ImGui_ImplDX12_Init( &initInfo );
         SW_LOG_TRACE( "ImGui_ImplDX12_Init Returned: %#", bInitialized );
         if ( bInitialized )
-            ImGuiViewportSizeGuard::install();
+            _viewportSizeGuard.install();
         return bInitialized;
     }
 
@@ -89,7 +89,7 @@ namespace sw::editor
     {
         // 렌더 스레드 · GPU 를 기다려 미뤄 둔 디스크립터 반환을 모두 끝낸 뒤에 힙을 놓는다(GPU 가 아직 읽는 힙을 놓지 않는다).
         flushDrawReleases( _pRHIDevice );
-        ImGuiViewportSizeGuard::clear();
+        _viewportSizeGuard.clear();
         if ( ImGui::GetIO().BackendRendererUserData != nullptr )
         {
             ImGui_ImplDX12_Shutdown();

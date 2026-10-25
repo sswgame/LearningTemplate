@@ -13,9 +13,16 @@
 
 #if defined( SW_PLATFORM_WINDOWS )
 
+struct ImGuiViewport;
+struct ImVec2;
+
 namespace sw::editor
 {
-    /** @brief ImGui 멀티 뷰포트 창 크기를 HWND 에 맞추는 보정입니다(DXGI 백엔드 공용). */
+    /**
+     * @brief ImGui 멀티 뷰포트 창 크기를 HWND 에 맞추는 보정입니다(DXGI 백엔드 공용). 렌더러 백엔드가 멤버로 소유합니다.
+     * @details 가로채는 ImGui 콜백에는 사용자 포인터가 없어, 설치한 가드가 ImGui 컨텍스트의 사용자 칸(`ImGuiIO::UserData`)에 자신을 겁니다 —
+     *          한 컨텍스트에 렌더러 백엔드는 하나라 칸이 겹치지 않습니다. 에디터 범위(상태 저장소)는 렌더러 백엔드보다 늦게 생기므로 쓰지 않습니다.
+     */
     class ImGuiViewportSizeGuard
     {
     public:
@@ -24,10 +31,17 @@ namespace sw::editor
          * @details 이미 걸려 있으면 아무것도 하지 않습니다(중복 설치 안전). ImGui 렌더러 백엔드 초기화가 성공한 **뒤에**
          *          부르십시오. 그때 Renderer_CreateWindow 가 채워집니다.
          */
-        static void install();
+        void install();
 
-        /** @brief 저장해 둔 원본 콜백 포인터를 놓습니다. 백엔드를 종료할 때 부르십시오. */
-        static void clear();
+        /** @brief 저장해 둔 원본 콜백 포인터와 컨텍스트의 사용자 칸을 놓습니다. 백엔드를 종료할 때 부르십시오. */
+        void clear();
+
+    private:
+        static void guardedCreateWindow( ImGuiViewport* pViewport );
+        static void guardedSetWindowSize( ImGuiViewport* pViewport, ImVec2 size );
+
+        void ( *_pOriginalCreateWindow )( ImGuiViewport* )          = nullptr;
+        void ( *_pOriginalSetWindowSize )( ImGuiViewport*, ImVec2 ) = nullptr;
     };
 } // namespace sw::editor
 

@@ -4,8 +4,6 @@
 
 #include "Core/Common/PlatformOsHeaders.h"
 
-#include "Editor/Common/Workspace/EditorStateStore.h"
-
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHISamplerPreset.h"
 
@@ -32,18 +30,16 @@ namespace sw::editor
     {
         struct ImGuiVulkanRendererBackendInternal
         {
-            /** @brief 가로챈 ImGui 렌더러 콜백의 원래 함수입니다. 콜백에는 사용자 포인터가 없어 에디터 범위의 상태 저장소가 소유한다(thunk 는 에디터 프레임 안에서만 불린다). */
-            struct State
-            {
-                void ( *_originalVkCreateWindow )( ImGuiViewport* )          = nullptr;
-                void ( *_originalVkSetWindowSize )( ImGuiViewport*, ImVec2 ) = nullptr;
-            };
+            using ViewportGuard = ImGuiVulkanRendererBackend::ViewportGuard;
 
-            static State& getState() { return getEditorState<State>(); }
+            /** @brief 설치한 백엔드의 원래 콜백입니다(`installVulkanViewportGuards` 가 컨텍스트의 사용자 칸에 건다). 걸려 있지 않으면 nullptr 입니다. */
+            static const ViewportGuard* findGuard() { return static_cast<const ViewportGuard*>( ImGui::GetIO().UserData ); }
 
             static void GuardedVkCreateWindow( ImGuiViewport* pViewport )
             {
-                if ( pViewport == nullptr || getState()._originalVkCreateWindow == nullptr )
+                const ViewportGuard* pGuard      = findGuard();
+                const auto           pfnOriginal = pGuard != nullptr ? pGuard->_pOriginalCreateWindow : nullptr;
+                if ( pViewport == nullptr || pfnOriginal == nullptr )
                     return;
 
                 if ( pViewport->Size.x < 1.0f )
@@ -51,33 +47,46 @@ namespace sw::editor
                 if ( pViewport->Size.y < 1.0f )
                     pViewport->Size.y = 1.0f;
 
-                getState()._originalVkCreateWindow( pViewport );
+                pfnOriginal( pViewport );
             }
 
             static void GuardedVkSetWindowSize( ImGuiViewport* pViewport, ImVec2 size )
             {
-                if ( pViewport == nullptr || getState()._originalVkSetWindowSize == nullptr )
+                const ViewportGuard* pGuard      = findGuard();
+                const auto           pfnOriginal = pGuard != nullptr ? pGuard->_pOriginalSetWindowSize : nullptr;
+                if ( pViewport == nullptr || pfnOriginal == nullptr )
                     return;
 
                 if ( size.x < 1.0f || size.y < 1.0f )
                     return;
 
-                getState()._originalVkSetWindowSize( pViewport, size );
+                pfnOriginal( pViewport, size );
             }
 
-            static void installVulkanViewportGuards()
+            static void installVulkanViewportGuards( ViewportGuard& guard )
             {
+                ImGuiIO& io = ImGui::GetIO();
+                SW_ASSERT( io.UserData == nullptr || io.UserData == &guard ); // 컨텍스트의 사용자 칸은 이 가드 하나가 쓴다
+                io.UserData = &guard;
+
                 ImGuiPlatformIO& platformIO = ImGui::GetPlatformIO();
                 if ( platformIO.Renderer_CreateWindow != nullptr && platformIO.Renderer_CreateWindow != &GuardedVkCreateWindow )
                 {
-                    getState()._originalVkCreateWindow = platformIO.Renderer_CreateWindow;
-                    platformIO.Renderer_CreateWindow   = &GuardedVkCreateWindow;
+                    guard._pOriginalCreateWindow     = platformIO.Renderer_CreateWindow;
+                    platformIO.Renderer_CreateWindow = &GuardedVkCreateWindow;
                 }
                 if ( platformIO.Renderer_SetWindowSize != nullptr && platformIO.Renderer_SetWindowSize != &GuardedVkSetWindowSize )
                 {
-                    getState()._originalVkSetWindowSize = platformIO.Renderer_SetWindowSize;
-                    platformIO.Renderer_SetWindowSize   = &GuardedVkSetWindowSize;
+                    guard._pOriginalSetWindowSize     = platformIO.Renderer_SetWindowSize;
+                    platformIO.Renderer_SetWindowSize = &GuardedVkSetWindowSize;
                 }
+            }
+
+            static void clearVulkanViewportGuards( ViewportGuard& guard )
+            {
+                guard = ViewportGuard{};
+                if ( ImGui::GetCurrentContext() != nullptr && ImGui::GetIO().UserData == &guard )
+                    ImGui::GetIO().UserData = nullptr;
             }
 
             /** @brief ImGui 텍스처 · 보조 뷰포트가 디스크립터 세트를 받는 풀을 만듭니다. 종류마다 1000 개입니다. */
@@ -218,7 +227,7 @@ namespace sw::editor
         if ( ImGui_ImplVulkan_Init( &init_info ) == false )
             return false;
 
-        ImGuiVulkanRendererBackendInternal::installVulkanViewportGuards();
+        ImGuiVulkanRendererBackendInternal::installVulkanViewportGuards( _viewportGuard );
         return true;
     }
 
@@ -240,6 +249,7 @@ namespace sw::editor
             const std::unique_lock<mutex> queueLock = lockSubmissionQueue();
             ImGui_ImplVulkan_Shutdown();
         }
+        ImGuiVulkanRendererBackendInternal::clearVulkanViewportGuards( _viewportGuard );
 
         if ( _pSampler != nullptr && _pDevice != nullptr )
         {
