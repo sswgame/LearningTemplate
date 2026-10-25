@@ -64,9 +64,10 @@ def findTestExecutables(tree: BuildTree) -> tuple[Path, list[Path]]:
     return tree.binDir, []
 
 
-def listSelectedCases(executable: Path, workingDir: Path, pattern: str) -> list[str]:
-    """그 실행 파일에서 패턴이 고르는 케이스 이름들(`Suite.Case`). `--test_list` 는 고른 것이 없어도 0 이라, 지면 진짜 실패다(기동 실패 · 크래시)."""
-    result = requireSucceededInternal(runProcess([executable, "--test_list", f"--test_filter={pattern}"], cwd=workingDir),
+def listSelectedCases(executable: Path, workingDir: Path, pattern: str, listExtra: list[str]) -> list[str]:
+    """그 실행 파일에서 패턴이 고르는 케이스 이름들(`Suite.Case`). `--test_list` 는 고른 것이 없어도 0 이라, 지면 진짜 실패다(기동 실패 · 크래시).
+    `listExtra` 는 돌릴 때와 같은 실행 파일 인자다 — `--load_suites=only` 가 없으면 부하 스위트는 목록에 나오지 않아 "어느 실행 파일에도 없다" 로 잘못 멈춘다."""
+    result = requireSucceededInternal(runProcess([executable, "--test_list", f"--test_filter={pattern}", *listExtra], cwd=workingDir),
                                       f"`{executable.name} --test_list`")
     return [f"{match.group(1)}.{match.group(2)}" for line in result.stdout.splitlines() if (match := _kListedCaseRe.match(line))]
 
@@ -171,7 +172,8 @@ def runPatternInternal(tree: BuildTree, args: argparse.Namespace, listPassthroug
         return ExitCode.CheckInvalid
 
     # 실행 파일마다 `--test_list` 로 묻는다 — 엔진 서비스를 세우느라 하나에 수백 ms 라 동시에.
-    listSelection = list(mapConcurrent(lambda executable: (executable, listSelectedCases(executable, workingDir, args.pattern)),
+    listPassed = [argument for argument in listPassthrough if argument != "--"]
+    listSelection = list(mapConcurrent(lambda executable: (executable, listSelectedCases(executable, workingDir, args.pattern, listPassed)),
                                        listExecutable, workerCount=len(listExecutable)))
     listSelection = sorted((item for item in listSelection if item[1]), key=lambda item: item[0].name)
     if not listSelection:
@@ -186,7 +188,7 @@ def runPatternInternal(tree: BuildTree, args: argparse.Namespace, listPassthroug
     if args.list:
         return ExitCode.Passed
 
-    listExtra = [argument for argument in listPassthrough if argument != "--"]
+    listExtra = list(listPassed)
     if args.repeat > 1:
         listExtra.append(f"--test_repeat={args.repeat}")
     if args.shuffle is not None:
