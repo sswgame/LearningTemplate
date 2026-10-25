@@ -5,6 +5,7 @@
 
 #include "EngineTest/AppearanceTestFixture.h"
 
+#include "GameFramework/Base/Actor/Combat/Weapon/Weapon.h"
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceResolver.h"
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceSelection.h"
@@ -813,10 +814,8 @@ SW_TEST_CASE( AppearanceTest, ShooterSampleDataResolves )
     SW_ASSERT_NOT_NULL( pCape );
     SW_EXPECT_TRUE( pCape->_asset == hashed_string( "game/shooter3d/prefabs/kaykit/knight_cape.prefab.xml" ) ); // 기사 세트 완성
     SW_EXPECT_TRUE( resolved.findPart( hashed_string( "Head" ), hashed_string( "Shell" ) ) != nullptr );
-    const ResolvedPart* pGun = resolved.findPart( hashed_string( "MainHand" ), hashed_string( "Body" ) );
-    SW_ASSERT_NOT_NULL( pGun );
-    SW_EXPECT_TRUE( pGun->_placement._listSocket[0] == hashed_string( "Gun" ) );
-    SW_EXPECT_TRUE( pGun->_socketSet == hashed_string( "game/shooter3d/data/sockets/blaster_d.sockets.xml" ) );
+    // 손에 든 무기는 프리셋이 아니라 무기 표(weapons.xml)의 item 이 정한다 — 프리셋은 MainHand 칸을 비워 둔다.
+    SW_EXPECT_TRUE( resolved.findPart( hashed_string( "MainHand" ), hashed_string( "Body" ) ) == nullptr );
     bool bDyed = false;
     for ( const ResolvedMaterialValue& value : resolved._listMaterialValue )
     {
@@ -852,6 +851,22 @@ SW_TEST_CASE( AppearanceTest, ShooterSampleDataResolves )
     equipment.setSetLookup( &database.getSets() );
     SW_EXPECT_TRUE( equipment.canEquip( hashed_string( "MainHand" ), hashed_string( "blaster_rifle" ) ) );
     SW_EXPECT_FALSE( equipment.canEquip( hashed_string( "MainHand" ), hashed_string( "shield_round" ) ) );
+
+    // 무기 표의 item · ammo 는 아이템 표에 있어야 하고, 각 무기의 아이템은 외형(소켓 포함)으로 풀린다.
+    WeaponCatalog weapons;
+    SW_ASSERT_TRUE( weapons.loadFromResource( "game/shooter3d/data/weapons.xml" ) );
+    vector<WeaponItemReference> listUnknown;
+    SW_EXPECT_TRUE( weapons.findUnknownItems( items, listUnknown ) );
+    for ( const WeaponDef& weapon : weapons.getAll() )
+    {
+        SW_EXPECT_TRUE( weapon._itemID.empty() == false );
+        SW_EXPECT_TRUE( database.findItemVisual( weapon._itemID ) != nullptr );
+        SW_EXPECT_TRUE( equipment.canEquip( hashed_string( "MainHand" ), weapon._itemID ) );
+    }
+    WeaponCatalog brokenWeapons;
+    SW_ASSERT_TRUE( brokenWeapons.loadFromXMLText( R"(<WeaponCatalog><Weapon id="ghost" item="no_such_item"/><Weapon id="ghostAmmo" ammo="no_such_ammo"/></WeaponCatalog>)", "inline" ) );
+    SW_EXPECT_FALSE( brokenWeapons.findUnknownItems( items, listUnknown ) );
+    SW_EXPECT_TRUE( listUnknown.size() == 2u );
 }
 
 /**

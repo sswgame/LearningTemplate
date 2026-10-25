@@ -34,6 +34,16 @@ namespace sw
         // 무기는 플레이어 컴포넌트가, 외형은 플레이어 몸 · 스켈레톤의 외형 컴포넌트가 게임 범위에서 찾는다. 외형은 아이템을 참조하므로 아이템 뒤에 읽는다.
         if ( loadRequiredCatalog( _weaponCatalog ) == false || loadRequiredCatalog( _itemCatalog ) == false )
             return false;
+        vector<WeaponItemReference> listUnknownItem;
+        if ( _weaponCatalog.findUnknownItems( _itemCatalog, listUnknownItem ) == false )
+        {
+            // 무기 표의 item · ammo 가 없는 아이템을 가리키면 이유를 남기고 게임을 띄우지 않는다
+            for ( const WeaponItemReference& reference : listUnknownItem )
+            {
+                SW_LOG_ERROR( "[Shooter] weapon '%#' %# names '%#', which is not in the item catalog", reference._weaponID.c_str(), reference._pField, reference._itemID.c_str() );
+            }
+            return false;
+        }
         const bool bAppearanceLoaded = loadRequiredData( AppearanceDatabase::kDataKind,
                                                          [this]( const string& folder )
         {

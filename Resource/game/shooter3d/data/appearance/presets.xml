@@ -2,20 +2,21 @@
 <!-- 캐릭터 외형 프리셋(CharacterAppearance). parent 위에 다른 값만 적는다 — 값은 매개변수별, 칸은 칸별, 소켓은 이름별로 아래가 덮고 세트는 쌓인다.
      쉼표 목록(items · options) · 범위(min/max) · 색 목록(colors, ; 로 나눔)은 씨앗으로 뽑는다(무작위 NPC).
      Equip 는 set 하나 또는 slot 하나 — item="" 은 칸을 비우고, visible 은 보이는 외형만 바꾼다(형상 변경), 안의 Value 는 그 아이템 인스턴스의 꾸미기 값이다.
-     플레이어는 ShooterPlayer(기사 세트 + 소총, 푸른 염색), 적은 Skeleton* 셋과 씨앗마다 섞이는 SkeletonRaider 다(ShooterDirectorComponent 의 적 프리셋 목록). -->
+     플레이어는 ShooterPlayer(기사 세트, 푸른 염색)다. 손에 든 무기는 여기에 적지 않는다 — 무기 표(weapons.xml)의 item 이 정본이라 ShooterPlayerComponent 가 MainHand 칸을 채운다.
+     적은 Skeleton* 셋과 씨앗마다 섞이는 SkeletonRaider 다(ShooterDirectorComponent 의 적 프리셋 목록). -->
 <CharacterAppearanceCatalog>
   <CharacterAppearance id="Adventurer" schema="Adventurer" bodyType="Male" bodyShape="Average" body="body_knight" tags="Race.Human"/>
 
   <CharacterAppearance id="ShooterPlayer" parent="Adventurer" tags="Faction.Player">
     <Value name="OutfitDye" color="0.62 0.78 1 1"/>
     <Equip set="Knight"/>
-    <Equip slot="MainHand" item="blaster_rifle"/>
   </CharacterAppearance>
 
   <CharacterAppearance id="ShooterArcher" parent="Adventurer" tags="Faction.Player">
     <Equip slot="MainHand" item="bow_long"/>
   </CharacterAppearance>
 
+  <!-- 외형 쇼케이스 — 어떤 컴포넌트도 가리키지 않아 무기 표와 이어지지 않는다(플레이어 무기가 아니라 이 외형이 든 장비다). -->
   <CharacterAppearance id="ShooterRogue" parent="Adventurer" body="body_rogue" tags="Faction.Player">
     <Value name="OutfitDye" colors="1 1 1 1; 1 0.85 0.7 1"/>
     <Equip slot="Back" item="cape_rogue"/>

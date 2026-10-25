@@ -61,6 +61,17 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 무기가 가리키는 아이템 id 하나입니다(`findUnknownItems` 의 결과). */
+    struct WeaponItemReference
+    {
+        hashed_string _weaponID{};
+        hashed_string _itemID{};
+        const utf8*   _pField{ "" }; ///< 가리킨 속성 이름("item" 또는 "ammo")
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief `<WeaponCatalog><Weapon id="rifle" name="Rifle" fireInterval="0.1" .../></WeaponCatalog>` 를 읽습니다. 속성 이름은 필드 이름에서 `_` 를 뺀 것입니다. */
     class SW_GF_API WeaponCatalog : public XMLCatalog<WeaponCatalog>, public GameCatalog<WeaponDef>
     {
@@ -71,6 +82,25 @@ namespace sw
         static constexpr const utf8* kDataKind = "weapons";
 
         WeaponCatalog();
+
+        /**
+         * @brief 무기가 가리키는 아이템 id(`item` · `ammo`) 가운데 @p items 에 없는 것을 @p outListUnknown 에 담고, 모두 있으면 true 를 반환합니다.
+         * @details 두 필드는 이름 없이 id 만 들고 있어 오타가 로드에서는 드러나지 않는다. 아이템 표(`find( id )` 가 null 을 돌려주는 카탈로그)를 읽은 뒤 게임이 한 번 부르고,
+         *          비어 있지 않은 목록이면 오류로 남기고 멈춘다. 아이템 표는 위층(Gameplay)이라 형식을 템플릿으로 받는다.
+         */
+        template <typename TItemCatalog>
+        [[nodiscard]] bool findUnknownItems( const TItemCatalog& items, vector<WeaponItemReference>& outListUnknown ) const
+        {
+            outListUnknown.clear();
+            for ( const WeaponDef& weapon : getAll() )
+            {
+                if ( weapon._itemID.empty() == false && items.find( weapon._itemID ) == nullptr )
+                    outListUnknown.push_back( WeaponItemReference{ weapon._id, weapon._itemID, "item" } );
+                if ( weapon._ammoID.empty() == false && items.find( weapon._ammoID ) == nullptr )
+                    outListUnknown.push_back( WeaponItemReference{ weapon._id, weapon._ammoID, "ammo" } );
+            }
+            return outListUnknown.empty();
+        }
 
     private:
         static constexpr const utf8* kXMLRootName = "WeaponCatalog"; ///< 루트 원소(`XMLCatalog`)

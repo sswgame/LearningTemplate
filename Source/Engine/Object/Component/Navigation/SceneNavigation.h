@@ -234,7 +234,7 @@ namespace sw
         vector<NavMeshSurfaceComponent*>     _listSurface;
         vector<NavMeshObstacleComponent*>    _listObstacle;
         vector<NavMeshLinkComponent*>        _listLink;
-        RegistrationList<INavGeometrySource> _listGeometrySource;  ///< 등록 순서(빼도 순서 유지) — 한 주인을 여러 소스가 맡으면 먼저 등록한 것이 이긴다
+        RegistrationList<INavGeometrySource> _listGeometrySource;  ///< 등록 순서(빼도 순서 유지) — 한 주인을 여러 소스가 맡으면 먼저 등록한 것이 이긴다. 순서가 뜻이라 순서를 버리는 `IndexedPtrList` 로 바꾸지 않는다(소스가 수천이 되면 순서 보존 색인이 필요하다)
         vector<hashed_string>                _listFailedAgentType; ///< 모르는 종류 — 오류를 한 번만
         NavTileRebaker                       _tileRebaker;
         NavDebugView                         _debugView;

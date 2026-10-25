@@ -88,7 +88,7 @@ namespace sw
         static bool isUsableCamera( const CameraComponent* pCamera );
 
     private:
-        /** @brief 등록된 카메라입니다(등록 순서). 소유하지 않습니다. */
+        /** @brief 등록된 카메라입니다(등록 순서). 소유하지 않습니다. 카메라는 뷰마다 하나(화면 분할 · CCTV · 미리보기)라 많아야 수십 개이므로 선형 등록 목록으로 충분합니다. */
         RegistrationList<CameraComponent> _registeredCamera{ "CameraRegistry.Camera" };
         /** @brief 목록을 지킵니다. 등록/해제는 드물고(비동기 씬 로드는 워커에서 등록합니다), 조회는 게임 스레드입니다. */
         mutable mutex    _mutex;

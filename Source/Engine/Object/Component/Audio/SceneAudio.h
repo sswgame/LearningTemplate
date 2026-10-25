@@ -111,9 +111,9 @@ namespace sw
         /** @brief 리버브 존 — 스냅샷마다 가장 큰 세기. 바뀐 것만 넣고, 이번에 거는 존이 없는 스냅샷은 0 으로 내린다. */
         void updateReverbZones( AudioEngine& audioEngine );
 
-        RegistrationList<AudioListenerComponent>   _listener;                /**< 리스너 컴포넌트입니다. */
+        RegistrationList<AudioListenerComponent>   _listener;                /**< 리스너 컴포넌트입니다. 화면 분할 칸마다 하나라 많아야 한 자릿수이므로 선형 등록 목록으로 충분하다. */
         IndexedPtrList<AudioEmitterComponent>      _emitter;                 /**< 에미터 컴포넌트입니다. 수가 많고 씬 중에 자주 오르내려 넣기 · 빼기가 O(1) 이다(순회 순서는 보존되지 않는다 — 가림 측정이 도는 순서만 달라진다). */
-        RegistrationList<AudioReverbZoneComponent> _zone;                    /**< 리버브 존입니다. */
+        RegistrationList<AudioReverbZoneComponent> _zone;                    /**< 리버브 존입니다. 레벨 디자이너가 방 · 구역마다 손으로 놓아 많아야 수십 개이고 씬 중에 오르내리지 않으므로 선형 등록 목록으로 충분하다(수천 개로 자라면 `IndexedPtrList`). */
         vector<AudioEmitterComponent*>             _listEmitterSnapshot;     /**< 프레임마다 잠금 밖에서 도는 에미터 사본입니다. */
         vector<ZoneValue>                          _listZoneValue;           /**< 지난 프레임의 스냅샷 세기입니다. */
         vector<ZoneValue>                          _listZoneCurrent;         /**< 이번 프레임의 스냅샷 세기(작업 목록)입니다. */
