@@ -2222,6 +2222,8 @@ SW_TEST_CASE( RHIDeviceTest, LostDeviceRejectsTransferSubmitsAtEntry )
         // 잃기 전에는 같은 제출이 받아들여진다. 한 번 올려 둔 스테이징이 있어야 제출 진입 검사가 없을 때 DX12 가 Accepted 를 돌려준다(새 스테이징을 못 만들어서가 아니라).
         SW_EXPECT_TRUE_MSG( sw::RHITransferUtil::uploadTexture2DAndWait( *pResource, texture, upload ), ( label + ": 손실 전 업로드가 실패했다" ).c_str() );
         device->waitIdle(); // 손실 전에 GPU 를 비운다 — 손실 뒤의 종료는 기다리지 않고 자원을 부순다
+        // 장치 제거 자체도 경고를 남긴다(DX12 "Removing the D3D12 device on request") — 제거부터 스코프 안이다.
+        SW_TEST_DEFENSIVE_SCOPE( "transfer submits on a removed device are rejected at entry" );
         if ( device->debugRemoveDevice() == false )
         {
             pResource->destroyTexture( texture );
@@ -2229,7 +2231,6 @@ SW_TEST_CASE( RHIDeviceTest, LostDeviceRejectsTransferSubmitsAtEntry )
         }
         ++removableCount;
 
-        SW_TEST_DEFENSIVE_SCOPE( "transfer submits on a removed device are rejected at entry" );
         sw::RHITextureMipSpan layout{};
         SW_EXPECT_TRUE_MSG( pResource->submitTextureUpload( texture, upload )._result == sw::RHISubmitResult::Rejected, ( label + ": 손실 뒤 업로드가 거절되지 않았다" ).c_str() );
         SW_EXPECT_TRUE_MSG( pResource->submitTextureRegionUpload( texture, region )._result == sw::RHISubmitResult::Rejected,
