@@ -10,19 +10,34 @@
 from __future__ import annotations
 
 import fnmatch
+import re
+from functools import lru_cache
+
+# 저장소 전수 검사는 같은 패턴을 수십만 경로에 맞춘다 — 패턴 해석과 경로 마디 나누기를 호출마다 되풀이하면 검증 하나가 분 단위가 된다.
+_kPathCacheSize = 1 << 17
 
 
-def _matchesSegmentInternal(patternSegment: str, textSegment: str) -> bool:
-    # 마디 하나 안에는 `/` 가 없으니 fnmatch 의 `*` 가 폴더를 넘을 일이 없다. `[` 는 글자 그대로 다루려고 이스케이프한다.
-    escaped = patternSegment.replace("[", "[[]")
-    return fnmatch.fnmatchcase(textSegment.lower(), escaped.lower())
+@lru_cache(maxsize=None)
+def _compilePatternInternal(pattern: str) -> tuple[bool, tuple[re.Pattern[str] | None, ...]]:
+    """(파일 이름에만 맞는 패턴인가, 마디별 정규식). 마디 `**` 는 None. `[` 는 글자 그대로 다루려고 이스케이프한다."""
+    normalized = pattern.replace("\\", "/")
+    bNameOnly = "/" not in normalized
+    listPatternSegment = [segment for segment in normalized.split("/") if segment]
+    listCompiled = tuple(None if segment == "**" and not bNameOnly else re.compile(fnmatch.translate(segment.replace("[", "[[]").lower())) for segment in listPatternSegment)
+    return bNameOnly, listCompiled
 
 
-def _matchesSegmentsInternal(listPattern: list[str], patternIndex: int, listText: list[str], textIndex: int) -> bool:
+@lru_cache(maxsize=_kPathCacheSize)
+def _splitLowerInternal(path: str) -> tuple[str, ...]:
+    return tuple(segment.lower() for segment in path.replace("\\", "/").split("/") if segment)
+
+
+def _matchesSegmentsInternal(listPattern: tuple[re.Pattern[str] | None, ...], patternIndex: int, listText: tuple[str, ...], textIndex: int) -> bool:
     while patternIndex < len(listPattern):
-        if listPattern[patternIndex] == "**":
+        compiled = listPattern[patternIndex]
+        if compiled is None:
             return any(_matchesSegmentsInternal(listPattern, patternIndex + 1, listText, skip) for skip in range(textIndex, len(listText) + 1))
-        if textIndex >= len(listText) or not _matchesSegmentInternal(listPattern[patternIndex], listText[textIndex]):
+        if textIndex >= len(listText) or compiled.match(listText[textIndex]) is None:
             return False
         patternIndex += 1
         textIndex += 1
@@ -36,10 +51,11 @@ def splitSegments(path: str) -> list[str]:
 
 def matchesPattern(pattern: str, path: str) -> bool:
     """패턴 하나가 경로(`/` 구분)에 맞는가."""
-    listText = splitSegments(path)
-    if "/" not in pattern.replace("\\", "/"):
-        return bool(listText) and _matchesSegmentInternal(pattern, listText[-1])
-    return _matchesSegmentsInternal(splitSegments(pattern), 0, listText, 0)
+    bNameOnly, listCompiled = _compilePatternInternal(pattern)
+    listText = _splitLowerInternal(path)
+    if bNameOnly:
+        return bool(listText) and bool(listCompiled) and listCompiled[0].match(listText[-1]) is not None
+    return _matchesSegmentsInternal(listCompiled, 0, listText, 0)
 
 
 def matchesAnyPattern(listPattern: list[str], path: str) -> bool:

@@ -1787,7 +1787,7 @@
   },
   {
    "page": "FacialRig",
-   "path": "Resource/game/*/models/*.facial.xml",
+   "path": "Resource/game/*/models/**/*.facial.xml",
    "layer": "팩 데이터",
    "type": "FacialRig",
    "types": [
@@ -2930,7 +2930,7 @@
   },
   {
    "page": "ModuleManifest",
-   "path": "Source/*.module.json",
+   "path": "Source/**/*.module.json",
    "layer": "모듈 매니페스트",
    "type": "ModuleManifestFile",
    "types": [

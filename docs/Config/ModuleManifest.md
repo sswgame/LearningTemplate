@@ -6,7 +6,7 @@
 
 | | |
 |---|---|
-| 파일 | `Source/*.module.json` |
+| 파일 | `Source/**/*.module.json` |
 | 층 | 모듈 매니페스트 |
 | 읽는 곳 | CMake `ModuleManifest.cmake` · `ModuleCatalog::loadDirectory` |
 | 언제 | configure · 기동(모듈 적재 순서) |

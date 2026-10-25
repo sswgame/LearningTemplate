@@ -6,7 +6,7 @@
 
 | | |
 |---|---|
-| 파일 | `Resource/game/*/models/*.facial.xml` |
+| 파일 | `Resource/game/*/models/**/*.facial.xml` |
 | 층 | 팩 데이터 |
 | 읽는 곳 | `FacialRig::loadFromResource` (`FacialAnimationComponent::_facialRigPath`) |
 | 언제 | 컴포넌트 시작 · 경로를 바꿀 때 |

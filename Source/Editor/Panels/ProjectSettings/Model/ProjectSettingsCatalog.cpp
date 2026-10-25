@@ -5,6 +5,8 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 
+#include "Editor/Common/Asset/AssetImportPathFilter.h"
+
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw::editor
@@ -51,6 +53,9 @@ namespace sw::editor
             const size_t slash = entry._relativePath.rfind( '/' );
             if ( slash == string::npos || entry._relativePath.find( '*' ) < slash )
                 continue;
+            // 이름 조건은 파이썬 `PathPattern` 과 같은 임포트 규칙 필터로 맞춘다(`*` 는 폴더를 넘지 않는다). 확장자로 모은 목록을 이 필터가 거른다.
+            AssetImportPathFilter filter;
+            filter._listIncludePattern.push_back( entry._relativePath );
             const string   directory = FileUtil::joinPath( projectRoot, string_view( entry._relativePath ).substr( 0, slash ) );
             const size_t   dot       = entry._relativePath.rfind( '.' );
             const string   extension = dot != string::npos && dot > slash ? entry._relativePath.substr( dot ) : string();
@@ -61,6 +66,8 @@ namespace sw::editor
             for ( const string& filePath : listFile )
             {
                 string fileName = FileUtil::getFileNamePart( filePath );
+                if ( filter.matchesPath( entry._relativePath.substr( 0, slash + 1 ) + fileName ) == false )
+                    continue;
                 if ( fileName.size() > extension.size() )
                     fileName.resize( fileName.size() - extension.size() );
                 ProjectSettingsEntry expanded{};
