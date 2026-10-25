@@ -96,7 +96,7 @@ namespace sw
         vector<LeaderboardStat> _listStat{}; ///< 상한은 `LeaderboardLimit::kMaxStatCount` 와 같다
         PROPERTY( MaxCount = LeaderboardLimit::kMaxAchievementCount )
         vector<AchievementState> _listAchievement{}; ///< 상한은 `LeaderboardLimit::kMaxAchievementCount` 와 같다
-        PROPERTY( MaxCount = 1024 )
+        PROPERTY( MaxCount = LeaderboardLimit::kMaxAchievementCount )
         vector<AchievementProgress> _listProgress{}; ///< kGetAchievementProgress. 상한은 `LeaderboardLimit::kMaxAchievementCount` 와 같다
         PROPERTY()
         uint64 _periodID{ 0 };

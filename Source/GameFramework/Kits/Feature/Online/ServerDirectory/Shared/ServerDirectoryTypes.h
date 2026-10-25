@@ -53,7 +53,7 @@ namespace sw
     struct MaintenanceView
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 16 )
+        PROPERTY( MaxCount = ServerRecord::kMaxNameSize )
         string _scope{}; ///< `all` 이거나 서버 종류 이름이다. 상한은 `ServerRecord::kMaxNameSize` 와 같다
         PROPERTY( MaxCount = ServerDirectoryLimit::kMaxMessageKeySize )
         string _messageKey{}; ///< 안내 문구의 로컬라이제이션 키이다. 상한은 `ServerDirectoryLimit::kMaxMessageKeySize` 와 같다

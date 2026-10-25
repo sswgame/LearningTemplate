@@ -360,6 +360,8 @@ id 슬롯이 다른 타입으로 재사용되는 경우는 지금도 Debug 단�
 ### 8.2 남은 확인
 
 - 없음. `getComponent<` 413 건의 틱 안 비율(옛 단계 0)은 세지 않고 닫았습니다(7.3).
+- 온라인 숫자 `MaxCount` 는 `wt/onlinemax` 에서 모두 상수 이름으로 바꿨습니다(8.1 위험 4). 같은 값이 여러 곳이면 상수 하나로 모았고(`AdminProtocol`, `EconomyProtocol`, `LoginConstant`, `MatchmakingLimit` 등), 서로 다른 키트의 같은 값(관리자 `kMaxMessageKeySize` · 서버 목록 `ServerDirectoryLimit::kMaxMessageKeySize`)은 키트끼리 포함할 수 없어 각자 두었습니다.
+  같은 헤더에 같은 값의 상수가 있으면 알리는 게이트는 두지 않았습니다. 값이 우연히 같은 상수(해시 32 바이트와 이름 32 바이트 등)가 많아 오탐이 진짜 후보보다 많았기 때문입니다. `Min` · `Max` 의 반복 리터럴(예: `Max = 100`)은 상수를 받지 못해 그대로입니다(3.8).
 
 ## 9. 단계
 

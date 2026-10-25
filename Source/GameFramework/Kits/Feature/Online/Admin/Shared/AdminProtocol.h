@@ -14,6 +14,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Base/Online/Audit/ServiceAuditLog.h"
+#include "GameFramework/Base/Online/Directory/ServerRecord.h"
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
 #include "GameFramework/Base/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Base/Online/Mail/ServiceMail.h"
@@ -140,13 +141,13 @@ namespace sw
         vector<ServiceMailAttachment> _listAttachment{}; ///< SendMail, BulkMail, CreateCampaign 에서 쓴다. 상한은 `ServiceMailConstant::kMaxAttachmentCount` 와 같다
         PROPERTY( MaxCount = AdminProtocol::kMaxBulkCount )
         vector<AccountID> _listAccountID{}; ///< BulkMail 에서 쓰며 12개 이하이다. 우편 하나가 쓰기 넷이라 감사와 멱등 기록까지 한 트랜잭션(64) 안에 들어간다
-        PROPERTY( MaxCount = 256 )
+        PROPERTY( MaxCount = AdminProtocol::kMaxTextSize )
         string _displayName{}; ///< LookupAccount 에서 계정 id 대신 쓴다. 이 프로세스에 접속해 있는 계정만 찾을 수 있다
-        PROPERTY( MaxCount = 256 )
+        PROPERTY( MaxCount = ServiceAuditEntry::kMaxTextSize )
         string _subject{}; ///< ListAudit 의 주체 접두어이다(예: `acct.<16진>/`)
         PROPERTY( MaxCount = LedgerConstant::kMaxAssetIDSize )
         string _assetID{}; ///< 상한은 `LedgerConstant::kMaxAssetIDSize` 와 같다
-        PROPERTY( MaxCount = 256 )
+        PROPERTY( MaxCount = ServiceSanctionState::kMaxReasonCodeSize )
         string _reasonCode{}; ///< 제재 표시 사유이며 로컬라이제이션 키이다
         PROPERTY( MaxCount = AdminProtocol::kMaxMemoSize )
         string _memo{}; ///< 티켓이나 사유이다. 상태를 바꾸는 명령에는 필수이며 1 KB 이하이다
@@ -154,15 +155,15 @@ namespace sw
         string _titleKey{}; ///< 상한은 `ServiceMailConstant::kMaxTitleSize` 와 같다
         PROPERTY( MaxCount = ServiceMailConstant::kMaxBodySize )
         string _body{}; ///< 상한은 `ServiceMailConstant::kMaxBodySize` 와 같다
-        PROPERTY( MaxCount = 256 )
+        PROPERTY( MaxCount = OnlineLimit::kMaxKeySize )
         string _cursor{};
-        PROPERTY( MaxCount = 16 )
+        PROPERTY( MaxCount = ServerRecord::kMaxNameSize )
         string _scope{}; ///< 점검 범위(`all` 또는 서버 종류)이다. 상한은 `ServerRecord::kMaxNameSize` 와 같다
-        PROPERTY( MaxCount = 64 )
+        PROPERTY( MaxCount = AdminProtocol::kMaxMessageKeySize )
         string _messageKey{}; ///< 점검 안내 문구 키이다
-        PROPERTY( MaxCount = 48 )
+        PROPERTY( MaxCount = AdminProtocol::kMaxEventIDSize )
         string _eventID{}; ///< RemoveLiveEvent 의 이벤트 id 이다
-        PROPERTY( MaxCount = 8192 )
+        PROPERTY( MaxCount = AdminProtocol::kMaxEventJSONSize )
         string _eventJSON{}; ///< PutLiveEvent 의 정의(`LiveEventDefinition` 의 리플렉션 JSON)이다. 상한은 `AdminProtocol::kMaxEventJSONSize` 와 같다
         PROPERTY( MaxCount = ServiceReportConstant::kMaxReportKeySize )
         string _reportKey{}; ///< ResolveReport 의 대상이다. 상한은 `ServiceReportConstant::kMaxReportKeySize` 와 같다
@@ -226,7 +227,7 @@ namespace sw
     struct AdminLiveEventView
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 8192 )
+        PROPERTY( MaxCount = AdminProtocol::kMaxEventJSONSize )
         string _definitionJSON{}; ///< 상한은 `AdminProtocol::kMaxEventJSONSize` 와 같다
     };
 } // namespace sw
@@ -244,7 +245,7 @@ namespace sw
         vector<AdminJournalLine> _listJournal{}; ///< 상한은 `AdminProtocol::kMaxListCount` 와 같다
         PROPERTY( MaxCount = AdminProtocol::kMaxListCount )
         vector<ServiceAuditEntry> _listAudit{}; ///< 상한은 `AdminProtocol::kMaxListCount` 와 같다
-        PROPERTY( MaxCount = 64 )
+        PROPERTY( MaxCount = AdminProtocol::kMaxLiveEventCount )
         vector<AdminLiveEventView> _listLiveEvent{}; ///< ListLiveEvents 의 결과이다. 상한은 `AdminProtocol::kMaxLiveEventCount` 와 같다
         PROPERTY( MaxCount = AdminProtocol::kMaxReportListCount )
         vector<ServiceReport> _listReport{}; ///< ListReports 의 결과이며 ResolveReport 는 닫힌 신고 하나이다. 상한은 `AdminProtocol::kMaxReportListCount` 와 같다
@@ -252,7 +253,7 @@ namespace sw
         ServiceSanctionState _sanction{};
         PROPERTY()
         AccountIdentity _identity{};
-        PROPERTY( MaxCount = 256 )
+        PROPERTY( MaxCount = OnlineLimit::kMaxKeySize )
         string _nextCursor{};
         PROPERTY()
         int32 _processedCount{ 0 }; ///< BulkMail 에서 이번에 새로 보낸 수이다
@@ -286,10 +287,16 @@ namespace sw
         static constexpr int32           kMaxReportListCount = 10; ///< 신고 하나가 문맥 줄 20 개를 담아 커서 한 번에 열 개까지만 싣는다
         static constexpr int32           kMaxEventJSONSize   = 8192;
         static constexpr int32           kMaxLiveEventCount  = 64;
+        static constexpr int32           kMaxTextSize        = 256; ///< 문구 상한이다(표시 이름 조회). 감사 줄과 제재 사유의 상한과 같다(아래 static_assert)
+        static constexpr int32           kMaxMessageKeySize  = 64;
+        static constexpr int32           kMaxEventIDSize     = 48;
 
         /** @brief 공통 오류 코드(`OnlineError`)를 결과로 바꿉니다. */
         static AdminResult fromErrorCode( uint16 errorCode );
         /** @brief 명령에 필요한 등급을 반환합니다. 제재는 종류에 따라 다릅니다. 모르는 메서드는 `Count` 이며 누구도 가질 수 없는 등급입니다. */
         static AdminRole getRequiredRole( uint16 method, ServiceSanctionKind sanctionKind );
     };
+
+    static_assert( AdminProtocol::kMaxTextSize == ServiceAuditEntry::kMaxTextSize && AdminProtocol::kMaxTextSize == ServiceSanctionState::kMaxReasonCodeSize,
+                   "the admin text limit, the audit entry text limit and the sanction reason limit are one wire value" );
 } // namespace sw

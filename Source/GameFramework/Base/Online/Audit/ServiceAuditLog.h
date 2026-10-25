@@ -30,14 +30,15 @@ namespace sw
     struct ServiceAuditEntry
     {
         REFLECT_BODY();
+        static constexpr int32 kMaxTextSize  = 256;  ///< `_actor` · `_action` · `_subject`. 관리자 프로토콜의 문구 상한(`AdminProtocol::kMaxTextSize`)과 같다
         static constexpr int32 kMaxStateSize = 2048; ///< `_before` · `_after`
         static constexpr int32 kMaxMemoSize  = 1024;
 
-        PROPERTY( MaxCount = 256 )
+        PROPERTY( MaxCount = kMaxTextSize )
         string _actor{}; ///< `acct.<16 진>`, `gm.<16 진>`, `system`
-        PROPERTY( MaxCount = 256 )
+        PROPERTY( MaxCount = kMaxTextSize )
         string _action{}; ///< 동작 코드 `[0-9a-z_.]`. 예: "trade.settle", "admin.sanction", "account.link"
-        PROPERTY( MaxCount = 256 )
+        PROPERTY( MaxCount = kMaxTextSize )
         string _subject{}; ///< 대상. 키의 앞부분이며 키 규칙을 따른다
         PROPERTY( MaxCount = kMaxStateSize )
         string _before{}; ///< 전 상태(짧은 JSON 또는 요약)

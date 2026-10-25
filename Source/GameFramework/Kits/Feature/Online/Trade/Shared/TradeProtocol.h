@@ -69,7 +69,7 @@ namespace sw
     struct TradeInviteRequest
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 64 )
+        PROPERTY( MaxCount = TradeConstant::kMaxPeerNameSize )
         string _peerDisplayName{};
     };
 } // namespace sw
@@ -107,7 +107,7 @@ namespace sw
     struct TradeOfferRequest
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 16 )
+        PROPERTY( MaxCount = TradeConstant::kMaxLegsOnWire )
         vector<TradeLeg> _listLeg{};
         PROPERTY()
         uint64 _tradeID{ 0 };
@@ -154,7 +154,7 @@ namespace sw
         static constexpr uint32 kBusVersion = 1; ///< push 중계(`OnlinePushRelay`)의 의미 버전(docs/09_Decisions.md 5-9 서버 버스 의미 버전)
         PROPERTY()
         TradeSnapshot _snapshot{};
-        PROPERTY( MaxCount = 16 )
+        PROPERTY( MaxCount = TradeConstant::kMaxLegsOnWire )
         vector<TradeBalance> _listBalance{}; ///< 상한은 양쪽 항목 수(`TradeConstant::kMaxLegsPerSide` 의 두 배)이다
         PROPERTY()
         TradeResult _result{ TradeResult::Ok };

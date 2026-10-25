@@ -105,7 +105,7 @@ namespace sw
     {
         REFLECT_BODY();
         static constexpr uint32 kBusVersion = 1; ///< 서버 버스의 의미 버전(docs/09_Decisions.md 5-9 서버 버스 의미 버전). 새 필드는 옛 빌드 매처를 지나면 기본값이 된다(3.6)
-        PROPERTY( MaxCount = 256 )
+        PROPERTY( MaxCount = MatchmakingLimit::kMaxMemberCount )
         vector<MatchMember> _listMember{}; ///< 상한은 팀 수 상한 곱하기 팀 인원 상한(`MatchmakingLimit`)이다
         PROPERTY( MaxCount = ServerRecord::kMaxNameSize )
         string _region{}; ///< 상한은 `ServerRecord::kMaxNameSize` 와 같다
@@ -145,7 +145,7 @@ namespace sw
         static constexpr uint32 kBusVersion = 1; ///< 서버 버스의 의미 버전(docs/09_Decisions.md 5-9 서버 버스 의미 버전)
         PROPERTY( MaxCount = MatchmakingLimit::kMaxTeamCount )
         vector<MatchFormedTeam> _listTeam{}; ///< 상한은 `MatchmakingLimit::kMaxTeamCount` 와 같다
-        PROPERTY( MaxCount = 256 )
+        PROPERTY( MaxCount = MatchmakingLimit::kMaxMemberCount )
         vector<MatchTicket> _listTicket{};
         PROPERTY( MaxCount = MatchmakingLimit::kMaxIDSize )
         string _modeID{}; ///< 상한은 `MatchmakingLimit::kMaxIDSize` 와 같다
@@ -170,13 +170,13 @@ namespace sw
     {
         REFLECT_BODY();
         static constexpr uint32 kBusVersion = 1; ///< 서버 버스의 의미 버전(docs/09_Decisions.md 5-9 서버 버스 의미 버전)
-        PROPERTY( MaxCount = 16 )
+        PROPERTY( MaxCount = MatchmakingLimit::kMaxTeamCount )
         vector<int32> _listOpenSlot{}; ///< 팀마다 빈 슬롯 수이다. 상한은 `MatchmakingLimit::kMaxTeamCount` 와 같다
-        PROPERTY( MaxCount = 32 )
+        PROPERTY( MaxCount = MatchmakingLimit::kMaxIDSize )
         string _modeID{};
-        PROPERTY( MaxCount = 16 )
+        PROPERTY( MaxCount = ServerRecord::kMaxNameSize )
         string _region{}; ///< 경기의 지역이다
-        PROPERTY( MaxCount = 128 )
+        PROPERTY( MaxCount = ServerRecord::kMaxAddressSize )
         string _address{}; ///< 채운 사람이 접속할 게임 서버 주소이다. 상한은 `ServerRecord::kMaxAddressSize` 와 같다
         PROPERTY()
         uint64 _matchID{ 0 };
@@ -209,9 +209,10 @@ namespace sw
     /** @brief 매칭의 상한 값들입니다. */
     struct MatchmakingLimit
     {
-        static constexpr int32 kMaxTeamCount = 16;
-        static constexpr int32 kMaxTeamSize  = 16;
-        static constexpr int32 kMaxIDSize    = 32;
+        static constexpr int32 kMaxTeamCount   = 16;
+        static constexpr int32 kMaxTeamSize    = 16;
+        static constexpr int32 kMaxIDSize      = 32;
+        static constexpr int32 kMaxMemberCount = kMaxTeamCount * kMaxTeamSize; ///< 경기 하나의 인원 상한이며 경기에 든 티켓 수의 상한이다
     };
 } // namespace sw
 
@@ -367,7 +368,7 @@ namespace sw
     {
         REFLECT_BODY();
         static constexpr uint32 kBusVersion = 1; ///< 서버 버스와 push 중계의 의미 버전(docs/09_Decisions.md 5-9 서버 버스 의미 버전)
-        PROPERTY( MaxCount = 16 )
+        PROPERTY( MaxCount = MatchmakingLimit::kMaxTeamSize )
         vector<AccountID> _listTeammate{}; ///< 상한은 `MatchmakingLimit::kMaxTeamSize` 와 같다
         PROPERTY( MaxCount = ServerRecord::kMaxAddressSize )
         string _address{}; ///< 상한은 `ServerRecord::kMaxAddressSize` 와 같다

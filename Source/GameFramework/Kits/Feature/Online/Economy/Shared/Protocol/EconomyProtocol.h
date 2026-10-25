@@ -94,7 +94,7 @@ namespace sw
     struct EconomyPurchaseRequest
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 64 )
+        PROPERTY( MaxCount = EconomyProtocol::kMaxOfferIDSize )
         string _offerID{};
         PROPERTY( Min = 1, Max = 1000 )
         int32 _count{ 1 };
@@ -108,9 +108,9 @@ namespace sw
     struct EconomyRedeemRequest
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 64 )
+        PROPERTY( MaxCount = EconomyProtocol::kMaxStoreNameSize )
         string _storeName{};
-        PROPERTY( MaxCount = 16384 )
+        PROPERTY( MaxCount = EconomyProtocol::kMaxReceiptPayloadSize )
         string _payload{}; ///< 스토어가 준 영수증이다. 서명된 JWS, 구매 토큰, 주문 id 가 해당하며 그 뜻은 제공자가 안다. Apple JWS 는 수 KB 이다
     };
 } // namespace sw
@@ -122,9 +122,9 @@ namespace sw
     struct EconomyWithdrawRequest
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 64 )
+        PROPERTY( MaxCount = EconomyProtocol::kMaxStoreNameSize )
         string _storeName{};
-        PROPERTY( MaxCount = 96 )
+        PROPERTY( MaxCount = LedgerConstant::kMaxTokenBytes )
         string _transactionID{}; ///< 상한은 `LedgerConstant::kMaxTokenBytes` 와 같다
     };
 } // namespace sw
@@ -136,7 +136,7 @@ namespace sw
     struct EconomyHistoryRequest
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 512 )
+        PROPERTY( MaxCount = EconomyProtocol::kMaxCursorSize )
         string _cursor{}; ///< 앞 응답의 `_nextCursor` 이다. 처음에는 빈 문자열이다
         PROPERTY( Min = 1, Max = 100 )
         int32 _maxCount{ 20 };
@@ -170,13 +170,13 @@ namespace sw
         REFLECT_BODY();
         PROPERTY( MaxCount = OnlineLimit::kMaxBalanceCount )
         vector<LedgerBalance> _listBalance{}; ///< GetWallet 은 전부(스냅샷)를, Purchase 와 Redeem 은 바뀐 것만 담는다. 상한은 `OnlineLimit::kMaxBalanceCount` 와 같다
-        PROPERTY( MaxCount = 100 )
+        PROPERTY( MaxCount = EconomyProtocol::kMaxHistoryCount )
         vector<EconomyHistoryEntry> _listHistory{};
-        PROPERTY( MaxCount = 16 )
+        PROPERTY( MaxCount = LedgerConstant::kMaxPostingCount )
         vector<LedgerBalance> _listWithdrawn{}; ///< WithdrawPurchase 가 회수한 자산과 양이다. 스토어 환불 금액은 이것으로 정한다
-        PROPERTY( MaxCount = 64 )
+        PROPERTY( MaxCount = EconomyProtocol::kMaxProductIDSize )
         string _productID{}; ///< Redeem 의 영수증에 포함된 스토어 상품이다
-        PROPERTY( MaxCount = 512 )
+        PROPERTY( MaxCount = EconomyProtocol::kMaxCursorSize )
         string _nextCursor{};
         PROPERTY()
         EconomyResult _result{ EconomyResult::Ok };
@@ -210,6 +210,12 @@ namespace sw
         using MessageTypes = OnlineMessageTypes<EconomyPurchaseRequest, EconomyRedeemRequest, EconomyWithdrawRequest, EconomyHistoryRequest, EconomyReply, EconomyBalanceChanged>;
 
         static const OnlineProtocolEntry kOnlineEntry; ///< 온라인 스키마 해시에 섞이는 이 키트의 등록 항목. 정의가 `.cpp` 에 있어 모듈이 오를 때 등록된다
+        static constexpr int32           kMaxOfferIDSize        = 64;
+        static constexpr int32           kMaxStoreNameSize      = 64;
+        static constexpr int32           kMaxProductIDSize      = 64;
+        static constexpr int32           kMaxReceiptPayloadSize = 16384; ///< 영수증 한 장의 크기이다. Apple JWS 는 수 KB 이다
+        static constexpr int32           kMaxCursorSize         = 512;
+        static constexpr int32           kMaxHistoryCount       = 100; ///< 내역 응답 한 번의 항목 수이며 요청의 `_maxCount` 상한(`Max = 100`, 범위 키는 상수를 받지 못한다)과 같은 값이다
 
         /** @brief 공통 오류 코드(`OnlineError`)를 결과로 바꿉니다. 로그인 없음, 손상된 본문, 충돌은 각각 대응하는 결과로, 나머지(전송, 저장소, 시한)는 Unavailable 로 바꿉니다. */
         static EconomyResult fromErrorCode( uint16 errorCode );

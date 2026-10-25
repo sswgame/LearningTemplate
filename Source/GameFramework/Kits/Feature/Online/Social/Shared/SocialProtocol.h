@@ -110,7 +110,7 @@ namespace sw
     struct SocialRequest
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 256 )
+        PROPERTY( MaxCount = GuildLimit::kMaxNoticeSize )
         string _text{}; ///< kRequestFriendByName 과 kGuildCreate 의 이름, kSetPresence 의 활동 문구, kGuildSetNotice 의 공지이다. 상한은 가장 긴 공지(`GuildLimit::kMaxNoticeSize`)와 같다
         PROPERTY( MaxCount = LedgerConstant::kMaxAssetIDSize )
         string _assetID{}; ///< kGuildDeposit · kGuildWithdraw 의 자산. 상한은 `LedgerConstant::kMaxAssetIDSize` 와 같다

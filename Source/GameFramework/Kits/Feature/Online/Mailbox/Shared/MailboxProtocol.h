@@ -121,7 +121,7 @@ namespace sw
         REFLECT_BODY();
         PROPERTY( MaxCount = OnlineLimit::kMaxKeySize )
         string _mailKey{}; ///< 상한은 `OnlineLimit::kMaxKeySize` 와 같다
-        PROPERTY( MaxCount = 256 )
+        PROPERTY( MaxCount = OnlineLimit::kMaxKeySize )
         string _cursor{}; ///< List 에서 쓴다. 앞 응답의 `_nextCursor` 이며 처음에는 빈 문자열이다
         PROPERTY( Min = 1, Max = 50 )
         int32 _maxCount{ 20 }; ///< 상한은 `MailboxProtocol::kMaxListCount` 와 같다
@@ -135,11 +135,11 @@ namespace sw
     struct MailboxReply
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 100 )
+        PROPERTY( MaxCount = MailboxProtocol::kMaxViewCount )
         vector<MailView> _listMail{}; ///< 캠페인이 개인 우편 앞에 끼어들므로 상한은 `MailboxProtocol::kMaxListCount` 의 두 배이다
         PROPERTY( MaxCount = OnlineLimit::kMaxBalanceCount )
         vector<LedgerBalance> _listBalance{}; ///< 수령과 모두 받기에서 바뀐 잔액이다. 게임이 EconomyClient::applyBalances 로 넘긴다
-        PROPERTY( MaxCount = 256 )
+        PROPERTY( MaxCount = OnlineLimit::kMaxKeySize )
         string _nextCursor{};
         PROPERTY()
         int32 _claimedCount{ 0 };
@@ -156,9 +156,9 @@ namespace sw
     {
         REFLECT_BODY();
         static constexpr uint32 kBusVersion = 1; ///< push 중계(`OnlinePushRelay`)의 의미 버전(docs/09_Decisions.md 5-9 서버 버스 의미 버전)
-        PROPERTY( MaxCount = 256 )
+        PROPERTY( MaxCount = OnlineLimit::kMaxKeySize )
         string _mailKey{}; ///< 상한은 `OnlineLimit::kMaxKeySize` 와 같다
-        PROPERTY( MaxCount = 128 )
+        PROPERTY( MaxCount = ServiceMailConstant::kMaxTitleSize )
         string _titleKey{}; ///< 상한은 `ServiceMailConstant::kMaxTitleSize` 와 같다
     };
 } // namespace sw
@@ -175,6 +175,7 @@ namespace sw
 
         static const OnlineProtocolEntry kOnlineEntry; ///< 온라인 스키마 해시에 섞이는 이 키트의 등록 항목. 정의가 `.cpp` 에 있어 모듈이 오를 때 등록된다
         static constexpr int32           kMaxListCount   = 50;
+        static constexpr int32           kMaxViewCount   = kMaxListCount * 2; ///< 응답 한 번의 우편 수. 캠페인이 개인 우편 앞에 끼어든다
         static constexpr const utf8*     kCampaignPrefix = "campaign/";
 
         /** @brief 공통 오류 코드(`OnlineError`)를 결과로 바꿉니다. 로그인 없음, 손상된 본문, 충돌은 각각 대응하는 결과로, 나머지는 Unavailable 로 바꿉니다. */

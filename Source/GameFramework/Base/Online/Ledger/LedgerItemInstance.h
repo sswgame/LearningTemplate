@@ -27,7 +27,7 @@ namespace sw
     struct SW_GF_API LedgerItemState
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = 48 )
+        PROPERTY( MaxCount = LedgerConstant::kMaxAssetIDSize )
         string _assetID{}; ///< `item.<정의>-<id 16진>` 이다. 레코드 키와 같다
         PROPERTY( Min = 0 )
         int32 _durability{ 0 };
