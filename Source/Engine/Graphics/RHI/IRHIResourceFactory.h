@@ -165,35 +165,85 @@ namespace sw
          */
         virtual RHIFormat getTextureFormat( RHITextureHandle texture ) const = 0;
 
+        // ------------------------------------------------------------------------------
+        // 전송: 제출 → 티켓 → 폴링 (docs/plans/RhiAsyncUploads.md 2.2)
+        // ------------------------------------------------------------------------------
+        // 규칙: 이 인터페이스에는 GPU 완료를 기다리는 가상 함수를 새로 만들지 않는다. 기다리는 변형은 Engine 의 `RHITransferUtil::...AndWait` 헬퍼이고
+        //       vtable 밖에 있다. 소비자는 `pollTransfer` 가 `Complete` 를 돌려준 뒤에야 텍스처를 bindless 에 등록한다 — 백엔드가 레코드의 마지막 전송 시리얼로
+        //       이를 확인하고, 끝나지 않은 전송이 있는 텍스처의 등록은 오류를 남기고 `kInvalidDescriptorIndex` 를 돌려준다(주석이 아니라 코드가 막는다).
+        // 계약 (제출 함수 공통):
+        //   1. 반환하기 전에 소스 메모리를 복사한다. 호출자는 바로 버퍼를 재사용한다.
+        //   2. GPU 완료를 기다리지 않는다. 결과는 세 가지다.
+        //      - `Accepted`: 티켓이 유효하다.
+        //      - `Busy`: **다시 시도하면 될 수 있을 때만** 쓴다(지금은 스테이징 링이나 단독 버퍼 총량이 차 있지만 GPU 가 진행하면 비는 경우). 티켓은 무효이고 호출자가 다음 프레임에 다시 제출한다.
+        //      - `Rejected`: 다시 시도해도 안 되는 요청이다. 검사에 걸린 것(포맷, 범위, 데이터 크기, 잘못된 핸들)과 링 · 단독 버퍼 총량 **상한보다 큰 요청**, 장치 손실이 여기에 든다.
+        //        이유는 로그로 남는다.
+        //   3. 순서는 양방향이다. (a) 이 전송은 **앞서 제출된** 프레임(`endFrame` 이 이미 반환한 프레임) 뒤에 실행되고, (b) **뒤에 제출될** 모든 프레임 커맨드 앞에 실행된다.
+        //      (c) 같은 텍스처에 대한 제출끼리는 제출 순서대로 실행된다. (d) 되읽기는 요청 시점까지 제출된 프레임(직전 프레임까지)의 쓰기를 본다.
+        //      진행 중인 프레임 안에서 `executeCommandList` 로 넘긴 리스트는 (a) 에 들지 않는다: DX12 · Vulkan 은 그 리스트들을 `endFrame` 까지 모아 두었다가 한 번에 내므로
+        //      전송이 그 앞에 끼고, DX11 · GL 은 곧바로 실행한다. 아직 제출하지 않고 기록 중인 커맨드 리스트가 어느 내용을 보는지도 백엔드마다 달라 정해져 있지 않으므로
+        //      호출자는 전송을 그리기 기록 전에 제출한다.
+        //      **렌더 타깃처럼 프레임 커맨드가 상태(레이아웃 · 리소스 상태)를 바꾸는 텍스처의 전송은 RT 기록 밖 구간에서만** 제출한다. 기록 중인 프레임과 같은 텍스처의 상태를 두 곳에서 바꾸지 않게 하는 규칙이다.
+        //   4. 스레드: 제출 함수는 **어느 스레드에서나** 부를 수 있다. DX11 · DX12 · Vulkan 은 자기 락으로 직렬화하고, GL 은 제출 함수가 `ScopedOpenGLContext` 로 컨텍스트를 빌린다
+        //      (렌더 스레드가 쥐고 있으면 프레임 끝에 놓을 때까지 기다린다). GL 의 비 RT 스레드 제출은 컨텍스트를 두고 RT 와 겨루므로 프레임 경로 밖(동기 `acquire`, 도구)에서만 쓴다.
+        //   5. 시리얼은 **큐에 낸 순서대로 같은 락 안에서** 매긴다(`RHITransferSerials::issue`). 락 밖에서 매기면 시리얼 순서가 큐 실행 순서와 어긋나 워터마크가 끝나지 않은 제출을 덮는다.
+        //      티켓에는 장치 세대가 실려 있어, 백엔드를 바꾼 뒤의 옛 티켓은 새 장치에서 `Failed` 다.
+        //   6. 전송 중인 텍스처를 `destroyTexture` 하면 백엔드가 GPU 자원 해제를 전송이 끝난 뒤로 미룬다(해제 큐). 호출자는 전송 중에도 안전하게 파괴할 수 있지만 그 티켓의 결과는 쓸 수 없다.
+        //   7. 진행: 프레임을 돌리지 않아도 `pollTransfer` 를 되풀이하면 결국 `Complete` 나 `Failed` 가 된다. 아직 GPU 에 내보내지 않은 일(DX12 의 열린 복사 리스트, GL 의 flush 안 된 명령)은
+        //      제출이나 폴링이 내보낸다. 단 GL 은 컨텍스트를 기다리지 않으므로(`pollTransfer` 참고) 컨텍스트를 가진 스레드의 폴링 · 제출 · `endFrame` 이 워터마크를 올린다.
+
         /**
-         * @brief 2D 텍스처에 픽셀을 올립니다. 밉 0 부터 차례로, 행은 빈틈없이(DDS 배치) 받습니다.
-         * @details 로드 시점용 동기 경로다. DX12 는 열어 둔 복사 리스트에 기록해 두고 프레임 리스트 앞에 끼워 제출하며
-         *          (flushPendingUploads), Vulkan 은 제출하고 기다린다. DX11 과 GL 은 즉시 컨텍스트에 들어간다.
-         *          어느 쪽이든 뒤이은 드로우보다 먼저 실행된다. 매 프레임 갱신하는 용도가 아니다.
-         *          createTexture2D 가 _bIsShaderResource 로 만든 컬러 포맷(비압축, BC)만 받고, 깊이와 Unknown 은
+         * @brief 2D 텍스처에 픽셀을 올리도록 제출합니다. 밉 0 부터 차례로, 행은 빈틈없이(DDS 배치) 받습니다.
+         * @details createTexture2D 가 _bIsShaderResource 로 만든 컬러 포맷(비압축, BC)만 받고, 깊이와 Unknown 은
          *          받지 않는다(getRHIFormatBlockInfo 참고). 밉 크기와 오프셋 규칙은 resolveTextureUploadMips 한 곳이 정한다.
-         * @return 포맷이 업로드할 수 없는 것이거나 데이터가 모자라면 false 입니다.
+         *          매 프레임 갱신하는 용도가 아니다.
+         * @return `Accepted` 면 티켓으로 `pollTransfer` 한다. 포맷이 업로드할 수 없는 것이거나 데이터가 모자라면 `Rejected` 다.
          */
-        virtual bool uploadTexture2D( RHITextureHandle texture, const RHITextureUploadDesc& desc ) = 0;
+        [[nodiscard]] virtual RHITransferSubmit submitTextureUpload( RHITextureHandle texture, const RHITextureUploadDesc& desc ) = 0;
 
         /**
-         * @brief 2D 텍스처의 밉 하나, 면 하나의 사각형 구간에 픽셀을 올립니다(비압축 컬러 포맷만). 나머지 픽셀은 그대로 둡니다.
-         * @details 동기 규약은 uploadTexture2D 와 같다. 뒤이은 드로우보다 먼저 실행된다(DX12 는 같은 업로드 슬롯의 복사 리스트,
-         *          Vulkan 은 일회성 커맨드를 제출하고 기다리고, DX11 과 GL 은 즉시 컨텍스트). 글리프 아틀라스처럼 **가끔, 작게** 바뀌는 텍스처용이고,
-         *          매 프레임 큰 구간을 올리는 용도가 아니다. 검사(포맷, 범위, 데이터 크기)는 validateTextureRegionUpload 한 곳이 한다.
-         * @return 검사에 걸리면 false 입니다(이유는 로그에 남깁니다).
+         * @brief 2D 텍스처의 밉 하나, 면 하나의 사각형 구간에 픽셀을 올리도록 제출합니다(비압축 컬러 포맷만). 나머지 픽셀은 그대로 둡니다.
+         * @details 글리프 아틀라스처럼 **가끔, 작게** 바뀌는 텍스처용이고, 매 프레임 큰 구간을 올리는 용도가 아니다.
+         *          검사(포맷, 범위, 데이터 크기)는 validateTextureRegionUpload 한 곳이 한다.
+         * @return 검사에 걸리면 `Rejected` 입니다(이유는 로그에 남깁니다).
          */
-        [[nodiscard]] virtual bool uploadTexture2DRegion( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc ) = 0;
+        [[nodiscard]] virtual RHITransferSubmit submitTextureRegionUpload( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc ) = 0;
 
         /**
-         * @brief 텍스처의 면(`arraySlice`: 배열 원소 또는 큐브 면, 2D 는 0) 하나의 밉 하나를 CPU 로 읽어 옵니다. 행은 빈틈없이(업로드와 같은 배치,
+         * @brief 텍스처의 면(`arraySlice`: 배열 원소 또는 큐브 면, 2D 는 0) 하나의 밉 하나를 CPU 로 읽도록 요청합니다. 행은 빈틈없이(업로드와 같은 배치,
          *        BC 는 블록 행) 채웁니다.
-         * @details GPU 를 기다리는 **동기** 경로다. 테스트, 도구, 스크린샷 용도이지 프레임 경로가 아니다.
-         *          outLayout 에 밉 크기와 행 바이트가 채워진다(_pData 는 outBytes.data() 를 가리키지 않는다).
-         *          깊이 텍스처는 네 백엔드 모두 `kRHIDepthReadbackFormat` 배치(텍셀마다 0..1 깊이 float32, 스텐실 없음)로 채운다.
-         * @return 포맷이 대상이 아니거나 밉이나 면이 범위 밖이면 false 입니다.
+         * @param outLayout 밉 크기와 행 바이트입니다. **제출 시점에 바로 채웁니다**(_pData 는 쓰지 않는다). 결과 바이트는 `takeTextureReadback` 이 준다.
+         * @details 깊이 텍스처는 네 백엔드 모두 `kRHIDepthReadbackFormat` 배치(텍셀마다 0..1 깊이 float32, 스텐실 없음)로 채운다.
+         *          요청 시점까지 제출된 이 텍스처의 쓰기가 읽기에 보인다(순서 규칙 3).
+         * @return 포맷이 대상이 아니거나 밉이나 면이 범위 밖이면 `Rejected` 다.
          */
-        virtual bool readbackTexture2D( RHITextureHandle texture, uint32 mip, uint32 arraySlice, vector<uint8>& outBytes, RHITextureMipSpan& outLayout ) = 0;
+        [[nodiscard]] virtual RHITransferSubmit submitTextureReadback( RHITextureHandle texture, uint32 mip, uint32 arraySlice, RHITextureMipSpan& outLayout ) = 0;
+
+        /**
+         * @brief 제출한 전송의 진행 상태를 값싸게 묻습니다. 기다리지 않습니다.
+         * @details `Complete` 는 완료 워터마크 이상으로 판정하므로 `Complete` 를 본 뒤 같은 티켓을 다시 물어도 `Complete` 이고, 티켓을 해제하는 함수는 없다.
+         *          무효 티켓, 다른 장치 세대의 티켓, 발급한 적 없는 시리얼은 오류를 남기고 `Failed` 다. 어느 스레드에서나 부를 수 있고, 프레임을 돌리지 않아도 되풀이하면 결국
+         *          `Complete` 나 `Failed` 가 된다(계약 7).
+         *          **GL 은 컨텍스트를 기다리며 빌리지 않는다**: 원자 워터마크를 읽고, 이 스레드가 이미 컨텍스트를 가졌을 때만 GL 에 물어 워터마크를 올린다.
+         *          컨텍스트가 없는 스레드의 폴링은 컨텍스트를 가진 쪽(RT 의 `endFrame`, 제출 스레드)이 올려 둔 워터마크만 본다.
+         */
+        [[nodiscard]] virtual RHITransferStatus pollTransfer( RHITransferTicket ticket ) = 0;
+
+        /**
+         * @brief 완료된 읽기 결과를 **한 번** 가져갑니다.
+         * @param ticket `submitTextureReadback` 이 돌려준 티켓입니다. `pollTransfer` 가 `Complete` 를 돌려준 뒤에 부릅니다.
+         * @param outBytes 결과 바이트입니다(제출 때 받은 `outLayout` 의 배치).
+         * @return 읽기 티켓이 아니거나(업로드 티켓), 아직 `Complete` 가 아니거나, 이미 가져갔거나 버렸으면 false 입니다(이유는 로그).
+         */
+        [[nodiscard]] virtual bool takeTextureReadback( RHITransferTicket ticket, vector<uint8>& outBytes ) = 0;
+
+        /**
+         * @brief 가져가지 않을 읽기 결과를 버립니다. 시간 초과, `Failed`, 호출자가 더는 필요 없을 때 부릅니다.
+         * @details 읽기 티켓은 결과(또는 결과를 담은 스테이징)를 백엔드가 들고 있으므로 `take` 나 이 함수로 놓지 않으면 새어 나간다. 아직 `Pending` 이어도 부를 수 있다 —
+         *          진행 중인 GPU 복사가 쓰는 자원은 백엔드가 복사가 끝난 뒤에 해제한다. 업로드 티켓, 무효 티켓, 이미 가져갔거나 버린 티켓은 아무 일도 하지 않는다.
+         *          Engine 쪽 호출은 `RHITransferUtil::PendingReadback` 의 소멸자가 맡는다(손으로 짝을 맞추지 않는다).
+         */
+        virtual void discardTextureReadback( RHITransferTicket ticket ) = 0;
 
         // ------------------------------------------------------------------------------
         // Bindless: 텍스처/버퍼/UAV 등록과 해제
@@ -203,6 +253,8 @@ namespace sw
          * @details 텍스처 인덱스와 버퍼 인덱스는 **서로 다른 공간**이다. DX12 만 하나의 셰이더 가시
          *          힙을 공유하고, DX11/OpenGL/Vulkan 은 텍스처 테이블과 버퍼 테이블을 따로 둔다. 같은 정수가
          *          양쪽에서 각각 다른 리소스를 가리킬 수 있다. 그래서 해제도 종류별로 나뉜다.
+         *          **끝나지 않은 전송이 있는 텍스처는 등록하지 않는다.** 백엔드가 레코드의 마지막 전송 시리얼이 완료 워터마크 아래인지 확인하고, 아니면 오류를 남기고
+         *          `kInvalidDescriptorIndex` 를 돌려준다(소비자는 `pollTransfer` 가 `Complete` 를 돌려준 뒤에 등록한다).
          */
         virtual RHIDescriptorIndex registerBindlessTexture( RHITextureHandle texture ) = 0;
 

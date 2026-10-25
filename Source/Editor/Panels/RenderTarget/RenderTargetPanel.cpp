@@ -17,6 +17,7 @@
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
+#include "Engine/Graphics/RHI/Support/RHITransferUtil.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
@@ -245,7 +246,7 @@ namespace sw::editor
         upload._pData     = image._byte.data();
         upload._sizeBytes = static_cast<uint32>( image._byte.size() );
         upload._mipLevels = 1;
-        if ( pResource->uploadTexture2D( _snapshotTexture, upload ) == false )
+        if ( RHITransferUtil::uploadTexture2DAndWait( *pResource, _snapshotTexture, upload ) == false )
         {
             SW_LOG_WARNING( "Render target preview %#x%# could not be uploaded", image._width, image._height );
             releaseSnapshotTexture( pDevice );

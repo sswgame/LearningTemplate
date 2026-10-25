@@ -78,6 +78,16 @@ namespace sw
         , _fenceEvent{ nullptr }
         , _fence{ nullptr }
         , _fenceValue{ 0 }
+        , _transferSerials{}
+        , _transferFence{ nullptr }
+        , _transferFenceValue{ 0 }
+        , _openTransferSerial{ 0 }
+        , _unsignaledTransferSerial{ 0 }
+        , _exportedTransferSerial{ 0 }
+        , _transferMutex{}
+        , _listSignaledTransfer{}
+        , _mapTextureTransferSerial{}
+        , _readbackTable{}
         , _releaseQueue{ constant::kGPUReleaseFrameLatency }
         , _frameStreamContext{ nullptr }
         , _resourceImpl{ nullptr }
@@ -295,13 +305,15 @@ namespace sw
         return info.SizeInBytes == UINT64_MAX ? kRHIMemoryUnknownBytes : static_cast<uint64>( info.SizeInBytes );
     }
 
-    void D3D12RHIDevice::releaseTrackedResourceDeferred( Microsoft::WRL::ComPtr<ID3D12Resource> owned, const RHIMemoryKey& key )
+    void D3D12RHIDevice::releaseTrackedResourceDeferred( Microsoft::WRL::ComPtr<ID3D12Resource> owned, const RHIMemoryKey& key, bool bAfterUnfinishedTransfer )
     {
+        // 끝나지 않은 전송이 있으면 한 값 더 기다린다: 프레임 제출과 Signal 사이에 연 복사는 다음 구간의 Signal 에서야 끝난다(`openUploadSlot` 의 `_resetFence` 와 같은 사정).
+        const uint64 releaseFence = bAfterUnfinishedTransfer ? _fenceValue + 1 : _fenceValue;
         // 키 공간은 템플릿 인자로 갈라 람다를 델리게이트의 인라인 칸(24 바이트)에 맞춘다.
         if ( key._space == RHIMemoryKeySpace::Texture )
-            _releaseQueue.enqueueGPULedgerRelease<RHIMemoryKeySpace::Texture>( owned, getMemoryLedger(), key._id, _fenceValue );
+            _releaseQueue.enqueueGPULedgerRelease<RHIMemoryKeySpace::Texture>( owned, getMemoryLedger(), key._id, releaseFence );
         else
-            _releaseQueue.enqueueGPULedgerRelease<RHIMemoryKeySpace::Buffer>( owned, getMemoryLedger(), key._id, _fenceValue );
+            _releaseQueue.enqueueGPULedgerRelease<RHIMemoryKeySpace::Buffer>( owned, getMemoryLedger(), key._id, releaseFence );
     }
 
     bool D3D12RHIDevice::createMappedUploadBuffer( uint64 sizeBytes, Microsoft::WRL::ComPtr<ID3D12Resource>& outBuffer, void*& pOutMapped )

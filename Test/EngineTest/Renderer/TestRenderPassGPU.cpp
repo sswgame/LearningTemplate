@@ -34,6 +34,7 @@
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
+#include "Engine/Graphics/RHI/Support/RHITransferUtil.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
@@ -150,7 +151,7 @@ namespace
 
         sw::vector<uint8>     bytes;
         sw::RHITextureMipSpan layout{};
-        bOk = bOk && pFactory->readbackTexture2D( backCopy, 0, 0, bytes, layout );
+        bOk = bOk && sw::RHITransferUtil::readbackTexture2DAndWait( *pFactory, backCopy, 0, 0, bytes, layout );
         if ( bOk )
             outImage.assign( std::move( bytes ), layout, desc._format );
         pFactory->destroyTexture( backCopy );
@@ -423,7 +424,7 @@ namespace
                 return false;
             sw::vector<uint8>     bytes;
             sw::RHITextureMipSpan layout{};
-            if ( pDevice->getResourceFactory()->readbackTexture2D( pTexture->getHandle(), 0, 0, bytes, layout ) == false )
+            if ( sw::RHITransferUtil::readbackTexture2DAndWait( *pDevice->getResourceFactory(), pTexture->getHandle(), 0, 0, bytes, layout ) == false )
                 return false;
             outImage.assign( std::move( bytes ), layout, pTexture->getFormat() );
             return true;
@@ -7096,7 +7097,7 @@ SW_TEST_CASE( RenderPassGPUTest, PresentCaptureFollowsOffscreenOutput )
         sw::RHITextureMipSpan outputLayout{};
         sw::vector<uint8>     captureBytes;
         sw::RHITextureMipSpan captureLayout{};
-        bOk = bOk && pFactory->readbackTexture2D( outputTarget, 0, 0, outputBytes, outputLayout ) &&
+        bOk = bOk && sw::RHITransferUtil::readbackTexture2DAndWait( *pFactory, outputTarget, 0, 0, outputBytes, outputLayout ) &&
               renderer.getCapture().readbackPresent( captureBytes, captureLayout );
         SW_EXPECT_TRUE_MSG( bOk, ( label + "그리기 · 출력 RT · 캡처 읽기" ).c_str() );
         if ( bOk )
@@ -7354,7 +7355,7 @@ SW_TEST_CASE( RenderPassGPUTest, ExtraViewSortsTransparencyFromItsOwnEye )
             const sw::Texture2D*  pTexture = sw::engine::getSubsystem<sw::AssetManager>().getAssetCache<sw::TextureCache>().find( "rendertarget/test_extraviewtransparency" );
             sw::vector<uint8>     bytes;
             sw::RHITextureMipSpan layout{};
-            bOk = pTexture != nullptr && device->getResourceFactory()->readbackTexture2D( pTexture->getHandle(), 0, 0, bytes, layout );
+            bOk = pTexture != nullptr && sw::RHITransferUtil::readbackTexture2DAndWait( *device->getResourceFactory(), pTexture->getHandle(), 0, 0, bytes, layout );
             if ( bOk )
                 viewImage.assign( std::move( bytes ), layout, pTexture->getFormat() );
         }
@@ -8157,7 +8158,7 @@ SW_TEST_CASE( RenderPassGPUTest, WaterWaveShaderMatchesCPU )
 
             sw::vector<uint8>     bytes;
             sw::RHITextureMipSpan layout{};
-            const bool            bRead = pResource->readbackTexture2D( texture, 0, 0, bytes, layout );
+            const bool            bRead = sw::RHITransferUtil::readbackTexture2DAndWait( *pResource, texture, 0, 0, bytes, layout );
             SW_EXPECT_TRUE_MSG( bRead && layout._rowBytes >= kTexelPerRow * 4 && bytes.size() >= static_cast<size_t>( layout._rowBytes ) * kSampleCount, pName );
             const bool bReadbackValid = bRead && layout._rowBytes >= kTexelPerRow * 4 && bytes.size() >= static_cast<size_t>( layout._rowBytes ) * kSampleCount;
             if ( bReadbackValid )

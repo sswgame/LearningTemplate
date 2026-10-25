@@ -7,6 +7,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/deque.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 
@@ -21,6 +22,7 @@
 #include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
 #include "Engine/Graphics/RHI/Support/RHIReleaseQueue.h"
 #include "Engine/Graphics/RHI/Support/RHITimestamp.h"
+#include "Engine/Graphics/RHI/Support/RHITransferSerials.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
 #include <shared_mutex>
@@ -370,8 +372,10 @@ namespace sw
         /**
          * @brief 핸들 테이블에서 꺼낸 자원을 지금 펜스 뒤에 해제하고, 그때 장부에서 뺍니다. destroyBuffer 와 destroyTexture 가 공통으로 쓰는 해제 함수입니다.
          * @details 장부는 GPU 가 실제로 해제한 뒤에 줄어야 한다. 해제 요청 시점에 빼면 아직 GPU 메모리를 쥔 자원이 장부에서 먼저 사라진다.
+         * @param bAfterUnfinishedTransfer 이 자원에 끝나지 않은 전송이 있으면 true 입니다. 열린(아직 내보내지 않은) 복사 리스트는 다음 프레임 Signal 에서야 끝나므로 한 펜스 값 더 기다렸다가 놓는다
+         *                                 (전송 중인 텍스처의 파괴를 전송 완료 뒤로 미루는 계약 6).
          */
-        void releaseTrackedResourceDeferred( Microsoft::WRL::ComPtr<ID3D12Resource> owned, const RHIMemoryKey& key );
+        void releaseTrackedResourceDeferred( Microsoft::WRL::ComPtr<ID3D12Resource> owned, const RHIMemoryKey& key, bool bAfterUnfinishedTransfer );
         /**
          * @brief 루트 시그니처(루트 CBV, t/u 슬롯 테이블, 텍스처 배열 테이블, 루트 상수, 정적 샘플러), 커맨드 시그니처, 풀스크린 정점 버퍼를 만듭니다.
          */
@@ -496,12 +500,12 @@ namespace sw
             RHITextureHandle                       _texture{ 0 };
         };
 
-        // 업로드(updateStructuredBufferRegions, uploadTexture2D) 전용 프레임 링 슬롯. 매 호출마다 업로드 힙과 커맨드 리스트를
+        // 업로드(updateStructuredBufferRegions, submitTexture*) 전용 프레임 링 슬롯. 매 호출마다 업로드 힙과 커맨드 리스트를
         // 새로 만들지 않도록 재사용한다. 이 슬롯은 waitForRingSlot() 이 이미 보장한 프레임 링 안전성에
         // 편승한다(같은 인덱스를 다시 쓸 때는 constant::kMaxFrameCountInFlight 프레임 전 제출이 이미 GPU 에서 끝났다).
         /**
          * @struct StructuredUploadSlot
-         * @brief 업로드(updateStructuredBufferRegions, uploadTexture2D)가 쓰는 프레임 링 슬롯 하나입니다. 스테이징 힙과 복사 얼로케이터, 리스트로 이루어집니다.
+         * @brief 업로드(updateStructuredBufferRegions, submitTexture*)가 쓰는 프레임 링 슬롯 하나입니다. 스테이징 힙과 복사 얼로케이터, 리스트로 이루어집니다.
          * @details 한 프레임 안에서 여러 번 불린다(GPUScene 만 해도 인스턴스, 배치 테이블, 간접 인자, 머티리얼 그룹). 그래서
          *          얼로케이터는 **펜스 구간마다 한 번만** Reset 하고(_resetFence), 스테이징은 bump
          *          오프셋으로 이어서 쓴다(_uploadOffset). 주의: 호출마다 둘 다 처음부터 다시 쓰면 두 번째 호출이
@@ -529,6 +533,25 @@ namespace sw
          *                    endFrame 의 한 번의 제출에 같이 나갑니다.
          */
         void flushPendingUploads( bool bExecuteNow );
+        /**
+         * @brief 새 전송의 시리얼을 발급합니다. **`_uploadSlotMutex` 를 쥔 채**, 복사를 열린 리스트에 기록한 직후에 부릅니다(시리얼은 기록 순서대로 같은 락 안에서 매긴다).
+         * @details 열린 리스트가 내보내질 때(`flushPendingUploads`) 이 시리얼까지가 한 묶음으로 전송 펜스에 매인다.
+         */
+        uint64 issueTransferSerial();
+        /**
+         * @brief `flushPendingUploads` 가 내보낸 전송 묶음 뒤에 전송 펜스를 올립니다. **`_uploadSlotMutex` 를 쥔 채**, 내보낸 리스트를 큐에 **실행한 뒤**에 부릅니다.
+         * @details `flushPendingUploads( true )` 는 스스로 부른다. `flushPendingUploads( false )` 는 리스트를 `_listPendingSubmit` 에 끼우기만 하므로 호출자가 `ExecuteCommandLists` 뒤에 부른다.
+         *          전용 펜스라 프레임 펜스(`_fenceValue`)와 얼로케이터 펜스 구간을 건드리지 않고, 프레임을 돌리지 않아도 전송이 끝났음을 알 수 있다.
+         */
+        void signalExportedTransfers();
+        /** @brief 전송 펜스가 지난 묶음의 시리얼까지 완료 워터마크를 올립니다. 기다리지 않습니다. 어느 스레드에서나 부릅니다. */
+        void retireCompletedTransfers();
+        /** @brief 이 텍스처에 마지막으로 제출한 전송(업로드 또는 읽기 원본)의 시리얼을 기록합니다(bindless 등록 보호와 파괴 지연이 읽는다). */
+        void noteTextureTransfer( RHITextureHandle texture, uint64 serial );
+        /** @brief 이 텍스처에 마지막으로 제출한 전송의 시리얼입니다. 없으면 0 입니다. */
+        [[nodiscard]] uint64 findTextureTransferSerial( RHITextureHandle texture );
+        /** @brief 텍스처를 파괴할 때 전송 시리얼 칸을 지웁니다. */
+        void eraseTextureTransfer( RHITextureHandle texture );
         /**
          * @brief 즉시 제출 모드(`setImmediateSubmit`)면 모아 둔 리스트를 지금 큐에 넣습니다. 그 앞에 여기까지 기록된 업로드 복사를 끼웁니다.
          * @details 즉시 모드가 아니면 아무것도 하지 않는다(endFrame 의 한 번의 제출에 같이 나간다). 잘라 담은 순서 그대로 내보내므로 실행
@@ -658,6 +681,41 @@ namespace sw
         HANDLE                              _fenceEvent;
         Microsoft::WRL::ComPtr<ID3D12Fence> _fence;
         UINT64                              _fenceValue;
+
+        /// @brief `flushPendingUploads` 가 한 번에 내보낸 전송 묶음입니다. 전송 펜스가 `_fenceValue` 에 이르면 시리얼 `_maxSerial` 까지 끝난 것입니다.
+        struct SignaledTransfer
+        {
+            uint64 _fenceValue; ///< 전송 펜스(`_transferFence`) 값
+            uint64 _maxSerial;  ///< 이 묶음에 든 가장 큰 전송 시리얼
+        };
+        /// @brief 읽기 하나가 들고 있는 것입니다. 읽기 힙 버퍼와 그 안의 배치, 결과를 꺼낼 때 필요한 배치입니다(`takeTextureReadback` 이 Map 해서 읽습니다).
+        struct TextureReadbackRecord
+        {
+            Microsoft::WRL::ComPtr<ID3D12Resource> _readback;
+            D3D12_PLACED_SUBRESOURCE_FOOTPRINT     _footprint{};
+            RHITextureMipSpan                      _layout{};
+            UINT                                   _rowCount{ 0 };
+            UINT64                                 _rowSize{ 0 };
+            uint8                                  _bDepth{ SW_FALSE };
+        };
+        /// @brief 전송 티켓의 시리얼 발급기와 완료 워터마크입니다. 시리얼은 `_uploadSlotMutex` 안에서 발급합니다.
+        RHITransferSerials _transferSerials;
+        /// @brief 전송 전용 펜스입니다. 프레임 펜스와 따로 두어 전송 완료를 프레임 없이도 알 수 있고 얼로케이터 펜스 구간에 끼어들지 않습니다.
+        Microsoft::WRL::ComPtr<ID3D12Fence> _transferFence;
+        UINT64                              _transferFenceValue; ///< 마지막으로 올린 전송 펜스 값(`_uploadSlotMutex` 안에서만 올린다)
+        /// @brief 열린(아직 내보내지 않은) 복사 리스트에 든 가장 큰 전송 시리얼입니다. 0 이면 없습니다. `_uploadSlotMutex` 가 지킵니다.
+        uint64 _openTransferSerial;
+        /// @brief 내보냈지만 전송 펜스를 아직 올리지 않은 가장 큰 시리얼입니다(`flushPendingUploads( false )` 와 실행 사이). `_uploadSlotMutex` 가 지킵니다.
+        uint64 _unsignaledTransferSerial;
+        /// @brief 지금까지 내보낸 가장 큰 전송 시리얼입니다. 이보다 큰 티켓은 폴링이 내보냅니다. `_uploadSlotMutex` 가 지킵니다.
+        uint64 _exportedTransferSerial;
+        /// @brief 전송 펜스를 올린 묶음 목록입니다(펜스 값 순서). `_transferMutex` 가 지킵니다.
+        mutex                   _transferMutex;
+        deque<SignaledTransfer> _listSignaledTransfer;
+        /// @brief 텍스처 핸들에서 마지막 쓰기 전송의 시리얼을 찾는 표입니다. `_transferMutex` 가 지킵니다(DX12 텍스처는 레코드 없이 리소스 포인터만 들고 있다).
+        unordered_map<RHITextureHandle, uint64> _mapTextureTransferSerial;
+        /// @brief 아직 가져가지 않은 텍스처 읽기입니다(시리얼로 찾습니다).
+        RHIPendingReadbackTable<TextureReadbackRecord> _readbackTable;
 
         RHIReleaseQueue _releaseQueue;
 

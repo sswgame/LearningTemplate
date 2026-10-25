@@ -237,6 +237,10 @@ namespace sw
         }
         _frameSerial          = 0;
         _completedFrameSerial = 0;
+        // 낸 전송의 쿼리와 아직 가져가지 않은 읽기는 장치와 함께 놓는다(COM 이 GPU 가 쓰는 동안 자원을 붙들어 준다).
+        _transferQueue.retireAll( []( Microsoft::WRL::ComPtr<ID3D11Query>& query )
+        { query.Reset(); } );
+        _listFreeTransferQuery.clear();
         _deviceContext.Reset();
         _memoryAdapter.Reset();
         _device.Reset();

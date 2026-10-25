@@ -10,6 +10,7 @@
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
+#include "Engine/Graphics/RHI/Support/RHITransferUtil.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
 
 namespace sw::editor
@@ -30,7 +31,7 @@ namespace sw::editor
                 upload._pData     = listPixel.data();
                 upload._sizeBytes = static_cast<uint32>( listPixel.size() * sizeof( uint32 ) );
                 upload._mipLevels = 1;
-                return resource.uploadTexture2D( texture, upload );
+                return RHITransferUtil::uploadTexture2DAndWait( resource, texture, upload );
             }
 
             static uint8 toUnorm8( float32 value ) { return static_cast<uint8>( MathUtil::round( MathUtil::saturate( value ) * 255.0f ) ); }

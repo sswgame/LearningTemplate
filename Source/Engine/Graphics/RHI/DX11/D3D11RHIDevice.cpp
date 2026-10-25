@@ -98,6 +98,10 @@ namespace sw
         , _arrStaticSampler{}
         , _pHWnd{ nullptr }
         , _releaseQueue{ constant::kGPUReleaseFrameLatency }
+        , _transferSerials{}
+        , _transferQueue{ _transferSerials }
+        , _listFreeTransferQuery{}
+        , _readbackTable{}
         , _frameStreamContext{ nullptr }
         , _resourceImpl{ nullptr }
     {

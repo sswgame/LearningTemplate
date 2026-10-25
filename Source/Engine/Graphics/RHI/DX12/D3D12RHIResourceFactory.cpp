@@ -156,32 +156,6 @@ namespace sw
         return true;
     }
 
-    bool D3D12RHIResourceFactory::waitForQueueDrain()
-    {
-        const bool bQueueNotReady = _pDevice->_commandQueue == nullptr || _pDevice->_fence == nullptr || _pDevice->_fenceEvent == nullptr;
-        if ( bQueueNotReady )
-            return false;
-        if ( _pDevice->_device != nullptr && FAILED( _pDevice->_device->GetDeviceRemovedReason() ) )
-            return false;
-
-        // 열어 둔 복사가 있으면 먼저 내보낸다. 아래 펜스가 그것까지 덮어야 한다.
-        _pDevice->flushPendingUploads( true );
-
-        // waitForPreviousFrame 은 스왑체인 acquire 까지 하므로 프레임 중간에 부를 수 없다. 펜스만 올리고 기다린다.
-        // _fenceValue 가 올라가므로 다음 openUploadSlot 은 새 구간으로 보고 얼로케이터를 Reset 한다. 방금
-        // 기다린 작업이 그 얼로케이터의 마지막 사용이니 안전하다.
-        const UINT64 fenceToWait = _pDevice->_fenceValue;
-        if ( FAILED( _pDevice->_commandQueue->Signal( _pDevice->_fence.Get(), fenceToWait ) ) )
-            return false;
-        _pDevice->_fenceValue++;
-        if ( _pDevice->waitForFenceValue( fenceToWait ) == false )
-            return false;
-        const uint64 completedFence = _pDevice->_fence->GetCompletedValue();
-        _pDevice->_releaseQueue.tickCompleted( completedFence );
-        _pDevice->recycleCompletedOnlineBlocks( completedFence );
-        return true;
-    }
-
     bool D3D12RHIResourceFactory::acquireUploadStaging( uint64 sizeBytes, uint64 alignment, uint32& outSlotIndex, uint64& outOffset, void*& pOutMapped )
     {
         const bool bCannotAcquireStaging = sizeBytes == 0 || _pDevice->_device == nullptr || _pDevice->_commandQueue == nullptr;
@@ -335,20 +309,23 @@ namespace sw
         }
     }
 
-    bool D3D12RHIResourceFactory::uploadTexture2D( RHITextureHandle texture, const RHITextureUploadDesc& desc )
+    RHITransferSubmit D3D12RHIResourceFactory::submitTextureUpload( RHITextureHandle texture, const RHITextureUploadDesc& desc )
     {
         ID3D12Resource* pTexture                  = _pDevice->resolveTexture( texture );
         const bool      bTextureUploadUnavailable = pTexture == nullptr || _pDevice->_device == nullptr || _pDevice->_commandQueue == nullptr;
         if ( bTextureUploadUnavailable )
-            return false;
+        {
+            SW_LOG_ERROR( "submitTextureUpload: texture %# or the device is not usable", texture );
+            return RHITransferSubmit::rejected();
+        }
 
         std::scoped_lock<mutex> uploadLock{ _pDevice->_uploadSlotMutex };
 
         const D3D12_RESOURCE_DESC resourceDesc = pTexture->GetDesc();
         if ( desc._arraySlice >= resourceDesc.DepthOrArraySize )
         {
-            SW_LOG_ERROR( "uploadTexture2D: slice %# is out of range (%# slices)", desc._arraySlice, static_cast<uint32>( resourceDesc.DepthOrArraySize ) );
-            return false;
+            SW_LOG_ERROR( "submitTextureUpload: slice %# is out of range (%# slices)", desc._arraySlice, static_cast<uint32>( resourceDesc.DepthOrArraySize ) );
+            return RHITransferSubmit::rejected();
         }
         // 서브리소스 번호 = 밉 + 면 × 밉 수(D3D12CalcSubresource 와 같은 순서).
         const UINT        firstSubresource = desc._arraySlice * resourceDesc.MipLevels;
@@ -357,9 +334,9 @@ namespace sw
                                                                resourceDesc.Height, resourceDesc.MipLevels, arrMip, constant::kMaxTextureMipCount );
         if ( mipCount == 0 )
         {
-            SW_LOG_ERROR( "uploadTexture2D: unsupported format or not enough data (%# bytes for %#×%#, %# mips)",
+            SW_LOG_ERROR( "submitTextureUpload: unsupported format or not enough data (%# bytes for %#×%#, %# mips)",
                           desc._sizeBytes, static_cast<uint32>( resourceDesc.Width ), resourceDesc.Height, static_cast<uint32>( resourceDesc.MipLevels ) );
-            return false;
+            return RHITransferSubmit::rejected();
         }
 
         // 텍스처 복사는 행 피치 256 · 서브리소스 512 정렬 풋프린트를 요구한다. 빈틈없는 입력을 풋프린트대로 다시 깐다.
@@ -373,10 +350,14 @@ namespace sw
         uint64 stagingOffset{ 0 };
         void*  pMapped{ nullptr };
         if ( acquireUploadStaging( totalBytes, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT, slotIndex, stagingOffset, pMapped ) == false )
-            return false;
+        {
+            SW_LOG_ERROR( "submitTextureUpload: failed to acquire %# bytes of upload staging", totalBytes );
+            return RHITransferSubmit::rejected();
+        }
         // 스테이징 안의 실제 위치로 풋프린트를 다시 받는다(BaseOffset).
         _pDevice->_device->GetCopyableFootprints( &resourceDesc, firstSubresource, mipCount, stagingOffset, arrFootprint, arrRowCount, arrRowSize, &totalBytes );
 
+        // 소스를 스테이징으로 복사한다(계약 1). 이 뒤로 호출자는 버퍼를 재사용해도 된다.
         for ( uint32 mip = 0; mip < mipCount; ++mip )
         {
             const RHITextureMipSpan&                  span      = arrMip[mip];
@@ -426,16 +407,21 @@ namespace sw
             barrier.Transition.StateAfter  = stateBefore;
             pList->ResourceBarrier( 1, &barrier );
         }
-        // 제출은 프레임 끝(또는 큐 대기 직전)에 한 번이다. D3D12RHIDevice::flushPendingUploads.
-        return true;
+        // 제출은 프레임 끝(또는 큐 대기 직전, 또는 이 티켓을 폴링할 때)에 한 번이다. D3D12RHIDevice::flushPendingUploads. 시리얼은 같은 락 안에서 기록 직후에 매긴다.
+        const uint64 serial = _pDevice->issueTransferSerial();
+        _pDevice->noteTextureTransfer( texture, serial );
+        return _pDevice->_transferSerials.makeAccepted( serial );
     }
 
-    bool D3D12RHIResourceFactory::uploadTexture2DRegion( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc )
+    RHITransferSubmit D3D12RHIResourceFactory::submitTextureRegionUpload( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc )
     {
         ID3D12Resource* pTexture                        = _pDevice->resolveTexture( texture );
         const bool      bTextureRegionUploadUnavailable = pTexture == nullptr || _pDevice->_device == nullptr || _pDevice->_commandQueue == nullptr;
         if ( bTextureRegionUploadUnavailable )
-            return false;
+        {
+            SW_LOG_ERROR( "submitTextureRegionUpload: texture %# or the device is not usable", texture );
+            return RHITransferSubmit::rejected();
+        }
 
         // 슬롯 · 얼로케이터 규칙은 전체 업로드와 같은 것 하나다(acquireUploadStaging) — 같은 프레임에 업로드가 여럿이어도 슬롯을 두 번 Reset 하지 않는다.
         std::scoped_lock<mutex> uploadLock{ _pDevice->_uploadSlotMutex };
@@ -444,7 +430,7 @@ namespace sw
         uint32                    rowBytes{ 0 };
         if ( validateTextureRegionUpload( fromDxgiFormat( resourceDesc.Format ), static_cast<uint32>( resourceDesc.Width ), resourceDesc.Height,
                                           resourceDesc.MipLevels, resourceDesc.DepthOrArraySize, desc, rowBytes ) == false )
-            return false;
+            return RHITransferSubmit::rejected();
 
         // 복사 원본은 행 피치 256 정렬 풋프린트여야 한다 — 구간 크기로 손수 짓는다(GetCopyableFootprints 는 서브리소스 전체를 준다).
         const uint32 rowPitch = MathUtil::align( rowBytes, static_cast<uint32>( D3D12_TEXTURE_DATA_PITCH_ALIGNMENT ) );
@@ -452,7 +438,10 @@ namespace sw
         uint64       stagingOffset{ 0 };
         void*        pMapped{ nullptr };
         if ( acquireUploadStaging( static_cast<uint64>( rowPitch ) * desc._height, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT, slotIndex, stagingOffset, pMapped ) == false )
-            return false;
+        {
+            SW_LOG_ERROR( "submitTextureRegionUpload: failed to acquire %# bytes of upload staging", static_cast<uint64>( rowPitch ) * desc._height );
+            return RHITransferSubmit::rejected();
+        }
 
         uint8*       pDstBase = static_cast<uint8*>( pMapped ) + stagingOffset;
         const uint8* pSrcBase = static_cast<const uint8*>( desc._pData );
@@ -499,7 +488,76 @@ namespace sw
             barrier.Transition.StateAfter  = stateBefore;
             pList->ResourceBarrier( 1, &barrier );
         }
+        const uint64 serial = _pDevice->issueTransferSerial();
+        _pDevice->noteTextureTransfer( texture, serial );
+        return _pDevice->_transferSerials.makeAccepted( serial );
+    }
+
+    RHITransferStatus D3D12RHIResourceFactory::pollTransfer( RHITransferTicket ticket )
+    {
+        const RHITransferStatus status = _pDevice->_transferSerials.classify( ticket );
+        if ( status != RHITransferStatus::Pending )
+            return status;
+        const bool bDeviceGone = _pDevice->_commandQueue == nullptr || _pDevice->_transferFence == nullptr || ( _pDevice->_device != nullptr && FAILED( _pDevice->_device->GetDeviceRemovedReason() ) );
+        if ( bDeviceGone )
+        {
+            _pDevice->_transferSerials.markLost();
+            return _pDevice->_transferSerials.classify( ticket );
+        }
+        {
+            // 아직 내보내지 않은 전송(열린 복사 리스트)은 폴링이 내보낸다 — 프레임을 돌리지 않아도 되풀이하면 끝에 이른다(계약 7). 내보내면서 전송 펜스도 올린다.
+            std::scoped_lock<mutex> uploadLock{ _pDevice->_uploadSlotMutex };
+            if ( ticket._serial > _pDevice->_exportedTransferSerial )
+                _pDevice->flushPendingUploads( true );
+        }
+        _pDevice->retireCompletedTransfers();
+        return _pDevice->_transferSerials.classify( ticket );
+    }
+
+    bool D3D12RHIResourceFactory::takeTextureReadback( RHITransferTicket ticket, vector<uint8>& outBytes )
+    {
+        if ( pollTransfer( ticket ) != RHITransferStatus::Complete )
+        {
+            SW_LOG_ERROR( "takeTextureReadback: ticket %# has not completed", ticket._serial );
+            return false;
+        }
+        D3D12RHIDevice::TextureReadbackRecord record;
+        if ( _pDevice->_readbackTable.take( ticket._serial, record ) == false )
+        {
+            SW_LOG_ERROR( "takeTextureReadback: ticket %# is not a pending texture readback (an upload ticket, or already taken or discarded)", ticket._serial );
+            return false;
+        }
+
+        void* pMapped{ nullptr };
+        if ( FAILED( record._readback->Map( 0, nullptr, &pMapped ) ) || pMapped == nullptr )
+        {
+            SW_LOG_ERROR( "takeTextureReadback: failed to map the readback buffer of ticket %#", ticket._serial );
+            return false;
+        }
+        outBytes.assign( record._layout._sizeBytes, 0 );
+        const uint32 copyRowBytes = MathUtil::min( record._layout._rowBytes, static_cast<uint32>( record._rowSize ) );
+        for ( uint32 row = 0; row < record._rowCount; ++row )
+        {
+            Memory::copy( outBytes.data() + static_cast<uint64>( row ) * record._layout._rowBytes,
+                          static_cast<const uint8*>( pMapped ) + record._footprint.Offset + static_cast<uint64>( row ) * record._footprint.Footprint.RowPitch, copyRowBytes );
+        }
+        D3D12_RANGE noWrite{ 0, 0 };
+        record._readback->Unmap( 0, &noWrite );
+        if ( record._bDepth != SW_FALSE )
+            convertRHIDepth24ToFloat( outBytes.data(), record._layout._width * record._layout._height );
         return true;
+    }
+
+    void D3D12RHIResourceFactory::discardTextureReadback( RHITransferTicket ticket )
+    {
+        if ( ticket._deviceGeneration != _pDevice->_transferSerials.getGeneration() )
+            return;
+        D3D12RHIDevice::TextureReadbackRecord record;
+        if ( _pDevice->_readbackTable.take( ticket._serial, record ) == false )
+            return; // 업로드 티켓이거나 이미 가져감 · 버림이다 — 계약상 아무 일도 하지 않는다
+        // 복사 리스트가 아직 열려 있거나 GPU 에서 도는 중일 수 있어 읽기 버퍼를 지금 놓으면 안 된다. 프레임 펜스를 한 값 더 기다렸다가 놓는다
+        // (열린 복사는 다음 구간의 Signal 에서야 끝난다 — releaseTrackedResourceDeferred 와 같은 사정).
+        _pDevice->_releaseQueue.enqueueGPUKeepAlive( std::move( record._readback ), _pDevice->_fenceValue + 1 );
     }
 
     RHIFormat D3D12RHIResourceFactory::getTextureFormat( RHITextureHandle texture ) const
@@ -518,23 +576,33 @@ namespace sw
         return fromDxgiFormat( pTexture->GetDesc().Format );
     }
 
-    bool D3D12RHIResourceFactory::readbackTexture2D( RHITextureHandle texture, uint32 mip, uint32 arraySlice, vector<uint8>& outBytes, RHITextureMipSpan& outLayout )
+    RHITransferSubmit D3D12RHIResourceFactory::submitTextureReadback( RHITextureHandle texture, uint32 mip, uint32 arraySlice, RHITextureMipSpan& outLayout )
     {
         ID3D12Resource* pTexture                    = _pDevice->resolveTexture( texture );
         const bool      bTextureReadbackUnavailable = pTexture == nullptr || _pDevice->_device == nullptr || _pDevice->_commandQueue == nullptr;
         if ( bTextureReadbackUnavailable )
-            return false;
+        {
+            SW_LOG_ERROR( "submitTextureReadback: texture %# or the device is not usable", texture );
+            return RHITransferSubmit::rejected();
+        }
 
         std::scoped_lock<mutex> uploadLock{ _pDevice->_uploadSlotMutex };
 
         const D3D12_RESOURCE_DESC resourceDesc = pTexture->GetDesc();
         if ( mip >= resourceDesc.MipLevels || arraySlice >= resourceDesc.DepthOrArraySize )
-            return false;
-        // 깊이는 typeless(R24G8)로 만들어져 있다. 깊이 평면(평면 0)만 복사하고 아래에서 0..1 float32 로 바꾼다(kRHIDepthReadbackFormat).
+        {
+            SW_LOG_ERROR( "submitTextureReadback: mip %# / slice %# is out of range (%# mips, %# slices)", mip, arraySlice, static_cast<uint32>( resourceDesc.MipLevels ),
+                          static_cast<uint32>( resourceDesc.DepthOrArraySize ) );
+            return RHITransferSubmit::rejected();
+        }
+        // 깊이는 typeless(R24G8)로 만들어져 있다. 깊이 평면(평면 0)만 복사하고 가져갈 때 0..1 float32 로 바꾼다(kRHIDepthReadbackFormat).
         const bool      bDepth       = resourceDesc.Format == DXGI_FORMAT_R24G8_TYPELESS || resourceDesc.Format == DXGI_FORMAT_D24_UNORM_S8_UINT;
         const RHIFormat layoutFormat = bDepth ? kRHIDepthReadbackFormat : fromDxgiFormat( resourceDesc.Format );
         if ( computeRHITextureMipLayout( layoutFormat, static_cast<uint32>( resourceDesc.Width ), resourceDesc.Height, mip, outLayout ) == false )
-            return false;
+        {
+            SW_LOG_ERROR( "submitTextureReadback: unsupported format for %#x%# mip %#", static_cast<uint32>( resourceDesc.Width ), resourceDesc.Height, mip );
+            return RHITransferSubmit::rejected();
+        }
 
         // 평면 0 의 서브리소스 번호는 평면이 하나인 텍스처와 같다.
         const UINT                         subresource = mip + arraySlice * resourceDesc.MipLevels;
@@ -549,11 +617,17 @@ namespace sw
         Microsoft::WRL::ComPtr<ID3D12Resource> readback;
         if ( FAILED( _pDevice->_device->CreateCommittedResource( &readbackHeap, D3D12_HEAP_FLAG_NONE, &bufferDesc,
                                                                  D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS( readback.GetAddressOf() ) ) ) )
-            return false;
+        {
+            SW_LOG_ERROR( "submitTextureReadback: failed to create the readback buffer (%# bytes)", totalBytes );
+            return RHITransferSubmit::rejected();
+        }
 
         uint32 slotIndex{ 0 };
         if ( openUploadSlot( slotIndex ) == false )
-            return false;
+        {
+            SW_LOG_ERROR( "submitTextureReadback: failed to open the copy command list" );
+            return RHITransferSubmit::rejected();
+        }
         ID3D12GraphicsCommandList* pList = _pDevice->_arrStructuredUploadSlot[slotIndex]._copyCommandList.Get();
 
         const D3D12_RESOURCE_STATES stateBefore = _pDevice->getTrackedTextureState( texture );
@@ -585,25 +659,20 @@ namespace sw
             barrier.Transition.StateAfter  = stateBefore;
             pList->ResourceBarrier( 1, &barrier );
         }
-        // 큐 대기가 열어 둔 복사를 먼저 내보낸다(flushPendingUploads). 이 readback 도 그 안에 있다.
-        if ( waitForQueueDrain() == false )
-            return false;
+        // 이 복사는 열린 리스트에 있다. 프레임 끝이나 이 티켓의 폴링이 내보낸다. 읽기 버퍼는 보관표가 쥐고 있다가 `takeTextureReadback` 이 Map 한다.
+        // 원본 텍스처도 복사가 끝나기 전에는 해제되지 않게 전송 시리얼에 매단다(destroyTexture 가 해제를 미룬다).
+        const uint64 serial = _pDevice->issueTransferSerial();
+        _pDevice->noteTextureTransfer( texture, serial );
 
-        void* pMapped{ nullptr };
-        if ( FAILED( readback->Map( 0, nullptr, &pMapped ) ) || pMapped == nullptr )
-            return false;
-        outBytes.assign( outLayout._sizeBytes, 0 );
-        const uint32 copyRowBytes = MathUtil::min( outLayout._rowBytes, static_cast<uint32>( rowSize ) );
-        for ( uint32 row = 0; row < rowCount; ++row )
-        {
-            Memory::copy( outBytes.data() + static_cast<uint64>( row ) * outLayout._rowBytes,
-                          static_cast<const uint8*>( pMapped ) + footprint.Offset + static_cast<uint64>( row ) * footprint.Footprint.RowPitch, copyRowBytes );
-        }
-        D3D12_RANGE noWrite{ 0, 0 };
-        readback->Unmap( 0, &noWrite );
-        if ( bDepth )
-            convertRHIDepth24ToFloat( outBytes.data(), outLayout._width * outLayout._height );
-        return true;
+        D3D12RHIDevice::TextureReadbackRecord record;
+        record._readback  = std::move( readback );
+        record._footprint = footprint;
+        record._layout    = outLayout;
+        record._rowCount  = rowCount;
+        record._rowSize   = rowSize;
+        record._bDepth    = bDepth ? SW_TRUE : SW_FALSE;
+        _pDevice->_readbackTable.add( serial, std::move( record ) );
+        return _pDevice->_transferSerials.makeAccepted( serial );
     }
 
     RHIBufferHandle D3D12RHIResourceFactory::createVertexBuffer( const void* pData, uint32 sizeBytes )
@@ -711,7 +780,7 @@ namespace sw
             }
         }
 
-        _pDevice->releaseTrackedResourceDeferred( std::move( owned ), RHIMemoryKey::makeBuffer( buffer ) );
+        _pDevice->releaseTrackedResourceDeferred( std::move( owned ), RHIMemoryKey::makeBuffer( buffer ), false );
     }
 
     RHIBufferHandle D3D12RHIResourceFactory::createReadbackBuffer( uint32 elementSize, uint32 elementCount )
@@ -985,7 +1054,11 @@ namespace sw
             }
         }
 
-        _pDevice->releaseTrackedResourceDeferred( std::move( owned ), RHIMemoryKey::makeTexture( texture ) );
+        // 전송 중인 텍스처의 해제는 전송이 끝난 뒤로 미룬다(전송 계약 6). 같은 핸들이 다시 쓰이지 않도록 표의 칸도 지운다.
+        const uint64 lastTransferSerial = _pDevice->findTextureTransferSerial( texture );
+        _pDevice->eraseTextureTransfer( texture );
+        const bool bUnfinishedTransfer = lastTransferSerial != 0 && _pDevice->_transferSerials.isComplete( lastTransferSerial ) == false;
+        _pDevice->releaseTrackedResourceDeferred( std::move( owned ), RHIMemoryKey::makeTexture( texture ), bUnfinishedTransfer );
     }
 } // namespace sw
 #endif

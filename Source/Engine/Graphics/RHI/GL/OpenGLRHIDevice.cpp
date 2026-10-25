@@ -51,6 +51,9 @@ namespace sw
         , _arrFrameDoneSync{}
         , _frameSerial{ 0 }
         , _completedFrameSerial{ 0 }
+        , _transferSerials{}
+        , _transferQueue{ _transferSerials }
+        , _readbackTable{}
         , _frameStreamContext{ nullptr }
         , _resourceImpl{ nullptr }
         , _computeRootConstantUbo{ 0 }

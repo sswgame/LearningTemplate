@@ -19,6 +19,7 @@
 #include "Engine/Graphics/RHI/Support/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Support/RHIReleaseQueue.h"
 #include "Engine/Graphics/RHI/Support/RHITimestamp.h"
+#include "Engine/Graphics/RHI/Support/RHITransferSerials.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
 namespace sw
@@ -202,6 +203,14 @@ namespace sw
          * @details 링이 가득 차면(프레임 `kMaxFrameCountInFlight` 개가 GPU 에 남음) 가장 오래된 프레임이 끝날 때까지 기다린다 — DX12 · Vulkan 의 링 슬롯 대기와 같다.
          */
         void retireFrameOnGPU();
+        /**
+         * @brief 방금 낸 전송 뒤에 펜스를 달고(`glFenceSync` + `glFlush`) 시리얼을 발급합니다. GL 컨텍스트를 가진 스레드에서, 전송 명령을 낸 직후에 부릅니다.
+         * @param bGPUPending 거짓이면 이미 끝난 제출(동기로 읽어 둔 되읽기)이라 펜스를 달지 않습니다.
+         * @details `glFlush` 가 있어야 프레임을 돌리지 않아도 펜스가 신호한다(계약 7). 시리얼은 컨텍스트를 쥔 채 큐에 낸 순서대로 매긴다.
+         */
+        uint64 endTransfer( bool bGPUPending );
+        /** @brief 앞에서부터 끝난 전송의 펜스를 놓고 워터마크를 올립니다. 기다리지 않습니다. GL 컨텍스트를 가진 스레드에서만 부릅니다. */
+        void retireFinishedTransfers();
 
         /** @brief 컴퓨트 루트 상수 UBO 를 확보합니다. */
         bool ensureComputeRootConstantUbo();
@@ -251,9 +260,11 @@ namespace sw
             uint32              _target{ 0x0DE1 };    ///< GL_TEXTURE_2D, GL_TEXTURE_2D_ARRAY, GL_TEXTURE_CUBE_MAP 중 하나
             uint32              _arraySize{ 1 };      ///< 면 수(배열 원소, 큐브 면)
             RHITextureDimension _dimension{ RHITextureDimension::Texture2D };
-            uint8               _bDepthStencil : 1;
-            uint8               _bUAV          : 1;
-            uint8               _reserved      : 6;
+            /// 이 텍스처에 마지막으로 제출한 쓰기 전송(업로드)의 시리얼입니다. 0 이면 전송한 적이 없습니다. bindless 등록이 이 전송이 끝났는지 확인합니다(`RHITransferSerials::isTextureReadyToRegister`).
+            atomic<uint64> _lastTransferSerial{ 0 };
+            uint8          _bDepthStencil : 1;
+            uint8          _bUAV          : 1;
+            uint8          _reserved      : 6;
             /// @brief 면이 여럿일 때 면 하나를 첨부한 FBO 들입니다(0번은 `_fbo`). 면이 하나면 비어 있습니다.
             vector<uint32> _listSliceFbo;
 
@@ -398,6 +409,13 @@ namespace sw
         void*  _arrFrameDoneSync[constant::kMaxFrameCountInFlight];
         uint64 _frameSerial;          ///< `endFrame` 이 끝낸 프레임 수입니다. `enqueueGPURelease` 는 다음 프레임 번호(`_frameSerial + 1`)에 맡깁니다.
         uint64 _completedFrameSerial; ///< GPU 가 지난 것이 확인된 가장 큰 프레임 번호입니다.
+
+        /// @brief 전송 티켓의 시리얼 발급기와 완료 워터마크입니다(GL 은 컨텍스트 하나라 제출 순서가 곧 실행 순서입니다).
+        RHITransferSerials _transferSerials;
+        /// @brief 제출한 전송마다 펜스(`GLsync`, `void*`)를 제출 순서대로 쌓습니다. 이미 끝난 제출(동기로 읽어 둔 되읽기)은 nullptr 입니다. 앞에서부터 끝난 것만 워터마크를 올립니다.
+        RHITransferFenceQueue<void*> _transferQueue;
+        /// @brief 아직 가져가지 않은 텍스처 읽기의 결과 바이트입니다(제출 시점에 동기로 읽어 둔 것).
+        RHIPendingReadbackTable<vector<uint8>> _readbackTable;
 
         sw::unique_ptr<OpenGLRHICommandContext>  _frameStreamContext;
         sw::unique_ptr<OpenGLRHIResourceFactory> _resourceImpl;

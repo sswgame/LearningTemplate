@@ -11,6 +11,7 @@
 #include "Engine/Graphics/RHI/Support/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Support/RHIReleaseQueue.h"
 #include "Engine/Graphics/RHI/Support/RHITimestamp.h"
+#include "Engine/Graphics/RHI/Support/RHITransferSerials.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIHandle.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIRenderPassCache.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHISwapChain.h"
@@ -435,10 +436,12 @@ namespace sw
             uint32              _mipLevels{ 1 };
             uint32              _arrayLayers{ 1 }; ///< 면 수(배열 원소 · 큐브 면)
             RHITextureDimension _dimension{ RHITextureDimension::Texture2D };
-            uint8               _bRenderTarget : 1;
-            uint8               _bDepthStencil : 1;
-            uint8               _reserved      : 6;
-            RHIDescriptorIndex  _bindlessIndex{ kInvalidDescriptorIndex };
+            /// 이 텍스처에 마지막으로 제출한 쓰기 전송(업로드)의 시리얼입니다. 0 이면 전송한 적이 없습니다. bindless 등록이 이 전송이 끝났는지 확인합니다(`RHITransferSerials::isTextureReadyToRegister`).
+            atomic<uint64>     _lastTransferSerial{ 0 };
+            uint8              _bRenderTarget : 1;
+            uint8              _bDepthStencil : 1;
+            uint8              _reserved      : 6;
+            RHIDescriptorIndex _bindlessIndex{ kInvalidDescriptorIndex };
             /// @brief 면이 여럿일 때 면마다의 2D 뷰(렌더 패스 첨부용)와 단일 RT 프레임버퍼입니다. 이때 `_imageView` 는 셰이더가 보는 배열 또는 큐브 뷰입니다.
             vector<VkImageView>   _listSliceView;
             vector<VkFramebuffer> _listSliceFramebuffer;
@@ -726,6 +729,11 @@ namespace sw
 
         RHIHandleTable<VulkanPipelineStateRecord> _pipelineStates;
         VkPipelineCache                           _pipelineCache;
+
+        /// @brief 전송 티켓의 시리얼 발급기와 완료 워터마크입니다. 지금은 임시 구현이라 제출이 끝난 뒤에 발급한다(`issueCompleted`) — U6 이 큐 제출 락 안의 `issue` 와 연속 구간 워터마크로 바꾼다.
+        RHITransferSerials _transferSerials;
+        /// @brief 아직 가져가지 않은 텍스처 읽기의 결과 바이트입니다(제출 안에서 읽어 둔 것).
+        RHIPendingReadbackTable<vector<uint8>> _readbackTable;
 
         sw::unique_ptr<VulkanRHICommandContext>  _frameStreamContext;
         sw::unique_ptr<VulkanRHIResourceFactory> _resourceImpl;

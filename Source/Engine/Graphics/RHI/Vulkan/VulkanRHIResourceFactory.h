@@ -31,17 +31,21 @@ namespace sw
         [[nodiscard]] bool     readReadbackBuffer( RHIBufferHandle readback, uint32 sizeBytes, void* pDestination ) override;
         RHITextureHandle       createTexture2D( const RHITextureDesc& desc ) override;
         void                   destroyTexture( RHITextureHandle texture ) override;
-        bool                   uploadTexture2D( RHITextureHandle texture, const RHITextureUploadDesc& desc ) override;
-        [[nodiscard]] bool     uploadTexture2DRegion( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc ) override;
-        bool                   readbackTexture2D( RHITextureHandle texture, uint32 mip, uint32 arraySlice, vector<uint8>& outBytes, RHITextureMipSpan& outLayout ) override;
-        RHIFormat              getTextureFormat( RHITextureHandle texture ) const override;
-        RHIDescriptorIndex     registerBindlessTexture( RHITextureHandle texture ) override;
-        void                   unregisterBindlessTexture( RHIDescriptorIndex index ) override;
-        RHIDescriptorIndex     registerBindlessBufferSrv( RHIBufferHandle buffer ) override;
-        void                   unregisterBindlessResource( RHIDescriptorIndex index ) override;
-        RHIDescriptorIndex     registerBindlessBufferUav( RHIBufferHandle buffer ) override;
-        RHIDescriptorIndex     registerBindlessTextureUav( RHITextureHandle texture ) override;
-        void                   unregisterBindlessUav( RHIDescriptorIndex index ) override;
+        // 전송(RhiAsyncUploads): 임시 구현이다. 제출 안에서 일회성 커맨드의 펜스를 기다리고 곧바로 `Complete` 티켓을 준다. 비동기화(업로드 링 · 연속 구간 워터마크)는 U6 이다.
+        [[nodiscard]] RHITransferSubmit submitTextureUpload( RHITextureHandle texture, const RHITextureUploadDesc& desc ) override;
+        [[nodiscard]] RHITransferSubmit submitTextureRegionUpload( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc ) override;
+        [[nodiscard]] RHITransferSubmit submitTextureReadback( RHITextureHandle texture, uint32 mip, uint32 arraySlice, RHITextureMipSpan& outLayout ) override;
+        [[nodiscard]] RHITransferStatus pollTransfer( RHITransferTicket ticket ) override;
+        [[nodiscard]] bool              takeTextureReadback( RHITransferTicket ticket, vector<uint8>& outBytes ) override;
+        void                            discardTextureReadback( RHITransferTicket ticket ) override;
+        RHIFormat                       getTextureFormat( RHITextureHandle texture ) const override;
+        RHIDescriptorIndex              registerBindlessTexture( RHITextureHandle texture ) override;
+        void                            unregisterBindlessTexture( RHIDescriptorIndex index ) override;
+        RHIDescriptorIndex              registerBindlessBufferSrv( RHIBufferHandle buffer ) override;
+        void                            unregisterBindlessResource( RHIDescriptorIndex index ) override;
+        RHIDescriptorIndex              registerBindlessBufferUav( RHIBufferHandle buffer ) override;
+        RHIDescriptorIndex              registerBindlessTextureUav( RHITextureHandle texture ) override;
+        void                            unregisterBindlessUav( RHIDescriptorIndex index ) override;
 
     private:
         /** @brief 텍스처 레코드가 보관한 bindless 슬롯을 반납하고 레코드의 인덱스를 지웁니다(destroyTexture 와 unregisterBindlessTexture 공용). */

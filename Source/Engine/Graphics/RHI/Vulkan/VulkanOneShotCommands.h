@@ -71,29 +71,43 @@ namespace sw
         VkCommandBuffer get() const { return _commandBuffer; }
 
         /**
-         * @brief 기록을 끝내고 제출한 뒤 큐가 빌 때까지 기다립니다.
-         * @details 로드 · 리드백 경로라 큐가 비기를 기다리는 값싼 동기 방식을 택했습니다
-         *          (`executeCommandListImmediate` 와 같은 이유).
+         * @brief 기록을 끝내고 제출한 뒤 **이 제출의 펜스**가 신호할 때까지 기다립니다(RhiAsyncUploads U2).
+         * @details 큐 전체를 비우는 `vkQueueWaitIdle` 대신 제출에 단 `VkFence` 를 기다린다. 대기 범위가 큐에 쌓인 이전 프레임 전체에서 내 제출로 줄고, 큐 락은 제출하는
+         *          동안만 쥐며 대기는 락 밖에서 한다(다른 스레드의 프레임 제출을 막지 않는다). 일회성 풀 락은 커맨드 버퍼 기록과 해제에 필요하므로(Vulkan 사양의 외부 동기화 규칙)
+         *          제출이 끝나면 놓고 대기한 뒤 다시 잡는다 — 해제는 소멸자가 한다.
+         *          호출 스레드는 자기 제출이 끝날 때까지 여전히 기다린다. 비동기가 아니라 대기 범위를 줄인 것이다(비동기화는 U6).
          */
         bool endSubmitAndWait()
         {
             if ( isValid() == false )
                 return false;
 
-            // 로드 · 리드백 업로드가 큐를 통째로 기다리는 지점이다(비동기 전환의 근거 계측). 제출 락 대기와 큐 비움 대기를 함께 잰다.
+            // 로드 · 리드백 업로드가 제출을 기다리는 지점이다(비동기 전환의 근거 계측). 제출 락 대기와 펜스 대기를 함께 잰다.
             SW_PROFILE_SCOPE( "RT.Upload.waitIdle" );
             vkEndCommandBuffer( _commandBuffer );
+
+            VkFenceCreateInfo fenceInfo{};
+            fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+            VkFence fence{ VK_NULL_HANDLE };
+            _lastResult = vkCreateFence( _device, &fenceInfo, nullptr, &fence );
+            if ( _lastResult != VK_SUCCESS )
+                return false;
 
             VkSubmitInfo submitInfo{};
             submitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
             submitInfo.commandBufferCount = 1;
             submitInfo.pCommandBuffers    = &_commandBuffer;
-            std::scoped_lock<mutex> queueLock{ _queueMutex };
-            _lastResult = vkQueueSubmit( _queue, 1, &submitInfo, VK_NULL_HANDLE );
-            if ( _lastResult != VK_SUCCESS )
-                return false;
-
-            _lastResult = vkQueueWaitIdle( _queue );
+            {
+                std::scoped_lock<mutex> queueLock{ _queueMutex };
+                _lastResult = vkQueueSubmit( _queue, 1, &submitInfo, fence );
+            }
+            if ( _lastResult == VK_SUCCESS )
+            {
+                _poolLock.unlock();
+                _lastResult = vkWaitForFences( _device, 1, &fence, VK_TRUE, UINT64_MAX );
+                _poolLock.lock();
+            }
+            vkDestroyFence( _device, fence, nullptr );
             return _lastResult == VK_SUCCESS;
         }
 
@@ -101,7 +115,7 @@ namespace sw
         [[nodiscard]] VkResult getLastResult() const { return _lastResult; }
 
     private:
-        std::scoped_lock<mutex> _poolLock;
+        std::unique_lock<mutex> _poolLock;
         mutex&                  _queueMutex;
         VkDevice                _device;
         VkCommandPool           _commandPool;

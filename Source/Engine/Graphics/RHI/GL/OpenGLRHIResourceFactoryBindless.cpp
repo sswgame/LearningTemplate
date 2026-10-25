@@ -38,6 +38,9 @@ namespace sw
                           static_cast<uint32>( pRecord->_dimension ) );
             return kInvalidDescriptorIndex;
         }
+        // 끝나지 않은 업로드가 남은 텍스처는 등록하지 않는다(소비자는 pollTransfer 가 Complete 를 준 뒤에 등록한다 — IRHIResourceFactory 전송 계약 머리말).
+        if ( pRecord != nullptr && _pDevice->_transferSerials.isTextureReadyToRegister( pRecord->_lastTransferSerial.load(), texture ) == false )
+            return kInvalidDescriptorIndex;
 
         return allocateFreeListIndex( _pDevice->_listRegisteredTexture, _pDevice->_listTextureFree,
                                       OpenGLRHIDevice::BindlessTextureRecord{ texture } );

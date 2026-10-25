@@ -11,6 +11,7 @@
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
+#include "Engine/Graphics/RHI/Support/RHITransferUtil.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
@@ -415,7 +416,7 @@ namespace sw
             upload._pData     = page._bytes.data();
             upload._sizeBytes = static_cast<uint32>( page._bytes.size() );
             upload._mipLevels = 1;
-            if ( factory.uploadTexture2D( page._texture, upload ) == false )
+            if ( RHITransferUtil::uploadTexture2DAndWait( factory, page._texture, upload ) == false )
                 SW_LOG_ERROR( "Glyph atlas page upload failed" );
             ++_lastUploadCallCount;
             page._bWholePageDirty = SW_FALSE;
@@ -440,7 +441,7 @@ namespace sw
             upload._y         = region._y;
             upload._width     = region._width;
             upload._height    = region._height;
-            if ( factory.uploadTexture2DRegion( page._texture, upload ) == false )
+            if ( RHITransferUtil::uploadTexture2DRegionAndWait( factory, page._texture, upload ) == false )
                 SW_LOG_ERROR( "Glyph atlas region upload failed" );
             ++_lastUploadCallCount;
         }

@@ -58,6 +58,10 @@ namespace sw
         VulkanRHIDevice::VulkanTextureRecord& record = *pResolved;
         if ( record._bindlessIndex != kInvalidDescriptorIndex )
             return record._bindlessIndex;
+        // 끝나지 않은 업로드가 남은 텍스처는 처음 등록하지 않는다(소비자는 pollTransfer 가 Complete 를 준 뒤에 등록한다 — IRHIResourceFactory 전송 계약 머리말).
+        // 이미 등록된 텍스처의 다시 부르기는 위에서 돌아가므로, 등록 뒤 구간 갱신(글리프 아틀라스)은 막지 않는다.
+        if ( _pDevice->_transferSerials.isTextureReadyToRegister( record._lastTransferSerial.load(), texture ) == false )
+            return kInvalidDescriptorIndex;
 
         std::unique_lock<std::shared_mutex> registryLock{ _pDevice->_bindlessMutex };
         const RHIDescriptorIndex            descriptorIndex = reserveFreeListIndex( _pDevice->_listTextureUsed, _pDevice->_listTextureFree );

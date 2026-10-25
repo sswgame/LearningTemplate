@@ -51,7 +51,7 @@ namespace sw::editor
     /**
      * @struct RenderTargetViewUtil
      * @brief 렌더 타깃 창이 쓰는 계산 모음입니다. 언리얼의 Buffer Visualization, 유니티 Frame Debugger 의 타깃 보기에 해당합니다.
-     * @details 입력 바이트는 `IRHIResourceFactory::readbackTexture2D` 가 만든 배치다. 깊이 타깃은 그 함수가 `kRHIDepthReadbackFormat`
+     * @details 입력 바이트는 `RHITransferUtil::readbackTexture2DAndWait` 가 만든 배치다. 깊이 타깃은 그 함수가 `kRHIDepthReadbackFormat`
      *          (0..1 float32)으로 채우므로 @p bDepth 로 알린다.
      */
     struct RenderTargetViewUtil

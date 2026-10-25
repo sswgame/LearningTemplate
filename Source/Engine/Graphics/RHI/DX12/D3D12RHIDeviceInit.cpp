@@ -235,6 +235,10 @@ namespace sw
             return false;
         _fenceValue = 1;
         _fenceEvent = CreateEventW( nullptr, FALSE, FALSE, nullptr );
+        // 전송 전용 펜스: 복사 리스트가 내보내진 묶음마다 올린다. 프레임 펜스와 따로라 전송 완료를 프레임 없이도 알 수 있다(RhiAsyncUploads).
+        if ( FAILED( _device->CreateFence( 0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS( _transferFence.GetAddressOf() ) ) ) )
+            return false;
+        _transferFenceValue = 0;
 
         if ( createGlobalResources() == false )
             return false;
@@ -293,6 +297,15 @@ namespace sw
         _frameStreamState._bRecording = SW_FALSE;
         _bBindlessRootSignature       = SW_FALSE;
         _fence.Reset();
+        _transferFence.Reset();
+        {
+            std::scoped_lock<mutex> lock{ _transferMutex };
+            _listSignaledTransfer.clear();
+            _mapTextureTransferSerial.clear();
+        }
+        _openTransferSerial       = 0;
+        _unsignaledTransferSerial = 0;
+        _exportedTransferSerial   = 0;
         _commandQueue.Reset();
         _memoryAdapter.Reset();
         Microsoft::WRL::ComPtr<ID3D12InfoQueue1> infoQueue1;

@@ -384,18 +384,24 @@ namespace sw
         return bReadable;
     }
 
-    bool OpenGLRHIResourceFactory::uploadTexture2D( RHITextureHandle texture, const RHITextureUploadDesc& desc )
+    RHITransferSubmit OpenGLRHIResourceFactory::submitTextureUpload( RHITextureHandle texture, const RHITextureUploadDesc& desc )
     {
         OpenGLRHIDevice::OpenGLTextureRecord* pRecord               = _pDevice->resolveTexture( texture );
         const bool                            bTextureNotUploadable = pRecord == nullptr || pRecord->_texture == 0 || _pDevice->_bInitialized == SW_FALSE;
         if ( bTextureNotUploadable )
-            return false;
+        {
+            SW_LOG_ERROR( "submitTextureUpload: texture %# or the device is not usable", texture );
+            return RHITransferSubmit::rejected();
+        }
         if ( pRecord->_bDepthStencil != SW_FALSE )
-            return false;
+        {
+            SW_LOG_ERROR( "submitTextureUpload: texture %# is a depth texture", texture );
+            return RHITransferSubmit::rejected();
+        }
         if ( desc._arraySlice >= pRecord->_arraySize )
         {
-            SW_LOG_ERROR( "uploadTexture2D: slice %# is out of range (%# slices)", desc._arraySlice, pRecord->_arraySize );
-            return false;
+            SW_LOG_ERROR( "submitTextureUpload: slice %# is out of range (%# slices)", desc._arraySlice, pRecord->_arraySize );
+            return RHITransferSubmit::rejected();
         }
 
         RHITextureMipSpan arrMip[constant::kMaxTextureMipCount]{};
@@ -403,16 +409,22 @@ namespace sw
                                                                pRecord->_mipLevels, arrMip, constant::kMaxTextureMipCount );
         if ( mipCount == 0 )
         {
-            SW_LOG_ERROR( "uploadTexture2D: unsupported format or not enough data (%# bytes for %#×%#, %# mips)",
+            SW_LOG_ERROR( "submitTextureUpload: unsupported format or not enough data (%# bytes for %#×%#, %# mips)",
                           desc._sizeBytes, pRecord->_width, pRecord->_height, pRecord->_mipLevels );
-            return false;
+            return RHITransferSubmit::rejected();
         }
 
+        // 컨텍스트를 빌려 올린다(어느 스레드에서나 제출할 수 있다 — 계약 4). 렌더 스레드가 프레임 끝까지 쥐고 있으면 기다리다 못 얻을 수 있고, 그때는 나중에 다시 시도하면 된다.
         ScopedOpenGLContext contextScope( _pDevice );
-        const bool          bCompressed = isRHIFormatBlockCompressed( pRecord->_format );
-        const GLenum        glInternal  = toGlInternalFormat( pRecord->_format );
-        const GLenum        glFormat    = toGlFormat( pRecord->_format );
-        const GLenum        glType      = toGlType( pRecord->_format );
+        if ( _pDevice->isGraphicsContextCurrent() == false )
+        {
+            SW_LOG_ERROR( "submitTextureUpload: the GL context could not be acquired; submit again later" );
+            return RHITransferSubmit::busy();
+        }
+        const bool   bCompressed = isRHIFormatBlockCompressed( pRecord->_format );
+        const GLenum glInternal  = toGlInternalFormat( pRecord->_format );
+        const GLenum glFormat    = toGlFormat( pRecord->_format );
+        const GLenum glType      = toGlType( pRecord->_format );
 
         // 행이 빈틈없이 이어진 데이터라 기본 4바이트 행 정렬을 끈다(R32G32B32 12바이트 행 같은 경우).
         glPixelStorei( GL_UNPACK_ALIGNMENT, 1 );
@@ -455,22 +467,32 @@ namespace sw
             }
         }
         glPixelStorei( GL_UNPACK_ALIGNMENT, 4 );
-        return true;
+        const uint64 serial = _pDevice->endTransfer( true );
+        pRecord->_lastTransferSerial.store( serial );
+        return _pDevice->_transferSerials.makeAccepted( serial );
     }
 
-    bool OpenGLRHIResourceFactory::uploadTexture2DRegion( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc )
+    RHITransferSubmit OpenGLRHIResourceFactory::submitTextureRegionUpload( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc )
     {
         OpenGLRHIDevice::OpenGLTextureRecord* pRecord                     = _pDevice->resolveTexture( texture );
         const bool                            bTextureRegionNotUploadable = pRecord == nullptr || pRecord->_texture == 0 || _pDevice->_bInitialized == SW_FALSE || pRecord->_bDepthStencil != SW_FALSE;
         if ( bTextureRegionNotUploadable )
-            return false;
+        {
+            SW_LOG_ERROR( "submitTextureRegionUpload: texture %# is missing, a depth texture, or the device is not usable", texture );
+            return RHITransferSubmit::rejected();
+        }
         uint32 rowBytes{ 0 };
         if ( validateTextureRegionUpload( pRecord->_format, pRecord->_width, pRecord->_height, pRecord->_mipLevels, pRecord->_arraySize, desc, rowBytes ) == false )
-            return false;
+            return RHITransferSubmit::rejected();
 
         ScopedOpenGLContext contextScope( _pDevice );
-        const GLenum        glFormat = toGlFormat( pRecord->_format );
-        const GLenum        glType   = toGlType( pRecord->_format );
+        if ( _pDevice->isGraphicsContextCurrent() == false )
+        {
+            SW_LOG_ERROR( "submitTextureRegionUpload: the GL context could not be acquired; submit again later" );
+            return RHITransferSubmit::busy();
+        }
+        const GLenum glFormat = toGlFormat( pRecord->_format );
+        const GLenum glType   = toGlType( pRecord->_format );
         // 행이 빈틈없이 이어진 데이터라 기본 4바이트 행 정렬을 끈다(R8 12픽셀 행 = 12바이트).
         glPixelStorei( GL_UNPACK_ALIGNMENT, 1 );
         if ( pRecord->_target == GL_TEXTURE_2D )
@@ -488,7 +510,44 @@ namespace sw
                                  glType, desc._pData );
         }
         glPixelStorei( GL_UNPACK_ALIGNMENT, 4 );
+        const uint64 serial = _pDevice->endTransfer( true );
+        pRecord->_lastTransferSerial.store( serial );
+        return _pDevice->_transferSerials.makeAccepted( serial );
+    }
+
+    RHITransferStatus OpenGLRHIResourceFactory::pollTransfer( RHITransferTicket ticket )
+    {
+        const RHITransferStatus status = _pDevice->_transferSerials.classify( ticket );
+        if ( status != RHITransferStatus::Pending )
+            return status;
+        // 컨텍스트를 기다리며 빌리지 않는다(계약). 이 스레드가 이미 컨텍스트를 쥐었을 때만 GL 에 묻고, 아니면 컨텍스트를 쥔 쪽(RT 의 endFrame, 제출 스레드)이 올린 워터마크를 본다.
+        if ( _pDevice->isGraphicsContextCurrent() == false )
+            return RHITransferStatus::Pending;
+        _pDevice->retireFinishedTransfers();
+        return _pDevice->_transferSerials.classify( ticket );
+    }
+
+    bool OpenGLRHIResourceFactory::takeTextureReadback( RHITransferTicket ticket, vector<uint8>& outBytes )
+    {
+        if ( pollTransfer( ticket ) != RHITransferStatus::Complete )
+        {
+            SW_LOG_ERROR( "takeTextureReadback: ticket %# has not completed", ticket._serial );
+            return false;
+        }
+        if ( _pDevice->_readbackTable.take( ticket._serial, outBytes ) == false )
+        {
+            SW_LOG_ERROR( "takeTextureReadback: ticket %# is not a pending texture readback (an upload ticket, or already taken or discarded)", ticket._serial );
+            return false;
+        }
         return true;
+    }
+
+    void OpenGLRHIResourceFactory::discardTextureReadback( RHITransferTicket ticket )
+    {
+        if ( ticket._deviceGeneration != _pDevice->_transferSerials.getGeneration() )
+            return;
+        vector<uint8> listDiscarded;
+        (void)_pDevice->_readbackTable.take( ticket._serial, listDiscarded ); // 없으면 업로드 티켓이거나 이미 가져감 · 버림이다 — 계약상 아무 일도 하지 않는다
     }
 
     RHIFormat OpenGLRHIResourceFactory::getTextureFormat( RHITextureHandle texture ) const
@@ -497,52 +556,70 @@ namespace sw
         return pRecord != nullptr ? pRecord->_format : RHIFormat::Unknown;
     }
 
-    bool OpenGLRHIResourceFactory::readbackTexture2D( RHITextureHandle texture, uint32 mip, uint32 arraySlice, vector<uint8>& outBytes, RHITextureMipSpan& outLayout )
+    RHITransferSubmit OpenGLRHIResourceFactory::submitTextureReadback( RHITextureHandle texture, uint32 mip, uint32 arraySlice, RHITextureMipSpan& outLayout )
     {
         OpenGLRHIDevice::OpenGLTextureRecord* pRecord             = _pDevice->resolveTexture( texture );
         const bool                            bTextureNotReadable = pRecord == nullptr || pRecord->_texture == 0 || _pDevice->_bInitialized == SW_FALSE;
         if ( bTextureNotReadable )
-            return false;
+        {
+            SW_LOG_ERROR( "submitTextureReadback: texture %# or the device is not usable", texture );
+            return RHITransferSubmit::rejected();
+        }
         if ( mip >= pRecord->_mipLevels || arraySlice >= pRecord->_arraySize )
-            return false;
+        {
+            SW_LOG_ERROR( "submitTextureReadback: mip %# / slice %# is out of range (%# mips, %# slices)", mip, arraySlice, pRecord->_mipLevels, pRecord->_arraySize );
+            return RHITransferSubmit::rejected();
+        }
         // 깊이는 깊이 성분만 0..1 float32 로 읽는다(kRHIDepthReadbackFormat). 스텐실은 버린다.
         const bool      bDepth       = pRecord->_bDepthStencil != SW_FALSE;
         const RHIFormat layoutFormat = bDepth ? kRHIDepthReadbackFormat : pRecord->_format;
         const GLenum    pixelFormat  = bDepth ? GL_DEPTH_COMPONENT : toGlFormat( pRecord->_format );
         const GLenum    pixelType    = bDepth ? GL_FLOAT : toGlType( pRecord->_format );
         if ( computeRHITextureMipLayout( layoutFormat, pRecord->_width, pRecord->_height, mip, outLayout ) == false )
-            return false;
+        {
+            SW_LOG_ERROR( "submitTextureReadback: unsupported format for %#x%# mip %#", pRecord->_width, pRecord->_height, mip );
+            return RHITransferSubmit::rejected();
+        }
 
         ScopedOpenGLContext contextScope( _pDevice );
-        outBytes.assign( outLayout._sizeBytes, 0 );
+        if ( _pDevice->isGraphicsContextCurrent() == false )
+        {
+            SW_LOG_ERROR( "submitTextureReadback: the GL context could not be acquired; submit again later" );
+            return RHITransferSubmit::busy();
+        }
+        // GL 의 읽기는 제출 시점에 동기로 읽어 둔다(glGetTexImage 가 앞선 명령을 끝내고 돌아온다). 그래서 앞서 제출된 쓰기가 보이고(계약 3), 티켓은 앞선 전송이 모두 끝나는 즉시 Complete 다.
+        // 비동기 읽기(PBO + 펜스)는 이 계획 밖이다.
+        vector<uint8> readBytes( outLayout._sizeBytes, 0 );
         glPixelStorei( GL_PACK_ALIGNMENT, 1 );
         if ( pRecord->_target == GL_TEXTURE_2D )
         {
             glBindTexture( GL_TEXTURE_2D, pRecord->_texture );
             if ( isRHIFormatBlockCompressed( pRecord->_format ) )
-                glGetCompressedTexImage( GL_TEXTURE_2D, static_cast<GLint>( mip ), outBytes.data() );
+                glGetCompressedTexImage( GL_TEXTURE_2D, static_cast<GLint>( mip ), readBytes.data() );
             else
-                glGetTexImage( GL_TEXTURE_2D, static_cast<GLint>( mip ), pixelFormat, pixelType, outBytes.data() );
+                glGetTexImage( GL_TEXTURE_2D, static_cast<GLint>( mip ), pixelFormat, pixelType, readBytes.data() );
             glBindTexture( GL_TEXTURE_2D, 0 );
         }
         else
         {
             // 면 하나만 읽는다(z = 면 — 큐브 맵도 DSA 에서는 면이 z 다).
-            const GLsizei bufferBytes = static_cast<GLsizei>( outBytes.size() );
+            const GLsizei bufferBytes = static_cast<GLsizei>( readBytes.size() );
             if ( isRHIFormatBlockCompressed( pRecord->_format ) )
             {
                 glGetCompressedTextureSubImage( pRecord->_texture, static_cast<GLint>( mip ), 0, 0, static_cast<GLint>( arraySlice ),
-                                                static_cast<GLsizei>( outLayout._width ), static_cast<GLsizei>( outLayout._height ), 1, bufferBytes, outBytes.data() );
+                                                static_cast<GLsizei>( outLayout._width ), static_cast<GLsizei>( outLayout._height ), 1, bufferBytes, readBytes.data() );
             }
             else
             {
                 glGetTextureSubImage( pRecord->_texture, static_cast<GLint>( mip ), 0, 0, static_cast<GLint>( arraySlice ), static_cast<GLsizei>( outLayout._width ),
                                       static_cast<GLsizei>( outLayout._height ), 1, pixelFormat, pixelType, bufferBytes,
-                                      outBytes.data() );
+                                      readBytes.data() );
             }
         }
         glPixelStorei( GL_PACK_ALIGNMENT, 4 );
-        return true;
+        const uint64 serial = _pDevice->endTransfer( false );
+        _pDevice->_readbackTable.add( serial, std::move( readBytes ) );
+        return _pDevice->_transferSerials.makeAccepted( serial );
     }
 
     // 길이 유지(긴 함수 정리 기준): 텍스처 생성 · 저장소 할당 · 매개변수 · 초기 데이터의 순서가 곧 의미라 나누지 않는다.

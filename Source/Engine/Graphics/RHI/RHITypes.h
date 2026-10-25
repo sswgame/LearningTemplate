@@ -213,7 +213,7 @@ namespace sw
             {},
         };
 
-        /** @brief uploadTexture2D 가 한 번에 받는 밉 수의 상한입니다. 2^16 텍스처의 전체 체인(17단계)을 덮습니다. */
+        /** @brief submitTextureUpload 가 한 번에 받는 밉 수의 상한입니다. 2^16 텍스처의 전체 체인(17단계)을 덮습니다. */
         inline constexpr uint32 kMaxTextureMipCount = 17;
 
         /**
@@ -667,7 +667,7 @@ namespace sw
      * @brief 텍스처의 형태입니다. 세 가지 모두 2D 면(slice)을 겹친 것이고, 면 수와 셰이더가 보는 뷰만 다릅니다.
      *        D3D 의 Texture2D + ArraySize, TEXTURECUBE 와 같으며, 그래서 텍스처를 만드는 함수는 `createTexture2D` 하나입니다.
      * @details 면 하나는 렌더 패스의 타깃(`RHIRenderPassBeginInfo::_arrColorTargetSlice`, `_depthTargetSlice`)이 될 수 있고, 업로드와
-     *          읽기도 면 단위로 한다(`RHITextureUploadDesc::_arraySlice`, `readbackTexture2D` 의 arraySlice). 셰이더에 바인딩하는
+     *          읽기도 면 단위로 한다(`RHITextureUploadDesc::_arraySlice`, `submitTextureReadback` 의 slice). 셰이더에 바인딩하는
      *          bindless 등록은 아직 Texture2D 만 받는다. 배열이나 큐브 뷰를 읽는 셰이더 테이블이 생기면 넓힌다(점광 그림자).
      */
     enum class RHITextureDimension : uint8
@@ -739,7 +739,7 @@ namespace sw
 
     /**
      * @struct RHITextureUploadDesc
-     * @brief IRHIResourceFactory::uploadTexture2D 의 입력입니다. 밉 0 부터 차례로, 각 밉의 행이 빈틈없이 이어진 바이트 블록입니다.
+     * @brief IRHIResourceFactory::submitTextureUpload 의 입력입니다. 밉 0 부터 차례로, 각 밉의 행이 빈틈없이 이어진 바이트 블록입니다.
      * @details DDS 파일의 픽셀 배치와 같다(DDSImageData::_bytes 를 그대로 넘길 수 있다). 행 패딩은
      *          백엔드가 필요하면 스스로 맞춘다(DX12 는 256 정렬 풋프린트로 다시 배치하고, GL 은 UNPACK_ALIGNMENT 1 을 쓴다).
      */
@@ -759,7 +759,7 @@ namespace sw
 {
     /**
      * @struct RHITextureRegionUploadDesc
-     * @brief `IRHIResourceFactory::uploadTexture2DRegion` 의 입력입니다. 밉 하나와 면 하나 안의 사각형 구간이며, 행은 빈틈없이(`_width × 픽셀 바이트`) 이어집니다.
+     * @brief `IRHIResourceFactory::submitTextureRegionUpload` 의 입력입니다. 밉 하나와 면 하나 안의 사각형 구간이며, 행은 빈틈없이(`_width × 픽셀 바이트`) 이어집니다.
      */
     struct RHITextureRegionUploadDesc
     {
@@ -771,6 +771,94 @@ namespace sw
         uint32      _height{ 0 };      ///< 구간 높이 (px)
         uint32      _mip{ 0 };         ///< 업로드할 밉
         uint32      _arraySlice{ 0 };  ///< 업로드할 면(배열 원소, 큐브 면)
+    };
+} // namespace sw
+
+namespace sw
+{
+    // ------------------------------------------------------------------------------
+    // 전송(업로드 · 되읽기)의 제출 결과와 티켓: 완료 대기를 형식으로 강제한다(docs/plans/RhiAsyncUploads.md 2.2)
+    // ------------------------------------------------------------------------------
+    /**
+     * @enum RHISubmitResult
+     * @brief 전송 제출 함수의 결과입니다.
+     */
+    enum class RHISubmitResult : uint8
+    {
+        /// 검사에 걸렸거나 이 요청은 어떤 상황에서도 받을 수 없다(포맷, 범위, 데이터 크기, 잘못된 핸들, 스테이징 링과 단독 버퍼 총량 상한보다 큰 요청, 장치 손실). 이유는 로그에 있다. 다시 시도하지 않는다.
+        Rejected = 0,
+        Accepted = 1, ///< 받았다. 소스 메모리는 이미 복사됐다. 티켓이 유효하다.
+                      /// 지금은 스테이징이 모자라지만 GPU 가 진행하면 받을 수 있다. 기다리지 않고 돌아왔으니 호출자가 다음 프레임에 다시 제출한다. 티켓은 무효다. 다시 시도해도 영원히 안 되는 요청은 `Rejected` 다.
+        Busy = 2,
+    };
+
+    /**
+     * @enum RHITransferStatus
+     * @brief 제출한 전송의 진행 상태입니다(`IRHIResourceFactory::pollTransfer`).
+     */
+    enum class RHITransferStatus : uint8
+    {
+        Pending  = 0, ///< GPU 가 아직 끝내지 않았다. 프레임을 돌리지 않아도 `pollTransfer` 를 되풀이하면 결국 `Complete` 나 `Failed` 가 된다.
+        Complete = 1, ///< 끝났다. 같은 티켓을 다시 물어도 Complete 다(완료 워터마크 이상으로 판정한다).
+        Failed   = 2, ///< 장치 손실처럼 끝나지 않을 일이다. 오류는 이미 로그에 남았고 대기하지 않는다. 무효 티켓, 다른 장치 세대의 티켓, 발급한 적 없는 시리얼도 Failed 다.
+    };
+
+    /**
+     * @brief 장치(백엔드 인스턴스) 하나에 붙이는 세대 번호를 새로 발급합니다. 0 이 아니고 호출마다 커집니다.
+     * @details 백엔드가 만들어질 때 한 번 받아 자기가 발급하는 모든 티켓에 싣는다(`RHITransferTicket::_deviceGeneration`). 백엔드를 바꾸면 새 장치의 세대가 달라서
+     *          옛 장치의 티켓이 새 장치에서 `Complete` 로 보이지 않는다. 어느 스레드에서나 부를 수 있다.
+     */
+    [[nodiscard]] SW_API uint32 allocateRHIDeviceGeneration();
+
+    /**
+     * @struct RHITransferTicket
+     * @brief 제출한 전송 하나를 가리키는 단조 증가 시리얼과, 그것을 발급한 장치의 세대입니다. 시리얼 0 은 무효입니다.
+     * @details 정수 별칭이 아니라 구조체라서 `uint64` 를 티켓 자리에 실수로 넘기는 일은 컴파일에서 막힌다. 멤버가 공개라 값을 직접 짓는 코드까지 막지는 못한다 — 그 틈은
+     *          백엔드가 막는다: 시리얼 0, 다른 세대, 발급한 적 없는 시리얼은 `pollTransfer` 가 오류를 남기고 `Failed` 로 돌려준다(`RHITransferSerials::classify`).
+     *          해제 함수가 없다 — 완료 워터마크가 시리얼을 덮는다. 읽기 티켓의 결과는 `takeTextureReadback` 으로 가져가거나 `discardTextureReadback` 으로 버린다.
+     */
+    struct RHITransferTicket
+    {
+        uint64 _serial{ 0 };           ///< 0 이면 무효
+        uint32 _deviceGeneration{ 0 }; ///< 발급한 장치의 세대(`allocateRHIDeviceGeneration`). 장치가 바뀐 뒤의 옛 티켓을 가려낸다.
+
+        /** @brief 제출이 받아들여져 발급된 티켓이면 true 입니다. */
+        [[nodiscard]] constexpr bool isValid() const noexcept { return _serial != 0; }
+        friend constexpr bool        operator==( const RHITransferTicket& lhs, const RHITransferTicket& rhs ) noexcept
+        {
+            return lhs._serial == rhs._serial && lhs._deviceGeneration == rhs._deviceGeneration;
+        }
+        friend constexpr bool operator!=( const RHITransferTicket& lhs, const RHITransferTicket& rhs ) noexcept { return ( lhs == rhs ) == false; }
+    };
+
+    /**
+     * @struct RHITransferSubmit
+     * @brief 전송 제출 함수의 반환값입니다. 결과를 버리면 컴파일 경고이고, 티켓은 `Accepted` 일 때만 유효합니다.
+     * @details 결과를 보지 않으면 티켓도 얻을 수 없는 모양이라 "제출하고 잊기"가 쓰이지 않는다. `Busy` 의 재시도는 호출자가 다음 프레임에 한다.
+     */
+    struct [[nodiscard]] RHITransferSubmit
+    {
+        RHISubmitResult   _result{ RHISubmitResult::Rejected };
+        RHITransferTicket _ticket{};
+
+        /** @brief 받아들여졌고 티켓이 유효하면 true 입니다. */
+        [[nodiscard]] constexpr bool isAccepted() const noexcept { return _result == RHISubmitResult::Accepted && _ticket.isValid(); }
+
+        /**
+         * @brief 받아들인 제출을 만듭니다. 시리얼 0 은 무효 티켓이라 받아들였다고 할 수 없다 — 백엔드가 0 을 넘기면 Debug 에서 단언이 걸린다.
+         * @param deviceGeneration 발급한 장치의 세대입니다(`allocateRHIDeviceGeneration` 이 준 값, 0 이 아니다).
+         */
+        [[nodiscard]] static RHITransferSubmit accepted( uint64 serial, uint32 deviceGeneration ) noexcept
+        {
+            SW_ASSERT( serial != 0 && deviceGeneration != 0 );
+            return RHITransferSubmit{
+                RHISubmitResult::Accepted, RHITransferTicket{ serial, deviceGeneration }
+            };
+        }
+        /** @brief 스테이징이 모자라 받지 못한 결과입니다. */
+        [[nodiscard]] static constexpr RHITransferSubmit busy() noexcept { return RHITransferSubmit{ RHISubmitResult::Busy, RHITransferTicket{} }; }
+        /** @brief 검사에 걸려 거절한 결과입니다. */
+        [[nodiscard]] static constexpr RHITransferSubmit rejected() noexcept { return RHITransferSubmit{ RHISubmitResult::Rejected, RHITransferTicket{} }; }
     };
 
     /**
@@ -916,7 +1004,7 @@ namespace sw
     }
 
     /**
-     * @brief 깊이 텍스처를 `readbackTexture2D` 로 읽을 때 채우는 배치의 포맷입니다. 텍셀마다 0..1 깊이 float32 하나이고 스텐실은 버립니다.
+     * @brief 깊이 텍스처를 `submitTextureReadback` 으로 읽을 때 채우는 배치의 포맷입니다. 텍셀마다 0..1 깊이 float32 하나이고 스텐실은 버립니다.
      * @details 네 백엔드가 같은 배치를 내야 읽는 쪽(에디터 렌더 타깃 창)이 백엔드를 묻지 않는다. Vulkan 이 D32 계열 깊이를 골라도 같다.
      */
     inline constexpr RHIFormat kRHIDepthReadbackFormat = RHIFormat::R32_FLOAT;

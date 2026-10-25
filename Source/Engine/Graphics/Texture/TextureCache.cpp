@@ -18,6 +18,7 @@
 #include "Engine/Common/RenderTargetDeclaration.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
+#include "Engine/Graphics/RHI/Support/RHITransferUtil.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Resource/AssetManager.h"
@@ -735,7 +736,7 @@ namespace sw
                 SW_LOG_WARNING( "Region update for texture %# dropped - only RGBA8 and BGRA8 textures take RGBA8 bytes", update._key.c_str() );
                 continue;
             }
-            if ( pDevice->getResourceFactory()->uploadTexture2DRegion( texture.getHandle(), desc ) )
+            if ( RHITransferUtil::uploadTexture2DRegionAndWait( *pDevice->getResourceFactory(), texture.getHandle(), desc ) )
                 ++uploadedCount;
         }
         _impl->_listFlushingRegion.clear();

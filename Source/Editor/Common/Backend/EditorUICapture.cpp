@@ -14,6 +14,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/RHI/Support/RHITransferUtil.h"
 #include "Engine/Renderer/Frame/Capture/RenderTargetImageFile.h"
 #include "Engine/Renderer/RenderThread.h"
 
@@ -230,7 +231,7 @@ namespace sw::editor
         vector<uint8>              bytes;
         RHITextureMipSpan          layout{};
         vector<uint8>              rgbaBytes;
-        const bool                 bRead = pFactory != nullptr && pFactory->readbackTexture2D( _texture, 0, 0, bytes, layout ) &&
+        const bool                 bRead = pFactory != nullptr && RHITransferUtil::readbackTexture2DAndWait( *pFactory, _texture, 0, 0, bytes, layout ) &&
                            RenderTargetImageFile::unpackRgba8( bytes, layout, device.getBackBufferFormat(), rgbaBytes );
         if ( bRead )
         {

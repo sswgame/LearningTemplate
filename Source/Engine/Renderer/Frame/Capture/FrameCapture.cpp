@@ -5,6 +5,7 @@
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
+#include "Engine/Graphics/RHI/Support/RHITransferUtil.h"
 #include "Engine/Renderer/Frame/Capture/RenderTargetImageFile.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/Resource/TransientAttachmentPool.h"
@@ -107,9 +108,9 @@ namespace sw
     {
         if ( _pDevice == nullptr || isPresentActive() == false )
             return false;
-        if ( _pDevice->getResourceFactory()->readbackTexture2D( _texture, 0, 0, outBytes, outLayout ) == false )
+        if ( RHITransferUtil::readbackTexture2DAndWait( *_pDevice->getResourceFactory(), _texture, 0, 0, outBytes, outLayout ) == false )
         {
-            SW_LOG_ERROR( "readbackPresent: readbackTexture2D failed." );
+            SW_LOG_ERROR( "readbackPresent: readbackTexture2DAndWait failed." );
             return false;
         }
         return outLayout._width != 0 && outLayout._height != 0;
@@ -146,9 +147,9 @@ namespace sw
                 break;
             }
         }
-        if ( _pDevice->getResourceFactory()->readbackTexture2D( texture, 0, 0, outBytes, outLayout ) == false )
+        if ( RHITransferUtil::readbackTexture2DAndWait( *_pDevice->getResourceFactory(), texture, 0, 0, outBytes, outLayout ) == false )
         {
-            SW_LOG_ERROR( "readbackTransient: readbackTexture2D failed ('%#').", string( attachmentName ).c_str() );
+            SW_LOG_ERROR( "readbackTransient: readbackTexture2DAndWait failed ('%#').", string( attachmentName ).c_str() );
             return false;
         }
         // 깊이 첨부는 네 백엔드 모두 텍셀마다 0..1 float32 하나로 읽힌다(스텐실 없음). 선언 포맷(D24S8)을 그대로 넘기면 바이트를 색으로 잘못 푼다.
@@ -178,10 +179,10 @@ namespace sw
 
         vector<uint8>     bytes;
         RHITextureMipSpan layout{};
-        const bool        bReadbackFailed = _pDevice->getResourceFactory()->readbackTexture2D( texture, 0, 0, bytes, layout ) == false || layout._width == 0 || layout._height == 0;
+        const bool        bReadbackFailed = RHITransferUtil::readbackTexture2DAndWait( *_pDevice->getResourceFactory(), texture, 0, 0, bytes, layout ) == false || layout._width == 0 || layout._height == 0;
         if ( bReadbackFailed )
         {
-            SW_LOG_ERROR( "dumpTextureToFile: readbackTexture2D failed (%#).", string( outFilePath ).c_str() );
+            SW_LOG_ERROR( "dumpTextureToFile: readbackTexture2DAndWait failed (%#).", string( outFilePath ).c_str() );
             return false;
         }
         return RenderTargetImageFile::writeImageFile( bytes, layout, format, outFilePath );

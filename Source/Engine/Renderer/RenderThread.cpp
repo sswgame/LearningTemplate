@@ -19,6 +19,7 @@
 #include "Engine/Graphics/RHI/IRHIContextThreadBinding.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
+#include "Engine/Graphics/RHI/Support/RHITransferUtil.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Profiling/ProfilerBackend.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
@@ -57,7 +58,7 @@ namespace sw
     /**
      * @brief `-gv_screenshot=<파일경로>` 입니다. 화면에 나간 이미지(Present 결과)를 PPM 으로 한 장 덤프합니다(백엔드별 시각 검증용).
      * @details Win32 PrintWindow 캡처는 DX11, GL, Vulkan 에서 빈 화면이 자주 나온다. 스왑체인이 GDI 로
-     *          합성되지 않기 때문이다. 그래서 GPU 에서 직접 읽는다(readbackTexture2D).
+     *          합성되지 않기 때문이다. 그래서 GPU 에서 직접 읽는다(readbackTexture2DAndWait).
      *          PPM 은 인코더가 필요 없어 의존성이 늘지 않는다. `-gv_profileFrames` 와 같이 쓰면 찍고 종료한다.
      * @note 세 변수 모두 이 파일이 유일한 소비자라 여기서 정의한다. 다른 파일에서 `extern` 으로 가져다 쓰면 타입이 어긋나도 링커까지 가야 걸린다.
      */
@@ -752,7 +753,7 @@ namespace sw
         readback._texture = texture;
         readback._serial  = serial;
         // 요청한 뒤 트랜지언트가 다시 만들어졌으면(창 크기 변경) 핸들이 죽었다 — 읽지 않고 조용한 실패로 돌려, UI 가 새 핸들로 다시 요청하게 한다.
-        const bool bReadable = pRegistry->isPublished( texture ) && _pDevice->getResourceFactory()->readbackTexture2D( texture, 0, 0, readback._byte, readback._layout );
+        const bool bReadable = pRegistry->isPublished( texture ) && RHITransferUtil::readbackTexture2DAndWait( *_pDevice->getResourceFactory(), texture, 0, 0, readback._byte, readback._layout );
         readback._bSucceeded = bReadable ? SW_TRUE : SW_FALSE;
         if ( readback._bSucceeded == SW_FALSE )
             readback._byte.clear();

@@ -7,6 +7,7 @@
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
+#include "Engine/Graphics/RHI/Support/RHITransferUtil.h"
 #include "Engine/Resource/AssetLoadProfiler.h"
 #include "Engine/Resource/Image/DDSLoader.h"
 
@@ -226,14 +227,15 @@ namespace sw
             return false;
         }
 
-        // DDS 페이로드는 밉 0 부터 행 빈틈없이 이어진 배치다. uploadTexture2D 의 규약과 같다.
+        // DDS 페이로드는 밉 0 부터 행 빈틈없이 이어진 배치다. submitTextureUpload 의 규약과 같다.
+        // 동기 변형이다: 업로드가 끝난 뒤에야 bindless 에 등록한다(전송 계약). 비동기로 바꾸는 일은 RhiAsyncUploads U8 이다.
         RHITextureUploadDesc upload{};
         upload._pData     = image.getPixels() + drop._skippedBytes;
         upload._sizeBytes = static_cast<uint32>( image._bytes.size() - drop._skippedBytes );
         upload._mipLevels = outDesc._mipLevels;
-        if ( pResource->uploadTexture2D( outHandle, upload ) == false )
+        if ( RHITransferUtil::uploadTexture2DAndWait( *pResource, outHandle, upload ) == false )
         {
-            SW_LOG_ERROR( "Texture2D: uploadTexture2D failed for '%#'", relativePath );
+            SW_LOG_ERROR( "Texture2D: uploadTexture2DAndWait failed for '%#'", relativePath );
             pResource->destroyTexture( outHandle );
             outHandle = 0;
             return false;
@@ -341,9 +343,9 @@ namespace sw
         upload._pData     = _cpuBytes.data();
         upload._sizeBytes = static_cast<uint32>( _cpuBytes.size() );
         upload._mipLevels = 1;
-        if ( pResource->uploadTexture2D( _handle, upload ) == false )
+        if ( RHITransferUtil::uploadTexture2DAndWait( *pResource, _handle, upload ) == false )
         {
-            SW_LOG_ERROR( "Texture2D: uploadTexture2D failed for CPU texture '%#'", _path.c_str() );
+            SW_LOG_ERROR( "Texture2D: uploadTexture2DAndWait failed for CPU texture '%#'", _path.c_str() );
             pResource->destroyTexture( _handle );
             _handle = 0;
             return false;
@@ -379,7 +381,7 @@ namespace sw
         const bool bResidentOnDevice = pDevice != nullptr && isRHIValid() && _pDevice == pDevice;
         if ( bResidentOnDevice == false )
             return true;
-        return pDevice->getResourceFactory()->uploadTexture2DRegion( _handle, desc );
+        return RHITransferUtil::uploadTexture2DRegionAndWait( *pDevice->getResourceFactory(), _handle, desc );
     }
 
     void Texture2D::forgetRHI( IRHIDevice* pDevice )

@@ -14,6 +14,7 @@
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
 #include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
 #include "Engine/Graphics/RHI/Support/RHITimestamp.h"
+#include "Engine/Graphics/RHI/Support/RHITransferUtil.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Window/IWindow.h"
 
@@ -86,7 +87,7 @@ namespace
         uint32 _total{ 0 }; ///< 센 픽셀 전체(너비 x 높이)
     };
 
-    /** @brief `readbackTexture2D` 로 읽은 RGBA8 픽셀을 원색별로 셉니다. */
+    /** @brief `readbackTexture2DAndWait` 로 읽은 RGBA8 픽셀을 원색별로 셉니다. */
     PrimaryColorCount countPrimaryColorPixels( const sw::vector<uint8>& bytes, const sw::RHITextureMipSpan& layout )
     {
         PrimaryColorCount count{};
@@ -181,9 +182,9 @@ namespace
         const bool bShouldReadback = bOk && pOutPixels != nullptr && pOutLayout != nullptr;
         if ( bShouldReadback )
         {
-            if ( pResource->readbackTexture2D( rt, 0, 0, *pOutPixels, *pOutLayout ) == false )
+            if ( sw::RHITransferUtil::readbackTexture2DAndWait( *pResource, rt, 0, 0, *pOutPixels, *pOutLayout ) == false )
             {
-                SW_LOG_WARNING( "executeOffscreenPipelineSmoke: readbackTexture2D failed" );
+                SW_LOG_WARNING( "executeOffscreenPipelineSmoke: readbackTexture2DAndWait failed" );
                 bOk = false;
             }
         }
@@ -770,22 +771,22 @@ SW_TEST_CASE( RHIDeviceTest, UploadTexture2DAllBackends )
         upload._pData     = arrPixel;
         upload._sizeBytes = sizeof( arrPixel );
         upload._mipLevels = 0; // 전부
-        SW_EXPECT_TRUE_MSG( pResource->uploadTexture2D( texture, upload ), "full mip chain upload failed" );
+        SW_EXPECT_TRUE_MSG( sw::RHITransferUtil::uploadTexture2DAndWait( *pResource, texture, upload ), "full mip chain upload failed" );
 
         sw::RHITextureUploadDesc firstMipOnly = upload;
         firstMipOnly._mipLevels               = 1;
         firstMipOnly._sizeBytes               = 16 * 4;
-        SW_EXPECT_TRUE_MSG( pResource->uploadTexture2D( texture, firstMipOnly ), "mip 0 only upload failed" );
+        SW_EXPECT_TRUE_MSG( sw::RHITransferUtil::uploadTexture2DAndWait( *pResource, texture, firstMipOnly ), "mip 0 only upload failed" );
 
         {
-            SW_TEST_DEFENSIVE_SCOPE( "uploadTexture2D rejects a short upload and a mip count beyond the texture" );
+            SW_TEST_DEFENSIVE_SCOPE( "submitTextureUpload rejects a short upload and a mip count beyond the texture" );
             sw::RHITextureUploadDesc tooShort = upload;
             tooShort._sizeBytes               = 16 * 4; // 밉 3개를 요구하면서 밉 0 분량만 줌
-            SW_EXPECT_TRUE_MSG( pResource->uploadTexture2D( texture, tooShort ) == false, "short upload must be rejected" );
+            SW_EXPECT_TRUE_MSG( sw::RHITransferUtil::uploadTexture2DAndWait( *pResource, texture, tooShort ) == false, "short upload must be rejected" );
 
             sw::RHITextureUploadDesc tooManyMips = upload;
             tooManyMips._mipLevels               = 4;
-            SW_EXPECT_TRUE_MSG( pResource->uploadTexture2D( texture, tooManyMips ) == false, "mip count beyond the texture must be rejected" );
+            SW_EXPECT_TRUE_MSG( sw::RHITransferUtil::uploadTexture2DAndWait( *pResource, texture, tooManyMips ) == false, "mip count beyond the texture must be rejected" );
         }
 
         const sw::RHIDescriptorIndex srv = pResource->registerBindlessTexture( texture );
@@ -864,14 +865,14 @@ SW_TEST_CASE( RHIDeviceTest, TextureReadbackMatchesUpload )
             upload._pData     = testCase._pData;
             upload._sizeBytes = testCase._sizeBytes;
             upload._mipLevels = 0;
-            SW_EXPECT_TRUE_MSG( pResource->uploadTexture2D( texture, upload ), testCase._pName );
+            SW_EXPECT_TRUE_MSG( sw::RHITransferUtil::uploadTexture2DAndWait( *pResource, texture, upload ), testCase._pName );
 
             uint32 offset = 0;
             for ( uint32 mip = 0; mip < testCase._mips; ++mip )
             {
                 sw::vector<uint8>     bytes;
                 sw::RHITextureMipSpan layout{};
-                const bool            bRead = pResource->readbackTexture2D( texture, mip, 0, bytes, layout );
+                const bool            bRead = sw::RHITransferUtil::readbackTexture2DAndWait( *pResource, texture, mip, 0, bytes, layout );
                 SW_EXPECT_TRUE_MSG( bRead, testCase._pName );
                 if ( bRead == false )
                     break;
@@ -883,10 +884,10 @@ SW_TEST_CASE( RHIDeviceTest, TextureReadbackMatchesUpload )
                 offset += layout._sizeBytes;
             }
             {
-                SW_TEST_DEFENSIVE_SCOPE( "readbackTexture2D rejects a mip past the last one" );
+                SW_TEST_DEFENSIVE_SCOPE( "submitTextureReadback rejects a mip past the last one" );
                 sw::vector<uint8>     outOfRangeBytes;
                 sw::RHITextureMipSpan outOfRangeLayout{};
-                SW_EXPECT_TRUE( pResource->readbackTexture2D( texture, testCase._mips, 0, outOfRangeBytes, outOfRangeLayout ) == false );
+                SW_EXPECT_TRUE( sw::RHITransferUtil::readbackTexture2DAndWait( *pResource, texture, testCase._mips, 0, outOfRangeBytes, outOfRangeLayout ) == false );
             }
             pResource->destroyTexture( texture );
         }
@@ -1052,7 +1053,7 @@ SW_TEST_CASE( RHIDeviceTest, WriteOnceConstantBufferReachesEveryFrameSlot )
 
             sw::vector<uint8>     pixels;
             sw::RHITextureMipSpan layout{};
-            SW_ASSERT_TRUE( pResource->readbackTexture2D( rt, 0, 0, pixels, layout ) );
+            SW_ASSERT_TRUE( sw::RHITransferUtil::readbackTexture2DAndWait( *pResource, rt, 0, 0, pixels, layout ) );
             const uint8* pCenter = pixels.data() + static_cast<size_t>( layout._height / 2 ) * layout._rowBytes +
                                    static_cast<size_t>( layout._width / 2 ) * 4;
             const bool bRed = pCenter[0] > 200 && pCenter[1] < 80 && pCenter[2] < 80;
@@ -1190,7 +1191,7 @@ SW_TEST_CASE( RHIDeviceTest, SceneDrawVertexIDStartsAtZeroOnlyOnD3D )
 
                 sw::vector<uint8>     pixels;
                 sw::RHITextureMipSpan layout{};
-                if ( pResource->readbackTexture2D( rt, 0, 0, pixels, layout ) )
+                if ( sw::RHITransferUtil::readbackTexture2DAndWait( *pResource, rt, 0, 0, pixels, layout ) )
                 {
                     const PrimaryColorCount count    = countPrimaryColorPixels( pixels, layout );
                     const uint32            redCount = count._red;
@@ -1211,7 +1212,7 @@ SW_TEST_CASE( RHIDeviceTest, SceneDrawVertexIDStartsAtZeroOnlyOnD3D )
                     }
                 }
                 else
-                    SW_EXPECT_TRUE_MSG( false, "readbackTexture2D 실패" );
+                    SW_EXPECT_TRUE_MSG( false, "readbackTexture2DAndWait 실패" );
             }
             if ( rt != 0 )
                 pResource->destroyTexture( rt );
@@ -1290,7 +1291,7 @@ SW_TEST_CASE( RHIDeviceTest, IndexedIndirectDrawReadsInstanceSlotStream )
 
                 sw::vector<uint8>     pixels;
                 sw::RHITextureMipSpan layout{};
-                if ( pResource->readbackTexture2D( rt, 0, 0, pixels, layout ) )
+                if ( sw::RHITransferUtil::readbackTexture2DAndWait( *pResource, rt, 0, 0, pixels, layout ) )
                 {
                     const PrimaryColorCount count = countPrimaryColorPixels( pixels, layout );
                     // 초록이 아니면: 빨강은 슬롯 1 을 못 읽은 것이고, 둘 다 0 이면 인덱스 드로우 자체가 안 그려진 것이다.
@@ -1300,7 +1301,7 @@ SW_TEST_CASE( RHIDeviceTest, IndexedIndirectDrawReadsInstanceSlotStream )
                                             .c_str() );
                 }
                 else
-                    SW_EXPECT_TRUE_MSG( false, "readbackTexture2D 실패" );
+                    SW_EXPECT_TRUE_MSG( false, "readbackTexture2DAndWait 실패" );
             }
             if ( rt != 0 )
                 pResource->destroyTexture( rt );
@@ -1378,7 +1379,7 @@ SW_TEST_CASE( RHIDeviceTest, DestroyedVertexBufferSkipsTheDrawAndReportsIt )
 
                 sw::vector<uint8>     pixels;
                 sw::RHITextureMipSpan layout{};
-                if ( pResource->readbackTexture2D( rt, 0, 0, pixels, layout ) )
+                if ( sw::RHITransferUtil::readbackTexture2DAndWait( *pResource, rt, 0, 0, pixels, layout ) )
                 {
                     const PrimaryColorCount count = countPrimaryColorPixels( pixels, layout );
                     SW_EXPECT_TRUE_MSG( count._green == 0 && count._red == 0,
@@ -1387,7 +1388,7 @@ SW_TEST_CASE( RHIDeviceTest, DestroyedVertexBufferSkipsTheDrawAndReportsIt )
                                             .c_str() );
                 }
                 else
-                    SW_EXPECT_TRUE_MSG( false, "readbackTexture2D 실패" );
+                    SW_EXPECT_TRUE_MSG( false, "readbackTexture2DAndWait 실패" );
 
                 if ( std::find( s_listCheckedBackend.begin(), s_listCheckedBackend.end(), backend ) == s_listCheckedBackend.end() )
                 {
@@ -1621,7 +1622,7 @@ SW_TEST_CASE( RHIDeviceTest, ComputeTextureUavWriteIsReadable )
 
             sw::vector<uint8>     bytes;
             sw::RHITextureMipSpan layout{};
-            const bool            bRead = pResource->readbackTexture2D( texture, 0, 0, bytes, layout );
+            const bool            bRead = sw::RHITransferUtil::readbackTexture2DAndWait( *pResource, texture, 0, 0, bytes, layout );
             SW_EXPECT_TRUE_MSG( bRead, pName );
             const bool bReadbackValid = bRead && layout._rowBytes >= kSize * 4 && bytes.size() >= static_cast<size_t>( layout._rowBytes ) * kSize;
             if ( bReadbackValid )
@@ -1705,7 +1706,7 @@ SW_TEST_CASE( RHIDeviceTest, ComputeEntryPointOtherThanCSMainRuns )
 
             sw::vector<uint8>     bytes;
             sw::RHITextureMipSpan layout{};
-            const bool            bRead = pResource->readbackTexture2D( texture, 0, 0, bytes, layout );
+            const bool            bRead = sw::RHITransferUtil::readbackTexture2DAndWait( *pResource, texture, 0, 0, bytes, layout );
             SW_EXPECT_TRUE_MSG( bRead, pName );
             const bool bReadbackValid = bRead && layout._rowBytes >= kSize * 4 && bytes.size() >= static_cast<size_t>( layout._rowBytes ) * kSize;
             if ( bReadbackValid )
@@ -2034,7 +2035,7 @@ SW_TEST_CASE( RHIDeviceTest, SlicedTexturesTargetUploadAndReadBackPerSlice )
                 {
                     sw::vector<uint8>     pixels;
                     sw::RHITextureMipSpan layout{};
-                    const bool            bRead = pResource->readbackTexture2D( color, 0, slice, pixels, layout );
+                    const bool            bRead = sw::RHITransferUtil::readbackTexture2DAndWait( *pResource, color, 0, slice, pixels, layout );
                     SW_EXPECT_TRUE_MSG( bRead, ( shapeLabel + "면 " + sw::to_string( slice ) + " 를 읽지 못했다" ).c_str() );
                     if ( bRead == false )
                         continue;
@@ -2077,7 +2078,7 @@ SW_TEST_CASE( RHIDeviceTest, SlicedTexturesTargetUploadAndReadBackPerSlice )
                 upload._sizeBytes  = static_cast<uint32>( bytes.size() );
                 upload._mipLevels  = 1;
                 upload._arraySlice = slice;
-                SW_EXPECT_TRUE_MSG( pResource->uploadTexture2D( uploaded, upload ), ( shapeLabel + "면 " + sw::to_string( slice ) + " 를 올리지 못했다" ).c_str() );
+                SW_EXPECT_TRUE_MSG( sw::RHITransferUtil::uploadTexture2DAndWait( *pResource, uploaded, upload ), ( shapeLabel + "면 " + sw::to_string( slice ) + " 를 올리지 못했다" ).c_str() );
             }
             device->waitIdle();
             for ( uint32 slice = 0; slice < shape._arraySize; ++slice )
@@ -2088,7 +2089,7 @@ SW_TEST_CASE( RHIDeviceTest, SlicedTexturesTargetUploadAndReadBackPerSlice )
                 }
                 sw::vector<uint8>     readBytes;
                 sw::RHITextureMipSpan layout{};
-                const bool            bRead = pResource->readbackTexture2D( uploaded, 0, slice, readBytes, layout );
+                const bool            bRead = sw::RHITransferUtil::readbackTexture2DAndWait( *pResource, uploaded, 0, slice, readBytes, layout );
                 const bool            bSame = bRead && readBytes.size() == bytes.size() && sw::Memory::compare( readBytes.data(), bytes.data(), bytes.size() ) == 0;
                 SW_EXPECT_TRUE_MSG( bSame, ( shapeLabel + "면 " + sw::to_string( slice ) + " 의 바이트가 올린 것과 다르다" ).c_str() );
             }
@@ -2096,7 +2097,7 @@ SW_TEST_CASE( RHIDeviceTest, SlicedTexturesTargetUploadAndReadBackPerSlice )
                 SW_TEST_SUPPRESS_LOGS();
                 sw::vector<uint8>     outOfRange;
                 sw::RHITextureMipSpan layout{};
-                SW_EXPECT_TRUE( pResource->readbackTexture2D( uploaded, 0, shape._arraySize, outOfRange, layout ) == false );
+                SW_EXPECT_TRUE( sw::RHITransferUtil::readbackTexture2DAndWait( *pResource, uploaded, 0, shape._arraySize, outOfRange, layout ) == false );
             }
             pResource->destroyTexture( uploaded );
         }
@@ -2401,7 +2402,7 @@ SW_TEST_CASE( RHIDeviceTest, RegionUploadReadsBackOnEveryBackend )
                 full._sizeBytes  = chainBytes;
                 full._mipLevels  = 0;
                 full._arraySlice = slice;
-                SW_EXPECT_TRUE_MSG( pResource->uploadTexture2D( texture, full ), ( label + "zero upload" ).c_str() );
+                SW_EXPECT_TRUE_MSG( sw::RHITransferUtil::uploadTexture2DAndWait( *pResource, texture, full ), ( label + "zero upload" ).c_str() );
             }
 
             // 구간 — 픽셀 (행, 열) 의 모든 채널이 행 × 16 + 열 + 1 이다(0 과 갈린다).
@@ -2421,11 +2422,11 @@ SW_TEST_CASE( RHIDeviceTest, RegionUploadReadsBackOnEveryBackend )
             sw::RHITextureRegionUploadDesc region = shape;
             region._pData                         = regionBytes.data();
             region._sizeBytes                     = static_cast<uint32>( regionBytes.size() );
-            SW_EXPECT_TRUE_MSG( pResource->uploadTexture2DRegion( texture, region ), ( label + "region upload" ).c_str() );
+            SW_EXPECT_TRUE_MSG( sw::RHITransferUtil::uploadTexture2DRegionAndWait( *pResource, texture, region ), ( label + "region upload" ).c_str() );
 
             sw::vector<uint8>     bytes;
             sw::RHITextureMipSpan layout{};
-            const bool            bRead = pResource->readbackTexture2D( texture, shape._mip, shape._arraySlice, bytes, layout );
+            const bool            bRead = sw::RHITransferUtil::readbackTexture2DAndWait( *pResource, texture, shape._mip, shape._arraySlice, bytes, layout );
             SW_EXPECT_TRUE_MSG( bRead, ( label + "readback" ).c_str() );
             if ( bRead )
             {
@@ -2482,22 +2483,22 @@ SW_TEST_CASE( RHIDeviceTest, RegionUploadRejectsOutOfRange )
         good._y         = 4;
         good._width     = 4;
         good._height    = 4;
-        SW_EXPECT_TRUE_MSG( pResource->uploadTexture2DRegion( r8, good ), ( label + "a region touching the far corner is inside" ).c_str() );
+        SW_EXPECT_TRUE_MSG( sw::RHITransferUtil::uploadTexture2DRegionAndWait( *pResource, r8, good ), ( label + "a region touching the far corner is inside" ).c_str() );
         {
-            SW_TEST_DEFENSIVE_SCOPE( "uploadTexture2DRegion rejects bad regions" );
+            SW_TEST_DEFENSIVE_SCOPE( "submitTextureRegionUpload rejects bad regions" );
             sw::RHITextureRegionUploadDesc outside = good;
             outside._x                             = 5;
-            SW_EXPECT_TRUE_MSG( pResource->uploadTexture2DRegion( r8, outside ) == false, ( label + "region past the right edge" ).c_str() );
+            SW_EXPECT_TRUE_MSG( sw::RHITransferUtil::uploadTexture2DRegionAndWait( *pResource, r8, outside ) == false, ( label + "region past the right edge" ).c_str() );
             sw::RHITextureRegionUploadDesc shortData = good;
             shortData._sizeBytes                     = 4 * 4 - 1;
-            SW_EXPECT_TRUE_MSG( pResource->uploadTexture2DRegion( r8, shortData ) == false, ( label + "short data" ).c_str() );
+            SW_EXPECT_TRUE_MSG( sw::RHITransferUtil::uploadTexture2DRegionAndWait( *pResource, r8, shortData ) == false, ( label + "short data" ).c_str() );
             sw::RHITextureRegionUploadDesc badMip = good;
             badMip._mip                           = 1;
-            SW_EXPECT_TRUE_MSG( pResource->uploadTexture2DRegion( r8, badMip ) == false, ( label + "mip past the last" ).c_str() );
+            SW_EXPECT_TRUE_MSG( sw::RHITransferUtil::uploadTexture2DRegionAndWait( *pResource, r8, badMip ) == false, ( label + "mip past the last" ).c_str() );
             sw::RHITextureRegionUploadDesc badSlice = good;
             badSlice._arraySlice                    = 1;
-            SW_EXPECT_TRUE_MSG( pResource->uploadTexture2DRegion( r8, badSlice ) == false, ( label + "slice past the last" ).c_str() );
-            SW_EXPECT_TRUE_MSG( pResource->uploadTexture2DRegion( bc1, good ) == false, ( label + "compressed format" ).c_str() );
+            SW_EXPECT_TRUE_MSG( sw::RHITransferUtil::uploadTexture2DRegionAndWait( *pResource, r8, badSlice ) == false, ( label + "slice past the last" ).c_str() );
+            SW_EXPECT_TRUE_MSG( sw::RHITransferUtil::uploadTexture2DRegionAndWait( *pResource, bc1, good ) == false, ( label + "compressed format" ).c_str() );
         }
         pResource->destroyTexture( r8 );
         pResource->destroyTexture( bc1 );
@@ -2551,7 +2552,7 @@ SW_TEST_CASE( RHIDeviceTest, PremultipliedBlendAddsColorWithoutAlphaMultiply )
 
             sw::vector<uint8>     pixels;
             sw::RHITextureMipSpan layout{};
-            SW_ASSERT_TRUE( pResource->readbackTexture2D( target, 0, 0, pixels, layout ) );
+            SW_ASSERT_TRUE( sw::RHITransferUtil::readbackTexture2DAndWait( *pResource, target, 0, 0, pixels, layout ) );
             const uint8* pCenter     = findPixel( pixels, layout, 8, 8 );
             const uint32 expectedRed = premultiplied == 1 ? 128u : 64u;
             const bool   bOk         = isNear( pCenter[0], expectedRed, 3 ) && isNear( pCenter[1], 0, 3 ) && isNear( pCenter[2], 128, 3 ) && isNear( pCenter[3], 255, 3 );
@@ -2639,7 +2640,7 @@ SW_TEST_CASE( RHIDeviceTest, ScissorRectClipsDrawsAndResetsWithViewport )
         {
             sw::vector<uint8>     pixels;
             sw::RHITextureMipSpan layout{};
-            SW_ASSERT_TRUE( pResource->readbackTexture2D( arrTarget[targetIndex], 0, 0, pixels, layout ) );
+            SW_ASSERT_TRUE( sw::RHITransferUtil::readbackTexture2DAndWait( *pResource, arrTarget[targetIndex], 0, 0, pixels, layout ) );
             uint32 wrongCount{ 0 };
             for ( uint32 row = 0; row < kSize; ++row )
             {
@@ -2720,7 +2721,7 @@ SW_TEST_CASE( RHIDeviceTest, LoadOpKeepsSingleOffscreenTarget )
 
         sw::vector<uint8>     pixels;
         sw::RHITextureMipSpan layout{};
-        SW_ASSERT_TRUE( pResource->readbackTexture2D( target, 0, 0, pixels, layout ) );
+        SW_ASSERT_TRUE( sw::RHITransferUtil::readbackTexture2DAndWait( *pResource, target, 0, 0, pixels, layout ) );
         uint32 wrongCount{ 0 };
         for ( uint32 row = 0; row < kSize; ++row )
         {
@@ -2823,7 +2824,7 @@ SW_TEST_CASE( RHIDeviceTest, VertexBufferRegionUpdateReachesItsDraws )
 
                 sw::vector<uint8>     pixels;
                 sw::RHITextureMipSpan layout{};
-                if ( pResource->readbackTexture2D( rt, 0, 0, pixels, layout ) )
+                if ( sw::RHITransferUtil::readbackTexture2DAndWait( *pResource, rt, 0, 0, pixels, layout ) )
                 {
                     const PrimaryColorCount count = countPrimaryColorPixels( pixels, layout );
                     if ( startVertex == 3 )
@@ -2838,7 +2839,7 @@ SW_TEST_CASE( RHIDeviceTest, VertexBufferRegionUpdateReachesItsDraws )
                     }
                 }
                 else
-                    SW_EXPECT_TRUE_MSG( false, ( label + "readbackTexture2D 실패" ).c_str() );
+                    SW_EXPECT_TRUE_MSG( false, ( label + "readbackTexture2DAndWait 실패" ).c_str() );
             }
             if ( rt != 0 )
                 pResource->destroyTexture( rt );

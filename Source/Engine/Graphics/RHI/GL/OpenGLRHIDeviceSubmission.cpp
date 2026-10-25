@@ -165,8 +165,53 @@ namespace sw
                 rpSync = nullptr;
             }
             _completedFrameSerial = _frameSerial;
+            // glFinish 가 낸 전송도 모두 끝냈다. 펜스를 놓고 워터마크를 올린다.
+            _transferQueue.retireAll( []( void*& pSync )
+            {
+                if ( pSync != nullptr )
+                    glDeleteSync( static_cast<GLsync>( pSync ) );
+                pSync = nullptr;
+            } );
         }
         _releaseQueue.flushAll();
+    }
+
+    uint64 OpenGLRHIDevice::endTransfer( bool bGPUPending )
+    {
+        // 펜스는 앞선 모든 명령의 끝을 알린다. glFlush 로 명령을 GPU 로 내보내야 프레임을 돌리지 않아도 신호가 선다.
+        void* pSync = nullptr;
+        if ( bGPUPending )
+        {
+            pSync = glFenceSync( GL_SYNC_GPU_COMMANDS_COMPLETE, 0 );
+            glFlush();
+        }
+        const uint64 serial = _transferQueue.enqueue( pSync );
+        retireFinishedTransfers(); // 앞서 낸 전송 가운데 끝난 것을 모은다(이 스레드가 컨텍스트를 쥐고 있다)
+        return serial;
+    }
+
+    void OpenGLRHIDevice::retireFinishedTransfers()
+    {
+        _transferQueue.retireDone(
+            [this]( void*& pSync )
+        {
+            if ( pSync == nullptr )
+                return true; // 동기로 읽어 둔 되읽기 등 이미 끝난 제출이다
+            const GLenum waitResult = glClientWaitSync( static_cast<GLsync>( pSync ), 0, 0 );
+            if ( waitResult == GL_WAIT_FAILED )
+            {
+                SW_LOG_ERROR( "pollTransfer: glClientWaitSync failed on a transfer fence" );
+                _transferSerials.markLost();
+                return false;
+            }
+            return waitResult != GL_TIMEOUT_EXPIRED;
+        },
+            []( void*& pSync )
+        {
+            if ( pSync != nullptr )
+                glDeleteSync( static_cast<GLsync>( pSync ) );
+            pSync = nullptr;
+        } );
     }
 
     void OpenGLRHIDevice::retireFrameOnGPU()
@@ -201,6 +246,8 @@ namespace sw
             rpNextSync            = nullptr;
             _completedFrameSerial = next;
         }
+        // 프레임을 돌리는 스레드는 컨텍스트를 쥐고 있으니 여기서 전송 워터마크도 올린다(컨텍스트 없는 스레드의 폴링은 이 값을 본다).
+        retireFinishedTransfers();
         _releaseQueue.tickCompleted( _completedFrameSerial );
     }
 
