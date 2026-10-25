@@ -306,6 +306,7 @@ namespace sw
         , _ragdollHalfExtent{ 0.0f }
         , _ragdollFrame{ 0 }
         , _rigLookTarget{}
+        , _framedRigView{ 0 }
         , _bCharacterFraming{ SW_FALSE }
         , _bFaceFraming{ SW_FALSE }
         , _reserved{ 0 }

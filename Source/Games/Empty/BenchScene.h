@@ -261,6 +261,8 @@ namespace sw
         uint32 _ragdollFrame;
         /** @brief 리그 데모의 시선 목표(작은 구). */
         TComponentHandle<MeshComponent> _rigLookTarget;
+        /** @brief 리그 데모 카메라를 마지막으로 맞출 때의 `-gv_benchRigView` 값입니다. 달라지면(시나리오가 도중에 바꾼 경우) 다시 맞춥니다. */
+        int32 _framedRigView;
         /** @brief 캐릭터 벤치를 스폰했으면 1 입니다. 카메라를 캐릭터 기준으로 맞춥니다. */
         uint8                  _bCharacterFraming : 1;
         uint8                  _bFaceFraming      : 1; ///< 테스트 머리 줄을 스폰했다(카메라를 머리 높이로 맞춘다).

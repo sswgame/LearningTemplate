@@ -295,6 +295,7 @@ namespace sw
             return;
         const uint32  count    = static_cast<uint32>( _listRigBody.size() );
         const float32 halfSpan = 0.5f * static_cast<float32>( count ) * _settings._rigSpacing;
+        _framedRigView         = gv_benchRigView;
         for ( CameraComponent* pCamera : pScene->getObjectManager()->getCameraRegistry().getAll() )
         {
             if ( count <= 1 )
@@ -322,6 +323,10 @@ namespace sw
         GameObjectManager* pObjects      = ( pScene != nullptr ) ? pScene->getObjectManager() : nullptr;
         if ( pObjects == nullptr )
             return;
+
+        // 시나리오가 `-gv_benchRigView` 를 도중에 바꾸면 카메라가 따라간다(맞춤은 장면을 세울 때와 0.5 초 뒤 두 번뿐이라 늦은 변경이 반영되지 않았다).
+        if ( gv_benchRigView != _framedRigView )
+            frameRigCameras( pScene );
 
         // 거리 LOD 기준점 = 첫 카메라(스프링 본의 lod_distance).
         const vector<CameraComponent*>& listCamera = pObjects->getCameraRegistry().getAll();
