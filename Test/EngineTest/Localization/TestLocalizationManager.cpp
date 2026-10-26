@@ -15,7 +15,6 @@
 #include "EngineTest/LocalizationTestUtil.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
-#include "GameFramework/Base/Foundation/Framework/Presentation/GameStrings.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -282,36 +281,38 @@ SW_TEST_CASE( LocalizationManagerTest, LanguageChangedCallbackNotification )
 }
 
 /**
- * @brief [LocalizationManagerTest] GameStrings 는 게임 프로젝트를 올리고(앞의 것은 내린다) 기본 · 폴백 언어를 고르며, clear 는 게임 프로젝트만 내린다
+ * @brief [LocalizationManagerTest] 게임 서비스로 찾은 관리자가 게임 프로젝트를 올리고(앞의 것은 내린다) 기본 · 폴백 언어를 고르며, 게임 범위를 내리면 게임 프로젝트만 내려간다
  */
-SW_TEST_CASE( LocalizationManagerTest, GameStringsMountsTheGameProject )
+SW_TEST_CASE( LocalizationManagerTest, GameServiceMountsTheGameProject )
 {
     sw::SubsystemScope gameService;
     SW_ASSERT_TRUE( gameService.bind( &sw::engine::getSubsystem<sw::LocalizationManager>() ) );
     sw::test::ScopedGameServiceBinding scopedBinding{ gameService };
+    sw::LocalizationManager*           pLoc = sw::game::findSubsystem<sw::LocalizationManager>();
+    SW_ASSERT_NOT_NULL( pLoc );
 
     const sw::string folder           = test::makeTempDirectory( "loc_gamestrings" );
     const sw::string projectPath      = writeSampleProject( folder );
-    const sw::string previousLanguage = sw::engine::getSubsystem<sw::LocalizationManager>().getCurrentLanguage();
-    const sw::string previousFallback = sw::engine::getSubsystem<sw::LocalizationManager>().getFallbackLanguage();
+    const sw::string previousLanguage = pLoc->getCurrentLanguage();
+    const sw::string previousFallback = pLoc->getFallbackLanguage();
 
-    SW_ASSERT_TRUE( sw::GameStrings::initialize( ::test::makeTempResourceID( projectPath ), "ko_KR", "en_US" ) );
-    SW_EXPECT_EQUAL( sw::string( "ko_kr" ), sw::GameStrings::getLanguage() );
-    SW_EXPECT_EQUAL( sw::string( "en_us" ), sw::GameStrings::getFallbackLanguage() );
-    SW_EXPECT_STREQ( "신비의 섬", sw::GameStrings::get( "ui.title" ) );
-    SW_EXPECT_STREQ( "종료(한국)", sw::GameStrings::get( "ui.quit" ) );
-    SW_EXPECT_TRUE( sw::GameStrings::hasLanguage( "ja" ) );
-    SW_EXPECT_STREQ( "Mystery Island", sw::GameStrings::getFromLanguage( "en", "ui.title" ) );
+    SW_ASSERT_TRUE( pLoc->initialize( ::test::makeTempResourceID( projectPath ), "ko_KR", "en_US" ) );
+    SW_EXPECT_EQUAL( sw::string( "ko_kr" ), pLoc->getCurrentLanguage() );
+    SW_EXPECT_EQUAL( sw::string( "en_us" ), pLoc->getFallbackLanguage() );
+    SW_EXPECT_STREQ( "신비의 섬", pLoc->getString( sw::hashed_string( "ui.title" ) ) );
+    SW_EXPECT_STREQ( "종료(한국)", pLoc->getString( sw::hashed_string( "ui.quit" ) ) );
+    SW_EXPECT_TRUE( pLoc->hasLanguage( "ja" ) );
+    SW_EXPECT_STREQ( "Mystery Island", pLoc->getStringFromLanguage( "en", sw::hashed_string( "ui.title" ) ) );
 
     sw::string   notifiedNewLang;
-    const uint32 callbackID = sw::GameStrings::registerLanguageChangedCallback( [&]( sw::string_view, sw::string_view newLang )
+    const uint32 callbackID = pLoc->registerLanguageChangedCallback( [&]( sw::string_view, sw::string_view newLang )
     { notifiedNewLang = newLang; } );
-    SW_EXPECT_TRUE( sw::GameStrings::setLanguage( "en" ) );
+    SW_EXPECT_TRUE( pLoc->setCurrentLanguage( "en" ) );
     SW_EXPECT_STREQ( "en", notifiedNewLang.c_str() );
-    SW_EXPECT_STREQ( "Start Game", sw::GameStrings::get( "ui.start" ) );
-    sw::GameStrings::unregisterLanguageChangedCallback( callbackID );
+    SW_EXPECT_STREQ( "Start Game", pLoc->getString( sw::hashed_string( "ui.start" ) ) );
+    pLoc->unregisterLanguageChangedCallback( callbackID );
 
-    sw::GameStrings::clear();
+    pLoc->unmountProjects( sw::LocalizationScope::Game );
     SW_EXPECT_FALSE( sw::engine::getSubsystem<sw::LocalizationManager>().hasString( sw::hashed_string( "ui.title" ) ) );
     sw::engine::getSubsystem<sw::LocalizationManager>().clearMissingKeys();
     (void)sw::engine::getSubsystem<sw::LocalizationManager>().setCurrentLanguage( previousLanguage );
@@ -374,7 +375,7 @@ SW_TEST_CASE( LocalizationManagerTest, LanguageCodeIsReturnedByValue )
 
 /**
  * @brief [LocalizationManagerTest] 언어 코드는 철자가 달라도 한 언어다 — `ko-KR` · `ko_KR` · `ko_kr` 는 같다
- * @details 파일 이름(`Resource/` 는 소문자만 받는다 → `ko_kr`)과 기본값(`GameStrings` 의 "ko_KR") · 명령줄(`-lang=ko-KR`)의 철자가 다를 수 있다.
+ * @details 파일 이름(`Resource/` 는 소문자만 받는다 → `ko_kr`)과 기본값(`GameSettings` 의 "ko_KR") · 명령줄(`-lang=ko-KR`)의 철자가 다를 수 있다.
  */
 SW_TEST_CASE( LocalizationManagerTest, LanguageCodeSpellingsNameOneLanguage )
 {

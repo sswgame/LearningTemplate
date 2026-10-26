@@ -14,6 +14,7 @@
 #include "Engine/Config/GameTimeScale.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
+#include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Net/GameNetSession.h"
 #include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
 #include "Engine/Object/Component/2D/SpriteAnimatorComponent.h"
@@ -39,7 +40,6 @@
 #include "GameFramework/Base/Foundation/Framework/Flow/ScreenTransitionManager.h"
 #include "GameFramework/Base/Foundation/Framework/GameEvents.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
-#include "GameFramework/Base/Foundation/Framework/Presentation/GameStrings.h"
 #include "GameFramework/Base/Foundation/Framework/Save/ComponentStateStore.h"
 #include "GameFramework/Base/Foundation/Framework/Save/SaveGame.h"
 #include "GameFramework/Base/Gameplay/Appearance/UserAppearancePresetStore.h"
@@ -2921,7 +2921,7 @@ SW_TEST_CASE( GameFrameworkTest, BootstrapGameSettingsIsBoundAndApplied )
         }
         ~ScopedRunState()
         {
-            GameStrings::clear();
+            engine::getSubsystem<LocalizationManager>().unmountProjects( LocalizationScope::Game );
             game::unbindGameService();
             _input.shutdown();
             Component::setDefaultGameSettingsPath( _oldGameSettingsPath );
@@ -2980,8 +2980,9 @@ SW_TEST_CASE( GameFrameworkTest, BootstrapGameSettingsIsBoundAndApplied )
     SW_EXPECT_TRUE( runState._input.getInputMap().hasAction( "Confirm" ) );
 
     // 3) 다국어 — 철자가 달라도 기본 · 폴백 언어를 찾는다
-    SW_EXPECT_EQUAL( string( "ko_kr" ), GameStrings::getLanguage() );
-    SW_EXPECT_STREQ( "English", GameStrings::get( "UI_ONLY_EN" ) );
+    const LocalizationManager& localization = engine::getSubsystem<LocalizationManager>();
+    SW_EXPECT_EQUAL( string( "ko_kr" ), localization.getCurrentLanguage() );
+    SW_EXPECT_STREQ( "English", localization.getString( hashed_string( "UI_ONLY_EN" ) ) );
 
     // 4) 씬 흐름 — 처음은 타이틀, 타이틀 다음은(입구 씬이 없어) 시작 맵.
     SW_EXPECT_STREQ( "game/test/maps/title.scene.xml", instance.getFirstScene().c_str() );
