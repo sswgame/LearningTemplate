@@ -68,7 +68,7 @@
 제목: 서버 여럿의 실제 망 지연 측정
 옛번호: D7-5
 왜 필요한가: 버스 · 캐시 왕복을 루프백에서만 쟀다. 남은 것: 실제 지연(루프백이 아닌 망)에서의 왕복 측정.
-한 PC 판: `DelayedStreamTransport`(Core `Network/Transport/`)가 TCP 스트림 전송을 감싸 보내기에 고정 지연을 건다(들어갔고 `StreamTransportTest.DelayedTransportAddsTheDelayToEachDirectionAndKeepsOrder` 가 지킨다, 빌드 전). 서버 둘의 전송을 이것으로 감싸 0 · 20 · 80 ms 로 버스 · 캐시 왕복(p50/p99)을 재는 벤치가 남았다 — 서버 키트가 전송을 주입받는 자리(`OnlineServerRuntime`)를 먼저 확인한다. UDP 쪽은 `NetSim`(`NetEmulationTransport`)이 이미 한다.
+한 PC 판: `DelayedStreamTransport`(Core `Network/Transport/`)가 TCP 스트림 전송을 감싸 보내기에 고정 지연을 건다(들어갔고 `StreamTransportTest.DelayedTransportAddsTheDelayToEachDirectionAndKeepsOrder` 가 지킨다, 빌드 전). `_ioThreadCount == 0` 이면 스레드 없이 `pollIO` 가 도는 수동 판이라 루프백에도 쓴다. 벤치 `RespLatencyBenchTest`(가짜 RESP 서버 앞에 0 · 20 · 80 ms, GET 왕복 `[Bench]` 줄)가 들어갔고 첫 측정이 남았다(시간 예산도 그때 고친다). 서버 간 버스는 캐시(`EphemeralServerBus`) 위에서 돌므로 이 벤치가 버스 왕복의 바닥이다. `CacheStoreFactory` 는 전송을 직접 만들어 장식자를 끼울 자리가 없어, 실제 Valkey · Garnet 앞 지연은 공장에 전송을 주입하는 길을 낼 때 한다. UDP 쪽은 `NetSim`(`NetEmulationTransport`)이 이미 한다.
 처음부터 두 번째 장비가 필요한 것은 실제 회선의 손실 · 경로 변화뿐이다. 그 확인은 두 번째 장비 또는 클라우드 인스턴스가 생길 때 한다.
 
 ### NetworkExtensionIdeas
