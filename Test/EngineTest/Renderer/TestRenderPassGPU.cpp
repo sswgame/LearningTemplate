@@ -953,7 +953,7 @@ namespace
 /**
  * @brief FrameRenderer 파이프라인 로드 + 씬 execute 스모크 (RenderThread와 동일 begin/execute/end)
  */
-SW_TEST_CASE( RenderPassGPUTest, FrameRendererInitializeAndExecuteSmoke )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, FrameRendererInitializeAndExecuteSmoke, test::listRHIBackendParameter, 0.4 )
 {
     test::RHITestDevice device( { sw::RHIBackend::DirectX11, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL, sw::RHIBackend::DirectX12 } );
     if ( device.isReady() == false )
@@ -991,7 +991,7 @@ SW_TEST_CASE( RenderPassGPUTest, FrameRendererInitializeAndExecuteSmoke )
  *          네 백엔드 모두 PSO 를 RHIHandleTable(generation 팩드)로 발급하므로, 다시 만들면
  *          핸들 값이 반드시 달라진다. 재생성 여부를 핸들로 판정하는 근거다.
  */
-SW_TEST_CASE( RenderPassGPUTest, ShaderRecompileRebuildsPipelineStates )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, ShaderRecompileRebuildsPipelineStates, test::listRHIBackendParameter, 0.4 )
 {
     test::RHITestDevice device( { sw::RHIBackend::DirectX11, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL, sw::RHIBackend::DirectX12 } );
     if ( device.isReady() == false )
@@ -1034,7 +1034,7 @@ SW_TEST_CASE( RenderPassGPUTest, ShaderRecompileRebuildsPipelineStates )
  *          아무것도 하지 않는다. 패스 자원 해제(`releasePassResources`)가 히스토리까지 놓으면, 리로드 뒤 창 크기가 바뀔 때까지
  *          히스토리가 0 이라 TAA 패스가 지난 프레임을 읽지도 쓰지도 않는다.
  */
-SW_TEST_CASE( RenderPassGPUTest, ShaderRecompileKeepsTaaHistory )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, ShaderRecompileKeepsTaaHistory, test::listRHIBackendParameter, 0.4 )
 {
     test::RHITestDevice device( { sw::RHIBackend::DirectX12, sw::RHIBackend::DirectX11, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL } );
     if ( device.isReady() == false )
@@ -1067,7 +1067,7 @@ SW_TEST_CASE( RenderPassGPUTest, ShaderRecompileKeepsTaaHistory )
  *          매 프레임 통째로 덮어쓰면 인스턴스 버퍼 핸들이 매번 바뀌고, 직전 프레임 버퍼/디스크립터는
  *          releaseGPU() 없이 버려져 샌다.
  */
-SW_TEST_CASE( RenderPassGPUTest, GPUSceneBufferReusedAcrossPackets )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, GPUSceneBufferReusedAcrossPackets, test::listRHIBackendParameter, 0.4 )
 {
     test::RHITestDevice device( { sw::RHIBackend::DirectX11, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL, sw::RHIBackend::DirectX12 } );
     if ( device.isReady() == false )
@@ -1129,7 +1129,7 @@ SW_TEST_CASE( RenderPassGPUTest, GPUSceneBufferReusedAcrossPackets )
  *          내보낸 **뒤에** GT 쪽 소유를 전부 놓고 그 패킷을 실행한다 — ASAN 빌드에서 use-after-free 로
  *          잡히는 순서다. 스냅샷이 소유를 함께 실어야만 통과한다.
  */
-SW_TEST_CASE( RenderPassGPUTest, MaterialLifetimeFollowsPacket )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, MaterialLifetimeFollowsPacket, test::listRHIBackendParameter, 0.4 )
 {
     test::RHITestDevice device( { sw::RHIBackend::DirectX11, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL, sw::RHIBackend::DirectX12 } );
     if ( device.isReady() == false )
@@ -2550,7 +2550,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, ViewModeSelectsDistinctPipelineSt
  *          빈 화면이 된다. 세 번 측정한다: 첫 디바이스, 재생성 뒤 같은 렌더러, 재생성 뒤
  *          새 렌더러(대조군 — 렌더러에 남은 상태인지 디바이스 쪽인지 가른다).
  */
-SW_TEST_CASE( RenderPassGPUTest, RendererSurvivesDeviceRecreate )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, RendererSurvivesDeviceRecreate, test::listRHIBackendParameter, 0.4 )
 {
     test::RHITestDevice device( { sw::RHIBackend::DirectX12, sw::RHIBackend::DirectX11, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL } );
     if ( device.isReady() == false )
@@ -2606,7 +2606,7 @@ SW_TEST_CASE( RenderPassGPUTest, RendererSurvivesDeviceRecreate )
  *          여기서는 (1) flush 뒤에 상주하는지, (2) 같은 메시를 여러 배치가 써도 한 번만 만드는지(중복 요청이
  *          워커 둘을 돌려 버퍼 하나를 새게 하면 안 된다), (3) 이미 상주하면 요청 자체가 쌓이지 않는지를 본다.
  */
-SW_TEST_CASE( RenderPassGPUTest, UploadQueueMakesMeshesResidentBeforeDraw )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, UploadQueueMakesMeshesResidentBeforeDraw, test::listRHIBackendParameter, 0.4 )
 {
     test::RHITestDevice device( { sw::RHIBackend::DirectX12, sw::RHIBackend::DirectX11, sw::RHIBackend::Vulkan } );
     if ( device.isReady() == false )
@@ -2712,7 +2712,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, MeshReleaseWaitsForTheRenderThrea
  * @details 이 테스트가 지키는 것은 "어느 캐시를 다시 올려야 하는지 기억하지 않아도 된다" 이다. 복원할 목록을
  *          바깥이 들면 목록에서 빠진 것은 교체 뒤 조용히 비어 있다. 아래 initAllFor 한 줄을 지우면 이 테스트가 빨개진다.
  */
-SW_TEST_CASE( RenderPassGPUTest, RegistryRestoresResourcesOnNewDevice )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, RegistryRestoresResourcesOnNewDevice, test::listRHIBackendParameter, 0.4 )
 {
     test::RHITestDevice device( { sw::RHIBackend::DirectX12, sw::RHIBackend::DirectX11, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL } );
     if ( device.isReady() == false )
@@ -2751,7 +2751,7 @@ SW_TEST_CASE( RenderPassGPUTest, RegistryRestoresResourcesOnNewDevice )
  *          "상주" 라고 답한다. 그러면 새 디바이스에 옛 핸들을 그대로 돌려주고, 해제는 죽은 디바이스에 destroy 를
  *          부른다(UAF).
  */
-SW_TEST_CASE( RenderPassGPUTest, DeviceDeathInvalidatesGPUHandles )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, DeviceDeathInvalidatesGPUHandles, test::listRHIBackendParameter, 0.4 )
 {
     test::RHITestDevice device( { sw::RHIBackend::DirectX12, sw::RHIBackend::DirectX11, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL } );
     if ( device.isReady() == false )
@@ -2787,7 +2787,7 @@ SW_TEST_CASE( RenderPassGPUTest, DeviceDeathInvalidatesGPUHandles )
  * @note 고유 색 수로 본다. "비배경 픽셀 수" 는 클리어 색·톤매핑에 무너지지만, 화면이 통째로 한
  *       색이면(= 아무것도 안 그렸다) 고유 색은 반드시 1 이다.
  */
-SW_TEST_CASE( RenderPassGPUTest, DeferredPipelineDrawsGeometry )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, DeferredPipelineDrawsGeometry, test::listRHIBackendParameter, 0.4 )
 {
     test::RHITestDevice device( { sw::RHIBackend::DirectX11, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL, sw::RHIBackend::DirectX12 } );
     if ( device.isReady() == false )
@@ -3123,7 +3123,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, AmbientOcclusionReachesBloom, tes
  * @note 패널 자체는 ImGui 라 테스트가 붙지 않는다. 대신 **패널이 먹는 데이터**를 여기서 고정한다 —
  *       목록이 비거나 이름이 바뀌면 패널은 조용히 빈 창이 된다(그게 이 계약의 유일한 실패 모드다).
  */
-SW_TEST_CASE( RenderPassGPUTest, RenderTargetsArePublishedForTheEditor )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, RenderTargetsArePublishedForTheEditor, test::listRHIBackendParameter, 0.4 )
 {
     test::RHITestDevice device( { sw::RHIBackend::DirectX11, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL, sw::RHIBackend::DirectX12 } );
     if ( device.isReady() == false )
@@ -4787,7 +4787,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, MissingTextureSamplesTheChecker, 
  *          기다렸다가 결과를 받아야 한다 — 따로 만들면 하나가 버려지거나 참조 수가 어긋난다. 실패한 키는 표에 남지 않는다.
  *          GL 은 컨텍스트가 한 스레드라 다른 스레드에서 만들 수 없으므로 DX12 · DX11 로만 본다.
  */
-SW_TEST_CASE( RenderPassGPUTest, ConcurrentTextureAcquireCreatesOnce )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, ConcurrentTextureAcquireCreatesOnce, test::listRHIBackendParameter, 0.4 )
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     test::RHITestDevice device( { sw::RHIBackend::DirectX12, sw::RHIBackend::DirectX11 } );
@@ -6608,7 +6608,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, PostProcessOffViewSkipsThePostCha
  * @details 1 Hz 캡처 카메라. 0 초에 붉은 큐브를 그린 뒤 큐브를 푸르게 바꾸고 0.1 초에 그리면 쉬는 프레임이라 텍스처는 여전히 붉다. 1.1 초에는
  *          다시 그려 푸르다. 쉬지 않으면(주기를 무시하면) 0.1 초에 이미 푸르다.
  */
-SW_TEST_CASE( RenderPassGPUTest, ExtraViewSkipsFramesByItsUpdateRate )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, ExtraViewSkipsFramesByItsUpdateRate, test::listRHIBackendParameter, 0.4 )
 {
     test::RHITestDevice device( { sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::DirectX11, sw::RHIBackend::OpenGL } );
     if ( device.isReady() == false )

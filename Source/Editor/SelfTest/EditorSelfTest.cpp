@@ -285,10 +285,7 @@ namespace sw::editor
                 SW_LOG_ERROR( "Could not write the editor self test report to %#", gv_editorSelfTestReport.c_str() );
         }
 
-        MainWindowSubsystem* pWindowHost = editor::findSubsystem<MainWindowSubsystem>();
-        IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
-        if ( pWindowHost == nullptr ) // 필수 서비스: 없으면 버그. 창이 없는 실행(헤드리스)은 종료 요청할 창이 없을 뿐이다.
-            SW_LOG_ERROR( "MainWindowSubsystem is missing - the editor cannot be asked to close after the self test" );
+        IWindow* pWindow = editor::getSubsystem<MainWindowSubsystem>().getWindow(); // 창이 없는 실행(헤드리스)은 종료 요청할 창이 없을 뿐이다.
         if ( pWindow != nullptr )
             pWindow->requestClose();
     }
