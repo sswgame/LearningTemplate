@@ -31,7 +31,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common.Constants import kLintTargetRelDirs  # noqa: E402
-from common.Search import collectRepositoryFiles  # noqa: E402
 from lint.LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 #: 문서 안의 `` `sw_foo` `` — 백틱에 싸인 함수 이름.
@@ -63,8 +62,8 @@ def collectDefinedFunctionInternal(cmakeRoot: Path, repositoryRoot: Path) -> set
 
     # 저장소 루트를 그대로 걸으면 `Tools/vcpkg` 를 통째로 걷는다 — 그것만으로 3초다. 걷기는 `collectRepositoryFiles`(내려받은 도구 ·
     # 빌드 폴더로 내려가지 않는다).
-    listPath = collectRepositoryFiles(repositoryRoot, (cmakeRoot.relative_to(repositoryRoot).as_posix(),), suffixes=(".cmake",))
-    listPath += collectRepositoryFiles(repositoryRoot, kLintTargetRelDirs + ("ThirdParty",), suffixes=(".cmake",),
+    listPath = LintGate.walkRepository(repositoryRoot, (cmakeRoot.relative_to(repositoryRoot).as_posix(),), what="cmake 모듈 걷기", bMustFind=True, suffixes=(".cmake",))
+    listPath += LintGate.walkRepository(repositoryRoot, kLintTargetRelDirs + ("ThirdParty",), what="CMakeLists 걷기", bMustFind=True, suffixes=(".cmake",),
                                        fileNames=("CMakeLists.txt",))
 
     rootListFile = repositoryRoot / "CMakeLists.txt"
@@ -139,7 +138,7 @@ class CheckCmakeReadmeGate(LintGate):
 
         # 1) 트리에 적힌 파일이 실재하는가.
         listTreeEntry = collectTreeFileInternal(readmeText)
-        setPresentName = {path.name for path in collectRepositoryFiles(repositoryRoot, (cmakeRoot.relative_to(repositoryRoot).as_posix(),), bAnySuffix=True)}
+        setPresentName = {path.name for path in LintGate.walkRepository(repositoryRoot, (cmakeRoot.relative_to(repositoryRoot).as_posix(),), what="cmake 폴더 걷기", bMustFind=True, bAnySuffix=True)}
         for lineNumber, fileName in listTreeEntry:
             if fileName not in setPresentName:
                 listViolation.append(

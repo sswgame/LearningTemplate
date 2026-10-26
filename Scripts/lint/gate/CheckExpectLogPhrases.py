@@ -38,7 +38,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common.Paths import normalizePath  # noqa: E402
-from common.Search import collectRepositoryFiles, collectSourceFiles  # noqa: E402
 from lint.LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 _kCppSuffixes = {".cpp", ".h", ".inl"}
@@ -237,7 +236,7 @@ class TemplateIndex:
 
 def collectTranslationText(repositoryRoot: Path) -> str:
     """`Resource/**/localization/` 의 문자열 표(번역 파일) 글을 한 덩어리로."""
-    listPath = [path for path in collectRepositoryFiles(repositoryRoot, ("Resource",), suffixes=_kTranslationSuffixes)
+    listPath = [path for path in LintGate.walkRepository(repositoryRoot, ("Resource",), what="번역 파일 걷기", bMustFind=False, suffixes=_kTranslationSuffixes)  # 번역 표가 없는 트리가 정상이다
                 if "/localization/" in normalizePath(str(path.relative_to(repositoryRoot)))]
     return "\n".join(text for _, text in LintGate.readFiles(listPath))
 
@@ -245,7 +244,7 @@ def collectTranslationText(repositoryRoot: Path) -> str:
 def collectScenarioLogSteps(repositoryRoot: Path) -> list[tuple[str, dict[str, str], str]]:
     """(시나리오 위치, `<ExpectLog>` 속성, 그 시나리오가 직접 쓰는 글) — 깨진 XML 은 에셋 검증 규칙이 알린다."""
     listStep: list[tuple[str, dict[str, str], str]] = []
-    for path in (path for path in collectRepositoryFiles(repositoryRoot, ("Resource",), suffixes=(".xml",)) if path.name.endswith(".scenario.xml")):
+    for path in (path for path in LintGate.walkRepository(repositoryRoot, ("Resource",), what="시나리오 걷기", bMustFind=True, suffixes=(".xml",)) if path.name.endswith(".scenario.xml")):
         relative = normalizePath(str(path.relative_to(repositoryRoot)))
         try:
             root = ElementTree.parse(path).getroot()
@@ -410,7 +409,7 @@ class CheckExpectLogPhrasesGate(LintGate):
         listStep = collectScenarioLogSteps(repositoryRoot)
         listTemplate: list[LogTemplate] = []
         listGeneric: list[LogTemplate] = []
-        listPath = collectSourceFiles([repositoryRoot / root for root in _kScanRoots if (repositoryRoot / root).is_dir()], _kCppSuffixes)
+        listPath = LintGate.walkSources([repositoryRoot / root for root in _kScanRoots if (repositoryRoot / root).is_dir()], _kCppSuffixes, what="로그 호출 걷기", bMustFind=True)
         for path, text in LintGate.readFiles(listPath, mustContain='"'):
             listLog, listOutside = collectLogTemplates(normalizePath(str(path.relative_to(repositoryRoot))), text)
             listTemplate += listLog

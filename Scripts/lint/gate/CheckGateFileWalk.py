@@ -24,6 +24,8 @@ from lint.SourceScan import SourceFile  # noqa: E402
 _kScanRoots = ("Scripts/lint/gate",)
 
 _kWalkRe = re.compile(r"\.(?:rglob|glob)\(")
+#: `common.Search` 의 걷기를 게이트가 직접 부르는 곳 — 보조 걷기가 0건을 모아도 통과하는 길이다. `LintGate.walkRepository` · `walkSources` 는 `bMustFind` 를 꼭 받는다.
+_kSharedWalkRe = re.compile(r"(?<![\w.])(?:collectRepositoryFiles|collectSourceFiles)\(")
 
 
 class CheckGateFileWalkGate(BaselineSourceGate):
@@ -43,6 +45,8 @@ class CheckGateFileWalkGate(BaselineSourceGate):
     selfTestCases = [
         {"name": "rglob 로 직접 걷는다", "expectedViolation": "1  Scripts/lint/gate/CheckProbe.py",
          "files": {"Scripts/lint/gate/CheckProbe.py": "def run( root ):\n    return list( root.rglob( \"*.cpp\" ) )\n"}, "args": ["--baseline", "0"]},
+        {"name": "공용 걷기를 bMustFind 없이 직접 부른다", "expectedViolation": "1  Scripts/lint/gate/CheckProbe.py",
+         "files": {"Scripts/lint/gate/CheckProbe.py": "def run( root ):\n    return collectRepositoryFiles( root, (\"Source\",), suffixes=(\".cpp\",) )\n"}, "args": ["--baseline", "0"]},
     ]
 
     def findCounted(self, source: SourceFile) -> list[CountedFinding] | None:
@@ -53,7 +57,10 @@ class CheckGateFileWalkGate(BaselineSourceGate):
             code = line.split("#", 1)[0]
             if _kWalkRe.search(code) is not None:
                 listFound.append(CountedFinding("total", source.relative, lineIndex, lineIndex,
-                                                "직접 파일 걷기 — collectRepositoryFiles 나 sourceScanRoots 로", line.strip()))
+                                                "직접 파일 걷기 — LintGate.walkRepository 나 sourceScanRoots 로", line.strip()))
+            elif _kSharedWalkRe.search(code) is not None and not code.lstrip().startswith(("from ", "import ")):
+                listFound.append(CountedFinding("total", source.relative, lineIndex, lineIndex,
+                                                "공용 걷기를 직접 부름 — LintGate.walkRepository · walkSources 로(bMustFind 를 적어야 0건 통과를 막는다)", line.strip()))
         return listFound
 
 

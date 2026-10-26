@@ -33,7 +33,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common.Constants import kLintProductRelDirs, kNotOurCodeDirNames  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
-from common.Search import collectRepositoryFiles  # noqa: E402
 from lint.LintGate import GateResult, LintGate  # noqa: E402
 from lint.SourceScan import FileFindings, SourceFile, SourceScanResult  # noqa: E402
 
@@ -108,7 +107,7 @@ class CheckDataFileReferencesGate(LintGate):
     def prepareSourceScan(self, repositoryRoot: Path, args: argparse.Namespace) -> None:
         # 대상 파일의 `resolve()` 와 저장소 기준 경로는 **미리 한 번만** 구한다 — 안쪽 루프에서 구하면
         # 참조 파일 × 대상 파일만큼의 파일시스템 질의가 되어 파일이 늘수록 제곱으로 느려진다.
-        dataFiles = collectRepositoryFiles(repositoryRoot, _kScanRoots, suffixes=(_kDataSuffix,), excludedDirNames=_kExcludedDirName)
+        dataFiles = LintGate.walkRepository(repositoryRoot, _kScanRoots, what="데이터 파일 걷기", bMustFind=True, suffixes=(_kDataSuffix,), excludedDirNames=_kExcludedDirName)
         args.repositoryRoot = repositoryRoot
         args.dataEntries = [(dataFile.resolve(), dataFile.relative_to(repositoryRoot).as_posix()) for dataFile in dataFiles]
 
