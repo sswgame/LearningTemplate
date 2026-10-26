@@ -81,6 +81,14 @@ namespace sw
                 }
                 return sum;
             }
+
+            /** @brief 0 <= z <= 1 의 asin 입니다. 0.5 를 넘으면 반각 공식 asin(z) = π/2 - 2 asin(sqrt((1 - z) / 2)) 으로 급수 범위에 넣는다. */
+            static float64 asinUnit( float64 z )
+            {
+                if ( z <= 0.5 )
+                    return asinSeries( z );
+                return kHalfPi - 2.0 * asinSeries( std::sqrt( ( 1.0 - z ) * 0.5 ) );
+            }
         };
     } // namespace
 } // namespace sw
@@ -123,5 +131,25 @@ namespace sw
         if ( value > 0.0 )
             return static_cast<float32>( 2.0 * Internal::asinSeries( std::sqrt( ( 1.0 - value ) * 0.5 ) ) );
         return static_cast<float32>( Internal::kPi - 2.0 * Internal::asinSeries( std::sqrt( ( 1.0 + value ) * 0.5 ) ) );
+    }
+
+    float32 DeterministicMathUtil::atan2( float32 y, float32 x ) noexcept
+    {
+        using Internal = DeterministicMathUtilInternal;
+        if ( std::isfinite( y ) == false || std::isfinite( x ) == false )
+            return std::numeric_limits<float32>::quiet_NaN();
+        const float64 absY   = std::fabs( static_cast<float64>( y ) );
+        const float64 absX   = std::fabs( static_cast<float64>( x ) );
+        const float64 radius = std::sqrt( absX * absX + absY * absY );
+        float64       angle  = 0.0;
+        if ( radius == 0.0 )
+            angle = std::signbit( x ) ? Internal::kPi : 0.0; // libm 과 같은 부호 규칙(±0, -0 → ±π)
+        else if ( absY <= absX )
+            angle = Internal::asinUnit( absY / radius ); // 비율이 1/√2 이하라 반각 공식의 상쇄가 작다
+        else
+            angle = Internal::kHalfPi - Internal::asinUnit( absX / radius );
+        if ( radius != 0.0 && x < 0.0f )
+            angle = Internal::kPi - angle;
+        return static_cast<float32>( std::signbit( y ) ? -angle : angle );
     }
 } // namespace sw

@@ -11,7 +11,7 @@
 
 namespace sw
 {
-    /** @brief 결정적 삼각함수입니다(전부 static, 줄 밖). 렌더 · 애니메이션은 `MathUtil` 을 그대로 쓴다. */
+    /** @brief 결정적 삼각함수입니다(전부 static, 줄 밖 — 무한대 입력은 libm 과 달리 NaN 이다). 렌더 · 애니메이션은 `MathUtil` 을 그대로 쓴다. */
     struct SW_API DeterministicMathUtil
     {
         /** @brief sin 입니다. 무한대 · NaN 이면 NaN 입니다. */
@@ -20,5 +20,7 @@ namespace sw
         [[nodiscard]] static float32 cos( float32 radian ) noexcept;
         /** @brief acos 입니다(라디안, [0, π]). [-1, 1] 밖이거나 NaN 이면 NaN 입니다. */
         [[nodiscard]] static float32 acos( float32 x ) noexcept;
+        /** @brief atan2 입니다(라디안, [-π, π], 0 의 부호 규칙은 libm 과 같다). 무한대 · NaN 이 있으면 NaN 입니다. */
+        [[nodiscard]] static float32 atan2( float32 y, float32 x ) noexcept;
     };
 } // namespace sw

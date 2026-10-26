@@ -2,6 +2,7 @@
 
 #include "Engine/Destruction/PolygonFracture.h"
 
+#include "Core/Math/DeterministicMathUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Destruction/DestructionRandom.h"
@@ -124,7 +125,7 @@ namespace sw
                 {
                     const float32 angle  = random.nextRange( 0.0f, MathUtil::kPi * 2.0f );
                     const float32 radius = MathUtil::sqrt( random.nextFloat01() ) * settings._clusterRadius;
-                    const float2  point  = impact + float2{ MathUtil::cos( angle ) * radius, MathUtil::sin( angle ) * radius };
+                    const float2  point  = impact + float2{ DeterministicMathUtil::cos( angle ) * radius, DeterministicMathUtil::sin( angle ) * radius };
                     FractureSiteUtil::addIfInside( outListSite, point, isInsideBorder );
                 }
                 for ( uint32 attempt = 0; outListSite.size() < target && attempt < target * FractureSiteUtil::kAttemptFactor; ++attempt )

@@ -69,3 +69,31 @@ SW_TEST_CASE( DeterministicMathTest, AcosMatchesRecordedBits )
     }
     SW_EXPECT_TRUE( MathUtil::isNan( static_cast<float64>( DeterministicMathUtil::acos( 1.5f ) ) ) );
 }
+
+/**
+ * @brief [DeterministicMathTest] atan2 는 네 사분면 · 축 위 · 0 의 부호에서 기록한 비트를 낸다
+ */
+SW_TEST_CASE( DeterministicMathTest, Atan2MatchesRecordedBits )
+{
+    struct Atan2Sample
+    {
+        float32 _y;
+        float32 _x;
+        uint32  _bits;
+    };
+    constexpr Atan2Sample kArrSample[] = {
+        {  0.0f,   1.0f,        0x0u},
+        {  1.0f,   0.0f, 0x3fc90fdbu},
+        {  1.0f,   1.0f, 0x3f490fdbu},
+        { -1.0f,   1.0f, 0xbf490fdbu},
+        {  0.5f,  -2.0f, 0x40396220u},
+        { -3.0f, -0.25f, 0xbfd3b43au},
+        {  0.0f,  -1.0f, 0x40490fdbu},
+        { -0.0f,  -1.0f, 0xc0490fdbu},
+        {0.001f,   2.0f, 0x3a03126eu},
+    };
+    for ( const Atan2Sample& sample : kArrSample )
+    {
+        SW_EXPECT_EQUAL( sample._bits, BitUtil::floatToBits( DeterministicMathUtil::atan2( sample._y, sample._x ) ) );
+    }
+}

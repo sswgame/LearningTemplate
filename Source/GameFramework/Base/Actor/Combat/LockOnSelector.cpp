@@ -2,6 +2,7 @@
 
 #include "GameFramework/Base/Actor/Combat/LockOnSelector.h"
 
+#include "Core/Math/DeterministicMathUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -26,7 +27,7 @@ namespace sw
                 if ( length < 1.0e-6f )
                     return 0.0f;
                 const float32 cosine = MathUtil::clamp( toTarget.dot( forward ) / length, -1.0f, 1.0f );
-                return MathUtil::acos( cosine ) * MathUtil::kRadianToDegree;
+                return DeterministicMathUtil::acos( cosine ) * MathUtil::kRadianToDegree;
             }
         };
     } // namespace
@@ -36,8 +37,8 @@ namespace sw
 {
     float32 LockOnSelector::computeYawOffset( const float3& eye, const float3& forward, const float3& position )
     {
-        const float32 forwardYaw = MathUtil::atan2( forward._x, forward._z );
-        const float32 targetYaw  = MathUtil::atan2( position._x - eye._x, position._z - eye._z );
+        const float32 forwardYaw = DeterministicMathUtil::atan2( forward._x, forward._z );
+        const float32 targetYaw  = DeterministicMathUtil::atan2( position._x - eye._x, position._z - eye._z );
         float32       offset     = ( targetYaw - forwardYaw ) * MathUtil::kRadianToDegree;
         while ( offset > 180.0f )
         {

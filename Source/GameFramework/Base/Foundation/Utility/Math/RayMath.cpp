@@ -2,6 +2,7 @@
 
 #include "GameFramework/Base/Foundation/Utility/Math/RayMath.h"
 
+#include "Core/Math/DeterministicMathUtil.h"
 #include "Core/Math/MathUtil.h"
 
 namespace sw
@@ -140,7 +141,7 @@ namespace sw
         const float32 forwardLength = forward.getLength();
         if ( distance <= 1.0e-6f || forwardLength <= 1.0e-6f )
             return true;
-        return toPoint.dot( forward ) / ( distance * forwardLength ) >= MathUtil::cos( MathUtil::toRadian( halfAngleDegree ) );
+        return toPoint.dot( forward ) / ( distance * forwardLength ) >= DeterministicMathUtil::cos( MathUtil::toRadian( halfAngleDegree ) );
     }
 
     bool RayMath::isInFlatCone( const float3& origin, const float3& forward, float32 halfAngleDegree, float32 range, const float3& point )
@@ -150,7 +151,7 @@ namespace sw
 
     float3 RayMath::computeLookDirection( float32 yaw, float32 pitch )
     {
-        const float32 cosPitch = MathUtil::cos( pitch );
-        return float3{ MathUtil::sin( yaw ) * cosPitch, MathUtil::sin( pitch ), MathUtil::cos( yaw ) * cosPitch };
+        const float32 cosPitch = DeterministicMathUtil::cos( pitch );
+        return float3{ DeterministicMathUtil::sin( yaw ) * cosPitch, DeterministicMathUtil::sin( pitch ), DeterministicMathUtil::cos( yaw ) * cosPitch };
     }
 } // namespace sw
