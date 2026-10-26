@@ -123,7 +123,7 @@ py -3 -m Scripts test --changed                                    # main 과 �
 - 원인이 엔진에 있고 못 고친 줄은 `Resource/engine/automation/allowedlogs.json` 에 `suite` 항목(로그 id · 스위트 · 사유 · 처리 계획 문서)으로 적습니다(시나리오와 같은 하나뿐인 목록). 로그 id(`SW_LOG_WARNING_ID` · `SW_LOG_ERROR_ID`)가 없는 줄은 가릴 수 없습니다.
 
 **샤드와 제한 시간은 한 실행 시간(`seconds`)에서 계산합니다.** 샤드 수는 `ceil(seconds / targetShardSeconds)`(30 초), 제한 시간은 `max(60, 4 × max(조각 하나의 초, 가장 비싼 케이스의 초))` 입니다(멈춤을 잡는 그물이고 느려짐은 `SW_TEST_TIME_BUDGET` 이 판정). 샤드는 `<타깃>_Shard1..n` 으로 `--test_shard=<k>/<n>` 으로 돌고,
-케이스는 정책의 `caseCosts`(`--test_costs=`)로 비싼 것부터 가장 가벼운 조각에 놓입니다(LPT). `hostShards` 는 `_HostOnly` 를 나누고(비용 `hostCaseCosts`), `_HostOnly` 는 GPU 칸(`gpuSlots`) 하나를 받으며 같은 `Bin` 에 쓰는 실행끼리는 `hostResourceLock` 으로 비켜 갑니다.
+케이스는 정책의 `caseCosts`(`--test_costs=`)로 비싼 것부터 가장 가벼운 조각에 놓입니다(LPT). `hostShards` 는 `_HostOnly` 를 나누고(비용 `hostCaseCosts`), `_HostOnly` 는 GPU 칸(`gpuSlots`) 하나를 받고 잠금 없이 칸 수만큼 겹쳐 돕니다 — App 은 케이스마다의 작업 폴더(`build/<프리셋>/AppRuns/shard<i>of<n>/<스위트_케이스>`, `AppTestUtil::getRunFolder`)에서 뜨고 로그 · 보고 · 사진도 거기 남습니다. 공유 자리에 쓰는 실행이 생기면 정책의 `hostResourceLock`(이유 `_hostResourceLockReason`)으로 비켜 가게 합니다.
 스위트가 크게 느려지면 `seconds` 와 `caseCosts` 를 다시 잽니다(요약의 `Slowest cases:` 가 재료). 비용표의 케이스 이름이 바뀌면 `CheckTestSuites.py` 가 잡습니다.
 
 **`race` 는 Debug 전용 레이스 묶음입니다.** `DataRaceDetector` 가 `SW_DEBUG` 에서만 켜지므로 스레드 경로를 지나는 케이스만 골라(`raceCases`) Debug 에 `<타깃>_Race` 로 등록합니다. 단계별로 무엇을 도는지는 [작업 방식](../docs/11_Workflow.md) 3절 표에 있습니다. 묶음을 바꾸면 `ctest -L race` 직렬 합이 10 분 안쪽인지 다시 잽니다.
