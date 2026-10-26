@@ -299,7 +299,7 @@ SW_TEST_CASE( BaseValueStateArchiveTest, MoveTimelineReplaysAfterRestore )
     catalog.add( jab );
 
     MoveTimeline timeline;
-    timeline.start( jab );
+    SW_ASSERT_TRUE( timeline.start( jab ) );
     (void)timeline.advanceFrame();
     (void)timeline.advanceFrame();
     timeline.registerContact( true );

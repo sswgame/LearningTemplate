@@ -174,7 +174,8 @@ namespace sw
         MoveTimeline();
 
         /** @brief 기술을 시작합니다. 지금 프레임은 1 이며, 첫 프레임이 화면에 나온 상태입니다. */
-        void start( const MoveFrameData& move );
+        /** @details 시작 · 지속 프레임이 1 미만이거나 후딜이 음수이면 오류를 남기고 false 입니다(올려 맞추지 않습니다). */
+        [[nodiscard]] bool start( const MoveFrameData& move );
         /** @brief 기술을 버리고 중립으로 돌아갑니다. 맞아서 끊길 때 씁니다. */
         void cancel();
         /**

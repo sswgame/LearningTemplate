@@ -233,7 +233,8 @@ namespace sw
         const MoveFrameData* pMove  = _pMoves->find( moveID );
         if ( pMove == nullptr )
             return;
-        _timeline.start( *pMove );
+        if ( _timeline.start( *pMove ) == false )
+            return;
         _comboIndex = comboIndex;
         pushEvent( ActionCombatEventType::MoveStarted, moveID, comboIndex );
     }

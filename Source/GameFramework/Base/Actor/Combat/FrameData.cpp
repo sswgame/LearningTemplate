@@ -184,17 +184,22 @@ namespace sw
     {
     }
 
-    void MoveTimeline::start( const MoveFrameData& move )
+    bool MoveTimeline::start( const MoveFrameData& move )
     {
+        const bool bInvalid = move._startup < 1 || move._active < 1 || move._recovery < 0;
+        if ( bInvalid )
+        {
+            SW_LOG_ERROR( "MoveTimeline: refused move '%#' with startup %# active %# recovery %# - startup and active must be at least 1 and recovery must not be negative", move._id.c_str(),
+                          move._startup, move._active, move._recovery );
+            return false;
+        }
         _move             = move;
-        _move._startup    = MathUtil::max( 1, _move._startup );
-        _move._active     = MathUtil::max( 1, _move._active );
-        _move._recovery   = MathUtil::max( 0, _move._recovery );
         _frame            = 1;
         _hitstopRemaining = 0;
         _bPlaying         = SW_TRUE;
         _bContact         = SW_FALSE;
         _bBlocked         = SW_FALSE;
+        return true;
     }
 
     void MoveTimeline::cancel()
@@ -211,7 +216,8 @@ namespace sw
         if ( hitstopRemaining < 0 || frame < 1 )
             return false;
         MoveTimeline restored;
-        restored.start( move );
+        if ( restored.start( move ) == false )
+            return false;
         if ( frame > restored._move.getTotalFrames() )
             return false;
         restored._frame            = frame;

@@ -262,7 +262,8 @@ SW_TEST_CASE( PlacementRuleTest, ScatterOnTwoDimensionalTiles )
         listTile[tileY * 8 + 3] = PlacementTileSurface::kBlockedTile;
     }
     PlacementTileSurface surface;
-    surface.setTiles( 8, 4, 2.0f, listTile );
+    SW_ASSERT_TRUE( surface.setTiles( 8, 4, 2.0f, listTile ) );
+    SW_EXPECT_FALSE( surface.setTiles( 8, 5, 2.0f, listTile ) ); // 타일 수가 맞지 않으면 거절한다
 
     PlacementRule rule   = PlacementRuleTestUtil::makeRule();
     rule._density        = 3.0f;

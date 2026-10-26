@@ -34,8 +34,9 @@ namespace sw
         const float32             reference   = std::get<float32>( fieldOfView._defaultValue ) * MathUtil::kDegreeToRadian;
         const float32             chosen      = fieldOfView.getValueAsFloat() * MathUtil::kDegreeToRadian;
         settings._fieldOfViewScale            = MathUtil::tan( chosen * 0.5f ) / MathUtil::tan( reference * 0.5f );
-        settings._shakeScale                  = MathUtil::max( 0.0f, findCameraUserSettingVariable( *pVariables, "gv_cameraShakeScale" ).getValueAsFloat() );
-        settings._bHeadBob                    = findCameraUserSettingVariable( *pVariables, "gv_cameraHeadBob" ).getValueAsBool();
+        settings._shakeScale                  = findCameraUserSettingVariable( *pVariables, "gv_cameraShakeScale" ).getValueAsFloat();
+        SW_ASSERT( settings._shakeScale >= 0.0f ); // 범위(0 ~ 1)는 사용자 설정 스키마(`gameplay.cameraShake`)가 지킨다. 음수를 0 으로 맞춰 돌지 않는다
+        settings._bHeadBob = findCameraUserSettingVariable( *pVariables, "gv_cameraHeadBob" ).getValueAsBool();
         return settings;
     }
 

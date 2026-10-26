@@ -743,19 +743,40 @@ namespace sw
         }
     }
 
-    void InputMap::setDoubleClickTime( float32 seconds )
+    bool InputMap::setDoubleClickTime( float32 seconds )
     {
-        _doubleClickTime = MathUtil::clamp( seconds, InputMapDefaults::kDoubleClickTimeMin, InputMapDefaults::kDoubleClickTimeMax );
+        const bool bValid = seconds >= InputMapDefaults::kDoubleClickTimeMin && seconds <= InputMapDefaults::kDoubleClickTimeMax;
+        if ( bValid == false )
+        {
+            SW_LOG_ERROR( "InputMap: refused double click time %# - it must be within [%#, %#]", seconds, InputMapDefaults::kDoubleClickTimeMin, InputMapDefaults::kDoubleClickTimeMax );
+            return false;
+        }
+        _doubleClickTime = seconds;
+        return true;
     }
 
-    void InputMap::setDoubleClickMaxDistance( float32 pixels )
+    bool InputMap::setDoubleClickMaxDistance( float32 pixels )
     {
-        _doubleClickMaxDistance = MathUtil::clamp( pixels, 0.0f, InputMapDefaults::kDoubleClickDistanceMax );
+        const bool bValid = pixels >= 0.0f && pixels <= InputMapDefaults::kDoubleClickDistanceMax;
+        if ( bValid == false )
+        {
+            SW_LOG_ERROR( "InputMap: refused double click distance %# - it must be within [0, %#]", pixels, InputMapDefaults::kDoubleClickDistanceMax );
+            return false;
+        }
+        _doubleClickMaxDistance = pixels;
+        return true;
     }
 
-    void InputMap::setHoldThreshold( float32 seconds )
+    bool InputMap::setHoldThreshold( float32 seconds )
     {
-        _holdThreshold = MathUtil::clamp( seconds, InputMapDefaults::kHoldThresholdMin, InputMapDefaults::kHoldThresholdMax );
+        const bool bValid = seconds >= InputMapDefaults::kHoldThresholdMin && seconds <= InputMapDefaults::kHoldThresholdMax;
+        if ( bValid == false )
+        {
+            SW_LOG_ERROR( "InputMap: refused hold threshold %# - it must be within [%#, %#]", seconds, InputMapDefaults::kHoldThresholdMin, InputMapDefaults::kHoldThresholdMax );
+            return false;
+        }
+        _holdThreshold = seconds;
+        return true;
     }
 
     bool InputMap::hasLayer( const hashed_string& layer ) const

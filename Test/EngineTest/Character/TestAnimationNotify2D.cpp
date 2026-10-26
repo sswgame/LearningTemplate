@@ -96,10 +96,11 @@ SW_TEST_CASE( AnimationNotify2DTest, SpriteClipRangeCarriesNotifies )
     SW_EXPECT_NEAR_EQUAL( 0.2f, loaded._listAnimation[0]._listNotify[0]._duration, 1e-6f );
 
     SpriteClipPlayable playable;
-    playable.configure( &loaded, 2, 4, true, 0.1f );
+    SW_ASSERT_TRUE( playable.configure( &loaded, 2, 4, true, 0.1f ) );
+    SW_EXPECT_FALSE( playable.configure( &loaded, -1, 2, true, 0.1f ) ); // 음수 첫 프레임은 맞추지 않고 거절한다
     SW_ASSERT_NOT_NULL( playable.findNotifyTrack() );
     SW_EXPECT_TRUE( playable.findNotifyTrack()->getEvents()[0]._name == hashed_string( "Swing" ) );
-    playable.configure( &loaded, 0, 2, true, 0.1f ); // 이름 붙은 구간이 아니다 — 알림 없음
+    SW_ASSERT_TRUE( playable.configure( &loaded, 0, 2, true, 0.1f ) ); // 이름 붙은 구간이 아니다 — 알림 없음
     SW_EXPECT_TRUE( playable.findNotifyTrack() == nullptr );
 }
 

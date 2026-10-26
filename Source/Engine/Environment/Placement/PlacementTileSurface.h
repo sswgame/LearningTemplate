@@ -27,7 +27,8 @@ namespace sw
         ~PlacementTileSurface() override = default;
 
         /** @brief 타일 맵을 줍니다. @p listTile 은 행 우선(y 가 바깥 루프)이고 크기는 width × height 여야 합니다. */
-        void setTiles( uint32 width, uint32 height, float32 tileSize, const vector<uint8>& listTile );
+        /** @details 타일 수가 너비 x 높이와 다르거나 타일 크기가 0 이하이면 오류를 남기고 false 입니다(맞추지 않습니다). */
+        [[nodiscard]] bool setTiles( uint32 width, uint32 height, float32 tileSize, const vector<uint8>& listTile );
 
         [[nodiscard]] bool sampleSurface( const float2& planePosition, PlacementSurfaceSample& outSample ) const override;
 
