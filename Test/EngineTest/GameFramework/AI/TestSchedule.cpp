@@ -1,6 +1,8 @@
 #include "pch.h"
 
+#include "Engine/Serialization/Base/SerializeContext.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/BinarySerializer.h"
 
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleActivity.h"
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleCatalog.h"
@@ -626,6 +628,37 @@ SW_TEST_CASE( ScheduleTest, SaveStateRoundTripsThroughTheArchive )
     restored.advanceTo( Internal::makeMinute( Internal::kWednesday, 23 ) );
     SW_EXPECT_EQUAL( original.computeStateHash(), restored.computeStateHash() );
     SW_EXPECT_TRUE( Internal::isNear( original.getNpcView( abigail )._location._position, restored.getNpcView( abigail )._location._position ) );
+}
+
+/**
+ * @brief [ScheduleTest] 세이브 경로 — 마을 디렉터가 쓰는 `BinarySerializer` + `SaveGame` 목적으로 왕복해도 끼어들기와 호감도(태그)가 이어진다
+ * @details 디렉터(`FarmVillageDirectorComponent::writeState`)와 같은 호출 모양이다. 세이브를 거는 시나리오 단계가 없어 여기서 지킨다(`docs/decisions/5-8_GameFramework.md` 의 NPC 일정 줄).
+ */
+SW_TEST_CASE( ScheduleTest, SaveGamePurposeKeepsInterruptionAndAffinity )
+{
+    using Internal = ScheduleTestInternal;
+    ScheduleCatalog catalog;
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( Internal::kTownXML, "town" ) );
+    ScheduleSystem original;
+    SW_ASSERT_TRUE( original.initialize( &catalog, Internal::makeSettings(), Internal::makeMinute( Internal::kWednesday, 6 ) ) );
+    const int32 pierre = original.findNpcIndex( "pierre" );
+    original.advanceTo( Internal::makeMinute( Internal::kWednesday, 11 ) );
+    SW_EXPECT_TRUE( original.pushInterruption( pierre, "Talk" ) );
+    original.addNpcTag( pierre, TagID::request( "Relationship.Player.Friend" ) );
+
+    ScheduleSaveState saved;
+    original.fillSaveState( saved );
+    Archive writer;
+    SW_ASSERT_TRUE( BinarySerializer::serialize( &saved, *ScheduleSaveState::StaticType(), writer, SerializeContext::getDefault( SerializePurpose::SaveGame ) ) );
+    Archive           reader( writer.getData(), writer.getSize() );
+    ScheduleSaveState loaded;
+    SW_ASSERT_TRUE( BinarySerializer::deserialize( &loaded, *ScheduleSaveState::StaticType(), reader, SerializeContext::getDefault( SerializePurpose::SaveGame ) ) );
+
+    ScheduleSystem restored;
+    SW_ASSERT_TRUE( restored.initialize( &catalog, Internal::makeSettings(), Internal::makeMinute( 0, 6 ) ) );
+    restored.restoreSaveState( loaded );
+    SW_EXPECT_TRUE( restored.getNpcView( pierre )._interruption == hashed_string( "Talk" ) );
+    SW_EXPECT_EQUAL( original.computeStateHash(), restored.computeStateHash() );
 }
 
 /**

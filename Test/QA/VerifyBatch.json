@@ -34,16 +34,6 @@
       "source": "docs/plans/DataKindRegistry.md DK1 ~ DK5", "result_doc": "docs/plans/DataKindRegistry.md 상태를 끝으로"
     },
     {
-      "id": "localization-check-text", "title": "App --check-text — 출시 문화권 ja 에 빠지거나 낡은 번역이 없는지", "kind": "check", "config": "Release", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
-      "tool": "app", "args": ["--check-text"],
-      "source": "docs/plans/Candidates-audio-ai-localization.md", "result_doc": "docs/plans/Candidates-audio-ai-localization.md"
-    },
-    {
-      "id": "localization-eye-check", "title": "일본어 화면의 잘림 · he/fa 의 RTL 배치와 ۰-۹ 숫자 · Shooter3D HUD 아이템 이름 줄 자리", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": false,
-      "manual": "화면의 잘림 · 배치 · 줄 자리는 사람이 화면을 보고 판단한다",
-      "source": "docs/plans/Candidates-audio-ai-localization.md", "result_doc": "docs/plans/Candidates-audio-ai-localization.md"
-    },
-    {
       "id": "skin-vat-pool-range-allocator", "title": "스킨 원본 · VAT 풀 구간 할당기 이득(RT.Deform.rebuild* 구간)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": false,
       "need_command": "스트리밍 셀 진입 · 군중 합류 장면을 만드는 perf-compare 케이스가 없다",
       "source": "docs/plans/GraphicsMeasurements.md M2", "result_doc": "docs/plans/GraphicsMeasurements.md M2"
