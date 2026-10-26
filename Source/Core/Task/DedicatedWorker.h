@@ -93,6 +93,9 @@ namespace sw
                 _thread.join();
         }
 
+        /** @brief `start` 뒤 `stop` 전이면 true 입니다. 처음 일이 올 때 스레드를 띄우는 쪽이 봅니다(`start` · `stop` 과 같은 순서로 부른다). */
+        bool isRunning() const { return _thread.joinable(); }
+
         /** @brief 큐에서 기다리는 일의 수입니다(처리 중인 일은 세지 않는다). */
         uint32 getQueuedCount() const
         {

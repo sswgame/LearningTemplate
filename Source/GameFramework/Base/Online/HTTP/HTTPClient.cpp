@@ -16,16 +16,13 @@ namespace sw
         , _mapCall{}
         , _mapHostToTLSContext{}
         , _listResolvingCall{}
-        , _listResolveRequestID{}
         , _listDone{}
         , _transport{}
         , _settings{}
         , _resolver{}
-        , _resolveReady{}
         , _requestIDAllocator{}
         , _ioThreadCount{ 0 }
         , _bInitialized{ SW_FALSE }
-        , _bResolverStopping{ SW_FALSE }
     {
     }
 
@@ -55,13 +52,7 @@ namespace sw
     {
         if ( _bInitialized == SW_FALSE )
             return;
-        {
-            std::scoped_lock<mutex> lock{ _mutex };
-            _bResolverStopping = SW_TRUE;
-        }
-        _resolveReady.notify_all();
-        if ( _resolver.joinable() )
-            _resolver.join();   // 풀던 이름 하나는 해석기 시한까지 기다린다
+        _resolver.stop();       // 풀던 이름 하나는 해석기 시한까지 기다린다. 남은 이름은 풀지 않고 아래에서 끝낸다
         _transport->shutdown(); // 열린 연결은 Shutdown 으로 닫히며 onStreamClosed 가 요청을 끝낸다
         _transport.reset();
         std::scoped_lock<mutex> lock{ _mutex };
@@ -76,9 +67,7 @@ namespace sw
         }
         _mapCall.clear();
         _listResolvingCall.clear();
-        _listResolveRequestID.clear();
-        _bResolverStopping = SW_FALSE;
-        _bInitialized      = SW_FALSE;
+        _bInitialized = SW_FALSE;
     }
 
     void HTTPClient::registerTLSContext( string_view host, ITLSContext* pTLSContext )
@@ -138,10 +127,10 @@ namespace sw
         call->_address      = NetAddress::makeAnyInterface( url._port );
         call->_resolveState = ResolveState::Pending;
         _listResolvingCall.push_back( std::move( call ) );
-        _listResolveRequestID.push_back( requestID );
-        if ( _resolver.joinable() == false )
-            _resolver = sw::thread( &HTTPClient::runResolver, this );
-        _resolveReady.notify_one();
+        if ( _resolver.isRunning() == false )
+            _resolver.start( "HTTPResolve", DedicatedWorker<uint64>::ProcessDelegate::create<&HTTPClient::resolveRequest>( this ) );
+        uint64 resolveJob = requestID;
+        (void)_resolver.submit( std::move( resolveJob ) ); // 바로 위에서 띄웠으니 받는다 — 못 받아도 요청은 Pending 으로 남아 시한이 끝낸다
         return requestID;
     }
 
@@ -177,43 +166,33 @@ namespace sw
         }
     }
 
-    void HTTPClient::runResolver()
+    void HTTPClient::resolveRequest( uint64& requestID, bool bStopping )
     {
-        for ( ;; )
+        if ( bStopping )
+            return; // 남은 요청은 shutdown 이 끝낸다
+        string     host;
+        NetAddress address;
         {
-            uint64     requestID = 0;
-            string     host;
-            NetAddress address;
-            {
-                std::unique_lock<mutex> lock{ _mutex };
-                while ( _listResolveRequestID.empty() && _bResolverStopping == SW_FALSE )
-                {
-                    _resolveReady.wait( lock );
-                }
-                if ( _bResolverStopping == SW_TRUE )
-                    return; // 남은 요청은 shutdown 이 끝낸다
-                requestID = _listResolveRequestID.front();
-                _listResolveRequestID.pop_front();
-                for ( const unique_ptr<Call>& call : _listResolvingCall )
-                {
-                    if ( call->_requestID == requestID )
-                    {
-                        host    = call->_resolveHost;
-                        address = call->_address;
-                    }
-                }
-            }
-            if ( host.empty() )
-                continue; // 그새 시한으로 끝났다
-            const bool              bResolved = PlatformSocketUtil::resolveAddress( host, address._port, address );
             std::scoped_lock<mutex> lock{ _mutex };
-            for ( unique_ptr<Call>& call : _listResolvingCall )
+            for ( const unique_ptr<Call>& call : _listResolvingCall )
             {
-                if ( call->_requestID != requestID )
-                    continue;
-                call->_address      = address;
-                call->_resolveState = bResolved ? ResolveState::Resolved : ResolveState::Failed;
+                if ( call->_requestID == requestID )
+                {
+                    host    = call->_resolveHost;
+                    address = call->_address;
+                }
             }
+        }
+        if ( host.empty() )
+            return; // 그새 시한으로 끝났다
+        const bool              bResolved = PlatformSocketUtil::resolveAddress( host, address._port, address );
+        std::scoped_lock<mutex> lock{ _mutex };
+        for ( unique_ptr<Call>& call : _listResolvingCall )
+        {
+            if ( call->_requestID != requestID )
+                continue;
+            call->_address      = address;
+            call->_resolveState = bResolved ? ResolveState::Resolved : ResolveState::Failed;
         }
     }
 

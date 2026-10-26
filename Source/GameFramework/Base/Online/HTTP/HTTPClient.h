@@ -12,21 +12,18 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
-#include "Core/Concurrency/thread.h"
 #include "Core/Container/IDAllocator.h"
-#include "Core/Container/deque.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/NetTypes.h"
 #include "Core/Network/Transport/IStreamTransport.h"
+#include "Core/Task/DedicatedWorker.h"
 
 #include "GameFramework/Base/Online/HTTP/HTTPLink.h"
 #include "GameFramework/Base/Online/HTTP/HTTPTypes.h"
 #include "GameFramework/GameFrameworkExports.h"
-
-#include <condition_variable>
 
 namespace sw
 {
@@ -106,21 +103,18 @@ namespace sw
         /** @brief 잠금 안에서 부릅니다. 해석이 끝났거나 시한이 지난 요청을 연결하거나 끝냅니다(`update`). */
         void advanceResolvingLocked( int64 nowMs );
         /** @brief 해석 스레드입니다. 맡긴 이름을 하나씩 해석해 요청에 적습니다. 종료할 때까지 돕니다. */
-        void runResolver();
+        void resolveRequest( uint64& requestID, bool bStopping );
 
         mutable mutex                           _mutex;
         unordered_map<uint64, unique_ptr<Call>> _mapCall; ///< 연결(packed) → 요청
         unordered_map<string, ITLSContext*>     _mapHostToTLSContext;
-        vector<unique_ptr<Call>>                _listResolvingCall;    ///< 이름 해석을 기다리는 요청
-        deque<uint64>                           _listResolveRequestID; ///< 해석 스레드가 아직 집지 않은 요청 id
+        vector<unique_ptr<Call>>                _listResolvingCall; ///< 이름 해석을 기다리는 요청
         vector<HTTPClientResponse>              _listDone;
         unique_ptr<IStreamTransport>            _transport;
         HTTPClientConfig                        _settings;
-        sw::thread                              _resolver; ///< 처음 이름을 받을 때 띄운다
-        std::condition_variable_any             _resolveReady;
+        DedicatedWorker<uint64>                 _resolver; ///< 이름 해석 스레드(요청 id 를 받는다). 처음 이름을 받을 때 띄운다
         IDAllocator<uint64>                     _requestIDAllocator;
         int32                                   _ioThreadCount;
         uint8                                   _bInitialized;
-        uint8                                   _bResolverStopping;
     };
 } // namespace sw
