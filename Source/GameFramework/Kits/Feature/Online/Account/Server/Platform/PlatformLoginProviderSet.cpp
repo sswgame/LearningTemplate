@@ -18,13 +18,13 @@ namespace sw
         shutdown();
     }
 
-    bool PlatformLoginProviderSet::initialize( const vector<PlatformLoginProviderConfig>& listSettings, string_view trustFile, string& outError )
+    bool PlatformLoginProviderSet::initialize( const vector<PlatformLoginProviderConfig>& listSettings, string_view trustFile, const IClock& clock, string& outError )
     {
         shutdown();
         for ( const PlatformLoginProviderConfig& settings : listSettings )
         {
             Entry& entry      = _listEntry.emplace_back();
-            entry._httpClient = make_unique<OwnedHTTPClient>();
+            entry._httpClient = make_unique<OwnedHTTPClient>( clock );
             if ( entry._httpClient->initialize() == false )
             {
                 outError = "cannot start the HTTP client of platform login provider '" + settings._name + "'";
@@ -42,7 +42,7 @@ namespace sw
             if ( settings._kind == PlatformLoginProviderKind::AppleSignIn )
             {
                 // 교환 · 철회는 JWKS 와 다른 클라이언트로 한다(클라이언트의 응답은 소유한 쪽이 모두 회수한다).
-                entry._secondHTTPClient   = make_unique<OwnedHTTPClient>();
+                entry._secondHTTPClient   = make_unique<OwnedHTTPClient>( clock );
                 const string tokenURL     = settings._tokenURL.empty() ? string( AppleLoginProvider::kDefaultTokenURL ) : settings._tokenURL;
                 const string revokeURL    = settings._revokeURL.empty() ? string( AppleLoginProvider::kDefaultRevokeURL ) : settings._revokeURL;
                 const bool   bSecondReady = entry._secondHTTPClient->initialize() && entry._secondHTTPClient->registerHostTLS( tokenURL, trustFile, "platformTrustFile", outError ) &&

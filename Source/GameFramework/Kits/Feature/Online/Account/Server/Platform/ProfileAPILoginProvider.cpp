@@ -25,7 +25,7 @@ namespace sw
         request._timeoutMs = _settings._requestTimeoutMs;
         request._listHeader.push_back( HTTPHeader{ "Authorization", "Bearer " + string( reinterpret_cast<const utf8*>( ticketBytes.data() ), ticketBytes.size() ) } );
         request._listHeader.push_back( HTTPHeader{ "Accept", "application/json" } );
-        _mapRequestToVerification[_pHTTPClient->submitRequest( request, nowMs.count() )] = verificationID;
+        _mapRequestToVerification[_pHTTPClient->submitRequest( request )] = verificationID;
         return verificationID;
     }
 
@@ -42,7 +42,7 @@ namespace sw
 
     void ProfileAPILoginProvider::update( UnixMilliseconds nowMs )
     {
-        _pHTTPClient->update( nowMs.count() );
+        _pHTTPClient->update();
         vector<HTTPClientResponse> listResponse;
         (void)_pHTTPClient->pollResponses( listResponse );
         for ( const HTTPClientResponse& response : listResponse )

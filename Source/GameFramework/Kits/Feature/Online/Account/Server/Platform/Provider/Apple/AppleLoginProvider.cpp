@@ -119,7 +119,7 @@ namespace sw
         request._bodyBytes = AppleLoginProviderInternal::toBytes( body );
         request._listHeader.push_back( HTTPHeader{ "Content-Type", "application/x-www-form-urlencoded" } );
         request._listHeader.push_back( HTTPHeader{ "Accept", "application/json" } );
-        return _pAppleHTTPClient->submitRequest( request, nowMs.count() );
+        return _pAppleHTTPClient->submitRequest( request );
     }
 
     uint64 AppleLoginProvider::submitVerification( const vector<uint8>& ticketBytes, UnixMilliseconds nowMs )
@@ -205,7 +205,7 @@ namespace sw
                 break;
             }
         }
-        _pAppleHTTPClient->update( nowMs.count() );
+        _pAppleHTTPClient->update();
         vector<HTTPClientResponse> listResponse;
         (void)_pAppleHTTPClient->pollResponses( listResponse );
         for ( const HTTPClientResponse& response : listResponse )

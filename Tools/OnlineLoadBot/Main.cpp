@@ -234,6 +234,7 @@ int32 main( int32 argc, utf8* argv[] )
     const int32 botCount             = options._botCount > 0 ? options._botCount : scenario._botCount;
 
     unique_ptr<IStreamTransport> serverTransport;
+    SystemMonotonicClock         serverClock; // 로컬 서버가 빌린다(메모리 캐시 만료). 서버보다 먼저 선언한다
     LoadBotLocalServer           localServer;
     if ( options._bLocalServer == SW_TRUE )
     {
@@ -248,6 +249,7 @@ int32 main( int32 argc, utf8* argv[] )
         serverSettings._region             = scenario._region;
         serverSettings._maxConnections     = botCount + Internal::kSpareConnectionCount;
         serverSettings._bLightPasswordHash = options._bLightHash;
+        serverSettings._pClock             = &serverClock;
         if ( serverTransport == nullptr || localServer.initialize( serverTransport.get(), serverSettings, error ) == false )
         {
             SW_LOG_ERROR( "OnlineLoadBot: local server did not start: %#", error );

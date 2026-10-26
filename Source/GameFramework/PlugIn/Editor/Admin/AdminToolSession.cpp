@@ -3,6 +3,7 @@
 #include "GameFramework/PlugIn/Editor/Admin/AdminToolSession.h"
 
 #include "Core/String/StringBuilder.h"
+#include "Core/Time/Clock.h"
 #include "Core/Time/WallClock.h"
 
 #include "Engine/Reflection/EnumName.h"
@@ -88,7 +89,7 @@ namespace sw::editor
 
     void AdminToolSession::updateConnection()
     {
-        _connection.update( WallClock::nowUnixMilliseconds().count() );
+        _connection.update( SystemMonotonicClock{}.nowMilliseconds() );
     }
 
     void AdminToolSession::requestLookup( AccountID accountID )

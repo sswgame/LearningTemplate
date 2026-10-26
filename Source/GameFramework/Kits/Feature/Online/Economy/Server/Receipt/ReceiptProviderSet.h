@@ -13,6 +13,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Time/Clock.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/ReceiptValidator.h"
@@ -60,7 +61,7 @@ namespace sw
         [[nodiscard]] static bool readSettings( string_view jsonText, vector<ReceiptProviderConfig>& outListSettings, string& outError );
 
         /** @brief 설정마다 비밀 읽기, HTTP 클라이언트, TLS 컨텍스트, 제공자를 만듭니다. 하나라도 실패하면 만든 것을 모두 버리고 false 와 @p outError 입니다. */
-        [[nodiscard]] bool initialize( const vector<ReceiptProviderConfig>& listSettings, string_view trustFile, string& outError );
+        [[nodiscard]] bool initialize( const vector<ReceiptProviderConfig>& listSettings, string_view trustFile, const IClock& clock, string& outError );
         /** @brief HTTP 클라이언트를 먼저 종료하고 제공자와 컨텍스트를 버립니다. */
         void shutdown();
 

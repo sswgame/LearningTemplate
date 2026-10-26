@@ -92,12 +92,12 @@ namespace sw
         using Internal = LoadBotLocalServerInternal;
         OnlineServerRuntimeConfig runtimeSettings;
         Internal::fillConfig( settings, runtimeSettings._config );
-        runtimeSettings._listenAddress    = NetAddress::makeLoopback( settings._port );
-        runtimeSettings._pTransport       = pTransport;
-        runtimeSettings._gamePort         = Internal::kGameServerPort;
-        runtimeSettings._bTLS             = SW_FALSE; // 봇과 테스트는 평문 루프백이다
-        runtimeSettings._bManualCacheTime = SW_TRUE;  // 캐시 만료를 `tick` 의 서비스 시각으로 측정한다(가짜 시계)
-        const UnixMilliseconds startMs    = settings._startMs != UnixMilliseconds{ 0 } ? settings._startMs : WallClock::nowUnixMilliseconds();
+        runtimeSettings._listenAddress = NetAddress::makeLoopback( settings._port );
+        runtimeSettings._pTransport    = pTransport;
+        runtimeSettings._gamePort      = Internal::kGameServerPort;
+        runtimeSettings._bTLS          = SW_FALSE; // 봇과 테스트는 평문 루프백이다
+        runtimeSettings._pClock        = settings._pClock;
+        const UnixMilliseconds startMs = settings._startMs != UnixMilliseconds{ 0 } ? settings._startMs : WallClock::nowUnixMilliseconds();
         return _runtime->initialize( std::move( runtimeSettings ), startMs, outError );
     }
 

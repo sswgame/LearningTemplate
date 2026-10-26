@@ -194,7 +194,7 @@ namespace sw
         if ( _bConnecting == SW_TRUE )
             return true; // 열림 · 닫힘을 기다린다
         if ( _bConnectionOpen == SW_TRUE )
-            _client.update( nowMs );
+            _client.update( MonotonicMilliseconds{ nowMs } ); // 실행기 시각은 시작부터 잰 단조 경과다(MonotonicClock 또는 수동 시계)
         drainNotifications();
         pollAccountReplies();
         switch ( _awaitKind )

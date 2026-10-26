@@ -77,7 +77,7 @@ namespace sw
                     return false;
                 _dispatcher.initialize( context._pStore, PushDispatcherConfig{} );
                 // 오프라인 푸시는 우편함 키트가 접속하지 않은 계정의 새 우편에, 이벤트 운영은 GM 키트가 쓴다. 부르는 것은 모든 키트가 시작한 뒤다.
-                const bool bAssembled = createPushProviders( providersFile, trustFile, outError ) && registerFakePush( bFakePush, outError ) && registerHostService( context, entry, &_server, outError ) && exposeInterface<IOfflinePushSender>( context, entry, _offlinePush, outError ) && exposeInterface<ILiveEventControl>( context, entry, _service, outError );
+                const bool bAssembled = createPushProviders( providersFile, trustFile, context._clock, outError ) && registerFakePush( bFakePush, outError ) && registerHostService( context, entry, &_server, outError ) && exposeInterface<IOfflinePushSender>( context, entry, _offlinePush, outError ) && exposeInterface<ILiveEventControl>( context, entry, _service, outError );
                 if ( bAssembled == false )
                     shutdown(); // 초기화에 실패한 키트는 shutdown 을 받지 않는다 — 만든 제공자를 여기서 내린다
                 return bAssembled;
@@ -127,7 +127,7 @@ namespace sw
             }
 
             /** @brief 설정 파일을 읽어 실제 푸시 제공자를 만들고 발송기에 등록합니다. 파일을 정하지 않았으면 실제 제공자가 없습니다. */
-            [[nodiscard]] bool createPushProviders( const string& providersFile, const string& trustFile, string& outError )
+            [[nodiscard]] bool createPushProviders( const string& providersFile, const string& trustFile, const IClock& clock, string& outError )
             {
                 if ( providersFile.empty() )
                 {
@@ -146,7 +146,7 @@ namespace sw
                     return false;
                 }
                 vector<PushProviderConfig> listSettings;
-                if ( PushProviderSet::readSettings( jsonText, listSettings, outError ) == false || _providerSet.initialize( listSettings, trustFile, outError ) == false )
+                if ( PushProviderSet::readSettings( jsonText, listSettings, outError ) == false || _providerSet.initialize( listSettings, trustFile, clock, outError ) == false )
                     return false;
                 for ( int32 index = 0; index < _providerSet.getProviderCount(); ++index )
                 {

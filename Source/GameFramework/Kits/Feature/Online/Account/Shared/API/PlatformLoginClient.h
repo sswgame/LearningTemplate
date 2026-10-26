@@ -9,6 +9,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Time/TimePoint.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -42,8 +43,8 @@ namespace sw
         IPlatformLoginClient& operator=( const IPlatformLoginClient& ) = delete;
 
         /** @brief @p provider 로 로그인을 시작합니다. 0이 아닌 요청 id 를 반환하며 결과의 `_requestID` 와 같습니다. 실패나 취소도 결과는 반드시 한 번 전달합니다. */
-        virtual uint64 beginLogin( string_view provider, int64 nowMs )                 = 0;
-        virtual void   update( int64 nowMs )                                           = 0;
+        virtual uint64 beginLogin( string_view provider, MonotonicMilliseconds nowMs ) = 0;
+        virtual void   update( MonotonicMilliseconds nowMs )                           = 0;
         virtual int32  pollResults( vector<PlatformLoginClientResult>& outListResult ) = 0;
     };
 } // namespace sw
@@ -79,8 +80,8 @@ namespace sw
         FakePlatformLoginClient();
 
         void   setTicket( string_view provider, string_view ticketText );
-        uint64 beginLogin( string_view provider, int64 nowMs ) override;
-        void   update( int64 nowMs ) override;
+        uint64 beginLogin( string_view provider, MonotonicMilliseconds nowMs ) override;
+        void   update( MonotonicMilliseconds nowMs ) override;
         int32  pollResults( vector<PlatformLoginClientResult>& outListResult ) override;
 
     private:

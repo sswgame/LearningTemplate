@@ -73,7 +73,7 @@ namespace sw::editor
         _state          = AdminToolConnectionState::Disconnected;
     }
 
-    void AdminToolConnection::update( int64 nowMs )
+    void AdminToolConnection::update( MonotonicMilliseconds nowMs )
     {
         if ( _state != AdminToolConnectionState::Connecting && _state != AdminToolConnectionState::Ready )
             return;

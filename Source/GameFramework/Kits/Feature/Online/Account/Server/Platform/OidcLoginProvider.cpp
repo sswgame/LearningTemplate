@@ -52,7 +52,7 @@ namespace sw
 
     void OidcLoginProvider::update( UnixMilliseconds nowMs )
     {
-        _pHTTPClient->update( nowMs.count() );
+        _pHTTPClient->update();
         vector<HTTPClientResponse> listResponse;
         (void)_pHTTPClient->pollResponses( listResponse );
         for ( const HTTPClientResponse& response : listResponse )
@@ -114,7 +114,7 @@ namespace sw
         request._url       = _settings._jwksURL;
         request._timeoutMs = _settings._requestTimeoutMs;
         request._listHeader.push_back( HTTPHeader{ "Accept", "application/json" } );
-        _jwksRequestID    = _pHTTPClient->submitRequest( request, nowMs.count() );
+        _jwksRequestID    = _pHTTPClient->submitRequest( request );
         _lastFetchStartMs = nowMs;
         ++_jwksFetchCount;
     }

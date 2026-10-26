@@ -122,14 +122,14 @@ namespace sw
         return true;
     }
 
-    bool PushProviderSet::initialize( const vector<PushProviderConfig>& listSettings, string_view trustFile, string& outError )
+    bool PushProviderSet::initialize( const vector<PushProviderConfig>& listSettings, string_view trustFile, const IClock& clock, string& outError )
     {
         using Internal = PushProviderSetInternal;
         shutdown();
         for ( const PushProviderConfig& config : listSettings )
         {
             Entry& entry      = _listEntry.emplace_back();
-            entry._httpClient = make_unique<OwnedHTTPClient>();
+            entry._httpClient = make_unique<OwnedHTTPClient>( clock );
             if ( entry._httpClient->initialize() == false )
             {
                 outError = "cannot start the HTTP client of push provider '" + config._kind + "'";

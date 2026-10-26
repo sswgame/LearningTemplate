@@ -38,9 +38,9 @@ namespace sw
 
 namespace sw
 {
-    LoopbackPkceLoginClient::LoopbackPkceLoginClient()
+    LoopbackPkceLoginClient::LoopbackPkceLoginClient( const IClock& clock )
         : _redirectServer{}
-        , _httpClient{}
+        , _httpClient{ clock }
         , _listProviderSettings{}
         , _listPending{}
         , _listDone{}
@@ -82,7 +82,7 @@ namespace sw
         _httpClient.shutdown();
     }
 
-    uint64 LoopbackPkceLoginClient::beginLogin( string_view provider, int64 nowMs )
+    uint64 LoopbackPkceLoginClient::beginLogin( string_view provider, MonotonicMilliseconds nowMs )
     {
         using Internal         = LoopbackPkceLoginClientInternal;
         const uint64 requestID = _nextRequestID++;
@@ -121,11 +121,11 @@ namespace sw
         return requestID;
     }
 
-    void LoopbackPkceLoginClient::update( int64 nowMs )
+    void LoopbackPkceLoginClient::update( MonotonicMilliseconds nowMs )
     {
         _nowMs = nowMs;
         _redirectServer.update();
-        _httpClient.update( nowMs );
+        _httpClient.update();
         vector<HTTPClientResponse> listResponse;
         (void)_httpClient.pollResponses( listResponse );
         for ( const HTTPClientResponse& response : listResponse )
@@ -233,7 +233,7 @@ namespace sw
         tokenRequest._bodyBytes.assign( reinterpret_cast<const uint8*>( body.data() ), reinterpret_cast<const uint8*>( body.data() ) + body.size() );
         tokenRequest._listHeader.push_back( HTTPHeader{ "Content-Type", "application/x-www-form-urlencoded" } );
         tokenRequest._listHeader.push_back( HTTPHeader{ "Accept", "application/json" } );
-        pFound->_tokenRequestID = _httpClient.submitRequest( tokenRequest, _nowMs );
+        pFound->_tokenRequestID = _httpClient.submitRequest( tokenRequest );
     }
 
     const PkceLoginProviderConfig* LoopbackPkceLoginClient::findSettings( string_view provider ) const

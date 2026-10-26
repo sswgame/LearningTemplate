@@ -44,7 +44,8 @@ namespace sw
     class SW_KIT_API LoopbackPkceLoginClient final : public IPlatformLoginClient, public IHTTPRequestHandler
     {
     public:
-        LoopbackPkceLoginClient();
+        /** @param clock 토큰 요청(HTTP)의 시한을 재는 단조 시계입니다. 빌려 쓰므로 이 객체보다 오래 살아야 합니다. */
+        explicit LoopbackPkceLoginClient( const IClock& clock );
         ~LoopbackPkceLoginClient() override;
 
         /**
@@ -56,8 +57,8 @@ namespace sw
                                        const vector<PkceLoginProviderConfig>& listProviderSettings );
         void               shutdown();
 
-        uint64 beginLogin( string_view provider, int64 nowMs ) override;
-        void   update( int64 nowMs ) override;
+        uint64 beginLogin( string_view provider, MonotonicMilliseconds nowMs ) override;
+        void   update( MonotonicMilliseconds nowMs ) override;
         int32  pollResults( vector<PlatformLoginClientResult>& outListResult ) override;
 
         HTTPClient& getHTTPClient() { return _httpClient; }
@@ -69,13 +70,13 @@ namespace sw
     private:
         struct PendingLogin
         {
-            string _provider{};
-            string _codeVerifier{};
-            string _state{};
-            string _nonce{};
-            uint64 _requestID{ 0 };
-            uint64 _tokenRequestID{ 0 }; ///< 토큰 교환 중이면 0이 아니다
-            int64  _deadlineMs{ 0 };
+            string                _provider{};
+            string                _codeVerifier{};
+            string                _state{};
+            string                _nonce{};
+            uint64                _requestID{ 0 };
+            uint64                _tokenRequestID{ 0 }; ///< 토큰 교환 중이면 0이 아니다
+            MonotonicMilliseconds _deadlineMs{ 0 };
         };
 
         const PkceLoginProviderConfig* findSettings( string_view provider ) const;
@@ -90,7 +91,7 @@ namespace sw
         vector<PlatformLoginClientResult> _listDone;
         INetSecurityProvider*             _pProvider;
         IExternalBrowser*                 _pBrowser;
-        int64                             _nowMs;
+        MonotonicMilliseconds             _nowMs;
         uint64                            _nextRequestID;
     };
 } // namespace sw

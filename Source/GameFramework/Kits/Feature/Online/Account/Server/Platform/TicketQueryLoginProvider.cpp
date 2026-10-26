@@ -81,7 +81,7 @@ namespace sw
         request._url       = makeRequestURL( ticket );
         request._timeoutMs = _settings._requestTimeoutMs;
         request._listHeader.push_back( HTTPHeader{ "Accept", "application/json" } );
-        _mapRequestToVerification[_pHTTPClient->submitRequest( request, nowMs.count() )] = verificationID;
+        _mapRequestToVerification[_pHTTPClient->submitRequest( request )] = verificationID;
         return verificationID;
     }
 
@@ -98,7 +98,7 @@ namespace sw
 
     void TicketQueryLoginProvider::update( UnixMilliseconds nowMs )
     {
-        _pHTTPClient->update( nowMs.count() );
+        _pHTTPClient->update();
         vector<HTTPClientResponse> listResponse;
         (void)_pHTTPClient->pollResponses( listResponse );
         for ( const HTTPClientResponse& response : listResponse )

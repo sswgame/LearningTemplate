@@ -190,7 +190,7 @@ namespace sw
         request._bodyBytes = bodyBytes;
         request._listHeader.push_back( HTTPHeader{ "Authorization", "Bearer " + _tokenSource.getToken() } );
         request._listHeader.push_back( HTTPHeader{ "Content-Type", "application/json" } );
-        _mapRequestToDelivery[_pHTTPClient->submitRequest( request, nowMs.count() )] = deliveryID;
+        _mapRequestToDelivery[_pHTTPClient->submitRequest( request )] = deliveryID;
     }
 
     void FcmPushProvider::flushWaiting( ServiceAccountTokenSource::Outcome outcome, UnixMilliseconds nowMs )
@@ -237,7 +237,7 @@ namespace sw
 
     void FcmPushProvider::update( UnixMilliseconds nowMs )
     {
-        _pHTTPClient->update( nowMs.count() );
+        _pHTTPClient->update();
         vector<HTTPClientResponse> listResponse;
         (void)_pHTTPClient->pollResponses( listResponse );
         for ( const HTTPClientResponse& response : listResponse )

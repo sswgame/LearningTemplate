@@ -13,6 +13,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Network/Message/StreamFrame.h"
 #include "Core/Network/Transport/StreamTypes.h"
+#include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"

@@ -11,6 +11,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Time/Clock.h"
 #include "Core/Time/TimePoint.h"
 
 namespace sw
@@ -25,6 +26,7 @@ namespace sw
         vector<string>   _listBoardID{};          ///< 서버만 점수를 내는 순위표 — 비면 "kills"
         string           _region{ "kr" };         ///< 게임 서버 지역
         UnixMilliseconds _startMs{ 0 };           ///< 서비스 시각의 시작. 0 이면 지금 — 가짜 시계 테스트는 첫 `tick` 과 같은 값을 준다
+        const IClock*    _pClock{ nullptr };      ///< 필수. 메모리 캐시 만료를 재는 단조 시계(실행은 `SystemMonotonicClock`, 결정적 테스트는 `ManualClock` 을 틱마다 민다). 빌려 쓴다
         uint64           _serverID{ 1 };          ///< 버스 · 접속 상태 · 디렉터리의 서버 id
         int32            _maxConnections{ 1024 }; ///< 받을 연결 상한(봇 수보다 크게)
         int32            _gameServerCapacity{ 100000 };

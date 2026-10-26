@@ -25,7 +25,7 @@ namespace sw
         _listPreset.push_back( Preset{ string( provider ), string( ticketText ) } );
     }
 
-    uint64 FakePlatformLoginClient::beginLogin( string_view provider, int64 nowMs )
+    uint64 FakePlatformLoginClient::beginLogin( string_view provider, MonotonicMilliseconds nowMs )
     {
         (void)nowMs;
         PlatformLoginClientResult& result = _listPending.emplace_back();
@@ -34,7 +34,7 @@ namespace sw
         return result._requestID;
     }
 
-    void FakePlatformLoginClient::update( int64 nowMs )
+    void FakePlatformLoginClient::update( MonotonicMilliseconds nowMs )
     {
         (void)nowMs;
         for ( PlatformLoginClientResult& result : _listPending )

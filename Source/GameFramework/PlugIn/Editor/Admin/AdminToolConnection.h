@@ -13,6 +13,7 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Transport/IStreamTransport.h"
+#include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Base/Online/Service/OnlineServiceClient.h"
 #include "GameFramework/Kits/Feature/Online/Admin/Shared/AdminClient.h"
@@ -51,7 +52,7 @@ namespace sw::editor
         [[nodiscard]] bool open( string_view address, string_view gameBuild, string& outError );
         void               close();
         /** @brief 전송 · 요청 시한 · 다시 연결을 돌립니다. 닫혀 있으면 아무것도 하지 않습니다. */
-        void update( int64 nowMs );
+        void update( MonotonicMilliseconds nowMs );
         void setLoginHook( const LoginHook& onReady ) { _onReady = onReady; }
         /** @brief 이 연결의 서비스 클라이언트(조립 쪽이 계정 클라이언트 같은 다른 키트 클라이언트를 `registerClientService` 로 등록하는 데 쓴다 — 연결을 열기 전에). */
         OnlineServiceClient& getServiceClient() { return _client; }
