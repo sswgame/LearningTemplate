@@ -82,6 +82,11 @@ namespace sw::editor
 
     private:
         void applyBookmark( const CameraBookmark& bookmark );
+        /**
+         * @brief 궤도 중심을 시선 앞 궤도 거리로 다시 정합니다. 위치 · 회전 · 궤도 거리를 직접 놓는 모든 곳(생성 · 비행 · 외부 이동 · 북마크 · setPose)이 이 하나를 거친다.
+         * @details 불변식: `_orbitTarget == _position + 시선 * _orbitDistance`. 깨지면 Alt 궤도가 옛 중심으로 튄다.
+         */
+        void syncOrbitTargetToView();
 
     private:
         float3                 _position;

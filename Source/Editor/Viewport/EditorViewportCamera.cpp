@@ -71,6 +71,12 @@ namespace sw::editor
         , _bFlownThisRightHold{ SW_FALSE }
         , _reserved{ 0 }
     {
+        syncOrbitTargetToView(); // 처음 Alt 궤도도 지금 보는 점을 돈다(옛 원점이 아니라)
+    }
+
+    void EditorViewportCamera::syncOrbitTargetToView()
+    {
+        _orbitTarget = _position + EditorViewportCameraInternal::computeForward( _rotation ) * _orbitDistance;
     }
 
     void EditorViewportCamera::processFlyInput( float32 deltaTime, float32& inoutCameraSpeed )
@@ -112,7 +118,7 @@ namespace sw::editor
         const float32 speed = inoutCameraSpeed * ( io.KeyShift ? 3.0f : 1.0f ) * deltaTime;
         _position += moveDir * speed;
         // 궤도 중심은 매 프레임 시선 앞 궤도 거리에 둔다. 비행 뒤 Alt 궤도가 옛 중심으로 튀지 않는다(언리얼 · 유니티).
-        _orbitTarget = _position + forward * _orbitDistance;
+        syncOrbitTargetToView();
 
         // 누르는 프레임에 새 누름으로 지우고, 키로 옮긴 프레임이 하나라도 있으면 비행이다(맥락 메뉴가 놓을 때 본다).
         // 마우스로 돌린 것은 맥락 메뉴가 끌기 거리(끌기 임계값)로 가린다 — 누를 때의 손떨림 한 픽셀로 메뉴가 막히지 않게 여기서는 세지 않는다.
@@ -233,7 +239,7 @@ namespace sw::editor
                 _rotation._y = MathUtil::toDegree( MathUtil::atan2( forward._x, forward._z ) );
             }
             // 이어받은 시점에서도 궤도 중심은 시선 앞 궤도 거리다(옛 중심이 남으면 다음 Alt 궤도가 튄다).
-            _orbitTarget = _position + EditorViewportCameraInternal::computeForward( _rotation ) * _orbitDistance;
+            syncOrbitTargetToView();
         }
         pCamera->setLocalPosition( _position );
         pCamera->setOrthographic( _bOrthographicView == SW_TRUE );
@@ -295,9 +301,9 @@ namespace sw::editor
 
     void EditorViewportCamera::setPose( const float3& position, const float3& rotation )
     {
-        _position    = position;
-        _rotation    = rotation;
-        _orbitTarget = _position + EditorViewportCameraInternal::computeForward( _rotation ) * _orbitDistance;
+        _position = position;
+        _rotation = rotation;
+        syncOrbitTargetToView();
     }
 
     void EditorViewportCamera::setOrthographicView( float32 pitch, float32 yaw )
@@ -345,7 +351,8 @@ namespace sw::editor
     {
         _position      = bookmark._position;
         _rotation      = bookmark._rotation;
-        _orbitTarget   = bookmark._orbitTarget;
         _orbitDistance = bookmark._orbitDistance;
+        // 저장된 궤도 중심은 쓰지 않고 위치 · 회전 · 거리에서 다시 구한다(비행 전에 저장한 북마크의 옛 중심이 불변식을 깨지 않게).
+        syncOrbitTargetToView();
     }
 } // namespace sw::editor
