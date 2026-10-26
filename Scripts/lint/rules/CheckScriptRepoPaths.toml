@@ -1,0 +1,6 @@
+# CheckScriptRepoPaths 의 규칙 데이터 — 게이트는 Scripts/lint/selftest/CheckScriptRepoPaths.py.
+
+# 저장소에 없어도 되는 경로 상수 → 이유. 상수가 사라지면 기반이 "낡은 예외" 로 알린다.
+[exemption]
+"Resource/engine/shaders/probe.hlsl" = "CheckShaderConventions 셀프테스트가 임시 저장소에 만드는 가상 셰이더 경로다"
+"Resource/engine/shaders/probe.hlsli" = "CheckShaderConventions 셀프테스트가 임시 저장소에 만드는 가상 셰이더 경로다"

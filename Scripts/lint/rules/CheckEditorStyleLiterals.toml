@@ -2,4 +2,10 @@
 
 # 전체 훑기의 기준선 — 지금 있는 건수다(테마 토큰으로 옮기며 낮춘다). 늘면 실패한다(커밋 훅은 추가한 줄만 본다).
 [baseline]
-total = 168
+total = 157
+
+# 검사하지 않는 파일의 경로 앞머리 → 이유. 앞머리에 맞는 파일을 훑지 못하면(옮기거나 지웠다) 기반이 "낡은 예외" 로 실패시킨다.
+[exemption]
+"Source/Editor/Common/GUI/EditorThemeUtil." = "테마 접근자 구현이다 — 색 · 스타일 값을 만드는 곳이라 리터럴이 있어도 된다"
+"Source/Editor/Common/GUI/EditorColorUtil." = "색 변환 도우미 구현이다 — 값을 만드는 곳이라 리터럴이 있어도 된다"
+"Source/Editor/Common/Config/EditorThemeTokens." = "테마 토큰 읽기 구현이다 — 토큰의 기본값을 만드는 곳이라 리터럴이 있어도 된다"

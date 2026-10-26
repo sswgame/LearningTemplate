@@ -12,7 +12,7 @@ Scripts/lint/gate/CheckEditorStyleLiterals.py
   - `ImGui::PushStyleColor(` 의 값 인자에 숫자 리터럴이 있다
   - `ImGui::PushStyleVar(` 의 값 인자에 숫자 리터럴(`ImVec2(4, 4)` 포함)이 있다
 
-테마 구현 파일(`_kThemeSourcePrefix`)은 값을 만드는 곳이라 보지 않는다.
+테마 구현 파일(`rules/CheckEditorStyleLiterals.toml` 의 `[exemption]` 경로 앞머리)은 값을 만드는 곳이라 보지 않는다.
 
 기준선은 현재 건수다(`rules/CheckEditorStyleLiterals.toml` 의 `[baseline] total`). 커밋 훅은 추가한 줄에 걸친 위반만, 전체 훑기는
 기준선을 넘을 때만 실패한다 — 두 모드 · 병합 커밋 · `--whole-files` · `--list` 는 기반(`LintGate.BaselineSourceGate`)이 정한다.
@@ -35,8 +35,6 @@ from lint.SourceScan import SourceFile  # noqa: E402
 
 _kScanRoot = ("Source/Editor", "Source/GameFramework/PlugIn/Editor")
 _kSuffixes = (".h", ".hpp", ".inl", ".cc", ".cpp", ".cxx")
-#: 테마 값을 만드는 파일 — 이 경로 앞머리에 맞으면 검사하지 않는다.
-_kThemeSourcePrefix = ("Source/Editor/Common/GUI/EditorThemeUtil.", "Source/Editor/Common/GUI/EditorColorUtil.", "Source/Editor/Common/GUI/EditorThemeTokens.")
 _kNumberRe = re.compile(r"(?<![\w.])(?:0[xX][0-9A-Fa-f]+|\d+(?:\.\d*)?(?:[eE][-+]?\d+)?[fFuUlL]*|\.\d+[fF]?)(?![\w.])")
 _kHeadNumberRe = r"\s*[-+]?(?:0[xX]|\d|\.\d)"
 #: (이름, 머리 정규식, 인자 검사 방식) — "head": 머리만으로 위반, "second": 둘째 인자에 숫자 리터럴이 있으면 위반.
@@ -142,8 +140,10 @@ class CheckEditorStyleLiteralsGate(BaselineSourceGate):
     ]
 
     def findCounted(self, source: SourceFile) -> list[CountedFinding] | None:
-        if source.relative.startswith(_kThemeSourcePrefix):
-            return None
+        for prefix in self.mapExemption:
+            if source.relative.startswith(prefix):
+                self.useExemption(prefix)
+                return None
         listLine = source.text.split("\n")
         return [CountedFinding("total", source.relative, literal.firstLine, literal.lastLine,
                                f"{literal.kind} 에 숫자 리터럴 — 테마 토큰(EditorThemeUtil 접근자)을 쓴다", listLine[literal.firstLine - 1].strip())

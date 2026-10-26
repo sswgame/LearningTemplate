@@ -47,6 +47,9 @@ pawn_side = ["Source/GameFramework/Base/Actor/Control/Pawn*"]
 - **목록도 읽는 게이트**는 클래스에 `ruleSchema`(키 → `kKindReason` · `kKindText` · `kKindInteger` · `kKindTextList`)를 적고, 모듈 수준에서
   `LintGate.readRules( 이름, 스키마, requiredKeys=… )` 로 읽어 지금까지의 이름(`_kEngineTier` …)에 담는다. 스키마에 없는 키 · 빈 이유 ·
   종류가 다른 값 · 같은 값 두 번 · 빠진 필수 키는 `RuleDataError` 다(게이트는 종료 2).
+- **스크립트 상수에 적은 저장소 경로**(`"Source/…"` · `"Test/…"` · `"Resource/…"` 로 시작하는 `k…` 상수)는 `selftest/CheckScriptRepoPaths` 가 실제 파일 · 폴더
+  (`/` 끝은 폴더, `.` · `_` · `-` 끝은 파일 이름 앞머리, `*` 는 글롭)를 가리키는지 본다. 경로가 문자열이라 형식으로 막지 못하는 틈이다 — 파일을 옮기면 상수가
+  조용히 낡는다. 예외 앞머리(`CheckEditorStyleLiterals` 의 테마 구현 파일)는 상수가 아니라 `[exemption]` 에 둔다.
 - 옮기지 않은 표와 그 까닭(정규식이 든 표, 여러 칸짜리 레코드, 언어가 정한 낱말)은 [결정 기록](../../docs/09_Decisions.md) 5-2 에 있다.
 
 ## 커밋 훅과 병합 커밋
