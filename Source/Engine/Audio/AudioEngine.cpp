@@ -96,6 +96,7 @@ namespace sw
         {
             std::scoped_lock<mutex> lock{ _libraryMutex };
             _mapGameLibrary.clear();
+            _libraryGeneration.fetch_add( 1, std::memory_order_release );
         }
         _mapEmitter.clear();
         _music._pDesc.reset();
@@ -228,6 +229,7 @@ namespace sw
 
         shared_ptr<const AudioEventLibrary> pLibrary = make_shared<AudioEventLibrary>( library );
         _mapGameLibrary[libraryName]                 = pLibrary;
+        _libraryGeneration.fetch_add( 1, std::memory_order_release );
         // 뱅크를 로드하듯 클립 디코드를 미리 요청해 둔다. 첫 재생이 디코드를 기다리지 않게 하려는 것이다.
         for ( const AudioEventDesc& event : pLibrary->_listEvent )
         {
@@ -250,6 +252,7 @@ namespace sw
             std::scoped_lock<mutex> lock{ _libraryMutex };
             if ( _mapGameLibrary.erase( libraryName ) == 0 )
                 return;
+            _libraryGeneration.fetch_add( 1, std::memory_order_release );
         }
         Command command;
         command._type = CommandType::SetLibrary;

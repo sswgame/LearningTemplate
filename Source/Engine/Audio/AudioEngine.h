@@ -196,6 +196,8 @@ namespace sw
         void getBusStatuses( vector<AudioBusStatus>& outListStatus ) const;
         /** @brief 로드한 라이브러리의 이벤트 이름을 @p outListName 에 담습니다(비우고 채웁니다). 라이브러리 로드 순서는 정해져 있지 않습니다. */
         void collectEventNames( vector<hashed_string>& outListName ) const;
+        /** @brief 이벤트 라이브러리를 로드하거나 내릴 때마다 오르는 세대입니다. 이름 목록을 캐시하는 쪽(오디오 믹서 창)이 이것이 바뀔 때만 다시 모읍니다. */
+        uint32 getEventLibraryGeneration() const { return _libraryGeneration.load( std::memory_order_acquire ); }
         /**
          * @brief 로드한 라이브러리에서 이벤트 설명자를 찾아 사본을 @p outDesc 에, 라이브러리 이름(리소스 경로)을 @p outLibraryName 에 담습니다.
          * @details 에디터의 오디오 이벤트 창이 읽습니다. @p pOutAttenuation 이 있으면 이벤트의 감쇠 프리셋(라이브러리 것을 먼저, 없으면 믹서 그래프 것)을 담고, 감쇠가 없으면 기본값으로 둡니다.
@@ -475,13 +477,14 @@ namespace sw
 
         AudioClipCache _clipStore; /**< 경로에서 클립으로 가는 캐시입니다. */
         // 게임 스레드
-        vector<Command>                  _listPendingCommand;  /**< 쌓인 명령입니다(`_commandMutex`). */
-        vector<Command>                  _listApplyingCommand; /**< 오디오 스레드가 꺼내 적용 중인 명령입니다. */
-        LibraryMap                       _mapGameLibrary;      /**< 게임 스레드가 아는 라이브러리입니다. */
-        shared_ptr<const AudioMixerDesc> _pGameMixerDesc;      /**< 게임 스레드가 아는 그래프입니다. 이름으로 대조합니다. */
-        mutex                            _commandMutex;        /**< `_listPendingCommand` 를 지킵니다. */
-        mutable mutex                    _libraryMutex;        /**< `_mapGameLibrary` 와 `_pGameMixerDesc` 를 지킵니다. 이벤트는 병렬 틱에서도 재생합니다. */
-        atomic<uint64>                   _nextPlayingID;       /**< 다음 재생 id 입니다. */
+        vector<Command>                  _listPendingCommand;     /**< 쌓인 명령입니다(`_commandMutex`). */
+        vector<Command>                  _listApplyingCommand;    /**< 오디오 스레드가 꺼내 적용 중인 명령입니다. */
+        LibraryMap                       _mapGameLibrary;         /**< 게임 스레드가 아는 라이브러리입니다. */
+        shared_ptr<const AudioMixerDesc> _pGameMixerDesc;         /**< 게임 스레드가 아는 그래프입니다. 이름으로 대조합니다. */
+        mutex                            _commandMutex;           /**< `_listPendingCommand` 를 지킵니다. */
+        mutable mutex                    _libraryMutex;           /**< `_mapGameLibrary` 와 `_pGameMixerDesc` 를 지킵니다. 이벤트는 병렬 틱에서도 재생합니다. */
+        atomic<uint32>                   _libraryGeneration{ 1 }; /**< `_mapGameLibrary` 를 바꿀 때마다 오릅니다(`getEventLibraryGeneration`). */
+        atomic<uint64>                   _nextPlayingID;          /**< 다음 재생 id 입니다. */
         // 오디오 스레드
         shared_ptr<AudioMixer>                       _pMixer;                         /**< 지금 그래프입니다. */
         vector<VoiceSlot>                            _listVoice;                      /**< 보이스 슬롯입니다. */

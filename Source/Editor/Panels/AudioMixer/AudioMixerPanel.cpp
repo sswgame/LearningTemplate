@@ -136,10 +136,16 @@ namespace sw::editor
 
     void AudioMixerPanel::drawPreviewBar( IAudioService& audio )
     {
-        AudioEngine& engine = audio.getEngine();
-        engine.collectEventNames( _listEventName );
-        // 라이브러리 로드 순서는 정해져 있지 않으므로 사전순으로 보인다.
-        std::sort( _listEventName.begin(), _listEventName.end(), HashedStringLexicalLess{} );
+        AudioEngine& engine          = audio.getEngine();
+        const bool   bEventNameStale = _pEventNameEngine != &engine || _eventNameGeneration != engine.getEventLibraryGeneration();
+        if ( bEventNameStale )
+        {
+            _pEventNameEngine    = &engine;
+            _eventNameGeneration = engine.getEventLibraryGeneration();
+            engine.collectEventNames( _listEventName );
+            // 라이브러리 로드 순서는 정해져 있지 않으므로 사전순으로 보인다.
+            std::sort( _listEventName.begin(), _listEventName.end(), HashedStringLexicalLess{} );
+        }
         if ( _selectedEvent >= _listEventName.size() )
             _selectedEvent = 0;
 

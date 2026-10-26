@@ -15,6 +15,7 @@
 
 namespace sw
 {
+    class AudioEngine;
     class IAudioService;
 } // namespace sw
 
@@ -55,8 +56,10 @@ namespace sw::editor
 
     private:
         vector<AudioBusStatus>                _listBusStatus;
-        vector<float32>                       _listHeldPeak; ///< 버스마다 천천히 내려가는 피크 표시 값(선형)
-        vector<hashed_string>                 _listEventName;
+        vector<float32>                       _listHeldPeak;                ///< 버스마다 천천히 내려가는 피크 표시 값(선형)
+        vector<hashed_string>                 _listEventName;               ///< 이름 순. 엔진이나 라이브러리 세대가 바뀔 때만 다시 모은다
+        const AudioEngine*                    _pEventNameEngine{ nullptr }; ///< `_listEventName` 을 모은 엔진(엔진이 새로 뜨면 세대가 다시 1 부터라 함께 본다)
+        uint32                                _eventNameGeneration{ 0 };    ///< `_listEventName` 을 모은 때의 `AudioEngine::getEventLibraryGeneration`
         uint32                                _selectedEvent;
         fixed_string<constant::kMaxBuffer256> _clipPath;
     };
