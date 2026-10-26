@@ -48,6 +48,8 @@
 남은 것:
 - 원인을 모름: `UIOptionsMenuTest.RebindIgnoresUIActionsWhileListening`(리눅스 Debug · Shipping · ASan, 포커스 위젯 ID 839 ≠ 823 `Tab.controls` — 창이 닫힌 뒤 탐색 Up 이 한 번 발화한 것으로 추정, 다음 실패 메시지가 포커스 위젯 이름을 보인다), ASan 중단 두 건(`PlatformLoginTest.Oidc…` · `NetRequestTest.IdempotentRetry…`), TSan 샤드의 새니타이저 보고.
 - 다음 야간 퍼징(`fuzz.yml`)에서 `LoaderFuzzer` `Compression` 이 통과하는지(원인: 헤더 원본 크기 620 MB 를 압축 크기 0 과 견주지 않음 — `decompressBound` 로 고침, 결정 기록 5-3, `seedCompression` 씨앗 추가).
+- 다음 야간 부하(`load.yml`)에서 replication × Mid · LowEnd 가 시간 예산을 `::notice` 로만 올리고 통과하는지, connect × Mid 는 OnlineLoadBot 매치메이킹 키트(NEXT 2번)가 고쳐진 뒤 통과하는지.
+  replication 의 tick p99 가 러너에서 15 → 17.5 ms 로 오른 것이 회귀인지는 이 PC 에서 `py -3 -m Scripts load run replication --profile Mid LowEnd --runs 3` 을 기준선(약 10 ms)과 견줘 본다.
 - Windows STL containers 잡에서 건너뛰게 한 테스트 셋(`MemoryTagTest` 둘, `DestructionDamageTest.EventLogHash…`)이 기본 컨테이너 구성에서도 가끔 지는지.
 
 ## 정리
