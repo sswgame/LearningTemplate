@@ -5,11 +5,14 @@
  *          돌려준다. 구독이 사라지면 등록이 풀리므로 해제를 잊을 수 없다(언리얼 `FDelegateHandle` 은 해제를 호출부가 기억해야 하는 형식이라 쓰지 않는다).
  *          출처가 먼저 사라지면 출처의 침입형 목록이 살아 있는 구독을 모두 무효화한다 — 그 뒤 구독의 소멸은 아무것도 하지 않는다.
  *          구독은 **[[nodiscard]]** 다. 반환값을 버리면 그 자리에서 풀리므로, 받지 않는 호출은 컴파일러가 막는다.
- * @note 스레드: 구독과 그 출처는 같은 스레드에서(또는 출처가 정한 잠금 안에서) 만들고 옮기고 풀어야 합니다. 목록에 잠금이 없습니다 —
- *       출처마다 이미 소유 스레드 계약이 있고(이벤트 버스 · 메시지 라우터) 구독마다 잠금 값을 치르지 않기 위해서입니다.
+ * @note 스레드: 목록(만들기 · 옮기기 · 풀기)은 출처의 스핀 잠금이 지킨다 — 서로 다른 스레드가 같은 출처의 구독을 따로 만들고 풀어도 된다(로그 리스너).
+ *       등록 내용 자체(`releaseSubscription`)는 출처가 자기 잠금으로 지킨다. 출처의 소멸 · 전체 비우기(`detachAllSubscriptions`)와 다른 스레드의
+ *       구독 해제가 겹치는 것은 계약 밖이다(출처가 사라지는 중이면 어느 잠금도 그 메모리를 지키지 못한다).
  */
 #pragma once
+#include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/SpinLock.h"
 
 namespace sw
 {
@@ -68,6 +71,7 @@ namespace sw
      * @brief 구독을 내주는 쪽의 기반입니다. 살아 있는 구독을 침입형 목록으로 들고, 먼저 사라지면 모두 무효화합니다.
      * @details 파생 클래스는 등록할 때 `issueSubscription( id )` 로 구독을 만들어 돌려주고, 구독이 풀릴 때 불리는 `releaseSubscription( id )` 에서
      *          그 등록을 지웁니다. 복사본은 구독을 넘겨받지 않습니다(구독은 원본의 등록이다). 이동은 구독을 데려갑니다(구독이 새 자리를 가리킨다).
+     *          `releaseSubscription` 은 목록 잠금을 놓은 뒤 부른다 — 파생 클래스가 자기 잠금을 잡아도 순서가 뒤집히지 않는다.
      */
     class SubscriptionSource
     {
@@ -78,7 +82,8 @@ namespace sw
 
         /** @brief 복사본은 구독을 넘겨받지 않습니다. */
         SubscriptionSource( const SubscriptionSource& ) noexcept
-            : _pHead{ nullptr }
+            : _listLock{}
+            , _pHead{ nullptr }
         {
         }
         /** @brief 대입은 구독 목록을 바꾸지 않습니다. 등록 내용을 바꾸는 파생 클래스가 필요하면 `detachAllSubscriptions` 를 부릅니다. */
@@ -86,7 +91,8 @@ namespace sw
 
         /** @brief 구독을 데려옵니다. 데려온 구독은 이 객체를 가리킵니다. */
         SubscriptionSource( SubscriptionSource&& other ) noexcept
-            : _pHead{ nullptr }
+            : _listLock{}
+            , _pHead{ nullptr }
         {
             takeSubscriptionsFrom( other );
         }
@@ -108,21 +114,25 @@ namespace sw
             Subscription subscription;
             subscription._pSource = this;
             subscription._id      = id;
-            subscription._pNext   = _pHead;
-            if ( _pHead != nullptr )
-                _pHead->_pPrev = &subscription;
-            _pHead = &subscription;
+            {
+                std::scoped_lock<SpinLock> lock{ _listLock };
+                subscription._pNext = _pHead;
+                if ( _pHead != nullptr )
+                    _pHead->_pPrev = &subscription;
+                _pHead = &subscription;
+            }
             // 반환이 옮기면(NRVO 가 아니면) 이동 생성자가 목록 자리를 새 객체로 고친다.
             return subscription;
         }
 
-        /** @brief 구독 @p id 가 풀렸습니다. 그 등록을 지웁니다. 구독은 이미 목록에서 빠졌습니다. */
+        /** @brief 구독 @p id 가 풀렸습니다. 그 등록을 지웁니다. 구독은 이미 목록에서 빠졌고 목록 잠금은 풀려 있습니다. */
         virtual void releaseSubscription( uint64 id ) = 0;
 
         /** @brief 살아 있는 구독을 모두 무효화합니다. 등록은 파생 클래스가 따로 지웁니다(전체 비우기 · 출처 소멸). */
         void detachAllSubscriptions() noexcept
         {
-            Subscription* pCurrent = _pHead;
+            std::scoped_lock<SpinLock> lock{ _listLock };
+            Subscription*              pCurrent = _pHead;
             while ( pCurrent != nullptr )
             {
                 Subscription* const pNext = pCurrent->_pNext;
@@ -137,8 +147,8 @@ namespace sw
     private:
         friend class Subscription;
 
-        /** @brief @p subscription 을 목록에서 뺍니다. */
-        void unlink( Subscription& subscription ) noexcept
+        /** @brief @p subscription 을 목록에서 뺍니다. 목록 잠금을 쥐고 부릅니다. */
+        void unlinkLocked( Subscription& subscription ) noexcept
         {
             if ( subscription._pPrev != nullptr )
                 subscription._pPrev->_pNext = subscription._pNext;
@@ -153,6 +163,7 @@ namespace sw
         /** @brief @p other 의 구독을 모두 이 객체로 옮깁니다. 이 객체의 목록은 비어 있어야 합니다. */
         void takeSubscriptionsFrom( SubscriptionSource& other ) noexcept
         {
+            std::scoped_lock<SpinLock, SpinLock> lock{ _listLock, other._listLock };
             _pHead       = other._pHead;
             other._pHead = nullptr;
             for ( Subscription* pCurrent = _pHead; pCurrent != nullptr; pCurrent = pCurrent->_pNext )
@@ -161,6 +172,7 @@ namespace sw
             }
         }
 
+        SpinLock      _listLock;         ///< 목록과 구독의 이웃 · 출처 칸을 지킨다
         Subscription* _pHead{ nullptr }; ///< 살아 있는 구독의 침입형 목록 머리
     };
 
@@ -169,8 +181,13 @@ namespace sw
         SubscriptionSource* const pSource = _pSource;
         if ( pSource == nullptr )
             return;
-        pSource->unlink( *this );
-        _pSource        = nullptr;
+        {
+            std::scoped_lock<SpinLock> lock{ pSource->_listLock };
+            if ( _pSource == nullptr )
+                return; // 잠금을 기다리는 사이 출처가 전체를 비웠다
+            pSource->unlinkLocked( *this );
+            _pSource = nullptr;
+        }
         const uint64 id = _id;
         _id             = 0;
         pSource->releaseSubscription( id );
@@ -178,6 +195,10 @@ namespace sw
 
     inline void Subscription::takeFrom( Subscription& other ) noexcept
     {
+        SubscriptionSource* const pSource = other._pSource;
+        if ( pSource == nullptr )
+            return;
+        std::scoped_lock<SpinLock> lock{ pSource->_listLock };
         _pSource = other._pSource;
         _pPrev   = other._pPrev;
         _pNext   = other._pNext;
