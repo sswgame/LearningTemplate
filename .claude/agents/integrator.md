@@ -7,6 +7,8 @@ tools: Read, Write, Edit, Glob, Grep, Bash, PowerShell, Skill, ToolSearch, mcp__
 
 너는 이 저장소의 통합 담당이다. 규칙의 정본은 `docs/11_Workflow.md` 이고, 아래는 꼭 지킬 요약이다.
 
+- 모델: 위 `model: opus` 는 설계 · 모듈을 넘는 리팩터 · GPU/스레드 결함의 기본이다. 병합 · 게이트 · `verify-batch` 실행만 하는 통합은 호출에서 `model: sonnet` · medium 으로 낮추고, 실패 원인 수정은 `worker`(opus)에 맡긴다([12 에이전트와 토큰](../../docs/12_Agents.md) 1절 표).
+
 - 시작할 때 읽는 것: 받은 지시서, 해당 계획 문서(`py -3 -m Scripts plans --file <이름>`) 나 후보 절, 건드릴 영역의 README. 다른 문서는 필요할 때만 찾아 읽는다.
 - 새 일은 제안서 없이 바로 구현한다. 결정이 필요하면 상용 엔진(Unreal · Unity · Godot)과 비교해 최선을 고르고 `docs/09_Decisions.md` 에 한 줄로 남긴다.
 - 도우미는 최대 하나만, 그것도 `worker` 나 `mech-worker` 로 띄운다. 도우미는 하위 에이전트를 띄우지 않는다. 후속은 하던 도우미에게 잇고 새로 띄우기는 마지막이다(`/worker-brief` 스킬 0번).

@@ -2,7 +2,7 @@
 
 > 상태: 측정대기 · 선행: 없음 · 영역: graphics · 옛번호: D2-11 · 진행: 12/12
 
-**남은 확인(통합에서 `gpu-verifier` 로 한 번에):** 매니페스트 id `render-pass-gpu-tests`, `vfx-preview-scenario`(GPU 방출기 · 깊이 충돌 · 메시 입자 · 띠의 네 백엔드 화면, GL 의 R32 실수 RW 텍스처 읽기와 DX11 RAW 인자 버퍼 SRV — 아래 "V4 남은 확인"). 확인이 끝나면 통합 담당이 이 문서를 닫는다.
+**남은 확인(통합에서 `gpu-verifier` 로 한 번에):** 매니페스트 id `render-pass-gpu-tests`, `vfx-preview-scenario`(GPU 방출기 · 깊이 충돌 · 메시 입자 · 띠의 네 백엔드 화면, DX11 RAW 인자 버퍼 SRV — 아래 "V4 남은 확인"). 확인이 끝나면 통합 담당이 이 문서를 닫는다.
 
 결정은 [결정 기록](../09_Decisions.md) 5-12 의 `D2-11` 행들과 옛 `D2-11` 본문의 사용자 결정이 원본입니다. 단위가 끝나면 절을 지우고 남는 교훈은 코드 헤더 주석으로 옮깁니다.
 
@@ -35,7 +35,7 @@
 - **셰이더 커밋은 쿠킹과 함께.** `vfxsimulate.hlsl` · `vfxsimulate.hlsli` · `vfxmeshinstance.hlsl` · `depthhistory.hlsl` 은 `CheckShaderStamps` 가 네 백엔드 쿠킹 바이너리와 함께 커밋하라고 막는다. 빌드를 허락받은 작업자가 `App --cook-shaders` 뒤 함께 넣는다(그 전에는 GPU 방출기와 깊이 히스토리가 없고, `VfxGPUSimulation.cpp` 가 `vfxsimulate.hlsli` 를 include 해 셰이더 패치 없이는 빌드되지 않는다).
 - FXC(DX11 cs_5_0)가 동기화를 낀 반복(덩어리 · 접두사 합)을 받는지, 네 백엔드에서 `ParticlesDrawInTheTransparentPass` 와 `editor/vfxpreview` 를 본다(`gv_vfxSimulation=CPU` 와 그림이 같아야 한다).
 - **V5 의 SPIR-V 크기 · 색 커브 오류(2026-10)**: GPU 크기 · 색 커브(`evaluateCurve` — 반복과 이른 반환을 다섯 번 인라인)가 Vulkan · GL 에서 첫 키 값을 냈다. `evaluateCurve` 를 이른 반환 없이 끝에서 한 번에 고르는 꼴로 고쳐 네 백엔드 통과했고 우회는 그대로 둔다. 처음 "SPIR-V 최적화 탓"으로 봤으나 반증됐다(검증기 통과, SPIR-V 해석기 실행이 -Od 와 비트까지 같음) — 최적화된 모양을 컴파일하는 NVIDIA 드라이버 쪽으로 본다(확신 약 65 %). 같은 모양(반복 + 이른 반환 여러 번 인라인)이 다른 셰이더에도 생길 수 있어 백엔드끼리 그림을 견주는 GPU 테스트가 마지막 그물이다.
-- GL 의 R32 실수 RW 텍스처 읽기(형식 없는 이미지 읽기)와 DX11 RAW 인자 버퍼의 SRV(메시 인스턴스 쓰기가 살아 있는 수를 읽는다)를 확인한다. 쿠킹된 SPIR-V 의 RW 이미지는 `Rgba32f` 선언이고 깊이 히스토리는 R32F 라 형식이 어긋난다(영향 미확인). `vfxgpulights` 의 gl 라이트 없음의 주원인으로는 보기 어렵다 — [GpuVerification](GpuVerification.md) 3.1 절.
+- GL 의 R32 실수 RW 텍스처 읽기(형식 없는 이미지 읽기)는 고쳤다(`e3f348bd5`): 컴퓨트 RW 슬롯 형식이 `rgba32f` 로 고정이던 것을 슬롯마다 적게 했고(`SW_RW_SLOT<n>_GL_FORMAT`), 깊이 히스토리 슬롯은 `r32f` 다. `vfxgpulights` 의 gl 라이트 없음의 주원인은 형식이 아니라 행 순서(GL 장면 깊이는 0 행이 아래)였고 깊이 히스토리를 D3D 순서로 뒤집어 고쳤다 — [GpuVerification](GpuVerification.md) 3.1 절. DX11 RAW 인자 버퍼의 SRV(메시 인스턴스 쓰기가 살아 있는 수를 읽는다)는 확인이 남았다.
 
 ### GPU 본체 + 라이트 CPU 방출기 (VfxGpuLights 전의 패턴)
 
