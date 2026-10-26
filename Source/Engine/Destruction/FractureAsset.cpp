@@ -408,8 +408,7 @@ namespace sw
 
     string FractureAsset::makePathForMesh( string_view meshPath )
     {
-        const size_t dot = meshPath.rfind( '.' );
-        string       path{ dot == string_view::npos ? meshPath : meshPath.substr( 0, dot ) };
+        string path = FileUtil::removeExtension( meshPath );
         path += kExtension;
         return path;
     }

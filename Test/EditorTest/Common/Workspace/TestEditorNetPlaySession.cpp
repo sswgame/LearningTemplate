@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Process/Process.h"
 #include "Core/Time/MonotonicClock.h"
@@ -10,7 +11,6 @@
 #include "TestFramework/TestFramework.h"
 
 #include <chrono>
-#include <cstdlib>
 #include <thread>
 
 using namespace sw;
@@ -71,8 +71,12 @@ namespace
         for ( const EditorNetPlayLogLine& line : session.getLogLines() )
         {
             const size_t tagPosition = line._processIndex == processIndex ? line._text.find( "[tick=" ) : string::npos;
-            if ( tagPosition != string::npos )
-                highest = std::max<int64>( highest, std::strtoll( line._text.c_str() + tagPosition + 6, nullptr, 10 ) );
+            if ( tagPosition == string::npos )
+                continue;
+            const string_view afterTag = string_view( line._text ).substr( tagPosition + 6 );
+            int64             tick     = 0;
+            if ( StringUtil::parseInt64( afterTag.substr( 0, afterTag.find( ']' ) ), tick ) )
+                highest = std::max<int64>( highest, tick );
         }
         return highest;
     }

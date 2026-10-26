@@ -26,10 +26,9 @@ namespace sw
             /** @brief 프리로드할 에셋 경로인가 — 확장자가 있고(내장 id 가 아니고) 씬 경로가 아니다. */
             static bool isPreloadable( string_view path )
             {
-                const size_t slash         = path.find_last_of( '/' );
-                const size_t dot           = path.find_last_of( '.' );
-                const bool   bHasExtension = dot != string_view::npos && ( slash == string_view::npos || slash < dot );
-                if ( bHasExtension == false )
+                string_view extension;
+                FileUtil::getExtension( path, extension );
+                if ( extension.empty() )
                     return false;
                 return StringUtil::endsWith( path, kSceneXML, true ) == false && StringUtil::endsWith( path, kSceneBin, true ) == false;
             }

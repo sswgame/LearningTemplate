@@ -6,8 +6,8 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 
 namespace sw
@@ -97,7 +97,7 @@ namespace sw
         clear();
         for ( XMLNode node = root.findChild( "Element" ); node; node = node.findNextSibling( "Element" ) )
         {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
+            const utf8* pID = XMLReadUtil::findRequiredID( node, sourceName );
             if ( pID != nullptr )
                 addElement( hashed_string( pID ) );
         }

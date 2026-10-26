@@ -38,16 +38,7 @@ namespace sw
     {
         const float32 forwardYaw = MathUtil::atan2( forward._x, forward._z );
         const float32 targetYaw  = MathUtil::atan2( position._x - eye._x, position._z - eye._z );
-        float32       offset     = ( targetYaw - forwardYaw ) * MathUtil::kRadianToDegree;
-        while ( offset > 180.0f )
-        {
-            offset -= 360.0f;
-        }
-        while ( offset < -180.0f )
-        {
-            offset += 360.0f;
-        }
-        return offset;
+        return MathUtil::wrapAngle( targetYaw - forwardYaw ) * MathUtil::kRadianToDegree;
     }
 
     uint64 LockOnSelector::pickBest( const float3& eye, const float3& forward, const vector<LockOnCandidate>& listCandidate )

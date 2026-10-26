@@ -1,5 +1,5 @@
 /**
- * @file HexUtil.h
+ * @file HexDigitUtil.h
  * @brief 16진수 글자와 값 사이의 변환입니다 — 할당 · 로그 없는 기본형이라 크래시 경로와 낮은 티어도 씁니다.
  * @note `string` 을 돌려주는 편의 함수는 `StringUtil`(티어 3)에 있습니다.
  */
@@ -16,10 +16,10 @@ namespace sw
     };
 
     /**
-     * @struct HexUtil
+     * @struct HexDigitUtil
      * @brief 숫자 → 16진수 글자, 16진수 글자 → 숫자 static 도우미입니다. 읽는 쪽은 대소문자를 가리지 않고 실패하면 출력을 건드리지 않습니다.
      */
-    struct HexUtil
+    struct HexDigitUtil
     {
         /** @brief 한 자리가 담는 비트 수입니다. */
         static constexpr uint32 kBitsPerDigit = 4;

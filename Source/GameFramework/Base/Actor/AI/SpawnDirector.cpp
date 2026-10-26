@@ -6,6 +6,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
@@ -43,13 +44,13 @@ namespace sw
         _curve._listKey.clear();
         // 적지 않은 칸은 생성자의 초기값이다. 깨진 값 · 범위 밖 값은 표 전체를 읽지 않는 오류다(자르지 않는다).
         constexpr float32 kAnyFloat = MathUtil::kMaxFloat;
-        bool              bValid    = GameDataXML::readOptionalNumber( root, "budgetPerMinute", sourceName, 0.0f, kAnyFloat, _budgetPerMinute );
-        bValid                      = GameDataXML::readOptionalNumber( root, "maxBudget", sourceName, 0.0f, kAnyFloat, _maxBudget ) && bValid;
-        bValid                      = GameDataXML::readOptionalNumber( root, "startBudget", sourceName, 0.0f, _maxBudget, _startBudget ) && bValid;
-        bValid                      = GameDataXML::readOptionalFlag( root, "refund", _bRefundOnDespawn ) && bValid;
+        bool              bValid    = XMLReadUtil::readOptionalNumber( root, "budgetPerMinute", sourceName, 0.0f, kAnyFloat, _budgetPerMinute );
+        bValid                      = XMLReadUtil::readOptionalNumber( root, "maxBudget", sourceName, 0.0f, kAnyFloat, _maxBudget ) && bValid;
+        bValid                      = XMLReadUtil::readOptionalNumber( root, "startBudget", sourceName, 0.0f, _maxBudget, _startBudget ) && bValid;
+        bValid                      = XMLReadUtil::readOptionalFlag( root, "refund", _bRefundOnDespawn ) && bValid;
         for ( XMLNode node = root.findChild( "Entry" ); node; node = node.findNextSibling( "Entry" ) )
         {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
+            const utf8* pID = XMLReadUtil::findRequiredID( node, sourceName );
             if ( pID == nullptr )
             {
                 bValid = false;
@@ -57,10 +58,10 @@ namespace sw
             }
             SpawnEntryDef entry;
             entry._id        = hashed_string( pID );
-            bool bEntryValid = GameDataXML::readOptionalNumber( node, "cost", sourceName, 0.0f, kAnyFloat, entry._cost );
-            bEntryValid      = GameDataXML::readOptionalNumber( node, "weight", sourceName, 0.0f, kAnyFloat, entry._weight ) && bEntryValid;
-            bEntryValid      = GameDataXML::readOptionalNumber( node, "minTime", sourceName, 0.0f, kAnyFloat, entry._minTime ) && bEntryValid;
-            bEntryValid      = GameDataXML::readOptionalNumber( node, "max", sourceName, -1, MathUtil::kMaxInt32, entry._max ) && bEntryValid;
+            bool bEntryValid = XMLReadUtil::readOptionalNumber( node, "cost", sourceName, 0.0f, kAnyFloat, entry._cost );
+            bEntryValid      = XMLReadUtil::readOptionalNumber( node, "weight", sourceName, 0.0f, kAnyFloat, entry._weight ) && bEntryValid;
+            bEntryValid      = XMLReadUtil::readOptionalNumber( node, "minTime", sourceName, 0.0f, kAnyFloat, entry._minTime ) && bEntryValid;
+            bEntryValid      = XMLReadUtil::readOptionalNumber( node, "max", sourceName, -1, MathUtil::kMaxInt32, entry._max ) && bEntryValid;
             StringUtil::forEachToken( node.getAttributeText( "tags" ), ",; ", [&]( string_view token )
             { entry._listTag.push_back( hashed_string( token ) ); } );
             if ( bEntryValid )

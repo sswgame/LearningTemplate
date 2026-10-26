@@ -26,7 +26,7 @@ namespace sw
                 StringUtil::forEachToken( node.getAttributeText( "scales" ), ",; ", [&]( string_view token )
                 {
                     float32    scale  = 0.0f;
-                    const bool bScale = GameDataXML::parseNumber( token, scale ) && scale >= 0.0f;
+                    const bool bScale = StringUtil::parseFloat( token, scale ) && scale >= 0.0f;
                     if ( bScale )
                         def._listScale.push_back( scale );
                     else
@@ -78,23 +78,23 @@ namespace sw
     bool AsymmetricHorrorRulesCatalog::loadElement( const XMLNode& node, string_view name, string_view sourceName )
     {
         using Internal = AsymmetricHorrorRulesInternal;
-        if ( GameDataXML::isElement( name, "Generator" ) )
+        if ( XMLReadUtil::isElement( name, "Generator" ) )
             return Internal::readScaledSetting( node, sourceName, _rules._generator );
-        if ( GameDataXML::isElement( name, "Heal" ) )
+        if ( XMLReadUtil::isElement( name, "Heal" ) )
             return Internal::readScaledSetting( node, sourceName, _rules._heal );
-        if ( GameDataXML::isElement( name, "SkillCheck" ) )
+        if ( XMLReadUtil::isElement( name, "SkillCheck" ) )
             return loadSkillCheck( node, sourceName );
-        if ( GameDataXML::isElement( name, "Hook" ) )
+        if ( XMLReadUtil::isElement( name, "Hook" ) )
             return GameDataXML::readSetting( node, sourceName, _rules._hook );
-        if ( GameDataXML::isElement( name, "Pallet" ) )
+        if ( XMLReadUtil::isElement( name, "Pallet" ) )
             return GameDataXML::readSetting( node, sourceName, _rules._pallet );
-        if ( GameDataXML::isElement( name, "Window" ) )
+        if ( XMLReadUtil::isElement( name, "Window" ) )
             return GameDataXML::readSetting( node, sourceName, _rules._window );
-        if ( GameDataXML::isElement( name, "Locker" ) )
+        if ( XMLReadUtil::isElement( name, "Locker" ) )
             return GameDataXML::readSetting( node, sourceName, _rules._locker );
-        if ( GameDataXML::isElement( name, "Endgame" ) )
+        if ( XMLReadUtil::isElement( name, "Endgame" ) )
             return GameDataXML::readSetting( node, sourceName, _rules._endgame );
-        if ( GameDataXML::isElement( name, "Killer" ) )
+        if ( XMLReadUtil::isElement( name, "Killer" ) )
         {
             HorrorKillerDef killer;
             if ( GameDataXML::readFields( node, killer, sourceName ) == false )
@@ -102,7 +102,7 @@ namespace sw
             (void)_catalogKiller.add( killer ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
             return true;
         }
-        if ( GameDataXML::isElement( name, "Category" ) )
+        if ( XMLReadUtil::isElement( name, "Category" ) )
         {
             HorrorScoreCategoryDef category;
             if ( GameDataXML::readFields( node, category, sourceName ) == false )
@@ -110,7 +110,7 @@ namespace sw
             _categoryCap.setValue( category._id, category._cap );
             return true;
         }
-        if ( GameDataXML::isElement( name, "Score" ) )
+        if ( XMLReadUtil::isElement( name, "Score" ) )
         {
             HorrorScoreRule rule;
             if ( GameDataXML::readFields( node, rule, sourceName ) == false )

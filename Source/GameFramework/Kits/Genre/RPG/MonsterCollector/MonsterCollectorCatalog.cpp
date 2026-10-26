@@ -269,7 +269,7 @@ namespace sw
 
     bool MonsterCollectorCatalog::loadElement( const XMLNode& node, string_view name, string_view sourceName )
     {
-        if ( GameDataXML::isElement( name, "StatusImmunity" ) )
+        if ( XMLReadUtil::isElement( name, "StatusImmunity" ) )
         {
             StatusImmunity    immunity;
             const string_view status = node.getAttributeText( "status" );
@@ -278,26 +278,26 @@ namespace sw
                 SW_LOG_ERROR( "%#: <StatusImmunity> needs a known status, got '%#'", sourceName, status );
                 return false;
             }
-            GameDataXML::appendNameList( node.getAttributeText( "types" ), ",; \t", immunity._listType );
+            XMLReadUtil::appendNameList( node.getAttributeText( "types" ), ",; \t", immunity._listType );
             _listStatusImmunity.push_back( immunity );
             return true;
         }
-        if ( GameDataXML::isElement( name, "Move" ) )
+        if ( XMLReadUtil::isElement( name, "Move" ) )
             return loadMove( node, sourceName );
-        if ( GameDataXML::isElement( name, "Species" ) )
+        if ( XMLReadUtil::isElement( name, "Species" ) )
             return loadSpecies( node, sourceName );
-        if ( GameDataXML::isElement( name, "Nature" ) )
+        if ( XMLReadUtil::isElement( name, "Nature" ) )
             return GameDataXML::readInto( node, sourceName, _natureCatalog ); // up 과 down 이 같으면(적지 않으면 둘 다 Attack) 보정이 없는 성격이다
-        if ( GameDataXML::isElement( name, "Weather" ) )
+        if ( XMLReadUtil::isElement( name, "Weather" ) )
         {
             MonsterWeatherDef def;
             if ( GameDataXML::readFields( node, def, sourceName, { "immune" } ) == false )
                 return false;
-            GameDataXML::appendNameList( node.getAttributeText( "immune" ), ",; \t", def._listChipImmuneType );
+            XMLReadUtil::appendNameList( node.getAttributeText( "immune" ), ",; \t", def._listChipImmuneType );
             (void)_weatherCatalog.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
             return true;
         }
-        if ( GameDataXML::isElement( name, "Encounter" ) )
+        if ( XMLReadUtil::isElement( name, "Encounter" ) )
             return loadEncounter( node, sourceName );
         SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, name );
         return false;
@@ -329,7 +329,7 @@ namespace sw
         using Internal = MonsterCollectorCatalogInternal;
         MonsterSpeciesDef def;
         bool              bValid = GameDataXML::readFields( node, def, sourceName, { "types", "stats", "evYield" } );
-        GameDataXML::appendNameList( node.getAttributeText( "types" ), ",; \t", def._listType );
+        XMLReadUtil::appendNameList( node.getAttributeText( "types" ), ",; \t", def._listType );
         if ( def._listType.empty() || def._listType.size() > 2 )
         {
             SW_LOG_ERROR( "%#: species '%#' has %# types - needs 1 or 2", sourceName, def._id.c_str(), static_cast<uint32>( def._listType.size() ) );
@@ -362,7 +362,7 @@ namespace sw
     {
         MonsterEncounterDef def;
         bool                bValid = GameDataXML::readFields( node, def, sourceName, { "time" } );
-        GameDataXML::appendNameList( node.getAttributeText( "time" ), ",; \t", def._listTime );
+        XMLReadUtil::appendNameList( node.getAttributeText( "time" ), ",; \t", def._listTime );
         for ( XMLNode child = node.findChild( "Slot" ); child; child = child.findNextSibling( "Slot" ) )
         {
             bValid = GameDataXML::readInto( child, sourceName, def._listSlot ) && bValid;

@@ -7,8 +7,7 @@
 #include "Core/Network/BitStream.h"
 
 #include "Engine/Serialization/Fixed/FixedLayout.h"
-
-#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 namespace sw
 {
@@ -44,7 +43,7 @@ namespace sw
                 if ( spec._type == GimmickParamType::Text )
                     return true;
                 vector<float32> listValue;
-                if ( GameDataXML::parseFloatList( text, 4, listValue ) == false || ( spec._type == GimmickParamType::Number && listValue.size() != 1 ) )
+                if ( XMLReadUtil::parseFloatList( text, 4, listValue ) == false || ( spec._type == GimmickParamType::Number && listValue.size() != 1 ) )
                     return false;
                 listValue.resize( 4, 0.0f ); // 벡터는 모자란 성분이 0 이다
                 outValue._vector = float4{ listValue[0], listValue[1], listValue[2], listValue[3] };

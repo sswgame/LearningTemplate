@@ -605,10 +605,9 @@ namespace sw
                 string path{ gv_screenshot };
                 if ( shotCount > 1u )
                 {
-                    const size_t                          dot = path.find_last_of( '.' );
                     StringBuilder<constant::kMaxBuffer16> suffix;
                     suffix.appendFormat( "_%03u", _screenshotShotCount );
-                    path.insert( dot == string::npos ? path.size() : dot, suffix.c_str() );
+                    path = FileUtil::removeExtension( path ) + suffix.c_str() + FileUtil::getExtension( path );
                 }
                 ++_screenshotShotCount;
                 _bScreenshotTaken = _screenshotShotCount >= shotCount ? SW_TRUE : SW_FALSE;

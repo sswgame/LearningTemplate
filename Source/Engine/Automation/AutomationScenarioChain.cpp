@@ -22,13 +22,10 @@ namespace sw
     vector<string> AutomationScenarioChain::splitList( string_view text )
     {
         vector<string> listPath;
-        StringUtil::forEachToken( text, ",",
-                                  [&listPath]( string_view token )
+        for ( const string_view path : StringUtil::split( text, ",", { ._bTrim = true, ._bDropEmpty = true } ) )
         {
-            const string_view path = StringUtil::trim( token );
-            if ( path.empty() == false )
-                listPath.emplace_back( path );
-        } );
+            listPath.emplace_back( path );
+        }
         return listPath;
     }
 
@@ -36,16 +33,8 @@ namespace sw
     {
         if ( reportPath.empty() || stageCount <= 1 )
             return string( reportPath );
-        // 폴더 이름의 점이 확장자로 읽히지 않게 마지막 구분자 뒤에서만 확장자를 찾는다.
-        string_view directory;
-        string_view fileName;
-        FileUtil::splitPath( reportPath, directory, fileName );
-        const size_t dot    = fileName.find_last_of( '.' );
-        const string suffix = "." + to_string( stageIndex + 1 );
-        if ( dot == string_view::npos )
-            return string( reportPath ) + suffix;
-        const size_t extensionBegin = directory.size() + dot;
-        return string( reportPath.substr( 0, extensionBegin ) ) + suffix + string( reportPath.substr( extensionBegin ) );
+        // 확장자 앞에 단계 번호를 넣는다(폴더 이름의 점은 FileUtil 이 확장자로 읽지 않는다).
+        return FileUtil::removeExtension( reportPath ) + "." + to_string( stageIndex + 1 ) + FileUtil::getExtension( reportPath );
     }
 
     void AutomationScenarioChain::begin( vector<string> listPath, bool bKeepGoing )

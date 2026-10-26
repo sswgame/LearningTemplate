@@ -6,6 +6,8 @@
  *          다른 형식(JUnit XML, 대시보드)이 필요하면 리스너를 하나 더 붙인다(`TestRegistry::registerListener`).
  */
 #pragma once
+#include "Core/Common/Macros.h"
+
 #include "TestFramework/TestCase.h"
 #include "TestFramework/TestContext.h"
 
@@ -127,4 +129,11 @@ namespace test
         void onCaseFinished( const CaseRecord& record ) override;
         void onRunFinished( const TestCatalog& catalog, const TestRunOptions& options, const TestRunSummary& summary ) override;
     };
+
+    /**
+     * @brief 테스트 본문의 진단 줄(골든 비교의 기대 · 실제, 퍼저 추적)을 표준 출력에 printf 서식으로 쓰고 바로 비웁니다.
+     * @details 로그(`SW_LOG_*`)는 판정기(`HostLogJudge`)가 세고 `ScopedLogSuppressor` 안에서는 사라지므로 진단 줄은 이것으로 씁니다.
+     *          바로 비우므로 다음 줄에서 프로세스가 죽어도 줄이 남습니다. 테스트 코드는 `printf` · `fprintf` 를 직접 부르지 않습니다(`CheckFacilityBypass`).
+     */
+    void printTestNote( const utf8* pFormat, ... ) SW_PRINTF_FORMAT( 1, 2 );
 } // namespace test

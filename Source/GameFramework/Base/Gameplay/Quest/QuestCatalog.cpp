@@ -49,7 +49,7 @@ namespace sw
         uint32 loadedCount = 0;
         for ( XMLNode questNode = root.findChild( "Quest" ); questNode; questNode = questNode.findNextSibling( "Quest" ) )
         {
-            const utf8* pID = GameDataXML::findRequiredID( questNode, sourceName );
+            const utf8* pID = XMLReadUtil::findRequiredID( questNode, sourceName );
             if ( pID == nullptr )
                 continue;
             // 기본값 · 범위는 스키마(Quest*RowDef)가 정한다. 칸 하나라도 오류면 그 퀘스트를 넣지 않는다(오류는 readFields 가 남긴다).
@@ -68,8 +68,8 @@ namespace sw
                 QuestStageRowDef stageRow;
                 bValid = GameDataXML::readFields( stageNode, stageRow, sourceName, { "id", "next" } ) && bValid;
                 QuestStage stage;
-                bValid           = GameDataXML::readRequiredName( stageNode, "id", sourceName, stage._id ) && bValid;
-                stage._nextStage = GameDataXML::readOptionalName( stageNode, "next" ); // 마지막 단계는 다음이 없다
+                bValid           = XMLReadUtil::readRequiredName( stageNode, "id", sourceName, stage._id ) && bValid;
+                stage._nextStage = XMLReadUtil::readOptionalName( stageNode, "next" ); // 마지막 단계는 다음이 없다
                 stage._text      = stageRow._text;
                 stage._timeLimit = stageRow._time;
                 stage._bComplete = stageRow._bComplete ? SW_TRUE : SW_FALSE;
@@ -79,8 +79,8 @@ namespace sw
                     QuestObjectiveRowDef objectiveRow;
                     bValid = GameDataXML::readFields( node, objectiveRow, sourceName, { "kind", "target" } ) && bValid;
                     QuestObjective objective;
-                    bValid               = GameDataXML::readRequiredName( node, "kind", sourceName, objective._kind ) && bValid;
-                    bValid               = GameDataXML::readRequiredName( node, "target", sourceName, objective._target ) && bValid;
+                    bValid               = XMLReadUtil::readRequiredName( node, "kind", sourceName, objective._kind ) && bValid;
+                    bValid               = XMLReadUtil::readRequiredName( node, "target", sourceName, objective._target ) && bValid;
                     objective._text      = objectiveRow._text;
                     objective._count     = objectiveRow._count;
                     objective._bOptional = objectiveRow._bOptional ? SW_TRUE : SW_FALSE;
@@ -89,8 +89,8 @@ namespace sw
                 for ( XMLNode node = stageNode.findChild( "Branch" ); node; node = node.findNextSibling( "Branch" ) )
                 {
                     QuestBranch branch;
-                    bValid = GameDataXML::readRequiredName( node, "choice", sourceName, branch._choice ) && bValid;
-                    bValid = GameDataXML::readRequiredName( node, "next", sourceName, branch._nextStage ) && bValid;
+                    bValid = XMLReadUtil::readRequiredName( node, "choice", sourceName, branch._choice ) && bValid;
+                    bValid = XMLReadUtil::readRequiredName( node, "next", sourceName, branch._nextStage ) && bValid;
                     stage._listBranch.push_back( branch );
                 }
                 bValid = readQuestReward( stageNode, sourceName, stage._reward ) && bValid;

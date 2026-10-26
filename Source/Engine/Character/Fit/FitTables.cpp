@@ -25,9 +25,7 @@ namespace sw
             static void readArguments( const XMLNode& node, CharacterDataReader& reader, vector<FitArgument>& outListArgument )
             {
                 outListArgument.clear();
-                vector<string_view> listToken;
-                CharacterDataReader::splitTokens( node.getAttributeText( "args" ), listToken );
-                for ( const string_view token : listToken )
+                for ( const string_view token : StringUtil::split( node.getAttributeText( "args" ), CharacterDataReader::kTokenSeparators, { ._bDropEmpty = true } ) )
                 {
                     const size_t equalPosition = token.find( '=' );
                     FitArgument  argument;

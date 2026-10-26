@@ -8,8 +8,8 @@
 
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceXMLUtil.h"
 
 namespace sw
@@ -183,7 +183,7 @@ namespace sw
                 part._bDeforms   = part._kind == AppearancePartKind::Skinned ? SW_TRUE : SW_FALSE;
                 part._bBreakable = part._breakStage.empty() == false ? SW_TRUE : SW_FALSE;
                 AppearanceXMLUtil::readOptionalInt( node, "layer", MathUtil::kMinInt32, MathUtil::kMaxInt32, part._layer, report, sourceName );
-                if ( GameDataXML::readOptionalFlag( node, "deforms", part._bDeforms ) == false || GameDataXML::readOptionalFlag( node, "breakable", part._bBreakable ) == false )
+                if ( XMLReadUtil::readOptionalFlag( node, "deforms", part._bDeforms ) == false || XMLReadUtil::readOptionalFlag( node, "breakable", part._bBreakable ) == false )
                     report.addErrorWithID( "Appearance.PartDeformsInvalid", "%#: visual '%#' part '%#' has an invalid deforms / breakable", sourceName, inoutVisual._id.c_str(), part._name.c_str() );
                 AppearanceXMLUtil::readOptionalFloat3( node, "impulse", part._breakImpulse, report, sourceName );
                 AppearanceXMLUtil::readPlacement( node, "socket", part._placement, report, sourceName );

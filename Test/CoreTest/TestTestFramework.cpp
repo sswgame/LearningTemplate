@@ -10,7 +10,6 @@
 
 #include <algorithm>
 #include <chrono>
-#include <cstdlib>
 #include <thread>
 
 namespace
@@ -599,8 +598,7 @@ SW_TEST_CASE( TestFrameworkTest, ChildRoleEchoesOrHangs )
         std::this_thread::sleep_for( std::chrono::seconds( 600 ) );
         return;
     }
-    std::fprintf( stdout, "SW_CHILD_ECHO:%s\n", pMode );
-    std::fflush( stdout );
+    test::printTestNote( "SW_CHILD_ECHO:%s", pMode );
 }
 
 /**

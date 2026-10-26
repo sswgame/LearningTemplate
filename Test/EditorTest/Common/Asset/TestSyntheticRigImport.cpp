@@ -30,7 +30,10 @@ SW_TEST_CASE( SyntheticRigImportTest, RepresentativesImportAndBindTheirRig )
         SW_ASSERT_TRUE_MSG( test::loadSyntheticRig( glbPath, rig ), glbPath.c_str() );
         const size_t boneMark = rig._stem.rfind( "_b" );
         SW_ASSERT_TRUE( boneMark != sw::string::npos );
-        const uint32 bonesInName = static_cast<uint32>( std::stoul( std::string( rig._stem.c_str() + boneMark + 2 ) ) );
+        const std::string_view afterMark( rig._stem.c_str() + boneMark + 2 );
+        int32                  bonesInNameValue = 0;
+        SW_ASSERT_TRUE_MSG( sw::StringUtil::parseInt( afterMark.substr( 0, afterMark.find_first_not_of( "0123456789" ) ), bonesInNameValue ), rig._stem.c_str() );
+        const uint32 bonesInName = static_cast<uint32>( bonesInNameValue );
         SW_EXPECT_TRUE( rig._import._bSkinned == SW_TRUE );
         SW_EXPECT_EQUAL( bonesInName, rig._skeleton->getBoneCount() );
         SW_EXPECT_EQUAL( bonesInName, rig._import._mesh._skinBoneCount );

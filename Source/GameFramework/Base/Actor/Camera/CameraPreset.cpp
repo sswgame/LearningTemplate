@@ -106,7 +106,7 @@ namespace sw
                 {
                     float3     position{};
                     const bool bKnown = XMLNameCheck::reportUnknownAttributes( pointNode, kArrPointAttribute, sourceName );
-                    if ( bKnown && GameDataXML::readRequiredFloat3( pointNode, "position", sourceName, position ) )
+                    if ( bKnown && XMLReadUtil::readRequiredFloat3( pointNode, "position", sourceName, position ) )
                         outDolly._listPoint.push_back( position );
                     else
                         bValid = false;
@@ -274,7 +274,7 @@ namespace sw
             const utf8* pName = node.getName();
             if ( StringUtil::equals( pName, "Preset", true ) )
             {
-                const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
+                const utf8* pID = XMLReadUtil::findRequiredID( node, sourceName );
                 if ( pID == nullptr )
                     continue;
                 CameraPresetDef def;

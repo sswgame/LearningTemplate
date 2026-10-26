@@ -7,8 +7,8 @@
 #include "EngineTest/LoaderFuzzTargets.h"
 
 #include "TestFramework/Harness/TestHostRuntime.h"
+#include "TestFramework/TestReport.h"
 
-#include <cstdio>
 #include <cstdlib>
 
 // libFuzzer 진입점 — 대상은 환경 변수 SW_FUZZ_TARGET(LoaderFuzzTargets.cpp 의 표 이름). SW_FUZZ_LIST=1 이면 대상 이름을 줄마다 찍고 끝나고,
@@ -48,7 +48,7 @@ namespace
                 sw::string name( "seed_" );
                 name += sw::to_string( static_cast<uint64>( index ) );
                 if ( sw::FileUtil::writeFile( sw::FileUtil::joinPath( pFolder, name ), listSeed[index].data(), listSeed[index].size() ) == false )
-                    std::fprintf( stderr, "LoaderFuzzer: could not write seed %zu\n", index );
+                    SW_LOW_LEVEL_ERROR( "LoaderFuzzer: could not write seed %zu", index );
             }
         }
     };
@@ -61,7 +61,7 @@ extern "C" int32 LLVMFuzzerInitialize( int32* pArgc, FuzzerArgumentList* pArgume
     {
         for ( const test::LoaderFuzzTarget& target : test::getLoaderFuzzTargets() )
         {
-            std::fprintf( stdout, "%s\n", target._pName );
+            test::printTestNote( "%s", target._pName );
         }
         std::exit( 0 );
     }
@@ -69,7 +69,7 @@ extern "C" int32 LLVMFuzzerInitialize( int32* pArgc, FuzzerArgumentList* pArgume
     utf8*                        arrArgument[] = { ( *pArgumentList )[0] };
     if ( s_runtime.start( 1, arrArgument ) == false )
     {
-        std::fprintf( stderr, "LoaderFuzzer: engine harness did not start\n" );
+        SW_LOW_LEVEL_ERROR( "LoaderFuzzer: engine harness did not start" );
         s_runtime.stop();
         std::exit( 2 );
     }
@@ -78,7 +78,7 @@ extern "C" int32 LLVMFuzzerInitialize( int32* pArgc, FuzzerArgumentList* pArgume
     const test::LoaderFuzzTarget* pTarget     = pTargetName != nullptr ? test::findLoaderFuzzTarget( pTargetName ) : nullptr;
     if ( pTarget == nullptr )
     {
-        std::fprintf( stderr, "LoaderFuzzer: set SW_FUZZ_TARGET to one of the names SW_FUZZ_LIST=1 prints\n" );
+        SW_LOW_LEVEL_ERROR( "LoaderFuzzer: set SW_FUZZ_TARGET to one of the names SW_FUZZ_LIST=1 prints" );
         s_runtime.stop();
         std::exit( 2 );
     }

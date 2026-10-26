@@ -617,7 +617,7 @@ SW_TEST_CASE( MatchmakingProtocolTest, LargestBusMessageFitsTheBusLimit )
     }
     vector<uint8> bytes;
     SW_ASSERT_TRUE( MixedBuildCodec::encode( MatchFormed::kBusVersion, match, bytes ) );
-    std::fprintf( stdout, "[MatchFormed A bytes at the real limit] %zu\n", bytes.size() );
+    test::printTestNote( "[MatchFormed A bytes at the real limit] %zu", bytes.size() );
     SW_EXPECT_TRUE_MSG( static_cast<int32>( bytes.size() ) <= IServerBusTransport::kMaxMessageSize, "가장 큰 매칭 버스 메시지가 버스 상한을 넘습니다" );
     SW_EXPECT_TRUE( test::ServerBusTestUtil::roundTrips( MatchQueueBus::kAssignTopic, "0000000000000007", match ) );
 }

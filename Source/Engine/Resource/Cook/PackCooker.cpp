@@ -89,15 +89,6 @@ namespace sw
                 return false;
             }
 
-            /** @brief @p absPath 의 @p rootPath 기준 상대 경로('/')입니다. 루트 밖이면 빈 글입니다. */
-            static string makeRelativePath( string_view rootPath, string_view absPath )
-            {
-                const string root       = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( rootPath ) );
-                const string path       = FileUtil::normalizeSeparators( absPath );
-                const bool   bUnderRoot = path.size() > root.size() + 1 && path[root.size()] == '/' && StringUtil::startsWith( path, root, true );
-                return bUnderRoot ? path.substr( root.size() + 1 ) : string{};
-            }
-
             /** @brief 굽을 도메인(`engine` · `common` · `game/<팩>`)을 모읍니다. 고른 게임 팩 폴더가 없으면 오류를 남기고 false 입니다. */
             static bool collectDomains( const PackCookParams& params, vector<string>& outListDomain )
             {
@@ -202,8 +193,8 @@ namespace sw
                 bool           bHasMeta = false;
                 for ( const string& absPath : listSourceFile )
                 {
-                    const string relativePath = makeRelativePath( domainDir, absPath );
-                    if ( relativePath.empty() )
+                    string relativePath;
+                    if ( FileUtil::tryMakePathUnderRoot( domainDir, absPath, relativePath, true ) == false )
                         continue;
                     bHasMeta = bHasMeta || StringUtil::endsWith( relativePath, ".meta", true );
                     if ( PackCooker::shouldIncludeFile( relativePath, config, params._shaderFolder, params._buildTarget ) == false )
@@ -228,8 +219,8 @@ namespace sw
                 bool bHasRegistry = false;
                 for ( const string& absPath : listStagedFile )
                 {
-                    const string relativePath = makeRelativePath( stagedDir, absPath );
-                    if ( relativePath.empty() )
+                    string relativePath;
+                    if ( FileUtil::tryMakePathUnderRoot( stagedDir, absPath, relativePath, true ) == false )
                         continue;
                     bHasRegistry = bHasRegistry || StringUtil::equals( relativePath, kAssetRegistryFileName, true );
                     if ( addFile( writer, relativePath, absPath, ioTiming ) == false )

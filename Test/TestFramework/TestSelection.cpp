@@ -1,9 +1,10 @@
 #include "pch.h"
 
+#include "Core/Math/XorShift32.h"
+
 #include "TestFramework/TestRegistry.h"
 
 #include <algorithm>
-#include <random>
 
 namespace test
 {
@@ -13,6 +14,21 @@ namespace test
         {
             /** @brief `--test_costs` 에 없는 케이스의 비용(초) — 대부분의 케이스는 수십 ms 다. */
             static constexpr float64 kDefaultCaseCostSeconds = 0.05;
+
+            /**
+             * @brief 피셔-예이츠 섞기입니다. 상태는 `XorShift32` 하나라 같은 씨앗이면 어느 플랫폼 · 표준 라이브러리에서나 같은 순서입니다.
+             * @details `std::shuffle` 은 알고리즘을 표준 라이브러리마다 달리 구현해, 같은 씨앗을 준 재현 명령이 다른 플랫폼에서 다른 순서를 돌았습니다.
+             */
+            template <typename TList>
+            static void shuffle( TList& inoutList, uint32& inoutState )
+            {
+                for ( size_t index = inoutList.size(); index > 1; --index )
+                {
+                    inoutState              = sw::XorShift32::next( inoutState );
+                    const size_t otherIndex = static_cast<size_t>( inoutState % static_cast<uint32>( index ) );
+                    std::swap( inoutList[index - 1], inoutList[otherIndex] );
+                }
+            }
         };
     } // namespace
 } // namespace test
@@ -105,13 +121,16 @@ namespace test
             listSuiteCase.push_back( pTestInfo );
         }
 
-        std::mt19937 random( _options._randomSeed + iteration );
-        std::shuffle( listSuiteOrder.begin(), listSuiteOrder.end(), random );
+        // 상태 0 은 xorshift 의 고정점이라 1 로 바꾼다(`--test_seed=0` 이나 `_randomSeed + iteration` 이 넘쳐 0 이 되는 경우).
+        uint32 randomState = _options._randomSeed + iteration;
+        if ( randomState == 0 )
+            randomState = 1;
+        TestSelectionInternal::shuffle( listSuiteOrder, randomState );
         listRun.clear();
         for ( const sw::string& suiteName : listSuiteOrder )
         {
             sw::vector<const TestCaseInfo*>& listSuiteCase = mapSuiteCase[suiteName];
-            std::shuffle( listSuiteCase.begin(), listSuiteCase.end(), random );
+            TestSelectionInternal::shuffle( listSuiteCase, randomState );
             listRun.insert( listRun.end(), listSuiteCase.begin(), listSuiteCase.end() );
         }
         return listRun;

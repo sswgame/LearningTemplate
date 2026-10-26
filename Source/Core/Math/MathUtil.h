@@ -235,6 +235,9 @@ namespace sw
             return radians;
         }
 
+        /** @brief 각(라디안) @p from 에서 @p to 로 짧은 쪽을 따라 @p weight 만큼 보간합니다. 결과는 감지 않습니다(언리얼 `FMath::LerpAngle` 과 같은 뜻). */
+        [[nodiscard]] static SW_INLINE float32 lerpAngle( float32 from, float32 to, float32 weight ) noexcept { return from + wrapAngle( to - from ) * weight; }
+
         /** @brief @p current 를 @p target 쪽으로 최대 @p maxDelta 만큼 옮깁니다. 넘치지 않고, 남은 거리가 @p maxDelta 이하면 @p target 입니다(유니티 `MoveTowards`). */
         template <typename T>
         [[nodiscard]] static SW_INLINE constexpr T moveToward( T current, T target, T maxDelta ) noexcept

@@ -12,8 +12,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Probe/AutomationProbe.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
-
-#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "Games/StarSkirmish/SkirmishDirectorComponent.h"
 
@@ -106,13 +105,13 @@ namespace sw
         uint32 loadedCount = 0;
         for ( XMLNode node = root.findChild( "Model" ); node; node = node.findNextSibling( "Model" ) )
         {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
+            const utf8* pID = XMLReadUtil::findRequiredID( node, sourceName );
             if ( pID == nullptr )
                 continue;
             hashed_string     modelName;
             SkirmishUnitModel entry;
             entry._id   = hashed_string( pID );
-            bool bValid = GameDataXML::readRequiredName( node, "model", sourceName, modelName );
+            bool bValid = XMLReadUtil::readRequiredName( node, "model", sourceName, modelName );
             // 폭은 필수다(적지 않은 칸이 조용히 1 이 되지 않는다). 0 이하는 오류다.
             if ( node.findAttribute( "width" ) == nullptr )
             {
@@ -121,7 +120,7 @@ namespace sw
             }
             else
             {
-                bValid = GameDataXML::readOptionalNumber( node, "width", sourceName, 0.01f, 1000.0f, entry._width ) && bValid;
+                bValid = XMLReadUtil::readOptionalNumber( node, "width", sourceName, 0.01f, 1000.0f, entry._width ) && bValid;
             }
             if ( bValid == false )
             {

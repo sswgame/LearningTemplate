@@ -3,7 +3,7 @@
 #include "Core/Math/Color.h"
 
 #include "Core/Common/BitUtil.h"
-#include "Core/Common/HexUtil.h"
+#include "Core/Common/HexDigitUtil.h"
 #include "Core/Math/MathUtil.h"
 
 namespace sw
@@ -85,12 +85,12 @@ namespace sw
             bool   bParsed = false;
             if ( bShort )
             {
-                bParsed = HexUtil::tryParseDigit( text[channelIndex], high );
+                bParsed = HexDigitUtil::tryParseDigit( text[channelIndex], high );
                 low     = high;
             }
             else
             {
-                bParsed = HexUtil::tryParseDigit( text[channelIndex * 2], high ) && HexUtil::tryParseDigit( text[channelIndex * 2 + 1], low );
+                bParsed = HexDigitUtil::tryParseDigit( text[channelIndex * 2], high ) && HexDigitUtil::tryParseDigit( text[channelIndex * 2 + 1], low );
             }
             if ( bParsed == false )
                 return false;
@@ -118,7 +118,7 @@ namespace sw
     void Color::toHex( utf8 ( &outText )[10] ) const noexcept
     {
         outText[0] = '#';
-        HexUtil::writeDigits( outText + 1, toRgba(), 8, HexCase::Upper );
+        HexDigitUtil::writeDigits( outText + 1, toRgba(), 8, HexCase::Upper );
         outText[9] = '\0';
     }
 

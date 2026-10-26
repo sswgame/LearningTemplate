@@ -6,8 +6,8 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
@@ -36,7 +36,7 @@ namespace sw
         uint32 loadedCount = 0;
         for ( XMLNode node = root.findChild( "Weapon" ); node; node = node.findNextSibling( "Weapon" ) )
         {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
+            const utf8* pID = XMLReadUtil::findRequiredID( node, sourceName );
             if ( pID == nullptr )
                 continue;
             WeaponDef weapon;
@@ -46,25 +46,25 @@ namespace sw
             // 적지 않은 칸은 WeaponDef 의 초기값이다. 깨진 값 · 범위 밖 값은 그 무기를 넣지 않는 오류다(자르지 않는다).
             constexpr int32   kAnyInt   = MathUtil::kMaxInt32;
             constexpr float32 kAnyFloat = MathUtil::kMaxFloat;
-            bool              bValid    = GameDataXML::readOptionalNumber( node, "fireInterval", sourceName, WeaponDef::kMinFireInterval, kAnyFloat, weapon._fireInterval );
-            bValid                      = GameDataXML::readOptionalNumber( node, "reloadTime", sourceName, 0.0f, kAnyFloat, weapon._reloadTime ) && bValid;
-            bValid                      = GameDataXML::readOptionalNumber( node, "damage", sourceName, -kAnyFloat, kAnyFloat, weapon._damage ) && bValid;
-            bValid                      = GameDataXML::readOptionalNumber( node, "range", sourceName, WeaponDef::kMinRange, kAnyFloat, weapon._range ) && bValid;
-            bValid                      = GameDataXML::readOptionalNumber( node, "minSpread", sourceName, 0.0f, kAnyFloat, weapon._minSpread ) && bValid;
-            bValid                      = GameDataXML::readOptionalNumber( node, "maxSpread", sourceName, 0.0f, kAnyFloat, weapon._maxSpread ) && bValid;
-            bValid                      = GameDataXML::readOptionalNumber( node, "spreadPerShot", sourceName, 0.0f, kAnyFloat, weapon._spreadPerShot ) && bValid;
-            bValid                      = GameDataXML::readOptionalNumber( node, "spreadRecovery", sourceName, 0.0f, kAnyFloat, weapon._spreadRecovery ) && bValid;
-            bValid                      = GameDataXML::readOptionalNumber( node, "recoilPitch", sourceName, -kAnyFloat, kAnyFloat, weapon._recoilPitch ) && bValid;
-            bValid                      = GameDataXML::readOptionalNumber( node, "magazineSize", sourceName, 1, kAnyInt, weapon._magazineSize ) && bValid;
-            bValid                      = GameDataXML::readOptionalNumber( node, "maxReserveAmmo", sourceName, 0, kAnyInt, weapon._maxReserveAmmo ) && bValid;
-            bValid                      = GameDataXML::readOptionalNumber( node, "pelletCount", sourceName, 1, kAnyInt, weapon._pelletCount ) && bValid;
-            bValid                      = GameDataXML::readOptionalFlag( node, "automatic", weapon._bAutomatic ) && bValid;
-            bValid                      = GameDataXML::readOptionalNumber( node, "falloffStart", sourceName, 0.0f, kAnyFloat, weapon._falloffStart ) && bValid;
-            bValid                      = GameDataXML::readOptionalNumber( node, "falloffEnd", sourceName, 0.0f, kAnyFloat, weapon._falloffEnd ) && bValid;
-            bValid                      = GameDataXML::readOptionalNumber( node, "falloffMinScale", sourceName, 0.0f, 1.0f, weapon._falloffMinScale ) && bValid;
-            bValid                      = GameDataXML::readOptionalNumber( node, "projectileSpeed", sourceName, 0.0f, kAnyFloat, weapon._projectileSpeed ) && bValid;
-            bValid                      = GameDataXML::readOptionalNumber( node, "projectileGravity", sourceName, -kAnyFloat, kAnyFloat, weapon._projectileGravity ) && bValid;
-            bValid                      = GameDataXML::readOptionalNumber( node, "headshotMultiplier", sourceName, 0.0f, kAnyFloat, weapon._headshotMultiplier ) && bValid;
+            bool              bValid    = XMLReadUtil::readOptionalNumber( node, "fireInterval", sourceName, WeaponDef::kMinFireInterval, kAnyFloat, weapon._fireInterval );
+            bValid                      = XMLReadUtil::readOptionalNumber( node, "reloadTime", sourceName, 0.0f, kAnyFloat, weapon._reloadTime ) && bValid;
+            bValid                      = XMLReadUtil::readOptionalNumber( node, "damage", sourceName, -kAnyFloat, kAnyFloat, weapon._damage ) && bValid;
+            bValid                      = XMLReadUtil::readOptionalNumber( node, "range", sourceName, WeaponDef::kMinRange, kAnyFloat, weapon._range ) && bValid;
+            bValid                      = XMLReadUtil::readOptionalNumber( node, "minSpread", sourceName, 0.0f, kAnyFloat, weapon._minSpread ) && bValid;
+            bValid                      = XMLReadUtil::readOptionalNumber( node, "maxSpread", sourceName, 0.0f, kAnyFloat, weapon._maxSpread ) && bValid;
+            bValid                      = XMLReadUtil::readOptionalNumber( node, "spreadPerShot", sourceName, 0.0f, kAnyFloat, weapon._spreadPerShot ) && bValid;
+            bValid                      = XMLReadUtil::readOptionalNumber( node, "spreadRecovery", sourceName, 0.0f, kAnyFloat, weapon._spreadRecovery ) && bValid;
+            bValid                      = XMLReadUtil::readOptionalNumber( node, "recoilPitch", sourceName, -kAnyFloat, kAnyFloat, weapon._recoilPitch ) && bValid;
+            bValid                      = XMLReadUtil::readOptionalNumber( node, "magazineSize", sourceName, 1, kAnyInt, weapon._magazineSize ) && bValid;
+            bValid                      = XMLReadUtil::readOptionalNumber( node, "maxReserveAmmo", sourceName, 0, kAnyInt, weapon._maxReserveAmmo ) && bValid;
+            bValid                      = XMLReadUtil::readOptionalNumber( node, "pelletCount", sourceName, 1, kAnyInt, weapon._pelletCount ) && bValid;
+            bValid                      = XMLReadUtil::readOptionalFlag( node, "automatic", weapon._bAutomatic ) && bValid;
+            bValid                      = XMLReadUtil::readOptionalNumber( node, "falloffStart", sourceName, 0.0f, kAnyFloat, weapon._falloffStart ) && bValid;
+            bValid                      = XMLReadUtil::readOptionalNumber( node, "falloffEnd", sourceName, 0.0f, kAnyFloat, weapon._falloffEnd ) && bValid;
+            bValid                      = XMLReadUtil::readOptionalNumber( node, "falloffMinScale", sourceName, 0.0f, 1.0f, weapon._falloffMinScale ) && bValid;
+            bValid                      = XMLReadUtil::readOptionalNumber( node, "projectileSpeed", sourceName, 0.0f, kAnyFloat, weapon._projectileSpeed ) && bValid;
+            bValid                      = XMLReadUtil::readOptionalNumber( node, "projectileGravity", sourceName, -kAnyFloat, kAnyFloat, weapon._projectileGravity ) && bValid;
+            bValid                      = XMLReadUtil::readOptionalNumber( node, "headshotMultiplier", sourceName, 0.0f, kAnyFloat, weapon._headshotMultiplier ) && bValid;
             if ( weapon._maxSpread < weapon._minSpread || weapon._falloffEnd < weapon._falloffStart )
             {
                 SW_LOG_ERROR( "%#: weapon '%#' needs minSpread <= maxSpread and falloffStart <= falloffEnd", sourceName, pID );

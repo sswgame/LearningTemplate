@@ -10,8 +10,8 @@
     #include <Psapi.h>
 #elif SW_PLATFORM_LINUX
     #include "Core/Container/StringUtil.h"
+    #include "Core/File/FileUtil.h"
 
-    #include <cstdio>
     #include <sys/resource.h>
 #endif
 
@@ -62,15 +62,10 @@ namespace sw
         return true;
 #elif SW_PLATFORM_LINUX
         // statm 의 둘째 값이 상주 페이지 수다. 최대값은 getrusage 의 ru_maxrss(KiB)다.
-        std::FILE* pFile = std::fopen( "/proc/self/statm", "r" );
-        if ( pFile == nullptr )
+        string statmText;
+        if ( FileUtil::readStreamTextFile( "/proc/self/statm", statmText, constant::kMaxBuffer256 ) == false )
             return false;
-        utf8       arrLine[constant::kMaxBuffer256]{};
-        const bool bRead = std::fgets( arrLine, static_cast<int32>( sizeof( arrLine ) ), pFile ) != nullptr;
-        std::fclose( pFile );
-        if ( bRead == false )
-            return false;
-        const string_view line{ arrLine };
+        const string_view line{ statmText };
         const size_t      firstSpace = line.find( ' ' );
         if ( firstSpace == string_view::npos )
             return false;

@@ -2,7 +2,7 @@
 
 #include "Core/Log/LogContext.h"
 
-#include "Core/Common/HexUtil.h"
+#include "Core/Common/HexDigitUtil.h"
 #include "Core/Math/MathUtil.h"
 
 namespace sw
@@ -24,8 +24,8 @@ namespace sw
 
             static int32 appendHex64( utf8* pOutBuffer, int32 length, uint64 value )
             {
-                HexUtil::writeDigits( pOutBuffer + length, value, HexUtil::kMaxDigitCount, HexCase::Lower );
-                return length + static_cast<int32>( HexUtil::kMaxDigitCount );
+                HexDigitUtil::writeDigits( pOutBuffer + length, value, HexDigitUtil::kMaxDigitCount, HexCase::Lower );
+                return length + static_cast<int32>( HexDigitUtil::kMaxDigitCount );
             }
         };
     } // namespace

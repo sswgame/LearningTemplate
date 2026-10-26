@@ -133,23 +133,23 @@ namespace sw
 
     bool HorrorCatalog::loadElement( const XMLNode& node, string_view name, string_view sourceName )
     {
-        if ( GameDataXML::isElement( name, "Rules" ) )
+        if ( XMLReadUtil::isElement( name, "Rules" ) )
             return GameDataXML::readSetting( node, sourceName, _rules );
-        if ( GameDataXML::isElement( name, "Item" ) )
+        if ( XMLReadUtil::isElement( name, "Item" ) )
             return GameDataXML::readInto( node, sourceName, _itemCatalog );
-        if ( GameDataXML::isElement( name, "Combine" ) )
+        if ( XMLReadUtil::isElement( name, "Combine" ) )
             return loadCombine( node, sourceName );
-        if ( GameDataXML::isElement( name, "Monster" ) )
+        if ( XMLReadUtil::isElement( name, "Monster" ) )
             return GameDataXML::readInto( node, sourceName, _monsterCatalog );
-        if ( GameDataXML::isElement( name, "KeyLock" ) )
+        if ( XMLReadUtil::isElement( name, "KeyLock" ) )
             return GameDataXML::readInto( node, sourceName, _keyLockCatalog );
-        if ( GameDataXML::isElement( name, "DialLock" ) )
+        if ( XMLReadUtil::isElement( name, "DialLock" ) )
             return loadDialLock( node, sourceName );
-        if ( GameDataXML::isElement( name, "Sequence" ) )
+        if ( XMLReadUtil::isElement( name, "Sequence" ) )
             return loadSequence( node, sourceName );
-        if ( GameDataXML::isElement( name, "Document" ) )
+        if ( XMLReadUtil::isElement( name, "Document" ) )
             return loadDocument( node, sourceName );
-        if ( GameDataXML::isElement( name, "Deduction" ) )
+        if ( XMLReadUtil::isElement( name, "Deduction" ) )
             return loadDeduction( node, sourceName );
         SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, name );
         return false;
@@ -185,7 +185,7 @@ namespace sw
         HorrorSequenceDef sequence;
         if ( GameDataXML::readFields( node, sequence, sourceName, { "steps" } ) == false )
             return false;
-        GameDataXML::parseNameList( node.getAttributeText( "steps" ), ",; ", sequence._listStep );
+        XMLReadUtil::parseNameList( node.getAttributeText( "steps" ), ",; ", sequence._listStep );
         if ( sequence._listStep.empty() )
         {
             SW_LOG_ERROR( "%#: sequence '%#' needs steps=\"a,b,...\"", sourceName, sequence._id.c_str() );
@@ -200,7 +200,7 @@ namespace sw
         HorrorDocumentDef document;
         if ( GameDataXML::readFields( node, document, sourceName, { "clues" } ) == false )
             return false;
-        GameDataXML::parseNameList( node.getAttributeText( "clues" ), ",; ", document._listClue );
+        XMLReadUtil::parseNameList( node.getAttributeText( "clues" ), ",; ", document._listClue );
         (void)_documentCatalog.add( document ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
         return true;
     }

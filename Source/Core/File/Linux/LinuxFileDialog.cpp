@@ -3,10 +3,12 @@
 #include "Core/File/Linux/LinuxFileDialog.h"
 
 #include "Core/Common/Types.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Process/Process.h"
 #include "Core/Process/ProcessEnvironment.h"
 
 #if defined( SW_PLATFORM_LINUX )
@@ -149,29 +151,27 @@ namespace sw
                 return ( params._type == FileDialogParams::Type::Save ) ? "Save File" : "Open File";
             }
 
-            /** @brief 셸 명령을 실행하고 표준 출력(stdout)을 문자열로 받아 반환합니다. */
+            /**
+             * @brief 셸 명령을 실행하고 표준 출력(stdout)을 문자열로 받아 반환합니다.
+             * @details `Process` 는 표준 오류를 표준 출력에 합치므로 표준 오류는 버린다(`2>/dev/null`) — 대화상자 도구가 찍는 GTK 경고가 경로로 읽히지 않게.
+             */
             static string runCommandCapture( string_view command, int32& outExitCode )
             {
                 outExitCode = -1;
-                const string commandNt( command );
-                FILE*        pPipe = popen( commandNt.c_str(), "r" );
-                if ( pPipe == nullptr )
+                string commandWithoutStderr( command );
+                commandWithoutStderr.append( " 2>/dev/null" );
+                Process process;
+                if ( process.launch( commandWithoutStderr ) == false )
                     return {};
 
-                utf8   arrBuffer[constant::kMaxBuffer4096];
                 string output;
-                while ( fgets( arrBuffer, sizeof( arrBuffer ), pPipe ) != nullptr )
+                string line;
+                while ( process.readOutputLine( line ) )
                 {
-                    output += arrBuffer;
+                    output.append( line );
+                    output.push_back( '\n' );
                 }
-
-                const int32 status = pclose( pPipe );
-                if ( status == -1 )
-                    outExitCode = -1;
-                else if ( WIFEXITED( status ) )
-                    outExitCode = WEXITSTATUS( status );
-                else
-                    outExitCode = -1;
+                outExitCode = process.waitForExit();
 
                 while ( output.empty() == false && ( output.back() == '\n' || output.back() == '\r' ) )
                 {
@@ -183,21 +183,11 @@ namespace sw
             /** @brief 다중 선택 결과를 구분자(separator)로 나눠 배열에 담습니다. */
             static void splitPaths( string_view output, utf8 separator, vector<string>& outListPath )
             {
-                size_t start{ 0 };
-                while ( start < output.size() )
+                // 줄바꿈도 구분자로 넣어 토큰 끝의 CR · LF 가 경로에 붙지 않게 한다.
+                const utf8 arrSeparator[] = { separator, '\r', '\n', '\0' };
+                for ( const string_view part : StringUtil::split( output, arrSeparator, { ._bDropEmpty = true } ) )
                 {
-                    const size_t sep = output.find( separator, start );
-                    const size_t end = ( sep == string::npos ) ? output.size() : sep;
-                    string       part{ output.substr( start, end - start ) };
-                    while ( part.empty() == false && ( part.back() == '\n' || part.back() == '\r' ) )
-                    {
-                        part.pop_back();
-                    }
-                    if ( part.empty() == false )
-                        outListPath.push_back( FileUtil::normalizeSeparators( part ) );
-                    if ( sep == string::npos )
-                        break;
-                    start = sep + 1;
+                    outListPath.push_back( FileUtil::normalizeSeparators( part ) );
                 }
             }
 

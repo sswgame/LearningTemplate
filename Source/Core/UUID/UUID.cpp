@@ -2,7 +2,7 @@
 
 #include "Core/UUID/UUID.h"
 
-#include "Core/Common/HexUtil.h"
+#include "Core/Common/HexDigitUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 
@@ -48,7 +48,7 @@ namespace sw
                 continue;
             if ( charIndex + 1 >= text.size() )
                 return false;
-            if ( byteIndex >= 16 || HexUtil::tryParseBytes( text.substr( charIndex, 2 ), &uuid._arrBytes[byteIndex], 1 ) == false )
+            if ( byteIndex >= 16 || HexDigitUtil::tryParseBytes( text.substr( charIndex, 2 ), &uuid._arrBytes[byteIndex], 1 ) == false )
                 return false;
             ++byteIndex;
             ++charIndex;
@@ -69,7 +69,7 @@ namespace sw
             const bool bDashPosition = byteIndex == 4 || byteIndex == 6 || byteIndex == 8 || byteIndex == 10;
             if ( bDashPosition )
                 out[outIndex++] = '-';
-            HexUtil::writeDigits( &out[outIndex], _arrBytes[byteIndex], 2, HexCase::Lower );
+            HexDigitUtil::writeDigits( &out[outIndex], _arrBytes[byteIndex], 2, HexCase::Lower );
             outIndex += 2;
         }
         return out;

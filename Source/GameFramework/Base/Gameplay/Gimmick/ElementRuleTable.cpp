@@ -7,9 +7,9 @@
 #include "Core/Memory/LifetimeScope.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/Base/Foundation/Data/GameDataCache.h"
-#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 
 namespace sw
 {
@@ -195,7 +195,7 @@ namespace sw
         XMLDocument doc;
         XMLNode     root;
         string      sourceName;
-        if ( GameDataXML::loadRoot( doc, path, ElementRuleTableInternal::kRootName, root, sourceName ) == false )
+        if ( XMLReadUtil::loadRootOrWarn( doc, path, ElementRuleTableInternal::kRootName, root, sourceName ) == false )
             return false;
         return loadRoot( root, sourceName );
     }
@@ -204,7 +204,7 @@ namespace sw
     {
         XMLDocument doc;
         XMLNode     root;
-        if ( GameDataXML::parseRoot( doc, xmlText, sourceName, ElementRuleTableInternal::kRootName, root ) == false )
+        if ( XMLReadUtil::parseRootOrWarn( doc, xmlText, sourceName, ElementRuleTableInternal::kRootName, root ) == false )
             return false;
         return loadRoot( root, sourceName );
     }
@@ -260,8 +260,8 @@ namespace sw
         bValid                    = readIndex( node, "neighbor", &ElementRuleTable::findMaterial, outRule._material, sourceName ) && bValid;
         bValid                    = readIndex( node, "setMaterial", &ElementRuleTable::findMaterial, outRule._setMaterial, sourceName ) && bValid;
         bValid                    = readIndex( node, "to", &ElementRuleTable::findFlag, outRule._toFlag, sourceName ) && bValid;
-        bValid                    = GameDataXML::readOptionalNumber( node, "after", sourceName, 0, MathUtil::kMaxInt32, outRule._after ) && bValid;
-        bValid                    = GameDataXML::readOptionalFlag( node, "crosswind", outRule._bCrosswind ) && bValid;
+        bValid                    = XMLReadUtil::readOptionalNumber( node, "after", sourceName, 0, MathUtil::kMaxInt32, outRule._after ) && bValid;
+        bValid                    = XMLReadUtil::readOptionalFlag( node, "crosswind", outRule._bCrosswind ) && bValid;
         outRule._stepsParam       = hashed_string( string( node.getAttributeText( "stepsParam" ) ).c_str() );
         outRule._event            = hashed_string( string( node.getAttributeText( "event" ) ).c_str() );
         const string_view pattern = node.getAttributeText( "pattern" );
@@ -286,7 +286,7 @@ namespace sw
     {
         clear();
         // 적지 않으면 clear() 가 둔 기본 스텝 길이다. 0 이하 · 깨진 값은 오류다.
-        bool bValid = GameDataXML::readOptionalNumber( root, "stepTime", sourceName, 0.0f, MathUtil::kMaxFloat, _stepTime );
+        bool bValid = XMLReadUtil::readOptionalNumber( root, "stepTime", sourceName, 0.0f, MathUtil::kMaxFloat, _stepTime );
         if ( _stepTime <= 0.0f )
         {
             SW_LOG_ERROR( "%#: stepTime must be positive", sourceName );
@@ -315,7 +315,7 @@ namespace sw
                     bValid = false;
                 }
                 int32 steps = ElementStatusDef{}._steps;
-                bValid      = GameDataXML::readOptionalNumber( child, "steps", sourceName, 1, MathUtil::kMaxInt32, steps ) && bValid;
+                bValid      = XMLReadUtil::readOptionalNumber( child, "steps", sourceName, 1, MathUtil::kMaxInt32, steps ) && bValid;
                 if ( addStatus( hashed_string( string( child.getAttributeText( "id" ) ).c_str() ), kind, steps ) < 0 )
                 {
                     SW_LOG_WARNING( "%#: duplicate status or more than %# statuses", sourceName, kMaxStatusCount );

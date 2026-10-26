@@ -2,7 +2,7 @@
 
 #include "Core/Diagnostics/CrashContext.h"
 
-#include "Core/Common/HexUtil.h"
+#include "Core/Common/HexDigitUtil.h"
 #include "Core/Common/PlatformOsHeaders.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/StringUtil.h"
@@ -112,7 +112,7 @@ namespace sw
             const uint64       mixed = nowTicks ^ ( wallSeconds << 16 ) ^ ( static_cast<uint64>( randomDevice() ) << 32 );
 
             SessionIDText session{};
-            HexUtil::writeDigits( session._arrText, mixed, HexUtil::kMaxDigitCount, HexCase::Lower );
+            HexDigitUtil::writeDigits( session._arrText, mixed, HexDigitUtil::kMaxDigitCount, HexCase::Lower );
             return session;
         }
 

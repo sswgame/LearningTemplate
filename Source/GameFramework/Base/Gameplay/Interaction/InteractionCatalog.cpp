@@ -9,9 +9,9 @@
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLNameCheck.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/Base/Foundation/Data/GameDataCache.h"
-#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 
 namespace sw
@@ -82,10 +82,10 @@ namespace sw
                 const utf8* pInteractableRole = node.findAttribute( "interactableRole" );
                 if ( pInteractableRole != nullptr )
                     inoutStep._interactableRole = hashed_string( pInteractableRole );
-                bValid = GameDataXML::readOptionalNumber( node, "duration", sourceName, 0.001f, MathUtil::kMaxFloat, inoutStep._duration ) && bValid;
-                bValid = GameDataXML::readOptionalNumber( node, "presses", sourceName, 1, MathUtil::kMaxInt32, inoutStep._presses ) && bValid;
-                bValid = GameDataXML::readOptionalNumber( node, "decay", sourceName, 0.0f, MathUtil::kMaxFloat, inoutStep._decay ) && bValid;
-                bValid = GameDataXML::readOptionalNumber( node, "maxParticipants", sourceName, 1, MathUtil::kMaxInt32, inoutStep._maxParticipants ) && bValid;
+                bValid = XMLReadUtil::readOptionalNumber( node, "duration", sourceName, 0.001f, MathUtil::kMaxFloat, inoutStep._duration ) && bValid;
+                bValid = XMLReadUtil::readOptionalNumber( node, "presses", sourceName, 1, MathUtil::kMaxInt32, inoutStep._presses ) && bValid;
+                bValid = XMLReadUtil::readOptionalNumber( node, "decay", sourceName, 0.0f, MathUtil::kMaxFloat, inoutStep._decay ) && bValid;
+                bValid = XMLReadUtil::readOptionalNumber( node, "maxParticipants", sourceName, 1, MathUtil::kMaxInt32, inoutStep._maxParticipants ) && bValid;
                 return bValid;
             }
 
@@ -139,17 +139,17 @@ namespace sw
         bool bValid    = Internal::checkAttributes( node, Internal::kArrInteractionAttribute, sourceName );
         outDef._id     = hashed_string( node.findAttribute( "id" ) != nullptr ? node.findAttribute( "id" ) : "" );
         // 적지 않은 칸은 InteractionDef 의 초기값이다. 각은 라디안이다. 범위 밖 값은 자르지 않고 오류다.
-        bValid = GameDataXML::readOptionalNumber( node, "maxDistance", sourceName, 0.0f, MathUtil::kMaxFloat, outDef._maxDistance ) && bValid;
-        bValid = GameDataXML::readOptionalNumber( node, "maxAngle", sourceName, 0.0f, MathUtil::kPi, outDef._maxAngle ) && bValid;
-        bValid = GameDataXML::readOptionalNumber( node, "cooldown", sourceName, 0.0f, MathUtil::kMaxFloat, outDef._cooldown ) && bValid;
-        bValid = GameDataXML::readOptionalFlag( node, "lineOfSight", outDef._bLineOfSight ) && bValid;
+        bValid = XMLReadUtil::readOptionalNumber( node, "maxDistance", sourceName, 0.0f, MathUtil::kMaxFloat, outDef._maxDistance ) && bValid;
+        bValid = XMLReadUtil::readOptionalNumber( node, "maxAngle", sourceName, 0.0f, MathUtil::kPi, outDef._maxAngle ) && bValid;
+        bValid = XMLReadUtil::readOptionalNumber( node, "cooldown", sourceName, 0.0f, MathUtil::kMaxFloat, outDef._cooldown ) && bValid;
+        bValid = XMLReadUtil::readOptionalFlag( node, "lineOfSight", outDef._bLineOfSight ) && bValid;
         Internal::readTags( node.getAttributeText( "requiredTags" ), outDef._requiredTags );
         Internal::readTags( node.getAttributeText( "forbiddenTags" ), outDef._forbiddenTags );
         const utf8* pAlignment = node.findAttribute( "alignment" );
         if ( pAlignment != nullptr )
             outDef._alignmentMarker = hashed_string( pAlignment );
         bValid = Internal::readEnum( node, "highlight", outDef._highlight, sourceName ) && bValid;
-        bValid = GameDataXML::readOptionalFloat3( node, "highlightColor", sourceName, outDef._highlightColor ) && bValid;
+        bValid = XMLReadUtil::readOptionalFloat3( node, "highlightColor", sourceName, outDef._highlightColor ) && bValid;
         bValid = Internal::readEnum( node, "authority", outDef._authority, sourceName ) && bValid;
 
         InteractionStepDef rootStep;
@@ -193,11 +193,11 @@ namespace sw
             bValid = Internal::checkAttributes( slotNode, Internal::kArrSlotAttribute, sourceName ) && bValid;
             SmartObjectSlotDef slot;
             float3             offset{};
-            bValid = GameDataXML::readOptionalFloat3( slotNode, "offset", sourceName, offset ) && bValid;
+            bValid = XMLReadUtil::readOptionalFloat3( slotNode, "offset", sourceName, offset ) && bValid;
 
             slot._id     = hashed_string( slotNode.findAttribute( "id" ) != nullptr ? slotNode.findAttribute( "id" ) : "" );
             slot._offset = offset;
-            bValid       = GameDataXML::readOptionalNumber( slotNode, "yaw", sourceName, -MathUtil::kTwoPi, MathUtil::kTwoPi, slot._yaw ) && bValid;
+            bValid       = XMLReadUtil::readOptionalNumber( slotNode, "yaw", sourceName, -MathUtil::kTwoPi, MathUtil::kTwoPi, slot._yaw ) && bValid;
             Internal::readTags( slotNode.getAttributeText( "tags" ), slot._tags );
             outDef._listSlot.push_back( slot );
         }

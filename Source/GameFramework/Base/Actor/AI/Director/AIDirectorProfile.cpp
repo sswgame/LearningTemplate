@@ -80,14 +80,14 @@ namespace sw
         XMLDocument doc;
         XMLNode     root;
         string      sourceName;
-        return GameDataXML::loadRoot( doc, path, "AIDirector", root, sourceName ) && loadRoot( root, sourceName );
+        return XMLReadUtil::loadRootOrWarn( doc, path, "AIDirector", root, sourceName ) && loadRoot( root, sourceName );
     }
 
     bool AIDirectorProfile::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
         XMLDocument doc;
         XMLNode     root;
-        return GameDataXML::parseRoot( doc, xmlText, sourceName, "AIDirector", root ) && loadRoot( root, sourceName );
+        return XMLReadUtil::parseRootOrWarn( doc, xmlText, sourceName, "AIDirector", root ) && loadRoot( root, sourceName );
     }
 
     void AIDirectorProfile::clear()

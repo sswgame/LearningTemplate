@@ -8,8 +8,8 @@
 
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceXMLUtil.h"
 
 namespace sw
@@ -30,7 +30,7 @@ namespace sw
             [[nodiscard]] static bool readCondition( const XMLNode& node, AppearanceRuleCondition& outCondition, AppearanceLoadReport& report, string_view sourceName, const hashed_string& ruleID )
             {
                 (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrWhenAttribute, report, sourceName );
-                if ( GameDataXML::readOptionalFlag( node, "not", outCondition._bNegate ) == false )
+                if ( XMLReadUtil::readOptionalFlag( node, "not", outCondition._bNegate ) == false )
                     report.addErrorWithID( "Appearance.RuleWhenNotInvalid", "%#: rule '%#' <When> has an invalid not", sourceName, ruleID.c_str() );
                 outCondition._target       = AppearanceXMLUtil::readOptionalName( node, "target" ); // 태그 조건에서만 쓰는 선택 이름
                 const utf8* pTag           = node.findAttribute( "tag" );

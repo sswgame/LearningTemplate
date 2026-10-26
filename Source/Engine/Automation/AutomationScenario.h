@@ -7,6 +7,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/File/FileUtil.h"
 
 #include "Engine/Automation/AutomationScratch.h"
 #include "Engine/Automation/AutomationTimeLimits.h"
@@ -32,8 +33,8 @@ namespace sw
      */
     inline string getAutomationScenarioStem( string_view path )
     {
-        const size_t      slash    = path.find_last_of( '/' );
-        const string_view fileName = path.substr( slash == string_view::npos ? 0 : slash + 1 );
+        string_view fileName;
+        FileUtil::getFileNamePart( path, fileName );
         return string( fileName.substr( 0, fileName.find( '.' ) ) );
     }
 

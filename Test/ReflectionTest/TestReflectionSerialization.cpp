@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/String/HexUtil.h"
 #include "Core/String/RegistrationList.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -52,27 +53,12 @@ namespace
         return src;
     }
 
-    /** @brief 바이트 버퍼를 소문자 16진 문자열로 인코딩합니다. */
-    sw::string toHexString( const sw::vector<uint8>& bytes )
-    {
-        static constexpr utf8 kDigit[] = "0123456789abcdef";
-        sw::string            out;
-        out.reserve( bytes.size() * 2 );
-        for ( uint8 byteValue : bytes )
-        {
-            out.push_back( kDigit[byteValue >> 4] );
-            out.push_back( kDigit[byteValue & 0x0F] );
-        }
-        return out;
-    }
-
     /** @brief 골든 문자열 비교 — 불일치 시 양쪽을 stdout 에 찍고 실패로 이어지도록 false 반환. */
     bool goldenEq( const utf8* pLabel, const sw::string& actual, const utf8* pExpected )
     {
         if ( actual == pExpected )
             return true;
-        std::fprintf( stdout, "[golden %s]\n---expected---\n%s\n---actual---\n%s\n", pLabel, pExpected, actual.c_str() );
-        std::fflush( stdout );
+        test::printTestNote( "[golden %s]\n---expected---\n%s\n---actual---\n%s", pLabel, pExpected, actual.c_str() );
         return false;
     }
 
@@ -88,9 +74,9 @@ namespace
         bool bOk = true;
         bOk &= goldenEq( pLabel, sw::JSONSerializer::serialize( pInstance, typeInfo ), pJSON );
         bOk &= goldenEq( pLabel, sw::XMLSerializer::serialize( pInstance, typeInfo ), pXML );
-        bOk &= goldenEq( pLabel, toHexString( bin ), pBinHex );
+        bOk &= goldenEq( pLabel, sw::HexUtil::encodeBytes( bin.data(), bin.size() ), pBinHex );
         bOk &= goldenEq( pLabel, sw::JSONSerializer::serializeVersioned( 7, pInstance, typeInfo ), pJSONVer );
-        bOk &= goldenEq( pLabel, toHexString( binVer ), pBinVerHex );
+        bOk &= goldenEq( pLabel, sw::HexUtil::encodeBytes( binVer.data(), binVer.size() ), pBinVerHex );
         return bOk;
     }
 
@@ -982,7 +968,7 @@ SW_TEST_CASE( ReflectionSerializationTest, OnlyTheCurrentWireVersionIsRead )
     const WireShiftHost saved = makeSavedWireShiftHost();
     sw::vector<uint8>   current;
     SW_EXPECT_TRUE( sw::BinarySerializer::serialize( &saved, info, current ) );
-    SW_EXPECT_TRUE( goldenEq( "enum wire", toHexString( current ),
+    SW_EXPECT_TRUE( goldenEq( "enum wire", sw::HexUtil::encodeBytes( current.data(), current.size() ),
                               "05000001516400bbad02b3b904000000bcec1d0169c34f84553734500c000000020000002c290ce4522c0ce60d69608302e8898f0c00000002000000"
                               "cdf5fb82dc80f44031a7168fb1efa2df0c00000001000000bcec1d0107000000849cb3ebbfe2defb0400000009000000" ) );
 
@@ -1545,7 +1531,7 @@ SW_TEST_CASE( ReflectionSerializationTest, NestedContainerRoundtripAllFormats )
     const auto verify = [&]( const sw::NestedContainerActor& dst, const utf8* pLabel )
     {
         // 실패 시 어느 포맷인지 알 수 있게 라벨을 먼저 남긴다.
-        std::fprintf( stdout, "[nested roundtrip] format=%s\n", pLabel );
+        test::printTestNote( "[nested roundtrip] format=%s", pLabel );
         SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), dst._grid.size() );
         SW_EXPECT_EQUAL( 5, dst._grid[1][2] );
         SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), dst._namedRows.size() );
@@ -2893,24 +2879,24 @@ SW_TEST_CASE( ReflectionSerializationTest, GoldenOutputFormatsStable )
 
     const sw::string json = sw::JSONSerializer::serialize( &src, *typeInfo );
     if ( json != kGoldenJSON )
-        std::fprintf( stdout, "[golden json]\n  expected: %s\n  actual  : %s\n", kGoldenJSON.c_str(), json.c_str() );
+        test::printTestNote( "[golden json]\n  expected: %s\n  actual  : %s", kGoldenJSON.c_str(), json.c_str() );
     SW_EXPECT_TRUE( json == kGoldenJSON );
 
     const sw::string pretty = sw::JSONSerializer::serializePretty( &src, *typeInfo, 4 );
     if ( pretty != kGoldenPretty )
-        std::fprintf( stdout, "[golden pretty]\n---expected---\n%s\n---actual---\n%s\n", kGoldenPretty.c_str(), pretty.c_str() );
+        test::printTestNote( "[golden pretty]\n---expected---\n%s\n---actual---\n%s", kGoldenPretty.c_str(), pretty.c_str() );
     SW_EXPECT_TRUE( pretty == kGoldenPretty );
 
     const sw::string xml = sw::XMLSerializer::serialize( &src, *typeInfo );
     if ( xml != kGoldenXML )
-        std::fprintf( stdout, "[golden xml]\n---expected---\n%s\n---actual---\n%s\n", kGoldenXML.c_str(), xml.c_str() );
+        test::printTestNote( "[golden xml]\n---expected---\n%s\n---actual---\n%s", kGoldenXML.c_str(), xml.c_str() );
     SW_EXPECT_TRUE( xml == kGoldenXML );
 
     sw::vector<uint8> bin;
     SW_EXPECT_TRUE( sw::BinarySerializer::serialize( &src, *typeInfo, bin ) );
-    const sw::string binHex = toHexString( bin );
+    const sw::string binHex = sw::HexUtil::encodeBytes( bin.data(), bin.size() );
     if ( binHex != kGoldenBinHex )
-        std::fprintf( stdout, "[golden binhex]\n  expected: %s\n  actual  : %s\n", kGoldenBinHex.c_str(), binHex.c_str() );
+        test::printTestNote( "[golden binhex]\n  expected: %s\n  actual  : %s", kGoldenBinHex.c_str(), binHex.c_str() );
     SW_EXPECT_TRUE( binHex == kGoldenBinHex );
 
     // 역방향: 골든 문자열을 다시 읽어 원본과 같은지 (안전망 자체가 유효한지 확인)

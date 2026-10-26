@@ -21,7 +21,7 @@ namespace sw
     {
         XMLDocument doc;
         XMLNode     root;
-        if ( GameDataXML::parseRoot( doc, xmlText, sourceName, "RunMap", root ) == false )
+        if ( XMLReadUtil::parseRootOrWarn( doc, xmlText, sourceName, "RunMap", root ) == false )
             return false;
         // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 틀린 원소가 하나라도 있으면 설정 전체를 읽지 못한 것으로 본다(반쪽 지도를 만들지 않는다).
         RunMapSettings settings;

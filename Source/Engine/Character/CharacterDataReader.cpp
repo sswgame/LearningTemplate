@@ -136,15 +136,8 @@ namespace sw
 
     float3 CharacterDataReader::parseFloat3Text( const XMLNode& node, const utf8* pName, const utf8* pText )
     {
-        float3              value{};
-        vector<string_view> listToken;
-        splitTokens( string_view( pText ), listToken );
-        bool bOk = listToken.size() == 3;
-        for ( size_t axis = 0; bOk && axis < 3; ++axis )
-        {
-            bOk = StringUtil::parseFloat( listToken[axis], value.data()[axis] );
-        }
-        if ( bOk == false )
+        float3 value{};
+        if ( StringUtil::parseExactFloats( string_view( pText ), kTokenSeparators, value.data(), 3 ) == false )
             addError( "Character.Vector3Invalid", node, string( "attribute '" ) + pName + "' is not three numbers: '" + pText + "'" );
         return value;
     }
@@ -213,9 +206,7 @@ namespace sw
     void CharacterDataReader::readNameList( const XMLNode& node, const utf8* pName, vector<hashed_string>& outListName )
     {
         outListName.clear();
-        vector<string_view> listToken;
-        splitTokens( node.getAttributeText( pName ), listToken );
-        for ( const string_view token : listToken )
+        for ( const string_view token : StringUtil::split( node.getAttributeText( pName ), kTokenSeparators, { ._bDropEmpty = true } ) )
         {
             const hashed_string name( token );
             // 빈 이름의 철자(`none`)는 이름이 될 수 없다 — 목록에 빈 이름이 조용히 들어가지 않게 오류로 남긴다.
@@ -236,29 +227,6 @@ namespace sw
             SW_LOG_WRITE( sw::LogLevel::Error, error._pID, "%#", error._text );
         }
         return _listError.empty();
-    }
-
-    void CharacterDataReader::splitTokens( string_view text, vector<string_view>& outListToken )
-    {
-        outListToken.clear();
-        size_t tokenStart = string_view::npos;
-        for ( size_t charIndex = 0; charIndex <= text.size(); ++charIndex )
-        {
-            const bool bEnd       = charIndex == text.size();
-            const utf8 character  = bEnd ? ' ' : text[charIndex];
-            const bool bSeparator = character == ' ' || character == ',' || character == '\t' || character == '\n' || character == '\r';
-            if ( bSeparator == false )
-            {
-                if ( tokenStart == string_view::npos )
-                    tokenStart = charIndex;
-                continue;
-            }
-            if ( tokenStart != string_view::npos )
-            {
-                outListToken.push_back( text.substr( tokenStart, charIndex - tokenStart ) );
-                tokenStart = string_view::npos;
-            }
-        }
     }
 
     string CharacterDataReader::formatFloat( float32 value )

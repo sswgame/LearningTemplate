@@ -9,8 +9,8 @@
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/Base/World/Query/GameFlags.h"
 
@@ -190,7 +190,7 @@ namespace sw
 
     void ScheduleCondition::parseNameList( string_view text, vector<hashed_string>& outListName )
     {
-        GameDataXML::parseNameList( text, ScheduleConditionInternal::kNameSeparators, outListName );
+        XMLReadUtil::parseNameList( text, ScheduleConditionInternal::kNameSeparators, outListName );
     }
 
     uint8 ScheduleCondition::parsePhaseMask( string_view text, string_view sourceName, string_view ownerName )

@@ -272,12 +272,12 @@ namespace sw
     {
         CreatureSpeciesDef species;
         bool               bValid = GameDataXML::readFields( node, species, sourceName, { "habitats", "foods", "gifts", "weathers", "abilities", "requests", "phases" } );
-        GameDataXML::parseNameList( node.getAttributeText( "habitats" ), ",;| ", species._listHabitat );
-        GameDataXML::parseNameList( node.getAttributeText( "foods" ), ",;| ", species._listFood );
-        GameDataXML::parseNameList( node.getAttributeText( "gifts" ), ",;| ", species._listGift );
+        XMLReadUtil::parseNameList( node.getAttributeText( "habitats" ), ",;| ", species._listHabitat );
+        XMLReadUtil::parseNameList( node.getAttributeText( "foods" ), ",;| ", species._listFood );
+        XMLReadUtil::parseNameList( node.getAttributeText( "gifts" ), ",;| ", species._listGift );
         ScheduleCondition::parseNameList( node.getAttributeText( "weathers" ), species._visitCondition._listWeather );
-        GameDataXML::parseNameList( node.getAttributeText( "abilities" ), ",;| ", species._listAbility );
-        GameDataXML::parseNameList( node.getAttributeText( "requests" ), ",;| ", species._listRequest );
+        XMLReadUtil::parseNameList( node.getAttributeText( "abilities" ), ",;| ", species._listAbility );
+        XMLReadUtil::parseNameList( node.getAttributeText( "requests" ), ",;| ", species._listRequest );
         species._visitCondition._phaseMask = ScheduleCondition::parsePhaseMask( node.getAttributeText( "phases" ), sourceName, species._id.view() );
         if ( species._listHabitat.empty() )
         {

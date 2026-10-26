@@ -44,17 +44,6 @@ namespace sw
                     return fallback;
                 return value * ( 1.0f / MathUtil::sqrt( lengthSquared ) );
             }
-
-            /** @brief `PlatformTileMap::loadFromText` 와 같은 방식으로 줄을 나눕니다(빈 줄과 끝의 CR 을 무시합니다). */
-            static void splitLines( string_view text, vector<string_view>& outListLine )
-            {
-                outListLine.clear();
-                StringUtil::forEachLine( text, [&]( string_view line )
-                {
-                    if ( line.empty() == false )
-                        outListLine.push_back( line );
-                } );
-            }
         };
     } // namespace
 } // namespace sw
@@ -83,8 +72,8 @@ namespace sw
         _listDirt.assign( static_cast<size_t>( _topology.getCellCount() ), SW_FALSE );
         _listGrapplePoint.clear();
 
-        vector<string_view> listLine;
-        ActionPlatformerBodyInternal::splitLines( text, listLine );
+        // `PlatformTileMap::loadFromText` 와 같은 방식으로 줄을 나눈다(빈 줄과 끝의 CR 을 무시한다).
+        const vector<string_view> listLine = StringUtil::split( text, "\r\n", { ._bDropEmpty = true } );
         for ( size_t row = 0; row < listLine.size(); ++row )
         {
             const int32 y = _topology._height - 1 - static_cast<int32>( row );

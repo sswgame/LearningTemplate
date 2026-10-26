@@ -10,8 +10,8 @@
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
@@ -88,7 +88,7 @@ namespace sw
         uint32 loadedCount = 0;
         for ( XMLNode node = root.findChild( "Stat" ); node; node = node.findNextSibling( "Stat" ) )
         {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
+            const utf8* pID = XMLReadUtil::findRequiredID( node, sourceName );
             if ( pID == nullptr )
                 continue;
             StatDef           def;
@@ -103,7 +103,7 @@ namespace sw
             def._name         = pName != nullptr ? pName : pID;
             // 상한을 적지 않으면 정의의 초기값이다. 깨진 값 · 음수는 그 통계를 넣지 않는 오류다(자르지 않는다).
             float32 maxValue = static_cast<float32>( def._maxValue );
-            if ( GameDataXML::readOptionalNumber( node, "max", sourceName, 0.0f, MathUtil::kMaxFloat, maxValue ) == false )
+            if ( XMLReadUtil::readOptionalNumber( node, "max", sourceName, 0.0f, MathUtil::kMaxFloat, maxValue ) == false )
             {
                 SW_LOG_ERROR( "%#: stat '%#' has an invalid max - skipped", sourceName, pID );
                 continue;

@@ -51,19 +51,19 @@ namespace sw
 
     bool GhostCatalog::loadElement( const XMLNode& node, string_view name, string_view sourceName )
     {
-        if ( GameDataXML::isElement( name, "Flashlight" ) )
+        if ( XMLReadUtil::isElement( name, "Flashlight" ) )
             return GameDataXML::readSetting( node, sourceName, _flashlight );
-        if ( GameDataXML::isElement( name, "Vacuum" ) )
+        if ( XMLReadUtil::isElement( name, "Vacuum" ) )
             return loadVacuum( node, sourceName );
-        if ( GameDataXML::isElement( name, "Ghost" ) )
+        if ( XMLReadUtil::isElement( name, "Ghost" ) )
             return GameDataXML::readInto( node, sourceName, _ghostCatalog );
-        if ( GameDataXML::isElement( name, "Room" ) )
+        if ( XMLReadUtil::isElement( name, "Room" ) )
             return loadRoom( node, sourceName );
-        if ( GameDataXML::isElement( name, "Door" ) )
+        if ( XMLReadUtil::isElement( name, "Door" ) )
             return GameDataXML::readInto( node, sourceName, _doorCatalog );
-        if ( GameDataXML::isElement( name, "Furniture" ) )
+        if ( XMLReadUtil::isElement( name, "Furniture" ) )
             return loadFurniture( node, sourceName );
-        if ( GameDataXML::isElement( name, "Boo" ) )
+        if ( XMLReadUtil::isElement( name, "Boo" ) )
             return GameDataXML::readInto( node, sourceName, _booCatalog );
         SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, name );
         return false;
@@ -81,7 +81,7 @@ namespace sw
             StringUtil::forEachToken( stages, ",; ", [&]( string_view token )
             {
                 float32    power  = 0.0f;
-                const bool bPower = GameDataXML::parseNumber( token, power ) && power >= 0.0f;
+                const bool bPower = StringUtil::parseFloat( token, power ) && power >= 0.0f;
                 if ( bPower )
                     vacuum._listStagePower.push_back( power );
                 else
@@ -101,7 +101,7 @@ namespace sw
         GhostRoomDef room;
         if ( GameDataXML::readFields( node, room, sourceName, { "ghosts" } ) == false )
             return false;
-        GameDataXML::parseNameList( node.getAttributeText( "ghosts" ), ",; ", room._listGhost );
+        XMLReadUtil::parseNameList( node.getAttributeText( "ghosts" ), ",; ", room._listGhost );
         (void)_roomCatalog.add( room ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
         return true;
     }

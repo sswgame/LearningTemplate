@@ -45,6 +45,16 @@ namespace sw
 
 namespace sw
 {
+    /** @brief `StringUtil::split` 의 선택입니다. 기본은 아무것도 바꾸지 않는다(빈 토큰도 남는다 — `"a,,b"` → `a` · 빈 글 · `b`). */
+    struct StringSplitOptions
+    {
+        bool _bTrim{ false };      ///< 토큰마다 앞뒤 공백을 뗀다
+        bool _bDropEmpty{ false }; ///< (자른 뒤) 빈 토큰을 버린다
+    };
+} // namespace sw
+
+namespace sw
+{
     namespace StringUtilCrcInternal
     {
         /** @brief IEEE 802.3 CRC32 테이블을 컴파일 타임에 만듭니다. */
@@ -287,6 +297,13 @@ namespace sw
                 tokenStart = tokenEnd + 1;
             }
         }
+
+        /**
+         * @brief @p separators 의 아무 글자에서 나눈 토큰 목록입니다(원본을 가리키는 뷰 — 원본이 살아 있는 동안만 쓴다).
+         * @details 글을 나누는 정본입니다. 호출부에서 `find` · `substr` 루프를 다시 짜지 않습니다. 할당 없이 하나씩 보려면 `forEachToken`
+         *          (빈 토큰을 늘 버린다), 줄은 `forEachLine` 입니다. 빈 글은 `_bDropEmpty` 가 아니면 빈 토큰 하나입니다(파이썬 `str.split( sep )` 과 같다).
+         */
+        [[nodiscard]] static vector<string_view> split( string_view text, string_view separators, StringSplitOptions options = {} );
 
         /** @brief 문자열 길이(문자 수)를 반환합니다. */
         static uint32 strlen( const utf8* pStr );

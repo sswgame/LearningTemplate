@@ -123,7 +123,7 @@ namespace sw
 
     bool CityCatalog::loadElement( const XMLNode& node, string_view name, string_view sourceName )
     {
-        if ( GameDataXML::isElement( name, "Good" ) )
+        if ( XMLReadUtil::isElement( name, "Good" ) )
         {
             CityGoodDef good;
             if ( GameDataXML::readFields( node, good, sourceName ) == false )
@@ -131,9 +131,9 @@ namespace sw
             (void)_goodCatalog.add( good ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
             return true;
         }
-        if ( GameDataXML::isElement( name, "Building" ) )
+        if ( XMLReadUtil::isElement( name, "Building" ) )
             return loadBuilding( node, sourceName );
-        if ( GameDataXML::isElement( name, "HouseLevel" ) )
+        if ( XMLReadUtil::isElement( name, "HouseLevel" ) )
             return loadHouseLevel( node, sourceName );
         SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, name );
         return false;
@@ -154,7 +154,7 @@ namespace sw
                 bValid = false;
             }
         }
-        GameDataXML::parseNameList( node.getAttributeText( "goods" ), ",; ", building._listGood );
+        XMLReadUtil::parseNameList( node.getAttributeText( "goods" ), ",; ", building._listGood );
         const bool bServiceWithoutService = building._kind == CityBuildingKind::Service && building._service == CityService::Count;
         if ( bServiceWithoutService )
         {
@@ -181,7 +181,7 @@ namespace sw
                 bValid = false;
             }
         } );
-        GameDataXML::parseNameList( node.getAttributeText( "goods" ), ",; ", level._listRequiredGood );
+        XMLReadUtil::parseNameList( node.getAttributeText( "goods" ), ",; ", level._listRequiredGood );
         if ( bValid )
             _listHouseLevel.push_back( level ); // 적힌 순서가 단계다(0 = 처음 짓는 집)
         return bValid;

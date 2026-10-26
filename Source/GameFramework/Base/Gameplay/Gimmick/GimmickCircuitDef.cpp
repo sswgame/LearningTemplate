@@ -7,8 +7,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
-
-#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 namespace sw
 {
@@ -55,7 +54,7 @@ namespace sw
     {
         XMLDocument doc;
         XMLNode     root;
-        if ( GameDataXML::loadRoot( doc, path, GimmickCircuitDefInternal::kRootName, root, _sourceName ) == false )
+        if ( XMLReadUtil::loadRootOrWarn( doc, path, GimmickCircuitDefInternal::kRootName, root, _sourceName ) == false )
             return false;
         return loadRoot( root );
     }
@@ -65,7 +64,7 @@ namespace sw
         XMLDocument doc;
         XMLNode     root;
         _sourceName = string( sourceName.empty() ? string_view( "<gimmick xml>" ) : sourceName );
-        if ( GameDataXML::parseRoot( doc, xmlText, _sourceName, GimmickCircuitDefInternal::kRootName, root ) == false )
+        if ( XMLReadUtil::parseRootOrWarn( doc, xmlText, _sourceName, GimmickCircuitDefInternal::kRootName, root ) == false )
             return false;
         return loadRoot( root );
     }
@@ -74,7 +73,7 @@ namespace sw
     {
         clear();
         // 적지 않으면 clear() 가 둔 기본 스텝 길이(kDefaultStepTime)다. 0 이하 · 깨진 값은 오류다.
-        bool bValid = GameDataXML::readOptionalNumber( root, "stepTime", _sourceName, 0.0f, MathUtil::kMaxFloat, _stepTime );
+        bool bValid = XMLReadUtil::readOptionalNumber( root, "stepTime", _sourceName, 0.0f, MathUtil::kMaxFloat, _stepTime );
         if ( _stepTime <= 0.0f )
         {
             SW_LOG_ERROR( "%#: stepTime must be positive", _sourceName );
@@ -104,7 +103,7 @@ namespace sw
             if ( StringUtil::equals( child.getName(), "Wire", true ) )
             {
                 bool bInvert = false; // 적지 않으면 뒤집지 않는다
-                if ( GameDataXML::readOptionalBool( child, "invert", bInvert ) == false )
+                if ( XMLReadUtil::readOptionalBool( child, "invert", bInvert ) == false )
                 {
                     bValid = false;
                     continue;

@@ -3,7 +3,7 @@
 #include "Core/Module/ModuleBuildID.h"
 
 #include "Core/Common/FourCcUtil.h"
-#include "Core/Common/HexUtil.h"
+#include "Core/Common/HexDigitUtil.h"
 #include "Core/Common/PlatformOsHeaders.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
@@ -24,7 +24,7 @@ namespace sw
                 for ( size_t index = 0; index < count; ++index )
                 {
                     utf8 arrPair[3] = {};
-                    HexUtil::writeDigits( arrPair, pBytes[index], 2, bUpper ? HexCase::Upper : HexCase::Lower );
+                    HexDigitUtil::writeDigits( arrPair, pBytes[index], 2, bUpper ? HexCase::Upper : HexCase::Lower );
                     text.append( arrPair );
                 }
             }

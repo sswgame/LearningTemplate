@@ -413,8 +413,7 @@ namespace sw
 
     string VisemeTrack::makePathForAudio( string_view audioPath )
     {
-        const size_t dot = audioPath.find_last_of( '.' );
-        string       path{ dot == string_view::npos ? audioPath : audioPath.substr( 0, dot ) };
+        string path = FileUtil::removeExtension( audioPath );
         path.append( kExtension.data(), kExtension.size() );
         return path;
     }
