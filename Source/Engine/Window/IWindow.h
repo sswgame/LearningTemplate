@@ -107,6 +107,23 @@ namespace sw
         virtual bool processMessages() = 0;
 
         /**
+         * @brief 창 메시지가 오거나 @p timeoutMilliseconds 가 지날 때까지 이 스레드를 재웁니다. 메시지를 꺼내지는 않는다(다음 `processMessages` 가 처리한다).
+         * @details 최소화된 동안 앱 루프가 헛돌지 않게 `FramePacer` 가 부른다(Win32 `MsgWaitForMultipleObjects`, X11 · Wayland 는 연결 소켓의 `poll`).
+         */
+        virtual void waitForMessages( uint32 timeoutMilliseconds ) = 0;
+
+        /**
+         * @brief 창이 최소화되어 있는지입니다. `processMessages` 가 창 이벤트(Win32 `WM_SIZE`, X11 `UnmapNotify` · `MapNotify`)로 갱신합니다.
+         * @details Wayland 는 클라이언트에 최소화를 알리지 않는다(xdg-shell 판 1) — 그 창에서는 늘 false 다.
+         */
+        [[nodiscard]] bool isMinimized() const { return _bMinimized == SW_TRUE; }
+        /**
+         * @brief 이 프로세스가 입력 포커스를 가졌는지입니다(Win32 `WM_ACTIVATEAPP`, X11 `FocusIn` · `FocusOut`, Wayland 키보드 enter · leave).
+         * @details 처음에는 false 다 — 활성화 통보가 와야 true 가 된다. Win32 는 창 하나가 아니라 앱 단위로 본다(에디터의 떠 있는 ImGui 창으로 옮겨도 배경이 아니다).
+         */
+        [[nodiscard]] bool hasFocus() const { return _bFocused == SW_TRUE; }
+
+        /**
          * @brief Win32 창이면 `HWND` 를 `void*` 로 반환하고, 아니면(X11 · Wayland) 또는 핸들이 아직 없으면 nullptr 입니다. 호출처가 `static_cast<HWND>` 로 읽는다.
          * @details 핸들 포인터는 창 시스템마다 뜻이 다르다(X11 은 창 ID, Wayland 는 `wl_surface*`). `HWND` 로 읽는 호출이 종류를 확인하지 않으면 다른 창 시스템의 값을 Win32 호출에 넘긴다.
          *          그래서 핸들만 꺼내는 길(`getNativeHandle`)은 보호 구역에만 두고, Win32 호출은 종류 확인과 값 확인이 함께 있는 이 함수로만 얻는다(`tryGetX11Surface` 와 같은 모양).
@@ -344,6 +361,11 @@ namespace sw
          */
         [[nodiscard]] bool storeTitle( const utf8* pTitle );
 
+        /** @brief 플랫폼 메시지 처리가 최소화 이벤트를 받으면 부릅니다(`isMinimized`). */
+        void setMinimizedState( bool bMinimized ) { _bMinimized = bMinimized ? SW_TRUE : SW_FALSE; }
+        /** @brief 플랫폼 메시지 처리가 포커스 이벤트를 받으면 부릅니다(`hasFocus`). */
+        void setFocusState( bool bFocused ) { _bFocused = bFocused ? SW_TRUE : SW_FALSE; }
+
     protected:
         /**
          * @brief `recreate` 가 같은 제목으로 다시 만들 제목입니다.
@@ -365,7 +387,9 @@ namespace sw
          */
         uint8                  _bRecreating       : 1;
         uint8                  _bVisibleRequested : 1; /**< 마지막 showWindow() 의 인자. 화면 상태가 아니라 **의도**. */
-        [[maybe_unused]] uint8 _reserved          : 5;
+        uint8                  _bMinimized        : 1; /**< 창 이벤트가 알린 최소화 상태(`isMinimized`). */
+        uint8                  _bFocused          : 1; /**< 창 이벤트가 알린 포커스 상태(`hasFocus`). */
+        [[maybe_unused]] uint8 _reserved          : 3;
         WindowDisplayMode      _displayMode; /**< 마지막 `setDisplayMode` 가 고른 방식. */
         uint8                  _arrReserved[6];
         /** @brief 다시 만들 때 놓을 위치입니다. 플랫폼 생성자가 자기 "알아서" 값으로 채웁니다. */

@@ -1114,6 +1114,9 @@ namespace sw
         listInput.swap( state._listPendingInput );
         for ( const WaylandInputEvent& input : listInput )
         {
+            // 포커스는 처리기가 없어도 적는다(앱 루프의 프레임 페이싱이 읽는다).
+            if ( input._kind == WaylandInputKind::FocusGained || input._kind == WaylandInputKind::FocusLost )
+                setFocusState( input._kind == WaylandInputKind::FocusGained );
             if ( _customHandler.isBound() == false )
                 break;
             NativeWindowEvent windowEvent{};
@@ -1139,6 +1142,17 @@ namespace sw
                 return false;
         }
         return _bShouldClose == SW_FALSE;
+    }
+
+    void WaylandWindow::waitForMessages( uint32 timeoutMilliseconds )
+    {
+        State& state = *_pState;
+        if ( state._pDisplay == nullptr )
+            return;
+        // `processMessages` 가 매 프레임 쌓인 것을 모두 처리하므로 큐는 비어 있다 — 소켓만 기다리고, 읽기는 다음 `processMessages` 가 한다.
+        wl_display_flush( state._pDisplay );
+        pollfd pollEntry{ wl_display_get_fd( state._pDisplay ), POLLIN, 0 };
+        (void)poll( &pollEntry, 1, static_cast<int32>( timeoutMilliseconds ) );
     }
 
     void WaylandWindow::applyWindowVisibility( bool bShow )
@@ -1412,6 +1426,12 @@ namespace sw
     bool WaylandWindow::processMessages()
     {
         return _bShouldClose == SW_FALSE;
+    }
+
+    void WaylandWindow::waitForMessages( uint32 timeoutMilliseconds )
+    {
+        // 이 빌드에는 Wayland 창이 없다 — 기다릴 것이 없다.
+        (void)timeoutMilliseconds;
     }
 
     void WaylandWindow::applyWindowVisibility( bool bShow )

@@ -135,6 +135,8 @@ namespace sw
          * @details 창 수명은 App 이 쥐고 있으므로 여기서는 의사만 알립니다.
          */
         bool isQuitRequested() const { return _bQuitRequested || _profileSession.isQuitRequested(); }
+        /** @brief `-gv_profileFrames` · `-gv_profileSeconds` 계측이 시작됐으면 true 입니다(앱 루프의 프레임 페이싱이 읽는다). */
+        bool isProfileRunActive() const { return _profileSession.isActive(); }
         /** @brief 이번 프레임이 끝나면 루프를 끝내라고 요청합니다(프레임 관찰자 · 도구). 여럿이면 처음 것의 코드를 씁니다. */
         void requestQuit( int32 exitCode );
         /** @brief App 이 돌려줄 종료 코드입니다(요청이 없었으면 0). */

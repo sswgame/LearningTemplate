@@ -287,6 +287,12 @@
 | `gv_effectsSpawnScale` | `float32` | `1.0` | 일반 | 이펙트 입자 생성 배율 (사용자 설정 graphics.effectsQuality 의 targetValue) | [VfxComponent.cpp](../../Source/Engine/Vfx/VfxComponent.cpp) |
 | `gv_vfxSimulation` | `VfxSimulationTarget` | `GPU` | 테스트 | 둘 다 되는 방출기의 시뮬레이션 (CPU / GPU — 모듈이 한 곳만 허락하면 그곳) | [VfxComponent.cpp](../../Source/Engine/Vfx/VfxComponent.cpp) |
 
+## `Source/Engine/Window`
+
+| 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
+|---|---|---|---|---|---|
+| `gv_backgroundFrameRate` | `int32` | `30` | 일반 | 포커스 없는 창의 초당 프레임 상한 (0=상한 없음) | [FramePacer.cpp](../../Source/Engine/Window/FramePacer.cpp) |
+
 ## `Source/GameFramework/Base`
 
 | 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
