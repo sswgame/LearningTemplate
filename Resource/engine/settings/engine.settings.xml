@@ -63,7 +63,6 @@
 		<Option value="ultra" targetValue="4096"/>
 	</Setting>
 	<Setting id="graphics.viewDistance" category="graphics" type="float" default="1" min="0.25" max="2" step="0.25" target="gv:gv_viewDistanceScale" text="settings.graphics.viewDistance"/>
-	<Setting id="graphics.foliageDensity" category="graphics" type="float" default="1" min="0" max="1.5" step="0.25" target="gv:gv_foliageDensity" text="settings.graphics.foliageDensity"/>
 	<Setting id="graphics.postQuality" category="graphics" type="enum" default="high" target="gv:gv_postQuality" text="settings.graphics.postQuality">
 		<Option value="low"/>
 		<Option value="medium"/>
@@ -91,7 +90,6 @@
 			<Value setting="graphics.renderScale" value="0.75"/>
 			<Value setting="graphics.shadowQuality" value="low"/>
 			<Value setting="graphics.viewDistance" value="0.5"/>
-			<Value setting="graphics.foliageDensity" value="0.25"/>
 			<Value setting="graphics.postQuality" value="low"/>
 			<Value setting="graphics.textureQuality" value="low"/>
 			<Value setting="graphics.effectsQuality" value="low"/>
@@ -100,7 +98,6 @@
 			<Value setting="graphics.renderScale" value="0.85"/>
 			<Value setting="graphics.shadowQuality" value="medium"/>
 			<Value setting="graphics.viewDistance" value="0.75"/>
-			<Value setting="graphics.foliageDensity" value="0.5"/>
 			<Value setting="graphics.postQuality" value="medium"/>
 			<Value setting="graphics.textureQuality" value="medium"/>
 			<Value setting="graphics.effectsQuality" value="medium"/>
@@ -109,7 +106,6 @@
 			<Value setting="graphics.renderScale" value="1"/>
 			<Value setting="graphics.shadowQuality" value="high"/>
 			<Value setting="graphics.viewDistance" value="1"/>
-			<Value setting="graphics.foliageDensity" value="1"/>
 			<Value setting="graphics.postQuality" value="high"/>
 			<Value setting="graphics.textureQuality" value="high"/>
 			<Value setting="graphics.effectsQuality" value="high"/>
@@ -118,7 +114,6 @@
 			<Value setting="graphics.renderScale" value="1"/>
 			<Value setting="graphics.shadowQuality" value="ultra"/>
 			<Value setting="graphics.viewDistance" value="1.5"/>
-			<Value setting="graphics.foliageDensity" value="1.5"/>
 			<Value setting="graphics.postQuality" value="ultra"/>
 			<Value setting="graphics.textureQuality" value="ultra"/>
 			<Value setting="graphics.effectsQuality" value="ultra"/>
@@ -189,7 +184,6 @@
 		<Option value="highcontrast" text="settings.accessibility.uiTheme.highcontrast"/>
 	</Setting>
 	<Setting id="accessibility.textSize" category="accessibility" type="float" default="1" min="0.75" max="2" step="0.05" target="gv:gv_uiTextScale" text="settings.accessibility.textSize"/>
-	<Setting id="accessibility.reduceFlashing" category="accessibility" type="bool" default="false" target="gv:gv_reduceFlashing" text="settings.accessibility.reduceFlashing"/>
 	<Setting id="accessibility.reduceMotion" category="accessibility" type="bool" default="false" target="gv:gv_uiReduceMotion" text="settings.accessibility.reduceMotion"/>
 	<Setting id="accessibility.subtitles" category="accessibility" type="bool" default="true" target="gv:gv_subtitles" text="settings.accessibility.subtitles"/>
 	<Setting id="accessibility.subtitleSize" category="accessibility" type="enum" default="medium" target="gv:gv_subtitleSize" enabledWhen="accessibility.subtitles=true" text="settings.accessibility.subtitleSize">

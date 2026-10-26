@@ -591,14 +591,6 @@
 				<item>engine/settings/engine.settings.xml</item>
 			</origins>
 		</entry>
-		<entry key="settings.accessibility.reduceFlashing"
-		       source="Reduce Flashing"
-		       context="Options menu label"
-		       maxLength="32">
-			<origins>
-				<item>engine/settings/engine.settings.xml</item>
-			</origins>
-		</entry>
 		<entry key="settings.accessibility.reduceMotion" source="Reduce Motion" context="Options menu label" maxLength="32">
 			<origins>
 				<item>engine/settings/engine.settings.xml</item>
@@ -869,11 +861,6 @@
 			</origins>
 		</entry>
 		<entry key="settings.graphics.effectsQuality" source="Effects Quality" context="Options menu label" maxLength="32">
-			<origins>
-				<item>engine/settings/engine.settings.xml</item>
-			</origins>
-		</entry>
-		<entry key="settings.graphics.foliageDensity" source="Foliage Density" context="Options menu label" maxLength="32">
 			<origins>
 				<item>engine/settings/engine.settings.xml</item>
 			</origins>

@@ -5,10 +5,10 @@
  *          | 바이트 | 의미 |
  *          |---|---|
  *          | 4 | 매직 `SWLW` |
- *          | 4 | 버전 번호(`kVersion` = 2. 1 은 레이어 넷이라 읽을 때 레이어 4..7 을 0 으로 채워 이관한다 - `kLegacyVersion`) |
+ *          | 4 | 버전 번호(`kVersion` = 2. 다른 판은 읽지 않는다) |
  *          | 4 | 너비 W(1 이상) |
  *          | 4 | 높이 H(1 이상) |
- *          | 4 | 레이어 수(버전 2 는 `kLayerCount`, 버전 1 은 `kLegacyLayerCount` 만 읽는다) |
+ *          | 4 | 레이어 수(`kLayerCount`) |
  *          | 8 × W × H | 텍셀마다 레이어 0..7 가중치(0..255, 행 우선이며 z 가 바깥, x 가 안쪽). 레이어 0..3 이 앞 네 바이트(RGBA 한 장), 4..7 이 뒤 네 바이트다 |
  *          가중치는 텍스처가 아니라 게임플레이 데이터다(발소리 · 표면 재질 · 이동 속도 판정). 텍스처(`.dds`)는 전용 서버 패키지에서 빠지므로
  *          (`Config/Engine/CookContract.json` 의 `target_excluded_asset_kinds`) 이 형식으로 둔다 — 서버도 레이어 질의에 정확히 답한다.
@@ -40,12 +40,9 @@ namespace sw
         };
         /** @brief 이 에셋 종류입니다(등록은 `LayerWeightsData.cpp` 의 `SW_ASSET_TYPE`). */
         static constexpr AssetTypeDef kAssetType{ "LayerWeightsData", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
-        static constexpr uint32       kVersion = 2u;
-        /// @brief 레이어 넷 시절의 버전과 레이어 수입니다. 읽을 때 레이어 4..7 을 0 으로 채워 이관한다(저장은 늘 `kVersion`).
-        static constexpr uint32 kLegacyVersion    = 1u;
-        static constexpr uint32 kLegacyLayerCount = 4u;
-        static constexpr uint32 kLayerCount       = SurfaceLayerWeights::kLayerCount;
-        static constexpr uint32 kMaxResolution    = 8193u;
+        static constexpr uint32       kVersion       = 2u;
+        static constexpr uint32       kLayerCount    = SurfaceLayerWeights::kLayerCount;
+        static constexpr uint32       kMaxResolution = 8193u;
 
         vector<uint8> _bytes; ///< W × H × `kLayerCount` 바이트다. 텍셀 (x, z) 는 (z × W + x) × `kLayerCount` 에서 시작한다.
         uint32        _width{ 0 };
