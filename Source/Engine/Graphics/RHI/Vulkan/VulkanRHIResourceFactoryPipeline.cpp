@@ -58,8 +58,13 @@ namespace sw
         vsInfo.sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
         vsInfo.codeSize = vsResult._bytecode.size();
         vsInfo.pCode    = reinterpret_cast<const uint32*>( vsResult._bytecode.data() );
+        // 모듈을 못 만들면 PSO 도 만들지 않는다(핸들 0). 결과를 보지 않으면 빈 모듈로 파이프라인을 만들려다 검증 오류 · 드라이버 크래시가 된다.
         VkShaderModule vertShaderModule{ VK_NULL_HANDLE };
-        vkCreateShaderModule( _pDevice->_device, &vsInfo, nullptr, &vertShaderModule );
+        if ( vkCreateShaderModule( _pDevice->_device, &vsInfo, nullptr, &vertShaderModule ) != VK_SUCCESS || vertShaderModule == VK_NULL_HANDLE )
+        {
+            SW_LOG_ERROR( "createPipelineState: vkCreateShaderModule failed for the vertex shader '%#'", desc._vertexShaderPath );
+            return 0;
+        }
 
         VkShaderModule fragShaderModule{ VK_NULL_HANDLE };
         if ( bHasPixelShader )
@@ -68,7 +73,12 @@ namespace sw
             psInfo.sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
             psInfo.codeSize = psResult._bytecode.size();
             psInfo.pCode    = reinterpret_cast<const uint32*>( psResult._bytecode.data() );
-            vkCreateShaderModule( _pDevice->_device, &psInfo, nullptr, &fragShaderModule );
+            if ( vkCreateShaderModule( _pDevice->_device, &psInfo, nullptr, &fragShaderModule ) != VK_SUCCESS || fragShaderModule == VK_NULL_HANDLE )
+            {
+                vkDestroyShaderModule( _pDevice->_device, vertShaderModule, nullptr );
+                SW_LOG_ERROR( "createPipelineState: vkCreateShaderModule failed for the pixel shader '%#'", desc._pixelShaderPath );
+                return 0;
+            }
         }
 
         VkPipelineShaderStageCreateInfo vertShaderStageInfo{};

@@ -245,6 +245,13 @@ namespace sw
         dispatchCmdSigDesc.NumArgumentDescs = 1;
         dispatchCmdSigDesc.pArgumentDescs   = &dispatchArg;
         _device->CreateCommandSignature( &dispatchCmdSigDesc, nullptr, IID_PPV_ARGS( _dispatchCommandSignature.GetAddressOf() ) );
+        // 간접 드로우 · 디스패치 서명은 장치 초기화의 필수 조건이다. 못 만들면 간접 호출이 조용히 빠지지 않게 초기화를 실패시킨다.
+        const bool bMissingCommandSignature = _drawCommandSignature == nullptr || _drawIndexedCommandSignature == nullptr || _dispatchCommandSignature == nullptr;
+        if ( bMissingCommandSignature )
+        {
+            SW_LOG_ERROR( "CreateCommandSignature failed (draw/drawIndexed/dispatch)." );
+            return false;
+        }
 
         {
 

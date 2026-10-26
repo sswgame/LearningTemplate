@@ -193,7 +193,12 @@ namespace sw
                 staticDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
                 staticDesc.MinLOD         = 0.0f;
                 staticDesc.MaxLOD         = D3D11_FLOAT32_MAX;
-                _device->CreateSamplerState( &staticDesc, _arrStaticSampler[samplerIndex].GetAddressOf() );
+                // 정적 샘플러는 셰이더가 번호로 고르는 필수 세트다. 빠지면 그 샘플러로 읽는 텍스처가 조용히 검정이 되므로 초기화를 실패시킨다.
+                if ( FAILED( _device->CreateSamplerState( &staticDesc, _arrStaticSampler[samplerIndex].GetAddressOf() ) ) )
+                {
+                    SW_LOG_ERROR( "CreateSamplerState failed for static sampler %#.", samplerIndex );
+                    return false;
+                }
             }
             const D3D11ImmediateContext::ScopedLock context = _immediateContext.lock();
             bindStaticSamplers( context.get() );

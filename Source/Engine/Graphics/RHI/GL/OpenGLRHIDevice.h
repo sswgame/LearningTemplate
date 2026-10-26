@@ -335,7 +335,7 @@ namespace sw
         struct OpenGLTextureRecord
         {
             uint32              _texture{ 0 };
-            uint32              _fbo{ 0 };
+            uint32              _fbo{ 0 }; ///< 복사 · 블릿용 FBO(컬러 렌더 타깃의 0 번 면). 렌더 패스는 합성 FBO 를 쓴다.
             uint32              _width{ 0 };
             uint32              _height{ 0 };
             uint32              _mipLevels{ 1 };
@@ -349,16 +349,6 @@ namespace sw
             uint8          _bDepthStencil : 1;
             uint8          _bUAV          : 1;
             uint8          _reserved      : 6;
-            /// @brief 면이 여럿일 때 면 하나를 첨부한 FBO 들입니다(0번은 `_fbo`). 면이 하나면 비어 있습니다.
-            vector<uint32> _listSliceFbo;
-
-            /** @brief 면 `slice` 를 첨부한 단일 타깃 FBO 입니다. 없으면 0 입니다. */
-            uint32 findSliceFbo( uint32 slice ) const
-            {
-                if ( _listSliceFbo.empty() )
-                    return slice == 0 ? _fbo : 0u;
-                return slice < _listSliceFbo.size() ? _listSliceFbo[slice] : 0u;
-            }
         };
 
         /// @brief MRT FBO 캐시 키입니다.
