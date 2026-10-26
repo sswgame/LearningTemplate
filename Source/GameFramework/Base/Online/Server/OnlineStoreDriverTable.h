@@ -13,6 +13,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Memory/Memory.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -36,12 +37,13 @@ namespace sw
 
         static constexpr const utf8* kMemoryDriverName = "memory";
 
-        /** @brief 저장소 만들기 함수를 묶습니다. 이미 묶인 함수가 있으면 바꿉니다(핫 리로드의 새 이미지). */
-        static void bindServiceStoreFactory( CreateServiceStoreFunction pCreate );
-        static void bindEphemeralStoreFactory( CreateEphemeralStoreFunction pCreate );
-        /** @brief 칸이 아직 @p pCreate 를 들고 있을 때만 풉니다. 다른 이미지가 그 뒤에 묶은 함수는 남깁니다. */
-        static void                         unbindServiceStoreFactory( CreateServiceStoreFunction pCreate );
-        static void                         unbindEphemeralStoreFactory( CreateEphemeralStoreFunction pCreate );
+        /**
+         * @brief 저장소 만들기 함수를 묶고 그 묶음을 돌려줍니다. 이미 묶인 함수가 있으면 바꿉니다(핫 리로드의 새 이미지).
+         * @details 구독이 풀리면 칸이 아직 @p pCreate 를 들고 있을 때만 비웁니다 — 그 뒤에 다른 이미지가 묶은 함수는 남깁니다.
+         *          묶기와 풀기는 모듈 로드 · 언로드 스레드에서 합니다(구독 목록에 잠금이 없다). 칸 읽기는 원자라 어느 스레드에서나 됩니다.
+         */
+        [[nodiscard]] static Subscription   bindServiceStoreFactory( CreateServiceStoreFunction pCreate );
+        [[nodiscard]] static Subscription   bindEphemeralStoreFactory( CreateEphemeralStoreFunction pCreate );
         static CreateServiceStoreFunction   findServiceStoreFactory();
         static CreateEphemeralStoreFunction findEphemeralStoreFactory();
     };
@@ -61,25 +63,18 @@ namespace sw
         using ReleaseFunction = void ( * )();
 
         OnlineStoreDriverBinding( OnlineStoreDriverTable::CreateServiceStoreFunction pCreate, ReleaseFunction pRelease )
-            : _pCreateServiceStore{ pCreate }
-            , _pCreateEphemeralStore{ nullptr }
+            : _binding{ OnlineStoreDriverTable::bindServiceStoreFactory( pCreate ) }
             , _pRelease{ pRelease }
         {
-            OnlineStoreDriverTable::bindServiceStoreFactory( pCreate );
         }
         OnlineStoreDriverBinding( OnlineStoreDriverTable::CreateEphemeralStoreFunction pCreate, ReleaseFunction pRelease )
-            : _pCreateServiceStore{ nullptr }
-            , _pCreateEphemeralStore{ pCreate }
+            : _binding{ OnlineStoreDriverTable::bindEphemeralStoreFactory( pCreate ) }
             , _pRelease{ pRelease }
         {
-            OnlineStoreDriverTable::bindEphemeralStoreFactory( pCreate );
         }
         ~OnlineStoreDriverBinding()
         {
-            if ( _pCreateServiceStore != nullptr )
-                OnlineStoreDriverTable::unbindServiceStoreFactory( _pCreateServiceStore );
-            if ( _pCreateEphemeralStore != nullptr )
-                OnlineStoreDriverTable::unbindEphemeralStoreFactory( _pCreateEphemeralStore );
+            _binding.reset(); // 정리 함수보다 먼저 푼다 — 정리 뒤에 이 함수로 드라이버를 만들지 않게
             if ( _pRelease != nullptr )
                 _pRelease();
         }
@@ -88,8 +83,7 @@ namespace sw
         OnlineStoreDriverBinding& operator=( const OnlineStoreDriverBinding& ) = delete;
 
     private:
-        OnlineStoreDriverTable::CreateServiceStoreFunction   _pCreateServiceStore;   ///< 묶은 저장소 함수(캐시를 묶었으면 nullptr)
-        OnlineStoreDriverTable::CreateEphemeralStoreFunction _pCreateEphemeralStore; ///< 묶은 캐시 함수(저장소를 묶었으면 nullptr)
-        ReleaseFunction                                      _pRelease;
+        Subscription    _binding; ///< 칸에 묶은 자기 함수. 풀리면 칸이 아직 그 함수일 때만 비운다
+        ReleaseFunction _pRelease;
     };
 } // namespace sw

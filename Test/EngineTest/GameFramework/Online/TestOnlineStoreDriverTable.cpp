@@ -56,6 +56,19 @@ namespace
             outError = "new image";
             return nullptr;
         }
+
+        /**
+         * @brief 이 프로세스에 실린 저장 키트의 함수를 칸에 되돌립니다(없었으면 빈 칸 그대로).
+         * @details 되돌린 묶음의 구독은 놓지 않는다 — 놓으면 그 자리에서 칸이 비고, 칸을 다시 푸는 것은 원래 묶은 키트의 구독이 할 일이다.
+         *          shortcut: 테스트마다 구독 하나가 프로세스 끝까지 남는다(표가 사라질 때 무효화된다). 키트 묶음을 테스트가 다시 세울 길이 생기면 그것으로 바꾼다.
+         */
+        static void restore( OnlineStoreDriverTable::CreateServiceStoreFunction pStore, OnlineStoreDriverTable::CreateEphemeralStoreFunction pCache )
+        {
+            if ( pStore != nullptr && OnlineStoreDriverTable::findServiceStoreFactory() != pStore )
+                (void)make_unique<Subscription>( OnlineStoreDriverTable::bindServiceStoreFactory( pStore ) ).release();
+            if ( pCache != nullptr && OnlineStoreDriverTable::findEphemeralStoreFactory() != pCache )
+                (void)make_unique<Subscription>( OnlineStoreDriverTable::bindEphemeralStoreFactory( pCache ) ).release();
+        }
     };
 } // namespace
 
@@ -79,8 +92,7 @@ SW_TEST_CASE( OnlineStoreDriverTableTest, HotReloadOfTheStorageKitKeepsTheNewIma
         SW_EXPECT_TRUE( OnlineStoreDriverTable::findServiceStoreFactory() == nullptr ); // 자기 함수라 풀린다
         SW_EXPECT_TRUE( OnlineStoreDriverTable::findEphemeralStoreFactory() == nullptr );
     }
-    OnlineStoreDriverTable::bindServiceStoreFactory( pLoaded ); // 이 프로세스에 실린 저장 키트의 함수를 되돌린다(없었으면 빈 칸)
-    OnlineStoreDriverTable::bindEphemeralStoreFactory( pLoadedEph );
+    Internal::restore( pLoaded, pLoadedEph );
 }
 
 SW_TEST_CASE( OnlineStoreDriverTableTest, UnloadListenerClearsOnlyTheUnloadingImage )
@@ -91,13 +103,14 @@ SW_TEST_CASE( OnlineStoreDriverTableTest, UnloadListenerClearsOnlyTheUnloadingIm
     const uint8*                                             pOldBegin = reinterpret_cast<const uint8*>( &Internal::createOldImageStore );
     vector<IModuleUnloadListener::ReleaseResult>             listResult;
 
-    OnlineStoreDriverTable::bindServiceStoreFactory( &Internal::createNewImageStore );
-    // 다른 이미지(옛 함수 한 바이트)를 내리면 새 함수는 남는다.
-    IModuleUnloadListener::removeAllWithin( pOldBegin, pOldBegin + 1, listResult );
-    SW_EXPECT_TRUE( OnlineStoreDriverTable::findServiceStoreFactory() == &Internal::createNewImageStore );
-    // 새 함수가 든 이미지를 내리면 칸이 빈다 — 미뤄진 언로드 뒤에도 내려간 코드를 부르지 않는다.
-    IModuleUnloadListener::removeAllWithin( pNewBegin, pNewBegin + 1, listResult );
-    SW_EXPECT_TRUE( OnlineStoreDriverTable::findServiceStoreFactory() == nullptr );
-
-    OnlineStoreDriverTable::bindServiceStoreFactory( pLoaded );
+    {
+        const Subscription binding = OnlineStoreDriverTable::bindServiceStoreFactory( &Internal::createNewImageStore );
+        // 다른 이미지(옛 함수 한 바이트)를 내리면 새 함수는 남는다.
+        IModuleUnloadListener::removeAllWithin( pOldBegin, pOldBegin + 1, listResult );
+        SW_EXPECT_TRUE( OnlineStoreDriverTable::findServiceStoreFactory() == &Internal::createNewImageStore );
+        // 새 함수가 든 이미지를 내리면 칸이 빈다 — 미뤄진 언로드 뒤에도 내려간 코드를 부르지 않는다. 구독이 나중에 풀려도 빈 칸을 건드리지 않는다.
+        IModuleUnloadListener::removeAllWithin( pNewBegin, pNewBegin + 1, listResult );
+        SW_EXPECT_TRUE( OnlineStoreDriverTable::findServiceStoreFactory() == nullptr );
+    }
+    Internal::restore( pLoaded, OnlineStoreDriverTable::findEphemeralStoreFactory() );
 }
