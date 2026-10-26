@@ -23,6 +23,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Math/AABB.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
@@ -93,7 +94,7 @@ namespace sw
 namespace sw
 {
     /** @class SceneNavigation @brief 파일 머리말 참고. */
-    class SW_API SceneNavigation : public ISceneService
+    class SW_API SceneNavigation : public ISceneService, private SubscriptionSource
     {
     public:
         /** @brief 레지스트리에 없는 자리입니다. */
@@ -136,10 +137,10 @@ namespace sw
         void unregisterSurface( NavMeshSurfaceComponent* pSurface );
         void registerObstacle( NavMeshObstacleComponent* pObstacle );
         void unregisterObstacle( NavMeshObstacleComponent* pObstacle );
-        void registerGeometrySource( INavGeometrySource* pSource );
-        void unregisterGeometrySource( INavGeometrySource* pSource );
-        void registerLink( NavMeshLinkComponent* pLink );
-        void unregisterLink( NavMeshLinkComponent* pLink );
+        /** @brief 기하 소스를 올리고 그 구독을 돌려줍니다. 구독이 사라지면 빠집니다. nullptr 이거나 이미 올라 있으면 빈 구독입니다. */
+        [[nodiscard]] Subscription registerGeometrySource( INavGeometrySource* pSource );
+        void                       registerLink( NavMeshLinkComponent* pLink );
+        void                       unregisterLink( NavMeshLinkComponent* pLink );
         /** @brief 지금 자세의 번호가 @p linkID 인 링크 컴포넌트입니다(에이전트가 건너는 링크의 종류 찾기). 없으면 nullptr 입니다. 링크 수만큼 훑습니다. */
         const NavMeshLinkComponent* findLink( uint32 linkID ) const;
 
@@ -226,14 +227,17 @@ namespace sw
         /** @brief 막기 · 풀기가 바뀐 링크를 모든 내비메시에 넣습니다(타일 교체와 같은 시점 — 질의가 없는 동안). */
         void applyLinkStates();
 
-        NavMeshSettings                      _settings;
-        string                               _sourcePath;
-        shared_ptr<const NavMeshAsset>       _pCookedAsset;
-        vector<unique_ptr<NavMeshRuntime>>   _listRuntime;
-        vector<NavMeshAgentComponent*>       _listAgent;
-        vector<NavMeshSurfaceComponent*>     _listSurface;
-        vector<NavMeshObstacleComponent*>    _listObstacle;
-        vector<NavMeshLinkComponent*>        _listLink;            ///< 링크 컴포넌트(등록 · 해제는 `_navIndex` 로 O(1)). 순회는 매 갱신 `applyLinkStates` 의 켜짐 표지 확인과 `findLink`(에이전트가 링크에 오른 첫 갱신) 뿐이다. 링크는 문 · 사다리 · 점프 지점이라 씬당 수십 ~ 수백이어서 선형으로 충분하다. 수천이 되면 껐다 켠 링크만 모으는 목록과 id 색인으로 바꾼다
+        NavMeshSettings                    _settings;
+        string                             _sourcePath;
+        shared_ptr<const NavMeshAsset>     _pCookedAsset;
+        vector<unique_ptr<NavMeshRuntime>> _listRuntime;
+        vector<NavMeshAgentComponent*>     _listAgent;
+        vector<NavMeshSurfaceComponent*>   _listSurface;
+        vector<NavMeshObstacleComponent*>  _listObstacle;
+        vector<NavMeshLinkComponent*>      _listLink; ///< 링크 컴포넌트(등록 · 해제는 `_navIndex` 로 O(1)). 순회는 매 갱신 `applyLinkStates` 의 켜짐 표지 확인과 `findLink`(에이전트가 링크에 오른 첫 갱신) 뿐이다. 링크는 문 · 사다리 · 점프 지점이라 씬당 수십 ~ 수백이어서 선형으로 충분하다. 수천이 되면 껐다 켠 링크만 모으는 목록과 id 색인으로 바꾼다
+        /** @brief 기하 소스 등록 구독이 풀렸습니다(@p id 는 소스 주소). 순서를 지키며 뺍니다. */
+        void releaseSubscription( uint64 id ) override;
+
         RegistrationList<INavGeometrySource> _listGeometrySource;  ///< 등록 순서(빼도 순서 유지) — 한 주인을 여러 소스가 맡으면 먼저 등록한 것이 이긴다. 순서가 뜻이라 순서를 버리는 `IndexedPtrList` 로 바꾸지 않는다(소스가 수천이 되면 순서 보존 색인이 필요하다)
         vector<hashed_string>                _listFailedAgentType; ///< 모르는 종류 — 오류를 한 번만
         NavTileRebaker                       _tileRebaker;

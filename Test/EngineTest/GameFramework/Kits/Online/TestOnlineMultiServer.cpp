@@ -459,12 +459,14 @@ SW_TEST_CASE( OnlineMultiServerTest, PresenceFindsTheServerOfAnAccountByIDAndByN
     SW_ASSERT_TRUE( rig.loginAliceOnAAndBobOnB( aliceID, bobID ) );
     IAccountPresence* pPresence = rig._serverA._accountServer.getPresence();
     // 두 서비스가 같은 창구로 같이 찾는다 — 각자 맡긴 결과만 받는다.
-    PresenceRecorder chatRecorder;
-    PresenceRecorder socialRecorder;
-    const uint64     bobLookup     = pPresence->submitFindByAccount( bobID, AccountPresenceDelegate::create<&PresenceRecorder::onFound>( &chatRecorder ) );
-    const uint64     aliceLookup   = pPresence->submitFindByAccount( aliceID, AccountPresenceDelegate::create<&PresenceRecorder::onFound>( &socialRecorder ) );
-    const uint64     nameLookup    = pPresence->submitFindByDisplayName( "BOB", AccountPresenceDelegate::create<&PresenceRecorder::onFound>( &socialRecorder ) );
-    const uint64     offlineLookup = pPresence->submitFindByAccount( 0xDEAD, AccountPresenceDelegate::create<&PresenceRecorder::onFound>( &chatRecorder ) );
+    PresenceRecorder   chatRecorder;
+    PresenceRecorder   socialRecorder;
+    const Subscription chatOwner     = pPresence->openFindOwner();
+    const Subscription socialOwner   = pPresence->openFindOwner();
+    const uint64       bobLookup     = pPresence->submitFindByAccount( bobID, AccountPresenceDelegate::create<&PresenceRecorder::onFound>( &chatRecorder ), chatOwner );
+    const uint64       aliceLookup   = pPresence->submitFindByAccount( aliceID, AccountPresenceDelegate::create<&PresenceRecorder::onFound>( &socialRecorder ), socialOwner );
+    const uint64       nameLookup    = pPresence->submitFindByDisplayName( "BOB", AccountPresenceDelegate::create<&PresenceRecorder::onFound>( &socialRecorder ), socialOwner );
+    const uint64       offlineLookup = pPresence->submitFindByAccount( 0xDEAD, AccountPresenceDelegate::create<&PresenceRecorder::onFound>( &chatRecorder ), chatOwner );
     SW_EXPECT_TRUE( chatRecorder._listResult.empty() ); // 맡긴 자리에서 부르지 않는다
     rig.step( 2 );
 

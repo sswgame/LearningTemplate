@@ -27,8 +27,9 @@ SW_TEST_CASE( CameraRegistrySerialTest, RegisterUnregisterAndSettersBumpOnlyOnRe
     const uint32 afterAdd = registry.getRegistrySerial();
     SW_EXPECT_TRUE( afterAdd != initial );
 
-    // 같은 카메라를 다시 등록해도 오르지 않는다(이미 있음).
-    manager.getCameraRegistry().add( pCamera );
+    // 같은 카메라를 다시 등록해도 오르지 않는다(이미 있음 — 빈 구독이다).
+    const Subscription duplicate = manager.getCameraRegistry().add( pCamera );
+    SW_EXPECT_FALSE( duplicate.isActive() );
     SW_EXPECT_EQUAL( afterAdd, registry.getRegistrySerial() );
 
     // 역할: 바뀔 때만 오른다.
@@ -67,11 +68,14 @@ SW_TEST_CASE( CameraRegistrySerialTest, RegisterUnregisterAndSettersBumpOnlyOnRe
     pCamera->setRenderOutput( output );
     SW_EXPECT_TRUE( registry.getRegistrySerial() != afterFov );
 
-    // 해제도 오르고, 이미 없는 카메라를 또 빼도 오르지 않는다.
-    const uint32 beforeRemove = registry.getRegistrySerial();
-    manager.getCameraRegistry().remove( pCamera );
-    const uint32 afterRemove = registry.getRegistrySerial();
+    // 해제(구독 풀기)도 오르고, 이미 푼 구독을 또 풀어도 오르지 않는다. 컴포넌트가 쥔 구독은 그대로 두고 따로 만든 레지스트리로 본다.
+    CameraRegistry otherRegistry;
+    Subscription   registration = otherRegistry.add( pCamera );
+    const uint32   beforeRemove = otherRegistry.getRegistrySerial();
+    registration.reset();
+    const uint32 afterRemove = otherRegistry.getRegistrySerial();
     SW_EXPECT_TRUE( afterRemove != beforeRemove );
-    manager.getCameraRegistry().remove( pCamera );
-    SW_EXPECT_EQUAL( afterRemove, registry.getRegistrySerial() );
+    SW_EXPECT_TRUE( otherRegistry.getAll().empty() );
+    registration.reset();
+    SW_EXPECT_EQUAL( afterRemove, otherRegistry.getRegistrySerial() );
 }

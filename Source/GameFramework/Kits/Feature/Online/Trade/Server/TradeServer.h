@@ -10,6 +10,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Network/Message/NetRequest.h"
 
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
@@ -73,6 +74,7 @@ namespace sw
         TradeService*                                _pTradeService;
         const IAccountDirectory*                     _pDirectory;
         IAccountPresence*                            _pPresence;
+        Subscription                                 _findOwner; ///< 접속 상태 찾기의 주인 몫(`initialize` 가 열고 `shutdown` 이 놓는다)
         uint64                                       _nextTag;
         int64                                        _nowMs;
     };

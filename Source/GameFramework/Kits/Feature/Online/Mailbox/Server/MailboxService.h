@@ -140,6 +140,7 @@ namespace sw
         vector<ServiceMailCampaign>           _listCampaign;
         ServiceMetrics                        _metrics;
         MailboxServiceConfig                  _settings;
+        Subscription                          _findOwner;                  ///< 접속 상태 찾기의 주인 몫(`initialize` 가 열고 `shutdown` 이 놓는다)
         unordered_map<uint64, MailboxNewMail> _mapPresenceRequestToNotice; ///< 접속 상태를 묻는 중인 알림(받는 계정은 결과에 있다)
         IServiceStore*                        _pStore;
         OnlineServiceHost*                    _pHost;                ///< 알림을 보낼 호스트이다. 첫 틱에 받는다

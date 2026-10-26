@@ -156,6 +156,7 @@ namespace sw
         vector<PendingCall>                          _listPendingCall;
         ServiceMetrics                               _metrics;
         EconomyServiceConfig                         _settings;
+        Subscription                                 _findOwner;                  ///< 접속 상태 찾기의 주인 몫(`initialize` 가 열고 `shutdown` 이 놓는다)
         unordered_map<uint64, EconomyBalanceChanged> _mapPresenceRequestToNotice; ///< 접속 상태를 묻는 중인 잔액 변경 알림(받는 계정은 결과에 있다)
         OnlineServiceHost*                           _pHost;                      ///< `onServiceTick` 이 붙잡는다. 알림을 이 서버에 붙은 계정에 바로 보낸다
         IServiceStore*                               _pStore;

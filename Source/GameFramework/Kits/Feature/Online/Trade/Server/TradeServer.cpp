@@ -30,17 +30,12 @@ namespace sw
         _pTradeService = pTradeService;
         _pDirectory    = pDirectory;
         _pPresence     = pPresence;
+        _findOwner     = pPresence != nullptr ? pPresence->openFindOwner() : Subscription{};
     }
 
     void TradeServer::shutdown()
     {
-        if ( _pPresence != nullptr ) // 맡긴 이름 찾기를 회수한다. 접속 상태 관리자가 이 객체보다 오래 살아도 이 객체를 부르지 않게 하려는 것이다
-        {
-            for ( const auto& [lookupID, call] : _mapLookupToCall )
-            {
-                _pPresence->cancel( lookupID );
-            }
-        }
+        _findOwner.reset(); // 맡긴 이름 찾기를 회수한다. 접속 상태 관리자가 이 객체보다 오래 살아도 이 객체를 부르지 않게 하려는 것이다
         _mapTagToCall.clear();
         _mapLookupToCall.clear();
         _listFound.clear();
@@ -77,7 +72,7 @@ namespace sw
                 respondImmediately( host, context._token, TradeResult::PeerOffline );
                 return;
             }
-            const uint64 lookupID      = _pPresence->submitFindByDisplayName( request._peerDisplayName, AccountPresenceDelegate::create<&TradeServer::onPresenceFound>( this ) );
+            const uint64 lookupID      = _pPresence->submitFindByDisplayName( request._peerDisplayName, AccountPresenceDelegate::create<&TradeServer::onPresenceFound>( this ), _findOwner );
             _mapLookupToCall[lookupID] = PendingLookup{ context._token, context._accountID, context._nowMs };
             return;
         }

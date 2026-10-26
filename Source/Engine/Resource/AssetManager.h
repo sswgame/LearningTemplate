@@ -17,6 +17,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Module/ModuleUnloadListener.h"
 #include "Core/String/RegistrationList.h"
@@ -41,7 +42,7 @@ namespace sw
      * @class AssetManager
      * @brief 에셋 식별자, 스키마, 인스턴스 캐시와 VFS 팩 매니저를 한 객체로 소유합니다.
      */
-    class SW_API AssetManager final : public IModuleUnloadListener, public ISubsystem
+    class SW_API AssetManager final : public IModuleUnloadListener, public ISubsystem, private SubscriptionSource
     {
     public:
         /** @brief 빈 매니저로 만듭니다. initialize() 전에 바인딩해도 됩니다. */
@@ -117,21 +118,15 @@ namespace sw
         // 에셋 캐시 레지스트리: 종류를 추가하는 곳
         // ----------------------------------------------------------------------
         /**
-         * @brief 경로 키 에셋 캐시를 레지스트리에 등록합니다. 소유하지 않습니다.
+         * @brief 경로 키 에셋 캐시를 레지스트리에 등록하고 그 구독을 돌려줍니다. 소유하지 않습니다. 구독이 사라지면 빠집니다.
          * @details 내장 캐시(기능 폴더가 `SW_BUILT_IN_ASSET_CACHE` 로 등록한 것)는 생성자가 등록한다. 모듈이 자기 에셋
-         *          종류를 추가할 때 이 함수를 부른다. 그러면 종료, 진단, 재초기화가 **자동으로**
-         *          그 캐시까지 훑는다. 같은 포인터를 두 번 등록하면 무시한다.
-         * @param pCache 매니저보다 오래 사는 캐시. nullptr 은 무시합니다.
+         *          종류를 추가할 때 이 함수를 부른다. 그러면 종료, 진단, 재초기화가 **자동으로** 그 캐시까지 훑는다.
+         *          **모듈은 언로드되기 전에 구독을 놓는다** — 레지스트리는 포인터만 가지고 있어 모듈 DLL 이 내려가면 포인터도,
+         *          가상 함수 테이블도 같이 사라진다(남기면 다음 종료나 비우기가 사라진 코드로 점프한다. 언로드 훑기가 마지막 그물이다).
+         *          nullptr · 같은 포인터 · 같은 종류 이름의 둘째 캐시면 빈 구독입니다.
+         * @param pCache 구독보다 오래 사는 캐시.
          */
-        void registerAssetCache( IAssetCache* pCache );
-        /**
-         * @brief 레지스트리에서 캐시를 제거합니다. **모듈은 언로드되기 전에 반드시 이 함수를 부릅니다.**
-         * @details 레지스트리는 포인터만 가지고 있다. 모듈 DLL 이 언로드되면 그 포인터도, 가상 함수 테이블도 같이
-         *          사라진다(CLAUDE.md 의 "Statics die on hot reload" 와 같은 문제다). 남겨 두면 다음
-         *          종료나 비우기가 사라진 코드로 점프한다.
-         * @param pCache 등록했던 그 포인터. 등록된 적이 없으면 아무 일도 하지 않습니다.
-         */
-        void unregisterAssetCache( const IAssetCache* pCache );
+        [[nodiscard]] Subscription registerAssetCache( IAssetCache* pCache );
         /** @brief 등록된 캐시 목록을 반환합니다. 소유하지 않습니다. */
         vector<IAssetCache*> getAllAssetCache() const;
         /**
@@ -190,6 +185,10 @@ namespace sw
     private:
         /** @brief 내장 캐시(`_listBuiltInAssetCache`)인지 확인합니다. 종료 경고와 모듈 코드 순회에서 제외합니다. */
         bool isBuiltInAssetCache( const IAssetCache* pCache ) const;
+        /** @brief 캐시를 목록에 올립니다(이름은 지금 복사). 올렸으면 true 입니다. 내장 캐시는 구독 없이 이것으로 올린다 — 매니저와 수명이 같다. */
+        bool addAssetCache( IAssetCache* pCache );
+        /** @brief 캐시 등록 구독이 풀렸습니다(@p id 는 캐시 주소). 목록에서 뺍니다. 언로드 훑기가 먼저 뺐으면 할 일이 없다. */
+        void releaseSubscription( uint64 id ) override;
         /** @brief `getAssetCache<T>()` 의 본체입니다. 종류 이름으로 내장 캐시를 찾습니다. 없으면 단언합니다(등록하지 않은 타입을 물은 경우). */
         IAssetCache& getBuiltInAssetCache( string_view assetKindName ) const;
 

@@ -48,6 +48,7 @@ namespace sw
         , _cutFrame{ 0 }
         , _cutStamp{ 0 }
         , _arrCutSeenStamp{}
+        , _cameraRegistration{}
     {
     }
 
@@ -107,7 +108,7 @@ namespace sw
     void CameraComponent::onRegister( GameObjectManager& manager )
     {
         SceneComponent::onRegister( manager );
-        manager.getCameraRegistry().add( this );
+        _cameraRegistration = manager.getCameraRegistry().add( this );
         declareRenderTexture();
     }
 
@@ -162,7 +163,7 @@ namespace sw
 
     void CameraComponent::onUnregister( GameObjectManager& manager )
     {
-        manager.getCameraRegistry().remove( this );
+        _cameraRegistration.reset();
         SceneComponent::onUnregister( manager );
     }
 

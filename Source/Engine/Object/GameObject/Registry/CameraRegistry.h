@@ -14,6 +14,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/String/RegistrationList.h"
 
 namespace sw
@@ -28,7 +29,7 @@ namespace sw
      * @note 락은 `ComponentRegistry` 와 같이 가장 안쪽입니다. 목록은 공통 등록 목록(`RegistrationList`)이라 등록 순서를 지킵니다(순서를 지키며
      *       뺍니다). 선택 규칙은 그 순서에 기대지 않습니다 — 우선순위가 같으면 컴포넌트 id 가 큰(나중에 만든) 카메라입니다.
      */
-    class SW_API CameraRegistry
+    class SW_API CameraRegistry : private SubscriptionSource
     {
     public:
         /** @brief 빈 레지스트리를 만듭니다. */
@@ -39,10 +40,8 @@ namespace sw
         CameraRegistry( const CameraRegistry& )            = delete;
         CameraRegistry& operator=( const CameraRegistry& ) = delete;
 
-        /** @brief 카메라를 등록합니다. 붙을 때 한 번 부릅니다. 이미 등록됐거나 nullptr 이면 무시합니다. */
-        void add( CameraComponent* pCamera );
-        /** @brief 카메라를 등록 해제합니다. 멱등입니다. */
-        void remove( CameraComponent* pCamera );
+        /** @brief 카메라를 등록하고 그 구독을 돌려줍니다. 붙을 때 한 번 부르고, 구독이 사라지면 빠집니다. 이미 등록됐거나 nullptr 이면 빈 구독입니다. */
+        [[nodiscard]] Subscription add( CameraComponent* pCamera );
 
         /** @brief 등록된 카메라 목록(등록 순서)입니다. 소유하지 않습니다. 활성 판정은 부르는 쪽이 합니다. */
         const vector<CameraComponent*>& getAll() const { return _registeredCamera.getItems(); }
@@ -65,7 +64,7 @@ namespace sw
 
         /**
          * @brief 시퀀서 카메라 컷이 고른 카메라를 적습니다(nullptr 이면 풉니다). 게임 카메라 선택에서 직접 고른 카메라 · 레지스트리 규칙보다 먼저입니다.
-         * @details 언리얼 Camera Cut 트랙이 뷰 타깃을 덮는 자리입니다. 그 카메라가 등록 해제되면(`remove`) 함께 풀립니다.
+         * @details 언리얼 Camera Cut 트랙이 뷰 타깃을 덮는 자리입니다. 그 카메라의 등록 구독이 풀리면 함께 풀립니다.
          */
         void setCutCamera( CameraComponent* pCamera );
         /** @brief 카메라 컷이 고른 카메라입니다. 없으면 nullptr 입니다. */
@@ -97,6 +96,9 @@ namespace sw
         static bool isUsableCamera( const CameraComponent* pCamera );
 
     private:
+        /** @brief 카메라 등록 구독이 풀렸습니다(@p id 는 카메라 주소). 순서를 지키며 빼고 컷 카메라였으면 풉니다. */
+        void releaseSubscription( uint64 id ) override;
+
         /** @brief 등록된 카메라입니다(등록 순서). 소유하지 않습니다. 카메라는 뷰마다 하나(화면 분할 · CCTV · 미리보기)라 많아야 수십 개이므로 선형 등록 목록으로 충분합니다. */
         RegistrationList<CameraComponent> _registeredCamera{ "CameraRegistry.Camera" };
         /** @brief 목록을 지킵니다. 등록/해제는 드물고(비동기 씬 로드는 워커에서 등록합니다), 조회는 게임 스레드입니다. */
