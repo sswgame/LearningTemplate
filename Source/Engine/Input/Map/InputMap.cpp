@@ -151,6 +151,7 @@ namespace sw
         , _playerSettings{}
         , _doubleClickTime{ InputMapDefaults::kDoubleClickTime }
         , _doubleClickMaxDistance{ InputMapDefaults::kDoubleClickMaxDistance }
+        , _dragThreshold{ InputMapDefaults::kDragThreshold }
         , _doubleTapTime{ InputMapDefaults::kDoubleTapTime }
         , _holdThreshold{ InputMapDefaults::kHoldThreshold }
         , _navRepeatDelay{ 0.4f }
@@ -177,6 +178,7 @@ namespace sw
         _defaultLayerName       = hashed_string( InputMapDefaults::kDefaultLayerName );
         _doubleClickTime        = InputMapDefaults::kDoubleClickTime;
         _doubleClickMaxDistance = InputMapDefaults::kDoubleClickMaxDistance;
+        _dragThreshold          = InputMapDefaults::kDragThreshold;
         _holdThreshold          = InputMapDefaults::kHoldThreshold;
         _totalElapsedTime       = 0.0f;
         _lastDeltaSeconds       = 0.0f;
@@ -753,6 +755,11 @@ namespace sw
         _doubleClickMaxDistance = MathUtil::clamp( pixels, 0.0f, InputMapDefaults::kDoubleClickDistanceMax );
     }
 
+    void InputMap::setDragThreshold( float32 pixels )
+    {
+        _dragThreshold = MathUtil::clamp( pixels, 0.0f, InputMapDefaults::kDragThresholdMax );
+    }
+
     void InputMap::setHoldThreshold( float32 seconds )
     {
         _holdThreshold = MathUtil::clamp( seconds, InputMapDefaults::kHoldThresholdMin, InputMapDefaults::kHoldThresholdMax );
@@ -873,6 +880,8 @@ namespace sw
             case ActionTrigger::Released:
             case ActionTrigger::Down:
             case ActionTrigger::Repeat: // 지연 · 간격 두 값이라 맵 값(`setNavRepeatTiming`)만 쓴다
+            case ActionTrigger::Click:  // 시간이 아니라 거리(`_dragThreshold`)를 본다
+            case ActionTrigger::Drag:
             case ActionTrigger::Count:
             {
                 return 0.0f;

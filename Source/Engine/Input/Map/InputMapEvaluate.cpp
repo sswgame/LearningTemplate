@@ -122,9 +122,13 @@ namespace sw
 
         if ( state._bPressed == SW_TRUE )
             advanceTapStreak( binding, state, requiredTaps, doubleWindow, mousePos );
+        advanceDrag( binding, state, mousePos );
 
         const bool bTriggerFired = evaluateTrigger( binding, state, deltaSeconds );
         state._bTriggered        = bTriggerFired ? SW_TRUE : SW_FALSE;
+        // 뗀 프레임까지는 `Click` 이 끌렸는지 봐야 하므로 끌기 표시는 판정 뒤에 지운다.
+        if ( state._bDown == SW_FALSE )
+            state._bDragged = SW_FALSE;
 
         if ( state._bDown == SW_TRUE )
             accum._bAnyDown = true;
@@ -154,9 +158,29 @@ namespace sw
         }
     }
 
+    bool InputMap::isPointerBinding( const ActionBinding& binding )
+    {
+        return binding._arrSlot[0]._deviceKind == InputDeviceKind::Mouse;
+    }
+
+    void InputMap::advanceDrag( const ActionBinding& binding, ActionBindingState& state, const int2& mousePos ) const
+    {
+        state._bDragStarted = SW_FALSE;
+        // 포인터가 없는 슬롯(키 · 패드)은 끌 수 없다 — 누름 위치는 그 누름의 마우스 위치가 아니다.
+        const bool bUndraggedPointerHeld = state._bDown == SW_TRUE && state._bDragged == SW_FALSE && isPointerBinding( binding );
+        if ( bUndraggedPointerHeld == false )
+            return;
+        const int2    moved  = mousePos - state._lastPress;
+        const float32 distSq = static_cast<float32>( moved._x * moved._x + moved._y * moved._y );
+        if ( distSq <= _dragThreshold * _dragThreshold )
+            return;
+        state._bDragged     = SW_TRUE;
+        state._bDragStarted = SW_TRUE;
+    }
+
     void InputMap::advanceTapStreak( const ActionBinding& binding, ActionBindingState& state, uint32 requiredTaps, float32 doubleWindow, const int2& mousePos ) const
     {
-        const bool bIsMouseBinding  = ( binding._arrSlot[0]._deviceKind == InputDeviceKind::Mouse );
+        const bool bIsMouseBinding  = isPointerBinding( binding );
         bool       bContinuesStreak = false;
 
         if ( state._timeSinceLastPress <= doubleWindow )
@@ -471,18 +495,34 @@ namespace sw
         return ( outValue._x != 0.0f || outValue._y != 0.0f );
     }
 
-    bool InputMap::areShortcutModifiersHeld( const ActionBinding& binding, SlotRead read ) const
+    bool InputMap::areShortcutModifiersExact( const ActionBinding& binding, SlotRead read ) const
     {
-        bool bModifierMatch = true;
-        if ( ( binding._modifierMask & ModifierKey::Ctrl ) != 0 )
-            bModifierMatch = bModifierMatch && ( isKeyboardKeyDown( Key::LeftControl, read ) || isKeyboardKeyDown( Key::RightControl, read ) );
-        if ( ( binding._modifierMask & ModifierKey::Shift ) != 0 )
-            bModifierMatch = bModifierMatch && ( isKeyboardKeyDown( Key::LeftShift, read ) || isKeyboardKeyDown( Key::RightShift, read ) );
-        if ( ( binding._modifierMask & ModifierKey::Alt ) != 0 )
-            bModifierMatch = bModifierMatch && ( isKeyboardKeyDown( Key::LeftAlt, read ) || isKeyboardKeyDown( Key::RightAlt, read ) );
-        if ( ( binding._modifierMask & ModifierKey::Super ) != 0 )
-            bModifierMatch = bModifierMatch && ( isKeyboardKeyDown( Key::LeftSuper, read ) || isKeyboardKeyDown( Key::RightSuper, read ) );
-        return bModifierMatch;
+        struct ModifierFamily
+        {
+            uint8 _bit;
+            Key   _left;
+            Key   _right;
+        };
+        static constexpr ModifierFamily kArrFamily[] = {
+            { ModifierKey::Ctrl, Key::LeftControl, Key::RightControl},
+            {ModifierKey::Shift,   Key::LeftShift,   Key::RightShift},
+            {  ModifierKey::Alt,     Key::LeftAlt,     Key::RightAlt},
+            {ModifierKey::Super,   Key::LeftSuper,   Key::RightSuper},
+        };
+        // 요구한 키만 보면 Ctrl+Shift+Z 가 Ctrl+Z 도 함께 발화시킨다. 눌린 수정 키 집합이 마스크와 같아야 한다.
+        // 방아쇠 키 자신이 수정 키(Ctrl+LeftShift)면 그 키는 늘 눌려 있으므로 비교에서 뺀다.
+        const bool bKeyboardTrigger = binding._arrSlot[0]._deviceKind == InputDeviceKind::Keyboard;
+        const Key  triggerKey       = static_cast<Key>( binding._arrSlot[0]._controlIndex );
+        for ( const ModifierFamily& family : kArrFamily )
+        {
+            if ( bKeyboardTrigger && ( triggerKey == family._left || triggerKey == family._right ) )
+                continue;
+            const bool bRequired = ( binding._modifierMask & family._bit ) != 0;
+            const bool bHeld     = isKeyboardKeyDown( family._left, read ) || isKeyboardKeyDown( family._right, read );
+            if ( bRequired != bHeld )
+                return false;
+        }
+        return true;
     }
 
     // 긴 케이스(스틱 · 가상 조이스틱 · 단축키 수정 키)는 함수로 뺐고, 남은 것은 종류마다 짧은 switch 디스패처라 나누지 않는다.
@@ -571,7 +611,7 @@ namespace sw
             }
             case BindingKind::Shortcut:
             {
-                if ( areShortcutModifiersHeld( binding, read ) == false )
+                if ( areShortcutModifiersExact( binding, read ) == false )
                     return false;
 
                 if ( isSlotDown( binding._arrSlot[0], read ) )
@@ -662,6 +702,14 @@ namespace sw
                     return stepNow > stepPrev;
                 }
                 return false;
+            }
+            case ActionTrigger::Click:
+            {
+                return state._bReleased == SW_TRUE && state._bDragged == SW_FALSE;
+            }
+            case ActionTrigger::Drag:
+            {
+                return state._bDragStarted == SW_TRUE;
             }
             case ActionTrigger::Count:
             {

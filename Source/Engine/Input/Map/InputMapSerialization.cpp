@@ -17,6 +17,15 @@
  * 두 XML 포맷은 용도가 다릅니다.
  *  - `loadFromResource()`, `saveToResource()`: Resource/ 의 InputMap XML(레이어, 액션, 기본 바인딩 정의)을 읽어 InputMap 을 처음 구성합니다.
  *    에디터 InputMap 패널에서 편집한 정의는 같은 형식으로 같은 위치에 다시 씁니다.
+ *  - `appendFromResource()`: 같은 형식의 다른 파일을 이미 읽은 맵에 더합니다(확장 모듈 · 게임 모드). 맵 전체 속성은 적지 않고, 있는 액션 · 레이어를 다시 정의하지 않는다.
+ *
+ * 정의 형식(`<InputMap>`) 요약 — 읽는 곳은 이 파일 하나다.
+ *  - 루트 속성(맵 전체, 기본 맵만): `defaultLayer`, `doubleClickTime`(초), `doubleClickMaxDistance`(픽셀), `holdThreshold`(초),
+ *    `dragThreshold`(픽셀, 클릭과 끌기를 가르는 거리 — `Click` · `Drag` 트리거), `virtualCursor`(Off · LeftStick · RightStick).
+ *  - `<layers><layer name priority enabled blockLower alwaysOn/></layers>` 와 `<layer name=…>` 묶음 안의 `<action>`.
+ *  - `<action name layer trigger valueType>` 아래 `<bind source="key|mouse|gamepad" code modifier=…>` 등. `modifier` 가 있는 키 바인딩은 단축키이고
+ *    수정 키가 정확히 그 조합이어야 발화한다(더 눌린 수정 키가 있으면 발화하지 않는다).
+ *  - `trigger`: Pressed · Released · Down · DoubleClicked · HoldThreshold · HoldAndRelease · Tap · Pulse · DoubleTap · Repeat · MultiTap · Click · Drag.
  *  - `saveUserBindings()`, `loadUserBindings()`: 플레이어가 키를 리매핑한 결과를 저장하고 복원하는 별도의 유저 바인딩 XML 입니다.
  *  - `actionTriggerFromName()`, `actionTriggerToName()`: 두 포맷이 함께 쓰는 ActionTrigger 이름과 enum 의 변환 테이블입니다.
  */
@@ -38,6 +47,7 @@ namespace sw
                 static constexpr const utf8* kAttrDoubleClick     = "doubleClickTime";
                 static constexpr const utf8* kAttrDoubleClickDist = "doubleClickMaxDistance";
                 static constexpr const utf8* kAttrHoldThreshold   = "holdThreshold";
+                static constexpr const utf8* kAttrDragThreshold   = "dragThreshold";
                 static constexpr const utf8* kAttrVirtualCursor   = "virtualCursor";
                 static constexpr const utf8* kAttrName            = "name";
                 static constexpr const utf8* kAttrPriority        = "priority";
@@ -121,6 +131,8 @@ namespace sw
                 {        "Repeat",         ActionTrigger::Repeat},
                 {      "MultiTap",       ActionTrigger::MultiTap},
                 {     "NavRepeat",         ActionTrigger::Repeat},
+                {         "Click",          ActionTrigger::Click},
+                {          "Drag",           ActionTrigger::Drag},
             };
 
             struct ValueTypeNameEntry
@@ -205,6 +217,80 @@ namespace sw
                 return true;
             }
 
+            struct ModifierNameEntry
+            {
+                const utf8* _pName;
+                uint8       _bit;
+            };
+            /** @brief `<bind modifier="Ctrl+Shift">` 의 이름과 수정 키 비트입니다. 읽기와 쓰기가 이 표 하나를 쓴다. */
+            static constexpr ModifierNameEntry kArrModifierNames[] = {
+                { "Ctrl",  ModifierKey::Ctrl},
+                {"Shift", ModifierKey::Shift},
+                {  "Alt",   ModifierKey::Alt},
+                {"Super", ModifierKey::Super},
+            };
+
+            /**
+             * @brief `modifier` 속성(`Ctrl`, `Ctrl+Shift` …)을 수정 키 마스크로 읽습니다.
+             * @return 빈 이름 · 모르는 이름 · 같은 이름 두 번이면 false 입니다. 모르는 이름을 다른 바인딩 종류로 바꿔 읽지 않는다 — 데이터를 고친다.
+             */
+            [[nodiscard]] static bool tryParseModifierNames( string_view text, uint8& outMask )
+            {
+                outMask = ModifierKey::None;
+                while ( true )
+                {
+                    const size_t      plusIndex = text.find( '+' );
+                    const string_view token     = text.substr( 0, plusIndex );
+                    uint8             bit       = ModifierKey::None;
+                    for ( const ModifierNameEntry& entry : kArrModifierNames )
+                    {
+                        if ( StringUtil::equals( token, entry._pName, true ) )
+                            bit = entry._bit;
+                    }
+                    if ( bit == ModifierKey::None || ( outMask & bit ) != 0 )
+                        return false;
+                    outMask = static_cast<uint8>( outMask | bit );
+                    if ( plusIndex == string_view::npos )
+                        return true;
+                    text = text.substr( plusIndex + 1 );
+                }
+            }
+
+            /** @brief 수정 키 마스크를 `modifier` 속성 글자(`Ctrl+Shift`)로 씁니다. */
+            static string formatModifierNames( uint8 modifierMask )
+            {
+                string text;
+                for ( const ModifierNameEntry& entry : kArrModifierNames )
+                {
+                    if ( ( modifierMask & entry._bit ) == 0 )
+                        continue;
+                    if ( text.empty() == false )
+                        text += "+";
+                    text += entry._pName;
+                }
+                return text;
+            }
+
+            /** @brief `Shortcut` 바인딩(수정 키 마스크 + 키)을 `<bind source="key" modifier="Ctrl+Shift">` 로 씁니다. 키가 아닌 슬롯이면 오류를 남기고 false 입니다. */
+            [[nodiscard]] static bool writeDefinitionShortcut( XMLNode actionNode, const utf8* pActionName, const ActionBinding& binding, const utf8* pTriggerName )
+            {
+                const InputSlot& slot = binding._arrSlot[0];
+                if ( slot._deviceKind != InputDeviceKind::Keyboard || binding._modifierMask == ModifierKey::None )
+                {
+                    SW_LOG_ERROR( "Action '%#' has a shortcut binding without a key or a modifier - not saved", pActionName );
+                    return false;
+                }
+                XMLNode bindNode = actionNode.appendChild( InputMapXML::kBind );
+                bindNode.appendAttribute( InputMapXML::kAttrSource, InputMapXML::kSourceKey );
+                bindNode.appendAttribute( InputMapXML::kAttrModifier, formatModifierNames( binding._modifierMask ).c_str() );
+                bindNode.appendAttribute( InputMapXML::kAttrCode, KeyCodeUtil::toName( static_cast<Key>( slot._controlIndex ) ) );
+                if ( pTriggerName != nullptr )
+                    bindNode.appendAttribute( InputMapXML::kAttrTrigger, pTriggerName );
+                writeBindingModifier( bindNode, binding );
+                bindNode.appendAttribute( InputMapXML::kAttrLayer, binding._layer.c_str() );
+                return true;
+            }
+
             /** @brief `Axis1DComposite` 바인딩을 `<axis1d>` 로 씁니다. 두 장치에 걸치면 오류를 남기고 false 입니다. */
             [[nodiscard]] static bool writeDefinitionAxis1D( XMLNode actionNode, const utf8* pActionName, const ActionBinding& binding, const utf8* pTriggerName )
             {
@@ -241,7 +327,7 @@ namespace sw
 
             /**
              * @brief 바인딩 하나를 `<InputMap>` 의 액션 노드 아래에, `loadFromResource` 가 읽는 형태로 씁니다.
-             * @return `<InputMap>` 형식으로 표현할 수 없는 종류(가상 조이스틱, 단축키, 아무 키)면 오류를 남기고 false 를 반환합니다.
+             * @return `<InputMap>` 형식으로 표현할 수 없는 종류(가상 조이스틱, 아무 키)면 오류를 남기고 false 를 반환합니다.
              *         빼고 쓰면 다시 읽을 때 그 바인딩이 조용히 사라지기 때문입니다.
              */
             [[nodiscard]] static bool writeDefinitionBinding( XMLNode actionNode, const utf8* pActionName, const ActionBinding& binding )
@@ -305,8 +391,11 @@ namespace sw
                         wheelNode.appendAttribute( InputMapXML::kAttrLayer, binding._layer.c_str() );
                         return true;
                     }
-                    case BindingKind::VirtualJoystick2D:
                     case BindingKind::Shortcut:
+                    {
+                        return writeDefinitionShortcut( actionNode, pActionName, binding, pTriggerName );
+                    }
+                    case BindingKind::VirtualJoystick2D:
                     case BindingKind::AnyKey:
                     case BindingKind::Count:
                     {
@@ -988,26 +1077,23 @@ namespace sw
                 const ActionTrigger trigger   = readTrigger( bindNode, Internal::InputMapXML::kAttrTrigger, _defaultTrigger );
                 const hashed_string bindLayer = resolveLayer( bindNode, Internal::InputMapXML::kAttrLayer );
 
+                // `modifier` 가 있으면 단축키다(수정 키 마스크 + 키, 정확 일치 — `InputMap::bindShortcut`). 두 키 조합은 `<chord>` 태그로 적는다.
                 const utf8* pModifierAttr = bindNode.findAttribute( Internal::InputMapXML::kAttrModifier );
-                if ( StringUtil::isNullOrEmpty( pModifierAttr ) == false )
+                if ( pModifierAttr != nullptr )
                 {
-                    Key modifierKey = KeyCodeUtil::fromName( pModifierAttr );
-                    if ( modifierKey == Key::Unknown )
+                    uint8      modifierMask = ModifierKey::None;
+                    const Key  triggerKey   = KeyCodeUtil::fromName( pCode );
+                    const bool bKeyShortcut = StringUtil::equals( pSource, Internal::InputMapXML::kSourceKey, true ) && triggerKey != Key::Unknown;
+                    if ( bKeyShortcut == false || Internal::tryParseModifierNames( pModifierAttr, modifierMask ) == false )
                     {
-                        if ( StringUtil::equals( pModifierAttr, "Ctrl", true ) || StringUtil::equals( pModifierAttr, "Control", true ) )
-                            modifierKey = Key::LeftControl;
-                        else if ( StringUtil::equals( pModifierAttr, "Shift", true ) )
-                            modifierKey = Key::LeftShift;
-                        else if ( StringUtil::equals( pModifierAttr, "Alt", true ) )
-                            modifierKey = Key::LeftAlt;
-                    }
-                    const Key triggerKey = KeyCodeUtil::fromName( pCode );
-                    if ( modifierKey != Key::Unknown && triggerKey != Key::Unknown )
-                    {
-                        _map.bindChord( _action, modifierKey, triggerKey, trigger, bindLayer );
-                        Internal::readBindingModifier( _map, _action, bindCountBefore, bindNode, _bValid );
+                        SW_LOG_ERROR( "Action '%#': <bind modifier=\"%#\" code=\"%#\"> is not a key shortcut (modifier is Ctrl, Shift, Alt, Super joined by '+')", _action.c_str(),
+                                      pModifierAttr, pCode );
+                        _bValid = false;
                         continue;
                     }
+                    _map.bindShortcut( _action, triggerKey, modifierMask, trigger, bindLayer );
+                    Internal::readBindingModifier( _map, _action, bindCountBefore, bindNode, _bValid );
+                    continue;
                 }
 
                 if ( StringUtil::equals( pSource, Internal::InputMapXML::kSourceKey, true ) )
@@ -1152,6 +1238,17 @@ namespace sw
 {
     bool InputMap::loadFromResource( string_view relativePath )
     {
+        return loadDefinition( relativePath, false );
+    }
+
+    bool InputMap::appendFromResource( string_view relativePath )
+    {
+        return loadDefinition( relativePath, true );
+    }
+
+    bool InputMap::loadDefinition( string_view relativePath, bool bAppend )
+    {
+        using InputMapXML = InputMapSerializationInternal::InputMapXML;
         XMLDocument doc;
         string      absPath;
         if ( doc.loadResource( relativePath, &absPath ) == false )
@@ -1160,11 +1257,28 @@ namespace sw
             return false;
         }
 
-        XMLNode root = doc.getRoot( InputMapSerializationInternal::InputMapXML::kRoot );
+        XMLNode root = doc.getRoot( InputMapXML::kRoot );
         if ( root.isValid() == false )
         {
             SW_LOG_WARNING( "Missing <InputMap> in %#", absPath );
             return false;
+        }
+
+        // 더하는 파일은 맵 전체 값을 정하지 않는다 — 두 파일이 각자 정하면 어느 값이 이기는지가 읽는 순서에 달린다.
+        if ( bAppend )
+        {
+            static constexpr const utf8* kArrMapWideAttr[] = { InputMapXML::kAttrDefaultLayer, InputMapXML::kAttrDoubleClick, InputMapXML::kAttrDoubleClickDist,
+                                                               InputMapXML::kAttrHoldThreshold, InputMapXML::kAttrDragThreshold, InputMapXML::kAttrVirtualCursor };
+            bool                         bMapWide          = false;
+            for ( const utf8* pAttr : kArrMapWideAttr )
+            {
+                if ( root.findAttribute( pAttr ) == nullptr )
+                    continue;
+                SW_LOG_ERROR( "InputMap %# is appended to another map but sets the map-wide attribute '%#' - only the base map sets it", absPath, pAttr );
+                bMapWide = true;
+            }
+            if ( bMapWide )
+                return false;
         }
 
         // 적지 않은 값은 `InputMapDefaults` 의 기본값이다. 깨진 값은 읽기 실패다.
@@ -1172,16 +1286,18 @@ namespace sw
         float32 dblClick      = InputMapDefaults::kDoubleClickTime;
         float32 dblDist       = InputMapDefaults::kDoubleClickMaxDistance;
         float32 holdThreshold = InputMapDefaults::kHoldThreshold;
-        InputMapSerializationInternal::readOptional( root, InputMapSerializationInternal::InputMapXML::kAttrDoubleClick, dblClick, bValid );
-        InputMapSerializationInternal::readOptional( root, InputMapSerializationInternal::InputMapXML::kAttrDoubleClickDist, dblDist, bValid );
-        InputMapSerializationInternal::readOptional( root, InputMapSerializationInternal::InputMapXML::kAttrHoldThreshold, holdThreshold, bValid );
+        float32 dragThreshold = InputMapDefaults::kDragThreshold;
+        InputMapSerializationInternal::readOptional( root, InputMapXML::kAttrDoubleClick, dblClick, bValid );
+        InputMapSerializationInternal::readOptional( root, InputMapXML::kAttrDoubleClickDist, dblDist, bValid );
+        InputMapSerializationInternal::readOptional( root, InputMapXML::kAttrHoldThreshold, holdThreshold, bValid );
+        InputMapSerializationInternal::readOptional( root, InputMapXML::kAttrDragThreshold, dragThreshold, bValid );
         if ( bValid == false )
         {
             SW_LOG_ERROR( "InputMap %# has invalid timing attributes", absPath );
             return false;
         }
-        const utf8*           pDefaultLayer  = root.findAttribute( InputMapSerializationInternal::InputMapXML::kAttrDefaultLayer );
-        const utf8*           pVirtualCursor = root.findAttribute( InputMapSerializationInternal::InputMapXML::kAttrVirtualCursor );
+        const utf8*           pDefaultLayer  = root.findAttribute( InputMapXML::kAttrDefaultLayer );
+        const utf8*           pVirtualCursor = root.findAttribute( InputMapXML::kAttrVirtualCursor );
         InputMapVirtualCursor virtualCursor  = InputMapVirtualCursor::Off;
         if ( pVirtualCursor != nullptr && InputMapSerializationInternal::tryParseVirtualCursor( pVirtualCursor, virtualCursor ) == false )
         {
@@ -1189,23 +1305,32 @@ namespace sw
             return false;
         }
 
-        clear();
-        setDoubleClickTime( dblClick );
-        setDoubleClickMaxDistance( dblDist );
-        setHoldThreshold( holdThreshold );
-        _virtualCursorStick = virtualCursor;
-        if ( StringUtil::isNullOrEmpty( pDefaultLayer ) == false )
-            _defaultLayerName = hashed_string( pDefaultLayer );
+        if ( bAppend == false )
+        {
+            clear();
+            setDoubleClickTime( dblClick );
+            setDoubleClickMaxDistance( dblDist );
+            setHoldThreshold( holdThreshold );
+            setDragThreshold( dragThreshold );
+            _virtualCursorStick = virtualCursor;
+            if ( StringUtil::isNullOrEmpty( pDefaultLayer ) == false )
+                _defaultLayerName = hashed_string( pDefaultLayer );
+        }
 
-        XMLNode layersNode = root.findChild( InputMapSerializationInternal::InputMapXML::kLayers );
+        XMLNode layersNode = root.findChild( InputMapXML::kLayers );
         if ( layersNode.isValid() )
         {
-            for ( XMLNode layerNode = layersNode.findChild( InputMapSerializationInternal::InputMapXML::kLayer ); layerNode.isValid();
-                  layerNode         = layerNode.findNextSibling( InputMapSerializationInternal::InputMapXML::kLayer ) )
+            for ( XMLNode layerNode = layersNode.findChild( InputMapXML::kLayer ); layerNode.isValid(); layerNode = layerNode.findNextSibling( InputMapXML::kLayer ) )
             {
-                const utf8* pLayerName = layerNode.findAttribute( InputMapSerializationInternal::InputMapXML::kAttrName );
+                const utf8* pLayerName = layerNode.findAttribute( InputMapXML::kAttrName );
                 if ( StringUtil::isNullOrEmpty( pLayerName ) )
                     continue;
+                if ( bAppend && hasLayer( hashed_string( pLayerName ) ) )
+                {
+                    SW_LOG_ERROR( "InputMap %# redefines layer '%#' that the map already has - put actions in it with <layer name=...> instead", absPath, pLayerName );
+                    bValid = false;
+                    continue;
+                }
                 InputMapSerializationInternal::LayerSettings settings;
                 InputMapSerializationInternal::readLayerSettings( layerNode, settings, bValid );
                 registerLayer( hashed_string( pLayerName ), settings._priority, settings._bEnabled, settings._bBlockLower, settings._bAlwaysOn );
@@ -1214,9 +1339,28 @@ namespace sw
 
         ensureLayer( _defaultLayerName, 0, true, false );
 
-        for ( XMLNode layerNode = root.findChild( InputMapSerializationInternal::InputMapXML::kLayer ); layerNode.isValid(); layerNode = layerNode.findNextSibling( InputMapSerializationInternal::InputMapXML::kLayer ) )
+        // 더할 때는 이미 있는 액션을 다시 정의하지 못한다(두 파일이 같은 이름을 쓰면 바인딩이 섞인다). 더한 액션은 끝에서 같은 레이어 충돌을 본다.
+        vector<hashed_string> listLoadedAction;
+        const auto            loadAction = [&]( XMLNode actionNode, string_view inheritedLayer )
         {
-            const utf8* pLayerName = layerNode.findAttribute( InputMapSerializationInternal::InputMapXML::kAttrName );
+            const utf8* pActionName = actionNode.findAttribute( InputMapXML::kAttrName );
+            if ( bAppend && StringUtil::isNullOrEmpty( pActionName ) == false )
+            {
+                const hashed_string actionName( pActionName );
+                if ( hasAction( actionName ) )
+                {
+                    SW_LOG_ERROR( "InputMap %# defines action '%#' that the map already has", absPath, pActionName );
+                    bValid = false;
+                    return;
+                }
+                listLoadedAction.push_back( actionName );
+            }
+            InputMapActionLoader::load( *this, actionNode, inheritedLayer, bValid );
+        };
+
+        for ( XMLNode layerNode = root.findChild( InputMapXML::kLayer ); layerNode.isValid(); layerNode = layerNode.findNextSibling( InputMapXML::kLayer ) )
+        {
+            const utf8* pLayerName = layerNode.findAttribute( InputMapXML::kAttrName );
             if ( StringUtil::isNullOrEmpty( pLayerName ) )
                 continue;
             if ( hasLayer( hashed_string( pLayerName ) ) == false )
@@ -1225,17 +1369,15 @@ namespace sw
                 InputMapSerializationInternal::readLayerSettings( layerNode, settings, bValid );
                 registerLayer( hashed_string( pLayerName ), settings._priority, settings._bEnabled, settings._bBlockLower, settings._bAlwaysOn );
             }
-            for ( XMLNode actionNode = layerNode.findChild( InputMapSerializationInternal::InputMapXML::kAction ); actionNode.isValid();
-                  actionNode         = actionNode.findNextSibling( InputMapSerializationInternal::InputMapXML::kAction ) )
+            for ( XMLNode actionNode = layerNode.findChild( InputMapXML::kAction ); actionNode.isValid(); actionNode = actionNode.findNextSibling( InputMapXML::kAction ) )
             {
-                InputMapActionLoader::load( *this, actionNode, pLayerName, bValid );
+                loadAction( actionNode, pLayerName );
             }
         }
 
-        for ( XMLNode actionNode = root.findChild( InputMapSerializationInternal::InputMapXML::kAction ); actionNode.isValid();
-              actionNode         = actionNode.findNextSibling( InputMapSerializationInternal::InputMapXML::kAction ) )
+        for ( XMLNode actionNode = root.findChild( InputMapXML::kAction ); actionNode.isValid(); actionNode = actionNode.findNextSibling( InputMapXML::kAction ) )
         {
-            InputMapActionLoader::load( *this, actionNode, _defaultLayerName.view(), bValid );
+            loadAction( actionNode, _defaultLayerName.view() );
         }
 
         if ( bValid == false )
@@ -1246,7 +1388,47 @@ namespace sw
         // 가상 커서가 마우스로 바꾸는 스틱 · 버튼을 액션에 따로 묶으면 한 입력이 두 입력이 된다 — 읽기를 실패로 돌려 데이터를 고치게 한다.
         if ( countVirtualCursorConflicts( absPath ) > 0 )
             return false;
-        return true;
+        uint32 sameLayerConflictCount = 0;
+        for ( const hashed_string& actionName : listLoadedAction )
+        {
+            sameLayerConflictCount += countSameLayerInputConflicts( absPath, actionName );
+        }
+        return sameLayerConflictCount == 0;
+    }
+
+    uint32 InputMap::countSameLayerInputConflicts( string_view sourceName, const hashed_string& action ) const
+    {
+        const ActionEntry* pEntry = findAction( action );
+        if ( pEntry == nullptr )
+            return 0;
+        uint32 conflictCount = 0;
+        for ( const ActionBinding& binding : pEntry->_listBinding )
+        {
+            const uint32 slotCount = BindingKinds::getConflictSlotCount( binding._kind );
+            if ( slotCount == 0 )
+                continue;
+            for ( const hashed_string& otherName : _listActionName )
+            {
+                const ActionEntry* pOther = otherName == action ? nullptr : findAction( otherName );
+                if ( pOther == nullptr )
+                    continue;
+                for ( const ActionBinding& other : pOther->_listBinding )
+                {
+                    bool bSameInput = other._kind == binding._kind && other._layer == binding._layer && other._trigger == binding._trigger &&
+                                      other._modifierMask == binding._modifierMask;
+                    for ( uint32 slotIndex = 0; bSameInput && slotIndex < slotCount; ++slotIndex )
+                    {
+                        bSameInput = other._arrSlot[slotIndex] == binding._arrSlot[slotIndex];
+                    }
+                    if ( bSameInput == false )
+                        continue;
+                    SW_LOG_ERROR( "InputMap %#: action '%#' uses the same input as '%#' in layer '%#' - one press would fire both", sourceName, action.c_str(), otherName.c_str(),
+                                  binding._layer.c_str() );
+                    ++conflictCount;
+                }
+            }
+        }
+        return conflictCount;
     }
 
     uint32 InputMap::countVirtualCursorConflicts( string_view sourceName ) const
@@ -1302,6 +1484,7 @@ namespace sw
         root.appendAttribute( InputMapXML::kAttrDoubleClick, _doubleClickTime );
         root.appendAttribute( InputMapXML::kAttrDoubleClickDist, _doubleClickMaxDistance );
         root.appendAttribute( InputMapXML::kAttrHoldThreshold, _holdThreshold );
+        root.appendAttribute( InputMapXML::kAttrDragThreshold, _dragThreshold );
         if ( _virtualCursorStick != InputMapVirtualCursor::Off )
             root.appendAttribute( InputMapXML::kAttrVirtualCursor, InputMapSerializationInternal::toVirtualCursorName( _virtualCursorStick ) );
 

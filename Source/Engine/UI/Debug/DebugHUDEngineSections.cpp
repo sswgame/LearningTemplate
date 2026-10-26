@@ -78,6 +78,8 @@ namespace sw
                         return "dev console";
                     case InputKeyboardFocus::UI:
                         return "UI text";
+                    case InputKeyboardFocus::Tool:
+                        return "tool window";
                     case InputKeyboardFocus::Count:
                         return "?";
                 }

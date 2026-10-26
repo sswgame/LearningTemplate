@@ -78,6 +78,11 @@ namespace sw
         Game = 0,   ///< 게임 코드와 통합 InputMap 이 받습니다.
         DevConsole, ///< 게임 창의 개발 콘솔이 열려 있는 동안 받습니다.
         UI,         ///< 런타임 UI 의 글자 입력 필드가 포커스를 가진 동안 받습니다(`UISystem` 이 잡고 놓습니다).
+        /**
+         * @brief 게임 화면 밖의 도구 창(에디터 패널 · 떼어 낸 OS 창)이 키보드를 가진 동안 받습니다. 도구는 자기 맵을 `InputMap::setKeyboardFocusIgnored` 로 읽습니다.
+         * @details 도구 창의 키도 이 매니저의 장치에 넣어 입력 맵 하나로 판정하되(에디터 단축키), 그동안 게임 쪽 조회는 그 키를 보지 않는다 — Ctrl+S 가 게임의 S 로 새지 않게.
+         */
+        Tool,
         Count
     };
 
