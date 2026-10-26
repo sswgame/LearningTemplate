@@ -11,6 +11,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 
 #include "GameFramework/Base/Online/Directory/ServerSelection.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -65,6 +66,7 @@ namespace sw
         unordered_map<uint64, uint64> _mapRequestToServer; ///< 기록 읽기 요청 id → 서버 id
         string                        _kind;
         EphemeralStoreRouter*         _pRouter;
+        Subscription                  _replyOwner;     ///< 라우터 답의 주인 몫(`openReplyOwner`). 놓으면 기다리던 답이 지워진다
         uint64                        _indexRequestID; ///< 기다리는 색인 읽기(0 = 없음)
         int64                         _refreshPeriodMs;
         int64                         _lastRefreshStartMs;

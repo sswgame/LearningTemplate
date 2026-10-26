@@ -259,7 +259,7 @@ hostgpu 항목은 `--required_backends=<이름,…>`(정책 `requiredBackends.<�
 같은 파일에 `SW_TEST_CASE` 가 하나는 있어야 하고(`CheckTestSuites`) 동적 이름은 `TestPolicy.json` 비용표에 적지 못하므로 예상 초를 마지막 인자로 줍니다(안 주면 기본 0.05 초라 한 샤드에 몰린다). 예: `Test/AppTest/TestAppScenario.cpp`.
 **백엔드 루프를 한 케이스 안에서 돌지 말고** `SW_TEST_CASE_PER_PARAMETER( 스위트, 이름, 목록 함수, 예상 초 )` 로 백엔드마다 케이스(`스위트.이름.dx12` …)를 둡니다. 본문은 `void ( const utf8* pParameter )` 이고 하나가 못 돌면(`SW_TEST_SKIP`) 그 백엔드만 건너뛰며 하나가 져도 나머지는 돕니다. 정책의 `raceCases` 는 `스위트.이름.*` 로 가리킵니다(백엔드끼리 견주는 케이스는 한 케이스로 둔다).
 
-**판정이나 보고 형식을 더하려면** 실행기를 고치지 않고 `ITestCaseJudge`(`TestJudge.h`, `TestRegistry::registerJudge`)나 `ITestRunListener`(`TestReport.h`, `registerListener`)를 하나 더 붙입니다.
+**판정이나 보고 형식을 더하려면** 실행기를 고치지 않고 `ITestCaseJudge`(`TestJudge.h`, `TestRegistry::registerJudge`)나 `ITestRunListener`(`TestReport.h`, `registerListener`)를 하나 더 붙입니다. 둘 다 구독(`sw::Subscription`)을 돌려주고, 구독이 사라지면 떨어집니다.
 
 ## 함정과 주의
 

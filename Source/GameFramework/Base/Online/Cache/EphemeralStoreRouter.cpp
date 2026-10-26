@@ -45,18 +45,16 @@ namespace sw
         }
         _listSubscriber.clear();
 
-        unordered_map<uint64, ReplyDelegate> mapPending;
+        unordered_map<uint64, PendingReply> mapPending;
         mapPending = std::move( _mapRequestToReply );
         _mapRequestToReply.clear();
         _pStore = nullptr;
-        for ( auto& [requestID, onReply] : mapPending )
+        for ( auto& [requestID, pending] : mapPending )
         {
-            if ( onReply.isBound() == false )
-                continue;
             EphemeralReply reply;
             reply._requestID = requestID;
             reply._result    = EphemeralResult::Unavailable;
-            onReply( reply );
+            pending._onReply( reply );
         }
     }
 
@@ -73,10 +71,9 @@ namespace sw
             const auto replyIt = _mapRequestToReply.find( reply._requestID );
             if ( replyIt == _mapRequestToReply.end() )
                 continue;
-            const ReplyDelegate onReply = replyIt->second;
+            const ReplyDelegate onReply = replyIt->second._onReply;
             _mapRequestToReply.erase( replyIt );
-            if ( onReply.isBound() )
-                onReply( reply );
+            onReply( reply );
             ++dispatchCount;
         }
 
@@ -99,13 +96,26 @@ namespace sw
         return dispatchCount;
     }
 
-    uint64 EphemeralStoreRouter::submit( const EphemeralRequest& request, ReplyDelegate onReply )
+    void EphemeralStoreRouter::submit( const EphemeralRequest& request )
     {
         if ( _pStore == nullptr )
             ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
+        (void)_pStore->submit( request ); // 답은 pump 가 주인 없는 id 로 보고 버린다
+    }
+
+    uint64 EphemeralStoreRouter::submit( const EphemeralRequest& request, ReplyDelegate onReply, const Subscription& owner )
+    {
+        if ( _pStore == nullptr )
+            ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
+        const uint64 ownerID = findIssuedID( owner );
+        if ( ownerID == 0 || onReply.isBound() == false )
+        {
+            SW_LOG_ERROR( "EphemeralStoreRouter: submit %# - nothing is submitted", ownerID == 0 ? "without a live reply owner of this router" : "with an empty delegate" );
+            return 0;
+        }
         const uint64 requestID = _pStore->submit( request );
         // 메모리 앞은 맡기는 시점에 답을 큐에 넣지만 꺼내는 것은 다음 pump 다 — 등록이 늦지 않다.
-        _mapRequestToReply.emplace( requestID, onReply );
+        _mapRequestToReply.emplace( requestID, PendingReply{ onReply, ownerID } );
         return requestID;
     }
 
@@ -128,6 +138,14 @@ namespace sw
 
     void EphemeralStoreRouter::releaseSubscription( uint64 id )
     {
+        // 주인 몫이었으면 그 답들을 버린다(지우기는 마지막 원소를 이 자리로 옮기므로 같은 자리를 다시 본다).
+        for ( auto replyIt = _mapRequestToReply.begin(); replyIt != _mapRequestToReply.end(); )
+        {
+            if ( replyIt->second._ownerID == id )
+                replyIt = _mapRequestToReply.erase( replyIt );
+            else
+                ++replyIt;
+        }
         const std::optional<size_t> index = VectorUtil::findIndexBy<&ChannelSubscriber::_subscriptionID>( _listSubscriber, id );
         if ( index.has_value() == false )
             return;

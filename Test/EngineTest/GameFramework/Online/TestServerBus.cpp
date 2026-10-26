@@ -154,8 +154,9 @@ SW_TEST_CASE( ServerBusTest, EphemeralBusSharesTheCacheFrontWithOtherServices )
         EphemeralServerBus bus{ &router, 1 };
         bus.subscribe( "account.revoke" );
         // 같은 앞으로 다른 서비스가 캐시 요청을 맡긴다. 버스가 앞을 혼자 쓰면 이 답을 버스가 가져간다.
+        const Subscription replyOwner = router.openReplyOwner();
         (void)router.submit( EphemeralRequest::makeGet( "presence:7" ),
-                             SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &TestServerBusInternal::ReplyRecorder::onReply, &recorder ) );
+                             SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &TestServerBusInternal::ReplyRecorder::onReply, &recorder ), replyOwner );
         TestServerBusInternal::publishText( bus, "account.revoke", "acct-7" );
         (void)router.pump();
         vector<ServerBusMessage> listMessage;

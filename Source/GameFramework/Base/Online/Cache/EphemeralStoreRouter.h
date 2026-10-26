@@ -6,8 +6,9 @@
  *          - 채널 구독은 `subscribe` 가 돌려준 구독(`Subscription`)이 소유한다. 구독이 사라지면 빠지고, 라우터가 먼저 내려가면(`shutdown`) 무효가 된다.
  *          - 델리게이트 안에서 `submit`, `subscribe`, 구독의 해제를 해도 된다(지금 나눠 주는 목록은 복사본이다).
  *          - 같은 채널을 둘이 구독하면 프런트에는 한 번만 구독하고, 마지막 구독자가 나갈 때 해제한다.
- *          - `shutdown` 은 답을 기다리는 요청마다 `Unavailable` 답을 한 번 부른다. 델리게이트는 언제나 정확히 한 번 불린다(`cancel` 한 것은 제외).
- *          - 델리게이트의 주인이 라우터보다 먼저 종료하면 기다리던 요청을 `cancel` 한다. 아니면 뒤의 `pump` 나 `shutdown` 이 사라진 객체를 부른다.
+ *          - `shutdown` 은 답을 기다리는 요청마다 `Unavailable` 답을 한 번 부른다. 델리게이트는 언제나 정확히 한 번 불린다(주인 몫을 놓은 것은 제외).
+ *          - 답을 받는 요청은 주인 몫(`openReplyOwner` 의 구독)과 함께 맡긴다. 주인이 그 구독을 놓으면 맡긴 요청의 델리게이트가 모두 지워진다 —
+ *            주인이 라우터보다 먼저 내려가도 뒤의 `pump` 나 `shutdown` 이 사라진 객체를 부르지 않는다. 답을 보지 않는 쓰기는 주인 없이 맡긴다.
  *          `IEphemeralStore::pollReplies` 와 `pollMessages` 는 프런트 전체의 것을 꺼내므로, 서비스 둘이 직접 부르면 서로의 답을 가져간다.
  *          gRPC 와 Nakama 런타임처럼 런타임이 나눠 주는 구조다.
  */
@@ -48,10 +49,18 @@ namespace sw
         /** @brief 앞의 답 · 메시지를 꺼내 델리게이트에 나눠 줍니다. 나눠 준 수입니다. */
         int32 pump();
 
-        /** @brief 요청을 맡깁니다. @p onReply 가 비어 있으면 답을 버립니다(발행 · 지우기처럼 결과를 보지 않는 쓰기). 요청 id 입니다. */
-        uint64 submit( const EphemeralRequest& request, ReplyDelegate onReply );
-        /** @brief 보낸 요청의 델리게이트를 지웁니다. 답이 와도 버립니다(요청 자체는 캐시에서 이미 실행됐을 수 있다). 없거나 끝난 요청이면 아무것도 하지 않는다. */
-        void cancel( uint64 requestID ) { _mapRequestToReply.erase( requestID ); }
+        /** @brief 답을 보지 않는 요청(발행 · 지우기처럼 결과를 보지 않는 쓰기)을 맡깁니다. 답은 버립니다. */
+        void submit( const EphemeralRequest& request );
+        /**
+         * @brief 요청을 맡기고 답을 @p onReply 로 받습니다. 요청 id 입니다.
+         * @details @p owner 는 이 라우터의 `openReplyOwner` 가 준 살아 있는 구독이어야 합니다. 아니거나 델리게이트가 비었으면 오류를 남기고 맡기지 않으며 0 입니다.
+         */
+        uint64 submit( const EphemeralRequest& request, ReplyDelegate onReply, const Subscription& owner );
+        /**
+         * @brief 답 델리게이트 주인의 몫을 엽니다. 주인이 멤버로 들고, 놓으면(소멸 · `reset`) 그 몫으로 맡긴 기다리는 요청의 델리게이트를 모두 지웁니다.
+         * @details 요청 자체는 캐시에서 이미 실행됐을 수 있다 — 답만 버린다. 라우터가 먼저 내려가면(`shutdown`) 몫은 무효가 된다.
+         */
+        [[nodiscard]] Subscription openReplyOwner() { return issueSubscription( _nextSubscriptionID++ ); }
         /**
          * @brief @p channel 을 구독하고 그 구독을 돌려줍니다. 구독이 사라지면 빠지고, 채널의 마지막 구독자면 앞의 구독도 닫습니다.
          * @details 초기화 전이거나 델리게이트가 비었으면 오류를 남기고 빈 구독을 돌려줍니다(예전에는 0 을 조용히 돌려줬다).
@@ -68,17 +77,22 @@ namespace sw
             MessageDelegate _onMessage{};
             uint64          _subscriptionID{ 0 }; ///< 이 줄을 소유하는 구독의 번호
         };
+        struct PendingReply
+        {
+            ReplyDelegate _onReply{};
+            uint64        _ownerID{ 0 }; ///< 맡긴 주인 몫의 구독 번호(`openReplyOwner`)
+        };
 
         bool hasChannelSubscriber( string_view channel ) const;
-        /** @brief 구독 @p id 가 풀렸습니다. 줄을 지우고 채널의 마지막 구독자였으면 앞의 구독을 닫습니다. */
+        /** @brief 구독 @p id 가 풀렸습니다. 채널 구독이면 줄을 지우고 채널의 마지막 구독자였으면 앞의 구독을 닫습니다. 주인 몫이면 그 몫의 기다리는 답을 지웁니다. */
         void releaseSubscription( uint64 id ) override;
 
-        vector<EphemeralReply>               _listReplyScratch;
-        vector<EphemeralMessage>             _listMessageScratch;
-        vector<MessageDelegate>              _listDispatchScratch;
-        vector<ChannelSubscriber>            _listSubscriber;
-        unordered_map<uint64, ReplyDelegate> _mapRequestToReply;
-        IEphemeralStore*                     _pStore;
-        uint64                               _nextSubscriptionID;
+        vector<EphemeralReply>              _listReplyScratch;
+        vector<EphemeralMessage>            _listMessageScratch;
+        vector<MessageDelegate>             _listDispatchScratch;
+        vector<ChannelSubscriber>           _listSubscriber;
+        unordered_map<uint64, PendingReply> _mapRequestToReply;
+        IEphemeralStore*                    _pStore;
+        uint64                              _nextSubscriptionID;
     };
 } // namespace sw

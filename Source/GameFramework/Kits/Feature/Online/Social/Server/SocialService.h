@@ -19,6 +19,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 
 #include "GameFramework/Base/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -159,6 +160,7 @@ namespace sw
         EventBuffer<SocialCompletion>          _completionBuffer;
         EventBuffer<SocialNotification>        _notificationBuffer;
         SocialServiceDependencies              _dependencies;
+        Subscription                           _replyOwner; ///< 라우터 답의 주인 몫(`initialize` 가 열고 `shutdown` 이 놓는다)
         uint64                                 _nextQueryID;
         int32                                  _pendingCount;
     };

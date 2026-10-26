@@ -266,6 +266,7 @@ namespace sw
         EventBuffer<AchievementUnlock>                     _unlockBuffer;
         EventBuffer<LeaderboardCompletion>                 _completionBuffer;
         LeaderboardServiceDependencies                     _dependencies;
+        Subscription                                       _replyOwner; ///< 라우터 답의 주인 몫(`initialize` 가 열고 `shutdown` 이 놓는다)
         ServiceScheduler*                                  _pScheduler;
         uint64                                             _nextQueryID;
         uint64                                             _nextSettlementID;

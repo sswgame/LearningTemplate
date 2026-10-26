@@ -13,18 +13,19 @@ namespace sw
         , _screenHalfWidth{ 10.0f }
         , _listenerIndex{ 0 }
         , _mode{ AudioSpatialMode::World3D }
+        , _sceneAudioSubscription{}
     {
     }
 
     void AudioListenerComponent::onRegister( GameObjectManager& manager )
     {
         SceneComponent::onRegister( manager );
-        manager.getSubsystem<sw::SceneAudio>().addListener( this );
+        _sceneAudioSubscription = manager.getSubsystem<sw::SceneAudio>().addListener( this );
     }
 
     void AudioListenerComponent::onUnregister( GameObjectManager& manager )
     {
-        manager.getSubsystem<sw::SceneAudio>().removeListener( this );
+        _sceneAudioSubscription.reset();
         SceneComponent::onUnregister( manager );
     }
 

@@ -5,6 +5,8 @@
  *          판정기(`TestJudge.h`)가 맡는다. 틀 자체를 테스트하는 케이스는 지역 레지스트리를 만들어 쓴다(결과 줄 머리가 `(nested) `).
  */
 #pragma once
+#include "Core/Delegate/Subscription.h"
+
 #include "TestFramework/TestCatalog.h"
 #include "TestFramework/TestContext.h"
 #include "TestFramework/TestEnvironment.h"
@@ -14,7 +16,7 @@
 
 namespace test
 {
-    class TestRegistry
+    class TestRegistry : private sw::SubscriptionSource
     {
     public:
         TestRegistry();
@@ -59,12 +61,10 @@ namespace test
         /** @brief 이 실행의 씨앗 — 읽은 케이스가 지면 재현 명령에 `--test_seed=` 가 붙는다. */
         uint32 getRandomSeed();
 
-        /** @brief 보고 리스너를 더합니다(기본 콘솔 보고기 뒤에 불린다). 수명은 부른 쪽이 레지스트리보다 길게 쥔다. */
-        void registerListener( ITestRunListener* pListener );
-        void unregisterListener( ITestRunListener* pListener );
-        /** @brief 케이스 판정기를 더합니다(기본 판정기 뒤에 불린다). 수명은 부른 쪽이 쥔다. */
-        void registerJudge( ITestCaseJudge* pJudge );
-        void unregisterJudge( ITestCaseJudge* pJudge );
+        /** @brief 보고 리스너를 더합니다(기본 콘솔 보고기 뒤에 불린다). 리스너는 부른 쪽이 쥐고, 돌려받은 구독이 사라지면 떨어집니다. */
+        [[nodiscard]] sw::Subscription registerListener( ITestRunListener* pListener );
+        /** @brief 케이스 판정기를 더합니다(기본 판정기 뒤에 불린다). 판정기는 부른 쪽이 쥐고, 돌려받은 구독이 사라지면 떨어집니다. */
+        [[nodiscard]] sw::Subscription registerJudge( ITestCaseJudge* pJudge );
 
         TestCatalog&          getCatalog() { return _catalog; }
         const TestCatalog&    getCatalog() const { return _catalog; }
@@ -95,6 +95,8 @@ namespace test
         CaseRecord runCase( const TestCaseInfo& testInfo, uint32 iteration );
         /** @brief 고른 스위트 가운데 케이스가 전부 환경 탓으로 건너뛴 것(샤드에 갈린 스위트는 빼고)을 셉니다. */
         sw::vector<sw::string> collectEmptySuites( const sw::vector<CaseRecord>& listRecord ) const;
+        /** @brief 리스너 · 판정기 구독이 풀렸습니다(@p id 는 등록한 주소). 두 목록에서 그 주소를 뺍니다. */
+        void releaseSubscription( uint64 id ) override;
 
         TestCatalog                   _catalog;
         TestRunOptions                _options;

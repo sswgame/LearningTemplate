@@ -39,9 +39,8 @@ namespace sw
         if ( _pRouter == nullptr )
             return;
         const ServerDescriptor& descriptor = _status._descriptor;
-        (void)_pRouter->submit( EphemeralRequest::makeErase( ServerRecord::makeRecordKey( descriptor._serverID ) ), EphemeralStoreRouter::ReplyDelegate{} );
-        (void)_pRouter->submit( EphemeralRequest::makeScoreRemove( ServerRecord::makeIndexKey( descriptor._kind ), ServerRecord::makeMember( descriptor._serverID ) ),
-                                EphemeralStoreRouter::ReplyDelegate{} );
+        _pRouter->submit( EphemeralRequest::makeErase( ServerRecord::makeRecordKey( descriptor._serverID ) ) );
+        _pRouter->submit( EphemeralRequest::makeScoreRemove( ServerRecord::makeIndexKey( descriptor._kind ), ServerRecord::makeMember( descriptor._serverID ) ) );
         _pRouter = nullptr;
     }
 
@@ -74,11 +73,9 @@ namespace sw
     {
         _status._heartbeatMs               = nowMs;
         const ServerDescriptor& descriptor = _status._descriptor;
-        (void)_pRouter->submit( EphemeralRequest::makeSet( ServerRecord::makeRecordKey( descriptor._serverID ), ServerRecord::encode( _status ), kRecordTtlMs ),
-                                EphemeralStoreRouter::ReplyDelegate{} );
-        (void)_pRouter->submit( EphemeralRequest::makeScoreSet( ServerRecord::makeIndexKey( descriptor._kind ), ServerRecord::makeMember( descriptor._serverID ),
-                                                                nowMs / constant::kMillisecondsPerSecond ),
-                                EphemeralStoreRouter::ReplyDelegate{} );
+        _pRouter->submit( EphemeralRequest::makeSet( ServerRecord::makeRecordKey( descriptor._serverID ), ServerRecord::encode( _status ), kRecordTtlMs ) );
+        _pRouter->submit( EphemeralRequest::makeScoreSet( ServerRecord::makeIndexKey( descriptor._kind ), ServerRecord::makeMember( descriptor._serverID ),
+                                                          nowMs / constant::kMillisecondsPerSecond ) );
         _lastWrittenMs = nowMs;
         _bDirty        = SW_FALSE;
     }

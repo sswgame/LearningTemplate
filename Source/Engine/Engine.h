@@ -70,7 +70,7 @@ namespace sw
      * @class Engine
      * @brief 코어 매니저들을 소유하고 메인 루프(tick)를 돌립니다.
      */
-    class SW_API Engine
+    class SW_API Engine : private SubscriptionSource
     {
     public:
         Engine();
@@ -116,12 +116,11 @@ namespace sw
         // 도우미
         // ----------------------------------------------------------------------
         /**
-         * @brief 프레임 관찰자(`IEngineFrameObserver`)를 붙입니다. 붙인 순서대로 부르고, 같은 관찰자를 두 번 붙이지 않습니다.
-         * @details 루프는 관찰자가 무엇인지 모릅니다(자동화 시나리오 · 시퀀서 · AI 구동기). 수명은 붙인 쪽이 쥐고, 없애기 전에 `unregisterFrameObserver` 로 뗍니다.
+         * @brief 프레임 관찰자(`IEngineFrameObserver`)를 붙입니다. 붙인 순서대로 부릅니다. 돌려받은 구독이 사라지면 떨어집니다.
+         * @details 루프는 관찰자가 무엇인지 모릅니다(자동화 시나리오 · 시퀀서 · AI 구동기). 관찰자와 구독은 붙인 쪽이 쥐고, 구독을 관찰자보다 먼저 놓습니다.
+         *          nullptr 이면 오류를 남기고 빈 구독을 돌려줍니다. 구독 하나가 등록 하나라 같은 관찰자를 두 번 붙이면 두 번 불립니다. `shutdown` 은 남은 구독을 모두 끊습니다.
          */
-        void registerFrameObserver( IEngineFrameObserver* pObserver );
-        /** @brief 붙인 프레임 관찰자를 뗍니다. 붙어 있지 않으면 아무것도 하지 않습니다. */
-        void unregisterFrameObserver( IEngineFrameObserver* pObserver );
+        [[nodiscard]] Subscription registerFrameObserver( IEngineFrameObserver* pObserver );
 
         void setPresentHook( sw::PresentHookDelegate presentHook );
         void setPostPresentHook( sw::PresentHookDelegate postPresentHook );
@@ -204,6 +203,8 @@ namespace sw
         void updateRuntimeUI( const HostViewTarget& mainOutput, uint32 vpWidth, uint32 vpHeight );
         /** @brief 머티리얼을 올리고 렌더 프레임 패킷을 채워 렌더 스레드에 냅니다. Server 타깃에는 렌더러가 없어 아무 일도 하지 않습니다. */
         void submitRenderPacket( float32 deltaTime, const HostViewTargets& views, const ViewCameraProviderDelegate& sceneViewCameraProvider );
+        /** @brief 프레임 관찰자 구독이 풀렸습니다(@p id 는 관찰자 주소). 목록에서 뗍니다. */
+        void releaseSubscription( uint64 id ) override;
 
     private:
         /**
@@ -228,6 +229,8 @@ namespace sw
          *        종료 코드를 내면 `requestQuit` 입니다. 텔레메트리(기동 단계 `Telemetry` 가 붙인다)와 App 의 진단 · 자동화도 여기로 붙습니다.
          */
         vector<IEngineFrameObserver*> _listFrameObserver;
+        /** @brief 기동 단계 `Telemetry` 가 붙인 텔레메트리 관찰자의 구독입니다. 목록보다 뒤에 선언해 먼저 사라진다. */
+        Subscription _telemetryFrameSubscription;
         /** @brief 시나리오 · 벤치 실행 정보를 창 제목에 적습니다(`endFrame` 이 부른다). */
         AutomationRunTitleTracker _runTitle;
 

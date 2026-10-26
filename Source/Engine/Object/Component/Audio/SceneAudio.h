@@ -16,6 +16,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/IndexedPtrList.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Math/Math.h"
 #include "Core/String/RegistrationList.h"
 #include "Core/String/hashed_string.h"
@@ -35,7 +36,7 @@ namespace sw
     class IAudioService;
 
     /** @class SceneAudio @brief 씬 하나의 오디오 묶기입니다. 파일 머리말 참고. */
-    class SW_API SceneAudio final : public ISceneService
+    class SW_API SceneAudio final : public ISceneService, private SubscriptionSource
     {
     public:
         /** @brief 한 프레임에 가림을 다시 측정하는 에미터 수입니다(레이 셋씩). */
@@ -80,18 +81,13 @@ namespace sw
         /** @brief 마지막 프레임의 첫 리스너 자리입니다(앰비언트 가장 가까운 점 · 리버브 존 판정). */
         const float3& getPrimaryListenerPosition() const { return _primaryListenerPosition; }
 
+        // 세 등록은 구독을 돌려준다. 구독이 사라지면 뺀다. 거절(nullptr · 이미 올라 있음)이면 빈 구독이다.
         /** @brief 리스너 컴포넌트를 올립니다. */
-        void addListener( AudioListenerComponent* pListener );
-        /** @brief 리스너 컴포넌트를 뺍니다. */
-        void removeListener( AudioListenerComponent* pListener );
-        /** @brief 에미터 컴포넌트를 올립니다. */
-        void addEmitter( AudioEmitterComponent* pEmitter );
-        /** @brief 에미터 컴포넌트를 뺍니다(엔진에서 에미터를 지운다 — 소리는 마지막 자리에서 끝까지 간다). */
-        void removeEmitter( AudioEmitterComponent* pEmitter );
+        [[nodiscard]] Subscription addListener( AudioListenerComponent* pListener );
+        /** @brief 에미터 컴포넌트를 올립니다. 뺄 때 엔진에서 에미터를 지운다 — 소리는 마지막 자리에서 끝까지 간다. */
+        [[nodiscard]] Subscription addEmitter( AudioEmitterComponent* pEmitter );
         /** @brief 리버브 존을 올립니다. */
-        void addReverbZone( AudioReverbZoneComponent* pZone );
-        /** @brief 리버브 존을 뺍니다. */
-        void removeReverbZone( AudioReverbZoneComponent* pZone );
+        [[nodiscard]] Subscription addReverbZone( AudioReverbZoneComponent* pZone );
 
     private:
         /** @brief 스냅샷 하나에 지난 프레임에 넣은 세기입니다. */
@@ -100,6 +96,9 @@ namespace sw
             hashed_string _snapshot{};
             float32       _intensity{ 0.0f };
         };
+
+        /** @brief 등록 구독이 풀렸습니다(@p id 는 컴포넌트 주소). 세 목록은 서로 다른 컴포넌트 종류라 주소가 겹치지 않으므로 든 목록에서 뺍니다. */
+        void releaseSubscription( uint64 id ) override;
 
         // `update` 의 단계들 — 잠금을 잡은 채로 부른다.
         /** @brief 리스너 — 리스너 컴포넌트가 있으면 그것들, 없으면 게임 카메라(직교면 2D 화면 팬). 지난 프레임에 켰는데 이번에 없는 칸은 끈다. */

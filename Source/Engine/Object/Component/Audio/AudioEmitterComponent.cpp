@@ -16,18 +16,19 @@ namespace sw
         , _bPlayOnBeginPlay{ true }
         , _bStopOnEndPlay{ true }
         , _bOcclusion{ true }
+        , _sceneAudioSubscription{}
     {
     }
 
     void AudioEmitterComponent::onRegister( GameObjectManager& manager )
     {
         SceneComponent::onRegister( manager );
-        manager.getSubsystem<sw::SceneAudio>().addEmitter( this );
+        _sceneAudioSubscription = manager.getSubsystem<sw::SceneAudio>().addEmitter( this );
     }
 
     void AudioEmitterComponent::onUnregister( GameObjectManager& manager )
     {
-        manager.getSubsystem<sw::SceneAudio>().removeEmitter( this );
+        _sceneAudioSubscription.reset();
         SceneComponent::onUnregister( manager );
     }
 

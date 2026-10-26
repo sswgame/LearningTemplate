@@ -56,6 +56,7 @@ namespace
             , _listBusMessage{}
             , _listCacheReply{}
             , _cacheKeyToRead{}
+            , _cacheReplyOwner{}
             , _lastLogContext{}
             , _lastTraceID{}
             , _pProtocol{ &protocol }
@@ -128,8 +129,9 @@ namespace
             if ( _bReadCacheOnTick && host.getEphemeralRouter() != nullptr )
             {
                 _bReadCacheOnTick = false;
+                _cacheReplyOwner  = host.getEphemeralRouter()->openReplyOwner();
                 (void)host.getEphemeralRouter()->submit( EphemeralRequest::makeGet( _cacheKeyToRead ),
-                                                         EphemeralStoreRouter::ReplyDelegate::create<&FakeOnlineService::onCacheReply>( this ) );
+                                                         EphemeralStoreRouter::ReplyDelegate::create<&FakeOnlineService::onCacheReply>( this ), _cacheReplyOwner );
             }
         }
 
@@ -167,8 +169,9 @@ namespace
         vector<ServerBusMessage>   _listBusMessage;
         vector<EphemeralReply>     _listCacheReply;
         string                     _cacheKeyToRead;
-        LogContext                 _lastLogContext; ///< 마지막 요청을 처리할 때의 로그 문맥
-        LogTraceID                 _lastTraceID;    ///< 마지막 요청의 추적 id
+        Subscription               _cacheReplyOwner; ///< 캐시 답의 주인 몫(틱에서 읽을 때 연다)
+        LogContext                 _lastLogContext;  ///< 마지막 요청을 처리할 때의 로그 문맥
+        LogTraceID                 _lastTraceID;     ///< 마지막 요청의 추적 id
         const OnlineProtocolEntry* _pProtocol;
         uint16                     _range;
         OnlineServiceExposure      _exposure; ///< 테스트가 바꾼다(GM 리슨 테스트)
@@ -905,9 +908,10 @@ SW_TEST_CASE( OnlineServiceHostTest, ShutdownTellsEveryServiceOnceAfterPendingCa
     settings._pEphemeralStore        = &hostCache;
     settings._pServerBusTransport    = &busOfHost;
     HostRig            rig( settings );
-    const Subscription subscription = rig._host.subscribeServerBus( "sd.changed", &rig._serviceA );
+    const Subscription subscription    = rig._host.subscribeServerBus( "sd.changed", &rig._serviceA );
+    const Subscription cacheReplyOwner = rig._host.getEphemeralRouter()->openReplyOwner();
     (void)rig._host.getEphemeralRouter()->submit( EphemeralRequest::makeGet( "never.pumped" ),
-                                                  EphemeralStoreRouter::ReplyDelegate::create<&FakeOnlineService::onCacheReply>( &rig._serviceA ) );
+                                                  EphemeralStoreRouter::ReplyDelegate::create<&FakeOnlineService::onCacheReply>( &rig._serviceA ), cacheReplyOwner );
     rig._host.shutdown();
     SW_EXPECT_EQUAL( 1, rig._serviceA._hostShutdownCount );
     SW_EXPECT_EQUAL( 1, rig._serviceB._hostShutdownCount );

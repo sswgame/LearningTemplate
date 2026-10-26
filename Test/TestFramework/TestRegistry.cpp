@@ -3,6 +3,7 @@
 #include "TestFramework/TestRegistry.h"
 
 #include "Core/Common/BuildInfo.h"
+#include "Core/Container/VectorUtil.h"
 
 #include "TestFramework/TestAssert.h"
 #include "TestFramework/TestScopes.h"
@@ -136,24 +137,24 @@ namespace test
         return _options.parse( argc, argv );
     }
 
-    void TestRegistry::registerListener( ITestRunListener* pListener )
+    sw::Subscription TestRegistry::registerListener( ITestRunListener* pListener )
     {
         _listListener.push_back( pListener );
+        return issueSubscription( reinterpret_cast<uint64>( pListener ) );
     }
 
-    void TestRegistry::unregisterListener( ITestRunListener* pListener )
-    {
-        _listListener.erase( std::remove( _listListener.begin(), _listListener.end(), pListener ), _listListener.end() );
-    }
-
-    void TestRegistry::registerJudge( ITestCaseJudge* pJudge )
+    sw::Subscription TestRegistry::registerJudge( ITestCaseJudge* pJudge )
     {
         _listJudge.push_back( pJudge );
+        return issueSubscription( reinterpret_cast<uint64>( pJudge ) );
     }
 
-    void TestRegistry::unregisterJudge( ITestCaseJudge* pJudge )
+    void TestRegistry::releaseSubscription( uint64 id )
     {
-        _listJudge.erase( std::remove( _listJudge.begin(), _listJudge.end(), pJudge ), _listJudge.end() );
+        const auto isReleased = [id]( const void* pItem )
+        { return reinterpret_cast<uint64>( pItem ) == id; };
+        sw::VectorUtil::removeIf( _listListener, isReleased ); // 두 목록 중 하나에만 있다
+        sw::VectorUtil::removeIf( _listJudge, isReleased );
     }
 
     void TestRegistry::addFailure( const sw::string& condition, const sw::string& file, int32 line, const sw::string& message )

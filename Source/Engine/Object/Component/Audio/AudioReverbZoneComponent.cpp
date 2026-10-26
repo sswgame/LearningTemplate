@@ -13,18 +13,19 @@ namespace sw
         , _radius{ 5.0f }
         , _fadeDistance{ 1.0f }
         , _shape{ AudioVolumeShape::Box }
+        , _sceneAudioSubscription{}
     {
     }
 
     void AudioReverbZoneComponent::onRegister( GameObjectManager& manager )
     {
         SceneComponent::onRegister( manager );
-        manager.getSubsystem<sw::SceneAudio>().addReverbZone( this );
+        _sceneAudioSubscription = manager.getSubsystem<sw::SceneAudio>().addReverbZone( this );
     }
 
     void AudioReverbZoneComponent::onUnregister( GameObjectManager& manager )
     {
-        manager.getSubsystem<sw::SceneAudio>().removeReverbZone( this );
+        _sceneAudioSubscription.reset();
         SceneComponent::onUnregister( manager );
     }
 

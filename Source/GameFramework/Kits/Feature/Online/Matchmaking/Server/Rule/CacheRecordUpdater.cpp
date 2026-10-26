@@ -20,18 +20,13 @@ namespace sw
 
     void CacheRecordUpdater::initialize( EphemeralStoreRouter* pRouter )
     {
-        _pRouter = pRouter;
+        _pRouter    = pRouter;
+        _replyOwner = pRouter != nullptr ? pRouter->openReplyOwner() : Subscription{};
     }
 
     void CacheRecordUpdater::shutdown()
     {
-        if ( _pRouter != nullptr )
-        {
-            for ( const auto& [requestID, operation] : _mapRequestToOperation )
-            {
-                _pRouter->cancel( requestID );
-            }
-        }
+        _replyOwner.reset(); // 기다리던 캐시 답이 이 객체를 부르지 않게 지운다
         _mapRequestToOperation.clear();
         _pRouter = nullptr;
     }
@@ -53,7 +48,7 @@ namespace sw
     void CacheRecordUpdater::startRead( unique_ptr<Operation> operation )
     {
         const uint64 requestID = _pRouter->submit( EphemeralRequest::makeGet( operation->_key ),
-                                                   EphemeralStoreRouter::ReplyDelegate::create<&CacheRecordUpdater::onReadReply>( this ) );
+                                                   EphemeralStoreRouter::ReplyDelegate::create<&CacheRecordUpdater::onReadReply>( this ), _replyOwner );
         _mapRequestToOperation.emplace( requestID, std::move( operation ) );
     }
 
@@ -92,7 +87,7 @@ namespace sw
             write = EphemeralRequest::makeCompareAndSet( operation->_key, operation->_oldBytes, operation->_newBytes, operation->_ttlMs );
         else
             write = EphemeralRequest::makeSet( operation->_key, operation->_newBytes, operation->_ttlMs, EphemeralCondition::IfAbsent );
-        const uint64 requestID = _pRouter->submit( write, EphemeralStoreRouter::ReplyDelegate::create<&CacheRecordUpdater::onWriteReply>( this ) );
+        const uint64 requestID = _pRouter->submit( write, EphemeralStoreRouter::ReplyDelegate::create<&CacheRecordUpdater::onWriteReply>( this ), _replyOwner );
         _mapRequestToOperation.emplace( requestID, std::move( operation ) );
     }
 

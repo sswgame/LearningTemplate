@@ -312,9 +312,9 @@ namespace sw
         if ( bDedicatedServer == false && _headlessState.isHeadless() == false )
             _shellActions.setUserBindingsPath( ShellInputActions::makeUserBindingsPath( engine::getSubsystem<UserSettingsManager>().getUserFilePath() ) );
         // 장면별 프레임 시간 · flush 는 프레임 관찰자로 돈다(씬 틱 뒤 — `TelemetryService::onAfterSceneTick`). 텔레메트리가 섰을 때만 붙인다.
-        // 떼는 것은 `shutdown` 이 단계 종료 전에 관찰자 목록을 비우는 것으로 끝난다.
+        // 떼는 것은 `shutdown` 이 단계 종료 전에 구독을 모두 끊는 것으로 끝난다.
         if ( telemetryService.isInitialized() )
-            registerFrameObserver( &telemetryService );
+            _telemetryFrameSubscription = registerFrameObserver( &telemetryService );
         if ( bDedicatedServer )
         {
             // 실제 바이너리에서 단계가 빠졌는지 테스트(ServerBootTest)가 이 줄로 본다. 초기화 순서대로 적는다.
@@ -381,6 +381,7 @@ namespace sw
 #endif
         // 프레임 관찰자는 붙인 쪽이 서비스보다 먼저 내린다(로그 리스너 · 입력을 빌려 쓴다). 남은 것은 더 부르지 않는다.
         // 목록의 용량은 기동 뒤에 잡았으므로 누수 보고 전에 해제한다.
+        detachAllSubscriptions();
         vector<IEngineFrameObserver*>{}.swap( _listFrameObserver );
 #if SW_DEV_COMMANDS_ENABLED
         AuthorityGhost* const pAuthorityGhost = engine::findSubsystem<AuthorityGhost>(); // 서비스 범위가 소유한다(켜지 않은 구성에는 없다)
@@ -460,23 +461,22 @@ namespace sw
         SW_LOG_INFO( "Quit requested (exit code %#)", exitCode );
     }
 
-    void Engine::registerFrameObserver( IEngineFrameObserver* pObserver )
+    Subscription Engine::registerFrameObserver( IEngineFrameObserver* pObserver )
     {
         if ( pObserver == nullptr )
-            return;
-        for ( const IEngineFrameObserver* pExisting : _listFrameObserver )
         {
-            if ( pExisting == pObserver )
-                return;
+            SW_LOG_ERROR( "Frame observer is null - nothing is registered" );
+            return {};
         }
         _listFrameObserver.push_back( pObserver );
+        return issueSubscription( reinterpret_cast<uint64>( pObserver ) );
     }
 
-    void Engine::unregisterFrameObserver( IEngineFrameObserver* pObserver )
+    void Engine::releaseSubscription( uint64 id )
     {
         for ( size_t index = 0; index < _listFrameObserver.size(); ++index )
         {
-            if ( _listFrameObserver[index] != pObserver )
+            if ( reinterpret_cast<uint64>( _listFrameObserver[index] ) != id )
                 continue;
             _listFrameObserver.erase( _listFrameObserver.begin() + static_cast<ptrdiff_t>( index ) );
             return;

@@ -7,6 +7,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Audio/AudioTypes.h"
@@ -83,5 +84,7 @@ namespace sw
         bool _bStopOnEndPlay;
         PROPERTY( Category = "Audio", DisplayName = "Occlusion", Tooltip = "Raycast between listener and emitter to muffle sound behind walls" )
         bool _bOcclusion;
+        /** @brief 씬 오디오 등록 구독입니다(`onRegister` 가 받고 `onUnregister` 가 놓는다 — 놓으면 엔진의 에미터도 지운다). */
+        Subscription _sceneAudioSubscription;
     };
 } // namespace sw

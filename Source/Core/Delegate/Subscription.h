@@ -125,6 +125,12 @@ namespace sw
             return subscription;
         }
 
+        /**
+         * @brief @p subscription 이 이 출처가 내준 살아 있는 구독이면 그 id, 아니면 0 입니다. 등록에 주인 구독을 받는 출처가 씁니다.
+         * @details 구독을 푸는 스레드와 같은 스레드에서 부릅니다(목록 잠금 없이 읽는다).
+         */
+        [[nodiscard]] uint64 findIssuedID( const Subscription& subscription ) const noexcept { return subscription._pSource == this ? subscription._id : 0; }
+
         /** @brief 구독 @p id 가 풀렸습니다. 그 등록을 지웁니다. 구독은 이미 목록에서 빠졌고 목록 잠금은 풀려 있습니다. */
         virtual void releaseSubscription( uint64 id ) = 0;
 

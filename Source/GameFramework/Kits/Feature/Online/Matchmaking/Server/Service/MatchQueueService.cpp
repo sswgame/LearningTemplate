@@ -89,6 +89,7 @@ namespace sw
             }
         }
         _dependencies = dependencies;
+        _replyOwner   = dependencies._pRouter != nullptr ? dependencies._pRouter->openReplyOwner() : Subscription{};
         for ( const MatchModeDefinition& mode : listMode )
         {
             if ( isValidMatchModeID( mode._modeID ) == false )
@@ -114,13 +115,7 @@ namespace sw
 
     void MatchQueueService::shutdown()
     {
-        if ( _dependencies._pRouter != nullptr )
-        {
-            for ( const auto& [requestID, modeID] : _mapLeaseRequestToMode )
-            {
-                _dependencies._pRouter->cancel( requestID );
-            }
-        }
+        _replyOwner.reset(); // 기다리던 임대 답이 이 객체를 부르지 않게 지운다
         _mapLeaseRequestToMode.clear();
         for ( auto& [modeID, state] : _mapModeState )
         {
@@ -209,7 +204,7 @@ namespace sw
         const EphemeralRequest request                = state._bAuthority != SW_FALSE
                                                           ? EphemeralRequest::makeCompareAndSet( makeLeaseKey( modeID ), selfValue, selfValue, MatchQueueLimit::kLeaseTtlMs )
                                                           : EphemeralRequest::makeSet( makeLeaseKey( modeID ), selfValue, MatchQueueLimit::kLeaseTtlMs, EphemeralCondition::IfAbsent );
-        state._leaseRequestID                         = _dependencies._pRouter->submit( request, EphemeralStoreRouter::ReplyDelegate::create<&MatchQueueService::onLeaseReply>( this ) );
+        state._leaseRequestID                         = _dependencies._pRouter->submit( request, EphemeralStoreRouter::ReplyDelegate::create<&MatchQueueService::onLeaseReply>( this ), _replyOwner );
         state._leaseAttemptMs                         = nowMs;
         state._bLeaseAttempted                        = SW_TRUE;
         _mapLeaseRequestToMode[state._leaseRequestID] = modeID;
