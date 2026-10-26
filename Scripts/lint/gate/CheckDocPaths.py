@@ -185,7 +185,7 @@ class CheckDocPathsGate(LintGate):
         self.addFilesArgument(parser, "검사할 문서 (생략 시 저장소의 .md 전부)")
 
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        listDocument = self.selectTargetFiles(repositoryRoot, args.files, suffixes=(".md",),
+        listDocument = self.selectTargetFiles(repositoryRoot, args.files, bMustFind=True, suffixes=(".md",),
                                               excludedDirNames=kNotOurDirNames | {"ThirdParty"})
         mapAnchor: dict[Path, set[str]] = {}
         mapChildDir: dict[Path, set[str]] = {}

@@ -96,7 +96,7 @@ class CheckExecutableBitsGate(LintGate):
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
         mapMode = readGitModesInternal(repositoryRoot)
         if mapMode is None or args.files:
-            listPath = self.selectTargetFiles(repositoryRoot, args.files, bAnySuffix=True)
+            listPath = self.selectTargetFiles(repositoryRoot, args.files, bMustFind=True, bAnySuffix=True)
             listRelative = [path.resolve().relative_to(repositoryRoot.resolve()).as_posix() for path in listPath]
         else:
             listRelative = [relativePath for relativePath in mapMode if isOurPathInternal(relativePath)]

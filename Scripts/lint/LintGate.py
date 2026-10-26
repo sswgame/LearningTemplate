@@ -25,7 +25,7 @@ class CheckSomethingGate(LintGate):
 
     def scan(self, repositoryRoot, args):
         # 파일 고르기: --files 와 전체 훑기가 같은 규칙, 빌드 산출물 · 내려받은 외부 도구로는 내려가지 않는다
-        listPath = self.selectTargetFiles(repositoryRoot, args.files, listScanRoot=("Source",), suffixes=(".h", ".cpp"))
+        listPath = self.selectTargetFiles(repositoryRoot, args.files, bMustFind=True, listScanRoot=("Source",), suffixes=(".h", ".cpp"))
         # 읽기: 동시에, 찾는 표식이 없는 파일은 거른다(비싼 정규식 앞에서)
         listViolation = [f"{path}: ..." for path, text in readTextFiles(listPath, mustContain="SOMETHING") if ...]
         return GateResult(listViolation=listViolation, summary=f"{len(listPath)} files scanned")
@@ -507,6 +507,7 @@ class LintGate:
     def selectTargetFiles(repositoryRoot: Path,
                           listFileArgument: list[str] | None,
                           *,
+                          bMustFind: bool,
                           listScanRoot: Iterable[str] = ("",),
                           suffixes: Iterable[str] = (),
                           fileNames: Iterable[str] = (),
@@ -523,6 +524,9 @@ class LintGate:
 
         게이트마다 이 일을 따로 하지 말 것 — 상대 경로를 푸는 기준과 제외 목록이 갈리고, `--files` 에 제외를 빠뜨리면
         **커밋 훅과 전체 검사가 서로 다른 파일을 본다.** 픽서도 같은 함수로 고른다(`LintFixer.selectFixerTargetFiles`).
+
+        `bMustFind`(필수): True 면 **전체 훑기**(`--files` 없음)가 이 저장소에서 0건을 고르면 GateError — 게이트가 걷기를 여러 번 할 때 `judgeOutcome` 은
+        전부 0건일 때만 잡으므로 걷기마다 적는다(`walkRepository` 와 같은 뜻). `--files` 의 0건은 정상(건너뜀)이라 보지 않고, 자기 증거 조각의 임시 트리도 뺀다.
         """
         listScanRoot = tuple(listScanRoot)
         if not listFileArgument:
@@ -531,6 +535,8 @@ class LintGate:
         else:
             listPath = resolveFileArguments(repositoryRoot, listFileArgument, listScanRoot=listScanRoot, suffixes=suffixes, fileNames=fileNames,
                                             excludedDirNames=excludedDirNames, bAnySuffix=bAnySuffix)
+        if bMustFind and not listPath and not listFileArgument and LintGate.isOwnRepositoryInternal(repositoryRoot):
+            raise GateError(f"대상 고르기: 전체 훑기가 {', '.join(listScanRoot)} 에서 파일을 하나도 고르지 못했습니다 — 폴더 · 접미사가 바뀌었나요?")
         LintGate.noteSelection(len(listPath))
         return listPath
 
