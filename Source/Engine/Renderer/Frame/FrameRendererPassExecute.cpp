@@ -16,7 +16,6 @@
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Module/ModuleRenderPassRegistry.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
-#include "Engine/UserSettings/UserSettingsVariables.h"
 
 namespace sw
 {
@@ -229,6 +228,9 @@ namespace sw
             const RenderPassInputRole role = static_cast<RenderPassInputRole>( input._role );
             if ( ( _disabledInputRoleMask & ( 1u << input._role ) ) != 0 )
                 continue;
+            // 이 뷰에서 빠진 패스의 출력(`TransientAttachmentPool::markAbsent`, 꺼진 SSAO)은 걸지 않는다 — 셰이더는 그 역할의 기본값(AO = 1)을 쓴다. 로드 검증 3-7 이 선택 입력만 그렇게 읽게 한다.
+            if ( activePool().resolveName( input._attachment.view() ).empty() )
+                continue;
             registerPassTexture( context, inputRoleName( role ), input._attachment.view() );
         }
     }
@@ -321,7 +323,7 @@ namespace sw
         const PassExecuteInput input{ context, passType, passDesc, declaredColor, passDepth, info.hasFlag( RenderPassTraitFlag::kDrawsTransparentBatch ) };
         if ( info.hasFlag( RenderPassTraitFlag::kGenericFullscreen ) )
         {
-            executeGenericFullscreenPass( input, info );
+            executeGenericFullscreenPass( input );
         }
         else
         {
@@ -451,7 +453,7 @@ namespace sw
         context._pCmd->endRenderPass();
     }
 
-    void FrameRenderer::executeGenericFullscreenPass( const PassExecuteInput& input, const RenderPassTypeInfo& info )
+    void FrameRenderer::executeGenericFullscreenPass( const PassExecuteInput& input )
     {
         // 일반 풀스크린 패스(테이블의 kGenericFullscreen: Lighting, SSAO, Bloom, BloomDownsample, Outline, Tonemap)다. **선언이 곧 바인딩**이다.
         // 입력은 역할 이름으로 모두 바인딩하고, 타깃은 선언한 첫 컬러 출력이다. 계약(RenderPassInputSignature)이
@@ -459,8 +461,9 @@ namespace sw
         FramePassContext&          context  = input._context;
         const RenderGraphPassDesc& passDesc = input._passDesc;
         const hashed_string*       pTarget  = &input._declaredColor[0]._attachment;
-        // 이 뷰에서 꺼진 효과(피사계 심도 · 모션 블러)는 셋업이 출력 이름을 원본에 이었다(`applyViewEffectBypass`) — 읽는 쪽이 원본을 받으므로 아무것도 기록하지 않는다.
-        if ( info.hasFlag( RenderPassTraitFlag::kBypassesToSource ) && activePool().isForwarded( pTarget->view() ) )
+        // 이 뷰에서 빠진 패스는 셋업이 출력 이름을 원본에 잇거나 비웠다(`applyViewPassSelection` — 꺼진 효과, 읽는 패스가 모두 빠진 패스). 아무것도 기록하지 않는다.
+        // 후처리를 끈 뷰 · 품질로 꺼지는 효과(kSkipsWithoutPostProcess)도 모두 이 길이다 — 원본을 복사하거나 셰이더가 원본을 고르던 길은 지웠다.
+        if ( activePool().isForwarded( pTarget->view() ) )
             return;
         registerDeclaredInputs( context, passDesc );
         recordAutoExposure( context, passDesc );
@@ -476,50 +479,7 @@ namespace sw
             executeModulePass( context, passDesc, *pTarget, targetClear );
             return;
         }
-        // 후처리를 끈 뷰(CCTV, 표면 값 보기 모드)에서 효과 패스(테이블의 kSkipsWithoutPostProcess)는 효과를 적용하지 않는다. 포맷이 같으면 원본을 복사하고,
-        // 다르면 그 패스 셰이더가 SW_PASS_FLAG_SKIP_POST 를 보고 원본을 그대로 낸다(복사는 같은 포맷끼리만 된다). 원본 색을 읽지 않는 효과(SSAO)는
-        // 기본 클리어로 지우기만 한다(SSAO 의 흰색은 가림 없음).
-        // 후처리 품질(gv_postQuality)이 패스의 최소 품질(`_minPostQuality`, 검증이 건너뛸 수 있는 타입에만 허락한다)보다 낮아도 같은 길로 건너뛴다.
-        const bool bBelowPostQuality = passDesc._minPostQuality > static_cast<int32>( gv_postQuality );
-        const bool bPostOff          = _pActiveView->_settings.usesPostProcess() == false || bBelowPostQuality;
-        const bool bSkipEffect       = info.hasFlag( RenderPassTraitFlag::kSkipsWithoutPostProcess ) && bPostOff;
-        if ( bSkipEffect == false )
-        {
-            executeFullscreenInto( context, pso, *pTarget, targetClear );
-            return;
-        }
-        RHITextureHandle source{ 0 };
-        for ( const RenderGraphPassDesc::ResolvedAttachment& sourceInput : passDesc._listResolvedInput )
-        {
-            if ( static_cast<RenderPassInputRole>( sourceInput._role ) == RenderPassInputRole::SourceColor )
-                source = findTransient( sourceInput._attachment.view() );
-        }
-        const RHITextureHandle target = findTransient( pTarget->view() );
-        const bool             bCopy  = source != 0 && target != 0 && source != target &&
-                           _pDevice->getResourceFactory()->getTextureFormat( source ) == _pDevice->getResourceFactory()->getTextureFormat( target );
-        if ( bCopy )
-        {
-            context._pCmd->blitTexture( source, target );
-            (void)markAttachmentCleared( *pTarget );
-        }
-        else if ( info._inputContract.reads( RenderPassInputRole::SourceColor ) && source != 0 )
-        {
-            // 셰이더가 SW_PASS_FLAG_SKIP_POST 를 보고 원본을 낸다. 뷰의 후처리는 켜 있고 품질로만 건너뛰는 패스는 이 패스의 상수에만 비트를 더한다.
-            if ( bBelowPostQuality )
-            {
-                uint32       passFlags  = 0;
-                uint32       valueSize  = 0;
-                const uint8* pFlagBytes = context._passValues.find( passConstantNames()._flags, valueSize );
-                if ( pFlagBytes != nullptr && valueSize == sizeof( uint32 ) )
-                    Memory::copy( &passFlags, pFlagBytes, sizeof( uint32 ) );
-                context._passValues.setUint( passConstantNames()._flags, passFlags | shaderslot::kPassFlagSkipPost );
-            }
-            executeFullscreenInto( context, pso, *pTarget, targetClear );
-        }
-        else if ( beginColorPass( context, pTarget->view(), "", targetClear, RHIRenderPassLoadOp::Clear, RHIRenderPassLoadOp::Load ) )
-        {
-            context._pCmd->endRenderPass();
-        }
+        executeFullscreenInto( context, pso, *pTarget, targetClear );
     }
 
     void FrameRenderer::executeForwardOpaquePass( const PassExecuteInput& input )

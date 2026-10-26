@@ -25,37 +25,122 @@ namespace sw
     {
         struct FrameRendererTransientsInternal
         {
-            /** @brief 꺼지면 출력이 원본을 가리키는 패스(`kBypassesToSource`)면 true 입니다. 원본 하나 · 컬러 출력 하나는 로드가 검사했다(`RenderPipelineAsset::validate` 3-6). */
-            static bool bypassesToSource( const RenderGraphPassDesc& pass )
+            /** @brief @p name 을 쓰는(출력으로 선언한) 패스 수입니다. */
+            static uint32 countWriters( const vector<RenderGraphPassDesc>& listPass, const hashed_string& name )
             {
-                return getRenderPassTypeInfo( pass._resolvedType ).hasFlag( RenderPassTraitFlag::kBypassesToSource ) && pass._listResolvedColorOutput.size() == 1;
-            }
-
-            /** @brief @p name 이 그런 패스의 출력이면 true 입니다 — 풀을 만들 때는 그 타깃을 만들지 않고, 효과가 처음 켜질 때 만든다(`applyViewEffectBypass`). */
-            static bool isBypassOutput( const vector<RenderGraphPassDesc>& listPass, string_view name )
-            {
+                uint32 count = 0;
                 for ( const RenderGraphPassDesc& pass : listPass )
                 {
-                    if ( bypassesToSource( pass ) && pass._listResolvedColorOutput[0]._attachment.view() == name )
-                        return true;
+                    count += VectorUtil::contains( pass._listResolvedOutput, name ) ? 1u : 0u;
+                }
+                return count;
+            }
+
+            /**
+             * @brief @p name 이 쓰는 패스가 있고 모두 일반 풀스크린 패스면 true 입니다 — 풀을 만들 때는 그 타깃을 만들지 않고, 그 패스가 이 뷰에서 처음 돌 때 만든다(`applyViewPassSelection`).
+             * @details 지오메트리 · TAA 처럼 늘 도는 패스의 출력과, 셋업이 미리 읽는 첨부(TAA 출력 · 장면 깊이)는 여기 들지 않는다.
+             */
+            static bool isMadeOnFirstUse( const vector<RenderGraphPassDesc>& listPass, const hashed_string& name )
+            {
+                bool bWritten = false;
+                for ( const RenderGraphPassDesc& pass : listPass )
+                {
+                    if ( VectorUtil::contains( pass._listResolvedOutput, name ) == false )
+                        continue;
+                    if ( getRenderPassTypeInfo( pass._resolvedType ).hasFlag( RenderPassTraitFlag::kGenericFullscreen ) == false )
+                        return false;
+                    bWritten = true;
+                }
+                return bWritten;
+            }
+
+            /**
+             * @brief 이 뷰에서 빠질 수 있는 패스면 true 입니다 — 일반 풀스크린 패스이고 컬러 출력을 모두 혼자 쓴다.
+             * @details 출력을 혼자 써야 그 이름을 원본에 잇거나 비워도 다른 쓰기와 섞이지 않는다(꺼질 수 있는 효과는 로드 검증 3-6 · 3-7 이 그것을 요구한다).
+             */
+            static bool isSelectable( const vector<RenderGraphPassDesc>& listPass, const RenderGraphPassDesc& pass )
+            {
+                if ( getRenderPassTypeInfo( pass._resolvedType ).hasFlag( RenderPassTraitFlag::kGenericFullscreen ) == false || pass._listResolvedColorOutput.empty() )
+                    return false;
+                return std::all_of( pass._listResolvedColorOutput.begin(), pass._listResolvedColorOutput.end(),
+                                    [&listPass]( const RenderGraphPassDesc::ResolvedAttachment& output )
+                { return countWriters( listPass, output._attachment ) == 1; } );
+            }
+
+            /** @brief 파이프라인에 이 패스의 컬러 출력을 읽는 다른 패스가 있으면 true 입니다. 없으면(디버그 · 스크린샷용 출력) 읽는 쪽이 없다고 빼지 않는다. */
+            static bool isConsumed( const vector<RenderGraphPassDesc>& listPass, const RenderGraphPassDesc& pass )
+            {
+                for ( const RenderGraphPassDesc::ResolvedAttachment& output : pass._listResolvedColorOutput )
+                {
+                    for ( const RenderGraphPassDesc& other : listPass )
+                    {
+                        const bool bReads = std::any_of( other._listResolvedInput.begin(), other._listResolvedInput.end(),
+                                                         [&output]( const RenderGraphPassDesc::ResolvedAttachment& input )
+                        { return input._attachment == output._attachment; } );
+                        if ( &other != &pass && bReads )
+                            return true;
+                    }
                 }
                 return false;
             }
 
-            /** @brief 패스의 원본(SourceColor 입력) 이름입니다. 없으면 빈 이름입니다(로드가 막는다). */
-            static string_view findSourceName( const RenderGraphPassDesc& pass )
+            /** @brief 파이프라인이 선언한 첨부 가운데 @p name 의 자리입니다. 선언되지 않은 이름(Swapchain)이면 첨부 수입니다. */
+            static size_t findAttachmentIndex( const vector<RenderPassAttachment>& listAttachment, const hashed_string& name )
+            {
+                size_t index = 0;
+                while ( index < listAttachment.size() && string_view( listAttachment[index]._name ) != name.view() )
+                {
+                    ++index;
+                }
+                return index;
+            }
+
+            /** @brief @p name 을 이번 프레임에 "읽힌다" 로 적습니다. 플래그는 선언한 첨부 자리마다 하나다(선언 밖 이름은 적지 않는다). */
+            static void markNeeded( const vector<RenderPassAttachment>& listAttachment, const hashed_string& name, vector<uint8>& outListNeeded )
+            {
+                const size_t index = findAttachmentIndex( listAttachment, name );
+                if ( index < outListNeeded.size() )
+                    outListNeeded[index] = SW_TRUE;
+            }
+
+            /** @brief @p name 이 이번 프레임에 "읽힌다" 로 적혀 있으면 true 입니다. */
+            static bool isNeeded( const vector<RenderPassAttachment>& listAttachment, const hashed_string& name, const vector<uint8>& listNeeded )
+            {
+                const size_t index = findAttachmentIndex( listAttachment, name );
+                return index < listNeeded.size() && listNeeded[index] == SW_TRUE;
+            }
+
+            /** @brief 도는 패스가 읽는 첨부를 "읽힌다" 로 적습니다. @p bIncludeOutputs 면 쓰는 첨부도 적는다(늘 도는 패스는 앞 판을 불러 이어 그릴 수 있다). */
+            static void markReads( const vector<RenderPassAttachment>& listAttachment, const RenderGraphPassDesc& pass, bool bIncludeOutputs, vector<uint8>& outListNeeded )
+            {
+                for ( const RenderGraphPassDesc::ResolvedAttachment& input : pass._listResolvedInput )
+                {
+                    markNeeded( listAttachment, input._attachment, outListNeeded );
+                }
+                if ( pass._resolvedDepthAttachment.empty() == false )
+                    markNeeded( listAttachment, pass._resolvedDepthAttachment, outListNeeded );
+                if ( bIncludeOutputs == false )
+                    return;
+                for ( const hashed_string& output : pass._listResolvedOutput )
+                {
+                    markNeeded( listAttachment, output, outListNeeded );
+                }
+            }
+
+            /** @brief 패스의 원본(SourceColor 입력)입니다. 없으면 nullptr 입니다(꺼지면 원본을 가리키는 타입은 로드가 막는다). */
+            static const hashed_string* findSource( const RenderGraphPassDesc& pass )
             {
                 for ( const RenderGraphPassDesc::ResolvedAttachment& input : pass._listResolvedInput )
                 {
                     if ( static_cast<RenderPassInputRole>( input._role ) == RenderPassInputRole::SourceColor )
-                        return input._attachment.view();
+                        return &input._attachment;
                 }
-                return string_view{};
+                return nullptr;
             }
 
             /**
-             * @brief 이 뷰에서 이번 프레임에 그 효과가 꺼졌으면 true 입니다. 꺼진 효과의 셰이더 결과는 원본과 같다(depthoffield.hlsl 의 `g_CameraLens.w` · motionblur.hlsl 의 `bStill` 과 같은 조건).
-             * @param bCameraStill 이번 뷰-투영이 지난번 것과 같거나 기록을 버리는 프레임이다(카메라 모션 블러의 속도가 모두 0).
+             * @brief 이 뷰에서 이번 프레임에 그 효과(`kSkipsWithoutPostProcess`)가 꺼졌으면 true 입니다. 꺼진 효과는 돌려도 원본(SSAO 는 가림 없음)과 같은 그림이다.
+             * @param bCameraStill 이번 뷰-투영이 지난번 것과 같거나 기록을 버리는 프레임이다. 모션 블러는 카메라 움직임만 흐리므로(motionblur.hlsl — 물체 속도 버퍼가 없다) 속도가 모두 0 이다.
              */
             static bool isEffectOff( const RenderGraphPassDesc& pass, const RenderViewSettings& settings, bool bCameraStill )
             {
@@ -128,10 +213,10 @@ namespace sw
         view._shadowMapResolution = shadowResolution;
 
         // 그림자 맵은 화면이 아니라 빛의 볼륨을 담는다 — 프레임 크기 대신 정사각 고정 크기로 만든다. 이름이 아니라 역할로 가린다(이름을 바꾼 그림자 첨부도 같다).
-        // 꺼지면 원본을 가리키는 효과의 출력(피사계 심도 · 모션 블러)은 여기서 만들지 않는다 — 그 효과가 이 뷰에서 처음 켜질 때 만든다(`applyViewEffectBypass`).
+        // 일반 풀스크린 패스만 쓰는 첨부(후처리 효과 · 톤맵의 출력)는 여기서 만들지 않는다 — 그 패스가 이 뷰에서 처음 돌 때 만든다(`applyViewPassSelection`).
         for ( const RenderPassAttachment& attachment : _pipelineResource.getDesc()._listAttachment )
         {
-            if ( FrameRendererTransientsInternal::isBypassOutput( _pipelineResource.getGraphPass(), attachment._name ) )
+            if ( FrameRendererTransientsInternal::isMadeOnFirstUse( _pipelineResource.getGraphPass(), hashed_string( attachment._name.c_str() ) ) )
                 continue;
             const RHIFormat format = FrameRendererUtil::parseAttachmentFormat( attachment._format );
             const bool      bDepth = FrameRendererUtil::isDepthFormat( format );
@@ -285,35 +370,75 @@ namespace sw
         pool.allocate( _pDevice, name, format, bDepth, clearColor, resolutionDivisor );
     }
 
-    void FrameRenderer::applyViewEffectBypass( ViewTarget& view, const float4x4& viewProj )
+    void FrameRenderer::applyViewPassSelection( ViewTarget& view, const float4x4& viewProj )
     {
         using Internal = FrameRendererTransientsInternal;
         // 카메라 모션 블러의 속도는 지난 뷰-투영과의 차이뿐이다. 같거나 기록을 버리는 프레임(지난 것 = 이번 것)이면 모든 픽셀이 원본이다(motionblur.hlsl).
-        const bool               bCameraStill = view._bHistoryReset == SW_TRUE || Memory::compare( &view._prevViewProj, &viewProj, sizeof( float4x4 ) ) == 0;
-        TransientAttachmentPool& pool         = view._transientPool;
-        bool                     bForwardSet  = false;
-        bool                     bAllocated   = false;
-        for ( const RenderGraphPassDesc& pass : _pipelineResource.getGraphPass() )
+        const bool                          bCameraStill   = view._bHistoryReset == SW_TRUE || Memory::compare( &view._prevViewProj, &viewProj, sizeof( float4x4 ) ) == 0;
+        const vector<RenderGraphPassDesc>&  listPass       = _pipelineResource.getGraphPass();
+        const vector<RenderPassAttachment>& listAttachment = _pipelineResource.getDesc()._listAttachment;
+        TransientAttachmentPool&            pool           = view._transientPool;
+        // 선언한 첨부 자리마다 "이번 프레임에 읽힌다" 하나 — 크기가 같으면 할당하지 않는다(프레임마다 · 뷰마다 부른다).
+        vector<uint8>& listNeeded = _listScratchNeededAttachment;
+        listNeeded.assign( listAttachment.size(), SW_FALSE );
+        bool bForwardSet = false;
+        bool bAllocated  = false;
+        auto ensureMade  = [&]( const hashed_string& name )
         {
-            if ( Internal::bypassesToSource( pass ) == false )
-                continue;
-            const string_view output = pass._listResolvedColorOutput[0]._attachment.view();
-            if ( Internal::isEffectOff( pass, view._settings, bCameraStill ) )
+            if ( pool.contains( name.view() ) )
+                return;
+            for ( const RenderPassAttachment& attachment : listAttachment )
             {
-                bForwardSet = pool.forward( output, Internal::findSourceName( pass ) ) || bForwardSet;
-                continue;
-            }
-            bForwardSet = pool.stopForward( output ) || bForwardSet;
-            if ( pool.contains( output ) )
-                continue;
-            for ( const RenderPassAttachment& attachment : _pipelineResource.getDesc()._listAttachment )
-            {
-                if ( string_view( attachment._name ) != output )
+                if ( string_view( attachment._name ) != name.view() )
                     continue;
                 const RHIFormat format = FrameRendererUtil::parseAttachmentFormat( attachment._format );
                 allocateTransient( pool, attachment._name, format, FrameRendererUtil::isDepthFormat( format ), attachment._clearColor, attachment._resolutionDivisor );
                 bAllocated = true;
             }
+        };
+        // 뒤에서부터 본다 — 패스가 돌지는 뒤의 패스가 그 출력을 읽는지로 정해진다(읽는 쪽은 늘 쓰는 쪽보다 뒤에 선언한다).
+        for ( size_t passIndex = listPass.size(); passIndex-- > 0; )
+        {
+            const RenderGraphPassDesc& pass = listPass[passIndex];
+            if ( Internal::isSelectable( listPass, pass ) == false )
+            {
+                Internal::markReads( listAttachment, pass, true, listNeeded );
+                for ( const RenderGraphPassDesc::ResolvedAttachment& output : pass._listResolvedColorOutput )
+                {
+                    ensureMade( output._attachment );
+                }
+                continue;
+            }
+            const RenderPassTypeInfo& info          = getRenderPassTypeInfo( pass._resolvedType );
+            const bool                bOff          = info.hasFlag( RenderPassTraitFlag::kSkipsWithoutPostProcess ) && Internal::isEffectOff( pass, view._settings, bCameraStill );
+            const bool                bOutputNeeded = std::any_of( pass._listResolvedColorOutput.begin(), pass._listResolvedColorOutput.end(),
+                                                                   [&]( const RenderGraphPassDesc::ResolvedAttachment& output )
+                           { return Internal::isNeeded( listAttachment, output._attachment, listNeeded ); } );
+            const hashed_string*      pSource       = Internal::findSource( pass );
+            const bool                bForwards     = bOff && info.hasFlag( RenderPassTraitFlag::kBypassesToSource ) && pSource != nullptr;
+            if ( bForwards )
+            {
+                // 꺼진 효과의 출력은 원본을 가리킨다 — 출력을 읽는 쪽이 원본을 읽는다.
+                bForwardSet = pool.forward( pass._listResolvedColorOutput[0]._attachment.view(), pSource->view() ) || bForwardSet;
+                if ( bOutputNeeded )
+                    Internal::markNeeded( listAttachment, *pSource, listNeeded );
+                continue;
+            }
+            if ( bOff || ( bOutputNeeded == false && Internal::isConsumed( listPass, pass ) ) )
+            {
+                // 꺼진 원본 없는 효과(SSAO)와 읽는 패스가 모두 빠진 패스는 출력이 없다 — 읽는 쪽은 그 역할을 바인딩하지 않는다.
+                for ( const RenderGraphPassDesc::ResolvedAttachment& output : pass._listResolvedColorOutput )
+                {
+                    bForwardSet = pool.markAbsent( output._attachment.view() ) || bForwardSet;
+                }
+                continue;
+            }
+            for ( const RenderGraphPassDesc::ResolvedAttachment& output : pass._listResolvedColorOutput )
+            {
+                bForwardSet = pool.stopForward( output._attachment.view() ) || bForwardSet;
+                ensureMade( output._attachment );
+            }
+            Internal::markReads( listAttachment, pass, false, listNeeded );
         }
         if ( &view != &_mainView )
             return;

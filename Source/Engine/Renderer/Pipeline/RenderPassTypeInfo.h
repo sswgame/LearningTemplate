@@ -124,8 +124,8 @@ namespace sw
         static constexpr uint32 kCullFront             = SW_BIT( 12 ); ///< PSO 기본값으로 앞면 컬링을 쓴다(인버티드 헐 외곽선). XML 은 None 으로만 바꿀 수 있다.
         static constexpr uint32 kPremultipliedAlpha    = SW_BIT( 13 ); ///< 블렌드가 켜지면 원본 색이 이미 알파를 곱한 값이다(One/InvSrcAlpha, `_bPremultipliedAlpha`).
         /**
-         * @brief 후처리를 끈 뷰(CCTV, 표면 값 보기)에서 효과를 적용하지 않는 효과 패스다(SSAO, 블룸, 외곽선). `kGenericFullscreen` 에만 붙는다.
-         * @details 원본 색을 읽는 효과는 원본을 그대로 넘기고(같은 포맷이면 복사), 원본이 없는 효과는 타깃을 기본 클리어로 지운다.
+         * @brief 후처리를 끈 뷰(CCTV, 표면 값 보기)와 품질(`_minPostQuality`)로 꺼지는 효과 패스다(SSAO, 블룸, 외곽선, 피사계 심도, 모션 블러). `kGenericFullscreen` 에만 붙는다.
+         * @details 꺼진 패스는 기록하지 않는다 — 어떻게 빠지는지는 `kBypassesToSource`(출력이 원본을 가리킨다) 또는 `kOmittedWhenOff`(출력이 없다) 가 정하고, 둘 중 하나가 꼭 붙는다.
          *          조명과 톤맵은 효과가 아니라 이미지를 만드는 단계라 이 비트가 없다.
          */
         static constexpr uint32 kSkipsWithoutPostProcess = SW_BIT( 14 );
@@ -142,12 +142,18 @@ namespace sw
          */
         static constexpr uint32 kRequiresPassDesc = SW_BIT( 16 );
         /**
-         * @brief 꺼진 뷰에서는 패스를 기록하지 않고 출력 이름이 원본(SourceColor 입력)을 가리킨다 — 출력 타깃도 처음 켜질 때까지 만들지 않는다(피사계 심도 · 모션 블러).
-         * @details 언리얼의 후처리가 꺼진 효과의 출력으로 입력 텍스처를 그대로 넘기는 것과 같다. 원본을 복사하거나 셰이더가 원본을 고르는 길(kSkipsWithoutPostProcess)은
-         *          꺼져 있어도 전 화면을 한 번 읽고 쓰고, 출력 타깃이 늘 메모리를 차지했다. 뷰마다 프레임에 한 번 정한다(`FrameRenderer::applyViewEffectBypass`).
+         * @brief 꺼진 뷰에서는 패스를 기록하지 않고 출력 이름이 원본(SourceColor 입력)을 가리킨다 — 출력 타깃도 처음 켜질 때까지 만들지 않는다(블룸 · 외곽선 · 피사계 심도 · 모션 블러).
+         * @details 원본을 복사하거나 셰이더가 원본을 고르던 길은 꺼져 있어도 전 화면을 한 번 읽고 쓰고, 출력 타깃이 늘 메모리를 차지했다.
+         *          뷰마다 프레임에 한 번 정한다(`FrameRenderer::applyViewPassSelection`).
          *          출력이 원본과 형식 · 크기가 같아야 하고 그 출력을 쓰는 패스가 하나뿐이어야 한다 — 로드가 검사한다(`RenderPipelineAsset::validate` 3-6).
          */
         static constexpr uint32 kBypassesToSource = SW_BIT( 17 );
+        /**
+         * @brief 꺼진 뷰에서는 패스를 기록하지 않고 출력이 없다 — 원본 색이 없는 효과(SSAO)다. 읽는 쪽은 그 역할을 바인딩하지 않아 셰이더 기본값(AO = 1, 가림 없음)을 쓴다.
+         * @details 지우기만 하던 길은 꺼져 있어도 타깃을 한 번 쓰고 늘 메모리를 차지했다. 출력을 쓰는 패스가 하나이고, 읽는 패스가 모두 그 역할을 선택 입력으로만 받는지
+         *          로드가 검사한다(`RenderPipelineAsset::validate` 3-7).
+         */
+        static constexpr uint32 kOmittedWhenOff = SW_BIT( 18 );
     };
 } // namespace sw
 

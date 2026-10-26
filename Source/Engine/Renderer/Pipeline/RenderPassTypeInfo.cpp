@@ -109,24 +109,24 @@ namespace sw
                     }
                     case RenderPassType::SSAO:
                     {
-                        // 클리어(가림 없음 = 흰색)는 AO 첨부의 선언이다.
+                        // 꺼지면(후처리를 끈 뷰 · 품질) 기록하지 않고 출력이 없다 — 읽는 쪽은 AO 역할을 바인딩하지 않아 가림 없음(1)이다(kOmittedWhenOff).
                         info._pDefaultShader = &EngineDefaultAssets::_shaderSsao;
                         info._inputContract  = makeContract( { Role::GBufferNormal, Role::SceneDepth }, {} );
-                        info._flags          = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract | Flag::kSkipsWithoutPostProcess;
+                        info._flags          = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract | Flag::kSkipsWithoutPostProcess | Flag::kOmittedWhenOff;
                         break;
                     }
                     case RenderPassType::Bloom:
                     {
                         // BloomBright(반해상도 밝은 부분)를 선언하면 그것을 업샘플해 더하고, 없으면 원본에서 밝은 부분을 직접 구한다.
+                        // 꺼지면 출력이 원본을 가리킨다(AO 적용도 함께 빠진다). 그때 BloomBright · AO 를 읽는 패스가 없으면 그 패스들도 돌지 않는다(applyViewPassSelection).
                         info._pDefaultShader = &EngineDefaultAssets::_shaderPostBloom;
                         info._inputContract  = makeContract( { Role::SourceColor }, { Role::AmbientOcclusion, Role::BloomBright } );
-                        info._flags          = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract | Flag::kSkipsWithoutPostProcess;
+                        info._flags          = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract | Flag::kSkipsWithoutPostProcess | Flag::kBypassesToSource;
                         break;
                     }
                     case RenderPassType::BloomDownsample:
                     {
-                        // 출력은 반해상도 첨부다(파이프라인이 `_resolutionDivisor` 로 정한다). 후처리를 끈 뷰에서는 셰이더가 0 을 낸다 —
-                        // 원본을 복사하는 kSkipsWithoutPostProcess 는 크기가 다른 출력에 맞지 않는다.
+                        // 출력은 반해상도 첨부다(파이프라인이 `_resolutionDivisor` 로 정한다). 읽는 블룸이 꺼진 뷰에서는 읽는 패스가 없어 돌지 않는다(applyViewPassSelection).
                         info._pDefaultShader = &EngineDefaultAssets::_shaderPostBloom;
                         info._pPassDefine    = kPassBloomDownsampleDefine;
                         info._inputContract  = makeContract( { Role::SourceColor }, {} );
@@ -135,9 +135,10 @@ namespace sw
                     }
                     case RenderPassType::Outline:
                     {
+                        // 꺼지면(후처리를 끈 뷰 · 품질) 출력이 원본을 가리킨다(kBypassesToSource) — 출력은 원본과 같은 HDR 형식이어야 한다(검증 3-6).
                         info._pDefaultShader = &EngineDefaultAssets::_shaderPostOutline;
                         info._inputContract  = makeContract( { Role::SourceColor, Role::SceneDepth }, {} );
-                        info._flags          = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract | Flag::kSkipsWithoutPostProcess;
+                        info._flags          = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract | Flag::kSkipsWithoutPostProcess | Flag::kBypassesToSource;
                         break;
                     }
                     case RenderPassType::TAA:
@@ -411,8 +412,10 @@ namespace sw
                     // 후처리를 끈 뷰에서 효과를 건너뛰는 일은 일반 풀스크린 실행만 한다.
                     if ( row.hasFlag( Flag::kSkipsWithoutPostProcess ) && row.hasFlag( Flag::kGenericFullscreen ) == false )
                         return false;
-                    // 원본을 가리켜 건너뛰는 패스도 건너뛸 수 있는 효과다(`_minPostQuality` 를 받는다).
-                    if ( row.hasFlag( Flag::kBypassesToSource ) && row.hasFlag( Flag::kSkipsWithoutPostProcess ) == false )
+                    // 건너뛸 수 있는 효과는 빠지는 방법(원본을 가리킴 · 출력 없음)이 정확히 하나다. 그 방법이 있는 패스는 건너뛸 수 있는 효과다(`_minPostQuality` 를 받는다).
+                    const bool bBypasses = row.hasFlag( Flag::kBypassesToSource );
+                    const bool bOmitted  = row.hasFlag( Flag::kOmittedWhenOff );
+                    if ( row.hasFlag( Flag::kSkipsWithoutPostProcess ) != ( bBypasses || bOmitted ) || ( bBypasses && bOmitted ) )
                         return false;
                     // 컴퓨트 패스는 파이프라인 XML 에 나오지 않고 그래픽스 성질을 갖지 않는다.
                     if ( row.hasFlag( Flag::kCompute ) && ( isPipelinePassType( row._type ) || row.hasFlag( Flag::kDrawsSceneMeshes | Flag::kGenericFullscreen ) ) )

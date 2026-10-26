@@ -88,11 +88,17 @@ namespace sw
          * @return 가리키는 곳이 바뀌었으면 true 입니다.
          */
         bool forward( string_view name, string_view source );
+        /**
+         * @brief 이번 프레임에 @p name 이 아무 첨부도 가리키지 않게 합니다(꺼진 SSAO처럼 원본이 없는 효과, 읽는 패스가 모두 꺼져 기록하지 않는 패스의 출력).
+         * @details `find` 는 빈 값이고 `resolveName` 은 빈 이름이다. 읽는 쪽은 그 역할을 바인딩하지 않아 셰이더의 기본값(AO = 1)을 쓴다.
+         * @return 가리키는 곳이 바뀌었으면 true 입니다.
+         */
+        bool markAbsent( string_view name ) { return forward( name, string_view{} ); }
         /** @brief @p name 이 다시 자기 첨부를 쓰게 합니다. @return 바뀌었으면 true 입니다. */
         bool stopForward( string_view name );
-        /** @brief @p name 이 지금 원본을 가리키면 true 입니다(그 패스는 기록하지 않는다). */
+        /** @brief @p name 이 지금 원본을 가리키거나 비어 있으면 true 입니다(그 이름을 쓰는 패스는 기록하지 않는다). */
         bool isForwarded( string_view name ) const { return _mapForward.find( name ) != _mapForward.end(); }
-        /** @brief 가리키는 곳을 끝까지 따라간 이름입니다. 가리키지 않으면 @p name 그대로입니다. */
+        /** @brief 가리키는 곳을 끝까지 따라간 이름입니다. 가리키지 않으면 @p name 그대로, 비어 있으면(`markAbsent`) 빈 이름입니다. */
         string_view resolveName( string_view name ) const;
         /** @brief 전체 첨부입니다. 레지스트리 등록이나 Present 소스 선택처럼 목록을 훑는 곳에서 씁니다. */
         const unordered_map<string, Attachment>& getAll() const { return _mapAttachment; }
