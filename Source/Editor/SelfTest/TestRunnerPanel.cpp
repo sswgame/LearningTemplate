@@ -60,15 +60,10 @@ namespace sw::editor
             /** @brief 지금 백엔드의 App 명령줄 플래그(`-dx12` …)입니다. 모르면 빈 글이라 App 이 설정의 기본 백엔드로 뜬다. */
             static string makeBackendArgument()
             {
-                const FrameRenderer* pRenderer = editor::findSubsystem<FrameRenderer>();
-                if ( pRenderer == nullptr ) // 필수 서비스: 없으면 버그
-                {
-                    SW_LOG_ERROR( "[TestRunner] FrameRenderer is missing - the backend flag of the relaunch is left empty" );
-                    return string{};
-                }
-                if ( pRenderer->getDevice() == nullptr )
+                const FrameRenderer& renderer = editor::getSubsystem<FrameRenderer>();
+                if ( renderer.getDevice() == nullptr )
                     return string{}; // 장치가 아직 없으면 플래그를 모른다
-                const utf8* pFlag = BugItReport::findBackendFlag( pRenderer->getDevice()->getBackendName() );
+                const utf8* pFlag = BugItReport::findBackendFlag( renderer.getDevice()->getBackendName() );
                 return pFlag[0] != '\0' ? string( " -" ) + pFlag : string{};
             }
         };

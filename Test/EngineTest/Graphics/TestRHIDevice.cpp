@@ -1526,7 +1526,7 @@ SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, CommandListHandedOffAcrossThreadsDoes
 /**
  * @brief [RHIDeviceTest] 컴퓨트 셰이더 디스패치와 간접 커맨드
  */
-SW_TEST_CASE( RHIDeviceTest, ComputeShaderDispatchAndIndirectCommands )
+SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, ComputeShaderDispatchAndIndirectCommands, test::listRHIBackendParameter, 0.4 )
 {
     test::RHITestDevice rhiDevice( { sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::OpenGL } );
     if ( rhiDevice.isReady() == false )

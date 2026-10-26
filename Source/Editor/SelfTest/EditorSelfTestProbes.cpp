@@ -35,15 +35,10 @@ namespace sw::editor
              */
             [[nodiscard]] static bool readSelectedEnumValue( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                EditorContext* pContext  = editor::findSubsystem<EditorContext>();
-                TypeRegistry*  pRegistry = editor::findSubsystem<TypeRegistry>();
-                if ( pRegistry == nullptr ) // 필수 서비스: 없으면 버그
-                {
-                    SW_LOG_ERROR( "[Scenario] probe Editor.SelectedEnumValue: TypeRegistry is missing" );
-                    return false;
-                }
-                const size_t dot                = gv_editorProbeProperty.find( '.' );
-                const bool   bInvalidProbeSetup = pContext == nullptr || dot == string::npos;
+                EditorContext* pContext           = editor::findSubsystem<EditorContext>();
+                TypeRegistry&  registry           = editor::getSubsystem<TypeRegistry>();
+                const size_t   dot                = gv_editorProbeProperty.find( '.' );
+                const bool     bInvalidProbeSetup = pContext == nullptr || dot == string::npos;
                 if ( bInvalidProbeSetup )
                     return false;
                 GameObject* pObject = editor::getMainSceneSelection().getPrimaryObject();
@@ -55,7 +50,7 @@ namespace sw::editor
                 const PropertyInfo* pProperty = pComponent->getTypeInfo()->findPropertyInHierarchy( hashed_string( gv_editorProbeProperty.substr( dot + 1 ).c_str() ) );
                 if ( pProperty == nullptr )
                     return false;
-                const EnumInfo* pEnum = pRegistry->findEnum( pProperty->_typeName );
+                const EnumInfo* pEnum = registry.findEnum( pProperty->_typeName );
                 if ( pEnum == nullptr )
                     return false;
                 const void* pMemory = pProperty->getValuePtr<void>( pComponent );

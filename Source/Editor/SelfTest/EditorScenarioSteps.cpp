@@ -403,13 +403,7 @@ namespace sw::editor
                 const string* pComponent = step.findAttribute( "component" );
                 if ( pComponent == nullptr )
                     return true;
-                TypeRegistry* pRegistry = editor::findSubsystem<TypeRegistry>();
-                if ( pRegistry == nullptr ) // 필수 서비스: 없으면 버그
-                {
-                    outError = step.describe() + ": TypeRegistry is missing, so component type '" + *pComponent + "' cannot be checked";
-                    return false;
-                }
-                if ( pRegistry->findType( hashed_string( *pComponent ) ) == nullptr )
+                if ( editor::getSubsystem<TypeRegistry>().findType( hashed_string( *pComponent ) ) == nullptr )
                 {
                     outError = step.describe() + ": unknown component type '" + *pComponent + "'";
                     return false;
@@ -438,14 +432,8 @@ namespace sw::editor
 
                 vector<GameObject*> listObject;
                 const string*       pComponent = step.findAttribute( "component" );
-                TypeRegistry*       pRegistry  = editor::findSubsystem<TypeRegistry>();
-                if ( pComponent != nullptr && pRegistry == nullptr ) // 필수 서비스: 없으면 버그
-                {
-                    runner.recordFailure( step, "TypeRegistry is missing, so component type '" + *pComponent + "' cannot be resolved" );
-                    return true;
-                }
                 if ( pComponent != nullptr )
-                    EditorSceneCommands::collectObjectsWithComponent( *pManager, pRegistry->findType( hashed_string( *pComponent ) ), listObject );
+                    EditorSceneCommands::collectObjectsWithComponent( *pManager, editor::getSubsystem<TypeRegistry>().findType( hashed_string( *pComponent ) ), listObject );
                 else
                     pManager->getAllGameObjects( listObject );
 
@@ -587,17 +575,12 @@ namespace sw::editor
             /** @brief 창 제목에 미저장 표시(`*`)가 있으면 1 입니다. 셸이 실제로 창에 설정한 제목을 읽습니다. */
             [[nodiscard]] static bool readWindowTitleDirty( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const MainWindowSubsystem* pWindowHost = editor::findSubsystem<MainWindowSubsystem>();
-                if ( pWindowHost == nullptr ) // 필수 서비스: 없으면 버그
-                {
-                    SW_LOG_ERROR( "[Scenario] probe Editor.WindowTitleDirty: MainWindowSubsystem is missing" );
-                    return false;
-                }
-                const IWindow* pWindow = pWindowHost->getWindow();
+                const MainWindowSubsystem& windowHost = editor::getSubsystem<MainWindowSubsystem>();
+                const IWindow*             pWindow    = windowHost.getWindow();
                 if ( pWindow == nullptr )
                     return false; // 창 없는 실행(헤드리스)에서는 값이 없다
                 // 창에는 엔진이 프레임 끝에 건 제목(실행 정보 포함)이 있어 한 프레임 늦다 — 에디터가 정한 평소 제목을 본다.
-                outValue = EditorWindowTitleUtil::isDirtyTitle( pWindowHost->getBaseTitle() ) ? 1.0 : 0.0;
+                outValue = EditorWindowTitleUtil::isDirtyTitle( windowHost.getBaseTitle() ) ? 1.0 : 0.0;
                 return true;
             }
 
@@ -678,40 +661,23 @@ namespace sw::editor
 
             [[nodiscard]] static bool readUndoCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const CommandStack* pStack = editor::findSubsystem<CommandStack>();
-                if ( pStack == nullptr ) // 필수 서비스: 없으면 버그
-                {
-                    SW_LOG_ERROR( "[Scenario] probe Editor.UndoCount: CommandStack is missing" );
-                    return false;
-                }
-                outValue = static_cast<float64>( pStack->getCommandCount() );
+                outValue = static_cast<float64>( editor::getSubsystem<CommandStack>().getCommandCount() );
                 return true;
             }
 
             [[nodiscard]] static bool readUndoIndex( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const CommandStack* pStack = editor::findSubsystem<CommandStack>();
-                if ( pStack == nullptr ) // 필수 서비스: 없으면 버그
-                {
-                    SW_LOG_ERROR( "[Scenario] probe Editor.UndoIndex: CommandStack is missing" );
-                    return false;
-                }
-                outValue = static_cast<float64>( pStack->getCurrentIndex() );
+                outValue = static_cast<float64>( editor::getSubsystem<CommandStack>().getCurrentIndex() );
                 return true;
             }
 
             /** @brief 툴이 겨누는 씬과 Undo 스택이 메인 씬의 것이면 1 입니다 — 포커스를 쥔 미리보기 창이 닫힌 뒤에도 남아 있으면 0 입니다(선택은 포커스를 잃어도 남는 것이 정상이라 보지 않는다). */
             [[nodiscard]] static bool readToolFocusIsMain( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const CommandStack* pMainStack = editor::findSubsystem<CommandStack>();
-                if ( pMainStack == nullptr ) // 필수 서비스: 없으면 버그
-                {
-                    SW_LOG_ERROR( "[Scenario] probe Editor.ToolFocusIsMain: CommandStack is missing" );
-                    return false;
-                }
+                const CommandStack& mainStack = editor::getSubsystem<CommandStack>();
                 if ( editor::getActiveScene() == nullptr )
                     return false; // 열린 씬이 없으면 값이 없다
-                outValue = editor::getFocusedScene() == editor::getActiveScene() && editor::getFocusedCommandStack() == pMainStack ? 1.0 : 0.0;
+                outValue = editor::getFocusedScene() == editor::getActiveScene() && editor::getFocusedCommandStack() == &mainStack ? 1.0 : 0.0;
                 return true;
             }
 
@@ -757,10 +723,7 @@ namespace sw::editor
                     listEntry.emplace_back( std::move( key ), HashUtil::computeStringHash64( state, false ) );
                 } );
                 std::sort( listEntry.begin(), listEntry.end() );
-                GlobalVariableManager* pVariables = editor::findSubsystem<GlobalVariableManager>(); // 필수 서비스: 없으면 버그
-                if ( pVariables == nullptr )
-                    SW_LOG_ERROR( "[Scenario] GlobalVariableManager is missing - the scene hash dump flag is not read" );
-                const GlobalVariableInfo* pDump = pVariables != nullptr ? pVariables->findVariable( "gv_automationHashDump" ) : nullptr;
+                const GlobalVariableInfo* pDump = editor::getSubsystem<GlobalVariableManager>().findVariable( "gv_automationHashDump" );
                 const bool                bDump = pDump != nullptr && pDump->getValueAsInt() != 0;
                 uint64                    hash  = HashUtil::kFnvOffset64;
                 for ( const std::pair<string, uint64>& entry : listEntry )
@@ -875,13 +838,7 @@ namespace sw::editor
 
             [[nodiscard]] static bool readLoadingScreenShown( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const UISystem* pUI = editor::findSubsystem<UISystem>();
-                if ( pUI == nullptr ) // 필수 서비스: 없으면 버그
-                {
-                    SW_LOG_ERROR( "[Scenario] probe LoadingScreen.Shown: UISystem is missing" );
-                    return false;
-                }
-                outValue = pUI->isLoadingScreenShown() ? 1.0 : 0.0;
+                outValue = editor::getSubsystem<UISystem>().isLoadingScreenShown() ? 1.0 : 0.0;
                 return true;
             }
 
@@ -1246,13 +1203,7 @@ namespace sw::editor
             /** @brief 게임 디버그 HUD 의 켜짐(`debug.hud`) 상태입니다. 화면이 열렸는지(엔진 프로브 `DebugHUD.Shown`)와 달리 정지 상태에서도 켜짐 여부를 반환합니다. 조종자가 없으면 값을 내지 않습니다. */
             [[nodiscard]] static bool readDebugHUDEnabled( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const UISystem* pUI = editor::findSubsystem<UISystem>();
-                if ( pUI == nullptr ) // 필수 서비스: 없으면 버그
-                {
-                    SW_LOG_ERROR( "[Scenario] probe DebugHUD.Enabled: UISystem is missing" );
-                    return false;
-                }
-                const DebugHUD* pHUD = pUI->getDebugHUD();
+                const DebugHUD* pHUD = editor::getSubsystem<UISystem>().getDebugHUD();
                 if ( pHUD == nullptr )
                     return false; // HUD 를 아직 만들지 않았다
                 outValue = pHUD->isShown() ? 1.0 : 0.0;
@@ -1458,17 +1409,12 @@ namespace sw::editor
                 const PropertyInfo* pProperty = pComponent->getTypeInfo()->findPropertyInHierarchy( hashed_string( gv_editorProbeProperty.substr( dot + 1 ).c_str() ) );
                 if ( pProperty == nullptr || SceneObjectReferenceUtil::isReferenceTypeName( pProperty->_typeName ) == false )
                     return false;
-                const SceneObjectReference* pReference    = pProperty->getValuePtr<SceneObjectReference>( pComponent );
-                const SceneManager*         pSceneManager = editor::findSubsystem<SceneManager>();
-                if ( pSceneManager == nullptr ) // 필수 서비스: 없으면 버그
-                {
-                    SW_LOG_ERROR( "[Scenario] scene reference probe: SceneManager is missing" );
-                    return false;
-                }
+                const SceneObjectReference* pReference   = pProperty->getValuePtr<SceneObjectReference>( pComponent );
+                const SceneManager&         sceneManager = editor::getSubsystem<SceneManager>();
                 if ( pReference == nullptr )
                     return false; // 프로퍼티 값 포인터가 없으면 값이 없다
                 uint64                         objectID{ 0 };
-                const SceneObjectResolveResult state = SceneObjectReferenceUtil::resolve( *pSceneManager, *pReference, objectID );
+                const SceneObjectResolveResult state = SceneObjectReferenceUtil::resolve( sceneManager, *pReference, objectID );
                 switch ( state )
                 {
                     case SceneObjectResolveResult::Unset:
@@ -1491,7 +1437,7 @@ namespace sw::editor
                         break;
                     }
                 }
-                for ( const unique_ptr<Scene>& scene : pSceneManager->getLoadedScenes() )
+                for ( const unique_ptr<Scene>& scene : sceneManager.getLoadedScenes() )
                 {
                     if ( scene == nullptr || scene->getObjectManager() == nullptr )
                         continue;
@@ -1586,13 +1532,8 @@ namespace sw::editor
             /** @brief 씬 뷰(툴바)나 주 출력(게임 뷰)의 보기 모드 번호(`RenderViewMode`)를 읽습니다. 렌더러가 없으면 false 입니다. */
             [[nodiscard]] static bool readViewMode( bool bSceneView, float64& outValue )
             {
-                const FrameRenderer* pRenderer = editor::findSubsystem<FrameRenderer>();
-                if ( pRenderer == nullptr ) // 필수 서비스: 없으면 버그
-                {
-                    SW_LOG_ERROR( "[Scenario] view mode probe: FrameRenderer is missing" );
-                    return false;
-                }
-                outValue = static_cast<float64>( bSceneView ? pRenderer->getSceneViewMode() : pRenderer->getViewMode() );
+                const FrameRenderer& renderer = editor::getSubsystem<FrameRenderer>();
+                outValue                      = static_cast<float64>( bSceneView ? renderer.getSceneViewMode() : renderer.getViewMode() );
                 return true;
             }
 
@@ -1603,13 +1544,7 @@ namespace sw::editor
             /** @brief 렌더 스레드에 살아 있는 미리보기 씬 렌더러 수입니다(창 하나에 하나). 창을 닫은 다음 렌더 프레임에 줄어듭니다. 렌더러가 없으면 false 입니다. */
             [[nodiscard]] static bool readScenePreviewRenderers( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const FrameRenderer* pRenderer = editor::findSubsystem<FrameRenderer>();
-                if ( pRenderer == nullptr ) // 필수 서비스: 없으면 버그
-                {
-                    SW_LOG_ERROR( "[Scenario] probe ScenePreviewRenderers: FrameRenderer is missing" );
-                    return false;
-                }
-                outValue = static_cast<float64>( pRenderer->getScenePreviewRendererCount() );
+                outValue = static_cast<float64>( editor::getSubsystem<FrameRenderer>().getScenePreviewRendererCount() );
                 return true;
             }
 
@@ -1754,14 +1689,8 @@ namespace sw::editor
             /** @brief 프로파일러 타임라인이 최근 4프레임에 이벤트를 남긴 스레드 수입니다. 녹화를 켜지 않았으면 0 입니다. */
             [[nodiscard]] static bool readProfilerTimelineThreadCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                constexpr uint32     kRecentFrameCount = 4;
-                const FrameProfiler* pProfiler         = editor::findSubsystem<FrameProfiler>();
-                if ( pProfiler == nullptr ) // 필수 서비스: 없으면 버그
-                {
-                    SW_LOG_ERROR( "[Scenario] probe ProfilerTimelineThreadCount: FrameProfiler is missing" );
-                    return false;
-                }
-                outValue = static_cast<float64>( pProfiler->getTimeline().countActiveThreads( kRecentFrameCount ) );
+                constexpr uint32 kRecentFrameCount = 4;
+                outValue                           = static_cast<float64>( editor::getSubsystem<FrameProfiler>().getTimeline().countActiveThreads( kRecentFrameCount ) );
                 return true;
             }
 
