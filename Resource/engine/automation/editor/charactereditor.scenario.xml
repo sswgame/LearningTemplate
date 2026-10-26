@@ -49,5 +49,11 @@
 	<!-- 제약 리그 미리보기(팩 데이터의 rig): 켜면 몸에 후처리 리그가 걸린다 — 눈으로 본다 -->
 	<At frame="730"><EditorClick mark="charactereditor.rigPreview"/></At>
 	<At frame="780"><CaptureEditorUI file="charactereditor/rig.png"/></At>
-	<At frame="800"><Variable name="gv_editorUiScale" value="0"/><Pass/></At>
+	<!-- 미리보기 뷰포트의 휠 줌: 씬 뷰와 같은 dolly 라 거리가 바뀐다(EditorOrbitMath) -->
+	<At frame="785"><EditorHover mark="charactereditor.previewScene" anchor="0.5,0.5"/></At>
+	<At frame="790"><Remember probe="Editor.PreviewViewportOrbitDistance" as="previewDistance"/></At>
+	<At frame="792"><EditorWheel dy="2"/></At>
+	<At frame="798"><Expect probe="Editor.PreviewViewportOrbitDistance" differsFrom="previewDistance"/></At>
+	<At frame="800"><EditorHover release="true"/></At>
+	<At frame="802"><Variable name="gv_editorUiScale" value="0"/><Pass/></At>
 </Scenario>

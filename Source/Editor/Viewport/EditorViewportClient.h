@@ -63,6 +63,8 @@ namespace sw::editor
         void focusOnPoint( const float3& target, float32 radius ) { _camera.focusOnPoint( target, radius ); }
 
         const float3& getCameraPosition() const { return _camera.getPosition(); }
+        /** @brief 씬 뷰 카메라의 궤도 거리(m)입니다. 프로브 `Editor.SceneViewOrbitDistance` 가 읽습니다. */
+        float32 getCameraOrbitDistance() const { return _camera.getOrbitDistance(); }
         /** @brief 씬 뷰 카메라(위치 · 회전 · 직교 · 속도)를 새 에디터 세션이 시작하는 값으로 되돌립니다. 씬을 다시 열어도 카메라 값은 이어지므로 따로 되돌린다. */
         void resetCameraToDefault();
         /** @brief 씬 뷰 카메라를 위치 @p position, 회전 @p rotation(도, 피치 · 요 · 롤)에 놓습니다(개발 명령 `camera.set`). */
@@ -94,13 +96,14 @@ namespace sw::editor
 
     private:
         ViewportToolbarSettings     _toolbarSettings;
-        EditorViewportCamera        _camera;          ///< 씬 뷰 카메라 값과 비행 · 궤도 · 북마크 입력
-        EditorViewportPicker        _picker;          ///< 클릭 선택과 호버
-        EditorViewportGizmo         _gizmo;           ///< 트랜스폼 기즈모와 그 되돌리기
-        EditorViewportCanvasOverlay _canvasOverlay;   ///< 격자, 자, 방향 큐브
-        EditorViewportOverlays      _overlays;        ///< 씬 뷰 위의 오버레이 바 목록
-        EditorDebugHUDView          _hudView;         ///< 오른쪽 위의 HUD 박스
-        EditorVisualizerStats       _visualizerStats; ///< 시각화가 마지막으로 그린 양(그리기 인자로 시각화에 넘긴다)
+        float32                     _canvasHeight{ 0.0f }; ///< 지난 `draw` 의 캔버스 높이(픽셀). 아직 그리지 않았으면 0 이고 팬은 쉰다
+        EditorViewportCamera        _camera;               ///< 씬 뷰 카메라 값과 비행 · 궤도 · 북마크 입력
+        EditorViewportPicker        _picker;               ///< 클릭 선택과 호버
+        EditorViewportGizmo         _gizmo;                ///< 트랜스폼 기즈모와 그 되돌리기
+        EditorViewportCanvasOverlay _canvasOverlay;        ///< 격자, 자, 방향 큐브
+        EditorViewportOverlays      _overlays;             ///< 씬 뷰 위의 오버레이 바 목록
+        EditorDebugHUDView          _hudView;              ///< 오른쪽 위의 HUD 박스
+        EditorVisualizerStats       _visualizerStats;      ///< 시각화가 마지막으로 그린 양(그리기 인자로 시각화에 넘긴다)
         /**
          * @brief 이 프레임의 오브젝트 스냅샷입니다. 용량을 재사용하며, 시각화와 통계 오버레이가 함께 읽습니다.
          * @details 값을 반환하는 `getAllGameObjects()` 는 호출마다 씬 전체를 새로 할당하고 복사한다. 그래서 통계 오버레이와

@@ -69,6 +69,8 @@ namespace sw::editor
         static void moveMouse( const float2& position, uint32 viewportID = 0 );
         static void setMouseButton( int32 button, bool bDown );
         static void typeText( string_view utf8Text );
+        /** @brief 세로 휠을 @p notches 눈금 돌립니다(양수면 위로). 커서 아래 창이 받는다. */
+        static void scrollMouseWheel( float32 notches );
         /**
          * @brief 이 뒤에 넣는 이벤트는 다음 ImGui 프레임에 들어갑니다.
          * @details 플랫폼 백엔드가 프레임마다 실제 커서를 넣으므로 누름과 뗌을 한 프레임에 몰면 뗄 때 커서가 위젯 밖에 있다. 그래서 뗌 앞에서 끊고 커서를 다시 옮긴다.

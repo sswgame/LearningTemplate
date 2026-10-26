@@ -107,6 +107,8 @@ namespace sw::editor
         /** @brief 지난 `draw` 가 이미지를 놓은 화면 위치와 크기입니다. 그리지 않았으면 크기가 0 입니다. */
         const float2& getImagePosition() const { return _imagePosition; }
         const float2& getImageSize() const { return _imageSize; }
+        /** @brief 오빗 카메라가 대상에서 떨어진 거리입니다. 휠 줌이 바꾸며 프로브 `Editor.PreviewViewportOrbitDistance` 가 읽습니다. */
+        float32 getOrbitDistance() const { return _orbitDistance; }
 
         /** @brief 환경 프리셋(방향광, 바닥)을 @p scene 에 오브젝트로 스폰하고 만든 수를 반환합니다. 테스트가 창 없이 부릅니다. */
         static uint32 spawnEnvironment( Scene& scene, const EditorPreviewEnvironment& environment );

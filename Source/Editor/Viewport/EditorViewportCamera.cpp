@@ -3,6 +3,7 @@
 #include "Editor/Viewport/EditorViewportCamera.h"
 
 #include "Core/Common/Defines.h"
+#include "Core/Container/vector.h"
 #include "Core/Math/AABB.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
@@ -13,6 +14,7 @@
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/Viewport/EditorOrbitMath.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
 
 #include "Engine/Object/Component/CameraComponent.h"
@@ -29,6 +31,17 @@ namespace sw::editor
         {
             /** @brief 에디터 카메라가 지난 프레임에 설정한 위치에서 이 거리(m)보다 멀리 떨어져 있으면 외부에서 옮긴 것으로 봅니다. 부동소수 왕복 오차보다 큰 값입니다. */
             static constexpr float32 kExternalMoveTolerance = 0.001f;
+            /** @brief 비행 속도(m/s)의 범위입니다. 툴바 슬라이더와 휠이 같은 범위를 쓴다. */
+            static constexpr float32 kFlySpeedMin = 0.5f;
+            static constexpr float32 kFlySpeedMax = 20.0f;
+            /** @brief 비행 속도가 휠 한 칸에 곱해지는 비율입니다. */
+            static constexpr float32 kFlySpeedWheelRatio = 1.2f;
+            /** @brief 궤도 거리(m)의 최솟값입니다. 이보다 가까이 당기면 궤도 중심을 지나친다. */
+            static constexpr float32 kOrbitDistanceMin = 0.5f;
+            /** @brief 초점(F)이 물체 반지름에 곱해 궤도 거리를 정하는 비율입니다. 상자가 화면에 여유 있게 들어온다. */
+            static constexpr float32 kFrameDistancePerRadius = 2.5f;
+            /** @brief 초점이 쓰는 물체 반지름(m)의 최솟값입니다. 점 같은 물체에서 거리가 0 이 되지 않게 한다. */
+            static constexpr float32 kFrameRadiusMin = 0.1f;
 
             /** @brief 회전(도, 피치 · 요)에서 시선 방향을 계산합니다. */
             static float3 computeForward( const float3& rotation )
@@ -58,6 +71,12 @@ namespace sw::editor
         , _bFlownThisRightHold{ SW_FALSE }
         , _reserved{ 0 }
     {
+        syncOrbitTargetToView(); // 처음 Alt 궤도도 지금 보는 점을 돈다(옛 원점이 아니라)
+    }
+
+    void EditorViewportCamera::syncOrbitTargetToView()
+    {
+        _orbitTarget = _position + EditorViewportCameraInternal::computeForward( _rotation ) * _orbitDistance;
     }
 
     void EditorViewportCamera::processFlyInput( float32 deltaTime, float32& inoutCameraSpeed )
@@ -91,12 +110,15 @@ namespace sw::editor
 
         // 오른쪽 버튼을 누른 채 휠로 비행 속도를 바꾼다(언리얼과 유니티). 툴바 슬라이더와 같은 값이다.
         if ( MathUtil::abs( io.MouseWheel ) > 0.01f )
-            inoutCameraSpeed = MathUtil::clamp( inoutCameraSpeed * MathUtil::pow( 1.2f, io.MouseWheel ), 0.5f, 20.0f );
+            inoutCameraSpeed = MathUtil::clamp( inoutCameraSpeed * MathUtil::pow( EditorViewportCameraInternal::kFlySpeedWheelRatio, io.MouseWheel ), EditorViewportCameraInternal::kFlySpeedMin,
+                                                EditorViewportCameraInternal::kFlySpeedMax );
         // 직교 보기에서 비행을 시작하면 원근 보기로 돌아간다. Godot 의 직교 보기와 같다. 직교로 둘러보는 것은 의미가 적기 때문이다.
         _bOrthographicView = SW_FALSE;
 
         const float32 speed = inoutCameraSpeed * ( io.KeyShift ? 3.0f : 1.0f ) * deltaTime;
         _position += moveDir * speed;
+        // 궤도 중심은 매 프레임 시선 앞 궤도 거리에 둔다. 비행 뒤 Alt 궤도가 옛 중심으로 튀지 않는다(언리얼 · 유니티).
+        syncOrbitTargetToView();
 
         // 누르는 프레임에 새 누름으로 지우고, 키로 옮긴 프레임이 하나라도 있으면 비행이다(맥락 메뉴가 놓을 때 본다).
         // 마우스로 돌린 것은 맥락 메뉴가 끌기 거리(끌기 임계값)로 가린다 — 누를 때의 손떨림 한 픽셀로 메뉴가 막히지 않게 여기서는 세지 않는다.
@@ -121,12 +143,37 @@ namespace sw::editor
 
         // Alt + RMB 또는 휠: 궤도 줌
         if ( io.MouseDown[1] )
-            _orbitDistance = MathUtil::max( _orbitDistance + ( io.MouseDelta.x - io.MouseDelta.y ) * 0.05f, 0.5f );
+            _orbitDistance = MathUtil::max( _orbitDistance + ( io.MouseDelta.x - io.MouseDelta.y ) * 0.05f, EditorViewportCameraInternal::kOrbitDistanceMin );
 
         if ( MathUtil::abs( io.MouseWheel ) > 0.01f )
-            _orbitDistance = MathUtil::max( _orbitDistance - io.MouseWheel * 1.0f, 0.5f );
+            dolly( io.MouseWheel );
 
         _position = _orbitTarget - EditorViewportCameraInternal::computeForward( _rotation ) * _orbitDistance;
+    }
+
+    void EditorViewportCamera::dolly( float32 mouseWheel )
+    {
+        _orbitDistance = EditorOrbitMath::dolly( _orbitDistance, mouseWheel, EditorViewportCameraInternal::kOrbitDistanceMin );
+        _position      = _orbitTarget - EditorViewportCameraInternal::computeForward( _rotation ) * _orbitDistance;
+    }
+
+    void EditorViewportCamera::pan( float32 pixelX, float32 pixelY, float32 viewportHeightPixels )
+    {
+        if ( viewportHeightPixels <= 0.0f )
+            return; // 뷰포트 높이를 모르면 픽셀을 월드 길이로 바꿀 수 없다
+        const float32 yawRad   = MathUtil::toRadian( _rotation._y );
+        const float32 pitchRad = MathUtil::toRadian( _rotation._x );
+        const float32 sinYaw   = MathUtil::sin( yawRad );
+        const float32 cosYaw   = MathUtil::cos( yawRad );
+        const float3  right{ cosYaw, 0.0f, -sinYaw };
+        // 시선과 오른쪽에 직교하는 카메라 위쪽(왼손 좌표계)
+        const float3 up{ sinYaw * MathUtil::sin( pitchRad ), MathUtil::cos( pitchRad ), cosYaw * MathUtil::sin( pitchRad ) };
+        // 픽셀 하나의 월드 길이: 직교는 화면 높이 / 픽셀 높이, 원근은 궤도 중심 깊이에서의 화면 높이 / 픽셀 높이
+        const float32 scale = _bOrthographicView == SW_TRUE ? _orthoHeight / viewportHeightPixels : EditorOrbitMath::panWorldPerPixel( _orbitDistance, MathUtil::toRadian( _fovY ), viewportHeightPixels );
+        // 끈 방향으로 장면이 따라오므로 카메라는 반대로 움직인다. 궤도 중심도 같이 옮겨 이어지는 Alt 궤도가 같은 점을 돈다.
+        const float3 delta = right * ( -pixelX * scale ) + up * ( pixelY * scale );
+        _position += delta;
+        _orbitTarget += delta;
     }
 
     void EditorViewportCamera::processBookmarkKeys()
@@ -143,7 +190,6 @@ namespace sw::editor
                     CameraBookmark bm{};
                     bm._position      = _position;
                     bm._rotation      = _rotation;
-                    bm._orbitTarget   = _orbitTarget;
                     bm._orbitDistance = _orbitDistance;
                     fixed_string<constant::kMaxBuffer32> arrName;
                     formatstring( arrName.data(), arrName.capacity(), "POI %d", keyIndex + 1 );
@@ -191,6 +237,8 @@ namespace sw::editor
                 _rotation._x = MathUtil::toDegree( MathUtil::asin( MathUtil::clamp( -forward._y / length, -1.0f, 1.0f ) ) );
                 _rotation._y = MathUtil::toDegree( MathUtil::atan2( forward._x, forward._z ) );
             }
+            // 이어받은 시점에서도 궤도 중심은 시선 앞 궤도 거리다(옛 중심이 남으면 다음 Alt 궤도가 튄다).
+            syncOrbitTargetToView();
         }
         pCamera->setLocalPosition( _position );
         pCamera->setOrthographic( _bOrthographicView == SW_TRUE );
@@ -202,33 +250,42 @@ namespace sw::editor
 
     void EditorViewportCamera::frameSelected()
     {
-        GameObject* pRaw = editor::getMainSceneSelection().getPrimaryObject();
-        if ( pRaw == nullptr )
-            return;
+        vector<GameObject*> listSelected;
+        editor::getMainSceneSelection().getSelectedObjects( listSelected );
 
-        SceneComponent* pSceneComp = pRaw->getPrimarySceneComponent();
-        if ( pSceneComp == nullptr )
-            return;
-
-        const float3 worldPos = pSceneComp->getWorldPosition();
-
-        // 크기는 오브젝트의 월드 상자로 측정한다(`GameObject::getWorldBox`). 메시의 로컬 스케일과 콜라이더 오프셋 크기로 따로 계산하면
-        // 부모가 키운 오브젝트나 단위 상자가 아닌 메시를 너무 가깝거나 멀게 잡는다.
-        float32 objectRadius = 2.0f;
-        AABB    objectBox{};
-        if ( pRaw->getWorldBox( objectBox ) )
+        // 크기는 선택 전체의 월드 상자를 합쳐 측정한다(`GameObject::getWorldBox`). 하나만 보면 여러 개를 골랐을 때 일부가 화면 밖에 남는다.
+        // 상자가 없는 오브젝트(빈 오브젝트)는 위치 한 점으로 넣는다.
+        AABB bounds = AABB::infinite();
+        bool bAny   = false;
+        for ( const GameObject* pObject : listSelected )
         {
-            const float3 diagonal{ objectBox._max._x - objectBox._min._x, objectBox._max._y - objectBox._min._y, objectBox._max._z - objectBox._min._z };
-            objectRadius = MathUtil::max( diagonal.getLength() * 0.5f, 0.1f );
+            if ( pObject == nullptr )
+                continue;
+            AABB box{};
+            if ( pObject->getWorldBox( box ) == false )
+            {
+                const SceneComponent* pSceneComp = pObject->getPrimarySceneComponent();
+                if ( pSceneComp == nullptr )
+                    continue;
+                const float3 point = pSceneComp->getWorldPosition();
+                box                = AABB{ point, point };
+            }
+            bounds = bAny ? bounds.unionWith( box ) : box;
+            bAny   = true;
         }
+        if ( bAny == false )
+            return;
 
-        focusOnPoint( worldPos, objectRadius );
+        const float3 diagonal = bounds._max - bounds._min;
+        focusOnPoint( bounds.getCenter(), diagonal.getLength() * 0.5f );
     }
 
     void EditorViewportCamera::focusOnPoint( const float3& target, float32 radius )
     {
-        _orbitTarget   = target;
-        _orbitDistance = MathUtil::clamp( MathUtil::max( radius, 0.1f ) * 2.5f, 3.0f, 60.0f );
+        _orbitTarget = target;
+        // 거리는 경계 반지름에 비례한다. 작은 물체에는 가까이, 큰 지형에는 멀리 물러난다(고정 범위로 자르지 않는다).
+        _orbitDistance = MathUtil::max( MathUtil::max( radius, EditorViewportCameraInternal::kFrameRadiusMin ) * EditorViewportCameraInternal::kFrameDistancePerRadius,
+                                        EditorViewportCameraInternal::kOrbitDistanceMin );
         _position      = _orbitTarget - EditorViewportCameraInternal::computeForward( _rotation ) * _orbitDistance;
     }
 
@@ -243,9 +300,9 @@ namespace sw::editor
 
     void EditorViewportCamera::setPose( const float3& position, const float3& rotation )
     {
-        _position    = position;
-        _rotation    = rotation;
-        _orbitTarget = _position + EditorViewportCameraInternal::computeForward( _rotation ) * _orbitDistance;
+        _position = position;
+        _rotation = rotation;
+        syncOrbitTargetToView();
     }
 
     void EditorViewportCamera::setOrthographicView( float32 pitch, float32 yaw )
@@ -293,7 +350,8 @@ namespace sw::editor
     {
         _position      = bookmark._position;
         _rotation      = bookmark._rotation;
-        _orbitTarget   = bookmark._orbitTarget;
         _orbitDistance = bookmark._orbitDistance;
+        // 궤도 중심은 저장하지 않고 위치 · 회전 · 거리에서 구한다.
+        syncOrbitTargetToView();
     }
 } // namespace sw::editor
