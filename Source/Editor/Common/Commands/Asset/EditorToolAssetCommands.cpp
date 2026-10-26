@@ -11,6 +11,7 @@
 
 #include "Editor/Common/Commands/Scene/EditorInspectorCommands.h"
 #include "Editor/Common/Config/EditorPaths.h"
+#include "Editor/Common/Widgets/Model/EditorDisplayNameUtil.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -282,11 +283,11 @@ namespace sw::editor
                 item._componentName = pTypeInfo->getDisplayName();
                 item._componentKey  = key;
                 item._propertyName  = prop._name.c_str();
-                item._propertyLabel = prop._name.c_str();
 #if !defined( SW_SHIPPING )
                 // 표시 이름 메타데이터는 Shipping 에서 빠진다. EditorTest 는 Shipping 에서도 이 파일을 빌드한다.
-                if ( prop._metadata->_displayName.empty() == false )
-                    item._propertyLabel = prop._metadata->_displayName.c_str();
+                item._propertyLabel = EditorDisplayNameUtil::chooseLabel( prop._metadata->_displayName, prop._name.c_str() );
+#else
+                item._propertyLabel = EditorDisplayNameUtil::makeDisplayName( prop._name.c_str() );
 #endif
                 item._defaultValue    = SerializerUtil::formatPropertyText( prop, ObjectAddress{ pCdoComp }, context );
                 item._overriddenValue = SerializerUtil::formatPropertyText( prop, ObjectAddress{ pInstanceComponent }, context );

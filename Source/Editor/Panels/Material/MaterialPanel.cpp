@@ -16,6 +16,7 @@
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Common/Widgets/Model/EditorDisplayNameUtil.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -80,7 +81,8 @@ namespace sw::editor
              */
             static bool drawTypedProperty( MaterialProperty& prop )
             {
-                const utf8* pLabel = prop._displayName.empty() ? prop._name.c_str() : prop._displayName.c_str();
+                const string label  = EditorDisplayNameUtil::chooseLabel( prop._displayName, prop._name ); // 인스펙터와 같은 이름표 규칙
+                const utf8*  pLabel = label.c_str();
                 if ( prop._value.empty() )
                     prop._value = prop._defaultValue;
 
