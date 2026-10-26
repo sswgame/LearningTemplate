@@ -10,7 +10,7 @@ cmake/
 │   ├── BuildOptions.cmake       — SW_* 빌드 기능 옵션 및 프로젝트 메타데이터
 │   ├── LoadConfigConstants.cmake — Constants.py 의 상수를 SW_* 변수로 (상수만 필요한 곳은 이것만 include)
 │   ├── JsonValue.cmake          — JSON 값 읽기 둘뿐: 필수 sw_requireJsonValue · 선택 sw_readOptionalJsonValue
-│   ├── GenerateConfigConstants.cmake — configure 생성기 다섯을 한 프로세스로(GenerateConfigureFiles.py) · ConfigConstants.h
+│   ├── GenerateConfigConstants.cmake — configure 생성기를 한 프로세스로(GenerateConfigureFiles.py — 목록은 그 머리말이 정본) · ConfigConstants.h
 │   └── ConfigConstants.h.in     — C++ 헤더 템플릿
 │
 ├── Environment/                 [2계층: 개발 환경 및 툴체인 주입 (project() 이전)]
@@ -133,7 +133,7 @@ Dev 와 Shipping · Server 는 다른 갈래를 탄다 — 고친 갈래의 프�
 - **빌드 스크립트의 자리**: 모듈 라이브러리는 `sw_addModuleLibrary` 하나(`cmake/Engine/ModuleTargets.cmake` — 팩토리 밖 SHARED/MODULE 은 `CheckCmakeConventions` 가 막는다), 지연 로드(`/DELAYLOAD` · `delayimp`)는 쓰지 않는다(`CheckNoDelayLoad`),
   키트는 매니페스트 의존 위상 순서(`PythonTest_TestKitBuildOrder`), RHI 백엔드의 빌드 칸은 `CookContract.json` 의 `rhi_backends`, vcpkg 라이브러리는 `sw_addVcpkgPackage`(REQUIRED) · `sw_addVcpkgHeaderOnly`.
   파이썬은 프로세스 `runProcess` · 빌드 폴더 `BuildTree` · 생성 파일 `writeGeneratedFile` · 보고서 `LintReport` 가 한 자리이고 `CheckScriptCommonHelpers` 가 비켜 가는 호출을, `CheckScriptLayout` 이 폴더 → 이름 앞머리 → 기반 클래스 표를 지킨다.
-- **configure 의 파이썬은 `GenerateConfigureFiles.py` 한 프로세스**(생성기 다섯) — 새 configure 생성기는 각자 `sw_executePythonScript` 를 더하지 말고 거기에 한 줄.
+- **configure 의 파이썬은 `GenerateConfigureFiles.py` 한 프로세스**(생성기 목록은 그 파일 머리말) — 새 configure 생성기는 각자 `sw_executePythonScript` 를 더하지 말고 거기에 한 줄.
 - **서드파티 격리의 링크 주인은 규칙마다다**(`CheckThirdPartyIsolation` 의 `cmakeLinkOwner`) — 엔진 백엔드는 `Source/Engine/CMakeLists.txt`, 키트 안 드라이버(SQLite)는 그 키트의 CMakeLists 가 링크한다. 어느 드라이버가 실행 파일에 드는지는 빌드 타깃(`_listTarget`)이 정하고 드라이버 목록 옵션은 따로 두지 않는다.
 - **빌드 타깃별 제외 에셋은 쿠킹 표 한 줄이다**(`Config/Engine/CookContract.json` 의 `target_excluded_asset_kinds` — 묶음 이름만 적고 어느 파일이 그 묶음인지는 `AssetTypeDef::_excludeGroup` 이 접미사로 정한다).
   팩 쿠커(`PackCooker`)가 팩에서 빼고 같은 호스트의 런타임(`ResourcePaths::setHostTarget`)은 그 종류를 읽지 않는다 — 한쪽만 고치면 서버가 "파일 없음" 을 쏟거나 팩에 쓸모없는 바이트가 남는다.
