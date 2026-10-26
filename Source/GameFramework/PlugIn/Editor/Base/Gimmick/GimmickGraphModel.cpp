@@ -439,11 +439,12 @@ namespace sw::editor
             start                  = end + 1;
             if ( pair.empty() )
                 continue;
-            const size_t equal = pair.find( '=' );
-            if ( equal == string_view::npos || equal == 0 )
+            string_view name;
+            string_view value;
+            if ( StringUtil::trySplitKeyValue( pair, name, value ) == false )
                 continue; // 이름 없는 조각은 검증이 알린다(`collectIssues`)
-            outListName.push_back( string( StringUtil::trim( pair.substr( 0, equal ) ) ) );
-            outListValue.push_back( string( StringUtil::trim( pair.substr( equal + 1 ) ) ) );
+            outListName.push_back( string( name ) );
+            outListValue.push_back( string( value ) );
         }
     }
 
@@ -479,13 +480,14 @@ namespace sw::editor
                 start                  = end + 1;
                 if ( pair.empty() )
                     continue;
-                const size_t equal = pair.find( '=' );
-                if ( equal == string_view::npos || equal == 0 )
+                string_view name;
+                string_view value;
+                if ( StringUtil::trySplitKeyValue( pair, name, value ) == false )
                 {
                     outListError.push_back( string( "node '" ) + node._id.c_str() + "' has a parameter without name=value: '" + string( pair ) + "'" );
                     continue;
                 }
-                nodeDef.setParam( hashed_string( StringUtil::trim( pair.substr( 0, equal ) ) ), StringUtil::trim( pair.substr( equal + 1 ) ) );
+                nodeDef.setParam( hashed_string( name ), value );
             }
         }
         for ( const GimmickGraphWire& wire : _listWire )

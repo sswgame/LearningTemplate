@@ -27,14 +27,13 @@ namespace sw
             /** @brief `키=값` 하나를 식에 적습니다. */
             [[nodiscard]] static bool applyOption( string_view option, UIBindingExpression& outExpression, string& outError )
             {
-                const size_t equal = option.find( '=' );
-                if ( equal == string_view::npos )
+                string_view key;
+                string_view value;
+                if ( StringUtil::trySplitKeyValue( option, key, value ) == false )
                 {
                     outError = "option '" + string( option ) + "' is not key=value";
                     return false;
                 }
-                const string_view key   = StringUtil::trim( option.substr( 0, equal ) );
-                const string_view value = StringUtil::trim( option.substr( equal + 1 ) );
                 if ( value.empty() )
                 {
                     outError = "option '" + string( key ) + "' has no value";

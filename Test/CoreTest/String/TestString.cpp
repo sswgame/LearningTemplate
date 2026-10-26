@@ -2095,6 +2095,30 @@ SW_TEST_CASE( StringTest, BoolTextIsReadByOneTable )
     }
 }
 
+/**
+ * @brief [StringTest] `키=값` 은 첫 구분자에서 나누고 앞뒤 공백을 자르며, 구분자가 없거나 키가 비면 거절하고 출력은 그대로다
+ * @details 호출부마다 `find( '=' )` 를 손으로 쓰면 빈 키(`=1`)를 받는 곳과 거절하는 곳이 갈렸다.
+ */
+SW_TEST_CASE( StringTest, KeyValueSplitsAtTheFirstSeparator )
+{
+    sw::string_view key{ "unchanged" };
+    sw::string_view value{ "unchanged" };
+    SW_EXPECT_TRUE( sw::StringUtil::trySplitKeyValue( "  name = a=b  ", key, value ) );
+    SW_EXPECT_TRUE( key == "name" );
+    SW_EXPECT_TRUE( value == "a=b" );
+    SW_EXPECT_TRUE( sw::StringUtil::trySplitKeyValue( "flag=", key, value ) );
+    SW_EXPECT_TRUE( key == "flag" && value.empty() );
+    SW_EXPECT_TRUE( sw::StringUtil::trySplitKeyValue( "Host: example.com", key, value, ':' ) );
+    SW_EXPECT_TRUE( key == "Host" && value == "example.com" );
+
+    key   = "unchanged";
+    value = "unchanged";
+    SW_EXPECT_FALSE( sw::StringUtil::trySplitKeyValue( "noSeparator", key, value ) );
+    SW_EXPECT_FALSE( sw::StringUtil::trySplitKeyValue( " = 1", key, value ) );
+    SW_EXPECT_FALSE( sw::StringUtil::trySplitKeyValue( "", key, value ) );
+    SW_EXPECT_TRUE( key == "unchanged" && value == "unchanged" );
+}
+
 #if !defined( SW_SHIPPING )
 /**
  * @brief [StringTest] StringBuilder 가 늘리다 할당에 실패하면 쌓은 글을 그대로 두고, 다음 할당이 되면 다시 이어 붙는다

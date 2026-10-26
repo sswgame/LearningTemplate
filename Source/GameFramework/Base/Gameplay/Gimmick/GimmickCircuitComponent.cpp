@@ -251,13 +251,14 @@ namespace sw
                 start                  = end + 1;
                 if ( pair.empty() )
                     continue;
-                const size_t equal = pair.find( '=' );
-                if ( equal == string_view::npos || equal == 0 )
+                string_view name;
+                string_view value;
+                if ( StringUtil::trySplitKeyValue( pair, name, value ) == false )
                 {
                     outListError.push_back( outDef.getSourceName() + ": node '" + desc._id.c_str() + "' has a parameter without name=value: '" + string( pair ) + "'" );
                     continue;
                 }
-                node.setParam( hashed_string( string( StringUtil::trim( pair.substr( 0, equal ) ) ) ), StringUtil::trim( pair.substr( equal + 1 ) ) );
+                node.setParam( hashed_string( string( name ) ), value );
             }
         }
         for ( const GimmickWireDesc& wire : _listWire )

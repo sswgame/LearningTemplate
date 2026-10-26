@@ -326,6 +326,13 @@ namespace sw
         [[nodiscard]] static bool tryParseBool( string_view token, bool& outValue );
 
         /**
+         * @brief `키=값` 한 토막을 첫 @p separator 에서 나누고 키와 값의 앞뒤 공백을 자릅니다(할당 없음).
+         * @return 구분자가 없거나 키가 비면 false 이고 출력은 그대로입니다. 값은 비어도 됩니다(`key=`).
+         * @details 호출부마다 `find( '=' )` · `substr` 을 손으로 쓰면 공백 자르기 · 빈 키 거절이 길마다 달라져 이 하나로 모읍니다.
+         */
+        [[nodiscard]] static bool trySplitKeyValue( string_view text, string_view& outKey, string_view& outValue, utf8 separator = '=' );
+
+        /**
          * @brief string_view 토큰을 32비트 실수로 파싱합니다(할당 없음).
          * @return 성공하면 true, 실패하면 false(outValue 는 바꾸지 않습니다)
          */

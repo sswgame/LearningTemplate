@@ -130,11 +130,9 @@ namespace sw
             return;
 
         // 2단계: '=' 구분자 찾기
-        const size_t eqPos     = line.find( '=' );
-        const bool   bHasValue = ( eqPos != string_view::npos );
-
-        const string_view rawKey   = bHasValue ? line.substr( 0, eqPos ) : line;
-        const string_view valueStr = bHasValue ? line.substr( eqPos + 1 ) : string_view{};
+        string_view rawKey = line;
+        string_view valueStr;
+        const bool  bHasValue = StringUtil::trySplitKeyValue( line, rawKey, valueStr );
 
         // 3단계: 앞의 하이픈('-') 제거
         string_view cleanKey = rawKey;
