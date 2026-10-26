@@ -4,7 +4,6 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Character/AnimationNotify/AnimationNotifyHandlers.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Object/Component/3D/MeshLODSystem.h"
@@ -50,8 +49,11 @@ namespace sw
         // 뷰 타깃을 움직이는 디렉터 · 리그(PostPhysics 까지)가 미룬 쓰기 다음에 읽는다.
         setTickGroup( TickGroup::PostUpdate );
         updateCamera( 0.0f );
-        _shakeSubscription = AnimationNotifyHandlerUtil::getCameraShakeRequested().add(
-            SW_DELEGATE_METHOD( CameraShakeRequestCallback, &CameraManagerComponent::onCameraShakeRequested, this ) );
+        GameObject*        pOwner   = getOwner();
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        if ( pManager != nullptr )
+            _shakeSubscription = pManager->getCameraRegistry().getShakeChannel().bind(
+                SW_DELEGATE_METHOD( CameraShakeRequestCallback, &CameraManagerComponent::onCameraShakeRequested, this ) );
     }
 
     void CameraManagerComponent::onEndPlay()

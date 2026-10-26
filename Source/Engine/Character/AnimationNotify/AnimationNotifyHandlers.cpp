@@ -15,6 +15,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Object/SceneAnimation/MotionWarpingComponent.h"
 #include "Engine/Resource/AssetManager.h"
@@ -257,7 +258,9 @@ namespace sw
                     request._duration       = context._entry.getFloatParam( s_duration );
                     request._frequency      = context._entry.getFloatParam( s_frequency );
                     request._falloffRadius  = context._entry.getFloatParam( s_radius );
-                    AnimationNotifyHandlerUtil::getCameraShakeRequested().broadcast( request );
+                    // 같은 씬의 카메라만 받는다. 매니저가 없는 오브젝트(씬 밖)는 들을 카메라도 없다.
+                    if ( GameObjectManager* pManager = context._owner.getManager(); pManager != nullptr )
+                        pManager->getCameraRegistry().getShakeChannel().broadcast( request );
                     record( context, hashed_string{}, request._origin, 0, AnimationNotifyPhase::Instant );
                 }
 
@@ -365,11 +368,5 @@ namespace sw
         registry.registerHandler( hashed_string( "GameplayEvent" ), make_unique<AnimationNotifyHandlersInternal::GameplayEventHandler>() );
         registry.registerHandler( hashed_string( "MotionWarp" ), make_unique<AnimationNotifyHandlersInternal::MotionWarpHandler>() );
         return true;
-    }
-
-    CameraShakeRequestDelegate& AnimationNotifyHandlerUtil::getCameraShakeRequested()
-    {
-        static CameraShakeRequestDelegate s_delegate;
-        return s_delegate;
     }
 } // namespace sw

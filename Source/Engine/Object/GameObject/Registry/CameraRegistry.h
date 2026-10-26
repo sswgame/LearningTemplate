@@ -16,6 +16,8 @@
 #include "Core/Container/vector.h"
 #include "Core/String/RegistrationList.h"
 
+#include "Engine/Object/GameObject/Registry/CameraShakeChannel.h"
+
 namespace sw
 {
     enum class CameraRole : uint8;
@@ -93,6 +95,12 @@ namespace sw
         float32 getPixelSnapUnit() const { return _pixelSnapUnit; }
         void    setPixelSnapUnit( float32 unit ) { _pixelSnapUnit = unit; }
 
+        /**
+         * @brief 이 씬의 카메라 흔들림 요청 채널입니다. 애니메이션 알림(`CameraShake`)이 내고 카메라 매니저가 플레이 동안 구독합니다.
+         * @details 씬이 소유하므로 다른 씬의 카메라는 받지 않고, 씬이 사라지면 남은 구독은 무효가 됩니다(언리얼 `PlayerCameraManager` 가 월드에 속하는 것과 같다).
+         */
+        CameraShakeChannel& getShakeChannel() { return _shakeChannel; }
+
         /** @brief 선택 대상이 될 수 있는 카메라인지 봅니다 — 켜져 있고(소유 오브젝트의 계층 활성 포함) 컴포넌트 · 소유자 모두 삭제 대기가 아닙니다. */
         static bool isUsableCamera( const CameraComponent* pCamera );
 
@@ -100,11 +108,12 @@ namespace sw
         /** @brief 등록된 카메라입니다(등록 순서). 소유하지 않습니다. 카메라는 뷰마다 하나(화면 분할 · CCTV · 미리보기)라 많아야 수십 개이므로 선형 등록 목록으로 충분합니다. */
         RegistrationList<CameraComponent> _registeredCamera{ "CameraRegistry.Camera" };
         /** @brief 목록을 지킵니다. 등록/해제는 드물고(비동기 씬 로드는 워커에서 등록합니다), 조회는 게임 스레드입니다. */
-        mutable mutex    _mutex;
-        atomic<uint32>   _registrySerial{ 0 };   ///< 등록 · 해제 때마다 오릅니다(`getRegistrySerial`)
-        CameraComponent* _pCutCamera{ nullptr }; ///< 시퀀서 카메라 컷(`setCutCamera`). 등록 해제가 함께 푼다
-        uint32           _viewportWidth{ 0 };    ///< 게임 뷰포트 픽셀 폭(게임 스레드가 틱 전에 적고 틱이 읽습니다)
-        uint32           _viewportHeight{ 0 };   ///< 게임 뷰포트 픽셀 높이
-        float32          _pixelSnapUnit{ 0.0f }; ///< 2D 픽셀 스냅 단위(0 = 끔)
+        mutable mutex      _mutex;
+        atomic<uint32>     _registrySerial{ 0 };   ///< 등록 · 해제 때마다 오릅니다(`getRegistrySerial`)
+        CameraComponent*   _pCutCamera{ nullptr }; ///< 시퀀서 카메라 컷(`setCutCamera`). 등록 해제가 함께 푼다
+        uint32             _viewportWidth{ 0 };    ///< 게임 뷰포트 픽셀 폭(게임 스레드가 틱 전에 적고 틱이 읽습니다)
+        uint32             _viewportHeight{ 0 };   ///< 게임 뷰포트 픽셀 높이
+        float32            _pixelSnapUnit{ 0.0f }; ///< 2D 픽셀 스냅 단위(0 = 끔)
+        CameraShakeChannel _shakeChannel;          ///< 흔들림 요청 채널(`getShakeChannel`). 자기 잠금을 쓴다
     };
 } // namespace sw
