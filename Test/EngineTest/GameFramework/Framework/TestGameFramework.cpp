@@ -19,6 +19,7 @@
 #include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
 #include "Engine/Object/Component/2D/SpriteAnimatorComponent.h"
 #include "Engine/Object/Component/2D/SpriteComponent.h"
+#include "Engine/Object/Component/ComponentDefaults.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/Component/TagComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -2908,7 +2909,7 @@ SW_TEST_CASE( GameFrameworkTest, BootstrapGameSettingsIsBoundAndApplied )
     // 실행 설정 · 서비스 · 전역 기본값 경로는 테스트가 빠져나가도 되돌린다.
     struct ScopedRunState
     {
-        string       _oldGameSettingsPath{ Component::getDefaultGameSettingsPath() };
+        string       _oldGameSettingsPath{ engine::getSubsystem<ComponentDefaults>().getPath() };
         InputManager _input;
 
         ScopedRunState()
@@ -2924,7 +2925,7 @@ SW_TEST_CASE( GameFrameworkTest, BootstrapGameSettingsIsBoundAndApplied )
             engine::getSubsystem<LocalizationManager>().unmountProjects( LocalizationScope::Game );
             game::unbindGameService();
             _input.shutdown();
-            Component::setDefaultGameSettingsPath( _oldGameSettingsPath );
+            engine::getSubsystem<ComponentDefaults>().setPath( _oldGameSettingsPath );
         }
         ScopedRunState( const ScopedRunState& )            = delete;
         ScopedRunState& operator=( const ScopedRunState& ) = delete;

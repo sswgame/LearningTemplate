@@ -14,6 +14,7 @@
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Net/GameNetSession.h"
+#include "Engine/Object/Component/ComponentDefaults.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Reflection/ReflectionCore.h"
@@ -219,6 +220,10 @@ namespace sw
 
     bool GameInstanceBase::loadGameSettings()
     {
+        // 컴포넌트 기본값 경로의 주인은 엔진 범위의 `ComponentDefaults` 다(정적 칸을 두지 않는다). 선택 조회: 엔진 서비스 없이 도는 하네스에서는 기본값을 쓰지 않는다.
+        ComponentDefaults* const pComponentDefaults = game::findSubsystem<ComponentDefaults>();
+        if ( pComponentDefaults != nullptr )
+            pComponentDefaults->setPath( _bootstrap.resolve( path::kGameSettingsFile ) );
         return _bootstrap.load( path::kGameSettingsFile );
     }
 

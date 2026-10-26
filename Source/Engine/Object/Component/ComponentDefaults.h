@@ -72,14 +72,7 @@ namespace sw
          *          워커와 게임 스레드가 처음 보는 타입을 함께 만들 때).
          */
         const void* findResolvedAddress( const TypeInfo& typeInfo ) const;
-
-        // ----------------------------------------------------------------------
-        // 정적 창구 (EngineServices 바인딩을 거쳐 인스턴스로 넘긴다)
-        // ----------------------------------------------------------------------
-        static void   applyDefaults( Component* pComp, const TypeInfo& typeInfo );
-        static void   setDefaultsPath( string_view path );
-        static string getDefaultsPath();
-        static void   reloadDefaults();
+        // 정적 창구는 두지 않는다 — 값의 주인은 엔진 범위의 이 서비스이고, 쓰는 쪽이 `engine::getSubsystem<ComponentDefaults>()`(모듈은 `game::`)로 찾는다.
 
     private:
         /**

@@ -243,7 +243,7 @@ namespace sw::editor
                     SW_LOG_ERROR( "Could not find the editor module image range - its undo commands stay on the stack" );
                     return;
                 }
-                pCommandStack->setObjectEditListener( {} );
+                // 알림 칸도 이 훑기가 비운다(처리기가 이 이미지의 코드다). 구독 주인(에디터 범위)은 이미 놓았거나 곧 놓는다.
                 const uint32 droppedCount = pCommandStack->removeCodeWithin( pBegin, pEnd );
                 if ( droppedCount > 0 )
                     SW_LOG_INFO( "Dropped %# undo commands that run editor module code; scene edits stay undoable", droppedCount );
@@ -692,7 +692,7 @@ namespace sw::editor
             SW_LOG_TRACE( "No shortcut overrides yet - default shortcuts" );
         EditorCommandGUI::registerDefaults();
         // 리로드 전에 기록한 오브젝트 편집을 되돌려도 이 모듈이 선택과 씬 dirty 상태를 맞춘다.
-        EditorTransaction::bindObjectEditListener( editor::getSubsystem<CommandStack>() ); // 필수 - 기동 경로다
+        _editorContext->getSubsystem<EditorObjectEditBindings>().ensureBound( editor::getSubsystem<CommandStack>() ); // 필수 - 기동 경로다
         EditorExtensionRegistryDump::dumpIfRequested();
         _dockLayout.loadPanelVisibility();
         const bool bResumedSession = ImGuiEditorInternal::resumeEditSession( *_editorContext );

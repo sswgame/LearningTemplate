@@ -36,6 +36,7 @@
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
+#include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/EditorModuleUnloadListener.h"
 #include "Editor/Panels/Inspector/IInspectorComponent.h"
@@ -76,6 +77,7 @@ namespace sw::editor
         _scope.addSubsystem( make_unique<EditorWorkspace>( &selection ) );
         _scope.addSubsystem( make_unique<EditorNotificationManager>() );
         _scope.addSubsystem( make_unique<EditorCommandRegistry>() );
+        _scope.addSubsystem( make_unique<EditorObjectEditBindings>() ); // 커맨드 스택 알림 칸의 주인 — 컨텍스트와 함께 놓는다
         _scope.addSubsystem( make_unique<EditorPopupManager>() );
         _scope.addSubsystem( make_unique<AssetHotReload>() );
         _scope.addSubsystem( make_unique<ConfigHotReload>() );

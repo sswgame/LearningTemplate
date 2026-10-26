@@ -43,16 +43,6 @@ namespace sw
         // 루트 → 파생 순서로 적용하는 일은 `ComponentDefaults::apply` 가 맡는다.
     }
 
-    void Component::setDefaultGameSettingsPath( string_view path )
-    {
-        ComponentDefaults::setDefaultsPath( path );
-    }
-
-    string Component::getDefaultGameSettingsPath()
-    {
-        return ComponentDefaults::getDefaultsPath();
-    }
-
     void Component::onBeginPlay()
     {
     }
@@ -273,8 +263,9 @@ namespace sw
 
     void Component::applyTypeDefaults( const TypeInfo* pTypeInfo )
     {
-        if ( pTypeInfo != nullptr )
-            ComponentDefaults::applyDefaults( this, *pTypeInfo );
+        // 기본값은 엔진 범위의 `ComponentDefaults` 가 든다. 서비스가 묶이지 않은 곳(서비스 없는 도구 · 테스트)은 기본값 없이 만든다.
+        if ( pTypeInfo != nullptr && engine::areEngineServicesBound() )
+            engine::getSubsystem<ComponentDefaults>().apply( this, *pTypeInfo );
     }
 
     void Component::setActive( bool bActive )

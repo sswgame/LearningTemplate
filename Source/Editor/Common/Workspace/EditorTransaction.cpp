@@ -3,6 +3,7 @@
 #include "Editor/Common/Workspace/EditorTransaction.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
 
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -68,7 +69,10 @@ namespace sw::editor
             {
                 if ( pStack != nullptr )
                 {
-                    EditorTransaction::bindObjectEditListener( *pStack );
+                    // 선택 조회: 처리기 주인은 에디터 범위의 서브시스템이다 — 범위에 없으면(서비스를 일부만 건 테스트) 알림 없이 기록만 한다.
+                    EditorObjectEditBindings* const pBindings = editor::findSubsystem<EditorObjectEditBindings>();
+                    if ( pBindings != nullptr )
+                        pBindings->ensureBound( *pStack );
                     pStack->push( std::move( cmd ) );
                 }
                 markActiveSceneDirty();
@@ -146,9 +150,14 @@ namespace sw::editor
         }
     }
 
-    void EditorTransaction::bindObjectEditListener( CommandStack& stack )
+    void EditorObjectEditBindings::ensureBound( CommandStack& stack )
     {
-        stack.setObjectEditListener( SW_DELEGATE_FUNCTION( CommandStack::ObjectEditListener, EditorTransactionInternal::onObjectEdit ) );
+        if ( stack.hasObjectEditListener() )
+            return;
+        // 사라진 스택의 구독(무효)은 걷는다 — 미리보기 창을 여닫아도 목록이 자라지 않는다.
+        (void)VectorUtil::removeIf( _listSubscription, []( const Subscription& subscription )
+        { return subscription.isActive() == false; } );
+        _listSubscription.push_back( stack.bindObjectEditListener( SW_DELEGATE_FUNCTION( CommandStack::ObjectEditListener, EditorTransactionInternal::onObjectEdit ) ) );
     }
 
     ObjectSnapshot EditorTransaction::captureSnapshot( const GameObject* pObj )

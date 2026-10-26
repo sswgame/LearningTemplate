@@ -164,21 +164,15 @@ namespace sw
         _bIsExecuting = false;
     }
 
-    void CommandStack::setObjectEditListener( ObjectEditListener listener )
-    {
-        _objectEditListener = std::move( listener );
-    }
-
     void CommandStack::notifyObjectEdit( const ObjectEditNotice& notice ) const
     {
         if ( _objectEditListener.isBound() )
-            _objectEditListener( notice );
+            _objectEditListener.get()( notice );
     }
 
     uint32 CommandStack::removeCodeWithin( const void* pBegin, const void* pEnd )
     {
-        if ( _objectEditListener.isCodeWithin( pBegin, pEnd ) )
-            _objectEditListener = {};
+        (void)_objectEditListener.releaseIfCodeWithin( pBegin, pEnd ); // 그 구독은 이제 아무것도 풀지 않는다 — 새 모듈이 다시 건다
 
         uint32 droppedCount = dropCommandsWithin( _listCommand, _index, pBegin, pEnd );
         droppedCount += dropCommandsWithin( _listParkedCommand, _parkedIndex, pBegin, pEnd );

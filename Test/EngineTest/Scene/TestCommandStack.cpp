@@ -881,8 +881,8 @@ SW_TEST_CASE( CommandStackTest, ReleaseCodeWithinDropsOnlyTheCommandsHoldingThat
     SW_ASSERT_EQUAL( 111, s_releaseProbeValue );
 
     // 알림 처리기 둘: 하나는 떼는 범위 밖, 하나는 안.
-    const sw::CommandStack::ObjectEditListener keptListener = SW_DELEGATE_FUNCTION( sw::CommandStack::ObjectEditListener, onReleaseProbeEdit );
-    stack.setObjectEditListener( keptListener );
+    const sw::CommandStack::ObjectEditListener keptListener    = SW_DELEGATE_FUNCTION( sw::CommandStack::ObjectEditListener, onReleaseProbeEdit );
+    const sw::Subscription                     listenerBinding = stack.bindObjectEditListener( keptListener );
 
     SW_EXPECT_EQUAL( 0u, stack.removeCodeWithin( &s_releaseProbeValue, &s_releaseProbeValue + 1 ) );
     SW_EXPECT_EQUAL( size_t{ 3 }, stack.getCommandCount() );

@@ -934,8 +934,8 @@ SW_TEST_CASE( ComponentDefaultsTest, BaseTypeDefaultsApplyBeforeDerived )
         "</GameSettings>\n";
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( defaultsPath, xml ) );
 
-    const sw::string previousPath{ sw::Component::getDefaultGameSettingsPath() };
-    sw::Component::setDefaultGameSettingsPath( ::test::makeTempResourceID( defaultsPath ) );
+    const sw::string previousPath{ sw::engine::getSubsystem<sw::ComponentDefaults>().getPath() };
+    sw::engine::getSubsystem<sw::ComponentDefaults>().setPath( ::test::makeTempResourceID( defaultsPath ) );
 
     {
         sw::GameObjectManager manager;
@@ -953,8 +953,8 @@ SW_TEST_CASE( ComponentDefaultsTest, BaseTypeDefaultsApplyBeforeDerived )
         SW_EXPECT_TRUE( sw::MathUtil::nearEqual( pMesh->getBoundsRadius(), 7.5f ) );
     }
 
-    sw::Component::setDefaultGameSettingsPath( previousPath );
-    sw::ComponentDefaults::reloadDefaults();
+    sw::engine::getSubsystem<sw::ComponentDefaults>().setPath( previousPath );
+    sw::engine::getSubsystem<sw::ComponentDefaults>().reload();
 }
 
 /**
@@ -970,8 +970,8 @@ SW_TEST_CASE( ComponentDefaultsTest, ResolvedDefaultsStayPutWhileOtherTypesResol
 
     const sw::string defaultsPath = test::makeTempPath( "test_component_defaults_stable.xml" );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( defaultsPath, "<GameSettings><Defaults><MeshComponent _boundsRadius=\"7.5\" /></Defaults></GameSettings>\n" ) );
-    const sw::string previousPath{ sw::Component::getDefaultGameSettingsPath() };
-    sw::Component::setDefaultGameSettingsPath( ::test::makeTempResourceID( defaultsPath ) );
+    const sw::string previousPath{ sw::engine::getSubsystem<sw::ComponentDefaults>().getPath() };
+    sw::engine::getSubsystem<sw::ComponentDefaults>().setPath( ::test::makeTempResourceID( defaultsPath ) );
 
     sw::ComponentDefaults& defaults  = sw::engine::getSubsystem<sw::ComponentDefaults>();
     const sw::TypeInfo*    pMeshType = sw::MeshComponent::StaticType();
@@ -994,8 +994,8 @@ SW_TEST_CASE( ComponentDefaultsTest, ResolvedDefaultsStayPutWhileOtherTypesResol
     }
     SW_EXPECT_TRUE( defaults.findResolvedAddress( *pMeshType ) == pAddress );
 
-    sw::Component::setDefaultGameSettingsPath( previousPath );
-    sw::ComponentDefaults::reloadDefaults();
+    sw::engine::getSubsystem<sw::ComponentDefaults>().setPath( previousPath );
+    sw::engine::getSubsystem<sw::ComponentDefaults>().reload();
 }
 
 /**
@@ -1010,8 +1010,8 @@ SW_TEST_CASE( ComponentDefaultsTest, ModuleRegistrationKeepsLiveValues )
 
     const sw::string defaultsPath = test::makeTempPath( "test_component_defaults_restamp.xml" );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( defaultsPath, "<GameSettings><Defaults><MeshComponent _boundsRadius=\"7.5\" /></Defaults></GameSettings>\n" ) );
-    const sw::string previousPath{ sw::Component::getDefaultGameSettingsPath() };
-    sw::Component::setDefaultGameSettingsPath( ::test::makeTempResourceID( defaultsPath ) );
+    const sw::string previousPath{ sw::engine::getSubsystem<sw::ComponentDefaults>().getPath() };
+    sw::engine::getSubsystem<sw::ComponentDefaults>().setPath( ::test::makeTempResourceID( defaultsPath ) );
 
     // 모듈 등록은 엔진 씬 매니저의 씬들을 돈다 — 그 씬에 둔다.
     sw::Scene* pScene = sw::engine::getSubsystem<sw::SceneManager>().getActiveScene();
@@ -1033,8 +1033,8 @@ SW_TEST_CASE( ComponentDefaultsTest, ModuleRegistrationKeepsLiveValues )
 
     pObjects->destroyObject( pObject );
     pObjects->processDeferredDestruction();
-    sw::Component::setDefaultGameSettingsPath( previousPath );
-    sw::ComponentDefaults::reloadDefaults();
+    sw::engine::getSubsystem<sw::ComponentDefaults>().setPath( previousPath );
+    sw::engine::getSubsystem<sw::ComponentDefaults>().reload();
 }
 
 /**
@@ -1053,7 +1053,7 @@ SW_TEST_CASE( ComponentDefaultsTest, MissingDefaultsFileIsOpenedOnlyOnce )
     }
     sw::ComponentDefaults& defaults = sw::engine::getSubsystem<sw::ComponentDefaults>();
 
-    const sw::string previousPath{ sw::Component::getDefaultGameSettingsPath() };
+    const sw::string previousPath{ sw::engine::getSubsystem<sw::ComponentDefaults>().getPath() };
 
     // 일부러 없는 경로를 준다 — 이것이 "기본값 없음" 의 정상 상태다.
     const sw::string missingPath = test::makeTempPath( "no_such_component_defaults.xml" );
@@ -1080,8 +1080,8 @@ SW_TEST_CASE( ComponentDefaultsTest, MissingDefaultsFileIsOpenedOnlyOnce )
     const uint32 attempts = defaults.getLoadAttemptCount() - before;
     SW_EXPECT_TRUE_MSG( attempts <= 1, "없는 기본값 파일을 컴포넌트마다 다시 열었습니다" );
 
-    sw::Component::setDefaultGameSettingsPath( previousPath );
-    sw::ComponentDefaults::reloadDefaults();
+    sw::engine::getSubsystem<sw::ComponentDefaults>().setPath( previousPath );
+    sw::engine::getSubsystem<sw::ComponentDefaults>().reload();
 }
 
 /**
@@ -1092,19 +1092,19 @@ SW_TEST_CASE( ComponentDefaultsTest, MissingDefaultsFileIsOpenedOnlyOnce )
  */
 SW_TEST_CASE( ComponentDefaultsTest, DefaultsPathIsReturnedByValue )
 {
-    const sw::string previousPath{ sw::Component::getDefaultGameSettingsPath() };
+    const sw::string previousPath{ sw::engine::getSubsystem<sw::ComponentDefaults>().getPath() };
 
-    sw::Component::setDefaultGameSettingsPath( "game/data/short.xml" );
-    const auto heldPath = sw::Component::getDefaultGameSettingsPath();
+    sw::engine::getSubsystem<sw::ComponentDefaults>().setPath( "game/data/short.xml" );
+    const auto heldPath = sw::engine::getSubsystem<sw::ComponentDefaults>().getPath();
 
     // 길이를 크게 바꿔 내부 버퍼를 **다시 잡게** 만든다.
-    sw::Component::setDefaultGameSettingsPath( sw::string( 4096, 'x' ) );
+    sw::engine::getSubsystem<sw::ComponentDefaults>().setPath( sw::string( 4096, 'x' ) );
 
     // 뷰를 돌려주면 여기서 사라진 버퍼를 읽는다 — ASAN 이 잡는다.
     SW_EXPECT_STREQ( "game/data/short.xml", sw::string( heldPath ).c_str() );
 
-    sw::Component::setDefaultGameSettingsPath( previousPath );
-    sw::ComponentDefaults::reloadDefaults();
+    sw::engine::getSubsystem<sw::ComponentDefaults>().setPath( previousPath );
+    sw::engine::getSubsystem<sw::ComponentDefaults>().reload();
 }
 
 /**
