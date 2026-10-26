@@ -141,6 +141,13 @@ namespace sw
          *          그 패스가 없는 파이프라인에서는 PSO 가 없고 실행도 없다. 강조 외곽선의 두께(`SW_HIGHLIGHT_WIDTH`)처럼 기본값을 코드에 두지 않는 값이 그 예다.
          */
         static constexpr uint32 kRequiresPassDesc = SW_BIT( 16 );
+        /**
+         * @brief 꺼진 뷰에서는 패스를 기록하지 않고 출력 이름이 원본(SourceColor 입력)을 가리킨다 — 출력 타깃도 처음 켜질 때까지 만들지 않는다(피사계 심도 · 모션 블러).
+         * @details 언리얼의 후처리가 꺼진 효과의 출력으로 입력 텍스처를 그대로 넘기는 것과 같다. 원본을 복사하거나 셰이더가 원본을 고르는 길(kSkipsWithoutPostProcess)은
+         *          꺼져 있어도 전 화면을 한 번 읽고 쓰고, 출력 타깃이 늘 메모리를 차지했다. 뷰마다 프레임에 한 번 정한다(`FrameRenderer::applyViewEffectBypass`).
+         *          출력이 원본과 형식 · 크기가 같아야 하고 그 출력을 쓰는 패스가 하나뿐이어야 한다 — 로드가 검사한다(`RenderPipelineAsset::validate` 3-6).
+         */
+        static constexpr uint32 kBypassesToSource = SW_BIT( 17 );
     };
 } // namespace sw
 

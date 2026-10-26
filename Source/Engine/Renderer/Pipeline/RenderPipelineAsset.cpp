@@ -490,6 +490,64 @@ namespace sw
                 }
                 return issueCount;
             }
+
+            /**
+             * @brief 3-6) 꺼지면 원본을 가리키는 패스(kBypassesToSource)는 원본(SourceColor 입력) 하나와 컬러 출력 하나를 갖고, 둘은 형식 · 나눗수가 같다.
+             *        그 출력을 쓰는 패스는 자기 하나이고, 뒤의 패스가 원본을 다시 쓰지 않는다.
+             * @details 꺼진 뷰에서는 출력 이름이 원본 텍스처를 가리킨다(`TransientAttachmentPool::forward`). 형식 · 크기가 다르면 읽는 쪽 PSO · 텍셀 크기와 어긋나고,
+             *          출력을 다른 패스도 쓰면 그 쓰기가 원본을 덮고, 뒤에서 원본을 쓰면 출력을 읽는 쪽이 나중 판을 읽는다.
+             */
+            static uint32 checkBypassPasses( const RenderPipelineDesc& desc, string_view sourcePath )
+            {
+                uint32 issueCount{ 0 };
+                for ( size_t passIndex = 0; passIndex < desc._listPass.size(); ++passIndex )
+                {
+                    const RenderGraphPassDesc& pass = desc._listPass[passIndex];
+                    if ( getRenderPassTypeInfo( pass._resolvedType ).hasFlag( RenderPassTraitFlag::kBypassesToSource ) == false )
+                        continue;
+                    const RenderGraphPassDesc::ResolvedAttachment* pSource = nullptr;
+                    for ( const RenderGraphPassDesc::ResolvedAttachment& input : pass._listResolvedInput )
+                    {
+                        if ( static_cast<RenderPassInputRole>( input._role ) == RenderPassInputRole::SourceColor )
+                            pSource = &input;
+                    }
+                    if ( pSource == nullptr || pass._listResolvedColorOutput.size() != 1 )
+                    {
+                        SW_LOG_ERROR( "[%#] pass '%#' (%#): needs one SourceColor input and one color output - when the effect is off the output names the source",
+                                      sourcePath, pass._name, pass._type );
+                        ++issueCount;
+                        continue;
+                    }
+                    const string                outputName = pass._listResolvedColorOutput[0]._attachment.c_str();
+                    const string                sourceName = pSource->_attachment.c_str();
+                    const RenderPassAttachment* pOutput    = findAttachment( desc, outputName );
+                    const RenderPassAttachment* pSourceAtt = findAttachment( desc, sourceName );
+                    const bool                  bSameShape = pOutput != nullptr && pSourceAtt != nullptr && pOutput->_format == pSourceAtt->_format && pOutput->_resolutionDivisor == pSourceAtt->_resolutionDivisor;
+                    if ( bSameShape == false )
+                    {
+                        SW_LOG_ERROR( "[%#] pass '%#' (%#): output '%#' and source '%#' differ in format or divisor - when the effect is off the output names the source",
+                                      sourcePath, pass._name, pass._type, outputName, sourceName );
+                        ++issueCount;
+                    }
+                    for ( size_t otherIndex = 0; otherIndex < desc._listPass.size(); ++otherIndex )
+                    {
+                        const RenderGraphPassDesc& other = desc._listPass[otherIndex];
+                        if ( otherIndex != passIndex && VectorUtil::contains( other._listOutput, outputName ) )
+                        {
+                            SW_LOG_ERROR( "[%#] pass '%#' also writes '%#', the output of '%#' (%#) - that output may name the source texture", sourcePath, other._name, outputName,
+                                          pass._name, pass._type );
+                            ++issueCount;
+                        }
+                        if ( otherIndex > passIndex && VectorUtil::contains( other._listOutput, sourceName ) )
+                        {
+                            SW_LOG_ERROR( "[%#] pass '%#' writes '%#' after '%#' (%#) reads it - readers of '%#' would see the later version when the effect is off", sourcePath,
+                                          other._name, sourceName, pass._name, pass._type, outputName );
+                            ++issueCount;
+                        }
+                    }
+                }
+                return issueCount;
+            }
         };
     } // namespace
 
@@ -507,6 +565,7 @@ namespace sw
         issueCount += Internal::checkInputContracts( _desc, sourcePath );
         issueCount += Internal::checkCanvasAndSky( _desc, sourcePath );
         issueCount += Internal::checkMinPostQuality( _desc, sourcePath );
+        issueCount += Internal::checkBypassPasses( _desc, sourcePath );
         if ( issueCount > 0 )
             SW_LOG_ERROR( "[%#] Pipeline validation found %# issues - the render result may be wrong or the GPU may die",
                           sourcePath, issueCount );

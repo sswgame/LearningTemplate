@@ -108,6 +108,8 @@ namespace sw
         view( RenderViewType::Shadow ).setViewProjection( _mainView._shadow._cullViewProj );
 
         beginViewHistory( _mainView );
+        // 지난 뷰-투영과 견주므로 applyViewProjection(지난 것을 이번 것으로 바꾼다) 앞이다.
+        applyViewEffectBypass( _mainView, mainViewProj );
         applyViewProjection( context, mainViewProj );
         context._passValues.setMatrix( passConstantNames()._world, context._world );
 

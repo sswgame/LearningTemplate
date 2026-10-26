@@ -97,6 +97,8 @@ namespace sw
 
         // 그래프가 **실제로 바뀌는 전이만** 추려서 준다. 여기서는 이름으로 텍스처를 찾아 그대로 바인딩한다.
         // 같은 자원을 여러 패스가 읽어도, 이미 맞는 상태여도 다시 바인딩하지 않는다.
+        // 꺼진 효과의 출력 이름은 원본을 가리키지만(`TransientAttachmentPool::forward`) 전이는 그 이름으로 만든 텍스처에만 낸다 — 따라가면 꺼진 패스의 "쓰기" 가
+        // 같은 레벨에서 원본을 읽는 패스와 부딪힌다. 원본의 읽기 상태는 원본을 입력으로 선언한 그 효과 패스의 레벨이 이미 냈고, 뒤에서 원본을 쓰는 패스는 로드 검증이 막는다.
         for ( const RenderGraphBarrier& barrier : *levelContext._pListBarrier )
         {
             if ( barrier._after == RenderGraphResourceState::Write )
@@ -107,13 +109,13 @@ namespace sw
                     levelContext._pCmdList->prepareTextureForRenderTarget( 0 );
                     continue;
                 }
-                const RHITextureHandle texture = findTransient( barrier._resource.c_str() );
+                const RHITextureHandle texture = activePool().findOwnTexture( barrier._resource.c_str() );
                 if ( texture != 0 )
                     levelContext._pCmdList->prepareTextureForRenderTarget( texture );
             }
             else if ( barrier._after == RenderGraphResourceState::Read )
             {
-                const RHITextureHandle texture = findTransient( barrier._resource.c_str() );
+                const RHITextureHandle texture = activePool().findOwnTexture( barrier._resource.c_str() );
                 if ( texture != 0 )
                     levelContext._pCmdList->prepareTextureForShaderRead( texture );
             }
@@ -456,9 +458,12 @@ namespace sw
         // 로드 시점에 같은 목록을 검사했다. 새 포스트 패스는 테이블의 한 줄로 여기를 탄다.
         FramePassContext&          context  = input._context;
         const RenderGraphPassDesc& passDesc = input._passDesc;
+        const hashed_string*       pTarget  = &input._declaredColor[0]._attachment;
+        // 이 뷰에서 꺼진 효과(피사계 심도 · 모션 블러)는 셋업이 출력 이름을 원본에 이었다(`applyViewEffectBypass`) — 읽는 쪽이 원본을 받으므로 아무것도 기록하지 않는다.
+        if ( info.hasFlag( RenderPassTraitFlag::kBypassesToSource ) && activePool().isForwarded( pTarget->view() ) )
+            return;
         registerDeclaredInputs( context, passDesc );
         recordAutoExposure( context, passDesc );
-        const hashed_string* pTarget = &input._declaredColor[0]._attachment;
 
         // PSO 가 0이면 `drawFullscreen` 이 파이프라인 설정을 건너뛴다. 대체할 PSO 는 테이블이 정한 것만 쓴다(Tonemap 은 Present).
         const RHIPipelineStateHandle pso = findPassPSO( input._passType );
@@ -475,9 +480,7 @@ namespace sw
         // 다르면 그 패스 셰이더가 SW_PASS_FLAG_SKIP_POST 를 보고 원본을 그대로 낸다(복사는 같은 포맷끼리만 된다). 원본 색을 읽지 않는 효과(SSAO)는
         // 기본 클리어로 지우기만 한다(SSAO 의 흰색은 가림 없음).
         // 후처리 품질(gv_postQuality)이 패스의 최소 품질(`_minPostQuality`, 검증이 건너뛸 수 있는 타입에만 허락한다)보다 낮아도 같은 길로 건너뛴다.
-        // 모션 블러는 사용자 설정(gv_motionBlur)으로 켜고 끈다 — 끄면 품질로 건너뛸 때와 같은 길이다.
-        const bool bMotionBlurOff    = input._passType == RenderPassType::MotionBlur && static_cast<bool>( gv_motionBlur ) == false;
-        const bool bBelowPostQuality = passDesc._minPostQuality > static_cast<int32>( gv_postQuality ) || bMotionBlurOff;
+        const bool bBelowPostQuality = passDesc._minPostQuality > static_cast<int32>( gv_postQuality );
         const bool bPostOff          = _pActiveView->_settings.usesPostProcess() == false || bBelowPostQuality;
         const bool bSkipEffect       = info.hasFlag( RenderPassTraitFlag::kSkipsWithoutPostProcess ) && bPostOff;
         if ( bSkipEffect == false )

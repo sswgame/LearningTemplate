@@ -64,14 +64,57 @@ namespace sw
 
     TransientAttachmentPool::Attachment TransientAttachmentPool::find( string_view name ) const
     {
-        const auto it = _mapAttachment.find( name );
+        const auto it = _mapAttachment.find( resolveName( name ) );
         return it != _mapAttachment.end() ? it->second : Attachment{};
     }
 
     RHITextureHandle TransientAttachmentPool::findTexture( string_view name ) const
     {
+        const auto it = _mapAttachment.find( resolveName( name ) );
+        return it != _mapAttachment.end() ? it->second._texture : 0;
+    }
+
+    RHITextureHandle TransientAttachmentPool::findOwnTexture( string_view name ) const
+    {
         const auto it = _mapAttachment.find( name );
         return it != _mapAttachment.end() ? it->second._texture : 0;
+    }
+
+    string_view TransientAttachmentPool::resolveName( string_view name ) const
+    {
+        // 고리는 로드 검증이 막는다(출력은 그 패스만 쓰고 원본은 그 패스의 입력이다). 그래도 끝없이 돌지 않게 원본 수만큼만 따라간다.
+        string_view resolved = name;
+        for ( size_t step = 0; step < _mapForward.size(); ++step )
+        {
+            const auto it = _mapForward.find( resolved );
+            if ( it == _mapForward.end() )
+                break;
+            resolved = it->second;
+        }
+        return resolved;
+    }
+
+    bool TransientAttachmentPool::forward( string_view name, string_view source )
+    {
+        const auto it = _mapForward.find( name );
+        if ( it != _mapForward.end() )
+        {
+            if ( string_view( it->second ) == source )
+                return false;
+            it->second = string( source );
+            return true;
+        }
+        _mapForward.emplace( name, source );
+        return true;
+    }
+
+    bool TransientAttachmentPool::stopForward( string_view name )
+    {
+        const auto it = _mapForward.find( name );
+        if ( it == _mapForward.end() )
+            return false;
+        _mapForward.erase( it );
+        return true;
     }
 
     void TransientAttachmentPool::release( IRHIDevice* pDevice )
@@ -94,6 +137,7 @@ namespace sw
     void TransientAttachmentPool::forget()
     {
         _mapAttachment.clear();
+        _mapForward.clear();
         _width  = 0;
         _height = 0;
     }

@@ -226,10 +226,12 @@ namespace sw
         static uint32 getShadowMapResolution();
         /**
          * @brief 지금 살아 있는 트랜지언트 목록을 엔진 레지스트리에 공개합니다. 에디터 패널이 이 목록을 읽습니다.
-         * @details 트랜지언트는 **구성이 바뀔 때만** 다시 만들어지므로 그때 한 번만 부르면 된다.
+         * @details 트랜지언트는 **구성이 바뀔 때만** 다시 만들어지므로 그때 한 번만 부르면 된다(풀을 다시 만들 때, 꺼진 효과의 출력이 가리키는 곳이 바뀔 때).
          *          매 프레임 부를 필요는 없다.
          */
         void publishRenderTargets() const;
+        /** @brief 주 시점 첨부마다의 크기(KB)를 Info 로그(`[RenderTargets]`)로 남깁니다. GPU 메모리가 늘었을 때 어느 첨부인지 나눈다. 풀을 다시 만들거나 첨부를 더 만들 때만 부릅니다. */
+        void reportRenderTargetMemory() const;
 
         /**
          * @brief 주 출력(게임 창, 에디터 게임 뷰)의 보기 모드를 정합니다. `-gv_viewMode` 와 테스트가 씁니다.
@@ -522,6 +524,12 @@ namespace sw
         bool ensureViewTransients( ViewTarget& view, uint32 width, uint32 height );
         /** @brief 뷰 하나의 트랜지언트와 TAA 히스토리를 해제합니다. 디바이스가 없으면 핸들만 잊습니다. */
         void releaseViewTransients( ViewTarget& view );
+        /**
+         * @brief 이 뷰의 이번 프레임에 꺼진 효과 패스(`RenderPassTraitFlag::kBypassesToSource`)의 출력이 원본을 가리키게 하고, 켜진 패스의 출력 타깃은 처음이면 만듭니다.
+         * @details 셋업 단계에서(기록 전) 뷰마다 한 번 부른다. 꺼진 패스는 기록하지 않는다(`executeGenericFullscreenPass`). 타깃은 한 번 만들면 풀이 바뀔 때까지 둔다.
+         * @param viewProj 이번 프레임 이 뷰의 뷰-투영입니다(지난번 것 `_prevViewProj` 와 같으면 카메라 모션 블러는 꺼진 것이다). `_bHistoryReset` 을 정한 뒤 부른다.
+         */
+        void applyViewEffectBypass( ViewTarget& view, const float4x4& viewProj );
         /** @brief 추가 뷰 하나를 통째로 해제합니다. 트랜지언트, 컬링 상수 버퍼, 리스트, 빌린 렌더 텍스처가 해당합니다. */
         void releaseExtraView( ViewTarget& view );
         /**

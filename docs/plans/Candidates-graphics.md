@@ -6,6 +6,15 @@
 
 ## 관찰
 
+### PostEffectBypass
+제목: 꺼진 피사계 심도 · 모션 블러가 전 화면 패스와 타깃 비용을 낸다
+옛번호: 없음
+왜 필요한가: 렌즈 없는 카메라(조리개 0)와 서 있는 카메라에서도 두 패스가 전 화면을 한 번씩 읽고 써서(셰이더가 원본을 고르거나 원본을 복사) Empty `GPU.Frame` 이 468 → 1089 us 가 됐고, 두 출력 타깃(RGBA16F)이 늘 메모리를 차지했다(GPU 메모리 56.8 → 176.9 MB, `renderbench` Native 1600×900 기준선 커밋 `14c775c55`).
+끝난 것(wt/renderbase): 패스 종류 표에 `kBypassesToSource` 를 두고 두 패스에 붙였다. 꺼진 뷰는 셋업(`FrameRenderer::applyViewEffectBypass`, 뷰마다 프레임에 한 번)이 출력 이름을 원본에 잇고(`TransientAttachmentPool::forward`) 패스를 기록하지 않는다. 출력 타깃은 풀을 만들 때 만들지 않고 이 뷰에서 처음 켜질 때 만든다. 끄는 조건은 피사계 심도가 조리개 0 · 직교 · 후처리 끔, 모션 블러가 `gv_motionBlur` 끔 · 품질 미달 · 후처리 끔 · 뷰-투영이 지난번과 같음(컷 포함)이다. 그래프 전이는 이은 이름을 따라가지 않는다. 로드 검증 3-6 이 출력과 원본의 형식 · 나눗수가 같고, 출력을 쓰는 패스가 하나이며, 뒤 패스가 원본을 다시 쓰지 않는지 본다. 주 시점 첨부마다의 크기를 `[RenderTargets]` Info 줄로 남긴다(풀을 다시 만들 때 · 타깃을 더 만들 때).
+메모리 추정(실행 안 함): 1600×900 RGBA16F 하나가 11.5 MB 라 두 타깃을 빼면 23 MB 가 준다. 같은 기간에 장면 색이 RGBA8 → RGBA16F(+5.8 MB), 깊이 히스토리 R32(+5.8 MB)가 더해졌다. 나머지 약 85 MB 는 렌더 타깃 목록 밖(버퍼 · 프로브 · 볼륨 안개 등)일 수 있어 `[Profile] GPU memory by kind` 의 종류별 줄과 `[RenderTargets]` 줄을 함께 보고 가른다.
+남은 것(통합): 빌드 · `RenderPassTest` · `TransientAttachmentPoolTest` · `RenderPassGPUTest` · 모션 블러 시나리오(`game/empty/automation/motionblur.scenario.xml`, 움직인 프레임이 여전히 달라야 한다) 네 백엔드. 그다음 기준을 새로 뜬다 — 숨기기 위한 재기록이 아니라 이 변경을 넣은 뒤의 값이다. `perf-frame` 은 `py -3 -m Scripts perf --app <app> --record`, `load-baseline-suite` 는 `py -3 -m Scripts load suite baseline --runs 3 --record`, `load-auto-render-scale` 은 LowEnd `renderbench` 를 `--app-arg=-gv_autoRenderScale=1` 로 `--record`. 뜨기 전에 `GPU.Frame` 이 468 us 근처로 돌아왔는지와 `gpu_memory_mb` 를 종류별로 나눈 표를 결과 문서에 남긴다(돌아오지 않은 몫은 원인을 적고 뜬다).
+같은 결함 후보: 디퍼드 `Outline`(BloomColor RGBA16F → OutlineColor RGBA8)은 형식이 달라 후처리를 끈 뷰에서도 셰이더가 전 화면을 돈다. `SSAO` · `Bloom` 은 꺼져도 타깃을 지우거나 원본을 복사한다. 셰이더(`depthoffield.hlsl` · `motionblur.hlsl`)의 원본 고르기 분기는 이제 C++ 가 부르지 않는 길이다(쿠킹을 바꾸지 않으려 남겼다).
+
 ### VulkanVsyncFrameMiss
 제목: Vulkan VSync 에서 프레임이 주기를 놓침
 옛번호: E-3

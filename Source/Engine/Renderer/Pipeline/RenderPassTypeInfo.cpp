@@ -212,10 +212,10 @@ namespace sw
                     }
                     case RenderPassType::DepthOfField:
                     {
-                        // 효과 패스다 — 후처리를 끈 뷰는 원본을 복사한다(입력 · 출력 형식이 같다). 렌즈가 핀홀(조리개 0)이면 셰이더가 원본을 고른다.
+                        // 효과 패스다 — 렌즈가 핀홀(조리개 0) · 직교 · 후처리를 끈 뷰는 패스를 기록하지 않고 출력이 원본을 가리킨다(kBypassesToSource).
                         info._pDefaultShader = &EngineDefaultAssets::_shaderDepthOfField;
                         info._inputContract  = makeContract( { Role::SourceColor, Role::SceneDepth }, {} );
-                        info._flags          = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract | Flag::kSkipsWithoutPostProcess;
+                        info._flags          = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract | Flag::kSkipsWithoutPostProcess | Flag::kBypassesToSource;
                         break;
                     }
                     case RenderPassType::HighlightOutline:
@@ -245,10 +245,10 @@ namespace sw
                     }
                     case RenderPassType::MotionBlur:
                     {
-                        // 원본 색과 장면 깊이를 읽는 효과 패스다. 꺼지면(후처리를 끈 뷰 · gv_motionBlur) 원본을 넘긴다 — 그 길은 kSkipsWithoutPostProcess 다.
+                        // 원본 색과 장면 깊이를 읽는 효과 패스다. 꺼지면(후처리를 끈 뷰 · 품질 · gv_motionBlur · 카메라가 서 있음) 패스를 기록하지 않고 출력이 원본을 가리킨다(kBypassesToSource).
                         info._pDefaultShader = &EngineDefaultAssets::_shaderMotionBlur;
                         info._inputContract  = makeContract( { Role::SourceColor, Role::SceneDepth }, {} );
-                        info._flags          = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract | Flag::kSkipsWithoutPostProcess;
+                        info._flags          = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract | Flag::kSkipsWithoutPostProcess | Flag::kBypassesToSource;
                         break;
                     }
                     case RenderPassType::ForwardOpaqueNoDepthWrite:
@@ -410,6 +410,9 @@ namespace sw
                         return false;
                     // 후처리를 끈 뷰에서 효과를 건너뛰는 일은 일반 풀스크린 실행만 한다.
                     if ( row.hasFlag( Flag::kSkipsWithoutPostProcess ) && row.hasFlag( Flag::kGenericFullscreen ) == false )
+                        return false;
+                    // 원본을 가리켜 건너뛰는 패스도 건너뛸 수 있는 효과다(`_minPostQuality` 를 받는다).
+                    if ( row.hasFlag( Flag::kBypassesToSource ) && row.hasFlag( Flag::kSkipsWithoutPostProcess ) == false )
                         return false;
                     // 컴퓨트 패스는 파이프라인 XML 에 나오지 않고 그래픽스 성질을 갖지 않는다.
                     if ( row.hasFlag( Flag::kCompute ) && ( isPipelinePassType( row._type ) || row.hasFlag( Flag::kDrawsSceneMeshes | Flag::kGenericFullscreen ) ) )

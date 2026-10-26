@@ -73,12 +73,27 @@ namespace sw
          * @return 이미 있으면 그대로 true 이고, 못 만들면 경고를 남기고 false 입니다.
          */
         bool allocateSized( IRHIDevice* pDevice, string_view name, RHIFormat format, bool bDepth, const float4& clearColor, uint32 width, uint32 height );
-        /** @brief 이름의 첨부(텍스처 + SRV)입니다. 없으면 빈 값입니다. */
+        /** @brief 이름의 첨부(텍스처 + SRV)입니다. 원본을 가리키는 이름(`forward`)은 원본의 첨부입니다. 없으면 빈 값입니다. */
         Attachment find( string_view name ) const;
-        /** @brief 이름의 텍스처 핸들입니다. 없으면 0 입니다. */
+        /** @brief 이름의 텍스처 핸들입니다. 원본을 가리키는 이름은 원본의 핸들입니다. 없으면 0 입니다. */
         RHITextureHandle findTexture( string_view name ) const;
-        /** @brief 그 이름의 첨부가 있는지 반환합니다. */
+        /** @brief 이름이 가리키는 원본을 따라가지 않고 그 이름으로 만든 텍스처 핸들입니다(그래프 배리어용 — 원본의 상태는 원본 이름의 배리어가 맡는다). 없으면 0 입니다. */
+        RHITextureHandle findOwnTexture( string_view name ) const;
+        /** @brief 그 이름으로 만든 첨부가 있는지 반환합니다(원본을 가리키는지와 상관없다). */
         bool contains( string_view name ) const { return _mapAttachment.find( name ) != _mapAttachment.end(); }
+
+        /**
+         * @brief 이번 프레임에 @p name 이 @p source 의 첨부를 가리키게 합니다(꺼진 효과의 출력 — `RenderPassTraitFlag::kBypassesToSource`).
+         * @details @p source 가 다시 다른 이름을 가리키면 끝까지 따라간다(꺼진 효과가 잇달아 있을 때). 고리는 로드 검증이 막는다(출력은 그 패스만 쓴다).
+         * @return 가리키는 곳이 바뀌었으면 true 입니다.
+         */
+        bool forward( string_view name, string_view source );
+        /** @brief @p name 이 다시 자기 첨부를 쓰게 합니다. @return 바뀌었으면 true 입니다. */
+        bool stopForward( string_view name );
+        /** @brief @p name 이 지금 원본을 가리키면 true 입니다(그 패스는 기록하지 않는다). */
+        bool isForwarded( string_view name ) const { return _mapForward.find( name ) != _mapForward.end(); }
+        /** @brief 가리키는 곳을 끝까지 따라간 이름입니다. 가리키지 않으면 @p name 그대로입니다. */
+        string_view resolveName( string_view name ) const;
         /** @brief 전체 첨부입니다. 레지스트리 등록이나 Present 소스 선택처럼 목록을 훑는 곳에서 씁니다. */
         const unordered_map<string, Attachment>& getAll() const { return _mapAttachment; }
 
@@ -99,6 +114,8 @@ namespace sw
 
     private:
         unordered_map<string, Attachment> _mapAttachment;
+        /// @brief 꺼진 효과의 출력 이름 → 그 원본 이름입니다(`forward`). 뷰가 프레임마다 정하고 패스 기록 중에는 읽기만 한다.
+        unordered_map<string, string> _mapForward;
         /// @brief 이번 프레임에 이미 클리어한 첨부들입니다. 병렬 패스가 동시에 갱신하므로 _clearedMutex 로 보호합니다.
         vector<hashed_string> _listClearedThisFrame;
         mutable mutex         _clearedMutex;

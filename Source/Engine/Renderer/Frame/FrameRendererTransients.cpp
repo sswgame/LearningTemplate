@@ -14,12 +14,65 @@
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
+#include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"
 
 namespace sw
 {
     SW_LOG_CALLER( "FrameRenderer" );
 
+    namespace
+    {
+        struct FrameRendererTransientsInternal
+        {
+            /** @brief 꺼지면 출력이 원본을 가리키는 패스(`kBypassesToSource`)면 true 입니다. 원본 하나 · 컬러 출력 하나는 로드가 검사했다(`RenderPipelineAsset::validate` 3-6). */
+            static bool bypassesToSource( const RenderGraphPassDesc& pass )
+            {
+                return getRenderPassTypeInfo( pass._resolvedType ).hasFlag( RenderPassTraitFlag::kBypassesToSource ) && pass._listResolvedColorOutput.size() == 1;
+            }
+
+            /** @brief @p name 이 그런 패스의 출력이면 true 입니다 — 풀을 만들 때는 그 타깃을 만들지 않고, 효과가 처음 켜질 때 만든다(`applyViewEffectBypass`). */
+            static bool isBypassOutput( const vector<RenderGraphPassDesc>& listPass, string_view name )
+            {
+                for ( const RenderGraphPassDesc& pass : listPass )
+                {
+                    if ( bypassesToSource( pass ) && pass._listResolvedColorOutput[0]._attachment.view() == name )
+                        return true;
+                }
+                return false;
+            }
+
+            /** @brief 패스의 원본(SourceColor 입력) 이름입니다. 없으면 빈 이름입니다(로드가 막는다). */
+            static string_view findSourceName( const RenderGraphPassDesc& pass )
+            {
+                for ( const RenderGraphPassDesc::ResolvedAttachment& input : pass._listResolvedInput )
+                {
+                    if ( static_cast<RenderPassInputRole>( input._role ) == RenderPassInputRole::SourceColor )
+                        return input._attachment.view();
+                }
+                return string_view{};
+            }
+
+            /**
+             * @brief 이 뷰에서 이번 프레임에 그 효과가 꺼졌으면 true 입니다. 꺼진 효과의 셰이더 결과는 원본과 같다(depthoffield.hlsl 의 `g_CameraLens.w` · motionblur.hlsl 의 `bStill` 과 같은 조건).
+             * @param bCameraStill 이번 뷰-투영이 지난번 것과 같거나 기록을 버리는 프레임이다(카메라 모션 블러의 속도가 모두 0).
+             */
+            static bool isEffectOff( const RenderGraphPassDesc& pass, const RenderViewSettings& settings, bool bCameraStill )
+            {
+                if ( settings.usesPostProcess() == false || pass._minPostQuality > static_cast<int32>( gv_postQuality ) )
+                    return true;
+                if ( pass._resolvedType == RenderPassType::DepthOfField )
+                    return settings._depthOfField.hasDepthOfField() == false || settings._projectionScaleY <= 0.0f; // 핀홀(조리개 0) · 직교
+                if ( pass._resolvedType == RenderPassType::MotionBlur )
+                    return static_cast<bool>( gv_motionBlur ) == false || bCameraStill;
+                return false;
+            }
+        };
+    } // namespace
+} // namespace sw
+
+namespace sw
+{
     void FrameRenderer::ensureTransientResources( uint32 overrideWidth, uint32 overrideHeight )
     {
         if ( _pDevice == nullptr )
@@ -51,7 +104,10 @@ namespace sw
         const uint32              poolHeight = FrameRendererUtil::computeViewPoolExtent( static_cast<float32>( height ) * settings._screenRect._w,
                                                                                          settings._resolutionScale, settings._upscaleZoom );
         if ( ensureViewTransients( _mainView, poolWidth, poolHeight ) )
+        {
             publishRenderTargets();
+            reportRenderTargetMemory();
+        }
         // Present 뷰포트(출력 × 사각형) — FSR 1 로 키우면 중간 RT 가 이 크기다(executePresentPass 의 뷰포트와 같은 식).
         const uint32 viewportWidth  = static_cast<uint32>( static_cast<float32>( width ) * settings._screenRect._z + 0.5f );
         const uint32 viewportHeight = static_cast<uint32>( static_cast<float32>( height ) * settings._screenRect._w + 0.5f );
@@ -72,8 +128,11 @@ namespace sw
         view._shadowMapResolution = shadowResolution;
 
         // 그림자 맵은 화면이 아니라 빛의 볼륨을 담는다 — 프레임 크기 대신 정사각 고정 크기로 만든다. 이름이 아니라 역할로 가린다(이름을 바꾼 그림자 첨부도 같다).
+        // 꺼지면 원본을 가리키는 효과의 출력(피사계 심도 · 모션 블러)은 여기서 만들지 않는다 — 그 효과가 이 뷰에서 처음 켜질 때 만든다(`applyViewEffectBypass`).
         for ( const RenderPassAttachment& attachment : _pipelineResource.getDesc()._listAttachment )
         {
+            if ( FrameRendererTransientsInternal::isBypassOutput( _pipelineResource.getGraphPass(), attachment._name ) )
+                continue;
             const RHIFormat format = FrameRendererUtil::parseAttachmentFormat( attachment._format );
             const bool      bDepth = FrameRendererUtil::isDepthFormat( format );
             if ( resolveRenderPassInputRole( attachment._name, bDepth, attachment._role ) == RenderPassInputRole::ShadowMap )
@@ -226,6 +285,66 @@ namespace sw
         pool.allocate( _pDevice, name, format, bDepth, clearColor, resolutionDivisor );
     }
 
+    void FrameRenderer::applyViewEffectBypass( ViewTarget& view, const float4x4& viewProj )
+    {
+        using Internal = FrameRendererTransientsInternal;
+        // 카메라 모션 블러의 속도는 지난 뷰-투영과의 차이뿐이다. 같거나 기록을 버리는 프레임(지난 것 = 이번 것)이면 모든 픽셀이 원본이다(motionblur.hlsl).
+        const bool               bCameraStill = view._bHistoryReset == SW_TRUE || Memory::compare( &view._prevViewProj, &viewProj, sizeof( float4x4 ) ) == 0;
+        TransientAttachmentPool& pool         = view._transientPool;
+        bool                     bForwardSet  = false;
+        bool                     bAllocated   = false;
+        for ( const RenderGraphPassDesc& pass : _pipelineResource.getGraphPass() )
+        {
+            if ( Internal::bypassesToSource( pass ) == false )
+                continue;
+            const string_view output = pass._listResolvedColorOutput[0]._attachment.view();
+            if ( Internal::isEffectOff( pass, view._settings, bCameraStill ) )
+            {
+                bForwardSet = pool.forward( output, Internal::findSourceName( pass ) ) || bForwardSet;
+                continue;
+            }
+            bForwardSet = pool.stopForward( output ) || bForwardSet;
+            if ( pool.contains( output ) )
+                continue;
+            for ( const RenderPassAttachment& attachment : _pipelineResource.getDesc()._listAttachment )
+            {
+                if ( string_view( attachment._name ) != output )
+                    continue;
+                const RHIFormat format = FrameRendererUtil::parseAttachmentFormat( attachment._format );
+                allocateTransient( pool, attachment._name, format, FrameRendererUtil::isDepthFormat( format ), attachment._clearColor, attachment._resolutionDivisor );
+                bAllocated = true;
+            }
+        }
+        if ( &view != &_mainView )
+            return;
+        // 화면에 나가는 첨부 표시(`_bPresented`)가 가리키는 곳을 따라가므로 가리키는 곳이 바뀌어도 다시 싣는다.
+        if ( bForwardSet || bAllocated )
+            publishRenderTargets();
+        if ( bAllocated )
+            reportRenderTargetMemory();
+    }
+
+    void FrameRenderer::reportRenderTargetMemory() const
+    {
+#if SW_LOG_LEVEL_COMPILED( SW_LOG_VERBOSITY_INFO )
+        // 주 시점의 첨부마다 크기를 남긴다(렌더 타깃 패널 `RenderTargetRegistry` 와 같은 목록). `[Profile] GPU memory by kind` 가 늘면 어느 첨부가 늘었는지 이 줄로 나눈다(측정 기준을 다시 뜰 때 함께 본다).
+        // 풀을 다시 만들 때와 꺼져 있던 효과의 타깃을 처음 만들 때만 부른다.
+        uint64 totalBytes = 0;
+        for ( const auto& [name, attachment] : _mainView._transientPool.getAll() )
+        {
+            totalBytes += static_cast<uint64>( attachment._width ) * attachment._height * getRHIFormatBytesPerPixel( attachment._format );
+        }
+        const uint64 totalKilobytes = totalBytes / 1024u;
+        SW_LOG_INFO( "[RenderTargets] main view %#x%#: %# KB in %# attachments", _mainView._transientPool.getWidth(), _mainView._transientPool.getHeight(),
+                     totalKilobytes, _mainView._transientPool.getAll().size() );
+        for ( const auto& [name, attachment] : _mainView._transientPool.getAll() )
+        {
+            const uint64 kilobytes = static_cast<uint64>( attachment._width ) * attachment._height * getRHIFormatBytesPerPixel( attachment._format ) / 1024u;
+            SW_LOG_INFO( "[RenderTargets]   %#  %#x%#  %# KB", name, attachment._width, attachment._height, kilobytes );
+        }
+#endif
+    }
+
     uint32 FrameRenderer::getShadowMapResolution()
     {
         // 값의 출처는 설정 스키마 하나다. 여기서는 텍스처를 만들 수 있는 범위만 지킨다(1 미만 · 밉 상한을 넘는 한 변은 첨부를 만들지 못한다).
@@ -284,7 +403,8 @@ namespace sw
 
         // 화면에 나가는 것이 무엇인지 함께 실어 준다. 패널이 열리자마자 **지금 보이는 그림**을
         // 고를 수 있어야 쓸모가 있다(이름순 첫 번째는 AOColor 라 아무 의미가 없다).
-        const string_view presented = getPresentedAttachmentName();
+        // 꺼진 효과의 출력이면 그것이 가리키는 원본이 화면에 나간다(`TransientAttachmentPool::forward`).
+        const string_view presented = _mainView._transientPool.resolveName( getPresentedAttachmentName() );
 
         vector<RenderTargetInfo> listTarget;
         listTarget.reserve( _mainView._transientPool.getAll().size() );
