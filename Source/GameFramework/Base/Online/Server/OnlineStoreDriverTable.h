@@ -7,6 +7,8 @@
  *          - 묶인 함수가 없는데 다른 드라이버를 고르면 서버 조립은 기동을 멈춥니다. 다른 드라이버로 대신하지 않습니다.
  *          - 키트는 묶기를 손으로 부르지 않고 `.cpp` 의 정적 `OnlineStoreDriverBinding` 하나로 둡니다. 모듈이 로드되면 묶이고 언로드되면 풀려서,
  *            "키트는 실렸는데 묶지 않았다" 나 "풀지 않아 언로드된 함수를 부른다" 가 생기지 않습니다(키트 조립의 `SW_REGISTER_ONLINE_SERVER_KIT` 와 같은 모양).
+ *          - 풀기는 자기 함수가 칸에 있을 때만 지웁니다(결정 기록 5-9). 핫 리로드는 옛 이미지의 언로드를 미뤄 새 이미지가 먼저 묶을 수 있어,
+ *            옛 묶음의 소멸자가 칸을 무조건 비우면 새 이미지의 함수가 사라집니다. 테이블은 모듈 언로드 리스너라 내려가는 이미지의 함수도 지웁니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -34,9 +36,12 @@ namespace sw
 
         static constexpr const utf8* kMemoryDriverName = "memory";
 
-        /** @brief 저장소 만들기 함수를 묶습니다. nullptr 이면 풉니다(모듈 언로드). */
-        static void                         bindServiceStoreFactory( CreateServiceStoreFunction pCreate );
-        static void                         bindEphemeralStoreFactory( CreateEphemeralStoreFunction pCreate );
+        /** @brief 저장소 만들기 함수를 묶습니다. 이미 묶인 함수가 있으면 바꿉니다(핫 리로드의 새 이미지). */
+        static void bindServiceStoreFactory( CreateServiceStoreFunction pCreate );
+        static void bindEphemeralStoreFactory( CreateEphemeralStoreFunction pCreate );
+        /** @brief 칸이 아직 @p pCreate 를 들고 있을 때만 풉니다. 다른 이미지가 그 뒤에 묶은 함수는 남깁니다. */
+        static void                         unbindServiceStoreFactory( CreateServiceStoreFunction pCreate );
+        static void                         unbindEphemeralStoreFactory( CreateEphemeralStoreFunction pCreate );
         static CreateServiceStoreFunction   findServiceStoreFactory();
         static CreateEphemeralStoreFunction findEphemeralStoreFactory();
     };
@@ -48,6 +53,7 @@ namespace sw
      * @class OnlineStoreDriverBinding
      * @brief 저장 키트의 만들기 함수를 모듈 수명 동안 테이블에 묶는 정적 객체입니다. 키트 `.cpp` 의 `namespace sw` 에 하나 둡니다.
      * @details @p pRelease 는 해제할 때(모듈 언로드) 부르는 정리 함수입니다. 드라이버 레지스트리에서 이 모듈의 드라이버를 해제하는 일 같은 것입니다. 없으면 nullptr 입니다.
+     *          소멸자는 자기가 묶은 함수만 풉니다 — 그사이 새 이미지가 묶은 함수는 그대로 둡니다.
      */
     class OnlineStoreDriverBinding
     {
@@ -55,23 +61,25 @@ namespace sw
         using ReleaseFunction = void ( * )();
 
         OnlineStoreDriverBinding( OnlineStoreDriverTable::CreateServiceStoreFunction pCreate, ReleaseFunction pRelease )
-            : _pRelease{ pRelease }
-            , _bServiceStore{ true }
+            : _pCreateServiceStore{ pCreate }
+            , _pCreateEphemeralStore{ nullptr }
+            , _pRelease{ pRelease }
         {
             OnlineStoreDriverTable::bindServiceStoreFactory( pCreate );
         }
         OnlineStoreDriverBinding( OnlineStoreDriverTable::CreateEphemeralStoreFunction pCreate, ReleaseFunction pRelease )
-            : _pRelease{ pRelease }
-            , _bServiceStore{ false }
+            : _pCreateServiceStore{ nullptr }
+            , _pCreateEphemeralStore{ pCreate }
+            , _pRelease{ pRelease }
         {
             OnlineStoreDriverTable::bindEphemeralStoreFactory( pCreate );
         }
         ~OnlineStoreDriverBinding()
         {
-            if ( _bServiceStore )
-                OnlineStoreDriverTable::bindServiceStoreFactory( nullptr );
-            else
-                OnlineStoreDriverTable::bindEphemeralStoreFactory( nullptr );
+            if ( _pCreateServiceStore != nullptr )
+                OnlineStoreDriverTable::unbindServiceStoreFactory( _pCreateServiceStore );
+            if ( _pCreateEphemeralStore != nullptr )
+                OnlineStoreDriverTable::unbindEphemeralStoreFactory( _pCreateEphemeralStore );
             if ( _pRelease != nullptr )
                 _pRelease();
         }
@@ -80,7 +88,8 @@ namespace sw
         OnlineStoreDriverBinding& operator=( const OnlineStoreDriverBinding& ) = delete;
 
     private:
-        ReleaseFunction _pRelease;
-        bool            _bServiceStore;
+        OnlineStoreDriverTable::CreateServiceStoreFunction   _pCreateServiceStore;   ///< 묶은 저장소 함수(캐시를 묶었으면 nullptr)
+        OnlineStoreDriverTable::CreateEphemeralStoreFunction _pCreateEphemeralStore; ///< 묶은 캐시 함수(저장소를 묶었으면 nullptr)
+        ReleaseFunction                                      _pRelease;
     };
 } // namespace sw
