@@ -74,11 +74,6 @@ namespace sw
                 PathStackScope& operator=( const PathStackScope& ) = delete;
             };
 
-            static bool isOnStack( const PrefabPathStack& stack, const hashed_string& key )
-            {
-                return VectorUtil::contains( stack, key );
-            }
-
             /**
              * @brief 프리팹 참조(경로 또는 GUID 문자열)를 경로로 풉니다. GUID 가 아니거나 데이터베이스에 없으면 받은 그대로 반환합니다.
              * @details 로드와 스폰이 함께 씁니다 — 한쪽만 GUID 를 풀면 같은 참조가 로드는 되고 스폰은 안 됩니다.
@@ -1384,7 +1379,7 @@ namespace sw
         const hashed_string pathKey      = PrefabAssetInternal::makePathKey( PrefabAssetInternal::makePrefabCacheKey( resolvedPath ) );
 
         PrefabAssetInternal::PrefabPathStack& spawnStack = t_prefabChain._spawnStack;
-        if ( PrefabAssetInternal::isOnStack( spawnStack, pathKey ) )
+        if ( VectorUtil::contains( spawnStack, pathKey ) )
         {
             SW_LOG_ERROR( "Circular prefab reference detected for '%#' — spawn aborted to prevent recursion overflow",
                           assetRelativePath );
@@ -1522,7 +1517,7 @@ namespace sw
             {
                 sourceKey = PrefabAssetInternal::makePathKey(
                     PrefabAssetInternal::makePrefabCacheKey( PrefabAssetInternal::resolvePrefabPath( node._prefabPath.empty() ? node._prefabGuid : node._prefabPath ) ) );
-                if ( PrefabAssetInternal::isOnStack( spawnStack, sourceKey ) )
+                if ( VectorUtil::contains( spawnStack, sourceKey ) )
                 {
                     SW_LOG_ERROR( "Circular nested prefab '%#' in '%#' - instance '%#' is not spawned", node._prefabPath, asset.getName(), node._name );
                     continue;
@@ -1668,7 +1663,7 @@ namespace sw
             const string                        sourcePath = PrefabAssetInternal::resolvePrefabPath( node._prefabPath.empty() ? node._prefabGuid : node._prefabPath );
             const hashed_string                 sourceKey  = PrefabAssetInternal::makePathKey( PrefabAssetInternal::makePrefabCacheKey( sourcePath ) );
             const shared_ptr<const PrefabAsset> pSource    = loadPrefab( sourcePath );
-            if ( pSource == nullptr || PrefabAssetInternal::isOnStack( spawnStack, sourceKey ) )
+            if ( pSource == nullptr || VectorUtil::contains( spawnStack, sourceKey ) )
             {
                 SW_LOG_ERROR( "Nested prefab '%#' in '%#' could not be loaded (missing or circular) - the prefab is not flattened", sourcePath, asset.getName() );
                 return false;
