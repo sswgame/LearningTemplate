@@ -163,6 +163,16 @@ namespace sw::editor
             {
                 return readPublished( &CharacterEditorPanel::Published::_clipPlaying, outValue );
             }
+            /** @brief 미리보기 뷰포트의 오빗 거리입니다. 미리보기 시나리오가 휠 줌(`EditorWheel`)을 단언하는 데 쓴다. 패널이 없으면 false 입니다. */
+            [[nodiscard]] static bool readPreviewOrbitDistance( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const EditorPanelManager*   pManager = editor::findSubsystem<EditorPanelManager>();
+                const CharacterEditorPanel* pPanel   = pManager != nullptr ? pManager->findPanel<CharacterEditorPanel>() : nullptr;
+                if ( pPanel == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pPanel->getPreviewViewport().getOrbitDistance() );
+                return true;
+            }
         };
     } // namespace
 
@@ -185,6 +195,8 @@ namespace sw::editor
                          &CharacterEditorPanelInternal::readBoneGizmoPlaced );
     SW_AUTOMATION_PROBE( editorCharacterEditorPreviewClipPlaying, "Editor.CharacterEditorPreviewClipPlaying", "1 while the Character Editor preview body plays the selected clip (published while the Preview tab draws)",
                          &CharacterEditorPanelInternal::readClipPlaying );
+    SW_AUTOMATION_PROBE( editorPreviewViewportOrbitDistance, "Editor.PreviewViewportOrbitDistance",
+                         "Orbit distance of the Character Editor preview viewport camera (wheel zoom shrinks it)", &CharacterEditorPanelInternal::readPreviewOrbitDistance );
 } // namespace sw::editor
 
 namespace sw::editor
