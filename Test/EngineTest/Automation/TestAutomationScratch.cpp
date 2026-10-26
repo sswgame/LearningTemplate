@@ -43,8 +43,10 @@ SW_TEST_CASE( AutomationScratchTest, ScratchIDsBindToThisProcess )
     const sw::string* pLine     = scenario.getSteps()[0].findAttribute( "line" );
     const sw::string* pContains = scenario.getSteps()[1].findAttribute( "contains" );
     SW_ASSERT_TRUE( pLine != nullptr && pContains != nullptr );
-    SW_EXPECT_TRUE( *pLine == "content.open " + instanceID );
-    SW_EXPECT_TRUE( *pContains == "'" + instanceID + "/a.material'" );
+    const sw::string expectedLine     = "content.open " + instanceID;
+    const sw::string expectedContains = "'" + instanceID + "/a.material'";
+    SW_EXPECT_TRUE( pLine->compare( expectedLine ) == 0 );
+    SW_EXPECT_TRUE( pContains->compare( expectedContains ) == 0 );
 }
 
 /**

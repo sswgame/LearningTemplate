@@ -354,7 +354,10 @@ SW_TEST_CASE( PartyArenaTest, ItemsSpawnDeterministicallyAndSuperBounceDoublesHe
         PartyItemSpawnSettings settings = spawner.getSettings();
         settings._maxActive             = 3;
         settings._lifetime              = 1.0f;
-        SW_ASSERT_TRUE( spawner.initialize( settings, seed ) );
+        const bool bInitialized         = spawner.initialize( settings, seed );
+        SW_EXPECT_TRUE( bInitialized );
+        if ( bInitialized == false )
+            return -1;
         for ( int32 frame = 0; frame < 60 * 3; ++frame )
         {
             spawner.update( kPartyArenaStep );
