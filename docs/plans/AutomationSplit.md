@@ -52,3 +52,58 @@
 - **어림값 문턱 승격:** `py -3 -m Scripts scenario-thresholds`(`--list` 가 38 개 목록, `--reports` 가 제안 표, `--apply` 가 쓴다). 숫자는 보고의 `metrics` 에서만 가져온다.
 - **행 감시 교착:** 개발 명령 `automation.hang` + 시나리오 `engine/automationwatch/hang.scenario.xml`(`wallTimeoutSeconds="3"`)을 `AppHangWatchTest` 가 12 · `"hang": true` 로 확인한다. 기동이 3 초를 넘기는 구성(Debug)에서는 시작 전에 일반 시간 초과로 끝날 수 있어 한 번 돌려 본다.
 - **남은 것:** 샤드 비용표(`Test/TestPolicy.json`)를 정적 어림으로 보정하는 방법(케이스 비용 ≈ 기동 + 마지막 프레임 × 프레임 비용, 에디터 · 게임별 두 상수를 `timeline` 에서 맞춘다)은 실측 뒤에 정한다.
+
+## 8. 시나리오가 없는 기능과 추가한 시나리오 (2026-10-27, 실행 전)
+
+덮임은 세 줄로 대조했다: 에디터 패널 id(`kPanelID` 46 개)를 시나리오의 `panel.focus` · `gv_editorProbePanel` · `mark` 와, 등록된 탐침(299 개)을 시나리오의 `probe=` 와(273 개 사용, 26 개 미사용), 게임마다 자동 플레이 스위치(`gv_*AutoPlay`)를 켠 시나리오가 있는지.
+엔진 모듈은 대부분 자기 폴더에 탐침이 없어(탐침은 Scene · Editor · GameFramework 에 있다) 폴더 단위로는 대조할 수 없었다 — 탐침이 없는 기능은 시나리오로 못 덮으므로 탐침을 먼저 더해야 한다.
+
+| 덮이지 않은 것 | 처리 |
+|---|---|
+| 패널 `audiograph` · `behavior_tree` · `world_cells` | 추가: `editor/audiographpanel` · `behaviortreepanel` · `worldcellspanel` — 열기(`Editor.PanelOpen` 조건 대기) → UI 캡처(`maxMagentaFraction=0`) → 닫기. 패널 안 조작은 표식(mark)이 없거나(world_cells 는 `worldCells.cell.N` 이 월드 파티션 씬을 요구) 파일을 써서 하지 않았다 |
+| 반사 프로브 베이크(`Editor.ReflectionProbeBake*` · `BakedReflectionProbeCount`) | 추가: `editor/reflectionprobebake` — 프로브 없는 씬에서 끝난 횟수 1 · 구운 수 0. 프로브가 있는 굽기는 씬 옆에 `.reflprobe` 를 써 하지 않는다(Scratch 가 필요) |
+| WildWest 자동 플레이(기수가 가장 가까운 말에 탐) | 추가: `wildwest/autoplaymount` — 탑승 순간까지 조건 대기 |
+| FrontierTown 자동 플레이(시계 8 배) | 추가: `frontiertown/autoplayclock` — 이틀째까지(1 배속이면 42 초라 시한 30 초에서 진다), `refused` 줄 0 |
+| MeadowVillage 자동 플레이(시계 8 배) | 추가: `meadowvillage/autoplayclock` — 첫 날 넘김까지(1 배속이면 90 초라 시한 40 초에서 진다) |
+| `Editor.NavMeshCount` · `NavMeshSegments` | 못 덮음: 내비메시가 서려면 걸을 바닥이 있는 씬 픽스처가 필요하다(`physicsnavview` 는 커맨드가 돈 것만 본다) |
+| `Editor.AssetImport*` | 못 덮음: 원본 모델 · 텍스처를 바꿔야 해서 Scratch 의 원본 에셋 복사가 있어야 한다 |
+| `Editor.CharacterEditor*` · `UIPreview*` · `NetPlayMeasuredLossPercent` · `GameViewCamera*` · `LoadingScreenShown` | 다음 일: 기존 시나리오(`charactereditor` · `uipreviewdesigner` · `netconditions` · `sceneviewgameview` · `loadingscreen`)에 단언을 더하는 일이라 이번에는 기존 파일을 건드리지 않았다 |
+| `Appearance.MergedSections` · `SocketPartPool.*` · `Animation.CrowdVertexAnimationUnits` · `PoseEvaluatedUnits` | 다음 일: 군중 · 외형 합치기 시나리오에 단언 — 기대 값은 한 번 재야 정한다 |
+| `AI.BehaviorTask` | 못 덮음: 한 틱에 끝나는 작업만 있는 트리는 도는 잎이 없다(README 함정) |
+| 사람 눈 확인(질감 · 그림자 · 색 · 애니메이션 느낌) | 시나리오가 사진을 남기고 판정은 사람이 한다(`눈 확인용` 주석 9 곳 + 이번 패널 셋). 숫자 문턱이 되는 것만 `ExpectImage` 가 맡는다 |
+
+추가한 일곱 시나리오는 고정 프레임 대기가 없다(대기는 `WaitUntil`, 그 사이는 `after="1"` 한 프레임). 이름 줄기가 겹치지 않게 했다(`autoplay` 는 shooter3d 가 쓴다). 실행하지 못했다 — 통합이 `AutomationScenarioDataTest`(단계 속성) 와 네 백엔드 실행으로 처음 본다.
+로그 id 가 없는 Warning · Error 가 나는 길은 쓰지 않았다: 패널은 열기만 하고 파일을 읽지 않으며, 자동 플레이 경고(`[WildWest] auto play: …`)는 탈 말이 없을 때만 나고 그때는 일부러 15 로 지게 둔다.
+
+### 병합 뒤 등록할 `Test/QA/VerifyBatch.json` 항목 (wt/verifycmd 병합 후 통합이 등록)
+
+파일은 다른 작업자가 고치는 중이라 여기에만 적는다. `items` 배열에 더한다(필드 이름은 현재 매니페스트의 `test` · `measure` · `covered` 항목 모양).
+
+```json
+{
+  "id": "app-hang-watch", "title": "AppHangWatchTest — 게임 스레드 교착을 행 감시가 12 · hang:true 로 끝낸다", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "shared", "pending": true, "timeout_minutes": 20,
+  "filter": "AppHangWatchTest.*", "extra_args": ["--host_suites=all"],
+  "source": "docs/plans/AutomationSplit.md 7절", "result_doc": "docs/plans/AutomationSplit.md 7절",
+  "note": "지면 보고의 reason 을 먼저 본다 — 기동이 wallTimeoutSeconds(3 초)를 넘겼으면 hang 없이 일반 시간 초과로 끝난 것이라 hang.scenario.xml 의 wallTimeoutSeconds 를 올린다."
+},
+{
+  "id": "scenario-timeline-measure", "title": "시나리오 보고의 timeline 으로 고정 대기 · 조건 대기 · 기동 몫 재기(app-scenarios-release 뒤)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 10,
+  "tool": "scripts", "args": ["scenario-waits", "--measured-dir", "{bin}/Saved/Automation", "--top", "20"], "limit": "보고만 — 어림 프레임 대 잰 초, 시작 전 · 고정 대기 · 조건 대기 · 단계 몫", "judge": "exit",
+  "source": "docs/plans/AutomationSplit.md 7절", "result_doc": "docs/plans/AutomationSplit.md 7절"
+},
+{
+  "id": "scenario-thresholds-promote", "title": "어림값 문턱 38 개를 잰 값으로 승격하는 제안 표(네 백엔드 보고)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 10,
+  "tool": "scripts", "args": ["scenario-thresholds", "--reports", "{bin}/Saved/Automation"], "limit": "보고만 — 승격 가능 · 결함 의심 · 사람이 정함을 나눠 보인다(--apply 는 표를 보고 사람이 따로 돌린다)", "judge": "exit",
+  "source": "docs/plans/GpuVerification.md 3절", "result_doc": "docs/plans/GpuVerification.md 3절"
+},
+{
+  "id": "scenarios-new-q2", "title": "시나리오 없던 기능 일곱(패널 셋 · 반사 프로브 베이크 · 자동 플레이 셋)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+  "covered": ["engine/automation/editor/audiographpanel.scenario.xml", "engine/automation/editor/behaviortreepanel.scenario.xml", "engine/automation/editor/worldcellspanel.scenario.xml",
+              "engine/automation/editor/reflectionprobebake.scenario.xml", "game/wildwest/automation/autoplaymount.scenario.xml", "game/frontiertown/automation/autoplayclock.scenario.xml",
+              "game/meadowvillage/automation/autoplayclock.scenario.xml"], "covered_by": "app-scenarios-release",
+  "source": "docs/plans/AutomationSplit.md 8절", "result_doc": "docs/plans/AutomationSplit.md 8절",
+  "note": "처음 도는 시나리오들이다. 지면 보고의 failures · unhandledLogs 를 본다 — 패널은 Editor.PanelOpen 이 안 서면 panel.focus 철자부터, 자동 플레이는 시한(30 · 40 초)이 8 배속 가정과 맞는지부터."
+}
+```
+
+`{bin}/Saved/Automation` 은 `app-scenarios-release` 가 쓴 보고 폴더다. 보고는 시나리오 줄기 + 백엔드 이름으로 덮어쓰이므로 같은 줄기(`control` 등)의 시나리오끼리는 마지막 실행의 보고만 남는다 — 승격 제안은 `ExpectImage` 가 든 줄기가 유일한 것들(어림값 13 개 시나리오)만 쓴다.
