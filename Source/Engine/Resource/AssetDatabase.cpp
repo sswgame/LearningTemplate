@@ -34,7 +34,10 @@ namespace sw
             return rel;
         }
         rel = FileUtil::normalizePath( rel );
-        if ( rel.empty() || rel == "." )
+        // 리소스 루트 밖의 경로는 상대 경로가 ".." 로 시작한다 — 리소스 id 가 아니므로 빈 문자열이다.
+        const bool bOutsideRoot = rel == ".." || StringUtil::startsWith( rel, "../" );
+        const bool bNoAsset     = rel.empty() || rel == "." || bOutsideRoot;
+        if ( bNoAsset )
             rel.clear();
         return rel;
     }
