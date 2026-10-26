@@ -7,7 +7,7 @@
 ## 1. 정한 것
 
 - 외부 계정 · 비용 연동은 4절 결정대로 코드를 넣되 자격은 환경 변수에서만 읽습니다.
-- 키트끼리는 include 하지 않습니다. 두 키트를 잇는 일은 기반 `Online/` 의 인터페이스를 서버 조립 문맥(`OnlineServerKitContext`)에 내놓고 다른 키트가 `start` 에서 읽습니다.
+- 키트끼리는 include 하지 않습니다. 두 키트를 잇는 일은 기반 `Online/` 의 인터페이스를 서버 조립 문맥의 지역 범위(`OnlineServerKitContext::_kits`)에 걸고(`exposeInterface`) 다른 키트가 `start` 에서 `get`(필수) · `find`(선택)로 읽습니다. 순서는 키트 이름 의존(`getRequiredKits` · `getOptionalKits`)이 정합니다.
 - 부하 봇 측정이 근거인 결정(채팅 채널 샤딩, 매칭 작은 n 전수 탐색)은 측정 전에는 구현하지 않습니다.
 
 ## 2. 단위
