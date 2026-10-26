@@ -2,6 +2,7 @@
 
 #include "AppTest/AppTestUtil.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
@@ -13,8 +14,6 @@
 #include "TestFramework/TestFramework.h"
 
 #include "sw/config/CookContract.gen.h"
-
-#include <cstdlib>
 
 // 실제 App.exe 를 백엔드마다 띄워 UI 견본 화면의 스크린샷을 읽는다 — GPU · 창 · 셰이더가 필요하다. CI 러너엔 없다.
 SW_TEST_REQUIRES_HOST( AppUITest, "launches App.exe on every RHI backend and reads screenshots of the UI demo screen" );
@@ -92,10 +91,9 @@ namespace
                 if ( listToken.size() != 5 )
                     continue; // collapsed
                 AppUITestRect rect{};
-                rect._x      = static_cast<float32>( std::atof( listToken[1].c_str() ) );
-                rect._y      = static_cast<float32>( std::atof( listToken[2].c_str() ) );
-                rect._width  = static_cast<float32>( std::atof( listToken[3].c_str() ) );
-                rect._height = static_cast<float32>( std::atof( listToken[4].c_str() ) );
+                const bool    bRectLine = sw::StringUtil::parseFloat( listToken[1], rect._x ) && sw::StringUtil::parseFloat( listToken[2], rect._y ) && sw::StringUtil::parseFloat( listToken[3], rect._width ) && sw::StringUtil::parseFloat( listToken[4], rect._height );
+                if ( bRectLine == false )
+                    return false; // 절 안의 다섯 낱말 줄은 모두 사각형이다 — 못 읽으면 덤프 형식이 바뀐 것이다
                 if ( bRoot )
                 {
                     bRoot  = false;

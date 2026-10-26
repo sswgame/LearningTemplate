@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Process/ProcessEnvironment.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
@@ -9,8 +10,6 @@
 
 #include "TestFramework/Harness/TestHostRuntime.h"
 #include "TestFramework/TestFramework.h"
-
-#include <cstdlib>
 
 // 루프백 클러스터 부하 — 서버 하나와 클라이언트 여럿이 나쁜 회선에서 파괴 쇼케이스를 돌리는 동안의 틱 시간과, 끝에 모든 클라이언트의 구조 해시가 서버와 같은지(어긋남 없음).
 // 부하 검증(`py -3 -m Scripts load`)이 시나리오의 `<Load>` 를 환경 변수로 넘긴다. 없으면 아래 기본값으로 돈다(`ctest -L load`).
@@ -31,11 +30,14 @@ namespace
     {
         static constexpr float32 kTickRate = 60.0f;
 
-        static float32 readEnvironmentNumber( const utf8* pName, float32 fallback )
+        /** @brief 환경 변수의 숫자입니다. 없거나 비면 @p fallback(문서의 기본값)이고, 값이 있는데 숫자가 아니면 false 입니다. */
+        [[nodiscard]] static bool tryReadEnvironmentNumber( const utf8* pName, float32 fallback, float32& outValue )
         {
-            sw::string  pValueText;
-            const utf8* pValue = sw::ProcessEnvironment::tryRead( pName, pValueText ) ? pValueText.c_str() : nullptr;
-            return pValue != nullptr && pValue[0] != '\0' ? static_cast<float32>( std::strtod( pValue, nullptr ) ) : fallback;
+            sw::string valueText;
+            outValue = fallback;
+            if ( sw::ProcessEnvironment::tryReadNonEmpty( pName, valueText ) == false )
+                return true;
+            return sw::StringUtil::parseFloat( valueText, outValue );
         }
     };
 } // namespace
@@ -53,9 +55,15 @@ SW_TEST_CASE( NetSimLoadTest, DestructionReplicationUnderLoad )
     const utf8*       pNetwork = sw::ProcessEnvironment::tryRead( "SW_LOAD_NETWORK", pNetworkText ) ? pNetworkText.c_str() : nullptr;
     const string_view network  = pNetwork != nullptr && pNetwork[0] != '\0' ? string_view( pNetwork ) : string_view( "lte" );
     ScenarioOptions   options;
-    options._clientCount = static_cast<uint32>( MathUtil::max( 1.0f, Internal::readEnvironmentNumber( "SW_LOAD_CLIENTS", 8.0f ) ) );
-    options._rampUpTicks = static_cast<uint32>( Internal::readEnvironmentNumber( "SW_LOAD_RAMP_UP_SECONDS", 2.0f ) * Internal::kTickRate );
-    options._tickCount   = static_cast<uint32>( MathUtil::max( 1.0f, Internal::readEnvironmentNumber( "SW_LOAD_DURATION_SECONDS", 12.0f ) ) * Internal::kTickRate );
+    float32           clientCount     = 0.0f;
+    float32           rampUpSeconds   = 0.0f;
+    float32           durationSeconds = 0.0f;
+    SW_ASSERT_TRUE_MSG( Internal::tryReadEnvironmentNumber( "SW_LOAD_CLIENTS", 8.0f, clientCount ), "SW_LOAD_CLIENTS is not a number" );
+    SW_ASSERT_TRUE_MSG( Internal::tryReadEnvironmentNumber( "SW_LOAD_RAMP_UP_SECONDS", 2.0f, rampUpSeconds ), "SW_LOAD_RAMP_UP_SECONDS is not a number" );
+    SW_ASSERT_TRUE_MSG( Internal::tryReadEnvironmentNumber( "SW_LOAD_DURATION_SECONDS", 12.0f, durationSeconds ), "SW_LOAD_DURATION_SECONDS is not a number" );
+    options._clientCount = static_cast<uint32>( MathUtil::max( 1.0f, clientCount ) );
+    options._rampUpTicks = static_cast<uint32>( rampUpSeconds * Internal::kTickRate );
+    options._tickCount   = static_cast<uint32>( MathUtil::max( 1.0f, durationSeconds ) * Internal::kTickRate );
     NetEmulationPresetTable presetTable;
     SW_ASSERT_TRUE( presetTable.loadFromResource( ::test::getEngineDefaultAssets()._netEmulationPresets.get() ) );
     SW_ASSERT_TRUE_MSG( presetTable.tryGetConditions( network, options._conditions ), string( "unknown SW_LOAD_NETWORK preset " ) + string( network ) );

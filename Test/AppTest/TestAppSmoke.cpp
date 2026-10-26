@@ -24,7 +24,6 @@
 #include "sw/config/CookContract.gen.h"
 
 #include <chrono>
-#include <cstdlib>
 #include <thread>
 
 using namespace sw;
@@ -188,12 +187,23 @@ namespace
         return sw::vector<sw::string>{ "-dx12", "-dx11" };
     }
 
-    /**
-     * @brief `-gv_profileFrames` 보고의 태그 줄에서 @p tagName 줄의 KB 정수부를 읽습니다. 줄이 없으면(그 태그가 0 바이트) 0 입니다.
-     * @details 줄 모양: `[Memory]   Editor  15538.7 KB  77.6%  2383 blocks | peak …`. `runApp` 에 표식 `"[Memory]   "` 을 주고 돌린 결과를 넘깁니다.
-     */
-    uint64 findMemoryTagKilobytes( const AppRunResult& result, string_view tagName )
+    /** @brief @p start 부터 이어지는 숫자(KB 의 정수부)를 읽습니다. 숫자가 없으면 false 입니다. */
+    [[nodiscard]] bool tryReadLeadingKilobytes( string_view text, size_t start, uint64& outKilobytes )
     {
+        if ( start == string_view::npos )
+            return false;
+        const size_t end = text.find_first_not_of( "0123456789", start );
+        return StringUtil::parseUint64( text.substr( start, end == string_view::npos ? string_view::npos : end - start ), outKilobytes );
+    }
+
+    /**
+     * @brief `-gv_profileFrames` 보고의 태그 줄에서 @p tagName 줄의 KB 정수부를 읽습니다. 줄이 없으면(그 태그가 0 바이트) 0 이고 true 입니다.
+     * @details 줄 모양: `[Memory]   Editor  15538.7 KB  77.6%  2383 blocks | peak …`. `runApp` 에 표식 `"[Memory]   "` 을 주고 돌린 결과를 넘깁니다.
+     *          줄은 있는데 숫자를 못 읽으면 false 입니다 — 0 으로 읽으면 상한 검사가 조용히 통과합니다.
+     */
+    [[nodiscard]] bool tryFindMemoryTagKilobytes( const AppRunResult& result, string_view tagName, uint64& outKilobytes )
+    {
+        outKilobytes = 0;
         for ( const string& line : result._listMarkedLine )
         {
             const string_view text{ line };
@@ -201,20 +211,20 @@ namespace
             const size_t      nameEnd   = nameStart == string_view::npos ? string_view::npos : text.find( ' ', nameStart );
             if ( nameEnd == string_view::npos || text.substr( nameStart, nameEnd - nameStart ) != tagName )
                 continue;
-            const size_t numberStart = text.find_first_not_of( ' ', nameEnd );
-            return numberStart == string_view::npos ? 0 : std::strtoull( line.c_str() + numberStart, nullptr, 10 );
+            return tryReadLeadingKilobytes( text, text.find_first_not_of( ' ', nameEnd ), outKilobytes );
         }
-        return 0;
+        return true;
     }
 
     /** @brief 태그를 걸지 않은 할당(Unknown)의 상한(KB)입니다. 진입점이 빠지면 기동만으로 수십 KB 가 이 줄에 쌓입니다. */
     constexpr uint64 kMaxUnknownTagKilobytes = 8;
 
     /**
-     * @brief 보고의 "sw 할당자 밖" 줄(`[Memory]   (outside the sw allocator — …)  19.8 KB`)의 KB 정수부입니다. 줄이 없으면(CRT 힙을 측정할 수 없는 구성) 0 입니다.
+     * @brief 보고의 "sw 할당자 밖" 줄(`[Memory]   (outside the sw allocator — …)  19.8 KB`)의 KB 정수부입니다. 줄이 없으면(CRT 힙을 측정할 수 없는 구성) 0 이고 true 입니다.
      */
-    uint64 findOutsideAllocatorKilobytes( const AppRunResult& result )
+    [[nodiscard]] bool tryFindOutsideAllocatorKilobytes( const AppRunResult& result, uint64& outKilobytes )
     {
+        outKilobytes = 0;
         for ( const string& line : result._listMarkedLine )
         {
             if ( line.find( "(outside the sw allocator" ) == string::npos )
@@ -222,10 +232,10 @@ namespace
             const size_t closeIndex = line.rfind( ')' );
             if ( closeIndex == string::npos )
                 continue;
-            const size_t numberStart = line.find_first_not_of( ' ', closeIndex + 1 );
-            return numberStart == string::npos ? 0 : std::strtoull( line.c_str() + numberStart, nullptr, 10 );
+            const string_view text{ line };
+            return tryReadLeadingKilobytes( text, text.find_first_not_of( ' ', closeIndex + 1 ), outKilobytes );
         }
-        return 0;
+        return true;
     }
 
     /**
@@ -493,11 +503,14 @@ SW_TEST_CASE( AppSmokeTest, EditorMemoryIsAttributedByTag )
     if ( test::hasRunHere( result._outcome ) == false )
         SW_TEST_SKIP( "DX12 is not usable on this machine" );
 
-    const uint64 editorKilobytes  = findMemoryTagKilobytes( result, "Editor" );
-    const uint64 unknownKilobytes = findMemoryTagKilobytes( result, "Unknown" );
+    uint64 editorKilobytes  = 0;
+    uint64 unknownKilobytes = 0;
+    uint64 outsideKilobytes = 0;
+    SW_ASSERT_TRUE( tryFindMemoryTagKilobytes( result, "Editor", editorKilobytes ) );
+    SW_ASSERT_TRUE( tryFindMemoryTagKilobytes( result, "Unknown", unknownKilobytes ) );
+    SW_ASSERT_TRUE( tryFindOutsideAllocatorKilobytes( result, outsideKilobytes ) );
     SW_EXPECT_TRUE_MSG( editorKilobytes > 4096, ( string( "Editor KB = " ) + to_string( editorKilobytes ) ).c_str() );
     SW_EXPECT_TRUE_MSG( unknownKilobytes < kMaxUnknownTagKilobytes, ( string( "Unknown KB = " ) + to_string( unknownKilobytes ) ).c_str() );
-    const uint64 outsideKilobytes = findOutsideAllocatorKilobytes( result );
     SW_EXPECT_TRUE_MSG( outsideKilobytes < kMaxOutsideAllocatorKilobytes, ( string( "outside sw allocator KB = " ) + to_string( outsideKilobytes ) ).c_str() );
 }
 
@@ -513,9 +526,11 @@ SW_TEST_CASE( AppSmokeTest, RuntimeMemoryIsAttributedByTag )
     if ( test::hasRunHere( result._outcome ) == false )
         SW_TEST_SKIP( "DX12 is not usable on this machine" );
 
-    const uint64 unknownKilobytes = findMemoryTagKilobytes( result, "Unknown" );
+    uint64 unknownKilobytes = 0;
+    uint64 outsideKilobytes = 0;
+    SW_ASSERT_TRUE( tryFindMemoryTagKilobytes( result, "Unknown", unknownKilobytes ) );
+    SW_ASSERT_TRUE( tryFindOutsideAllocatorKilobytes( result, outsideKilobytes ) );
     SW_EXPECT_TRUE_MSG( unknownKilobytes < kMaxUnknownTagKilobytes, ( string( "Unknown KB = " ) + to_string( unknownKilobytes ) ).c_str() );
-    const uint64 outsideKilobytes = findOutsideAllocatorKilobytes( result );
     SW_EXPECT_TRUE_MSG( outsideKilobytes < kMaxOutsideAllocatorKilobytes, ( string( "outside sw allocator KB = " ) + to_string( outsideKilobytes ) ).c_str() );
 }
 

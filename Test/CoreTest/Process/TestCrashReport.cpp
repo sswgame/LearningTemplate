@@ -1,16 +1,16 @@
 #include "pch.h"
 
 #include "Core/Common/PlatformOsHeaders.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/Diagnostics/CrashContext.h"
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Process/ProcessEnvironment.h"
 #include "Core/String/StringBuilder.h"
 
 #include "TestFramework/Harness/TestChildProcess.h"
 #include "TestFramework/TestFramework.h"
-
-#include <cstdlib>
 
 // ------------------------------------------------------------------------------
 // 1) CrashReport — 크래시 경로에서 **할당 없이** 미리 담아 둔 컨텍스트와, 세 플랫폼이 함께 쓰는 리포트 본문
@@ -268,15 +268,21 @@ SW_TEST_CASE( CrashReportTest, ChildProcessCrashesAsRequested )
     if ( pKind == nullptr || pFolder == nullptr )
         SW_TEST_SKIP( "crash child only — EveryCrashKindLeavesAReport launches it" );
 
+    int32 kindCode = 0;
+    SW_ASSERT_TRUE_MSG( sw::StringUtil::parseInt( pKindText, kindCode ), pKind );
     sw::setCrashReportFolder( pFolder );
     sw::string deadlineText;
     if ( sw::ProcessEnvironment::tryRead( "SW_CRASH_CHILD_DEADLINE_SECONDS", deadlineText ) )
-        sw::CrashHandler::setReportDeadline( static_cast<uint32>( std::atoi( deadlineText.c_str() ) ) );
+    {
+        uint64 deadlineSeconds = 0;
+        SW_ASSERT_TRUE_MSG( sw::StringUtil::parseUint64( deadlineText, deadlineSeconds ) && deadlineSeconds <= sw::MathUtil::kMaxUInt32, deadlineText.c_str() );
+        sw::CrashHandler::setReportDeadline( static_cast<uint32>( deadlineSeconds ) );
+    }
 #if defined( SW_PLATFORM_WINDOWS )
     // 오류 보고 창이 떠서 부모가 기다리지 않게 한다(핸들러가 처리하면 원래 뜨지 않는다 — 처리하지 못했을 때를 위한 것).
     SetErrorMode( SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX );
 #endif
-    sw::CrashHandler::crashForTest( static_cast<sw::CrashTestKind>( std::atoi( pKind ) ) );
+    sw::CrashHandler::crashForTest( static_cast<sw::CrashTestKind>( kindCode ) );
     SW_EXPECT_TRUE_MSG( false, "crashForTest returned instead of crashing" );
 }
 

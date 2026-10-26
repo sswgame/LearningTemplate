@@ -6,7 +6,7 @@ stdout = 31
 random = 6
 fileOpen = 2
 processSpawn = 1
-numberParse = 24
+numberParse = 8
 
 # 직접 불러도 되는 자리 → 이유. 키는 `<규칙>:<경로 글롭>`. 그 기능을 구현하는 파일 자신만 둔다 — 옮겨야 할 호출부는 여기가 아니라 [baseline] 에 센다.
 [exemption]

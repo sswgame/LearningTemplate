@@ -3,12 +3,11 @@
 #include "TestFramework/TestRunOptions.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Process/ProcessEnvironment.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "sw/config/CookContract.gen.h"
-
-#include <cstdlib>
 
 namespace test
 {
@@ -109,9 +108,10 @@ namespace test
         // 샤드 — gtest 의 환경 변수도 받는다(아래 `--test_shard=` 가 있으면 그쪽이 이긴다).
         const auto setShard = [this]( std::string_view indexText, std::string_view countText )
         {
-            const int32 index         = std::atoi( sw::string( indexText ).c_str() );
-            const int32 count         = std::atoi( sw::string( countText ).c_str() );
-            const bool  bInvalidShard = count < 1 || index < 0 || index >= count;
+            int32      index         = -1;
+            int32      count         = 0;
+            const bool bParsed       = sw::StringUtil::parseInt( indexText, index ) && sw::StringUtil::parseInt( countText, count );
+            const bool bInvalidShard = bParsed == false || count < 1 || index < 0 || index >= count;
             if ( bInvalidShard )
             {
                 _bInvalidArgument = true;
@@ -191,9 +191,10 @@ namespace test
             constexpr std::string_view kRepeatPrefixB = "--gtest_repeat=";
             if ( sw::StringUtil::startsWith( arg, kRepeatPrefixA ) || sw::StringUtil::startsWith( arg, kRepeatPrefixB ) )
             {
-                const std::string_view value = arg.substr( arg.find( '=' ) + 1 );
-                const int32            count = std::atoi( sw::string( value ).c_str() );
-                if ( count < 1 )
+                const std::string_view value       = arg.substr( arg.find( '=' ) + 1 );
+                int32                  count       = 0;
+                const bool             bValidCount = sw::StringUtil::parseInt( value, count ) && count >= 1;
+                if ( bValidCount == false )
                 {
                     _bInvalidArgument = true;
                     std::fprintf( stdout, "Invalid --test_repeat value '%s' (expected a count of 1 or more)\n", sw::string( value ).c_str() );
@@ -214,8 +215,17 @@ namespace test
             const bool                 bSeedArgument    = sw::StringUtil::startsWith( arg, kSeedPrefix ) || sw::StringUtil::startsWith( arg, kGtestSeedPrefix );
             if ( sw::StringUtil::startsWith( arg, kShufflePrefix ) || bSeedArgument )
             {
-                _bShuffle   = _bShuffle || bSeedArgument == false;
-                _randomSeed = static_cast<uint32>( std::strtoul( sw::string( arg.substr( arg.find( '=' ) + 1 ) ).c_str(), nullptr, 10 ) );
+                _bShuffle                         = _bShuffle || bSeedArgument == false;
+                const std::string_view value      = arg.substr( arg.find( '=' ) + 1 );
+                uint64                 seed       = 0;
+                const bool             bValidSeed = sw::StringUtil::parseUint64( value, seed ) && seed <= sw::MathUtil::kMaxUInt32;
+                if ( bValidSeed == false )
+                {
+                    _bInvalidArgument = true;
+                    std::fprintf( stdout, "Invalid test seed '%s' (expected a number from 0 to 4294967295)\n", sw::string( value ).c_str() );
+                }
+                else
+                    _randomSeed = static_cast<uint32>( seed );
                 continue;
             }
 
@@ -275,10 +285,11 @@ namespace test
             size_t separator = text.find( ',', start );
             if ( separator == sw::string::npos )
                 separator = text.size();
-            const sw::string entry  = text.substr( start, separator - start );
-            const size_t     equals = entry.rfind( '=' );
-            const float64    cost   = equals == sw::string::npos ? 0.0 : std::strtod( entry.c_str() + equals + 1, nullptr );
-            if ( cost <= 0.0 )
+            const sw::string entry      = text.substr( start, separator - start );
+            const size_t     equals     = entry.rfind( '=' );
+            float64          cost       = 0.0;
+            const bool       bValidCost = equals != sw::string::npos && sw::StringUtil::parseDouble( std::string_view( entry.c_str(), entry.size() ).substr( equals + 1 ), cost ) && cost > 0.0;
+            if ( bValidCost == false )
             {
                 _bInvalidArgument = true;
                 std::fprintf( stdout, "Invalid --test_costs entry '%s' (expected Suite.Case=<seconds>)\n", entry.c_str() );
