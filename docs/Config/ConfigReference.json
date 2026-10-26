@@ -3794,7 +3794,7 @@
    "default": "",
    "kind": "테스트",
    "description": "탐침 Editor.HierarchyRowIcon · Editor.BillboardIcon 이 볼 오브젝트 이름 (시나리오용)",
-   "source": "Source/Editor/SelfTest/EditorScenarioSteps.cpp"
+   "source": "Source/Editor/SelfTest/EditorProbeSupport.cpp"
   },
   {
    "name": "gv_editorProbeOverlay",
@@ -3802,7 +3802,7 @@
    "default": "view",
    "kind": "테스트",
    "description": "탐침 Editor.Overlay* 가 볼 씬 뷰 오버레이 바 id (view · transform · display · tools, 시나리오용)",
-   "source": "Source/Editor/SelfTest/EditorScenarioSteps.cpp"
+   "source": "Source/Editor/SelfTest/EditorProbeSupport.cpp"
   },
   {
    "name": "gv_editorProbePanel",
@@ -3810,7 +3810,7 @@
    "default": "",
    "kind": "테스트",
    "description": "탐침 Editor.PanelOpen 이 볼 패널 id (시나리오용)",
-   "source": "Source/Editor/SelfTest/EditorScenarioSteps.cpp"
+   "source": "Source/Editor/SelfTest/EditorProbeSupport.cpp"
   },
   {
    "name": "gv_editorProbeProperty",
@@ -3818,7 +3818,7 @@
    "default": "",
    "kind": "테스트",
    "description": "탐침 Editor.SelectedProperty 가 볼 <컴포넌트 타입>.<프로퍼티> (시나리오용)",
-   "source": "Source/Editor/SelfTest/EditorScenarioSteps.cpp"
+   "source": "Source/Editor/SelfTest/EditorProbeSupport.cpp"
   },
   {
    "name": "gv_editorProbeVisualizer",
@@ -3826,7 +3826,7 @@
    "default": "",
    "kind": "테스트",
    "description": "탐침 Editor.VisualizerOn 이 볼 뷰포트 시각화 id (시나리오용)",
-   "source": "Source/Editor/SelfTest/EditorScenarioSteps.cpp"
+   "source": "Source/Editor/SelfTest/EditorProbeSupport.cpp"
   },
   {
    "name": "gv_editorRegistryDump",
