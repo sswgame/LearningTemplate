@@ -29,6 +29,15 @@ namespace sw::editor
         Count
     };
 
+    /** @brief 글 칸 · 목록의 편집 키입니다(`EditorInputGUI::wasEditKeyPressed`). */
+    enum class EditorEditKey : uint8
+    {
+        Up,
+        Down,
+        Enter, ///< Enter 와 키패드 Enter
+        Escape,
+    };
+
     /**
      * @struct EditorPointerState
      * @brief 이번 프레임의 포인터 · 수정 키 상태입니다(캔버스 · 뷰포트 도구가 읽는다). 패널이 `ImGuiIO` 필드를 직접 읽지 않게 한 곳에서 채운다.
@@ -155,6 +164,12 @@ namespace sw::editor
          * @details 단축키가 아니라 글 칸 · 모달의 편집 키라 입력 맵에 두지 않는다 — 글을 치는 동안 액션은 멈추는데 이 키는 그때 들어야 한다.
          */
         static bool wasCancelPressed();
+        /**
+         * @brief 글 칸 · 목록의 편집 키(@p key)를 이번 프레임에 눌렀으면 true 입니다. @p bRepeat 면 누른 채 반복도 셉니다.
+         * @details 목록 위젯의 위 · 아래 · Enter, 빠른 실행 창의 Enter 처럼 **글을 치는 동안** 듣는 키다. 입력 맵의 액션은 글 입력 중 멈추므로(단축키가 글 칸의 것)
+         *          여기에 둔다 — 재배치 대상이 아닌 편집 키라는 예외다(유니티 · 언리얼의 검색 목록도 화살표 · Enter 를 고정 키로 쓴다).
+         */
+        static bool wasEditKeyPressed( EditorEditKey key, bool bRepeat = false );
 
         // ------------------------------------------------------------------------------
         // 4) 비맥락 팝업(확인 창 · 도구 팝업) 열기

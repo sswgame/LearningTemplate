@@ -5272,7 +5272,7 @@
    "type": "BOOL",
    "default": "ON",
    "choices": [],
-   "description": "Panel tiers fail to compile when they call ImGui input/popup/drag functions directly (EditorInputBan.h)",
+   "description": "Editor code fails to compile when it calls ImGui input/popup/drag functions directly (EditorInputBan.h)",
    "presets": []
   },
   {

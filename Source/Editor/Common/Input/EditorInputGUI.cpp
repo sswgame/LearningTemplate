@@ -4,6 +4,9 @@
  */
 #include "pch.h"
 
+// 금지 헤더(EditorInputBan.h)를 받지 않는 두 파일 중 하나다 — ImGui 입력을 직접 읽는 유일한 자리(유니티 묶음에서 빠진다, CMake `sw_applyEditorInputBan`).
+#define SW_EDITOR_INPUT_ADAPTER
+
 #include "Editor/Common/Input/EditorInputGUI.h"
 
 #include "Core/Common/HashUtil.h"
@@ -308,6 +311,22 @@ namespace sw::editor
     bool EditorInputGUI::wasCancelPressed()
     {
         return ImGui::IsKeyPressed( ImGuiKey_Escape, false );
+    }
+
+    bool EditorInputGUI::wasEditKeyPressed( EditorEditKey key, bool bRepeat )
+    {
+        switch ( key )
+        {
+            case EditorEditKey::Up:
+                return ImGui::IsKeyPressed( ImGuiKey_UpArrow, bRepeat );
+            case EditorEditKey::Down:
+                return ImGui::IsKeyPressed( ImGuiKey_DownArrow, bRepeat );
+            case EditorEditKey::Enter:
+                return ImGui::IsKeyPressed( ImGuiKey_Enter, bRepeat ) || ImGui::IsKeyPressed( ImGuiKey_KeypadEnter, bRepeat );
+            case EditorEditKey::Escape:
+                return ImGui::IsKeyPressed( ImGuiKey_Escape, bRepeat );
+        }
+        return false;
     }
 
     void EditorInputGUI::openPopup( const utf8* pPopupID )

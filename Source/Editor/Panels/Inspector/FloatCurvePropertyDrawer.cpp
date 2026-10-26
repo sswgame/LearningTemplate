@@ -8,6 +8,7 @@
 
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorCurveEditor.h"
 #include "Editor/Panels/Inspector/EditorPropertyGrid.h"
 #include "Editor/Panels/Inspector/IInspectorProperty.h"
@@ -43,7 +44,7 @@ namespace sw::editor
                     _state._working       = *pCurve;
                     const ImGuiID popupID = ImGui::GetID( "CurveEditor" );
                     _openPopupID          = popupID;
-                    ImGui::OpenPopupEx( popupID );
+                    EditorInputGUI::openPopup( "CurveEditor" ); // 같은 id(위의 GetID 와 같은 이름)
                 }
                 fixed_string<constant::kMaxBuffer128> mark;
                 formatstring( mark.data(), mark.capacity(), "inspector.curve.%#", prop._name.c_str() );

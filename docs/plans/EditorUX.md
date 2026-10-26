@@ -309,7 +309,8 @@ ImGui 의 `BeginPopupContextItem` · `BeginPopupContextWindow` 는 **뗄 때** �
 - 맥락 메뉴는 둘이다: 대상이 id 로 풀리는 것(오브젝트 · 컴포넌트 · 에셋 · 뷰포트)은 명령 등록부의 `drawContextMenuFor`, 대상이 그 프레임의 주소인 행 메뉴(속성 행 · 로그 행 · 표 칸 · 시간 배율)는 R1 만 맞춘 `beginItemContextMenu`. 메뉴 항목의 시나리오 표식은 `menu.<명령 id>` 다.
 - 뷰포트 비행은 모드 레이어 `Editor.Viewport.Fly`(우선순위 20, 아래를 막는다)를 오른쪽 단추를 누른 동안 켜서 가른다 — 같은 W 가 기즈모 모드(`Editor.Panel.scene_view`)와 겹치지 않는다. 패널 레이어는 포커스로 켜지므로 W · F · 숫자 키는 씬 뷰가 포커스일 때만 듣는다(예전에는 호버로도 들었다).
 - 콘텐츠 브라우저 대상 id 는 절대 경로를 페이로드 이름 표에 올린 값이다. 컴포넌트 메뉴는 메인 · 미리보기 카드 · 계층 창 행이 같다(미리보기 카드에도 복사 · 옮기기 · 프리셋이 생겼다).
-- 남긴 것: 목록 위젯(`EditorWidgets`)의 화살표 · Enter 와 빠른 실행 창의 Enter 는 글을 치는 동안 듣는 편집 키라 입력 맵(글 입력 중 멈춤)에 두지 않았다. `imgui_internal.h` 의 다른 겹(`IsKeyPressed( key, flags, owner )`)은 금지 헤더가 다시 선언하지 않는다.
+- 금지는 패널 티어만이 아니라 에디터 코드 전체다(모든 뷰 부분 · 루트 `EditorModule` · 에디터 확장 모듈 — `sw_applyEditorInputBan`). `imgui_internal.h` 의 다른 겹(키 주인 · 입력 플래그)과 `OpenPopupEx` · `Shortcut` · `BeginDragDropTargetCustom` 도 막는다. 받지 않는 곳은 `SW_EDITOR_INPUT_ADAPTER` 를 정의한 두 파일(`EditorInputGUI.cpp` · `ImGuiKeyForward.cpp`, 유니티 묶음에서 뺌)뿐이고 그 정의의 자리는 린트가 센다.
+- 편집 키 예외: 목록 위젯 · 빠른 실행 창의 화살표 · Enter · Esc 는 글을 치는 동안 듣는 고정 키라 입력 맵(글 입력 중 멈춤)이 아니라 `EditorInputGUI::wasEditKeyPressed` 로 읽는다(이유는 린트 규칙 표 `[exemption]` 의 `Common/Input` 줄).
 
 | 단위 | 파일 영역 | 할 일 | 선행 |
 |---|---|---|---|

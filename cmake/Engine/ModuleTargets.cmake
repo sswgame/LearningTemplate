@@ -414,7 +414,34 @@ function(sw_addEditorExtension TARGET_NAME)
 		SOURCES ${listExtensionSource} "${binderSource}"
 		LINK_PRIVATE EditorModule Engine RuntimeAPI ${listLinkedModule} imgui implot imgui_nodeeditor
 	)
+	sw_applyEditorInputBan(${TARGET_NAME}) # 확장 패널도 에디터 코드다 — ImGui 입력은 입력 맵 · EditorInputGUI 로
 	add_dependencies(EditorAll ${TARGET_NAME})
+endfunction()
+
+# ------------------------------------------------------------------------------
+# sw_applyEditorInputBan — 에디터 코드 타깃에 `Source/Editor/Common/Input/EditorInputBan.h` 를 imgui.h 의 사용자 헤더로 붙이고 사용 중단을 오류로 올린다
+#
+# 그 헤더가 ImGui 입력 · 팝업 · 끌어 놓기 함수(imgui_internal.h 의 다른 겹 포함)를 [[deprecated]] 로 다시 선언한다(EditorUX 10-4).
+# ImGui 를 직접 읽는 어댑터 두 파일은 imgui.h 앞에서 SW_EDITOR_INPUT_ADAPTER 를 정의해 금지를 받지 않는다 — 유니티 묶음에 들면 같은 묶음의
+# 다른 파일까지(또는 그 반대로) 정의가 번지므로 묶음에서 뺀다. 옵션 SW_EDITOR_INPUT_BAN(Source/Editor/CMakeLists.txt, 기본 ON)이 꺼져 있으면 아무것도 하지 않는다.
+# ------------------------------------------------------------------------------
+function(sw_applyEditorInputBan TARGET_NAME)
+	if(NOT SW_EDITOR_INPUT_BAN)
+		return()
+	endif()
+	target_compile_definitions(${TARGET_NAME} PRIVATE IMGUI_INCLUDE_IMGUI_USER_H
+		"IMGUI_USER_H_FILENAME=\"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Input/EditorInputBan.h\"")
+	if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+		target_compile_options(${TARGET_NAME} PRIVATE /we4996)
+	else()
+		target_compile_options(${TARGET_NAME} PRIVATE -Werror=deprecated-declarations)
+	endif()
+	get_target_property(listSource ${TARGET_NAME} SOURCES)
+	foreach(source IN LISTS listSource)
+		if(source MATCHES "Common/Input/EditorInputGUI\\.cpp$|Common/Backend/ImGuiKeyForward\\.cpp$")
+			set_source_files_properties(${source} TARGET_DIRECTORY ${TARGET_NAME} PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+		endif()
+	endforeach()
 endfunction()
 
 # ------------------------------------------------------------------------------

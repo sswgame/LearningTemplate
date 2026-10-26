@@ -12,6 +12,7 @@
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Input/EditorPopupManager.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -290,7 +291,7 @@ namespace sw::editor
     {
         // 이름을 치고 바로 Enter 를 누르면 파일 목록(일 스레드)이 아직 안 왔을 수 있다 — 그때는 목록이 오는 대로 연다.
         // 목록이 비면 `updateListSelection` 이 Enter 를 보지 않으므로 키를 직접 본다.
-        const bool bEnterPressed         = ImGui::IsKeyPressed( ImGuiKey_Enter, false ) || ImGui::IsKeyPressed( ImGuiKey_KeypadEnter, false );
+        const bool bEnterPressed         = EditorInputGUI::wasEditKeyPressed( EditorEditKey::Enter ); // 글을 치는 동안 듣는 편집 키(입력 맵 밖)
         const bool bExecuteAfterIndexing = bEnterPressed && filteredCount == 0 && bIndexOutstanding;
         if ( bExecuteAfterIndexing )
             _bExecuteWhenIndexed = true;

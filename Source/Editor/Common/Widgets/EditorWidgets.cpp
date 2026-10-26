@@ -568,13 +568,13 @@ namespace sw::editor
         if ( selectedIndex < 0 )
             selectedIndex = 0;
 
-        if ( ImGui::IsKeyPressed( ImGuiKey_DownArrow, bRepeat ) )
+        if ( EditorInputGUI::wasEditKeyPressed( EditorEditKey::Down, bRepeat ) )
         {
             ++selectedIndex;
             if ( selectedIndex >= itemCount )
                 selectedIndex = itemCount - 1;
         }
-        if ( ImGui::IsKeyPressed( ImGuiKey_UpArrow, bRepeat ) )
+        if ( EditorInputGUI::wasEditKeyPressed( EditorEditKey::Up, bRepeat ) )
         {
             --selectedIndex;
             if ( selectedIndex < 0 )
@@ -584,7 +584,7 @@ namespace sw::editor
         const bool bValidSelection = ( 0 <= selectedIndex && selectedIndex < itemCount );
         if ( bValidSelection == false )
             return false;
-        return ImGui::IsKeyPressed( ImGuiKey_Enter, bRepeat );
+        return EditorInputGUI::wasEditKeyPressed( EditorEditKey::Enter, bRepeat );
     }
 
     bool EditorWidgets::beginCenteredModal( const utf8* pPopupID )

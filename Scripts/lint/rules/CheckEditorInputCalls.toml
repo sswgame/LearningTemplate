@@ -1,6 +1,6 @@
 # CheckEditorInputCalls 의 규칙 데이터 — 게이트는 Scripts/lint/gate/CheckEditorInputCalls.py, 규칙은 docs/plans/EditorUX.md 10-4.
-# 이 게이트는 형식(EditorInputBan.h 의 [[deprecated]] 재선언)이 못 막는 ImGuiIO 입력 필드 읽기만 센다 — 필드는 함수가 아니라 다시 선언할 수 없고,
-# 필드를 내주는 GetIO() 는 입력이 아닌 필드(DisplaySize · Fonts · DeltaTime)에도 쓰여 함수째 막을 수 없다.
+# 이 게이트는 형식(EditorInputBan.h 의 [[deprecated]] 재선언)이 못 막는 틈만 센다: ImGuiIO 입력 필드 읽기 — 필드는 함수가 아니라 다시 선언할 수 없고,
+# 필드를 내주는 GetIO() 는 입력이 아닌 필드(DisplaySize · Fonts · DeltaTime)에도 쓰여 함수째 막을 수 없다 — 와 금지를 끄는 정의(SW_EDITOR_INPUT_ADAPTER)의 자리.
 
 # 전체 훑기의 기준선 — 0 이다(EditorUX 10-5 I4 — 패널 · 위젯 · 뷰포트가 모두 입력 맵 · EditorInputGUI 로 옮겼다). 하나라도 생기면 실패한다.
 [baseline]
@@ -9,4 +9,4 @@ total = 0
 # 읽어도 되는 경로 앞머리 → 이유.
 [exemption]
 "Source/Editor/Common/Backend/" = "OS 입력을 ImGui 로 넣고(플랫폼 백엔드) ImGui 가 받은 키를 엔진 입력으로 옮기는 자리 — 입력 맵보다 아래다"
-"Source/Editor/Common/Input/" = "어댑터 자신 — 맥락 메뉴의 끌기 거리(MouseDragMaxDistanceSqr)처럼 입력 맵이 모르는 ImGui 상태를 읽는 유일한 자리"
+"Source/Editor/Common/Input/" = "어댑터 자신 — 맥락 메뉴의 끌기 거리(MouseDragMaxDistanceSqr)처럼 입력 맵이 모르는 ImGui 상태를 읽는 유일한 자리. 목록 위젯 · 빠른 실행 창의 화살표 · Enter · Esc 같은 편집 키(EditorInputGUI::wasEditKeyPressed)도 여기서 읽는다 — 글을 치는 동안 들어야 하는데 입력 맵의 액션은 글 입력 중 멈추고, 재배치할 단축키가 아니라 글 칸의 고정 키라서다"
