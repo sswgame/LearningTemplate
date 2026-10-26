@@ -16,6 +16,7 @@
 #include "Engine/Automation/AutomationRunTitle.h"
 #include "Engine/Automation/AutomationScenario.h"
 #include "Engine/Automation/AutomationStepContext.h"
+#include "Engine/Automation/AutomationTimeline.h"
 #include "Engine/Input/Virtual/VirtualInputScript.h"
 #include "Engine/Probe/AutomationProbe.h"
 
@@ -219,6 +220,12 @@ namespace sw
         /** @brief 벽시계 감시를 시작합니다(시나리오를 읽기 시작할 때 한 번). 시작 시각(단조 시계 · 유닉스 · 지역 달력 글)을 잡습니다. */
         void markWallStart();
         /**
+         * @brief 앞 프레임 끝부터 지금까지 걸린 벽시계를 프레임 하나로 `_timeline` 에 더합니다(`onFrameEnd` 가 프레임마다 한 번).
+         * @param stepIndexBefore 이 프레임의 `onFrameEnd` 가 시작할 때의 `_nextStepIndex` — 달라졌으면 단계가 돈 프레임이다
+         * @details 종류: 시작 전 · 시계 잡기 조건이 붙잡음 · 조건 대기가 붙잡음 · 단계가 돎 · 돌 단계 없이 `<At>` 시점만 기다림(고정 프레임 대기).
+         */
+        void recordTimelineFrame( size_t stepIndexBefore );
+        /**
          * @brief 시작부터 `wallTimeoutSeconds` 가 지났으면 시간 초과(12)로 끝냅니다. 부하 시나리오는 자기 그물이 있어 보지 않습니다.
          * @details 프레임 시한(`timeoutFrames`)은 붙잡은 프레임(`holdUntilReady` · 시계 잡기)을 세지 않아, 붙잡힌 채로는 영영 끝나지 않고 테스트의 프로세스 시한(보고 없는 kill)까지 간다.
          *          이 감시는 프레임이 도는 동안만 본다 — 프레임 자체가 멈춘 행은 행 감시 스레드(`AutomationHangWatchdog`)가 상한 + 유예 뒤에 잡는다.
@@ -243,6 +250,7 @@ namespace sw
         AutomationLogCapture     _logCapture;            ///< 시나리오 동안의 로그 줄(`<ExpectLog>`, 로그 게이트)
         AutomationLogPolicy      _logPolicy;             ///< 로그 게이트의 허용 목록(전역 + `<ExpectLog>`)
         AutomationReportWriter   _reportWriter;          ///< 보고 경로 · 지표 줄 · JSON 보고 쓰기
+        AutomationTimeline       _timeline;              ///< 벽시계가 프레임 종류(고정 대기 · 조건 대기 · 단계 …)별로 어디에 쓰였는지(보고의 `timeline`)
         vector<string>           _listFailure;           ///< "frame 40 <Expect> #7: Shooter3D.WeaponIndex == 1, got 2"
         vector<string>           _listUnconfirmed;       ///< 맞았지만 어림값 문턱인 `<ExpectImage>` ("frame 40 <ExpectImage> #7: meanLuma >= 0.05 held with 0.2 …")
         vector<string>           _listUnhandledLog;      ///< 로그 게이트가 처리하지 않았다고 본 줄(`[Warning] [호출자] (id=…) 본문`)
@@ -263,6 +271,7 @@ namespace sw
         float64                  _loadDeadlineSeconds;    ///< 부하 시나리오(`<Load>`)의 멈춤 그물 — 측정 창이 이때까지 끝내지 못하면 시간 초과다(단조 시계 초). 0 이면 부하 시나리오가 아니다.
         float64                  _wallStartSeconds;       ///< 시나리오를 읽기 시작한 단조 시계 초(벽시계 감시의 기준)
         float64                  _wallEndSeconds;         ///< 끝맺은 단조 시계 초(끝나기 전에는 0)
+        float64                  _lastFrameEndSeconds;    ///< 앞 프레임의 `onFrameEnd` 가 닿은 단조 시계 초(`_timeline` 에 프레임 시간을 더하는 기준 — 처음엔 `_wallStartSeconds`)
         int64                    _startedUnixMs;          ///< 같은 시각의 유닉스 밀리초(보고용)
         size_t                   _nextStepIndex;
         uint32                   _frameIndex;

@@ -17,9 +17,11 @@
 	<!-- 자동 플레이를 켜면 자동 농부 AI 가 농부를 쥐고 밭을 갈고 심는다. -->
 	<At frame="60"><Variable name="gv_farmAutoPlay" value="1"/></At>
 	<At frame="65"><Expect probe="Farm.FarmerControllerKind" equals="1"/></At>
-	<At frame="1800"><Expect probe="Farm.TilledCount" atLeast="1"/><Expect probe="Farm.CropCount" atLeast="1"/></At>
+	<!-- 작물이 생길 때까지만 기다린다(고정 1800 프레임을 기다리던 것을 조건 대기로 바꿨다). 심기는 갈린 칸에만 되므로 작물이 있으면 밭은 갈려 있다. -->
+	<At frame="66"><WaitUntil probe="Farm.CropCount" atLeast="1" timeoutFrames="1800"/></At>
+	<At frame="67"><Expect probe="Farm.TilledCount" atLeast="1"/><Expect probe="Farm.CropCount" atLeast="1"/></At>
 	<!-- 끄면 플레이어 조종자가 되찾는다. -->
-	<At frame="1801"><Variable name="gv_farmAutoPlay" value="0"/></At>
-	<At frame="1806"><Expect probe="Farm.FarmerControllerKind" equals="0"/></At>
-	<At frame="1810"><Pass/></At>
+	<At frame="68"><Variable name="gv_farmAutoPlay" value="0"/></At>
+	<At frame="73"><Expect probe="Farm.FarmerControllerKind" equals="0"/></At>
+	<At frame="77"><Pass/></At>
 </Scenario>

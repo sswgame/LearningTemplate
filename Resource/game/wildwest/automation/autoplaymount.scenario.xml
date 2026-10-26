@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  WildWest 자동 플레이 — gv_wildWestAutoPlay 를 켜면 디렉터가 첫 틱 뒤에 기수를 가장 가까운 말(Bessie)에 태운다(WildWestDirectorComponent::mountNearestHorse).
+  탈 말이 닿는 곳에 없으면 [WildWest] auto play 경고가 남아 로그 게이트(15)가 잡는다. 탑승 단계 대신 스위치로 탔을 때도 좌석 · 조종자가 mount 시나리오와 같게 넘어가는지 본다.
+  고정 프레임으로 기다리지 않고 탑승이 되는 순간까지만 기다린다(조건 대기).
+  App -game=WildWest -scenario=game/wildwest/automation/autoplaymount.scenario.xml (종료 코드 0 = 통과)
+-->
+<Scenario name="wildwest.autoplaymount" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" input="exclusive">
+	<At frame="0"><Variable name="gv_wildWestAutoPlay" value="1"/></At>
+	<At frame="1"><WaitUntil probe="Pawn.Seat" target="Player" is="Bessie" timeoutSeconds="10"/></At>
+	<At after="1">
+		<Expect probe="Pawn.Seat" target="Player" is="Bessie"/>
+		<Expect probe="Pawn.Controller" target="Bessie" is="PlayerController"/>
+		<Pass/>
+	</At>
+</Scenario>

@@ -108,6 +108,11 @@ frame 900 <ExpectVisited> #3: AI.State(FarmAutoFarmer) never went through 'Till 
 **보고의 실행 환경과 행 감시.** 보고 JSON 은 결과 칸 외에 `backend` · `game` · `startedAt` · `wallMilliseconds` · `wallLimitMilliseconds` · `lastStep` · `reproduce` 를 담습니다(읽는 쪽이 있어 필드는 더하기만 한다). `reproduce` 는 App 원본 인자를 옮긴 명령줄이고 보고 · 녹화 경로는 빼며 이름에 token · secret · password · apikey · credential · auth · license 가 든 인자의 값은 `REDACTED` 입니다(`AutomationReproduceRules` 한 곳).
 벽시계 상한은 프레임이 도는 동안만 보므로 프레임 자체가 멈춘 행은 감시 스레드(`AutomationHangWatchdog`)가 잡습니다. 세션이 켠 실행(`armHangWatchdog`, 부하 시나리오 제외)만 띄우고 `endRun` 이 내리며, 세션 없이 실행기를 손으로 돌리는 테스트(`startFromText`)는 켜지 않습니다(감시는 프로세스를 `_Exit(12)` 로 끝내므로 테스트 프로세스가 죽는다).
 상한 + 유예(`AutomationTimeLimits::kHangGraceSeconds` 5 초)가 지나도 `endRun` 이 안 불리면 스냅샷(`AutomationHangPayload`)으로 보고(`hang: true`, 종료 코드 12)를 할당 · 잠금 없이 쓰고 크래시 컨텍스트와 stderr 한 줄을 남긴 뒤 끝냅니다. 체인의 프로세스 시한은 `AutomationTimeLimits::getChainKillSeconds` 이고 시나리오의 `wallTimeoutSeconds` 는 시계 보류 시한(170 초) 미만이어야 읽힙니다(시한들의 대소 관계는 `AutomationTimeLimits.h` 의 `static_assert`).
+행 감시의 통합 시험은 개발 명령 `automation.hang <초>`(호출한 게임 스레드를 붙잡는다. `profile.stall` 은 5 초 상한이라 상한 3 + 유예 5 초를 못 넘긴다)로 게임 스레드를 멈추는 시나리오 `engine/automationwatch/hang.scenario.xml` 이고, 일부러 12 로 끝나므로 `AppScenarioTest` 가 훑는 `engine/automation` 밖에 두고 `AppHangWatchTest` 가 종료 코드 12 와 `"hang": true` 를 본다.
+
+**시간이 어디에 쓰였나.** 보고의 `timeline` 이 프레임마다 걸린 벽시계를 종류별로 더해 둡니다(`AutomationTimeline`): `start`(시작 전) · `backgroundHold`(앞 실행의 백그라운드 작업이 시계를 붙잡음) · `held`(`WaitUntil` · `Screenshot` 같은 조건 대기) · `step`(단계가 돈 프레임) · `scheduledWait`(돌 단계 없이 `<At>` 시점만 기다린 프레임 = 고정 프레임 대기).
+종류마다 `<키>Frames` · `<키>Milliseconds` 이고 `slowestWaits[]` 는 단계 앞 대기(고정 + 조건) 가운데 가장 긴 다섯이다(`beforeStep` · `frame` · `frames` · `milliseconds`). 시나리오 파일의 대기 합계는 `py -3 -m Scripts scenario-waits`(정적 어림, `--measured-dir` 로 보고의 잰 값과 견준다)가 센다.
+조건 대기로 바꾸는 기준은 "프레임 수가 아니라 상태에 닿는 순간이 이어질 일"이다 — 입력 길이(키를 4 초 누름) · 사진 시점 · 카운트다운처럼 프레임 수 자체가 단언 대상이거나 `<Record>` 처럼 백엔드끼리 같은 프레임에 견주는 것은 고정으로 둔다.
 
 
 ## 확장하는 법
@@ -133,7 +138,7 @@ AI 의 상태를 보려면 `AIControllerComponent` 파생의 `think` 에서 상�
 - **배타 시나리오는 시작 조건을 기다리는 프레임부터 사람의 장치를 버리고 포인터를 (0, 0) 에 둡니다.** 백엔드끼리 `records` 가 다르면 `-gv_automationHashDump=1` 로 두 번 돌려 `[Scenario] hash item` 줄을 비교하면 어긋난 오브젝트가 나옵니다.
 - **경계를 넘는 단언은 탐침 셋으로 나눠 둡니다.** `Editor.StateHash` 하나만 견주면 실패 줄이 해시 둘만 보여 주므로 같은 프레임에 `Editor.SceneHash` · `Editor.UndoState` · `Editor.SelectedNames` 를 함께 두고 씬 내용이 다르면 `[Scenario] scene hash item` 줄(`-gv_automationHashDump=1`)로 오브젝트를 찾습니다.
 - **`backend="other"` 로 건넌 뒤에는 그림을 견주지 않습니다**(`backend="start"` 로 돌아온 뒤에). 그림이 "같다" 는 문턱은 편집 크기보다 훨씬 작게 둡니다(편집이 0.015 면 0.002).
-- **`ExpectImage` 의 문턱은 근거 속성이 있어야 읽힙니다**: `measured="2026-10-22 dx12:0.095 vk:0.095"`(날짜와 백엔드별 잰 값, 모두 같으면 `all:0.095`) 또는 `provisional="이유"` 중 정확히 하나. 어림값 문턱이 맞은 시나리오는 14 로 끝나고 보고 JSON 의 `unconfirmed` 에 줄이 남으며(틀리면 실패) `metrics` 의 값을 `measured` 로 옮기면 확정입니다.
+- **`ExpectImage` 의 문턱은 근거 속성이 있어야 읽힙니다**: `measured="2026-10-22 dx12:0.095 vk:0.095"`(날짜와 백엔드별 잰 값, 모두 같으면 `all:0.095`) 또는 `provisional="이유"` 중 정확히 하나. 어림값 문턱이 맞은 시나리오는 14 로 끝나고 보고 JSON 의 `unconfirmed` 에 줄이 남으며(틀리면 실패) `metrics` 의 값을 `measured` 로 옮기면 확정입니다(`py -3 -m Scripts scenario-thresholds --reports <보고 폴더>` 가 백엔드마다 돈 보고에서 제안 표를 만들고 `--apply` 가 쓴다 — 백엔드 사이 값이 벌어진 것은 결함 의심이라 올리지 않는다).
 - **글 값 탐침은 `is` 로만 비교합니다**(수 탐침은 `is` 로도 비교할 수 있고 끝의 0 을 정리한 글과 견준다).
 - **리소스에 쓰는 시나리오는 원본 폴더에 쓰지 않습니다.** `<Scratch from="engine/automation/editor/assetmanage" as="scratch/assetmanage"/>` 로 선언하면 실행기가 시작할 때 `Resource/scratch/…`(저장소에 넣지 않음)를 지우고 원본을 복사하며(글 파일의 원본 id 는 사본 id 로, `.meta` 의 guid 는 새로) 단계는 사본 id 를 씁니다(`AutomationScratch`).
   실제 사본 이름은 프로세스 꼬리가 붙은 `scratch/assetmanage_p<pid>` 이고 단계 글의 `scratch/assetmanage` 도 실행기가 같이 바꿉니다 — 같은 체크아웃에서 동시에 도는 App 이 서로의 사본을 지우지 않게 합니다(끝난 프로세스의 사본은 다음 실행이 거둔다).

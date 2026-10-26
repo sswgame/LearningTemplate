@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  엔진 시나리오 — 행 감시 교착(Dev 전용): 게임 스레드가 프레임 경계를 지나지 못하고 멈추면 실행기의 벽시계 상한 검사는 돌지 못하므로,
+  감시 스레드(AutomationHangWatchdog)가 상한(wallTimeoutSeconds 3 초) + 유예(5 초)가 지난 뒤 보고를 대신 쓰고(hang: true) 종료 코드 12 로 프로세스를 끝낸다.
+  개발 명령 automation.hang 이 프레임 0 에서 게임 스레드를 30 초 붙잡는다(감시가 8 초 근처에서 먼저 끝낸다).
+  이 시나리오는 일부러 12 로 끝난다 — 그래서 AppScenarioTest 가 훑는 engine/automation 밖에 두고, AppHangWatchTest 가 종료 코드 12 · 보고의 "hang": true 를 확인한다.
+  기동이 3 초를 넘기면 시작 전에 실행기가 일반 시간 초과(hang 없음)로 끝내 이 시험은 진다 — 그때는 wallTimeoutSeconds 를 올린다.
+  실행: AppHangWatchTest (ctest -L hostgpu). 손으로: App.exe -unattended -scenario=engine/automationwatch/hang.scenario.xml -scenario-report=<경로> 의 종료 코드가 12.
+-->
+<Scenario name="engine.hangwatch" fixedDelta="0.0166667" timeoutFrames="600" wallTimeoutSeconds="3" startAfter="Immediately" startTimeoutFrames="900">
+	<At frame="0"><DevCommand line="automation.hang 30"/></At>
+	<At frame="1"><Pass/></At>
+</Scenario>
