@@ -23,9 +23,10 @@ namespace sw::editor
         absorbCloseButton(); // 접힌 창과 숨은 탭의 X 도 같은 확인을 거친다
         if ( bVisible )
         {
-            _bWindowFocused   = ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows );
-            _bContentDrawn    = true;
-            _contentLineCount = ImGui::GetContentRegionAvail().y / ImGui::GetTextLineHeightWithSpacing();
+            _bWindowFocused     = ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows );
+            _bContentDrawn      = true;
+            _contentLineCount   = ImGui::GetContentRegionAvail().y / ImGui::GetTextLineHeightWithSpacing();
+            _contentColumnCount = ImGui::GetContentRegionAvail().x / ImGui::CalcTextSize( "0" ).x;
             drawContent();
         }
         else

@@ -35,6 +35,17 @@ namespace sw::editor
             /** @brief 기본 배치에서 아래 도크의 높이(글자 높이 `GetTextLineHeightWithSpacing` 의 배수)입니다. 탭 줄 · 로그 툴바 · 명령 입력 줄을 빼고도 로그가 8줄 넘게 남는 값입니다. */
             static constexpr float32 kBottomDockTextLines = 16.0f;
 
+            /** @brief 기본 배치의 왼쪽 · 오른쪽 도크 폭 비율입니다. 넓은 창에서 쓰고, 좁은 창은 아래 최소 글자 칸 수가 이깁니다. */
+            static constexpr float32 kLeftDockRatio  = 0.22f;
+            static constexpr float32 kRightDockRatio = 0.28f;
+
+            /** @brief 좌우 도크 폭의 최소값입니다(숫자 "0" 의 너비 × 칸 수). 이름 열이 말줄임으로 뭉개지지 않는 폭입니다. */
+            static constexpr float32 kLeftDockMinColumns  = 40.0f;
+            static constexpr float32 kRightDockMinColumns = 48.0f;
+
+            /** @brief 좌우 도크 폭의 합이 작업 영역 폭에서 차지할 수 있는 최대 비율입니다. 좁은 창에서 가운데 영역이 사라지지 않게 합니다. */
+            static constexpr float32 kMaxSideDockRatio = 0.5f;
+
             /** @brief 아래 도크가 작업 영역 높이에서 차지할 수 있는 최대 비율입니다. 낮은 창에서 가운데 영역이 사라지지 않게 합니다. */
             static constexpr float32 kMaxBottomDockRatio = 0.5f;
 
@@ -358,7 +369,7 @@ namespace sw::editor
 
         const ImGuiViewport* pViewport = ImGui::GetMainViewport();
         // 이름의 버전 번호는 기본 배치의 창이 바뀔 때 올린다. 저장된 imgui.ini 의 이전 도크 트리를 버리고 기본 배치를 다시 만든다.
-        const ImGuiID dockspaceID = ImGui::GetID( "EditorMainDockSpace_v7" );
+        const ImGuiID dockspaceID = ImGui::GetID( "EditorMainDockSpace_v8" );
         // 도크스페이스가 이번 프레임 크기를 나누기 전에 기준 크기를 새 뷰포트 비율로 맞춘다.
         scaleDockSizeToViewport( dockspaceID );
         (void)ImGui::DockSpaceOverViewport( dockspaceID, pViewport, ImGuiDockNodeFlags_PassthruCentralNode );
@@ -373,6 +384,8 @@ namespace sw::editor
             const ImGuiDockNode* const pNode = ImGui::DockBuilderGetNode( dockspaceID );
             const bool                 bEmpty =
                 ( pNode == nullptr ) || ( pNode->IsSplitNode() == false && pNode->Windows.Size == 0 );
+            if ( bEmpty && _bResetDefault == SW_FALSE )
+                SW_LOG_INFO( "Dock tree for 'EditorMainDockSpace_v8' is missing or from an older layout version - building the default layout." );
             if ( bEmpty || _bResetDefault == SW_TRUE )
                 applyDefaultDockLayout( dockspaceID );
             _bApplied      = SW_TRUE;
@@ -458,8 +471,22 @@ namespace sw::editor
         ImGuiID dockBottom{ 0 };
         ImGuiID dockTop{ 0 };
 
-        ImGui::DockBuilderSplitNode( dockMain, ImGuiDir_Left, 0.22f, &dockLeft, &dockMain );
-        ImGui::DockBuilderSplitNode( dockMain, ImGuiDir_Right, 0.28f, &dockRight, &dockMain );
+        // 좌우 도크 폭은 넓은 창에서는 비율을 따르고, 좁은 창에서는 글자 너비의 배수 아래로 내려가지 않는다(Hierarchy · Inspector 가 말줄임으로 뭉개진다).
+        // 두 도크의 합이 작업 영역 폭의 절반을 넘으면 같은 비율로 줄여 가운데 영역을 남긴다. `Editor.PanelContentColumns`(defaultlayout 시나리오)가 지킨다.
+        const float32 columnWidth = ImGui::CalcTextSize( "0" ).x;
+        const float32 workWidth   = pViewport->WorkSize.x;
+        float32       leftWidth   = MathUtil::max( EditorDockLayoutInternal::kLeftDockMinColumns * columnWidth, workWidth * EditorDockLayoutInternal::kLeftDockRatio );
+        float32       rightWidth  = MathUtil::max( EditorDockLayoutInternal::kRightDockMinColumns * columnWidth, workWidth * EditorDockLayoutInternal::kRightDockRatio );
+        const float32 sideLimit   = workWidth * EditorDockLayoutInternal::kMaxSideDockRatio;
+        if ( leftWidth + rightWidth > sideLimit )
+        {
+            const float32 shrink = sideLimit / ( leftWidth + rightWidth );
+            leftWidth *= shrink;
+            rightWidth *= shrink;
+        }
+        ImGui::DockBuilderSplitNode( dockMain, ImGuiDir_Left, leftWidth / workWidth, &dockLeft, &dockMain );
+        // 오른쪽 비율은 왼쪽을 뺀 나머지에 대한 값이다.
+        ImGui::DockBuilderSplitNode( dockMain, ImGuiDir_Right, rightWidth / ( workWidth - leftWidth ), &dockRight, &dockMain );
         // 아래 도크 높이는 비율이 아니라 글자 높이의 배수다. 비율이면 창 높이에 따라 Output Log 가 몇 줄 보일지가 달라져 낮은 창에서 한두 줄만 남는다.
         // 배수에는 탭 줄 · 로그 툴바 · 명령 입력 줄이 든다. 남는 로그 줄은 `Editor.PanelContentLines`(defaultlayout 시나리오)가 지킨다.
         // 창이 너무 낮으면 가운데 영역이 사라지지 않게 절반에서 멈춘다.
