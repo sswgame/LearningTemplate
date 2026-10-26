@@ -252,43 +252,67 @@ ImGui 의 `BeginPopupContextItem` · `BeginPopupContextWindow` 는 **뗄 때** �
 | R8 | 우클릭에 메뉴가 아닌 숨은 동작을 두지 않는다(시간 배율 1.0 되돌림은 메뉴 항목 "Reset to 1.0" 으로) | — |
 | R9 | 게임 뷰는 오른쪽 단추를 게임에 넘기고 에디터 메뉴를 열지 않는다(지금 그대로) | 유니티 Game 뷰 [기억] |
 
-### 10-4. 입력 · 명령 계층의 형식
+### 10-4. 입력 · 명령 계층의 형식(2026-10-27 개정 — 엔진 입력 맵 위에 둔다)
 
-목표: 패널은 "이 대상에 이 명령들이 있다" 와 "이 위젯은 이 종류를 끌고 이 종류를 받는다" 만 선언하고, 언제 눌렸는지 · 메뉴를 언제 여는지 · 선택을 언제 바꾸는지는 계층 한 곳이 정합니다. 그러면 R1 ~ R8 을 패널마다 다시 구현할 수 없습니다.
+목표: 패널은 "이 대상에 이 명령들이 있다" 와 "이 위젯은 이 종류를 끌고 이 종류를 받는다" 만 선언하고, 언제 눌렸는지 · 메뉴를 언제 여는지 · 선택을 언제 바꾸는지는 한 곳이 정합니다. 그러면 R1 ~ R8 을 패널마다 다시 구현할 수 없습니다.
+
+**개정 이유.** 첫 안은 `Common/Commands` 에 범위 · 키 · 몸짓 바인딩 형식을 새로 만들었습니다. 그런데 엔진에 데이터 주도 입력 맵이 이미 있습니다 — `InputMap`(`Source/Engine/Input/Map`)과 `Resource/engine/input/*.input.xml`(레이어 = 맥락, 트리거, 수정 키 조합, 더블클릭 시간 · 거리), 사용자 재배치 파일, `InputMapPanel`, 시나리오 `inputmapedit` · `inputmaptaps`. 따로 만든 맵을 소유자가 갱신하는 모양도 있습니다(`ShellInputActions` · `UIInputRouter`, `setKeyboardFocusIgnored`). 새 형식은 같은 일을 하는 두 번째 체계가 되므로 버립니다. **키 · 단추 · 몸짓은 엔진 입력 맵 하나가 맡고, 에디터 어댑터는 입력 맵에 없는 것(ImGui 포커스 · 호버로 정하는 범위, 맥락 메뉴, 끌어 놓기 페이로드)만 맡습니다.** 에디터 명령(`SW_EDITOR_COMMAND` · 기본 명령 표)의 단축키 칸도 이 맵으로 옮겨 두 체계를 하나로 만듭니다(옛 단축키 형식 · `Saved/Editor/Shortcuts.json` 은 읽지 않는다).
+
+| 필요 | 엔진에 이미 있는 것 | 에디터에서 쓰는 법 |
+|---|---|---|
+| 범위(포커스 창 → 바깥 → 전역) | 레이어(`<layer>` 의 우선순위 · `blockLower` · `alwaysOn`) | 새 `Resource/engine/input/editor.input.xml`: `Editor.Global`(alwaysOn) · 패널마다 레이어(`Editor.Hierarchy` · `Editor.ContentBrowser` …) · `Editor.Viewport`. 어댑터가 프레임마다 포커스 창의 레이어만 켠다. 같은 `Ctrl+D` 를 두 패널 레이어가 각자 가진다 — 지금의 손 포커스 검사를 대신한다. 텍스트 입력 중(`WantTextInput`)에는 `Editor.Global` 밖을 끈다 |
+| 수정 키 조합 | `Shortcut` 바인딩(`modifier="Ctrl"`) | 그대로 |
+| 더블클릭 | `DoubleClicked` 트리거, 맵 속성 `doubleClickTime` · `doubleClickMaxDistance` | 그대로 |
+| 메뉴의 단축키 글자 | `InputMap::getGlyphForAction` | 명령이 가리키는 액션의 글자를 그린다(R4) |
+| 사용자 재배치 | `ShellInputActions::saveUserBindings` · `loadUserBindings`(기본과 다른 슬롯만 XML 로) | `EditorShortcutOverrides`(JSON)를 대신한다 |
+| 맵 소유 · 갱신 | 소유자가 만든 `InputMap` 을 `InputManager` 에 붙여 갱신 | 새 에디터 서브시스템 `EditorInputActions` 가 `editor.input.xml` 맵을 소유한다 |
+
+**엔진에 더할 것(게임도 쓰는 일반 기능이라 `Engine/Input` 에 둔다).**
+
+| 번호 | 모자란 것 | 근거 |
+|---|---|---|
+| E1 | 수정 키 **정확 일치**(바인딩 속성 `exactModifiers`). 지금 `InputMap::areShortcutModifiersHeld` 는 요구한 키가 눌렸는지만 봐서 Ctrl+Shift+Z 가 Ctrl+Z 도 발동시킨다(에디터 `matchesPressedModifiers` 는 정확 일치로 이 겹침을 막고 있다) | 런타임 UI 도 같은 겹침을 손으로 푼다(`ui.input.xml` 주석의 Shift 쌍) — 엔진 |
+| E2 | `Click`(누른 뒤 `dragThreshold` 이하로 움직이고 뗌) · `Drag`(문턱을 넘은 누름) 트리거와 맵 속성 `dragThreshold`(R1 · R7 의 한 상수) | RTS 선택 상자 · 카메라 끌기와 클릭을 가르는 일반 기능이고 `doubleClickMaxDistance` 와 같은 자리 — 엔진 |
+| E3 | 맵에 다른 파일의 액션 · 레이어를 더하기(`appendFromResource`). 확장 모듈(`GF_EditorPlugIn_*`)이 자기 `*.input.xml` 을 더하고, 같은 레이어의 같은 조합은 읽을 때 오류 | 게임 모드 · DLC 가 기본 맵에 액션을 더하는 것과 같다 — 엔진 |
+| E4 | 키보드 포커스 주인 하나 더(`InputKeyboardFocus` 에 에디터 · 도구 창). 에디터 패널을 다른 OS 창으로 떼면 그 창의 키는 ImGui 만 받는다(`ImGuiKeyForward` 는 지금 게임 뷰만 넘긴다). 모든 창의 키를 `InputManager` 에 넣되, 에디터 패널이 포커스인 동안 게임 조회는 키를 못 보게 한다 | 주인 값은 엔진 열거형이라 엔진, 키 전달은 에디터(`Common/Backend`) |
+
+**에디터 쪽 형식.**
 
 | 형식 | 자리(층) | 내용 |
 |---|---|---|
-| `EditorCommandScope` | `Common/Commands`(3, ImGui 없음) | 명령이 듣는 범위: `Global` · `Panel(EditorPanelID)` · `Viewport` · `TextInput`. 키 조합은 **포커스 창의 범위 → 바깥 → Global** 순으로 찾고, 같은 범위 안 중복은 등록 때 오류다. 같은 `Ctrl+D` 를 Hierarchy 범위와 ContentBrowser 범위가 각자 가질 수 있다 — 지금의 손 포커스 검사를 대신한다. 유니티 단축키 관리자의 컨텍스트, 언리얼 위젯별 `FUICommandList` 와 같은 선 [기억] |
-| `EditorCommandTarget` | `Common/Commands`(3) | 명령이 받는 대상: 종류(`GameObject` · `Component` · `Asset` · `Viewport` · `LogRow` · `Property` · `CurveKey` …), 선택 스냅숏(id 목록), 커서 아래 항목 id, 월드 위치. 지금의 `EditorContextMenuTarget` 을 흡수한다 |
-| 명령 정의 확장 | `EditorCommandRegistry.h` | `_scope`, 대상을 받는 동작 `void(const EditorCommandTarget&)` · 켜짐 `bool(const EditorCommandTarget&)`, 놓일 메뉴 종류 · 순서(`_contextMenus`). 인자 없는 전역 명령은 대상을 무시한다. 확장 항목(`SW_EDITOR_CONTEXT_MENU_ENTRY`)은 이 칸을 채운 등록 줄이 된다 |
-| `EditorInputBinding` | `Common/Commands`(3) | 장치(키 · 마우스 단추) + 수정자 + 몸짓(`Press` · `Release` · `Click`(문턱 이하 뗌) · `Drag` · `DoubleClick`). 문턱은 상수 하나(`kClickDragThreshold`)이고 패널이 숫자를 고르지 않는다. 비행 키(WASD)도 바인딩이다 |
-| `EditorDragPayload` · `EditorPayloadKindSet` | `Common/Commands`(3) | 페이로드는 `{종류, uint64 id}` 하나의 POD. 에셋은 경로 문자열 대신 에셋 id(없으면 이 단위가 경로 → id 표를 둔다), 오브젝트는 오브젝트 id, 위젯 타입은 타입 번호. 받는 쪽은 받을 종류 집합을 넘기고 집합 밖 종류는 계층이 거절한다(문자열 비교 없음) |
-| `EditorInputGUI` | 새 폴더 `Common/Input`(4) | 위 형식을 ImGui 로 옮기는 유일한 곳: 범위 스택(패널 호스트가 그리기 전후로 넣고 뺀다), 바인딩 판정, `drawContextMenuFor( 대상, 메뉴 종류 )` — R1 · R2 · R3 · R6 를 이 함수 하나가 한다, `beginDragSource( 페이로드 )` · `acceptDrop( 받을 종류 집합 )`. `EditorCommandGUI` · `EditorContextMenuExtension.h` 는 이 폴더로 옮긴다 |
-| 게이트 | 아래 | — |
+| `EditorCommandTarget` | `Common/Commands`(3, ImGui 없음) | 명령이 받는 대상: 종류(`GameObject` · `Component` · `Asset` · `Viewport` · `LogRow` · `Property` · `CurveKey` …), 선택 스냅숏(id 목록), 커서 아래 항목 id, 월드 위치. 지금의 `EditorContextMenuTarget` 을 흡수한다 |
+| 명령 정의 | `EditorCommandRegistry.h` | 대상을 받는 동작 `void(const EditorCommandTarget&)` · 켜짐 `bool(const EditorCommandTarget&)`, 입력 맵 액션 이름(단축키 칸 `_shortcut` · `_altShortcut` · `EditorCommandKey` 를 대신한다 — 범위는 그 액션의 레이어가 정한다), 놓일 맥락 메뉴 종류 · 순서. 확장 항목(`SW_EDITOR_CONTEXT_MENU_ENTRY`)은 이 칸을 채운 등록 줄이 된다 |
+| `EditorDragPayload` · `EditorPayloadKindSet` | `Common/Commands`(3) | 페이로드는 `{종류, uint64 id}` 하나의 POD. 에셋은 경로 문자열 대신 에셋 id, 오브젝트는 오브젝트 id, 위젯 타입은 타입 번호. 받는 쪽은 받을 종류 집합을 넘기고 집합 밖 종류는 어댑터가 거절한다(문자열 비교 없음) |
+| `EditorInputActions` | 새 폴더 `Common/Input`(4) | `editor.input.xml` 맵 소유 · 포커스 창 → 레이어 켜기 · 명령 실행(`wasActionTriggered`). 지금 `EditorCommandGUI::processHotkeys` 의 키 판정을 대신한다 |
+| `EditorInputGUI` | `Common/Input`(4) | 입력 맵에 없는 것만: `drawContextMenuFor( 대상, 메뉴 종류 )` — R1(E2 의 `Click` 문턱) · R2 · R3 · R6 를 이 함수 하나가 한다, `beginDragSource( 페이로드 )` · `acceptDrop( 받을 종류 집합 )`. 키 · 단추 · 몸짓 판정은 두지 않는다 |
 
-**게이트.** 형식으로 먼저 막고 형식이 못 닿는 틈만 린트로 둡니다.
+**막는 방법 — 형식이 먼저, 린트는 형식이 못 닿는 틈만.**
 
-- 형식: 티어별 오브젝트 라이브러리(`EditorTier<N>Model/View`)가 이미 따로 컴파일되므로, `Panels` · `Viewport` · `AssetActions` 티어에만 강제 include 헤더 `EditorInputBan.h` 를 붙여 위 표의 ImGui 함수를 `[[deprecated("Common/Input 을 쓴다")]]` 로 다시 선언하고 그 티어의 경고를 오류로 올립니다(MSVC `/we4996`, clang · gcc `-Werror=deprecated-declarations`). 패널이 부르면 컴파일이 멈춥니다. 계층 자신(`Common/Input`, 티어 4)은 이 헤더를 받지 않습니다. 남은 호출이 0 이 된 티어부터 켭니다.
-- 린트(`Scripts/lint/gate/CheckEditorInputCalls.py`, 규칙 `Scripts/lint/rules/CheckEditorInputCalls.toml`): 함수 재선언으로 막지 못하는 `ImGuiIO` 필드 읽기(`io.KeyCtrl` · `io.MouseDown` …)와, 형식을 켜기 전 전환 기간의 함수 호출을 셉니다. 기준선은 파일별 상한(10-2 표의 수)이고 늘면 실패, 줄면 표를 줄입니다. 허용 목록은 이유와 함께: `Common/Backend`(OS 입력을 ImGui 로 넣는 곳), `Common/Input`(계층 자신), `Panels/Scene/GameViewPanel.cpp`(게임으로 넘기는 전달), 텍스트 입력 위젯 내부.
+1. 형식: 티어별 오브젝트 라이브러리(`EditorTier<N>View`)가 이미 따로 컴파일되므로 `Panels` · `AssetActions`(티어 6) · `Viewport`(티어 5) 부분에만 강제 include 헤더 `EditorInputBan.h` 를 붙입니다. 이 헤더가 10-2 의 ImGui 입력 · 팝업 · 끌어 놓기 함수를 `[[deprecated("Common/Input 을 쓴다")]]` 로 다시 선언하고, 그 부분의 경고를 오류로 올립니다(clang-cl · MSVC `/we4996`, clang · gcc `-Werror=deprecated-declarations`). 패널이 부르면 컴파일이 멈춥니다. 어댑터 자신(`Common/Input`, 티어 4)은 받지 않습니다. 남은 호출이 0 이 된 티어부터 켭니다(I4).
+   다른 후보 둘은 버렸습니다: 패널이 `imgui.h` 를 include 하지 못하게 하는 래퍼는 패널이 그리기 함수 수백 개를 다 감싸야 하고, 패널에 액션 핸들만 주는 인터페이스는 같은 이유로 그리기를 막는다.
+2. 린트: 함수 재선언으로 막지 못하는 `ImGuiIO` 입력 필드 읽기(`io.KeyCtrl` · `io.MouseDown` · `io.MouseDelta` · `io.MouseWheel` …)만 셉니다. **형식으로 못 막는 이유**: 같은 `ImGui::GetIO()` 가 입력이 아닌 필드(`DisplaySize` · `Fonts` · `DeltaTime` · `ConfigFlags`)에도 쓰여 함수 하나를 막으면 그것까지 막고, 구조체 필드는 `[[deprecated]]` 로 다시 선언할 수 없다. 기준선은 파일별 상한이고 늘면 실패, 줄면 표를 줄입니다. 허용은 이유와 함께: `Common/Backend`(OS 입력을 ImGui 로 넣는 곳), `Common/Input`(어댑터 자신), `Panels/Scene/GameViewPanel.cpp`(게임으로 넘기는 전달). 이유를 쓸 수 없는 규칙은 두지 않습니다.
 
-**폴더 이동과의 순서.** 이 저장소 문서에서 `Common/GUI` · `Workspace` 이동 계획의 목적지를 찾지 못했습니다. 그래서 새 파일은 이동이 건드리지 않는 곳에 둡니다: ImGui 없는 형식은 `Common/Commands`, ImGui 어댑터는 새 폴더 `Common/Input`(층 표 `GenerateEditorLayers.toml` 에 티어 4 한 줄). 이렇게 하면 이동을 먼저 하든 나중에 하든 새 파일은 두 번 옮겨지지 않습니다. 겹치는 것은 기존 세 파일(`Common/GUI/EditorCommandGUI.*` · `EditorContextMenuExtension.h` · `EditorPopupManager.*`)뿐이므로 **이동 단위가 이 셋의 목적지를 `Common/Input` 으로 정하고 먼저 끝내면** I1 이 옮기지 않고 고치기만 합니다. 이동이 늦으면 I1 이 셋을 `Common/Input` 으로 옮기고 이동 단위는 셋을 목록에서 뺍니다.
+**폴더 이동과의 순서.** 새 파일은 이동이 건드리지 않는 곳에 둡니다: ImGui 없는 형식은 `Common/Commands`, ImGui 어댑터는 새 폴더 `Common/Input`(층 표 `GenerateEditorLayers.toml` 에 티어 4 한 줄). 기존 세 파일(`Common/GUI/EditorCommandGUI.*` · `EditorContextMenuExtension.h` · `EditorPopupManager.*`)을 `Common/Input` 으로 옮기면 `Viewport/EditorViewportClient.cpp` · `EditorViewportToolbar.cpp` 의 include 도 바뀌므로 **옮김은 I3f(뷰포트)와 같은 작업자가** 합니다.
 
 ### 10-5. 구현 단위와 순서
 
-파일 영역이 겹치지 않게 나눴습니다. I0 · I1 은 차례로, I2 는 I0 와 함께, I3 들은 I1 뒤에 서로 나란히 할 수 있습니다.
+파일 영역이 겹치지 않게 나눴습니다. IE → I0 → I1 은 차례로, I2 는 I0 와 함께, I3 들은 I1 뒤에 서로 나란히 할 수 있습니다.
+
+상태(2026-10-27): 첫 안(범위 · 몸짓 바인딩 형식을 `Common/Commands` 에 새로 만드는 것)으로 시작한 작업자가 엔진 입력 맵과 겹치는 것을 확인하고 구현 전에 멈췄습니다. 아래는 개정한 단위이고 아직 아무것도 구현하지 않았습니다.
 
 | 단위 | 파일 영역 | 할 일 | 선행 |
 |---|---|---|---|
-| I0 형식 | `Common/Commands/`(새 헤더 넷 + `EditorCommandRegistry.*`), EditorTest 새 테스트 | 10-4 의 범위 · 대상 · 바인딩 · 페이로드 형식, 등록부의 범위별 조합 찾기 · 중복 검사, 대상 받는 동작. ImGui 없이 테스트 | — |
-| I1 어댑터 | 새 `Common/Input/`, `GenerateEditorLayers.toml` 한 줄, `Common/GUI/EditorPanelHost.cpp`(범위 넣고 빼기) | `EditorInputGUI`, `drawContextMenuFor`, 끌기 원본 · 받기, `EditorCommandGUI` · 메뉴 확장 헤더 옮김 | I0 |
-| I2 게이트 | `Scripts/lint/gate/CheckEditorInputCalls.py` · 규칙 toml · Python 테스트, `Source/Editor/CMakeLists.txt`(강제 include, 처음엔 꺼 둠), 새 `EditorInputBan.h` | 기준선 = 10-2 표. 허용 목록과 이유 | I0 |
+| IE 엔진 입력 맵 | `Source/Engine/Input/Map/`(`InputMap.*` · 평가 · 직렬화), `InputManager.*`(E4 의 포커스 주인), `Resource/engine/input/` 스키마 문서, EngineTest | 10-4 의 E1 ~ E4. 읽기 · 쓰기 · 사용자 재배치 · `InputMapPanel` 이 새 속성을 함께 다룬다 | — |
+| I0 명령 형식 | `Common/Commands/`(`EditorCommandTarget.h` · `EditorDragPayload.h` 새로, `EditorCommandRegistry.*`), EditorTest 새 테스트 | 대상을 받는 동작 · 켜짐, 맥락 메뉴 칸, 페이로드 형식. ImGui 없이 테스트. 단축키 칸은 I1 이 액션 이름으로 바꿀 때까지 둔다 | — |
+| I1 어댑터와 단축키 이전 | 새 `Common/Input/`(`EditorInputActions` · `EditorInputGUI`), `GenerateEditorLayers.toml` 한 줄, 새 `Resource/engine/input/editor.input.xml`, `Common/GUI/EditorCommandGUI.cpp`(표의 단축키 칸 → 액션 이름, `processHotkeys` 삭제), `Common/GUI/EditorPanelManager.cpp`(포커스 창 → 레이어; 패널을 그리는 곳은 `EditorPanelHost` 가 아니라 `EditorPanelManager::drawOpenPanels` 다), `SW_EDITOR_COMMAND` 를 쓰는 등록 줄 전부(에디터 14 파일 · 플러그인 6 파일)와 확장의 `*.input.xml`, `Common/Commands/Dev/EditorShortcutOverrides.*` 삭제, `Panels/Settings/ShortcutsPanel.*`(입력 맵 재배치로) | `editor.input.xml` 과 명령 ↔ 액션 연결, `drawContextMenuFor`, 끌기 원본 · 받기. 옛 단축키 형식 · `Shortcuts.json` 은 읽지 않는다 | IE, I0 |
+| I2 형식으로 막기 | 새 `Common/Input/EditorInputBan.h`, `Source/Editor/CMakeLists.txt`(티어 5 · 6 View 부분의 강제 include 와 경고 → 오류, 처음엔 꺼 둠), 그 뒤 `Scripts/lint/gate/CheckEditorInputCalls.py` · 규칙 toml · Python 테스트 | 10-4 "막는 방법" 의 1 을 먼저, 2(린트)는 `ImGuiIO` 입력 필드 읽기만 — 규칙마다 형식으로 못 막는 이유 한 줄 | I0 |
 | I3a 장면 | `Panels/Scene/` | Hierarchy 메뉴 · 단축키 · 끌어 놓기를 계층으로. U4 의 장면 오브젝트 명령을 메뉴에 건다 | I1, U4 |
 | I3b 콘텐츠 | `Panels/ContentBrowser/` | 에셋 명령(Rename · Duplicate · Delete)을 Asset 범위 명령으로, 빈 곳 메뉴, 에셋 id 페이로드 | I1 |
 | I3c 인스펙터 | `Panels/Inspector/` | 컴포넌트 카드 메뉴 하나로(메인 · 미리보기 같게), PropertyGrid 행 메뉴 | I1 |
 | I3d 표 · 목록 패널 | `Panels/Console/` · `Catalog/` · `MapCheck/` · `Profiler/` · `Settings/` · `InputMap/` · `Animation/` | 메뉴 · 키 · 더블클릭을 계층으로 | I1 |
 | I3e 캔버스 패널 | `Panels/TileMap/` · `Panels/UIPreview/` | 오른쪽 끌기 문턱, 팔레트 페이로드 | I1 |
-| I3f 뷰포트 | `Viewport/` | 코어 메뉴 항목(R6), 클릭 · 끌기 판정을 계층으로, 비행 키 바인딩 | I1, U1 과 같은 파일이라 U1 과 한 작업자에게 |
-| I3g 공용 위젯 · 셸 | `Common/Widgets/` · `Common/GUI/`(I1 이 옮긴 셋과 `EditorPanelHost` 밖) · `Popups/` | CurveEditor · DebugHUD · 시간 배율(R1 · R8), 셸 팝업 열기 | I1 |
+| I3f 뷰포트 | `Viewport/`, `Common/GUI/` 의 세 파일(`EditorCommandGUI.*` · `EditorContextMenuExtension.h` · `EditorPopupManager.*`)을 `Common/Input` 으로 옮김 | 코어 메뉴 항목(R6), 클릭 · 끌기 판정을 입력 맵 액션(`Editor.Viewport` 레이어, E2 의 `Click` · `Drag`)으로, 비행 키도 액션 | I1, U1 과 같은 파일이라 U1 과 한 작업자에게 |
+| I3g 공용 위젯 · 셸 | `Common/Widgets/` · `Common/GUI/`(I3f 가 옮기는 셋 밖) · `Popups/` | CurveEditor · DebugHUD · 시간 배율(R1 · R8), 셸 팝업 열기 | I1 |
 | I4 형식 켜기 | `Source/Editor/CMakeLists.txt` · 규칙 toml | 호출이 0 이 된 티어부터 강제 include 를 켜고 기준선을 지운다 | I3 들 |
 
 **다른 단위와의 순서.** U4(장면 오브젝트 명령 공용화)는 대상을 받는 명령 형식이 있어야 한 번에 끝나므로 **I0 · I1 뒤, I3a 앞**입니다(U4 를 먼저 하면 인자 없는 명령으로 만든 뒤 다시 고칩니다). U1(비행)은 `Viewport/EditorViewportCamera.cpp` · `EditorViewportClient.cpp` 를 I3f 와 함께 고치므로 I1 뒤에 I3f 와 묶습니다. U3a · U5 · U6 은 이 문서에서 내용을 확인하지 못했습니다 — 패널 · 뷰포트 파일을 고치는 단위라면 그 영역의 I3 뒤에, 아니면 이 계층과 무관하게 둡니다.
