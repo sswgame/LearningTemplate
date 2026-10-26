@@ -410,11 +410,11 @@ SW_TEST_CASE( LocalizationManagerTest, LookupPointerOutlivesTableChanges )
 {
     sw::StringTable table;
     table.setString( sw::hashed_string( "KEY_KEEP" ), "Alpha" );
-    const utf8* pHeld = table.getString( sw::hashed_string( "KEY_KEEP" ) );
+    const utf8* pHeld = table.findString( sw::hashed_string( "KEY_KEEP" ) );
     SW_ASSERT_NOT_NULL( pHeld );
 
     table.setString( sw::hashed_string( "KEY_KEEP" ), "Changed" );
-    SW_EXPECT_STREQ( "Changed", table.getString( sw::hashed_string( "KEY_KEEP" ) ) );
+    SW_EXPECT_STREQ( "Changed", table.findString( sw::hashed_string( "KEY_KEEP" ) ) );
     SW_EXPECT_STREQ( "Alpha", pHeld );
 
     for ( int32 index = 0; index < 200; ++index )

@@ -856,7 +856,7 @@ namespace sw
         const string                        code = normalizeLanguageCode( languageCode );
         std::shared_lock<std::shared_mutex> lock( _mutex );
         const auto                          it = _mapLanguageTable.find( code );
-        return it != _mapLanguageTable.end() ? it->second->getString( key ) : nullptr;
+        return it != _mapLanguageTable.end() ? it->second->findString( key ) : nullptr;
     }
 
     bool LocalizationManager::hasString( const hashed_string& key ) const
