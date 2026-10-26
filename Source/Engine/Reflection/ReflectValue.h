@@ -114,6 +114,20 @@ namespace sw
         /** @brief 정규 이름의 내장 타입 자리입니다. 내장 타입이 아니면 -1 입니다(별칭은 `TypeRegistry` 로 정규 이름으로 바꿔 찾습니다). */
         static int32 findBuiltinIndex( const hashed_string& typeName );
         /**
+         * @brief 갈래가 Number 인 내장 타입 값 하나(@p pValue)를 float64 로 읽습니다 — 정수 · 실수 · 성분이 하나인 압축 타입.
+         * @details 타입 이름 목록을 따로 두지 않는다 — 읽는 길은 `ReflectBuiltins.xxx` 줄마다 하나씩 만들어지고, 표에 줄을 더하면 따라온다.
+         *          무한대 · NaN 도 그대로 돌려준다(범위 검사가 밖이라고 판정하게).
+         * @return 범위 밖 자리이거나 Number 갈래가 아니면 false(@p outValue 는 그대로)
+         */
+        [[nodiscard]] static bool readNumber( int32 builtinIndex, const void* pValue, float64& outValue );
+        /**
+         * @brief 정수 · bool 내장 타입 값 하나(@p pValue)를 int64 로 읽습니다. uint64 는 비트 그대로 int64 로 바꿉니다(2^63 이상은 음수).
+         * @return 범위 밖 자리이거나 정수 · bool 이 아니면(실수 · 압축 타입 포함) false(@p outValue 는 그대로)
+         */
+        [[nodiscard]] static bool readInteger( int32 builtinIndex, const void* pValue, int64& outValue );
+        /** @brief 내장 타입 값 하나(@p pValue)를 사람이 읽는 글로 씁니다(`formatText` 와 같은 서식). 범위 밖 자리는 빈 글입니다. */
+        static string formatBuiltin( int32 builtinIndex, const void* pValue );
+        /**
          * @brief @p in 을 @p builtinIndex 내장 타입의 값으로 바꿉니다 — 숫자끼리 형 변환, 글은 읽기, 숫자는 글로.
          * @return 바꿀 수 없으면 false(@p outValue 는 그대로)
          */

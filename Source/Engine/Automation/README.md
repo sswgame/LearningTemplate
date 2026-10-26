@@ -90,7 +90,7 @@ frame 900 <ExpectVisited> #3: AI.State(FarmAutoFarmer) never went through 'Till 
 
 **경계 전후 견주기.** `<Remember probe="Editor.StateHash" as="edited"/>` 가 그 프레임의 탐침 값을 기억하고 뒤의 `Expect` · `WaitUntil` 이 `sameAs="edited"` · `differsFrom="edited"` 로 견줍니다(글 그대로 견주므로 64 비트 해시도 뭉개지지 않고 플레이 인/아웃 · 모듈 리로드 · 백엔드 교체를 넘어 기억한다).
 `SwapBackend backend="other"` 는 지금과 다른 백엔드(DirectX 12 가 아니면 DirectX 12, 12 면 DirectX 11)로, `backend="start"` 는 시작한 백엔드로 건너므로 "갔다 돌아오는" 시나리오를 한 파일로 씁니다.
-에디터 편집 상태는 `Editor.SceneHash` · `Editor.SelectedNames` · `Editor.UndoState` · `Editor.StateHash`(넷을 접은 것)로, 오브젝트 하나의 컴포넌트 값은 `Object.Property target="이름" key="<컴포넌트>.<프로퍼티>"` 로 읽습니다. 에디터 흐름 시나리오 `engine/automation/editor/flow*.scenario.xml` 의 기능별 표는 [에디터 시나리오 표](../../../docs/plans/EditorScenarios.md) 입니다.
+에디터 편집 상태는 `Editor.SceneHash` · `Editor.SelectedNames` · `Editor.UndoState` · `Editor.StateHash`(넷을 접은 것)로, 오브젝트 하나의 컴포넌트 값은 `Object.Property target="이름" key="<컴포넌트>.<프로퍼티>"` 로 읽습니다(숫자 갈래 · bool 은 수, `string` · `hashed_string` 은 글 — 갈래는 `ReflectValueUtil` 의 내장 타입 표가 정합니다). 에디터 흐름 시나리오 `engine/automation/editor/flow*.scenario.xml` 의 기능별 표는 [에디터 시나리오 표](../../../docs/plans/EditorScenarios.md) 입니다.
 
 **결정적 재생과 녹화.** `-scenario-record=<Saved/Automation/...scenario.xml>` 는 씬 플레이 첫 프레임부터 입력(가상 입력 포함)을 적고 끝날 때 `-scenario-record-probes` 의 탐침 값을 끝 프레임의 `<Expect>` 로 씁니다. 같은 입력과 고정 틱이므로 다시 돌리면 같은 값이 나와야 하고 `AppScenarioTest.RecordedPlayReplaysOnEveryBackend` 가 네 백엔드에서 확인합니다.
 다시 돌릴 때는 디스크 경로가 아니라 id 를 줍니다(`Saved/Automation/Recorded/a.scenario.xml` → `-scenario=saved/Automation/Recorded/a.scenario.xml`, `ScenarioRecorder::makeReplayID`).

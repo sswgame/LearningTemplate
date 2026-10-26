@@ -8,6 +8,7 @@
 
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Localization/TextFormatter.h"
+#include "Engine/Reflection/ReflectValue.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/UI/Base/Widget.h"
 #include "Engine/UI/Binding/UIViewModel.h"
@@ -427,7 +428,10 @@ namespace sw
                     return UIBindingValue::makeText( text );
                 }
                 // 선택지 목록(텍스트 키)을 고른 항목보다 먼저 쓴다.
-                if ( binding._optionList.isValid() && binding._optionList.getLeafProperty()._elementTypeName == hashed_string( "string" ) )
+                // 원소 타입은 캐스트할 C++ 타입의 내장 자리(`ReflectBuiltinOf<string>`)로 묻는다 — 이름 리터럴을 두지 않는다.
+                const bool bTextOptionList = binding._optionList.isValid() &&
+                                             ReflectValueUtil::findBuiltinIndex( binding._optionList.getLeafProperty()._elementTypeName ) == ReflectBuiltinOf<string>::kIndex;
+                if ( bTextOptionList )
                 {
                     vector<string>* pList = binding._optionList.getLeafProperty().getValuePtr<vector<string>>( binding._optionList.findLeafOwner( &widget ) );
                     vector<string>  listText;

@@ -35,6 +35,7 @@
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Probe/AutomationProbe.h"
 #include "Engine/Profiling/ProfilerTraceExport.h"
+#include "Engine/Reflection/ReflectValue.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
@@ -767,7 +768,7 @@ namespace sw
 
             /**
              * @brief 탐침 `Object.Property` 입니다. 대상 오브젝트의 컴포넌트 PROPERTY 값(`key="<컴포넌트 타입>.<프로퍼티>"`)입니다.
-             * @details 수(float32 · int32 · uint32)와 글(string)을 읽는다. 선택과 무관하게 이름으로 고르므로 여러 오브젝트를 한 프레임에 비교할 수 있다
+             * @details 숫자 갈래(정수 · 실수 · 성분이 하나인 압축 타입) · bool 은 수로, 글 갈래(string · hashed_string)는 글로 읽는다. 선택과 무관하게 이름으로 고르므로 여러 오브젝트를 한 프레임에 비교할 수 있다
              *          (프리팹 인스턴스마다의 값, 플레이 전후의 값). 비트필드 bool 은 PROPERTY 주소가 없어 읽지 못한다.
              */
             [[nodiscard]] static bool readObjectProperty( const AutomationProbeQuery& query, AutomationProbeValue& outValue )
@@ -798,14 +799,19 @@ namespace sw
                     outValue.setText( "no property " + propertyName );
                     return false;
                 }
-                if ( pProperty->_typeName == hashed_string( "float32" ) )
-                    outValue.setNumber( static_cast<float64>( *pProperty->getValuePtr<float32>( pComponent ) ) );
-                else if ( pProperty->_typeName == hashed_string( "int32" ) )
-                    outValue.setNumber( static_cast<float64>( *pProperty->getValuePtr<int32>( pComponent ) ) );
-                else if ( pProperty->_typeName == hashed_string( "uint32" ) )
-                    outValue.setNumber( static_cast<float64>( *pProperty->getValuePtr<uint32>( pComponent ) ) );
-                else if ( pProperty->_typeName == hashed_string( "string" ) )
-                    outValue.setText( *pProperty->getValuePtr<string>( pComponent ) );
+                // 갈래는 내장 타입 표 한 곳(`ReflectValueUtil`)이 정한다 — 숫자 · bool 은 수, 글 갈래는 글로 읽는다.
+                const int32               builtinIndex = ReflectValueUtil::findBuiltinIndex( pProperty->_typeName );
+                const ReflectBuiltinClass builtinClass = ReflectValueUtil::getBuiltinClass( builtinIndex );
+                const void* const         pValue       = pProperty->getRawPtr( static_cast<const void*>( pComponent ) );
+                float64                   number{ 0.0 };
+                int64                     integer{ 0 };
+                // 비트필드는 주소가 없어(pValue == nullptr) 읽는 함수가 모두 false 다.
+                if ( builtinClass == ReflectBuiltinClass::Number && ReflectValueUtil::readNumber( builtinIndex, pValue, number ) )
+                    outValue.setNumber( number );
+                else if ( builtinClass == ReflectBuiltinClass::Bool && ReflectValueUtil::readInteger( builtinIndex, pValue, integer ) )
+                    outValue.setNumber( static_cast<float64>( integer ) );
+                else if ( builtinClass == ReflectBuiltinClass::Text && pValue != nullptr )
+                    outValue.setText( ReflectValueUtil::formatBuiltin( builtinIndex, pValue ) );
                 else
                 {
                     outValue.setText( "property type " + string( pProperty->_typeName.c_str() ) + " is not readable here" );

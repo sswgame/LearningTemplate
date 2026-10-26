@@ -7,6 +7,7 @@
 #include "Core/Log/LogOnce.h"
 #include "Core/Log/Logger.h"
 
+#include "Engine/Reflection/ReflectValue.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TypeRegistry.h"
@@ -44,33 +45,13 @@ namespace sw
     {
         struct SerializerUtilInternal
         {
-            /** @brief 숫자 칸 하나를 float64 로 읽습니다. 숫자 타입이 아니면 false 입니다(범위 검사가 보지 않는 칸). */
-            [[nodiscard]] static bool readRangeNumber( const string_view typeName, const ValueAddress value, float64& outValue )
+            /**
+             * @brief 숫자 칸 하나를 float64 로 읽습니다. 숫자 타입이 아니면 false 입니다(범위 검사가 보지 않는 칸).
+             * @details 숫자 판정은 내장 타입 표 한 곳(`ReflectValueUtil::readNumber`)이 한다 — 성분이 하나인 압축 타입(half · unorm · snorm)도 범위를 본다.
+             */
+            [[nodiscard]] static bool readRangeNumber( const hashed_string& typeName, const ValueAddress value, float64& outValue )
             {
-                const void* const pValue = value.get();
-                if ( typeName == "float32" || typeName == "float" )
-                    outValue = static_cast<float64>( *static_cast<const float32*>( pValue ) );
-                else if ( typeName == "float64" || typeName == "double" )
-                    outValue = *static_cast<const float64*>( pValue );
-                else if ( typeName == "int32" || typeName == "int" )
-                    outValue = static_cast<float64>( *static_cast<const int32*>( pValue ) );
-                else if ( typeName == "uint32" )
-                    outValue = static_cast<float64>( *static_cast<const uint32*>( pValue ) );
-                else if ( typeName == "int64" )
-                    outValue = static_cast<float64>( *static_cast<const int64*>( pValue ) );
-                else if ( typeName == "uint64" )
-                    outValue = static_cast<float64>( *static_cast<const uint64*>( pValue ) );
-                else if ( typeName == "int16" )
-                    outValue = static_cast<float64>( *static_cast<const int16*>( pValue ) );
-                else if ( typeName == "uint16" )
-                    outValue = static_cast<float64>( *static_cast<const uint16*>( pValue ) );
-                else if ( typeName == "int8" )
-                    outValue = static_cast<float64>( *static_cast<const int8*>( pValue ) );
-                else if ( typeName == "uint8" )
-                    outValue = static_cast<float64>( *static_cast<const uint8*>( pValue ) );
-                else
-                    return false;
-                return true;
+                return ReflectValueUtil::readNumber( ReflectValueUtil::findBuiltinIndex( typeName ), value.get(), outValue );
             }
 
             /** @brief @p value 가 @p range 밖이면 "경로 = 값 is outside [아래, 위]" 한 줄을 더합니다. */
@@ -84,7 +65,7 @@ namespace sw
             }
 
             /** @brief @p value(@p typeName 의 숫자)가 @p range 안인지입니다. 숫자가 아니면 범위가 없으므로 true 입니다. */
-            static bool isNumberWithinRange( const string_view typeName, const ValueAddress value, const PropertyAllowedRange& range )
+            static bool isNumberWithinRange( const hashed_string& typeName, const ValueAddress value, const PropertyAllowedRange& range )
             {
                 float64 number = 0.0;
                 if ( readRangeNumber( typeName, value, number ) == false )
@@ -125,7 +106,7 @@ namespace sw
                             // 구조체 원소의 값 주소는 그 원소 타입의 객체 주소다.
                             const void* const pElementValue = pSequence->getElementConst( pValue, elementIndex );
                             const bool        bWithin       = pElement != nullptr ? isEveryValueWithinRange( *pElement, ObjectAddress{ pElementValue } )
-                                                                                  : isNumberWithinRange( prop._elementTypeName.view(), ValueAddress{ pElementValue }, range );
+                                                                                  : isNumberWithinRange( prop._elementTypeName, ValueAddress{ pElementValue }, range );
                             if ( bWithin == false )
                                 return false;
                         }
@@ -133,7 +114,7 @@ namespace sw
                     }
                     // 숫자 칸은 범위를 선언했을 때만 본다. 숫자가 아닌 칸만 중첩 구조체인지 찾는다(숫자 칸마다 타입 조회를 하지 않는다).
                     float64 value = 0.0;
-                    if ( readRangeNumber( prop._typeName.view(), ValueAddress{ pValue }, value ) )
+                    if ( readRangeNumber( prop._typeName, ValueAddress{ pValue }, value ) )
                     {
                         if ( prop._metadata->hasAllowedRange() && prop._metadata->computeAllowedRange( pInstance ).contains( value ) == false )
                             return false;
@@ -1171,7 +1152,7 @@ namespace sw
                     // 구조체 원소의 값 주소는 그 원소 타입의 객체 주소다.
                     if ( pElement != nullptr )
                         collectRangeErrors( *pElement, ObjectAddress{ pElementValue }, elementPath, outListError );
-                    else if ( Internal::readRangeNumber( prop._elementTypeName.view(), ValueAddress{ pElementValue }, value ) )
+                    else if ( Internal::readRangeNumber( prop._elementTypeName, ValueAddress{ pElementValue }, value ) )
                         Internal::appendRangeError( elementPath, value, range, outListError );
                 }
                 continue;
@@ -1183,7 +1164,7 @@ namespace sw
                 continue;
             }
             float64 value = 0.0;
-            if ( prop._metadata->hasAllowedRange() && Internal::readRangeNumber( prop._typeName.view(), ValueAddress{ pValue }, value ) )
+            if ( prop._metadata->hasAllowedRange() && Internal::readRangeNumber( prop._typeName, ValueAddress{ pValue }, value ) )
                 Internal::appendRangeError( path, value, prop._metadata->computeAllowedRange( pInstance ), outListError );
         }
     }

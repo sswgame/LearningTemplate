@@ -305,9 +305,51 @@ namespace sw
                 return string( buf.c_str() );
             }
 
+            /** @brief Number 갈래 값 하나를 float64 로 읽습니다. 갈래는 `getReflectBuiltinClass` 하나가 정하므로 숫자 목록을 따로 두지 않습니다. */
+            template <typename T>
+            [[nodiscard]] static bool readNumberAs( const void* pValue, float64& outValue )
+            {
+                if constexpr ( getReflectBuiltinClass<T>() != ReflectBuiltinClass::Number )
+                {
+                    (void)pValue;
+                    (void)outValue;
+                    return false;
+                }
+                else if constexpr ( kIsPackedValue<T> )
+                {
+                    static_assert( PackedValueTraits<T>::kComponentCount == 1, "ReflectValue: Number packed type must have one component" );
+                    outValue = static_cast<float64>( PackedValueTraits<T>::toFloats( *static_cast<const T*>( pValue ) )._arrValue[0] );
+                    return true;
+                }
+                else
+                {
+                    outValue = static_cast<float64>( *static_cast<const T*>( pValue ) );
+                    return true;
+                }
+            }
+
+            /** @brief 정수 · bool 값 하나를 int64 로 읽습니다. 실수 · 압축 타입은 읽지 않습니다(소수부를 조용히 버리지 않게). */
+            template <typename T>
+            [[nodiscard]] static bool readIntegerAs( const void* pValue, int64& outValue )
+            {
+                if constexpr ( std::is_integral_v<T> )
+                {
+                    outValue = static_cast<int64>( *static_cast<const T*>( pValue ) );
+                    return true;
+                }
+                else
+                {
+                    (void)pValue;
+                    (void)outValue;
+                    return false;
+                }
+            }
+
             using ReadSourceFn    = void ( * )( const void* pValue, SourceValue& out );
             using ConvertSourceFn = bool ( * )( const SourceValue& source, TaskValue& outValue );
             using FormatFn        = string ( * )( const void* pValue );
+            using ReadNumberFn    = bool ( * )( const void* pValue, float64& outValue );
+            using ReadIntegerFn   = bool ( * )( const void* pValue, int64& outValue );
 
             /** @brief 내장 타입 줄마다 읽기 · 바꾸기 · 쓰기입니다. 순서는 `ReflectBuiltinIndex` 와 같습니다(같은 파일을 같은 순서로 include). */
             struct BuiltinRow
@@ -315,13 +357,16 @@ namespace sw
                 ReadSourceFn        _pReadSource;
                 ConvertSourceFn     _pConvertSource;
                 FormatFn            _pFormat;
+                ReadNumberFn        _pReadNumber;
+                ReadIntegerFn       _pReadInteger;
                 ReflectBuiltinClass _class;
             };
 
             static constexpr BuiltinRow kArrBuiltinRow[] = {
-#define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, ... )                                               \
-    { &readSource<ReflectBuiltinCppTypeT<CppType>>, &convertSource<ReflectBuiltinCppTypeT<CppType>>, \
-      &formatBuiltin<ReflectBuiltinCppTypeT<CppType>>, getReflectBuiltinClass<ReflectBuiltinCppTypeT<CppType>>() },
+#define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, ... )                                                 \
+    { &readSource<ReflectBuiltinCppTypeT<CppType>>, &convertSource<ReflectBuiltinCppTypeT<CppType>>,   \
+      &formatBuiltin<ReflectBuiltinCppTypeT<CppType>>, &readNumberAs<ReflectBuiltinCppTypeT<CppType>>, \
+      &readIntegerAs<ReflectBuiltinCppTypeT<CppType>>, getReflectBuiltinClass<ReflectBuiltinCppTypeT<CppType>>() },
 #define SW_REFLECT_BUILTIN_CONTAINER( ... )
 #include "Engine/Reflection/ReflectBuiltins.xxx"
 #undef SW_REFLECT_BUILTIN_TYPE
@@ -346,6 +391,15 @@ namespace sw
                 const int64 raw = pEnumInfo->readValueFromMemory( in._value.getRawPtr() );
                 setNumber( out, static_cast<float64>( raw ), true, raw );
                 return true;
+            }
+
+            /** @brief @p builtinIndex 가 표 안 자리이고 @p pValue 가 있으면 그 줄, 아니면 nullptr 입니다(값 하나를 읽는 공개 함수의 입구). */
+            [[nodiscard]] static const BuiltinRow* findReadableRow( const int32 builtinIndex, const void* pValue )
+            {
+                const bool bInTable = 0 <= builtinIndex && builtinIndex < ReflectBuiltinIndex::kCount;
+                if ( bInTable == false || pValue == nullptr )
+                    return nullptr;
+                return &kArrBuiltinRow[builtinIndex];
             }
         };
     } // namespace
@@ -376,6 +430,24 @@ namespace sw
         if ( builtinIndex < 0 || ReflectBuiltinIndex::kCount <= builtinIndex )
             return ReflectBuiltinClass::Other;
         return ReflectValueInternal::kArrBuiltinRow[builtinIndex]._class;
+    }
+
+    bool ReflectValueUtil::readNumber( const int32 builtinIndex, const void* pValue, float64& outValue )
+    {
+        const ReflectValueInternal::BuiltinRow* pRow = ReflectValueInternal::findReadableRow( builtinIndex, pValue );
+        return pRow != nullptr && pRow->_pReadNumber( pValue, outValue );
+    }
+
+    bool ReflectValueUtil::readInteger( const int32 builtinIndex, const void* pValue, int64& outValue )
+    {
+        const ReflectValueInternal::BuiltinRow* pRow = ReflectValueInternal::findReadableRow( builtinIndex, pValue );
+        return pRow != nullptr && pRow->_pReadInteger( pValue, outValue );
+    }
+
+    string ReflectValueUtil::formatBuiltin( const int32 builtinIndex, const void* pValue )
+    {
+        const ReflectValueInternal::BuiltinRow* pRow = ReflectValueInternal::findReadableRow( builtinIndex, pValue );
+        return pRow != nullptr ? pRow->_pFormat( pValue ) : string();
     }
 
     int32 ReflectValueUtil::findBuiltinIndex( const hashed_string& typeName )

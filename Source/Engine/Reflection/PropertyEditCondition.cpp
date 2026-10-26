@@ -5,6 +5,7 @@
 #include "Core/Container/StringUtil.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Reflection/ReflectValue.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
@@ -28,26 +29,8 @@ namespace sw
                 outValue = expr._pEnum->readValueFromMemory( pValue );
                 return true;
             }
-            const string_view typeName = subject._typeName.view();
-            if ( typeName == "bool" )
-                outValue = *static_cast<const bool*>( pValue ) ? 1 : 0;
-            else if ( typeName == "int8" )
-                outValue = *static_cast<const int8*>( pValue );
-            else if ( typeName == "uint8" )
-                outValue = *static_cast<const uint8*>( pValue );
-            else if ( typeName == "int16" )
-                outValue = *static_cast<const int16*>( pValue );
-            else if ( typeName == "uint16" )
-                outValue = *static_cast<const uint16*>( pValue );
-            else if ( typeName == "int32" )
-                outValue = *static_cast<const int32*>( pValue );
-            else if ( typeName == "uint32" )
-                outValue = *static_cast<const uint32*>( pValue );
-            else if ( typeName == "int64" || typeName == "uint64" )
-                outValue = *static_cast<const int64*>( pValue );
-            else
-                return false;
-            return true;
+            // 정수 · bool 판정은 내장 타입 표 한 곳(`ReflectValueUtil::readInteger`)이 한다 — 이름 목록을 여기 두지 않는다.
+            return ReflectValueUtil::readInteger( ReflectValueUtil::findBuiltinIndex( subject._typeName ), pValue, outValue );
         }
     } // namespace
 } // namespace sw
