@@ -548,7 +548,8 @@ namespace sw
     {
         FighterRuntime&    fighter = _arrFighter[player];
         const FighterMove& move    = fighter._pDef->_listMove[static_cast<size_t>( moveIndex )];
-        fighter._timeline.start( move._frame );
+        if ( fighter._timeline.start( move._frame ) == false )
+            return;
         fighter._moveIndex    = moveIndex;
         fighter._state        = FighterState::Attacking;
         fighter._stateFrames  = 0;

@@ -2203,7 +2203,7 @@ SW_TEST_CASE( GameFrameworkTest, EnhancedInput_ActionPhaseStateMachineAndAdvance
     SW_EXPECT_TRUE( inputManager.initialize() );
 
     InputMap& inputMap = inputManager.getInputMap();
-    inputMap.setHoldThreshold( 0.2f );
+    SW_ASSERT_TRUE( inputMap.setHoldThreshold( 0.2f ) );
 
     // 1) 일반 버튼 액션의 Started -> Ongoing -> Triggered -> Completed 생명주기 검증
     inputMap.bind( "HeavySlash", Key::J, ActionTrigger::Pressed );

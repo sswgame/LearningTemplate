@@ -177,15 +177,16 @@ namespace sw
 
     void CameraDirectorComponent::setViewOverride( const float3& position, const float3& euler, float32 fieldOfViewY, float32 farPlane )
     {
-        _overrideDef._id                  = hashed_string( CameraDirectorComponentInternal::kOverridePresetID );
-        _overrideDef._view._mode          = CameraPresetMode::Fixed;
-        _overrideDef._view._aim           = CameraAimMode::Angles;
-        _overrideDef._view._offset        = position;
-        _overrideDef._view._pitch         = euler._x;
-        _overrideDef._view._yaw           = euler._y;
-        _overrideDef._lens._fieldOfViewY  = fieldOfViewY;
-        _overrideDef._lens._nearPlane     = CameraDirectorComponentInternal::kOverrideNearPlane;
-        _overrideDef._lens._farPlane      = MathUtil::max( farPlane, CameraDirectorComponentInternal::kOverrideNearPlane * 2.0f );
+        _overrideDef._id                 = hashed_string( CameraDirectorComponentInternal::kOverridePresetID );
+        _overrideDef._view._mode         = CameraPresetMode::Fixed;
+        _overrideDef._view._aim          = CameraAimMode::Angles;
+        _overrideDef._view._offset       = position;
+        _overrideDef._view._pitch        = euler._x;
+        _overrideDef._view._yaw          = euler._y;
+        _overrideDef._lens._fieldOfViewY = fieldOfViewY;
+        _overrideDef._lens._nearPlane    = CameraDirectorComponentInternal::kOverrideNearPlane;
+        SW_ASSERT( farPlane >= CameraDirectorComponentInternal::kOverrideNearPlane * 2.0f ); // 호출부 속성(`Far Plane`)의 범위가 지킨다. 올려 맞추지 않는다
+        _overrideDef._lens._farPlane      = farPlane;
         _overrideDef._lens._bOrthographic = false;
         // 덮어쓰는 동안에는 값만 바꾼다 — 매 프레임 블렌드를 새로 시작하면 영영 도착하지 못한다.
         if ( _bViewOverride )

@@ -20,12 +20,20 @@ namespace sw
     {
     }
 
-    void SpriteClipPlayable::configure( const SpriteClipAsset* pClip, int32 firstFrame, int32 frameCount, bool bLoop, float32 animatorFrameSeconds )
+    bool SpriteClipPlayable::configure( const SpriteClipAsset* pClip, int32 firstFrame, int32 frameCount, bool bLoop, float32 animatorFrameSeconds )
     {
+        // 맞추지 않고 거절한다(예전에는 첫 프레임 0 · 프레임 수 1 · 프레임 길이 1/12 초로 조용히 바꿨다).
+        const bool bValid = firstFrame >= 0 && frameCount >= 1 && animatorFrameSeconds > 0.0f;
+        if ( bValid == false )
+        {
+            SW_LOG_ERROR( "SpriteClipPlayable: refused first frame %# frame count %# frame seconds %# - the first frame must not be negative, the count must be at least 1 and the seconds positive", firstFrame, frameCount,
+                          animatorFrameSeconds );
+            return false;
+        }
         _pClip                = pClip;
-        _animatorFrameSeconds = animatorFrameSeconds > 0.0f ? animatorFrameSeconds : 1.0f / 12.0f;
-        _firstFrame           = MathUtil::max( firstFrame, 0 );
-        _frameCount           = MathUtil::max( frameCount, 1 );
+        _animatorFrameSeconds = animatorFrameSeconds;
+        _firstFrame           = firstFrame;
+        _frameCount           = frameCount;
         _bLoop                = bLoop ? SW_TRUE : SW_FALSE;
         _rangeStartSeconds    = ( _pClip != nullptr ) ? _pClip->computeFrameStartSeconds( _firstFrame, _animatorFrameSeconds ) : 0.0f;
         _playLength           = computeFrameStart( _frameCount );
@@ -42,6 +50,7 @@ namespace sw
             }
             break;
         }
+        return true;
     }
 
     float32 SpriteClipPlayable::getFrameDuration( int32 frameInRange ) const

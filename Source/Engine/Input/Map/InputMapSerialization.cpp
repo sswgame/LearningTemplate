@@ -1190,9 +1190,9 @@ namespace sw
         }
 
         clear();
-        setDoubleClickTime( dblClick );
-        setDoubleClickMaxDistance( dblDist );
-        setHoldThreshold( holdThreshold );
+        const bool bTimingRefused = setDoubleClickTime( dblClick ) == false || setDoubleClickMaxDistance( dblDist ) == false || setHoldThreshold( holdThreshold ) == false;
+        if ( bTimingRefused )
+            return false;
         _virtualCursorStick = virtualCursor;
         if ( StringUtil::isNullOrEmpty( pDefaultLayer ) == false )
             _defaultLayerName = hashed_string( pDefaultLayer );

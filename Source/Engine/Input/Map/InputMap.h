@@ -517,13 +517,13 @@ namespace sw
          * @details 셸 맵(개발 콘솔, 리로드 단축키)만 켠다. 콘솔이 키보드를 가진 동안에도 닫는 키와 편집 키를 받아야 하기 때문이다.
          *          패드도 같다 — 콘솔이 열린 동안 게임 맵은 패드 바인딩을 "안 눌림" 으로 보고(`InputManager::isGamepadControlVisibleToGame`), 이 맵은 장치 상태를 그대로 읽는다.
          */
-        void setKeyboardFocusIgnored( bool bIgnored ) { _bKeyboardFocusIgnored = bIgnored ? SW_TRUE : SW_FALSE; }
-        bool isKeyboardFocusIgnored() const { return _bKeyboardFocusIgnored == SW_TRUE; }
-        void setDoubleClickTime( float32 seconds );
-        void setDoubleClickMaxDistance( float32 pixels );
-        void setDoubleTapTime( float32 seconds ) { _doubleTapTime = seconds; }
-        void setHoldThreshold( float32 seconds );
-        void setNavRepeatTiming( float32 delaySeconds, float32 rateSeconds )
+        void               setKeyboardFocusIgnored( bool bIgnored ) { _bKeyboardFocusIgnored = bIgnored ? SW_TRUE : SW_FALSE; }
+        bool               isKeyboardFocusIgnored() const { return _bKeyboardFocusIgnored == SW_TRUE; }
+        [[nodiscard]] bool setDoubleClickTime( float32 seconds );
+        [[nodiscard]] bool setDoubleClickMaxDistance( float32 pixels );
+        void               setDoubleTapTime( float32 seconds ) { _doubleTapTime = seconds; }
+        [[nodiscard]] bool setHoldThreshold( float32 seconds );
+        void               setNavRepeatTiming( float32 delaySeconds, float32 rateSeconds )
         {
             _navRepeatDelay = delaySeconds;
             _navRepeatRate  = rateSeconds;

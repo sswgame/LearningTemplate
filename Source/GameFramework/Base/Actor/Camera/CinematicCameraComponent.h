@@ -66,7 +66,7 @@ namespace sw
         void                     endCinematic( const SequenceCameraSignal& signal );
         void                     forwardPendingView( const SequenceCameraSignal& signal );
         void                     applyShake( const SequenceCameraSignal& signal );
-        /** @brief 시네마틱 블렌드 곡선(`_cinematicBlendCurve`)에 시간을 붙입니다. */
+        /** @brief 시네마틱 블렌드 곡선(`_cinematicBlendCurve`)에 시간을 붙입니다. @p seconds 는 0 보다 커야 한다(호출부가 0 이하를 먼저 거른다). */
         BlendCurveDef makeCinematicBlend( float32 seconds ) const;
 
     private:

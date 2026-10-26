@@ -27,7 +27,8 @@ namespace sw
          * @brief 구간을 정합니다. 클립이나 구간이 바뀔 때마다 호출합니다(길이를 다시 셉니다).
          * @param animatorFrameSeconds 시간이 없는 프레임(0 ms)이 머무는 시간입니다.
          */
-        void configure( const SpriteClipAsset* pClip, int32 firstFrame, int32 frameCount, bool bLoop, float32 animatorFrameSeconds );
+        /** @details 첫 프레임이 음수이거나 프레임 수가 1 미만이거나 프레임 길이가 0 이하이면 오류를 남기고 false 입니다(맞추지 않습니다). */
+        [[nodiscard]] bool configure( const SpriteClipAsset* pClip, int32 firstFrame, int32 frameCount, bool bLoop, float32 animatorFrameSeconds );
 
         float32 getPlayLength() const override { return _playLength; }
         bool    isLoopingByDefault() const override { return _bLoop == SW_TRUE; }

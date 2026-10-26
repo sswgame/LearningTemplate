@@ -14,14 +14,20 @@ namespace sw
     {
     }
 
-    void PlacementTileSurface::setTiles( uint32 width, uint32 height, float32 tileSize, const vector<uint8>& listTile )
+    bool PlacementTileSurface::setTiles( uint32 width, uint32 height, float32 tileSize, const vector<uint8>& listTile )
     {
-        const bool bSizeMatches = static_cast<size_t>( width ) * height == listTile.size();
-        SW_LOG_ASSERT( bSizeMatches, "PlacementTileSurface tile count does not match width x height" );
-        _width    = bSizeMatches ? width : 0u;
-        _height   = bSizeMatches ? height : 0u;
-        _tileSize = MathUtil::max( tileSize, MathUtil::kEpsilon );
-        _listTile = bSizeMatches ? listTile : vector<uint8>{};
+        // 크기가 맞지 않거나 타일 크기가 0 이하이면 맞추지 않고 거절한다(예전에는 빈 표면으로 만들거나 `kEpsilon` 으로 올렸다).
+        const bool bValid = static_cast<size_t>( width ) * height == listTile.size() && tileSize > 0.0f;
+        if ( bValid == false )
+        {
+            SW_LOG_ERROR( "PlacementTileSurface: refused %# x %# tiles of size %# with %# entries", width, height, tileSize, static_cast<uint32>( listTile.size() ) );
+            return false;
+        }
+        _width    = width;
+        _height   = height;
+        _tileSize = tileSize;
+        _listTile = listTile;
+        return true;
     }
 
     uint8 PlacementTileSurface::getTileAt( const float2& planePosition ) const

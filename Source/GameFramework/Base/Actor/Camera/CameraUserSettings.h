@@ -29,7 +29,7 @@ namespace sw
         /**
          * @brief 엔진 전역 변수에서 읽습니다. 시야각 비율의 기준은 `gv_cameraFieldOfView` 의 기본값입니다.
          * @details 엔진 서비스가 묶이지 않은 실행(엔진 없이 도는 테스트 하네스)에는 사용자 설정이 없으므로 기본값(바꾸지 않은 상태)을 돌려준다.
-         *          변수 관리자가 있는데 변수가 없으면 등록이 빠진 결함이라 `SW_ASSERT` 로 멈춘다.
+         *          변수 관리자가 있는데 변수가 없거나 흔들림 배율이 음수이면(범위는 사용자 설정 스키마가 지킨다) 결함이라 `SW_ASSERT` 로 멈춘다. 음수를 0 으로 맞추지 않는다.
          */
         static CameraUserSettings makeFromGlobalVariables();
 

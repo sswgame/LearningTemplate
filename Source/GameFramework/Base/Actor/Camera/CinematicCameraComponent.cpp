@@ -120,8 +120,9 @@ namespace sw
     BlendCurveDef CinematicCameraComponent::makeCinematicBlend( float32 seconds ) const
     {
         BlendCurveDef blend;
-        blend._curve    = seconds > 0.0f ? _cinematicBlendCurve : BlendCurve::Cut;
-        blend._duration = MathUtil::max( 0.0f, seconds );
+        SW_ASSERT( seconds > 0.0f ); // 호출부가 0 이하(끊어 바꿈)를 먼저 걸러 보낸다. 0 으로 맞춰 컷으로 돌지 않는다
+        blend._curve    = _cinematicBlendCurve;
+        blend._duration = seconds;
         return blend;
     }
 

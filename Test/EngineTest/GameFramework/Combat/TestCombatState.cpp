@@ -313,7 +313,10 @@ SW_TEST_CASE( CombatStateTest, MoveTimelinePhasesCancelWindowsHitstopAndFrameAdv
 
     MoveTimeline timeline;
     SW_EXPECT_TRUE( timeline.getPhase() == MovePhase::Idle );
-    timeline.start( *pJab );
+    SW_ASSERT_TRUE( timeline.start( *pJab ) );
+    MoveFrameData badMove = *pJab;
+    badMove._startup      = 0;
+    SW_EXPECT_FALSE( timeline.start( badMove ) ); // 시작 프레임 0 은 올려 맞추지 않고 거절한다
     vector<MoveHitbox> listHitbox;
     SW_EXPECT_TRUE( timeline.getPhase() == MovePhase::Startup );
     SW_EXPECT_EQUAL( 0u, timeline.collectActiveHitboxes( listHitbox ) );
@@ -356,7 +359,7 @@ SW_TEST_CASE( CombatStateTest, MoveTimelinePhasesCancelWindowsHitstopAndFrameAdv
     SW_EXPECT_TRUE( timeline.canCancelInto( hashed_string( "backdash" ) ) );
 
     // 헛치면 onHit 창은 열리지 않는다.
-    timeline.start( *pJab );
+    SW_ASSERT_TRUE( timeline.start( *pJab ) );
     while ( timeline.getFrame() < 12 )
     {
         (void)timeline.advanceFrame();
@@ -518,7 +521,7 @@ SW_TEST_CASE( CombatStateTest, MaxHealthChangesAndTimelineRestores )
 
     // 같은 상태까지 걸어간 타임라인과 같다.
     MoveTimeline walked;
-    walked.start( move );
+    SW_ASSERT_TRUE( walked.start( move ) );
     walked.registerContact( true );
     while ( walked.isInHitstop() )
     {

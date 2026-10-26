@@ -257,7 +257,8 @@ namespace sw
             if ( pMove == nullptr )
                 return;
             (void)findLockTarget( pilotIndex );
-            pilot._melee.start( *pMove );
+            if ( pilot._melee.start( *pMove ) == false )
+                return;
             pilot._comboStage   = 0;
             pilot._meleeSlot    = slotIndex;
             pilot._bMeleeHit    = SW_FALSE;
@@ -276,7 +277,8 @@ namespace sw
             if ( bCanCancelIntoNext )
             {
                 // 캔슬 창이 열려서 다음 단이 이 프레임에 나간다.
-                pilot._melee.start( *pNext );
+                if ( pilot._melee.start( *pNext ) == false )
+                    return;
                 pilot._comboStage   = nextStage;
                 pilot._bMeleeHit    = SW_FALSE;
                 pilot._bMeleeQueued = SW_FALSE;
