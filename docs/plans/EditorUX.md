@@ -156,3 +156,139 @@ py -3 -m Scripts editor-theme export-figma Resource/editor/theme/dark.tokens.jso
 | Figma MCP 설정 | `.mcp.json` |
 | 결정의 이유 | [결정 기록](../09_Decisions.md) 5-11절 |
 | 작업 방식과 에이전트 | [에이전트와 토큰](../12_Agents.md) |
+
+## 10. 우클릭과 에디터 입력 · 명령 계층
+
+패널이 ImGui 입력 함수를 저마다 직접 불러서 같은 우클릭이 패널마다 다르게 동작하고, 단축키 처리와 메뉴의 단축키 글자가 따로 놀고, 끌어 놓기 페이로드 형식이 패널마다 다릅니다. 이 절은 지금 모습(10-1, 10-2), 정한 규칙(10-3), 그 규칙을 형식으로 강제하는 계층(10-4), 구현 단위와 순서(10-5)를 적습니다. 결정의 한 줄 요약은 [5-11](../decisions/5-11_Editor.md) 에 있습니다.
+
+### 10-1. 지금의 우클릭(2026-10-27 조사)
+
+ImGui 의 `BeginPopupContextItem` · `BeginPopupContextWindow` 는 **뗄 때** 열고 끌기 거리는 보지 않습니다(`imgui.h` 의 `OpenPopupOnItemClick` 설명). 아래 "뗄 때" 는 모두 이 기본 동작입니다.
+
+| 패널 · 대상 | 시점 | 메뉴 항목 | 선택을 먼저 바꾸나 | 단축키 표시 · 겹침 | 끌기와 구분 |
+|---|---|---|---|---|---|
+| Hierarchy 오브젝트 행 | 뗄 때 | Create · Create Child · Create Folder(Inside) · Move Up/Down · Duplicate · Add Component · Select All With · Unparent · Parent to Selected · 확장 항목 · Destroy | 아니오(행 선택은 왼쪽 단추만). 다중 선택 위에서도 누른 **한 행**에만 작동하고, Parent to Selected 만 선택을 읽음 | Duplicate `Ctrl+D` · Destroy `Delete` 를 손으로 적음. 실제 처리는 패널의 `handleHierarchyShortcuts` 가 따로 함 | 없음 |
+| Hierarchy 컴포넌트 행 | 뗄 때 | Select Owner GameObject · Remove Component | 아니오 | 없음 | 없음 |
+| Hierarchy 빈 곳 | 뗄 때(항목 위 제외) | Create Empty GameObject · Create Folder | 선택 유지 | 없음. 행 메뉴는 같은 동작을 "Create GameObject" 로 부름 | 없음 |
+| Inspector 컴포넌트 카드 | 뗄 때 | Copy · Paste Values · Paste as New · 순서 옮기기 · Presets · Remove | 해당 없음(카드 하나) | 없음 | 없음 |
+| Inspector 미리보기 창 카드 | 뗄 때 | Remove Component 만 | 해당 없음 | 없음 | 없음 — **같은 대상인데 메인 카드와 메뉴가 다름** |
+| PropertyGrid 행 | 뗄 때 | Favorites · Reset to Default · Copy/Paste Value · Copy Property Name | 해당 없음 | 없음 | 없음 |
+| ContentBrowser 타일 · 목록 행 | 뗄 때 | Show in Explorer · Copy Relative/Absolute Path · Find References · Show Dependencies · Check Out/Release Lock/Refresh · 확장 항목 | 아니오(단일 선택 패널). 빈 곳 메뉴 없음 | 패널이 `F2` · `Ctrl+D` · `Delete` 를 처리하지만 메뉴에 Rename · Duplicate · Delete 가 없음 | 없음 |
+| Console 로그 행 | **누를 때 선택**, 뗄 때 메뉴 | Open in IDE · Copy Message · Copy Full Log Line · Copy Selected (n) | **예** — 선택 밖 행이면 그 행만 고르고, 선택 안이면 다중 선택 유지. 유일하게 아래 규칙에 가까움 | `Ctrl+C` 를 손으로 적음 | 없음 |
+| Catalog 셀 | 뗄 때(값 있는 셀만) | Unset attribute | 해당 없음 | 없음 | 없음 |
+| TileMap 캔버스 | — | 메뉴 없음. 오른쪽 · 가운데 끌기 = 화면 이동 | — | — | 문턱 0(누르자마자 이동) |
+| GameView | — | 오른쪽 단추를 게임으로 넘김 | — | — | — |
+| CurveEditor | **누를 때** 바로 열림 | 키 위: Delete Key · Constant/Linear/Cubic · Auto Tangent. 빈 곳: Add Key | 아니오(메뉴용 키 번호를 따로 둠) | 없음 | 없음 |
+| PlayToolbar 시간 배율 | 누를 때 | 메뉴가 아니라 **배율을 1.0 으로 되돌림**(숨은 동작) | — | — | — |
+| DebugHUDControls 항목 | 누를 때 | 섹션 체크 목록 · 배치 설정 | — | — | 없음 |
+| 씬 뷰포트 | 뗄 때 | **확장 항목만**(코어 항목 0 — 확장이 없으면 메뉴 자체가 없음) | 아니오. 커서 아래 오브젝트를 대상으로 넘기기만 함 | 없음 | **있음**: 끌기 문턱(`io.MouseDragThreshold`, 6px)을 넘었거나 그 누름 동안 WASD 로 날았으면 열지 않음. Alt 면 궤도 줌이라 열지 않음 |
+| 뷰포트 오버레이 막대 | 뗄 때 | 막대 메뉴(보이기 · 위치) | — | 없음 | 왼쪽 끌기로 막대를 옮김. 오른쪽은 구분 없음 |
+
+정리하면 빈 곳 메뉴는 Hierarchy 하나뿐이고, 선택 밖 항목 위 우클릭이 선택을 바꾸는 곳은 Console 하나, 다중 선택을 대상으로 삼는 메뉴도 Console 하나입니다. 끌기와 클릭을 가르는 곳은 뷰포트 하나이고, 메뉴의 단축키 글자는 모두 손으로 적었습니다.
+
+### 10-2. 패널이 입력을 직접 읽는 곳(2026-10-27, 39 파일 147 곳)
+
+약어: KP `IsKeyPressed` · KD `IsKeyDown` · KC `IsKeyChordPressed` · MC `IsMouseClicked` · MR `IsMouseReleased` · MDC `IsMouseDoubleClicked` · IC `IsItemClicked` · PCI `BeginPopupContextItem` · PCW `BeginPopupContextWindow` · OP `OpenPopup` · DS/SP `BeginDragDropSource`/`SetDragDropPayload` · DT/AP `BeginDragDropTarget`/`AcceptDragDropPayload`. 경로는 `Source/Editor/` 아래, 숫자는 줄입니다. 이 밖에 `ImGuiIO` 필드(`io.KeyCtrl` · `io.MouseDown` · `io.MouseDelta` · `io.MouseWheel` …)를 직접 읽는 곳이 17 파일 75 줄입니다(`Common/Backend` 제외).
+
+| 파일 | 곳 | 호출(줄) |
+|---|---|---|
+| `Common/Backend/ImGuiKeyForward.cpp` | 8 | KD 109,111,113,115,125 · KP 134,149,151 — OS 입력 전달, 허용 |
+| `Common/GUI/EditorChrome.cpp` | 1 | KP 399 |
+| `Common/GUI/EditorCommandGUI.cpp` | 2 | KP 551,641 — 계층 자신, 허용 |
+| `Common/GUI/EditorDocumentPanel.cpp` | 2 | OP 61,133 |
+| `Common/GUI/EditorMenuBar.cpp` | 1 | OP 348 |
+| `Common/GUI/EditorPlayToolbar.cpp` | 2 | IC 216 · OP 263 |
+| `Common/GUI/IEditorPanel.cpp` | 1 | OP 46 |
+| `Common/Widgets/EditorCurveEditor.cpp` | 5 | MC 223,243,245 · OP 249 · KP 253 |
+| `Common/Widgets/EditorDebugHUDControls.cpp` | 2 | IC 119 · OP 120 |
+| `Common/Widgets/EditorNodeGraph.cpp` | 1 | OP 124 |
+| `Common/Widgets/EditorWidgets.cpp` | 8 | OP 172 · DS 541 · SP 545 · AP 552 · DT 562 · KP 593,599,609 |
+| `Panels/Animation/AnimationGraphPanel.cpp` | 1 | OP 337 |
+| `Panels/Animation/SpriteClipPanel.cpp` | 1 | MC 268 |
+| `Panels/Catalog/CatalogTableEditor.cpp` | 2 | PCI 238 · OP 403 |
+| `Panels/Console/ConsolePanel.cpp` | 6 | OP 420 · KC 476 · MDC 528 · MC 534,536 · PCI 551 |
+| `Panels/ContentBrowser/ContentBrowserPanel.cpp` | 18 | PCI 351 · OP 478,724,1007 · KP 509,667,706,708,710,794,796,803,805 · DT 647 · MDC 768,1341,1402 · IC 1182 |
+| `Panels/InputMap/InputMapPanel.cpp` | 1 | OP 624 |
+| `Panels/Inspector/EditorPropertyGrid.cpp` | 2 | OP 241 · PCI 483 |
+| `Panels/Inspector/InspectorPanel.cpp` | 4 | PCI 347,513 · OP 369,497 |
+| `Panels/Inspector/InspectorPropertyManager.cpp` | 1 | OP 155 |
+| `Panels/MapCheck/MapCheckPanel.cpp` | 1 | MDC 256 |
+| `Panels/Profiler/ProfilerPanel.cpp` | 1 | IC 884 |
+| `Panels/Scene/GameViewPanel.cpp` | 2 | MC 134 · MR 138 — 게임으로 넘기는 전달, 허용 |
+| `Panels/Scene/HierarchyPanel.cpp` | 22 | DS 287 · SP 290 · DT 295,908 · AP 297,910 · PCI 310,374 · OP 338 · IC 497,563 · KP 625,630,955,962,974,984,995,1004,1017,1027 · PCW 927 |
+| `Panels/Scene/SceneViewPanel.cpp` | 1 | OP 57 |
+| `Panels/Settings/GlobalVariablesPanel.cpp` | 1 | OP 303 |
+| `Panels/Settings/ModulesPanel.cpp` | 1 | OP 197 |
+| `Panels/TileMap/TileMapPanel.cpp` | 5 | KP 236,238,240,242 · MC 390 |
+| `Panels/UIPreview/UIPreviewPanel.cpp` | 10 | DT 1144,1744 · AP 1146,1747 · MDC 1193 · DS 1198 · SP 1200 · MC 1687 · MR 1697 · IC 1759 |
+| `Popups/QuickLauncherPopup.cpp` | 1 | KP 293 |
+| `Viewport/EditorColliderHandleTool.cpp` | 1 | MC 219 |
+| `Viewport/EditorPreviewGizmo.cpp` | 1 | MR 53 |
+| `Viewport/EditorViewportCamera.cpp` | 8 | KD 79,81,83,85,87,89 · MC 103 · KP 138 |
+| `Viewport/EditorViewportCanvasOverlay.cpp` | 3 | MC 247,305 · KD 290 |
+| `Viewport/EditorViewportClient.cpp` | 13 | KP 98,127,129,131,133,136,141,143,145,147 · IC 181 · MR 273 · OP 286 |
+| `Viewport/EditorViewportGizmo.cpp` | 2 | MC 145,248 |
+| `Viewport/EditorViewportOverlays.cpp` | 2 | OP 150 · PCI 332 |
+| `Viewport/EditorViewportToolbar.cpp` | 2 | OP 184,222 |
+| `Viewport/TerrainBrushTool.cpp` | 1 | MC 713 |
+
+끌어 놓기 페이로드는 지금 세 형식입니다: 에셋은 상대 경로 문자열(`SW_ASSET_PATH`), 하이어라키 오브젝트는 `uint64` id(`SW_HIERARCHY_GO`), UI 미리보기 팔레트는 위젯 타입 이름(`SW_UIPREVIEW_WIDGET_TYPE`). 받는 쪽이 이름 문자열을 하나씩 비교합니다.
+
+명령 등록부(`EditorCommandRegistry`)의 명령은 인자 없는 `void()` 동작이라 "누른 대상" 을 받을 수 없습니다. 그래서 Duplicate · Delete · Rename · Copy · Paste 같은 대상 명령은 등록부에 없고 패널이 키를 직접 읽어 처리하며, 같은 `Ctrl+D` 를 Hierarchy 와 ContentBrowser 가 포커스 검사로 나눠 갖습니다.
+
+### 10-3. 정한 규칙
+
+상용 엔진 비교는 이 세션에서 공식 문서를 열어 보지 못해 모두 [기억] 입니다(통합이나 다음 작업자가 문서 링크로 바꿉니다). ImGui 동작만 헤더로 확인했습니다.
+
+| 번호 | 규칙 | 비교 |
+|---|---|---|
+| R1 | 우클릭 메뉴는 **뗄 때** 열고, 누른 뒤 끌기 문턱(`io.MouseDragThreshold`, 한 상수)을 넘었거나 그 누름 동안 다른 동작(비행 · 화면 이동)이 있었으면 열지 않는다. 누를 때 여는 곳(CurveEditor · DebugHUD · 시간 배율)은 뗄 때로 바꾼다 | ImGui 기본이 뗄 때. 언리얼 뷰포트는 움직이지 않고 뗀 오른쪽 클릭에 메뉴 [기억] |
+| R2 | 메뉴가 **열리는 프레임**에 대상이 선택 밖이면 그 대상만 선택(바꾸기)하고, 선택 안이면 다중 선택을 그대로 둔다. 빈 곳 우클릭은 선택을 바꾸지 않는다. 누를 때 바꾸지 않는 까닭은 뷰포트에서 누름이 비행이 될 수 있어서다(Console 도 이 시점으로 맞춘다) | 유니티 Hierarchy · 언리얼 아웃라이너 · 고도 씬 트리 모두 선택 밖 항목 우클릭이 그 항목을 고른다 [기억] |
+| R3 | 메뉴의 대상은 **선택 전체**다. 하나에만 뜻이 있는 명령(Rename · Open in IDE)은 다중 선택이면 꺼진다. Hierarchy 의 "누른 한 행에만" 동작은 없앤다 | 유니티 · 언리얼 모두 다중 선택 메뉴가 선택 전체에 작동 [기억] |
+| R4 | 메뉴 항목은 **명령 등록부의 명령 id** 만 가리키고 라벨 · 켜짐 · 단축키 글자는 명령이 정한다(사용자 덮어쓰기가 메뉴에 그대로 보인다). 패널이 `"Ctrl+D"` 같은 글자를 적지 않는다 | 언리얼 `FUICommandInfo` 가 메뉴에 단축키를 함께 그림 [기억] |
+| R5 | 같은 종류의 대상은 어느 패널에서 열어도 **같은 메뉴**다(메뉴 종류 = 대상 종류). 패널 고유 항목은 그 종류의 한 구역으로만 더한다 | 언리얼 `UToolMenus` 의 메뉴 이름 · 구역 [기억] |
+| R6 | 코어 항목은 확장이 없어도 열린다. 켜진 항목이 하나도 없으면 메뉴를 열지 않는다(빈 팝업 금지). 뷰포트 코어 항목은 오브젝트 위: 선택 명령(Frame · Duplicate · Delete …), 빈 곳: 여기에 만들기 · 붙여 넣기 | 언리얼 뷰포트 메뉴는 액터 메뉴를 포함 [기억] |
+| R7 | 뷰포트 · 2D 캔버스(TileMap)는 **오른쪽 끌기 = 비행(2D 는 화면 이동), Alt+오른쪽 끌기 = 궤도 줌, 문턱 이하 뗌 = 메뉴**. TileMap 의 문턱 0 이동도 같은 문턱을 쓴다 | 유니티 씬 뷰 오른쪽 끌기 = 플라이스루, 고도 3D 뷰 오른쪽 누름 = 프리룩 [기억] |
+| R8 | 우클릭에 메뉴가 아닌 숨은 동작을 두지 않는다(시간 배율 1.0 되돌림은 메뉴 항목 "Reset to 1.0" 으로) | — |
+| R9 | 게임 뷰는 오른쪽 단추를 게임에 넘기고 에디터 메뉴를 열지 않는다(지금 그대로) | 유니티 Game 뷰 [기억] |
+
+### 10-4. 입력 · 명령 계층의 형식
+
+목표: 패널은 "이 대상에 이 명령들이 있다" 와 "이 위젯은 이 종류를 끌고 이 종류를 받는다" 만 선언하고, 언제 눌렸는지 · 메뉴를 언제 여는지 · 선택을 언제 바꾸는지는 계층 한 곳이 정합니다. 그러면 R1 ~ R8 을 패널마다 다시 구현할 수 없습니다.
+
+| 형식 | 자리(층) | 내용 |
+|---|---|---|
+| `EditorCommandScope` | `Common/Commands`(3, ImGui 없음) | 명령이 듣는 범위: `Global` · `Panel(EditorPanelID)` · `Viewport` · `TextInput`. 키 조합은 **포커스 창의 범위 → 바깥 → Global** 순으로 찾고, 같은 범위 안 중복은 등록 때 오류다. 같은 `Ctrl+D` 를 Hierarchy 범위와 ContentBrowser 범위가 각자 가질 수 있다 — 지금의 손 포커스 검사를 대신한다. 유니티 단축키 관리자의 컨텍스트, 언리얼 위젯별 `FUICommandList` 와 같은 선 [기억] |
+| `EditorCommandTarget` | `Common/Commands`(3) | 명령이 받는 대상: 종류(`GameObject` · `Component` · `Asset` · `Viewport` · `LogRow` · `Property` · `CurveKey` …), 선택 스냅숏(id 목록), 커서 아래 항목 id, 월드 위치. 지금의 `EditorContextMenuTarget` 을 흡수한다 |
+| 명령 정의 확장 | `EditorCommandRegistry.h` | `_scope`, 대상을 받는 동작 `void(const EditorCommandTarget&)` · 켜짐 `bool(const EditorCommandTarget&)`, 놓일 메뉴 종류 · 순서(`_contextMenus`). 인자 없는 전역 명령은 대상을 무시한다. 확장 항목(`SW_EDITOR_CONTEXT_MENU_ENTRY`)은 이 칸을 채운 등록 줄이 된다 |
+| `EditorInputBinding` | `Common/Commands`(3) | 장치(키 · 마우스 단추) + 수정자 + 몸짓(`Press` · `Release` · `Click`(문턱 이하 뗌) · `Drag` · `DoubleClick`). 문턱은 상수 하나(`kClickDragThreshold`)이고 패널이 숫자를 고르지 않는다. 비행 키(WASD)도 바인딩이다 |
+| `EditorDragPayload` · `EditorPayloadKindSet` | `Common/Commands`(3) | 페이로드는 `{종류, uint64 id}` 하나의 POD. 에셋은 경로 문자열 대신 에셋 id(없으면 이 단위가 경로 → id 표를 둔다), 오브젝트는 오브젝트 id, 위젯 타입은 타입 번호. 받는 쪽은 받을 종류 집합을 넘기고 집합 밖 종류는 계층이 거절한다(문자열 비교 없음) |
+| `EditorInputGUI` | 새 폴더 `Common/Input`(4) | 위 형식을 ImGui 로 옮기는 유일한 곳: 범위 스택(패널 호스트가 그리기 전후로 넣고 뺀다), 바인딩 판정, `drawContextMenuFor( 대상, 메뉴 종류 )` — R1 · R2 · R3 · R6 를 이 함수 하나가 한다, `beginDragSource( 페이로드 )` · `acceptDrop( 받을 종류 집합 )`. `EditorCommandGUI` · `EditorContextMenuExtension.h` 는 이 폴더로 옮긴다 |
+| 게이트 | 아래 | — |
+
+**게이트.** 형식으로 먼저 막고 형식이 못 닿는 틈만 린트로 둡니다.
+
+- 형식: 티어별 오브젝트 라이브러리(`EditorTier<N>Model/View`)가 이미 따로 컴파일되므로, `Panels` · `Viewport` · `AssetActions` 티어에만 강제 include 헤더 `EditorInputBan.h` 를 붙여 위 표의 ImGui 함수를 `[[deprecated("Common/Input 을 쓴다")]]` 로 다시 선언하고 그 티어의 경고를 오류로 올립니다(MSVC `/we4996`, clang · gcc `-Werror=deprecated-declarations`). 패널이 부르면 컴파일이 멈춥니다. 계층 자신(`Common/Input`, 티어 4)은 이 헤더를 받지 않습니다. 남은 호출이 0 이 된 티어부터 켭니다.
+- 린트(`Scripts/lint/gate/CheckEditorInputCalls.py`, 규칙 `Scripts/lint/rules/CheckEditorInputCalls.toml`): 함수 재선언으로 막지 못하는 `ImGuiIO` 필드 읽기(`io.KeyCtrl` · `io.MouseDown` …)와, 형식을 켜기 전 전환 기간의 함수 호출을 셉니다. 기준선은 파일별 상한(10-2 표의 수)이고 늘면 실패, 줄면 표를 줄입니다. 허용 목록은 이유와 함께: `Common/Backend`(OS 입력을 ImGui 로 넣는 곳), `Common/Input`(계층 자신), `Panels/Scene/GameViewPanel.cpp`(게임으로 넘기는 전달), 텍스트 입력 위젯 내부.
+
+**폴더 이동과의 순서.** 이 저장소 문서에서 `Common/GUI` · `Workspace` 이동 계획의 목적지를 찾지 못했습니다. 그래서 새 파일은 이동이 건드리지 않는 곳에 둡니다: ImGui 없는 형식은 `Common/Commands`, ImGui 어댑터는 새 폴더 `Common/Input`(층 표 `GenerateEditorLayers.toml` 에 티어 4 한 줄). 이렇게 하면 이동을 먼저 하든 나중에 하든 새 파일은 두 번 옮겨지지 않습니다. 겹치는 것은 기존 세 파일(`Common/GUI/EditorCommandGUI.*` · `EditorContextMenuExtension.h` · `EditorPopupManager.*`)뿐이므로 **이동 단위가 이 셋의 목적지를 `Common/Input` 으로 정하고 먼저 끝내면** I1 이 옮기지 않고 고치기만 합니다. 이동이 늦으면 I1 이 셋을 `Common/Input` 으로 옮기고 이동 단위는 셋을 목록에서 뺍니다.
+
+### 10-5. 구현 단위와 순서
+
+파일 영역이 겹치지 않게 나눴습니다. I0 · I1 은 차례로, I2 는 I0 와 함께, I3 들은 I1 뒤에 서로 나란히 할 수 있습니다.
+
+| 단위 | 파일 영역 | 할 일 | 선행 |
+|---|---|---|---|
+| I0 형식 | `Common/Commands/`(새 헤더 넷 + `EditorCommandRegistry.*`), EditorTest 새 테스트 | 10-4 의 범위 · 대상 · 바인딩 · 페이로드 형식, 등록부의 범위별 조합 찾기 · 중복 검사, 대상 받는 동작. ImGui 없이 테스트 | — |
+| I1 어댑터 | 새 `Common/Input/`, `GenerateEditorLayers.toml` 한 줄, `Common/GUI/EditorPanelHost.cpp`(범위 넣고 빼기) | `EditorInputGUI`, `drawContextMenuFor`, 끌기 원본 · 받기, `EditorCommandGUI` · 메뉴 확장 헤더 옮김 | I0 |
+| I2 게이트 | `Scripts/lint/gate/CheckEditorInputCalls.py` · 규칙 toml · Python 테스트, `Source/Editor/CMakeLists.txt`(강제 include, 처음엔 꺼 둠), 새 `EditorInputBan.h` | 기준선 = 10-2 표. 허용 목록과 이유 | I0 |
+| I3a 장면 | `Panels/Scene/` | Hierarchy 메뉴 · 단축키 · 끌어 놓기를 계층으로. U4 의 장면 오브젝트 명령을 메뉴에 건다 | I1, U4 |
+| I3b 콘텐츠 | `Panels/ContentBrowser/` | 에셋 명령(Rename · Duplicate · Delete)을 Asset 범위 명령으로, 빈 곳 메뉴, 에셋 id 페이로드 | I1 |
+| I3c 인스펙터 | `Panels/Inspector/` | 컴포넌트 카드 메뉴 하나로(메인 · 미리보기 같게), PropertyGrid 행 메뉴 | I1 |
+| I3d 표 · 목록 패널 | `Panels/Console/` · `Catalog/` · `MapCheck/` · `Profiler/` · `Settings/` · `InputMap/` · `Animation/` | 메뉴 · 키 · 더블클릭을 계층으로 | I1 |
+| I3e 캔버스 패널 | `Panels/TileMap/` · `Panels/UIPreview/` | 오른쪽 끌기 문턱, 팔레트 페이로드 | I1 |
+| I3f 뷰포트 | `Viewport/` | 코어 메뉴 항목(R6), 클릭 · 끌기 판정을 계층으로, 비행 키 바인딩 | I1, U1 과 같은 파일이라 U1 과 한 작업자에게 |
+| I3g 공용 위젯 · 셸 | `Common/Widgets/` · `Common/GUI/`(I1 이 옮긴 셋과 `EditorPanelHost` 밖) · `Popups/` | CurveEditor · DebugHUD · 시간 배율(R1 · R8), 셸 팝업 열기 | I1 |
+| I4 형식 켜기 | `Source/Editor/CMakeLists.txt` · 규칙 toml | 호출이 0 이 된 티어부터 강제 include 를 켜고 기준선을 지운다 | I3 들 |
+
+**다른 단위와의 순서.** U4(장면 오브젝트 명령 공용화)는 대상을 받는 명령 형식이 있어야 한 번에 끝나므로 **I0 · I1 뒤, I3a 앞**입니다(U4 를 먼저 하면 인자 없는 명령으로 만든 뒤 다시 고칩니다). U1(비행)은 `Viewport/EditorViewportCamera.cpp` · `EditorViewportClient.cpp` 를 I3f 와 함께 고치므로 I1 뒤에 I3f 와 묶습니다. U3a · U5 · U6 은 이 문서에서 내용을 확인하지 못했습니다 — 패널 · 뷰포트 파일을 고치는 단위라면 그 영역의 I3 뒤에, 아니면 이 계층과 무관하게 둡니다.
