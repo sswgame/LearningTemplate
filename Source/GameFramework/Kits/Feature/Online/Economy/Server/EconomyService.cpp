@@ -4,6 +4,7 @@
 
 #include "Core/Network/BitStream.h"
 #include "Core/Time/MonotonicClock.h"
+#include "Core/Time/TimePoint.h"
 
 #include "Engine/Observability/MetricRegistry.h"
 
@@ -244,11 +245,10 @@ namespace sw
             (void)host.respondError( context._token, OnlineError::kFeatureDisabled );
             return;
         }
-        EconomyCall call;
+        EconomyCall call{ context._nowMs };
         call._method               = context._method;
         call._accountID            = context._accountID;
         call._idempotencyKey       = context._idempotencyKey;
-        call._nowMs                = context._nowMs;
         FixedReadResult readResult = FixedReadResult::Ok;
         switch ( context._method )
         {
@@ -300,6 +300,8 @@ namespace sw
         _nowMs = nowMs;
         if ( _pStore == nullptr )
             return;
+        if ( _settings._pReceiptRegistry != nullptr )
+            _settings._pReceiptRegistry->update( UnixMilliseconds{ nowMs } ); // 서버 루프의 nowMs 는 유닉스 밀리초다(ServerApp 이 WallClock 으로 준다)
         pollReceipts();
         pollRefunds();
         _metrics.setPendingStoreWorkCount( static_cast<int32>( _listPendingCall.size() ) );
@@ -308,7 +310,7 @@ namespace sw
     void EconomyService::startCall( const EconomyCall& call, PendingCall pending )
     {
         pending._callID              = _nextCallID++;
-        pending._receivedNanoseconds = MonotonicClock::nowNanoseconds();
+        pending._receivedNanoseconds = MonotonicClock::nowNanoseconds(); // 예외 — 지연 지표는 실제 처리 시간을 잰다(가짜 시각으로 재면 뜻이 없다, 프로파일러와 같은 자리)
         pending._accountID           = call._accountID;
         pending._methodIndex         = EconomyMethod::toIndex( call._method );
         _listPendingCall.push_back( pending );
@@ -330,7 +332,7 @@ namespace sw
         if ( call._method == EconomyMethod::kRedeemReceipt )
         {
             const uint64 ticket = _settings._pReceiptRegistry != nullptr
-                                    ? _settings._pReceiptRegistry->submitValidation( call._redeem._storeName, call._redeem._payload, call._accountID )
+                                    ? _settings._pReceiptRegistry->submitValidation( call._redeem._storeName, call._redeem._payload, call._accountID, UnixMilliseconds{ call._nowMs } )
                                     : 0;
             if ( ticket == 0 )
             {
@@ -341,7 +343,7 @@ namespace sw
             _listPendingCall[pendingIndex]._receiptTicket = ticket; // 지급 작업은 검증 결과가 오면 맡긴다(pollReceipts)
             return;
         }
-        const int64                    nowMs = call._nowMs != 0 ? call._nowMs : _nowMs;
+        const int64                    nowMs = call._nowMs;
         unique_ptr<EconomyRequestWork> work  = make_unique<EconomyRequestWork>( this, _settings, pending._callID, pending._methodIndex );
         work->_accountID                     = call._accountID;
         work->_history                       = call._history;

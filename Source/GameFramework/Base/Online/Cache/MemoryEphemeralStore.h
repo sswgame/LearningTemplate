@@ -1,7 +1,7 @@
 /**
  * @file MemoryEphemeralStore.h
  * @brief 메모리 휘발성 저장소입니다. 서버 한 대와 테스트에 씁니다.
- *        데이터(`MemoryEphemeralDatabase`: 고정 가능한 시계, 게으른 만료, 채널 받은편지함)와 프런트(`MemoryEphemeralStore`)가 나뉩니다.
+ *        데이터(`MemoryEphemeralDatabase`: 받은 시계(`IClock`), 게으른 만료, 채널 받은편지함)와 프런트(`MemoryEphemeralStore`)가 나뉩니다.
  * @details - 프런트의 `submit` 은 즉시 실행해 답을 큐에 넣는다(메모리 서비스 저장소와 같은 계약이며 결정적이다). "서버 둘" 테스트는 프런트 둘이 데이터 하나를 쓴다.
  *          - 만료는 읽을 때 지운다(게으른 만료, Valkey 와 같은 관측 결과). `nowMs >= 만료 시각` 이면 없는 것이다.
  *          - 발행은 그 채널을 구독한 앞마다 받은편지함에 넣고, 앞의 `pollMessages` 가 꺼낸다.
@@ -13,6 +13,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Time/Clock.h"
 
 #include "GameFramework/Base/Online/Cache/EphemeralStore.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -26,7 +27,10 @@ namespace sw
     class SW_GF_API MemoryEphemeralDatabase
     {
     public:
-        MemoryEphemeralDatabase();
+        /**
+         * @param clock 만료를 계산하는 시계입니다(운영 `SystemMonotonicClock`, 가짜 시각으로 도는 서버 · 테스트는 `ManualClock`). 데이터보다 오래 살아야 합니다(참조만 든다).
+         */
+        explicit MemoryEphemeralDatabase( const IClock& clock );
 
         /** @brief 요청 하나를 실행해 답을 돌려줍니다(요청 id 는 프런트가 채운다). 보내기 전의 형식 검사는 프런트가 맡습니다. */
         EphemeralReply execute( const EphemeralRequest& request );
@@ -40,10 +44,8 @@ namespace sw
         /** @brief @p inboxID 에 온 메시지를 @p outListMessage 뒤에 붙이고 비웁니다. 붙인 수입니다. */
         int32 takeMessages( uint64 inboxID, vector<EphemeralMessage>& outListMessage );
 
-        /** @brief 시계를 @p nowMs 에 고정합니다(테스트). 그 뒤로는 `advanceTimeMs` 로만 흐른다. */
-        void  setManualTimeMs( int64 nowMs );
-        void  advanceTimeMs( int64 deltaMs );
-        int64 getNowMs() const;
+        /** @brief 받은 시계의 지금 시각(밀리초)입니다. */
+        int64 getNowMs() const { return _clock.nowMilliseconds().count(); }
         /** @brief 값과 정렬 집합을 모두 지웁니다(구독은 남긴다). 테스트의 "캐시 서버가 재시작해 비었다" 에 씁니다. */
         void clearData();
 
@@ -66,7 +68,6 @@ namespace sw
             vector<string>           _listChannel{};
         };
 
-        int64 getNowMsLocked() const;
         /** @brief 만료됐으면 지우고, 살아 있는 값이면 그것입니다. */
         ValueEntry*    findValue( const string& key, int64 nowMs );
         ScoreSetEntry* findScoreSet( const string& key, int64 nowMs );
@@ -77,13 +78,12 @@ namespace sw
         void executeScore( const EphemeralRequest& request, int64 nowMs, EphemeralReply& outReply );
         void executePublish( const EphemeralRequest& request, EphemeralReply& outReply );
 
+        const IClock&                        _clock;
         mutable mutex                        _mutex;
         unordered_map<string, ValueEntry>    _mapValue;
         unordered_map<string, ScoreSetEntry> _mapScoreSet;
         unordered_map<uint64, Inbox>         _mapInbox;
-        int64                                _manualTimeMs;
         uint64                               _nextInboxID;
-        uint8                                _bManualTime;
     };
 } // namespace sw
 

@@ -17,6 +17,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Base/Online/HTTP/HTTPTypes.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -61,8 +62,8 @@ namespace sw
 
         /** @brief 티켓 `ID 토큰|nonce|인가 코드` 를 나눕니다. 인가 코드가 없으면 @p outCode 가 빕니다. */
         static void splitTicket( string_view ticket, string& outIDToken, string& outNonce, string& outCode );
-        /** @brief 지금 쓸 client secret(JWT)을 반환합니다. 서명하지 못하면 빈 글입니다. 테스트가 봅니다. */
-        string makeClientSecret( int64 nowMs );
+        /** @brief 지금 쓸 client secret(JWT)을 반환합니다. 서명하지 못하면 빈 글입니다. 테스트가 봅니다. @p now 는 `iat` · `exp` 의 유닉스 시각입니다. */
+        string makeClientSecret( UnixMilliseconds now );
 
     private:
         struct PendingVerification

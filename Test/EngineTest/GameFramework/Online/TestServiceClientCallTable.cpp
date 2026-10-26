@@ -171,7 +171,8 @@ SW_TEST_CASE( ServiceClientCallTableTest, KitDestroyedDuringReadyNotificationIsS
 {
     LoopbackStreamNetwork   network( 5u );
     MemoryServiceDatabase   database;
-    MemoryEphemeralDatabase cacheDatabase;
+    SystemMonotonicClock    cacheClock;
+    MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     LocalServerBusHub       hub;
     test::OnlineTestServer  server( network, &database, &cacheDatabase, &hub, 1 );
     server.start();
@@ -208,7 +209,8 @@ SW_TEST_CASE( ServiceClientCallTableTest, ResponsesFindTheirOwnDelegateOverLoopb
 {
     LoopbackStreamNetwork   network( 5u );
     MemoryServiceDatabase   database;
-    MemoryEphemeralDatabase cacheDatabase;
+    SystemMonotonicClock    cacheClock;
+    MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     LocalServerBusHub       hub;
     test::OnlineTestServer  server( network, &database, &cacheDatabase, &hub, 1 );
     server.start();
@@ -262,7 +264,8 @@ SW_TEST_CASE( ServiceClientCallTableTest, CancelledRequestsDropTheirAnswersWitho
 {
     LoopbackStreamNetwork   network( 5u );
     MemoryServiceDatabase   database;
-    MemoryEphemeralDatabase cacheDatabase;
+    SystemMonotonicClock    cacheClock;
+    MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     LocalServerBusHub       hub;
     test::OnlineTestServer  server( network, &database, &cacheDatabase, &hub, 1 );
     server.start();

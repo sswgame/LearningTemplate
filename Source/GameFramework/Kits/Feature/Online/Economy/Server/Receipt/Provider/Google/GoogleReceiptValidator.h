@@ -9,7 +9,7 @@
  *            다시 확인할 때 다시 보낸다(확인 상태가 아직 0 이다). 소비 가능 상품의 소비(consume)는 게임이 지급을 마친 뒤의 일이라 여기서 하지 않는다.
  *          - 환불은 `purchases.voidedpurchases.list` 를 주기적으로 조회해(`_voidedPollIntervalMs`) 무효가 된 주문(`orderId`)을 알린다. 실시간 알림(RTDN)은 Pub/Sub 구독 기반 시설이 있어야
  *            하므로 쓰지 않고, 같은 정보를 조회로 받는다. 지난 조회 시각에서 `_voidedLookbackMs` 만큼 겹쳐 읽고 겹친 주문은 한 번만 알린다.
- *          시간은 HTTP 시한용 단조 시계(밀리초)와 조회용 벽시계를 따로 쓴다. 서비스 스레드 하나에서 쓴다.
+ *          시계를 읽지 않는다 — HTTP 시한 · 토큰(JWT `iat`) · 조회 주기 · 취소 목록 구간을 모두 서버 루프가 넘긴 `now`(유닉스 밀리초)로 잰다. 서비스 스레드 하나에서 쓴다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -59,10 +59,12 @@ namespace sw
         ~GoogleReceiptValidator() override;
 
         const utf8* getStoreName() const override { return "google"; }
-        void        submitValidation( const ReceiptValidationRequest& request ) override;
-        void        pollCompletions( vector<ReceiptValidationResult>& outListResult ) override;
-        void        pollRefunds( vector<ReceiptRefundNotice>& outListNotice ) override;
-        void        shutdown() override;
+        void        submitValidation( const ReceiptValidationRequest& request, UnixMilliseconds now ) override;
+        /** @brief HTTP 클라이언트를 돌리고, 주기가 되면 무효 구매 목록을 조회하고, 끝난 응답을 처리합니다. */
+        void update( UnixMilliseconds now ) override;
+        void pollCompletions( vector<ReceiptValidationResult>& outListResult ) override;
+        void pollRefunds( vector<ReceiptRefundNotice>& outListNotice ) override;
+        void shutdown() override;
 
         /** @brief 영수증 `<상품 id>|<구매 토큰>` 을 나눕니다. 두 부분이 `[A-Za-z0-9._-]`(토큰은 `_` · `-` 포함, 1~512 자)가 아니면 false 입니다. */
         static bool splitPayload( string_view payload, string& outProductID, string& outPurchaseToken );
@@ -95,11 +97,10 @@ namespace sw
             Kind              _kind{ Kind::Validate };
         };
 
-        void service();
-        void submitCall( const WaitingCall& call, int64 nowMs );
-        void finishValidation( const PendingValidation& pending, const HTTPClientResponse& response, int64 nowMs );
-        void finishVoided( const HTTPClientResponse& response, int64 nowWall );
-        void flushWaiting( ServiceAccountTokenSource::Outcome outcome, int64 nowMs );
+        void submitCall( const WaitingCall& call, UnixMilliseconds now );
+        void finishValidation( const PendingValidation& pending, const HTTPClientResponse& response, UnixMilliseconds now );
+        void finishVoided( const HTTPClientResponse& response, UnixMilliseconds now );
+        void flushWaiting( ServiceAccountTokenSource::Outcome outcome, UnixMilliseconds now );
         void completeRetry( const PendingValidation& pending, const utf8* pText );
 
         GoogleReceiptSettings              _settings;
@@ -110,9 +111,9 @@ namespace sw
         vector<ReceiptRefundNotice>        _listRefund;
         unordered_set<string>              _uniqueSetNotifiedRefund;
         HTTPClient*                        _pHTTPClient;
-        int64                              _nextVoidedMs;      ///< 단조 시계 — 다음 무효 목록 조회 시각
-        int64                              _lastVoidedUnixMs;  ///< 벽시계 — 지난 성공한 조회의 시작 시각(0 이면 아직 성공한 적이 없다)
-        int64                              _voidedStartUnixMs; ///< 벽시계 — 지금 조회의 시작 시각
+        int64                              _nextVoidedMs;      ///< 다음 무효 목록 조회 시각
+        int64                              _lastVoidedUnixMs;  ///< 지난 성공한 조회의 시작 시각(0 이면 아직 성공한 적이 없다)
+        int64                              _voidedStartUnixMs; ///< 지금 조회의 시작 시각
         uint8                              _bVoidedInFlight;
         uint8                              _bStopped;
     };

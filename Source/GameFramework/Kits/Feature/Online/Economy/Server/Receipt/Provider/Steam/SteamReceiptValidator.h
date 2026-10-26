@@ -9,7 +9,7 @@
  *          - 환불은 `ISteamMicroTxn/GetReport` 를 주기적으로 조회해(`_reportPollIntervalMs`) 환불 상태가 된 주문을 알린다. 한 번에 1000 건까지 읽고, 지난 조회 시각에서
  *            `_reportLookbackMs` 만큼 겹쳐 읽는다(겹친 주문은 한 번만 알린다). 재시작 뒤 겹친 알림은 서비스의 환불 회수가 거래 id 로 한 번만 처리한다.
  *          - 샌드박스 인터페이스(`ISteamMicroTxnSandbox`)를 쓰는 설정이면 결과가 샌드박스 결제로 표시된다 — 서비스가 스테이징 서버가 아니면 거절한다.
- *          시간은 HTTP 시한용 단조 시계(밀리초)와 보고서 조회용 벽시계를 따로 쓴다. 서비스 스레드 하나에서 쓴다.
+ *          시계를 읽지 않는다 — HTTP 시한 · 조회 주기 · 보고서 구간을 모두 서버 루프가 넘긴 `now`(유닉스 밀리초)로 잰다. 서비스 스레드 하나에서 쓴다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -57,10 +57,12 @@ namespace sw
         ~SteamReceiptValidator() override;
 
         const utf8* getStoreName() const override { return "steam"; }
-        void        submitValidation( const ReceiptValidationRequest& request ) override;
-        void        pollCompletions( vector<ReceiptValidationResult>& outListResult ) override;
-        void        pollRefunds( vector<ReceiptRefundNotice>& outListNotice ) override;
-        void        shutdown() override;
+        void        submitValidation( const ReceiptValidationRequest& request, UnixMilliseconds now ) override;
+        /** @brief HTTP 클라이언트를 돌리고, 주기가 되면 환불 보고서를 조회하고, 끝난 응답을 처리합니다. */
+        void update( UnixMilliseconds now ) override;
+        void pollCompletions( vector<ReceiptValidationResult>& outListResult ) override;
+        void pollRefunds( vector<ReceiptRefundNotice>& outListNotice ) override;
+        void shutdown() override;
 
         /** @brief 주문 번호(1~20 자리 십진 숫자)면 true 입니다. 쿼리에 그대로 싣기 전의 검사다. */
         static bool isOrderID( string_view text );
@@ -83,8 +85,6 @@ namespace sw
             string                   _orderID{};
         };
 
-        /** @brief HTTP 클라이언트를 돌리고 끝난 응답을 처리합니다. */
-        void service();
         void finishValidation( const PendingValidation& pending, const HTTPClientResponse& response );
 
         SteamReceiptSettings                     _settings;
@@ -93,9 +93,9 @@ namespace sw
         vector<ReceiptRefundNotice>              _listRefund;
         unordered_set<string>                    _uniqueSetNotifiedRefund;
         HTTPClient*                              _pHTTPClient;
-        int64                                    _nextReportMs;      ///< 단조 시계 — 다음 보고서 조회 시각
-        int64                                    _lastReportUnixMs;  ///< 벽시계 — 지난 성공한 조회의 시작 시각(0 이면 아직 성공한 적이 없다)
-        int64                                    _reportStartUnixMs; ///< 벽시계 — 지금 조회의 시작 시각
+        int64                                    _nextReportMs;      ///< 다음 보고서 조회 시각
+        int64                                    _lastReportUnixMs;  ///< 지난 성공한 조회의 시작 시각(0 이면 아직 성공한 적이 없다)
+        int64                                    _reportStartUnixMs; ///< 지금 조회의 시작 시각
         uint64                                   _reportRequestID;   ///< 0 이면 보고서 요청이 없다
         uint8                                    _bStopped;          ///< `shutdown` 뒤에는 새 요청을 보내지 않는다
     };

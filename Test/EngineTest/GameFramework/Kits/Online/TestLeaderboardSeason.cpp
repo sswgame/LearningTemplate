@@ -92,7 +92,8 @@ namespace
 SW_TEST_CASE( LeaderboardSeasonTest, AchievementUnlocksOnceWithOneRewardMail )
 {
     MemoryServiceDatabase   database;
-    MemoryEphemeralDatabase cacheDatabase;
+    SystemMonotonicClock    cacheClock;
+    MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     SeasonNode              node( &database, &cacheDatabase );
     AchievementDefinition   achievement;
     achievement._achievementID = "ten_wins";
@@ -129,7 +130,8 @@ SW_TEST_CASE( LeaderboardSeasonTest, AchievementUnlocksOnceWithOneRewardMail )
 SW_TEST_CASE( LeaderboardSeasonTest, AchievementProgressShowsStatsAndHidesSecretOnesUntilUnlocked )
 {
     MemoryServiceDatabase   database;
-    MemoryEphemeralDatabase cacheDatabase;
+    SystemMonotonicClock    cacheClock;
+    MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     SeasonNode              node( &database, &cacheDatabase );
     AchievementDefinition   wins;
     wins._achievementID = "ten_wins";
@@ -173,7 +175,8 @@ SW_TEST_CASE( LeaderboardSeasonTest, SettlementRanksRewardsAndIsIdempotent )
 {
     using Internal = LeaderboardSeasonTestInternal;
     MemoryServiceDatabase   database;
-    MemoryEphemeralDatabase cacheDatabase;
+    SystemMonotonicClock    cacheClock;
+    MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     SeasonNode              node( &database, &cacheDatabase );
     SW_ASSERT_TRUE( node._service.registerBoard( Internal::makeSeasonBoard() ) );
     node._service.submitScore( "arena", 1, "a", 50, 500, 1 ); // 시즌 전
@@ -214,7 +217,8 @@ SW_TEST_CASE( LeaderboardSeasonTest, InterruptedSettlementResumesWithoutDuplicat
 {
     using Internal = LeaderboardSeasonTestInternal;
     MemoryServiceDatabase   database;
-    MemoryEphemeralDatabase cacheDatabase;
+    SystemMonotonicClock    cacheClock;
+    MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     SeasonNode              node( &database, &cacheDatabase );
     SW_ASSERT_TRUE( node._service.registerBoard( Internal::makeSeasonBoard() ) );
     node.submitThirtyPlayers();
@@ -238,7 +242,8 @@ SW_TEST_CASE( LeaderboardSeasonTest, ScheduledWindowRunsSettlementOnce )
 {
     using Internal = LeaderboardSeasonTestInternal;
     MemoryServiceDatabase   database;
-    MemoryEphemeralDatabase cacheDatabase;
+    SystemMonotonicClock    cacheClock;
+    MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     SeasonNode              node( &database, &cacheDatabase );
     ServiceScheduler        scheduler;
     scheduler.initialize( &node._store, 1 );
@@ -270,7 +275,8 @@ SW_TEST_CASE( LeaderboardSeasonTest, LargeSettlementRunsInPagesWithContinuousRan
     // 정산은 순위 읽기 일 하나 + 600 명씩 페이지 일 여럿이다 — 시즌 하나가 저장소 워커 하나를 오래 잡지 않는다. 페이지 경계를 넘어도 순위가 이어진다.
     using Internal = LeaderboardSeasonTestInternal;
     MemoryServiceDatabase   database;
-    MemoryEphemeralDatabase cacheDatabase;
+    SystemMonotonicClock    cacheClock;
+    MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     SeasonNode              node( &database, &cacheDatabase );
     SW_ASSERT_TRUE( node._service.registerBoard( Internal::makeSeasonBoard() ) );
     constexpr AccountID kPlayerCount = 1250; // 600 + 600 + 50
@@ -304,11 +310,12 @@ SW_TEST_CASE( LeaderboardSeasonTest, PeriodRanksExpireFromTheCacheAfterTheirPeri
 {
     // 주간 보드의 캐시 순위(정렬 집합)는 그 주가 끝나고 하루 뒤 캐시가 지운다 — 기간마다 쌓이지 않는다. 초기화 없는 보드는 지우지 않는다.
     MemoryServiceDatabase   database;
-    MemoryEphemeralDatabase cacheDatabase;
+    ManualClock             cacheClock{ 1000000 };
+    MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     constexpr int64         kNowMs  = 1767225600000; // 2026-01-01 00:00 UTC(목요일)
     constexpr int64         kWeekMs = 604800000;
     constexpr int64         kDayMs  = 86400000;
-    cacheDatabase.setManualTimeMs( kNowMs );
+    cacheClock.setMilliseconds( kNowMs );
     SeasonNode            node( &database, &cacheDatabase );
     LeaderboardDefinition weekly;
     weekly._boardID = "weekly";
@@ -326,9 +333,9 @@ SW_TEST_CASE( LeaderboardSeasonTest, PeriodRanksExpireFromTheCacheAfterTheirPeri
     const string foreverKey = LeaderboardService::makeRankKey( "forever", 0 );
     SW_EXPECT_EQUAL( cacheDatabase.execute( EphemeralRequest::makeScoreRange( weeklyKey, 0, 10 ) )._listMember.size(), size_t( 1 ) );
 
-    cacheDatabase.setManualTimeMs( static_cast<int64>( weekStart ) + kWeekMs + kDayMs - 1 ); // 끝나고 하루 안 — 아직 있다
+    cacheClock.setMilliseconds( static_cast<int64>( weekStart ) + kWeekMs + kDayMs - 1 ); // 끝나고 하루 안 — 아직 있다
     SW_EXPECT_EQUAL( cacheDatabase.execute( EphemeralRequest::makeScoreRange( weeklyKey, 0, 10 ) )._listMember.size(), size_t( 1 ) );
-    cacheDatabase.setManualTimeMs( static_cast<int64>( weekStart ) + kWeekMs + kDayMs + 1 );
+    cacheClock.setMilliseconds( static_cast<int64>( weekStart ) + kWeekMs + kDayMs + 1 );
     SW_EXPECT_TRUE( cacheDatabase.execute( EphemeralRequest::makeScoreRange( weeklyKey, 0, 10 ) )._listMember.empty() );
     SW_EXPECT_EQUAL( cacheDatabase.execute( EphemeralRequest::makeScoreRange( foreverKey, 0, 10 ) )._listMember.size(), size_t( 1 ) );
 }

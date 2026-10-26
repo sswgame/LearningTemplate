@@ -115,7 +115,6 @@ namespace sw
         AdminServiceConfig  _settings;
         IServiceStore*      _pStore;
         uint64              _nextCallID;
-        int64               _nowMs;
         int32               _pendingSeedCount;
     };
 } // namespace sw

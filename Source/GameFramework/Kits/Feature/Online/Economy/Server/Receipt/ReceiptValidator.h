@@ -11,6 +11,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Time/TimePoint.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -69,7 +70,12 @@ namespace sw
 
 namespace sw
 {
-    /** @class IReceiptValidator @brief 스토어 하나의 검증 제공자입니다. 서비스 스레드가 `submitValidation` 과 `pollCompletions` 를 부릅니다. */
+    /**
+     * @class IReceiptValidator
+     * @brief 스토어 하나의 검증 제공자입니다. 서비스 스레드가 `submitValidation` · `update` · `pollCompletions` 를 부릅니다.
+     * @details 제공자는 시계를 직접 읽지 않는다. 시각은 서버 루프의 `now`(유닉스 밀리초)를 인자로 받는다 — HTTP 시한과 환불 보고 조회 주기를
+     *          같은 값으로 측정하고, 테스트는 가짜 시각을 넣어 조회 주기를 밀어 본다.
+     */
     class SW_KIT_SERVER_API IReceiptValidator
     {
     public:
@@ -83,9 +89,11 @@ namespace sw
         virtual const utf8* getStoreName() const = 0;
         /** @brief 개발과 테스트 전용 제공자이면 true 입니다. 서명이 없으므로 Shipping 서비스가 거절합니다. */
         virtual bool isDevelopmentOnly() const { return false; }
-        /** @brief 검증을 맡깁니다. 결과는 정확히 한 번 `pollCompletions` 로 나오며, 종료할 때 남은 것은 Retry 로 나옵니다. */
-        virtual void submitValidation( const ReceiptValidationRequest& request ) = 0;
-        /** @brief 끝난 결과를 @p outListResult 뒤에 붙입니다. */
+        /** @brief 검증을 맡깁니다(@p now 는 서버 루프의 시각). 결과는 정확히 한 번 `pollCompletions` 로 나오며, 종료할 때 남은 것은 Retry 로 나옵니다. */
+        virtual void submitValidation( const ReceiptValidationRequest& request, UnixMilliseconds now ) = 0;
+        /** @brief 서버 루프의 시각 @p now 로 스토어 통신을 진행합니다(응답 처리 · 시한 · 주기 조회). 결과는 `pollCompletions` · `pollRefunds` 가 꺼냅니다. */
+        virtual void update( UnixMilliseconds now ) = 0;
+        /** @brief 끝난 결과를 @p outListResult 뒤에 붙입니다. 진행은 하지 않습니다(`update`). */
         virtual void pollCompletions( vector<ReceiptValidationResult>& outListResult ) = 0;
         /** @brief 받은 환불 알림을 @p outListNotice 뒤에 붙입니다. 제공자마다 알림을 받는 길(웹훅, 구독, 보고 조회)이 다르므로 기본 구현을 두지 않습니다. */
         virtual void pollRefunds( vector<ReceiptRefundNotice>& outListNotice ) = 0;
@@ -107,10 +115,12 @@ namespace sw
         /** @brief 개발 전용 제공자가 하나라도 있으면 true 입니다. */
         bool hasDevelopmentValidator() const;
         /** @brief 검증을 맡기고 번호를 반환합니다. 모르는 스토어이면 0을 반환하며 맡기지 않습니다. */
-        uint64 submitValidation( string_view storeName, string_view payload, uint64 accountID );
-        void   pollCompletions( vector<ReceiptValidationResult>& outListResult );
-        void   pollRefunds( vector<ReceiptRefundNotice>& outListNotice );
-        void   shutdown();
+        uint64 submitValidation( string_view storeName, string_view payload, uint64 accountID, UnixMilliseconds now );
+        /** @brief 모든 제공자를 서버 루프의 시각 @p now 로 진행합니다. */
+        void update( UnixMilliseconds now );
+        void pollCompletions( vector<ReceiptValidationResult>& outListResult );
+        void pollRefunds( vector<ReceiptRefundNotice>& outListNotice );
+        void shutdown();
 
     private:
         vector<IReceiptValidator*> _listValidator;

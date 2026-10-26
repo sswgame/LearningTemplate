@@ -12,7 +12,7 @@
  *            서버 알림(웹훅)은 바깥에서 받는 시설이 있어야 해서 쓰지 않는다. 쪽(`hasMore`)이 이어지면 `paginationToken` 으로 한 주기에 열 쪽까지 읽는다.
  *            지난 성공 시각보다 이틀 앞에서 읽고 겹친 거래는 한 번만 알린다.
  *          - `sandbox` 설정이면 샌드박스 서버(`api.storekit-sandbox`)를 쓴다(스테이징 서버).
- *          시간은 HTTP 시한용 단조 시계(밀리초)와 JWT · 조회용 벽시계를 따로 쓴다. 서비스 스레드 하나에서 쓴다.
+ *          시계를 읽지 않는다 — HTTP 시한 · JWT · 서명 검증 시각 · 조회 주기 · 이력 구간을 모두 서버 루프가 넘긴 `now`(유닉스 밀리초)로 잰다. 서비스 스레드 하나에서 쓴다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -70,10 +70,12 @@ namespace sw
         ~AppleReceiptValidator() override;
 
         const utf8* getStoreName() const override { return "apple"; }
-        void        submitValidation( const ReceiptValidationRequest& request ) override;
-        void        pollCompletions( vector<ReceiptValidationResult>& outListResult ) override;
-        void        pollRefunds( vector<ReceiptRefundNotice>& outListNotice ) override;
-        void        shutdown() override;
+        void        submitValidation( const ReceiptValidationRequest& request, UnixMilliseconds now ) override;
+        /** @brief HTTP 클라이언트를 돌리고, 주기가 되면 환불 알림 기록을 조회하고, 끝난 응답을 처리합니다. */
+        void update( UnixMilliseconds now ) override;
+        void pollCompletions( vector<ReceiptValidationResult>& outListResult ) override;
+        void pollRefunds( vector<ReceiptRefundNotice>& outListNotice ) override;
+        void shutdown() override;
 
         /** @brief 거래 id(1~20 자리 십진 숫자)면 true 입니다. 경로에 그대로 싣기 전의 검사다. */
         static bool isTransactionID( string_view text );
@@ -98,12 +100,11 @@ namespace sw
             Kind                     _kind{ Kind::Validate };
         };
 
-        void   service();
-        string makeAuthorization( int64 nowWallMs );
-        void   submitCall( const Call& call, string_view paginationToken, int64 nowMs, int64 nowWallMs );
-        void   startHistory( int64 nowMs, int64 nowWallMs );
-        void   finishValidation( const Call& call, const HTTPClientResponse& response, int64 nowWallMs );
-        void   finishHistory( const Call& call, const HTTPClientResponse& response, int64 nowMs, int64 nowWallMs );
+        string makeAuthorization( UnixMilliseconds now );
+        void   submitCall( const Call& call, string_view paginationToken, UnixMilliseconds now );
+        void   startHistory( UnixMilliseconds now );
+        void   finishValidation( const Call& call, const HTTPClientResponse& response, UnixMilliseconds now );
+        void   finishHistory( const Call& call, const HTTPClientResponse& response, UnixMilliseconds now );
         void   completeRetry( const ReceiptValidationRequest& request, const utf8* pText );
 
         AppleReceiptSettings            _settings;
@@ -115,9 +116,9 @@ namespace sw
         INetSecurityProvider*           _pSecurity;
         HTTPClient*                     _pHTTPClient;
         int64                           _authExpiresWallMs;
-        int64                           _nextHistoryMs;      ///< 단조 시계 — 다음 알림 기록 조회 시각
-        int64                           _lastHistoryUnixMs;  ///< 벽시계 — 지난 성공한 조회의 시작 시각(0 이면 아직 성공한 적이 없다)
-        int64                           _historyStartUnixMs; ///< 벽시계 — 지금 조회의 시작 시각
+        int64                           _nextHistoryMs;      ///< 다음 알림 기록 조회 시각
+        int64                           _lastHistoryUnixMs;  ///< 지난 성공한 조회의 시작 시각(0 이면 아직 성공한 적이 없다)
+        int64                           _historyStartUnixMs; ///< 지금 조회의 시작 시각
         uint8                           _bHistoryInFlight;
         uint8                           _bStopped;
     };

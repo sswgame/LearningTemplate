@@ -300,10 +300,9 @@ SW_TEST_CASE( MailboxTest, ServiceClaimNeedsAKeyAndSweepsOnItsPeriod )
     SW_ASSERT_TRUE( service.initialize( &store, settings ) );
     const string mailKey = fixture.send( "svc", LedgerHolder::makeMint(), 7, 1000, 4000 );
 
-    MailboxCall claimCall;
+    MailboxCall claimCall{ 2000 };
     claimCall._method           = MailboxMethod::kClaim;
     claimCall._accountID        = MailFixture::kOwner;
-    claimCall._nowMs            = 2000;
     claimCall._request._mailKey = mailKey;
     MailboxReplyCapture noKey;
     service.submitCall( claimCall, noKey.makeDelegate() );

@@ -100,7 +100,8 @@ SW_TEST_CASE( ServerBusTest, LocalBusesDeliverOnlyToSubscribers )
 
 SW_TEST_CASE( ServerBusTest, EphemeralBusesDeliverOnlyToSubscribers )
 {
-    MemoryEphemeralDatabase database;
+    SystemMonotonicClock    clock;
+    MemoryEphemeralDatabase database{ clock };
     MemoryEphemeralStore    cacheA{ &database };
     MemoryEphemeralStore    cacheB{ &database };
     EphemeralStoreRouter    routerA;
@@ -145,7 +146,8 @@ SW_TEST_CASE( ServerBusTest, TopicWritesAndReadsOnlyItsBodyType )
 
 SW_TEST_CASE( ServerBusTest, EphemeralBusSharesTheCacheFrontWithOtherServices )
 {
-    MemoryEphemeralDatabase database;
+    SystemMonotonicClock    clock;
+    MemoryEphemeralDatabase database{ clock };
     MemoryEphemeralStore    cache{ &database };
     EphemeralStoreRouter    router;
     router.initialize( &cache );

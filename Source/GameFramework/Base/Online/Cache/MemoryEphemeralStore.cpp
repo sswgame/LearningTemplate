@@ -4,7 +4,6 @@
 
 #include "Core/Container/CompareUtil.h"
 #include "Core/Container/VectorUtil.h"
-#include "Core/Time/MonotonicClock.h"
 
 #include <algorithm>
 #include <charconv>
@@ -73,14 +72,13 @@ namespace sw
 
 namespace sw
 {
-    MemoryEphemeralDatabase::MemoryEphemeralDatabase()
-        : _mutex{}
+    MemoryEphemeralDatabase::MemoryEphemeralDatabase( const IClock& clock )
+        : _clock{ clock }
+        , _mutex{}
         , _mapValue{}
         , _mapScoreSet{}
         , _mapInbox{}
-        , _manualTimeMs{ 0 }
         , _nextInboxID{ 1 }
-        , _bManualTime{ SW_FALSE }
     {
     }
 
@@ -89,7 +87,7 @@ namespace sw
         EphemeralReply reply;
         reply._operation = request._operation;
         std::scoped_lock<mutex> lock{ _mutex };
-        const int64             nowMs = getNowMsLocked();
+        const int64             nowMs = _clock.nowMilliseconds().count(); // 만료는 같은 시계 안의 차이로만 잰다
         switch ( request._operation )
         {
             case EphemeralOperation::Get:
@@ -178,37 +176,6 @@ namespace sw
         std::scoped_lock<mutex> lock{ _mutex };
         _mapValue.clear();
         _mapScoreSet.clear();
-    }
-
-    void MemoryEphemeralDatabase::setManualTimeMs( int64 nowMs )
-    {
-        std::scoped_lock<mutex> lock{ _mutex };
-        _manualTimeMs = nowMs;
-        _bManualTime  = SW_TRUE;
-    }
-
-    void MemoryEphemeralDatabase::advanceTimeMs( int64 deltaMs )
-    {
-        std::scoped_lock<mutex> lock{ _mutex };
-        if ( _bManualTime == SW_FALSE )
-        {
-            _manualTimeMs = getNowMsLocked();
-            _bManualTime  = SW_TRUE;
-        }
-        _manualTimeMs += deltaMs;
-    }
-
-    int64 MemoryEphemeralDatabase::getNowMs() const
-    {
-        std::scoped_lock<mutex> lock{ _mutex };
-        return getNowMsLocked();
-    }
-
-    int64 MemoryEphemeralDatabase::getNowMsLocked() const
-    {
-        if ( _bManualTime == SW_TRUE )
-            return _manualTimeMs;
-        return MonotonicClock::nowNanoseconds() / constant::kNanosecondsPerMillisecond;
     }
 
     MemoryEphemeralDatabase::ValueEntry* MemoryEphemeralDatabase::findValue( const string& key, int64 nowMs )

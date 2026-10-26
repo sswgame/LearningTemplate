@@ -87,13 +87,13 @@ namespace sw
             outCode = string( rest.substr( secondBar + 1 ) );
     }
 
-    string AppleLoginProvider::makeClientSecret( int64 nowMs )
+    string AppleLoginProvider::makeClientSecret( UnixMilliseconds now )
     {
         using Internal = AppleLoginProviderInternal;
-        if ( _clientSecret.empty() == false && nowMs + Internal::kSecretRefreshMarginMs < _secretExpiresMs )
+        if ( _clientSecret.empty() == false && now.count() + Internal::kSecretRefreshMarginMs < _secretExpiresMs )
             return _clientSecret;
-        const int64  issuedAtSec = nowMs / constant::kMillisecondsPerSecond;
-        const int64  expiresAtMs = nowMs + Internal::kSecretLifetimeMs;
+        const int64  issuedAtSec = now.toSeconds();
+        const int64  expiresAtMs = now.count() + Internal::kSecretLifetimeMs;
         const string clientID    = _settings._listClientID.empty() ? string() : _settings._listClientID.front();
         const string payload     = "{\"iss\":" + Internal::quote( _settings._teamID ) + ",\"iat\":" + to_string( issuedAtSec ) +
                                ",\"exp\":" + to_string( expiresAtMs / constant::kMillisecondsPerSecond ) + ",\"aud\":" + Internal::quote( kAudience ) +
@@ -139,7 +139,7 @@ namespace sw
 
     void AppleLoginProvider::submitExchange( PendingVerification& pending, int64 nowMs )
     {
-        const string clientSecret = makeClientSecret( nowMs );
+        const string clientSecret = makeClientSecret( UnixMilliseconds{ nowMs } ); // 서버 루프의 nowMs 는 유닉스 밀리초다
         if ( clientSecret.empty() )
         {
             _listDone.push_back( pending._verified ); // 연동 비밀 없이 끝낸다 — 로그인은 성공이다
@@ -240,7 +240,7 @@ namespace sw
     uint64 AppleLoginProvider::submitRevocation( string_view linkSecret, int64 nowMs )
     {
         const uint64 revocationID = _nextRevocationID++;
-        const string clientSecret = makeClientSecret( nowMs );
+        const string clientSecret = makeClientSecret( UnixMilliseconds{ nowMs } ); // 서버 루프의 nowMs 는 유닉스 밀리초다
         if ( clientSecret.empty() )
         {
             PlatformLoginRevocation& done = _listRevocationDone.emplace_back();

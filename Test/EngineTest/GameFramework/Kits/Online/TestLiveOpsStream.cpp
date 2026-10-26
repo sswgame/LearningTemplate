@@ -73,7 +73,8 @@ SW_TEST_CASE( LiveOpsStreamTest, ClientRefreshesWhenOperationsPutAnEvent )
 {
     LoopbackStreamNetwork   network( 3u );
     MemoryServiceDatabase   database;
-    MemoryEphemeralDatabase cacheDatabase;
+    SystemMonotonicClock    cacheClock;
+    MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     LocalServerBusHub       hub;
     LiveOpsOnServer         liveOps;
     test::OnlineTestServer  server( network, &database, &cacheDatabase, &hub, 1 );
@@ -119,7 +120,8 @@ SW_TEST_CASE( LiveOpsStreamTest, DeviceRegistrationOverTheWireReachesTheDispatch
 {
     LoopbackStreamNetwork      network( 3u );
     MemoryServiceDatabase      database;
-    MemoryEphemeralDatabase    cacheDatabase;
+    SystemMonotonicClock       cacheClock;
+    MemoryEphemeralDatabase    cacheDatabase{ cacheClock };
     LocalServerBusHub          hub;
     FakePushProvider           provider;
     PushNotificationDispatcher dispatcher;

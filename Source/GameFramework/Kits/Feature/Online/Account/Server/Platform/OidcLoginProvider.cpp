@@ -85,7 +85,7 @@ namespace sw
             }
             PlatformLoginVerification verification;
             verification._verificationID = pending._verificationID;
-            if ( evaluate( pending, nowMs, verification ) == Decision::NeedKey )
+            if ( evaluate( pending, UnixMilliseconds{ nowMs }, verification ) == Decision::NeedKey ) // 서버 루프의 nowMs 는 유닉스 밀리초다
             {
                 const bool bAlreadyWaited = pending._waitedFetchGeneration != 0;
                 const bool bCanRefetch    = _jwksRequestID != 0 || _jwksFetchCount == 0 || nowMs - _lastFetchStartMs >= _settings._minRefetchMs;
@@ -119,7 +119,7 @@ namespace sw
         ++_jwksFetchCount;
     }
 
-    OidcLoginProvider::Decision OidcLoginProvider::evaluate( const PendingTicket& pending, int64 nowMs, PlatformLoginVerification& outVerification )
+    OidcLoginProvider::Decision OidcLoginProvider::evaluate( const PendingTicket& pending, UnixMilliseconds now, PlatformLoginVerification& outVerification )
     {
         JSONWebToken token;
         if ( token.parse( pending._token ) == false )
@@ -146,8 +146,8 @@ namespace sw
             bAudience = bAudience || token.hasAudience( clientID );
         }
         const bool bIssuerOk      = token.findText( "iss", issuer ) && issuer == _settings._issuer;
-        const bool bExpiresOk     = token.findInteger( "exp", expiresAt ) && nowMs < expiresAt * constant::kMillisecondsPerSecond + _settings._clockSkewMs;
-        const bool bIssuedOk      = token.findInteger( "iat", issuedAt ) == false || issuedAt * constant::kMillisecondsPerSecond <= nowMs + _settings._clockSkewMs;
+        const bool bExpiresOk     = token.findInteger( "exp", expiresAt ) && now.count() < expiresAt * constant::kMillisecondsPerSecond + _settings._clockSkewMs;
+        const bool bIssuedOk      = token.findInteger( "iat", issuedAt ) == false || issuedAt * constant::kMillisecondsPerSecond <= now.count() + _settings._clockSkewMs;
         const bool bNonceOk       = _settings._bRequireNonce == SW_FALSE || ( pending._nonce.empty() == false && token.findText( "nonce", nonce ) && nonce == pending._nonce );
         const bool bSubjectOk     = token.findText( _settings._subjectPath, subject ) && subject.empty() == false;
         const bool bTokenRejected = bAudience == false || bIssuerOk == false || bExpiresOk == false || bIssuedOk == false || bNonceOk == false || bSubjectOk == false;
