@@ -32,8 +32,8 @@ namespace sw::editor
         void processOrbitInput();
         /** @brief 원근 보기의 휠 줌입니다. 궤도 중심을 두고 궤도 거리를 거리에 비례해 줄이거나 늘립니다(@p mouseWheel 이 양수면 가까워진다). */
         void dolly( float32 mouseWheel );
-        /** @brief 가운데 단추 팬입니다. 마우스 이동 픽셀(@p pixelX, @p pixelY)만큼 화면 평면에서 카메라와 궤도 중심을 같이 옮깁니다. */
-        void pan( float32 pixelX, float32 pixelY );
+        /** @brief 가운데 단추 팬입니다. 마우스 이동 픽셀(@p pixelX, @p pixelY)만큼 화면 평면에서 카메라와 궤도 중심을 같이 옮깁니다. @p viewportHeightPixels 는 뷰포트의 실제 높이이고 0 이하이면 옮기지 않습니다. */
+        void pan( float32 pixelX, float32 pixelY, float32 viewportHeightPixels );
         /** @brief 숫자 키 1~9 북마크입니다. Ctrl 과 함께 누르면 저장하고, 수식 키 없이 누르면 불러옵니다. */
         void processBookmarkKeys();
 

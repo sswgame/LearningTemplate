@@ -115,7 +115,7 @@ namespace sw::editor
             else
             {
                 if ( io.MouseDown[2] && bWindowHovered )
-                    _camera.pan( io.MouseDelta.x, io.MouseDelta.y );
+                    _camera.pan( io.MouseDelta.x, io.MouseDelta.y, _canvasHeight );
                 if ( bWheel )
                 {
                     if ( _camera.isOrthographicView() )
@@ -185,6 +185,7 @@ namespace sw::editor
 
     void EditorViewportClient::draw( const void* pTextureID, const float2& canvasSize )
     {
+        _canvasHeight         = canvasSize._y; // 팬이 마우스 픽셀을 월드 길이로 바꾸는 데 쓴다(다음 프레임의 update)
         const ImVec2 imagePos = ImGui::GetCursorScreenPos();
         if ( pTextureID != nullptr )
             ImGui::Image( reinterpret_cast<ImTextureID>( pTextureID ), ImVec2{ canvasSize._x, canvasSize._y } );
