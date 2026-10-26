@@ -57,11 +57,12 @@ namespace sw
         IStreamTransport*       _pAdminTransport{ nullptr }; ///< `_bAdminListener` 일 때 GM 리슨의 전송. 빌려 쓴다. null 이면 플랫폼 전송을 만든다
         MetricRegistry*         _pMetricRegistry{ nullptr };
         ServiceHealthRegistry*  _pHealthRegistry{ nullptr };
-        uint16                  _gamePort{ 0 };                ///< 디렉터리에 알릴 게임(UDP) 포트(샤드 여럿이면 첫 포트)
-        uint8                   _gamePortCount{ 1 };           ///< 디렉터리에 알릴 게임 포트 수(`ServerDescriptor::_portCount` — 연이은 포트 샤드 수, 한 포트를 나누면 1)
-        uint8                   _bTLS{ SW_TRUE };              ///< 서비스 스트림을 TLS 1.3 으로 받는다(테스트와 봇은 끈다)
-        uint8                   _bManualCacheTime{ SW_FALSE }; ///< 메모리 캐시의 만료를 `tick` 의 시각으로 측정한다(가짜 시각 테스트, 봇)
-        uint8                   _bAdminListener{ SW_FALSE };   ///< GM 리슨을 따로 연다(`OnlineServiceExposure`). 끄면 서비스 리슨 하나가 GM 서비스도 받는다
+        uint16                  _gamePort{ 0 };                           ///< 디렉터리에 알릴 게임(UDP) 포트(샤드 여럿이면 첫 포트)
+        uint8                   _gamePortCount{ 1 };                      ///< 디렉터리에 알릴 게임 포트 수(`ServerDescriptor::_portCount` — 연이은 포트 샤드 수, 한 포트를 나누면 1)
+        uint8                   _bTLS{ SW_TRUE };                         ///< 서비스 스트림을 TLS 1.3 으로 받는다(테스트와 봇은 끈다)
+        uint8                   _bManualCacheTime{ SW_FALSE };            ///< 메모리 캐시의 만료를 `tick` 의 시각으로 측정한다(가짜 시각 테스트, 봇)
+        uint8                   _bAdminListener{ SW_FALSE };              ///< GM 리슨을 따로 연다(`OnlineServiceExposure`). 끄면 서비스 리슨 하나가 GM 서비스도 받는다
+        uint8                   _bReverseIndependentKitOrder{ SW_FALSE }; ///< 의존이 없는 키트끼리를 이름 역순으로 세운다(테스트 — 적지 않은 의존을 이름 순서가 가리는지 잡는다)
     };
 } // namespace sw
 
@@ -107,7 +108,7 @@ namespace sw
 
         [[nodiscard]] bool createStores( OnlineServerRuntimeConfig& settings, int64 nowMs, string& outError );
         /** @brief 설정의 키트를 만들어 노드로 더합니다(모르는 키트 · 두 번 적은 키트 · 설정에 없는 필수 키트는 오류). */
-        [[nodiscard]] bool addKits( string& outError );
+        [[nodiscard]] bool addKits( bool bReverseIndependentOrder, string& outError );
         [[nodiscard]] bool startHost( OnlineServerRuntimeConfig& settings, string& outError );
         [[nodiscard]] bool registerServer( string& outError );
 

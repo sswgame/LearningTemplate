@@ -85,6 +85,44 @@ SW_TEST_CASE( OnlineServerKitsTest, AccountMailboxTradeAndAdminAssembleAndShutDo
     runtime.shutdown();
 }
 
+SW_TEST_CASE( OnlineServerKitsTest, AssemblyDoesNotLeanOnTheNameOrderOfIndependentKits )
+{
+#if defined( SW_SHIPPING )
+    SW_TEST_REQUIRES_FEATURE( DevelopmentBuild ); // the shipping account kit refuses development options and needs a real ticket key secret
+#endif
+    // 의존이 없는 키트끼리는 이름 순으로 서는데, 그 순서에 기댄 조립(적지 않은 의존)은 이름 역순으로 세우면 드러난다. 두 순서 모두 서고 내려가야 한다.
+    using Internal = OnlineServerKitsTestInternal;
+    for ( const uint8 bReverse : { SW_FALSE, SW_TRUE } )
+    {
+        LoopbackStreamNetwork        network;
+        unique_ptr<IStreamTransport> transport = network.createTransport();
+        OnlineServerRuntimeConfig    settings  = Internal::makeSettings( transport.get(), 7466 );
+        settings._bReverseIndependentKitOrder  = bReverse;
+        Internal::addOption( Internal::addKit( settings, "account" ), "lightPasswordHash", "1" );
+        (void)Internal::addKit( settings, "social" );
+        Internal::addOption( Internal::addKit( settings, "chat" ), "bannedWords", "none" );
+        (void)Internal::addKit( settings, "directory" );
+        (void)Internal::addKit( settings, "liveops" );
+        (void)Internal::addKit( settings, "mailbox" );
+        Internal::addOption( Internal::addKit( settings, "trade" ), "tradable", "cur.gold" );
+        (void)Internal::addKit( settings, "admin" );
+        OnlineServerRuntime runtime;
+        string              error;
+        SW_ASSERT_TRUE_MSG( runtime.initialize( settings, Internal::kStartMs, error ), error.c_str() );
+        vector<string> listKitName;
+        runtime.collectKitNames( listKitName );
+        SW_ASSERT_EQUAL( listKitName.size(), size_t( 8 ) );
+        // 이름 순이면 GM 키트가 앞쪽, 역순이면 뒤쪽이다 — 두 순서가 실제로 달랐는지 본다.
+        const bool bAdminBeforeTrade = std::find( listKitName.begin(), listKitName.end(), "admin" ) < std::find( listKitName.begin(), listKitName.end(), "trade" );
+        SW_EXPECT_TRUE( bAdminBeforeTrade == ( bReverse == SW_FALSE ) );
+        for ( int32 tickIndex = 0; tickIndex < 3; ++tickIndex )
+        {
+            runtime.update( Internal::kStartMs + tickIndex * 100 );
+        }
+        runtime.shutdown();
+    }
+}
+
 SW_TEST_CASE( OnlineServerKitsTest, StartupStopsOnUnknownOptionsAndMissingDependencies )
 {
     using Internal = OnlineServerKitsTestInternal;

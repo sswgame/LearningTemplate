@@ -140,7 +140,54 @@ namespace sw
             void          update( int64 nowMs ) { _kit->update( nowMs ); }
             const string& getKitName() const { return _entry._name; }
 
+            /**
+             * @brief 의존이 없는 키트끼리의 순서를 이름 역순으로 못 박습니다(`OnlineServerRuntimeConfig::_bReverseIndependentKitOrder`).
+             * @details 컬렉션은 준비된 노드가 여럿이면 이름 순으로 세운다. 이름 역순으로 고른 위상 순서대로 앞 노드를 의존에 더해, 이름 순에 기댄 조립(적지 않은 의존)이
+             *          테스트에서 드러나게 한다. 순환이 있으면 거기서 멈춘다 — 그 오류는 컬렉션 정렬이 알린다.
+             */
+            static void chainReverseNameOrder( vector<unique_ptr<OnlineServerKitNode>>& inoutListNode )
+            {
+                const size_t  nodeCount = inoutListNode.size();
+                vector<uint8> listPlaced( nodeCount, SW_FALSE );
+                const utf8*   pPrevious = nullptr;
+                for ( size_t placedCount = 0; placedCount < nodeCount; ++placedCount )
+                {
+                    size_t pick = nodeCount;
+                    for ( size_t index = 0; index < nodeCount; ++index )
+                    {
+                        const bool bCandidate = listPlaced[index] == SW_FALSE && isReady( inoutListNode, listPlaced, index );
+                        const bool bLaterName = pick == nodeCount || string_view( inoutListNode[index]->_pName ) > string_view( inoutListNode[pick]->_pName );
+                        if ( bCandidate && bLaterName )
+                            pick = index;
+                    }
+                    if ( pick == nodeCount )
+                        return;
+                    if ( pPrevious != nullptr )
+                        inoutListNode[pick]->_listDependency.push_back( pPrevious );
+                    listPlaced[pick] = SW_TRUE;
+                    pPrevious        = inoutListNode[pick]->_pName;
+                }
+            }
+
         private:
+            /** @brief @p index 노드의 의존(기반 노드 말고)이 모두 놓였는지입니다. */
+            static bool isReady( const vector<unique_ptr<OnlineServerKitNode>>& listNode, const vector<uint8>& listPlaced, size_t index )
+            {
+                for ( const utf8* pDependency : listNode[index]->_listDependency )
+                {
+                    if ( string_view( pDependency ) == OnlineServerKitName::kBase )
+                        continue;
+                    bool bPlaced = false;
+                    for ( size_t other = 0; other < listNode.size(); ++other )
+                    {
+                        bPlaced = bPlaced || ( listPlaced[other] == SW_TRUE && string_view( listNode[other]->_pName ) == pDependency );
+                    }
+                    if ( bPlaced == false )
+                        return false;
+                }
+                return true;
+            }
+
             unique_ptr<IOnlineServerKit> _kit;
             OnlineServerKitEntry         _entry;
             vector<const utf8*>          _listDependency; ///< 이 노드가 살아 있는 동안 컬렉션이 읽는다
@@ -267,7 +314,7 @@ namespace sw
 
         SubsystemCollection& collection = parts._kitScope.getCollection();
         const ISubsystem&    baseNode   = collection.add( make_unique<BaseNode>( *this, settings, nowMs ) );
-        if ( addKits( outError ) == false )
+        if ( addKits( settings._bReverseIndependentKitOrder == SW_TRUE, outError ) == false )
             return false;
         if ( collection.initializeAll( SubsystemHostMask::All ) == false )
         {
@@ -386,7 +433,7 @@ namespace sw
         return true;
     }
 
-    bool OnlineServerRuntime::addKits( string& outError )
+    bool OnlineServerRuntime::addKits( bool bReverseIndependentOrder, string& outError )
     {
         Parts&                          parts = *_parts;
         vector<OnlineServerKitFactory*> listFactory;
@@ -427,6 +474,7 @@ namespace sw
             }
         }
         // 순서는 설정에 적힌 순서가 아니라 노드의 이름 의존이 정한다(컬렉션의 위상 정렬).
+        vector<unique_ptr<OnlineServerKitNode>> listNode;
         for ( size_t factoryIndex = 0; factoryIndex < listFactory.size(); ++factoryIndex )
         {
             const OnlineServerKitEntry* pEntry = listEntryByFactory[factoryIndex];
@@ -453,8 +501,14 @@ namespace sw
                 if ( OnlineServerRuntimeInternal::isKitListed( parts._config, pOptional ) )
                     listDependency.push_back( pOptional );
             }
-            (void)parts._kitScope.getCollection().add(
+            listNode.push_back(
                 make_unique<OnlineServerKitNode>( std::move( kit ), listFactory[factoryIndex]->_pName, *pEntry, std::move( listDependency ), parts._context, parts._startupError ) );
+        }
+        if ( bReverseIndependentOrder )
+            OnlineServerKitNode::chainReverseNameOrder( listNode );
+        for ( unique_ptr<OnlineServerKitNode>& node : listNode )
+        {
+            (void)parts._kitScope.getCollection().add( std::move( node ) );
         }
         return true;
     }
