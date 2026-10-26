@@ -16,7 +16,7 @@ namespace sw
 
     void IFileWatcher::pushChange( FileWatcherAction action, string_view directory, string_view filename )
     {
-        std::scoped_lock<mutex> lock{ _eventMutex };
+        ScopedLock<mutex> lock{ _eventMutex };
 
         if ( _listEventQueue.size() >= _s_kMaxQueuedEvent )
         {
@@ -48,13 +48,13 @@ namespace sw
     void IFileWatcher::reportWatchLost( string_view reason )
     {
         SW_LOG_ERROR( "File watching of %# stopped: %#", _directoryPath, reason );
-        std::scoped_lock<mutex> lock{ _eventMutex };
+        ScopedLock<mutex> lock{ _eventMutex };
         _bWatchLost = true;
     }
 
     FileWatchPollResult IFileWatcher::pollEvents( vector<FileChangeEvent>& outListEvent )
     {
-        std::scoped_lock<mutex> lock{ _eventMutex };
+        ScopedLock<mutex> lock{ _eventMutex };
 
         FileWatchPollResult result{};
         result._eventCount = static_cast<uint32>( _listEventQueue.size() );

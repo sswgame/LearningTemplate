@@ -29,7 +29,7 @@ namespace sw
     bool FileLogOutput::open()
     {
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             if ( _bOpened )
                 return true;
         }
@@ -41,7 +41,7 @@ namespace sw
         const string logFolderPath = FileUtil::joinPath( FileUtil::joinPath( baseDir, path::kSavedFolder ), path::kLogsFolder );
         const bool   bFolderReady  = FileUtil::ensureDirectoryExists( logFolderPath );
 
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         if ( _bOpened )
             return true;
 
@@ -57,7 +57,7 @@ namespace sw
 
     void FileLogOutput::close()
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         if ( _pFile != nullptr )
         {
             std::fflush( _pFile );
@@ -70,7 +70,7 @@ namespace sw
 
     void FileLogOutput::write( const LogRecord& record )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         if ( _bOpened == false )
             return;
 

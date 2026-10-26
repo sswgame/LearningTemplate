@@ -183,12 +183,12 @@ namespace sw
 
         static void finish( uint64 requestID, Pending&& pending, NetRequestStatus status, const uint8* pBody, int32 bodySize );
 
-        mutable mutex                  _mutex;
-        unordered_map<uint64, Pending> _mapPending;
-        BitWriter                      _writer; ///< _mutex 안에서만 쓴다.
-        StreamMessageEndpoint*         _pEndpoint;
-        uint64                         _nextRequestID;
-        int32                          _maxPendingRequests;
+        mutable mutex                              _mutex;
+        unordered_map<uint64, Pending> _mapPending SW_GUARDED_BY( _mutex );
+        BitWriter _writer                          SW_GUARDED_BY( _mutex ); ///< _mutex 안에서만 쓴다.
+        StreamMessageEndpoint*                     _pEndpoint;
+        uint64 _nextRequestID                      SW_GUARDED_BY( _mutex );
+        int32                                      _maxPendingRequests;
     };
 } // namespace sw
 
@@ -302,18 +302,18 @@ namespace sw
         void             sendResponse( StreamConnectionHandle handle, uint64 requestID, NetRequestStatus status, const uint8* pBody, int32 bodySize );
         void             purgeIdempotencyLocked( int64 now );
 
-        mutable mutex                              _mutex;
-        unordered_map<uint16, INetRequestHandler*> _mapHandler;
-        unordered_map<uint32, InFlight>            _mapInFlight; ///< 일련번호에서 처리 중인 요청으로 가는 맵.
-        unordered_map<RequestKey, uint32>          _mapSerialByRequest;
-        unordered_map<uint64, int32>               _mapInFlightCount; ///< 연결에서 처리 중인 요청 수로 가는 맵.
-        unordered_map<uint64, uint64>              _mapPrincipal;     ///< 연결에서 주체로 가는 맵.
-        unordered_map<ScopeKey, IdempotencyEntry>  _mapIdempotency;
-        deque<pair<ScopeKey, int64>>               _listExpiry; ///< 끝난 기억의 만료 순서.
-        mutex                                      _writerMutex;
-        BitWriter                                  _writer; ///< _writerMutex 안에서만 쓴다.
-        NetRequestServerConfig                     _settings;
-        StreamMessageEndpoint*                     _pEndpoint;
-        uint32                                     _nextSerial;
+        mutable mutex                                          _mutex;
+        unordered_map<uint16, INetRequestHandler*> _mapHandler SW_GUARDED_BY( _mutex );
+        unordered_map<uint32, InFlight> _mapInFlight           SW_GUARDED_BY( _mutex ); ///< 일련번호에서 처리 중인 요청으로 가는 맵.
+        unordered_map<RequestKey, uint32> _mapSerialByRequest  SW_GUARDED_BY( _mutex );
+        unordered_map<uint64, int32> _mapInFlightCount         SW_GUARDED_BY( _mutex ); ///< 연결에서 처리 중인 요청 수로 가는 맵.
+        unordered_map<uint64, uint64> _mapPrincipal            SW_GUARDED_BY( _mutex ); ///< 연결에서 주체로 가는 맵.
+        unordered_map<ScopeKey, IdempotencyEntry>              _mapIdempotency;
+        deque<pair<ScopeKey, int64>>                           _listExpiry; ///< 끝난 기억의 만료 순서.
+        mutex                                                  _writerMutex;
+        BitWriter _writer                                      SW_GUARDED_BY( _writerMutex ); ///< _writerMutex 안에서만 쓴다.
+        NetRequestServerConfig                                 _settings;
+        StreamMessageEndpoint*                                 _pEndpoint;
+        uint32 _nextSerial                                     SW_GUARDED_BY( _mutex );
     };
 } // namespace sw

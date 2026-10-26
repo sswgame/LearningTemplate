@@ -61,7 +61,7 @@ namespace sw
         CallStack       currentStack;
         CallStackCapture::capture( currentStack, 2 );
 
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
 
         ThreadState& state      = _mapThreadState[tid];
         state._threadID         = tid;
@@ -86,8 +86,8 @@ namespace sw
 
         const std::thread::id tid = std::this_thread::get_id();
 
-        std::scoped_lock<sw::mutex> lock{ _mutex };
-        ThreadState&                state = _mapThreadState[tid];
+        ScopedLock<sw::mutex> lock{ _mutex };
+        ThreadState&          state = _mapThreadState[tid];
 
         // `lock()` 은 바로 앞에서 recordLockAttempt 로 이 락을 기다린다고 적어 두므로, 그때 캡처한 스택이 곧 획득 지점의
         // 스택이다. 그래서 다시 캡처하지 않는다. 하지만 `try_lock()` 에는 그 단계가 없다(기다리지 않으니 사이클 검사를 할
@@ -124,8 +124,8 @@ namespace sw
 
         std::thread::id tid = std::this_thread::get_id();
 
-        std::scoped_lock<mutex> lock{ _mutex };
-        ThreadState&            state = _mapThreadState[tid];
+        ScopedLock<mutex> lock{ _mutex };
+        ThreadState&      state = _mapThreadState[tid];
 
         VectorUtil::removeFirst( state._listHeldLock, pLock );
         state._mapAcquiredCallStack.erase( pLock );

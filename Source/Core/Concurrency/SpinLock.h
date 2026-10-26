@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/ScopedLock.h"
 #include "Core/Concurrency/ThreadSafety.h"
 #include "Core/Concurrency/atomic.h"
 
@@ -17,7 +18,7 @@ namespace sw
     /**
      * @class SpinLock
      * @brief sw::atomic<bool> 기반 TTAS 스핀락입니다. 아주 짧은 임계 구역에서 mutex 대신 씁니다.
-     * @details 잠금 계약 분석(`SW_GUARDED_BY( _spinLock )`)이 보는 잠금이다 — 가드는 `ScopedLock<SpinLock>`(`mutex.h`).
+     * @details 잠금 계약 분석(`SW_GUARDED_BY( _spinLock )`)이 보는 잠금이다 — 가드는 `ScopedLock<SpinLock>`(`ScopedLock.h`).
      *          교착 검출기 · 쥔 잠금 수는 거치지 않는다(구간이 몇 명령이라 알림 비용이 구간보다 크다).
      */
     class SW_CAPABILITY( "SpinLock" ) SpinLock

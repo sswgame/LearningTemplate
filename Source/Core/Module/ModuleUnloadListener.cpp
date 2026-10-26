@@ -44,7 +44,7 @@ namespace sw
                 (void)list._registeredListener.addLogged( pListener, "Module unload listener" ); // 훑기 안에서 — 잠금은 훑기가 쥐고 있다
                 return;
             }
-            std::scoped_lock<mutex> lock{ list._mutex };
+            ScopedLock<mutex> lock{ list._mutex };
             (void)list._registeredListener.addLogged( pListener, "Module unload listener" ); // 생성자에서 한 번 — 같은 객체가 두 번 오를 일은 없다
         }
 
@@ -56,7 +56,7 @@ namespace sw
                 (void)list._registeredListener.remove( pListener ); // 훑기 안에서 — 훑기는 사본을 돌고 지워진 것은 건너뛴다
                 return;
             }
-            std::scoped_lock<mutex> lock{ list._mutex };
+            ScopedLock<mutex> lock{ list._mutex };
             (void)list._registeredListener.remove( pListener ); // 올라 있지 않으면(정적 소멸 순서) 할 일이 없다
         }
     } // namespace
@@ -93,7 +93,7 @@ namespace sw
             return;
 
         ModuleUnloadListenerList& list = getModuleUnloadListenerList();
-        std::scoped_lock<mutex>   lock{ list._mutex };
+        ScopedLock<mutex>         lock{ list._mutex };
         // 사본을 돈다 — 리스너가 훑기 안에서 다른 리스너를 만들거나 지울 수 있다(같은 스레드는 잠금 없이 목록을 고친다).
         const vector<IModuleUnloadListener*> listSnapshot = list._registeredListener.getItems();
         list._walkingThread                               = std::this_thread::get_id();
@@ -115,7 +115,7 @@ namespace sw
     uint32 IModuleUnloadListener::getListenerCount()
     {
         ModuleUnloadListenerList& list = getModuleUnloadListenerList();
-        std::scoped_lock<mutex>   lock{ list._mutex };
+        ScopedLock<mutex>         lock{ list._mutex };
         return list._registeredListener.getCount();
     }
 

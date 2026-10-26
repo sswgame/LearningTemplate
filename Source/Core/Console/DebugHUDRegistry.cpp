@@ -151,7 +151,7 @@ namespace sw
         }
         RegistrationResult result = RegistrationResult::Added;
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             result = _registration.addLogged( pRegistration, "Debug HUD section", name, pRegistration->_order );
             if ( result == RegistrationResult::Added )
                 ++_revision;
@@ -161,32 +161,32 @@ namespace sw
 
     void DebugHUDRegistry::unregisterSection( const DebugHUDSectionRegistration* pRegistration )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         if ( _registration.remove( pRegistration ) )
             ++_revision;
     }
 
     const DebugHUDSectionRegistration* DebugHUDRegistry::findSection( string_view name ) const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _registration.findByName( name );
     }
 
     vector<const DebugHUDSectionRegistration*> DebugHUDRegistry::getSections() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _registration.getItems();
     }
 
     uint32 DebugHUDRegistry::getCount() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _registration.getCount();
     }
 
     uint64 DebugHUDRegistry::getRevision() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _revision;
     }
 } // namespace sw

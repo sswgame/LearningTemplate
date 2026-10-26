@@ -34,20 +34,20 @@ namespace sw
 
     uint64 LoopbackNetwork::getDroppedCount() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _droppedCount;
     }
 
     uint64 LoopbackNetwork::getDeliveredCount() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _deliveredCount;
     }
 
     LoopbackTransport* LoopbackNetwork::createEndpoint( uint16 port )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        const NetAddress        address = NetAddress::makeLoopback( port );
+        ScopedLock<mutex> lock{ _mutex };
+        const NetAddress  address = NetAddress::makeLoopback( port );
         if ( VectorUtil::containsBy<&LoopbackTransport::getLocalAddress>( _listEndpoint, address ) )
             return nullptr;
         _listEndpoint.emplace_back( this, address );
@@ -56,8 +56,8 @@ namespace sw
 
     void LoopbackNetwork::enqueue( const NetAddress& from, const NetAddress& to, const uint8* pData, int32 size )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        InFlight                packet;
+        ScopedLock<mutex> lock{ _mutex };
+        InFlight          packet;
         packet._buffer.assign( pData, pData + size );
         packet._from = from;
         packet._to   = to;
@@ -66,7 +66,7 @@ namespace sw
 
     void LoopbackNetwork::deliverInFlight()
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         // 보낸 순서대로 — 한 엔드포인트가 보낸 것은 순서가 지켜진다.
         for ( InFlight& packet : _listInFlight )
         {
@@ -89,13 +89,13 @@ namespace sw
 
     bool LoopbackNetwork::takeDatagram( LoopbackTransport* pEndpoint, NetAddress& outFrom, vector<uint8>& outBuffer )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return pEndpoint->popInbox( outFrom, outBuffer );
     }
 
     bool LoopbackNetwork::hasDatagram( const LoopbackTransport* pEndpoint ) const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return pEndpoint->hasInbox();
     }
 

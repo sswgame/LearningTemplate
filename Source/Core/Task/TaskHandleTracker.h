@@ -49,8 +49,8 @@ namespace sw
         /** @brief 아직 끝나지 않은 태스크를 낸 매니저입니다(없거나 매니저가 사라졌으면 nullptr). 메인 스레드가 기다릴 때 메인 큐를 돕는 데 씁니다. */
         [[nodiscard]] TaskManager* findPendingOwner() const;
 
-        mutable mutex      _mutex;
-        vector<TaskHandle> _listHandle;
-        size_t             _pruneThreshold{ 64 };
+        mutable mutex                  _mutex;
+        vector<TaskHandle> _listHandle SW_GUARDED_BY( _mutex );
+        size_t _pruneThreshold         SW_GUARDED_BY( _mutex ){ 64 };
     };
 } // namespace sw

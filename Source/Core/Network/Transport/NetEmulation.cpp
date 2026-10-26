@@ -193,31 +193,31 @@ namespace sw
 
     void NetEmulationTransport::setIncomingConditions( const NetEmulationConditions& conditions )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _incomingConditions = conditions;
     }
 
     NetEmulationConditions NetEmulationTransport::getIncomingConditions() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _incomingConditions;
     }
 
     void NetEmulationTransport::startOutage( float64 durationSeconds )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _outageUntil = durationSeconds > 0.0 ? _time + durationSeconds : 0.0;
     }
 
     bool NetEmulationTransport::isInOutage() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _time < _outageUntil;
     }
 
     void NetEmulationTransport::setDefaultConditions( const NetEmulationConditions& conditions )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _defaultConditions = conditions;
         for ( LinkState& link : _listLink )
         {
@@ -228,30 +228,30 @@ namespace sw
 
     NetEmulationConditions NetEmulationTransport::getDefaultConditions() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _defaultConditions;
     }
 
     void NetEmulationTransport::setConditions( const NetAddress& to, const NetEmulationConditions& conditions )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        LinkState&              link = findOrAddLink( to );
-        link._conditions             = conditions;
-        link._bOverride              = SW_TRUE;
+        ScopedLock<mutex> lock{ _mutex };
+        LinkState&        link = findOrAddLink( to );
+        link._conditions       = conditions;
+        link._bOverride        = SW_TRUE;
     }
 
     void NetEmulationTransport::clearConditions( const NetAddress& to )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        LinkState&              link = findOrAddLink( to );
-        link._conditions             = _defaultConditions;
-        link._bOverride              = SW_FALSE;
+        ScopedLock<mutex> lock{ _mutex };
+        LinkState&        link = findOrAddLink( to );
+        link._conditions       = _defaultConditions;
+        link._bOverride        = SW_FALSE;
     }
 
     NetEmulationConditions NetEmulationTransport::findConditions( const NetAddress& to ) const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        const LinkState*        pLink = VectorUtil::findBy<&LinkState::_to>( _listLink, to );
+        ScopedLock<mutex> lock{ _mutex };
+        const LinkState*  pLink = VectorUtil::findBy<&LinkState::_to>( _listLink, to );
         return pLink != nullptr ? pLink->_conditions : _defaultConditions;
     }
 
@@ -260,7 +260,7 @@ namespace sw
         const bool bCannotSend = _pInner == nullptr || pData == nullptr || size <= 0;
         if ( bCannotSend )
             return false;
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         if ( _time < _outageUntil )
         {
             // 끊김 — 보내는 쪽은 모른다(손실과 같다).
@@ -334,7 +334,7 @@ namespace sw
     {
         if ( _pInner == nullptr )
             return false;
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         // 받는 쪽 조건도 끊김도 없고 늦춘 것도 없으면 그대로 받는다(순서와 할당이 그대로다).
         const bool bPassThrough = _incomingConditions.isActive() == false && _time >= _outageUntil && _listIncoming.empty();
         if ( bPassThrough )
@@ -399,7 +399,7 @@ namespace sw
     {
         vector<Pending> listDue;
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             _time = MathUtil::max( _time, time );
             // 때가 된 것을 전할 때 · 보낸 순서로 넘긴다.
             const auto dueEnd = std::partition( _listPending.begin(), _listPending.end(), [this]( const Pending& pending )
@@ -430,20 +430,20 @@ namespace sw
 
     NetEmulationStats NetEmulationTransport::getStats() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _stats;
     }
 
     size_t NetEmulationTransport::getQueuedCount() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _listPending.size();
     }
 
     uint64 NetEmulationTransport::getQueuedBytes() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        uint64                  total = 0;
+        ScopedLock<mutex> lock{ _mutex };
+        uint64            total = 0;
         for ( const LinkState& link : _listLink )
         {
             total += link._queuedBytes;

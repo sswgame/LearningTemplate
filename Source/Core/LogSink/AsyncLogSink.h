@@ -122,14 +122,14 @@ namespace sw
          */
         uint32 snapshotOutputs( ILogOutput* ( &outArrDevice )[_s_kMaxOutput] );
 
-        LogWrittenMulticast              _onLogWritten;
-        vector<unique_ptr<ILogOutput>>   _listOutput;
-        FileLogOutput*                   _pFileOutput; ///< _listOutput 이 소유한다. getLogFolderPath 용 비소유 포인터
-        ConcurrentQueue<LogRecord, 4096> _queue;
-        sw::thread                       _workerThread;
-        std::condition_variable_any      _cv;
-        mutex                            _mutex;   ///< 리스너 목록과 출력 목록을 보호한다
-        mutex                            _cvMutex; ///< 조건 변수 대기용 뮤텍스
+        LogWrittenMulticast                        _onLogWritten;
+        vector<unique_ptr<ILogOutput>> _listOutput SW_GUARDED_BY( _mutex );
+        FileLogOutput*                             _pFileOutput; ///< _listOutput 이 소유한다. getLogFolderPath 용 비소유 포인터
+        ConcurrentQueue<LogRecord, 4096>           _queue;
+        sw::thread                                 _workerThread;
+        std::condition_variable_any                _cv;
+        mutex                                      _mutex;   ///< 리스너 목록과 출력 목록을 보호한다
+        mutex                                      _cvMutex; ///< 조건 변수 대기용 뮤텍스
         /** @brief 리스너 목록의 불변 사본입니다. 리스너가 없으면 nullptr 입니다. _mutex 로 보호하고, 생산자는 참조만 잡아 락 밖에서 부른다. */
         shared_ptr<const LogWrittenMulticast> _listenerSnapshot;
         atomic<uint32>                        _arrBroadcastInFlight[2]; ///< 리스너를 부르는 중인 방송 수(세대 두 슬롯). 제거가 이전 세대가 빌 때까지 기다린다

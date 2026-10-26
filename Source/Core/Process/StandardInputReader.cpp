@@ -43,7 +43,7 @@ namespace sw
 
     void StandardInputReader::drainLines( vector<string>& outListLine )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         for ( string& line : _listLine )
         {
             outListLine.push_back( std::move( line ) );
@@ -63,7 +63,7 @@ namespace sw
                     return; // 입력이 닫혔다 — 프로세스는 계속 돈다(신호 · 서비스 정지 · 다른 길로 끝낸다)
                 continue;
             }
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             _listLine.push_back( line );
         }
     }

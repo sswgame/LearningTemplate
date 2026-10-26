@@ -5,9 +5,8 @@
 #pragma once
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
-
-#include <mutex>
 
 namespace sw
 {
@@ -55,7 +54,7 @@ namespace sw
          * @param lock 이 목록을 지키는 잠금입니다. 이미 잠겨 있어야 하며, 돌아올 때도 잠겨 있습니다.
          */
         template <typename TLock>
-        void extractReadyReserving( std::unique_lock<TLock>& lock, uint64 threshold, vector<TItem>& outListItem )
+        void extractReadyReserving( UniqueLock<TLock>& lock, uint64 threshold, vector<TItem>& outListItem ) SW_REQUIRES_LOCK( lock )
         {
             for ( ;; )
             {

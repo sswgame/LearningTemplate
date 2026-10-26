@@ -253,7 +253,7 @@ namespace sw
         }
 
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             _onLogWritten.removeAll();
             rebuildListenerSnapshot();
         }
@@ -273,8 +273,8 @@ namespace sw
      */
     DelegateHandle AsyncLogSink::registerLogWrittenListener( const LogWrittenDelegate& listener )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        const DelegateHandle    handle = _onLogWritten.add( listener );
+        ScopedLock<mutex>    lock{ _mutex };
+        const DelegateHandle handle = _onLogWritten.add( listener );
         rebuildListenerSnapshot();
         return handle;
     }
@@ -286,7 +286,7 @@ namespace sw
     {
         uint32 retiredSlot{ 0 };
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             _onLogWritten.remove( handle );
             rebuildListenerSnapshot();
             retiredSlot = retireBroadcastSlot();
@@ -300,7 +300,7 @@ namespace sw
         uint32 releasedCount{ 0 };
         uint32 retiredSlot{ 0 };
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             releasedCount = _onLogWritten.removeCodeWithin( pBegin, pEnd );
             rebuildListenerSnapshot();
             retiredSlot = retireBroadcastSlot();
@@ -382,7 +382,7 @@ namespace sw
         // 장치가 생긴다. 그 실패는 붙인 쪽에서 보이지 않는다.
         bool bRejected{ false };
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             bRejected = _listOutput.size() >= _s_kMaxOutput;
         }
 
@@ -394,7 +394,7 @@ namespace sw
                 (void)output->open(); // 열지 못한 출력은 쓰기를 무시한다 — 장치가 이유를 남긴다
 
             // 열기 사이에 다른 스레드가 자리를 채웠을 수 있어 같은 락 안에서 다시 확인하고 넣는다.
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             bRejected = _listOutput.size() >= _s_kMaxOutput;
             if ( bRejected == false )
                 _listOutput.push_back( std::move( output ) );
@@ -433,7 +433,7 @@ namespace sw
 
             if ( bProcessedAny == false && _bIsRunning.load( std::memory_order_acquire ) )
             {
-                std::unique_lock<mutex> lock{ _cvMutex };
+                UniqueLock<mutex> lock{ _cvMutex };
                 // 잠든다고 알린 **뒤에** 큐를 본다(아래 술어). 생산자는 넣은 뒤 이 값을 보므로 둘 중 하나는 상대를 본다.
                 _bWorkerSleeping.store( true, std::memory_order_seq_cst );
                 std::atomic_thread_fence( std::memory_order_seq_cst );
@@ -474,8 +474,8 @@ namespace sw
     {
         // `_mutex` 는 **잎 락**이다 — 이 안에서는 목록과 리스너 사본만 만지고 로그 · 장치 · 리스너를 부르지 않는다. 부르면 그 로그가 이 싱크로
         // 되돌아와 같은 `_mutex` 를 잡는다(재진입 불가 → 같은 스레드가 영구 정지). 장치 포인터를 복사해 락 밖에서 부르는 것이 그 규칙의 모양이다.
-        uint32                  deviceCount{ 0 };
-        std::scoped_lock<mutex> lock{ _mutex };
+        uint32            deviceCount{ 0 };
+        ScopedLock<mutex> lock{ _mutex };
         for ( unique_ptr<ILogOutput>& output : _listOutput )
         {
             if ( output != nullptr && deviceCount < _s_kMaxOutput )
@@ -491,7 +491,7 @@ namespace sw
         shared_ptr<const LogWrittenMulticast> listenerSnapshot;
         uint32                                broadcastSlot{ 0 };
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             if ( _listenerSnapshot != nullptr )
             {
                 listenerSnapshot = _listenerSnapshot;
@@ -529,7 +529,7 @@ namespace sw
         if ( _bWorkerSleeping.load( std::memory_order_relaxed ) )
         {
             {
-                std::scoped_lock<mutex> lock{ _cvMutex };
+                ScopedLock<mutex> lock{ _cvMutex };
             }
             _cv.notify_one();
         }

@@ -133,12 +133,12 @@ namespace sw
         mutex _eventMutex;
 
         /** @brief 폴링하기 전까지 쌓이는 변경 목록입니다. */
-        vector<FileChangeEvent> _listEventQueue;
+        vector<FileChangeEvent> _listEventQueue SW_GUARDED_BY( _eventMutex );
 
         /** @brief 상한에 걸려 개별 이벤트를 버렸다는 표시입니다. 다음 폴링이 합성 리스캔으로 바꿔 전달합니다. */
-        bool _bEventQueueOverflowed{ false };
+        bool _bEventQueueOverflowed SW_GUARDED_BY( _eventMutex ){ false };
 
         /** @brief 워커가 감시를 잃었다는 표시입니다(`reportWatchLost`). 다음 폴링이 한 번 알리고 내립니다. */
-        bool _bWatchLost{ false };
+        bool _bWatchLost SW_GUARDED_BY( _eventMutex ){ false };
     };
 } // namespace sw

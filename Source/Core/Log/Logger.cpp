@@ -142,8 +142,8 @@ namespace sw
 
     void Logger::registerCaller( string_view filePath, string_view callerName ) noexcept
     {
-        const CallerKey         fileKey = computeCallerKey( filePath );
-        std::scoped_lock<mutex> lock{ s_callerMutex };
+        const CallerKey   fileKey = computeCallerKey( filePath );
+        ScopedLock<mutex> lock{ s_callerMutex };
 
         for ( size_t index = 0; index < s_callerEntryCount; ++index )
         {
@@ -172,8 +172,8 @@ namespace sw
     {
         if ( StringUtil::isNullOrEmpty( pFile ) )
             return nullptr;
-        const CallerKey         fileKey = computeCallerKey( string_view{ pFile } );
-        std::scoped_lock<mutex> lock{ s_callerMutex };
+        const CallerKey   fileKey = computeCallerKey( string_view{ pFile } );
+        ScopedLock<mutex> lock{ s_callerMutex };
         for ( size_t index = 0; index < s_callerEntryCount; ++index )
         {
             if ( s_arrCallerEntry[index]._key == fileKey )

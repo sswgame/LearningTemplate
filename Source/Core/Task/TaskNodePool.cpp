@@ -22,7 +22,7 @@ namespace sw
 
     TaskNodePool::~TaskNodePool()
     {
-        std::scoped_lock<mutex> lock{ _slabMutex };
+        ScopedLock<mutex> lock{ _slabMutex };
         for ( const MemoryBlock& slab : _listSlab )
         {
             TaskNode* pSlab = slab.getAs<TaskNode>();
@@ -42,7 +42,7 @@ namespace sw
         if ( _freeQueue.dequeue( pMem ) == false || pMem == nullptr )
         {
             {
-                std::scoped_lock<mutex> lock{ _slabMutex };
+                ScopedLock<mutex> lock{ _slabMutex };
                 if ( _listOverflowFree.empty() == false )
                 {
                     pMem = _listOverflowFree.back();
@@ -60,14 +60,14 @@ namespace sw
                     pSlab[index]._refCount.store( 0, std::memory_order_relaxed ); // 자유 노드는 0 이다(`detachOwner` 가 참조 남은 노드를 이것으로 가린다)
                 }
                 {
-                    std::scoped_lock<mutex> lock{ _slabMutex };
+                    ScopedLock<mutex> lock{ _slabMutex };
                     _listSlab.push_back( std::move( slab ) ); // pSlab 은 블록 주소라 이동해도 그대로다
                 }
                 for ( uint32 index = 1; index < kSlabSize; ++index )
                 {
                     if ( _freeQueue.enqueue( &pSlab[index] ) == false )
                     {
-                        std::scoped_lock<mutex> lock{ _slabMutex };
+                        ScopedLock<mutex> lock{ _slabMutex };
                         _listOverflowFree.push_back( &pSlab[index] );
                     }
                 }
@@ -108,7 +108,7 @@ namespace sw
 
         if ( _freeQueue.enqueue( pNode ) == false )
         {
-            std::scoped_lock<mutex> lock{ _slabMutex };
+            ScopedLock<mutex> lock{ _slabMutex };
             _listOverflowFree.push_back( pNode );
         }
     }
@@ -122,7 +122,7 @@ namespace sw
         string            name;
         vector<TaskNode*> listRejected; // 잡았다가 거른 노드. 잠금 밖에서 놓는다
         {
-            std::scoped_lock<mutex> lock{ _slabMutex };
+            ScopedLock<mutex> lock{ _slabMutex };
             for ( const MemoryBlock& slab : _listSlab )
             {
                 TaskNode* pSlab = slab.getAs<TaskNode>();
@@ -167,7 +167,7 @@ namespace sw
     {
         StageNode* pStage{ nullptr };
         {
-            std::scoped_lock<mutex> lock{ _stageMutex };
+            ScopedLock<mutex> lock{ _stageMutex };
             if ( _listStageFree.empty() == false )
             {
                 pStage = _listStageFree.back();
@@ -178,7 +178,7 @@ namespace sw
         {
             unique_ptr<StageNode> uniqueStage = make_unique<StageNode>();
             pStage                            = uniqueStage.get();
-            std::scoped_lock<mutex> lock{ _stageMutex };
+            ScopedLock<mutex> lock{ _stageMutex };
             _listStageAll.push_back( std::move( uniqueStage ) );
         }
         pStage->_join.reset();
@@ -196,7 +196,7 @@ namespace sw
             returnDetachedReference();
             return;
         }
-        std::scoped_lock<mutex> lock{ _stageMutex };
+        ScopedLock<mutex> lock{ _stageMutex };
         _listStageFree.push_back( pStage );
     }
 
@@ -206,7 +206,7 @@ namespace sw
         // 0 으로 덮으면 그 핸들이 나중에 놓을 때 이미 재사용된 스테이지의 수를 내린다.
         vector<StageNode*> listPending;
         {
-            std::scoped_lock<mutex> lock{ _stageMutex };
+            ScopedLock<mutex> lock{ _stageMutex };
             for ( const unique_ptr<StageNode>& uniqueStage : _listStageAll )
             {
                 if ( uniqueStage != nullptr && uniqueStage->_join.getPending() > 0 )
@@ -225,7 +225,7 @@ namespace sw
         _pOwner               = nullptr;
         uint32 referenceCount = 0;
         {
-            std::scoped_lock<mutex> lock{ _slabMutex };
+            ScopedLock<mutex> lock{ _slabMutex };
             for ( const MemoryBlock& slab : _listSlab )
             {
                 const TaskNode* pSlab = slab.getAs<TaskNode>();
@@ -237,7 +237,7 @@ namespace sw
             }
         }
         {
-            std::scoped_lock<mutex> lock{ _stageMutex };
+            ScopedLock<mutex> lock{ _stageMutex };
             for ( const unique_ptr<StageNode>& uniqueStage : _listStageAll )
             {
                 if ( uniqueStage->_refCount.load( std::memory_order_acquire ) > 0 )

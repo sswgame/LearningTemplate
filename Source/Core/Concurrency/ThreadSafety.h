@@ -23,8 +23,8 @@
 /** @brief 이 멤버는 잠금 @p lock 을 쥐어야 읽고 쓸 수 있습니다. */
 #define SW_GUARDED_BY( lock ) SW_THREAD_ANNOTATION_INTERNAL( guarded_by( lock ) )
 /**
- * @brief 이 잠금은 @p ... 를 쥔 뒤에만 잡습니다(잠금 순서). 순서 검사는 `-Wthread-safety-beta` 가 하고 기본 빌드는 켜지 않는다 —
- *        그래도 순서를 선언에 두어 주석과 코드가 어긋나지 않게 한다.
+ * @brief 이 잠금은 @p ... 를 쥔 뒤에만 잡습니다(잠금 순서). 순서 검사는 clang 빌드에 켠 `-Wthread-safety-beta` 가 한다 —
+ *        거꾸로 잡으면 컴파일 경고다.
  */
 #define SW_ACQUIRED_AFTER( ... ) SW_THREAD_ANNOTATION_INTERNAL( acquired_after( __VA_ARGS__ ) )
 
@@ -48,5 +48,25 @@
 /** @brief 이 함수가 @p result 를 돌려주면 잠금을 공유로 얻은 것입니다. */
 #define SW_TRY_ACQUIRE_SHARED_LOCK( ... ) SW_THREAD_ANNOTATION_INTERNAL( try_acquire_shared_capability( __VA_ARGS__ ) )
 
+/** @brief 이 함수가 돌아오면 부른 쪽이 그 능력을 쥔 것으로 봅니다(검사가 아니라 선언 — 스레드 역할의 진입점에 쓴다). */
+#define SW_ASSERT_CAPABILITY_LOCK( ... ) SW_THREAD_ANNOTATION_INTERNAL( assert_capability( __VA_ARGS__ ) )
+
 /** @brief 이 함수 본문은 분석하지 않습니다. 잠금 타입 자신의 구현(주석 없는 원시 잠금을 부른다)에만 씁니다 — 다른 곳에 쓰면 이유를 한 줄 적는다. */
 #define SW_NO_THREAD_SAFETY_ANALYSIS SW_THREAD_ANNOTATION_INTERNAL( no_thread_safety_analysis )
+
+namespace sw
+{
+    /**
+     * @class ThreadRole
+     * @brief 스레드 역할("이 목록은 스텝 스레드만 만진다")을 분석이 보는 능력으로 적는 가짜 잠금입니다. 잠그지 않고 크기도 비용도 없다.
+     * @details 역할 아래 멤버는 `SW_GUARDED_BY( _role )`, 그 역할에서만 부르는 함수는 `SW_REQUIRES_LOCK( _role )` 이고, 역할이 시작되는 진입점
+     *          (그 스레드에서만 불리는 콜백)이 `assumeHeld()` 를 부른다 — 역할 밖 스레드에서 만지는 코드가 컴파일 경고가 된다. 크로미움 `SequenceChecker` 의
+     *          분석 판(`GUARDED_BY_CONTEXT`)과 같은 자리다.
+     */
+    class SW_CAPABILITY( "thread role" ) ThreadRole
+    {
+    public:
+        /** @brief 이 스레드가 역할을 맡은 진입점임을 분석에 알립니다(실행 때 검사는 하지 않는다). */
+        void assumeHeld() const SW_ASSERT_CAPABILITY_LOCK( this ) {}
+    };
+} // namespace sw

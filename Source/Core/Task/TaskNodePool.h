@@ -85,22 +85,22 @@ namespace sw
     private:
         static constexpr uint32 kSlabSize = 64;
 
-        TaskManager*                     _pOwner; ///< 노드를 낸 매니저. `detachOwner` 뒤 nullptr
-        ConcurrentQueue<TaskNode*, 4096> _freeQueue;
-        vector<TaskNode*>                _listOverflowFree;
-        vector<MemoryBlock>              _listSlab; ///< 64개 슬랩의 바이트 블록. **소유한다**(노드의 소멸은 `~TaskNodePool`)
-        mutex                            _slabMutex;
-        vector<StageNode*>               _listStageFree; ///< 돌아온 스테이지. 다음 createStage 가 먼저 꺼내 쓴다. 빌려 쓰는 것이라 소유하지 않는다
+        TaskManager*                        _pOwner; ///< 노드를 낸 매니저. `detachOwner` 뒤 nullptr
+        ConcurrentQueue<TaskNode*, 4096>    _freeQueue;
+        vector<TaskNode*> _listOverflowFree SW_GUARDED_BY( _slabMutex );
+        vector<MemoryBlock> _listSlab       SW_GUARDED_BY( _slabMutex ); ///< 64개 슬랩의 바이트 블록. **소유한다**(노드의 소멸은 `~TaskNodePool`)
+        mutex                               _slabMutex;
+        vector<StageNode*> _listStageFree   SW_GUARDED_BY( _stageMutex ); ///< 돌아온 스테이지. 다음 createStage 가 먼저 꺼내 쓴다. 빌려 쓰는 것이라 소유하지 않는다
         /**
          * @brief 지금까지 만든 스테이지 전부입니다. **소유합니다.**
          * @details 소유를 타입으로 적어 풀 소멸자에서 지우기를 빠뜨릴 수 없게 합니다(raw 포인터 목록이면 그 누락은 LeakSanitizer 만
          *          잡습니다). 꺼내 쓰는 쪽(`_listStageFree`)은 raw 포인터라 할당 경로에 간접 참조가 늘지 않습니다.
          */
-        vector<unique_ptr<StageNode>> _listStageAll;
-        mutex                         _stageMutex;
-        ParallelGroupPool             _groupPool;
-        atomic<uint32>                _detachedReferenceCount; ///< `detachOwner` 뒤에도 참조가 남은 노드 · 스테이지 수
-        atomic<bool>                  _bDetached;              ///< `detachOwner` 가 남은 참조를 보고 풀을 그것들에 넘겼다
-        mutex                         _dependencyMutex;        ///< 의존 간선 검사 + 붙이기를 직렬화한다(`getDependencyMutex`)
+        vector<unique_ptr<StageNode>> _listStageAll SW_GUARDED_BY( _stageMutex );
+        mutex                                       _stageMutex;
+        ParallelGroupPool                           _groupPool;
+        atomic<uint32>                              _detachedReferenceCount; ///< `detachOwner` 뒤에도 참조가 남은 노드 · 스테이지 수
+        atomic<bool>                                _bDetached;              ///< `detachOwner` 가 남은 참조를 보고 풀을 그것들에 넘겼다
+        mutex                                       _dependencyMutex;        ///< 의존 간선 검사 + 붙이기를 직렬화한다(`getDependencyMutex`)
     };
 } // namespace sw

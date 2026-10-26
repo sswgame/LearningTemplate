@@ -136,9 +136,9 @@ namespace sw
         static bool isReservedName( string_view name );
 
     private:
-        mutable mutex                                       _mutex;        ///< 등록 목록 · 판 번호를 지킨다(본문 호출은 잠금 밖)
-        RegistrationList<const DebugHUDSectionRegistration> _registration; ///< (순서, 이름) 순 · 이름은 대소문자 무시
-        uint64                                              _revision;
+        mutable mutex                                                     _mutex;                  ///< 등록 목록 · 판 번호를 지킨다(본문 호출은 잠금 밖)
+        RegistrationList<const DebugHUDSectionRegistration> _registration SW_GUARDED_BY( _mutex ); ///< (순서, 이름) 순 · 이름은 대소문자 무시
+        uint64 _revision                                                  SW_GUARDED_BY( _mutex );
     };
 } // namespace sw
 

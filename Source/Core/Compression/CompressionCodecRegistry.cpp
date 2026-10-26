@@ -51,14 +51,14 @@ namespace sw
 
     void CompressionCodecRegistry::initialize()
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         if ( _mapCodec.empty() )
             registerBuiltinCodecs();
     }
 
     void CompressionCodecRegistry::shutdown()
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _mapCodec.clear();
     }
 
@@ -70,20 +70,20 @@ namespace sw
         const CompressionCodecType type = codec->getCodecType();
         SW_LOG_INFO( "Registered codec: %# (type=%#)", codec->getCodecName(), static_cast<uint32>( type ) );
 
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _mapCodec[type] = std::move( codec );
     }
 
     void CompressionCodecRegistry::unregisterCodec( CompressionCodecType type )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _mapCodec.erase( type );
     }
 
     ICompressionCodec* CompressionCodecRegistry::getCodec( CompressionCodecType type ) const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        const auto              iter = _mapCodec.find( type );
+        ScopedLock<mutex> lock{ _mutex };
+        const auto        iter = _mapCodec.find( type );
         if ( iter != _mapCodec.end() )
             return iter->second.get();
 
@@ -92,7 +92,7 @@ namespace sw
 
     ICompressionCodec* CompressionCodecRegistry::getCodec( string_view name ) const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         for ( const auto& [key, codec] : _mapCodec )
         {
             if ( codec != nullptr && name == codec->getCodecName() )
@@ -121,7 +121,7 @@ namespace sw
 
     bool CompressionCodecRegistry::isCodecRegistered( CompressionCodecType type ) const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _mapCodec.find( type ) != _mapCodec.end();
     }
 

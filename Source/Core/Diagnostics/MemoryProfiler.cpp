@@ -425,8 +425,8 @@ namespace sw
 
                 MemoryProfilerInternal::t_bIsInsideProfiler = true;
                 {
-                    std::scoped_lock<mutex> lock{ _stackMapMutex };
-                    auto&                   info = _mapCallStackAllocInfo[outHash];
+                    ScopedLock<mutex> lock{ _stackMapMutex };
+                    auto&             info = _mapCallStackAllocInfo[outHash];
                     if ( info._stack._frameCount == 0 )
                         info._stack = stack;
                     info._currentBytes += size;
@@ -471,8 +471,8 @@ namespace sw
         {
             MemoryProfilerInternal::t_bIsInsideProfiler = true;
             {
-                std::scoped_lock<mutex> lock{ _stackMapMutex };
-                auto                    it = _mapCallStackAllocInfo.find( callStackHash );
+                ScopedLock<mutex> lock{ _stackMapMutex };
+                auto              it = _mapCallStackAllocInfo.find( callStackHash );
                 if ( it != _mapCallStackAllocInfo.end() )
                 {
                     if ( it->second._currentBytes >= size )
@@ -697,7 +697,7 @@ namespace sw
         // 테이블이 할당할 때(노드 · 버킷)의 재귀를 막는다. 세지 않으므로 그 해제도 오지 않는다.
         MemoryProfilerInternal::t_bIsInsideProfiler = true;
         {
-            std::scoped_lock<mutex> lock{ shard._mutex };
+            ScopedLock<mutex> lock{ shard._mutex };
             shard._mapBlock[pPtr] = LeakWindowBlock{ size, stack._hash, MemoryProfilerInternal::getCurrentThreadKey(), stamp, tag };
             if ( shard._mapStack.contains( stack._hash ) == false )
                 shard._mapStack.emplace( stack._hash, stack );
@@ -726,8 +726,8 @@ namespace sw
         const bool       bWasInside                 = MemoryProfilerInternal::t_bIsInsideProfiler;
         MemoryProfilerInternal::t_bIsInsideProfiler = true;
         {
-            std::scoped_lock<mutex> lock{ shard._mutex };
-            auto                    it = shard._mapBlock.find( pPtr );
+            ScopedLock<mutex> lock{ shard._mutex };
+            auto              it = shard._mapBlock.find( pPtr );
             // 같은 주소를 다른 회차 · 다른 창이 다시 받았을 수 있다 — 스탬프가 같은 블록만 지운다.
             if ( it != shard._mapBlock.end() && it->second._stamp == stamp )
                 shard._mapBlock.erase( it );
@@ -741,7 +741,7 @@ namespace sw
         {
             LeakWindowShard& shard = _leakShard.getShard( shardIndex );
             {
-                std::scoped_lock<mutex> lock{ shard._mutex };
+                ScopedLock<mutex> lock{ shard._mutex };
                 shard._mapBlock.clear();
                 shard._mapStack.clear();
             }
@@ -791,8 +791,8 @@ namespace sw
         MemoryProfilerInternal::t_bIsInsideProfiler = true;
         for ( uint32 shardIndex = 0; shardIndex < ShardedCounterUtil::kShardCount; ++shardIndex )
         {
-            LeakWindowShard&        shard = _leakShard.getShard( shardIndex );
-            std::scoped_lock<mutex> lock{ shard._mutex };
+            LeakWindowShard&  shard = _leakShard.getShard( shardIndex );
+            ScopedLock<mutex> lock{ shard._mutex };
             for ( const auto& blockPair : shard._mapBlock )
             {
                 const LeakWindowBlock& block = blockPair.second;
@@ -933,7 +933,7 @@ namespace sw
         // (그 해제도 세지 않으므로 어긋나지는 않는다). 표가 자란 만큼만 여유를 두고, 가드 안에서는 그 용량 안에서만 넣어 다시 할당하지 않는다.
         size_t entryCount{ 0 };
         {
-            std::scoped_lock<mutex> lock{ _stackMapMutex };
+            ScopedLock<mutex> lock{ _stackMapMutex };
             entryCount = _mapCallStackAllocInfo.size();
         }
         vector<CallStackAllocInfo> listResult;
@@ -941,7 +941,7 @@ namespace sw
 
         MemoryProfilerInternal::t_bIsInsideProfiler = true;
         {
-            std::scoped_lock<mutex> lock{ _stackMapMutex };
+            ScopedLock<mutex> lock{ _stackMapMutex };
             for ( const auto& [hash, info] : _mapCallStackAllocInfo )
             {
                 const bool bIncluded = ( order == TopCallStackOrder::LiveBytes ) ? ( info._currentBytes > 0 ) : ( info._totalCount > 0 );

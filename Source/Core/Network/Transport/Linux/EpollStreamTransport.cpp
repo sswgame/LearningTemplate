@@ -147,13 +147,13 @@ namespace sw
 
         EpollConnection& getConnection( uint32 index ) const
         {
-            std::scoped_lock<mutex> lock{ _tableMutex };
+            ScopedLock<mutex> lock{ _tableMutex };
             return *_listConnection[index];
         }
 
         EpollConnection* findConnection( StreamConnectionHandle handle ) const
         {
-            std::scoped_lock<mutex> lock{ _tableMutex };
+            ScopedLock<mutex> lock{ _tableMutex };
             if ( handle.isValid() == false || handle._index >= _listConnection.size() )
                 return nullptr;
             return _listConnection[handle._index].get();
@@ -166,8 +166,8 @@ namespace sw
 
         StreamConnectionHandle allocateConnection( int32 fd, const NetAddress& remote, bool bAccepted, EpollConnectionState state, EpollConnection*& pOutConnection )
         {
-            std::scoped_lock<mutex> lock{ _tableMutex };
-            uint32                  index = 0;
+            ScopedLock<mutex> lock{ _tableMutex };
+            uint32            index = 0;
             if ( _listFreeIndex.empty() == false )
             {
                 index = _listFreeIndex.back();
@@ -178,8 +178,8 @@ namespace sw
                 index = static_cast<uint32>( _listConnection.size() );
                 _listConnection.push_back( make_unique<EpollConnection>() );
             }
-            EpollConnection&        connection = *_listConnection[index];
-            std::scoped_lock<mutex> connectionLock{ connection._mutex };
+            EpollConnection&  connection = *_listConnection[index];
+            ScopedLock<mutex> connectionLock{ connection._mutex };
             connection._sendQueue.clear();
             connection._sendQueue.configure( _settings._sendHighWatermarkBytes, _settings._sendLowWatermarkBytes, _settings._maxQueuedSendBytes );
             connection._remote                 = remote;
@@ -218,8 +218,8 @@ namespace sw
         void scheduleCommand( int32 loopIndex, uint32 index )
         {
             {
-                EpollLoop&              loop = getLoop( loopIndex );
-                std::scoped_lock<mutex> lock{ loop._commandMutex };
+                EpollLoop&        loop = getLoop( loopIndex );
+                ScopedLock<mutex> lock{ loop._commandMutex };
                 loop._listCommandIndex.push_back( index );
             }
             wakeLoop( loopIndex );
@@ -292,16 +292,16 @@ namespace sw
             StreamConnectionHandle handle{};
             StreamCloseReason      reason = StreamCloseReason::None;
             {
-                std::scoped_lock<mutex> lock{ connection._mutex };
+                ScopedLock<mutex> lock{ connection._mutex };
                 if ( connection._state != EpollConnectionState::Closed )
                     return;
                 handle = StreamConnectionHandle::make( index, connection._generation );
                 reason = connection._closeReason;
             }
             _pHandler->onStreamClosed( handle, reason );
-            std::scoped_lock<mutex> lock{ _tableMutex };
+            ScopedLock<mutex> lock{ _tableMutex };
             {
-                std::scoped_lock<mutex> connectionLock{ connection._mutex };
+                ScopedLock<mutex> connectionLock{ connection._mutex };
                 ++connection._generation;
                 if ( connection._generation == 0 )
                     connection._generation = 1;
@@ -320,8 +320,8 @@ namespace sw
                 StreamConnectionHandle handle{};
                 int32                  fd = -1;
                 {
-                    std::scoped_lock<mutex> lock{ connection._mutex };
-                    const bool              bReading = connection._state == EpollConnectionState::Open || connection._state == EpollConnectionState::Closing;
+                    ScopedLock<mutex> lock{ connection._mutex };
+                    const bool        bReading = connection._state == EpollConnectionState::Open || connection._state == EpollConnectionState::Closing;
                     if ( bReading == false || connection._bRemoteFinished == SW_TRUE )
                         return;
                     if ( connection._bReceivePaused == SW_TRUE )
@@ -336,7 +336,7 @@ namespace sw
                 if ( received > 0 )
                 {
                     {
-                        std::scoped_lock<mutex> lock{ connection._mutex };
+                        ScopedLock<mutex> lock{ connection._mutex };
                         connection._lastReceiveNanoseconds = MonotonicClock::nowNanoseconds();
                     }
                     _receivedBytes.fetch_add( static_cast<uint64>( received ), std::memory_order_relaxed );
@@ -344,7 +344,7 @@ namespace sw
                     _pHandler->onStreamReceived( handle, pScratch, static_cast<int32>( received ) );
                     continue;
                 }
-                std::scoped_lock<mutex> lock{ connection._mutex };
+                ScopedLock<mutex> lock{ connection._mutex };
                 if ( received == 0 )
                 {
                     connection._bRemoteFinished = SW_TRUE;
@@ -372,7 +372,7 @@ namespace sw
             StreamConnectionHandle handle{};
             NetAddress             remote{};
             {
-                std::scoped_lock<mutex> lock{ connection._mutex };
+                ScopedLock<mutex> lock{ connection._mutex };
                 if ( connection._state != EpollConnectionState::Connecting )
                     return;
                 int32     error  = 0;
@@ -393,7 +393,7 @@ namespace sw
             _pHandler->onStreamOpened( handle, remote, false );
             bool bWritable = false;
             {
-                std::scoped_lock<mutex> lock{ connection._mutex };
+                ScopedLock<mutex> lock{ connection._mutex };
                 bWritable = flushLocked( connection ); // 연결 중에 쌓인 것을 보낸다.
             }
             if ( bWritable )
@@ -407,7 +407,7 @@ namespace sw
             EpollConnection&     connection = getConnection( index );
             EpollConnectionState state      = EpollConnectionState::Free;
             {
-                std::scoped_lock<mutex> lock{ connection._mutex };
+                ScopedLock<mutex> lock{ connection._mutex };
                 // 같은 배치의 앞에서 닫혀 슬롯이 다른 연결(다른 루프일 수도 있다)로 다시 쓰였으면, 이 사건은 옛 fd 의 것이다.
                 if ( connection._generation != eventHandle._generation || connection._loopIndex != loopIndex )
                     return;
@@ -422,7 +422,7 @@ namespace sw
             {
                 if ( ( events & EPOLLERR ) != 0 )
                 {
-                    std::scoped_lock<mutex> lock{ connection._mutex };
+                    ScopedLock<mutex> lock{ connection._mutex };
                     closeFdLocked( connection, StreamCloseReason::Reset, true );
                 }
                 if ( ( events & ( EPOLLIN | EPOLLRDHUP | EPOLLHUP ) ) != 0 )
@@ -432,7 +432,7 @@ namespace sw
                     StreamConnectionHandle handle{};
                     bool                   bWritable = false;
                     {
-                        std::scoped_lock<mutex> lock{ connection._mutex };
+                        ScopedLock<mutex> lock{ connection._mutex };
                         bWritable = flushLocked( connection );
                         handle    = StreamConnectionHandle::make( index, connection._generation );
                     }
@@ -449,7 +449,7 @@ namespace sw
             bool             bOpen      = false;
             bool             bRead      = false;
             {
-                std::scoped_lock<mutex> lock{ connection._mutex };
+                ScopedLock<mutex> lock{ connection._mutex };
                 if ( connection._bAbortRequested == SW_TRUE )
                 {
                     connection._bAbortRequested = SW_FALSE;
@@ -498,7 +498,7 @@ namespace sw
                 _pHandler->onStreamOpened( handle, address, true ); // 등록 전이다. 열림이 첫 콜백이어야 한다.
                 if ( registerFd( pConnection->_loopIndex, fd, handle.packed() ) == false )
                 {
-                    std::scoped_lock<mutex> lock{ pConnection->_mutex };
+                    ScopedLock<mutex> lock{ pConnection->_mutex };
                     closeFdLocked( *pConnection, StreamCloseReason::Reset, true );
                 }
                 // 열림 콜백 안에서 쌓인 보내기와 등록 실패에 따른 닫힘은 그 루프가 처리한다.
@@ -510,7 +510,7 @@ namespace sw
         {
             vector<uint32> listIndex;
             {
-                std::scoped_lock<mutex> lock{ _tableMutex };
+                ScopedLock<mutex> lock{ _tableMutex };
                 for ( uint32 index = 0; index < static_cast<uint32>( _listConnection.size() ); ++index )
                 {
                     if ( _listConnection[index]->_loopIndex == loopIndex )
@@ -523,8 +523,8 @@ namespace sw
             {
                 EpollConnection& connection = getConnection( index );
                 {
-                    std::scoped_lock<mutex> lock{ connection._mutex };
-                    const bool              bLive = connection._state != EpollConnectionState::Free && connection._state != EpollConnectionState::Closed;
+                    ScopedLock<mutex> lock{ connection._mutex };
+                    const bool        bLive = connection._state != EpollConnectionState::Free && connection._state != EpollConnectionState::Closed;
                     if ( bStopping && bLive )
                         closeFdLocked( connection, StreamCloseReason::Shutdown, true ); // shutdown 이 테이블을 훑은 뒤에 받은 연결이다.
                     switch ( connection._state )
@@ -580,7 +580,7 @@ namespace sw
                     handleConnectionEvent( StreamConnectionHandle::fromPacked( tag ), arrEvent[index].events, loopIndex );
             }
             {
-                std::scoped_lock<mutex> lock{ loop._commandMutex };
+                ScopedLock<mutex> lock{ loop._commandMutex };
                 loop._listWorkIndex.clear();
                 loop._listWorkIndex.swap( loop._listCommandIndex );
             }
@@ -668,13 +668,13 @@ namespace sw
         // 리슨 소켓은 루프를 모두 멈춘 뒤에 닫는다. 루프 0 이 acceptAvailable 에서 `_listenFd` 를 읽고 있기 때문이다. 멈추는 동안 받은 연결은 acceptAvailable 이 바로 끊는다.
         state._bStopping.store( true, std::memory_order_release );
         {
-            std::scoped_lock<mutex> lock{ state._tableMutex };
+            ScopedLock<mutex> lock{ state._tableMutex };
             for ( uint32 index = 0; index < static_cast<uint32>( state._listConnection.size() ); ++index )
             {
                 EpollConnection& connection = *state._listConnection[index];
                 bool             bSchedule  = false;
                 {
-                    std::scoped_lock<mutex> connectionLock{ connection._mutex };
+                    ScopedLock<mutex> connectionLock{ connection._mutex };
                     if ( connection._state != EpollConnectionState::Free )
                     {
                         state.closeFdLocked( connection, StreamCloseReason::Shutdown, true );
@@ -683,8 +683,8 @@ namespace sw
                 }
                 if ( bSchedule )
                 {
-                    EpollLoop&              loop = state.getLoop( connection._loopIndex );
-                    std::scoped_lock<mutex> commandLock{ loop._commandMutex };
+                    EpollLoop&        loop = state.getLoop( connection._loopIndex );
+                    ScopedLock<mutex> commandLock{ loop._commandMutex };
                     loop._listCommandIndex.push_back( index );
                 }
             }
@@ -780,7 +780,7 @@ namespace sw
         const sockaddr_in            native      = EpollStreamTransportInternal::makeNativeAddress( remote );
         const int32                  result      = ::connect( fd, reinterpret_cast<const sockaddr*>( &native ), sizeof( native ) );
         {
-            std::scoped_lock<mutex> lock{ pConnection->_mutex };
+            ScopedLock<mutex> lock{ pConnection->_mutex };
             if ( result == 0 )
                 pConnection->_bOpenPending = SW_TRUE; // 바로 연결됐다. 열림은 루프에서 처리한다.
             else if ( errno != EINPROGRESS )
@@ -788,7 +788,7 @@ namespace sw
         }
         if ( pConnection->_fd >= 0 && state.registerFd( pConnection->_loopIndex, fd, handle.packed() ) == false )
         {
-            std::scoped_lock<mutex> lock{ pConnection->_mutex };
+            ScopedLock<mutex> lock{ pConnection->_mutex };
             state.closeFdLocked( *pConnection, StreamCloseReason::ConnectFailed, true );
         }
         state.scheduleCommand( pConnection->_loopIndex, handle._index ); // 즉시 성공이나 즉시 실패를 루프가 처리한다(콜백은 루프 스레드에서 나간다).
@@ -800,8 +800,8 @@ namespace sw
         EpollConnection* pConnection = _state->findConnection( handle );
         if ( pConnection == nullptr )
             return StreamSendResult::Closed;
-        std::scoped_lock<mutex> lock{ pConnection->_mutex };
-        const bool              bAccepting = pConnection->_state == EpollConnectionState::Open || pConnection->_state == EpollConnectionState::Connecting;
+        ScopedLock<mutex> lock{ pConnection->_mutex };
+        const bool        bAccepting = pConnection->_state == EpollConnectionState::Open || pConnection->_state == EpollConnectionState::Connecting;
         if ( State::isLive( *pConnection, handle ) == false || bAccepting == false )
             return StreamSendResult::Closed;
         const bool             bWasEmpty       = pConnection->_sendQueue.isEmpty();
@@ -820,7 +820,7 @@ namespace sw
         if ( pConnection == nullptr )
             return;
         {
-            std::scoped_lock<mutex> lock{ pConnection->_mutex };
+            ScopedLock<mutex> lock{ pConnection->_mutex };
             if ( State::isLive( *pConnection, handle ) == false || pConnection->_state == EpollConnectionState::Closed )
                 return;
             if ( mode == StreamCloseMode::Abort || pConnection->_state == EpollConnectionState::Connecting )
@@ -845,7 +845,7 @@ namespace sw
         if ( pConnection == nullptr )
             return;
         {
-            std::scoped_lock<mutex> lock{ pConnection->_mutex };
+            ScopedLock<mutex> lock{ pConnection->_mutex };
             if ( State::isLive( *pConnection, handle ) == false || pConnection->_state == EpollConnectionState::Closing )
                 return;
             pConnection->_bReceivePaused = bPaused ? SW_TRUE : SW_FALSE;
@@ -866,7 +866,7 @@ namespace sw
         EpollConnection* pConnection = _state->findConnection( handle );
         if ( pConnection == nullptr )
             return NetAddress{};
-        std::scoped_lock<mutex> lock{ pConnection->_mutex };
+        ScopedLock<mutex> lock{ pConnection->_mutex };
         return State::isLive( *pConnection, handle ) ? pConnection->_remote : NetAddress{};
     }
 

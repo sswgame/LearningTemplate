@@ -135,15 +135,15 @@ namespace sw
         void             pushEvent( Event&& event, const uint8* pBody, int32 bodySize );
         void             closeForError( Connection& connection, StreamCloseReason reason );
 
-        mutable mutex                                 _tableMutex;
-        unordered_map<uint64, shared_ptr<Connection>> _mapConnection; ///< 핸들(packed)에서 연결로 가는 맵. I/O 스레드가 열고 닫는다.
-        mutable mutex                                 _inboxMutex;
-        vector<Event>                                 _listInbox;   ///< I/O 스레드가 쌓는다.
-        vector<uint8>                                 _inboxBytes;  ///< 프레임 본문을 담는 아레나.
-        vector<Event>                                 _listPumping; ///< pump 스레드 전용. 맞바꿔서 꺼낸다.
-        vector<uint8>                                 _pumpingBytes;
-        unordered_map<uint64, int64>                  _mapLastPingTime; ///< pump 스레드 전용. 열린 연결의 마지막 핑 시각(나노초).
-        StreamEndpointConfig                          _settings;
-        IStreamTransport*                             _pTransport;
+        mutable mutex                                                _tableMutex;
+        unordered_map<uint64, shared_ptr<Connection>> _mapConnection SW_GUARDED_BY( _tableMutex ); ///< 핸들(packed)에서 연결로 가는 맵. I/O 스레드가 열고 닫는다.
+        mutable mutex                                                _inboxMutex;
+        vector<Event> _listInbox                                     SW_GUARDED_BY( _inboxMutex ); ///< I/O 스레드가 쌓는다.
+        vector<uint8> _inboxBytes                                    SW_GUARDED_BY( _inboxMutex ); ///< 프레임 본문을 담는 아레나.
+        vector<Event>                                                _listPumping;                 ///< pump 스레드 전용. 맞바꿔서 꺼낸다.
+        vector<uint8>                                                _pumpingBytes;
+        unordered_map<uint64, int64>                                 _mapLastPingTime; ///< pump 스레드 전용. 열린 연결의 마지막 핑 시각(나노초).
+        StreamEndpointConfig                                         _settings;
+        IStreamTransport*                                            _pTransport;
     };
 } // namespace sw

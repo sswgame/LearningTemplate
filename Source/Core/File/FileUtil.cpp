@@ -754,7 +754,7 @@ namespace sw
 
         uint32 openGeneration{ 0 };
         {
-            std::scoped_lock<mutex> lock( s_fileDialogMutex );
+            ScopedLock<mutex> lock{ s_fileDialogMutex };
             openGeneration = s_fileDialogGeneration;
         }
 
@@ -780,7 +780,7 @@ namespace sw
                 return;
 
             // **여기서 델리게이트를 부르지 않는다.** 이 스레드는 메인 스레드와 아무런 동기화 약속이 없다.
-            std::scoped_lock<mutex> lock( s_fileDialogMutex );
+            ScopedLock<mutex> lock{ s_fileDialogMutex };
             if ( s_fileDialogGeneration != openGeneration )
                 return; // 여는 사이에 취소됐다. 델리게이트가 가리키던 모듈이 이미 없을 수 있다.
             FileDialogResult result;
@@ -795,7 +795,7 @@ namespace sw
     {
         vector<FileDialogResult> listReady;
         {
-            std::scoped_lock<mutex> lock( s_fileDialogMutex );
+            ScopedLock<mutex> lock{ s_fileDialogMutex };
             if ( s_listFileDialogResult.empty() )
                 return;
             listReady.swap( s_listFileDialogResult );
@@ -813,7 +813,7 @@ namespace sw
     {
         vector<FileDialogResult> listDropped;
         {
-            std::scoped_lock<mutex> lock( s_fileDialogMutex );
+            ScopedLock<mutex> lock{ s_fileDialogMutex };
             ++s_fileDialogGeneration;
             listDropped.swap( s_listFileDialogResult );
         }

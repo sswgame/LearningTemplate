@@ -145,38 +145,38 @@ namespace sw
     {
         using Internal = IocpStreamTransportInternal;
 
-        mutable mutex                      _tableMutex;
-        vector<unique_ptr<IocpConnection>> _listConnection;
-        vector<uint32>                     _listFreeIndex;
-        unique_ptr<IocpAcceptSlot[]>       _arrAcceptSlot;
-        vector<sw::thread>                 _listThread;
-        StreamTransportConfig              _settings{};
-        IStreamHandler*                    _pHandler{ nullptr };
-        HANDLE                             _completionPort{ nullptr };
-        SOCKET                             _listenSocket{ INVALID_SOCKET };
-        LPFN_ACCEPTEX                      _pAcceptEx{ nullptr };
-        atomic<LPFN_CONNECTEX>             _pConnectEx{ nullptr };
-        atomic<int64>                      _nextSweepNanoseconds{ 0 };
-        atomic<int32>                      _pendingAcceptCount{ 0 };
-        atomic<int32>                      _openCount{ 0 };
-        atomic<uint64>                     _acceptedCount{ 0 };
-        atomic<uint64>                     _connectedCount{ 0 };
-        atomic<uint64>                     _closedCount{ 0 };
-        atomic<uint64>                     _receivedBytes{ 0 };
-        atomic<uint64>                     _sentBytes{ 0 };
-        atomic<uint64>                     _receiveCallCount{ 0 };
-        atomic<uint64>                     _sendCallCount{ 0 };
-        atomic<bool>                       _bStopping{ false };
-        atomic<bool>                       _bExitThreads{ false }; ///< I/O 스레드가 끝난다. 종료 키는 깨우기만 한다(한 배치에서 종료 키 여럿을 한 스레드가 가져갈 수 있다).
-        uint16                             _listenPort{ 0 };
-        uint8                              _bInitialized{ SW_FALSE };
+        mutable mutex                                      _tableMutex;
+        vector<unique_ptr<IocpConnection>> _listConnection SW_GUARDED_BY( _tableMutex );
+        vector<uint32> _listFreeIndex                      SW_GUARDED_BY( _tableMutex );
+        unique_ptr<IocpAcceptSlot[]>                       _arrAcceptSlot;
+        vector<sw::thread>                                 _listThread;
+        StreamTransportConfig                              _settings{};
+        IStreamHandler*                                    _pHandler{ nullptr };
+        HANDLE                                             _completionPort{ nullptr };
+        SOCKET                                             _listenSocket{ INVALID_SOCKET };
+        LPFN_ACCEPTEX                                      _pAcceptEx{ nullptr };
+        atomic<LPFN_CONNECTEX>                             _pConnectEx{ nullptr };
+        atomic<int64>                                      _nextSweepNanoseconds{ 0 };
+        atomic<int32>                                      _pendingAcceptCount{ 0 };
+        atomic<int32>                                      _openCount{ 0 };
+        atomic<uint64>                                     _acceptedCount{ 0 };
+        atomic<uint64>                                     _connectedCount{ 0 };
+        atomic<uint64>                                     _closedCount{ 0 };
+        atomic<uint64>                                     _receivedBytes{ 0 };
+        atomic<uint64>                                     _sentBytes{ 0 };
+        atomic<uint64>                                     _receiveCallCount{ 0 };
+        atomic<uint64>                                     _sendCallCount{ 0 };
+        atomic<bool>                                       _bStopping{ false };
+        atomic<bool>                                       _bExitThreads{ false }; ///< I/O 스레드가 끝난다. 종료 키는 깨우기만 한다(한 배치에서 종료 키 여럿을 한 스레드가 가져갈 수 있다).
+        uint16                                             _listenPort{ 0 };
+        uint8                                              _bInitialized{ SW_FALSE };
 
         // ---- 슬롯 ----
 
         StreamConnectionHandle allocateConnection( SOCKET socket, const NetAddress& remote, bool bAccepted, IocpConnectionState state, IocpConnection*& pOutConnection )
         {
-            std::scoped_lock<mutex> lock{ _tableMutex };
-            uint32                  index = 0;
+            ScopedLock<mutex> lock{ _tableMutex };
+            uint32            index = 0;
             if ( _listFreeIndex.empty() == false )
             {
                 index = _listFreeIndex.back();
@@ -187,8 +187,8 @@ namespace sw
                 index = static_cast<uint32>( _listConnection.size() );
                 _listConnection.push_back( make_unique<IocpConnection>() );
             }
-            IocpConnection&         connection = *_listConnection[index];
-            std::scoped_lock<mutex> connectionLock{ connection._mutex };
+            IocpConnection&   connection = *_listConnection[index];
+            ScopedLock<mutex> connectionLock{ connection._mutex };
             connection._sendQueue.clear();
             connection._sendQueue.configure( _settings._sendHighWatermarkBytes, _settings._sendLowWatermarkBytes, _settings._maxQueuedSendBytes );
             connection._receiveBuffer.resize( static_cast<size_t>( _settings._receiveChunkBytes ) );
@@ -215,7 +215,7 @@ namespace sw
         /** @brief 핸들의 슬롯을 반환합니다. 세대는 부르는 쪽이 연결 잠금 안에서 `isLive` 로 확인합니다. 슬롯 객체는 지워지지 않습니다. */
         IocpConnection* findConnection( StreamConnectionHandle handle ) const
         {
-            std::scoped_lock<mutex> lock{ _tableMutex };
+            ScopedLock<mutex> lock{ _tableMutex };
             if ( handle.isValid() == false || handle._index >= _listConnection.size() )
                 return nullptr;
             return _listConnection[handle._index].get();
@@ -223,7 +223,7 @@ namespace sw
 
         IocpConnection& getConnection( uint32 index ) const
         {
-            std::scoped_lock<mutex> lock{ _tableMutex };
+            ScopedLock<mutex> lock{ _tableMutex };
             return *_listConnection[index];
         }
 
@@ -326,9 +326,9 @@ namespace sw
         void retire( IocpConnection& connection, StreamConnectionHandle handle, StreamCloseReason reason )
         {
             _pHandler->onStreamClosed( handle, reason );
-            std::scoped_lock<mutex> lock{ _tableMutex };
+            ScopedLock<mutex> lock{ _tableMutex };
             {
-                std::scoped_lock<mutex> connectionLock{ connection._mutex };
+                ScopedLock<mutex> connectionLock{ connection._mutex };
                 ++connection._generation;
                 if ( connection._generation == 0 )
                     connection._generation = 1;
@@ -346,7 +346,7 @@ namespace sw
             StreamCloseReason      reason  = StreamCloseReason::None;
             bool                   bRetire = false;
             {
-                std::scoped_lock<mutex> lock{ connection._mutex };
+                ScopedLock<mutex> lock{ connection._mutex };
                 --connection._pendingOperationCount;
                 bRetire = takeRetireLocked( connection, handle, reason, index );
             }
@@ -362,7 +362,7 @@ namespace sw
             StreamConnectionHandle handle{};
             bool                   bDeliver = false;
             {
-                std::scoped_lock<mutex> lock{ connection._mutex };
+                ScopedLock<mutex> lock{ connection._mutex };
                 connection._bReceivePosted = SW_FALSE;
                 handle                     = StreamConnectionHandle::make( index, connection._generation );
                 if ( bSucceeded == false )
@@ -394,7 +394,7 @@ namespace sw
             {
                 // 받기는 다시 걸기 전이라 버퍼가 그대로다. 작업 수는 아직 유지한다. 콜백 중에 닫혀도 슬롯이 반환되지 않는다.
                 _pHandler->onStreamReceived( handle, connection._receiveBuffer.data(), static_cast<int32>( transferred ) );
-                std::scoped_lock<mutex> lock{ connection._mutex };
+                ScopedLock<mutex> lock{ connection._mutex };
                 postReceiveLocked( connection );
             }
             finishOperation( connection, index );
@@ -406,7 +406,7 @@ namespace sw
             StreamConnectionHandle handle{};
             bool                   bWritable = false;
             {
-                std::scoped_lock<mutex> lock{ connection._mutex };
+                ScopedLock<mutex> lock{ connection._mutex };
                 connection._bSendPosted = SW_FALSE;
                 handle                  = StreamConnectionHandle::make( index, connection._generation );
                 if ( bSucceeded == false )
@@ -434,7 +434,7 @@ namespace sw
             NetAddress             remote{};
             bool                   bOpened = false;
             {
-                std::scoped_lock<mutex> lock{ connection._mutex };
+                ScopedLock<mutex> lock{ connection._mutex };
                 handle                       = StreamConnectionHandle::make( index, connection._generation );
                 remote                       = connection._remote;
                 const bool bConnectCompleted = bSucceeded && connection._socket != INVALID_SOCKET && connection._state == IocpConnectionState::Connecting;
@@ -455,7 +455,7 @@ namespace sw
             {
                 _connectedCount.fetch_add( 1, std::memory_order_relaxed );
                 _pHandler->onStreamOpened( handle, remote, false );
-                std::scoped_lock<mutex> lock{ connection._mutex };
+                ScopedLock<mutex> lock{ connection._mutex };
                 postReceiveLocked( connection );
                 postSendLocked( connection ); // 연결 중에 쌓인 것을 보낸다.
             }
@@ -514,7 +514,7 @@ namespace sw
                     _acceptedCount.fetch_add( 1, std::memory_order_relaxed );
                     _pHandler->onStreamOpened( handle, address, true ); // 받기는 열림 뒤에 건다. 열림이 항상 첫 콜백이어야 하기 때문이다.
                     {
-                        std::scoped_lock<mutex> lock{ pConnection->_mutex };
+                        ScopedLock<mutex> lock{ pConnection->_mutex };
                         postReceiveLocked( *pConnection );
                         postSendLocked( *pConnection );
                     }
@@ -536,7 +536,7 @@ namespace sw
             StreamCloseReason      reason  = StreamCloseReason::None;
             bool                   bRetire = false;
             {
-                std::scoped_lock<mutex> lock{ connection._mutex };
+                ScopedLock<mutex> lock{ connection._mutex };
                 bRetire = takeRetireLocked( connection, handle, reason, index );
             }
             if ( bRetire )
@@ -551,7 +551,7 @@ namespace sw
                 return;
             vector<IocpConnection*> listConnection;
             {
-                std::scoped_lock<mutex> lock{ _tableMutex };
+                ScopedLock<mutex> lock{ _tableMutex };
                 listConnection.reserve( _listConnection.size() );
                 for ( const unique_ptr<IocpConnection>& connection : _listConnection )
                 {
@@ -561,7 +561,7 @@ namespace sw
             const int64 idleNanoseconds = Internal::toNanoseconds( _settings._idleTimeoutSeconds );
             for ( IocpConnection* pConnection : listConnection )
             {
-                std::scoped_lock<mutex> lock{ pConnection->_mutex };
+                ScopedLock<mutex> lock{ pConnection->_mutex };
                 switch ( pConnection->_state )
                 {
                     case IocpConnectionState::Open:
@@ -703,10 +703,10 @@ namespace sw
             state._listenSocket = INVALID_SOCKET;
         }
         {
-            std::scoped_lock<mutex> lock{ state._tableMutex };
+            ScopedLock<mutex> lock{ state._tableMutex };
             for ( const unique_ptr<IocpConnection>& connection : state._listConnection )
             {
-                std::scoped_lock<mutex> connectionLock{ connection->_mutex };
+                ScopedLock<mutex> connectionLock{ connection->_mutex };
                 state.closeSocketLocked( *connection, StreamCloseReason::Shutdown, true );
             }
         }
@@ -804,7 +804,7 @@ namespace sw
         }
         IocpConnection*              pConnection = nullptr;
         const StreamConnectionHandle handle      = state.allocateConnection( socket, remote, false, IocpConnectionState::Connecting, pConnection );
-        std::scoped_lock<mutex>      lock{ pConnection->_mutex };
+        ScopedLock<mutex>            lock{ pConnection->_mutex };
         IocpOperation&               operation = pConnection->_receiveOperation;
         std::memset( &operation._overlapped, 0, sizeof( operation._overlapped ) );
         operation._kind            = IocpOperationKind::Connect;
@@ -825,8 +825,8 @@ namespace sw
         IocpConnection* pConnection = _state->findConnection( handle );
         if ( pConnection == nullptr )
             return StreamSendResult::Closed;
-        std::scoped_lock<mutex> lock{ pConnection->_mutex };
-        const bool              bAccepting = pConnection->_state == IocpConnectionState::Open || pConnection->_state == IocpConnectionState::Connecting;
+        ScopedLock<mutex> lock{ pConnection->_mutex };
+        const bool        bAccepting = pConnection->_state == IocpConnectionState::Open || pConnection->_state == IocpConnectionState::Connecting;
         if ( State::isLive( *pConnection, handle ) == false || bAccepting == false )
             return StreamSendResult::Closed;
         const StreamSendResult result = pConnection->_sendQueue.append( pData, size );
@@ -840,7 +840,7 @@ namespace sw
         IocpConnection* pConnection = _state->findConnection( handle );
         if ( pConnection == nullptr )
             return;
-        std::scoped_lock<mutex> lock{ pConnection->_mutex };
+        ScopedLock<mutex> lock{ pConnection->_mutex };
         if ( State::isLive( *pConnection, handle ) == false )
             return;
         if ( mode == StreamCloseMode::Abort || pConnection->_state == IocpConnectionState::Connecting )
@@ -863,7 +863,7 @@ namespace sw
         IocpConnection* pConnection = _state->findConnection( handle );
         if ( pConnection == nullptr )
             return;
-        std::scoped_lock<mutex> lock{ pConnection->_mutex };
+        ScopedLock<mutex> lock{ pConnection->_mutex };
         if ( State::isLive( *pConnection, handle ) == false || pConnection->_state == IocpConnectionState::Closing )
             return;
         pConnection->_bReceivePaused = bPaused ? SW_TRUE : SW_FALSE;
@@ -884,7 +884,7 @@ namespace sw
         IocpConnection* pConnection = _state->findConnection( handle );
         if ( pConnection == nullptr )
             return NetAddress{};
-        std::scoped_lock<mutex> lock{ pConnection->_mutex };
+        ScopedLock<mutex> lock{ pConnection->_mutex };
         return State::isLive( *pConnection, handle ) ? pConnection->_remote : NetAddress{};
     }
 

@@ -97,7 +97,7 @@ namespace sw
                 , _listenPort{ 0 }
                 , _bInitialized{ SW_FALSE }
             {
-                std::scoped_lock<mutex> lock{ _pState->_mutex };
+                ScopedLock<mutex> lock{ _pState->_mutex };
                 _localPort = _pState->_nextEphemeralPort++;
             }
 
@@ -121,7 +121,7 @@ namespace sw
                 if ( _bInitialized == SW_FALSE )
                     return;
                 {
-                    std::scoped_lock<mutex> lock{ _pState->_mutex };
+                    ScopedLock<mutex> lock{ _pState->_mutex };
                     if ( _listenPort != 0 )
                         _pState->_mapListener.erase( _listenPort );
                     _listenPort = 0;
@@ -135,7 +135,7 @@ namespace sw
                 {
                     // 저쪽이 아직 자리를 풀지 않은 링크는 이 전송을 가리킨 채 남는다 — 이 전송이 먼저 없어지면 저쪽의 자리 풀기가 없어진 전송을 읽는다.
                     // 두 쪽 모두 닫혔으므로 이 쪽 자리는 더 쓰이지 않는다(자리 풀기는 nullptr 을 "이미 풀렸다" 로 본다).
-                    std::scoped_lock<mutex> lock{ _pState->_mutex };
+                    ScopedLock<mutex> lock{ _pState->_mutex };
                     for ( LoopbackLink& link : _pState->_listLink )
                     {
                         for ( LoopbackStreamTransport*& pSide : link._arrSide )
@@ -150,8 +150,8 @@ namespace sw
 
             bool listen( const NetAddress& bindAddress ) override
             {
-                std::scoped_lock<mutex> lock{ _pState->_mutex };
-                const uint16            listenPort = bindAddress._port != 0 ? bindAddress._port : _localPort;
+                ScopedLock<mutex> lock{ _pState->_mutex };
+                const uint16      listenPort = bindAddress._port != 0 ? bindAddress._port : _localPort;
                 if ( _pState->_mapListener.find( listenPort ) != _pState->_mapListener.end() )
                     return false;
                 _pState->_mapListener[listenPort] = this;
@@ -163,7 +163,7 @@ namespace sw
 
             StreamConnectionHandle connect( const NetAddress& remote ) override
             {
-                std::scoped_lock<mutex>        lock{ _pState->_mutex };
+                ScopedLock<mutex>              lock{ _pState->_mutex };
                 const StreamConnectionHandle   handle          = allocateSlotLocked();
                 const auto                     found           = _pState->_mapListener.find( remote._port );
                 LoopbackStreamTransport* const pPeer           = found != _pState->_mapListener.end() ? found->second : nullptr;
@@ -200,10 +200,10 @@ namespace sw
 
             StreamSendResult send( StreamConnectionHandle handle, const uint8* pData, int32 size ) override
             {
-                std::scoped_lock<mutex> lock{ _pState->_mutex };
-                LoopbackLink*           pLink                   = findLinkLocked( handle );
-                const uint8             side                    = pLink != nullptr ? _listSlot[handle._index]._side : 0;
-                const bool              bLinkUnavailableForSend = pLink == nullptr || pLink->_arrFinRequested[side] == SW_TRUE || pLink->_arrClosed[side] == SW_TRUE;
+                ScopedLock<mutex> lock{ _pState->_mutex };
+                LoopbackLink*     pLink                   = findLinkLocked( handle );
+                const uint8       side                    = pLink != nullptr ? _listSlot[handle._index]._side : 0;
+                const bool        bLinkUnavailableForSend = pLink == nullptr || pLink->_arrFinRequested[side] == SW_TRUE || pLink->_arrClosed[side] == SW_TRUE;
                 if ( bLinkUnavailableForSend )
                     return StreamSendResult::Closed;
                 const StreamSendResult result = pLink->_arrQueue[side].append( pData, size );
@@ -214,8 +214,8 @@ namespace sw
 
             void close( StreamConnectionHandle handle, StreamCloseMode mode ) override
             {
-                std::scoped_lock<mutex> lock{ _pState->_mutex };
-                LoopbackLink*           pLink = findLinkLocked( handle );
+                ScopedLock<mutex> lock{ _pState->_mutex };
+                LoopbackLink*     pLink = findLinkLocked( handle );
                 if ( pLink == nullptr )
                     return;
                 const uint8 side = _listSlot[handle._index]._side;
@@ -233,8 +233,8 @@ namespace sw
 
             void setReceivePaused( StreamConnectionHandle handle, bool bPaused ) override
             {
-                std::scoped_lock<mutex> lock{ _pState->_mutex };
-                LoopbackLink*           pLink = findLinkLocked( handle );
+                ScopedLock<mutex> lock{ _pState->_mutex };
+                LoopbackLink*     pLink = findLinkLocked( handle );
                 if ( pLink != nullptr )
                     pLink->_arrPaused[_listSlot[handle._index]._side] = bPaused ? SW_TRUE : SW_FALSE;
             }
@@ -243,7 +243,7 @@ namespace sw
             {
                 (void)timeoutMilli; // 루프백은 기다릴 것이 없다 — 저쪽이 쓴 것은 이미 망에 있다
                 {
-                    std::scoped_lock<mutex> lock{ _pState->_mutex };
+                    ScopedLock<mutex> lock{ _pState->_mutex };
                     transferLocked();
                     _listDispatch.clear();
                     _listDispatch.swap( _listPending );
@@ -270,7 +270,7 @@ namespace sw
                         case LoopbackEventKind::Closed:
                         {
                             _pHandler->onStreamClosed( event._handle, event._reason );
-                            std::scoped_lock<mutex> lock{ _pState->_mutex };
+                            ScopedLock<mutex> lock{ _pState->_mutex };
                             freeSlotLocked( event._handle );
                             break;
                         }
@@ -281,8 +281,8 @@ namespace sw
 
             NetAddress getRemoteAddress( StreamConnectionHandle handle ) const override
             {
-                std::scoped_lock<mutex> lock{ _pState->_mutex };
-                const LoopbackLink*     pLink = const_cast<LoopbackStreamTransport*>( this )->findLinkLocked( handle );
+                ScopedLock<mutex>   lock{ _pState->_mutex };
+                const LoopbackLink* pLink = const_cast<LoopbackStreamTransport*>( this )->findLinkLocked( handle );
                 if ( pLink == nullptr )
                     return NetAddress{};
                 const uint8                    peerSide = static_cast<uint8>( 1 - _listSlot[handle._index]._side );
@@ -294,9 +294,9 @@ namespace sw
 
             StreamTransportStats getStats() const override
             {
-                std::scoped_lock<mutex> lock{ _pState->_mutex };
-                StreamTransportStats    stats = _stats;
-                stats._openCount              = countOpenLocked();
+                ScopedLock<mutex>    lock{ _pState->_mutex };
+                StreamTransportStats stats = _stats;
+                stats._openCount           = countOpenLocked();
                 return stats;
             }
 
@@ -498,7 +498,7 @@ namespace sw
 
     void LoopbackStreamNetwork::setConditions( const LoopbackStreamConditions& conditions )
     {
-        std::scoped_lock<mutex> lock{ _state->_mutex };
+        ScopedLock<mutex> lock{ _state->_mutex };
         _state->_conditions = conditions;
     }
 } // namespace sw

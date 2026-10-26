@@ -65,7 +65,7 @@ namespace sw
     CacheStatsHandle CacheStats::registerCache( string_view name )
     {
         CacheStatsInternal::Registry& registry = CacheStatsInternal::getRegistry();
-        std::scoped_lock<mutex>       lock{ registry._mutex };
+        ScopedLock<mutex>             lock{ registry._mutex };
         if ( CacheStatsInternal::findIndex( registry, name ) != registry._entryCount )
         {
             SW_LOG_ERROR( "Cache stats name '%#' is already registered - keeping the first", name );
@@ -77,7 +77,7 @@ namespace sw
     CacheStatsHandle CacheStats::getOrCreate( string_view name )
     {
         CacheStatsInternal::Registry& registry = CacheStatsInternal::getRegistry();
-        std::scoped_lock<mutex>       lock{ registry._mutex };
+        ScopedLock<mutex>             lock{ registry._mutex };
         const uint32                  index = CacheStatsInternal::findIndex( registry, name );
         if ( index != registry._entryCount )
             return CacheStatsHandle{ &registry._arrEntry[index] };
@@ -87,7 +87,7 @@ namespace sw
     void CacheStats::markWindowStart()
     {
         CacheStatsInternal::Registry& registry = CacheStatsInternal::getRegistry();
-        std::scoped_lock<mutex>       lock{ registry._mutex };
+        ScopedLock<mutex>             lock{ registry._mutex };
         for ( uint32 index = 0; index < registry._entryCount; ++index )
         {
             CacheStatsCounters& entry = registry._arrEntry[index];
@@ -101,7 +101,7 @@ namespace sw
     {
         outListSnapshot.clear();
         CacheStatsInternal::Registry& registry = CacheStatsInternal::getRegistry();
-        std::scoped_lock<mutex>       lock{ registry._mutex };
+        ScopedLock<mutex>             lock{ registry._mutex };
         outListSnapshot.reserve( registry._entryCount );
         for ( uint32 index = 0; index < registry._entryCount; ++index )
         {
@@ -120,7 +120,7 @@ namespace sw
     uint32 CacheStats::getCount()
     {
         CacheStatsInternal::Registry& registry = CacheStatsInternal::getRegistry();
-        std::scoped_lock<mutex>       lock{ registry._mutex };
+        ScopedLock<mutex>             lock{ registry._mutex };
         return registry._entryCount;
     }
 } // namespace sw

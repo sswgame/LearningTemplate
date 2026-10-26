@@ -189,18 +189,18 @@ namespace sw
         /** @brief 잠금 안에서 부릅니다. 안쪽 전송에서 받은 것을 받는 쪽 조건으로 큐에 넣습니다. */
         void pullIncomingLocked();
 
-        mutable mutex          _mutex;
-        INetTransport*         _pInner;
-        vector<Pending>        _listPending;
-        vector<Incoming>       _listIncoming; ///< 받는 쪽 조건으로 늦춘 패킷(도착 순서)
-        vector<uint8>          _receivedBytes;
-        vector<LinkState>      _listLink;
-        NetEmulationConditions _defaultConditions;
-        NetEmulationConditions _incomingConditions;
-        NetEmulationStats      _stats;
-        float64                _time;
-        float64                _outageUntil; ///< 이 시각 전까지 보내고 받는 것을 모두 버린다
-        uint64                 _order;
-        uint32                 _randomState;
+        mutable mutex                _mutex;
+        INetTransport*               _pInner;
+        vector<Pending> _listPending SW_GUARDED_BY( _mutex );
+        vector<Incoming>             _listIncoming; ///< 받는 쪽 조건으로 늦춘 패킷(도착 순서)
+        vector<uint8>                _receivedBytes;
+        vector<LinkState>            _listLink;
+        NetEmulationConditions       _defaultConditions;
+        NetEmulationConditions       _incomingConditions;
+        NetEmulationStats            _stats;
+        float64                      _time;
+        float64                      _outageUntil; ///< 이 시각 전까지 보내고 받는 것을 모두 버린다
+        uint64                       _order;
+        uint32                       _randomState;
     };
 } // namespace sw

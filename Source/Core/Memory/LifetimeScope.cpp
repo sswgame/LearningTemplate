@@ -23,8 +23,8 @@ namespace sw
     {
         LifetimeScopeEntry* pEntry = nullptr;
         {
-            std::lock_guard<SpinLock> lock( _lock );
-            const bool                bWasOpen = _bClosed.load( std::memory_order_relaxed ) == false;
+            ScopedLock<SpinLock> lock{ _lock };
+            const bool           bWasOpen = _bClosed.load( std::memory_order_relaxed ) == false;
             SW_ASSERT( bWasOpen );
             if ( bWasOpen == false )
                 return;
@@ -44,7 +44,7 @@ namespace sw
 
     void LifetimeScope::open()
     {
-        std::lock_guard<SpinLock> lock( _lock );
+        ScopedLock<SpinLock> lock{ _lock };
         // 닫을 때 목록을 비웠다 — 다시 여는 범위는 빈 범위다.
         SW_ASSERT( _pHead == nullptr || _bClosed.load( std::memory_order_relaxed ) == false );
         _bClosed.store( false, std::memory_order_release );
@@ -52,7 +52,7 @@ namespace sw
 
     bool LifetimeScope::attach( LifetimeScopeEntry& entry )
     {
-        std::lock_guard<SpinLock> lock( _lock );
+        ScopedLock<SpinLock> lock{ _lock };
         if ( _bClosed.load( std::memory_order_relaxed ) )
             return false;
         entry._pNext = _pHead;
@@ -62,8 +62,8 @@ namespace sw
 
     void LifetimeScope::detach( LifetimeScopeEntry& entry )
     {
-        std::lock_guard<SpinLock> lock( _lock );
-        LifetimeScopeEntry**      ppLink = &_pHead;
+        ScopedLock<SpinLock> lock{ _lock };
+        LifetimeScopeEntry** ppLink = &_pHead;
         while ( *ppLink != nullptr )
         {
             if ( *ppLink == &entry )

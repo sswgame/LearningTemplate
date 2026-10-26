@@ -162,15 +162,15 @@ namespace sw
         /** @brief 완료 콜백을 부르고 요청을 끝난 것으로 표시합니다. */
         void runDelivery( const shared_ptr<AsyncReadRequest>& pRequest );
 
-        mutable mutex                                                     _mutex;
-        mutable std::condition_variable_any                               _cv;
-        array<deque<shared_ptr<AsyncReadRequest>>, kAsyncIOPriorityCount> _arrQueue;
-        Delegate<void()>                                                  _wakeDelegate;
-        TaskManager*                                                      _pTaskManager;
-        uint32                                                            _maxInFlightCount;
-        uint32                                                            _inFlightCount;
-        uint32                                                            _outstandingCount;
-        bool                                                              _bStopping;
+        mutable mutex                                                               _mutex;
+        mutable std::condition_variable_any                                         _cv;
+        array<deque<shared_ptr<AsyncReadRequest>>, kAsyncIOPriorityCount> _arrQueue SW_GUARDED_BY( _mutex );
+        Delegate<void()>                                                            _wakeDelegate;
+        TaskManager*                                                                _pTaskManager;
+        uint32 _maxInFlightCount                                                    SW_GUARDED_BY( _mutex );
+        uint32 _inFlightCount                                                       SW_GUARDED_BY( _mutex );
+        uint32                                                                      _outstandingCount;
+        bool                                                                        _bStopping;
     };
 } // namespace sw
 
