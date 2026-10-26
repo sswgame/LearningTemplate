@@ -34,8 +34,6 @@ private:
 | `_listItems` · `_itemList` | `_listItem` | 컨테이너는 접두어 + 단수(`unique` 와 바이트 버퍼 `_bytes` 만 예외) |
 | `listOut` · `outItemList` · `outListItems` | `outListItem` | `out` 이 맨 앞, 컨테이너 접두어가 그 뒤, 단수 |
 | `outBuffer`(포인터) | `pOutBuffer` · `ppOutObject` · `pInOutSize` | 포인터 출력만 `p` / `pp` 가 `out` 앞 |
-| `Task*** pppTask` | 구조를 바꾼다 | 삼중 포인터 금지 |
-| `for ( int32 i = 0; … )` | `for ( int32 index = 0; … )` | 한 글자 · 불투명한 줄임말 금지 |
 
 전역 변수 두 종류(`Core/GlobalVariable/GlobalVariableManager.h`):
 
@@ -49,22 +47,14 @@ SW_EXTERN_GLOBAL_VARIABLE( bool, gv_useRenderThread );                // extern 
 
 | 쓰지 않는 것 | 쓰는 것 | 규칙 |
 | :--- | :--- | :--- |
-| `updateHud` · `HudViewModel` · `pHud` | `updateHUD` · `HUDViewModel` · `pHUD` | 약어는 대문자(이름 맨 앞만 소문자 — `hudLayer`). 레지스트리 `kEnforced` 에 오른 약어부터 |
-| `RHIUIPass` | `RHIOverlayPass` | 대문자 약어 둘을 이어 붙이지 않는다 |
 | `setupDevice` · `cleanup` | `initialize` · `shutdown` | 한 개념에 동사 하나 |
 | `fetchAsset` · `lookupAsset` | `getAsset`(반드시 있다) · `findAsset`(없을 수 있다) | |
-| `calcBounds` · `calculateBounds` | `computeBounds` | |
 | `buildMesh`(새 값) · `generateId` · `constructShape` | `createMesh`(소유) · `makeKey`(값) | |
 | `buildStages()`(있는 표를 다시 채움) | `rebuildStages()` · `populateRows()` | 이미 있는 상태를 다시 채우면 `rebuild` · `populate` |
 | `bool findBody( handle, PhysicsBody& out )` | `PhysicsBody* findBody( handle )` · `bool tryGetBody( handle, PhysicsBody& outBody )` | `find` 는 값이나 포인터를 돌려준다. 돌려줄 "없음"이 없을 때만 `tryGet` + out |
 | `getOrLoadTexture( path )` · `findOrAddSlot( name )` | `acquire( path )`(공유 소유) · `getOrCreateSlot( name )` | get-or-create 는 `getOrCreate` |
 | `Folder* ensureFolder( path )` | `getOrCreateFolder( path )` · `void ensureFolder( path )` | `ensure` 는 존재만 보장하고 돌려주지 않는다 |
-| `tickInput()` · `fixedUpdate()` | `update( deltaTime )` · `step( fixedDelta )` · `poll()` | 기존 선언은 일괄 개명하지 않는다 |
-| `appendBoolAttr( ... )` · `attr()` | `appendBoolAttribute( ... )` · `attribute()` | 줄임말은 저장소의 타입 이름이 줄일 때만 |
 | `void parse( XmlNode node, Desc& out )` | `void parse( XmlNode node, Desc& outDesc )` | out 매개변수는 채우는 것을 이름에 담는다 |
-| `bool checkValid()` | `bool isValid()` · `void assertValid()` | 술어는 질문형, `check*` 는 술어가 아니다 |
-| `name()`(짝 `setName`) | `getName()` | 맨이름 게터 금지 |
-| `Handle onLanguageChanged( callback )` | `registerLanguageChanged( callback )` | `on*` 은 "일어났다" 알림이지 등록이 아니다 |
 | `find( string_view )` + `find( const hashed_string& )` | `find( const hashed_string& )` 하나 · 키가 아닌 글은 `findStringByText( string_view )` | 리터럴 호출이 모호해진다 |
 | 매 프레임 `string resolvePresentSource()` | `string_view resolvePresentSource()` · `hashed_string` | 프레임 경로는 사본을 만들지 않고, 15자 이하는 `string` 도 힙이 없다 |
 
@@ -107,7 +97,6 @@ Core 폴더는 층입니다. 아래 층이 위 층을 알아야 하면 include �
 | 쓰지 않는 것 | 쓰는 것 |
 | :--- | :--- |
 | `#ifdef _WIN32` · `#if defined( __linux__ )` | `#if defined( SW_PLATFORM_WINDOWS )` · `#elif defined( SW_PLATFORM_LINUX )` |
-| `#ifdef __clang__` · `#if defined( _M_X64 )` | `#if defined( SW_COMPILER_CLANG )` · `#if defined( SW_X64 )` |
 | `SW_COMPILER_MSVC` 로 `__forceinline` 가르기 | `SW_PLATFORM_WINDOWS`(clang-cl 도 MS 확장을 쓴다 — `Core/Common/Macros.h` `SW_INLINE`) |
 | 헤더 클래스 구조를 `SW_WITH_SERVER_CODE` 로 가르기 | `.cpp` 본문에서만 `#if defined( SW_WITH_SERVER_CODE )`, 나뉘는 기능은 모듈 `GF_<X>` · `GF_Server_<X>` · `GF_Client_<X>` 로 |
 
@@ -140,7 +129,6 @@ GameObject* pTarget = pManager->resolveGameObject( _targetHandle );   // 쓸 때
 | :--- | :--- |
 | `char buf[64]` · `fixed_string<256>` | `constant::kMaxBuffer64` · `constant::kMaxPathSize` |
 | `kFrameCount = constant::kMaxFrameCountInFlight`(별칭) | `constant::kMaxFrameCountInFlight` 를 그대로 |
-| `kTimeout = 5` | `kTimeoutSeconds = 5` |
 | `nanoseconds / 1000000000` | `nanoseconds / constant::kNanosecondsPerSecond`(이름 붙은 비율) |
 | `0x53574846`(4 글자 표식) | `FourCcUtil::make( "SWHF" )` |
 
@@ -177,7 +165,6 @@ namespace sw                                    // 구현은 다른 블록 — �
 } // namespace sw
 ```
 
-여러 번역 단위가 쓰는 헬퍼는 `XxxUtil` 정적 구조체 헤더(`SerializerUtil` · `MaterialUtil`)이고, 파일에 클래스가 여럿이면 클래스마다 `namespace` 블록을 닫고 다시 엽니다.
 
 ## 6. 문법 형태 — [docs/agents › C++ style](agents/CppStyle.md#c-style)
 
@@ -218,8 +205,6 @@ Foo::Foo()
 }
 ```
 
-함수 본문은 줄을 나눠 씁니다. 클래스 본문 안에 정의한 짧은 함수(getter · 단순 접근자)만 한 줄이 허용됩니다(`AllowShortFunctionsOnASingleLine: InlineOnly`).
-클래스 밖의 `inline` 자유 함수(연산자 · 수학 도우미)와 클래스 밖 정의는 `{` 를 다음 줄에 두고 본문을 펼칩니다.
 
 ## 7. HLSL — [docs/agents › HLSL](agents/NamingScripts.md#hlsl)
 
@@ -249,7 +234,4 @@ Python 파일의 모양입니다. 괄호 안 낱말은 `CheckPythonConventions` 
 | `from typing import Optional, Dict` · `Optional[Dict[str, str]]` | `dict[str, str] \| None` (`typing`) |
 | `open(path)` · `path.read_text()` | `open(path, encoding="utf-8")` · `path.read_text(encoding="utf-8")` — 바이트는 `"rb"` · `read_bytes()` (`encoding`) |
 | `os.path.join(root, "Resource")` · `os.path.isfile(p)` · `os.makedirs(os.path.dirname(p))` | `root / "Resource"` · `p.is_file()` · `p.parent.mkdir(parents=True, exist_ok=True)` (`osPath`) |
-| `os.path.dirname(os.path.abspath(__file__))` | `Path(__file__).resolve().parent` — `..` 를 글자로 접어야 하면 `os.path.normpath` 는 쓴다 |
-| `raise SystemExit("git mv 실패")` | `sys.exit("git mv 실패")` (`exit`) |
 | `raise SystemExit(main())` · `main()` · `sys.exit(unittest.main())` | `sys.exit(main())` · 테스트는 `unittest.main()` (`mainGuard`) |
-| `argparse.ArgumentParser()` | `argparse.ArgumentParser(description="서드파티 고지 파일을 씁니다.")` (`argparse`) |

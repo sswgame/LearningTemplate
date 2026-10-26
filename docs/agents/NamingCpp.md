@@ -28,8 +28,7 @@
 - Use descriptive names; do not use opaque abbreviations or loop counters such
   as `i`, `j`, or `k` (use at least `index`).
 - **GPU resource verbs are a closed vocabulary.** A class that owns RHI resources derives from
-  `RHIRenderResource` and names its device-lifecycle methods from this table only. Do not invent
-  synonyms (`upload`, `applyToGPU`, `shutdownAllGPU`, `isUploaded`, `isReady`, `releaseGPU`):
+  `RHIRenderResource` and names its device-lifecycle methods from this table only (no `upload`, `applyToGPU`, `isReady`, `releaseGPU`):
 
   | Verb | Meaning |
   | --- | --- |
@@ -39,10 +38,9 @@
   | `forgetRHI( pDevice )` | `pDevice` is **already gone** — clear the handles only; calling destroy here is use-after-free. |
   | `isRHIValid()` | Are this object's GPU resources live right now? |
 
-  `releaseRHI` / `forgetRHI` / `initRHI` are never called in a loop from outside. `IRHIDevice` broadcasts
-  them to the whole registry (`RHIRenderResource::releaseAllFor` / `forgetAllFor` / `initAllFor`), so a
-  new resource class is covered the moment it derives. Per-frame buffer managers that are not assets
-  (`GPUScene`) keep their own vocabulary — they are not registry members.
+  `releaseRHI` / `forgetRHI` / `initRHI` are never called in a loop from outside: `IRHIDevice` broadcasts
+  them to the whole registry (`releaseAllFor` / `forgetAllFor` / `initAllFor`). Per-frame buffer managers that are not assets
+  (`GPUScene`) keep their own vocabulary.
 
 ### Class suffixes — Manager · Registry · System · Service · Backend
 
@@ -64,8 +62,7 @@ Fixed naming rules that go with the table:
   exception is a name that refers to an outside term, such as Unreal's `AnimInstance` or `AnimMontage`.
 - **A boolean variable or member keeps the `b` prefix** (`bVisible`, `_bOpen`), as in Unreal. Only a function that returns a
   boolean follows the `is` / `has` / `can` / `should` rule.
-- **`Scene` owns the data of one scene** (Unreal Level / World, Unity Scene). `GameObjectManager` manages the lifetime of that
-  scene's objects, and `GameObjectStore` is the storage it uses. Their header descriptions say each role, not "one scene" for all three.
+- **`Scene` owns the data of one scene.** `GameObjectManager` manages the lifetime of that scene's objects, and `GameObjectStore` is the storage it uses.
 
 ### Function names
 
@@ -77,15 +74,14 @@ Declarations that predate a check sit in `[exemption]` of `Scripts/lint/rules/Ch
 the domain's own term (`UUID::generate`, `SurfaceBvh::build`); a fixed name is removed from the table. The `on*` and spell-it-out rules are kept by review.
 
 - **An acronym is written in capitals, everywhere.** What counts as an acronym is one list,
-  `acronym` in `Scripts/lint/rules/AcronymRegistry.toml` (read by `Scripts/common/AcronymRegistry.py` as `kAcronym`); a shortening (`Nav`, `Anim`, `Info`) is not one. Types, files, namespaces,
-  enums, folders, modules and test executables: `UISystem`, `GPUScene`, `HTTPClient`, `UISystem.h`. Functions, variables and
-  members: capitals in the middle or at the end (`updateUI`, `queryAABB`, `entityID`, `pUISystem`, `_pGPUScene`), all lower case
-  as the first word (`uiSystem`, `_gpuScene`, `_id`). Two capital acronyms never touch (`RHIUI…` hides the boundary — spell one
-  out or put a word between). Lower-case extensions and resource paths (`*.ui.xml`), `gv_` prefixes and third-party names keep
-  their spelling (a third-party member that looks like ours goes in `kExternalName`: Box2D `bodyIdA`, Tracy `queryId`).
-  `CheckAcronymSpelling.py` blocks Pascal spellings and touching capitals of the registered acronyms;
-  `AcronymRun` blocks a capital run in a function name that is not one registered acronym (`UAV` is not registered, so it stays `bindComputeUav`).
-  A new acronym is added to `acronym` · `enforced` in that data file and rewritten across the tree with `FormatAcronymSpelling.py` in one commit.
+  `acronym` in `Scripts/lint/rules/AcronymRegistry.toml`; a shortening (`Nav`, `Anim`, `Info`) is not one. Types, files, namespaces,
+  enums, folders, modules and test executables: `UISystem`, `GPUScene`, `UISystem.h`. Functions, variables and
+  members: capitals in the middle or at the end (`updateUI`, `entityID`, `pUISystem`), all lower case
+  as the first word (`uiSystem`, `_gpuScene`). Two capital acronyms never touch (`RHIUI…` — spell one
+  out or put a word between). Lower-case extensions and resource paths, `gv_` prefixes and third-party names keep
+  their spelling (a third-party member that looks like ours goes in `kExternalName`).
+  `CheckAcronymSpelling.py` and `AcronymRun` enforce it (`UAV` is not registered, so it stays `bindComputeUav`).
+  A new acronym is added to that data file and rewritten across the tree with `FormatAcronymSpelling.py` in one commit.
 - **One verb per concept.** Picking a synonym is how two names for one thing get born:
 
   | Concept | Verb | Never |
@@ -105,7 +101,6 @@ the domain's own term (`UUID::generate`, `SurfaceBvh::build`); a fixed name is r
   | hand over something that is called or looked up later — a callback, observer, handler, task, factory, cache — whose lifetime the caller keeps and ends with the pair | `register` / `unregister` | `add*Handler`, `add*Observer`, `add*Listener`, `remove*Handler` |
   | join to the end of an ordered sequence (text, bytes, a list whose order is the meaning) | `append` | `add` for text |
 
-  Other spellings of get-or-create (`findOrAdd*`, an `ensure*` that returns) are aligned when their function is touched.
   `tick` names only the tick system itself (`SceneTickScheduler`, `TickBatchRegistry`, component `onTick`) and behavior-tree
   node ticks; everything else that advances a frame or a time is `update`.
   A variable or member holding a count is `xCount` (`itemCount`, `_listenerCount`); `countX()` is a function that counts by scanning.
@@ -117,30 +112,24 @@ the domain's own term (`UUID::generate`, `SurfaceBvh::build`); a fixed name is r
   the Unreal `U*Settings` name, and so do match rules a game picks per match); `Params` — call arguments bundled into one value.
   A sub-struct of a catalog file is a `Def` (`BrZoneDef` inside `BrCatalog`).
   `Context` — the environment a caller hands to a callee for one call, pass, frame or operation (`RenderGraphPassContext`,
-  `UIPaintContext`, `SerializeContext`); a graphics API object keeps the API's own term (`RHICommandContext`). A record the owner
-  keeps for each thing it manages is a `Record` (`LiveReloadManager::ModuleRecord`), not a `Context`.
-  `Unit` is a game-play unit (`RTSUnit`, `SRPGUnit`), an animated skeletal mesh in `AnimationSystem`, or a measurement unit
-  (`ReflectUnit`); the three live in separate namespaces and each header says which one it means.
+  `SerializeContext`); a graphics API object keeps the API's own term (`RHICommandContext`). A record the owner
+  keeps for each thing it manages is a `Record`, not a `Context`.
+  `Unit` is a game-play unit, an animated skeletal mesh in `AnimationSystem`, or a measurement unit; each header says which one it means.
 - **`RT` means render thread** (profile tags `RT.Frame`, `RT.BeginFrame`). A render target is spelled `RenderTarget`.
 
 - **A name is a `hashed_string`, and only that.** Take names as `const hashed_string&`; a string literal converts
   implicitly (`isActionDown( "Jump" )`), while pointers, `string_view` and `string` stay explicit so that interning
-  dynamic text is visible at the call site (`hashed_string( text )`). Never declare a `string_view` overload next to
-  the `hashed_string` one — with the same parameter count a literal call is ambiguous. A lookup that must **not**
-  intern (free text that may not be a key) gets its own name: `findStringByText( string_view )`.
+  dynamic text is visible (`hashed_string( text )`). Never declare a `string_view` overload next to
+  the `hashed_string` one (a literal call is ambiguous); a lookup that must **not** intern gets its own name: `findStringByText( string_view )`.
   `hashed_string` follows Unreal `FName`: `==` and `getHash()` ignore case, `c_str()` is the spelling you wrote
-  (`isEqual( other, NameCase::CaseSensitive )` compares the spelling — use it for "did the name change?"), and there is
-  no `operator<`: sort with `HashedStringLexicalLess` (stable, for output people or files see) or `HashedStringFastLess`
-  (intern order, lookup only).
-- **Pick the string type by what it holds, not by habit.** A name on a per-frame path is a `hashed_string` or a
+  (`isEqual( other, NameCase::CaseSensitive )` for "did the name change?"), and there is
+  no `operator<`: sort with `HashedStringLexicalLess` (stable, for output) or `HashedStringFastLess` (intern order, lookup only).
+- **Pick the string type by what it holds.** A name on a per-frame path is a `hashed_string` or a
   `string_view` into storage that already exists — return a view, not a copy. `fixed_string<N>` is only for text whose
   bound is a code constant (never data, a path or user input) where the heap is off limits (crash, log and signal
-  paths) or a fixed buffer is required (ImGui input). It has no length field: `size()` scans the first `N` characters for a
-  null (O(length), so not in a loop condition), and outside code may write up to `max_size()` characters into `data()`
-  with or without a terminator. Overflow truncates with a warning; use `try_assign` / `try_append` where a truncated
-  value is a wrong value. A null is never data in it — null-separated lists (Win32 filters, multi-select results) go in
-  a `wstring` / `vector` that carries its own length.
-  Up to 15 characters `string` is already heap-free (SSO), so `fixed_string` buys nothing there. No bulk rewrites.
+  paths) or a fixed buffer is required (ImGui input). `size()` scans for a null (O(length), not in a loop condition),
+  overflow truncates with a warning (use `try_assign` / `try_append` where truncation is wrong), and a null is never data in it.
+  Up to 15 characters `string` is already heap-free (SSO). No bulk rewrites.
 
 - **A predicate reads as a question.** Start with `is` / `has` / `was` / `can` / `should`, or use a
   third-person verb (`supportsX`, `usesX`, `requiresX`, `matchesX`, `allowsX`, `overlapsX`).
@@ -153,8 +142,6 @@ the domain's own term (`UUID::generate`, `SurfaceBvh::build`); a fixed name is r
   `attribute()`, not `attr()`, because the type beside it is `XMLAttribute`; `TagQueryExpr::…Expr` and
   `ShaderEngineCbMember`'s `…Cb…` are fine because the type carries the same short form.
 - **A fallible verb returns a result you must not drop silently.** A `bool` whose name starts with a fallible verb
-  (`load` · `save` · `read` · `write` · `parse` · `apply` · `remove` · `spawn` · `attach` … — the list lives in
-  `CheckFallibleNodiscard.py`) is `[[nodiscard]]`, so dropping it stops the build. Dropping it on purpose is
-  `(void)call(); // why that is fine` — the reason on the same line or the line above (`CheckDiscardReason.py`):
-  the callee already logs the failure, the file is optional, a test asserts the state below. Other `(void)` casts
-  (an unused query result, an unused parameter) need no reason.
+  (`load` · `save` · `read` · `write` · `parse` · `apply` · `remove` · `spawn` · `attach` … — list in
+  `CheckFallibleNodiscard.py`) is `[[nodiscard]]`. Dropping it on purpose is
+  `(void)call(); // why that is fine` (`CheckDiscardReason.py`). Other `(void)` casts need no reason.
