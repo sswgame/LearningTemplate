@@ -25,8 +25,8 @@ namespace sw
         float32 _jumpStartRatio{ 0.0f };
         float32 _jumpEndRatio{ 1.0f };
 
-        /** @brief 시드로 방향과 중심에서 비킨 거리를 골라 맵 경계에서 자른 경로입니다. 같은 시드면 같은 경로가 나옵니다. */
-        static BrFlightPath makeRandom( const BrFlightDef& settings, float32 mapSize, uint32 seed );
+        /** @brief 시드로 방향과 중심에서 비킨 거리를 골라 맵 경계에서 자른 경로입니다. 같은 시드면 같은 경로가 나옵니다. 설정이 범위 밖이거나 @p mapSize 가 1 미만이면 오류를 남기고 false 입니다(맞추지 않습니다). */
+        [[nodiscard]] static bool makeRandom( const BrFlightDef& settings, float32 mapSize, uint32 seed, BrFlightPath& outPath );
 
         float32 computeLength() const;
         float32 computeDuration() const;

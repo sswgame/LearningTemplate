@@ -56,7 +56,7 @@ namespace sw
 {
     /** @brief 지도 설정입니다. */
     REFLECT()
-    struct RunMapSettings
+    struct SW_KIT_API RunMapSettings
     {
         REFLECT_BODY();
 
@@ -97,7 +97,8 @@ namespace sw
         /** @brief `<RunMap floors="15" columns="7" paths="6"><Node kind="Battle" weight="5" minFloor="0"/>...<Floor index="0" kind="Battle"/></RunMap>` */
         [[nodiscard]] static bool loadSettings( string_view xmlText, string_view sourceName, RunMapSettings& outSettings );
 
-        void generate( const RunMapSettings& settings, uint32 seed );
+        /** @brief 지도를 만듭니다. 설정이 범위 밖(`PROPERTY( Min )`)이면 오류를 남기고 false 입니다(맞추지 않습니다). */
+        [[nodiscard]] bool generate( const RunMapSettings& settings, uint32 seed );
         /** @brief 현재 위치에서 갈 수 있는 노드입니다. 시작 상태이면 첫 층 전체입니다. */
         void collectChoices( vector<int32>& outListNode ) const;
         /** @brief 노드로 이동합니다. 갈 수 없는 노드이면 false 입니다. */

@@ -4,6 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "GameFramework/Base/Foundation/Utility/ConfigRangeUtil.h"
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 
 namespace sw
@@ -43,10 +44,21 @@ namespace sw
 
 namespace sw
 {
-    BrFlightPath BrFlightPath::makeRandom( const BrFlightDef& settings, float32 mapSize, uint32 seed )
+    bool BrFlightPath::makeRandom( const BrFlightDef& settings, float32 mapSize, uint32 seed, BrFlightPath& outPath )
     {
+        const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
+        if ( rangeError.empty() == false )
+        {
+            SW_LOG_ERROR( "BrFlightPath: refused flight settings - %#", rangeError.c_str() );
+            return false;
+        }
+        if ( mapSize < 1.0f )
+        {
+            SW_LOG_ERROR( "BrFlightPath: refused map size %# - it must be at least 1", mapSize );
+            return false;
+        }
         GameRandom    random{ seed };
-        const float32 size      = MathUtil::max( 1.0f, mapSize );
+        const float32 size      = mapSize;
         const float32 half      = size * 0.5f;
         const float32 angle     = random.nextFloat() * MathUtil::kPi * 2.0f;
         const float32 offset    = random.nextRange( -1.0f, 1.0f ) * settings._offsetRatio * half;
@@ -60,11 +72,12 @@ namespace sw
         BrFlightPath path;
         path._start          = float2{ origin._x + direction._x * minT, origin._y + direction._y * minT };
         path._end            = float2{ origin._x + direction._x * maxT, origin._y + direction._y * maxT };
-        path._speed          = MathUtil::max( 1.0f, settings._speed );
+        path._speed          = settings._speed;
         path._altitude       = settings._altitude;
         path._jumpStartRatio = settings._jumpStartRatio;
         path._jumpEndRatio   = settings._jumpEndRatio;
-        return path;
+        outPath              = path;
+        return true;
     }
 
     float32 BrFlightPath::computeLength() const

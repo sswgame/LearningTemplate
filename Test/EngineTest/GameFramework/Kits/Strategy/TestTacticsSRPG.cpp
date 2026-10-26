@@ -629,7 +629,7 @@ SW_TEST_CASE( TacticsSRPGTest, LevelUpDevelopmentAndRogueliteCampaign )
     rule._kind = hashed_string( "Battle" );
     mapSettings._listRule.push_back( rule );
     SRPGCampaign campaign;
-    campaign.initialize( mapSettings, 99 );
+    SW_ASSERT_TRUE( campaign.initialize( mapSettings, 99 ) );
     SW_EXPECT_EQUAL( 0, campaign.addRosterEntry( scene._catalog, hashed_string( "gm" ), hashed_string( "ace" ) ) );
     SW_EXPECT_EQUAL( 1, campaign.addRosterEntry( scene._catalog, hashed_string( "zaku" ), hashed_string( "grunt" ) ) );
     SW_EXPECT_EQUAL( -1, campaign.addRosterEntry( scene._catalog, hashed_string( "nothing" ), hashed_string( "ace" ) ) );
@@ -756,7 +756,7 @@ SW_TEST_CASE( TacticsSRPGTest, StateRoundTripContinuesTheSameCampaign )
     rule._kind = hashed_string( "Battle" );
     mapSettings._listRule.push_back( rule );
     SRPGCampaign campaign;
-    campaign.initialize( mapSettings, 99 );
+    SW_ASSERT_TRUE( campaign.initialize( mapSettings, 99 ) );
     SW_EXPECT_EQUAL( 0, campaign.addRosterEntry( catalog, hashed_string( "gm" ), hashed_string( "ace" ), 2 ) );
     SW_EXPECT_EQUAL( 1, campaign.addRosterEntry( catalog, hashed_string( "zaku" ), hashed_string( "grunt" ) ) );
     vector<int32> listChoice;
@@ -850,8 +850,8 @@ SW_TEST_CASE( TacticsSRPGTest, RunMapsConnectFloorsWithoutCrossingAndEndAtTheBos
                                           "TacticsSRPGTest", settings ) );
     RunMap mapA;
     RunMap mapB;
-    mapA.generate( settings, 42u );
-    mapB.generate( settings, 42u );
+    SW_ASSERT_TRUE( mapA.generate( settings, 42u ) );
+    SW_ASSERT_TRUE( mapB.generate( settings, 42u ) );
     SW_ASSERT_TRUE( mapA.getNodes().size() == mapB.getNodes().size() ); // 씨앗이 같으면 같은 지도
     int32 bossCount = 0;
     for ( size_t index = 0; index < mapA.getNodes().size(); ++index )
@@ -916,6 +916,25 @@ SW_TEST_CASE( TacticsSRPGTest, RunMapsConnectFloorsWithoutCrossingAndEndAtTheBos
 }
 
 /**
+ * @brief [TacticsSRPGTest] 런 지도 — 범위 밖 설정은 맞추지 않고 거절한다
+ */
+SW_TEST_CASE( TacticsSRPGTest, RunMapRefusesOutOfRangeSettingsInsteadOfClamping )
+{
+    RunMapSettings settings;
+    RunNodeRule    fight;
+    fight._kind          = "Fight";
+    settings._listRule   = { fight };
+    settings._floorCount = 1; // Min 2
+    RunMap map;
+    SW_EXPECT_FALSE( map.generate( settings, 1 ) );
+    settings._floorCount = 6;
+    settings._pathCount  = 0; // Min 1
+    SW_EXPECT_FALSE( map.generate( settings, 1 ) );
+    settings._pathCount = 3;
+    SW_EXPECT_TRUE( map.generate( settings, 1 ) );
+}
+
+/**
  * @brief [TacticsSRPGTest] 런 지도 — 만든 지도 · 지금 자리가 와서 같은 갈림길을 낸다
  */
 SW_TEST_CASE( TacticsSRPGTest, RunMapReplaysAfterRestore )
@@ -931,7 +950,7 @@ SW_TEST_CASE( TacticsSRPGTest, RunMapReplaysAfterRestore )
     settings._columnCount = 4;
     settings._pathCount   = 3;
     RunMap map;
-    map.generate( settings, 17 );
+    SW_ASSERT_TRUE( map.generate( settings, 17 ) );
     vector<int32> listChoice;
     map.collectChoices( listChoice );
     SW_ASSERT_FALSE( listChoice.empty() );

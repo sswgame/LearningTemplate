@@ -338,7 +338,7 @@ SW_TEST_CASE( PartyArenaTest, ItemsSpawnDeterministicallyAndSuperBounceDoublesHe
         PartyItemSpawnSettings settings = spawner.getSettings();
         settings._maxActive             = 3;
         settings._lifetime              = 1.0f;
-        spawner.initialize( settings, seed );
+        SW_ASSERT_TRUE( spawner.initialize( settings, seed ) );
         for ( int32 frame = 0; frame < 60 * 3; ++frame )
         {
             spawner.update( kPartyArenaStep );
@@ -561,7 +561,7 @@ SW_TEST_CASE( PartyArenaTest, ItemSpawnRateDoesNotDependOnFrameRate )
         settings._maxInterval           = 0.47f;
         settings._maxActive             = 100000;
         settings._lifetime              = 0.0f; // 주울 때까지 — 자리가 차서 시계가 멈추지 않게
-        spawner.initialize( settings, 5u );
+        SW_ASSERT_TRUE( spawner.initialize( settings, 5u ) );
         const float32          seconds    = 60.0f;
         const int32            frameCount = static_cast<int32>( seconds * framesPerSecond + 0.5f );
         int32                  spawnCount = 0;
@@ -603,6 +603,15 @@ SW_TEST_CASE( PartyArenaTest, StateRoundTripContinuesTheSameArena )
     SW_EXPECT_TRUE( arena.findPlayer( 2 )->_position._y == restored.findPlayer( 2 )->_position._y );
     SW_EXPECT_EQUAL( static_cast<int32>( arena.getItemSpawner().getInstances().size() ), static_cast<int32>( restored.getItemSpawner().getInstances().size() ) );
     SW_EXPECT_TRUE( written == captureArenaBytes( restored ) );
+
+    PartyItemSpawner badSpawner;
+    SW_ASSERT_TRUE( badSpawner.loadFromXMLText( kPartyItemXML, "PartyArenaTest" ) );
+    PartyItemSpawnSettings badSettings = badSpawner.getSettings();
+    badSettings._minInterval           = -1.0f; // 범위 밖 규칙은 맞추지 않고 거절한다
+    SW_EXPECT_FALSE( badSpawner.initialize( badSettings, 1u ) );
+    badSettings._minInterval = 4.0f;
+    badSettings._maxInterval = 2.0f;
+    SW_EXPECT_FALSE( badSpawner.initialize( badSettings, 1u ) );
 
     // 같은 입력을 더 넣으면 같은 판 — 다음 아이템 자리(난수) · 부활 대기 · 점수까지 갈리지 않는다.
     runArenaScript( arena, 60 * 3, 60 * 3 );

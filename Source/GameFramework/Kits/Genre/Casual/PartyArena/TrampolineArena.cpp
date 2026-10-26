@@ -209,7 +209,8 @@ namespace sw
         PartyItemSpawnSettings item = _itemSpawner.getSettings();
         item._center                = float3{};
         item._spawnRadius           = _settings._arenaRadius * 0.75f;
-        _itemSpawner.initialize( item, seed );
+        if ( _itemSpawner.initialize( item, seed ) == false )
+            return false;
         _eventBuffer.clear();
         _timer = FixedStepTimer( _settings._step, 0.25f );
         _time  = 0.0f;

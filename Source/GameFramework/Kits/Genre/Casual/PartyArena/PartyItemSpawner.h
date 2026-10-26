@@ -108,9 +108,9 @@ namespace sw
 
         PartyItemSpawner();
 
-        /** @brief 규칙과 시드를 정하고 놓인 아이템을 비웁니다(정의는 남깁니다). 첫 아이템은 최소 간격 뒤에 나옵니다. */
-        void initialize( const PartyItemSpawnSettings& settings, uint32 seed );
-        void addItem( const PartyItemDef& def ) { (void)_catalog.add( def ); }
+        /** @brief 규칙과 시드를 정하고 놓인 아이템을 비웁니다(정의는 남깁니다). 첫 아이템은 최소 간격 뒤에 나옵니다. 규칙이 범위 밖이면 오류를 남기고 false 입니다(맞추지 않습니다). */
+        [[nodiscard]] bool initialize( const PartyItemSpawnSettings& settings, uint32 seed );
+        void               addItem( const PartyItemDef& def ) { (void)_catalog.add( def ); }
 
         void update( float32 deltaTime );
         /** @brief @p position 에서 @p radius 안의 가장 가까운 아이템을 @p player 가 줍습니다. 없으면 false 를 반환합니다. */

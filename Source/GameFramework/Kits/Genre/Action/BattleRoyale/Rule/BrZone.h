@@ -82,8 +82,9 @@ namespace sw
         BrZone();
 
         /** @brief 설정, 맵 크기, 시드, 지형(빌려 옴, nullptr 가능)을 설정하고, 첫 원을 맵 중심에 놓은 뒤 첫 단계의 다음 원을 고릅니다. */
-        void initialize( const BrZoneDef& settings, float32 mapSize, uint32 seed, const IBrZoneTerrain* pTerrain );
-        void update( float32 deltaTime );
+        /** @details @p mapSize 가 1 미만이면 오류를 남기고 false 입니다(맞추지 않습니다). */
+        [[nodiscard]] bool initialize( const BrZoneDef& settings, float32 mapSize, uint32 seed, const IBrZoneTerrain* pTerrain );
+        void               update( float32 deltaTime );
 
         bool isInside( const float2& position ) const;
         /** @brief 원 가장자리 밖으로 나간 거리를 반환합니다(안이면 0). */

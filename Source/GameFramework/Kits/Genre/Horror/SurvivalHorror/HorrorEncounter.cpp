@@ -23,12 +23,18 @@ namespace sw
     {
     }
 
-    void HorrorEncounter::initialize( const HorrorMonsterDef& monster, const vector<HorrorInvestigator>& listInvestigator, uint32 seed, int32 successFace )
+    bool HorrorEncounter::initialize( const HorrorMonsterDef& monster, const vector<HorrorInvestigator>& listInvestigator, uint32 seed, int32 successFace )
     {
+        // 주사위는 여섯 면이다. 범위 밖 성공 눈은 맞추지 않고 거절한다.
+        if ( successFace < 1 || successFace > 6 )
+        {
+            SW_LOG_ERROR( "HorrorEncounter: refused success face %# - it must be within [1, 6]", successFace );
+            return false;
+        }
         _monster          = monster;
         _listInvestigator = listInvestigator;
         _monsterToughness = monster._toughness;
-        _successFace      = MathUtil::clamp( successFace, 1, 6 );
+        _successFace      = successFace;
         _turnCount        = 0;
         _state            = HorrorEncounterState::Ongoing;
         _random.setSeed( seed );
@@ -41,6 +47,7 @@ namespace sw
         }
         _turnOrder.addActor( kMonsterActorID, monster._speed );
         refreshState();
+        return true;
     }
 
     HorrorTurnResult HorrorEncounter::playNextTurn()

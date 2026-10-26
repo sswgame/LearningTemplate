@@ -55,11 +55,17 @@ namespace sw
     {
     }
 
-    void BrZone::initialize( const BrZoneDef& settings, float32 mapSize, uint32 seed, const IBrZoneTerrain* pTerrain )
+    bool BrZone::initialize( const BrZoneDef& settings, float32 mapSize, uint32 seed, const IBrZoneTerrain* pTerrain )
     {
+        // 맵 크기가 1 미만이면 맞추지 않고 거절한다(카탈로그의 `_mapSize` 는 `Min = 1` 이다).
+        if ( mapSize < 1.0f )
+        {
+            SW_LOG_ERROR( "BrZone: refused map size %# - it must be at least 1", mapSize );
+            return false;
+        }
         _settings = settings;
         _pTerrain = pTerrain;
-        _mapSize  = MathUtil::max( 1.0f, mapSize );
+        _mapSize  = mapSize;
         _random.setSeed( seed );
         _eventBuffer.clear();
         const float32 half = _mapSize * 0.5f;
@@ -68,6 +74,7 @@ namespace sw
         _fromCenter        = _center;
         _fromRadius        = _radius;
         beginPhase( 0 );
+        return true;
     }
 
     void BrZone::update( float32 deltaTime )

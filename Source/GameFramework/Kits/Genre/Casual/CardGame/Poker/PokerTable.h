@@ -11,6 +11,8 @@
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Casual/CardGame/CardDeck.h"
 #include "GameFramework/Kits/Genre/Casual/CardGame/Poker/PokerHand.h"
@@ -39,10 +41,17 @@ namespace sw
         AllIn
     };
 
-    /** @brief 판 설정입니다. */
-    struct PokerSettings
+    /**
+     * @brief 판 설정입니다.
+     * @details 범위는 필드의 `PROPERTY( Min )` 이고, 벗어난 값은 `PokerTable::initialize` 가 오류로 거절한다(`ConfigRangeUtil`). 값을 조용히 맞추지 않는다(폴백 금지 원칙).
+     */
+    REFLECT()
+    struct SW_KIT_API PokerSettings
     {
+        REFLECT_BODY();
+        PROPERTY( Min = 1 )
         int32 _smallBlind{ 1 };
+        PROPERTY( Min = "_smallBlind" )
         int32 _bigBlind{ 2 };
     };
 } // namespace sw
@@ -125,7 +134,8 @@ namespace sw
         PokerTable();
 
         /** @brief 자리 수는 @p listStack 의 길이입니다. 버튼은 마지막 자리에서 시작하므로 첫 판에는 0번이 됩니다. */
-        void initialize( const PokerSettings& settings, const vector<int32>& listStack );
+        /** @details 설정이 범위 밖이거나 칩이 음수인 자리가 있으면 오류를 남기고 false 입니다(맞추지 않습니다). */
+        [[nodiscard]] bool initialize( const PokerSettings& settings, const vector<int32>& listStack );
         /** @brief 덱을 섞어 판을 엽니다. 칩이 있는 자리가 둘 미만이면 false 를 반환합니다. */
         [[nodiscard]] bool startHand( GameRandom& random );
         /** @brief 주어진 덱(맨 위부터 나눕니다)으로 판을 엽니다. 테스트와 리플레이용입니다. */

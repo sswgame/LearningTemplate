@@ -176,8 +176,7 @@ namespace sw
             SW_LOG_WARNING( "[Meadow] the town cannot start - the creature catalog is not loaded" );
             return false;
         }
-        outTown.initialize( pCatalog, state.makeRefs(), kTownSize, kTownSize, CreatureTownSettings{} );
-        return true;
+        return outTown.initialize( pCatalog, state.makeRefs(), kTownSize, kTownSize, CreatureTownSettings{} );
     }
 
     void MeadowTownDirectorComponent::spawnTown( GameObjectManager& manager )

@@ -289,7 +289,8 @@ namespace sw
         const CitySettings citySettings = makeCitySettings();
         _wallet.clear();
         _wallet.add( citySettings._currency, _startingMoney );
-        _city.initialize( &_catalog, NileCityPlanner::kMapWidth, NileCityPlanner::kMapHeight, citySettings, makeRefs() );
+        if ( _city.initialize( &_catalog, NileCityPlanner::kMapWidth, NileCityPlanner::kMapHeight, citySettings, makeRefs() ) == false )
+            return false; // 칸 수가 범위 밖이면 도시가 오류를 남겼다
         if ( _city.claimEvents( _cityEventLease ) == false )
             return false; // 이 디렉터의 표뿐이라 일어날 수 없다 — 둘째 소비자가 생기면 게이트가 어서션을 남긴다
         const NileCityLayout layout = makeCityLayout();
@@ -513,7 +514,8 @@ namespace sw
             return false; // 자동 계획을 읽지 못했다 — 이유는 플래너가 남겼다
         if ( clock.initialize( makeClockSettings() ) == false )
             return false;
-        city.initialize( &_catalog, NileCityPlanner::kMapWidth, NileCityPlanner::kMapHeight, makeCitySettings(), makeRefs() );
+        if ( city.initialize( &_catalog, NileCityPlanner::kMapWidth, NileCityPlanner::kMapHeight, makeCitySettings(), makeRefs() ) == false )
+            return false;
         const bool bStateReadFailed = city.readState( archive ) == false || planner.readState( archive ) == false || wallet.readState( archive ) == false || clock.readState( archive ) == false;
         if ( bStateReadFailed )
             return false;

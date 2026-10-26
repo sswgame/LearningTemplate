@@ -136,7 +136,7 @@ namespace
     /** @brief 풀숲을 만들고 낮 · 맑음에 sprout 를 부릅니다. */
     void makeTownWithSprout( CreatureTown& town, CreatureLifeTestWorld& world )
     {
-        town.initialize( &world._catalog, world.makeRefs(), 10, 10, CreatureTownSettings{} );
+        SW_ASSERT_TRUE( town.initialize( &world._catalog, world.makeRefs(), 10, 10, CreatureTownSettings{} ) );
         placeTallGrass( town, 0, 0, true );
         (void)town.attractVisitorsAt( 0, 9, DayPhase::Day, "sunny" );
     }
@@ -251,7 +251,8 @@ SW_TEST_CASE( CreatureLifeTest, HabitatsMatchRotatedPatternsAndLargestWins )
     CreatureLifeTestWorld world;
     SW_ASSERT_TRUE( world.load() );
     CreatureTown town;
-    town.initialize( &world._catalog, SessionStateRefs{}, 8, 8, CreatureTownSettings{} );
+    SW_ASSERT_TRUE( town.initialize( &world._catalog, SessionStateRefs{}, 8, 8, CreatureTownSettings{} ) );
+    SW_EXPECT_FALSE( town.initialize( &world._catalog, SessionStateRefs{}, 0, 8, CreatureTownSettings{} ) ); // 칸 수 1 미만은 맞추지 않고 거절한다
 
     // 돌린 풀숲: 2×2 풀 + 그 위 줄 오른쪽에 나무(돌리지 않은 패턴은 나무가 풀 줄의 오른쪽 끝에 있어야 한다).
     (void)town.setObject( 2, 2, "grass" );
@@ -301,7 +302,7 @@ SW_TEST_CASE( CreatureLifeTest, VisitorsFollowPhaseWeatherAndAreDeterministic )
     SW_EXPECT_TRUE( clock.initialize( WorldClockSettings{} ) );
 
     CreatureTown town;
-    town.initialize( &world._catalog, world.makeRefs(), 10, 10, CreatureTownSettings{} );
+    SW_ASSERT_TRUE( town.initialize( &world._catalog, world.makeRefs(), 10, 10, CreatureTownSettings{} ) );
     weather.forceWeather( "sunny", 0.0f, true );
     clock.setTime( 0, 9.0f );
     SW_EXPECT_EQUAL( 0, town.attractVisitors( clock, weather ) ); // 서식지가 없다
@@ -323,7 +324,7 @@ SW_TEST_CASE( CreatureLifeTest, VisitorsFollowPhaseWeatherAndAreDeterministic )
 
     // 연못(자리 2): 밤 · 비의 frog 는 늘, newt 는 35 % — 같은 씨앗이면 두 마을이 같은 시각에 받는다.
     CreatureTown townB;
-    townB.initialize( &world._catalog, SessionStateRefs{}, 10, 10, CreatureTownSettings{} );
+    SW_ASSERT_TRUE( townB.initialize( &world._catalog, SessionStateRefs{}, 10, 10, CreatureTownSettings{} ) );
     (void)town.setObject( 0, 5, "water" );
     (void)town.setObject( 1, 5, "water" );
     (void)townB.setObject( 0, 5, "water" );
@@ -471,7 +472,7 @@ SW_TEST_CASE( CreatureLifeTest, HousesAndTownAppealTiers )
     CreatureLifeTestWorld world;
     SW_ASSERT_TRUE( world.load() );
     CreatureTown town;
-    town.initialize( &world._catalog, world.makeRefs(), 12, 12, CreatureTownSettings{} );
+    SW_ASSERT_TRUE( town.initialize( &world._catalog, world.makeRefs(), 12, 12, CreatureTownSettings{} ) );
     SW_EXPECT_TRUE( town.getAppealTierName() == hashed_string( "Camp" ) );
 
     placeTallGrass( town, 0, 0, true );
@@ -622,7 +623,7 @@ SW_TEST_CASE( CreatureLifeTest, TownPlacesOnlyOnUsableLandAndBlocksForTreesAndHo
     SW_ASSERT_TRUE( land.claimRect( other, 2, 2, 2, 2, false ) );
 
     CreatureTown town;
-    town.initialize( nullptr, SessionStateRefs{}, 6, 6, CreatureTownSettings{} );
+    SW_ASSERT_TRUE( town.initialize( nullptr, SessionStateRefs{}, 6, 6, CreatureTownSettings{} ) );
     SW_ASSERT_TRUE( town.setObject( 1, 1, "grass" ) ); // 묶기 전에 놓은 것은 묶을 때 얻는다
     SW_ASSERT_TRUE( town.bindLand( &land, int2{ 0, 0 } ) );
     SW_EXPECT_TRUE( land.getOwnerName( 1, 1 ) == hashed_string( "CreatureLife" ) );

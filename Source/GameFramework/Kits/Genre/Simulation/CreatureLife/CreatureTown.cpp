@@ -140,14 +140,20 @@ namespace sw
     {
     }
 
-    void CreatureTown::initialize( const CreatureLifeCatalog* pCatalog, const SessionStateRefs& refs, int32 width, int32 height, const CreatureTownSettings& settings )
+    bool CreatureTown::initialize( const CreatureLifeCatalog* pCatalog, const SessionStateRefs& refs, int32 width, int32 height, const CreatureTownSettings& settings )
     {
+        // 칸 수가 1 미만이면 맞추지 않고 거절한다(예전에는 `MathUtil::max( 1, … )` 로 조용히 1 칸 마을을 열었다).
+        if ( width < 1 || height < 1 )
+        {
+            SW_LOG_ERROR( "CreatureTown: refused size %# x %# - both must be at least 1", width, height );
+            return false;
+        }
         _pCatalog    = pCatalog;
         _pReputation = refs._pReputation;
         _pQuestLog   = refs._pQuestLog;
         _pClock      = refs._pClock;
         _settings    = settings;
-        _topology    = GridTopology{ MathUtil::max( 1, width ), MathUtil::max( 1, height ) };
+        _topology    = GridTopology{ width, height };
         _listObject.assign( static_cast<size_t>( _topology.getCellCount() ), hashed_string{} );
         _listHabitat.clear();
         _listCreature.clear();
@@ -159,6 +165,7 @@ namespace sw
         _appealTier     = -1;
         updateAppealTier();
         _eventBuffer.clear(); // 처음 단계는 알리지 않는다
+        return true;
     }
 
     bool CreatureTown::bindLand( LandRegistry* pLand, const int2& origin )

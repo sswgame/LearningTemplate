@@ -332,7 +332,7 @@ namespace sw
         static void initializeTown( CreatureTown& outTown, SessionStateComponent& state )
         {
             const KitCompositionCatalogs& catalogs = KitCompositionCatalogs::get();
-            outTown.initialize( &catalogs._creatures, state.makeRefs(), kTownSize, kTownSize, CreatureTownSettings{} ); // U14 뒤 모양 — 평판 카탈로그는 공유 상태가
+            SW_ASSERT_TRUE( outTown.initialize( &catalogs._creatures, state.makeRefs(), kTownSize, kTownSize, CreatureTownSettings{} ) ); // U14 뒤 모양 — 평판 카탈로그는 공유 상태가
         }
 
         CreatureTown _town;

@@ -157,7 +157,8 @@ namespace sw
 
         MonsterStorage();
 
-        void                initialize( int32 boxCapacity );
+        /** @brief 파티를 비우고 상자 크기를 정합니다. @p boxCapacity 가 음수이면 오류를 남기고 false 입니다(맞추지 않습니다). */
+        [[nodiscard]] bool  initialize( int32 boxCapacity );
         MonsterStoragePlace add( const MonsterInstance& monster );
         [[nodiscard]] bool  depositToBox( int32 partyIndex );
         [[nodiscard]] bool  withdrawFromBox( int32 boxIndex );

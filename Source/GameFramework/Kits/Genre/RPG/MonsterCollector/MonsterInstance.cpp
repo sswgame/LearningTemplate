@@ -323,11 +323,17 @@ namespace sw
     {
     }
 
-    void MonsterStorage::initialize( int32 boxCapacity )
+    bool MonsterStorage::initialize( int32 boxCapacity )
     {
+        if ( boxCapacity < 0 )
+        {
+            SW_LOG_ERROR( "MonsterStorage: refused box capacity %# - it must not be negative", boxCapacity );
+            return false;
+        }
         _listParty.clear();
         _listBox.clear();
-        _boxCapacity = MathUtil::max( 0, boxCapacity );
+        _boxCapacity = boxCapacity;
+        return true;
     }
 
     MonsterStoragePlace MonsterStorage::add( const MonsterInstance& monster )

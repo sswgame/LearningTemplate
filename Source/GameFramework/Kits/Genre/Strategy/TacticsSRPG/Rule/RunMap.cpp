@@ -9,6 +9,7 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Base/Foundation/Data/GameDataXML.h"
+#include "GameFramework/Base/Foundation/Utility/ConfigRangeUtil.h"
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 
@@ -124,11 +125,17 @@ namespace sw
         return settings._listRule.back()._kind;
     }
 
-    void RunMap::generate( const RunMapSettings& settings, uint32 seed )
+    bool RunMap::generate( const RunMapSettings& settings, uint32 seed )
     {
+        const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
+        if ( rangeError.empty() == false )
+        {
+            SW_LOG_ERROR( "RunMap: refused settings - %#", rangeError.c_str() );
+            return false;
+        }
         GameRandom random( seed );
-        _floorCount  = MathUtil::max( 2, settings._floorCount );
-        _columnCount = MathUtil::max( 1, settings._columnCount );
+        _floorCount  = settings._floorCount;
+        _columnCount = settings._columnCount;
         _current     = kStart;
         _listNode.clear();
         _listCell.assign( static_cast<size_t>( _floorCount * _columnCount ), -1 );
@@ -136,7 +143,7 @@ namespace sw
         // 길을 아래에서 위로 긋는다. 마지막 층 바로 아래까지 긋는다. 첫 두 길은 서로 다른 열에서 시작한다.
         const int32 lastFloor  = _floorCount - 1;
         int32       firstStart = -1;
-        for ( int32 pathIndex = 0; pathIndex < MathUtil::max( 1, settings._pathCount ); ++pathIndex )
+        for ( int32 pathIndex = 0; pathIndex < settings._pathCount; ++pathIndex )
         {
             int32      column               = random.nextInt( 0, _columnCount - 1 );
             const bool bAvoidDuplicateStart = pathIndex == 1 && column == firstStart && _columnCount > 1;
@@ -194,6 +201,7 @@ namespace sw
                 return _listNode[static_cast<size_t>( lhs )]._column < _listNode[static_cast<size_t>( rhs )]._column;
             } );
         }
+        return true;
     }
 
     void RunMap::collectChoices( vector<int32>& outListNode ) const

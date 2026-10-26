@@ -174,10 +174,10 @@ namespace sw
         CreatureTown();
 
         /**
-         * @brief 크기를 정하고 모든 셀을 비웁니다. 평판, 부탁 일지, 시계는 없어도 됩니다(평판이 없으면 호감도 0, 일지가 없으면 부탁 없음, 시계가 없으면 0일).
+         * @brief 크기를 정하고 모든 셀을 비웁니다. @p width 나 @p height 가 1 미만이면 오류를 남기고 false 입니다(조용히 1 로 맞추지 않습니다). 평판, 부탁 일지, 시계는 없어도 됩니다(평판이 없으면 호감도 0, 일지가 없으면 부탁 없음, 시계가 없으면 0일).
          * @param refs 빌려 쓰는 공유 상태이다. 마을은 `_pReputation`(호감도이며 세력 `creature.<종 id>`), `_pQuestLog`(부탁 일지), `_pClock`(날)을 쓰며 마을보다 오래 살아야 한다. 여러 장르가 섞인 게임은 `SessionStateComponent::makeRefs()` 로 얻는다.
          */
-        void initialize( const CreatureLifeCatalog* pCatalog, const SessionStateRefs& refs, int32 width, int32 height, const CreatureTownSettings& settings );
+        [[nodiscard]] bool initialize( const CreatureLifeCatalog* pCatalog, const SessionStateRefs& refs, int32 width, int32 height, const CreatureTownSettings& settings );
 
         /**
          * @brief 공유 땅을 빌립니다. 마을 셀 (0, 0) 이 땅 셀 @p origin 에 해당합니다. 이미 놓인 오브젝트의 셀을 얻고, 그 뒤로는 오브젝트를 놓을 때 얻고 비우면 반납합니다.

@@ -108,7 +108,8 @@ namespace
                                             _lootCatalog.loadFromXMLText( kBrLootXML, "BattleRoyaleTest" ) == false;
             if ( bCatalogLoadFailed )
                 return false;
-            _match.initialize( &_catalog, &_itemCatalog, &_lootCatalog, seed, nullptr );
+            if ( _match.initialize( &_catalog, &_itemCatalog, &_lootCatalog, seed, nullptr ) == false )
+                return false;
             return true;
         }
 
@@ -153,7 +154,7 @@ SW_TEST_CASE( BattleRoyaleTest, ZoneShrinksIntoNextCircleAndHurtsOutside )
     SW_EXPECT_EQUAL( 2, static_cast<int32>( catalog.getZoneSettings()._listPhase.size() ) );
 
     BrZone zone;
-    zone.initialize( catalog.getZoneSettings(), catalog.getMapSize(), 7u, nullptr );
+    SW_ASSERT_TRUE( zone.initialize( catalog.getZoneSettings(), catalog.getMapSize(), 7u, nullptr ) );
     const float32 startRadius = zone.getRadius();
     SW_EXPECT_NEAR_EQUAL( 500.0f * MathUtil::sqrt( 2.0f ), startRadius, 0.01f );
     SW_EXPECT_TRUE( zone.getStage() == BrZoneStage::Waiting );
@@ -188,7 +189,7 @@ SW_TEST_CASE( BattleRoyaleTest, ZoneShrinksIntoNextCircleAndHurtsOutside )
     BitWriter writer;
     SW_ASSERT_TRUE( zone.writeState( writer ) );
     BrZone copy;
-    copy.initialize( catalog.getZoneSettings(), catalog.getMapSize(), 99u, nullptr );
+    SW_ASSERT_TRUE( copy.initialize( catalog.getZoneSettings(), catalog.getMapSize(), 99u, nullptr ) );
     BitReader reader( writer.getBytes().data(), writer.getByteCount() );
     SW_ASSERT_TRUE( copy.readState( reader ) );
     SW_EXPECT_NEAR_EQUAL( zone.getRadius(), copy.getRadius(), 0.0001f );
@@ -216,9 +217,9 @@ SW_TEST_CASE( BattleRoyaleTest, ZoneShrinksIntoNextCircleAndHurtsOutside )
 
     // 같은 씨앗이면 같은 원.
     BrZone again;
-    again.initialize( catalog.getZoneSettings(), catalog.getMapSize(), 7u, nullptr );
+    SW_ASSERT_TRUE( again.initialize( catalog.getZoneSettings(), catalog.getMapSize(), 7u, nullptr ) );
     SW_EXPECT_NEAR_EQUAL( firstCenter._x, again.getCenter()._x, 0.0001f );
-    zone.initialize( catalog.getZoneSettings(), catalog.getMapSize(), 7u, nullptr );
+    SW_ASSERT_TRUE( zone.initialize( catalog.getZoneSettings(), catalog.getMapSize(), 7u, nullptr ) );
     SW_EXPECT_NEAR_EQUAL( zone.getNextCenter()._x, again.getNextCenter()._x, 0.0001f );
 }
 
@@ -246,11 +247,11 @@ SW_TEST_CASE( BattleRoyaleTest, ZoneStateRoundTripContinuesTheSameZone )
     };
 
     BrZone zone;
-    zone.initialize( catalog.getZoneSettings(), catalog.getMapSize(), 7u, nullptr );
+    SW_ASSERT_TRUE( zone.initialize( catalog.getZoneSettings(), catalog.getMapSize(), 7u, nullptr ) );
     zone.update( 70.0f ); // 첫 단계가 줄어드는 중
     const vector<uint8> written = captureSaveBytes( zone );
     BrZone              restored;
-    restored.initialize( catalog.getZoneSettings(), catalog.getMapSize(), 99u, nullptr );
+    SW_ASSERT_TRUE( restored.initialize( catalog.getZoneSettings(), catalog.getMapSize(), 99u, nullptr ) );
     const float32 untouchedRadius = restored.getRadius();
     Archive       reader( written.data(), written.size() );
     SW_ASSERT_TRUE( restored.readState( reader ) );
@@ -267,7 +268,7 @@ SW_TEST_CASE( BattleRoyaleTest, ZoneStateRoundTripContinuesTheSameZone )
     SW_EXPECT_TRUE( captureSaveBytes( zone ) == captureSaveBytes( restored ) );
 
     BrZone truncated;
-    truncated.initialize( catalog.getZoneSettings(), catalog.getMapSize(), 99u, nullptr );
+    SW_ASSERT_TRUE( truncated.initialize( catalog.getZoneSettings(), catalog.getMapSize(), 99u, nullptr ) );
     Archive cut( written.data(), written.size() - 1 );
     SW_EXPECT_FALSE( truncated.readState( cut ) );
     SW_EXPECT_TRUE( truncated.getRadius() == untouchedRadius );
@@ -286,11 +287,11 @@ SW_TEST_CASE( BattleRoyaleTest, NextZoneCenterAvoidsForbiddenTerrain )
     for ( uint32 seed = 1; seed <= 40; ++seed )
     {
         BrZone free;
-        free.initialize( catalog.getZoneSettings(), catalog.getMapSize(), seed, nullptr );
+        SW_ASSERT_TRUE( free.initialize( catalog.getZoneSettings(), catalog.getMapSize(), seed, nullptr ) );
         westWithoutCallback += free.getNextCenter()._x < 500.0f ? 1 : 0;
 
         BrZone dry;
-        dry.initialize( catalog.getZoneSettings(), catalog.getMapSize(), seed, &terrain );
+        SW_ASSERT_TRUE( dry.initialize( catalog.getZoneSettings(), catalog.getMapSize(), seed, &terrain ) );
         westWithCallback += dry.getNextCenter()._x < 500.0f ? 1 : 0;
         // 보급 상자 자리도 같은 콜백을 지킨다.
         GameRandom random{ seed };
@@ -306,8 +307,18 @@ SW_TEST_CASE( BattleRoyaleTest, FlightPathCrossesMapAndLandingIsPredicted )
 {
     BrCatalog catalog;
     SW_ASSERT_TRUE( catalog.loadFromXMLText( kBrCatalogXML, "BattleRoyaleTest" ) );
-    const BrFlightPath path  = BrFlightPath::makeRandom( catalog.getFlightSettings(), 1000.0f, 42u );
-    const BrFlightPath again = BrFlightPath::makeRandom( catalog.getFlightSettings(), 1000.0f, 42u );
+    BrFlightPath path;
+    BrFlightPath again;
+    SW_ASSERT_TRUE( BrFlightPath::makeRandom( catalog.getFlightSettings(), 1000.0f, 42u, path ) );
+    SW_ASSERT_TRUE( BrFlightPath::makeRandom( catalog.getFlightSettings(), 1000.0f, 42u, again ) );
+    // 범위 밖 설정 · 맵 크기는 맞추지 않고 거절한다.
+    BrFlightPath refused;
+    SW_EXPECT_FALSE( BrFlightPath::makeRandom( catalog.getFlightSettings(), 0.5f, 42u, refused ) );
+    BrFlightDef badFlight = catalog.getFlightSettings();
+    badFlight._speed      = 0.5f; // Min 1
+    SW_EXPECT_FALSE( BrFlightPath::makeRandom( badFlight, 1000.0f, 42u, refused ) );
+    BrZone refusedZone;
+    SW_EXPECT_FALSE( refusedZone.initialize( catalog.getZoneSettings(), 0.5f, 7u, nullptr ) );
     SW_EXPECT_NEAR_EQUAL( path._start._x, again._start._x, 0.0001f );
     SW_EXPECT_NEAR_EQUAL( path._end._y, again._end._y, 0.0001f );
 
