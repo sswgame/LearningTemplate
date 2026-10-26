@@ -6,6 +6,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
+#include "GameFramework/Base/Foundation/Utility/ConfigRangeUtil.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
@@ -18,9 +19,30 @@ namespace sw
             static constexpr int32 kWildCopyCount  = 4;
             static constexpr int32 kActionPoints   = 20;
             static constexpr int32 kWildPoints     = 50;
-            static constexpr int32 kFirstCardTries = 108;
+            static constexpr int32 kDeckCardCount  = 108;
+            static constexpr int32 kFirstCardTries = kDeckCardCount;
 
             static bool isWildValue( uint8 rank ) { return rank == static_cast<uint8>( UnoValue::Wild ) || rank == static_cast<uint8>( UnoValue::WildDrawFour ); }
+
+            /**
+             * @brief 설정이 선언된 범위 안이고 나눌 카드가 덱에 있는지 봅니다. 밖이면 오류를 남기고 false 입니다(맞추지 않는다).
+             * @details 인원 × 손패 + 첫 장 한 장이 덱(108장)을 넘으면 나누기가 모자라 손패가 조용히 짧아진다.
+             */
+            [[nodiscard]] static bool acceptSettings( const UnoSettings& settings )
+            {
+                const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
+                if ( rangeError.empty() == false )
+                {
+                    SW_LOG_ERROR( "UnoGame: refused settings - %#", rangeError.c_str() );
+                    return false;
+                }
+                if ( settings._playerCount * settings._handSize + 1 > kDeckCardCount )
+                {
+                    SW_LOG_ERROR( "UnoGame: refused settings - %# players x %# cards leaves no card for the first discard (deck has %# cards)", settings._playerCount, settings._handSize, kDeckCardCount );
+                    return false;
+                }
+                return true;
+            }
         };
     } // namespace
 } // namespace sw
@@ -78,13 +100,15 @@ namespace sw
         return points;
     }
 
-    void UnoGame::initialize( const UnoSettings& settings, uint32 seed )
+    bool UnoGame::initialize( const UnoSettings& settings, uint32 seed )
     {
+        if ( UnoGameInternal::acceptSettings( settings ) == false )
+            return false;
         GameRandom random( seed );
         UnoLayout  layout;
         makeDeck( layout._drawPile );
         layout._drawPile.shuffle( random );
-        layout._listHand.resize( static_cast<size_t>( MathUtil::max( 2, settings._playerCount ) ) );
+        layout._listHand.resize( static_cast<size_t>( settings._playerCount ) );
         (void)layout._drawPile.deal( layout._listHand, settings._handSize );
         // 와일드가 아닌 첫 장을 뒤집는다. 와일드는 더미 맨 아래로 보낸다.
         for ( int32 attempt = 0; attempt < UnoGameInternal::kFirstCardTries; ++attempt )
@@ -101,25 +125,37 @@ namespace sw
             layout._color = static_cast<UnoColor>( card._suit );
             break;
         }
-        initializeFromLayout( settings, layout, random.getState() );
+        return initializeFromLayout( settings, layout, random.getState() );
     }
 
-    void UnoGame::initializeFromLayout( const UnoSettings& settings, const UnoLayout& layout, uint32 seed )
+    bool UnoGame::initializeFromLayout( const UnoSettings& settings, const UnoLayout& layout, uint32 seed )
     {
-        _settings = settings;
-        _listHand = layout._listHand;
-        if ( _listHand.size() < 2 )
-            _listHand.resize( 2 );
+        if ( UnoGameInternal::acceptSettings( settings ) == false )
+            return false;
+        const int32 handCount = static_cast<int32>( layout._listHand.size() );
+        if ( handCount != settings._playerCount )
+        {
+            SW_LOG_ERROR( "UnoGame: refused layout - %# hands for %# players", handCount, settings._playerCount );
+            return false;
+        }
+        if ( layout._firstPlayer < 0 || layout._firstPlayer >= handCount )
+        {
+            SW_LOG_ERROR( "UnoGame: refused layout - first player %# is outside 0..%#", layout._firstPlayer, handCount - 1 );
+            return false;
+        }
+        _settings      = settings;
+        _listHand      = layout._listHand;
         _drawPile      = layout._drawPile;
         _discardPile   = layout._discardPile;
         _random        = GameRandom( seed );
-        _currentPlayer = MathUtil::clamp( layout._firstPlayer, 0, getPlayerCount() - 1 );
+        _currentPlayer = layout._firstPlayer;
         _direction     = 1;
         _pendingDraw   = 0;
         _unoTarget     = -1;
         _winner        = -1;
         _color         = layout._color;
         _eventBuffer.clear();
+        return true;
     }
 
     bool UnoGame::isPlayable( const Card& card ) const

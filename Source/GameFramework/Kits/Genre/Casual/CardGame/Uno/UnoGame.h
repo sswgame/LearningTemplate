@@ -13,6 +13,8 @@
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Casual/CardGame/CardDeck.h"
 
@@ -42,11 +44,20 @@ namespace sw
         WildDrawFour
     };
 
-    /** @brief 규칙 설정입니다. */
-    struct UnoSettings
+    /**
+     * @brief 규칙 설정입니다.
+     * @details 범위는 필드의 `PROPERTY( Min · Max )` 이고, 벗어난 값은 `UnoGame::initialize*` 가 오류로 거절한다(`ConfigRangeUtil`). 인원 × 손패 + 1 이 덱(108장)을 넘는 짝도 거절한다.
+     *          값을 조용히 맞추지 않는다(폴백 금지 원칙).
+     */
+    REFLECT()
+    struct SW_KIT_API UnoSettings
     {
+        REFLECT_BODY();
+        PROPERTY( Min = 2, Max = 10 )
         int32 _playerCount{ 4 };
+        PROPERTY( Min = 1 )
         int32 _handSize{ 7 };
+        PROPERTY( Min = 0 )
         int32 _unoPenalty{ 2 };                ///< 우노를 외치지 않아 잡히면 뽑는 장수
         uint8 _bStackDrawTwo{ SW_FALSE };      ///< +2 위에 +2 를 쌓아 넘길 수 있다
         uint8 _bStackDrawFour{ SW_FALSE };     ///< 쌓인 벌칙 위에 +4 를 쌓아 넘길 수 있다
@@ -113,9 +124,13 @@ namespace sw
 
         UnoGame();
 
-        /** @brief 108장을 @p seed 로 섞어 한 장씩 돌려 나누고, 와일드가 아닌 첫 장을 뒤집습니다(첫 장의 효과는 적용하지 않습니다). */
-        void initialize( const UnoSettings& settings, uint32 seed );
-        void initializeFromLayout( const UnoSettings& settings, const UnoLayout& layout, uint32 seed = GameRandom::kDefaultSeed );
+        /**
+         * @brief 108장을 @p seed 로 섞어 한 장씩 돌려 나누고, 와일드가 아닌 첫 장을 뒤집습니다(첫 장의 효과는 적용하지 않습니다).
+         * @return 설정이 범위 안이면 true 입니다. 밖이면 오류를 남기고 false 이며 상태를 바꾸지 않습니다.
+         */
+        [[nodiscard]] bool initialize( const UnoSettings& settings, uint32 seed );
+        /** @brief 정해진 배치로 시작합니다. 설정이 범위 밖이거나 손패 수가 인원과 다르거나 첫 차례가 인원 밖이면 오류를 남기고 false 이며 상태를 바꾸지 않습니다. */
+        [[nodiscard]] bool initializeFromLayout( const UnoSettings& settings, const UnoLayout& layout, uint32 seed = GameRandom::kDefaultSeed );
 
         /** @brief 차례인 @p player 가 낼 수 있는 패 @p cardID 를 냅니다. 와일드는 @p chosenColor 가 네 색 중 하나여야 합니다. */
         [[nodiscard]] bool playCard( int32 player, uint16 cardID, UnoColor chosenColor = UnoColor::Wild, bool bDeclareUno = false );
