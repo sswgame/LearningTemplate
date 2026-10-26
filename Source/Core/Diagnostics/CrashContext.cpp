@@ -2,6 +2,7 @@
 
 #include "Core/Diagnostics/CrashContext.h"
 
+#include "Core/Common/HexUtil.h"
 #include "Core/Common/PlatformOsHeaders.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/StringUtil.h"
@@ -110,12 +111,8 @@ namespace sw
             std::random_device randomDevice;
             const uint64       mixed = nowTicks ^ ( wallSeconds << 16 ) ^ ( static_cast<uint64>( randomDevice() ) << 32 );
 
-            static const utf8 kHex[] = "0123456789abcdef";
-            SessionIDText     session{};
-            for ( uint32 digit = 0; digit < 16; ++digit )
-            {
-                session._arrText[digit] = kHex[( mixed >> ( digit * 4 ) ) & 0xFu];
-            }
+            SessionIDText session{};
+            HexUtil::writeDigits( session._arrText, mixed, HexUtil::kMaxDigitCount, HexCase::Lower );
             return session;
         }
 
