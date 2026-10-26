@@ -69,10 +69,5 @@ namespace sw
         static void readPlacement( const XMLNode& node, const utf8* pSocketAttribute, AppearancePlacement& outPlacement, AppearanceLoadReport& report, string_view sourceName );
         /** @brief 쉼표로 나뉜 계층 태그를 추가합니다(`Helmet.FullFace, Armor.Heavy`). */
         static void readTags( const XMLNode& node, const utf8* pAttribute, TagContainer& outTags );
-        /**
-         * @brief 이름이 목록에 있으면 true 입니다(`VectorUtil::contains` 와 같다).
-         * @details 지울 별칭이다 — 남은 호출 다섯은 목록에 넣기 전 중복 검사(`CheckContainsPushBack` 의 모양)라 집합으로 고친 뒤 지운다(계획 ReuseExistingFacilities.ContainsNameAlias).
-         */
-        static bool containsName( const vector<hashed_string>& listName, const hashed_string& name );
     };
 } // namespace sw

@@ -3,7 +3,6 @@
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceXMLUtil.h"
 
 #include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
 
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -175,10 +174,5 @@ namespace sw
         {
             outTags.addTag( TagID::request( token ) );
         } );
-    }
-
-    bool AppearanceXMLUtil::containsName( const vector<hashed_string>& listName, const hashed_string& name )
-    {
-        return VectorUtil::contains( listName, name );
     }
 } // namespace sw
