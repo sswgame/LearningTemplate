@@ -14,6 +14,7 @@
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/Viewport/EditorOrbitMath.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
 
 #include "Engine/Object/Component/CameraComponent.h"
@@ -37,10 +38,6 @@ namespace sw::editor
             static constexpr float32 kFlySpeedWheelRatio = 1.2f;
             /** @brief 궤도 거리(m)의 최솟값입니다. 이보다 가까이 당기면 궤도 중심을 지나친다. */
             static constexpr float32 kOrbitDistanceMin = 0.5f;
-            /** @brief 휠 한 칸이 궤도 거리에 곱하는 비율입니다(dolly). 거리에 비례해 움직이므로 멀리서도 가까이서도 같은 느낌이다. */
-            static constexpr float32 kDollyRatioPerNotch = 0.85f;
-            /** @brief 가운데 단추 팬이 마우스 한 픽셀에 옮기는 양입니다. 원근은 궤도 거리, 직교는 화면 높이에 곱한다(화면 높이 약 700px 기준). */
-            static constexpr float32 kPanPerPixel = 0.0016f;
             /** @brief 초점(F)이 물체 반지름에 곱해 궤도 거리를 정하는 비율입니다. 상자가 화면에 여유 있게 들어온다. */
             static constexpr float32 kFrameDistancePerRadius = 2.5f;
             /** @brief 초점이 쓰는 물체 반지름(m)의 최솟값입니다. 점 같은 물체에서 거리가 0 이 되지 않게 한다. */
@@ -150,20 +147,23 @@ namespace sw::editor
 
     void EditorViewportCamera::dolly( float32 mouseWheel )
     {
-        _orbitDistance = MathUtil::max( _orbitDistance * MathUtil::pow( EditorViewportCameraInternal::kDollyRatioPerNotch, mouseWheel ), EditorViewportCameraInternal::kOrbitDistanceMin );
+        _orbitDistance = EditorOrbitMath::dolly( _orbitDistance, mouseWheel, EditorViewportCameraInternal::kOrbitDistanceMin );
         _position      = _orbitTarget - EditorViewportCameraInternal::computeForward( _rotation ) * _orbitDistance;
     }
 
-    void EditorViewportCamera::pan( float32 pixelX, float32 pixelY )
+    void EditorViewportCamera::pan( float32 pixelX, float32 pixelY, float32 viewportHeightPixels )
     {
+        if ( viewportHeightPixels <= 0.0f )
+            return; // 뷰포트 높이를 모르면 픽셀을 월드 길이로 바꿀 수 없다
         const float32 yawRad   = MathUtil::toRadian( _rotation._y );
         const float32 pitchRad = MathUtil::toRadian( _rotation._x );
         const float32 sinYaw   = MathUtil::sin( yawRad );
         const float32 cosYaw   = MathUtil::cos( yawRad );
         const float3  right{ cosYaw, 0.0f, -sinYaw };
         // 시선과 오른쪽에 직교하는 카메라 위쪽(왼손 좌표계)
-        const float3  up{ sinYaw * MathUtil::sin( pitchRad ), MathUtil::cos( pitchRad ), cosYaw * MathUtil::sin( pitchRad ) };
-        const float32 scale = EditorViewportCameraInternal::kPanPerPixel * ( _bOrthographicView == SW_TRUE ? _orthoHeight : _orbitDistance );
+        const float3 up{ sinYaw * MathUtil::sin( pitchRad ), MathUtil::cos( pitchRad ), cosYaw * MathUtil::sin( pitchRad ) };
+        // 픽셀 하나의 월드 길이: 직교는 화면 높이 / 픽셀 높이, 원근은 궤도 중심 깊이에서의 화면 높이 / 픽셀 높이
+        const float32 scale = _bOrthographicView == SW_TRUE ? _orthoHeight / viewportHeightPixels : EditorOrbitMath::panWorldPerPixel( _orbitDistance, MathUtil::toRadian( _fovY ), viewportHeightPixels );
         // 끈 방향으로 장면이 따라오므로 카메라는 반대로 움직인다. 궤도 중심도 같이 옮겨 이어지는 Alt 궤도가 같은 점을 돈다.
         const float3 delta = right * ( -pixelX * scale ) + up * ( pixelY * scale );
         _position += delta;

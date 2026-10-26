@@ -9,6 +9,7 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Viewport/EditorOrbitMath.h"
 
 #include "Engine/Environment/Sky/SkyComponent.h"
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
@@ -44,7 +45,6 @@ namespace sw::editor
             static constexpr float32 kMinDistance           = 0.2f;
             static constexpr float32 kMaxPitch              = 1.5f;
             static constexpr float32 kRotateRadiansPerPixel = 0.01f;
-            static constexpr float32 kZoomStepScale         = 0.9f;
             /** @brief 스크린샷을 찍기 전에 그릴 프레임 수입니다 — 첫 프레임은 클리어 색이고 렌더러 · PSO 를 준비하는 데 몇 프레임 걸린다. */
             static constexpr uint32 kScreenshotWarmupFrames = 30;
         };
@@ -194,10 +194,17 @@ namespace sw::editor
                 _orbitPitch = MathUtil::clamp( _orbitPitch + io.MouseDelta.y * EditorPreviewViewportInternal::kRotateRadiansPerPixel,
                                                -EditorPreviewViewportInternal::kMaxPitch, EditorPreviewViewportInternal::kMaxPitch );
             }
+            // 씬 뷰와 같은 휠 줌과 가운데 단추 팬이다(`EditorOrbitMath`). 궤도 중심이 같이 움직여 이어지는 회전이 같은 점을 돈다.
             if ( io.MouseWheel != 0.0f )
+                _orbitDistance = EditorOrbitMath::dolly( _orbitDistance, io.MouseWheel, EditorPreviewViewportInternal::kMinDistance );
+            if ( ImGui::IsMouseDown( ImGuiMouseButton_Middle ) )
             {
-                const float32 zoom = io.MouseWheel > 0.0f ? EditorPreviewViewportInternal::kZoomStepScale : 1.0f / EditorPreviewViewportInternal::kZoomStepScale;
-                _orbitDistance     = MathUtil::max( EditorPreviewViewportInternal::kMinDistance, _orbitDistance * zoom );
+                // 시선 f 는 눈에서 대상으로, 오른쪽은 위쪽 축과 f 의 외적(왼손 좌표계), 카메라 위쪽은 f 와 오른쪽의 외적이다.
+                const float3  forward{ -MathUtil::sin( _orbitYaw ) * MathUtil::cos( _orbitPitch ), -MathUtil::sin( _orbitPitch ), -MathUtil::cos( _orbitYaw ) * MathUtil::cos( _orbitPitch ) };
+                const float3  right = float3{ forward._z, 0.0f, -forward._x }.normalize();
+                const float3  up{ forward._y * right._z, forward._z * right._x - forward._x * right._z, -forward._y * right._x };
+                const float32 scale = EditorOrbitMath::panWorldPerPixel( _orbitDistance, _fieldOfViewY, size._y );
+                _orbitTarget += right * ( -io.MouseDelta.x * scale ) + up * ( io.MouseDelta.y * scale );
             }
         }
 
