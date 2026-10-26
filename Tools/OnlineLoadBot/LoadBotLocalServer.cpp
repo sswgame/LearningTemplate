@@ -39,15 +39,16 @@ namespace sw
             /** @brief 봇이 쓰는 키트 일곱과 옵션입니다. 전용 서버라면 운영자가 `<이름>.online.json` 에 적는 내용이다. */
             static void fillConfig( const LoadBotLocalServerSettings& settings, OnlineServerConfig& outConfig )
             {
-                outConfig._serverID               = static_cast<int32>( settings._serverID );
-                outConfig._region                 = settings._region;
-                outConfig._serverKind             = "game";
-                outConfig._publicAddress          = kLoopbackAddress; // 이 서버를 게임 서버로 등록한다 — 매칭 배정이 그리로 간다
-                outConfig._capacity               = settings._gameServerCapacity;
-                outConfig._maxConnections         = settings._maxConnections;
-                outConfig._ioThreadCount          = 0; // `tick` 이 전송을 돈다
-                outConfig._requestBurstPerRemote  = kUnlimitedAttemptBurst;
-                outConfig._requestBurstPerAccount = kUnlimitedAttemptBurst;
+                outConfig._serverID                = static_cast<int32>( settings._serverID );
+                outConfig._region                  = settings._region;
+                outConfig._serverKind              = "game";
+                outConfig._publicAddress           = kLoopbackAddress; // 이 서버를 게임 서버로 등록한다 — 매칭 배정이 그리로 간다
+                outConfig._capacity                = settings._gameServerCapacity;
+                outConfig._maxConnections          = settings._maxConnections;
+                outConfig._ioThreadCount           = 0; // `tick` 이 전송을 돈다
+                outConfig._requestBurstPerRemote   = kUnlimitedAttemptBurst;
+                outConfig._requestBurstPerAccount  = kUnlimitedAttemptBurst;
+                outConfig._maxConnectionsPerRemote = settings._maxConnections; // 봇은 모두 루프백 한 주소에서 붙는다
 
                 OnlineServerKitEntry& account = addKit( outConfig, "account" );
                 addOption( account, "attemptBurst", sw::to_string( kUnlimitedAttemptBurst ) );

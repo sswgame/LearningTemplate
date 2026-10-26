@@ -703,17 +703,78 @@ SW_TEST_CASE( OnlineServiceHostTest, AdminListenerSplitsServicesByExposure )
     SW_EXPECT_TRUE( rig.call( player, Internal::kRangeA + Internal::kEcho, 1 )._status == NetRequestStatus::Ok );
 }
 
-/** @brief [OnlineServiceHostTest] GM 리슨이 없으면 리슨 하나가 GM 서비스도 받는다(서버를 하나 더 띄우는 운영) */
-SW_TEST_CASE( OnlineServiceHostTest, WithoutAnAdminListenerOneListenerServesEveryService )
+/**
+ * @brief [OnlineServiceHostTest] GM 리슨 없이 GM 서비스를 올리면 기동이 멈추고, 기동한 뒤의 등록도 거절한다. 플레이어 포트가 GM 서비스를 받는 숨은 폴백은 없다
+ * @details 노출이 기동 뒤에 바뀌어도(가짜 서비스) 플레이어 포트의 연결은 GM 서비스를 받지 못한다.
+ */
+SW_TEST_CASE( OnlineServiceHostTest, AdminServiceWithoutAnAdminListenerFailsToStart )
 {
+    LoopbackStreamNetwork        network{ 13u };
+    unique_ptr<IStreamTransport> startTransport = network.createTransport();
+    unique_ptr<IStreamTransport> lateTransport  = network.createTransport();
+    FakeOnlineService            adminService{ kProtocolB };
+    adminService._exposure = OnlineServiceExposure::Admin;
+    {
+        OnlineServiceHost host;
+        SW_ASSERT_TRUE( host.registerHostService( &adminService ) );
+        string error;
+        SW_EXPECT_FALSE( host.initialize( startTransport.get(), HostRig::makeSettings(), error ) );
+        SW_EXPECT_FALSE( error.empty() );
+    }
+    {
+        FakeOnlineService playerService{ kProtocolA };
+        OnlineServiceHost host;
+        SW_ASSERT_TRUE( host.registerHostService( &playerService ) );
+        string error;
+        SW_ASSERT_TRUE_MSG( host.initialize( lateTransport.get(), HostRig::makeSettings(), error ), error.c_str() );
+        SW_TEST_DEFENSIVE_SCOPE( "an admin-only service is refused without an admin listener" );
+        SW_EXPECT_FALSE( host.registerHostService( &adminService ) );
+    }
+
     HostRig rig;
     rig._serviceB._exposure = OnlineServiceExposure::Admin;
-    SW_EXPECT_EQUAL( uint16( 0 ), rig._host.getAdminListenPort() );
     ClientSide client( rig._network, rig.getPort() );
     rig._listClient.push_back( &client );
     rig.step( 10 );
     SW_ASSERT_TRUE( client._client.isReady() );
-    SW_EXPECT_TRUE( rig.call( client, OnlineServiceHostTestInternal::kRangeB + OnlineServiceHostTestInternal::kEcho, 1 )._status == NetRequestStatus::Ok );
+    SW_EXPECT_EQUAL( OnlineError::kInvalidRequest, rig.call( client, OnlineServiceHostTestInternal::kRangeB + OnlineServiceHostTestInternal::kEcho, 1 )._errorCode );
+    SW_EXPECT_EQUAL( 0, rig._serviceB._handledCount );
+}
+
+/** @brief [OnlineServiceHostTest] Hello 를 기한 안에 끝내지 않은 연결은 서버가 닫고, 한 주소의 동시 연결은 상한을 넘지 못한다 */
+SW_TEST_CASE( OnlineServiceHostTest, SilentAndExcessConnectionsAreClosed )
+{
+    OnlineServiceHostConfig settings  = HostRig::makeSettings();
+    settings._helloTimeoutMs          = 200;
+    settings._maxConnectionsPerRemote = 2;
+    HostRig rig( settings );
+    {
+        RawClientSide silent( rig._network, rig.getPort() ); // 연결만 열고 Hello 를 보내지 않는다
+        for ( int32 index = 0; index < 4; ++index )
+        {
+            silent.pump();
+            rig.step( 1 );
+        }
+        SW_EXPECT_EQUAL( 1, rig._host.getConnectionCount() );
+        for ( int32 index = 0; index < 60 && rig._host.getConnectionCount() > 0; ++index )
+        {
+            silent.pump();
+            rig.step( 1 ); // 10 ms 씩 — 기한(200 ms)과 검사 간격(250 ms)을 넘긴다
+        }
+        SW_EXPECT_EQUAL( 0, rig._host.getConnectionCount() );
+    }
+
+    RawClientSide first( rig._network, rig.getPort() );
+    RawClientSide second( rig._network, rig.getPort() );
+    RawClientSide third( rig._network, rig.getPort() ); // 모두 127.0.0.1 — 셋째는 상한(2)을 넘는다
+    for ( int32 index = 0; index < 6; ++index )
+    {
+        first.pump();
+        second.pump();
+        third.pump();
+        rig.step( 1 );
+    }
+    SW_EXPECT_EQUAL( 2, rig._host.getConnectionCount() );
 }
 
 SW_TEST_CASE( OnlineServiceHostTest, OversizedBodiesAndFloodsAreRefused )

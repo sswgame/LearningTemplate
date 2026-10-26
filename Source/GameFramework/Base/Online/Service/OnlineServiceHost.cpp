@@ -3,6 +3,7 @@
 #include "GameFramework/Base/Online/Service/OnlineServiceHost.h"
 
 #include "Core/Container/LittleEndianUtil.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Log/LogContext.h"
 #include "Core/Network/Transport/IStreamTransport.h"
@@ -19,15 +20,14 @@ namespace sw
         struct OnlineServiceHostInternal
         {
             static constexpr size_t kMaxTrackedBucketCount = 100000;
+            static constexpr int64  kHelloSweepIntervalMs  = 250; ///< Hello 기한을 넘긴 연결을 찾는 간격 — 연결 표를 틱마다 돌지 않는다
 
             /** @brief 주소마다의 도배 제한 단위 — 포트는 빼고 IP 만(포트를 바꿔 새 연결로 우회하지 못하게). */
             static uint64 makeRemoteKey( const NetAddress& remote ) { return static_cast<uint64>( remote._ipv4 ) + 1; }
 
-            /** @brief 노출이 @p exposure 인 서비스가 이 연결의 요청을 받는지입니다. GM 리슨이 없으면 리슨 하나가 모든 서비스를 받습니다. */
-            static bool isServedOn( OnlineServiceExposure exposure, bool bHasAdminListener, bool bAdminConnection )
+            /** @brief 노출이 @p exposure 인 서비스가 이 연결의 요청을 받는지입니다. GM 서비스는 GM 리슨의 연결만 받는다(GM 리슨이 없으면 기동이 멈춘다). */
+            static bool isServedOn( OnlineServiceExposure exposure, bool bAdminConnection )
             {
-                if ( bHasAdminListener == false )
-                    return true;
                 switch ( exposure )
                 {
                     case OnlineServiceExposure::Player:
@@ -37,6 +37,16 @@ namespace sw
                     case OnlineServiceExposure::PlayerAndAdmin:
                         return true;
                 }
+                return false;
+            }
+
+            /** @brief GM 리슨 없이 GM 서비스(`Admin`)를 올리려 하면 오류 문장을 채우고 false 입니다. 플레이어 포트로 받는 숨은 폴백은 두지 않는다. */
+            [[nodiscard]] static bool checkExposure( const IOnlineHostService& service, bool bHasAdminListener, string& outError )
+            {
+                if ( bHasAdminListener || service.getExposure() != OnlineServiceExposure::Admin )
+                    return true;
+                outError = "online service range " + to_string( static_cast<uint32>( service.getMethodRange() ) ) +
+                           " is admin-only but the host has no admin listener (set the server config _adminServicePort)";
                 return false;
             }
         };
@@ -202,9 +212,12 @@ namespace sw
         , _responseBytes{}
         , _mapConnection{}
         , _mapAccountToConnection{}
+        , _mapRemoteConnectionCount{}
+        , _listHandleScratch{}
         , _pServerBus{}
         , _listenerTransport{}
         , _nowMs{ 0 }
+        , _nextHelloSweepMs{ 0 }
         , _schemaHash{ 0 }
         , _bInitialized{ SW_FALSE }
     {
@@ -245,6 +258,11 @@ namespace sw
         }
         for ( IOnlineHostService* pService : _listService )
         {
+            if ( OnlineServiceHostInternal::checkExposure( *pService, _listenerTransport->hasAdminListener(), outError ) == false )
+            {
+                releaseTransportSide();
+                return false;
+            }
             for ( uint16 offset = 0; offset < OnlineMethodRange::kMethodCount; ++offset )
             {
                 (void)_requestServer.registerMethod( static_cast<uint16>( pService->getMethodRange() + offset ), this ); // registerHostService 가 겹침을 이미 봤다
@@ -295,6 +313,7 @@ namespace sw
         _requestServer.shutdown();
         _endpoint.shutdown();
         _mapConnection.clear();
+        _mapRemoteConnectionCount.clear();
         _mapAccountToConnection.clear();
         _listenerTransport.reset(); // 엔드포인트가 내려간 뒤 — 엔드포인트는 이 묶음을 전송으로 들고 있었다
     }
@@ -318,6 +337,12 @@ namespace sw
         }
         if ( _bInitialized == SW_TRUE )
         {
+            string exposureError;
+            if ( OnlineServiceHostInternal::checkExposure( *pService, _listenerTransport->hasAdminListener(), exposureError ) == false )
+            {
+                SW_LOG_ERROR( "%#", exposureError );
+                return false;
+            }
             for ( uint16 offset = 0; offset < OnlineMethodRange::kMethodCount; ++offset )
             {
                 if ( _requestServer.registerMethod( static_cast<uint16>( range + offset ), this ) )
@@ -341,6 +366,7 @@ namespace sw
         if ( _settings._transportSettings._ioThreadCount == 0 )
             (void)_listenerTransport->pollIO( 0 );
         (void)_endpoint.pump( *this );
+        closeExpiredHelloConnections();
         _requestServer.update();
         (void)_ephemeralRouter.pump();
         if ( _settings._pServerBusTransport != nullptr )
@@ -498,7 +524,36 @@ namespace sw
         ConnectionState& connection = _mapConnection[handle.packed()];
         connection                  = ConnectionState{};
         connection._remoteKey       = OnlineServiceHostInternal::makeRemoteKey( remote );
+        connection._openedMs        = _nowMs;
         connection._bAdminListener  = _listenerTransport->isAdminConnection( handle ) ? SW_TRUE : SW_FALSE;
+        // 주소마다 동시 연결 상한 — 전송의 `_maxConnections` 는 전체 상한이라 한 주소가 슬롯을 다 잡을 수 있다. 닫힘(`onEndpointClosed`)이 수를 되돌린다.
+        const int32 remoteCount = ++_mapRemoteConnectionCount[connection._remoteKey];
+        if ( remoteCount > _settings._maxConnectionsPerRemote )
+        {
+            connection._bClosing = SW_TRUE;
+            _endpoint.close( handle, StreamCloseMode::Abort );
+        }
+    }
+
+    void OnlineServiceHost::closeExpiredHelloConnections()
+    {
+        // Hello 를 끝내지 않은 연결은 짧은 기한 안에 닫는다 — 전송의 쉼 시한(60 초)까지 슬롯을 잡아 두는 열기만 하는 연결을 막는다.
+        if ( _nowMs < _nextHelloSweepMs )
+            return;
+        _nextHelloSweepMs = _nowMs + OnlineServiceHostInternal::kHelloSweepIntervalMs;
+        _listHandleScratch.clear();
+        for ( auto& [packed, connection] : _mapConnection )
+        {
+            const bool bExpired = connection._bHelloDone == SW_FALSE && connection._bClosing == SW_FALSE && _nowMs - connection._openedMs > _settings._helloTimeoutMs;
+            if ( bExpired == false )
+                continue;
+            connection._bClosing = SW_TRUE;
+            _listHandleScratch.push_back( StreamConnectionHandle::fromPacked( packed ) );
+        }
+        for ( const StreamConnectionHandle handle : _listHandleScratch )
+        {
+            _endpoint.close( handle, StreamCloseMode::Abort ); // 닫힘 콜백이 표를 지우므로 표를 돌던 중에는 부르지 않는다
+        }
     }
 
     void OnlineServiceHost::onEndpointFrame( StreamConnectionHandle handle, StreamFrameKind kind, const uint8* pBody, int32 bodySize )
@@ -516,6 +571,9 @@ namespace sw
         if ( connectionIt == _mapConnection.end() )
             return;
         const AccountID accountID = connectionIt->second._accountID;
+        const auto      remoteIt  = _mapRemoteConnectionCount.find( connectionIt->second._remoteKey );
+        if ( remoteIt != _mapRemoteConnectionCount.end() && --remoteIt->second <= 0 )
+            _mapRemoteConnectionCount.erase( remoteIt );
         _mapConnection.erase( connectionIt );
         if ( accountID == kInvalidAccountID )
             return;
@@ -534,7 +592,9 @@ namespace sw
         if ( connectionIt == _mapConnection.end() )
             return; // 닫히는 연결
         ConnectionState& connection = connectionIt->second;
-        const uint16     method     = context._token._method;
+        if ( connection._bClosing == SW_TRUE )
+            return; // 상한 · Hello 기한으로 닫는 중 — 답하지 않는다
+        const uint16 method = context._token._method;
         if ( method == OnlineHostMethod::kHello )
         {
             handleHello( context, connection );
@@ -564,8 +624,7 @@ namespace sw
             return;
         }
         IOnlineHostService* pService = findService( method );
-        const bool          bServed  = pService != nullptr && OnlineServiceHostInternal::isServedOn( pService->getExposure(), _listenerTransport->hasAdminListener(),
-                                                                                                     connection._bAdminListener == SW_TRUE );
+        const bool          bServed  = pService != nullptr && OnlineServiceHostInternal::isServedOn( pService->getExposure(), connection._bAdminListener == SW_TRUE );
         if ( bServed == false )
         {
             (void)respondError( context._token, OnlineError::kInvalidRequest );
