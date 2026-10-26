@@ -58,6 +58,9 @@ cd build/Ninja-Debug/Bin
 소리는 `HarvestValleyGame` 이 로드하는 사운드 이벤트(`audio/harvestvalley.audioevents.xml`)의 `ToolSelect`, `Plant`, `Harvest`, `Ship`(모두 2D)입니다. 작물 모델은 디렉터가 미리 로드해 두어 단계가 바뀔 때 뷰가 워커에서 파일을 읽지 않습니다.
 
 **핫 리로드와 상태 저장.** 달력, 밭, 인벤토리, 농부의 위치와 체력과 도구, 날씨 난수가 디렉터의 `writeState`(상태 버전 3)로 실립니다. 다시 만든 디렉터가 데이터를 읽은 뒤 농장을 복원하고 밭을 다시 만들며, 형식이 맞지 않으면(`kStateVersion` 을 올렸다면) 알리고 새 농장으로 시작합니다.
+마을 일정(끼어들기 · 깨진 약속 · 관계 태그 · 자리 예약)은 `FarmVillageDirectorComponent::writeState` 가 `ScheduleSaveState` 로 싣고 왕복은 `ScheduleTest.SaveStateRoundTripsThroughTheArchive` 가 지킵니다. 세이브 파일로 쓰는 호출(`GameInstanceBase::saveStateToFile`)은 아직 이 게임에 없습니다 — 세이브 메뉴를 만들 때 겁니다.
+
+**마을 내비의 함정.** 장애물은 이름 목록의 오브젝트 자리 + 반지름입니다(메시 경계는 비동기 로드라 결정적이지 않아 쓰지 않았습니다). 시계를 감지 않고 오래 걸으면 나무 옆에서 미끄러지며 일정상 자리를 3 m 넘게 놓칠 수 있고, 놓치면 그 자리에 놓입니다.
 
 ## 데이터
 

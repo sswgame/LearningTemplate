@@ -9,10 +9,10 @@
 -->
 <Scenario name="shooter3d.crowd" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<At frame="0"><Variable name="gv_shooterAutoPlay" value="1"/></At>
-	<!-- 적이 몇 마리 서 있는 때는 디렉터의 페이싱과 자동 플레이의 사격이 정한다(고정 프레임에 보면 한 마리만 남은 순간을 볼 수 있다). 둘 이상 나눌 때까지 기다린 바로 다음 프레임에 본다. -->
+	<!-- 단언은 WaitUntil 이다: 60 초 안에 둘 이상 나누지 못하면 진다(구간 최댓값 >= 2). 나눈 수는 프레임마다 흔들린다 — 자동 플레이가 쏴 맞은 적 · 휘두르는 적은
+	     반복하지 않는 클립이라 그 프레임에 혼자로 내려간다. 그래서 다음 프레임에 같은 값을 다시 단언하지 않는다(그 단언이 2 → 1 로 졌다). 다음 프레임 값은 기록만 한다. -->
 	<At frame="300"><WaitUntil probe="Animation.CrowdSharedUnits" atLeast="2" timeoutSeconds="60"/></At>
 	<At after="1">
-		<Expect probe="Animation.CrowdSharedUnits" atLeast="2"/>
 		<Record probe="Animation.CrowdSharedUnits"/>
 		<Record probe="Animation.CrowdSoloUnits"/>
 		<Record probe="Animation.ActiveUnits"/>
