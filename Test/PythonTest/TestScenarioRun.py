@@ -22,6 +22,8 @@ kScriptsRoot = Path(__file__).resolve().parents[2] / "Scripts"
 sys.path.insert(0, str(kScriptsRoot))
 
 from common.AppRun import AppRunResult, kAppRhiUnusableExitCode  # noqa: E402
+from common.AutomationTimeLimits import kTimeLimitsHeaderRelPath, readProcessKillSeconds  # noqa: E402
+from common.CppConstants import ConstantResolver  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 from common import ScenarioArguments  # noqa: E402
@@ -334,6 +336,31 @@ class ArgumentVocabularyTest(unittest.TestCase):
         for resourceId, stem in (("game/empty/automation/fog.scenario.xml", "fog"), ("engine/automation/editor/savedstate.1.scenario.xml", "savedstate"),
                                  ("runner.scenario.xml", "runner")):
             self.assertEqual(stem, ScenarioRun.ScenarioDeclaration(resourceId, Path(resourceId), "", (), False, False, False).stem)
+
+
+class CppConstantAgreementTest(unittest.TestCase):
+    def testDefaultTimeoutEqualsTheHeaderProcessKillSeconds(self) -> None:
+        """기본 시한이 `AutomationTimeLimits::kProcessKillSeconds` 와 같다 — 읽는 쪽과 따로 식을 풀어(`ConstantResolver`) 견준다."""
+        resolver = ConstantResolver(getProjectRoot(), lambda relative: (getProjectRoot() / relative).read_text(encoding="utf-8"))
+        expected = int(resolver.resolveExpression(kTimeLimitsHeaderRelPath, "AutomationTimeLimits::kProcessKillSeconds"))
+        self.assertEqual(expected, ScenarioRun.kDefaultTimeoutSeconds)
+
+    def testMissingTimeLimitStopsLoudly(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            writeText(root / kTimeLimitsHeaderRelPath, "static constexpr uint32 kChainStageSeconds = 5;")
+            with self.assertRaises(SystemExit):
+                readProcessKillSeconds(root)
+
+    def testConfigPresetsComeFromCMakePresets(self) -> None:
+        self.assertEqual({"Debug": "Ninja-Debug", "Release": "Ninja-Release", "Shipping": "Ninja-Shipping"}, ScenarioRun.kMapConfigPreset)
+
+    def testMissingConfigPresetStopsLoudly(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            writeText(root / "CMakePresets.json", json.dumps({"configurePresets": [{"name": "WSL-Debug"}]}))
+            with self.assertRaises(SystemExit):
+                ScenarioRun.readConfigPresets(root)
 
 
 class ShippingBuildTest(ScenarioRunCase):

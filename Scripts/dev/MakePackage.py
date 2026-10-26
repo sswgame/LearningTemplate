@@ -35,7 +35,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
-from common.BuildTree import BuildTree  # noqa: E402
+from common.BuildTree import BuildTree, kMapConfigPreset, kMapServerPreset  # noqa: E402
 from common.Config import ConfigError, requireConfig  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 from common.Constants import kDirRuntimeGamePreset  # noqa: E402
@@ -45,7 +45,7 @@ from common.ExitCode import ExitCode  # noqa: E402
 #: 단계 이름 — 창이 `[package] step k/n <이름>` 으로 읽는다. 순서가 진행 순서다.
 kListStepName: tuple[str, ...] = ("build", "cook", "stage", "verify")
 #: 타깃마다 Shipping 프리셋과 실행 파일 이름.
-kMapTargetPreset: dict[str, str] = {"Client": "Ninja-Shipping", "Server": "Ninja-Shipping-Server"}
+kMapTargetPreset: dict[str, str] = {"Client": kMapConfigPreset["Shipping"], "Server": kMapServerPreset["Shipping"]}
 kMapTargetExecutable: dict[str, str] = {"Client": "App.exe" if sys.platform == "win32" else "App",
                                         "Server": "Server.exe" if sys.platform == "win32" else "Server"}
 #: 실행 파일 옆에 두는 공유 라이브러리 확장자.

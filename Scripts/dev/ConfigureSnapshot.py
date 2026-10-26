@@ -40,7 +40,7 @@ from typing import Any, Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts — common
 
-from common.BuildTree import BuildTree  # noqa: E402
+from common.BuildTree import BuildTree, kDefaultPreset  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 from common.Process import runProcess  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
@@ -263,7 +263,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     for name in ("prepare", "take"):
         sub = subparsers.add_parser(name)
-        sub.add_argument("--preset", default="Ninja-Debug", help="빌드 폴더 build/<프리셋> (기본 Ninja-Debug)")
+        sub.add_argument("--preset", default=kDefaultPreset, help=f"빌드 폴더 build/<프리셋> (기본 {kDefaultPreset})")
         sub.add_argument("--build-dir", default="", help="빌드 폴더를 직접 줄 때")
         if name == "take":
             sub.add_argument("--out", type=Path, required=True, help="스냅숏을 쓸 JSON")

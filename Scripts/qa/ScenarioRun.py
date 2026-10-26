@@ -32,7 +32,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 from common.AppRun import findUsableBackends, kAppRhiUnusableExitCode, kBackendSwitch, runApp  # noqa: E402
-from common.BuildTree import BuildTree  # noqa: E402
+from common.AutomationTimeLimits import kProcessKillSeconds  # noqa: E402
+from common.BuildTree import BuildTree, kMapConfigPreset, readConfigPresets  # noqa: E402,F401 — `readConfigPresets` 는 테스트가 ScenarioRun 에서 부른다
 from common.CookContract import CookContractSpec  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
@@ -44,10 +45,8 @@ from common.ScenarioOutcome import (ScenarioRunReport, describeOutcomeExitCode, 
 from common.SharedLock import holdLock, kDefaultWaitSeconds  # noqa: E402
 from common.Worktree import findMainRoot  # noqa: E402
 
-#: App 한 판의 시한(초) — `AppTestUtil::kScenarioTimeoutSeconds` 와 같다. 느린 구성은 `--timeout` 으로 늘린다.
-kDefaultTimeoutSeconds = 180
-#: 구성 이름 → 빌드 폴더 프리셋(`build/<프리셋>`).
-kMapConfigPreset: dict[str, str] = {"Release": "Ninja-Release", "Shipping": "Ninja-Shipping", "Debug": "Ninja-Debug"}
+#: App 한 판의 시한(초) — `AppTestUtil::kScenarioTimeoutSeconds` 와 같은 `AutomationTimeLimits::kProcessKillSeconds` 다(정본은 헤더, `common/AutomationTimeLimits.py` 가 읽는다). 느린 구성은 `--timeout` 으로 늘린다.
+kDefaultTimeoutSeconds = kProcessKillSeconds
 #: App 작업 폴더(`Bin`) 아래 보고 · 산출물 폴더 — 실행기가 `Saved/Automation/<시나리오 name>/` 에 사진을 쓴다(`AutomationRunner::_outputDirectory`).
 #: 인자의 글은 C++ `AppTestUtil` 상수가 정본이다(`common/ScenarioArguments.py` 가 헤더에서 읽는다) — 여기에 다시 적지 않는다.
 kAutomationFolder = kVocabulary.automationFolder

@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import sys
 from functools import cached_property
 from pathlib import Path
 from typing import Any, Iterator, Sequence
@@ -20,6 +21,35 @@ from typing import Any, Iterator, Sequence
 from .Paths import getProjectRoot
 
 kDefaultPreset = "Ninja-Debug"
+_kConfigPresetRe = re.compile(r"Ninja-([A-Z][a-z]+)")
+
+
+_kServerPresetRe = re.compile(r"Ninja-([A-Z][a-z]+)-Server")
+
+
+def readPresetsByPattern(repositoryRoot: Path, pattern: re.Pattern[str], description: str) -> dict[str, str]:
+    """`CMakePresets.json` 의 configure 프리셋 이름 중 @p pattern 에 전부 맞는 것의 (첫 묶음 → 이름) 표. 하나도 없으면 `sys.exit`."""
+    listPreset = json.loads((repositoryRoot / "CMakePresets.json").read_text(encoding="utf-8"))["configurePresets"]
+    mapPreset = {match.group(1): preset["name"] for preset in listPreset if (match := pattern.fullmatch(preset["name"])) is not None}
+    if not mapPreset:
+        sys.exit(f"{repositoryRoot / 'CMakePresets.json'}: `{description}` 모양의 configure 프리셋을 찾지 못했다 — 프리셋 이름이 바뀌었나")
+    return mapPreset
+
+
+def readConfigPresets(repositoryRoot: Path) -> dict[str, str]:
+    """구성 이름 → 빌드 폴더 프리셋(`build/<프리셋>`). 정본은 `CMakePresets.json` 의 `Ninja-<구성>` configure 프리셋이다. 하나도 없으면 `sys.exit`."""
+    return readPresetsByPattern(repositoryRoot, _kConfigPresetRe, "Ninja-<구성>")
+
+
+def readServerPresets(repositoryRoot: Path) -> dict[str, str]:
+    """구성 이름 → 전용 서버 프리셋. `Ninja-<구성>-Server` 변형이라 구성 표(`readConfigPresets`)와 따로 읽는다 — 섞으면 변형 이름이 구성 표를 오염시킨다."""
+    return readPresetsByPattern(repositoryRoot, _kServerPresetRe, "Ninja-<구성>-Server")
+
+
+#: 구성 이름 → 프리셋 표(Debug · Release · Shipping). 프리셋 이름을 코드에 적는 도구는 이 표에서 구성 이름으로 고른다.
+kMapConfigPreset: dict[str, str] = readConfigPresets(getProjectRoot())
+#: 구성 이름 → 전용 서버 프리셋 표(Debug · Shipping).
+kMapServerPreset: dict[str, str] = readServerPresets(getProjectRoot())
 kCompileDatabaseFileName = "compile_commands.json"
 kCMakeCacheFileName = "CMakeCache.txt"
 #: CMake 가 "이 구성이 일부러 짓지 않는 소스" 를 적는 자리(빌드 폴더 기준) — CMake 의 `SW_UNBUILT_SOURCE_LIST`.
