@@ -51,7 +51,7 @@ namespace sw
         {
             vector<RHIRenderResource*> listResource;
             {
-                std::scoped_lock<mutex> lock{ getRegistryInternal()._mutex };
+                ScopedLock<mutex> lock{ getRegistryInternal()._mutex };
                 listResource.reserve( getRegistryInternal()._uniqueSetResource.size() );
                 for ( RHIRenderResource* pResource : getRegistryInternal()._uniqueSetResource )
                 {
@@ -64,7 +64,7 @@ namespace sw
                 if ( pResource == nullptr )
                     continue;
                 {
-                    std::scoped_lock<mutex> lock{ getRegistryInternal()._mutex };
+                    ScopedLock<mutex> lock{ getRegistryInternal()._mutex };
                     // 앞선 통보를 처리하다 사라졌다. 사본에 남은 주소는 이미 남의 것이거나 없는 것이다.
                     if ( getRegistryInternal()._uniqueSetResource.count( pResource ) == 0 )
                         continue;
@@ -76,13 +76,13 @@ namespace sw
 
     RHIRenderResource::RHIRenderResource()
     {
-        std::scoped_lock<mutex> lock{ getRegistryInternal()._mutex };
+        ScopedLock<mutex> lock{ getRegistryInternal()._mutex };
         getRegistryInternal()._uniqueSetResource.insert( this );
     }
 
     RHIRenderResource::~RHIRenderResource()
     {
-        std::scoped_lock<mutex>            lock{ getRegistryInternal()._mutex };
+        ScopedLock<mutex>                  lock{ getRegistryInternal()._mutex };
         unordered_set<RHIRenderResource*>& registry = getRegistryInternal()._uniqueSetResource;
         registry.erase( this );
         // 마지막 리소스가 사라지면 버킷도 놓는다 — 기동 뒤 자란 표가 종료 누수 보고에 남지 않는다. 엔진 기본 에셋이 사는 동안은 비지 않으므로 실행 중에는 일어나지 않는다.
@@ -98,7 +98,7 @@ namespace sw
 
     uint32 RHIRenderResource::getRegisteredCount()
     {
-        std::scoped_lock<mutex> lock{ getRegistryInternal()._mutex };
+        ScopedLock<mutex> lock{ getRegistryInternal()._mutex };
         return static_cast<uint32>( getRegistryInternal()._uniqueSetResource.size() );
     }
 

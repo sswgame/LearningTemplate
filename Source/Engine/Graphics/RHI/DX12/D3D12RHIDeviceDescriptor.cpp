@@ -43,7 +43,7 @@ namespace sw
         // 링 상수버퍼의 CBV 는 이번 프레임 슬롯을 가리켜야 한다. 슬롯은 프레임당 한 번 바뀌므로 여기서 한 번에 맞춘다.
         // 렌더 스레드의 기록 시작 전이지만 게임 스레드는 그와 겹쳐 버퍼를 만들고 부수므로(레지스트리 · 상수버퍼 맵에 쓴다)
         // 읽기 락을 잡는다. 주의: "단일 스레드 구간" 이 아니다.
-        std::shared_lock<shared_mutex> registryLock{ _bindlessMutex };
+        ScopedSharedLock<shared_mutex> registryLock{ _bindlessMutex };
         const uint32                   slot = _frameRing.currentIndex();
         for ( BindlessResourceRecord& record : _listRegisteredBindless )
         {
@@ -75,7 +75,7 @@ namespace sw
     void D3D12RHIDevice::fillConstantBufferSlot()
     {
         // 맵 조회가 게임 스레드의 만들기 · 부수기와 겹치지 않게 읽기 락을 쥔다(락 순서: 레지스트리 → 그림자).
-        std::shared_lock<shared_mutex> registryLock{ _bindlessMutex };
+        ScopedSharedLock<shared_mutex> registryLock{ _bindlessMutex };
         _constantBufferMirror.fillSlot( _frameRing.currentIndex(), [this]( RHIBufferHandle buffer, uint32 slot, const void* pData, uint32 size )
         { writeConstantBufferSlot( buffer, slot, pData, size ); } );
     }
@@ -266,7 +266,7 @@ namespace sw
     #if !defined( SW_SHIPPING )
     bool D3D12RHIDevice::isBindlessIndexLive( RHIBindlessIndexSpace space, RHIDescriptorIndex index ) const
     {
-        std::shared_lock<shared_mutex> lock{ _bindlessMutex };
+        ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
         if ( index >= _listRegisteredBindless.size() )
             return false;
         // 힙 하나를 나눠 쓰므로 종류까지 본다 — 텍스처 자리에 버퍼 뷰가 있으면 Texture2D 로 읽는 셰이더가 잘못된 디스크립터를 읽는다.

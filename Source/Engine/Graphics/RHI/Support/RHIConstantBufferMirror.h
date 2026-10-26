@@ -36,7 +36,7 @@ namespace sw
         template <typename WriteSlotFunction>
         void write( RHIBufferHandle buffer, uint32 slot, const void* pData, uint32 size, WriteSlotFunction&& writeSlot )
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             writeSlot( buffer, slot, pData, size );
             rememberWrite( buffer, slot, pData, size );
         }
@@ -48,7 +48,7 @@ namespace sw
         template <typename WriteSlotFunction>
         void fillSlot( uint32 slot, WriteSlotFunction&& writeSlot )
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             if ( _mapPendingWrite.empty() )
                 return;
             const uint32 slotBit = slotBitOf( slot );
@@ -93,7 +93,7 @@ namespace sw
         void rememberWrite( RHIBufferHandle buffer, uint32 slot, const void* pData, uint32 size );
 
         unordered_map<RHIBufferHandle, PendingWrite> _mapPendingWrite;
-        vector<RHIBufferHandle>                      _listFilledScratch; ///< fillSlot 이 다 채운 버퍼를 모으는 임시 목록(프레임마다 다시 쓴다)
+        vector<RHIBufferHandle> _listFilledScratch   SW_GUARDED_BY( _mutex ); ///< fillSlot 이 다 채운 버퍼를 모으는 임시 목록(프레임마다 다시 쓴다)
         mutable mutex                                _mutex;
     };
 } // namespace sw

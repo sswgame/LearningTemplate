@@ -22,8 +22,8 @@ namespace sw
             /** @brief 그 백엔드의 횟수를 1 증가시키고 증가 전 값을 돌려줍니다. */
             static uint32 countReport( const utf8* pBackendName )
             {
-                std::scoped_lock<mutex> lock{ s_mutex };
-                uint32&                 count = s_mapBackendToCount[string( pBackendName )];
+                ScopedLock<mutex> lock{ s_mutex };
+                uint32&           count = s_mapBackendToCount[string( pBackendName )];
                 return count++;
             }
         };

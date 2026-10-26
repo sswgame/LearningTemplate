@@ -383,7 +383,7 @@ namespace sw
         if ( state == nullptr )
             return;
 
-        std::scoped_lock<mutex> lock{ state->_mutex };
+        ScopedLock<mutex> lock{ state->_mutex };
         if ( state->_pMaterial == nullptr )
             return;
         if ( state->_pMaterial->loadFromFile( args.get<string>( 1 ) ) == false )

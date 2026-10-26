@@ -554,8 +554,8 @@ namespace sw
                 // 다른 구성은 그대로 병렬이다. 이 구성에서는 DXC 안쪽의 경쟁을 검사하지 않는다.
                 // libdxcompiler 를 부르는 다른 자리 `ShaderReflectionDx`(DXIL 리플렉션)는 Windows 전용 파일이고 TSan 구성은 리눅스 전용(Sanitizer.cmake)이라 그 구성에 없다.
                 // 리눅스에서 DXIL 리플렉션을 켜면 이 직렬화를 두 호출처가 함께 쓰는 한 함수로 올린다(뮤텍스를 하나 더 두면 서로를 막지 못한다).
-                static mutex            s_mutexDxcSerial;
-                std::scoped_lock<mutex> dxcSerialLock{ s_mutexDxcSerial };
+                static mutex      s_mutexDxcSerial;
+                ScopedLock<mutex> dxcSerialLock{ s_mutexDxcSerial };
     #endif
 
                 DxcComPtr<IDxcUtils>     utils;

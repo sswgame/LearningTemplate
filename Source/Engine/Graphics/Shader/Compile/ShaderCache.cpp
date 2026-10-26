@@ -174,8 +174,8 @@ namespace sw
         _pResult = std::move( pResult );
         {
             // 이 블록의 칸일 때만 뺀다(캐시를 비운 뒤 같은 요청이 새 블록을 넣었을 수 있다).
-            std::scoped_lock<mutex> lock{ _pCache->_mutexCache };
-            const auto              it = _pCache->_mapLoading.find( _cacheKey );
+            ScopedLock<mutex> lock{ _pCache->_mutexCache };
+            const auto        it = _pCache->_mapLoading.find( _cacheKey );
             if ( it != _pCache->_mapLoading.end() && ( it->second.expired() || it->second.lock().get() == this ) )
                 _pCache->_mapLoading.erase( it );
         }
@@ -231,8 +231,8 @@ namespace sw
         string                      cacheKey = makeCacheKey( desc );
         shared_ptr<ShaderLoadBlock> pBlock;
         {
-            std::scoped_lock<mutex> lock{ _mutexCache };
-            const auto              it = _mapLoading.find( cacheKey );
+            ScopedLock<mutex> lock{ _mutexCache };
+            const auto        it = _mapLoading.find( cacheKey );
             if ( it != _mapLoading.end() )
                 pBlock = it->second.lock();
             if ( pBlock != nullptr )
@@ -263,7 +263,7 @@ namespace sw
     {
         vector<shared_ptr<ShaderLoadBlock>> listLoading;
         {
-            std::scoped_lock<mutex> lock{ _mutexCache };
+            ScopedLock<mutex> lock{ _mutexCache };
             for ( const auto& [key, weakBlock] : _mapLoading )
             {
                 shared_ptr<ShaderLoadBlock> pBlock = weakBlock.lock();
@@ -289,8 +289,8 @@ namespace sw
             ShaderCacheEntry cachedEntry{};
             bool             bCached = false;
             {
-                std::scoped_lock<mutex> lock{ _mutexCache };
-                const auto              iter = _mapCache.find( cacheKey );
+                ScopedLock<mutex> lock{ _mutexCache };
+                const auto        iter = _mapCache.find( cacheKey );
                 if ( iter != _mapCache.end() )
                 {
                     cachedEntry = iter->second;
@@ -361,13 +361,13 @@ namespace sw
 
     void ShaderCache::clearCache()
     {
-        std::scoped_lock<mutex> lock{ _mutexCache };
+        ScopedLock<mutex> lock{ _mutexCache };
         _mapCache.clear();
     }
 
     void ShaderCache::collectCompiledDescs( vector<ShaderCompileDesc>& outListDesc ) const
     {
-        std::scoped_lock<mutex> lock{ _mutexCache };
+        ScopedLock<mutex> lock{ _mutexCache };
         outListDesc.clear();
         outListDesc.reserve( _mapCache.size() );
         for ( const pair<const string, ShaderCacheEntry>& entry : _mapCache )
@@ -386,7 +386,7 @@ namespace sw
         entry._desc              = desc;
         entry._result            = result;
 
-        std::scoped_lock<mutex> lock{ _mutexCache };
+        ScopedLock<mutex> lock{ _mutexCache };
         _mapCache.insert_or_assign( std::move( cacheKey ), std::move( entry ) );
     }
 } // namespace sw

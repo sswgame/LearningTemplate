@@ -31,11 +31,10 @@ namespace sw
         return handle;
     }
 
-    RHIDescriptorIndex D3D12RHIResourceFactory::acquireBindlessIndex( const std::unique_lock<shared_mutex>& lock )
+    RHIDescriptorIndex D3D12RHIResourceFactory::acquireBindlessIndex( UniqueLock<shared_mutex>& lock )
     {
-        // 잠금은 부르는 쪽의 것이다. 인덱스를 집는 것과 그 자리에 뷰를 만드는 것이 한 임계 구역이어야 한다.
-        SW_ASSERT( lock.owns_lock() );
         (void)lock;
+        // 잠금은 부르는 쪽의 것이다(선언의 SW_REQUIRES_LOCK). 인덱스를 집는 것과 그 자리에 뷰를 만드는 것이 한 임계 구역이어야 한다.
 
         // 반납된 슬롯이 있으면 그것부터 쓴다(펜스 뒤에 회수된 것들이다). 새 인덱스는 레지스트리 크기가 아니라 힙 카운터다 —
         // SRV/CBV 와 UAV 가 레지스트리 둘에 나뉘어도 힙 인덱스 공간은 하나라서다.
@@ -65,8 +64,8 @@ namespace sw
             return kInvalidDescriptorIndex;
         // 셰이더의 bindless 텍스처 배열은 Texture2D[] 다 — 배열 · 큐브 뷰를 넣으면 셰이더가 읽지 못한다(RHITextureDimension 참고).
         {
-            std::scoped_lock<mutex> stateLock{ _pDevice->_resourceStateMutex };
-            const auto              it = _pDevice->_mapOffscreenTexture.find( texture );
+            ScopedLock<mutex> stateLock{ _pDevice->_resourceStateMutex };
+            const auto        it = _pDevice->_mapOffscreenTexture.find( texture );
             if ( it != _pDevice->_mapOffscreenTexture.end() && it->second._dimension != RHITextureDimension::Texture2D )
             {
                 SW_LOG_ERROR( "registerBindlessTexture: texture %# is a %# texture — only Texture2D can be bound to the bindless texture table yet",
@@ -75,8 +74,8 @@ namespace sw
             }
         }
 
-        std::unique_lock<shared_mutex> lock{ _pDevice->_bindlessMutex };
-        const RHIDescriptorIndex       index = acquireBindlessIndex( lock );
+        UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
+        const RHIDescriptorIndex index = acquireBindlessIndex( lock );
         if ( index == kInvalidDescriptorIndex )
             return kInvalidDescriptorIndex;
 
@@ -113,8 +112,8 @@ namespace sw
         if ( pResource == nullptr )
             return kInvalidDescriptorIndex;
 
-        std::unique_lock<shared_mutex> lock{ _pDevice->_bindlessMutex };
-        const RHIDescriptorIndex       index = acquireBindlessIndex( lock );
+        UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
+        const RHIDescriptorIndex index = acquireBindlessIndex( lock );
         if ( index == kInvalidDescriptorIndex )
             return kInvalidDescriptorIndex;
 
@@ -193,7 +192,7 @@ namespace sw
     {
         const bool bUav = ( registry == BindlessRegistry::UnorderedAccess );
 
-        std::unique_lock<shared_mutex>                  lock{ _pDevice->_bindlessMutex };
+        UniqueLock<shared_mutex>                        lock{ _pDevice->_bindlessMutex };
         vector<D3D12RHIDevice::BindlessResourceRecord>& listRegistry = bUav ? _pDevice->_listRegisteredUAV : _pDevice->_listRegisteredBindless;
         if ( index >= listRegistry.size() )
             return;
@@ -240,7 +239,7 @@ namespace sw
         D3D12RHIDevice* pDevice = _pDevice;
         _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [pDevice, index]()
         {
-            std::unique_lock<shared_mutex> lock{ pDevice->_bindlessMutex };
+            UniqueLock<shared_mutex> lock{ pDevice->_bindlessMutex };
             pDevice->_listFreeBindless.push_back( index );
         } ),
                                                    _pDevice->_fenceValue );
@@ -259,8 +258,8 @@ namespace sw
         // UAV 도 SRV/CBV 와 **같은 힙 인덱스 공간**을 쓴다. 셰이더가 RWStructuredBuffer<T> name[] 을 이 인덱스로
         // 고르고, 루트 시그니처의 UAV 무제한 범위가 힙 시작(offset 0)을 가리키므로 인덱스 = 힙 슬롯이어야 한다
         // (UAV 목록 안의 순번을 돌려주면 안 된다).
-        std::unique_lock<shared_mutex> lock{ _pDevice->_bindlessMutex };
-        const RHIDescriptorIndex       index = acquireBindlessIndex( lock );
+        UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
+        const RHIDescriptorIndex index = acquireBindlessIndex( lock );
         if ( index == kInvalidDescriptorIndex )
             return kInvalidDescriptorIndex;
 
@@ -302,8 +301,8 @@ namespace sw
             return kInvalidDescriptorIndex;
 
         // 텍스처 UAV 도 같은 힙 인덱스 공간이다. 셰이더가 RWTexture2D g_SwBindlessRWTex2D[] (u0 space1) 을 이 인덱스로 고른다.
-        std::unique_lock<shared_mutex> lock{ _pDevice->_bindlessMutex };
-        const RHIDescriptorIndex       index = acquireBindlessIndex( lock );
+        UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
+        const RHIDescriptorIndex index = acquireBindlessIndex( lock );
         if ( index == kInvalidDescriptorIndex )
             return kInvalidDescriptorIndex;
 

@@ -34,11 +34,11 @@ namespace sw
         _transferReleaseQueue.flushAll();
         _releaseQueue.flushAll();
         {
-            std::scoped_lock<mutex> jobLock{ _transferJobMutex };
+            ScopedLock<mutex> jobLock{ _transferJobMutex };
             _listFreeTransferJob.clear();
         }
         {
-            std::scoped_lock<mutex> lock{ _textureTransferMutex };
+            ScopedLock<mutex> lock{ _textureTransferMutex };
             _mapTextureTransferSerial.clear();
         }
         // 가져가지 않은 읽기는 읽기 버퍼와 함께 사라진다. 그 뒤의 가져가기 · 버리기는 업로드 티켓처럼 아무 일도 하지 않는다.
@@ -58,7 +58,7 @@ namespace sw
     void D3D12RHIDevice::destroyStagingRing( D3D12StagingRing& ring )
     {
         {
-            std::scoped_lock<mutex> soloLock{ ring._soloMutex };
+            ScopedLock<mutex> soloLock{ ring._soloMutex };
             destroyMappedStagingBuffer( ring._soloBuffer, ring._pSoloMapped );
         }
         destroyMappedStagingBuffer( ring._buffer, ring._pMapped );
@@ -101,7 +101,7 @@ namespace sw
         if ( submitResult != RHISubmitResult::Accepted || outSpan._bSolo == SW_FALSE )
             return submitResult;
         // 장부가 단독 구간을 내줬다면 앞선 단독 구간은 이미 돌아왔다 — 남은 버퍼(아직 회수가 지우지 않은 것)를 GPU 가 더 쓰지 않는다.
-        std::scoped_lock<mutex> soloLock{ ring._soloMutex };
+        ScopedLock<mutex> soloLock{ ring._soloMutex };
         destroyMappedStagingBuffer( ring._soloBuffer, ring._pSoloMapped );
         if ( createMappedStagingBuffer( outSpan._sizeBytes, ring._soloBuffer, ring._pSoloMapped ) )
             return RHISubmitResult::Accepted;
@@ -110,7 +110,7 @@ namespace sw
 
     void D3D12RHIDevice::destroyIdleSoloBuffer( D3D12StagingRing& ring )
     {
-        std::scoped_lock<mutex> soloLock{ ring._soloMutex };
+        ScopedLock<mutex> soloLock{ ring._soloMutex };
         if ( ring._soloBuffer == nullptr )
             return;
         // 판정은 락 안에서 한다 — 밖에서 보면 그 사이 다른 스레드가 새 단독 구간을 받아 버퍼를 만들 수 있다.
@@ -124,7 +124,7 @@ namespace sw
     {
         outJob = D3D12TransferJob{};
         {
-            std::scoped_lock<mutex> jobLock{ _transferJobMutex };
+            ScopedLock<mutex> jobLock{ _transferJobMutex };
             if ( _listFreeTransferJob.empty() == false )
             {
                 outJob = std::move( _listFreeTransferJob.back() );
@@ -171,7 +171,7 @@ namespace sw
             return 0;
         }
 
-        std::scoped_lock<mutex> submitLock{ _transferSubmitMutex };
+        ScopedLock<mutex> submitLock{ _transferSubmitMutex };
         // 기록하는 사이에 장치를 잃었으면(다른 스레드의 손실 · rhi.removeDevice) 내지 않는다.
         if ( isDeviceLost() )
         {
@@ -200,7 +200,7 @@ namespace sw
     void D3D12RHIDevice::recycleTransferJob( D3D12TransferJob&& job )
     {
         job._fenceValue = 0;
-        std::scoped_lock<mutex> jobLock{ _transferJobMutex };
+        ScopedLock<mutex> jobLock{ _transferJobMutex };
         _listFreeTransferJob.push_back( std::move( job ) );
     }
 
@@ -234,7 +234,7 @@ namespace sw
 
     void D3D12RHIDevice::noteTextureTransfer( RHITextureHandle texture, uint64 serial )
     {
-        std::scoped_lock<mutex> lock{ _textureTransferMutex };
+        ScopedLock<mutex> lock{ _textureTransferMutex };
         // 스레드마다 제출하므로 늦게 기록한 작은 시리얼이 큰 시리얼을 덮지 않게 한다(파괴 지연과 bindless 등록 보호는 가장 나중에 제출한 전송을 기다려야 한다).
         uint64& rSerial = _mapTextureTransferSerial[texture];
         if ( serial > rSerial )
@@ -243,14 +243,14 @@ namespace sw
 
     uint64 D3D12RHIDevice::findTextureTransferSerial( RHITextureHandle texture )
     {
-        std::scoped_lock<mutex> lock{ _textureTransferMutex };
-        const auto              foundIt = _mapTextureTransferSerial.find( texture );
+        ScopedLock<mutex> lock{ _textureTransferMutex };
+        const auto        foundIt = _mapTextureTransferSerial.find( texture );
         return foundIt != _mapTextureTransferSerial.end() ? foundIt->second : 0;
     }
 
     void D3D12RHIDevice::eraseTextureTransfer( RHITextureHandle texture )
     {
-        std::scoped_lock<mutex> lock{ _textureTransferMutex };
+        ScopedLock<mutex> lock{ _textureTransferMutex };
         _mapTextureTransferSerial.erase( texture );
     }
 } // namespace sw

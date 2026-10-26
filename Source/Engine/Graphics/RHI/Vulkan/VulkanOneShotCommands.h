@@ -98,7 +98,7 @@ namespace sw
             submitInfo.commandBufferCount = 1;
             submitInfo.pCommandBuffers    = &_commandBuffer;
             {
-                std::scoped_lock<mutex> queueLock{ _queueMutex };
+                ScopedLock<mutex> queueLock{ _queueMutex };
                 _lastResult = vkQueueSubmit( _queue, 1, &submitInfo, fence );
             }
             if ( _lastResult == VK_SUCCESS )

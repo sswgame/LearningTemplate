@@ -9,7 +9,7 @@ namespace sw
     void RenderTargetRegistry::publish( vector<RenderTargetInfo> listTarget )
     {
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             _listTarget = std::move( listTarget );
         }
         // 잠금을 푼 뒤에 세대를 증가시킨다. 읽는 쪽은 세대를 보고 목록을 다시 가져갈지 정한다.
@@ -19,7 +19,7 @@ namespace sw
     void RenderTargetRegistry::clear()
     {
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             _listTarget.clear();
         }
         _generation.fetch_add( 1, std::memory_order_release );
@@ -27,19 +27,19 @@ namespace sw
 
     void RenderTargetRegistry::snapshot( vector<RenderTargetInfo>& outList ) const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         outList = _listTarget;
     }
 
     bool RenderTargetRegistry::isPublished( RHITextureHandle texture ) const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return VectorUtil::containsBy<&RenderTargetInfo::_texture>( _listTarget, texture );
     }
 
     uint32 RenderTargetRegistry::requestReadback( RHITextureHandle texture )
     {
-        std::scoped_lock<mutex> lock{ _readbackMutex };
+        ScopedLock<mutex> lock{ _readbackMutex };
         ++_lastRequestSerial;
         _pendingReadbackTexture = texture;
         _pendingReadbackSerial  = _lastRequestSerial;
@@ -48,7 +48,7 @@ namespace sw
 
     bool RenderTargetRegistry::takeReadbackRequest( RHITextureHandle& outTexture, uint32& outSerial )
     {
-        std::scoped_lock<mutex> lock{ _readbackMutex };
+        ScopedLock<mutex> lock{ _readbackMutex };
         if ( _pendingReadbackSerial == 0 )
             return false;
         outTexture              = _pendingReadbackTexture;
@@ -62,7 +62,7 @@ namespace sw
     {
         const uint32 serial = readback._serial;
         {
-            std::scoped_lock<mutex> lock{ _readbackMutex };
+            ScopedLock<mutex> lock{ _readbackMutex };
             _readback = std::move( readback );
         }
         _readbackSerial.store( serial, std::memory_order_release );
@@ -70,7 +70,7 @@ namespace sw
 
     bool RenderTargetRegistry::copyReadback( RenderTargetReadback& outReadback ) const
     {
-        std::scoped_lock<mutex> lock{ _readbackMutex };
+        ScopedLock<mutex> lock{ _readbackMutex };
         if ( _readback._serial == 0 )
             return false;
         outReadback = _readback;

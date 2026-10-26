@@ -120,15 +120,15 @@ namespace sw
         [[nodiscard]] bool copyReadback( RenderTargetReadback& outReadback ) const;
 
     private:
-        mutable mutex            _mutex;
-        vector<RenderTargetInfo> _listTarget;
-        atomic<uint64>           _generation{ 0 };
+        mutable mutex                        _mutex;
+        vector<RenderTargetInfo> _listTarget SW_GUARDED_BY( _mutex );
+        atomic<uint64>                       _generation{ 0 };
 
-        mutable mutex        _readbackMutex;
-        RenderTargetReadback _readback;                    ///< 마지막 결과(`_readbackMutex`)
-        RHITextureHandle     _pendingReadbackTexture{ 0 }; ///< 처리할 요청(0 이면 없음, `_readbackMutex`)
-        uint32               _pendingReadbackSerial{ 0 };  ///< 그 요청의 번호(`_readbackMutex`)
-        uint32               _lastRequestSerial{ 0 };      ///< 마지막으로 낸 요청 번호(`_readbackMutex`)
-        atomic<uint32>       _readbackSerial{ 0 };         ///< 마지막 결과의 번호
+        mutable mutex                            _readbackMutex;
+        RenderTargetReadback _readback           SW_GUARDED_BY( _readbackMutex );      ///< 마지막 결과(`_readbackMutex`)
+        RHITextureHandle _pendingReadbackTexture SW_GUARDED_BY( _readbackMutex ){ 0 }; ///< 처리할 요청(0 이면 없음, `_readbackMutex`)
+        uint32 _pendingReadbackSerial            SW_GUARDED_BY( _readbackMutex ){ 0 }; ///< 그 요청의 번호(`_readbackMutex`)
+        uint32 _lastRequestSerial                SW_GUARDED_BY( _readbackMutex ){ 0 }; ///< 마지막으로 낸 요청 번호(`_readbackMutex`)
+        atomic<uint32>                           _readbackSerial{ 0 };                 ///< 마지막 결과의 번호
     };
 } // namespace sw

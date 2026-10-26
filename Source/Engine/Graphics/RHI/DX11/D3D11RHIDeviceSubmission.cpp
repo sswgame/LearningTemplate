@@ -465,7 +465,7 @@ namespace sw
         if ( _recordingState._boundInstanceSlotVb == buffer )
             _recordingState._boundInstanceSlotVb = 0;
 
-        std::scoped_lock<mutex> lock{ _liveCmdListMutex };
+        ScopedLock<mutex> lock{ _liveCmdListMutex };
         for ( D3D11RHICommandList* pList : _listLiveCmd )
         {
             if ( pList == nullptr )
@@ -483,7 +483,7 @@ namespace sw
         if ( _recordingState._activeGraphicsPSO == pso )
             _recordingState._activeGraphicsPSO = 0;
 
-        std::scoped_lock<mutex> lock{ _liveCmdListMutex };
+        ScopedLock<mutex> lock{ _liveCmdListMutex };
         for ( D3D11RHICommandList* pList : _listLiveCmd )
         {
             if ( pList != nullptr && pList->getRecordingState()._activeGraphicsPSO == pso )
@@ -493,13 +493,13 @@ namespace sw
 
     void D3D11RHIDevice::registerCommandList( D3D11RHICommandList* pCmdList )
     {
-        std::scoped_lock<mutex> lock{ _liveCmdListMutex };
+        ScopedLock<mutex> lock{ _liveCmdListMutex };
         _listLiveCmd.push_back( pCmdList );
     }
 
     void D3D11RHIDevice::unregisterCommandList( D3D11RHICommandList* pCmdList )
     {
-        std::scoped_lock<mutex> lock{ _liveCmdListMutex };
+        ScopedLock<mutex> lock{ _liveCmdListMutex };
         (void)VectorUtil::removeSingleSwap( _listLiveCmd, pCmdList ); // 등록되지 않은 리스트면 뺄 것이 없다
     }
 

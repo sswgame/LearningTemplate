@@ -99,7 +99,7 @@ namespace sw
     {
         const BindlessSiteKey siteKey = BindlessIndexValidatorInternal::makeSiteKey( passName, fieldName, element );
         {
-            std::scoped_lock<mutex> lock{ s_reportMutex };
+            ScopedLock<mutex> lock{ s_reportMutex };
             if ( s_uniqueReportedSite.insert( siteKey ).second == false )
                 return false;
         }
@@ -114,7 +114,7 @@ namespace sw
     {
         const BindlessSiteKey siteKey = BindlessIndexValidatorInternal::makeSiteKey( passName, fieldName, element );
         {
-            std::scoped_lock<mutex> lock{ s_reportMutex };
+            ScopedLock<mutex> lock{ s_reportMutex };
             if ( s_uniqueAbsentSite.insert( siteKey ).second == false )
                 return false;
         }
@@ -125,19 +125,19 @@ namespace sw
 
     uint32 BindlessIndexValidator::getReportCount()
     {
-        std::scoped_lock<mutex> lock{ s_reportMutex };
+        ScopedLock<mutex> lock{ s_reportMutex };
         return static_cast<uint32>( s_uniqueReportedSite.size() );
     }
 
     uint32 BindlessIndexValidator::getAbsentNoteCount()
     {
-        std::scoped_lock<mutex> lock{ s_reportMutex };
+        ScopedLock<mutex> lock{ s_reportMutex };
         return static_cast<uint32>( s_uniqueAbsentSite.size() );
     }
 
     void BindlessIndexValidator::clearReports()
     {
-        std::scoped_lock<mutex> lock{ s_reportMutex };
+        ScopedLock<mutex> lock{ s_reportMutex };
         s_uniqueReportedSite.clear();
         s_uniqueAbsentSite.clear();
     }

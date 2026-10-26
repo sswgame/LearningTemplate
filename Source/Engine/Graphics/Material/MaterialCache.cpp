@@ -129,8 +129,8 @@ namespace sw
         const string key = FileUtil::normalizePath( relativePath );
         engine::getSubsystem<AssetManager>().getAssetDatabase().ensureMeta( key );
 
-        std::unique_lock<shared_mutex> lock{ _impl->_mutex };
-        Impl::Entry&                   entry = _impl->_mapEntry[key];
+        UniqueLock<shared_mutex> lock{ _impl->_mutex };
+        Impl::Entry&             entry = _impl->_mapEntry[key];
         if ( entry._material == nullptr )
         {
             entry._material = Material::create();
@@ -181,8 +181,8 @@ namespace sw
 
         const string key = FileUtil::normalizePath( relativePath );
 
-        std::unique_lock<shared_mutex> lock{ _impl->_mutex };
-        auto                           it = _impl->_mapEntry.find( key );
+        UniqueLock<shared_mutex> lock{ _impl->_mutex };
+        auto                     it = _impl->_mapEntry.find( key );
         if ( it == _impl->_mapEntry.end() )
             return;
 
@@ -205,7 +205,7 @@ namespace sw
     {
         if ( _impl == nullptr )
             return 0;
-        std::shared_lock<shared_mutex> lock{ _impl->_mutex };
+        ScopedSharedLock<shared_mutex> lock{ _impl->_mutex };
         return _impl->_mapEntry.size();
     }
 
@@ -214,9 +214,9 @@ namespace sw
         if ( relativePath.empty() || _impl == nullptr )
             return;
 
-        const string                   key = FileUtil::normalizePath( relativePath );
-        std::unique_lock<shared_mutex> lock{ _impl->_mutex };
-        const auto                     it = _impl->_mapEntry.find( key );
+        const string             key = FileUtil::normalizePath( relativePath );
+        UniqueLock<shared_mutex> lock{ _impl->_mutex };
+        const auto               it = _impl->_mapEntry.find( key );
         if ( it == _impl->_mapEntry.end() || it->second._material->isRHIValid() )
             return;
         for ( const string& pendingKey : _impl->_listPendingKey )
@@ -238,7 +238,7 @@ namespace sw
         const Impl::DeviceInitScope initScope{ *_impl };
         vector<string>              listKey;
         {
-            std::unique_lock<shared_mutex> lock{ _impl->_mutex };
+            UniqueLock<shared_mutex> lock{ _impl->_mutex };
             listKey.swap( _impl->_listPendingKey );
             _impl->_pendingCount.store( 0, std::memory_order_release );
         }
@@ -248,7 +248,7 @@ namespace sw
         {
             shared_ptr<Material> material;
             {
-                std::shared_lock<shared_mutex> lock{ _impl->_mutex };
+                ScopedSharedLock<shared_mutex> lock{ _impl->_mutex };
                 const auto                     it = _impl->_mapEntry.find( key );
                 if ( it == _impl->_mapEntry.end() )
                     continue; // 그 사이에 해제됐다
@@ -272,7 +272,7 @@ namespace sw
             return false;
 
         const string                   key = FileUtil::normalizePath( relativePath );
-        std::shared_lock<shared_mutex> lock{ _impl->_mutex };
+        ScopedSharedLock<shared_mutex> lock{ _impl->_mutex };
         return _impl->_mapEntry.find( key ) != _impl->_mapEntry.end();
     }
 
@@ -288,7 +288,7 @@ namespace sw
         // `takePSOWarmMaterials` 로 이 잠금을 잡는다. 잠금을 쥔 채 기다리면 서로 영영 기다린다. 소유를 하나 빌려 그 사이 항목이 지워져도 머티리얼이 살아 있게 한다.
         shared_ptr<Material> material;
         {
-            std::shared_lock<shared_mutex> lock{ _impl->_mutex };
+            ScopedSharedLock<shared_mutex> lock{ _impl->_mutex };
             const auto                     it = _impl->_mapEntry.find( key );
             if ( it == _impl->_mapEntry.end() )
                 return;
@@ -322,7 +322,7 @@ namespace sw
         requestInitialize( relativePath );
         const string key = FileUtil::normalizePath( relativePath );
         {
-            std::unique_lock<shared_mutex> lock{ _impl->_mutex };
+            UniqueLock<shared_mutex> lock{ _impl->_mutex };
             if ( VectorUtil::contains( _impl->_listPSOWarmKey, key ) == false )
                 _impl->_listPSOWarmKey.push_back( key );
             _impl->_psoWarmCount.store( static_cast<uint32>( _impl->_listPSOWarmKey.size() ), std::memory_order_release );
@@ -335,8 +335,8 @@ namespace sw
         outListMaterial.clear();
         if ( _impl == nullptr || _impl->_psoWarmCount.load( std::memory_order_acquire ) == 0 )
             return;
-        std::unique_lock<shared_mutex> lock{ _impl->_mutex };
-        size_t                         keyIndex = 0;
+        UniqueLock<shared_mutex> lock{ _impl->_mutex };
+        size_t                   keyIndex = 0;
         while ( keyIndex < _impl->_listPSOWarmKey.size() )
         {
             const auto it = _impl->_mapEntry.find( _impl->_listPSOWarmKey[keyIndex] );
@@ -367,7 +367,7 @@ namespace sw
     {
         if ( _impl != nullptr )
         {
-            std::unique_lock<shared_mutex> lock{ _impl->_mutex };
+            UniqueLock<shared_mutex> lock{ _impl->_mutex };
             _impl->_mapEntry.clear();
             _impl->_listPSOWarmKey.clear();
             _impl->_psoWarmCount.store( 0, std::memory_order_release );

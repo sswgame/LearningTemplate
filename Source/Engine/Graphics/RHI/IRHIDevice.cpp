@@ -233,7 +233,7 @@ namespace sw
         const bool   bRenderThreadUp  = _pfnRenderThreadDrain.load( std::memory_order_acquire ) != nullptr;
         if ( ( bRenderThreadUp || bFrameInFlight ) && std::this_thread::get_id() != _renderThreadID.load( std::memory_order_relaxed ) )
         {
-            std::scoped_lock<mutex> lock{ _pDeferredHandleQueue->_mutex };
+            ScopedLock<mutex> lock{ _pDeferredHandleQueue->_mutex };
             _pDeferredHandleQueue->_listHandle.push_back( RHIDeferredHandleQueue::Entry{ handle, kind, queuedFrameCount + 1 } );
             return;
         }
@@ -246,7 +246,7 @@ namespace sw
     {
         vector<RHIDeferredHandleQueue::Entry> listHandle;
         {
-            std::scoped_lock<mutex> lock{ _pDeferredHandleQueue->_mutex };
+            ScopedLock<mutex> lock{ _pDeferredHandleQueue->_mutex };
             if ( _pDeferredHandleQueue->_listHandle.empty() )
                 return;
             listHandle.swap( _pDeferredHandleQueue->_listHandle );
@@ -282,7 +282,7 @@ namespace sw
         const uint64                          retiredFrameCount = _pDeferredHandleQueue->_retiredFrameCount.load( std::memory_order_acquire );
         vector<RHIDeferredHandleQueue::Entry> listDue;
         {
-            std::scoped_lock<mutex>                lock{ _pDeferredHandleQueue->_mutex };
+            ScopedLock<mutex>                      lock{ _pDeferredHandleQueue->_mutex };
             vector<RHIDeferredHandleQueue::Entry>& listHandle = _pDeferredHandleQueue->_listHandle;
             size_t                                 keptCount  = 0;
             for ( RHIDeferredHandleQueue::Entry& entry : listHandle )
@@ -305,7 +305,7 @@ namespace sw
 
     size_t IRHIDevice::getDeferredHandleCount() const
     {
-        std::scoped_lock<mutex> lock{ _pDeferredHandleQueue->_mutex };
+        ScopedLock<mutex> lock{ _pDeferredHandleQueue->_mutex };
         return _pDeferredHandleQueue->_listHandle.size();
     }
 

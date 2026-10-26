@@ -126,8 +126,8 @@ namespace sw
         /** @brief 시리얼을 발급하고 Probe 를 줄 끝에 넣습니다. 백엔드의 큐 제출 락 안에서, 제출을 낸 직후에 부릅니다. */
         [[nodiscard]] uint64 enqueue( Probe probe )
         {
-            std::scoped_lock<mutex> lock{ _mutex };
-            const uint64            serial = _serials.issue();
+            ScopedLock<mutex> lock{ _mutex };
+            const uint64      serial = _serials.issue();
             _listEntry.push_back( Entry{ serial, std::move( probe ) } );
             return serial;
         }
@@ -139,8 +139,8 @@ namespace sw
         template <typename IsDoneFn, typename RetireFn>
         bool retireDone( IsDoneFn&& isDone, RetireFn&& retire )
         {
-            std::scoped_lock<mutex> lock{ _mutex };
-            uint64                  doneSerial{ 0 };
+            ScopedLock<mutex> lock{ _mutex };
+            uint64            doneSerial{ 0 };
             while ( _listEntry.empty() == false && isDone( _listEntry.front()._probe ) )
             {
                 doneSerial = _listEntry.front()._serial;
@@ -156,8 +156,8 @@ namespace sw
         template <typename RetireFn>
         void retireAll( RetireFn&& retire )
         {
-            std::scoped_lock<mutex> lock{ _mutex };
-            uint64                  doneSerial{ 0 };
+            ScopedLock<mutex> lock{ _mutex };
+            uint64            doneSerial{ 0 };
             while ( _listEntry.empty() == false )
             {
                 doneSerial = _listEntry.front()._serial;
@@ -171,7 +171,7 @@ namespace sw
         /** @brief 아직 끝나지 않은 제출 수입니다. */
         [[nodiscard]] uint32 getPendingCount() const
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             return static_cast<uint32>( _listEntry.size() );
         }
 
@@ -204,15 +204,15 @@ namespace sw
         /** @brief 읽기 하나를 시리얼로 등록합니다. 같은 시리얼이 이미 있으면 안 됩니다(시리얼은 발급마다 새 값이다). */
         void add( uint64 serial, Payload payload )
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             _mapPayload.insert_or_assign( serial, std::move( payload ) );
         }
 
         /** @brief 등록된 읽기를 꺼내며 지웁니다. 없으면(업로드 티켓, 이미 가져감, 버림) false 입니다. */
         [[nodiscard]] bool take( uint64 serial, Payload& outPayload )
         {
-            std::scoped_lock<mutex> lock{ _mutex };
-            const auto              foundIt = _mapPayload.find( serial );
+            ScopedLock<mutex> lock{ _mutex };
+            const auto        foundIt = _mapPayload.find( serial );
             if ( foundIt == _mapPayload.end() )
                 return false;
             outPayload = std::move( foundIt->second );
@@ -223,19 +223,19 @@ namespace sw
         /** @brief 아직 가져가지 않은 읽기 수입니다. */
         [[nodiscard]] uint32 getCount() const
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             return static_cast<uint32>( _mapPayload.size() );
         }
 
         /** @brief 남은 읽기를 모두 버립니다. 결과를 담은 스테이징을 장치 종료와 함께 놓을 때 부릅니다(그 뒤의 `take` 는 false). */
         void clear()
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             _mapPayload.clear();
         }
 
     private:
-        mutable mutex                  _mutex;
-        unordered_map<uint64, Payload> _mapPayload;
+        mutable mutex                              _mutex;
+        unordered_map<uint64, Payload> _mapPayload SW_GUARDED_BY( _mutex );
     };
 } // namespace sw

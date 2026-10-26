@@ -192,9 +192,9 @@ namespace sw
          *          쓴다. 부모 머티리얼의 상수 버퍼는 **셰이더를 다시 쿠킹하는 동안 커질 수 있으므로**
          *          (레이아웃이 바뀐다) 만들 때의 크기를 가지고 있다가 커지면 다시 만든다.
          */
-        uint32 _constantByteSize;
+        uint32 _constantByteSize SW_GUARDED_BY( _overrideMutex );
         /** @brief `_bytes` 를 복사할 때의 부모 `getBufferGeneration()` 입니다. 다르면 부모 값이나 레이아웃이 바뀐 것이라 다시 복사합니다. */
-        uint32 _parentBufferGeneration;
+        uint32 _parentBufferGeneration SW_GUARDED_BY( _overrideMutex );
         /** @brief 텍스처 덮어쓰기를 빌린 디바이스입니다. 반환할 때 씁니다(디바이스가 죽으면 forgetRHI 가 비웁니다). */
         IRHIDevice* _pTextureDevice;
         /** @brief 덮어쓴 텍스처를 패킹할 때의 `TextureCache::getReloadGeneration()` 입니다. 다르면 다시 올라온 텍스처의 새 SRV 를 다시 패킹합니다. */

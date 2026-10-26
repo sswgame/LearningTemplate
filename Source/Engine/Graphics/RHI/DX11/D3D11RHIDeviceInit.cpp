@@ -278,7 +278,7 @@ namespace sw
         // 매번 조용히 실패한다.
         _swapChain.releaseBackBufferRtv();
         {
-            std::scoped_lock<mutex> lock{ _liveCmdListMutex };
+            ScopedLock<mutex> lock{ _liveCmdListMutex };
             for ( D3D11RHICommandList* pLiveList : _listLiveCmd )
             {
                 pLiveList->releaseRecordedState();

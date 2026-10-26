@@ -66,7 +66,7 @@ namespace sw
 
             void add( IRHIDevice* pDevice, const Texture2DRetiredResource& resource )
             {
-                std::scoped_lock<mutex> lock{ _mutex };
+                ScopedLock<mutex> lock{ _mutex };
                 _listItem.push_back( Item{ pDevice, resource } );
             }
 
@@ -75,7 +75,7 @@ namespace sw
             {
                 vector<Item> listRelease;
                 {
-                    std::scoped_lock<mutex> lock{ _mutex };
+                    ScopedLock<mutex> lock{ _mutex };
                     for ( size_t index = 0; index < _listItem.size(); )
                     {
                         if ( _listItem[index]._pDevice != pDevice )
@@ -100,14 +100,14 @@ namespace sw
 
             void forgetRHI( IRHIDevice* pDevice ) override
             {
-                std::scoped_lock<mutex> lock{ _mutex };
+                ScopedLock<mutex> lock{ _mutex };
                 VectorUtil::removeIf( _listItem, [pDevice]( const Item& item )
                 { return item._pDevice == pDevice; } );
             }
 
         private:
-            mutable mutex _mutex;
-            vector<Item>  _listItem;
+            mutable mutex          _mutex;
+            vector<Item> _listItem SW_GUARDED_BY( _mutex );
         };
     } // namespace
 
@@ -151,36 +151,38 @@ namespace sw
             vector<uint8> _rgbaBytes;
             bool          _bSwappedToBgra{ false }; ///< `_rgbaBytes` 를 이미 BGRA 순서로 바꿨다(`Busy` 로 미룬 갱신을 다시 낼 때 두 번 바꾸지 않게)
         };
-        unordered_map<string, Entry>            _mapEntry;
-        vector<RegionUpdate>                    _listPendingRegion;  ///< 게임 스레드가 쌓고 렌더 스레드가 비운다(`_regionMutex`)
-        vector<RegionUpdate>                    _listFlushingRegion; ///< 렌더 스레드만 쓰는 맞바꾸기 자리(저장소를 재사용한다)
-        mutex                                   _regionMutex;
-        unordered_map<string, RenderTargetSize> _mapRenderTargetSize; ///< `declareRenderTarget` 이 알린 크기
-        shared_mutex                            _mutex;
-        std::condition_variable_any             _cvLoaded;              ///< 항목의 `_bLoading` 이 내려갈 때 깨운다
-        atomic<uint32>                          _reloadGeneration{ 0 }; ///< SRV 가 바뀌었을 수 있는 횟수 — 머티리얼이 SRV 인덱스를 다시 받을 때를 안다
-        mutex                                   _awaitingMutex;
-        vector<shared_ptr<TextureLoadBlock>>    _listAwaitingUpload; ///< 워커가 읽기를 마치고 업로드를 기다리는 로드(`completePendingLoads` 가 비운다)
-        mutex                                   _streamingMutex;
-        vector<StreamingUpgrade>                _listStreamingUpgrade; ///< 위쪽 밉을 기다리는 텍스처(먼저 들어온 것부터, `updateStreaming` 이 비운다)
-        TextureStreamingRetireList              _retired;              ///< 바꿔 끼운 옛 GPU 자원(`releaseRetiredTextures` 가 해제한다)
-        unordered_map<string, float32>          _mapScreenSize;        ///< 이번 프레임에 알린 화면 크기(`noteScreenSize`, `_streamingMutex`) — `updateStreaming` 이 줄을 정렬한 뒤 비운다
+        unordered_map<string, Entry> _mapEntry         SW_GUARDED_BY( _mutex );
+        vector<RegionUpdate>                           _listPendingRegion;  ///< 게임 스레드가 쌓고 렌더 스레드가 비운다(`_regionMutex`)
+        vector<RegionUpdate>                           _listFlushingRegion; ///< 렌더 스레드만 쓰는 맞바꾸기 자리(저장소를 재사용한다)
+        mutex                                          _regionMutex;
+        unordered_map<string, RenderTargetSize>        _mapRenderTargetSize; ///< `declareRenderTarget` 이 알린 크기
+        shared_mutex                                   _mutex;
+        std::condition_variable_any                    _cvLoaded;              ///< 항목의 `_bLoading` 이 내려갈 때 깨운다
+        atomic<uint32>                                 _reloadGeneration{ 0 }; ///< SRV 가 바뀌었을 수 있는 횟수 — 머티리얼이 SRV 인덱스를 다시 받을 때를 안다
+        mutex                                          _awaitingMutex;
+        vector<shared_ptr<TextureLoadBlock>>           _listAwaitingUpload; ///< 워커가 읽기를 마치고 업로드를 기다리는 로드(`completePendingLoads` 가 비운다)
+        mutex                                          _streamingMutex;
+        vector<StreamingUpgrade> _listStreamingUpgrade SW_GUARDED_BY( _streamingMutex ); ///< 위쪽 밉을 기다리는 텍스처(먼저 들어온 것부터, `updateStreaming` 이 비운다)
+        TextureStreamingRetireList                     _retired;                         ///< 바꿔 끼운 옛 GPU 자원(`releaseRetiredTextures` 가 해제한다)
+        unordered_map<string, float32>                 _mapScreenSize;                   ///< 이번 프레임에 알린 화면 크기(`noteScreenSize`, `_streamingMutex`) — `updateStreaming` 이 줄을 정렬한 뒤 비운다
 
         /** @brief 위쪽 밉을 기다리는 줄에 넣습니다(로드 블록의 완료 단계). */
         void queueStreamingUpgrade( const string& key, unique_ptr<DDSImageData> pImage )
         {
-            std::scoped_lock<mutex> lock{ _streamingMutex };
+            ScopedLock<mutex> lock{ _streamingMutex };
             _listStreamingUpgrade.push_back( StreamingUpgrade{ key, std::move( pImage ) } );
         }
 
         /** @brief 참조를 하나 놓습니다. 0 이 되면 GPU 자원까지 해제합니다(`TextureCache::release` · 로드 블록 소멸). */
         void releaseReference( const string& key, IRHIDevice* pDevice )
         {
-            // 표에서 지우는 항목의 텍스처는 꺼내서 잠금을 놓은 뒤 내린다(장치 호출 — 잠금은 잎 잠금, 결정 5-3).
+            // GPU 자원은 잠금을 놓은 뒤 내린다(장치 호출 — 잠금은 잎 잠금, 결정 5-3). 표에서 지우는 항목은 텍스처를 꺼내고, 표에 남는 고정(CPU) 항목은
+            // 진행 중 표시(`_bLoading`)를 세워 그사이 acquire 가 기다리게 한 뒤 내리고 다시 잠가 표시를 내린다(`reload` 와 같은 순서).
             unique_ptr<Texture2D> pErased;
+            Texture2D*            pPinned = nullptr;
             {
-                std::unique_lock<shared_mutex> lock{ _mutex };
-                auto                           it = _mapEntry.find( key );
+                UniqueLock<shared_mutex> lock{ _mutex };
+                auto                     it = _mapEntry.find( key );
                 if ( it == _mapEntry.end() )
                     return;
                 if ( it->second._refCount > 0 )
@@ -189,18 +191,36 @@ namespace sw
                 const bool bUnused = it->second._refCount == 0 && it->second._bLoading == false && it->second._bUpgrading == false;
                 if ( bUnused == false )
                     return;
-                // CPU 텍스처는 원본을 남긴다 — 소유자가 `releaseCPUTexture` 로 지운다. 표에 남는 항목은 다른 스레드가 곧 다시 쥘 수 있어 잠금 안에서 내린다.
+                // CPU 텍스처는 원본을 남긴다 — 소유자가 `releaseCPUTexture` 로 지운다.
                 if ( it->second._bPinned )
                 {
-                    if ( it->second._texture != nullptr )
-                        it->second._texture->releaseRHI( pDevice );
-                    return;
+                    if ( it->second._texture == nullptr )
+                        return;
+                    it->second._bLoading = true;
+                    pPinned              = it->second._texture.get();
                 }
-                pErased = std::move( it->second._texture );
-                _mapEntry.erase( it );
+                else
+                {
+                    pErased = std::move( it->second._texture );
+                    _mapEntry.erase( it );
+                }
             }
             if ( pErased != nullptr )
                 pErased->releaseRHI( pDevice );
+            if ( pPinned == nullptr )
+                return;
+            pPinned->releaseRHI( pDevice );
+            {
+                UniqueLock<shared_mutex> lock{ _mutex };
+                const auto               it = _mapEntry.find( key );
+                SW_ASSERT( it != _mapEntry.end() && it->second._bLoading );
+                it->second._bLoading = false;
+                // 내리는 사이 소유자가 `releaseCPUTexture` 했으면 여기서 지운다(GPU 자원은 이미 내렸다).
+                const bool bOrphaned = it->second._bPinned == false && it->second._refCount == 0;
+                if ( bOrphaned )
+                    _mapEntry.erase( it );
+            }
+            _cvLoaded.notify_all();
         }
 
         /**
@@ -210,8 +230,8 @@ namespace sw
         void finishLoad( const string& key, bool bReady )
         {
             {
-                std::unique_lock<shared_mutex> lock{ _mutex };
-                const auto                     it = _mapEntry.find( key );
+                UniqueLock<shared_mutex> lock{ _mutex };
+                const auto               it = _mapEntry.find( key );
                 SW_ASSERT( it != _mapEntry.end() && it->second._bLoading );
                 Entry& entry      = it->second;
                 entry._bLoading   = false;
@@ -257,9 +277,9 @@ namespace sw
         // 디스크 읽기와 GPU 생성은 잠금 밖에서 한다. 잠금 안에서는 "진행 중" 표시(_bLoading)와 그 로드의 블록만 적고, 같은 키를 동시에
         // 원한 쪽은 같은 블록을 받는다(이중 생성 없음). Texture2D 는 unique_ptr 이라 맵이 원소를 옮겨도 주소가 그대로다. 진행 중인 항목은
         // release · 실패 정리가 지우지 않는다.
-        std::unique_lock<shared_mutex> lock{ _impl->_mutex };
-        Texture2D*                     pTexture = nullptr;
-        TextureLoadBlock::Source       source   = TextureLoadBlock::Source::File;
+        UniqueLock<shared_mutex> lock{ _impl->_mutex };
+        Texture2D*               pTexture = nullptr;
+        TextureLoadBlock::Source source   = TextureLoadBlock::Source::File;
         for ( ;; )
         {
             const auto it = _impl->_mapEntry.find( key );
@@ -344,9 +364,9 @@ namespace sw
         if ( pTexture == nullptr )
             return nullptr;
         // 핸들 몫의 참조는 이 함수를 나가며 놓인다 — 돌려주는 포인터 몫(짝 `release`)을 하나 더 센다. 핸들이 쥐고 있으므로 항목은 있다.
-        const string                   key = FileUtil::normalizePath( relativePath );
-        std::unique_lock<shared_mutex> lock{ _impl->_mutex };
-        const auto                     it = _impl->_mapEntry.find( key );
+        const string             key = FileUtil::normalizePath( relativePath );
+        UniqueLock<shared_mutex> lock{ _impl->_mutex };
+        const auto               it = _impl->_mapEntry.find( key );
         SW_ASSERT( it != _impl->_mapEntry.end() );
         ++it->second._refCount;
         return pTexture.get();
@@ -358,8 +378,8 @@ namespace sw
             return 0;
         vector<shared_ptr<TextureLoadBlock>> listBlock;
         {
-            std::scoped_lock<mutex> lock{ _impl->_awaitingMutex };
-            const size_t            takeCount = MathUtil::min( static_cast<size_t>( maxCount ), _impl->_listAwaitingUpload.size() );
+            ScopedLock<mutex> lock{ _impl->_awaitingMutex };
+            const size_t      takeCount = MathUtil::min( static_cast<size_t>( maxCount ), _impl->_listAwaitingUpload.size() );
             if ( takeCount == 0 )
                 return 0;
             listBlock.assign( std::make_move_iterator( _impl->_listAwaitingUpload.begin() ), std::make_move_iterator( _impl->_listAwaitingUpload.begin() + static_cast<ptrdiff_t>( takeCount ) ) );
@@ -382,8 +402,8 @@ namespace sw
             return 0;
         vector<Impl::StreamingUpgrade> listUpgrade;
         {
-            std::scoped_lock<mutex> lock{ _impl->_streamingMutex };
-            const size_t            takeCount = MathUtil::min( static_cast<size_t>( maxCount ), _impl->_listStreamingUpgrade.size() );
+            ScopedLock<mutex> lock{ _impl->_streamingMutex };
+            const size_t      takeCount = MathUtil::min( static_cast<size_t>( maxCount ), _impl->_listStreamingUpgrade.size() );
             if ( takeCount == 0 )
             {
                 _impl->_mapScreenSize.clear();
@@ -413,8 +433,8 @@ namespace sw
         {
             Texture2D* pTexture = nullptr;
             {
-                std::unique_lock<shared_mutex> lock{ _impl->_mutex };
-                const auto                     it = _impl->_mapEntry.find( upgrade._key );
+                UniqueLock<shared_mutex> lock{ _impl->_mutex };
+                const auto               it = _impl->_mapEntry.find( upgrade._key );
                 // 놓였으면 버린다. 다시 읽는 중(`reload` · 디바이스 교체)이면 그쪽이 밉 전부를 올린다.
                 const bool bUpgradable = it != _impl->_mapEntry.end() && it->second._bLoading == false && it->second._bPublished && it->second._texture != nullptr &&
                                          it->second._texture->isFullyResident() == false;
@@ -428,8 +448,8 @@ namespace sw
             const bool               bUpgraded = pTexture->upgradeResidency( pDevice, *upgrade._pImage, retired );
             unique_ptr<Texture2D>    pErased;
             {
-                std::unique_lock<shared_mutex> lock{ _impl->_mutex };
-                const auto                     it = _impl->_mapEntry.find( upgrade._key );
+                UniqueLock<shared_mutex> lock{ _impl->_mutex };
+                const auto               it = _impl->_mapEntry.find( upgrade._key );
                 SW_ASSERT( it != _impl->_mapEntry.end() && it->second._bUpgrading );
                 it->second._bUpgrading = false;
                 if ( bUpgraded )
@@ -458,15 +478,15 @@ namespace sw
     {
         if ( screenSize <= 0.0f )
             return;
-        const string            key = FileUtil::normalizePath( relativePath );
-        std::scoped_lock<mutex> lock{ _impl->_streamingMutex };
-        float32&                noted = _impl->_mapScreenSize[key];
-        noted                         = MathUtil::max( noted, screenSize );
+        const string      key = FileUtil::normalizePath( relativePath );
+        ScopedLock<mutex> lock{ _impl->_streamingMutex };
+        float32&          noted = _impl->_mapScreenSize[key];
+        noted                   = MathUtil::max( noted, screenSize );
     }
 
     bool TextureCache::hasPendingStreamingUpgrades() const
     {
-        std::scoped_lock<mutex> lock{ _impl->_streamingMutex };
+        ScopedLock<mutex> lock{ _impl->_streamingMutex };
         return _impl->_listStreamingUpgrade.empty() == false;
     }
 
@@ -480,10 +500,10 @@ namespace sw
     {
         uint32 count = 0;
         {
-            std::scoped_lock<mutex> lock{ _impl->_streamingMutex };
+            ScopedLock<mutex> lock{ _impl->_streamingMutex };
             count += static_cast<uint32>( _impl->_listStreamingUpgrade.size() );
         }
-        std::shared_lock<shared_mutex> lock{ _impl->_mutex };
+        ScopedSharedLock<shared_mutex> lock{ _impl->_mutex };
         for ( const auto& [key, entry] : _impl->_mapEntry )
         {
             if ( entry._bLoading || entry._bUpgrading )
@@ -508,8 +528,8 @@ namespace sw
         const bool bValidRequest = isCPUTexturePath( relativePath ) && bSizeMatches;
         if ( _impl == nullptr || bValidRequest == false )
             return false;
-        const string                   key = FileUtil::normalizePath( relativePath );
-        std::unique_lock<shared_mutex> lock{ _impl->_mutex };
+        const string             key = FileUtil::normalizePath( relativePath );
+        UniqueLock<shared_mutex> lock{ _impl->_mutex };
         if ( _impl->_mapEntry.find( key ) != _impl->_mapEntry.end() )
             return false;
         Impl::Entry& entry = _impl->_mapEntry[key];
@@ -524,9 +544,9 @@ namespace sw
     {
         if ( _impl == nullptr || isCPUTexturePath( relativePath ) == false )
             return;
-        const string                   key = FileUtil::normalizePath( relativePath );
-        std::unique_lock<shared_mutex> lock{ _impl->_mutex };
-        const auto                     it = _impl->_mapEntry.find( key );
+        const string             key = FileUtil::normalizePath( relativePath );
+        UniqueLock<shared_mutex> lock{ _impl->_mutex };
+        const auto               it = _impl->_mapEntry.find( key );
         if ( it == _impl->_mapEntry.end() )
             return;
         it->second._bPinned = false;
@@ -540,11 +560,11 @@ namespace sw
         const bool bInvalidDeclaration = _impl == nullptr || isRenderTargetPath( relativePath ) == false || width == 0 || height == 0;
         if ( bInvalidDeclaration )
             return;
-        const string                   key = FileUtil::normalizePath( relativePath );
-        std::unique_lock<shared_mutex> lock{ _impl->_mutex };
-        Impl::RenderTargetSize&        size = _impl->_mapRenderTargetSize[key];
-        size._width                         = width;
-        size._height                        = height;
+        const string             key = FileUtil::normalizePath( relativePath );
+        UniqueLock<shared_mutex> lock{ _impl->_mutex };
+        Impl::RenderTargetSize&  size = _impl->_mapRenderTargetSize[key];
+        size._width                   = width;
+        size._height                  = height;
     }
 
     bool TextureCache::resizeRenderTarget( string_view relativePath, uint32 width, uint32 height, IRHIDevice* pDevice )
@@ -556,11 +576,11 @@ namespace sw
         const string key = FileUtil::normalizePath( relativePath );
 
         // 크기를 먼저 알린다 — 아직 만들지 않았으면 다음 acquire 가 이 크기로 만든다. 다시 만드는 일은 reload 와 같이 잠금 밖에서 한다.
-        std::unique_lock<shared_mutex> lock{ _impl->_mutex };
-        Impl::RenderTargetSize&        size = _impl->_mapRenderTargetSize[key];
-        size._width                         = width;
-        size._height                        = height;
-        Texture2D* pTexture                 = nullptr;
+        UniqueLock<shared_mutex> lock{ _impl->_mutex };
+        Impl::RenderTargetSize&  size = _impl->_mapRenderTargetSize[key];
+        size._width                   = width;
+        size._height                  = height;
+        Texture2D* pTexture           = nullptr;
         for ( ;; )
         {
             const auto it = _impl->_mapEntry.find( key );
@@ -619,8 +639,8 @@ namespace sw
 
         // 기다림(waitIdle)과 다시 올리기는 잠금 밖에서 한다. 잠금을 쥔 채 waitIdle 을 부르면 같은 잠금을 기다리는
         // 렌더 스레드와 서로 기다릴 수 있다. 진행 중 표시를 세워 두면 그사이 acquire 는 기다리고 release 는 지우지 않는다.
-        std::unique_lock<shared_mutex> lock{ _impl->_mutex };
-        Texture2D*                     pTexture = nullptr;
+        UniqueLock<shared_mutex> lock{ _impl->_mutex };
+        Texture2D*               pTexture = nullptr;
         for ( ;; )
         {
             const auto it = _impl->_mapEntry.find( key );
@@ -672,7 +692,7 @@ namespace sw
         if ( relativePath.empty() || _impl == nullptr )
             return nullptr;
         const string                   key = FileUtil::normalizePath( relativePath );
-        std::shared_lock<shared_mutex> lock{ _impl->_mutex };
+        ScopedSharedLock<shared_mutex> lock{ _impl->_mutex };
         const auto                     it = _impl->_mapEntry.find( key );
         // 올리는 중(처음 acquire · reload)인 항목은 내주지 않는다 — 그 스레드가 잠금 없이 같은 객체의 핸들 · SRV 를 바꾸고 있다.
         const bool bReady = it != _impl->_mapEntry.end() && it->second._bPublished && it->second._bLoading == false;
@@ -698,7 +718,7 @@ namespace sw
         update._width     = width;
         update._height    = height;
         update._rgbaBytes = std::move( rgbaBytes );
-        std::scoped_lock<mutex> lock{ _impl->_regionMutex };
+        ScopedLock<mutex> lock{ _impl->_regionMutex };
         _impl->_listPendingRegion.push_back( std::move( update ) );
     }
 
@@ -707,7 +727,7 @@ namespace sw
         if ( _impl == nullptr )
             return 0;
         {
-            std::scoped_lock<mutex> lock{ _impl->_regionMutex };
+            ScopedLock<mutex> lock{ _impl->_regionMutex };
             if ( _impl->_listPendingRegion.empty() )
                 return 0;
             _impl->_listFlushingRegion.swap( _impl->_listPendingRegion );
@@ -728,7 +748,7 @@ namespace sw
                 continue;
             }
             // 올리는 동안 같은 텍스처를 놓거나 다시 올리지 못하게 읽기 잠금을 쥔다(release · reload 는 쓰기 잠금을 잡는다).
-            std::shared_lock<shared_mutex> lock{ _impl->_mutex };
+            ScopedSharedLock<shared_mutex> lock{ _impl->_mutex };
             const auto                     it     = _impl->_mapEntry.find( update._key );
             Texture2D*                     pFound = it != _impl->_mapEntry.end() ? it->second._texture.get() : nullptr;
             RHITextureRegionUploadDesc     desc{};
@@ -807,7 +827,7 @@ namespace sw
         if ( listRetry.empty() == false )
         {
             // 미룬 것은 새로 들어온 것보다 앞에 둔다 — 같은 자리를 다시 칠했으면 나중 것이 이긴다.
-            std::scoped_lock<mutex> lock{ _impl->_regionMutex };
+            ScopedLock<mutex> lock{ _impl->_regionMutex };
             listRetry.insert( listRetry.end(), std::make_move_iterator( _impl->_listPendingRegion.begin() ), std::make_move_iterator( _impl->_listPendingRegion.end() ) );
             _impl->_listPendingRegion.swap( listRetry );
         }
@@ -826,7 +846,7 @@ namespace sw
             return false;
 
         const string                   key = FileUtil::normalizePath( relativePath );
-        std::shared_lock<shared_mutex> lock{ _impl->_mutex };
+        ScopedSharedLock<shared_mutex> lock{ _impl->_mutex };
         return _impl->_mapEntry.find( key ) != _impl->_mapEntry.end();
     }
 
@@ -834,7 +854,7 @@ namespace sw
     {
         if ( _impl == nullptr )
             return 0;
-        std::shared_lock<shared_mutex> lock{ _impl->_mutex };
+        ScopedSharedLock<shared_mutex> lock{ _impl->_mutex };
         return _impl->_mapEntry.size();
     }
 
@@ -857,14 +877,14 @@ namespace sw
         if ( _impl == nullptr )
             return;
         {
-            std::scoped_lock<mutex> awaitingLock{ _impl->_awaitingMutex };
+            ScopedLock<mutex> awaitingLock{ _impl->_awaitingMutex };
             _impl->_listAwaitingUpload.clear(); // 올리지 않은 로드는 버린다 — 그 블록을 쥔 핸들은 `Loading` 으로 남는다(종료 때만 온다)
         }
         {
-            std::scoped_lock<mutex> streamingLock{ _impl->_streamingMutex };
+            ScopedLock<mutex> streamingLock{ _impl->_streamingMutex };
             _impl->_listStreamingUpgrade.clear(); // 위쪽 밉을 기다리던 텍스처도 함께 사라진다
         }
-        std::unique_lock<shared_mutex> lock{ _impl->_mutex };
+        UniqueLock<shared_mutex> lock{ _impl->_mutex };
         _impl->_mapEntry.clear();
         getTextureCacheStats().recordClear();
     }
@@ -923,7 +943,7 @@ namespace sw
         const shared_ptr<TextureCache::Impl> pCache = _pCache.lock();
         if ( pCache == nullptr )
             return;
-        std::scoped_lock<mutex> lock{ pCache->_awaitingMutex };
+        ScopedLock<mutex> lock{ pCache->_awaitingMutex };
         // 단계를 알린 뒤라 기다리던 스레드가 이미 올렸을 수 있다 — 그러면 넣지 않는다(넣으면 펌프가 없는 동안 블록이 참조를 쥐고 남는다).
         // 완료 본문은 같은 잠금 안에서 목록에서 빼므로, 여기서 아직 기다리는 중이면 넣은 것을 그쪽이 뺀다.
         if ( isAwaitingCompletion() == false )
@@ -942,7 +962,7 @@ namespace sw
         }
         {
             // 펌프가 아닌 쪽(`wait`)이 먼저 올렸으면 대기 목록에서 뺀다 — 목록이 블록(곧 참조)을 쥔 채 남지 않게(렌더가 없는 테스트는 펌프가 돌지 않는다).
-            std::scoped_lock<mutex>               lock{ pCache->_awaitingMutex };
+            ScopedLock<mutex>                     lock{ pCache->_awaitingMutex };
             vector<shared_ptr<TextureLoadBlock>>& listAwaiting = pCache->_listAwaitingUpload;
             for ( size_t index = 0; index < listAwaiting.size(); ++index )
             {

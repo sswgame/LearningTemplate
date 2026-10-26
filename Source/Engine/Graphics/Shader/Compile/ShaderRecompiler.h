@@ -60,10 +60,10 @@ namespace sw
         void triggerReloadAll();
 
     private:
-        mutable shared_mutex      _mutex;
-        vector<ShaderCompileDesc> _listPendingReload;
-        ShaderRecompiledDelegate  _onAnyRecompiled;
-        string                    _label;
-        bool                      _bInitialized{ false };
+        mutable shared_mutex                         _mutex;
+        vector<ShaderCompileDesc> _listPendingReload SW_GUARDED_BY( _mutex );
+        ShaderRecompiledDelegate                     _onAnyRecompiled;
+        string                                       _label;
+        bool                                         _bInitialized{ false };
     };
 } // namespace sw

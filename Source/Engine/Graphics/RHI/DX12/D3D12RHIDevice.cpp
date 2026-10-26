@@ -125,8 +125,8 @@ namespace sw
 
     D3D12_RESOURCE_STATES D3D12RHIDevice::getTrackedTextureState( RHITextureHandle texture )
     {
-        std::scoped_lock<mutex> lock{ _resourceStateMutex };
-        const auto              offscreenIt = _mapOffscreenTexture.find( texture );
+        ScopedLock<mutex> lock{ _resourceStateMutex };
+        const auto        offscreenIt = _mapOffscreenTexture.find( texture );
         if ( offscreenIt == _mapOffscreenTexture.end() )
             return D3D12_RESOURCE_STATE_COMMON;
         return offscreenIt->second._state;
@@ -134,8 +134,8 @@ namespace sw
 
     bool D3D12RHIDevice::findOffscreenTargetView( RHITextureHandle texture, uint32 slice, OffscreenTargetView& outView )
     {
-        std::scoped_lock<mutex> lock{ _resourceStateMutex };
-        const auto              it = _mapOffscreenTexture.find( texture );
+        ScopedLock<mutex> lock{ _resourceStateMutex };
+        const auto        it = _mapOffscreenTexture.find( texture );
         if ( it == _mapOffscreenTexture.end() )
             return false;
 
@@ -214,7 +214,7 @@ namespace sw
 
     uint32 D3D12RHIDevice::acquireOnlineBlock()
     {
-        std::scoped_lock<mutex> lock{ _onlineBlockMutex };
+        ScopedLock<mutex> lock{ _onlineBlockMutex };
         // 프레임 끝까지 기다리지 않고 펜스가 지난 묶음을 먼저 거둔다 — 한 프레임에 리스트가 많으면(미리보기 씬 · 컴퓨트) 블록 수보다 리스트가 많다.
         if ( _listFreeOnlineBlock.empty() )
             recycleCompletedOnlineBlocksLocked( _fence->GetCompletedValue() );
@@ -242,7 +242,7 @@ namespace sw
 
         // GPU 가 이 리스트의 테이블을 아직 읽는 중이다. 현재 펜스가 지난 뒤에야 블록을 다시 내준다.
         // 벡터를 복사하지 않고 통째로 묶음에 옮긴다. 상태는 풀에서 온 빈 벡터를 받아 다음 기록에 그대로 쓴다.
-        std::scoped_lock<mutex> lock{ _onlineBlockMutex };
+        ScopedLock<mutex>       lock{ _onlineBlockMutex };
         OnlineBlockRecycleBatch batch{};
         batch._fence = _fenceValue.load();
         if ( _listOnlineRecyclePool.empty() == false )
@@ -256,7 +256,7 @@ namespace sw
 
     void D3D12RHIDevice::recycleCompletedOnlineBlocks( uint64 completedFence )
     {
-        std::scoped_lock<mutex> lock{ _onlineBlockMutex };
+        ScopedLock<mutex> lock{ _onlineBlockMutex };
         recycleCompletedOnlineBlocksLocked( completedFence );
     }
 

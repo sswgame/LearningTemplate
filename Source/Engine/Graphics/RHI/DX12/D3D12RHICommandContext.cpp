@@ -79,7 +79,7 @@ namespace sw
         // 렌더 스레드 안에서 레지스트리는 기록 중에 바뀌지 않는다(등록/해제는 그래프 셋업에서 끝나고 assertRegistryMutableNow 가 감시한다). 그러나
         // **게임 스레드**는 렌더 스레드의 기록과 겹쳐 버퍼를 만들고 부순다(에디터가 없는 빌드 — 오브젝트가 사라지며 머티리얼 인스턴스가 풀린다).
         // 그 쓰기와 겹치지 않게 짧은 읽기 락을 잡는다(경합이 없으면 원자 연산 하나). const 참조로 받는 것도 중요하다.
-        std::shared_lock<shared_mutex>                        registryLock{ _pDevice->_bindlessMutex };
+        ScopedSharedLock<shared_mutex>                        registryLock{ _pDevice->_bindlessMutex };
         const vector<D3D12RHIDevice::BindlessResourceRecord>& listRegistry =
             bUav ? _pDevice->_listRegisteredUAV : _pDevice->_listRegisteredBindless;
         if ( index >= static_cast<RHIDescriptorIndex>( listRegistry.size() ) )
@@ -105,7 +105,7 @@ namespace sw
         if ( index == kInvalidDescriptorIndex )
             return D3D12_CPU_DESCRIPTOR_HANDLE{};
         // resolveBufferAddress 와 같은 이유로 짧은 읽기 락을 잡는다.
-        std::shared_lock<shared_mutex>                        registryLock{ _pDevice->_bindlessMutex };
+        ScopedSharedLock<shared_mutex>                        registryLock{ _pDevice->_bindlessMutex };
         const vector<D3D12RHIDevice::BindlessResourceRecord>& listRegistry =
             bUav ? _pDevice->_listRegisteredUAV : _pDevice->_listRegisteredBindless;
         if ( index >= static_cast<RHIDescriptorIndex>( listRegistry.size() ) )
@@ -264,7 +264,7 @@ namespace sw
         // 상태 확인과 배리어 기록이 한 덩어리여야 한다. RenderGraph::executeParallel 이 같은 레벨의
         // 패스 콜백을 여러 스레드에서 돌리는데, 둘이 같은 텍스처를 전이하면 둘 다 같은 "이전 상태" 를
         // 보고 각자 배리어를 쏴서 두 번째가 before==after 가 된다(검증 오류 → 디바이스 제거).
-        std::scoped_lock<mutex> lock{ _pDevice->_resourceStateMutex };
+        ScopedLock<mutex> lock{ _pDevice->_resourceStateMutex };
 
         auto it = _pDevice->_mapOffscreenTexture.find( texture );
         if ( it == _pDevice->_mapOffscreenTexture.end() )
@@ -388,7 +388,7 @@ namespace sw
             return;
         }
 
-        std::scoped_lock<mutex> lock{ _pDevice->_resourceStateMutex };
+        ScopedLock<mutex> lock{ _pDevice->_resourceStateMutex };
 
         D3D12_RESOURCE_BARRIER barrier{};
         barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -462,8 +462,8 @@ namespace sw
 
         bool bDepth = false;
         {
-            std::scoped_lock<mutex> lock{ _pDevice->_resourceStateMutex };
-            const auto              it = _pDevice->_mapOffscreenTexture.find( texture );
+            ScopedLock<mutex> lock{ _pDevice->_resourceStateMutex };
+            const auto        it = _pDevice->_mapOffscreenTexture.find( texture );
             if ( it == _pDevice->_mapOffscreenTexture.end() )
                 return;
             bDepth = it->second._bHasDsv != SW_FALSE;
@@ -936,8 +936,8 @@ namespace sw
         const D3D12_RESOURCE_STATES stateAfter = toD3D12BufferState( newState );
         D3D12_RESOURCE_STATES       stateBefore;
         {
-            std::scoped_lock<mutex> lock{ _pDevice->_resourceStateMutex };
-            auto                    stateIt = _pDevice->_mapStructuredBufferState.find( buffer );
+            ScopedLock<mutex> lock{ _pDevice->_resourceStateMutex };
+            auto              stateIt = _pDevice->_mapStructuredBufferState.find( buffer );
             if ( stateIt == _pDevice->_mapStructuredBufferState.end() )
                 return;
             if ( stateIt->second == stateAfter )

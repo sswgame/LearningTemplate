@@ -27,7 +27,7 @@ namespace sw
         SW_ASSERT( soloReservationMicroseconds >= 0 );
         const uint64 slotCount = capacityBytes / alignmentBytes;
         SW_ASSERT( slotCount < SpanAllocator::kInvalidOffset );
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _slots.reset( static_cast<uint32>( slotCount ) );
         _capacityBytes                 = slotCount * alignmentBytes;
         _alignmentBytes                = alignmentBytes;
@@ -41,7 +41,7 @@ namespace sw
 
     void RHIStagingAllocator::shutdown()
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _slots.reset( 0 );
         _capacityBytes                 = 0;
         _soloMaxBytes                  = 0;
@@ -54,9 +54,9 @@ namespace sw
     RHIStagingAllocateResult RHIStagingAllocator::allocate( uint64 sizeBytes, uint64 completedSerial, RHIStagingSpan& outSpan )
     {
         outSpan = RHIStagingSpan{};
-        std::scoped_lock<mutex> lock{ _mutex };
-        const bool              bSolo     = sizeBytes > _capacityBytes;
-        const bool              bTooLarge = sizeBytes == 0 || ( bSolo && sizeBytes > _soloMaxBytes );
+        ScopedLock<mutex> lock{ _mutex };
+        const bool        bSolo     = sizeBytes > _capacityBytes;
+        const bool        bTooLarge = sizeBytes == 0 || ( bSolo && sizeBytes > _soloMaxBytes );
         if ( bTooLarge )
             return RHIStagingAllocateResult::TooLarge;
 
@@ -100,7 +100,7 @@ namespace sw
     {
         SW_ASSERT( serial != 0 );
         SW_ASSERT( span._sizeBytes != 0 );
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         if ( span._bSolo != SW_FALSE )
         {
             SW_ASSERT( _soloSizeBytes == span._sizeBytes && _soloSerial == 0 );
@@ -113,7 +113,7 @@ namespace sw
     void RHIStagingAllocator::free( const RHIStagingSpan& span )
     {
         SW_ASSERT( span._sizeBytes != 0 );
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         if ( span._bSolo != SW_FALSE )
         {
             SW_ASSERT( _soloSizeBytes == span._sizeBytes && _soloSerial == 0 );
@@ -130,31 +130,31 @@ namespace sw
 
     void RHIStagingAllocator::freeCompleted( uint64 completedSerial )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         freeCompletedLocked( completedSerial );
     }
 
     uint64 RHIStagingAllocator::getCapacityBytes() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _capacityBytes;
     }
 
     uint64 RHIStagingAllocator::getSoloMaxBytes() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _soloMaxBytes;
     }
 
     uint32 RHIStagingAllocator::getLiveCount() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _liveCount;
     }
 
     bool RHIStagingAllocator::hasLiveSolo() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _soloSizeBytes != 0;
     }
 

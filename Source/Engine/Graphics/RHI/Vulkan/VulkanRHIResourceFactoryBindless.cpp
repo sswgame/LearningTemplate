@@ -64,8 +64,8 @@ namespace sw
         if ( _pDevice->_transferSerials.isTextureReadyToRegister( record._lastTransferSerial.load(), texture ) == false )
             return kInvalidDescriptorIndex;
 
-        std::unique_lock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
-        const RHIDescriptorIndex       descriptorIndex = reserveFreeListIndex( _pDevice->_listTextureUsed, _pDevice->_listTextureFree );
+        UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
+        const RHIDescriptorIndex descriptorIndex = reserveFreeListIndex( _pDevice->_listTextureUsed, _pDevice->_listTextureFree );
         if ( descriptorIndex >= _pDevice->kBindlessTextureCount )
         {
             SW_LOG_ERROR( "Bindless texture table full." );
@@ -88,14 +88,14 @@ namespace sw
 
         // 버퍼는 인덱스 → 핸들 표에만 올린다. 실제 VkBuffer · 오프셋은 슬롯 세트를 쓰는 순간(flushSlotSet)에 푼다.
         // 링 상수버퍼의 프레임 오프셋도 그때 더한다.
-        std::unique_lock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
+        UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
         return allocateFreeListIndex( _pDevice->_listBindlessSourceBuffer, _pDevice->_listBindlessFree, buffer );
     }
 
     void VulkanRHIResourceFactory::unregisterBindlessResource( RHIDescriptorIndex index )
     {
         _pDevice->assertRegistryMutableNow( "unregisterBindlessResource" );
-        std::unique_lock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
+        UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
         // 버퍼가 소유하지 않는 인덱스(텍스처 SRV 인덱스가 잘못 넘어왔거나 이중 해제)를 프리리스트에
         // 넣으면 다음 registerBindlessBufferSrv 가 살아 있는 다른 버퍼의 슬롯을 덮어쓴다. 실제로
         // 트랜지언트 텍스처 인덱스 0 · 1 · 2 가 여기로 와서 패스 CB 슬롯 2 에 인스턴스 버퍼가 들어갔다.
@@ -115,7 +115,7 @@ namespace sw
         VulkanRHIDevice* pDevice = _pDevice;
         _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [pDevice, index, bUav]()
         {
-            std::unique_lock<shared_mutex> lock{ pDevice->_bindlessMutex };
+            UniqueLock<shared_mutex> lock{ pDevice->_bindlessMutex };
             ( bUav ? pDevice->_listUavFree : pDevice->_listBindlessFree ).push_back( index );
         } ),
                                                    _pDevice->_frameFenceCounter + 1 );
@@ -144,8 +144,8 @@ namespace sw
     {
         if ( record._bindlessIndex == kInvalidDescriptorIndex )
             return;
-        std::unique_lock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
-        const RHIDescriptorIndex       index = record._bindlessIndex;
+        UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
+        const RHIDescriptorIndex index = record._bindlessIndex;
         if ( index < _pDevice->_listTextureUsed.size() && _pDevice->_listTextureUsed[index] != 0 )
         {
             // 원소를 더미로 되돌리는 것도, 인덱스 재사용도 GPU 펜스 뒤에 한다. update-after-bind 라도 실행 중인
@@ -155,7 +155,7 @@ namespace sw
             VulkanRHIDevice* pDevice          = _pDevice;
             _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [pDevice, index]()
             {
-                std::unique_lock<shared_mutex> lock{ pDevice->_bindlessMutex };
+                UniqueLock<shared_mutex> lock{ pDevice->_bindlessMutex };
                 pDevice->writeBindlessTextureSlot( index, pDevice->_bindlessDummyView, static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ) );
                 releaseFreeListIndex( pDevice->_listTextureUsed, pDevice->_listTextureFree, index, uint8{ 0 } );
             } ),
@@ -169,8 +169,8 @@ namespace sw
         _pDevice->assertRegistryMutableNow( "registerBindlessBufferUav" );
         if ( _pDevice->resolveAllocatedBuffer( buffer ) == nullptr )
             return kInvalidDescriptorIndex;
-        std::unique_lock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
-        const RHIDescriptorIndex       index = allocateFreeListIndex( _pDevice->_listUavSourceBuffer, _pDevice->_listUavFree, buffer );
+        UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
+        const RHIDescriptorIndex index = allocateFreeListIndex( _pDevice->_listUavSourceBuffer, _pDevice->_listUavFree, buffer );
         if ( index >= _pDevice->_listUavSourceTexture.size() )
             _pDevice->_listUavSourceTexture.resize( index + 1, RHITextureHandle{ 0 } );
         _pDevice->_listUavSourceTexture[index] = RHITextureHandle{ 0 };
@@ -188,8 +188,8 @@ namespace sw
             return kInvalidDescriptorIndex;
 
         // 버퍼 UAV 와 같은 인덱스 공간이다. 인덱스가 곧 RW 텍스처 배열(set 1 binding 3)의 원소다.
-        std::unique_lock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
-        const RHIDescriptorIndex       index = allocateFreeListIndex( _pDevice->_listUavSourceBuffer, _pDevice->_listUavFree, RHIBufferHandle{ 0 } );
+        UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
+        const RHIDescriptorIndex index = allocateFreeListIndex( _pDevice->_listUavSourceBuffer, _pDevice->_listUavFree, RHIBufferHandle{ 0 } );
         if ( index >= _pDevice->kBindlessStorageImageCount )
         {
             SW_LOG_ERROR( "The RW texture array (%#) is full.", _pDevice->kBindlessStorageImageCount );
@@ -206,9 +206,9 @@ namespace sw
     void VulkanRHIResourceFactory::unregisterBindlessUav( RHIDescriptorIndex index )
     {
         _pDevice->assertRegistryMutableNow( "unregisterBindlessUav" );
-        std::unique_lock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
-        const bool                     bBuffer  = index < _pDevice->_listUavSourceBuffer.size() && _pDevice->_listUavSourceBuffer[index] != 0;
-        const bool                     bTexture = index < _pDevice->_listUavSourceTexture.size() && _pDevice->_listUavSourceTexture[index] != 0;
+        UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
+        const bool               bBuffer  = index < _pDevice->_listUavSourceBuffer.size() && _pDevice->_listUavSourceBuffer[index] != 0;
+        const bool               bTexture = index < _pDevice->_listUavSourceTexture.size() && _pDevice->_listUavSourceTexture[index] != 0;
         if ( bBuffer == false && bTexture == false )
             return;
         if ( bBuffer )

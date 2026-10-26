@@ -72,7 +72,7 @@ namespace sw
         if ( handle != 0 )
         {
             // 렌더 스레드가 드로우마다 이 표를 읽는다. 게임 스레드의 삽입(재배치)이 그와 겹치지 않게 배타 락으로 넣는다.
-            std::unique_lock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
+            UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
             _pDevice->_mapCbSlotSize[handle] = aligned;
         }
         return handle;
@@ -87,7 +87,7 @@ namespace sw
         // 이번 프레임 칸에 쓰고, 나머지 칸은 링이 그 칸으로 돌아올 때 채운다(`RHIConstantBufferMirror` — 값이 바뀔 때만 쓰는 머티리얼 버퍼가
         // 세 프레임 중 두 프레임을 옛 값으로 그리던 것). 링 상수버퍼가 아니면(칸 크기가 없다) 버퍼 앞에 그대로 쓴다.
         // 디스크립터는 여기서 손대지 않는다. 드로우 직전 슬롯 세트를 쓸 때(flushSlotSet) 이번 프레임 칸의 오프셋을 넣는다.
-        std::shared_lock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
+        ScopedSharedLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
         if ( _pDevice->_mapCbSlotSize.contains( buffer ) == false )
         {
             VulkanRHIDevice::VulkanBufferRecord* pRecord = _pDevice->resolveAllocatedBuffer( buffer );
@@ -390,7 +390,7 @@ namespace sw
         // 렌더 스레드만 쓴다(여기서 쓰면 경쟁이다). 핸들은 세대가 있어 다시 쓰이지 않으므로 지운 핸들은 드로우에서 풀리지 않고,
         // 그 드로우는 버리고 알린다(`bindMeshVertexBufferForDraw` · `RHIDrawDiagnostics`).
         {
-            std::unique_lock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
+            UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
             _pDevice->_mapCbSlotSize.erase( buffer );
             _pDevice->_constantBufferMirror.forget( buffer );
         }
@@ -401,7 +401,7 @@ namespace sw
 
         // 아직 등록돼 있으면 인덱스를 반납한다 (unregister 를 안 부른 소유자 정리). 디스크립터는 드로우 시점 슬롯 세트에만
         // 있으므로 되돌릴 것이 없다.
-        std::unique_lock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
+        UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
         for ( size_t bufferIndex = 0; bufferIndex < _pDevice->_listBindlessSourceBuffer.size(); ++bufferIndex )
         {
             if ( _pDevice->_listBindlessSourceBuffer[bufferIndex] != buffer )
@@ -662,7 +662,7 @@ namespace sw
             ringOffset += mipSpan._sizeBytes;
         }
 
-        std::scoped_lock<mutex>            transferLock{ _pDevice->_transferMutex };
+        ScopedLock<mutex>                  transferLock{ _pDevice->_transferMutex };
         VulkanRHIDevice::VulkanTransferJob job{};
         if ( _pDevice->beginTransferJob( job ) == false )
         {
@@ -671,7 +671,7 @@ namespace sw
         }
         uint32 layoutBefore{ 0 };
         {
-            std::scoped_lock<mutex> layoutLock{ _pDevice->_imageLayoutMutex };
+            ScopedLock<mutex> layoutLock{ _pDevice->_imageLayoutMutex };
             layoutBefore = pRecord->_layout;
         }
 
@@ -703,7 +703,7 @@ namespace sw
         ring._ledger.markSubmitted( span, serial );
         // 레이아웃 기록은 제출 순서를 따른다 — 뒤에 기록 · 제출하는 명령은 이 전송 뒤에 실행되므로 지금 바꿔 둔다.
         {
-            std::scoped_lock<mutex> layoutLock{ _pDevice->_imageLayoutMutex };
+            ScopedLock<mutex> layoutLock{ _pDevice->_imageLayoutMutex };
             pRecord->_layout = static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
         }
         pRecord->_lastTransferSerial.store( serial );
@@ -738,7 +738,7 @@ namespace sw
         const uint64 ringOffset = alignUpToMultiple( span._offsetBytes, copyAlignment );
         Memory::copy( ring.getSpanMappedBase( span ) + ringOffset, desc._pData, static_cast<size_t>( usedBytes ) );
 
-        std::scoped_lock<mutex>            transferLock{ _pDevice->_transferMutex };
+        ScopedLock<mutex>                  transferLock{ _pDevice->_transferMutex };
         VulkanRHIDevice::VulkanTransferJob job{};
         if ( _pDevice->beginTransferJob( job ) == false )
         {
@@ -747,7 +747,7 @@ namespace sw
         }
         uint32 layoutBefore{ 0 };
         {
-            std::scoped_lock<mutex> layoutLock{ _pDevice->_imageLayoutMutex };
+            ScopedLock<mutex> layoutLock{ _pDevice->_imageLayoutMutex };
             layoutBefore = pRecord->_layout;
         }
 
@@ -787,7 +787,7 @@ namespace sw
         }
         ring._ledger.markSubmitted( span, serial );
         {
-            std::scoped_lock<mutex> layoutLock{ _pDevice->_imageLayoutMutex };
+            ScopedLock<mutex> layoutLock{ _pDevice->_imageLayoutMutex };
             pRecord->_layout = static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
         }
         pRecord->_lastTransferSerial.store( serial );
@@ -921,7 +921,7 @@ namespace sw
             return RHITransferSubmit::fromUnaccepted( allocateResult );
         const uint64 ringOffset = alignUpToMultiple( span._offsetBytes, copyAlignment );
 
-        std::scoped_lock<mutex>            transferLock{ _pDevice->_transferMutex };
+        ScopedLock<mutex>                  transferLock{ _pDevice->_transferMutex };
         VulkanRHIDevice::VulkanTransferJob job{};
         if ( _pDevice->beginTransferJob( job ) == false )
         {
@@ -930,7 +930,7 @@ namespace sw
         }
         uint32 layoutBeforeValue{ 0 };
         {
-            std::scoped_lock<mutex> layoutLock{ _pDevice->_imageLayoutMutex };
+            ScopedLock<mutex> layoutLock{ _pDevice->_imageLayoutMutex };
             layoutBeforeValue = pRecord->_layout;
         }
 
@@ -984,7 +984,7 @@ namespace sw
             return RHITransferSubmit::rejected();
         }
         {
-            std::scoped_lock<mutex> layoutLock{ _pDevice->_imageLayoutMutex };
+            ScopedLock<mutex> layoutLock{ _pDevice->_imageLayoutMutex };
             pRecord->_layout = static_cast<uint32>( layoutAfter );
         }
         pRecord->_lastReadbackSerial.store( serial );

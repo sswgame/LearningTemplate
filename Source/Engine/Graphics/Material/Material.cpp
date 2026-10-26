@@ -91,7 +91,7 @@ namespace sw
             releaseRHI( _pRHIDevice );
         if ( _asyncLoadState != nullptr )
         {
-            std::scoped_lock<mutex> lock{ _asyncLoadState->_mutex };
+            ScopedLock<mutex> lock{ _asyncLoadState->_mutex };
             _asyncLoadState->_pMaterial = nullptr;
         }
     }

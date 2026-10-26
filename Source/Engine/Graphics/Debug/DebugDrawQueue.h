@@ -143,8 +143,8 @@ namespace sw
     private:
         mutable mutex                       _mutex;
         vector<DebugLine>                   _listLine;
-        vector<DebugSphere>                 _listSphere;
-        vector<DebugText>                   _listText;
+        vector<DebugSphere> _listSphere     SW_GUARDED_BY( _mutex );
+        vector<DebugText> _listText         SW_GUARDED_BY( _mutex );
         vector<DebugLine>                   _listVisibleLine;
         vector<DebugSphere>                 _listVisibleSphere;
         vector<DebugText>                   _listVisibleText;

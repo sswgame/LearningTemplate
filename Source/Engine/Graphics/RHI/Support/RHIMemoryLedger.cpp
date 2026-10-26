@@ -134,7 +134,7 @@ namespace sw
         if ( bInvalidLedgerKey )
             return;
 
-        std::scoped_lock<mutex>           lock{ _mutex };
+        ScopedLock<mutex>                 lock{ _mutex };
         unordered_map<uint64, LiveEntry>& mapIDToEntry = _arrMapIDToEntry[spaceIndex];
         const auto                        entryIt      = mapIDToEntry.find( key._id );
         if ( entryIt != mapIDToEntry.end() )
@@ -166,7 +166,7 @@ namespace sw
         if ( spaceIndex >= kRHIMemoryKeySpaceCount )
             return;
 
-        std::scoped_lock<mutex>           lock{ _mutex };
+        ScopedLock<mutex>                 lock{ _mutex };
         unordered_map<uint64, LiveEntry>& mapIDToEntry = _arrMapIDToEntry[spaceIndex];
         const auto                        entryIt      = mapIDToEntry.find( key._id );
         if ( entryIt == mapIDToEntry.end() )
@@ -180,14 +180,14 @@ namespace sw
         const uint32 kindIndex = static_cast<uint32>( kind );
         if ( kindIndex >= kRHIMemoryKindCount )
             return RHIMemoryKindStats{};
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _arrStat[kindIndex];
     }
 
     uint64 RHIMemoryLedger::getTrackedBytes() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        uint64                  total{ 0 };
+        ScopedLock<mutex> lock{ _mutex };
+        uint64            total{ 0 };
         for ( const RHIMemoryKindStats& stat : _arrStat )
         {
             total += stat._liveBytes;
@@ -201,7 +201,7 @@ namespace sw
         array<uint64, kRHIMemoryKindCount>        arrLiveBytes{};
         array<RHIMemoryKind, kRHIMemoryKindCount> arrKind{};
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             for ( uint32 kindIndex = 0; kindIndex < kRHIMemoryKindCount; ++kindIndex )
             {
                 arrLiveBytes[kindIndex] = _arrStat[kindIndex]._liveBytes;
@@ -215,13 +215,13 @@ namespace sw
 
     RHIMemoryBudget RHIMemoryLedger::getDriverBudget() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _driverBudget;
     }
 
     void RHIMemoryLedger::setDriverBudget( const RHIMemoryBudget& budget )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _driverBudget = budget;
     }
 
@@ -229,7 +229,7 @@ namespace sw
     {
         RHIMemorySummary summary{};
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             summary._budget    = _driverBudget;
             summary._sizeBasis = _sizeBasis;
             for ( const RHIMemoryKindStats& stat : _arrStat )

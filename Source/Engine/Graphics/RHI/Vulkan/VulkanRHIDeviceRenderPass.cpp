@@ -17,7 +17,7 @@ namespace sw
         if ( cmd == VK_NULL_HANDLE || record._image == VK_NULL_HANDLE )
             return;
 
-        std::scoped_lock<mutex> lock{ _imageLayoutMutex };
+        ScopedLock<mutex> lock{ _imageLayoutMutex };
         if ( record._layout == targetLayout )
             return;
 
@@ -40,7 +40,7 @@ namespace sw
 
     void VulkanRHIDevice::restoreDroppedFrameLayouts()
     {
-        std::scoped_lock<mutex> lock{ _imageLayoutMutex };
+        ScopedLock<mutex> lock{ _imageLayoutMutex };
         if ( _listDroppedFrameLayout.empty() )
             return;
         // 그 사이 지워진 텍스처는 찾지 못하고 넘어간다.

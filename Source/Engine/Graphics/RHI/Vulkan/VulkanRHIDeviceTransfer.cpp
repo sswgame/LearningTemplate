@@ -42,7 +42,7 @@ namespace sw
         { recycleTransferJob( job ); } );
         _transferReleaseQueue.flushAll();
         {
-            std::scoped_lock<mutex> jobLock{ _transferJobMutex };
+            ScopedLock<mutex> jobLock{ _transferJobMutex };
             for ( const VulkanTransferJob& job : _listFreeTransferJob )
             {
                 if ( job._fence != VK_NULL_HANDLE )
@@ -75,7 +75,7 @@ namespace sw
     void VulkanRHIDevice::destroyStagingRing( VulkanStagingRing& ring )
     {
         {
-            std::scoped_lock<mutex> soloLock{ ring._soloMutex };
+            ScopedLock<mutex> soloLock{ ring._soloMutex };
             destroyMappedStagingBuffer( ring._soloBuffer, ring._soloMemory, ring._pSoloMapped );
         }
         destroyMappedStagingBuffer( ring._buffer, ring._memory, ring._pMapped );
@@ -157,7 +157,7 @@ namespace sw
         if ( submitResult != RHISubmitResult::Accepted || outSpan._bSolo == SW_FALSE )
             return submitResult;
         // 장부가 단독 구간을 내줬다면 앞선 단독 구간은 이미 돌아왔다 — 남은 버퍼(아직 회수가 지우지 않은 것)를 GPU 가 더 쓰지 않는다.
-        std::scoped_lock<mutex> soloLock{ ring._soloMutex };
+        ScopedLock<mutex> soloLock{ ring._soloMutex };
         destroyMappedStagingBuffer( ring._soloBuffer, ring._soloMemory, ring._pSoloMapped );
         if ( createMappedStagingBuffer( outSpan._sizeBytes, usageFlags, "single transfer", ring._soloBuffer, ring._soloMemory, ring._pSoloMapped ) )
             return RHISubmitResult::Accepted;
@@ -166,7 +166,7 @@ namespace sw
 
     void VulkanRHIDevice::destroyIdleSoloBuffer( VulkanStagingRing& ring )
     {
-        std::scoped_lock<mutex> soloLock{ ring._soloMutex };
+        ScopedLock<mutex> soloLock{ ring._soloMutex };
         if ( ring._soloBuffer == VK_NULL_HANDLE )
             return;
         // 판정은 락 안에서 한다 — 밖에서 보면 그 사이 다른 스레드가 새 단독 구간을 받아 버퍼를 만들 수 있다.
@@ -180,7 +180,7 @@ namespace sw
     {
         outJob = VulkanTransferJob{};
         {
-            std::scoped_lock<mutex> jobLock{ _transferJobMutex };
+            ScopedLock<mutex> jobLock{ _transferJobMutex };
             if ( _listFreeTransferJob.empty() == false )
             {
                 outJob = _listFreeTransferJob.back();
@@ -240,7 +240,7 @@ namespace sw
             submitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
             submitInfo.commandBufferCount = 1;
             submitInfo.pCommandBuffers    = &job._commandBuffer;
-            std::scoped_lock<mutex> queueLock{ _queueMutex };
+            ScopedLock<mutex> queueLock{ _queueMutex };
             // 기록하는 사이에 장치를 잃었으면(다른 스레드의 손실 · rhi.removeDevice) 내지 않는다.
             result = isDeviceLost() ? VK_ERROR_DEVICE_LOST : vkQueueSubmit( _graphicsQueue, 1, &submitInfo, job._fence );
             // 시리얼은 큐에 낸 직후 같은 락 안에서 매긴다 — 락 밖에서 매기면 시리얼 순서가 큐 순서와 어긋나 워터마크가 끝나지 않은 제출을 덮는다(계약 5).
@@ -256,7 +256,7 @@ namespace sw
 
     void VulkanRHIDevice::recycleTransferJob( const VulkanTransferJob& job )
     {
-        std::scoped_lock<mutex> jobLock{ _transferJobMutex };
+        ScopedLock<mutex> jobLock{ _transferJobMutex };
         _listFreeTransferJob.push_back( job );
     }
 

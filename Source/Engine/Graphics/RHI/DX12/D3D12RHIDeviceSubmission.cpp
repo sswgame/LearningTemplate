@@ -47,13 +47,13 @@ namespace sw
 
     void D3D12RHIDevice::registerCommandList( D3D12RHICommandList* pCmdList )
     {
-        std::scoped_lock<mutex> lock{ _liveCmdListMutex };
+        ScopedLock<mutex> lock{ _liveCmdListMutex };
         _listLiveCmd.push_back( pCmdList );
     }
 
     void D3D12RHIDevice::unregisterCommandList( D3D12RHICommandList* pCmdList )
     {
-        std::scoped_lock<mutex> lock{ _liveCmdListMutex };
+        ScopedLock<mutex> lock{ _liveCmdListMutex };
         (void)VectorUtil::removeSingleSwap( _listLiveCmd, pCmdList ); // 등록되지 않은 리스트면 뺄 것이 없다
     }
 
@@ -86,7 +86,7 @@ namespace sw
 
         // 이 리스트가 방금 올린 버퍼를 읽을 수 있다. 열어 둔 업로드 복사를 먼저 내보낸다.
         {
-            std::scoped_lock<mutex> uploadLock{ _uploadSlotMutex };
+            ScopedLock<mutex> uploadLock{ _uploadSlotMutex };
             flushPendingUploads( true );
         }
         ID3D12CommandList* arr[] = { pList };
@@ -157,7 +157,7 @@ namespace sw
 
         // 여기까지 기록된 구조 버퍼 갱신 복사가 이 리스트들보다 먼저 가야 한다. 앞에 끼운다. **실행까지 업로드 락을 쥔다** — 닫아서 대기열에 넣은 복사
         // 리스트를 실행 전에 다른 스레드의 갱신이 `Reset` 하면 그 복사가 사라진다.
-        std::scoped_lock<mutex> uploadLock{ _uploadSlotMutex };
+        ScopedLock<mutex> uploadLock{ _uploadSlotMutex };
         flushPendingUploads( false );
         _commandQueue->ExecuteCommandLists( static_cast<UINT>( _listPendingSubmit.size() ), _listPendingSubmit.data() );
         _listPendingSubmit.clear();
@@ -227,7 +227,7 @@ namespace sw
         UINT64  fenceToWait{ 0 };
         HRESULT signalHr{ S_OK };
         {
-            std::scoped_lock<mutex> uploadLock{ _uploadSlotMutex };
+            ScopedLock<mutex> uploadLock{ _uploadSlotMutex };
             flushPendingUploads( true );
             fenceToWait = _fenceValue.load();
             signalHr    = _commandQueue->Signal( _fence.Get(), fenceToWait );
@@ -324,7 +324,7 @@ namespace sw
         UINT64  fenceToSignal{ 0 };
         HRESULT signalHr{ S_OK };
         {
-            std::scoped_lock<mutex> uploadLock{ _uploadSlotMutex };
+            ScopedLock<mutex> uploadLock{ _uploadSlotMutex };
             fenceToSignal = _fenceValue.load();
             signalHr      = _commandQueue->Signal( _fence.Get(), fenceToSignal );
             _fenceValue.store( fenceToSignal + 1 );
@@ -353,7 +353,7 @@ namespace sw
         // 반환할 때마다 엔트리(ComPtr 두 개)가 복사된다.
         D3D12CommandListEntry entry;
         {
-            std::scoped_lock<mutex> lock{ _cmdListPoolMutex };
+            ScopedLock<mutex> lock{ _cmdListPoolMutex };
             if ( _listFreeCmdListEntry.empty() == false )
             {
                 entry = std::move( _listFreeCmdListEntry.back() );
@@ -412,7 +412,7 @@ namespace sw
         // Reset 해도 안전하다.
         auto recycleCb = [this, entry]()
         {
-            std::scoped_lock<mutex> lock{ _cmdListPoolMutex };
+            ScopedLock<mutex> lock{ _cmdListPoolMutex };
             _listFreeCmdListEntry.push_back( entry );
         };
         _releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, recycleCb ), _fenceValue );
@@ -627,7 +627,7 @@ namespace sw
             // 리스트를 실행 전에 다른 스레드의 갱신이 `Reset` 하면 GPUScene 복사가 사라진다(submitPendingIfImmediate 와 같은 이유).
             // 텍스처 전송은 제출 때 이미 큐에 나갔다 — 이 프레임 리스트들보다 먼저 실행된다(계약 3).
             {
-                std::scoped_lock<mutex> uploadLock{ _uploadSlotMutex };
+                ScopedLock<mutex> uploadLock{ _uploadSlotMutex };
                 flushPendingUploads( false );
 
                 // 프레임 세그먼트와 패스 리스트를 기록 순서 그대로 한 번에 제출한다.

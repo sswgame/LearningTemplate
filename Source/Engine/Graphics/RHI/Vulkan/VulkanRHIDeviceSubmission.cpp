@@ -69,7 +69,7 @@ namespace sw
 
         fixed_string<constant::kMaxBuffer64> lastMarker;
         {
-            std::scoped_lock<mutex> lock{ _submittedMarkerMutex };
+            ScopedLock<mutex> lock{ _submittedMarkerMutex };
             lastMarker = _lastSubmittedEventMarker;
         }
         SW_LOG_ERROR( "%#: VkResult=%# (%#) — last pass put in the submission order: '%#'", pWhere != nullptr ? pWhere : "<queue>", result,
@@ -94,7 +94,7 @@ namespace sw
     {
         if ( pMarker == nullptr || pMarker[0] == '\0' )
             return;
-        std::scoped_lock<mutex> lock{ _submittedMarkerMutex };
+        ScopedLock<mutex> lock{ _submittedMarkerMutex };
         _lastSubmittedEventMarker = pMarker;
     }
 
@@ -158,7 +158,7 @@ namespace sw
         if ( _device && isDeviceLost() == false )
         {
             {
-                std::scoped_lock<mutex> queueLock{ _queueMutex };
+                ScopedLock<mutex> queueLock{ _queueMutex };
                 reportQueueResult( static_cast<int32>( vkDeviceWaitIdle( _device ) ), "waitIdle: vkDeviceWaitIdle" );
             }
             // 큐가 비었으니 낸 전송은 모두 끝났다. 잃었으면 워터마크를 올리지 않는다 — 끝나지 않은 티켓이 Complete 로 보이면 안 된다.
@@ -501,7 +501,7 @@ namespace sw
         _listRingFrameNumber[_currentFrame] = ++_frameFenceCounter;
         if ( _frameStreamContext != nullptr )
             noteSubmittedEventMarker( _frameStreamContext->getLastEventMarker() );
-        std::unique_lock<mutex> queueLock{ _queueMutex };
+        UniqueLock<mutex> queueLock{ _queueMutex };
         // 기록하는 사이에 장치를 잃었으면(다른 스레드의 손실 · rhi.removeDevice) 내지 않는다. 버퍼는 위에서 닫았다.
         const bool     bDeviceLost  = isDeviceLost();
         const VkResult submitResult = bDeviceLost ? VK_ERROR_DEVICE_LOST : vkQueueSubmit( _graphicsQueue, 1, &submitInfo, _listInFlightFence[_currentFrame] );
@@ -554,7 +554,7 @@ namespace sw
         // 반환 대상은 이 하나다. 이름 있는 반환 객체가 여럿이면 NRVO 가 걸리지 않는다.
         VulkanCommandListEntry entry{};
         {
-            std::scoped_lock<mutex> lock{ _cmdListPoolMutex };
+            ScopedLock<mutex> lock{ _cmdListPoolMutex };
             if ( _listFreeCmdListEntry.empty() == false )
             {
                 entry = _listFreeCmdListEntry.back();
@@ -592,7 +592,7 @@ namespace sw
 
         {
             // 풀 묶음은 디바이스가 소유한다. 쌍은 값으로 복사돼 다니므로(지연 반환 람다 캡처) 빌려 쓰는 포인터만 든다.
-            std::scoped_lock<mutex> lock{ _cmdListPoolMutex };
+            ScopedLock<mutex> lock{ _cmdListPoolMutex };
             _listCmdListDescriptorPoolSet.push_back( make_unique<VulkanDescriptorPoolSet>() );
             entry._pDescriptorPoolSet = _listCmdListDescriptorPoolSet.back().get();
         }
@@ -608,13 +608,13 @@ namespace sw
 
     void VulkanRHIDevice::registerCommandList( VulkanRHICommandList* pCmdList )
     {
-        std::scoped_lock<mutex> lock{ _liveCmdListMutex };
+        ScopedLock<mutex> lock{ _liveCmdListMutex };
         _listLiveCmd.push_back( pCmdList );
     }
 
     void VulkanRHIDevice::unregisterCommandList( VulkanRHICommandList* pCmdList )
     {
-        std::scoped_lock<mutex> lock{ _liveCmdListMutex };
+        ScopedLock<mutex> lock{ _liveCmdListMutex };
         (void)VectorUtil::removeSingleSwap( _listLiveCmd, pCmdList ); // 등록되지 않은 리스트면 뺄 것이 없다
     }
 
@@ -627,7 +627,7 @@ namespace sw
         // 끝났다고 확인된 뒤에야 재사용 풀로 돌려보낸다(대기 없음).
         auto recycleCb = [this, entry]()
         {
-            std::scoped_lock<mutex> lock{ _cmdListPoolMutex };
+            ScopedLock<mutex> lock{ _cmdListPoolMutex };
             _listFreeCmdListEntry.push_back( entry );
         };
         _releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, recycleCb ), _frameFenceCounter + 1 );
@@ -685,14 +685,14 @@ namespace sw
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers    = &listBuffer;
         noteSubmittedEventMarker( pList->getLastEventMarker() );
-        std::scoped_lock<mutex> queueLock{ _queueMutex };
-        VkResult                queueResult = isDeviceLost() ? VK_ERROR_DEVICE_LOST : vkQueueSubmit( _graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE );
+        ScopedLock<mutex> queueLock{ _queueMutex };
+        VkResult          queueResult = isDeviceLost() ? VK_ERROR_DEVICE_LOST : vkQueueSubmit( _graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE );
         if ( queueResult == VK_SUCCESS )
             queueResult = vkQueueWaitIdle( _graphicsQueue );
         reportQueueResult( static_cast<int32>( queueResult ), "executeCommandListImmediate" );
 
         // 제출한 리스트가 바꾼 레이아웃은 실제로 일어났으므로 되돌릴 기록에서 뺀다.
-        std::scoped_lock<mutex> layoutLock{ _imageLayoutMutex };
+        ScopedLock<mutex> layoutLock{ _imageLayoutMutex };
         for ( size_t index = _listDroppedFrameLayout.size(); index > 0; --index )
         {
             if ( _listDroppedFrameLayout[index - 1]._cmd == listBuffer )
@@ -740,8 +740,8 @@ namespace sw
                 _bFrameAcquireWaitPending    = SW_FALSE;
             }
             {
-                std::scoped_lock<mutex> queueLock{ _queueMutex };
-                const VkResult          flushResult = isDeviceLost() ? VK_ERROR_DEVICE_LOST : vkQueueSubmit( _graphicsQueue, 1, &flushInfo, VK_NULL_HANDLE );
+                ScopedLock<mutex> queueLock{ _queueMutex };
+                const VkResult    flushResult = isDeviceLost() ? VK_ERROR_DEVICE_LOST : vkQueueSubmit( _graphicsQueue, 1, &flushInfo, VK_NULL_HANDLE );
                 reportQueueResult( static_cast<int32>( flushResult ), "executeCommandList: vkQueueSubmit (immediate)" );
             }
             _listPendingSubmit.clear();
