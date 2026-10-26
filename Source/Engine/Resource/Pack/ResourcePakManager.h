@@ -160,10 +160,10 @@ namespace sw
          */
         shared_ptr<ResourcePakReader> findReaderWithFile( string_view relativePath, uint64& outPathHash, string_view& outPathInPack ) const;
 
-        mutable mutex          _vfsMutex;
-        vector<MountedPack>    _listMountedPack;
-        DlcEntitlementDelegate _dlcValidator;
-        bool                   _bAllowLooseFiles;
+        mutable mutex                        _vfsMutex;
+        vector<MountedPack> _listMountedPack SW_GUARDED_BY( _vfsMutex );
+        DlcEntitlementDelegate               _dlcValidator;
+        bool                                 _bAllowLooseFiles;
     };
 
 } // namespace sw

@@ -134,8 +134,8 @@ namespace sw
         AssetMetaReadResult loadMetaFile( string_view relativePath, UUID& outGuid, bool* pOutImported = nullptr ) const;
 
     private:
-        mutable shared_mutex           _mutex;
-        map<string, UUID, std::less<>> _mapPathToGuid;
-        unordered_map<UUID, string>    _mapGuidToPath;
+        mutable shared_mutex                          _mutex;
+        map<string, UUID, std::less<>> _mapPathToGuid SW_GUARDED_BY( _mutex );
+        unordered_map<UUID, string> _mapGuidToPath    SW_GUARDED_BY( _mutex );
     };
 } // namespace sw

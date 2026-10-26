@@ -151,7 +151,7 @@ namespace sw
          * @details 취소해도 이미 큐에 들어간 워커 태스크는 계속 실행된다. 세대가 없으면
          *          그 오래된 태스크가 완료되면서 새 요청의 콜백을 대신 소비해 버린다.
          */
-        unordered_map<string, uint64> _mapRequestGeneration;
+        unordered_map<string, uint64> _mapRequestGeneration SW_GUARDED_BY( _mutex );
         /** @brief 진행 중인 바이트 읽기의 IO 핸들입니다(경로당 하나). 취소와 종료가 OS 에 걸린 읽기를 멈추고 기다리는 데 씁니다. */
         unordered_map<string, AsyncReadHandle> _mapInFlightIO;
         /**

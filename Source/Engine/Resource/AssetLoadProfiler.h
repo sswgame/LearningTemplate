@@ -101,10 +101,10 @@ namespace sw
             uint32               _arrProfilerSlot[static_cast<uint32>( AssetLoadPhase::Count )]{};
         };
 
-        mutable mutex           _mutex;
-        vector<KindEntry>       _listKind;
-        vector<AssetLoadRecord> _listSlowest; ///< 느린 것부터(최대 kSlowestCount)
-        uint32                  _loadCount;
+        mutable mutex                        _mutex;
+        vector<KindEntry> _listKind          SW_GUARDED_BY( _mutex );
+        vector<AssetLoadRecord> _listSlowest SW_GUARDED_BY( _mutex ); ///< 느린 것부터(최대 kSlowestCount)
+        uint32 _loadCount                    SW_GUARDED_BY( _mutex );
     };
 } // namespace sw
 

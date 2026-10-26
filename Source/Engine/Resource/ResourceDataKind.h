@@ -83,9 +83,9 @@ namespace sw
         uint32 getCount() const;
 
     private:
-        mutable mutex                                          _mutex;         ///< 등록 목록을 지킨다(로더 실행은 잠금 밖)
-        RegistrationList<const ResourceDataKind>               _registration;  ///< 이름은 대소문자를 무시하고, 이름 없는 등록은 거절한다
-        unordered_map<string, vector<const ResourceDataKind*>> _mapModuleKind; ///< 모듈 이름 → 그 모듈이 `registerModuleKinds` 로 올린 종류(내릴 때 뺀다)
+        mutable mutex                                                         _mutex;                  ///< 등록 목록을 지킨다(로더 실행은 잠금 밖)
+        RegistrationList<const ResourceDataKind> _registration                SW_GUARDED_BY( _mutex ); ///< 이름은 대소문자를 무시하고, 이름 없는 등록은 거절한다
+        unordered_map<string, vector<const ResourceDataKind*>> _mapModuleKind SW_GUARDED_BY( _mutex ); ///< 모듈 이름 → 그 모듈이 `registerModuleKinds` 로 올린 종류(내릴 때 뺀다)
     };
 } // namespace sw
 

@@ -81,8 +81,8 @@ namespace sw
         uint32     arrSlot[static_cast<uint32>( AssetLoadPhase::Count )]{};
         const bool bFrameProfiler = engine::areEngineServicesBound();
         {
-            std::scoped_lock<mutex> lock{ _mutex };
-            KindEntry*              pEntry = nullptr;
+            ScopedLock<mutex> lock{ _mutex };
+            KindEntry*        pEntry = nullptr;
             for ( KindEntry& entry : _listKind )
             {
                 if ( entry._summary._kind == record._kind )
@@ -147,7 +147,7 @@ namespace sw
     {
         outListSummary.clear();
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             for ( const KindEntry& entry : _listKind )
             {
                 if ( entry._summary._count != 0 ) // 비운 뒤 아직 받지 않은 종류
@@ -160,13 +160,13 @@ namespace sw
 
     void AssetLoadProfiler::collectSlowest( vector<AssetLoadRecord>& outListRecord ) const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         outListRecord = _listSlowest;
     }
 
     uint32 AssetLoadProfiler::getLoadCount() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _loadCount;
     }
 
@@ -210,7 +210,7 @@ namespace sw
 
     void AssetLoadProfiler::reset()
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         // 프레임 프로파일러 구간 번호는 그대로 둔다(같은 이름은 같은 번호다) — 누적만 비운다.
         for ( KindEntry& entry : _listKind )
         {
