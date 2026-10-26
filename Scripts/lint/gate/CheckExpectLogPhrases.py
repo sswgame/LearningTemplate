@@ -15,6 +15,8 @@
 - `ExpectLog/UseID`: `contains` 문구가 id 가 있는 로그에서만 나온다 — `id` 로 지정한다.
 - `ExpectLog/PartialLine`: `contains`(`count="0"` 이 아닌 것)가 id 없는 Warning · Error 로그의 **일부분**이다. 런타임의 선언은 본문 전체가 같은 줄만 가리므로(부분 문자열은 다른 줄까지 가린다) 이 문구는 그 줄을 가리지 못한다 —
   본문 전체를 적거나 로그에 `SW_LOG_*_ID` 를 붙여 `id` 로 지정한다. shortcut: 같은 문구가 Info 줄에도 맞으면(셈만 하는 단언일 수 있어) 보지 않는다.
+- `ExpectLog/AssembledLine`: `contains`(`count="0"` 이 아닌 것)가 id 없는 Warning · Error **조립 문장**(서식 구멍 `%#` 등이 낀 글)만 가리킨다. 실행 때 값이 들어가 문구로는 안정적으로 선언할 수 없다 —
+  로그에 `SW_LOG_*_ID` 를 붙여 `id` 로 지정한다. 소스 전체의 id 없는 조립 문장을 막지 않는 이유: 시나리오가 선언하는 줄만 이 규칙이 보고, 나머지는 실행 때 처리하지 않은 로그(15)가 잡는다.
 - `ExpectLog/LevelTag`: `contains` 가 `[Error]` · `[Warning]` 같은 수준 꼬리표다. 실행기가 세는 글은 로그 **본문**이라 수준 꼬리표는 들어 있지 않다
   (`count="0"` 이 항상 참이다). 처리하지 않은 Warning · Error 는 로그 게이트(`allowedlogs.json`)가 이미 실패로 센다.
 
@@ -301,6 +303,11 @@ def findExpectLogViolations(listStep: list[tuple[str, dict[str, str], str]], ind
         # 선언은 본문 전체가 같은 줄만 가린다(런타임 AutomationLogPolicy). id 없는 Warning · Error 로그만 가리키는 부분 문자열은 아무것도 가리지 못해 그 줄이 처리 안 된 줄로 남는다.
         listGated = [template for template in listFitting if template.level in _kGatedLevels and not template.logID]
         bDeclares = attrib.get("count") != "0"
+        listAssembled = [template for template in listGated if len(template.pieces) > 1]
+        if bDeclares and listAssembled and len(listAssembled) == len(listFitting) and any(isWholeBody(phrase, template.pieces) for template in listAssembled):
+            # 조립 문장(서식 구멍이 낀 글)은 실행 때 값이 들어가 본문 전체 일치로 선언하면 값이 바뀔 때마다 깨진다 — 이 줄을 선언하려면 id 가 있어야 한다.
+            listViolation.append(f"[ExpectLog/AssembledLine] {relative}: contains='{phrase}' 는 id 없는 {listAssembled[0].level} 조립 문장({listAssembled[0].location})입니다 — 그 로그에 SW_LOG_*_ID 를 붙여 id 로 지정합니다")
+            continue
         if bDeclares and listGated and len(listGated) == len(listFitting) and not any(isWholeBody(phrase, template.pieces) for template in listGated):
             listViolation.append(f"[ExpectLog/PartialLine] {relative}: contains='{phrase}' 는 id 없는 {listGated[0].level} 로그({listGated[0].location})의 일부분입니다 — 부분 문자열은 그 줄을 가리지 못합니다. 본문 전체를 적거나 그 로그에 SW_LOG_*_ID 를 붙여 id 로 지정합니다")
             continue
@@ -376,6 +383,14 @@ class CheckExpectLogPhrasesGate(LintGate):
                 "Resource/engine/automation/probe.scenario.xml": (
                     "<Scenario><At frame=\"1\"><ExpectLog contains=\"Probe: unsaved edits of 'a.xml' are discarded\" atLeast=\"1\"/>"
                     "<ExpectLog contains=\"unsaved edits of\" atLeast=\"1\"/><ExpectLog contains=\"unsaved edits of\" count=\"0\"/></At></Scenario>\n"),
+            },
+        },
+        {
+            "name": "id 없는 Warning 조립 문장은 본문 전체를 적어도 id 로 올려야 한다",
+            "expectedViolation": "[ExpectLog/AssembledLine] Resource/engine/automation/probe.scenario.xml: contains='Probe: lost 3 frames' 는 id 없는 WARNING 조립 문장",
+            "files": {
+                "Source/Engine/Probe.cpp": "void f() { SW_LOG_WARNING( \"Probe: lost %# frames\", n ); }\n",
+                "Resource/engine/automation/probe.scenario.xml": "<Scenario><At frame=\"1\"><ExpectLog contains=\"Probe: lost 3 frames\" atLeast=\"1\"/></At></Scenario>\n",
             },
         },
         {

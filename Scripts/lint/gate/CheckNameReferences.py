@@ -131,13 +131,15 @@ class CodeNameKind:
     element: str
     attribute: str
     marker: str                               # 이 글이 없는 파일은 읽지 않는다
+    bMustFind: bool = True                    # 데이터에 이름이 있는데 코드에서 하나도 못 주우면 실패(정규식이 죽은 것). 지금 코드에 리터럴 호출이 없는 종류만 False
 
 
 _kListCodeNameKind: tuple[CodeNameKind, ...] = (
     CodeNameKind(rule="InputAction", label="입력 맵 액션", listCodeRe=(_kActionQueryRe,), constantRe=_kActionConstantRe,
                  dataGlob="*.input.xml", element="action", attribute="name", marker="Action"),
     CodeNameKind(rule="AudioEvent", label="오디오 이벤트", listCodeRe=(_kAudioEventCallRe,), constantRe=None,
-                 dataGlob="*.audioevents.xml", element="AudioEventDesc", attribute="_name", marker="Event"),
+                 dataGlob="*.audioevents.xml", element="AudioEventDesc", attribute="_name", marker="Event",
+                 bMustFind=False),   # shortcut: 소스의 postEvent 호출이 전부 변수를 넘겨 리터럴 호출이 아직 없다 — 생기면 True 로 올려 정규식이 살아 있는지 지킨다
 )
 
 
@@ -205,6 +207,7 @@ def findCodeNameViolations(repositoryRoot: Path) -> tuple[list[str], dict[str, i
         uniqueShared, mapPackName = collectDataNames(repositoryRoot, kind)
         uniqueAll = uniqueShared.union(*mapPackName.values()) if mapPackName else set(uniqueShared)
         checkedCount = 0
+        bMarkerSeen = False
         for gameName, listFile in sorted(mapGameText.items()):
             known, scope = uniqueAll, f"어느 {kind.dataGlob}"
             if gameName:
@@ -213,10 +216,14 @@ def findCodeNameViolations(repositoryRoot: Path) -> tuple[list[str], dict[str, i
             for relative, text in listFile:
                 if kind.marker not in text:
                     continue
+                bMarkerSeen = True
                 for name in collectCodeNames(stripCommentsInternal(text), kind):
                     checkedCount += 1
                     if name not in known:
                         listViolation.append(f"[NameReference/{kind.rule}] {relative}: {kind.label} '{name}' 이(가) {scope}에 없습니다")
+        # 데이터에 이름이 있고 코드에 표지 글도 있는데 이름을 하나도 못 주웠다면 정규식이 죽은 것이다 — "0곳 위반 없음" 을 통과로 두지 않는다.
+        if kind.bMustFind and uniqueAll and bMarkerSeen and checkedCount == 0:
+            raise GateError(f"{kind.label}: 데이터에는 이름이 있는데 코드에서 이름을 하나도 찾지 못했습니다 — 호출 · 상수 모양이 바뀌었나요?")
         mapCheckedCount[kind.rule] = checkedCount
     return listViolation, mapCheckedCount
 
@@ -322,7 +329,8 @@ def findScenarioViolations(repositoryRoot: Path) -> tuple[list[str], int]:
     listViolation: list[str] = []
     scenarioCount = 0
     resourceRoot = repositoryRoot / "Resource"
-    for path in (path for path in collectRepositoryFiles(repositoryRoot, ("Resource",), suffixes=(".xml",)) if path.name.endswith(".scenario.xml")):
+    listScenarioPath = [path for path in collectRepositoryFiles(repositoryRoot, ("Resource",), suffixes=(".xml",)) if path.name.endswith(".scenario.xml")]
+    for path in listScenarioPath:
         relative = normalizePath(str(path.relative_to(repositoryRoot)))
         try:
             root = ElementTree.parse(path).getroot()
@@ -349,6 +357,8 @@ def findScenarioViolations(repositoryRoot: Path) -> tuple[list[str], int]:
             bEditorCommandLine = len(listToken) >= 2 and listToken[0] == "editor" and bEditorCommandSource
             if bEditorCommandLine and listToken[1] not in uniqueEditorCommand:
                 listViolation.append(f"[NameReference/EditorCommand] {relative}: 에디터 명령 '{listToken[1]}' 이(가) 등록돼 있지 않습니다(SW_EDITOR_COMMAND · 원본 표)")
+    if listScenarioPath and scenarioCount == 0:
+        raise GateError("시나리오 파일은 있는데 하나도 읽지 못했습니다 — 전부 깨진 XML 이면 시나리오 이름 검사가 아무것도 보지 않은 채 통과합니다")
     return listViolation, scenarioCount
 
 
