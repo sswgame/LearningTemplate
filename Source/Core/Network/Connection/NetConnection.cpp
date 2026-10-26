@@ -66,6 +66,8 @@ namespace sw
                 return "SecurityMismatch";
             case NetDisconnectReason::AuthenticationFailed:
                 return "AuthenticationFailed";
+            case NetDisconnectReason::ReceiveOverflow:
+                return "ReceiveOverflow";
         }
         return "Unknown";
     }
@@ -99,6 +101,7 @@ namespace sw
         , _bAckPending{ SW_FALSE }
         , _bDiscardingAssembly{ SW_FALSE }
         , _bUnreliableFirst{ SW_FALSE }
+        , _bReceiveOverflowed{ SW_FALSE }
     {
     }
 
@@ -108,9 +111,10 @@ namespace sw
         _receivedPackets.reset();
         _outgoingReliable.reset();
         _incomingReliable.reset();
-        for ( deque<vector<uint8>>& listIncoming : _arrIncoming )
+        for ( IncomingQueue& queue : _arrIncoming )
         {
-            listIncoming.clear();
+            queue._listMessage.clear();
+            queue._byteCount = 0;
         }
         _listOutgoingSequenced.clear();
         _listOutgoingUnreliable.clear();
@@ -133,6 +137,7 @@ namespace sw
         _bAckPending             = SW_FALSE;
         _bDiscardingAssembly     = SW_FALSE;
         _bUnreliableFirst        = SW_FALSE;
+        _bReceiveOverflowed      = SW_FALSE;
     }
 
     int32 NetConnection::getPendingReliableCount() const
@@ -284,13 +289,15 @@ namespace sw
     bool NetConnection::receiveMessage( NetChannelType channel, vector<uint8>& outBuffer )
     {
         const int32 channelIndex       = static_cast<int32>( channel );
-        const bool  bNoIncomingMessage = channelIndex < 0 || channelIndex >= static_cast<int32>( NetChannelType::Count ) || _arrIncoming[channelIndex].empty();
+        const bool  bNoIncomingMessage = channelIndex < 0 || channelIndex >= static_cast<int32>( NetChannelType::Count ) || _arrIncoming[channelIndex]._listMessage.empty();
         if ( bNoIncomingMessage )
             return false;
         // 바꿔 넣어 부른 쪽 버퍼의 옛 용량을 다시 쓴다 — 받는 쪽이 같은 버퍼로 계속 꺼내면 메시지마다 할당하지 않는다.
-        outBuffer.swap( _arrIncoming[channelIndex].front() );
-        recycleBuffer( _arrIncoming[channelIndex].front() );
-        _arrIncoming[channelIndex].pop_front();
+        IncomingQueue& queue = _arrIncoming[channelIndex];
+        outBuffer.swap( queue._listMessage.front() );
+        queue._byteCount -= static_cast<int32>( outBuffer.size() ) + kIncomingMessageOverheadBytes;
+        recycleBuffer( queue._listMessage.front() );
+        queue._listMessage.pop_front();
         if ( channel == NetChannelType::ReliableOrdered )
         {
             recordFlow( channel, _orderedReceivedCount, outBuffer.data(), outBuffer.size(), true );
@@ -302,19 +309,45 @@ namespace sw
     bool NetConnection::receiveMessageAppend( NetChannelType channel, vector<uint8>& inoutBytes )
     {
         const int32 channelIndex       = static_cast<int32>( channel );
-        const bool  bNoIncomingMessage = channelIndex < 0 || channelIndex >= static_cast<int32>( NetChannelType::Count ) || _arrIncoming[channelIndex].empty();
+        const bool  bNoIncomingMessage = channelIndex < 0 || channelIndex >= static_cast<int32>( NetChannelType::Count ) || _arrIncoming[channelIndex]._listMessage.empty();
         if ( bNoIncomingMessage )
             return false;
-        vector<uint8>& message = _arrIncoming[channelIndex].front();
+        IncomingQueue& queue   = _arrIncoming[channelIndex];
+        vector<uint8>& message = queue._listMessage.front();
         inoutBytes.insert( inoutBytes.end(), message.begin(), message.end() );
         if ( channel == NetChannelType::ReliableOrdered )
         {
             recordFlow( channel, _orderedReceivedCount, message.data(), message.size(), true );
             ++_orderedReceivedCount;
         }
-        recycleBuffer( message );
-        _arrIncoming[channelIndex].pop_front();
+        popIncoming( queue );
         return true;
+    }
+
+    void NetConnection::popIncoming( IncomingQueue& queue )
+    {
+        vector<uint8>& message = queue._listMessage.front();
+        queue._byteCount -= static_cast<int32>( message.size() ) + kIncomingMessageOverheadBytes;
+        recycleBuffer( message );
+        queue._listMessage.pop_front();
+    }
+
+    void NetConnection::pushIncoming( NetChannelType channel, vector<uint8>& buffer )
+    {
+        IncomingQueue& queue = _arrIncoming[static_cast<int32>( channel )];
+        const int32    bytes = static_cast<int32>( buffer.size() ) + kIncomingMessageOverheadBytes;
+        if ( queue._byteCount + bytes > kMaxPendingReceiveBytes )
+        {
+            // 게임이 꺼내는 속도보다 상대가 빨리 넣는다(느린 틱이거나 홍수). UDP 는 상대를 멈출 수 없으므로 호스트가 끊는다.
+            if ( _bReceiveOverflowed == SW_FALSE )
+                SW_LOG_WARNING_ID( "Net.ReceiveOverflow", "NetConnection: the receive queue of channel %# exceeds %# bytes - dropping the connection", static_cast<int32>( channel ), kMaxPendingReceiveBytes );
+            _bReceiveOverflowed = SW_TRUE;
+            recycleBuffer( buffer );
+            return;
+        }
+        queue._byteCount += bytes;
+        queue._listMessage.push_back( std::move( buffer ) );
+        buffer = vector<uint8>{};
     }
 
     vector<uint8> NetConnection::acquireBuffer()
@@ -578,7 +611,7 @@ namespace sw
                 {
                     recordFlow( message._channel, message._id, message._buffer.data(), message._buffer.size(), true );
                     pIncoming->_bDelivered = SW_TRUE;
-                    _arrIncoming[static_cast<int32>( NetChannelType::ReliableUnordered )].push_back( std::move( message._buffer ) );
+                    pushIncoming( NetChannelType::ReliableUnordered, message._buffer );
                     return;
                 }
                 pIncoming->_buffer.swap( message._buffer ); // 슬롯의 옛 용량은 받은 메시지 쪽으로 가 다음 패킷이 재사용 목록에 돌려 놓는다
@@ -604,13 +637,13 @@ namespace sw
                 }
                 pStream->_lastID = message._id;
                 recordFlow( message._channel, NetConnectionInternal::makeWirePosition( sequence, static_cast<int32>( position ) ), message._buffer.data(), message._buffer.size(), true );
-                _arrIncoming[static_cast<int32>( NetChannelType::UnreliableSequenced )].push_back( std::move( message._buffer ) );
+                pushIncoming( NetChannelType::UnreliableSequenced, message._buffer );
                 return;
             }
             case NetChannelType::Unreliable:
             {
                 recordFlow( message._channel, NetConnectionInternal::makeWirePosition( sequence, static_cast<int32>( position ) ), message._buffer.data(), message._buffer.size(), true );
-                _arrIncoming[static_cast<int32>( NetChannelType::Unreliable )].push_back( std::move( message._buffer ) );
+                pushIncoming( NetChannelType::Unreliable, message._buffer );
                 return;
             }
             case NetChannelType::Count:
@@ -674,13 +707,12 @@ namespace sw
             }
             return;
         }
-        deque<vector<uint8>>& listIncoming = _arrIncoming[static_cast<int32>( NetChannelType::ReliableOrdered )];
-        const bool            bLast        = incoming._bMore == SW_FALSE;
+        const bool bLast = incoming._bMore == SW_FALSE;
         // 조각이 하나뿐인 경우(대부분)는 모으지 않고 그대로 넘긴다.
         const bool bDeliverSingleFragment = bLast && _listReliableAssembly.empty() && _bDiscardingAssembly == SW_FALSE;
         if ( bDeliverSingleFragment )
         {
-            listIncoming.push_back( std::move( incoming._buffer ) );
+            pushIncoming( NetChannelType::ReliableOrdered, incoming._buffer );
             return;
         }
         if ( _bDiscardingAssembly == SW_FALSE )
@@ -701,7 +733,7 @@ namespace sw
         if ( bLast == false )
             return;
         if ( _bDiscardingAssembly == SW_FALSE )
-            listIncoming.push_back( std::move( _listReliableAssembly ) );
+            pushIncoming( NetChannelType::ReliableOrdered, _listReliableAssembly );
         _listReliableAssembly.clear(); // 옮긴 뒤의 빈 버퍼다. 다음 메시지가 새로 할당한다.
         _bDiscardingAssembly = SW_FALSE;
     }

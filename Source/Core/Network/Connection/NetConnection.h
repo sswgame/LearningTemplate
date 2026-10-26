@@ -29,6 +29,7 @@
  *          싣지 못하고 줄에서 나이 상한을 넘기면 Lost 다. 잃은 것으로 본 뒤 늦게 온 확인은 판정을 바꾸지 않는다(받는 쪽은 틱 번호로 늦은 메시지를 스스로 거른다).
  */
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/deque.h"
@@ -80,6 +81,14 @@ namespace sw
         static constexpr float64 kResendMargin              = 0.05; ///< 재전송 간격은 RTT에 이 여유를 더한 값이다(흔들림과 상대의 보내기 간격을 흡수한다).
         static constexpr int32   kMaxSpareBuffers           = 64;   ///< 다시 쓸 메시지 버퍼를 이만큼까지 둔다(조각 하나 크기라 연결 하나에 64KB 안쪽).
         /**
+         * @brief 채널 하나의 받은 큐가 게임이 꺼내기를 기다리며 쌓아 둘 수 있는 바이트(메시지마다 `kIncomingMessageOverheadBytes` 를 더해 센다).
+         * @details 넘기면 `hasReceiveOverflowed` 가 참이 되고 호스트가 연결을 끊는다(`NetDisconnectReason::ReceiveOverflow`).
+         *          스트림의 `StreamLimit::kDefaultMaxPendingReceiveBytes`(4 MiB, 읽기를 멈춘다)와 같은 역할이다. UDP 는 상대를 멈출 수 없어 끊는다.
+         *          신뢰 순서 메시지 하나의 상한(64 KB)의 16 배다. 연결 1024 개 × 채널 넷이어도 4 GiB 안쪽이다.
+         */
+        static constexpr int32 kMaxPendingReceiveBytes       = static_cast<int32>( constant::kBytesPerMegabyte );
+        static constexpr int32 kIncomingMessageOverheadBytes = 32; ///< 빈 메시지도 큐 칸과 버퍼 머리를 쓴다. 0 바이트 메시지 홍수도 상한에 걸리게 한다.
+        /**
          * @brief 비신뢰 메시지가 보낼 줄에서 기다릴 수 있는 시간(초)의 기본값입니다. 넘으면 싣지 않고 버립니다.
          * @details 대역폭이 오래 포화되면 옛 비신뢰가 쌓였다가 몰려 나간다. 비신뢰는 늦으면 쓸모가 없으므로(위치 · 효과) 버리는 쪽이 맞다.
          *          언리얼은 포화된 연결(`IsNetReady` 거짓)에 비신뢰 번치를 아예 싣지 않는다. 30 Hz 기준 8 틱쯤이다.
@@ -125,6 +134,8 @@ namespace sw
         bool hasDataToSend( float64 time ) const;
         /** @brief 받은 패킷을 확인해 줘야 하는지 반환합니다. 대역폭 토큰을 다 쓴 호스트가 메시지 없이 확인만 보낼지 정할 때 씁니다. */
         bool isAckPending() const { return _bAckPending != SW_FALSE; }
+        /** @brief 어느 채널의 받은 큐가 `kMaxPendingReceiveBytes` 를 넘었다(넘친 메시지는 버렸다). 참이면 호스트가 끊는다. `reset` 이 지운다. */
+        bool hasReceiveOverflowed() const { return _bReceiveOverflowed != SW_FALSE; }
 
         const NetConnectionStats& getStats() const { return _stats; }
         int32                     getPendingReliableCount() const;
@@ -202,6 +213,13 @@ namespace sw
             vector<uint8> _buffer{};
             uint8         _bMore{ SW_FALSE };
             uint8         _bDelivered{ SW_FALSE }; ///< 신뢰 순서 없음에서 받을 때 이미 넘겼다는 표시(순서 커서는 지나가기만 한다).
+        };
+
+        /** @brief 채널 하나의 받은 메시지 큐입니다. 넣고 꺼낼 때 `pushIncoming` · `popIncoming` 이 바이트를 함께 센다. */
+        struct IncomingQueue
+        {
+            deque<vector<uint8>> _listMessage{};
+            int32                _byteCount{ 0 }; ///< 쌓인 메시지 바이트 + 메시지마다 `kIncomingMessageOverheadBytes`
         };
 
         /** @brief 순서만 채널의 흐름 하나(메시지 첫 바이트가 종류)에서 마지막으로 넘긴 메시지 번호입니다. */
@@ -283,12 +301,16 @@ namespace sw
         bool queueReliable( NetChannelType channel, const uint8* pData, int32 size );
         /** @brief 순서가 온 신뢰 조각 하나를 넘기거나(조각이 하나뿐인 경우) 모읍니다(마지막 조각에서 한 메시지로 넘깁니다). */
         void deliverReliable( IncomingReliable& incoming );
+        /** @brief 받은 메시지를 채널 큐에 넣습니다. 큐가 `kMaxPendingReceiveBytes` 를 넘게 되면 넣지 않고 `_bReceiveOverflowed` 를 세운다. @p buffer 는 빈다. */
+        void pushIncoming( NetChannelType channel, vector<uint8>& buffer );
+        /** @brief 채널 큐의 맨 앞 메시지를 빼고 바이트 수를 줄입니다. 큐가 비어 있지 않아야 한다. */
+        void popIncoming( IncomingQueue& queue );
 
         SequenceBuffer<SentPacket, kPacketWindow>                                _sentPackets;
         SequenceBuffer<ReceivedPacket, kPacketWindow>                            _receivedPackets;
         SequenceBuffer<OutgoingReliable, static_cast<uint32>( kReliableWindow )> _outgoingReliable;
         SequenceBuffer<IncomingReliable, static_cast<uint32>( kReliableWindow )> _incomingReliable;
-        deque<vector<uint8>>                                                     _arrIncoming[static_cast<int32>( NetChannelType::Count )];
+        IncomingQueue                                                            _arrIncoming[static_cast<int32>( NetChannelType::Count )];
         vector<vector<uint8>>                                                    _listOutgoingSequenced; ///< 종류(첫 바이트)마다 가장 새 메시지 하나. 쌓인 순서대로 보관한다.
         deque<QueuedUnreliable>                                                  _listOutgoingUnreliable;
         vector<ParsedMessage>                                                    _listParsedScratch;    ///< 받은 패킷을 먼저 다 읽어 두는 스크래치 버퍼(용량을 다시 쓴다).
@@ -312,5 +334,6 @@ namespace sw
         uint8                                                                    _bAckPending;         ///< 받은 패킷이 있어 확인을 돌려줘야 한다.
         uint8                                                                    _bDiscardingAssembly; ///< 모으던 메시지가 상한을 넘었다(상대의 규약 위반). 마지막 조각까지 버린다.
         uint8                                                                    _bUnreliableFirst;    ///< 다음 패킷은 순서만과 비신뢰 메시지부터 싣는다(앞 패킷의 조각이 그쪽을 남겼다).
+        uint8                                                                    _bReceiveOverflowed;  ///< 받은 큐가 상한을 넘었다(`hasReceiveOverflowed`).
     };
 } // namespace sw

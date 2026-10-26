@@ -141,10 +141,11 @@ namespace sw
         Remote,    ///< 상대가 끊었다.
         Timeout,
         ServerFull,
-        Rejected,            ///< 다른 게임(게임 ID가 다르다)이거나 시작할 수 없는 연결이다.
-        VersionMismatch,     ///< 같은 게임의 다른 와이어 버전(`NetWireVersion`).
-        SecurityMismatch,    ///< 한쪽만 암호화나 토큰 결속을 켰다(협상하지 않으므로 다운그레이드는 없다).
-        AuthenticationFailed ///< 토큰을 모르거나 세션 비밀 증명이나 키 확인이 틀렸다.
+        Rejected,             ///< 다른 게임(게임 ID가 다르다)이거나 시작할 수 없는 연결이다.
+        VersionMismatch,      ///< 같은 게임의 다른 와이어 버전(`NetWireVersion`).
+        SecurityMismatch,     ///< 한쪽만 암호화나 토큰 결속을 켰다(협상하지 않으므로 다운그레이드는 없다).
+        AuthenticationFailed, ///< 토큰을 모르거나 세션 비밀 증명이나 키 확인이 틀렸다.
+        ReceiveOverflow       ///< 받은 큐가 `NetConnection::kMaxPendingReceiveBytes` 를 넘었다(게임이 꺼내는 속도보다 상대가 빨리 넣는다).
     };
 
     SW_API const utf8* toString( NetDisconnectReason reason );
