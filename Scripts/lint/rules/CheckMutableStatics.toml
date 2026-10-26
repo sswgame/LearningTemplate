@@ -156,7 +156,7 @@
 "Source/Engine/Object/GameObject/Tick/TickBatchRegistry.cpp" = 1
 "Source/Engine/Object/Prefab/PrefabAsset.cpp" = 1
 # Source/Engine/Observability — 이전 대기
-"Source/Engine/Observability/ServerServiceRegistry.cpp" = 2
+"Source/Engine/Observability/ServerServiceRegistry.cpp" = 1
 # Source/Engine/Physics — 이전 대기
 "Source/Engine/Physics/Collision/PhysicsMeshShapeCache.cpp" = 1
 "Source/Engine/Physics/Jolt/JoltJobSystem.cpp" = 1

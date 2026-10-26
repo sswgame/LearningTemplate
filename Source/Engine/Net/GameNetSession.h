@@ -7,7 +7,7 @@
  *          장르별 복제(클라이언트-서버, 락스텝, MMO)는 키트가 `getRouter()` 에 처리기를 달고 `getPeers()` 로 보낸다.
  *
  *          - 전용 서버(`Server`): 서버 설정(`ServerConfig::_gamePort` · `_listenAddress`)의 게임 포트를 늘 연다(언리얼 전용 서버와 같다).
- *            설정은 `ServerServiceRegistry::findHostContext` 로 받는다. 포트 0 은 운영체제가 고른 포트다(한 기계에서 서버를 여럿 띄우는 테스트).
+ *            설정은 전용 서버가 호스트 범위에 빌려 건 `ServerServiceContext` 를 `engine::findSubsystem` 으로 찾아 받는다. 포트 0 은 운영체제가 고른 포트다(한 기계에서 서버를 여럿 띄우는 테스트).
  *          - 포트 샤딩(`ServerConfig::_gamePortShardCount` N): 샤드마다 소켓 · `NetHost` · 네트워크 스레드가 하나씩 선다 — `_gamePort` 부터 N 개의 연이은 포트,
  *            리눅스에서 `_bGamePortReuse` 면 한 포트에 `SO_REUSEPORT` 소켓 N 개(커널이 4-튜플로 나눈다). 키트는 샤드를 모른다 — `getPeers()` 가 연결 ID 에
  *            샤드 번호를 접어 넣은 묶음(`NetHostShardSet`)이다. 어느 샤드 포트로 붙을지는 서버 배정(`ServerDescriptor::pickPort`)이 계정마다 정한다.

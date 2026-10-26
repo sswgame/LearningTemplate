@@ -135,7 +135,7 @@ namespace sw
         unique_ptr<ServerServiceManager>  _serverServices;          ///< 모듈이 올린 서버 서비스(온라인 서비스 호스트 등)
         Subscription                      _reloadStopsServices;     ///< 리로드 배치 직전에 서버 서비스를 멈추는 콜백(Dev, `onBeforeModuleReload`)
         string                            _serverConfigPath;        ///< 읽은 서버 설정 파일 경로(서비스가 옆 파일을 찾는다)
-        ServerServiceContext              _serverServiceContext;    ///< 서버 서비스와 게임 · 키트 모듈(`ServerServiceRegistry::findHostContext`)이 받는 서버 문맥
+        ServerServiceContext              _serverServiceContext;    ///< 서버 서비스와 게임 · 키트 모듈이 받는 서버 문맥(호스트 범위에 빌려 건다 — `engine::findSubsystem<ServerServiceContext>()`)
         const ServerConfig*               _pServerConfig;           // ConfigManager 가 소유한다
         MetricHistogram*                  _pTickHistogram;          ///< server_tick_seconds. 틱 본문 시간.
         MetricCounter*                    _pDroppedTickCounter;     ///< server_dropped_ticks_total

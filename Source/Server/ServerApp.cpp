@@ -184,7 +184,9 @@ namespace sw
         _serverServiceContext._pConfigManager   = _engine.getConfigManager();
         _serverServiceContext._pMetricRegistry  = _metricRegistry.get();
         _serverServiceContext._pHealthRegistry  = _healthRegistry.get();
-        ServerServiceRegistry::bindHostContext( &_serverServiceContext );
+        const bool bContextBound                = _host.bind( &_serverServiceContext ); // 게임 · 키트(네트워크 세션)가 `engine::findSubsystem<ServerServiceContext>()` 로 찾는다
+        SW_ASSERT( bContextBound );
+        (void)bContextBound;
 
         if ( _moduleHost == nullptr )
             _moduleHost = make_unique<ModuleHost>();
@@ -649,7 +651,7 @@ namespace sw
             _moduleHost->shutdown();
             _moduleHost.reset();
         }
-        ServerServiceRegistry::bindHostContext( nullptr ); // 게임과 모듈이 내려간 뒤 — 레지스트리를 지우기 전
+        _host.unbind<ServerServiceContext>(); // 게임과 모듈이 내려간 뒤 — 레지스트리를 지우기 전
         if ( _bCrashReportsStarted == SW_TRUE && engine::areEngineServicesBound() )
             engine::getSubsystem<CrashReportService>().shutdown();
         _bCrashReportsStarted = SW_FALSE;
