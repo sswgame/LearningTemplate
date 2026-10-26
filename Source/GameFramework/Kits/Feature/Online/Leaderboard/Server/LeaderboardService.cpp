@@ -1005,9 +1005,9 @@ namespace sw
         // 기간 보드의 정렬 집합은 기간이 끝나면 캐시가 지우게 한다. 기간마다 이 프로세스에서 한 번만 건다(점수 쓰기마다 요청이 늘지 않게).
         const int64 retentionMs = computeRankRetentionMs( *pBoard, periodID, nowMs );
         if ( retentionMs > 0 && _uniqueExpiringRankKeys.insert( rankKey ).second )
-            (void)_dependencies._pRouter->submit( EphemeralRequest::makeExpire( rankKey, retentionMs ), EphemeralStoreRouter::ReplyDelegate{} );
+            (void)_dependencies._pRouter->submit( EphemeralRequest::makeExpire( rankKey, retentionMs ), EphemeralStoreRouter::ReplyDelegate{} ); // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
         if ( displayName.empty() == false )
-            (void)_dependencies._pRouter->submit( EphemeralRequest::makeSet( LeaderboardServiceInternal::makeNameKey( accountID ),
+            (void)_dependencies._pRouter->submit( EphemeralRequest::makeSet( LeaderboardServiceInternal::makeNameKey( accountID ), // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
                                                                              vector<uint8>( reinterpret_cast<const uint8*>( displayName.data() ), reinterpret_cast<const uint8*>( displayName.data() ) + displayName.size() ), LeaderboardLimit::kNameTtlMs ),
                                                   EphemeralStoreRouter::ReplyDelegate{} );
     }
@@ -1051,8 +1051,8 @@ namespace sw
     {
         const auto waitIt = _mapRankKeyToWaitingRead.find( rankKey );
         if ( waitIt != _mapRankKeyToWaitingRead.end() )
-            _mapRankKeyToLateWrite[rankKey].push_back( LeaderboardScoreRow{ accountID, cacheScore } ); // 다시 채우는 중이므로 채운 뒤에 한 번 더 싣는다. 이전 값을 덮기 위해서이다
-        (void)_dependencies._pRouter->submit( EphemeralRequest::makeScoreSet( rankKey, ServiceKeyUtil::makeHex64( accountID ), cacheScore ),
+            _mapRankKeyToLateWrite[rankKey].push_back( LeaderboardScoreRow{ accountID, cacheScore } );                                       // 다시 채우는 중이므로 채운 뒤에 한 번 더 싣는다. 이전 값을 덮기 위해서이다
+        (void)_dependencies._pRouter->submit( EphemeralRequest::makeScoreSet( rankKey, ServiceKeyUtil::makeHex64( accountID ), cacheScore ), // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
                                               EphemeralStoreRouter::ReplyDelegate{} );
     }
 
@@ -1179,19 +1179,19 @@ namespace sw
         const LeaderboardOrder       order  = pBoard != nullptr ? pBoard->_order : LeaderboardOrder::Descending;
         for ( const LeaderboardScoreRow& row : listScore )
         {
-            (void)_dependencies._pRouter->submit( EphemeralRequest::makeScoreSet( rankKey, ServiceKeyUtil::makeHex64( row._accountID ), toCacheScore( order, row._score ) ),
+            (void)_dependencies._pRouter->submit( EphemeralRequest::makeScoreSet( rankKey, ServiceKeyUtil::makeHex64( row._accountID ), toCacheScore( order, row._score ) ), // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
                                                   EphemeralStoreRouter::ReplyDelegate{} );
         }
         for ( const LeaderboardScoreRow& row : listLateWrite ) // 다시 채우는 동안 쓴 점수이다. 영속 저장소에서 읽은 이전 값을 덮으며 이미 캐시 점수이다
         {
-            (void)_dependencies._pRouter->submit( EphemeralRequest::makeScoreSet( rankKey, ServiceKeyUtil::makeHex64( row._accountID ), row._score ),
+            (void)_dependencies._pRouter->submit( EphemeralRequest::makeScoreSet( rankKey, ServiceKeyUtil::makeHex64( row._accountID ), row._score ), // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
                                                   EphemeralStoreRouter::ReplyDelegate{} );
         }
         // 기간 보드면 다시 채운 집합과 준비 표시도 기간이 끝나면 사라지게 한다(0 이면 만료 없음).
         const int64 retentionMs = pBoard != nullptr ? computeRankRetentionMs( *pBoard, listWaiting.front()._periodID, listWaiting.front()._nowMs ) : 0;
         if ( retentionMs > 0 )
-            (void)_dependencies._pRouter->submit( EphemeralRequest::makeExpire( rankKey, retentionMs ), EphemeralStoreRouter::ReplyDelegate{} );
-        (void)_dependencies._pRouter->submit( EphemeralRequest::makeSet( LeaderboardServiceInternal::makeReadyKey( rankKey ), vector<uint8>{ 1 }, retentionMs ),
+            (void)_dependencies._pRouter->submit( EphemeralRequest::makeExpire( rankKey, retentionMs ), EphemeralStoreRouter::ReplyDelegate{} );                 // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
+        (void)_dependencies._pRouter->submit( EphemeralRequest::makeSet( LeaderboardServiceInternal::makeReadyKey( rankKey ), vector<uint8>{ 1 }, retentionMs ), // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
                                               EphemeralStoreRouter::ReplyDelegate{} );
         // 캐시는 맡긴 순서대로 응답한다. 아래 읽기는 위 쓰기 뒤에 처리된다
         for ( const PendingRead& read : listWaiting )

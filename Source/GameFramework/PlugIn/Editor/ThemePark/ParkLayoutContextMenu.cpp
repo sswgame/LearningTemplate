@@ -34,7 +34,7 @@ namespace sw::editor
             }
 
             /** @brief 메뉴 대상의 월드 위치를 구합니다. 오브젝트가 있으면 그 주 SceneComponent, 없으면 뷰포트 바닥 교점입니다. */
-            static bool findTargetPosition( const EditorContextMenuTarget& target, float3& outPosition )
+            [[nodiscard]] static bool findTargetPosition( const EditorContextMenuTarget& target, float3& outPosition )
             {
                 if ( target._pGameObject != nullptr )
                 {

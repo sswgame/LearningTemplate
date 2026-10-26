@@ -128,8 +128,8 @@ namespace sw
             return;
         // 내 것일 때만 지운다. 같은 계정이 다른 서버에 새로 접속했으면 그쪽 기록이 남는다.
         EphemeralStoreRouter* pRouter = _pHost->getEphemeralRouter();
-        (void)pRouter->submit( EphemeralRequest::makeCompareAndErase( makeAccountKey( accountID ), makeServerBytes() ), EphemeralStoreRouter::ReplyDelegate{} );
-        (void)pRouter->submit( EphemeralRequest::makeCompareAndErase( makeNameKey( identity._displayName ), makeNameBytes( identity ) ),
+        (void)pRouter->submit( EphemeralRequest::makeCompareAndErase( makeAccountKey( accountID ), makeServerBytes() ), EphemeralStoreRouter::ReplyDelegate{} ); // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
+        (void)pRouter->submit( EphemeralRequest::makeCompareAndErase( makeNameKey( identity._displayName ), makeNameBytes( identity ) ),                         // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
                                EphemeralStoreRouter::ReplyDelegate{} );
     }
 
@@ -280,8 +280,8 @@ namespace sw
         {
             // 새로 접속했으므로 다른 서버의 이전 기록을 덮는다. 새 로그인이 이긴다.
             EphemeralStoreRouter* pRouter = _pHost->getEphemeralRouter();
-            (void)pRouter->submit( EphemeralRequest::makeSet( accountKey, serverBytes, _settings._ttlMs ), EphemeralStoreRouter::ReplyDelegate{} );
-            (void)pRouter->submit( EphemeralRequest::makeSet( nameKey, nameBytes, _settings._ttlMs ), EphemeralStoreRouter::ReplyDelegate{} );
+            (void)pRouter->submit( EphemeralRequest::makeSet( accountKey, serverBytes, _settings._ttlMs ), EphemeralStoreRouter::ReplyDelegate{} ); // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
+            (void)pRouter->submit( EphemeralRequest::makeSet( nameKey, nameBytes, _settings._ttlMs ), EphemeralStoreRouter::ReplyDelegate{} );      // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
             return;
         }
         PendingOperation accountPending;

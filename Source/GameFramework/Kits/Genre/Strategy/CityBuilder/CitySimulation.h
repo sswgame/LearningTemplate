@@ -257,12 +257,12 @@ namespace sw
         void startReturn( CityWalker& walker );
         void removeWalker( CityWalker& walker );
         /** @brief 도로 타일 사이의 가장 짧은 경로(너비 우선)를 구합니다. 갈 수 없으면 false 를 반환합니다. */
-        bool  findRoadPath( const int2& from, const int2& to, vector<int2>& outListPath ) const;
-        int32 findStorageFor( const hashed_string& goodID, int32 roadComponent, const int2& from, int32 amount ) const;
-        int32 computeStorageFree( const CityBuilding& storage ) const;
-        bool  meetsHouseLevel( const CityBuilding& house, int32 level ) const;
-        bool  isRoad( int32 x, int32 y ) const;
-        int32 getRoadComponent( const int2& tile ) const;
+        [[nodiscard]] bool findRoadPath( const int2& from, const int2& to, vector<int2>& outListPath ) const;
+        int32              findStorageFor( const hashed_string& goodID, int32 roadComponent, const int2& from, int32 amount ) const;
+        int32              computeStorageFree( const CityBuilding& storage ) const;
+        bool               meetsHouseLevel( const CityBuilding& house, int32 level ) const;
+        bool               isRoad( int32 x, int32 y ) const;
+        int32              getRoadComponent( const int2& tile ) const;
 
         vector<CityTile>          _listTile;
         vector<CityBuilding>      _listBuilding;

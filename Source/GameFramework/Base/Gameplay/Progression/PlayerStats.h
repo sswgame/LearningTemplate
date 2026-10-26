@@ -107,7 +107,7 @@ namespace sw
         /** @brief 카운터에 @p amount 를 더합니다. 0 이상이어야 하며, 값이 바뀌었으면 true 입니다. */
         bool increment( const hashed_string& id, int64 amount = 1 );
         /** @brief 최대나 최소 통계에 값을 제출합니다. 기록이 좋아질 때만 바뀌며, 바뀌었으면 true 입니다. */
-        bool submit( const hashed_string& id, float64 value );
+        [[nodiscard]] bool submit( const hashed_string& id, float64 value );
         /** @brief 시간 통계에 @p seconds 를 더합니다. 0 이상이어야 하며, 값이 바뀌었으면 true 입니다. */
         bool addTime( const hashed_string& id, float64 seconds );
 

@@ -40,7 +40,7 @@ namespace sw
         };
         for ( const ScheduleActivityDef& def : arrBuiltin )
         {
-            (void)registerActivity( def );
+            (void)registerActivity( def ); // 실패(이름 없음 · 중복)는 등록이 오류로 남긴다
         }
     }
 } // namespace sw

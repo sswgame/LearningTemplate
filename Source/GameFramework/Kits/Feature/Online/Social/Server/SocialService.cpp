@@ -177,7 +177,7 @@ namespace sw
 
         private:
             /** @brief 이름으로 계정 id 를 찾습니다. 못 찾으면 결과를 적고 false 를 반환합니다. */
-            bool resolveName( IServiceStoreConnection& connection )
+            [[nodiscard]] bool resolveName( IServiceStoreConnection& connection )
             {
                 AccountIdentity          identity;
                 const ServiceStoreResult found = _pNameIndex != nullptr ? _pNameIndex->readIdentityByDisplayName( connection, _displayName, identity )
@@ -514,7 +514,7 @@ namespace sw
             localIt->second._activity.clear();
             publishPresence( accountID, localIt->second );
             if ( _dependencies._pRouter != nullptr )
-                (void)_dependencies._pRouter->submit( EphemeralRequest::makeErase( SocialServiceInternal::makePresenceKey( accountID ) ), EphemeralStoreRouter::ReplyDelegate{} );
+                (void)_dependencies._pRouter->submit( EphemeralRequest::makeErase( SocialServiceInternal::makePresenceKey( accountID ) ), EphemeralStoreRouter::ReplyDelegate{} ); // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
         }
         _mapAccountToLocal.erase( localIt );
     }
@@ -562,7 +562,7 @@ namespace sw
             return false;
         if ( _dependencies._pRouter == nullptr )
             return true;
-        (void)_dependencies._pRouter->submit( EphemeralRequest::makeSet( SocialServiceInternal::makePresenceKey( presence._accountID ), std::move( bytes ),
+        (void)_dependencies._pRouter->submit( EphemeralRequest::makeSet( SocialServiceInternal::makePresenceKey( presence._accountID ), std::move( bytes ), // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
                                                                          SocialServiceInternal::kPresenceTtlMs ),
                                               EphemeralStoreRouter::ReplyDelegate{} );
         return true;

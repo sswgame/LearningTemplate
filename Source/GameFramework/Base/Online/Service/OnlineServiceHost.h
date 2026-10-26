@@ -206,8 +206,8 @@ namespace sw
         /** @brief 연결에 계정을 붙입니다. 그 계정이 다른 연결에 붙어 있으면 false 이며, 계정 키트가 먼저 `unbindAccount` 를 불러야 합니다. */
         [[nodiscard]] bool bindAccount( StreamConnectionHandle connection, AccountID accountID );
         /** @brief 계정의 연결을 닫고 서비스들에 `onAccountLeft` 를 알립니다. */
-        void unbindAccount( AccountID accountID );
-        bool findConnection( AccountID accountID, StreamConnectionHandle& outConnection ) const;
+        void               unbindAccount( AccountID accountID );
+        [[nodiscard]] bool findConnection( AccountID accountID, StreamConnectionHandle& outConnection ) const;
         /** @brief 알림을 보냅니다. Message 프레임은 `[종류 u16][몸]` 이며, 종류는 영역에 0x80..0xFF 를 더한 값입니다. 그 계정이 이 프로세스에 없으면 false 입니다. */
         bool sendPush( AccountID accountID, uint16 kind, const BitWriter& body );
         /** @brief 이 프로세스에 붙은(로그인한) 모든 계정에 알림을 보내고 보낸 수를 반환합니다. 다른 서버는 각자 보내며, 서비스가 버스로 알립니다. */

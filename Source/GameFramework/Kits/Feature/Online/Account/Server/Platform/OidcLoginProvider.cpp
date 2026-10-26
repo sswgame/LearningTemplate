@@ -158,7 +158,7 @@ namespace sw
         }
         outVerification._subject = subject;
         if ( _settings._displayNamePath.empty() == false )
-            (void)token.findText( _settings._displayNamePath, outVerification._displayName );
+            (void)token.findText( _settings._displayNamePath, outVerification._displayName ); // 선택 값이다 — 없으면 비워 둔다
         return Decision::Done;
     }
 } // namespace sw

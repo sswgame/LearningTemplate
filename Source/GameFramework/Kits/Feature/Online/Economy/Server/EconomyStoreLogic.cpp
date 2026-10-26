@@ -84,7 +84,7 @@ namespace sw
              * @brief 같은 분개 키의 분개가 이미 있으면 그 결과를 @p outReply 에 넣고 true 를 반환합니다. `_result` 는 Ok 이며 다른 구매의 키이면 InvalidRequest 입니다.
              * @details 지금 잔액으로 분개 항목을 다시 짤 수 없다. 재원이 비었을 수 있기 때문이다. 그래서 저장된 분개의 항목으로 재생한다.
              */
-            static bool findReplay( IServiceStoreConnection& connection, const LedgerTransferRequest& request, uint64 accountID, EconomyReply& outReply )
+            [[nodiscard]] static bool findReplay( IServiceStoreConnection& connection, const LedgerTransferRequest& request, uint64 accountID, EconomyReply& outReply )
             {
                 LedgerJournalEntry entry;
                 if ( Ledger::findJournal( connection, request._journalKey, entry ) != ServiceStoreResult::Ok )

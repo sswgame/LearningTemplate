@@ -412,7 +412,7 @@ namespace sw
     void PartyLobbyService::submitFireAndForget( const EphemeralRequest& cacheRequest )
     {
         if ( _pRouter != nullptr )
-            (void)_pRouter->submit( cacheRequest, EphemeralStoreRouter::ReplyDelegate{} );
+            (void)_pRouter->submit( cacheRequest, EphemeralStoreRouter::ReplyDelegate{} ); // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
     }
 
     void PartyLobbyService::createParty( AccountID accountID, uint64 requestTag )

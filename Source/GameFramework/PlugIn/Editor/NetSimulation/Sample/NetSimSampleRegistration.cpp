@@ -14,7 +14,7 @@ namespace sw::editor
          */
         struct NetSimSampleRegistrar
         {
-            NetSimSampleRegistrar() { (void)NetSimGameRegistry::registerGame( _entry ); }
+            NetSimSampleRegistrar() { (void)NetSimGameRegistry::registerGame( _entry ); } // 실패(이름 없음 · 중복)는 등록이 오류로 남긴다
             ~NetSimSampleRegistrar() { (void)NetSimGameRegistry::unregisterGame( _entry ); }
 
             NetSimGameEntry _entry{ NetSimSampleGame::kName, &NetSimSampleGame::create };

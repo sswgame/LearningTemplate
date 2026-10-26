@@ -110,9 +110,9 @@ namespace sw
         /** @brief 운영자나 GM 이 값 하나를 바꿉니다. 버전 조건과 감사 줄을 한 트랜잭션에 넣습니다. 다른 서버는 주기적으로 다시 읽어 반영합니다. */
         void submitSet( IServiceStore& store, string_view key, const RemoteConfigValue& value, const ServiceAuditEntry& audit );
 
-        bool findInteger( string_view key, int64& outValue ) const;
-        bool findReal( string_view key, float64& outValue ) const;
-        bool findText( string_view key, string& outValue ) const;
+        [[nodiscard]] bool findInteger( string_view key, int64& outValue ) const;
+        [[nodiscard]] bool findReal( string_view key, float64& outValue ) const;
+        [[nodiscard]] bool findText( string_view key, string& outValue ) const;
         /** @brief 실험 @p experiment 에서 이 계정의 변형입니다. 없거나 실험이 아닌 키면 false 입니다(기본 변형을 지어내지 않는다). */
         [[nodiscard]] bool findVariant( string_view experiment, uint64 accountID, string& outVariant ) const;
         /** @brief 플래그가 이 계정에 켜졌는가입니다(없거나 플래그가 아닌 키는 @p bDefault). */

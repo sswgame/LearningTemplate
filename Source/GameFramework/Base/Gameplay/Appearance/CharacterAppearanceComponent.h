@@ -185,9 +185,9 @@ namespace sw
          * @brief 이름(접두어 포함, 예: `MainHand.Muzzle`, `Eyes`)의 소켓 월드 변환입니다. 지난 프레임의 몸 포즈와 부품 월드로 계산합니다.
          * @return 조립 전이거나 이번 외형에 없는 소켓이면 false 입니다.
          */
-        bool findSocketWorldTransform( const hashed_string& fullName, float4x4& outWorldTransform ) const;
+        [[nodiscard]] bool findSocketWorldTransform( const hashed_string& fullName, float4x4& outWorldTransform ) const;
         /** @brief 이름의 몸 소켓을 몸의 바인드(레퍼런스) 포즈로 계산한 유닛 공간 변환입니다. 눈높이처럼 흔들리면 안 되는 값에 씁니다. */
-        bool findBindSocketTransform( const hashed_string& fullName, float4x4& outUnitTransform ) const;
+        [[nodiscard]] bool findBindSocketTransform( const hashed_string& fullName, float4x4& outUnitTransform ) const;
         /** @brief 지난 해석 결과입니다. */
         const ResolvedAppearance& getResolvedAppearance() const { return _state.getResolved(); }
         /** @brief 소켓 테이블입니다. */

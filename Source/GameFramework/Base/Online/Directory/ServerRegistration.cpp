@@ -39,8 +39,8 @@ namespace sw
         if ( _pRouter == nullptr )
             return;
         const ServerDescriptor& descriptor = _status._descriptor;
-        (void)_pRouter->submit( EphemeralRequest::makeErase( ServerRecord::makeRecordKey( descriptor._serverID ) ), EphemeralStoreRouter::ReplyDelegate{} );
-        (void)_pRouter->submit( EphemeralRequest::makeScoreRemove( ServerRecord::makeIndexKey( descriptor._kind ), ServerRecord::makeMember( descriptor._serverID ) ),
+        (void)_pRouter->submit( EphemeralRequest::makeErase( ServerRecord::makeRecordKey( descriptor._serverID ) ), EphemeralStoreRouter::ReplyDelegate{} );           // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
+        (void)_pRouter->submit( EphemeralRequest::makeScoreRemove( ServerRecord::makeIndexKey( descriptor._kind ), ServerRecord::makeMember( descriptor._serverID ) ), // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
                                 EphemeralStoreRouter::ReplyDelegate{} );
         _pRouter = nullptr;
     }
@@ -74,9 +74,9 @@ namespace sw
     {
         _status._heartbeatMs               = nowMs;
         const ServerDescriptor& descriptor = _status._descriptor;
-        (void)_pRouter->submit( EphemeralRequest::makeSet( ServerRecord::makeRecordKey( descriptor._serverID ), ServerRecord::encode( _status ), kRecordTtlMs ),
+        (void)_pRouter->submit( EphemeralRequest::makeSet( ServerRecord::makeRecordKey( descriptor._serverID ), ServerRecord::encode( _status ), kRecordTtlMs ), // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
                                 EphemeralStoreRouter::ReplyDelegate{} );
-        (void)_pRouter->submit( EphemeralRequest::makeScoreSet( ServerRecord::makeIndexKey( descriptor._kind ), ServerRecord::makeMember( descriptor._serverID ),
+        (void)_pRouter->submit( EphemeralRequest::makeScoreSet( ServerRecord::makeIndexKey( descriptor._kind ), ServerRecord::makeMember( descriptor._serverID ), // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
                                                                 nowMs / constant::kMillisecondsPerSecond ),
                                 EphemeralStoreRouter::ReplyDelegate{} );
         _lastWrittenMs = nowMs;

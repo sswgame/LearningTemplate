@@ -56,9 +56,9 @@ namespace sw
         IAccountDirectory& operator=( const IAccountDirectory& ) = delete;
 
         /** @brief 계정 id 의 공개 정보입니다. 이 프로세스에 접속한 계정만 알며, 모르면 false 입니다. */
-        virtual bool findIdentity( AccountID accountID, AccountIdentity& outIdentity ) const = 0;
+        [[nodiscard]] virtual bool findIdentity( AccountID accountID, AccountIdentity& outIdentity ) const = 0;
         /** @brief 접속한 계정을 표시 이름(대소문자 무시)으로 찾습니다. 거래 신청과 귓속말은 상대가 접속해 있어야 합니다. */
-        virtual bool findIdentityByDisplayName( string_view displayName, AccountIdentity& outIdentity ) const = 0;
+        [[nodiscard]] virtual bool findIdentityByDisplayName( string_view displayName, AccountIdentity& outIdentity ) const = 0;
         /** @brief 지금 이 프로세스에 로그인해 붙어 있는가입니다(재접속 유예 중이면 false). */
         virtual bool isAccountOnline( AccountID accountID ) const = 0;
     };

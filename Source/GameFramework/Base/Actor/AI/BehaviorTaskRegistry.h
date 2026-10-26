@@ -43,7 +43,7 @@ namespace sw
         BehaviorTaskRegistry();
 
         /** @brief 함수를 올립니다. 이름이 비었거나 이미 있거나 함수가 없으면 false 입니다(오류를 남긴다). */
-        bool registerTask( const BehaviorTaskEntry* pEntry );
+        [[nodiscard]] bool registerTask( const BehaviorTaskEntry* pEntry );
         /** @brief 함수를 뺍니다(없으면 아무 일도 없습니다). */
         void unregisterTask( const BehaviorTaskEntry* pEntry );
         /** @brief 이름(대소문자 무시)의 함수입니다. 없으면 nullptr 입니다. */

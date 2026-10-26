@@ -40,10 +40,10 @@ namespace sw
         class OnlineServerService final : public IServerService
         {
         public:
-            bool  initialize( const ServerServiceContext& context, string& outError ) override;
-            void  shutdown() override { _runtime.shutdown(); }
-            void  update( int64 nowMs ) override { _runtime.update( nowMs ); }
-            int32 getConnectionCount() const override { return _runtime.getConnectionCount(); }
+            [[nodiscard]] bool initialize( const ServerServiceContext& context, string& outError ) override;
+            void               shutdown() override { _runtime.shutdown(); }
+            void               update( int64 nowMs ) override { _runtime.update( nowMs ); }
+            int32              getConnectionCount() const override { return _runtime.getConnectionCount(); }
 
         private:
             [[nodiscard]] static bool fillStoreSettings( const ServerConfig& serverConfig, const OnlineServerConfig& onlineConfig, OnlineServerRuntimeConfig& outSettings,

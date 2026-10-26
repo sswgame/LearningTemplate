@@ -69,17 +69,17 @@ namespace sw::editor
         void                     rememberPositions();
 
         // 그리기
-        void drawToolbar( GimmickCircuitComponent& circuit );
-        void drawCanvasArea( GimmickCircuitComponent& circuit );
-        void drawNode( const GimmickGraphNode& node );
-        void drawSidePanel( GimmickCircuitComponent& circuit );
-        void drawNodeInspector( GimmickCircuitComponent& circuit );
-        void drawWireSection( GimmickCircuitComponent& circuit );
-        void drawIssueSection( GimmickCircuitComponent& circuit );
-        bool drawCommittedText( const utf8* pID, const string& current, string& outText, const utf8* pHint = nullptr );
-        void handleCanvasInteractions( GimmickCircuitComponent& circuit );
-        bool findGraphPin( int32 pinID, EditorGraphPinInfo& outInfo ) const;
-        bool isPinLinked( int32 pinID ) const;
+        void               drawToolbar( GimmickCircuitComponent& circuit );
+        void               drawCanvasArea( GimmickCircuitComponent& circuit );
+        void               drawNode( const GimmickGraphNode& node );
+        void               drawSidePanel( GimmickCircuitComponent& circuit );
+        void               drawNodeInspector( GimmickCircuitComponent& circuit );
+        void               drawWireSection( GimmickCircuitComponent& circuit );
+        void               drawIssueSection( GimmickCircuitComponent& circuit );
+        bool               drawCommittedText( const utf8* pID, const string& current, string& outText, const utf8* pHint = nullptr );
+        void               handleCanvasInteractions( GimmickCircuitComponent& circuit );
+        [[nodiscard]] bool findGraphPin( int32 pinID, EditorGraphPinInfo& outInfo ) const;
+        bool               isPinLinked( int32 pinID ) const;
 
         // 편집 — 모델을 고치고 컴포넌트에 쓰고 Undo 에 올린다
         ObjectSnapshot beginEdit( GimmickCircuitComponent& circuit ) const;

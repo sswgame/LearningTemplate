@@ -70,7 +70,7 @@ namespace sw
         IJRPGTimingInput& operator=( const IJRPGTimingInput& ) = default;
 
         /** @brief 눌렀으면 어긋난 시간(초, 음수면 일찍 누른 것)을 @p outOffset 에 두고 true 를 반환하며, 누르지 않았으면 false 를 반환합니다. */
-        virtual bool findPressOffset( JRPGTimingKind kind, int32 memberIndex, float32& outOffset ) const = 0;
+        [[nodiscard]] virtual bool findPressOffset( JRPGTimingKind kind, int32 memberIndex, float32& outOffset ) const = 0;
     };
 } // namespace sw
 

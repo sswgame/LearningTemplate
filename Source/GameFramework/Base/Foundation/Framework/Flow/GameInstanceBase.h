@@ -54,7 +54,7 @@ namespace sw
          *          사운드 이벤트 라이브러리(`_audioEvents`)도 `onInitialize` 앞에 올리고 `shutdown` 이 내린다. 적었는데 못 읽거나 `onInitialize` 가 false 면 false 다
          *          (필수 데이터 — `loadRequiredData` — 를 못 읽은 게임은 뜨지 않는다).
          */
-        bool initialize( IWindow* pWindow, IRHIDevice* pRHIDevice ) final;
+        [[nodiscard]] bool initialize( IWindow* pWindow, IRHIDevice* pRHIDevice ) final;
         /** @brief onShutdown 뒤에 `GameSettings` 서비스를 풀고 윈도우 · RHI 포인터를 끊습니다. */
         void shutdown() final;
         /**

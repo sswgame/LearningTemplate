@@ -29,7 +29,7 @@ namespace sw
          * @param defaultLanguage 기본 활성 언어 코드 (예: "ko_KR")
          * @param fallbackLanguage 대체(Fallback) 언어 코드 (예: "en_US")
          */
-        static bool initialize( string_view projectPath, string_view defaultLanguage = "ko_KR", string_view fallbackLanguage = "en_US" );
+        [[nodiscard]] static bool initialize( string_view projectPath, string_view defaultLanguage = "ko_KR", string_view fallbackLanguage = "en_US" );
 
         /** @brief 현재 활성 언어를 설정합니다(언어가 바뀌면 등록된 UI 콜백들에 알림이 갑니다). */
         static bool setLanguage( string_view languageCode );

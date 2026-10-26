@@ -36,7 +36,7 @@ namespace sw
          * @brief 라우터를 정합니다. 호스트가 라우터를 여는 것은 호스트 `initialize` 안이고, 호스트는 그 전에 버스 포인터를 받으므로 서버 조립은 버스를 먼저 만들고
          *        호스트를 띄운 뒤 이것을 부릅니다. 구독이 있으면 바꾸지 않습니다(false).
          */
-        bool bindRouter( EphemeralStoreRouter* pRouter );
+        [[nodiscard]] bool bindRouter( EphemeralStoreRouter* pRouter );
 
         void   publish( string_view topic, const uint8* pData, int32 size ) override;
         void   subscribe( string_view topic ) override;

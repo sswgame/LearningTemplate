@@ -254,7 +254,7 @@ namespace sw
             const MoveFrameData*     pMove = slot._listMoveID.empty() ? nullptr : _pMoveCatalog->find( slot._listMoveID.front() );
             if ( pMove == nullptr )
                 return;
-            (void)findLockTarget( pilotIndex );
+            (void)findLockTarget( pilotIndex ); // 대상을 골라 잠금 상태에 적는다 — 번호는 쓰지 않는다
             pilot._melee.start( *pMove );
             pilot._comboStage   = 0;
             pilot._meleeSlot    = slotIndex;

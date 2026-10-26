@@ -37,7 +37,7 @@ namespace sw
             {
             }
 
-            void run( IServiceStoreConnection& connection ) override { (void)AdminStoreLogic::execute( connection, _command, _reply ); }
+            void run( IServiceStoreConnection& connection ) override { (void)AdminStoreLogic::execute( connection, _command, _reply ); } // 결과는 _reply 에 담겨 complete 가 돌려준다
             void complete() override { _pService->completeCall( _callID, _reply ); }
 
         private:

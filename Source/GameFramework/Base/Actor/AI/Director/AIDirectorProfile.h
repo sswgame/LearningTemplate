@@ -263,7 +263,7 @@ namespace sw
         [[nodiscard]] bool readIntensity( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool readPhase( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool readPool( const XMLNode& node, const ScheduleConditionVocabulary& vocabulary, string_view sourceName );
-        bool               resolveReferences( string_view sourceName );
+        [[nodiscard]] bool resolveReferences( string_view sourceName );
         bool               validatePacingNames( const vector<hashed_string>& listPacing, const hashed_string& ownerID, string_view sourceName ) const;
 
         AIDirectorIntensityDef     _intensity;

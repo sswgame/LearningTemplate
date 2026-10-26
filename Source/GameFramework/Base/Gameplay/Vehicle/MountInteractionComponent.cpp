@@ -56,6 +56,6 @@ namespace sw
         }
         VehicleSeatComponent* pSeat = MountUtil::findNearestFreeSeat( *pPawn );
         if ( pSeat != nullptr )
-            (void)MountUtil::mount( *pPawn, *pSeat );
+            (void)MountUtil::mount( *pPawn, *pSeat ); // 태우지 못하면 아무것도 바뀌지 않는다 — 결과는 좌석 상태로 본다
     }
 } // namespace sw

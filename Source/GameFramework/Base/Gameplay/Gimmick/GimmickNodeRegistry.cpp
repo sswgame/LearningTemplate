@@ -213,7 +213,7 @@ namespace sw
             /** @brief Not 은 입력을 뒤집는다. */
             static void stepNot( GimmickNodeContext& context ) { context.setOutput( 0, context.isInput( 0 ) == false ); }
 
-            static bool initializeStartBit( GimmickNodeContext& context )
+            [[nodiscard]] static bool initializeStartBit( GimmickNodeContext& context )
             {
                 context._pIntState[0] = context.getNumber( 0 ) != 0.0f ? 1 : 0;
                 context.setOutput( 0, context._pIntState[0] != 0 );
@@ -340,7 +340,7 @@ namespace sw
             // ------------------------------------------------------------------------------
             // 액추에이터: 상태 float[0] 이 오브젝트에 적용하는 값이다(열림, 거리, 높이, 각도)
             // ------------------------------------------------------------------------------
-            static bool initializeDoor( GimmickNodeContext& context )
+            [[nodiscard]] static bool initializeDoor( GimmickNodeContext& context )
             {
                 const bool bOpen        = context.getNumber( 2 ) != 0.0f;
                 context._pFloatState[0] = bOpen ? 1.0f : 0.0f;
@@ -372,7 +372,7 @@ namespace sw
                 context.setOutput( 2, openness != previous );
             }
 
-            static bool initializeMover( GimmickNodeContext& context )
+            [[nodiscard]] static bool initializeMover( GimmickNodeContext& context )
             {
                 const string& mode = context.getText( 1 );
                 if ( StringUtil::equals( mode, "Once", true ) )
@@ -483,7 +483,7 @@ namespace sw
                 context.setOutput( 3, bArrive );
             }
 
-            static bool initializeElevator( GimmickNodeContext& context )
+            [[nodiscard]] static bool initializeElevator( GimmickNodeContext& context )
             {
                 vector<float32> listFloor;
                 if ( GameDataXML::parseFloatList( context.getText( 0 ), kMaxElevatorFloor, listFloor ) == false )
@@ -570,7 +570,7 @@ namespace sw
                 context.setOutput( 1, maxCount > 0 && context._pIntState[0] >= maxCount );
             }
 
-            static bool initializeHazard( GimmickNodeContext& context )
+            [[nodiscard]] static bool initializeHazard( GimmickNodeContext& context )
             {
                 const int32 onSteps   = context.toSteps( context.getNumber( 0 ), 1 );
                 const int32 offSteps  = context.getNumber( 1 ) > 0.0f ? context.toSteps( context.getNumber( 1 ), 1 ) : 0;
@@ -634,7 +634,7 @@ namespace sw
                 context.setOutput( 0, context.isInputHigh( 0, context.getNumber( 0 ) != 0.0f ) != ( context._pIntState[0] != 0 ) );
             }
 
-            static bool initializeEnable( GimmickNodeContext& context )
+            [[nodiscard]] static bool initializeEnable( GimmickNodeContext& context )
             {
                 context.setOutput( 0, context.getNumber( 0 ) != 0.0f );
                 return true;

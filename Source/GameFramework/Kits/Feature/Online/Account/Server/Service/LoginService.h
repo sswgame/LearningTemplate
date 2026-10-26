@@ -144,9 +144,9 @@ namespace sw
         void noteRevokedElsewhere( AccountID accountID, uint64 sessionID, LoginRevokeReason reason );
 
         // IAccountDirectory 구현이다. 이 프로세스에 접속해 있는 계정만 메모리에서 조회하며 저장소는 읽지 않는다
-        bool findIdentity( AccountID accountID, AccountIdentity& outIdentity ) const override;
-        bool findIdentityByDisplayName( string_view displayName, AccountIdentity& outIdentity ) const override;
-        bool isAccountOnline( AccountID accountID ) const override { return _mapAccountToSession.find( accountID ) != _mapAccountToSession.end(); }
+        [[nodiscard]] bool findIdentity( AccountID accountID, AccountIdentity& outIdentity ) const override;
+        [[nodiscard]] bool findIdentityByDisplayName( string_view displayName, AccountIdentity& outIdentity ) const override;
+        bool               isAccountOnline( AccountID accountID ) const override { return _mapAccountToSession.find( accountID ) != _mapAccountToSession.end(); }
 
         /** @brief 맡겨 두고 아직 끝나지 않은 요청 수입니다. 외부 확인 대기도 포함합니다. */
         int32                       getPendingCount() const { return _pendingCount + static_cast<int32>( _listPendingVerification.size() ); }

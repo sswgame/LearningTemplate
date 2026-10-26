@@ -16,7 +16,7 @@ namespace sw
         struct EconomyMirrorInternal
         {
             /** @brief @p assetID 가 @p prefix 로 시작하면 뒤의 이름을 @p outName 에 넣고 true 를 반환합니다. */
-            static bool findSuffix( string_view assetID, string_view prefix, hashed_string& outName )
+            [[nodiscard]] static bool findSuffix( string_view assetID, string_view prefix, hashed_string& outName )
             {
                 if ( StringUtil::startsWith( assetID, prefix ) == false || assetID.size() == prefix.size() )
                     return false;

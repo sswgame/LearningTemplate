@@ -232,9 +232,9 @@ namespace sw
                 if ( bKnown || bJustOpened == false )
                     continue;
                 PushNotificationMessage message;
-                (void)findParameter( definition._eventID, LiveOpsPush::kTitleParameter, message._titleKey );
-                (void)findParameter( definition._eventID, LiveOpsPush::kBodyParameter, message._bodyKey );
-                (void)findParameter( definition._eventID, LiveOpsPush::kLinkParameter, message._deepLink );
+                (void)findParameter( definition._eventID, LiveOpsPush::kTitleParameter, message._titleKey ); // 선택 값이다 — 없으면 비우고 아래가 거른다
+                (void)findParameter( definition._eventID, LiveOpsPush::kBodyParameter, message._bodyKey );   // 선택 값이다 — 없으면 비우고 아래가 거른다
+                (void)findParameter( definition._eventID, LiveOpsPush::kLinkParameter, message._deepLink );  // 선택 값이다 — 없으면 비우고 아래가 거른다
                 if ( message._titleKey.empty() && message._bodyKey.empty() )
                     continue; // 시작 푸시를 달지 않은 이벤트이다
                 LiveEventStart& start = _listStarted.emplace_back();
