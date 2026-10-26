@@ -29,6 +29,9 @@
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/TileMap/TileSetAsset.h"
+#include "Engine/UI/Base/Widget.h"
+#include "Engine/UI/Screen/UIGlobalCommandRegistry.h"
+#include "Engine/UI/UISystem.h"
 
 #include "EngineTest/TestGameObjectMocks.h"
 
@@ -921,6 +924,93 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBasePublishesSceneLoadEvents )
     SW_EXPECT_EQUAL( missingPath, listCompleted[1]._levelName );
     SW_EXPECT_FALSE( listCompleted[1]._bSuccess );
 
+    sceneManager.shutdown();
+}
+
+/**
+ * @brief [GameFrameworkTest] 타이틀 씬(`titleScene`)을 가진 게임만 UI 전역 명령 `ReturnToTitle` 을 걸고, 그 명령은 타이틀 씬 로드를 요청하며, 거두면 사라진다
+ * @details 일시정지 메뉴의 "타이틀로" 단추의 게임 쪽 반이다(단추 보임 · 눌림은 `UIOptionsMenuTest.PauseMenuSessionButtonsFollowGlobalCommands`).
+ *          변이: 타이틀 씬이 없는데 등록하면 첫 단언이, 명령이 `requestTitleScene` 을 부르지 않으면 요청 수 단언이, `shutdown` 이 거두지 않으면 마지막 단언이 진다.
+ */
+SW_TEST_CASE( GameFrameworkTest, GameInstanceBaseReturnToTitleFollowsTitleScene )
+{
+    class TitleGameInstance : public GameInstanceBase
+    {
+    public:
+        // 경로 칸(`DataPath`)은 데이터 읽기만 채운다. @p titlePath 가 비면 타이틀 씬이 없는 게임이다.
+        [[nodiscard]] bool setScenes( const string& startPath, const string& titlePath )
+        {
+            fixed_string<constant::kMaxBuffer2048> xml;
+            if ( titlePath.empty() )
+                formatstring( xml.data(), xml.capacity(), "<GameSettings><startMap>%#</startMap></GameSettings>", startPath );
+            else
+                formatstring( xml.data(), xml.capacity(), "<GameSettings><startMap>%#</startMap><titleScene>%#</titleScene></GameSettings>", startPath, titlePath );
+            return _bootstrap._data.loadFromXMLText( xml.c_str(), "test" );
+        }
+        void registerCommands( UISystem& ui ) { registerSessionCommands( ui ); }
+        void unregisterCommands( UISystem& ui ) { unregisterSessionCommands( ui ); }
+    };
+
+    const string titleFile = test::makeTempPath( "return_to_title.scene.xml" );
+    const string titlePath = ::test::makeTempResourceID( titleFile );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( titleFile, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+                                                        "<Scene formatVersion=\"2\" name=\"TitleScreen\">\n"
+                                                        "  <WorldSettings _bStreaming=\"false\" _unloadMargin=\"0\" _maxCellLoadsPerFrame=\"0\"><_cellGrid _cellSize=\"0\" _loadingRadius=\"0\"/></WorldSettings><entities>\n"
+                                                        "    <entity id=\"101\" name=\"Logo\"/>\n"
+                                                        "  </entities>\n"
+                                                        "</Scene>\n" ) );
+    SceneDocument document{};
+    document._name = "TitleScreen";
+    SceneDocument::SceneObjectNode entity{};
+    entity._name = "Logo";
+    document._listSceneObjectNode.push_back( std::move( entity ) );
+    SW_ASSERT_TRUE( document.saveBinary( test::makeTempPath( "return_to_title.scene.bin" ) ) );
+
+    SceneManager sceneManager;
+    SW_ASSERT_TRUE( sceneManager.initialize() );
+    const ScopedSceneGameService    scopedScene{ sceneManager };
+    EventDispatcher                 dispatcher;
+    const ScopedGameEventDispatcher scopedDispatcher{ dispatcher };
+    vector<string>                  listRequested;
+    dispatcher.subscribe<SceneLoadRequestedEvent>( gameEventChannel(), SW_DELEGATE_LAMBDA( Delegate<void( const SceneLoadRequestedEvent& )>, [&listRequested]( const SceneLoadRequestedEvent& event )
+    { listRequested.push_back( event._levelName ); } ) );
+    sw::GameTimeScale::setUnscaledDeltaTime( 0.016f );
+
+    UISystem            ui;
+    Widget              source;
+    const hashed_string command( UIGlobalCommandRegistry::kReturnToTitle );
+
+    // 타이틀 씬이 없으면 걸지 않는다 — 일시정지 메뉴의 단추가 접힌 채다.
+    {
+        TitleGameInstance noTitle;
+        SW_ASSERT_TRUE( noTitle.setScenes( titlePath, string{} ) );
+        noTitle.registerCommands( ui );
+        SW_EXPECT_FALSE( ui.getGlobalCommands().hasCommand( command ) );
+    }
+
+    TitleGameInstance gameInstance;
+    SW_ASSERT_TRUE( gameInstance.setScenes( titlePath, titlePath ) );
+    gameInstance.registerCommands( ui );
+    SW_ASSERT_TRUE( ui.getGlobalCommands().hasCommand( command ) );
+    SW_EXPECT_TRUE( listRequested.empty() );
+
+    // 명령을 누르면 타이틀 씬 로드를 요청한다.
+    SW_EXPECT_TRUE( ui.getGlobalCommands().tryExecute( command, source ) );
+    SW_ASSERT_EQUAL( size_t( 1 ), listRequested.size() );
+    SW_EXPECT_EQUAL( titlePath, listRequested[0] );
+    TaskManager& tasks = engine::getSubsystem<TaskManager>();
+    for ( int32 stepIndex = 0; stepIndex < 200 && sceneManager.isTransitioning(); ++stepIndex )
+    {
+        tasks.waitAll();
+        sceneManager.updateTransitions();
+    }
+    sceneManager.updateTransitions();
+    gameInstance.update( 0.016f );
+    SW_ASSERT_NOT_NULL( sceneManager.getActiveScene() );
+    SW_EXPECT_EQUAL( string( "TitleScreen" ), sceneManager.getActiveScene()->getName() );
+
+    gameInstance.unregisterCommands( ui );
+    SW_EXPECT_FALSE( ui.getGlobalCommands().hasCommand( command ) );
     sceneManager.shutdown();
 }
 

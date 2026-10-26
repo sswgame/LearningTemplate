@@ -28,6 +28,7 @@
 "Scripts/setup/SetupEnvironment.py|setup.InstallGitHooks" = "설정 단계(SetupLlvm · SetupVcpkg · SetupLinuxDevEnvironment · InstallGitHooks)를 순서대로 부르는 조립 명령"
 "Scripts/setup/SetupEnvironment.py|setup.SetupLinuxDevEnvironment" = "설정 단계(SetupLlvm · SetupVcpkg · SetupLinuxDevEnvironment · InstallGitHooks)를 순서대로 부르는 조립 명령"
 "Scripts/setup/SetupEnvironment.py|setup.SetupLlvm" = "설정 단계(SetupLlvm · SetupVcpkg · SetupLinuxDevEnvironment · InstallGitHooks)를 순서대로 부르는 조립 명령"
+"Scripts/qa/ScenarioSequence.py|qa.ScenarioRun" = "시나리오 실행기(ScenarioRun)를 순서대로 부르는 얇은 조립 명령 — 조립 · 실행 · 표는 ScenarioRun 의 것이고 이 명령은 순서만 정한다"
 "Scripts/setup/SetupEnvironment.py|setup.SetupVcpkg" = "설정 단계(SetupLlvm · SetupVcpkg · SetupLinuxDevEnvironment · InstallGitHooks)를 순서대로 부르는 조립 명령"
 "Scripts/lint/fixer/FormatModified.py|lint.fixer.FormatBranchBraces" = "픽서 넷과 clang-format 을 순서대로 부르는 조립 명령(kFixerSkipReason)"
 "Scripts/lint/fixer/FormatModified.py|lint.fixer.FormatForwardDeclarations" = "픽서 넷과 clang-format 을 순서대로 부르는 조립 명령(kFixerSkipReason)"

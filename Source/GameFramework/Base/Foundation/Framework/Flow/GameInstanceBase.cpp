@@ -185,7 +185,8 @@ namespace sw
             SW_LOG_ERROR( "Game instance cannot start - the net session asked for by the launch arguments or the server config did not open" );
         // 사운드 이벤트는 gamesettings 가 기준이다. 적었는데 못 읽으면 게임을 띄우지 않는다(소리 없이 진행하지 않는다). 입력 맵을 적었는데 입력 서비스가 없어도 같다.
         const bool bInitialized = bBootstrapApplied && bNetSessionOpened && loadAudioEvents() && onInitialize();
-        registerSessionCommands();
+        if ( _pUISystem != nullptr )
+            registerSessionCommands( *_pUISystem );
 
         // 플레이어 설정을 다시 넣는다. 언어 팩과 입력 맵(키 바인딩, 누르기/토글)은 위에서 막 생겼고, 엔진 기동 때의 적용은 그 대상이 없을 때 한 것이다.
         // 액션을 더 늦게(컴포넌트 시작 때) 만드는 게임은 그 뒤에 `UserSettingsManager::reapplyAll` 을 부른다. 창이 없는 호스트는 사용자 설정이 없다.
@@ -196,7 +197,8 @@ namespace sw
 
     void GameInstanceBase::shutdown()
     {
-        unregisterSessionCommands();
+        if ( _pUISystem != nullptr )
+            unregisterSessionCommands( *_pUISystem );
         onShutdown();
         if ( _loadedAudioEvents.empty() == false )
         {
@@ -317,20 +319,19 @@ namespace sw
         return requestLoadScene( titleScene.get(), "title" );
     }
 
-    void GameInstanceBase::registerSessionCommands()
+    void GameInstanceBase::registerSessionCommands( UISystem& ui )
     {
-        // 창이 없는 호스트(전용 서버 · 테스트)는 UI 가 없다(`bindEngineServices`) — 타이틀로 돌아갈 메뉴도 없다.
-        if ( _pUISystem == nullptr || _bootstrap._data._titleScene.isSet() == false )
+        // 타이틀 씬이 없는 게임은 "타이틀로" 를 걸지 않는다(창이 없는 호스트는 `initialize` 가 이 함수를 부르지 않는다 — UI 가 없다).
+        if ( _bootstrap._data._titleScene.isSet() == false )
             return;
-        _pUISystem->getGlobalCommands().registerCommand( hashed_string( UIGlobalCommandRegistry::kReturnToTitle ),
-                                                         SW_DELEGATE_METHOD( UICommandDelegate, &GameInstanceBase::onReturnToTitleCommand, this ) );
+        ui.getGlobalCommands().registerCommand( hashed_string( UIGlobalCommandRegistry::kReturnToTitle ),
+                                                SW_DELEGATE_METHOD( UICommandDelegate, &GameInstanceBase::onReturnToTitleCommand, this ) );
     }
 
-    void GameInstanceBase::unregisterSessionCommands()
+    void GameInstanceBase::unregisterSessionCommands( UISystem& ui )
     {
-        if ( _pUISystem != nullptr )
-            _pUISystem->getGlobalCommands().unregisterCommand( hashed_string( UIGlobalCommandRegistry::kReturnToTitle ),
-                                                               SW_DELEGATE_METHOD( UICommandDelegate, &GameInstanceBase::onReturnToTitleCommand, this ) );
+        ui.getGlobalCommands().unregisterCommand( hashed_string( UIGlobalCommandRegistry::kReturnToTitle ),
+                                                  SW_DELEGATE_METHOD( UICommandDelegate, &GameInstanceBase::onReturnToTitleCommand, this ) );
     }
 
     void GameInstanceBase::onReturnToTitleCommand( [[maybe_unused]] const hashed_string& command, [[maybe_unused]] Widget& source )

@@ -62,6 +62,7 @@ _kSubcommand: tuple[Subcommand, ...] = (
     Subcommand("verify-batch", "dev.RunVerifyBatch", "통합 검증 · 측정 항목(Test/QA/VerifyBatch.json)을 구성별로 모아 한 번에 돌리고 결과 표 하나를 남긴다(--list · --check · --dry-run)"),
     Subcommand("scenario-logs", "dev.RunScenarioLogs", "시나리오 보고로 로그 허용 목록(allowedlogs.json)을 지킨다 — 낡은 항목 · 처리하지 않은 로그(종료 코드 15)를 --check 가 세고 --regen 이 초안 항목을 만든다"),
     Subcommand("scenario", "qa.ScenarioRun", "시나리오 하나를 선언한 <Launch> 인자 그대로 백엔드마다 돌려(GPU 공유 잠금) 종료 코드를 뜻으로 풀고 failures · unconfirmed · unhandledLogs 를 한 표로 보인다"),
+    Subcommand("scenario-seq", "qa.ScenarioSequence", "시나리오를 차례로 새 프로세스로 돌린다(앞 실행이 디스크에 남긴 사용자 설정 같은 상태를 뒤 실행이 읽는다 — 재시작 뒤 유지 확인)"),
     Subcommand("validate-assets", "qa.ValidateAssets", "에셋 검증 규칙(Config/Editor/AssetValidationRules.json)을 Resource/ 에 돌린다"),
     Subcommand("asset-merge", "asset.AssetMerge", "XML 에셋 의미 비교 · 3-way 병합 (git 드라이버로도 쓴다)"),
     Subcommand("golden", "qa.GoldenImages", "테스트 게임 자동 플레이를 네 백엔드로 그려 골든 이미지와 지표로 견준다"),
