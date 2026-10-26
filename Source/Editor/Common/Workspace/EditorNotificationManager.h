@@ -30,6 +30,7 @@ namespace sw::editor
         float32          _durationSec{ 4.0f }; ///< 0 보다 커야 한다(`push` 가 단언)
         float32          _elapsedSec{ 0.0f };
         float32          _progress{ -1.0f }; ///< 0.0 ~ 1.0 이면 프로그레스 바 표시, 음수면 미표시
+        string           _revealPath;        ///< 비어 있지 않으면 "Show in Explorer" 단추가 이 절대 경로를 연다
     };
 } // namespace sw::editor
 
@@ -63,6 +64,11 @@ namespace sw::editor
          */
         void push( string_view title, string_view message, NotificationType type = NotificationType::Info,
                    float32 durationSec = 4.0f, float32 progress = -1.0f );
+        /**
+         * @brief `push` 와 같되 토스트에 "Show in Explorer" 단추를 답니다. 단추는 @p revealPath(절대 경로)를 탐색기에서 선택합니다.
+         * @details 단추를 누르려면 토스트가 입력을 받아야 하므로 이 토스트만 마우스를 받는다(나머지는 입력을 통과시킨다).
+         */
+        void pushRevealable( string_view title, string_view message, NotificationType type, string_view revealPath, float32 durationSec = 4.0f );
         /** @brief 시간을 @p deltaTime 초 진행하고 표시 시간이 끝난 알림을 지웁니다. */
         void update( float32 deltaTime );
         void clear() { _listNotification.clear(); }

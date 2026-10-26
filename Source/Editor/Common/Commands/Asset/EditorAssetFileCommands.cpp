@@ -3,6 +3,7 @@
 #include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
 
 #include "Core/Common/StdHeaders.h"
+#include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
@@ -11,10 +12,14 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Commands/Asset/EditorReferenceIndex.h"
+#include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorNotificationManager.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorStateStore.h"
 
 #include "Engine/Common/EngineDefines.h"
 #include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/Probe/AutomationProbe.h"
 #include "Engine/Resource/AssetDatabase.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/ResourceIO.h"
@@ -28,6 +33,60 @@ namespace sw::editor
     {
         struct EditorAssetFileCommandsInternal
         {
+            /** @brief 탐색기 명령의 기록입니다. 에디터 범위의 상태 저장소가 소유한다. */
+            struct ExplorerState
+            {
+                bool   _bDryRun{ false };
+                uint32 _launchCount{ 0 };
+                string _lastCommand;
+            };
+
+            [[nodiscard]] static bool readExplorerLaunchCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                if ( editor::findSubsystem<EditorStateStore>() == nullptr )
+                    return false;
+                outValue = static_cast<float64>( getEditorState<ExplorerState>()._launchCount );
+                return true;
+            }
+
+            [[nodiscard]] static bool readExplorerCommandWellFormed( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                if ( editor::findSubsystem<EditorStateStore>() == nullptr )
+                    return false;
+                const string_view command{ getEditorState<ExplorerState>()._lastCommand };
+#if defined( SW_PLATFORM_WINDOWS )
+                constexpr string_view kPrefix = "explorer.exe /select,\"";
+                // 경로 부분에 슬래시가 남으면 explorer 가 선택하지 않고 내 문서를 연다(`makeFileExplorerCommand` 의 함정).
+                const bool bPrefixed   = command.size() > kPrefix.size() + 1 && command.substr( 0, kPrefix.size() ) == kPrefix && command.back() == '"';
+                const bool bWellFormed = bPrefixed && command.find( '/', kPrefix.size() ) == string_view::npos;
+#else
+                constexpr string_view kPrefix     = "xdg-open \"";
+                const bool            bWellFormed = command.size() > kPrefix.size() && command.substr( 0, kPrefix.size() ) == kPrefix && command.back() == '"';
+#endif
+                outValue = bWellFormed ? 1.0 : 0.0;
+                return true;
+            }
+
+            static bool runExplorerDryRun( const vector<string>& listArgument, string& outReply )
+            {
+                const bool bValidArgument = listArgument.size() == 1 && ( listArgument[0] == "0" || listArgument[0] == "1" );
+                if ( bValidArgument == false || editor::findSubsystem<EditorStateStore>() == nullptr )
+                    return false;
+                getEditorState<ExplorerState>()._bDryRun = listArgument[0] == "1";
+                outReply                                 = "explorer dry run " + listArgument[0];
+                return true;
+            }
+
+            static bool runNotifyReveal( const vector<string>& listArgument, string& outReply )
+            {
+                EditorContext* pContext = editor::findSubsystem<EditorContext>();
+                if ( listArgument.size() != 1 || pContext == nullptr )
+                    return false;
+                pContext->getSubsystem<EditorNotificationManager>().pushRevealable( "Reveal", listArgument[0], NotificationType::Success, listArgument[0] );
+                outReply = "toast with Show in Explorer pushed";
+                return true;
+            }
+
             /** @brief 새 씬의 글입니다. */
             static constexpr const utf8* kSceneText = "<Scene formatVersion=\"2\" name=\"NewScene\">\n\t<WorldSettings _bStreaming=\"false\" _unloadMargin=\"0\" _maxCellLoadsPerFrame=\"0\"><_cellGrid _cellSize=\"0\" _loadingRadius=\"0\"/></WorldSettings><entities>\n\t</entities>\n</Scene>\n";
             /** @brief 새 프리팹의 글입니다. */
@@ -345,10 +404,10 @@ namespace sw::editor
         return copied;
     }
 
-    bool EditorAssetFileCommands::showInFileExplorer( string_view absolutePath )
+    string EditorAssetFileCommands::makeFileExplorerCommand( string_view absolutePath )
     {
         if ( absolutePath.empty() )
-            return false;
+            return {};
 
         const string path = FileUtil::normalizeSeparators( absolutePath );
         string       command;
@@ -365,14 +424,53 @@ namespace sw::editor
         // 리눅스 파일 관리자에는 "선택한 채로 열기" 표준이 없다. 그래서 폴더까지만 연다.
         command = "xdg-open \"" + FileUtil::getDirectoryPart( path ) + "\"";
 #endif
+        return command;
+    }
+
+    bool EditorAssetFileCommands::showInFileExplorer( string_view absolutePath )
+    {
+        const string command = makeFileExplorerCommand( absolutePath );
+        if ( command.empty() )
+            return false;
+
+        EditorAssetFileCommandsInternal::ExplorerState& state = getEditorState<EditorAssetFileCommandsInternal::ExplorerState>();
+        ++state._launchCount;
+        state._lastCommand = command;
+        if ( state._bDryRun )
+            return true;
 
         // 실행하고 기다리지 않는다. `Process::execute` 로 기다리면 UI 스레드가 탐색기(또는 탐색기가 띄운 창)가 출력 파이프를 놓을
         // 때까지 멈추고, `explorer.exe /select,` 는 성공해도 종료 코드 1 을 반환한다. 알 수 있는 실패는 "실행하지 못했다" 뿐이다.
         if ( Process::launchDetached( command ) == false )
         {
-            SW_LOG_WARNING( "Failed to open file explorer for %#", path.c_str() );
+            SW_LOG_WARNING( "Failed to open file explorer: %#", command.c_str() );
             return false;
         }
         return true;
     }
+
+    void EditorAssetFileCommands::setFileExplorerDryRun( bool bDryRun )
+    {
+        getEditorState<EditorAssetFileCommandsInternal::ExplorerState>()._bDryRun = bDryRun;
+    }
+
+    uint32 EditorAssetFileCommands::getFileExplorerLaunchCount()
+    {
+        return getEditorState<EditorAssetFileCommandsInternal::ExplorerState>()._launchCount;
+    }
+
+    string EditorAssetFileCommands::getLastFileExplorerCommand()
+    {
+        return getEditorState<EditorAssetFileCommandsInternal::ExplorerState>()._lastCommand;
+    }
+
+    SW_AUTOMATION_PROBE( editorExplorerLaunchCount, "Editor.ExplorerLaunchCount", "Times the editor built a file explorer command (Show in Explorer, dry run included)",
+                         &EditorAssetFileCommandsInternal::readExplorerLaunchCount );
+    SW_AUTOMATION_PROBE( editorExplorerCommandWellFormed, "Editor.ExplorerCommandWellFormed",
+                         "1 when the last file explorer command selects a quoted path using the platform separator (Windows: backslashes only)",
+                         &EditorAssetFileCommandsInternal::readExplorerCommandWellFormed );
+    SW_DEV_COMMAND( ExplorerDryRun, "explorer.dryRun", "explorer.dryRun <0|1>", "Record Show in Explorer commands without starting the file explorer",
+                    &EditorAssetFileCommandsInternal::runExplorerDryRun );
+    SW_DEV_COMMAND( NotifyReveal, "notify.reveal", "notify.reveal <absolute path>", "Push a toast with a Show in Explorer button for the path",
+                    &EditorAssetFileCommandsInternal::runNotifyReveal );
 } // namespace sw::editor

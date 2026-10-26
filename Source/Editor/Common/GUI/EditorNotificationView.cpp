@@ -4,10 +4,12 @@
 
 #include "Core/String/fixed_string.h"
 
+#include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
+#include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include <imgui.h>
 
@@ -79,9 +81,12 @@ namespace sw::editor
             toastDesc._rounding   = 6.0f;
             toastDesc._borderSize = 1.5f;
             toastDesc._bgAlpha    = bgColor._a;
-            toastDesc._flags      = editor::EditorOverlayFlags::NoDecoration | editor::EditorOverlayFlags::NoInputs |
+            toastDesc._flags      = editor::EditorOverlayFlags::NoDecoration |
                                editor::EditorOverlayFlags::NoNav | editor::EditorOverlayFlags::AutoResize |
                                editor::EditorOverlayFlags::NoSavedSettings | editor::EditorOverlayFlags::NoFocusOnAppearing;
+            // 단추가 있는 토스트만 마우스를 받는다. 나머지는 뒤의 패널로 입력을 통과시킨다.
+            if ( item._revealPath.empty() )
+                toastDesc._flags = toastDesc._flags | editor::EditorOverlayFlags::NoInputs;
 
             ImGui::PushStyleColor( ImGuiCol_WindowBg, EditorColorUtil::toImVec4( bgColor ) );
             ImGui::PushStyleColor( ImGuiCol_Border, EditorColorUtil::toImVec4( typeColor ) );
@@ -97,6 +102,14 @@ namespace sw::editor
                     ImGui::PushStyleColor( ImGuiCol_Text, EditorColorUtil::toImVec4( Color{ 0.85f, 0.85f, 0.85f, alpha } ) );
                     ImGui::TextWrapped( "%s", item._message.c_str() );
                     ImGui::PopStyleColor();
+                }
+
+                if ( item._revealPath.empty() == false )
+                {
+                    // 콘텐츠 브라우저 메뉴와 같은 글이다(그쪽도 지역화 전 글).
+                    if ( ImGui::SmallButton( "Show in Explorer" ) )
+                        (void)EditorAssetFileCommands::showInFileExplorer( item._revealPath );
+                    EditorSelfTestMarks::note( "notification.showInExplorer" );
                 }
 
                 if ( item._progress >= 0.0f )

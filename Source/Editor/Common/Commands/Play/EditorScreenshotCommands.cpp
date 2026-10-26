@@ -80,6 +80,6 @@ namespace sw::editor
         if ( path.empty() )
             editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyScreenshotTitle" ), SW_LOCKEY( "EdCommon", "NotifyScreenshotFailed" ), NotificationType::Error );
         else
-            editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyScreenshotSaved" ), path, NotificationType::Success );
+            editorContext.getSubsystem<EditorNotificationManager>().pushRevealable( SW_LOCKEY( "EdCommon", "NotifyScreenshotSaved" ), path, NotificationType::Success, path );
     }
 } // namespace sw::editor
