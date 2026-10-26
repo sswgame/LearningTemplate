@@ -6,15 +6,18 @@
 #include "Core/Task/TaskTypes.h"
 
 #include "Editor/Common/Commands/Dev/EditorGlobalVariableCommands.h"
+#include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Commands/Scene/EditorInspectorCommands.h"
 #include "Editor/Common/Commands/Scene/EditorMultiEdit.h"
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
+#include "Editor/Common/Commands/Scene/EditorSceneObjectCommands.h"
 #include "Editor/Common/Commands/Scene/EditorTransformCommands.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorComponentIcon.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorComponentMenu.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
@@ -61,6 +64,28 @@ namespace sw::editor
         struct InspectorPanelInternal
         {
             static constexpr Color kMultiSelectionText{ 0.4f, 0.7f, 1.0f, 1.0f };
+
+            static InspectorPanel* findPanel()
+            {
+                EditorContext* pContext = editor::findSubsystem<EditorContext>();
+                return pContext != nullptr ? pContext->getSubsystem<EditorPanelManager>().findPanel<InspectorPanel>() : nullptr;
+            }
+
+            /** @brief 프리셋 하위 메뉴는 인스펙터가 프리셋 목록 · 이름 칸을 들고 있어 그 창이 있을 때 켜진다. */
+            static bool canShowPresets( const EditorCommandTarget& target )
+            {
+                GameObject* pOwner = nullptr;
+                return findPanel() != nullptr && EditorSceneObjectCommands::findTargetComponent( target, pOwner ) != nullptr;
+            }
+
+            static void drawPresetsSubmenu( const EditorCommandTarget& target )
+            {
+                GameObject*     pOwner     = nullptr;
+                Component*      pComponent = EditorSceneObjectCommands::findTargetComponent( target, pOwner );
+                InspectorPanel* pPanel     = findPanel();
+                if ( pComponent != nullptr && pPanel != nullptr )
+                    pPanel->drawComponentPresetItems( pComponent );
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -68,6 +93,9 @@ namespace sw::editor
 namespace sw::editor
 {
     SW_EDITOR_PANEL( InspectorPanel, InspectorPanel::kPanelID, EditorPanelCategory::Core, 200 );
+    // 컴포넌트 메뉴의 Presets 하위 메뉴(나머지 항목은 `EditorSceneObjectCommands.cpp`).
+    SW_EDITOR_CONTEXT_COMMAND( ComponentPresets, "inspector.component.presets", "Presets", nullptr, "Scene", Component, 400, nullptr, nullptr,
+                               &InspectorPanelInternal::canShowPresets, NoScene, &InspectorPanelInternal::drawPresetsSubmenu );
 
     InspectorPanel::InspectorPanel()
         : _propertyGrid{}
@@ -79,8 +107,6 @@ namespace sw::editor
         , _listComponentPresetFile{}
         , _nameEditObjectID{ 0 }
         , _lockedObjectID{ 0 }
-        , _pPendingMoveComponent{ nullptr }
-        , _pendingMoveDirection{ 0 }
         , _addComponentSearch{}
         , _presetNameBuffer{}
         , _bComponentPresetDirty{ SW_TRUE }
@@ -342,31 +368,21 @@ namespace sw::editor
             if ( pComp == nullptr || pComp->getTypeInfo() == nullptr )
                 continue;
             ImGui::PushID( pComp );
-            bool       bRemove{ false };
             const bool bOpen = ImGui::CollapsingHeader( pComp->getTypeInfo()->getDisplayName(), ImGuiTreeNodeFlags_DefaultOpen );
-            if ( ImGui::BeginPopupContextItem( "PreviewCompCtx" ) )
-            {
-                bRemove = ImGui::MenuItem( "Remove Component" );
-                ImGui::EndPopup();
-            }
-            if ( bOpen && bRemove == false )
+            drawComponentContextMenu( pComp ); // 메인 카드와 같은 컴포넌트 메뉴 — 고른 명령은 다음 프레임 첫머리에 돈다
+            if ( bOpen )
             {
                 const EditorPropertyGridTarget target{ pComp, pComp->getTypeInfo(), pComp, pObj, {}, {} };
                 _propertyGrid.drawProperties( target, nullptr, {} );
             }
             ImGui::PopID();
-            if ( bRemove )
-            {
-                (void)EditorSceneCommands::destroyComponent( pObj->getManager(), pObj, pComp ); // 막혔으면(플레이 중) 그대로 남고 카드가 보인다
-                break;
-            }
         }
 
         ImGui::Spacing();
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kPlus, "Add Component" ) ) )
         {
             _addComponentSearch.clear();
-            ImGui::OpenPopup( "PreviewAddComponent" );
+            EditorInputGUI::openPopup( "PreviewAddComponent" );
         }
         if ( ImGui::BeginPopup( "PreviewAddComponent" ) )
         {
@@ -455,7 +471,7 @@ namespace sw::editor
                 if ( bScrollTo )
                     ImGui::SetScrollHereY( 0.25f );
 
-                drawComponentContextMenu( pObj, pComp, workspace, bRemove );
+                drawComponentContextMenu( pComp );
 
                 drawComponentSection( pComp, pRHIDevice );
                 EditorWidgets::endComponentCard();
@@ -464,25 +480,9 @@ namespace sw::editor
                 InspectorObjectEdit::applyObjectEdit( pObj, "Toggle Component Active", [pComp, bActive]()
                 { pComp->setActive( bActive ); } );
 
-            if ( _pPendingMoveComponent == pComp && _pendingMoveDirection != 0 )
-            {
-                const int32 direction = _pendingMoveDirection;
-                InspectorObjectEdit::applyObjectEdit( pObj, direction < 0 ? "Move Component Up" : "Move Component Down", [pObj, pComp, direction]()
-                { (void)pObj->moveComponent( pComp, direction ); } ); // 끝 · 주 씬 컴포넌트면 그대로 — 메뉴가 이미 막는다
-                _pPendingMoveComponent = nullptr;
-                _pendingMoveDirection  = 0;
-                break;
-            }
-
             if ( bRemove )
             {
-                GameObjectManager* pGameObjectManager = pObj->getManager();
-                if ( pGameObjectManager == nullptr )
-                    (void)pObj->removeComponent( pComp ); // 실패는 removeComponent 가 알리고 카드가 남는다
-                else if ( EditorPlaySession::areSceneEditsAllowed() )
-                    EditorSceneCommands::destroyComponent( pGameObjectManager, pObj, pComp ); // 기록과 dirty 를 남긴다
-                else
-                    pGameObjectManager->destroyComponent( pComp ); // 플레이 사본이므로 Stop 이 되돌린다
+                EditorSceneObjectCommands::removeComponent( pObj, pComp ); // 메뉴의 Remove Component 와 같은 한 곳
                 break;
             }
         }
@@ -494,7 +494,7 @@ namespace sw::editor
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kPlus, "Add Component" ), ImVec2{ buttonWidth, 0.0f } ) )
         {
             _addComponentSearch.clear();
-            ImGui::OpenPopup( "InspectorAddComponent" );
+            EditorInputGUI::openPopup( "InspectorAddComponent" );
         }
         EditorSelfTestMarks::note( "inspector.addComponent" );
         if ( ImGui::BeginPopup( "InspectorAddComponent" ) )
@@ -508,128 +508,58 @@ namespace sw::editor
         }
     }
 
-    void InspectorPanel::drawComponentContextMenu( GameObject* pObj, Component* pComp, EditorWorkspace& workspace, bool& bOutRemove )
+    void InspectorPanel::drawComponentContextMenu( const Component* pComp )
     {
-        if ( ImGui::BeginPopupContextItem( "CompCardCtx" ) )
-        {
-            const TypeInfo* pTInfo = pComp->getTypeInfo();
-            if ( pTInfo != nullptr )
-            {
-                drawComponentCopyPasteItems( pObj, pComp, workspace );
-                drawComponentMoveItems( pObj, pComp );
-
-                ImGui::Separator();
-                drawComponentPresetsMenu( pComp );
-            }
-            ImGui::Separator();
-            if ( ImGui::MenuItem( "Remove Component" ) )
-                bOutRemove = true;
-            ImGui::EndPopup();
-        }
+        // 계층 창의 컴포넌트 행 · 미리보기 카드와 같은 메뉴다(`scene.component.*` 와 프리셋 하위 메뉴). 선택은 오브젝트 단위라 컴포넌트 선택을 바꾸지 않는다.
+        EditorContextMenuSubject subject{};
+        subject._pPopupID  = "CompCardCtx";
+        subject._kind      = EditorCommandTargetKind::Component;
+        subject._hoveredID = pComp->getComponentID();
+        (void)EditorInputGUI::drawContextMenuFor( subject ); // 열렸는지는 쓰지 않는다
     }
 
-    void InspectorPanel::drawComponentCopyPasteItems( GameObject* pObj, Component* pComp, EditorWorkspace& workspace )
+    void InspectorPanel::drawComponentPresetItems( Component* pComp )
     {
-        if ( ImGui::MenuItem( "Copy Component" ) )
-            workspace.copyComponent( pComp );
-        const string compTypeName = pComp->getTypeName().c_str();
-        const bool   bCanPaste    = ( workspace.hasCopiedComponent() &&
-                                 workspace.getCopiedComponentTypeName() == compTypeName );
-        if ( bCanPaste )
+        ImGui::InputTextWithHint( "##presetName", SW_LOCKEY( "EditorInspector", "PresetNameHint" ), _presetNameBuffer.data(), _presetNameBuffer.capacity() );
+        ImGui::SameLine();
+        if ( ImGui::Button( "Save" ) && _presetNameBuffer.empty() == false )
         {
-            if ( ImGui::MenuItem( "Paste Component Values" ) )
-                (void)EditorTransformCommands::pasteCopiedComponentValues( workspace, pComp ); // 실패는 붙여넣기가 로그로 알린다
-        }
-        else
-        {
-            ImGui::BeginDisabled();
-            ImGui::MenuItem( "Paste Component Values" );
-            ImGui::EndDisabled();
-        }
-
-        if ( workspace.hasCopiedComponent() )
-        {
-            if ( ImGui::MenuItem( "Paste as New Component" ) )
-                (void)EditorTransformCommands::pasteCopiedComponentAsNew( workspace, pObj ); // 실패는 붙여넣기가 로그로 알린다
+            if ( EditorTransformCommands::saveComponentPreset( pComp, _presetNameBuffer.c_str() ) )
+            {
+                _presetNameBuffer.clear();
+                _bComponentPresetDirty = SW_TRUE;
+            }
+            else
+            {
+                SW_LOG_ERROR( "Could not save component preset '%#'", _presetNameBuffer.c_str() );
+            }
         }
         ImGui::Separator();
-    }
 
-    void InspectorPanel::drawComponentMoveItems( GameObject* pObj, Component* pComp )
-    {
-        // 주 씬 컴포넌트(루트 트랜스폼)는 옮기지 않고, 그 위치로 옮겨 들어가지도 않는다(`GameObject::moveComponent`).
-        const auto& listComponent = pObj->getComponents();
-        size_t      index         = 0;
-        while ( index < listComponent.size() && listComponent[index] != pComp )
+        vector<string>       listNewPresetFile;
+        const EditorTaskPoll presetPoll = _componentPresetJob.take( listNewPresetFile );
+        if ( presetPoll == EditorTaskPoll::Ready )
         {
-            ++index;
+            _listComponentPresetFile = std::move( listNewPresetFile );
+            _bComponentPresetDirty   = SW_FALSE;
         }
-        const Component* pPrimary = pObj->getPrimarySceneComponent();
-        const bool       bCanUp   = index > 0 && index < listComponent.size() && pComp != pPrimary && listComponent[index - 1] != pPrimary;
-        const bool       bCanDown = index + 1 < listComponent.size() && pComp != pPrimary && listComponent[index + 1] != pPrimary;
-        if ( ImGui::MenuItem( "Move Up", nullptr, false, bCanUp ) )
+        else if ( _bComponentPresetDirty == SW_TRUE && presetPoll == EditorTaskPoll::Idle )
         {
-            _pPendingMoveComponent = pComp;
-            _pendingMoveDirection  = -1;
+            _componentPresetJob.request( EditorGlobalVariableCommands::getComponentPresetFolderPath(), ".preset.xml", false );
         }
-        if ( ImGui::MenuItem( "Move Down", nullptr, false, bCanDown ) )
+
+        bool bFoundPresets{ false };
+        for ( const string& presetFile : _listComponentPresetFile )
         {
-            _pPendingMoveComponent = pComp;
-            _pendingMoveDirection  = 1;
+            const string displayPreset = EditorTransformCommands::getComponentPresetName( pComp, presetFile );
+            if ( displayPreset.empty() )
+                continue;
+            bFoundPresets = true;
+            if ( ImGui::MenuItem( displayPreset.c_str() ) && EditorTransformCommands::loadComponentPreset( pComp, presetFile ) == false )
+                SW_LOG_ERROR( "Could not apply component preset '%#'", presetFile.c_str() );
         }
-    }
-
-    void InspectorPanel::drawComponentPresetsMenu( Component* pComp )
-    {
-        if ( ImGui::BeginMenu( "Presets" ) )
-        {
-            ImGui::InputTextWithHint( "##presetName", SW_LOCKEY( "EditorInspector", "PresetNameHint" ), _presetNameBuffer.data(),
-                                      _presetNameBuffer.capacity() );
-            ImGui::SameLine();
-            if ( ImGui::Button( "Save" ) && _presetNameBuffer.empty() == false )
-            {
-                if ( EditorTransformCommands::saveComponentPreset( pComp, _presetNameBuffer.c_str() ) )
-                {
-                    _presetNameBuffer.clear();
-                    _bComponentPresetDirty = SW_TRUE;
-                }
-                else
-                {
-                    SW_LOG_ERROR( "Could not save component preset '%#'", _presetNameBuffer.c_str() );
-                }
-            }
-            ImGui::Separator();
-
-            vector<string>       listNewPresetFile;
-            const EditorTaskPoll presetPoll = _componentPresetJob.take( listNewPresetFile );
-            if ( presetPoll == EditorTaskPoll::Ready )
-            {
-                _listComponentPresetFile = std::move( listNewPresetFile );
-                _bComponentPresetDirty   = SW_FALSE;
-            }
-            else if ( _bComponentPresetDirty == SW_TRUE && presetPoll == EditorTaskPoll::Idle )
-            {
-                _componentPresetJob.request(
-                    EditorGlobalVariableCommands::getComponentPresetFolderPath(), ".preset.xml", false );
-            }
-
-            bool bFoundPresets{ false };
-            for ( const string& presetFile : _listComponentPresetFile )
-            {
-                const string displayPreset = EditorTransformCommands::getComponentPresetName( pComp, presetFile );
-                if ( displayPreset.empty() == false )
-                {
-                    bFoundPresets = true;
-                    if ( ImGui::MenuItem( displayPreset.c_str() ) )
-                        if ( EditorTransformCommands::loadComponentPreset( pComp, presetFile ) == false )
-                            SW_LOG_ERROR( "Could not apply component preset '%#'", presetFile.c_str() );
-                }
-            }
-            if ( bFoundPresets == false )
-                ImGui::TextDisabled( "No saved presets." );
-
-            ImGui::EndMenu();
-        }
+        if ( bFoundPresets == false )
+            ImGui::TextDisabled( "No saved presets." );
     }
 
     void InspectorPanel::drawGameObjectHeader( GameObject* pObj )

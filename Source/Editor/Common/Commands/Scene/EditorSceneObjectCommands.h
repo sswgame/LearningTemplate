@@ -29,8 +29,13 @@ namespace sw::editor
         static void collectTargetObjects( const EditorCommandTarget& target, vector<GameObject*>& outListObject );
         /** @brief 누른 항목(없으면 주 선택)의 오브젝트입니다. 없으면 nullptr 입니다. */
         static GameObject* findTargetObject( const EditorCommandTarget& target );
-        /** @brief 컴포넌트 대상(누른 항목의 컴포넌트 id)의 컴포넌트와 주인입니다. 없으면 nullptr 입니다. */
+        /** @brief 컴포넌트 대상(누른 항목의 컴포넌트 id)의 컴포넌트와 주인입니다. 메인 씬 다음에 포커스 씬(미리보기 창)을 봅니다. 없으면 nullptr 입니다. */
         static Component* findTargetComponent( const EditorCommandTarget& target, GameObject*& pOutOwner );
+        /**
+         * @brief 컴포넌트를 지웁니다. 정지 상태면 되돌리기 기록과 dirty 를 남기고, 플레이 중이면 사본에서 바로 지웁니다(Stop 이 되돌린다).
+         * @details 컴포넌트 메뉴의 Remove 와 인스펙터 카드의 닫기 단추가 이 한 곳을 지난다.
+         */
+        static void removeComponent( GameObject* pOwner, Component* pComponent );
         /** @brief 대상 오브젝트가 하나 이상이면 true 입니다(복제 · 복사 · 지우기의 켜짐). */
         static bool hasTargetObjects( const EditorCommandTarget& target );
     };

@@ -10,8 +10,10 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/span.h"
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "Editor/Common/Commands/EditorCommandTarget.h"
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Common/EditorSubsystem.h"
 #include "Editor/Common/Workspace/EditorExtensionRegistry.h"
@@ -86,6 +88,12 @@ namespace sw::editor
         bool wasActionTriggered( string_view action ) const;
         /** @brief 액션이 눌려 있으면 true 입니다(비행처럼 누르는 동안 하는 일). 조건은 `wasActionTriggered` 와 같습니다. */
         bool isActionDown( string_view action ) const;
+        /**
+         * @brief 메뉴에서 고른 명령을 다음 `processFrame` 첫머리에 실행하도록 넣습니다(패널을 그리기 전).
+         * @details 맥락 메뉴는 패널이 목록을 그리는 중에 닫힌다. 그 자리에서 실행하면 지운 컴포넌트 · 오브젝트를 그리던 루프가 계속 읽는다 —
+         *          실행을 프레임 경계로 미뤄 그리는 중인 목록이 명령 뒤에 남지 않게 한다. 글을 치는 중이어도 실행한다(고른 것이다).
+         */
+        void queueCommand( string_view commandID, const EditorCommandTarget& target );
 
         // ------------------------------------------------------------------------------
         // 단축키 글자 · 재배치(단축키 창이 쓴다). 바꾼 것은 곧바로 사용자 재배치 파일에 저장한다
@@ -139,13 +147,21 @@ namespace sw::editor
         void saveUserBindings() const;
 
     private:
-        InputMap           _map;
-        hashed_string      _focusedPanelLayer;                                    ///< 지금 켠 패널 레이어(없으면 빈 이름)
-        bool               _arrForwardedKey[static_cast<size_t>( Key::Count )]{}; ///< 에디터 창에서 넣은 눌린 키(키보드를 놓으면 놓는다)
-        InputKeyboardFocus _focusBeforeTool{ InputKeyboardFocus::Game };          ///< `Tool` 로 바꾸기 전의 키보드 주인
-        uint32             _syncedMapGeneration{ invalid_index::kUint32 };        ///< 마지막으로 더한 확장 맵 등록 세대
-        bool               _bToolOwnsKeyboard{ false };                           ///< 이 서브시스템이 키보드 포커스를 `Tool` 로 둔 중이면 true
-        bool               _bCommandsSuspended{ false };                          ///< 재배치 창이 키를 받는 중이면 true
+        /** @brief 메뉴에서 고른, 다음 프레임 첫머리에 실행할 명령입니다. */
+        struct QueuedCommand
+        {
+            string              _commandID;
+            EditorCommandTarget _target;
+        };
+
+        InputMap              _map;
+        vector<QueuedCommand> _listQueuedCommand;                                    ///< `queueCommand` 가 넣은 것(다음 `processFrame` 이 비운다)
+        hashed_string         _focusedPanelLayer;                                    ///< 지금 켠 패널 레이어(없으면 빈 이름)
+        bool                  _arrForwardedKey[static_cast<size_t>( Key::Count )]{}; ///< 에디터 창에서 넣은 눌린 키(키보드를 놓으면 놓는다)
+        InputKeyboardFocus    _focusBeforeTool{ InputKeyboardFocus::Game };          ///< `Tool` 로 바꾸기 전의 키보드 주인
+        uint32                _syncedMapGeneration{ invalid_index::kUint32 };        ///< 마지막으로 더한 확장 맵 등록 세대
+        bool                  _bToolOwnsKeyboard{ false };                           ///< 이 서브시스템이 키보드 포커스를 `Tool` 로 둔 중이면 true
+        bool                  _bCommandsSuspended{ false };                          ///< 재배치 창이 키를 받는 중이면 true
     };
 } // namespace sw::editor
 

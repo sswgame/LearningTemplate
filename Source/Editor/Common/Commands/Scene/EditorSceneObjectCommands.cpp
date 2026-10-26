@@ -11,15 +11,21 @@
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
 #include "Editor/Common/Commands/Scene/EditorSiblingOrder.h"
+#include "Editor/Common/Commands/Scene/EditorTransformCommands.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/Workspace/EditorCamera.h"
+#include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorTransaction.h"
+#include "Editor/Common/Workspace/EditorWorkspace.h"
 
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Scene/Scene.h"
 
 namespace sw::editor
 {
@@ -146,7 +152,7 @@ namespace sw::editor
                 GameObject* pOwner     = nullptr;
                 Component*  pComponent = EditorSceneObjectCommands::findTargetComponent( target, pOwner );
                 if ( pComponent != nullptr )
-                    (void)EditorSceneCommands::destroyComponent( editor::getActiveObjectManager(), pOwner, pComponent ); // 지울 수 없는 컴포넌트면 아무것도 바뀌지 않는다
+                    EditorSceneObjectCommands::removeComponent( pOwner, pComponent );
             }
 
             static bool hasTargetComponent( const EditorCommandTarget& target )
@@ -154,6 +160,84 @@ namespace sw::editor
                 GameObject* pOwner = nullptr;
                 return EditorSceneObjectCommands::findTargetComponent( target, pOwner ) != nullptr;
             }
+
+            static EditorWorkspace& getWorkspace() { return editor::getSubsystem<EditorContext>().getSubsystem<EditorWorkspace>(); }
+
+            static void runCopyComponent( const EditorCommandTarget& target )
+            {
+                GameObject*      pOwner     = nullptr;
+                const Component* pComponent = EditorSceneObjectCommands::findTargetComponent( target, pOwner );
+                if ( pComponent != nullptr )
+                    getWorkspace().copyComponent( pComponent );
+            }
+
+            /** @brief 복사한 컴포넌트가 대상과 같은 타입이면 true 입니다(값 붙여 넣기). */
+            static bool canPasteComponentValues( const EditorCommandTarget& target )
+            {
+                GameObject*            pOwner     = nullptr;
+                const Component*       pComponent = EditorSceneObjectCommands::findTargetComponent( target, pOwner );
+                const EditorWorkspace& workspace  = getWorkspace();
+                if ( pComponent == nullptr || workspace.hasCopiedComponent() == false )
+                    return false;
+                return workspace.getCopiedComponentTypeName() == pComponent->getTypeName().c_str();
+            }
+
+            static void runPasteComponentValues( const EditorCommandTarget& target )
+            {
+                GameObject* pOwner     = nullptr;
+                Component*  pComponent = EditorSceneObjectCommands::findTargetComponent( target, pOwner );
+                if ( pComponent != nullptr )
+                    (void)EditorTransformCommands::pasteCopiedComponentValues( getWorkspace(), pComponent ); // 실패는 붙여넣기가 로그로 알린다
+            }
+
+            static bool canPasteComponentAsNew( const EditorCommandTarget& target ) { return hasTargetComponent( target ) && getWorkspace().hasCopiedComponent(); }
+
+            static void runPasteComponentAsNew( const EditorCommandTarget& target )
+            {
+                GameObject* pOwner = nullptr;
+                if ( EditorSceneObjectCommands::findTargetComponent( target, pOwner ) != nullptr )
+                    (void)EditorTransformCommands::pasteCopiedComponentAsNew( getWorkspace(), pOwner ); // 실패는 붙여넣기가 로그로 알린다
+            }
+
+            /** @brief 컴포넌트를 @p direction(-1 위 · +1 아래) 칸 옮길 수 있으면 true 입니다. 주 씬 컴포넌트(루트 트랜스폼)는 옮기지 않고 그 자리로 옮겨 들어가지도 않는다. */
+            static bool canMoveComponent( const EditorCommandTarget& target, int32 direction )
+            {
+                GameObject*      pOwner     = nullptr;
+                const Component* pComponent = EditorSceneObjectCommands::findTargetComponent( target, pOwner );
+                if ( pComponent == nullptr )
+                    return false;
+                const auto& listComponent = pOwner->getComponents();
+                size_t      index         = 0;
+                while ( index < listComponent.size() && listComponent[index] != pComponent )
+                {
+                    ++index;
+                }
+                const Component* pPrimary  = pOwner->getPrimarySceneComponent();
+                const bool       bMovable  = index < listComponent.size() && pComponent != pPrimary;
+                const bool       bHasOther = direction < 0 ? index > 0 : index + 1 < listComponent.size();
+                if ( ( bMovable && bHasOther ) == false )
+                    return false;
+                return listComponent[direction < 0 ? index - 1 : index + 1] != pPrimary;
+            }
+
+            static void runMoveComponent( const EditorCommandTarget& target, int32 direction )
+            {
+                GameObject* pOwner     = nullptr;
+                Component*  pComponent = EditorSceneObjectCommands::findTargetComponent( target, pOwner );
+                if ( pComponent == nullptr )
+                    return;
+                // 인스펙터 편집과 같은 규칙(`InspectorObjectEdit`) — 정지 상태면 되돌리기 기록과 dirty, 플레이 중이면 사본을 바로 바꾼다.
+                const bool           bRecord        = EditorPlaySession::areSceneEditsAllowed();
+                const ObjectSnapshot beforeSnapshot = bRecord ? EditorTransaction::captureSnapshot( pOwner ) : ObjectSnapshot{};
+                (void)pOwner->moveComponent( pComponent, direction ); // 끝 · 주 씬 컴포넌트면 그대로 — 켜짐 조건이 이미 막는다
+                if ( bRecord )
+                    EditorSceneCommands::commitModify( pOwner, beforeSnapshot, direction < 0 ? "Move Component Up" : "Move Component Down" );
+            }
+
+            static bool canMoveComponentUp( const EditorCommandTarget& target ) { return canMoveComponent( target, -1 ); }
+            static bool canMoveComponentDown( const EditorCommandTarget& target ) { return canMoveComponent( target, 1 ); }
+            static void runMoveComponentUp( const EditorCommandTarget& target ) { runMoveComponent( target, -1 ); }
+            static void runMoveComponentDown( const EditorCommandTarget& target ) { runMoveComponent( target, 1 ); }
         };
     } // namespace
 } // namespace sw::editor
@@ -191,21 +275,39 @@ namespace sw::editor
 
     Component* EditorSceneObjectCommands::findTargetComponent( const EditorCommandTarget& target, GameObject*& pOutOwner )
     {
-        pOutOwner                   = nullptr;
-        GameObjectManager* pManager = editor::getActiveObjectManager();
-        if ( pManager == nullptr || target._hoveredID == 0 )
+        pOutOwner = nullptr;
+        if ( target._hoveredID == 0 )
             return nullptr;
         // 컴포넌트 id 만 든다(포인터를 프레임 넘어 들지 않는다) — 메뉴를 고르는 순간 주인을 찾는다.
-        Component* pFound = nullptr;
-        pManager->forEachGameObject( [&]( GameObject* pObject )
+        // 메인 씬 다음에 인스펙터가 겨눈 씬(미리보기 창)을 본다 — 미리보기 카드도 같은 컴포넌트 메뉴다.
+        const Scene*             pFocusedScene = editor::getFocusedScene();
+        GameObjectManager* const arrManager[]  = { editor::getActiveObjectManager(), pFocusedScene != nullptr ? pFocusedScene->getObjectManager() : nullptr };
+        Component*               pFound        = nullptr;
+        for ( GameObjectManager* pManager : arrManager )
         {
-            if ( pFound != nullptr )
-                return;
-            pFound = pObject->findComponentByID( target._hoveredID );
-            if ( pFound != nullptr )
-                pOutOwner = pObject;
-        } );
+            if ( pManager == nullptr || pFound != nullptr )
+                continue;
+            pManager->forEachGameObject( [&]( GameObject* pObject )
+            {
+                if ( pFound != nullptr )
+                    return;
+                pFound = pObject->findComponentByID( target._hoveredID );
+                if ( pFound != nullptr )
+                    pOutOwner = pObject;
+            } );
+        }
         return pFound;
+    }
+
+    void EditorSceneObjectCommands::removeComponent( GameObject* pOwner, Component* pComponent )
+    {
+        GameObjectManager* pManager = pOwner->getManager();
+        if ( pManager == nullptr )
+            (void)pOwner->removeComponent( pComponent ); // 실패는 removeComponent 가 알리고 카드가 남는다
+        else if ( EditorPlaySession::areSceneEditsAllowed() )
+            (void)EditorSceneCommands::destroyComponent( pManager, pOwner, pComponent ); // 기록과 dirty 를 남긴다. 지울 수 없으면 그대로다
+        else
+            pManager->destroyComponent( pComponent ); // 플레이 사본이므로 Stop 이 되돌린다
     }
 
     bool EditorSceneObjectCommands::hasTargetObjects( const EditorCommandTarget& target )
@@ -244,9 +346,20 @@ namespace sw::editor
     SW_EDITOR_CONTEXT_COMMAND( ViewportPaste, "scene.viewport.paste", "Paste", editoricon::kPlus, "Scene", Viewport, 110, nullptr, &EditorSceneObjectCommandsInternal::runPaste, &EditorSceneObjectCommandsInternal::canPaste, Scene,
                                nullptr );
 
-    // 컴포넌트 메뉴(계층 창의 컴포넌트 행).
+    // 컴포넌트 메뉴 — 계층 창의 컴포넌트 행 · 인스펙터의 메인 카드 · 미리보기 카드가 같은 메뉴다. 프리셋 하위 메뉴(400)는 인스펙터 파일에 있다.
+    // 지우기 · 옮기기는 플레이 중에도 된다(사본을 바로 바꾸고 Stop 이 되돌린다 — 인스펙터 편집 규칙). 그래서 편집 칸이 NoScene 이다.
     SW_EDITOR_CONTEXT_COMMAND( ComponentSelectOwner, "scene.component.selectOwner", "Select Owner GameObject", editoricon::kGameObject, "Scene", Component, 100, nullptr,
                                &EditorSceneObjectCommandsInternal::runSelectOwner, &EditorSceneObjectCommandsInternal::hasTargetComponent, NoScene, nullptr );
+    SW_EDITOR_CONTEXT_COMMAND( ComponentCopy, "scene.component.copy", "Copy Component", editoricon::kCopy, "Scene", Component, 200, nullptr,
+                               &EditorSceneObjectCommandsInternal::runCopyComponent, &EditorSceneObjectCommandsInternal::hasTargetComponent, NoScene, nullptr );
+    SW_EDITOR_CONTEXT_COMMAND( ComponentPasteValues, "scene.component.pasteValues", "Paste Component Values", editoricon::kPlus, "Scene", Component, 210, nullptr,
+                               &EditorSceneObjectCommandsInternal::runPasteComponentValues, &EditorSceneObjectCommandsInternal::canPasteComponentValues, NoScene, nullptr );
+    SW_EDITOR_CONTEXT_COMMAND( ComponentPasteAsNew, "scene.component.pasteAsNew", "Paste as New Component", editoricon::kPlus, "Scene", Component, 220, nullptr,
+                               &EditorSceneObjectCommandsInternal::runPasteComponentAsNew, &EditorSceneObjectCommandsInternal::canPasteComponentAsNew, NoScene, nullptr );
+    SW_EDITOR_CONTEXT_COMMAND( ComponentMoveUp, "scene.component.moveUp", "Move Up", nullptr, "Scene", Component, 300, nullptr, &EditorSceneObjectCommandsInternal::runMoveComponentUp,
+                               &EditorSceneObjectCommandsInternal::canMoveComponentUp, NoScene, nullptr );
+    SW_EDITOR_CONTEXT_COMMAND( ComponentMoveDown, "scene.component.moveDown", "Move Down", nullptr, "Scene", Component, 310, nullptr, &EditorSceneObjectCommandsInternal::runMoveComponentDown,
+                               &EditorSceneObjectCommandsInternal::canMoveComponentDown, NoScene, nullptr );
     SW_EDITOR_CONTEXT_COMMAND( ComponentRemove, "scene.component.remove", "Remove Component", editoricon::kTrash, "Scene", Component, 900, nullptr, &EditorSceneObjectCommandsInternal::runRemoveComponent,
-                               &EditorSceneObjectCommandsInternal::hasTargetComponent, Scene, nullptr );
+                               &EditorSceneObjectCommandsInternal::hasTargetComponent, NoScene, nullptr );
 } // namespace sw::editor

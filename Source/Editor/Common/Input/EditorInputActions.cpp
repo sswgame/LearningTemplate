@@ -31,6 +31,7 @@ namespace sw::editor
 
     EditorInputActions::EditorInputActions()
         : _map{}
+        , _listQueuedCommand{}
         , _focusedPanelLayer{}
     {
     }
@@ -117,6 +118,14 @@ namespace sw::editor
         // 확장 모듈이 맵을 더하거나(로드) 뺐으면(언로드) 맵을 처음부터 다시 만든다 — 빠진 모듈의 액션이 남지 않고, 다시 올린 모듈의 액션이 두 번 더해지지 않는다.
         if ( EditorExtensionRegistry<EditorInputMapRegistration>::getList().getGeneration() != _syncedMapGeneration && rebuildMap() == false )
             SW_LOG_ERROR( "EditorInputActions: the editor input map could not be rebuilt after an extension module changed - see above" );
+        // 지난 프레임 메뉴에서 고른 명령부터 — 패널을 그리기 전이라 그리는 중인 목록이 없다. 실행이 다시 넣은 것은 다음 프레임이다.
+        vector<QueuedCommand> listRun;
+        listRun.swap( _listQueuedCommand );
+        EditorCommandRegistry& registry = editor::getSubsystem<EditorContext>().getSubsystem<EditorCommandRegistry>();
+        for ( const QueuedCommand& queued : listRun )
+        {
+            (void)registry.execute( queued._commandID, queued._target ); // 그 사이 꺼졌으면 아무 일도 없다(메뉴의 회색과 같은 조건)
+        }
         forwardEditorKeyboard( syncKeyboardOwner() );
         syncFocusedPanelLayer();
         _map.update( deltaSeconds );
@@ -129,6 +138,11 @@ namespace sw::editor
         if ( areActionsBlocked() )
             return;
         executeTriggeredCommands();
+    }
+
+    void EditorInputActions::queueCommand( string_view commandID, const EditorCommandTarget& target )
+    {
+        _listQueuedCommand.push_back( QueuedCommand{ string( commandID ), target } );
     }
 
     bool EditorInputActions::areActionsBlocked() const

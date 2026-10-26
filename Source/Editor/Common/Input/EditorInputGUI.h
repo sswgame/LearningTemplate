@@ -107,6 +107,14 @@ namespace sw::editor
          * @return 이번 프레임에 메뉴가 열려 있었으면 true 입니다.
          */
         static bool drawContextMenuFor( const EditorContextMenuSubject& subject );
+        /**
+         * @brief 직전 항목 위 우클릭(R1 — 끌기 문턱 안에서 뗀 순간)에 @p pPopupID 팝업을 열고, 열려 있으면 true 입니다. true 면 부른 쪽이 `ImGui::EndPopup` 을 부릅니다.
+         * @details 항목이 그 행에만 뜻이 있는 메뉴(속성 행의 값 복사 · 로그 행 · 표 칸 — 대상이 그 프레임의 주소라 id 로 명령에 넘길 수 없는 것)가 쓴다.
+         *          대상이 id 로 풀리는 메뉴(오브젝트 · 컴포넌트 · 에셋 · 뷰포트)는 명령 등록부를 쓰는 `drawContextMenuFor` 다.
+         */
+        static bool beginItemContextMenu( const utf8* pPopupID );
+        /** @brief 창의 빈 곳(어느 항목 밖) 우클릭에 @p pPopupID 팝업을 엽니다. 나머지는 `beginItemContextMenu` 와 같습니다. */
+        static bool beginWindowContextMenu( const utf8* pPopupID );
 
         // ------------------------------------------------------------------------------
         // 2) 끌어 놓기 — {종류, id} 한 형식. 이름(에셋 경로 · 위젯 타입)은 id 표로 바꾼다

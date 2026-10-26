@@ -163,12 +163,11 @@ namespace sw::editor
             EditorSelfTestMarks::note( markKey.c_str() );
         }
         ImGui::EndPopup();
-        // 고른 명령은 팝업을 닫은 뒤 실행한다 — 명령이 등록부 · 선택을 바꿔도 그리는 중인 목록을 읽지 않는다.
+        // 고른 명령은 다음 프레임 첫머리에 실행한다 — 패널이 그리는 중인 목록(컴포넌트 카드 · 행)이 명령 뒤에 남지 않는다.
         if ( chosenCommandID.empty() == false )
         {
-            const EditorCommandTarget target = std::move( state._target );
-            state._popupKey                  = 0;
-            (void)registry.execute( chosenCommandID, target ); // 그 사이 꺼졌으면 아무 일도 없다
+            editorContext.getSubsystem<EditorInputActions>().queueCommand( chosenCommandID, state._target );
+            state._popupKey = 0;
         }
         return true;
     }
@@ -240,6 +239,21 @@ namespace sw::editor
             return false;
         outName = found->second;
         return true;
+    }
+
+    bool EditorInputGUI::beginItemContextMenu( const utf8* pPopupID )
+    {
+        if ( ImGui::IsItemHovered( ImGuiHoveredFlags_AllowWhenBlockedByPopup ) && EditorInputGUIInternal::wasClickedWithoutDrag( ImGuiMouseButton_Right ) )
+            ImGui::OpenPopup( pPopupID );
+        return ImGui::BeginPopup( pPopupID );
+    }
+
+    bool EditorInputGUI::beginWindowContextMenu( const utf8* pPopupID )
+    {
+        const bool bOverEmpty = ImGui::IsWindowHovered( ImGuiHoveredFlags_AllowWhenBlockedByPopup ) && ImGui::IsAnyItemHovered() == false;
+        if ( bOverEmpty && EditorInputGUIInternal::wasClickedWithoutDrag( ImGuiMouseButton_Right ) )
+            ImGui::OpenPopup( pPopupID );
+        return ImGui::BeginPopup( pPopupID );
     }
 
     bool EditorInputGUI::wasItemClicked( EditorMouseButton button )
