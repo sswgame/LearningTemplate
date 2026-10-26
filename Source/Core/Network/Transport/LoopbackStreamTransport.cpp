@@ -6,8 +6,8 @@
 #include "Core/Container/IndexFreeList.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Math/DeterministicRandom.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Math/XorShift32.h"
 #include "Core/Network/Transport/StreamSendQueue.h"
 
 #include <mutex>
@@ -71,14 +71,10 @@ namespace sw
             vector<uint32>                                  _listFreeLink;
             unordered_map<uint16, LoopbackStreamTransport*> _mapListener;
             LoopbackStreamConditions                        _conditions;
-            uint32                                          _randomState;
+            DeterministicRandom32                           _random;
             uint16                                          _nextEphemeralPort;
 
-            int32 nextRandomInRange( int32 maxValue ) // 1..maxValue
-            {
-                _randomState = XorShift32::next( _randomState );
-                return 1 + static_cast<int32>( _randomState % static_cast<uint32>( maxValue ) );
-            }
+            int32 nextRandomInRange( int32 maxValue ) { return _random.nextInt( 1, maxValue ); } // 1..maxValue
         };
 
         class LoopbackStreamTransport final : public IStreamTransport
@@ -485,7 +481,7 @@ namespace sw
     LoopbackStreamNetwork::LoopbackStreamNetwork( uint32 seed )
         : _state{ make_unique<State>() }
     {
-        _state->_randomState       = seed != 0 ? seed : 1u;
+        _state->_random.setSeed( seed );
         _state->_nextEphemeralPort = LoopbackStreamTransportInternal::kFirstEphemeralPort;
     }
 

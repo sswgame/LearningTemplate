@@ -2,13 +2,11 @@
 
 #include "Core/Network/Transport/NetEmulation.h"
 
-#include "Core/Common/HashUtil.h"
 #include "Core/Container/CompareUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Math/XorShift32.h"
 #include "Core/Network/DebugReplyLine.h"
 
 #include <algorithm>
@@ -19,10 +17,9 @@ namespace sw
     {
         struct NetEmulationInternal
         {
-            static constexpr float64 kMillisecond   = 0.001;
-            static constexpr float32 kPercent       = 0.01f;
-            static constexpr uint32  kDefaultRandom = HashUtil::kGoldenRatio32;
-            static constexpr uint8   kCorruptMask   = 0x5A; ///< 깨짐 — 고른 바이트에 XOR 한다
+            static constexpr float64 kMillisecond = 0.001;
+            static constexpr float32 kPercent     = 0.01f;
+            static constexpr uint8   kCorruptMask = 0x5A; ///< 깨짐 — 고른 바이트에 XOR 한다
 
             /** @brief 0 이상 숫자를 읽습니다. */
             [[nodiscard]] static bool parseNonNegative( string_view text, float32& outValue ) { return StringUtil::parseFloat( text, outValue ) && outValue >= 0.0f; }
@@ -186,7 +183,7 @@ namespace sw
         , _time{ 0.0 }
         , _outageUntil{ 0.0 }
         , _order{ 0 }
-        , _randomState{ seed != 0 ? seed : NetEmulationInternal::kDefaultRandom }
+        , _random{ seed }
     {
     }
 
@@ -463,8 +460,6 @@ namespace sw
 
     float32 NetEmulationTransport::nextRandom()
     {
-        // xorshift32 — 씨앗이 같으면 같은 수열(테스트 · 재현).
-        _randomState = XorShift32::next( _randomState );
-        return XorShift32::toUnit24( _randomState );
+        return _random.nextFloat();
     }
 } // namespace sw

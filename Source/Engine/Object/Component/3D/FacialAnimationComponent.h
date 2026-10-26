@@ -8,6 +8,7 @@
 #include "Core/Container/ComponentHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Math/DeterministicRandom.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 
@@ -130,8 +131,6 @@ namespace sw
         void loadRig();
         /** @brief 유닛의 메시 · 스켈레톤에 맞춰 타깃 번호 · 눈 본 번호를 다시 짓습니다(바뀌었을 때만). */
         void refreshBindings( const SkeletalMeshComponent& unit );
-        /** @brief 0 ~ 1 결정적 난수입니다(xorshift — 컴포넌트 id 로 씨앗). */
-        float32 nextRandom();
         /** @brief 시간 단계 — 깜빡임 · 사카드 · 말하기 시각을 흘립니다. */
         void advanceTime( float32 deltaSeconds );
         /** @brief 같은 오브젝트의 애니메이터(표정 커브의 출처)입니다. 찾을 수 없으면 nullptr 입니다. */
@@ -181,7 +180,7 @@ namespace sw
         float32                                     _blinkElapsed; ///< 깜빡이는 중 지난 시간(음수 = 깜빡이지 않음)
         float32                                     _blinkAmount;
         float32                                     _saccadeTimer;
-        uint32                                      _randomState;
+        DeterministicRandom32                       _random; ///< 깜빡임 · 사카드 박자(씨앗은 컴포넌트 id)
         PROPERTY( Category = "Facial", DisplayName = "Blink", Tooltip = "Blink automatically with the rig's interval and duration" )
         uint8 _bBlink : 1;
         PROPERTY( Category = "Facial", DisplayName = "Saccades", Tooltip = "Add small random eye jumps while looking at a target" )

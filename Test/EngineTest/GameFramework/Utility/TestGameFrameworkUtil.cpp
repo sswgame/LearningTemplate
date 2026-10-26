@@ -101,13 +101,12 @@ namespace
 } // namespace
 
 /**
- * @brief [GameFrameworkUtilTest] 난수는 씨앗이 같으면 같은 수열이고 범위를 지킨다 · 씨앗 0 은 고정점이라 기본 씨앗이 된다 · 좌표 해시는 순서와 상관없다
+ * @brief [GameFrameworkUtilTest] 난수는 씨앗이 같으면 같은 수열이고 범위를 지킨다 · 좌표 해시는 순서와 상관없다(씨앗 0 거절은 CoreTest 의 DeterministicRandom 테스트)
  */
 SW_TEST_CASE( GameFrameworkUtilTest, RandomIsDeterministicAndBounded )
 {
     GameRandom first( 1234u );
     GameRandom second( 1234u );
-    GameRandom zero( 0u );
     bool       bSame     = true;
     bool       bInRange  = true;
     int32      arrHit[3] = { 0, 0, 0 };
@@ -126,7 +125,6 @@ SW_TEST_CASE( GameFrameworkUtilTest, RandomIsDeterministicAndBounded )
     SW_EXPECT_TRUE( bSame );
     SW_EXPECT_TRUE( bInRange );
     SW_EXPECT_TRUE( arrHit[0] > 800 && arrHit[1] > 800 && arrHit[2] > 800 ); // 양 끝도 고르게 나온다
-    SW_EXPECT_EQUAL( GameRandom::kDefaultSeed, zero.getState() );
     SW_EXPECT_EQUAL( 7, first.nextInt( 7, 7 ) );
 
     constexpr uint32 kHash = GameHash::hashCoord( 3, -5, 99u );

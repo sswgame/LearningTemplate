@@ -800,7 +800,7 @@ namespace sw
             }
             case CommandType::SetRandomSeed:
             {
-                _random._state = command._seed;
+                _random.setSeed( command._seed );
                 break;
             }
             case CommandType::SetListener:

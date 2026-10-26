@@ -9,6 +9,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Math/DeterministicRandom.h"
 #include "Core/Network/NetTypes.h"
 #include "Core/Network/Transport/NetTransport.h"
 
@@ -201,6 +202,6 @@ namespace sw
         float64                _time;
         float64                _outageUntil; ///< 이 시각 전까지 보내고 받는 것을 모두 버린다
         uint64                 _order;
-        uint32                 _randomState;
+        DeterministicRandom32  _random; ///< 손실 · 지연 흔들림 난수(씨앗이 같으면 같은 수열 — 테스트 · 재현)
     };
 } // namespace sw

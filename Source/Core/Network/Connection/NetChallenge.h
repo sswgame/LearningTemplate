@@ -10,6 +10,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Math/DeterministicRandom.h"
 
 namespace sw
 {
@@ -41,7 +42,7 @@ namespace sw
     private:
         uint64 makeTokenForWindow( const NetAddress& address, uint64 clientSalt, int64 window ) const;
 
-        uint64 _saltState;
-        uint64 _secret; ///< 서버 전용. 챌린지 값의 비밀 키(솔트 시드에서 만든다).
+        DeterministicRandom64 _salt;
+        uint64                _secret; ///< 서버 전용. 챌린지 값의 비밀 키(솔트 시드에서 만든다).
     };
 } // namespace sw

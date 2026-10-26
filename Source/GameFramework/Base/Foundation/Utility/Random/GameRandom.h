@@ -1,41 +1,25 @@
 /**
  * @file GameRandom.h
- * @brief 씨앗이 같으면 같은 수열을 내는 난수(xorshift32)와 좌표 해시를 정의합니다.
- * @details 테스트, 리플레이, 절차 생성이 같은 결과를 되풀이하게 한다.
+ * @brief 게임 규칙의 결정적 난수(Core `DeterministicRandom32`)에 가중치 고르기 · 섞기 도우미를 더한 것과 좌표 해시를 정의합니다.
+ * @details 테스트, 리플레이, 절차 생성이 같은 결과를 되풀이하게 한다. 수열 · 씨앗 규칙(0 거절)은 `DeterministicRandom32` 하나다.
  */
 #pragma once
-#include "Core/Common/HashUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
-
-#include "GameFramework/GameFrameworkExports.h"
+#include "Core/Math/DeterministicRandom.h"
 
 namespace sw
 {
     /**
      * @class GameRandom
      * @brief 결정적 난수입니다. 장르를 가리지 않아서 슈터의 탄 퍼짐, 테마파크의 손님 성향, 농장의 날씨가 같은 것을 씁니다.
-     * @details 표준 `<random>` 은 분포 구현이 표준 라이브러리마다 달라서 같은 씨앗이 플랫폼마다 다른 수를 낸다. 여기는 정수 연산만 쓴다.
+     * @details 수열(`nextUint` · `nextFloat` · `nextRange` · `nextInt` · `nextChance`)은 `DeterministicRandom32` 이고 여기는 그 위의 도우미만 둔다.
      */
-    class SW_GF_API GameRandom
+    class GameRandom : public DeterministicRandom32
     {
     public:
-        static constexpr uint32 kDefaultSeed = HashUtil::kGoldenRatio32;
-
-        explicit GameRandom( uint32 seed = kDefaultSeed );
-
-        /** @brief 씨앗을 다시 둡니다. 0 은 xorshift 의 고정점이라 기본 씨앗으로 바꿉니다. */
-        void   setSeed( uint32 seed );
-        uint32 getState() const { return _state; }
-        uint32 nextUint();
-        /** @brief [0, 1) 범위의 실수를 반환합니다. 위 24 비트를 씁니다. */
-        float32 nextFloat();
-        /** @brief [@p minValue, @p maxValue) 범위의 실수를 반환합니다. */
-        float32 nextRange( float32 minValue, float32 maxValue );
-        /** @brief [@p minValue, @p maxValue] 범위의 정수를 반환합니다. 양 끝을 포함합니다. */
-        int32 nextInt( int32 minValue, int32 maxValue );
-        /** @brief 확률 @p probability 로 true 를 반환합니다. */
-        bool nextChance( float32 probability ) { return nextFloat() < probability; }
+        using DeterministicRandom32::DeterministicRandom32;
+        GameRandom() = default;
 
         /**
          * @brief 가중치로 하나를 고릅니다. `nextFloat` 를 한 번 씁니다. @p getWeight( 원소 ) 가 가중치이고 음수는 0 으로 칩니다. 합이 0 이하이면 -1 입니다.
@@ -119,9 +103,6 @@ namespace sw
                 inoutList[static_cast<size_t>( swapIndex )] = temp;
             }
         }
-
-    private:
-        uint32 _state;
     };
 } // namespace sw
 

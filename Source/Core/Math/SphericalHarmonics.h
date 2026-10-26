@@ -10,6 +10,7 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Math/DeterministicRandom.h"
 #include "Core/Math/VectorMath.h"
 
 namespace sw
@@ -38,10 +39,9 @@ namespace sw
          */
         static SH9Color makeDirectional( const float3& toLight, const float3& irradiance );
         /**
-         * @brief 결정적 균일 구 방향 하나를 내고 상태를 한 걸음 옮깁니다. 같은 씨앗이면 어느 플랫폼에서도 같은 수열입니다(투영의 샘플).
-         * @param inoutState xorshift32 상태입니다. 0 이 아니어야 합니다.
+         * @brief 결정적 균일 구 방향 하나를 냅니다(난수 둘을 꺼낸다). 같은 씨앗이면 어느 플랫폼에서도 같은 수열입니다(투영의 샘플).
          */
-        static float3 makeUniformSphereDirection( uint32& inoutState );
+        static float3 makeUniformSphereDirection( DeterministicRandom32& inoutRandom );
 
         /** @brief 방향 @p direction 에서 온 복사휘도 @p radiance 를 가중치 @p weight 로 투영해 더합니다. 균일 구 샘플 N 개면 가중치는 4π / N 입니다. */
         void addSample( const float3& direction, const float3& radiance, float32 weight );

@@ -10,6 +10,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/ComponentHandle.h"
 #include "Core/Container/vector.h"
+#include "Core/Math/DeterministicRandom.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
 
@@ -207,12 +208,6 @@ namespace sw
         void churnInstanceValue( MaterialInstance* pInstance );
         /** @brief 목록에서 인스턴스를 해제합니다(마지막 참조면 여기서 파괴됩니다). 없으면 아무것도 하지 않습니다. */
         void releaseChurnInstance( const MaterialInstance* pInstance );
-        /**
-         * @brief 결정적 난수를 한 단계 진행합니다(xorshift32).
-         * @details 표준 난수를 쓰지 않는 이유는, **같은 프레임 수만큼 실행하면 같은 순서가 나와야** 스크린샷과
-         *          로그를 실행 사이에 비교할 수 있기 때문입니다. 시드도 고정입니다.
-         */
-        uint32 nextChurnRandom();
 
     private:
         /** @brief `benchscene.xml` 에서 읽은 배치 값과 튜닝 값입니다. `spawnFromGlobals` 가 채웁니다. */
@@ -253,8 +248,8 @@ namespace sw
          *          사라지고, 그래야 요소 회수와 상수 버퍼 해제 경로가 돈다.
          */
         vector<shared_ptr<MaterialInstance>> _listChurnInstance;
-        /** @brief 스트레스용 난수 상태입니다. 0 이 되면 xorshift 가 멈추므로 고정 시드로 시작합니다. */
-        uint32 _churnRandom;
+        /** @brief 스트레스용 결정적 난수입니다(고정 시드) — 같은 프레임 수만큼 실행하면 같은 순서라 스크린샷 · 로그를 실행 사이에 비교한다. */
+        DeterministicRandom32 _churnRandom;
         /** @brief 스트레스가 돈 프레임 수입니다. 키워드를 바꾸는 주기에 씁니다. */
         uint64 _churnFrame;
         /** @brief 애니메이션 누적 시간입니다. */

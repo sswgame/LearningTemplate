@@ -3,8 +3,8 @@
 #include "Engine/Graphics/Mesh/MeshUtil.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Math/DeterministicRandom.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Math/XorShift32.h"
 #include "Core/Memory/LifetimeScope.h"
 #include "Core/Memory/Memory.h"
 
@@ -636,25 +636,20 @@ namespace sw
     shared_ptr<Mesh> MeshUtil::createGrassClump( uint32 bladeCount )
     {
         bladeCount = MathUtil::max( bladeCount, 1u );
-        // 고정 씨앗 xorshift — 포기 모양이 실행마다 같아야 스크린샷이 비교된다.
-        uint32 state    = 0x2545F491u;
-        auto   nextUnit = [&state]() -> float32
-        {
-            state = XorShift32::next( state );
-            return XorShift32::toUnit24( state );
-        };
+        // 고정 씨앗 — 포기 모양이 실행마다 같아야 스크린샷이 비교된다.
+        DeterministicRandom32 random{ 0x2545F491u };
 
         constexpr uint32  kSegmentCount = 3;
         vector<RHIVertex> listVertex;
         listVertex.reserve( static_cast<size_t>( bladeCount ) * kSegmentCount * 12 );
         for ( uint32 bladeIndex = 0; bladeIndex < bladeCount; ++bladeIndex )
         {
-            const float32 angle  = nextUnit() * MathUtil::kTwoPi;
-            const float32 radius = nextUnit() * 0.22f;
-            const float32 height = 0.5f + nextUnit() * 0.3f;
-            const float32 width  = 0.05f + nextUnit() * 0.03f;
-            const float32 lean   = 0.08f + nextUnit() * 0.18f;
-            const float32 facing = nextUnit() * MathUtil::kTwoPi;
+            const float32 angle  = random.nextFloat() * MathUtil::kTwoPi;
+            const float32 radius = random.nextFloat() * 0.22f;
+            const float32 height = 0.5f + random.nextFloat() * 0.3f;
+            const float32 width  = 0.05f + random.nextFloat() * 0.03f;
+            const float32 lean   = 0.08f + random.nextFloat() * 0.18f;
+            const float32 facing = random.nextFloat() * MathUtil::kTwoPi;
             const float3  root{ MathUtil::cos( angle ) * radius, 0.0f, MathUtil::sin( angle ) * radius };
             const float3  across{ MathUtil::cos( facing ), 0.0f, MathUtil::sin( facing ) };
             const float3  outward{ -across._z, 0.0f, across._x };

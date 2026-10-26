@@ -81,32 +81,6 @@ namespace sw
 
 namespace sw
 {
-    /**
-     * @struct AudioRandom
-     * @brief 시드로 정해지는 난수(SplitMix64)입니다. 컨테이너의 클립 고르기와 볼륨, 피치 범위가 씁니다.
-     * @details 오프라인 렌더 테스트가 같은 출력을 내도록 엔진이 시드를 보관합니다(`AudioEngine::setRandomSeed`). 전역 난수(`MathUtil::getRandom`)는
-     *          스레드마다 시드가 달라 쓰지 않습니다.
-     */
-    struct AudioRandom
-    {
-        uint64 _state{ HashUtil::kGoldenRatio64 };
-
-        /** @brief 다음 64 비트 값입니다. */
-        uint64 nextUint64()
-        {
-            return HashUtil::splitMix64Next( _state );
-        }
-
-        /** @brief [0, 1) 의 값입니다. */
-        float32 nextUnit() { return static_cast<float32>( nextUint64() >> 40 ) / static_cast<float32>( 1ull << 24 ); }
-
-        /** @brief [lowValue, highValue] 의 값입니다. 둘이 같으면 그 값입니다. */
-        float32 nextRange( float32 lowValue, float32 highValue ) { return lowValue + ( highValue - lowValue ) * nextUnit(); }
-    };
-} // namespace sw
-
-namespace sw
-{
     /** @brief 엔진이 아는 버스 이름입니다. 기본 그래프가 이 이름들을 듭니다. */
     namespace AudioBusNames
     {
