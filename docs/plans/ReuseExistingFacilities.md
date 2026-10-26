@@ -1,10 +1,10 @@
 # 이미 있는 기능으로 옮기기
 
-> 상태: 구현중 · 선행: 없음 · 영역: quality · 옛번호: 없음 · 진행: 11/16
+> 상태: 구현중 · 선행: 없음 · 영역: quality · 옛번호: 없음 · 진행: 14/19
 
 > 질문: Core · Engine 에 이미 있는 기능을 두고 직접 구현하거나 C 런타임을 직접 부르는 곳은 몇 군데이고, 어떤 순서로 옮기는가?
 > 독자: 아래 단위를 맡는 작업자와 단위를 나눠 주는 통합 담당.
-> 결론: 게이트가 세는 직접 호출은 64건에서 22건으로 줄었고, 남은 22건은 다른 작업자 브랜치에 이미 고쳐져 병합을 기다린다. 남은 단위는 병합 뒤 정리 넷과 게이트 합치기로, 모두 통합 몫이다.
+> 결론: 게이트가 세는 직접 호출은 64건에서 22건으로 줄었고, 남은 22건은 다른 작업자 브랜치에 이미 고쳐져 병합을 기다린다. 별칭 래퍼 · 손 재구현 · 손 이분 탐색도 다시 재어 정본으로 옮겼다. 남은 단위는 병합 뒤 기준선 재집계 넷과 게이트 합치기로, 모두 통합 몫이다.
 
 쓸 것과 쓰지 말 것의 표는 [ExistingFacilities](../agents/ExistingFacilities.md) 한 곳에 있습니다. 새로 늘지 않게 막는 게이트는 `Scripts/lint/gate/CheckFacilityBypass.py` 이고, 규칙마다 형식으로 막지 못하는 이유(`whyNotType`)를 적었습니다. 기준선과 허용 목록은 `Scripts/lint/rules/CheckFacilityBypass.toml` 에 있습니다.
 
@@ -51,6 +51,12 @@
   - CrashContext: 고정 버퍼에 할당 없이 씁니다.
   - HTTPTypes · ProfilerTraceExport: 다른 작업자가 고치는 파일이라 병합 뒤 옮깁니다.
 - **정본 Util 을 이름만 바꿔 넘기는 별칭은 두지 않습니다**(ContainsNameAlias). `AppearanceXMLUtil::containsName` 은 목록에 넣기 전 중복 검사 다섯 자리를 `CheckContainsPushBack` 에서 가리고 있었습니다. 그 다섯을 순서를 지키는 집합으로 고치고 별칭을 지웠습니다. 다시 재어 찾은 `VectorUtil::contains` 별칭 셋(isEqualKey · isOnStack · containsPairedSessionID)도 지웠습니다. 정책을 이름 붙인 것(캐시 키 · 키 비교 규칙 · 임포트 폴더 이름)은 별칭이 아니라 둡니다.
+- **문서 열기의 정본은 `XMLCatalogLoader` 입니다**(WrapperRemeasure). 여러 줄 래퍼와 인자 순서만 바꾼 래퍼를 다시 재어 `isLoaded` 를 그리로 옮겼습니다. 대소문자 무시 비교 별칭 다섯(MaterialPacking `iequals` · PrefabOverrides `isSameText` · XMLDocument · JSONDocument `nameEquals` · ElementRuleTable `isNamed`)은 `StringUtil` 정본으로 바꾸고 지웠습니다.
+- **손으로 짠 정렬 · 중복 제거 · 접두 비교 · 범위 자르기는 정본을 부릅니다**(ReimplRemeasure). `VectorUtil::sortUnique` 12곳, `StringUtil::startsWith` 5곳, `std::clamp` 1곳(MonsterBattle)을 바꿨습니다. Box2D · Jolt 는 범위 일부만 정렬하고, EditorReferenceIndex 는 정렬 비교와 같음 기준이 달라 남겼습니다.
+- **정렬된 배열의 이분 탐색은 `std::lower_bound` · `std::upper_bound` 입니다**(BinarySearch). NetPrioritizer · DestructionState · FloatCurve · RhythmChart(두 곳)를 바꿨습니다. 아래 셋은 남겼습니다.
+  - TickRegistry: 병렬 배열 둘을 함께 움직여 반복자 하나로 못 씁니다.
+  - AnimationRewind: 원형 버퍼라 시작 위치가 감깁니다.
+  - UIPaintPass: `wt/errh` 가 고치는 파일입니다.
 
 ## 3. 단위를 나눈 규칙
 
