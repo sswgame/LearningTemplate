@@ -34,12 +34,6 @@ namespace sw::editor
         float2           _canvasPos{};
         float2           _canvasSize{};
         CameraComponent* _pActiveCamera{ nullptr }; ///< 자기 자신의 프러스텀은 그리지 않는다
-        /**
-         * @brief 이 프레임의 오브젝트 스냅샷입니다. 호출하는 쪽이 재사용 버퍼로 채워 넘깁니다.
-         * @details 시각화마다 씬 목록을 따로 받으면 프레임마다 시각화 수만큼 씬 전체를 힙에
-         *          복사한다(값으로 반환하는 getAllGameObjects()). 한 번 채워서 함께 읽는다.
-         */
-        const vector<GameObject*>* _pListObject{ nullptr };
         /** @brief 씬의 카메라 레지스트리 목록입니다. 프러스텀 시각화가 씬 전체를 스캔하지 않게 합니다. 매니저가 없으면 nullptr 입니다. */
         const vector<CameraComponent*>* _pListCamera{ nullptr };
         /** @brief 씬의 콜라이더 레지스트리 목록입니다(`ScenePhysics::getColliders2D`). 매니저가 없으면 nullptr 입니다. */

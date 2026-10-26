@@ -25,6 +25,8 @@
 
 namespace sw
 {
+    enum class PhysicsComponentPhase : uint8;
+
     struct PhysicsSettings;
 
     class BoxCollider2DComponent;
@@ -137,6 +139,8 @@ namespace sw
         void unregisterComponent( PhysicsComponent* pComponent );
         /** @brief 등록된 물리 컴포넌트 수입니다(진단 · 테스트). */
         uint32 getComponentCount() const;
+        /** @brief 단계 @p phase 에 등록된 물리 컴포넌트 목록입니다(순서 없음, 편집 중에도 있다). 에디터 시각화가 씬 전체를 훑지 않고 이것을 봅니다. */
+        const vector<PhysicsComponent*>& getComponents( PhysicsComponentPhase phase ) const { return _arrListComponent[static_cast<uint32>( phase )]; }
 
         /**
          * @brief 이 씬의 파괴 오브젝트들이 든 떨어진 덩어리 바디 수입니다(`gv_destructionMaxDebrisBodies` 예산).

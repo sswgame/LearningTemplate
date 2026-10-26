@@ -59,7 +59,6 @@ namespace sw::editor
         , _overlays{}
         , _hudView{}
         , _visualizerStats{}
-        , _listSceneObject{}
         , _contextMenuObjectID{ 0 }
         , _contextMenuWorldPosition{}
         , _bContextMenuHasWorldPosition{ false }
@@ -204,11 +203,8 @@ namespace sw::editor
             if ( _toolbarSettings._bShowGrid )
                 _canvasOverlay.drawAdaptiveGrid( ImGui::GetWindowDrawList(), canvasPos, canvasSize, arrView, arrProj, _camera.getPosition(), _toolbarSettings._bIs2DMode );
 
-            // 이 프레임의 스냅샷을 한 번만 만든다. 시각화와 아래의 통계 오버레이가 함께 읽는다.
-            _listSceneObject.clear();
-            GameObjectManager* pSnapshotManager = editor::getActiveObjectManager();
-            if ( pSnapshotManager != nullptr )
-                pSnapshotManager->getAllGameObjects( _listSceneObject );
+            // 시각화는 씬 전체를 복사하지 않고 매니저의 레지스트리(카메라 · 물리)를 읽는다.
+            GameObjectManager* pActiveManager = editor::getActiveObjectManager();
 
             EditorViewportVisualizerArgs visualizerArgs{};
             visualizerArgs._pDrawList       = ImGui::GetWindowDrawList();
@@ -216,11 +212,10 @@ namespace sw::editor
             visualizerArgs._canvasPos       = canvasPos;
             visualizerArgs._canvasSize      = canvasSize;
             visualizerArgs._pActiveCamera   = pCamera;
-            visualizerArgs._pListObject     = &_listSceneObject;
-            visualizerArgs._pListCamera     = ( pSnapshotManager != nullptr ) ? &pSnapshotManager->getCameraRegistry().getAll() : nullptr;
-            visualizerArgs._pListCollider   = ( pSnapshotManager != nullptr ) ? &pSnapshotManager->getSubsystem<sw::ScenePhysics>().getColliders2D() : nullptr;
+            visualizerArgs._pListCamera     = ( pActiveManager != nullptr ) ? &pActiveManager->getCameraRegistry().getAll() : nullptr;
+            visualizerArgs._pListCollider   = ( pActiveManager != nullptr ) ? &pActiveManager->getSubsystem<sw::ScenePhysics>().getColliders2D() : nullptr;
             visualizerArgs._pDebugDrawQueue = &editor::getSubsystem<DebugDrawQueue>();
-            visualizerArgs._pObjectManager  = pSnapshotManager;
+            visualizerArgs._pObjectManager  = pActiveManager;
             visualizerArgs._bGizmoDragging  = _gizmo.isDragging();
             visualizerArgs._bFlat2D         = EditorVisualizerGeometryUtil::isFlat2DView( pCamera->isOrthographic(), pCamera->getViewMatrix() );
             visualizerArgs._pStats          = &_visualizerStats;

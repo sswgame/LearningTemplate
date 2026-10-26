@@ -11,7 +11,9 @@
 
 #include "Engine/Object/Component/Physics/RigidBody2DComponent.h"
 #include "Engine/Object/Component/Physics/RigidBodyComponent.h"
+#include "Engine/Object/Component/Physics/ScenePhysics.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/PhysicsDebugDraw.h"
 
 namespace sw::editor
@@ -58,24 +60,24 @@ namespace sw::editor
             {
                 EditorShapeVisualizerStats& stats = args._pStats->_shape;
                 stats._physicsSegmentCount        = 0;
-                if ( args._pListObject == nullptr || args._pViewProj == nullptr )
+                if ( args._pObjectManager == nullptr || args._pViewProj == nullptr )
                     return;
                 EditorProjectedLineRenderer renderer{ args._pDrawList, *args._pViewProj, args._canvasPos, args._canvasSize };
-                for ( const GameObject* pObject : *args._pListObject )
+                // 씬 전체를 훑지 않고 물리 레지스트리의 바디 단계만 본다(빌보드 · 카메라 시각화와 같은 방식).
+                const TypeInfo*     pBody3DType = findStaticType<RigidBodyComponent>();
+                const TypeInfo*     pBody2DType = findStaticType<RigidBody2DComponent>();
+                const ScenePhysics& physics     = args._pObjectManager->getSubsystem<ScenePhysics>();
+                for ( PhysicsComponent* pComponent : physics.getComponents( PhysicsComponentPhase::Body ) )
                 {
-                    const bool bSkipObject = pObject == nullptr || pObject->isActiveInHierarchy() == false || pObject->isHiddenInEditor();
+                    const GameObject* pObject     = pComponent->getOwner();
+                    const bool        bSkipObject = pComponent->isActive() == false || pComponent->isPendingDestroy() || pObject == nullptr ||
+                                             pObject->isActiveInHierarchy() == false || pObject->isHiddenInEditor();
                     if ( bSkipObject )
                         continue;
-                    pObject->forEachComponentOfType<RigidBodyComponent>( [&renderer]( RigidBodyComponent* pBody )
-                    {
-                        if ( pBody->isActive() )
-                            drawBody3D( renderer, *pBody );
-                    } );
-                    pObject->forEachComponentOfType<RigidBody2DComponent>( [&renderer]( RigidBody2DComponent* pBody )
-                    {
-                        if ( pBody->isActive() )
-                            drawBody2D( renderer, *pBody );
-                    } );
+                    if ( const RigidBodyComponent* pBody3D = castTo<RigidBodyComponent>( pComponent, pBody3DType ); pBody3D != nullptr )
+                        drawBody3D( renderer, *pBody3D );
+                    else if ( const RigidBody2DComponent* pBody2D = castTo<RigidBody2DComponent>( pComponent, pBody2DType ); pBody2D != nullptr )
+                        drawBody2D( renderer, *pBody2D );
                 }
                 stats._physicsSegmentCount = renderer.getDrawnSegmentCount();
                 // 같은 시각화 켬 아래서 선택한 강체의 크기 손잡이를 그리고 끈다.
