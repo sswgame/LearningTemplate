@@ -43,8 +43,8 @@ from common.ImageMetrics import (ImageMetrics, averageMetrics, compareMetrics, c
 kGoldenRelativeDir = "Test/QA/Golden"
 
 
-def captureInternal(appPath: Path, game: dict, table: dict, backend: str, workDir: Path, runIndex: int) -> tuple[str, object]:
-    """한 판 그려 축소본을 돌려줍니다. ("ok", RgbImage) · ("skip", 이유) · ("fail", 이유)."""
+def captureInternal(appPath: Path, game: dict, table: dict, backend: str, workDir: Path, runIndex: int) -> tuple[str, object, float]:
+    """한 판 그려 축소본을 돌려줍니다. ("ok", RgbImage, 초) · ("skip", 이유, 초) · ("fail", 이유, 초) — 초는 App 이 돈 시간입니다."""
     screenshotPath = workDir / f"{backend}_{runIndex}.ppm"
     settledFrames = int(game["settled_frames"])
     # 사진을 다 찍으면(또는 자리 잡지 않아 못 찍으면 14 로) App 이 스스로 끝난다 — 프레임 수로 끝내면 자리 잡기 전에 끝날 수 있다.
@@ -53,21 +53,26 @@ def captureInternal(appPath: Path, game: dict, table: dict, backend: str, workDi
                     kBackendSwitch[backend], *game["extra_arguments"]]
     result = runApp(appPath, listArgument, timeoutSeconds=300.0)
     if result.bBackendUnusable:
-        return "skip", "backend unusable on this machine"
+        return "skip", "backend unusable on this machine", result.seconds
     listIgnored = result.findIgnoredGlobals(listArgument)
     if listIgnored:
         # 배포본은 벤치 · 자동 플레이 스위치를 등록하지 않는다 — 기준과 다른 장면을 견주지 않는다.
-        return "skip", f"this build has no {', '.join(listIgnored)} - the capture arguments do not apply"
+        return "skip", f"this build has no {', '.join(listIgnored)} - the capture arguments do not apply", result.seconds
     if not result.bClean:
         detail = result.listErrorLine[0] if result.listErrorLine else f"exit {result.exitCode}, timed out={result.bTimedOut}"
         # 진 판의 App 출력 전체를 남긴다 — 간헐 실패는 다시 돌리면 안 나온다.
         logPath = workDir.parent / f"sw_golden_{backend}_{runIndex}_app.log"
         logPath.write_text("\n".join(result.listLine) + "\n", encoding="utf-8")
-        return "fail", f"App did not finish cleanly ({logPath}): {detail}"
+        return "fail", f"App did not finish cleanly ({logPath}): {detail}", result.seconds
     if not screenshotPath.is_file():
-        return "fail", "no screenshot was written"
+        return "fail", "no screenshot was written", result.seconds
     image = readPpm(screenshotPath)
-    return "ok", downscale(image, table["reference_width"], table["reference_height"])
+    return "ok", downscale(image, table["reference_width"], table["reference_height"]), result.seconds
+
+
+def formatCaseLine(gameName: str, backend: str, status: str, seconds: float, message: str) -> str:
+    """결과 표 한 줄 — 게임 · 백엔드 · 판정 · 케이스 소요 시간(초) · 메시지."""
+    return f"[Golden] {gameName} {backend:5} {status.upper():8} {seconds:6.1f}s {message}"
 
 
 def describeGpuInternal() -> dict:
@@ -97,12 +102,14 @@ def describeDeviceMismatchInternal(record: dict) -> str:
 
 
 def recordInternal(appPath: Path, gameName: str, game: dict, table: dict, backend: str, goldenDir: Path, runCount: int,
-                   workDir: Path) -> tuple[str, str]:
+                   workDir: Path) -> tuple[str, str, float]:
     listImage = []
+    totalSeconds = 0.0
     for runIndex in range(runCount):
-        status, payload = captureInternal(appPath, game, table, backend, workDir, runIndex)
+        status, payload, seconds = captureInternal(appPath, game, table, backend, workDir, runIndex)
+        totalSeconds += seconds
         if status != "ok":
-            return status, str(payload)
+            return status, str(payload), totalSeconds
         listImage.append(payload)
     listMetrics = [computeMetrics(image) for image in listImage]
     tolerance = deriveTolerance(listMetrics)
@@ -119,30 +126,30 @@ def recordInternal(appPath: Path, gameName: str, game: dict, table: dict, backen
         "device": describeGpuInternal(),
     }
     (goldenDir / f"{backend}.json").write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
-    return "recorded", f"{runCount} run(s), tolerance {json.dumps(tolerance)}"
+    return "recorded", f"{runCount} run(s), tolerance {json.dumps(tolerance)}", totalSeconds
 
 
 def compareInternal(appPath: Path, game: dict, table: dict, backend: str, goldenDir: Path, workDir: Path,
-                    diffDir: Path | None) -> tuple[str, str]:
+                    diffDir: Path | None) -> tuple[str, str, float]:
     referencePath = goldenDir / f"{backend}.json"
     if not referencePath.is_file():
-        return "skip", f"no reference ({referencePath.relative_to(goldenDir.parents[2])}) - record it with --record"
+        return "skip", f"no reference ({referencePath.relative_to(goldenDir.parents[2])}) - record it with --record", 0.0
     record = json.loads(referencePath.read_text(encoding="utf-8"))
     if record["capture"]["arguments"] != game["arguments"] or record["capture"].get("settled_frames") != game["settled_frames"]:
-        return "fail", "the reference was captured with other arguments/settled_frames than Test/QA/Games.json - re-record it"
-    status, payload = captureInternal(appPath, game, table, backend, workDir, 0)
+        return "fail", "the reference was captured with other arguments/settled_frames than Test/QA/Games.json - re-record it", 0.0
+    status, payload, seconds = captureInternal(appPath, game, table, backend, workDir, 0)
     if status != "ok":
-        return status, str(payload)
+        return status, str(payload), seconds
     actual = computeMetrics(payload)
     listViolation = compareMetrics(ImageMetrics.fromJSON(record["metrics"]), actual, record["tolerance"])
     if not listViolation:
-        return "pass", f"foreground {actual.foregroundFraction:.3f}, edges {actual.edgeDensity:.3f}"
+        return "pass", f"foreground {actual.foregroundFraction:.3f}, edges {actual.edgeDensity:.3f}", seconds
     if diffDir is not None:
         writePng(diffDir / f"{backend}_actual.png", payload)
         referencePng = goldenDir / f"{backend}.png"
         if referencePng.is_file():
             writePng(diffDir / f"{backend}_expected.png", readPng(referencePng))
-    return "fail", "; ".join(violation.describe() for violation in listViolation) + describeDeviceMismatchInternal(record)
+    return "fail", "; ".join(violation.describe() for violation in listViolation) + describeDeviceMismatchInternal(record), seconds
 
 
 def main(listArgument: list[str] | None = None) -> int:
@@ -179,11 +186,11 @@ def main(listArgument: list[str] | None = None) -> int:
     with tempfile.TemporaryDirectory(prefix="sw_golden_") as tempDir:
         for backend in listBackend:
             if args.record:
-                status, message = recordInternal(args.app, gameName, game, table, backend, goldenDir, max(1, args.runs), Path(tempDir))
+                status, message, seconds = recordInternal(args.app, gameName, game, table, backend, goldenDir, max(1, args.runs), Path(tempDir))
             else:
-                status, message = compareInternal(args.app, game, table, backend, goldenDir, Path(tempDir), diffDir)
+                status, message, seconds = compareInternal(args.app, game, table, backend, goldenDir, Path(tempDir), diffDir)
             mapStatus[backend] = status
-            print(f"[Golden] {gameName} {backend:5} {status.upper():8} {message}", flush=True)
+            print(formatCaseLine(gameName, backend, status, seconds, message), flush=True)
 
     if any(status == "fail" for status in mapStatus.values()):
         return ExitCode.Violation

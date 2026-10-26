@@ -27,7 +27,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from common.ExitCode import ExitCode  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 from common.BuildTree import BuildTree  # noqa: E402
-from common.AppRun import addAppRunArguments, kBackendSwitch, computeSlopePerMinute, loadGameTable, parseProfileTable, parseProfileWall, runApp  # noqa: E402
+from common.AppRun import (addAppRunArguments, kBackendSwitch, kStartupRe, computeSlopePerMinute, loadGameTable, parseProfileTable,  # noqa: E402
+                           parseProfileWall, runApp, splitRunSeconds)
 
 kMegabyte = 1024.0 * 1024.0
 
@@ -85,9 +86,12 @@ def main(listArgument: list[str] | None = None) -> int:
         if args.max_p99_ms > 0.0 and row.p99Micro / 1000.0 > args.max_p99_ms:
             listFailure.append(f"{row.scope} p99 {row.p99Micro / 1000.0:.2f} ms exceeds {args.max_p99_ms} ms")
 
+    startupMs = next((float(match.group(1)) for line in result.listLine if (match := kStartupRe.search(line)) is not None), None)
+    startupSeconds, measureSeconds = splitRunSeconds(result.seconds, startupMs)
     first = listSteady[0] if listSteady else None
     last = listSteady[-1] if listSteady else None
-    print(f"[Soak] samples {len(result.listSample)} ({len(listSteady)} after {warmupSeconds:.0f} s warm-up), run {result.seconds:.0f} s", flush=True)
+    print(f"[Soak] samples {len(result.listSample)} ({len(listSteady)} after {warmupSeconds:.0f} s warm-up), run {result.seconds:.0f} s, "
+          f"startup {'-' if startupSeconds is None else f'{startupSeconds:.1f}'} s, measure {'-' if measureSeconds is None else f'{measureSeconds:.1f}'} s", flush=True)
     if first is not None and last is not None:
         print(f"[Soak] private {first.privateBytes / kMegabyte:.1f} -> {last.privateBytes / kMegabyte:.1f} MB ({privateSlope:+.2f} MB/min), "
               f"working set {workingSetSlope:+.2f} MB/min, handles {first.handleCount} -> {last.handleCount} ({handleSlope:+.1f}/min), "
@@ -100,6 +104,7 @@ def main(listArgument: list[str] | None = None) -> int:
     if args.out is not None:
         report = {
             "game": gameName, "backend": args.backend, "seconds": seconds, "exit_code": result.exitCode,
+            "run_seconds": result.seconds, "startup_seconds": startupSeconds, "measure_seconds": measureSeconds,
             "private_mb_per_minute": privateSlope, "working_set_mb_per_minute": workingSetSlope,
             "handles_per_minute": handleSlope, "gui_objects_per_minute": guiSlope,
             "frame": {row.scope: {"p50_us": row.p50Micro, "p99_us": row.p99Micro, "max_us": row.maxMicro} for row in listFrameRow},

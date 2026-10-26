@@ -132,6 +132,18 @@ def parseProfileWall(listLine: list[str]) -> tuple[int, int, int] | None:
     return None
 
 
+#: App 이 기동 뒤 찍는 `startup N ms[, M file opens]` — Load · Soak 이 같은 줄로 기동(로딩) 구간을 가른다.
+kStartupRe = re.compile(r"startup (\d+) ms(?:, (\d+) file opens)?")
+
+
+def splitRunSeconds(totalSeconds: float, startupMs: float | None) -> tuple[float | None, float | None]:
+    """판의 전체 시간을 (기동 초, 측정 초) 로 가릅니다. 기동 보고가 없으면 가를 수 없어 둘 다 None(0 으로 채우지 않는다)."""
+    if startupMs is None:
+        return None, None
+    startupSeconds = startupMs / 1000.0
+    return startupSeconds, max(0.0, totalSeconds - startupSeconds)
+
+
 def findUsableBackends(tree: BuildTree) -> list[str]:
     """그 빌드의 App 이 받는 백엔드 — Dev 는 넷 다(모듈), Shipping 은 링크한 하나뿐이다(다른 스위치는 기동 오류다)."""
     if not tree.bShipping:

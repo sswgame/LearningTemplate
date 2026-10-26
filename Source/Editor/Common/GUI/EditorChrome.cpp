@@ -371,11 +371,11 @@ namespace sw::editor
     {
         float2 viewportPos{};
         float2 viewportSize{};
-        if ( tryGetMainViewportRect( viewportPos, viewportSize ) == false )
-        {
-            viewportPos  = float2{ 0.0f, 0.0f };
-            viewportSize = float2{ 800.0f, 600.0f };
-        }
+        // 메인 뷰포트는 ImGui 프레임 안에서 항상 있다 — 없으면 호출 시점이 틀린 것이라 임의 크기로 계속하지 않고 멈춘다
+        const bool bHasViewport = tryGetMainViewportRect( viewportPos, viewportSize );
+        SW_ASSERT( bHasViewport );
+        if ( bHasViewport == false )
+            return false;
 
         EditorOverlayDesc overlayDesc{};
         overlayDesc._pID        = desc._pID != nullptr ? desc._pID : "##SearchOverlay";
