@@ -22,7 +22,7 @@
    - 간접 조명 [IndirectLighting](IndirectLighting.md). [단독: 셰이더 재베이크]
    - 월드 스트리밍 [WorldStreaming](WorldStreaming.md). [단독: 히치 측정은 Release 에서 혼자]
 3. **기능 묶음**(분류는 결정 기록 5-12)
-   1. 카메라 디렉터 · 직교 리그 [CameraRendererIntegration](CameraRendererIntegration.md) → [GamepadVirtualCursor](GamepadVirtualCursor.md), 에디터 시나리오 GraphSaveScenarioRun, [ScenarioRecorderAndInspectorGaps](Candidates-editor.md#scenariorecorderandinspectorgaps). [병렬 가능]
+   1. 카메라 디렉터 · 직교 리그 [CameraRendererIntegration](CameraRendererIntegration.md) → [GamepadVirtualCursor](GamepadVirtualCursor.md), 에디터 시나리오 GraphSaveScenarioRun. [병렬 가능]
    2. 미리보기 창 [EditorMultiWorld](EditorMultiWorld.md) 6절. [병렬 가능]
    3. 지형 · 식생 [TerrainEditCost](TerrainEditCost.md), 서버 파괴 호스트 [DestructionNetSessionScene](Candidates-network.md#destructionnetsessionscene) → [EncryptedTickCost](Candidates-network.md#encryptedtickcost). [단독: 셰이더 재베이크, 측정은 Release 에서 혼자]
    4. 오디오 [AudioEngineExtensions](AudioEngineExtensions.md), 온라인 키트 마감 [OnlineKits](OnlineKits.md). [병렬 가능]
