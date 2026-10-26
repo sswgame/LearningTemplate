@@ -16,14 +16,26 @@ namespace
     int32 s_invokeCount = 0;
     bool  s_bEnabled    = true;
 
-    void bumpInvokeCount()
+    void bumpInvokeCount( const EditorCommandTarget& /*target*/ )
     {
         ++s_invokeCount;
     }
 
-    bool isEnabledProbe()
+    bool isEnabledProbe( const EditorCommandTarget& /*target*/ )
     {
         return s_bEnabled;
+    }
+
+    /** @brief 인자 없는 전역 동작 — 등록 줄이 대상을 버리는 감싸개로 맞춘다. */
+    void bumpWithoutTarget()
+    {
+        ++s_invokeCount;
+    }
+
+    /** @brief 선택이 정확히 하나일 때만 켜지는 조건(Rename 처럼 하나에만 뜻이 있는 명령 — R3). */
+    bool isSingleSelection( const EditorCommandTarget& target )
+    {
+        return target.hasSingleSelection();
     }
 
     /** @brief id 와 동작만 채운 최소 커맨드를 만듭니다. */
@@ -122,10 +134,10 @@ SW_TEST_CASE( EditorCommandRegistryTest, ExecuteByIDRunsBoundAction )
     SW_EXPECT_NOT_NULL( registry.find( "test.bump" ) );
     SW_EXPECT_NULL( registry.find( "test.missing" ) );
 
-    SW_EXPECT_TRUE( registry.execute( "test.bump" ) );
+    SW_EXPECT_TRUE( registry.execute( "test.bump", EditorCommandTarget::none() ) );
     SW_EXPECT_EQUAL( 1, s_invokeCount );
 
-    SW_EXPECT_FALSE( registry.execute( "test.missing" ) );
+    SW_EXPECT_FALSE( registry.execute( "test.missing", EditorCommandTarget::none() ) );
     SW_EXPECT_EQUAL( 1, s_invokeCount );
 }
 
@@ -142,12 +154,100 @@ SW_TEST_CASE( EditorCommandRegistryTest, DisabledCommandIsNotExecuted )
     registry.registerCommand( std::move( desc ) );
 
     s_bEnabled = false;
-    SW_EXPECT_FALSE( registry.execute( "test.gated" ) );
+    SW_EXPECT_FALSE( registry.execute( "test.gated", EditorCommandTarget::none() ) );
     SW_EXPECT_EQUAL( 0, s_invokeCount );
 
     s_bEnabled = true;
-    SW_EXPECT_TRUE( registry.execute( "test.gated" ) );
+    SW_EXPECT_TRUE( registry.execute( "test.gated", EditorCommandTarget::none() ) );
     SW_EXPECT_EQUAL( 1, s_invokeCount );
+}
+
+/**
+ * @brief [EditorCommandRegistryTest] 동작과 켜짐 조건은 실행할 때 넘긴 대상을 받는다
+ * @details 인자 없는 동작이면 "누른 대상" 을 받을 수 없어 Duplicate · Delete 같은 대상 명령을 패널이 키를 직접 읽어 처리했다(EditorUX 10-2).
+ *          하나에만 뜻이 있는 명령은 다중 선택이면 꺼진다(R3).
+ */
+SW_TEST_CASE( EditorCommandRegistryTest, ActionAndEnabledReceiveTheTarget )
+{
+    EditorCommandRegistry registry;
+    int32                 invokeCount   = 0;
+    uint64                lastHoveredID = 0;
+
+    EditorCommandDesc rename = makeCommand( "test.rename" );
+    rename._action           = [&invokeCount, &lastHoveredID]( const EditorCommandTarget& target )
+    {
+        ++invokeCount;
+        lastHoveredID = target._hoveredID;
+    };
+    rename._enabledPredicate = &isSingleSelection;
+    registry.registerCommand( std::move( rename ) );
+
+    EditorCommandTarget single{};
+    single._kind           = EditorCommandTargetKind::GameObject;
+    single._listSelectedID = { 7 };
+    single._hoveredID      = 7;
+    SW_EXPECT_TRUE( registry.execute( "test.rename", single ) );
+    SW_EXPECT_EQUAL( 1, invokeCount );
+    SW_EXPECT_EQUAL( static_cast<uint64>( 7 ), lastHoveredID );
+
+    EditorCommandTarget multiple = single;
+    multiple._listSelectedID     = { 7, 8 };
+    SW_EXPECT_FALSE( registry.execute( "test.rename", multiple ) );
+    SW_EXPECT_EQUAL( 1, invokeCount );
+}
+
+/**
+ * @brief [EditorCommandRegistryTest] 등록 줄의 동작 칸은 인자 없는 함수 · 대상을 받는 함수 · nullptr 을 모두 대상을 받는 형식으로 맞춘다
+ */
+SW_TEST_CASE( EditorCommandRegistryTest, TargetUtilAdaptsActionShapes )
+{
+    s_invokeCount                         = 0;
+    const EditorCommandActionFn pfnGlobal = EditorCommandTargetUtil::toAction<&bumpWithoutTarget>();
+    const EditorCommandActionFn pfnTarget = EditorCommandTargetUtil::toAction<&bumpInvokeCount>();
+    SW_ASSERT_TRUE( pfnGlobal != nullptr );
+    SW_EXPECT_TRUE( pfnTarget == &bumpInvokeCount );
+    SW_EXPECT_TRUE( EditorCommandTargetUtil::toAction<nullptr>() == nullptr );
+    SW_EXPECT_TRUE( EditorCommandTargetUtil::toEnabled<nullptr>() == nullptr );
+    pfnGlobal( EditorCommandTarget::none() );
+    SW_EXPECT_EQUAL( 1, s_invokeCount );
+}
+
+/**
+ * @brief [EditorCommandRegistryTest] 맥락 메뉴는 대상 종류마다 명령의 맥락 메뉴 칸에서 나오고, 같은 자리는 validate 가 잡는다
+ * @details 메뉴 항목은 명령 id 만 가리킨다(R4). 같은 종류는 어느 패널에서 열어도 같은 메뉴다(R5).
+ */
+SW_TEST_CASE( EditorCommandRegistryTest, ContextMenuComesFromCommandColumns )
+{
+    EditorCommandRegistry registry;
+    const auto            addContext = [&]( const utf8* pID, EditorCommandTargetKind kind, int32 order )
+    {
+        EditorCommandDesc desc = makeCommand( pID );
+        desc._contextMenuKind  = kind;
+        desc._contextMenuOrder = order;
+        registry.registerCommand( std::move( desc ) );
+    };
+    addContext( "object.delete", EditorCommandTargetKind::GameObject, 900 );
+    addContext( "object.duplicate", EditorCommandTargetKind::GameObject, 110 );
+    addContext( "object.rename", EditorCommandTargetKind::GameObject, 100 );
+    addContext( "asset.reveal", EditorCommandTargetKind::Asset, 100 );
+    registry.registerCommand( makeCommand( "menu.none" ) );
+
+    vector<EditorMenuItem> listItem;
+    registry.collectContextMenuItems( EditorCommandTargetKind::GameObject, listItem );
+    SW_ASSERT_EQUAL( 3u, static_cast<uint32>( listItem.size() ) );
+    SW_EXPECT_STREQ( "object.rename", registry.getCommands()[listItem[0]._commandIndex]._id.c_str() );
+    SW_EXPECT_STREQ( "object.duplicate", registry.getCommands()[listItem[1]._commandIndex]._id.c_str() );
+    SW_EXPECT_FALSE( listItem[1]._bSeparatorBefore );
+    SW_EXPECT_TRUE( listItem[2]._bSeparatorBefore );
+
+    registry.collectContextMenuItems( EditorCommandTargetKind::None, listItem );
+    SW_EXPECT_TRUE( listItem.empty() );
+
+    string report;
+    SW_EXPECT_TRUE( registry.validate( report ) );
+    addContext( "object.rename2", EditorCommandTargetKind::GameObject, 100 );
+    SW_EXPECT_FALSE( registry.validate( report ) );
+    SW_EXPECT_TRUE( report.find( "object.rename2" ) != string::npos );
 }
 
 /**
@@ -353,7 +453,7 @@ SW_TEST_CASE( EditorCommandRegistryTest, RegistrationLinesAreAppendedAndExcluded
     SW_EXPECT_EQUAL( 9100, pDesc->_menuOrder );
     SW_EXPECT_TRUE( pDesc->_shortcut._key == EditorCommandKey::F7 );
     SW_EXPECT_TRUE( registry.findMenu( "MainMenu/TestExtension" ) != nullptr );
-    SW_EXPECT_TRUE( registry.execute( "test.registeredCommand" ) );
+    SW_EXPECT_TRUE( registry.execute( "test.registeredCommand", EditorCommandTarget::none() ) );
     SW_EXPECT_EQUAL( 1, s_invokeCount );
 
     EditorCommandRegistry excluded;

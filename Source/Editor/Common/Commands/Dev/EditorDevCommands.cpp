@@ -71,7 +71,7 @@ namespace sw::editor
                 EditorContext* pContext = editor::findSubsystem<EditorContext>();
                 if ( listArgument.size() != 1 || pContext == nullptr )
                     return false;
-                if ( pContext->getSubsystem<EditorCommandRegistry>().execute( listArgument[0] ) == false )
+                if ( pContext->getSubsystem<EditorCommandRegistry>().execute( listArgument[0], EditorCommandTarget::none() ) == false )
                 {
                     outReply = "no enabled editor command '" + listArgument[0] + "'";
                     return false;

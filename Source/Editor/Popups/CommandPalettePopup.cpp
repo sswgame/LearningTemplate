@@ -136,7 +136,7 @@ namespace sw::editor
             entry._action = [commandID]()
             {
                 EditorContext& editorContext = editor::getSubsystem<EditorContext>();
-                editorContext.getSubsystem<EditorCommandRegistry>().execute( commandID );
+                (void)editorContext.getSubsystem<EditorCommandRegistry>().execute( commandID, EditorCommandTarget::none() ); // 팔레트는 대상 없이 실행한다 — 꺼진 명령이면 아무 일도 없다
             };
             _listAllCommand.push_back( std::move( entry ) );
         }

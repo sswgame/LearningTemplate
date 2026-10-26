@@ -203,31 +203,53 @@ namespace sw::editor
         return VectorUtil::findBy<&EditorCommandDesc::_id>( _listCommand, commandID );
     }
 
-    bool EditorCommandRegistry::isEnabled( const EditorCommandDesc& desc )
+    bool EditorCommandRegistry::isEnabled( const EditorCommandDesc& desc, const EditorCommandTarget& target )
     {
         // 씬을 바꾸는 커맨드는 편집 허용 답을 먼저 묻는다 — 플레이 중 · 편집을 막는 작업(베이크) 중이면 꺼진다.
         if ( desc._edit == EditorCommandEdit::Scene && EditorPlaySession::areSceneEditsAllowed() == false )
             return false;
         if ( desc._enabledPredicate.isBound() == false )
             return true;
-        return desc._enabledPredicate();
+        return desc._enabledPredicate( target );
     }
 
-    bool EditorCommandRegistry::execute( string_view commandID )
+    bool EditorCommandRegistry::execute( string_view commandID, const EditorCommandTarget& target )
     {
         const EditorCommandDesc* pDesc = find( commandID );
         if ( pDesc == nullptr )
             return false;
-        return executeDesc( *pDesc );
+        return executeDesc( *pDesc, target );
     }
 
-    bool EditorCommandRegistry::executeDesc( const EditorCommandDesc& desc )
+    bool EditorCommandRegistry::executeDesc( const EditorCommandDesc& desc, const EditorCommandTarget& target )
     {
-        if ( desc._action.isBound() == false || isEnabled( desc ) == false )
+        if ( desc._action.isBound() == false || isEnabled( desc, target ) == false )
             return false;
 
-        desc._action();
+        desc._action( target );
         return true;
+    }
+
+    void EditorCommandRegistry::collectContextMenuItems( EditorCommandTargetKind kind, vector<EditorMenuItem>& outListItem ) const
+    {
+        outListItem.clear();
+        if ( kind == EditorCommandTargetKind::None )
+            return;
+        vector<uint32> listIndex;
+        for ( uint32 index = 0; index < static_cast<uint32>( _listCommand.size() ); ++index )
+        {
+            if ( _listCommand[index]._contextMenuKind == kind )
+                listIndex.push_back( index );
+        }
+        std::stable_sort( listIndex.begin(), listIndex.end(), [this]( uint32 lhsIndex, uint32 rhsIndex )
+        { return _listCommand[lhsIndex]._contextMenuOrder < _listCommand[rhsIndex]._contextMenuOrder; } );
+        for ( const uint32 commandIndex : listIndex )
+        {
+            const bool bSeparatorBefore = outListItem.empty() == false &&
+                                          EditorCommandRegistryInternal::isGroupBoundary( _listCommand[outListItem.back()._commandIndex]._contextMenuOrder,
+                                                                                          _listCommand[commandIndex]._contextMenuOrder );
+            outListItem.push_back( EditorMenuItem{ commandIndex, bSeparatorBefore } );
+        }
     }
 
     bool EditorCommandRegistry::validate( string& outReport ) const
@@ -256,6 +278,17 @@ namespace sw::editor
                     outReport += "같은 메뉴 순서 ";
                     outReport += desc._menuPath;
                     outReport += ": ";
+                    outReport += desc._id;
+                    outReport += " / ";
+                    outReport += other._id;
+                    outReport += "\n";
+                }
+
+                const bool bSameContextSlot = desc._contextMenuKind != EditorCommandTargetKind::None && desc._contextMenuKind == other._contextMenuKind &&
+                                              desc._contextMenuOrder == other._contextMenuOrder;
+                if ( bSameContextSlot )
+                {
+                    outReport += "같은 맥락 메뉴 순서: ";
                     outReport += desc._id;
                     outReport += " / ";
                     outReport += other._id;

@@ -561,10 +561,10 @@ namespace sw::editor
                 EditorCommandRegistry::formatShortcutLabel( desc, shortcutLabel );
 
                 const utf8* pShortcut = shortcutLabel.empty() ? nullptr : shortcutLabel.c_str();
-                const bool  bEnabled  = EditorCommandRegistry::isEnabled( desc );
+                const bool  bEnabled  = EditorCommandRegistry::isEnabled( desc, EditorCommandTarget::none() );
 
                 if ( ImGui::MenuItem( menuLabel.c_str(), pShortcut, false, bEnabled ) )
-                    EditorCommandRegistry::executeDesc( desc );
+                    (void)EditorCommandRegistry::executeDesc( desc, EditorCommandTarget::none() ); // 꺼진 항목은 그려질 때 이미 회색이다
 
                 if ( desc._tooltip.empty() == false )
                 {
@@ -669,10 +669,13 @@ namespace sw::editor
             desc._bPaletteVisible = row._bPaletteVisible;
             desc._menuPath        = row._pMenuPath != nullptr ? row._pMenuPath : "";
             desc._menuOrder       = row._menuOrder;
+            // 표의 명령은 모두 전역 명령이라 대상을 받지 않는다 — 대상을 버리고 부른다.
             if ( row._pAction != nullptr )
-                desc._action = row._pAction;
+                desc._action = [pfnAction = row._pAction]( const EditorCommandTarget& /*target*/ )
+                { pfnAction(); };
             if ( row._pEnabled != nullptr )
-                desc._enabledPredicate = row._pEnabled;
+                desc._enabledPredicate = [pfnEnabled = row._pEnabled]( const EditorCommandTarget& /*target*/ )
+                { return pfnEnabled(); };
             desc._edit = row._edit;
 
             registry.registerCommand( std::move( desc ) );
@@ -711,7 +714,7 @@ namespace sw::editor
                 continue;
 
             // 조합은 유일하다(registerDefaults 의 validate 가 보장한다). 그래서 처음 맞은 것만 실행한다.
-            EditorCommandRegistry::executeDesc( desc );
+            (void)EditorCommandRegistry::executeDesc( desc, EditorCommandTarget::none() ); // 꺼진 명령이면 아무 일도 없다
             return;
         }
     }

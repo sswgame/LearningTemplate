@@ -123,7 +123,7 @@ namespace sw::editor
             if ( ImGui::SmallButton( "Build" ) )
             {
                 EditorContext& editorContext = editor::getSubsystem<EditorContext>();
-                (void)editorContext.getSubsystem<EditorCommandRegistry>().execute( "build.compileAll" ); // 막혀 있으면 빌드 상태 표시가 알린다
+                (void)editorContext.getSubsystem<EditorCommandRegistry>().execute( "build.compileAll", EditorCommandTarget::none() ); // 막혀 있으면 빌드 상태 표시가 알린다
             }
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "BuildModules" ) );
         }

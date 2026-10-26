@@ -11,6 +11,7 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/String/fixed_string.h"
 
+#include "Editor/Common/Commands/EditorCommandTarget.h"
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Common/EditorSubsystem.h"
 #include "Editor/Common/Workspace/EditorExtensionRegistry.h"
@@ -150,6 +151,54 @@ namespace sw::editor
 
 namespace sw::editor
 {
+    /** @brief 대상을 받는 명령 동작입니다. 전역 명령은 대상을 무시한다(`EditorCommandTarget::none()` 을 받는다). */
+    using EditorCommandActionFn = void ( * )( const EditorCommandTarget& target );
+    /** @brief 대상을 받는 명령 켜짐 조건입니다. */
+    using EditorCommandEnabledFn = bool ( * )( const EditorCommandTarget& target );
+
+    /**
+     * @struct EditorCommandTargetUtil
+     * @brief 인자 없는 전역 동작 · 켜짐 함수를 대상을 받는 형식으로 맞춥니다(등록 줄 `SW_EDITOR_COMMAND` 가 부른다).
+     * @details 전역 명령마다 대상을 버리는 감싸개를 손으로 쓰면 이름만 늘어난다. 등록 줄이 함수의 형식을 보고 고른다 —
+     *          대상을 받는 함수는 그대로, 인자 없는 함수는 대상을 버리는 감싸개로, nullptr 은 nullptr 로.
+     */
+    struct EditorCommandTargetUtil
+    {
+        template <auto TFunction>
+        static void ignoreTargetAction( const EditorCommandTarget& /*target*/ )
+        {
+            TFunction();
+        }
+        template <auto TFunction>
+        static bool ignoreTargetEnabled( const EditorCommandTarget& /*target*/ )
+        {
+            return TFunction();
+        }
+        template <auto TFunction>
+        static constexpr EditorCommandActionFn toAction()
+        {
+            if constexpr ( std::is_null_pointer_v<decltype( TFunction )> )
+                return nullptr;
+            else if constexpr ( std::is_convertible_v<decltype( TFunction ), EditorCommandActionFn> )
+                return TFunction;
+            else
+                return &ignoreTargetAction<TFunction>;
+        }
+        template <auto TFunction>
+        static constexpr EditorCommandEnabledFn toEnabled()
+        {
+            if constexpr ( std::is_null_pointer_v<decltype( TFunction )> )
+                return nullptr;
+            else if constexpr ( std::is_convertible_v<decltype( TFunction ), EditorCommandEnabledFn> )
+                return TFunction;
+            else
+                return &ignoreTargetEnabled<TFunction>;
+        }
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
     /**
      * @brief 커맨드가 씬을 바꾸는지입니다. 모든 커맨드가 정한다(테이블 줄 · `SW_EDITOR_COMMAND` 의 필수 칸 — 빠뜨리면 컴파일되지 않는다).
      * @details `Scene` 이면 레지스트리가 커맨드 자신의 켜짐 조건과 함께 편집 허용 답(`EditorPlaySession::areSceneEditsAllowed` — 플레이 중 · 베이크처럼 편집을
@@ -185,13 +234,19 @@ namespace sw::editor
          * @brief 메뉴 안의 순서입니다. 작을수록 위이고, 백의 자리(`commandmenu::kGroupSpan`)가 바뀌는 위치에 구분선이 들어갑니다.
          * @details 메뉴바에서 메뉴끼리의 순서(왼쪽에서 오른쪽)도 이 값으로 정한다. 가장 작은 값이 더 작은 메뉴가 앞에 온다.
          */
-        int32             _menuOrder{ 0 };
-        Delegate<void()>  _action;
-        Delegate<bool()>  _enabledPredicate;                   ///< 바인딩하지 않으면 항상 활성이다
-        EditorCommandEdit _edit{ EditorCommandEdit::NoScene }; ///< `Scene` 이면 편집 허용 답도 묻는다(`EditorCommandEdit`)
+        int32                                        _menuOrder{ 0 };
+        Delegate<void( const EditorCommandTarget& )> _action;                             ///< 대상을 받는 동작. 전역 명령은 대상을 무시한다
+        Delegate<bool( const EditorCommandTarget& )> _enabledPredicate;                   ///< 바인딩하지 않으면 항상 활성이다
+        EditorCommandEdit                            _edit{ EditorCommandEdit::NoScene }; ///< `Scene` 이면 편집 허용 답도 묻는다(`EditorCommandEdit`)
         /** @brief 이 커맨드가 놓일 메뉴 경로(`"MainMenu/File"`)입니다. 비어 있으면 어느 메뉴에도 나오지 않습니다. */
         string _menuPath;
         bool   _bPaletteVisible{ true };
+        /**
+         * @brief 이 커맨드가 놓일 맥락(우클릭) 메뉴의 종류입니다. `None` 이면 어느 맥락 메뉴에도 나오지 않습니다.
+         * @details 메뉴 종류는 대상 종류다 — 같은 종류는 어느 패널에서 열어도 같은 메뉴다(EditorUX 10-3 R5). 순서 · 구분선 규칙은 메뉴바와 같다(`_contextMenuOrder`).
+         */
+        EditorCommandTargetKind _contextMenuKind{ EditorCommandTargetKind::None };
+        int32                   _contextMenuOrder{ 0 }; ///< 맥락 메뉴 안 순서. 백의 자리가 바뀌면 구분선이 들어간다
     };
 } // namespace sw::editor
 
@@ -243,12 +298,17 @@ namespace sw::editor
 
         /** @brief id 로 커맨드를 찾습니다. 없으면 nullptr 입니다. */
         const EditorCommandDesc* find( string_view commandID ) const;
-        /** @brief 활성 조건을 평가합니다. 조건이 없으면 true 입니다. */
-        static bool isEnabled( const EditorCommandDesc& desc );
-        /** @brief 활성 상태이면 커맨드를 실행하고 true 를 반환합니다. */
-        bool execute( string_view commandID );
-        /** @brief 활성 상태이면 커맨드를 실행하고 true 를 반환합니다. */
-        static bool executeDesc( const EditorCommandDesc& desc );
+        /** @brief @p target 에 대한 활성 조건을 평가합니다. 조건이 없으면 true 입니다. */
+        static bool isEnabled( const EditorCommandDesc& desc, const EditorCommandTarget& target );
+        /** @brief 활성 상태이면 @p target 에 커맨드를 실행하고 true 를 반환합니다. 대상이 없는 실행은 `EditorCommandTarget::none()` 을 넘깁니다. */
+        bool execute( string_view commandID, const EditorCommandTarget& target );
+        /** @brief 활성 상태이면 @p target 에 커맨드를 실행하고 true 를 반환합니다. */
+        static bool executeDesc( const EditorCommandDesc& desc, const EditorCommandTarget& target );
+        /**
+         * @brief @p kind 맥락 메뉴에 놓인 커맨드를 `_contextMenuOrder` 순서로 @p outListItem 에 담습니다. 구분선 규칙은 메뉴바와 같습니다.
+         * @details 항목은 커맨드 인덱스만 가리킨다 — 라벨 · 켜짐 · 단축키 글자는 커맨드가 정한다(R4). 패널이 메뉴 글자를 적지 않는다.
+         */
+        void collectContextMenuItems( EditorCommandTargetKind kind, vector<EditorMenuItem>& outListItem ) const;
 
         const vector<EditorCommandDesc>& getCommands() const { return _listCommand; }
         /** @brief 커맨드의 메뉴 경로와 순서 필드에서 만든 메뉴 목록입니다. 메뉴 안에서 가장 작은 `_menuOrder` 가 작은 메뉴가 앞에 옵니다. */
@@ -306,16 +366,16 @@ namespace sw::editor
     {
         static constexpr const utf8* kKindName = "command";
 
-        const utf8*           _pLabel;
-        const utf8*           _pIcon;
-        const utf8*           _pCategory;
-        const utf8*           _pTooltip;
-        const utf8*           _pDetail;
-        EditorCommandShortcut _shortcut;
-        void ( *_pfnAction )();
-        bool ( *_pfnEnabled )();
-        EditorCommandEdit _edit;      ///< 씬을 바꾸는지(필수 — `EditorCommandEdit`)
-        const utf8*       _pMenuPath; ///< nullptr 이면 메뉴에 나오지 않는다(팔레트와 단축키만 쓴다)
+        const utf8*            _pLabel;
+        const utf8*            _pIcon;
+        const utf8*            _pCategory;
+        const utf8*            _pTooltip;
+        const utf8*            _pDetail;
+        EditorCommandShortcut  _shortcut;
+        EditorCommandActionFn  _pfnAction;  ///< 대상을 받는 동작(등록 줄이 인자 없는 함수를 `EditorCommandTargetUtil::toAction` 으로 맞춘다)
+        EditorCommandEnabledFn _pfnEnabled; ///< nullptr 이면 늘 켜져 있다
+        EditorCommandEdit      _edit;       ///< 씬을 바꾸는지(필수 — `EditorCommandEdit`)
+        const utf8*            _pMenuPath;  ///< nullptr 이면 메뉴에 나오지 않는다(팔레트와 단축키만 쓴다)
     };
 } // namespace sw::editor
 
@@ -342,4 +402,5 @@ namespace sw::editor
  */
 #define SW_EDITOR_COMMAND( name, pID, menuOrder, pLabel, pIcon, pCategory, pTooltip, pDetail, shortcut, pfnAction, pfnEnabled, edit, pMenuPath )  \
     SW_EDITOR_REGISTER( ::sw::editor::EditorCommandRegistration, Command_##name, { pID, menuOrder }, pLabel, pIcon, pCategory, pTooltip, pDetail, \
-                        shortcut, pfnAction, pfnEnabled, ::sw::editor::EditorCommandEdit::edit, pMenuPath )
+                        shortcut, ::sw::editor::EditorCommandTargetUtil::toAction<pfnAction>(),                                                   \
+                        ::sw::editor::EditorCommandTargetUtil::toEnabled<pfnEnabled>(), ::sw::editor::EditorCommandEdit::edit, pMenuPath )
