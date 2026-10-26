@@ -11,6 +11,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Time/MonotonicClock.h"
+#include "Core/Time/TimePoint.h"
 
 namespace sw
 {
@@ -30,8 +31,8 @@ namespace sw
         /** @brief 지금 시각(나노초)입니다. 여러 스레드에서 같이 불러도 됩니다. */
         virtual int64 nowNanoseconds() const noexcept = 0;
 
-        /** @brief 지금 시각(밀리초)입니다. */
-        int64 nowMilliseconds() const noexcept { return nowNanoseconds() / constant::kNanosecondsPerMillisecond; }
+        /** @brief 지금 시각(밀리초)입니다. 단조 시각 형식이라 유닉스 시각을 받는 자리(`UnixMilliseconds`)에 넣으면 컴파일이 안 됩니다. */
+        MonotonicMilliseconds nowMilliseconds() const noexcept { return MonotonicMilliseconds{ nowNanoseconds() / constant::kNanosecondsPerMillisecond }; }
     };
 } // namespace sw
 

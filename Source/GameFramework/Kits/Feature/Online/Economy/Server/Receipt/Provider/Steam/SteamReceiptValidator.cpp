@@ -186,7 +186,7 @@ namespace sw
                "&maxresults=" + to_string( kReportMaxResults );
     }
 
-    void SteamReceiptValidator::submitValidation( const ReceiptValidationRequest& request, int64 nowMs )
+    void SteamReceiptValidator::submitValidation( const ReceiptValidationRequest& request, UnixMilliseconds now )
     {
         if ( isOrderID( request._payload ) == false )
         {
@@ -203,7 +203,7 @@ namespace sw
         httpRequest._url       = makeQueryURL( request._payload );
         httpRequest._timeoutMs = _settings._requestTimeoutMs;
         httpRequest._listHeader.push_back( HTTPHeader{ "Accept", "application/json" } );
-        PendingValidation& pending = _mapRequestToPending[_pHTTPClient->submitRequest( httpRequest, nowMs )];
+        PendingValidation& pending = _mapRequestToPending[_pHTTPClient->submitRequest( httpRequest, now.count() )];
         pending._request           = request;
         pending._orderID           = request._payload;
     }
@@ -255,23 +255,23 @@ namespace sw
         }
     }
 
-    void SteamReceiptValidator::update( int64 nowMs )
+    void SteamReceiptValidator::update( UnixMilliseconds now )
     {
         using Internal = SteamReceiptValidatorInternal;
         // 서버 루프의 시각(유닉스 밀리초) 하나로 HTTP 시한 · 조회 주기 · 보고서 구간을 모두 잰다.
-        _pHTTPClient->update( nowMs );
+        _pHTTPClient->update( now.count() );
         // 보고서 조회 — 처음에는 바로, 그 뒤로는 주기마다. 앞 요청이 끝나기 전에는 새로 보내지 않는다.
         const bool bMayReport = _bStopped == SW_FALSE && _reportRequestID == 0;
-        if ( bMayReport && nowMs >= _nextReportMs )
+        if ( bMayReport && now.count() >= _nextReportMs )
         {
-            const int64       sinceMs = ( _lastReportUnixMs != 0 ? _lastReportUnixMs : nowMs ) - _settings._reportLookbackMs;
+            const int64       sinceMs = ( _lastReportUnixMs != 0 ? _lastReportUnixMs : now.count() ) - _settings._reportLookbackMs;
             HTTPClientRequest request;
             request._url       = makeReportURL( sinceMs );
             request._timeoutMs = _settings._requestTimeoutMs;
             request._listHeader.push_back( HTTPHeader{ "Accept", "application/json" } );
-            _reportRequestID   = _pHTTPClient->submitRequest( request, nowMs );
-            _reportStartUnixMs = nowMs;
-            _nextReportMs      = nowMs + _settings._reportPollIntervalMs;
+            _reportRequestID   = _pHTTPClient->submitRequest( request, now.count() );
+            _reportStartUnixMs = now.count();
+            _nextReportMs      = now.count() + _settings._reportPollIntervalMs;
         }
         vector<HTTPClientResponse> listResponse;
         (void)_pHTTPClient->pollResponses( listResponse );
@@ -301,7 +301,7 @@ namespace sw
                     if ( _uniqueSetNotifiedRefund.size() >= Internal::kMaxNotifiedRefundCount )
                         _uniqueSetNotifiedRefund.clear(); // 상한 — 겹친 알림은 서비스가 거래 id 로 한 번만 처리한다
                     _uniqueSetNotifiedRefund.insert( orderID );
-                    int64 refundedMs   = nowMs;
+                    int64 refundedMs   = now.count();
                     int64 parsedRefund = 0;
                     if ( parseTime( Internal::readText( order, "time" ), parsedRefund ) )
                         refundedMs = parsedRefund;

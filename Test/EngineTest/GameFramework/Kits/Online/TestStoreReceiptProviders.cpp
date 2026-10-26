@@ -43,7 +43,7 @@ namespace
         while ( listResult.size() < count && deadline.isExpired() == false )
         {
             https.pump();
-            validator.update( nowMs );
+            validator.update( UnixMilliseconds{ nowMs } );
             validator.pollCompletions( listResult );
         }
         return listResult;
@@ -68,7 +68,7 @@ namespace
         while ( listNotice.size() < count && deadline.isExpired() == false )
         {
             https.pump();
-            validator.update( nowMs );
+            validator.update( UnixMilliseconds{ nowMs } );
             validator.pollCompletions( listIgnored );
             validator.pollRefunds( listNotice );
         }
@@ -285,11 +285,11 @@ namespace
 SW_TEST_CASE( SteamReceiptTest, QueryTxnStatusesBecomeReceiptStatuses )
 {
     SteamFixture fixture;
-    fixture._validator.submitValidation( makeRequest( "steam", "1001", 1 ), kTestNowMs );
-    fixture._validator.submitValidation( makeRequest( "steam", "1002", 2 ), kTestNowMs );
-    fixture._validator.submitValidation( makeRequest( "steam", "1003", 3 ), kTestNowMs );
-    fixture._validator.submitValidation( makeRequest( "steam", "1004", 4 ), kTestNowMs );
-    fixture._validator.submitValidation( makeRequest( "steam", "9999", 5 ), kTestNowMs );
+    fixture._validator.submitValidation( makeRequest( "steam", "1001", 1 ), UnixMilliseconds{ kTestNowMs } );
+    fixture._validator.submitValidation( makeRequest( "steam", "1002", 2 ), UnixMilliseconds{ kTestNowMs } );
+    fixture._validator.submitValidation( makeRequest( "steam", "1003", 3 ), UnixMilliseconds{ kTestNowMs } );
+    fixture._validator.submitValidation( makeRequest( "steam", "1004", 4 ), UnixMilliseconds{ kTestNowMs } );
+    fixture._validator.submitValidation( makeRequest( "steam", "9999", 5 ), UnixMilliseconds{ kTestNowMs } );
     const vector<ReceiptValidationResult> listResult = collectResults( fixture._https, fixture._validator, kTestNowMs, 5 );
     SW_ASSERT_EQUAL( listResult.size(), size_t( 5 ) );
     const ReceiptValidationResult* pValid = findByTicket( listResult, 1 );
@@ -310,9 +310,9 @@ SW_TEST_CASE( SteamReceiptTest, QueryTxnStatusesBecomeReceiptStatuses )
 SW_TEST_CASE( SteamReceiptTest, ReceiptsThatCannotGoIntoAQueryAreRefusedWithoutAskingSteam )
 {
     SteamFixture fixture;
-    fixture._validator.submitValidation( makeRequest( "steam", "1001&key=other", 1 ), kTestNowMs );
-    fixture._validator.submitValidation( makeRequest( "steam", "", 2 ), kTestNowMs );
-    fixture._validator.submitValidation( makeRequest( "steam", "123456789012345678901", 3 ), kTestNowMs ); // 21 자리
+    fixture._validator.submitValidation( makeRequest( "steam", "1001&key=other", 1 ), UnixMilliseconds{ kTestNowMs } );
+    fixture._validator.submitValidation( makeRequest( "steam", "", 2 ), UnixMilliseconds{ kTestNowMs } );
+    fixture._validator.submitValidation( makeRequest( "steam", "123456789012345678901", 3 ), UnixMilliseconds{ kTestNowMs } ); // 21 자리
     const vector<ReceiptValidationResult> listResult = collectResults( fixture._https, fixture._validator, kTestNowMs, 3 );
     SW_ASSERT_EQUAL( listResult.size(), size_t( 3 ) );
     for ( const ReceiptValidationResult& result : listResult )
@@ -327,7 +327,7 @@ SW_TEST_CASE( SteamReceiptTest, AWrongPublisherKeyIsRetriedNotBlamedOnThePlayer 
     SteamFixture fixture( "wrong-key" );
     {
         SW_TEST_DEFENSIVE_SCOPE( "the provider logs that steam rejected the key" );
-        fixture._validator.submitValidation( makeRequest( "steam", "1001", 1 ), kTestNowMs );
+        fixture._validator.submitValidation( makeRequest( "steam", "1001", 1 ), UnixMilliseconds{ kTestNowMs } );
         const vector<ReceiptValidationResult> listResult = collectResults( fixture._https, fixture._validator, kTestNowMs, 1 );
         SW_ASSERT_EQUAL( listResult.size(), size_t( 1 ) );
         SW_EXPECT_TRUE( listResult[0]._status == ReceiptStatus::Retry );
@@ -353,7 +353,7 @@ SW_TEST_CASE( SteamReceiptTest, TheRefundReportNotifiesEachRefundedOrderOnce )
 SW_TEST_CASE( SteamReceiptTest, TheSandboxInterfaceMarksResultsAsSandboxPurchases )
 {
     SteamFixture fixture( "publisher-key", true );
-    fixture._validator.submitValidation( makeRequest( "steam", "1001", 1 ), kTestNowMs );
+    fixture._validator.submitValidation( makeRequest( "steam", "1001", 1 ), UnixMilliseconds{ kTestNowMs } );
     const vector<ReceiptValidationResult> listResult = collectResults( fixture._https, fixture._validator, kTestNowMs, 1 );
     SW_ASSERT_EQUAL( listResult.size(), size_t( 1 ) );
     SW_EXPECT_TRUE( listResult[0]._bSandbox == SW_TRUE );
@@ -384,12 +384,12 @@ SW_TEST_CASE( SteamReceiptTest, TimesRoundTripAndOrderIDsAreChecked )
 SW_TEST_CASE( GoogleReceiptTest, PurchaseStatesBecomeReceiptStatusesAndValidPurchasesAreAcknowledged )
 {
     GoogleFixture fixture;
-    fixture._validator.submitValidation( makeRequest( "google", "gems100|tokenOK", 1 ), kTestNowMs );
-    fixture._validator.submitValidation( makeRequest( "google", "gems100|tokenCanceled", 2 ), kTestNowMs );
-    fixture._validator.submitValidation( makeRequest( "google", "gems100|tokenPending", 3 ), kTestNowMs );
-    fixture._validator.submitValidation( makeRequest( "google", "gems100|tokenTest", 4 ), kTestNowMs );
-    fixture._validator.submitValidation( makeRequest( "google", "gems100|tokenUnknown", 5 ), kTestNowMs );
-    fixture._validator.submitValidation( makeRequest( "google", "gems100|tokenAcked", 6 ), kTestNowMs );
+    fixture._validator.submitValidation( makeRequest( "google", "gems100|tokenOK", 1 ), UnixMilliseconds{ kTestNowMs } );
+    fixture._validator.submitValidation( makeRequest( "google", "gems100|tokenCanceled", 2 ), UnixMilliseconds{ kTestNowMs } );
+    fixture._validator.submitValidation( makeRequest( "google", "gems100|tokenPending", 3 ), UnixMilliseconds{ kTestNowMs } );
+    fixture._validator.submitValidation( makeRequest( "google", "gems100|tokenTest", 4 ), UnixMilliseconds{ kTestNowMs } );
+    fixture._validator.submitValidation( makeRequest( "google", "gems100|tokenUnknown", 5 ), UnixMilliseconds{ kTestNowMs } );
+    fixture._validator.submitValidation( makeRequest( "google", "gems100|tokenAcked", 6 ), UnixMilliseconds{ kTestNowMs } );
     const vector<ReceiptValidationResult> listResult = collectResults( fixture._https, fixture._validator, kTestNowMs, 6 );
     SW_ASSERT_EQUAL( listResult.size(), size_t( 6 ) );
     SW_EXPECT_TRUE( fixture._handler._bAssertionValid == SW_TRUE );
@@ -414,7 +414,7 @@ SW_TEST_CASE( GoogleReceiptTest, PurchaseStatesBecomeReceiptStatusesAndValidPurc
     {
         vector<ReceiptValidationResult> listIgnored;
         fixture._https.pump();
-        fixture._validator.update( kTestNowMs );
+        fixture._validator.update( UnixMilliseconds{ kTestNowMs } );
         fixture._validator.pollCompletions( listIgnored );
     }
     SW_EXPECT_EQUAL( fixture._handler._acknowledgeHits, 1 );
@@ -423,9 +423,9 @@ SW_TEST_CASE( GoogleReceiptTest, PurchaseStatesBecomeReceiptStatusesAndValidPurc
 SW_TEST_CASE( GoogleReceiptTest, MalformedReceiptsAreRefusedWithoutAskingGoogle )
 {
     GoogleFixture fixture;
-    fixture._validator.submitValidation( makeRequest( "google", "no-bar", 1 ), kTestNowMs );
-    fixture._validator.submitValidation( makeRequest( "google", "gems100|tok/../x", 2 ), kTestNowMs );
-    fixture._validator.submitValidation( makeRequest( "google", "|token", 3 ), kTestNowMs );
+    fixture._validator.submitValidation( makeRequest( "google", "no-bar", 1 ), UnixMilliseconds{ kTestNowMs } );
+    fixture._validator.submitValidation( makeRequest( "google", "gems100|tok/../x", 2 ), UnixMilliseconds{ kTestNowMs } );
+    fixture._validator.submitValidation( makeRequest( "google", "|token", 3 ), UnixMilliseconds{ kTestNowMs } );
     const vector<ReceiptValidationResult> listResult = collectResults( fixture._https, fixture._validator, kTestNowMs, 3 );
     SW_ASSERT_EQUAL( listResult.size(), size_t( 3 ) );
     for ( const ReceiptValidationResult& result : listResult )

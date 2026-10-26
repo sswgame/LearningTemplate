@@ -134,7 +134,7 @@ namespace sw
                "/purchases/voidedpurchases?startTime=" + to_string( sinceUnixMs ) + "&maxResults=" + to_string( kVoidedMaxResults ) + "&type=0";
     }
 
-    void GoogleReceiptValidator::submitCall( const WaitingCall& call, int64 nowMs )
+    void GoogleReceiptValidator::submitCall( const WaitingCall& call, UnixMilliseconds now )
     {
         using Internal = GoogleReceiptValidatorInternal;
         string     url;
@@ -148,10 +148,10 @@ namespace sw
         }
         else
             url = makeVoidedURL( ( _lastVoidedUnixMs != 0 ? _lastVoidedUnixMs : _voidedStartUnixMs ) - _settings._voidedLookbackMs );
-        _mapRequestToCall[_pHTTPClient->submitRequest( Internal::makeRequest( url, _settings._requestTimeoutMs, _tokenSource.getToken(), method ), nowMs )] = call;
+        _mapRequestToCall[_pHTTPClient->submitRequest( Internal::makeRequest( url, _settings._requestTimeoutMs, _tokenSource.getToken(), method ), now.count() )] = call;
     }
 
-    void GoogleReceiptValidator::submitValidation( const ReceiptValidationRequest& request, int64 nowMs )
+    void GoogleReceiptValidator::submitValidation( const ReceiptValidationRequest& request, UnixMilliseconds now )
     {
         WaitingCall call;
         call._kind             = WaitingCall::Kind::Validate;
@@ -166,14 +166,14 @@ namespace sw
             result._failureText             = "google receipt must be <product id>|<purchase token>";
             return;
         }
-        if ( _tokenSource.hasValidToken( nowMs ) )
+        if ( _tokenSource.hasValidToken( now ) )
         {
-            submitCall( call, nowMs );
+            submitCall( call, now );
             return;
         }
         _listWaiting.push_back( std::move( call ) );
-        if ( _tokenSource.request( nowMs ) == false )
-            flushWaiting( ServiceAccountTokenSource::Outcome::Rejected, nowMs );
+        if ( _tokenSource.request( now ) == false )
+            flushWaiting( ServiceAccountTokenSource::Outcome::Rejected, now );
     }
 
     void GoogleReceiptValidator::completeRetry( const PendingValidation& pending, const utf8* pText )
@@ -186,7 +186,7 @@ namespace sw
         result._failureText             = pText;
     }
 
-    void GoogleReceiptValidator::flushWaiting( ServiceAccountTokenSource::Outcome outcome, int64 nowMs )
+    void GoogleReceiptValidator::flushWaiting( ServiceAccountTokenSource::Outcome outcome, UnixMilliseconds now )
     {
         vector<WaitingCall> listWaiting;
         listWaiting.swap( _listWaiting );
@@ -194,7 +194,7 @@ namespace sw
         {
             if ( outcome == ServiceAccountTokenSource::Outcome::Granted )
             {
-                submitCall( call, nowMs );
+                submitCall( call, now );
                 continue;
             }
             // 토큰을 받지 못했다 — 검증은 같은 영수증으로 다시 시도하게 하고, 확인 · 조회는 다음 기회에 한다.
@@ -205,7 +205,7 @@ namespace sw
         }
     }
 
-    void GoogleReceiptValidator::finishValidation( const PendingValidation& pending, const HTTPClientResponse& response, int64 nowMs )
+    void GoogleReceiptValidator::finishValidation( const PendingValidation& pending, const HTTPClientResponse& response, UnixMilliseconds now )
     {
         using Internal = GoogleReceiptValidatorInternal;
         if ( Internal::isAuthFailure( response ) )
@@ -264,11 +264,11 @@ namespace sw
             WaitingCall call;
             call._kind    = WaitingCall::Kind::Acknowledge;
             call._pending = pending;
-            submitCall( call, nowMs );
+            submitCall( call, now );
         }
     }
 
-    void GoogleReceiptValidator::finishVoided( const HTTPClientResponse& response, int64 nowMs )
+    void GoogleReceiptValidator::finishVoided( const HTTPClientResponse& response, UnixMilliseconds now )
     {
         using Internal   = GoogleReceiptValidatorInternal;
         _bVoidedInFlight = SW_FALSE;
@@ -296,7 +296,7 @@ namespace sw
             if ( _uniqueSetNotifiedRefund.size() >= Internal::kMaxNotifiedRefundCount )
                 _uniqueSetNotifiedRefund.clear(); // 상한 — 겹친 알림은 서비스가 거래 id 로 한 번만 처리한다
             _uniqueSetNotifiedRefund.insert( orderID );
-            int64 voidedMs     = nowMs;
+            int64 voidedMs     = now.count();
             int64 parsedVoided = 0;
             if ( StringUtil::parseInt64( Internal::readText( entry, "voidedTimeMillis" ), parsedVoided ) )
                 voidedMs = parsedVoided;
@@ -304,36 +304,36 @@ namespace sw
         }
     }
 
-    void GoogleReceiptValidator::update( int64 nowMs )
+    void GoogleReceiptValidator::update( UnixMilliseconds now )
     {
         // 서버 루프의 시각(유닉스 밀리초) 하나로 HTTP 시한 · 토큰 만료 · 조회 주기 · 취소 목록 구간을 모두 잰다.
-        _pHTTPClient->update( nowMs );
+        _pHTTPClient->update( now.count() );
         const bool bMayPoll = _bStopped == SW_FALSE && _bVoidedInFlight == SW_FALSE;
-        if ( bMayPoll && nowMs >= _nextVoidedMs )
+        if ( bMayPoll && now.count() >= _nextVoidedMs )
         {
             // 처음에는 바로, 그 뒤로는 주기마다. 이번 조회의 시작 시각을 먼저 정해 두고, 응답이 성공하면 다음 조회의 기준이 된다.
-            _voidedStartUnixMs = nowMs;
+            _voidedStartUnixMs = now.count();
             WaitingCall call;
             call._kind       = WaitingCall::Kind::Voided;
             _bVoidedInFlight = SW_TRUE;
-            _nextVoidedMs    = nowMs + _settings._voidedPollIntervalMs;
-            if ( _tokenSource.hasValidToken( nowMs ) )
-                submitCall( call, nowMs );
+            _nextVoidedMs    = now.count() + _settings._voidedPollIntervalMs;
+            if ( _tokenSource.hasValidToken( now ) )
+                submitCall( call, now );
             else
             {
                 _listWaiting.push_back( std::move( call ) );
-                if ( _tokenSource.request( nowMs ) == false )
-                    flushWaiting( ServiceAccountTokenSource::Outcome::Rejected, nowMs );
+                if ( _tokenSource.request( now ) == false )
+                    flushWaiting( ServiceAccountTokenSource::Outcome::Rejected, now );
             }
         }
         vector<HTTPClientResponse> listResponse;
         (void)_pHTTPClient->pollResponses( listResponse );
         for ( const HTTPClientResponse& response : listResponse )
         {
-            const ServiceAccountTokenSource::Outcome outcome = _tokenSource.handleResponse( response, nowMs );
+            const ServiceAccountTokenSource::Outcome outcome = _tokenSource.handleResponse( response, now );
             if ( outcome != ServiceAccountTokenSource::Outcome::None )
             {
-                flushWaiting( outcome, nowMs );
+                flushWaiting( outcome, now );
                 continue;
             }
             const auto callIt = _mapRequestToCall.find( response._requestID );
@@ -342,9 +342,9 @@ namespace sw
             const WaitingCall call = std::move( callIt->second );
             _mapRequestToCall.erase( callIt );
             if ( call._kind == WaitingCall::Kind::Validate )
-                finishValidation( call._pending, response, nowMs );
+                finishValidation( call._pending, response, now );
             else if ( call._kind == WaitingCall::Kind::Voided )
-                finishVoided( response, nowMs );
+                finishVoided( response, now );
             else if ( response.isSuccess() == false )
                 SW_LOG_WARNING( "Google purchase acknowledge failed (status %#) - it is sent again when the token is validated again", response._statusCode );
         }

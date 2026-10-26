@@ -81,7 +81,6 @@ namespace sw
         , _settings{}
         , _pStore{ nullptr }
         , _nextCallID{ 1 }
-        , _nowMs{ 0 }
         , _pendingSeedCount{ 0 }
     {
     }
@@ -129,8 +128,8 @@ namespace sw
     void AdminService::startCall( AccountID adminID, uint16 method, const AdminRequest& request, const NetIdempotencyKey& idempotencyKey, int64 nowMs, PendingCall pending )
     {
         pending._callID              = _nextCallID++;
-        pending._receivedNanoseconds = MonotonicClock::nowNanoseconds();
-        pending._nowMs               = nowMs != 0 ? nowMs : _nowMs;
+        pending._receivedNanoseconds = MonotonicClock::nowNanoseconds(); // 예외 — 지연 지표는 실제 처리 시간을 잰다(가짜 시각으로 재면 뜻이 없다, 프로파일러와 같은 자리)
+        pending._nowMs               = nowMs;                            // 요청의 시각은 필수 인자다 — 마지막 틱 시각으로 메우지 않는다
         pending._targetID            = request._accountID;
         pending._adminID             = adminID;
         pending._methodIndex         = AdminMethod::toIndex( method );
@@ -177,7 +176,7 @@ namespace sw
 
     void AdminService::update( int64 nowMs )
     {
-        _nowMs = nowMs;
+        (void)nowMs; // 요청마다 시각을 인자로 받으므로 틱 시각을 들고 있지 않는다
         pollForwardedCompletions();
         _metrics.setPendingStoreWorkCount( static_cast<int32>( _listPendingCall.size() ) );
     }

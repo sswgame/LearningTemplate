@@ -10,6 +10,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Base/Online/HTTP/HTTPTypes.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -63,15 +64,18 @@ namespace sw
         ServiceAccountTokenSource& operator=( const ServiceAccountTokenSource& ) = delete;
 
         /** @brief 쓸 수 있는 토큰이 있고 만료 1분 전이 아니면 true 입니다. */
-        bool          hasValidToken( int64 nowMs ) const { return _accessToken.empty() == false && nowMs + kRefreshMarginMs < _expiresMs; }
+        bool          hasValidToken( UnixMilliseconds now ) const { return _accessToken.empty() == false && now.count() + kRefreshMarginMs < _expiresMs; }
         const string& getToken() const { return _accessToken; }
         bool          isRequesting() const { return _requestID != 0; }
         const string& getProjectID() const { return _credentials._projectID; }
 
-        /** @brief 토큰 요청을 보냅니다. 이미 보냈으면 아무 일도 없습니다. JWT 를 서명하지 못하면 오류 로그와 false 입니다. */
-        [[nodiscard]] bool request( int64 nowMs );
+        /**
+         * @brief 토큰 요청을 보냅니다. 이미 보냈으면 아무 일도 없습니다. JWT 를 서명하지 못하면 오류 로그와 false 입니다.
+         * @param now JWT 의 `iat` · `exp` 가 되는 유닉스 시각입니다. 형식이 단조 시각을 막는다.
+         */
+        [[nodiscard]] bool request( UnixMilliseconds now );
         /** @brief 응답이 이 객체의 토큰 요청의 것이면 처리합니다(아니면 `None`). 받은 토큰은 `getToken` 으로 읽는다. */
-        Outcome handleResponse( const HTTPClientResponse& response, int64 nowMs );
+        Outcome handleResponse( const HTTPClientResponse& response, UnixMilliseconds now );
         /** @brief 거절된 토큰을 버립니다. 다음에 `hasValidToken` 이 false 가 되어 새로 받는다. */
         void invalidate();
 

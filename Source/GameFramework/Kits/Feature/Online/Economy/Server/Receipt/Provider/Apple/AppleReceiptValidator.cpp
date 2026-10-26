@@ -104,13 +104,13 @@ namespace sw
         return bChainOk && outToken.verifySignature( *_pSecurity, leafKey );
     }
 
-    string AppleReceiptValidator::makeAuthorization( int64 nowMs )
+    string AppleReceiptValidator::makeAuthorization( UnixMilliseconds now )
     {
         using Internal = AppleReceiptValidatorInternal;
-        if ( _authorization.empty() == false && nowMs + Internal::kAuthRefreshMarginMs < _authExpiresWallMs )
+        if ( _authorization.empty() == false && now.count() + Internal::kAuthRefreshMarginMs < _authExpiresWallMs )
             return _authorization;
-        const int64  issuedAtSec = nowMs / Internal::kMillisecondsPerSecond;
-        const int64  expiresMs   = nowMs + Internal::kAuthLifetimeMs;
+        const int64  issuedAtSec = now.toSeconds();
+        const int64  expiresMs   = now.count() + Internal::kAuthLifetimeMs;
         const string payload     = "{\"iss\":\"" + JSONDocument::escapeString( _settings._issuerID ) + "\",\"iat\":" + to_string( issuedAtSec ) +
                                ",\"exp\":" + to_string( expiresMs / Internal::kMillisecondsPerSecond ) + ",\"aud\":\"" + AppleReceiptSettings::kAudience + "\",\"bid\":\"" +
                                JSONDocument::escapeString( _settings._bundleID ) + "\"}";
@@ -125,12 +125,12 @@ namespace sw
         return _authorization;
     }
 
-    void AppleReceiptValidator::submitCall( const Call& call, string_view paginationToken, int64 nowMs )
+    void AppleReceiptValidator::submitCall( const Call& call, string_view paginationToken, UnixMilliseconds now )
     {
         using Internal = AppleReceiptValidatorInternal;
         HTTPClientRequest request;
         request._timeoutMs = _settings._requestTimeoutMs;
-        request._listHeader.push_back( HTTPHeader{ "Authorization", makeAuthorization( nowMs ) } );
+        request._listHeader.push_back( HTTPHeader{ "Authorization", makeAuthorization( now ) } );
         request._listHeader.push_back( HTTPHeader{ "Accept", "application/json" } );
         if ( call._kind == Call::Kind::Validate )
             request._url = makeTransactionURL( call._transactionID );
@@ -143,10 +143,10 @@ namespace sw
             request._bodyBytes = Internal::toBytes( body );
             request._listHeader.push_back( HTTPHeader{ "Content-Type", "application/json" } );
         }
-        _mapRequestToCall[_pHTTPClient->submitRequest( request, nowMs )] = call;
+        _mapRequestToCall[_pHTTPClient->submitRequest( request, now.count() )] = call;
     }
 
-    void AppleReceiptValidator::submitValidation( const ReceiptValidationRequest& request, int64 nowMs )
+    void AppleReceiptValidator::submitValidation( const ReceiptValidationRequest& request, UnixMilliseconds now )
     {
         if ( isTransactionID( request._payload ) == false )
         {
@@ -163,7 +163,7 @@ namespace sw
         call._kind          = Call::Kind::Validate;
         call._request       = request;
         call._transactionID = request._payload;
-        submitCall( call, {}, nowMs );
+        submitCall( call, {}, now );
     }
 
     void AppleReceiptValidator::completeRetry( const ReceiptValidationRequest& request, const utf8* pText )
@@ -177,7 +177,7 @@ namespace sw
         result._failureText             = pText;
     }
 
-    void AppleReceiptValidator::finishValidation( const Call& call, const HTTPClientResponse& response, int64 nowMs )
+    void AppleReceiptValidator::finishValidation( const Call& call, const HTTPClientResponse& response, UnixMilliseconds now )
     {
         using Internal = AppleReceiptValidatorInternal;
         if ( response._statusCode == HTTPConstant::kStatusUnauthorized )
@@ -205,7 +205,7 @@ namespace sw
         }
         const JSONValue signedInfo = document.getRoot().get( "signedTransactionInfo", false );
         JSONWebToken    token;
-        if ( signedInfo.isString() == false || verifyJws( signedInfo.asString(), nowMs / Internal::kMillisecondsPerSecond, token ) == false )
+        if ( signedInfo.isString() == false || verifyJws( signedInfo.asString(), now.toSeconds(), token ) == false )
         {
             result._failureText = "the signed transaction does not verify against the Apple root";
             SW_LOG_ERROR( "The signed transaction %# from Apple does not verify - check rootCertificateFile", call._transactionID.c_str() );
@@ -243,18 +243,18 @@ namespace sw
         result._status = ReceiptStatus::Valid;
     }
 
-    void AppleReceiptValidator::startHistory( int64 nowMs )
+    void AppleReceiptValidator::startHistory( UnixMilliseconds now )
     {
-        _historyStartUnixMs = nowMs;
+        _historyStartUnixMs = now.count();
         _bHistoryInFlight   = SW_TRUE;
-        _nextHistoryMs      = nowMs + _settings._historyPollIntervalMs;
+        _nextHistoryMs      = now.count() + _settings._historyPollIntervalMs;
         Call call;
         call._kind = Call::Kind::History;
         call._page = 0;
-        submitCall( call, {}, nowMs );
+        submitCall( call, {}, now );
     }
 
-    void AppleReceiptValidator::finishHistory( const Call& call, const HTTPClientResponse& response, int64 nowMs )
+    void AppleReceiptValidator::finishHistory( const Call& call, const HTTPClientResponse& response, UnixMilliseconds now )
     {
         using Internal = AppleReceiptValidatorInternal;
         JSONDocument document;
@@ -275,7 +275,7 @@ namespace sw
             const JSONValue item          = history.at( index );
             const JSONValue signedPayload = item.get( "signedPayload", false );
             JSONWebToken    notification;
-            if ( signedPayload.isString() == false || verifyJws( signedPayload.asString(), nowMs / Internal::kMillisecondsPerSecond, notification ) == false )
+            if ( signedPayload.isString() == false || verifyJws( signedPayload.asString(), now.toSeconds(), notification ) == false )
             {
                 SW_LOG_ERROR( "An Apple notification does not verify against the Apple root - it is skipped" );
                 continue;
@@ -290,14 +290,14 @@ namespace sw
                 continue;
             JSONWebToken transaction;
             string       transactionID;
-            if ( verifyJws( signedTransaction, nowMs / Internal::kMillisecondsPerSecond, transaction ) == false || transaction.findText( "transactionId", transactionID ) == false )
+            if ( verifyJws( signedTransaction, now.toSeconds(), transaction ) == false || transaction.findText( "transactionId", transactionID ) == false )
                 continue;
             if ( _uniqueSetNotifiedRefund.count( transactionID ) != 0 )
                 continue;
             if ( _uniqueSetNotifiedRefund.size() >= Internal::kMaxNotifiedRefundCount )
                 _uniqueSetNotifiedRefund.clear(); // 상한 — 겹친 알림은 서비스가 거래 id 로 한 번만 처리한다
             _uniqueSetNotifiedRefund.insert( transactionID );
-            int64 refundedMs   = nowMs;
+            int64 refundedMs   = now.count();
             int64 revocationMs = 0;
             if ( transaction.findInteger( "revocationDate", revocationMs ) )
                 refundedMs = revocationMs;
@@ -311,20 +311,20 @@ namespace sw
         {
             Call next  = call;
             next._page = call._page + 1;
-            submitCall( next, paginationToken, nowMs );
+            submitCall( next, paginationToken, now );
             return;
         }
         _lastHistoryUnixMs = _historyStartUnixMs;
         _bHistoryInFlight  = SW_FALSE;
     }
 
-    void AppleReceiptValidator::update( int64 nowMs )
+    void AppleReceiptValidator::update( UnixMilliseconds now )
     {
         // 서버 루프의 시각(유닉스 밀리초) 하나로 HTTP 시한 · 토큰 · 서명 검증 시각 · 조회 주기 · 이력 구간을 모두 잰다.
-        _pHTTPClient->update( nowMs );
+        _pHTTPClient->update( now.count() );
         const bool bMayPoll = _bStopped == SW_FALSE && _bHistoryInFlight == SW_FALSE;
-        if ( bMayPoll && nowMs >= _nextHistoryMs )
-            startHistory( nowMs );
+        if ( bMayPoll && now.count() >= _nextHistoryMs )
+            startHistory( now );
         vector<HTTPClientResponse> listResponse;
         (void)_pHTTPClient->pollResponses( listResponse );
         for ( const HTTPClientResponse& response : listResponse )
@@ -335,9 +335,9 @@ namespace sw
             const Call call = std::move( callIt->second );
             _mapRequestToCall.erase( callIt );
             if ( call._kind == Call::Kind::Validate )
-                finishValidation( call, response, nowMs );
+                finishValidation( call, response, now );
             else
-                finishHistory( call, response, nowMs );
+                finishHistory( call, response, now );
         }
     }
 

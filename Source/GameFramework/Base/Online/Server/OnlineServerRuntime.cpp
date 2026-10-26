@@ -497,9 +497,4 @@ namespace sw
             ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
         return _parts->_context;
     }
-
-    MemoryEphemeralDatabase* OnlineServerRuntime::findMemoryCacheDatabase()
-    {
-        return _parts != nullptr ? _parts->_memoryCacheDatabase.get() : nullptr;
-    }
 } // namespace sw

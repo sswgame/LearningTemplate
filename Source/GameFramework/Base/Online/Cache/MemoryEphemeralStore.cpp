@@ -87,7 +87,7 @@ namespace sw
         EphemeralReply reply;
         reply._operation = request._operation;
         std::scoped_lock<mutex> lock{ _mutex };
-        const int64             nowMs = _clock.nowMilliseconds();
+        const int64             nowMs = _clock.nowMilliseconds().count(); // 만료는 같은 시계 안의 차이로만 잰다
         switch ( request._operation )
         {
             case EphemeralOperation::Get:

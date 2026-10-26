@@ -12,7 +12,7 @@
  *            서버 알림(웹훅)은 바깥에서 받는 시설이 있어야 해서 쓰지 않는다. 쪽(`hasMore`)이 이어지면 `paginationToken` 으로 한 주기에 열 쪽까지 읽는다.
  *            지난 성공 시각보다 이틀 앞에서 읽고 겹친 거래는 한 번만 알린다.
  *          - `sandbox` 설정이면 샌드박스 서버(`api.storekit-sandbox`)를 쓴다(스테이징 서버).
- *          시계를 읽지 않는다 — HTTP 시한 · JWT · 서명 검증 시각 · 조회 주기 · 이력 구간을 모두 서버 루프가 넘긴 `nowMs`(유닉스 밀리초)로 잰다. 서비스 스레드 하나에서 쓴다.
+ *          시계를 읽지 않는다 — HTTP 시한 · JWT · 서명 검증 시각 · 조회 주기 · 이력 구간을 모두 서버 루프가 넘긴 `now`(유닉스 밀리초)로 잰다. 서비스 스레드 하나에서 쓴다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -70,9 +70,9 @@ namespace sw
         ~AppleReceiptValidator() override;
 
         const utf8* getStoreName() const override { return "apple"; }
-        void        submitValidation( const ReceiptValidationRequest& request, int64 nowMs ) override;
+        void        submitValidation( const ReceiptValidationRequest& request, UnixMilliseconds now ) override;
         /** @brief HTTP 클라이언트를 돌리고, 주기가 되면 환불 알림 기록을 조회하고, 끝난 응답을 처리합니다. */
-        void update( int64 nowMs ) override;
+        void update( UnixMilliseconds now ) override;
         void pollCompletions( vector<ReceiptValidationResult>& outListResult ) override;
         void pollRefunds( vector<ReceiptRefundNotice>& outListNotice ) override;
         void shutdown() override;
@@ -100,11 +100,11 @@ namespace sw
             Kind                     _kind{ Kind::Validate };
         };
 
-        string makeAuthorization( int64 nowMs );
-        void   submitCall( const Call& call, string_view paginationToken, int64 nowMs );
-        void   startHistory( int64 nowMs );
-        void   finishValidation( const Call& call, const HTTPClientResponse& response, int64 nowMs );
-        void   finishHistory( const Call& call, const HTTPClientResponse& response, int64 nowMs );
+        string makeAuthorization( UnixMilliseconds now );
+        void   submitCall( const Call& call, string_view paginationToken, UnixMilliseconds now );
+        void   startHistory( UnixMilliseconds now );
+        void   finishValidation( const Call& call, const HTTPClientResponse& response, UnixMilliseconds now );
+        void   finishHistory( const Call& call, const HTTPClientResponse& response, UnixMilliseconds now );
         void   completeRetry( const ReceiptValidationRequest& request, const utf8* pText );
 
         AppleReceiptSettings            _settings;

@@ -98,10 +98,9 @@ namespace
 
         EconomyCall makeCall( uint16 method, AccountID accountID = kPlayer ) const
         {
-            EconomyCall call;
+            EconomyCall call{ 1000 };
             call._method    = method;
             call._accountID = accountID;
-            call._nowMs     = 1000;
             return call;
         }
     };

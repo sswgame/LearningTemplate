@@ -9,6 +9,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Base/Online/Security/JSONWebToken.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -53,8 +54,9 @@ namespace sw
             NeedKey
         };
 
-        void     startJwksFetch( int64 nowMs );
-        Decision evaluate( const PendingTicket& pending, int64 nowMs, PlatformLoginVerification& outVerification );
+        void startJwksFetch( int64 nowMs );
+        /** @brief 토큰 하나를 확인합니다. @p now 는 `exp` · `iat` 와 견주는 유닉스 시각입니다(형식이 단조 시각을 막는다). */
+        Decision evaluate( const PendingTicket& pending, UnixMilliseconds now, PlatformLoginVerification& outVerification );
 
         PlatformLoginProviderConfig       _settings;
         JwksKeyCache                      _keyCache;

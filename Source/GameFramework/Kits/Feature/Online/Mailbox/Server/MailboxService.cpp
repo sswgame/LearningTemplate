@@ -345,11 +345,10 @@ namespace sw
 
     void MailboxService::onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body )
     {
-        MailboxCall call;
+        MailboxCall call{ context._nowMs };
         call._method         = context._method;
         call._accountID      = context._accountID;
         call._idempotencyKey = context._idempotencyKey;
-        call._nowMs          = context._nowMs;
         if ( MailboxProtocol::MessageTypes::read( body, call._request ) != FixedReadResult::Ok )
         {
             (void)host.respondError( context._token, OnlineError::kInvalidRequest );
@@ -370,7 +369,7 @@ namespace sw
     void MailboxService::startCall( const MailboxCall& call, PendingCall pending )
     {
         pending._callID              = _nextCallID++;
-        pending._receivedNanoseconds = MonotonicClock::nowNanoseconds();
+        pending._receivedNanoseconds = MonotonicClock::nowNanoseconds(); // 예외 — 지연 지표는 실제 처리 시간을 잰다(가짜 시각으로 재면 뜻이 없다, 프로파일러와 같은 자리)
         pending._methodIndex         = MailboxMethod::toIndex( call._method );
         _listPendingCall.push_back( pending );
         const size_t pendingIndex = _listPendingCall.size() - 1;
@@ -388,10 +387,8 @@ namespace sw
             finishCall( pendingIndex, refused );
             return;
         }
-        MailboxCall work      = call;
-        work._nowMs           = call._nowMs != 0 ? call._nowMs : _nowMs;
         const bool bFirstPage = call._method == MailboxMethod::kList && call._request._cursor.empty();
-        _pStore->submit( sw::make_unique<MailboxRequestWork>( this, work, bFirstPage ? _listCampaign : vector<ServiceMailCampaign>{}, _settings._pPolicy, pending._callID ) );
+        _pStore->submit( sw::make_unique<MailboxRequestWork>( this, call, bFirstPage ? _listCampaign : vector<ServiceMailCampaign>{}, _settings._pPolicy, pending._callID ) );
     }
 
     void MailboxService::completeCall( uint64 callID, const MailboxReply& reply )

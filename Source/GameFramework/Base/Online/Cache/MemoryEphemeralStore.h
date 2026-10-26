@@ -45,7 +45,7 @@ namespace sw
         int32 takeMessages( uint64 inboxID, vector<EphemeralMessage>& outListMessage );
 
         /** @brief 받은 시계의 지금 시각(밀리초)입니다. */
-        int64 getNowMs() const { return _clock.nowMilliseconds(); }
+        int64 getNowMs() const { return _clock.nowMilliseconds().count(); }
         /** @brief 값과 정렬 집합을 모두 지웁니다(구독은 남긴다). 테스트의 "캐시 서버가 재시작해 비었다" 에 씁니다. */
         void clearData();
 

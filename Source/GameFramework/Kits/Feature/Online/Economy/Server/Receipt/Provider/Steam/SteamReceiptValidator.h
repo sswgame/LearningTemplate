@@ -9,7 +9,7 @@
  *          - 환불은 `ISteamMicroTxn/GetReport` 를 주기적으로 조회해(`_reportPollIntervalMs`) 환불 상태가 된 주문을 알린다. 한 번에 1000 건까지 읽고, 지난 조회 시각에서
  *            `_reportLookbackMs` 만큼 겹쳐 읽는다(겹친 주문은 한 번만 알린다). 재시작 뒤 겹친 알림은 서비스의 환불 회수가 거래 id 로 한 번만 처리한다.
  *          - 샌드박스 인터페이스(`ISteamMicroTxnSandbox`)를 쓰는 설정이면 결과가 샌드박스 결제로 표시된다 — 서비스가 스테이징 서버가 아니면 거절한다.
- *          시계를 읽지 않는다 — HTTP 시한 · 조회 주기 · 보고서 구간을 모두 서버 루프가 넘긴 `nowMs`(유닉스 밀리초)로 잰다. 서비스 스레드 하나에서 쓴다.
+ *          시계를 읽지 않는다 — HTTP 시한 · 조회 주기 · 보고서 구간을 모두 서버 루프가 넘긴 `now`(유닉스 밀리초)로 잰다. 서비스 스레드 하나에서 쓴다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -57,9 +57,9 @@ namespace sw
         ~SteamReceiptValidator() override;
 
         const utf8* getStoreName() const override { return "steam"; }
-        void        submitValidation( const ReceiptValidationRequest& request, int64 nowMs ) override;
+        void        submitValidation( const ReceiptValidationRequest& request, UnixMilliseconds now ) override;
         /** @brief HTTP 클라이언트를 돌리고, 주기가 되면 환불 보고서를 조회하고, 끝난 응답을 처리합니다. */
-        void update( int64 nowMs ) override;
+        void update( UnixMilliseconds now ) override;
         void pollCompletions( vector<ReceiptValidationResult>& outListResult ) override;
         void pollRefunds( vector<ReceiptRefundNotice>& outListNotice ) override;
         void shutdown() override;

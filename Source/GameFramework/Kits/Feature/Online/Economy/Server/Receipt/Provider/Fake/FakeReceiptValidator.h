@@ -19,9 +19,9 @@ namespace sw
 
         const utf8* getStoreName() const override { return "fake"; }
         bool        isDevelopmentOnly() const override { return true; }
-        void        submitValidation( const ReceiptValidationRequest& request, int64 nowMs ) override;
+        void        submitValidation( const ReceiptValidationRequest& request, UnixMilliseconds now ) override;
         /** @brief 스토어 통신이 없어 할 일이 없습니다. 결과는 맡길 때 이미 정해진다. */
-        void update( int64 nowMs ) override { (void)nowMs; }
+        void update( UnixMilliseconds now ) override { (void)now; }
         void pollCompletions( vector<ReceiptValidationResult>& outListResult ) override;
         void pollRefunds( vector<ReceiptRefundNotice>& outListNotice ) override;
         /** @brief 다음 `pollRefunds` 에 환불 알림 하나를 냅니다(테스트와 개발 서버). */
