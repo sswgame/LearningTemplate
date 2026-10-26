@@ -49,7 +49,7 @@ namespace sw
                 if ( kind >= static_cast<uint32>( DestructionDamageKind::Count ) )
                     return false;
                 outEvent._kind     = static_cast<DestructionDamageKind>( kind );
-                outEvent._leafHint = static_cast<int32>( reader.readVarInt() );
+                outEvent._leafHint = reader.readVarInt32();
                 outEvent._groupID  = reader.readVarUint32();
                 return reader.readFiniteFloat( outEvent._position._x ) && reader.readFiniteFloat( outEvent._position._y ) &&
                        reader.readFiniteFloat( outEvent._position._z ) && reader.readFiniteFloat( outEvent._direction._x ) &&

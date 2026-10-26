@@ -249,8 +249,8 @@ namespace sw
 
     NetHandleResult RollbackSession::handleNetMessage( const NetMessageContext& context, BitReader& body )
     {
-        const int32 player      = static_cast<int32>( body.readVarUint() );
-        const int32 remoteFrame = static_cast<int32>( body.readVarUint() );
+        const int32 player      = body.readVarUint31();
+        const int32 remoteFrame = body.readVarUint31();
         if ( body.hasOverflowed() )
             return NetHandleResult::Malformed;
         const bool bIgnoreInput = player < 0 || player >= _playerCount || player == _localPlayer;
@@ -264,8 +264,8 @@ namespace sw
         int32 advantage       = 0;
         for ( int32 index = 0; index < _playerCount; ++index )
         {
-            const int32 acked         = static_cast<int32>( body.readVarUint() ) - 1;
-            const int32 peerAdvantage = static_cast<int32>( body.readVarInt() );
+            const int32 acked         = body.readVarUint31() - 1;
+            const int32 peerAdvantage = body.readVarInt32();
             if ( index == _localPlayer )
             {
                 ackedLocalFrame = acked;

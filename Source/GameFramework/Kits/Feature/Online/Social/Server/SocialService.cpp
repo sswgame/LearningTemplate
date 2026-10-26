@@ -86,10 +86,10 @@ namespace sw
                 BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
                 if ( reader.readBits( 8 ) != kFormatVersion )
                     return false;
-                outCounts._friendCount   = static_cast<int32>( reader.readVarInt() );
-                outCounts._incomingCount = static_cast<int32>( reader.readVarInt() );
-                outCounts._outgoingCount = static_cast<int32>( reader.readVarInt() );
-                outCounts._blockedCount  = static_cast<int32>( reader.readVarInt() );
+                outCounts._friendCount   = reader.readVarInt32();
+                outCounts._incomingCount = reader.readVarInt32();
+                outCounts._outgoingCount = reader.readVarInt32();
+                outCounts._blockedCount  = reader.readVarInt32();
                 return reader.hasOverflowed() == false;
             }
 

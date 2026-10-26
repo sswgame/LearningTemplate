@@ -8,6 +8,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Network/Connection/NetConnection.h"
 #include "Core/Network/Connection/NetHost.h"
+#include "Core/Network/Message/NetRequest.h"
 #include "Core/Network/Message/NetSendBudget.h"
 #include "Core/Network/Message/StreamFrame.h"
 #include "Core/Network/Replication/NetInputWindow.h"
@@ -55,6 +56,7 @@
 #include "GameFramework/Base/Online/HTTP/Hpack.h"
 #include "GameFramework/Base/Online/Security/JSONWebToken.h"
 
+#include "TestFramework/Harness/TestStreamEndpointPair.h"
 #include "TestFramework/TestTempPath.h"
 
 using namespace sw;
@@ -554,6 +556,80 @@ namespace test
                 }
             }
 
+            static constexpr uint16 kFuzzRequestMethod = 1; ///< 처리기를 단 메서드(나머지는 UnknownMethod 길)
+            static constexpr int32  kRequestSetupSteps = 4; ///< 루프백 연결이 서기까지 돌리는 횟수
+            static constexpr int32  kRequestFlushSteps = 2; ///< 응답을 보내 버리는 횟수
+            static constexpr uint32 kSeedDeadlineMs    = 5000;
+
+            /** @brief 서버 쪽 연결 하나를 기억하고, 받은 프레임을 요청 서버로 넘기고, 처리기로 빈 성공 응답을 줍니다. 클라이언트 쪽(서버 없음)은 아무것도 하지 않습니다. */
+            class RequestFuzzListener final : public IStreamEndpointListener, public INetRequestHandler
+            {
+            public:
+                explicit RequestFuzzListener( NetRequestServer* pServer )
+                    : _pServer{ pServer }
+                    , _serverHandle{}
+                    , _bOpened{ false }
+                {
+                }
+
+                void onEndpointOpened( StreamConnectionHandle handle, const NetAddress& remote, bool bAccepted ) override
+                {
+                    (void)remote;
+                    if ( bAccepted == false || _pServer == nullptr )
+                        return;
+                    _serverHandle = handle;
+                    _bOpened      = true;
+                }
+                void onEndpointFrame( StreamConnectionHandle handle, StreamFrameKind kind, const uint8* pBody, int32 bodySize ) override
+                {
+                    if ( _pServer != nullptr )
+                        (void)_pServer->handleFrame( handle, kind, pBody, bodySize ); // 요청 · 취소가 아닌 프레임은 맡지 않는다 — 버린다
+                }
+                void onEndpointClosed( StreamConnectionHandle handle, StreamCloseReason reason ) override
+                {
+                    (void)reason;
+                    if ( _pServer != nullptr )
+                        _pServer->onConnectionClosed( handle );
+                }
+                void onNetRequest( NetRequestServer& server, const NetRequestContext& context ) override
+                {
+                    (void)server.respond( context._token, NetRequestStatus::Ok, nullptr, 0 ); // 이미 답한 요청이면 false — 퍼징에서는 정상이다
+                }
+
+                StreamConnectionHandle getServerHandle() const { return _serverHandle; }
+                bool                   isOpened() const { return _bOpened; }
+
+            private:
+                NetRequestServer*      _pServer;
+                StreamConnectionHandle _serverHandle;
+                bool                   _bOpened;
+            };
+
+            /**
+             * @brief 첫 바이트의 낮은 비트가 1 이면 취소, 아니면 요청 프레임으로 나머지를 서버 쪽 연결에 넣습니다(요청 머리 · 멱등 키 · 추적 id · 응답 길).
+             * @details `OnlineServiceHost::handleHello` 는 이 요청 서버가 넘긴 몸에서 해시 비교 뒤 `readBlob` · `readBits` 둘을 부를 뿐이라 따로 두지 않는다
+             *          (호스트를 세우려면 리스너 전송 · 서비스 설정이 들고 그 두 읽기는 `BitReader` 계약이 이미 막는다).
+             */
+            static void runNetRequest( const uint8* pData, size_t size )
+            {
+                if ( pData == nullptr || size == 0 )
+                    return;
+                NetRequestServer           requestServer;
+                RequestFuzzListener        serverListener{ &requestServer };
+                RequestFuzzListener        clientListener{ nullptr };
+                ::test::StreamEndpointPair endpointPair{ serverListener, clientListener, StreamEndpointConfig{}, LoopbackStreamConditions{} };
+                requestServer.initialize( &endpointPair._server, NetRequestServerConfig{} );
+                if ( requestServer.registerMethod( kFuzzRequestMethod, &serverListener ) == false )
+                    return;
+                endpointPair.step( kRequestSetupSteps );
+                if ( serverListener.isOpened() == false )
+                    return;
+                const StreamFrameKind kind = ( pData[0] & 1u ) != 0 ? StreamFrameKind::Cancel : StreamFrameKind::Request;
+                (void)requestServer.handleFrame( serverListener.getServerHandle(), kind, pData + 1, static_cast<int32>( size - 1 ) ); // 퍼즈 대상 — 깨진 머리는 Malformed 응답이다
+                endpointPair.step( kRequestFlushSteps );
+                requestServer.shutdown();
+            }
+
             // ---------------------------------------------------------------------------------------------------------
             // 씨앗
             // ---------------------------------------------------------------------------------------------------------
@@ -939,6 +1015,37 @@ namespace test
                 appendTextSeed( PackPatchUtil::makeBuildRecordText( record ), outListSeed );
             }
 
+            /** @brief 요청 머리(`NetRequest.h` 머리말의 형식): 요청 id, 메서드 16 비트, 시한, [멱등 키 128 비트], [추적 id 128 비트], 바이트 정렬, 몸. 취소는 요청 id 하나다. */
+            static void seedNetRequest( vector<vector<uint8>>& outListSeed )
+            {
+                static constexpr int32 kKeyWords = 4; // 32 비트 넷 = 128 비트
+                const uint8            arrBody[] = { 1, 2, 3 };
+                for ( int32 variant = 0; variant < 3; ++variant )
+                {
+                    BitWriter writer;
+                    writer.writeVarUint( 1 + static_cast<uint64>( variant ) );
+                    writer.writeBits( variant == 2 ? kFuzzRequestMethod + 1u : kFuzzRequestMethod, 16 );
+                    writer.writeVarUint( kSeedDeadlineMs );
+                    const bool bExtras = variant == 1;
+                    writer.writeBool( bExtras );
+                    for ( int32 word = 0; bExtras && word < kKeyWords; ++word )
+                    {
+                        writer.writeUint32( 0x11111111u * static_cast<uint32>( word + 1 ) );
+                    }
+                    writer.writeBool( bExtras );
+                    for ( int32 word = 0; bExtras && word < kKeyWords; ++word )
+                    {
+                        writer.writeUint32( 0x0A0B0C0Du + static_cast<uint32>( word ) );
+                    }
+                    writer.alignToByte();
+                    writer.writeBytes( arrBody, sizeof( arrBody ) );
+                    appendSelectedSeed( 0, writer.getBytes().data(), writer.getBytes().size(), outListSeed );
+                }
+                BitWriter cancel;
+                cancel.writeVarUint( 1 );
+                appendSelectedSeed( 1, cancel.getBytes().data(), cancel.getBytes().size(), outListSeed );
+            }
+
             /** @brief 값 타입을 등록 순서에서 고르게 `kTypeSeedCount` 개 뽑아 `[고르개 2 바이트][@p pfnWrite 가 쓴 바이트]` 씨앗을 만듭니다. */
             template <typename WriteFunc>
             static void appendTypeSeeds( WriteFunc&& pfnWrite, vector<vector<uint8>>& outListSeed )
@@ -1036,6 +1143,7 @@ namespace test
             {              "PackPatch",               &LoaderFuzzTargetsInternal::runPackPatch,               &LoaderFuzzTargetsInternal::seedPackPatch,  true},
             {            "FixedLayout",             &LoaderFuzzTargetsInternal::runFixedLayout,             &LoaderFuzzTargetsInternal::seedFixedLayout, false},
             {       "BinarySerializer",        &LoaderFuzzTargetsInternal::runBinarySerializer,        &LoaderFuzzTargetsInternal::seedBinarySerializer, false},
+            {             "NetRequest",              &LoaderFuzzTargetsInternal::runNetRequest,              &LoaderFuzzTargetsInternal::seedNetRequest, false},
         };
 
         vector<LoaderFuzzTarget> LoaderFuzzTargetsInternal::buildTargets()

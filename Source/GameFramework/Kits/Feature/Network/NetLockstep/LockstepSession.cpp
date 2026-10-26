@@ -236,7 +236,7 @@ namespace sw
 
     NetHandleResult LockstepSession::handleNetMessage( const NetMessageContext& context, BitReader& body )
     {
-        const int32  player  = static_cast<int32>( body.readVarUint() );
+        const int32  player  = body.readVarUint31();
         const uint32 tick    = body.readVarUint32();
         const bool   bServer = _pHost != nullptr && _pHost->isServer();
         if ( context._kind == NetLockstepMessage::kLeave )

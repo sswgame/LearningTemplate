@@ -72,9 +72,14 @@ namespace sw
                 uint64 index = 0;
                 for ( uint64 entry = 0; entry < valueCount; ++entry )
                 {
-                    index += reader.readVarUint();
+                    // 간격은 남은 칸 안이어야 한다 — 더해 보고 비교하면 큰 간격이 uint64 를 감아 앞 칸으로 돌아온다. 첫 칸 뒤의 간격 0 은 같은 칸을 두 번 쓴 것이다.
+                    const uint64 step       = reader.readVarUint();
+                    const bool   bValidStep = ( entry == 0 || step > 0 ) && step < static_cast<uint64>( count ) - index;
+                    if ( bValidStep == false )
+                        return false;
+                    index += step;
                     float32 value{ 0.0f };
-                    if ( reader.readFiniteFloat( value ) == false || index >= count )
+                    if ( reader.readFiniteFloat( value ) == false )
                         return false;
                     outListValue[static_cast<size_t>( index )] = value;
                 }

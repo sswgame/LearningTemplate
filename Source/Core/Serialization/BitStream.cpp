@@ -7,6 +7,7 @@
 #include "Core/Math/VectorMath.h"
 
 #include <cstring>
+#include <limits>
 
 namespace sw
 {
@@ -346,10 +347,50 @@ namespace sw
         return static_cast<uint32>( value );
     }
 
+    int32 BitReader::readVarUint31()
+    {
+        const uint64 value = readVarUint();
+        if ( hasOverflowed() )
+            return 0;
+        if ( value > static_cast<uint64>( std::numeric_limits<int32>::max() ) )
+        {
+            _bOverflow = SW_TRUE; // 쓰는 쪽은 음수가 아닌 int32 만 쓰므로 깨진 데이터다 — 자르면 음수 번호가 된다
+            return 0;
+        }
+        return static_cast<int32>( value );
+    }
+
+    int64 BitReader::readVarUint63()
+    {
+        const uint64 value = readVarUint();
+        if ( hasOverflowed() )
+            return 0;
+        if ( value > static_cast<uint64>( std::numeric_limits<int64>::max() ) )
+        {
+            _bOverflow = SW_TRUE; // 쓰는 쪽은 음수가 아닌 int64 만 쓰므로 깨진 데이터다
+            return 0;
+        }
+        return static_cast<int64>( value );
+    }
+
     int64 BitReader::readVarInt()
     {
         const uint64 zigZag = readVarUint();
         return static_cast<int64>( zigZag >> 1 ) ^ -static_cast<int64>( zigZag & 1u );
+    }
+
+    int32 BitReader::readVarInt32()
+    {
+        const int64 value = readVarInt();
+        if ( hasOverflowed() )
+            return 0;
+        const bool bInRange = std::numeric_limits<int32>::min() <= value && value <= std::numeric_limits<int32>::max();
+        if ( bInRange == false )
+        {
+            _bOverflow = SW_TRUE; // 쓰는 쪽은 int32 만 쓰므로 깨진 데이터다
+            return 0;
+        }
+        return static_cast<int32>( value );
     }
 
     bool BitReader::hasBytes( int32 byteCount ) const

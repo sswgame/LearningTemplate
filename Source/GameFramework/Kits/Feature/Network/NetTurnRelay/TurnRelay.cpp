@@ -334,7 +334,7 @@ namespace sw
     bool TurnRelayServer::handleAction( int32 connectionID, BitReader& reader )
     {
         const uint32  roomID   = reader.readVarUint32();
-        const int32   submitID = static_cast<int32>( reader.readVarUint() );
+        const int32   submitID = reader.readVarUint31();
         vector<uint8> actionBuffer;
         if ( reader.readBlob( actionBuffer, NetTurnRelayMessage::kMaxActionBytes ) == false )
             return false;
@@ -491,7 +491,7 @@ namespace sw
         {
             case NetTurnRelayMessage::kJoined:
             {
-                _seat       = static_cast<int32>( reader.readVarUint() );
+                _seat       = reader.readVarUint31();
                 _token      = reader.readUint32();
                 event._kind = TurnRelayEvent::Kind::Joined;
                 event._seat = _seat;
@@ -501,14 +501,14 @@ namespace sw
             {
                 _bStarted   = SW_TRUE;
                 event._kind = TurnRelayEvent::Kind::Started;
-                event._seat = static_cast<int32>( reader.readVarUint() );
+                event._seat = reader.readVarUint31();
                 break;
             }
             case NetTurnRelayMessage::kApplied:
             {
                 event._kind  = TurnRelayEvent::Kind::ActionApplied;
-                event._index = static_cast<int32>( reader.readVarUint() );
-                event._seat  = static_cast<int32>( reader.readVarUint() );
+                event._index = reader.readVarUint31();
+                event._seat  = reader.readVarUint31();
                 if ( reader.readBlob( event._buffer, NetTurnRelayMessage::kMaxActionBytes ) == false )
                     return NetHandleResult::Malformed;
                 if ( event._index != static_cast<int32>( _listAction.size() ) )
@@ -519,7 +519,7 @@ namespace sw
             case NetTurnRelayMessage::kRejected:
             {
                 event._kind   = TurnRelayEvent::Kind::ActionRejected;
-                event._index  = static_cast<int32>( reader.readVarUint() );
+                event._index  = reader.readVarUint31();
                 event._reason = static_cast<TurnRejectReason>( reader.readBits( 8 ) );
                 break;
             }

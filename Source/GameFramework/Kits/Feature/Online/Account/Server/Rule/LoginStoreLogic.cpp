@@ -156,7 +156,7 @@ namespace sw
                 record._params._memoryKiB      = reader.readVarUint32();
                 record._params._iterationCount = reader.readVarUint32();
                 record._params._parallelism    = reader.readVarUint32();
-                record._failedCount            = static_cast<int32>( reader.readVarUint() );
+                record._failedCount            = reader.readVarUint31();
                 record._lockedUntilMs          = reader.readVarInt();
                 if ( reader.hasOverflowed() )
                     return false;

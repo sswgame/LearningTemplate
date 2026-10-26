@@ -164,7 +164,13 @@ namespace sw
          * @details `static_cast<uint32>( readVarUint() )` 는 2^32 + 5 를 5 로 받아들인다 — 쓰는 쪽은 uint32 만 쓰므로 넘친 값은 깨진 데이터다.
          */
         [[nodiscard]] uint32 readVarUint32();
-        int64                readVarInt();
+        /** @brief `writeVarUint` 로 쓴 0 ~ INT32_MAX 의 값(번호 · 자리 · 개수)을 int32 로 읽습니다. 넘으면 0 이고 `hasOverflowed` 를 세웁니다(음수로 감겨 읽지 않는다). */
+        [[nodiscard]] int32 readVarUint31();
+        /** @brief `writeVarUint` 로 쓴 0 ~ INT64_MAX 의 값(시간 ms)을 int64 로 읽습니다. 넘으면 0 이고 `hasOverflowed` 를 세웁니다. */
+        [[nodiscard]] int64 readVarUint63();
+        int64               readVarInt();
+        /** @brief `writeVarInt` 로 쓴 int32 를 읽습니다. int32 범위 밖이면 잘라 읽지 않고 0 을 돌려주며 `hasOverflowed` 를 세웁니다. */
+        [[nodiscard]] int32 readVarInt32();
         /** @brief @p byteCount 바이트를 읽습니다. 모자라면 false 이고 읽지 않습니다. */
         [[nodiscard]] bool readBytes( uint8* pOutData, int32 byteCount );
         /** @brief @p byteCount 바이트를 읽지 않고 넘깁니다(필요 없는 페이로드 — 받을 버퍼를 잡지 않는다). 모자라면 false 이고 움직이지 않습니다. */

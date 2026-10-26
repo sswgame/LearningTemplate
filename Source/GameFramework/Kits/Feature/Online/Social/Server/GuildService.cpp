@@ -119,7 +119,7 @@ namespace sw
                 outInfo._guildID      = guildID;
                 outInfo._masterID     = reader.readVarUint();
                 outInfo._createdMs    = reader.readVarInt();
-                outInfo._memberCount  = static_cast<int32>( reader.readVarInt() );
+                outInfo._memberCount  = reader.readVarInt32();
                 outInfo._experience   = reader.readVarInt();
                 outInfo._bOpenToApply = reader.readBits( 1 ) == 1u ? SW_TRUE : SW_FALSE;
                 return reader.hasOverflowed() == false && 0 <= outInfo._experience;
