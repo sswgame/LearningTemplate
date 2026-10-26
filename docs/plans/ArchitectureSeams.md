@@ -50,9 +50,6 @@
 같은 일을 하는 코드가 둘 이상이면 정본 하나를 정하고 나머지를 호출로 바꾼다. 새 추상화 전에 이미 있는 공용 형식(`RegistrationList` · `addLogged`, `StringUtil`, 서비스 접근 API)으로 모은다. 합친 뒤 옛 모양이 다시 생기지 못하게 형식으로 막고(`[[nodiscard]]`, 공용 API 만 공개) 게이트는 형식으로 못 막는 틈에만 둔다.
 
 알려진 후보:
-- 이름을 손으로 거절하는 레지스트리(`LocalStoreFactory` · `SQLDriverRegistry` · `LoginService` · `ModuleRenderPassRegistry` · `EditorAssetTypeActions`)를 `RegistrationList` 로.
-- 손 불리언 파서를 `StringUtil::tryParseBool` 로. `ElementGrid.cpp` 의 `cellBytes` 손 계산을 공용 계산으로.
-- `TestResourceDataSchema` 의 종류 표(`SW_RESOURCE_DATA_KIND` 의 사본)를 지우고 등록표를 읽게.
 - 테스트 소스 목록이 두 벌인 곳(2a · 2b · 2c).
 - 같은 사실이 데이터 두 곳에 있는 곳(HUD 의 `ItemName` · `WeaponName` 한 건은 고쳤고 같은 모양을 더 찾는다), 같은 값을 여러 곳이 따로 만드는 곳(`FrameProfiler::getFrameCount` 를 프레임 번호로 쓴 곳 — `UISystem` · `RenderPacketBuilder` 는 고쳤고 나머지를 찾는다).
 
