@@ -7,10 +7,10 @@
 
 namespace sw
 {
-    int64 WallClock::nowUnixMilliseconds() noexcept
+    UnixMilliseconds WallClock::nowUnixMilliseconds() noexcept
     {
         const auto sinceEpoch = std::chrono::system_clock::now().time_since_epoch();
-        return static_cast<int64>( std::chrono::duration_cast<std::chrono::milliseconds>( sinceEpoch ).count() );
+        return UnixMilliseconds{ static_cast<int64>( std::chrono::duration_cast<std::chrono::milliseconds>( sinceEpoch ).count() ) };
     }
 
     bool WallClock::toLocalCalendar( int64 unixSeconds, LocalCalendarTime& outCalendar ) noexcept

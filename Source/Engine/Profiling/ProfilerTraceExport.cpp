@@ -82,7 +82,7 @@ namespace sw
             meta._processName          = string( processName );
             meta._hostName             = Process::getHostName();
             meta._processID            = Process::getCurrentProcessID();
-            meta._wallUnixMilliseconds = WallClock::nowUnixMilliseconds();
+            meta._wallUnixMilliseconds = WallClock::nowUnixMilliseconds().count();
             meta._monotonicNanoseconds = static_cast<uint64>( MonotonicClock::nowNanoseconds() );
             return meta;
         }

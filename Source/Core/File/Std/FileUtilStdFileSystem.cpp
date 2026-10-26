@@ -46,9 +46,9 @@ namespace sw
                     int64           bestWindow     = std::numeric_limits<int64>::max();
                     for ( uint32 sample = 0; sample < 8; ++sample )
                     {
-                        const int64 beforeMilli = WallClock::nowUnixMilliseconds();
+                        const int64 beforeMilli = WallClock::nowUnixMilliseconds().count();
                         const int64 file        = std::chrono::duration_cast<TickDuration>( std::filesystem::file_time_type::clock::now().time_since_epoch() ).count();
-                        const int64 afterMilli  = WallClock::nowUnixMilliseconds();
+                        const int64 afterMilli  = WallClock::nowUnixMilliseconds().count();
                         if ( afterMilli - beforeMilli < bestWindow )
                         {
                             bestWindow = afterMilli - beforeMilli;

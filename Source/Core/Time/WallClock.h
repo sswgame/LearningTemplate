@@ -10,6 +10,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Time/TimePoint.h"
 
 namespace sw
 {
@@ -36,8 +37,8 @@ namespace sw
      */
     struct SW_API WallClock
     {
-        /** @brief 지금 UTC 유닉스 시각(밀리초)입니다. */
-        static int64 nowUnixMilliseconds() noexcept;
+        /** @brief 지금 UTC 유닉스 시각(밀리초)입니다. 형식이 유닉스 시각이라 단조 시각(`MonotonicMilliseconds`) 자리에 넣으면 컴파일이 안 됩니다. */
+        static UnixMilliseconds nowUnixMilliseconds() noexcept;
 
         /**
          * @brief 유닉스 시각(초)을 이 기계의 지역 시각 달력으로 바꿉니다. 여러 스레드에서 같이 불러도 됩니다(스레드마다 결과 버퍼).

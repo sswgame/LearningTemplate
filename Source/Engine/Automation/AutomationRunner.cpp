@@ -1492,7 +1492,7 @@ namespace sw
     void AutomationRunner::markWallStart()
     {
         _wallStartSeconds = AutomationRunnerInternal::readNowSeconds();
-        _startedUnixMs    = WallClock::nowUnixMilliseconds();
+        _startedUnixMs    = WallClock::nowUnixMilliseconds().count();
         LocalCalendarTime calendar{};
         if ( WallClock::toLocalCalendar( _startedUnixMs / 1000, calendar ) == false )
             return; // 달력으로 못 바꾸는 플랫폼이면 지역 시각 글은 비운다(유닉스 밀리초는 남는다)
