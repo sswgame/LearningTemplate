@@ -404,7 +404,7 @@ SW_TEST_CASE( AnimationNotifyTest, BuiltInHandlersFindSurfaceHitTargetsOnceAndRa
     manager.update( TestAnimationNotifyInternal::kFrame ); // 바디를 만든다
 
     vector<CameraShakeRequest> listShake;
-    const DelegateHandle       shakeHandle =
+    Subscription               shakeSubscription =
         AnimationNotifyHandlerUtil::getCameraShakeRequested().add( SW_DELEGATE_LAMBDA( CameraShakeRequestCallback, [&listShake]( const CameraShakeRequest& request )
     { listShake.push_back( request ); } ) );
 
@@ -453,6 +453,6 @@ SW_TEST_CASE( AnimationNotifyTest, BuiltInHandlersFindSurfaceHitTargetsOnceAndRa
     SW_EXPECT_TRUE( hit._direction._x > 0.9f );
     SW_EXPECT_EQUAL( 0u, static_cast<uint32>( pSelfListener->_listHit.size() ) ); // 자기 바디는 칼날 안에 있어도 맞지 않는다
 
-    AnimationNotifyHandlerUtil::getCameraShakeRequested().remove( shakeHandle );
+    shakeSubscription.reset();
     manager.endPlay();
 }

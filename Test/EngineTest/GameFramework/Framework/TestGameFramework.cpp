@@ -796,10 +796,10 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBasePublishesSaveAndLoadCompleted )
     const ScopedGameEventDispatcher scopedDispatcher{ dispatcher };
     vector<SaveGameSavedEvent>      listSaved;
     vector<SaveGameLoadedEvent>     listLoaded;
-    dispatcher.subscribe<SaveGameSavedEvent>( gameEventChannel(), SW_DELEGATE_LAMBDA( Delegate<void( const SaveGameSavedEvent& )>, [&listSaved]( const SaveGameSavedEvent& event )
-    { listSaved.push_back( event ); } ) );
-    dispatcher.subscribe<SaveGameLoadedEvent>( gameEventChannel(), SW_DELEGATE_LAMBDA( Delegate<void( const SaveGameLoadedEvent& )>, [&listLoaded]( const SaveGameLoadedEvent& event )
-    { listLoaded.push_back( event ); } ) );
+    const Subscription              savedSubscription  = dispatcher.subscribe<SaveGameSavedEvent>( gameEventChannel(), SW_DELEGATE_LAMBDA( Delegate<void( const SaveGameSavedEvent& )>, [&listSaved]( const SaveGameSavedEvent& event )
+                  { listSaved.push_back( event ); } ) );
+    const Subscription              loadedSubscription = dispatcher.subscribe<SaveGameLoadedEvent>( gameEventChannel(), SW_DELEGATE_LAMBDA( Delegate<void( const SaveGameLoadedEvent& )>, [&listLoaded]( const SaveGameLoadedEvent& event )
+                 { listLoaded.push_back( event ); } ) );
 
     PlainGameInstance gameInstance;
     const string      savePath = test::makeTempPath( "events_state.sav" );
@@ -867,10 +867,10 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBasePublishesSceneLoadEvents )
     vector<string>                  listRequested;
     vector<SceneLoadCompletedEvent> listCompleted;
     string                          activeSceneAtCompletion;
-    dispatcher.subscribe<SceneLoadRequestedEvent>( gameEventChannel(), SW_DELEGATE_LAMBDA( Delegate<void( const SceneLoadRequestedEvent& )>, [&listRequested]( const SceneLoadRequestedEvent& event )
-    { listRequested.push_back( event._levelName ); } ) );
-    dispatcher.subscribe<SceneLoadCompletedEvent>( gameEventChannel(), SW_DELEGATE_LAMBDA( Delegate<void( const SceneLoadCompletedEvent& )>, [&]( const SceneLoadCompletedEvent& event )
-    {
+    const Subscription              requestedSubscription = dispatcher.subscribe<SceneLoadRequestedEvent>( gameEventChannel(), SW_DELEGATE_LAMBDA( Delegate<void( const SceneLoadRequestedEvent& )>, [&listRequested]( const SceneLoadRequestedEvent& event )
+                 { listRequested.push_back( event._levelName ); } ) );
+    const Subscription              completedSubscription = dispatcher.subscribe<SceneLoadCompletedEvent>( gameEventChannel(), SW_DELEGATE_LAMBDA( Delegate<void( const SceneLoadCompletedEvent& )>, [&]( const SceneLoadCompletedEvent& event )
+                 {
         listCompleted.push_back( event );
         const Scene* pActive    = sceneManager.getActiveScene();
         activeSceneAtCompletion = ( pActive != nullptr ) ? pActive->getName() : string{};
@@ -1253,9 +1253,9 @@ SW_TEST_CASE( GameFrameworkTest, RecreatedGameInstanceKeepsTheLiveScene )
     const ScopedSceneGameService    scopedScene{ sceneManager };
     EventDispatcher                 dispatcher;
     const ScopedGameEventDispatcher scopedDispatcher{ dispatcher };
-    int32                           requestedCount = 0;
-    dispatcher.subscribe<SceneLoadRequestedEvent>( gameEventChannel(), SW_DELEGATE_LAMBDA( Delegate<void( const SceneLoadRequestedEvent& )>, [&requestedCount]( const SceneLoadRequestedEvent& )
-    { ++requestedCount; } ) );
+    int32                           requestedCount        = 0;
+    const Subscription              requestedSubscription = dispatcher.subscribe<SceneLoadRequestedEvent>( gameEventChannel(), SW_DELEGATE_LAMBDA( Delegate<void( const SceneLoadRequestedEvent& )>, [&requestedCount]( const SceneLoadRequestedEvent& )
+                 { ++requestedCount; } ) );
 
     BLOCK( "다시 선 인스턴스 — 활성 씬이 있으면 요청하지 않는다" )
     {

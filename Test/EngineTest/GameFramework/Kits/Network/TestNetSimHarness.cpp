@@ -67,7 +67,7 @@ namespace
                 _listCrate.push_back( spawnBox( manager, name.c_str(), position, float3{ 0.5f, 0.5f, 0.5f }, PhysicsBodyType::Dynamic ) );
             }
             SW_EXPECT_TRUE( _server.initialize( &world.getPeers(), ReplicationServerConfig{}, nullptr ) );
-            world.getRouter().registerHandler( &_server );
+            _routerSubscription = world.getRouter().registerHandler( &_server );
         }
 
         void onTickEnd( NetSimWorld& world, float32 deltaTime ) override
@@ -100,6 +100,7 @@ namespace
         ReplicationServer           _server;
         vector<RigidBodyComponent*> _listCrate;
         CrateServerRecord*          _pRecord;
+        Subscription                _routerSubscription;
     };
 
     /** @brief 클라이언트 — 자기 바닥이 있고, 받은 상자 자리(보간)로 키네마틱 대리 바디를 옮긴다. */
@@ -117,7 +118,7 @@ namespace
             ReplicationClientConfig settings;
             settings._tickInterval = kTickSeconds;
             SW_EXPECT_TRUE( _client.initialize( &world.getPeers(), settings ) );
-            world.getRouter().registerHandler( &_client );
+            _routerSubscription = world.getRouter().registerHandler( &_client );
         }
 
         void onTickBegin( NetSimWorld& world, float32 deltaTime ) override
@@ -162,6 +163,7 @@ namespace
         ReplicationClient           _client;
         vector<RigidBodyComponent*> _listProxy; ///< 엔티티 id - 1
         int32                       _firstSnapshotTick;
+        Subscription                _routerSubscription;
     };
 
     class CrateGame final : public INetSimGame
@@ -245,7 +247,7 @@ namespace
             , _advancedCount{ 0 }
             , _bStarted{ false }
         {
-            world.getRouter().registerHandler( &_session );
+            _routerSubscription = world.getRouter().registerHandler( &_session );
         }
 
         void onHostEvent( NetSimWorld& world, const NetHostEvent& event ) override
@@ -280,6 +282,7 @@ namespace
         int32           _playerCount;
         int32           _advancedCount;
         bool            _bStarted;
+        Subscription    _routerSubscription;
     };
 
     class LockstepNetSimGame final : public INetSimGame

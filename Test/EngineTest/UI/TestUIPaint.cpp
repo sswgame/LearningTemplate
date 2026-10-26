@@ -564,8 +564,8 @@ SW_TEST_CASE( UIPaintTest, ButtonClickRequiresPressAndReleaseOnSameWidget )
     sw::CanvasPanel*  pCanvas = fixture.setRoot<sw::CanvasPanel>();
     sw::ButtonWidget* pButton = static_cast<sw::ButtonWidget*>( pCanvas->addChild( sw::make_unique<sw::ButtonWidget>() ) );
     UIWidgetTestUtil::pin( *pButton, 10.0f, 10.0f, 100.0f, 40.0f );
-    uint32 notified = 0;
-    (void)pButton->getOnClicked().add( [&notified]( sw::WidgetID )
+    uint32                 notified          = 0;
+    const sw::Subscription clickSubscription = pButton->getOnClicked().add( [&notified]( sw::WidgetID )
     { ++notified; } );
     (void)fixture.runFrame();
 
@@ -603,10 +603,10 @@ SW_TEST_CASE( UIPaintTest, CheckBoxTogglesOnClick )
     sw::CanvasPanel*    pCanvas = fixture.setRoot<sw::CanvasPanel>();
     sw::CheckBoxWidget* pCheck  = static_cast<sw::CheckBoxWidget*>( pCanvas->addChild( sw::make_unique<sw::CheckBoxWidget>() ) );
     UIWidgetTestUtil::pin( *pCheck, 0.0f, 0.0f, 100.0f, 30.0f );
-    bool bLast = false;
-    (void)pCheck->getOnCheckedChanged().add( [&bLast]( bool bChecked )
+    bool                   bLast               = false;
+    const sw::Subscription checkedSubscription = pCheck->getOnCheckedChanged().add( [&bLast]( bool bChecked )
     { bLast = bChecked; } );
-    sw::UIPointerState pointer;
+    sw::UIPointerState     pointer;
     (void)fixture.runFrame();
     (void)pointer.process( fixture._tree, UIWidgetTestUtil::makePointer( sw::UIPointerEventKind::Move, 10.0f, 10.0f ) ); // 호버 바탕을 먼저
     (void)fixture.runFrame();
@@ -736,10 +736,10 @@ SW_TEST_CASE( UIPaintTest, ComboBoxOpensPopupAndSelects )
     UIWidgetTestUtil::pin( *pCombo, 100.0f, 50.0f, 200.0f, 40.0f );
     pCombo->setOptions( sw::vector<sw::string>{ "Low", "Medium", "High" } );
     pCombo->setSelectedIndex( 0 );
-    uint32 chosen = sw::invalid_index::kUint32;
-    (void)pCombo->getOnSelectionChanged().add( [&chosen]( uint32 index )
+    uint32                   chosen                = sw::invalid_index::kUint32;
+    const sw::Subscription   selectionSubscription = pCombo->getOnSelectionChanged().add( [&chosen]( uint32 index )
     { chosen = index; } );
-    const sw::UIScreenHandle screen = ui.pushScreen( sw::make_unique<sw::UIScreen>( sw::UIScreenDesc{}, std::move( root ) ) );
+    const sw::UIScreenHandle screen                = ui.pushScreen( sw::make_unique<sw::UIScreen>( sw::UIScreenDesc{}, std::move( root ) ) );
     sw::UIViewport           viewport{};
     viewport._size         = sw::float2{ 800.0f, 600.0f };
     viewport._physicalSize = viewport._size;
@@ -782,10 +782,10 @@ SW_TEST_CASE( UIPaintTest, TextInputTypesAndDeletes )
     sw::unique_ptr<sw::BoxPanel> root   = sw::make_unique<sw::BoxPanel>();
     sw::TextInputWidget*         pField = static_cast<sw::TextInputWidget*>( root->addChild( sw::make_unique<sw::TextInputWidget>() ) );
     sw::string                   committed;
-    (void)pField->getOnCommitted().add( [&committed]( const sw::string& text )
+    const sw::Subscription       committedSubscription = pField->getOnCommitted().add( [&committed]( const sw::string& text )
     { committed = text; } );
-    const sw::UIScreenHandle screen = ui.pushScreen( sw::make_unique<sw::UIScreen>( sw::UIScreenDesc{}, std::move( root ) ) );
-    sw::UIViewport           viewport{};
+    const sw::UIScreenHandle     screen                = ui.pushScreen( sw::make_unique<sw::UIScreen>( sw::UIScreenDesc{}, std::move( root ) ) );
+    sw::UIViewport               viewport{};
     viewport._size         = sw::float2{ 800.0f, 600.0f };
     viewport._physicalSize = viewport._size;
     const auto runFrame    = [&]()
