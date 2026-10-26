@@ -227,3 +227,27 @@ SW_TEST_CASE( FrameCaptureTest, StaysInactiveWithoutDeviceAndRejectsMismatchedOu
     SW_EXPECT_FALSE( capture.readbackTransient( "SceneColor", bytes, layout, format ) );
     SW_EXPECT_FALSE( capture.dumpTextureToFile( 1, sw::constant::kBackBufferFormat, "unused.ppm" ) );
 }
+
+/**
+ * @brief [TransientAttachmentPoolTest] 꺼진 효과의 출력 이름은 원본을 끝까지 따라가고(효과가 잇달아 꺼진 경우), 그만두면 자기 이름으로 돌아온다
+ */
+SW_TEST_CASE( TransientAttachmentPoolTest, ForwardedNamesFollowTheSourceChain )
+{
+    sw::TransientAttachmentPool pool;
+    SW_EXPECT_TRUE( pool.forward( "DepthOfFieldColor", "SceneColor" ) );
+    SW_EXPECT_FALSE( pool.forward( "DepthOfFieldColor", "SceneColor" ) ); // 같은 곳이면 바뀐 것이 없다
+    SW_EXPECT_TRUE( pool.forward( "MotionBlurColor", "DepthOfFieldColor" ) );
+    SW_EXPECT_TRUE( pool.isForwarded( "MotionBlurColor" ) );
+    SW_EXPECT_TRUE( pool.resolveName( "MotionBlurColor" ) == "SceneColor" );
+    SW_EXPECT_TRUE( pool.resolveName( "SceneColor" ) == "SceneColor" );
+
+    SW_EXPECT_TRUE( pool.stopForward( "DepthOfFieldColor" ) );
+    SW_EXPECT_FALSE( pool.stopForward( "DepthOfFieldColor" ) );
+    SW_EXPECT_TRUE( pool.resolveName( "MotionBlurColor" ) == "DepthOfFieldColor" );
+    // 만든 첨부가 없으니 따라가도 따라가지 않아도 핸들은 0 이다.
+    SW_EXPECT_EQUAL( pool.findTexture( "MotionBlurColor" ), static_cast<sw::RHITextureHandle>( 0 ) );
+    SW_EXPECT_EQUAL( pool.findOwnTexture( "MotionBlurColor" ), static_cast<sw::RHITextureHandle>( 0 ) );
+
+    pool.forget();
+    SW_EXPECT_FALSE( pool.isForwarded( "MotionBlurColor" ) );
+}

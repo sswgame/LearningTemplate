@@ -876,6 +876,123 @@ SW_TEST_CASE( RenderPassTest, PipelineValidationCatchesInconsistencies )
 }
 
 /**
+ * @brief [RenderPassTest] 꺼지면 출력이 원본을 가리키는 패스(피사계 심도)는 출력이 원본과 형식이 같고, 출력을 쓰는 패스가 하나이며, 뒤에서 원본을 쓰지 않아야 로드된다
+ */
+SW_TEST_CASE( RenderPassTest, BypassPassOutputMustMatchItsSource )
+{
+    for ( const sw::RenderPassType type : { sw::RenderPassType::DepthOfField, sw::RenderPassType::MotionBlur, sw::RenderPassType::Bloom, sw::RenderPassType::Outline } )
+    {
+        SW_EXPECT_TRUE( sw::getRenderPassTypeInfo( type ).hasFlag( sw::RenderPassTraitFlag::kBypassesToSource ) );
+    }
+    SW_EXPECT_TRUE( sw::getRenderPassTypeInfo( sw::RenderPassType::SSAO ).hasFlag( sw::RenderPassTraitFlag::kOmittedWhenOff ) );
+    // outputFormat: 출력 첨부의 형식, pExtraWriter: 그 뒤에 이 첨부를 쓰는 Tonemap 패스를 하나 더한다(nullptr 이면 없다)
+    auto makePipeline = []( sw::RenderPipelineAsset& res, const utf8* pOutputFormat, const utf8* pExtraWriter )
+    {
+        sw::RenderPipelineDesc& desc = res.getDesc();
+        for ( const auto& [pName, pFormat] : {
+                  std::pair{       "SceneColor", "R16G16B16A16_FLOAT"},
+                  std::pair{       "SceneDepth",  "D24_UNORM_S8_UINT"},
+                  std::pair{"DepthOfFieldColor",        pOutputFormat},
+                  std::pair{     "TonemapColor",     "R8G8B8A8_UNORM"}
+        } )
+        {
+            sw::RenderPassAttachment att{};
+            att._name   = pName;
+            att._format = pFormat;
+            desc._listAttachment.push_back( att );
+        }
+        sw::RenderGraphPassDesc dof{};
+        dof._name = "DepthOfField";
+        dof._type = "DepthOfField";
+        dof._listInput.push_back( "SceneColor" );
+        dof._listInput.push_back( "SceneDepth" );
+        dof._listOutput.push_back( "DepthOfFieldColor" );
+        desc._listPass.push_back( dof );
+        if ( pExtraWriter == nullptr )
+            return;
+        sw::RenderGraphPassDesc writer{};
+        writer._name = "Writer";
+        writer._type = "Tonemap";
+        writer._listInput.push_back( "TonemapColor" );
+        writer._listOutput.push_back( pExtraWriter );
+        desc._listPass.push_back( writer );
+    };
+    {
+        sw::RenderPipelineAsset res;
+        makePipeline( res, "R16G16B16A16_FLOAT", nullptr );
+        SW_EXPECT_EQUAL( 0u, res.validate( "unit-test" ) );
+    }
+    // 형식이 다르면 꺼진 뷰에서 읽는 쪽이 다른 형식의 원본을 받는다.
+    {
+        sw::RenderPipelineAsset res;
+        makePipeline( res, "R8G8B8A8_UNORM", nullptr );
+        SW_EXPECT_EQUAL( 1u, res.validate( "unit-test" ) );
+    }
+    // 출력을 다른 패스도 쓰면 꺼진 뷰에서 그 쓰기가 원본을 덮는다.
+    {
+        sw::RenderPipelineAsset res;
+        makePipeline( res, "R16G16B16A16_FLOAT", "DepthOfFieldColor" );
+        SW_EXPECT_EQUAL( 1u, res.validate( "unit-test" ) );
+    }
+    // 뒤에서 원본을 쓰면 꺼진 뷰에서 출력을 읽는 쪽이 나중 판을 읽는다.
+    {
+        sw::RenderPipelineAsset res;
+        makePipeline( res, "R16G16B16A16_FLOAT", "SceneColor" );
+        SW_EXPECT_EQUAL( 1u, res.validate( "unit-test" ) );
+    }
+}
+
+/**
+ * @brief [RenderPassTest] 꺼지면 출력이 없는 패스(SSAO)의 출력은 선택 입력으로만 읽을 수 있다 — 꺼진 뷰에서 읽는 쪽이 그 역할의 기본값(AO = 1)을 쓴다
+ */
+SW_TEST_CASE( RenderPassTest, OmittedPassOutputIsReadOnlyAsOptionalInput )
+{
+    // pReaderType: AOColor 를 읽는 패스의 종류(Bloom 은 AO 를 선택 입력으로 받고, ForwardOpaque 는 입력 계약이 없다)
+    auto makePipeline = []( sw::RenderPipelineAsset& res, const utf8* pReaderType )
+    {
+        sw::RenderPipelineDesc& desc = res.getDesc();
+        for ( const auto& [pName, pFormat] : {
+                  std::pair{     "LitColor", "R16G16B16A16_FLOAT"},
+                  std::pair{      "AOColor",     "R8G8B8A8_UNORM"},
+                  std::pair{   "BloomColor", "R16G16B16A16_FLOAT"},
+                  std::pair{"GBufferNormal", "R16G16B16A16_FLOAT"},
+                  std::pair{   "SceneDepth",  "D24_UNORM_S8_UINT"}
+        } )
+        {
+            sw::RenderPassAttachment att{};
+            att._name   = pName;
+            att._format = pFormat;
+            desc._listAttachment.push_back( att );
+        }
+        sw::RenderGraphPassDesc ssao{};
+        ssao._name = "SSAO";
+        ssao._type = "SSAO";
+        ssao._listInput.push_back( "GBufferNormal" );
+        ssao._listInput.push_back( "SceneDepth" );
+        ssao._listOutput.push_back( "AOColor" );
+        desc._listPass.push_back( ssao );
+        sw::RenderGraphPassDesc reader{};
+        reader._name = "Reader";
+        reader._type = pReaderType;
+        if ( sw::string_view( pReaderType ) == "Bloom" )
+            reader._listInput.push_back( "LitColor" );
+        reader._listInput.push_back( "AOColor" );
+        reader._listOutput.push_back( "BloomColor" );
+        desc._listPass.push_back( reader );
+    };
+    {
+        sw::RenderPipelineAsset res;
+        makePipeline( res, "Bloom" );
+        SW_EXPECT_EQUAL( 0u, res.validate( "unit-test" ) );
+    }
+    {
+        sw::RenderPipelineAsset res;
+        makePipeline( res, "ForwardOpaque" );
+        SW_EXPECT_EQUAL( 1u, res.validate( "unit-test" ) );
+    }
+}
+
+/**
  * @brief [RenderPassTest] RenderGraph 다중 타깃 기반 자동 패스 컬링 및 출력 파라미터 검증
  */
 SW_TEST_CASE( RenderPassTest, AutomaticPassCulling )

@@ -226,10 +226,12 @@ namespace sw
         static uint32 getShadowMapResolution();
         /**
          * @brief 지금 살아 있는 트랜지언트 목록을 엔진 레지스트리에 공개합니다. 에디터 패널이 이 목록을 읽습니다.
-         * @details 트랜지언트는 **구성이 바뀔 때만** 다시 만들어지므로 그때 한 번만 부르면 된다.
+         * @details 트랜지언트는 **구성이 바뀔 때만** 다시 만들어지므로 그때 한 번만 부르면 된다(풀을 다시 만들 때, 꺼진 효과의 출력이 가리키는 곳이 바뀔 때).
          *          매 프레임 부를 필요는 없다.
          */
         void publishRenderTargets() const;
+        /** @brief 주 시점 첨부마다의 크기(KB)를 Info 로그(`[RenderTargets]`)로 남깁니다. GPU 메모리가 늘었을 때 어느 첨부인지 나눈다. 풀을 다시 만들거나 첨부를 더 만들 때만 부릅니다. */
+        void reportRenderTargetMemory() const;
 
         /**
          * @brief 주 출력(게임 창, 에디터 게임 뷰)의 보기 모드를 정합니다. `-gv_viewMode` 와 테스트가 씁니다.
@@ -522,6 +524,14 @@ namespace sw
         bool ensureViewTransients( ViewTarget& view, uint32 width, uint32 height );
         /** @brief 뷰 하나의 트랜지언트와 TAA 히스토리를 해제합니다. 디바이스가 없으면 핸들만 잊습니다. */
         void releaseViewTransients( ViewTarget& view );
+        /**
+         * @brief 이 뷰가 이번 프레임에 기록할 풀스크린 패스를 고릅니다. 꺼진 효과는 출력이 원본을 가리키거나(`kBypassesToSource`) 없고(`kOmittedWhenOff`),
+         *        읽는 패스가 모두 빠진 풀스크린 패스(블룸이 꺼진 뷰의 BloomDownsample)도 빠집니다. 도는 패스의 출력 타깃은 처음이면 만듭니다.
+         * @details 셋업 단계에서(기록 전) 뷰마다 한 번 부른다. 빠진 패스는 기록하지 않는다(`executeGenericFullscreenPass`). 타깃은 한 번 만들면 풀이 바뀔 때까지 둔다.
+         *          빠질 수 있는 것은 출력을 혼자 쓰는 일반 풀스크린 패스뿐이고, 파이프라인에 읽는 패스가 하나도 없는 출력의 패스는 그대로 돈다(디버그 · 스크린샷용).
+         * @param viewProj 이번 프레임 이 뷰의 뷰-투영입니다(지난번 것 `_prevViewProj` 와 같으면 카메라 모션 블러는 꺼진 것이다). `_bHistoryReset` 을 정한 뒤 부른다.
+         */
+        void applyViewPassSelection( ViewTarget& view, const float4x4& viewProj );
         /** @brief 추가 뷰 하나를 통째로 해제합니다. 트랜지언트, 컬링 상수 버퍼, 리스트, 빌린 렌더 텍스처가 해당합니다. */
         void releaseExtraView( ViewTarget& view );
         /**
@@ -666,8 +676,8 @@ namespace sw
         RHIRenderPassLoadOp colorLoadFor( const hashed_string& name );
         /** @brief @p targetName 하나에 풀스크린 삼각형을 그립니다. 열지 못하면 아무것도 하지 않습니다. */
         void executeFullscreenInto( FramePassContext& context, RHIPipelineStateHandle pso, const hashed_string& targetName, const float4& passClearColor );
-        /** @brief 일반 풀스크린 패스(테이블의 kGenericFullscreen)입니다. 선언한 입력을 모두 바인딩하고 선언한 출력 중 첫 번째로 있는 것에 그립니다. */
-        void executeGenericFullscreenPass( const PassExecuteInput& input, const RenderPassTypeInfo& info );
+        /** @brief 일반 풀스크린 패스(테이블의 kGenericFullscreen)입니다. 선언한 입력을 모두 바인딩하고 선언한 첫 컬러 출력에 그립니다. 이 뷰에서 빠진 패스(`applyViewPassSelection`)는 기록하지 않습니다. */
+        void executeGenericFullscreenPass( const PassExecuteInput& input );
         /** @brief ForwardOpaque · ForwardOnlyOpaque 입니다. 그림자 맵 입력을 바인딩하고 선언한 첫 컬러 출력에 그립니다. */
         void executeForwardOpaquePass( const PassExecuteInput& input );
         /** @brief G버퍼(알베도 · 노멀 MRT)입니다. 노멀 출력이 없거나 PSO 가 없으면 그리지 않습니다. */
@@ -1134,7 +1144,8 @@ namespace sw
         uint32 _disabledInputRoleMask;
         /// @brief 씬 라이트 구조 버퍼입니다. RT 가 소유하며 포워드와 디퍼드가 같은 버퍼를 읽습니다.
         GPULightBuffer   _lightBuffer;
-        vector<float4x4> _listScratchGridViewProj; ///< 라이트 그리드를 만들 뷰의 뷰-투영(프레임마다 다시 쓴다)
+        vector<float4x4> _listScratchGridViewProj;     ///< 라이트 그리드를 만들 뷰의 뷰-투영(프레임마다 다시 쓴다)
+        vector<uint8>    _listScratchNeededAttachment; ///< 뷰의 패스를 고를 때 선언한 첨부 자리마다 "이번 프레임에 읽힌다"(`applyViewPassSelection`, 뷰마다 다시 쓴다)
         /// @brief GPU 방출기의 파티클 라이트 슬롯 범위입니다. 라이트 버퍼의 GPU 구간 크기를 정하는 데만 쓴다(범위는 시뮬레이션이 같은 함수로 다시 얻는다).
         vector<VfxGPULightRange> _listScratchGPULightRange;
         /// @brief 씬 직접 경로에서 라이트를 모으는 버퍼입니다. 프레임마다 할당하지 않으려고 보관합니다.

@@ -138,6 +138,8 @@ namespace sw
         (void)ensureViewTransients( view, width, height );
         // 기록을 버릴지는 컬링(가림 판정)이 기록 전에 보므로 그리기(renderExtraView)가 아니라 여기서 정한다.
         beginViewHistory( view );
+        // 이 뷰가 기록할 풀스크린 패스를 고르고 도는 패스의 타깃을 만든다 — 텍스처는 기록 중에 만들 수 없어 셋업에서 한다. 지난 뷰-투영은 그리기(applyViewProjection)가 바꾼다.
+        applyViewPassSelection( view, request._viewProj );
         prepareUpscale( view, view._outputWidth, view._outputHeight );
     }
 

@@ -72,13 +72,14 @@ namespace sw
         Module,
         /**
          * @brief 피사계 심도입니다. HDR 색(`SourceColor`)과 장면 깊이(`SceneDepth`)를 읽어 초점면에서 먼 픽셀을 착란원 반지름만큼 흐린 같은 형식의 색을 냅니다(depthoffield.hlsl).
-         *        렌즈 값은 뷰 카메라의 `CameraDepthOfFieldValues` 이고 패스 상수 `g_CameraLens` 로 받습니다. 조리개 0 · 직교 · 후처리를 끈 뷰는 원본을 그대로 냅니다.
-         *        디퍼드는 TAA 와 Tonemap 사이, 포워드는 후처리 체인(Present) 앞에 둡니다.
+         *        렌즈 값은 뷰 카메라의 `CameraDepthOfFieldValues` 이고 패스 상수 `g_CameraLens` 로 받습니다. 조리개 0 · 직교 · 후처리를 끈 뷰는 패스를 기록하지 않고
+         *        출력 이름이 원본을 가리킵니다(`RenderPassTraitFlag::kBypassesToSource` — 출력 타깃도 처음 켜질 때 만듭니다). 디퍼드는 TAA 와 Tonemap 사이, 포워드는 후처리 체인(Present) 앞에 둡니다.
          */
         DepthOfField,
         /**
          * @brief 카메라 모션 블러입니다. 깊이로 복원한 월드 위치를 지난 프레임 뷰-투영(`g_PrevViewProj`)으로 다시 투영해 화면 속도를 구하고, 그 방향으로 원본을 섞습니다(motionblur.hlsl).
-         *        사용자 설정 `graphics.motionBlur`(`gv_motionBlur`)를 끄거나 후처리를 끈 뷰면 원본을 그대로 넘기고, 컷 프레임은 지난 행렬을 이번 것으로 둬 속도가 0 입니다.
+         *        사용자 설정 `graphics.motionBlur`(`gv_motionBlur`)를 끄거나 후처리를 끈 뷰, 카메라가 서 있거나 컷인 프레임(속도가 모두 0)은
+         *        피사계 심도와 같이 패스를 기록하지 않고 출력 이름이 원본을 가리킵니다(`kBypassesToSource`).
          *        움직이는 물체의 속도 버퍼는 아직 없다(카메라 움직임만 흐린다). 디퍼드는 피사계 심도와 Tonemap 사이에, 포워드는 피사계 심도와 후처리 체인(Present) 사이에 둡니다.
          */
         MotionBlur,

@@ -6326,8 +6326,8 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, HalfResolutionBloomBlursByTheSour
     sw::string pipelineText;
     SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( "engine/pipeline/forwardpipelinestaged.xml", pipelineText ) );
     // 깊이도 같이 나눈다 — 한 패스의 출력(색 · 깊이)은 같은 크기여야 한다(파이프라인 검증). 블룸의 원본은 모션 블러의 출력(카메라가 서 있으면 피사계 심도 출력
-    // 그대로, 조리개 0 이면 장면 색 그대로)이다.
-    for ( const utf8* pName : { "SceneColor", "SceneDepth", "DepthOfFieldColor", "MotionBlurColor", "BloomColor" } )
+    // 그대로, 조리개 0 이면 장면 색 그대로)이다. 외곽선 출력도 나눈다 — 꺼지면 원본(블룸 출력)을 가리키는 패스는 출력과 원본의 크기가 같아야 한다(검증 3-6).
+    for ( const utf8* pName : { "SceneColor", "SceneDepth", "DepthOfFieldColor", "MotionBlurColor", "BloomColor", "OutlineColor" } )
     {
         const sw::string declaration = sw::string( "<RenderPassAttachment _name=\"" ) + pName + "\"";
         SW_ASSERT_TRUE( pipelineText.find( declaration ) != sw::string::npos );

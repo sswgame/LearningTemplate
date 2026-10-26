@@ -108,6 +108,8 @@ namespace sw
         view( RenderViewType::Shadow ).setViewProjection( _mainView._shadow._cullViewProj );
 
         beginViewHistory( _mainView );
+        // 지난 뷰-투영과 견주므로 applyViewProjection(지난 것을 이번 것으로 바꾼다) 앞이다.
+        applyViewPassSelection( _mainView, mainViewProj );
         applyViewProjection( context, mainViewProj );
         context._passValues.setMatrix( passConstantNames()._world, context._world );
 
@@ -157,7 +159,7 @@ namespace sw
         context._passValues.setFloat4( passConstantNames()._cameraFrame, float4{ MathUtil::max( 0.0f, post._letterboxAspectRatio ), viewAspect, colorVisionMode, 0.0f } );
         // 피사계 심도(depthoffield.hlsl) — 얇은 렌즈의 착란원. 지름 / 센서 높이 = 센서 높이 · s² / ( 4 · N · 초점 거리 ) · |1 - 초점 거리 / 깊이|
         // (s = 1 / tan( fovY / 2 ) 라 초점 길이 = 센서 높이 · s / 2, 구경 = 초점 길이 / N, 초점 길이가 초점 거리보다 훨씬 짧다고 본다). y 는 그 반지름을 화면 높이 px 로 바꾼 배율이다.
-        // 조리개 0(핀홀) · 직교 · 후처리를 끈 뷰는 끈다(w = 0) — 셰이더가 원본을 고른다.
+        // 조리개 0(핀홀) · 직교 · 후처리를 끈 뷰는 패스를 기록하지 않는다(applyViewPassSelection). 그때는 배율을 0 으로 두고 w 도 0 이다(셰이더는 w 를 읽지 않는다).
         const CameraDepthOfFieldValues& lens          = _pActiveView->_settings._depthOfField;
         const float32                   scaleY        = _pActiveView->_settings._projectionScaleY;
         const bool                      bDepthOfField = _pActiveView->_settings.usesPostProcess() && lens.hasDepthOfField() && scaleY > 0.0f;
