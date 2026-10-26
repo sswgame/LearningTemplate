@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/String/HexUtil.h"
 #include "Core/String/RegistrationList.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -52,20 +53,6 @@ namespace
         return src;
     }
 
-    /** @brief 바이트 버퍼를 소문자 16진 문자열로 인코딩합니다. */
-    sw::string toHexString( const sw::vector<uint8>& bytes )
-    {
-        static constexpr utf8 kDigit[] = "0123456789abcdef";
-        sw::string            out;
-        out.reserve( bytes.size() * 2 );
-        for ( uint8 byteValue : bytes )
-        {
-            out.push_back( kDigit[byteValue >> 4] );
-            out.push_back( kDigit[byteValue & 0x0F] );
-        }
-        return out;
-    }
-
     /** @brief 골든 문자열 비교 — 불일치 시 양쪽을 stdout 에 찍고 실패로 이어지도록 false 반환. */
     bool goldenEq( const utf8* pLabel, const sw::string& actual, const utf8* pExpected )
     {
@@ -87,9 +74,9 @@ namespace
         bool bOk = true;
         bOk &= goldenEq( pLabel, sw::JSONSerializer::serialize( pInstance, typeInfo ), pJSON );
         bOk &= goldenEq( pLabel, sw::XMLSerializer::serialize( pInstance, typeInfo ), pXML );
-        bOk &= goldenEq( pLabel, toHexString( bin ), pBinHex );
+        bOk &= goldenEq( pLabel, sw::HexUtil::encodeBytes( bin.data(), bin.size() ), pBinHex );
         bOk &= goldenEq( pLabel, sw::JSONSerializer::serializeVersioned( 7, pInstance, typeInfo ), pJSONVer );
-        bOk &= goldenEq( pLabel, toHexString( binVer ), pBinVerHex );
+        bOk &= goldenEq( pLabel, sw::HexUtil::encodeBytes( binVer.data(), binVer.size() ), pBinVerHex );
         return bOk;
     }
 
@@ -981,7 +968,7 @@ SW_TEST_CASE( ReflectionSerializationTest, OnlyTheCurrentWireVersionIsRead )
     const WireShiftHost saved = makeSavedWireShiftHost();
     sw::vector<uint8>   current;
     SW_EXPECT_TRUE( sw::BinarySerializer::serialize( &saved, info, current ) );
-    SW_EXPECT_TRUE( goldenEq( "enum wire", toHexString( current ),
+    SW_EXPECT_TRUE( goldenEq( "enum wire", sw::HexUtil::encodeBytes( current.data(), current.size() ),
                               "05000001516400bbad02b3b904000000bcec1d0169c34f84553734500c000000020000002c290ce4522c0ce60d69608302e8898f0c00000002000000"
                               "cdf5fb82dc80f44031a7168fb1efa2df0c00000001000000bcec1d0107000000849cb3ebbfe2defb0400000009000000" ) );
 
@@ -2907,7 +2894,7 @@ SW_TEST_CASE( ReflectionSerializationTest, GoldenOutputFormatsStable )
 
     sw::vector<uint8> bin;
     SW_EXPECT_TRUE( sw::BinarySerializer::serialize( &src, *typeInfo, bin ) );
-    const sw::string binHex = toHexString( bin );
+    const sw::string binHex = sw::HexUtil::encodeBytes( bin.data(), bin.size() );
     if ( binHex != kGoldenBinHex )
         test::printTestNote( "[golden binhex]\n  expected: %s\n  actual  : %s", kGoldenBinHex.c_str(), binHex.c_str() );
     SW_EXPECT_TRUE( binHex == kGoldenBinHex );
