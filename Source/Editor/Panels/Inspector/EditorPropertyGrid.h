@@ -14,6 +14,7 @@
 
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Panels/Inspector/Model/InspectorBuiltinValue.h"
+#include "Editor/Panels/Inspector/Model/InspectorLayoutCache.h"
 
 #include "Engine/Reflection/TextAddress.h"
 
@@ -115,6 +116,13 @@ namespace sw::editor
          */
         GameObject* getEditOwner() const;
 
+        /** @brief @p prop 의 표시 단위입니다. 묶음에 든 프로퍼티는 캐시한 값이고, 컨테이너 원소처럼 값으로 만든 임시 프로퍼티는 이번 호출에 계산합니다. 숫자 · 벡터 위젯이 씁니다. */
+        const InspectorDisplayUnit& getDisplayUnit( const PropertyInfo& prop );
+        /** @brief @p pNumberFormat 에 @p prop 의 단위를 붙인 printf 서식입니다(`InspectorPropertyLayout::appendUnitSuffix`). 묶음에 든 프로퍼티는 처음 한 번만 짓습니다. */
+        const utf8* getUnitNumberFormat( const PropertyInfo& prop, const utf8* pNumberFormat );
+        /** @brief 배치 묶음을 새로 지은 횟수입니다(프로브 `Editor.InspectorLayoutRebuildCount` — 선택 · 검색 글이 그대로면 늘지 않는다). */
+        uint32 getLayoutRebuildCount() const { return _layoutCache.getRebuildCount(); }
+
     private:
         void beginTarget( const EditorPropertyGridTarget& target );
         /** @brief 프로퍼티 하나를 기본값으로 되돌립니다. 기본값은 @p defaultInstance 의 값이고, nullptr 이면 메타 텍스트입니다. 알림과 되돌리기 기록은 일반 편집과 같습니다. */
@@ -126,8 +134,7 @@ namespace sw::editor
          */
         void drawTypeProperties( void* pInstance, const TypeInfo* pTypeInfo, const utf8* pSectionTitle, const vector<hashed_string>& listDrawnName );
         /** @brief 속성 테이블의 한 행을 그립니다 — 이름 필드(혼합 표시 · 즐겨찾기 별 · 이름 · 행 메뉴 · 되돌리기 버튼)과 값 필드(위젯). @p bDisabled 면 값 위젯을 막습니다. */
-        void drawPropertyRow( MutableObjectAddress instance, const TypeInfo& typeInfo, const PropertyInfo& prop, bool bDisabled, bool bFavoriteTarget, ObjectAddress defaultInstance );
-        /** @brief 이름 글을 오른쪽 클릭하면 열리는 행 메뉴(즐겨찾기 · 기본값 · 복사 · 붙여넣기)입니다. */
+        void drawPropertyRow( MutableObjectAddress instance, const TypeInfo& typeInfo, const PropertyInfo& prop, bool bDisabled, bool bFavoriteTarget, ObjectAddress defaultInstance ); /** @brief 이름 글을 오른쪽 클릭하면 열리는 행 메뉴(즐겨찾기 · 기본값 · 복사 · 붙여넣기)입니다. */
         void drawPropertyRowMenu( MutableObjectAddress instance, const PropertyInfo& prop, const string& favoriteKey, bool bFavoriteTarget, bool bFavorite, ObjectAddress defaultInstance );
         /**
          * @brief 단일 프로퍼티 위젯을 그립니다. 값이 바뀌면 편집 대상에 통지합니다.
@@ -177,5 +184,8 @@ namespace sw::editor
         int32                                                        _openAllRequest;       ///< 이번 프레임의 모두 펼치기(1) · 접기(-1) 요청. 0 이면 없다
         bool                                                         _bFavoritesOnly;       ///< 다음 `drawTypeProperties` 한 번만 즐겨찾기 프로퍼티로 거른다
         bool                                                         _bShowModifiedOnly;    ///< 기본값과 다른 프로퍼티만 그린다(언리얼 Show Only Modified Properties)
+        InspectorLayoutCache                                         _layoutCache;          ///< 타입 · 확장이 그린 이름 · 검색 글 · 레지스트리 세대마다 지은 묶음과 프로퍼티별 표시 정보
+        InspectorPropertyDisplay                                     _scratchDisplay;       ///< 묶음 밖 임시 프로퍼티(컨테이너 원소)의 표시 정보 — 주소가 매번 달라 캐시하지 않고 부를 때마다 다시 채운다
+        uint32                                                       _layoutUseDepth;       ///< 돌려받은 묶음을 도는 `drawTypeProperties` 의 겹 수. 0 일 때만 캐시가 묶음을 비울 수 있다
     };
 } // namespace sw::editor

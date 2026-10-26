@@ -415,7 +415,7 @@ namespace sw::editor
             static constexpr bool kIsInteger = std::is_integral_v<T>;
 
         public:
-            bool draw( const MutableObjectAddress instance, const PropertyInfo& prop, EditorPropertyGrid& /*grid*/ ) override
+            bool draw( const MutableObjectAddress instance, const PropertyInfo& prop, EditorPropertyGrid& grid ) override
             {
                 if constexpr ( kIsInteger )
                 {
@@ -427,10 +427,10 @@ namespace sw::editor
                 if ( pPtr == nullptr )
                     return true;
 
-                // 표시 단위(라디안에서 도)의 배율은 실수에만 적용한다. 정수는 단위를 문자열로만 붙인다.
-                const InspectorDisplayUnit unit      = InspectorPropertyLayout::getDisplayUnit( prop );
-                const float64              scale     = kIsInteger ? 1.0 : static_cast<float64>( unit._scale );
-                const float32              dragSpeed = kIsInteger ? 1.0f : ( unit._dragSpeed > 0.0f ? unit._dragSpeed : 0.01f );
+                // 표시 단위(라디안에서 도)의 배율은 실수에만 적용한다. 정수는 단위를 문자열로만 붙인다. 단위 · 서식은 그리드가 묶음과 함께 캐시한다.
+                const InspectorDisplayUnit& unit      = grid.getDisplayUnit( prop );
+                const float64               scale     = kIsInteger ? 1.0 : static_cast<float64>( unit._scale );
+                const float32               dragSpeed = kIsInteger ? 1.0f : ( unit._dragSpeed > 0.0f ? unit._dragSpeed : 0.01f );
                 if ( prop._metadata->_bReadOnly != SW_FALSE )
                 {
                     fixed_string<constant::kMaxBuffer64> buf;
@@ -450,14 +450,14 @@ namespace sw::editor
                 const T*                    pMin     = range._bHasWidgetMin ? &minValue : nullptr;
                 const T*                    pMax     = range._bHasWidgetMax ? &maxValue : nullptr;
                 const bool                  bSlider  = range._bSlider;
-                const string                fmt      = InspectorPropertyLayout::appendUnitSuffix( getNumberFormat<T>(), unit._suffix );
+                const utf8* const           pFormat  = grid.getUnitNumberFormat( prop, getNumberFormat<T>() );
 
                 T    widgetValue = kIsInteger ? *pPtr : static_cast<T>( static_cast<float64>( *pPtr ) * scale );
                 bool bChanged    = false;
                 if ( bSlider )
-                    bChanged = ImGui::SliderScalar( _pLabel, getNumberDataType<T>(), &widgetValue, pMin, pMax, fmt.c_str() );
+                    bChanged = ImGui::SliderScalar( _pLabel, getNumberDataType<T>(), &widgetValue, pMin, pMax, pFormat );
                 else
-                    bChanged = ImGui::DragScalar( _pLabel, getNumberDataType<T>(), &widgetValue, dragSpeed, pMin, pMax, fmt.c_str() );
+                    bChanged = ImGui::DragScalar( _pLabel, getNumberDataType<T>(), &widgetValue, dragSpeed, pMin, pMax, pFormat );
                 if ( bChanged )
                 {
                     const float64 stored = kIsInteger ? static_cast<float64>( widgetValue ) : static_cast<float64>( widgetValue ) / scale;
@@ -750,13 +750,13 @@ namespace sw::editor
         class Float3Property : public BuiltinPropertyBase
         {
         public:
-            bool draw( const MutableObjectAddress instance, const PropertyInfo& prop, EditorPropertyGrid& /*grid*/ ) override
+            bool draw( const MutableObjectAddress instance, const PropertyInfo& prop, EditorPropertyGrid& grid ) override
             {
                 float3* pPtr = prop.getValuePtr<float3>( instance.get() );
                 if ( pPtr == nullptr )
                     return true;
                 // 라디안으로 저장한 각도(`Units=rad`)는 도로 보여 주고 편집한다. 바뀌었을 때만 다시 쓴다.
-                const InspectorDisplayUnit unit = InspectorPropertyLayout::getDisplayUnit( prop );
+                const InspectorDisplayUnit& unit = grid.getDisplayUnit( prop );
                 if ( prop._metadata->_bReadOnly != SW_FALSE )
                 {
                     const float3                          shown = *pPtr * unit._scale;

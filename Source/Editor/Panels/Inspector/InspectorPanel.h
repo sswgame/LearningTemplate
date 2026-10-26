@@ -58,6 +58,8 @@ namespace sw::editor
         EditorDockSlot getDefaultDockSlot() const override { return EditorDockSlot::Right; }
         /** @brief 인스펙터 UI 를 그립니다. */
         void drawContent() override;
+        /** @brief 프로퍼티 그리드가 배치 묶음을 새로 지은 횟수입니다(프로브 `Editor.InspectorLayoutRebuildCount`). */
+        uint32 getLayoutRebuildCount() const { return _propertyGrid.getLayoutRebuildCount(); }
 
     private:
         // ------------------------------------------------------------------------------
