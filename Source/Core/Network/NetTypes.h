@@ -178,6 +178,17 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 일괄 보내기에 넘기는 데이터그램 하나의 보기입니다. 바이트는 부른 쪽이 호출이 끝날 때까지 살려 둡니다(사본 없음). */
+    struct NetDatagramView
+    {
+        NetAddress   _to{};
+        const uint8* _pData{ nullptr };
+        int32        _size{ 0 };
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @struct NetSequence
      * @brief 16비트 시퀀스를 비교합니다. 65535 다음에 0으로 감겨도 "더 새 것"을 맞게 고릅니다(반 바퀴 안의 차이를 앞으로 봅니다).

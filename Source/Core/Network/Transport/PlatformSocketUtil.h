@@ -18,6 +18,15 @@ namespace sw
         Error
     };
 
+    /** @brief 일괄 받기의 한 칸입니다. 부른 쪽이 버퍼를 정하고, 받은 뒤 `_from` 과 `_size` 가 채워진다. */
+    struct SocketReceiveEntry
+    {
+        NetAddress _from{};
+        uint8*     _pBuffer{ nullptr };
+        int32      _bufferSize{ 0 };
+        int32      _size{ 0 };
+    };
+
     /** @brief UDP 포트를 다른 소켓과 나누는가입니다. */
     enum class UDPPortSharing : uint8
     {
@@ -45,6 +54,17 @@ namespace sw
         static uint16              getBoundPort( uint64 socketHandle );
         [[nodiscard]] static bool  sendTo( uint64 socketHandle, const NetAddress& to, const uint8* pData, int32 size );
         static SocketReceiveResult receiveFrom( uint64 socketHandle, NetAddress& outFrom, uint8* pBuffer, int32 bufferSize, int32& outSize );
+        /** @brief 한 번에 일괄로 다루는 최대 개수입니다(호출부가 스택에 두는 배열 크기). */
+        static constexpr int32 kMaxBatch = 64;
+        /**
+         * @brief @p count 개(최대 `kMaxBatch`)를 보내고 보낸 개수를 반환합니다. 리눅스는 `sendmmsg` 한 번(부분 전송이면 이어서), Windows 는 `sendto` 를 하나씩 부릅니다.
+         * @details 실패한 데이터그램에서 멈춘다 — 나머지는 보내지 않은 것으로 세어 손실과 같다.
+         */
+        static int32 sendBatch( uint64 socketHandle, const NetDatagramView* pViews, int32 count );
+        /**
+         * @brief 받을 수 있는 데이터그램을 @p count 칸(최대 `kMaxBatch`)까지 받고 받은 개수를 반환합니다(없거나 오류이면 0). 리눅스는 `recvmmsg`(논블로킹) 한 번, Windows 는 `recvfrom` 을 하나씩 부릅니다.
+         */
+        static int32 receiveBatch( uint64 socketHandle, SocketReceiveEntry* pEntries, int32 count );
         /**
          * @brief 받을 데이터그램이 생기거나 @p timeoutMilli 가 지날 때까지 잠듭니다(POSIX `poll` · Windows `WSAPoll` — `select` 의 FD_SETSIZE 한도가 없다).
          *        받을 것이 있으면 true 입니다. 기다리는 동안 소켓을 닫으면 안 된다(기다리는 스레드를 먼저 멈춘다).

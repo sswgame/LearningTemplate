@@ -295,9 +295,19 @@ namespace sw
     {
         if ( pTransport == nullptr )
             return;
-        for ( const OutgoingDatagram& datagram : batch._listDatagram )
+        // 실패는 손실과 같다(재전송이 맡는다). 묶어서 보내면 UDP 소켓이 시스템 호출 한 번으로 보낸다(`INetTransport::sendBatch`).
+        constexpr size_t kChunkSize = static_cast<size_t>( kReceiveBatchSize );
+        NetDatagramView  arrView[kChunkSize];
+        const size_t     total = batch._listDatagram.size();
+        for ( size_t first = 0; first < total; first += kChunkSize )
         {
-            (void)pTransport->send( datagram._to, batch._bytes.data() + datagram._offset, datagram._size ); // 실패는 손실과 같다(재전송이 맡는다).
+            const size_t chunkCount = total - first < kChunkSize ? total - first : kChunkSize;
+            for ( size_t index = 0; index < chunkCount; ++index )
+            {
+                const OutgoingDatagram& datagram = batch._listDatagram[first + index];
+                arrView[index]                   = NetDatagramView{ datagram._to, batch._bytes.data() + datagram._offset, datagram._size };
+            }
+            (void)pTransport->sendBatch( arrView, static_cast<int32>( chunkCount ) );
         }
     }
 
@@ -603,12 +613,13 @@ namespace sw
             int32 receivedCount = 0;
             while ( receivedCount < kMaxDatagramPerUpdate )
             {
-                if ( receivedCount == static_cast<int32>( _listReceived.size() ) )
-                    _listReceived.emplace_back();
-                ReceivedDatagram& datagram = _listReceived[static_cast<size_t>( receivedCount )];
-                if ( pTransport->receive( datagram._from, datagram._buffer ) == false )
+                const int32 wantCount = kMaxDatagramPerUpdate - receivedCount < kReceiveBatchSize ? kMaxDatagramPerUpdate - receivedCount : kReceiveBatchSize;
+                if ( static_cast<int32>( _listReceived.size() ) < receivedCount + wantCount )
+                    _listReceived.resize( static_cast<size_t>( receivedCount + wantCount ) );
+                const int32 gotCount = pTransport->receiveBatch( _listReceived.data() + receivedCount, wantCount );
+                if ( gotCount <= 0 )
                     break;
-                ++receivedCount;
+                receivedCount += gotCount;
             }
             // 2) 처리, 타임아웃, 보낼 패킷 생성(잠금 안).
             {
@@ -616,7 +627,7 @@ namespace sw
                 updateDebugHold( nowSeconds );
                 for ( int32 index = 0; index < receivedCount; ++index )
                 {
-                    const ReceivedDatagram& datagram = _listReceived[static_cast<size_t>( index )];
+                    const NetReceivedDatagram& datagram = _listReceived[static_cast<size_t>( index )];
                     handlePacket( nowSeconds, datagram._from, datagram._buffer.data(), static_cast<int32>( datagram._buffer.size() ) );
                 }
                 updateSlots( nowSeconds );

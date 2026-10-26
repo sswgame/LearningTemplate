@@ -15,6 +15,7 @@
     #include <netinet/in.h>
     #include <poll.h>
     #include <sys/socket.h>
+    #include <sys/uio.h>
     #include <unistd.h>
 #endif
 
@@ -155,6 +156,84 @@ namespace sw
         outFrom._port = ntohs( from.sin_port );
         outSize       = static_cast<int32>( received );
         return SocketReceiveResult::Received;
+    }
+
+    int32 PlatformSocketUtil::sendBatch( uint64 socketHandle, const NetDatagramView* pViews, int32 count )
+    {
+        const int32 batchCount = count < kMaxBatch ? count : kMaxBatch;
+#if defined( SW_PLATFORM_WINDOWS )
+        int32 sentCount = 0;
+        for ( ; sentCount < batchCount; ++sentCount )
+        {
+            if ( sendTo( socketHandle, pViews[sentCount]._to, pViews[sentCount]._pData, pViews[sentCount]._size ) == false )
+                break;
+        }
+        return sentCount;
+#else
+        sockaddr_in arrAddress[kMaxBatch]{};
+        iovec       arrVector[kMaxBatch]{};
+        mmsghdr     arrMessage[kMaxBatch]{};
+        for ( int32 index = 0; index < batchCount; ++index )
+        {
+            arrAddress[index]                     = PlatformSocketUtilInternal::makeAddress( pViews[index]._to );
+            arrVector[index].iov_base             = const_cast<uint8*>( pViews[index]._pData );
+            arrVector[index].iov_len              = static_cast<size_t>( pViews[index]._size );
+            arrMessage[index].msg_hdr.msg_name    = &arrAddress[index];
+            arrMessage[index].msg_hdr.msg_namelen = sizeof( sockaddr_in );
+            arrMessage[index].msg_hdr.msg_iov     = &arrVector[index];
+            arrMessage[index].msg_hdr.msg_iovlen  = 1;
+        }
+        int32 sentCount = 0;
+        while ( sentCount < batchCount )
+        {
+            const int32 sent = sendmmsg( PlatformSocketUtilInternal::toNative( socketHandle ), arrMessage + sentCount, static_cast<uint32>( batchCount - sentCount ), 0 );
+            if ( sent <= 0 )
+                break;
+            sentCount += sent;
+        }
+        return sentCount;
+#endif
+    }
+
+    int32 PlatformSocketUtil::receiveBatch( uint64 socketHandle, SocketReceiveEntry* pEntries, int32 count )
+    {
+        const int32 batchCount = count < kMaxBatch ? count : kMaxBatch;
+#if defined( SW_PLATFORM_WINDOWS )
+        int32 receivedCount = 0;
+        for ( int32 attempt = 0; receivedCount < batchCount && attempt < batchCount + kMaxBatch; ++attempt ) // 오류가 이어져도 끝난다(단건 받기의 시도 한도와 같다)
+        {
+            SocketReceiveEntry&       entry  = pEntries[receivedCount];
+            const SocketReceiveResult result = receiveFrom( socketHandle, entry._from, entry._pBuffer, entry._bufferSize, entry._size );
+            if ( result == SocketReceiveResult::WouldBlock )
+                break;
+            if ( result == SocketReceiveResult::Received )
+                ++receivedCount; // 오류는 건너뛰고 다음 데이터그램을 본다(단건 받기와 같다)
+        }
+        return receivedCount;
+#else
+        sockaddr_in arrAddress[kMaxBatch]{};
+        iovec       arrVector[kMaxBatch]{};
+        mmsghdr     arrMessage[kMaxBatch]{};
+        for ( int32 index = 0; index < batchCount; ++index )
+        {
+            arrVector[index].iov_base             = pEntries[index]._pBuffer;
+            arrVector[index].iov_len              = static_cast<size_t>( pEntries[index]._bufferSize );
+            arrMessage[index].msg_hdr.msg_name    = &arrAddress[index];
+            arrMessage[index].msg_hdr.msg_namelen = sizeof( sockaddr_in );
+            arrMessage[index].msg_hdr.msg_iov     = &arrVector[index];
+            arrMessage[index].msg_hdr.msg_iovlen  = 1;
+        }
+        const int32 received = recvmmsg( PlatformSocketUtilInternal::toNative( socketHandle ), arrMessage, static_cast<uint32>( batchCount ), MSG_DONTWAIT, nullptr );
+        if ( received <= 0 )
+            return 0;
+        for ( int32 index = 0; index < received; ++index )
+        {
+            pEntries[index]._from._ipv4 = ntohl( arrAddress[index].sin_addr.s_addr );
+            pEntries[index]._from._port = ntohs( arrAddress[index].sin_port );
+            pEntries[index]._size       = static_cast<int32>( arrMessage[index].msg_len );
+        }
+        return received;
+#endif
     }
 
     bool PlatformSocketUtil::waitReadable( uint64 socketHandle, int32 timeoutMilli )
