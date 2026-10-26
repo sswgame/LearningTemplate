@@ -9,6 +9,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Container/string.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/ISubsystem.h"
 
@@ -55,6 +56,7 @@ namespace sw
         void onShaderRecompiled( string_view shaderPath, const ShaderCompileResult& result );
 
         unique_ptr<ShaderRecompiler> _shaderRecompiler;
+        Subscription                 _recompiledSubscription; ///< 재컴파일 알림 칸 구독(재컴파일기가 먼저 사라지면 무효가 된다)
 #endif
         [[maybe_unused]] const FrameRendererSubsystem& _frameRendererSubsystem; ///< 배포본은 라이브 리로드가 없어 쓰지 않는다
         [[maybe_unused]] const RenderThreadSubsystem&  _renderThreadSubsystem;

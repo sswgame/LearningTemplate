@@ -23,9 +23,9 @@ namespace sw
     {
         ++_updateSerial;
         // 순서는 표 하나가 갖는다(`SceneFrameStepList.xxx`). 관찰자는 보통 비어 있어 단계마다 분기 하나다.
-#define SW_SCENE_FRAME_STEP( Name )                 \
-    if ( _frameStepObserver.isBound() )             \
-        _frameStepObserver( SceneFrameStep::Name ); \
+#define SW_SCENE_FRAME_STEP( Name )                       \
+    if ( _frameStepObserver.isBound() )                   \
+        _frameStepObserver.get()( SceneFrameStep::Name ); \
     runFrameStep##Name( deltaTime );
 #include "Engine/Object/GameObject/Tick/SceneFrameStepList.xxx"
 #undef SW_SCENE_FRAME_STEP

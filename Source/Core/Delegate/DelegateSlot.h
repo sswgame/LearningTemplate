@@ -28,6 +28,9 @@ namespace sw
         DelegateSlot()                                 = default;
         DelegateSlot( const DelegateSlot& )            = delete;
         DelegateSlot& operator=( const DelegateSlot& ) = delete;
+        /** @brief 칸과 그 구독을 함께 옮깁니다(구독이 새 자리를 가리킨다). 칸을 담은 객체가 옮겨질 때 쓴다. */
+        DelegateSlot( DelegateSlot&& )            = default;
+        DelegateSlot& operator=( DelegateSlot&& ) = default;
 
         /** @brief 칸에 @p delegate 를 겁니다. 칸이 이미 차 있으면 부른 쪽의 결함이라 단언합니다(주인이 둘이다). */
         [[nodiscard]] Subscription bind( delegate_type delegate )

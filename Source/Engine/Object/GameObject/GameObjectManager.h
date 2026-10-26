@@ -13,6 +13,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Delegate/DelegateSlot.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
@@ -200,10 +201,10 @@ namespace sw
 
         using FrameStepObserver = Delegate<void( SceneFrameStep )>;
         /**
-         * @brief 단계마다 돌기 **직전에** 부를 관찰자를 겁니다(게임 스레드). 묶이지 않은 델리게이트를 주면 풉니다.
+         * @brief 단계마다 돌기 **직전에** 부를 관찰자를 겁니다(게임 스레드). 칸 주인은 하나다(이미 걸려 있으면 단언) — 구독이 풀리면 빈다.
          * @details 진단 · 테스트용입니다 — 단계 사이의 상태를 보거나 순서를 기록합니다. 관찰자 안에서 구조를 바꾸지 마십시오.
          */
-        void setFrameStepObserver( FrameStepObserver observer ) { _frameStepObserver = std::move( observer ); }
+        [[nodiscard]] Subscription bindFrameStepObserver( FrameStepObserver observer ) { return _frameStepObserver.bind( std::move( observer ) ); }
 
         /** @brief 이름 붙은 프레임 시스템(`ISceneFrameSystem`)입니다. 없으면 nullptr 입니다. */
         ISceneFrameSystem* findFrameSystem( const hashed_string& key ) const;
@@ -578,8 +579,8 @@ namespace sw
         SubsystemScope _sceneScope;
         /** @brief 씬 서비스를 범위의 초기화 순서로 든 목록입니다. 코어는 타입을 모르고 단계마다 `update` 만 부른다. */
         vector<SceneServiceEntry> _listSceneService;
-        /** @brief 단계마다 돌기 직전에 부르는 관찰자(`setFrameStepObserver`)입니다. 보통 비어 있습니다. */
-        FrameStepObserver _frameStepObserver;
+        /** @brief 단계마다 돌기 직전에 부르는 관찰자(`bindFrameStepObserver`)입니다. 보통 비어 있습니다. */
+        DelegateSlot<FrameStepObserver> _frameStepObserver;
         /** @brief `FrameSystems` 단계가 붙인 순서대로 부르는 시스템입니다. 오브젝트보다 먼저 비웁니다(시스템이 컴포넌트를 가리킬 수 있다). */
         vector<FrameSystemEntry> _listFrameSystem;
         /** @brief 단계가 도는 동안 뗀 시스템입니다 — 그 단계가 끝난 뒤 놓습니다. */

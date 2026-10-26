@@ -494,13 +494,13 @@ SW_TEST_CASE( GameFrameworkTest, DialogueRunnerComponentBasicFlow )
     string heardText;
     bool   bFinished{ false };
 
-    runner.setOnDialogueLine( [&]( const string& speaker, const string& text )
+    const sw::Subscription dialogueLineBinding1 = runner.bindOnDialogueLine( [&]( const string& speaker, const string& text )
     {
         heardSpeaker = speaker;
         heardText    = text;
     } );
 
-    runner.setOnDialogueFinished( [&]()
+    const sw::Subscription dialogueFinishedBinding2 = runner.bindOnDialogueFinished( [&]()
     {
         bFinished = true;
     } );
@@ -550,8 +550,8 @@ SW_TEST_CASE( GameFrameworkTest, DialogueRunnerComponentChoiceBranchAndAction )
 
     SW_EXPECT_TRUE( runner.loadGraphXML( testJSON ) );
 
-    vector<string> listCurrentChoice;
-    runner.setOnDialogueChoices( [&]( const vector<string>& listChoice )
+    vector<string>         listCurrentChoice;
+    const sw::Subscription dialogueChoicesBinding3 = runner.bindOnDialogueChoices( [&]( const vector<string>& listChoice )
     {
         listCurrentChoice = listChoice;
     } );
@@ -1669,8 +1669,8 @@ SW_TEST_CASE( GameFrameworkTest, DialogueRunner_StopDialogueDuringAction )
     DialogueRunnerComponent runner;
     SW_EXPECT_TRUE( runner.loadGraphXML( dialogueJSON ) );
 
-    bool bActionExecuted = false;
-    runner.setOnDialogueEvent( [&]( const string& cmd )
+    bool                   bActionExecuted       = false;
+    const sw::Subscription dialogueEventBinding4 = runner.bindOnDialogueEvent( [&]( const string& cmd )
     {
         if ( cmd == "CloseMenu" )
         {
@@ -2601,9 +2601,9 @@ SW_TEST_CASE( GameFrameworkTest, DialogueRunner_HandlerArgumentsSurviveReentrant
 </DialogueGraphAsset>)";
     SW_ASSERT_TRUE( runner.loadGraphXML( testJSON ) );
 
-    int32  lineCount{ 0 };
-    string firstLineAfterAdvancing;
-    runner.setOnDialogueLine( [&]( const string& speaker, const string& text )
+    int32                  lineCount{ 0 };
+    string                 firstLineAfterAdvancing;
+    const sw::Subscription dialogueLineBinding5 = runner.bindOnDialogueLine( [&]( const string& speaker, const string& text )
     {
         ++lineCount;
         if ( lineCount != 1 )
@@ -2651,8 +2651,8 @@ SW_TEST_CASE( GameFrameworkTest, DialogueRunner_ChoiceListSurvivesSelectingWhile
 </DialogueGraphAsset>)";
     SW_ASSERT_TRUE( runner.loadGraphXML( testJSON ) );
 
-    vector<string> listCollectedChoice;
-    runner.setOnDialogueChoices( [&]( const vector<string>& listChoice )
+    vector<string>         listCollectedChoice;
+    const sw::Subscription dialogueChoicesBinding6 = runner.bindOnDialogueChoices( [&]( const vector<string>& listChoice )
     {
         for ( size_t choiceIndex = 0; choiceIndex < listChoice.size(); ++choiceIndex )
         {
