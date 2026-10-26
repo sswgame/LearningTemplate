@@ -27,10 +27,10 @@ namespace sw::editor
 
         MultiplayerPanel();
 
-        const utf8* getPanelTitle() const override { return "Multiplayer"; }
-        bool        isToolPanel() const override { return true; }
-        void        drawContent() override;
-        float2      getInitialPanelSize() const override { return float2{ 760.0f, 560.0f }; }
+        const utf8*      getPanelTitle() const override { return "Multiplayer"; }
+        bool             isToolPanel() const override { return true; }
+        void             drawContent() override;
+        EditorTextExtent getInitialPanelSize() const override { return EditorTextExtent::ofText( 101.0f, 29.0f ); }
 
     private:
         /** @brief 탭 인스턴스 하나와 그것을 만든 등록입니다. */

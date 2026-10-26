@@ -37,10 +37,10 @@ namespace sw::editor
         {
         }
 
-        const utf8* getPanelTitle() const override { return "Ability Debugger"; }
-        bool        isToolPanel() const override { return true; }
-        float2      getInitialPanelSize() const override { return float2{ 520.0f, 640.0f }; }
-        void        drawContent() override;
+        const utf8*      getPanelTitle() const override { return "Ability Debugger"; }
+        bool             isToolPanel() const override { return true; }
+        EditorTextExtent getInitialPanelSize() const override { return EditorTextExtent::ofText( 69.0f, 34.0f ); }
+        void             drawContent() override;
 
     private:
         AbilitySystemComponent* findTarget();

@@ -40,7 +40,7 @@ namespace sw::editor
         BehaviorTreePanel();
 
         const utf8*        getPanelTitle() const override { return kPanelTitle; }
-        float2             getInitialPanelSize() const override { return float2{ 1100.0f, 700.0f }; }
+        EditorTextExtent   getInitialPanelSize() const override { return EditorTextExtent::ofText( 147.0f, 37.0f ); }
         void               shutdown( IRHIDevice* pRHIDevice ) override;
         void               drawDocumentContent() override;
         [[nodiscard]] bool saveDocument() override;

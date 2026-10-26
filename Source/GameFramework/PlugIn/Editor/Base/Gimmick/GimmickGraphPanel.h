@@ -41,11 +41,11 @@ namespace sw::editor
 
         GimmickGraphPanel();
 
-        const utf8* getPanelTitle() const override { return kPanelTitle; }
-        bool        isToolPanel() const override { return true; }
-        float2      getInitialPanelSize() const override { return float2{ 1100.0f, 700.0f }; }
-        void        drawContent() override;
-        void        shutdown( IRHIDevice* pRHIDevice ) override;
+        const utf8*      getPanelTitle() const override { return kPanelTitle; }
+        bool             isToolPanel() const override { return true; }
+        EditorTextExtent getInitialPanelSize() const override { return EditorTextExtent::ofText( 147.0f, 37.0f ); }
+        void             drawContent() override;
+        void             shutdown( IRHIDevice* pRHIDevice ) override;
 
     private:
         /** @brief 노드 위치를 이름으로 기억합니다. 다시 읽을 때(되돌리기, 다른 오브젝트에서 돌아옴) 같은 이름의 노드를 같은 자리에 둡니다. */

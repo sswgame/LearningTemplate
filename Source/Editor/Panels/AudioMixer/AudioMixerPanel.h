@@ -35,10 +35,10 @@ namespace sw::editor
 
         AudioMixerPanel();
 
-        const utf8* getPanelTitle() const override { return "Audio Mixer"; }
-        bool        isToolPanel() const override { return true; }
-        void        drawContent() override;
-        float2      getInitialPanelSize() const override { return float2{ 720.0f, 420.0f }; }
+        const utf8*      getPanelTitle() const override { return "Audio Mixer"; }
+        bool             isToolPanel() const override { return true; }
+        void             drawContent() override;
+        EditorTextExtent getInitialPanelSize() const override { return EditorTextExtent::ofText( 96.0f, 22.0f ); }
 
         /** @brief 지난 프레임에 게시된 버스 수입니다(탐침 `Editor.AudioMixerBusCount`). */
         static uint32 getBusCount();

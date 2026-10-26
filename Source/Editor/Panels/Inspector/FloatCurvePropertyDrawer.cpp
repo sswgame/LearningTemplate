@@ -6,6 +6,7 @@
 
 #include "Core/String/fixed_string.h"
 
+#include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorCurveEditor.h"
 #include "Editor/Panels/Inspector/EditorPropertyGrid.h"
@@ -36,7 +37,6 @@ namespace sw::editor
                 FloatCurve* pCurve = prop.getValuePtr<FloatCurve>( instance.get() );
                 if ( pCurve == nullptr )
                     return false;
-                const float32 scale = EditorThemeUtil::getDpiScale();
                 if ( EditorCurveEditor::drawPreview( "##curvePreview", *pCurve, ImGui::GetFrameHeight() * 2.0f ) )
                 {
                     _state                = EditorCurveEditorState{};
@@ -52,7 +52,7 @@ namespace sw::editor
                 const ImGuiID popupID = ImGui::GetID( "CurveEditor" );
                 // 창 가운데에 연다 — 인스펙터는 오른쪽 끝이라 누른 위치에 열면 편집기가 창 밖으로 나간다.
                 ImGui::SetNextWindowPos( ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, ImVec2{ 0.5f, 0.5f } );
-                ImGui::SetNextWindowSize( ImVec2{ 640.0f * scale, 360.0f * scale }, ImGuiCond_Appearing );
+                EditorChrome::setNextWindowExtent( EditorTextExtent::ofText( 85.0f, 19.0f ), false );
                 if ( ImGui::BeginPopupEx( popupID, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoScrollbar ) == false )
                     return true;
                 if ( popupID != _openPopupID )

@@ -41,10 +41,10 @@ namespace sw::editor
 
         AudioEventBrowserPanel();
 
-        const utf8* getPanelTitle() const override { return "Audio Events"; }
-        bool        isToolPanel() const override { return true; }
-        void        drawContent() override;
-        float2      getInitialPanelSize() const override { return float2{ 820.0f, 520.0f }; }
+        const utf8*      getPanelTitle() const override { return "Audio Events"; }
+        bool             isToolPanel() const override { return true; }
+        void             drawContent() override;
+        EditorTextExtent getInitialPanelSize() const override { return EditorTextExtent::ofText( 109.0f, 27.0f ); }
         /** @brief 고치는 라이브러리 사본을 파일에 씁니다(닫기 · 종료 확인의 Save). 검사를 통과하지 못하면 쓰지 않고 false 입니다. */
         [[nodiscard]] bool saveDocument() override;
         bool               canSaveDocument() const override { return _bEditDirty; }

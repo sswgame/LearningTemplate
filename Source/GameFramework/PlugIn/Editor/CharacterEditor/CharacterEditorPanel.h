@@ -58,7 +58,7 @@ namespace sw::editor
 
         const utf8* getPanelTitle() const override { return "Character Editor"; }
         /** @brief 외형 탭은 데이터 줄 · 내보내기 · 선택 · 슬롯 · 꾸미기 값을 한 화면에 둔다 — 기본 크기(640x420)는 슬롯 줄이 창 밖에 남는다. */
-        float2             getInitialPanelSize() const override { return float2{ 760.0f, 900.0f }; }
+        EditorTextExtent   getInitialPanelSize() const override { return EditorTextExtent::ofText( 101.0f, 47.0f ); }
         void               drawDocumentContent() override;
         [[nodiscard]] bool saveDocument() override;
         bool               canSaveDocument() const override { return isDocumentLoadFailed() == false && ( _sockets.isDirty() || _pose.isDirty() ); }

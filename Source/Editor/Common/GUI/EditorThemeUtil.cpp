@@ -8,6 +8,7 @@
 
 #include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
+#include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -569,7 +570,7 @@ namespace sw::editor
         if ( pOpen != nullptr && *pOpen == false )
             return;
 
-        ImGui::SetNextWindowSize( ImVec2( 460.0f * EditorThemeUtil::getDpiScale(), 380.0f * EditorThemeUtil::getDpiScale() ), ImGuiCond_FirstUseEver );
+        EditorChrome::setNextWindowExtentFirstUse( EditorTextExtent::ofText( 61.0f, 20.0f ) );
         if ( ImGui::Begin( makeIconLabel( editoricon::kPalette, "Theme & Look and Feel" ), pOpen, ImGuiWindowFlags_NoCollapse ) )
         {
             EditorThemeConfig editorConfig = EditorThemeInternal::activeTheme();
