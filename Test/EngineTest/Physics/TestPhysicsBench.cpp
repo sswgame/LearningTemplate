@@ -196,19 +196,27 @@ SW_TEST_CASE( PhysicsBenchTest, JoltStepWithAndWithoutCloth )
 }
 
 /**
- * @brief [PhysicsBenchTest] 씬 물리 프레임(`ScenePhysics::step`, 컴포넌트 길 전체) — 정적 강체 10000 개 + 동적 강체 1000 개(900 개는 잠듦)
+ * @brief [PhysicsBenchTest] 씬 물리 프레임(`ScenePhysics::step`, 컴포넌트 길 전체) — 정적 강체 10000 개 + 동적 강체 1000 개(900 개는 잠듦, Release 규모 — Debug 는 줄인다)
  * @details 정적 · 잠든 바디가 프레임마다 내는 비용을 잰다. 바깥 이동은 트랜스폼의 월드 변경 번호로 알고, 스텝 뒤 자세는 백엔드가 깨어 있다고 한
  *          바디만 읽으므로 이 비용은 바디 수가 아니라 깨어 있는 바디 수를 따라야 한다. 깨어 있는 100 개는 프레임마다 옆으로 미는 속도를 받는다.
  *          정적 바디는 위쪽(y = 50) 격자에 두어 동적 바디와 겹치지 않는다. 데우기 동안 바닥 위 900 개가 잠든다. 값은 Release 로 읽는다(측정은 통합).
  */
 SW_TEST_CASE( PhysicsBenchTest, SceneFrameWithManyStaticAndSleepingBodies )
 {
-    constexpr uint32  kStaticSide        = 100; // 100 × 100 = 10000
-    constexpr uint32  kSleeperSide       = 30;  // 30 × 30 = 900
-    constexpr uint32  kAwakeCount        = 100;
-    constexpr uint32  kWarmupFrameCount  = 90; // 바닥 위 상자가 잠들 때까지(잠들기 0.5 초 + 여유)
-    constexpr uint32  kMeasureFrameCount = 60;
-    constexpr float32 kFrame             = 1.0f / 60.0f;
+    // Debug 는 스위트 시간 예산(`SW_TEST_TIME_BUDGET`, Release 기준) 안에 들도록 규모를 줄인다 — 측정값은 Release 규모로만 읽는다.
+#if defined( SW_DEBUG )
+    constexpr uint32 kStaticSide        = 20; // 400
+    constexpr uint32 kSleeperSide       = 10; // 100
+    constexpr uint32 kAwakeCount        = 10;
+    constexpr uint32 kMeasureFrameCount = 10;
+#else
+    constexpr uint32 kStaticSide        = 100; // 100 × 100 = 10000
+    constexpr uint32 kSleeperSide       = 30;  // 30 × 30 = 900
+    constexpr uint32 kAwakeCount        = 100;
+    constexpr uint32 kMeasureFrameCount = 60;
+#endif
+    constexpr uint32  kWarmupFrameCount = 60; // 바닥 위 상자가 잠들 때까지(잠들기 0.5 초 + 여유)
+    constexpr float32 kFrame            = 1.0f / 60.0f;
 
     sw::GameObjectManager   manager;
     sw::RigidBodyComponent* pFloor = spawnBenchBox( manager, sw::float3{ 0.0f, -0.5f, 0.0f }, sw::PhysicsBodyType::Static );
@@ -249,5 +257,8 @@ SW_TEST_CASE( PhysicsBenchTest, SceneFrameWithManyStaticAndSleepingBodies )
     }
     manager.endPlay();
     SW_EXPECT_EQUAL( static_cast<size_t>( kMeasureFrameCount ), listSample.size() );
-    test::logBenchSamples( "Scene frame  10000 static + 1000 dynamic rigid bodies (900 asleep)", listSample );
+    sw::StringBuilder<sw::constant::kMaxBuffer128> label;
+    label.appendFormat( "Scene frame  %# static + %# dynamic rigid bodies (%# asleep)", kStaticSide * kStaticSide, kSleeperSide * kSleeperSide + kAwakeCount,
+                        kSleeperSide * kSleeperSide );
+    test::logBenchSamples( label.c_str(), listSample );
 }
