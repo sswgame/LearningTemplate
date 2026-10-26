@@ -4,6 +4,7 @@
 
 #include "Engine/Config/Server/ServerSecret.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
+#include "Engine/Serialization/JSON/JSONWriter.h"
 
 #include "GameFramework/Base/Online/HTTP/HTTPClient.h"
 #include "GameFramework/Base/Online/Security/JSONWebToken.h"
@@ -24,8 +25,6 @@ namespace sw
             {
                 return vector<uint8>( reinterpret_cast<const uint8*>( text.data() ), reinterpret_cast<const uint8*>( text.data() ) + text.size() );
             }
-
-            static string quote( string_view text ) { return "\"" + JSONDocument::escapeString( text ) + "\""; }
         };
     } // namespace
 } // namespace sw
@@ -95,9 +94,20 @@ namespace sw
         const int64  issuedAtSec = nowMs / constant::kMillisecondsPerSecond;
         const int64  expiresAtMs = nowMs + Internal::kSecretLifetimeMs;
         const string clientID    = _settings._listClientID.empty() ? string() : _settings._listClientID.front();
-        const string payload     = "{\"iss\":" + Internal::quote( _settings._teamID ) + ",\"iat\":" + to_string( issuedAtSec ) +
-                               ",\"exp\":" + to_string( expiresAtMs / constant::kMillisecondsPerSecond ) + ",\"aud\":" + Internal::quote( kAudience ) +
-                               ",\"sub\":" + Internal::quote( clientID ) + "}";
+        string       payload;
+        JSONWriter   writer{ payload };
+        writer.beginObject();
+        writer.key( "iss" );
+        writer.valueString( _settings._teamID );
+        writer.key( "iat" );
+        writer.valueInt( issuedAtSec );
+        writer.key( "exp" );
+        writer.valueInt( expiresAtMs / constant::kMillisecondsPerSecond );
+        writer.key( "aud" );
+        writer.valueString( kAudience );
+        writer.key( "sub" );
+        writer.valueString( clientID );
+        writer.endObject();
         string secret;
         if ( JSONWebToken::makeSigned( *_pSecurity, NetSignatureAlgorithm::EcdsaP256Sha256, _settings._signingKeyID, payload, _signingKeyPem, secret ) == false )
         {

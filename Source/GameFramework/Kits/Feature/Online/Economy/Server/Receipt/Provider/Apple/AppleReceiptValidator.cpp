@@ -7,6 +7,7 @@
 #include "Core/Time/WallClock.h"
 
 #include "Engine/Serialization/JSON/JSONDocument.h"
+#include "Engine/Serialization/JSON/JSONWriter.h"
 
 #include "GameFramework/Base/Online/HTTP/HTTPClient.h"
 #include "GameFramework/Base/Online/Security/JSONWebToken.h"
@@ -112,11 +113,22 @@ namespace sw
         using Internal = AppleReceiptValidatorInternal;
         if ( _authorization.empty() == false && nowWallMs + Internal::kAuthRefreshMarginMs < _authExpiresWallMs )
             return _authorization;
-        const int64  issuedAtSec = nowWallMs / Internal::kMillisecondsPerSecond;
-        const int64  expiresMs   = nowWallMs + Internal::kAuthLifetimeMs;
-        const string payload     = "{\"iss\":\"" + JSONDocument::escapeString( _settings._issuerID ) + "\",\"iat\":" + to_string( issuedAtSec ) +
-                               ",\"exp\":" + to_string( expiresMs / Internal::kMillisecondsPerSecond ) + ",\"aud\":\"" + AppleReceiptSettings::kAudience + "\",\"bid\":\"" +
-                               JSONDocument::escapeString( _settings._bundleID ) + "\"}";
+        const int64 issuedAtSec = nowWallMs / Internal::kMillisecondsPerSecond;
+        const int64 expiresMs   = nowWallMs + Internal::kAuthLifetimeMs;
+        string      payload;
+        JSONWriter  writer{ payload };
+        writer.beginObject();
+        writer.key( "iss" );
+        writer.valueString( _settings._issuerID );
+        writer.key( "iat" );
+        writer.valueInt( issuedAtSec );
+        writer.key( "exp" );
+        writer.valueInt( expiresMs / Internal::kMillisecondsPerSecond );
+        writer.key( "aud" );
+        writer.valueString( AppleReceiptSettings::kAudience );
+        writer.key( "bid" );
+        writer.valueString( _settings._bundleID );
+        writer.endObject();
         string token;
         if ( JSONWebToken::makeSigned( *_pSecurity, NetSignatureAlgorithm::EcdsaP256Sha256, _settings._keyID, payload, _settings._privateKeyPem, token ) == false )
         {
@@ -139,8 +151,16 @@ namespace sw
             request._url = makeTransactionURL( call._transactionID );
         else
         {
-            const string body = "{\"startDate\":" + to_string( ( _lastHistoryUnixMs != 0 ? _lastHistoryUnixMs : _historyStartUnixMs ) - _settings._historyLookbackMs ) +
-                                ",\"endDate\":" + to_string( _historyStartUnixMs ) + ",\"notificationType\":\"REFUND\"}";
+            string     body;
+            JSONWriter writer{ body };
+            writer.beginObject();
+            writer.key( "startDate" );
+            writer.valueInt( ( _lastHistoryUnixMs != 0 ? _lastHistoryUnixMs : _historyStartUnixMs ) - _settings._historyLookbackMs );
+            writer.key( "endDate" );
+            writer.valueInt( _historyStartUnixMs );
+            writer.key( "notificationType" );
+            writer.valueString( "REFUND" );
+            writer.endObject();
             request._method    = HTTPMethod::Post;
             request._url       = makeHistoryURL( paginationToken );
             request._bodyBytes = Internal::toBytes( body );

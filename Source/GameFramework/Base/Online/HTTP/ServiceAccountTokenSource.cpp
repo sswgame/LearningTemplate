@@ -5,6 +5,7 @@
 #include "Core/Network/Security/INetSecurityProvider.h"
 
 #include "Engine/Serialization/JSON/JSONDocument.h"
+#include "Engine/Serialization/JSON/JSONWriter.h"
 
 #include "GameFramework/Base/Online/HTTP/HTTPClient.h"
 #include "GameFramework/Base/Online/Security/JSONWebToken.h"
@@ -37,8 +38,6 @@ namespace sw
                 if ( value.isString() && value.asString().empty() == false )
                     outText = value.asString();
             }
-
-            static string quote( string_view text ) { return "\"" + JSONDocument::escapeString( text ) + "\""; }
         };
     } // namespace
 } // namespace sw
@@ -99,10 +98,22 @@ namespace sw
         using Internal = ServiceAccountTokenSourceInternal;
         if ( _requestID != 0 )
             return true;
-        const int64  issuedAtSec = nowMs / Internal::kMillisecondsPerSecond;
-        const int64  expiresSec  = issuedAtSec + kJwtLifetimeMs / Internal::kMillisecondsPerSecond;
-        const string payload     = "{\"iss\":" + Internal::quote( _credentials._clientEmail ) + ",\"scope\":" + Internal::quote( _scope ) +
-                               ",\"aud\":" + Internal::quote( _credentials._tokenURL ) + ",\"iat\":" + to_string( issuedAtSec ) + ",\"exp\":" + to_string( expiresSec ) + "}";
+        const int64 issuedAtSec = nowMs / Internal::kMillisecondsPerSecond;
+        const int64 expiresSec  = issuedAtSec + kJwtLifetimeMs / Internal::kMillisecondsPerSecond;
+        string      payload;
+        JSONWriter  writer{ payload };
+        writer.beginObject();
+        writer.key( "iss" );
+        writer.valueString( _credentials._clientEmail );
+        writer.key( "scope" );
+        writer.valueString( _scope );
+        writer.key( "aud" );
+        writer.valueString( _credentials._tokenURL );
+        writer.key( "iat" );
+        writer.valueInt( issuedAtSec );
+        writer.key( "exp" );
+        writer.valueInt( expiresSec );
+        writer.endObject();
         string assertion;
         if ( JSONWebToken::makeSigned( *_pSecurity, NetSignatureAlgorithm::RsaPkcs1Sha256, _credentials._keyID, payload, _credentials._privateKeyPem, assertion ) == false )
         {

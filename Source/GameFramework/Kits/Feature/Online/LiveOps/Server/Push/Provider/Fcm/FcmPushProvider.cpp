@@ -4,7 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 
-#include "Engine/Serialization/JSON/JSONDocument.h"
+#include "Engine/Serialization/JSON/JSONWriter.h"
 
 #include "GameFramework/Base/Online/HTTP/HTTPClient.h"
 
@@ -20,34 +20,43 @@ namespace sw
             static constexpr int32 kStatusServerError     = 500;
             static constexpr int64 kMillisecondsPerSecond = 1000;
 
-            static string quote( string_view text ) { return "\"" + JSONDocument::escapeString( text ) + "\""; }
-
             static vector<uint8> toBytes( string_view text )
             {
                 return vector<uint8>( reinterpret_cast<const uint8*>( text.data() ), reinterpret_cast<const uint8*>( text.data() ) + text.size() );
             }
 
-            /** @brief 알림의 앞쪽 비지 않은 인자를 JSON 배열 글로 씁니다. 인자가 없으면 빈 글입니다. */
-            static string makeArguments( const PushNotificationMessage& message )
+            /** @brief 알림의 앞쪽에서 비지 않은 인자 수입니다(첫 빈 인자에서 멈춘다). */
+            static int32 countArguments( const PushNotificationMessage& message )
             {
                 int32 count = 0;
                 while ( count < PushNotificationMessage::kArgumentCount && message._arrArgument[count].empty() == false )
                 {
                     ++count;
                 }
-                if ( count == 0 )
-                    return {};
-                string list = "[";
-                for ( int32 index = 0; index < count; ++index )
-                {
-                    list += ( index == 0 ? "" : "," ) + quote( message._arrArgument[index] );
-                }
-                return list + "]";
+                return count;
             }
 
-            static void addMember( string& inoutObject, string_view name, string_view value )
+            /** @brief 글이 비지 않았을 때만 멤버 하나를 씁니다. */
+            static void writeOptionalText( JSONWriter& writer, string_view key, string_view text )
             {
-                inoutObject += ( inoutObject.empty() ? "" : "," ) + quote( name ) + ":" + string( value );
+                if ( text.empty() )
+                    return;
+                writer.key( key );
+                writer.valueString( text );
+            }
+
+            /** @brief 앞쪽 인자 @p count 개를 글 배열 멤버로 씁니다. 없으면 멤버를 쓰지 않습니다. */
+            static void writeArguments( JSONWriter& writer, string_view key, const PushNotificationMessage& message, int32 count )
+            {
+                if ( count == 0 )
+                    return;
+                writer.key( key );
+                writer.beginArray();
+                for ( int32 index = 0; index < count; ++index )
+                {
+                    writer.valueString( message._arrArgument[index] );
+                }
+                writer.endArray();
             }
         };
     } // namespace
@@ -85,51 +94,67 @@ namespace sw
 
     string FcmPushProvider::makeMessageJSON( string_view token, string_view topic, const PushNotificationMessage& message )
     {
-        using Internal = FcmPushProviderInternal;
-        string body;
-        if ( token.empty() == false )
-            Internal::addMember( body, "token", Internal::quote( token ) );
-        if ( topic.empty() == false )
-            Internal::addMember( body, "topic", Internal::quote( topic ) );
-        string data;
-        if ( message._deepLink.empty() == false )
-            Internal::addMember( data, "deep_link", Internal::quote( message._deepLink ) );
-        if ( message._titleKey.empty() == false )
-            Internal::addMember( data, "title_key", Internal::quote( message._titleKey ) );
-        if ( message._bodyKey.empty() == false )
-            Internal::addMember( data, "body_key", Internal::quote( message._bodyKey ) );
-        for ( int32 index = 0; index < PushNotificationMessage::kArgumentCount && message._arrArgument[index].empty() == false; ++index )
+        using Internal            = FcmPushProviderInternal;
+        const int32 argumentCount = Internal::countArguments( message );
+        const bool  bHasAlert     = message._titleKey.empty() == false || message._bodyKey.empty() == false;
+        const bool  bHasData      = bHasAlert || message._deepLink.empty() == false || argumentCount > 0;
+        string      json;
+        JSONWriter  writer{ json };
+        writer.beginObject();
+        writer.key( "message" );
+        writer.beginObject();
+        Internal::writeOptionalText( writer, "token", token );
+        Internal::writeOptionalText( writer, "topic", topic );
+        if ( bHasData )
         {
-            Internal::addMember( data, "arg" + to_string( index ), Internal::quote( message._arrArgument[index] ) );
+            writer.key( "data" );
+            writer.beginObject();
+            Internal::writeOptionalText( writer, "deep_link", message._deepLink );
+            Internal::writeOptionalText( writer, "title_key", message._titleKey );
+            Internal::writeOptionalText( writer, "body_key", message._bodyKey );
+            for ( int32 index = 0; index < argumentCount; ++index )
+            {
+                writer.key( "arg" + to_string( index ) );
+                writer.valueString( message._arrArgument[index] );
+            }
+            writer.endObject();
         }
-        if ( data.empty() == false )
-            Internal::addMember( body, "data", "{" + data + "}" );
-        const string arguments = Internal::makeArguments( message );
-        const bool   bHasAlert = message._titleKey.empty() == false || message._bodyKey.empty() == false;
         if ( bHasAlert )
         {
-            string notification;
-            if ( message._titleKey.empty() == false )
-                Internal::addMember( notification, "title_loc_key", Internal::quote( message._titleKey ) );
-            if ( message._bodyKey.empty() == false )
-                Internal::addMember( notification, "body_loc_key", Internal::quote( message._bodyKey ) );
-            if ( arguments.empty() == false )
-                Internal::addMember( notification, "body_loc_args", arguments );
-            Internal::addMember( body, "android", "{\"notification\":{" + notification + "}}" );
-            string alert;
-            if ( message._titleKey.empty() == false )
-                Internal::addMember( alert, "title-loc-key", Internal::quote( message._titleKey ) );
-            if ( message._bodyKey.empty() == false )
-                Internal::addMember( alert, "loc-key", Internal::quote( message._bodyKey ) );
-            if ( arguments.empty() == false )
-                Internal::addMember( alert, "loc-args", arguments );
-            string aps;
-            Internal::addMember( aps, "alert", "{" + alert + "}" );
+            writer.key( "android" );
+            writer.beginObject();
+            writer.key( "notification" );
+            writer.beginObject();
+            Internal::writeOptionalText( writer, "title_loc_key", message._titleKey );
+            Internal::writeOptionalText( writer, "body_loc_key", message._bodyKey );
+            Internal::writeArguments( writer, "body_loc_args", message, argumentCount );
+            writer.endObject();
+            writer.endObject();
+
+            writer.key( "apns" );
+            writer.beginObject();
+            writer.key( "payload" );
+            writer.beginObject();
+            writer.key( "aps" );
+            writer.beginObject();
+            writer.key( "alert" );
+            writer.beginObject();
+            Internal::writeOptionalText( writer, "title-loc-key", message._titleKey );
+            Internal::writeOptionalText( writer, "loc-key", message._bodyKey );
+            Internal::writeArguments( writer, "loc-args", message, argumentCount );
+            writer.endObject();
             if ( message._badgeCount >= 0 )
-                Internal::addMember( aps, "badge", to_string( message._badgeCount ) );
-            Internal::addMember( body, "apns", "{\"payload\":{\"aps\":{" + aps + "}}}" );
+            {
+                writer.key( "badge" );
+                writer.valueInt( message._badgeCount );
+            }
+            writer.endObject();
+            writer.endObject();
+            writer.endObject();
         }
-        return "{\"message\":{" + body + "}}";
+        writer.endObject();
+        writer.endObject();
+        return json;
     }
 
     PushDeliveryStatus FcmPushProvider::mapStatus( int32 statusCode, bool bTransportFailed, string_view body )
