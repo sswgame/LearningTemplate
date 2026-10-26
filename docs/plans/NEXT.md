@@ -54,3 +54,18 @@
 - `perf-frame` · `load-baseline-suite` · `load-auto-render-scale` — 남은 일 1 · 2 가 들어간 뒤.
 - `rhi-native-context-guard` · `rhi-transfer-dx12-u5`(DX12 Debug 디버그 레이어), `host-write-snapshot` — 명령이 생기면.
 - CI: push 뒤 `py -3 -m Scripts ci-jobs --summary` 한 번 — Wayland 잡(`wayland-ci-job`, wlwin2 의 `PosixProcessEnvironment.cpp` · 커서 모양 · 소수 배율 첫 컴파일)과 `CheckSourceGlob`(skipgate) 위반 여부.
+
+### 끊긴 작업(2026-10-27 새벽, 사용량 한도로 작업자 전원 중단 — 7시 이후 재개)
+
+main 은 통합 R 그대로다. 아래는 워크트리 브랜치에만 있고 병합되지 않았다. 중단된 작업자는 `SendMessage` 로 이어 시킬 수 있다(작업은 저장돼 있다).
+
+| 묶음 | 브랜치 | 상태 |
+|---|---|---|
+| 통합 S | `wt/integ-s` | 끝 브랜치 병합 중 중단. 이어서 병합 → 빌드 → `verify-batch` Debug/Shipping/Release → push. subs 소비자(UserSettingsManager · Telemetry · CrashReport · UIBindingSet · TestUserSettings · ReflectionInvoke)를 `Subscription` 에 맞춰 고친다. `HeaderSelfContained.py` 중복 수정은 loadbot 것을 취한다 |
+| 구독 · 잠금 · 오류 | `wt/subs` `wt/lockfmt` `wt/errh` `wt/hostlife` `wt/onlinelife` `wt/corebase` `wt/corelib` `wt/jsonwriter` `wt/procargs` `wt/clk` | 대부분 끝, 후속(등록 형태 · ScopedLock/GUARDED_BY · 가능한 실패 동사) 중단 |
+| 입력 계층 | `wt/inputlayer` `wt/rclick` `wt/reuse` | I0–I2 끝, I3a–g · I4 중단 |
+| 그래픽스 | `wt/gfxc` `wt/taabypass` `wt/gfprobe` | gfxc ea6559434 끝. 셰이더 소스 패치(scratchpad `gfxc-shader-cook-batch.patch`)는 통합이 적용 → `App --cook-shaders` → `--verify-shaders`. 후속: DDS 비트마스크 표를 `DdsFormats.json` 으로, 블렌드 모드 대소문자 별칭 읽기 제거 |
+| 중단 | `wt/finitefloat` `wt/determ` `wt/edperf` `wt/unixloop` `wt/netsec` `wt/candnet` | 이어 시킨다. `wt/netsec` 212995371(평문 UDP 정책)은 병합 금지(사용자 결정) |
+| 아직 안 띄움 | — | `ResourceID` 타입, `Candidates-engine/quality/gameplay.md` 처리 |
+
+사용자 결정 대기: 평문 UDP 정책(Shipping), 장르 키트 21개(232 파일) 삭제, Steam/Epic SDK, 말 모델 에셋, H-3 운영 문서. 사용자 영향: Shortcuts.json 초기화, `<bind modifier>` 형식, 레이아웃 dockspace v7→v8, foliageDensity/reduceFlashing 설정 제거.
