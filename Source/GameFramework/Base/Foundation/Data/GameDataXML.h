@@ -12,6 +12,7 @@
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
+#include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -44,7 +45,7 @@ namespace sw
         [[nodiscard]] static bool loadFile( TLoader& loader, TResult ( TLoader::*pLoadRoot )( const XMLNode&, string_view ), string_view path, const utf8* pRootName )
         {
             RootCall<TLoader, TResult> call{ loader, pLoadRoot };
-            return loadFileWith( &call, &RootCall<TLoader, TResult>::invoke, path, pRootName );
+            return XMLCatalogLoader::loadFile( &call, &RootCall<TLoader, TResult>::invoke, path, pRootName );
         }
         /** @brief `loadFile` 의 XML 문자열 버전입니다. 테스트와 에디터 미리보기(`loadFromXMLText`)가 씁니다. */
         template <typename TLoader, typename TResult>
@@ -52,7 +53,7 @@ namespace sw
                                             const utf8* pRootName )
         {
             RootCall<TLoader, TResult> call{ loader, pLoadRoot };
-            return loadTextWith( &call, &RootCall<TLoader, TResult>::invoke, xmlText, sourceName, pRootName );
+            return XMLCatalogLoader::loadText( &call, &RootCall<TLoader, TResult>::invoke, xmlText, sourceName, pRootName );
         }
 
         /** @brief `loadFile` 에 다른 카탈로그(기술, 코스터 설계)를 함께 넘기는 버전입니다. 루트 읽기가 `( root, context, sourceName )` 를 받습니다. */
@@ -61,7 +62,7 @@ namespace sw
                                             string_view path, const utf8* pRootName )
         {
             RootCallWithContext<TLoader, TResult, TContext> call{ loader, pLoadRoot, context };
-            return loadFileWith( &call, &RootCallWithContext<TLoader, TResult, TContext>::invoke, path, pRootName );
+            return XMLCatalogLoader::loadFile( &call, &RootCallWithContext<TLoader, TResult, TContext>::invoke, path, pRootName );
         }
         /** @brief `loadText` 에 다른 카탈로그를 함께 넘기는 버전입니다. */
         template <typename TLoader, typename TResult, typename TContext>
@@ -69,18 +70,11 @@ namespace sw
                                             string_view xmlText, string_view sourceName, const utf8* pRootName )
         {
             RootCallWithContext<TLoader, TResult, TContext> call{ loader, pLoadRoot, context };
-            return loadTextWith( &call, &RootCallWithContext<TLoader, TResult, TContext>::invoke, xmlText, sourceName, pRootName );
+            return XMLCatalogLoader::loadText( &call, &RootCallWithContext<TLoader, TResult, TContext>::invoke, xmlText, sourceName, pRootName );
         }
 
         /** @brief 속성 이름을 다른 읽기가 맡는지 답하는 함수입니다(`XMLNameCheck::AcceptNameFunction` 과 같은 모양). */
         using AcceptAttributeFunction = bool ( * )( const utf8* pName );
-        /** @brief 루트 읽기를 부르는 함수 포인터입니다. @p pCall 은 호출부 스택의 호출 정보이고, 할당하지 않습니다. */
-        using ReadRootFunction = bool ( * )( void* pCall, const XMLNode& root, string_view sourceName );
-        /** @brief 문서를 .cpp 안에서 열고 루트를 @p pReadRoot 에 넘깁니다. `loadFile` 템플릿의 몸통이라 헤더가 XML 구현 타입을 몰라도 된다. */
-        [[nodiscard]] static bool loadFileWith( void* pCall, ReadRootFunction pReadRoot, string_view path, const utf8* pRootName );
-        /** @brief `loadFileWith` 의 XML 문자열 버전입니다. */
-        [[nodiscard]] static bool loadTextWith( void* pCall, ReadRootFunction pReadRoot, string_view xmlText, string_view sourceName, const utf8* pRootName );
-
         /**
          * @brief 원소 @p node 의 속성을 리플렉션 Def(@p pInstance, @p typeInfo) 하나로 엄격하게 읽습니다 — 스키마(필드 표)가 기본값과 필수를 선언하고 이 함수가 로드 시점에 검증합니다.
          * @details 속성 이름은 PROPERTY 이름에서 앞의 `_` 를 뗀 것이고, 불리언은 `b` 도 떼고 첫 글자를 소문자로 쓴다(`_bShootOnSight` → `shootOnSight`, `_runningCost` → `runningCost`).
@@ -141,11 +135,6 @@ namespace sw
          */
         [[nodiscard]] static bool readFloatCurve( const XMLNode& parent, const utf8* pElement, float32 minValue, FloatCurve& outCurve, string_view sourceName );
 
-        /** @brief 루트 읽기가 읽은 항목 수를 성공 여부로 바꿉니다. 0 이면 실패입니다. */
-        static constexpr bool isLoaded( uint32 loadedCount ) { return loadedCount > 0; }
-        /** @brief 루트 읽기의 성공 여부를 그대로 반환합니다. */
-        static constexpr bool isLoaded( bool bLoaded ) { return bLoaded; }
-
     private:
         template <typename TLoader, typename TResult>
         struct RootCall
@@ -156,7 +145,7 @@ namespace sw
             static bool invoke( void* pCall, const XMLNode& root, string_view sourceName )
             {
                 RootCall& call = *static_cast<RootCall*>( pCall );
-                return isLoaded( ( call.loader.*call.pLoadRoot )( root, sourceName ) );
+                return XMLCatalogLoader::isLoaded( ( call.loader.*call.pLoadRoot )( root, sourceName ) );
             }
         };
         template <typename TLoader, typename TResult, typename TContext>
@@ -169,7 +158,7 @@ namespace sw
             static bool invoke( void* pCall, const XMLNode& root, string_view sourceName )
             {
                 RootCallWithContext& call = *static_cast<RootCallWithContext*>( pCall );
-                return isLoaded( ( call.loader.*call.pLoadRoot )( root, call.context, sourceName ) );
+                return XMLCatalogLoader::isLoaded( ( call.loader.*call.pLoadRoot )( root, call.context, sourceName ) );
             }
         };
     };

@@ -63,11 +63,6 @@ namespace sw
                 {        "Volume",      MaterialPropertyType::Texture3D,  4},
             };
 
-            static bool iequals( string_view value, const utf8* pExpected )
-            {
-                return StringUtil::equals( value, pExpected, true );
-            }
-
             /** @brief `_enumType` 이 가리키는 리플렉션 enum 입니다. 타입 이름은 찾기만 한다(에셋 글을 전역 이름 표에 넣지 않는다). */
             static const EnumInfo* findReflectedEnum( const MaterialProperty& prop )
             {
@@ -86,7 +81,7 @@ namespace sw
             {
                 for ( const MaterialEnumEntry& enumEntry : prop._listEnumEntry )
                 {
-                    if ( iequals( token, enumEntry._name.c_str() ) )
+                    if ( StringUtil::equals( token, enumEntry._name.c_str(), true ) )
                     {
                         outValue = enumEntry._value;
                         return true;
@@ -356,7 +351,7 @@ namespace sw
     {
         for ( const MaterialPackingInternal::PropertyTypeDesc& desc : MaterialPackingInternal::s_PropertyTypes )
         {
-            if ( MaterialPackingInternal::iequals( str, desc._pName ) )
+            if ( StringUtil::equals( str, desc._pName, true ) )
             {
                 outSize = desc._size;
                 return desc._type;
@@ -447,7 +442,7 @@ namespace sw
             if ( bPlainReflectedType )
                 return reflectedType;
             // HLSL 의 bool 은 보통 "Bool" 로 보고된다
-            if ( MaterialPackingInternal::iequals( typeName, "Bool" ) )
+            if ( StringUtil::equals( typeName, "Bool", true ) )
                 return MaterialPropertyType::Uint;
         }
         if ( byteSize == 4 )

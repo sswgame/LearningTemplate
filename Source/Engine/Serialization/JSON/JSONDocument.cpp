@@ -34,11 +34,6 @@ namespace sw
                 return static_cast<JSONImpl*>( pPtr );
             }
 
-            static bool nameEquals( string_view lhs, string_view rhs, bool bIgnoreCase )
-            {
-                return StringUtil::equals( lhs, rhs, bIgnoreCase );
-            }
-
             static string fromJSONString( const JSONString& value )
             {
                 return string( value.data(), value.size() );
@@ -62,7 +57,7 @@ namespace sw
                 }
                 for ( auto it = pObj->begin(); it != pObj->end(); ++it )
                 {
-                    if ( nameEquals( it.key(), key, true ) )
+                    if ( StringUtil::equals( it.key(), key, true ) )
                         return &( *it );
                 }
                 return nullptr;
@@ -76,7 +71,7 @@ namespace sw
                     return string( key );
                 for ( auto it = pObj->begin(); it != pObj->end(); ++it )
                 {
-                    if ( nameEquals( it.key(), key, true ) )
+                    if ( StringUtil::equals( it.key(), key, true ) )
                         return fromJSONString( it.key() );
                 }
                 return string( key );

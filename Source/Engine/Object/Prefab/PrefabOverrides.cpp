@@ -50,11 +50,6 @@ namespace sw
                 return node.isValid() && StringUtil::isNullOrEmpty( node.getName() ) == false;
             }
 
-            static bool isSameText( const utf8* pLeft, const utf8* pRight )
-            {
-                return StringUtil::equals( pLeft, pRight, false );
-            }
-
             /** @brief 이름이 정확히 같은 첫 자식 원소입니다. 없으면 무효 노드입니다. */
             static XMLNode findChildElement( const XMLNode& parent, const utf8* pName )
             {
@@ -62,7 +57,7 @@ namespace sw
                     return {};
                 for ( XMLNode child = parent.findChild(); child.isValid(); child = child.findNextSibling() )
                 {
-                    if ( isElement( child ) && isSameText( child.getName(), pName ) )
+                    if ( isElement( child ) && StringUtil::equals( child.getName(), pName, false ) )
                         return child;
                 }
                 return {};
@@ -94,7 +89,7 @@ namespace sw
                     if ( isElement( child ) == false )
                         continue;
                     const utf8*  pLabel     = child.findAttribute( kComponentName, false );
-                    const bool   bNoLabel   = StringUtil::isNullOrEmpty( pLabel ) || isSameText( pLabel, "None" );
+                    const bool   bNoLabel   = StringUtil::isNullOrEmpty( pLabel ) || StringUtil::equals( pLabel, "None", false );
                     const string baseName   = bNoLabel ? string{ child.getName() } : string{ pLabel };
                     int32&       occurrence = mapCount[baseName];
                     outListComponent.push_back( KeyedComponent{ child, baseName + "#" + to_string( occurrence ), false } );
@@ -106,13 +101,13 @@ namespace sw
             static KeyedComponent* findComponent( vector<KeyedComponent>& listComponent, string_view key, const utf8* pTypeName )
             {
                 return VectorUtil::findIf( listComponent, [&]( KeyedComponent& component )
-                { return component._key == key && isSameText( component._node.getName(), pTypeName ); } );
+                { return component._key == key && StringUtil::equals( component._node.getName(), pTypeName, false ); } );
             }
 
             /** @brief 오브젝트 루트에서 덮어쓴 것으로 적지 않는 칸입니다 — 이름은 엔티티가, 판은 직렬화기가, 컴포넌트는 따로 비교한다. */
             static bool isRootOnlyField( const utf8* pName )
             {
-                return isSameText( pName, sw::kSchemaVersionKey ) || isSameText( pName, kObjectName ) || isSameText( pName, kComponentList );
+                return StringUtil::equals( pName, sw::kSchemaVersionKey, false ) || StringUtil::equals( pName, kObjectName, false ) || StringUtil::equals( pName, kComponentList, false );
             }
 
             /** @brief 인스턴스 원소에서 기준 원소와 다른 속성 · 자식 원소를 모읍니다. */
@@ -126,7 +121,7 @@ namespace sw
                     if ( bRoot && isRootOnlyField( attribute.getName() ) )
                         continue;
                     const utf8* pBaseValue = base.findAttribute( attribute.getName(), false );
-                    if ( pBaseValue == nullptr || isSameText( pBaseValue, attribute.getValue() ) == false )
+                    if ( pBaseValue == nullptr || StringUtil::equals( pBaseValue, attribute.getValue(), false ) == false )
                         outListAttribute.push_back( attribute );
                 }
                 for ( XMLNode child = instance.findChild(); child.isValid(); child = child.findNextSibling() )
@@ -158,7 +153,7 @@ namespace sw
             {
                 for ( XMLAttribute attribute = base.getFirstAttribute(); attribute; attribute = attribute.getNext() )
                 {
-                    const bool  bRenamed = pName != nullptr && isSameText( attribute.getName(), kObjectName );
+                    const bool  bRenamed = pName != nullptr && StringUtil::equals( attribute.getName(), kObjectName, false );
                     const utf8* pValue   = partial.isValid() ? partial.findAttribute( attribute.getName(), false ) : nullptr;
                     if ( bRenamed )
                         pValue = pName;
@@ -168,7 +163,7 @@ namespace sw
                     return;
                 for ( XMLAttribute attribute = partial.getFirstAttribute(); attribute; attribute = attribute.getNext() )
                 {
-                    if ( base.findAttribute( attribute.getName(), false ) == nullptr && isSameText( attribute.getName(), kObjectName ) == false )
+                    if ( base.findAttribute( attribute.getName(), false ) == nullptr && StringUtil::equals( attribute.getName(), kObjectName, false ) == false )
                         out.appendAttribute( attribute.getName(), attribute.getValue() );
                 }
             }
@@ -181,7 +176,7 @@ namespace sw
                 {
                     if ( isElement( child ) == false )
                         continue;
-                    if ( pListWriter != nullptr && isSameText( child.getName(), kComponentList ) )
+                    if ( pListWriter != nullptr && StringUtil::equals( child.getName(), kComponentList, false ) )
                     {
                         ( *pListWriter )( out, child );
                         bListWritten = true;
@@ -296,7 +291,7 @@ namespace sw
                     {
                         const utf8*   pKey                    = entry.findAttribute( kKey, false );
                         const XMLNode partial                 = findFirstElement( entry );
-                        const bool    bMatchingComponentEntry = pKey != nullptr && component._key == pKey && partial.isValid() && isSameText( partial.getName(), component._node.getName() );
+                        const bool    bMatchingComponentEntry = pKey != nullptr && component._key == pKey && partial.isValid() && StringUtil::equals( partial.getName(), component._node.getName(), false );
                         if ( bMatchingComponentEntry )
                             return partial;
                     }

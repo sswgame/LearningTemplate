@@ -196,11 +196,6 @@ namespace sw
                 return pugi::xml_attribute{ static_cast<pugi::xml_attribute_struct*>( pPtr ) };
             }
 
-            static bool nameEquals( const utf8* pLhs, const utf8* pRhs, bool bIgnoreCase = true )
-            {
-                return StringUtil::equals( pLhs, pRhs, bIgnoreCase );
-            }
-
             static pugi::xml_node findChild( pugi::xml_node parent, const utf8* pName, bool bIgnoreCase = true )
             {
                 if ( parent.empty() || pName == nullptr )
@@ -209,7 +204,7 @@ namespace sw
                     return parent.child( pName );
                 for ( pugi::xml_node child = parent.first_child(); child.empty() == false; child = child.next_sibling() )
                 {
-                    if ( nameEquals( child.name(), pName, true ) )
+                    if ( StringUtil::equals( child.name(), pName, true ) )
                         return child;
                 }
                 return {};
@@ -221,7 +216,7 @@ namespace sw
                     return {};
                 for ( pugi::xml_node sibling = node; sibling.empty() == false; sibling = sibling.next_sibling() )
                 {
-                    if ( nameEquals( sibling.name(), pName, bIgnoreCase ) )
+                    if ( StringUtil::equals( sibling.name(), pName, bIgnoreCase ) )
                         return sibling;
                 }
                 return {};
@@ -235,7 +230,7 @@ namespace sw
                     return node.attribute( pName );
                 for ( pugi::xml_attribute attr = node.first_attribute(); attr.empty() == false; attr = attr.next_attribute() )
                 {
-                    if ( nameEquals( attr.name(), pName, true ) )
+                    if ( StringUtil::equals( attr.name(), pName, true ) )
                         return attr;
                 }
                 return {};
