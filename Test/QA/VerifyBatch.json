@@ -35,7 +35,7 @@
     },
     {
       "id": "localization-check-text", "title": "일본어 · RTL 화면 눈 확인과 App --check-text", "kind": "test", "config": "Release", "platform": "windows", "gpu": "none", "pending": true,
-      "need_command": "눈 확인은 사람이 화면을 봐야 하고 --check-text 의 호출 모양이 매니페스트에 없다",
+      "need_command": "글 잘림 · RTL 배치를 재는 탐침이 없어 사람이 화면을 봐야 한다(--check-text 판정은 LocalizationGatherTest.RepositoryProjectsAreUpToDate 가 nogpu 에서 한다)",
       "source": "docs/plans/Candidates-audio-ai-localization.md", "result_doc": "docs/plans/Candidates-audio-ai-localization.md"
     },
     {

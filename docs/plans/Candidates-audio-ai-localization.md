@@ -9,11 +9,11 @@
 ### LocalizationCultureData
 제목: 현지화 문화권 데이터와 쿠킹 필터
 옛번호: D5-2
-왜 필요한가: 구현은 끝났다(2026-10-22 — RTL 문화권 `he` · `fa`, 엔진 `ja` 번역과 출시 문화권, 쿠킹 문화권 필터 `CookAssets.collectUnstagedTranslationTablesInternal`, Shooter3D HUD 의 든 아이템 이름 `_itemName`). 빌드 · 눈 확인만 남았다.
+왜 필요한가: 구현은 끝났다(2026-10-22 — RTL 문화권 `he` · `fa`, 엔진 `ja` 번역과 출시 문화권, 쿠킹 문화권 필터 `CookAssets.collectUnstagedTranslationTablesInternal`, Shooter3D HUD 의 든 아이템 이름 `_itemName`). 사람 눈 확인만 남았다.
 남은 것:
 - 사람 눈 확인: 일본어 화면의 잘림, `he` · `fa` 의 RTL 배치와 `۰-۹` 숫자, Shooter3D HUD 의 아이템 이름 줄 자리(무기 이름 위).
-- `App --check-text` 로 출시 문화권 `ja` 에 빠지거나 낡은 번역이 없는지.
-못 하는 이유(2026-10-24): 눈 확인은 사람이 화면을 봐야 한다. `--check-text` 는 빌드된 App 이 있어야 돌려서 통합에서 실행 대기다(매니페스트 id `localization-check-text`). 풀리는 조건: 사람이 일본어 · RTL 화면을 보고, 통합 담당이 `--check-text` 를 돌린다.
+- `--check-text`(출시 문화권 `ja` 의 빠지거나 낡은 번역)는 대기가 아니다(2026-10-27 다시 봄): 같은 판정을 `LocalizationGatherTest.RepositoryProjectsAreUpToDate`(EditorTest, CI 와 통합의 nogpu)가 매번 한다.
+못 하는 이유(2026-10-27): 글 잘림을 재는 탐침이 없어 사람이 화면을 봐야 한다(매니페스트 id `localization-check-text`). 풀리는 조건: 사람이 일본어 · RTL 화면을 볼 때, 또는 위젯 글 넘침을 세는 탐침이 생길 때.
 
 ### NpcScheduleFollowUp
 제목: NPC 하루 일정의 남은 것
