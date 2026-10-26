@@ -8,6 +8,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/XML/XMLWriter.h"
 
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
@@ -39,47 +40,51 @@ namespace sw
                 appendNumber( inoutText, roomIndex );
             }
 
-            static hashed_string makeRoomID( int32 roomIndex )
+            static string makeRoomText( int32 roomIndex )
             {
                 string text;
                 appendRoomID( text, roomIndex );
+                return text;
+            }
+
+            static hashed_string makeRoomID( int32 roomIndex )
+            {
+                const string text = makeRoomText( roomIndex );
                 return hashed_string( string_view( text.data(), text.size() ) );
             }
 
-            static void appendArea( string& inoutText, const utf8* pID, int32 roomIndex, const utf8* pRegion, int32 x, int32 y )
+            /** @brief @p pID 가 nullptr 이면 방 번호의 id 입니다. */
+            static void writeArea( XMLWriter& writer, const utf8* pID, int32 roomIndex, const utf8* pRegion, int32 x, int32 y )
             {
-                inoutText += "<Area id=\"";
-                if ( pID != nullptr )
-                    inoutText += pID;
-                else
-                    appendRoomID( inoutText, roomIndex );
-                inoutText += "\" region=\"";
-                inoutText += pRegion;
-                inoutText += "\" x=\"";
-                appendNumber( inoutText, x );
-                inoutText += "\" y=\"";
-                appendNumber( inoutText, y );
-                inoutText += "\"/>";
+                writer.beginElement( "Area" );
+                writer.attribute( "id", pID != nullptr ? string( pID ) : makeRoomText( roomIndex ) );
+                writer.attribute( "region", pRegion );
+                writer.attributeInt( "x", x );
+                writer.attributeInt( "y", y );
+                writer.endElement();
+            }
+
+            /** @brief 바깥과 배를 잇는 `Ship` 길입니다. */
+            static void writeShipLink( XMLWriter& writer )
+            {
+                writer.beginElement( "Link" );
+                writer.attribute( "from", "outside" );
+                writer.attribute( "to", "ship" );
+                writer.attribute( "kind", "Ship" );
+                writer.endElement();
             }
 
             /** @brief 방 번호가 음수이면 바깥(`outside`)입니다. */
-            static void appendLink( string& inoutText, int32 fromRoom, int32 toRoom, const utf8* pKind, bool bLocked )
+            static void writeLink( XMLWriter& writer, int32 fromRoom, int32 toRoom, const utf8* pKind, bool bLocked )
             {
-                inoutText += "<Link from=\"";
-                if ( fromRoom < 0 )
-                    inoutText += "outside";
-                else
-                    appendRoomID( inoutText, fromRoom );
-                inoutText += "\" to=\"";
-                appendRoomID( inoutText, toRoom );
-                inoutText += "\" kind=\"";
-                inoutText += pKind;
+                const string toText = makeRoomText( toRoom );
+                writer.beginElement( "Link" );
+                writer.attribute( "from", fromRoom < 0 ? string( "outside" ) : makeRoomText( fromRoom ) );
+                writer.attribute( "to", toText );
+                writer.attribute( "kind", pKind );
                 if ( bLocked )
-                {
-                    inoutText += "\" requires=\"unlocked.";
-                    appendRoomID( inoutText, toRoom );
-                }
-                inoutText += "\"/>";
+                    writer.attribute( "requires", "unlocked." + toText );
+                writer.endElement();
             }
 
             static const ScavengerScrapDef* pickScrap( const ScavengerCatalog& catalog, const ScavengerMoonDef& moon, GameRandom& random )
@@ -124,9 +129,11 @@ namespace sw
         _layoutSeed   = seed;
         GameRandom                  random{ seed };
         const ScavengerFacilityDef& settings = catalog.getFacilitySettings();
-        string                      xml      = "<AreaGraph>";
-        ScavengerFacilityInternal::appendArea( xml, "outside", 0, "Outside", 0, 0 );
-        ScavengerFacilityInternal::appendArea( xml, "ship", 0, "Ship", -1, 0 );
+        string                      xml;
+        XMLWriter                   writer{ xml };
+        writer.beginElement( "AreaGraph" );
+        ScavengerFacilityInternal::writeArea( writer, "outside", 0, "Outside", 0, 0 );
+        ScavengerFacilityInternal::writeArea( writer, "ship", 0, "Ship", -1, 0 );
         if ( moon._bCompany == false )
         {
             _roomCount = random.nextInt( settings._minRooms, settings._maxRooms );
@@ -139,16 +146,16 @@ namespace sw
             }
             for ( int32 room = 0; room < _roomCount; ++room )
             {
-                ScavengerFacilityInternal::appendArea( xml, nullptr, room, "Facility", listDepth[static_cast<size_t>( room )] + 1, room );
+                ScavengerFacilityInternal::writeArea( writer, nullptr, room, "Facility", listDepth[static_cast<size_t>( room )] + 1, room );
             }
 
-            xml += "<Link from=\"outside\" to=\"ship\" kind=\"Ship\"/>";
-            ScavengerFacilityInternal::appendLink( xml, -1, 0, "MainEntrance", false );
+            ScavengerFacilityInternal::writeShipLink( writer );
+            ScavengerFacilityInternal::writeLink( writer, -1, 0, "MainEntrance", false );
             for ( int32 room = 1; room < _roomCount; ++room )
             {
                 const bool bLocked = random.nextChance( settings._lockedChance );
                 _lockedDoorCount += bLocked ? 1 : 0;
-                ScavengerFacilityInternal::appendLink( xml, listParent[static_cast<size_t>( room )], room, "Door", bLocked );
+                ScavengerFacilityInternal::writeLink( writer, listParent[static_cast<size_t>( room )], room, "Door", bLocked );
             }
             for ( int32 room = 2; room < _roomCount; ++room )
             {
@@ -156,7 +163,7 @@ namespace sw
                     continue;
                 const int32 other = random.nextInt( 0, room - 1 );
                 if ( other != listParent[static_cast<size_t>( room )] )
-                    ScavengerFacilityInternal::appendLink( xml, other, room, "Door", false );
+                    ScavengerFacilityInternal::writeLink( writer, other, room, "Door", false );
             }
             // 화재 출구는 정문에서 가장 깊은 방부터 만든다(같으면 번호 순).
             vector<int32> listExitCandidate;
@@ -170,14 +177,15 @@ namespace sw
             const int32 exitCount = MathUtil::min( settings._fireExits, static_cast<int32>( listExitCandidate.size() ) );
             for ( int32 exitIndex = 0; exitIndex < exitCount; ++exitIndex )
             {
-                ScavengerFacilityInternal::appendLink( xml, -1, listExitCandidate[static_cast<size_t>( exitIndex )], "FireExit", false );
+                ScavengerFacilityInternal::writeLink( writer, -1, listExitCandidate[static_cast<size_t>( exitIndex )], "FireExit", false );
             }
         }
         else
         {
-            xml += "<Link from=\"outside\" to=\"ship\" kind=\"Ship\"/>";
+            ScavengerFacilityInternal::writeShipLink( writer );
         }
-        xml += "</AreaGraph>";
+        writer.endElement();
+        SW_ASSERT( writer.isComplete() );
         if ( _graph.loadFromXMLText( string_view( xml.data(), xml.size() ), "ScavengerFacility" ) == false )
             return false;
 

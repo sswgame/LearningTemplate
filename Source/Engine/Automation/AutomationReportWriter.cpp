@@ -4,7 +4,8 @@
 
 #include "Core/Common/Defines.h"
 #include "Core/File/FileUtil.h"
-#include "Core/String/StringBuilder.h"
+
+#include "Engine/Serialization/JSON/JSONWriter.h"
 
 namespace sw
 {
@@ -12,71 +13,58 @@ namespace sw
 
     namespace
     {
-        struct AutomationReportWriterInternal
+        /** @brief `"key": [ "a", "b" ]` 한 멤버를 씁니다. @p pListText 가 없거나 비어 있으면 `[]` 입니다. */
+        void writeAutomationReportList( JSONWriter& writer, string_view key, const vector<string>* pListText )
         {
-            static string escapeJSON( string_view text )
+            writer.key( key );
+            writer.beginArray();
+            if ( pListText != nullptr )
             {
-                string escaped;
-                escaped.reserve( text.size() + 8 );
-                for ( const utf8 character : text )
+                for ( const string& text : *pListText )
                 {
-                    if ( character == '"' || character == '\\' )
-                    {
-                        escaped.push_back( '\\' );
-                        escaped.push_back( character );
-                    }
-                    else if ( character == '\n' )
-                    {
-                        escaped += "\\n";
-                    }
-                    else if ( static_cast<uint8>( character ) >= 0x20 )
-                    {
-                        escaped.push_back( character );
-                    }
+                    writer.valueString( text );
                 }
-                return escaped;
             }
+            writer.endArray();
+        }
 
-            /** @brief `"key": [ "a", "b" ]` 의 배열 부분을 붙입니다. 비어 있으면 `[]` 입니다. */
-            static void appendStringArray( string& inoutJSON, const vector<string>& listText )
+        [[nodiscard]] uint32 toAutomationMilliseconds( float64 seconds )
+        {
+            return static_cast<uint32>( seconds * static_cast<float64>( constant::kMillisecondsPerSecond ) );
+        }
+
+        /** @brief `"timeline": { … }` 을 씁니다 — 프레임 종류마다 `<키>Frames` · `<키>Milliseconds`, 단계 앞 대기 중 가장 긴 것은 `slowestWaits[]`. */
+        void writeAutomationTimeline( JSONWriter& writer, const AutomationTimeline& timeline )
+        {
+            writer.key( "timeline" );
+            writer.beginObject();
+            for ( uint32 kindIndex = 0; kindIndex < AutomationTimeline::kFrameKindCount; ++kindIndex )
             {
-                inoutJSON += "[";
-                for ( size_t index = 0; index < listText.size(); ++index )
-                {
-                    inoutJSON += index == 0 ? "\n    \"" : ",\n    \"";
-                    inoutJSON += escapeJSON( listText[index] ) + "\"";
-                }
-                inoutJSON += listText.empty() ? "]" : "\n  ]";
+                const AutomationFrameKind      kind  = static_cast<AutomationFrameKind>( kindIndex );
+                const AutomationTimelineSlice& slice = timeline.getSlice( kind );
+                writer.key( string( AutomationTimeline::getKindKey( kind ) ) + "Frames" );
+                writer.valueUint( slice._frameCount );
+                writer.key( string( AutomationTimeline::getKindKey( kind ) ) + "Milliseconds" );
+                writer.valueUint( toAutomationMilliseconds( slice._seconds ) );
             }
-
-            /** @brief `"timeline": { … },` 를 붙입니다 — 프레임 종류마다 `<키>Frames` · `<키>Milliseconds`, 단계 앞 대기 중 가장 긴 것은 `slowestWaits[]`. */
-            static void appendTimeline( string& inoutJSON, const AutomationTimeline& timeline )
+            writer.key( "slowestWaits" );
+            writer.beginArray();
+            for ( const AutomationSlowWait& wait : timeline.getSlowestWaits() )
             {
-                inoutJSON += "  \"timeline\": {\n";
-                for ( uint32 kindIndex = 0; kindIndex < AutomationTimeline::kFrameKindCount; ++kindIndex )
-                {
-                    const AutomationFrameKind              kind  = static_cast<AutomationFrameKind>( kindIndex );
-                    const AutomationTimelineSlice&         slice = timeline.getSlice( kind );
-                    StringBuilder<constant::kMaxBuffer128> line;
-                    line.appendFormat( "    \"%#Frames\": %#,\n    \"%#Milliseconds\": %#,\n", AutomationTimeline::getKindKey( kind ), slice._frameCount,
-                                       AutomationTimeline::getKindKey( kind ), toMilliseconds( slice._seconds ) );
-                    inoutJSON += line.c_str();
-                }
-                inoutJSON += "    \"slowestWaits\": [";
-                const vector<AutomationSlowWait>& listWait = timeline.getSlowestWaits();
-                for ( size_t index = 0; index < listWait.size(); ++index )
-                {
-                    const AutomationSlowWait&              wait = listWait[index];
-                    StringBuilder<constant::kMaxBuffer256> line;
-                    line.appendFormat( "%#\n      { \"beforeStep\": \"%# #%#\", \"frame\": %#, \"frames\": %#, \"milliseconds\": %# }", index == 0 ? "" : ",",
-                                       escapeJSON( wait._stepKind ).c_str(), wait._stepNumber, wait._frameIndex, wait._waitedFrameCount, toMilliseconds( wait._seconds ) );
-                    inoutJSON += line.c_str();
-                }
-                inoutJSON += listWait.empty() ? "]\n  },\n" : "\n    ]\n  },\n";
+                writer.beginObject();
+                writer.key( "beforeStep" );
+                writer.valueString( wait._stepKind + " #" + to_string( wait._stepNumber ) );
+                writer.key( "frame" );
+                writer.valueUint( wait._frameIndex );
+                writer.key( "frames" );
+                writer.valueUint( wait._waitedFrameCount );
+                writer.key( "milliseconds" );
+                writer.valueUint( toAutomationMilliseconds( wait._seconds ) );
+                writer.endObject();
             }
-
-            [[nodiscard]] static uint32 toMilliseconds( float64 seconds ) { return static_cast<uint32>( seconds * static_cast<float64>( constant::kMillisecondsPerSecond ) ); }
-        };
+            writer.endArray();
+            writer.endObject();
+        }
     } // namespace
 } // namespace sw
 
@@ -93,36 +81,47 @@ namespace sw
     {
         if ( _reportPath.empty() )
             return;
-        using Internal = AutomationReportWriterInternal;
-        const vector<string> listEmpty;
-        string               json = "{\n  \"name\": \"" + Internal::escapeJSON( params._scenarioName ) + "\",\n";
-        json += "  \"result\": \"" + string( params._pResultName ) + "\",\n";
-        json += "  \"exitCode\": " + to_string( params._exitCode ) + ",\n";
-        json += "  \"frames\": " + to_string( params._frameCount ) + ",\n";
-        json += "  \"reason\": \"" + Internal::escapeJSON( params._reason ) + "\",\n";
-        json += "  \"backend\": \"" + Internal::escapeJSON( params._backendName ) + "\",\n";
-        json += "  \"game\": \"" + Internal::escapeJSON( params._gameName ) + "\",\n";
-        json += "  \"startedAt\": \"" + Internal::escapeJSON( params._startedAt ) + "\",\n";
-        json += "  \"startedAtUnixMs\": " + to_string( params._startedUnixMs ) + ",\n";
-        json += "  \"wallMilliseconds\": " + to_string( params._wallMilliseconds ) + ",\n";
-        json += "  \"wallLimitMilliseconds\": " + to_string( params._wallLimitMilliseconds ) + ",\n";
-        json += "  \"lastStep\": \"" + Internal::escapeJSON( params._lastStep ) + "\",\n";
-        json += "  \"reproduce\": \"" + Internal::escapeJSON( params._reproduce ) + "\",\n";
+        // 들여쓰기 2 칸 — 행 감시 보고(`AutomationHangReport::format`)와 같은 모양이고 `records` 가 마지막 멤버다(`readReportRecords`).
+        string     json;
+        JSONWriter writer{ json, 2 };
+        writer.beginObject();
+        writer.key( "name" );
+        writer.valueString( params._scenarioName );
+        writer.key( "result" );
+        writer.valueString( params._pResultName );
+        writer.key( "exitCode" );
+        writer.valueInt( params._exitCode );
+        writer.key( "frames" );
+        writer.valueUint( params._frameCount );
+        writer.key( "reason" );
+        writer.valueString( params._reason );
+        writer.key( "backend" );
+        writer.valueString( params._backendName );
+        writer.key( "game" );
+        writer.valueString( params._gameName );
+        writer.key( "startedAt" );
+        writer.valueString( params._startedAt );
+        writer.key( "startedAtUnixMs" );
+        writer.valueInt( params._startedUnixMs );
+        writer.key( "wallMilliseconds" );
+        writer.valueUint( params._wallMilliseconds );
+        writer.key( "wallLimitMilliseconds" );
+        writer.valueUint( params._wallLimitMilliseconds );
+        writer.key( "lastStep" );
+        writer.valueString( params._lastStep );
+        writer.key( "reproduce" );
+        writer.valueString( params._reproduce );
         if ( params._pTimeline != nullptr )
-            Internal::appendTimeline( json, *params._pTimeline );
-        json += "  \"failures\": ";
-        Internal::appendStringArray( json, params._pListFailure != nullptr ? *params._pListFailure : listEmpty );
-        json += ",\n  \"unconfirmed\": ";
-        Internal::appendStringArray( json, params._pListUnconfirmed != nullptr ? *params._pListUnconfirmed : listEmpty );
-        json += ",\n  \"unhandledLogs\": ";
-        Internal::appendStringArray( json, params._pListUnhandledLog != nullptr ? *params._pListUnhandledLog : listEmpty );
-        json += ",\n  \"allowedLogs\": ";
-        Internal::appendStringArray( json, params._pListAllowedLog != nullptr ? *params._pListAllowedLog : listEmpty );
-        json += ",\n  \"metrics\": ";
-        Internal::appendStringArray( json, _listMetricLine );
-        json += ",\n  \"records\": ";
-        Internal::appendStringArray( json, _listRecordLine );
-        json += "\n}\n";
+            writeAutomationTimeline( writer, *params._pTimeline );
+        writeAutomationReportList( writer, "failures", params._pListFailure );
+        writeAutomationReportList( writer, "unconfirmed", params._pListUnconfirmed );
+        writeAutomationReportList( writer, "unhandledLogs", params._pListUnhandledLog );
+        writeAutomationReportList( writer, "allowedLogs", params._pListAllowedLog );
+        writeAutomationReportList( writer, "metrics", &_listMetricLine );
+        writeAutomationReportList( writer, "records", &_listRecordLine );
+        writer.endObject();
+        SW_ASSERT( writer.isComplete() );
+        json += '\n';
         const string directory = FileUtil::getDirectoryPart( _reportPath );
         if ( directory.empty() == false )
             (void)FileUtil::ensureDirectoryExists( directory ); // 실패하면 아래 쓰기가 실패로 알린다

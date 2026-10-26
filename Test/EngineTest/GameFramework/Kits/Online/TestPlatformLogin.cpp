@@ -10,6 +10,8 @@
 #include "Core/String/Base64Util.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "Engine/Serialization/JSON/JSONWriter.h"
+
 #include "GameFramework/Base/Online/HTTP/HTTPClient.h"
 #include "GameFramework/Base/Online/HTTP/HTTPServer.h"
 #include "GameFramework/Base/Online/Security/JSONWebToken.h"
@@ -171,13 +173,30 @@ namespace
 
         static string makeToken( const SigningKey& key, const utf8* pIssuer, const utf8* pAudience, int64 expiresAtSeconds, const utf8* pSubject, const utf8* pNonce )
         {
-            string payload = string( "{\"iss\":\"" ) + pIssuer + "\",\"aud\":\"" + pAudience + "\",\"sub\":\"" + pSubject + "\",\"name\":\"Hero\",\"iat\":900,\"exp\":" +
-                             to_string( expiresAtSeconds );
+            JSONWriter writer;
+            writer.beginObject();
+            writer.key( "iss" );
+            writer.valueString( pIssuer );
+            writer.key( "aud" );
+            writer.valueString( pAudience );
+            writer.key( "sub" );
+            writer.valueString( pSubject );
+            writer.key( "name" );
+            writer.valueString( "Hero" );
+            writer.key( "iat" );
+            writer.valueInt( 900 );
+            writer.key( "exp" );
+            writer.valueInt( expiresAtSeconds );
             if ( pNonce != nullptr )
-                payload += string( ",\"nonce\":\"" ) + pNonce + "\"";
-            payload += "}";
-            string compact;
-            (void)JSONWebToken::makeSigned( NetSecurity::getProvider(), key._algorithm, key._keyID, payload, key._privateKeyPem, compact );
+            {
+                writer.key( "nonce" );
+                writer.valueString( pNonce );
+            }
+            writer.endObject();
+            const std::optional<JSONText> payload = writer.finish();
+            string                        compact;
+            if ( payload.has_value() )
+                (void)JSONWebToken::makeSigned( NetSecurity::getProvider(), key._algorithm, key._keyID, *payload, key._privateKeyPem, compact );
             return compact;
         }
 

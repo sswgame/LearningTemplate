@@ -9,7 +9,9 @@
 
 #include "Engine/Automation/AutomationExitCode.h"
 #include "Engine/Automation/AutomationOutcome.h"
+#include "Engine/Serialization/JSON/JSONWriter.h"
 
+#include <algorithm>
 #include <atomic>
 #include <cstdio>
 #include <cstdlib>
@@ -26,80 +28,24 @@ namespace sw
             /** @brief 행 보고 글 버퍼의 크기(바이트)입니다. 재현 명령(1 KB)과 이름들을 이스케이프해도 넉넉하다. */
             static constexpr uint32 kReportCapacity = 8192;
 
-            /** @brief 고정 버퍼에 글을 덧붙입니다. 넘치면 버리고, 늘 0 으로 끝낼 자리를 남긴다. 할당하지 않는다. */
-            struct TextWriter
-            {
-                utf8*  _pBuffer{ nullptr };
-                uint32 _capacity{ 0 };
-                uint32 _length{ 0 };
-
-                void appendText( string_view text )
-                {
-                    for ( const utf8 character : text )
-                    {
-                        if ( _length + 1 >= _capacity )
-                            return;
-                        _pBuffer[_length++] = character;
-                    }
-                }
-
-                /** @brief 실행기의 보고와 같은 이스케이프입니다(`"` · `\` 앞에 `\`, 줄바꿈은 `\n`, 나머지 제어 문자는 버린다). */
-                void appendEscaped( string_view text )
-                {
-                    for ( const utf8 character : text )
-                    {
-                        if ( character == '"' || character == '\\' )
-                        {
-                            appendText( "\\" );
-                            appendText( string_view{ &character, 1 } );
-                        }
-                        else if ( character == '\n' )
-                        {
-                            appendText( "\\n" );
-                        }
-                        else if ( static_cast<uint8>( character ) >= 0x20 )
-                        {
-                            appendText( string_view{ &character, 1 } );
-                        }
-                    }
-                }
-
-                void appendNumber( uint64 value )
-                {
-                    utf8   arrDigit[24]{};
-                    uint32 count = 0;
-                    do
-                    {
-                        arrDigit[count++] = static_cast<utf8>( '0' + value % 10 );
-                        value /= 10;
-                    } while ( value != 0 );
-                    while ( count > 0 )
-                    {
-                        appendText( string_view{ &arrDigit[--count], 1 } );
-                    }
-                }
-
-                /** @brief `  "key": "escaped value",\n` 한 줄. */
-                void appendStringField( string_view key, string_view value )
-                {
-                    appendText( "  \"" );
-                    appendText( key );
-                    appendText( "\": \"" );
-                    appendEscaped( value );
-                    appendText( "\",\n" );
-                }
-
-                void appendNumberField( string_view key, uint64 value )
-                {
-                    appendText( "  \"" );
-                    appendText( key );
-                    appendText( "\": " );
-                    appendNumber( value );
-                    appendText( ",\n" );
-                }
-            };
+            /** @brief `reason` 글의 버퍼 크기(바이트)입니다. 고정 문구(200 자 안팎)와 숫자 둘에 마지막 단계(`kLastStepBytes`)를 더해도 넉넉하다. */
+            static constexpr uint32 kReasonCapacity = AutomationHangPayload::kLastStepBytes + 512;
 
             static string_view toView( const utf8* pText ) { return string_view{ pText }; }
+
+            /** @brief 문자열 멤버 하나를 씁니다. */
+            static void writeStringField( JSONWriter& writer, string_view key, string_view value )
+            {
+                writer.key( key );
+                writer.valueString( value );
+            }
+
+            /** @brief 부호 없는 정수 멤버 하나를 씁니다. */
+            static void writeNumberField( JSONWriter& writer, string_view key, uint64 value )
+            {
+                writer.key( key );
+                writer.valueUint( value );
+            }
         };
     } // namespace
 
@@ -173,34 +119,47 @@ namespace sw
         using Internal = AutomationHangWatchInternal;
         if ( pOutText == nullptr || capacity == 0 )
             return 0;
-        Internal::TextWriter writer;
-        writer._pBuffer            = pOutText;
-        writer._capacity           = capacity;
+        // 게임 스레드가 멈춘 채 힙 잠금을 쥐고 있을 수 있다 — 고정 버퍼 쓰기기와 스택 버퍼만 쓰고 할당하지 않는다.
+        JSONWriter        writer{ pOutText, capacity, 2 };
         const string_view lastStep = Internal::toView( payload._lastStep );
-        writer.appendText( "{\n" );
-        writer.appendStringField( "name", Internal::toView( payload._scenario ) );
-        writer.appendStringField( "result", getAutomationOutcomeName( AutomationOutcome::TimedOut ) );
-        writer.appendNumberField( "exitCode", static_cast<uint64>( getAutomationExitCode( AutomationOutcome::TimedOut ) ) );
-        writer.appendNumberField( "frames", payload._frame );
-        writer.appendText( "  \"reason\": \"hang watchdog: the scenario was not ended by the runner within its wall-clock limit of " );
-        writer.appendNumber( payload._wallLimitMilliseconds );
-        writer.appendText( " ms plus grace (elapsed " );
-        writer.appendNumber( elapsedMilliseconds );
-        writer.appendText( " ms) - the game thread stopped running frames; last known position: " );
-        writer.appendEscaped( lastStep );
-        writer.appendText( "\",\n" );
-        writer.appendStringField( "backend", Internal::toView( payload._backend ) );
-        writer.appendStringField( "game", Internal::toView( payload._game ) );
-        writer.appendStringField( "startedAt", Internal::toView( payload._startedAt ) );
-        writer.appendNumberField( "startedAtUnixMs", payload._startedUnixMs > 0 ? static_cast<uint64>( payload._startedUnixMs ) : 0u );
-        writer.appendNumberField( "wallMilliseconds", elapsedMilliseconds );
-        writer.appendNumberField( "wallLimitMilliseconds", payload._wallLimitMilliseconds );
-        writer.appendStringField( "lastStep", lastStep );
-        writer.appendStringField( "reproduce", Internal::toView( payload._reproduce ) );
-        writer.appendText( "  \"hang\": true,\n" );
-        writer.appendText( "  \"failures\": [],\n  \"unconfirmed\": [],\n  \"unhandledLogs\": [],\n  \"allowedLogs\": [],\n  \"metrics\": [],\n  \"records\": []\n}\n" );
-        writer._pBuffer[writer._length] = '\0';
-        return writer._length;
+        utf8              arrReason[Internal::kReasonCapacity];
+        const int32       reasonLength = std::snprintf( arrReason, Internal::kReasonCapacity,
+                                                        "hang watchdog: the scenario was not ended by the runner within its wall-clock limit of %u ms plus grace "
+                                                              "(elapsed %u ms) - the game thread stopped running frames; last known position: %s",
+                                                        payload._wallLimitMilliseconds, elapsedMilliseconds, payload._lastStep );
+        // 넘쳐 잘렸으면 snprintf 가 돌려준 길이가 버퍼보다 길다 — 버퍼 안으로 줄인다(글자 중간에서 잘린 바이트는 쓰기기가 U+FFFD 로 바꾼다).
+        const size_t reasonSize = reasonLength < 0 ? 0 : std::min( static_cast<size_t>( reasonLength ), static_cast<size_t>( Internal::kReasonCapacity - 1 ) );
+        writer.beginObject();
+        Internal::writeStringField( writer, "name", Internal::toView( payload._scenario ) );
+        Internal::writeStringField( writer, "result", getAutomationOutcomeName( AutomationOutcome::TimedOut ) );
+        Internal::writeNumberField( writer, "exitCode", static_cast<uint64>( getAutomationExitCode( AutomationOutcome::TimedOut ) ) );
+        Internal::writeNumberField( writer, "frames", payload._frame );
+        Internal::writeStringField( writer, "reason", string_view{ arrReason, reasonSize } );
+        Internal::writeStringField( writer, "backend", Internal::toView( payload._backend ) );
+        Internal::writeStringField( writer, "game", Internal::toView( payload._game ) );
+        Internal::writeStringField( writer, "startedAt", Internal::toView( payload._startedAt ) );
+        Internal::writeNumberField( writer, "startedAtUnixMs", payload._startedUnixMs > 0 ? static_cast<uint64>( payload._startedUnixMs ) : 0u );
+        Internal::writeNumberField( writer, "wallMilliseconds", elapsedMilliseconds );
+        Internal::writeNumberField( writer, "wallLimitMilliseconds", payload._wallLimitMilliseconds );
+        Internal::writeStringField( writer, "lastStep", lastStep );
+        Internal::writeStringField( writer, "reproduce", Internal::toView( payload._reproduce ) );
+        writer.key( "hang" );
+        writer.valueBool( true );
+        for ( const utf8* pListName : { "failures", "unconfirmed", "unhandledLogs", "allowedLogs", "metrics", "records" } )
+        {
+            writer.key( pListName );
+            writer.beginArray();
+            writer.endArray();
+        }
+        writer.endObject();
+        // 실행기 보고(`AutomationReportWriter`)처럼 줄바꿈으로 끝낸다. 넘쳐 잘렸으면 덧붙이지 않는다.
+        uint32 length = static_cast<uint32>( writer.getWrittenSize() );
+        if ( writer.isComplete() && length + 1 < capacity )
+        {
+            pOutText[length++] = '\n';
+            pOutText[length]   = '\0';
+        }
+        return length;
     }
 } // namespace sw
 

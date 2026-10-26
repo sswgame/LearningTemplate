@@ -61,6 +61,7 @@
 ### 엔진 모듈
 - [Automation](../Source/Engine/Automation/README.md) — 자동화 시나리오 형식, 단계와 탐침, 대상 고르기 규칙, 결정적 재생과 녹화
 - [고정 배치형(B) 코덱 계약](../Source/Engine/Serialization/Fixed/README.md) — 같은 빌드끼리 읽는 바이트의 인코딩, 스키마 해시, 호환 정책
+- [JSON 읽기와 쓰기](../Source/Engine/Serialization/JSON/README.md) — 문서(`JSONDocument` · `XMLDocument`)와 쓰기기(`JSONWriter` · `XMLWriter`)를 고르는 기준, 쓰기기의 이스케이프 · 수 · 버퍼 규칙, `JSONText`
 - [Schedule](../Source/GameFramework/Base/Actor/AI/Schedule/README.md) — NPC 하루 일정 런타임, 칸 고르기 · 일찍 나서기 · 끼어들기 · 경로 제공자
 
 ### 게임

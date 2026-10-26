@@ -16,6 +16,7 @@ namespace sw
 {
     class INetSecurityProvider;
     class JSONDocument;
+    class JSONText;
 
     /**
      * @class JSONWebToken
@@ -24,8 +25,11 @@ namespace sw
     class SW_GF_API JSONWebToken
     {
     public:
-        /** @brief @p payloadJSON 을 본문으로 서명한 압축 JWT 를 만듭니다. 헤더에는 `alg`, `typ`, `kid` 를 넣습니다. */
-        [[nodiscard]] static bool makeSigned( INetSecurityProvider& provider, NetSignatureAlgorithm algorithm, string_view keyID, string_view payloadJSON,
+        /**
+         * @brief @p payload 를 본문으로 서명한 압축 JWT 를 만듭니다. 헤더에는 `alg`, `typ`, `kid` 를 넣습니다.
+         * @details 본문은 `JSONWriter::finish` 의 결과만 받는다 — 클레임 값을 글로 이어 붙여 다른 클레임을 끼워 넣는 모양을 형식으로 막는다.
+         */
+        [[nodiscard]] static bool makeSigned( INetSecurityProvider& provider, NetSignatureAlgorithm algorithm, string_view keyID, const JSONText& payload,
                                               const string& privateKeyPem, string& outCompact );
 
         JSONWebToken();

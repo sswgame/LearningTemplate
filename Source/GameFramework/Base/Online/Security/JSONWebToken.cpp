@@ -7,6 +7,7 @@
 #include "Core/String/Base64Util.h"
 
 #include "Engine/Serialization/JSON/JSONDocument.h"
+#include "Engine/Serialization/JSON/JSONWriter.h"
 
 namespace sw
 {
@@ -164,14 +165,23 @@ namespace sw
                                          static_cast<int32>( _signatureBytes.size() ) );
     }
 
-    bool JSONWebToken::makeSigned( INetSecurityProvider& provider, NetSignatureAlgorithm algorithm, string_view keyID, string_view payloadJSON,
-                                   const string& privateKeyPem, string& outCompact )
+    bool JSONWebToken::makeSigned( INetSecurityProvider& provider, NetSignatureAlgorithm algorithm, string_view keyID, const JSONText& payload, const string& privateKeyPem,
+                                   string& outCompact )
     {
-        using Internal            = JSONWebTokenInternal;
-        const string header       = string( "{\"alg\":\"" ) + Internal::getAlgorithmName( algorithm ) + "\",\"typ\":\"JWT\",\"kid\":\"" + JSONDocument::escapeString( keyID ) + "\"}";
-        string       signingInput = Internal::encodeText( header );
+        using Internal = JSONWebTokenInternal;
+        string     header;
+        JSONWriter writer{ header };
+        writer.beginObject();
+        writer.key( "alg" );
+        writer.valueString( Internal::getAlgorithmName( algorithm ) );
+        writer.key( "typ" );
+        writer.valueString( "JWT" );
+        writer.key( "kid" );
+        writer.valueString( keyID );
+        writer.endObject();
+        string signingInput = Internal::encodeText( header );
         signingInput.push_back( '.' );
-        signingInput += Internal::encodeText( payloadJSON );
+        signingInput += Internal::encodeText( payload.view() );
         vector<uint8> signature;
         if ( provider.signData( algorithm, privateKeyPem, reinterpret_cast<const uint8*>( signingInput.data() ), static_cast<int32>( signingInput.size() ), signature ) ==
              false )
@@ -182,15 +192,38 @@ namespace sw
 
     string JwksKeyCache::writeJwk( const NetPublicKey& publicKey, string_view keyID )
     {
-        string jwk = "{\"kid\":\"" + JSONDocument::escapeString( keyID ) + "\",\"use\":\"sig\",";
+        string     jwk;
+        JSONWriter writer{ jwk };
+        writer.beginObject();
+        writer.key( "kid" );
+        writer.valueString( keyID );
+        writer.key( "use" );
+        writer.valueString( "sig" );
         if ( publicKey._algorithm == NetSignatureAlgorithm::RsaPkcs1Sha256 )
         {
-            jwk += "\"kty\":\"RSA\",\"alg\":\"RS256\",\"n\":\"" + Base64Util::encodeURL( publicKey._modulus.data(), publicKey._modulus.size() ) + "\",\"e\":\"" +
-                   Base64Util::encodeURL( publicKey._exponent.data(), publicKey._exponent.size() ) + "\"}";
-            return jwk;
+            writer.key( "kty" );
+            writer.valueString( "RSA" );
+            writer.key( "alg" );
+            writer.valueString( "RS256" );
+            writer.key( "n" );
+            writer.valueString( Base64Util::encodeURL( publicKey._modulus.data(), publicKey._modulus.size() ) );
+            writer.key( "e" );
+            writer.valueString( Base64Util::encodeURL( publicKey._exponent.data(), publicKey._exponent.size() ) );
         }
-        jwk += "\"kty\":\"EC\",\"alg\":\"ES256\",\"crv\":\"P-256\",\"x\":\"" + Base64Util::encodeURL( publicKey._x.data(), publicKey._x.size() ) + "\",\"y\":\"" +
-               Base64Util::encodeURL( publicKey._y.data(), publicKey._y.size() ) + "\"}";
+        else
+        {
+            writer.key( "kty" );
+            writer.valueString( "EC" );
+            writer.key( "alg" );
+            writer.valueString( "ES256" );
+            writer.key( "crv" );
+            writer.valueString( "P-256" );
+            writer.key( "x" );
+            writer.valueString( Base64Util::encodeURL( publicKey._x.data(), publicKey._x.size() ) );
+            writer.key( "y" );
+            writer.valueString( Base64Util::encodeURL( publicKey._y.data(), publicKey._y.size() ) );
+        }
+        writer.endObject();
         return jwk;
     }
 

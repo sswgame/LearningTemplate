@@ -39,26 +39,13 @@ namespace sw::editor
                     inoutListMissing.push_back( bone );
             }
 
-            /** @brief XML 속성 값으로 쓸 글자를 바꿉니다(& < > " '). */
-            static string escapeXMLAttribute( string_view text )
+            /** @brief 프리팹 `_listComponent` 에 컴포넌트 원소 하나(`_componentName` · `_bActive` 까지)를 더합니다. */
+            static XMLNode appendComponent( const XMLNode& listComponent, const utf8* pTypeName )
             {
-                string escaped;
-                for ( const utf8 letter : text )
-                {
-                    if ( letter == '&' )
-                        escaped += "&amp;";
-                    else if ( letter == '<' )
-                        escaped += "&lt;";
-                    else if ( letter == '>' )
-                        escaped += "&gt;";
-                    else if ( letter == '"' )
-                        escaped += "&quot;";
-                    else if ( letter == '\'' )
-                        escaped += "&apos;";
-                    else
-                        escaped += letter;
-                }
-                return escaped;
+                const XMLNode component = listComponent.appendChild( pTypeName );
+                component.appendAttribute( "_componentName", pTypeName );
+                component.appendAttribute( "_bActive", "true" );
+                return component;
             }
 
             static string joinNames( const vector<string>& listName )
@@ -239,33 +226,40 @@ namespace sw::editor
         { return ResourcePaths::toResourceID( FileUtil::joinPath( FileUtil::joinPath( sideFolder, kMaterialFolder ), section._fileStem + ".material" ) ); };
         const string meshID       = ResourcePaths::toResourceID( meshPath );
         const string skeletonPath = resourceOf( Skeleton::kExtension );
-        const string name         = Internal::escapeXMLAttribute( stem );
+
+        // 문서 트리로 만들어 엔진 XML 서식으로 저장한다(이스케이프는 문서가 한다) — 저장소의 엔진 형식 파일은 바이트 그대로 왕복해야 한다(XmlAssetMerge).
+        XMLDocument   prefabDocument;
+        const XMLNode prefab = prefabDocument.appendRoot( "Prefab" );
+        prefab.appendAttribute( "formatVersion", "0" );
+        prefab.appendAttribute( "name", stem );
+        const XMLNode gameObject = prefab.appendChild( "GameObject" );
+        gameObject.appendAttribute( "_schemaVersion", "0" );
+        gameObject.appendAttribute( "_name", stem );
+        gameObject.appendAttribute( "_bActive", "true" );
+        const XMLNode listComponent = gameObject.appendChild( "_listComponent" );
 
         // 주 컴포넌트(스켈레탈 메시)가 첫 구간을 그리고, 나머지 구간은 같은 메시 객체를 빌려 그린다(MeshSectionComponent). 구간 컴포넌트는 주 컴포넌트에 붙어 따라 움직인다.
-        string xml = "<Prefab formatVersion=\"0\" name=\"" + name + "\">\n";
-        xml += "\t<GameObject _schemaVersion=\"0\" _name=\"" + name + "\" _bActive=\"true\">\n\t\t<_listComponent>\n";
-        const ModelImportSection& first = result._listSection.front();
-        xml += "\t\t\t<SkeletalMeshComponent _componentName=\"SkeletalMeshComponent\" _bActive=\"true\" _meshID=\"" + Internal::escapeXMLAttribute( meshID ) +
-               "\" _materialPath=\"" + Internal::escapeXMLAttribute( materialOf( first ) ) + "\" _sectionName=\"" + Internal::escapeXMLAttribute( first._sectionName ) +
-               "\" _skeletonPath=\"" + Internal::escapeXMLAttribute( skeletonPath ) + "\" />\n";
+        const ModelImportSection& first        = result._listSection.front();
+        const XMLNode             skeletalMesh = Internal::appendComponent( listComponent, "SkeletalMeshComponent" );
+        skeletalMesh.appendAttribute( "_meshID", string_view{ meshID } );
+        skeletalMesh.appendAttribute( "_materialPath", string_view{ materialOf( first ) } );
+        skeletalMesh.appendAttribute( "_sectionName", string_view{ first._sectionName } );
+        skeletalMesh.appendAttribute( "_skeletonPath", string_view{ skeletonPath } );
         for ( size_t index = 1; index < result._listSection.size(); ++index )
         {
-            const ModelImportSection& section = result._listSection[index];
-            xml += "\t\t\t<MeshSectionComponent _componentName=\"MeshSectionComponent\" _bActive=\"true\" _attachComponent=\"SkeletalMeshComponent#0\" _materialPath=\"" +
-                   Internal::escapeXMLAttribute( materialOf( section ) ) + "\" _sectionName=\"" + Internal::escapeXMLAttribute( section._sectionName ) + "\" />\n";
+            const ModelImportSection& section     = result._listSection[index];
+            const XMLNode             meshSection = Internal::appendComponent( listComponent, "MeshSectionComponent" );
+            meshSection.appendAttribute( "_attachComponent", "SkeletalMeshComponent#0" );
+            meshSection.appendAttribute( "_materialPath", string_view{ materialOf( section ) } );
+            meshSection.appendAttribute( "_sectionName", string_view{ section._sectionName } );
         }
         if ( VrmRuntimeAssets::hasFacialRig( result._avatar ) )
-            xml += "\t\t\t<FacialAnimationComponent _componentName=\"FacialAnimationComponent\" _bActive=\"true\" _facialRigPath=\"" +
-                   Internal::escapeXMLAttribute( resourceOf( FacialRig::kExtension ) ) + "\" />\n";
+            Internal::appendComponent( listComponent, "FacialAnimationComponent" ).appendAttribute( "_facialRigPath", string_view{ resourceOf( FacialRig::kExtension ) } );
         if ( VrmRuntimeAssets::hasSpringRig( result._avatar, result._skeleton ) )
-            xml += "\t\t\t<PoseModifierComponent _componentName=\"PoseModifierComponent\" _bActive=\"true\" _rigPath=\"" +
-                   Internal::escapeXMLAttribute( resourceOf( RigAsset::kExtension ) ) + "\" />\n";
-        xml += "\t\t</_listComponent>\n\t</GameObject>\n</Prefab>\n";
+            Internal::appendComponent( listComponent, "PoseModifierComponent" ).appendAttribute( "_rigPath", string_view{ resourceOf( RigAsset::kExtension ) } );
 
         const string prefabPath = FileUtil::joinPath( sideFolder, string( stem ) + ".prefab.xml" );
-        // 엔진 XML 서식으로 쓴다(문서를 거쳐 저장) — 저장소의 엔진 형식 파일은 바이트 그대로 왕복해야 한다(XmlAssetMerge).
-        XMLDocument prefabDocument;
-        const bool  bWritten = prefabDocument.parse( xml, prefabPath ) && prefabDocument.saveFile( prefabPath ) && writeImportedMeta( prefabPath );
+        const bool   bWritten   = prefabDocument.saveFile( prefabPath ) && writeImportedMeta( prefabPath );
         if ( bWritten == false )
         {
             SW_LOG_ERROR( "Failed to write character prefab %#", prefabPath.c_str() );
