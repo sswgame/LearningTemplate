@@ -55,7 +55,7 @@ SW_TEST_CASE( PlayerStatsTest, ValuesChangeByKindAndNotifyOnlyRealChanges )
     PlayerStats stats;
     stats.initialize( &catalog );
     vector<StatChange> listChange;
-    const uint32       handle = stats.registerChangeListener( SW_DELEGATE_LAMBDA( PlayerStats::ChangeDelegate, [&listChange]( const StatChange& change )
+    Subscription       subscription = stats.registerChangeListener( SW_DELEGATE_LAMBDA( PlayerStats::ChangeDelegate, [&listChange]( const StatChange& change )
           { listChange.push_back( change ); } ) );
 
     SW_EXPECT_TRUE( stats.increment( "enemies_killed" ) );
@@ -93,7 +93,7 @@ SW_TEST_CASE( PlayerStatsTest, ValuesChangeByKindAndNotifyOnlyRealChanges )
     SW_EXPECT_NEAR_EQUAL( 5.0, listChange[1]._newValue, 1.0e-9 );
     SW_EXPECT_TRUE( listChange[4]._kind == StatKind::Max );
 
-    stats.unregisterChangeListener( handle );
+    subscription.reset();
     SW_EXPECT_TRUE( stats.increment( "enemies_killed" ) );
     SW_EXPECT_EQUAL( size_t( 9 ), listChange.size() );
 }
@@ -118,8 +118,8 @@ SW_TEST_CASE( PlayerStatsTest, ProfileFileRoundTripsAndDropsRemovedStats )
 
     PlayerStats loaded;
     loaded.initialize( &catalog );
-    int32 changeCount = 0;
-    (void)loaded.registerChangeListener( SW_DELEGATE_LAMBDA( PlayerStats::ChangeDelegate, [&changeCount]( const StatChange& )
+    int32              changeCount  = 0;
+    const Subscription subscription = loaded.registerChangeListener( SW_DELEGATE_LAMBDA( PlayerStats::ChangeDelegate, [&changeCount]( const StatChange& )
     { ++changeCount; } ) );
     SW_ASSERT_TRUE( loaded.loadFromFile( path ) );
     SW_EXPECT_EQUAL( 0, changeCount );

@@ -664,7 +664,8 @@ SW_TEST_CASE( ArchitectureTest, ReleaseModuleCodeSweepsEveryRegistryTheEditorUse
     // 이벤트 버스
     using ResizeDelegate          = sw::Delegate<void( const sw::WindowResizeEvent& )>;
     const ResizeDelegate onResize = SW_DELEGATE_FUNCTION( ResizeDelegate, sw::onSweepProbeResize );
-    sw::engine::getSubsystem<sw::EventDispatcher>().subscribe<sw::WindowResizeEvent>( onResize );
+    // 구독은 쥐고 있되 떼지 않은 채로 훑기에 맡긴다(모듈이 해제를 빠뜨린 모양). 훑기가 항목을 떼면 구독의 소멸은 찾을 것이 없다.
+    const sw::Subscription resizeSubscription = sw::engine::getSubsystem<sw::EventDispatcher>().subscribe<sw::WindowResizeEvent>( onResize );
     SW_EXPECT_EQUAL( 1u, sw::releaseStubOf( onResize ) );
     sw::WindowResizeEvent resize;
     resize._width  = 1;
@@ -672,8 +673,9 @@ SW_TEST_CASE( ArchitectureTest, ReleaseModuleCodeSweepsEveryRegistryTheEditorUse
     sw::engine::getSubsystem<sw::EventDispatcher>().publish( resize );
 
     // 전역 로그 리스너
-    const sw::LogWrittenDelegate onLog = SW_DELEGATE_FUNCTION( sw::LogWrittenDelegate, sw::onSweepProbeLog );
-    SW_ASSERT_TRUE( sw::Logger::registerGlobalListener( onLog ).isValid() );
+    const sw::LogWrittenDelegate onLog           = SW_DELEGATE_FUNCTION( sw::LogWrittenDelegate, sw::onSweepProbeLog );
+    const sw::Subscription       logSubscription = sw::Logger::registerGlobalListener( onLog ); // 쥐되 떼지 않은 채 훑기에 맡긴다
+    SW_ASSERT_TRUE( logSubscription.isActive() );
     SW_EXPECT_EQUAL( 1u, sw::releaseStubOf( onLog ) );
     SW_EXPECT_EQUAL( 0u, sw::releaseStubOf( onLog ) );
 

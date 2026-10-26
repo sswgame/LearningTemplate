@@ -14,6 +14,7 @@
 #include "Engine/Config/GameTimeScale.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
+#include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Net/GameNetSession.h"
 #include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
 #include "Engine/Object/Component/2D/SpriteAnimatorComponent.h"
@@ -42,7 +43,6 @@
 #include "GameFramework/Base/Foundation/Framework/Flow/ScreenTransitionManager.h"
 #include "GameFramework/Base/Foundation/Framework/GameEvents.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
-#include "GameFramework/Base/Foundation/Framework/Presentation/GameStrings.h"
 #include "GameFramework/Base/Foundation/Framework/Save/ComponentStateStore.h"
 #include "GameFramework/Base/Foundation/Framework/Save/SaveGame.h"
 #include "GameFramework/Base/Gameplay/Appearance/UserAppearancePresetStore.h"
@@ -799,10 +799,10 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBasePublishesSaveAndLoadCompleted )
     const ScopedGameEventDispatcher scopedDispatcher{ dispatcher };
     vector<SaveGameSavedEvent>      listSaved;
     vector<SaveGameLoadedEvent>     listLoaded;
-    dispatcher.subscribe<SaveGameSavedEvent>( gameEventChannel(), SW_DELEGATE_LAMBDA( Delegate<void( const SaveGameSavedEvent& )>, [&listSaved]( const SaveGameSavedEvent& event )
-    { listSaved.push_back( event ); } ) );
-    dispatcher.subscribe<SaveGameLoadedEvent>( gameEventChannel(), SW_DELEGATE_LAMBDA( Delegate<void( const SaveGameLoadedEvent& )>, [&listLoaded]( const SaveGameLoadedEvent& event )
-    { listLoaded.push_back( event ); } ) );
+    const Subscription              savedSubscription  = dispatcher.subscribe<SaveGameSavedEvent>( gameEventChannel(), SW_DELEGATE_LAMBDA( Delegate<void( const SaveGameSavedEvent& )>, [&listSaved]( const SaveGameSavedEvent& event )
+                  { listSaved.push_back( event ); } ) );
+    const Subscription              loadedSubscription = dispatcher.subscribe<SaveGameLoadedEvent>( gameEventChannel(), SW_DELEGATE_LAMBDA( Delegate<void( const SaveGameLoadedEvent& )>, [&listLoaded]( const SaveGameLoadedEvent& event )
+                 { listLoaded.push_back( event ); } ) );
 
     PlainGameInstance gameInstance;
     const string      savePath = test::makeTempPath( "events_state.sav" );
@@ -870,10 +870,10 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBasePublishesSceneLoadEvents )
     vector<string>                  listRequested;
     vector<SceneLoadCompletedEvent> listCompleted;
     string                          activeSceneAtCompletion;
-    dispatcher.subscribe<SceneLoadRequestedEvent>( gameEventChannel(), SW_DELEGATE_LAMBDA( Delegate<void( const SceneLoadRequestedEvent& )>, [&listRequested]( const SceneLoadRequestedEvent& event )
-    { listRequested.push_back( event._levelName ); } ) );
-    dispatcher.subscribe<SceneLoadCompletedEvent>( gameEventChannel(), SW_DELEGATE_LAMBDA( Delegate<void( const SceneLoadCompletedEvent& )>, [&]( const SceneLoadCompletedEvent& event )
-    {
+    const Subscription              requestedSubscription = dispatcher.subscribe<SceneLoadRequestedEvent>( gameEventChannel(), SW_DELEGATE_LAMBDA( Delegate<void( const SceneLoadRequestedEvent& )>, [&listRequested]( const SceneLoadRequestedEvent& event )
+                 { listRequested.push_back( event._levelName ); } ) );
+    const Subscription              completedSubscription = dispatcher.subscribe<SceneLoadCompletedEvent>( gameEventChannel(), SW_DELEGATE_LAMBDA( Delegate<void( const SceneLoadCompletedEvent& )>, [&]( const SceneLoadCompletedEvent& event )
+                 {
         listCompleted.push_back( event );
         const Scene* pActive    = sceneManager.getActiveScene();
         activeSceneAtCompletion = ( pActive != nullptr ) ? pActive->getName() : string{};
@@ -1343,9 +1343,9 @@ SW_TEST_CASE( GameFrameworkTest, RecreatedGameInstanceKeepsTheLiveScene )
     const ScopedSceneGameService    scopedScene{ sceneManager };
     EventDispatcher                 dispatcher;
     const ScopedGameEventDispatcher scopedDispatcher{ dispatcher };
-    int32                           requestedCount = 0;
-    dispatcher.subscribe<SceneLoadRequestedEvent>( gameEventChannel(), SW_DELEGATE_LAMBDA( Delegate<void( const SceneLoadRequestedEvent& )>, [&requestedCount]( const SceneLoadRequestedEvent& )
-    { ++requestedCount; } ) );
+    int32                           requestedCount        = 0;
+    const Subscription              requestedSubscription = dispatcher.subscribe<SceneLoadRequestedEvent>( gameEventChannel(), SW_DELEGATE_LAMBDA( Delegate<void( const SceneLoadRequestedEvent& )>, [&requestedCount]( const SceneLoadRequestedEvent& )
+                 { ++requestedCount; } ) );
 
     BLOCK( "다시 선 인스턴스 — 활성 씬이 있으면 요청하지 않는다" )
     {
@@ -3011,7 +3011,7 @@ SW_TEST_CASE( GameFrameworkTest, BootstrapGameSettingsIsBoundAndApplied )
         }
         ~ScopedRunState()
         {
-            GameStrings::clear();
+            engine::getSubsystem<LocalizationManager>().unmountProjects( LocalizationScope::Game );
             game::unbindGameService();
             _input.shutdown();
             Component::setDefaultGameSettingsPath( _oldGameSettingsPath );
@@ -3070,8 +3070,9 @@ SW_TEST_CASE( GameFrameworkTest, BootstrapGameSettingsIsBoundAndApplied )
     SW_EXPECT_TRUE( runState._input.getInputMap().hasAction( "Confirm" ) );
 
     // 3) 다국어 — 철자가 달라도 기본 · 폴백 언어를 찾는다
-    SW_EXPECT_EQUAL( string( "ko_kr" ), GameStrings::getLanguage() );
-    SW_EXPECT_STREQ( "English", GameStrings::get( "UI_ONLY_EN" ) );
+    const LocalizationManager& localization = engine::getSubsystem<LocalizationManager>();
+    SW_EXPECT_EQUAL( string( "ko_kr" ), localization.getCurrentLanguage() );
+    SW_EXPECT_STREQ( "English", localization.getString( hashed_string( "UI_ONLY_EN" ) ) );
 
     // 4) 씬 흐름 — 처음은 타이틀, 타이틀 다음은(입구 씬이 없어) 시작 맵.
     SW_EXPECT_STREQ( "game/test/maps/title.scene.xml", instance.getFirstScene().c_str() );

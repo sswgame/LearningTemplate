@@ -12,7 +12,6 @@ namespace sw
         , _mutex{}
         , _listLine{}
         , _partialLine{}
-        , _stopRequested{ 0 }
         , _endOfInput{ 0 }
     {
     }
@@ -26,16 +25,16 @@ namespace sw
     {
         if ( _thread.joinable() )
             return;
-        _stopRequested.store( 0 );
-        _thread = sw::thread( [this]()
-        { readLoop(); } );
+        _thread = sw::thread( &StandardInputReader::readLoop, this );
     }
 
     void StandardInputReader::stop()
     {
-        _stopRequested.store( 1 );
         if ( _thread.joinable() )
+        {
+            _thread.request_stop();
             _thread.join();
+        }
         // 버퍼도 놓는다 — 엔진 종료의 누수 보고(기동 뒤 기준선)보다 먼저 멈추는 쪽이 읽고 남긴 용량을 늘어난 메모리로 찍지 않게.
         vector<string>{}.swap( _listLine );
         string{}.swap( _partialLine );
@@ -51,13 +50,13 @@ namespace sw
         _listLine.clear();
     }
 
-    void StandardInputReader::readLoop()
+    void StandardInputReader::readLoop( ThreadStopToken stopToken )
     {
         ThreadName::setCurrentThreadName( "StandardInput" );
         string line;
-        while ( _stopRequested.load() == 0 )
+        while ( stopToken.stop_requested() == false )
         {
-            if ( readLinePlatform( line ) == false )
+            if ( readLinePlatform( stopToken, line ) == false )
             {
                 if ( _endOfInput.load() != 0 )
                     return; // 입력이 닫혔다 — 프로세스는 계속 돈다(신호 · 서비스 정지 · 다른 길로 끝낸다)

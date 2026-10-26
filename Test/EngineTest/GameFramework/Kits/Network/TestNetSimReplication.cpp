@@ -35,7 +35,7 @@ namespace
             , _pTable{ pTable }
         {
             SW_EXPECT_TRUE( _server.initialize( &world.getPeers(), pTable->_settings, pTable->_pPolicy ) );
-            world.getRouter().registerHandler( &_server );
+            _routerSubscription = world.getRouter().registerHandler( &_server );
         }
 
         void onTickEnd( NetSimWorld& world, float32 deltaTime ) override
@@ -61,6 +61,7 @@ namespace
     private:
         ReplicationServer _server;
         ReplicationTable* _pTable;
+        sw::Subscription  _routerSubscription;
     };
 
     /** @brief 클라이언트 — 가장 새 스냅숏과, 엔티티마다 그 상태가 서버 틱 몇에 만들어졌는지(틱 스탬프)의 가장 큰 뒤처짐을 든다. */
@@ -76,7 +77,7 @@ namespace
             ReplicationClientConfig settings;
             settings._tickInterval = kReplicationTickSeconds;
             SW_EXPECT_TRUE( _client.initialize( &world.getPeers(), settings ) );
-            world.getRouter().registerHandler( &_client );
+            _routerSubscription = world.getRouter().registerHandler( &_client );
         }
 
         void onTickBegin( NetSimWorld& world, float32 deltaTime ) override
@@ -119,6 +120,7 @@ namespace
         vector<uint32>    _listMaxStaleness; ///< 엔티티 id 자리
         uint32            _measureFromTick;
         uint32            _lastSeenTick;
+        sw::Subscription  _routerSubscription;
     };
 
     class TableGame final : public INetSimGame

@@ -231,7 +231,7 @@ namespace sw
             const UserSettingValueResult result = UserSettingsSchema::normalizeValue( _schema.getSettings()[settingIndex], entry._value, normalized );
             if ( result == UserSettingValueResult::Rejected )
             {
-                SW_LOG_WARNING( "User settings '%#': '%#' has an invalid value '%#' - using the default", sourceName, entry._key, entry._value );
+                SW_LOG_WARNING_ID( "UserSettings.ValueInvalid", "User settings '%#': '%#' has an invalid value '%#' - using the default", sourceName, entry._key, entry._value );
                 continue;
             }
             if ( result == UserSettingValueResult::Clamped )
@@ -250,8 +250,8 @@ namespace sw
 
     string UserSettingsManager::makeUserJSON() const
     {
-        const vector<UserSettingDef>& listSetting = _schema.getSettings();
-        vector<UserSettingsFileEntry> listEntry;
+        const vector<UserSettingDef>&  listSetting = _schema.getSettings();
+        vector<UserSettingsWriteEntry> listEntry;
         for ( size_t settingIndex = 0; settingIndex < _listState.size(); ++settingIndex )
         {
             const SettingState& state = _listState[settingIndex];
@@ -259,7 +259,7 @@ namespace sw
             const string& value = state._bRollback ? state._rollbackValue : state._committedValue;
             if ( value == state._defaultValue )
                 continue;
-            listEntry.push_back( UserSettingsFileEntry{ string( listSetting[settingIndex]._id.c_str() ), value } );
+            listEntry.push_back( UserSettingsWriteEntry{ listSetting[settingIndex], value } );
         }
         return UserSettingsFile::makeJSON( _schema, listEntry );
     }
@@ -374,22 +374,28 @@ namespace sw
         return settingIndex != invalid_index::kUint32 ? string_view( _listState[settingIndex]._defaultValue ) : string_view{};
     }
 
-    bool UserSettingsManager::getBoolValue( const hashed_string& settingID ) const
+    bool UserSettingsManager::getBoolValue( const UserSettingKey<bool>& key ) const
     {
-        bool bValue{ false };
-        return StringUtil::tryParseBool( getValue( settingID ), bValue ) && bValue; // 값은 normalizeValue 가 true · false 로 맞춰 둔다. 없는 설정은 getIntValue 처럼 false
+        bool                        bValue{ false };
+        [[maybe_unused]] const bool bParsed = StringUtil::tryParseBool( getKeyValue( key._settingID, key._settingIndex ), bValue );
+        SW_ASSERT( bParsed ); // 값은 `normalizeValue` 를 거쳐 들어왔다 — 실패는 정규화의 결함이다
+        return bValue;
     }
 
-    int32 UserSettingsManager::getIntValue( const hashed_string& settingID ) const
+    int32 UserSettingsManager::getIntValue( const UserSettingKey<int32>& key ) const
     {
-        int32 value{ 0 };
-        return StringUtil::parseInt( getValue( settingID ), value ) ? value : 0;
+        int32                       value{ 0 };
+        [[maybe_unused]] const bool bParsed = StringUtil::parseInt( getKeyValue( key._settingID, key._settingIndex ), value );
+        SW_ASSERT( bParsed ); // 값은 `normalizeValue` 가 범위 안의 정수로 맞춰 넣었다
+        return value;
     }
 
-    float32 UserSettingsManager::getFloatValue( const hashed_string& settingID ) const
+    float32 UserSettingsManager::getFloatValue( const UserSettingKey<float32>& key ) const
     {
-        float32 value{ 0.0f };
-        return StringUtil::parseFloat( getValue( settingID ), value ) ? value : 0.0f;
+        float32                     value{ 0.0f };
+        [[maybe_unused]] const bool bParsed = StringUtil::parseFloat( getKeyValue( key._settingID, key._settingIndex ), value );
+        SW_ASSERT( bParsed ); // 값은 `normalizeValue` 가 수로 맞춰 넣었다
+        return value;
     }
 
     void UserSettingsManager::collectOptions( const hashed_string& settingID, vector<UserSettingOption>& outListOption ) const
@@ -763,14 +769,9 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 7) 통보와 모듈
     // ------------------------------------------------------------------------------
-    DelegateHandle UserSettingsManager::registerEventListener( const UserSettingEventListener& listener )
+    Subscription UserSettingsManager::registerEventListener( const UserSettingEventListener& listener )
     {
         return _onEvent.add( listener );
-    }
-
-    void UserSettingsManager::unregisterEventListener( const DelegateHandle& handle )
-    {
-        _onEvent.remove( handle );
     }
 
     uint32 UserSettingsManager::onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped )
@@ -786,6 +787,31 @@ namespace sw
     {
         const uint32 settingIndex = _schema.findSettingIndex( settingID );
         return settingIndex < static_cast<uint32>( _listState.size() ) ? settingIndex : invalid_index::kUint32;
+    }
+
+    uint32 UserSettingsManager::resolveKeyIndex( const hashed_string& settingID, UserSettingType expectedType ) const
+    {
+        const uint32 settingIndex = findIndex( settingID );
+        if ( settingIndex == invalid_index::kUint32 )
+        {
+            SW_LOG_ERROR_ID( "UserSettings.KeyUnresolved", "User setting '%#' is not in the schema", settingID.c_str() );
+            return invalid_index::kUint32;
+        }
+        const UserSettingType actualType = _schema.getSettings()[settingIndex]._type;
+        if ( actualType != expectedType )
+        {
+            SW_LOG_ERROR_ID( "UserSettings.KeyUnresolved", "User setting '%#' is '%#', not '%#'", settingID.c_str(), UserSettingsSchema::getTypeTraits( actualType )._pName,
+                             UserSettingsSchema::getTypeTraits( expectedType )._pName );
+            return invalid_index::kUint32;
+        }
+        return settingIndex;
+    }
+
+    const string& UserSettingsManager::getKeyValue( const hashed_string& settingID, uint32 settingIndex ) const
+    {
+        // 핸들은 이 관리자의 스키마에서 풀렸다. 스키마를 비우고(`shutdown`) 다시 읽었는데 옛 핸들을 쓰면 다른 설정을 읽게 된다.
+        SW_ASSERT( settingIndex < static_cast<uint32>( _listState.size() ) && _schema.getSettings()[settingIndex]._id == settingID );
+        return getEffectiveValue( settingIndex );
     }
 
     const string& UserSettingsManager::getEffectiveValue( uint32 settingIndex ) const

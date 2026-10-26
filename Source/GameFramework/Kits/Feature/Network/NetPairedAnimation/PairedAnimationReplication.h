@@ -94,7 +94,7 @@ namespace sw
      * @brief 서버 쪽 — 재생 중인 세션을 처음 본 갱신에 상태를, 끝난 세션에 끝을 보내고, 들어온 연결에는 재생 중인 세션의 지금 상태를 보냅니다.
      * @code
      *     server.initialize( &host, &manager );
-     *     router.registerHandler( &server ); // 연결 사건(늦은 참가)
+     *     _subscription = router.registerHandler( &server ); // 연결 사건(늦은 참가). 구독이 사라지면 뗀다
      *     server.update();                   // 세션 갱신(프레임 시스템 단계) 뒤 — 같은 프레임에 보낸다
      * @endcode
      */
@@ -150,7 +150,7 @@ namespace sw
      * @brief 클라이언트 쪽 — 받은 상태로 세션을 복원하고, 끝 메시지에 중단합니다. 메시지는 게임 프레임 앞(`GameNetSession::update`, 게임 스레드 · 틱 밖)에서 받습니다.
      * @code
      *     client.initialize( &manager );
-     *     router.registerHandler( &client );
+     *     _subscription = router.registerHandler( &client );
      * @endcode
      */
     class SW_KIT_API PairedAnimationReplicationClient : public INetMessageHandler

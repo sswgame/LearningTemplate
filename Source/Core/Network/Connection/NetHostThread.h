@@ -66,13 +66,13 @@ namespace sw
         static float64 getTime();
 
     private:
-        void run();
+        /** @brief 스레드 본문입니다. @p stopToken 이 정지를 받을 때까지 호스트를 갱신합니다. */
+        void run( ThreadStopToken stopToken );
 
         sw::thread          _thread;
         NetHost*            _pHost;
         NetHostThreadConfig _settings;
         atomic<uint64>      _updateCount;
-        atomic<bool>        _bStopRequested;
         atomic<bool>        _bRunning;
     };
 } // namespace sw

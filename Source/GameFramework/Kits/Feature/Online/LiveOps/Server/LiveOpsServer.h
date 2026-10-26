@@ -55,6 +55,7 @@ namespace sw
         vector<LiveEventStart>       _listStartScratch;
         LiveOpsService*              _pService;
         PushNotificationDispatcher*  _pDispatcher;
-        OnlineServiceHost*           _pHost; ///< 버스를 구독한 호스트이다. 구독을 해제할 때 쓴다
+        OnlineServiceHost*           _pHost;           ///< 붙은 호스트이다(첫 서비스 틱에 붙는다). 붙었는지만 본다
+        Subscription                 _busSubscription; ///< 버스 주제의 구독. 서버가 한 대면 비어 있다
     };
 } // namespace sw

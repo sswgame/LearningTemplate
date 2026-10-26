@@ -16,17 +16,16 @@ namespace
     {
         vector<EphemeralReply>   _listReply{};
         vector<EphemeralMessage> _listMessage{};
-        EphemeralStoreRouter*    _pRouter{ nullptr };
-        uint64                   _subscriptionToDrop{ 0 };
+        Subscription*            _pSubscriptionToDrop{ nullptr };
 
         void onReply( const EphemeralReply& reply ) { _listReply.push_back( reply ); }
         void onMessage( const EphemeralMessage& message )
         {
             _listMessage.push_back( message );
-            if ( _pRouter != nullptr && _subscriptionToDrop != 0 )
+            if ( _pSubscriptionToDrop != nullptr )
             {
-                _pRouter->unsubscribe( _subscriptionToDrop );
-                _subscriptionToDrop = 0;
+                _pSubscriptionToDrop->reset();
+                _pSubscriptionToDrop = nullptr;
             }
         }
     };
@@ -63,12 +62,11 @@ SW_TEST_CASE( EphemeralStoreRouterTest, TwoSubscribersShareOneChannelAndCanLeave
     EphemeralStoreRouter    router;
     router.initialize( &store );
 
-    RouterRecorder first;
-    RouterRecorder second;
-    const uint64   firstID = router.subscribe( "chan:a", EphemeralStoreRouter::MessageDelegate::create<&RouterRecorder::onMessage>( &first ) );
-    (void)router.subscribe( "chan:a", EphemeralStoreRouter::MessageDelegate::create<&RouterRecorder::onMessage>( &second ) );
-    second._pRouter            = &router;
-    second._subscriptionToDrop = firstID; // 두 번째가 받는 동안 첫 번째를 뺀다 — 이번 메시지는 둘 다 받는다(복사본)
+    RouterRecorder     first;
+    RouterRecorder     second;
+    Subscription       firstSubscription  = router.subscribe( "chan:a", EphemeralStoreRouter::MessageDelegate::create<&RouterRecorder::onMessage>( &first ) );
+    const Subscription secondSubscription = router.subscribe( "chan:a", EphemeralStoreRouter::MessageDelegate::create<&RouterRecorder::onMessage>( &second ) );
+    second._pSubscriptionToDrop           = &firstSubscription; // 두 번째가 받는 동안 첫 번째를 뺀다 — 이번 메시지는 둘 다 받는다(복사본)
 
     (void)publisher.submit( EphemeralRequest::makePublish( "chan:a", vector<uint8>{ 7 } ) );
     (void)router.pump();

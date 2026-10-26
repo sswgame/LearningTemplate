@@ -12,6 +12,7 @@
 #include "Engine/Environment/Terrain/TerrainComponent.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
+#include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Net/GameNetSession.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
@@ -29,7 +30,6 @@
 #include "GameFramework/Base/Foundation/Framework/GameEventUtil.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Foundation/Framework/Presentation/GameSound.h"
-#include "GameFramework/Base/Foundation/Framework/Presentation/GameStrings.h"
 #include "GameFramework/Base/Foundation/Framework/Save/ComponentStateStore.h"
 #include "GameFramework/Base/Online/Security/NetSecurity.h"
 
@@ -229,8 +229,19 @@ namespace sw
         const GameSettings& settings = _bootstrap._data;
 
         // 게임의 로컬라이제이션 프로젝트를 올린다. 엔진 프로젝트는 엔진이 기동 때 올렸다.
-        if ( settings._localizationProject.isSet() && GameStrings::initialize( settings._localizationProject.get(), settings._defaultLanguage, settings._fallbackLanguage ) == false )
-            SW_LOG_WARNING( "GameSettings localization project '%#' could not be loaded - strings show their keys", settings._localizationProject.c_str() );
+        if ( settings._localizationProject.isSet() )
+        {
+            LocalizationManager* pLocalization = game::findSubsystem<LocalizationManager>();
+            if ( pLocalization == nullptr )
+            {
+                SW_LOG_ERROR( "GameSettings localization project '%#' needs the engine service LocalizationManager, which is not bound to the game services",
+                              settings._localizationProject.c_str() );
+            }
+            else if ( pLocalization->initialize( settings._localizationProject.get(), settings._defaultLanguage, settings._fallbackLanguage ) == false )
+            {
+                SW_LOG_WARNING( "GameSettings localization project '%#' could not be loaded - strings show their keys", settings._localizationProject.c_str() );
+            }
+        }
 
         // 게임플레이 입력 맵은 `InputManager::beginFrame` 이 프레임마다 갱신하는 통합 맵이며, `PlayerController` 가 읽는다.
         if ( settings._inputMap.isSet() == false )

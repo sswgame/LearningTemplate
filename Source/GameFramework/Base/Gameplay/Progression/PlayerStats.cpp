@@ -121,8 +121,7 @@ namespace sw
     PlayerStats::PlayerStats()
         : _pCatalog{ nullptr }
         , _mapValue{}
-        , _listListener{}
-        , _nextListenerHandle{ 1 }
+        , _changedMulticast{}
     {
     }
 
@@ -179,25 +178,9 @@ namespace sw
         _mapValue.clear();
     }
 
-    uint32 PlayerStats::registerChangeListener( const ChangeDelegate& listener )
+    Subscription PlayerStats::registerChangeListener( const ChangeDelegate& listener )
     {
-        Listener entry{};
-        entry._delegate = listener;
-        entry._handle   = _nextListenerHandle++;
-        _listListener.push_back( entry );
-        return entry._handle;
-    }
-
-    void PlayerStats::unregisterChangeListener( uint32 handle )
-    {
-        for ( size_t index = 0; index < _listListener.size(); ++index )
-        {
-            if ( _listListener[index]._handle == handle )
-            {
-                _listListener.erase( _listListener.begin() + static_cast<ptrdiff_t>( index ) );
-                return;
-            }
-        }
+        return _changedMulticast.add( listener );
     }
 
     const StatDef* PlayerStats::findDefForUse( const hashed_string& id, StatKind expectedKind, StatKind alternateKind ) const
@@ -230,13 +213,8 @@ namespace sw
         change._oldValue = oldValue;
         change._newValue = newValue;
         change._kind     = def._kind;
-        // 듣는 쪽이 순회 중에 등록하거나 해제할 수 있으므로 사본을 순회한다.
-        const vector<Listener> listListener = _listListener;
-        for ( const Listener& listener : listListener )
-        {
-            if ( listener._delegate.isBound() )
-                listener._delegate( change );
-        }
+        // 듣는 쪽이 순회 중에 등록하거나 해제해도 된다(멀티캐스트가 해제를 방송 뒤로 미룬다).
+        _changedMulticast.broadcast( change );
         return true;
     }
 

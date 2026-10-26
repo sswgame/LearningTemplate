@@ -168,6 +168,7 @@ namespace sw
 {
     AsyncLogSink::AsyncLogSink()
         : _onLogWritten{}
+        , _listListenerSubscription{}
         , _listOutput{}
         , _pFileOutput{ nullptr }
         , _queue{}
@@ -252,6 +253,8 @@ namespace sw
         {
             std::scoped_lock<mutex> lock{ _mutex };
             _onLogWritten.removeAll();
+            _listListenerSubscription.clear(); // removeAll 이 이미 무효로 만들었다 — 푸는 일 없이 비운다
+            detachAllSubscriptions();          // 바깥 구독도 무효로 — 뒤늦은 해제가 비운 목록을 찾지 않는다
             rebuildListenerSnapshot();
         }
         _bInitialized = false;
@@ -268,23 +271,28 @@ namespace sw
     /**
      * @brief 로그가 쓰일 때 알림을 받을 리스너를 등록합니다(예: ImGui 에디터 콘솔 창).
      */
-    DelegateHandle AsyncLogSink::registerLogWrittenListener( const LogWrittenDelegate& listener )
+    Subscription AsyncLogSink::registerLogWrittenListener( const LogWrittenDelegate& listener )
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        const DelegateHandle    handle = _onLogWritten.add( listener );
+        const DelegateHandle    handle = DelegateHandle::allocate();
+        _listListenerSubscription.emplace_back( handle, _onLogWritten.add( listener ) );
         rebuildListenerSnapshot();
-        return handle;
+        return issueSubscription( handle._id );
     }
 
     /**
-     * @brief 등록된 로그 리스너를 해제합니다.
+     * @brief 리스너의 구독이 풀렸습니다. 항목을 떼고, 떼기 **전에** 시작한 방송이 끝나기를 기다립니다.
      */
-    void AsyncLogSink::unregisterLogWrittenListener( const DelegateHandle& handle )
+    void AsyncLogSink::releaseSubscription( uint64 id )
     {
-        uint32 retiredSlot{ 0 };
+        const DelegateHandle handle{ id };
+        uint32               retiredSlot{ 0 };
         {
             std::scoped_lock<mutex> lock{ _mutex };
-            _onLogWritten.remove( handle );
+            // 안쪽 구독(멀티캐스트 항목)을 지우면 그 소멸자가 항목을 뺀다(_mutex 안이라 다른 등록 · 해제와 겹치지 않는다).
+            const std::optional<size_t> index = VectorUtil::findIndexBy<&pair<DelegateHandle, Subscription>::first>( _listListenerSubscription, handle );
+            if ( index.has_value() )
+                VectorUtil::removeAtSwap( _listListenerSubscription, *index );
             rebuildListenerSnapshot();
             retiredSlot = retireBroadcastSlot();
         }

@@ -11,33 +11,25 @@ namespace sw
     UserSettingsHandlerRegistry::UserSettingsHandlerRegistry()
         : _listHandler{}
         , _listProvider{}
+        , _nextSubscriptionID{ 1 }
     {
     }
 
-    void UserSettingsHandlerRegistry::registerHandler( const hashed_string& name, const UserSettingHandlerDelegate& handler, const UserSettingValueFilterDelegate& filter )
+    Subscription UserSettingsHandlerRegistry::registerHandler( const hashed_string& name, const UserSettingHandlerDelegate& handler, const UserSettingValueFilterDelegate& filter )
     {
+        const uint64 subscriptionID = _nextSubscriptionID++;
         for ( HandlerEntry& entry : _listHandler )
         {
             if ( entry._name == name )
             {
-                entry._handler = handler;
-                entry._filter  = filter;
-                return;
+                entry._handler        = handler;
+                entry._filter         = filter;
+                entry._subscriptionID = subscriptionID;
+                return issueSubscription( subscriptionID );
             }
         }
-        _listHandler.push_back( HandlerEntry{ name, handler, filter } );
-    }
-
-    void UserSettingsHandlerRegistry::unregisterHandler( const hashed_string& name )
-    {
-        for ( size_t entryIndex = 0; entryIndex < _listHandler.size(); ++entryIndex )
-        {
-            if ( _listHandler[entryIndex]._name == name )
-            {
-                _listHandler.erase( _listHandler.begin() + static_cast<ptrdiff_t>( entryIndex ) );
-                return;
-            }
-        }
+        _listHandler.push_back( HandlerEntry{ name, handler, filter, subscriptionID } );
+        return issueSubscription( subscriptionID );
     }
 
     bool UserSettingsHandlerRegistry::hasHandler( const hashed_string& name ) const
@@ -63,17 +55,33 @@ namespace sw
         return pEntry->_filter( value );
     }
 
-    void UserSettingsHandlerRegistry::registerOptionProvider( const hashed_string& name, const UserSettingOptionProviderDelegate& provider )
+    Subscription UserSettingsHandlerRegistry::registerOptionProvider( const hashed_string& name, const UserSettingOptionProviderDelegate& provider )
     {
+        const uint64 subscriptionID = _nextSubscriptionID++;
         for ( ProviderEntry& entry : _listProvider )
         {
             if ( entry._name == name )
             {
-                entry._provider = provider;
-                return;
+                entry._provider       = provider;
+                entry._subscriptionID = subscriptionID;
+                return issueSubscription( subscriptionID );
             }
         }
-        _listProvider.push_back( ProviderEntry{ name, provider } );
+        _listProvider.push_back( ProviderEntry{ name, provider, subscriptionID } );
+        return issueSubscription( subscriptionID );
+    }
+
+    void UserSettingsHandlerRegistry::releaseSubscription( uint64 id )
+    {
+        const std::optional<size_t> handlerIndex = VectorUtil::findIndexBy<&HandlerEntry::_subscriptionID>( _listHandler, id );
+        if ( handlerIndex.has_value() )
+        {
+            _listHandler.erase( _listHandler.begin() + static_cast<ptrdiff_t>( *handlerIndex ) );
+            return;
+        }
+        const std::optional<size_t> providerIndex = VectorUtil::findIndexBy<&ProviderEntry::_subscriptionID>( _listProvider, id );
+        if ( providerIndex.has_value() )
+            _listProvider.erase( _listProvider.begin() + static_cast<ptrdiff_t>( *providerIndex ) );
     }
 
     bool UserSettingsHandlerRegistry::hasOptionProvider( const hashed_string& name ) const
@@ -117,6 +125,7 @@ namespace sw
 
     void UserSettingsHandlerRegistry::clear()
     {
+        detachAllSubscriptions();
         _listHandler.clear();
         _listProvider.clear();
     }

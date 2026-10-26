@@ -11,6 +11,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Concurrency/thread.h"
 #include "Core/Container/ConcurrentQueue.h"
+#include "Core/Container/pair.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
@@ -35,7 +36,7 @@ namespace sw
      *          시작하며, `addOutput` 으로 더 붙일 수 있습니다(에디터 패널 · 네트워크 등. 그때도 이 클래스를 고칠 필요는 없습니다).
      *          매크로가 부르는 전역 진입점(`Logger`)는 아래층(Log)에 있고, 이 싱크는 파일 · 크래시 · 모듈을 알아야 해서 위층(LogSink)에 있습니다.
      */
-    class SW_API AsyncLogSink final : public ILogSink
+    class SW_API AsyncLogSink final : public ILogSink, private SubscriptionSource
     {
     public:
         /** @brief 기본 출력 장치(콘솔 · 파일)를 하나씩 달고, 전역 싱크가 비어 있으면 자신을 등록합니다. */
@@ -53,10 +54,8 @@ namespace sw
 
         /** @brief 한 줄을 포맷해 리스너와 출력 장치에 넘깁니다. */
         void writeLogWithID( LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pID ) override;
-        /** @brief 한 줄이 쓰일 때 호출할 리스너를 붙입니다. */
-        DelegateHandle registerLogWrittenListener( const LogWrittenDelegate& listener ) override;
-        /** @brief 핸들로 리스너를 뗍니다. */
-        void unregisterLogWrittenListener( const DelegateHandle& handle ) override;
+        /** @brief 한 줄이 쓰일 때 호출할 리스너를 붙이고 이 싱크가 소유한 구독을 돌려줍니다. 어느 스레드에서나 부를 수 있습니다(`_mutex`). */
+        Subscription registerLogWrittenListener( const LogWrittenDelegate& listener ) override;
         /** @brief 호출 스텁이 [@p pBegin, @p pEnd) 안에 있는 리스너를 모두 뗍니다. */
         uint32 removeListenerCodeWithin( const void* pBegin, const void* pEnd ) override;
 
@@ -106,6 +105,8 @@ namespace sw
          * @details 생산자는 줄마다 목록을 복사하지 않고 이 사본의 참조 하나만 잡습니다(리스너가 바뀔 때만 복사한다).
          */
         void rebuildListenerSnapshot();
+        /** @brief 리스너 구독 @p id 가 풀렸습니다. 항목을 떼고 그 전에 시작한 방송이 끝나기를 기다립니다(`waitForRetiredBroadcasts`). */
+        void releaseSubscription( uint64 id ) override;
 
         /**
          * @brief 달 수 있는 출력 장치의 최대 개수입니다.
@@ -122,14 +123,20 @@ namespace sw
          */
         uint32 snapshotOutputs( ILogOutput* ( &outArrDevice )[_s_kMaxOutput] );
 
-        LogWrittenMulticast              _onLogWritten;
-        vector<unique_ptr<ILogOutput>>   _listOutput;
-        FileLogOutput*                   _pFileOutput; ///< _listOutput 이 소유한다. getLogFolderPath 용 비소유 포인터
-        ConcurrentQueue<LogRecord, 4096> _queue;
-        sw::thread                       _workerThread;
-        std::condition_variable_any      _cv;
-        mutex                            _mutex;   ///< 리스너 목록과 출력 목록을 보호한다
-        mutex                            _cvMutex; ///< 조건 변수 대기용 뮤텍스
+        LogWrittenMulticast _onLogWritten;
+        /**
+         * @brief 등록된 리스너의 구독과, 그 구독을 찾는 핸들입니다. _mutex 로 보호한다.
+         * @details 바깥에 돌려준 구독은 이 싱크가 낸 것(id = 핸들)이다. 그것이 풀리면 핸들로 안쪽 구독(멀티캐스트 항목)을 찾아 지운다 —
+         *          멀티캐스트의 구독을 그대로 내주면 해제가 `_mutex` 와 방송 대기를 지나지 않는다.
+         */
+        vector<pair<DelegateHandle, Subscription>> _listListenerSubscription;
+        vector<unique_ptr<ILogOutput>>             _listOutput;
+        FileLogOutput*                             _pFileOutput; ///< _listOutput 이 소유한다. getLogFolderPath 용 비소유 포인터
+        ConcurrentQueue<LogRecord, 4096>           _queue;
+        sw::thread                                 _workerThread;
+        std::condition_variable_any                _cv;
+        mutex                                      _mutex;   ///< 리스너 목록과 출력 목록을 보호한다
+        mutex                                      _cvMutex; ///< 조건 변수 대기용 뮤텍스
         /** @brief 리스너 목록의 불변 사본입니다. 리스너가 없으면 nullptr 입니다. _mutex 로 보호하고, 생산자는 참조만 잡아 락 밖에서 부른다. */
         shared_ptr<const LogWrittenMulticast> _listenerSnapshot;
         atomic<uint32>                        _arrBroadcastInFlight[2]; ///< 리스너를 부르는 중인 방송 수(세대 두 슬롯). 제거가 이전 세대가 빌 때까지 기다린다

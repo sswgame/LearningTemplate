@@ -101,8 +101,10 @@ namespace sw
                 , _listAvatar{}
                 , _listPendingMove{}
                 , _stateWriter{}
+                , _routerSubscription{}
             {
-                if ( world.getRouter().registerHandler( this ) == false )
+                _routerSubscription = world.getRouter().registerHandler( this );
+                if ( _routerSubscription.isActive() == false )
                     SW_LOG_ERROR( "NetSimSampleGame: the server could not claim its message kinds - no input arrives" );
             }
 
@@ -244,6 +246,7 @@ namespace sw
             vector<Avatar>       _listAvatar;
             vector<PendingMove>  _listPendingMove;
             NetMessageWriter     _stateWriter;
+            Subscription         _routerSubscription; ///< 월드 라우터에 단 이 세션의 등록. 세션이 사라지면 뗀다
         };
 
         /** @brief 클라이언트 월드의 세션입니다 — 이동 입력을 보내고 받은 아바타 목록으로 자기 씬의 아바타를 옮깁니다. */
@@ -258,8 +261,10 @@ namespace sw
                 , _nextInputTick{ 0 }
                 , _lastStateTick{ 0 }
                 , _bHasState{ false }
+                , _routerSubscription{}
             {
-                if ( world.getRouter().registerHandler( this ) == false )
+                _routerSubscription = world.getRouter().registerHandler( this );
+                if ( _routerSubscription.isActive() == false )
                     SW_LOG_ERROR( "NetSimSampleGame: the client could not claim its message kinds - nothing is shown" );
             }
 
@@ -384,6 +389,7 @@ namespace sw
             uint32               _nextInputTick;
             uint32               _lastStateTick;
             bool                 _bHasState;
+            Subscription         _routerSubscription; ///< 월드 라우터에 단 이 세션의 등록. 세션이 사라지면 뗀다
         };
     } // namespace
 } // namespace sw

@@ -62,10 +62,10 @@ SW_TEST_CASE( WindowEventTest, EventsCarryReservedIDsAndReachSubscribers )
     using CloseDelegate    = sw::Delegate<void( const sw::WindowCloseEvent& )>;
     using ActivateDelegate = sw::Delegate<void( const sw::WindowActivateEvent& )>;
 
-    sw::EventDispatcher dispatcher;
-    dispatcher.subscribe<sw::WindowResizeEvent>( SW_DELEGATE_FUNCTION( ResizeDelegate, onResize ) );
-    dispatcher.subscribe<sw::WindowCloseEvent>( SW_DELEGATE_FUNCTION( CloseDelegate, onClose ) );
-    dispatcher.subscribe<sw::WindowActivateEvent>( SW_DELEGATE_FUNCTION( ActivateDelegate, onActivate ) );
+    sw::EventDispatcher    dispatcher;
+    const sw::Subscription resizeSubscription   = dispatcher.subscribe<sw::WindowResizeEvent>( SW_DELEGATE_FUNCTION( ResizeDelegate, onResize ) );
+    const sw::Subscription closeSubscription    = dispatcher.subscribe<sw::WindowCloseEvent>( SW_DELEGATE_FUNCTION( CloseDelegate, onClose ) );
+    const sw::Subscription activateSubscription = dispatcher.subscribe<sw::WindowActivateEvent>( SW_DELEGATE_FUNCTION( ActivateDelegate, onActivate ) );
 
     resizeEvent._width         = 1920;
     resizeEvent._height        = 1080;

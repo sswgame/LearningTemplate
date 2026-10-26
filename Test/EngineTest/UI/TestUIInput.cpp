@@ -464,10 +464,10 @@ SW_TEST_CASE( UIInputTest, MouseClickOnWorldWidgetThroughCameraRay )
         pWidget->setDrawSize( sw::float2{ 100.0f, 50.0f } );
         pWidget->setWorldSize( sw::float2{ 2.0f, 1.0f } );
         pWidget->setAcceptsInput( true );
-        sw::unique_ptr<sw::ButtonWidget> button     = sw::make_unique<sw::ButtonWidget>();
-        sw::ButtonWidget*                pButton    = button.get();
-        int32                            clickCount = 0;
-        (void)pButton->getOnClicked().add( [&clickCount]( sw::WidgetID )
+        sw::unique_ptr<sw::ButtonWidget> button            = sw::make_unique<sw::ButtonWidget>();
+        sw::ButtonWidget*                pButton           = button.get();
+        int32                            clickCount        = 0;
+        const sw::Subscription           clickSubscription = pButton->getOnClicked().add( [&clickCount]( sw::WidgetID )
         { ++clickCount; } );
         pWidget->setContent( std::move( button ) );
         manager.flushSceneTransforms();

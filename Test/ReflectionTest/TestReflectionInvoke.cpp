@@ -163,13 +163,13 @@ SW_TEST_CASE( ReflectionInvokeTest, EventBindsBroadcastsAndUnbindsByName )
     SW_ASSERT_NOT_NULL( pEvent );
 
     sw::vector<sw::ReflectValue> listReceived;
-    uint32                       callCount = 0;
-    const sw::DelegateHandle     handle    = sw::ReflectionInvoke::bindEvent( *pEvent, &actor, sw::ReflectEventHandler::create( [&listReceived, &callCount]( const sw::vector<sw::ReflectValue>& listArg )
+    uint32                       callCount    = 0;
+    sw::Subscription             subscription = sw::ReflectionInvoke::bindEvent( *pEvent, &actor, sw::ReflectEventHandler::create( [&listReceived, &callCount]( const sw::vector<sw::ReflectValue>& listArg )
     {
         listReceived = listArg;
         ++callCount;
     } ) );
-    SW_ASSERT_TRUE( handle.isValid() );
+    SW_ASSERT_TRUE( subscription.isActive() );
     SW_EXPECT_TRUE( sw::ReflectionInvoke::isEventBound( *pEvent, &actor ) );
 
     // 네이티브 broadcast 가 리플렉션 받는 쪽에 이름 붙은 값으로 닿는다
@@ -181,10 +181,10 @@ SW_TEST_CASE( ReflectionInvokeTest, EventBindsBroadcastsAndUnbindsByName )
     SW_EXPECT_EQUAL( sw::string( "potion" ), listReceived[1].toText() );
 
     // 리플렉션 broadcast 는 인자를 이벤트 타입으로 바꿔 네이티브 받는 쪽까지 부른다
-    using HpChangedDelegate = sw::Delegate<void( int32, const sw::string& )>;
-    int32      nativeHp     = 0;
-    sw::string nativeReason;
-    actor._onHpChanged.add( SW_DELEGATE_LAMBDA( HpChangedDelegate, [&nativeHp, &nativeReason]( int32 hp, const sw::string& reason )
+    using HpChangedDelegate         = sw::Delegate<void( int32, const sw::string& )>;
+    int32                  nativeHp = 0;
+    sw::string             nativeReason;
+    const sw::Subscription nativeSubscription = actor._onHpChanged.add( SW_DELEGATE_LAMBDA( HpChangedDelegate, [&nativeHp, &nativeReason]( int32 hp, const sw::string& reason )
     {
         nativeHp     = hp;
         nativeReason = reason;
@@ -201,7 +201,7 @@ SW_TEST_CASE( ReflectionInvokeTest, EventBindsBroadcastsAndUnbindsByName )
                     sw::ReflectCallResult::ArgumentMismatch );
     SW_EXPECT_EQUAL( 2u, callCount );
 
-    sw::ReflectionInvoke::unbindEvent( *pEvent, &actor, handle );
+    subscription.reset();
     actor._onHpChanged.broadcast( 1, sw::string( "after" ) );
     SW_EXPECT_EQUAL( 2u, callCount );
 }
@@ -221,21 +221,22 @@ SW_TEST_CASE( ReflectionInvokeTest, EventBindsToFunctionByName )
 
     // (int32, string) → reportHp(int32): 앞쪽 인자만 넘긴다
     SW_EXPECT_TRUE( sw::ReflectionInvoke::canBindEventToFunction( *pEvent, getInvokeDemoMethod( "reportHp" ) ) );
-    const sw::DelegateHandle handle = sw::ReflectionInvoke::bindEventToFunction( *pEvent, &source, type, "reportHp", &target );
-    SW_ASSERT_TRUE( handle.isValid() );
+    const sw::Subscription hpSubscription = sw::ReflectionInvoke::bindEventToFunction( *pEvent, &source, type, "reportHp", &target );
+    SW_ASSERT_TRUE( hpSubscription.isActive() );
     source._onHpChanged.broadcast( 33, sw::string( "hit" ) );
     SW_EXPECT_EQUAL( 33, target._lastReported );
 
     // () → reportHp(int32): 넘길 인자가 없고 기본 인자도 없다 / () → setStatus(=Moving): 기본 인자로 채운다
     SW_EXPECT_FALSE( sw::ReflectionInvoke::canBindEventToFunction( *pDied, getInvokeDemoMethod( "reportHp" ) ) );
-    SW_EXPECT_FALSE( sw::ReflectionInvoke::bindEventToFunction( *pDied, &source, type, "reportHp", &target ).isValid() );
-    SW_EXPECT_TRUE( sw::ReflectionInvoke::bindEventToFunction( *pDied, &source, type, "setStatus", &target ).isValid() );
+    SW_EXPECT_FALSE( sw::ReflectionInvoke::bindEventToFunction( *pDied, &source, type, "reportHp", &target ).isActive() );
+    const sw::Subscription statusSubscription = sw::ReflectionInvoke::bindEventToFunction( *pDied, &source, type, "setStatus", &target );
+    SW_EXPECT_TRUE( statusSubscription.isActive() );
     source._onDied.broadcast();
     SW_EXPECT_TRUE( target._status == sw::SampleStatus::Moving );
 
     // (int32, string) → describe(string): int32 를 글로 넘길 수 있다 / 없는 함수는 묶지 않는다
     SW_EXPECT_TRUE( sw::ReflectionInvoke::canBindEventToFunction( *pEvent, getInvokeDemoMethod( "describe" ) ) );
-    SW_EXPECT_FALSE( sw::ReflectionInvoke::bindEventToFunction( *pEvent, &source, type, "noSuchFunction", &target ).isValid() );
+    SW_EXPECT_FALSE( sw::ReflectionInvoke::bindEventToFunction( *pEvent, &source, type, "noSuchFunction", &target ).isActive() );
 }
 
 /**

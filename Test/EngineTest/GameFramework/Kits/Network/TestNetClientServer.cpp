@@ -667,10 +667,10 @@ SW_TEST_CASE( NetClientServerTest, ReconnectOnSameSlotResetsHandlerState )
     SW_ASSERT_TRUE( serverHost.listen() );
     ReplicationServer server;
     SW_ASSERT_TRUE( server.initialize( &serverHost, ReplicationServerConfig{}, nullptr ) );
-    NetMessageRouter router;
-    router.registerHandler( &server );
-    float64    time   = 0.0;
-    const auto runAll = [&]( float64 seconds )
+    NetMessageRouter   router;
+    const Subscription serverSubscription = router.registerHandler( &server );
+    float64            time               = 0.0;
+    const auto         runAll             = [&]( float64 seconds )
     {
         for ( float64 elapsed = 0.0; elapsed < seconds; elapsed += 1.0 / 60.0 )
         {
@@ -737,10 +737,15 @@ SW_TEST_CASE( NetClientServerTest, KindMaskRoutesSharedRange )
     KindCounter      clientSide{ otherKind };
     NetMessageRouter serverRouter;
     NetMessageRouter clientRouter;
-    SW_ASSERT_TRUE( serverRouter.registerHandler( &server ) ); // 키트 처리기와 게임 처리기는 서로 다른 종류를 맡는다(겹치면 라우터가 받지 않는다)
-    SW_ASSERT_TRUE( serverRouter.registerHandler( &serverSide ) );
-    SW_ASSERT_TRUE( clientRouter.registerHandler( &client ) );
-    SW_ASSERT_TRUE( clientRouter.registerHandler( &clientSide ) );
+    // 키트 처리기와 게임 처리기는 서로 다른 종류를 맡는다(겹치면 라우터가 받지 않는다)
+    const Subscription serverSubscription     = serverRouter.registerHandler( &server );
+    const Subscription serverSideSubscription = serverRouter.registerHandler( &serverSide );
+    const Subscription clientSubscription     = clientRouter.registerHandler( &client );
+    const Subscription clientSideSubscription = clientRouter.registerHandler( &clientSide );
+    SW_ASSERT_TRUE( serverSubscription.isActive() );
+    SW_ASSERT_TRUE( serverSideSubscription.isActive() );
+    SW_ASSERT_TRUE( clientSubscription.isActive() );
+    SW_ASSERT_TRUE( clientSideSubscription.isActive() );
     SW_EXPECT_TRUE( NetHandleResult::Handled == serverRouter.dispatch( NetMessageContext{}, message.data(), static_cast<int32>( message.size() ) ) );
     SW_EXPECT_TRUE( NetHandleResult::Handled == clientRouter.dispatch( NetMessageContext{}, message.data(), static_cast<int32>( message.size() ) ) );
     SW_EXPECT_EQUAL( 1, serverSide._count );
@@ -834,11 +839,11 @@ SW_TEST_CASE( NetClientServerTest, OversizedInputIsRejectedAtTheSender )
     ReplicationClient liveClient;
     SW_ASSERT_TRUE( liveServer.initialize( &serverHost, ReplicationServerConfig{}, nullptr ) );
     SW_EXPECT_TRUE( liveClient.initialize( &clientHost, ReplicationClientConfig{} ) );
-    NetMessageRouter serverRouter;
-    NetMessageRouter clientRouter;
-    serverRouter.registerHandler( &liveServer );
-    clientRouter.registerHandler( &liveClient );
-    float64 time = 0.0;
+    NetMessageRouter   serverRouter;
+    NetMessageRouter   clientRouter;
+    const Subscription serverSubscription = serverRouter.registerHandler( &liveServer );
+    const Subscription clientSubscription = clientRouter.registerHandler( &liveClient );
+    float64            time               = 0.0;
     for ( int32 frame = 0; frame < 30; ++frame )
     {
         time += 1.0 / 60.0;
@@ -904,10 +909,10 @@ SW_TEST_CASE( NetClientServerTest, InputBurstLossLeavesNoGap )
     ReplicationClient client;
     SW_ASSERT_TRUE( server.initialize( &serverHost, ReplicationServerConfig{} ) );
     SW_EXPECT_TRUE( client.initialize( &clientHost, ReplicationClientConfig{} ) );
-    NetMessageRouter serverRouter;
-    NetMessageRouter clientRouter;
-    serverRouter.registerHandler( &server );
-    clientRouter.registerHandler( &client );
+    NetMessageRouter   serverRouter;
+    NetMessageRouter   clientRouter;
+    const Subscription serverSubscription = serverRouter.registerHandler( &server );
+    const Subscription clientSubscription = clientRouter.registerHandler( &client );
 
     // 30 Hz 틱 · 60 Hz 프레임. 서버는 입력을 24 틱 늦게 꺼낸다 — 끊김이 끝난 뒤 다시 온 입력이 꺼내기 전에 닿는다.
     const uint32  popDelay     = 24;

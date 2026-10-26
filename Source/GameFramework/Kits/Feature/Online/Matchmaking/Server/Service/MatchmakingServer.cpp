@@ -176,7 +176,7 @@ namespace sw
         , _listQueueCompletionScratch{}
         , _listQueueNotificationScratch{}
         , _listTopicChangeScratch{}
-        , _listSubscribedTopic{}
+        , _mapTopicSubscription{}
         , _pPartyLobby{ nullptr }
         , _pQueue{ nullptr }
         , _pAgent{ nullptr }
@@ -218,14 +218,7 @@ namespace sw
             }
         }
         _mapAccountToGraceEnd.clear();
-        if ( _pHost != nullptr )
-        {
-            for ( const string& topic : _listSubscribedTopic )
-            {
-                _pHost->unsubscribeServerBus( topic, this );
-            }
-        }
-        _listSubscribedTopic.clear();
+        _mapTopicSubscription.clear(); // 구독이 사라지며 버스 구독을 끊는다
         _pendingTable.clear();
         _pHost          = nullptr;
         _pPartyLobby    = nullptr;
@@ -238,7 +231,7 @@ namespace sw
     void MatchmakingServer::onHostShutdown( OnlineServiceHost& host )
     {
         (void)host;
-        _listSubscribedTopic.clear(); // 구독은 호스트가 이어서 모두 해제한다
+        _mapTopicSubscription.clear();
         _pHost = nullptr;
     }
 
@@ -341,17 +334,13 @@ namespace sw
         _pQueue->drainTopicChanges( _listTopicChangeScratch );
         for ( const MatchQueueTopicChange& change : _listTopicChangeScratch )
         {
-            const bool bSubscribed = VectorUtil::contains( _listSubscribedTopic, change._topic );
-            if ( change._bSubscribe != SW_FALSE && bSubscribed == false )
-            {
-                host.subscribeServerBus( change._topic, this );
-                _listSubscribedTopic.push_back( change._topic );
-            }
+            const bool bSubscribed   = _mapTopicSubscription.contains( change._topic );
+            const bool bShouldListen = change._bSubscribe != SW_FALSE && host.getServerBus() != nullptr; // 서버가 한 대면 들을 버스가 없다
+            const bool bNewSubscribe = bShouldListen && bSubscribed == false;
+            if ( bNewSubscribe )
+                _mapTopicSubscription.emplace( change._topic, host.subscribeServerBus( change._topic, this ) );
             else if ( change._bSubscribe == SW_FALSE && bSubscribed )
-            {
-                host.unsubscribeServerBus( change._topic, this );
-                VectorUtil::removeFirst( _listSubscribedTopic, change._topic ); // 위에서 있음을 확인했다
-            }
+                _mapTopicSubscription.erase( change._topic ); // 구독이 사라지며 끊는다
         }
     }
 
@@ -447,11 +436,10 @@ namespace sw
     void MatchmakingServer::attachHost( OnlineServiceHost& host )
     {
         _pHost = &host;
-        if ( _pAgent == nullptr )
-            return;
+        if ( _pAgent == nullptr || host.getServerBus() == nullptr )
+            return; // 배정 받을 서버가 아니거나 서버가 한 대이다
         const string topic = _pAgent->getAssignTopic();
-        host.subscribeServerBus( topic, this );
-        _listSubscribedTopic.push_back( topic );
+        _mapTopicSubscription.emplace( topic, host.subscribeServerBus( topic, this ) );
     }
 
     void MatchmakingServer::respond( OnlineServiceHost& host, uint64 requestTag, const MatchmakingReply& reply )

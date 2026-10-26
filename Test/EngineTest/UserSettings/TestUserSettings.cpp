@@ -262,7 +262,7 @@ SW_TEST_CASE( UserSettingsTest, HandlerRegistryDispatchesByName )
 
     sw::UserSettingsManager settings;
     settings.initialize( sw::UserSettingsTargets{} );
-    settings.getRegistry().registerHandler( "game.record", SW_DELEGATE_METHOD( sw::UserSettingHandlerDelegate, &Recorder::record, &recorder ) );
+    sw::Subscription recordSubscription = settings.getRegistry().registerHandler( "game.record", SW_DELEGATE_METHOD( sw::UserSettingHandlerDelegate, &Recorder::record, &recorder ) );
     SW_ASSERT_TRUE( settings.loadSchemaFromXMLText( R"(<UserSettingsSchema version="1"><Category id="g"/>
         <Setting id="g.level" category="g" type="int" default="3" min="1" max="9" target="handler:game.record" param="slot2"/></UserSettingsSchema>)",
                                                     "game.settings.xml" ) );
@@ -280,7 +280,7 @@ SW_TEST_CASE( UserSettingsTest, HandlerRegistryDispatchesByName )
     SW_EXPECT_STREQ( "9", recorder._value );
 
     // 같은 이름이 레지스트리에 없으면 그 이름을 쓰는 스키마는 읽히지 않는다.
-    settings.getRegistry().unregisterHandler( "game.record" );
+    recordSubscription.reset();
     SW_TEST_DEFENSIVE_SCOPE( "an handler name nobody registered" );
     SW_EXPECT_FALSE( settings.loadSchemaFromXMLText( R"(<UserSettingsSchema version="1"><Category id="h"/>
         <Setting id="h.x" category="h" type="bool" default="true" target="handler:game.record"/></UserSettingsSchema>)",
@@ -301,7 +301,7 @@ SW_TEST_CASE( UserSettingsTest, RejectedApplyIsCountedAndReported )
 
     sw::UserSettingsManager settings;
     settings.initialize( sw::UserSettingsTargets{} );
-    settings.getRegistry().registerHandler( "game.refuse", SW_DELEGATE_METHOD( sw::UserSettingHandlerDelegate, &Refuser::refuse, &refuser ) );
+    sw::Subscription refuseSubscription = settings.getRegistry().registerHandler( "game.refuse", SW_DELEGATE_METHOD( sw::UserSettingHandlerDelegate, &Refuser::refuse, &refuser ) );
     SW_ASSERT_TRUE( settings.loadSchemaFromXMLText( R"(<UserSettingsSchema version="1"><Category id="g"/>
         <Setting id="g.refused" category="g" type="int" default="3" min="1" max="9" target="handler:game.refuse"/></UserSettingsSchema>)",
                                                     "refuse.settings.xml" ) );
@@ -316,7 +316,7 @@ SW_TEST_CASE( UserSettingsTest, RejectedApplyIsCountedAndReported )
     SW_EXPECT_EQUAL( 1u, result._failedCount );
     SW_EXPECT_EQUAL( 0u, result._appliedCount );
     SW_EXPECT_TRUE_MSG( collector.countWithID( "UserSettings.TargetRejected" ) > 0, collector.joined().c_str() );
-    settings.getRegistry().unregisterHandler( "game.refuse" );
+    refuseSubscription.reset();
 }
 
 /**
@@ -528,8 +528,8 @@ SW_TEST_CASE( UserSettingsTest, ConfirmCountdownRevertsWithoutConfirmation )
         sw::vector<sw::UserSettingEventKind>* _pListEvent;
         void                                  onEvent( const sw::UserSettingEvent& event ) { _pListEvent->push_back( event._kind ); }
     };
-    EventSink                sink{ &listEvent };
-    const sw::DelegateHandle handle = settings.registerEventListener( SW_DELEGATE_METHOD( sw::UserSettingEventListener, &EventSink::onEvent, &sink ) );
+    EventSink        sink{ &listEvent };
+    sw::Subscription subscription = settings.registerEventListener( SW_DELEGATE_METHOD( sw::UserSettingEventListener, &EventSink::onEvent, &sink ) );
 
     // 1) 확인하지 않으면 10 초 뒤 되돌린다.
     SW_EXPECT_TRUE( settings.setPendingValue( "video.mode", "c" ) == sw::UserSettingSetResult::Accepted );
@@ -563,7 +563,7 @@ SW_TEST_CASE( UserSettingsTest, ConfirmCountdownRevertsWithoutConfirmation )
     }
     SW_EXPECT_TRUE( bSawTimeout );
     SW_EXPECT_TRUE( bSawConfirmed );
-    settings.unregisterEventListener( handle );
+    subscription.reset();
     UserSettingsTestInternal::resetTestVariables();
 }
 
@@ -776,7 +776,7 @@ SW_TEST_CASE( UserSettingsTest, OptionProviderOverridesFixedOptionsAndFallsBack 
     sw::UserSettingsManager settings;
     sw::UserSettingsTargets targets;
     settings.initialize( targets );
-    settings.getRegistry().registerOptionProvider( "test.modes", SW_DELEGATE_FUNCTION( sw::UserSettingOptionProviderDelegate, &UserSettingsTestInternal::collectTestModes ) );
+    const sw::Subscription modesSubscription = settings.getRegistry().registerOptionProvider( "test.modes", SW_DELEGATE_FUNCTION( sw::UserSettingOptionProviderDelegate, &UserSettingsTestInternal::collectTestModes ) );
     SW_ASSERT_TRUE( settings.loadSchemaFromXMLText( R"(<UserSettingsSchema version="1"><Category id="video"/>
         <Setting id="video.resolution" category="video" type="enum" default="1280x720" optionsFrom="test.modes">
             <Option value="1280x720"/>
@@ -997,4 +997,68 @@ SW_TEST_CASE( UserSettingsTest, GameOverlayAndGameDefaults )
     // 품질 프리셋 기본값을 바꾸면 묶인 값의 기본값도 그 프리셋이다.
     SW_EXPECT_TRUE( settings.setGameDefault( "graphics.quality", "low" ) );
     SW_EXPECT_STREQ( "0.75", settings.getValue( "graphics.renderScale" ) );
+}
+
+/**
+ * @brief [UserSettingsTest] 형식 핸들은 스키마에 있고 타입이 맞는 설정에서만 풀린다 — 모르는 id 와 타입이 다른 id 는 오류이고 false · 0 으로 읽히지 않는다
+ */
+SW_TEST_CASE( UserSettingsTest, KeyResolveRejectsUnknownAndMistypedID )
+{
+    sw::UserSettingsManager settings;
+    settings.initialize( sw::UserSettingsTargets{} );
+    SW_ASSERT_TRUE( settings.loadSchemaFromXMLText( R"(<UserSettingsSchema version="1"><Category id="k"/>
+        <Setting id="k.flag" category="k" type="bool" default="true"/>
+        <Setting id="k.count" category="k" type="int" default="3" min="0" max="9"/>
+        <Setting id="k.scale" category="k" type="float" default="0.5" min="0" max="1"/></UserSettingsSchema>)",
+                                                    "key.settings.xml" ) );
+
+    const std::optional<sw::UserSettingKey<bool>>    flagKey  = settings.resolveKey<bool>( "k.flag" );
+    const std::optional<sw::UserSettingKey<int32>>   countKey = settings.resolveKey<int32>( "k.count" );
+    const std::optional<sw::UserSettingKey<float32>> scaleKey = settings.resolveKey<float32>( "k.scale" );
+    SW_ASSERT_TRUE( flagKey.has_value() && countKey.has_value() && scaleKey.has_value() );
+    SW_EXPECT_TRUE( settings.getBoolValue( *flagKey ) );
+    SW_EXPECT_EQUAL( 3, settings.getIntValue( *countKey ) );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, settings.getFloatValue( *scaleKey ), 0.0001f );
+
+    // 보류 값이 있으면 그것을 읽는다(메뉴가 보일 값).
+    SW_EXPECT_TRUE( settings.setPendingIntValue( "k.count", 7 ) == sw::UserSettingSetResult::Accepted );
+    SW_EXPECT_EQUAL( 7, settings.getIntValue( *countKey ) );
+
+    test::ScopedLogCollector logs;
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "an unknown id and a type mismatch" );
+        SW_EXPECT_FALSE( settings.resolveKey<bool>( "k.missing" ).has_value() );
+        SW_EXPECT_FALSE( settings.resolveKey<int32>( "k.flag" ).has_value() );
+    }
+    SW_EXPECT_TRUE_MSG( logs.countWithID( "UserSettings.KeyUnresolved" ) == 2u, logs.joined().c_str() );
+}
+
+/**
+ * @brief [UserSettingsTest] 사용자 파일의 깨진 값은 경고하고 기본값으로 둔다 — 불 칸의 "ture" 가 false 가 되지 않고, 쓰기도 그 글을 false 로 바꾸지 않는다
+ */
+SW_TEST_CASE( UserSettingsTest, UserFileInvalidValueWarnsAndKeepsDefault )
+{
+    sw::UserSettingsManager settings;
+    settings.initialize( sw::UserSettingsTargets{} );
+    SW_ASSERT_TRUE( settings.loadSchemaFromXMLText( R"(<UserSettingsSchema version="1"><Category id="k"/>
+        <Setting id="k.flag" category="k" type="bool" default="true"/>
+        <Setting id="k.count" category="k" type="int" default="3" min="0" max="9"/></UserSettingsSchema>)",
+                                                    "broken.settings.xml" ) );
+
+    test::ScopedLogCollector logs;
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a player file with values that do not parse" );
+        SW_ASSERT_TRUE( settings.loadUserJSON( R"({ "version": 1, "values": { "k.flag": "ture", "k.count": "many" } })", "broken.json" ) );
+    }
+    SW_EXPECT_TRUE_MSG( logs.countWithID( "UserSettings.ValueInvalid" ) == 2u, logs.joined().c_str() );
+
+    const std::optional<sw::UserSettingKey<bool>>  flagKey  = settings.resolveKey<bool>( "k.flag" );
+    const std::optional<sw::UserSettingKey<int32>> countKey = settings.resolveKey<int32>( "k.count" );
+    SW_ASSERT_TRUE( flagKey.has_value() && countKey.has_value() );
+    SW_EXPECT_TRUE( settings.getBoolValue( *flagKey ) );
+    SW_EXPECT_EQUAL( 3, settings.getIntValue( *countKey ) );
+
+    // 기본값과 같으니 쓰지 않는다 — 깨진 글이 false 나 0 으로 저장되지 않는다.
+    const sw::string json = settings.makeUserJSON();
+    SW_EXPECT_TRUE_MSG( json.find( "k.flag" ) == sw::string::npos && json.find( "k.count" ) == sw::string::npos, json.c_str() );
 }

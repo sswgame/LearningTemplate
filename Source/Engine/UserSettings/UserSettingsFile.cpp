@@ -133,7 +133,7 @@ namespace sw
         return true;
     }
 
-    string UserSettingsFile::makeJSON( const UserSettingsSchema& schema, const vector<UserSettingsFileEntry>& listEntry )
+    string UserSettingsFile::makeJSON( const UserSettingsSchema& schema, const vector<UserSettingsWriteEntry>& listEntry )
     {
         using Internal = UserSettingsFileInternal;
         JSONDocument    doc;
@@ -142,12 +142,10 @@ namespace sw
         const JSONValue values = root.set( Internal::kValuesKey );
         values.setObject();
 
-        for ( const UserSettingsFileEntry& entry : listEntry )
+        for ( const UserSettingsWriteEntry& entry : listEntry )
         {
-            const UserSettingDef* pDef  = schema.findSetting( hashed_string( entry._key ) );
-            const UserSettingType type  = pDef != nullptr ? pDef->_type : UserSettingType::String;
-            const JSONValue       field = values.set( entry._key.c_str(), false );
-            switch ( UserSettingsSchema::getTypeTraits( type )._storageKind )
+            const JSONValue field = values.set( entry._def._id.c_str(), false );
+            switch ( UserSettingsSchema::getTypeTraits( entry._def._type )._storageKind )
             {
                 case UserSettingStorageKind::Bool:
                 {

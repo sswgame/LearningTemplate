@@ -138,23 +138,33 @@ namespace sw::editor
         ImGui::SetNextItemWidth( -1.0f );
         switch ( def._type )
         {
+            // 아래 세 칸의 핸들은 스키마에서 꺼낸 정의(`def`)로 풀어 언제나 풀린다 — 못 풀면 `resolveKey` 가 오류를 남기고 칸을 그리지 않는다.
             case UserSettingType::Bool:
             {
-                bool bValue = settings.getBoolValue( def._id );
+                const std::optional<UserSettingKey<bool>> key = settings.resolveKey<bool>( def._id );
+                if ( key.has_value() == false )
+                    break;
+                bool bValue = settings.getBoolValue( *key );
                 if ( ImGui::Checkbox( "##value", &bValue ) )
                     (void)settings.setPendingBoolValue( def._id, bValue );
                 break;
             }
             case UserSettingType::Int:
             {
-                int32 number = settings.getIntValue( def._id );
+                const std::optional<UserSettingKey<int32>> key = settings.resolveKey<int32>( def._id );
+                if ( key.has_value() == false )
+                    break;
+                int32 number = settings.getIntValue( *key );
                 if ( ImGui::SliderInt( "##value", &number, static_cast<int32>( def._minValue ), static_cast<int32>( def._maxValue ) ) )
                     (void)settings.setPendingIntValue( def._id, number );
                 break;
             }
             case UserSettingType::Float:
             {
-                float32 number = settings.getFloatValue( def._id );
+                const std::optional<UserSettingKey<float32>> key = settings.resolveKey<float32>( def._id );
+                if ( key.has_value() == false )
+                    break;
+                float32 number = settings.getFloatValue( *key );
                 if ( ImGui::SliderFloat( "##value", &number, static_cast<float32>( def._minValue ), static_cast<float32>( def._maxValue ), "%.2f" ) )
                     (void)settings.setPendingFloatValue( def._id, number );
                 break;

@@ -232,8 +232,8 @@ SW_TEST_CASE( UITextInputTest, ClipboardRoundTripAndSingleLinePaste )
     fixture.sendAction( sw::UIActionName::kTextPaste );
     SW_EXPECT_STREQ( "xyz", field.getText().c_str() );
 
-    sw::string changed{};
-    (void)field.getOnTextChanged().add( [&changed]( const sw::string& text )
+    sw::string             changed{};
+    const sw::Subscription changedSubscription = field.getOnTextChanged().add( [&changed]( const sw::string& text )
     { changed = text; } );
     SW_ASSERT_TRUE( fixture._ui.getClipboard().setText( "123456" ) );
     field.setText( "" );

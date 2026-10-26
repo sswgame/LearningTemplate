@@ -13,6 +13,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Network/Connection/NetHost.h"
 #include "Core/Network/NetTypes.h"
 #include "Core/Serialization/BitStream.h"
@@ -146,16 +147,18 @@ namespace sw
     /**
      * @class NetMessageRouter
      * @brief 받은 메시지를 종류(첫 바이트)마다 맡은 처리기 하나에게 바로 전달합니다(종류 256개짜리 테이블). 연결 사건은 메시지보다 먼저 모든 처리기에 알립니다.
-     * @details - 처리기는 빌려 쓴다. 라우터보다 오래 살아야 하며, 먼저 없앨 때는 `unregisterHandler` 로 뺀다. 한 종류를 둘이 맡으려 하면 나중 것을 받지 않는다(`registerHandler` 가 false 를 반환한다).
+     * @details - 처리기는 빌려 쓴다. 등록은 `registerHandler` 가 돌려주는 구독(`Subscription`)이 소유한다 — 처리기와 같은 수명의 객체(보통 처리기를 가진 쪽)가 들고,
+     *            구독이 사라지면 처리기가 빠진다. 라우터가 먼저 사라지면 구독은 무효가 된다. 한 종류를 둘이 맡으려 하면 나중 것을 받지 않는다(빈 구독).
      *          - `pump` 는 호스트에서 사건과 메시지를 잠금 한 번에 꺼내(`INetPeers::drainInbound` — 호스트 하나든 포트 샤드 묶음이든) 잠금 밖에서 나눠 준다. 처리기는 그 안에서 보내도 된다.
      *          - 깨진 메시지(처리기가 Malformed 를 반환)는 세고(`getMalformedCount`) 버린다.
+     *          - 등록과 구독의 해제는 `pump` 를 부르는 스레드에서 한다(구독 목록에 잠금이 없다).
      * @code
-     *     router.registerHandler( &replicationServer );
-     *     router.registerHandler( &gameMessages );          // 0x80..0x8F
-     *     router.pump( host, &listUnhandled );          // 매 틱 host.update 뒤
+     *     _replicationSubscription = router.registerHandler( &replicationServer );
+     *     _gameSubscription        = router.registerHandler( &gameMessages );     // 0x80..0x8F
+     *     router.pump( host, &listUnhandled );                                    // 매 틱 host.update 뒤
      * @endcode
      */
-    class SW_API NetMessageRouter
+    class SW_API NetMessageRouter : private SubscriptionSource
     {
     public:
         static constexpr int32 kKindCount = NetMessageKindTallyTable::kKindCount;
@@ -166,12 +169,12 @@ namespace sw
         NetMessageRouter& operator=( const NetMessageRouter& ) = delete;
 
         /**
-         * @brief 처리기를 등록합니다. 맡으려는 종류 중 하나라도 이미 다른 처리기가 맡았으면 **통째로 받지 않고** 알린 뒤 false 를 반환합니다(일부만 등록된 처리기는 없습니다).
-         * @details 영역이 겹친 게임은 false 를 기동 실패로 다룬다. 키트는 자기 영역(`NetKitMessageRange`)을 쓰고, 게임 처리기 여럿은 영역 안에서 서로 다른 마스크를 쓴다.
-         *          이미 단 처리기를 다시 달면 true 입니다.
+         * @brief 처리기를 등록하고 그 등록을 소유하는 구독을 반환합니다. 구독이 사라지면 처리기가 빠집니다.
+         * @details 맡으려는 종류 중 하나라도 이미 맡은 처리기가 있거나(같은 처리기를 다시 달아도 자기 종류와 겹친다), @p pHandler 가 nullptr 이면 **통째로 받지 않고**
+         *          오류를 남긴 뒤 빈 구독(`isActive` 가 false)을 반환합니다(일부만 등록된 처리기는 없습니다). 영역이 겹친 게임은 빈 구독을 기동 실패로 다룬다.
+         *          키트는 자기 영역(`NetKitMessageRange`)을 쓰고, 게임 처리기 여럿은 영역 안에서 서로 다른 마스크를 쓴다.
          */
-        bool registerHandler( INetMessageHandler* pHandler );
-        void unregisterHandler( INetMessageHandler* pHandler );
+        [[nodiscard]] Subscription registerHandler( INetMessageHandler* pHandler );
         /** @brief 메시지 하나를 그 종류의 처리기에 넘깁니다. 처리기가 없으면(빈 메시지도) NotMine 을 반환합니다. */
         NetHandleResult dispatch( const NetMessageContext& context, const uint8* pData, int32 size );
         /** @brief 연결 사건 하나를 모든 처리기에 등록 순서대로 알립니다. */
@@ -194,6 +197,8 @@ namespace sw
         const NetMessageKindTallyTable& getKindTally() const { return _kindTally; }
 
     private:
+        /** @brief 구독 @p id(처리기 주소)가 풀렸습니다. 그 처리기를 뺍니다. */
+        void releaseSubscription( uint64 id ) override;
         void rebuildKindTable();
         /** @brief 전달 통지 하나를 그 종류를 보내는 처리기에 넘깁니다. 없으면 세고 버립니다. */
         void dispatchNotice( const NetDeliveryNotice& notice );

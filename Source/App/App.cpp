@@ -100,6 +100,7 @@ namespace sw
         , _backendSwap{}
         , _userSettingsHost{}
         , _sceneViewCameraProvider{}
+        , _configReloadedSubscription{}
         , _initializeStartMicro{ 0 }
         , _bEnableEditor{ SW_FALSE }
         , _bQuitAfterInitialize{ SW_FALSE }
@@ -170,7 +171,7 @@ namespace sw
 
         _fixedTimestep.configure( AppInternal::makeFixedTimestepParams( *pEngineConfig ) );
         // 에디터가 Config/ 를 감시해 다시 읽으면(ConfigManager::reloadConfigFile) 프레임 시간 정책도 따라간다.
-        pConfigManager->onConfigReloaded().add( SW_DELEGATE_METHOD( Delegate<void( const hashed_string& )>, &App::onConfigReloaded, this ) );
+        _configReloadedSubscription = pConfigManager->onConfigReloaded().add( SW_DELEGATE_METHOD( Delegate<void( const hashed_string& )>, &App::onConfigReloaded, this ) );
 
         // 2. 창 소유권을 가져온다(초기화 중에는 숨긴 상태로 시작한다).
         splash.updateStatus( "Initializing Platform Window & Graphics...", 0.60f );

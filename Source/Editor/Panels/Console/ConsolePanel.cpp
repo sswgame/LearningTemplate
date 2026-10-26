@@ -217,7 +217,7 @@ namespace sw::editor
         , _tagFilter{}
         , _cachedTagRevision{ 0 }
         , _entriesMutex{}
-        , _logListenerHandle{}
+        , _logListenerSubscription{}
         , _errorSerial{ 0 }
         , _entrySerial{ 0 }
         , _snapshotSerial{ 0 }
@@ -237,13 +237,13 @@ namespace sw::editor
         , _bRowsChanged{ SW_FALSE }
         , _reservedFlags{ 0 }
     {
-        _logListenerHandle = Logger::registerGlobalListener(
+        _logListenerSubscription = Logger::registerGlobalListener(
             SW_DELEGATE_METHOD( LogWrittenDelegate, &ConsolePanel::onLogWritten, this ) );
     }
 
     ConsolePanel::~ConsolePanel()
     {
-        unsubscribe();
+        _logListenerSubscription.reset(); // 멤버가 사라지기 전에 — 다른 스레드의 방송이 끝나기를 기다린다
     }
 
     void ConsolePanel::updateFilteredEntries( const string& filterStr )
@@ -712,7 +712,7 @@ namespace sw::editor
 
     void ConsolePanel::shutdown( IRHIDevice* /*rhiDevice*/ )
     {
-        unsubscribe();
+        _logListenerSubscription.reset();
     }
 
     void ConsolePanel::onLogWritten( const LogEntry& entry )
@@ -731,12 +731,4 @@ namespace sw::editor
         _bHasNewLogs = SW_TRUE;
     }
 
-    void ConsolePanel::unsubscribe()
-    {
-        if ( _logListenerHandle.isValid() )
-        {
-            Logger::unregisterGlobalListener( _logListenerHandle );
-            _logListenerHandle = {};
-        }
-    }
 } // namespace sw::editor

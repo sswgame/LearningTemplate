@@ -1,6 +1,7 @@
 /**
  * @file TestThread.cpp
- * @brief sw::thread — 시작 · 끝 · 합류 대기가 잠금 관찰자에 닿는지, 교착 검출기가 "락을 쥔 채 join" 순환을 잡는지, 로더 락 안의 join 을 막는지.
+ * @brief sw::thread — 시작 · 끝 · 합류 대기가 잠금 관찰자에 닿는지, 교착 검출기가 "락을 쥔 채 join" 순환을 잡는지, 로더 락 안의 join 을 막는지,
+ *        소멸 · 이동 대입이 정지를 요청하고 합류하는지.
  */
 #include "pch.h"
 
@@ -83,6 +84,23 @@ namespace
         }
         return true;
     }
+
+    /** @brief 멤버 함수가 정지 토큰을 마지막 인자로 받는 소유자입니다(`sw::thread( &X::run, this, … )`). */
+    struct StopTokenLastArgumentOwner
+    {
+        sw::atomic<int32> _loopCount{ 0 };
+        sw::atomic<int32> _seenValue{ 0 };
+
+        void run( int32 value, sw::ThreadStopToken stopToken )
+        {
+            _seenValue.store( value );
+            while ( stopToken.stop_requested() == false )
+            {
+                _loopCount.store( _loopCount.load() + 1 );
+                std::this_thread::yield();
+            }
+        }
+    };
 } // namespace
 
 /**
@@ -158,6 +176,76 @@ SW_TEST_CASE( ThreadTest, JoinWhileHoldingALockTheThreadWaitsForIsADeadlock )
     detector.recordLockReleased( pHeldLock );
     detector.shutdown();
     SW_EXPECT_TRUE( capture.getCount() >= 1 );
+}
+
+/**
+ * @brief [ThreadTest] 소멸자는 정지를 요청하고 합류한다 — 정지 토큰을 받는 스레드는 요청을 보고 끝난다
+ * @details `join` 을 빠뜨린 소유자가 `std::terminate` 로 끝나지 않고, 정지 토큰을 보는 루프는 소멸 하나로 멈춘다(`std::jthread` 와 같은 규칙).
+ */
+SW_TEST_CASE( ThreadTest, DestructorRequestsStopAndJoins )
+{
+    sw::atomic<bool>  bStarted{ false };
+    sw::atomic<bool>  bFinished{ false };
+    sw::atomic<int32> loopCount{ 0 };
+    {
+        sw::thread worker{ [&bStarted, &bFinished, &loopCount]( sw::ThreadStopToken stopToken )
+        {
+            bStarted.store( true );
+            while ( stopToken.stop_requested() == false )
+            {
+                loopCount.store( loopCount.load() + 1 );
+                std::this_thread::yield();
+            }
+            bFinished.store( true );
+        } };
+        SW_ASSERT_TRUE( waitForFlag( bStarted, 5000 ) );
+        SW_EXPECT_TRUE( worker.get_stop_token().stop_requested() == false );
+    }
+    // 소멸자가 돌아왔으면 스레드는 끝났다(합류했다)
+    SW_EXPECT_TRUE( bFinished.load() );
+    SW_EXPECT_TRUE( loopCount.load() >= 1 );
+}
+
+/**
+ * @brief [ThreadTest] 정지 토큰을 받지 않는 함수도 그대로 돈다. 이동 대입은 지금 스레드를 합류한 뒤 넘겨받는다
+ */
+SW_TEST_CASE( ThreadTest, MoveAssignJoinsTheCurrentThreadFirst )
+{
+    sw::atomic<int32> finishedCount{ 0 };
+    sw::thread        worker{ [&finishedCount]()
+    { finishedCount.store( finishedCount.load() + 1 ); } };
+    sw::thread        next{ [&finishedCount]( sw::ThreadStopToken stopToken )
+    {
+        while ( stopToken.stop_requested() == false )
+        {
+            std::this_thread::yield();
+        }
+        finishedCount.store( finishedCount.load() + 10 );
+    } };
+    worker = std::move( next ); // 첫 스레드를 합류한다(정지 요청은 토큰을 받지 않는 함수에 아무 일도 하지 않는다)
+    SW_EXPECT_EQUAL( 1, finishedCount.load() );
+    SW_EXPECT_TRUE( worker.joinable() );
+    worker.request_stop();
+    worker.join();
+    SW_EXPECT_EQUAL( 11, finishedCount.load() );
+}
+
+/**
+ * @brief [ThreadTest] 정지 토큰을 마지막 인자로 받는 멤버 함수도 토큰을 받는다 — 소멸이 정지를 요청하고 합류한다
+ */
+SW_TEST_CASE( ThreadTest, MemberFunctionTakesTheStopTokenAsLastArgument )
+{
+    StopTokenLastArgumentOwner owner;
+    {
+        sw::thread         worker{ &StopTokenLastArgumentOwner::run, &owner, 7 };
+        const sw::Deadline deadline = sw::Deadline::afterMilliseconds( 5000 );
+        while ( owner._loopCount.load() == 0 && deadline.isExpired() == false )
+        {
+            std::this_thread::yield();
+        }
+    }
+    SW_EXPECT_EQUAL( 7, owner._seenValue.load() );
+    SW_EXPECT_TRUE( owner._loopCount.load() >= 1 );
 }
 
 #if defined( SW_PLATFORM_WINDOWS )

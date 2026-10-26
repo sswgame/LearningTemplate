@@ -376,8 +376,8 @@ SW_TEST_CASE( ActionCombatTest, DamagePublishesAnEventWithInstigatorTargetAmount
     EventDispatcher                    dispatcher;
     const ScopedEventDispatcherService scopedDispatcher{ dispatcher };
     vector<DamageAppliedEvent>         listReceived;
-    dispatcher.subscribe<DamageAppliedEvent>( gameEventChannel(), SW_DELEGATE_LAMBDA( Delegate<void( const DamageAppliedEvent& )>, [&listReceived]( const DamageAppliedEvent& event )
-    { listReceived.push_back( event ); } ) );
+    const Subscription                 subscriptionDamageAppliedEvent = dispatcher.subscribe<DamageAppliedEvent>( gameEventChannel(), SW_DELEGATE_LAMBDA( Delegate<void( const DamageAppliedEvent& )>, [&listReceived]( const DamageAppliedEvent& event )
+                    { listReceived.push_back( event ); } ) );
 
     GameObjectManager   manager;
     GameObject*         pShooter = manager.createGameObject( hashed_string( "Shooter" ) );
@@ -500,8 +500,8 @@ SW_TEST_CASE( ActionCombatTest, AttackHitsEachUnitInItsHitboxOncePerSwing )
     EventDispatcher                    dispatcher;
     const ScopedEventDispatcherService scopedDispatcher{ dispatcher };
     vector<DamageAppliedEvent>         listReceived;
-    dispatcher.subscribe<DamageAppliedEvent>( gameEventChannel(), SW_DELEGATE_LAMBDA( Delegate<void( const DamageAppliedEvent& )>, [&listReceived]( const DamageAppliedEvent& event )
-    { listReceived.push_back( event ); } ) );
+    const Subscription                 subscriptionDamageAppliedEvent = dispatcher.subscribe<DamageAppliedEvent>( gameEventChannel(), SW_DELEGATE_LAMBDA( Delegate<void( const DamageAppliedEvent& )>, [&listReceived]( const DamageAppliedEvent& event )
+                    { listReceived.push_back( event ); } ) );
 
     GameObjectManager   manager;
     UnitStatsComponent* pAttacker = spawnUnit( manager, "Attacker", 0.0f, 100, 0, 0.0f );
@@ -669,17 +669,17 @@ SW_TEST_CASE( ActionCombatTest, DamageReachesSubscribersInTheSameFrame )
     EventDispatcher                    dispatcher;
     const ScopedEventDispatcherService scopedDispatcher{ dispatcher };
     dispatcher.processEvents(); // 이 스레드가 버스 스레드가 된다(엔진에서는 `Engine` 의 게임 스레드)
-    vector<int32> listChannelHp;
-    dispatcher.subscribe<DamageAppliedEvent>( gameEventChannel(), SW_DELEGATE_LAMBDA( Delegate<void( const DamageAppliedEvent& )>, [&listChannelHp]( const DamageAppliedEvent& event )
+    vector<int32>      listChannelHp;
+    const Subscription subscriptionDamageAppliedEvent = dispatcher.subscribe<DamageAppliedEvent>( gameEventChannel(), SW_DELEGATE_LAMBDA( Delegate<void( const DamageAppliedEvent& )>, [&listChannelHp]( const DamageAppliedEvent& event )
     { listChannelHp.push_back( event._remainingHp ); } ) );
 
     GameObjectManager    manager;
     UnitStatsComponent*  pTarget     = spawnUnit( manager, "Target", 3.0f, 100, 0, 0.0f );
     ProjectileComponent* pProjectile = spawnBullet( manager, 0.0f, 0.0f, 6.0f, 10 );
     SW_ASSERT_TRUE( pTarget != nullptr && pProjectile != nullptr );
-    vector<int32>        listComponentHp;
-    const DelegateHandle subscription = pTarget->registerDamageApplied( SW_DELEGATE_LAMBDA( UnitStatsComponent::DamageAppliedDelegate, [&listComponentHp]( const DamageAppliedEvent& event )
-    { listComponentHp.push_back( event._remainingHp ); } ) );
+    vector<int32> listComponentHp;
+    Subscription  subscription = pTarget->registerDamageApplied( SW_DELEGATE_LAMBDA( UnitStatsComponent::DamageAppliedDelegate, [&listComponentHp]( const DamageAppliedEvent& event )
+     { listComponentHp.push_back( event._remainingHp ); } ) );
 
     // 겹침 전달에서 맞는다 — 그 틱이 끝나기 전에 둘 다 받았다.
     manager.beginPlay();
@@ -700,7 +700,7 @@ SW_TEST_CASE( ActionCombatTest, DamageReachesSubscribersInTheSameFrame )
     SW_EXPECT_EQUAL( 85, listChannelHp[1] );
 
     // 뗀 델리게이트는 다시 불리지 않는다.
-    pTarget->unregisterDamageApplied( subscription );
+    subscription.reset();
     pTarget->takeDamage( 5 );
     SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), listComponentHp.size() );
     SW_EXPECT_EQUAL( static_cast<size_t>( 3 ), listChannelHp.size() );
@@ -989,12 +989,12 @@ SW_TEST_CASE( ActionCombatTest, ActionRoomAnnouncesGateClearAndDefeat )
     vector<RoomClearedEvent>           listCleared;
     vector<PlayerDefeatedInRoomEvent>  listDefeated;
     vector<ClearGateStateChangedEvent> listGate;
-    dispatcher.subscribe<RoomClearedEvent>( gameEventChannel(), SW_DELEGATE_LAMBDA( Delegate<void( const RoomClearedEvent& )>, [&listCleared]( const RoomClearedEvent& event )
-    { listCleared.push_back( event ); } ) );
-    dispatcher.subscribe<PlayerDefeatedInRoomEvent>( gameEventChannel(), SW_DELEGATE_LAMBDA( Delegate<void( const PlayerDefeatedInRoomEvent& )>, [&listDefeated]( const PlayerDefeatedInRoomEvent& event )
-    { listDefeated.push_back( event ); } ) );
-    dispatcher.subscribe<ClearGateStateChangedEvent>( gameEventChannel(), SW_DELEGATE_LAMBDA( Delegate<void( const ClearGateStateChangedEvent& )>, [&listGate]( const ClearGateStateChangedEvent& event )
-    { listGate.push_back( event ); } ) );
+    const Subscription                 subscriptionRoomClearedEvent           = dispatcher.subscribe<RoomClearedEvent>( gameEventChannel(), SW_DELEGATE_LAMBDA( Delegate<void( const RoomClearedEvent& )>, [&listCleared]( const RoomClearedEvent& event )
+                              { listCleared.push_back( event ); } ) );
+    const Subscription                 subscriptionPlayerDefeatedInRoomEvent  = dispatcher.subscribe<PlayerDefeatedInRoomEvent>( gameEventChannel(), SW_DELEGATE_LAMBDA( Delegate<void( const PlayerDefeatedInRoomEvent& )>, [&listDefeated]( const PlayerDefeatedInRoomEvent& event )
+                     { listDefeated.push_back( event ); } ) );
+    const Subscription                 subscriptionClearGateStateChangedEvent = dispatcher.subscribe<ClearGateStateChangedEvent>( gameEventChannel(), SW_DELEGATE_LAMBDA( Delegate<void( const ClearGateStateChangedEvent& )>, [&listGate]( const ClearGateStateChangedEvent& event )
+                    { listGate.push_back( event ); } ) );
 
     const ScopedRoomMonsterCatalog scopedCatalog;
     SW_ASSERT_TRUE( scopedCatalog._bLoaded );
@@ -1166,8 +1166,8 @@ SW_TEST_CASE( ActionCombatTest, ZeroDamageIsNoHitAndArmorLeavesAtLeastOne )
     GameObjectManager   manager;
     UnitStatsComponent* pUnit = spawnUnit( manager, "Tank", 0.0f, 100, 10, 0.5f );
     SW_ASSERT_NOT_NULL( pUnit );
-    int32                hitCount     = 0;
-    const DelegateHandle subscription = pUnit->registerDamageApplied( SW_DELEGATE_LAMBDA( UnitStatsComponent::DamageAppliedDelegate, [&hitCount]( const DamageAppliedEvent& event )
+    int32        hitCount     = 0;
+    Subscription subscription = pUnit->registerDamageApplied( SW_DELEGATE_LAMBDA( UnitStatsComponent::DamageAppliedDelegate, [&hitCount]( const DamageAppliedEvent& event )
     {
         (void)event;
         ++hitCount;
@@ -1180,7 +1180,7 @@ SW_TEST_CASE( ActionCombatTest, ZeroDamageIsNoHitAndArmorLeavesAtLeastOne )
     pUnit->takeDamage( 3 ); // 0 은 무적을 걸지 않았다 — 방어 10 이 3 보다 커도 1
     SW_EXPECT_EQUAL( 99, pUnit->getHp() );
     SW_EXPECT_EQUAL( 1, hitCount );
-    pUnit->unregisterDamageApplied( subscription );
+    subscription.reset();
     manager.endPlay();
 }
 

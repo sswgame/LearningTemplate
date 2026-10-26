@@ -10,6 +10,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/String/hashed_string.h"
 
 namespace sw
@@ -42,16 +43,18 @@ namespace sw
      * @brief 이름에서 핸들러와 선택지 공급자를 찾는 레지스트리입니다.
      * @details 모듈(게임, 키트)도 등록할 수 있다. 모듈 이미지를 언로드하기 전에 `UserSettingsManager`(IModuleUnloadListener)가 그 범위의 것을
      *          제거한다(`removeCodeWithin`). 다만 스키마 검사는 스키마를 읽을 때 한 번만 하므로, 엔진 기동 때 읽는 스키마가 쓰는 이름은 엔진이 등록해야 한다.
+     *          등록은 돌려준 구독(`Subscription`)이 소유한다 — 구독이 사라지면 그 줄이 빠지고, 레지스트리가 먼저 사라지면 구독이 무효가 된다.
+     *          게임 스레드에서만 쓴다(설정 적용 · 메뉴 · 등록이 모두 게임 스레드라 잠금을 두지 않는다).
      */
-    class SW_API UserSettingsHandlerRegistry
+    class SW_API UserSettingsHandlerRegistry : private SubscriptionSource
     {
     public:
         UserSettingsHandlerRegistry();
 
-        /** @brief 핸들러를 올립니다. 같은 이름이 있으면 바꿉니다. @p filter 는 받는 값을 아는 핸들러만 줍니다. */
-        void registerHandler( const hashed_string& name, const UserSettingHandlerDelegate& handler, const UserSettingValueFilterDelegate& filter = {} );
-        /** @brief 핸들러를 내립니다. */
-        void unregisterHandler( const hashed_string& name );
+        /**
+         * @brief 핸들러를 올리고 그 구독을 돌려줍니다. 같은 이름이 있으면 바꿉니다(앞 구독은 더 아무것도 떼지 않는다). @p filter 는 받는 값을 아는 핸들러만 줍니다.
+         */
+        [[nodiscard]] Subscription registerHandler( const hashed_string& name, const UserSettingHandlerDelegate& handler, const UserSettingValueFilterDelegate& filter = {} );
         /** @brief 이름의 핸들러가 있는지 봅니다. */
         bool hasHandler( const hashed_string& name ) const;
         /** @brief 핸들러를 부릅니다. 없으면 false 입니다. */
@@ -59,8 +62,8 @@ namespace sw
         /** @brief 핸들러가 @p value 를 받는지 확인합니다. 필터가 없는 핸들러나 없는 핸들러는 true 입니다. */
         bool acceptsValue( const hashed_string& name, string_view value ) const;
 
-        /** @brief 선택지 공급자를 올립니다. 같은 이름이 있으면 바꿉니다. */
-        void registerOptionProvider( const hashed_string& name, const UserSettingOptionProviderDelegate& provider );
+        /** @brief 선택지 공급자를 올리고 그 구독을 돌려줍니다. 같은 이름이 있으면 바꿉니다(앞 구독은 더 아무것도 떼지 않는다). */
+        [[nodiscard]] Subscription registerOptionProvider( const hashed_string& name, const UserSettingOptionProviderDelegate& provider );
         /** @brief 이름의 공급자가 있는지 봅니다. */
         bool hasOptionProvider( const hashed_string& name ) const;
         /** @brief 공급자의 선택지를 채웁니다. 없으면 false 이고 @p outListOption 은 비어 있습니다. */
@@ -78,19 +81,24 @@ namespace sw
             hashed_string                  _name;
             UserSettingHandlerDelegate     _handler;
             UserSettingValueFilterDelegate _filter;
+            uint64                         _subscriptionID{ 0 }; ///< 이 줄을 소유하는 구독의 번호(바꾸면 새 번호)
         };
         /** @brief 선택지 공급자 한 줄입니다. */
         struct ProviderEntry
         {
             hashed_string                     _name;
             UserSettingOptionProviderDelegate _provider;
+            uint64                            _subscriptionID{ 0 }; ///< 이 줄을 소유하는 구독의 번호(바꾸면 새 번호)
         };
 
         const HandlerEntry*  findHandlerEntry( const hashed_string& name ) const;
         const ProviderEntry* findProviderEntry( const hashed_string& name ) const;
+        /** @brief 구독 @p id 가 풀렸습니다. 그 번호의 핸들러 · 공급자 줄을 지웁니다(바뀐 줄이면 번호가 달라 남는다). */
+        void releaseSubscription( uint64 id ) override;
 
     private:
         vector<HandlerEntry>  _listHandler;
         vector<ProviderEntry> _listProvider;
+        uint64                _nextSubscriptionID; ///< 다음 구독 번호(0 은 쓰지 않는다)
     };
 } // namespace sw

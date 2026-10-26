@@ -55,18 +55,15 @@ namespace sw
         /**
          * @brief 이벤트 항목을 지날 때 호출할 델리게이트를 등록합니다(언리얼 시퀀서 이벤트 트랙, 유니티 Timeline Signal 에 해당합니다).
          * @details 한 갱신에 지난 이벤트를 시간 순서로(루프를 되감았으면 되감기 전 끝 구간부터) 모두 알린다. 로그와 달리 Shipping 에서도 호출된다.
+         *          돌려준 구독이 사라지면 뗍니다. 이 컴포넌트가 먼저 사라지면 구독은 무효가 됩니다.
          */
-        DelegateHandle registerSequenceEvent( const OnSequenceEventDelegate& delegate );
-        /** @brief `registerSequenceEvent` 로 건 델리게이트를 뗍니다. */
-        void unregisterSequenceEvent( DelegateHandle handle );
+        [[nodiscard]] Subscription registerSequenceEvent( const OnSequenceEventDelegate& delegate );
         /**
          * @brief 카메라 신호를 받을 델리게이트를 등록합니다. 엔진은 카메라 디렉터를 모르므로 블렌드 · 프리셋 · 흔들림은 듣는 쪽(게임 프레임워크)이 합니다.
          * @details 한 갱신의 신호는 `SequenceTimelineUtil::collectPlaybackCameraSignals` 순서로 낸다. 재생을 멈출 때 컷이 덮고 있었으면 시네마틱 끝을 낸다.
-         *          대기 뷰 신호를 듣는 렌더 쪽(LOD, 스트리밍, PSO 미리 만들기)은 아직 없다.
+         *          대기 뷰 신호를 듣는 렌더 쪽(LOD, 스트리밍, PSO 미리 만들기)은 아직 없다. 돌려준 구독이 사라지면 뗍니다.
          */
-        DelegateHandle registerCameraSignal( const OnSequenceCameraSignalDelegate& delegate );
-        /** @brief `registerCameraSignal` 로 건 델리게이트를 뗍니다. */
-        void unregisterCameraSignal( DelegateHandle handle );
+        [[nodiscard]] Subscription registerCameraSignal( const OnSequenceCameraSignalDelegate& delegate );
         /** @brief 재생 빠르기(초당 프레임)입니다. */
         float32 getFramesPerSecond() const { return _framesPerSecond; }
 

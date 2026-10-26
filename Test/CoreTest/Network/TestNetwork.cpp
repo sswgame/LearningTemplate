@@ -1588,13 +1588,16 @@ SW_TEST_CASE( NetworkTest, MessageRouterDispatchesByRangeAndKeepsUnhandled )
     SW_ASSERT_TRUE( pair.getClient( 0 ).getConnectionState( 0 ) == NetConnectionState::Connected );
 
     // 한 영역에 처리기 둘 — 등록 순서대로 묻고 처음 받아들인 쪽에서 멈춘다.
-    CountingHandler  lockstep( NetMessageRange::kFramework + NetMessageRange::kSize, 0x21 );
-    CountingHandler  gameFirst( NetMessageRange::kGame, 0x81 );
-    CountingHandler  gameSecond( NetMessageRange::kGame, 0x82 );
-    NetMessageRouter router;
-    SW_ASSERT_TRUE( router.registerHandler( &lockstep ) );
-    SW_ASSERT_TRUE( router.registerHandler( &gameFirst ) );
-    SW_ASSERT_TRUE( router.registerHandler( &gameSecond ) );
+    CountingHandler        lockstep( NetMessageRange::kFramework + NetMessageRange::kSize, 0x21 );
+    CountingHandler        gameFirst( NetMessageRange::kGame, 0x81 );
+    CountingHandler        gameSecond( NetMessageRange::kGame, 0x82 );
+    NetMessageRouter       router;
+    const sw::Subscription lockstepSubscription   = router.registerHandler( &lockstep );
+    sw::Subscription       gameFirstSubscription  = router.registerHandler( &gameFirst );
+    const sw::Subscription gameSecondSubscription = router.registerHandler( &gameSecond );
+    SW_ASSERT_TRUE( lockstepSubscription.isActive() );
+    SW_ASSERT_TRUE( gameFirstSubscription.isActive() );
+    SW_ASSERT_TRUE( gameSecondSubscription.isActive() );
 
     NetMessageWriter messageWriter;
     const uint8      arrKind[] = { 0x21, 0x81, 0x82, 0x82, 0x83, 0x51, 0x22 };
@@ -1641,7 +1644,7 @@ SW_TEST_CASE( NetworkTest, MessageRouterDispatchesByRangeAndKeepsUnhandled )
     SW_EXPECT_EQUAL( parsed._listSentKindEntry[0]._byteCount, uint64{ 6 } );
 
     // 뺀 처리기는 더 묻지 않는다. 빈 메시지는 누구에게도 가지 않는다.
-    router.unregisterHandler( &gameFirst );
+    gameFirstSubscription.reset();
     messageWriter.begin( 0x81 ).writeVarUint( 1 );
     SW_EXPECT_TRUE( NetHandleResult::NotMine == router.dispatch( NetMessageContext{}, messageWriter.getBytes().data(), messageWriter.getByteCount() ) );
     SW_EXPECT_TRUE( NetHandleResult::NotMine == router.dispatch( NetMessageContext{}, nullptr, 0 ) );
@@ -1657,20 +1660,41 @@ SW_TEST_CASE( NetworkTest, MessageRouterRefusesAHandlerThatOverlapsAClaimedKind 
     CountingHandler  overlapping( NetMessageRange::kGame, 0x81 );
     CountingHandler  disjoint( NetMessageRange::kGame, 0x82 );
     NetMessageRouter router;
-    SW_EXPECT_TRUE( router.registerHandler( &first ) );
-    SW_EXPECT_FALSE( router.registerHandler( &overlapping ) );
-    SW_EXPECT_TRUE( router.registerHandler( &disjoint ) );
-    SW_EXPECT_TRUE( router.registerHandler( &first ) ); // 이미 단 처리기
-    SW_EXPECT_FALSE( router.registerHandler( nullptr ) );
+    SW_TEST_DEFENSIVE_SCOPE( "refused handlers log an error" );
+    sw::Subscription firstSubscription = router.registerHandler( &first );
+    SW_EXPECT_TRUE( firstSubscription.isActive() );
+    SW_EXPECT_FALSE( router.registerHandler( &overlapping ).isActive() );
+    const sw::Subscription disjointSubscription = router.registerHandler( &disjoint );
+    SW_EXPECT_TRUE( disjointSubscription.isActive() );
+    // 같은 처리기를 다시 달면 받지 않는다 — 두 구독이 한 등록을 나눠 가지면 먼저 풀린 쪽이 다른 쪽의 처리기를 뺀다
+    SW_EXPECT_FALSE( router.registerHandler( &first ).isActive() );
+    SW_EXPECT_FALSE( router.registerHandler( nullptr ).isActive() );
 
     const uint8 arrMessage[] = { 0x81, 0x01 };
     SW_EXPECT_TRUE( NetHandleResult::Handled == router.dispatch( NetMessageContext{}, arrMessage, static_cast<int32>( sizeof( arrMessage ) ) ) );
     SW_EXPECT_EQUAL( 1, first.getHandledCount() );
     SW_EXPECT_EQUAL( 0, overlapping.getHandledCount() );
 
-    // 거절된 처리기는 목록에 없다 — 먼저 단 처리기를 빼면 비로소 단다
-    router.unregisterHandler( &first );
-    SW_EXPECT_TRUE( router.registerHandler( &overlapping ) );
+    // 거절된 처리기는 목록에 없다 — 먼저 단 처리기의 구독을 풀면 비로소 단다
+    firstSubscription.reset();
+    const sw::Subscription overlappingSubscription = router.registerHandler( &overlapping );
+    SW_EXPECT_TRUE( overlappingSubscription.isActive() );
+}
+
+/**
+ * @brief [NetworkTest] 라우터가 먼저 사라지면 처리기 구독은 무효가 되고, 구독의 소멸은 사라진 라우터를 부르지 않는다
+ */
+SW_TEST_CASE( NetworkTest, MessageRouterDestroyedFirstInvalidatesTheSubscription )
+{
+    CountingHandler  handler( NetMessageRange::kGame, 0x81 );
+    sw::Subscription subscription;
+    {
+        NetMessageRouter router;
+        subscription = router.registerHandler( &handler );
+        SW_EXPECT_TRUE( subscription.isActive() );
+    }
+    SW_EXPECT_FALSE( subscription.isActive() );
+    subscription.reset();
 }
 
 /**
@@ -1684,10 +1708,10 @@ SW_TEST_CASE( NetworkTest, MalformedMessageIsCountedNotForwarded )
     SW_ASSERT_TRUE( pair.getServer().listen() );
     SW_ASSERT_TRUE( pair.getClient( 0 ).connect( NetAddress::makeLoopback( 4000 ) ) );
     pair.run( 0.3 );
-    CountingHandler  handler( NetMessageRange::kGame, 0x81 );
-    NetMessageRouter router;
-    router.registerHandler( &handler );
-    NetMessageWriter messageWriter;
+    CountingHandler        handler( NetMessageRange::kGame, 0x81 );
+    NetMessageRouter       router;
+    const sw::Subscription subscription = router.registerHandler( &handler );
+    NetMessageWriter       messageWriter;
     (void)messageWriter.begin( 0x81 ); // 몸(가변 정수)이 없다
     SW_ASSERT_TRUE( messageWriter.send( pair.getClient( 0 ), 0, NetChannelType::ReliableOrdered ) );
     messageWriter.begin( 0x81 ).writeVarUint( 5 );
@@ -1738,9 +1762,9 @@ SW_TEST_CASE( NetworkTest, RouterTellsHandlersAboutConnectionsBeforeTheirMessage
     addServerAndClient( pair, NetHostConfig{} );
     SW_ASSERT_TRUE( pair.getServer().listen() );
     SW_ASSERT_TRUE( pair.getClient( 0 ).connect( NetAddress::makeLoopback( 4000 ) ) );
-    ConnectionTracker tracker;
-    NetMessageRouter  router;
-    router.registerHandler( &tracker );
+    ConnectionTracker      tracker;
+    NetMessageRouter       router;
+    const sw::Subscription subscription = router.registerHandler( &tracker );
     pair.run( 0.3 );
     NetMessageWriter messageWriter;
     messageWriter.begin( 0x80 ).writeVarUint( 1 );

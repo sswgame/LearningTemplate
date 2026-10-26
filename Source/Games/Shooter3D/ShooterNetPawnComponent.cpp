@@ -65,6 +65,7 @@ namespace sw
         , _server{}
         , _client{}
         , _interest{}
+        , _routerSubscription{}
         , _prediction{}
         , _smoother{}
         , _bytesScratch{}
@@ -102,10 +103,12 @@ namespace sw
         if ( pSession->getRole() == GameNetRole::Server )
         {
             ReplicationServerConfig settings;
-            settings._tickInterval = _tickInterval;
-            const bool bStarted    = _interest.initialize( _interestCellSize, _interestEnterRadius, _interestLeaveRadius ) &&
-                                  _server.initialize( &pSession->getPeers(), settings, &_interest ) && pSession->getRouter().registerHandler( &_server );
-            if ( bStarted == false )
+            settings._tickInterval  = _tickInterval;
+            const bool bInitialized = _interest.initialize( _interestCellSize, _interestEnterRadius, _interestLeaveRadius ) &&
+                                      _server.initialize( &pSession->getPeers(), settings, &_interest );
+            if ( bInitialized )
+                _routerSubscription = pSession->getRouter().registerHandler( &_server );
+            if ( _routerSubscription.isActive() == false )
             {
                 SW_LOG_ERROR( "Shooter net pawn: the replication server did not start (reason above) - the networked movement stays off" );
                 return;
@@ -116,8 +119,9 @@ namespace sw
         {
             ReplicationClientConfig settings;
             settings._tickInterval = _tickInterval;
-            const bool bStarted    = _client.initialize( &pSession->getPeers(), settings ) && pSession->getRouter().registerHandler( &_client );
-            if ( bStarted == false )
+            if ( _client.initialize( &pSession->getPeers(), settings ) )
+                _routerSubscription = pSession->getRouter().registerHandler( &_client );
+            if ( _routerSubscription.isActive() == false )
             {
                 SW_LOG_ERROR( "Shooter net pawn: the replication client did not start (reason above) - the networked movement stays off" );
                 return;
@@ -135,11 +139,7 @@ namespace sw
 
     void ShooterNetPawnComponent::onEndPlay()
     {
-        GameNetSession* pSession = game::findSubsystem<GameNetSession>();
-        if ( pSession != nullptr && _role == Role::Server )
-            pSession->getRouter().unregisterHandler( &_server );
-        if ( pSession != nullptr && _role == Role::Client )
-            pSession->getRouter().unregisterHandler( &_client );
+        _routerSubscription.reset();
         ShooterBodyMovementComponent* pMovement = findMovement();
         if ( pMovement != nullptr )
         {

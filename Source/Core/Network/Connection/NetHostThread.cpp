@@ -14,7 +14,6 @@ namespace sw
         , _pHost{ nullptr }
         , _settings{}
         , _updateCount{ 0 }
-        , _bStopRequested{ false }
         , _bRunning{ false }
     {
     }
@@ -35,7 +34,6 @@ namespace sw
             return false;
         _pHost    = pHost;
         _settings = settings;
-        _bStopRequested.store( false, std::memory_order_release );
         _bRunning.store( true, std::memory_order_release );
         _thread = sw::thread( &NetHostThread::run, this );
         return true;
@@ -45,16 +43,16 @@ namespace sw
     {
         if ( _thread.joinable() == false )
             return;
-        _bStopRequested.store( true, std::memory_order_release );
+        _thread.request_stop();
         _thread.join();
         _bRunning.store( false, std::memory_order_release );
     }
 
-    void NetHostThread::run()
+    void NetHostThread::run( ThreadStopToken stopToken )
     {
         ThreadName::setCurrentThreadName( "Net" );
         const float64 maxWait = _settings._maxWaitSeconds > 0.0f ? static_cast<float64>( _settings._maxWaitSeconds ) : 0.0;
-        while ( _bStopRequested.load( std::memory_order_acquire ) == false )
+        while ( stopToken.stop_requested() == false )
         {
             _pHost->update( getTime() );
             _updateCount.fetch_add( 1, std::memory_order_relaxed );

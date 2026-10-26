@@ -72,7 +72,7 @@ namespace test
             {
                 _replication.registerObject( index + 1, *_objects._listFracture[index] );
             }
-            world.getRouter().registerHandler( &_replication );
+            _routerSubscription = world.getRouter().registerHandler( &_replication );
         }
 
         void onTickEnd( NetSimWorld& world, float32 deltaTime ) override
@@ -83,6 +83,7 @@ namespace test
 
         DestructionReplicationServer _replication;
         ShowcaseObjects              _objects;
+        sw::Subscription             _routerSubscription;
     };
 } // namespace test
 
@@ -111,7 +112,7 @@ namespace test
             {
                 _replication.registerObject( index + 1, *_objects._listFracture[index] );
             }
-            world.getRouter().registerHandler( &_replication );
+            _routerSubscription = world.getRouter().registerHandler( &_replication );
         }
 
         void onTickBegin( NetSimWorld& world, float32 deltaTime ) override
@@ -122,6 +123,7 @@ namespace test
 
         DestructionReplicationClient _replication;
         ShowcaseObjects              _objects;
+        sw::Subscription             _routerSubscription;
     };
 } // namespace test
 

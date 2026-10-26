@@ -119,9 +119,8 @@ namespace sw
         /** @brief 모든 값을 지웁니다. 알림은 내지 않으며, 프로필을 새로 만들 때 씁니다. */
         void reset();
 
-        /** @brief 값이 바뀔 때 호출할 델리게이트를 등록합니다. 반환값은 해제할 때 쓰는 번호이며 0 이 아닙니다. */
-        uint32 registerChangeListener( const ChangeDelegate& listener );
-        void   unregisterChangeListener( uint32 handle );
+        /** @brief 값이 바뀔 때 호출할 델리게이트를 등록하고 그 구독을 돌려줍니다. 구독이 사라지면 뗍니다. */
+        [[nodiscard]] Subscription registerChangeListener( const ChangeDelegate& listener );
 
         void writeState( Archive& outArchive ) const;
         /** @brief `writeState` 가 쓴 바이트로 상태를 복원합니다. 데이터가 깨졌으면 false 를 반환하고 상태는 바뀌지 않습니다. 카탈로그에 없는 id 의 값은 경고를 남기고 버립니다. */
@@ -130,20 +129,13 @@ namespace sw
         [[nodiscard]] bool loadFromFile( string_view path );
 
     private:
-        struct Listener
-        {
-            ChangeDelegate _delegate{};
-            uint32         _handle{ 0 };
-        };
-
         /** @brief 정의를 찾고 종류를 확인합니다. 맞지 않으면 경고를 남기고 nullptr 를 반환합니다. */
         const StatDef* findDefForUse( const hashed_string& id, StatKind expectedKind, StatKind alternateKind ) const;
         /** @brief 값을 바꾸고(상한 적용) 바뀌었으면 알립니다. */
         [[nodiscard]] bool applyValue( const StatDef& def, float64 newValue );
 
-        const StatCatalog*                    _pCatalog;
-        unordered_map<hashed_string, float64> _mapValue;
-        vector<Listener>                      _listListener;
-        uint32                                _nextListenerHandle;
+        const StatCatalog*                           _pCatalog;
+        unordered_map<hashed_string, float64>        _mapValue;
+        MulticastDelegate<void( const StatChange& )> _changedMulticast; ///< 값이 바뀐 것을 듣는 쪽(구독이 소유)
     };
 } // namespace sw

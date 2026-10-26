@@ -289,7 +289,8 @@ namespace sw
         }
         // 팁은 현지화 키(원문)다 — 지금 문화권의 글로 푼다(표에 없으면 원문 그대로).
         const LocalizationManager* pLocalization = game::findSubsystem<LocalizationManager>();
-        pTip->setText( pLocalization != nullptr ? pLocalization->getStringByText( _currentTip, _currentTip.c_str() ) : _currentTip.c_str() );
+        const utf8*                pFound        = pLocalization != nullptr ? pLocalization->findStringByText( _currentTip ) : nullptr;
+        pTip->setText( pFound != nullptr ? pFound : _currentTip.c_str() );
         pTip->setVisibility( WidgetVisibility::HitTestInvisible );
     }
 } // namespace sw

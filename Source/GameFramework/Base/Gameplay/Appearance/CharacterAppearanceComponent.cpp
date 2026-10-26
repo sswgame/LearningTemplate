@@ -225,7 +225,6 @@ namespace sw
         , _taskUnit{}
         , _previewSelection{}
         , _pPreviewDatabase{ nullptr }
-        , _reloadDatabaseID{ 0 }
         , _reloadSubscription{}
         , _listMeshAssemblyLoad{}
         , _fitTablesLoad{}
@@ -260,10 +259,7 @@ namespace sw
         // 핫 리로드: 외형 데이터를 다시 읽으면(`AppearanceDatabase::reloadFromFolder`) 다시 조립한다 — 상태가 데이터 버전으로 다시 해석한다.
         AppearanceDatabase* pDatabase = game::findSubsystem<AppearanceDatabase>();
         if ( pDatabase != nullptr )
-        {
-            _reloadDatabaseID   = pDatabase->getInstanceID();
             _reloadSubscription = pDatabase->registerReloaded( Delegate<void()>::create<&CharacterAppearanceComponent::onAppearanceDataReloaded>( this ) );
-        }
         if ( _presetID.empty() == false )
             requestAssemble();
     }
@@ -307,13 +303,8 @@ namespace sw
 
     void CharacterAppearanceComponent::onEndPlay()
     {
-        // 데이터베이스는 게임 서비스다 — 모듈을 내릴 때 서비스가 컴포넌트보다 먼저 사라진다. 쥔 포인터로 부르지 않고 지금 서비스를 다시 찾아
-        // 같은 것이 살아 있을 때만 뗀다(사라졌으면 구독도 함께 사라졌다).
-        AppearanceDatabase* pLiveDatabase = game::findSubsystem<AppearanceDatabase>();
-        if ( pLiveDatabase != nullptr && pLiveDatabase->getInstanceID() == _reloadDatabaseID )
-            pLiveDatabase->unregisterReloaded( _reloadSubscription );
-        _reloadDatabaseID   = 0;
-        _reloadSubscription = DelegateHandle{};
+        // 데이터베이스는 게임 서비스다 — 모듈을 내릴 때 서비스가 컴포넌트보다 먼저 사라질 수 있다. 그때는 구독이 이미 무효라 푸는 일이 없다.
+        _reloadSubscription.reset();
         unregisterSocketTask();
         _surfaceBinding.releaseTextures(); // 마스크 텍스처를 놓는다(상태 값은 다음 시작에 다시 만든다)
         _surface = CharacterSurfaceState{};

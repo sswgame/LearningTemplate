@@ -9,6 +9,8 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Container/string.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"
@@ -44,12 +46,11 @@ namespace sw
     private:
         void flushServiceOutput( OnlineServiceHost& host );
 
-        ServicePendingTable        _pendingTable;
-        vector<ChatCompletion>     _listCompletionScratch;
-        vector<ChatDelivery>       _listDeliveryScratch;
-        vector<ChatBusTopicChange> _listTopicScratch;
-        vector<string>             _listSubscribedTopic; ///< 종료할 때 해제할 주제이다
-        ChatService*               _pService;
-        OnlineServiceHost*         _pHost; ///< 버스를 구독한 호스트이다. 구독을 해제할 때 쓴다
+        ServicePendingTable                 _pendingTable;
+        vector<ChatCompletion>              _listCompletionScratch;
+        vector<ChatDelivery>                _listDeliveryScratch;
+        vector<ChatBusTopicChange>          _listTopicScratch;
+        unordered_map<string, Subscription> _mapTopicSubscription; ///< 버스 주제 → 그 구독. 서버가 한 대면 비어 있다
+        ChatService*                        _pService;
     };
 } // namespace sw

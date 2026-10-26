@@ -21,6 +21,24 @@ namespace
         DelegateLiveCapture& operator=( const DelegateLiveCapture& ) noexcept = default;
         ~DelegateLiveCapture() { --s_liveCount; }
     };
+
+    /** @brief 구독을 내고 풀린 수를 세는 출처입니다(여러 스레드가 동시에 만들고 푸는 목록 잠금 확인용). */
+    class CountingSubscriptionSource final : public sw::SubscriptionSource
+    {
+    public:
+        sw::Subscription issue() { return issueSubscription( _nextID.fetch_add( 1 ) + 1 ); }
+        uint32           getReleasedCount() const { return _releasedCount.load(); }
+
+    private:
+        void releaseSubscription( uint64 id ) override
+        {
+            (void)id;
+            _releasedCount.fetch_add( 1 );
+        }
+
+        std::atomic<uint64> _nextID{ 0 };
+        std::atomic<uint32> _releasedCount{ 0 };
+    };
 } // namespace
 
 struct DummyListener
@@ -76,8 +94,8 @@ SW_TEST_CASE( DelegateTest, MulticastDelegateBroadcast )
     sw::MulticastDelegate<void( int32 )> multiDel;
     SW_EXPECT_FALSE( multiDel.isBound() );
 
-    multiDel.add( SW_DELEGATE_FUNCTION( sw::Delegate<void( int32 )>, freeFunctionTest ) );
-    multiDel.add( SW_DELEGATE_METHOD( sw::Delegate<void( int32 )>, &DummyListener::memberFunc, &listener ) );
+    const sw::Subscription freeSubscription   = multiDel.add( SW_DELEGATE_FUNCTION( sw::Delegate<void( int32 )>, freeFunctionTest ) );
+    const sw::Subscription memberSubscription = multiDel.add( SW_DELEGATE_METHOD( sw::Delegate<void( int32 )>, &DummyListener::memberFunc, &listener ) );
     SW_EXPECT_TRUE( multiDel.isBound() );
 
     multiDel.broadcast( 5 );
@@ -86,20 +104,20 @@ SW_TEST_CASE( DelegateTest, MulticastDelegateBroadcast )
 }
 
 /**
- * @brief [DelegateTest] 멀티캐스트 델리게이트 단일 제거
+ * @brief [DelegateTest] 구독을 풀면(`reset`) 그 항목만 빠진다
  */
 SW_TEST_CASE( DelegateTest, MulticastDelegateRemoveSingle )
 {
     s_TestValue = 0;
 
     sw::MulticastDelegate<void( int32 )> multiDel;
-    sw::Delegate<void( int32 )>          delFree = SW_DELEGATE_FUNCTION( sw::Delegate<void( int32 )>, freeFunctionTest );
-
-    multiDel.add( delFree );
+    sw::Subscription                     subscription = multiDel.add( SW_DELEGATE_FUNCTION( sw::Delegate<void( int32 )>, freeFunctionTest ) );
     SW_EXPECT_TRUE( multiDel.isBound() );
+    SW_EXPECT_TRUE( subscription.isActive() );
 
-    multiDel.remove( delFree );
+    subscription.reset();
     SW_EXPECT_FALSE( multiDel.isBound() );
+    SW_EXPECT_FALSE( subscription.isActive() );
 
     multiDel.broadcast( 99 );
     SW_EXPECT_EQUAL( 0, s_TestValue );
@@ -114,12 +132,13 @@ SW_TEST_CASE( DelegateTest, MulticastDelegateRemoveAll )
     DummyListener listener;
 
     sw::MulticastDelegate<void( int32 )> multiDel;
-    multiDel.add( SW_DELEGATE_FUNCTION( sw::Delegate<void( int32 )>, freeFunctionTest ) );
-    multiDel.add( SW_DELEGATE_METHOD( sw::Delegate<void( int32 )>, &DummyListener::memberFunc, &listener ) );
+    const sw::Subscription               freeSubscription   = multiDel.add( SW_DELEGATE_FUNCTION( sw::Delegate<void( int32 )>, freeFunctionTest ) );
+    const sw::Subscription               memberSubscription = multiDel.add( SW_DELEGATE_METHOD( sw::Delegate<void( int32 )>, &DummyListener::memberFunc, &listener ) );
     SW_EXPECT_TRUE( multiDel.isBound() );
 
     multiDel.removeAll();
     SW_EXPECT_FALSE( multiDel.isBound() );
+    SW_EXPECT_FALSE_MSG( freeSubscription.isActive(), "removeAll 이 비운 항목의 구독이 아직 살아 있다고 답한다" );
 
     multiDel.broadcast( 10 );
     SW_EXPECT_EQUAL( 0, s_TestValue );
@@ -135,10 +154,10 @@ SW_TEST_CASE( DelegateTest, MulticastDelegateLambda )
     int32 capturedB{ 0 };
 
     sw::MulticastDelegate<void( int32 )> multiDel;
-    multiDel.add( SW_DELEGATE_LAMBDA( sw::Delegate<void( int32 )>, [&]( int32 val )
-    { capturedA += val; } ) );
-    multiDel.add( SW_DELEGATE_LAMBDA( sw::Delegate<void( int32 )>, [&]( int32 val )
-    { capturedB += val * 2; } ) );
+    const sw::Subscription               subscriptionA = multiDel.add( SW_DELEGATE_LAMBDA( sw::Delegate<void( int32 )>, [&]( int32 val )
+                  { capturedA += val; } ) );
+    const sw::Subscription               subscriptionB = multiDel.add( SW_DELEGATE_LAMBDA( sw::Delegate<void( int32 )>, [&]( int32 val )
+                  { capturedB += val * 2; } ) );
     SW_EXPECT_TRUE( multiDel.isBound() );
 
     multiDel.broadcast( 3 );
@@ -154,7 +173,7 @@ SW_TEST_CASE( DelegateTest, MulticastDelegateMultipleBroadcasts )
     s_TestValue = 0;
 
     sw::MulticastDelegate<void( int32 )> multiDel;
-    multiDel.add( SW_DELEGATE_FUNCTION( sw::Delegate<void( int32 )>, freeFunctionTest ) );
+    const sw::Subscription               subscription = multiDel.add( SW_DELEGATE_FUNCTION( sw::Delegate<void( int32 )>, freeFunctionTest ) );
 
     multiDel.broadcast( 10 );
     multiDel.broadcast( 20 );
@@ -164,23 +183,117 @@ SW_TEST_CASE( DelegateTest, MulticastDelegateMultipleBroadcasts )
 }
 
 /**
- * @brief [DelegateTest] 멀티캐스트 델리게이트 핸들
+ * @brief [DelegateTest] 구독자가 먼저 사라지면 항목이 빠진다(구독의 소멸이 해제다)
  */
-SW_TEST_CASE( DelegateTest, MulticastDelegateHandle )
+SW_TEST_CASE( DelegateTest, SubscriberDestroyedFirstRemovesTheEntry )
 {
     int32                                val{ 0 };
     sw::MulticastDelegate<void( int32 )> multiDel;
 
-    sw::DelegateHandle h1 = multiDel.add( SW_DELEGATE_LAMBDA( sw::Delegate<void( int32 )>, [&]( int32 delta )
-    { val += delta; } ) );
-    SW_EXPECT_TRUE( h1.isValid() );
+    {
+        const sw::Subscription subscription = multiDel.add( SW_DELEGATE_LAMBDA( sw::Delegate<void( int32 )>, [&]( int32 delta )
+        { val += delta; } ) );
+        SW_EXPECT_TRUE( subscription.isActive() );
 
-    multiDel.broadcast( 100 );
-    SW_EXPECT_EQUAL( 100, val );
-
-    multiDel.remove( h1 );
+        multiDel.broadcast( 100 );
+        SW_EXPECT_EQUAL( 100, val );
+    }
+    SW_EXPECT_FALSE( multiDel.isBound() );
     multiDel.broadcast( 50 );
     SW_EXPECT_EQUAL( 100, val );
+}
+
+/**
+ * @brief [DelegateTest] 출처가 먼저 사라지면 구독이 무효가 되고, 그 뒤 구독의 소멸 · `reset` 은 아무것도 하지 않는다
+ * @details 출처의 침입형 목록이 소멸 때 살아 있는 구독의 출처 칸을 비운다. 비우지 않으면 구독의 소멸이 사라진 출처를 부른다(UAF).
+ */
+SW_TEST_CASE( DelegateTest, SourceDestroyedFirstInvalidatesTheSubscription )
+{
+    sw::Subscription first;
+    sw::Subscription second;
+    {
+        sw::MulticastDelegate<void()> multiDel;
+        first  = multiDel.add( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, []() {} ) );
+        second = multiDel.add( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, []() {} ) );
+        SW_EXPECT_TRUE( first.isActive() );
+        SW_EXPECT_TRUE( second.isActive() );
+    }
+    SW_EXPECT_FALSE( first.isActive() );
+    SW_EXPECT_FALSE( second.isActive() );
+    first.reset(); // 사라진 출처를 부르지 않아야 한다(ASan · Debug 힙 검사가 잡는다)
+}
+
+/**
+ * @brief [DelegateTest] 구독을 옮기면 등록이 따라가고, 옮긴 원본의 소멸은 아무것도 풀지 않는다
+ * @details 이동은 출처 목록의 자리를 새 객체로 고친다. 고치지 않으면 출처가 사라질 때 옮긴 원본(이미 사라진 지역)의 칸을 쓴다.
+ *          `vector<Subscription>` 이 재할당하며 옮기는 경우와 출처 자체를 옮기는 경우도 같이 본다.
+ */
+SW_TEST_CASE( DelegateTest, MovingSubscriptionKeepsTheRegistration )
+{
+    int32                         callCount = 0;
+    sw::MulticastDelegate<void()> multiDel;
+
+    sw::vector<sw::Subscription> listSubscription;
+    for ( int32 index = 0; index < 8; ++index )
+    {
+        // 재할당이 여러 번 일어나도록 하나씩 넣는다
+        listSubscription.push_back( multiDel.add( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [&callCount]()
+        { ++callCount; } ) ) );
+    }
+    multiDel.broadcast();
+    SW_EXPECT_EQUAL( 8, callCount );
+
+    sw::Subscription moved = std::move( listSubscription[3] );
+    SW_EXPECT_FALSE( listSubscription[3].isActive() );
+    SW_EXPECT_TRUE( moved.isActive() );
+    listSubscription.erase( listSubscription.begin() + 3 ); // 옮긴 원본의 소멸 — 아무것도 풀지 않는다
+    callCount = 0;
+    multiDel.broadcast();
+    SW_EXPECT_EQUAL( 8, callCount );
+
+    // 출처를 옮기면 구독이 새 출처를 가리킨다 — 새 출처에서 풀린다
+    sw::MulticastDelegate<void()> movedSource{ std::move( multiDel ) };
+    moved.reset();
+    callCount = 0;
+    movedSource.broadcast();
+    SW_EXPECT_EQUAL( 7, callCount );
+
+    listSubscription.clear();
+    SW_EXPECT_FALSE( movedSource.isBound() );
+}
+
+/**
+ * @brief [DelegateTest] 여러 스레드가 한 출처의 구독을 동시에 만들고 옮기고 풀어도 목록이 깨지지 않는다(출처의 목록 잠금)
+ * @details 로그 리스너처럼 등록 · 해제가 아무 스레드에서나 오는 출처가 쓴다. 목록이 깨지면 풀린 수가 맞지 않거나 출처 소멸이 사라진 구독을 쓴다.
+ */
+SW_TEST_CASE( DelegateTest, SubscriptionsFromManyThreadsKeepTheListConsistent )
+{
+    constexpr int32            kThreadCount     = 4;
+    constexpr int32            kRoundsPerThread = 500;
+    CountingSubscriptionSource source;
+    sw::vector<std::thread>    listWorker;
+    for ( int32 threadIndex = 0; threadIndex < kThreadCount; ++threadIndex )
+    {
+        listWorker.emplace_back( [&source]()
+        {
+            for ( int32 round = 0; round < kRoundsPerThread; ++round )
+            {
+                sw::Subscription first  = source.issue();
+                sw::Subscription second = source.issue();
+                sw::Subscription moved  = std::move( first ); // 옮기기도 이웃을 고친다
+                second.reset();
+            }
+        } );
+    }
+    for ( std::thread& worker : listWorker )
+    {
+        worker.join();
+    }
+    SW_EXPECT_EQUAL( static_cast<uint32>( kThreadCount * kRoundsPerThread * 2 ), source.getReleasedCount() );
+
+    // 스레드가 끝난 뒤에도 출처는 새 구독을 낸다(목록이 빈 채로 남았다)
+    const sw::Subscription leftover = source.issue();
+    SW_EXPECT_TRUE( leftover.isActive() );
 }
 
 struct ConstListener
@@ -215,11 +328,11 @@ SW_TEST_CASE( DelegateTest, DelegateFullCoverage )
     sw::Delegate<void( int32 )>          delLambda = SW_DELEGATE_LAMBDA( sw::Delegate<void( int32 )>, [&]( int32 delta )
              { val += delta; } );
 
-    auto handle = multiDel.add( delLambda );
+    sw::Subscription subscription = multiDel.add( delLambda );
     multiDel.broadcast( 20 );
     SW_EXPECT_EQUAL( 20, val );
 
-    multiDel.remove( handle );
+    subscription.reset();
     multiDel.broadcast( 30 );
     SW_EXPECT_EQUAL( 20, val );
 }
@@ -233,17 +346,17 @@ SW_TEST_CASE( DelegateTest, MulticastDelegateDeferredRemoveDuringBroadcast )
     int32                         firstCallCount  = 0;
     int32                         secondCallCount = 0;
 
-    sw::DelegateHandle handleA;
-    sw::DelegateHandle handleB;
+    sw::Subscription subscriptionA;
+    sw::Subscription subscriptionB;
 
-    handleA = multiDel.add( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [&]()
+    subscriptionA = multiDel.add( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [&]()
     {
         firstCallCount++;
-        // A 실행 중 B를 remove -> B는 unbind되어 이번 브로드캐스트 및 다음 브로드캐스트에서 실행되지 않아야 함
-        multiDel.remove( handleB );
+        // A 실행 중 B의 구독을 푼다 -> B는 unbind되어 이번 브로드캐스트 및 다음 브로드캐스트에서 실행되지 않아야 함
+        subscriptionB.reset();
     } ) );
 
-    handleB = multiDel.add( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [&]()
+    subscriptionB = multiDel.add( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [&]()
     {
         secondCallCount++;
     } ) );
@@ -274,8 +387,8 @@ SW_TEST_CASE( DelegateTest, MulticastDelegateMovesInsteadOfCopying )
 
     int32 callCount = 0;
 
-    Multi source;
-    source.add( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [&callCount]()
+    Multi                  source;
+    const sw::Subscription subscription = source.add( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [&callCount]()
     { ++callCount; } ) );
     SW_ASSERT_TRUE( source.isBound() );
 
@@ -313,7 +426,7 @@ SW_TEST_CASE( DelegateTest, CopyMadeDuringBroadcastStartsWithCleanBroadcastState
     sw::unique_ptr<Multi> pCopy;
 
     // 방송 도중에 **복사 생성자**로 사본을 만든다 — 그 순간 원본의 _broadcastDepth 는 1 이다.
-    source.add( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [&]()
+    const sw::Subscription subscription = source.add( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [&]()
     {
         ++sourceCount;
         pCopy = sw::make_unique<Multi>( source );
@@ -352,8 +465,8 @@ SW_TEST_CASE( DelegateTest, RemoveCodeWithinDropsOnlyTheDelegatesBuiltInThatRang
     const IntDelegate memberDelegate = SW_DELEGATE_METHOD( IntDelegate, &DummyListener::memberFunc, &listener );
     SW_ASSERT_TRUE( freeDelegate.getCodeAddress() != nullptr );
     SW_EXPECT_TRUE( freeDelegate.getCodeAddress() != memberDelegate.getCodeAddress() );
-    multicast.add( freeDelegate );
-    multicast.add( memberDelegate );
+    const sw::Subscription freeSubscription   = multicast.add( freeDelegate );
+    const sw::Subscription memberSubscription = multicast.add( memberDelegate );
 
     const uint8* pFreeCode = static_cast<const uint8*>( freeDelegate.getCodeAddress() );
     SW_EXPECT_EQUAL( 1u, multicast.removeCodeWithin( pFreeCode, pFreeCode + 1 ) );

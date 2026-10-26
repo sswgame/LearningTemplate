@@ -69,10 +69,10 @@ namespace
 SW_TEST_CASE( UIRotatorTest, StepsWrapAndNotify )
 {
     using Util = UIRotatorTestUtil;
-    UIRotatorFixture   fixture( false );
-    sw::RotatorWidget& rotator = *fixture._pRotator;
-    sw::vector<uint32> listNotified;
-    (void)rotator.getOnSelectionChanged().add( [&listNotified]( uint32 index )
+    UIRotatorFixture       fixture( false );
+    sw::RotatorWidget&     rotator = *fixture._pRotator;
+    sw::vector<uint32>     listNotified;
+    const sw::Subscription selectionSubscription = rotator.getOnSelectionChanged().add( [&listNotified]( uint32 index )
     { listNotified.push_back( index ); } );
 
     const sw::UIActionEvent right = Util::makeAction( sw::UIActionName::kNavigateRight );

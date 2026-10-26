@@ -56,8 +56,7 @@ namespace sw
 
     void CameraManagerComponent::onEndPlay()
     {
-        AnimationNotifyHandlerUtil::getCameraShakeRequested().remove( _shakeSubscription );
-        _shakeSubscription = DelegateHandle{};
+        _shakeSubscription.reset();
         Component::onEndPlay();
     }
 
@@ -109,14 +108,9 @@ namespace sw
         _pendingViewMulticast.broadcast( _pendingView );
     }
 
-    DelegateHandle CameraManagerComponent::registerPendingViewListener( const OnCameraPendingViewDelegate& delegate )
+    Subscription CameraManagerComponent::registerPendingViewListener( const OnCameraPendingViewDelegate& delegate )
     {
         return _pendingViewMulticast.add( delegate );
-    }
-
-    void CameraManagerComponent::unregisterPendingViewListener( DelegateHandle handle )
-    {
-        _pendingViewMulticast.remove( handle );
     }
 
     GameObjectHandle CameraManagerComponent::cycleViewTarget( CameraRole role )

@@ -61,7 +61,7 @@ namespace
             , _pTable{ pTable }
         {
             SW_EXPECT_TRUE( _server.initialize( &world.getPeers(), pTable->_settings, makeMMOCellGrid() ) );
-            world.getRouter().registerHandler( &_server );
+            _routerSubscription = world.getRouter().registerHandler( &_server );
         }
 
         void onHostEvent( NetSimWorld& world, const NetHostEvent& event ) override
@@ -96,8 +96,9 @@ namespace
         const MMOReplicator& getServer() const { return _server; }
 
     private:
-        MMOReplicator _server;
-        MMOTable*     _pTable;
+        MMOReplicator    _server;
+        MMOTable*        _pTable;
+        sw::Subscription _routerSubscription;
     };
 
     /** @brief 클라이언트 — 보이는 엔티티와, 틱 스탬프가 있는 상태가 뒤로 간 횟수(옛 갱신이 새 것을 덮음)를 센다. 받은 갱신 틱은 틱마다 확인한다. */
@@ -110,7 +111,7 @@ namespace
             , _mapLastStamp{}
             , _regressionCount{ 0 }
         {
-            world.getRouter().registerHandler( &_view ); // 갱신 확인은 보내지 않는다 — 서버가 연결 계층의 전달 통지로 판정한다
+            _routerSubscription = world.getRouter().registerHandler( &_view ); // 갱신 확인은 보내지 않는다 — 서버가 연결 계층의 전달 통지로 판정한다
         }
 
         void onTickBegin( NetSimWorld& world, float32 deltaTime ) override
@@ -149,6 +150,7 @@ namespace
         vector<MMOClientEvent>        _listEvent;
         unordered_map<uint32, uint32> _mapLastStamp;
         int32                         _regressionCount;
+        sw::Subscription              _routerSubscription;
     };
 
     class MMONetSimGame final : public INetSimGame

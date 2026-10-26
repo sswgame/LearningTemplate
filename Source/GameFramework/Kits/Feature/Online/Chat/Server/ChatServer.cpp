@@ -15,9 +15,8 @@ namespace sw
         , _listCompletionScratch{}
         , _listDeliveryScratch{}
         , _listTopicScratch{}
-        , _listSubscribedTopic{}
+        , _mapTopicSubscription{}
         , _pService{ nullptr }
-        , _pHost{ nullptr }
     {
     }
 
@@ -28,24 +27,15 @@ namespace sw
 
     void ChatServer::shutdown()
     {
-        if ( _pHost != nullptr )
-        {
-            for ( const string& topic : _listSubscribedTopic )
-            {
-                _pHost->unsubscribeServerBus( topic, this );
-            }
-        }
-        _listSubscribedTopic.clear();
+        _mapTopicSubscription.clear(); // 구독이 사라지며 버스 구독을 끊는다
         _pendingTable.clear();
-        _pHost    = nullptr;
         _pService = nullptr;
     }
 
     void ChatServer::onHostShutdown( OnlineServiceHost& host )
     {
         (void)host;
-        _listSubscribedTopic.clear(); // 구독은 호스트가 이어서 모두 해제한다
-        _pHost = nullptr;
+        _mapTopicSubscription.clear();
     }
 
     void ChatServer::onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body )
@@ -113,7 +103,6 @@ namespace sw
 
     void ChatServer::onServiceTick( OnlineServiceHost& host, int64 nowMs )
     {
-        _pHost = &host;
         if ( _pService == nullptr )
             return;
         _pService->update( nowMs );
@@ -126,16 +115,11 @@ namespace sw
         _pService->drainBusTopicChanges( _listTopicScratch );
         for ( const ChatBusTopicChange& change : _listTopicScratch )
         {
-            if ( change._bSubscribe == SW_TRUE )
-            {
-                host.subscribeServerBus( change._topic, this );
-                _listSubscribedTopic.push_back( change._topic );
-            }
-            else
-            {
-                host.unsubscribeServerBus( change._topic, this );
-                VectorUtil::removeValue( _listSubscribedTopic, change._topic );
-            }
+            const bool bShouldListen = change._bSubscribe == SW_TRUE && host.getServerBus() != nullptr; // 서버가 한 대면 들을 버스가 없다
+            if ( bShouldListen && _mapTopicSubscription.contains( change._topic ) == false )
+                _mapTopicSubscription.emplace( change._topic, host.subscribeServerBus( change._topic, this ) );
+            else if ( change._bSubscribe == SW_FALSE )
+                _mapTopicSubscription.erase( change._topic ); // 구독이 사라지며 끊는다
         }
 
         _listCompletionScratch.clear();

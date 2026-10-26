@@ -72,6 +72,10 @@ namespace sw
     public:
         UserSettingsEngineHandlers();
 
+        // 레지스트리 구독을 들므로 옮기거나 복사하지 않는다(내보내는 클래스라 암시적 복사도 만들어진다).
+        UserSettingsEngineHandlers( const UserSettingsEngineHandlers& )            = delete;
+        UserSettingsEngineHandlers& operator=( const UserSettingsEngineHandlers& ) = delete;
+
         /** @brief 대상을 정하고 핸들러와 공급자를 @p registry 에 등록합니다. */
         void initialize( const UserSettingsTargets& targets, UserSettingsHandlerRegistry& registry );
         /** @brief 대상을 잊습니다. */
@@ -126,5 +130,6 @@ namespace sw
         vector<int2>           _listDisplayResolution; ///< 모니터 모드의 해상도(`collectResolutions` 가 처음 한 번 읽는다)
         bool                   _bDisplayDirty;
         bool                   _bResolutionProbed;
+        vector<Subscription>   _listRegistration; ///< 레지스트리에 올린 핸들러 · 공급자의 구독(`initialize` ~ `shutdown`)
     };
 } // namespace sw

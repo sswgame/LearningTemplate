@@ -178,7 +178,8 @@ namespace sw
         if ( _bDisplayValid && _displayRevision == textRevision )
             return;
         const bool  bResolve  = _bLocalized && pLocalization != nullptr && _text.empty() == false;
-        const utf8* pResolved = bResolve ? pLocalization->getStringByText( _text, _text.c_str() ) : _text.c_str();
+        const utf8* pFound    = bResolve ? pLocalization->findStringByText( _text ) : nullptr;
+        const utf8* pResolved = pFound != nullptr ? pFound : _text.c_str(); // 표에 없으면 텍스트 그대로다(키가 아닌 글일 수 있다)
         // 액션 태그는 해석된 텍스트(번역)에서 바꾼다. 번역가가 태그 위치를 옮길 수 있기 때문이다.
         string expanded;
         _bHasActionTag = false;

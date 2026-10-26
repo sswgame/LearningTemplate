@@ -121,18 +121,20 @@ namespace sw
         return reply;
     }
 
-    uint64 MemoryEphemeralDatabase::registerInbox()
+    Subscription MemoryEphemeralDatabase::registerInbox( uint64& outInboxID )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        const uint64            inboxID = _inboxIDAllocator.allocate();
-        _mapInbox[inboxID]              = Inbox{};
-        return inboxID;
+        {
+            std::scoped_lock<mutex> lock{ _mutex };
+            outInboxID            = _inboxIDAllocator.allocate();
+            _mapInbox[outInboxID] = Inbox{};
+        }
+        return issueSubscription( outInboxID );
     }
 
-    void MemoryEphemeralDatabase::unregisterInbox( uint64 inboxID )
+    void MemoryEphemeralDatabase::releaseSubscription( uint64 id )
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        _mapInbox.erase( inboxID );
+        _mapInbox.erase( id );
     }
 
     void MemoryEphemeralDatabase::subscribe( uint64 inboxID, string_view channel )
@@ -466,17 +468,14 @@ namespace sw
     MemoryEphemeralStore::MemoryEphemeralStore( MemoryEphemeralDatabase* pDatabase )
         : _listReply{}
         , _pDatabase{ pDatabase }
-        , _inboxID{ pDatabase->registerInbox() }
+        , _inboxID{ 0 }
+        , _inboxSubscription{ pDatabase->registerInbox( _inboxID ) }
         , _requestIDAllocator{}
         , _bShutdown{ SW_FALSE }
     {
     }
 
-    MemoryEphemeralStore::~MemoryEphemeralStore()
-    {
-        if ( _bShutdown == SW_FALSE )
-            _pDatabase->unregisterInbox( _inboxID );
-    }
+    MemoryEphemeralStore::~MemoryEphemeralStore() = default; // 받은편지함은 구독이 지운다(`shutdown` 했으면 이미 풀렸다)
 
     uint64 MemoryEphemeralStore::submit( const EphemeralRequest& request )
     {
@@ -529,6 +528,6 @@ namespace sw
         if ( _bShutdown == SW_TRUE )
             return;
         _bShutdown = SW_TRUE;
-        _pDatabase->unregisterInbox( _inboxID );
+        _inboxSubscription.reset();
     }
 } // namespace sw

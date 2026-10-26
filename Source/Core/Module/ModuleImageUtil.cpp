@@ -428,8 +428,8 @@ namespace sw
         if ( pOutKeepImageMapped != nullptr )
             *pOutKeepImageMapped = false;
 
-        // 모듈은 자기가 등록한 것을 스스로 해제해야 한다(에디터는 ImGuiEditor::shutdown 과 ~ConsolePanel 에서 해제한다). 여기서 해제한 것이 있으면
-        // 그 정리가 빠졌다는 뜻이라 경고로 남긴다. 항상 0 이어야 한다.
+        // 모듈은 자기가 등록한 것을 스스로 해제해야 한다 — 등록 API 는 구독(`Subscription`)을 돌려주므로 구독을 든 객체가 사라지면 풀린다.
+        // 이 훑기는 정리가 아니라 탐지기다: 여기서 뗀 것이 있으면 형식 밖의 등록(원시 포인터 · 이름 등록)이 해제를 빠뜨렸다는 뜻이라 오류로 남긴다(뗀 뒤 이미지는 내린다).
         vector<IModuleUnloadListener::ReleaseResult> listResult;
         IModuleUnloadListener::removeAllWithin( pBegin, pEnd, listResult );
 
@@ -440,7 +440,7 @@ namespace sw
             if ( result._releasedCount > 0 && result._bExpected )
                 SW_LOG_INFO( "Module %#: released %# %# before unloading its image", moduleName, result._releasedCount, result._pListenerName );
             else if ( result._releasedCount > 0 )
-                SW_LOG_WARNING_ID( "Module.ListenerLeftBehind", "Module %# left %# %# behind — released them before unloading its image", moduleName, result._releasedCount, result._pListenerName );
+                SW_LOG_ERROR_ID( "Module.ListenerLeftBehind", "Module %# left %# %# behind — released them before unloading its image", moduleName, result._releasedCount, result._pListenerName );
             // 해제할 수 없는 것(다른 코드가 아직 구독하는 이 이미지의 이벤트 채널)이 남았다. 언로드하면 다음 발행이나 종료 때 언로드된 코드로 점프한다.
             if ( result._bKeepImageMapped )
             {

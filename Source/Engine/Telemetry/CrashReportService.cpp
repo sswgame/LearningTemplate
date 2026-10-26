@@ -206,7 +206,7 @@ namespace sw
         , _reportsFolder{}
         , _currentSessionID{}
         , _reporterExecutable{}
-        , _settingHandle{}
+        , _settingSubscription{}
         , _pSettings{ nullptr }
         , _consent{ CrashReportConsent::Local }
         , _bInitialized{ SW_FALSE }
@@ -228,12 +228,8 @@ namespace sw
 
     void CrashReportService::shutdown()
     {
-        if ( _pSettings != nullptr )
-        {
-            _pSettings->unregisterEventListener( _settingHandle );
-            _pSettings     = nullptr;
-            _settingHandle = DelegateHandle{};
-        }
+        _settingSubscription.reset();
+        _pSettings    = nullptr;
         _bInitialized = SW_FALSE;
     }
 
@@ -246,10 +242,8 @@ namespace sw
 
     void CrashReportService::bindConsentSetting( UserSettingsManager& settings )
     {
-        if ( _pSettings != nullptr )
-            _pSettings->unregisterEventListener( _settingHandle );
-        _pSettings     = &settings;
-        _settingHandle = settings.registerEventListener( SW_DELEGATE_METHOD( UserSettingEventListener, &CrashReportService::onSettingEvent, this ) );
+        _pSettings           = &settings;
+        _settingSubscription = settings.registerEventListener( SW_DELEGATE_METHOD( UserSettingEventListener, &CrashReportService::onSettingEvent, this ) ); // 앞 구독은 대입이 푼다
         refreshConsentFromSetting();
     }
 

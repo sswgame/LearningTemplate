@@ -43,7 +43,7 @@ namespace test
         mutable std::mutex          _mutex;
         sw::vector<Line>            _listLine;
         sw::map<sw::string, uint32> _mapAllowedHit; ///< 이 실행에서 허용 항목이 맞은 케이스 수 — 키 `스위트 id`
-        sw::DelegateHandle          _handle;
+        sw::Subscription            _subscription;  ///< 케이스 동안의 전역 로그 리스너
         uint32                      _droppedCount{ 0 };
     };
 
@@ -58,8 +58,7 @@ namespace test
 
     HostLogJudge::~HostLogJudge()
     {
-        if ( _pState->_handle.isValid() )
-            sw::Logger::unregisterGlobalListener( _pState->_handle );
+        _pState->_subscription.reset(); // 상태가 사라지기 전에 — 다른 스레드의 방송이 끝나기를 기다린다
     }
 
     void HostLogJudge::beginCase( const TestCaseInfo& testInfo )
@@ -72,7 +71,7 @@ namespace test
         if ( _pCatalog->isSuiteOfKind( testInfo._groupName, SuiteKind::Host ) == false )
             return;
 
-        state._handle = sw::Logger::registerGlobalListener( SW_DELEGATE_LAMBDA( sw::LogWrittenDelegate, [pState = &state]( const sw::LogEntry& entry )
+        state._subscription = sw::Logger::registerGlobalListener( SW_DELEGATE_LAMBDA( sw::LogWrittenDelegate, [pState = &state]( const sw::LogEntry& entry )
         {
             const bool bGatedLevel = sw::AutomationLogPolicy::isGatedLevel( entry._level );
             if ( bGatedLevel == false || isReportingFailureOnThisThread() )
@@ -113,10 +112,9 @@ namespace test
     void HostLogJudge::endCase( const TestCaseInfo& testInfo, float64, TestRegistry& registry )
     {
         State& state = *_pState;
-        if ( state._handle.isValid() == false )
+        if ( state._subscription.isActive() == false )
             return;
-        sw::Logger::unregisterGlobalListener( state._handle );
-        state._handle = {};
+        state._subscription.reset();
 
         sw::vector<State::Line> listLine;
         uint32                  droppedCount = 0;

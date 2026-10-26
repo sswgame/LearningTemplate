@@ -279,24 +279,14 @@ namespace sw
         }
     }
 
-    DelegateHandle AbilitySystemComponent::registerAbilityActivated( const AbilityActivatedDelegate& delegate )
+    Subscription AbilitySystemComponent::registerAbilityActivated( const AbilityActivatedDelegate& delegate )
     {
         return _abilityActivatedMulticast.add( delegate );
     }
 
-    void AbilitySystemComponent::unregisterAbilityActivated( DelegateHandle handle )
-    {
-        _abilityActivatedMulticast.remove( handle );
-    }
-
-    DelegateHandle AbilitySystemComponent::registerAbilityEnded( const AbilityEndedDelegate& delegate )
+    Subscription AbilitySystemComponent::registerAbilityEnded( const AbilityEndedDelegate& delegate )
     {
         return _abilityEndedMulticast.add( delegate );
-    }
-
-    void AbilitySystemComponent::unregisterAbilityEnded( DelegateHandle handle )
-    {
-        _abilityEndedMulticast.remove( handle );
     }
 
     // ------------------------------------------------------------------------------
@@ -380,31 +370,20 @@ namespace sw
         } ) );
     }
 
-    DelegateHandle AbilitySystemComponent::registerGameplayEvent( TagID eventTag, const GameplayEventDelegate& delegate )
+    Subscription AbilitySystemComponent::registerGameplayEvent( TagID eventTag, const GameplayEventDelegate& delegate )
     {
         if ( eventTag.isValid() == false )
-            return DelegateHandle{};
+            return Subscription{}; // 빈 구독 — `isActive` 가 false 다
+        // 멀티캐스트는 힙에 두어 맵이 다시 해시해도 구독이 가리키는 주소가 그대로다.
         unique_ptr<MulticastDelegate<void( const GameplayEventData& )>>& pMulticast = _mapGameplayEventMulticast[eventTag._id];
         if ( pMulticast == nullptr )
             pMulticast = make_unique<MulticastDelegate<void( const GameplayEventData& )>>();
         return pMulticast->add( delegate );
     }
 
-    void AbilitySystemComponent::unregisterGameplayEvent( TagID eventTag, DelegateHandle handle )
-    {
-        const auto mapIter = _mapGameplayEventMulticast.find( eventTag._id );
-        if ( mapIter != _mapGameplayEventMulticast.end() && mapIter->second != nullptr )
-            mapIter->second->remove( handle );
-    }
-
-    DelegateHandle AbilitySystemComponent::registerGameplayCue( const GameplayCueDelegate& delegate )
+    Subscription AbilitySystemComponent::registerGameplayCue( const GameplayCueDelegate& delegate )
     {
         return _gameplayCueMulticast.add( delegate );
-    }
-
-    void AbilitySystemComponent::unregisterGameplayCue( DelegateHandle handle )
-    {
-        _gameplayCueMulticast.remove( handle );
     }
 
     void AbilitySystemComponent::setHealthAttributes( const hashed_string& health, const hashed_string& maxHealth )

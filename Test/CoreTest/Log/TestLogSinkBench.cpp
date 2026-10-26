@@ -122,12 +122,12 @@ SW_TEST_CASE( LogSinkBenchTest, ProducerCost )
     LogSinkBenchInternal::measureConcurrentProducers( sink, listRound );
     test::logBenchSamples( "log producer, 4 threads x 64 lines, no listener (us per round)", listRound );
 
-    const sw::DelegateHandle listener = sink.registerLogWrittenListener( SW_DELEGATE_FUNCTION( sw::LogWrittenDelegate, LogSinkBenchInternal::onLogWritten ) );
+    sw::Subscription listener = sink.registerLogWrittenListener( SW_DELEGATE_FUNCTION( sw::LogWrittenDelegate, LogSinkBenchInternal::onLogWritten ) );
     LogSinkBenchInternal::measureSingleProducer( sink, listRound );
     test::logBenchSamples( "log producer, 1 thread x 128 lines, one listener (us per round)", listRound );
     LogSinkBenchInternal::measureConcurrentProducers( sink, listRound );
     test::logBenchSamples( "log producer, 4 threads x 64 lines, one listener (us per round)", listRound );
-    sink.unregisterLogWrittenListener( listener );
+    listener.reset();
 
     sink.shutdown();
     const uint32 expectedListened = LogSinkBenchInternal::kRoundCount *

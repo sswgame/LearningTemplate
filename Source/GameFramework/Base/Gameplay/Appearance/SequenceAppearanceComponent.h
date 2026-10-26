@@ -49,6 +49,6 @@ namespace sw
         [[nodiscard]] static bool applyAppearanceItem( GameObjectManager& manager, const SequenceTrackItem& item );
 
     private:
-        DelegateHandle _eventSubscription;
+        Subscription _eventSubscription; ///< 시퀀스 플레이어의 이벤트 구독. 플레이어가 먼저 사라지면 무효가 된다
     };
 } // namespace sw

@@ -43,14 +43,14 @@ namespace
     public:
         ScopedErrorLogCollector()
         {
-            _handle = Logger::registerGlobalListener( SW_DELEGATE_LAMBDA( LogWrittenDelegate, [this]( const LogEntry& entry )
+            _subscription = Logger::registerGlobalListener( SW_DELEGATE_LAMBDA( LogWrittenDelegate, [this]( const LogEntry& entry )
             {
                 if ( entry._level == LogLevel::Error )
                     _errorCount++;
             } ) );
         }
 
-        ~ScopedErrorLogCollector() { Logger::unregisterGlobalListener( _handle ); }
+        ~ScopedErrorLogCollector() { _subscription.reset(); } // 세는 칸보다 먼저 푼다
 
         ScopedErrorLogCollector( const ScopedErrorLogCollector& )            = delete;
         ScopedErrorLogCollector& operator=( const ScopedErrorLogCollector& ) = delete;
@@ -58,8 +58,8 @@ namespace
         int32 getErrorCount() const { return _errorCount; }
 
     private:
-        DelegateHandle _handle{};
-        int32          _errorCount{ 0 };
+        Subscription _subscription{};
+        int32        _errorCount{ 0 };
     };
 
     /** @brief 스코프 동안 도구 애셋 커맨드가 남긴 Error · Warning 로그의 문구를 모읍니다. */
@@ -68,7 +68,7 @@ namespace
     public:
         ScopedLogMessageCollector()
         {
-            _handle = Logger::registerGlobalListener( SW_DELEGATE_LAMBDA( LogWrittenDelegate, [this]( const LogEntry& entry )
+            _subscription = Logger::registerGlobalListener( SW_DELEGATE_LAMBDA( LogWrittenDelegate, [this]( const LogEntry& entry )
             {
                 // 커맨드가 남긴 것만 본다 — 파일 계층의 오류 · 테스트 프레임워크의 실패 보고는 모양을 비교할 대상이 아니다.
                 if ( entry._caller != "EditorToolAssetCommands" )
@@ -80,7 +80,7 @@ namespace
             } ) );
         }
 
-        ~ScopedLogMessageCollector() { Logger::unregisterGlobalListener( _handle ); }
+        ~ScopedLogMessageCollector() { _subscription.reset(); } // 목록보다 먼저 푼다
 
         ScopedLogMessageCollector( const ScopedLogMessageCollector& )            = delete;
         ScopedLogMessageCollector& operator=( const ScopedLogMessageCollector& ) = delete;
@@ -99,7 +99,7 @@ namespace
         }
 
     private:
-        DelegateHandle _handle{};
+        Subscription   _subscription{};
         vector<string> _listError;
         vector<string> _listWarning;
     };

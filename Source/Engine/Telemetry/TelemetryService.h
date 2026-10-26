@@ -212,7 +212,7 @@ namespace sw
         TelemetryContext        _context;
         TelemetryStats          _stats;
         TelemetryFrameHistogram _frames;
-        DelegateHandle          _settingHandle;
+        Subscription            _settingSubscription; ///< 동의 설정의 변경 통보 구독(`bindConsentSetting` ~ `shutdown`)
         vector<string>          _listPendingLine;
         vector<string>          _listBreadcrumb;      ///< 고리 — `_breadcrumbHead` 가 가장 오래된 자리
         vector<string>          _listClosedFile;      ///< 올릴 파일(오래된 것부터)

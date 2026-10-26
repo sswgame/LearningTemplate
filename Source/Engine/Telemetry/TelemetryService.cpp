@@ -201,7 +201,7 @@ namespace sw
         , _context{}
         , _stats{}
         , _frames{}
-        , _settingHandle{}
+        , _settingSubscription{}
         , _listPendingLine{}
         , _listBreadcrumb{}
         , _listClosedFile{}
@@ -270,12 +270,8 @@ namespace sw
 
     void TelemetryService::shutdown()
     {
-        if ( _pSettings != nullptr )
-        {
-            _pSettings->unregisterEventListener( _settingHandle );
-            _pSettings     = nullptr;
-            _settingHandle = DelegateHandle{};
-        }
+        _settingSubscription.reset();
+        _pSettings = nullptr;
         std::scoped_lock<mutex> lock{ _mutex };
         if ( _bInitialized == SW_FALSE )
             return;
@@ -395,10 +391,8 @@ namespace sw
 
     void TelemetryService::bindConsentSetting( UserSettingsManager& settings )
     {
-        if ( _pSettings != nullptr )
-            _pSettings->unregisterEventListener( _settingHandle );
-        _pSettings     = &settings;
-        _settingHandle = settings.registerEventListener( SW_DELEGATE_METHOD( UserSettingEventListener, &TelemetryService::onSettingEvent, this ) );
+        _pSettings           = &settings;
+        _settingSubscription = settings.registerEventListener( SW_DELEGATE_METHOD( UserSettingEventListener, &TelemetryService::onSettingEvent, this ) ); // 앞 구독은 대입이 푼다
         refreshConsentFromSetting();
     }
 

@@ -88,6 +88,7 @@ namespace sw
         , _pGuildService{ nullptr }
         , _pPresence{ nullptr }
         , _pHost{ nullptr }
+        , _listBusSubscription{}
     {
     }
 
@@ -100,11 +101,7 @@ namespace sw
 
     void SocialServer::shutdown()
     {
-        if ( _pHost != nullptr )
-        {
-            _pHost->unsubscribeServerBus( SocialBus::kLinksTopic.getName(), this );
-            _pHost->unsubscribeServerBus( SocialBus::kPresenceTopic.getName(), this );
-        }
+        _listBusSubscription.clear();
         _pendingTable.clear();
         _pHost          = nullptr;
         _pSocialService = nullptr;
@@ -115,7 +112,8 @@ namespace sw
     void SocialServer::onHostShutdown( OnlineServiceHost& host )
     {
         (void)host;
-        _pHost = nullptr; // 구독은 호스트가 이어서 모두 해제한다
+        _listBusSubscription.clear();
+        _pHost = nullptr;
     }
 
     const OnlineProtocolEntry& SocialServer::getProtocol() const
@@ -261,8 +259,10 @@ namespace sw
     void SocialServer::attachHost( OnlineServiceHost& host )
     {
         _pHost = &host;
-        host.subscribeServerBus( SocialBus::kLinksTopic.getName(), this );
-        host.subscribeServerBus( SocialBus::kPresenceTopic.getName(), this );
+        if ( host.getServerBus() == nullptr )
+            return; // 서버가 한 대이다
+        _listBusSubscription.push_back( host.subscribeServerBus( SocialBus::kLinksTopic.getName(), this ) );
+        _listBusSubscription.push_back( host.subscribeServerBus( SocialBus::kPresenceTopic.getName(), this ) );
     }
 
     void SocialServer::respond( OnlineServiceHost& host, uint64 requestTag, const SocialReply& reply )

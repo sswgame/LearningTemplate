@@ -25,7 +25,7 @@ namespace sw
         , _mapEntryIndex{}
         , _listRecord{}
         , _pManager{ nullptr }
-        , _pRouter{ nullptr }
+        , _routerSubscription{}
         , _serverTick{ 0 }
         , _seenSpawnedRevision{ 0 }
         , _side{ DestructionNetSide::Server }
@@ -70,8 +70,7 @@ namespace sw
         _seenSpawnedRevision = table.getSpawnedRevision();
         registerNumberedObjects();
         INetMessageHandler* pHandler = side == DestructionNetSide::Server ? static_cast<INetMessageHandler*>( &_server ) : static_cast<INetMessageHandler*>( &_client );
-        (void)router.registerHandler( pHandler ); // 이미 단 처리기여도 true 다 — 같은 라우터에 다시 시작하는 경우
-        _pRouter = &router;
+        _routerSubscription          = router.registerHandler( pHandler ); // 앞의 `shutdown` 이 이전 등록을 풀었다 — 다시 시작해도 겹치지 않는다
         SW_LOG_INFO( "Destruction net session started as %# with %# objects", side == DestructionNetSide::Server ? "server" : "client", static_cast<uint32>( _listEntry.size() ) );
     }
 
@@ -115,25 +114,20 @@ namespace sw
 
     void DestructionNetSession::shutdown()
     {
-        if ( _pRouter == nullptr )
+        if ( _routerSubscription.isActive() == false )
             return;
-        if ( _side == DestructionNetSide::Server )
+        _routerSubscription.reset();
+        if ( _side == DestructionNetSide::Client )
         {
-            _pRouter->unregisterHandler( &_server );
-        }
-        else
-        {
-            _pRouter->unregisterHandler( &_client );
             [[maybe_unused]] const DestructionReplicationStats& stats = _client.getStats();
             SW_LOG_INFO( "[DestructionNetSession] client hash checks matched %# mismatched %# snapshots applied %#", stats._hashMatchCount, stats._hashMismatchCount,
                          stats._snapshotAppliedCount );
         }
-        _pRouter = nullptr;
     }
 
     void DestructionNetSession::update( float32 deltaTime )
     {
-        if ( _pRouter == nullptr )
+        if ( _routerSubscription.isActive() == false )
             return;
         // 플레이 중에 번호를 받은 파괴 오브젝트(서버의 registerSpawned · 클라이언트의 bindSpawned)를 등록한다.
         const uint32 spawnedRevision = _pManager->getSubsystem<NetObjectTable>().getSpawnedRevision();

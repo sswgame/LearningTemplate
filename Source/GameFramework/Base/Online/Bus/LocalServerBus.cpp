@@ -20,18 +20,20 @@ namespace sw
     {
     }
 
-    uint64 LocalServerBusHub::registerInbox()
+    Subscription LocalServerBusHub::registerInbox( uint64& outInboxID )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        const uint64            inboxID = _inboxIDAllocator.allocate();
-        _mapInbox[inboxID]              = Inbox{};
-        return inboxID;
+        {
+            std::scoped_lock<mutex> lock{ _mutex };
+            outInboxID            = _inboxIDAllocator.allocate();
+            _mapInbox[outInboxID] = Inbox{};
+        }
+        return issueSubscription( outInboxID );
     }
 
-    void LocalServerBusHub::unregisterInbox( uint64 inboxID )
+    void LocalServerBusHub::releaseSubscription( uint64 id )
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        _mapInbox.erase( inboxID );
+        _mapInbox.erase( id );
     }
 
     void LocalServerBusHub::subscribe( uint64 inboxID, string_view topic )
@@ -93,15 +95,13 @@ namespace sw
     LocalServerBus::LocalServerBus( LocalServerBusHub* pHub, uint64 serverID )
         : _pHub{ pHub }
         , _serverID{ serverID }
-        , _inboxID{ pHub->registerInbox() }
+        , _inboxID{ 0 }
+        , _inboxSubscription{ pHub->registerInbox( _inboxID ) }
         , _nextSequence{ 1 }
     {
     }
 
-    LocalServerBus::~LocalServerBus()
-    {
-        _pHub->unregisterInbox( _inboxID );
-    }
+    LocalServerBus::~LocalServerBus() = default; // 받은편지함은 구독이 지운다
 
     void LocalServerBus::publish( string_view topic, const uint8* pData, int32 size )
     {

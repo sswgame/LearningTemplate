@@ -34,7 +34,7 @@ namespace sw
      *          | 쪽 | 함수 | 부를 수 있는 스레드 |
      *          | --- | --- | --- |
      *          | 큐 | `push` · `enqueueEvent` · `getPendingEventCount` | **아무 스레드** |
-     *          | 버스 | `subscribe` · `unsubscribe` · `publish` · `processEvents` · `clear` | **소유 스레드만** |
+     *          | 버스 | `subscribe` · 구독(`Subscription`)의 해제 · `publish` · `processEvents` · `clear` | **소유 스레드만** |
      *
      *          큐 쪽은 `_queueSpinLock` 과 프레임 아레나가 온전히 지킵니다. 워커 스레드가 이벤트를 넣으면, 소유 스레드가
      *          프레임마다 `processEvents` 로 꺼내 브로드캐스트합니다. 이 클래스는 실제로 이렇게 쓰입니다(`Engine::update`
@@ -66,54 +66,22 @@ namespace sw
         /** @brief 구독과 대기 큐를 비웁니다. */
         ~EventDispatcher() override;
 
-        /** @brief 구독을 해제할 때 쓰는 채널, 타입, 핸들 토큰입니다. */
-        struct EventSubscription
-        {
-            hashed_string  _channel;
-            EventTypeID    _eventType;
-            DelegateHandle _handle;
-        };
-
-        /** @brief 기본 채널에서 이벤트를 구독합니다. */
+        /** @brief 기본 채널에서 이벤트를 구독합니다. 돌려준 구독이 사라지면 해제됩니다. */
         template <typename T>
-        EventSubscription subscribe( const Delegate<void( const T& )>& delegate ) { return subscribe<T>( getDefaultChannel(), delegate ); }
+        [[nodiscard]] Subscription subscribe( const Delegate<void( const T& )>& delegate ) { return subscribe<T>( getDefaultChannel(), delegate ); }
 
         /**
-         * @brief 지정한 채널에서 이벤트를 구독합니다.
-         * @details `add` 를 **잠금 안에서** 합니다(해제의 `remove` 와 같이). 잠금이 맵 조회까지만 걸리면 같은 이벤트를 두 스레드가
-         *          동시에 구독할 때 멀티캐스트의 벡터가 경쟁합니다.
+         * @brief 지정한 채널에서 이벤트를 구독합니다. 돌려준 구독이 사라지면 해제됩니다.
+         * @details `add` 를 **잠금 안에서** 합니다. 잠금이 맵 조회까지만 걸리면 같은 이벤트를 두 스레드가 동시에 구독할 때 멀티캐스트의 벡터가 경쟁합니다.
+         *          구독은 채널의 멀티캐스트를 가리킵니다. 해제(구독의 소멸)는 버스 함수라 **소유 스레드에서** 합니다. 채널 항목이 지워지면(`clear` ·
+         *          `removeCodeWithin`) 멀티캐스트와 함께 구독도 무효가 됩니다.
          */
         template <typename T>
-        EventSubscription subscribe( hashed_string channel, const Delegate<void( const T& )>& delegate )
+        [[nodiscard]] Subscription subscribe( hashed_string channel, const Delegate<void( const T& )>& delegate )
         {
             assertBusThread();
             std::scoped_lock<SpinLock> lock{ _busSpinLock };
-            DelegateHandle             handle = findOrCreateChannelDelegateUnlocked<T>( channel )->add( delegate );
-            return EventSubscription{ channel, T::kType, handle };
-        }
-
-        /** @brief 구독할 때 받은 토큰으로 구독을 해제합니다. */
-        void unsubscribe( const EventSubscription& token )
-        {
-            assertBusThread();
-            std::scoped_lock<SpinLock>       lock{ _busSpinLock };
-            pair<hashed_string, EventTypeID> key( token._channel, token._eventType );
-            auto                             iter = _mapChannelDispatchTable.find( key );
-            if ( iter != _mapChannelDispatchTable.end() )
-                std::static_pointer_cast<IMulticastDelegateBase>( iter->second._pMulticast )->remove( token._handle );
-        }
-
-        /** @brief 기본 채널에서 구독을 해제합니다. */
-        template <typename T>
-        void unsubscribe( const Delegate<void( const T& )>& delegate ) { unsubscribe<T>( getDefaultChannel(), delegate ); }
-
-        /** @brief 지정한 채널에서 구독을 해제합니다. */
-        template <typename T>
-        void unsubscribe( hashed_string channel, const Delegate<void( const T& )>& delegate )
-        {
-            assertBusThread();
-            std::scoped_lock<SpinLock> lock{ _busSpinLock };
-            findOrCreateChannelDelegateUnlocked<T>( channel )->remove( delegate );
+            return findOrCreateChannelDelegateUnlocked<T>( channel )->add( delegate );
         }
 
         /** @brief 기본 채널로 이벤트를 즉시 발행합니다. */

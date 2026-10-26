@@ -40,9 +40,10 @@ namespace sw
         void drainLines( vector<string>& outListLine );
 
     private:
-        void readLoop();
-        /** @brief 한 줄을 읽습니다. 멈춤 요청 · EOF 면 false — EOF 는 `_endOfInput` 을 켠다(종료가 아니다). 플랫폼 파일이 정의한다. */
-        [[nodiscard]] bool readLinePlatform( string& outLine );
+        /** @brief 읽기 스레드 본문입니다. @p stopToken 이 정지를 받거나 입력이 닫히면 끝납니다. */
+        void readLoop( ThreadStopToken stopToken );
+        /** @brief 한 줄을 읽습니다. 멈춤 요청(@p stopToken) · EOF 면 false — EOF 는 `_endOfInput` 을 켠다(종료가 아니다). 플랫폼 파일이 정의한다. */
+        [[nodiscard]] bool readLinePlatform( const ThreadStopToken& stopToken, string& outLine );
         /** @brief 쌓인 조각에서 줄 하나를 분리합니다(끝의 CR 은 버린다). 줄이 아직 없으면 false 입니다. */
         bool takeLine( string& outLine );
 
@@ -51,7 +52,6 @@ namespace sw
         mutex          _mutex;
         vector<string> _listLine;    ///< 읽기 스레드가 넣고 게임 스레드가 꺼낸다(_mutex)
         string         _partialLine; ///< 읽기 스레드만 — 줄바꿈을 기다리는 조각
-        atomic<uint32> _stopRequested;
         atomic<uint32> _endOfInput;
     };
 } // namespace sw
