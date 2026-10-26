@@ -28,6 +28,7 @@ namespace sw
     struct UIPaintContext;
     struct UIStyleTransitionState;
     struct WidgetPaintCache;
+    struct WidgetStyle;
 
     class CanvasPainter;
     class PanelWidget;
@@ -207,11 +208,17 @@ namespace sw
         /**
          * @brief 계산된 스타일이 필드 @p field 를 정하지 않았을 때 이 위젯이 상태 @p styleStates(`UIStyleState` 비트)에서 자기 필드로 그리는 값을 @p outArr 에 읽습니다
          *        (성분 수는 필드가 정합니다). 그런 값이 없으면 false 입니다.
-         * @details 스타일 전환이 "한쪽만 정한 필드"(위젯 자기 겉모습 ↔ 시트 값)를 옮기려고 묻습니다. 기본은 불투명도(스타일 값이 곱해지는 값이라 1)만 답합니다.
-         *          위젯 타입마다 자기가 그리는 필드(`BorderPanel` 의 배경 브러시, `TextWidget` 의 색 등)를 재정의합니다. 상태별로 달라지는 값(버튼의 호버 · 누름 · 꺼짐 브러시)은
-         *          @p styleStates 의 것을 답한다 — 전환은 옛 쪽을 옛 스타일의 상태로, 새 쪽을 새 상태로 묻는다(`_styleStates`).
+         * @details 스타일 전환이 "한쪽만 정한 필드"(위젯 자기 겉모습 ↔ 시트 값)를 옮기려고 묻습니다. 값은 `fillOwnStyle` 이 채운 `WidgetStyle` 에서
+         *          서술자 표(`UIStyleFieldTable::readComponents`)로 읽는다 — 위젯은 성분 배치를 알지 않는다. 수치가 아닌 필드는 false 입니다.
          */
-        [[nodiscard]] virtual bool tryGetOwnStyleField( UIStyleField field, uint32 styleStates, float32 ( &outArr )[4] ) const;
+        [[nodiscard]] bool tryGetOwnStyleField( UIStyleField field, uint32 styleStates, float32 ( &outArr )[4] ) const;
+        /**
+         * @brief 이 위젯이 상태 @p styleStates(`UIStyleState` 비트)에서 자기 필드로 그리는 겉모습을 @p outStyle 에 쓰고, 쓴 필드 비트(`UIStyleFieldTable::makeBit`)를 반환합니다.
+         * @details 기본은 불투명도(스타일 값이 곱해지는 값이라 1)만 쓴다. 위젯 타입마다 자기가 그리는 필드(`BorderPanel` 의 배경 브러시, `TextWidget` 의 색 등)를
+         *          재정의하고 부모의 것을 먼저 부른다. 상태별로 달라지는 값(버튼의 호버 · 누름 · 꺼짐 브러시)은 @p styleStates 의 것을 쓴다 —
+         *          전환은 옛 쪽을 옛 스타일의 상태로, 새 쪽을 새 상태로 묻는다(`_styleStates`).
+         */
+        virtual uint32 fillOwnStyle( uint32 styleStates, WidgetStyle& outStyle ) const;
         /** @brief 불투명도에 계산된 스타일의 `_opacity` 를 곱한 값입니다(그리기 순회가 씁니다). */
         float32 computeEffectiveOpacity() const;
 

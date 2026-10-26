@@ -50,8 +50,8 @@ namespace sw
         const UIBrush& getBackgroundBrush() const { return selectBackgroundBrush( computeStyleStates() ); }
         /** @brief 상태 @p styleStates(`UIStyleState` 비트)에서 칠할 배경입니다. 기본은 `_background` 이며, 버튼은 호버 · 누름 · 꺼짐 브러시를 고릅니다. */
         virtual const UIBrush& selectBackgroundBrush( [[maybe_unused]] uint32 styleStates ) const { return _background; }
-        /** @brief 상태 @p styleStates 의 배경 브러시 색 · 모서리 · 테두리, 여백, 그림자를 자기 값으로 답합니다(스타일 전환의 "한쪽만 정한 필드"). */
-        [[nodiscard]] bool tryGetOwnStyleField( UIStyleField field, uint32 styleStates, float32 ( &outArr )[4] ) const override;
+        /** @brief 상태 @p styleStates 의 배경 브러시 색 · 모서리 · 테두리, 여백, 그림자를 자기 값으로 씁니다(스타일 전환의 "한쪽만 정한 필드"). */
+        uint32 fillOwnStyle( uint32 styleStates, WidgetStyle& outStyle ) const override;
 
     private:
         PROPERTY( DisplayName = "Background" )

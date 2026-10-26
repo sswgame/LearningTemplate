@@ -109,8 +109,8 @@ namespace sw
         static void writeComponents( WidgetStyle& style, UIStyleField field, const float32 ( &arr )[4] );
         /** @brief `WidgetStyle` 의 PROPERTY 이름(`_backgroundColor`, 대소문자 무시)에 해당하는 필드를 찾습니다. 없으면 false 입니다. */
         [[nodiscard]] static bool tryFindField( string_view name, UIStyleField& outField );
-        /** @brief 4성분 값을 `tryGetOwnStyleField` 의 출력 배열 `[x, y, z, w]` 에 옮깁니다. */
-        static void storeFloat4( const float4& value, float32 ( &outArr )[4] );
+        /** @brief 필드 하나의 값을 @p source 에서 @p outTarget 으로 옮깁니다(수치 필드는 표의 성분으로, 폰트 · 전환은 값째). 상속(`UIStyleSet`)이 씁니다. */
+        static void copyField( const WidgetStyle& source, UIStyleField field, WidgetStyle& outTarget );
         /** @brief 비트 하나(칸 하나)입니다. */
         static constexpr uint32 makeBit( UIStyleField field ) { return 1u << static_cast<uint32>( field ); }
     };

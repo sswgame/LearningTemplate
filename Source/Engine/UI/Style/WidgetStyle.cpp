@@ -139,12 +139,22 @@ namespace sw
         std::memcpy( pBase + WidgetStyleInternal::getRow( field )._offset, arr, componentCount * sizeof( float32 ) );
     }
 
-    void UIStyleFieldTable::storeFloat4( const float4& value, float32 ( &outArr )[4] )
+    void UIStyleFieldTable::copyField( const WidgetStyle& source, UIStyleField field, WidgetStyle& outTarget )
     {
-        outArr[0] = value._x;
-        outArr[1] = value._y;
-        outArr[2] = value._z;
-        outArr[3] = value._w;
+        if ( getComponentCount( field ) > 0 )
+        {
+            float32 arrComponent[4]{ 0.0f, 0.0f, 0.0f, 0.0f };
+            readComponents( source, field, arrComponent );
+            writeComponents( outTarget, field, arrComponent );
+        }
+        else if ( field == UIStyleField::Font )
+        {
+            outTarget._font = source._font;
+        }
+        else if ( field == UIStyleField::Transition )
+        {
+            outTarget._transition = source._transition; // 수치가 아닌 필드는 이 둘뿐이다(WidgetStyleInternal 의 static_assert)
+        }
     }
 
     bool UIStyleFieldTable::tryFindField( string_view name, UIStyleField& outField )
