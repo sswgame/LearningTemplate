@@ -7,6 +7,7 @@
 #include "Engine/Object/GameObject/GameObjectStore.h"
 
 #include "Core/Common/StdHeaders.h"
+#include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/String/StringBuilder.h"
@@ -84,14 +85,14 @@ namespace sw
     GameObject* GameObjectStore::createGameObject( hashed_string name )
     {
         SW_ASSERT( WalkScope::isInsideWalk() == false );
-        std::unique_lock<std::shared_mutex> lock{ _mutex };
+        std::unique_lock<shared_mutex> lock{ _mutex };
         return createGameObjectUnlocked( name, allocateID() );
     }
 
     GameObject* GameObjectStore::createGameObjectWithID( hashed_string name, uint64 objectID )
     {
         SW_ASSERT( WalkScope::isInsideWalk() == false );
-        std::unique_lock<std::shared_mutex> lock{ _mutex };
+        std::unique_lock<shared_mutex> lock{ _mutex };
         if ( objectID == 0 )
             return createGameObjectUnlocked( name, allocateID() );
 
@@ -137,7 +138,7 @@ namespace sw
             return;
         SW_ASSERT( WalkScope::isInsideWalk() == false );
 
-        std::unique_lock<std::shared_mutex> lock{ _mutex };
+        std::unique_lock<shared_mutex> lock{ _mutex };
         if ( findRegisteredUnlocked( pObj->getObjectID() ) != pObj )
             return;
         notifyStructureChanged();
@@ -170,8 +171,8 @@ namespace sw
 
     GameObject* GameObjectStore::findGameObjectByName( hashed_string name ) const
     {
-        std::shared_lock<std::shared_mutex> lock{ _mutex };
-        auto                                it = _mapNameToObject.find( name );
+        std::shared_lock<shared_mutex> lock{ _mutex };
+        auto                           it = _mapNameToObject.find( name );
         if ( it == _mapNameToObject.end() )
             return nullptr;
         GameObject* pObj = it->second._pObject;
@@ -246,8 +247,8 @@ namespace sw
         // 슬롯이 막혀 맵에 들어간 오브젝트가 있을 때만 맵을 본다(보통 없다). 없는 id 를 묻는 핸들(파괴된 대상)도 잠그지 않는다.
         if ( _overflowObjectCount.load( std::memory_order_acquire ) == 0 )
             return nullptr;
-        std::shared_lock<std::shared_mutex> lock{ _mutex };
-        auto                                it = _mapIDToObject.find( objectID );
+        std::shared_lock<shared_mutex> lock{ _mutex };
+        auto                           it = _mapIDToObject.find( objectID );
         if ( it == _mapIDToObject.end() )
             return nullptr;
         GameObject* pObj = it->second;
@@ -257,7 +258,7 @@ namespace sw
     void GameObjectStore::getAllGameObjects( vector<GameObject*>& outListGameObject ) const
     {
         outListGameObject.clear();
-        std::shared_lock<std::shared_mutex> lock{ _mutex };
+        std::shared_lock<shared_mutex> lock{ _mutex };
         outListGameObject.reserve( _listGameObject.size() + _listPendingAdd.size() );
         outListGameObject.insert( outListGameObject.end(), _listGameObject.begin(), _listGameObject.end() );
         outListGameObject.insert( outListGameObject.end(), _listPendingAdd.begin(), _listPendingAdd.end() );
@@ -286,7 +287,7 @@ namespace sw
     {
         _bHasBegunPlay.store( false, std::memory_order_release );
         {
-            std::scoped_lock<mutex> lock{ _beginPlayMutex };
+            ScopedLock<mutex> lock{ _beginPlayMutex };
             _listPendingBeginPlay.clear();
         }
         getAllGameObjects( _listPlayWalk );
@@ -300,14 +301,14 @@ namespace sw
 
     void GameObjectStore::queueBeginPlay( ComponentHandle handle )
     {
-        std::scoped_lock<mutex> lock{ _beginPlayMutex };
+        ScopedLock<mutex> lock{ _beginPlayMutex };
         _listPendingBeginPlay.push_back( handle );
     }
 
     void GameObjectStore::dispatchPendingBeginPlay()
     {
         {
-            std::scoped_lock<mutex> lock{ _beginPlayMutex };
+            ScopedLock<mutex> lock{ _beginPlayMutex };
             if ( _listPendingBeginPlay.empty() )
                 return;
             _listProcessingBeginPlay.swap( _listPendingBeginPlay );
@@ -364,7 +365,7 @@ namespace sw
         }
 
         {
-            std::unique_lock<std::shared_mutex> lock{ _mutex };
+            std::unique_lock<shared_mutex> lock{ _mutex };
             _listPendingDestroyObject.push_back( pObj );
         }
         // 틱 레지스트리에는 아무것도 알리지 않는다. 삭제 대기 오브젝트는 디스패치가 건너뛰고, 실제 파괴가 레지스트리에서 뺀다.
@@ -381,7 +382,7 @@ namespace sw
         // **포인터가 아니라 핸들로 기록한다.** 대기열에 선 뒤에도 즉시 경로(틱 밖의 `removeComponent`, 상태를 되돌리는 로드의
         // `clearComponents`)가 먼저 해제할 수 있다. 날 포인터로 보관하면 처리할 때 해제된 블록을(그새 같은 위치에 새
         // 컴포넌트가 들어왔으면 **엉뚱한 컴포넌트를**) 지운다. 핸들은 처리할 때 다시 찾아, 이미 없으면 건너뛴다.
-        std::unique_lock<std::shared_mutex> lock{ _mutex };
+        std::unique_lock<shared_mutex> lock{ _mutex };
         _listPendingDestroyComponent.push_back( pComp->getHandle() );
         // 틱에 참여하던 컴포넌트면 소유 오브젝트의 항목을 다시 만들게 한다. 나머지는 레지스트리와 무관하다.
         if ( pComp->hasTickWork() )
@@ -401,9 +402,9 @@ namespace sw
         if ( pEntry != nullptr && pComp->_poolEntrySlot != Component::kNotInPoolEntry )
         {
             SW_ASSERT( WalkScope::isInsideWalk() == false );
-            std::unique_lock<std::shared_mutex> lock{ _mutex };
-            vector<Component*>&                 listBucket = pEntry->_listComponent;
-            const uint32                        slot       = pComp->_poolEntrySlot;
+            std::unique_lock<shared_mutex> lock{ _mutex };
+            vector<Component*>&            listBucket = pEntry->_listComponent;
+            const uint32                   slot       = pComp->_poolEntrySlot;
             SW_ASSERT( slot < listBucket.size() && listBucket[slot] == pComp );
             Component* pBack      = listBucket.back();
             listBucket[slot]      = pBack;
@@ -443,7 +444,7 @@ namespace sw
         // 처리 목록을 돌며 컴포넌트와 오브젝트 소멸자를 부른다. 그 안에서 다시 들어오면 순회 중인 목록을 맞바꿔 버린다.
         SW_ASSERT( _bProcessingDestruction == false );
         {
-            std::unique_lock<std::shared_mutex> lock{ _mutex };
+            std::unique_lock<shared_mutex> lock{ _mutex };
             if ( _listPendingDestroyObject.empty() && _listPendingDestroyComponent.empty() )
                 return;
 
@@ -464,7 +465,7 @@ namespace sw
 
         if ( _listProcessingDestroyObject.empty() == false )
         {
-            std::unique_lock<std::shared_mutex> lock{ _mutex };
+            std::unique_lock<shared_mutex> lock{ _mutex };
             for ( GameObject* pObj : _listProcessingDestroyObject )
             {
                 if ( pObj != nullptr )
@@ -526,7 +527,7 @@ namespace sw
         SW_ASSERT( _bProcessingDestruction == false );
         vector<GameObject*> listToDestroy;
         {
-            std::unique_lock<std::shared_mutex> lock{ _mutex };
+            std::unique_lock<shared_mutex> lock{ _mutex };
 
             listToDestroy.reserve( _listGameObject.size() + _listPendingAdd.size() );
             listToDestroy.insert( listToDestroy.end(), _listGameObject.begin(), _listGameObject.end() );
@@ -537,7 +538,7 @@ namespace sw
             _listProcessingDestroyObject.clear();
             _listProcessingDestroyComponent.clear();
             {
-                std::scoped_lock<mutex> lockBeginPlay{ _beginPlayMutex };
+                ScopedLock<mutex> lockBeginPlay{ _beginPlayMutex };
                 _listPendingBeginPlay.clear();
             }
 
@@ -558,7 +559,7 @@ namespace sw
         }
 
         {
-            std::unique_lock<std::shared_mutex> lock{ _mutex };
+            std::unique_lock<shared_mutex> lock{ _mutex };
             _poolGameObject.clear();
             for ( ComponentPoolEntry* pEntry : _listComponentPoolEntry )
             {
@@ -575,7 +576,7 @@ namespace sw
         // 이름 맵과 id 테이블은 만들 때(`createGameObjectUnlocked`) 이미 넣었다. 여기서 다시 넣지 않는다.
         size_t firstNewIndex = 0;
         {
-            std::unique_lock<std::shared_mutex> lock{ _mutex };
+            std::unique_lock<shared_mutex> lock{ _mutex };
             if ( _listPendingAdd.empty() )
                 return;
             firstNewIndex = _listGameObject.size();
@@ -734,8 +735,8 @@ namespace sw
             return nullptr;
 
         SW_ASSERT( WalkScope::isInsideWalk() == false );
-        std::unique_lock<std::shared_mutex> lock{ _mutex };
-        auto                                iter = _mapComponentPool.find( pTypeInfo->_fullyQualifiedName );
+        std::unique_lock<shared_mutex> lock{ _mutex };
+        auto                           iter = _mapComponentPool.find( pTypeInfo->_fullyQualifiedName );
         if ( iter != _mapComponentPool.end() )
             return iter->second.get();
 
@@ -756,7 +757,7 @@ namespace sw
             return;
         }
         SW_ASSERT( WalkScope::isInsideWalk() == false );
-        std::unique_lock<std::shared_mutex> lock{ _mutex };
+        std::unique_lock<shared_mutex> lock{ _mutex };
         SW_ASSERT( pComp->_poolEntrySlot == Component::kNotInPoolEntry );
         if ( pEntry->_listComponent.empty() )
             pEntry->_pType = pComp->_pTypeInfo;
@@ -766,8 +767,8 @@ namespace sw
 
     uint32 GameObjectStore::getTypedComponentBucketCount() const
     {
-        std::shared_lock<std::shared_mutex> lock{ _mutex };
-        uint32                              count{ 0 };
+        std::shared_lock<shared_mutex> lock{ _mutex };
+        uint32                         count{ 0 };
         for ( const ComponentPoolEntry* pEntry : _listComponentPoolEntry )
         {
             if ( pEntry->_pType != nullptr )

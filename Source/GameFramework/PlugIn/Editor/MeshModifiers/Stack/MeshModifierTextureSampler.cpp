@@ -8,6 +8,7 @@
 #include "GameFramework/PlugIn/Editor/MeshModifiers/Stack/MeshModifierTextureSampler.h"
 
 #include "Core/Common/StdHeaders.h"
+#include "Core/Concurrency/mutex.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
@@ -104,12 +105,12 @@ namespace sw::editor
             }
 
             /** @brief 캐시에서 찾고, 없거나 낡았으면 단일 잠금 아래에서 한 번만 디코드합니다. */
-            static std::shared_ptr<DecodedTexture> acquire( std::shared_mutex& mutex, TextureCache& cache, string_view assetPath )
+            static std::shared_ptr<DecodedTexture> acquire( shared_mutex& mutex, TextureCache& cache, string_view assetPath )
             {
                 std::shared_ptr<DecodedTexture> pTexture;
                 {
-                    std::shared_lock<std::shared_mutex> lock( mutex );
-                    auto                                iter = cache.find( assetPath );
+                    std::shared_lock<shared_mutex> lock( mutex );
+                    auto                           iter = cache.find( assetPath );
                     if ( iter != cache.end() )
                         pTexture = iter->second;
                 }
@@ -120,8 +121,8 @@ namespace sw::editor
 
                 if ( bReload )
                 {
-                    std::unique_lock<std::shared_mutex> lock( mutex );
-                    auto                                iter = cache.find( assetPath );
+                    std::unique_lock<shared_mutex> lock( mutex );
+                    auto                           iter = cache.find( assetPath );
                     // 다른 스레드가 잠금을 먼저 잡아 새로 읽었으면 그것을 쓴다.
                     if ( iter != cache.end() && iter->second != pTexture )
                     {
@@ -225,7 +226,7 @@ namespace sw::editor
     /** @brief 표본기가 소유하는 캐시와 그 잠금입니다. 여러 작업 스레드가 같이 부르므로 잠금이 캐시를 지킨다. */
     struct MeshModifierTextureSampler::State
     {
-        std::shared_mutex                                _mutex;
+        shared_mutex                                     _mutex;
         MeshModifierTextureSamplerInternal::TextureCache _cache;
     };
 
@@ -253,7 +254,7 @@ namespace sw::editor
 
     void MeshModifierTextureSampler::clearCache()
     {
-        std::unique_lock<std::shared_mutex> lock( _pState->_mutex );
+        std::unique_lock<shared_mutex> lock( _pState->_mutex );
         _pState->_cache.clear();
     }
 } // namespace sw::editor

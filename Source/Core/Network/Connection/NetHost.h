@@ -32,7 +32,7 @@
  *          `update` 는 소켓 받기와 보내기를 **잠금 밖에서** 묶어 처리하고 잠금 안에서는 패킷 처리만 하므로, 시스템 호출이 보내는 쪽 스레드를 막지 않는다.
  *          `update` 를 부르는 스레드는 한 번에 하나여야 한다. 보통 `NetHostThread` 가 맡아 게임 프레임과 상관없이 받기, 확인, 재전송, 연결 유지를 돌린다.
  *          그래서 로딩이나 프레임 멈춤 중에도 연결이 끊기지 않는다.
- *          멤버의 소유: `_listReceived` · `_flushBatch` · `_listDeliver` 는 `update` 스레드 전용(잠금 밖), 나머지는 모두 `_mutex` 아래다.
+ *          멤버의 소유: `_listReceived` · `_flushBatch` · `_listDeliver` 는 `update` 스레드 전용(잠금 밖), 나머지는 모두 `_mutex` 아래다(선언의 `SW_GUARDED_BY` · `SW_REQUIRES_LOCK` · `SW_EXCLUDES_LOCK` 을 clang `-Wthread-safety` 가 본다).
  *          잠금은 `_mutex` 하나뿐이고, 잠금을 쥔 채 부르는 바깥 코드는 `INetConnectAuthenticator` 와 `INetSecurityProvider` 뿐이다(둘 다 `NetHost` 를 부르지 않는다).
  *          전송의 `receive` · `send` 와 비동기 연결 결과(`TaskPromise::setValue`)는 잠금 밖에서 부른다.
  *
@@ -246,82 +246,82 @@ namespace sw
         NetHost& operator=( const NetHost& ) = delete;
 
         /** @brief 전송과 설정을 정합니다. `update` 를 도는 스레드가 없을 때 부른다. */
-        void               initialize( INetTransport* pTransport, const NetHostConfig& settings );
-        [[nodiscard]] bool listen();
-        [[nodiscard]] bool connect( const NetAddress& serverAddress );
+        void               initialize( INetTransport* pTransport, const NetHostConfig& settings ) SW_EXCLUDES_LOCK( _mutex );
+        [[nodiscard]] bool listen() SW_EXCLUDES_LOCK( _mutex );
+        [[nodiscard]] bool connect( const NetAddress& serverAddress ) SW_EXCLUDES_LOCK( _mutex );
         /** @brief 세션 토큰을 내밀며 연결합니다(토큰 결속 서버용). 토큰과 비밀은 로그인 키트가 TLS 로 받은 값입니다. */
-        [[nodiscard]] bool connect( const NetAddress& serverAddress, const NetConnectCredentials& credentials );
+        [[nodiscard]] bool connect( const NetAddress& serverAddress, const NetConnectCredentials& credentials ) SW_EXCLUDES_LOCK( _mutex );
         /**
          * @brief 비동기로 연결하고, 연결되거나 실패(거절, 정원 초과, 타임아웃, 끊김)하면 채워지는 future 를 돌려줍니다.
          * @details 시작부터 실패하면 이미 채워진 future(Rejected)를 돌려준다.
          *          결과와 `then` 후속 작업은 그 일을 처리한 스레드(`update` 나 `disconnect` 를 부른 쪽)에서 잠금을 푼 뒤에 채운다.
          *          다시 `connect` 하면 앞의 future 는 Requested 로 끝난다.
          */
-        TaskFuture<NetConnectResult> connectAsync( const NetAddress& serverAddress );
-        TaskFuture<NetConnectResult> connectAsync( const NetAddress& serverAddress, const NetConnectCredentials& credentials );
+        TaskFuture<NetConnectResult> connectAsync( const NetAddress& serverAddress ) SW_EXCLUDES_LOCK( _mutex );
+        TaskFuture<NetConnectResult> connectAsync( const NetAddress& serverAddress, const NetConnectCredentials& credentials ) SW_EXCLUDES_LOCK( _mutex );
         /** @brief 소켓에서 받고(잠금 밖), 패킷 처리와 타임아웃 확인과 보낼 패킷 생성을 하고(잠금 안), 보냅니다(잠금 밖). 한 번에 한 스레드만 부른다. */
-        void update( float64 nowSeconds );
+        void update( float64 nowSeconds ) SW_EXCLUDES_LOCK( _mutex );
         /** @brief 받을 데이터그램이 생기거나 @p timeoutSeconds 가 지날 때까지 잠듭니다. `update` 를 도는 스레드가 부릅니다. */
-        bool waitForReceive( float64 timeoutSeconds );
+        bool waitForReceive( float64 timeoutSeconds ) SW_EXCLUDES_LOCK( _mutex );
 
-        [[nodiscard]] bool sendMessage( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size ) override;
-        [[nodiscard]] bool sendNotifiedMessage( int32 connectionID, const uint8* pData, int32 size, uint32 tag ) override;
+        [[nodiscard]] bool sendMessage( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size ) SW_EXCLUDES_LOCK( _mutex ) override;
+        [[nodiscard]] bool sendNotifiedMessage( int32 connectionID, const uint8* pData, int32 size, uint32 tag ) SW_EXCLUDES_LOCK( _mutex ) override;
         [[nodiscard]] bool sendMessage( int32 connectionID, NetChannelType channel, const vector<uint8>& buffer )
         {
             return sendMessage( connectionID, channel, buffer.data(), static_cast<int32>( buffer.size() ) );
         }
         /** @brief 연결된 모두에게 보냅니다. @p exceptID 는 제외합니다. 반환값은 보낸 수입니다. */
-        int32 broadcast( NetChannelType channel, const uint8* pData, int32 size, int32 exceptID = -1 ) override;
+        int32 broadcast( NetChannelType channel, const uint8* pData, int32 size, int32 exceptID = -1 ) SW_EXCLUDES_LOCK( _mutex ) override;
         /**
          * @brief 지금까지 보내기 큐에 넣은 메시지의 종류별 셈을 @p outTable 에 더합니다(`sendMessage` · `broadcast` 가 연결마다 센다 — 받은 쪽 셈은 `NetMessageRouter::getKindTally`).
          * @details 큐에 넣은 것을 센다. 대역폭에 막혀 늦게 나가거나 다시 보낸 바이트는 연결 통계(`NetConnectionStats`)의 몫이다. 잠금을 잡고 표 하나(4 KiB)를 더한다 — `net.stats` 처럼 느리게 묻는 쪽이 쓴다.
          */
-        void addSentKindTally( NetMessageKindTallyTable& outTable ) const override;
+        void addSentKindTally( NetMessageKindTallyTable& outTable ) const SW_EXCLUDES_LOCK( _mutex ) override;
         /** @brief 받은 메시지 하나를 꺼냅니다. 연결 순서대로, 채널은 신뢰 순서, 신뢰 순서 없음, 순서만, 비신뢰 순(채널 값 순)으로 확인합니다. */
-        [[nodiscard]] bool receiveMessage( int32& outConnectionID, NetChannelType& outChannel, vector<uint8>& outBuffer );
-        void               disconnect( int32 connectionID ) override;
-        void               disconnectAll();
-        void               drainEvents( vector<NetHostEvent>& outListEvent );
+        [[nodiscard]] bool receiveMessage( int32& outConnectionID, NetChannelType& outChannel, vector<uint8>& outBuffer ) SW_EXCLUDES_LOCK( _mutex );
+        void               disconnect( int32 connectionID ) SW_EXCLUDES_LOCK( _mutex ) override;
+        void               disconnectAll() SW_EXCLUDES_LOCK( _mutex );
+        void               drainEvents( vector<NetHostEvent>& outListEvent ) SW_EXCLUDES_LOCK( _mutex );
         /**
          * @brief 쌓인 연결 사건과 받은 메시지를 **잠금 한 번에** 모두 꺼냅니다. @p outInbound 를 비운 뒤 채우며, 사건이 메시지보다 앞에 옵니다.
          * @details 닫힌 연결의 받은 메시지는 연결을 닫을 때 지워지므로, 꺼낸 메시지는 모두 지금 그 슬롯에 있는 연결의 것이다.
          *          사건을 먼저 처리하면 같은 슬롯에 새로 연결된 클라이언트의 메시지를 옛 연결의 상태로 읽지 않는다.
          *          `receiveMessage` 나 `drainEvents` 와 섞어 쓰지 않는다(`NetMessageRouter::pump` 가 이 함수를 쓴다).
          */
-        void drainInbound( NetInbound& outInbound ) override;
+        void drainInbound( NetInbound& outInbound ) SW_EXCLUDES_LOCK( _mutex ) override;
 
-        bool               isServer() const override;
-        NetConnectionState getConnectionState( int32 connectionID ) const override;
+        bool               isServer() const SW_EXCLUDES_LOCK( _mutex ) override;
+        NetConnectionState getConnectionState( int32 connectionID ) const SW_EXCLUDES_LOCK( _mutex ) override;
         /** @brief 연결 통계의 사본입니다. 연결돼 있지 않으면 false 를 반환합니다. 다른 스레드가 `update` 하는 중에도 안전합니다. */
-        [[nodiscard]] bool getConnectionStats( int32 connectionID, NetConnectionStats& outStats ) const override;
+        [[nodiscard]] bool getConnectionStats( int32 connectionID, NetConnectionStats& outStats ) const SW_EXCLUDES_LOCK( _mutex ) override;
         /**
          * @brief 연결 객체를 그대로 빌려줍니다.
          * @warning 잠금 밖으로 나가는 포인터이므로 `update` 를 도는 다른 스레드가 없을 때만(한 스레드에서 쓰거나 테스트에서) 쓴다. 스레드가 돌고 있으면 `getConnectionStats` 를 쓴다.
          */
-        const NetConnection* findConnection( int32 connectionID ) const;
-        NetAddress           getConnectionAddress( int32 connectionID ) const override;
-        int32                getConnectedCount() const override;
+        const NetConnection* findConnection( int32 connectionID ) const SW_EXCLUDES_LOCK( _mutex );
+        NetAddress           getConnectionAddress( int32 connectionID ) const SW_EXCLUDES_LOCK( _mutex ) override;
+        int32                getConnectedCount() const SW_EXCLUDES_LOCK( _mutex ) override;
         /** @brief 클라이언트에서 서버가 준 자기 번호(서버 쪽 연결 ID)를 반환합니다. 연결 전이면 -1 입니다. */
-        int32 getClientIndex() const override;
-        void  collectConnected( vector<int32>& outListConnection ) const override;
+        int32 getClientIndex() const SW_EXCLUDES_LOCK( _mutex ) override;
+        void  collectConnected( vector<int32>& outListConnection ) const SW_EXCLUDES_LOCK( _mutex ) override;
         /** @brief 이 호스트가 지금 디버거 대기를 알리는지 반환합니다. 마지막 `update` 기준이며(`NetHostConfig::_debugHold`), Shipping 은 항상 false 입니다. */
-        bool   isDebugHoldAnnounced() const;
-        uint64 getRejectedPacketCount() const;
+        bool   isDebugHoldAnnounced() const SW_EXCLUDES_LOCK( _mutex );
+        uint64 getRejectedPacketCount() const SW_EXCLUDES_LOCK( _mutex );
         /** @brief 서버에서 인증기가 이 연결에 지정한 주체(로그인 계정)를 반환합니다. 없으면 0 입니다. */
-        uint64 getConnectionPrincipal( int32 connectionID ) const;
+        uint64 getConnectionPrincipal( int32 connectionID ) const SW_EXCLUDES_LOCK( _mutex );
         /** @brief 복호, 증명, 키 확인에 실패해 버린 패킷 수입니다(진단과 테스트용). */
-        uint64 getAuthenticationFailureCount() const;
+        uint64 getAuthenticationFailureCount() const SW_EXCLUDES_LOCK( _mutex );
         /** @brief 재전송 방지 윈도우가 버린 패킷 수입니다. */
-        uint64 getReplayRejectedCount() const;
+        uint64 getReplayRejectedCount() const SW_EXCLUDES_LOCK( _mutex );
         /** @brief 이 호스트의 프로토콜 ID(`NetProtocol::makeProtocolID( 게임 ID, 와이어 버전 )`)입니다. */
-        uint32 getProtocolID() const;
+        uint32 getProtocolID() const SW_EXCLUDES_LOCK( _mutex );
         /** @brief 연결마다의 보내기 상한(초당 바이트, `NetHostConfig::_maxBytesPerSecond`)입니다. 키트가 틱 예산을 계산할 때 씁니다(`NetSendBudget::computeTickBudget`). */
-        int32 getMaxBytesPerSecond() const override;
+        int32 getMaxBytesPerSecond() const SW_EXCLUDES_LOCK( _mutex ) override;
         /**
          * @brief 이 연결이 포화됐는가입니다. 대역폭 토큰을 다 썼거나 앞 패킷이 비신뢰 메시지를 다 싣지 못했으면 true 입니다. 연결돼 있지 않으면 false 입니다.
          * @details 키트는 포화된 연결에 이번 틱의 비신뢰 복제(위치 · 효과)를 건너뛴다. 쌓아 두면 늦은 것이 몰려 나간다. 언리얼 `UNetConnection::IsNetReady` 가 거짓인 자리이다.
          */
-        bool isConnectionSaturated( int32 connectionID ) const override;
+        bool isConnectionSaturated( int32 connectionID ) const SW_EXCLUDES_LOCK( _mutex ) override;
 
         /** @brief 패킷 본문의 첫 3비트로, 핸드셰이크 단계와 데이터와 끊김을 구분합니다. */
         enum class PacketType : uint8
@@ -385,87 +385,87 @@ namespace sw
 
         // 아래 함수는 모두 잠금을 잡은 채로 부른다.
         /** @brief 받은 데이터그램 하나의 헤더와 종류를 검사하고 종류별 처리로 넘깁니다. 틀린 패킷은 `_rejectedPacketCount` 로만 셉니다. */
-        void handlePacket( float64 nowSeconds, const NetAddress& from, const uint8* pData, int32 size );
+        void handlePacket( float64 nowSeconds, const NetAddress& from, const uint8* pData, int32 size ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 암호화하지 않은 데이터 패킷의 연결 값을 확인하고 본문을 연결에 넘깁니다. */
-        void handlePayloadPacket( float64 nowSeconds, int32 slotIndex, BitReader& reader );
+        void handlePayloadPacket( float64 nowSeconds, int32 slotIndex, BitReader& reader ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 제어 패킷을 종류별로 처리합니다(핸드셰이크 · 거절 · 끊기). */
-        void handleControlPacket( PacketType type, const ControlPacket& packet, BitReader& reader );
+        void handleControlPacket( PacketType type, const ControlPacket& packet, BitReader& reader ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 서버가 연결 요청에 답합니다. 프로토콜이 다르면 거절, 빈 슬롯이 없으면 가득 참, 아니면 챌린지를 보냅니다. */
-        void handleConnectRequest( const ControlPacket& packet );
+        void handleConnectRequest( const ControlPacket& packet ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 서버가 챌린지 응답을 확인하고 슬롯을 할당해 수락합니다. 이미 연결된 주소의 같은 응답이면 수락만 다시 보냅니다. */
-        void handleChallengeResponse( const ControlPacket& packet, BitReader& reader );
-        void updateSlots( float64 nowSeconds );
-        void sendControl( const NetAddress& to, PacketType type, uint64 valueA, uint64 valueB );
+        void handleChallengeResponse( const ControlPacket& packet, BitReader& reader ) SW_REQUIRES_LOCK( _mutex );
+        void updateSlots( float64 nowSeconds ) SW_REQUIRES_LOCK( _mutex );
+        void sendControl( const NetAddress& to, PacketType type, uint64 valueA, uint64 valueB ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 연결 요청을 거절합니다. 이유, 이 호스트의 프로토콜 ID, 요청에 든 클라이언트 솔트(위조 거절을 걸러 내는 값)를 싣습니다. */
-        void sendDenied( const NetAddress& to, NetDisconnectReason reason, uint64 clientSalt );
+        void sendDenied( const NetAddress& to, NetDisconnectReason reason, uint64 clientSalt ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 클라이언트가 챌린지 응답을 보냅니다. 암호화 방식이면 공개 키를, 토큰 결속이면 토큰과 증명 태그를 함께 싣습니다. */
-        void sendChallengeResponse( NetHostSlot& slot );
+        void sendChallengeResponse( NetHostSlot& slot ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 서버가 수락을 보냅니다. 암호화 방식이면 공개 키와 키 확인 태그를 함께 싣습니다. */
-        void sendAccepted( int32 slotIndex );
+        void sendAccepted( int32 slotIndex ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 서버가 응답의 공개 키, 토큰, 증명을 읽고 검증해 키를 만듭니다. 틀리면 거절을 보내고 false 를 반환합니다. */
-        [[nodiscard]] bool acceptSecureResponse( BitReader& reader, const NetAddress& from, uint64 clientSalt, uint64 challenge, unique_ptr<NetSlotSecurity>& outSecurity );
+        [[nodiscard]] bool acceptSecureResponse( BitReader& reader, const NetAddress& from, uint64 clientSalt, uint64 challenge, unique_ptr<NetSlotSecurity>& outSecurity ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 클라이언트가 수락의 공개 키와 키 확인 태그를 읽고 키를 만듭니다. 틀리면 연결을 닫고 false 를 반환합니다. */
-        [[nodiscard]] bool acceptSecureAccepted( BitReader& reader, NetHostSlot& slot, int32 slotIndex, uint32 serverIndex );
+        [[nodiscard]] bool acceptSecureAccepted( BitReader& reader, NetHostSlot& slot, int32 slotIndex, uint32 serverIndex ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 암호화된 데이터 패킷과 끊기 패킷을 만듭니다(@p pPlain 을 봉인). 보낸 데이터그램의 바이트 수를 반환하며, 실패하면 0 입니다. */
-        int32 sendSealed( NetHostSlot& slot, PacketType type, const uint8* pPlain, int32 plainSize );
+        int32 sendSealed( NetHostSlot& slot, PacketType type, const uint8* pPlain, int32 plainSize ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 암호화 방식의 데이터 패킷과 끊기 패킷(헤더 8바이트 뒤의 본문)을 처리합니다. */
-        void handleSealedPacket( float64 nowSeconds, PacketType type, int32 slotIndex, const uint8* pBody, int32 bodySize );
+        void handleSealedPacket( float64 nowSeconds, PacketType type, int32 slotIndex, const uint8* pBody, int32 bodySize ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 이 호스트의 기능 마스크(`NetProtocolFeature`)입니다. 역할과 자격이 정해진 뒤(listen, connect) 프로토콜 ID에 섞습니다. */
-        uint32 computeFeatureMask() const;
-        bool   isEncrypted() const { return _settings._security._mode == NetSecurityMode::Encrypted; }
+        uint32 computeFeatureMask() const SW_REQUIRES_LOCK( _mutex );
+        bool   isEncrypted() const SW_REQUIRES_LOCK( _mutex ) { return _settings._security._mode == NetSecurityMode::Encrypted; }
         /** @brief `_packetWriter` 의 본문에 헤더(헤더 값과 체크섬)를 붙여 보낼 배치에 넣습니다. */
-        void sendFramed( const NetAddress& to, uint32 headerID );
+        void sendFramed( const NetAddress& to, uint32 headerID ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 패킷 하나를 씁니다. 대역폭 토큰이 남아 있으면 메시지까지 싣고, 다 썼으면 헤더(확인)만 싣습니다. 보낸 바이트만큼 토큰에서 뺍니다. */
-        void sendPayload( float64 nowSeconds, NetHostSlot& slot );
+        void sendPayload( float64 nowSeconds, NetHostSlot& slot ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 지난 충전 이후 흐른 시간만큼 대역폭 토큰을 채웁니다. 상한은 보내기 간격 두 번어치이고, 최소 패킷 하나 크기입니다. */
-        void refillSendCredit( float64 nowSeconds, NetHostSlot& slot ) const;
+        void refillSendCredit( float64 nowSeconds, NetHostSlot& slot ) const SW_REQUIRES_LOCK( _mutex );
         /** @brief 디버거 대기를 알릴지 다시 정합니다(디버거는 1초마다 확인). 알리는 중에 `update` 사이가 벌어졌으면 그 시간만큼 연결 시계를 앞으로 밀습니다(가상 시계). */
-        void updateDebugHold( float64 nowSeconds );
+        void updateDebugHold( float64 nowSeconds ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 이 연결의 타임아웃을 반환합니다. 상대가 디버거 대기를 알렸다면(개발 빌드) `_debugHoldTimeoutSeconds` 와 기본값 중 큰 쪽입니다. */
-        float64                      computeTimeoutSeconds( const NetHostSlot& slot ) const;
-        void                         closeSlot( int32 slotIndex, NetDisconnectReason reason, bool bNotifyRemote );
-        bool                         startConnect( const NetAddress& serverAddress );
-        bool                         connectLocked( const NetAddress& serverAddress, const NetConnectCredentials* pCredentials );
-        TaskFuture<NetConnectResult> connectAsyncWith( const NetAddress& serverAddress, const NetConnectCredentials* pCredentials );
-        void                         pushEvent( const NetHostEvent& event );
-        void                         finishConnect( NetDisconnectReason reason );
-        bool                         sendMessageLocked( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size );
-        void                         takePending( OutgoingBatch& outBatch, vector<FinishedConnect>& outListFinished );
+        float64                      computeTimeoutSeconds( const NetHostSlot& slot ) const SW_REQUIRES_LOCK( _mutex );
+        void                         closeSlot( int32 slotIndex, NetDisconnectReason reason, bool bNotifyRemote ) SW_REQUIRES_LOCK( _mutex );
+        bool                         startConnect( const NetAddress& serverAddress ) SW_REQUIRES_LOCK( _mutex );
+        bool                         connectLocked( const NetAddress& serverAddress, const NetConnectCredentials* pCredentials ) SW_EXCLUDES_LOCK( _mutex );
+        TaskFuture<NetConnectResult> connectAsyncWith( const NetAddress& serverAddress, const NetConnectCredentials* pCredentials ) SW_EXCLUDES_LOCK( _mutex );
+        void                         pushEvent( const NetHostEvent& event ) SW_REQUIRES_LOCK( _mutex );
+        void                         finishConnect( NetDisconnectReason reason ) SW_REQUIRES_LOCK( _mutex );
+        bool                         sendMessageLocked( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size ) SW_REQUIRES_LOCK( _mutex );
+        void                         takePending( OutgoingBatch& outBatch, vector<FinishedConnect>& outListFinished ) SW_REQUIRES_LOCK( _mutex );
 
         // 잠금 밖에서 부른다.
         static void sendBatch( INetTransport* pTransport, const OutgoingBatch& batch );
         static void deliverFinished( vector<FinishedConnect>& listFinished );
 
-        mutable mutex                 _mutex;     ///< 아래 상태 전부. 잠금 밖 전용이라고 적은 것은 제외한다.
-        NetSlotTable                  _slotTable; ///< 연결 슬롯과 주소 맵.
-        NetChallenge                  _challenge; ///< 챌린지 값의 비밀 키와 솔트 수열.
-        NetPacketSealer               _sealer;    ///< 암호화 방식의 봉인과 열기(스크래치 버퍼를 다시 쓴다).
-        vector<NetHostEvent>          _listEvent;
-        OutgoingBatch                 _pendingBatch;   ///< 잠금 안에서 쌓인 보낼 데이터그램
-        BitWriter                     _packetWriter;   ///< 보낼 패킷의 몸
-        TaskPromise<NetConnectResult> _connectPromise; ///< 기다리는 비동기 연결(`_bConnectPending`).
-        vector<FinishedConnect>       _listFinished;   ///< 끝난 비동기 연결. 잠금을 푼 뒤 채운다.
-        vector<NetReceivedDatagram>   _listReceived;   ///< `update` 스레드 전용. 잠금 밖에서 받은 배치(버퍼를 다시 쓴다).
-        OutgoingBatch                 _flushBatch;     ///< `update` 스레드 전용. 잠금 밖에서 보내는 배치.
-        vector<FinishedConnect>       _listDeliver;    ///< `update` 스레드 전용.
-        BitWriter                     _plainWriter;    ///< 암호화에서 NetConnection 이 쓴 평문 패킷.
-        NetConnectCredentials         _credentials;    ///< 클라이언트 전용. 지금 연결에 제시하는 자격.
-        NetHostConfig                 _settings;
-        NetMessageKindTallyTable      _sentKindTally; ///< `sendMessageLocked` 가 큐에 넣은 메시지마다 더한다.
-        INetTransport*                _pTransport;
-        uint64                        _rejectedPacketCount;
-        uint64                        _authenticationFailureCount;
-        uint64                        _replayRejectedCount;
-        uint64                        _mismatchLogCount;
-        float64                       _lastUpdateTime;       ///< 지난 `update` 의 시각. 음수면 아직 호출한 적이 없다(가상 시계가 멈춘 시간을 측정할 때 쓴다).
-        float64                       _nextDebuggerPollTime; ///< 디버거가 붙었는지 다시 확인할 시각.
-        uint32                        _protocolID;
-        atomic<uint32>                _updateDepth; ///< `update` 를 두 스레드가 동시에 부르는 실수를 잡는다.
-        int32                         _clientIndex;
-        int32                         _receiveCursor; ///< 연결마다 받기를 고르게 돌리기 위한 시작 위치.
-        uint8                         _bServer;
-        uint8                         _bConnectPending;
-        uint8                         _bHasCredentials; ///< 클라이언트 전용. 자격을 제시하는 연결이다(토큰 결속).
-        uint8                         _bDebugHold;      ///< 지금 디버거 대기를 알린다(데이터 패킷의 비트).
+        mutable mutex                                 _mutex;                  ///< 아래 상태 전부. 잠금 밖 전용이라고 적은 것은 제외한다.
+        NetSlotTable _slotTable                       SW_GUARDED_BY( _mutex ); ///< 연결 슬롯과 주소 맵.
+        NetChallenge _challenge                       SW_GUARDED_BY( _mutex ); ///< 챌린지 값의 비밀 키와 솔트 수열.
+        NetPacketSealer _sealer                       SW_GUARDED_BY( _mutex ); ///< 암호화 방식의 봉인과 열기(스크래치 버퍼를 다시 쓴다).
+        vector<NetHostEvent> _listEvent               SW_GUARDED_BY( _mutex );
+        OutgoingBatch _pendingBatch                   SW_GUARDED_BY( _mutex ); ///< 잠금 안에서 쌓인 보낼 데이터그램
+        BitWriter _packetWriter                       SW_GUARDED_BY( _mutex ); ///< 보낼 패킷의 몸
+        TaskPromise<NetConnectResult> _connectPromise SW_GUARDED_BY( _mutex ); ///< 기다리는 비동기 연결(`_bConnectPending`).
+        vector<FinishedConnect> _listFinished         SW_GUARDED_BY( _mutex ); ///< 끝난 비동기 연결. 잠금을 푼 뒤 채운다.
+        vector<NetReceivedDatagram>                   _listReceived;           ///< `update` 스레드 전용. 잠금 밖에서 받은 배치(버퍼를 다시 쓴다).
+        OutgoingBatch                                 _flushBatch;             ///< `update` 스레드 전용. 잠금 밖에서 보내는 배치.
+        vector<FinishedConnect>                       _listDeliver;            ///< `update` 스레드 전용.
+        BitWriter _plainWriter                        SW_GUARDED_BY( _mutex ); ///< 암호화에서 NetConnection 이 쓴 평문 패킷.
+        NetConnectCredentials _credentials            SW_GUARDED_BY( _mutex ); ///< 클라이언트 전용. 지금 연결에 제시하는 자격.
+        NetHostConfig _settings                       SW_GUARDED_BY( _mutex );
+        NetMessageKindTallyTable _sentKindTally       SW_GUARDED_BY( _mutex ); ///< `sendMessageLocked` 가 큐에 넣은 메시지마다 더한다.
+        INetTransport*                                _pTransport;
+        uint64 _rejectedPacketCount                   SW_GUARDED_BY( _mutex );
+        uint64 _authenticationFailureCount            SW_GUARDED_BY( _mutex );
+        uint64 _replayRejectedCount                   SW_GUARDED_BY( _mutex );
+        uint64 _mismatchLogCount                      SW_GUARDED_BY( _mutex );
+        float64 _lastUpdateTime                       SW_GUARDED_BY( _mutex ); ///< 지난 `update` 의 시각. 음수면 아직 호출한 적이 없다(가상 시계가 멈춘 시간을 측정할 때 쓴다).
+        float64 _nextDebuggerPollTime                 SW_GUARDED_BY( _mutex ); ///< 디버거가 붙었는지 다시 확인할 시각.
+        uint32 _protocolID                            SW_GUARDED_BY( _mutex );
+        atomic<uint32>                                _updateDepth; ///< `update` 를 두 스레드가 동시에 부르는 실수를 잡는다.
+        int32 _clientIndex                            SW_GUARDED_BY( _mutex );
+        int32 _receiveCursor                          SW_GUARDED_BY( _mutex ); ///< 연결마다 받기를 고르게 돌리기 위한 시작 위치.
+        uint8 _bServer                                SW_GUARDED_BY( _mutex );
+        uint8 _bConnectPending                        SW_GUARDED_BY( _mutex );
+        uint8 _bHasCredentials                        SW_GUARDED_BY( _mutex ); ///< 클라이언트 전용. 자격을 제시하는 연결이다(토큰 결속).
+        uint8 _bDebugHold                             SW_GUARDED_BY( _mutex ); ///< 지금 디버거 대기를 알린다(데이터 패킷의 비트).
     };
 } // namespace sw

@@ -29,8 +29,8 @@ namespace sw
             /** @brief 이미 경고한 경로입니다. 잠금과 함께 둡니다. */
             struct WarnedPathSet
             {
-                mutex                 _mutex;
-                unordered_set<string> _uniquePath;
+                mutex                             _mutex;
+                unordered_set<string> _uniquePath SW_GUARDED_BY( _mutex );
             };
 
             /** @brief 읽는 중인 로드입니다. 같은 경로를 동시에 요청하면 같은 블록을 받습니다(이중 읽기 없음). 로드 단계가 끝나면 지웁니다. */
@@ -77,9 +77,15 @@ namespace sw
             /** @brief 읽지 못한 경로를 처음 한 번만 경고합니다. */
             static void warnLoadFailureOnce( string_view path )
             {
-                WarnedPathSet&          warned = getState()._warned;
-                std::scoped_lock<mutex> lock{ warned._mutex };
-                if ( warned._uniquePath.insert( makeKey( path ) ).second )
+                WarnedPathSet& warned = getState()._warned;
+                string         key    = makeKey( path );
+                bool           bFirst = false;
+                {
+                    // 잠금 안에서는 기록만 하고 경고는 놓은 뒤에 남긴다(잠금은 잎 잠금, 결정 5-3).
+                    ScopedLock<mutex> lock{ warned._mutex };
+                    bFirst = warned._uniquePath.insert( std::move( key ) ).second;
+                }
+                if ( bFirst )
                     SW_LOG_WARNING( "Mesh asset '%#' could not be loaded - nothing is drawn for it", path );
             }
 
@@ -267,7 +273,7 @@ namespace sw
         {
             pState->_sharedTable.clear();
             // 다시 읽으면 다시 알리도록 경고 기록을 잊는다.
-            std::scoped_lock<mutex> lock{ pState->_warned._mutex };
+            ScopedLock<mutex> lock{ pState->_warned._mutex };
             pState->_warned._uniquePath = unordered_set<string>{};
         }
         MeshCacheInternal::getStats().recordClear();

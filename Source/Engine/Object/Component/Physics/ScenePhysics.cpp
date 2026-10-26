@@ -16,6 +16,7 @@
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"
 #include "Engine/Physics/PhysicsDebugDraw.h"
 #include "Engine/Physics/PhysicsSystem.h"
+#include "Engine/Profiling/FrameProfiler.h"
 
 namespace sw
 {
@@ -90,6 +91,10 @@ namespace sw
 
     void ScenePhysics::update( float32 deltaTime )
     {
+        // 틱만 도는 미리보기 씬은 물리를 끈다(`ScenePreviewPolicy::_bPhysics`).
+        if ( _manager.isPhysicsStepEnabled() == false )
+            return;
+        SW_PROFILE_SCOPE( "GT.Scene.tick.physics" );
         SW_MEMORY_SCOPE( Physics );
         step( _manager, deltaTime );
     }

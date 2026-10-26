@@ -8,11 +8,14 @@
 
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Service/ISceneService.h"
 #include "Engine/Object/GameObject/Tick/SceneFrameStep.h"
 
 #include "EngineTest/TestGameObjectMocks.h"
 
 #include "TestFramework/TestFramework.h"
+
+#include <utility>
 
 /**
  * @brief [SceneFrameStepTest] tick 한 번이 표의 단계를 줄 순서대로 한 번씩 돌고, 단계마다 이름이 있다
@@ -70,6 +73,75 @@ SW_TEST_CASE( SceneFrameStepTest, PrePhysicsTickWritesLandInTheApplyStep )
 
 namespace
 {
+    /** @brief 단계 @p Step 에 등록하는 테스트 씬 서비스입니다. 불린 수와, 불릴 때 관찰자가 마지막으로 본 단계를 적는다. */
+    template <sw::SceneFrameStep Step>
+    class SceneFrameStepCountService final : public sw::ISceneService
+    {
+    public:
+        explicit SceneFrameStepCountService( sw::GameObjectManager& /*manager*/ )
+            : _pLastObservedStep{ nullptr }
+            , _updateCount{ 0 }
+            , _bUpdatedInOtherStep{ SW_FALSE }
+        {
+        }
+
+        /** @brief 씬 서비스 이름과 겹치지 않게 접두를 붙인 단계 이름입니다. */
+        const utf8* getSubsystemName() const override
+        {
+            static constexpr const utf8* kArrName[] = {
+#define SW_SCENE_FRAME_STEP( Name ) "SceneFrameStepTest." #Name,
+#include "Engine/Object/GameObject/Tick/SceneFrameStepList.xxx"
+#undef SW_SCENE_FRAME_STEP
+            };
+            return kArrName[static_cast<uint32>( Step )];
+        }
+
+        void update( float32 /*deltaTime*/ ) override
+        {
+            ++_updateCount;
+            if ( _pLastObservedStep != nullptr && *_pLastObservedStep != Step )
+                _bUpdatedInOtherStep = SW_TRUE;
+        }
+
+        void onSceneCleared() override {}
+
+        const sw::SceneFrameStep* _pLastObservedStep;
+        uint32                    _updateCount;
+        uint8                     _bUpdatedInOtherStep;
+    };
+
+    /** @brief 단계마다 테스트 서비스 하나를 레지스트리에 올립니다(한 번만). 이 뒤에 만든 매니저는 단계마다 하나씩 갖는다. */
+    template <uint32... StepIndex>
+    void registerSceneFrameStepCountServices( std::integer_sequence<uint32, StepIndex...> )
+    {
+        static const sw::SceneServiceRegistration kArrRegistration[] = {
+            { &sw::createSceneService<SceneFrameStepCountService<static_cast<sw::SceneFrameStep>( StepIndex )>>, static_cast<sw::SceneFrameStep>( StepIndex ) }
+            ...
+        };
+        for ( const sw::SceneServiceRegistration& registration : kArrRegistration )
+        {
+            sw::SceneServiceRegistry::add( &registration );
+        }
+    }
+
+    /** @brief 단계 @p Step 의 테스트 서비스에 관찰자가 본 단계를 건네고, 불린 수가 @p expectedCount 이며 제 단계에서만 불렸는지 봅니다. */
+    template <sw::SceneFrameStep Step>
+    void checkSceneFrameStepCountService( sw::GameObjectManager& manager, const sw::SceneFrameStep* pLastObservedStep, uint32 expectedCount )
+    {
+        SceneFrameStepCountService<Step>& service = manager.getSubsystem<SceneFrameStepCountService<Step>>();
+        service._pLastObservedStep                = pLastObservedStep;
+        SW_EXPECT_EQUAL( expectedCount, service._updateCount );
+        SW_EXPECT_TRUE( service._bUpdatedInOtherStep == SW_FALSE );
+    }
+
+    /** @brief 모든 단계의 테스트 서비스를 `checkSceneFrameStepCountService` 로 봅니다. */
+    template <uint32... StepIndex>
+    void checkSceneFrameStepCountServices( sw::GameObjectManager& manager, const sw::SceneFrameStep* pLastObservedStep, uint32 expectedCount,
+                                           std::integer_sequence<uint32, StepIndex...> )
+    {
+        ( checkSceneFrameStepCountService<static_cast<sw::SceneFrameStep>( StepIndex )>( manager, pLastObservedStep, expectedCount ), ... );
+    }
+
     /** @brief 불릴 때마다 단계와 순번을 적는 테스트 시스템입니다. 지정한 이름의 시스템을 떼어 볼 수도 있다. */
     class SceneFrameStepTestSystem final : public sw::ISceneFrameSystem
     {
@@ -104,6 +176,24 @@ namespace
         int32               _id;
     };
 } // namespace
+
+/**
+ * @brief [SceneFrameStepTest] 어느 단계에 등록한 씬 서비스든 tick 한 번에 그 단계에서 update 를 한 번 받는다 — 디스패치는 단계 본문이 아니라 표가 한다
+ */
+SW_TEST_CASE( SceneFrameStepTest, EveryStepUpdatesItsRegisteredServicesOnce )
+{
+    using StepIndexSequence = std::make_integer_sequence<uint32, static_cast<uint32>( sw::SceneFrameStep::Count )>;
+    registerSceneFrameStepCountServices( StepIndexSequence{} );
+
+    sw::GameObjectManager manager;
+    sw::SceneFrameStep    lastStep = sw::SceneFrameStep::Count;
+    manager.setFrameStepObserver( sw::GameObjectManager::FrameStepObserver( [&lastStep]( sw::SceneFrameStep step )
+    { lastStep = step; } ) );
+    checkSceneFrameStepCountServices( manager, &lastStep, 0, StepIndexSequence{} );
+
+    manager.update( 0.016f );
+    checkSceneFrameStepCountServices( manager, &lastStep, 1, StepIndexSequence{} );
+}
 
 /**
  * @brief [SceneFrameStepTest] 프레임 시스템은 FrameSystems 단계(시작 뒤 · PrePhysics 틱 앞)에서 붙인 순서대로 돌고, 같은 이름은 거절하며, 도는 중에 자기를 떼어도 된다

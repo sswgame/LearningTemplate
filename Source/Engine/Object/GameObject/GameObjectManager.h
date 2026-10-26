@@ -543,13 +543,7 @@ namespace sw
         /** @brief 막 붙인 컴포넌트를 타입별 버킷에 넣습니다(`GameObject::attachCreatedComponent`). */
         void registerTypedComponent( Component* pComp ) { _store.registerTypedComponent( pComp ); }
 
-        /**
-         * @brief `Physics` 단계의 서비스(`ScenePhysics` — 강체 물리와 2D 콜라이더)를 진행하고 그 쓰기를 펼칩니다. 틱 · 트랜스폼 적용 뒤, 게임 스레드에서.
-         * @details 유니티는 물리 갱신 뒤 OnTrigger 를, 언리얼은 움직임이 끝난 뒤 Begin/EndOverlap 을 부른다. 여기서는 그 프레임에 적용된 월드 자리로 측정한다.
-         */
-        void stepPhysics( float32 deltaTime );
-
-        /** @brief 등록 줄의 단계가 @p step 인 서비스를 씬 범위의 초기화 순서(의존 순서)로 갱신합니다. */
+        /** @brief 등록 줄의 단계가 @p step 인 서비스를 씬 범위의 초기화 순서(의존 순서)로 갱신합니다. `update` 가 모든 단계 끝에 부른다 — 본문은 부르지 않는다. */
         void updateSceneServices( SceneFrameStep step, float32 deltaTime );
 
         /** @brief 이 매니저가 만든 씬 서비스 하나입니다(소유는 씬 범위 — 갱신 단계를 알려고 등록 줄과 짝지어 든다). */

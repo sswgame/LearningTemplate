@@ -49,6 +49,11 @@
 - **Read time through `Core/Time/MonotonicClock.h`** (`MonotonicClock::nowNanoseconds()`, `Stopwatch`, `Deadline`), never a `std::chrono` clock; a UTC timestamp is
   `WallClock::nowUnixMilliseconds()` and services take it as a `nowMs` parameter so tests can pass a fake time (`CheckClockReads.py`).
 - **Start threads with `sw::thread`**, never `std::thread` in `Source/` (the lock observer sees what `join` waits for; tests may use `std::thread`; `CheckStdThread.py`).
+- **Lock with `sw::mutex` / `sw::shared_mutex` / `SpinLock`**, never `std::mutex` / `std::shared_mutex` in `Source/` (`CheckStdMutex.py`). Write the lock
+  contract on the declaration, not in a comment: `SW_GUARDED_BY( _mutex )` on members, `SW_REQUIRES_LOCK( _mutex )` on "call with the lock held"
+  helpers, `SW_EXCLUDES_LOCK( _mutex )` on functions that lock inside (`Core/Concurrency/ThreadSafety.h`), and lock those members through
+  `ScopedLock` / `ScopedSharedLock` — clang `-Wthread-safety` checks them; it does not see `std::scoped_lock`. Locks are leaf locks: never log or call
+  out while holding one (Debug asserts it in the logger).
 - **Reach a service through the window of its lifetime**: `getSubsystem<T>()` (must exist, `T&`) or `findSubsystem<T>()` (may be missing, `T*`) on `engine::`, `game::`, `editor::`
   or the owning object. A new service is a subsystem added to a scope; an engine service read on hot paths also gets a row in `EngineServiceList.xxx`. No named accessors
   and no `static getInstance()`. Tests inject mocks through scopes (`test::ScopedEngineServiceOverride`, `game::ScopedGameScope`, `editor::ScopedEditorScope`) (`CheckServiceAccess.py`).

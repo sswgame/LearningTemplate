@@ -113,16 +113,18 @@ namespace sw
         const bool                     bLoaded = pfnLoad != nullptr && pfnLoad( path, listPosition ) && listPosition.size() >= 3;
         if ( bLoaded == false )
         {
-            std::scoped_lock<mutex> lock{ table._mutex };
-            const auto              failedInserted = table._mapFailedPathToEpoch.try_emplace( key, creationEpoch );
-            failedInserted.first->second           = creationEpoch; // 다시 읽어도 못 읽었다 — 새 횟수로 기억한다(오류는 처음 한 번만 남긴다)
-            if ( failedInserted.second )
+            bool bFirstFailure = false;
             {
-                if ( pfnLoad == nullptr )
-                    SW_LOG_ERROR( "Physics shape mesh '%#' needs a load function - PhysicsMeshShapeCache::setLoadFunction was never called", path );
-                else
-                    SW_LOG_ERROR( "Physics shape mesh '%#' could not be loaded or has no triangle - the shape is not created", path );
+                // 잠금 안에서는 기록만 하고 오류는 놓은 뒤에 남긴다(잠금은 잎 잠금, 결정 5-3).
+                std::scoped_lock<mutex> lock{ table._mutex };
+                const auto              failedInserted = table._mapFailedPathToEpoch.try_emplace( key, creationEpoch );
+                failedInserted.first->second           = creationEpoch; // 다시 읽어도 못 읽었다 — 새 횟수로 기억한다(오류는 처음 한 번만 남긴다)
+                bFirstFailure                          = failedInserted.second;
             }
+            if ( bFirstFailure && pfnLoad == nullptr )
+                SW_LOG_ERROR( "Physics shape mesh '%#' needs a load function - PhysicsMeshShapeCache::setLoadFunction was never called", path );
+            else if ( bFirstFailure )
+                SW_LOG_ERROR( "Physics shape mesh '%#' could not be loaded or has no triangle - the shape is not created", path );
             return result;
         }
 

@@ -109,7 +109,7 @@ namespace sw
     {
         vector<FinishedConnect> listFinished;
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             finishConnect( NetDisconnectReason::Requested );
             _pTransport = pTransport;
             _settings   = settings;
@@ -168,7 +168,7 @@ namespace sw
 
     bool NetHost::listen()
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         if ( _pTransport == nullptr )
             return false;
         if ( isEncrypted() && _settings._security._pProvider == nullptr )
@@ -205,7 +205,7 @@ namespace sw
         vector<FinishedConnect> listFinished;
         bool                    bStarted = false;
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             finishConnect( NetDisconnectReason::Requested ); // 앞의 비동기 연결은 여기서 끝난다.
             _credentials     = pCredentials != nullptr ? *pCredentials : NetConnectCredentials{};
             _bHasCredentials = pCredentials != nullptr && pCredentials->_tokenSize > 0 ? SW_TRUE : SW_FALSE;
@@ -231,7 +231,7 @@ namespace sw
         vector<FinishedConnect>      listFinished;
         TaskFuture<NetConnectResult> future;
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             finishConnect( NetDisconnectReason::Requested );
             _connectPromise  = TaskPromise<NetConnectResult>{};
             future           = _connectPromise.getFuture();
@@ -580,7 +580,7 @@ namespace sw
 
     bool NetHost::isDebugHoldAnnounced() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _bDebugHold == SW_TRUE;
     }
 
@@ -588,7 +588,7 @@ namespace sw
     {
         INetTransport* pTransport = nullptr;
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             pTransport = _pTransport;
         }
         if ( pTransport != nullptr )
@@ -604,7 +604,7 @@ namespace sw
         (void)depth;
         INetTransport* pTransport = nullptr;
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             pTransport = _pTransport;
         }
         if ( pTransport != nullptr )
@@ -624,7 +624,7 @@ namespace sw
             }
             // 2) 처리, 타임아웃, 보낼 패킷 생성(잠금 안).
             {
-                std::scoped_lock<mutex> lock{ _mutex };
+                ScopedLock<mutex> lock{ _mutex };
                 updateDebugHold( nowSeconds );
                 for ( int32 index = 0; index < receivedCount; ++index )
                 {
@@ -1039,7 +1039,7 @@ namespace sw
 
     bool NetHost::sendMessage( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return sendMessageLocked( connectionID, channel, pData, size );
     }
 
@@ -1054,9 +1054,9 @@ namespace sw
 
     bool NetHost::sendNotifiedMessage( int32 connectionID, const uint8* pData, int32 size, uint32 tag )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        NetHostSlot*            pSlot   = _slotTable.findConnected( connectionID );
-        const bool              bQueued = pSlot != nullptr && pSlot->_connection.sendNotifiedMessage( pData, size, tag );
+        ScopedLock<mutex> lock{ _mutex };
+        NetHostSlot*      pSlot   = _slotTable.findConnected( connectionID );
+        const bool        bQueued = pSlot != nullptr && pSlot->_connection.sendNotifiedMessage( pData, size, tag );
         if ( bQueued )
             _sentKindTally.add( pData, size );
         return bQueued;
@@ -1064,15 +1064,15 @@ namespace sw
 
     void NetHost::addSentKindTally( NetMessageKindTallyTable& outTable ) const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         outTable.addTable( _sentKindTally );
     }
 
     int32 NetHost::broadcast( NetChannelType channel, const uint8* pData, int32 size, int32 exceptID )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        int32                   sentCount = 0;
-        const int32             slotCount = _slotTable.getCount();
+        ScopedLock<mutex> lock{ _mutex };
+        int32             sentCount = 0;
+        const int32       slotCount = _slotTable.getCount();
         for ( int32 index = 0; index < slotCount; ++index )
         {
             if ( index != exceptID && sendMessageLocked( index, channel, pData, size ) )
@@ -1083,8 +1083,8 @@ namespace sw
 
     bool NetHost::receiveMessage( int32& outConnectionID, NetChannelType& outChannel, vector<uint8>& outBuffer )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        const int32             slotCount = _slotTable.getCount();
+        ScopedLock<mutex> lock{ _mutex };
+        const int32       slotCount = _slotTable.getCount();
         for ( int32 step = 0; step < slotCount; ++step )
         {
             const int32  index = ( _receiveCursor + step ) % slotCount;
@@ -1113,7 +1113,7 @@ namespace sw
         vector<FinishedConnect> listFinished;
         INetTransport*          pTransport = nullptr;
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             if ( _slotTable.isValid( connectionID ) )
                 closeSlot( connectionID, NetDisconnectReason::Requested, true );
             takePending( batch, listFinished );
@@ -1129,8 +1129,8 @@ namespace sw
         vector<FinishedConnect> listFinished;
         INetTransport*          pTransport = nullptr;
         {
-            std::scoped_lock<mutex> lock{ _mutex };
-            const int32             slotCount = _slotTable.getCount();
+            ScopedLock<mutex> lock{ _mutex };
+            const int32       slotCount = _slotTable.getCount();
             for ( int32 index = 0; index < slotCount; ++index )
             {
                 closeSlot( index, NetDisconnectReason::Requested, true );
@@ -1144,7 +1144,7 @@ namespace sw
 
     void NetHost::drainEvents( vector<NetHostEvent>& outListEvent )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
         _listEvent.clear();
     }
@@ -1152,7 +1152,7 @@ namespace sw
     void NetHost::drainInbound( NetInbound& outInbound )
     {
         outInbound.clear();
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         outInbound._listEvent.swap( _listEvent );
         const int32 slotCount = _slotTable.getCount();
         for ( int32 index = 0; index < slotCount; ++index )
@@ -1187,25 +1187,25 @@ namespace sw
 
     bool NetHost::isServer() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _bServer != SW_FALSE;
     }
 
     int32 NetHost::getClientIndex() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _clientIndex;
     }
 
     uint64 NetHost::getRejectedPacketCount() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _rejectedPacketCount;
     }
 
     uint64 NetHost::getConnectionPrincipal( int32 connectionID ) const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         if ( _bServer == SW_FALSE )
             return 0;
         const NetHostSlot* pSlot = _slotTable.findConnected( connectionID );
@@ -1214,32 +1214,32 @@ namespace sw
 
     uint64 NetHost::getAuthenticationFailureCount() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _authenticationFailureCount;
     }
 
     uint64 NetHost::getReplayRejectedCount() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _replayRejectedCount;
     }
 
     uint32 NetHost::getProtocolID() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _protocolID;
     }
 
     int32 NetHost::getMaxBytesPerSecond() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _settings._maxBytesPerSecond;
     }
 
     bool NetHost::isConnectionSaturated( int32 connectionID ) const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        const NetHostSlot*      pSlot = _slotTable.findConnected( connectionID );
+        ScopedLock<mutex>  lock{ _mutex };
+        const NetHostSlot* pSlot = _slotTable.findConnected( connectionID );
         if ( pSlot == nullptr )
             return false;
         return pSlot->_sendCredit <= 0.0 || pSlot->_connection.getQueuedUnreliableCount() > 0;
@@ -1247,8 +1247,8 @@ namespace sw
 
     bool NetHost::getConnectionStats( int32 connectionID, NetConnectionStats& outStats ) const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        const NetHostSlot*      pSlot = _slotTable.findConnected( connectionID );
+        ScopedLock<mutex>  lock{ _mutex };
+        const NetHostSlot* pSlot = _slotTable.findConnected( connectionID );
         if ( pSlot == nullptr )
             return false;
         outStats                       = pSlot->_connection.getStats();
@@ -1258,32 +1258,32 @@ namespace sw
 
     NetConnectionState NetHost::getConnectionState( int32 connectionID ) const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _slotTable.isValid( connectionID ) ? _slotTable.get( connectionID )._state : NetConnectionState::Disconnected;
     }
 
     const NetConnection* NetHost::findConnection( int32 connectionID ) const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        const NetHostSlot*      pSlot = _slotTable.findConnected( connectionID );
+        ScopedLock<mutex>  lock{ _mutex };
+        const NetHostSlot* pSlot = _slotTable.findConnected( connectionID );
         return pSlot != nullptr ? &pSlot->_connection : nullptr;
     }
 
     NetAddress NetHost::getConnectionAddress( int32 connectionID ) const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _slotTable.isValid( connectionID ) ? _slotTable.get( connectionID )._address : NetAddress{};
     }
 
     int32 NetHost::getConnectedCount() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _slotTable.countConnected();
     }
 
     void NetHost::collectConnected( vector<int32>& outListConnection ) const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _slotTable.collectConnected( outListConnection );
     }
 } // namespace sw

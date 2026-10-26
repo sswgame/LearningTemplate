@@ -1,6 +1,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/mutex.h"
 #include "Core/Container/map.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
@@ -133,7 +134,7 @@ namespace sw
         AssetMetaReadResult loadMetaFile( string_view relativePath, UUID& outGuid, bool* pOutImported = nullptr ) const;
 
     private:
-        mutable std::shared_mutex      _mutex;
+        mutable shared_mutex           _mutex;
         map<string, UUID, std::less<>> _mapPathToGuid;
         unordered_map<UUID, string>    _mapGuidToPath;
     };

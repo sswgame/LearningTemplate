@@ -266,10 +266,14 @@ namespace sw
 
             if ( _bStop.load( std::memory_order_relaxed ) )
                 return;
-
+        }
+        // 끝날 때까지 다른 스레드가 해제하는 자원 핸들은 미뤄진다(`IRHIDevice::releaseHandle`. 이 프레임을 병렬로 기록하는 동안 테이블을 바꾸지 않게 한다).
+        // 넘긴 수는 패킷이 렌더 스레드에 보이기(head) 전에 올린다 — 끝낸 수가 넘긴 수를 앞지르지 않게. 장치 호출이라 잠금 밖에서 한다(잠금은 잎 잠금, 결정 5-3).
+        // 생산자는 이 스레드 하나라 놓은 사이에 슬롯이 다시 차지 않고(소비자는 tail 만 민다), 멈춤(`stop`)도 이 스레드가 부른다.
+        _pDevice->notifyRenderFrameQueued();
+        {
+            std::scoped_lock<mutex> lock{ _mutex };
             // 맞바꾸기다. 호출하는 쪽은 이 슬롯에 있던 지난 패킷의 저장소를 받아 다음 프레임에 그대로 쓴다.
-            // 끝날 때까지 다른 스레드가 해제하는 자원 핸들은 미뤄진다(`IRHIDevice::releaseHandle`. 이 프레임을 병렬로 기록하는 동안 테이블을 바꾸지 않게 한다).
-            _pDevice->notifyRenderFrameQueued();
             std::swap( _arrRingBuffer[currentHead], packet );
             _head.store( nextHead, std::memory_order_release );
         }

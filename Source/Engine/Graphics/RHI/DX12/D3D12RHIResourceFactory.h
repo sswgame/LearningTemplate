@@ -1,5 +1,6 @@
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/mutex.h"
 
 #include "Engine/Common/EnginePlatformHeaders.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
@@ -63,7 +64,7 @@ namespace sw
          *       `registerBindlessTextureUav`)가 이것을 같이 씁니다. 용량 검사와 프리리스트 정책이 여러 벌이면 한 곳만
          *       고치고 넘어가기 쉽고, 그 결과는 **디스크립터가 어긋나 화면이 조용히 깨지는 것**입니다.
          */
-        RHIDescriptorIndex acquireBindlessIndex( const std::unique_lock<std::shared_mutex>& lock );
+        RHIDescriptorIndex acquireBindlessIndex( const std::unique_lock<shared_mutex>& lock );
 
         /** @brief 힙 인덱스 하나가 가리키는 두 디스크립터입니다. 온라인 힙의 CPU 핸들과 오프라인 힙의 CPU 핸들입니다. */
         struct BindlessHandleSet

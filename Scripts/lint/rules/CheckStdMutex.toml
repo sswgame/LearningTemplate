@@ -1,0 +1,7 @@
+# CheckStdMutex 의 규칙 데이터 — 게이트는 Scripts/lint/gate/CheckStdMutex.py.
+
+# std:: 잠금 타입을 직접 써도 되는 파일 → 이유.
+[exemption]
+"Source/Core/Concurrency/mutex.h" = "sw::mutex · sw::shared_mutex 가 감싸는 std 잠금의 자리 — 래퍼 자신"
+"Source/Core/Concurrency/Futex.cpp" = "futex 대체 구현(조건 변수 버킷)은 sw::mutex 보다 아래 층의 원시 대기다 — 감싸면 관찰자 · 잠금 수가 대기 자체를 센다"
+"Source/Core/Common/Macros.cpp" = "단언 · 낮은 층 보고 경로다 — 쥔 잠금 수 단언 · 교착 검출기가 다시 단언을 부르면 재진입한다"

@@ -51,6 +51,8 @@ target_compile_options(sw_compiler_clang INTERFACE
 	-Werror=covered-switch-default
 	-Wno-switch-default # 모든 switch 에 default: 를 요구하지 않는다(위 규칙과 반대)
 	-Wno-switch-enum # 일부만 다루는 switch 가 상관없는 열거자를 다 적지 않아도 된다
+	# 잠금 계약(`Core/Concurrency/ThreadSafety.h` 의 SW_GUARDED_BY · SW_REQUIRES_LOCK · SW_EXCLUDES_LOCK) — 잠그지 않고 만진 멤버 · 쥔 채 다시 잠그는 호출이 경고다
+	-Wthread-safety
 
 	# 경고 비활성화 (C++17+ 표준 및 엔진 아키텍처 지원, 알파벳 정렬)
 	-Wno-c++98-compat # C++17+ 타깃 프로젝트이므로 C++98 하위 호환성 경고 억제

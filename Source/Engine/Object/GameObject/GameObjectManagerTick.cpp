@@ -23,10 +23,12 @@ namespace sw
     {
         ++_updateSerial;
         // 순서는 표 하나가 갖는다(`SceneFrameStepList.xxx`). 관찰자는 보통 비어 있어 단계마다 분기 하나다.
+        // 단계마다 본문 뒤에 그 단계에 등록한 씬 서비스를 부른다 — 본문이 부르게 두면 부르지 않는 단계에 등록한 서비스가 조용히 돌지 않는다.
 #define SW_SCENE_FRAME_STEP( Name )                 \
     if ( _frameStepObserver.isBound() )             \
         _frameStepObserver( SceneFrameStep::Name ); \
-    runFrameStep##Name( deltaTime );
+    runFrameStep##Name( deltaTime );                \
+    updateSceneServices( SceneFrameStep::Name, deltaTime );
 #include "Engine/Object/GameObject/Tick/SceneFrameStepList.xxx"
 #undef SW_SCENE_FRAME_STEP
     }
@@ -105,11 +107,9 @@ namespace sw
         _structuralChangeBuffer.drain( *this );
     }
 
-    void GameObjectManager::runFrameStepNavigation( float32 deltaTime )
+    void GameObjectManager::runFrameStepNavigation( float32 /*deltaTime*/ )
     {
-        // 끝난 타일 재베이크를 끼우는 것도 여기다 — 컴포넌트 틱이 질의하지 않는 구간이다.
-        SW_PROFILE_SCOPE( "GT.Scene.tick.navigation" );
-        updateSceneServices( SceneFrameStep::Navigation, deltaTime );
+        // 군중 진행(`SceneNavigation`)은 이 단계에 등록된 씬 서비스다(`update` 가 단계 끝에 부른다). 끝난 타일 재베이크를 끼우는 것도 거기다 — 컴포넌트 틱이 질의하지 않는 구간이다.
     }
 
     void GameObjectManager::updateSceneServices( SceneFrameStep step, float32 deltaTime )
@@ -121,10 +121,9 @@ namespace sw
         }
     }
 
-    void GameObjectManager::runFrameStepAnimation( float32 deltaTime )
+    void GameObjectManager::runFrameStepAnimation( float32 /*deltaTime*/ )
     {
         // 애니메이션 평가(`AnimationSystem`)는 이 단계에 등록된 씬 서비스다. 래그돌의 바디 자세는 물리 뒤에 읽혀 다음 포즈에 섞인다.
-        updateSceneServices( SceneFrameStep::Animation, deltaTime );
     }
 
     void GameObjectManager::runFrameStepFlushPostAnimation( float32 /*deltaTime*/ )
@@ -136,12 +135,17 @@ namespace sw
         }
     }
 
-    void GameObjectManager::runFrameStepPhysics( float32 deltaTime )
+    void GameObjectManager::runFrameStepPhysics( float32 /*deltaTime*/ )
     {
-        // 이 프레임에 적용된 월드 자리로 겹침을 측정한다. 이벤트 처리가 지운 것은 마지막 단계가 놓는다.
-        SW_PROFILE_SCOPE( "GT.Scene.tick.physics" );
-        if ( _bPhysicsStepEnabled )
-            stepPhysics( deltaTime );
+        // 물리 서비스(`ScenePhysics`) — 강체와 2D 콜라이더(센서)가 이 프레임에 적용된 월드 자리로 겹침을 측정한다(고정 스텝 · 보간한 자리를 트랜스폼에 쓰고
+        // 접촉 이벤트를 나눠 준다). 단계 끝에 부르고, 끈 씬(`setPhysicsStepEnabled( false )`)은 서비스가 건너뛴다. 이벤트 처리가 지운 것은 마지막 단계가 놓는다.
+    }
+
+    void GameObjectManager::runFrameStepFlushPostPhysics( float32 /*deltaTime*/ )
+    {
+        // 물리가 쓴 자리가 이번 프레임의 그림과 PostPhysics 틱에 들게 바로 펼친다.
+        if ( hasDirtySceneTransforms() )
+            flushSceneTransforms();
     }
 
     void GameObjectManager::runFrameStepTickPostPhysics( float32 deltaTime )
@@ -168,8 +172,7 @@ namespace sw
     {
         SW_PROFILE_SCOPE( "GT.Scene.tick.destroyPost" );
         processDeferredDestruction();
-        // 놓은 오브젝트의 기록을 거두는 서비스(`PrefabInstanceRegistry`)가 여기서 돈다 — 파괴를 처리한 뒤라야 무엇이 없어졌는지 안다.
-        updateSceneServices( SceneFrameStep::DestroyPost, 0.0f );
+        // 놓은 오브젝트의 기록을 거두는 서비스(`PrefabInstanceRegistry`)가 이 본문 뒤에 돈다 — 파괴를 처리한 뒤라야 무엇이 없어졌는지 안다.
     }
 
     const utf8* getSceneFrameStepName( SceneFrameStep step )
@@ -181,14 +184,6 @@ namespace sw
         };
         const uint32 index = static_cast<uint32>( step );
         return index < static_cast<uint32>( SceneFrameStep::Count ) ? kArrName[index] : "Unknown";
-    }
-
-    void GameObjectManager::stepPhysics( float32 deltaTime )
-    {
-        // 물리 서비스 — 강체와 2D 콜라이더(센서)(고정 스텝 · 보간한 자리를 트랜스폼에 쓰고 접촉 이벤트를 나눠 준다). 그 쓰기가 이번 프레임의 그림에 들게 바로 펼친다.
-        updateSceneServices( SceneFrameStep::Physics, deltaTime );
-        if ( hasDirtySceneTransforms() )
-            flushSceneTransforms();
     }
 
     uint32 GameObjectManager::applyTransformBatch( const SceneTransformWrite* pWrite, uint32 count )

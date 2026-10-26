@@ -176,10 +176,10 @@ namespace sw
         };
 
         /** @brief `_mutex` 를 이미 쥔 채로 더티 표시를 지웁니다. */
-        void clearDirtyLocked();
+        void clearDirtyLocked() SW_REQUIRES_LOCK( _mutex );
 
         /** @brief 더티 플래그 배열을 최소 @p count 개의 슬롯으로 키웁니다(`_mutex` 를 쥔 채, 병렬 구간 밖). */
-        void growDirtyFlags( uint32 count );
+        void growDirtyFlags( uint32 count ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 번호 하나에 렌더 상태 플래그를 켭니다. 메시 컴포넌트와 인스턴스 항목이 같은 경로를 씁니다. */
         void markSlotDirty( uint32 slot );
         /** @brief 플래그 배열 @p pArrWord 의 번호 하나를 켭니다. 이미 켜져 있으면 읽기만 합니다. 0 에서 1 로 바꿨으면 "하나라도" 플래그를 켭니다. */

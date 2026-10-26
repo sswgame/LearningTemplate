@@ -478,7 +478,7 @@ namespace sw
         /// @brief 디스크립터 레지스트리를 보호합니다. 커맨드 기록(D3D11RHICommandContext 의 바인드 경로)이
         /// 인덱스로 이 목록들을 읽는 동안 register/unregister 가 push_back 으로 재할당을 일으키면
         /// 기록 스레드가 쓰레기를 읽습니다. 읽기는 공유 락이라 병렬 기록을 직렬화하지 않습니다.
-        mutable std::shared_mutex _bindlessMutex;
+        mutable shared_mutex _bindlessMutex;
 
         /**
          * @struct D3D11TimestampFrame

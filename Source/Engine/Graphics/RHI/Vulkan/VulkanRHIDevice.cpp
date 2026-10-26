@@ -3,6 +3,7 @@
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
 
 #include "Core/Common/PlatformOsHeaders.h"
+#include "Core/Concurrency/mutex.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Process/ProcessEnvironment.h"
@@ -313,7 +314,7 @@ namespace sw
     void VulkanRHIDevice::fillConstantBufferSlot()
     {
         // 표 조회가 게임 스레드의 만들기 · 부수기와 겹치지 않게 읽기 락을 쥔다(락 순서: 레지스트리 → 그림자).
-        std::shared_lock<std::shared_mutex> registryLock{ _bindlessMutex };
+        std::shared_lock<shared_mutex> registryLock{ _bindlessMutex };
         _constantBufferMirror.fillSlot( _currentFrame % constant::kMaxFrameCountInFlight,
                                         [this]( RHIBufferHandle buffer, uint32 slot, const void* pData, uint32 size )
         { writeConstantBufferSlot( buffer, slot, pData, size ); } );

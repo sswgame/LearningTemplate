@@ -15,6 +15,21 @@ namespace sw
 {
     SW_LOG_CALLER( "AudioEngine" );
 
+    namespace
+    {
+        struct AudioEngineInternal
+        {
+            /** @brief 잠금 안에서 찾은 오류 한 줄을 @p outListError 에 모읍니다 — 로그는 잠금을 놓은 뒤 남긴다(잠금은 잎 잠금, 결정 5-3). */
+            template <typename... Args>
+            static void appendError( vector<string>& outListError, string_view format, Args&&... args )
+            {
+                utf8 arrLine[constant::kMaxBuffer512]{};
+                formatstring( arrLine, sizeof( arrLine ), format, std::forward<Args>( args )... );
+                outListError.emplace_back( arrLine );
+            }
+        };
+    } // namespace
+
     AudioEngine::AudioEngine()
         : _clipStore{}
         , _listPendingCommand{}
@@ -63,9 +78,13 @@ namespace sw
         shared_ptr<AudioMixer> pMixer = make_shared<AudioMixer>();
         if ( pMixer->initialize( mixerDesc, layout ) == false )
             return false;
-        _layout         = layout;
-        _pMixer         = std::move( pMixer );
-        _pGameMixerDesc = make_shared<AudioMixerDesc>( mixerDesc );
+        _layout                                         = layout;
+        _pMixer                                         = std::move( pMixer );
+        shared_ptr<const AudioMixerDesc> pGameMixerDesc = make_shared<AudioMixerDesc>( mixerDesc );
+        {
+            ScopedLock<mutex> lock{ _libraryMutex };
+            _pGameMixerDesc = std::move( pGameMixerDesc );
+        }
         _listVoice.clear();
         _listVoice.resize( mixerDesc._maxVoiceCount );
         _listVoiceOrder.reserve( mixerDesc._maxVoiceCount );
@@ -94,7 +113,7 @@ namespace sw
         _mapLibrary.clear();
         _mapEventState.clear();
         {
-            std::scoped_lock<mutex> lock{ _libraryMutex };
+            ScopedLock<mutex> lock{ _libraryMutex };
             _mapGameLibrary.clear();
         }
         _mapEmitter.clear();
@@ -111,7 +130,7 @@ namespace sw
         if ( pMixer->initialize( mixerDesc, _layout ) == false )
             return false;
         {
-            std::scoped_lock<mutex> lock{ _libraryMutex };
+            ScopedLock<mutex> lock{ _libraryMutex };
             _pGameMixerDesc = make_shared<AudioMixerDesc>( mixerDesc );
         }
         Command command;
@@ -172,13 +191,47 @@ namespace sw
         if ( library.validate( sourceName ) == false )
             return false;
 
-        std::scoped_lock<mutex> lock{ _libraryMutex };
-        bool                    bValid = true;
+        // 잠금 안에서는 검사와 표 갱신만 하고, 오류 로그 · 클립 요청 · 명령은 잠금을 놓은 뒤에 한다.
+        vector<string>                      listError;
+        shared_ptr<const AudioEventLibrary> pLibrary;
+        {
+            ScopedLock<mutex> lock{ _libraryMutex };
+            loadEventLibraryLocked( libraryName, library, listError, pLibrary );
+        }
+        for ( const string& error : listError )
+        {
+            SW_LOG_ERROR( "%#", error.c_str() );
+        }
+        if ( pLibrary == nullptr )
+            return false;
+
+        // 뱅크를 로드하듯 클립 디코드를 미리 요청해 둔다. 첫 재생이 디코드를 기다리지 않게 하려는 것이다.
+        for ( const AudioEventDesc& event : pLibrary->_listEvent )
+        {
+            for ( const AudioClipEntry& clip : event._listClip )
+            {
+                _clipStore.requestClip( clip._path );
+            }
+        }
+        Command command;
+        command._type     = CommandType::SetLibrary;
+        command._name     = libraryName;
+        command._pLibrary = std::move( pLibrary );
+        pushCommand( std::move( command ) );
+        return true;
+    }
+
+    void AudioEngine::loadEventLibraryLocked( const hashed_string& libraryName, const AudioEventLibrary& library, vector<string>& outListError,
+                                              shared_ptr<const AudioEventLibrary>& outLibrary )
+    {
+        using Internal               = AudioEngineInternal;
+        const string_view sourceName = libraryName.view();
+        bool              bValid     = true;
         for ( const AudioEventDesc& event : library._listEvent )
         {
             if ( _pGameMixerDesc == nullptr || _pGameMixerDesc->findBusIndex( event._bus ) < 0 )
             {
-                SW_LOG_ERROR( "%#: event '%#' sends to unknown bus '%#'", sourceName, event._name.c_str(), event._bus.c_str() );
+                Internal::appendError( outListError, "%#: event '%#' sends to unknown bus '%#'", sourceName, event._name.c_str(), event._bus.c_str() );
                 bValid = false;
             }
             if ( event._attenuation.empty() == false )
@@ -197,7 +250,7 @@ namespace sw
                 }
                 if ( bFound == false )
                 {
-                    SW_LOG_ERROR( "%#: event '%#' uses unknown attenuation '%#'", sourceName, event._name.c_str(), event._attenuation.c_str() );
+                    Internal::appendError( outListError, "%#: event '%#' uses unknown attenuation '%#'", sourceName, event._name.c_str(), event._attenuation.c_str() );
                     bValid = false;
                 }
             }
@@ -210,7 +263,7 @@ namespace sw
             {
                 if ( entry.second->findEvent( event._name ) != nullptr )
                 {
-                    SW_LOG_ERROR( "%#: event '%#' is already declared by '%#'", sourceName, event._name.c_str(), entry.first.c_str() );
+                    Internal::appendError( outListError, "%#: event '%#' is already declared by '%#'", sourceName, event._name.c_str(), entry.first.c_str() );
                     bValid = false;
                 }
             }
@@ -218,36 +271,22 @@ namespace sw
             {
                 if ( entry.second->findParameter( parameter._name ) != nullptr )
                 {
-                    SW_LOG_ERROR( "%#: parameter '%#' is already declared by '%#'", sourceName, parameter._name.c_str(), entry.first.c_str() );
+                    Internal::appendError( outListError, "%#: parameter '%#' is already declared by '%#'", sourceName, parameter._name.c_str(), entry.first.c_str() );
                     bValid = false;
                 }
             }
         }
         if ( bValid == false )
-            return false;
+            return;
 
-        shared_ptr<const AudioEventLibrary> pLibrary = make_shared<AudioEventLibrary>( library );
-        _mapGameLibrary[libraryName]                 = pLibrary;
-        // 뱅크를 로드하듯 클립 디코드를 미리 요청해 둔다. 첫 재생이 디코드를 기다리지 않게 하려는 것이다.
-        for ( const AudioEventDesc& event : pLibrary->_listEvent )
-        {
-            for ( const AudioClipEntry& clip : event._listClip )
-            {
-                _clipStore.requestClip( clip._path );
-            }
-        }
-        Command command;
-        command._type     = CommandType::SetLibrary;
-        command._name     = libraryName;
-        command._pLibrary = std::move( pLibrary );
-        pushCommand( std::move( command ) );
-        return true;
+        outLibrary                   = make_shared<AudioEventLibrary>( library );
+        _mapGameLibrary[libraryName] = outLibrary;
     }
 
     void AudioEngine::unloadEventLibrary( const hashed_string& libraryName )
     {
         {
-            std::scoped_lock<mutex> lock{ _libraryMutex };
+            ScopedLock<mutex> lock{ _libraryMutex };
             if ( _mapGameLibrary.erase( libraryName ) == 0 )
                 return;
         }
@@ -265,7 +304,7 @@ namespace sw
     void AudioEngine::collectEventNames( vector<hashed_string>& outListName ) const
     {
         outListName.clear();
-        std::scoped_lock<mutex> lock{ _libraryMutex };
+        ScopedLock<mutex> lock{ _libraryMutex };
         for ( const auto& entry : _mapGameLibrary )
         {
             for ( const AudioEventDesc& eventDesc : entry.second->_listEvent )
@@ -278,7 +317,7 @@ namespace sw
     bool AudioEngine::findEventDesc( const hashed_string& eventName, AudioEventDesc& outDesc, hashed_string& outLibraryName,
                                      AudioAttenuationDesc* pOutAttenuation ) const
     {
-        std::scoped_lock<mutex> lock{ _libraryMutex };
+        ScopedLock<mutex> lock{ _libraryMutex };
         for ( const auto& entry : _mapGameLibrary )
         {
             const AudioEventDesc* pEvent = entry.second->findEvent( eventName );
@@ -320,7 +359,7 @@ namespace sw
 
     bool AudioEngine::hasEvent( const hashed_string& eventName ) const
     {
-        std::scoped_lock<mutex> lock{ _libraryMutex };
+        ScopedLock<mutex> lock{ _libraryMutex };
         for ( const auto& entry : _mapGameLibrary )
         {
             if ( entry.second->findEvent( eventName ) != nullptr )
@@ -331,8 +370,8 @@ namespace sw
 
     bool AudioEngine::findEventLibraryName( string_view libraryName, hashed_string& outLibraryName ) const
     {
-        const string            wanted = FileUtil::normalizeSeparators( libraryName );
-        std::scoped_lock<mutex> lock{ _libraryMutex };
+        const string      wanted = FileUtil::normalizeSeparators( libraryName );
+        ScopedLock<mutex> lock{ _libraryMutex };
         for ( const auto& entry : _mapGameLibrary )
         {
             if ( StringUtil::equals( FileUtil::normalizeSeparators( entry.first.view() ), wanted, true ) )
@@ -358,7 +397,7 @@ namespace sw
         const AudioEventDesc*               pEvent = nullptr;
         shared_ptr<const AudioEventLibrary> pLibrary;
         {
-            std::scoped_lock<mutex> lock{ _libraryMutex };
+            ScopedLock<mutex> lock{ _libraryMutex };
             for ( const auto& entry : _mapGameLibrary )
             {
                 pEvent = entry.second->findEvent( eventName );

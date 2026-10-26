@@ -743,7 +743,7 @@ namespace sw
         /// 기록 중에는 레지스트리가 바뀌지 않는다는 규칙(IRHIDevice::setParallelRecording, assertRegistryMutableNow)이
         /// 그것을 보장합니다. 주의: 기록 중에 레지스트리를 락 없이 순회하는 동안 재할당이 일어나면 GPU 가 쓰레기 디스크립터를
         /// 읽어 PageFault(VA=0)가 나고 DEVICE_HUNG 으로 이어집니다.
-        mutable std::shared_mutex      _bindlessMutex;
+        mutable shared_mutex           _bindlessMutex;
         vector<BindlessResourceRecord> _listRegisteredBindless;
         vector<uint32>                 _listFreeBindless;
 

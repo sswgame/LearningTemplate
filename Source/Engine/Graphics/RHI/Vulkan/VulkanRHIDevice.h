@@ -3,6 +3,8 @@
  * @brief Vulkan 1.3 RHI 백엔드 디바이스입니다.
  */
 #pragma once
+#include "Core/Concurrency/mutex.h"
+
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -710,7 +712,7 @@ namespace sw
         /// register/unregister 가 resize 로 재할당하면 기록 스레드가 쓰레기를 읽습니다
         /// (gv_useRenderThread 기본 true 라 렌더 스레드와 게임 스레드 사이에서 이미 성립하는 레이스).
         /// 읽기는 공유 락이라 서로를 막지 않습니다.
-        mutable std::shared_mutex _bindlessMutex;
+        mutable shared_mutex _bindlessMutex;
 
         /// @brief SRV/CB 버퍼 인덱스에서 원본 버퍼를 찾는 목록입니다(0이면 빈 슬롯). 인덱스 공간의 기준이며 프리리스트와 짝을 이룹니다.
         vector<RHIBufferHandle> _listBindlessSourceBuffer;

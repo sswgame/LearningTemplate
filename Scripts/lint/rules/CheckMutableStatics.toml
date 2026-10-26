@@ -13,6 +13,7 @@
 "Source/Engine/Graphics/RHI/RHI.cpp:s_lastGeneration" = "장치 세대는 백엔드 인스턴스보다 오래 살아야 백엔드를 바꾼 뒤 옛 티켓을 가려낸다. 세대를 발급받는 쪽(장치)이 소유자가 될 수 없고, 함수 안 원자 하나라 상수 초기화다"
 "Source/Engine/Graphics/RHI/Support/RHITransferUtil.cpp:s_forbidBlockingDepth" = "RT 셋업 구간 표시는 호출 사슬 어디서든 `...AndWait` 가 읽는 스레드별 상태다. 인자로 넘길 길이 없고(깊은 호출처 수십 곳), 스레드마다 따로라 경쟁도 없다"
 "Source/Engine/Graphics/RHI/Support/RHITransferUtil.cpp:s_heldReadbackCount" = "이 스레드가 쥔 읽기 티켓 수는 제출하는 `...AndWait` 가 호출 사슬 어디서든 읽는 스레드별 상태다. 인자로 넘길 길이 없고 스레드마다 따로라 경쟁도 없다"
+"Source/Core/Concurrency/mutex.cpp:t_heldLockDepth" = "이 스레드가 쥔 잠금 수(Debug)는 모든 잠금 · 해제와 로거가 호출 사슬 어디서든 읽는 스레드별 상태다. 인자로 넘길 길이 없고 스레드마다 따로라 경쟁도 없다 — 헤더 inline 으로 두면 모듈마다 따로 세서 Engine 이미지의 TU 하나에 둔다"
 "Source/Core/Diagnostics/CacheStats.cpp:s_registry" = "캐시 계측 칸은 함수 정적 캐시(약한 intern 표 등 서비스 범위 밖)와 여러 DLL 이 핸들 포인터로 쥐고 엔진을 다시 세워도 살아야 해서 프로세스에 하나다 — 소멸자가 없는 정적 배열이라 정적 소멸 뒤 기록도 안전하다(언리얼 stat 등록부와 같은 자리)"
 "Source/Engine/UI/Debug/DebugHUDEngineSections.cpp:s_objectCount" = "HUD 섹션은 사용자 자료 없는 함수 포인터(`DebugHUDSectionFunc`)라 구조 세대로 거른 오브젝트 · 컴포넌트 수를 둘 소유자가 없다. 그리는 스레드 하나만 쓰는 thread_local 이라 경쟁이 없고, 세대가 매니저끼리 겹치지 않아 씬을 바꿔도 틀리지 않는다"
 "Source/Engine/Graphics/Shader/Compile/ShaderCompiler.cpp:s_mutexDxcSerial" = "TSan 구성에서만 있는 DXC 호출 직렬화 뮤텍스다. libdxcompiler 의 전역 상태(ManagedStatic · 락 객체)가 프로세스에 하나이고 그 선후를 TSan 이 못 봐서, 같은 수명(프로세스)의 칸 하나로 그 호출들을 묶는다 — 소유할 서브시스템이 없다(다른 구성에는 없다)"

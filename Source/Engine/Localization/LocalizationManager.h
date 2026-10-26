@@ -6,6 +6,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/mutex.h"
 #include "Core/Container/IDAllocator.h"
 #include "Core/Container/map.h"
 #include "Core/Container/set.h"
@@ -244,7 +245,7 @@ namespace sw
         void releaseSubscription( uint64 id ) override;
 
     private:
-        mutable std::shared_mutex                      _mutex;
+        mutable shared_mutex                           _mutex;
         string                                         _currentLanguage;
         string                                         _fallbackLanguage;
         CultureTable                                   _cultureTable;
@@ -257,7 +258,7 @@ namespace sw
         vector<string>                                 _listLookupCulture;
         unordered_map<uint64, LanguageChangedCallback> _mapCallback; ///< 구독 번호 → 콜백
 
-        mutable std::mutex  _missingMutex;
+        mutable mutex       _missingMutex;
         mutable set<string> _uniqueMissingKey;
 
         std::atomic<uint32> _textRevision;

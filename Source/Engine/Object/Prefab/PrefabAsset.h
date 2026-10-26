@@ -7,6 +7,7 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
+#include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
@@ -357,7 +358,7 @@ namespace sw
         uint32 spawnNestedInstancesUnder( GameObject* pRoot, const PrefabAsset& asset, string_view rootPath, const vector<PrefabPartOverride>& listPartOverride,
                                           vector<string>& inoutListSpawnedPath );
 
-        mutable std::shared_mutex                            _mapCacheMutex;
+        mutable shared_mutex                                 _mapCacheMutex;
         unordered_map<string, shared_ptr<const PrefabAsset>> _mapCache;
         unordered_map<string, weak_ptr<PrefabLoadBlock>>     _mapLoading;      ///< 읽는 중인 로드(같은 경로의 동시 요청은 같은 블록). `_mapCacheMutex` 로 지킨다
         atomic<uint32>                                       _cacheGeneration; ///< `reload` · `clear` 가 올린다. 읽는 사이 바뀌면 결과를 캐시에 넣지 않는다

@@ -430,9 +430,9 @@ namespace sw
             using NameIndexMap     = unordered_map<StringKey, uint32, typename StringKey::HashFunc, typename StringKey::EqualIgnoreCase>;
             using SpellingIndexMap = unordered_map<StringKey, uint32, typename StringKey::HashFunc, typename StringKey::EqualExact>;
 
-            mutable std::shared_mutex _mutex;              ///< 이 샤드 전용 읽기/쓰기 락
-            NameIndexMap              _mapKeyToIndex;      ///< 이름(대소문자 무시)에서 비교 엔트리 인덱스로 가는 맵
-            SpellingIndexMap          _mapExactKeyToIndex; ///< 철자에서 표시 엔트리 인덱스로 가는 맵
+            mutable shared_mutex _mutex;              ///< 이 샤드 전용 읽기/쓰기 락
+            NameIndexMap         _mapKeyToIndex;      ///< 이름(대소문자 무시)에서 비교 엔트리 인덱스로 가는 맵
+            SpellingIndexMap     _mapExactKeyToIndex; ///< 철자에서 표시 엔트리 인덱스로 가는 맵
         };
 
         atomic<Entry*> _arrChunk[kMaxChunks]{}; /**< 1024 단위 엔트리 청크의 원자 포인터 배열(락 없는 O(1) 조회) */
@@ -478,10 +478,10 @@ namespace sw
         /** @brief 모든 메모리 블록, 청크, 맵을 한꺼번에 해제합니다. 맵과 목록은 저장소(버킷, 밀집 배열, 용량)까지 돌려줍니다. */
         void clear() noexcept
         {
-            std::unique_lock<std::shared_mutex> arrShardLock[kNumShards];
+            std::unique_lock<shared_mutex> arrShardLock[kNumShards];
             for ( uint32 shardIndex = 0; shardIndex < kNumShards; ++shardIndex )
             {
-                arrShardLock[shardIndex] = std::unique_lock<std::shared_mutex>( _arrShard[shardIndex]._mutex );
+                arrShardLock[shardIndex] = std::unique_lock<shared_mutex>( _arrShard[shardIndex]._mutex );
                 // `clear()` 는 버킷과 밀집 배열을 남긴다. 빈 맵을 대입해야 종료 뒤 남는 블록이 없다. `= {}` 는 쓰지 않는다(STL 구성에서 initializer_list 대입이 선택되어 버킷이 남는다).
                 _arrShard[shardIndex]._mapKeyToIndex      = typename Shard::NameIndexMap{};
                 _arrShard[shardIndex]._mapExactKeyToIndex = typename Shard::SpellingIndexMap{};
@@ -608,7 +608,7 @@ namespace sw
         auto&           shard      = info._arrShard[shardIndex];
         StringKey       lookupKey{ hash, text.data(), static_cast<size_type>( text.size() ) };
 
-        std::shared_lock<std::shared_mutex> readLock{ shard._mutex };
+        std::shared_lock<shared_mutex> readLock{ shard._mutex };
         // 그 철자가 있으면 그것을, 없고 이름만 있으면 이름의 첫 철자를 반환한다(철자를 새로 넣지 않고 찾기만 한다).
         const auto exactIter = shard._mapExactKeyToIndex.find( lookupKey );
         if ( exactIter != shard._mapExactKeyToIndex.end() )
@@ -660,14 +660,14 @@ namespace sw
 
         // 1단계: 샤드 공유 락으로 빠르게 조회한다(이미 등록된 철자는 대부분 여기서 끝난다).
         {
-            std::shared_lock<std::shared_mutex> readLock{ shard._mutex };
-            const auto                          iter = shard._mapExactKeyToIndex.find( lookupKey );
+            std::shared_lock<shared_mutex> readLock{ shard._mutex };
+            const auto                     iter = shard._mapExactKeyToIndex.find( lookupKey );
             if ( iter != shard._mapExactKeyToIndex.end() )
                 return makeInterned( iter->second );
         }
 
         // 2단계: 새 철자를 등록한다. 샤드 배타 락과 전역 할당 락을 잡는다.
-        std::unique_lock<std::shared_mutex>         writeLock{ shard._mutex };
+        std::unique_lock<shared_mutex>              writeLock{ shard._mutex };
         const HashedStringPool::ScopedPoolMemoryTag poolMemoryTag;
 
         // 다시 확인한다(double-check).

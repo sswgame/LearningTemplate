@@ -95,8 +95,8 @@ namespace sw
         pRecord->_pContext        = pTaskContext;
         pRecord->_remainingRangeCount.store( static_cast<uint32>( rangeCount ), std::memory_order_relaxed );
         {
-            std::scoped_lock<mutex> lock{ _mutex };
-            int32                   startIndex = 0;
+            ScopedLock<mutex> lock{ _mutex };
+            int32             startIndex = 0;
             for ( int32 rangeIndex = 0; rangeIndex < rangeCount; ++rangeIndex )
             {
                 const int32 endIndex = startIndex + itemsPerRange + ( rangeIndex < remainder ? 1 : 0 );
@@ -131,7 +131,7 @@ namespace sw
     {
         Range range;
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             if ( _nextRangeIndex >= _listRange.size() )
                 return false;
             range = _listRange[_nextRangeIndex];

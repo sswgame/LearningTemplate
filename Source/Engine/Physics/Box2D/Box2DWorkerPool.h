@@ -79,12 +79,12 @@ namespace sw
         void               runWorker( uint32 workerIndex, ThreadStopToken stopToken );
 
         vector<sw::thread>       _listThread;
-        vector<unique_ptr<Task>> _listTask;     ///< 만든 태스크 전부(소유). 스텝 스레드만 만진다.
-        vector<Task*>            _listFreeTask; ///< 다시 쓸 태스크. 스텝 스레드만 만진다.
-        vector<Range>            _listRange;    ///< 대기열. `_mutex` 를 쥐고 만진다.
+        vector<unique_ptr<Task>> _listTask;               ///< 만든 태스크 전부(소유). 스텝 스레드만 만진다.
+        vector<Task*>            _listFreeTask;           ///< 다시 쓸 태스크. 스텝 스레드만 만진다.
+        vector<Range> _listRange SW_GUARDED_BY( _mutex ); ///< 대기열.
         mutex                    _mutex;
-        atomic<uint32>           _wakeWord;       ///< 넣을 때마다 올리는 세대 — 워커가 이 워드에서 잠든다(`Futex`).
-        uint32                   _nextRangeIndex; ///< `_listRange` 에서 다음에 꺼낼 칸. `_mutex` 를 쥐고 만진다.
+        atomic<uint32>           _wakeWord;               ///< 넣을 때마다 올리는 세대 — 워커가 이 워드에서 잠든다(`Futex`).
+        uint32 _nextRangeIndex   SW_GUARDED_BY( _mutex ); ///< `_listRange` 에서 다음에 꺼낼 칸.
         uint32                   _workerCount;
     };
 } // namespace sw
