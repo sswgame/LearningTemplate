@@ -15,15 +15,6 @@
 namespace sw
 {
     using FileWatchMatchDelegate = FileChangeDelegate;
-
-    /// @brief registerWatch 가 반환하는 감시 핸들입니다.
-    struct FileWatchHandle
-    {
-        uint64 _id{ 0 };
-        bool   isValid() const { return _id != 0; }
-        bool   operator==( const FileWatchHandle& rhs ) const { return _id == rhs._id; }
-        bool   operator!=( const FileWatchHandle& rhs ) const { return _id != rhs._id; }
-    };
 } // namespace sw
 
 namespace sw
@@ -33,7 +24,7 @@ namespace sw
      * @brief FileWatcher 로 리소스 변경을 폴링하고, 등록된 경로 접두사와 확장자가 맞을 때만 콜백을 부릅니다.
      * @note Windows 는 ReadDirectoryChangesW, Linux 는 inotify, 그 밖의 플랫폼은 mtime 폴링으로 대신합니다.
      */
-    class FileWatchDispatcher
+    class FileWatchDispatcher : private SubscriptionSource
     {
     public:
         /** @brief 워치 목록을 비운 채 시작합니다. */
@@ -56,20 +47,18 @@ namespace sw
         void update();
 
         /**
-         * @brief pathPrefix 아래에서 확장자가 맞는 변경이 있을 때만 onMatch 를 호출하도록 등록합니다.
+         * @brief pathPrefix 아래에서 확장자가 맞는 변경이 있을 때만 onMatch 를 호출하도록 등록하고 그 구독을 돌려줍니다. 구독이 사라지면 감시가 빠집니다.
          * @param pathPrefix 감시와 필터에 쓰는 경로입니다. 안에서 정규화합니다.
          * @param listExtension 예를 들면 { ".hlsl", ".hlsli" } 입니다. 점을 포함하며 대소문자를 무시합니다.
          */
-        FileWatchHandle registerWatch( string_view pathPrefix, const vector<string>& listExtension, const FileWatchMatchDelegate& onMatch );
-        /** @brief 감시 등록을 해제합니다. */
-        void unregisterWatch( FileWatchHandle handle );
+        [[nodiscard]] Subscription registerWatch( string_view pathPrefix, const vector<string>& listExtension, const FileWatchMatchDelegate& onMatch );
 
         /**
          * @brief 파일 변경 이벤트를 등록된 감시 콜백으로 보냅니다.
          * @details 이 함수를 공개한 이유는 이 클래스의 절반이기 때문이다. 나머지 절반(폴링)은 OS 알림에 기대므로 검사가
          *          타이밍에 따라 흔들린다. 이벤트를 직접 넣을 수 있으면 "누구에게 가고 누구에게 안 가는가" 와 "콜백이 목록을
          *          바꿔도 견디는가" 를 파일 시스템 없이 결정적으로 확인할 수 있다. 도구가 합성 이벤트를 넣는 데도 쓴다.
-         * @note 콜백 안에서 `registerWatch` 와 `unregisterWatch` 를 호출해도 됩니다.
+         * @note 콜백 안에서 `registerWatch` 와 구독 해제를 해도 됩니다.
          */
         void dispatchEvents( const vector<FileChangeEvent>& listEvent );
 
@@ -77,8 +66,8 @@ namespace sw
         /// @brief 경로 접두사, 확장자 필터, 콜백을 담습니다.
         struct WatchEntry
         {
-            FileWatchHandle _handle;
-            string          _pathPrefix;
+            uint64 _id{ 0 }; ///< 이 감시를 소유하는 구독의 번호
+            string _pathPrefix;
             /**
              * @brief `_pathPrefix` 를 `normalizePath` 한 값입니다. 등록할 때 한 번만 만듭니다.
              * @details 접두사는 감시가 등록된 뒤로 바뀌지 않는다. `matchesWatch` 가 이벤트마다 다시 만들면 이벤트 E 개와
@@ -103,6 +92,8 @@ namespace sw
         void expandRescanEvents( vector<FileChangeEvent>& outListEvent, uint64 sinceTimestamp );
         /** @brief mtime 폴백으로 변경을 모읍니다. */
         void pollMtimeFallback( vector<FileChangeEvent>& outListEvent );
+        /** @brief 감시 구독 @p id 가 풀렸습니다. 그 감시를 뺍니다. */
+        void releaseSubscription( uint64 id ) override;
         /** @brief 파일 확장자가 감시 허용 목록에 있으면 true 입니다. */
         bool isExtensionAllowed( const WatchEntry& entry, string_view filename ) const;
 

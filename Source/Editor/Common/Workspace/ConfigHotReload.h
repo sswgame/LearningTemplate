@@ -65,6 +65,6 @@ namespace sw::editor
         void onConfigFileChanged( const FileChangeEvent& changeEvent );
 
         unique_ptr<FileWatchDispatcher> _pFileWatchDispatcher;
-        FileWatchHandle                 _configWatchHandle;
+        Subscription                    _configWatch; ///< 설정 폴더 감시 구독
     };
 } // namespace sw::editor

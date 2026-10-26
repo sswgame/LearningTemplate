@@ -87,11 +87,11 @@ namespace sw
         /** @brief 표정 가중치를 정합니다(리그에 없는 이름이면 false). 애니메이터의 같은 이름 커브와 더해집니다. */
         bool setExpressionWeight( const hashed_string& expressionName, float32 weight );
         /**
-         * @brief 실시간 얼굴 입력을 겁니다(빌림 — 건 쪽이 수명을 쥐고 `unregisterLiveSource` 로 뗀다). 표정마다 같은 이름 채널의 값이 명시 가중치 · 애니메이터 커브에 더해진다.
+         * @brief 실시간 얼굴 입력을 걸고 그 구독을 돌려줍니다(빌림 — 건 쪽이 입력과 구독을 쥐고, 구독을 놓으면 떨어진다). 표정마다 같은 이름 채널의 값이 명시 가중치 · 애니메이터 커브에 더해진다.
          * @details 값은 게임 스레드에서 프레임마다 옮겨 둔다(`prepareAnimationFrame`) — 워커의 얼굴 단계는 입력을 직접 읽지 않는다.
+         *          입력은 하나뿐이라 다시 걸면 교체한다. 교체된 옛 구독은 놓아도 새 입력을 떼지 않는다. nullptr 이면 빈 구독이다.
          */
-        void registerLiveSource( const IFacialLiveSource* pSource );
-        void unregisterLiveSource();
+        [[nodiscard]] Subscription registerLiveSource( const IFacialLiveSource* pSource );
         /** @brief 시선 목표(월드)를 정합니다. */
         void setLookAtTarget( const float3& worldPosition );
         /** @brief 시선을 놓습니다(눈은 애니메이션 그대로). */
@@ -155,15 +155,35 @@ namespace sw
         PROPERTY( Category = "Facial", DisplayName = "Facial Rig", AssetPath, AssetType = "FacialRig", Tooltip = "Facial rig (.facial.xml): expressions, visemes, blink, gaze" )
         string _facialRigPath;
 
-        FacialAnimationBinding                      _binding;
-        Subscription                                _bindingRegistration; ///< 유닛 단계 작업 등록 구독(놓으면 유닛에서 빠진다)
-        FacialRig                                   _rig;
-        LipSyncSettings                             _lipSync;
-        VisemeTrack                                 _speechTrack;
-        vector<float32>                             _listSpeechSample;     ///< 트랙이 없을 때의 진폭 립싱크 표본(모노)
-        vector<float32>                             _listExpressionWeight; ///< 리그 표정 순서의 명시 가중치
-        vector<float32>                             _listLiveWeight;       ///< 리그 표정 순서의 실시간 입력 값(게임 스레드가 프레임마다 옮겨 둔다, 입력이 없으면 0)
-        const IFacialLiveSource*                    _pLiveSource;          ///< 실시간 얼굴 입력(빌림, `registerLiveSource`)
+        FacialAnimationBinding   _binding;
+        Subscription             _bindingRegistration; ///< 유닛 단계 작업 등록 구독(놓으면 유닛에서 빠진다)
+        FacialRig                _rig;
+        LipSyncSettings          _lipSync;
+        VisemeTrack              _speechTrack;
+        vector<float32>          _listSpeechSample;     ///< 트랙이 없을 때의 진폭 립싱크 표본(모노)
+        vector<float32>          _listExpressionWeight; ///< 리그 표정 순서의 명시 가중치
+        vector<float32>          _listLiveWeight;       ///< 리그 표정 순서의 실시간 입력 값(게임 스레드가 프레임마다 옮겨 둔다, 입력이 없으면 0)
+        const IFacialLiveSource* _pLiveSource;          ///< 실시간 얼굴 입력(빌림, `registerLiveSource`)
+
+        /** @brief 실시간 입력 등록의 출처입니다(구독 id 는 입력 주소). 리플렉션 클래스라 기반을 더하지 않고 멤버로 둔다. */
+        class LiveSourceSlot final : public SubscriptionSource
+        {
+        public:
+            explicit LiveSourceSlot( FacialAnimationComponent& owner )
+                : _owner{ owner }
+            {
+            }
+            [[nodiscard]] Subscription issue( const IFacialLiveSource* pSource ) { return issueSubscription( reinterpret_cast<uint64>( pSource ) ); }
+
+        private:
+            /** @brief 지금 입력이 이 구독의 것일 때만 뗍니다(교체된 옛 구독이면 할 일이 없다). */
+            void releaseSubscription( uint64 id ) override { _owner.detachLiveSource( reinterpret_cast<const IFacialLiveSource*>( id ) ); }
+
+            FacialAnimationComponent& _owner;
+        };
+        /** @brief 지금 입력이 @p pSource 이면 뗍니다. */
+        void                                        detachLiveSource( const IFacialLiveSource* pSource );
+        LiveSourceSlot                              _liveSourceSlot;       ///< `_pLiveSource` 의 등록 구독을 내준다
         vector<vector<int32>>                       _listExpressionTarget; ///< 표정마다 타깃 → 메시 타깃 번호
         vector<vector<int32>>                       _listVisemeTarget;     ///< 비즘마다 타깃 → 메시 타깃 번호
         vector<int32>                               _listBlinkTarget;      ///< 깜빡임 타깃 → 메시 타깃 번호

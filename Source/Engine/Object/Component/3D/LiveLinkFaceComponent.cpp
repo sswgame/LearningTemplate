@@ -22,7 +22,6 @@ namespace sw
         , _transport{}
         , _appliedPacketCount{ 0 }
         , _bLoopbackOnly{ SW_FALSE }
-        , _bRegistered{ SW_FALSE }
         , _bReportedError{ SW_FALSE }
         , _reserved{ 0 }
     {
@@ -51,17 +50,12 @@ namespace sw
             _transport.reset();
             return;
         }
-        pFace->registerLiveSource( &_source );
-        _bRegistered = SW_TRUE;
+        _faceRegistration = pFace->registerLiveSource( &_source );
     }
 
     void LiveLinkFaceComponent::onEndPlay()
     {
-        GameObject*               pOwner = getOwner();
-        FacialAnimationComponent* pFace  = pOwner != nullptr ? pOwner->getComponent<FacialAnimationComponent>() : nullptr;
-        if ( _bRegistered == SW_TRUE && pFace != nullptr )
-            pFace->unregisterLiveSource();
-        _bRegistered = SW_FALSE;
+        _faceRegistration.reset(); // 얼굴이 먼저 사라졌으면 이미 무효다
         if ( _transport != nullptr )
             _transport->close();
         _transport.reset();

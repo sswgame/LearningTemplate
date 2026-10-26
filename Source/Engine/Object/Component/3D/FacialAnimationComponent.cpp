@@ -123,6 +123,7 @@ namespace sw
         , _listExpressionWeight{}
         , _listLiveWeight{}
         , _pLiveSource{ nullptr }
+        , _liveSourceSlot{ *this }
         , _listExpressionTarget{}
         , _listVisemeTarget{}
         , _listBlinkTarget{}
@@ -246,15 +247,20 @@ namespace sw
         return true;
     }
 
-    void FacialAnimationComponent::registerLiveSource( const IFacialLiveSource* pSource )
+    Subscription FacialAnimationComponent::registerLiveSource( const IFacialLiveSource* pSource )
     {
+        if ( pSource == nullptr )
+            return {};
         _pLiveSource = pSource;
         if ( _pUnit != nullptr )
             _pUnit->markPoseDirty();
+        return _liveSourceSlot.issue( pSource );
     }
 
-    void FacialAnimationComponent::unregisterLiveSource()
+    void FacialAnimationComponent::detachLiveSource( const IFacialLiveSource* pSource )
     {
+        if ( _pLiveSource != pSource )
+            return;
         _pLiveSource = nullptr;
         if ( _pUnit != nullptr )
             _pUnit->markPoseDirty();

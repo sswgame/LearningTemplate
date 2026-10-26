@@ -16,15 +16,15 @@ SW_TEST_CASE( EditorHotReloadTest, FileWatchDispatcherLifecycle )
     sw::FileWatchDispatcher manager;
     SW_EXPECT_TRUE( manager.initialize() );
 
-    bool       bCallbackCalled = false;
-    const auto handle          = manager.registerWatch( "Resource/shaders", { ".hlsl" },
-                                                        SW_DELEGATE_LAMBDA( sw::FileWatchMatchDelegate, [&bCallbackCalled]( const sw::FileChangeEvent& )
-             {
+    bool             bCallbackCalled = false;
+    sw::Subscription watch           = manager.registerWatch( "Resource/shaders", { ".hlsl" },
+                                                              SW_DELEGATE_LAMBDA( sw::FileWatchMatchDelegate, [&bCallbackCalled]( const sw::FileChangeEvent& )
+              {
         bCallbackCalled = true;
     } ) );
 
-    SW_EXPECT_TRUE( handle.isValid() );
-    manager.unregisterWatch( handle );
+    SW_EXPECT_TRUE( watch.isActive() );
+    watch.reset();
     manager.shutdown();
 }
 
@@ -41,15 +41,16 @@ SW_TEST_CASE( EditorHotReloadTest, DispatchSurvivesWatchesAddedFromItsOwnCallbac
 {
     sw::FileWatchDispatcher manager;
 
-    int32 callCount = 0;
-    manager.registerWatch( "Resource", { ".hlsl" },
-                           SW_DELEGATE_LAMBDA( sw::FileWatchMatchDelegate, [&manager, &callCount]( const sw::FileChangeEvent& )
-    {
+    int32                        callCount = 0;
+    sw::vector<sw::Subscription> listAddedWatch; // 콜백이 건 감시를 든다 — 버리면 바로 빠져 목록이 자라지 않는다
+    const sw::Subscription       watch = manager.registerWatch( "Resource", { ".hlsl" },
+                                                                SW_DELEGATE_LAMBDA( sw::FileWatchMatchDelegate, [&manager, &callCount, &listAddedWatch]( const sw::FileChangeEvent& )
+          {
         ++callCount;
         // 순회 중인 목록을 **반드시 재할당시킨다** — 늘어나는 폭이 기하급수라 넉넉히 건다.
         for ( int32 addIndex = 0; addIndex < 64; ++addIndex )
         {
-            manager.registerWatch( "Resource/never_matches", { ".none" }, {} );
+            listAddedWatch.push_back( manager.registerWatch( "Resource/never_matches", { ".none" }, {} ) );
         }
     } ) );
 
