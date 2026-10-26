@@ -52,8 +52,9 @@ namespace sw
          *          사각형 버퍼를 갱신합니다. 주 출력 다음에 렌더 텍스처 대상들을 이어 한 버퍼에 담아(같은 프레임에 버퍼를 두 번 갱신하지 않게) 갱신하고, 대상마다 시작 위치는
          *          `getTargetQuadBase` 로 얻습니다. 프로파일 항목은 RT.Canvas.Upload 입니다.
          *          그 앞에 렌더 텍스처 대상을 `TextureCache` 에서 빌리고(위젯이 그리기 크기를 바꾸면 다시 만듭니다) 목록에서 사라진 대상은 돌려줍니다.
+         *          대상 포맷의 캔버스 PSO 가 셋업(@p psoCache, `FrameRenderer::createOutputPSOVariants`)에 없으면 그 대상은 처음 빌릴 때 오류로 거절하고 그리지 않습니다.
          */
-        void prepareFrame( IRHIDevice& device, CanvasFrameData& inoutFrame );
+        void prepareFrame( IRHIDevice& device, CanvasFrameData& inoutFrame, const RenderPSOCache& psoCache );
         /**
          * @brief 목록 하나를 지금 열린 렌더 패스에 그립니다. 일괄마다 가위, 루트 상수(시작, 텍스처 넷, 대상 크기, 색각 보정), `drawInstanced( 6, n )` 을 기록합니다.
          * @param quadBase       사각형 버퍼에서 이 목록이 시작하는 위치(주 출력 0, 대상은 `getTargetQuadBase`)
@@ -67,10 +68,11 @@ namespace sw
                          bool bNativeBindless, uint32 colorVisionMode = 0 ) const;
         /**
          * @brief 렌더 텍스처 대상(월드 공간 UI)을 지우고 그립니다. 내용 번호와 텍스처가 지난번과 같은 대상은 건너뜁니다(언리얼 위젯 컴포넌트의 다시 그리기 조건에 해당합니다).
-         * @details 장면 뷰가 그 텍스처를 읽기 전에 먼저 제출하는 프리패스 리스트에 기록한다. PSO 는 대상 포맷의 출력 PSO(`RenderPSOCache::findOutputPSO`)이고,
-         *          셋업에 없는 포맷이면 @p fallbackPSO 로 그리고 한 번만 알린다. 그린 텍스처는 셰이더가 읽으므로(머티리얼, 에디터 이미지) 읽기 상태로 둔다.
+         * @details 장면 뷰가 그 텍스처를 읽기 전에 먼저 제출하는 프리패스 리스트에 기록한다. PSO 는 대상 포맷의 출력 PSO(`RenderPSOCache::findOutputPSO`)뿐이다 —
+         *          셋업에 없는 포맷의 대상은 등록(`prepareFrame`)이 이미 거절하고 알렸으므로 여기서는 그리지 않는다(다른 포맷의 PSO 로 대신 그리지 않는다).
+         *          그린 텍스처는 셰이더가 읽으므로(머티리얼, 에디터 이미지) 읽기 상태로 둔다.
          */
-        void drawTargets( IRHICommandList& cmd, IRHIDevice& device, const CanvasFrameData& frame, const RenderPSOCache& psoCache, RHIPipelineStateHandle fallbackPSO );
+        void drawTargets( IRHICommandList& cmd, IRHIDevice& device, const CanvasFrameData& frame, const RenderPSOCache& psoCache );
         /** @brief 마지막 `drawTargets` 가 다시 그린 렌더 텍스처 대상 수입니다(테스트와 진단용). */
         uint32 getLastDrawnTargetCount() const { return _lastDrawnTargetCount; }
         /** @brief 마지막 `prepareFrame` 에서 주 출력 사각형이 버퍼에서 시작하는 위치입니다(버퍼 맨 앞은 화면 앵커입니다). */
@@ -139,8 +141,11 @@ namespace sw
             uint8            _bSeen{ SW_FALSE };   ///< 이번 프레임 목록에 있다.
         };
 
-        /** @brief 이번 목록의 렌더 텍스처 대상을 빌리고, 사라진 대상은 돌려줍니다. 텍스처 생성과 bindless 등록은 기록 중에 할 수 없으므로 `prepareFrame` 이 부릅니다. */
-        void prepareTargets( IRHIDevice& device, const CanvasFrameData& frame );
+        /**
+         * @brief 이번 목록의 렌더 텍스처 대상을 빌리고, 사라진 대상은 돌려줍니다. 텍스처 생성과 bindless 등록은 기록 중에 할 수 없으므로 `prepareFrame` 이 부릅니다.
+         * @details 처음 빌린 대상의 포맷에 셋업 PSO 가 없으면 여기서 오류로 거절한다(대상마다 한 번 — 다음 프레임에는 빌린 상태라 다시 묻지 않는다).
+         */
+        void prepareTargets( IRHIDevice& device, const CanvasFrameData& frame, const RenderPSOCache& psoCache );
         /** @brief 경로로 대상 상태를 찾습니다. 이번 목록과 순서가 같지 않으므로 경로로 찾습니다. 없으면 nullptr 입니다. */
         TargetState* findTarget( const hashed_string& path );
         /** @brief 일괄 텍스처 하나의 SRV 입니다. 없으면 kInvalidDescriptorIndex 입니다. */
@@ -162,6 +167,5 @@ namespace sw
         uint32                  _mainQuadBase; ///< 주 출력 사각형이 버퍼에서 시작하는 위치(앞의 앵커 수)
         uint32                  _lastUploadCallCount;
         uint32                  _lastDrawnTargetCount;
-        uint8                   _bTargetPSOMissingLogged; ///< 셋업에 없는 대상 포맷을 한 번만 알리는 래치(렌더 스레드 프리패스에서만 쓴다)
     };
 } // namespace sw

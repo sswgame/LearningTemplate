@@ -266,7 +266,11 @@ namespace sw
                 SW_LOG_ERROR( "Failed to create descriptor / pipeline layout resources." );
                 return false;
             }
-            (void)ensureTextureSet();
+            if ( ensureTextureSet() == false )
+            {
+                SW_LOG_ERROR( "Failed to create the bindless texture set." );
+                return false;
+            }
         }
 
         BLOCK( "Fullscreen Triangle" )

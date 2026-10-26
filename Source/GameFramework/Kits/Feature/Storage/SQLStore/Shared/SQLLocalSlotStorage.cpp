@@ -42,7 +42,7 @@ namespace sw
         if ( SQLMigrationRunner::loadMigrations( kMigrationFolder, driver.getName(), listMigration, outError ) == false )
             return false;
         if ( databasePath != ":memory:" )
-            (void)FileUtil::ensureParentDirectoryExists( databasePath );
+            (void)FileUtil::ensureParentDirectoryExists( databasePath ); // 못 만들면 ensure 가 알리고 바로 뒤 openConnection 이 오류로 답한다
         _connection = driver.openConnection( databasePath, "", outError );
         if ( _connection == nullptr )
             return false;

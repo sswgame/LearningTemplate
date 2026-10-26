@@ -270,9 +270,8 @@ namespace sw
         if ( bytes.empty() )
             return false;
 
-        FileUtil::ensureDirectoryExists( absDirectory );
         const string outPath = FileUtil::joinPath( absDirectory, getManifestFileName() );
-        if ( FileUtil::writeFile( outPath, bytes.data(), bytes.size() ) == false )
+        if ( FileUtil::ensureDirectoryExists( absDirectory ) == false || FileUtil::writeFile( outPath, bytes.data(), bytes.size() ) == false )
         {
             SW_LOG_ERROR( "Failed to write the reflection manifest: %#", outPath.c_str() );
             return false;

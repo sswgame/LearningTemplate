@@ -106,7 +106,7 @@ namespace
         const sw::string runRoot     = test::makeTempPath( runName.c_str() );
         const sw::string projectRoot = sw::ResourcePaths::getProjectFolderPath();
         const sw::string outGenDir   = sw::FileUtil::joinPath( runRoot, "gen" );
-        sw::FileUtil::ensureDirectoryExists( outGenDir );
+        SW_EXPECT_TRUE( sw::FileUtil::ensureDirectoryExists( outGenDir ) );
 
         ParserRunResult    result;
         sw::ProcessCommand command;
@@ -1427,7 +1427,7 @@ SW_TEST_CASE( ReflectionParserTest, RegeneratesWhenTheParserItselfIsNewer )
     const sw::string caseRoot    = test::makeTempPath( "staleness" );
     const sw::string headerPath  = sw::FileUtil::joinPath( caseRoot, "StalenessProbeSample.h" );
     const sw::string outGenDir   = sw::FileUtil::joinPath( caseRoot, "gen" );
-    sw::FileUtil::ensureDirectoryExists( outGenDir );
+    SW_EXPECT_TRUE( sw::FileUtil::ensureDirectoryExists( outGenDir ) );
 
     const sw::string headerContent = "#pragma once\n"
                                      "#include \"Engine/Reflection/ReflectionMacros.h\"\n"
@@ -1506,9 +1506,9 @@ SW_TEST_CASE( ReflectionParserTest, SameFileNameInOneOutputDirIsRejected )
     const sw::string dirA      = sw::FileUtil::joinPath( caseRoot, "A" );
     const sw::string dirB      = sw::FileUtil::joinPath( caseRoot, "B" );
     const sw::string outGenDir = sw::FileUtil::joinPath( caseRoot, "gen" );
-    sw::FileUtil::ensureDirectoryExists( dirA );
-    sw::FileUtil::ensureDirectoryExists( dirB );
-    sw::FileUtil::ensureDirectoryExists( outGenDir );
+    SW_EXPECT_TRUE( sw::FileUtil::ensureDirectoryExists( dirA ) );
+    SW_EXPECT_TRUE( sw::FileUtil::ensureDirectoryExists( dirB ) );
+    SW_EXPECT_TRUE( sw::FileUtil::ensureDirectoryExists( outGenDir ) );
 
     const sw::string headerA = sw::FileUtil::joinPath( dirA, "CollidingSample.h" );
     const sw::string headerB = sw::FileUtil::joinPath( dirB, "CollidingSample.h" );
@@ -1917,7 +1917,7 @@ SW_TEST_CASE( ReflectionParserTest, EditSavedWhileParsingIsNotHiddenByTheStamp )
     const sw::string caseRoot    = test::makeTempPath( "midparse_edit" );
     const sw::string headerPath  = sw::FileUtil::joinPath( caseRoot, "MidParseEditSample.h" );
     const sw::string outGenDir   = sw::FileUtil::joinPath( caseRoot, "gen" );
-    sw::FileUtil::ensureDirectoryExists( outGenDir );
+    SW_EXPECT_TRUE( sw::FileUtil::ensureDirectoryExists( outGenDir ) );
 
     const auto makeHeader = []( const utf8* pExtraProperty )
     {
@@ -1986,7 +1986,7 @@ SW_TEST_CASE( ReflectionParserTest, IncludedHeaderChangeRegeneratesAndIsInTheDep
     const sw::string headerPath  = sw::FileUtil::joinPath( caseRoot, "DependencyHolderSample.h" );
     const sw::string outGenDir   = sw::FileUtil::joinPath( caseRoot, "gen" );
     const sw::string depfilePath = sw::FileUtil::joinPath( outGenDir, "ReflectionParser.d" );
-    sw::FileUtil::ensureDirectoryExists( outGenDir );
+    SW_EXPECT_TRUE( sw::FileUtil::ensureDirectoryExists( outGenDir ) );
 
     const auto writeBase = [&basePath]( const utf8* pExtraMember )
     {
@@ -2119,8 +2119,8 @@ SW_TEST_CASE( ReflectionParserTest, LocalConfigCannotOverrideCommittedDefaults )
     const sw::string caseRoot    = test::makeTempPath( "local_config" );
     const sw::string envDir      = sw::FileUtil::joinPath( caseRoot, "Config/Environment" );
     const sw::string outGenDir   = sw::FileUtil::joinPath( caseRoot, "gen" );
-    sw::FileUtil::ensureDirectoryExists( envDir );
-    sw::FileUtil::ensureDirectoryExists( outGenDir );
+    SW_EXPECT_TRUE( sw::FileUtil::ensureDirectoryExists( envDir ) );
+    SW_EXPECT_TRUE( sw::FileUtil::ensureDirectoryExists( outGenDir ) );
     // 파서는 작업 폴더에서 위로 올라가며 설정을 찾는다 — 이 케이스 폴더의 사본이 먼저 잡힌다.
     for ( const utf8* pName : { "parser_config.defaults.json", "toolchain_config.json" } )
     {
@@ -2180,8 +2180,8 @@ SW_TEST_CASE( ReflectionParserTest, BrokenLocalConfigStopsTheParser )
     const sw::string caseRoot    = test::makeTempPath( "broken_local_config" );
     const sw::string envDir      = sw::FileUtil::joinPath( caseRoot, "Config/Environment" );
     const sw::string outGenDir   = sw::FileUtil::joinPath( caseRoot, "gen" );
-    sw::FileUtil::ensureDirectoryExists( envDir );
-    sw::FileUtil::ensureDirectoryExists( outGenDir );
+    SW_EXPECT_TRUE( sw::FileUtil::ensureDirectoryExists( envDir ) );
+    SW_EXPECT_TRUE( sw::FileUtil::ensureDirectoryExists( outGenDir ) );
     for ( const utf8* pName : { "parser_config.defaults.json", "toolchain_config.json" } )
     {
         const sw::string source = sw::FileUtil::joinPath( sw::FileUtil::joinPath( projectRoot, "Config/Environment" ), pName );

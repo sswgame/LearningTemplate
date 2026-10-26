@@ -208,7 +208,8 @@ namespace sw
             return 0;
 
         vector<string> listFile;
-        FileUtil::collectFiles( absoluteFolder, {}, listFile, false );
+        // 더하기만 하는 새로고침이라 모은 데까지 등록한다 — 도중에 멈춘 것은 collectFiles 가 경로와 함께 알리고, 다음 새로고침이 나머지를 채운다.
+        (void)FileUtil::collectFiles( absoluteFolder, {}, listFile, false );
         for ( const string& filePath : listFile )
         {
             string rel;
@@ -249,7 +250,8 @@ namespace sw
         // 까지 소문자가 되어 대소문자를 가리는 파일시스템에서 toRelativePath 의 루트 비교가 어긋난다.
         // 소문자화는 상대 경로가 된 뒤 toRelativePath 안에서 한 번만 한다.
         vector<string> listMeta;
-        FileUtil::collectFiles( absoluteRoot, path::kMetaExtension, listMeta, true );
+        // 더하기만 하는 등록이라 모은 데까지 등록한다(`refreshFolder` 와 같다) — 도중에 멈춘 것은 collectFiles 가 경로와 함께 알린다.
+        (void)FileUtil::collectFiles( absoluteRoot, path::kMetaExtension, listMeta, true );
 
         uint32 count{ 0 };
         for ( const string& metaAbs : listMeta )
@@ -279,7 +281,12 @@ namespace sw
         const string domainRoot = FileUtil::joinPath( FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) ), domain );
         // 목록과 각 .meta 는 쿠킹 작업 안이면 그 작업의 입력이다 — .meta 가 생기거나 사라져도 레지스트리를 다시 만든다.
         vector<string> listMeta;
-        CookJob::collectFiles( domainRoot, path::kMetaExtension, listMeta );
+        if ( CookJob::collectFiles( domainRoot, path::kMetaExtension, listMeta ) == false )
+        {
+            SW_LOG_ERROR( "Asset registry: the .meta files under '%#' could not all be listed - no registry is written for it", domainRoot );
+            ++outFailedCount;
+            return {};
+        }
 
         const string_view                       metaExtension( path::kMetaExtension );
         const string                            domainPrefix = FileUtil::normalizePath( domain );

@@ -105,8 +105,6 @@ namespace sw
         const MaterialInstanceDesc& getDesc() const { return _desc; }
         /** @brief 이름으로 찾은 파라미터 텍스트를 읽습니다. */
         bool getParameter( hashed_string name, string& outValue ) const;
-        /** @brief 스칼라 파라미터를 반환합니다. */
-        float32 getScalarParameter( hashed_string name, float32 defaultValue = 0.0f ) const;
         /** @brief 텍스처 파라미터의 에셋 경로입니다. 덮어썼으면 그 경로, 아니면 부모 프로퍼티의 경로, 둘 다 없으면 빈 문자열입니다. */
         string getTextureParameter( hashed_string name ) const;
         /**

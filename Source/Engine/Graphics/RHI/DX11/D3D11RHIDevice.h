@@ -393,7 +393,7 @@ namespace sw
         RHIBufferHandle uavSourceBufferAt( RHIDescriptorIndex index ) const;
 
         /** @brief 이 기록 스트림의 루트 상수 CB 를 확보합니다(없으면 만듭니다). */
-        bool ensureRootConstantCb( D3D11RecordingState& state );
+        [[nodiscard]] bool ensureRootConstantCb( D3D11RecordingState& state );
         /**
          * @brief 살아 있는 모든 기록 상태에서 이 버퍼와 PSO 캐시를 지웁니다.
          * @details 캐시가 리스트마다 있으므로 자원이 사라질 때 **모두** 훑어야 한다. 한 곳만 지우면

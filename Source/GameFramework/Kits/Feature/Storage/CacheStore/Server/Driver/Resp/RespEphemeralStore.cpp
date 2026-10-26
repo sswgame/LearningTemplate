@@ -100,7 +100,7 @@ namespace sw
         }
         _bInitialized = SW_TRUE;
         std::scoped_lock<mutex> lock{ _mutex };
-        (void)ensureCommandConnection();
+        (void)ensureCommandConnection(); // 연결 실패는 물러섬 뒤 다음 요청이 다시 시도한다
         return true;
     }
 
@@ -218,7 +218,7 @@ namespace sw
             {
                 std::scoped_lock<mutex> lock{ _mutex };
                 if ( _listChannel.empty() == false )
-                    (void)ensureSubscribeConnection();
+                    (void)ensureSubscribeConnection(); // 연결 실패는 물러섬 뒤 다음 펌프가 다시 시도한다
                 _subscribeConnection.takePushValues( listValue );
             }
             for ( const RespValue& value : listValue )

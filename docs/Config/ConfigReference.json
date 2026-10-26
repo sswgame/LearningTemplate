@@ -3925,14 +3925,6 @@
    "source": "Source/App/App.cpp"
   },
   {
-   "name": "gv_foliageDensity",
-   "type": "float32",
-   "default": "1.0",
-   "kind": "일반",
-   "description": "식생 밀도 배율 (사용자 설정 graphics.foliageDensity)",
-   "source": "Source/Engine/UserSettings/UserSettingsVariables.cpp"
-  },
-  {
    "name": "gv_fontMsdfGlyphs",
    "type": "bool",
    "default": "false",
@@ -4211,14 +4203,6 @@
    "kind": "테스트",
    "description": "측정 창 전체를 이 경로에 트레이스로 저장 (비면 끄기)",
    "source": "Source/Engine/Profiling/FrameProfileSession.cpp"
-  },
-  {
-   "name": "gv_reduceFlashing",
-   "type": "bool",
-   "default": "false",
-   "kind": "일반",
-   "description": "번쩍임 줄이기 (사용자 설정 accessibility.reduceFlashing)",
-   "source": "Source/Engine/UserSettings/UserSettingsVariables.cpp"
   },
   {
    "name": "gv_renderPipeline",

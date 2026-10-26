@@ -67,7 +67,7 @@ namespace
         vector<string> listPath;
 #if !defined( SW_SHIPPING )
         const string folder = FileUtil::joinPath( FileUtil::getCurrentPath(), kModuleLibraryFolder );
-        (void)FileUtil::collectFiles( folder, kModuleLibraryExtension, listPath, false );
+        (void)FileUtil::collectFiles( folder, kModuleLibraryExtension, listPath, false ); // 폴더가 없으면 빈 목록이 답이다
 #endif
         return listPath;
     }

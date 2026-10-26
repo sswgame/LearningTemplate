@@ -61,7 +61,7 @@ namespace sw
          *          **이미 초기화되어 있으면 그대로 true 를 반환해야 합니다.** 통보 순서는 정해져 있지 않아서, 머티리얼이
          *          먼저 복원되며 자기 텍스처를 초기화해 놓은 뒤에 그 텍스처가 이 통보를 받는 일이 실제로 일어납니다.
          */
-        virtual bool initRHI( IRHIDevice* pDevice );
+        [[nodiscard]] virtual bool initRHI( IRHIDevice* pDevice );
 
         /** @brief 이 디바이스의 리소스를 보관하는 객체 전부에게 `releaseRHI` 를 보냅니다. 디바이스가 살아 있을 때 부릅니다. */
         static void releaseAllFor( IRHIDevice* pDevice );

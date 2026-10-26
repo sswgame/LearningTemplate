@@ -242,7 +242,8 @@ namespace sw
                 }
                 for ( const string& outDir : uniqueBinFolder )
                 {
-                    FileUtil::ensureDirectoryExists( outDir );
+                    // 못 만들면 ensure 가 폴더와 이유를 남기고, 그 폴더의 작업은 쓰기 실패로 결과(`outListResult`)에 남는다.
+                    (void)FileUtil::ensureDirectoryExists( outDir );
                 }
 
                 CookJob job{};

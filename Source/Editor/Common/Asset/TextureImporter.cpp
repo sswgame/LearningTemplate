@@ -193,9 +193,8 @@ namespace sw::editor
         [[nodiscard]] bool saveImportedDDSInternal( const DirectX::ScratchImage& finalImage, uint32 sourceChannelCount, [[maybe_unused]] string_view sourcePath, string_view outputPath,
                                                     TextureImportResult* pOutResult )
         {
-            const string outputDir = FileUtil::getDirectoryPart( outputPath );
-            if ( outputDir.empty() == false )
-                FileUtil::ensureDirectoryExists( outputDir );
+            if ( FileUtil::ensureParentDirectoryExists( outputPath ) == false )
+                return false;
 
             // 엔진 `DDSLoader` 의 옛 머리(DX9 픽셀 형식) 경로는 1 채널 휘도(L8)를 모른다. R8_UNORM 은 DX10 머리로 써서 DXGI 번호(61)를 그대로 싣는다.
             // 다른 형식은 옛 머리 그대로 둔다 — 이미 커밋된 DDS 의 바이트가 바뀌지 않게 한다.

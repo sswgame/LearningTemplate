@@ -149,7 +149,6 @@
 		<entry key="settings.accessibility.colorVision.deuteranopia" text="녹색약" sourceHash="eaffd5d797c0d636" />
 		<entry key="settings.accessibility.colorVision.protanopia" text="적색약" sourceHash="ebd58127ad3cb56a" />
 		<entry key="settings.accessibility.colorVision.tritanopia" text="청색약" sourceHash="0cb4b4d963fc5f44" />
-		<entry key="settings.accessibility.reduceFlashing" text="번쩍임 줄이기" sourceHash="81cf7ea1fe1b0e77" />
 		<entry key="settings.accessibility.reduceMotion" text="움직임 줄이기" sourceHash="4c7266515b845807" />
 		<entry key="settings.accessibility.subtitleBackground" text="자막 배경" sourceHash="2b9911a132958e47" />
 		<entry key="settings.accessibility.subtitleSize" text="자막 크기" sourceHash="6b7868a86e8badfa" />
@@ -204,7 +203,6 @@
 		<entry key="settings.gameplay.headBob" text="걸음 흔들림" sourceHash="6b009c84219aa0f8" />
 		<entry key="settings.gameplay.showTutorials" text="튜토리얼 표시" sourceHash="f7f7f982c0020167" />
 		<entry key="settings.graphics.effectsQuality" text="효과 품질" sourceHash="2f1d73eefe0d67e4" />
-		<entry key="settings.graphics.foliageDensity" text="초목 밀도" sourceHash="2fbb57da1cea22f8" />
 		<entry key="settings.graphics.motionBlur" text="모션 블러" sourceHash="bb0dd4796cb70d98" />
 		<entry key="settings.graphics.postQuality" text="후처리 품질" sourceHash="25d945a94bd08004" />
 		<entry key="settings.graphics.quality" text="그래픽 품질" sourceHash="207b31ba362cec89" />

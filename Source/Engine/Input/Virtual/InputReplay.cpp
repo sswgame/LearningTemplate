@@ -155,11 +155,7 @@ namespace sw
             }
         }
 
-        const string dirPart = FileUtil::getDirectoryPart( filePath );
-        if ( dirPart.empty() == false )
-            FileUtil::ensureDirectoryExists( dirPart );
-
-        return FileUtil::writeFile( filePath, bytes.data(), bytes.size() );
+        return FileUtil::ensureParentDirectoryExists( filePath ) && FileUtil::writeFile( filePath, bytes.data(), bytes.size() );
     }
 
     bool InputReplay::loadFromFile( string_view filePath )

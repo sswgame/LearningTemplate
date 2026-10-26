@@ -815,7 +815,7 @@ namespace sw
         const float32 forward = relX * fighter._dirX + relZ * fighter._dirZ;
         const float32 lateral = MathUtil::abs( relX * fighter._dirZ - relZ * fighter._dirX );
 
-        (void)fighter._timeline.collectActiveHitboxes( _listHitboxScratch );
+        (void)fighter._timeline.collectActiveHitboxes( _listHitboxScratch ); // 모은 수는 목록 크기로 본다
         for ( const MoveHitbox& hitbox : _listHitboxScratch )
         {
             const float32 halfWidth       = hitbox._width * 0.5f;

@@ -615,13 +615,6 @@ msgstr "3 型色覚 (青)"
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
-msgctxt "settings.accessibility.reduceFlashing"
-msgid "Reduce Flashing"
-msgstr "点滅を減らす"
-
-#. Context: Options menu label
-#. Max length: 32
-#: engine/settings/engine.settings.xml
 msgctxt "settings.accessibility.reduceMotion"
 msgid "Reduce Motion"
 msgstr "動きを減らす"
@@ -981,13 +974,6 @@ msgstr "チュートリアルを表示"
 msgctxt "settings.graphics.effectsQuality"
 msgid "Effects Quality"
 msgstr "エフェクト品質"
-
-#. Context: Options menu label
-#. Max length: 32
-#: engine/settings/engine.settings.xml
-msgctxt "settings.graphics.foliageDensity"
-msgid "Foliage Density"
-msgstr "植生の密度"
 
 #. Context: Options menu label
 #. Max length: 32

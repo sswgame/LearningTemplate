@@ -433,7 +433,7 @@ SW_TEST_CASE( ShaderCookRequestTest, CookedFoldersHoldOnlyRequestedBinaries )
     for ( const sw::string& extension : uniqueExtension )
     {
         sw::vector<sw::string> listBinary;
-        (void)sw::FileUtil::collectFiles( rootDir, extension, listBinary, true );
+        SW_EXPECT_TRUE( sw::FileUtil::collectFiles( rootDir, extension, listBinary, true ) );
         for ( const sw::string& binaryPath : listBinary )
         {
             const sw::string normBinary = sw::FileUtil::normalizePath( binaryPath );
@@ -501,7 +501,7 @@ SW_TEST_CASE( ShaderCookRequestTest, EveryRuntimeStaticSwitchCombinationIsReques
     SW_ASSERT_TRUE( listRequest.empty() == false );
 
     sw::vector<sw::string> listMaterialFile;
-    sw::FileUtil::collectFiles( rootDir, ".material", listMaterialFile, true );
+    SW_EXPECT_TRUE( sw::FileUtil::collectFiles( rootDir, ".material", listMaterialFile, true ) );
     uint32 runtimeComboCount{ 0 };
     for ( const sw::string& materialPath : listMaterialFile )
     {

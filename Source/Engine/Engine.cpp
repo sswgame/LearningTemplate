@@ -885,7 +885,7 @@ namespace sw
 
         Scene* pScene = _pSceneManager != nullptr ? _pSceneManager->getActiveScene() : nullptr;
         if ( pScene != nullptr )
-            pScene->ensureDefaultCameras();
+            (void)pScene->ensureDefaultCameras(); // 못 고르면 렌더 경로가 "카메라 없음" 으로 알린다(카메라는 프레임마다 다시 고른다)
         return bRestarted;
     }
 

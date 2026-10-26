@@ -177,7 +177,7 @@ SW_TEST_CASE( FileTest, CollectPreservesPathCase )
     const sw::string rootDir = test::makeTempPath( "SwCollectCaseRoot" );
     const sw::string subDir  = sw::FileUtil::joinPath( rootDir, "MixedCaseSub" );
     SW_ASSERT_TRUE( sw::FileUtil::removeDirectory( rootDir ) ); // 앞 실행이 죽어 남긴 찌꺼기가 개수 단언을 흔들지 않게 한다
-    sw::FileUtil::ensureDirectoryExists( subDir );
+    SW_EXPECT_TRUE( sw::FileUtil::ensureDirectoryExists( subDir ) );
 
     const sw::string filePath = sw::FileUtil::joinPath( subDir, "MixedCaseAsset.Bin" );
     const sw::string content  = "collect-case";
@@ -262,7 +262,7 @@ SW_TEST_CASE( FileTest, DirectoryWalkCollectsFilesAndFolders )
 {
     const sw::string rootDir = test::makeTempPath( "sw_walk_root" );
     const sw::string subDir  = sw::FileUtil::joinPath( rootDir, "nested" );
-    sw::FileUtil::ensureDirectoryExists( subDir );
+    SW_EXPECT_TRUE( sw::FileUtil::ensureDirectoryExists( subDir ) );
 
     const sw::string topFile    = sw::FileUtil::joinPath( rootDir, "top.txt" );
     const sw::string nestedFile = sw::FileUtil::joinPath( subDir, "deep.txt" );
@@ -368,7 +368,7 @@ SW_TEST_CASE( FileTest, WriteReplacesAtomicallyAndLeavesNoTemporaryFile )
 {
     const sw::string dir = test::makeTempPath( "SwAtomicWriteTest" );
     SW_ASSERT_TRUE( sw::FileUtil::removeDirectory( dir ) );
-    sw::FileUtil::ensureDirectoryExists( dir );
+    SW_EXPECT_TRUE( sw::FileUtil::ensureDirectoryExists( dir ) );
     const sw::string filePath = sw::FileUtil::joinPath( dir, "scene.xml" );
 
     SW_EXPECT_TRUE( sw::FileUtil::writeTextFile( filePath, "first" ) );
@@ -406,7 +406,7 @@ SW_TEST_CASE( FileTest, FailedWriteReportsFalseAndKeepsOriginal )
 
     // 폴더 안에 임시 파일을 남기지 않는다.
     sw::vector<sw::string> listFile;
-    sw::FileUtil::collectFiles( dir, "", listFile, false );
+    SW_EXPECT_TRUE( sw::FileUtil::collectFiles( dir, "", listFile, false ) );
     SW_EXPECT_EQUAL( 0u, static_cast<uint32>( listFile.size() ) );
 
     // 없는 폴더에 쓰기도 false 다.
@@ -424,7 +424,7 @@ SW_TEST_CASE( FileTest, NonAsciiPathRoundTrips )
 {
     const sw::string dir = test::makeTempPath( "SwUnicodePath_한글폴더" );
     SW_ASSERT_TRUE( sw::FileUtil::removeDirectory( dir ) );
-    sw::FileUtil::ensureDirectoryExists( dir );
+    SW_EXPECT_TRUE( sw::FileUtil::ensureDirectoryExists( dir ) );
     SW_ASSERT_TRUE( sw::FileUtil::isDirectory( dir ) );
 
     const sw::string filePath = sw::FileUtil::joinPath( dir, "세이브_1.txt" );

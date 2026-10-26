@@ -228,7 +228,7 @@ namespace sw
             }
 
             /** @brief 두 `state.objects*` 명령이 같이 쓰는 값입니다. 첫 값의 틱은 이력의 가장 최근 틱이다 — 이력이 없으면 어느 틱의 해시인지 말할 수 없어 답하지 않는다(이유는 @p outReply). */
-            static bool collectTickedObjects( string& outReply, uint64& outTick, vector<SceneObjectHash>& outListObject )
+            [[nodiscard]] static bool collectTickedObjects( string& outReply, uint64& outTick, vector<SceneObjectHash>& outListObject )
             {
                 const StateHashHistory* pHistory = findRecordingHistory( outReply );
                 if ( pHistory == nullptr )

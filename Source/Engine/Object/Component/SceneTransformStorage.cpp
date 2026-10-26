@@ -59,10 +59,7 @@ namespace sw
             {
                 // 닿지 않는 한계다(`kMaxPageCount` 설명). 닿았다면 칸 없이 컴포넌트를 만들 방법이 없다 — 알리고 멈춘다.
                 if ( _nextSlot >= kMaxPageCount * SceneTransformPage::kSlotCount )
-                {
-                    SW_LOG_ERROR( "Scene transform storage is full (%# slots). Too many scene components are alive.", _nextSlot );
-                    std::abort();
-                }
+                    SW_FATAL( "Scene transform storage is full (%# slots). Too many scene components are alive.", _nextSlot );
                 slot = _nextSlot++;
             }
 

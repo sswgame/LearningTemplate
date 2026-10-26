@@ -292,7 +292,8 @@ namespace sw
                 continue;
 
             vector<string> listFile;
-            FileUtil::collectFiles( entry._pathPrefix, {}, listFile, true );
+            if ( FileUtil::collectFiles( entry._pathPrefix, {}, listFile, true ) == false )
+                SW_LOG_WARNING( "Watch tree '%#' could not be listed completely - changes in the part left out are not recovered", entry._pathPrefix );
             for ( const string& filePath : listFile )
             {
                 if ( isExtensionAllowed( entry, filePath ) == false )
@@ -332,7 +333,8 @@ namespace sw
             else
             {
                 vector<string> listFile;
-                FileUtil::collectFiles( entry._pathPrefix, {}, listFile, true );
+                if ( FileUtil::collectFiles( entry._pathPrefix, {}, listFile, true ) == false )
+                    SW_LOG_WARNING( "Watch tree '%#' could not be listed completely - changes in the part left out are not polled", entry._pathPrefix );
                 for ( const string& filePath : listFile )
                 {
                     pollFileChange( _mapPollMtime, outListEvent, entry._listExtension, filePath );

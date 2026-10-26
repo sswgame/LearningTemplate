@@ -155,7 +155,6 @@
 		<entry key="settings.accessibility.colorVision.deuteranopia" text="2 型色覚 (緑)" sourceHash="eaffd5d797c0d636" />
 		<entry key="settings.accessibility.colorVision.protanopia" text="1 型色覚 (赤)" sourceHash="ebd58127ad3cb56a" />
 		<entry key="settings.accessibility.colorVision.tritanopia" text="3 型色覚 (青)" sourceHash="0cb4b4d963fc5f44" />
-		<entry key="settings.accessibility.reduceFlashing" text="点滅を減らす" sourceHash="81cf7ea1fe1b0e77" />
 		<entry key="settings.accessibility.reduceMotion" text="動きを減らす" sourceHash="4c7266515b845807" />
 		<entry key="settings.accessibility.subtitleBackground" text="字幕の背景" sourceHash="2b9911a132958e47" />
 		<entry key="settings.accessibility.subtitleSize" text="字幕のサイズ" sourceHash="6b7868a86e8badfa" />
@@ -214,7 +213,6 @@
 		<entry key="settings.gameplay.headBob" text="頭の揺れ" sourceHash="6b009c84219aa0f8" />
 		<entry key="settings.gameplay.showTutorials" text="チュートリアルを表示" sourceHash="f7f7f982c0020167" />
 		<entry key="settings.graphics.effectsQuality" text="エフェクト品質" sourceHash="2f1d73eefe0d67e4" />
-		<entry key="settings.graphics.foliageDensity" text="植生の密度" sourceHash="2fbb57da1cea22f8" />
 		<entry key="settings.graphics.motionBlur" text="モーションブラー" sourceHash="bb0dd4796cb70d98" />
 		<entry key="settings.graphics.postQuality" text="ポストプロセス品質" sourceHash="25d945a94bd08004" />
 		<entry key="settings.graphics.quality" text="グラフィック品質" sourceHash="207b31ba362cec89" />

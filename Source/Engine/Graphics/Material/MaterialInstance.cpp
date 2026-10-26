@@ -571,20 +571,6 @@ namespace sw
         return false;
     }
 
-    float32 MaterialInstance::getScalarParameter( hashed_string name, float32 defaultValue ) const
-    {
-        const float32* pVal = MaterialInstanceInternal::findValue( _listScalarOverride, name );
-        if ( pVal != nullptr )
-            return *pVal;
-        if ( _pParentMaterial != nullptr )
-        {
-            float32 parentScalar = defaultValue;
-            if ( _pParentMaterial->getScalarParameter( name, parentScalar ) )
-                return parentScalar;
-        }
-        return defaultValue;
-    }
-
     string MaterialInstance::getTextureParameter( hashed_string name ) const
     {
         for ( const TextureOverride& texture : _listTextureOverride )

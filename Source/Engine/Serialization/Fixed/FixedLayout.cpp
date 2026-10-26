@@ -392,8 +392,7 @@ namespace sw
     void FixedLayout::stopForMissingCodec( const hashed_string& fqn, const string& reason )
     {
         // 대체 값(0 해시, 빈 결과)을 돌려주면 그 값이 핸드셰이크 해시나 롤백 상태에 섞입니다. 고칠 곳은 선언이므로 멈춥니다.
-        SW_LOG_ERROR( "'%#' has no fixed layout codec: %#", fqn.c_str(), reason );
-        std::abort();
+        SW_FATAL( "'%#' has no fixed layout codec: %#", fqn.c_str(), reason );
     }
 
     bool FixedLayout::writeWithCodec( const FixedCodec& codec, const void* pObject, BitWriter& writer )

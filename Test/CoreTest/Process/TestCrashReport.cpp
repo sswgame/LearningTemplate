@@ -31,7 +31,8 @@ namespace
     sw::string findReportFileInternal( const sw::string& folder, sw::string_view suffix )
     {
         sw::vector<sw::string> listFile;
-        sw::FileUtil::collectFiles( folder, "", listFile, false );
+        if ( sw::FileUtil::collectFiles( folder, "", listFile, false ) == false )
+            return {}; // 폴더가 없으면(리포트가 아직 없다) 빈 문자열이 답이다
         for ( const sw::string& filePath : listFile )
         {
             const sw::string_view pathView{ filePath.c_str(), filePath.size() };
@@ -313,7 +314,7 @@ SW_TEST_CASE_PER_PARAMETER( CrashReportTest, EveryCrashKindLeavesAReport, listCr
     folderName.append( "SwCrashChild_" ).append( pCrashCase->_pName );
     const sw::string folder = test::makeTempPath( folderName.view() );
     SW_ASSERT_TRUE( sw::FileUtil::removeDirectory( folder ) );
-    sw::FileUtil::ensureDirectoryExists( folder );
+    SW_EXPECT_TRUE( sw::FileUtil::ensureDirectoryExists( folder ) );
 
     sw::StringBuilder<sw::constant::kMaxBuffer16> kindText;
     kindText.append( static_cast<int32>( pCrashCase->_kind ) );
@@ -361,7 +362,7 @@ SW_TEST_CASE( CrashReportTest, StuckReportStillEndsAndKeepsTheStackFile )
 
     const sw::string folder = test::makeTempPath( "SwCrashChild_stuck" );
     SW_ASSERT_TRUE( sw::FileUtil::removeDirectory( folder ) );
-    sw::FileUtil::ensureDirectoryExists( folder );
+    SW_EXPECT_TRUE( sw::FileUtil::ensureDirectoryExists( folder ) );
 
     sw::StringBuilder<sw::constant::kMaxBuffer16> kindText;
     kindText.append( static_cast<int32>( sw::CrashTestKind::StderrHeld ) );
@@ -403,7 +404,7 @@ SW_TEST_CASE( CrashReportTest, FailedAssertNamesItsExpressionBeforeStopping )
 #else
     const sw::string folder = test::makeTempPath( "SwCrashChild_assert" );
     SW_ASSERT_TRUE( sw::FileUtil::removeDirectory( folder ) );
-    sw::FileUtil::ensureDirectoryExists( folder );
+    SW_EXPECT_TRUE( sw::FileUtil::ensureDirectoryExists( folder ) );
 
     sw::StringBuilder<sw::constant::kMaxBuffer16> kindText;
     kindText.append( static_cast<int32>( sw::CrashTestKind::AssertFailure ) );

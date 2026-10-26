@@ -669,34 +669,34 @@ SW_TEST_CASE( SceneTest, GameCameraSelectionFollowsTheRegistry )
     SW_ASSERT_NOT_NULL( pHigh );
     pHigh->setRole( sw::CameraRole::Game );
     pHigh->setPriority( 10 );
-    scene.ensureDefaultCameras();
+    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
     SW_EXPECT_TRUE( scene.getActiveGameCamera() == pHigh );
 
     // 끄면 다음 것으로, 켜면 돌아온다. 역할을 바꿔도 따라간다.
     pHigh->setActive( false );
-    scene.ensureDefaultCameras();
+    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
     SW_EXPECT_TRUE( scene.getActiveGameCamera() == pDefault );
     pHigh->setActive( true );
-    scene.ensureDefaultCameras();
+    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
     SW_EXPECT_TRUE( scene.getActiveGameCamera() == pHigh );
     pHigh->setRole( sw::CameraRole::Viewport );
-    scene.ensureDefaultCameras();
+    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
     SW_EXPECT_TRUE( scene.getActiveGameCamera() == pDefault );
     SW_EXPECT_TRUE( pObjects->getCameraRegistry().selectCamera( sw::CameraRole::Viewport ) == pHigh );
     pHigh->setRole( sw::CameraRole::Game );
 
     // 직접 고른 카메라가 살아 있고 켜져 있는 동안은 그것이 먼저다.
     scene.setActiveGameCamera( pDefault );
-    scene.ensureDefaultCameras();
+    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
     SW_EXPECT_TRUE( scene.getActiveGameCamera() == pDefault );
     scene.setActiveGameCamera( nullptr );
-    scene.ensureDefaultCameras();
+    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
     SW_EXPECT_TRUE( scene.getActiveGameCamera() == pHigh );
 
     // 파괴 대기가 되면 그 프레임부터 빠진다(메모리는 아직 살아 있다). 규칙 자체가 거르는지 레지스트리 선택으로 본다.
     pObjects->destroyObject( pHighObj );
     SW_EXPECT_TRUE( pObjects->getCameraRegistry().selectCamera( sw::CameraRole::Game ) == pDefault );
-    scene.ensureDefaultCameras();
+    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
     SW_EXPECT_TRUE( scene.getActiveGameCamera() == pDefault );
     SW_EXPECT_NEAR_EQUAL( 5.0f, pDefault->getLocalPosition()._x, 1e-4f );
     pObjects->processDeferredDestruction();
@@ -706,14 +706,14 @@ SW_TEST_CASE( SceneTest, GameCameraSelectionFollowsTheRegistry )
     sw::GameObject*      pTieObj = pObjects->createGameObject( sw::hashed_string( "TieCamera" ) );
     sw::CameraComponent* pTie    = pTieObj->addComponent<sw::CameraComponent>();
     pTie->setRole( sw::CameraRole::Game );
-    scene.ensureDefaultCameras();
+    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
     SW_EXPECT_TRUE( scene.getActiveGameCamera() == pTie );
 
     // 진 쪽을 제자리에서 다시 읽어도(되돌리기 · 플레이 종료 복원 — 다시 등록돼 목록 끝으로 간다) 선택은 그대로다. 등록 순서로 가르면
     // 여기서 뒤집힌다.
     const sw::ObjectIdentity identity = sw::ObjectStateSerializer::captureIdentity( pDefaultObj );
     SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXMLString( pDefaultObj, sw::ObjectStateSerializer::saveToXMLString( pDefaultObj, sw::ObjectSaveOptions{ sw::SerializePurpose::Authoring } ), sw::ObjectLoadContext{ sw::SerializePurpose::Authoring, &identity } ) );
-    scene.ensureDefaultCameras();
+    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
     SW_EXPECT_TRUE( scene.getActiveGameCamera() == pTie );
 }
 
@@ -1088,7 +1088,7 @@ SW_TEST_CASE( SceneTest, SceneCookCountsTheScenesItCouldNotCook )
     sw::SceneDocument good;
     good._name                = "Good";
     const sw::string goodPath = sw::FileUtil::joinPath( root, "game/demo/maps/good.scene.xml" );
-    sw::FileUtil::ensureParentDirectoryExists( goodPath );
+    SW_EXPECT_TRUE( sw::FileUtil::ensureParentDirectoryExists( goodPath ) );
     SW_ASSERT_TRUE( good.saveXML( goodPath ) );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( root, "game/demo/maps/broken.scene.xml" ), "<Scene name=\"Broken\"><Entity" ) );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( root, "game/demo/maps/good.scene.xml.bak" ), "<Scene" ) ); // 쿠킹하는 것이 아니다
@@ -1115,12 +1115,12 @@ SW_TEST_CASE( SceneTest, SceneCookSkipsEditorOnlyScenes )
     sw::SceneDocument good;
     good._name                = "Good";
     const sw::string goodPath = sw::FileUtil::joinPath( root, "engine/automation/good.scene.xml" );
-    sw::FileUtil::ensureParentDirectoryExists( goodPath );
+    SW_EXPECT_TRUE( sw::FileUtil::ensureParentDirectoryExists( goodPath ) );
     SW_ASSERT_TRUE( good.saveXML( goodPath ) );
     for ( const utf8* pEditorScene : { "editor/maps/preview.scene.xml", "engine/automation/editor/mapcheck/broken.scene.xml" } )
     {
         const sw::string path = sw::FileUtil::joinPath( root, pEditorScene );
-        sw::FileUtil::ensureParentDirectoryExists( path );
+        SW_EXPECT_TRUE( sw::FileUtil::ensureParentDirectoryExists( path ) );
         SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( path, "<Scene name=\"Broken\"><Entity" ) );
     }
 
@@ -1149,7 +1149,7 @@ SW_TEST_CASE( SceneTest, SceneIsNotReadBeforeEveryModuleRegisteredItsTypes )
     sw::SceneDocument doc;
     doc._name                  = "Gate";
     const sw::string scenePath = sw::FileUtil::joinPath( root, "game/demo/maps/gate.scene.xml" );
-    sw::FileUtil::ensureParentDirectoryExists( scenePath );
+    SW_EXPECT_TRUE( sw::FileUtil::ensureParentDirectoryExists( scenePath ) );
     SW_ASSERT_TRUE( doc.saveXML( scenePath ) );
     const sw::string cookedPath = sw::FileUtil::joinPath( cooked, "game/demo/maps/gate.scene.bin" );
 
@@ -1268,10 +1268,10 @@ SW_TEST_CASE( SceneTest, SceneCookFailsOnAComponentOfUnknownType )
     node._embeddedXML = xml;
     doc._listSceneObjectNode.push_back( node );
     const sw::string scenePath = sw::FileUtil::joinPath( root, "game/demo/maps/unknown.scene.xml" );
-    sw::FileUtil::ensureParentDirectoryExists( scenePath );
+    SW_EXPECT_TRUE( sw::FileUtil::ensureParentDirectoryExists( scenePath ) );
     SW_ASSERT_TRUE( doc.saveXML( scenePath ) );
     const sw::string otherGamePath = sw::FileUtil::joinPath( root, "game/othergame/maps/unknown.scene.xml" );
-    sw::FileUtil::ensureParentDirectoryExists( otherGamePath );
+    SW_EXPECT_TRUE( sw::FileUtil::ensureParentDirectoryExists( otherGamePath ) );
     SW_ASSERT_TRUE( doc.saveXML( otherGamePath ) );
 
     uint32 missingComponentCount{ 0 };

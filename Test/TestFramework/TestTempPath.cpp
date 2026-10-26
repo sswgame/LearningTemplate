@@ -52,22 +52,23 @@ namespace test
             pContext->markTempPathUsed();
 
         const sw::string caseDirectory = getCaseTempDirectory( pContext->getTestName() );
-        sw::FileUtil::ensureDirectoryExists( caseDirectory );
+        if ( sw::FileUtil::ensureDirectoryExists( caseDirectory ) == false )
+            reportFailure( "makeTempPath", __FILE__, __LINE__, "케이스 임시 폴더를 만들지 못했다: " + caseDirectory );
         return sw::FileUtil::joinPath( caseDirectory, fileName );
     }
 
     sw::string makeTempDirectory( sw::string_view directoryName )
     {
         const sw::string directory = makeTempPath( directoryName );
-        sw::FileUtil::ensureDirectoryExists( directory );
+        if ( sw::FileUtil::ensureDirectoryExists( directory ) == false )
+            reportFailure( "makeTempDirectory", __FILE__, __LINE__, "임시 폴더를 만들지 못했다: " + directory );
         return directory;
     }
 
     sw::string makeTempResourceID( sw::string_view tempDiskPath )
     {
         const sw::string processDirectory = sw::FileUtil::normalizeSeparators( getProcessTempDirectory() );
-        sw::FileUtil::ensureDirectoryExists( processDirectory );
-        if ( sw::ResourcePaths::mountDiskDomain( kTempResourceDomain, processDirectory ) == false )
+        if ( sw::FileUtil::ensureDirectoryExists( processDirectory ) == false || sw::ResourcePaths::mountDiskDomain( kTempResourceDomain, processDirectory ) == false )
         {
             reportFailure( "makeTempResourceID", __FILE__, __LINE__, "프로세스 임시 폴더를 리소스 도메인으로 붙이지 못했다: " + processDirectory );
             return {};
@@ -117,7 +118,6 @@ namespace test
         const sw::string path = makePath( relativePath );
         if ( path.empty() )
             return false;
-        sw::FileUtil::ensureParentDirectoryExists( path );
-        return sw::FileUtil::writeTextFile( path, text );
+        return sw::FileUtil::ensureParentDirectoryExists( path ) && sw::FileUtil::writeTextFile( path, text );
     }
 } // namespace test

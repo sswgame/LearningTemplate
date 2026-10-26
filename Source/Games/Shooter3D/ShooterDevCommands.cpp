@@ -23,7 +23,7 @@ namespace sw
         struct ShooterDevCommandsInternal
         {
             /** @brief 활성 씬의 슈터 플레이어를 모읍니다. 씬이 없거나 하나도 없으면 답을 채우고 false 입니다. */
-            static bool collectPlayers( vector<ShooterPlayerComponent*>& outListPlayer, string& outReply )
+            [[nodiscard]] static bool collectPlayers( vector<ShooterPlayerComponent*>& outListPlayer, string& outReply )
             {
                 GameObjectManager* pManager = GameInstanceBase::findActiveObjectManager();
                 if ( pManager == nullptr )

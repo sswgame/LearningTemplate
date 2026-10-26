@@ -68,7 +68,7 @@ namespace sw
         /** @brief 체크포인트에 닿았음을 알립니다. 지금보다 뒤쪽 체크포인트면 그곳이 새 시작점이 되고, 지닌 수집품이 확정됩니다. 새로 닿았으면 true 를 반환합니다. */
         bool reachCheckpoint( const hashed_string& checkpointID );
         /** @brief 비밀 수집품을 줍습니다(아직 확정되지 않습니다). 이 스테이지의 것이고 처음 줍는 것이면 true 를 반환합니다. */
-        bool collectSecret( const hashed_string& secretID );
+        [[nodiscard]] bool collectSecret( const hashed_string& secretID );
         /** @brief 죽지 않고 맞았음을 알립니다. */
         void registerHit();
         /**

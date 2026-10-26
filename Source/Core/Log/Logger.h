@@ -243,6 +243,19 @@ namespace sw
 /// @brief id 가 없는 줄입니다.
 #define SW_LOG_INTERNAL( level, ... ) SW_LOG_WRITE( level, nullptr, __VA_ARGS__ )
 
+/**
+ * @brief 이어 갈 수 없는 결함을 한 줄로 남기고 **모든 구성에서** 멈춥니다(언리얼 `UE_LOG(Fatal)` · 유니티 `Debug.LogError` + `Application.Quit` 자리).
+ * @details 서식은 `SW_LOG_*` 와 같은 `formatstring`(`%#`)입니다. 줄은 stderr 에 먼저 동기로 쓰이고 로그로도 가며, 비동기 싱크를 비운 뒤
+ *          `std::abort` 합니다(`sw::internal::reportFatal`, `[[noreturn]]`). 로그 수준 필터 · 컴파일 제외를 타지 않습니다. 로그보다 아래 티어는 `SW_LOW_LEVEL_FATAL`.
+ */
+#define SW_FATAL( ... )                                                                           \
+    do                                                                                            \
+    {                                                                                             \
+        ::utf8 arrFatalMessage[::sw::constant::kMaxBuffer8192];                                   \
+        ::sw::formatstring( arrFatalMessage, ::sw::constant::kMaxBuffer8192, __VA_ARGS__ );       \
+        ::sw::internal::reportFatal( __FILE__, static_cast<int32>( __LINE__ ), arrFatalMessage ); \
+    } while ( false )
+
 #if SW_LOG_LEVEL_COMPILED( SW_LOG_VERBOSITY_ERROR )
     /** @brief Error 수준으로 포맷해 남깁니다. 모든 빌드에 남습니다. */
     #define SW_LOG_ERROR( ... ) SW_LOG_INTERNAL( sw::LogLevel::Error, __VA_ARGS__ )

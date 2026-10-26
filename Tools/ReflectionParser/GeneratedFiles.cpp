@@ -144,8 +144,7 @@ namespace sw
                 return true;
         }
 
-        FileUtil::ensureParentDirectoryExists( path );
-        if ( FileUtil::writeTextFile( path, content ) == false )
+        if ( FileUtil::ensureParentDirectoryExists( path ) == false || FileUtil::writeTextFile( path, content ) == false )
         {
             SW_LOG_ERROR( "Failed to write %#", path );
             return false;
@@ -233,8 +232,8 @@ namespace sw
         {
             listToolFile.push_back( configFile );
         }
-        if ( options._emitTemplatesDir.empty() == false )
-            FileUtil::collectFiles( options._emitTemplatesDir, config._emitTemplateExtension, listToolFile, false );
+        const bool bTemplateDir = options._emitTemplatesDir.empty() == false && FileUtil::isDirectory( options._emitTemplatesDir );
+        const bool bListFailed  = bTemplateDir && FileUtil::collectFiles( options._emitTemplatesDir, config._emitTemplateExtension, listToolFile, false ) == false;
 
         for ( const string& toolFile : listToolFile )
         {
@@ -242,6 +241,9 @@ namespace sw
             if ( writeTime > _newestToolWriteTime )
                 _newestToolWriteTime = writeTime;
         }
+        // 템플릿 목록을 다 읽지 못했으면 바뀐 템플릿을 놓칠 수 있다 — 모두 낡은 것으로 보고 다시 만든다(경로는 collectFiles 가 알린다).
+        if ( bListFailed )
+            _newestToolWriteTime = MathUtil::kMaxUInt64;
     }
 
     bool IncrementalCheck::isUpToDate( const string& inputFile, const GeneratedPaths& paths ) const

@@ -706,8 +706,8 @@ namespace sw
             if ( vkGetPipelineCacheData( _device, _pipelineCache, &dataSize, listCacheData.data() ) == VK_SUCCESS )
             {
                 const string cachePath = getVulkanPipelineCachePath();
-                FileUtil::ensureParentDirectoryExists( cachePath );
-                if ( FileUtil::writeFile( cachePath, listCacheData.data(), static_cast<uint64>( listCacheData.size() ) ) )
+                if ( FileUtil::ensureParentDirectoryExists( cachePath ) &&
+                     FileUtil::writeFile( cachePath, listCacheData.data(), static_cast<uint64>( listCacheData.size() ) ) )
                     SW_LOG_INFO( "Saved pipeline cache (%# bytes).", static_cast<uint32>( dataSize ) );
                 else
                     SW_LOG_WARNING( "Could not save the pipeline cache - the next run builds pipelines from scratch" );

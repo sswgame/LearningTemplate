@@ -711,7 +711,7 @@ SW_TEST_CASE( InteractionTest, EditedCatalogReachesComponentsThroughTheAssetCach
 {
     SW_ASSERT_TRUE( ResourcePaths::initialize() );
     const string path = FileUtil::joinPath( test::makeTempPath( "catalogreload" ), "edited.interactions.xml" );
-    FileUtil::ensureParentDirectoryExists( path );
+    SW_EXPECT_TRUE( FileUtil::ensureParentDirectoryExists( path ) );
     SW_ASSERT_TRUE( FileUtil::writeTextFile( path, R"(<Interactions><Interaction id="Open" mode="Press" maxDistance="2"/></Interactions>)" ) );
 
     AssetManager                resources;
@@ -755,7 +755,7 @@ SW_TEST_CASE( InteractionTest, EditedCatalogReachesSmartObjectSlots )
 {
     SW_ASSERT_TRUE( ResourcePaths::initialize() );
     const string path = FileUtil::joinPath( test::makeTempPath( "smartreload" ), "bench.interactions.xml" );
-    FileUtil::ensureParentDirectoryExists( path );
+    SW_EXPECT_TRUE( FileUtil::ensureParentDirectoryExists( path ) );
     SW_ASSERT_TRUE( FileUtil::writeTextFile( path, R"(<Interactions><SmartObject id="Bench"><Slot id="Left" offset="-0.5,0,0" tags="Activity.Sit"/></SmartObject></Interactions>)" ) );
 
     AssetManager                resources;

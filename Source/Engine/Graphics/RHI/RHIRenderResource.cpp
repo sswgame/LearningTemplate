@@ -129,7 +129,7 @@ namespace sw
         // 실패는 각 리소스가 자기 코드에서 로그로 남긴다. 여기서 세어 봐야 어느 리소스인지 모르는 한 줄만 늘어난다.
         broadcastInternal( [pDevice]( RHIRenderResource* pResource )
         {
-            (void)pResource->initRHI( pDevice );
+            (void)pResource->initRHI( pDevice ); // 실패는 리소스가 자기 코드에서 로그로 남긴다(위 설명)
         } );
     }
 } // namespace sw

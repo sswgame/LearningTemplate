@@ -107,7 +107,7 @@ namespace sw
             if ( s_globalSink.load( std::memory_order_acquire ) == nullptr )
                 return false;
 
-            const LogLevel logLevel = level == internal::LowLevelReportLevel::Error ? LogLevel::Error : LogLevel::Warning;
+            const LogLevel logLevel = level == internal::LowLevelReportLevel::Warning ? LogLevel::Warning : LogLevel::Error;
             if ( Logger::shouldLog( logLevel ) )
             {
                 utf8        arrStem[constant::kMaxBuffer64];
@@ -119,6 +119,8 @@ namespace sw
                 }
                 Logger::writeLogGlobal( logLevel, SW_LOG_TAG, pCaller, pMessage, pFile, line );
             }
+            if ( level == internal::LowLevelReportLevel::Fatal )
+                Logger::flushGlobalForCrash(); // 곧 멈춘다(`reportFatal`) — 비동기 싱크가 쥔 줄을 내보낸다
             return true;
         }
 

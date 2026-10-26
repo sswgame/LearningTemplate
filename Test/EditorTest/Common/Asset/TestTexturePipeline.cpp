@@ -53,7 +53,7 @@ namespace sw::editor
                     bytes.push_back( rgbaBytes[offset + 0] );
                     bytes.push_back( rgbaBytes[offset + 3] );
                 }
-                FileUtil::ensureParentDirectoryExists( path );
+                SW_EXPECT_TRUE( FileUtil::ensureParentDirectoryExists( path ) );
                 return FileUtil::writeFile( path, bytes.data(), bytes.size() );
             }
 
@@ -321,7 +321,7 @@ namespace sw::editor
             SW_EXPECT_TRUE_MSG( image.hasSourceAlpha() == ( testCase._expectedSourceChannelCount == 4 ), testCase._pName );
 
             const string sourcePath = test::makeTempPath( string( "channels_" ) + testCase._pName + ".tga" );
-            FileUtil::ensureParentDirectoryExists( sourcePath );
+            SW_EXPECT_TRUE( FileUtil::ensureParentDirectoryExists( sourcePath ) );
             SW_ASSERT_TRUE_MSG( FileUtil::writeFile( sourcePath, tgaBytes.data(), tgaBytes.size() ), testCase._pName );
             TextureImportRule rule;
             rule._format        = TextureImportFormat::R8G8B8A8;
@@ -853,7 +853,7 @@ namespace sw::editor
     {
         const string resourceRoot = test::makeTempDirectory( "import_stamp_hdr" );
         const string sourcePath   = FileUtil::joinPath( resourceRoot, "engine/textures_raw/sky.hdr" );
-        FileUtil::ensureParentDirectoryExists( sourcePath );
+        SW_EXPECT_TRUE( FileUtil::ensureParentDirectoryExists( sourcePath ) );
         SW_ASSERT_TRUE( FileUtil::writeTextFile( sourcePath, "#?RADIANCE\n" ) );
 
         TextureImportConfig config;

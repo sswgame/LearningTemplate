@@ -237,7 +237,7 @@ namespace sw
             }
 
             /** @brief zenity · yad 의 출력(구분자 `|`)을 경로 목록으로 바꿉니다. */
-            static bool collectGtkStyleOutput( string_view output, bool bMulti, vector<string>& outListPath )
+            [[nodiscard]] static bool collectGtkStyleOutput( string_view output, bool bMulti, vector<string>& outListPath )
             {
                 if ( bMulti )
                     splitPaths( output, '|', outListPath );

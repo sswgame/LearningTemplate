@@ -12,6 +12,7 @@
   load · save · read · write · parse · deserialize · serialize · apply · restore · import · export · cook · compile
   revert · convert · try · open · attach · spawn · instantiate · reload
   remove · copy · create · delete · move · rename
+  ensure · collect · makeRelativePath · makeAbsolutePath · getFileStamp · initRHI
 
 동사의 뜻은 "false = 그 일이 일어나지 않았다" 다. 할 일이 없어 true 인 것(`FileUtil::removeFile` 은 이미 없으면 true)도, 없어서 false 인
 컨테이너 도우미(`VectorUtil::removeSingleSwap`)도 그 뜻 안에 있다 — 버려도 되는 자리는 `(void)` 와 이유로 그렇다고 적는다.
@@ -47,7 +48,7 @@ _kListFallibleVerb: tuple[str, ...] = readFallibleVerbs()
 
 # 실패할 수 있는 동사로(또는 `re` + 그 동사로) 시작하는 이름.
 _kFallibleNamePattern = r"(?P<name>(?:re)?(?:" + "|".join(_kListFallibleVerb) + r")(?:[A-Z0-9]\w*)?)"
-_kSpecifierPattern = r"(?:(?:static|virtual|inline|constexpr|SW_API|SW_GF_API|SW_KIT_API|SW_MODULE_API)\s+)*"
+_kSpecifierPattern = r"(?:(?:static|virtual|inline|constexpr|SW_INLINE|SW_NOINLINE|SW_API|SW_GF_API|SW_KIT_API|SW_KIT_SERVER_API|SW_EDITOR_API|SW_MODULE_API)\s+)*"
 
 # 줄 머리의 지정자(static · virtual · 내보내기 매크로) 다음 `bool 이름(` — 이름이 실패할 수 있는 동사로 시작하는 선언.
 _kDeclarationRe = re.compile(r"^\s*" + _kSpecifierPattern + r"bool\s+" + _kFallibleNamePattern + r"\s*\(")
@@ -206,6 +207,16 @@ class CheckFallibleNodiscardGate(LintGate):
                 ("rename", "    static bool rename( GameObject* pObj, const utf8* pNewName );\n"),
             )
         ),
+        {
+            "name": "있게 하기 · 모으기 동사와 SW_NOINLINE 지정자 — ensureCapacity",
+            "expectedViolation": "[Fallible Nodiscard] Source/Probe/ProbeBuffer.h:3: ensureCapacity",
+            "files": {"Source/Probe/ProbeBuffer.h": "struct ProbeBuffer\n{\n    SW_NOINLINE bool ensureCapacity( uint32 size );\n};\n"},
+        },
+        {
+            "name": "모으기 동사 — collectFiles(폴더가 없으면 false · 도중에 멈추면 false)",
+            "expectedViolation": "[Fallible Nodiscard] Source/Probe/ProbeWalk.h:3: collectFiles",
+            "files": {"Source/Probe/ProbeWalk.h": "struct ProbeWalk\n{\n    static bool collectFiles( string_view directory, vector<string>& outList );\n};\n"},
+        },
         {
             "name": "re + 동사 — recreate",
             "expectedViolation": "[Fallible Nodiscard] Source/Probe/ProbeSurface.h:3: recreateSurface",

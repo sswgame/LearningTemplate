@@ -49,13 +49,15 @@ namespace sw::editor
             const std::thread::id scopeThreadID = s_editorScope._ownerThreadID.load( std::memory_order_relaxed );
             if ( scopeThreadID == std::thread::id{} || scopeThreadID == std::this_thread::get_id() )
                 return;
-            SW_LOG_ERROR( "Editor state is read off the editor thread - look the service up on the editor thread and pass it by value (see findEditorScope)" );
 #if defined( SW_DEBUG )
             if ( sw::internal::tryCaptureAssert() )
-                return; // 단언 가로채기를 건 테스트(`ScopedAssertCapture`)만 멈추지 않고 개수를 센다 — 가로채기는 Debug 에만 있다
+            {
+                // 단언 가로채기를 건 테스트(`ScopedAssertCapture`)만 멈추지 않고 개수를 센다 — 가로채기는 Debug 에만 있다
+                SW_LOG_ERROR( "Editor state is read off the editor thread - look the service up on the editor thread and pass it by value (see findEditorScope)" );
+                return;
+            }
 #endif
-            Logger::flushGlobalForCrash(); // 비동기 싱크가 보관하고 있는 위 한 줄을 멈추기 전에 내보낸다
-            std::abort();
+            SW_FATAL( "Editor state is read off the editor thread - look the service up on the editor thread and pass it by value (see findEditorScope)" );
         }
 
         /** @brief 메인 씬의 선택입니다 — 지금 에디터 범위(에디터 컨텍스트 또는 테스트가 건 범위)에 건 `EditorSelection`. 없으면 nullptr 입니다. */
@@ -102,11 +104,7 @@ namespace sw::editor
         // 지어낼 기본값도 없다(빈 글꼴 목록 · 0 색). 기동(`ImGuiEditor::initializeEditorData`)은 파일을 못 읽으면 서지 않으니,
         // 연결 전에 묻는 것은 호출 순서의 결함이다 — 모든 구성에서 이유를 남기고 멈춘다.
         if ( s_pEditorToolDefaults == nullptr )
-        {
-            SW_LOG_ERROR( "EditorToolDefaults is read before the editor bound it (setEditorToolDefaults) - call order is wrong" );
-            Logger::flushGlobalForCrash(); // 비동기 싱크가 보관하고 있는 위 한 줄을 멈추기 전에 내보낸다
-            std::abort();
-        }
+            SW_FATAL( "EditorToolDefaults is read before the editor bound it (setEditorToolDefaults) - call order is wrong" );
         return *s_pEditorToolDefaults;
     }
 

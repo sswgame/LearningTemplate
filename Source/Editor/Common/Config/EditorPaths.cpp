@@ -44,7 +44,8 @@ namespace sw::editor
                 return stateDir;
             stateDir = FileUtil::joinPath( projectRoot, config::kDirSavedEditor );
         }
-        FileUtil::ensureDirectoryExists( stateDir );
+        // 경로를 묻는 함수라 폴더를 못 만들어도 경로는 돌려준다 — 이유는 ensure 가 남기고, 이 폴더에 쓰는 쪽이 쓰기 실패로 다시 알린다.
+        (void)FileUtil::ensureDirectoryExists( stateDir );
         return stateDir;
     }
 

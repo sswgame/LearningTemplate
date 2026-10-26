@@ -20,7 +20,7 @@ namespace sw
     FileLocalSlotStorage::FileLocalSlotStorage( string_view rootDirectory )
         : _rootDirectory{ FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( rootDirectory ) ) }
     {
-        (void)FileUtil::ensureDirectoryExists( _rootDirectory );
+        (void)FileUtil::ensureDirectoryExists( _rootDirectory ); // 못 만들면 ensure 가 폴더와 이유를 남기고 뒤따르는 쓰기가 실패로 답한다
         vector<string> listTempPath;
         (void)FileUtil::forEachDirectoryEntry( _rootDirectory, true, [&listTempPath]( const DirectoryEntry& entry )
         {

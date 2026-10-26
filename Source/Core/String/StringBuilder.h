@@ -84,7 +84,7 @@ namespace sw
          *          여기서 로그를 남기지 않는 이유는 **로거 자신이 이 클래스를 쓰기 때문입니다**(`formatString.h` 가 stderr 로 직접
          *          출력하는 것과 같은 이유입니다).
          */
-        SW_NOINLINE bool ensureCapacity( uint32 additionalSize )
+        [[nodiscard]] SW_NOINLINE bool ensureCapacity( uint32 additionalSize )
         {
             const uint32 requiredCapacity = _length + additionalSize + 1;
             if ( requiredCapacity <= _capacity )

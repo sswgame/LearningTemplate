@@ -141,7 +141,7 @@ namespace sw
 
     private:
         /** @brief 부모 체인을 루트부터 모읍니다. 알 수 없는 부모이거나 순환이면 false 입니다. */
-        bool collectChain( const hashed_string& id, vector<const CharacterAppearanceDef*>& outListChain ) const;
+        [[nodiscard]] bool collectChain( const hashed_string& id, vector<const CharacterAppearanceDef*>& outListChain ) const;
 
         vector<CharacterAppearanceDef> _listPreset{};
     };

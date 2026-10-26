@@ -120,7 +120,7 @@ SW_TEST_CASE( FileUtilBenchTest, QueriesAndDirectoryWalk )
     FileUtilBenchInternal::measure( "collectFiles Resource/ recursive", *pProfiler, kWalkCount, [&resourceRoot, &fileCount]()
     {
         sw::vector<sw::string> listFilePath;
-        (void)sw::FileUtil::collectFiles( resourceRoot, "", listFilePath, true );
+        (void)sw::FileUtil::collectFiles( resourceRoot, "", listFilePath, true ); // 벤치 — 걸린 시간과 목록 크기만 잰다
         fileCount = listFilePath.size();
     } );
     SW_LOG_INFO( "[Bench] collectFiles visited %# files", fileCount );

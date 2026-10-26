@@ -241,7 +241,7 @@ namespace sw
              * @brief @p table 의 서술자마다 DLL 이름 문자열의 파일 위치를 모읍니다.
              * @return 표를 끝까지 읽었으면 true(표가 없으면 빈 목록). 이름이 파일 밖을 가리키면 false 입니다.
              */
-            static bool collectImportNameOffsets( const vector<uint8>& bytes, const PeView& view, ModuleImagePatch::ImportTable table, vector<uint64>& outListOffset )
+            [[nodiscard]] static bool collectImportNameOffsets( const vector<uint8>& bytes, const PeView& view, ModuleImagePatch::ImportTable table, vector<uint64>& outListOffset )
             {
                 outListOffset.clear();
                 const bool   bDelay         = table == ModuleImagePatch::ImportTable::Delay;

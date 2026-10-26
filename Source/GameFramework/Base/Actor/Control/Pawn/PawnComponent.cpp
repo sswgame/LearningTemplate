@@ -64,7 +64,7 @@ namespace sw
     {
         Component::onRegister( manager );
         manager.getComponentRegistry().add<PawnComponent>( this );
-        (void)ControlSystem::ensureFor( manager );
+        (void)ControlSystem::ensureFor( manager ); // 시스템을 있게만 한다 — 관리자가 쥔다
     }
 
     void PawnComponent::onUnregister( GameObjectManager& manager )

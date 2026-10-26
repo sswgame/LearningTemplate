@@ -398,7 +398,7 @@ SW_TEST_CASE( ShaderCookerTest, FailedSourcesAreLeftOutOfTheCookStamp )
     const sw::string binDir     = sw::FileUtil::joinPath( sw::FileUtil::joinPath( shadersDir, "bin" ), "dx12" );
     const sw::string goodPath   = sw::FileUtil::normalizeSeparators( sw::FileUtil::joinPath( shadersDir, "good.hlsl" ) );
     const sw::string brokenPath = sw::FileUtil::normalizeSeparators( sw::FileUtil::joinPath( shadersDir, "broken.hlsl" ) );
-    sw::FileUtil::ensureDirectoryExists( binDir );
+    SW_EXPECT_TRUE( sw::FileUtil::ensureDirectoryExists( binDir ) );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( goodPath, "float4 main() : SV_Target { return 1; }\n" ) );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( brokenPath, "float4 main() : SV_Target { return }\n" ) );
 

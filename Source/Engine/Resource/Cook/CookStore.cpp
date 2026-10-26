@@ -125,7 +125,9 @@ namespace sw
         constexpr string_view kRecordSuffix = ".cookrec";
         const string          recordRoot    = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( _recordRootPath ) );
         vector<string>        listRecord;
-        FileUtil::collectFiles( recordRoot, kRecordSuffix, listRecord, true ); // 기록 폴더가 아직 없으면 지울 옛 출력도 없다
+        // 기록 폴더가 아직 없으면 지울 옛 출력도 없다. 도중에 멈춘 목록이면 지울 것을 빠뜨리므로 실패로 센다(경로는 collectFiles 가 알린다).
+        if ( FileUtil::isDirectory( recordRoot ) && FileUtil::collectFiles( recordRoot, kRecordSuffix, listRecord, true ) == false )
+            ++outFailedCount;
         uint32 removedCount = 0;
         for ( const string& recordPath : listRecord )
         {

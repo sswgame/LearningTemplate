@@ -899,7 +899,7 @@ SW_TEST_CASE( UserSettingsTest, PseudoLocaleIsSelectableThroughTheLanguageSettin
 }
 
 /**
- * @brief [UserSettingsTest] 엔진 스키마의 접근성 · 게임플레이 설정이 전역 변수 대상에 닿는다(색각 · 번쩍임 · 자막 · UI 배율 · 흔들림 · 시야각)
+ * @brief [UserSettingsTest] 엔진 스키마의 접근성 · 게임플레이 설정이 전역 변수 대상에 닿는다(색각 · 움직임 줄이기 · 자막 · UI 배율 · 흔들림 · 시야각)
  */
 SW_TEST_CASE( UserSettingsTest, AccessibilitySettingsReachGlobalVariables )
 {
@@ -913,7 +913,7 @@ SW_TEST_CASE( UserSettingsTest, AccessibilitySettingsReachGlobalVariables )
     settings.reapplyAll();
 
     SW_EXPECT_TRUE( settings.setPendingValue( "accessibility.colorVision", "deuteranopia" ) == sw::UserSettingSetResult::Accepted );
-    SW_EXPECT_TRUE( settings.setPendingBoolValue( "accessibility.reduceFlashing", true ) == sw::UserSettingSetResult::Accepted );
+    SW_EXPECT_TRUE( settings.setPendingBoolValue( "accessibility.reduceMotion", true ) == sw::UserSettingSetResult::Accepted );
     SW_EXPECT_TRUE( settings.setPendingFloatValue( "accessibility.uiScale", 1.25f ) == sw::UserSettingSetResult::Accepted );
     SW_EXPECT_TRUE( settings.setPendingValue( "accessibility.subtitleSize", "large" ) == sw::UserSettingSetResult::Accepted );
     SW_EXPECT_TRUE( settings.setPendingFloatValue( "gameplay.cameraShake", 0.0f ) == sw::UserSettingSetResult::Accepted );
@@ -921,7 +921,7 @@ SW_TEST_CASE( UserSettingsTest, AccessibilitySettingsReachGlobalVariables )
     (void)settings.applyPending(); // 적용 결과는 아래 단언이 대상 값으로 확인한다
 
     SW_EXPECT_EQUAL( 2, Internal::findVariable( "gv_colorVisionMode" ).getValueAsInt() );
-    SW_EXPECT_TRUE( Internal::findVariable( "gv_reduceFlashing" ).getValueAsBool() );
+    SW_EXPECT_TRUE( Internal::findVariable( "gv_uiReduceMotion" ).getValueAsBool() );
     SW_EXPECT_NEAR_EQUAL( 1.25f, Internal::findVariable( "gv_uiScale" ).getValueAsFloat(), 0.0001f );
     SW_EXPECT_EQUAL( 2, Internal::findVariable( "gv_subtitleSize" ).getValueAsInt() );
     SW_EXPECT_NEAR_EQUAL( 0.0f, Internal::findVariable( "gv_cameraShakeScale" ).getValueAsFloat(), 0.0001f );
@@ -937,7 +937,7 @@ SW_TEST_CASE( UserSettingsTest, AccessibilitySettingsReachGlobalVariables )
     settings.resetCategoryToDefaults( "gameplay" );
     (void)settings.applyPending(); // 적용 결과는 아래 단언이 대상 값으로 확인한다
     SW_EXPECT_EQUAL( 0, Internal::findVariable( "gv_colorVisionMode" ).getValueAsInt() );
-    SW_EXPECT_FALSE( Internal::findVariable( "gv_reduceFlashing" ).getValueAsBool() );
+    SW_EXPECT_FALSE( Internal::findVariable( "gv_uiReduceMotion" ).getValueAsBool() );
 }
 
 /**

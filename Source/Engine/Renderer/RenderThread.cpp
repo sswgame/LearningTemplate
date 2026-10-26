@@ -306,7 +306,8 @@ namespace sw
     void RenderThread::executeInline( RenderFramePacket& packet )
     {
         // 게임 스레드(워커 없음) 경로다. 이 프레임 동안 이 스레드가 그래픽스 컨텍스트를 가진다.
-        ensureContextOnCurrentThread();
+        // 못 잡으면 기록 단계가 다시 확인해 그 프레임을 기록하지 않는다(실패 로그는 디바이스가 남긴다).
+        (void)ensureContextOnCurrentThread();
         executePacket( packet );
     }
 

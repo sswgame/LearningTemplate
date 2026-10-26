@@ -67,7 +67,7 @@ namespace sw
         /** @brief 이름의 공급자가 있는지 봅니다. */
         bool hasOptionProvider( const hashed_string& name ) const;
         /** @brief 공급자의 선택지를 채웁니다. 없으면 false 이고 @p outListOption 은 비어 있습니다. */
-        bool collectOptions( const hashed_string& name, vector<UserSettingOption>& outListOption ) const;
+        [[nodiscard]] bool collectOptions( const hashed_string& name, vector<UserSettingOption>& outListOption ) const;
 
         /** @brief 호출 스텁이 [@p pBegin, @p pEnd) 안에 있는 핸들러, 필터, 공급자를 제거하고 제거한 개수를 반환합니다. */
         uint32 removeCodeWithin( const void* pBegin, const void* pEnd );

@@ -545,7 +545,7 @@ namespace sw
         }
 
         StringBuilder<constant::kMaxBuffer512> sb;
-        sb.ensureCapacity( static_cast<uint32>( r.size() + 1 + rel.size() ) );
+        (void)sb.ensureCapacity( static_cast<uint32>( r.size() + 1 + rel.size() ) ); // 미리 잡기일 뿐이다 — 못 잡으면 append 가 저마다 다시 잡는다
         for ( const utf8 ch : r )
         {
             sb.append( ( ch == '\\' ) ? '/' : ch );
@@ -919,15 +919,16 @@ namespace sw
             return false;
 
         const bool bHasFilter = filterExtension.empty() == false;
-        // 열지 못하는 디렉터리는 위에서 걸렀다. 순회 도중 멈춘 것은 거기까지 모은 것으로 끝난다(순회가 경고한다).
-        (void)forEachDirectoryEntry( directory, bRecursive, [&outListFilePath, filterExtension, bHasFilter]( const DirectoryEntry& entry )
-        {
+        const bool bWalked    = forEachDirectoryEntry( directory, bRecursive, [&outListFilePath, filterExtension, bHasFilter]( const DirectoryEntry& entry )
+           {
             if ( entry._bDirectory || ( bHasFilter && hasExtension( entry._path, filterExtension ) == false ) )
                 return true;
             outListFilePath.push_back( string( entry._path ) );
             return true;
         } );
-        return true;
+        if ( bWalked == false )
+            SW_LOG_WARNING( "Collecting files under '%#' stopped partway - the list is incomplete", directory );
+        return bWalked;
     }
 
     bool FileUtil::collectFolders( string_view directory, vector<string>& outListFolder, const bool bRecursive )
@@ -935,12 +936,14 @@ namespace sw
         if ( isDirectory( directory ) == false )
             return false;
 
-        (void)forEachDirectoryEntry( directory, bRecursive, [&outListFolder]( const DirectoryEntry& entry )
+        const bool bWalked = forEachDirectoryEntry( directory, bRecursive, [&outListFolder]( const DirectoryEntry& entry )
         {
             if ( entry._bDirectory )
                 outListFolder.push_back( string( entry._path ) );
             return true;
         } );
-        return true;
+        if ( bWalked == false )
+            SW_LOG_WARNING( "Collecting folders under '%#' stopped partway - the list is incomplete", directory );
+        return bWalked;
     }
 } // namespace sw

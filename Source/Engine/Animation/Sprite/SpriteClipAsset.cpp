@@ -76,8 +76,7 @@ namespace sw
     {
         if ( path.empty() )
             return false;
-        FileUtil::ensureParentDirectoryExists( path );
-        return FileUtil::writeTextFile( path, toXML() );
+        return FileUtil::ensureParentDirectoryExists( path ) && FileUtil::writeTextFile( path, toXML() );
     }
 
     bool SpriteClipAsset::parseXML( string_view xml )

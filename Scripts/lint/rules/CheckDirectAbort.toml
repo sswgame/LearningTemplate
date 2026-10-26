@@ -1,0 +1,6 @@
+# CheckDirectAbort 의 규칙 데이터 — 게이트는 Scripts/lint/gate/CheckDirectAbort.py.
+
+# std::abort 를 직접 불러도 되는 파일 → 이유.
+[exemption]
+"Source/Core/Common/Macros.cpp" = "sw::internal::reportFatal — SW_FATAL · SW_LOW_LEVEL_FATAL 이 모이는 유일한 abort 자리"
+"Source/Core/Diagnostics/CrashContext.cpp" = "크래시 재현 테스트 전용 — 맨 abort 로 죽을 때 크래시 핸들러가 무엇을 남기는지 확인한다"

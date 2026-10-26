@@ -32,7 +32,7 @@ namespace sw
             return false;
         }
         const string directory = outputDirectory.empty() ? string( "Saved/Portraits" ) : string( outputDirectory );
-        (void)FileUtil::ensureDirectoryExists( directory );
+        (void)FileUtil::ensureDirectoryExists( directory ); // 못 만들면 ensure 가 폴더와 이유를 남기고 뒤따르는 쓰기가 실패로 답한다
 
         PortraitRenderer      portrait;
         bool                  bAllSucceeded = portrait.initialize( &device, services );

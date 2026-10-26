@@ -64,8 +64,7 @@ namespace sw
             {
                 const string& file = *step.findAttribute( "file" );
                 const string  path = FileUtil::isAbsolutePath( file ) ? file : FileUtil::joinPath( runner.getOutputDirectory(), file );
-                (void)FileUtil::ensureDirectoryExists( FileUtil::getDirectoryPart( path ) );
-                if ( FileUtil::writeTextFile( path, engine::getSubsystem<UISystem>().makeLayoutDump() ) == false )
+                if ( FileUtil::ensureParentDirectoryExists( path ) == false || FileUtil::writeTextFile( path, engine::getSubsystem<UISystem>().makeLayoutDump() ) == false )
                     runner.recordFailure( step, "could not write " + path );
                 return true;
             }

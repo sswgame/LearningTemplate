@@ -12,7 +12,6 @@
 SW_EXTERN_GLOBAL_VARIABLE( float32, gv_renderScale );       ///< 3D 렌더 해상도 배율(0.5~1). 화면 출력 뷰의 내부 해상도에 곱하고(`RenderViewCollector`) Present 가 출력 크기로 키운다 — 업스케일러(`gv_upscaler`)가 그 필터를 고른다.
 SW_EXTERN_GLOBAL_VARIABLE( int32, gv_upscaler );            ///< Present 가 배율 크기 뷰를 키우는 필터(선택지 순번 — 0 off 선형, 1 spatial FSR 1 EASU + RCAS). Present 가 톤맵하지 않는 파이프라인에서 쓴다(`FrameRenderer::prepareUpscale`).
 SW_EXTERN_GLOBAL_VARIABLE( int32, gv_shadowMapResolution ); ///< 그림자 맵 한 변의 텍셀 수입니다. 품질 단계마다의 값은 설정 스키마 `graphics.shadowQuality` 선택지의 `targetValue` 입니다.
-SW_EXTERN_GLOBAL_VARIABLE( float32, gv_foliageDensity );    ///< 식생 밀도 배율. 식생 배치가 읽는다(env-world).
 SW_EXTERN_GLOBAL_VARIABLE( int32, gv_postQuality );         ///< 후처리 품질 0~3. 파이프라인 패스의 `_minPostQuality` 보다 낮으면 그 패스를 건너뛴다(SSAO · 블룸, `FrameRenderer::executePass`).
 SW_EXTERN_GLOBAL_VARIABLE( bool, gv_motionBlur );           ///< 모션 블러. 3D 파이프라인(디퍼드 · 포워드 넷)의 MotionBlur 패스가 읽는다(끄면 원본을 넘긴다).
 // 아래 층이 읽는 설정 변수는 읽는 쪽에 있다(그 층은 이 헤더를 include 하지 못한다): 시야 거리 `gv_viewDistanceScale`(CameraComponent.cpp),
@@ -28,7 +27,6 @@ SW_EXTERN_GLOBAL_VARIABLE( int32, gv_colorVisionMode );             ///< 색각 
 SW_EXTERN_GLOBAL_VARIABLE( float32, gv_uiScale );                   ///< 게임 UI 배율.
 SW_EXTERN_GLOBAL_VARIABLE( sw::string, gv_uiTheme );                ///< 게임 UI 테마 이름입니다(UISystem 이 테마 목록에서 고르며, 목록에 없으면 목록의 기본 테마를 씁니다).
 SW_EXTERN_GLOBAL_VARIABLE( float32, gv_uiTextScale );               ///< 게임 UI 글자 크기 배율입니다(줄여도 글은 12 UI 단위 밑으로 가지 않습니다. UIScaleUtil).
-SW_EXTERN_GLOBAL_VARIABLE( bool, gv_reduceFlashing );               ///< 번쩍임 줄이기입니다(섬광과 화면 깜빡임 효과를 약하게 합니다).
 SW_EXTERN_GLOBAL_VARIABLE( bool, gv_uiReduceMotion );               ///< UI 움직임 줄이기입니다. UI 애니메이션, 트윈, 스타일 전환의 길이를 0 으로 만듭니다.
 SW_EXTERN_GLOBAL_VARIABLE( bool, gv_subtitles );                    ///< 자막 표시입니다(UISubtitleService 가 읽으며, 끄면 줄은 받되 화면을 닫습니다).
 SW_EXTERN_GLOBAL_VARIABLE( int32, gv_subtitleSize );                ///< 자막 크기입니다(0 작게, 1 보통, 2 크게).

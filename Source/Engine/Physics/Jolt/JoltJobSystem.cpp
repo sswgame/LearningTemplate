@@ -57,10 +57,8 @@ namespace sw
         {
             if ( stopwatch.getElapsedMilliseconds() >= kDrainTimeoutMs )
             {
-                SW_LOG_ERROR( "JoltJobSystem destroyed but %# job task(s) never finished within %# ms - aborting instead of hanging",
-                              _pendingTaskCount.load( std::memory_order_acquire ), kDrainTimeoutMs );
-                Logger::flushGlobalForCrash();
-                std::abort();
+                SW_FATAL( "JoltJobSystem destroyed but %# job task(s) never finished within %# ms - aborting instead of hanging",
+                          _pendingTaskCount.load( std::memory_order_acquire ), kDrainTimeoutMs );
             }
             std::this_thread::yield();
         }

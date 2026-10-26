@@ -192,11 +192,13 @@ namespace sw
             }
 
             /** @brief 1) 렌더 파이프라인 XML(`pipeline` 폴더)의 패스마다 셰이더 요청을 더하고, 씬 메시 패스는 머티리얼과 곱할 목록에 넣습니다. */
-            static void collectPipelinePassRequests( string_view rootDir, const EngineDefaultAssets& engineDefaultAssets, vector<MeshPassInfo>& outListMeshPass,
-                                                     vector<ShaderCookRequest>& outListRequest )
+            [[nodiscard]] static bool collectPipelinePassRequests( string_view rootDir, const EngineDefaultAssets& engineDefaultAssets, vector<MeshPassInfo>& outListMeshPass,
+                                                                   vector<ShaderCookRequest>& outListRequest )
             {
                 vector<string> listXMLFile;
-                FileUtil::collectFiles( rootDir, ".xml", listXMLFile, true );
+                // 폴더가 없으면 요청이 없다. 도중에 멈춘 목록은 셰이더를 빠뜨린 채 쿠킹하므로 실패다(경로는 collectFiles 가 알린다).
+                if ( FileUtil::isDirectory( rootDir ) && FileUtil::collectFiles( rootDir, ".xml", listXMLFile, true ) == false )
+                    return false;
                 for ( const string& xmlPath : listXMLFile )
                 {
                     const string normXML = FileUtil::normalizeSeparators( xmlPath );
@@ -234,6 +236,7 @@ namespace sw
                         appendPipelinePassStages( outListRequest, pass, pipelineResource, passShader._shaderPath, passShader._listDefine );
                     }
                 }
+                return true;
             }
 
             /**
@@ -310,10 +313,12 @@ namespace sw
             }
 
             /** @brief 4) 머티리얼 에셋(.material)마다 런타임과 같은 define 목록으로 요청을 더하고, 패스와 곱할 머티리얼 변형 목록을 만듭니다. */
-            static void collectMaterialRequests( string_view rootDir, vector<MaterialVariantInfo>& outListMaterialVariant, vector<ShaderCookRequest>& outListRequest )
+            [[nodiscard]] static bool collectMaterialRequests( string_view rootDir, vector<MaterialVariantInfo>& outListMaterialVariant, vector<ShaderCookRequest>& outListRequest )
             {
                 vector<string> listMaterialFile;
-                FileUtil::collectFiles( rootDir, ".material", listMaterialFile, true );
+                // 폴더가 없으면 요청이 없다. 도중에 멈춘 목록은 머티리얼 변형을 빠뜨린 채 쿠킹하므로 실패다(경로는 collectFiles 가 알린다).
+                if ( FileUtil::isDirectory( rootDir ) && FileUtil::collectFiles( rootDir, ".material", listMaterialFile, true ) == false )
+                    return false;
                 for ( const string& matPath : listMaterialFile )
                 {
                     // **머티리얼을 직접 읽어 런타임과 같은 define 목록을 얻는다.** 주의: XML 의 `_alwaysDefines` 만
@@ -352,6 +357,7 @@ namespace sw
                     appendRequestUnique( outListRequest, variant._shaderPath, getShaderStageInfo( ShaderStage::Vertex )._pEntryPoint, ShaderStage::Vertex, {} );
                     appendRequestUnique( outListRequest, variant._shaderPath, getShaderStageInfo( ShaderStage::Pixel )._pEntryPoint, ShaderStage::Pixel, {} );
                 }
+                return true;
             }
 
             /**
@@ -410,10 +416,12 @@ namespace sw
                     return false;
                 vector<MeshPassInfo>        listMeshPass;
                 vector<MaterialVariantInfo> listMaterialVariant;
-                collectPipelinePassRequests( rootDir, *loadedAssets, listMeshPass, outListRequest );
+                if ( collectPipelinePassRequests( rootDir, *loadedAssets, listMeshPass, outListRequest ) == false )
+                    return false;
                 collectPassTypeTableRequests( *loadedAssets, listMeshPass, outListRequest );
                 collectEngineShaderRequests( *loadedAssets, outListRequest );
-                collectMaterialRequests( rootDir, listMaterialVariant, outListRequest );
+                if ( collectMaterialRequests( rootDir, listMaterialVariant, outListRequest ) == false )
+                    return false;
                 collectMeshPassVariantRequests( listMeshPass, listMaterialVariant, outListRequest );
                 return true;
             }

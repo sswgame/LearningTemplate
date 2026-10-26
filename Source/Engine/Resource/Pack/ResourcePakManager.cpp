@@ -511,7 +511,12 @@ namespace sw
             return false;
 
         vector<string> listCandidateFile;
-        FileUtil::collectFiles( packsDirectory, "", listCandidateFile, false );
+        if ( FileUtil::collectFiles( packsDirectory, "", listCandidateFile, false ) == false )
+        {
+            // 일부 팩만 마운트하면 빠진 팩의 파일이 아래 팩 판으로 조용히 바뀐다 — 아무것도 마운트하지 않는다.
+            SW_LOG_ERROR( "Pack folder '%#' could not be listed completely - no pack is mounted", packsDirectory );
+            return false;
+        }
 
         if ( listCandidateFile.empty() )
             return false;

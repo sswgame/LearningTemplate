@@ -61,15 +61,14 @@ namespace sw
         , _mainQuadBase{ 0 }
         , _lastUploadCallCount{ 0 }
         , _lastDrawnTargetCount{ 0 }
-        , _bTargetPSOMissingLogged{ SW_FALSE }
     {
     }
 
     CanvasRenderer::~CanvasRenderer() = default;
 
-    void CanvasRenderer::prepareFrame( IRHIDevice& device, CanvasFrameData& inoutFrame )
+    void CanvasRenderer::prepareFrame( IRHIDevice& device, CanvasFrameData& inoutFrame, const RenderPSOCache& psoCache )
     {
-        prepareTargets( device, inoutFrame );
+        prepareTargets( device, inoutFrame, psoCache );
         SW_PROFILE_SCOPE( "RT.Canvas.Upload" );
         _lastUploadCallCount = 0;
 
@@ -273,8 +272,7 @@ namespace sw
         _listUploadedAnchor.clear();
     }
 
-    void CanvasRenderer::drawTargets( IRHICommandList& cmd, IRHIDevice& device, const CanvasFrameData& frame, const RenderPSOCache& psoCache,
-                                      RHIPipelineStateHandle fallbackPSO )
+    void CanvasRenderer::drawTargets( IRHICommandList& cmd, IRHIDevice& device, const CanvasFrameData& frame, const RenderPSOCache& psoCache )
     {
         _lastDrawnTargetCount = 0;
         for ( uint32 targetIndex = 0; targetIndex < static_cast<uint32>( frame._listTarget.size() ); ++targetIndex )
@@ -289,20 +287,12 @@ namespace sw
             const bool             bCanvasUnchanged = target._contentRevision != 0 && target._contentRevision == pState->_drawnRevision && texture == pState->_drawnTexture;
             if ( bCanvasUnchanged )
                 continue;
-            const uint32           width  = pState->_pTexture->getWidth();
-            const uint32           height = pState->_pTexture->getHeight();
+            const uint32 width  = pState->_pTexture->getWidth();
+            const uint32 height = pState->_pTexture->getHeight();
+            // 셋업에 없는 포맷은 등록(`prepareTargets`)이 거절하고 알렸다 — 다른 포맷의 PSO 로 대신 그리지 않는다.
             RHIPipelineStateHandle pso{ 0 };
-            if ( psoCache.findOutputPSO( RenderPassType::Canvas, pState->_pTexture->getFormat(), pso ) == false )
-            {
-                pso = fallbackPSO;
-                if ( _bTargetPSOMissingLogged == SW_FALSE )
-                {
-                    _bTargetPSOMissingLogged = SW_TRUE;
-                    SW_LOG_ERROR( "Canvas target has no PSO for format %# from setup - add the format to FrameRenderer::createOutputPSOVariants",
-                                  static_cast<uint32>( pState->_pTexture->getFormat() ) );
-                }
-            }
-            const bool bInvalidCanvasTarget = pso == 0 || width == 0 || height == 0;
+            const bool             bHasPSO              = psoCache.findOutputPSO( RenderPassType::Canvas, pState->_pTexture->getFormat(), pso );
+            const bool             bInvalidCanvasTarget = bHasPSO == false || pso == 0 || width == 0 || height == 0;
             if ( bInvalidCanvasTarget )
                 continue;
             RHIRenderPassBeginInfo beginInfo{};
@@ -497,7 +487,7 @@ namespace sw
         page._listDirty.erase( page._listDirty.begin(), page._listDirty.begin() + static_cast<ptrdiff_t>( submittedCount ) );
     }
 
-    void CanvasRenderer::prepareTargets( IRHIDevice& device, const CanvasFrameData& frame )
+    void CanvasRenderer::prepareTargets( IRHIDevice& device, const CanvasFrameData& frame, const RenderPSOCache& psoCache )
     {
         for ( TargetState& state : _listTarget )
         {
@@ -530,6 +520,12 @@ namespace sw
             textures.declareRenderTarget( target._targetPath.view(), width, height );
             pState->_pTexture      = textures.acquire( target._targetPath.view(), &device );
             pState->_drawnRevision = 0;
+            // 등록 때 한 번 대상 포맷을 셋업 PSO 와 대조한다 — 없으면 거절을 알리고 그리지 않는다(`drawTargets` 는 다른 포맷의 PSO 로 대신 그리지 않는다).
+            RHIPipelineStateHandle pso{ 0 };
+            const bool             bHasPSO = pState->_pTexture != nullptr && psoCache.findOutputPSO( RenderPassType::Canvas, pState->_pTexture->getFormat(), pso ) && pso != 0;
+            if ( pState->_pTexture != nullptr && bHasPSO == false )
+                SW_LOG_ERROR( "Canvas target '%#' has format %# with no canvas PSO from setup - it is rejected and never drawn (add the format to FrameRenderer::createOutputPSOVariants)",
+                              target._targetPath.c_str(), static_cast<uint32>( pState->_pTexture->getFormat() ) );
         }
 
         // 이번 목록에 없는 대상(위젯 컴포넌트가 사라졌다)은 돌려준다.

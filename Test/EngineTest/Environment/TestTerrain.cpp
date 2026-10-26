@@ -960,35 +960,23 @@ SW_TEST_CASE( TerrainTest, LayerWeightsFormatRoundTrips )
 }
 
 /**
- * @brief [TerrainTest] 레이어 넷 시절의 가중치 파일(버전 1)은 읽을 때 레이어 4..7 을 0 으로 채워 이관하고, 다시 쓰면 현재 버전이다 · 버전과 레이어 수가 맞지 않으면 거절한다
- * @details 변이: 이관이 텍셀 사이 간격을 넷으로 두면(복사 폭 오류) 둘째 텍셀의 값이 어긋나 바이트 비교가 진다.
+ * @brief [TerrainTest] 옛 판(버전 1, 레이어 넷)의 가중치 파일은 이관하지 않고 거절한다 — 옛 형식 리더를 두지 않는다
+ * @details 변이: 버전 1 을 다시 받아들이면(이관 리더 복원) 첫 단언이 진다.
  */
-SW_TEST_CASE( TerrainTest, LayerWeightsLegacyVersionIsMigrated )
+SW_TEST_CASE( TerrainTest, LayerWeightsOldVersionIsRejected )
 {
-    vector<uint8> legacy;
-    LittleEndianUtil::appendUint32( legacy, LayerWeightsData::kMagic );
-    LittleEndianUtil::appendUint32( legacy, LayerWeightsData::kLegacyVersion );
-    LittleEndianUtil::appendUint32( legacy, 2u ); // 너비
-    LittleEndianUtil::appendUint32( legacy, 1u ); // 높이
-    LittleEndianUtil::appendUint32( legacy, LayerWeightsData::kLegacyLayerCount );
+    vector<uint8> old;
+    LittleEndianUtil::appendUint32( old, LayerWeightsData::kMagic );
+    LittleEndianUtil::appendUint32( old, 1u ); // 옛 판
+    LittleEndianUtil::appendUint32( old, 2u ); // 너비
+    LittleEndianUtil::appendUint32( old, 1u ); // 높이
+    LittleEndianUtil::appendUint32( old, 4u ); // 옛 판의 레이어 수
     const vector<uint8> weights = { 10, 20, 30, 40, 50, 60, 70, 80 };
-    legacy.insert( legacy.end(), weights.begin(), weights.end() );
+    old.insert( old.end(), weights.begin(), weights.end() );
 
+    SW_TEST_DEFENSIVE_SCOPE( "an old layer weight map version is rejected" );
     LayerWeightsData loaded;
-    SW_ASSERT_TRUE( loaded.loadFromMemory( legacy, "legacy" ) );
-    const vector<uint8> expected = { 10, 20, 30, 40, 0, 0, 0, 0, 50, 60, 70, 80, 0, 0, 0, 0 };
-    SW_EXPECT_TRUE( loaded._bytes == expected );
-    SW_EXPECT_TRUE( loaded.isValid() );
-
-    vector<uint8> rewritten;
-    loaded.saveToMemory( rewritten );
-    SW_EXPECT_EQUAL( LayerWeightsData::kVersion, LittleEndianUtil::readUint32( rewritten.data() + 4 ) );
-    SW_EXPECT_EQUAL( LayerWeightsData::kLayerCount, LittleEndianUtil::readUint32( rewritten.data() + 16 ) );
-
-    SW_TEST_DEFENSIVE_SCOPE( "a legacy version with the current layer count is rejected" );
-    vector<uint8> mismatched = legacy;
-    mismatched[16]           = static_cast<uint8>( LayerWeightsData::kLayerCount );
-    SW_EXPECT_FALSE( loaded.loadFromMemory( mismatched, "mismatch" ) );
+    SW_EXPECT_FALSE( loaded.loadFromMemory( old, "old" ) );
 }
 
 /**

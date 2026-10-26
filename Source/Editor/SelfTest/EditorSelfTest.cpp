@@ -280,8 +280,7 @@ namespace sw::editor
 
         if ( gv_editorSelfTestReport.empty() == false )
         {
-            (void)FileUtil::ensureParentDirectoryExists( gv_editorSelfTestReport );
-            if ( FileUtil::writeTextFile( gv_editorSelfTestReport, state._report ) == false )
+            if ( FileUtil::ensureParentDirectoryExists( gv_editorSelfTestReport ) == false || FileUtil::writeTextFile( gv_editorSelfTestReport, state._report ) == false )
                 SW_LOG_ERROR( "Could not write the editor self test report to %#", gv_editorSelfTestReport.c_str() );
         }
 

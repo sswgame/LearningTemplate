@@ -279,8 +279,7 @@ namespace sw::editor
             const bool    bSame = FileUtil::exists( rawPath ) && FileUtil::readFile( rawPath, existingBytes ) && existingBytes == texture._bytes;
             if ( bSame == false )
             {
-                FileUtil::ensureDirectoryExists( rawTextureFolder );
-                if ( FileUtil::writeFile( rawPath, texture._bytes.data(), texture._bytes.size() ) == false )
+                if ( FileUtil::ensureDirectoryExists( rawTextureFolder ) == false || FileUtil::writeFile( rawPath, texture._bytes.data(), texture._bytes.size() ) == false )
                 {
                     SW_LOG_ERROR( "Failed to write texture source %#", rawPath.c_str() );
                     return false;
@@ -298,8 +297,8 @@ namespace sw::editor
             listWrittenStem.push_back( section._fileStem );
             const string materialText = VrmMaterialImporter::makeMaterialXML( section._material, listTexturePath );
             const string materialPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, kMaterialFolder ), section._fileStem + ".material" );
-            FileUtil::ensureDirectoryExists( FileUtil::getDirectoryPart( materialPath ) );
-            if ( materialText.empty() || FileUtil::writeTextFile( materialPath, materialText ) == false )
+            const bool   bWritten     = materialText.empty() == false && FileUtil::ensureParentDirectoryExists( materialPath ) && FileUtil::writeTextFile( materialPath, materialText );
+            if ( bWritten == false )
             {
                 SW_LOG_ERROR( "Failed to write toon material %#", materialPath.c_str() );
                 return false;

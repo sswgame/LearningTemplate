@@ -91,12 +91,14 @@ namespace sw
             /**
              * @brief 스탬프가 볼 소스를 모읍니다 — 자기 도메인(@p shadersDir)의 `.hlsl` 입니다(`/bin/` 아래는 뺀다).
              * @details 헤더(`.hlsli`)는 줄로 적지 않는다. 소스마다 컴파일이 연 헤더가 그 소스의 의존 줄로 적힌다. 판정(`ShaderCooker::verifyCookedShaders`)도 이 함수를 쓴다 — 규칙이 한 곳이다.
+             * @return 폴더가 없으면 빈 목록으로 true, 순회가 도중에 멈췄으면(빠진 소스를 최신으로 스탬프 찍는다) false 입니다.
              */
-            static void collectStampedSources( const string& shadersDir, vector<StampedSource>& outListSource )
+            [[nodiscard]] static bool collectStampedSources( const string& shadersDir, vector<StampedSource>& outListSource )
             {
                 outListSource.clear();
                 vector<string> listOwn;
-                FileUtil::collectFiles( shadersDir, ".hlsl", listOwn, true );
+                if ( FileUtil::isDirectory( shadersDir ) && FileUtil::collectFiles( shadersDir, ".hlsl", listOwn, true ) == false )
+                    return false;
                 for ( const string& sourcePath : listOwn )
                 {
                     const string normSource = FileUtil::normalizeSeparators( sourcePath );
@@ -106,6 +108,7 @@ namespace sw
                     if ( key.empty() == false )
                         outListSource.push_back( StampedSource{ std::move( key ), normSource } );
                 }
+                return true;
             }
 
             /** @brief 소스 하나의 의존 줄입니다 — 연 헤더의 키(대소문자 그대로)와 그 내용 해시. */
@@ -307,7 +310,11 @@ namespace sw
                     return true;
 
                 vector<string> listOwn;
-                FileUtil::collectFiles( shadersDir, ".hlsli", listOwn, true );
+                if ( FileUtil::isDirectory( shadersDir ) && FileUtil::collectFiles( shadersDir, ".hlsli", listOwn, true ) == false )
+                {
+                    appendProblem( outListProblem, "%#: the headers could not all be listed - shadowing is not known", shadersDir );
+                    return false;
+                }
                 unordered_set<string> setOwnKey;
                 for ( const string& ownPath : listOwn )
                 {
@@ -324,7 +331,12 @@ namespace sw
                     if ( FileUtil::isDirectory( rootDir ) == false || StringUtil::toLower( rootDir.c_str() ) == ownDirLower )
                         continue;
                     vector<string> listRootHeader;
-                    FileUtil::collectFiles( rootDir, ".hlsli", listRootHeader, true );
+                    if ( FileUtil::collectFiles( rootDir, ".hlsli", listRootHeader, true ) == false )
+                    {
+                        appendProblem( outListProblem, "%#: the headers could not all be listed - shadowing is not known", rootDir );
+                        bClean = false;
+                        continue;
+                    }
                     for ( const string& headerPath : listRootHeader )
                     {
                         const string normHeader = FileUtil::normalizeSeparators( headerPath );
@@ -383,7 +395,11 @@ namespace sw
                 }
 
                 vector<StampedSource> listSource;
-                collectStampedSources( shadersDir, listSource );
+                if ( collectStampedSources( shadersDir, listSource ) == false )
+                {
+                    SW_LOG_ERROR( "Failed to write the cook stamp: the shader sources under '%#' could not all be listed", shadersDir.c_str() );
+                    return false;
+                }
 
                 vector<string> listLine;
                 listLine.reserve( listSource.size() );
@@ -498,7 +514,11 @@ namespace sw
                 }
                 (void)findShadowedInDir( resourceRoot, listPriority, shadersDir, outListProblem );
                 vector<StampedSource> listSource;
-                collectStampedSources( shadersDir, listSource );
+                if ( collectStampedSources( shadersDir, listSource ) == false )
+                {
+                    appendProblem( outListProblem, "%#/shaders: the shader sources could not all be listed", domain );
+                    return;
+                }
                 if ( listSource.empty() )
                     return;
 
@@ -559,7 +579,11 @@ namespace sw
 
                 vector<string> listBinary;
                 vector<string> listFile;
-                (void)FileUtil::collectFiles( binDir, "", listFile, false ); // 방금 본 폴더다
+                if ( FileUtil::collectFiles( binDir, "", listFile, false ) == false ) // 방금 본 폴더다 — 실패는 도중에 멈춘 목록뿐이다
+                {
+                    appendProblem( outListProblem, "%#: '%#' binaries could not all be listed", label, shaderFolder );
+                    return;
+                }
                 for ( const string& filePath : listFile )
                 {
                     if ( isShaderBinaryFile( filePath ) )
@@ -613,8 +637,11 @@ namespace sw
                 continue;
             }
             // 게임 도메인은 이름을 코드가 알지 않고 game/ 아래 폴더를 훑어 찾는다. 폴더가 없으면 게임 도메인이 없을 뿐이다.
+            // 도중에 멈춘 목록이면 빠진 게임 도메인을 모른 채 넘어가므로 실패다(경로는 collectFolders 가 알린다).
             vector<string> listGameFolder;
-            (void)FileUtil::collectFolders( FileUtil::joinPath( resourceRoot, path::kGamePack ), listGameFolder, false );
+            const string   gameRoot = FileUtil::joinPath( resourceRoot, path::kGamePack );
+            if ( FileUtil::isDirectory( gameRoot ) && FileUtil::collectFolders( gameRoot, listGameFolder, false ) == false )
+                return false;
             std::sort( listGameFolder.begin(), listGameFolder.end() );
             for ( const string& gameFolder : listGameFolder )
             {

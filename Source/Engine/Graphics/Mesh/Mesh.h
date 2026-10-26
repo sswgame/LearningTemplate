@@ -325,7 +325,7 @@ namespace sw
         uint64 getContentID() const { return _contentID; }
 
         /** @brief 디바이스에 업로드(또는 재업로드)합니다. 같은 디바이스면 여러 번 불러도 결과가 같습니다. */
-        bool initRHI( IRHIDevice* pDevice ) override;
+        [[nodiscard]] bool initRHI( IRHIDevice* pDevice ) override;
 
         /** @brief GPU 정점 버퍼 핸들을 반환합니다. */
         RHIBufferHandle getVertexBuffer() const { return _vertex._buffer; }

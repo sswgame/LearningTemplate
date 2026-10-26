@@ -615,13 +615,6 @@ msgstr "청색약"
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
-msgctxt "settings.accessibility.reduceFlashing"
-msgid "Reduce Flashing"
-msgstr "번쩍임 줄이기"
-
-#. Context: Options menu label
-#. Max length: 32
-#: engine/settings/engine.settings.xml
 msgctxt "settings.accessibility.reduceMotion"
 msgid "Reduce Motion"
 msgstr "움직임 줄이기"
@@ -981,13 +974,6 @@ msgstr "튜토리얼 표시"
 msgctxt "settings.graphics.effectsQuality"
 msgid "Effects Quality"
 msgstr "효과 품질"
-
-#. Context: Options menu label
-#. Max length: 32
-#: engine/settings/engine.settings.xml
-msgctxt "settings.graphics.foliageDensity"
-msgid "Foliage Density"
-msgstr "초목 밀도"
 
 #. Context: Options menu label
 #. Max length: 32

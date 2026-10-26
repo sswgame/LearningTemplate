@@ -72,8 +72,8 @@ namespace sw::editor
          *          다 쓰면 실행 중인 `LocalizationManager` 가 그 프로젝트를 다시 읽습니다(핫 리로드).
          */
         [[nodiscard]] static bool saveLocalizationProject( LocalizationSheet& inoutSheet );
-        /** @brief data 폴더의 XML 파일 목록을 채웁니다. */
-        static bool collectGameDataFiles( vector<GameDataFileEntry>& outList );
+        /** @brief data 폴더의 XML 파일 목록을 채웁니다. 폴더가 없거나 목록이 도중에 멈췄으면 false 입니다(`FileUtil::collectFiles` 와 같다). */
+        [[nodiscard]] static bool collectGameDataFiles( vector<GameDataFileEntry>& outList );
 
         /** @brief 활성 게임의 Resource/.../data/localization 폴더 절대 경로를 반환합니다. */
         static string getLocalizationFolderPath();

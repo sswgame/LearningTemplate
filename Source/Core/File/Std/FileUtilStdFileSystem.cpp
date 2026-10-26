@@ -121,9 +121,12 @@ namespace sw
             /** @brief OS 오류를 사람이 읽는 문장으로 바꿉니다(실패 경로에서만 부른다 — 문자열을 만든다). */
             static string describe( const std::error_code& errorCode ) { return string( errorCode.message().c_str() ); }
 
-            /** @brief 순회자 하나를 끝까지 돌며 항목마다 @p visit 를 부릅니다. 순회자 종류(재귀 · 한 단계)만 다르고 몸은 같다. */
+            /**
+             * @brief 순회자 하나를 끝까지 돌며 항목마다 @p visit 를 부릅니다. 순회자 종류(재귀 · 한 단계)만 다르고 몸은 같다.
+             * @return 순회가 도중에 멈췄으면(경고를 남긴다) false. 콜백이 멈춘 것은 실패가 아니다.
+             */
             template <typename Iterator>
-            static void visitEntries( Iterator& iterator, string_view directory, DirectoryEntryVisitFn visit, void* pContext )
+            [[nodiscard]] static bool visitEntries( Iterator& iterator, string_view directory, DirectoryEntryVisitFn visit, void* pContext )
             {
                 string          entryPath;
                 const Iterator  end{};
@@ -135,14 +138,15 @@ namespace sw
                     toUtf8( iterator->path(), entryPath );
                     const DirectoryEntry entry{ string_view{ entryPath }, typeError ? false : bDirectory };
                     if ( visit( pContext, entry ) == false )
-                        return;
+                        return true;
                     iterator.increment( errorCode );
                     if ( errorCode )
                     {
                         SW_LOG_WARNING( "Directory walk of '%#' stopped early at '%#': %#", directory, entryPath.c_str(), describe( errorCode ).c_str() );
-                        return;
+                        return false;
                     }
                 }
+                return true;
             }
         };
     } // namespace
@@ -410,14 +414,12 @@ namespace sw
             std::filesystem::recursive_directory_iterator iterator{ root, std::filesystem::directory_options::skip_permission_denied, errorCode };
             if ( errorCode )
                 return false;
-            FileUtilStdInternal::visitEntries( iterator, directory, visit, pContext );
-            return true;
+            return FileUtilStdInternal::visitEntries( iterator, directory, visit, pContext );
         }
 
         std::filesystem::directory_iterator iterator{ root, std::filesystem::directory_options::skip_permission_denied, errorCode };
         if ( errorCode )
             return false;
-        FileUtilStdInternal::visitEntries( iterator, directory, visit, pContext );
-        return true;
+        return FileUtilStdInternal::visitEntries( iterator, directory, visit, pContext );
     }
 } // namespace sw

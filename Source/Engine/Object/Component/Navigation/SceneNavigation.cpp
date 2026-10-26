@@ -550,12 +550,12 @@ namespace sw
                     continue;
                 if ( pSurface->getAgentTypes().empty() )
                 {
-                    (void)ensureNavMesh( hashed_string{} );
+                    (void)ensureNavMesh( hashed_string{} ); // 있게만 한다 — 모르는 종류 · 기하 없음은 ensureNavMesh 가 이미 남긴다
                     continue;
                 }
                 for ( const hashed_string& agentType : pSurface->getAgentTypes() )
                 {
-                    (void)ensureNavMesh( agentType );
+                    (void)ensureNavMesh( agentType ); // 있게만 한다 — 모르는 종류 · 기하 없음은 ensureNavMesh 가 이미 남긴다
                 }
             }
         }

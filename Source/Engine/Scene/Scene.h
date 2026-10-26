@@ -95,7 +95,7 @@ namespace sw
          *          매 프레임 다시 고르므로 나중에 생긴 더 높은 우선순위의 카메라 · 꺼진 카메라 · 역할이 바뀐 카메라를 따라갑니다. 이미 있는
          *          "GameCamera" 의 위치 · 렌즈는 건드리지 않습니다(만들 때만 기본값을 씁니다).
          */
-        bool ensureDefaultCameras();
+        [[nodiscard]] bool ensureDefaultCameras();
 
         /** @brief 씬 이름을 설정합니다. */
         void setName( string_view name ) { _name = name; }

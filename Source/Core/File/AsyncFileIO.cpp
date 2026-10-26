@@ -648,10 +648,8 @@ namespace sw
         constexpr uint32 kShutdownDeliveryTimeoutMs = 30000;
         if ( _queue->waitIdleFor( kShutdownDeliveryTimeoutMs ) == false )
         {
-            SW_LOG_ERROR( "Async file IO shutdown waited %# ms but %# request(s) never completed their callback - aborting instead of hanging", kShutdownDeliveryTimeoutMs,
-                          _queue->getOutstandingCount() );
-            Logger::flushGlobalForCrash();
-            std::abort();
+            SW_FATAL( "Async file IO shutdown waited %# ms but %# request(s) never completed their callback - aborting instead of hanging", kShutdownDeliveryTimeoutMs,
+                      _queue->getOutstandingCount() );
         }
         _backend.reset();
         _queue.reset();

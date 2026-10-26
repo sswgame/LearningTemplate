@@ -182,8 +182,7 @@ namespace sw::editor
             root.set( registration._pID ).assignFrom( section );
             keyCount += writtenCount;
         }
-        FileUtil::ensureParentDirectoryExists( filePath );
-        if ( document.saveFile( filePath, 4 ) == false )
+        if ( FileUtil::ensureParentDirectoryExists( filePath ) == false || document.saveFile( filePath, 4 ) == false )
         {
             SW_LOG_WARNING( "Editor preferences could not be saved to %#", string( filePath ).c_str() );
             return false;
@@ -273,8 +272,6 @@ namespace sw::editor
                 return registration;
         }
         // 등록되지 않은 섹션을 읽었다 - 그 모듈이 꺼져 있거나 SW_EDITOR_SETTINGS 가 빠졌다. 기본값으로 대신하지 않고 모든 구성에서 이유를 남기고 멈춘다.
-        SW_LOG_ERROR( "Editor preferences section for type '%#' is not registered (its module is off, or SW_EDITOR_SETTINGS is missing)", pType != nullptr ? pType->_name.c_str() : "(null)" );
-        Logger::flushGlobalForCrash(); // 비동기 싱크가 보관하고 있는 위 한 줄을 멈추기 전에 내보낸다
-        std::abort();
+        SW_FATAL( "Editor preferences section for type '%#' is not registered (its module is off, or SW_EDITOR_SETTINGS is missing)", pType != nullptr ? pType->_name.c_str() : "(null)" );
     }
 } // namespace sw::editor

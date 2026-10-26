@@ -277,17 +277,24 @@ namespace sw
         }
 
         // 결과는 컴퓨트가 채우므로 초기값이 필요 없다 — 구간이 바뀌어도 올릴 것이 없다(용량만 맞춘다).
-        _morph.ensureCapacity( pDevice, GPUMeshMorphPoolInternal::kElementStride, _vertexCount * shaderslot::kMorphFloat4PerVertex, GPUMeshMorphPoolInternal::kWriteUsage, true,
-                               true, nullptr );
+        const bool bMorphBuffer = _morph.ensureCapacity( pDevice, GPUMeshMorphPoolInternal::kElementStride, _vertexCount * shaderslot::kMorphFloat4PerVertex,
+                                                         GPUMeshMorphPoolInternal::kWriteUsage, true, true, nullptr );
         GPUMeshMorphPoolInternal::uploadAll( pDevice, _skinInstance, _listSkinRow.data(), static_cast<uint32>( _listSkinRow.size() ) * shaderslot::kSkinUint4PerInstance );
         if ( _skinBoneCount > 0 )
-            _skinPalette.ensureCapacity( pDevice, GPUMeshMorphPoolInternal::kElementStride, _skinBoneCount * shaderslot::kSkinFloat4PerBone + ( _skinMorphWeightCount + 3u ) / 4u,
-                                         GPUMeshMorphPoolInternal::kReadUsage, true, false, nullptr );
+        {
+            if ( _skinPalette.ensureCapacity( pDevice, GPUMeshMorphPoolInternal::kElementStride, _skinBoneCount * shaderslot::kSkinFloat4PerBone + ( _skinMorphWeightCount + 3u ) / 4u,
+                                              GPUMeshMorphPoolInternal::kReadUsage, true, false, nullptr ) == false )
+                SW_LOG_WARNING( "Failed to create the skin palette buffer (%# bones) - GPU skinning has no palette.", _skinBoneCount );
+        }
         else
+        {
             _skinPalette.release( pDevice );
+        }
 
-        // UAV 를 못 받으면(백엔드 · 드라이버가 거절) 모프는 조용히 꺼진다. 그리기는 레스트 포즈로 살아 있다.
-        if ( _morph._uav == kInvalidDescriptorIndex )
+        // 버퍼나 UAV 를 못 받으면(백엔드 · 드라이버가 거절) 모프는 꺼진다. 그리기는 레스트 포즈로 살아 있다.
+        if ( bMorphBuffer == false )
+            SW_LOG_WARNING( "Failed to create the morph result buffer (%# vertices) - morphing is off.", _vertexCount );
+        else if ( _morph._uav == kInvalidDescriptorIndex )
             SW_LOG_WARNING( "Failed to bind a UAV to the morph result buffer - morphing is off on this backend." );
     }
 

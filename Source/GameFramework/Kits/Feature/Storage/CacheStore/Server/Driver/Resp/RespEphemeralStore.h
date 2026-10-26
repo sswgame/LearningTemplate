@@ -112,10 +112,10 @@ namespace sw
         void finishOperation( Operation& operation, EphemeralResult result );
         void failOperation( Operation& operation );
         /** @brief 명령 연결이 열려 있거나 연결 중이면 true 입니다. 아니면 백오프가 지났을 때 다시 연결합니다. */
-        bool ensureCommandConnection();
-        bool ensureSubscribeConnection();
-        void abortTimedOutRequests();
-        void handlePushValue( const RespValue& value );
+        [[nodiscard]] bool ensureCommandConnection();
+        [[nodiscard]] bool ensureSubscribeConnection();
+        void               abortTimedOutRequests();
+        void               handlePushValue( const RespValue& value );
         /** @brief 구독 연결이 @p channel 확인을 낼 때까지 기다립니다. 전송이 별도 스레드 없이 돌면 직접 돌립니다. */
         void        waitForSubscriptionAck( uint64 targetAckCount );
         string      makeKey( string_view key ) const;

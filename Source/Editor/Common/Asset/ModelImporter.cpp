@@ -930,7 +930,7 @@ namespace sw::editor
         if ( FileUtil::isDirectory( sideFolder ) == false )
             return hash;
         vector<string> listFile;
-        (void)FileUtil::collectFiles( sideFolder, "", listFile, true );
+        (void)FileUtil::collectFiles( sideFolder, "", listFile, true ); // 폴더는 위에서 확인했다 — 도중에 멈춘 목록은 collectFiles 가 알리고 해시가 달라져 다시 임포트한다
         for ( string& file : listFile )
         {
             file = FileUtil::normalizeSeparators( file );

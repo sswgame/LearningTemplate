@@ -112,10 +112,7 @@ namespace sw
     {
         // 스크래치는 칠하는 쪽이 소유해 넘기는 필수 값이다. 없으면 z 순서 패널을 칠할 수 없으므로 멈춘다.
         if ( context._pScratch == nullptr )
-        {
-            SW_LOG_ERROR( "UIPaintPass::paint needs UIPaintContext::_pScratch - the painting owner must pass its scratch" );
-            std::abort();
-        }
+            SW_FATAL( "UIPaintPass::paint needs UIPaintContext::_pScratch - the painting owner must pass its scratch" );
         // 지난 순회 뒤 트리에 무효화가 하나도 없고 배율과 아틀라스도 그대로면 순회하지 않고 지난 목록을 낸다(멈춘 HUD 나 메뉴는 위젯 수와 무관하게 이어 붙이기 한 번으로 끝난다).
         const bool bReusePaintOutput = canReuseOutput( tree, context, outCanvas._targetSize );
         const bool bScaleChanged     = tree._paintUIScale != context._uiScale;

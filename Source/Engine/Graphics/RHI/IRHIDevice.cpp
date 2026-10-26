@@ -118,9 +118,7 @@ namespace sw
     {
         if ( _bParallelRecording.load( std::memory_order_relaxed ) == false )
             return;
-        SW_LOG_ERROR( "%# tries to change the resource table during parallel pass recording - release it through IRHIDevice::releaseHandle (see setParallelRecording)", pWhat );
-        Logger::flushGlobalForCrash(); // 비동기 싱크가 보관하고 있는 위 한 줄을 멈추기 전에 내보낸다
-        std::abort();
+        SW_FATAL( "%# tries to change the resource table during parallel pass recording - release it through IRHIDevice::releaseHandle (see setParallelRecording)", pWhat );
     }
 
     void IRHIDevice::waitIdle()
