@@ -14,11 +14,10 @@
   (`bool`, `int32`, `float32`, `sw::string` or a reflected enum). Runtime settings someone would change in the editor use
   `SW_GLOBAL_VARIABLE( type, name, default, desc )`. Bench, automation and diagnostic switches use `SW_TEST_GLOBAL_VARIABLE`: they
   stay settable with `-gv_*` but are hidden from the editor panel and presets and are **not registered in Shipping**. Use
-  `SW_TEST_GLOBAL_VARIABLE_SHIPPED` only when scripts must drive the shipped executable with it — the list and the reason per variable
-  live in `Scripts/lint/rules/CheckGlobalVariableKinds.toml` `[shipped]`, and a SHIPPED definition outside it stops the gate. Release is not
-  Shipping: test variables stay registered in Release, so measurement and bench switches (`gv_bench*`) and crash switches (`gv_crashTest`)
-  are plain `SW_TEST_GLOBAL_VARIABLE`. An `extern` is `SW_EXTERN_GLOBAL_VARIABLE( type, name )` for
-  every kind; `CheckGlobalVariableKinds.py` blocks a type that differs from the definition.
+  `SW_TEST_GLOBAL_VARIABLE_SHIPPED` only when scripts must drive the shipped executable — the list lives in
+  `Scripts/lint/rules/CheckGlobalVariableKinds.toml` `[shipped]`. Release is not Shipping: test variables stay registered in Release,
+  so `gv_bench*` and `gv_crashTest` are plain `SW_TEST_GLOBAL_VARIABLE`. An `extern` is `SW_EXTERN_GLOBAL_VARIABLE( type, name )` for
+  every kind (`CheckGlobalVariableKinds.py`).
 - Static variables: `s_camelCase`; private statics: `_s_camelCase`.
 - Macros: `SW_SCREAMING_CASE`.
 - Raw pointers use a `p` prefix (`pObject`, `_pObject`); double pointers use
@@ -49,13 +48,13 @@
 
 A class suffix says what the class does with the objects it names. Pick the one that matches, the way the commercial engines use it:
 
-| Suffix | Meaning | Commercial counterpart |
-| --- | --- | --- |
-| `…Manager` | Owns the lifetime of a set of runtime objects and decides the create / destroy / load policy. | Unity `SceneManager`, Unreal `UAssetManager` |
-| `…Registry` | Lookup table filled by registration, keyed by name or ID. No lifetime policy. | Unreal `AssetRegistry` |
-| `…System` | Runs every frame over many objects / components with the same logic. | Unity DOTS `System` |
-| `…Service` | Replaceable function window reached through service binding or a remote endpoint. | PlayFab · EOS · Nakama services |
-| `…Backend` | Platform or library implementation of an interface. | `JoltPhysicsBackend`, `XAudio2AudioBackend` |
+| Suffix | Meaning |
+| --- | --- |
+| `…Manager` | Owns the lifetime of a set of runtime objects and decides the create / destroy / load policy (Unreal `UAssetManager`). |
+| `…Registry` | Lookup table filled by registration, keyed by name or ID. No lifetime policy (Unreal `AssetRegistry`). |
+| `…System` | Runs every frame over many objects / components with the same logic (Unity DOTS `System`). |
+| `…Service` | Replaceable function window reached through service binding or a remote endpoint. |
+| `…Backend` | Platform or library implementation of an interface (`JoltPhysicsBackend`, `XAudio2AudioBackend`). |
 
 A C function table is `…API` (`GameAPI`, `EditorAPI`, `ModuleAPI`).
 
@@ -70,15 +69,12 @@ Fixed naming rules that go with the table:
 
 ### Function names
 
-A reader who knows one of these names must be able to guess the rest; that is the whole point.
-`CheckFunctionVocabulary.py` enforces six checks on header declarations — acronym runs (`AcronymRun`), the banned
-verbs below (`BannedVerb`), abbreviations in function names (`Abbreviation`: `Attr` → `Attribute`), `check*`
-predicates (`CheckVerb`), `string_view`/`hashed_string` name pairs (`NamePair`) and bare getters (`BareGetter`).
-Declarations that predate a check sit in the gate's exemption table, `[exemption]` in `Scripts/lint/rules/CheckFunctionVocabulary.toml`
-(key `<Rule>:<HeaderStem>::<function>`, the reason
-"개명 예정 <new name>" or "도메인 용어"); a new declaration is never added there unless the verb is
-the domain's own term (`UUID::generate`, `SurfaceBvh::build`), and a fixed name is removed from the table — a full run
-reports keys that no longer match. The `on*` and spell-it-out rules are kept by review.
+A reader who knows one of these names must be able to guess the rest.
+`CheckFunctionVocabulary.py` enforces six checks on header declarations: `AcronymRun`, `BannedVerb`, `Abbreviation` (`Attr` → `Attribute`),
+`CheckVerb` (`check*` predicates), `NamePair` (`string_view`/`hashed_string` pairs) and `BareGetter`.
+Declarations that predate a check sit in `[exemption]` of `Scripts/lint/rules/CheckFunctionVocabulary.toml`
+(key `<Rule>:<HeaderStem>::<function>`, reason "개명 예정 <new name>" or "도메인 용어"). A new declaration is never added there unless the verb is
+the domain's own term (`UUID::generate`, `SurfaceBvh::build`); a fixed name is removed from the table. The `on*` and spell-it-out rules are kept by review.
 
 - **An acronym is written in capitals, everywhere.** What counts as an acronym is one list,
   `acronym` in `Scripts/lint/rules/AcronymRegistry.toml` (read by `Scripts/common/AcronymRegistry.py` as `kAcronym`); a shortening (`Nav`, `Anim`, `Info`) is not one. Types, files, namespaces,
@@ -87,10 +83,9 @@ reports keys that no longer match. The `on*` and spell-it-out rules are kept by 
   as the first word (`uiSystem`, `_gpuScene`, `_id`). Two capital acronyms never touch (`RHIUI…` hides the boundary — spell one
   out or put a word between). Lower-case extensions and resource paths (`*.ui.xml`), `gv_` prefixes and third-party names keep
   their spelling (a third-party member that looks like ours goes in `kExternalName`: Box2D `bodyIdA`, Tracy `queryId`).
-  `CheckAcronymSpelling.py` blocks Pascal spellings and touching capitals of the acronyms in `kEnforced` (every registered acronym);
-  `AcronymRun` blocks a capital run in a function name that is not one registered acronym (`bindComputeUAV` — `UAV` is not
-  registered, so it stays `bindComputeUav`). A new acronym is added to `acronym` · `enforced` in that data file and rewritten across the tree with
-  `FormatAcronymSpelling.py` in one commit.
+  `CheckAcronymSpelling.py` blocks Pascal spellings and touching capitals of the registered acronyms;
+  `AcronymRun` blocks a capital run in a function name that is not one registered acronym (`UAV` is not registered, so it stays `bindComputeUav`).
+  A new acronym is added to `acronym` · `enforced` in that data file and rewritten across the tree with `FormatAcronymSpelling.py` in one commit.
 - **One verb per concept.** Picking a synonym is how two names for one thing get born:
 
   | Concept | Verb | Never |
@@ -112,8 +107,7 @@ reports keys that no longer match. The `on*` and spell-it-out rules are kept by 
 
   Other spellings of get-or-create (`findOrAdd*`, an `ensure*` that returns) are aligned when their function is touched.
   `tick` names only the tick system itself (`SceneTickScheduler`, `TickBatchRegistry`, component `onTick`) and behavior-tree
-  node ticks, as Unreal's `FTickFunction` · `BTTask::TickTask`; everything else that advances a frame or a time is `update`
-  (`CheckFunctionVocabulary` `BannedVerb`, the domain uses sit in its exemption table).
+  node ticks; everything else that advances a frame or a time is `update`.
   A variable or member holding a count is `xCount` (`itemCount`, `_listenerCount`); `countX()` is a function that counts by scanning.
 - **Type suffixes say what the data is for.** `Def` — authored data definition (read from a file, shared, immutable);
   `Desc` — creation description handed to a `create*` call; `Spec` — a granted runtime instance in the Unreal GAS sense
