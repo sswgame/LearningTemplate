@@ -3,6 +3,7 @@
 #include "Core/Module/ModuleBuildID.h"
 
 #include "Core/Common/FourCcUtil.h"
+#include "Core/Common/HexUtil.h"
 #include "Core/Common/PlatformOsHeaders.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
@@ -20,12 +21,10 @@ namespace sw
         {
             static void appendHex( StringBuilder<constant::kMaxBuffer256>& text, const uint8* pBytes, size_t count, bool bUpper )
             {
-                static constexpr utf8 kLowerDigit[] = "0123456789abcdef";
-                static constexpr utf8 kUpperDigit[] = "0123456789ABCDEF";
-                const utf8*           pDigit        = bUpper ? kUpperDigit : kLowerDigit;
                 for ( size_t index = 0; index < count; ++index )
                 {
-                    const utf8 arrPair[3] = { pDigit[pBytes[index] >> 4], pDigit[pBytes[index] & 0xF], '\0' };
+                    utf8 arrPair[3] = {};
+                    HexUtil::writeDigits( arrPair, pBytes[index], 2, bUpper ? HexCase::Upper : HexCase::Lower );
                     text.append( arrPair );
                 }
             }

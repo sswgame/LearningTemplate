@@ -3,6 +3,7 @@
 #include "Core/Math/Color.h"
 
 #include "Core/Common/BitUtil.h"
+#include "Core/Common/HexUtil.h"
 #include "Core/Math/MathUtil.h"
 
 namespace sw
@@ -21,18 +22,6 @@ namespace sw
             static float32 fromByte( const uint32 byte ) noexcept
             {
                 return static_cast<float32>( byte ) / 255.0f;
-            }
-
-            /** @brief 16진 숫자 한 글자의 값입니다. 아니면 -1 입니다. */
-            static int32 parseHexDigit( const utf8 digit ) noexcept
-            {
-                if ( digit >= '0' && digit <= '9' )
-                    return digit - '0';
-                if ( digit >= 'a' && digit <= 'f' )
-                    return digit - 'a' + 10;
-                if ( digit >= 'A' && digit <= 'F' )
-                    return digit - 'A' + 10;
-                return -1;
             }
 
             static float32 srgbToLinear( const float32 value ) noexcept
@@ -91,21 +80,21 @@ namespace sw
         const size_t channelCount = bShort ? digitCount : digitCount / 2;
         for ( size_t channelIndex = 0; channelIndex < channelCount; ++channelIndex )
         {
-            int32 high = 0;
-            int32 low  = 0;
+            uint32 high    = 0;
+            uint32 low     = 0;
+            bool   bParsed = false;
             if ( bShort )
             {
-                high = ColorInternal::parseHexDigit( text[channelIndex] );
-                low  = high;
+                bParsed = HexUtil::tryParseDigit( text[channelIndex], high );
+                low     = high;
             }
             else
             {
-                high = ColorInternal::parseHexDigit( text[channelIndex * 2] );
-                low  = ColorInternal::parseHexDigit( text[channelIndex * 2 + 1] );
+                bParsed = HexUtil::tryParseDigit( text[channelIndex * 2], high ) && HexUtil::tryParseDigit( text[channelIndex * 2 + 1], low );
             }
-            if ( high < 0 || low < 0 )
+            if ( bParsed == false )
                 return false;
-            arrChannel[channelIndex] = static_cast<uint32>( high * 16 + low );
+            arrChannel[channelIndex] = high * 16 + low;
         }
         outColor = Color{ ColorInternal::fromByte( arrChannel[0] ), ColorInternal::fromByte( arrChannel[1] ), ColorInternal::fromByte( arrChannel[2] ), ColorInternal::fromByte( arrChannel[3] ) };
         return true;
@@ -128,13 +117,8 @@ namespace sw
 
     void Color::toHex( utf8 ( &outText )[10] ) const noexcept
     {
-        static constexpr utf8 kDigit[] = "0123456789ABCDEF";
-        const uint32          packed   = toRgba();
-        outText[0]                     = '#';
-        for ( uint32 index = 0; index < 8; ++index )
-        {
-            outText[1 + index] = kDigit[( BitUtil::getByte( packed, 3 - index / 2 ) >> ( index % 2 == 0 ? 4 : 0 ) ) & 0xFu];
-        }
+        outText[0] = '#';
+        HexUtil::writeDigits( outText + 1, toRgba(), 8, HexCase::Upper );
         outText[9] = '\0';
     }
 

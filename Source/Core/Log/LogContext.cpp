@@ -2,6 +2,7 @@
 
 #include "Core/Log/LogContext.h"
 
+#include "Core/Common/HexUtil.h"
 #include "Core/Math/MathUtil.h"
 
 namespace sw
@@ -12,8 +13,6 @@ namespace sw
 
         struct LogContextInternal
         {
-            static constexpr utf8 kArrHexDigit[] = "0123456789abcdef";
-
             static int32 appendText( utf8* pOutBuffer, int32 length, const utf8* pText )
             {
                 for ( const utf8* pCharacter = pText; *pCharacter != '\0'; ++pCharacter )
@@ -25,11 +24,8 @@ namespace sw
 
             static int32 appendHex64( utf8* pOutBuffer, int32 length, uint64 value )
             {
-                for ( int32 digitIndex = 15; digitIndex >= 0; --digitIndex )
-                {
-                    pOutBuffer[length++] = kArrHexDigit[( value >> ( digitIndex * 4 ) ) & 0xFu];
-                }
-                return length;
+                HexUtil::writeDigits( pOutBuffer + length, value, HexUtil::kMaxDigitCount, HexCase::Lower );
+                return length + static_cast<int32>( HexUtil::kMaxDigitCount );
             }
         };
     } // namespace
