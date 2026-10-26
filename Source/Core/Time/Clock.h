@@ -52,16 +52,16 @@ namespace sw
     class ManualClock final : public IClock
     {
     public:
-        /** @param startMilliseconds 처음 시각(밀리초)입니다. */
-        explicit ManualClock( int64 startMilliseconds ) noexcept
-            : _nowNanoseconds{ startMilliseconds * constant::kNanosecondsPerMillisecond }
+        /** @param start 처음 시각입니다. 단조 시각 형식이라 유닉스 시각(`UnixMilliseconds`)을 넣으면 컴파일이 안 됩니다. */
+        explicit ManualClock( MonotonicMilliseconds start ) noexcept
+            : _nowNanoseconds{ start.count() * constant::kNanosecondsPerMillisecond }
         {
         }
 
         int64 nowNanoseconds() const noexcept override { return _nowNanoseconds.load(); }
 
-        /** @brief 시각을 @p nowMilliseconds 로 옮깁니다. 서버 루프가 받은 `nowMs` 를 그대로 넣을 때 씁니다. */
-        void setMilliseconds( int64 nowMilliseconds ) noexcept { _nowNanoseconds.store( nowMilliseconds * constant::kNanosecondsPerMillisecond ); }
+        /** @brief 시각을 @p now 로 옮깁니다. 테스트가 가짜 경과 시간을 정할 때 씁니다. */
+        void setMilliseconds( MonotonicMilliseconds now ) noexcept { _nowNanoseconds.store( now.count() * constant::kNanosecondsPerMillisecond ); }
         /** @brief 시각을 @p deltaMilliseconds 만큼 앞으로 밉니다. */
         void advanceMilliseconds( int64 deltaMilliseconds ) noexcept { (void)_nowNanoseconds.fetch_add( deltaMilliseconds * constant::kNanosecondsPerMillisecond ); }
 

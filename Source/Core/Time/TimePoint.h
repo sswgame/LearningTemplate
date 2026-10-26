@@ -58,6 +58,22 @@ namespace sw
 
         constexpr int64 count() const noexcept { return _count; }
 
+        // 유닉스 시각과 같은 연산을 같은 종류끼리만 연다 — 시한(시각 + 길이)과 경과(두 시각의 차이)를 정수로 풀지 않고 잰다.
+        friend constexpr bool                  operator==( MonotonicMilliseconds left, MonotonicMilliseconds right ) noexcept { return left._count == right._count; }
+        friend constexpr bool                  operator!=( MonotonicMilliseconds left, MonotonicMilliseconds right ) noexcept { return left._count != right._count; }
+        friend constexpr bool                  operator<( MonotonicMilliseconds left, MonotonicMilliseconds right ) noexcept { return left._count < right._count; }
+        friend constexpr bool                  operator<=( MonotonicMilliseconds left, MonotonicMilliseconds right ) noexcept { return left._count <= right._count; }
+        friend constexpr bool                  operator>( MonotonicMilliseconds left, MonotonicMilliseconds right ) noexcept { return left._count > right._count; }
+        friend constexpr bool                  operator>=( MonotonicMilliseconds left, MonotonicMilliseconds right ) noexcept { return left._count >= right._count; }
+        friend constexpr MonotonicMilliseconds operator+( MonotonicMilliseconds time, int64 deltaMs ) noexcept { return MonotonicMilliseconds{ time._count + deltaMs }; }
+        friend constexpr MonotonicMilliseconds operator-( MonotonicMilliseconds time, int64 deltaMs ) noexcept { return MonotonicMilliseconds{ time._count - deltaMs }; }
+        constexpr MonotonicMilliseconds&       operator+=( int64 deltaMs ) noexcept
+        {
+            _count += deltaMs;
+            return *this;
+        }
+        friend constexpr int64 operator-( MonotonicMilliseconds left, MonotonicMilliseconds right ) noexcept { return left._count - right._count; }
+
     private:
         int64 _count;
     };
