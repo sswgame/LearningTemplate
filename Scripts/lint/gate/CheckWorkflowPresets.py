@@ -22,7 +22,6 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from common.Search import collectRepositoryFiles  # noqa: E402
 from lint.LintGate import GateResult, LintGate  # noqa: E402
 
 _kWorkflowFolder = ".github/workflows"
@@ -43,7 +42,7 @@ def findWorkflowPresetViolations(repositoryRoot: Path) -> tuple[list[str], int]:
     except ValueError as error:
         return [f"[Workflow Preset] CMakePresets.json 을 읽지 못했습니다 ({error})"], 0
     violations: list[str] = []
-    listWorkflow = collectRepositoryFiles(repositoryRoot, (_kWorkflowFolder,), suffixes=(".yml",))
+    listWorkflow = LintGate.walkRepository(repositoryRoot, (_kWorkflowFolder,), what="워크플로 yml", bMustFind=True, suffixes=(".yml",))
     for workflow in listWorkflow:
         for lineNumber, line in enumerate(workflow.read_text(encoding="utf-8").splitlines(), start=1):
             for name in _kPresetRe.findall(line):
