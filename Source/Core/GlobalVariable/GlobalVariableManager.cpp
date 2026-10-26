@@ -684,23 +684,6 @@ namespace sw
         return nullptr;
     }
 
-    /**
-     * @brief 등록된 변수 이름 목록의 스냅샷을 반환합니다(스레드 안전).
-     *
-     * 패널 등에서 이 목록을 훑으며 findVariable 로 편집할 포인터를 얻는 용도입니다.
-     */
-    vector<string> GlobalVariableManager::collectVariableNames() const
-    {
-        std::shared_lock<std::shared_mutex> lock{ _mutex };
-        vector<string>                      listName;
-        listName.reserve( static_cast<uint32>( _mapVariable.size() ) );
-        for ( const auto& [name, info] : _mapVariable )
-        {
-            listName.push_back( name );
-        }
-        return listName;
-    }
-
     void GlobalVariableManager::collectVariables( vector<GlobalVariableInfo*>& outListVariable ) const
     {
         std::shared_lock<std::shared_mutex> lock{ _mutex };

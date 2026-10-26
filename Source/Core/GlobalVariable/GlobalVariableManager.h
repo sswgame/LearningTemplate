@@ -235,9 +235,6 @@ namespace sw
          */
         GlobalVariableInfo* findVariable( string_view name );
 
-        /** @brief 등록된 변수 이름 목록의 스냅샷을 반환합니다(스레드 안전). */
-        vector<string> collectVariableNames() const;
-
         /**
          * @brief 등록된 변수의 포인터를 @p outListVariable 에 채웁니다(먼저 비운다, 순서 없음, 스레드 안전).
          * @details 포인터는 `findVariable` 과 같이 그 변수가 해제될 때까지 유효합니다. 들고 있는 쪽은 `getRegistrationGeneration` 이 바뀌면 다시 채웁니다.
