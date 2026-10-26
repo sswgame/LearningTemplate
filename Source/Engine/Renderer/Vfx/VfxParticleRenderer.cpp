@@ -2,6 +2,7 @@
 
 #include "Engine/Renderer/Vfx/VfxParticleRenderer.h"
 
+#include "Core/Common/BitUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -43,14 +44,6 @@ namespace sw
 
             /** @brief 입자 버퍼가 모자라면 이 배율로 키운다(입자 수가 프레임마다 조금씩 늘 때 다시 만들기를 줄인다). */
             static constexpr float32 kParticleBufferGrowth = 1.5f;
-
-            /** @brief float 의 비트를 uint32 로 옮깁니다(루트 상수는 dword 배열이다). */
-            static uint32 toBits( float32 value )
-            {
-                uint32 bits = 0;
-                Memory::copy( &bits, &value, sizeof( bits ) );
-                return bits;
-            }
         };
     } // namespace
 } // namespace sw
@@ -162,7 +155,7 @@ namespace sw
             uint32 arrRoot[Root::kRootConstantCount]{};
             arrRoot[Root::kRootParticleBase] = bGPUBatch ? 0u : _listBatchBase[batchIndex];
             arrRoot[Root::kRootFlags]        = ( batch._bAdditive == SW_TRUE ? Root::kFlagAdditive : 0u ) | ( batch._bRibbon == SW_TRUE ? Root::kFlagRibbon : 0u );
-            arrRoot[Root::kRootSizeScale]    = Root::toBits( batch._sizeScale );
+            arrRoot[Root::kRootSizeScale]    = BitUtil::floatToBits( batch._sizeScale );
             if ( bNativeBindless )
             {
                 arrRoot[Root::kRootTexture] = srv; // 전역 번호
@@ -184,7 +177,7 @@ namespace sw
             {
                 for ( uint32 row = 0; row < Root::kFloatsPerColumn; ++row )
                 {
-                    arrRoot[Root::kRootColumn0 + column * Root::kFloatsPerColumn + row] = Root::toBits( arrColumn[column][row] );
+                    arrRoot[Root::kRootColumn0 + column * Root::kFloatsPerColumn + row] = BitUtil::floatToBits( arrColumn[column][row] );
                 }
             }
             cmd.setGraphicsRootConstants( 0, Root::kRootConstantCount, arrRoot );

@@ -2,6 +2,7 @@
 
 #include "Engine/Observability/MetricRegistry.h"
 
+#include "Core/Common/BitUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Time/MonotonicClock.h"
@@ -18,24 +19,10 @@ namespace sw
     {
         struct MetricRegistryInternal
         {
-            static uint64 toBits( float64 value )
-            {
-                uint64 bits = 0;
-                Memory::copy( &bits, &value, sizeof( bits ) );
-                return bits;
-            }
-
-            static float64 fromBits( uint64 bits )
-            {
-                float64 value = 0.0;
-                Memory::copy( &value, &bits, sizeof( value ) );
-                return value;
-            }
-
             static void addFloat( atomic<uint64>& inoutBits, float64 delta )
             {
                 uint64 expected = inoutBits.load( std::memory_order_relaxed );
-                while ( inoutBits.compare_exchange_weak( expected, toBits( fromBits( expected ) + delta ), std::memory_order_relaxed ) == false )
+                while ( inoutBits.compare_exchange_weak( expected, BitUtil::doubleToBits( BitUtil::bitsToDouble( expected ) + delta ), std::memory_order_relaxed ) == false )
                 {
                 }
             }
@@ -132,13 +119,13 @@ namespace sw
     }
 
     MetricGauge::MetricGauge()
-        : _bits{ MetricRegistryInternal::toBits( 0.0 ) }
+        : _bits{ BitUtil::doubleToBits( 0.0 ) }
     {
     }
 
     void MetricGauge::set( float64 value )
     {
-        _bits.store( MetricRegistryInternal::toBits( value ), std::memory_order_relaxed );
+        _bits.store( BitUtil::doubleToBits( value ), std::memory_order_relaxed );
     }
 
     void MetricGauge::add( float64 delta )
@@ -148,14 +135,14 @@ namespace sw
 
     float64 MetricGauge::getValue() const
     {
-        return MetricRegistryInternal::fromBits( _bits.load( std::memory_order_relaxed ) );
+        return BitUtil::bitsToDouble( _bits.load( std::memory_order_relaxed ) );
     }
 
     MetricHistogram::MetricHistogram( const vector<float64>& listUpperBound )
         : _listUpperBound( listUpperBound.begin(), listUpperBound.end() )
         , _arrBucketValue{ make_unique<atomic<uint64>[]>( listUpperBound.size() + 1 ) }
         , _count{ 0 }
-        , _sumBits{ MetricRegistryInternal::toBits( 0.0 ) }
+        , _sumBits{ BitUtil::doubleToBits( 0.0 ) }
     {
         for ( size_t bucketIndex = 0; bucketIndex <= _listUpperBound.size(); ++bucketIndex )
         {
@@ -181,7 +168,7 @@ namespace sw
 
     float64 MetricHistogram::getSum() const
     {
-        return MetricRegistryInternal::fromBits( _sumBits.load( std::memory_order_relaxed ) );
+        return BitUtil::bitsToDouble( _sumBits.load( std::memory_order_relaxed ) );
     }
 
     ScopedMetricTimer::ScopedMetricTimer( MetricHistogram* pHistogram )

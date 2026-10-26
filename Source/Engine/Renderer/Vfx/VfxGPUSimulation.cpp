@@ -2,6 +2,7 @@
 
 #include "Engine/Renderer/Vfx/VfxGPUSimulation.h"
 
+#include "Core/Common/BitUtil.h"
 #include "Core/Common/HashUtil.h"
 #include "Core/Log/Logger.h"
 
@@ -32,13 +33,6 @@ namespace sw
             static_assert( SW_VFX_ARGS_WORD_ALIVE * sizeof( uint32 ) >= sizeof( RHIDrawIndirectCommand ), "the alive count must sit after the draw arguments" );
             static_assert( SW_VFX_ARGS_WORD_DROPPED < SW_VFX_ARGS_WORD_COUNT, "the dropped counter must sit inside the arguments buffer" );
 
-            static uint32 toBits( float32 value )
-            {
-                uint32 bits = 0;
-                Memory::copy( &bits, &value, sizeof( bits ) );
-                return bits;
-            }
-
             static uint32 lowWord( uint64 value ) { return static_cast<uint32>( value ); }
             static uint32 highWord( uint64 value ) { return static_cast<uint32>( value >> 32 ); }
 
@@ -53,10 +47,10 @@ namespace sw
             /** @brief 행렬 @p matrix 의 행 넷(행벡터 규약 — _11.._14 가 첫 행)을 붙입니다. */
             static void appendMatrixRows( vector<uint32>& inoutListWord, const float4x4& matrix )
             {
-                appendRow( inoutListWord, toBits( matrix._11 ), toBits( matrix._12 ), toBits( matrix._13 ), toBits( matrix._14 ) );
-                appendRow( inoutListWord, toBits( matrix._21 ), toBits( matrix._22 ), toBits( matrix._23 ), toBits( matrix._24 ) );
-                appendRow( inoutListWord, toBits( matrix._31 ), toBits( matrix._32 ), toBits( matrix._33 ), toBits( matrix._34 ) );
-                appendRow( inoutListWord, toBits( matrix._41 ), toBits( matrix._42 ), toBits( matrix._43 ), toBits( matrix._44 ) );
+                appendRow( inoutListWord, BitUtil::floatToBits( matrix._11 ), BitUtil::floatToBits( matrix._12 ), BitUtil::floatToBits( matrix._13 ), BitUtil::floatToBits( matrix._14 ) );
+                appendRow( inoutListWord, BitUtil::floatToBits( matrix._21 ), BitUtil::floatToBits( matrix._22 ), BitUtil::floatToBits( matrix._23 ), BitUtil::floatToBits( matrix._24 ) );
+                appendRow( inoutListWord, BitUtil::floatToBits( matrix._31 ), BitUtil::floatToBits( matrix._32 ), BitUtil::floatToBits( matrix._33 ), BitUtil::floatToBits( matrix._34 ) );
+                appendRow( inoutListWord, BitUtil::floatToBits( matrix._41 ), BitUtil::floatToBits( matrix._42 ), BitUtil::floatToBits( matrix._43 ), BitUtil::floatToBits( matrix._44 ) );
             }
 
             /** @brief 커브 키 하나의 구간 모양 단어 둘(상수, 직선)입니다. 둘 다 0 이면 에르미트다 — 열거자를 더하면 이 switch 가 빌드를 멈춘다. */
@@ -92,7 +86,7 @@ namespace sw
                     uint32 constantWord = 0;
                     uint32 linearWord   = 0;
                     computeInterpolationWords( key._interpolation, constantWord, linearWord );
-                    appendRow( inoutListWord, toBits( key._time ), toBits( key._value ), toBits( key._arriveTangent ), toBits( key._leaveTangent ) );
+                    appendRow( inoutListWord, BitUtil::floatToBits( key._time ), BitUtil::floatToBits( key._value ), BitUtil::floatToBits( key._arriveTangent ), BitUtil::floatToBits( key._leaveTangent ) );
                     appendRow( inoutListWord, constantWord, linearWord, 0u, 0u );
                 }
                 return firstRow;
@@ -375,19 +369,19 @@ namespace sw
                              Internal::highWord( HashUtil::kGoldenRatio64 ) );
         Internal::appendRow( _listParamWord, Internal::lowWord( HashUtil::kSplitMixMultiplier0 ), Internal::highWord( HashUtil::kSplitMixMultiplier0 ),
                              Internal::lowWord( HashUtil::kSplitMixMultiplier1 ), Internal::highWord( HashUtil::kSplitMixMultiplier1 ) );
-        Internal::appendRow( _listParamWord, Internal::toBits( def._velocityMin._x ), Internal::toBits( def._velocityMin._y ), Internal::toBits( def._velocityMin._z ),
-                             Internal::toBits( def._lifetimeMin ) );
-        Internal::appendRow( _listParamWord, Internal::toBits( def._velocityMax._x ), Internal::toBits( def._velocityMax._y ), Internal::toBits( def._velocityMax._z ),
-                             Internal::toBits( def._lifetimeMax ) );
-        Internal::appendRow( _listParamWord, Internal::toBits( def._gravity._x ), Internal::toBits( def._gravity._y ), Internal::toBits( def._gravity._z ), Internal::toBits( stepTime ) );
+        Internal::appendRow( _listParamWord, BitUtil::floatToBits( def._velocityMin._x ), BitUtil::floatToBits( def._velocityMin._y ), BitUtil::floatToBits( def._velocityMin._z ),
+                             BitUtil::floatToBits( def._lifetimeMin ) );
+        Internal::appendRow( _listParamWord, BitUtil::floatToBits( def._velocityMax._x ), BitUtil::floatToBits( def._velocityMax._y ), BitUtil::floatToBits( def._velocityMax._z ),
+                             BitUtil::floatToBits( def._lifetimeMax ) );
+        Internal::appendRow( _listParamWord, BitUtil::floatToBits( def._gravity._x ), BitUtil::floatToBits( def._gravity._y ), BitUtil::floatToBits( def._gravity._z ), BitUtil::floatToBits( stepTime ) );
         // 커브 행 셋은 키를 붙인 뒤 채운다.
         Internal::appendRow( _listParamWord, 0u, 0u, 0u, 0u );
         Internal::appendRow( _listParamWord, 0u, 0u, 0u, 0u );
         Internal::appendRow( _listParamWord, 0u, 0u, 0u, 0u );
-        Internal::appendRow( _listParamWord, Internal::toBits( def._collision._restitution ), Internal::toBits( def._collision._friction ),
-                             Internal::toBits( VfxCollisionDef::kSurfaceSkin ), Internal::toBits( def._collision._depthThickness ) );
+        Internal::appendRow( _listParamWord, BitUtil::floatToBits( def._collision._restitution ), BitUtil::floatToBits( def._collision._friction ),
+                             BitUtil::floatToBits( VfxCollisionDef::kSurfaceSkin ), BitUtil::floatToBits( def._collision._depthThickness ) );
         Internal::appendRow( _listParamWord, depth._width, depth._height, historyIndex, 0u );
-        Internal::appendRow( _listParamWord, Internal::toBits( depth._eye._x ), Internal::toBits( depth._eye._y ), Internal::toBits( depth._eye._z ), 0u );
+        Internal::appendRow( _listParamWord, BitUtil::floatToBits( depth._eye._x ), BitUtil::floatToBits( depth._eye._y ), BitUtil::floatToBits( depth._eye._z ), 0u );
         Internal::appendMatrixRows( _listParamWord, world );
         Internal::appendMatrixRows( _listParamWord, world.invert() );
         Internal::appendMatrixRows( _listParamWord, depth._viewProj );
@@ -396,8 +390,8 @@ namespace sw
         if ( lightRange._count > 0 )
         {
             const VfxLightDef& light = def._light;
-            Internal::appendRow( _listParamWord, _frameInput._lightBase + lightRange._first, lightRange._count, Internal::toBits( light._radius * world.getMaximumAxisScale() ),
-                                 Internal::toBits( light._intensity ) );
+            Internal::appendRow( _listParamWord, _frameInput._lightBase + lightRange._first, lightRange._count, BitUtil::floatToBits( light._radius * world.getMaximumAxisScale() ),
+                                 BitUtil::floatToBits( light._intensity ) );
         }
         else
         {
@@ -437,7 +431,7 @@ namespace sw
         const uint32          poolSize = state._clock.getDef()._maxParticles;
         const vector<uint32>& listSlot = *emitter._pListInstanceSlot;
         const uint32          paramRow = static_cast<uint32>( _listParamWord.size() / Internal::kWordsPerRow );
-        Internal::appendRow( _listParamWord, poolSize, 0u, Internal::toBits( emitter._meshRadius ), Internal::toBits( emitter._sizeScale ) );
+        Internal::appendRow( _listParamWord, poolSize, 0u, BitUtil::floatToBits( emitter._meshRadius ), BitUtil::floatToBits( emitter._sizeScale ) );
         Internal::appendMatrixRows( _listParamWord, emitter._world );
         static_assert( SW_VFX_MESH_ROW_FIRST_SLOT == 5u, "the mesh header rows above must match vfxsimulate.hlsli" );
         // 풀 자리마다 칸 — 행 하나에 넷. 배치 항목 수는 풀 크기와 같다(`VfxComponent::rebuildMeshEmitters`). 모자란 자리는 쓰지 않는다.

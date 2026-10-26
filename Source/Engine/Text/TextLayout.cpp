@@ -2,6 +2,7 @@
 
 #include "Engine/Text/TextLayout.h"
 
+#include "Core/Common/BitUtil.h"
 #include "Core/Common/HashUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
@@ -116,9 +117,7 @@ namespace sw
 
             static uint64 hashFloat( uint64 seed, float32 value )
             {
-                uint32 bits = 0;
-                Memory::copy( &bits, &value, sizeof( bits ) );
-                return HashUtil::combine( seed, bits );
+                return HashUtil::combine( seed, BitUtil::floatToBits( value ) );
             }
 
             static uint64 hashStyle( const TextLayoutStyle& style )

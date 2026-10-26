@@ -2,6 +2,7 @@
 
 #include "Editor/Common/Asset/ModelImportConfig.h"
 
+#include "Core/Common/BitUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
@@ -90,9 +91,7 @@ namespace sw::editor
         const float32 arrValue[4] = { _animationSampleRate, _animationPrecision, _animationShellDistance, _bodySurfaceDistance };
         for ( const float32 value : arrValue )
         {
-            uint32 bits = 0;
-            Memory::copy( &bits, &value, sizeof( bits ) );
-            text += ";" + to_string( bits );
+            text += ";" + to_string( BitUtil::floatToBits( value ) );
         }
         return text;
     }
@@ -120,9 +119,7 @@ namespace sw::editor
                                        _fracture._interiorColor._y, _fracture._interiorColor._z, _fracture._interiorColor._w };
         for ( const float32 value : arrValue )
         {
-            uint32 bits = 0;
-            Memory::copy( &bits, &value, sizeof( bits ) );
-            text += ";" + to_string( bits );
+            text += ";" + to_string( BitUtil::floatToBits( value ) );
         }
         return text;
     }
@@ -452,9 +449,7 @@ namespace sw::editor
             const float32 arrValue[3] = { lod._triangleRatio, lod._screenSize, lod._maxError };
             for ( const float32 value : arrValue )
             {
-                uint32 bits = 0;
-                Memory::copy( &bits, &value, sizeof( bits ) );
-                text += to_string( bits ) + ",";
+                text += to_string( BitUtil::floatToBits( value ) ) + ",";
             }
             text += ";";
         }
