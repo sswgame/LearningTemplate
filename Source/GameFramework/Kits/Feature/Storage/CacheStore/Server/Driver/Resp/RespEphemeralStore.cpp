@@ -42,12 +42,7 @@ namespace sw
 
 namespace sw
 {
-    int64 RespMonotonicClock::nowNanoseconds() const noexcept
-    {
-        return MonotonicClock::nowNanoseconds();
-    }
-
-    RespEphemeralStore::RespEphemeralStore( const IRespClock& clock )
+    RespEphemeralStore::RespEphemeralStore( const IClock& clock )
         : _clock{ clock }
         , _settings{}
         , _transportSettings{}

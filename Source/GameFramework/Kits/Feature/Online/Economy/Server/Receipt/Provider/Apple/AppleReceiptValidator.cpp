@@ -2,9 +2,8 @@
 
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/Provider/Apple/AppleReceiptValidator.h"
 
+#include "Core/Common/Defines.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
-#include "Core/Time/MonotonicClock.h"
-#include "Core/Time/WallClock.h"
 
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/JSON/JSONWriter.h"
@@ -28,8 +27,6 @@ namespace sw
             static constexpr int32       kStatusServerError      = 500;
             static constexpr size_t      kMaxNotifiedRefundCount = 100000;
             static constexpr const utf8* kEnvironmentSandbox     = "Sandbox";
-
-            static int64 nowMonotonicMs() { return MonotonicClock::nowNanoseconds() / constant::kNanosecondsPerMillisecond; }
 
             static vector<uint8> toBytes( string_view text )
             {
@@ -108,13 +105,13 @@ namespace sw
         return bChainOk && outToken.verifySignature( *_pSecurity, leafKey );
     }
 
-    string AppleReceiptValidator::makeAuthorization( int64 nowWallMs )
+    string AppleReceiptValidator::makeAuthorization( UnixMilliseconds now )
     {
         using Internal = AppleReceiptValidatorInternal;
-        if ( _authorization.empty() == false && nowWallMs + Internal::kAuthRefreshMarginMs < _authExpiresWallMs )
+        if ( _authorization.empty() == false && now.count() + Internal::kAuthRefreshMarginMs < _authExpiresWallMs )
             return _authorization;
-        const int64 issuedAtSec = nowWallMs / Internal::kMillisecondsPerSecond;
-        const int64 expiresMs   = nowWallMs + Internal::kAuthLifetimeMs;
+        const int64 issuedAtSec = now.toSeconds();
+        const int64 expiresMs   = now.count() + Internal::kAuthLifetimeMs;
         JSONWriter  writer;
         writer.beginObject();
         writer.key( "iss" );
@@ -142,12 +139,12 @@ namespace sw
         return _authorization;
     }
 
-    void AppleReceiptValidator::submitCall( const Call& call, string_view paginationToken, int64 nowMs, int64 nowWallMs )
+    void AppleReceiptValidator::submitCall( const Call& call, string_view paginationToken, UnixMilliseconds now )
     {
         using Internal = AppleReceiptValidatorInternal;
         HTTPClientRequest request;
         request._timeoutMs = _settings._requestTimeoutMs;
-        request._listHeader.push_back( HTTPHeader{ "Authorization", makeAuthorization( nowWallMs ) } );
+        request._listHeader.push_back( HTTPHeader{ "Authorization", makeAuthorization( now ) } );
         request._listHeader.push_back( HTTPHeader{ "Accept", "application/json" } );
         if ( call._kind == Call::Kind::Validate )
             request._url = makeTransactionURL( call._transactionID );
@@ -168,12 +165,11 @@ namespace sw
             request._bodyBytes = Internal::toBytes( body );
             request._listHeader.push_back( HTTPHeader{ "Content-Type", "application/json" } );
         }
-        _mapRequestToCall[_pHTTPClient->submitRequest( request, nowMs )] = call;
+        _mapRequestToCall[_pHTTPClient->submitRequest( request, now.count() )] = call;
     }
 
-    void AppleReceiptValidator::submitValidation( const ReceiptValidationRequest& request )
+    void AppleReceiptValidator::submitValidation( const ReceiptValidationRequest& request, UnixMilliseconds now )
     {
-        using Internal = AppleReceiptValidatorInternal;
         if ( isTransactionID( request._payload ) == false )
         {
             // 경로에 실을 수 없는 영수증은 애플에 묻지 않고 거절한다.
@@ -189,7 +185,7 @@ namespace sw
         call._kind          = Call::Kind::Validate;
         call._request       = request;
         call._transactionID = request._payload;
-        submitCall( call, {}, Internal::nowMonotonicMs(), WallClock::nowUnixMilliseconds() );
+        submitCall( call, {}, now );
     }
 
     void AppleReceiptValidator::completeRetry( const ReceiptValidationRequest& request, const utf8* pText )
@@ -203,7 +199,7 @@ namespace sw
         result._failureText             = pText;
     }
 
-    void AppleReceiptValidator::finishValidation( const Call& call, const HTTPClientResponse& response, int64 nowWallMs )
+    void AppleReceiptValidator::finishValidation( const Call& call, const HTTPClientResponse& response, UnixMilliseconds now )
     {
         using Internal = AppleReceiptValidatorInternal;
         if ( response._statusCode == HTTPConstant::kStatusUnauthorized )
@@ -231,7 +227,7 @@ namespace sw
         }
         const JSONValue signedInfo = document.getRoot().get( "signedTransactionInfo", false );
         JSONWebToken    token;
-        if ( signedInfo.isString() == false || verifyJws( signedInfo.asString(), nowWallMs / Internal::kMillisecondsPerSecond, token ) == false )
+        if ( signedInfo.isString() == false || verifyJws( signedInfo.asString(), now.toSeconds(), token ) == false )
         {
             result._failureText = "the signed transaction does not verify against the Apple root";
             SW_LOG_ERROR( "The signed transaction %# from Apple does not verify - check rootCertificateFile", call._transactionID.c_str() );
@@ -269,18 +265,18 @@ namespace sw
         result._status = ReceiptStatus::Valid;
     }
 
-    void AppleReceiptValidator::startHistory( int64 nowMs, int64 nowWallMs )
+    void AppleReceiptValidator::startHistory( UnixMilliseconds now )
     {
-        _historyStartUnixMs = nowWallMs;
+        _historyStartUnixMs = now.count();
         _bHistoryInFlight   = SW_TRUE;
-        _nextHistoryMs      = nowMs + _settings._historyPollIntervalMs;
+        _nextHistoryMs      = now.count() + _settings._historyPollIntervalMs;
         Call call;
         call._kind = Call::Kind::History;
         call._page = 0;
-        submitCall( call, {}, nowMs, nowWallMs );
+        submitCall( call, {}, now );
     }
 
-    void AppleReceiptValidator::finishHistory( const Call& call, const HTTPClientResponse& response, int64 nowMs, int64 nowWallMs )
+    void AppleReceiptValidator::finishHistory( const Call& call, const HTTPClientResponse& response, UnixMilliseconds now )
     {
         using Internal = AppleReceiptValidatorInternal;
         JSONDocument document;
@@ -301,7 +297,7 @@ namespace sw
             const JSONValue item          = history.at( index );
             const JSONValue signedPayload = item.get( "signedPayload", false );
             JSONWebToken    notification;
-            if ( signedPayload.isString() == false || verifyJws( signedPayload.asString(), nowWallMs / Internal::kMillisecondsPerSecond, notification ) == false )
+            if ( signedPayload.isString() == false || verifyJws( signedPayload.asString(), now.toSeconds(), notification ) == false )
             {
                 SW_LOG_ERROR( "An Apple notification does not verify against the Apple root - it is skipped" );
                 continue;
@@ -316,14 +312,14 @@ namespace sw
                 continue;
             JSONWebToken transaction;
             string       transactionID;
-            if ( verifyJws( signedTransaction, nowWallMs / Internal::kMillisecondsPerSecond, transaction ) == false || transaction.findText( "transactionId", transactionID ) == false )
+            if ( verifyJws( signedTransaction, now.toSeconds(), transaction ) == false || transaction.findText( "transactionId", transactionID ) == false )
                 continue;
             if ( _uniqueSetNotifiedRefund.count( transactionID ) != 0 )
                 continue;
             if ( _uniqueSetNotifiedRefund.size() >= Internal::kMaxNotifiedRefundCount )
                 _uniqueSetNotifiedRefund.clear(); // 상한 — 겹친 알림은 서비스가 거래 id 로 한 번만 처리한다
             _uniqueSetNotifiedRefund.insert( transactionID );
-            int64 refundedMs   = nowWallMs;
+            int64 refundedMs   = now.count();
             int64 revocationMs = 0;
             if ( transaction.findInteger( "revocationDate", revocationMs ) )
                 refundedMs = revocationMs;
@@ -337,22 +333,20 @@ namespace sw
         {
             Call next  = call;
             next._page = call._page + 1;
-            submitCall( next, paginationToken, nowMs, nowWallMs );
+            submitCall( next, paginationToken, now );
             return;
         }
         _lastHistoryUnixMs = _historyStartUnixMs;
         _bHistoryInFlight  = SW_FALSE;
     }
 
-    void AppleReceiptValidator::service()
+    void AppleReceiptValidator::update( UnixMilliseconds now )
     {
-        using Internal      = AppleReceiptValidatorInternal;
-        const int64 nowMs   = Internal::nowMonotonicMs();
-        const int64 nowWall = WallClock::nowUnixMilliseconds();
-        _pHTTPClient->update( nowMs );
+        // 서버 루프의 시각(유닉스 밀리초) 하나로 HTTP 시한 · 토큰 · 서명 검증 시각 · 조회 주기 · 이력 구간을 모두 잰다.
+        _pHTTPClient->update( now.count() );
         const bool bMayPoll = _bStopped == SW_FALSE && _bHistoryInFlight == SW_FALSE;
-        if ( bMayPoll && nowMs >= _nextHistoryMs )
-            startHistory( nowMs, nowWall );
+        if ( bMayPoll && now.count() >= _nextHistoryMs )
+            startHistory( now );
         vector<HTTPClientResponse> listResponse;
         (void)_pHTTPClient->pollResponses( listResponse );
         for ( const HTTPClientResponse& response : listResponse )
@@ -363,15 +357,14 @@ namespace sw
             const Call call = std::move( callIt->second );
             _mapRequestToCall.erase( callIt );
             if ( call._kind == Call::Kind::Validate )
-                finishValidation( call, response, nowWall );
+                finishValidation( call, response, now );
             else
-                finishHistory( call, response, nowMs, nowWall );
+                finishHistory( call, response, now );
         }
     }
 
     void AppleReceiptValidator::pollCompletions( vector<ReceiptValidationResult>& outListResult )
     {
-        service();
         for ( ReceiptValidationResult& result : _listDone )
         {
             outListResult.push_back( std::move( result ) );
@@ -381,7 +374,6 @@ namespace sw
 
     void AppleReceiptValidator::pollRefunds( vector<ReceiptRefundNotice>& outListNotice )
     {
-        service();
         for ( ReceiptRefundNotice& notice : _listRefund )
         {
             outListNotice.push_back( std::move( notice ) );

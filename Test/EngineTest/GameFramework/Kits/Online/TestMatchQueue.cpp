@@ -186,10 +186,10 @@ namespace
 SW_TEST_CASE( MatchQueueTest, RatedModeNeedsAStatSourceAndRefusesAccountsWhoseStatsAreNotLoaded )
 {
     using Internal = MatchQueueTestInternal;
-    MemoryEphemeralDatabase cacheDatabase;
-    cacheDatabase.setManualTimeMs( 0 );
-    MemoryEphemeralStore cache{ &cacheDatabase };
-    EphemeralStoreRouter router;
+    ManualClock             cacheClock{ 0 };
+    MemoryEphemeralDatabase cacheDatabase{ cacheClock };
+    MemoryEphemeralStore    cache{ &cacheDatabase };
+    EphemeralStoreRouter    router;
     router.initialize( &cache );
     MatchModeDefinition rated = Internal::makeDuoMode();
     rated._ratingStat         = "mmr_duo";
@@ -250,10 +250,10 @@ SW_TEST_CASE( MatchQueueTest, AgentAdmitsOnlyAssignedAccounts )
 SW_TEST_CASE( MatchQueueTest, SingleServerPlacesMatchOnRegisteredGameServer )
 {
     using Internal = MatchQueueTestInternal;
-    MemoryEphemeralDatabase cacheDatabase;
-    cacheDatabase.setManualTimeMs( 0 );
-    QueueNode          node( &cacheDatabase, nullptr, 1 );
-    ServerRegistration gameServer;
+    ManualClock             cacheClock{ 0 };
+    MemoryEphemeralDatabase cacheDatabase{ cacheClock };
+    QueueNode               node( &cacheDatabase, nullptr, 1 );
+    ServerRegistration      gameServer;
     Internal::registerGameServer( node._router, gameServer, 0 );
     node.step( 0 );                                       // 서버 목록 읽기
     SW_EXPECT_TRUE( node._service.isAuthority( "duo" ) ); // 버스 없음 — 늘 권한
@@ -296,13 +296,13 @@ SW_TEST_CASE( MatchQueueTest, SingleServerPlacesMatchOnRegisteredGameServer )
 SW_TEST_CASE( MatchQueueTest, TicketsFromAnotherServerReachTheAuthorityAndResultsComeBack )
 {
     using Internal = MatchQueueTestInternal;
-    MemoryEphemeralDatabase cacheDatabase;
-    cacheDatabase.setManualTimeMs( 0 );
-    LocalServerBusHub  hub;
-    QueueNode          first( &cacheDatabase, &hub, 1 );
-    QueueNode          second( &cacheDatabase, &hub, 2 );
-    GameServerNode     gameServer( &hub, 50 );
-    ServerRegistration registration;
+    ManualClock             cacheClock{ 0 };
+    MemoryEphemeralDatabase cacheDatabase{ cacheClock };
+    LocalServerBusHub       hub;
+    QueueNode               first( &cacheDatabase, &hub, 1 );
+    QueueNode               second( &cacheDatabase, &hub, 2 );
+    GameServerNode          gameServer( &hub, 50 );
+    ServerRegistration      registration;
     Internal::registerGameServer( first._router, registration, 0 );
     first.step( 0 ); // 첫 서버가 임대를 잡는다
     second.step( 0 );
@@ -343,12 +343,12 @@ SW_TEST_CASE( MatchQueueTest, TicketsFromAnotherServerReachTheAuthorityAndResult
 
 SW_TEST_CASE( MatchQueueTest, AuthorityFailoverLosesQueuedTicketsWhichTimeOutAtTheOrigin )
 {
-    MemoryEphemeralDatabase cacheDatabase;
-    cacheDatabase.setManualTimeMs( 0 );
-    LocalServerBusHub hub;
-    const int64       maxWaitMs = 20000;
-    QueueNode         first( &cacheDatabase, &hub, 1, maxWaitMs );
-    QueueNode         second( &cacheDatabase, &hub, 2, maxWaitMs );
+    ManualClock             cacheClock{ 0 };
+    MemoryEphemeralDatabase cacheDatabase{ cacheClock };
+    LocalServerBusHub       hub;
+    const int64             maxWaitMs = 20000;
+    QueueNode               first( &cacheDatabase, &hub, 1, maxWaitMs );
+    QueueNode               second( &cacheDatabase, &hub, 2, maxWaitMs );
     first.step( 0 );
     second.step( 0 );
     SW_ASSERT_TRUE( first._service.isAuthority( "duo" ) );
@@ -359,7 +359,7 @@ SW_TEST_CASE( MatchQueueTest, AuthorityFailoverLosesQueuedTicketsWhichTimeOutAtT
     SW_EXPECT_EQUAL( first._service.getQueuedTicketCount( "duo" ), 1 );
 
     // 첫 서버가 멈춘다(더 돌리지 않는다). 임대 TTL 이 지나면 둘째가 잡는다.
-    cacheDatabase.advanceTimeMs( MatchQueueLimit::kLeaseTtlMs + 1000 );
+    cacheClock.advanceMilliseconds( MatchQueueLimit::kLeaseTtlMs + 1000 );
     second.step( 12000 );
     SW_EXPECT_TRUE( second._service.isAuthority( "duo" ) );
     SW_EXPECT_EQUAL( second._service.getQueuedTicketCount( "duo" ), 0 ); // 첫 서버의 표는 모른다
@@ -382,9 +382,9 @@ SW_TEST_CASE( MatchQueueTest, NoServerWaitsThenPlacesWhenOneAppears )
 {
     using Internal = MatchQueueTestInternal;
     {
-        MemoryEphemeralDatabase cacheDatabase;
-        cacheDatabase.setManualTimeMs( 0 );
-        QueueNode node( &cacheDatabase, nullptr, 1 );
+        ManualClock             cacheClock{ 0 };
+        MemoryEphemeralDatabase cacheDatabase{ cacheClock };
+        QueueNode               node( &cacheDatabase, nullptr, 1 );
         for ( AccountID accountID = 1; accountID <= 4; ++accountID )
         {
             node._service.joinQueue( accountID, "duo", "kr", 0, accountID );
@@ -402,9 +402,9 @@ SW_TEST_CASE( MatchQueueTest, NoServerWaitsThenPlacesWhenOneAppears )
         }
     }
     {
-        MemoryEphemeralDatabase cacheDatabase;
-        cacheDatabase.setManualTimeMs( 0 );
-        QueueNode node( &cacheDatabase, nullptr, 1 );
+        ManualClock             cacheClock{ 0 };
+        MemoryEphemeralDatabase cacheDatabase{ cacheClock };
+        QueueNode               node( &cacheDatabase, nullptr, 1 );
         for ( AccountID accountID = 1; accountID <= 4; ++accountID )
         {
             node._service.joinQueue( accountID, "duo", "kr", 0, accountID );
@@ -425,10 +425,10 @@ SW_TEST_CASE( MatchQueueTest, NoServerWaitsThenPlacesWhenOneAppears )
 SW_TEST_CASE( MatchQueueTest, PartyLeaderQueuesTheWholePartyAsOneTeam )
 {
     using Internal = MatchQueueTestInternal;
-    MemoryEphemeralDatabase cacheDatabase;
-    cacheDatabase.setManualTimeMs( 0 );
-    QueueNode          node( &cacheDatabase, nullptr, 1 );
-    ServerRegistration gameServer;
+    ManualClock             cacheClock{ 0 };
+    MemoryEphemeralDatabase cacheDatabase{ cacheClock };
+    QueueNode               node( &cacheDatabase, nullptr, 1 );
+    ServerRegistration      gameServer;
     Internal::registerGameServer( node._router, gameServer, 0 );
     node._partyLobby.createParty( 10, 1 );
     node.step( 0 );
@@ -474,10 +474,10 @@ SW_TEST_CASE( MatchQueueTest, PartyLeaderQueuesTheWholePartyAsOneTeam )
 SW_TEST_CASE( MatchQueueTest, LobbyStartPlacesTheLobbyTeams )
 {
     using Internal = MatchQueueTestInternal;
-    MemoryEphemeralDatabase cacheDatabase;
-    cacheDatabase.setManualTimeMs( 0 );
-    QueueNode     node( &cacheDatabase, nullptr, 1 );
-    LobbySnapshot request;
+    ManualClock             cacheClock{ 0 };
+    MemoryEphemeralDatabase cacheDatabase{ cacheClock };
+    QueueNode               node( &cacheDatabase, nullptr, 1 );
+    LobbySnapshot           request;
     request._name           = "scrim";
     request._modeID         = "duo";
     request._maxMemberCount = 4;

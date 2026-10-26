@@ -20,6 +20,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Network/NetTypes.h"
 #include "Core/Network/Transport/IStreamTransport.h"
+#include "Core/Time/Clock.h"
 
 #include "GameFramework/Base/Online/Cache/EphemeralStore.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -42,45 +43,18 @@ namespace sw
 namespace sw
 {
     /**
-     * @class IRespClock
-     * @brief RESP 저장소가 요청 시한과 다시 연결 백오프를 측정하는 시계입니다. 저장소가 실제 시계를 직접 읽지 않고 이것을 받아, 테스트가 손으로 미는 시계를 줄 수 있습니다.
-     * @details 운영은 `RespMonotonicClock` 을 줍니다. 구독 확인을 기다리는 루프(`waitForSubscriptionAck`)는 I/O 진행을 기다리는 것이라 이 시계를 쓰지 않고 실제 시간으로 측정한다.
-     */
-    class IRespClock
-    {
-    public:
-        IRespClock()          = default;
-        virtual ~IRespClock() = default;
-
-        IRespClock( const IRespClock& )            = default;
-        IRespClock& operator=( const IRespClock& ) = default;
-
-        /** @brief 지금 시각(나노초)입니다. 두 시각의 차이로만 쓴다. I/O 스레드에서도 부른다. */
-        virtual int64 nowNanoseconds() const noexcept = 0;
-    };
-} // namespace sw
-
-namespace sw
-{
-    /** @brief 실제 단조 시계(`MonotonicClock`)를 읽는 운영용 시계입니다. */
-    class SW_KIT_SERVER_API RespMonotonicClock final : public IRespClock
-    {
-    public:
-        int64 nowNanoseconds() const noexcept override;
-    };
-} // namespace sw
-
-namespace sw
-{
-    /**
      * @class RespEphemeralStore
      * @brief RESP2 휘발성 저장소입니다. 서비스 스레드 하나가 요청을 맡기고 답을 회수하며, 전송 콜백만 I/O 스레드에서 실행됩니다.
      */
     class SW_KIT_SERVER_API RespEphemeralStore final : public IEphemeralStore, private IStreamHandler
     {
     public:
-        /** @param clock 시한과 백오프를 측정하는 시계이다. 저장소보다 오래 살아야 한다(참조만 들고 있다). */
-        explicit RespEphemeralStore( const IRespClock& clock );
+        /**
+         * @param clock 요청 시한과 다시 연결 백오프를 측정하는 시계이다(운영 `SystemMonotonicClock`, 테스트는 손으로 미는 시계). I/O 스레드에서도 읽는다.
+         *              저장소보다 오래 살아야 한다(참조만 들고 있다). 구독 확인을 기다리는 루프(`waitForSubscriptionAck`)는 I/O 진행을 기다리는 것이라
+         *              이 시계를 쓰지 않고 실제 시간으로 측정한다.
+         */
+        explicit RespEphemeralStore( const IClock& clock );
         ~RespEphemeralStore() override;
 
         /**
@@ -147,7 +121,7 @@ namespace sw
         string      makeKey( string_view key ) const;
         RespCommand makeAuthCommand() const;
 
-        const IRespClock&            _clock;
+        const IClock&                _clock;
         RespStoreConfig              _settings;
         StreamTransportConfig        _transportSettings;
         mutable mutex                _mutex; ///< 두 연결, 받은 메시지, 확인 수를 보호한다. I/O 스레드와 함께 쓴다

@@ -85,11 +85,11 @@ namespace
 SW_TEST_CASE( ServerRegistryTest, RegisteredServerIsSeenAndExpiresWhenHeartbeatStops )
 {
     using Internal = ServerRegistryTestInternal;
-    MemoryEphemeralDatabase database;
-    database.setManualTimeMs( 0 );
-    RegistryNode       gameNode( &database );
-    RegistryNode       lobbyNode( &database );
-    ServerRegistration registration;
+    ManualClock             clock{ 0 };
+    MemoryEphemeralDatabase database{ clock };
+    RegistryNode            gameNode( &database );
+    RegistryNode            lobbyNode( &database );
+    ServerRegistration      registration;
     SW_ASSERT_TRUE( registration.initialize( &gameNode._router, Internal::makeDescriptor( 1 ) ) );
     registration.setState( ServerState::Open );
     registration.update( 0 );
@@ -104,7 +104,7 @@ SW_TEST_CASE( ServerRegistryTest, RegisteredServerIsSeenAndExpiresWhenHeartbeatS
     SW_EXPECT_TRUE( reader.getSnapshot()[0]._descriptor._address == "127.0.0.1" );
 
     registration.update( ServerRegistration::kHeartbeatPeriodMs - 1 ); // 주기 전 — 다시 쓰지 않는다
-    database.advanceTimeMs( ServerRegistration::kRecordTtlMs );        // 하트비트 없이 시한이 지났다
+    clock.advanceMilliseconds( ServerRegistration::kRecordTtlMs );     // 하트비트 없이 시한이 지났다
     Internal::refreshFully( lobbyNode, reader, ServerRegistration::kRecordTtlMs );
     SW_EXPECT_EQUAL( reader.getSnapshot().size(), size_t( 0 ) );
     SW_EXPECT_EQUAL( Internal::countIndexMembers( lobbyNode ), size_t( 0 ) ); // 죽은 멤버를 색인에서 지웠다
@@ -114,17 +114,17 @@ SW_TEST_CASE( ServerRegistryTest, RegisteredServerIsSeenAndExpiresWhenHeartbeatS
 SW_TEST_CASE( ServerRegistryTest, HeartbeatKeepsTheRecordAliveAndStateChangesAreWrittenAtOnce )
 {
     using Internal = ServerRegistryTestInternal;
-    MemoryEphemeralDatabase database;
-    database.setManualTimeMs( 0 );
-    RegistryNode       node( &database );
-    ServerRegistration registration;
+    ManualClock             clock{ 0 };
+    MemoryEphemeralDatabase database{ clock };
+    RegistryNode            node( &database );
+    ServerRegistration      registration;
     SW_ASSERT_TRUE( registration.initialize( &node._router, Internal::makeDescriptor( 3 ) ) );
     registration.setState( ServerState::Open );
     ServerRegistryReader reader;
     reader.initialize( &node._router, "game", 2000 );
     for ( int64 nowMs = 0; nowMs <= 3 * ServerRegistration::kRecordTtlMs; nowMs += 1000 )
     {
-        database.setManualTimeMs( nowMs );
+        clock.setMilliseconds( nowMs );
         registration.update( nowMs );
         (void)node._router.pump();
     }
@@ -146,11 +146,11 @@ SW_TEST_CASE( ServerRegistryTest, HeartbeatKeepsTheRecordAliveAndStateChangesAre
 SW_TEST_CASE( ServerRegistryTest, ShutdownRemovesImmediatelyAndPickAddsPendingLoad )
 {
     using Internal = ServerRegistryTestInternal;
-    MemoryEphemeralDatabase database;
-    database.setManualTimeMs( 0 );
-    RegistryNode       node( &database );
-    ServerRegistration first;
-    ServerRegistration second;
+    ManualClock             clock{ 0 };
+    MemoryEphemeralDatabase database{ clock };
+    RegistryNode            node( &database );
+    ServerRegistration      first;
+    ServerRegistration      second;
     SW_ASSERT_TRUE( first.initialize( &node._router, Internal::makeDescriptor( 1 ) ) );
     SW_ASSERT_TRUE( second.initialize( &node._router, Internal::makeDescriptor( 2 ) ) );
     first.setState( ServerState::Open );
@@ -185,7 +185,8 @@ SW_TEST_CASE( ServerRegistryTest, ShutdownRemovesImmediatelyAndPickAddsPendingLo
 SW_TEST_CASE( ServerRegistryTest, ReaderShutDownBeforeTheRouterIsNeverCalledBack )
 {
     using Internal = ServerRegistryTestInternal;
-    MemoryEphemeralDatabase database;
+    SystemMonotonicClock    clock;
+    MemoryEphemeralDatabase database{ clock };
     RegistryNode            node( &database );
     ServerRegistration      registration;
     SW_ASSERT_TRUE( registration.initialize( &node._router, Internal::makeDescriptor( 1 ) ) );
@@ -240,7 +241,8 @@ SW_TEST_CASE( ServerRegistryTest, RecordRoundTripsAndRejectsBadInput )
     SW_EXPECT_FALSE( ServerRecord::isValidName( "Game" ) );
     SW_EXPECT_FALSE( ServerRecord::isValidName( "" ) );
 
-    MemoryEphemeralDatabase database;
+    SystemMonotonicClock    clock;
+    MemoryEphemeralDatabase database{ clock };
     RegistryNode            node( &database );
     ServerRegistration      registration;
     ServerDescriptor        descriptor = Internal::makeDescriptor( 1 );

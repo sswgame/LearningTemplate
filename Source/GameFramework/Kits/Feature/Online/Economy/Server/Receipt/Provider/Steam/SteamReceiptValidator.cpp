@@ -3,8 +3,6 @@
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/Provider/Steam/SteamReceiptValidator.h"
 
 #include "Core/Container/StringUtil.h"
-#include "Core/Time/MonotonicClock.h"
-#include "Core/Time/WallClock.h"
 
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
@@ -24,8 +22,6 @@ namespace sw
             static constexpr int32  kStatusTooManyRequests  = 429;
             static constexpr int32  kStatusServerError      = 500;
             static constexpr size_t kMaxNotifiedRefundCount = 100000; ///< 겹친 조회에서 같은 주문을 두 번 알리지 않으려고 기억하는 상한
-
-            static int64 nowMonotonicMs() { return MonotonicClock::nowNanoseconds() / constant::kNanosecondsPerMillisecond; }
 
             /** @brief 1970-01-01 부터 (년, 월, 일) 까지의 날 수입니다(그레고리력). */
             static int64 daysFromCivil( int64 year, int64 month, int64 day )
@@ -190,9 +186,8 @@ namespace sw
                "&maxresults=" + to_string( kReportMaxResults );
     }
 
-    void SteamReceiptValidator::submitValidation( const ReceiptValidationRequest& request )
+    void SteamReceiptValidator::submitValidation( const ReceiptValidationRequest& request, UnixMilliseconds now )
     {
-        using Internal = SteamReceiptValidatorInternal;
         if ( isOrderID( request._payload ) == false )
         {
             // 쿼리에 실을 수 없는 영수증은 스팀에 묻지 않고 거절한다(다른 인자를 끼워 넣는 길을 막는다).
@@ -208,7 +203,7 @@ namespace sw
         httpRequest._url       = makeQueryURL( request._payload );
         httpRequest._timeoutMs = _settings._requestTimeoutMs;
         httpRequest._listHeader.push_back( HTTPHeader{ "Accept", "application/json" } );
-        PendingValidation& pending = _mapRequestToPending[_pHTTPClient->submitRequest( httpRequest, Internal::nowMonotonicMs() )];
+        PendingValidation& pending = _mapRequestToPending[_pHTTPClient->submitRequest( httpRequest, now.count() )];
         pending._request           = request;
         pending._orderID           = request._payload;
     }
@@ -260,24 +255,23 @@ namespace sw
         }
     }
 
-    void SteamReceiptValidator::service()
+    void SteamReceiptValidator::update( UnixMilliseconds now )
     {
-        using Internal      = SteamReceiptValidatorInternal;
-        const int64 nowMs   = Internal::nowMonotonicMs();
-        const int64 nowWall = WallClock::nowUnixMilliseconds();
-        _pHTTPClient->update( nowMs );
+        using Internal = SteamReceiptValidatorInternal;
+        // 서버 루프의 시각(유닉스 밀리초) 하나로 HTTP 시한 · 조회 주기 · 보고서 구간을 모두 잰다.
+        _pHTTPClient->update( now.count() );
         // 보고서 조회 — 처음에는 바로, 그 뒤로는 주기마다. 앞 요청이 끝나기 전에는 새로 보내지 않는다.
         const bool bMayReport = _bStopped == SW_FALSE && _reportRequestID == 0;
-        if ( bMayReport && nowMs >= _nextReportMs )
+        if ( bMayReport && now.count() >= _nextReportMs )
         {
-            const int64       sinceMs = ( _lastReportUnixMs != 0 ? _lastReportUnixMs : nowWall ) - _settings._reportLookbackMs;
+            const int64       sinceMs = ( _lastReportUnixMs != 0 ? _lastReportUnixMs : now.count() ) - _settings._reportLookbackMs;
             HTTPClientRequest request;
             request._url       = makeReportURL( sinceMs );
             request._timeoutMs = _settings._requestTimeoutMs;
             request._listHeader.push_back( HTTPHeader{ "Accept", "application/json" } );
-            _reportRequestID   = _pHTTPClient->submitRequest( request, nowMs );
-            _reportStartUnixMs = nowWall;
-            _nextReportMs      = nowMs + _settings._reportPollIntervalMs;
+            _reportRequestID   = _pHTTPClient->submitRequest( request, now.count() );
+            _reportStartUnixMs = now.count();
+            _nextReportMs      = now.count() + _settings._reportPollIntervalMs;
         }
         vector<HTTPClientResponse> listResponse;
         (void)_pHTTPClient->pollResponses( listResponse );
@@ -307,7 +301,7 @@ namespace sw
                     if ( _uniqueSetNotifiedRefund.size() >= Internal::kMaxNotifiedRefundCount )
                         _uniqueSetNotifiedRefund.clear(); // 상한 — 겹친 알림은 서비스가 거래 id 로 한 번만 처리한다
                     _uniqueSetNotifiedRefund.insert( orderID );
-                    int64 refundedMs   = nowWall;
+                    int64 refundedMs   = now.count();
                     int64 parsedRefund = 0;
                     if ( parseTime( Internal::readText( order, "time" ), parsedRefund ) )
                         refundedMs = parsedRefund;
@@ -326,7 +320,6 @@ namespace sw
 
     void SteamReceiptValidator::pollCompletions( vector<ReceiptValidationResult>& outListResult )
     {
-        service();
         for ( ReceiptValidationResult& result : _listDone )
         {
             outListResult.push_back( std::move( result ) );
@@ -336,7 +329,6 @@ namespace sw
 
     void SteamReceiptValidator::pollRefunds( vector<ReceiptRefundNotice>& outListNotice )
     {
-        service();
         for ( ReceiptRefundNotice& notice : _listRefund )
         {
             outListNotice.push_back( std::move( notice ) );

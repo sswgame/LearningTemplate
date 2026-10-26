@@ -80,7 +80,8 @@ SW_TEST_CASE( SocialStreamTest, FriendRequestNotificationAndGuildRoundTrip )
 {
     LoopbackStreamNetwork   network( 7u );
     MemoryServiceDatabase   database;
-    MemoryEphemeralDatabase cacheDatabase;
+    SystemMonotonicClock    cacheClock;
+    MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     LocalServerBusHub       hub;
     SocialOnServer          social;
     test::OnlineTestServer  server( network, &database, &cacheDatabase, &hub, 1 );

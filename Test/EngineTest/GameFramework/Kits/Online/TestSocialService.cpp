@@ -212,7 +212,8 @@ namespace
 SW_TEST_CASE( SocialServiceTest, RequestAcceptAndList )
 {
     MemoryServiceDatabase   database;
-    MemoryEphemeralDatabase cacheDatabase;
+    SystemMonotonicClock    cacheClock;
+    MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     LocalServerBusHub       hub;
     SocialNode              node( &database, &cacheDatabase, &hub, 1 );
     node._service.changeLink( SocialLinkOperation::Request, 1, 2, 100, 1 );
@@ -244,7 +245,8 @@ SW_TEST_CASE( SocialServiceTest, RequestAcceptAndList )
 SW_TEST_CASE( SocialServiceTest, ConcurrentMutualRequestsRetryIntoOneFriendship )
 {
     MemoryServiceDatabase   database;
-    MemoryEphemeralDatabase cacheDatabase;
+    SystemMonotonicClock    cacheClock;
+    MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     LocalServerBusHub       hub;
     SocialNode              rival( &database, &cacheDatabase, &hub, 2 );
     InterleavingConnection  connection( &database, &rival._service, 2, 1 );
@@ -276,7 +278,8 @@ SW_TEST_CASE( SocialServiceTest, ConcurrentMutualRequestsRetryIntoOneFriendship 
 SW_TEST_CASE( SocialServiceTest, RequestByNameFindsRegisteredAccountsOnly )
 {
     MemoryServiceDatabase   database;
-    MemoryEphemeralDatabase cacheDatabase;
+    SystemMonotonicClock    cacheClock;
+    MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     LocalServerBusHub       hub;
     FakeNameIndex           nameIndex;
     nameIndex.add( 2, "bob" );
@@ -301,7 +304,8 @@ SW_TEST_CASE( SocialServiceTest, RequestByNameFindsRegisteredAccountsOnly )
 SW_TEST_CASE( SocialServiceTest, BlockIsVisibleLocallyAndHidesRequests )
 {
     MemoryServiceDatabase   database;
-    MemoryEphemeralDatabase cacheDatabase;
+    SystemMonotonicClock    cacheClock;
+    MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     LocalServerBusHub       hub;
     SocialNode              first( &database, &cacheDatabase, &hub, 1 );
     SocialNode              second( &database, &cacheDatabase, &hub, 2 );
@@ -331,7 +335,8 @@ SW_TEST_CASE( SocialServiceTest, BlockIsVisibleLocallyAndHidesRequests )
 SW_TEST_CASE( SocialServiceTest, PresenceReachesFriendsOnOtherServersAndQueryReadsCache )
 {
     MemoryServiceDatabase   database;
-    MemoryEphemeralDatabase cacheDatabase;
+    SystemMonotonicClock    cacheClock;
+    MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     LocalServerBusHub       hub;
     SocialNode              first( &database, &cacheDatabase, &hub, 1 );
     SocialNode              second( &database, &cacheDatabase, &hub, 2 );
@@ -373,7 +378,8 @@ SW_TEST_CASE( SocialServiceTest, PresenceReachesFriendsOnOtherServersAndQueryRea
 SW_TEST_CASE( SocialServiceTest, StoreFailureWritesNothing )
 {
     MemoryServiceDatabase   database;
-    MemoryEphemeralDatabase cacheDatabase;
+    SystemMonotonicClock    cacheClock;
+    MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     LocalServerBusHub       hub;
     SocialNode              node( &database, &cacheDatabase, &hub, 1 );
     const uint64            hashBefore = database.computeContentHash();

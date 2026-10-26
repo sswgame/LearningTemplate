@@ -93,12 +93,12 @@ namespace sw
         Memory::set( _accessToken.data(), 0, _accessToken.size() );
     }
 
-    bool ServiceAccountTokenSource::request( int64 nowMs )
+    bool ServiceAccountTokenSource::request( UnixMilliseconds now )
     {
         using Internal = ServiceAccountTokenSourceInternal;
         if ( _requestID != 0 )
             return true;
-        const int64 issuedAtSec = nowMs / Internal::kMillisecondsPerSecond;
+        const int64 issuedAtSec = now.toSeconds();
         const int64 expiresSec  = issuedAtSec + kJwtLifetimeMs / Internal::kMillisecondsPerSecond;
         JSONWriter  writer;
         writer.beginObject();
@@ -132,11 +132,11 @@ namespace sw
         httpRequest._timeoutMs = _requestTimeoutMs;
         httpRequest._bodyBytes.assign( reinterpret_cast<const uint8*>( body.data() ), reinterpret_cast<const uint8*>( body.data() ) + body.size() );
         httpRequest._listHeader.push_back( HTTPHeader{ "Content-Type", "application/x-www-form-urlencoded" } );
-        _requestID = _pHTTPClient->submitRequest( httpRequest, nowMs );
+        _requestID = _pHTTPClient->submitRequest( httpRequest, now.count() );
         return true;
     }
 
-    ServiceAccountTokenSource::Outcome ServiceAccountTokenSource::handleResponse( const HTTPClientResponse& response, int64 nowMs )
+    ServiceAccountTokenSource::Outcome ServiceAccountTokenSource::handleResponse( const HTTPClientResponse& response, UnixMilliseconds now )
     {
         using Internal = ServiceAccountTokenSourceInternal;
         if ( _requestID == 0 || response._requestID != _requestID )
@@ -151,7 +151,7 @@ namespace sw
         {
             Memory::set( _accessToken.data(), 0, _accessToken.size() );
             _accessToken = std::move( token );
-            _expiresMs   = nowMs + expiresInSec * Internal::kMillisecondsPerSecond;
+            _expiresMs   = now.count() + expiresInSec * Internal::kMillisecondsPerSecond;
             return Outcome::Granted;
         }
         SW_LOG_WARNING( "The access token request of service account '%#' failed (status %#)", _credentials._clientEmail.c_str(), response._statusCode );

@@ -4,6 +4,7 @@
 
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Network/Transport/IStreamTransport.h"
+#include "Core/Time/Clock.h"
 
 #include "Engine/Observability/ServiceHealthRegistry.h"
 
@@ -100,29 +101,30 @@ namespace sw
             OnlineServerKitEntry         _entry{};
         };
 
-        MemoryServiceDatabase          _memoryDatabase{};
-        MemoryEphemeralDatabase        _memoryCacheDatabase{};
-        OnlineServerConfig             _config{};
-        OnlineServerKitContext         _context{};
-        unique_ptr<IServiceStore>      _store{};
-        unique_ptr<IEphemeralStore>    _cache{};
-        unique_ptr<IStreamTransport>   _ownedTransport{};
-        unique_ptr<IStreamTransport>   _ownedAdminTransport{};
-        unique_ptr<ITLSContext>        _tlsContext{};
-        ServiceScheduler               _scheduler{};
-        ServiceRetentionJob            _retention{};
-        RemoteConfig                   _remoteConfig{};
-        OnlineServiceHost              _host{};
-        unique_ptr<EphemeralServerBus> _bus{};
-        unique_ptr<ServerBus>          _busFront{}; ///< 키트 문맥에 넘기는 타입 있는 앞이다. 전송(`_bus`)은 호스트만 받는다
-        ServerRegistration             _registration{};
-        vector<KitInstance>            _listKit{};
-        ServiceHealthRegistry*         _pHealthRegistry{ nullptr };
-        int64                          _nextRemoteConfigReloadMs{ 0 };
-        int32                          _healthCheckIndex{ -1 };
-        uint8                          _bMemoryCache{ SW_FALSE };
-        uint8                          _bManualCacheTime{ SW_FALSE };
-        uint8                          _bRegistered{ SW_FALSE };
+        MemoryServiceDatabase               _memoryDatabase{};
+        SystemMonotonicClock                _cacheSystemClock{};    ///< 메모리 캐시의 운영 시계
+        ManualClock                         _cacheManualClock{ 0 }; ///< `_bManualCacheTime` 이면 메모리 캐시가 이것을 받고 `update` 가 서비스 시각으로 민다
+        unique_ptr<MemoryEphemeralDatabase> _memoryCacheDatabase{}; ///< 캐시 드라이버가 메모리일 때만 있다. 받는 시계보다 나중에 선언한다(먼저 사라진다)
+        OnlineServerConfig                  _config{};
+        OnlineServerKitContext              _context{};
+        unique_ptr<IServiceStore>           _store{};
+        unique_ptr<IEphemeralStore>         _cache{};
+        unique_ptr<IStreamTransport>        _ownedTransport{};
+        unique_ptr<IStreamTransport>        _ownedAdminTransport{};
+        unique_ptr<ITLSContext>             _tlsContext{};
+        ServiceScheduler                    _scheduler{};
+        ServiceRetentionJob                 _retention{};
+        RemoteConfig                        _remoteConfig{};
+        OnlineServiceHost                   _host{};
+        unique_ptr<EphemeralServerBus>      _bus{};
+        unique_ptr<ServerBus>               _busFront{}; ///< 키트 문맥에 넘기는 타입 있는 앞이다. 전송(`_bus`)은 호스트만 받는다
+        ServerRegistration                  _registration{};
+        vector<KitInstance>                 _listKit{};
+        ServiceHealthRegistry*              _pHealthRegistry{ nullptr };
+        int64                               _nextRemoteConfigReloadMs{ 0 };
+        int32                               _healthCheckIndex{ -1 };
+        uint8                               _bManualCacheTime{ SW_FALSE };
+        uint8                               _bRegistered{ SW_FALSE };
     };
 } // namespace sw
 
@@ -207,10 +209,10 @@ namespace sw
 
         if ( Internal::isMemoryDriver( settings._cache._driver ) )
         {
-            parts._bMemoryCache = SW_TRUE;
-            if ( parts._bManualCacheTime == SW_TRUE )
-                parts._memoryCacheDatabase.setManualTimeMs( nowMs );
-            parts._cache = make_unique<MemoryEphemeralStore>( &parts._memoryCacheDatabase );
+            parts._cacheManualClock.setMilliseconds( nowMs );
+            const IClock& cacheClock   = parts._bManualCacheTime == SW_TRUE ? static_cast<const IClock&>( parts._cacheManualClock ) : parts._cacheSystemClock;
+            parts._memoryCacheDatabase = make_unique<MemoryEphemeralDatabase>( cacheClock );
+            parts._cache               = make_unique<MemoryEphemeralStore>( parts._memoryCacheDatabase.get() );
         }
         else
         {
@@ -441,8 +443,8 @@ namespace sw
             return;
         Parts& parts = *_parts;
         // 메모리 캐시의 만료(TTL)를 서비스와 같은 시계로 계산한다 — 캐시가 제 단조 시계를 쓰면 가짜 시계에서 서버 등록 · 매칭 테이블이 서비스 시각보다 먼저 만료된다.
-        if ( parts._bMemoryCache == SW_TRUE && parts._bManualCacheTime == SW_TRUE )
-            parts._memoryCacheDatabase.setManualTimeMs( nowMs );
+        // 수동 시계를 받지 않은 캐시에는 닿지 않는다(운영 시계를 받았다).
+        parts._cacheManualClock.setMilliseconds( nowMs );
         parts._host.update( nowMs );
         parts._scheduler.update( nowMs );
         for ( Parts::KitInstance& instance : parts._listKit )
@@ -494,10 +496,5 @@ namespace sw
         if ( _parts == nullptr )
             ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
         return _parts->_context;
-    }
-
-    MemoryEphemeralDatabase* OnlineServerRuntime::findMemoryCacheDatabase()
-    {
-        return _parts != nullptr && _parts->_bMemoryCache == SW_TRUE ? &_parts->_memoryCacheDatabase : nullptr;
     }
 } // namespace sw

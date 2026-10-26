@@ -24,7 +24,6 @@ namespace sw
     struct OnlineServerKitContext;
 
     class IStreamTransport;
-    class MemoryEphemeralDatabase;
     class MetricRegistry;
     class OnlineServiceHost;
     class ServiceHealthRegistry;
@@ -95,8 +94,6 @@ namespace sw
         void collectKitNames( vector<string>& outListName ) const;
         /** @brief 키트가 내놓은 인터페이스와 기반을 가진 문맥입니다(테스트와 진단). */
         const OnlineServerKitContext& getContext() const;
-        /** @brief 메모리 캐시이면 그 데이터베이스입니다(가짜 시각을 넣는 테스트). 아니면 nullptr 입니다. */
-        MemoryEphemeralDatabase* findMemoryCacheDatabase();
 
     private:
         struct Parts;

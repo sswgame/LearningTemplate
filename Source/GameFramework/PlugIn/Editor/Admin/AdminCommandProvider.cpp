@@ -5,7 +5,6 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/String/StringBuilder.h"
-#include "Core/Time/WallClock.h"
 
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"
 
@@ -86,11 +85,11 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    FakeAdminProvider::FakeAdminProvider()
+    FakeAdminProvider::FakeAdminProvider( int64 nowMs )
         : _listAccount{}
         , _listAudit{}
         , _listRecorded{}
-        , _nowMs{ 0 }
+        , _nowMs{ nowMs }
         , _actingRole{ AdminRole::Operator }
     {
         FakeAdminAccount playerOne;
@@ -117,11 +116,6 @@ namespace sw::editor
     FakeAdminAccount* FakeAdminProvider::findMutableAccount( AccountID accountID )
     {
         return VectorUtil::findBy<&FakeAdminAccount::_accountID>( _listAccount, accountID );
-    }
-
-    int64 FakeAdminProvider::getNowMs() const
-    {
-        return _nowMs != 0 ? _nowMs : WallClock::nowUnixMilliseconds();
     }
 
     void FakeAdminProvider::sendCommand( uint16 method, const AdminRequest& request, const NetIdempotencyKey& key, AdminClient::ReplyDelegate onReply )

@@ -116,7 +116,7 @@ namespace sw
             outError = "the TLS private key passphrase environment variable is not set (name in _tlsPrivateKeySecretEnvironment)";
             return false;
         }
-        return _runtime.initialize( std::move( settings ), WallClock::nowUnixMilliseconds(), outError );
+        return _runtime.initialize( std::move( settings ), WallClock::nowUnixMilliseconds(), outError ); // 예외 — 호스트 최상위(서버 서비스의 뿌리)가 시각을 정한다
     }
 
     bool OnlineServerService::fillStoreSettings( const ServerConfig& serverConfig, const OnlineServerConfig& onlineConfig, OnlineServerRuntimeConfig& outSettings,

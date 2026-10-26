@@ -131,6 +131,7 @@ namespace
     {
         LoopbackStreamNetwork   _network;
         MemoryServiceDatabase   _database;
+        ManualClock             _cacheClock;
         MemoryEphemeralDatabase _cacheDatabase;
         LocalServerBusHub       _hub;
         ServerNode              _serverA;
@@ -143,7 +144,8 @@ namespace
         MultiServerRig()
             : _network{ 43u }
             , _database{}
-            , _cacheDatabase{}
+            , _cacheClock{ 800000 }
+            , _cacheDatabase{ _cacheClock }
             , _hub{}
             , _serverA{ _network, _database, _cacheDatabase, _hub, 1 }
             , _serverB{ _network, _database, _cacheDatabase, _hub, 2 }
@@ -152,7 +154,6 @@ namespace
             , _aliceOnB{ _network, 2 }
             , _nowMs{ 800000 }
         {
-            _cacheDatabase.setManualTimeMs( _nowMs );
         }
 
         void step( int32 count = 1 )
@@ -160,7 +161,7 @@ namespace
             for ( int32 index = 0; index < count; ++index )
             {
                 _nowMs += 20;
-                _cacheDatabase.advanceTimeMs( 20 );
+                _cacheClock.setMilliseconds( _nowMs ); // 캐시 만료를 서비스와 같은 시각으로 잰다
                 _aliceOnA._client.update( _nowMs );
                 _bobOnB._client.update( _nowMs );
                 _aliceOnB._client.update( _nowMs );

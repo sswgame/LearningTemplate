@@ -116,7 +116,7 @@ SW_TEST_CASE( AdminToolSessionTest, AuditListsNewestFirstAndFiltersBySubject )
 
 SW_TEST_CASE( AdminToolSessionTest, SameKeyIsReplayedWithoutASecondEffect )
 {
-    FakeAdminProvider     provider;
+    FakeAdminProvider     provider{ 1000000 }; // 고정 시각 — 감사 기록의 시각만 쓴다
     AdminToolReplyCapture capture;
     AdminRequest          request;
     request._accountID          = FakeAdminProvider::kSeedPlayerID;

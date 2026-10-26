@@ -83,12 +83,13 @@ namespace sw::editor
         /** @brief 한 번에 지급하거나 회수할 수 있는 양의 상한입니다. 넘으면 `CapExceeded` 입니다. */
         static constexpr int64 kMaxAdjustAmount = 1000000000ll;
 
-        FakeAdminProvider();
+        /** @param nowMs 처음 시각(유닉스 밀리초)입니다. 시계를 읽지 않으므로 그 뒤로는 `setNowMs` 로만 흐릅니다. */
+        explicit FakeAdminProvider( int64 nowMs );
 
         /** @brief 명령을 보내는 GM 의 등급입니다. 기본은 `Operator` 입니다. */
         void      setActingRole( AdminRole role ) { _actingRole = role; }
         AdminRole getActingRole() const { return _actingRole; }
-        /** @brief 0 이 아니면 감사 기록과 제재 시각에 이 시각을 씁니다(테스트용). 0 이면 벽시계입니다. */
+        /** @brief 감사 기록과 제재 시각에 쓰는 시각(유닉스 밀리초)입니다. 세션이 명령을 보내기 전에 넣고, 테스트는 고정 시각을 넣습니다. */
         void setNowMs( int64 nowMs ) { _nowMs = nowMs; }
 
         const FakeAdminAccount*          findAccount( AccountID accountID ) const;
@@ -114,7 +115,7 @@ namespace sw::editor
         AdminResult       executeSanction( const AdminRequest& request, AdminReply& outReply );
         AdminResult       executeListAudit( const AdminRequest& request, AdminReply& outReply ) const;
         void              appendAudit( const utf8* pAction, const AdminRequest& request, string_view before, string_view after );
-        int64             getNowMs() const;
+        int64             getNowMs() const { return _nowMs; }
         FakeAdminAccount* findMutableAccount( AccountID accountID );
 
         vector<FakeAdminAccount>  _listAccount;

@@ -111,7 +111,8 @@ namespace
 
 SW_TEST_CASE( CacheRecordUpdaterTest, RetriesAfterConcurrentWrite )
 {
-    MemoryEphemeralDatabase database;
+    SystemMonotonicClock    clock;
+    MemoryEphemeralDatabase database{ clock };
     UpdaterNode             node( &database );
     node.run( 0, 0x01 ); // 없던 기록 — IfAbsent 로 만든다
     SW_ASSERT_TRUE( node._result == MatchmakingResult::Ok );
@@ -129,7 +130,8 @@ SW_TEST_CASE( CacheRecordUpdaterTest, RetriesAfterConcurrentWrite )
 
 SW_TEST_CASE( CacheRecordUpdaterTest, GivesUpAfterMaxAttemptAndRejectWritesNothing )
 {
-    MemoryEphemeralDatabase database;
+    SystemMonotonicClock    clock;
+    MemoryEphemeralDatabase database{ clock };
     UpdaterNode             node( &database );
     node.run( 0, 0x01 );
     node.run( CacheRecordUpdater::kMaxAttempt, 0x02 ); // 매번 끼어듦

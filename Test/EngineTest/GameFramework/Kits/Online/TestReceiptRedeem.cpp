@@ -40,7 +40,7 @@ namespace
 
         ReceiptValidationResult validate( const utf8* pPayload, uint64 accountID )
         {
-            [[maybe_unused]] const uint64   ticket = _registry.submitValidation( "fake", pPayload, accountID );
+            [[maybe_unused]] const uint64   ticket = _registry.submitValidation( "fake", pPayload, accountID, UnixMilliseconds{ 1000 } );
             vector<ReceiptValidationResult> listResult;
             _registry.pollCompletions( listResult );
             SW_ASSERT( listResult.size() == 1 && listResult[0]._ticket == ticket );
@@ -72,17 +72,22 @@ namespace
     {
     public:
         const utf8* getStoreName() const override { return "Bad.Store"; }
-        void        submitValidation( const ReceiptValidationRequest& request ) override { (void)request; }
-        void        pollCompletions( vector<ReceiptValidationResult>& outListResult ) override { (void)outListResult; }
-        void        pollRefunds( vector<ReceiptRefundNotice>& outListNotice ) override { (void)outListNotice; }
+        void        submitValidation( const ReceiptValidationRequest& request, UnixMilliseconds now ) override
+        {
+            (void)request;
+            (void)now;
+        }
+        void update( UnixMilliseconds now ) override { (void)now; }
+        void pollCompletions( vector<ReceiptValidationResult>& outListResult ) override { (void)outListResult; }
+        void pollRefunds( vector<ReceiptRefundNotice>& outListNotice ) override { (void)outListNotice; }
     };
 } // namespace
 
 SW_TEST_CASE( ReceiptRedeemTest, FakeValidatorCompletesOnTheNextPoll )
 {
     RedeemFixture fixture;
-    SW_EXPECT_EQUAL( fixture._registry.submitValidation( "nostore", "x", 1 ), uint64( 0 ) );
-    const uint64 ticket = fixture._registry.submitValidation( "fake", "fake|gem100|tx1|ok", 1 );
+    SW_EXPECT_EQUAL( fixture._registry.submitValidation( "nostore", "x", 1, UnixMilliseconds{ 1000 } ), uint64( 0 ) );
+    const uint64 ticket = fixture._registry.submitValidation( "fake", "fake|gem100|tx1|ok", 1, UnixMilliseconds{ 1000 } );
     SW_EXPECT_EQUAL( fixture._fake.getPendingCount(), 1 );
     vector<ReceiptValidationResult> listResult;
     fixture._registry.pollCompletions( listResult );

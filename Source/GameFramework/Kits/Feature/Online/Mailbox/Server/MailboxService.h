@@ -60,10 +60,16 @@ namespace sw
     /** @brief 전송과 무관한 요청 하나입니다. */
     struct MailboxCall
     {
+        /** @param nowMs 요청의 시각(서버 루프의 유닉스 밀리초)입니다. 필수입니다 — 서비스가 다른 시각으로 메우지 않습니다. */
+        explicit MailboxCall( int64 nowMs )
+            : _nowMs{ nowMs }
+        {
+        }
+
         MailboxRequest    _request{};
         NetIdempotencyKey _idempotencyKey{};
         AccountID         _accountID{ kInvalidAccountID };
-        int64             _nowMs{ 0 }; ///< 0이면 마지막 `tick` 의 시각을 쓴다
+        int64             _nowMs;
         uint16            _method{ 0 };
     };
 } // namespace sw

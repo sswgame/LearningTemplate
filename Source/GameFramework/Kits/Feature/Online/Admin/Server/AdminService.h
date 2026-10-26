@@ -116,7 +116,6 @@ namespace sw
         AdminServiceConfig  _settings;
         IServiceStore*      _pStore;
         IDAllocator<uint64> _callIDAllocator;
-        int64               _nowMs;
         int32               _pendingSeedCount;
     };
 } // namespace sw

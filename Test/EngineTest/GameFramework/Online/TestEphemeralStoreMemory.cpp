@@ -12,21 +12,22 @@ namespace
 {
     struct MemoryEphemeralFixture
     {
+        ManualClock             _clock;
         MemoryEphemeralDatabase _database;
         MemoryEphemeralStore    _store;
         MemoryEphemeralStore    _secondStore;
 
         MemoryEphemeralFixture()
-            : _database{}
+            : _clock{ 1000000 }
+            , _database{ _clock }
             , _store{ &_database }
             , _secondStore{ &_database }
         {
-            _database.setManualTimeMs( 1000000 );
         }
 
         IEphemeralStore& getStore() { return _store; }
         IEphemeralStore& getSecondStore() { return _secondStore; }
-        void             advanceTimeMs( int64 deltaMs ) { _database.advanceTimeMs( deltaMs ); }
+        void             advanceTimeMs( int64 deltaMs ) { _clock.advanceMilliseconds( deltaMs ); }
 
         string makeKey( const utf8* pName )
         {
@@ -41,7 +42,8 @@ SW_EPHEMERAL_STORE_CONTRACT_SUITE( EphemeralStoreMemoryTest, MemoryEphemeralFixt
 
 SW_TEST_CASE( EphemeralStoreMemoryTest, ShutdownAnswersUnavailableAndDropsSubscriptions )
 {
-    MemoryEphemeralDatabase database;
+    ManualClock             clock{ 1000000 };
+    MemoryEphemeralDatabase database{ clock };
     MemoryEphemeralStore    publisher{ &database };
     MemoryEphemeralStore    subscriber{ &database };
     subscriber.subscribe( "bus:x" );

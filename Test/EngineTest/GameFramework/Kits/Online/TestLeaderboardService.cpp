@@ -75,7 +75,8 @@ SW_TEST_CASE( LeaderboardServiceTest, BestKeepsHighestAndTopListsWithNames )
 {
     using Internal = LeaderboardServiceTestInternal;
     MemoryServiceDatabase   database;
-    MemoryEphemeralDatabase cacheDatabase;
+    SystemMonotonicClock    cacheClock;
+    MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     BoardNode               node( &database, &cacheDatabase );
     SW_ASSERT_TRUE( node._service.registerBoard( Internal::makeBoard( "kills", LeaderboardUpdate::Best ) ) );
     SW_EXPECT_FALSE( node._service.registerBoard( Internal::makeBoard( "Kills", LeaderboardUpdate::Best ) ) ); // id 규칙
@@ -116,7 +117,8 @@ SW_TEST_CASE( LeaderboardServiceTest, ScoresOfRanksOnlyTheGivenAccounts )
 {
     using Internal = LeaderboardServiceTestInternal;
     MemoryServiceDatabase   database;
-    MemoryEphemeralDatabase cacheDatabase;
+    SystemMonotonicClock    cacheClock;
+    MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     BoardNode               node( &database, &cacheDatabase );
     SW_ASSERT_TRUE( node._service.registerBoard( Internal::makeBoard( "kills", LeaderboardUpdate::Best ) ) );
     node._service.submitScore( "kills", 1, "alice", 10, 0, 1 );
@@ -148,7 +150,8 @@ SW_TEST_CASE( LeaderboardServiceTest, ScoresOfRanksOnlyTheGivenAccounts )
 SW_TEST_CASE( LeaderboardServiceTest, JoinedAccountStatsAreKeptInMemoryForMatchmaking )
 {
     MemoryServiceDatabase   database;
-    MemoryEphemeralDatabase cacheDatabase;
+    SystemMonotonicClock    cacheClock;
+    MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     BoardNode               node( &database, &cacheDatabase );
     node._service.changeStat( 7, "p", "mmr_duo", 1700, LeaderboardUpdate::Latest, 0, 1 );
     node.step();
@@ -172,7 +175,8 @@ SW_TEST_CASE( LeaderboardServiceTest, AscendingSumAndLatest )
 {
     using Internal = LeaderboardServiceTestInternal;
     MemoryServiceDatabase   database;
-    MemoryEphemeralDatabase cacheDatabase;
+    SystemMonotonicClock    cacheClock;
+    MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     BoardNode               node( &database, &cacheDatabase );
     SW_ASSERT_TRUE( node._service.registerBoard( Internal::makeBoard( "lap_time", LeaderboardUpdate::Best, LeaderboardOrder::Ascending ) ) );
     SW_ASSERT_TRUE( node._service.registerBoard( Internal::makeBoard( "gold_earned", LeaderboardUpdate::Sum ) ) );
@@ -200,7 +204,8 @@ SW_TEST_CASE( LeaderboardServiceTest, DailyBoardStartsEmptyAfterReset )
 {
     using Internal = LeaderboardServiceTestInternal;
     MemoryServiceDatabase   database;
-    MemoryEphemeralDatabase cacheDatabase;
+    SystemMonotonicClock    cacheClock;
+    MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     BoardNode               node( &database, &cacheDatabase );
     SW_ASSERT_TRUE( node._service.registerBoard( Internal::makeBoard( "daily_runs", LeaderboardUpdate::Sum, LeaderboardOrder::Descending, LeaderboardReset::Daily ) ) );
     node._service.submitScore( "daily_runs", 1, "a", 3, Internal::kMonday20261005Ms + 1000, 1 );
@@ -221,7 +226,8 @@ SW_TEST_CASE( LeaderboardServiceTest, LostCacheIsRebuiltFromStoreWithTheSameOrde
     MemoryServiceDatabase database;
     int64                 bestScore = 0;
     {
-        MemoryEphemeralDatabase cacheDatabase;
+        SystemMonotonicClock    cacheClock;
+        MemoryEphemeralDatabase cacheDatabase{ cacheClock };
         BoardNode               node( &database, &cacheDatabase );
         SW_ASSERT_TRUE( node._service.registerBoard( Internal::makeBoard( "kills", LeaderboardUpdate::Best ) ) );
         for ( AccountID accountID = 1; accountID <= 300; ++accountID ) // 다시 채우기 묶음(256)보다 많이 — 점수는 서로 다르다(307 은 소수)
@@ -232,7 +238,8 @@ SW_TEST_CASE( LeaderboardServiceTest, LostCacheIsRebuiltFromStoreWithTheSameOrde
         }
         node.step();
     }
-    MemoryEphemeralDatabase emptyCache; // 캐시 서버가 비었다
+    SystemMonotonicClock    emptyCacheClock;
+    MemoryEphemeralDatabase emptyCache{ emptyCacheClock }; // 캐시 서버가 비었다
     BoardNode               node( &database, &emptyCache );
     SW_ASSERT_TRUE( node._service.registerBoard( Internal::makeBoard( "kills", LeaderboardUpdate::Best ) ) );
     node._service.readTop( "kills", 0, 3, 0, 1 );
@@ -258,7 +265,8 @@ SW_TEST_CASE( LeaderboardServiceTest, StatFeedsLinkedBoardAndStoreFailure )
 {
     using Internal = LeaderboardServiceTestInternal;
     MemoryServiceDatabase   database;
-    MemoryEphemeralDatabase cacheDatabase;
+    SystemMonotonicClock    cacheClock;
+    MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     BoardNode               node( &database, &cacheDatabase );
     LeaderboardDefinition   linked = Internal::makeBoard( "total_wins", LeaderboardUpdate::Latest );
     linked._sourceStat             = "wins";

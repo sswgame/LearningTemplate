@@ -97,7 +97,8 @@ SW_TEST_CASE( ChatStreamTest, ChannelChatBetweenTwoClientsWithEchoAndErrors )
 {
     LoopbackStreamNetwork   network( 5u );
     MemoryServiceDatabase   database;
-    MemoryEphemeralDatabase cacheDatabase;
+    SystemMonotonicClock    cacheClock;
+    MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     LocalServerBusHub       hub;
     ChatOnServer            chat;
     test::OnlineTestServer  server( network, &database, &cacheDatabase, &hub, 1 );
@@ -164,7 +165,8 @@ SW_TEST_CASE( ChatStreamTest, WhisperHistoryAndMuteAcrossTwoServers )
 {
     LoopbackStreamNetwork   network( 6u );
     MemoryServiceDatabase   database;
-    MemoryEphemeralDatabase cacheDatabase;
+    SystemMonotonicClock    cacheClock;
+    MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     LocalServerBusHub       hub;
     ChatOnServer            firstChat;
     ChatOnServer            secondChat;

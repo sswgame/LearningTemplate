@@ -192,8 +192,9 @@ namespace sw
 
     void FcmPushProvider::queueSend( uint64 deliveryID, string&& bodyJSON, int64 nowMs )
     {
-        vector<uint8> bodyBytes = FcmPushProviderInternal::toBytes( bodyJSON );
-        if ( _tokenSource.hasValidToken( nowMs ) )
+        vector<uint8>          bodyBytes = FcmPushProviderInternal::toBytes( bodyJSON );
+        const UnixMilliseconds now{ nowMs }; // 서버 루프의 nowMs 는 유닉스 밀리초다 — 서명 토큰의 iat · exp 가 된다
+        if ( _tokenSource.hasValidToken( now ) )
         {
             submitSend( deliveryID, bodyBytes, nowMs );
             return;
@@ -201,7 +202,7 @@ namespace sw
         Waiting& waiting    = _listWaiting.emplace_back();
         waiting._deliveryID = deliveryID;
         waiting._bodyBytes  = std::move( bodyBytes );
-        if ( _tokenSource.request( nowMs ) == false )
+        if ( _tokenSource.request( now ) == false )
             flushWaiting( ServiceAccountTokenSource::Outcome::Rejected, nowMs ); // 서명하지 못했다 — 키가 틀렸다
     }
 
@@ -266,7 +267,7 @@ namespace sw
         (void)_pHTTPClient->pollResponses( listResponse );
         for ( const HTTPClientResponse& response : listResponse )
         {
-            const ServiceAccountTokenSource::Outcome outcome = _tokenSource.handleResponse( response, nowMs );
+            const ServiceAccountTokenSource::Outcome outcome = _tokenSource.handleResponse( response, UnixMilliseconds{ nowMs } );
             if ( outcome != ServiceAccountTokenSource::Outcome::None )
             {
                 flushWaiting( outcome, nowMs );
