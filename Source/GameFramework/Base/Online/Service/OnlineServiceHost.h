@@ -17,6 +17,7 @@
  *          - **Hello 는 다른 어떤 바이트보다 먼저 온라인 스키마 해시(`OnlineProtocolRegistry`)를 비교한다.** 다르면 `kVersionMismatch` 와 서버 해시로 답하고 연결을 닫는다.
  *            해시는 `initialize` 때 한 번 정한다. 이 비교는 B 형식이 아니라 고정된 작은 형식이라 스키마가 바뀌어도 늘 읽힌다.
  *          - **수명 계약**: 서비스는 빌려 쓴다. 호스트 `shutdown` 이 서비스마다 `onHostShutdown` 을 한 번 불러 호스트 포인터와 구독을 떼게 한다.
+ *            버스 구독은 `subscribeServerBus` 가 돌려준 구독(`Subscription`)이 소유한다 — 서비스가 먼저 사라지면 구독이 풀리고, 호스트가 먼저 내려가면 무효가 된다.
  *            그래서 서비스 객체는 호스트보다 먼저 종료돼도 늦게 종료돼도 된다.
  *            서비스 쪽에서 맡긴 비동기 일(캐시 라우터, 접속 상태 찾기)은 서비스 `shutdown` 이 `cancel` 한다.
  */
@@ -25,6 +26,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Log/LogContext.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/BitStream.h"
@@ -163,7 +165,7 @@ namespace sw
      * @class OnlineServiceHost
      * @brief 서비스 호스트입니다.
      */
-    class SW_GF_API OnlineServiceHost final : public IStreamEndpointListener, public INetRequestHandler
+    class SW_GF_API OnlineServiceHost final : public IStreamEndpointListener, public INetRequestHandler, private SubscriptionSource
     {
     public:
         OnlineServiceHost();
@@ -215,9 +217,12 @@ namespace sw
 
         /** @brief 캐시 답과 채널 메시지를 나눠 주는 라우터입니다. 캐시가 없으면(서버 한 대) nullptr 이며, 호스트 `tick` 이 비웁니다. */
         EphemeralStoreRouter* getEphemeralRouter();
-        /** @brief @p pService 가 @p topic 의 버스 메시지를 받게 합니다. 같은 주제를 둘이 구독해도 버스에는 한 번만 구독하며, 버스가 없으면 아무것도 하지 않습니다. */
-        void subscribeServerBus( string_view topic, IOnlineHostService* pService );
-        void unsubscribeServerBus( string_view topic, IOnlineHostService* pService );
+        /**
+         * @brief @p pService 가 @p topic 의 버스 메시지를 받게 하고, 그 구독을 돌려줍니다. 구독이 사라지면 끊고, 그 주제를 듣는 서비스가 없으면 버스 구독도 닫습니다.
+         * @details 같은 주제를 둘이 구독해도 버스에는 한 번만 구독한다. 버스가 없거나(서버 한 대 · `initialize` 전) 같은 서비스가 같은 주제를 이미 구독했으면
+         *          오류를 남기고 빈 구독을 돌려준다 — 서버 한 대인지는 부르는 쪽이 `getServerBus` 로 먼저 가른다. 호스트가 `shutdown` 하면 남은 구독은 무효가 된다.
+         */
+        [[nodiscard]] Subscription subscribeServerBus( string_view topic, IOnlineHostService* pService );
 
         RemoteConfig* getRemoteConfig() const { return _settings._pRemoteConfig; }
         /** @brief 버스의 타입 있는 앞입니다. 버스가 없으면(서버 한 대) nullptr 입니다. `initialize` 뒤부터 있습니다. */
@@ -253,7 +258,11 @@ namespace sw
         {
             string              _topic{};
             IOnlineHostService* _pService{ nullptr };
+            uint64              _subscriptionID{ 0 }; ///< 이 항목을 소유하는 구독(`Subscription`)이 찾는 번호
         };
+
+        /** @brief 구독 @p id 가 풀렸습니다. 그 항목을 지우고, 주제를 듣는 서비스가 더 없으면 버스 구독을 닫습니다. */
+        void releaseSubscription( uint64 id ) override;
 
         void handleHello( const NetRequestContext& context, ConnectionState& connection );
         /**
@@ -281,7 +290,8 @@ namespace sw
         unique_ptr<ServerBus>                            _pServerBus;        ///< `_settings._pServerBusTransport` 의 앞이다
         unique_ptr<ListenerTransport>                    _listenerTransport; ///< 빌린 전송(플레이어 · GM)을 묶은 것. 엔드포인트는 이것 하나를 본다
         int64                                            _nowMs;
-        uint64                                           _schemaHash; ///< `initialize` 때 `OnlineProtocolRegistry::computeSchemaHash` 로 정한다
+        uint64                                           _nextBusSubscriptionID; ///< 다음 버스 구독 번호(0 은 쓰지 않는다)
+        uint64                                           _schemaHash;            ///< `initialize` 때 `OnlineProtocolRegistry::computeSchemaHash` 로 정한다
         uint8                                            _bInitialized;
     };
 } // namespace sw

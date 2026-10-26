@@ -95,11 +95,7 @@ namespace sw
     void AbilityTaskWaitGameplayEvent::onDestroy( bool bAbilityEnded )
     {
         (void)bAbilityEnded;
-        GameplayAbility*        pAbility       = getAbility();
-        AbilitySystemComponent* pAbilitySystem = pAbility != nullptr ? pAbility->getAbilitySystem() : nullptr;
-        if ( pAbilitySystem != nullptr && _subscription.isValid() )
-            pAbilitySystem->unregisterGameplayEvent( _eventTag, _subscription );
-        _subscription = DelegateHandle{};
+        _subscription.reset();
     }
 
     void AbilityTaskWaitGameplayEvent::handleEvent( const GameplayEventData& payload )

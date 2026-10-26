@@ -445,8 +445,8 @@ SW_TEST_CASE( AbilitySystemTest, GrantedTagsAreCountedAndGateApplicationAndClean
     addPowerAttribute( *pAbilitySystem, 0.0f );
     const hashed_string power{ "Power" };
 
-    int32 tagEventCount = 0;
-    (void)pAbilitySystem->getOwnedTagCounts().registerChanged( SW_DELEGATE_LAMBDA( GameplayTagCountContainer::TagChangedDelegate, [&tagEventCount]( TagID tag, int32 newCount )
+    int32              tagEventCount   = 0;
+    const Subscription tagSubscription = pAbilitySystem->getOwnedTagCounts().registerChanged( SW_DELEGATE_LAMBDA( GameplayTagCountContainer::TagChangedDelegate, [&tagEventCount]( TagID tag, int32 newCount )
     {
         (void)newCount;
         if ( tag == "State.Burning"_tag )
@@ -492,8 +492,8 @@ SW_TEST_CASE( AbilitySystemTest, DamageExecutionMitigatesByArmorAndKillsExactlyO
     EventDispatcher                   dispatcher;
     const AbilityTestScopedDispatcher scopedDispatcher{ dispatcher };
     vector<AbilityOwnerDiedEvent>     listDied;
-    dispatcher.subscribe<AbilityOwnerDiedEvent>( gameEventChannel(), SW_DELEGATE_LAMBDA( Delegate<void( const AbilityOwnerDiedEvent& )>, [&listDied]( const AbilityOwnerDiedEvent& event )
-    { listDied.push_back( event ); } ) );
+    const Subscription                diedSubscription = dispatcher.subscribe<AbilityOwnerDiedEvent>( gameEventChannel(), SW_DELEGATE_LAMBDA( Delegate<void( const AbilityOwnerDiedEvent& )>, [&listDied]( const AbilityOwnerDiedEvent& event )
+                   { listDied.push_back( event ); } ) );
 
     GameObjectManager       manager;
     AbilitySystemComponent* pAttacker = spawnCombatant( manager, "Attacker", 100.0f, 0.0f, 20.0f );
@@ -511,8 +511,8 @@ SW_TEST_CASE( AbilitySystemTest, DamageExecutionMitigatesByArmorAndKillsExactlyO
     GameplayEffectSpec spec = pAttacker->makeOutgoingSpec( pDamage );
     spec.setSetByCallerMagnitude( "Damage", 30.0f );
 
-    int32 hitCount = 0;
-    (void)pTarget->registerGameplayEvent( CombatAttributeSet::getHitEventTag(), SW_DELEGATE_LAMBDA( AbilitySystemComponent::GameplayEventDelegate, [&hitCount]( const GameplayEventData& payload )
+    int32              hitCount        = 0;
+    const Subscription hitSubscription = pTarget->registerGameplayEvent( CombatAttributeSet::getHitEventTag(), SW_DELEGATE_LAMBDA( AbilitySystemComponent::GameplayEventDelegate, [&hitCount]( const GameplayEventData& payload )
     {
         (void)payload;
         ++hitCount;
@@ -823,8 +823,8 @@ SW_TEST_CASE( AbilitySystemTest, CatalogXMLGrantsAnAbilitySetAndRunsADataOnlyAbi
     SW_EXPECT_TRUE( pAbilitySystem->setAttributeBaseValue( "Stamina", 150.0f ) );
     SW_EXPECT_NEAR_EQUAL( 100.0f, pAbilitySystem->getAttributeValue( "Stamina" ).value(), 0.001f );
 
-    int32 healCueCount = 0;
-    (void)pAbilitySystem->registerGameplayCue( SW_DELEGATE_LAMBDA( AbilitySystemComponent::GameplayCueDelegate, [&healCueCount]( const GameplayCueEvent& cue )
+    int32              healCueCount    = 0;
+    const Subscription cueSubscription = pAbilitySystem->registerGameplayCue( SW_DELEGATE_LAMBDA( AbilitySystemComponent::GameplayCueDelegate, [&healCueCount]( const GameplayCueEvent& cue )
     {
         if ( cue._cueTag == "GameplayCue.Heal"_tag && cue._phase == GameplayCuePhase::Executed )
             ++healCueCount;

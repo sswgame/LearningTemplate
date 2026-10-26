@@ -179,9 +179,9 @@ SW_TEST_CASE( ConfigManagerTest, ReloadConfigFileUpdatesInPlaceAndNotifies )
     SW_ASSERT_NOT_NULL( pBefore );
     SW_EXPECT_EQUAL( 1u, manager.getReloadableCount() );
 
-    uint32        notifyCount{ 0 };
-    hashed_string notifiedType{};
-    manager.onConfigReloaded().add( SW_DELEGATE_LAMBDA( Delegate<void( const hashed_string& )>, [&notifyCount, &notifiedType]( const hashed_string& typeName )
+    uint32             notifyCount{ 0 };
+    hashed_string      notifiedType{};
+    const Subscription reloadSubscription = manager.onConfigReloaded().add( SW_DELEGATE_LAMBDA( Delegate<void( const hashed_string& )>, [&notifyCount, &notifiedType]( const hashed_string& typeName )
     {
         ++notifyCount;
         notifiedType = typeName;

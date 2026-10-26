@@ -136,6 +136,7 @@ namespace sw
         , _pCommandLineSubsystem{ nullptr }
         , _pEventDispatcher{ nullptr }
         , _pConfigManager{ nullptr }
+        , _configReloadedSubscription{}
         , _shellActions{}
         , _listFrameObserver{}
         , _runTitle{}
@@ -262,13 +263,13 @@ namespace sw
             startupParts                   = engine::addStartupSubsystems( _startup, std::move( startupSetup ) );
             EngineCompressionCodecUtil::registerAll( *startupParts._pCodecRegistry );
             // 다시 읽기 알림은 엔진 루프가 받는다.
-            _pConfigManager = startupParts._pConfigManager;
-            _pConfigManager->onConfigReloaded().add( SW_DELEGATE_METHOD( Delegate<void( const hashed_string& )>, &Engine::onConfigReloaded, this ) );
-            _pInputManager = startupParts._pInputManager;
-            _pAudioService = startupParts._pAudio;
-            _pSceneManager = startupParts._pSceneManager;
-            _pFontService  = startupParts._pFontService;
-            _pUISystem     = startupParts._pUISystem;
+            _pConfigManager             = startupParts._pConfigManager;
+            _configReloadedSubscription = _pConfigManager->onConfigReloaded().add( SW_DELEGATE_METHOD( Delegate<void( const hashed_string& )>, &Engine::onConfigReloaded, this ) );
+            _pInputManager              = startupParts._pInputManager;
+            _pAudioService              = startupParts._pAudio;
+            _pSceneManager              = startupParts._pSceneManager;
+            _pFontService               = startupParts._pFontService;
+            _pUISystem                  = startupParts._pUISystem;
 #if defined( SW_WITH_CLIENT_CODE )
             _pRHISubsystem  = startupParts._pRHI;
             _pFrameRenderer = &startupParts._pFrameRendererSubsystem->getFrameRenderer();
@@ -395,6 +396,7 @@ namespace sw
         _services.unbind<ShellInputActions>();
         // 단계가 소유한 객체를 초기화 순서의 역순으로 소멸시킨다: UI → 텔레메트리 → 렌더러 쪽 → RHI →
         // 글꼴 → 씬 → 입력 · 오디오 → 태스크 → 셰이더 캐시 → 엔진 데이터 → 리소스 → 설정 → 리플렉션 → 압축. 기동이 어디서 멈췄든 모든 단계를 해제한다.
+        _configReloadedSubscription.reset();
         _startup.destroyAll();
         _pRHISubsystem  = nullptr;
         _pRHI           = nullptr;

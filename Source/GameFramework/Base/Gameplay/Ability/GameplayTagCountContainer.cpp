@@ -83,14 +83,9 @@ namespace sw
         }
     }
 
-    DelegateHandle GameplayTagCountContainer::registerChanged( const TagChangedDelegate& delegate )
+    Subscription GameplayTagCountContainer::registerChanged( const TagChangedDelegate& delegate )
     {
         return _changedMulticast.add( delegate );
-    }
-
-    void GameplayTagCountContainer::unregisterChanged( DelegateHandle handle )
-    {
-        _changedMulticast.remove( handle );
     }
 
     void GameplayTagCountContainer::unregisterAllChanged()

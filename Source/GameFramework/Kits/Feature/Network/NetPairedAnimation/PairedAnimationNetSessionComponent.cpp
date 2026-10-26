@@ -15,7 +15,7 @@ namespace sw
     PairedAnimationNetSessionComponent::PairedAnimationNetSessionComponent()
         : _server{}
         , _client{}
-        , _pRouter{ nullptr }
+        , _routerSubscription{}
         , _bServer{ SW_FALSE }
     {
         setCanEverTick( true );
@@ -46,11 +46,10 @@ namespace sw
             _client.initialize( pManager );
             pHandler = &_client;
         }
-        _pRouter = &pNetSession->getRouter();
-        if ( _pRouter->registerHandler( pHandler ) == false )
+        _routerSubscription = pNetSession->getRouter().registerHandler( pHandler );
+        if ( _routerSubscription.isActive() == false )
         {
             SW_LOG_ERROR( "Paired animation net session not started: another handler owns the paired animation message range" );
-            _pRouter = nullptr;
             return;
         }
         SW_LOG_INFO( "Paired animation net session started as %#", _bServer == SW_TRUE ? "server" : "client" );
@@ -58,18 +57,14 @@ namespace sw
 
     void PairedAnimationNetSessionComponent::onEndPlay()
     {
-        if ( _pRouter != nullptr )
-        {
-            _pRouter->unregisterHandler( _bServer == SW_TRUE ? static_cast<INetMessageHandler*>( &_server ) : static_cast<INetMessageHandler*>( &_client ) );
-            _pRouter = nullptr;
-        }
+        _routerSubscription.reset();
         Component::onEndPlay();
     }
 
     void PairedAnimationNetSessionComponent::onTick( float32 deltaTime )
     {
         Component::onTick( deltaTime );
-        const bool bSends = _pRouter != nullptr && _bServer == SW_TRUE;
+        const bool bSends = _routerSubscription.isActive() && _bServer == SW_TRUE;
         if ( bSends )
             _server.update();
     }

@@ -663,7 +663,8 @@ SW_TEST_CASE( ArchitectureTest, ReleaseModuleCodeSweepsEveryRegistryTheEditorUse
     // 이벤트 버스
     using ResizeDelegate          = sw::Delegate<void( const sw::WindowResizeEvent& )>;
     const ResizeDelegate onResize = SW_DELEGATE_FUNCTION( ResizeDelegate, sw::onSweepProbeResize );
-    sw::engine::getSubsystem<sw::EventDispatcher>().subscribe<sw::WindowResizeEvent>( onResize );
+    // 구독은 쥐고 있되 떼지 않은 채로 훑기에 맡긴다(모듈이 해제를 빠뜨린 모양). 훑기가 항목을 떼면 구독의 소멸은 찾을 것이 없다.
+    const sw::Subscription resizeSubscription = sw::engine::getSubsystem<sw::EventDispatcher>().subscribe<sw::WindowResizeEvent>( onResize );
     SW_EXPECT_EQUAL( 1u, sw::releaseStubOf( onResize ) );
     sw::WindowResizeEvent resize;
     resize._width  = 1;

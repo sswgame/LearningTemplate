@@ -29,14 +29,6 @@ namespace sw
             /** @brief 해상도 한 변의 범위입니다. 0 이나 터무니없는 값은 데이터 오타로 봅니다. */
             static constexpr uint32 kMinResolution = 320;
             static constexpr uint32 kMaxResolution = 16384;
-
-            static float32 toFloat( string_view value, float32 fallback )
-            {
-                float32 number = fallback;
-                return StringUtil::parseFloat( value, number ) ? number : fallback;
-            }
-
-            static bool toBool( string_view value ) { return StringUtil::parseBool( value, false ); }
         };
     } // namespace
 } // namespace sw
@@ -165,16 +157,21 @@ namespace sw
 
     bool UserSettingsEngineHandlers::applyBusVolume( const UserSettingApplyParams& context )
     {
-        if ( _targets._pAudioService == nullptr )
-            return true;
-        _targets._pAudioService->setBusVolume( hashed_string( context._param ), UserSettingsEngineHandlersInternal::toFloat( context._value, 1.0f ) );
+        float32 volume{ 0.0f };
+        if ( StringUtil::parseFloat( context._value, volume ) == false )
+            return false;
+        if ( _targets._pAudioService != nullptr )
+            _targets._pAudioService->setBusVolume( hashed_string( context._param ), volume );
         return true;
     }
 
     bool UserSettingsEngineHandlers::applyMute( const UserSettingApplyParams& context )
     {
+        bool bMute{ false };
+        if ( StringUtil::tryParseBool( context._value, bMute ) == false )
+            return false;
         if ( _targets._pAudioService != nullptr )
-            _targets._pAudioService->setMute( UserSettingsEngineHandlersInternal::toBool( context._value ) );
+            _targets._pAudioService->setMute( bMute );
         return true;
     }
 
@@ -211,7 +208,9 @@ namespace sw
 
     bool UserSettingsEngineHandlers::applyMouseSensitivity( const UserSettingApplyParams& context )
     {
-        const float32 sensitivity = UserSettingsEngineHandlersInternal::toFloat( context._value, 1.0f );
+        float32 sensitivity{ 0.0f };
+        if ( StringUtil::parseFloat( context._value, sensitivity ) == false )
+            return false;
         if ( _targets._pInputMap != nullptr )
             _targets._pInputMap->getPlayerSettings()._mouseSensitivity = float2{ sensitivity, sensitivity };
         return true;
@@ -219,7 +218,9 @@ namespace sw
 
     bool UserSettingsEngineHandlers::applyGamepadSensitivity( const UserSettingApplyParams& context )
     {
-        const float32 sensitivity = UserSettingsEngineHandlersInternal::toFloat( context._value, 1.0f );
+        float32 sensitivity{ 0.0f };
+        if ( StringUtil::parseFloat( context._value, sensitivity ) == false )
+            return false;
         if ( _targets._pInputMap != nullptr )
             _targets._pInputMap->getPlayerSettings()._gamepadSensitivity = float2{ sensitivity, sensitivity };
         return true;
@@ -227,22 +228,31 @@ namespace sw
 
     bool UserSettingsEngineHandlers::applyInvertX( const UserSettingApplyParams& context )
     {
+        bool bInvert{ false };
+        if ( StringUtil::tryParseBool( context._value, bInvert ) == false )
+            return false;
         if ( _targets._pInputMap != nullptr )
-            _targets._pInputMap->getPlayerSettings()._bInvertX = UserSettingsEngineHandlersInternal::toBool( context._value );
+            _targets._pInputMap->getPlayerSettings()._bInvertX = bInvert;
         return true;
     }
 
     bool UserSettingsEngineHandlers::applyInvertY( const UserSettingApplyParams& context )
     {
+        bool bInvert{ false };
+        if ( StringUtil::tryParseBool( context._value, bInvert ) == false )
+            return false;
         if ( _targets._pInputMap != nullptr )
-            _targets._pInputMap->getPlayerSettings()._bInvertY = UserSettingsEngineHandlersInternal::toBool( context._value );
+            _targets._pInputMap->getPlayerSettings()._bInvertY = bInvert;
         return true;
     }
 
     bool UserSettingsEngineHandlers::applyStickDeadzone( const UserSettingApplyParams& context )
     {
+        float32 deadzone{ 0.0f };
+        if ( StringUtil::parseFloat( context._value, deadzone ) == false )
+            return false;
         if ( _targets._pInputMap != nullptr )
-            _targets._pInputMap->getPlayerSettings()._stickDeadzoneOverride = UserSettingsEngineHandlersInternal::toFloat( context._value, -1.0f );
+            _targets._pInputMap->getPlayerSettings()._stickDeadzoneOverride = deadzone;
         return true;
     }
 
@@ -318,7 +328,10 @@ namespace sw
 
     bool UserSettingsEngineHandlers::applyVSync( const UserSettingApplyParams& context )
     {
-        _displayRequest._bVSync    = UserSettingsEngineHandlersInternal::toBool( context._value );
+        bool bVSync{ false };
+        if ( StringUtil::tryParseBool( context._value, bVSync ) == false )
+            return false;
+        _displayRequest._bVSync    = bVSync;
         _displayRequest._bHasVSync = _displayRequest._bHasVSync || context._bDefault == false;
         _bDisplayDirty             = _bDisplayDirty || context._bStartup == false;
         return true;

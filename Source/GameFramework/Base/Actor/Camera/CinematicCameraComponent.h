@@ -77,7 +77,7 @@ namespace sw
         PROPERTY( Category = "Cinematic", DisplayName = "Shake Frequency", Min = 0.0, Tooltip = "Phase speed of sequencer shakes", Units = "rad/s" )
         float32 _shakeFrequency;
 
-        GameObjectHandle _currentCutCamera; ///< 지금 화면을 덮는 컷 카메라
-        DelegateHandle   _signalSubscription;
+        GameObjectHandle _currentCutCamera;   ///< 지금 화면을 덮는 컷 카메라
+        Subscription     _signalSubscription; ///< 시퀀스 플레이어의 카메라 신호 구독
     };
 } // namespace sw

@@ -290,24 +290,14 @@ namespace sw
         return true;
     }
 
-    DelegateHandle AbilitySystemComponent::registerEffectApplied( const EffectDelegate& delegate )
+    Subscription AbilitySystemComponent::registerEffectApplied( const EffectDelegate& delegate )
     {
         return _effectAppliedMulticast.add( delegate );
     }
 
-    void AbilitySystemComponent::unregisterEffectApplied( DelegateHandle handle )
-    {
-        _effectAppliedMulticast.remove( handle );
-    }
-
-    DelegateHandle AbilitySystemComponent::registerEffectRemoved( const EffectDelegate& delegate )
+    Subscription AbilitySystemComponent::registerEffectRemoved( const EffectDelegate& delegate )
     {
         return _effectRemovedMulticast.add( delegate );
-    }
-
-    void AbilitySystemComponent::unregisterEffectRemoved( DelegateHandle handle )
-    {
-        _effectRemovedMulticast.remove( handle );
     }
 
     // ------------------------------------------------------------------------------

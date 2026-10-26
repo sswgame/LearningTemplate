@@ -108,7 +108,7 @@ namespace sw
 
         Delegate<void( const GameplayEventData& )> _onEvent;
         TagID                                      _eventTag;
-        DelegateHandle                             _subscription;
+        Subscription                               _subscription; ///< 주인 컴포넌트의 이벤트 구독. 컴포넌트가 먼저 사라지면 무효가 된다
         uint32                                     _receivedCount;
         uint8                                      _bOnlyTriggerOnce : 1;
         [[maybe_unused]] uint8                     _reserved         : 7;

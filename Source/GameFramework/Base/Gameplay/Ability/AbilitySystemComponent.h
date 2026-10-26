@@ -151,9 +151,9 @@ namespace sw
         /**
          * @brief current 가 바뀔 때 부를 델리게이트를 겁니다(언리얼 `GetGameplayAttributeValueChangeDelegate`).
          * @param name 빈 이름이면 모든 어트리뷰트
+         * @return 등록을 소유하는 구독. 사라지면 뗀다(이 컴포넌트가 먼저 사라지면 무효가 된다)
          */
-        DelegateHandle registerAttributeChanged( const hashed_string& name, const AttributeChangedDelegate& delegate );
-        void           unregisterAttributeChanged( const hashed_string& name, DelegateHandle handle );
+        [[nodiscard]] Subscription registerAttributeChanged( const hashed_string& name, const AttributeChangedDelegate& delegate );
 
         // --------------------------------------------------------------------------
         // 3) 태그. 개수로 센다(이펙트 둘이 같은 태그를 주면 둘 다 해제되어야 사라진다)
@@ -223,12 +223,10 @@ namespace sw
          * @details `Add` 모디파이어만 검사합니다. 없는 어트리뷰트를 깎는 비용은 지불할 수 없으므로 false 입니다.
          */
         bool canApplyAttributeModifiers( const GameplayEffectSpec& spec ) const;
-        /** @brief 이펙트가 적용된 뒤(지속, 무한, 스택 증가) 호출할 델리게이트를 등록합니다. */
-        DelegateHandle registerEffectApplied( const EffectDelegate& delegate );
-        void           unregisterEffectApplied( DelegateHandle handle );
-        /** @brief 이펙트가 해제된 뒤 호출할 델리게이트를 등록합니다. */
-        DelegateHandle registerEffectRemoved( const EffectDelegate& delegate );
-        void           unregisterEffectRemoved( DelegateHandle handle );
+        /** @brief 이펙트가 적용된 뒤(지속, 무한, 스택 증가) 호출할 델리게이트를 등록합니다. 돌려준 구독이 사라지면 뗍니다. */
+        [[nodiscard]] Subscription registerEffectApplied( const EffectDelegate& delegate );
+        /** @brief 이펙트가 해제된 뒤 호출할 델리게이트를 등록합니다. 돌려준 구독이 사라지면 뗍니다. */
+        [[nodiscard]] Subscription registerEffectRemoved( const EffectDelegate& delegate );
 
         // --------------------------------------------------------------------------
         // 5) 어빌리티
@@ -270,12 +268,10 @@ namespace sw
         void abilityInputPressed( int32 inputID );
         /** @brief 입력 @p inputID 를 뗐을 때 부릅니다. */
         void abilityInputReleased( int32 inputID );
-        /** @brief 어빌리티가 발동한 뒤 호출할 델리게이트를 등록합니다. */
-        DelegateHandle registerAbilityActivated( const AbilityActivatedDelegate& delegate );
-        void           unregisterAbilityActivated( DelegateHandle handle );
-        /** @brief 어빌리티가 끝난 뒤 호출할 델리게이트를 등록합니다. 두 번째 인자는 취소로 끝났는지 여부입니다. */
-        DelegateHandle registerAbilityEnded( const AbilityEndedDelegate& delegate );
-        void           unregisterAbilityEnded( DelegateHandle handle );
+        /** @brief 어빌리티가 발동한 뒤 호출할 델리게이트를 등록합니다. 돌려준 구독이 사라지면 뗍니다. */
+        [[nodiscard]] Subscription registerAbilityActivated( const AbilityActivatedDelegate& delegate );
+        /** @brief 어빌리티가 끝난 뒤 호출할 델리게이트를 등록합니다. 두 번째 인자는 취소로 끝났는지 여부입니다. 돌려준 구독이 사라지면 뗍니다. */
+        [[nodiscard]] Subscription registerAbilityEnded( const AbilityEndedDelegate& delegate );
 
         // --------------------------------------------------------------------------
         // 6) 게임플레이 이벤트와 큐
@@ -289,12 +285,10 @@ namespace sw
          * @brief @p pTarget 에 게임플레이 이벤트를 보냅니다(언리얼의 `SendGameplayEventToActor` 에 해당). 틱 중이고 대상이 지금 틱하는 오브젝트가 아니면 틱 직후로 미룹니다.
          */
         static void sendGameplayEventToTarget( AbilitySystemComponent* pTarget, TagID eventTag, const GameplayEventData& payload );
-        /** @brief @p eventTag 나 그 하위 태그의 이벤트가 오면 호출할 델리게이트를 등록합니다. */
-        DelegateHandle registerGameplayEvent( TagID eventTag, const GameplayEventDelegate& delegate );
-        void           unregisterGameplayEvent( TagID eventTag, DelegateHandle handle );
-        /** @brief 이 오브젝트의 이펙트가 큐를 낼 때마다 호출할 델리게이트를 등록합니다. 채널 이벤트보다 먼저 호출됩니다. */
-        DelegateHandle registerGameplayCue( const GameplayCueDelegate& delegate );
-        void           unregisterGameplayCue( DelegateHandle handle );
+        /** @brief @p eventTag 나 그 하위 태그의 이벤트가 오면 호출할 델리게이트를 등록합니다. 돌려준 구독이 사라지면 뗍니다. 태그가 무효면 빈 구독입니다. */
+        [[nodiscard]] Subscription registerGameplayEvent( TagID eventTag, const GameplayEventDelegate& delegate );
+        /** @brief 이 오브젝트의 이펙트가 큐를 낼 때마다 호출할 델리게이트를 등록합니다. 채널 이벤트보다 먼저 호출됩니다. 돌려준 구독이 사라지면 뗍니다. */
+        [[nodiscard]] Subscription registerGameplayCue( const GameplayCueDelegate& delegate );
 
         // --------------------------------------------------------------------------
         // 7) 표시 설정
@@ -412,6 +406,7 @@ namespace sw
         vector<unique_ptr<ActiveGameplayEffect>>                                                        _listActiveEffect;
         vector<unique_ptr<AbilitySpec>>                                                                 _listAbilitySpec;
         GameplayTagCountContainer                                                                       _ownedTagCounts;
+        Subscription                                                                                    _ownedTagSubscription;    ///< `_ownedTagCounts` 의 변화를 자기가 듣는 구독(`onOwnedTagChanged`)
         GameplayTagCountContainer                                                                       _blockedAbilityTagCounts; ///< `_blockAbilitiesWithTags` 가 막은 어빌리티 태그(알림 없이 센다)
         unordered_map<hashed_string, unique_ptr<MulticastDelegate<void( const AttributeChangeData& )>>> _mapAttributeChangedMulticast;
         unordered_map<uint64, unique_ptr<MulticastDelegate<void( const GameplayEventData& )>>>          _mapGameplayEventMulticast;

@@ -36,11 +36,7 @@ namespace sw
 
     void SequenceAppearanceComponent::onEndPlay()
     {
-        GameObject*              pOwner  = getOwner();
-        SequencePlayerComponent* pPlayer = pOwner != nullptr ? pOwner->getComponent<SequencePlayerComponent>() : nullptr;
-        if ( pPlayer != nullptr && _eventSubscription.isValid() )
-            pPlayer->unregisterSequenceEvent( _eventSubscription );
-        _eventSubscription = DelegateHandle{};
+        _eventSubscription.reset();
         Component::onEndPlay();
     }
 

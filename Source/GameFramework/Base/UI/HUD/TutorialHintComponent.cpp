@@ -52,11 +52,14 @@ namespace sw
         if ( _activatorTag.isValid() && pActivator->hasTag( _activatorTag ) == false )
             return false;
         // 끈 플레이어에게는 띄우지 않는다 — 한 번 켜기를 바라는 볼륨도 발동한 것으로 치지 않는다(나중에 켜면 그때 보인다).
+        // 설정은 엔진 스키마에 있다 — 없거나 타입이 다르면 `resolveKey` 가 오류로 알리고 띄우지 않는다(데이터 결함을 "켜짐" 으로 덮지 않는다).
         const UserSettingsManager* pSettings = game::findSubsystem<UserSettingsManager>();
-        const hashed_string        settingID( TutorialHintComponentInternal::kShowTutorialsSetting );
-        const bool                 bTutorialsDisabled = pSettings != nullptr && pSettings->findSetting( settingID ) != nullptr && pSettings->getBoolValue( settingID ) == false;
-        if ( bTutorialsDisabled )
-            return false;
+        if ( pSettings != nullptr )
+        {
+            const std::optional<UserSettingKey<bool>> showTutorialsKey = pSettings->resolveKey<bool>( hashed_string( TutorialHintComponentInternal::kShowTutorialsSetting ) );
+            if ( showTutorialsKey.has_value() == false || pSettings->getBoolValue( *showTutorialsKey ) == false )
+                return false;
+        }
         UISystem* pUI = _pUISystem != nullptr ? _pUISystem : game::findSubsystem<UISystem>();
         if ( pUI == nullptr )
             return false; // 서버처럼 UI 가 없다

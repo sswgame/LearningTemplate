@@ -13,6 +13,7 @@ namespace sw
     ServerDirectoryServer::ServerDirectoryServer()
         : _pService{ nullptr }
         , _pHost{ nullptr }
+        , _busSubscription{}
     {
     }
 
@@ -23,8 +24,7 @@ namespace sw
 
     void ServerDirectoryServer::shutdown()
     {
-        if ( _pHost != nullptr )
-            _pHost->unsubscribeServerBus( ServerDirectoryBus::kChangedTopic.getName(), this );
+        _busSubscription.reset();
         _pHost    = nullptr;
         _pService = nullptr;
     }
@@ -32,7 +32,8 @@ namespace sw
     void ServerDirectoryServer::onHostShutdown( OnlineServiceHost& host )
     {
         (void)host;
-        _pHost = nullptr; // 구독은 호스트가 이어서 모두 해제한다
+        _busSubscription.reset();
+        _pHost = nullptr;
     }
 
     const OnlineProtocolEntry& ServerDirectoryServer::getProtocol() const
@@ -131,6 +132,7 @@ namespace sw
     void ServerDirectoryServer::attachHost( OnlineServiceHost& host )
     {
         _pHost = &host;
-        host.subscribeServerBus( ServerDirectoryBus::kChangedTopic.getName(), this );
+        if ( host.getServerBus() != nullptr ) // 서버가 한 대면 들을 버스가 없다
+            _busSubscription = host.subscribeServerBus( ServerDirectoryBus::kChangedTopic.getName(), this );
     }
 } // namespace sw

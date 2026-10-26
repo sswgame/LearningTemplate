@@ -63,7 +63,7 @@ namespace sw
 
         UISystem*            _pUI;
         IntentRewindSession* _pSession;
-        DelegateHandle       _scrubHandle;
+        Subscription         _scrubSubscription; ///< 슬라이더 값 변경 구독. 화면이 먼저 닫혀 슬라이더가 사라지면 무효가 된다
         float32              _tickSeconds;
         float32              _shownMin;
         float32              _shownMax;

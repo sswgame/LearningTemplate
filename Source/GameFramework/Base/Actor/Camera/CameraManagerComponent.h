@@ -82,10 +82,8 @@ namespace sw
         void                     clearPendingView();
         bool                     hasPendingView() const { return _pendingView._camera.isValid(); }
         const CameraPendingView& getPendingView() const { return _pendingView; }
-        /** @brief 대기 뷰가 바뀔 때 부를 델리게이트를 등록합니다. */
-        DelegateHandle registerPendingViewListener( const OnCameraPendingViewDelegate& delegate );
-        /** @brief `registerPendingViewListener` 로 건 델리게이트를 뗍니다. */
-        void unregisterPendingViewListener( DelegateHandle handle );
+        /** @brief 대기 뷰가 바뀔 때 부를 델리게이트를 등록합니다. 돌려준 구독이 사라지면 뗍니다. */
+        [[nodiscard]] Subscription registerPendingViewListener( const OnCameraPendingViewDelegate& delegate );
 
         bool              isBlending() const { return _blender.isBlending(); }
         const CameraPose& getPose() const { return _blender.getPose(); }
@@ -126,7 +124,7 @@ namespace sw
         MulticastDelegate<void( const CameraPendingView& )> _pendingViewMulticast;
         CameraPoseBlender                                   _blender;
         CameraImpulseListener                               _impulseListener;
-        DelegateHandle                                      _shakeSubscription; ///< 알림의 카메라 흔들림 요청 구독(플레이 동안)
+        Subscription                                        _shakeSubscription; ///< 알림의 카메라 흔들림 요청 구독(플레이 동안)
         float32                                             _pendingDeltaTime;
     };
 } // namespace sw

@@ -129,7 +129,7 @@ namespace sw
      * @code
      *     GameNetSessionParams params;
      *     if ( session.openFromLaunch() == false ) return false; // 게임 인스턴스 initialize(이미 열렸으면 그대로, 틀린 인자면 멈춤)
-     *     session.getRouter().registerHandler( &replicationServer ); // 키트 — 보내기는 session.getPeers()
+     *     _subscription = session.getRouter().registerHandler( &replicationServer ); // 키트 — 보내기는 session.getPeers(). 구독이 사라지면 뗀다
      *     session.update();                                     // 프레임마다(게임 스레드)
      *     session.shutdown();
      * @endcode
@@ -273,11 +273,12 @@ namespace sw
         vector<unique_ptr<Shard>>    _listShard; ///< 포트 샤드마다 소켓 · 회선 흉내 · 호스트 · 네트워크 스레드(클라이언트는 하나)
         NetHostShardSet              _peers;     ///< `_listShard` 의 호스트를 키트에 하나로 보이는 묶음
         NetMessageRouter             _router;
-        GameConnectSecurity          _connectSecurity;  ///< 티켓 게임 포트의 암호 제공자 · 접속 인증기 자리(`getConnectSecurity`)
-        NetMessageWriter             _tickWriter;       ///< 서버 — `sendServerTick` 이 다시 쓴다
-        TaskFuture<NetConnectResult> _connectFuture;    ///< 클라이언트 — 기다리는 연결(결과를 알리면 비운다)
-        vector<NetHostEvent>         _listEventScratch; ///< `update` 가 다시 쓴다
-        vector<ReplicaStat>          _listReplicaStat;  ///< 복제 키트가 올린 셈(`setReplicaStats`)
+        Subscription                 _routerSubscription; ///< 클라이언트 — 이 세션을 엔진 영역 처리기로 `_router` 에 단 등록
+        GameConnectSecurity          _connectSecurity;    ///< 티켓 게임 포트의 암호 제공자 · 접속 인증기 자리(`getConnectSecurity`)
+        NetMessageWriter             _tickWriter;         ///< 서버 — `sendServerTick` 이 다시 쓴다
+        TaskFuture<NetConnectResult> _connectFuture;      ///< 클라이언트 — 기다리는 연결(결과를 알리면 비운다)
+        vector<NetHostEvent>         _listEventScratch;   ///< `update` 가 다시 쓴다
+        vector<ReplicaStat>          _listReplicaStat;    ///< 복제 키트가 올린 셈(`setReplicaStats`)
         NetAddress                   _serverAddress;
         NetConnectCredentials        _credentials;      ///< 클라이언트 — 내미는 접속 티켓. 거절되면 지운다(옛 비밀을 들고 있지 않는다)
         uint64                       _latestServerTick; ///< 클라이언트 — 받은 가장 새 서버 틱(`_bServerTickKnown` 일 때만 뜻이 있다)

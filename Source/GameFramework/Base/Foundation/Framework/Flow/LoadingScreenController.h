@@ -46,7 +46,7 @@ namespace sw
      *          - **로딩 화면**: `beginLoading` 이 Loading 층 화면(문서 `_documentPath`)을 연다. 이 화면은 입력을 막고 Back 으로 닫히지 않는다.
      *            `update` 는 로드가 끝났고 최소 표시 시간이 지났으면 화면을 닫고 페이드 인을 시작한다.
      *            닫기 애니메이션 역할이며, 검은 화면에서 씬이 드러난다. 페이드는 입력을 막지 않는다.
-     *            문서에 `Spinner` 가 있으면 돌리고, `Tip` 이 있으면 팁 하나를 넣는다. 팁 키는 `getStringByText` 로 문자열을 찾는다.
+     *            문서에 `Spinner` 가 있으면 돌리고, `Tip` 이 있으면 팁 하나를 넣는다. 팁 키는 `findStringByText` 로 문자열을 찾는다(없으면 원문 그대로).
      *            진행률은 부르는 쪽이 넘긴다(`update` 의 `loadProgress` — 씬 매니저의 프리로드 진행 `SceneManager::tryGetLoadProgress`). 문서에 `Progress` 슬라이더가 있으면
      *            값이 있을 때 보이고(입력은 받지 않는다) 없으면 접는다.
      *            팁 목록은 gamesettings 의 `_loadingTips` 파일(`loadTipsFromResource`)이 채운다.
@@ -74,7 +74,7 @@ namespace sw
 
         /**
          * @brief 팁 목록 파일(`<LoadingTips><Tip text="원문"/>…</LoadingTips>`)을 읽어 @p outListTip 을 채웁니다(먼저 비운다). 파일을 못 읽거나 `text` 가 빈 팁이 있으면 오류를 남기고 false 입니다.
-         * @details 글은 지역화 원문이다 — 열 때 `LocalizationManager::getStringByText` 로 지금 문화권의 글로 푼다. 수집은 현지화 프로젝트의 `assetRules`(`files`·`attribute="text"`·`elements`)로 한다.
+         * @details 글은 지역화 원문이다 — 열 때 `LocalizationManager::findStringByText` 로 지금 문화권의 글로 푼다. 수집은 현지화 프로젝트의 `assetRules`(`files`·`attribute="text"`·`elements`)로 한다.
          */
         [[nodiscard]] static bool loadTipsFromResource( string_view path, vector<string>& outListTip );
         /** @brief `loadTipsFromResource` 의 XML 문자열 버전이며 테스트가 씁니다. */

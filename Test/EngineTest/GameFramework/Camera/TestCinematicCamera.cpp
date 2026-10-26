@@ -127,9 +127,8 @@ SW_TEST_CASE( CinematicCameraTest, PrewarmRegistersAPendingViewAndShakesMoveTheC
             _secondsUntil = view._secondsUntil;
         }
     };
-    Listener             listener;
-    const DelegateHandle handle =
-        pCameraManager->registerPendingViewListener( SW_DELEGATE_METHOD( OnCameraPendingViewDelegate, &Listener::record, &listener ) );
+    Listener     listener;
+    Subscription subscription = pCameraManager->registerPendingViewListener( SW_DELEGATE_METHOD( OnCameraPendingViewDelegate, &Listener::record, &listener ) );
 
     SequenceCameraSignal prewarm = CinematicCameraTestInternal::makeSignal( SequenceCameraSignalKind::CutPrewarm, "ShotB" );
     prewarm._secondsUntil        = 0.25f;
@@ -142,7 +141,7 @@ SW_TEST_CASE( CinematicCameraTest, PrewarmRegistersAPendingViewAndShakesMoveTheC
     pCinematic->handleCameraSignal( CinematicCameraTestInternal::makeSignal( SequenceCameraSignalKind::CutBegin, "ShotB" ) );
     SW_EXPECT_FALSE( pCameraManager->hasPendingView() ); // 그 시점이 화면에 왔다
     SW_EXPECT_EQUAL( 2u, listener._count );
-    pCameraManager->unregisterPendingViewListener( handle );
+    subscription.reset();
 
     SequenceCameraSignal shake = CinematicCameraTestInternal::makeSignal( SequenceCameraSignalKind::Shake, "ShotB" );
     shake._item._amplitude     = 0.5f;

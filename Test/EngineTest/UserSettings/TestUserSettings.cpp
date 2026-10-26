@@ -949,3 +949,67 @@ SW_TEST_CASE( UserSettingsTest, GameOverlayAndGameDefaults )
     SW_EXPECT_TRUE( settings.setGameDefault( "graphics.quality", "low" ) );
     SW_EXPECT_STREQ( "0.75", settings.getValue( "graphics.renderScale" ) );
 }
+
+/**
+ * @brief [UserSettingsTest] 형식 핸들은 스키마에 있고 타입이 맞는 설정에서만 풀린다 — 모르는 id 와 타입이 다른 id 는 오류이고 false · 0 으로 읽히지 않는다
+ */
+SW_TEST_CASE( UserSettingsTest, KeyResolveRejectsUnknownAndMistypedID )
+{
+    sw::UserSettingsManager settings;
+    settings.initialize( sw::UserSettingsTargets{} );
+    SW_ASSERT_TRUE( settings.loadSchemaFromXMLText( R"(<UserSettingsSchema version="1"><Category id="k"/>
+        <Setting id="k.flag" category="k" type="bool" default="true"/>
+        <Setting id="k.count" category="k" type="int" default="3" min="0" max="9"/>
+        <Setting id="k.scale" category="k" type="float" default="0.5" min="0" max="1"/></UserSettingsSchema>)",
+                                                    "key.settings.xml" ) );
+
+    const std::optional<sw::UserSettingKey<bool>>    flagKey  = settings.resolveKey<bool>( "k.flag" );
+    const std::optional<sw::UserSettingKey<int32>>   countKey = settings.resolveKey<int32>( "k.count" );
+    const std::optional<sw::UserSettingKey<float32>> scaleKey = settings.resolveKey<float32>( "k.scale" );
+    SW_ASSERT_TRUE( flagKey.has_value() && countKey.has_value() && scaleKey.has_value() );
+    SW_EXPECT_TRUE( settings.getBoolValue( *flagKey ) );
+    SW_EXPECT_EQUAL( 3, settings.getIntValue( *countKey ) );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, settings.getFloatValue( *scaleKey ), 0.0001f );
+
+    // 보류 값이 있으면 그것을 읽는다(메뉴가 보일 값).
+    SW_EXPECT_TRUE( settings.setPendingIntValue( "k.count", 7 ) == sw::UserSettingSetResult::Accepted );
+    SW_EXPECT_EQUAL( 7, settings.getIntValue( *countKey ) );
+
+    test::ScopedLogCollector logs;
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "an unknown id and a type mismatch" );
+        SW_EXPECT_FALSE( settings.resolveKey<bool>( "k.missing" ).has_value() );
+        SW_EXPECT_FALSE( settings.resolveKey<int32>( "k.flag" ).has_value() );
+    }
+    SW_EXPECT_TRUE_MSG( logs.countWithID( "UserSettings.KeyUnresolved" ) == 2u, logs.joined().c_str() );
+}
+
+/**
+ * @brief [UserSettingsTest] 사용자 파일의 깨진 값은 경고하고 기본값으로 둔다 — 불 칸의 "ture" 가 false 가 되지 않고, 쓰기도 그 글을 false 로 바꾸지 않는다
+ */
+SW_TEST_CASE( UserSettingsTest, UserFileInvalidValueWarnsAndKeepsDefault )
+{
+    sw::UserSettingsManager settings;
+    settings.initialize( sw::UserSettingsTargets{} );
+    SW_ASSERT_TRUE( settings.loadSchemaFromXMLText( R"(<UserSettingsSchema version="1"><Category id="k"/>
+        <Setting id="k.flag" category="k" type="bool" default="true"/>
+        <Setting id="k.count" category="k" type="int" default="3" min="0" max="9"/></UserSettingsSchema>)",
+                                                    "broken.settings.xml" ) );
+
+    test::ScopedLogCollector logs;
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a player file with values that do not parse" );
+        SW_ASSERT_TRUE( settings.loadUserJSON( R"({ "version": 1, "values": { "k.flag": "ture", "k.count": "many" } })", "broken.json" ) );
+    }
+    SW_EXPECT_TRUE_MSG( logs.countWithID( "UserSettings.ValueInvalid" ) == 2u, logs.joined().c_str() );
+
+    const std::optional<sw::UserSettingKey<bool>>  flagKey  = settings.resolveKey<bool>( "k.flag" );
+    const std::optional<sw::UserSettingKey<int32>> countKey = settings.resolveKey<int32>( "k.count" );
+    SW_ASSERT_TRUE( flagKey.has_value() && countKey.has_value() );
+    SW_EXPECT_TRUE( settings.getBoolValue( *flagKey ) );
+    SW_EXPECT_EQUAL( 3, settings.getIntValue( *countKey ) );
+
+    // 기본값과 같으니 쓰지 않는다 — 깨진 글이 false 나 0 으로 저장되지 않는다.
+    const sw::string json = settings.makeUserJSON();
+    SW_EXPECT_TRUE_MSG( json.find( "k.flag" ) == sw::string::npos && json.find( "k.count" ) == sw::string::npos, json.c_str() );
+}
