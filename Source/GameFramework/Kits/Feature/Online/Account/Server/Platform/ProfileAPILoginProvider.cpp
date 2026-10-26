@@ -86,7 +86,7 @@ namespace sw
             path                   = dot == string_view::npos ? string_view{} : path.substr( dot + 1 );
             if ( current.isObject() == false )
                 return false;
-            current = current.get( part, false );
+            current = current.get( part );
             if ( current.isValid() == false )
                 return false;
         }

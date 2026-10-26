@@ -67,7 +67,7 @@ namespace sw
     {
         if ( XMLReadUtil::hasOnlyKnownNames( root, {}, { "levels" }, sourceLabel ) == false )
             return false;
-        const XMLNode levels = root.findChild( "levels", false );
+        const XMLNode levels = root.findChild( "levels" );
         if ( levels.isValid() == false )
         {
             SW_LOG_ERROR( "Bone LOD '%#': a <levels> element is required", sourceLabel );
@@ -81,7 +81,7 @@ namespace sw
                 SW_LOG_ERROR( "Bone LOD '%#': <levels> holds only <level> elements", sourceLabel );
                 return false;
             }
-            const XMLNode                removed          = level.findChild( "remove", false );
+            const XMLNode                removed          = level.findChild( "remove" );
             const std::optional<float32> maxScreenSize    = level.readRequiredAttribute<float32>( "max_screen_size" );
             const bool                   bInvalidLODLevel = maxScreenSize.has_value() == false || removed.isValid() == false || removed.findChild().isValid() == false;
             if ( bInvalidLODLevel )

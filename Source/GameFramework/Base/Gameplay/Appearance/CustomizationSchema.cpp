@@ -33,7 +33,7 @@ namespace sw
                 constexpr CustomizationKind kArrKind[] = { CustomizationKind::Slider, CustomizationKind::Color, CustomizationKind::Choice, CustomizationKind::Attachment };
                 for ( const CustomizationKind kind : kArrKind )
                 {
-                    if ( StringUtil::equals( pName, getEnumName( kind ), true ) )
+                    if ( StringUtil::equals( pName, getEnumName( kind ) ) )
                     {
                         outKind = kind;
                         return true;
@@ -212,11 +212,11 @@ namespace sw
                 {
                     const utf8* pName      = child.getName();
                     const bool  bHasOption = kind == CustomizationKind::Choice || kind == CustomizationKind::Attachment;
-                    if ( StringUtil::equals( pName, "Drive", true ) && bHasOption == false )
+                    if ( StringUtil::equals( pName, "Drive" ) && bHasOption == false )
                         readDrive( child, param, report, sourceName, inoutSchema._id );
-                    else if ( StringUtil::equals( pName, "Option", true ) && bHasOption )
+                    else if ( StringUtil::equals( pName, "Option" ) && bHasOption )
                         readOption( child, param, report, sourceName, inoutSchema._id );
-                    else if ( StringUtil::equals( pName, "Condition", true ) )
+                    else if ( StringUtil::equals( pName, "Condition" ) )
                         readCondition( child, inoutSchema, param, report, sourceName );
                     else
                         AppearanceXMLUtil::reportUnknownChild( node, child, report, sourceName );
@@ -283,7 +283,7 @@ namespace sw
         (void)AppearanceXMLUtil::reportUnknownAttributes( root, nullptr, 0, report, sourceName );
         for ( XMLNode schemaNode = root.findChild(); schemaNode; schemaNode = schemaNode.findNextSibling() )
         {
-            if ( StringUtil::equals( schemaNode.getName(), "Schema", true ) == false )
+            if ( StringUtil::equals( schemaNode.getName(), "Schema" ) == false )
             {
                 AppearanceXMLUtil::reportUnknownChild( root, schemaNode, report, sourceName );
                 continue;

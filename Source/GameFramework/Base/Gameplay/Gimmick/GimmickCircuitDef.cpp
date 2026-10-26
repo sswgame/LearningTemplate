@@ -82,7 +82,7 @@ namespace sw
         }
         for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
         {
-            if ( StringUtil::equals( child.getName(), "Node", true ) )
+            if ( StringUtil::equals( child.getName(), "Node" ) )
             {
                 const utf8* pID   = child.findAttribute( "id" );
                 const utf8* pKind = child.findAttribute( "kind" );
@@ -95,13 +95,13 @@ namespace sw
                 GimmickNodeDef& node = addNode( hashed_string( pID ), hashed_string( pKind ) );
                 for ( XMLAttribute attribute = child.getFirstAttribute(); attribute; attribute = attribute.getNext() )
                 {
-                    const bool bReserved = StringUtil::equals( attribute.getName(), "id", true ) || StringUtil::equals( attribute.getName(), "kind", true );
+                    const bool bReserved = StringUtil::equals( attribute.getName(), "id" ) || StringUtil::equals( attribute.getName(), "kind" );
                     if ( bReserved == false )
                         node.setParam( hashed_string( attribute.getName() ), string_view( attribute.getValue() ) );
                 }
                 continue;
             }
-            if ( StringUtil::equals( child.getName(), "Wire", true ) )
+            if ( StringUtil::equals( child.getName(), "Wire" ) )
             {
                 bool bInvert = false; // 적지 않으면 뒤집지 않는다
                 if ( GameDataXML::readOptionalBool( child, "invert", bInvert ) == false )

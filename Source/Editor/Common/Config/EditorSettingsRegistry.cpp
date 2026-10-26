@@ -140,7 +140,7 @@ namespace sw::editor
         for ( const EditorSettingsRegistration* pRegistration : listPending )
         {
             const string sectionID{ pRegistration->_pID };
-            if ( root.has( sectionID, false ) == false )
+            if ( root.has( sectionID ) == false )
                 continue;
             EditorSettingsRegistryInternal::applySection( root, sectionID, *pRegistration );
             ++appliedCount;

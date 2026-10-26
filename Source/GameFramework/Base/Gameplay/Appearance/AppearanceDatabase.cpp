@@ -207,17 +207,17 @@ namespace sw
     {
         const utf8* pName = root.getName();
         ++_revision;
-        if ( StringUtil::equals( pName, "SlotTable", true ) )
+        if ( StringUtil::equals( pName, "SlotTable" ) )
             return _slotTable.loadFromNode( root, _report, sourceName );
-        if ( StringUtil::equals( pName, "EquipSetCatalog", true ) )
+        if ( StringUtil::equals( pName, "EquipSetCatalog" ) )
             return _sets.loadFromNode( root, _report, sourceName );
-        if ( StringUtil::equals( pName, "ItemVisualCatalog", true ) )
+        if ( StringUtil::equals( pName, "ItemVisualCatalog" ) )
             return _visuals.loadFromNode( root, _report, sourceName );
-        if ( StringUtil::equals( pName, "CustomizationSchemaCatalog", true ) )
+        if ( StringUtil::equals( pName, "CustomizationSchemaCatalog" ) )
             return _schemas.loadFromNode( root, _report, sourceName );
-        if ( StringUtil::equals( pName, "AppearanceRuleTable", true ) )
+        if ( StringUtil::equals( pName, "AppearanceRuleTable" ) )
             return _rules.loadFromNode( root, _report, sourceName );
-        if ( StringUtil::equals( pName, "CharacterAppearanceCatalog", true ) )
+        if ( StringUtil::equals( pName, "CharacterAppearanceCatalog" ) )
             return _presets.loadFromNode( root, _report, sourceName );
         _report.addErrorWithID( "Appearance.RootUnknown", "%#: unknown appearance data root <%#>", sourceName, pName );
         return false;

@@ -305,17 +305,16 @@ namespace sw
             }
 
             /**
-             * @brief @p pName 이 타입(상속 포함)의 프로퍼티 이름 · 별칭이면 true 입니다. 대소문자를 가리지 않습니다(해시가 그렇다).
-             * @details 대소문자만 다른 태그 · 속성은 orphan 이 아니다(XML 은 이름 해시로 맞춘다 — JSON 은 대소문자를 가리는 문맥에서 그런 키를 모르는 키로 본다).
+             * @brief @p pName 이 타입(상속 포함)의 프로퍼티 이름 · 별칭과 철자 그대로 같으면 true 입니다(`PropertyInfo::matchesNameText`).
+             * @details 대소문자만 다른 태그 · 속성은 모르는 이름(orphan)이다 — JSON 과 같다.
              */
             static bool isNameKnown( const TypeInfo& typeInfo, const utf8* pName )
             {
                 if ( pName == nullptr )
                     return false;
-                const uint32 nameHash = static_cast<uint32>( hashed_string::computeHash( string_view{ pName } ) );
                 for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
                 {
-                    if ( prop.matchesNameHash( nameHash ) )
+                    if ( prop.matchesNameText( pName ) )
                         return true;
                 }
                 return false;
@@ -331,7 +330,7 @@ namespace sw
             {
                 const FieldReadResult fieldsResult = readXMLIntoInstance( instance, typeInfo, backend, context, pOutListOrphan );
                 if ( pOutListOrphan != nullptr )
-                    appendUnknownXMLChildOrphans( backend.getCurrentNode(), typeInfo, backend.ignoresCaseKeys(), pOutListOrphan, typeInfo._name.c_str() );
+                    appendUnknownXMLChildOrphans( backend.getCurrentNode(), typeInfo, pOutListOrphan, typeInfo._name.c_str() );
                 return fieldsResult;
             }
 
@@ -581,15 +580,14 @@ namespace sw
              * @brief 원소 @p node 의 속성 · 자식 가운데 타입이 모르는 이름을 orphan 으로 남깁니다.
              * @param pOwnerTypeName 안쪽 원소면 그 타입 이름(경고에 붙는다), 루트면 nullptr 입니다.
              */
-            static void appendUnknownXMLChildOrphans( XMLNode node, const TypeInfo& typeInfo, bool bIgnore,
+            static void appendUnknownXMLChildOrphans( XMLNode node, const TypeInfo& typeInfo,
                                                       vector<SchemaOrphanValue>* pOutListOrphan, const utf8* pOwnerTypeName = nullptr )
             {
                 if ( pOutListOrphan == nullptr || node.isValid() == false )
                     return;
 
-                // 대소문자만 다른 태그는 setIgnoreCaseKeys(false) 로 의도적으로 바인딩을 거른 것이므로
-                // 모르는 필드(orphan)로 올리지 않는다. bIgnore 와 무관하게 무시 대소문자로 판정한다.
-                for ( XMLNode child = node.findChild( nullptr, bIgnore ); child.isValid(); child = child.findNextSibling( nullptr, bIgnore ) )
+                // 이름은 철자 그대로 맞춘다 — 대소문자만 다른 태그 · 속성도 모르는 이름(orphan)이다.
+                for ( XMLNode child = node.findChild( nullptr ); child.isValid(); child = child.findNextSibling( nullptr ) )
                 {
                     const utf8* pChildName = child.getName();
                     if ( pChildName == nullptr )
@@ -598,7 +596,7 @@ namespace sw
                         continue;
                     if ( isNameKnown( typeInfo, pChildName ) )
                         continue;
-                    const utf8* pNameAttr = child.findAttribute( kXMLPropertyNameAttr, bIgnore );
+                    const utf8* pNameAttr = child.findAttribute( kXMLPropertyNameAttr );
                     if ( pNameAttr != nullptr && isNameKnown( typeInfo, pNameAttr ) )
                         continue;
                     appendUnknownNameOrphan( pChildName, child.getText(), pOwnerTypeName, *pOutListOrphan );
@@ -627,14 +625,13 @@ namespace sw
                 if ( doc.parse( xmlStr ) == false )
                     return false;
 
-                const bool bIgnore = context.ignoresCaseKeys();
-                XMLNode    root    = doc.getRoot( typeInfo._name.c_str(), bIgnore );
+                XMLNode root = doc.getRoot( typeInfo._name.c_str() );
                 if ( root.isValid() == false )
-                    root = doc.getRoot( nullptr, bIgnore );
+                    root = doc.getRoot( nullptr );
                 if ( root.isValid() == false )
                     return false;
 
-                appendUnknownXMLChildOrphans( root, typeInfo, bIgnore, pOutListOrphan );
+                appendUnknownXMLChildOrphans( root, typeInfo, pOutListOrphan );
                 return true;
             }
         };
@@ -752,9 +749,9 @@ namespace sw
             return false;
 
         string  sTag = Impl::sanitizeTag( pRootTagName );
-        XMLNode root = _impl->_doc.getRoot( sTag.c_str(), ignoresCaseKeys() );
+        XMLNode root = _impl->_doc.getRoot( sTag.c_str() );
         if ( root.isValid() == false )
-            root = _impl->_doc.getRoot( nullptr, ignoresCaseKeys() );
+            root = _impl->_doc.getRoot( nullptr );
 
         if ( root.isValid() == false )
             return false;
@@ -771,7 +768,7 @@ namespace sw
             return false;
 
         string  sTag = Impl::sanitizeTag( pTagName );
-        XMLNode node = _impl->_currentParent.findChild( sTag.c_str(), ignoresCaseKeys() );
+        XMLNode node = _impl->_currentParent.findChild( sTag.c_str() );
         if ( node.isValid() == false )
             return false;
 
@@ -785,7 +782,7 @@ namespace sw
             return false;
 
         string      sName = Impl::sanitizeTag( pAttrName );
-        const utf8* pVal  = _impl->_currentParent.findAttribute( sName.c_str(), ignoresCaseKeys() );
+        const utf8* pVal  = _impl->_currentParent.findAttribute( sName.c_str() );
         if ( pVal == nullptr )
             return false;
 
@@ -799,7 +796,7 @@ namespace sw
             return false;
 
         string  sTag  = Impl::sanitizeTag( pTagName );
-        XMLNode child = _impl->_currentParent.findChild( sTag.c_str(), ignoresCaseKeys() );
+        XMLNode child = _impl->_currentParent.findChild( sTag.c_str() );
         if ( child.isValid() == false )
             return false;
 
@@ -812,7 +809,7 @@ namespace sw
     {
         if ( _impl->_currentParent.isValid() == false )
             return false;
-        XMLNode child = _impl->_currentParent.findChild( nullptr, ignoresCaseKeys() );
+        XMLNode child = _impl->_currentParent.findChild( nullptr );
         if ( child.isValid() == false )
             return false;
         _impl->_listNodeStack.push_back( child );
@@ -862,7 +859,7 @@ namespace sw
 
         const XMLNode parent = _impl->_currentParent;
         bool          bAny{ false };
-        for ( XMLNode child = parent.findChild( nullptr, ignoresCaseKeys() ); child.isValid(); child = child.findNextSibling( nullptr, ignoresCaseKeys() ) )
+        for ( XMLNode child = parent.findChild( nullptr ); child.isValid(); child = child.findNextSibling( nullptr ) )
         {
             // 콜백이 도는 동안 그 자식이 현재 노드가 되어야 재귀 순회가 가능하다.
             _impl->_listNodeStack.push_back( child );
@@ -900,8 +897,6 @@ namespace sw
     {
         if ( xmlStr.empty() )
             return false;
-
-        backend.setIgnoreCaseKeys( context.ignoresCaseKeys() );
 
         if ( backend.initializeXMLDeserialization( xmlStr, typeInfo._name.c_str() ) == false )
             return false;
@@ -956,9 +951,7 @@ namespace sw
 
         // **문서 하나로 셋을 다 한다.** 버전 속성 · 값 읽기 · orphan 자식 훑기 — 같은 문자열을 두 번 파싱하지 않는다.
         // 씬 · 프리팹 로드가 엔티티마다 이 경로로 간다(형제 `JSONSerializer::deserializeSoft` 도 문서 하나만 쓴다).
-        const bool         bIgnore = context.ignoresCaseKeys();
         XMLDocumentBackend backend;
-        backend.setIgnoreCaseKeys( bIgnore );
         if ( backend.initializeXMLDeserialization( xmlStr, typeInfo._name.c_str() ) == false )
             return SoftReadResult::NotParsed;
 
@@ -969,7 +962,7 @@ namespace sw
         if ( pOutVersion != nullptr )
         {
             *pOutVersion     = 0;
-            const utf8* pVer = root.findAttribute( kSchemaVersionKey, bIgnore );
+            const utf8* pVer = root.findAttribute( kSchemaVersionKey );
             if ( pVer != nullptr )
             {
                 uint64 ver{ 0 };
@@ -983,7 +976,7 @@ namespace sw
         const bool bFieldsRead = XMLSerializerInternal::readXMLIntoInstance( MutableObjectAddress{ pInstance }, typeInfo, backend, context, pOutListOrphan ) == FieldReadResult::Read;
 
         if ( pOutListOrphan != nullptr )
-            XMLSerializerInternal::appendUnknownXMLChildOrphans( root, typeInfo, bIgnore, pOutListOrphan );
+            XMLSerializerInternal::appendUnknownXMLChildOrphans( root, typeInfo, pOutListOrphan );
 
         // 선언된 범위는 읽기 공통 끝에서 본다(바이너리 · JSON 과 같다).
         const bool bWithinRange = SerializerUtil::isWithinDeclaredRanges( typeInfo, ObjectAddress{ pInstance } );

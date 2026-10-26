@@ -78,22 +78,22 @@ namespace sw
          */
         int64 getSourceOffset() const;
         /** @brief 속성 값을 반환합니다. 없으면 nullptr 입니다. */
-        const utf8* findAttribute( const utf8* pName, bool bIgnoreCaseKeys = true ) const;
+        const utf8* findAttribute( const utf8* pName ) const;
         /**
          * @brief 속성 값을 문자열로 반환합니다. 없으면 빈 문자열입니다.
          * @details `string_view` 를 받는 함수(`KeyCodeUtil::fromName` 등)에 넘길 때 쓴다. `findAttribute` 가 반환한 nullptr 로 `string_view` 를 만들면 미정의 동작(strlen)이다.
          */
-        string_view getAttributeText( const utf8* pName, bool bIgnoreCaseKeys = true ) const;
+        string_view getAttributeText( const utf8* pName ) const;
 
         /** @brief 자식 노드를 찾습니다. pName 이 nullptr 이면 첫 자식을 반환합니다. */
-        XMLNode findChild( const utf8* pName = nullptr, bool bIgnoreCaseKeys = true ) const;
+        XMLNode findChild( const utf8* pName = nullptr ) const;
         /** @brief 다음 형제 노드를 반환합니다. */
-        XMLNode findNextSibling( const utf8* pName = nullptr, bool bIgnoreCaseKeys = true ) const;
+        XMLNode findNextSibling( const utf8* pName = nullptr ) const;
         /** @brief 이름이 일치하는 자식의 텍스트를 반환합니다. */
-        const utf8* findChildText( const utf8* pName, bool bIgnoreCaseKeys = true ) const;
+        const utf8* findChildText( const utf8* pName ) const;
 
         /** @brief 비어 있지 않은 자식 텍스트를 dst 에 복사합니다. 복사했으면 true 입니다. */
-        bool takeChildText( const utf8* pName, string& dst, bool bIgnoreCaseKeys = true ) const;
+        bool takeChildText( const utf8* pName, string& dst ) const;
 
         // ------------------------------------------------------------------------------
         // 1-1) 값 읽기 — 폴백 인자 없이(결정 기록 5-4, 데이터 주도 계획 7.3). 폴백을 받던 `getAttributeInt` · `getChildFloat` 같은 읽기는 지웠다(D9).
@@ -332,8 +332,8 @@ namespace sw
         /** @brief 원문 @p text 의 바이트 위치 @p offset 이 몇 번째 줄(1 부터)인지 셉니다. 위치가 음수면 0 입니다(`XMLNode::getSourceOffset` 이 모를 때). */
         static uint32 computeLineNumber( string_view text, int64 offset );
 
-        /** @brief 첫 엘리먼트를 반환합니다. pName 이 있으면 이름으로 찾습니다(기본은 대소문자 무시). */
-        XMLNode getRoot( const utf8* pName = nullptr, bool bIgnoreCaseKeys = true ) const;
+        /** @brief 첫 엘리먼트를 반환합니다. pName 이 있으면 이름으로 찾습니다(철자 그대로 — 대소문자가 다르면 없는 이름). */
+        XMLNode getRoot( const utf8* pName = nullptr ) const;
 
         // ------------------------------------------------------------------------------
         // 5) 쓰기

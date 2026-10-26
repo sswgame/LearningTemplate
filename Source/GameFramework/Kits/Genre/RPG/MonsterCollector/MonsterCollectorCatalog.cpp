@@ -339,9 +339,9 @@ namespace sw
         bValid = Internal::readSixInts( node, "evYield", false, 0, sourceName, def._arrEvYield ) && bValid;
         for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
         {
-            if ( StringUtil::equals( child.getName(), "Learn", true ) )
+            if ( StringUtil::equals( child.getName(), "Learn" ) )
                 bValid = GameDataXML::readInto( child, sourceName, def._listLearn ) && bValid;
-            else if ( StringUtil::equals( child.getName(), "Evolve", true ) )
+            else if ( StringUtil::equals( child.getName(), "Evolve" ) )
                 bValid = GameDataXML::readInto( child, sourceName, def._listEvolution ) && bValid;
             else
             {

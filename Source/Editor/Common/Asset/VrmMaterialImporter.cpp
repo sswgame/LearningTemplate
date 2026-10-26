@@ -195,7 +195,7 @@ namespace sw::editor
             /** @brief 없어도 되는 숫자 @p key 를 읽습니다. 없으면 @p inoutValue 를 그대로 두고(정의의 초기값), 숫자가 아니면 이유와 false 입니다. */
             [[nodiscard]] static bool readFloat( const JSONValue& object, string_view key, float32& inoutValue, string& outError )
             {
-                const JSONValue value = object.get( key, false );
+                const JSONValue value = object.get( key );
                 if ( value.isValid() == false || value.isNull() )
                     return true;
                 const std::optional<float32> number = value.read<float32>();
@@ -234,13 +234,13 @@ namespace sw::editor
             {
                 if ( textureInfo.isObject() == false )
                     return true;
-                const std::optional<int32> index = textureInfo.get( "index", false ).read<int32>();
+                const std::optional<int32> index = textureInfo.get( "index" ).read<int32>();
                 if ( index.has_value() == false || *index < 0 )
                 {
-                    outError = string( what ) + ".index " + textureInfo.get( "index", false ).dump() + " is not a texture number";
+                    outError = string( what ) + ".index " + textureInfo.get( "index" ).dump() + " is not a texture number";
                     return false;
                 }
-                const JSONValue extensions = textureInfo.get( "extensions", false );
+                const JSONValue extensions = textureInfo.get( "extensions" );
                 if ( extensions.isObject() )
                 {
                     for ( const string& extension : extensions.getMemberNames() )
@@ -248,7 +248,7 @@ namespace sw::editor
                         appendIgnored( pOutListIgnored, extension );
                     }
                 }
-                const JSONValue texCoord = textureInfo.get( "texCoord", false );
+                const JSONValue texCoord = textureInfo.get( "texCoord" );
                 if ( texCoord.isValid() )
                 {
                     const std::optional<int32> texCoordIndex = texCoord.read<int32>();
@@ -272,18 +272,18 @@ namespace sw::editor
             {
                 if ( gltfMaterial.isObject() == false )
                     return true;
-                const JSONValue pbr = gltfMaterial.get( "pbrMetallicRoughness", false );
+                const JSONValue pbr = gltfMaterial.get( "pbrMetallicRoughness" );
                 if ( pbr.isObject() )
                 {
-                    if ( pbr.has( "baseColorFactor", false ) && readColor( pbr.get( "baseColorFactor", false ), inoutDesc._baseColor ) == false )
+                    if ( pbr.has( "baseColorFactor" ) && readColor( pbr.get( "baseColorFactor" ), inoutDesc._baseColor ) == false )
                     {
                         outError = "baseColorFactor is not a color";
                         return false;
                     }
-                    if ( readTextureIndex( pbr.get( "baseColorTexture", false ), "baseColorTexture", inoutDesc._baseColorTexture, pOutListIgnored, outError ) == false )
+                    if ( readTextureIndex( pbr.get( "baseColorTexture" ), "baseColorTexture", inoutDesc._baseColorTexture, pOutListIgnored, outError ) == false )
                         return false;
                 }
-                const string alphaMode = gltfMaterial.has( "alphaMode", false ) ? gltfMaterial.get( "alphaMode", false ).asString() : string( "OPAQUE" );
+                const string alphaMode = gltfMaterial.has( "alphaMode" ) ? gltfMaterial.get( "alphaMode" ).asString() : string( "OPAQUE" );
                 if ( alphaMode == "OPAQUE" )
                     inoutDesc._alphaMode = ToonAlphaMode::Opaque;
                 else if ( alphaMode == "MASK" )
@@ -305,21 +305,21 @@ namespace sw::editor
                     return false;
                 }
                 inoutDesc._bTwoSided = bTwoSided ? SW_TRUE : SW_FALSE;
-                if ( gltfMaterial.has( "emissiveFactor", false ) && readColor( gltfMaterial.get( "emissiveFactor", false ), inoutDesc._emissiveColor ) == false )
+                if ( gltfMaterial.has( "emissiveFactor" ) && readColor( gltfMaterial.get( "emissiveFactor" ), inoutDesc._emissiveColor ) == false )
                 {
                     outError = "emissiveFactor is not a color";
                     return false;
                 }
                 // 노멀 맵(glTF normalTextureInfo) — 배율은 xy 에 곱한다(셰이더 applyNormalMap).
-                const JSONValue normalTexture = gltfMaterial.get( "normalTexture", false );
-                const bool      bTexturesRead = readTextureIndex( gltfMaterial.get( "emissiveTexture", false ), "emissiveTexture", inoutDesc._emissiveTexture, pOutListIgnored, outError ) &&
+                const JSONValue normalTexture = gltfMaterial.get( "normalTexture" );
+                const bool      bTexturesRead = readTextureIndex( gltfMaterial.get( "emissiveTexture" ), "emissiveTexture", inoutDesc._emissiveTexture, pOutListIgnored, outError ) &&
                                            readTextureIndex( normalTexture, "normalTexture", inoutDesc._normalTexture, pOutListIgnored, outError );
                 if ( bTexturesRead == false )
                     return false;
                 if ( normalTexture.isObject() && readFloat( normalTexture, "scale", inoutDesc._normalScale, outError ) == false )
                     return false;
-                const JSONValue extensions = gltfMaterial.get( "extensions", false );
-                const JSONValue strength   = extensions.isObject() ? extensions.get( "KHR_materials_emissive_strength", false ) : JSONValue{};
+                const JSONValue extensions = gltfMaterial.get( "extensions" );
+                const JSONValue strength   = extensions.isObject() ? extensions.get( "KHR_materials_emissive_strength" ) : JSONValue{};
                 return strength.isObject() == false || readFloat( strength, "emissiveStrength", inoutDesc._emissiveStrength, outError );
             }
 
@@ -362,14 +362,14 @@ namespace sw::editor
             [[nodiscard]] static bool readVrm0Floats( const JSONValue& materialProperty, const string& context, vector<string>* pOutListIgnored, float32 ( &outFloat )[Vrm0FloatCount],
                                                       string& outError )
             {
-                const JSONValue floats = materialProperty.get( "floatProperties", false );
+                const JSONValue floats = materialProperty.get( "floatProperties" );
                 for ( uint32 index = 0; index < Vrm0FloatCount; ++index )
                 {
                     outFloat[index] = kArrVrm0Float[index]._default;
                 }
                 for ( const string& key : floats.isObject() ? floats.getMemberNames() : vector<string>{} )
                 {
-                    const std::optional<float32> number = floats.get( key, false ).read<float32>();
+                    const std::optional<float32> number = floats.get( key ).read<float32>();
                     if ( number.has_value() == false )
                     {
                         outError = context + ": float property '" + key + "' is not a number";
@@ -401,7 +401,7 @@ namespace sw::editor
             [[nodiscard]] static bool readVrm0Colors( const JSONValue& materialProperty, const string& context, vector<string>* pOutListIgnored, float4 ( &outColor )[kVrm0ColorCount],
                                                       string& outError )
             {
-                const JSONValue vectors = materialProperty.get( "vectorProperties", false );
+                const JSONValue vectors = materialProperty.get( "vectorProperties" );
                 outColor[0]             = float4{ 1.0f, 1.0f, 1.0f, 1.0f };
                 for ( size_t index = 1; index < kVrm0ColorCount; ++index )
                 {
@@ -409,7 +409,7 @@ namespace sw::editor
                 }
                 for ( const string& key : vectors.isObject() ? vectors.getMemberNames() : vector<string>{} )
                 {
-                    const JSONValue value  = vectors.get( key, false );
+                    const JSONValue value  = vectors.get( key );
                     bool            bKnown = false;
                     for ( size_t index = 0; index < kVrm0ColorCount; ++index )
                     {
@@ -449,14 +449,14 @@ namespace sw::editor
             [[nodiscard]] static bool readVrm0Textures( const JSONValue& materialProperty, const string& context, vector<string>* pOutListIgnored, int32 ( &outTexture )[kVrm0TextureCount],
                                                         string& outError )
             {
-                const JSONValue textures = materialProperty.get( "textureProperties", false );
+                const JSONValue textures = materialProperty.get( "textureProperties" );
                 for ( size_t index = 0; index < kVrm0TextureCount; ++index )
                 {
                     outTexture[index] = -1;
                 }
                 for ( const string& key : textures.isObject() ? textures.getMemberNames() : vector<string>{} )
                 {
-                    const std::optional<int32> textureIndex = textures.get( key, false ).read<int32>();
+                    const std::optional<int32> textureIndex = textures.get( key ).read<int32>();
                     if ( textureIndex.has_value() == false )
                     {
                         outError = context + ": texture property '" + key + "' is not a texture index";
@@ -601,9 +601,9 @@ namespace sw::editor
             outError = "materialProperties element is not an object";
             return false;
         }
-        outDesc._name        = materialProperty.get( "name", false ).asString();
+        outDesc._name        = materialProperty.get( "name" ).asString();
         const string context = "VRM 0.x material '" + outDesc._name + "'";
-        const string shader  = materialProperty.get( "shader", false ).asString();
+        const string shader  = materialProperty.get( "shader" ).asString();
         if ( Internal::checkKeys( materialProperty, Internal::kArrVrm0RootKey, context, outError ) == false )
             return false;
 
@@ -639,15 +639,15 @@ namespace sw::editor
     {
         using Internal       = VrmMaterialImporterInternal;
         outDesc              = ToonMaterialDesc{};
-        outDesc._name        = gltfMaterial.get( "name", false ).asString();
+        outDesc._name        = gltfMaterial.get( "name" ).asString();
         const string context = "VRM 1.0 material '" + outDesc._name + "'";
         if ( Internal::readGltfBase( gltfMaterial, outDesc, pOutListIgnored, outError ) == false )
         {
             outError = context + ": " + outError;
             return false;
         }
-        const JSONValue extensions = gltfMaterial.get( "extensions", false );
-        const JSONValue mtoon      = extensions.isObject() ? extensions.get( "VRMC_materials_mtoon", false ) : JSONValue{};
+        const JSONValue extensions = gltfMaterial.get( "extensions" );
+        const JSONValue mtoon      = extensions.isObject() ? extensions.get( "VRMC_materials_mtoon" ) : JSONValue{};
         if ( mtoon.isObject() == false )
         {
             // MToon 이 없는 머티리얼(KHR_materials_unlit, PBR)은 평면 툰으로 처리한다.
@@ -659,7 +659,7 @@ namespace sw::editor
 
         // 키가 없으면 `ToonMaterialDesc` 의 초기값이다 — 그 값이 1.0 의 기본값(VRMC_materials_mtoon 스키마)이다.
         auto readFactor = [&]( string_view key, float4& inoutColor ) -> bool
-        { return mtoon.has( key, false ) == false || Internal::readColor( mtoon.get( key, false ), inoutColor ); };
+        { return mtoon.has( key ) == false || Internal::readColor( mtoon.get( key ), inoutColor ); };
         const bool bInvalidColorFactor = readFactor( "shadeColorFactor", outDesc._shadeColor ) == false || readFactor( "matcapFactor", outDesc._matcapColor ) == false ||
                                          readFactor( "parametricRimColorFactor", outDesc._rimColor ) == false || readFactor( "outlineColorFactor", outDesc._outlineColor ) == false;
         if ( bInvalidColorFactor )
@@ -668,13 +668,13 @@ namespace sw::editor
             return false;
         }
         // 셰이딩 시프트 텍스처는 shadingShiftTextureInfo(index · texCoord · scale)다.
-        const JSONValue shiftTexture  = mtoon.get( "shadingShiftTexture", false );
-        const bool      bTexturesRead = Internal::readTextureIndex( mtoon.get( "shadeMultiplyTexture", false ), "shadeMultiplyTexture", outDesc._shadeTexture, pOutListIgnored, outError ) &&
-                                   Internal::readTextureIndex( mtoon.get( "matcapTexture", false ), "matcapTexture", outDesc._matcapTexture, pOutListIgnored, outError ) &&
-                                   Internal::readTextureIndex( mtoon.get( "rimMultiplyTexture", false ), "rimMultiplyTexture", outDesc._rimMultiplyTexture, pOutListIgnored, outError ) &&
-                                   Internal::readTextureIndex( mtoon.get( "outlineWidthMultiplyTexture", false ), "outlineWidthMultiplyTexture", outDesc._outlineWidthTexture, pOutListIgnored,
+        const JSONValue shiftTexture  = mtoon.get( "shadingShiftTexture" );
+        const bool      bTexturesRead = Internal::readTextureIndex( mtoon.get( "shadeMultiplyTexture" ), "shadeMultiplyTexture", outDesc._shadeTexture, pOutListIgnored, outError ) &&
+                                   Internal::readTextureIndex( mtoon.get( "matcapTexture" ), "matcapTexture", outDesc._matcapTexture, pOutListIgnored, outError ) &&
+                                   Internal::readTextureIndex( mtoon.get( "rimMultiplyTexture" ), "rimMultiplyTexture", outDesc._rimMultiplyTexture, pOutListIgnored, outError ) &&
+                                   Internal::readTextureIndex( mtoon.get( "outlineWidthMultiplyTexture" ), "outlineWidthMultiplyTexture", outDesc._outlineWidthTexture, pOutListIgnored,
                                                                outError ) &&
-                                   Internal::readTextureIndex( mtoon.get( "uvAnimationMaskTexture", false ), "uvAnimationMaskTexture", outDesc._uvAnimationMaskTexture, pOutListIgnored,
+                                   Internal::readTextureIndex( mtoon.get( "uvAnimationMaskTexture" ), "uvAnimationMaskTexture", outDesc._uvAnimationMaskTexture, pOutListIgnored,
                                                                outError ) &&
                                    Internal::readTextureIndex( shiftTexture, "shadingShiftTexture", outDesc._shadingShiftTexture, pOutListIgnored, outError ) &&
                                    ( shiftTexture.isObject() == false || Internal::readFloat( shiftTexture, "scale", outDesc._shadingShiftTextureScale, outError ) );
@@ -694,7 +694,7 @@ namespace sw::editor
             return false;
         }
 
-        const string outlineMode = mtoon.has( "outlineWidthMode", false ) ? mtoon.get( "outlineWidthMode", false ).asString() : string( "none" );
+        const string outlineMode = mtoon.has( "outlineWidthMode" ) ? mtoon.get( "outlineWidthMode" ).asString() : string( "none" );
         if ( outlineMode == "none" )
             outDesc._outlineMode = ToonOutlineMode::None;
         else if ( outlineMode == "worldCoordinates" )

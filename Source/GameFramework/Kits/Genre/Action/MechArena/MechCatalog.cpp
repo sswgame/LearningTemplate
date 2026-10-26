@@ -113,17 +113,17 @@ namespace sw
         for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
             const string_view name = node.getName() != nullptr ? string_view( node.getName() ) : string_view{};
-            if ( StringUtil::equals( name, string_view( "Mech" ), true ) )
+            if ( StringUtil::equals( name, string_view( "Mech" ) ) )
             {
                 if ( loadMech( node, sourceName ) )
                     ++loadedCount;
             }
-            else if ( StringUtil::equals( name, string_view( "Class" ), true ) )
+            else if ( StringUtil::equals( name, string_view( "Class" ) ) )
             {
                 if ( loadClass( node, sourceName ) == false )
                     SW_LOG_ERROR( "%#: <Class> was not read", sourceName );
             }
-            else if ( StringUtil::equals( name, string_view( "Skill" ), true ) )
+            else if ( StringUtil::equals( name, string_view( "Skill" ) ) )
             {
                 if ( loadSkill( node, sourceName ) == false )
                     SW_LOG_ERROR( "%#: <Skill> was not read", sourceName );

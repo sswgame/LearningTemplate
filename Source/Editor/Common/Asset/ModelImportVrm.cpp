@@ -117,9 +117,9 @@ namespace sw::editor
         JSONDocument document;
         if ( document.parse( string_view( data.json, data.json_size ) ) == false )
             return true; // cgltf 가 이미 읽은 JSON 이다 — 못 읽으면 VRM 이 아닌 것으로 본다(readToonMaterials 와 같다)
-        const JSONValue extensions = document.getRoot().get( "extensions", false );
-        const JSONValue vrm0       = extensions.isObject() ? extensions.get( "VRM", false ) : JSONValue{};
-        const JSONValue vrm1       = extensions.isObject() ? extensions.get( "VRMC_vrm", false ) : JSONValue{};
+        const JSONValue extensions = document.getRoot().get( "extensions" );
+        const JSONValue vrm0       = extensions.isObject() ? extensions.get( "VRM" ) : JSONValue{};
+        const JSONValue vrm1       = extensions.isObject() ? extensions.get( "VRMC_vrm" ) : JSONValue{};
         if ( vrm0.isObject() == false && vrm1.isObject() == false )
             return true;
 
@@ -129,7 +129,7 @@ namespace sw::editor
         bool   bRead = false;
         if ( vrm1.isObject() )
         {
-            const JSONValue springBone = extensions.get( "VRMC_springBone", false );
+            const JSONValue springBone = extensions.get( "VRMC_springBone" );
             bRead                      = VrmAvatarImporter::readVrm1Avatar( vrm1, springBone, names, inoutResult._avatar, &inoutResult._listIgnoredAvatarKey, error );
         }
         else

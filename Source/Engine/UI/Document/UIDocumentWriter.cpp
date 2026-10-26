@@ -25,13 +25,12 @@ namespace sw
     {
         struct UIDocumentWriterInternal
         {
-            /** @brief @p type(상속 포함)의 프로퍼티 중 이름이 @p pName 인 것입니다(대소문자 무시). 없으면 nullptr 입니다. */
+            /** @brief @p type(상속 포함)의 프로퍼티 중 이름이 @p pName 인 것입니다(철자 그대로). 없으면 nullptr 입니다. */
             static const PropertyInfo* findProperty( const TypeInfo& type, const utf8* pName )
             {
-                const uint32 nameHash = static_cast<uint32>( hashed_string::computeHash( string_view( pName ) ) );
                 for ( const PropertyInfo& prop : type.getPropertiesWithBase() )
                 {
-                    if ( prop.matchesNameHash( nameHash ) )
+                    if ( prop.matchesNameText( pName ) )
                         return &prop;
                 }
                 return nullptr;

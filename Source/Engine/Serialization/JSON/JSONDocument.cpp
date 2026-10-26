@@ -34,11 +34,6 @@ namespace sw
                 return static_cast<JSONImpl*>( pPtr );
             }
 
-            static bool nameEquals( string_view lhs, string_view rhs, bool bIgnoreCase )
-            {
-                return StringUtil::equals( lhs, rhs, bIgnoreCase );
-            }
-
             static string fromJSONString( const JSONString& value )
             {
                 return string( value.data(), value.size() );
@@ -49,37 +44,15 @@ namespace sw
                 return JSONString( value.data(), value.size() );
             }
 
-            static JSONImpl* findMember( JSONImpl* pObj, string_view key, bool bIgnoreCase )
+            /** @brief 키(철자 그대로)로 멤버를 찾습니다. 대소문자를 무시하면 같은 칸을 여러 철자로 적는 데이터가 쌓인다(별칭). */
+            static JSONImpl* findMember( JSONImpl* pObj, string_view key )
             {
                 if ( pObj == nullptr || pObj->is_object() == false )
                     return nullptr;
-                if ( bIgnoreCase == false )
-                {
-                    auto it = pObj->find( std::string_view( key.data(), key.size() ) );
-                    if ( it != pObj->end() )
-                        return &( *it );
-                    return nullptr;
-                }
-                for ( auto it = pObj->begin(); it != pObj->end(); ++it )
-                {
-                    if ( nameEquals( it.key(), key, true ) )
-                        return &( *it );
-                }
+                auto it = pObj->find( std::string_view( key.data(), key.size() ) );
+                if ( it != pObj->end() )
+                    return &( *it );
                 return nullptr;
-            }
-
-            static string findExistingKey( JSONImpl* pObj, string_view key, bool bIgnoreCase )
-            {
-                if ( pObj == nullptr || pObj->is_object() == false )
-                    return string( key );
-                if ( bIgnoreCase == false )
-                    return string( key );
-                for ( auto it = pObj->begin(); it != pObj->end(); ++it )
-                {
-                    if ( nameEquals( it.key(), key, true ) )
-                        return fromJSONString( it.key() );
-                }
-                return string( key );
             }
 
             static string dumpValue( const JSONImpl& value, int32 indent )
@@ -326,14 +299,14 @@ namespace sw
         return listName;
     }
 
-    JSONValue JSONValue::get( string_view key, bool bIgnoreCaseKeys ) const
+    JSONValue JSONValue::get( string_view key ) const
     {
-        return JSONValue{ JSONDocumentInternal::findMember( JSONDocumentInternal::asJSON( _pValue ), key, bIgnoreCaseKeys ) };
+        return JSONValue{ JSONDocumentInternal::findMember( JSONDocumentInternal::asJSON( _pValue ), key ) };
     }
 
-    bool JSONValue::has( string_view key, bool bIgnoreCaseKeys ) const
+    bool JSONValue::has( string_view key ) const
     {
-        return get( key, bIgnoreCaseKeys ).isValid();
+        return get( key ).isValid();
     }
 
     JSONValue JSONValue::at( size_t index ) const
@@ -446,15 +419,14 @@ namespace sw
             *pJSON = JSONImpl::array();
     }
 
-    JSONValue JSONValue::set( string_view key, bool bIgnoreCaseKeys ) const
+    JSONValue JSONValue::set( string_view key ) const
     {
         JSONImpl* pJSON = JSONDocumentInternal::asJSON( _pValue );
         if ( pJSON == nullptr )
             return {};
         if ( pJSON->is_object() == false )
             *pJSON = JSONImpl::object();
-        const string storedKey = JSONDocumentInternal::findExistingKey( pJSON, key, bIgnoreCaseKeys );
-        JSONImpl&    child     = ( *pJSON )[JSONDocumentInternal::toJSONString( storedKey )];
+        JSONImpl& child = ( *pJSON )[JSONDocumentInternal::toJSONString( key )];
         return JSONValue{ &child };
     }
 
@@ -637,8 +609,7 @@ namespace sw
         return string( value );
     }
 
-    string JSONDocument::extractStringField( string_view json, string_view fieldName,
-                                             bool bIgnoreCaseKeys )
+    string JSONDocument::extractStringField( string_view json, string_view fieldName )
     {
         JSONDocument doc;
         if ( doc.parse( json ) == false )
@@ -646,7 +617,7 @@ namespace sw
         const JSONValue root = doc.getRoot();
         if ( root.isObject() == false )
             return {};
-        const JSONValue field = root.get( fieldName, bIgnoreCaseKeys );
+        const JSONValue field = root.get( fieldName );
         if ( field.isValid() == false )
             return {};
         if ( field.isObject() || field.isArray() )

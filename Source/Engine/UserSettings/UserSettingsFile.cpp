@@ -39,7 +39,7 @@ namespace sw
                 return {};
             }
 
-            static bool equalsText( string_view lhs, string_view rhs ) { return StringUtil::equals( lhs, rhs, true ); }
+            static bool equalsText( string_view lhs, string_view rhs ) { return StringUtil::equals( lhs, rhs ); }
 
             /** @brief 버전 @p fromVersion 의 단계를 적힌 순서대로 목록에 적용합니다. */
             static void applyUpgradeSteps( const UserSettingsSchema& schema, uint32 fromVersion, vector<UserSettingsFileEntry>& inoutListEntry,
@@ -114,7 +114,7 @@ namespace sw
 
         for ( const string& key : values.getMemberNames() )
         {
-            outListEntry.push_back( UserSettingsFileEntry{ key, Internal::toText( values.get( key, false ) ) } );
+            outListEntry.push_back( UserSettingsFileEntry{ key, Internal::toText( values.get( key ) ) } );
         }
 
         uint32 fileVersion{ Internal::kUnversionedFile };
@@ -146,7 +146,7 @@ namespace sw
         {
             const UserSettingDef* pDef  = schema.findSetting( hashed_string( entry._key ) );
             const UserSettingType type  = pDef != nullptr ? pDef->_type : UserSettingType::String;
-            const JSONValue       field = values.set( entry._key.c_str(), false );
+            const JSONValue       field = values.set( entry._key.c_str() );
             switch ( UserSettingsSchema::getTypeTraits( type )._storageKind )
             {
                 case UserSettingStorageKind::Bool:

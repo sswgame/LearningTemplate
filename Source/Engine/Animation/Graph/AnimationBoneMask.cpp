@@ -25,7 +25,7 @@ namespace sw
             [[nodiscard]] static bool parseEntries( const XMLNode& element, const utf8* pListKey, bool bPropagate, string_view context,
                                                     vector<AnimationBoneMaskEntry>& inoutListEntry )
             {
-                const XMLNode listNode = element.findChild( pListKey, false );
+                const XMLNode listNode = element.findChild( pListKey );
                 if ( listNode.isValid() == false )
                     return true;
                 bool   bValid = true;
@@ -44,7 +44,7 @@ namespace sw
                         continue;
                     }
                     AnimationBoneMaskEntry entry{};
-                    entry._bone       = hashed_string( string_view{ entryNode.getAttributeText( "bone", false ) } );
+                    entry._bone       = hashed_string( string_view{ entryNode.getAttributeText( "bone" ) } );
                     entry._bPropagate = bPropagate ? SW_TRUE : SW_FALSE;
                     if ( entry._bone.empty() )
                     {
@@ -116,7 +116,7 @@ namespace sw
             SW_LOG_ERROR( "Bone mask file '%#' could not be read", path );
             return false;
         }
-        const XMLNode root = doc.getRoot( "AnimationBoneMaskDef", false );
+        const XMLNode root = doc.getRoot( "AnimationBoneMaskDef" );
         if ( root.isValid() == false || XMLReadUtil::hasOnlyKnownNames( root, {}, { "roots", "bones" }, path ) == false )
         {
             SW_LOG_ERROR( "Bone mask file '%#' must be an <AnimationBoneMaskDef> element", path );

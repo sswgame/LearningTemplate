@@ -100,7 +100,7 @@ namespace sw
 
         /** @brief 필드 하나의 플래그(`kAffectsLayout` · `kAffectsSubtree` · `kInherited`)입니다. */
         static uint32 getFlags( UIStyleField field );
-        /** @brief `WidgetStyle` 의 PROPERTY 이름(`_backgroundColor`, 대소문자 무시)에 해당하는 필드를 찾습니다. 없으면 false 입니다. */
+        /** @brief `WidgetStyle` 의 PROPERTY 이름(`_backgroundColor`, 철자 그대로)에 해당하는 필드를 찾습니다. 없으면 false 입니다. */
         [[nodiscard]] static bool tryFindField( string_view name, UIStyleField& outField );
         /** @brief 4성분 값을 `tryGetOwnStyleField` 의 출력 배열 `[x, y, z, w]` 에 옮깁니다. */
         static void storeFloat4( const float4& value, float32 ( &outArr )[4] );

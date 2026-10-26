@@ -57,7 +57,7 @@ namespace
             for ( const sw::string& key : shape.getMemberNames() )
             {
                 const sw::string    path      = prefix.empty() ? key : sw::string( prefix + "." + key );
-                const sw::JSONValue fileValue = file.get( key, false );
+                const sw::JSONValue fileValue = file.get( key );
                 if ( fileValue.isValid() == false )
                 {
                     bool bExempt = false;
@@ -69,7 +69,7 @@ namespace
                         outListKey.push_back( path );
                     continue;
                 }
-                const sw::JSONValue shapeValue = shape.get( key, false );
+                const sw::JSONValue shapeValue = shape.get( key );
                 if ( shapeValue.isObject() )
                     collectMissingKeys( shapeValue, fileValue, path, outListKey );
             }

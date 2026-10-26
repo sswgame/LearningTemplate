@@ -123,7 +123,7 @@ namespace sw
         uint32 loadedCount = 0;
         for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
-            if ( StringUtil::equals( node.getName(), "Round", true ) == false )
+            if ( StringUtil::equals( node.getName(), "Round" ) == false )
             {
                 SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, node.getName() );
                 continue;

@@ -409,10 +409,10 @@ namespace sw
 
             static string_view readPropertyValue( const XMLNode& node, const PropertyInfo& property )
             {
-                string_view value = node.getAttributeText( property._name.c_str(), false );
+                string_view value = node.getAttributeText( property._name.c_str() );
                 if ( value.empty() )
                 {
-                    const utf8* pChildText = node.findChildText( property._name.c_str(), false );
+                    const utf8* pChildText = node.findChildText( property._name.c_str() );
                     if ( pChildText != nullptr )
                         value = string_view( pChildText );
                 }

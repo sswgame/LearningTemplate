@@ -31,7 +31,7 @@ namespace sw::editor
         string          brokenCommandID;
         for ( const string& commandID : root.getMemberNames() )
         {
-            const JSONValue        pair = root.get( commandID, false );
+            const JSONValue        pair = root.get( commandID );
             EditorShortcutOverride entry{};
             entry._commandID  = commandID;
             const bool bValid = pair.isArray() && pair.size() == 2 && parseShortcut( pair.at( 0 ).asString(), entry._shortcut ) &&
@@ -58,7 +58,7 @@ namespace sw::editor
         const JSONValue root = document.makeObject();
         for ( const EditorShortcutOverride& entry : _listOverride )
         {
-            const JSONValue pair = root.set( entry._commandID, false );
+            const JSONValue pair = root.set( entry._commandID );
             pair.setArray();
             pair.pushBack().setString( formatShortcut( entry._shortcut ) );
             pair.pushBack().setString( formatShortcut( entry._altShortcut ) );

@@ -134,19 +134,19 @@ namespace sw
             SW_LOG_ERROR( "Rig '%#': malformed XML, rig settings not saved", sourceLabel );
             return false;
         }
-        const XMLNode nodes = root.findChild( "nodes", false );
+        const XMLNode nodes = root.findChild( "nodes" );
         if ( nodes.isValid() == false )
         {
             SW_LOG_ERROR( "Rig '%#': no 'nodes', rig settings not saved", sourceLabel );
             return false;
         }
-        const XMLNode targets = root.findChild( "targets", false );
+        const XMLNode targets = root.findChild( "targets" );
         for ( const RigTargetSaveParams& params : saveParams._listTarget )
         {
             bool bFound = false;
             for ( XMLNode target = targets.findChild(); target.isValid(); target = target.findNextSibling() )
             {
-                const bool bNamed = hashed_string( string_view{ target.getAttributeText( "name", false ) } ) == params._name;
+                const bool bNamed = hashed_string( string_view{ target.getAttributeText( "name" ) } ) == params._name;
                 if ( bNamed == false )
                     continue;
                 bFound = true;
@@ -154,8 +154,8 @@ namespace sw
                 const float3 degrees           = params._rotation.getEulerAngles() * MathUtil::kRadianToDegree;
                 const bool   bHasTranslation   = params._translation.getLengthSquared() > 0.0f;
                 const bool   bHasRotation      = degrees.getLengthSquared() > 0.0f;
-                const bool   bWriteTranslation = bHasTranslation || target.findAttribute( "translation", false ) != nullptr;
-                const bool   bWriteRotation    = bHasRotation || target.findAttribute( "rotation", false ) != nullptr;
+                const bool   bWriteTranslation = bHasTranslation || target.findAttribute( "translation" ) != nullptr;
+                const bool   bWriteRotation    = bHasRotation || target.findAttribute( "rotation" ) != nullptr;
                 if ( bWriteTranslation )
                     target.setAttribute( "translation", string_view{ XMLReadUtil::makeFloatListText( &params._translation._x, 3 ) } );
                 if ( bWriteRotation )
@@ -172,12 +172,12 @@ namespace sw
             bool bFound = false;
             for ( XMLNode node = nodes.findChild(); node.isValid(); node = node.findNextSibling() )
             {
-                const bool bNamed = hashed_string( string_view{ node.getAttributeText( "name", false ) } ) == params._name;
+                const bool bNamed = hashed_string( string_view{ node.getAttributeText( "name" ) } ) == params._name;
                 if ( bNamed == false )
                     continue;
                 bFound = true;
                 node.setAttribute( "weight", params._weight );
-                const bool bWriteEnabled = params._bEnabled == false || node.findAttribute( "enabled", false ) != nullptr;
+                const bool bWriteEnabled = params._bEnabled == false || node.findAttribute( "enabled" ) != nullptr;
                 if ( bWriteEnabled )
                     node.setAttribute( "enabled", string_view{ params._bEnabled ? "true" : "false" } );
             }

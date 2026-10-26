@@ -200,8 +200,8 @@ namespace sw
          */
         [[nodiscard]] SW_API static string formatValueText( ValueAddress value, const hashed_string& typeName, const SerializeContext& context );
 
-        /** @brief 키 문자열이 같은지 비교합니다(대소문자 무시 옵션 지원). */
-        static bool keysEqual( string_view left, string_view right, bool bIgnoreCase );
+        /** @brief 키 문자열이 철자 그대로 같은지 비교합니다(대소문자가 다르면 다른 키 — 별칭 없음). */
+        static bool keysEqual( string_view left, string_view right );
 
         /**
          * @brief Alias 로 들어온 이름을 `SerializeContext` 핸들러가 아는 원본 이름(`_name`)으로 바꿉니다.
@@ -240,9 +240,8 @@ namespace sw
          */
         [[nodiscard]] SW_API static bool isWithinDeclaredRanges( const TypeInfo& typeInfo, ObjectAddress instance );
 
-        /** @brief 프로퍼티 목록에서 키에 맞는 프로퍼티 메타데이터를 찾습니다. */
-        static const PropertyInfo* matchProperty( const vector<PropertyInfo>& listProp, string_view keyRaw,
-                                                  bool bIgnoreCaseKeys, bool& bCaseVariant );
+        /** @brief 프로퍼티 목록에서 키(철자 그대로)에 맞는 프로퍼티 메타데이터를 찾습니다. 지금 이름을 모두 본 뒤에 옛 이름(Alias)을 봅니다. */
+        static const PropertyInfo* matchProperty( const vector<PropertyInfo>& listProp, string_view keyRaw );
 
         /**
          * @brief 이름 해시(바이너리 태그 · diff 항목)에 맞는 프로퍼티의 인덱스입니다. 없으면 `listProp.size()` 입니다.

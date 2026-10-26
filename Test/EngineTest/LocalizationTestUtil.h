@@ -45,7 +45,7 @@ namespace sw::test
             root.appendAttribute( "sourceCulture", sourceCulture );
             for ( const string& fieldName : fields.getRoot().getMemberNames() )
             {
-                const JSONValue list     = fields.getRoot().get( fieldName, false );
+                const JSONValue list     = fields.getRoot().get( fieldName );
                 const XMLNode   listNode = root.appendChild( fieldName.c_str() );
                 for ( size_t index = 0; list.isArray() && index < list.size(); ++index )
                 {
@@ -66,13 +66,13 @@ namespace sw::test
             table.setCulture( culture );
             for ( const string& key : entries.getRoot().getMemberNames() )
             {
-                const JSONValue  value = entries.getRoot().get( key, false );
+                const JSONValue  value = entries.getRoot().get( key );
                 SourceTextEntry& entry = table.getOrAddEntry( key );
-                entry._source          = value.get( "source", false ).asString();
-                entry._context         = value.get( "context", false ).asString();
-                entry._comment         = value.get( "comment", false ).asString();
+                entry._source          = value.get( "source" ).asString();
+                entry._context         = value.get( "context" ).asString();
+                entry._comment         = value.get( "comment" ).asString();
                 (void)value.readOptionalInto( "maxLength", entry._maxLength ); // 없으면 항목의 초기값(제한 없음)이고, 틀린 값은 loadFromXMLText 테스트가 따로 본다
-                const JSONValue origins = value.get( "origins", false );
+                const JSONValue origins = value.get( "origins" );
                 for ( size_t index = 0; origins.isArray() && index < origins.size(); ++index )
                 {
                     entry._listOrigin.push_back( origins.at( index ).asString() );
@@ -92,12 +92,12 @@ namespace sw::test
             table.setCulture( culture );
             for ( const string& key : entries.getRoot().getMemberNames() )
             {
-                const JSONValue   value  = entries.getRoot().get( key, false );
+                const JSONValue   value  = entries.getRoot().get( key );
                 TranslationEntry& entry  = table.getOrAddEntry( key );
-                entry._text              = value.get( "text", false ).asString();
-                entry._translatorComment = value.get( "translatorComment", false ).asString();
+                entry._text              = value.get( "text" ).asString();
+                entry._translatorComment = value.get( "translatorComment" ).asString();
                 (void)value.readOptionalInto( "review", entry._bReview ); // 없으면 검토 표시 없음이다 — 테스트 준비라 틀린 값은 뒤의 읽기 단언이 드러낸다
-                const JSONValue hash = value.get( "sourceHash", false );
+                const JSONValue hash = value.get( "sourceHash" );
                 if ( hash.isValid() )
                     (void)LocalizationTextUtil::tryParseSourceHash( hash.asString(), entry._sourceHash ); // 틀린 해시는 0(확인 안 함)으로 남는다 — 해시 오류는 loadFromXMLText 테스트가 따로 본다
             }

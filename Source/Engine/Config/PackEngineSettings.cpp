@@ -35,8 +35,8 @@ namespace sw
             SW_LOG_ERROR( "%#: %#", label.c_str(), document.getLastError().c_str() );
             return false;
         }
-        const XMLNode root    = document.getRoot( kRootElementName, false );
-        const XMLNode element = root.isValid() ? root.findChild( kElementName, false ) : XMLNode{};
+        const XMLNode root    = document.getRoot( kRootElementName );
+        const XMLNode element = root.isValid() ? root.findChild( kElementName ) : XMLNode{};
         if ( element.isValid() == false )
         {
             SW_LOG_ERROR( "%#: <%#><%#> is missing - the pack names its window title and engine settings there", label.c_str(), kRootElementName, kElementName );

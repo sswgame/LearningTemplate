@@ -20,7 +20,7 @@ namespace sw
             {
                 for ( const AnimationNotifyParamDef& def : listDef )
                 {
-                    if ( StringUtil::equals( def._pName, pName, true ) )
+                    if ( StringUtil::equals( def._pName, pName ) )
                         return &def;
                 }
                 return nullptr;
@@ -160,9 +160,9 @@ namespace sw
         reader.reportUnexpectedAttributes( root );
         for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
         {
-            if ( StringUtil::equals( child.getName(), "Notify", true ) )
+            if ( StringUtil::equals( child.getName(), "Notify" ) )
                 readEntry( child, registry, reader );
-            else if ( StringUtil::equals( child.getName(), "FootContact", true ) )
+            else if ( StringUtil::equals( child.getName(), "FootContact" ) )
                 readFootContact( child, reader );
             else
                 reader.reportUnknownElement( child );
@@ -220,7 +220,7 @@ namespace sw
         for ( XMLAttribute attribute = node.getFirstAttribute(); attribute; attribute = attribute.getNext() )
         {
             const utf8* pName      = attribute.getName();
-            const bool  bBaseField = StringUtil::equals( pName, "name", true ) || StringUtil::equals( pName, "handler", true );
+            const bool  bBaseField = StringUtil::equals( pName, "name" ) || StringUtil::equals( pName, "handler" );
             if ( bBaseField == false && AnimationNotifyTableInternal::findParamDef( listDef, pName ) == nullptr )
                 reader.addError( "Character.NotifyArgumentUnknown", node, string( "has unknown argument '" ) + pName + "' for handler '" + entry._handlerName.c_str() + "'" );
         }

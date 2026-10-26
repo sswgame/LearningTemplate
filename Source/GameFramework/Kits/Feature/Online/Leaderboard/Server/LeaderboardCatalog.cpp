@@ -19,7 +19,7 @@ namespace sw
         for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
             const utf8* pElement = node.getName();
-            if ( StringUtil::equals( pElement, "Board", true ) )
+            if ( StringUtil::equals( pElement, "Board" ) )
             {
                 LeaderboardDefinition board;
                 if ( readBoard( node, sourceName, board ) )
@@ -28,7 +28,7 @@ namespace sw
                     ++loadedCount;
                 }
             }
-            else if ( StringUtil::equals( pElement, "Achievement", true ) )
+            else if ( StringUtil::equals( pElement, "Achievement" ) )
             {
                 AchievementDefinition achievement;
                 if ( GameDataXML::readFields( node, achievement, sourceName ) )

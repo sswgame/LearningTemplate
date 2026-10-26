@@ -200,7 +200,7 @@ namespace sw
     uint32 ScheduleCatalog::loadElement( const XMLNode& node, string_view sourceName )
     {
         const utf8* pName = node.getName();
-        if ( StringUtil::equals( pName, "Calendar", true ) )
+        if ( StringUtil::equals( pName, "Calendar" ) )
         {
             loadCalendar( node, sourceName );
             return 0;
@@ -208,17 +208,17 @@ namespace sw
         const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
         if ( pID == nullptr )
             return 0;
-        if ( StringUtil::equals( pName, "Place", true ) )
+        if ( StringUtil::equals( pName, "Place" ) )
             loadPlace( node, sourceName, pID );
-        else if ( StringUtil::equals( pName, "Spot", true ) )
+        else if ( StringUtil::equals( pName, "Spot" ) )
             loadSpot( node, sourceName, pID );
-        else if ( StringUtil::equals( pName, "Interrupt", true ) )
+        else if ( StringUtil::equals( pName, "Interrupt" ) )
             loadInterrupt( node, sourceName, pID );
-        else if ( StringUtil::equals( pName, "Appointment", true ) )
+        else if ( StringUtil::equals( pName, "Appointment" ) )
             loadAppointment( node, sourceName, pID );
-        else if ( StringUtil::equals( pName, "Archetype", true ) )
+        else if ( StringUtil::equals( pName, "Archetype" ) )
             loadArchetype( node, sourceName, pID );
-        else if ( StringUtil::equals( pName, "Npc", true ) )
+        else if ( StringUtil::equals( pName, "Npc" ) )
             return loadNpc( node, sourceName, pID ) ? 1 : 0;
         else
             loadEvent( node, sourceName, pID );
@@ -316,7 +316,7 @@ namespace sw
     {
         for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
         {
-            if ( StringUtil::equals( child.getName(), "Routine", true ) == false )
+            if ( StringUtil::equals( child.getName(), "Routine" ) == false )
             {
                 SW_LOG_WARNING( "%#: %# '%#' has unknown element <%#>", sourceName, ownerKind, ownerID, child.getName() );
                 continue;
@@ -388,7 +388,7 @@ namespace sw
         }
         for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
         {
-            if ( StringUtil::equals( child.getName(), "Block", true ) == false )
+            if ( StringUtil::equals( child.getName(), "Block" ) == false )
             {
                 SW_LOG_WARNING( "%#: event '%#' has unknown element <%#>", sourceName, pID, child.getName() );
                 continue;
@@ -413,7 +413,7 @@ namespace sw
         bValid = outRoutine._condition.readFromNode( node, _vocabulary, sourceName, ownerName ) && bValid;
         for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
         {
-            if ( StringUtil::equals( child.getName(), "Block", true ) == false )
+            if ( StringUtil::equals( child.getName(), "Block" ) == false )
             {
                 SW_LOG_WARNING( "%#: routine '%#' of '%#' has unknown element <%#>", sourceName, outRoutine._id.c_str(), ownerName, child.getName() );
                 continue;

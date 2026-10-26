@@ -230,6 +230,19 @@ namespace sw
             { return alias.empty() == false && alias.getHash() == oldNameHash; } );
         }
 
+        /**
+         * @brief 글 @p text 가 지금 이름이나 옛 이름(`PROPERTY( Alias = … )`)과 **철자 그대로** 같으면 true 입니다.
+         * @details XML · JSON 의 태그 · 속성 이름을 프로퍼티에 맞출 때 쓴다. 이름 해시(`matchesNameHash`)는 `hashed_string` 규칙이라 대소문자를 무시해
+         *          `_Width` 같은 철자가 조용히 같은 칸이 된다(별칭). 해시는 엔진이 쓴 바이너리 태그에만 쓴다.
+         */
+        bool matchesNameText( string_view text ) const
+        {
+            if ( _name.view() == text )
+                return true;
+            return VectorUtil::containsIf( _listAlias, [&]( const hashed_string& alias )
+            { return alias.empty() == false && alias.view() == text; } );
+        }
+
         /** @brief 이름이나 별칭과 일치하면 true 입니다. */
         bool matchesName( const hashed_string& nameOrAlias ) const
         {

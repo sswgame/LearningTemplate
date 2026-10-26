@@ -17,13 +17,13 @@ namespace sw::editor
         const JSONValue root = document.getRoot();
         // 남길 줄을 모은다 — 그 모듈의 옛 줄은 빼고, 기본과 다르면 새 줄 하나.
         vector<std::pair<string, bool>> listEntry;
-        const JSONValue                 listOld = root.get( "_listModuleOverride", false );
+        const JSONValue                 listOld = root.get( "_listModuleOverride" );
         if ( listOld.isValid() && listOld.isArray() )
         {
             for ( size_t index = 0; index < listOld.size(); ++index )
             {
                 const JSONValue entry = listOld.at( index );
-                const string    name  = entry.get( "_name", false ).asString();
+                const string    name  = entry.get( "_name" ).asString();
                 if ( name == moduleName )
                     continue;
                 // 다른 모듈의 줄은 그대로 옮긴다. 켬 · 끔이 불리언이 아닌 줄은 고쳐 쓰지 않고 실패한다(읽기가 알린다).
@@ -36,14 +36,14 @@ namespace sw::editor
         if ( bEnabled != bEnabledByDefault )
             listEntry.emplace_back( string( moduleName ), bEnabled );
 
-        const JSONValue listNew = root.set( "_listModuleOverride", false );
+        const JSONValue listNew = root.set( "_listModuleOverride" );
         listNew.setArray();
         for ( const std::pair<string, bool>& entry : listEntry )
         {
             const JSONValue item = listNew.pushBack();
             item.setObject();
-            item.set( "_name", false ).setString( entry.first );
-            item.set( "_bEnabled", false ).setBool( entry.second );
+            item.set( "_name" ).setString( entry.first );
+            item.set( "_bEnabled" ).setBool( entry.second );
         }
         outManifestJSON = document.dump( 4 );
         return true;

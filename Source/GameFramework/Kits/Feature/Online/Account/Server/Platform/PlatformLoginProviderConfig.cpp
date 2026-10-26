@@ -27,7 +27,7 @@ namespace sw
 
             static string readText( const JSONValue& object, const utf8* pKey, string_view fallback )
             {
-                const JSONValue value = object.get( pKey, false );
+                const JSONValue value = object.get( pKey );
                 return value.isString() ? value.asString() : string( fallback );
             }
         };
@@ -64,7 +64,7 @@ namespace sw
             outError = "platform login settings are not JSON";
             return false;
         }
-        const JSONValue providers = document.getRoot().get( "providers", false );
+        const JSONValue providers = document.getRoot().get( "providers" );
         if ( providers.isArray() == false )
         {
             outError = "platform login settings need a 'providers' array";
@@ -123,7 +123,7 @@ namespace sw
                 return false;
             }
             settings._bRequireNonce   = bRequireNonce ? SW_TRUE : SW_FALSE;
-            const JSONValue clientIDs = entry.get( "clientIds", false );
+            const JSONValue clientIDs = entry.get( "clientIds" );
             for ( size_t clientIndex = 0; clientIDs.isArray() && clientIndex < clientIDs.size(); ++clientIndex )
             {
                 settings._listClientID.push_back( clientIDs.at( clientIndex ).asString() );

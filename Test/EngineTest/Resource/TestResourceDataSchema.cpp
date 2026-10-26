@@ -350,7 +350,7 @@ namespace
             const sw::JSONValue clips = root.get( "clips" );
             for ( const sw::string& clipName : clips.getMemberNames() )
             {
-                const sw::JSONValue clip = clips.get( clipName, false );
+                const sw::JSONValue clip = clips.get( clipName );
                 if ( sw::AnimationJSONUtil::hasOnlyKnownKeys( clip, { "loop", "notifies", "curves" }, resourceID ) == false )
                     return false;
                 const sw::JSONValue notifies = clip.get( "notifies" );
@@ -500,8 +500,8 @@ namespace
             sw::XMLDocument document;
             if ( document.loadFile( sw::FileUtil::joinPath( sw::ResourcePaths::getRootFolderPath(), resourceID ) ) == false )
                 return false;
-            const sw::XMLNode root = document.getRoot( "VrmAvatar", false );
-            return root.isValid() && root.findAttribute( "_version", false ) != nullptr && root.findChild( "_mapHumanBone", false ).isValid();
+            const sw::XMLNode root = document.getRoot( "VrmAvatar" );
+            return root.isValid() && root.findAttribute( "_version" ) != nullptr && root.findChild( "_mapHumanBone" ).isValid();
         }
 
         /**
@@ -661,7 +661,7 @@ namespace
             sw::XMLDocument document;
             if ( document.loadResource( resourceID ) == false )
                 return false;
-            const sw::XMLNode root = document.getRoot( nullptr, false );
+            const sw::XMLNode root = document.getRoot( nullptr );
             if ( root.isValid() == false || root.getName() == nullptr )
                 return false;
             for ( const sw::string& typeName : listGameTypeName )

@@ -222,7 +222,7 @@ namespace sw
                     result._error = string( "EngineConfig.json (configure-time copy) could not be parsed: " ) + document.getLastError();
                     return result;
                 }
-                const JSONValue priority = document.getRoot().get( "_listResourcePriority", false );
+                const JSONValue priority = document.getRoot().get( "_listResourcePriority" );
                 for ( size_t index = 0; index < priority.size(); ++index )
                 {
                     result._listPriority.push_back( priority.at( index ).asString() );

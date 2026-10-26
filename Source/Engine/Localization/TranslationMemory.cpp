@@ -46,9 +46,9 @@ namespace sw
             if ( error.empty() )
                 error = string( sourceName ) + ": root must be <TranslationMemory>";
         }
-        const XMLNode entries = root.findChild( "entries", false );
+        const XMLNode entries = root.findChild( "entries" );
         if ( error.empty() && ( XMLReadUtil::hasOnlyKnownNames( root, { "culture" }, { "entries" }, sourceName ) == false || entries.isValid() == false ||
-                                root.findAttribute( "culture", false ) == nullptr ) )
+                                root.findAttribute( "culture" ) == nullptr ) )
             error = string( sourceName ) + ": needs <TranslationMemory culture=\"…\"><entries>…</entries></TranslationMemory> and nothing else";
 
         map<string, string> mapPair;
@@ -56,13 +56,13 @@ namespace sw
         for ( XMLNode entry = entries.findChild(); error.empty() && entry.isValid(); entry = entry.findNextSibling(), ++index )
         {
             const bool bMalformedEntry = string_view{ entry.getName() } != "entry" || XMLReadUtil::hasOnlyKnownNames( entry, { "source", "text" }, {}, sourceName ) == false ||
-                                         entry.findAttribute( "source", false ) == nullptr || entry.findAttribute( "text", false ) == nullptr;
+                                         entry.findAttribute( "source" ) == nullptr || entry.findAttribute( "text" ) == nullptr;
             if ( bMalformedEntry )
             {
                 error = string( sourceName ) + ": entries[" + to_string( static_cast<uint64>( index ) ) + "] needs exactly \"source\" and \"text\"";
                 break;
             }
-            mapPair[string{ entry.getAttributeText( "source", false ) }] = string{ entry.getAttributeText( "text", false ) };
+            mapPair[string{ entry.getAttributeText( "source" ) }] = string{ entry.getAttributeText( "text" ) };
         }
         if ( error.empty() == false )
         {
@@ -70,7 +70,7 @@ namespace sw
                 *pOutError = error;
             return false;
         }
-        _culture         = CultureTable::normalizeCode( root.getAttributeText( "culture", false ) );
+        _culture         = CultureTable::normalizeCode( root.getAttributeText( "culture" ) );
         _mapSourceToText = std::move( mapPair );
         return true;
     }

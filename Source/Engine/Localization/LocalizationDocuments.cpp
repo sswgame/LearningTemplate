@@ -88,8 +88,8 @@ namespace sw
                     outError = string( sourceName ) + ": unknown field '" + unknown + "'";
                     return false;
                 }
-                outCulture = CultureTable::normalizeCode( root.getAttributeText( "culture", false ) );
-                outEntries = root.findChild( "entries", false );
+                outCulture = CultureTable::normalizeCode( root.getAttributeText( "culture" ) );
+                outEntries = root.findChild( "entries" );
                 if ( outCulture.empty() )
                 {
                     outError = string( sourceName ) + ": needs a \"culture\" attribute";
@@ -113,7 +113,7 @@ namespace sw
                     outError = string( sourceName ) + ": entry has unknown field '" + unknown + "'";
                     return false;
                 }
-                outKey = string{ entryNode.getAttributeText( "key", false ) };
+                outKey = string{ entryNode.getAttributeText( "key" ) };
                 if ( outKey.empty() )
                 {
                     outError = string( sourceName ) + ": entry needs a \"key\" attribute";
@@ -206,15 +206,15 @@ namespace sw
                 error = string( sourceName ) + ": entry '" + key + "' is written twice";
                 break;
             }
-            if ( entryNode.findAttribute( "source", false ) == nullptr )
+            if ( entryNode.findAttribute( "source" ) == nullptr )
             {
                 error = string( sourceName ) + ": entry '" + key + "' needs a \"source\" attribute";
                 break;
             }
             SourceTextEntry entry;
-            entry._source  = string{ entryNode.getAttributeText( "source", false ) };
-            entry._context = string{ entryNode.getAttributeText( "context", false ) };
-            entry._comment = string{ entryNode.getAttributeText( "comment", false ) };
+            entry._source  = string{ entryNode.getAttributeText( "source" ) };
+            entry._context = string{ entryNode.getAttributeText( "context" ) };
+            entry._comment = string{ entryNode.getAttributeText( "comment" ) };
             // 최대 길이는 없으면 항목의 초기값(제한 없음 0)이다.
             std::optional<uint32> maxLength;
             if ( entryNode.readOptionalAttribute( "maxLength", maxLength ) == false )
@@ -224,7 +224,7 @@ namespace sw
             }
             if ( maxLength.has_value() )
                 entry._maxLength = *maxLength;
-            if ( Internal::readStringList( entryNode.findChild( "origins", false ), entry._listOrigin ) == false )
+            if ( Internal::readStringList( entryNode.findChild( "origins" ), entry._listOrigin ) == false )
             {
                 error = string( sourceName ) + ": entry '" + key + "' origins must be <item> elements";
                 break;
@@ -324,14 +324,14 @@ namespace sw
                 error = string( sourceName ) + ": entry '" + key + "' is written twice";
                 break;
             }
-            if ( entryNode.findAttribute( "text", false ) == nullptr )
+            if ( entryNode.findAttribute( "text" ) == nullptr )
             {
                 error = string( sourceName ) + ": entry '" + key + "' needs a \"text\" attribute";
                 break;
             }
             TranslationEntry entry;
-            entry._text              = string{ entryNode.getAttributeText( "text", false ) };
-            entry._translatorComment = string{ entryNode.getAttributeText( "translatorComment", false ) };
+            entry._text              = string{ entryNode.getAttributeText( "text" ) };
+            entry._translatorComment = string{ entryNode.getAttributeText( "translatorComment" ) };
             std::optional<bool> review;
             if ( entryNode.readOptionalAttribute( "review", review ) == false )
             {
@@ -339,7 +339,7 @@ namespace sw
                 break;
             }
             entry._bReview = review.value_or( false );
-            if ( entryNode.findAttribute( "sourceHash", false ) != nullptr && LocalizationTextUtil::tryParseSourceHash( entryNode.getAttributeText( "sourceHash", false ), entry._sourceHash ) == false )
+            if ( entryNode.findAttribute( "sourceHash" ) != nullptr && LocalizationTextUtil::tryParseSourceHash( entryNode.getAttributeText( "sourceHash" ), entry._sourceHash ) == false )
             {
                 error = string( sourceName ) + ": entry '" + key + "' sourceHash must be 16 hex digits";
                 break;
@@ -446,23 +446,23 @@ namespace sw
         LocalizationProject loaded;
         if ( error.empty() )
         {
-            loaded._name          = string{ root.getAttributeText( "name", false ) };
-            loaded._sourceCulture = CultureTable::normalizeCode( root.getAttributeText( "sourceCulture", false ) );
-            const bool bListsRead = Internal::readStringList( root.findChild( "cultures", false ), loaded._listCulture ) &&
-                                    Internal::readStringList( root.findChild( "stagedCultures", false ), loaded._listStagedCulture ) &&
-                                    Internal::readStringList( root.findChild( "stringTables", false ), loaded._listStringTable ) &&
-                                    Internal::readStringList( root.findChild( "codeRoots", false ), loaded._listCodeRoot ) &&
-                                    Internal::readStringList( root.findChild( "assetRoots", false ), loaded._listAssetRoot );
+            loaded._name          = string{ root.getAttributeText( "name" ) };
+            loaded._sourceCulture = CultureTable::normalizeCode( root.getAttributeText( "sourceCulture" ) );
+            const bool bListsRead = Internal::readStringList( root.findChild( "cultures" ), loaded._listCulture ) &&
+                                    Internal::readStringList( root.findChild( "stagedCultures" ), loaded._listStagedCulture ) &&
+                                    Internal::readStringList( root.findChild( "stringTables" ), loaded._listStringTable ) &&
+                                    Internal::readStringList( root.findChild( "codeRoots" ), loaded._listCodeRoot ) &&
+                                    Internal::readStringList( root.findChild( "assetRoots" ), loaded._listAssetRoot );
             size_t ruleIndex{ 0 };
-            for ( XMLNode ruleNode = root.findChild( "assetRules", false ).findChild(); error.empty() && ruleNode.isValid(); ruleNode = ruleNode.findNextSibling(), ++ruleIndex )
+            for ( XMLNode ruleNode = root.findChild( "assetRules" ).findChild(); error.empty() && ruleNode.isValid(); ruleNode = ruleNode.findNextSibling(), ++ruleIndex )
             {
                 LocalizationAssetRule rule;
                 const bool            bShape = string_view{ ruleNode.getName() } == "rule" && Internal::hasOnlyKnownNames( ruleNode, { "files", "attribute", "kind", "context" }, { "elements" }, unknown ) &&
-                                    Internal::readStringList( ruleNode.findChild( "elements", false ), rule._listElement );
-                rule._fileSuffix = string{ ruleNode.getAttributeText( "files", false ) };
-                rule._attribute  = string{ ruleNode.getAttributeText( "attribute", false ) };
-                rule._context    = string{ ruleNode.getAttributeText( "context", false ) };
-                const string kind{ ruleNode.getAttributeText( "kind", false ) };
+                                    Internal::readStringList( ruleNode.findChild( "elements" ), rule._listElement );
+                rule._fileSuffix = string{ ruleNode.getAttributeText( "files" ) };
+                rule._attribute  = string{ ruleNode.getAttributeText( "attribute" ) };
+                rule._context    = string{ ruleNode.getAttributeText( "context" ) };
+                const string kind{ ruleNode.getAttributeText( "kind" ) };
                 rule._bKeyReference          = kind == "key";
                 const bool bKnownKind        = kind == "key" || kind == "text";
                 const bool bInvalidAssetRule = bShape == false || bKnownKind == false || rule._fileSuffix.empty() || rule._attribute.empty() || rule._listElement.empty();

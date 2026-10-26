@@ -461,7 +461,7 @@ namespace sw
                             bFirstMember = false;
                             appendQuoted( outJSON, member );
                             outJSON += ':';
-                            const JSONValue value = event.get( member, false );
+                            const JSONValue value = event.get( member );
                             if ( member == "pid" )
                                 outJSON += pid;
                             else if ( const std::optional<float64> ts = member == "ts" && value.isNumber() ? value.read<float64>() : std::nullopt; ts.has_value() )

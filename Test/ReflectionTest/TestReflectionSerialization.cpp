@@ -821,9 +821,9 @@ SW_TEST_CASE( ReflectionSerializationTest, XMLAttributeRoundtrip )
 }
 
 /**
- * @brief [ReflectionSerializationTest] XML/JSON 키 대소문자 무시, 값은 유지
+ * @brief [ReflectionSerializationTest] XML/JSON 키는 철자 그대로 맞추고 값은 대소문자를 유지한다 — 대소문자만 다른 키는 묶지 않는다(별칭 없음)
  */
-SW_TEST_CASE( ReflectionSerializationTest, XMLAndJSONKeysIgnoreCaseValuesPreserveCase )
+SW_TEST_CASE( ReflectionSerializationTest, XMLAndJSONKeysMatchExactlyValuesPreserveCase )
 {
     const sw::TypeInfo* typeInfo =
         sw::engine::getSubsystem<sw::TypeRegistry>().findType( sw::hashed_string( "sw::ComplexData" ) );
@@ -831,47 +831,45 @@ SW_TEST_CASE( ReflectionSerializationTest, XMLAndJSONKeysIgnoreCaseValuesPreserv
     if ( typeInfo == nullptr )
         return;
 
-    // 프로퍼티 키/태그는 대소문자가 달라도 되고, 문자열 값은 대소문자를 유지해야 한다.
-    const utf8* json =
-        R"({"_ID":77,"_TITLE":"CaseSensitiveValue","_listScore":[1,2]})";
+    // 철자가 맞는 키는 묶이고 문자열 값은 대소문자를 유지한다.
+    const utf8*     exactJSON = R"({"_id":77,"_title":"CaseSensitiveValue","_listScore":[1,2]})";
     sw::ComplexData fromJSON;
-    SW_EXPECT_TRUE( sw::JSONSerializer::deserialize( &fromJSON, *typeInfo, json ) );
+    SW_EXPECT_TRUE( sw::JSONSerializer::deserialize( &fromJSON, *typeInfo, exactJSON ) );
     SW_EXPECT_EQUAL( 77, fromJSON._id );
     SW_EXPECT_EQUAL( sw::string( "CaseSensitiveValue" ), fromJSON._title );
     SW_EXPECT_EQUAL( 2u, static_cast<uint32>( fromJSON._listScore.size() ) );
 
-    const utf8* xml =
-        R"(<sw__ComplexData _ID="88" _TITLE="XmlCaseValue"><_listScore><item>3</item><ITEM>4</ITEM></_listScore></sw__ComplexData>)";
+    const utf8*     exactXML = R"(<sw__ComplexData _id="88" _title="XmlCaseValue"><_listScore><item>3</item><ITEM>4</ITEM></_listScore></sw__ComplexData>)";
     sw::ComplexData fromXML;
-    SW_EXPECT_TRUE( sw::XMLSerializer::deserialize( &fromXML, *typeInfo, xml ) );
+    SW_EXPECT_TRUE( sw::XMLSerializer::deserialize( &fromXML, *typeInfo, exactXML ) );
     SW_EXPECT_EQUAL( 88, fromXML._id );
     SW_EXPECT_EQUAL( sw::string( "XmlCaseValue" ), fromXML._title );
+    // 시퀀스 원소는 이름으로 조회하지 않고 순서대로 읽는다(원소 태그는 타입에 따라 달라짐) — 원소 태그의 철자와 무관하게 모두 들어온다.
     SW_EXPECT_EQUAL( 2u, static_cast<uint32>( fromXML._listScore.size() ) );
     SW_EXPECT_EQUAL( 3, fromXML._listScore[0] );
     SW_EXPECT_EQUAL( 4, fromXML._listScore[1] );
 
-    SW_EXPECT_EQUAL( sw::string( "CaseSensitiveValue" ),
-                     sw::JSONDocument::extractStringField( json, "_title" ) );
-    SW_EXPECT_TRUE( sw::JSONDocument::extractStringField( json, "_title", false ).empty() );
+    SW_EXPECT_EQUAL( sw::string( "CaseSensitiveValue" ), sw::JSONDocument::extractStringField( exactJSON, "_title" ) );
+    SW_EXPECT_TRUE( sw::JSONDocument::extractStringField( exactJSON, "_TITLE" ).empty() );
 
-    // 옵트아웃: 대소문자 구분 키 조회는 다른 대소문자를 바인딩하면 안 된다.
-    sw::SerializeContext strictContext = sw::SerializeContext::getDefault( sw::SerializePurpose::Authoring );
-    strictContext.setIgnoreCaseKeys( false );
+    // 대소문자만 다른 키는 모르는 키다 — 칸에 묶이지 않아 기본값이 남는다(`_ID` 가 `_id` 가 되지 않는다).
+    const utf8*     caseJSON = R"({"_ID":77,"_TITLE":"CaseSensitiveValue"})";
+    sw::ComplexData caseFromJSON;
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "JSON keys that differ from the field names only in case are unknown keys" );
+        (void)sw::JSONSerializer::deserialize( &caseFromJSON, *typeInfo, caseJSON ); // 성공 여부가 아니라 칸이 묶이지 않았는지를 아래에서 본다
+    }
+    SW_EXPECT_EQUAL( 101, caseFromJSON._id ); // ComplexData 기본값, 77 아님
+    SW_EXPECT_EQUAL( sw::string( "HeroData" ), caseFromJSON._title );
 
-    sw::ComplexData strictJSON;
-    SW_EXPECT_TRUE( sw::JSONSerializer::deserialize( &strictJSON, *typeInfo, json, strictContext ) );
-    SW_EXPECT_EQUAL( 101, strictJSON._id ); // ComplexData 기본값, 77 아님
-    SW_EXPECT_EQUAL( sw::string( "HeroData" ), strictJSON._title );
-
-    sw::ComplexData strictXML;
-    SW_EXPECT_TRUE( sw::XMLSerializer::deserialize( &strictXML, *typeInfo, xml, strictContext ) );
-    SW_EXPECT_EQUAL( 101, strictXML._id );
-    SW_EXPECT_EQUAL( sw::string( "HeroData" ), strictXML._title );
-    // 시퀀스 원소는 이름으로 조회하지 않고 순서대로 읽는다(원소 태그는 타입에 따라 달라짐).
-    // 따라서 대소문자 정책과 무관하게 자식이 모두 들어온다. strict 는 프로퍼티/속성 이름 조회에만 적용된다.
-    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( strictXML._listScore.size() ) );
-    SW_EXPECT_EQUAL( 3, strictXML._listScore[0] );
-    SW_EXPECT_EQUAL( 4, strictXML._listScore[1] );
+    const utf8*     caseXML = R"(<sw__ComplexData _ID="88" _TITLE="XmlCaseValue"/>)";
+    sw::ComplexData caseFromXML;
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "XML attributes that differ from the field names only in case are unknown attributes" );
+        (void)sw::XMLSerializer::deserialize( &caseFromXML, *typeInfo, caseXML ); // 성공 여부가 아니라 칸이 묶이지 않았는지를 아래에서 본다
+    }
+    SW_EXPECT_EQUAL( 101, caseFromXML._id );
+    SW_EXPECT_EQUAL( sw::string( "HeroData" ), caseFromXML._title );
 }
 
 /**

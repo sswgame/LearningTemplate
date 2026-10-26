@@ -88,15 +88,14 @@ namespace sw
                 return pType;
             }
 
-            /** @brief @p pName 이 타입(상속 포함)의 프로퍼티 이름이나 별칭인지 판정합니다(대소문자 무시이며, 직렬화의 이름 맞춤과 같습니다). */
+            /** @brief @p pName 이 타입(상속 포함)의 프로퍼티 이름이나 별칭인지 판정합니다(철자 그대로이며, 직렬화의 이름 맞춤과 같습니다). */
             static bool isKnownProperty( const TypeInfo& type, const utf8* pName )
             {
                 if ( StringUtil::isNullOrEmpty( pName ) )
                     return false;
-                const uint32 nameHash = static_cast<uint32>( hashed_string::computeHash( string_view( pName ) ) );
                 for ( const PropertyInfo& prop : type.getPropertiesWithBase() )
                 {
-                    if ( prop.matchesNameHash( nameHash ) )
+                    if ( prop.matchesNameText( pName ) )
                         return true;
                 }
                 return false;
@@ -212,7 +211,7 @@ namespace sw
             {
                 for ( XMLNode item = element.findChild(); item.isValid(); item = item.findNextSibling() )
                 {
-                    if ( StringUtil::equals( item.getName(), kItemElement, true ) == false )
+                    if ( StringUtil::equals( item.getName(), kItemElement ) == false )
                         return fail( context, item, string( "_listStyleSheet has unknown element <" ) + item.getName() + ">" );
                     const utf8* pPath = item.getText();
                     if ( StringUtil::isNullOrEmpty( pPath ) )
@@ -410,7 +409,7 @@ namespace sw
         }
         const Internal::ParseContext context{ text, path, &asset, &outError };
         const XMLNode                root = document.getRoot();
-        if ( root.isValid() == false || StringUtil::equals( root.getName(), UIDocumentAsset::kRootElementName, true ) == false )
+        if ( root.isValid() == false || StringUtil::equals( root.getName(), UIDocumentAsset::kRootElementName ) == false )
         {
             outError = Internal::makeError( path, 1, "the root element must be <UIDocument>" );
             return false;
@@ -420,7 +419,7 @@ namespace sw
         bool bVersioned{ false };
         for ( XMLAttribute attribute = root.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
         {
-            if ( StringUtil::equals( attribute.getName(), sw::kSchemaVersionKey, true ) == false )
+            if ( StringUtil::equals( attribute.getName(), sw::kSchemaVersionKey ) == false )
                 return Internal::fail( context, root, string( "UIDocument has unknown attribute '" ) + attribute.getName() + "'" );
             int32 version{ 0 };
             if ( StringUtil::parseInt( string( attribute.getValue() ), version ) == false || version != static_cast<int32>( UIDocumentAsset::kVersion ) )
@@ -435,7 +434,7 @@ namespace sw
         for ( XMLNode child = root.findChild(); child.isValid(); child = child.findNextSibling() )
         {
             const utf8* pName = child.getName();
-            if ( StringUtil::equals( pName, Internal::kScreenDescElement, true ) )
+            if ( StringUtil::equals( pName, Internal::kScreenDescElement ) )
             {
                 if ( bScreenDesc )
                     return Internal::fail( context, child, "UIDocument has more than one UIScreenDesc" );
@@ -444,13 +443,13 @@ namespace sw
                     return false;
                 continue;
             }
-            if ( StringUtil::equals( pName, Internal::kStyleSheetListElement, true ) )
+            if ( StringUtil::equals( pName, Internal::kStyleSheetListElement ) )
             {
                 if ( Internal::parseStyleSheetList( context, child ) == false )
                     return false;
                 continue;
             }
-            if ( StringUtil::equals( pName, Internal::kAnimationListElement, true ) )
+            if ( StringUtil::equals( pName, Internal::kAnimationListElement ) )
             {
                 if ( Internal::parseAnimationList( context, child ) == false )
                     return false;

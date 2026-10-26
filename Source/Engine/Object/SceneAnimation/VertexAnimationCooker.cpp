@@ -73,17 +73,17 @@ namespace sw
     {
         if ( XMLReadUtil::hasOnlyKnownNames( root, { "mesh", "skeleton", "clip_folder" }, { "clips" }, sourceLabel ) == false )
             return false;
-        const XMLNode clips                 = root.findChild( "clips", false );
-        const bool    bInvalidAnimationList = root.findAttribute( "mesh", false ) == nullptr || root.findAttribute( "skeleton", false ) == nullptr ||
-                                           root.findAttribute( "clip_folder", false ) == nullptr || clips.isValid() == false || clips.findChild().isValid() == false;
+        const XMLNode clips                 = root.findChild( "clips" );
+        const bool    bInvalidAnimationList = root.findAttribute( "mesh" ) == nullptr || root.findAttribute( "skeleton" ) == nullptr ||
+                                           root.findAttribute( "clip_folder" ) == nullptr || clips.isValid() == false || clips.findChild().isValid() == false;
         if ( bInvalidAnimationList )
         {
             SW_LOG_ERROR( "Vertex animation list '%#' needs mesh, skeleton, clip_folder and a non-empty <clips> list", sourceLabel );
             return false;
         }
-        _meshPath     = string{ root.getAttributeText( "mesh", false ) };
-        _skeletonPath = string{ root.getAttributeText( "skeleton", false ) };
-        _clipFolder   = string{ root.getAttributeText( "clip_folder", false ) };
+        _meshPath     = string{ root.getAttributeText( "mesh" ) };
+        _skeletonPath = string{ root.getAttributeText( "skeleton" ) };
+        _clipFolder   = string{ root.getAttributeText( "clip_folder" ) };
         for ( XMLNode clip = clips.findChild(); clip.isValid(); clip = clip.findNextSibling() )
         {
             if ( string_view{ clip.getName() } != "item" )

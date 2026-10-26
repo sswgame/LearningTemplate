@@ -207,7 +207,7 @@ namespace sw
             result._failureText = "apple does not know this transaction (status " + to_string( response._statusCode ) + ")";
             return;
         }
-        const JSONValue signedInfo = document.getRoot().get( "signedTransactionInfo", false );
+        const JSONValue signedInfo = document.getRoot().get( "signedTransactionInfo" );
         JSONWebToken    token;
         if ( signedInfo.isString() == false || verifyJws( signedInfo.asString(), nowWallMs / Internal::kMillisecondsPerSecond, token ) == false )
         {
@@ -273,11 +273,11 @@ namespace sw
             _bHistoryInFlight = SW_FALSE; // 지난 성공 시각을 그대로 둔다 — 다음 조회가 이번 구간까지 다시 읽는다
             return;
         }
-        const JSONValue history = document.getRoot().get( "notificationHistory", false );
+        const JSONValue history = document.getRoot().get( "notificationHistory" );
         for ( size_t index = 0; history.isArray() && index < history.size(); ++index )
         {
             const JSONValue item          = history.at( index );
-            const JSONValue signedPayload = item.get( "signedPayload", false );
+            const JSONValue signedPayload = item.get( "signedPayload" );
             JSONWebToken    notification;
             if ( signedPayload.isString() == false || verifyJws( signedPayload.asString(), nowWallMs / Internal::kMillisecondsPerSecond, notification ) == false )
             {

@@ -85,7 +85,7 @@ namespace sw
                     const string_view key   = StringUtil::trim( line.substr( 0, colon ) );
                     const string_view value = StringUtil::trim( line.substr( colon + 1 ) );
                     if ( key.empty() == false )
-                        outContext.set( key, false ).setString( value );
+                        outContext.set( key ).setString( value );
                 } );
             }
 

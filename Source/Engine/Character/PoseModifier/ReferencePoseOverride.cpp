@@ -77,7 +77,7 @@ namespace sw
         }
         for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
         {
-            if ( StringUtil::equals( child.getName(), "Bone", true ) )
+            if ( StringUtil::equals( child.getName(), "Bone" ) )
             {
                 reader.reportUnknownAttributes( child, ReferencePoseOverrideInternal::kArrBoneAttribute );
                 BoneOverride boneOverride;
@@ -106,7 +106,7 @@ namespace sw
                 }
                 _listOverride.push_back( boneOverride );
             }
-            else if ( StringUtil::equals( child.getName(), "Mirror", true ) )
+            else if ( StringUtil::equals( child.getName(), "Mirror" ) )
             {
                 reader.reportUnknownAttributes( child, ReferencePoseOverrideInternal::kArrMirrorAttribute );
                 const hashed_string left  = reader.readName( child, "left", true );

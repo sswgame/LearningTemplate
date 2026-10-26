@@ -9,9 +9,9 @@
 // 1) Core_XML — 대소문자 무시 키·옵트아웃
 // ------------------------------------------------------------------------------
 /**
- * @brief [XMLDocumentTest] 파싱·탐색과 대소문자 무시 키
+ * @brief [XMLDocumentTest] 파싱·탐색 — 요소 · 속성 이름은 철자 그대로 찾는다(대소문자가 다르면 없는 이름)
  */
-SW_TEST_CASE( XMLDocumentTest, ParseAndNavigateIgnoreCaseKeys )
+SW_TEST_CASE( XMLDocumentTest, ParseAndNavigateExactKeys )
 {
     sw::XMLDocument doc;
     const bool      bParsed = doc.parse(
@@ -25,20 +25,23 @@ SW_TEST_CASE( XMLDocumentTest, ParseAndNavigateIgnoreCaseKeys )
     sw::XMLNode missing = doc.getRoot( "Missing" );
     SW_EXPECT_TRUE( missing.isValid() == false );
 
-    sw::XMLNode root = doc.getRoot( "root" ); // 기본은 대소문자 무시
+    SW_EXPECT_TRUE( doc.getRoot( "root" ).isValid() == false ); // 대소문자가 다르면 없는 이름
+    sw::XMLNode root = doc.getRoot( "Root" );
     SW_EXPECT_TRUE( root.isValid() );
     SW_EXPECT_STREQ( "Root", root.getName() );
-    SW_EXPECT_STREQ( "Demo", root.findAttribute( "name" ) );
+    SW_EXPECT_STREQ( "Demo", root.findAttribute( "Name" ) );
+    SW_EXPECT_TRUE( root.findAttribute( "name" ) == nullptr );
     std::optional<int32> missingValue{ 12 };
     SW_EXPECT_TRUE( root.readOptionalAttribute( "missing", missingValue ) );
     SW_EXPECT_FALSE( missingValue.has_value() );
 
     SW_EXPECT_STREQ( "12", root.findChildText( "_score" ) );
-    SW_EXPECT_STREQ( "12", root.findChildText( "_SCORE" ) );
+    SW_EXPECT_TRUE( root.findChildText( "_SCORE" ) == nullptr );
 
-    sw::XMLNode firstItem = root.findChild( "ITEM" );
+    SW_EXPECT_TRUE( root.findChild( "ITEM" ).isValid() == false );
+    sw::XMLNode firstItem = root.findChild( "item" );
     SW_EXPECT_TRUE( firstItem.isValid() );
-    SW_EXPECT_STREQ( "1", firstItem.findAttribute( "ID" ) );
+    SW_EXPECT_STREQ( "1", firstItem.findAttribute( "id" ) );
     SW_EXPECT_STREQ( "A", firstItem.getText() );
 
     sw::XMLNode secondItem = firstItem.findNextSibling( "item" );
@@ -52,18 +55,18 @@ SW_TEST_CASE( XMLDocumentTest, ParseAndNavigateIgnoreCaseKeys )
 }
 
 /**
- * @brief [XMLDocumentTest] 대소문자 구분 키 옵트아웃
+ * @brief [XMLDocumentTest] 자식 이름은 철자 그대로 찾는다 — 대소문자가 다르면 없는 이름
  */
-SW_TEST_CASE( XMLDocumentTest, CaseSensitiveKeyOptOut )
+SW_TEST_CASE( XMLDocumentTest, ChildNamesMatchExactly )
 {
     sw::XMLDocument doc;
     SW_EXPECT_TRUE( doc.parse( R"(<Root><Child>ok</Child></Root>)" ) );
 
-    sw::XMLNode root = doc.getRoot( "Root", false );
+    sw::XMLNode root = doc.getRoot( "Root" );
     SW_EXPECT_TRUE( root.isValid() );
-    SW_EXPECT_TRUE( root.findChild( "child", false ).isValid() == false );
-    SW_EXPECT_TRUE( root.findChild( "Child", false ).isValid() );
-    SW_EXPECT_STREQ( "ok", root.findChildText( "Child", false ) );
+    SW_EXPECT_TRUE( root.findChild( "child" ).isValid() == false );
+    SW_EXPECT_TRUE( root.findChild( "Child" ).isValid() );
+    SW_EXPECT_STREQ( "ok", root.findChildText( "Child" ) );
 }
 
 /**

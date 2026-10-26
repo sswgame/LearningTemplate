@@ -36,9 +36,9 @@ namespace sw
             for ( const string& key : fileObject.getMemberNames() )
             {
                 const string    path       = prefix.empty() ? key : string( prefix + "." + key );
-                const JSONValue fileValue  = fileObject.get( key, false );
-                const JSONValue leftValue  = left.get( key, false );
-                const JSONValue rightValue = right.get( key, false );
+                const JSONValue fileValue  = fileObject.get( key );
+                const JSONValue leftValue  = left.get( key );
+                const JSONValue rightValue = right.get( key );
                 if ( leftValue.isValid() == false || rightValue.isValid() == false )
                     continue;
                 const bool bRecurseIntoMembers = fileValue.isObject() && leftValue.isObject() && rightValue.isObject() && fileValue.getMemberNames().empty() == false;
@@ -64,7 +64,7 @@ namespace sw
                 if ( prop._bIsBitField == SW_TRUE )
                     continue;
                 const string    path  = prefix.empty() ? string( prop._name.c_str() ) : prefix + "." + prop._name.c_str();
-                const JSONValue value = object.get( prop._name.c_str(), false );
+                const JSONValue value = object.get( prop._name.c_str() );
                 if ( value.isValid() == false )
                 {
                     if ( prop._metadata->_bRequired != SW_FALSE )
@@ -101,8 +101,8 @@ namespace sw
             for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
             {
                 const string  path     = prefix.empty() ? string( prop._name.c_str() ) : prefix + "." + prop._name.c_str();
-                const XMLNode child    = element.findChild( prop._name.c_str(), false );
-                const bool    bWritten = element.findAttribute( prop._name.c_str(), false ) != nullptr || child.isValid();
+                const XMLNode child    = element.findChild( prop._name.c_str() );
+                const bool    bWritten = element.findAttribute( prop._name.c_str() ) != nullptr || child.isValid();
                 if ( bWritten == false )
                 {
                     if ( prop._metadata->_bRequired != SW_FALSE )
@@ -134,9 +134,8 @@ namespace sw
 {
     bool ConfigManager::readConfigJSON( void* pInstance, const TypeInfo& typeInfo, string_view jsonStr, const utf8* pSourceLabel )
     {
-        // 키는 대소문자까지 맞아야 한다 — 기본 문맥은 대소문자를 무시해 `_Width` 오타를 그대로 받아들인다.
+        // 키는 대소문자까지 맞아야 한다(직렬화기는 키를 철자 그대로 찾는다 — `_Width` 오타는 모르는 키다).
         SerializeContext context = SerializeContext::deriveFromDefault( SerializePurpose::Authoring );
-        context.setIgnoreCaseKeys( false );
         // JSON 객체가 아닌 본문(`SoftReadResult::NotParsed`)만 여기서 멈춘다. 범위 밖 값(`Rejected`)에서 바로 돌아가면
         // 그 값 하나가 모르는 키 · 빠진 필수 칸의 오류를 삼킨다 — 모두 알린다는 계약(헤더)이 깨진다.
         JSONDocument document;
@@ -173,8 +172,7 @@ namespace sw
             return false;
         }
         // 키는 대소문자까지 맞아야 한다(`readConfigJSON` 과 같다). 범위 밖 값은 칸마다 읽기 공통 끝이 이미 알렸다.
-        SerializeContext context = SerializeContext::deriveFromDefault( SerializePurpose::Authoring );
-        context.setIgnoreCaseKeys( false );
+        SerializeContext          context = SerializeContext::deriveFromDefault( SerializePurpose::Authoring );
         vector<SchemaOrphanValue> listOrphan;
         const bool                bWithinRange = XMLSerializer::deserializeSoft( pInstance, typeInfo, elementXML, &listOrphan, nullptr, context ) == SoftReadResult::Read;
         for ( const SchemaOrphanValue& orphan : listOrphan )

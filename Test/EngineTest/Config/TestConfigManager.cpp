@@ -32,9 +32,9 @@ namespace
         const bool   bParsed = document.parse( shipping_host::kEngineConfigJSON );
         SW_LOG_ASSERT( bParsed, "the configure-time EngineConfig.json copy must parse" );
         (void)bParsed;
-        const JSONValue window = document.getRoot().get( "_window", false );
-        window.set( "_width", false ).setUint( width );
-        window.set( "_height", false ).setUint( height );
+        const JSONValue window = document.getRoot().get( "_window" );
+        window.set( "_width" ).setUint( width );
+        window.set( "_height" ).setUint( height );
         return document.dump();
     }
 } // namespace
@@ -249,8 +249,8 @@ SW_TEST_CASE( ConfigManagerTest, ValidFileWithNestedStructLoads )
     ConfigManager manager;
     JSONDocument  document;
     SW_ASSERT_TRUE( document.parse( makeEngineConfigJSON( 800, 600 ) ) );
-    document.getRoot().get( "_window", false ).set( "_defaultRHI", false ).setString( "Vulkan" );
-    document.getRoot().set( "_fixedDeltaTime", false ).setFloat( 0.02 );
+    document.getRoot().get( "_window" ).set( "_defaultRHI" ).setString( "Vulkan" );
+    document.getRoot().set( "_fixedDeltaTime" ).setFloat( 0.02 );
     SW_EXPECT_TRUE( manager.loadConfigFromJSON<EngineConfig>( document.dump(), "test" ) );
     SW_ASSERT_NOT_NULL( manager.getConfig<EngineConfig>() );
     SW_EXPECT_EQUAL( 800u, manager.getConfig<EngineConfig>()->_window._width );

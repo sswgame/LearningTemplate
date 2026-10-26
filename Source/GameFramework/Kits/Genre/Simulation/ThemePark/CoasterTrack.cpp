@@ -471,7 +471,7 @@ namespace sw
         uint32 loadedCount = 0;
         for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
-            if ( StringUtil::equals( node.getName(), "Layout", true ) == false )
+            if ( StringUtil::equals( node.getName(), "Layout" ) == false )
                 SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, node.getName() );
             else if ( loadLayout( node, sourceName ) )
                 ++loadedCount;

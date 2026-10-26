@@ -17,7 +17,7 @@ namespace sw
 
     /**
      * @struct XMLNameCheck
-     * @brief 이름 비교는 대소문자를 가리지 않습니다(`XMLNode` 의 읽기와 같다).
+     * @brief 이름 비교는 철자 그대로입니다(`XMLNode` 의 읽기와 같다).
      */
     struct SW_API XMLNameCheck
     {

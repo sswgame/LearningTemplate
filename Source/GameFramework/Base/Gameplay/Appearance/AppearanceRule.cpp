@@ -73,7 +73,7 @@ namespace sw
                 const utf8* pName = node.getName();
                 outAction._target = AppearanceXMLUtil::readOptionalName( node, "target" ); // 동작 종류마다 필수 여부가 달라 아래에서 확인한다
                 outAction._part   = AppearanceXMLUtil::readOptionalName( node, "part" );
-                if ( StringUtil::equals( pName, "Hide", true ) )
+                if ( StringUtil::equals( pName, "Hide" ) )
                 {
                     (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrHideAttribute, report, sourceName );
                     const utf8* pItemTag  = node.findAttribute( "itemTag" );
@@ -97,28 +97,28 @@ namespace sw
                     }
                     return true;
                 }
-                if ( StringUtil::equals( pName, "Variant", true ) )
+                if ( StringUtil::equals( pName, "Variant" ) )
                 {
                     (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrVariantAttribute, report, sourceName );
                     outAction._kind = AppearanceRuleActionKind::ChooseVariant;
                     outAction._name = AppearanceXMLUtil::readRequiredName( node, "name", report, sourceName );
                     return outAction._name.empty() == false;
                 }
-                if ( StringUtil::equals( pName, "SwapMesh", true ) )
+                if ( StringUtil::equals( pName, "SwapMesh" ) )
                 {
                     (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrMeshAttribute, report, sourceName );
                     outAction._kind  = AppearanceRuleActionKind::SwapMesh;
                     outAction._value = AppearanceXMLUtil::readRequiredName( node, "mesh", report, sourceName );
                     return outAction._value.empty() == false && outAction._target.empty() == false;
                 }
-                if ( StringUtil::equals( pName, "SwapMaterial", true ) )
+                if ( StringUtil::equals( pName, "SwapMaterial" ) )
                 {
                     (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrMaterialAttribute, report, sourceName );
                     outAction._kind  = AppearanceRuleActionKind::SwapMaterial;
                     outAction._value = AppearanceXMLUtil::readRequiredName( node, "material", report, sourceName );
                     return outAction._value.empty() == false && outAction._target.empty() == false;
                 }
-                if ( StringUtil::equals( pName, "Morph", true ) )
+                if ( StringUtil::equals( pName, "Morph" ) )
                 {
                     (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrMorphAttribute, report, sourceName );
                     outAction._kind = AppearanceRuleActionKind::ApplyMorph;
@@ -126,7 +126,7 @@ namespace sw
                     AppearanceXMLUtil::readOptionalFloat( node, "weight", -MathUtil::kMaxFloat, MathUtil::kMaxFloat, outAction._weight, report, sourceName );
                     return outAction._name.empty() == false;
                 }
-                if ( StringUtil::equals( pName, "OverrideSocket", true ) )
+                if ( StringUtil::equals( pName, "OverrideSocket" ) )
                 {
                     (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrSocketAttribute, report, sourceName );
                     outAction._kind = AppearanceRuleActionKind::OverrideSocket;
@@ -182,7 +182,7 @@ namespace sw
         (void)AppearanceXMLUtil::reportUnknownAttributes( root, nullptr, 0, report, sourceName );
         for ( XMLNode ruleNode = root.findChild(); ruleNode; ruleNode = ruleNode.findNextSibling() )
         {
-            if ( StringUtil::equals( ruleNode.getName(), "Rule", true ) == false )
+            if ( StringUtil::equals( ruleNode.getName(), "Rule" ) == false )
             {
                 AppearanceXMLUtil::reportUnknownChild( root, ruleNode, report, sourceName );
                 continue;
@@ -200,7 +200,7 @@ namespace sw
             }
             for ( XMLNode child = ruleNode.findChild(); child; child = child.findNextSibling() )
             {
-                if ( StringUtil::equals( child.getName(), "When", true ) )
+                if ( StringUtil::equals( child.getName(), "When" ) )
                 {
                     AppearanceRuleCondition condition;
                     if ( AppearanceRuleInternal::readCondition( child, condition, report, sourceName, rule._id ) )

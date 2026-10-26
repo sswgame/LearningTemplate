@@ -21,7 +21,7 @@ namespace sw
         {
             static constexpr const utf8* kRootName = "ElementRules";
 
-            static bool isNamed( const XMLNode& node, const utf8* pName ) { return StringUtil::equals( node.getName(), pName, true ); }
+            static bool isNamed( const XMLNode& node, const utf8* pName ) { return StringUtil::equals( node.getName(), pName ); }
         };
 
         /** @brief 캐시를 엔진 수명 범위가 만들 수 있게 종류 이름을 쥔 껍데기입니다(`ScopeOwned` 는 기본 생성한다). */
@@ -337,7 +337,7 @@ namespace sw
             }
             for ( XMLAttribute attribute = child.getFirstAttribute(); attribute; attribute = attribute.getNext() )
             {
-                const bool bReserved = StringUtil::equals( attribute.getName(), "id", true ) || StringUtil::equals( attribute.getName(), "flags", true );
+                const bool bReserved = StringUtil::equals( attribute.getName(), "id" ) || StringUtil::equals( attribute.getName(), "flags" );
                 if ( bReserved )
                     continue;
                 int32 value{ 0 };

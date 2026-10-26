@@ -35,7 +35,7 @@ namespace sw::editor
             bool            bComplete = true;
             for ( const PropertyInfo& prop : EditorToolDefaults::StaticType()->getPropertiesWithBase() )
             {
-                if ( prop._metadata->_bRequired == SW_FALSE || root.has( prop._name.view(), false ) )
+                if ( prop._metadata->_bRequired == SW_FALSE || root.has( prop._name.view() ) )
                     continue;
                 SW_LOG_ERROR( "Editor tool defaults %#: required key '%#' is missing", pSourceLabel, prop._name.c_str() );
                 bComplete = false;

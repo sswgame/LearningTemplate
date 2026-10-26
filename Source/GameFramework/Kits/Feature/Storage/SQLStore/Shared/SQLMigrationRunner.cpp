@@ -112,7 +112,7 @@ namespace sw
                     outError = formatText( "migration list '%#' is not XML: %#", listPath, document.getLastError() );
                     return false;
                 }
-                const XMLNode root = document.getRoot( "SQLMigrationList", false );
+                const XMLNode root = document.getRoot( "SQLMigrationList" );
                 if ( root.isValid() == false || root.getFirstAttribute().isValid() )
                 {
                     outError = formatText( "migration list '%#' must be a <SQLMigrationList> element without attributes", listPath );

@@ -29,17 +29,17 @@ SW_TEST_CASE( JSONDocumentTest, ParseAndNavigateIgnoreCaseKeys )
 }
 
 /**
- * @brief [JSONDocumentTest] 대소문자 구분 키 옵트아웃
+ * @brief [JSONDocumentTest] 키는 철자 그대로 찾는다 — 대소문자가 다르면 없는 키
  */
-SW_TEST_CASE( JSONDocumentTest, CaseSensitiveKeyOptOut )
+SW_TEST_CASE( JSONDocumentTest, KeysMatchExactly )
 {
     sw::JSONDocument doc;
     SW_EXPECT_TRUE( doc.parse( R"({"Child":"ok"})" ) );
 
     sw::JSONValue root = doc.getRoot();
-    SW_EXPECT_TRUE( root.get( "child", false ).isValid() == false );
-    SW_EXPECT_TRUE( root.get( "Child", false ).isValid() );
-    SW_EXPECT_EQUAL( sw::string( "ok" ), root.get( "Child", false ).asString() );
+    SW_EXPECT_TRUE( root.get( "child" ).isValid() == false );
+    SW_EXPECT_TRUE( root.get( "Child" ).isValid() );
+    SW_EXPECT_EQUAL( sw::string( "ok" ), root.get( "Child" ).asString() );
 }
 
 /**
@@ -50,8 +50,8 @@ SW_TEST_CASE( JSONDocumentTest, UnicodeEscapeAndRejectMalformed )
     sw::JSONDocument doc;
     SW_EXPECT_TRUE( doc.parse( R"({"Title":"A\u0020B","Nested":{"k":1}})" ) );
     SW_EXPECT_EQUAL( sw::string( "A B" ), doc.getRoot().get( "Title" ).asString() );
-    SW_EXPECT_TRUE( sw::JSONDocument::extractStringField( R"({"Title":"Hero","HP":"10"})", "title", true ) == sw::string( "Hero" ) );
-    SW_EXPECT_TRUE( sw::JSONDocument::extractStringField( R"({"Title":"Hero"})", "title", false ).empty() );
+    SW_EXPECT_TRUE( sw::JSONDocument::extractStringField( R"({"Title":"Hero","HP":"10"})", "Title" ) == sw::string( "Hero" ) );
+    SW_EXPECT_TRUE( sw::JSONDocument::extractStringField( R"({"Title":"Hero"})", "title" ).empty() );
 
     const sw::string raw     = "line\n\t\"quote\"\\slash";
     const sw::string escaped = sw::JSONDocument::escapeString( raw );

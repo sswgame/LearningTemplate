@@ -36,7 +36,7 @@ namespace sw
         uint32 loadedCount = 0;
         for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
-            if ( StringUtil::equals( node.getName(), "Unit", true ) == false )
+            if ( StringUtil::equals( node.getName(), "Unit" ) == false )
                 SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, node.getName() );
             else if ( loadUnit( node, sourceName ) )
                 ++loadedCount;

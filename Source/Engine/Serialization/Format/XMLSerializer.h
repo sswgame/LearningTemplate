@@ -105,22 +105,9 @@ namespace sw
          */
         [[nodiscard]] virtual XMLNode getCurrentNode() const;
 
-        // ------------------------------------------------------------------------------
-        // 3) 키 정책: 태그와 속성 이름에만 적용하며 값에는 영향이 없다
-        // ------------------------------------------------------------------------------
-        /** @brief 태그/속성 이름을 찾을 때 대소문자를 무시하는지 반환합니다(기본 true). */
-        bool ignoresCaseKeys() const { return _bIgnoreCaseKeys == SW_TRUE; }
-        /** @brief 태그/속성 이름을 찾을 때 대소문자를 무시할지 설정합니다. */
-        void setIgnoreCaseKeys( bool bIgnoreCaseKeys ) { _bIgnoreCaseKeys = bIgnoreCaseKeys ? SW_TRUE : SW_FALSE; }
-
     protected:
-        /** @brief 키 대소문자를 무시하는 기본 상태로 만듭니다. */
-        IXMLBackend() noexcept
-            : _bIgnoreCaseKeys{ SW_TRUE }
-            , _reservedIgnoreCase{ 0 } {}
-
-        uint8                  _bIgnoreCaseKeys    : 1;
-        [[maybe_unused]] uint8 _reservedIgnoreCase : 7;
+        /** @brief 태그 · 속성 이름은 철자 그대로 찾는다(`XMLNode` 머리말) — 키 정책 옵션은 없다. */
+        IXMLBackend() noexcept = default;
     };
 } // namespace sw
 
