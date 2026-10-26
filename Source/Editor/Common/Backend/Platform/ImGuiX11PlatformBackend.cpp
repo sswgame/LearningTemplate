@@ -80,7 +80,12 @@ namespace sw::editor
             platformIO.Platform_GetWindowMinimized = getWindowMinimizedThunk;
             platformIO.Platform_SetWindowTitle     = setWindowTitleThunk;
 
-            updateMonitors();
+            // 모니터를 하나도 못 읽으면 가짜 모니터로 계속하지 않고 초기화 실패로 멈춘다(호출 쪽이 실패를 처리한다)
+            if ( updateMonitors() == false )
+            {
+                SW_LOG_ERROR( "The ImGui X11 platform backend found no usable monitor (ScreenCount or the screen size is zero)" );
+                return false; // 정리는 호출 쪽(ImGuiEditor)이 shutdownPlatformBackend 로 한다
+            }
             return true;
         }
 
@@ -103,9 +108,6 @@ namespace sw::editor
             ImGuiIO& io = ImGui::GetIO();
             if ( _pDisplay == nullptr || _mainWindow == 0 )
                 return;
-
-            if ( ImGui::GetPlatformIO().Monitors.empty() )
-                updateMonitors();
 
             XWindowAttributes attrs{};
             XGetWindowAttributes( _pDisplay, _mainWindow, &attrs );
@@ -432,12 +434,13 @@ namespace sw::editor
             return focused == pData->_windowHandle;
         }
 
-        void updateMonitors()
+        /** @brief 모니터 목록을 다시 읽습니다. 하나도 못 읽으면 false 입니다. */
+        [[nodiscard]] bool updateMonitors()
         {
             ImGuiPlatformIO& platformIO = ImGui::GetPlatformIO();
             platformIO.Monitors.resize( 0 );
             if ( _pDisplay == nullptr )
-                return;
+                return false;
 
             const int32 screenCount = ScreenCount( _pDisplay );
             for ( int32 screen = 0; screen < screenCount; ++screen )
@@ -463,13 +466,7 @@ namespace sw::editor
                 platformIO.Monitors.push_back( monitor );
             }
 
-            if ( platformIO.Monitors.empty() )
-            {
-                ImGuiPlatformMonitor fallback{};
-                fallback.MainSize = fallback.WorkSize = ImVec2( 1280.0f, 720.0f );
-                fallback.DpiScale                     = 1.0f;
-                platformIO.Monitors.push_back( fallback );
-            }
+            return platformIO.Monitors.empty() == false;
         }
 
     private:
