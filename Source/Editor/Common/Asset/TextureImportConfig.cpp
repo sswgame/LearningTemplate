@@ -20,17 +20,17 @@ namespace sw::editor
         };
         /** @brief 프리셋 · 규칙 하나입니다. 적지 않은 필드는 `inherits` 의 값, 그것도 없으면 기본값입니다. */
         static constexpr ConfigKeyDoc kArrTextureImportRuleKeyDoc[] = {
-            {            "name",   "string",          "",                                                                                           "규칙 이름(로그 · 경고에 나온다). 프리셋은 키가 이름이다"},
-            {        "inherits",   "string",          "",                                                                                   "값을 물려받을 프리셋 이름 — 위에 정의되지 않은 이름은 로드 오류"},
-            {          "format",   "string", "BC7_UNORM",       "DXGI 포맷 이름(BC1~BC5_UNORM · BC6H_UF16 · BC7_UNORM · B8G8R8A8_UNORM · R8G8B8A8_UNORM · R16G16B16A16_FLOAT · R8_UNORM) — 그 밖은 로드 오류"},
-            {         "swizzle",   "string",      "RGBA",                                                                                          "채널 순서: RGBA · BGRA · ARGB · RGB1 — 그 밖은 로드 오류"},
-            {   "generate_mips",     "bool",      "true",                                                                                                                                     "밉맵을 만든다"},
-            {            "srgb",     "bool",      "true",                                                                                             "sRGB 색 공간으로 읽는다(노멀 · 데이터 텍스처는 false)"},
-            {    "invert_green",     "bool",     "false",                                                                                                       "G 채널을 뒤집는다(DirectX ↔ OpenGL 노멀 맵)"},
-            {"include_patterns", "string[]",          "", "맞아야 하는 와일드카드(`*` · `?`, 대소문자 무시). `/` 없으면 파일 이름에, 있으면 경로 마디에 맞춘다 — `*` 는 폴더를 넘지 않고 마디 `**` 만 넘는다"},
-            {"exclude_patterns", "string[]",          "",                                                                                                        "맞으면 빼는 와일드카드(포함보다 먼저 본다)"},
-            {   "include_paths", "string[]",          "",                                                                                           "들어 있어야 하는 폴더 마디(`ui/` 는 `…/ui/…` 에 맞는다)"},
-            {   "exclude_paths", "string[]",          "",                                                                                                                        "들어 있으면 빼는 폴더 마디"},
+            {            "name",   "string",          "",                                                                                                                     "규칙 이름(로그 · 경고에 나온다). 프리셋은 키가 이름이다"},
+            {        "inherits",   "string",          "",                                                                                                             "값을 물려받을 프리셋 이름 — 위에 정의되지 않은 이름은 로드 오류"},
+            {          "format",   "string", "BC7_UNORM", "DXGI 포맷 이름(BC1_UNORM · BC3_UNORM · BC4_UNORM · BC5_UNORM · BC6H_UF16 · BC7_UNORM · B8G8R8A8_UNORM · R8G8B8A8_UNORM · R16G16B16A16_FLOAT · R8_UNORM) — 그 밖은 로드 오류"},
+            {         "swizzle",   "string",      "RGBA",                                                                                                                    "채널 순서: RGBA · BGRA · ARGB · RGB1 — 그 밖은 로드 오류"},
+            {   "generate_mips",     "bool",      "true",                                                                                                                                                               "밉맵을 만든다"},
+            {            "srgb",     "bool",      "true",                                                                                                                       "sRGB 색 공간으로 읽는다(노멀 · 데이터 텍스처는 false)"},
+            {    "invert_green",     "bool",     "false",                                                                                                                                 "G 채널을 뒤집는다(DirectX ↔ OpenGL 노멀 맵)"},
+            {"include_patterns", "string[]",          "",                           "맞아야 하는 와일드카드(`*` · `?`, 대소문자 무시). `/` 없으면 파일 이름에, 있으면 경로 마디에 맞춘다 — `*` 는 폴더를 넘지 않고 마디 `**` 만 넘는다"},
+            {"exclude_patterns", "string[]",          "",                                                                                                                                  "맞으면 빼는 와일드카드(포함보다 먼저 본다)"},
+            {   "include_paths", "string[]",          "",                                                                                                                     "들어 있어야 하는 폴더 마디(`ui/` 는 `…/ui/…` 에 맞는다)"},
+            {   "exclude_paths", "string[]",          "",                                                                                                                                                  "들어 있으면 빼는 폴더 마디"},
         };
 
         /**
@@ -48,7 +48,6 @@ namespace sw::editor
         };
         static constexpr TextureImportFormatName kArrTextureImportFormatName[] = {
             {         "BC1_UNORM",     "bc1",               TextureImportFormat::BC1, 71,      "BC1_UNORM_SRGB", 72},
-            {         "BC2_UNORM",     "bc2",               TextureImportFormat::BC2, 74,      "BC2_UNORM_SRGB", 75},
             {         "BC3_UNORM",     "bc3",               TextureImportFormat::BC3, 77,      "BC3_UNORM_SRGB", 78},
             {         "BC4_UNORM",     "bc4",               TextureImportFormat::BC4, 80,                    "", 80},
             {         "BC5_UNORM",     "bc5",               TextureImportFormat::BC5, 83,                    "", 83},

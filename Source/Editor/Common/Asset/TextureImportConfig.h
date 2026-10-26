@@ -36,11 +36,11 @@ namespace sw::editor
      * @enum TextureImportFormat
      * @brief 임포트 결과의 픽셀 형식입니다. 규칙의 `format` 이름은 `TextureImportFormatUtil::parse` 로만 이 값이 됩니다.
      * @details 이름 표는 하나뿐입니다. 설정 로드가 모르는 이름을 거절하고, 임포터는 이 열거형을 DXGI 로 바꿀 뿐이라 "모르는 이름이면 BC7" 같은 기본값이 설 자리가 없습니다.
+     *          BC2 는 없다 — 같은 크기에 BC3 가 알파를 더 잘 담고 언리얼 · 유니티의 압축 설정에도 없다(규칙의 `bc2` 는 로드 오류).
      */
     enum class TextureImportFormat : uint8
     {
         BC1 = 0,
-        BC2,
         BC3,
         BC4,
         BC5,

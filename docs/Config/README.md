@@ -65,6 +65,7 @@
 | `Config/Editor/TextureImportConfig.json` | `TextureImportConfig::loadFromFile` (손으로 읽음) — 텍스처 임포트(에디터 · `App --import-textures`) | 없음(임포트는 Dev 만) | 한다 | [TextureImportConfig](TextureImportConfig.md) |
 | `Config/Editor/ModelImportConfig.json` | `ModelImportConfig::loadFromFile` (손으로 읽음) — 모델 임포트(에디터 · `App --import-models`) | 없음(임포트는 Dev 만) | 한다 | [ModelImportConfig](ModelImportConfig.md) |
 | `Config/Editor/AssetValidationRules.json` | `Scripts/common/AssetValidation.py` (에디터 `EditorAssetValidation` 도 이것을 돌린다) — 저장 · 임포트 직후(에디터) · `CheckAssetRules` 게이트 · `py -3 -m Scripts validate-assets` | 없음 | 한다 | [형식 설명](../../Scripts/common/AssetValidation.py) |
+| `Config/Editor/DdsFormats.json` | `Scripts/common/AssetValidation.py` (DDS 형식 이름 · 옛 FourCC 표, 모듈을 읽을 때) — 에셋 검증(`CheckAssetRules` · `validate-assets`) — C++ 표와 같은지는 `EditorTexturePipelineTest.DDSFormatFileMatchesTheLoaderTables` | 없음 | 한다 | [형식 설명](../../Scripts/common/AssetValidation.py) |
 | `Config/Editor/Cc0PropPlacement.json` | `Scripts/dev/MakeCc0SceneProps.py` (손으로 돌린다) — 게임 씬에 CC0 모델을 놓거나 다시 놓을 때 | 없음 | 한다 | [형식 설명](../../Scripts/dev/MakeCc0SceneProps.py) |
 | `Saved/Editor/*` | ImGui · `EditorDockLayout` · `EditorLayoutStore` · 노드 캔버스 · 도구 문서 임시본 · gv 프리셋(`GlobalVariablePresets/<팩>/`) — 에디터가 쓰고 읽는다. 앱이 쓰는 에디터 상태 — `EditorPaths::getEditorStateDirectory`(git 무시) | 없음 | 안 한다 |  |
 

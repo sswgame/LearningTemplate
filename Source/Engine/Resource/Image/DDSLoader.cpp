@@ -102,14 +102,8 @@ namespace sw
 
         struct DDSLoaderInternal
         {
-            /** @brief FourCC 코드 하나가 가리키는 DXGI 포맷입니다. */
-            struct FourCcRow
-            {
-                uint32 _fourCC;
-                uint32 _dxgiFormat;
-            };
-
-            static constexpr FourCcRow kArrFourCcRow[] = {
+            /** @brief FourCC 코드 하나가 가리키는 DXGI 포맷의 표입니다. 이름의 정본은 `Config/Editor/DdsFormats.json` 이고 테스트가 이 표와 견준다. */
+            static constexpr DDSLegacyFourCc kArrFourCcRow[] = {
                 {         kFourCC_DXT1,          kDxgiFormatBC1Unorm},
                 {         kFourCC_DXT2,          kDxgiFormatBC2Unorm},
                 {         kFourCC_DXT3,          kDxgiFormatBC2Unorm},
@@ -130,7 +124,7 @@ namespace sw
             /** @brief 압축 계열 FourCC 와 D3DFMT 정수 코드를 DXGI 포맷으로 바꿉니다. 모르는 코드는 `kDxgiFormatUnknown`(호출한 쪽의 포맷 검사가 실패로 끝낸다)입니다. */
             static uint32 findDxgiFormatOfFourCc( uint32 fourCC )
             {
-                for ( const FourCcRow& row : kArrFourCcRow )
+                for ( const DDSLegacyFourCc& row : kArrFourCcRow )
                 {
                     if ( row._fourCC == fourCC )
                         return row._dxgiFormat;
@@ -280,5 +274,15 @@ namespace sw
 
         outImage = std::move( image );
         return true;
+    }
+
+    vector<DDSLegacyFourCc> DDSLoader::getLegacyFourCcTable()
+    {
+        vector<DDSLegacyFourCc> listRow;
+        for ( const DDSLegacyFourCc& row : DDSLoaderInternal::kArrFourCcRow )
+        {
+            listRow.push_back( row );
+        }
+        return listRow;
     }
 } // namespace sw

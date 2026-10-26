@@ -2222,7 +2222,7 @@
        "min": "",
        "max": "",
        "units": "",
-       "description": "DXGI 포맷 이름(BC1~BC5_UNORM · BC6H_UF16 · BC7_UNORM · B8G8R8A8_UNORM · R8G8B8A8_UNORM · R16G16B16A16_FLOAT · R8_UNORM) — 그 밖은 로드 오류"
+       "description": "DXGI 포맷 이름(BC1_UNORM · BC3_UNORM · BC4_UNORM · BC5_UNORM · BC6H_UF16 · BC7_UNORM · B8G8R8A8_UNORM · R8G8B8A8_UNORM · R16G16B16A16_FLOAT · R8_UNORM) — 그 밖은 로드 오류"
       },
       {
        "name": "swizzle",

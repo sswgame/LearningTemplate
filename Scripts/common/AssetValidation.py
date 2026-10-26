@@ -71,16 +71,26 @@ _kClassBaseRe = re.compile(r"\b(?:class|struct)\s+(?:SW_[A-Z_]+\s+)?([A-Za-z_][A
 #: 폴더를 가리키는 값 — 도메인으로 시작하고 확장자가 없다(`game/shooter3d/models/knight/clips`). 이름이 `…Folder` 인 속성만 이것으로 본다.
 _kResourceFolderRe = re.compile(r"^(engine|common|editor|game/[a-z0-9_]+)/[A-Za-z0-9_/\-]+$")
 
-#: DXGI 형식 번호 → 이름(검증에 쓰는 것만). 레거시 DDS 는 FourCC · 마스크에서 이름을 만든다.
-_kDxgiFormatName: dict[int, str] = {
-    2: "R32G32B32A32_FLOAT", 10: "R16G16B16A16_FLOAT", 24: "R10G10B10A2_UNORM", 28: "R8G8B8A8_UNORM", 29: "R8G8B8A8_UNORM_SRGB",
-    61: "R8_UNORM", 71: "BC1_UNORM", 72: "BC1_UNORM_SRGB", 74: "BC2_UNORM", 75: "BC2_UNORM_SRGB", 77: "BC3_UNORM", 78: "BC3_UNORM_SRGB",
-    80: "BC4_UNORM", 83: "BC5_UNORM", 87: "B8G8R8A8_UNORM", 91: "B8G8R8A8_UNORM_SRGB", 95: "BC6H_UF16", 98: "BC7_UNORM", 99: "BC7_UNORM_SRGB",
-}
-_kLegacyFourCcName: dict[bytes, str] = {
-    b"DXT1": "BC1_UNORM", b"DXT3": "BC2_UNORM", b"DXT5": "BC3_UNORM", b"ATI2": "BC5_UNORM", b"BC5U": "BC5_UNORM",
-    struct.pack("<I", 113): "R16G16B16A16_FLOAT", struct.pack("<I", 116): "R32G32B32A32_FLOAT",
-}
+#: DDS 형식 이름표의 자리(저장소 기준). C++ 표(임포터 · DDSLoader · Texture2D)와 같은지는 `EditorTexturePipelineTest.DDSFormatFileMatchesTheLoaderTables` 가 본다.
+kDdsFormatFileRelative = "Config/Editor/DdsFormats.json"
+
+
+def _readDdsFormatTables() -> tuple[dict[int, str], dict[bytes, str]]:
+    """`DdsFormats.json` 에서 (DXGI 번호 → 이름, 옛 머리 FourCC 바이트 → 이름)을 읽습니다. 손으로 적은 사본은 로더의 FourCC 표와 어긋났다(DXT2 · ATI1 · D3DFMT 111 …)."""
+    path = Path(__file__).resolve().parents[2] / kDdsFormatFileRelative
+    data = json.loads(path.read_text(encoding="utf-8"))
+    mapName = {int(entry["dxgi"]): str(entry["name"]) for entry in data["dxgi_formats"]}
+    mapLegacy: dict[bytes, str] = {}
+    for entry in data["legacy_fourcc"]:
+        code = entry["fourcc"].encode("ascii") if "fourcc" in entry else struct.pack("<I", int(entry["d3dfmt"]))
+        if entry["dxgi"] not in mapName:
+            raise RuntimeError(f"{path}: legacy_fourcc row {entry} names DXGI {entry['dxgi']} that dxgi_formats does not list")
+        mapLegacy[code] = mapName[entry["dxgi"]]
+    return mapName, mapLegacy
+
+
+#: DXGI 형식 번호 → 이름, 옛 머리 FourCC → 이름. 마스크만 있는 옛 머리는 `UNCOMPRESSED_<비트>BPP` 로 짓는다.
+_kDxgiFormatName, _kLegacyFourCcName = _readDdsFormatTables()
 #: 마스크만 있는 옛 머리의 형식 이름(`readDdsInfo` 가 비트 수로 짓는다).
 _kUncompressedFormatRe = re.compile(r"^UNCOMPRESSED_\d+BPP$")
 #: 텍스처 규칙의 형식 목록 키 — 이름은 `readDdsInfo` 가 지을 수 있는 이름이어야 하고(모르는 이름은 규칙 로드 오류) 두 목록은 겹치지 않는다.
