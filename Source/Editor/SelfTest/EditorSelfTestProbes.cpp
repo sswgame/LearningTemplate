@@ -12,6 +12,7 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/SelfTest/EditorProbeSupport.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -22,9 +23,6 @@
 
 namespace sw::editor
 {
-    SW_EXTERN_GLOBAL_VARIABLE( sw::string, gv_editorProbeProperty );
-    SW_EXTERN_GLOBAL_VARIABLE( sw::string, gv_editorProbeObject );
-
     namespace
     {
         struct EditorSelfTestProbesInternal
