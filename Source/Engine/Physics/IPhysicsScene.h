@@ -83,7 +83,7 @@ namespace sw
 
         /**
          * @brief 고정 스텝 하나를 진행합니다. 접촉 이벤트는 이 스텝의 것으로 바뀝니다(`getContactEvents`).
-         * @details 가변 프레임 시간은 호출하는 쪽이 `FixedStepAccumulator` 로 고정 스텝 수로 바꾼다. 같은 스텝 크기와 같은 입력이면 같은 결과가 나온다.
+         * @details 가변 프레임 시간은 호출하는 쪽이 `FixedStepTimer` 로 고정 스텝 수로 바꾼다. 같은 스텝 크기와 같은 입력이면 같은 결과가 나온다.
          */
         virtual void step( float32 fixedDeltaTime ) = 0;
         /** @brief 마지막 `step` 이 낸 접촉과 트리거 이벤트를 반환합니다(결정적 순서, `PhysicsContactTracker`). 다음 `step` 까지 그대로입니다. */

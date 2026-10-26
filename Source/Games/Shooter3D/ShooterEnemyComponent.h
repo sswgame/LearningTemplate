@@ -8,12 +8,12 @@
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
+#include "Core/Time/Countdown.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Base/Actor/Combat/Health/HealthSourceComponent.h"
 #include "GameFramework/Base/Actor/Combat/Health/Vitality.h"
-#include "GameFramework/Base/Foundation/Utility/Time/Countdown.h"
 
 namespace sw
 {

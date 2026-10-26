@@ -8,8 +8,8 @@
 #include "Core/Event/EventType.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
+#include "Core/Time/FixedStepTimer.h"
 
-#include "GameFramework/Base/Foundation/Utility/Time/FixedStepTimer.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw

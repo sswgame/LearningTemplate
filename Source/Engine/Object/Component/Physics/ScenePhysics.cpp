@@ -40,7 +40,7 @@ namespace sw
         , _listSweptOverlap2D{}
         , _pScene3D{}
         , _pScene2D{}
-        , _accumulator{}
+        , _stepTimer{}
         , _arrListComponent{}
         , _listFrameEvent3D{}
         , _listFrameEvent2D{}
@@ -84,7 +84,7 @@ namespace sw
         _listFrameEvent2D.clear();
         _listSweptOverlap2D.clear();
         _listMovedCollider2D.clear();
-        _accumulator.reset();
+        _stepTimer.reset();
     }
 
     void ScenePhysics::registerCollider2D( BoxCollider2DComponent* pCollider )
@@ -145,8 +145,10 @@ namespace sw
         const EngineConfig& engineConfig = engine::getSubsystem<EngineConfig>();
         const uint32        subStepCount = pSettings->_subStepCount;
         const float32       fixedStep    = _fixedStepOverride > 0.0f ? _fixedStepOverride : engineConfig._fixedDeltaTime;
-        _accumulator.configure( fixedStep / static_cast<float32>( subStepCount ), engineConfig._maxFixedStepPerFrame * subStepCount );
-        _bConfigured = true;
+        // 쌓인 시간은 그대로 두고 스텝과 프레임당 상한(스텝 수 × 스텝 길이)만 바꾼다.
+        _stepTimer._step         = fixedStep / static_cast<float32>( subStepCount );
+        _stepTimer._maxFrameTime = _stepTimer._step * static_cast<float32>( engineConfig._maxFixedStepPerFrame * subStepCount );
+        _bConfigured             = true;
     }
 
     void ScenePhysics::setFixedStepOverride( float32 seconds )
@@ -262,8 +264,8 @@ namespace sw
         }
         sweepContinuousColliders2D();
 
-        const uint32  stepCount = _accumulator.advance( deltaTime );
-        const float32 fixedStep = _accumulator.getFixedTimeStep();
+        const uint32  stepCount = static_cast<uint32>( _stepTimer.consume( deltaTime ) );
+        const float32 fixedStep = _stepTimer.getStep();
         for ( uint32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
             for ( uint32 phase = 0; phase < ScenePhysicsInternal::kPhaseCount; ++phase )
@@ -297,7 +299,7 @@ namespace sw
             }
         }
 
-        const float32 alpha = _accumulator.getAlpha();
+        const float32 alpha = _stepTimer.getAlpha();
         for ( uint32 phase = 0; phase < ScenePhysicsInternal::kPhaseCount; ++phase )
         {
             vector<PhysicsComponent*>& listComponent = _arrListComponent[phase];

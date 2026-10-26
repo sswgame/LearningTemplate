@@ -7,11 +7,11 @@
 #include "Core/Container/string.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
+#include "Core/Time/FixedStepTimer.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Foundation/Utility/Time/FixedStepTimer.h"
 #include "GameFramework/Base/Gameplay/Gimmick/ElementGrid.h"
 #include "GameFramework/GameFrameworkExports.h"
 

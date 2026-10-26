@@ -799,7 +799,7 @@ namespace sw
 
     void FractureComponentBase::postPhysicsStep( ScenePhysics& physics )
     {
-        _frameSimulatedTime += physics.getAccumulator().getFixedTimeStep();
+        _frameSimulatedTime += physics.getStepTimer().getStep();
     }
 
     void FractureComponentBase::endPhysicsFrame( ScenePhysics& physics, float32 alpha )

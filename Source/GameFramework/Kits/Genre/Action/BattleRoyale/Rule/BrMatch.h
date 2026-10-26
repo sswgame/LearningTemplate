@@ -10,10 +10,10 @@
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
+#include "Core/Time/FixedStepTimer.h"
 
 #include "GameFramework/Base/Actor/Combat/Health/Vitality.h"
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
-#include "GameFramework/Base/Foundation/Utility/Time/FixedStepTimer.h"
 #include "GameFramework/Base/Gameplay/Interaction/InteractionProgress.h"
 #include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Base/Gameplay/Match/MatchState.h"
