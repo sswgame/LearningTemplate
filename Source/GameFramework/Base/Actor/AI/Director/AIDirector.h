@@ -11,6 +11,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/EventBuffer.h"
+#include "Core/Container/RingBuffer.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
@@ -111,9 +112,9 @@ namespace sw
     class SW_GF_API AIDirector
     {
     public:
-        static constexpr int32 kMaxTransitionsPerUpdate = 4;   ///< 한 프레임에 넘길 단계 수 상한. 머무는 시간이 0 인 단계끼리 끝없이 돌지 않게 한다
-        static constexpr int32 kMaxPicksPerUpdate       = 8;   ///< 풀 하나가 한 프레임에 고르는 수 상한. dt 가 길 때 한꺼번에 쏟아지지 않게 한다
-        static constexpr int32 kMaxTraceEvent           = 256; ///< 추적이 보관하는 최근 사건 수
+        static constexpr int32  kMaxTransitionsPerUpdate = 4;   ///< 한 프레임에 넘길 단계 수 상한. 머무는 시간이 0 인 단계끼리 끝없이 돌지 않게 한다
+        static constexpr int32  kMaxPicksPerUpdate       = 8;   ///< 풀 하나가 한 프레임에 고르는 수 상한. dt 가 길 때 한꺼번에 쏟아지지 않게 한다
+        static constexpr uint32 kMaxTraceEvent           = 256; ///< 추적이 보관하는 최근 사건 수
 
         AIDirector();
 
@@ -202,25 +203,24 @@ namespace sw
         void                       pushEvent( const AIDirectorEvent& event );
         uint32                     computeChanceKey( int32 poolIndex, int32 encounterIndex ) const;
 
-        AIDirectorContext            _context;
-        AIDirectorIntensityModel     _builtinModel;
-        SpawnDirector                _spawnDirector;
-        vector<PoolState>            _listPoolState;
-        EventBuffer<AIDirectorEvent> _eventBuffer;
-        vector<AIDirectorEvent>      _listTrace; ///< 링 버퍼. `_traceHead` 가 가장 오래된 위치다
-        vector<float32>              _listScratchWeight;
-        vector<SpawnEvent>           _listScratchSpawnEvent;
-        const AIDirectorProfile*     _pProfile;
-        const SpawnTable*            _pSpawnTable;
-        IAIDirectorIntensityModel*   _pCustomModel;
-        GameRandom                   _random;
-        float32                      _time;
-        float32                      _phaseTime;
-        float32                      _intensity;
-        uint32                       _seed;
-        uint32                       _pickSerial; ///< 고른 횟수. 확률 절의 해시 키로 쓴다
-        int32                        _phaseIndex;
-        int32                        _cycle;
-        int32                        _traceHead;
+        AIDirectorContext                           _context;
+        AIDirectorIntensityModel                    _builtinModel;
+        SpawnDirector                               _spawnDirector;
+        vector<PoolState>                           _listPoolState;
+        EventBuffer<AIDirectorEvent>                _eventBuffer;
+        RingBuffer<AIDirectorEvent, kMaxTraceEvent> _listTrace; ///< 최근 사건. 가득 차면 가장 오래된 것을 덮는다
+        vector<float32>                             _listScratchWeight;
+        vector<SpawnEvent>                          _listScratchSpawnEvent;
+        const AIDirectorProfile*                    _pProfile;
+        const SpawnTable*                           _pSpawnTable;
+        IAIDirectorIntensityModel*                  _pCustomModel;
+        GameRandom                                  _random;
+        float32                                     _time;
+        float32                                     _phaseTime;
+        float32                                     _intensity;
+        uint32                                      _seed;
+        uint32                                      _pickSerial; ///< 고른 횟수. 확률 절의 해시 키로 쓴다
+        int32                                       _phaseIndex;
+        int32                                       _cycle;
     };
 } // namespace sw

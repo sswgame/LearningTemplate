@@ -43,10 +43,10 @@ namespace sw
         const uint64 hash        = computeTextHash( text );
         History&     history     = _mapAccountToHistory[accountID];
         int32        repeatCount = 0;
-        for ( int32 index = 0; index < kHistorySize; ++index )
+        for ( const SentText& sent : history )
         {
-            const bool bRecent = history._arrTimeMs[index] != 0 && nowMs - history._arrTimeMs[index] < _settings._repeatWindowMs;
-            repeatCount += ( bRecent && history._arrHash[index] == hash ) ? 1 : 0;
+            const bool bRecent = nowMs - sent._timeMs < _settings._repeatWindowMs;
+            repeatCount += ( bRecent && sent._hash == hash ) ? 1 : 0;
         }
         if ( repeatCount >= _settings._maxRepeatCount )
         {
@@ -55,10 +55,11 @@ namespace sw
         }
         if ( _bucketMap.tryConsume( accountID, nowMs, outRetryAfterMs ) == false )
             return ChatSpamVerdict::RateLimited;
-        history._arrHash[history._next]   = hash;
-        history._arrTimeMs[history._next] = nowMs != 0 ? nowMs : 1;
-        history._next                     = ( history._next + 1 ) % kHistorySize;
-        outRetryAfterMs                   = 0;
+        SentText sent;
+        sent._hash   = hash;
+        sent._timeMs = nowMs;
+        history.push( sent );
+        outRetryAfterMs = 0;
         return ChatSpamVerdict::Allowed;
     }
 } // namespace sw

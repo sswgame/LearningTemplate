@@ -11,6 +11,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/RingBuffer.h"
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
@@ -39,8 +40,8 @@ namespace sw
         bool wasCommandPatternTriggered( const hashed_string& pattern, float32 maxWindowSeconds = 0.8f ) const;
 
     private:
-        static constexpr size_t  kMaxBufferedActions = 16;
-        static constexpr size_t  kMaxCommandHistory  = 32;
+        static constexpr uint32  kMaxBufferedActions = 16;
+        static constexpr uint32  kMaxCommandHistory  = 32;
         static constexpr float32 kHistorySeconds     = 2.0f; ///< 이보다 오래된 커맨드 이력은 판정에 쓰지 않는다
 
         struct BufferedActionItem
@@ -55,12 +56,8 @@ namespace sw
             float32       _timestamp{ 0.0f };
         };
 
-        BufferedActionItem  _arrBufferedAction[kMaxBufferedActions];
-        CommandHistoryEntry _arrCommandHistory[kMaxCommandHistory];
-        float32             _elapsedSeconds;
-        uint32              _bufferedActionCount;
-        uint32              _bufferedActionHead;
-        uint32              _commandHistoryCount;
-        uint32              _commandHistoryHead;
+        RingBuffer<BufferedActionItem, kMaxBufferedActions> _listBufferedAction; ///< 가득 차면 가장 오래된 선입력을 덮는다
+        RingBuffer<CommandHistoryEntry, kMaxCommandHistory> _listCommandHistory; ///< 가득 차면 가장 오래된 이력을 덮는다
+        float32                                             _elapsedSeconds;
     };
 } // namespace sw

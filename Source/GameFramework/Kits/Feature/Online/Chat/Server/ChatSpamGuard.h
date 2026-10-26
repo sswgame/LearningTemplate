@@ -5,6 +5,7 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Container/RingBuffer.h"
 #include "Core/Container/unordered_map.h"
 
 #include "GameFramework/Base/Online/Guard/TokenBucketMap.h"
@@ -54,15 +55,17 @@ namespace sw
         static uint64 computeTextHash( string_view text );
 
     private:
-        static constexpr int32 kHistorySize = 4;
+        static constexpr uint32 kHistorySize = 4;
 
-        /** @brief 계정 하나의 최근 글 해시 링 버퍼입니다. 시각이 0이면 빈 슬롯입니다. */
-        struct History
+        /** @brief 보낸 글 하나의 해시와 시각입니다. */
+        struct SentText
         {
-            uint64 _arrHash[kHistorySize]{};
-            int64  _arrTimeMs[kHistorySize]{};
-            int32  _next{ 0 };
+            uint64 _hash{ 0 };
+            int64  _timeMs{ 0 };
         };
+
+        /** @brief 계정 하나의 최근 글 링 버퍼입니다. 가득 차면 가장 오래된 글을 덮습니다. */
+        using History = RingBuffer<SentText, kHistorySize>;
 
         TokenBucketMap                    _bucketMap;
         unordered_map<AccountID, History> _mapAccountToHistory;
