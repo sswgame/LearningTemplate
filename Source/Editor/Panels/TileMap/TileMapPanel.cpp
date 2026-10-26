@@ -13,6 +13,7 @@
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorTextExtentImGui.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -232,18 +233,15 @@ namespace sw::editor
         ImGui::SameLine();
         ImGui::TextDisabled( "%dx%d  %.0f%%", _map._width, _map._height, static_cast<float64>( _canvasZoom * 100.0f ) );
 
-        // 유니티 Tile Palette 의 단축키 — 캔버스에 포커스가 있고 글을 치는 중이 아닐 때만.
-        if ( ImGui::IsWindowFocused( ImGuiFocusedFlags_ChildWindows ) && ImGui::GetIO().WantTextInput == false )
-        {
-            if ( ImGui::IsKeyPressed( ImGuiKey_B, false ) )
-                _tool = PaintTool::Brush;
-            if ( ImGui::IsKeyPressed( ImGuiKey_U, false ) )
-                _tool = PaintTool::Rect;
-            if ( ImGui::IsKeyPressed( ImGuiKey_G, false ) )
-                _tool = PaintTool::Fill;
-            if ( ImGui::IsKeyPressed( ImGuiKey_I, false ) )
-                _tool = PaintTool::Picker;
-        }
+        // 유니티 Tile Palette 의 단축키 — `Editor.Panel.tile_map` 레이어의 액션(이 창이 포커스이고 글을 치는 중이 아닐 때만 발화한다).
+        if ( EditorInputGUI::wasActionTriggered( "tileMap.brush" ) )
+            _tool = PaintTool::Brush;
+        if ( EditorInputGUI::wasActionTriggered( "tileMap.rect" ) )
+            _tool = PaintTool::Rect;
+        if ( EditorInputGUI::wasActionTriggered( "tileMap.fill" ) )
+            _tool = PaintTool::Fill;
+        if ( EditorInputGUI::wasActionTriggered( "tileMap.picker" ) )
+            _tool = PaintTool::Picker;
     }
 
     void TileMapPanel::drawCanvas()
@@ -268,7 +266,7 @@ namespace sw::editor
 
         drawGridCells( pDl, origin, cell );
 
-        const int2 hoverCell = TileMapPaintUtil::findCellAt( ImGui::GetIO().MousePos.x - origin.x, ImGui::GetIO().MousePos.y - origin.y, cell );
+        const int2 hoverCell = TileMapPaintUtil::findCellAt( EditorInputGUI::readPointer()._position._x - origin.x, EditorInputGUI::readPointer()._position._y - origin.y, cell );
         drawBrushPreview( pDl, origin, cell, hoverCell, bHovered );
         pDl->PopClipRect();
 
@@ -278,21 +276,22 @@ namespace sw::editor
     void TileMapPanel::updateCanvasView( const ImVec2& canvasMin, bool bHovered, bool bActive )
     {
         // 휠은 커서 아래 위치를 붙든 채 확대하고, 가운데 · 오른쪽 끌기는 이동한다(유니티 씬 뷰 2D).
-        const ImGuiIO& io = ImGui::GetIO();
-        if ( bHovered && io.MouseWheel != 0.0f )
+        const EditorPointerState pointer = EditorInputGUI::readPointer();
+        if ( bHovered && pointer._wheel != 0.0f )
         {
             const float32 oldZoom = _canvasZoom;
-            _canvasZoom           = MathUtil::clamp( _canvasZoom * ( 1.0f + 0.1f * io.MouseWheel ), TileMapPanelInternal::kMinZoom, TileMapPanelInternal::kMaxZoom );
-            const float32 mouseX  = io.MousePos.x - canvasMin.x;
-            const float32 mouseY  = io.MousePos.y - canvasMin.y;
+            _canvasZoom           = MathUtil::clamp( _canvasZoom * ( 1.0f + 0.1f * pointer._wheel ), TileMapPanelInternal::kMinZoom, TileMapPanelInternal::kMaxZoom );
+            const float32 mouseX  = pointer._position._x - canvasMin.x;
+            const float32 mouseY  = pointer._position._y - canvasMin.y;
             const float32 ratio   = _canvasZoom / oldZoom;
             _canvasPan._x         = mouseX - ( mouseX - _canvasPan._x ) * ratio;
             _canvasPan._y         = mouseY - ( mouseY - _canvasPan._y ) * ratio;
         }
-        if ( bActive && ( ImGui::IsMouseDragging( ImGuiMouseButton_Middle, 0.0f ) || ImGui::IsMouseDragging( ImGuiMouseButton_Right, 0.0f ) ) )
+        // 화면 이동은 끌기 문턱(입력 맵의 `dragThreshold`)을 넘은 뒤부터다 — 문턱 0 이면 오른쪽 클릭(메뉴)도 한 픽셀 끌기가 됐다(R1).
+        if ( bActive && ( pointer.isDragging( EditorMouseButton::Middle ) || pointer.isDragging( EditorMouseButton::Right ) ) )
         {
-            _canvasPan._x += io.MouseDelta.x;
-            _canvasPan._y += io.MouseDelta.y;
+            _canvasPan._x += pointer._delta._x;
+            _canvasPan._y += pointer._delta._y;
         }
     }
 
@@ -389,7 +388,7 @@ namespace sw::editor
     }
     void TileMapPanel::applyToolInput( const int2& hoverCell, bool bHovered )
     {
-        const bool bClicked = bHovered && ImGui::IsMouseClicked( ImGuiMouseButton_Left );
+        const bool bClicked = bHovered && EditorInputGUI::readPointer().wasPressed( EditorMouseButton::Left );
         switch ( _tool )
         {
             case PaintTool::Brush:

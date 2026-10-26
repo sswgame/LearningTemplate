@@ -13,6 +13,8 @@
 		<layer name="Editor.Panel.hierarchy" priority="10" enabled="0" blockLower="0"/>
 		<layer name="Editor.Panel.content_browser" priority="10" enabled="0" blockLower="0"/>
 		<layer name="Editor.Panel.scene_view" priority="10" enabled="0" blockLower="0"/>
+		<layer name="Editor.Panel.console" priority="10" enabled="0" blockLower="0"/>
+		<layer name="Editor.Panel.tile_map" priority="10" enabled="0" blockLower="0"/>
 	</layers>
 
 	<layer name="Editor.Global">
@@ -102,6 +104,29 @@
 		</action>
 		<action name="contentBrowser.navigateForward" trigger="Pressed">
 			<bind source="key" modifier="Alt" code="Right"/>
+		</action>
+	</layer>
+
+	<!-- Console: copy the selected log rows. -->
+	<layer name="Editor.Panel.console">
+		<action name="console.copySelection" trigger="Pressed">
+			<bind source="key" modifier="Ctrl" code="C"/>
+		</action>
+	</layer>
+
+	<!-- Tile Map: paint tools (Unity Tile Palette keys). -->
+	<layer name="Editor.Panel.tile_map">
+		<action name="tileMap.brush" trigger="Pressed">
+			<bind source="key" code="B"/>
+		</action>
+		<action name="tileMap.rect" trigger="Pressed">
+			<bind source="key" code="U"/>
+		</action>
+		<action name="tileMap.fill" trigger="Pressed">
+			<bind source="key" code="G"/>
+		</action>
+		<action name="tileMap.picker" trigger="Pressed">
+			<bind source="key" code="I"/>
 		</action>
 	</layer>
 </InputMap>

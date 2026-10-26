@@ -15,6 +15,7 @@
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -300,7 +301,7 @@ namespace sw::editor
 
             ImGui::SameLine();
             if ( ImGui::Button( "Presets..." ) )
-                ImGui::OpenPopup( "##GvPresetsPopup" );
+                EditorInputGUI::openPopup( "##GvPresetsPopup" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "Presets" ) );
 
             drawPresetsPopup();

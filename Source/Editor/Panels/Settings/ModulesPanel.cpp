@@ -10,6 +10,7 @@
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -194,7 +195,7 @@ namespace sw::editor
         drawDetail();
         if ( _bOpenPreview )
         {
-            ImGui::OpenPopup( "Confirm Module Change" );
+            EditorInputGUI::openPopup( "Confirm Module Change" );
             _bOpenPreview = false;
         }
         drawPreview();

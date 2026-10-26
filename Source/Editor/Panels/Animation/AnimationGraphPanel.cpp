@@ -13,6 +13,7 @@
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorNodeGraphID.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -334,7 +335,7 @@ namespace sw::editor
         if ( ed::ShowNodeContextMenu( &contextNode ) )
         {
             _selectedNodeID = static_cast<int32>( contextNode.Get() );
-            ImGui::OpenPopup( "AnimationNodeContext" );
+            EditorInputGUI::openPopup( "AnimationNodeContext" );
         }
         if ( ImGui::BeginPopup( "AnimationNodeContext" ) )
         {
