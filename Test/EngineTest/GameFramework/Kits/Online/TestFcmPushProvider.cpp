@@ -322,13 +322,13 @@ SW_TEST_CASE( FcmPushProviderTest, TheMessageCarriesLocalizationKeysAndEscapesTe
     const sw::string json           = FcmPushProvider::makeMessageJSON( "tok", {}, message );
     JSONDocument     document;
     SW_ASSERT_TRUE( document.tryParse( json ) ); // 따옴표 · 줄바꿈이 이스케이프됐다
-    const JSONValue body = document.getRoot().get( "message", false );
-    SW_EXPECT_EQUAL( body.get( "token", false ).asString(), sw::string( "tok" ) );
-    SW_EXPECT_EQUAL( body.get( "data", false ).get( "deep_link", false ).asString(), sw::string( "mailbox" ) );
-    SW_EXPECT_EQUAL( body.get( "android", false ).get( "notification", false ).get( "title_loc_key", false ).asString(), sw::string( "push.mail.title" ) );
-    SW_EXPECT_EQUAL( body.get( "android", false ).get( "notification", false ).get( "body_loc_args", false ).at( 1 ).asString(), sw::string( "say \"hi\"\n" ) );
-    SW_EXPECT_EQUAL( body.get( "apns", false ).get( "payload", false ).get( "aps", false ).get( "alert", false ).get( "loc-key", false ).asString(), sw::string( "push.mail.body" ) );
-    SW_EXPECT_EQUAL( body.get( "apns", false ).get( "payload", false ).get( "aps", false ).get( "badge", false ).asString(), sw::string( "3" ) );
+    const JSONValue body = document.getRoot().get( "message" );
+    SW_EXPECT_EQUAL( body.get( "token" ).asString(), sw::string( "tok" ) );
+    SW_EXPECT_EQUAL( body.get( "data" ).get( "deep_link" ).asString(), sw::string( "mailbox" ) );
+    SW_EXPECT_EQUAL( body.get( "android" ).get( "notification" ).get( "title_loc_key" ).asString(), sw::string( "push.mail.title" ) );
+    SW_EXPECT_EQUAL( body.get( "android" ).get( "notification" ).get( "body_loc_args" ).at( 1 ).asString(), sw::string( "say \"hi\"\n" ) );
+    SW_EXPECT_EQUAL( body.get( "apns" ).get( "payload" ).get( "aps" ).get( "alert" ).get( "loc-key" ).asString(), sw::string( "push.mail.body" ) );
+    SW_EXPECT_EQUAL( body.get( "apns" ).get( "payload" ).get( "aps" ).get( "badge" ).asString(), sw::string( "3" ) );
 
     PushNotificationMessage silent;
     silent._deepLink            = "mailbox"; // 문구가 없으면 데이터 메시지만 보낸다

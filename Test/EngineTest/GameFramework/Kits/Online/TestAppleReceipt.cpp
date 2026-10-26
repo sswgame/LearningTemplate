@@ -196,8 +196,8 @@ namespace
         void respondHistory( const HTTPServerRequest& request, HTTPServerResponse& outResponse )
         {
             JSONDocument body;
-            _bHistoryBodyValid       = body.tryParse( request.getBodyText() ) && body.getRoot().get( "notificationType", false ).asString() == "REFUND" &&
-                                         body.getRoot().has( "startDate", false ) && body.getRoot().has( "endDate", false )
+            _bHistoryBodyValid       = body.tryParse( request.getBodyText() ) && body.getRoot().get( "notificationType" ).asString() == "REFUND" &&
+                                         body.getRoot().has( "startDate" ) && body.getRoot().has( "endDate" )
                                          ? SW_TRUE
                                          : SW_FALSE;
             const HTTPHeader* pToken = request.findQuery( "paginationToken" );

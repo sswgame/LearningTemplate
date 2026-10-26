@@ -186,13 +186,12 @@ namespace sw
                 return false;
             }
 
-            /** @brief @p type 의 프로퍼티 중 이름이 @p pName 인 것입니다(대소문자 무시). */
+            /** @brief @p type 의 프로퍼티 중 이름이 @p pName 인 것입니다(철자 그대로). */
             static const PropertyInfo* findProperty( const TypeInfo& type, const utf8* pName )
             {
-                const uint32 nameHash = static_cast<uint32>( hashed_string::computeHash( string_view( pName ) ) );
                 for ( const PropertyInfo& prop : type.getPropertiesWithBase() )
                 {
-                    if ( prop.matchesNameHash( nameHash ) )
+                    if ( prop.matchesNameText( pName ) )
                         return &prop;
                 }
                 return nullptr;
@@ -240,7 +239,7 @@ namespace sw
                 for ( XMLAttribute attribute = element.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
                 {
                     const utf8* pName = attribute.getName();
-                    if ( StringUtil::equals( pName, kSelectorKey, true ) )
+                    if ( StringUtil::equals( pName, kSelectorKey ) )
                         continue;
                     UIStyleField        field{};
                     const PropertyInfo* pProperty = findProperty( styleType, pName );
@@ -360,7 +359,7 @@ namespace sw
         }
         Internal::ParseContext context{ text, path, {}, &sheet, &outError };
         const XMLNode          root = document.getRoot();
-        if ( root.isValid() == false || StringUtil::equals( root.getName(), UIStyleSheetAsset::kRootElementName, true ) == false )
+        if ( root.isValid() == false || StringUtil::equals( root.getName(), UIStyleSheetAsset::kRootElementName ) == false )
         {
             outError = Internal::makeError( path, 1, "the root element must be <UiStyleSheet>" );
             return false;
@@ -368,7 +367,7 @@ namespace sw
         bool bVersioned{ false };
         for ( XMLAttribute attribute = root.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
         {
-            if ( StringUtil::equals( attribute.getName(), sw::kSchemaVersionKey, true ) == false )
+            if ( StringUtil::equals( attribute.getName(), sw::kSchemaVersionKey ) == false )
                 return Internal::fail( context, root, string( "UiStyleSheet has unknown attribute '" ) + attribute.getName() + "'" );
             int32 version{ 0 };
             if ( StringUtil::parseInt( string( attribute.getValue() ), version ) == false || version != static_cast<int32>( UIStyleSheetAsset::kVersion ) )
@@ -390,9 +389,9 @@ namespace sw
         for ( XMLNode child = root.findChild(); child.isValid(); child = child.findNextSibling() )
         {
             const utf8* pName = child.getName();
-            if ( StringUtil::equals( pName, Internal::kVariableElement, true ) )
+            if ( StringUtil::equals( pName, Internal::kVariableElement ) )
                 continue;
-            if ( StringUtil::equals( pName, Internal::kRuleElement, true ) == false )
+            if ( StringUtil::equals( pName, Internal::kRuleElement ) == false )
                 return Internal::fail( context, child, string( "UiStyleSheet has unknown element <" ) + pName + ">" );
             if ( Internal::parseRule( context, child ) == false )
                 return false;

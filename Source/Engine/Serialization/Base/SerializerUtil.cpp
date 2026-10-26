@@ -986,31 +986,25 @@ namespace sw
         return ss.c_str();
     }
 
-    bool SerializerUtil::keysEqual( string_view left, string_view right, bool bIgnoreCase )
+    bool SerializerUtil::keysEqual( string_view left, string_view right )
     {
-        return StringUtil::equals( left, right, bIgnoreCase );
+        return left == right;
     }
 
-    const PropertyInfo* SerializerUtil::matchProperty( const vector<PropertyInfo>& listProp, string_view keyRaw,
-                                                       bool bIgnoreCaseKeys, bool& bCaseVariant )
+    const PropertyInfo* SerializerUtil::matchProperty( const vector<PropertyInfo>& listProp, string_view keyRaw )
     {
         // 지금 이름을 모두 본 뒤에만 옛 이름(Alias)을 본다. 앞 프로퍼티의 옛 이름이 뒤 프로퍼티의 지금 이름을 가로채지 않는다.
-        bCaseVariant = false;
         for ( const PropertyInfo& prop : listProp )
         {
-            if ( SerializerUtil::keysEqual( keyRaw, prop._name.c_str(), bIgnoreCaseKeys ) )
+            if ( SerializerUtil::keysEqual( keyRaw, prop._name.view() ) )
                 return &prop;
-            bCaseVariant = bCaseVariant || SerializerUtil::keysEqual( keyRaw, prop._name.c_str(), true );
         }
         for ( const PropertyInfo& prop : listProp )
         {
             for ( const hashed_string& alias : prop._listAlias )
             {
-                if ( alias.empty() )
-                    continue;
-                if ( SerializerUtil::keysEqual( keyRaw, alias.c_str(), bIgnoreCaseKeys ) )
+                if ( alias.empty() == false && SerializerUtil::keysEqual( keyRaw, alias.view() ) )
                     return &prop;
-                bCaseVariant = bCaseVariant || SerializerUtil::keysEqual( keyRaw, alias.c_str(), true );
             }
         }
         return nullptr;

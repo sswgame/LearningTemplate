@@ -24,7 +24,7 @@ namespace sw
 
             [[nodiscard]] static bool readText( const JSONValue& object, const utf8* pKey, string& outText )
             {
-                const JSONValue value = object.get( pKey, false );
+                const JSONValue value = object.get( pKey );
                 if ( value.isString() == false || value.asString().empty() )
                     return false;
                 outText = value.asString();
@@ -34,7 +34,7 @@ namespace sw
             /** @brief 없어도 되는 글 칸을 읽습니다. 없으면 @p outText 를 그대로 둡니다. */
             static void readOptionalText( const JSONValue& object, const utf8* pKey, string& outText )
             {
-                const JSONValue value = object.get( pKey, false );
+                const JSONValue value = object.get( pKey );
                 if ( value.isString() && value.asString().empty() == false )
                     outText = value.asString();
             }

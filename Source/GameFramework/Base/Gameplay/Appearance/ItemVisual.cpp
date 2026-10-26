@@ -88,7 +88,7 @@ namespace sw
             {
                 const utf8* pName         = child.getName();
                 const bool  bModification = inoutPart._kind == AppearancePartKind::BodyModification;
-                if ( StringUtil::equals( pName, "Variant", true ) && bModification == false )
+                if ( StringUtil::equals( pName, "Variant" ) && bModification == false )
                 {
                     (void)AppearanceXMLUtil::reportUnknownAttributes( child, kArrVariantAttribute, report, sourceName );
                     reportMisplacedAssetAttributes( child, inoutPart._kind, report, sourceName, visualID );
@@ -101,7 +101,7 @@ namespace sw
                     else
                         inoutPart._listVariant.push_back( variant );
                 }
-                else if ( StringUtil::equals( pName, "MaterialVariant", true ) && bModification == false )
+                else if ( StringUtil::equals( pName, "MaterialVariant" ) && bModification == false )
                 {
                     (void)AppearanceXMLUtil::reportUnknownAttributes( child, kArrMaterialVariantAttribute, report, sourceName );
                     AppearancePartVariantDef variant;
@@ -113,7 +113,7 @@ namespace sw
                     else
                         inoutPart._listMaterialVariant.push_back( variant );
                 }
-                else if ( StringUtil::equals( pName, "Morph", true ) && bModification )
+                else if ( StringUtil::equals( pName, "Morph" ) && bModification )
                 {
                     (void)AppearanceXMLUtil::reportUnknownAttributes( child, kArrMorphAttribute, report, sourceName );
                     AppearanceMorphDef morph;
@@ -121,7 +121,7 @@ namespace sw
                     AppearanceXMLUtil::readOptionalFloat( child, "weight", -MathUtil::kMaxFloat, MathUtil::kMaxFloat, morph._weight, report, sourceName );
                     inoutPart._listMorph.push_back( morph );
                 }
-                else if ( StringUtil::equals( pName, "Material", true ) && bModification )
+                else if ( StringUtil::equals( pName, "Material" ) && bModification )
                 {
                     (void)AppearanceXMLUtil::reportUnknownAttributes( child, kArrMaterialAttribute, report, sourceName );
                     AppearanceMaterialValueDef value;
@@ -129,7 +129,7 @@ namespace sw
                     AppearanceXMLUtil::readRequiredShaderValue( child, "value", value._value, report, sourceName );
                     inoutPart._listMaterialValue.push_back( value );
                 }
-                else if ( StringUtil::equals( pName, "HideRegion", true ) && bModification )
+                else if ( StringUtil::equals( pName, "HideRegion" ) && bModification )
                 {
                     (void)AppearanceXMLUtil::reportUnknownAttributes( child, kArrRegionAttribute, report, sourceName );
                     const hashed_string region = AppearanceXMLUtil::readRequiredName( child, "name", report, sourceName );
@@ -212,7 +212,7 @@ namespace sw
                 }
                 for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
                 {
-                    if ( StringUtil::equals( child.getName(), "Place", true ) )
+                    if ( StringUtil::equals( child.getName(), "Place" ) )
                     {
                         (void)AppearanceXMLUtil::reportUnknownAttributes( child, kArrPlaceAttribute, report, sourceName );
                         AppearanceStateDef::Placement placement;
@@ -221,7 +221,7 @@ namespace sw
                         if ( hasPart( inoutVisual, placement._part, report, sourceName, "<Place>" ) )
                             state._listPlacement.push_back( placement );
                     }
-                    else if ( StringUtil::equals( child.getName(), "HidePart", true ) )
+                    else if ( StringUtil::equals( child.getName(), "HidePart" ) )
                     {
                         (void)AppearanceXMLUtil::reportUnknownAttributes( child, kArrHidePartAttribute, report, sourceName );
                         const hashed_string part = AppearanceXMLUtil::readRequiredName( child, "part", report, sourceName );
@@ -258,7 +258,7 @@ namespace sw
                 }
                 for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
                 {
-                    if ( StringUtil::equals( child.getName(), "Variant", true ) )
+                    if ( StringUtil::equals( child.getName(), "Variant" ) )
                     {
                         (void)AppearanceXMLUtil::reportUnknownAttributes( child, kArrStageVariantAttribute, report, sourceName );
                         AppearanceDamageStageDef::PartVariant entry;
@@ -271,7 +271,7 @@ namespace sw
                         else
                             stage._listVariant.push_back( entry );
                     }
-                    else if ( StringUtil::equals( child.getName(), "Material", true ) )
+                    else if ( StringUtil::equals( child.getName(), "Material" ) )
                     {
                         (void)AppearanceXMLUtil::reportUnknownAttributes( child, kArrStageMaterialAttribute, report, sourceName );
                         AppearanceMaterialValueDef value;
@@ -304,11 +304,11 @@ namespace sw
                 for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
                 {
                     const utf8* pName = child.getName();
-                    if ( StringUtil::equals( pName, "Part", true ) )
+                    if ( StringUtil::equals( pName, "Part" ) )
                         continue;
-                    if ( StringUtil::equals( pName, "State", true ) )
+                    if ( StringUtil::equals( pName, "State" ) )
                         readState( child, outVisual, report, sourceName );
-                    else if ( StringUtil::equals( pName, "DamageStage", true ) )
+                    else if ( StringUtil::equals( pName, "DamageStage" ) )
                         readDamageStage( child, outVisual, report, sourceName );
                     else
                         AppearanceXMLUtil::reportUnknownChild( node, child, report, sourceName );
@@ -383,7 +383,7 @@ namespace sw
         (void)AppearanceXMLUtil::reportUnknownAttributes( root, nullptr, 0, report, sourceName );
         for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
-            if ( StringUtil::equals( node.getName(), "ItemVisual", true ) == false )
+            if ( StringUtil::equals( node.getName(), "ItemVisual" ) == false )
             {
                 AppearanceXMLUtil::reportUnknownChild( root, node, report, sourceName );
                 continue;

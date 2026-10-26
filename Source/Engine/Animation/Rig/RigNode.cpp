@@ -74,7 +74,7 @@ namespace sw
         if ( _element.isValid() == false )
             return nullptr;
         const string      keyText{ key };
-        const utf8* const pValue = _element.findAttribute( keyText.c_str(), false );
+        const utf8* const pValue = _element.findAttribute( keyText.c_str() );
         if ( pValue == nullptr && bRequired )
         {
             string message = "missing required key '";
@@ -91,7 +91,7 @@ namespace sw
         if ( _element.isValid() == false )
             return XMLNode{};
         const string  keyText{ key };
-        const XMLNode child = _element.findChild( keyText.c_str(), false );
+        const XMLNode child = _element.findChild( keyText.c_str() );
         if ( child.isValid() == false && bRequired )
         {
             string message = "missing required key '";
@@ -144,7 +144,7 @@ namespace sw
         if ( readFloat( key, number, bRequired ) == false )
             return false;
         const string keyText{ key };
-        if ( _element.findAttribute( keyText.c_str(), false ) == nullptr )
+        if ( _element.findAttribute( keyText.c_str() ) == nullptr )
             return true;
         if ( number < 0.0f || MathUtil::floor( number ) != number )
         {

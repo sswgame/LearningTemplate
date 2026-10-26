@@ -138,7 +138,7 @@ namespace sw
                 const PkceLoginProviderConfig* pSettings = findSettings( pending._provider );
                 JSONDocument                   document;
                 const bool                     bParsed = response.isSuccess() && document.tryParse( response.getBodyText() ) && document.getRoot().isObject();
-                const JSONValue                token   = bParsed ? document.getRoot().get( pSettings->_bUseIDToken == SW_TRUE ? "id_token" : "access_token", false )
+                const JSONValue                token   = bParsed ? document.getRoot().get( pSettings->_bUseIDToken == SW_TRUE ? "id_token" : "access_token" )
                                                                  : JSONValue{};
                 if ( token.isString() == false || token.asString().empty() )
                 {

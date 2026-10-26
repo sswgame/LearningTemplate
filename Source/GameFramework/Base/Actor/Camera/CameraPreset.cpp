@@ -126,57 +126,57 @@ namespace sw
                 for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
                 {
                     const utf8* pName = child.getName();
-                    if ( StringUtil::equals( pName, "View", true ) )
+                    if ( StringUtil::equals( pName, "View" ) )
                     {
                         bValid = GameDataXML::readFields( child, inoutDef._view, sourceName ) && bValid;
                     }
-                    else if ( StringUtil::equals( pName, "Lens", true ) )
+                    else if ( StringUtil::equals( pName, "Lens" ) )
                     {
                         bValid = readLens( child, inoutDef._lens, sourceName ) && bValid;
                     }
-                    else if ( StringUtil::equals( pName, "Damping", true ) )
+                    else if ( StringUtil::equals( pName, "Damping" ) )
                     {
                         bValid = GameDataXML::readFields( child, inoutDef._damping, sourceName ) && bValid;
                     }
-                    else if ( StringUtil::equals( pName, "BlendIn", true ) )
+                    else if ( StringUtil::equals( pName, "BlendIn" ) )
                     {
                         bValid = readBlend( child, inoutDef._blendIn, sourceName ) && bValid;
                     }
-                    else if ( StringUtil::equals( pName, "Input", true ) )
+                    else if ( StringUtil::equals( pName, "Input" ) )
                     {
                         bValid = GameDataXML::readFields( child, inoutDef._input, sourceName ) && bValid;
                     }
-                    else if ( StringUtil::equals( pName, "Confiner", true ) )
+                    else if ( StringUtil::equals( pName, "Confiner" ) )
                     {
                         bValid = readConfiner( child, inoutDef._confiner, sourceName ) && bValid;
                     }
-                    else if ( StringUtil::equals( pName, "Framing", true ) )
+                    else if ( StringUtil::equals( pName, "Framing" ) )
                     {
                         bValid = readFraming( child, inoutDef._framing, sourceName ) && bValid;
                     }
-                    else if ( StringUtil::equals( pName, "Collision", true ) )
+                    else if ( StringUtil::equals( pName, "Collision" ) )
                     {
                         // 섹션이 있으면 켜진다 — `enabled` 를 따로 적지 않는다.
                         bValid                        = GameDataXML::readFields( child, inoutDef._collision, sourceName ) && bValid;
                         inoutDef._collision._bEnabled = true;
                     }
-                    else if ( StringUtil::equals( pName, "Noise", true ) )
+                    else if ( StringUtil::equals( pName, "Noise" ) )
                     {
                         bValid = GameDataXML::readFields( child, inoutDef._noise, sourceName ) && bValid;
                     }
-                    else if ( StringUtil::equals( pName, "HeadBob", true ) )
+                    else if ( StringUtil::equals( pName, "HeadBob" ) )
                     {
                         bValid = GameDataXML::readFields( child, inoutDef._headBob, sourceName ) && bValid;
                     }
-                    else if ( StringUtil::equals( pName, "Sweep", true ) )
+                    else if ( StringUtil::equals( pName, "Sweep" ) )
                     {
                         bValid = GameDataXML::readFields( child, inoutDef._sweep, sourceName ) && bValid;
                     }
-                    else if ( StringUtil::equals( pName, "Dolly", true ) )
+                    else if ( StringUtil::equals( pName, "Dolly" ) )
                     {
                         bValid = readDolly( child, inoutDef._dolly, sourceName ) && bValid;
                     }
-                    else if ( StringUtil::equals( pName, "PostProcess", true ) )
+                    else if ( StringUtil::equals( pName, "PostProcess" ) )
                     {
                         bValid = GameDataXML::readFields( child, inoutDef._postProcess, sourceName ) && bValid;
                     }
@@ -272,7 +272,7 @@ namespace sw
         for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
             const utf8* pName = node.getName();
-            if ( StringUtil::equals( pName, "Preset", true ) )
+            if ( StringUtil::equals( pName, "Preset" ) )
             {
                 const utf8* pID = XMLReadUtil::findRequiredID( node, sourceName );
                 if ( pID == nullptr )
@@ -289,7 +289,7 @@ namespace sw
                 add( def );
                 ++loadedCount;
             }
-            else if ( StringUtil::equals( pName, "Blend", true ) )
+            else if ( StringUtil::equals( pName, "Blend" ) )
             {
                 const utf8* pFrom = node.findAttribute( "from" );
                 const utf8* pTo   = node.findAttribute( "to" );
@@ -307,7 +307,7 @@ namespace sw
                 else
                     SW_LOG_ERROR( "%#: <Blend from=\"%#\" to=\"%#\"> has invalid fields - skipped", sourceName, pFrom, pTo );
             }
-            else if ( StringUtil::equals( pName, "DefaultBlend", true ) == false )
+            else if ( StringUtil::equals( pName, "DefaultBlend" ) == false )
             {
                 SW_LOG_ERROR( "%#: unknown element <%#>", sourceName, pName );
             }

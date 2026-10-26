@@ -167,7 +167,7 @@ namespace sw
         reader.reportUnexpectedAttributes( root );
         for ( XMLNode axisNode = root.findChild(); axisNode; axisNode = axisNode.findNextSibling() )
         {
-            if ( StringUtil::equals( axisNode.getName(), "Axis", true ) == false )
+            if ( StringUtil::equals( axisNode.getName(), "Axis" ) == false )
             {
                 reader.reportUnknownElement( axisNode );
                 continue;
@@ -183,9 +183,9 @@ namespace sw
                 reader.addError( "Character.BodyAxisRangeInvalid", axisNode, "needs min <= 0 <= max with min < max" );
             for ( XMLNode sideNode = axisNode.findChild(); sideNode; sideNode = sideNode.findNextSibling() )
             {
-                if ( StringUtil::equals( sideNode.getName(), "Positive", true ) )
+                if ( StringUtil::equals( sideNode.getName(), "Positive" ) )
                     readSide( sideNode, axis._positive, reader );
-                else if ( StringUtil::equals( sideNode.getName(), "Negative", true ) )
+                else if ( StringUtil::equals( sideNode.getName(), "Negative" ) )
                     readSide( sideNode, axis._negative, reader );
                 else
                     reader.reportUnknownElement( sideNode );
@@ -207,7 +207,7 @@ namespace sw
         outSide._morph = reader.readName( node, "morph", false );
         for ( XMLNode boneNode = node.findChild(); boneNode; boneNode = boneNode.findNextSibling() )
         {
-            if ( StringUtil::equals( boneNode.getName(), "Bone", true ) == false )
+            if ( StringUtil::equals( boneNode.getName(), "Bone" ) == false )
             {
                 reader.reportUnknownElement( boneNode );
                 continue;

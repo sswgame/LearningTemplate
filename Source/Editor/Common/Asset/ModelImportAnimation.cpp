@@ -310,7 +310,7 @@ namespace sw::editor
         const JSONValue clips = root.get( "clips" );
         for ( const string& clipName : clips.getMemberNames() )
         {
-            const JSONValue clipValue = clips.get( clipName, false );
+            const JSONValue clipValue = clips.get( clipName );
             if ( AnimationJSONUtil::hasOnlyKnownKeys( clipValue, { "loop", "notifies", "curves" }, clipDataPath ) == false )
                 return false;
             ClipExtra extra{};
@@ -344,7 +344,7 @@ namespace sw::editor
             const JSONValue curves = clipValue.get( "curves" );
             for ( const string& curveName : curves.isObject() ? curves.getMemberNames() : vector<string>{} )
             {
-                const JSONValue    keys = curves.get( curveName, false );
+                const JSONValue    keys = curves.get( curveName );
                 AnimationClipCurve curve{};
                 curve._name = hashed_string( curveName );
                 for ( size_t keyIndex = 0; keys.isArray() && keyIndex < keys.size(); ++keyIndex )

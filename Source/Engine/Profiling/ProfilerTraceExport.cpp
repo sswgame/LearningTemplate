@@ -509,7 +509,7 @@ namespace sw
                         for ( const string& member : event.getMemberNames() )
                         {
                             writer.key( member );
-                            const JSONValue              value      = event.get( member, false );
+                            const JSONValue              value      = event.get( member );
                             const bool                   bTimestamp = member == "ts" && value.isNumber();
                             const std::optional<float64> ts         = bTimestamp ? value.read<float64>() : std::nullopt;
                             if ( member == "pid" )

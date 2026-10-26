@@ -472,9 +472,9 @@ SW_TEST_CASE( UIDocumentTest, StyleReloadRestylesOnly )
 {
     using Util = UIDocumentTestUtil;
     UIDocumentFixture fixture;
-    fixture._ui.getStyleSheetCache().registerMemorySheet( "test/reload.uistyle.xml", "<UiStyleSheet _schemaVersion=\"1\">\n"
+    fixture._ui.getStyleSheetCache().registerMemorySheet( "test/reload.uistyle.xml", "<UIStyleSheet _schemaVersion=\"1\">\n"
                                                                                      "\t<Rule _selector=\"ButtonWidget\" _backgroundColor=\"1,0,0,1\" />\n"
-                                                                                     "</UiStyleSheet>\n" );
+                                                                                     "</UIStyleSheet>\n" );
     fixture._ui.getDocumentCache().registerMemoryDocument( "test/styled.ui.xml", "<UIDocument _schemaVersion=\"1\">\n"
                                                                                  "\t<_listStyleSheet><item>test/reload.uistyle.xml</item></_listStyleSheet>\n"
                                                                                  "\t<BoxPanel>\n"
@@ -489,9 +489,9 @@ SW_TEST_CASE( UIDocumentTest, StyleReloadRestylesOnly )
     const sw::WidgetID goID = pGo->getID();
     SW_EXPECT_TRUE( pGo->getComputedStyle()->_value._backgroundColor == ( sw::float4{ 1.0f, 0.0f, 0.0f, 1.0f } ) );
 
-    fixture._ui.getStyleSheetCache().registerMemorySheet( "test/reload.uistyle.xml", "<UiStyleSheet _schemaVersion=\"1\">\n"
+    fixture._ui.getStyleSheetCache().registerMemorySheet( "test/reload.uistyle.xml", "<UIStyleSheet _schemaVersion=\"1\">\n"
                                                                                      "\t<Rule _selector=\"ButtonWidget\" _backgroundColor=\"0,1,0,1\" />\n"
-                                                                                     "</UiStyleSheet>\n" );
+                                                                                     "</UIStyleSheet>\n" );
     fixture._ui.getStyleSheetCache().reload( "test/reload.uistyle.xml", nullptr );
     Util::runFrame( fixture._input, fixture._ui );
     const sw::Widget* pSame = pScreen->getTree().findWidgetByName( "Go" );

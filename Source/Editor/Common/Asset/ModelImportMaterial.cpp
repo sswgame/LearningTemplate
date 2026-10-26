@@ -34,22 +34,22 @@ namespace sw::editor
         if ( document.parse( string_view( data.json, data.json_size ) ) == false )
             return true; // cgltf 가 이미 읽은 JSON 이다 — 여기서 못 읽을 일은 없지만, 못 읽으면 VRM 이 아닌 것으로 본다
         const JSONValue root       = document.getRoot();
-        const JSONValue extensions = root.get( "extensions", false );
-        const JSONValue vrm0       = extensions.isObject() ? extensions.get( "VRM", false ) : JSONValue{};
-        const JSONValue materials  = root.get( "materials", false );
+        const JSONValue extensions = root.get( "extensions" );
+        const JSONValue vrm0       = extensions.isObject() ? extensions.get( "VRM" ) : JSONValue{};
+        const JSONValue materials  = root.get( "materials" );
         const size_t    count      = materials.isArray() ? materials.size() : 0;
 
-        bool bVrm1 = extensions.isObject() && extensions.has( "VRMC_vrm", false );
+        bool bVrm1 = extensions.isObject() && extensions.has( "VRMC_vrm" );
         for ( size_t index = 0; index < count && bVrm1 == false; ++index )
         {
-            const JSONValue materialExtensions = materials.at( index ).get( "extensions", false );
-            bVrm1                              = materialExtensions.isObject() && materialExtensions.has( "VRMC_materials_mtoon", false );
+            const JSONValue materialExtensions = materials.at( index ).get( "extensions" );
+            bVrm1                              = materialExtensions.isObject() && materialExtensions.has( "VRMC_materials_mtoon" );
         }
         if ( vrm0.isObject() == false && bVrm1 == false )
             return true;
 
         outListToon.resize( count );
-        const JSONValue materialProperties = vrm0.isObject() ? vrm0.get( "materialProperties", false ) : JSONValue{};
+        const JSONValue materialProperties = vrm0.isObject() ? vrm0.get( "materialProperties" ) : JSONValue{};
         for ( size_t index = 0; index < count; ++index )
         {
             string error;

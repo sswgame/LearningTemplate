@@ -51,7 +51,7 @@ namespace sw
         reader.reportUnexpectedAttributes( root );
         for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
         {
-            if ( StringUtil::equals( child.getName(), "Channel", true ) == false )
+            if ( StringUtil::equals( child.getName(), "Channel" ) == false )
             {
                 reader.reportUnknownElement( child );
                 continue;

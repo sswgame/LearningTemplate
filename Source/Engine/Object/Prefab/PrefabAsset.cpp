@@ -290,19 +290,19 @@ namespace sw
             /** @brief `<PrefabInstance>` 원소들(@p parent 의 자식)을 읽어 끝에 더합니다. 안에 둔 `<PrefabInstance>` 는 그 노드에 붙는 노드입니다. */
             static void readNodesFromXML( const XMLNode& parent, int32 parentIndex, vector<PrefabInstanceNode>& inoutListNode )
             {
-                for ( XMLNode element = parent.findChild( kNestedInstance, false ); element.isValid(); element = element.findNextSibling( kNestedInstance, false ) )
+                for ( XMLNode element = parent.findChild( kNestedInstance ); element.isValid(); element = element.findNextSibling( kNestedInstance ) )
                 {
                     PrefabInstanceNode node{};
-                    const utf8*        pName   = element.findAttribute( kName, false );
-                    const utf8*        pPrefab = element.findAttribute( kNestedPrefab, false );
-                    const utf8*        pGuid   = element.findAttribute( kNestedGuid, false );
-                    const utf8*        pAttach = element.findAttribute( kNestedAttach, false );
+                    const utf8*        pName   = element.findAttribute( kName );
+                    const utf8*        pPrefab = element.findAttribute( kNestedPrefab );
+                    const utf8*        pGuid   = element.findAttribute( kNestedGuid );
+                    const utf8*        pAttach = element.findAttribute( kNestedAttach );
                     node._name                 = pName != nullptr ? pName : "";
                     node._prefabPath           = pPrefab != nullptr ? pPrefab : "";
                     node._prefabGuid           = pGuid != nullptr ? pGuid : "";
                     node._attachKey            = pAttach != nullptr ? pAttach : "";
                     node._parentIndex          = parentIndex;
-                    const XMLNode overrides    = element.findChild( PrefabOverrides::kRootName, false );
+                    const XMLNode overrides    = element.findChild( PrefabOverrides::kRootName );
                     if ( overrides.isValid() )
                         node._overrideXML = overrides.toString();
                     resolveNodePathByGuid( node );
@@ -347,7 +347,7 @@ namespace sw
             /** @brief JSON 배열 `_listPrefabInstance`(@p parent 의 멤버)의 노드를 읽어 끝에 더합니다. 객체마다 같은 이름의 배열이 그 노드에 붙는 노드입니다. */
             static void readNodesFromJSON( const JSONValue& parent, int32 parentIndex, vector<PrefabInstanceNode>& inoutListNode )
             {
-                const JSONValue arrayValue = parent.get( kNestedList, false );
+                const JSONValue arrayValue = parent.get( kNestedList );
                 if ( arrayValue.isArray() == false )
                     return;
                 const size_t count = arrayValue.size();
@@ -357,11 +357,11 @@ namespace sw
                     if ( element.isObject() == false )
                         continue;
                     PrefabInstanceNode node{};
-                    node._name        = element.get( kName, false ).asString();
-                    node._prefabPath  = element.get( kNestedPrefab, false ).asString();
-                    node._prefabGuid  = element.get( kNestedGuid, false ).asString();
-                    node._attachKey   = element.get( kNestedAttach, false ).asString();
-                    node._overrideXML = element.get( kNestedOverrides, false ).asString();
+                    node._name        = element.get( kName ).asString();
+                    node._prefabPath  = element.get( kNestedPrefab ).asString();
+                    node._prefabGuid  = element.get( kNestedGuid ).asString();
+                    node._attachKey   = element.get( kNestedAttach ).asString();
+                    node._overrideXML = element.get( kNestedOverrides ).asString();
                     node._parentIndex = parentIndex;
                     resolveNodePathByGuid( node );
                     inoutListNode.push_back( std::move( node ) );
@@ -380,21 +380,21 @@ namespace sw
                         continue;
                     if ( arrayValue.isValid() == false )
                     {
-                        arrayValue = parent.set( kNestedList, false );
+                        arrayValue = parent.set( kNestedList );
                         arrayValue.setArray();
                     }
                     const JSONValue element = arrayValue.pushBack();
                     element.setObject();
                     if ( node._name.empty() == false )
-                        element.set( kName, false ).setString( node._name );
-                    element.set( kNestedPrefab, false ).setString( node._prefabPath );
+                        element.set( kName ).setString( node._name );
+                    element.set( kNestedPrefab ).setString( node._prefabPath );
                     const string guid = makeNodeGuid( node );
                     if ( guid.empty() == false )
-                        element.set( kNestedGuid, false ).setString( guid );
+                        element.set( kNestedGuid ).setString( guid );
                     if ( node._attachKey.empty() == false )
-                        element.set( kNestedAttach, false ).setString( node._attachKey );
+                        element.set( kNestedAttach ).setString( node._attachKey );
                     if ( node._overrideXML.empty() == false )
-                        element.set( kNestedOverrides, false ).setString( node._overrideXML );
+                        element.set( kNestedOverrides ).setString( node._overrideXML );
                     writeNodesToJSON( element, listNode, static_cast<int32>( index ) );
                 }
             }
@@ -716,14 +716,14 @@ namespace sw
             return false;
         _listNestedInstance = std::move( listNode );
 
-        if ( root.has( PrefabAssetInternal::kNestedList, false ) )
+        if ( root.has( PrefabAssetInternal::kNestedList ) )
         {
             JSONDocument    stateDoc;
             const JSONValue stateRoot = stateDoc.makeObject();
             for ( const string& key : root.getMemberNames() )
             {
                 if ( key != PrefabAssetInternal::kNestedList )
-                    stateRoot.set( key, false ).assignFrom( root.get( key, false ) );
+                    stateRoot.set( key ).assignFrom( root.get( key ) );
             }
             _stateData = stateDoc.dump( 0 );
         }

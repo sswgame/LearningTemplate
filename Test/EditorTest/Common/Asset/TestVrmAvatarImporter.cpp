@@ -252,22 +252,22 @@ SW_TEST_CASE( VrmAvatarImporterTest, AvatarXMLIsReadable )
     SW_EXPECT_TRUE( text == sw::editor::VrmAvatarImporter::makeAvatarXML( def ) );
     sw::XMLDocument written;
     SW_ASSERT_TRUE( written.parse( text, "avatar" ) );
-    const sw::XMLNode root = written.getRoot( "VrmAvatar", false );
+    const sw::XMLNode root = written.getRoot( "VrmAvatar" );
     SW_ASSERT_TRUE( root.isValid() );
     SW_EXPECT_EQUAL( sw::editor::VrmAvatarImporter::kVersion, root.readRequiredAttribute<uint32>( "_version" ).value() );
-    SW_EXPECT_STREQ( "Hips", sw::string( root.findChild( "_mapHumanBone", false ).getAttributeText( "hips", false ) ).c_str() );
-    SW_EXPECT_STREQ( "Head", sw::string( root.getAttributeText( "_firstPersonBone", false ) ).c_str() );
-    SW_EXPECT_STREQ( "-0.01,0.06,-0.02", sw::string( root.getAttributeText( "_firstPersonOffset", false ) ).c_str() );
-    const sw::XMLNode expression = root.findChild( "_listExpression", false ).findChild();
-    SW_EXPECT_STREQ( "happy", sw::string( expression.getAttributeText( "_name", false ) ).c_str() );
-    SW_EXPECT_STREQ( "target1", sw::string( expression.findChild( "_listBind", false ).findChild().getAttributeText( "_morphTarget", false ) ).c_str() );
+    SW_EXPECT_STREQ( "Hips", sw::string( root.findChild( "_mapHumanBone" ).getAttributeText( "hips" ) ).c_str() );
+    SW_EXPECT_STREQ( "Head", sw::string( root.getAttributeText( "_firstPersonBone" ) ).c_str() );
+    SW_EXPECT_STREQ( "-0.01,0.06,-0.02", sw::string( root.getAttributeText( "_firstPersonOffset" ) ).c_str() );
+    const sw::XMLNode expression = root.findChild( "_listExpression" ).findChild();
+    SW_EXPECT_STREQ( "happy", sw::string( expression.getAttributeText( "_name" ) ).c_str() );
+    SW_EXPECT_STREQ( "target1", sw::string( expression.findChild( "_listBind" ).findChild().getAttributeText( "_morphTarget" ) ).c_str() );
     size_t jointCount{ 0 };
-    for ( sw::XMLNode joint = root.findChild( "_listSpring", false ).findChild().findChild( "_listJoint", false ).findChild(); joint.isValid(); joint = joint.findNextSibling() )
+    for ( sw::XMLNode joint = root.findChild( "_listSpring" ).findChild().findChild( "_listJoint" ).findChild(); joint.isValid(); joint = joint.findNextSibling() )
     {
         ++jointCount;
     }
     SW_EXPECT_EQUAL( size_t( 2 ), jointCount );
-    SW_EXPECT_STREQ( "ThirdPersonOnly", sw::string( root.findChild( "_listFirstPersonMesh", false ).findChild().getAttributeText( "_mode", false ) ).c_str() );
+    SW_EXPECT_STREQ( "ThirdPersonOnly", sw::string( root.findChild( "_listFirstPersonMesh" ).findChild().getAttributeText( "_mode" ) ).c_str() );
 }
 
 /**
@@ -290,27 +290,27 @@ SW_TEST_CASE( VrmAvatarImporterTest, RepositoryVroidSampleResolves )
     const sw::JSONValue root = document.getRoot();
 
     sw::editor::VrmGltfNames names;
-    const sw::JSONValue      nodes = root.get( "nodes", false );
+    const sw::JSONValue      nodes = root.get( "nodes" );
     for ( size_t nodeIndex = 0; nodeIndex < nodes.size(); ++nodeIndex )
     {
         const sw::JSONValue node = nodes.at( nodeIndex );
-        names._listNodeName.push_back( node.get( "name", false ).asString() );
-        const std::optional<int32> mesh = node.get( "mesh", false ).read<int32>();
+        names._listNodeName.push_back( node.get( "name" ).asString() );
+        const std::optional<int32> mesh = node.get( "mesh" ).read<int32>();
         names._listNodeMesh.push_back( mesh.has_value() ? *mesh : -1 ); // -1 = 메시 없는 노드(`VrmGltfNames::_listNodeMesh`)
         sw::vector<uint32>  listChild;
-        const sw::JSONValue children = node.get( "children", false );
+        const sw::JSONValue children = node.get( "children" );
         for ( size_t childIndex = 0; childIndex < children.size(); ++childIndex )
         {
             listChild.push_back( static_cast<uint32>( children.at( childIndex ).read<uint64>().value() ) );
         }
         names._listNodeChild.push_back( std::move( listChild ) );
     }
-    const sw::JSONValue meshes = root.get( "meshes", false );
+    const sw::JSONValue meshes = root.get( "meshes" );
     for ( size_t meshIndex = 0; meshIndex < meshes.size(); ++meshIndex )
     {
         const sw::JSONValue mesh = meshes.at( meshIndex );
-        names._listMeshName.push_back( mesh.get( "name", false ).asString() );
-        const size_t           targetCount = mesh.get( "primitives", false ).at( 0 ).get( "targets", false ).size();
+        names._listMeshName.push_back( mesh.get( "name" ).asString() );
+        const size_t           targetCount = mesh.get( "primitives" ).at( 0 ).get( "targets" ).size();
         sw::vector<sw::string> listMorph;
         for ( size_t targetIndex = 0; targetIndex < targetCount; ++targetIndex )
         {
@@ -322,7 +322,7 @@ SW_TEST_CASE( VrmAvatarImporterTest, RepositoryVroidSampleResolves )
     sw::editor::VrmAvatarDef def;
     sw::vector<sw::string>   listIgnored;
     sw::string               error;
-    SW_ASSERT_TRUE_MSG( sw::editor::VrmAvatarImporter::readVrm0Avatar( root.get( "extensions", false ).get( "VRM", false ), names, def, &listIgnored, error ),
+    SW_ASSERT_TRUE_MSG( sw::editor::VrmAvatarImporter::readVrm0Avatar( root.get( "extensions" ).get( "VRM" ), names, def, &listIgnored, error ),
                         error.c_str() );
     SW_EXPECT_EQUAL( size_t( 54 ), def._listHumanBone.size() );
     SW_EXPECT_STREQ( "J_Bip_C_Hips", def.findBone( "hips" ).c_str() );

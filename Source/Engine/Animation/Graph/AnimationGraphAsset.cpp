@@ -69,7 +69,7 @@ namespace sw
         if ( doc.loadResource( path ) == false )
             return false;
         // 파싱한 문서를 그대로 읽는다(문자열로 덤프해 parseXML 에 다시 넘기지 않는다).
-        return parseRoot( doc.getRoot( "AnimationGraphAsset", false ), path );
+        return parseRoot( doc.getRoot( "AnimationGraphAsset" ), path );
     }
 
     bool AnimationGraphAsset::loadFromDiskFile( string_view diskPath )
@@ -82,7 +82,7 @@ namespace sw
         XMLDocument doc;
         if ( doc.loadFile( diskPath ) == false )
             return false;
-        return parseRoot( doc.getRoot( "AnimationGraphAsset", false ), diskPath );
+        return parseRoot( doc.getRoot( "AnimationGraphAsset" ), diskPath );
     }
 
     bool AnimationGraphAsset::saveToFile( string_view path ) const
@@ -100,7 +100,7 @@ namespace sw
         if ( doc.parse( xmlView, "<animation graph text>" ) == false )
             return false;
 
-        return parseRoot( doc.getRoot( "AnimationGraphAsset", false ), "<animation graph text>" );
+        return parseRoot( doc.getRoot( "AnimationGraphAsset" ), "<animation graph text>" );
     }
 
     bool AnimationGraphAsset::parseBlendSpace( const XMLNode& blendSpaceXML, AnimationGraphNode& inoutNode )
@@ -108,9 +108,9 @@ namespace sw
         if ( XMLReadUtil::hasOnlyKnownNames( blendSpaceXML, { "x", "y", "notify" }, { "samples" }, inoutNode._name ) == false )
             return false;
         AnimationGraphBlendSpaceDef& def = inoutNode._blendSpace;
-        def._parameterX                  = hashed_string( string_view{ blendSpaceXML.getAttributeText( "x", false ) } );
-        if ( blendSpaceXML.findAttribute( "y", false ) != nullptr )
-            def._parameterY = hashed_string( string_view{ blendSpaceXML.getAttributeText( "y", false ) } );
+        def._parameterX                  = hashed_string( string_view{ blendSpaceXML.getAttributeText( "x" ) } );
+        if ( blendSpaceXML.findAttribute( "y" ) != nullptr )
+            def._parameterY = hashed_string( string_view{ blendSpaceXML.getAttributeText( "y" ) } );
         def._space.clear();
         def._space.setAxisCount( def._parameterY.empty() ? 1u : 2u );
         if ( def._parameterX.empty() )
@@ -119,9 +119,9 @@ namespace sw
             return false;
         }
         def._notifyMode = AnimationBlendSpaceNotifyMode::All;
-        if ( blendSpaceXML.findAttribute( "notify", false ) != nullptr )
+        if ( blendSpaceXML.findAttribute( "notify" ) != nullptr )
         {
-            const string notifyText{ blendSpaceXML.getAttributeText( "notify", false ) };
+            const string notifyText{ blendSpaceXML.getAttributeText( "notify" ) };
             bool         bKnown = false;
             for ( uint32 index = 0; index < static_cast<uint32>( std::size( AnimationGraphAssetInternal::kArrBlendSpaceNotifyText ) ); ++index )
             {
@@ -140,7 +140,7 @@ namespace sw
 
         bool   bValid = true;
         size_t sampleIndex{ 0 };
-        for ( XMLNode sampleXML = blendSpaceXML.findChild( "samples", false ).findChild(); sampleXML.isValid(); sampleXML = sampleXML.findNextSibling(), ++sampleIndex )
+        for ( XMLNode sampleXML = blendSpaceXML.findChild( "samples" ).findChild(); sampleXML.isValid(); sampleXML = sampleXML.findNextSibling(), ++sampleIndex )
         {
             if ( string_view{ sampleXML.getName() } != "sample" || XMLReadUtil::hasOnlyKnownNames( sampleXML, { "clip", "x", "y" }, {}, inoutNode._name ) == false )
             {
@@ -148,7 +148,7 @@ namespace sw
                 bValid = false;
                 continue;
             }
-            const string clipName{ sampleXML.getAttributeText( "clip", false ) };
+            const string clipName{ sampleXML.getAttributeText( "clip" ) };
             if ( clipName.empty() )
             {
                 SW_LOG_ERROR( "Animation graph node '%#' blend space sample %# has no 'clip'", inoutNode._name.c_str(), sampleIndex );
@@ -179,7 +179,7 @@ namespace sw
         if ( XMLReadUtil::hasOnlyKnownNames( poseNodeXML, { "type", "weight" }, { "inputs" }, inoutNode._name ) == false )
             return false;
         AnimationGraphPoseNodeDef& def = inoutNode._poseNode;
-        const string               typeText{ poseNodeXML.getAttributeText( "type", false ) };
+        const string               typeText{ poseNodeXML.getAttributeText( "type" ) };
         def = AnimationGraphPoseNodeDef{};
         for ( uint32 index = 1; index < static_cast<uint32>( std::size( AnimationGraphAssetInternal::kArrPoseNodeTypeText ) ); ++index )
         {
@@ -191,12 +191,12 @@ namespace sw
             SW_LOG_ERROR( "Animation graph node '%#' has unknown pose_node type '%#'", inoutNode._name.c_str(), typeText.c_str() );
             return false;
         }
-        for ( XMLNode input = poseNodeXML.findChild( "inputs", false ).findChild(); input.isValid(); input = input.findNextSibling() )
+        for ( XMLNode input = poseNodeXML.findChild( "inputs" ).findChild(); input.isValid(); input = input.findNextSibling() )
         {
             def._listInput.push_back( hashed_string( string_view{ input.getText() } ) );
         }
-        if ( poseNodeXML.findAttribute( "weight", false ) != nullptr )
-            def._weightParameter = hashed_string( string_view{ poseNodeXML.getAttributeText( "weight", false ) } );
+        if ( poseNodeXML.findAttribute( "weight" ) != nullptr )
+            def._weightParameter = hashed_string( string_view{ poseNodeXML.getAttributeText( "weight" ) } );
 
         // 종류마다 요구하는 값 — 지금은 blend_poses 하나다.
         const bool bHasEmptyInput     = VectorUtil::contains( def._listInput, hashed_string{} );
@@ -229,11 +229,11 @@ namespace sw
     bool AnimationGraphAsset::parseNodes( const XMLNode& root, string_view sourceLabel )
     {
         bool bValid = true;
-        for ( XMLNode nodeXML = root.findChild( "nodes", false ).findChild(); nodeXML.isValid(); nodeXML = nodeXML.findNextSibling() )
+        for ( XMLNode nodeXML = root.findChild( "nodes" ).findChild(); nodeXML.isValid(); nodeXML = nodeXML.findNextSibling() )
         {
             // id 는 필수이고 1 이상이다. 위치는 없으면 노드의 초기 자리다. 반복은 적었을 때만 클립 설정을 덮는다.
             AnimationGraphNode node{};
-            node._name = string{ nodeXML.getAttributeText( "name", false ) };
+            node._name = string{ nodeXML.getAttributeText( "name" ) };
             if ( string_view{ nodeXML.getName() } != "node" ||
                  XMLReadUtil::hasOnlyKnownNames( nodeXML, { "id", "name", "x", "y", "loop", "sync_group" }, { "blend_space", "pose_node" }, node._name ) == false )
             {
@@ -260,12 +260,12 @@ namespace sw
                 node._position._y = *positionY;
             if ( loop.has_value() )
                 node._loopOverride = *loop ? 1 : 0;
-            if ( nodeXML.findAttribute( "sync_group", false ) != nullptr )
-                node._syncGroup = hashed_string( string_view{ nodeXML.getAttributeText( "sync_group", false ) } );
-            const XMLNode blendSpaceXML = nodeXML.findChild( "blend_space", false );
+            if ( nodeXML.findAttribute( "sync_group" ) != nullptr )
+                node._syncGroup = hashed_string( string_view{ nodeXML.getAttributeText( "sync_group" ) } );
+            const XMLNode blendSpaceXML = nodeXML.findChild( "blend_space" );
             if ( blendSpaceXML.isValid() && parseBlendSpace( blendSpaceXML, node ) == false )
                 bValid = false;
-            const XMLNode poseNodeXML = nodeXML.findChild( "pose_node", false );
+            const XMLNode poseNodeXML = nodeXML.findChild( "pose_node" );
             if ( poseNodeXML.isValid() && parsePoseNode( poseNodeXML, node ) == false )
                 bValid = false;
             if ( node.hasBlendSpace() && node.hasPoseNode() )
@@ -281,7 +281,7 @@ namespace sw
     bool AnimationGraphAsset::parseLinks( const XMLNode& root, string_view sourceLabel )
     {
         bool bValid = true;
-        for ( XMLNode linkXML = root.findChild( "links", false ).findChild(); linkXML.isValid(); linkXML = linkXML.findNextSibling() )
+        for ( XMLNode linkXML = root.findChild( "links" ).findChild(); linkXML.isValid(); linkXML = linkXML.findNextSibling() )
         {
             // id · from · to 는 필수다. 크로스페이드 길이 · 반감기는 없으면 링크의 초기값(플레이어 기본 · 즉시)이다.
             if ( string_view{ linkXML.getName() } != "link" ||
@@ -312,9 +312,9 @@ namespace sw
                 link._blendSeconds = *blendSeconds;
             if ( halfLifeSeconds.has_value() )
                 link._halfLifeSeconds = *halfLifeSeconds;
-            if ( linkXML.findAttribute( "blend_mode", false ) != nullptr )
+            if ( linkXML.findAttribute( "blend_mode" ) != nullptr )
             {
-                const string modeText{ linkXML.getAttributeText( "blend_mode", false ) };
+                const string modeText{ linkXML.getAttributeText( "blend_mode" ) };
                 if ( parseBlendMode( modeText, link._blendMode ) == false )
                 {
                     SW_LOG_ERROR( "Animation graph link %# has unknown blend_mode '%#'", link._id, modeText.c_str() );
@@ -326,18 +326,18 @@ namespace sw
                 SW_LOG_ERROR( "Animation graph link %# uses inertialization without a positive 'half_life'", link._id );
                 bValid = false;
             }
-            const XMLNode condition = linkXML.findChild( "condition", false );
+            const XMLNode condition = linkXML.findChild( "condition" );
             if ( condition.isValid() )
             {
                 if ( XMLReadUtil::hasOnlyKnownNames( condition, { "param", "op", "value" }, {}, sourceLabel ) == false )
                     bValid = false;
-                const string opText{ condition.getAttributeText( "op", false ) };
+                const string opText{ condition.getAttributeText( "op" ) };
                 if ( parseConditionOp( opText, link._op ) == false || link._op == AnimationConditionOp::None )
                 {
                     SW_LOG_ERROR( "Animation graph link %# has unknown condition op '%#'", link._id, opText.c_str() );
                     bValid = false;
                 }
-                link._parameter = hashed_string( string_view{ condition.getAttributeText( "param", false ) } );
+                link._parameter = hashed_string( string_view{ condition.getAttributeText( "param" ) } );
                 std::optional<float32> threshold;
                 if ( condition.readOptionalAttribute( "value", threshold ) == false )
                 {
@@ -370,10 +370,10 @@ namespace sw
     {
         bool   bValid = true;
         size_t maskIndex{ 0 };
-        for ( XMLNode maskXML = root.findChild( "bone_masks", false ).findChild(); maskXML.isValid(); maskXML = maskXML.findNextSibling(), ++maskIndex )
+        for ( XMLNode maskXML = root.findChild( "bone_masks" ).findChild(); maskXML.isValid(); maskXML = maskXML.findNextSibling(), ++maskIndex )
         {
             AnimationBoneMaskDef mask{};
-            mask._name = hashed_string( string_view{ maskXML.getAttributeText( "name", false ) } );
+            mask._name = hashed_string( string_view{ maskXML.getAttributeText( "name" ) } );
             if ( string_view{ maskXML.getName() } != "bone_mask" )
             {
                 SW_LOG_ERROR( "Animation graph <bone_masks> holds only <bone_mask> elements" );
@@ -398,8 +398,8 @@ namespace sw
                 bValid = false;
                 continue;
             }
-            const bool bFromFile = maskXML.findAttribute( "file", false ) != nullptr;
-            const bool bInline   = maskXML.findChild( "roots", false ).isValid() || maskXML.findChild( "bones", false ).isValid();
+            const bool bFromFile = maskXML.findAttribute( "file" ) != nullptr;
+            const bool bInline   = maskXML.findChild( "roots" ).isValid() || maskXML.findChild( "bones" ).isValid();
             if ( bFromFile && bInline )
             {
                 SW_LOG_ERROR( "Animation graph bone mask '%#' has both 'file' and inline bones", mask._name.c_str() );
@@ -407,7 +407,7 @@ namespace sw
                 continue;
             }
             const string context = string( "Animation graph bone mask '" ) + mask._name.c_str() + "'";
-            const bool   bLoaded = bFromFile ? mask.loadFromFile( maskXML.getAttributeText( "file", false ) ) : mask.parseObject( maskXML, context );
+            const bool   bLoaded = bFromFile ? mask.loadFromFile( maskXML.getAttributeText( "file" ) ) : mask.parseObject( maskXML, context );
             if ( bLoaded == false )
             {
                 bValid = false;
@@ -422,11 +422,11 @@ namespace sw
     {
         bool   bValid = true;
         size_t layerIndex{ 0 };
-        for ( XMLNode layerXML = root.findChild( "layers", false ).findChild(); layerXML.isValid(); layerXML = layerXML.findNextSibling(), ++layerIndex )
+        for ( XMLNode layerXML = root.findChild( "layers" ).findChild(); layerXML.isValid(); layerXML = layerXML.findNextSibling(), ++layerIndex )
         {
             AnimationGraphLayerDef layer{};
-            layer._name     = hashed_string( string_view{ layerXML.getAttributeText( "name", false ) } );
-            layer._clipName = hashed_string( string_view{ layerXML.getAttributeText( "clip", false ) } );
+            layer._name     = hashed_string( string_view{ layerXML.getAttributeText( "name" ) } );
+            layer._clipName = hashed_string( string_view{ layerXML.getAttributeText( "clip" ) } );
             if ( string_view{ layerXML.getName() } != "layer" || XMLReadUtil::hasOnlyKnownNames( layerXML, { "name", "clip", "mask", "weight", "blend", "loop", "weight_param", "half_life" }, {}, "Animation graph layer" ) == false )
             {
                 SW_LOG_ERROR( "Animation graph <layers> holds only <layer> elements" );
@@ -449,7 +449,7 @@ namespace sw
             const bool                   bWeightValid = weight.has_value() && 0.0f <= *weight && *weight <= 1.0f;
             if ( bWeightValid )
                 layer._weight = *weight;
-            const string blendText{ layerXML.getAttributeText( "blend", false ) };
+            const string blendText{ layerXML.getAttributeText( "blend" ) };
             bool         bBlendValid = false;
             for ( uint32 blendIndex = 0; blendIndex < static_cast<uint32>( std::size( AnimationGraphAssetInternal::kArrLayerBlendText ) ); ++blendIndex )
             {
@@ -467,15 +467,15 @@ namespace sw
             const bool          bLoopValid = layerXML.readOptionalAttribute( "loop", layerLoop );
             if ( layerLoop.has_value() )
                 layer._bLoop = *layerLoop ? SW_TRUE : SW_FALSE;
-            if ( layerXML.findAttribute( "weight_param", false ) != nullptr )
-                layer._weightParameter = hashed_string( string_view{ layerXML.getAttributeText( "weight_param", false ) } );
-            if ( layerXML.findAttribute( "mask", false ) != nullptr )
-                layer._maskName = hashed_string( string_view{ layerXML.getAttributeText( "mask", false ) } );
+            if ( layerXML.findAttribute( "weight_param" ) != nullptr )
+                layer._weightParameter = hashed_string( string_view{ layerXML.getAttributeText( "weight_param" ) } );
+            if ( layerXML.findAttribute( "mask" ) != nullptr )
+                layer._maskName = hashed_string( string_view{ layerXML.getAttributeText( "mask" ) } );
             const bool bMaskValid = layer._maskName.empty() || findBoneMask( layer._maskName ) != nullptr;
             if ( bMaskValid == false )
                 SW_LOG_ERROR( "Animation graph layer '%#' names unknown bone mask '%#'", layer._name.c_str(), layer._maskName.c_str() );
             bool bHalfLifeValid = true;
-            if ( layerXML.findAttribute( "half_life", false ) != nullptr )
+            if ( layerXML.findAttribute( "half_life" ) != nullptr )
             {
                 const std::optional<float32> halfLife = layerXML.readRequiredAttribute<float32>( "half_life" );
                 bHalfLifeValid                        = halfLife.has_value() && *halfLife > 0.0f;

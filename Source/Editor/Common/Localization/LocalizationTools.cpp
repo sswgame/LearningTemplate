@@ -66,7 +66,7 @@ namespace sw
                 {
                     if ( pName == nullptr || element != pName )
                         continue;
-                    const string_view value = node.getAttributeText( rule._attribute.c_str(), false );
+                    const string_view value = node.getAttributeText( rule._attribute.c_str() );
                     if ( value.empty() )
                         continue;
                     if ( rule._bKeyReference )

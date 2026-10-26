@@ -52,12 +52,12 @@ namespace sw::editor
             /** @brief 노드마다 부모 번호 표를 만듭니다(노드 수 = 부모 없음). 읽지 못하는 자식 번호가 있으면 false 입니다. */
             [[nodiscard]] static bool collectParents( const JSONValue& root, vector<size_t>& outListParent )
             {
-                const JSONValue nodes     = root.get( "nodes", false );
+                const JSONValue nodes     = root.get( "nodes" );
                 const size_t    nodeCount = nodes.isArray() ? nodes.size() : 0;
                 outListParent.assign( nodeCount, nodeCount ); // nodeCount = 부모 없음
                 for ( size_t nodeIndex = 0; nodeIndex < nodeCount; ++nodeIndex )
                 {
-                    const JSONValue children   = nodes.at( nodeIndex ).get( "children", false );
+                    const JSONValue children   = nodes.at( nodeIndex ).get( "children" );
                     const size_t    childCount = children.isArray() ? children.size() : 0;
                     for ( size_t childSlot = 0; childSlot < childCount; ++childSlot )
                     {
@@ -75,11 +75,11 @@ namespace sw::editor
             [[nodiscard]] static bool promoteSceneNodes( const JSONValue& root, const vector<size_t>& listParent, uint32& outPromotedCount )
             {
                 const size_t    nodeCount  = listParent.size();
-                const JSONValue scenes     = root.get( "scenes", false );
+                const JSONValue scenes     = root.get( "scenes" );
                 const size_t    sceneCount = scenes.isArray() ? scenes.size() : 0;
                 for ( size_t sceneIndex = 0; sceneIndex < sceneCount; ++sceneIndex )
                 {
-                    const JSONValue sceneNodes = scenes.at( sceneIndex ).get( "nodes", false );
+                    const JSONValue sceneNodes = scenes.at( sceneIndex ).get( "nodes" );
                     if ( sceneNodes.isArray() == false )
                         continue;
 

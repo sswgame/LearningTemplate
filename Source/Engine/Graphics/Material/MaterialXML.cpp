@@ -105,10 +105,10 @@ namespace sw
         if ( node.isValid() == false || pName == nullptr )
             return {};
 
-        const utf8* pAttr = node.findAttribute( pName, false );
+        const utf8* pAttr = node.findAttribute( pName );
         if ( pAttr != nullptr )
             return string{ StringUtil::trim( pAttr ) };
-        const utf8* pText = node.findChildText( pName, false );
+        const utf8* pText = node.findChildText( pName );
         if ( pText != nullptr )
             return string{ StringUtil::trim( pText ) };
         return {};

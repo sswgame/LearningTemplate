@@ -97,7 +97,7 @@ namespace sw
         {
             const string_view name    = node.getName() != nullptr ? string_view( node.getName() ) : string_view{};
             const bool        bLoaded = loadElement( node, name, sourceName );
-            if ( bLoaded && StringUtil::equals( name, string_view( "Building" ), true ) )
+            if ( bLoaded && StringUtil::equals( name, string_view( "Building" ) ) )
                 ++buildingCount;
         }
 

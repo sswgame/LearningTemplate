@@ -157,7 +157,7 @@ namespace sw
         XMLNode child = node.findChild();
         for ( ; child; child = child.findNextSibling() )
         {
-            if ( StringUtil::equals( child.getName(), "Step", true ) == false )
+            if ( StringUtil::equals( child.getName(), "Step" ) == false )
             {
                 SW_LOG_WARNING( "%#: unknown element <%#> in <Interaction>", sourceName, child.getName() );
                 bValid = false;
@@ -184,7 +184,7 @@ namespace sw
         outDef._id     = hashed_string( node.findAttribute( "id" ) != nullptr ? node.findAttribute( "id" ) : "" );
         for ( XMLNode slotNode = node.findChild(); slotNode; slotNode = slotNode.findNextSibling() )
         {
-            if ( StringUtil::equals( slotNode.getName(), "Slot", true ) == false )
+            if ( StringUtil::equals( slotNode.getName(), "Slot" ) == false )
             {
                 SW_LOG_WARNING( "%#: unknown element <%#> in <SmartObject>", sourceName, slotNode.getName() );
                 bValid = false;
@@ -209,7 +209,7 @@ namespace sw
         bool bValid = true;
         for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
         {
-            if ( StringUtil::equals( child.getName(), "Interaction", true ) )
+            if ( StringUtil::equals( child.getName(), "Interaction" ) )
             {
                 InteractionDef def;
                 bValid = readInteraction( child, def, sourceName ) && bValid;
@@ -222,7 +222,7 @@ namespace sw
                 addInteraction( def );
                 continue;
             }
-            if ( StringUtil::equals( child.getName(), "SmartObject", true ) )
+            if ( StringUtil::equals( child.getName(), "SmartObject" ) )
             {
                 SmartObjectDef def;
                 bValid = readSmartObject( child, def, sourceName ) && bValid;

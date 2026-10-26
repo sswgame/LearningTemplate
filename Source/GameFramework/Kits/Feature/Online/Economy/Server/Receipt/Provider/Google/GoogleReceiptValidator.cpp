@@ -37,7 +37,7 @@ namespace sw
 
             static string readText( const JSONValue& object, const utf8* pKey )
             {
-                const JSONValue value = object.get( pKey, false );
+                const JSONValue value = object.get( pKey );
                 return value.isString() || value.isNumber() ? value.asString() : string();
             }
 
@@ -284,7 +284,7 @@ namespace sw
             return; // 지난 성공 시각을 그대로 둔다 — 다음 조회가 이번 구간까지 다시 읽는다
         }
         _lastVoidedUnixMs      = _voidedStartUnixMs;
-        const JSONValue voided = document.getRoot().get( "voidedPurchases", false );
+        const JSONValue voided = document.getRoot().get( "voidedPurchases" );
         if ( voided.isArray() && voided.size() >= static_cast<size_t>( kVoidedMaxResults ) )
             SW_LOG_WARNING( "Google returned %# voided purchases (the limit) - some may be read at the next overlapping poll only", static_cast<int32>( voided.size() ) );
         for ( size_t index = 0; voided.isArray() && index < voided.size(); ++index )

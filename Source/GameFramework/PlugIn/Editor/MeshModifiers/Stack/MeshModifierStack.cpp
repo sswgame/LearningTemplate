@@ -324,9 +324,9 @@ namespace sw::editor
                     for ( uint32 paramIndex = 0; paramIndex < modifier.getParamCount(); ++paramIndex )
                     {
                         const utf8* pName = modifier.getParamDefs()[paramIndex]._pName;
-                        if ( params.has( pName, false ) && readParam( modifier, paramIndex, params.get( pName, false ) ) == false )
+                        if ( params.has( pName ) && readParam( modifier, paramIndex, params.get( pName ) ) == false )
                         {
-                            SW_LOG_ERROR( "Mesh modifier '%#' parameter '%#' does not have the shape of its kind: %#", typeID.c_str(), pName, params.get( pName, false ).dump() );
+                            SW_LOG_ERROR( "Mesh modifier '%#' parameter '%#' does not have the shape of its kind: %#", typeID.c_str(), pName, params.get( pName ).dump() );
                             return false;
                         }
                     }

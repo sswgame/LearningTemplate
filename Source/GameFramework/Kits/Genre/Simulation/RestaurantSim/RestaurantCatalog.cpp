@@ -74,29 +74,29 @@ namespace sw
         for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
             const utf8* pElement = node.getName();
-            if ( StringUtil::equals( pElement, "Dish", true ) )
+            if ( StringUtil::equals( pElement, "Dish" ) )
             {
                 if ( loadDish( node, sourceName ) )
                     ++loadedCount;
             }
-            else if ( StringUtil::equals( pElement, "Customer", true ) )
+            else if ( StringUtil::equals( pElement, "Customer" ) )
             {
                 if ( loadCustomer( node, sourceName ) )
                     ++loadedCount;
             }
-            else if ( StringUtil::equals( pElement, "Ingredient", true ) )
+            else if ( StringUtil::equals( pElement, "Ingredient" ) )
             {
                 IngredientDef ingredient;
                 if ( GameDataXML::readFields( node, ingredient, sourceName ) )
                     (void)_ingredientCatalog.add( ingredient ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
             }
-            else if ( StringUtil::equals( pElement, "Arrival", true ) )
+            else if ( StringUtil::equals( pElement, "Arrival" ) )
             {
                 RestaurantArrivalDef arrival;
                 if ( GameDataXML::readFields( node, arrival, sourceName ) )
                     _arrArrivalRate[arrival._hour] = arrival._rate;
             }
-            else if ( StringUtil::equals( pElement, "Weather", true ) )
+            else if ( StringUtil::equals( pElement, "Weather" ) )
             {
                 RestaurantWeatherDef weather;
                 if ( GameDataXML::readFields( node, weather, sourceName ) )

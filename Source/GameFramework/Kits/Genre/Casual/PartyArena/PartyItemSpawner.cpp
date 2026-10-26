@@ -210,7 +210,7 @@ namespace sw
         uint32 loadedCount = 0;
         for ( XMLNode itemNode = root.findChild(); itemNode; itemNode = itemNode.findNextSibling() )
         {
-            if ( StringUtil::equals( itemNode.getName(), "Item", true ) == false )
+            if ( StringUtil::equals( itemNode.getName(), "Item" ) == false )
             {
                 SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, itemNode.getName() );
                 continue;

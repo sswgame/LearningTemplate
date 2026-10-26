@@ -110,7 +110,7 @@ namespace sw
         static void readComponents( const WidgetStyle& style, UIStyleField field, float32 ( &outArr )[4] );
         /** @brief 성분을 수치 필드에 씁니다. 수치가 아닌 필드는 건드리지 않습니다. */
         static void writeComponents( WidgetStyle& style, UIStyleField field, const float32 ( &arr )[4] );
-        /** @brief `WidgetStyle` 의 PROPERTY 이름(`_backgroundColor`, 대소문자 무시)에 해당하는 필드를 찾습니다. 없으면 false 입니다. */
+        /** @brief `WidgetStyle` 의 PROPERTY 이름(`_backgroundColor`, 철자 그대로)에 해당하는 필드를 찾습니다. 없으면 false 입니다. */
         [[nodiscard]] static bool tryFindField( string_view name, UIStyleField& outField );
         /** @brief 필드 하나의 값을 @p source 에서 @p outTarget 으로 옮깁니다(수치 필드는 표의 성분으로, 폰트 · 전환은 값째). 상속(`UIStyleSet`)이 씁니다. */
         static void copyField( const WidgetStyle& source, UIStyleField field, WidgetStyle& outTarget );

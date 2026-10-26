@@ -75,7 +75,7 @@ namespace sw
         reader.reportUnexpectedAttributes( root );
         for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
         {
-            if ( StringUtil::equals( child.getName(), "Kind", true ) == false )
+            if ( StringUtil::equals( child.getName(), "Kind" ) == false )
             {
                 reader.reportUnknownElement( child );
                 continue;
@@ -155,9 +155,9 @@ namespace sw
         reader.reportUnexpectedAttributes( root );
         for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
         {
-            if ( StringUtil::equals( child.getName(), "Socket", true ) )
+            if ( StringUtil::equals( child.getName(), "Socket" ) )
                 readSocket( child, kinds, reader );
-            else if ( StringUtil::equals( child.getName(), "VirtualBone", true ) )
+            else if ( StringUtil::equals( child.getName(), "VirtualBone" ) )
                 readVirtualBone( child, reader );
             else
                 reader.reportUnknownElement( child );

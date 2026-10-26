@@ -25,7 +25,7 @@ namespace sw
 
             static string readText( const JSONValue& object, const utf8* pKey )
             {
-                const JSONValue value = object.get( pKey, false );
+                const JSONValue value = object.get( pKey );
                 return value.isString() ? value.asString() : string();
             }
 
@@ -81,7 +81,7 @@ namespace sw
             outError = "push provider settings are not JSON";
             return false;
         }
-        const JSONValue providers = document.getRoot().get( "providers", false );
+        const JSONValue providers = document.getRoot().get( "providers" );
         if ( providers.isArray() == false )
         {
             outError = "push provider settings need a 'providers' array";

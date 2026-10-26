@@ -2,7 +2,6 @@
 
 #include "Engine/UI/Style/WidgetStyle.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Reflection/ReflectionTypes.h"
@@ -177,7 +176,7 @@ namespace sw
         const uint32                fieldCount   = MathUtil::min( static_cast<uint32>( listProperty.size() ), static_cast<uint32>( UIStyleField::Count ) );
         for ( uint32 index = 0; index < fieldCount; ++index )
         {
-            if ( StringUtil::equals( name, string_view( listProperty[index]._name.c_str() ), true ) )
+            if ( name == listProperty[index]._name.view() )
             {
                 outField = static_cast<UIStyleField>( index );
                 return true;

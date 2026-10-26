@@ -68,7 +68,7 @@ namespace sw
                     path                   = dot == string_view::npos ? string_view{} : path.substr( dot + 1 );
                     if ( current.isObject() == false )
                         return {};
-                    current = current.get( part, false );
+                    current = current.get( part );
                     if ( current.isValid() == false )
                         return {};
                 }
@@ -241,7 +241,7 @@ namespace sw
         const string status   = Internal::readText( root, "response.params.status" );
         result._status        = mapOrderStatus( status );
         result._failureText   = result._status == ReceiptStatus::Valid ? string() : "steam order status " + status;
-        const JSONValue items = root.get( "response", false ).get( "params", false ).get( "items", false );
+        const JSONValue items = root.get( "response" ).get( "params" ).get( "items" );
         if ( items.isArray() && items.size() > 0 )
             result._productID = Internal::readText( items.at( 0 ), "itemid" );
         int64 purchaseMs = 0;
@@ -287,7 +287,7 @@ namespace sw
                     continue; // 지난 성공 시각을 그대로 둔다 — 다음 조회가 이번 구간까지 다시 읽는다
                 }
                 _lastReportUnixMs      = _reportStartUnixMs;
-                const JSONValue orders = document.getRoot().get( "response", false ).get( "params", false ).get( "orders", false );
+                const JSONValue orders = document.getRoot().get( "response" ).get( "params" ).get( "orders" );
                 if ( orders.isArray() && orders.size() >= static_cast<size_t>( kReportMaxResults ) )
                     SW_LOG_WARNING( "Steam refund report returned %# orders (the limit) - some refunds may be read at the next overlapping poll only", static_cast<int32>( orders.size() ) );
                 for ( size_t index = 0; orders.isArray() && index < orders.size(); ++index )

@@ -55,9 +55,9 @@ namespace sw
         using OpaqueElementQueryFn = bool ( * )( const void* pElement, OpaqueElementView& outElement );
 
         // ------------------------------------------------------------------------------
-        // 1) 수명: 목적은 필수, 키 대소문자는 기본 무시
+        // 1) 수명: 목적은 필수(키는 언제나 철자 그대로 맞춘다)
         // ------------------------------------------------------------------------------
-        /** @brief 목적 @p purpose 의 빈 문맥(핸들러 없음, 키 대소문자 무시)을 만듭니다. 내장 핸들러가 필요하면 `getDefault` · `deriveFromDefault` 를 씁니다. */
+        /** @brief 목적 @p purpose 의 빈 문맥(핸들러 없음)을 만듭니다. 내장 핸들러가 필요하면 `getDefault` · `deriveFromDefault` 를 씁니다. */
         explicit SerializeContext( SerializePurpose purpose ) noexcept
             : _mapBinaryWriter{}
             , _mapBinaryReader{}
@@ -70,7 +70,6 @@ namespace sw
             , _pOpaqueKeepFn{ nullptr }
             , _pOpaqueQueryFn{ nullptr }
             , _purpose{ purpose }
-            , _bIgnoreCaseKeys{ SW_TRUE }
             , _bSkipUnknownProperties{ SW_FALSE }
             , _bSkipUnreadableProperties{ SW_FALSE }
             , _reservedFlags{ 0 } {}
@@ -82,13 +81,6 @@ namespace sw
         void registerBinaryHandler( hashed_string typeName, BinaryWriteFn writeFn, BinaryReadFn readFn );
         /** @brief 텍스트 읽기/쓰기 커스텀 핸들러를 등록합니다. */
         void registerTextHandler( hashed_string typeName, TextWriteFn writeFn, TextReadFn readFn );
-
-        /** @brief 키 대소문자를 무시할지 설정합니다(자신을 반환하므로 이어 부를 수 있습니다). */
-        SerializeContext& setIgnoreCaseKeys( bool bIgnoreCaseKeys )
-        {
-            _bIgnoreCaseKeys = bIgnoreCaseKeys ? SW_TRUE : SW_FALSE;
-            return *this;
-        }
 
         /**
          * @brief 바이너리 엄격 읽기가 **타입에 없는 이름**의 필드를 건너뛰고 계속할지 설정합니다. 켜면 (타입, 이름)마다 한 번 경고하고, 끄면(기본) 읽기가 실패합니다.
@@ -133,12 +125,6 @@ namespace sw
         const TextWriteFn* findTextWriter( hashed_string typeName ) const;
         /** @brief 등록된 텍스트 reader 를 찾습니다. */
         const TextReadFn* findTextReader( hashed_string typeName ) const;
-        /**
-         * @brief XML/JSON 의 키 · 태그 · 속성 이름을 찾을 때 대소문자를 무시하는지 반환합니다(기본 true). 값 비교에는 영향이 없습니다.
-         * @details XMLSerializer::deserialize 가 이 값을 IXMLBackend 에 넘깁니다.
-         *          끄려면: `SerializeContext context = SerializeContext::deriveFromDefault( purpose ); context.setIgnoreCaseKeys( false );`
-         */
-        bool ignoresCaseKeys() const { return _bIgnoreCaseKeys == SW_TRUE; }
         /** @brief 타입에 없는 이름의 필드를 건너뛰고 계속하는지(`setSkipUnknownProperties`) 반환합니다. */
         bool skipsUnknownProperties() const { return _bSkipUnknownProperties == SW_TRUE; }
         /** @brief 타입에 있는데 값을 읽지 못한 필드를 건너뛰고 계속하는지(`setSkipUnreadableProperties`) 반환합니다. */
@@ -251,10 +237,9 @@ namespace sw
         OpaqueElementKeepFn    _pOpaqueKeepFn;
         OpaqueElementQueryFn   _pOpaqueQueryFn;
         SerializePurpose       _purpose;
-        uint8                  _bIgnoreCaseKeys           : 1;
         uint8                  _bSkipUnknownProperties    : 1;
         uint8                  _bSkipUnreadableProperties : 1;
-        [[maybe_unused]] uint8 _reservedFlags             : 5;
+        [[maybe_unused]] uint8 _reservedFlags             : 6;
     };
 
 } // namespace sw

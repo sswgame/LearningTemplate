@@ -93,7 +93,7 @@ namespace sw
                 {
                     if ( isElement( child ) == false )
                         continue;
-                    const utf8*  pLabel     = child.findAttribute( kComponentName, false );
+                    const utf8*  pLabel     = child.findAttribute( kComponentName );
                     const bool   bNoLabel   = StringUtil::isNullOrEmpty( pLabel ) || isSameText( pLabel, "None" );
                     const string baseName   = bNoLabel ? string{ child.getName() } : string{ pLabel };
                     int32&       occurrence = mapCount[baseName];
@@ -125,7 +125,7 @@ namespace sw
                 {
                     if ( bRoot && isRootOnlyField( attribute.getName() ) )
                         continue;
-                    const utf8* pBaseValue = base.findAttribute( attribute.getName(), false );
+                    const utf8* pBaseValue = base.findAttribute( attribute.getName() );
                     if ( pBaseValue == nullptr || isSameText( pBaseValue, attribute.getValue() ) == false )
                         outListAttribute.push_back( attribute );
                 }
@@ -159,7 +159,7 @@ namespace sw
                 for ( XMLAttribute attribute = base.getFirstAttribute(); attribute; attribute = attribute.getNext() )
                 {
                     const bool  bRenamed = pName != nullptr && isSameText( attribute.getName(), kObjectName );
-                    const utf8* pValue   = partial.isValid() ? partial.findAttribute( attribute.getName(), false ) : nullptr;
+                    const utf8* pValue   = partial.isValid() ? partial.findAttribute( attribute.getName() ) : nullptr;
                     if ( bRenamed )
                         pValue = pName;
                     out.appendAttribute( attribute.getName(), pValue != nullptr ? pValue : attribute.getValue() );
@@ -168,7 +168,7 @@ namespace sw
                     return;
                 for ( XMLAttribute attribute = partial.getFirstAttribute(); attribute; attribute = attribute.getNext() )
                 {
-                    if ( base.findAttribute( attribute.getName(), false ) == nullptr && isSameText( attribute.getName(), kObjectName ) == false )
+                    if ( base.findAttribute( attribute.getName() ) == nullptr && isSameText( attribute.getName(), kObjectName ) == false )
                         out.appendAttribute( attribute.getName(), attribute.getValue() );
                 }
             }
@@ -215,9 +215,9 @@ namespace sw
                     XMLNode outList = outRoot.appendChild( kComponentList );
 
                     vector<string> listRemovedKey;
-                    for ( XMLNode entry = _overrideRoot.findChild( kRemove, false ); entry.isValid(); entry = entry.findNextSibling( kRemove, false ) )
+                    for ( XMLNode entry = _overrideRoot.findChild( kRemove ); entry.isValid(); entry = entry.findNextSibling( kRemove ) )
                     {
-                        const utf8* pKey = entry.findAttribute( kKey, false );
+                        const utf8* pKey = entry.findAttribute( kKey );
                         if ( StringUtil::isNullOrEmpty( pKey ) == false )
                             listRemovedKey.push_back( pKey );
                     }
@@ -255,9 +255,9 @@ namespace sw
                 /** @brief `after` 가 @p pAnchorKey 인 더한 컴포넌트를 문서 순서대로 씁니다. @p pAnchorKey 가 nullptr 이면 `after` 가 없는 것(맨 앞)입니다. */
                 void appendAddedAfter( XMLNode outList, const string* pAnchorKey ) const
                 {
-                    for ( XMLNode entry = _overrideRoot.findChild( kAdd, false ); entry.isValid(); entry = entry.findNextSibling( kAdd, false ) )
+                    for ( XMLNode entry = _overrideRoot.findChild( kAdd ); entry.isValid(); entry = entry.findNextSibling( kAdd ) )
                     {
-                        const utf8* pAfter    = entry.findAttribute( kAfter, false );
+                        const utf8* pAfter    = entry.findAttribute( kAfter );
                         const bool  bNoAnchor = StringUtil::isNullOrEmpty( pAfter );
                         const bool  bMatches  = pAnchorKey == nullptr ? bNoAnchor : ( bNoAnchor == false && *pAnchorKey == pAfter );
                         if ( bMatches == false )
@@ -271,9 +271,9 @@ namespace sw
                 /** @brief 앞의 물려받은 컴포넌트가 프리팹에서 사라진 더한 컴포넌트를 끝에 씁니다 — 버리지 않는다(다음 저장이 지금 자리로 다시 적는다). */
                 void appendAddedWithLostAnchor( XMLNode outList, const vector<KeyedComponent>& listBase ) const
                 {
-                    for ( XMLNode entry = _overrideRoot.findChild( kAdd, false ); entry.isValid(); entry = entry.findNextSibling( kAdd, false ) )
+                    for ( XMLNode entry = _overrideRoot.findChild( kAdd ); entry.isValid(); entry = entry.findNextSibling( kAdd ) )
                     {
-                        const utf8* pAfter = entry.findAttribute( kAfter, false );
+                        const utf8* pAfter = entry.findAttribute( kAfter );
                         if ( StringUtil::isNullOrEmpty( pAfter ) )
                             continue;
                         bool bFound = false;
@@ -292,9 +292,9 @@ namespace sw
                 /** @brief 이 컴포넌트를 가리키는 `<Override>` 의 컴포넌트 원소입니다. 원소 이름(타입)이 다르면 무효 노드입니다. */
                 XMLNode findOverride( const KeyedComponent& component ) const
                 {
-                    for ( XMLNode entry = _overrideRoot.findChild( kOverride, false ); entry.isValid(); entry = entry.findNextSibling( kOverride, false ) )
+                    for ( XMLNode entry = _overrideRoot.findChild( kOverride ); entry.isValid(); entry = entry.findNextSibling( kOverride ) )
                     {
-                        const utf8*   pKey                    = entry.findAttribute( kKey, false );
+                        const utf8*   pKey                    = entry.findAttribute( kKey );
                         const XMLNode partial                 = findFirstElement( entry );
                         const bool    bMatchingComponentEntry = pKey != nullptr && component._key == pKey && partial.isValid() && isSameText( partial.getName(), component._node.getName() );
                         if ( bMatchingComponentEntry )
@@ -306,9 +306,9 @@ namespace sw
                 /** @brief 프리팹에서 사라진(또는 타입이 바뀐) 컴포넌트를 가리키는 항목을 알립니다 — 버려지고 다음 저장에서 빠진다. */
                 void warnDroppedEntries( const vector<KeyedComponent>& listBase, const vector<string>& listRemovedKey ) const
                 {
-                    for ( XMLNode entry = _overrideRoot.findChild( kOverride, false ); entry.isValid(); entry = entry.findNextSibling( kOverride, false ) )
+                    for ( XMLNode entry = _overrideRoot.findChild( kOverride ); entry.isValid(); entry = entry.findNextSibling( kOverride ) )
                     {
-                        const utf8* pKey     = entry.findAttribute( kKey, false );
+                        const utf8* pKey     = entry.findAttribute( kKey );
                         bool        bMatched = false;
                         for ( const KeyedComponent& component : listBase )
                         {
@@ -458,7 +458,7 @@ namespace sw
         {
             if ( overrideDoc.parse( overrideXML ) == false )
                 return false;
-            overrideRoot = overrideDoc.getRoot( kRootName, false );
+            overrideRoot = overrideDoc.getRoot( kRootName );
             if ( overrideRoot.isValid() == false )
             {
                 SW_LOG_WARNING( "Prefab overrides have no <%#> root - the instance is built from the prefab alone", kRootName );
@@ -494,7 +494,7 @@ namespace sw
         {
             if ( outDoc.parse( inoutOverrideXML ) == false )
                 return false;
-            outRoot = outDoc.getRoot( kRootName, false );
+            outRoot = outDoc.getRoot( kRootName );
         }
         if ( outRoot.isValid() == false )
             return false;
@@ -504,7 +504,7 @@ namespace sw
             XMLDocument partDoc;
             if ( part._partPath.empty() || partDoc.parse( part._overrideXML ) == false )
                 return false;
-            const XMLNode partRoot = partDoc.getRoot( kRootName, false );
+            const XMLNode partRoot = partDoc.getRoot( kRootName );
             if ( partRoot.isValid() == false )
                 return false;
             XMLNode entry = outRoot.appendChild( PrefabOverridesInternal::kPart );
@@ -526,16 +526,16 @@ namespace sw
             SW_LOG_ERROR( "Prefab overrides could not be parsed - nested part overrides are not read" );
             return false;
         }
-        const XMLNode root = doc.getRoot( kRootName, false );
+        const XMLNode root = doc.getRoot( kRootName );
         if ( root.isValid() == false )
         {
             SW_LOG_ERROR( "Prefab overrides have no <%#> root - nested part overrides are not read", kRootName );
             return false;
         }
-        for ( XMLNode entry = root.findChild( PrefabOverridesInternal::kPart, false ); entry.isValid();
-              entry         = entry.findNextSibling( PrefabOverridesInternal::kPart, false ) )
+        for ( XMLNode entry = root.findChild( PrefabOverridesInternal::kPart ); entry.isValid();
+              entry         = entry.findNextSibling( PrefabOverridesInternal::kPart ) )
         {
-            const utf8*   pPath = entry.findAttribute( PrefabOverridesInternal::kPath, false );
+            const utf8*   pPath = entry.findAttribute( PrefabOverridesInternal::kPath );
             const XMLNode body  = PrefabOverridesInternal::findChildElement( entry, kRootName );
             if ( StringUtil::isNullOrEmpty( pPath ) || body.isValid() == false )
             {

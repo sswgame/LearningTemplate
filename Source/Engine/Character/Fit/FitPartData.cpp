@@ -75,14 +75,14 @@ namespace sw
         for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
         {
             const utf8* pName = child.getName();
-            if ( StringUtil::equals( pName, "Hide", true ) )
+            if ( StringUtil::equals( pName, "Hide" ) )
             {
                 reader.reportUnknownAttributes( child, FitPartDataInternal::kArrHideAttribute );
                 const hashed_string region = reader.readName( child, "region", true );
                 if ( region.empty() == false )
                     _listHiddenRegion.push_back( region );
             }
-            else if ( StringUtil::equals( pName, "Ring", true ) )
+            else if ( StringUtil::equals( pName, "Ring" ) )
             {
                 reader.reportUnknownAttributes( child, FitPartDataInternal::kArrRingAttribute );
                 FitRingDef ring;
@@ -97,14 +97,14 @@ namespace sw
                 else
                     _listRing.push_back( ring );
             }
-            else if ( StringUtil::equals( pName, "Corrective", true ) )
+            else if ( StringUtil::equals( pName, "Corrective" ) )
             {
                 reader.reportUnknownAttributes( child, FitPartDataInternal::kArrCorrectiveAttribute );
                 FitCorrectiveDef corrective;
                 corrective._morph = reader.readName( child, "morph", false );
                 for ( XMLNode deltaNode = child.findChild(); deltaNode; deltaNode = deltaNode.findNextSibling() )
                 {
-                    if ( StringUtil::equals( deltaNode.getName(), "Delta", true ) == false )
+                    if ( StringUtil::equals( deltaNode.getName(), "Delta" ) == false )
                     {
                         reader.reportUnknownElement( deltaNode );
                         continue;

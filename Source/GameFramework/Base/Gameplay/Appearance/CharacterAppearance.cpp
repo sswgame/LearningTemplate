@@ -134,7 +134,7 @@ namespace sw
                 AppearanceXMLUtil::readOptionalFloat( node, "damage", 0.0f, 1.0f, slot._damage, report, sourceName );
                 for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
                 {
-                    if ( StringUtil::equals( child.getName(), "Value", true ) )
+                    if ( StringUtil::equals( child.getName(), "Value" ) )
                         readItemValue( child, slot, report, sourceName, inoutDef._id );
                     else
                         AppearanceXMLUtil::reportUnknownChild( node, child, report, sourceName );
@@ -168,15 +168,15 @@ namespace sw
                 for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
                 {
                     const utf8* pName = child.getName();
-                    if ( StringUtil::equals( pName, "Value", true ) )
+                    if ( StringUtil::equals( pName, "Value" ) )
                     {
                         readValue( child, outDef, report, sourceName );
                     }
-                    else if ( StringUtil::equals( pName, "Equip", true ) )
+                    else if ( StringUtil::equals( pName, "Equip" ) )
                     {
                         readEquip( child, outDef, report, sourceName );
                     }
-                    else if ( StringUtil::equals( pName, "SocketOverride", true ) )
+                    else if ( StringUtil::equals( pName, "SocketOverride" ) )
                     {
                         (void)AppearanceXMLUtil::reportUnknownAttributes( child, kArrSocketAttribute, report, sourceName );
                         AppearanceSocketOverride socketOverride;
@@ -439,7 +439,7 @@ namespace sw
         (void)AppearanceXMLUtil::reportUnknownAttributes( root, nullptr, 0, report, sourceName );
         for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
-            if ( StringUtil::equals( node.getName(), "CharacterAppearance", true ) == false )
+            if ( StringUtil::equals( node.getName(), "CharacterAppearance" ) == false )
             {
                 AppearanceXMLUtil::reportUnknownChild( root, node, report, sourceName );
                 continue;
@@ -462,7 +462,7 @@ namespace sw
     bool CharacterAppearanceCatalog::loadPresetFromNode( const XMLNode& presetNode, AppearanceLoadReport& report, string_view sourceName )
     {
         const size_t errorCountBefore = report.getErrors().size();
-        if ( StringUtil::equals( presetNode.getName(), "CharacterAppearance", true ) == false )
+        if ( StringUtil::equals( presetNode.getName(), "CharacterAppearance" ) == false )
         {
             report.addErrorWithID( "Appearance.RootUnknown", "%#: a preset asset needs a <CharacterAppearance> root, got <%#>", sourceName, presetNode.getName() );
             return false;

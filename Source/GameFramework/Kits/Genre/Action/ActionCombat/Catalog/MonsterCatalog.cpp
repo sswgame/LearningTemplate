@@ -40,7 +40,7 @@ namespace sw
         uint32 rejectedCount = 0;
         for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
-            const bool bMonster = StringUtil::equals( node.getName(), "Monster", true );
+            const bool bMonster = StringUtil::equals( node.getName(), "Monster" );
             if ( bMonster == false )
                 SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, node.getName() );
             if ( bMonster == false || loadMonster( node, sourceName ) == false )

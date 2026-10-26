@@ -249,7 +249,7 @@ namespace sw
                 bool bOk = true;
                 for ( XMLNode optionNode = node.findChild(); optionNode.isValid(); optionNode = optionNode.findNextSibling() )
                 {
-                    if ( StringUtil::equals( optionNode.getName(), "Option", true ) == false )
+                    if ( StringUtil::equals( optionNode.getName(), "Option" ) == false )
                     {
                         SW_LOG_ERROR( "%#: setting '%#' has an unknown child <%#>", sourceName, inoutDef._id.c_str(), optionNode.getName() );
                         bOk = false;
@@ -337,7 +337,7 @@ namespace sw
                 outPreset._name = hashed_string( node.getAttributeText( "name" ) );
                 for ( XMLNode valueNode = node.findChild(); valueNode.isValid(); valueNode = valueNode.findNextSibling() )
                 {
-                    if ( StringUtil::equals( valueNode.getName(), "Value", true ) == false )
+                    if ( StringUtil::equals( valueNode.getName(), "Value" ) == false )
                     {
                         SW_LOG_ERROR( "%#: preset '%#' has an unknown child <%#>", sourceName, outPreset._name.c_str(), valueNode.getName() );
                         bOk = false;
@@ -373,13 +373,13 @@ namespace sw
                 outGroup._autoDetectFallback = hashed_string( node.getAttributeText( "autoDetectFallback" ) );
                 for ( XMLNode groupChild = node.findChild(); groupChild.isValid(); groupChild = groupChild.findNextSibling() )
                 {
-                    if ( StringUtil::equals( groupChild.getName(), "Preset", true ) )
+                    if ( StringUtil::equals( groupChild.getName(), "Preset" ) )
                     {
                         ScalabilityPresetDef preset;
                         bOk = readPreset( groupChild, sourceName, preset ) && bOk;
                         outGroup._listPreset.push_back( preset );
                     }
-                    else if ( StringUtil::equals( groupChild.getName(), "AutoDetect", true ) )
+                    else if ( StringUtil::equals( groupChild.getName(), "AutoDetect" ) )
                     {
                         bOk = readAutoDetect( groupChild, sourceName, outGroup ) && bOk;
                     }
@@ -748,27 +748,27 @@ namespace sw
         for ( XMLNode child = root.findChild(); child.isValid(); child = child.findNextSibling() )
         {
             const utf8* pName = child.getName();
-            if ( StringUtil::equals( pName, "Category", true ) )
+            if ( StringUtil::equals( pName, "Category" ) )
             {
                 UserSettingCategoryDef category;
                 bOk = Internal::readCategory( child, static_cast<uint32>( _listCategory.size() + overlay._listCategory.size() ), sourceName, category ) && bOk;
                 if ( category._id.empty() == false )
                     overlay._listCategory.push_back( category );
             }
-            else if ( StringUtil::equals( pName, "Setting", true ) )
+            else if ( StringUtil::equals( pName, "Setting" ) )
             {
                 UserSettingDef def;
                 bOk = Internal::readSetting( child, orderBase + static_cast<uint32>( overlay._listSetting.size() ), sourceName, def ) && bOk;
                 if ( def._id.empty() == false )
                     overlay._listSetting.push_back( def );
             }
-            else if ( StringUtil::equals( pName, "Scalability", true ) )
+            else if ( StringUtil::equals( pName, "Scalability" ) )
             {
                 ScalabilityGroupDef group;
                 bOk = Internal::readScalability( child, sourceName, group ) && bOk;
                 overlay._listScalabilityGroup.push_back( group );
             }
-            else if ( StringUtil::equals( pName, "Upgrade", true ) )
+            else if ( StringUtil::equals( pName, "Upgrade" ) )
             {
                 UserSettingsUpgradeStep step;
                 bOk = Internal::readUpgrade( child, sourceName, step ) && bOk;

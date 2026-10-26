@@ -502,7 +502,7 @@ namespace sw
         fields.setObject();
         for ( const TelemetryValue& value : event.getValues() )
         {
-            TelemetryServiceInternal::setValueJSON( fields.set( value._name.c_str(), false ), value );
+            TelemetryServiceInternal::setValueJSON( fields.set( value._name.c_str() ), value );
         }
         return doc.dump( -1 );
     }

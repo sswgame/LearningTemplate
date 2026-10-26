@@ -52,7 +52,7 @@ namespace sw
         (void)AppearanceXMLUtil::reportUnknownAttributes( root, nullptr, 0, report, sourceName );
         for ( XMLNode setNode = root.findChild(); setNode; setNode = setNode.findNextSibling() )
         {
-            if ( StringUtil::equals( setNode.getName(), "Set", true ) == false )
+            if ( StringUtil::equals( setNode.getName(), "Set" ) == false )
             {
                 AppearanceXMLUtil::reportUnknownChild( root, setNode, report, sourceName );
                 continue;
@@ -70,7 +70,7 @@ namespace sw
             for ( XMLNode child = setNode.findChild(); child; child = child.findNextSibling() )
             {
                 const utf8* pName = child.getName();
-                if ( StringUtil::equals( pName, "Piece", true ) )
+                if ( StringUtil::equals( pName, "Piece" ) )
                 {
                     EquipSetPieceDef piece;
                     if ( EquipSetCatalogInternal::readPiece( child, piece, report, sourceName, def._id ) == false )
@@ -80,7 +80,7 @@ namespace sw
                     else
                         def._listPiece.push_back( piece );
                 }
-                else if ( StringUtil::equals( pName, "Variant", true ) )
+                else if ( StringUtil::equals( pName, "Variant" ) )
                 {
                     (void)AppearanceXMLUtil::reportUnknownAttributes( child, EquipSetCatalogInternal::kArrVariantAttribute, report, sourceName );
                     EquipSetVariantDef variant;
@@ -90,14 +90,14 @@ namespace sw
                     for ( XMLNode pieceNode = child.findChild(); pieceNode; pieceNode = pieceNode.findNextSibling() )
                     {
                         EquipSetPieceDef piece;
-                        if ( StringUtil::equals( pieceNode.getName(), "Piece", true ) == false )
+                        if ( StringUtil::equals( pieceNode.getName(), "Piece" ) == false )
                             AppearanceXMLUtil::reportUnknownChild( child, pieceNode, report, sourceName );
                         else if ( EquipSetCatalogInternal::readPiece( pieceNode, piece, report, sourceName, def._id ) )
                             variant._listPiece.push_back( piece );
                     }
                     def._listVariant.push_back( variant );
                 }
-                else if ( StringUtil::equals( pName, "Complete", true ) )
+                else if ( StringUtil::equals( pName, "Complete" ) )
                 {
                     (void)AppearanceXMLUtil::reportUnknownAttributes( child, EquipSetCatalogInternal::kArrCompleteAttribute, report, sourceName );
                     def._completeVisual = AppearanceXMLUtil::readRequiredName( child, "visual", report, sourceName );

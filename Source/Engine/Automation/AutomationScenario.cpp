@@ -414,8 +414,8 @@ namespace sw
             if ( elementName == "Scratch" )
             {
                 AutomationScratchFolder folder;
-                folder._sourceID  = string( atNode.getAttributeText( "from", false ) );
-                folder._scratchID = string( atNode.getAttributeText( "as", false ) );
+                folder._sourceID  = string( atNode.getAttributeText( "from" ) );
+                folder._scratchID = string( atNode.getAttributeText( "as" ) );
                 if ( AutomationScratch::isValidFolder( folder, reason ) == false )
                 {
                     outError = _sourcePath + ": " + reason;
@@ -455,7 +455,7 @@ namespace sw
             outError = doc.getLastError();
             return false;
         }
-        const XMLNode root = doc.getRoot( nullptr, false );
+        const XMLNode root = doc.getRoot( nullptr );
         if ( root.isValid() == false || string_view{ root.getName() } != "Scenario" )
         {
             outError = _sourcePath + ": the root element must be <Scenario>";

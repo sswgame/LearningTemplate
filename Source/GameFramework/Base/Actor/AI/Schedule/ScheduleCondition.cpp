@@ -182,7 +182,7 @@ namespace sw
     {
         for ( const utf8* pKnown : ScheduleConditionInternal::kArrConditionAttribute )
         {
-            if ( StringUtil::equals( pName, pKnown, true ) )
+            if ( StringUtil::equals( pName, pKnown ) )
                 return true;
         }
         return false;

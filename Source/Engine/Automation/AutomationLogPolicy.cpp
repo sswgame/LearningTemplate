@@ -79,11 +79,11 @@ namespace sw
                 return false;
             }
         }
-        outEntry._id           = entry.get( "id", false ).asString();
-        const string scenario  = entry.get( "scenario", false ).asString();
-        const string suite     = entry.get( "suite", false ).asString();
-        outEntry._reason       = entry.get( "reason", false ).asString();
-        outEntry._plan         = entry.get( "plan", false ).asString();
+        outEntry._id           = entry.get( "id" ).asString();
+        const string scenario  = entry.get( "scenario" ).asString();
+        const string suite     = entry.get( "suite" ).asString();
+        outEntry._reason       = entry.get( "reason" ).asString();
+        outEntry._plan         = entry.get( "plan" ).asString();
         const bool bBothScopes = scenario.empty() == false && suite.empty() == false;
         const bool bNoScope    = scenario.empty() && suite.empty();
         if ( bBothScopes || bNoScope )
@@ -125,7 +125,7 @@ namespace sw
 
     bool AutomationLogPolicy::readAllowList( const JSONValue& root, string_view sourceName, string& outError )
     {
-        const JSONValue listAllowed = root.get( "allowed", false );
+        const JSONValue listAllowed = root.get( "allowed" );
         if ( listAllowed.isArray() == false )
         {
             outError = string( sourceName ) + ": needs an \"allowed\" array";

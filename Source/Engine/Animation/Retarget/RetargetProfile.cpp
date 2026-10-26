@@ -187,7 +187,7 @@ namespace sw
         bOk                          = reader.finish() && bOk;
         if ( bOk == false )
             return false;
-        if ( root.findAttribute( "height_ratio", false ) != nullptr && heightRatio <= 0.0f )
+        if ( root.findAttribute( "height_ratio" ) != nullptr && heightRatio <= 0.0f )
         {
             SW_LOG_ERROR( "Retarget profile '%#': 'height_ratio' must be positive", sourceLabel );
             return false;

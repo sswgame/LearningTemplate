@@ -316,17 +316,17 @@ namespace sw
             /** @brief 문자열 필드 하나(적힌 것만)를 덮어씁니다. */
             static void applyStringField( const XMLNode& entry, const utf8* pFieldName, string& outTarget )
             {
-                if ( entry.findAttribute( pFieldName, false ) != nullptr )
-                    outTarget = string{ entry.getAttributeText( pFieldName, false ) };
+                if ( entry.findAttribute( pFieldName ) != nullptr )
+                    outTarget = string{ entry.getAttributeText( pFieldName ) };
             }
 
             /** @brief 복수형 규칙 이름 필드(적힌 것만)를 규칙 함수로 풀어 덮어씁니다. 모르는 이름이면 false 입니다. */
             [[nodiscard]] static bool applyRuleField( const XMLNode& entry, const utf8* pFieldName, PluralRuleFunc ( *pFindRule )( string_view ), string& outRuleName, PluralRuleFunc& outRule,
                                                       string& outError )
             {
-                if ( entry.findAttribute( pFieldName, false ) == nullptr )
+                if ( entry.findAttribute( pFieldName ) == nullptr )
                     return true;
-                const string   ruleName{ entry.getAttributeText( pFieldName, false ) };
+                const string   ruleName{ entry.getAttributeText( pFieldName ) };
                 PluralRuleFunc pRule = pFindRule( ruleName );
                 if ( pRule == nullptr )
                 {
@@ -349,9 +349,9 @@ namespace sw
                 }
                 if ( bRightToLeft.has_value() )
                     inoutInfo._bRightToLeft = *bRightToLeft;
-                if ( entry.findAttribute( "digits", false ) != nullptr )
+                if ( entry.findAttribute( "digits" ) != nullptr )
                 {
-                    const string digitsName{ entry.getAttributeText( "digits", false ) };
+                    const string digitsName{ entry.getAttributeText( "digits" ) };
                     if ( digitsName == "latn" )
                         inoutInfo._numeralSystem = NumeralSystem::Latin;
                     else if ( digitsName == "arab" )
@@ -364,9 +364,9 @@ namespace sw
                         return false;
                     }
                 }
-                if ( entry.findAttribute( "pseudo", false ) != nullptr )
+                if ( entry.findAttribute( "pseudo" ) != nullptr )
                 {
-                    const string pseudoName{ entry.getAttributeText( "pseudo", false ) };
+                    const string pseudoName{ entry.getAttributeText( "pseudo" ) };
                     if ( pseudoName == "accented" )
                         inoutInfo._pseudoMode = PseudoLocaleMode::Accented;
                     else if ( pseudoName == "mirrored" )
@@ -399,15 +399,15 @@ namespace sw
             /** @brief 날짜 · 시간 패턴 모음과 문자열 목록 필드를 덮어씁니다. 모양이 틀리면 false 입니다. */
             [[nodiscard]] static bool applyPatternAndListFields( const XMLNode& entry, CultureInfo& inoutInfo, string& outError )
             {
-                const XMLNode datePatterns = entry.findChild( "datePatterns", false );
+                const XMLNode datePatterns = entry.findChild( "datePatterns" );
                 if ( datePatterns.isValid() && readPatternGroup( datePatterns, &inoutInfo._dateShort, &inoutInfo._dateMedium, &inoutInfo._dateLong, outError ) == false )
                     return false;
-                const XMLNode timePatterns = entry.findChild( "timePatterns", false );
+                const XMLNode timePatterns = entry.findChild( "timePatterns" );
                 if ( timePatterns.isValid() && readPatternGroup( timePatterns, &inoutInfo._timeShort, &inoutInfo._timeMedium, nullptr, outError ) == false )
                     return false;
                 for ( const ListFieldRow& row : kArrListField )
                 {
-                    const XMLNode field = entry.findChild( row._pName, false );
+                    const XMLNode field = entry.findChild( row._pName );
                     if ( field.isValid() == false )
                         continue;
                     vector<string>& list      = inoutInfo.*( row._pMember );
@@ -459,7 +459,7 @@ namespace sw
             {
                 for ( XMLNode entry = cultures.findChild(); entry.isValid(); entry = entry.findNextSibling() )
                 {
-                    const string rawCode{ entry.getAttributeText( "code", false ) };
+                    const string rawCode{ entry.getAttributeText( "code" ) };
                     if ( string_view{ entry.getName() } != "culture" || rawCode.empty() )
                     {
                         outError = "<cultures> holds only <culture code=\"…\"> elements";
@@ -483,14 +483,14 @@ namespace sw
             [[nodiscard]] static ResolveResult resolveEntry( const XMLNode& entry, const vector<string>& listFileCode, const map<string, CultureInfo>& mapExisting,
                                                              map<string, CultureInfo>& inoutMapResolved, string& outError )
             {
-                const string rawCode{ entry.getAttributeText( "code", false ) };
+                const string rawCode{ entry.getAttributeText( "code" ) };
                 const string code = CultureTable::normalizeCode( rawCode );
                 if ( code != rawCode )
                 {
                     outError = "culture code '" + rawCode + "' must be written as '" + code + "'";
                     return ResolveResult::Failed;
                 }
-                const string parentCode = CultureTable::normalizeCode( entry.getAttributeText( "parent", false ) );
+                const string parentCode = CultureTable::normalizeCode( entry.getAttributeText( "parent" ) );
                 CultureInfo  info;
                 if ( parentCode.empty() == false )
                 {
@@ -504,7 +504,7 @@ namespace sw
                     else
                         return ResolveResult::Deferred;
                 }
-                else if ( entry.findAttribute( "pluralRule", false ) == nullptr )
+                else if ( entry.findAttribute( "pluralRule" ) == nullptr )
                 {
                     outError = "culture '" + rawCode + "' has no parent and no pluralRule";
                     return ResolveResult::Failed;
@@ -512,7 +512,7 @@ namespace sw
                 info._code       = code;
                 info._parentCode = parentCode;
                 info._nativeName.clear();
-                if ( info._pseudoMode != PseudoLocaleMode::None && entry.findAttribute( "pseudo", false ) == nullptr )
+                if ( info._pseudoMode != PseudoLocaleMode::None && entry.findAttribute( "pseudo" ) == nullptr )
                     info._pseudoMode = PseudoLocaleMode::None; // 의사 방식은 물려받지 않는다. `qps_ploc` 을 부모로 둔 실제 문화권이 의사 문화권이 되면 안 된다
                 string fieldError;
                 if ( applyFields( entry, info, fieldError ) == false )
@@ -544,7 +544,7 @@ namespace sw
                     }
                     if ( listNext.size() == listPending.size() )
                     {
-                        outError = "culture '" + string{ listNext.front().getAttributeText( "code", false ) } + "' has an unknown parent or a parent cycle";
+                        outError = "culture '" + string{ listNext.front().getAttributeText( "code" ) } + "' has an unknown parent or a parent cycle";
                         return false;
                     }
                     listPending = std::move( listNext );
@@ -918,7 +918,7 @@ namespace sw
             }
             return false;
         }
-        const XMLNode cultures           = root.findChild( "cultures", false );
+        const XMLNode cultures           = root.findChild( "cultures" );
         const bool    bRootHasOtherParts = root.getFirstAttribute().isValid() || cultures.findNextSibling().isValid() || cultures.getFirstAttribute().isValid();
         if ( cultures.isValid() == false || bRootHasOtherParts )
         {

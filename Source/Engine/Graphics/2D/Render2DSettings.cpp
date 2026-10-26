@@ -87,11 +87,11 @@ namespace sw
         for ( XMLNode child = root.findChild(); child.isValid(); child = child.findNextSibling() )
         {
             bool bRead = false;
-            if ( StringUtil::equals( child.getName(), "TransparencySort", true ) )
+            if ( StringUtil::equals( child.getName(), "TransparencySort" ) )
             {
                 bRead = loaded.readTransparencySort( child, sourceName );
             }
-            else if ( StringUtil::equals( child.getName(), "SortingLayers", true ) )
+            else if ( StringUtil::equals( child.getName(), "SortingLayers" ) )
             {
                 bHasLayers = true;
                 bRead      = loaded.readSortingLayers( child, sourceName );
@@ -165,7 +165,7 @@ namespace sw
         static constexpr const utf8* kArrKnown[] = { "name" };
         for ( XMLNode layerNode = node.findChild(); layerNode.isValid(); layerNode = layerNode.findNextSibling() )
         {
-            if ( StringUtil::equals( layerNode.getName(), "Layer", true ) == false )
+            if ( StringUtil::equals( layerNode.getName(), "Layer" ) == false )
             {
                 SW_LOG_ERROR( "%#: unknown element <%#> in <SortingLayers> (only <Layer name=\"...\"/>)", sourceName, layerNode.getName() );
                 return false;

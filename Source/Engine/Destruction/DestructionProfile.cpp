@@ -105,7 +105,7 @@ namespace sw
         uint8 bNetworkSeen = SW_FALSE;
         for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
         {
-            if ( StringUtil::equals( child.getName(), "Strain", true ) )
+            if ( StringUtil::equals( child.getName(), "Strain" ) )
             {
                 if ( Internal::claimElement( child, reader, bStrainSeen ) == false )
                     continue;
@@ -126,7 +126,7 @@ namespace sw
                         _listStrainThreshold.push_back( value );
                 }
             }
-            else if ( StringUtil::equals( child.getName(), "Links", true ) )
+            else if ( StringUtil::equals( child.getName(), "Links" ) )
             {
                 if ( Internal::claimElement( child, reader, bLinkSeen ) == false )
                     continue;
@@ -134,7 +134,7 @@ namespace sw
                 reader.readOptionalFloat( child, "strength", _linkStrength );
                 reader.readOptionalFloat( child, "supportStrength", _supportStrength );
             }
-            else if ( StringUtil::equals( child.getName(), "Impact", true ) )
+            else if ( StringUtil::equals( child.getName(), "Impact" ) )
             {
                 if ( Internal::claimElement( child, reader, bImpactSeen ) == false )
                     continue;
@@ -143,7 +143,7 @@ namespace sw
                 reader.readOptionalFloat( child, "minImpulse", _minImpulse );
                 reader.readOptionalFloat( child, "radius", _impactRadius );
             }
-            else if ( StringUtil::equals( child.getName(), "Debris", true ) )
+            else if ( StringUtil::equals( child.getName(), "Debris" ) )
             {
                 if ( Internal::claimElement( child, reader, bDebrisSeen ) == false )
                     continue;
@@ -161,7 +161,7 @@ namespace sw
                 else
                     _maxDebrisBody = static_cast<uint32>( maxBody );
             }
-            else if ( StringUtil::equals( child.getName(), "Network", true ) )
+            else if ( StringUtil::equals( child.getName(), "Network" ) )
             {
                 if ( Internal::claimElement( child, reader, bNetworkSeen ) == false )
                     continue;

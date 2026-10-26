@@ -181,8 +181,8 @@ namespace sw
     bool TileSetAsset::parseBrush( const XMLNode& node, string_view sourceName, TileBrush& outBrush ) const
     {
         using Internal       = TileSetAssetInternal;
-        const bool bRuleTile = StringUtil::equals( node.getName(), "RuleTile", true );
-        if ( bRuleTile == false && StringUtil::equals( node.getName(), "Tile", true ) == false )
+        const bool bRuleTile = StringUtil::equals( node.getName(), "RuleTile" );
+        if ( bRuleTile == false && StringUtil::equals( node.getName(), "Tile" ) == false )
         {
             SW_LOG_ERROR( "%#: unknown element <%#> (Tile, RuleTile)", sourceName, node.getName() );
             return false;
@@ -227,7 +227,7 @@ namespace sw
 
         for ( XMLNode ruleNode = node.findChild(); ruleNode.isValid(); ruleNode = ruleNode.findNextSibling() )
         {
-            if ( bRuleTile == false || StringUtil::equals( ruleNode.getName(), "Rule", true ) == false )
+            if ( bRuleTile == false || StringUtil::equals( ruleNode.getName(), "Rule" ) == false )
             {
                 SW_LOG_ERROR( "%#: unknown element <%#> in <%#> (only <Rule> inside <RuleTile>)", sourceName, ruleNode.getName(), node.getName() );
                 return false;

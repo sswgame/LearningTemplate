@@ -171,7 +171,7 @@ namespace sw
         JSONDocument document;
         if ( response.isSuccess() && document.tryParse( response.getBodyText() ) )
         {
-            const JSONValue refreshToken = document.getRoot().get( "refresh_token", false );
+            const JSONValue refreshToken = document.getRoot().get( "refresh_token" );
             if ( refreshToken.isString() )
                 pending._verified._linkSecret = refreshToken.asString();
         }

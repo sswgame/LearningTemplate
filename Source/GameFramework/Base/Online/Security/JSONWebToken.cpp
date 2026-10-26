@@ -33,7 +33,7 @@ namespace sw
 
             [[nodiscard]] static bool decodeField( const JSONValue& key, const utf8* pName, vector<uint8>& outBytes )
             {
-                const JSONValue field = key.get( pName, false );
+                const JSONValue field = key.get( pName );
                 return field.isString() && Base64Util::decodeURL( field.asString(), outBytes ) && outBytes.empty() == false;
             }
         };
@@ -80,7 +80,7 @@ namespace sw
             return false;
         if ( Base64Util::decodeURL( compact.substr( secondDot + 1 ), _signatureBytes ) == false || _signatureBytes.empty() )
             return false;
-        const JSONValue algorithm = header.getRoot().get( "alg", false );
+        const JSONValue algorithm = header.getRoot().get( "alg" );
         if ( algorithm.isString() == false )
             return false;
         const string algorithmName = algorithm.asString();
@@ -90,10 +90,10 @@ namespace sw
             _algorithm = NetSignatureAlgorithm::EcdsaP256Sha256;
         else
             return false; // none, HS256, 그 밖의 알고리즘은 받지 않는다
-        const JSONValue keyID = header.getRoot().get( "kid", false );
+        const JSONValue keyID = header.getRoot().get( "kid" );
         _keyID                = keyID.isString() ? keyID.asString() : string{};
         _listCertificateDer.clear();
-        const JSONValue chain = header.getRoot().get( "x5c", false );
+        const JSONValue chain = header.getRoot().get( "x5c" );
         if ( chain.isValid() )
         {
             if ( chain.isArray() == false )
@@ -145,7 +145,7 @@ namespace sw
 
     bool JwtVerified::findText( string_view claim, string& outValue ) const
     {
-        const JSONValue value = _payload->getRoot().get( claim, false );
+        const JSONValue value = _payload->getRoot().get( claim );
         if ( value.isString() == false )
             return false;
         outValue = value.asString();
@@ -162,7 +162,7 @@ namespace sw
             path                   = dot == string_view::npos ? string_view{} : path.substr( dot + 1 );
             if ( current.isObject() == false )
                 return false;
-            current = current.get( part, false );
+            current = current.get( part );
             if ( current.isValid() == false )
                 return false;
         }
@@ -175,7 +175,7 @@ namespace sw
     bool JwtVerified::findInteger( string_view claim, int64& outValue ) const
     {
         // 시각 클레임(NumericDate)은 소수 초도 허용된다(RFC 7519 2절) — 실수로 읽어 초 단위로 버린다. 값은 2^53 보다 작다.
-        const JSONValue              value  = _payload->getRoot().get( claim, false );
+        const JSONValue              value  = _payload->getRoot().get( claim );
         const std::optional<float64> number = value.isNumber() ? value.read<float64>() : std::nullopt;
         if ( number.has_value() == false )
             return false;
@@ -185,7 +185,7 @@ namespace sw
 
     bool JwtVerified::hasAudience( string_view audience ) const
     {
-        const JSONValue value = _payload->getRoot().get( "aud", false );
+        const JSONValue value = _payload->getRoot().get( "aud" );
         if ( value.isString() )
             return value.asString() == audience;
         if ( value.isArray() == false )
@@ -273,16 +273,16 @@ namespace sw
         JSONDocument document;
         if ( document.tryParse( jwksJSON ) == false )
             return false;
-        const JSONValue keys = document.getRoot().get( "keys", false );
+        const JSONValue keys = document.getRoot().get( "keys" );
         if ( keys.isArray() == false )
             return false;
         vector<Entry> listEntry;
         for ( size_t index = 0; index < keys.size(); ++index )
         {
             const JSONValue key      = keys.at( index );
-            const JSONValue use      = key.get( "use", false );
-            const JSONValue kid      = key.get( "kid", false );
-            const JSONValue type     = key.get( "kty", false );
+            const JSONValue use      = key.get( "use" );
+            const JSONValue kid      = key.get( "kid" );
+            const JSONValue type     = key.get( "kty" );
             const bool      bSign    = use.isValid() == false || use.isNull() || use.asString() == "sig";
             const bool      bSkipKey = key.isObject() == false || bSign == false || kid.isString() == false || type.isString() == false;
             if ( bSkipKey )
@@ -296,7 +296,7 @@ namespace sw
                 entry._publicKey._algorithm = NetSignatureAlgorithm::RsaPkcs1Sha256;
                 bRead                       = Internal::decodeField( key, "n", entry._publicKey._modulus ) && Internal::decodeField( key, "e", entry._publicKey._exponent );
             }
-            else if ( typeName == "EC" && key.get( "crv", false ).asString() == "P-256" )
+            else if ( typeName == "EC" && key.get( "crv" ).asString() == "P-256" )
             {
                 entry._publicKey._algorithm = NetSignatureAlgorithm::EcdsaP256Sha256;
                 bRead                       = Internal::decodeField( key, "x", entry._publicKey._x ) && Internal::decodeField( key, "y", entry._publicKey._y );

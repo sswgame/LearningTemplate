@@ -33,12 +33,12 @@ SW_TEST_CASE( ConfigHotReloadTest, ChangedFileGoesToItsOwner )
     // `EngineConfig` 는 값이 파일에만 있다 — 구성 때 베이크한 바탕 파일 사본에서 한 칸만 바꿔 쓴다.
     JSONDocument document;
     SW_ASSERT_TRUE( document.parse( shipping_host::kEngineConfigJSON ) );
-    document.getRoot().set( "_maxFrameDeltaTime", false ).setFloat( 0.25 );
+    document.getRoot().set( "_maxFrameDeltaTime" ).setFloat( 0.25 );
     SW_ASSERT_TRUE( FileUtil::writeTextFile( path, document.dump() ) );
 
     ConfigManager manager;
     SW_ASSERT_TRUE( manager.loadConfig<EngineConfig>( path ) );
-    document.getRoot().set( "_maxFrameDeltaTime", false ).setFloat( 0.5 );
+    document.getRoot().set( "_maxFrameDeltaTime" ).setFloat( 0.5 );
     SW_ASSERT_TRUE( FileUtil::writeTextFile( path, document.dump() ) );
 
     SW_EXPECT_TRUE( ConfigHotReload::reloadChangedFile( &manager, path ) == ReloadOutcome::Reloaded );

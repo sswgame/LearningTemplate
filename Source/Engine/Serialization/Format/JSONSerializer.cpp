@@ -140,7 +140,7 @@ namespace sw
                 {
                     StringBuilder<constant::kMaxBuffer8192> keyText;
                     SerializerUtil::valueToText( keyText, key, keyTypeName, _context );
-                    const JSONValue entry = _listSlot.back().set( keyText.view(), false );
+                    const JSONValue entry = _listSlot.back().set( keyText.view() );
                     _listSlot.push_back( entry );
                 }
 
@@ -182,9 +182,9 @@ namespace sw
                     const TypeInfo* pRuntimeType = _context.getRuntimeTypeInfo( pObject );
                     if ( pRuntimeType == nullptr )
                         return;
-                    const JSONValue body = dst.set( pRuntimeType->_name.c_str(), false );
+                    const JSONValue body = dst.set( pRuntimeType->_name.c_str() );
                     JSONSerializer::writeObject( body, pObject, *pRuntimeType, _context );
-                    body.set( kSchemaVersionKey, false ).setUint( 0 );
+                    body.set( kSchemaVersionKey ).setUint( 0 );
                 }
 
                 // 값 구조체는 타입 래핑 없이 본문을 그대로 쓴다(리더도 본문만 받는다).
@@ -259,7 +259,7 @@ namespace sw
                     for ( size_t entryIndex = 0; entryIndex < listKey.size() && ContainerVisitor::stopsReading( total ) == false; ++entryIndex )
                     {
                         _pCurrentKey = &listKey[entryIndex];
-                        _listCursor.push_back( container.get( listKey[entryIndex], false ) );
+                        _listCursor.push_back( container.get( listKey[entryIndex] ) );
                         total = ContainerVisitor::mergeResult( total, visit( entryIndex ) );
                         _listCursor.pop_back();
                     }
@@ -299,7 +299,7 @@ namespace sw
                     }
                     // 원소 안의 못 읽은 칸은 바깥 orphan 목록으로(XML 과 같다) — 엄격하게 읽으면 칸 하나가 `_listComponent` 칸 전체를 실패로 만든다.
                     // 금지된 필드 · 되돌리지 못한 필드는 ObjectRejected 로 올라간다(칸 실패로 낮추지 않는다).
-                    return ContainerVisitor::toElementResult( JSONSerializer::readObject( element.get( listKey[0], false ), pObject, *pType, _pOutListOrphan, nullptr, _context ) );
+                    return ContainerVisitor::toElementResult( JSONSerializer::readObject( element.get( listKey[0] ), pObject, *pType, _pOutListOrphan, nullptr, _context ) );
                 }
 
                 // 값 구조체 원소는 본문 그대로다(쓰는 쪽이 타입 이름으로 감싸지 않는다). 감싼 원소는 모르는 키 하나로 읽힌다.
@@ -404,18 +404,18 @@ namespace sw
                 if ( prop._bIsBitField == SW_TRUE )
                 {
                     const bool bVal = prop.getValue<bool>( instance.get() );
-                    parent.set( prop._name.c_str(), false ).setBool( bVal );
+                    parent.set( prop._name.c_str() ).setBool( bVal );
                     return;
                 }
                 const ValueAddress propValue{ prop.getRawPtr( instance.get() ) };
                 if ( prop._bIsContainer && prop.hasContainerWrapper() )
                 {
                     // 프로퍼티 이름 아래에 바로 배열/오브젝트로 쓴다.
-                    ContainerWriter writer( parent.set( prop._name.c_str(), false ), context );
+                    ContainerWriter writer( parent.set( prop._name.c_str() ), context );
                     ContainerVisitor::write( propValue, prop.getContainerShape(), writer, context );
                     return;
                 }
-                writeJSONValue( parent.set( prop._name.c_str(), false ), propValue, prop._typeName, context );
+                writeJSONValue( parent.set( prop._name.c_str() ), propValue, prop._typeName, context );
             }
 
             [[nodiscard]] static FieldReadResult readProperty( const JSONValue& field, const PropertyInfo& prop, const MutableObjectAddress instance, const SerializeContext& context,
@@ -513,8 +513,7 @@ namespace sw
         if ( pInstance == nullptr || src.isObject() == false )
             return FieldReadResult::FieldFailed;
 
-        const bool                  bIgnoreCaseKeys = context.ignoresCaseKeys();
-        const vector<PropertyInfo>& listProp        = typeInfo.getPropertiesWithBase();
+        const vector<PropertyInfo>& listProp = typeInfo.getPropertiesWithBase();
         unordered_set<uint32>       uniqueMatched;
         bool                        bFieldError{ false };
         bool                        bForbiddenField{ false };
@@ -527,8 +526,8 @@ namespace sw
 
         for ( const string& keyRaw : src.getMemberNames() )
         {
-            const JSONValue field = src.get( keyRaw, false );
-            if ( SerializerUtil::keysEqual( keyRaw, kSchemaVersionKey, bIgnoreCaseKeys ) )
+            const JSONValue field = src.get( keyRaw );
+            if ( SerializerUtil::keysEqual( keyRaw, kSchemaVersionKey ) )
             {
                 if ( pOutVersion == nullptr )
                     continue;
@@ -539,13 +538,8 @@ namespace sw
                 *pOutVersion = *version;
                 continue;
             }
-            bool bCaseVariant{ false };
-            // 대소문자를 가리는 문맥에서 대소문자만 다른 키: orphan 목록이 없으면 건너뛴다(그 문맥의 계약 — 묶지 않을 뿐 실패는 아니다).
-            // 목록이 있으면(설정 읽기 `ConfigManager::readConfigJSON`) 아래에서 모르는 키로 이름을 알린다 — 조용히 버리면 `_Width` 오타가 사라진다.
-            const PropertyInfo* pMatched            = SerializerUtil::matchProperty( listProp, keyRaw, bIgnoreCaseKeys, bCaseVariant );
-            const bool          bSkipCaseVariantKey = pMatched == nullptr && bCaseVariant && pOutListOrphan == nullptr;
-            if ( bSkipCaseVariantKey )
-                continue;
+            // 키는 철자 그대로 맞춘다 — 대소문자만 다른 키(`_Width`)도 모르는 키라 아래에서 알린다(조용히 묶거나 버리지 않는다).
+            const PropertyInfo* pMatched = SerializerUtil::matchProperty( listProp, keyRaw );
 
             if ( pMatched == nullptr || pMatched->_metadata->_bTransient == SW_TRUE )
             {
@@ -627,7 +621,7 @@ namespace sw
     {
         JSONDocument doc;
         JSONValue    root = doc.makeObject();
-        root.set( kSchemaVersionKey, false ).setUint( version );
+        root.set( kSchemaVersionKey ).setUint( version );
         typeInfo.forEachProperty( [&]( const PropertyInfo& prop )
         {
             if ( SerializerUtil::shouldSerializeProperty( typeInfo, prop, context ) == false )

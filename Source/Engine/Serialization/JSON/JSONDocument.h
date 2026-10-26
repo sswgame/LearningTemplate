@@ -88,10 +88,10 @@ namespace sw
         size_t size() const;
         /** @brief 객체 멤버 이름을 삽입 순으로 반환합니다. */
         vector<string> getMemberNames() const;
-        /** @brief 객체 멤버를 찾습니다. 없으면 무효 핸들을 반환합니다. */
-        JSONValue get( string_view key, bool bIgnoreCaseKeys = true ) const;
+        /** @brief 객체 멤버를 키(철자 그대로)로 찾습니다. 없으면 무효 핸들을 반환합니다. 대소문자가 다른 키는 없는 키다(별칭 없음). */
+        JSONValue get( string_view key ) const;
         /** @brief 객체에 키가 있으면 true 입니다. */
-        bool has( string_view key, bool bIgnoreCaseKeys = true ) const;
+        bool has( string_view key ) const;
         /** @brief 배열 원소를 반환합니다. 범위 밖이면 무효 핸들을 반환합니다. */
         JSONValue at( size_t index ) const;
         /**
@@ -168,9 +168,9 @@ namespace sw
 
         /**
          * @brief 객체 멤버를 만들거나 기존 키를 반환합니다.
-         * @details bIgnoreCaseKeys 가 true 이면 대소문자만 다른 기존 키를 재사용합니다.
+         * @details 키는 철자 그대로다 — 대소문자만 다른 기존 키는 다른 키다.
          */
-        JSONValue set( string_view key, bool bIgnoreCaseKeys = true ) const;
+        JSONValue set( string_view key ) const;
         /** @brief 배열 끝에 null 원소를 붙이고 반환합니다. */
         JSONValue pushBack() const;
 
@@ -319,8 +319,7 @@ namespace sw
          * @brief 최상위 객체에서 필드를 문자열로 추출합니다.
          * @details 문자열이면 내용을, 그 밖의 스칼라는 dump 한 값을 반환합니다. 객체나 배열이면 빈 문자열입니다.
          */
-        static string extractStringField( string_view json, string_view fieldName,
-                                          bool bIgnoreCaseKeys = true );
+        static string extractStringField( string_view json, string_view fieldName );
 
     private:
         struct Impl;

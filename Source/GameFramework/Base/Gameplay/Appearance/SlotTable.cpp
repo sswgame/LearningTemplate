@@ -38,7 +38,7 @@ namespace sw
         (void)AppearanceXMLUtil::reportUnknownAttributes( root, nullptr, 0, report, sourceName );
         for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
         {
-            if ( StringUtil::equals( child.getName(), "Slot", true ) )
+            if ( StringUtil::equals( child.getName(), "Slot" ) )
             {
                 (void)AppearanceXMLUtil::reportUnknownAttributes( child, SlotTableInternal::kArrSlotAttribute, report, sourceName );
                 AppearanceSlotDef slot;
@@ -53,7 +53,7 @@ namespace sw
                 else
                     _listSlot.push_back( slot );
             }
-            else if ( StringUtil::equals( child.getName(), "Occupancy", true ) )
+            else if ( StringUtil::equals( child.getName(), "Occupancy" ) )
             {
                 (void)AppearanceXMLUtil::reportUnknownAttributes( child, SlotTableInternal::kArrOccupancyAttribute, report, sourceName );
                 SlotOccupancyDef occupancy;

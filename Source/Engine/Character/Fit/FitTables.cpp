@@ -93,7 +93,7 @@ namespace sw
         for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
         {
             const utf8* pName = child.getName();
-            if ( StringUtil::equals( pName, "Layer", true ) )
+            if ( StringUtil::equals( pName, "Layer" ) )
             {
                 reader.reportUnknownAttributes( child, FitTablesInternal::kArrLayerAttribute );
                 FitLayerDef layer;
@@ -106,7 +106,7 @@ namespace sw
                 else
                     _listLayer.push_back( layer );
             }
-            else if ( StringUtil::equals( pName, "Region", true ) )
+            else if ( StringUtil::equals( pName, "Region" ) )
             {
                 reader.reportUnknownAttributes( child, FitTablesInternal::kArrRegionAttribute );
                 BodyRegionDef region;
@@ -125,7 +125,7 @@ namespace sw
                 else
                     _listRegion.push_back( std::move( region ) );
             }
-            else if ( StringUtil::equals( pName, "Profile", true ) )
+            else if ( StringUtil::equals( pName, "Profile" ) )
             {
                 reader.reportUnknownAttributes( child, FitTablesInternal::kArrProfileAttribute );
                 FitProfileDef profile;
@@ -144,7 +144,7 @@ namespace sw
                 else
                     _listProfile.push_back( profile );
             }
-            else if ( StringUtil::equals( pName, "Interaction", true ) )
+            else if ( StringUtil::equals( pName, "Interaction" ) )
             {
                 // 프로필이 뒤에 적혀도 되게, 줄은 다 모은 뒤에 대조한다.
                 listInteractionNode.push_back( child );

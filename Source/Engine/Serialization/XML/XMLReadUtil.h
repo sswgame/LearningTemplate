@@ -42,7 +42,7 @@ namespace sw
     {
         /**
          * @brief 경로(리소스 상대 또는 절대)의 문서를 읽고 루트 원소를 찾습니다.
-         * @param pRootName 루트 원소 이름입니다(대소문자 무시).
+         * @param pRootName 루트 원소 이름입니다(철자 그대로).
          * @param pOutAbsPath 있으면 실제로 읽은 경로를 받습니다(`XMLDocument::loadResource`).
          */
         [[nodiscard]] static XMLRootStatus loadRoot( XMLDocument& outDocument, string_view path, const utf8* pRootName, XMLNode& outRoot,

@@ -46,7 +46,7 @@ namespace sw::editor
                     const string path = makePath( prefix, key );
                     if ( VectorUtil::contains( listEqual, path ) )
                         continue;
-                    const JSONValue child = source.get( key, false );
+                    const JSONValue child = source.get( key );
                     keptCount += isNestedObject( child ) ? countKept( child, path, listEqual ) : 1u;
                 }
                 return keptCount;
@@ -63,17 +63,17 @@ namespace sw::editor
                     const string path = makePath( prefix, key );
                     if ( VectorUtil::contains( listEqual, path ) )
                         continue;
-                    const JSONValue child = source.get( key, false );
+                    const JSONValue child = source.get( key );
                     if ( isNestedObject( child ) )
                     {
                         if ( countKept( child, path, listEqual ) == 0 )
                             continue;
-                        const JSONValue nested = destination.set( key, false );
+                        const JSONValue nested = destination.set( key );
                         nested.setObject();
                         copyDifference( child, nested, path, listEqual );
                         continue;
                     }
-                    destination.set( key, false ).assignFrom( child );
+                    destination.set( key ).assignFrom( child );
                 }
             }
 
@@ -170,7 +170,7 @@ namespace sw::editor
                 const string_view newline  = fileText.find( "\r\n" ) != string_view::npos ? string_view( "\r\n" ) : string_view( "\n" );
                 const string      indented = indentElement( elementText, newline );
                 const string      name( elementName );
-                const XMLNode     existing = root.findChild( name.c_str(), false );
+                const XMLNode     existing = root.findChild( name.c_str() );
                 size_t            begin{ 0 };
                 size_t            end{ 0 };
                 if ( existing.isValid() )
@@ -279,7 +279,7 @@ namespace sw::editor
             SW_LOG_ERROR( "Project settings: %# is not XML - %#", _path.c_str(), document.getLastError().c_str() );
             return ConfigReadResult::Invalid;
         }
-        const XMLNode element = document.getRoot().findChild( _elementName.c_str(), false );
+        const XMLNode element = document.getRoot().findChild( _elementName.c_str() );
         if ( element.isValid() == false )
             return ConfigReadResult::Missing;
         return ConfigManager::readConfigXMLElement( pInstance, *_pType, element.toString(), _path.c_str() ) ? ConfigReadResult::Loaded : ConfigReadResult::Invalid;
@@ -392,14 +392,14 @@ namespace sw::editor
         const XMLNode element = difference.appendRoot( _elementName.c_str() );
         for ( XMLAttribute attr = currentRoot.getFirstAttribute(); attr.isValid(); attr = attr.getNext() )
         {
-            const utf8* pDefaultValue = defaultRoot.isValid() ? defaultRoot.findAttribute( attr.getName(), false ) : nullptr;
+            const utf8* pDefaultValue = defaultRoot.isValid() ? defaultRoot.findAttribute( attr.getName() ) : nullptr;
             if ( pDefaultValue != nullptr && StringUtil::equals( pDefaultValue, attr.getValue() ) )
                 continue;
             element.appendAttribute( attr.getName(), attr.getValue() );
         }
         for ( XMLNode child = currentRoot.findChild(); child.isValid(); child = child.findNextSibling() )
         {
-            const XMLNode defaultChild = defaultRoot.isValid() ? defaultRoot.findChild( child.getName(), false ) : XMLNode{};
+            const XMLNode defaultChild = defaultRoot.isValid() ? defaultRoot.findChild( child.getName() ) : XMLNode{};
             if ( defaultChild.isValid() && defaultChild.toString() == child.toString() )
                 continue;
             (void)element.appendClone( child );

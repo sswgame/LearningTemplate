@@ -42,7 +42,7 @@ namespace sw::editor
                 outMap._output = reader.readName( node, "output", true ).c_str();
                 for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
                 {
-                    if ( StringUtil::equals( child.getName(), "Source", true ) == false )
+                    if ( StringUtil::equals( child.getName(), "Source" ) == false )
                     {
                         reader.reportUnknownElement( child );
                         continue;
@@ -64,7 +64,7 @@ namespace sw::editor
                 reader.readOptionalInt( root, "padding", outSpec._padding );
                 for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
                 {
-                    if ( StringUtil::equals( child.getName(), "Part", true ) )
+                    if ( StringUtil::equals( child.getName(), "Part" ) )
                     {
                         reader.reportUnknownAttributes( child, kArrPartAttribute );
                         OutfitAtlasPartSpec part;
@@ -72,7 +72,7 @@ namespace sw::editor
                         part._mesh = reader.readName( child, "mesh", true ).c_str();
                         outSpec._listPart.push_back( std::move( part ) );
                     }
-                    else if ( StringUtil::equals( child.getName(), "Map", true ) )
+                    else if ( StringUtil::equals( child.getName(), "Map" ) )
                     {
                         OutfitAtlasMapSpec map;
                         readMap( child, reader, map );

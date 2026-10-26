@@ -196,49 +196,31 @@ namespace sw
                 return pugi::xml_attribute{ static_cast<pugi::xml_attribute_struct*>( pPtr ) };
             }
 
-            static bool nameEquals( const utf8* pLhs, const utf8* pRhs, bool bIgnoreCase = true )
-            {
-                return StringUtil::equals( pLhs, pRhs, bIgnoreCase );
-            }
-
-            static pugi::xml_node findChild( pugi::xml_node parent, const utf8* pName, bool bIgnoreCase = true )
+            // 이름은 철자 그대로 찾는다(XMLNode 머리말) — pugixml 의 child · attribute 가 그 비교다.
+            static pugi::xml_node findChild( pugi::xml_node parent, const utf8* pName )
             {
                 if ( parent.empty() || pName == nullptr )
                     return {};
-                if ( bIgnoreCase == false )
-                    return parent.child( pName );
-                for ( pugi::xml_node child = parent.first_child(); child.empty() == false; child = child.next_sibling() )
-                {
-                    if ( nameEquals( child.name(), pName, true ) )
-                        return child;
-                }
-                return {};
+                return parent.child( pName );
             }
 
-            static pugi::xml_node findSibling( pugi::xml_node node, const utf8* pName, bool bIgnoreCase = true )
+            static pugi::xml_node findSibling( pugi::xml_node node, const utf8* pName )
             {
                 if ( node.empty() || pName == nullptr )
                     return {};
                 for ( pugi::xml_node sibling = node; sibling.empty() == false; sibling = sibling.next_sibling() )
                 {
-                    if ( nameEquals( sibling.name(), pName, bIgnoreCase ) )
+                    if ( StringUtil::equals( sibling.name(), pName ) )
                         return sibling;
                 }
                 return {};
             }
 
-            static pugi::xml_attribute findAttr( pugi::xml_node node, const utf8* pName, bool bIgnoreCase = true )
+            static pugi::xml_attribute findAttr( pugi::xml_node node, const utf8* pName )
             {
                 if ( node.empty() || pName == nullptr )
                     return {};
-                if ( bIgnoreCase == false )
-                    return node.attribute( pName );
-                for ( pugi::xml_attribute attr = node.first_attribute(); attr.empty() == false; attr = attr.next_attribute() )
-                {
-                    if ( nameEquals( attr.name(), pName, true ) )
-                        return attr;
-                }
-                return {};
+                return node.attribute( pName );
             }
 
             /** @brief 값 글 하나를 타입으로 읽습니다. 글이 타입이 아니면 false 입니다(없음은 부르는 쪽이 nullptr 로 먼저 가른다). */
@@ -329,20 +311,20 @@ namespace sw
         return static_cast<int64>( pNode.offset_debug() );
     }
 
-    const utf8* XMLNode::findAttribute( const utf8* pName, bool bIgnoreCaseKeys ) const
+    const utf8* XMLNode::findAttribute( const utf8* pName ) const
     {
         const pugi::xml_node pNode = XMLDocumentInternal::asNode( _pNode );
         if ( pNode.empty() || pName == nullptr )
             return nullptr;
-        const pugi::xml_attribute pAttr = XMLDocumentInternal::findAttr( pNode, pName, bIgnoreCaseKeys );
+        const pugi::xml_attribute pAttr = XMLDocumentInternal::findAttr( pNode, pName );
         if ( pAttr.empty() == false )
             return pAttr.value();
         return nullptr;
     }
 
-    string_view XMLNode::getAttributeText( const utf8* pName, bool bIgnoreCaseKeys ) const
+    string_view XMLNode::getAttributeText( const utf8* pName ) const
     {
-        const utf8* pValue = findAttribute( pName, bIgnoreCaseKeys );
+        const utf8* pValue = findAttribute( pName );
         return ( pValue != nullptr ) ? string_view( pValue ) : string_view{};
     }
 
@@ -372,17 +354,17 @@ namespace sw
         SW_LOG_ERROR_ID( "Xml.AttributeOutOfRange", "<%# %#=\"%#\"> is outside [%#, %#]", getName(), pName, value, minValue, maxValue );
     }
 
-    XMLNode XMLNode::findChild( const utf8* pName, bool bIgnoreCaseKeys ) const
+    XMLNode XMLNode::findChild( const utf8* pName ) const
     {
         const pugi::xml_node pNode = XMLDocumentInternal::asNode( _pNode );
         if ( pNode.empty() )
             return {};
         if ( pName == nullptr )
             return XMLNode{ pNode.first_child().internal_object() };
-        return XMLNode{ XMLDocumentInternal::findChild( pNode, pName, bIgnoreCaseKeys ).internal_object() };
+        return XMLNode{ XMLDocumentInternal::findChild( pNode, pName ).internal_object() };
     }
 
-    XMLNode XMLNode::findNextSibling( const utf8* pName, bool bIgnoreCaseKeys ) const
+    XMLNode XMLNode::findNextSibling( const utf8* pName ) const
     {
         const pugi::xml_node pNode = XMLDocumentInternal::asNode( _pNode );
         if ( pNode.empty() )
@@ -390,20 +372,20 @@ namespace sw
         const pugi::xml_node pSibling = pNode.next_sibling();
         if ( pName == nullptr )
             return XMLNode{ pSibling.internal_object() };
-        return XMLNode{ XMLDocumentInternal::findSibling( pSibling, pName, bIgnoreCaseKeys ).internal_object() };
+        return XMLNode{ XMLDocumentInternal::findSibling( pSibling, pName ).internal_object() };
     }
 
-    const utf8* XMLNode::findChildText( const utf8* pName, bool bIgnoreCaseKeys ) const
+    const utf8* XMLNode::findChildText( const utf8* pName ) const
     {
-        const XMLNode childNode = findChild( pName, bIgnoreCaseKeys );
+        const XMLNode childNode = findChild( pName );
         if ( childNode.isValid() == false )
             return nullptr;
         return childNode.getText();
     }
 
-    bool XMLNode::takeChildText( const utf8* pName, string& dst, bool bIgnoreCaseKeys ) const
+    bool XMLNode::takeChildText( const utf8* pName, string& dst ) const
     {
-        const utf8* pValue = findChildText( pName, bIgnoreCaseKeys );
+        const utf8* pValue = findChildText( pName );
         if ( StringUtil::isNullOrEmpty( pValue ) )
             return false;
         dst = pValue;
@@ -463,7 +445,7 @@ namespace sw
         pugi::xml_node pNode = XMLDocumentInternal::asNode( _pNode );
         if ( pNode.empty() || pName == nullptr )
             return;
-        pugi::xml_attribute pAttr = XMLDocumentInternal::findAttr( pNode, pName, true );
+        pugi::xml_attribute pAttr = XMLDocumentInternal::findAttr( pNode, pName );
         if ( pAttr.empty() == false )
             pAttr.set_value( pValue != nullptr ? pValue : "" );
         else
@@ -475,7 +457,7 @@ namespace sw
         pugi::xml_node pNode = XMLDocumentInternal::asNode( _pNode );
         if ( pNode.empty() || pName == nullptr )
             return;
-        pugi::xml_attribute pAttr = XMLDocumentInternal::findAttr( pNode, pName, true );
+        pugi::xml_attribute pAttr = XMLDocumentInternal::findAttr( pNode, pName );
         if ( pAttr.empty() == false )
         {
             const string valStr( value );
@@ -663,13 +645,13 @@ namespace sw
         return line;
     }
 
-    XMLNode XMLDocument::getRoot( const utf8* pName, bool bIgnoreCaseKeys ) const
+    XMLNode XMLDocument::getRoot( const utf8* pName ) const
     {
         if ( _impl == nullptr )
             return {};
         if ( pName == nullptr )
             return XMLNode{ _impl->doc.first_child().internal_object() };
-        return XMLNode{ XMLDocumentInternal::findChild( _impl->doc, pName, bIgnoreCaseKeys ).internal_object() };
+        return XMLNode{ XMLDocumentInternal::findChild( _impl->doc, pName ).internal_object() };
     }
 
     XMLNode XMLDocument::appendRoot( const utf8* pName )

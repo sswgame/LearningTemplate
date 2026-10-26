@@ -183,7 +183,7 @@ namespace sw::editor
             /** @brief 없어도 되는 숫자 @p key 를 읽습니다. 없으면 @p inoutValue 를 그대로 두고(정의의 초기값), 숫자가 아니면 이유와 false 입니다. */
             [[nodiscard]] static bool readFloat( const JSONValue& object, string_view key, string_view context, float32& inoutValue, string& outError )
             {
-                const JSONValue value = object.get( key, false );
+                const JSONValue value = object.get( key );
                 if ( value.isValid() == false || value.isNull() )
                     return true;
                 const std::optional<float32> number = value.read<float32>();
@@ -199,7 +199,7 @@ namespace sw::editor
             /** @brief 없어도 되는 불리언 @p key 를 읽습니다. 없으면 @p inoutFlag 를 그대로 두고, 불리언이 아니면 이유와 false 입니다. */
             [[nodiscard]] static bool readFlag( const JSONValue& object, string_view key, string_view context, uint8& inoutFlag, string& outError )
             {
-                const JSONValue value = object.get( key, false );
+                const JSONValue value = object.get( key );
                 if ( value.isValid() == false || value.isNull() )
                     return true;
                 const std::optional<bool> flag = value.read<bool>();
@@ -380,12 +380,12 @@ namespace sw::editor
             [[nodiscard]] static bool readVrm0Humanoid( const JSONValue& humanoid, const VrmGltfNames& names, VrmAvatarDef& inoutDef, vector<string>* pOutListIgnored, string& outError )
             {
                 collectUnknownKeys( humanoid, kArrVrm0HumanoidKey, "VRM.humanoid", pOutListIgnored );
-                const JSONValue listBone = humanoid.get( "humanBones", false );
+                const JSONValue listBone = humanoid.get( "humanBones" );
                 for ( size_t index = 0; index < listBone.size(); ++index )
                 {
                     const JSONValue entry = listBone.at( index );
                     collectUnknownKeys( entry, kArrVrm0HumanBoneKey, "VRM.humanoid.humanBones", pOutListIgnored );
-                    string humanBone = entry.get( "bone", false ).asString();
+                    string humanBone = entry.get( "bone" ).asString();
                     for ( const string_view( &arrRename )[2] : kArrVrm0ThumbRename )
                     {
                         if ( humanBone == arrRename[0] )
@@ -401,7 +401,7 @@ namespace sw::editor
                     }
                     VrmHumanBone bone;
                     bone._humanBone = humanBone;
-                    if ( resolveNode( names, entry.get( "node", false ), "VRM 0.x humanoid bone '" + humanBone + "'", bone._bone, outError ) == false )
+                    if ( resolveNode( names, entry.get( "node" ), "VRM 0.x humanoid bone '" + humanBone + "'", bone._bone, outError ) == false )
                         return false;
                     inoutDef._listHumanBone.push_back( std::move( bone ) );
                 }
@@ -412,14 +412,14 @@ namespace sw::editor
             [[nodiscard]] static bool readVrm0Expressions( const JSONValue& master, const VrmGltfNames& names, VrmAvatarDef& inoutDef, vector<string>* pOutListIgnored, string& outError )
             {
                 collectUnknownKeys( master, kArrVrm0MasterKey, "VRM.blendShapeMaster", pOutListIgnored );
-                const JSONValue listGroup = master.get( "blendShapeGroups", false );
+                const JSONValue listGroup = master.get( "blendShapeGroups" );
                 for ( size_t groupIndex = 0; groupIndex < listGroup.size(); ++groupIndex )
                 {
                     const JSONValue group = listGroup.at( groupIndex );
                     collectUnknownKeys( group, kArrVrm0GroupKey, "VRM.blendShapeMaster.blendShapeGroups", pOutListIgnored );
                     VrmExpression expression;
-                    expression._name        = group.get( "name", false ).asString();
-                    const string presetName = group.get( "presetName", false ).asString();
+                    expression._name        = group.get( "name" ).asString();
+                    const string presetName = group.get( "presetName" ).asString();
                     if ( presetName.empty() == false && StringUtil::equals( presetName, "unknown", true ) == false )
                     {
                         bool bKnown = false;
@@ -442,7 +442,7 @@ namespace sw::editor
                     const string groupContext = "VRM 0.x blend shape group '" + expression._name + "'";
                     if ( readFlag( group, "isBinary", groupContext, expression._bBinary, outError ) == false )
                         return false;
-                    const JSONValue listBind = group.get( "binds", false );
+                    const JSONValue listBind = group.get( "binds" );
                     for ( size_t bindIndex = 0; bindIndex < listBind.size(); ++bindIndex )
                     {
                         const JSONValue bindValue = listBind.at( bindIndex );
@@ -450,16 +450,16 @@ namespace sw::editor
                         VrmExpressionBind bind;
                         uint32            mesh{ 0 };
                         float32           weight{ kVrm0FullWeight };
-                        const bool        bBindRead = readIndex( bindValue.get( "mesh", false ), names._listMeshMorphName.size(), groupContext, "mesh", "is not a mesh of the model", mesh,
+                        const bool        bBindRead = readIndex( bindValue.get( "mesh" ), names._listMeshMorphName.size(), groupContext, "mesh", "is not a mesh of the model", mesh,
                                                                  outError ) &&
-                                               resolveMorphTarget( names, mesh, bindValue.get( "index", false ), groupContext, bind._morphTarget, outError ) &&
+                                               resolveMorphTarget( names, mesh, bindValue.get( "index" ), groupContext, bind._morphTarget, outError ) &&
                                                readFloat( bindValue, "weight", groupContext, weight, outError );
                         if ( bBindRead == false )
                             return false;
                         bind._weight = weight * kVrm0WeightScale;
                         expression._listBind.push_back( std::move( bind ) );
                     }
-                    if ( group.get( "materialValues", false ).size() > 0 )
+                    if ( group.get( "materialValues" ).size() > 0 )
                         addIgnored( pOutListIgnored, "VRM.blendShapeMaster.blendShapeGroups.materialValues" );
                     inoutDef._listExpression.push_back( std::move( expression ) );
                 }
@@ -470,17 +470,17 @@ namespace sw::editor
             [[nodiscard]] static bool readVrm0Springs( const JSONValue& secondary, const VrmGltfNames& names, VrmAvatarDef& inoutDef, vector<string>* pOutListIgnored, string& outError )
             {
                 collectUnknownKeys( secondary, kArrVrm0SecondaryKey, "VRM.secondaryAnimation", pOutListIgnored );
-                const JSONValue listColliderGroup = secondary.get( "colliderGroups", false );
+                const JSONValue listColliderGroup = secondary.get( "colliderGroups" );
                 for ( size_t groupIndex = 0; groupIndex < listColliderGroup.size(); ++groupIndex )
                 {
                     const JSONValue group = listColliderGroup.at( groupIndex );
                     collectUnknownKeys( group, kArrVrm0ColliderGroupKey, "VRM.secondaryAnimation.colliderGroups", pOutListIgnored );
                     string bone;
-                    if ( resolveNode( names, group.get( "node", false ), "VRM 0.x collider group " + to_string( static_cast<uint64>( groupIndex ) ), bone, outError ) == false )
+                    if ( resolveNode( names, group.get( "node" ), "VRM 0.x collider group " + to_string( static_cast<uint64>( groupIndex ) ), bone, outError ) == false )
                         return false;
                     VrmSpringColliderGroup colliderGroup;
                     colliderGroup._name               = "colliderGroup" + to_string( static_cast<uint64>( groupIndex ) );
-                    const JSONValue listColliderValue = group.get( "colliders", false );
+                    const JSONValue listColliderValue = group.get( "colliders" );
                     for ( size_t colliderIndex = 0; colliderIndex < listColliderValue.size(); ++colliderIndex )
                     {
                         const JSONValue colliderValue = listColliderValue.at( colliderIndex );
@@ -489,7 +489,7 @@ namespace sw::editor
                         collider._bone               = bone;
                         const string colliderContext = "VRM 0.x collider group " + to_string( static_cast<uint64>( groupIndex ) );
                         float3       offset{};
-                        if ( readVector( colliderValue.get( "offset", false ), colliderContext, offset, outError ) == false ||
+                        if ( readVector( colliderValue.get( "offset" ), colliderContext, offset, outError ) == false ||
                              readFloat( colliderValue, "radius", colliderContext, collider._radius, outError ) == false )
                             return false;
                         collider._offset = convertVrm0Vector( offset );
@@ -500,7 +500,7 @@ namespace sw::editor
                     inoutDef._listColliderGroup.push_back( std::move( colliderGroup ) );
                 }
 
-                const JSONValue listBoneGroup = secondary.get( "boneGroups", false );
+                const JSONValue listBoneGroup = secondary.get( "boneGroups" );
                 vector<uint32>  listChain;
                 for ( size_t groupIndex = 0; groupIndex < listBoneGroup.size(); ++groupIndex )
                 {
@@ -514,7 +514,7 @@ namespace sw::editor
                     float3     gravityDirection{ convertVrm0Vector( jointValue._gravityDirection ) };
                     const bool bJointRead = readFloat( group, "stiffiness", context, jointValue._stiffness, outError ) &&
                                             readFloat( group, "gravityPower", context, jointValue._gravityPower, outError ) &&
-                                            readVector( group.get( "gravityDir", false ), context, gravityDirection, outError ) &&
+                                            readVector( group.get( "gravityDir" ), context, gravityDirection, outError ) &&
                                             readFloat( group, "dragForce", context, jointValue._dragForce, outError ) &&
                                             readFloat( group, "hitRadius", context, jointValue._hitRadius, outError );
                     if ( bJointRead == false )
@@ -522,7 +522,7 @@ namespace sw::editor
                     jointValue._gravityDirection = convertVrm0Vector( gravityDirection );
 
                     string          centerBone;
-                    const JSONValue center         = group.get( "center", false );
+                    const JSONValue center         = group.get( "center" );
                     bool            bCenterInvalid = false;
                     const bool      bHasCenter     = refersToNode( center, bCenterInvalid );
                     if ( bCenterInvalid || ( bHasCenter && resolveNode( names, center, context + " center", centerBone, outError ) == false ) )
@@ -532,7 +532,7 @@ namespace sw::editor
                         return false;
                     }
                     vector<uint32>  listColliderGroupIndex;
-                    const JSONValue listGroupRef = group.get( "colliderGroups", false );
+                    const JSONValue listGroupRef = group.get( "colliderGroups" );
                     for ( size_t refIndex = 0; refIndex < listGroupRef.size(); ++refIndex )
                     {
                         uint32 ref{ 0 };
@@ -541,8 +541,8 @@ namespace sw::editor
                         listColliderGroupIndex.push_back( ref );
                     }
 
-                    const string    comment  = group.get( "comment", false ).asString();
-                    const JSONValue listRoot = group.get( "bones", false );
+                    const string    comment  = group.get( "comment" ).asString();
+                    const JSONValue listRoot = group.get( "bones" );
                     for ( size_t rootIndex = 0; rootIndex < listRoot.size(); ++rootIndex )
                     {
                         uint32 rootNode{ 0 };
@@ -573,7 +573,7 @@ namespace sw::editor
             [[nodiscard]] static bool readVrm0FirstPerson( const JSONValue& firstPerson, const VrmGltfNames& names, VrmAvatarDef& inoutDef, vector<string>* pOutListIgnored, string& outError )
             {
                 collectUnknownKeys( firstPerson, kArrVrm0FirstPersonKey, "VRM.firstPerson", pOutListIgnored );
-                const JSONValue bone         = firstPerson.get( "firstPersonBone", false );
+                const JSONValue bone         = firstPerson.get( "firstPersonBone" );
                 bool            bBoneInvalid = false;
                 const bool      bHasBone     = refersToNode( bone, bBoneInvalid );
                 if ( bBoneInvalid )
@@ -591,23 +591,23 @@ namespace sw::editor
                     inoutDef._firstPersonBone = inoutDef.findBone( "head" );
                 }
                 float3 offset{};
-                if ( readVector( firstPerson.get( "firstPersonBoneOffset", false ), "VRM 0.x firstPersonBoneOffset", offset, outError ) == false )
+                if ( readVector( firstPerson.get( "firstPersonBoneOffset" ), "VRM 0.x firstPersonBoneOffset", offset, outError ) == false )
                     return false;
                 inoutDef._firstPersonOffset    = convertVrm0Vector( offset );
-                const JSONValue listAnnotation = firstPerson.get( "meshAnnotations", false );
+                const JSONValue listAnnotation = firstPerson.get( "meshAnnotations" );
                 for ( size_t index = 0; index < listAnnotation.size(); ++index )
                 {
                     const JSONValue annotation = listAnnotation.at( index );
                     collectUnknownKeys( annotation, kArrVrm0AnnotationKey, "VRM.firstPerson.meshAnnotations", pOutListIgnored );
                     VrmFirstPersonMesh          mesh;
-                    const std::optional<uint32> meshIndex = annotation.get( "mesh", false ).read<uint32>();
+                    const std::optional<uint32> meshIndex = annotation.get( "mesh" ).read<uint32>();
                     if ( meshIndex.has_value() == false )
                     {
-                        outError = "VRM 0.x meshAnnotations: mesh " + annotation.get( "mesh", false ).dump() + " is not a mesh number";
+                        outError = "VRM 0.x meshAnnotations: mesh " + annotation.get( "mesh" ).dump() + " is not a mesh number";
                         return false;
                     }
                     mesh._mesh        = makeMeshName( names, *meshIndex );
-                    const string flag = annotation.get( "firstPersonFlag", false ).asString();
+                    const string flag = annotation.get( "firstPersonFlag" ).asString();
                     if ( parseFirstPersonMode( flag, mesh._mode ) == false )
                     {
                         outError = "VRM 0.x meshAnnotations: unknown firstPersonFlag '" + flag + "'";
@@ -615,7 +615,7 @@ namespace sw::editor
                     }
                     inoutDef._listFirstPersonMesh.push_back( std::move( mesh ) );
                 }
-                if ( firstPerson.has( "lookAtTypeName", false ) )
+                if ( firstPerson.has( "lookAtTypeName" ) )
                     addIgnored( pOutListIgnored, "VRM.firstPerson.lookAt*" );
                 return true;
             }
@@ -630,15 +630,15 @@ namespace sw::editor
                 expression._bPreset = bPreset ? SW_TRUE : SW_FALSE;
                 if ( readFlag( value, "isBinary", "VRM 1.0 expression '" + name + "'", expression._bBinary, outError ) == false )
                     return false;
-                const bool bOverrides = parseOverride( value.get( "overrideBlink", false ), expression._overrideBlink ) &&
-                                        parseOverride( value.get( "overrideLookAt", false ), expression._overrideLookAt ) &&
-                                        parseOverride( value.get( "overrideMouth", false ), expression._overrideMouth );
+                const bool bOverrides = parseOverride( value.get( "overrideBlink" ), expression._overrideBlink ) &&
+                                        parseOverride( value.get( "overrideLookAt" ), expression._overrideLookAt ) &&
+                                        parseOverride( value.get( "overrideMouth" ), expression._overrideMouth );
                 if ( bOverrides == false )
                 {
                     outError = "VRM 1.0 expression '" + name + "': override must be none, block or blend";
                     return false;
                 }
-                const JSONValue listBind = value.get( "morphTargetBinds", false );
+                const JSONValue listBind = value.get( "morphTargetBinds" );
                 for ( size_t index = 0; index < listBind.size(); ++index )
                 {
                     const JSONValue bindValue = listBind.at( index );
@@ -646,7 +646,7 @@ namespace sw::editor
                     const string      context = "VRM 1.0 expression '" + name + "'";
                     uint32            node{ 0 };
                     VrmExpressionBind bind;
-                    if ( readIndex( bindValue.get( "node", false ), names._listNodeMesh.size(), context, "node", "is not a node of the model", node, outError ) == false )
+                    if ( readIndex( bindValue.get( "node" ), names._listNodeMesh.size(), context, "node", "is not a node of the model", node, outError ) == false )
                         return false;
                     const int64 mesh = names._listNodeMesh[node];
                     if ( mesh < 0 )
@@ -654,16 +654,16 @@ namespace sw::editor
                         outError = context + ": node " + to_string( node ) + " has no mesh";
                         return false;
                     }
-                    const bool bBindRead = resolveMorphTarget( names, static_cast<uint32>( mesh ), bindValue.get( "index", false ), context + " node " + to_string( node ),
+                    const bool bBindRead = resolveMorphTarget( names, static_cast<uint32>( mesh ), bindValue.get( "index" ), context + " node " + to_string( node ),
                                                                bind._morphTarget, outError ) &&
                                            readFloat( bindValue, "weight", context, bind._weight, outError );
                     if ( bBindRead == false )
                         return false;
                     expression._listBind.push_back( std::move( bind ) );
                 }
-                if ( value.get( "materialColorBinds", false ).size() > 0 )
+                if ( value.get( "materialColorBinds" ).size() > 0 )
                     addIgnored( pOutListIgnored, "VRMC_vrm.expressions.materialColorBinds" );
-                if ( value.get( "textureTransformBinds", false ).size() > 0 )
+                if ( value.get( "textureTransformBinds" ).size() > 0 )
                     addIgnored( pOutListIgnored, "VRMC_vrm.expressions.textureTransformBinds" );
                 inoutDef._listExpression.push_back( std::move( expression ) );
                 return true;
@@ -672,18 +672,18 @@ namespace sw::editor
             /** @brief 1.0 VRMC_springBone 의 콜라이더(구 · 캡슐)를 읽습니다. */
             [[nodiscard]] static bool readVrm1Colliders( const JSONValue& springBone, const VrmGltfNames& names, VrmAvatarDef& inoutDef, vector<string>* pOutListIgnored, string& outError )
             {
-                const JSONValue listCollider = springBone.get( "colliders", false );
+                const JSONValue listCollider = springBone.get( "colliders" );
                 for ( size_t index = 0; index < listCollider.size(); ++index )
                 {
                     const JSONValue colliderValue = listCollider.at( index );
                     collectUnknownKeys( colliderValue, kArrVrm1ColliderKey, "VRMC_springBone.colliders", pOutListIgnored );
                     VrmSpringCollider collider;
-                    if ( resolveNode( names, colliderValue.get( "node", false ), "VRM 1.0 collider " + to_string( static_cast<uint64>( index ) ), collider._bone, outError ) ==
+                    if ( resolveNode( names, colliderValue.get( "node" ), "VRM 1.0 collider " + to_string( static_cast<uint64>( index ) ), collider._bone, outError ) ==
                          false )
                         return false;
-                    const JSONValue shape   = colliderValue.get( "shape", false );
-                    const JSONValue sphere  = shape.get( "sphere", false );
-                    const JSONValue capsule = shape.get( "capsule", false );
+                    const JSONValue shape   = colliderValue.get( "shape" );
+                    const JSONValue sphere  = shape.get( "sphere" );
+                    const JSONValue capsule = shape.get( "capsule" );
                     collectUnknownKeys( shape, kArrVrm1ShapeKey, "VRMC_springBone.colliders.shape", pOutListIgnored );
                     const string colliderContext = "VRM 1.0 collider " + to_string( static_cast<uint64>( index ) );
                     float3       offset{};
@@ -691,7 +691,7 @@ namespace sw::editor
                     if ( sphere.isObject() )
                     {
                         collectUnknownKeys( sphere, kArrVrm1SphereKey, "VRMC_springBone.colliders.shape.sphere", pOutListIgnored );
-                        if ( readVector( sphere.get( "offset", false ), colliderContext, offset, outError ) == false ||
+                        if ( readVector( sphere.get( "offset" ), colliderContext, offset, outError ) == false ||
                              readFloat( sphere, "radius", colliderContext, collider._radius, outError ) == false )
                             return false;
                         collider._offset = convertVrm1Vector( offset );
@@ -700,8 +700,8 @@ namespace sw::editor
                     else if ( capsule.isObject() )
                     {
                         collectUnknownKeys( capsule, kArrVrm1CapsuleKey, "VRMC_springBone.colliders.shape.capsule", pOutListIgnored );
-                        const bool bCapsuleRead = readVector( capsule.get( "offset", false ), colliderContext, offset, outError ) &&
-                                                  readVector( capsule.get( "tail", false ), colliderContext, tail, outError ) &&
+                        const bool bCapsuleRead = readVector( capsule.get( "offset" ), colliderContext, offset, outError ) &&
+                                                  readVector( capsule.get( "tail" ), colliderContext, tail, outError ) &&
                                                   readFloat( capsule, "radius", colliderContext, collider._radius, outError );
                         if ( bCapsuleRead == false )
                             return false;
@@ -722,14 +722,14 @@ namespace sw::editor
             /** @brief 1.0 VRMC_springBone 의 콜라이더 그룹을 읽습니다. 콜라이더는 앞에서 읽은 목록의 번호로 가리킵니다. */
             [[nodiscard]] static bool readVrm1ColliderGroups( const JSONValue& springBone, VrmAvatarDef& inoutDef, vector<string>* pOutListIgnored, string& outError )
             {
-                const JSONValue listGroup = springBone.get( "colliderGroups", false );
+                const JSONValue listGroup = springBone.get( "colliderGroups" );
                 for ( size_t index = 0; index < listGroup.size(); ++index )
                 {
                     const JSONValue groupValue = listGroup.at( index );
                     collectUnknownKeys( groupValue, kArrVrm1GroupKey, "VRMC_springBone.colliderGroups", pOutListIgnored );
                     VrmSpringColliderGroup group;
-                    group._name                     = groupValue.get( "name", false ).asString();
-                    const JSONValue listColliderRef = groupValue.get( "colliders", false );
+                    group._name                     = groupValue.get( "name" ).asString();
+                    const JSONValue listColliderRef = groupValue.get( "colliders" );
                     for ( size_t refIndex = 0; refIndex < listColliderRef.size(); ++refIndex )
                     {
                         uint32 ref{ 0 };
@@ -747,18 +747,18 @@ namespace sw::editor
             [[nodiscard]] static bool readVrm1SpringChains( const JSONValue& springBone, const VrmGltfNames& names, VrmAvatarDef& inoutDef, vector<string>* pOutListIgnored,
                                                             string& outError )
             {
-                const JSONValue listSpring = springBone.get( "springs", false );
+                const JSONValue listSpring = springBone.get( "springs" );
                 for ( size_t index = 0; index < listSpring.size(); ++index )
                 {
                     const JSONValue springValue = listSpring.at( index );
                     collectUnknownKeys( springValue, kArrVrm1SpringKey, "VRMC_springBone.springs", pOutListIgnored );
                     VrmSpring spring;
-                    spring._name            = springValue.get( "name", false ).asString();
+                    spring._name            = springValue.get( "name" ).asString();
                     const string    context = "VRM 1.0 spring '" + spring._name + "'";
-                    const JSONValue center  = springValue.get( "center", false );
+                    const JSONValue center  = springValue.get( "center" );
                     if ( center.isValid() && resolveNode( names, center, context + " center", spring._centerBone, outError ) == false )
                         return false;
-                    const JSONValue listGroupRef = springValue.get( "colliderGroups", false );
+                    const JSONValue listGroupRef = springValue.get( "colliderGroups" );
                     for ( size_t refIndex = 0; refIndex < listGroupRef.size(); ++refIndex )
                     {
                         uint32 ref{ 0 };
@@ -766,20 +766,20 @@ namespace sw::editor
                             return false;
                         spring._listColliderGroup.push_back( ref );
                     }
-                    const JSONValue listJoint = springValue.get( "joints", false );
+                    const JSONValue listJoint = springValue.get( "joints" );
                     for ( size_t jointIndex = 0; jointIndex < listJoint.size(); ++jointIndex )
                     {
                         const JSONValue jointValue = listJoint.at( jointIndex );
                         collectUnknownKeys( jointValue, kArrVrm1JointKey, "VRMC_springBone.springs.joints", pOutListIgnored );
                         VrmSpringJoint joint;
-                        if ( resolveNode( names, jointValue.get( "node", false ), context + " joint", joint._bone, outError ) == false )
+                        if ( resolveNode( names, jointValue.get( "node" ), context + " joint", joint._bone, outError ) == false )
                             return false;
                         // 적지 않은 칸은 `VrmSpringJoint` 의 초기값(1.0 명세의 기본값)이다. 중력 방향은 원본 공간에서 읽고 옮긴다.
                         float3     gravityDirection{ convertVrm1Vector( joint._gravityDirection ) };
                         const bool bJointRead = readFloat( jointValue, "hitRadius", context, joint._hitRadius, outError ) &&
                                                 readFloat( jointValue, "stiffness", context, joint._stiffness, outError ) &&
                                                 readFloat( jointValue, "gravityPower", context, joint._gravityPower, outError ) &&
-                                                readVector( jointValue.get( "gravityDir", false ), context, gravityDirection, outError ) &&
+                                                readVector( jointValue.get( "gravityDir" ), context, gravityDirection, outError ) &&
                                                 readFloat( jointValue, "dragForce", context, joint._dragForce, outError );
                         if ( bJointRead == false )
                             return false;
@@ -890,16 +890,16 @@ namespace sw::editor
         outDef                     = VrmAvatarDef{};
         outDef._sourceMajorVersion = 0;
         Internal::collectUnknownKeys( vrm, Internal::kArrVrm0RootKey, "VRM", pOutListIgnored );
-        const JSONValue humanoid = vrm.get( "humanoid", false );
+        const JSONValue humanoid = vrm.get( "humanoid" );
         if ( humanoid.isObject() && Internal::readVrm0Humanoid( humanoid, names, outDef, pOutListIgnored, outError ) == false )
             return false;
-        const JSONValue master = vrm.get( "blendShapeMaster", false );
+        const JSONValue master = vrm.get( "blendShapeMaster" );
         if ( master.isObject() && Internal::readVrm0Expressions( master, names, outDef, pOutListIgnored, outError ) == false )
             return false;
-        const JSONValue secondary = vrm.get( "secondaryAnimation", false );
+        const JSONValue secondary = vrm.get( "secondaryAnimation" );
         if ( secondary.isObject() && Internal::readVrm0Springs( secondary, names, outDef, pOutListIgnored, outError ) == false )
             return false;
-        const JSONValue firstPerson = vrm.get( "firstPerson", false );
+        const JSONValue firstPerson = vrm.get( "firstPerson" );
         if ( firstPerson.isObject() )
             return Internal::readVrm0FirstPerson( firstPerson, names, outDef, pOutListIgnored, outError );
         outDef._firstPersonBone = outDef.findBone( "head" );
@@ -914,9 +914,9 @@ namespace sw::editor
         outDef._sourceMajorVersion = 1;
         Internal::collectUnknownKeys( vrmcVrm, Internal::kArrVrm1RootKey, "VRMC_vrm", pOutListIgnored );
 
-        const JSONValue humanoid = vrmcVrm.get( "humanoid", false );
+        const JSONValue humanoid = vrmcVrm.get( "humanoid" );
         Internal::collectUnknownKeys( humanoid, Internal::kArrVrm1HumanoidKey, "VRMC_vrm.humanoid", pOutListIgnored );
-        const JSONValue humanBones = humanoid.get( "humanBones", false );
+        const JSONValue humanBones = humanoid.get( "humanBones" );
         for ( const string& humanBone : humanBones.getMemberNames() )
         {
             if ( VectorUtil::contains( Internal::kArrHumanBone, humanBone ) == false )
@@ -924,18 +924,18 @@ namespace sw::editor
                 outError = "VRM 1.0 humanoid: unknown human bone '" + humanBone + "'";
                 return false;
             }
-            const JSONValue entry = humanBones.get( humanBone, false );
+            const JSONValue entry = humanBones.get( humanBone );
             Internal::collectUnknownKeys( entry, Internal::kArrVrm1NodeKey, "VRMC_vrm.humanoid.humanBones." + humanBone, pOutListIgnored );
             VrmHumanBone bone;
             bone._humanBone = humanBone;
-            if ( Internal::resolveNode( names, entry.get( "node", false ), "VRM 1.0 humanoid bone '" + humanBone + "'", bone._bone, outError ) == false )
+            if ( Internal::resolveNode( names, entry.get( "node" ), "VRM 1.0 humanoid bone '" + humanBone + "'", bone._bone, outError ) == false )
                 return false;
             outDef._listHumanBone.push_back( std::move( bone ) );
         }
 
-        const JSONValue expressions = vrmcVrm.get( "expressions", false );
+        const JSONValue expressions = vrmcVrm.get( "expressions" );
         Internal::collectUnknownKeys( expressions, Internal::kArrVrm1ExpressionsKey, "VRMC_vrm.expressions", pOutListIgnored );
-        const JSONValue preset = expressions.get( "preset", false );
+        const JSONValue preset = expressions.get( "preset" );
         for ( const string& name : preset.getMemberNames() )
         {
             if ( VectorUtil::contains( Internal::kArrVrm1Preset, name ) == false )
@@ -943,25 +943,25 @@ namespace sw::editor
                 outError = "VRM 1.0 expressions: unknown preset '" + name + "'";
                 return false;
             }
-            if ( Internal::readVrm1Expression( preset.get( name, false ), name, true, names, outDef, pOutListIgnored, outError ) == false )
+            if ( Internal::readVrm1Expression( preset.get( name ), name, true, names, outDef, pOutListIgnored, outError ) == false )
                 return false;
         }
-        const JSONValue custom = expressions.get( "custom", false );
+        const JSONValue custom = expressions.get( "custom" );
         for ( const string& name : custom.getMemberNames() )
         {
-            if ( Internal::readVrm1Expression( custom.get( name, false ), name, false, names, outDef, pOutListIgnored, outError ) == false )
+            if ( Internal::readVrm1Expression( custom.get( name ), name, false, names, outDef, pOutListIgnored, outError ) == false )
                 return false;
         }
 
-        const JSONValue firstPerson = vrmcVrm.get( "firstPerson", false );
+        const JSONValue firstPerson = vrmcVrm.get( "firstPerson" );
         Internal::collectUnknownKeys( firstPerson, Internal::kArrVrm1FirstPersonKey, "VRMC_vrm.firstPerson", pOutListIgnored );
-        const JSONValue listAnnotation = firstPerson.get( "meshAnnotations", false );
+        const JSONValue listAnnotation = firstPerson.get( "meshAnnotations" );
         for ( size_t index = 0; index < listAnnotation.size(); ++index )
         {
             const JSONValue annotation = listAnnotation.at( index );
             Internal::collectUnknownKeys( annotation, Internal::kArrVrm1AnnotationKey, "VRMC_vrm.firstPerson.meshAnnotations", pOutListIgnored );
             uint32 node{ 0 };
-            if ( Internal::readIndex( annotation.get( "node", false ), names._listNodeMesh.size(), "VRM 1.0 meshAnnotations", "node", "is not a node of the model", node, outError ) == false )
+            if ( Internal::readIndex( annotation.get( "node" ), names._listNodeMesh.size(), "VRM 1.0 meshAnnotations", "node", "is not a node of the model", node, outError ) == false )
                 return false;
             const int64 nodeMesh = names._listNodeMesh[node];
             if ( nodeMesh < 0 )
@@ -971,7 +971,7 @@ namespace sw::editor
             }
             VrmFirstPersonMesh mesh;
             mesh._mesh        = Internal::makeMeshName( names, static_cast<uint32>( nodeMesh ) );
-            const string type = annotation.get( "type", false ).asString();
+            const string type = annotation.get( "type" ).asString();
             if ( Internal::parseFirstPersonMode( type, mesh._mode ) == false )
             {
                 outError = "VRM 1.0 meshAnnotations: unknown type '" + type + "'";
@@ -981,14 +981,14 @@ namespace sw::editor
         }
 
         // 1.0 의 1인칭 본은 humanoid head 이고, 눈 위치는 lookAt.offsetFromHeadBone 이다.
-        const JSONValue lookAt = vrmcVrm.get( "lookAt", false );
+        const JSONValue lookAt = vrmcVrm.get( "lookAt" );
         Internal::collectUnknownKeys( lookAt, Internal::kArrVrm1LookAtKey, "VRMC_vrm.lookAt", pOutListIgnored );
         outDef._firstPersonBone = outDef.findBone( "head" );
         float3 offset{};
-        if ( Internal::readVector( lookAt.get( "offsetFromHeadBone", false ), "VRM 1.0 lookAt.offsetFromHeadBone", offset, outError ) == false )
+        if ( Internal::readVector( lookAt.get( "offsetFromHeadBone" ), "VRM 1.0 lookAt.offsetFromHeadBone", offset, outError ) == false )
             return false;
         outDef._firstPersonOffset = Internal::convertVrm1Vector( offset );
-        if ( lookAt.has( "type", false ) )
+        if ( lookAt.has( "type" ) )
             Internal::addIgnored( pOutListIgnored, "VRMC_vrm.lookAt" );
 
         if ( vrmcSpringBone.isObject() )

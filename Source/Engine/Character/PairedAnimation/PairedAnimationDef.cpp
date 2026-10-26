@@ -233,11 +233,11 @@ namespace sw
             reader.addError( "Character.PairedDurationInvalid", root, "attribute 'duration' must be positive" );
         for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
         {
-            if ( StringUtil::equals( child.getName(), "Role", true ) )
+            if ( StringUtil::equals( child.getName(), "Role" ) )
                 readRole( child, reader );
-            else if ( StringUtil::equals( child.getName(), "Notify", true ) )
+            else if ( StringUtil::equals( child.getName(), "Notify" ) )
                 readNotify( child, reader );
-            else if ( StringUtil::equals( child.getName(), "Select", true ) )
+            else if ( StringUtil::equals( child.getName(), "Select" ) )
                 readSelect( child, reader );
             else
                 reader.reportUnknownElement( child );

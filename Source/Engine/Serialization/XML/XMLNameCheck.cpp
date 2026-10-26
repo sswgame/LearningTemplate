@@ -39,7 +39,7 @@ namespace sw
     {
         for ( uint32 index = 0; index < knownCount; ++index )
         {
-            if ( StringUtil::equals( pName, ppKnown[index], true ) )
+            if ( StringUtil::equals( pName, ppKnown[index] ) )
                 return true;
         }
         return false;

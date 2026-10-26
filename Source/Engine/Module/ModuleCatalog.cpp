@@ -47,13 +47,12 @@ namespace sw
 
             /**
              * @brief JSON 글을 매니페스트 파일 형식으로 읽습니다.
-             * @details 키는 대소문자까지 맞아야 한다(기본 문맥은 대소문자를 무시해 오타를 삼킨다). 모르는 키 · 읽지 못한 값은 orphan 으로 남는다.
+             * @details 키는 대소문자까지 맞아야 한다(직렬화기는 키를 철자 그대로 찾는다). 모르는 키 · 읽지 못한 값은 orphan 으로 남는다.
              *          범위 밖 값(`Rejected`)이 있어도 모은 키를 모두 적는다 — 첫 실패에서 돌아가면 같은 파일의 오타가 다음 수정까지 숨는다(C-60).
              */
             [[nodiscard]] static bool deserializeManifestFile( string_view jsonText, const string& where, ModuleManifestFile& outFile, string& outError )
             {
-                SerializeContext context = SerializeContext::deriveFromDefault( SerializePurpose::Authoring );
-                context.setIgnoreCaseKeys( false );
+                SerializeContext          context = SerializeContext::deriveFromDefault( SerializePurpose::Authoring );
                 vector<SchemaOrphanValue> listOrphan;
                 const SoftReadResult      result = JSONSerializer::deserializeSoft( &outFile, *ModuleManifestFile::StaticType(), jsonText, &listOrphan, nullptr, context );
                 if ( result == SoftReadResult::NotParsed )
