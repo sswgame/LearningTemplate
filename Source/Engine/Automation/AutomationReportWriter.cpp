@@ -4,49 +4,28 @@
 
 #include "Core/File/FileUtil.h"
 
+#include "Engine/Serialization/JSON/JSONWriter.h"
+
 namespace sw
 {
     SW_LOG_CALLER( "Automation" );
 
     namespace
     {
-        struct AutomationReportWriterInternal
+        /** @brief `"key": [ "a", "b" ]` 한 멤버를 씁니다. @p pListText 가 없거나 비어 있으면 `[]` 입니다. */
+        void writeAutomationReportList( JSONWriter& writer, string_view key, const vector<string>* pListText )
         {
-            static string escapeJSON( string_view text )
+            writer.key( key );
+            writer.beginArray();
+            if ( pListText != nullptr )
             {
-                string escaped;
-                escaped.reserve( text.size() + 8 );
-                for ( const utf8 character : text )
+                for ( const string& text : *pListText )
                 {
-                    if ( character == '"' || character == '\\' )
-                    {
-                        escaped.push_back( '\\' );
-                        escaped.push_back( character );
-                    }
-                    else if ( character == '\n' )
-                    {
-                        escaped += "\\n";
-                    }
-                    else if ( static_cast<uint8>( character ) >= 0x20 )
-                    {
-                        escaped.push_back( character );
-                    }
+                    writer.valueString( text );
                 }
-                return escaped;
             }
-
-            /** @brief `"key": [ "a", "b" ]` 의 배열 부분을 붙입니다. 비어 있으면 `[]` 입니다. */
-            static void appendStringArray( string& inoutJSON, const vector<string>& listText )
-            {
-                inoutJSON += "[";
-                for ( size_t index = 0; index < listText.size(); ++index )
-                {
-                    inoutJSON += index == 0 ? "\n    \"" : ",\n    \"";
-                    inoutJSON += escapeJSON( listText[index] ) + "\"";
-                }
-                inoutJSON += listText.empty() ? "]" : "\n  ]";
-            }
-        };
+            writer.endArray();
+        }
     } // namespace
 } // namespace sw
 
@@ -63,34 +42,45 @@ namespace sw
     {
         if ( _reportPath.empty() )
             return;
-        using Internal = AutomationReportWriterInternal;
-        const vector<string> listEmpty;
-        string               json = "{\n  \"name\": \"" + Internal::escapeJSON( params._scenarioName ) + "\",\n";
-        json += "  \"result\": \"" + string( params._pResultName ) + "\",\n";
-        json += "  \"exitCode\": " + to_string( params._exitCode ) + ",\n";
-        json += "  \"frames\": " + to_string( params._frameCount ) + ",\n";
-        json += "  \"reason\": \"" + Internal::escapeJSON( params._reason ) + "\",\n";
-        json += "  \"backend\": \"" + Internal::escapeJSON( params._backendName ) + "\",\n";
-        json += "  \"game\": \"" + Internal::escapeJSON( params._gameName ) + "\",\n";
-        json += "  \"startedAt\": \"" + Internal::escapeJSON( params._startedAt ) + "\",\n";
-        json += "  \"startedAtUnixMs\": " + to_string( params._startedUnixMs ) + ",\n";
-        json += "  \"wallMilliseconds\": " + to_string( params._wallMilliseconds ) + ",\n";
-        json += "  \"wallLimitMilliseconds\": " + to_string( params._wallLimitMilliseconds ) + ",\n";
-        json += "  \"lastStep\": \"" + Internal::escapeJSON( params._lastStep ) + "\",\n";
-        json += "  \"reproduce\": \"" + Internal::escapeJSON( params._reproduce ) + "\",\n";
-        json += "  \"failures\": ";
-        Internal::appendStringArray( json, params._pListFailure != nullptr ? *params._pListFailure : listEmpty );
-        json += ",\n  \"unconfirmed\": ";
-        Internal::appendStringArray( json, params._pListUnconfirmed != nullptr ? *params._pListUnconfirmed : listEmpty );
-        json += ",\n  \"unhandledLogs\": ";
-        Internal::appendStringArray( json, params._pListUnhandledLog != nullptr ? *params._pListUnhandledLog : listEmpty );
-        json += ",\n  \"allowedLogs\": ";
-        Internal::appendStringArray( json, params._pListAllowedLog != nullptr ? *params._pListAllowedLog : listEmpty );
-        json += ",\n  \"metrics\": ";
-        Internal::appendStringArray( json, _listMetricLine );
-        json += ",\n  \"records\": ";
-        Internal::appendStringArray( json, _listRecordLine );
-        json += "\n}\n";
+        // 들여쓰기 2 칸 — 행 감시 보고(`AutomationHangReport::format`)와 같은 모양이고 `records` 가 마지막 멤버다(`readReportRecords`).
+        string     json;
+        JSONWriter writer{ json, 2 };
+        writer.beginObject();
+        writer.key( "name" );
+        writer.valueString( params._scenarioName );
+        writer.key( "result" );
+        writer.valueString( params._pResultName );
+        writer.key( "exitCode" );
+        writer.valueInt( params._exitCode );
+        writer.key( "frames" );
+        writer.valueUint( params._frameCount );
+        writer.key( "reason" );
+        writer.valueString( params._reason );
+        writer.key( "backend" );
+        writer.valueString( params._backendName );
+        writer.key( "game" );
+        writer.valueString( params._gameName );
+        writer.key( "startedAt" );
+        writer.valueString( params._startedAt );
+        writer.key( "startedAtUnixMs" );
+        writer.valueInt( params._startedUnixMs );
+        writer.key( "wallMilliseconds" );
+        writer.valueUint( params._wallMilliseconds );
+        writer.key( "wallLimitMilliseconds" );
+        writer.valueUint( params._wallLimitMilliseconds );
+        writer.key( "lastStep" );
+        writer.valueString( params._lastStep );
+        writer.key( "reproduce" );
+        writer.valueString( params._reproduce );
+        writeAutomationReportList( writer, "failures", params._pListFailure );
+        writeAutomationReportList( writer, "unconfirmed", params._pListUnconfirmed );
+        writeAutomationReportList( writer, "unhandledLogs", params._pListUnhandledLog );
+        writeAutomationReportList( writer, "allowedLogs", params._pListAllowedLog );
+        writeAutomationReportList( writer, "metrics", &_listMetricLine );
+        writeAutomationReportList( writer, "records", &_listRecordLine );
+        writer.endObject();
+        SW_ASSERT( writer.isComplete() );
+        json += '\n';
         const string directory = FileUtil::getDirectoryPart( _reportPath );
         if ( directory.empty() == false )
             (void)FileUtil::ensureDirectoryExists( directory ); // 실패하면 아래 쓰기가 실패로 알린다

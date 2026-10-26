@@ -99,6 +99,41 @@ SW_TEST_CASE( ProfilerTraceExportTest, EmitsCompleteEventsMetaAndFrameMarks )
 }
 
 /**
+ * @brief [ProfilerTraceExportTest] `JSONWriter` 로 옮긴 뒤에도 출력 바이트가 손으로 이어 붙이던 때와 같다(이스케이프 · 마이크로초 세 자리 · 잘림 · 표식 · 흐름)
+ * @details 기대 글은 옮기기 전 코드(`appendQuoted` + `JSONDocument::escapeString`, `appendMicroseconds`)가 내던 바이트다. 뷰어 · 합치기 · 외부 도구가 이 모양을 읽는다.
+ */
+SW_TEST_CASE( ProfilerTraceExportTest, OutputBytesMatchTheConcatenatedFormat )
+{
+    sw::ProfilerTraceMeta meta = makeMeta();
+    meta._hostName             = "PC\t1";
+    meta._bTruncated           = true;
+    meta._listMarker.push_back( { "Slow \"tick\"", 2000 } );
+    meta._listFlow.push_back( { 3000, 0x1ABCull, 0x81, false } );
+    meta._listFlow.push_back( { 4000, 0x1ABCull, 0x81, true } );
+    const sw::string json = sw::ProfilerTraceExport::makeTraceJSON( makeThreads(), { 1000 }, { "GT.Frame", "GT.Scene.tick" }, meta );
+
+    const sw::string expected =
+        R"json({"displayTimeUnit":"ms","otherData":{"processName":"Game","hostName":"PC\t1","processID":4242,"wallUnixMilliseconds":1700000000123,)json"
+        R"json("monotonicNanoseconds":987654321,"truncated":true},"traceEvents":[)json"
+        R"json({"name":"process_name","ph":"M","pid":4242,"tid":0,"args":{"name":"Game"}},)json"
+        R"json({"name":"thread_name","ph":"M","pid":4242,"tid":1,"args":{"name":"Main \"GT\""}},)json"
+        R"json({"name":"GT.Frame","cat":"cpu","ph":"X","pid":4242,"tid":1,"ts":1.000,"dur":4.500},)json"
+        R"json({"name":"GT.Scene.tick","cat":"cpu","ph":"X","pid":4242,"tid":1,"ts":2.000,"dur":0.500},)json"
+        R"json({"name":"thread_name","ph":"M","pid":4242,"tid":2,"args":{"name":"Worker 1"}},)json"
+        R"json({"name":"slot 9","cat":"cpu","ph":"X","pid":4242,"tid":2,"ts":3.000,"dur":0.001},)json"
+        R"json({"name":"TRUNCATED (event budget reached)","cat":"trace","ph":"i","s":"g","pid":4242,"tid":0,"ts":5.500},)json"
+        R"json({"name":"Slow \"tick\"","cat":"marker","ph":"i","s":"g","pid":4242,"tid":0,"ts":2.000},)json"
+        R"json({"name":"Frame","cat":"frame","ph":"i","s":"g","pid":4242,"tid":0,"ts":1.000},)json"
+        R"json({"name":"thread_name","ph":"M","pid":4242,"tid":3,"args":{"name":"Net messages"}},)json"
+        R"json({"name":"send 0x81","cat":"net","ph":"X","pid":4242,"tid":3,"ts":3.000,"dur":1},)json"
+        R"json({"name":"net","cat":"net","ph":"s","id":"0x1ABC","pid":4242,"tid":3,"ts":3.000},)json"
+        R"json({"name":"recv 0x81","cat":"net","ph":"X","pid":4242,"tid":3,"ts":4.000,"dur":1},)json"
+        R"json({"name":"net","cat":"net","ph":"f","bp":"e","id":"0x1ABC","pid":4242,"tid":3,"ts":4.000}]})json"
+        "\n";
+    SW_EXPECT_EQUAL( expected, json );
+}
+
+/**
  * @brief [ProfilerTraceExportTest] 사건이 없어도 파일은 유효한 JSON 이다
  */
 SW_TEST_CASE( ProfilerTraceExportTest, EmptyInputIsStillValidJSON )

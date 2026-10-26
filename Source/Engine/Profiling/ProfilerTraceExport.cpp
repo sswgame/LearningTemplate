@@ -16,6 +16,7 @@
     #include "Engine/Profiling/FrameProfiler.h"
     #include "Engine/Resource/ResourcePaths.h"
     #include "Engine/Serialization/JSON/JSONDocument.h"
+    #include "Engine/Serialization/JSON/JSONWriter.h"
 
 namespace sw
 {
@@ -34,17 +35,48 @@ namespace sw
 
     namespace
     {
-        /** @brief 나노초를 마이크로초 문자열(소수 셋째 자리까지)로 덧붙입니다. */
-        void appendMicroseconds( string& out, uint64 nanos )
+        /** @brief 시각은 나노초를 마이크로초(소수 셋째 자리까지)로 쓴다 — `valueFixedPoint( nanos, 이것 )`, 실수를 거치지 않는다. */
+        constexpr uint32 kTraceMicrosecondDigits = 3;
+
+        /** @brief 이름 메타 이벤트 `{"name":…,"ph":"M","pid":…,"tid":…,"args":{"name":…}}` 하나를 씁니다(프로세스 · 스레드 줄 이름). */
+        void writeTraceNameEvent( JSONWriter& writer, string_view eventName, int64 pid, uint64 tid, string_view displayName )
         {
-            out += to_string( nanos / constant::kNanosecondsPerMicrosecond );
-            out += '.';
-            const uint64 fraction = nanos % 1000;
-            if ( fraction < 100 )
-                out += '0';
-            if ( fraction < 10 )
-                out += '0';
-            out += to_string( fraction );
+            writer.beginObject();
+            writer.key( "name" );
+            writer.valueString( eventName );
+            writer.key( "ph" );
+            writer.valueString( "M" );
+            writer.key( "pid" );
+            writer.valueInt( pid );
+            writer.key( "tid" );
+            writer.valueUint( tid );
+            writer.key( "args" );
+            writer.beginObject();
+            writer.key( "name" );
+            writer.valueString( displayName );
+            writer.endObject();
+            writer.endObject();
+        }
+
+        /** @brief 전역 인스턴트 이벤트 `{"name":…,"cat":…,"ph":"i","s":"g","pid":…,"tid":0,"ts":…}` 하나를 씁니다(프레임 · 표식 · 잘림). */
+        void writeTraceInstantEvent( JSONWriter& writer, string_view eventName, string_view category, int64 pid, uint64 nanos )
+        {
+            writer.beginObject();
+            writer.key( "name" );
+            writer.valueString( eventName );
+            writer.key( "cat" );
+            writer.valueString( category );
+            writer.key( "ph" );
+            writer.valueString( "i" );
+            writer.key( "s" );
+            writer.valueString( "g" );
+            writer.key( "pid" );
+            writer.valueInt( pid );
+            writer.key( "tid" );
+            writer.valueUint( 0 );
+            writer.key( "ts" );
+            writer.valueFixedPoint( nanos, kTraceMicrosecondDigits );
+            writer.endObject();
         }
 
         /** @brief `0x` 와 대문자 16 진 숫자(적어도 @p minDigits 자리)입니다. */
@@ -66,13 +98,6 @@ namespace sw
                 ++count;
             }
             return "0x" + string( string_view{ arrDigit + ( kMaxDigits - count ), count } );
-        }
-
-        void appendQuoted( string& out, string_view text )
-        {
-            out += '"';
-            out += JSONDocument::escapeString( text );
-            out += '"';
         }
 
         /** @brief 지금 이 프로세스의 머리말(이름 · 호스트 · pid · 시계 쌍)입니다. */
@@ -409,42 +434,68 @@ namespace sw
                 }
             }
 
-            /** @brief 합친 파일의 머리(`otherData` 와 `traceEvents` 배열의 여는 부분)를 씁니다. */
-            static void appendMergedHeader( string& outJSON, const vector<unique_ptr<MergeSource>>& listSource )
+            /** @brief 합친 파일의 머리(`otherData`)를 쓰고 `traceEvents` 배열을 엽니다. */
+            static void writeMergedHeader( JSONWriter& writer, const vector<unique_ptr<MergeSource>>& listSource )
             {
-                outJSON = "{\"displayTimeUnit\":\"ms\",\"otherData\":{\"processName\":\"merged\",\"merged\":true,\"sources\":[";
-                for ( size_t index = 0; index < listSource.size(); ++index )
+                writer.beginObject();
+                writer.key( "displayTimeUnit" );
+                writer.valueString( "ms" );
+                writer.key( "otherData" );
+                writer.beginObject();
+                writer.key( "processName" );
+                writer.valueString( "merged" );
+                writer.key( "merged" );
+                writer.valueBool( true );
+                writer.key( "sources" );
+                writer.beginArray();
+                for ( const unique_ptr<MergeSource>& pSource : listSource )
                 {
-                    const MergeSource& source = *listSource[index];
-                    outJSON += index == 0 ? "{\"label\":" : ",{\"label\":";
-                    appendQuoted( outJSON, source._label );
-                    outJSON += ",\"hostName\":";
-                    appendQuoted( outJSON, source._hostName );
-                    outJSON += ",\"processID\":" + to_string( source._outputPID ) + ",\"shiftNanoseconds\":" + to_string( source._shiftNanos ) + ",\"alignment\":";
-                    appendQuoted( outJSON, source._alignment );
-                    outJSON += '}';
+                    writer.beginObject();
+                    writer.key( "label" );
+                    writer.valueString( pSource->_label );
+                    writer.key( "hostName" );
+                    writer.valueString( pSource->_hostName );
+                    writer.key( "processID" );
+                    writer.valueInt( pSource->_outputPID );
+                    writer.key( "shiftNanoseconds" );
+                    writer.valueInt( pSource->_shiftNanos );
+                    writer.key( "alignment" );
+                    writer.valueString( pSource->_alignment );
+                    writer.endObject();
                 }
-                outJSON += "]},\"traceEvents\":[";
+                writer.endArray();
+                writer.endObject();
+                writer.key( "traceEvents" );
+                writer.beginArray();
             }
 
             /** @brief 파일마다 프로세스 이름 줄을 쓰고 이벤트를 pid · 시각을 옮겨 씁니다. 쓴 이벤트 수를 반환합니다. */
-            static size_t appendMergedEvents( string& outJSON, const vector<unique_ptr<MergeSource>>& listSource )
+            static size_t writeMergedEvents( JSONWriter& writer, const vector<unique_ptr<MergeSource>>& listSource )
             {
                 size_t eventCount = 0;
-                bool   bFirst     = true;
                 for ( size_t sourceIndex = 0; sourceIndex < listSource.size(); ++sourceIndex )
                 {
                     const MergeSource& source = *listSource[sourceIndex];
-                    const string       pid    = to_string( source._outputPID );
                     string             label  = source._label;
                     if ( source._hostName.empty() == false )
                         label += " @ " + source._hostName;
                     label += " [" + source._alignment + "]";
-                    outJSON += bFirst ? "" : ",";
-                    bFirst = false;
-                    outJSON += "{\"name\":\"process_name\",\"ph\":\"M\",\"pid\":" + pid + ",\"tid\":0,\"args\":{\"name\":";
-                    appendQuoted( outJSON, label );
-                    outJSON += "}},{\"name\":\"process_sort_index\",\"ph\":\"M\",\"pid\":" + pid + ",\"tid\":0,\"args\":{\"sort_index\":" + to_string( sourceIndex ) + "}}";
+                    writeTraceNameEvent( writer, "process_name", source._outputPID, 0, label );
+                    writer.beginObject();
+                    writer.key( "name" );
+                    writer.valueString( "process_sort_index" );
+                    writer.key( "ph" );
+                    writer.valueString( "M" );
+                    writer.key( "pid" );
+                    writer.valueInt( source._outputPID );
+                    writer.key( "tid" );
+                    writer.valueUint( 0 );
+                    writer.key( "args" );
+                    writer.beginObject();
+                    writer.key( "sort_index" );
+                    writer.valueUint( sourceIndex );
+                    writer.endObject();
+                    writer.endObject();
 
                     for ( size_t eventIndex = 0; eventIndex < source._listEvent.size(); ++eventIndex )
                     {
@@ -453,23 +504,21 @@ namespace sw
                             continue;
                         if ( event.get( "ph" ).asString() == "M" && event.get( "name" ).asString() == "process_name" )
                             continue; // 위에서 맞춘 방법을 담은 이름으로 바꿨다
-                        outJSON += ",{";
-                        bool bFirstMember = true;
+                        writer.beginObject();
                         for ( const string& member : event.getMemberNames() )
                         {
-                            outJSON += bFirstMember ? "" : ",";
-                            bFirstMember = false;
-                            appendQuoted( outJSON, member );
-                            outJSON += ':';
-                            const JSONValue value = event.get( member, false );
+                            writer.key( member );
+                            const JSONValue              value      = event.get( member, false );
+                            const bool                   bTimestamp = member == "ts" && value.isNumber();
+                            const std::optional<float64> ts         = bTimestamp ? value.read<float64>() : std::nullopt;
                             if ( member == "pid" )
-                                outJSON += pid;
-                            else if ( const std::optional<float64> ts = member == "ts" && value.isNumber() ? value.read<float64>() : std::nullopt; ts.has_value() )
-                                appendMicroseconds( outJSON, shiftMicroseconds( *ts, source._shiftNanos ) );
+                                writer.valueInt( source._outputPID );
+                            else if ( ts.has_value() )
+                                writer.valueFixedPoint( shiftMicroseconds( *ts, source._shiftNanos ), kTraceMicrosecondDigits );
                             else
-                                outJSON += value.dump();
+                                writer.valueJSON( value );
                         }
-                        outJSON += '}';
+                        writer.endObject();
                         ++eventCount;
                     }
                 }
@@ -481,43 +530,69 @@ namespace sw
     string ProfilerTraceExport::makeTraceJSON( const vector<ProfilerTimelineThread>& listThread, const vector<uint64>& listFrameBegin,
                                                const vector<string>& listSlotName, const ProfilerTraceMeta& meta )
     {
-        string       json;
-        const string pid = to_string( meta._processID );
+        // 이벤트 하나가 한 줄 100 바이트 안팎이다 — 한 번에 잡아 큰 캡처에서 버퍼를 몇 번씩 옮기지 않는다.
+        constexpr size_t kBytesPerEvent = 128;
+        size_t           eventCount     = listThread.size() + listFrameBegin.size() + meta._listMarker.size() + meta._listFlow.size() * 2 + 2;
+        for ( const ProfilerTimelineThread& thread : listThread )
+        {
+            eventCount += thread._listEvent.size();
+        }
+        string json;
+        json.reserve( eventCount * kBytesPerEvent );
+        JSONWriter  writer{ json };
+        const int64 pid = meta._processID;
 
-        json += "{\"displayTimeUnit\":\"ms\",\"otherData\":{\"processName\":";
-        appendQuoted( json, meta._processName );
-        json += ",\"hostName\":";
-        appendQuoted( json, meta._hostName );
-        json += ",\"processID\":" + pid;
-        json += ",\"wallUnixMilliseconds\":" + to_string( meta._wallUnixMilliseconds );
-        json += ",\"monotonicNanoseconds\":" + to_string( meta._monotonicNanoseconds );
-        json += meta._bTruncated ? ",\"truncated\":true" : ",\"truncated\":false";
-        json += "},\"traceEvents\":[";
+        writer.beginObject();
+        writer.key( "displayTimeUnit" );
+        writer.valueString( "ms" );
+        writer.key( "otherData" );
+        writer.beginObject();
+        writer.key( "processName" );
+        writer.valueString( meta._processName );
+        writer.key( "hostName" );
+        writer.valueString( meta._hostName );
+        writer.key( "processID" );
+        writer.valueInt( pid );
+        writer.key( "wallUnixMilliseconds" );
+        writer.valueInt( meta._wallUnixMilliseconds );
+        writer.key( "monotonicNanoseconds" );
+        writer.valueUint( meta._monotonicNanoseconds );
+        writer.key( "truncated" );
+        writer.valueBool( meta._bTruncated );
+        writer.endObject();
+        writer.key( "traceEvents" );
+        writer.beginArray();
 
-        json += "{\"name\":\"process_name\",\"ph\":\"M\",\"pid\":" + pid + ",\"tid\":0,\"args\":{\"name\":";
-        appendQuoted( json, meta._processName );
-        json += "}}";
+        writeTraceNameEvent( writer, "process_name", pid, 0, meta._processName );
 
         for ( size_t threadIndex = 0; threadIndex < listThread.size(); ++threadIndex )
         {
             const ProfilerTimelineThread& thread = listThread[threadIndex];
-            const string                  tid    = to_string( threadIndex + 1 );
-            json += ",{\"name\":\"thread_name\",\"ph\":\"M\",\"pid\":" + pid + ",\"tid\":" + tid + ",\"args\":{\"name\":";
-            appendQuoted( json, thread._name );
-            json += "}}";
+            const uint64                  tid    = threadIndex + 1;
+            writeTraceNameEvent( writer, "thread_name", pid, tid, thread._name );
             for ( const ProfilerTimelineEvent& event : thread._listEvent )
             {
-                const uint64 duration = event._endNanos > event._beginNanos ? event._endNanos - event._beginNanos : 0;
-                json += ",{\"name\":";
-                if ( event._slot < listSlotName.size() && listSlotName[event._slot].empty() == false )
-                    appendQuoted( json, listSlotName[event._slot] );
+                const uint64 duration   = event._endNanos > event._beginNanos ? event._endNanos - event._beginNanos : 0;
+                const bool   bSlotNamed = event._slot < listSlotName.size() && listSlotName[event._slot].empty() == false;
+                writer.beginObject();
+                writer.key( "name" );
+                if ( bSlotNamed )
+                    writer.valueString( listSlotName[event._slot] );
                 else
-                    appendQuoted( json, "slot " + to_string( event._slot ) );
-                json += ",\"cat\":\"cpu\",\"ph\":\"X\",\"pid\":" + pid + ",\"tid\":" + tid + ",\"ts\":";
-                appendMicroseconds( json, event._beginNanos );
-                json += ",\"dur\":";
-                appendMicroseconds( json, duration );
-                json += '}';
+                    writer.valueString( "slot " + to_string( event._slot ) );
+                writer.key( "cat" );
+                writer.valueString( "cpu" );
+                writer.key( "ph" );
+                writer.valueString( "X" );
+                writer.key( "pid" );
+                writer.valueInt( pid );
+                writer.key( "tid" );
+                writer.valueUint( tid );
+                writer.key( "ts" );
+                writer.valueFixedPoint( event._beginNanos, kTraceMicrosecondDigits );
+                writer.key( "dur" );
+                writer.valueFixedPoint( duration, kTraceMicrosecondDigits );
+                writer.endObject();
             }
         }
 
@@ -532,50 +607,71 @@ namespace sw
                     lastNanos = event._endNanos > lastNanos ? event._endNanos : lastNanos;
                 }
             }
-            json += ",{\"name\":\"TRUNCATED (event budget reached)\",\"cat\":\"trace\",\"ph\":\"i\",\"s\":\"g\",\"pid\":" + pid + ",\"tid\":0,\"ts\":";
-            appendMicroseconds( json, lastNanos );
-            json += '}';
+            writeTraceInstantEvent( writer, "TRUNCATED (event budget reached)", "trace", pid, lastNanos );
         }
 
         for ( const ProfilerTraceMarker& marker : meta._listMarker )
         {
-            json += ",{\"name\":";
-            appendQuoted( json, marker._name );
-            json += ",\"cat\":\"marker\",\"ph\":\"i\",\"s\":\"g\",\"pid\":" + pid + ",\"tid\":0,\"ts\":";
-            appendMicroseconds( json, marker._nanos );
-            json += '}';
+            writeTraceInstantEvent( writer, marker._name, "marker", pid, marker._nanos );
         }
 
         for ( const uint64 frameBegin : listFrameBegin )
         {
-            json += ",{\"name\":\"Frame\",\"cat\":\"frame\",\"ph\":\"i\",\"s\":\"g\",\"pid\":" + pid + ",\"tid\":0,\"ts\":";
-            appendMicroseconds( json, frameBegin );
-            json += '}';
+            writeTraceInstantEvent( writer, "Frame", "frame", pid, frameBegin );
         }
 
         if ( meta._listFlow.empty() == false )
         {
             // 흐름은 스레드 줄 뒤의 한 줄("Net messages")에 모은다. 흐름 이벤트는 감싸는 구간에 묶여야 뷰어가 그리므로(`bp:e`) 사건마다 1 us 구간을 함께 둔다.
             // id 는 16 진 글이다 — 53 비트 안이지만 글로 두면 뷰어 · 합치기가 수로 바꾸지 않는다.
-            const string tid = to_string( listThread.size() + 1 );
-            json += ",{\"name\":\"thread_name\",\"ph\":\"M\",\"pid\":" + pid + ",\"tid\":" + tid + ",\"args\":{\"name\":\"Net messages\"}}";
+            const uint64 tid = listThread.size() + 1;
+            writeTraceNameEvent( writer, "thread_name", pid, tid, "Net messages" );
             for ( const NetFlowEvent& flow : meta._listFlow )
             {
-                const string kindText = makeHexText( flow._kind, 2 );
-                const string idText   = makeHexText( flow._id, 1 );
-                json += ",{\"name\":";
-                appendQuoted( json, string( flow._bReceive ? "recv " : "send " ) + kindText );
-                json += ",\"cat\":\"net\",\"ph\":\"X\",\"pid\":" + pid + ",\"tid\":" + tid + ",\"ts\":";
-                appendMicroseconds( json, flow._nanos );
-                json += ",\"dur\":1}";
-                json += ",{\"name\":\"net\",\"cat\":\"net\",\"ph\":\"";
-                json += flow._bReceive ? "f\",\"bp\":\"e\"" : "s\"";
-                json += ",\"id\":\"" + idText + "\",\"pid\":" + pid + ",\"tid\":" + tid + ",\"ts\":";
-                appendMicroseconds( json, flow._nanos );
-                json += '}';
+                writer.beginObject();
+                writer.key( "name" );
+                writer.valueString( string( flow._bReceive ? "recv " : "send " ) + makeHexText( flow._kind, 2 ) );
+                writer.key( "cat" );
+                writer.valueString( "net" );
+                writer.key( "ph" );
+                writer.valueString( "X" );
+                writer.key( "pid" );
+                writer.valueInt( pid );
+                writer.key( "tid" );
+                writer.valueUint( tid );
+                writer.key( "ts" );
+                writer.valueFixedPoint( flow._nanos, kTraceMicrosecondDigits );
+                writer.key( "dur" );
+                writer.valueUint( 1 );
+                writer.endObject();
+
+                writer.beginObject();
+                writer.key( "name" );
+                writer.valueString( "net" );
+                writer.key( "cat" );
+                writer.valueString( "net" );
+                writer.key( "ph" );
+                writer.valueString( flow._bReceive ? "f" : "s" );
+                if ( flow._bReceive )
+                {
+                    writer.key( "bp" );
+                    writer.valueString( "e" );
+                }
+                writer.key( "id" );
+                writer.valueString( makeHexText( flow._id, 1 ) );
+                writer.key( "pid" );
+                writer.valueInt( pid );
+                writer.key( "tid" );
+                writer.valueUint( tid );
+                writer.key( "ts" );
+                writer.valueFixedPoint( flow._nanos, kTraceMicrosecondDigits );
+                writer.endObject();
             }
         }
-        json += "]}\n";
+        writer.endArray();
+        writer.endObject();
+        SW_ASSERT( writer.isComplete() );
+        json += '\n';
         return json;
     }
 
@@ -899,9 +995,20 @@ namespace sw
         Internal::alignSources( listSource );
         Internal::assignOutputPIDs( listSource );
 
-        Internal::appendMergedHeader( outJSON, listSource );
-        const size_t eventCount = Internal::appendMergedEvents( outJSON, listSource );
-        outJSON += "]}\n";
+        // 합친 결과는 입력을 거의 그대로 옮긴 크기다 — 한 번에 잡는다.
+        size_t inputBytes = 0;
+        for ( const ProfilerTraceMergeInput& input : listInput )
+        {
+            inputBytes += input._json.size();
+        }
+        outJSON.reserve( inputBytes + inputBytes / 8 );
+        JSONWriter writer{ outJSON };
+        Internal::writeMergedHeader( writer, listSource );
+        const size_t eventCount = Internal::writeMergedEvents( writer, listSource );
+        writer.endArray();
+        writer.endObject();
+        SW_ASSERT( writer.isComplete() );
+        outJSON += '\n';
         if ( eventCount == 0 )
         {
             outReport = "the traces have no events";
