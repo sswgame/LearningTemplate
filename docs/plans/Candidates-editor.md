@@ -21,14 +21,6 @@
 - 녹화메뉴: 에디터 메뉴의 시나리오 녹화(`automation.toggleScenarioRecord`)는 자동화가 주입한 입력을 기록하지 않아(`0 steps`) 실제 입력으로만 확인된다(게임 실행의 `-scenario-record` 는 가상 입력도 적고 왕복 테스트가 있다). 풀리는 조건: 사람이 직접 입력.
 - 빈상태창: 어빌리티 디버거 · 오디오 이벤트 · 리그 디버그 · 시퀀서 `RigSlot` 트랙 · UI 디자이너 앵커 프리셋은 빈 상태(안내 글)까지만 봤다. 쓰는 데이터(리그 · 오디오 이벤트 라이브러리)가 저장소에 없다. 풀리는 조건: 그 데이터가 들어올 때.
 
-### ContentBrowserAsyncWaits
-제목: 콘텐츠 브라우저의 백그라운드 작업을 고정 프레임으로 기다리는 남은 곳
-옛번호: 없음
-왜 필요한가: 참조 역색인은 "마지막 변경을 따라왔다"(`ContentBrowserReferenceSearch::isCurrent`)를 준비로 보고 보이는 패널에서 시계를 잡게 고쳤다(`assetmanage` 간헐 실패, 폴더 목록의 고정 프레임 대기는 `contentthumbnails` 를 `WaitUntil` 로 바꿔 없앴다). 같은 모양이 남았다.
-- 폴더 목록: `contentthumbnails` 는 `content.open` 뒤 65 프레임에 `Editor.ThumbnailCacheCount` 를 단언한다. 목록은 워커 잡(`EditorFolderListingJob`)이라 워커가 밀리면(같은 때 도는 역색인 스캔) 고정 프레임이 모자랄 수 있다. 아직 진 적은 없다.
-- 감시 지연 · 스캔 비용은 [ContentBrowserWatchAndScan](ContentBrowserWatchAndScan.md) 로 옮겼다.
-착수 조건: 폴더 목록 단언이 한 번이라도 지거나 에디터 체인 시간이 시한에 닿을 때.
-
 ### PopupWindowCapture
 제목: 팝업 창을 캡처 시나리오가 찍도록 캡처 영역을 플랫폼 창 합집합으로 넓히기
 옛번호: 없음
