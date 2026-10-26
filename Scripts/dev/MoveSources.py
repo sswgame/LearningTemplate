@@ -46,7 +46,7 @@ _kTextFileNames = ("CMakeLists.txt",)
 _kCppSuffixes = frozenset({".h", ".cpp", ".inl"})
 _kSourcePrefix = "Source/"
 _kIncludeRe = re.compile(r'(#[ \t]*include[ \t]*)([<"])([^>"\r\n]+)([>"])')
-_kGlobRe = re.compile(r"\bfile\s*\(\s*(GLOB_RECURSE|GLOB)\s+[^\s)]+([^)]*)\)", re.IGNORECASE)
+_kGlobRe = re.compile(r"\bfile\s*\(\s*(GLOB_RECURSE|GLOB|\$\{\w+\})\s+[^\s)]+([^)]*)\)", re.IGNORECASE)
 _kGlobKeywords = frozenset({"CONFIGURE_DEPENDS", "LIST_DIRECTORIES", "FOLLOW_SYMLINKS", "TRUE", "FALSE", "RELATIVE"})
 _kBoundary = r"(?![\w-]|\.\w)"
 
@@ -66,17 +66,19 @@ class MoveContext:
     root: Path
     mapMove: dict[str, str]
     setFile: frozenset[str]
+    mapReviewed: dict[str, str]   # 사람이 읽고 이 이동과 무관하다고 확인한 파일(저장소 기준 경로) → 이유
 
 
 # --- 표 · 상태 ------------------------------------------------------------------
 
 
-def loadMoveMapInternal(mapPath: Path) -> dict[str, str]:
-    """TOML 의 `[move]` 를 `Source/` 를 붙인 저장소 기준 경로 표로 읽는다."""
+def loadMoveMapInternal(mapPath: Path) -> tuple[dict[str, str], dict[str, str]]:
+    """TOML 의 `[move]` 를 `Source/` 를 붙인 저장소 기준 경로 표로, `[reviewed]`(파일 = 이유)를 그대로 읽는다."""
     try:
-        table = readTomlText(mapPath.read_text(encoding="utf-8"), str(mapPath)).get("move")
+        data = readTomlText(mapPath.read_text(encoding="utf-8"), str(mapPath))
     except (OSError, RuleDataError) as error:
         raise MoveError(f"표를 읽지 못했습니다: {mapPath} ({error})", ExitCode.CheckInvalid) from error
+    table = data.get("move")
     if not isinstance(table, dict) or not table:
         raise MoveError(f"표에 비지 않은 [move] 가 없습니다: {mapPath}", ExitCode.CheckInvalid)
     mapMove: dict[str, str] = {}
@@ -84,7 +86,10 @@ def loadMoveMapInternal(mapPath: Path) -> dict[str, str]:
         if not isinstance(new, str) or not old.strip("/") or not new.strip("/"):
             raise MoveError(f"[move] 항목이 문자열 경로 쌍이 아닙니다: {old!r} = {new!r}", ExitCode.CheckInvalid)
         mapMove[_kSourcePrefix + old.strip("/")] = _kSourcePrefix + new.strip("/")
-    return mapMove
+    mapReviewed = data.get("reviewed", {})
+    if not isinstance(mapReviewed, dict) or any(not isinstance(why, str) or not why.strip() for why in mapReviewed.values()):
+        raise MoveError("[reviewed] 는 `\"파일 경로\" = \"이유\"` 이고 이유가 비면 안 됩니다", ExitCode.CheckInvalid)
+    return mapMove, mapReviewed
 
 
 def listRepositoryFilesInternal(root: Path) -> frozenset[str]:
@@ -222,6 +227,37 @@ def findLeftoversInternal(mapText: dict[str, str], mapMove: dict[str, str]) -> l
     return listLeft
 
 
+def buildRelativeNeedlesInternal(rel: str, mapMove: dict[str, str]) -> list[str]:
+    """이 파일이 옛 폴더를 **상대 경로**로 적을 수 있는 모양들. CMake 는 자기 폴더 기준(`add_subdirectory(Old)` · `Old/*.cpp`), 그 밖의 설정 · 스크립트는 `Source` 이후 경로의 뒤 두 토막 이상."""
+    listNeedle: list[str] = []
+    cmakeDir = posixpath.dirname(rel)
+    bCmake = posixpath.basename(rel) == "CMakeLists.txt" or rel.endswith(".cmake")
+    for old in mapMove:
+        if bCmake and cmakeDir and isUnderInternal(old, cmakeDir) and old != cmakeDir:
+            listNeedle.append(old[len(cmakeDir) + 1:])
+        listSegment = old[len(_kSourcePrefix):].split("/")
+        # 린트 규칙 표(`Scripts/lint/rules/*.toml`)는 층 · 폴더를 `Source/<최상위>/` 이후 이름(한 토막도)으로 적는다(`Audio = 7`).
+        bRuleTable = rel.startswith("Scripts/lint/rules/") and rel.endswith(".toml")
+        listNeedle.extend("/".join(listSegment[start:]) for start in range(1, len(listSegment) if bRuleTable else len(listSegment) - 1))
+    return listNeedle
+
+
+def findRelativeReferencesInternal(context: MoveContext, mapText: dict[str, str]) -> list[str]:
+    """(4-2) 쓰고 난 글에 옛 폴더가 상대 경로(맨 앞 `Source/` · 따옴표 없이)로 남은 곳 — 도구가 새 경로를 알 수 없으니 손으로 고칠 곳이다. include 줄은 빼고 CMake · 설정 · 스크립트만 본다."""
+    listFound: list[str] = []
+    for rel, text in sorted(mapText.items()):
+        if rel in context.mapReviewed or posixpath.splitext(rel)[1] not in (".cmake", ".toml", ".json", ".py", ".in", ".txt"):
+            continue
+        listNeedle = buildRelativeNeedlesInternal(rel, context.mapMove)
+        if not listNeedle:
+            continue
+        body = re.sub(r"(?m)#.*$", "", _kIncludeRe.sub("", text)) if posixpath.splitext(rel)[1] in (".cmake", ".txt", ".toml", ".py") else _kIncludeRe.sub("", text)
+        for needle in dict.fromkeys(listNeedle):
+            if re.search(rf"(?:(?<![\w./-])|(?<=\}}/)){re.escape(needle)}{_kBoundary}", body):
+                listFound.append(f"{rel}: {needle}")
+    return listFound
+
+
 def parseGlobsInternal(cmakeRel: str, text: str) -> list[tuple[bool, str]]:
     """CMake 글 속 `file(GLOB[_RECURSE] …)` 의 (재귀 여부, 저장소 기준 패턴). 변수를 못 푸는 패턴은 `?` 로 시작해 돌려준다."""
     listGlob: list[tuple[bool, str]] = []
@@ -229,11 +265,12 @@ def parseGlobsInternal(cmakeRel: str, text: str) -> list[tuple[bool, str]]:
     textNoComment = re.sub(r"(?m)^[ \t]*#.*$", "", text)
     for match in _kGlobRe.finditer(textNoComment):
         bRecurse = match.group(1).upper() == "GLOB_RECURSE"
+        bModeVariable = match.group(1).startswith("$")   # file(${globMode} …) — 재귀 여부를 모르니 패턴 전부를 풀지 못한 것으로 본다
         for token in match.group(2).split():
             pattern = token.strip('"')
             if pattern.upper() in _kGlobKeywords or pattern in ("${CMAKE_CURRENT_SOURCE_DIR}", "${CMAKE_CURRENT_LIST_DIR}"):   # 폴더 자체(LIST_DIRECTORIES 의 대상) — 파일 패턴이 아니다
                 continue
-            listGlob.append((bRecurse, resolveGlobPatternInternal(pattern, cmakeDir)))
+            listGlob.append((bRecurse, "?" + pattern if bModeVariable else resolveGlobPatternInternal(pattern, cmakeDir)))
     return listGlob
 
 
@@ -267,8 +304,19 @@ def countGlobMatchesInternal(bRecurse: bool, pattern: str, setFile: frozenset[st
     return sum(1 for name in mapDir.get(directory, ()) if compiled.match(name))
 
 
+def isGlobRelevantInternal(cmakeRel: str, pattern: str, mapMove: dict[str, str]) -> bool:
+    """변수를 못 푼 글롭이 옮기는 폴더에 닿을 수 있는가 — 보수적으로: CMake 가 옮기는 폴더의 조상 · 안쪽에 있거나 패턴이 옮기는 폴더 이름을 적는다."""
+    cmakeDir = posixpath.dirname(cmakeRel)
+    for old in mapMove:
+        if cmakeDir and (isUnderInternal(cmakeDir, old) or isUnderInternal(old, cmakeDir)):
+            return True
+        if posixpath.basename(old) in pattern:
+            return True
+    return False
+
+
 def checkGlobCountsInternal(context: MoveContext, mapOriginal: dict[str, str], mapChanged: dict[str, str]) -> tuple[list[str], list[str]]:
-    """(7) 같은 CMake 글롭이 맞히는 파일 수를 옮기기 전 · 후로 센다. (줄어든 글롭 목록, 평가 못 한 패턴 목록)"""
+    """(7) 같은 CMake 글롭이 맞히는 파일 수를 옮기기 전 · 후로 센다. (줄어든 글롭 목록, 변수를 못 풀어 세지 못했고 옮기는 폴더에 닿을 수 있는 글롭 목록)"""
     setAfter = frozenset(mapPathInternal(name, context.mapMove) for name in context.setFile)
     mapDirBefore, mapDirAfter = indexByDirInternal(context.setFile), indexByDirInternal(setAfter)
     listShrunk: list[str] = []
@@ -280,7 +328,7 @@ def checkGlobCountsInternal(context: MoveContext, mapOriginal: dict[str, str], m
         listAfter = parseGlobsInternal(mapPathInternal(rel, context.mapMove), mapChanged.get(rel, text))
         for (bRecurse, before), (_, after) in zip(listBefore, listAfter):
             if before.startswith("?"):
-                if rel.startswith(_kSourcePrefix) or mapPathInternal(rel, context.mapMove) != rel:   # 옮기는 소스 쪽 CMake 의 것만 알린다
+                if rel not in context.mapReviewed and isGlobRelevantInternal(rel, before[1:], context.mapMove):
                     listSkipped.append(f"{rel}: {before[1:]}")
                 continue
             countBefore = countGlobMatchesInternal(bRecurse, before, context.setFile, mapDirBefore)
@@ -340,28 +388,32 @@ def fixIncludeOrderInternal(context: MoveContext, listChangedNew: list[str]) -> 
 # --- 진입 ----------------------------------------------------------------------
 
 
-def planMovesInternal(root: Path, mapMove: dict[str, str]) -> tuple[MoveContext, dict[str, str], dict[str, str], list[str]]:
+def planMovesInternal(root: Path, mapMove: dict[str, str], mapReviewed: dict[str, str]) -> tuple[MoveContext, dict[str, str], dict[str, str]]:
     """쓰기 전 단계 (1) (2) (3) (4) — 하나라도 어긋나면 MoveError. (맥락, 원본 글, 바뀐 글, 평가 못 한 글롭)"""
-    context = MoveContext(root, mapMove, listRepositoryFilesInternal(root))
+    context = MoveContext(root, mapMove, listRepositoryFilesInternal(root), mapReviewed)
     validateMovesInternal(context)
     mapOriginal, mapChanged = rewriteAllInternal(context, collectTextFilesInternal(root, context.setFile))
-    listShrunk, listSkipped = checkGlobCountsInternal(context, mapOriginal, mapChanged)
+    listShrunk, listUnsafe = checkGlobCountsInternal(context, mapOriginal, mapChanged)
     if listShrunk:
         raise MoveError("CMake 글롭이 맞히는 파일이 줄었습니다(일부만 옮기면 조용히 빠진다 — 표에 나머지를 더하거나 글롭을 고치십시오):\n  " + "\n  ".join(listShrunk))
-    listLeft = findLeftoversInternal({rel: mapChanged.get(rel, text) for rel, text in mapOriginal.items()}, mapMove)
+    if listUnsafe:
+        raise MoveError("변수를 풀지 못해 파일 수를 못 세는 글롭이 옮기는 폴더에 닿을 수 있습니다 — 읽고 고친 뒤 표의 [reviewed] 에 파일과 이유를 적으십시오:\n  " + "\n  ".join(dict.fromkeys(listUnsafe)))
+    mapNew = {rel: mapChanged.get(rel, text) for rel, text in mapOriginal.items()}
+    listLeft = findLeftoversInternal(mapNew, mapMove)
     if listLeft:
         raise MoveError("고친 뒤에도 옛 경로가 남습니다:\n  " + "\n  ".join(listLeft))
-    return context, mapOriginal, mapChanged, listSkipped
+    listRelative = findRelativeReferencesInternal(context, mapNew)
+    if listRelative:
+        raise MoveError("옛 폴더를 상대 경로로 적은 곳이 남습니다 — 손으로 고친 뒤 표의 [reviewed] 에 파일과 이유를 적으십시오:\n  " + "\n  ".join(listRelative))
+    return context, mapOriginal, mapChanged
 
 
-def printReportInternal(context: MoveContext, listTouched: list[str], listSkipped: list[str], bDryRun: bool) -> None:
+def printReportInternal(context: MoveContext, listTouched: list[str], bDryRun: bool) -> None:
     print(f"[MoveSources] {'(dry-run) ' if bDryRun else ''}이동 {len(context.mapMove)}건, 손댄 파일 {len(listTouched)}개")
     for old, new in sorted(context.mapMove.items()):
         print(f"  move {old} -> {new}")
     for rel in listTouched:
         print(f"  touched {rel}")
-    for item in listSkipped:
-        print(f"  [경고] 변수를 풀지 못해 세지 못한 글롭: {item}")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -372,7 +424,8 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     root = (args.root or getProjectRoot()).resolve()
     try:
-        context, mapOriginal, mapChanged, listSkipped = planMovesInternal(root, loadMoveMapInternal(args.map))
+        mapMove, mapReviewed = loadMoveMapInternal(args.map)
+        context, mapOriginal, mapChanged = planMovesInternal(root, mapMove, mapReviewed)
         listTouched = sorted({mapPathInternal(rel, context.mapMove) for rel in mapChanged})
         if not args.dry_run:
             writeAndMoveInternal(context, mapChanged)
@@ -384,7 +437,7 @@ def main(argv: list[str] | None = None) -> int:
     except MoveError as error:
         print(f"[MoveSources] {error}", file=sys.stderr)
         return int(error.exitCode)
-    printReportInternal(context, listTouched, listSkipped, args.dry_run)
+    printReportInternal(context, listTouched, args.dry_run)
     return ExitCode.Passed
 
 

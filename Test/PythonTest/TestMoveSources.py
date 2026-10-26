@@ -41,7 +41,7 @@ class MoveSourcesTest(unittest.TestCase):
         self.gitInternal("add", "-A")
         mapPath = self.root.parent / (self.root.name + ".moves.toml")
         mapPath.write_text("[move]\n" + mapText, encoding="utf-8")
-        self.addCleanup(mapPath.unlink)
+        self.addCleanup(lambda: mapPath.unlink(missing_ok=True))
         out, err = io.StringIO(), io.StringIO()
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
             code = MoveSources.main(["--map", str(mapPath), "--root", str(self.root), *extraArgs])
@@ -125,6 +125,31 @@ class MoveSourcesTest(unittest.TestCase):
         self.writeInternal("Source/Editor/Mod/A.cpp", "int a;\n")
         code, _, err = self.moveInternal('"Editor/Mod" = "Editor/Meshes/Mod"\n')
         self.assertEqual(code, 0, err)
+
+    def testUnresolvedVariableGlobNearMovedFolderStopsUntilReviewed(self) -> None:
+        self.writeInternal("Source/Editor/CMakeLists.txt", 'set(layerPrefix "Common/")\nfile(GLOB layerSource "${layerPrefix}*.cpp")\n')
+        self.writeInternal("Source/Editor/Common/GUI/G.cpp", "int g;\n")
+        code, _, err = self.moveInternal('"Editor/Common/GUI" = "Editor/GUI"\n', "--dry-run")
+        self.assertEqual(code, ExitCode.Violation)
+        self.assertIn("변수를 풀지 못해", err)
+        code, _, err = self.moveInternal('"Editor/Common/GUI" = "Editor/GUI"\n[reviewed]\n"Source/Editor/CMakeLists.txt" = "층 이름 표로 훑는다"\n', "--dry-run")
+        self.assertEqual(code, 0, err)
+
+    def testRelativeFolderNameInCmakeAndTomlStops(self) -> None:
+        self.writeInternal("Source/Editor/Common/Workspace/W.cpp", "int w;\n")
+        self.writeInternal("Source/Editor/CMakeLists.txt", "set(listLayer Common/Asset Common/Workspace)\n")
+        self.writeInternal("Config/Layers.toml", '"Common/Workspace" = 2\n')
+        code, _, err = self.moveInternal('"Editor/Common/Workspace" = "Editor/Workspace"\n', "--dry-run")
+        self.assertEqual(code, ExitCode.Violation)
+        self.assertIn("Source/Editor/CMakeLists.txt: Common/Workspace", err)
+        self.assertIn("Config/Layers.toml: Common/Workspace", err)
+
+    def testAddSubdirectoryOfMovedFolderStops(self) -> None:
+        self.writeInternal("Source/Plug/CMakeLists.txt", "add_subdirectory(Mesh)\n")
+        self.writeInternal("Source/Plug/Mesh/M.cpp", "int m;\n")
+        code, _, err = self.moveInternal('"Plug/Mesh" = "Plug/Other/Mesh"\n', "--dry-run")
+        self.assertEqual(code, ExitCode.Violation)
+        self.assertIn("Source/Plug/CMakeLists.txt: Mesh", err)
 
     def testDryRunWritesNothingButListsTouchedFiles(self) -> None:
         self.writeInternal("Source/A/X.h", "#pragma once\n")
