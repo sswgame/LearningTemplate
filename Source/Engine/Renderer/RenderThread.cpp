@@ -129,6 +129,9 @@ namespace sw
         , _requestedScreenshotTexture{ 0 }
         , _requestedScreenshotFormat{ RHIFormat::R8G8B8A8_UNORM }
         , _requestedScreenshotWaitFrames{ 0 }
+#if SW_DEV_COMMANDS_ENABLED
+        , _pendingDeviceLossWaitMilliseconds{ 0 }
+#endif
         , _arrRingBuffer{}
         , _head{ 0 }
         , _tail{ 0 }
@@ -432,6 +435,10 @@ namespace sw
             // **여기가 GPU 백프레셔다.** 백엔드의 `beginFrame` 은 이번 프레임이 쓸 커맨드
             // 얼로케이터와 프레임 리소스가 풀릴 때까지 펜스를 기다린다.
             SW_PROFILE_SCOPE( "RT.BeginFrame" );
+#if SW_DEV_COMMANDS_ENABLED
+            // 개발 명령 `rhi.removeDevice <ms>` 가 건 드라이버 대기 + 장치 제거를 펜스 대기 자리에서 소비한다(실제 TDR 이 막히는 곳).
+            consumeDeviceLossRequest();
+#endif
             _pDevice->beginFrame();
         }
 
@@ -650,6 +657,26 @@ namespace sw
         }
         pMailbox->put( filePath, sourceTexture, sourceFormat );
     }
+
+#if SW_DEV_COMMANDS_ENABLED
+    void RenderThread::requestDeviceLossAfterDriverWait( uint32 waitMilliseconds )
+    {
+        SW_ASSERT( 1u <= waitMilliseconds && waitMilliseconds <= kMaxDeviceLossDriverWaitMilliseconds );
+        _pendingDeviceLossWaitMilliseconds.store( waitMilliseconds, std::memory_order_relaxed );
+    }
+
+    void RenderThread::consumeDeviceLossRequest()
+    {
+        const uint32 waitMilliseconds = _pendingDeviceLossWaitMilliseconds.exchange( 0u, std::memory_order_relaxed );
+        if ( waitMilliseconds == 0u )
+            return;
+        SW_LOG_WARNING( "Holding the render thread %# ms before removing the device (rhi.removeDevice <ms>) - the driver wait a real TDR spends before the first device-lost result",
+                        waitMilliseconds );
+        MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + static_cast<int64>( waitMilliseconds ) * constant::kNanosecondsPerMillisecond );
+        if ( _pDevice->debugRemoveDevice() == false )
+            SW_LOG_ERROR( "rhi.removeDevice <ms>: this backend cannot remove its device; only the wait ran" );
+    }
+#endif
 
     uint32 RenderThread::getCompletedScreenshotSerial()
     {

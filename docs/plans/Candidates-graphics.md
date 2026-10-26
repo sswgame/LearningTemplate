@@ -26,8 +26,9 @@
 제목: 실제 TDR 뒤 행을 재현하지 못함
 옛번호: E-13, A-2
 왜 필요한가: `rhi.removeDevice` 로 DX12(장치 제거) · Vulkan(손실 상태로 둠) 모두 프레임을 계속 돌고 종료 코드 0 으로 끝난다. 남은 것은 드라이버 안의 대기(첫 `VK_ERROR_DEVICE_LOST` 를 돌려주기 전)뿐이다.
-착수 조건 / 남은 것: 다시 보이면 `py -3 -m Scripts stacks <pid>` 로 매달린 스레드의 스택을 남긴다.
-왜 지금 못 하는가: 진짜 TDR 은 GPU 를 2 초 넘게 붙잡는 컴퓨트로 일으킬 수 있으나 화면이 깨지고 쿠킹한 셰이더가 하나 더 필요해 실기에서 사용자가 승인한 때만 시험한다. 풀리는 조건: 실기 TDR 재현 또는 그 승인.
+끝난 것(wt/gfxc, 빌드 · 실행 안 함): `rhi.removeDevice <ms>` 가 드라이버 대기를 흉내 낸다 — 렌더 스레드가 다음 프레임의 `beginFrame`(펜스 대기 자리) 바로 앞에서 그만큼 잠든 뒤 장치를 제거한다(`RenderThread::requestDeviceLossAfterDriverWait`, Shipping 에는 없음). 시나리오 둘을 `engine/automation/rhiswap/` 에 더했다 — `removedevicewait`(2.5 초 대기 뒤 손실, 프레임이 다시 돌고 종료 코드 0), `removedevicehang`(40 초 대기, 상한 20 초 + 유예 5 초 뒤 행 감시가 보고를 쓰고 종료 코드 12 — 이것이 통과다).
+남은 것(통합): 두 시나리오를 `-dx12` · `-vk` 로 돌린다. hang 은 보고 JSON 의 `hang: true` 와 `lastStep` 을 보고, 멈춘 동안 `py -3 -m Scripts stacks <pid>` 로 렌더 스레드가 `RenderThread::consumeDeviceLossRequest` 에 있는지 스택을 남긴다. 실제 TDR 이 다시 보이면 같은 명령으로 매달린 스레드의 스택을 남긴다.
+왜 지금 못 하는가(실제 TDR 만): 진짜 TDR 은 GPU 를 2 초 넘게 붙잡는 컴퓨트로 일으킬 수 있으나 화면이 깨지고 쿠킹한 셰이더가 하나 더 필요해 실기에서 사용자가 승인한 때만 시험한다. 풀리는 조건: 실기 TDR 재현 또는 그 승인.
 
 ### ShaderPrefixAndFormat
 제목: 셰이더 이름의 sw 접두를 없애고 clang-format 을 셰이더에도 건다
