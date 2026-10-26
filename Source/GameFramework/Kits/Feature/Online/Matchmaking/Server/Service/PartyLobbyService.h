@@ -13,6 +13,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Container/EventBuffer.h"
+#include "Core/Container/IDAllocator.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
@@ -222,7 +223,7 @@ namespace sw
         EventBuffer<uint64>                 _brokenTicketBuffer;
         EphemeralStoreRouter*               _pRouter;
         uint64                              _serverID;
-        uint64                              _nextListID;
+        IDAllocator<uint64>                 _lobbyListIDAllocator;
         int32                               _maxPartySize;
         uint32                              _sequence;
     };

@@ -205,7 +205,7 @@ namespace sw
         , _accountBucketMap{}
         , _stats{}
         , _pStore{ nullptr }
-        , _nextDeliveryID{ 1 }
+        , _deliveryIDAllocator{}
         , _pendingWorkCount{ 0 }
     {
     }
@@ -269,7 +269,7 @@ namespace sw
         {
             if ( pProvider->supportsTopics() == false )
                 continue;
-            const uint64 deliveryID      = _nextDeliveryID++;
+            const uint64 deliveryID      = _deliveryIDAllocator.allocate();
             Delivery&    delivery        = _mapDelivery[deliveryID];
             delivery._message            = message;
             delivery._topic              = string( topic );
@@ -312,7 +312,7 @@ namespace sw
         {
             if ( findProvider( device._providerID ) == nullptr )
                 continue; // 이 서버 빌드에 없는 제공자이다
-            const uint64 deliveryID = _nextDeliveryID++;
+            const uint64 deliveryID = _deliveryIDAllocator.allocate();
             Delivery&    delivery   = _mapDelivery[deliveryID];
             delivery._message       = message;
             delivery._device        = std::move( device );

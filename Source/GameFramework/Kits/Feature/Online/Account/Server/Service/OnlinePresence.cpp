@@ -44,7 +44,7 @@ namespace sw
         , _settings{}
         , _pHost{ nullptr }
         , _serverID{ 0 }
-        , _nextLookupID{ 1 }
+        , _lookupIDAllocator{}
         , _nextRefreshMs{ 0 }
     {
     }
@@ -173,7 +173,7 @@ namespace sw
 
     uint64 OnlinePresence::submitFindByDisplayName( string_view displayName, const AccountPresenceDelegate& onFound )
     {
-        const uint64 lookupID = _nextLookupID++;
+        const uint64 lookupID = _lookupIDAllocator.allocate();
         if ( _pHost == nullptr )
         {
             _listDeferred.push_back( DeferredFound{
@@ -193,7 +193,7 @@ namespace sw
 
     uint64 OnlinePresence::submitFindByAccount( AccountID accountID, const AccountPresenceDelegate& onFound )
     {
-        const uint64 lookupID = _nextLookupID++;
+        const uint64 lookupID = _lookupIDAllocator.allocate();
         if ( _pHost == nullptr || accountID == kInvalidAccountID )
         {
             _listDeferred.push_back( DeferredFound{

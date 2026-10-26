@@ -47,7 +47,7 @@ namespace sw
         , _pProvider{ nullptr }
         , _pBrowser{ nullptr }
         , _nowMs{ 0 }
-        , _nextRequestID{ 1 }
+        , _requestIDAllocator{}
     {
     }
 
@@ -85,7 +85,7 @@ namespace sw
     uint64 LoopbackPkceLoginClient::beginLogin( string_view provider, int64 nowMs )
     {
         using Internal         = LoopbackPkceLoginClientInternal;
-        const uint64 requestID = _nextRequestID++;
+        const uint64 requestID = _requestIDAllocator.allocate();
         PendingLogin pending;
         pending._requestID                       = requestID;
         pending._provider                        = string( provider );

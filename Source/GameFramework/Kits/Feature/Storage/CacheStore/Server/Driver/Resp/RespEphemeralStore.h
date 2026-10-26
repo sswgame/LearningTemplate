@@ -13,6 +13,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/IDAllocator.h"
 #include "Core/Container/deque.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
@@ -163,7 +164,7 @@ namespace sw
         int64                        _nextSubscribeConnectNanoseconds;
         int64                        _commandBackoffMs;
         int64                        _subscribeBackoffMs;
-        uint64                       _nextRequestID;
+        IDAllocator<uint64>          _requestIDAllocator;
         uint64                       _subscriptionAckCount; ///< 구독 연결이 받은 subscribe 와 unsubscribe 확인 수
         uint64                       _subscriptionSentCount;
         uint64                       _blockingRequestID; ///< 비교 후 쓰기가 GET 답을 기다리는 요청이다. 0이면 없다

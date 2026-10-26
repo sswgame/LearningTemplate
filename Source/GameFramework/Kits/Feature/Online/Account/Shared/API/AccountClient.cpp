@@ -46,7 +46,7 @@ namespace sw
         , _identity{}
         , _token{}
         , _pClient{ nullptr }
-        , _nextRequestID{ 1 }
+        , _requestIDAllocator{}
         , _bLoggedIn{ SW_FALSE }
         , _bResuming{ SW_FALSE }
     {
@@ -86,7 +86,7 @@ namespace sw
         if ( _token.isEmpty() )
         {
             AccountClientReply& reply = _listReply.emplace_back();
-            reply._requestID          = _nextRequestID++;
+            reply._requestID          = _requestIDAllocator.allocate();
             reply._operation          = AccountClientOperation::Resume;
             reply._result             = LoginResult::InvalidToken;
             return reply._requestID;
@@ -210,14 +210,14 @@ namespace sw
         if ( AccountProtocol::MessageTypes::write( body, request ) )
             return send( operation, method, body, bNeedsSession, bAutomatic );
         // 범위 밖 값이라 보내지 않는다. 재접속 응답 뒤로 미루는 요청이 있어 몸을 먼저 쓰므로 sendMessage 대신 reject 로 같은 응답 처리기를 지난다
-        const PendingCall pendingCall{ _nextRequestID++, operation, static_cast<uint8>( bAutomatic ? SW_TRUE : SW_FALSE ) };
+        const PendingCall pendingCall{ _requestIDAllocator.allocate(), operation, static_cast<uint8>( bAutomatic ? SW_TRUE : SW_FALSE ) };
         (void)_callTable.reject( *_pClient, OnlineError::kInvalidRequest, OnlineResponseDelegate::create<&AccountClient::onResponse>( this ), pendingCall );
         return pendingCall._requestID;
     }
 
     uint64 AccountClient::send( AccountClientOperation operation, uint16 method, const BitWriter& body, bool bNeedsSession, bool bAutomatic )
     {
-        const uint64        requestID = _nextRequestID++;
+        const uint64        requestID = _requestIDAllocator.allocate();
         const vector<uint8> bodyBytes( body.getBytes().begin(), body.getBytes().begin() + body.getByteCount() );
         if ( bNeedsSession && _bResuming == SW_TRUE )
         {

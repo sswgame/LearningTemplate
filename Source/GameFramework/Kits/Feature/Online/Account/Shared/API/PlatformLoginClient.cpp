@@ -8,7 +8,7 @@ namespace sw
         : _listPreset{}
         , _listPending{}
         , _listDone{}
-        , _nextRequestID{ 1 }
+        , _requestIDAllocator{}
     {
     }
 
@@ -29,7 +29,7 @@ namespace sw
     {
         (void)nowMs;
         PlatformLoginClientResult& result = _listPending.emplace_back();
-        result._requestID                 = _nextRequestID++;
+        result._requestID                 = _requestIDAllocator.allocate();
         result._provider                  = string( provider );
         return result._requestID;
     }

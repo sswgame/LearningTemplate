@@ -17,6 +17,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Container/EventBuffer.h"
+#include "Core/Container/IDAllocator.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
@@ -267,8 +268,8 @@ namespace sw
         EventBuffer<LeaderboardCompletion>                 _completionBuffer;
         LeaderboardServiceDependencies                     _dependencies;
         ServiceScheduler*                                  _pScheduler;
-        uint64                                             _nextQueryID;
-        uint64                                             _nextSettlementID;
+        IDAllocator<uint64>                                _queryIDAllocator;
+        IDAllocator<uint64>                                _settlementIDAllocator;
         int32                                              _pendingCount;
     };
 } // namespace sw

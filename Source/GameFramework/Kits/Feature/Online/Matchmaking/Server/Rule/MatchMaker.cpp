@@ -70,7 +70,7 @@ namespace sw
         : _listTicket{}
         , _listBackfill{}
         , _definition{}
-        , _nextMatchID{ 1 }
+        , _matchIDAllocator{}
     {
     }
 
@@ -83,8 +83,8 @@ namespace sw
             SW_LOG_ERROR( "MatchMaker: refused mode '%#' - %#", definition._modeID, rangeError.c_str() );
             return false;
         }
-        _definition  = definition;
-        _nextMatchID = ( matchIDSeed << 32 ) | 1u;
+        _definition = definition;
+        _matchIDAllocator.restore( ( matchIDSeed << 32 ) | 1u );
         _listTicket.clear();
         _listBackfill.clear();
         return true;
@@ -213,7 +213,7 @@ namespace sw
             MatchFormed match;
             if ( tryFormMatch( anchorIndex, nowMs, listUsed, match ) == false )
                 continue;
-            match._matchID = _nextMatchID++;
+            match._matchID = _matchIDAllocator.allocate();
             outListMatch.push_back( std::move( match ) );
         }
 

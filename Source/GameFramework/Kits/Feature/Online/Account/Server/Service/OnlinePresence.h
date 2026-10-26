@@ -14,6 +14,7 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Container/IDAllocator.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
@@ -131,7 +132,7 @@ namespace sw
         OnlinePresenceConfig                      _settings;
         OnlineServiceHost*                        _pHost;
         uint64                                    _serverID;
-        uint64                                    _nextLookupID;
+        IDAllocator<uint64>                       _lookupIDAllocator;
         int64                                     _nextRefreshMs;
     };
 } // namespace sw

@@ -6,6 +6,7 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Container/IDAllocator.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
@@ -59,8 +60,8 @@ namespace sw
         vector<string>                    _listRevokedSecret;
         string                            _name;
         string                            _linkSecret;
-        uint64                            _nextVerificationID;
-        uint64                            _nextRevocationID;
+        IDAllocator<uint64>               _verificationIDAllocator;
+        IDAllocator<uint64>               _revocationIDAllocator;
         int32                             _submittedCount;
         uint8                             _bRevocationEnabled;
         uint8                             _bRevocationUnavailable;

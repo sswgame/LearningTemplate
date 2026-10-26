@@ -9,6 +9,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/IDAllocator.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
@@ -137,7 +138,7 @@ namespace sw
         IServiceStore*                        _pStore;
         OnlineServiceHost*                    _pHost;                ///< 알림을 보낼 호스트이다. 첫 틱에 받는다
         MetricCounter*                        _arrExpiredCounter[3]; ///< discarded · returned · removed
-        uint64                                _nextCallID;
+        IDAllocator<uint64>                   _callIDAllocator;
         int64                                 _nowMs;
         int64                                 _nextSweepMs;
         int64                                 _nextCampaignRefreshMs;

@@ -10,6 +10,7 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Container/IDAllocator.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
@@ -146,7 +147,7 @@ namespace sw
         AccountIdentity                     _identity;
         LoginSessionToken                   _token;
         OnlineServiceClient*                _pClient;
-        uint64                              _nextRequestID;
+        IDAllocator<uint64>                 _requestIDAllocator;
         uint8                               _bLoggedIn;
         uint8                               _bResuming;
     };

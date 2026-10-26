@@ -12,6 +12,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Container/EventBuffer.h"
+#include "Core/Container/IDAllocator.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 
@@ -136,7 +137,7 @@ namespace sw
         TokenBucketMap                     _accountBucketMap;
         PushDispatcherStats                _stats;
         IServiceStore*                     _pStore;
-        uint64                             _nextDeliveryID;
+        IDAllocator<uint64>                _deliveryIDAllocator;
         int32                              _pendingWorkCount;
     };
 } // namespace sw

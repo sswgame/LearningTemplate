@@ -16,6 +16,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Container/EventBuffer.h"
+#include "Core/Container/IDAllocator.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
@@ -159,7 +160,7 @@ namespace sw
         EventBuffer<SocialCompletion>          _completionBuffer;
         EventBuffer<SocialNotification>        _notificationBuffer;
         SocialServiceDependencies              _dependencies;
-        uint64                                 _nextQueryID;
+        IDAllocator<uint64>                    _queryIDAllocator;
         int32                                  _pendingCount;
     };
 } // namespace sw

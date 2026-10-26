@@ -80,7 +80,7 @@ namespace sw
         , _metrics{}
         , _settings{}
         , _pStore{ nullptr }
-        , _nextCallID{ 1 }
+        , _callIDAllocator{}
         , _nowMs{ 0 }
         , _pendingSeedCount{ 0 }
     {
@@ -128,7 +128,7 @@ namespace sw
 
     void AdminService::startCall( AccountID adminID, uint16 method, const AdminRequest& request, const NetIdempotencyKey& idempotencyKey, int64 nowMs, PendingCall pending )
     {
-        pending._callID              = _nextCallID++;
+        pending._callID              = _callIDAllocator.allocate();
         pending._receivedNanoseconds = MonotonicClock::nowNanoseconds();
         pending._nowMs               = nowMs != 0 ? nowMs : _nowMs;
         pending._targetID            = request._accountID;

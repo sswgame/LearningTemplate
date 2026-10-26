@@ -18,7 +18,7 @@ namespace sw
         , _listDone{}
         , _pProvider{ pProvider }
         , _pHTTPClient{ pHTTPClient }
-        , _nextVerificationID{ 1 }
+        , _verificationIDAllocator{}
         , _jwksRequestID{ 0 }
         , _lastFetchStartMs{ 0 }
         , _fetchGeneration{ 0 }
@@ -35,7 +35,7 @@ namespace sw
         PendingTicket&    pending = _listPending.emplace_back();
         pending._token            = string( text.substr( 0, bar ) );
         pending._nonce            = bar == string_view::npos ? string{} : string( text.substr( bar + 1 ) );
-        pending._verificationID   = _nextVerificationID++;
+        pending._verificationID   = _verificationIDAllocator.allocate();
         return pending._verificationID;
     }
 

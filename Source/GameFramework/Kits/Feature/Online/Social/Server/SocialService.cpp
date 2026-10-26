@@ -303,7 +303,7 @@ namespace sw
         , _completionBuffer{}
         , _notificationBuffer{}
         , _dependencies{}
-        , _nextQueryID{ 1 }
+        , _queryIDAllocator{}
         , _pendingCount{ 0 }
     {
     }
@@ -469,7 +469,7 @@ namespace sw
     void SocialService::queryFriendPresence( AccountID accountID, uint64 requestTag )
     {
         const LocalAccount& local   = ensureLocal( accountID );
-        const uint64        queryID = _nextQueryID++;
+        const uint64        queryID = _queryIDAllocator.allocate();
         PresenceQuery       query;
         query._requestTag = requestTag;
         for ( const SocialLink& link : local._listLink )
