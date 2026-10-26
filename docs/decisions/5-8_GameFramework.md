@@ -58,3 +58,5 @@
 - **걸음 조우 판정은 기반의 `StepEncounterRule` · `StepEncounterCounter` 하나입니다**(2026-10-22, 걸음 조우 판정 하나로). `GameFramework/Base/World/Encounter/StepEncounter.h` 에 규칙(방식 `Period` · `Chance`, rate, 유예 걸음)과 셈(총 걸음 · 조우 뒤 걸음, `advance` · `roll` · `markEncounter`)을 두고 Overworld(`Period`, 난수 없음, 유예 0, 조우 칸 걸음만 셈)와 ClassicJRPG(`Chance`, 자기 난수)가 같이 씁니다. 세이브 바이트는 바꾸지 않았고(Overworld 는 예전 `uint32` 칸에 조우 칸 걸음 수, JRPG 는 난수 · 조우 뒤 걸음 · 총 걸음) 범위 검사는 `StepEncounterCounter::restore` 한 곳입니다.
 
 - **표면 상태 머티리얼 이름은 셰이더 필드 이름(`_surface<채널>` · `_surface<채널>Mask`)이고, 영역별 덮개는 영역 벡터가 아니라 UV 마스크가 정한다**(2026-10-25, 캐릭터 통합 E6). 셰이더 필드 규칙(`_camelCase`)과 문자열로 묶인 이름이 어긋나 옛 `Surface_<채널>` 은 필드가 될 수 없었다. 이름을 고치고 정점 영역 칸은 만들지 않았다(메시 형식 유지). 언리얼은 페인트 마스크 텍스처 · 머티리얼 파라미터 컬렉션으로 같은 일을 한다.
+
+- **NPC 일정의 세이브 경로는 디렉터 `writeState` 와 같은 호출 모양(`BinarySerializer` + `SaveGame`)의 시스템 단위 테스트가 지킨다**(2026-10-27, NPC 일정 후보 정리). 게임에 세이브 호출이 생기길 기다려 시나리오를 쌓지 않는다. 에디터 패널 실물 확인은 에디터 시나리오(`uiaudit`)의 일이라 이 후보에서 뺀다.
