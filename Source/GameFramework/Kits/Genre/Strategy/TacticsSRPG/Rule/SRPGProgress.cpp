@@ -89,13 +89,15 @@ namespace sw
     {
     }
 
-    void SRPGCampaign::initialize( const RunMapSettings& settings, uint32 seed )
+    bool SRPGCampaign::initialize( const RunMapSettings& settings, uint32 seed )
     {
+        if ( _runMap.generate( settings, seed ) == false )
+            return false;
         _seed = seed;
-        _runMap.generate( settings, seed );
         _listRoster.clear();
         _bInMission = SW_FALSE;
         _bFailed    = SW_FALSE;
+        return true;
     }
 
     int32 SRPGCampaign::addRosterEntry( const SRPGCatalog& catalog, const hashed_string& unitID, const hashed_string& pilotID, int32 pilotLevel )

@@ -87,7 +87,8 @@ namespace sw
 
         SRPGCampaign();
 
-        void initialize( const RunMapSettings& settings, uint32 seed );
+        /** @brief 캠페인을 새로 엽니다. 지도 설정이 범위 밖이면 오류를 남기고 false 이며 상태를 바꾸지 않습니다. */
+        [[nodiscard]] bool initialize( const RunMapSettings& settings, uint32 seed );
         /** @brief 명단에 추가합니다. 모르는 기체나 파일럿이면 -1 을 반환합니다. */
         int32 addRosterEntry( const SRPGCatalog& catalog, const hashed_string& unitID, const hashed_string& pilotID, int32 pilotLevel = 1 );
 
