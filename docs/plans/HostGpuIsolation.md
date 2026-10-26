@@ -1,12 +1,19 @@
 # hostgpu 의 AppBin 잠금 풀기 — 실행별 쓰기 위치 나누기
 
-> 상태: 설계 · 선행: 없음 · 영역: quality · 옛번호: 없음 · 진행: 0/4
+> 상태: 측정대기 · 선행: 없음 · 영역: quality · 옛번호: 없음 · 진행: 4/4
 
 > 질문: `AppTest_HostOnly` 조각과 `QaGoldenImages` 가 `AppBin` 잠금으로 서로 직렬인 것을 풀려면 무엇이 먼저 바뀌어야 하는가?
 > 독자: GPU 검증 구조를 고치는 작업자와 통합 담당.
-> 결론: 잠금은 `Bin` 이 아니라 **에디터 시나리오가 지우고 다시 만드는 고정 이름 폴더**(`Resource/scratch/<이름>`, `Saved/Automation/<시나리오 이름>/`)를 지킨다. 지금 풀면 두 슬롯이 서로의 파일을 지우므로 풀지 않는다. 쓰기 위치를 실행별로 나누는 H1 ~ H3 이 끝난 뒤 H4 에서 푼다.
+> 결론: 잠금은 `Bin` 이 아니라 **에디터 시나리오가 지우고 다시 만드는 고정 이름 폴더**(`Resource/scratch/<이름>`, `Saved/Automation/<시나리오 이름>/`)를 지켰다. 2026-10-27 쓰기 위치를 실행별로 나누고(H2 · H3) 잠금을 풀었다(H4). 남은 일은 통합의 6절 확인과 Debug `hostgpu` 시간 측정이다.
 
 2026-10-25 코드 읽기로 정리했고 표는 코드에서 찾은 위치입니다(실행으로 확인한 것 없음).
+
+**2026-10-27 구현(빌드 · 실행 전, 브랜치 `wt/hostiso`):** 커밋마다 한 단위라 6절에서 지면 H4 커밋 하나만 되돌려 잠금을 되살린다.
+
+- H2(4.1 안 A 변형): `AppTestUtil::makeAppLaunch` 가 명령줄과 작업 폴더를 함께 돌려주고 작업 폴더는 `getRunFolder()` = `build/<프리셋>/AppRuns/shard<i>of<n>/<스위트_케이스>` 다. `build/<프리셋>/` 아래라 App 이 위로 올라가 `Resource/` 를 찾으므로 엔진 인자(`-gv_projectRoot`)가 필요 없다. 폴더는 비우지 않고 남긴다(케이스마다 이름이 하나라 쌓이지 않고 `scenario-logs` 가 보고를 읽는다). 테스트가 읽는 산출물은 `makeRunPath` 로 푼다. 셰이더 라이브 캐시와 Vulkan 파이프라인 캐시는 실행 파일 폴더(`Bin/Saved/ShaderCache`) 기준이다.
+- H3: 4.2 는 인자 대신 프로세스 id 를 꼬리로 쓴다(`AutomationScratch::makeInstanceID` → `scratch/<이름>_p<pid>`, `AutomationScenario::bindScratchInstances` 가 단계 글을 같이 바꾸고 `prepare` 가 끝난 프로세스의 사본을 거둔다). 에디터 감시 울타리 표지도 `contentfence_p<pid>.tmp` 다. 4.3 은 `makeAppLaunch` 가 붙이고 붙일 때 비운다.
+- H4: `TestPolicy.json` 의 `hostResourceLock` 을 지웠다. `QaGoldenImages` 는 같은 키를 읽게 바꿔 함께 풀렸다(잠금 이름의 정본 한 곳).
+- H1: 코드는 있고 실행이 남았다(아래 문단).
 
 **H1 코드는 있고 실행이 남았습니다(통합에서 확인):** 매니페스트 id `host-write-snapshot`. 도구는 `Scripts/qa/WriteSnapshot.py`, 알려진 위치 표는 `Test/AppTest/HostWriteLocations.json`(2절 표와 같은 W 번호)이다. 표에 없는 쓰기가 나오면 이 문서 2절과 그 JSON 에 같이 적는다. 점검하지 않는 위치: W9 `Bin/Modules` 섀도 복사본(pid 로 구분됨), W12 `GoldenDiff` · `Golden`(`Bin` 밖).
 
@@ -38,7 +45,7 @@
 
 읽기만 하는 공유 자원(`Resource` 의 추적 파일, `Bin/Modules` 의 원본 DLL, 쿠킹한 셰이더, `Test/AppTest/Golden`)은 문제가 없습니다. 골든 비교는 `Bin` 상대 경로를 가정하지 않고(`findGoldenDirectory`) 캡처는 `makeTempPath` 나 `Saved/Automation/<시나리오>/` 로 가지만, `ShippingFrameMatchesGoldenImage` 는 고정 경로 `Saved/Automation/game.empty.shippingframe/shippingframe.ppm` 을 읽으므로 W2 가 갈라지면 읽는 경로도 같이 바꾼다.
 
-## 3. 풀지 않은 이유
+## 3. 풀지 않았던 이유(2026-10-25)
 
 풀려면 W1 · W2 · W3 · W5 · W10 이 실행마다 달라야 하는데 W2 · W10 의 `Saved/…` 는 엔진이 상대 경로로 직접 쓰고 시나리오 35 곳이 같은 문자열을 리터럴로 가져, 빌드 · 실행 없이 한 번에 정확함을 보증할 수 없다. 확인하지 못한 위치(W11)가 남으면 풀지 않는다.
 잠금을 좁히는 것(에디터 케이스만 잠그기)은 이득이 작다 — 에디터 네 케이스가 1,657 s 로 대부분이고 서로 W1 · W2 로 겹치므로 2,254 s 가 1,700 s 안팎으로 줄 뿐이고 샤드가 비용으로 나뉘어 케이스별 잠금도 줄 수 없다.
@@ -54,9 +61,11 @@
 
 상용 엔진과 비교: 자동화 러너(언리얼 Gauntlet 등)는 인스턴스마다 저장 · 로그 폴더를 따로 주어 병렬로 돌리는 구조로 알고 있다(인자 이름 미확인).
 
+**정한 것(2026-10-27, 결정 기록 5-2):** A 를 고르되 루트를 `%TEMP%` 가 아니라 `build/<프리셋>/AppRuns/…` 에 둔다 — 위로 올라가면 저장소 루트에 닿아 프로젝트 루트 인자가 없어도 되고(`gv_` 인자는 배포본이 몰라 Shipping `hostgpu` 를 막는다), 실패한 케이스의 로그 · 사진이 남는다. B 는 시나리오 리터럴 35 곳과 엔진의 상대 경로를 모두 고쳐야 해 기각했다. H1 결과 없이 정했다 — 표 밖의 상대 쓰기도 작업 폴더로 가므로 A 는 그것을 저절로 나눈다.
+
 ### 4.2 scratch 이름은 실행마다 다르게
 
-W1 은 `Resource/scratch` 가 저장소 `Resource` 안이라 쓰기 루트로 풀리지 않습니다. `AutomationScratch::prepare` 가 `as` 에 실행 식별자(`-scenario-instance=<id>`)를 덧붙이고 같은 시나리오의 `scratch/assetmanage/…` 리소스 id 를 읽을 때 같은 규칙으로 바꾸는 방법이 가장 작다. 대안인 scratch 를 `Resource` 밖 디스크 도메인(`ResourcePaths::mountDiskDomain`)으로 옮기는 안은 콘텐츠 브라우저 역색인에 들어가지 못해 `assetmanage` 의 검사 동작이 바뀌므로 기각.
+W1 은 `Resource/scratch` 가 저장소 `Resource` 안이라 쓰기 루트로 풀리지 않습니다. `AutomationScratch::prepare` 가 `as` 에 실행 식별자(구현은 인자 대신 프로세스 id — `_p<pid>`)를 덧붙이고 같은 시나리오의 `scratch/assetmanage/…` 리소스 id 를 읽을 때 같은 규칙으로 바꾸는 방법이 가장 작다. 대안인 scratch 를 `Resource` 밖 디스크 도메인(`ResourcePaths::mountDiskDomain`)으로 옮기는 안은 콘텐츠 브라우저 역색인에 들어가지 못해 `assetmanage` 의 검사 동작이 바뀌므로 기각.
 
 ### 4.3 에디터 상태 폴더는 입구에서 붙인다
 
@@ -81,6 +90,14 @@ GPU 경합은 프레임 시간 · 타이밍에 기대는 단언, 골든 이미�
 4. 같은 구성에서 세 번 반복해 재현율을 적고, 한 번 지면 단독으로 다시 돌려 경합 탓인지 가른다.
 
 `DemoScreenMatchesAcrossBackends`, `RecordedPlayReplaysOnEveryBackend`, `ChainedScenariosShareOneProcess` 는 시한 · 프레임 수에 기대므로 슬롯 둘일 때 시간 초과가 나는지 먼저 봅니다.
+
+2026-10-27 구현에서 더 볼 것:
+
+- 빌드 뒤 `-L nogpu`(`AutomationScratchTest.ScratchIDsBindToThisProcess` — 작업자 문법 검사 도구가 이 파일을 "command line is too long" 으로 못 봤다), `-L lint`, `-L hostgpu` Shipping 전체, `AppSmokeTest.EveryBackendStartsRendersAndExitsCleanly` 시간 전후(셰이더 캐시가 `Bin/Saved/ShaderCache` 그대로인지).
+- 두 App 이 같은 때 끝나면 `Bin/Saved/ShaderCache/vk_pipeline_cache.bin` 을 같이 쓴다(원자적 쓰기지만 바꿔 끼우기가 겹치면 `Could not save the pipeline cache` 경고 → 시나리오 15). 6절 반복에서 보이면 파일 이름에 pid 를 넣는다.
+- `packaging` 시나리오는 `Bin` 을 쓰기 루트 아래 `Saved/Packages/` 로 복사한다 — 경로가 길어져 260 자를 넘는지.
+- 옛 `Bin/Saved/Automation` 의 보고는 더 갱신되지 않는다 — `scenario-logs` 가 낡은 보고를 읽지 않게 통합이 한 번 지운다.
+- H1 `host-write-snapshot` 을 돌려 2절 표 밖의 쓰기가 없는지.
 
 ## 7. 규칙 후보
 
