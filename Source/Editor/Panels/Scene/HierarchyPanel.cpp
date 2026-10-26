@@ -765,13 +765,13 @@ namespace sw::editor
 {
     SW_EDITOR_PANEL( HierarchyPanel, HierarchyPanel::kPanelID, EditorPanelCategory::Core, 100 );
     SW_EDITOR_COMMAND( SceneMoveSiblingUp, "scene.moveSiblingUp", 2420, "Move Up in Hierarchy", editoricon::kGameObject, "Scene", "고른 오브젝트를 형제 사이에서 한 칸 위로 옮깁니다",
-                       "Move the selected object up among its siblings", {}, &HierarchyPanelInternal::runMoveUp, nullptr, Scene, "MainMenu/Edit" );
+                       "Move the selected object up among its siblings", nullptr, &HierarchyPanelInternal::runMoveUp, nullptr, Scene, "MainMenu/Edit", None, 0 );
     SW_EDITOR_COMMAND( SceneMoveSiblingDown, "scene.moveSiblingDown", 2421, "Move Down in Hierarchy", editoricon::kGameObject, "Scene",
-                       "고른 오브젝트를 형제 사이에서 한 칸 아래로 옮깁니다", "Move the selected object down among its siblings", {}, &HierarchyPanelInternal::runMoveDown, nullptr, Scene,
-                       "MainMenu/Edit" );
+                       "고른 오브젝트를 형제 사이에서 한 칸 아래로 옮깁니다", "Move the selected object down among its siblings", nullptr, &HierarchyPanelInternal::runMoveDown, nullptr, Scene,
+                       "MainMenu/Edit", None, 0 );
     SW_EDITOR_COMMAND( SceneCreateFolder, "scene.createFolder", 2422, "Create Folder", editoricon::kFolder, "Scene",
-                       "고른 오브젝트 아래(없으면 루트)에 정리용 폴더를 만듭니다", "Create an organizing folder under the selection", {}, &HierarchyPanelInternal::runCreateFolder, nullptr, Scene,
-                       "MainMenu/Edit" );
+                       "고른 오브젝트 아래(없으면 루트)에 정리용 폴더를 만듭니다", "Create an organizing folder under the selection", nullptr, &HierarchyPanelInternal::runCreateFolder, nullptr, Scene,
+                       "MainMenu/Edit", None, 0 );
     SW_AUTOMATION_PROBE( editorHierarchyRowIndex, "Editor.HierarchyRowIndex", "Row index (from 0) of the object named by gv_editorProbeHierarchyObject in the last Hierarchy frame (-1 when not drawn)",
                          &HierarchyPanelInternal::readProbedRowIndex );
 

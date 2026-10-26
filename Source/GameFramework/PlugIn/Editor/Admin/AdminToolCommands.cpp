@@ -23,6 +23,6 @@ namespace sw::editor
         }
     } // namespace
 
-    SW_EDITOR_COMMAND( AdminToolOpen, "admin.openToolPanel", 9200, "GM Tool", editoricon::kSettings, "Admin", "GM 도구 패널을 엽니다", "Open the GM tool panel", {},
-                       &openAdminToolPanel, nullptr, NoScene, nullptr );
+    SW_EDITOR_COMMAND( AdminToolOpen, "admin.openToolPanel", 9200, "GM Tool", editoricon::kSettings, "Admin", "GM 도구 패널을 엽니다", "Open the GM tool panel", nullptr,
+                       &openAdminToolPanel, nullptr, NoScene, nullptr, None, 0 );
 } // namespace sw::editor

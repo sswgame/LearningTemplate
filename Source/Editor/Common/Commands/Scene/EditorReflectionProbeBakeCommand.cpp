@@ -29,6 +29,6 @@ namespace sw::editor
     } // namespace
 
     SW_EDITOR_COMMAND( ReflectionProbeBake, "lighting.bakeReflectionProbes", 3320, "Bake Reflection Probes", editoricon::kLightGlobal, "Lighting",
-                       "선택한(없으면 모든) 반사 프로브를 GPU 로 찍어 굽습니다(씬 옆 .reflprobe)", "Capture the selected (or every) reflection probe of the active scene on the GPU", {},
-                       &EditorReflectionProbeBakeCommandInternal::runBake, &EditorReflectionProbeBakeCommandInternal::isEnabled, Scene, "MainMenu/Build" );
+                       "선택한(없으면 모든) 반사 프로브를 GPU 로 찍어 굽습니다(씬 옆 .reflprobe)", "Capture the selected (or every) reflection probe of the active scene on the GPU", nullptr,
+                       &EditorReflectionProbeBakeCommandInternal::runBake, &EditorReflectionProbeBakeCommandInternal::isEnabled, Scene, "MainMenu/Build", None, 0 );
 } // namespace sw::editor

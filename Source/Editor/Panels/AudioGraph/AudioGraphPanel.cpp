@@ -382,5 +382,5 @@ namespace sw::editor
 
     SW_EDITOR_PANEL( AudioGraphPanel, AudioGraphPanel::kPanelID, EditorPanelCategory::Tool, 2102 );
     SW_EDITOR_COMMAND( AudioGraphOpen, "window.audioGraph", 2232, "Audio Graph", editoricon::kSettings, "Audio", "소리 그래프 창을 엽니다(노드 · 연결 캔버스, 값 편집, 저장, 미리 듣기)",
-                       "Open the audio graph editor", {}, &AudioGraphPanelInternal::openPanel, nullptr, NoScene, "MainMenu/Window" );
+                       "Open the audio graph editor", nullptr, &AudioGraphPanelInternal::openPanel, nullptr, NoScene, "MainMenu/Window", None, 0 );
 } // namespace sw::editor

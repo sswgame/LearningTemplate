@@ -393,6 +393,6 @@ namespace sw::editor
 
     SW_EDITOR_PANEL( AudioEventBrowserPanel, AudioEventBrowserPanel::kPanelID, EditorPanelCategory::Tool, 2101 );
     SW_EDITOR_COMMAND( AudioEventBrowserOpen, "window.audioEvents", 2231, "Audio Events", editoricon::kSettings, "Audio",
-                       "오디오 이벤트 창을 엽니다(이벤트 속성 · 재생 중 인스턴스 · 보이스 프로파일러)", "Open the audio event browser", {}, &AudioEventBrowserPanelInternal::openPanel, nullptr, NoScene,
-                       "MainMenu/Window" );
+                       "오디오 이벤트 창을 엽니다(이벤트 속성 · 재생 중 인스턴스 · 보이스 프로파일러)", "Open the audio event browser", nullptr, &AudioEventBrowserPanelInternal::openPanel, nullptr, NoScene,
+                       "MainMenu/Window", None, 0 );
 } // namespace sw::editor
