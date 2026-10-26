@@ -63,13 +63,7 @@ namespace sw::editor
         /** @brief 트리 아래 빈 영역의 드래그 앤 드롭 대상, 단축키, 우클릭 메뉴를 처리합니다. */
         void drawTreeEmptyArea( GameObjectManager* pManager );
 
-        /**
-         * @brief 프레임마다 다시 채우는 오브젝트 스냅샷입니다(용량 재사용).
-         * @details 트리를 그리는 도중 오브젝트가 지워지거나 부모가 바뀔 수 있으므로 스냅샷이 필요합니다. 매니저를 잠근 채로
-         *          그리면 그 변경이 같은 스레드에서 배타 락을 다시 잡아 교착합니다. 다만 값으로 반환하는 getAllGameObjects() 는
-         *          호출마다 새로 할당하므로, 버퍼를 들고 출력 매개변수 오버로드를 씁니다.
-         */
-        vector<GameObject*>                   _listSceneObject;
+        // 루트 순서와 필터 결과(행 모델)는 cpp 의 행 상태가 들고, 구조 세대가 바뀔 때만 다시 짓는다(`refreshRowModel`).
         uint64                                _renamingObjectID;
         uint64                                _lastDrawnRootID; ///< 마지막 프레임에 그린 마지막 루트(`getLastDrawnRootID`)
         fixed_string<constant::kMaxBuffer128> _filterBuffer;

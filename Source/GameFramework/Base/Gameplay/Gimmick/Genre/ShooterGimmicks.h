@@ -17,6 +17,7 @@
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Base/Gameplay/Interaction/InteractionSelector.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -113,7 +114,9 @@ namespace sw
         PROPERTY( RuntimeState, Category = "Turret", DisplayName = "Shot Count", Tooltip = "Runtime" )
         int32 _shotCount;
 
-        FixedStepTimer _clock;
+        FixedStepTimer               _clock;
+        vector<InteractionCandidate> _listCandidate; ///< 스텝마다 대상 후보를 모으는 버퍼(용량 재사용)
+        vector<GameObject*>          _listTagged;    ///< 스텝마다 태그 색인의 답을 받는 버퍼(용량 재사용, `TagIndex::findObjectsWithTags`)
     };
 } // namespace sw
 

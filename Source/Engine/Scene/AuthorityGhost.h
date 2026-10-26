@@ -18,6 +18,7 @@
     #include "Core/Concurrency/atomic.h"
     #include "Core/Concurrency/mutex.h"
     #include "Core/Concurrency/thread.h"
+    #include "Core/Container/GameObjectHandle.h"
     #include "Core/Container/string.h"
     #include "Core/Container/vector.h"
     #include "Core/Math/VectorMath.h"
@@ -32,8 +33,9 @@ namespace sw
     /** @brief 이름 있는 오브젝트의 월드 위치입니다. */
     struct AuthorityPose
     {
-        string _name;
-        float3 _position{};
+        string           _name;
+        float3           _position{};
+        GameObjectHandle _object{}; ///< 로컬 포즈의 오브젝트다(`collectPoses`). 서버 글에서 읽은 포즈는 비어 있다
     };
 } // namespace sw
 
@@ -89,11 +91,13 @@ namespace sw
         void runPoller( ThreadStopToken stopToken );
 
         mutable mutex          _mutex;
-        string                 _latestText;     ///< 작업 스레드가 받은 최근 `scene.poses` 답(`_mutex`)
-        string                 _parsedText;     ///< 마지막으로 파싱한 글(게임 스레드)
-        vector<AuthorityPose>  _listServerPose; ///< 게임 스레드
-        vector<AuthorityDelta> _listDelta;      ///< 마지막 `update` 의 차이(`_mutex` - `describe` 가 다른 스레드에서 읽을 수 있다)
-        sw::thread             _thread;         ///< 정지 요청은 스레드의 토큰으로 한다(`shutdown`)
+        string                 _latestText;               ///< 작업 스레드가 받은 최근 `scene.poses` 답(`_mutex`)
+        string                 _parsedText;               ///< 마지막으로 파싱한 글(게임 스레드)
+        vector<AuthorityPose>  _listServerPose;           ///< 게임 스레드
+        vector<AuthorityPose>  _listLocalPose;            ///< 로컬 이름 순 포즈(게임 스레드). 오브젝트 목록은 구조 세대가 바뀔 때만 다시 모으고 위치만 프레임마다 읽는다
+        uint64                 _localStructureGeneration; ///< `_listLocalPose` 를 모은 때의 구조 세대(`GameObjectManager::getStructureGeneration`, 매니저끼리 겹치지 않는다)
+        vector<AuthorityDelta> _listDelta;                ///< 마지막 `update` 의 차이(`_mutex` - `describe` 가 다른 스레드에서 읽을 수 있다)
+        sw::thread             _thread;                   ///< 정지 요청은 스레드의 토큰으로 한다(`shutdown`)
         uint8                  _bStarted  : 1;
         uint8                  _bReceived : 1; ///< 서버 포즈를 한 번이라도 받았다(`_mutex`)
         [[maybe_unused]] uint8 _reserved  : 6;

@@ -22,6 +22,7 @@ namespace sw
         , _bPlanar{ false }
         , _bOpen{ false }
         , _clock{ GenreGimmickUtil::makeClock() }
+        , _listTagged{}
     {
     }
 
@@ -52,23 +53,23 @@ namespace sw
         const bool            bCannotCheckDoor = pManager == nullptr || pScene == nullptr || ( _bOpen && _bStaysOpen ) || _requiredTags.getTagCount() == 0;
         if ( bCannotCheckDoor )
             return;
-        const float3        center     = pScene->getWorldPosition();
-        const uint64        selfID     = pOwner->getObjectID();
-        const TagContainer& required   = _requiredTags;
-        const float32       radius     = _openRadius;
-        const bool          bPlanar    = _bPlanar;
-        bool                bQualified = false;
-        pManager->forEachGameObject( [&bQualified, &required, center, selfID, radius, bPlanar]( GameObject* pObject )
+        const float3 center     = pScene->getWorldPosition();
+        const uint64 selfID     = pOwner->getObjectID();
+        bool         bQualified = false;
+        // 요구 태그를 가진 것만 태그 색인에서 받는다(씬을 훑지 않는다).
+        pManager->getTagIndex().findObjectsWithTags( _requiredTags, _listTagged );
+        for ( const GameObject* pObject : _listTagged )
         {
-            const SceneComponent* pOther      = pObject != nullptr ? pObject->getPrimarySceneComponent() : nullptr;
-            const bool            bSkipObject = bQualified || pOther == nullptr || pObject->getObjectID() == selfID || pObject->getTags().hasAllTags( required ) == false;
-            if ( bSkipObject )
-                return;
+            const SceneComponent* pOther = pObject->getPrimarySceneComponent();
+            if ( pOther == nullptr || pObject->getObjectID() == selfID )
+                continue;
             float3 offset = pOther->getWorldPosition() - center;
-            if ( bPlanar )
+            if ( _bPlanar )
                 offset._z = 0.0f;
-            bQualified = offset.getLength() <= radius;
-        } );
+            bQualified = offset.getLength() <= _openRadius;
+            if ( bQualified )
+                break;
+        }
         if ( bQualified == _bOpen )
             return;
         _bOpen = bQualified;

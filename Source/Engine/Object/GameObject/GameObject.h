@@ -159,8 +159,8 @@ namespace sw
          * @details 씬 파일에 저장되고 에디터의 계층 창이 그 순서로 그립니다. 틱 · 렌더 순서에는 쓰지 않는다. 값은 형제 수 안에서 0 부터 센 자리이고 65535 로 막힌다.
          */
         uint16 getSiblingIndex() const { return _siblingIndex; }
-        /** @brief 형제 사이의 표시 순서를 정합니다. 되돌리기 기록은 부르는 쪽(`EditorSiblingOrder`)이 합니다. */
-        void setSiblingIndex( uint16 siblingIndex ) { _siblingIndex = siblingIndex; }
+        /** @brief 형제 사이의 표시 순서를 정하고, 바뀌었으면 매니저의 구조 세대를 올립니다. 되돌리기 기록은 부르는 쪽(`EditorSiblingOrder`)이 합니다. */
+        void setSiblingIndex( uint16 siblingIndex );
         /**
          * @brief 이 오브젝트(자식 오브젝트는 제외)의 켜진 씬 컴포넌트들이 그리거나 부딪히는 것을 덮는 **월드** 상자입니다. 크기가 있는 것이 없으면 false 를 반환합니다.
          * @details 에디터의 바닥과 표면 붙이기, 프레이밍이 크기를 이 함수 하나로 측정한다(`SceneComponent::getWorldBox`).

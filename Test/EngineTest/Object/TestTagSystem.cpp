@@ -1,12 +1,74 @@
 #include "pch.h"
 
+#include "Core/Common/StdHeaders.h"
+
+#include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/Component/TagComponent.h"
 #include "Engine/Object/Component/TagSystem.h"
+#include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Registry/TagIndex.h"
 
 #include "TestFramework/TestFramework.h"
 
 using namespace sw;
+
+namespace
+{
+    struct TagIndexTestInternal
+    {
+        /** @brief 색인의 답(`TagIndex::findObjectsWithTags`)과 전 오브젝트를 훑은 답(`hasAllTags` — 하위 태그 인정)이 같으면 true 입니다. */
+        static bool matchesFullScan( const GameObjectManager& manager, const TagContainer& required )
+        {
+            vector<GameObject*> listFound;
+            manager.getTagIndex().findObjectsWithTags( required, listFound );
+            vector<uint64> listIndexed;
+            for ( const GameObject* pObject : listFound )
+            {
+                listIndexed.push_back( pObject->getObjectID() );
+            }
+            vector<uint64> listScanned;
+            manager.forEachGameObject( [&listScanned, &required]( GameObject* pObject )
+            {
+                if ( required.getTagCount() > 0 && pObject->getTags().hasAllTags( required ) )
+                    listScanned.push_back( pObject->getObjectID() );
+            } );
+            std::sort( listIndexed.begin(), listIndexed.end() );
+            std::sort( listScanned.begin(), listScanned.end() );
+            return listIndexed == listScanned;
+        }
+
+        /** @brief 색인이 @p required 로 돌려준 오브젝트 수입니다. */
+        static uint32 countIndexed( const GameObjectManager& manager, const TagContainer& required )
+        {
+            vector<GameObject*> listFound;
+            manager.getTagIndex().findObjectsWithTags( required, listFound );
+            return static_cast<uint32>( listFound.size() );
+        }
+
+        /** @brief 질의 묶음 모두에서 색인과 전 훑기가 같은지 봅니다. */
+        static bool allQueriesMatchFullScan( const GameObjectManager& manager )
+        {
+            const TagContainer arrQuery[] = {
+                TagContainer{ "Faction"_tag },
+                TagContainer{ "Faction.Enemy"_tag },
+                TagContainer{ "Faction.Player"_tag },
+                TagContainer{ "Faction.Enemy.Boss"_tag },
+                TagContainer{ "Factional"_tag },
+                TagContainer{ "Other"_tag },
+                TagContainer{ "Faction"_tag, "Role"_tag },
+                TagContainer{ TagID::request( "faction.player" ) },
+                TagContainer{},
+            };
+            bool bAllMatch = true;
+            for ( const TagContainer& query : arrQuery )
+            {
+                bAllMatch = matchesFullScan( manager, query ) && bAllMatch;
+            }
+            return bAllMatch;
+        }
+    };
+} // namespace
 
 // ------------------------------------------------------------------------------
 // 1) TagSystemTest — 계층 리터럴·매칭
@@ -356,4 +418,139 @@ SW_TEST_CASE( TagSystemTest, IntegerLiteralAndHierarchicalSubsumption )
     TagContainer required{ tagAttacking };
     TagContainer forbidden{ "State.Dead"_tag };
     SW_EXPECT_TRUE( container.matchesTags( required, forbidden ) );
+}
+
+// ------------------------------------------------------------------------------
+// 3) TagIndexTest — 태그 → 오브젝트 색인이 계층 태그 의미(`hasTag( tag, false )`)를 똑같이 지킨다
+// ------------------------------------------------------------------------------
+/**
+ * @brief [TagIndexTest] 부모 태그 질의 · 대소문자 · 접두어만 같은 태그 · 여러 태그 질의가 전 오브젝트 훑기와 같은 답이고, 태그 빼기 · 비우기 · 파괴 · 컴포넌트 떼기를 따라간다
+ */
+SW_TEST_CASE( TagIndexTest, HierarchicalQueryMatchesFullScanThroughEveryWrite )
+{
+    using Internal = TagIndexTestInternal;
+    GameObjectManager manager;
+    GameObject*       pPlayer = manager.createGameObject( hashed_string( "Player" ) );
+    GameObject*       pBoss   = manager.createGameObject( hashed_string( "Boss" ) );
+    GameObject*       pLower  = manager.createGameObject( hashed_string( "Lower" ) );
+    GameObject*       pPrefix = manager.createGameObject( hashed_string( "Prefix" ) );
+    GameObject*       pNone   = manager.createGameObject( hashed_string( "None" ) );
+    SW_ASSERT_TRUE( pPlayer != nullptr && pBoss != nullptr && pLower != nullptr && pPrefix != nullptr && pNone != nullptr );
+    pPlayer->addTag( "Faction.Player"_tag );
+    pPlayer->addTag( "Role.Scout"_tag );
+    pBoss->addTag( "Faction.Enemy.Boss"_tag );
+    pLower->addTag( TagID::request( "faction" ) ); // 대소문자만 다른 부모 태그 — 같은 태그다
+    pPrefix->addTag( "Factional"_tag );            // 접두어만 같다 — `Faction` 의 하위 태그가 아니다
+
+    SW_EXPECT_TRUE( Internal::allQueriesMatchFullScan( manager ) );
+    SW_EXPECT_EQUAL( 3u, Internal::countIndexed( manager, TagContainer{ "Faction"_tag } ) );
+    SW_EXPECT_EQUAL( 1u, Internal::countIndexed( manager, TagContainer{ "Faction.Enemy"_tag } ) );
+    SW_EXPECT_EQUAL( 1u, Internal::countIndexed( manager, TagContainer{ "Faction"_tag, "Role"_tag } ) );
+    SW_EXPECT_EQUAL( 0u, Internal::countIndexed( manager, TagContainer{} ) );
+
+    // 같은 태그를 다시 더해도 칸은 그대로다(세대도 오르지 않는다).
+    const uint64 generationBefore = manager.getTagIndex().getGeneration();
+    pBoss->addTag( "Faction.Enemy.Boss"_tag );
+    SW_EXPECT_EQUAL( generationBefore, manager.getTagIndex().getGeneration() );
+
+    pPlayer->removeTag( "Faction.Player"_tag );
+    pBoss->clearTags();
+    SW_EXPECT_TRUE( Internal::allQueriesMatchFullScan( manager ) );
+    SW_EXPECT_EQUAL( 1u, Internal::countIndexed( manager, TagContainer{ "Faction"_tag } ) );
+    SW_EXPECT_EQUAL( 1u, Internal::countIndexed( manager, TagContainer{ "Role"_tag } ) );
+
+    // 파괴 표시만으로 빠지고(삭제 대기), 해체 뒤에도 같다.
+    manager.destroyObject( pLower );
+    SW_EXPECT_TRUE( Internal::allQueriesMatchFullScan( manager ) );
+    SW_EXPECT_EQUAL( 0u, Internal::countIndexed( manager, TagContainer{ "Faction"_tag } ) );
+    manager.processDeferredDestruction();
+    SW_EXPECT_TRUE( Internal::allQueriesMatchFullScan( manager ) );
+
+    // 태그 컴포넌트를 떼면 그 칸이 모두 빠진다.
+    TagComponent* pPlayerTags = pPlayer->getComponent<TagComponent>();
+    SW_ASSERT_NOT_NULL( pPlayerTags );
+    SW_EXPECT_TRUE( pPlayer->removeComponent( pPlayerTags ) );
+    SW_EXPECT_EQUAL( 0u, Internal::countIndexed( manager, TagContainer{ "Role"_tag } ) );
+    SW_EXPECT_TRUE( Internal::allQueriesMatchFullScan( manager ) );
+}
+
+/**
+ * @brief [TagIndexTest] 받은 목록을 돌며 태그를 바꿔도 멈추지 않는다 — 질의가 잠금을 놓은 뒤 목록을 돌려준다
+ */
+SW_TEST_CASE( TagIndexTest, WritingTagsWhileWalkingTheResultDoesNotDeadlock )
+{
+    GameObjectManager manager;
+    for ( uint32 index = 0; index < 4; ++index )
+    {
+        GameObject* pObject = manager.createGameObject( hashed_string( "Tagged" ) );
+        SW_ASSERT_NOT_NULL( pObject );
+        pObject->addTag( "Faction.Enemy"_tag );
+    }
+    vector<GameObject*> listFound;
+    manager.getTagIndex().findObjectsWithTags( TagContainer{ "Faction"_tag }, listFound );
+    SW_EXPECT_EQUAL( size_t{ 4 }, listFound.size() );
+    for ( GameObject* pObject : listFound )
+    {
+        pObject->removeTag( "Faction.Enemy"_tag ); // 색인의 배타 잠금을 잡는다 — 질의가 공유 잠금을 쥐고 있으면 여기서 멈춘다
+        pObject->addTag( "Faction.Player"_tag );
+    }
+    manager.getTagIndex().findObjectsWithTags( TagContainer{ "Faction.Enemy"_tag }, listFound );
+    SW_EXPECT_TRUE( listFound.empty() );
+    manager.getTagIndex().findObjectsWithTags( TagContainer{ "Faction.Player"_tag }, listFound );
+    SW_EXPECT_EQUAL( size_t{ 4 }, listFound.size() );
+}
+
+// ------------------------------------------------------------------------------
+// 4) StructureGenerationTest — 구조 세대는 구조를 바꾸는 세터에서만 오르고 매니저끼리 겹치지 않는다
+// ------------------------------------------------------------------------------
+/**
+ * @brief [StructureGenerationTest] 생성 · 이름 · 형제 순서 · 부착과 떼기 · 컴포넌트 · 파괴 표시가 세대를 올리고, 같은 값 쓰기와 태그는 올리지 않는다
+ */
+SW_TEST_CASE( StructureGenerationTest, StructuralSettersBumpAndOthersDoNot )
+{
+    GameObjectManager manager;
+    uint64            generation = manager.getStructureGeneration();
+    SW_EXPECT_TRUE( generation != 0 );
+
+    GameObject* pParent = manager.createGameObject( hashed_string( "Parent" ) );
+    GameObject* pChild  = manager.createGameObject( hashed_string( "Child" ) );
+    SW_ASSERT_TRUE( pParent != nullptr && pChild != nullptr );
+    SW_EXPECT_TRUE( manager.getStructureGeneration() != generation );
+
+    generation = manager.getStructureGeneration();
+    SW_ASSERT_NOT_NULL( pParent->addComponent<SceneComponent>() );
+    SW_EXPECT_TRUE( manager.getStructureGeneration() != generation );
+    SW_ASSERT_NOT_NULL( pChild->addComponent<SceneComponent>() );
+
+    generation = manager.getStructureGeneration();
+    pChild->setName( hashed_string( "Renamed" ) );
+    SW_EXPECT_TRUE( manager.getStructureGeneration() != generation );
+
+    generation = manager.getStructureGeneration();
+    pChild->setSiblingIndex( pChild->getSiblingIndex() ); // 같은 값
+    SW_EXPECT_EQUAL( generation, manager.getStructureGeneration() );
+    pChild->setSiblingIndex( 3 );
+    SW_EXPECT_TRUE( manager.getStructureGeneration() != generation );
+
+    generation = manager.getStructureGeneration();
+    SW_ASSERT_TRUE( pChild->attachToParent( pParent ) );
+    SW_EXPECT_TRUE( manager.getStructureGeneration() != generation );
+    generation = manager.getStructureGeneration();
+    pChild->detachFromParent();
+    SW_EXPECT_TRUE( manager.getStructureGeneration() != generation );
+
+    // 태그는 구조가 아니다(태그 색인의 세대가 따로 오른다). 첫 태그는 태그 컴포넌트를 붙이므로 그 뒤 태그로 본다.
+    pChild->addTag( "Faction.Player"_tag );
+    generation                    = manager.getStructureGeneration();
+    const uint64 tagGenerationOld = manager.getTagIndex().getGeneration();
+    pChild->addTag( "Role.Scout"_tag );
+    SW_EXPECT_EQUAL( generation, manager.getStructureGeneration() );
+    SW_EXPECT_TRUE( manager.getTagIndex().getGeneration() != tagGenerationOld );
+
+    manager.destroyObject( pChild );
+    SW_EXPECT_TRUE( manager.getStructureGeneration() != generation );
+
+    // 다른 매니저의 세대와 겹치지 않는다(지운 매니저 자리에 새 매니저가 생겨도 캐시가 틀리지 않는다).
+    GameObjectManager other;
+    SW_EXPECT_TRUE( other.getStructureGeneration() != manager.getStructureGeneration() );
 }
