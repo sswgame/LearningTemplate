@@ -555,7 +555,7 @@ SW_TEST_CASE( CreatureLifeTest, TownStateRoundTripContinuesTheSameTown )
     Archive written;
     town.writeState( written );
     CreatureTown restored;
-    restored.initialize( &world._catalog, world.makeRefs(), 10, 10, CreatureTownSettings{} );
+    SW_ASSERT_TRUE( restored.initialize( &world._catalog, world.makeRefs(), 10, 10, CreatureTownSettings{} ) );
     Archive reader( written.getData(), written.getSize() );
     SW_ASSERT_TRUE( restored.readState( reader ) );
     SW_EXPECT_EQUAL( uint64{ 0 }, reader.getRemainingBytes() );
@@ -580,11 +580,11 @@ SW_TEST_CASE( CreatureLifeTest, TownStateRoundTripContinuesTheSameTown )
     SW_EXPECT_EQUAL( friendshipBefore + 50, restored.getFriendship( "sprout" ) );
 
     CreatureTown smaller;
-    smaller.initialize( &world._catalog, SessionStateRefs{}, 8, 8, CreatureTownSettings{} );
+    SW_ASSERT_TRUE( smaller.initialize( &world._catalog, SessionStateRefs{}, 8, 8, CreatureTownSettings{} ) );
     Archive smallerReader( written.getData(), written.getSize() );
     SW_EXPECT_FALSE( smaller.readState( smallerReader ) );
     CreatureTown truncated;
-    truncated.initialize( &world._catalog, SessionStateRefs{}, 10, 10, CreatureTownSettings{} );
+    SW_ASSERT_TRUE( truncated.initialize( &world._catalog, SessionStateRefs{}, 10, 10, CreatureTownSettings{} ) );
     Archive cut( written.getData(), written.getSize() - 2 );
     SW_EXPECT_FALSE( truncated.readState( cut ) );
     SW_EXPECT_TRUE( truncated.getCreatures().empty() );
@@ -642,7 +642,7 @@ SW_TEST_CASE( CreatureLifeTest, TownPlacesOnlyOnUsableLandAndBlocksForTreesAndHo
 
     // 남의 땅 위에 이미 놓인 오브젝트가 있으면 묶지 않는다
     CreatureTown second;
-    second.initialize( nullptr, SessionStateRefs{}, 6, 6, CreatureTownSettings{} );
+    SW_ASSERT_TRUE( second.initialize( nullptr, SessionStateRefs{}, 6, 6, CreatureTownSettings{} ) );
     SW_ASSERT_TRUE( second.setObject( 2, 2, "grass" ) );
     SW_EXPECT_FALSE( second.bindLand( &land, int2{ 0, 0 } ) );
 }

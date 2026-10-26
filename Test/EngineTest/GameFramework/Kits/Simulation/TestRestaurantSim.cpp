@@ -100,7 +100,8 @@ namespace
                 item._value    = 3;
                 _items.add( item );
             }
-            _curve.setFormula( 20.0f, 1.0f, 0.0f, 10 ); // 레벨 L → L+1 에 20 × L
+            if ( _curve.setFormula( 20.0f, 1.0f, 0.0f, 10 ) == false ) // 레벨 L → L+1 에 20 × L
+                return false;
             return _catalog.loadFromXMLText( kRestaurantTestXML, "RestaurantSimTest" ) && _recipes.loadFromXMLText( kRestaurantTestRecipeXML, "RestaurantSimTest" ) &&
                    _shops.loadFromXMLText( kRestaurantTestShopXML, "RestaurantSimTest" ) &&
                    _reputation.loadFromXMLText( kRestaurantTestReputationXML, "RestaurantSimTest" );

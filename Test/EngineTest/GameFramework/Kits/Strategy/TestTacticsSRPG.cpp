@@ -640,7 +640,7 @@ SW_TEST_CASE( TacticsSRPGTest, LevelUpDevelopmentAndRogueliteCampaign )
     SW_EXPECT_FALSE( campaign.beginMission( listChoice[0] ) ); // 작전 중
     SW_EXPECT_TRUE( campaign.getMissionKind() == hashed_string( "Battle" ) );
     SRPGCampaign twin;
-    twin.initialize( mapSettings, 99 );
+    SW_ASSERT_TRUE( twin.initialize( mapSettings, 99 ) );
     SW_ASSERT_TRUE( twin.beginMission( listChoice[0] ) );
     SW_EXPECT_TRUE( twin.getMissionSeed() == campaign.getMissionSeed() ); // 같은 판 · 같은 칸이면 같은 전장
 
@@ -767,7 +767,7 @@ SW_TEST_CASE( TacticsSRPGTest, StateRoundTripContinuesTheSameCampaign )
     Archive written;
     campaign.writeState( written );
     SRPGCampaign restored;
-    restored.initialize( mapSettings, 5 );
+    SW_ASSERT_TRUE( restored.initialize( mapSettings, 5 ) );
     Archive reader( written.getData(), written.getSize() );
     SW_ASSERT_TRUE( restored.readState( reader ) );
     SW_EXPECT_EQUAL( uint64{ 0 }, reader.getRemainingBytes() );
@@ -811,7 +811,7 @@ SW_TEST_CASE( TacticsSRPGTest, StateRoundTripContinuesTheSameCampaign )
     SW_EXPECT_TRUE( originalBytes == restoredBytes );
 
     SRPGCampaign truncated;
-    truncated.initialize( mapSettings, 5 );
+    SW_ASSERT_TRUE( truncated.initialize( mapSettings, 5 ) );
     Archive cut( written.getData(), written.getSize() - 1 );
     SW_EXPECT_FALSE( truncated.readState( cut ) );
     SW_EXPECT_TRUE( truncated.getRoster().empty() );

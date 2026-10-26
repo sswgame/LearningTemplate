@@ -508,7 +508,7 @@ namespace sw
     private:
         static void initializeCity( CitySimulation& outCity, SessionStateComponent& state )
         {
-            outCity.initialize( &LandCompositionCatalogs::get()._city, LandCompositionCatalogs::kLandSize, LandCompositionCatalogs::kLandSize, CitySettings{}, state.makeRefs() );
+            SW_ASSERT_TRUE( outCity.initialize( &LandCompositionCatalogs::get()._city, LandCompositionCatalogs::kLandSize, LandCompositionCatalogs::kLandSize, CitySettings{}, state.makeRefs() ) );
             outCity.bindLand( &state.getLand(), int2{ 0, 0 } );
         }
 

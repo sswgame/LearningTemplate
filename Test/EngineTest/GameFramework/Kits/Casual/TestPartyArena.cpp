@@ -29,7 +29,8 @@ namespace
         PartyItemSpawnSettings item;
         item._minInterval = 1000.0f;
         item._maxInterval = 1000.0f;
-        outArena.getItemSpawner().initialize( item, seed );
+        if ( outArena.getItemSpawner().initialize( item, seed ) == false )
+            return false;
         if ( outArena.initialize( settings, 2, roundTime, 0, seed ) == false )
             return false;
         outArena.start();
@@ -338,7 +339,8 @@ SW_TEST_CASE( PartyArenaTest, ItemsSpawnDeterministicallyAndSuperBounceDoublesHe
         PartyItemSpawnSettings settings = spawner.getSettings();
         settings._maxActive             = 3;
         settings._lifetime              = 1.0f;
-        SW_ASSERT_TRUE( spawner.initialize( settings, seed ) );
+        if ( spawner.initialize( settings, seed ) == false )
+            return -1;
         for ( int32 frame = 0; frame < 60 * 3; ++frame )
         {
             spawner.update( kPartyArenaStep );

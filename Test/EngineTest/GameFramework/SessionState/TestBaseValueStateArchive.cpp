@@ -459,7 +459,7 @@ SW_TEST_CASE( BaseValueStateArchiveTest, StatBlockAndLevelProgressReplayAfterRes
     SW_EXPECT_FALSE( restoredStats.hasValue( "Other" ) );
 
     ExperienceCurve curve;
-    curve.setFormula( 100.0f, 1.5f, 0.0f, 50 );
+    SW_ASSERT_TRUE( curve.setFormula( 100.0f, 1.5f, 0.0f, 50 ) );
     LevelProgress progress;
     (void)progress.addXp( curve, 350 );
     LevelProgress restoredProgress;

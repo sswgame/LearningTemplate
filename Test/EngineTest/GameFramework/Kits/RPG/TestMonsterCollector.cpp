@@ -211,7 +211,9 @@ SW_TEST_CASE( MonsterCollectorTest, StatFormulaIvEvNatureAndExpGroups )
     GameRandom            randomB( 77 );
     const MonsterInstance pikachuA = MonsterRules::createMonster( world._catalog, hashed_string( "pikachu" ), 15, randomA );
     const MonsterInstance pikachuB = MonsterRules::createMonster( world._catalog, hashed_string( "pikachu" ), 15, randomB );
-    bool                  bSameIv  = true;
+    SW_EXPECT_TRUE( MonsterRules::createMonster( world._catalog, hashed_string( "pikachu" ), 0, randomA )._speciesID.empty() ); // 범위 밖 레벨은 맞추지 않고 빈 개체로 거절한다
+    SW_EXPECT_TRUE( MonsterRules::createMonster( world._catalog, hashed_string( "pikachu" ), MonsterCollectorCatalog::kMaxLevel + 1, randomA )._speciesID.empty() );
+    bool bSameIv = true;
     for ( int32 index = 0; index < kMonsterStatCount; ++index )
     {
         bSameIv = bSameIv && pikachuA._arrIv[index] == pikachuB._arrIv[index];
@@ -825,7 +827,7 @@ SW_TEST_CASE( MonsterCollectorTest, StateRoundTripContinuesTheSameBattle )
     SW_EXPECT_TRUE( captureMonsterBytes( storage ) == captureMonsterBytes( restoredStorage ) );
 
     MonsterStorage noBox;
-    noBox.initialize( 0 );
+    SW_ASSERT_TRUE( noBox.initialize( 0 ) );
     Archive noBoxReader( storageBytes.data(), storageBytes.size() );
     SW_EXPECT_FALSE( noBox.readState( noBoxReader ) ); // 박스 정원을 넘는다
     MonsterStorage truncatedStorage;
