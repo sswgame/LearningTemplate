@@ -17,9 +17,12 @@
 	<!-- 자동 플레이를 켜면 자동 전투 AI 가 플레이어 폰을 쥐고 싸운다. -->
 	<At frame="70"><Variable name="gv_arenaAutoPlay" value="1"/></At>
 	<At frame="75"><Expect probe="Arena.PlayerControllerKind" equals="1"/></At>
-	<At frame="1500"><Expect probe="Arena.KillCount" atLeast="1"/><Expect probe="Arena.PlayerShotCount" atLeast="3"/></At>
+	<!-- 첫 처치와 셋째 발사까지만 기다린다(고정 1425 프레임을 기다리던 것을 조건 대기로 바꿨다). 둘 다 이번 판에 쌓이는 수라 먼저 닿은 쪽이 풀리지 않는다. -->
+	<At frame="76"><WaitUntil probe="Arena.KillCount" atLeast="1" timeoutFrames="1500"/></At>
+	<At frame="77"><WaitUntil probe="Arena.PlayerShotCount" atLeast="3" timeoutFrames="1500"/></At>
+	<At frame="78"><Expect probe="Arena.KillCount" atLeast="1"/><Expect probe="Arena.PlayerShotCount" atLeast="3"/></At>
 	<!-- 끄면 플레이어 조종자가 되찾는다. -->
-	<At frame="1501"><Variable name="gv_arenaAutoPlay" value="0"/></At>
-	<At frame="1506"><Expect probe="Arena.PlayerControllerKind" equals="0"/></At>
-	<At frame="1510"><Pass/></At>
+	<At frame="79"><Variable name="gv_arenaAutoPlay" value="0"/></At>
+	<At frame="84"><Expect probe="Arena.PlayerControllerKind" equals="0"/></At>
+	<At frame="88"><Pass/></At>
 </Scenario>

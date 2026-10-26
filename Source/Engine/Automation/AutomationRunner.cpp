@@ -1212,6 +1212,7 @@ namespace sw
         , _logCapture{}
         , _logPolicy{}
         , _reportWriter{}
+        , _timeline{}
         , _listFailure{}
         , _listUnconfirmed{}
         , _listUnhandledLog{}
@@ -1232,6 +1233,7 @@ namespace sw
         , _loadDeadlineSeconds{ 0.0 }
         , _wallStartSeconds{ 0.0 }
         , _wallEndSeconds{ 0.0 }
+        , _lastFrameEndSeconds{ 0.0 }
         , _startedUnixMs{ 0 }
         , _nextStepIndex{ 0 }
         , _frameIndex{ 0 }
@@ -1404,6 +1406,7 @@ namespace sw
     {
         // 붙잡힌 프레임도 센다 — 시계를 붙잡는 동안에도 크래시 자리와 벽시계 감시가 갱신돼야 한다.
         ++_seenFrameCount;
+        const size_t stepIndexBefore = _nextStepIndex;
         finishIfWallClockExceeded();
         const bool bRefreshCrashContext = _bStarted == SW_TRUE && _result == AutomationOutcome::Running && _seenFrameCount % AutomationRunTitleUtil::kTitleRefreshFrames == 0;
         if ( bRefreshCrashContext )
@@ -1427,6 +1430,7 @@ namespace sw
                     break;
                 _imageWaitFrameCount = 0;
                 ++_nextStepIndex;
+                _timeline.closeWait( step._kind, step._orderInFile, _frameIndex ); // 앞서 쌓인 고정 대기 · 조건 대기를 이 단계 앞의 대기로 닫는다
                 if ( hold == AutomationStepHold::Skip )
                     continue;
                 // 등록이 없으면 검사 뒤에 그 단계를 등록한 모듈이 내려갔다(핫 리로드). 실행 함수가 없는 단계(입력)는 준비에서 이미 끝났다.
@@ -1466,6 +1470,8 @@ namespace sw
             if ( bLoadDeadlineExceeded )
                 finish( AutomationOutcome::TimedOut, "the <Load> measurement window did not close in time (was -gv_profileFrames also given?)" );
         }
+        if ( _bEnded == SW_FALSE )
+            recordTimelineFrame( stepIndexBefore );
         if ( _result != AutomationOutcome::Running )
             endRun( &input );
         return _result;
@@ -1491,14 +1497,33 @@ namespace sw
 
     void AutomationRunner::markWallStart()
     {
-        _wallStartSeconds = AutomationRunnerInternal::readNowSeconds();
-        _startedUnixMs    = WallClock::nowUnixMilliseconds();
+        _wallStartSeconds    = AutomationRunnerInternal::readNowSeconds();
+        _lastFrameEndSeconds = _wallStartSeconds;
+        _startedUnixMs       = WallClock::nowUnixMilliseconds();
         LocalCalendarTime calendar{};
         if ( WallClock::toLocalCalendar( _startedUnixMs / 1000, calendar ) == false )
             return; // 달력으로 못 바꾸는 플랫폼이면 지역 시각 글은 비운다(유닉스 밀리초는 남는다)
         StringBuilder<constant::kMaxBuffer64> text;
         text.appendFormat( "%04d-%02d-%02d %02d:%02d:%02d", calendar._year, calendar._month, calendar._day, calendar._hour, calendar._minute, calendar._second );
         _startedAt = text.c_str();
+    }
+
+    void AutomationRunner::recordTimelineFrame( size_t stepIndexBefore )
+    {
+        AutomationFrameKind kind = AutomationFrameKind::Start;
+        if ( _bStarted == SW_TRUE )
+        {
+            const bool bStepRan = _nextStepIndex != stepIndexBefore;
+            if ( _bClockHeld == SW_TRUE )
+                kind = AutomationFrameKind::BackgroundHold;
+            else if ( _holdFrameCount > 0 )
+                kind = AutomationFrameKind::ConditionHold;
+            else
+                kind = bStepRan ? AutomationFrameKind::StepRan : AutomationFrameKind::ScheduledWait;
+        }
+        const float64 nowSeconds = AutomationRunnerInternal::readNowSeconds();
+        _timeline.recordFrame( kind, nowSeconds - _lastFrameEndSeconds );
+        _lastFrameEndSeconds = nowSeconds;
     }
 
     void AutomationRunner::finishIfWallClockExceeded()
@@ -2221,6 +2246,7 @@ namespace sw
         report._wallLimitMilliseconds    = bWatchedByWallTime ? static_cast<uint32>( static_cast<float64>( _scenario.getWallTimeoutSeconds() ) * 1000.0 ) : 0u;
         report._lastStep                 = lastStep;
         report._reproduce                = reproduce;
+        report._pTimeline                = &_timeline;
         _reportWriter.write( report );
         updateCrashContext( string( "ended " ) + getAutomationOutcomeName( _result ) );
     }

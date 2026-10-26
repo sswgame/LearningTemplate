@@ -2,7 +2,9 @@
 
 #include "Engine/Automation/AutomationReportWriter.h"
 
+#include "Core/Common/Defines.h"
 #include "Core/File/FileUtil.h"
+#include "Core/String/StringBuilder.h"
 
 namespace sw
 {
@@ -46,6 +48,34 @@ namespace sw
                 }
                 inoutJSON += listText.empty() ? "]" : "\n  ]";
             }
+
+            /** @brief `"timeline": { … },` 를 붙입니다 — 프레임 종류마다 `<키>Frames` · `<키>Milliseconds`, 단계 앞 대기 중 가장 긴 것은 `slowestWaits[]`. */
+            static void appendTimeline( string& inoutJSON, const AutomationTimeline& timeline )
+            {
+                inoutJSON += "  \"timeline\": {\n";
+                for ( uint32 kindIndex = 0; kindIndex < AutomationTimeline::kFrameKindCount; ++kindIndex )
+                {
+                    const AutomationFrameKind              kind  = static_cast<AutomationFrameKind>( kindIndex );
+                    const AutomationTimelineSlice&         slice = timeline.getSlice( kind );
+                    StringBuilder<constant::kMaxBuffer128> line;
+                    line.appendFormat( "    \"%#Frames\": %#,\n    \"%#Milliseconds\": %#,\n", AutomationTimeline::getKindKey( kind ), slice._frameCount,
+                                       AutomationTimeline::getKindKey( kind ), toMilliseconds( slice._seconds ) );
+                    inoutJSON += line.c_str();
+                }
+                inoutJSON += "    \"slowestWaits\": [";
+                const vector<AutomationSlowWait>& listWait = timeline.getSlowestWaits();
+                for ( size_t index = 0; index < listWait.size(); ++index )
+                {
+                    const AutomationSlowWait&              wait = listWait[index];
+                    StringBuilder<constant::kMaxBuffer256> line;
+                    line.appendFormat( "%#\n      { \"beforeStep\": \"%# #%#\", \"frame\": %#, \"frames\": %#, \"milliseconds\": %# }", index == 0 ? "" : ",",
+                                       escapeJSON( wait._stepKind ).c_str(), wait._stepNumber, wait._frameIndex, wait._waitedFrameCount, toMilliseconds( wait._seconds ) );
+                    inoutJSON += line.c_str();
+                }
+                inoutJSON += listWait.empty() ? "]\n  },\n" : "\n    ]\n  },\n";
+            }
+
+            [[nodiscard]] static uint32 toMilliseconds( float64 seconds ) { return static_cast<uint32>( seconds * static_cast<float64>( constant::kMillisecondsPerSecond ) ); }
         };
     } // namespace
 } // namespace sw
@@ -78,6 +108,8 @@ namespace sw
         json += "  \"wallLimitMilliseconds\": " + to_string( params._wallLimitMilliseconds ) + ",\n";
         json += "  \"lastStep\": \"" + Internal::escapeJSON( params._lastStep ) + "\",\n";
         json += "  \"reproduce\": \"" + Internal::escapeJSON( params._reproduce ) + "\",\n";
+        if ( params._pTimeline != nullptr )
+            Internal::appendTimeline( json, *params._pTimeline );
         json += "  \"failures\": ";
         Internal::appendStringArray( json, params._pListFailure != nullptr ? *params._pListFailure : listEmpty );
         json += ",\n  \"unconfirmed\": ";
