@@ -11,6 +11,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Time/TimePoint.h"
 
 namespace sw
 {
@@ -21,14 +22,14 @@ namespace sw
     /** @brief 조립 설정입니다. */
     struct LoadBotLocalServerSettings
     {
-        vector<string> _listBoardID{};          ///< 서버만 점수를 내는 순위표 — 비면 "kills"
-        string         _region{ "kr" };         ///< 게임 서버 지역
-        int64          _startMs{ 0 };           ///< 서비스 시각의 시작(UTC 밀리초). 0 이면 지금 — 가짜 시계 테스트는 첫 `tick` 과 같은 값을 준다
-        uint64         _serverID{ 1 };          ///< 버스 · 접속 상태 · 디렉터리의 서버 id
-        int32          _maxConnections{ 1024 }; ///< 받을 연결 상한(봇 수보다 크게)
-        int32          _gameServerCapacity{ 100000 };
-        uint16         _port{ 7100 };
-        uint8          _bLightPasswordHash{ SW_FALSE }; ///< 테스트 — 가벼운 Argon2id(실제 비용을 측정하려면 끈다)
+        vector<string>   _listBoardID{};          ///< 서버만 점수를 내는 순위표 — 비면 "kills"
+        string           _region{ "kr" };         ///< 게임 서버 지역
+        UnixMilliseconds _startMs{ 0 };           ///< 서비스 시각의 시작. 0 이면 지금 — 가짜 시계 테스트는 첫 `tick` 과 같은 값을 준다
+        uint64           _serverID{ 1 };          ///< 버스 · 접속 상태 · 디렉터리의 서버 id
+        int32            _maxConnections{ 1024 }; ///< 받을 연결 상한(봇 수보다 크게)
+        int32            _gameServerCapacity{ 100000 };
+        uint16           _port{ 7100 };
+        uint8            _bLightPasswordHash{ SW_FALSE }; ///< 테스트 — 가벼운 Argon2id(실제 비용을 측정하려면 끈다)
     };
 } // namespace sw
 
@@ -52,7 +53,7 @@ namespace sw
         void               shutdown();
 
         /** @brief 호스트 틱 · 서버 등록 하트비트입니다. @p nowMs 는 서비스 시각(실제 실행은 UTC 밀리초, 테스트는 가짜 시각) — 캐시 만료도 이 시각으로 측정한다. */
-        void update( int64 nowMs );
+        void update( UnixMilliseconds nowMs );
 
         OnlineServiceHost& getHost();
         uint16             getListenPort() const;

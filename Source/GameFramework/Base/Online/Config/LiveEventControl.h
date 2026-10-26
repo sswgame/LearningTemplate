@@ -9,6 +9,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
 
@@ -47,8 +48,8 @@ namespace sw
         ILiveEventControl& operator=( const ILiveEventControl& ) = delete;
 
         /** @brief JSON 정의 하나를 올리거나 같은 id 를 덮어씁니다. */
-        virtual void putEventJSON( string_view definitionJSON, AccountID actorID, string_view memo, int64 nowMs, uint64 requestTag ) = 0;
-        virtual void removeEvent( string_view eventID, AccountID actorID, string_view memo, int64 nowMs, uint64 requestTag )         = 0;
+        virtual void putEventJSON( string_view definitionJSON, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag ) = 0;
+        virtual void removeEvent( string_view eventID, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag )         = 0;
         /** @brief 이 서버가 마지막으로 읽은 정의를 JSON 글로 @p outListJSON 에 담습니다(비운 뒤 채운다). */
         virtual void collectEventJSON( vector<string>& outListJSON ) const = 0;
         /** @brief 끝난 바꾸기를 @p outListCompletion 뒤에 붙입니다. */

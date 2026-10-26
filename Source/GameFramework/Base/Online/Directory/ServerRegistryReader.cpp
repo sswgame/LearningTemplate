@@ -55,7 +55,7 @@ namespace sw
         _mapRequestToServer.clear();
     }
 
-    void ServerRegistryReader::update( int64 nowMs )
+    void ServerRegistryReader::update( UnixMilliseconds nowMs )
     {
         if ( _pRouter == nullptr || _outstandingCount > 0 )
             return;
@@ -69,7 +69,7 @@ namespace sw
         _bRefreshRequested = SW_TRUE;
     }
 
-    void ServerRegistryReader::startRefresh( int64 nowMs )
+    void ServerRegistryReader::startRefresh( UnixMilliseconds nowMs )
     {
         _bRefreshRequested  = SW_FALSE;
         _lastRefreshStartMs = nowMs;
@@ -137,10 +137,10 @@ namespace sw
         ++_refreshCount;
     }
 
-    bool ServerRegistryReader::pickServer( const ServerSelectionQuery& query, int64 nowMs, ServerStatus& outStatus )
+    bool ServerRegistryReader::pickServer( const ServerSelectionQuery& query, UnixMilliseconds nowMs, ServerStatus& outStatus )
     {
         int32 index = -1;
-        if ( ServerSelection::pickServer( _listSnapshot, query, nowMs, index ) == false )
+        if ( ServerSelection::pickServer( _listSnapshot, query, nowMs.count(), index ) == false )
             return false;
         ServerStatus& picked = _listSnapshot[static_cast<size_t>( index )];
         picked._load += query._seatCount;

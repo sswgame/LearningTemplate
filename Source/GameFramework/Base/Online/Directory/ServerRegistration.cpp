@@ -45,7 +45,7 @@ namespace sw
         _pRouter = nullptr;
     }
 
-    void ServerRegistration::update( int64 nowMs )
+    void ServerRegistration::update( UnixMilliseconds nowMs )
     {
         if ( _pRouter == nullptr )
             return;
@@ -70,14 +70,14 @@ namespace sw
         _bDirty       = SW_TRUE; // 바뀌는 대로 쓴다 — 쓰기 빈도가 문제면(부하 봇 숫자) 하트비트에만 싣는다
     }
 
-    void ServerRegistration::writeRecord( int64 nowMs )
+    void ServerRegistration::writeRecord( UnixMilliseconds nowMs )
     {
-        _status._heartbeatMs               = nowMs;
+        _status._heartbeatMs               = nowMs.count();
         const ServerDescriptor& descriptor = _status._descriptor;
         (void)_pRouter->submit( EphemeralRequest::makeSet( ServerRecord::makeRecordKey( descriptor._serverID ), ServerRecord::encode( _status ), kRecordTtlMs ),
                                 EphemeralStoreRouter::ReplyDelegate{} );
         (void)_pRouter->submit( EphemeralRequest::makeScoreSet( ServerRecord::makeIndexKey( descriptor._kind ), ServerRecord::makeMember( descriptor._serverID ),
-                                                                nowMs / constant::kMillisecondsPerSecond ),
+                                                                nowMs.toSeconds() ),
                                 EphemeralStoreRouter::ReplyDelegate{} );
         _lastWrittenMs = nowMs;
         _bDirty        = SW_FALSE;

@@ -138,7 +138,7 @@ namespace sw
                 outError = "online kit '" + _entry._name + "' could not start: " + error;
                 return false;
             }
-            void          update( int64 nowMs ) { _kit->update( nowMs ); }
+            void          update( UnixMilliseconds nowMs ) { _kit->update( nowMs ); }
             const string& getKitName() const { return _entry._name; }
 
             /**
@@ -226,7 +226,7 @@ namespace sw
         vector<OnlineServerKitNode*>        _listKit{};      ///< 초기화한 키트(초기화 순서). 소유는 `_kitScope`
         string                              _startupError{}; ///< 노드가 남긴 기동 오류(어느 키트 · 무엇)
         ServiceHealthRegistry*              _pHealthRegistry{ nullptr };
-        int64                               _nextRemoteConfigReloadMs{ 0 };
+        UnixMilliseconds                    _nextRemoteConfigReloadMs{ 0 };
         int32                               _healthCheckIndex{ -1 };
         uint8                               _bManualCacheTime{ SW_FALSE };
         uint8                               _bRegistered{ SW_FALSE };
@@ -241,7 +241,7 @@ namespace sw
     {
     public:
         /** @p settings 는 `initialize` 의 인자이고 그 함수가 도는 동안(컬렉션 초기화)만 읽는다. */
-        BaseNode( OnlineServerRuntime& runtime, OnlineServerRuntimeConfig& settings, int64 nowMs )
+        BaseNode( OnlineServerRuntime& runtime, OnlineServerRuntimeConfig& settings, UnixMilliseconds nowMs )
             : _runtime{ runtime }
             , _settings{ settings }
             , _nowMs{ nowMs }
@@ -284,7 +284,7 @@ namespace sw
     private:
         OnlineServerRuntime&       _runtime;
         OnlineServerRuntimeConfig& _settings;
-        int64                      _nowMs;
+        UnixMilliseconds           _nowMs;
     };
 } // namespace sw
 
@@ -301,7 +301,7 @@ namespace sw
         shutdown();
     }
 
-    bool OnlineServerRuntime::initialize( OnlineServerRuntimeConfig settings, int64 nowMs, string& outError )
+    bool OnlineServerRuntime::initialize( OnlineServerRuntimeConfig settings, UnixMilliseconds nowMs, string& outError )
     {
         SW_ASSERT( _bInitialized == SW_FALSE );
         _parts        = make_unique<Parts>();
@@ -355,7 +355,7 @@ namespace sw
         return true;
     }
 
-    bool OnlineServerRuntime::createStores( OnlineServerRuntimeConfig& settings, int64 nowMs, string& outError )
+    bool OnlineServerRuntime::createStores( OnlineServerRuntimeConfig& settings, UnixMilliseconds nowMs, string& outError )
     {
         using Internal = OnlineServerRuntimeInternal;
         Parts& parts   = *_parts;
@@ -380,7 +380,7 @@ namespace sw
 
         if ( Internal::isMemoryDriver( settings._cache._driver ) )
         {
-            parts._cacheManualClock.setMilliseconds( nowMs );
+            parts._cacheManualClock.setMilliseconds( nowMs.count() );
             const IClock& cacheClock   = parts._bManualCacheTime == SW_TRUE ? static_cast<const IClock&>( parts._cacheManualClock ) : parts._cacheSystemClock;
             parts._memoryCacheDatabase = make_unique<MemoryEphemeralDatabase>( cacheClock );
             parts._cache               = make_unique<MemoryEphemeralStore>( parts._memoryCacheDatabase.get() );
@@ -604,14 +604,14 @@ namespace sw
         _parts.reset();
     }
 
-    void OnlineServerRuntime::update( int64 nowMs )
+    void OnlineServerRuntime::update( UnixMilliseconds nowMs )
     {
         if ( _bInitialized == SW_FALSE )
             return;
         Parts& parts = *_parts;
         // 메모리 캐시의 만료(TTL)를 서비스와 같은 시계로 계산한다 — 캐시가 제 단조 시계를 쓰면 가짜 시계에서 서버 등록 · 매칭 테이블이 서비스 시각보다 먼저 만료된다.
         // 수동 시계를 받지 않은 캐시에는 닿지 않는다(운영 시계를 받았다).
-        parts._cacheManualClock.setMilliseconds( nowMs );
+        parts._cacheManualClock.setMilliseconds( nowMs.count() );
         parts._host.update( nowMs );
         parts._scheduler.update( nowMs );
         for ( OnlineServerKitNode* pKit : parts._listKit )

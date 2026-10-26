@@ -9,6 +9,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
 
@@ -73,10 +74,10 @@ namespace sw
         IServerDirectoryControl( const IServerDirectoryControl& )            = delete;
         IServerDirectoryControl& operator=( const IServerDirectoryControl& ) = delete;
 
-        virtual void setMaintenance( const ServerDirectoryMaintenanceChange& change, AccountID actorID, string_view memo, int64 nowMs, uint64 requestTag ) = 0;
-        virtual void clearMaintenance( string_view scope, AccountID actorID, string_view memo, int64 nowMs, uint64 requestTag )                            = 0;
-        virtual void postNotice( const ServerDirectoryNoticeChange& change, AccountID actorID, int64 nowMs, uint64 requestTag )                            = 0;
-        virtual void removeNotice( uint64 noticeID, AccountID actorID, int64 nowMs, uint64 requestTag )                                                    = 0;
+        virtual void setMaintenance( const ServerDirectoryMaintenanceChange& change, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag ) = 0;
+        virtual void clearMaintenance( string_view scope, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag )                            = 0;
+        virtual void postNotice( const ServerDirectoryNoticeChange& change, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag )                            = 0;
+        virtual void removeNotice( uint64 noticeID, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag )                                                    = 0;
         /** @brief 끝난 변경을 @p outListCompletion 뒤에 붙입니다. */
         virtual void drainControlCompletions( vector<ServerDirectoryControlCompletion>& outListCompletion ) = 0;
     };

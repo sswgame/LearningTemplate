@@ -13,6 +13,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
+#include "Core/Time/TimePoint.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -51,9 +52,9 @@ namespace sw
     /** @brief 차지한 회차 하나입니다. */
     struct ScheduledRun
     {
-        string _jobID{};
-        int64  _occurrenceMs{ 0 }; ///< 회차의 정한 시각
-        uint64 _runToken{ 0 };     ///< `completeRun` 에 돌려준다(차지 레코드의 버전)
+        string           _jobID{};
+        UnixMilliseconds _occurrenceMs{ 0 }; ///< 회차의 정한 시각
+        uint64           _runToken{ 0 };     ///< `completeRun` 에 돌려준다(차지 레코드의 버전)
     };
 } // namespace sw
 
@@ -94,7 +95,7 @@ namespace sw
         /** @brief 작업을 등록합니다. 일정이 틀리면(작업 id 문자, 시각 범위, 임대) 경고를 남기고 등록하지 않습니다. 등록했으면 true 입니다. */
         bool registerJob( const ScheduleDefinition& definition, IScheduledJobHandler* pHandler );
         /** @brief 회차가 된 작업을 저장소에서 차지해 보고, 차지한 것만 처리기를 부릅니다. 차지는 저장소 작업이라 결과는 다음 `pollCompletions` 에서 옵니다. */
-        void update( int64 nowMs );
+        void update( UnixMilliseconds nowMs );
         /** @brief 처리기가 일을 마쳤음을 차지 레코드에 적습니다(끝 시각은 마지막 `tick` 시각. 임대가 지나 다른 서버가 이어받았으면 적지 않는다). */
         void completeRun( const ScheduledRun& run, bool bSucceeded );
 
@@ -132,10 +133,10 @@ namespace sw
         void onClaimCompleted( size_t jobIndex, int64 occurrenceMs, ClaimOutcome outcome, uint64 runToken, int64 retryAtMs );
         void onWorkCompleted() { --_pendingWorkCount; }
 
-        vector<Job>    _listJob;
-        IServiceStore* _pStore;
-        uint64         _serverID;
-        int64          _lastTickMs;
-        int32          _pendingWorkCount;
+        vector<Job>      _listJob;
+        IServiceStore*   _pStore;
+        uint64           _serverID;
+        UnixMilliseconds _lastTickMs;
+        int32            _pendingWorkCount;
     };
 } // namespace sw

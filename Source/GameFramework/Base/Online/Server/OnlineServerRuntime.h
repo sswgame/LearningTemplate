@@ -17,6 +17,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/NetTypes.h"
+#include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Base/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -82,12 +83,12 @@ namespace sw
         OnlineServerRuntime( const OnlineServerRuntime& )            = delete;
         OnlineServerRuntime& operator=( const OnlineServerRuntime& ) = delete;
 
-        /** @brief 조립하고 받기 시작합니다. 실패하면 false 와 @p outError 이며, 만든 것은 `shutdown` 이 정리합니다. @p nowMs 는 서비스 시각(UTC 밀리초)입니다. */
-        [[nodiscard]] bool initialize( OnlineServerRuntimeConfig settings, int64 nowMs, string& outError );
+        /** @brief 조립하고 받기 시작합니다. 실패하면 false 와 @p outError 이며, 만든 것은 `shutdown` 이 정리합니다. @p nowMs 는 서비스 시각입니다. */
+        [[nodiscard]] bool initialize( OnlineServerRuntimeConfig settings, UnixMilliseconds nowMs, string& outError );
         /** @brief 만든 역순으로 종료합니다. 두 번 불러도 됩니다. */
         void shutdown();
         /** @brief 호스트, 예약 작업, 키트, 서버 등록 하트비트를 돌립니다. */
-        void update( int64 nowMs );
+        void update( UnixMilliseconds nowMs );
 
         bool               isInitialized() const { return _bInitialized == SW_TRUE; }
         OnlineServiceHost& getHost();
@@ -103,7 +104,7 @@ namespace sw
 
         class BaseNode;
 
-        [[nodiscard]] bool createStores( OnlineServerRuntimeConfig& settings, int64 nowMs, string& outError );
+        [[nodiscard]] bool createStores( OnlineServerRuntimeConfig& settings, UnixMilliseconds nowMs, string& outError );
         /** @brief 설정의 키트를 만들어 노드로 더합니다(모르는 키트 · 두 번 적은 키트 · 설정에 없는 필수 키트는 오류). */
         [[nodiscard]] bool addKits( bool bReverseIndependentOrder, string& outError );
         [[nodiscard]] bool startHost( OnlineServerRuntimeConfig& settings, string& outError );

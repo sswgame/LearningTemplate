@@ -42,7 +42,7 @@ namespace sw
         public:
             bool  initialize( const ServerServiceContext& context, string& outError ) override;
             void  shutdown() override { _runtime.shutdown(); }
-            void  update( int64 nowMs ) override { _runtime.update( nowMs ); }
+            void  update( UnixMilliseconds nowMs ) override { _runtime.update( nowMs ); }
             int32 getConnectionCount() const override { return _runtime.getConnectionCount(); }
 
         private:

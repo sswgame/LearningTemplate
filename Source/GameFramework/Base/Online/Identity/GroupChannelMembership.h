@@ -8,6 +8,7 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
 
@@ -37,7 +38,7 @@ namespace sw
         IGroupChannelMembership& operator=( const IGroupChannelMembership& ) = delete;
 
         /** @brief @p accountID 를 그룹 채널에 넣습니다. 이 서버에 없는 계정이거나 채널 수 상한이면 넣지 않습니다(경고 로그). */
-        virtual void addGroupMember( GroupChannelKind kind, uint64 groupID, AccountID accountID, int64 nowMs ) = 0;
-        virtual void removeGroupMember( GroupChannelKind kind, uint64 groupID, AccountID accountID )           = 0;
+        virtual void addGroupMember( GroupChannelKind kind, uint64 groupID, AccountID accountID, UnixMilliseconds nowMs ) = 0;
+        virtual void removeGroupMember( GroupChannelKind kind, uint64 groupID, AccountID accountID )                      = 0;
     };
 } // namespace sw

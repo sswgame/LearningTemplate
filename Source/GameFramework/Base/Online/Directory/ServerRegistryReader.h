@@ -11,6 +11,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Base/Online/Directory/ServerSelection.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -42,12 +43,12 @@ namespace sw
         void shutdown();
 
         /** @brief 주기가 됐거나(또는 `requestRefresh`) 읽는 중이 아니면 새로 읽기 시작합니다. */
-        void update( int64 nowMs );
+        void update( UnixMilliseconds nowMs );
         /** @brief 다음 `tick` 에 주기와 상관없이 읽습니다(읽는 중이면 끝난 뒤의 `tick` 에). */
         void requestRefresh();
 
         /** @brief 서버를 고릅니다. 고르면 그 서버에 @p query 의 `_seatCount` 를 더합니다(다음 스냅숏까지). */
-        [[nodiscard]] bool pickServer( const ServerSelectionQuery& query, int64 nowMs, ServerStatus& outStatus );
+        [[nodiscard]] bool pickServer( const ServerSelectionQuery& query, UnixMilliseconds nowMs, ServerStatus& outStatus );
 
         const vector<ServerStatus>& getSnapshot() const { return _listSnapshot; }
         const string&               getKind() const { return _kind; }
@@ -55,7 +56,7 @@ namespace sw
         bool                        isRefreshing() const { return _outstandingCount > 0; }
 
     private:
-        void startRefresh( int64 nowMs );
+        void startRefresh( UnixMilliseconds nowMs );
         void onIndexReply( const EphemeralReply& reply );
         void onRecordReply( const EphemeralReply& reply );
         void finishRefresh();
@@ -67,7 +68,7 @@ namespace sw
         EphemeralStoreRouter*         _pRouter;
         uint64                        _indexRequestID; ///< 기다리는 색인 읽기(0 = 없음)
         int64                         _refreshPeriodMs;
-        int64                         _lastRefreshStartMs;
+        UnixMilliseconds              _lastRefreshStartMs;
         uint64                        _refreshCount;
         int32                         _outstandingCount;
         uint8                         _bRefreshRequested;

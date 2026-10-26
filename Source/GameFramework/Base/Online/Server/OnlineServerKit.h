@@ -18,6 +18,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/SubsystemScope.h"
+#include "Core/Time/TimePoint.h"
 
 #include "Engine/Observability/ServiceFactoryList.h"
 
@@ -82,7 +83,7 @@ namespace sw
         const OnlineServerConfig* _pConfig{ nullptr };
         uint64                    _serverID{ 1 };
         ServerDescriptor          _serverDescriptor{}; ///< 이 서버의 설명(id · 종류 · 지역 · 공개 주소 · 게임 포트와 수). 디렉터리 등록과 매칭 백필이 같은 값을 쓴다
-        int64                     _nowMs{ 0 };         ///< 시작 시각(UTC 밀리초). 테스트는 가짜 시각을 넣는다
+        UnixMilliseconds          _nowMs{ 0 };         ///< 시작 시각. 테스트는 가짜 시각을 넣는다
     };
 } // namespace sw
 
@@ -112,7 +113,7 @@ namespace sw
         /** @brief 모든 키트의 `initialize` 와 호스트 기동 뒤입니다. 라우터와 다른 키트의 인터페이스로 로직을 시작합니다. */
         [[nodiscard]] virtual bool start( OnlineServerKitContext& context, string& outError ) = 0;
         /** @brief 서버 루프마다 호스트 틱 뒤에 불립니다. 바인딩의 `onServiceTick` 이 하지 않는 일(서버 등록 하트비트 등)만 둡니다. */
-        virtual void update( int64 nowMs ) { (void)nowMs; }
+        virtual void update( UnixMilliseconds nowMs ) { (void)nowMs; }
         /** @brief 호스트를 내리기 전입니다. 맡긴 캐시 요청을 취소하고, 구독을 풀고, 저장 일을 회수합니다. */
         virtual void stop() = 0;
         /** @brief 호스트와 저장소를 종료하고 남은 완료를 돌린 뒤입니다. 저장소 완료가 부르는 로직(로그인 서비스 등)의 마지막 정리를 합니다. */
