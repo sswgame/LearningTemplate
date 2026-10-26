@@ -398,7 +398,7 @@ namespace sw
              * @brief 타입 선언의 REFLECT_CONTAINER(Kind [, WrapperStem]) 를 조회합니다.
              * @return 어노테이션된 컨테이너 메타를 찾으면 true
              */
-            static bool findReflectContainer( const CXType type, const ParserConfig& config, ContainerKind& outKind, string& outWrapperStem )
+            [[nodiscard]] static bool findReflectContainer( const CXType type, const ParserConfig& config, ContainerKind& outKind, string& outWrapperStem )
             {
                 const CXCursor declaration = findContainerDeclaration( type );
                 if ( clang_Cursor_isNull( declaration ) )
@@ -1220,7 +1220,7 @@ namespace sw
              *          읽은 뒤의 연결이 타입을 확인한다. 맵 · 중첩 컨테이너 · 타입 없는 `ComponentHandle` 은 대상 타입을 확인할 자리가 없어 생성 오류다
              *          (`docs/09_Decisions.md` 5-6 타입 핸들 직렬화). 리플렉션 구조체의 필드도 이 검사를 지난다.
              */
-            static bool resolveComponentHandleProperty( ParsedPropertyInfo& prop, const string& owner )
+            [[nodiscard]] static bool resolveComponentHandleProperty( ParsedPropertyInfo& prop, const string& owner )
             {
                 bool bHolds = spellsComponentHandle( prop._typeName ) || spellsComponentHandle( prop._elementTypeName ) || spellsComponentHandle( prop._keyTypeName );
                 for ( const ParsedContainerNode* pNode = prop._containerTree.get(); pNode != nullptr && bHolds == false; pNode = pNode->_elementNested.get() )
@@ -1270,7 +1270,7 @@ namespace sw
              *          확인에는 그 씬의 매니저가 들어서 **컴포넌트의 비정적 메서드**만 받는다(생성자 · 정적 함수 · 컴포넌트가 아닌 타입은 생성 오류다).
              *          컨테이너에 든 타입 핸들은 대상 타입을 확인할 자리가 없어 오류다. 타입 없는 `ComponentHandle` 은 예전처럼 그대로 둔다.
              */
-            static bool resolveComponentHandleParameters( ParsedFunctionInfo& method, bool bComponentOwner, const string& owner )
+            [[nodiscard]] static bool resolveComponentHandleParameters( ParsedFunctionInfo& method, bool bComponentOwner, const string& owner )
             {
                 for ( ParsedParameterInfo& parameter : method._listParameter )
                 {

@@ -358,7 +358,7 @@ namespace sw
         {
             _pendingAccountOperation = AccountClientOperation::Register; // 처음이면 가입 — 이름이 있으면 그대로 로그인
             const string loginName   = "bot" + LoadBotInternal::makeNumberText( _pRunner->getScenario()._seed ) + "_" + LoadBotInternal::makeNumberText( _botIndex );
-            (void)_accountClient.registerAccount( loginName, LoadBotInternal::kPassword );
+            (void)_accountClient.registerAccount( loginName, LoadBotInternal::kPassword ); // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
             return;
         }
         // 게스트 — 장치 비밀은 씨앗 · 봇 번호에서 정해진다(같은 시나리오를 다시 돌리면 같은 계정)

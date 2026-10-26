@@ -5,8 +5,17 @@ fallible_verb = [
     "cook", "compile", "revert", "convert", "try", "open", "attach", "spawn", "instantiate", "reload",
     "remove", "copy", "create", "delete", "move", "rename",
     "ensure", "collect", "makeRelativePath", "makeAbsolutePath", "getFileStamp", "initRHI",
+    "initialize", "init", "bind", "mount", "register", "execute", "submit", "upload", "finish", "prepare", "resolve", "find",
 ]
 
 # 폴더 패턴(fnmatch) 또는 `<파일>:<이름>` → 속성을 달지 않는 까닭.
 [exemption]
 "Source/RuntimeAPI/*" = "C-ABI 계약(extern \"C\" 함수 포인터 표) — 속성을 달 자리가 아니다"
+"Source/Engine/Graphics/RHI/Support/RHITimestamp.h:resolve" = "푼 슬롯이 있나 — 실패가 아니다(풀지 못한 슬롯은 -1 로 남고 부르는 쪽이 그 쌍을 버린다)"
+"Source/Engine/Renderer/Scene/GPUScene.h:upload" = "그릴 인스턴스가 있나 — 빈 장면은 false 라 실패가 아니다"
+"Source/Editor/Common/Commands/EditorCommandRegistry.h:execute" = "켜진 명령이면 실행했나 — 꺼진 명령은 false 라 실패가 아니다"
+"Source/Editor/Common/Commands/EditorCommandRegistry.h:executeDesc" = "켜진 명령이면 실행했나 — 꺼진 명령은 false 라 실패가 아니다"
+# 아래 셋은 실패 뜻이지만 헤더 단독 탐침(CheckHeaderSelfContained)이 레이어 스텁으로 이미 실패해 커밋 훅이 이 헤더의 변경을 받지 않는다 — 탐침이 고쳐지면 [[nodiscard]] 를 달고 지운다.
+"Source/Editor/IEditor.h:initialize" = "헤더 단독 탐침이 이 헤더에서 이미 실패한다(위 설명) — 지금 호출은 결과를 쓴다"
+"Source/Editor/ImGuiEditor.h:initialize" = "헤더 단독 탐침이 이 헤더에서 이미 실패한다(위 설명) — 지금 호출은 결과를 쓴다"
+"Source/Editor/Panels/Animation/AnimationGraphPanel.h:findGraphPin" = "헤더 단독 탐침이 이 헤더에서 이미 실패한다(위 설명) — 지금 호출은 결과를 쓴다"
