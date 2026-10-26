@@ -31,7 +31,6 @@ import os
 import re
 import shlex
 import subprocess
-import tempfile
 from pathlib import Path
 from typing import Sequence
 
@@ -151,10 +150,6 @@ def isPchTokenInternal(token: str) -> bool:
     return "cmake_pch" in token
 
 
-#: 셸(Windows `cmd`)이 받는 명령줄 길이의 안전한 상한 — 넘으면 응답 파일로 넘긴다(한계는 8191 자).
-kMaxShellCommandLength = 7000
-
-
 def makeSyntaxOnlyCommand(entry: dict, probeSource: Path, listExtraFlag: Sequence[str] = ()) -> list[str]:
     """TU 의 명령줄에서 PCH · 출력 · 의존 파일 · 소스 파일을 떼고 `-fsyntax-only` 로 바꾼다. `listExtraFlag` 는 소스 앞에 붙인다."""
     rawCommand = entry.get("command") or " ".join(entry.get("arguments", []))
@@ -194,18 +189,8 @@ def makeSyntaxOnlyCommand(entry: dict, probeSource: Path, listExtraFlag: Sequenc
 
 def compileSyntaxOnly(entry: dict, probeSource: Path, buildDir: Path, listExtraFlag: Sequence[str] = ()) -> tuple[bool, str]:
     """`probeSource` 를 `entry` 의 플래그로 `-fsyntax-only` 컴파일한다. (성공 여부, 컴파일러 출력 전부)."""
-    listToken = makeSyntaxOnlyCommand(entry, probeSource, listExtraFlag)
-    commandLine = " ".join(listToken)
-    if len(commandLine) <= kMaxShellCommandLength:
-        completed = subprocess.run(commandLine, shell=True, capture_output=True, text=True, errors="replace", cwd=str(buildDir))
-        return completed.returncode == 0, (completed.stdout or "") + (completed.stderr or "")
-    # 테스트 TU 처럼 명령줄이 셸 한계를 넘으면 컴파일러 뒤의 인자를 응답 파일(`@파일`, clang · clang-cl 이 읽는다)로 넘긴다 — "명령줄이 너무 깁니다" 로 검사가 빠지지 않게.
-    with tempfile.NamedTemporaryFile("w", suffix=".rsp", delete=False, encoding="utf-8", dir=str(buildDir)) as responseFile:
-        responseFile.write(" ".join(listToken[1:]))  # 줄바꿈으로 나누면 clang-cl 이 `/imsvc` 의 다음 인자를 잇지 못한다 — 공백 한 줄이 명령줄과 같다
-    try:
-        completed = subprocess.run(f"{listToken[0]} @{responseFile.name}", shell=True, capture_output=True, text=True, errors="replace", cwd=str(buildDir))
-    finally:
-        Path(responseFile.name).unlink(missing_ok=True)
+    completed = subprocess.run(" ".join(makeSyntaxOnlyCommand(entry, probeSource, listExtraFlag)), shell=True, capture_output=True,
+                               text=True, errors="replace", cwd=str(buildDir))
     return completed.returncode == 0, (completed.stdout or "") + (completed.stderr or "")
 
 
