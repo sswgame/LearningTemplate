@@ -1,7 +1,7 @@
 /**
  * @file PairedAnimationSession.h
  * @brief 페어드 애니메이션 세션입니다. 에셋(`PairedAnimationDef`)의 역할마다 참가자(애니메이터)를 묶어 한 시계로 재생하고, 정렬 · 공유 알림 · 끝 · 중단을 맡습니다.
- * @details 설계는 `docs/plans/PairedAnimation.md`. 요점은 이렇다.
+ * @details 설계는 `docs/decisions/5-8_GameFramework.md`. 요점은 이렇다.
  *          - **시계**: 앵커 역할 플레이어의 시각 하나가 기준이다. 세션은 그것을 읽고, 이번 프레임 평가가 갈 시각(`시각 + dt × 속도`)을 예측해 공유 알림을
  *            그 구간에서 낸다. 다음 프레임에 앵커 시각이 예측과 다르면 오류로 중단한다(조용히 맞추지 않는다).
  *          - **맞춤**: 역할은 같은 프레임 · 속도 1 로 각자 `play` 한다. 매 프레임 역할 시각 = 앵커 시각 − 진입 때 앵커 시각인지 검사한다.
@@ -9,7 +9,7 @@
  *          - **정렬**: `Snap` 은 진입 때 트랜스폼을 맞추고, `Warp` 는 같은 오브젝트의 `MotionWarpingComponent` 에 목표 · 창을 넣는다(목표는 매 프레임 앵커에서 다시 구함).
  *          - **스레드**: 시작 · 갱신 · 중단은 모두 게임 스레드, 틱 밖(`PairedAnimationSystem` 의 프레임 시스템 단계)에서 부른다. 애니메이션 평가는 세션을 읽지 않는다.
  *          - **잃음**: 필수 역할(앵커 포함)의 애니메이터가 사라지거나 다른 것을 재생하면 중단, 선택 역할이면 그 역할만 빠진다.
- *          - **복제**: 상태는 `captureSnapshot` 으로 복사하고 `restore` 로 이어 받는다(늦게 들어온 클라이언트, 롤백). 설계는 `docs/plans/PairedAnimation.md` 7절.
+ *          - **복제**: 상태는 `captureSnapshot` 으로 복사하고 `restore` 로 이어 받는다(늦게 들어온 클라이언트, 롤백). 설계는 `docs/decisions/5-8_GameFramework.md`.
  */
 #pragma once
 #include "Core/Common/Macros.h"

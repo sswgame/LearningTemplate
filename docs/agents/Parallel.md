@@ -37,7 +37,7 @@ Prefer a shape that cannot race over a rule; the two gates below exist only for 
 - Code inside a tick, a service or a worker does not read mutable global or singleton state. Pass what it needs in.
 - A worker body touches pointers and scratch slots, not containers that another worker may resize (`EngineParallel.h`).
 - A new job-style interface declares what it reads and writes as pure virtuals, with no default (the model is `getPoseAccess`,
-  `docs/plans/AnimationLodAndCrowd.md`). A default hides a missing declaration until two jobs race.
+  `docs/decisions/5-6_ObjectsInput.md`). A default hides a missing declaration until two jobs race.
 
 ### Lazy initialization
 

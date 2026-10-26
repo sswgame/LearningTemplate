@@ -8,7 +8,7 @@
 - 에셋 고정: `PreloadSet::enablePinning` 을 부르면 읽기에 성공한 경로를 그 종류의 캐시에 요청하고 토큰을 보관한다(`AssetManager::pinAsset` → `IAssetCache::pinAsset`). 비용은 읽은 바이트 수이고 예산을 넘으면 마지막으로 쓴 때가 가장 오래된 것부터 놓는다(`AssetPinSet`, LRU). 텍스처는 디바이스가 있어야 요청하므로 그것을 쓰는 머티리얼의 고정이 붙든다.
 - 프리팹 풀: `PrefabPool`(`GameFramework/Base/World/Lifetime/PrefabPool.h`) — 돌려받은 인스턴스를 끄고 쉬게 했다가 켜서 다시 내준다(상한 넘으면 지움, `prewarm`).
 - 컷 준비의 LOD: `CameraManagerComponent` 가 대기 뷰의 카메라를 프레임마다 `AnimationSystem::setPendingLODView` · `MeshLODSystem::setPendingView` 로 넣는다.
-- 메시 LOD: 모델 임포트 규칙의 `lods`(단계마다 삼각형 비율 · 화면 크기 임계값 · 허용 오차)로 `meshopt_simplify` 가 단계를 만들어 `.mesh` 의 `LODS` 덩어리에 싣는다(LOD 없는 파일은 바이트 그대로). `Mesh` 는 LOD 0 을 CPU 정점으로 두고(물리 · 내비 · 피킹은 LOD 0) 낮은 단계를 정점 흐름 뒤에 연결한다. 씬 서비스 `MeshLODSystem` 이 프레임마다 화면 크기로 단계를 고르고(고운 쪽은 10 % 여유) 렌더 수집이 그 단계의 정점 범위로 배치를 나눈다. 모프 · 구간이 있는 메시는 LOD 를 받지 않는다. 스킨드 메시는 받는다([AnimationLodAndCrowd](AnimationLodAndCrowd.md) C4).
+- 메시 LOD: 모델 임포트 규칙의 `lods`(단계마다 삼각형 비율 · 화면 크기 임계값 · 허용 오차)로 `meshopt_simplify` 가 단계를 만들어 `.mesh` 의 `LODS` 덩어리에 싣는다(LOD 없는 파일은 바이트 그대로). `Mesh` 는 LOD 0 을 CPU 정점으로 두고(물리 · 내비 · 피킹은 LOD 0) 낮은 단계를 정점 흐름 뒤에 연결한다. 씬 서비스 `MeshLODSystem` 이 프레임마다 화면 크기로 단계를 고르고(고운 쪽은 10 % 여유) 렌더 수집이 그 단계의 정점 범위로 배치를 나눈다. 모프 · 구간이 있는 메시는 LOD 를 받지 않는다. 스킨드 메시는 받는다([결정 기록 5-6](../decisions/5-6_ObjectsInput.md) C4).
 - PSO 미리 만들기: 씬에 있는 머티리얼은 렌더러가 배치마다 PSO 를 만들므로 이미 준비돼 있고, 고정한 머티리얼(아직 씬에 없는 다음 레벨 · 컷의 것)은 렌더러가 기록 전에 보기 모드의 불투명 또는 투명 패스마다 등장 디더 변형까지 PSO 를 미리 만든다(`FrameRenderer::warmPinnedMaterialPSOs`).
 - 텍스처 밉 스트리밍: 비동기로 읽는 텍스처는 아래쪽 밉(짧은 변 64 근처)만 먼저 업로드하고 렌더 스레드가 한 프레임에 둘씩 위쪽 밉까지 새 GPU 텍스처 · SRV 로 바꿔 끼운다(`TextureCache::updateStreaming`). 옛 자원은 이미 만든 패킷이 끝날 때까지 미룬다. 시나리오 스크린샷은 위쪽 밉이 다 들어올 때까지 기다린다(`countLoadsInFlight`). `-gv_textureStreaming=0` 이면 처음부터 밉 전부.
 - 자동 수집(P8): 쿠킹이 씬마다 옆에 `<씬>.preload.json` 을 굽는다(`ScenePreloadList`, `SceneCooker::cookAllScenes` — 쿠킹 기록은 작업 하나에 출력 하나라 SCN1 에 싣지 않고 두 번째 작업으로 돈다). 목록은 씬 문서를 런타임과 같은 길로 지어(프리팹 스폰 · 중첩까지) 모든 컴포넌트의 에셋 경로 프로퍼티(`PROPERTY( AssetPath )` · `AssetType`)를 리플렉션으로 읽어 모은 것이다(`ComponentAssetPathUtil`). `SceneManager::requestLoadFuture` 가 로드를 띄울 때 목록이 있으면 `PreloadSet`(고정 켬)으로 열고 `updateTransitions` 가 진행하며 로드가 끝난 뒤 `gv_scenePreloadHoldFrames` 프레임 붙들고 놓는다. 진행률은 `SceneManager::tryGetLoadProgress` 이고 로딩 화면의 `Progress` 슬라이더가 그린다. 끄기 `gv_scenePreload`. 쿠킹 전 Dev 실행은 목록이 없어 에셋을 잡을 때 읽는다. 머티리얼이 쓰는 텍스처는 싣지 않는다. 로딩 화면 팁은 gamesettings `loadingTips`(`*.loadingtips.xml`)가 채우고 글은 현지화 프로젝트 `assetRules` 로 수집한다.
@@ -17,7 +17,7 @@
 
 ## P9 GPU 인스턴스 LOD 와 크로스페이드 (남음 — 셰이더)
 
-지금은 컴포넌트마다 CPU 에서 고른다(`MeshLODSystem`). 단계가 바뀌면 배치 키가 달라져 그 프레임은 다시 나누고 정렬한다(단계가 자주 바뀌는 큰 씬에서는 비용). GPU 컬링이 인스턴스마다 화면 크기로 단계를 고르고(`gpucull.hlsl` 이 단계별 간접 인자 구간에 압축) 단계 사이는 디더 크로스페이드(머티리얼 셰이더, 등장 디더와 같은 패턴)로 넘기며, 컷 프레임과 대기 뷰는 크로스페이드를 끈다. 본 LOD 를 메시 LOD 와 묶는 일은 [AnimationLodAndCrowd](AnimationLodAndCrowd.md), HLOD 는 나중.
+지금은 컴포넌트마다 CPU 에서 고른다(`MeshLODSystem`). 단계가 바뀌면 배치 키가 달라져 그 프레임은 다시 나누고 정렬한다(단계가 자주 바뀌는 큰 씬에서는 비용). GPU 컬링이 인스턴스마다 화면 크기로 단계를 고르고(`gpucull.hlsl` 이 단계별 간접 인자 구간에 압축) 단계 사이는 디더 크로스페이드(머티리얼 셰이더, 등장 디더와 같은 패턴)로 넘기며, 컷 프레임과 대기 뷰는 크로스페이드를 끈다. 본 LOD 를 메시 LOD 와 묶는 일은 [결정 기록 5-6](../decisions/5-6_ObjectsInput.md), HLOD 는 나중.
 **못 하는 근거**: 셰이더 소스를 커밋하면 커밋 훅이 빌드한 `App --cook-shaders` 로 전 백엔드 바이너리를 굽는데 작업자는 빌드하지 않아 셰이더 변경을 커밋할 수 없다. **풀리는 조건**: 빌드한 App 이 있는 통합/셰이더 담당이 `gpucull.hlsl` · 머티리얼 디더 크로스페이드 · 간접 인자 구간(CPU 쪽 배치 나눔 제거)을 한 묶음으로 쓰고 쿠킹한다(CPU 쪽 선행 없음 — 단계 임계값은 `Mesh::selectLOD` 가 이미 정한다).
 
 ## P10 그림자 (끝)
