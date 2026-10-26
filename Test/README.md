@@ -261,6 +261,8 @@ hostgpu 항목은 `--required_backends=<이름,…>`(정책 `requiredBackends.<�
 
 **판정이나 보고 형식을 더하려면** 실행기를 고치지 않고 `ITestCaseJudge`(`TestJudge.h`, `TestRegistry::registerJudge`)나 `ITestRunListener`(`TestReport.h`, `registerListener`)를 하나 더 붙입니다.
 
+**케이스 단위 결과 보고(JSON).** `--test_report=<경로>`(gtest 별칭 `--gtest_output=json:<경로>`, 다른 형식은 실행을 실패로 끝낸다)를 주면 실행이 끝날 때 `JSONTestReporter`(`TestReportJSON.cpp`)가 파일 하나를 씁니다. ctest 항목은 `SW_TEST_REPORT_DIR`(`<빌드>/TestReports`)을 받아 경로를 안 주면 `<폴더>/<ctest 이름>.json` 에 씁니다(폴더만 있고 `SW_TEST_CTEST_NAME` 이 없으면 실패). 형식은 하나뿐이고(`format` 1, 별칭 · 옛 형식 리더 없음) 케이스마다 `name` · `parameter` · `result`(`passed`/`failed`/`skipped`) · `ms` · `iteration` · `shard` · `failures`(`file` · `line` · `condition` · `message` · `trace`) · `partSkips` · `missingFeature` · `unhandledLog`(처리하지 않은 Error · Warning 줄)를 적습니다. 틀 테스트 안의 `(nested)` 레지스트리는 쓰지 않습니다.
+
 ## 함정과 주의
 
 게이트가 막는 규칙(스위트 이름 `XxxTest` · 한 파일 한 스위트, 호스트 스위트 파일 분리, 비활성 게임 팩 원본은 `SW_TEST_REQUIRES_FEATURE( SourceResources )`, CoreTest 의 엔진 include 금지, EditorTest 의 ImGui 금지, 실패 가능 bool 의 `[[nodiscard]]`)은 `CheckTestSuites` · `CheckFallibleNodiscard` 가 잡습니다.

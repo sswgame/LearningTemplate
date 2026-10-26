@@ -74,6 +74,7 @@ namespace test
         record._iteration       = iteration;
         record._bSeedUsed       = _currentContext.isSeedUsed();
         record._listSkippedPart = _currentContext.getListSkippedPart();
+        record._listFailure     = _currentContext.getListFailure();
         if ( _currentContext.hasFailed() )
         {
             record._result = CaseResult::Failed;

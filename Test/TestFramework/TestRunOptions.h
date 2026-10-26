@@ -79,6 +79,7 @@ namespace test
         static const utf8* getBackendName( sw::RHIBackend backend );
 
         TestFilter                   _filter;
+        sw::string                   _reportPath;                                           ///< 케이스 단위 결과 보고(JSON)를 쓸 파일 — `--test_report=` · `--gtest_output=json:` · 없으면 `SW_TEST_REPORT_DIR/<SW_TEST_CTEST_NAME>.json`. 빈 글이면 쓰지 않는다
         sw::string                   _filterText;                                           ///< 받은 그대로의 `--test_filter`(재현 명령용)
         sw::vector<sw::string>       _listEngineArgument;                                   ///< 테스트 인자가 아닌 것(엔진 명령줄)
         sw::map<sw::string, float64> _mapCaseCost;                                          ///< `--test_costs=A.B=40,C.D=12` — 샤드를 비용으로 고르게 나눌 때(`Test/TestPolicy.json` 의 `caseCosts`)
