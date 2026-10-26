@@ -28,8 +28,12 @@ namespace sw::editor
 
         /** @brief 오른쪽 단추 비행(마우스 회전 + WASD/QE 이동)입니다. 휠은 @p inoutCameraSpeed(툴바 슬라이더와 같은 값)를 바꿉니다. */
         void processFlyInput( float32 deltaTime, float32& inoutCameraSpeed );
-        /** @brief Alt 궤도 입력입니다. 왼쪽 단추는 회전, 오른쪽 단추와 휠은 궤도 거리입니다. */
+        /** @brief Alt 궤도 입력입니다. 왼쪽 단추는 회전, 오른쪽 단추와 휠은 궤도 거리입니다. 궤도 중심은 `processFlyInput` 이 시선 앞으로 이어 둔다. */
         void processOrbitInput();
+        /** @brief 원근 보기의 휠 줌입니다. 궤도 중심을 두고 궤도 거리를 거리에 비례해 줄이거나 늘립니다(@p mouseWheel 이 양수면 가까워진다). */
+        void dolly( float32 mouseWheel );
+        /** @brief 가운데 단추 팬입니다. 마우스 이동 픽셀(@p pixelX, @p pixelY)만큼 화면 평면에서 카메라와 궤도 중심을 같이 옮깁니다. */
+        void pan( float32 pixelX, float32 pixelY );
         /** @brief 숫자 키 1~9 북마크입니다. Ctrl 과 함께 누르면 저장하고, 수식 키 없이 누르면 불러옵니다. */
         void processBookmarkKeys();
 
@@ -67,6 +71,8 @@ namespace sw::editor
         /** @brief 회전(도)입니다. x 는 피치, y 는 요, z 는 롤입니다. */
         const float3& getRotation() const { return _rotation; }
         bool          isOrthographicView() const { return _bOrthographicView == SW_TRUE; }
+        /** @brief 시선 앞 궤도 거리(m)입니다. 휠 줌과 초점이 바꾼다. */
+        float32 getOrbitDistance() const { return _orbitDistance; }
         /**
          * @brief 지금(또는 막 끝난) 오른쪽 단추 누름 동안 비행 키(WASD · QE)로 카메라를 옮겼는가입니다. 단추를 누르는 프레임에 지워집니다.
          * @details 오른쪽 단추를 놓을 때 여는 맥락 메뉴가 이것과 끌기 거리로 "비행이었다" 를 가린다. 마우스를 끌지 않고 WASD 로만 날아도 비행이다 —

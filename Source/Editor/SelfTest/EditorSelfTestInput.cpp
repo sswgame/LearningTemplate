@@ -21,6 +21,7 @@ namespace sw::editor
                 MouseButton,
                 Text,
                 Key,
+                MouseWheel, ///< 세로 휠 눈금(`_position._y`)
                 FrameBreak, ///< 여기까지를 이번 프레임에 넣고 나머지는 다음 프레임에 넣는다
             };
 
@@ -206,6 +207,14 @@ namespace sw::editor
         EditorSelfTestInputInternal::push( std::move( event ) );
     }
 
+    void EditorSelfTestInput::scrollMouseWheel( float32 notches )
+    {
+        EditorSelfTestInputInternal::PendingEvent event;
+        event._kind     = EditorSelfTestInputInternal::EventKind::MouseWheel;
+        event._position = float2{ 0.0f, notches };
+        EditorSelfTestInputInternal::push( std::move( event ) );
+    }
+
     void EditorSelfTestInput::waitNextFrame()
     {
         EditorSelfTestInputInternal::PendingEvent event;
@@ -330,6 +339,11 @@ namespace sw::editor
                 case EditorSelfTestInputInternal::EventKind::Key:
                 {
                     io.AddKeyEvent( static_cast<ImGuiKey>( event._code ), event._bDown != SW_FALSE );
+                    break;
+                }
+                case EditorSelfTestInputInternal::EventKind::MouseWheel:
+                {
+                    io.AddMouseWheelEvent( 0.0f, event._position._y );
                     break;
                 }
                 case EditorSelfTestInputInternal::EventKind::FrameBreak:
