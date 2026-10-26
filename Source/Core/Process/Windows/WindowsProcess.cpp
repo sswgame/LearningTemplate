@@ -173,18 +173,24 @@ namespace sw
         _processID.store( 0 );
     }
 
-    bool Process::launch( string_view command, const ProcessOptions& options )
+    bool Process::launch( const ProcessCommand& command, const ProcessOptions& options )
     {
         using Internal = WindowsProcessInternal;
         shutdown();
+
+        if ( command._executable.empty() )
+        {
+            SW_LOG_ERROR( "Process launch needs an executable" );
+            return false;
+        }
 
         Internal::StdPipes pipes;
         if ( Internal::createStdPipes( options._bPipeStandardInput, pipes ) == false )
             return false;
 
-        string  cmdStr     = string( command );
-        wstring wsCmdLine  = StringUtil::utf8ToUtf16( cmdStr.c_str() );
-        wstring wsBuildDir = StringUtil::utf8ToUtf16( options._workingDirectory.c_str() );
+        const string cmdStr     = command.toCommandLine();
+        wstring      wsCmdLine  = StringUtil::utf8ToUtf16( cmdStr.c_str() );
+        wstring      wsBuildDir = StringUtil::utf8ToUtf16( options._workingDirectory.c_str() );
 
         Internal::InheritedHandleList inheritedHandles;
         if ( inheritedHandles.initialize( pipes ) == false )
@@ -241,9 +247,14 @@ namespace sw
         return true;
     }
 
-    bool Process::launchDetached( string_view command, const ProcessOptions& options )
+    bool Process::launchDetached( const ProcessCommand& command, const ProcessOptions& options )
     {
-        const string  cmdStr      = string( command );
+        if ( command._executable.empty() )
+        {
+            SW_LOG_ERROR( "Detached process launch needs an executable" );
+            return false;
+        }
+        const string  cmdStr      = command.toCommandLine();
         wstring       wsCmdLine   = StringUtil::utf8ToUtf16( cmdStr.c_str() );
         const wstring wsDirectory = StringUtil::utf8ToUtf16( options._workingDirectory.c_str() );
 
