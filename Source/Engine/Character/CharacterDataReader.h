@@ -93,8 +93,8 @@ namespace sw
         /** @brief 읽는 파일 이름입니다. */
         const string& getSourceName() const { return _sourceName; }
 
-        /** @brief 공백이나 쉼표로 나눈 토큰 목록을 구합니다(비우고 채웁니다). */
-        static void splitTokens( string_view text, vector<string_view>& outListToken );
+        /** @brief 캐릭터 데이터 값의 토큰 구분자(공백이나 쉼표)입니다 — `StringUtil::split( text, kTokenSeparators, { ._bDropEmpty = true } )` 로 나눕니다. */
+        static constexpr const utf8* kTokenSeparators = " ,\t\n\r";
         /** @brief 실수 하나를 가장 짧은 표현으로 씁니다. */
         static string formatFloat( float32 value );
         /** @brief 세 수를 "x y z" 로 씁니다. */

@@ -116,10 +116,8 @@ namespace sw
                     reader.addError( "Destruction.ThresholdsMissing", child, "needs thresholds" );
                     continue;
                 }
-                vector<string_view> listToken;
-                CharacterDataReader::splitTokens( pText, listToken );
                 _listStrainThreshold.clear();
-                for ( const string_view token : listToken )
+                for ( const string_view token : StringUtil::split( pText, CharacterDataReader::kTokenSeparators, { ._bDropEmpty = true } ) )
                 {
                     float32 value = 0.0f;
                     if ( StringUtil::parseFloat( token, value ) == false || value <= 0.0f )

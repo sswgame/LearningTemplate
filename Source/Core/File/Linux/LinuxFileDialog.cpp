@@ -3,6 +3,7 @@
 #include "Core/File/Linux/LinuxFileDialog.h"
 
 #include "Core/Common/Types.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
@@ -182,21 +183,11 @@ namespace sw
             /** @brief 다중 선택 결과를 구분자(separator)로 나눠 배열에 담습니다. */
             static void splitPaths( string_view output, utf8 separator, vector<string>& outListPath )
             {
-                size_t start{ 0 };
-                while ( start < output.size() )
+                // 줄바꿈도 구분자로 넣어 토큰 끝의 CR · LF 가 경로에 붙지 않게 한다.
+                const utf8 arrSeparator[] = { separator, '\r', '\n', '\0' };
+                for ( const string_view part : StringUtil::split( output, arrSeparator, { ._bDropEmpty = true } ) )
                 {
-                    const size_t sep = output.find( separator, start );
-                    const size_t end = ( sep == string::npos ) ? output.size() : sep;
-                    string       part{ output.substr( start, end - start ) };
-                    while ( part.empty() == false && ( part.back() == '\n' || part.back() == '\r' ) )
-                    {
-                        part.pop_back();
-                    }
-                    if ( part.empty() == false )
-                        outListPath.push_back( FileUtil::normalizeSeparators( part ) );
-                    if ( sep == string::npos )
-                        break;
-                    start = sep + 1;
+                    outListPath.push_back( FileUtil::normalizeSeparators( part ) );
                 }
             }
 

@@ -1066,6 +1066,25 @@ namespace sw
         return StringUtilInternal::parseFiniteFloatToken( token, outValue );
     }
 
+    vector<string_view> StringUtil::split( string_view text, string_view separators, StringSplitOptions options )
+    {
+        vector<string_view> listToken;
+        size_t              tokenStart = 0;
+        while ( true )
+        {
+            const size_t tokenEnd = text.find_first_of( separators, tokenStart );
+            string_view  token    = text.substr( tokenStart, tokenEnd == string_view::npos ? string_view::npos : tokenEnd - tokenStart );
+            if ( options._bTrim )
+                token = trim( token );
+            if ( options._bDropEmpty == false || token.empty() == false )
+                listToken.push_back( token );
+            if ( tokenEnd == string_view::npos )
+                break;
+            tokenStart = tokenEnd + 1;
+        }
+        return listToken;
+    }
+
     bool StringUtil::parseExactFloats( string_view text, string_view separators, float32* pOutValue, uint32 count )
     {
         if ( pOutValue == nullptr || count == 0 )

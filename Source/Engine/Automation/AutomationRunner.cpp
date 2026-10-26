@@ -542,21 +542,6 @@ namespace sw
                        validateProbeReference( step, outError );
             }
 
-            /** @brief 쉼표로 가른 값 목록입니다(앞뒤 공백을 제거하고 빈 항목은 버린다). */
-            static vector<string> splitList( string_view text )
-            {
-                vector<string> listValue;
-                while ( text.empty() == false )
-                {
-                    const size_t      comma = text.find( ',' );
-                    const string_view value = StringUtil::trim( text.substr( 0, comma ) );
-                    if ( value.empty() == false )
-                        listValue.emplace_back( value );
-                    text = comma == string_view::npos ? string_view{} : text.substr( comma + 1 );
-                }
-                return listValue;
-            }
-
             /** @brief 탐침 값의 글입니다(수는 끝의 0 을 정리한다). */
             static string makeValueText( const AutomationProbeValue& value ) { return value._bText ? value._text : formatNumber( value._number ); }
 
@@ -1966,8 +1951,20 @@ namespace sw
             recordFailure( step, error ); // 검사 뒤 단계가 바뀌었다(핫 리로드)
             return;
         }
-        const string*        pIs      = step.findAttribute( "is" );
-        const vector<string> listWant = pIs != nullptr ? vector<string>{ *pIs } : AutomationRunnerInternal::splitList( *step.findAttribute( "sequence" ) );
+        const string*  pIs = step.findAttribute( "is" );
+        vector<string> listWant;
+        if ( pIs != nullptr )
+        {
+            listWant.push_back( *pIs );
+        }
+        else
+        {
+            // `sequence` 는 쉼표로 가른 값 목록이다(앞뒤 공백을 떼고 빈 항목은 버린다).
+            for ( const string_view value : StringUtil::split( *step.findAttribute( "sequence" ), ",", { ._bTrim = true, ._bDropEmpty = true } ) )
+            {
+                listWant.emplace_back( value );
+            }
+        }
         // `since` 프레임에 이미 들어 있던 값(그 앞의 마지막 바뀜)도 거친 것으로 본다.
         size_t first = 0;
         for ( size_t index = 0; pWatch != nullptr && index < pWatch->_listFrame.size(); ++index )
