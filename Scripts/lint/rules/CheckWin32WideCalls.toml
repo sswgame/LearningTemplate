@@ -15,7 +15,7 @@ generic_name = [
     "MessageBox", "MessageBoxEx", "DialogBoxParam", "CreateDialogParam", "DrawText", "DrawTextEx", "TextOut", "CreateFont",
     "CreateFontIndirect", "GetObject", "GetTextExtentPoint32", "GetTextMetrics", "CreateDC", "AddFontResource",
     "AddFontResourceEx", "RegisterClipboardFormat", "GetOpenFileName", "GetSaveFileName", "SHBrowseForFolder",
-    "SHGetPathFromIDList", "SHGetFolderPath", "SHFileOperation", "ShellExecute", "ShellExecuteEx",
+    "SHGetPathFromIDList", "ILCreateFromPath", "SHGetFolderPath", "SHFileOperation", "ShellExecute", "ShellExecuteEx",
     # 키보드
     "MapVirtualKey", "MapVirtualKeyEx", "GetKeyNameText", "VkKeyScan", "VkKeyScanEx", "CharUpper", "CharLower", "ImmGetCompositionString",
     # 모듈 · 파일 · 프로세스

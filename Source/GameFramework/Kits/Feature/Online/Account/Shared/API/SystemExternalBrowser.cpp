@@ -48,16 +48,8 @@ namespace sw
             SW_LOG_ERROR( "Refused to open a URL that is not plain http(s): %#", string( url ).c_str() );
             return false;
         }
-#if defined( SW_PLATFORM_WINDOWS )
-        // rundll32 는 `<dll>,<함수>` 뒤의 줄을 인자로 나누지 않고 통째로 넘긴다 — 표준 인용의 따옴표가 주소에 남으므로 날 인자 줄로 준다.
-        // 주소에는 공백 · 따옴표가 없다(isOpenableURL). url.dll 이 기본 브라우저를 고른다.
-        ProcessCommand command;
-        command._executable             = "rundll32.exe";
-        command._rawWindowsArgumentLine = "url.dll,FileProtocolHandler " + string( url );
-#else
-        const ProcessCommand command{ "xdg-open", { string( url ) } };
-#endif
-        if ( Process::launchDetached( command ) == false )
+        // http(s) 만 넘긴다(위) — `launchURL` 은 무엇이든 그 형식의 기본 처리기에 넘긴다.
+        if ( Process::launchURL( url ) == false )
         {
             SW_LOG_ERROR( "Failed to launch the system browser" );
             return false;

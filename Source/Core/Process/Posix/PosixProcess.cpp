@@ -353,6 +353,19 @@ namespace sw
         return bLaunched;
     }
 
+    bool Process::launchURL( string_view url )
+    {
+        return launchDetached( ProcessCommand{ "xdg-open", { string( url ) } } );
+    }
+
+    bool Process::showInFileManager( string_view filePath )
+    {
+        // 리눅스 파일 관리자에는 "선택한 채로 열기" 표준이 없다 — 그 폴더를 연다. Process 는 File 보다 아래 층이라 FileUtil 을 쓰지 않는다.
+        const size_t separatorIndex = filePath.find_last_of( '/' );
+        const string directory      = separatorIndex == string_view::npos ? string( "." ) : string( filePath.substr( 0, separatorIndex == 0 ? 1 : separatorIndex ) );
+        return launchDetached( ProcessCommand{ "xdg-open", { directory } } );
+    }
+
     bool Process::readOutputLine( string& outLine )
     {
         outLine.clear();

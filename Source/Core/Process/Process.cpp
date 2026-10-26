@@ -52,14 +52,6 @@ namespace sw
         // 첫 토큰(실행 파일)은 CommandLineToArgvW 가 역슬래시를 풀지 않고 따옴표만 본다 — Windows 경로에는 따옴표가 없으므로 같은 함수로 감싸도 같다.
         string line;
         appendQuotedProcessArgument( _executable, line );
-#if defined( SW_PLATFORM_WINDOWS )
-        if ( _rawWindowsArgumentLine.empty() == false )
-        {
-            line += ' ';
-            line += _rawWindowsArgumentLine;
-            return line;
-        }
-#endif
         for ( const string& argument : _listArgument )
         {
             line += ' ';

@@ -33,14 +33,6 @@ namespace sw
 
         string         _executable{};
         vector<string> _listArgument{};
-#if defined( SW_PLATFORM_WINDOWS )
-        /**
-         * @brief 인자 규칙이 CommandLineToArgvW 와 다른 프로그램에만 쓰는 예외 — 비어 있지 않으면 `_listArgument` 대신 실행 파일 뒤에 그대로 붙는다.
-         * @details 쓰는 곳은 둘이다 — `explorer.exe /select,"<경로>"`(표준 인용 `"/select,<경로>"` 를 받는다는 보장이 없다), `rundll32.exe url.dll,FileProtocolHandler <주소>`
-         *          (rundll32 는 뒤 줄을 나누지 않고 통째로 넘겨 표준 인용의 따옴표가 주소에 남는다). 날 줄에 넣는 값은 부르는 쪽이 따옴표 · 공백을 막는다. POSIX 에는 이 칸이 없다.
-         */
-        string _rawWindowsArgumentLine{};
-#endif
 
         /** @brief 실행 파일을 포함해 CommandLineToArgvW 규칙으로 인용한 명령줄입니다. Windows 가 `CreateProcessW` 에 넘기는 글이고, 양쪽 모두 로그에 씁니다. */
         [[nodiscard]] string toCommandLine() const;
@@ -188,14 +180,28 @@ namespace sw
 
         /**
          * @brief 출력을 받지 않고 **기다리지도 않고** 프로세스를 띄웁니다. 띄웠으면 true 입니다(종료 코드는 볼 수 없습니다).
-         * @details 파일 탐색기 · 브라우저처럼 **사용자가 닫을 때까지 사는** 프로그램을 띄울 때 씁니다. `execute` 는 출력 파이프가 닫힐
-         *          때까지 기다리므로, 그런 프로그램(또는 그것이 띄운 손자)이 파이프를 물고 있으면 부른 스레드가 그동안 멈춥니다 —
-         *          에디터의 "탐색기에서 보기" 가 UI 스레드에서 그렇게 불렀습니다. 게다가 `explorer.exe /select,` 는 성공해도 1 을
-         *          돌려줘서 실패 경고가 매번 찍혔습니다. 언리얼의 `CreateProc( bLaunchDetached )` 와 에 해당합니다.
+         * @details 뷰어 · 새 창 게임처럼 **사용자가 닫을 때까지 사는** 프로그램을 띄울 때 씁니다. `execute` 는 출력 파이프가 닫힐
+         *          때까지 기다리므로, 그런 프로그램(또는 그것이 띄운 손자)이 파이프를 물고 있으면 부른 스레드가 그동안 멈춥니다.
+         *          언리얼의 `CreateProc( bLaunchDetached )` 에 해당합니다.
          *          자식은 이 프로세스의 핸들 · 서술자를 하나도 물려받지 않습니다(POSIX 는 표준 입출력을 /dev/null 로, 두 번 fork 해
          *          좀비를 남기지 않습니다).
          */
         static bool launchDetached( const ProcessCommand& command, const ProcessOptions& options = {} );
+
+        /**
+         * @brief 기본 브라우저(주소의 기본 처리기)로 @p url 을 엽니다. 기다리지 않습니다. 띄웠으면 true 입니다.
+         * @details Windows 는 `ShellExecuteW( "open" )`, POSIX 는 `xdg-open <주소>`(인자 하나)입니다. 주소가 http(s) 인지는 부르는 쪽이 가린다 —
+         *          이 함수는 무엇이든 그 형식의 기본 처리기에 넘긴다. 언리얼 `FPlatformProcess::LaunchURL` 에 해당합니다.
+         *          예전에는 `rundll32 url.dll,FileProtocolHandler` 를 띄웠는데, rundll32 는 뒤 줄을 인자로 나누지 않아 인용 규칙 밖의 예외가 필요했다.
+         */
+        static bool launchURL( string_view url );
+
+        /**
+         * @brief 파일 관리자에서 @p filePath 를 고른 채 엽니다. 기다리지 않습니다. 열었으면 true 입니다.
+         * @details Windows 는 `SHOpenFolderAndSelectItems`(탐색기 창을 쓰거나 새로 연다), POSIX 는 선택한 채로 열기 표준이 없어 그 폴더를 `xdg-open` 합니다.
+         *          예전에는 `explorer.exe /select,"<경로>"` 를 띄웠는데, explorer 의 인자 규칙이 CommandLineToArgvW 와 달라 인용 규칙 밖의 예외가 필요했다.
+         */
+        static bool showInFileManager( string_view filePath );
 
         /** @brief 이 프로세스의 ID 입니다. 같은 폴더를 나눠 쓰는 프로세스끼리 파일 이름이 겹치지 않게 가를 때 씁니다. */
         static int32 getCurrentProcessID();

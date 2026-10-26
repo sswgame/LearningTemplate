@@ -350,30 +350,9 @@ namespace sw::editor
         if ( absolutePath.empty() )
             return false;
 
-        const string   path = FileUtil::normalizeSeparators( absolutePath );
-        ProcessCommand command;
-#if defined( SW_PLATFORM_WINDOWS )
-        // Windows 파일 이름에는 큰따옴표가 없다 — 있으면 아래 날 인자 줄의 따옴표를 닫아 버리므로 띄우지 않는다.
-        if ( path.find( '"' ) != string::npos )
-            return false;
-        // explorer 는 백슬래시만 받는다. 슬래시를 주면 선택이 안 되고 내 문서를 연다.
-        string windowsPath = path;
-        for ( utf8& ch : windowsPath )
-        {
-            if ( ch == '/' )
-                ch = '\\';
-        }
-        // explorer 의 `/select,` 는 CommandLineToArgvW 인자가 아니다 — 표준 인용(`"/select,<경로>"`)을 받는다는 보장이 없어 날 인자 줄로 준다(유일한 예외).
-        command._executable             = "explorer.exe";
-        command._rawWindowsArgumentLine = "/select,\"" + windowsPath + "\"";
-#else
-        // 리눅스 파일 관리자에는 "선택한 채로 열기" 표준이 없다. 그래서 폴더까지만 연다.
-        command = ProcessCommand{ "xdg-open", { FileUtil::getDirectoryPart( path ) } };
-#endif
-
-        // 실행하고 기다리지 않는다. `Process::execute` 로 기다리면 UI 스레드가 탐색기(또는 탐색기가 띄운 창)가 출력 파이프를 놓을
-        // 때까지 멈추고, `explorer.exe /select,` 는 성공해도 종료 코드 1 을 반환한다. 알 수 있는 실패는 "실행하지 못했다" 뿐이다.
-        if ( Process::launchDetached( command ) == false )
+        const string path = FileUtil::normalizeSeparators( absolutePath );
+        // 기다리지 않는다(Windows 는 셸 API, 리눅스는 분리 실행한 xdg-open). 알 수 있는 실패는 "열지 못했다" 뿐이다.
+        if ( Process::showInFileManager( path ) == false )
         {
             SW_LOG_WARNING( "Failed to open file explorer for %#", path.c_str() );
             return false;
