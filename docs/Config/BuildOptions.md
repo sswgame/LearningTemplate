@@ -14,6 +14,7 @@ configure 때 정한다(`cmake --preset <프리셋>` 또는 `-D<이름>=<값>`).
 | `SW_BUILD_GAMEFRAMEWORK` | BOOL | `ON` |  | Source/GameFramework 및 게임 장르별 키트 라이브러리 빌드 |  | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
 | `SW_BUILD_UNUSED_KITS` | BOOL | `ON` |  | 활성 게임이 쓰지 않는 장르 키트도 빌드(끄면 게임 의존으로 닿는 키트만) | Ninja-Debug-Lean | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
 | `SW_CPP_STANDARD` | STRING | `17` |  | C++ 표준(17 이상 — 20 · 23) |  | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
+| `SW_EDITOR_INPUT_BAN` | BOOL | `OFF` |  | Panel tiers fail to compile when they call ImGui input/popup/drag functions directly (EditorInputBan.h) |  | [Source/Editor/CMakeLists.txt](../../Source/Editor/CMakeLists.txt) |
 | `SW_ENABLE_COMPLEX_TEXT` | BOOL | `OFF` |  | HarfBuzz + SheenBidi 복합 문자 셰이핑(아랍어 연결형 · 전체 양방향). 끄면 단순 셰이퍼 · 단순 양방향 |  | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
 | `SW_ENABLE_DEADLOCK_DETECTION` | BOOL | `OFF` |  | sw::Mutex 잠금 순서를 실시간 추적하여 데드락 사이클 탐지 (성능 저하 주의) |  | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
 | `SW_ENABLE_FUZZING` | BOOL | `OFF` |  | 리눅스 clang + ASan 에서 libFuzzer 대상(LoaderFuzzer)과 엔진 커버리지 계측 | CI-Fuzz | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
