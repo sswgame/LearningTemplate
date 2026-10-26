@@ -23,12 +23,15 @@ namespace sw::editor
         absorbCloseButton(); // 접힌 창과 숨은 탭의 X 도 같은 확인을 거친다
         if ( bVisible )
         {
-            _bWindowFocused = ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows );
+            _bWindowFocused   = ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows );
+            _bContentDrawn    = true;
+            _contentLineCount = ImGui::GetContentRegionAvail().y / ImGui::GetTextLineHeightWithSpacing();
             drawContent();
         }
         else
         {
             _bWindowFocused = false;
+            _bContentDrawn  = false;
             onPanelCollapsed();
         }
         EditorChrome::endPanel();

@@ -48,8 +48,9 @@ namespace sw::editor
         PROPERTY( Min = 0.01, Tooltip = "Scale snap step" )
         float32 _scaleSnapValue{ 0.1f };
 
+        // 기본은 끈다. 첫 화면에서 HUD 상자가 씬을 가리지 않게 한다(언리얼 · 유니티 · Godot 의 뷰포트 통계도 기본은 꺼져 있다).
         PROPERTY( Tooltip = "Show the Debug HUD box (the same sections as the game HUD) in new scene views" )
-        bool _bShowHUD{ true };
+        bool _bShowHUD{ false };
 
         PROPERTY( Tooltip = "Show the viewport grid" )
         bool _bShowGrid{ true };

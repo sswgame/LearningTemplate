@@ -18,6 +18,7 @@
 	<At frame="120"><EditorClick mark="debugHUD.section.physics"/></At>
 	<At frame="140"><Expect probe="Editor.DebugHUDShownSections" equals="5"/><EditorKey key="Escape"/></At>
 	<At frame="150"><DevCommand line="panel.focus scene_view"/></At>
+	<At frame="170"><Expect probe="Editor.SceneViewHUDSections" equals="0"/><EditorClick mark="viewport.hud"/></At>
 	<At frame="200"><Expect probe="Editor.SceneViewHUDSections" atLeast="2"/></At>
 	<At frame="205"><EditorClick mark="viewport.hud"/></At>
 	<At frame="225"><Expect probe="Editor.SceneViewHUDSections" equals="0"/></At>

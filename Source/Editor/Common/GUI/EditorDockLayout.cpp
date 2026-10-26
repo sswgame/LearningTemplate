@@ -32,6 +32,12 @@ namespace sw::editor
             /** @brief 기본 배치 뒤에 앞 탭을 고르려고 포커스를 주는 최대 프레임 수입니다. 창이 도킹되고 탭 막대가 만들어지는 데 한두 프레임이 걸립니다. */
             static constexpr uint8 kMaxFrontTabFrames = 8;
 
+            /** @brief 기본 배치에서 아래 도크의 높이(글자 높이 `GetTextLineHeightWithSpacing` 의 배수)입니다. 탭 줄 · 로그 툴바 · 명령 입력 줄을 빼고도 로그가 8줄 넘게 남는 값입니다. */
+            static constexpr float32 kBottomDockTextLines = 16.0f;
+
+            /** @brief 아래 도크가 작업 영역 높이에서 차지할 수 있는 최대 비율입니다. 낮은 창에서 가운데 영역이 사라지지 않게 합니다. */
+            static constexpr float32 kMaxBottomDockRatio = 0.5f;
+
             /** @brief @p pNode 아래 모든 노드의 기준 크기(SizeRef)에 @p scale 을 곱합니다. */
             static void scaleSizeRef( ImGuiDockNode* pNode, const ImVec2& scale )
             {
@@ -454,7 +460,12 @@ namespace sw::editor
 
         ImGui::DockBuilderSplitNode( dockMain, ImGuiDir_Left, 0.22f, &dockLeft, &dockMain );
         ImGui::DockBuilderSplitNode( dockMain, ImGuiDir_Right, 0.28f, &dockRight, &dockMain );
-        ImGui::DockBuilderSplitNode( dockMain, ImGuiDir_Down, 0.28f, &dockBottom, &dockMain );
+        // 아래 도크 높이는 비율이 아니라 글자 높이의 배수다. 비율이면 창 높이에 따라 Output Log 가 몇 줄 보일지가 달라져 낮은 창에서 한두 줄만 남는다.
+        // 배수에는 탭 줄 · 로그 툴바 · 명령 입력 줄이 든다. 남는 로그 줄은 `Editor.PanelContentLines`(defaultlayout 시나리오)가 지킨다.
+        // 창이 너무 낮으면 가운데 영역이 사라지지 않게 절반에서 멈춘다.
+        const float32 bottomHeight = EditorDockLayoutInternal::kBottomDockTextLines * ImGui::GetTextLineHeightWithSpacing();
+        const float32 bottomRatio  = MathUtil::min( bottomHeight / pViewport->WorkSize.y, EditorDockLayoutInternal::kMaxBottomDockRatio );
+        ImGui::DockBuilderSplitNode( dockMain, ImGuiDir_Down, bottomRatio, &dockBottom, &dockMain );
         (void)dockTop;
 
         // 패널마다 제가 밝힌 영역(`IEditorPanel::getDefaultDockSlot`)에 등록된 제목으로 붙인다. 제목을 여기 따로 적으면 패널 쪽에서 제목이 바뀔 때

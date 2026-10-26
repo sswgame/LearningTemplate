@@ -19,5 +19,9 @@
 	</At>
 	<At frame="85"><EditorClick mark="sceneView.canvas"/></At>
 
+	<!-- 기본 배치의 아래 도크는 글자 높이의 배수라 Output Log 내용 영역에 글자 줄이 8줄 넘게 든다(첫 화면에서 로그가 한두 줄만 보이던 결함) -->
+	<At frame="90"><Variable name="gv_editorProbePanel" value="console"/></At>
+	<At frame="95"><Expect probe="Editor.PanelContentLines" atLeast="8"/></At>
+
 	<At frame="100"><Pass/></At>
 </Scenario>
