@@ -15,6 +15,7 @@
 - 키 바인딩이 재시작 뒤에도 유지되는지의 실기동 확인(Shooter3D · 패드): 두 번 기동해야 하고 사용자 설정 파일을 쓰므로 시나리오 하나로 못 한다(15 초 되돌림은 `engine/automation/displayrevert.scenario.xml` 이 본다).
 - "타이틀로" 단추: 타이틀 씬(`titleScene`)을 가진 게임이 아직 없어 어느 게임에서도 접혀 있다. 타이틀 화면을 만드는 게임이 생기면 그 게임으로 확인한다.
 못 하는 이유(2026-10-24): 패드 실기 입력과 두 번 기동이 필요하고, 타이틀 씬을 가진 게임이 없다. 풀리는 조건: 패드가 있는 실기에서 두 번 기동해 보거나 타이틀 씬을 가진 게임이 생길 때.
+2026-10-27 재확인: `Resource` 의 어느 게임 `gamesettings.xml` 에도 `titleScene` 이 없다. 그대로 둔다.
 
 ### DetachedGameViewKeyboard
 제목: 떼어 낸 게임 뷰 창의 키보드를 실제 OS 창에서 확인
@@ -47,4 +48,4 @@
 착수 조건: 게임 HUD 에서 마커가 2,000 개를 넘거나 이 구간이 0.5 ms 를 꾸준히 넘을 때.
 남은 것: 컴퓨트가 GPUScene 변환을 읽어 앵커 표를 쓰는 모양이다(마커 ↔ GPU 인스턴스 대응이 필요하다). 데미지 숫자처럼 시간 함수로만 움직이는 UI 의 GPU 애니메이션도 같은 길이다.
 함정: 측정은 Release `App -gv_benchMeshes=2000 -gv_benchUiNameplates=2000 -gv_profileFrames=600` 의 `GT.UI.Markers` · `GT.UI.Paint`.
-2026-10-24 확인: 마커를 쓰는 곳은 벤치 장면(`Source/Games/Empty/BenchScene*`)뿐이라 게임 HUD 에는 조건이 닿지 않았다. 그대로 둔다. 컴퓨트 패스 · 셰이더 · 마커 ↔ GPU 인스턴스 대응이 렌더러 영역이다.
+2026-10-24 확인: 마커를 쓰는 곳은 벤치 장면(`Source/Games/Empty/BenchScene*`)뿐이라 게임 HUD 에는 조건이 닿지 않았다. 그대로 둔다(2026-10-27 재확인: `Source/Games` 에서 마커는 여전히 `Empty` 벤치뿐이다). 컴퓨트 패스 · 셰이더 · 마커 ↔ GPU 인스턴스 대응이 렌더러 영역이다.
