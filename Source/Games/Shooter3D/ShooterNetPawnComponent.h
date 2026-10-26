@@ -94,6 +94,7 @@ namespace sw
         ReplicationServer                                    _server;
         ReplicationClient                                    _client;
         InterestReplicationPolicy                            _interest;
+        Subscription                                         _routerSubscription; ///< 세션 라우터에 단 `_server` 또는 `_client` 의 등록(처리기보다 뒤에 선언 — 먼저 풀린다)
         ClientPrediction<ShooterMoveState, ShooterMoveInput> _prediction;
         PredictionSmoother                                   _smoother;
         vector<uint8>                                        _bytesScratch;

@@ -74,6 +74,7 @@ namespace sw
         , _listActiveEffect{}
         , _listAbilitySpec{}
         , _ownedTagCounts{}
+        , _ownedTagSubscription{}
         , _blockedAbilityTagCounts{}
         , _mapAttributeChangedMulticast{}
         , _mapGameplayEventMulticast{}
@@ -99,7 +100,7 @@ namespace sw
         _pModuleCodeGuard = make_unique<AbilitySystemModuleUnloadGuard>( *this );
         // 결정: 태그가 바뀌는 길(이펙트 · 어빌리티 · 이펙트 없이 붙인 태그)은 여럿이지만 알림은 집합 하나에서 나온다 — 걸린 동안의 조건과
         // 태그로 발동하는 어빌리티는 그 알림 하나에 건다. 소멸자의 `unregisterAllChanged` 가 함께 푼다.
-        (void)_ownedTagCounts.registerChanged( GameplayTagCountContainer::TagChangedDelegate::create<&AbilitySystemComponent::onOwnedTagChanged>( this ) );
+        _ownedTagSubscription = _ownedTagCounts.registerChanged( GameplayTagCountContainer::TagChangedDelegate::create<&AbilitySystemComponent::onOwnedTagChanged>( this ) );
     }
 
     AbilitySystemComponent::~AbilitySystemComponent()

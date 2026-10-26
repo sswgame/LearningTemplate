@@ -128,24 +128,14 @@ namespace sw
         _player.setAsset( asset );
     }
 
-    DelegateHandle SequencePlayerComponent::registerSequenceEvent( const OnSequenceEventDelegate& delegate )
+    Subscription SequencePlayerComponent::registerSequenceEvent( const OnSequenceEventDelegate& delegate )
     {
         return _sequenceEventMulticast.add( delegate );
     }
 
-    void SequencePlayerComponent::unregisterSequenceEvent( DelegateHandle handle )
-    {
-        _sequenceEventMulticast.remove( handle );
-    }
-
-    DelegateHandle SequencePlayerComponent::registerCameraSignal( const OnSequenceCameraSignalDelegate& delegate )
+    Subscription SequencePlayerComponent::registerCameraSignal( const OnSequenceCameraSignalDelegate& delegate )
     {
         return _cameraSignalMulticast.add( delegate );
-    }
-
-    void SequencePlayerComponent::unregisterCameraSignal( DelegateHandle handle )
-    {
-        _cameraSignalMulticast.remove( handle );
     }
 
     void SequencePlayerComponent::broadcastCameraSignals( vector<SequenceCameraSignal>& inoutListSignal )

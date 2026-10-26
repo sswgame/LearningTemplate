@@ -58,12 +58,8 @@ namespace sw
 
     void CinematicCameraComponent::onEndPlay()
     {
-        GameObject*              pOwner  = getOwner();
-        SequencePlayerComponent* pPlayer = pOwner != nullptr ? pOwner->getComponent<SequencePlayerComponent>() : nullptr;
-        if ( pPlayer != nullptr && _signalSubscription.isValid() )
-            pPlayer->unregisterCameraSignal( _signalSubscription );
-        _signalSubscription = DelegateHandle{};
-        _currentCutCamera   = GameObjectHandle{};
+        _signalSubscription.reset();
+        _currentCutCamera = GameObjectHandle{};
         Component::onEndPlay();
     }
 

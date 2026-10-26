@@ -141,6 +141,7 @@ namespace sw
         , _mapAccountToReasonCode{}
         , _listCompletionScratch{}
         , _listEventScratch{}
+        , _listBusSubscription{}
         , _presence{}
         , _settings{}
         , _pLoginService{ nullptr }
@@ -164,6 +165,7 @@ namespace sw
         _mapTagToCall.clear();
         _mapAccountToSession.clear();
         _mapAccountToReasonCode.clear();
+        _listBusSubscription.clear();
         _presence.shutdown();
         _pLoginService = nullptr;
     }
@@ -171,7 +173,8 @@ namespace sw
     void AccountServer::onHostShutdown( OnlineServiceHost& host )
     {
         (void)host;
-        _presence.detach(); // 캐시 응답은 호스트가 이미 Unavailable 로 회수했다
+        _listBusSubscription.clear(); // attachHost 가 건 구독을 같은 짝에서 푼다(다른 키트 서버와 같이)
+        _presence.detach();           // 캐시 응답은 호스트가 이미 Unavailable 로 회수했다
         _bHostAttached = SW_FALSE;
     }
 
@@ -447,8 +450,8 @@ namespace sw
         _presence.attach( &host );
         if ( _presence.isEnabled() == false )
             return; // 서버가 한 대이다
-        host.subscribeServerBus( AccountBus::kRevokeTopic.getName(), this );
-        host.subscribeServerBus( OnlinePresence::makePushTopic( host.getServerBus()->getServerID() ), this );
+        _listBusSubscription.push_back( host.subscribeServerBus( AccountBus::kRevokeTopic.getName(), this ) );
+        _listBusSubscription.push_back( host.subscribeServerBus( OnlinePresence::makePushTopic( host.getServerBus()->getServerID() ), this ) );
     }
 
     void AccountServer::publishRemoteRevocations( OnlineServiceHost& host )

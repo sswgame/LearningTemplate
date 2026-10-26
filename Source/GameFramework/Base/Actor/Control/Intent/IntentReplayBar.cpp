@@ -33,7 +33,7 @@ namespace sw
     IntentReplayBar::IntentReplayBar()
         : _pUI{ nullptr }
         , _pSession{ nullptr }
-        , _scrubHandle{}
+        , _scrubSubscription{}
         , _tickSeconds{ 1.0f / 60.0f }
         , _shownMin{ 0.0f }
         , _shownMax{ 0.0f }
@@ -84,7 +84,7 @@ namespace sw
         _furthestTick                          = session.getWorldTick();
         _shownMin                              = 0.0f;
         _shownMax                              = 0.0f;
-        _scrubHandle                           = pScrub->getOnValueChanged().add( SW_DELEGATE_METHOD( Delegate<void( float32 )>, &IntentReplayBar::onScrub, this ) );
+        _scrubSubscription                     = pScrub->getOnValueChanged().add( SW_DELEGATE_METHOD( Delegate<void( float32 )>, &IntentReplayBar::onScrub, this ) );
         const UICommandDelegate commandHandler = SW_DELEGATE_METHOD( UICommandDelegate, &IntentReplayBar::onCommand, this );
         pScreen->registerCommand( hashed_string( IntentReplayBarInternal::kStepBack ), commandHandler );
         pScreen->registerCommand( hashed_string( IntentReplayBarInternal::kTogglePause ), commandHandler );
@@ -97,21 +97,18 @@ namespace sw
     {
         if ( _bOpen == SW_FALSE )
             return;
+        _scrubSubscription.reset();
         UIScreen* pScreen = _pUI != nullptr ? _pUI->findScreen( _screen ) : nullptr;
         if ( pScreen != nullptr )
         {
-            SliderWidget* pScrub = pScreen->getTree().findWidget<SliderWidget>( hashed_string( IntentReplayBarInternal::kScrub ) );
-            if ( pScrub != nullptr )
-                pScrub->getOnValueChanged().remove( _scrubHandle );
             pScreen->unregisterCommand( hashed_string( IntentReplayBarInternal::kStepBack ) );
             pScreen->unregisterCommand( hashed_string( IntentReplayBarInternal::kTogglePause ) );
             pScreen->unregisterCommand( hashed_string( IntentReplayBarInternal::kClose ) );
             _pUI->closeScreen( _screen );
         }
-        _scrubHandle = DelegateHandle{};
-        _screen      = kInvalidUIScreenHandle;
-        _bOpen       = SW_FALSE;
-        _bPaused     = SW_FALSE;
+        _screen  = kInvalidUIScreenHandle;
+        _bOpen   = SW_FALSE;
+        _bPaused = SW_FALSE;
     }
 
     bool IntentReplayBar::shouldHostStep() const

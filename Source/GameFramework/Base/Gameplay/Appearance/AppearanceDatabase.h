@@ -70,9 +70,8 @@ namespace sw
          *          통과하지 못하면 그 보고를 @p outReport 에 담고 false 이며 지금 데이터는 그대로다.
          */
         [[nodiscard]] bool reloadFromFolder( string_view folder, const ItemCatalog* pItemCatalog, string& outReport );
-        /** @brief 다시 읽은 뒤(`reloadFromFolder` 성공) 부를 델리게이트를 겁니다. 외형 컴포넌트가 다시 조립합니다. */
-        DelegateHandle registerReloaded( const Delegate<void()>& delegate );
-        void           unregisterReloaded( DelegateHandle handle );
+        /** @brief 다시 읽은 뒤(`reloadFromFolder` 성공) 부를 델리게이트를 겁니다. 외형 컴포넌트가 다시 조립합니다. 돌려준 구독이 사라지면 뗍니다. */
+        [[nodiscard]] Subscription registerReloaded( const Delegate<void()>& delegate );
 
         const SlotTable&                  getSlotTable() const { return _slotTable; }
         const EquipSetCatalog&            getSets() const { return _sets; }

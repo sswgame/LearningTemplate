@@ -130,14 +130,9 @@ namespace sw
         applyHeal( amount );
     }
 
-    DelegateHandle UnitStatsComponent::registerDamageApplied( const DamageAppliedDelegate& delegate )
+    Subscription UnitStatsComponent::registerDamageApplied( const DamageAppliedDelegate& delegate )
     {
         return _damageAppliedMulticast.add( delegate );
-    }
-
-    void UnitStatsComponent::unregisterDamageApplied( DelegateHandle handle )
-    {
-        _damageAppliedMulticast.remove( handle );
     }
 
     void UnitStatsComponent::applyTakeDamage( int32 amount, GameObjectHandle instigator )

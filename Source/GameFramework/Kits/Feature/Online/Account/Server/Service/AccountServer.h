@@ -114,6 +114,7 @@ namespace sw
         unordered_map<AccountID, string>       _mapAccountToReasonCode;
         vector<LoginCompletion>                _listCompletionScratch;
         vector<LoginEvent>                     _listEventScratch;
+        vector<Subscription>                   _listBusSubscription; ///< 취소 주제와 이 서버의 알림 주제 구독(`attachHost`). 호스트가 내려가면 `onHostShutdown` 이 푼다
         OnlinePresence                         _presence;
         AccountServerConfig                    _settings;
         LoginService*                          _pLoginService;

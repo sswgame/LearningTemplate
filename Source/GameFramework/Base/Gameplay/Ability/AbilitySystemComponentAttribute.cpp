@@ -175,27 +175,16 @@ namespace sw
             inoutNewBase = oldBase;
     }
 
-    DelegateHandle AbilitySystemComponent::registerAttributeChanged( const hashed_string& name, const AttributeChangedDelegate& delegate )
+    Subscription AbilitySystemComponent::registerAttributeChanged( const hashed_string& name, const AttributeChangedDelegate& delegate )
     {
         if ( name.empty() )
             return _anyAttributeChangedMulticast.add( delegate );
 
+        // 멀티캐스트는 힙에 두어 맵이 다시 해시해도 구독이 가리키는 주소가 그대로다.
         unique_ptr<MulticastDelegate<void( const AttributeChangeData& )>>& pMulticast = _mapAttributeChangedMulticast[name];
         if ( pMulticast == nullptr )
             pMulticast = make_unique<MulticastDelegate<void( const AttributeChangeData& )>>();
         return pMulticast->add( delegate );
-    }
-
-    void AbilitySystemComponent::unregisterAttributeChanged( const hashed_string& name, DelegateHandle handle )
-    {
-        if ( name.empty() )
-        {
-            _anyAttributeChangedMulticast.remove( handle );
-            return;
-        }
-        const auto mapIter = _mapAttributeChangedMulticast.find( name );
-        if ( mapIter != _mapAttributeChangedMulticast.end() && mapIter->second != nullptr )
-            mapIter->second->remove( handle );
     }
 
     // ------------------------------------------------------------------------------

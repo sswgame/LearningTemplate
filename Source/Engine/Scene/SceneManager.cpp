@@ -65,7 +65,7 @@ namespace sw
         , _loadTracker{}
         , _saveBlockReason{}
         , _onSceneObjectsInvalidated{}
-        , _commandStackClearHandle{}
+        , _commandStackClearSubscription{}
         , _bInitialized{ false }
         , _pScenePreload{}
         , _preloadHeldFrames{ 0 }
@@ -962,22 +962,18 @@ namespace sw
     {
         if ( initialize( SceneEngineServices::makeFromBoundEngine() ) == false )
             return SubsystemInitResult::Failed;
-        // 되돌리기 기록은 나간 씬의 오브젝트를 가리킨다 — 씬이 바뀌면 비운다. 다시 초기화해도 구독이 겹치지 않는다.
-        if ( _commandStackClearHandle.isValid() )
-            _onSceneObjectsInvalidated.remove( _commandStackClearHandle );
-        _commandStackClearHandle          = DelegateHandle{};
+        // 되돌리기 기록은 나간 씬의 오브젝트를 가리킨다 — 씬이 바뀌면 비운다. 다시 초기화해도 구독이 겹치지 않는다(대입이 앞 구독을 푼다).
+        _commandStackClearSubscription.reset();
         CommandStack* const pCommandStack = engine::findSubsystem<CommandStack>();
         if ( pCommandStack != nullptr )
-            _commandStackClearHandle = _onSceneObjectsInvalidated.add( SW_DELEGATE_METHOD( Delegate<void()>, &CommandStack::clear, pCommandStack ) );
+            _commandStackClearSubscription = _onSceneObjectsInvalidated.add( SW_DELEGATE_METHOD( Delegate<void()>, &CommandStack::clear, pCommandStack ) );
         return SubsystemInitResult::Succeeded;
     }
 
     void SceneManager::shutdownSubsystem()
     {
         shutdown(); // 종료도 알린다(기록을 비운다) — 그 뒤에 구독을 뗀다
-        if ( _commandStackClearHandle.isValid() )
-            _onSceneObjectsInvalidated.remove( _commandStackClearHandle );
-        _commandStackClearHandle = DelegateHandle{};
+        _commandStackClearSubscription.reset();
     }
 
     span<const utf8* const> SceneManager::getSubsystemDependencies() const

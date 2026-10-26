@@ -46,7 +46,7 @@ namespace sw
     private:
         PairedAnimationReplicationServer _server;
         PairedAnimationReplicationClient _client;
-        NetMessageRouter*                _pRouter; ///< 처리기를 단 라우터(빌린 것). nullptr 이면 시작하지 않았다
-        uint8                            _bServer; ///< 서버로 시작했다
+        Subscription                     _routerSubscription; ///< 세션 라우터에 단 처리기의 등록. 없으면 시작하지 않았다(처리기보다 뒤에 선언 — 먼저 풀린다)
+        uint8                            _bServer;            ///< 서버로 시작했다
     };
 } // namespace sw

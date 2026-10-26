@@ -19,6 +19,7 @@ namespace sw
         , _pService{ nullptr }
         , _pDispatcher{ nullptr }
         , _pHost{ nullptr }
+        , _busSubscription{}
     {
     }
 
@@ -30,8 +31,7 @@ namespace sw
 
     void LiveOpsServer::shutdown()
     {
-        if ( _pHost != nullptr )
-            _pHost->unsubscribeServerBus( LiveOpsBus::kChangedTopic.getName(), this );
+        _busSubscription.reset();
         _pendingTable.clear();
         _pHost       = nullptr;
         _pService    = nullptr;
@@ -41,7 +41,8 @@ namespace sw
     void LiveOpsServer::onHostShutdown( OnlineServiceHost& host )
     {
         (void)host;
-        _pHost = nullptr; // 구독은 호스트가 이어서 모두 해제한다
+        _busSubscription.reset();
+        _pHost = nullptr;
     }
 
     const OnlineProtocolEntry& LiveOpsServer::getProtocol() const
@@ -178,6 +179,7 @@ namespace sw
     void LiveOpsServer::attachHost( OnlineServiceHost& host )
     {
         _pHost = &host;
-        host.subscribeServerBus( LiveOpsBus::kChangedTopic.getName(), this );
+        if ( host.getServerBus() != nullptr ) // 서버가 한 대면 들을 버스가 없다
+            _busSubscription = host.subscribeServerBus( LiveOpsBus::kChangedTopic.getName(), this );
     }
 } // namespace sw

@@ -41,8 +41,12 @@ namespace sw
                 : UIScreen{ desc, std::move( root ) }
                 , _ownerScreen{ ownerScreen }
                 , _combo{ combo }
+                , _listOptionSubscription{}
             {
             }
+
+            /** @brief 항목 버튼의 클릭 구독을 듭니다. 버튼은 이 화면의 트리가 가지므로 구독도 화면과 함께 풀린다(멤버라 트리보다 먼저). */
+            void addOptionSubscription( Subscription subscription ) { _listOptionSubscription.push_back( std::move( subscription ) ); }
 
             void choose( uint32 index )
             {
@@ -56,8 +60,9 @@ namespace sw
             }
 
         private:
-            UIScreenHandle _ownerScreen;
-            WidgetID       _combo;
+            UIScreenHandle       _ownerScreen;
+            WidgetID             _combo;
+            vector<Subscription> _listOptionSubscription;
         };
 
         struct ComboBoxWidgetInternal
@@ -205,8 +210,8 @@ namespace sw
         ComboBoxPopupScreen* const      pPopup = popup.get();
         for ( uint32 index = 0; index < static_cast<uint32>( listButton.size() ); ++index )
         {
-            (void)listButton[index]->getOnClicked().add( [pPopup, index]( WidgetID )
-            { pPopup->choose( index ); } );
+            pPopup->addOptionSubscription( listButton[index]->getOnClicked().add( [pPopup, index]( WidgetID )
+            { pPopup->choose( index ); } ) );
         }
         _popupScreen = pUI->pushScreen( std::move( popup ) );
     }

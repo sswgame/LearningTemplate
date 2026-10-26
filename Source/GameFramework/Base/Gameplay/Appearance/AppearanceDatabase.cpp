@@ -81,14 +81,9 @@ namespace sw
         return true;
     }
 
-    DelegateHandle AppearanceDatabase::registerReloaded( const Delegate<void()>& delegate )
+    Subscription AppearanceDatabase::registerReloaded( const Delegate<void()>& delegate )
     {
         return _reloadedMulticast.add( delegate );
-    }
-
-    void AppearanceDatabase::unregisterReloaded( DelegateHandle handle )
-    {
-        _reloadedMulticast.remove( handle );
     }
 
     void AppearanceDatabase::clear()
