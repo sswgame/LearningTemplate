@@ -25,8 +25,11 @@ namespace sw
         float32 _jumpStartRatio{ 0.0f };
         float32 _jumpEndRatio{ 1.0f };
 
-        /** @brief 시드로 방향과 중심에서 비킨 거리를 골라 맵 경계에서 자른 경로입니다. 같은 시드면 같은 경로가 나옵니다. */
-        static BrFlightPath makeRandom( const BrFlightDef& settings, float32 mapSize, uint32 seed );
+        /**
+         * @brief 시드로 방향과 중심에서 비킨 거리를 골라 맵 경계에서 자른 경로를 @p outPath 에 담습니다. 같은 시드면 같은 경로가 나옵니다.
+         * @return 비행 설정이 `PROPERTY( Min · Max )` 범위 안이고 @p mapSize 가 1 이상이면 true 입니다. 밖이면 오류를 남기고 false 이며 @p outPath 를 바꾸지 않습니다(값을 조용히 맞추지 않는다).
+         */
+        [[nodiscard]] static bool makeRandom( const BrFlightDef& settings, float32 mapSize, uint32 seed, BrFlightPath& outPath );
 
         float32 computeLength() const;
         float32 computeDuration() const;
