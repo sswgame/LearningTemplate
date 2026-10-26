@@ -40,7 +40,6 @@ sw_markDeterministicSources(GameFramework
 	Base/Actor/Combat/LockOnSelector.cpp
 	Base/Actor/Combat/Weapon/Weapon.cpp
 	Base/Foundation/Utility/Math/RayMath.cpp
-	Base/Foundation/Utility/Random/GameRandom.cpp
 )
 # 로컬 저장의 장치 키(Base/Online/Local/LocalDeviceKeyProvider)는 Windows DPAPI 로 감싼다.
 if(WIN32)

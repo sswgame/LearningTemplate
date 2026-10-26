@@ -98,8 +98,8 @@ bool traceVoxelRay( VoxelGrid grid, float3 origin, float3 direction, float maxDi
     float        tNear     = 0.0f;
     float        tFar      = maxDistance;
     int          entryAxis = -1;
-    // 펼친 루프 안에서 continue 를 쓰지 않는다 — FXC(DX11)는 그것을 바깥 [loop](CSMain 의 광선 루프)까지 펼치려다 X3531 로 진다.
-    [unroll] for ( int axis = 0; axis < 3; ++axis )
+    // 펼친 루프 안에서 continue 를 쓰지 않는다 — FXC(DX11)는 그것을 바깥 SW_LOOP(CSMain 의 광선 루프)까지 펼치려다 X3531 로 진다.
+    SW_UNROLL for ( int axis = 0; axis < 3; ++axis )
     {
         const float component  = direction[axis];
         const float offset     = local[axis];
@@ -149,7 +149,7 @@ bool traceVoxelRay( VoxelGrid grid, float3 origin, float3 direction, float maxDi
     int3   stepDirection = int3( 0, 0, 0 );
     float3 tMax          = float3( kFarDistance, kFarDistance, kFarDistance );
     float3 tDelta        = float3( kFarDistance, kFarDistance, kFarDistance );
-    [unroll] for ( int stepAxis = 0; stepAxis < 3; ++stepAxis )
+    SW_UNROLL for ( int stepAxis = 0; stepAxis < 3; ++stepAxis )
     {
         const float component = direction[stepAxis];
         if ( abs( component ) >= kParallelEpsilon )
@@ -207,7 +207,7 @@ float3 evaluateSkyRadiance( float3 direction )
     float arrBasisWeight[9];
     computeBasis( direction, arrBasisWeight );
     float3 radiance = float3( 0.0f, 0.0f, 0.0f );
-    [unroll] for ( uint coefficient = 0u; coefficient < 9u; ++coefficient )
+    SW_UNROLL for ( uint coefficient = 0u; coefficient < 9u; ++coefficient )
     {
         const uint   first = coefficient * 3u;
         const float4 rowA  = g_ProbeParams[kRowSky + ( first >> 2u )];
@@ -276,7 +276,7 @@ float3 computeDirectLight( VoxelGrid grid, uint lightCount, float3 position, flo
 /** @brief 원시 SH9 계수(28 칸, 27 개 + 0)를 소비 셰이더의 프로브 원소 일곱으로 바꿉니다(SH9Color::makeGPUElement 와 같다). */
 void packProbeElement( float coefficient[28], out float4 outElement[7] )
 {
-    [unroll] for ( uint channel = 0u; channel < 3u; ++channel )
+    SW_UNROLL for ( uint channel = 0u; channel < 3u; ++channel )
     {
         outElement[channel]      = float4( coefficient[9u + channel] * kPackBand1, coefficient[3u + channel] * kPackBand1, coefficient[6u + channel] * kPackBand1,
                                            coefficient[channel] * kPackBand0 - coefficient[18u + channel] * kPackZonal );
@@ -326,7 +326,7 @@ void CSMain( uint3 dispatchId : SV_DispatchThreadID )
 
     // 기록(원시 계수 27 개 + 0).
     float arrCoefficient[28];
-    [unroll] for ( uint slot = 0u; slot < kProbeFloat4Count; ++slot )
+    SW_UNROLL for ( uint slot = 0u; slot < kProbeFloat4Count; ++slot )
     {
         const float4 stored            = g_ProbeHistoryRW[historyAt + slot];
         arrCoefficient[slot * 4u]      = stored.x;
@@ -357,7 +357,7 @@ void CSMain( uint3 dispatchId : SV_DispatchThreadID )
         const float azimuthOff = hashToUnit( hashUint( seed + 1u ) ) * 2.0f * kPi;
 
         float arrFresh[28];
-        [unroll] for ( uint clearIndex = 0u; clearIndex < 28u; ++clearIndex )
+        SW_UNROLL for ( uint clearIndex = 0u; clearIndex < 28u; ++clearIndex )
         {
             arrFresh[clearIndex] = 0.0f;
         }
@@ -383,7 +383,7 @@ void CSMain( uint3 dispatchId : SV_DispatchThreadID )
 
             float arrBasisWeight[9];
             computeBasis( direction, arrBasisWeight );
-            [unroll] for ( uint basisIndex = 0u; basisIndex < 9u; ++basisIndex )
+            SW_UNROLL for ( uint basisIndex = 0u; basisIndex < 9u; ++basisIndex )
             {
                 const float factor = arrBasisWeight[basisIndex] * weight;
                 arrFresh[basisIndex * 3u] += radiance.x * factor;
@@ -394,11 +394,11 @@ void CSMain( uint3 dispatchId : SV_DispatchThreadID )
 
         // 기록이 막 생겼으면(쌓인 프레임 수 0) 새 값으로 바로 바꾼다. 쌓일수록 설정한 비율로 섞는다 - 1 / (쌓인 프레임 + 1) 이 더 크면 그 비율(처음 몇 번을 빨리 채운다).
         const float blend = max( spacingBlend.w, 1.0f / ( (float)schedule.y + 1.0f ) );
-        [unroll] for ( uint mixIndex = 0u; mixIndex < 27u; ++mixIndex )
+        SW_UNROLL for ( uint mixIndex = 0u; mixIndex < 27u; ++mixIndex )
         {
             arrCoefficient[mixIndex] = lerp( arrCoefficient[mixIndex], arrFresh[mixIndex], blend );
         }
-        [unroll] for ( uint writeSlot = 0u; writeSlot < kProbeFloat4Count; ++writeSlot )
+        SW_UNROLL for ( uint writeSlot = 0u; writeSlot < kProbeFloat4Count; ++writeSlot )
         {
             g_ProbeHistoryRW[historyAt + writeSlot] = float4( arrCoefficient[writeSlot * 4u], arrCoefficient[writeSlot * 4u + 1u], arrCoefficient[writeSlot * 4u + 2u], arrCoefficient[writeSlot * 4u + 3u] );
         }
@@ -406,7 +406,7 @@ void CSMain( uint3 dispatchId : SV_DispatchThreadID )
 
     float4 arrElement[7];
     packProbeElement( arrCoefficient, arrElement );
-    [unroll] for ( uint outSlot = 0u; outSlot < kProbeFloat4Count; ++outSlot )
+    SW_UNROLL for ( uint outSlot = 0u; outSlot < kProbeFloat4Count; ++outSlot )
     {
         g_ProbeOutRW[outAt + outSlot] = arrElement[outSlot];
     }

@@ -232,12 +232,12 @@ SWCOOK 5
 847c4add44810cc6 highlightoutline.hlsl
 88907170d8af7e2a shadowdepth.hlsl
 89a913ffe3778644 lightgrid.hlsl
-92cdccb9016fa81f probeupdate.hlsl
 933974aadb06a806 canvas.hlsl?colorvision.hlsli
 933974aadb06a806 postchain.hlsl?colorvision.hlsli
 933974aadb06a806 tonemap.hlsl?colorvision.hlsli
 950fb88d8f14e420 fog.hlsl?fogcommon.hlsli
 950fb88d8f14e420 volumetricfog.hlsl?fogcommon.hlsli
+95da1293dd77ce0e probeupdate.hlsl
 97497890b5995fbc autoexposure.hlsl
 97892aba7a9c3910 surfacelit.hlsl
 9bf2ae0ee30a014d vfxmeshinstance.hlsl
