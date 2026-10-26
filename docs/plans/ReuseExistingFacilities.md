@@ -1,27 +1,27 @@
 # 이미 있는 기능으로 옮기기
 
-> 상태: 구현대기 · 선행: 없음 · 영역: quality · 옛번호: 없음 · 진행: 0/8
+> 상태: 구현중 · 선행: 없음 · 영역: quality · 옛번호: 없음 · 진행: 6/13
 
-> 질문: Core · Engine 에 이미 있는 기능을 두고 C 런타임 · 표준 라이브러리를 직접 부르는 곳은 몇 군데이고, 어떤 순서로 옮기는가?
+> 질문: Core · Engine 에 이미 있는 기능을 두고 직접 구현하거나 C 런타임을 직접 부르는 곳은 몇 군데이고, 어떤 순서로 옮기는가?
 > 독자: 아래 단위를 맡는 작업자와 단위를 나눠 주는 통합 담당.
-> 결론: 직접 호출은 64건이다(2026-10-27 기준선). 단위마다 먼저 형식(대체 API · 레이어 경계)으로 막을 길을 만들고 호출부를 옮긴다. 기준선은 단위가 아니라 통합이 낮춘다.
+> 결론: 게이트가 세는 직접 호출은 64건에서 22건으로 줄었고 남은 것은 corebase · jsonwriter 작업자의 파일이다. 남은 새 단위는 GameDataXML 별칭 · split 정본 · 경로 정본 셋이다.
 
 쓸 것과 쓰지 말 것의 표는 [ExistingFacilities](../agents/ExistingFacilities.md) 한 곳에 있습니다. 새로 늘지 않게 막는 게이트는 `Scripts/lint/gate/CheckFacilityBypass.py` 이고, 규칙마다 형식으로 막지 못하는 이유(`whyNotType`)를 적었습니다. 기준선과 허용 목록은 `Scripts/lint/rules/CheckFacilityBypass.toml` 에 있습니다.
 
 ## 1. 지금 위반 수
 
-`py -3 Scripts/lint/gate/CheckFacilityBypass.py --list` 로 셉니다. 허용 목록(그 기능을 구현하는 파일)은 세지 않습니다.
+`py -3 Scripts/lint/gate/CheckFacilityBypass.py --list` 로 셉니다. 허용 목록(그 기능을 구현하는 파일과 이유가 적힌 자리)은 세지 않습니다.
 
-| 규칙 | 쓸 것 | Core | Engine | GameFramework | Editor | ModuleHost | Tools | Test | 합 |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| stdout | `SW_LOG_*` · `SW_LOW_LEVEL_*` | 7 | 6 | 2 | 0 | 1 | 1 | 14 | 31 |
-| random | `MathUtil::getRandom*` · `XorShift32` | 4 | 0 | 0 | 1 | 0 | 0 | 1 | 6 |
-| fileOpen | `FileUtil::read*` · `write*` | 0 | 1 | 0 | 0 | 0 | 0 | 1 | 2 |
-| processSpawn | `sw::Process` | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 1 |
-| numberParse | `StringUtil::parse*` | 0 | 6 | 1 | 0 | 0 | 0 | 17 | 24 |
-| 합 | | 12 | 13 | 3 | 1 | 1 | 1 | 33 | 64 |
+| 규칙 | 쓸 것 | 처음 | 지금 | 남은 파일 |
+| --- | --- | --- | --- | --- |
+| stdout | `SW_LOG_*` · `SW_LOW_LEVEL_*` · `StandardOutput` · `test::printTestNote` | 31 | 10 | Memory · TaskManager · AutomationHangWatch · GameTimeScale · Engine · OnlinePushRelay · OnlineProtocolRegistry · ModuleImageHostSubsystem |
+| random | `MathUtil::getRandom*` · `XorShift32` | 6 | 5 | UUID · CrashContext · NetChallenge · NetRequest · EditorNetPlaySession |
+| fileOpen | `FileUtil::read*` · `readStreamTextFile` | 2 | 0 | 없음 |
+| processSpawn | `sw::Process` | 1 | 0 | 없음 |
+| numberParse | `StringUtil::parse*` | 24 | 7 | ProfilerTraceExport · TracyProfilerBackend · X11Window · PostgresDriver |
+| 합 | | 64 | 22 | |
 
-이미 다른 게이트가 막아 이 표에 넣지 않은 것은 시계 · 환경 변수 · `std::thread` · 맨 할당 · `std::filesystem` · 서드파티 헤더입니다. 게이트 이름은 카탈로그 표의 "Basis" 칸에 있습니다.
+남은 22건은 모두 다른 작업자가 지금 고치는 파일입니다. corebase 가 `SecureRandom`(random 다섯), 낮은 층 보고(stdout 여섯), 숫자 파싱(numberParse 일곱)을 옮기고 있고, `AutomationHangWatch.cpp` 는 jsonwriter 가 고칩니다. 병합 뒤 통합이 기준선을 0 에 가깝게 낮춥니다.
 
 게이트로 만들지 않고 카탈로그에만 둔 것은 아래와 같습니다. 모양만으로는 정당한 코드와 가를 수 없거나 지금 0건이라 지킬 것이 없습니다.
 
@@ -29,50 +29,44 @@
 - `std::function` · `std::async` · `assert` · `malloc`(구현 파일 `Memory.cpp` 밖 0건).
 - 문자열 리터럴 UI 글(지역화), 게임 코드의 키 직접 확인(입력 맵).
 
-## 2. 단위를 나눈 규칙
+## 2. 끝난 단위에서 정한 것
 
-- 단위 사이에 겹치는 파일이 없습니다. 한 파일에 규칙이 둘이면 그 파일 전체를 한 단위가 맡습니다(`TestLoaderFuzz.cpp` 는 TestOutput).
-- 단위는 `CheckFacilityBypass.toml` 을 고치지 않습니다. 줄어든 기준선은 전체 훑기가 참고로만 알리고 실패하지 않으므로, 통합이 병합 뒤 한 번에 낮춥니다(여러 단위가 같은 줄을 고쳐 충돌하지 않게).
+- **C 함수의 `[[deprecated]]` 재선언은 쓰지 않습니다**(DeprecatedCRuntime). 시험 결과와 이유는 [결정 기록 5-3](../decisions/5-3_CorePlatform.md) 에 있습니다. 그래서 C 이름도 게이트가 계속 맡습니다. Windows 에서 이미 막혀 glibc 의 `_FORTIFY_SOURCE` 와 서드파티 헤더는 보지 않았습니다.
+- 명령줄 도구의 결과 글은 `Core/Process/StandardOutput.h` 로, 테스트 본문의 진단 줄은 `test::printTestNote`(`Test/TestFramework/TestReport.h`)로 씁니다.
+- 크기를 0 으로 알리는 의사 파일(`/proc`)은 `FileUtil::readStreamTextFile` 로 읽습니다. 같은 일을 하는 `PosixProcess.cpp` 의 `/proc/self/status` 읽기는 Process 층(6)이 File 층(8)을 볼 수 없어 그대로 둡니다.
+- 서식 오류를 알리는 `formatString.h` 와 CRT 누수 보고인 `MemoryProfiler.cpp` 는 로거를 쓸 수 없어 허용 목록에 올렸습니다. 잠긴 파일을 흉내 내는 `TestResource.cpp` 의 `std::ifstream` 도 같습니다.
+- 테스트 섞기는 `std::shuffle` 대신 `XorShift32` 피셔-예이츠입니다. `std::shuffle` 은 표준 라이브러리마다 알고리즘이 달라 같은 씨앗이 플랫폼마다 다른 순서를 돌았습니다.
+- 실수 목록 읽기는 `StringUtil::parseExactFloats` 하나입니다(FloatListParse). 각 보간은 `MathUtil::lerpAngle`, 각 감기는 `MathUtil::wrapAngle` 하나입니다(AngleLerp).
+
+## 3. 단위를 나눈 규칙
+
+- 단위 사이에 겹치는 파일이 없습니다. 한 파일에 규칙이 둘이면 그 파일 전체를 한 단위가 맡습니다.
+- 줄인 단위가 기준선을 낮춥니다. 여러 작업자가 같은 줄을 고치면 병합 때 작은 값을 남깁니다.
 - 첫 단계는 재측정입니다. `--list` 로 맡은 파일의 줄을 다시 보고, 이 문서의 수와 다르면 보고에 적습니다.
 - 대체 API 가 없으면 호출부에 직접 짜지 않고 Core · Engine 에 하나 더한 뒤 카탈로그 표의 그 줄을 고칩니다.
 
-## 3. 단위
+## 4. 남은 단위
 
 ### ReuseExistingFacilities.OsEntropy
-random 6건. 운영체제 난수를 받는 API 가 없어 네 곳이 `std::random_device` 를 따로 엽니다. `MathUtil` 에 운영체제 난수 함수(예: `getEntropyBits64`)를 더하고 구현은 지금 `<random>` 을 쓰는 유일한 자리인 `MathUtil.cpp` 에 둡니다. 옮긴 뒤 `<random>` 은 그 파일에만 남습니다.
-파일: `Source/Core/Math/MathUtil.h` · `MathUtil.cpp`, `Source/Core/UUID/UUID.cpp`, `Source/Core/Network/Connection/NetChallenge.cpp`, `Source/Core/Network/Message/NetRequest.cpp`, `Source/Core/Diagnostics/CrashContext.cpp`, `Source/Editor/Common/Workspace/EditorNetPlaySession.cpp`, `Test/TestFramework/TestSelection.cpp`(씨앗 있는 섞기는 `XorShift32`).
-주의: `UUID.cpp` 는 스레드마다 장치를 둔 이유(스레드 안전 약속 없음)를 주석에 적었습니다. 새 함수가 같은 보장을 지키는지 확인합니다.
+random 다섯. corebase 가 Core/Math 에 `SecureRandom` 을 만들고 있으니 그것을 씁니다. 별도 API 를 더하지 않습니다.
+파일: `Source/Core/UUID/UUID.cpp`, `Source/Core/Network/Connection/NetChallenge.cpp`, `Source/Core/Network/Message/NetRequest.cpp`, `Source/Core/Diagnostics/CrashContext.cpp`, `Source/Editor/Common/Workspace/EditorNetPlaySession.cpp`.
 
 ### ReuseExistingFacilities.LowLevelStderr
-stdout 7건, Core 안의 `fprintf( stderr )` · `fputs`. `SW_LOW_LEVEL_ERROR` 로 옮깁니다. 이 매크로는 로거가 보고자를 등록하기 전에는 stderr 로 씁니다.
-파일: `Source/Core/Container/formatString.h`, `Source/Core/Memory/Memory.cpp`, `Source/Core/Diagnostics/MemoryProfiler.cpp`, `Source/Core/Task/TaskManager.cpp`.
-주의: `Memory.cpp` 와 `MemoryProfiler.cpp` 는 할당 경로입니다. 보고자가 로거로 가며 할당하면 되돌아 들어오므로, 그 경로에서 할당이 없는지 먼저 봅니다. 되돌아 들어오면 이유를 적어 허용 목록에 올리는 것이 답입니다.
+stdout 둘(`Memory.cpp` · `TaskManager.cpp`)을 `SW_LOW_LEVEL_ERROR` 로 옮깁니다. corebase 작업 트리에서 진행 중입니다.
 
 ### ReuseExistingFacilities.EngineStderr
-stdout 10건, 엔진 · 게임 프레임워크 · 모듈 호스트 · 도구의 기동 실패와 명령줄 출력. 기동 실패는 `SW_LOW_LEVEL_ERROR` 로 옮깁니다. 사용법 글처럼 표준 출력이 계약인 출력은 Core 에 표준 출력 쓰기 API(예: `Core/Process/StandardOutput.h`)를 하나 더해 그것만 허용 목록에 둡니다.
-파일: `Source/Engine/Automation/AutomationHangWatch.cpp`, `Source/Engine/Config/GameTimeScale.cpp`, `Source/Engine/Engine.cpp`, `Source/Engine/HeadlessSubsystem.cpp`, `Source/GameFramework/Base/Online/Identity/OnlinePushRelay.cpp`, `Source/GameFramework/Base/Online/Service/OnlineProtocolRegistry.cpp`, `Source/ModuleHost/ModuleImageHostSubsystem.cpp`, `Tools/OnlineLoadBot/Main.cpp`.
-주의: `AutomationHangWatch.cpp` 는 실행기가 멈췄을 때 도는 감시자입니다. 로거가 멈춘 원인일 수 있으므로 로거를 거치지 않아야 하면 이유를 적어 허용 목록에 올립니다.
-
-### ReuseExistingFacilities.TestOutput
-stdout 14건과 numberParse 1건, 테스트 본문의 출력. 테스트 프레임워크에 진단 출력 API 가 있으면 그것을, 없으면 `Test/TestFramework` 에 하나 더해 씁니다. 퍼저의 대상 목록 출력은 표준 출력이 계약이므로 EngineStderr 의 표준 출력 API 를 씁니다(선행: EngineStderr).
-파일: `Test/ReflectionTest/TestReflectionSerialization.cpp`, `Test/FuzzTest/LoaderFuzzer.cpp`, `Test/CoreTest/TestTestFramework.cpp`, `Test/EngineTest/Destruction/TestDestructionDamage.cpp`, `Test/EngineTest/GameFramework/Kits/Online/TestMatchQueue.cpp`, `Test/EngineTest/Resource/TestLoaderFuzz.cpp`.
+stdout 여덟. 기동 실패는 `SW_LOW_LEVEL_ERROR` 로 옮기고, `AutomationHangWatch.cpp` 는 멈춘 실행기의 감시자라 로거를 거치면 안 되면 이유를 적어 허용 목록에 올립니다. `HeadlessSubsystem.cpp` 와 `Tools/OnlineLoadBot/Main.cpp` 는 끝났습니다.
+파일: `Source/Engine/Automation/AutomationHangWatch.cpp`(jsonwriter), `Source/Engine/Config/GameTimeScale.cpp`, `Source/Engine/Engine.cpp`, `Source/GameFramework/Base/Online/Identity/OnlinePushRelay.cpp`, `Source/GameFramework/Base/Online/Service/OnlineProtocolRegistry.cpp`, `Source/ModuleHost/ModuleImageHostSubsystem.cpp`(corebase · errh).
 
 ### ReuseExistingFacilities.EngineNumberParse
-numberParse 7건. `StringUtil::parseInt64` · `parseUint64` · `parseDouble` 로 옮깁니다. 이 함수들은 실패를 돌려주므로 지금 0 으로 넘어가던 잘못된 입력이 오류가 됩니다. 호출부마다 실패 처리를 정합니다.
-파일: `Source/Engine/Profiling/ProfilerTraceExport.cpp`, `Source/Engine/Profiling/Tracy/TracyProfilerBackend.cpp`, `Source/Engine/Window/Linux/X11Window.cpp`, `Source/GameFramework/Kits/Feature/Storage/SQLStore/Server/Driver/Postgres/PostgresDriver.cpp`.
+numberParse 일곱. corebase 브랜치(`wt/corebase`)가 이미 `StringUtil::parse*` 로 옮겼습니다. 병합 뒤 기준선만 낮춥니다.
 
-### ReuseExistingFacilities.TestNumberParse
-numberParse 16건, 테스트와 테스트 실행기의 인자 · 출력 해석.
-파일: `Test/TestFramework/TestRunOptions.cpp`, `Test/AppTest/TestAppSmoke.cpp`, `Test/AppTest/TestAppUI.cpp`, `Test/CoreTest/Process/TestCrashReport.cpp`, `Test/EditorTest/Common/Asset/TestSyntheticRigImport.cpp`, `Test/EditorTest/Common/Workspace/TestEditorNetPlaySession.cpp`, `Test/EngineTest/GameFramework/Kits/Network/TestNetSimLoad.cpp`.
+### ReuseExistingFacilities.GameDataXMLAlias
+`GameDataXML` 의 읽기 별칭(`parseFloat2` · `readOptionalFloat2` 같은 이름)은 엔진의 `XMLReadUtil` 과 같은 일을 하고 호출부가 약 850 곳입니다. 먼저 `GameDataXML` 에만 있는 읽기를 `XMLReadUtil` 로 올리고, 다음에 호출부를 옮겨 별칭을 지웁니다. 호출부가 많아 한 작업자가 이 일만 맡습니다.
+첫 단계: `git grep -c "GameDataXML::"` 로 호출부를 다시 세고, `XMLReadUtil` 에 없는 함수 목록을 만듭니다.
 
-### ReuseExistingFacilities.FileAndProcess
-fileOpen 2건과 processSpawn 1건.
-파일: `Source/Engine/Observability/ProcessMetrics.cpp`(`/proc` 읽기를 `FileUtil::readTextFile` 로), `Test/EngineTest/Resource/TestResource.cpp`(`std::ifstream`), `Source/Core/File/Linux/LinuxFileDialog.cpp`(`popen` 을 `Process::execute` 의 출력 델리게이트로).
-주의: `/proc` 파일은 크기를 0 으로 알립니다. `FileUtil::readTextFile` 이 크기만큼만 읽으면 빈 글이 됩니다. 먼저 끝까지 읽는지 확인합니다. `TestResource.cpp` 는 파일을 열어 둔 채 잠그는 테스트일 수 있으므로, 그렇다면 이유를 적어 허용 목록에 올립니다.
+### ReuseExistingFacilities.SplitCanonical
+글을 구분자로 나누는 일은 `StringUtil::forEachToken` · `string_splitter` 가 있는데 호출부가 `find` · `substr` 루프를 손으로 씁니다. 정본을 `StringUtil::split`(벡터를 돌려주는 형태) 하나로 정하고 손 루프를 옮깁니다. 감사 보고 R9 의 목록으로 재측정하고 시작합니다.
 
-### ReuseExistingFacilities.DeprecatedCRuntime
-선행: OsEntropy · LowLevelStderr · EngineStderr · TestOutput · EngineNumberParse · TestNumberParse · FileAndProcess.
-형식으로 막는 길을 시험합니다. C 함수(`printf` · `fprintf` · `puts` · `fopen` · `rand` · `atoi` · `strtol` · `system` · `popen`)는 pch 뒤에 `[[deprecated]]` 를 붙여 다시 선언할 수 있습니다. 그다음 `-Werror=deprecated-declarations` 를 엔진 타깃에 걸면 컴파일러가 막습니다. 허용 목록 파일은 그 줄만 경고를 끕니다.
-먼저 확인할 것은 셋입니다. ① Windows UCRT 의 `printf` 는 인라인 정의라 재선언이 받아들여지는지 봅니다. ② glibc 의 `_FORTIFY_SOURCE` 가 이름을 매크로로 바꾸는지 봅니다. ③ pch 뒤에 include 되는 서드파티 헤더가 이 이름을 쓰는지 봅니다. 셋을 `syntax-check` 로 두 플랫폼에서 확인합니다.
-되면 게이트에서 C 이름을 빼고 `std::` 이름(`std::cout` · `std::ifstream` · `std::mt19937` · `std::random_device` · `std::stoi`)만 남깁니다. `std` 이름공간의 재선언은 미정의 동작이므로 그 이름들은 게이트가 계속 맡습니다. 안 되면 이유를 결정 기록(`docs/decisions/5-3_CorePlatform.md`)에 한 줄 남깁니다.
-파일: `Source/Core/Common/StdHeaders.h`, 새 헤더 하나, `Source/Core/CMakeLists.txt` 의 경고 플래그, `Scripts/lint/gate/CheckFacilityBypass.py` · `rules/CheckFacilityBypass.toml`.
+### ReuseExistingFacilities.PathCanonical
+경로 붙이기 · 확장자 · 구분자 바꾸기를 호출부가 문자열로 직접 합니다. 정본은 `FileUtil::joinPath` · `getExtension` · `normalizeSeparators` 입니다. 감사 보고 R10 의 목록으로 재측정하고 옮깁니다.
