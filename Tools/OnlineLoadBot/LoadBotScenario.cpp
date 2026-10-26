@@ -144,7 +144,7 @@ namespace sw
             outError = "step must be an object (repeat nesting up to 8)";
             return false;
         }
-        const string actionName = value.get( "_action", false ).asString();
+        const string actionName = value.get( "_action" ).asString();
         bool         bFound     = false;
         for ( const ActionRow& entry : kArrAction )
         {
@@ -169,7 +169,7 @@ namespace sw
         }
         for ( const string_view key : kArrRequiredKey )
         {
-            const bool bMissingRequired = isKnownKey( outStep._action, key ) && value.has( key, false ) == false;
+            const bool bMissingRequired = isKnownKey( outStep._action, key ) && value.has( key ) == false;
             if ( bMissingRequired )
             {
                 outError = "action '" + actionName + "' needs '" + string( key ) + "'";
@@ -194,13 +194,13 @@ namespace sw
         }
         for ( const string_view key : kArrTextKey )
         {
-            if ( value.has( key, false ) )
-                outStep._text = value.get( key, false ).asString();
+            if ( value.has( key ) )
+                outStep._text = value.get( key ).asString();
         }
-        if ( value.has( "_text", false ) )
-            outStep._secondText = value.get( "_text", false ).asString();
-        else if ( value.has( "_activity", false ) )
-            outStep._secondText = value.get( "_activity", false ).asString();
+        if ( value.has( "_text" ) )
+            outStep._secondText = value.get( "_text" ).asString();
+        else if ( value.has( "_activity" ) )
+            outStep._secondText = value.get( "_activity" ).asString();
         const bool bInvalidStepTiming = outStep._minMs < 0 || outStep._maxMs < outStep._minMs || outStep._count <= 0;
         if ( bInvalidStepTiming )
         {
@@ -214,7 +214,7 @@ namespace sw
             return false;
         }
         if ( bRepeat )
-            return readStepList( value.get( "_listStep", false ), outStep._listStep, outError, depth + 1 );
+            return readStepList( value.get( "_listStep" ), outStep._listStep, outError, depth + 1 );
         return true;
     }
 
@@ -256,7 +256,7 @@ namespace sw
         }
         // 적지 않은 칸은 시나리오의 초기값이다. 정수가 아니면 거절한다.
         outScenario       = LoadBotScenario{};
-        outScenario._name = root.get( "_name", false ).asString();
+        outScenario._name = root.get( "_name" ).asString();
         const bool bRead  = root.readOptionalInto( "_botCount", outScenario._botCount ) && root.readOptionalInto( "_rampUpSeconds", outScenario._rampUpSeconds ) &&
                            root.readOptionalInto( "_durationSeconds", outScenario._durationSeconds ) && root.readOptionalInto( "_seed", outScenario._seed );
         if ( bRead == false )
@@ -264,14 +264,14 @@ namespace sw
             outError = "_botCount, _rampUpSeconds, _durationSeconds and _seed must be integers";
             return false;
         }
-        if ( root.has( "_region", false ) )
-            outScenario._region = root.get( "_region", false ).asString();
+        if ( root.has( "_region" ) )
+            outScenario._region = root.get( "_region" ).asString();
         const bool bInvalidScenarioTiming = outScenario._botCount <= 0 || outScenario._rampUpSeconds < 0 || outScenario._durationSeconds <= 0;
         if ( bInvalidScenarioTiming )
         {
             outError = "_botCount and _durationSeconds must be positive and _rampUpSeconds not negative";
             return false;
         }
-        return LoadBotScenarioInternal::readStepList( root.get( "_listStep", false ), outScenario._listStep, outError, 0 );
+        return LoadBotScenarioInternal::readStepList( root.get( "_listStep" ), outScenario._listStep, outError, 0 );
     }
 } // namespace sw

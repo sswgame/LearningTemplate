@@ -21,7 +21,7 @@ namespace sw
      *          셸 문법(파이프 · 리디렉션 · `&&`)이 필요하면 셸을 실행 파일로 적는다(`/bin/sh` + `-c`, `cmd.exe` + `/c`) — 그때 셸 문법은 부르는 쪽 몫이다.
      *          `_executable` 은 경로이거나 PATH 에서 찾을 이름(`cmake` · `git`)이다. Core 라 Engine 의 `DataPath` 를 쓸 수 없고, PATH 이름은 경로가 아니다.
      */
-    struct ProcessCommand
+    struct SW_API ProcessCommand
     {
         ProcessCommand() = default;
         /** @brief 인자 목록을 반드시 함께 받는다 — 글 하나에서 바뀌는 생성자를 두지 않아 `launch( "a b c" )` 가 컴파일되지 않게. */

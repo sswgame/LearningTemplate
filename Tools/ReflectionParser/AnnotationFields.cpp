@@ -49,7 +49,10 @@ namespace sw
             {
                 if constexpr ( std::is_same_v<TMember, uint8> )
                 {
-                    return static_cast<uint8>( StringUtil::parseBool( value, true ) ? SW_TRUE : SW_FALSE );
+                    bool bFlag = true; // 값을 적지 않은 어노테이션(`Flag`)은 켠다는 뜻이다 — 읽을 수 없는 글도 같은 규칙(도구 입력이라 오류로 멈추지 않는다)
+                    if ( StringUtil::tryParseBool( value, bFlag ) == false )
+                        bFlag = true;
+                    return static_cast<uint8>( bFlag ? SW_TRUE : SW_FALSE );
                 }
                 else
                 {

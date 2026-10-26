@@ -435,15 +435,11 @@ namespace test
             }
             static void runJSONWebToken( const uint8* pData, size_t size )
             {
-                JSONWebToken token;
+                JwtUnverified token; // 본문 클레임은 서명을 확인한 JwtVerified 에서만 읽는다 — 퍼즈는 머리 해석까지 본다
                 if ( token.parse( asText( pData, pData != nullptr ? size : 0 ) ) == false )
                     return;
-                string text;
-                int64  integer{ 0 };
-                (void)token.findText( "sub", text ); // 읽은 토큰의 클레임 길도 본다
-                (void)token.findTextPath( "data.x", text );
-                (void)token.findInteger( "exp", integer );
-                (void)token.hasAudience( "a" );
+                (void)token.getKeyID();
+                (void)token.getAlgorithm();
             }
             static void runJwks( const uint8* pData, size_t size )
             {

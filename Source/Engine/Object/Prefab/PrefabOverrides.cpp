@@ -89,7 +89,7 @@ namespace sw
                     if ( isElement( child ) == false )
                         continue;
                     const utf8*  pLabel     = child.findAttribute( kComponentName );
-                    const bool   bNoLabel   = StringUtil::isNullOrEmpty( pLabel ) || isSameText( pLabel, "None" );
+                    const bool   bNoLabel   = StringUtil::isNullOrEmpty( pLabel ) || StringUtil::equals( pLabel, "None" );
                     const string baseName   = bNoLabel ? string{ child.getName() } : string{ pLabel };
                     int32&       occurrence = mapCount[baseName];
                     outListComponent.push_back( KeyedComponent{ child, baseName + "#" + to_string( occurrence ), false } );
@@ -121,7 +121,7 @@ namespace sw
                     if ( bRoot && isRootOnlyField( attribute.getName() ) )
                         continue;
                     const utf8* pBaseValue = base.findAttribute( attribute.getName() );
-                    if ( pBaseValue == nullptr || isSameText( pBaseValue, attribute.getValue() ) == false )
+                    if ( pBaseValue == nullptr || StringUtil::equals( pBaseValue, attribute.getValue() ) == false )
                         outListAttribute.push_back( attribute );
                 }
                 for ( XMLNode child = instance.findChild(); child.isValid(); child = child.findNextSibling() )
@@ -153,7 +153,7 @@ namespace sw
             {
                 for ( XMLAttribute attribute = base.getFirstAttribute(); attribute; attribute = attribute.getNext() )
                 {
-                    const bool  bRenamed = pName != nullptr && isSameText( attribute.getName(), kObjectName );
+                    const bool  bRenamed = pName != nullptr && StringUtil::equals( attribute.getName(), kObjectName );
                     const utf8* pValue   = partial.isValid() ? partial.findAttribute( attribute.getName() ) : nullptr;
                     if ( bRenamed )
                         pValue = pName;
@@ -163,7 +163,7 @@ namespace sw
                     return;
                 for ( XMLAttribute attribute = partial.getFirstAttribute(); attribute; attribute = attribute.getNext() )
                 {
-                    if ( base.findAttribute( attribute.getName() ) == nullptr && isSameText( attribute.getName(), kObjectName ) == false )
+                    if ( base.findAttribute( attribute.getName() ) == nullptr && StringUtil::equals( attribute.getName(), kObjectName ) == false )
                         out.appendAttribute( attribute.getName(), attribute.getValue() );
                 }
             }

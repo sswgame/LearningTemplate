@@ -248,10 +248,10 @@ SW_TEST_CASE( EditorNetPlaySessionTest, WindowArgumentsTileTheAppWindows )
     settings._windowWidth       = 800;
     settings._windowHeight      = 450;
     settings._windowColumnCount = 2;
-    SW_EXPECT_TRUE( EditorNetPlaySession::makeWindowArguments( settings, 0 ) == "-W=800 -H=450 -WinX=0 -WinY=0" );
-    SW_EXPECT_TRUE( EditorNetPlaySession::makeWindowArguments( settings, 1 ) == "-W=800 -H=450 -WinX=816 -WinY=0" );
-    SW_EXPECT_TRUE( EditorNetPlaySession::makeWindowArguments( settings, 2 ) == "-W=800 -H=450 -WinX=0 -WinY=490" );
-    SW_EXPECT_TRUE( EditorNetPlaySession::makeWindowArguments( settings, 3 ) == "-W=800 -H=450 -WinX=816 -WinY=490" );
+    SW_EXPECT_TRUE( ( EditorNetPlaySession::makeWindowArguments( settings, 0 ) == vector<string>{ "-W=800", "-H=450", "-WinX=0", "-WinY=0" } ) );
+    SW_EXPECT_TRUE( ( EditorNetPlaySession::makeWindowArguments( settings, 1 ) == vector<string>{ "-W=800", "-H=450", "-WinX=816", "-WinY=0" } ) );
+    SW_EXPECT_TRUE( ( EditorNetPlaySession::makeWindowArguments( settings, 2 ) == vector<string>{ "-W=800", "-H=450", "-WinX=0", "-WinY=490" } ) );
+    SW_EXPECT_TRUE( ( EditorNetPlaySession::makeWindowArguments( settings, 3 ) == vector<string>{ "-W=800", "-H=450", "-WinX=816", "-WinY=490" } ) );
     settings._bArrangeWindows = false;
     SW_EXPECT_TRUE( EditorNetPlaySession::makeWindowArguments( settings, 1 ).empty() );
 }

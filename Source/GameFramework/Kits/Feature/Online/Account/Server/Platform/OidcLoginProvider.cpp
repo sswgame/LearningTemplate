@@ -132,7 +132,7 @@ namespace sw
             return Decision::NeedKey;
         // 서명과 iss · aud · exp · iat 는 `verify` 가 한 번에 본다. 여기서는 제공자마다 다른 nonce · subject 만 본다.
         const std::optional<JwtVerified> token =
-            std::move( unverified ).verify( *_pProvider, *pKey, JwtClaimRule::makeIDToken( _settings._issuer, _settings._listClientID, nowMs, _settings._clockSkewMs ) );
+            std::move( unverified ).verify( *_pProvider, *pKey, JwtClaimRule::makeIDToken( _settings._issuer, _settings._listClientID, now.count(), _settings._clockSkewMs ) );
         if ( token.has_value() == false )
         {
             outVerification._bRejected = SW_TRUE;

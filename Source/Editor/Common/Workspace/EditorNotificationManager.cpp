@@ -25,7 +25,9 @@ namespace sw::editor
                 EditorContext* pContext = editor::findSubsystem<EditorContext>();
                 if ( listArgument.size() < 2 || pContext == nullptr )
                     return false;
-                const float32 durationSec = std::strtof( listArgument[0].c_str(), nullptr );
+                float32 durationSec = 0.0f;
+                if ( StringUtil::parseFloat( listArgument[0], durationSec ) == false )
+                    durationSec = 0.0f; // 숫자가 아니면 아래 검사가 양수가 아니라고 답한다
                 if ( durationSec <= 0.0f )
                 {
                     outReply = "the duration must be a positive number of seconds";
@@ -70,6 +72,12 @@ namespace sw::editor
         item._progress    = progress;
 
         _listNotification.push_back( std::move( item ) );
+    }
+
+    void EditorNotificationManager::pushRevealable( string_view title, string_view message, NotificationType type, string_view revealPath, float32 durationSec )
+    {
+        push( title, message, type, durationSec );
+        _listNotification.back()._revealPath = string{ revealPath };
     }
 
     void EditorNotificationManager::update( float32 deltaTime )

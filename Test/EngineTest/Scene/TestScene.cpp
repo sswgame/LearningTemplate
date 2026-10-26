@@ -2258,7 +2258,7 @@ SW_TEST_CASE( SceneTest, PreviewSceneTickScalesDeltaByPolicy )
 SW_TEST_CASE( SceneTest, HiddenPreviewSceneFreezesUntilDrawnAgain )
 {
     sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
     sw::RegisterMockComponents();
     manager.createScene( "Main" );
 
@@ -2282,7 +2282,7 @@ SW_TEST_CASE( SceneTest, HiddenPreviewSceneFreezesUntilDrawnAgain )
     SW_EXPECT_EQUAL( 2, pMesh->_tickCount );
     SW_EXPECT_NEAR_EQUAL( 0.016f, pMesh->_lastDeltaTime, 1e-6f );
 
-    manager.shutdown();
+    manager.shutdownSubsystem();
 }
 
 /**

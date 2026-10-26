@@ -967,13 +967,13 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBaseReturnToTitleFollowsTitleScene 
     SW_ASSERT_TRUE( document.saveBinary( test::makeTempPath( "return_to_title.scene.bin" ) ) );
 
     SceneManager sceneManager;
-    SW_ASSERT_TRUE( sceneManager.initialize() );
+    SW_ASSERT_TRUE( sceneManager.initializeSubsystem() == SubsystemInitResult::Succeeded );
     const ScopedSceneGameService    scopedScene{ sceneManager };
     EventDispatcher                 dispatcher;
     const ScopedGameEventDispatcher scopedDispatcher{ dispatcher };
     vector<string>                  listRequested;
-    dispatcher.subscribe<SceneLoadRequestedEvent>( gameEventChannel(), SW_DELEGATE_LAMBDA( Delegate<void( const SceneLoadRequestedEvent& )>, [&listRequested]( const SceneLoadRequestedEvent& event )
-    { listRequested.push_back( event._levelName ); } ) );
+    const Subscription              requestedSubscription = dispatcher.subscribe<SceneLoadRequestedEvent>( gameEventChannel(), SW_DELEGATE_LAMBDA( Delegate<void( const SceneLoadRequestedEvent& )>, [&listRequested]( const SceneLoadRequestedEvent& event )
+                 { listRequested.push_back( event._levelName ); } ) );
     sw::GameTimeScale::setUnscaledDeltaTime( 0.016f );
 
     UISystem            ui;
@@ -1011,7 +1011,7 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBaseReturnToTitleFollowsTitleScene 
 
     gameInstance.unregisterCommands( ui );
     SW_EXPECT_FALSE( ui.getGlobalCommands().hasCommand( command ) );
-    sceneManager.shutdown();
+    sceneManager.shutdownSubsystem();
 }
 
 /**

@@ -183,41 +183,41 @@ namespace sw
         summarize( listSummary );
         JSONDocument    document;
         const JSONValue root = document.makeObject();
-        root.set( "_scenario", false ).setString( scenario._name );
-        root.set( "_botCount", false ).setInt( scenario._botCount );
-        root.set( "_elapsedMs", false ).setInt( elapsedMs );
-        const JSONValue listAction = root.set( "_listAction", false );
+        root.set( "_scenario" ).setString( scenario._name );
+        root.set( "_botCount" ).setInt( scenario._botCount );
+        root.set( "_elapsedMs" ).setInt( elapsedMs );
+        const JSONValue listAction = root.set( "_listAction" );
         listAction.setArray();
         for ( const LoadBotActionSummary& summary : listSummary )
         {
             const JSONValue entry = listAction.pushBack();
             entry.setObject();
-            entry.set( "_name", false ).setString( summary._actionName );
-            entry.set( "_count", false ).setInt( summary._count );
-            entry.set( "_errorCount", false ).setInt( summary._errorCount );
-            entry.set( "_p50Us", false ).setInt( summary._p50Us );
-            entry.set( "_p95Us", false ).setInt( summary._p95Us );
-            entry.set( "_p99Us", false ).setInt( summary._p99Us );
-            entry.set( "_maxUs", false ).setInt( summary._maxUs );
+            entry.set( "_name" ).setString( summary._actionName );
+            entry.set( "_count" ).setInt( summary._count );
+            entry.set( "_errorCount" ).setInt( summary._errorCount );
+            entry.set( "_p50Us" ).setInt( summary._p50Us );
+            entry.set( "_p95Us" ).setInt( summary._p95Us );
+            entry.set( "_p99Us" ).setInt( summary._p99Us );
+            entry.set( "_maxUs" ).setInt( summary._maxUs );
         }
-        const JSONValue mapError = root.set( "_mapError", false );
+        const JSONValue mapError = root.set( "_mapError" );
         mapError.setObject();
         for ( const auto& [errorKey, count] : _mapErrorKeyToCount )
         {
-            mapError.set( errorKey, false ).setInt( count );
+            mapError.set( errorKey ).setInt( count );
         }
-        const JSONValue mapPush = root.set( "_mapPush", false );
+        const JSONValue mapPush = root.set( "_mapPush" );
         mapPush.setObject();
         for ( const auto& [pushKind, count] : _mapPushKindToCount )
         {
-            mapPush.set( LoadBotMetricsInternal::makeNumberText( pushKind ), false ).setInt( count );
+            mapPush.set( LoadBotMetricsInternal::makeNumberText( pushKind ) ).setInt( count );
         }
-        const JSONValue connection = root.set( "_connection", false );
+        const JSONValue connection = root.set( "_connection" );
         connection.setObject();
-        connection.set( "_opened", false ).setInt( _openedCount );
-        connection.set( "_failed", false ).setInt( _failedCount );
-        connection.set( "_closed", false ).setInt( _disconnectCount );
-        root.set( "_matchCount", false ).setInt( getDistinctMatchCount() );
+        connection.set( "_opened" ).setInt( _openedCount );
+        connection.set( "_failed" ).setInt( _failedCount );
+        connection.set( "_closed" ).setInt( _disconnectCount );
+        root.set( "_matchCount" ).setInt( getDistinctMatchCount() );
         return document.dump( LoadBotMetricsInternal::kJSONIndent );
     }
 
