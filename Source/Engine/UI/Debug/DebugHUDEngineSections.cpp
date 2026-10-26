@@ -46,6 +46,17 @@ namespace sw
             /** @brief 활성 씬의 오브젝트 매니저입니다(씬이 없으면 nullptr). */
             static GameObjectManager* findActiveObjectManager() { return engine::getSubsystem<SceneManager>().findActiveObjectManager(); }
 
+            /**
+             * @brief `objects` 섹션의 수입니다. 구조 세대(`GameObjectManager::getStructureGeneration`)가 같으면 다시 세지 않습니다.
+             * @details 생성 · 파괴 · 컴포넌트 붙이기와 떼기가 세대를 올리므로 수가 바뀌는 경우를 놓치지 않는다. 세대는 매니저끼리 겹치지 않아 씬을 바꿔도 맞다.
+             */
+            struct ObjectCount
+            {
+                uint64 _structureGeneration{ 0 }; ///< 센 때의 세대. 0 은 나오지 않는 값이다
+                uint32 _objectCount{ 0 };
+                uint32 _componentCount{ 0 };
+            };
+
             /** @brief 프로파일러 구간 @p slot 의 마지막으로 접힌 프레임 시간(밀리초)입니다. */
             static float64 readLastFrameMilliseconds( uint32 slot )
             {
@@ -157,17 +168,22 @@ namespace sw
                     writer.addLine( "scene", "none" );
                     return;
                 }
-                uint32 objectCount    = 0;
-                uint32 componentCount = 0;
-                pManager->forEachGameObject( [&objectCount, &componentCount]( GameObject* pObject )
+                static thread_local ObjectCount s_objectCount{};
+                ObjectCount&                    count      = s_objectCount;
+                const uint64                    generation = pManager->getStructureGeneration();
+                if ( count._structureGeneration != generation )
                 {
-                    if ( pObject == nullptr )
-                        return;
-                    ++objectCount;
-                    componentCount += static_cast<uint32>( pObject->getComponentCount() );
-                } );
-                writer.addLineFormat( "objects", "%#", objectCount );
-                writer.addLineFormat( "components", "%#", componentCount );
+                    count = ObjectCount{ generation, 0, 0 };
+                    pManager->forEachGameObject( [&count]( GameObject* pObject )
+                    {
+                        if ( pObject == nullptr )
+                            return;
+                        ++count._objectCount;
+                        count._componentCount += static_cast<uint32>( pObject->getComponentCount() );
+                    } );
+                }
+                writer.addLineFormat( "objects", "%#", count._objectCount );
+                writer.addLineFormat( "components", "%#", count._componentCount );
             }
 
             static void writePhysics( DebugHUDSectionWriter& writer )

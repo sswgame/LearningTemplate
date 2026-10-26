@@ -3,6 +3,7 @@
 #include "Editor/Panels/Scene/HierarchyPanel.h"
 
 #include "Core/Common/StdHeaders.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/String/TagID.h"
 #include "Core/String/fixed_string.h"
@@ -103,9 +104,28 @@ namespace sw::editor
                 return EditorListFilter{ pFilter }.matches( pObj->getName().view() );
             }
 
+            /**
+             * @brief 계층 창의 행 모델입니다. 루트 순서와 필터에 걸린 오브젝트를 담고, 구조 세대 · 태그 세대 · 필터 글이 바뀔 때만 다시 짓습니다(`refreshRowModel`).
+             * @details 프레임마다 전 오브젝트를 훑어 루트를 모으고 정렬하면 큐브 수천 개 씬에서 그것만으로 프레임을 먹는다. 필터를 켜면 노드마다 서브트리를
+             *          재귀로 다시 물었다. 언리얼 아웃라이너도 트리를 이벤트로 고치고 프레임마다 다시 모으지 않는다.
+             *          포인터를 들어도 된다. 오브젝트는 해체 전에 늘 구조 세대를 올리고(`GameObjectStore::destroyObject`), 그리기 전에 세대를 먼저 본다.
+             */
+            struct RowModel
+            {
+                vector<GameObject*>                   _listRoot{};            ///< 형제 순서의 루트(삭제 대기 제외)
+                unordered_set<uint64>                 _uniqueFilterMatchID{}; ///< 자기나 후손이 필터에 걸린 오브젝트 id. 필터가 꺼져 있으면 비어 있다
+                fixed_string<constant::kMaxBuffer128> _filterText{};          ///< 지을 때의 필터 글
+                const GameObjectManager*              _pManager{ nullptr };   ///< 지을 때의 매니저
+                uint64                                _structureGeneration{ 0 };
+                uint64                                _tagGeneration{ 0 };
+                uint32                                _rebuildCount{ 0 }; ///< 다시 지은 횟수(탐침 `Editor.HierarchyRowRebuildCount`)
+                bool                                  _bFilterActive{ false };
+            };
+
             /** @brief 이번 프레임에 그린 오브젝트 행을 위에서 아래 순서로 담습니다. Shift 범위 선택, Ctrl+A, 화살표가 지난 프레임의 것을 봅니다. */
             struct RowState
             {
+                RowModel                             _rowModel{};
                 vector<uint64>                       _listDrawnRow;
                 vector<uint64>                       _listPreviousRow;
                 uint64                               _anchorObjectID{ 0 };  ///< 범위 선택의 시작 행. 마지막으로 그냥 클릭하거나 Ctrl 을 누르고 클릭한 행이다
@@ -215,20 +235,56 @@ namespace sw::editor
                 return ImGui::TreeNodeGetOpen( nodeID ) == false;
             }
 
-            static bool subtreeMatchesFilter( GameObject* pObj, const utf8* pFilter )
+            /**
+             * @brief 행 모델이 지금 매니저 · 구조 세대 · 태그 세대 · 필터 글과 맞지 않으면 다시 짓습니다. 그리기 전에 한 번 부릅니다.
+             * @details 필터는 걸린 오브젝트마다 조상을 거슬러 올라가며 표시한다(이미 표시된 조상에서 멈춘다). 노드마다 서브트리를 다시 묻지 않는다.
+             */
+            static void refreshRowModel( GameObjectManager& manager, string_view filterText )
             {
-                if ( pObj == nullptr )
-                    return false;
-                if ( nameMatchesFilter( pObj, pFilter ) )
-                    return true;
-                vector<GameObject*> listChild;
-                pObj->getChildren( listChild );
-                for ( GameObject* pChild : listChild )
+                RowModel&    model               = getRowState()._rowModel;
+                const uint64 structureGeneration = manager.getStructureGeneration();
+                const uint64 tagGeneration       = manager.getTagIndex().getGeneration();
+                const bool   bUpToDate           = model._pManager == &manager && model._structureGeneration == structureGeneration && model._tagGeneration == tagGeneration &&
+                                       model._filterText.view() == filterText;
+                if ( bUpToDate )
+                    return;
+
+                model._pManager            = &manager;
+                model._structureGeneration = structureGeneration;
+                model._tagGeneration       = tagGeneration;
+                model._filterText          = filterText;
+                ++model._rebuildCount;
+                EditorSceneCommands::collectRootsInOrder( manager, model._listRoot ); // 루트만 형제 순서로 모은다. 지우고 되돌려도 위치가 그대로다
+                model._uniqueFilterMatchID.clear();
+                model._bFilterActive = EditorListFilter{ model._filterText.c_str() }.isActive();
+                if ( model._bFilterActive == false )
+                    return;
+                const utf8*            pFilter     = model._filterText.c_str();
+                unordered_set<uint64>& uniqueMatch = model._uniqueFilterMatchID;
+                manager.forEachGameObject( [pFilter, &uniqueMatch]( GameObject* pObj )
                 {
-                    if ( subtreeMatchesFilter( pChild, pFilter ) )
-                        return true;
-                }
-                return false;
+                    if ( nameMatchesFilter( pObj, pFilter ) == false )
+                        return;
+                    for ( const GameObject* pCursor = pObj; pCursor != nullptr; pCursor = pCursor->getParent() )
+                    {
+                        if ( uniqueMatch.insert( pCursor->getObjectID() ).second == false )
+                            break;
+                    }
+                } );
+            }
+
+            /** @brief 필터가 꺼져 있거나, 이 오브젝트나 후손이 필터에 걸렸으면 true 입니다(행 모델로 답한다). */
+            static bool isRowVisible( const GameObject* pObj )
+            {
+                const RowModel& model = getRowState()._rowModel;
+                return model._bFilterActive == false || model._uniqueFilterMatchID.contains( pObj->getObjectID() );
+            }
+
+            /** @brief 행 모델을 다시 지은 횟수입니다(탐침 `Editor.HierarchyRowRebuildCount`). 구조가 그대로인 프레임에는 오르지 않아야 한다. */
+            [[nodiscard]] static bool readRowRebuildCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                outValue = static_cast<float64>( getRowState()._rowModel._rebuildCount );
+                return true;
             }
 
             /** @brief 계층 창이 보이지 않는 에디터 카메라 오브젝트입니다. 형제 번호를 다시 매길 때 빼야 한다. 없으면 nullptr 입니다. */
@@ -655,14 +711,14 @@ namespace sw::editor
             }
 
             /** @brief 펼친 오브젝트의 자식 오브젝트(형제 순서)와 컴포넌트 줄을 그립니다. */
-            static void drawOpenNodeChildren( EditorContext* pContext, GameObject* pObj, GameObjectManager* pManager, const utf8* pFilter,
+            static void drawOpenNodeChildren( EditorContext* pContext, GameObject* pObj, GameObjectManager* pManager,
                                               uint64& renamingObjectID, fixed_string<constant::kMaxBuffer256>& renameBuffer, bool& bFocusRenameInput )
             {
                 vector<GameObject*> listChild;
                 EditorSiblingOrder::collectChildrenInOrder( *pObj, listChild );
                 for ( GameObject* pChild : listChild )
                 {
-                    drawGameObjectNode( pChild, pManager, pFilter, renamingObjectID, renameBuffer,
+                    drawGameObjectNode( pChild, pManager, renamingObjectID, renameBuffer,
                                         bFocusRenameInput );
                 }
 
@@ -687,20 +743,15 @@ namespace sw::editor
                 }
             }
 
-            static void drawGameObjectNode( GameObject* pObj, GameObjectManager* pManager, const utf8* pFilter,
+            static void drawGameObjectNode( GameObject* pObj, GameObjectManager* pManager,
                                             uint64& renamingObjectID, fixed_string<constant::kMaxBuffer256>& renameBuffer,
                                             bool& bFocusRenameInput )
             {
                 EditorContext& editorContext = editor::getSubsystem<EditorContext>();
 
-                if ( pObj == nullptr || pManager == nullptr )
+                const bool bSkipRow = pObj == nullptr || pManager == nullptr || isRowVisible( pObj ) == false;
+                if ( bSkipRow )
                     return;
-
-                if ( StringUtil::isNullOrEmpty( pFilter ) == false )
-                {
-                    if ( subtreeMatchesFilter( pObj, pFilter ) == false )
-                        return;
-                }
 
                 const uint64 objectID  = pObj->getObjectID();
                 const bool   bSelected = editor::getMainSceneSelection().hasObject( pObj );
@@ -751,7 +802,7 @@ namespace sw::editor
 
                 if ( bOpen )
                 {
-                    drawOpenNodeChildren( &editorContext, pObj, pManager, pFilter, renamingObjectID, renameBuffer, bFocusRenameInput );
+                    drawOpenNodeChildren( &editorContext, pObj, pManager, renamingObjectID, renameBuffer, bFocusRenameInput );
                     ImGui::TreePop();
                 }
 
@@ -774,6 +825,9 @@ namespace sw::editor
                        "MainMenu/Edit" );
     SW_AUTOMATION_PROBE( editorHierarchyRowIndex, "Editor.HierarchyRowIndex", "Row index (from 0) of the object named by gv_editorProbeHierarchyObject in the last Hierarchy frame (-1 when not drawn)",
                          &HierarchyPanelInternal::readProbedRowIndex );
+    SW_AUTOMATION_PROBE( editorHierarchyRowRebuildCount, "Editor.HierarchyRowRebuildCount",
+                         "Times the Hierarchy row model was rebuilt (roots and filter matches); rises only when the scene structure, tags or filter text change",
+                         &HierarchyPanelInternal::readRowRebuildCount );
 
     HierarchyPanel::HierarchyPanel()
         : _renamingObjectID{ 0 }
@@ -797,7 +851,7 @@ namespace sw::editor
         }
 
         GameObjectManager* pManager = pScene->getObjectManager();
-        EditorSceneCommands::collectRootsInOrder( *pManager, _listSceneObject ); // 루트만 id 순서로 모은다. 지우고 되돌려도 위치가 그대로다
+        HierarchyPanelInternal::refreshRowModel( *pManager, _filterBuffer.view() );
 
         HierarchyPanelInternal::beginRowFrame();
         drawToolbar( pManager );
@@ -847,10 +901,9 @@ namespace sw::editor
 
     void HierarchyPanel::drawRootRows( Scene* pScene, GameObjectManager* pManager )
     {
-        // `drawGameObjectNode` 는 서브트리가 필터에 걸리지 않으면 조용히 빠진다. 그래서 같은 술어로
+        // `drawGameObjectNode` 는 서브트리가 필터에 걸리지 않으면 조용히 빠진다. 그래서 같은 술어(행 모델)로
         // 미리 세어 두고, 전부 빠질 때는 빈 상자 대신 이유를 보여 준다.
         const EditorListFilter treeFilter{ _filterBuffer.c_str() };
-        const bool             bFilterActive = treeFilter.isActive();
         uint32                 visibleRootCount{ 0 };
         uint32                 drawnRootCount{ 0 };
         uint64                 lastDrawnRootID{ 0 };
@@ -872,12 +925,9 @@ namespace sw::editor
         // 화면을 그리는 에디터 카메라는 씬 오브젝트지만 편집 대상이 아니다. 저장에서도 빠진다. 그래서 목록에 표시하지 않는다.
         const CameraComponent* pEditorCamera       = EditorCamera::find( pScene );
         const GameObject*      pEditorCameraObject = pEditorCamera != nullptr ? pEditorCamera->getOwner() : nullptr;
-        for ( GameObject* pObj : _listSceneObject )
+        for ( GameObject* pObj : HierarchyPanelInternal::getRowState()._rowModel._listRoot )
         {
-            if ( pObj == pEditorCameraObject )
-                continue;
-            const bool bMatches = bFilterActive == false || HierarchyPanelInternal::subtreeMatchesFilter( pObj, _filterBuffer.c_str() );
-            if ( bMatches == false )
+            if ( pObj == pEditorCameraObject || HierarchyPanelInternal::isRowVisible( pObj ) == false )
                 continue;
             ++visibleRootCount;
             const bool bSkip = _bSkipOffscreenRows && HierarchyPanelInternal::canSkipRootRow( pObj, _renamingObjectID, nextRowY, ImGui::GetFrameHeight() );
@@ -888,7 +938,7 @@ namespace sw::editor
                 continue;
             }
             flushSkippedRows();
-            HierarchyPanelInternal::drawGameObjectNode( pObj, pManager, _filterBuffer.c_str(), _renamingObjectID, _renameBuffer, _bFocusRenameInput );
+            HierarchyPanelInternal::drawGameObjectNode( pObj, pManager, _renamingObjectID, _renameBuffer, _bFocusRenameInput );
             nextRowY = ImGui::GetCursorScreenPos().y;
             ++drawnRootCount;
             lastDrawnRootID = pObj->getObjectID();
