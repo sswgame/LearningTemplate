@@ -55,12 +55,14 @@ namespace sw
             }
 
             /**
-             * @brief 이 뷰에서 빠질 수 있는 패스면 true 입니다 — 일반 풀스크린 패스이고 컬러 출력을 모두 혼자 쓴다.
+             * @brief 이 뷰에서 빠질 수 있는 패스면 true 입니다 — 일반 풀스크린 패스이거나 꺼지면 원본을 가리키는 패스(TAA)이고, 컬러 출력을 모두 혼자 쓴다.
              * @details 출력을 혼자 써야 그 이름을 원본에 잇거나 비워도 다른 쓰기와 섞이지 않는다(꺼질 수 있는 효과는 로드 검증 3-6 · 3-7 이 그것을 요구한다).
              */
             static bool isSelectable( const vector<RenderGraphPassDesc>& listPass, const RenderGraphPassDesc& pass )
             {
-                if ( getRenderPassTypeInfo( pass._resolvedType ).hasFlag( RenderPassTraitFlag::kGenericFullscreen ) == false || pass._listResolvedColorOutput.empty() )
+                const RenderPassTypeInfo& info            = getRenderPassTypeInfo( pass._resolvedType );
+                const bool                bSelectableType = info.hasFlag( RenderPassTraitFlag::kGenericFullscreen ) || info.hasFlag( RenderPassTraitFlag::kBypassesToSource );
+                if ( bSelectableType == false || pass._listResolvedColorOutput.empty() )
                     return false;
                 return std::all_of( pass._listResolvedColorOutput.begin(), pass._listResolvedColorOutput.end(),
                                     [&listPass]( const RenderGraphPassDesc::ResolvedAttachment& output )

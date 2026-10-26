@@ -144,9 +144,11 @@ namespace sw
                     case RenderPassType::TAA:
                     {
                         // 기록은 깊이로 지난 프레임 자리에 재투영하고 이번 원본의 이웃 범위로 자른다(taa.hlsl) — 깊이가 없으면 움직일 때 앞 그림이 겹친다.
+                        // 후처리를 끈 뷰(CCTV)에서는 패스를 기록하지 않고 출력이 원본을 가리킨다(kBypassesToSource, 출력은 원본과 같은 형식 — 검증 3-6).
+                        // 일반 풀스크린 패스가 아니라 실행은 executeTaaPass 이고, 출력 타깃은 셋업이 기록 형식으로 읽으므로 늘 만든다(ensureTaaHistory).
                         info._pDefaultShader = &EngineDefaultAssets::_shaderTaa;
                         info._inputContract  = makeContract( { Role::SourceColor, Role::SceneDepth }, {} );
-                        info._flags          = Flag::kHasInputContract | Flag::kDrawsDeclaredColor;
+                        info._flags          = Flag::kHasInputContract | Flag::kDrawsDeclaredColor | Flag::kSkipsWithoutPostProcess | Flag::kBypassesToSource;
                         break;
                     }
                     case RenderPassType::Tonemap:
@@ -409,8 +411,11 @@ namespace sw
                     // 일반 풀스크린 실행은 선언한 입력을 계약대로 건다.
                     if ( row.hasFlag( Flag::kGenericFullscreen ) && row.hasFlag( Flag::kHasInputContract ) == false )
                         return false;
-                    // 후처리를 끈 뷰에서 효과를 건너뛰는 일은 일반 풀스크린 실행만 한다.
-                    if ( row.hasFlag( Flag::kSkipsWithoutPostProcess ) && row.hasFlag( Flag::kGenericFullscreen ) == false )
+                    // 꺼진 패스를 기록하지 않는 것은 실행이 출력 이름의 연결(`isForwarded`)을 볼 때만 된다 — 일반 풀스크린 실행과 TAA 실행(executeTaaPass)이 본다.
+                    // TAA 는 출력이 원본을 가리키는 길만 있다(출력이 없으면 셋업이 읽는 기록 형식이 사라진다).
+                    const bool bExecutorHonorsSelection =
+                        row.hasFlag( Flag::kGenericFullscreen ) || ( row._type == RenderPassType::TAA && row.hasFlag( Flag::kBypassesToSource ) );
+                    if ( row.hasFlag( Flag::kSkipsWithoutPostProcess ) && bExecutorHonorsSelection == false )
                         return false;
                     // 건너뛸 수 있는 효과는 빠지는 방법(원본을 가리킴 · 출력 없음)이 정확히 하나다. 그 방법이 있는 패스는 건너뛸 수 있는 효과다(`_minPostQuality` 를 받는다).
                     const bool bBypasses = row.hasFlag( Flag::kBypassesToSource );
