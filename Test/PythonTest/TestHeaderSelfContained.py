@@ -83,6 +83,11 @@ class SeedIndexTest(unittest.TestCase):
                                   {"file": "D:/r/Source/Editor/Common/GUI/EditorThemeUtil.cpp", "command": "editor"}])
         self.assertEqual("editor", findSeedEntry("D:/r/Source/Editor/Common/Widgets/EditorWidgets.h", listSeed)["command"])
 
+    def testAncestorFolderBeatsSiblingSubfolderOnTie(self) -> None:
+        listSeed = makeSeedIndex([{"file": "D:/r/Source/Editor/Common/Backend/Queue.cpp", "command": "low"},
+                                  {"file": "D:/r/Source/Editor/ImGuiEditor.cpp", "command": "root"}])
+        self.assertEqual("root", findSeedEntry("D:/r/Source/Editor/IEditor.h", listSeed)["command"])
+
 
 class HeaderProbeProblemTest(unittest.TestCase):
     def testMissingDatabaseIsAProblem(self) -> None:
