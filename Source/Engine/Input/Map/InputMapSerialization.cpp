@@ -1402,31 +1402,14 @@ namespace sw
         if ( pEntry == nullptr )
             return 0;
         uint32 conflictCount = 0;
-        for ( const ActionBinding& binding : pEntry->_listBinding )
+        for ( uint32 bindIndex = 0; bindIndex < static_cast<uint32>( pEntry->_listBinding.size() ); ++bindIndex )
         {
-            const uint32 slotCount = BindingKinds::getConflictSlotCount( binding._kind );
-            if ( slotCount == 0 )
+            hashed_string otherName{};
+            if ( findSameLayerInputConflict( action, bindIndex, otherName ) == false )
                 continue;
-            for ( const hashed_string& otherName : _listActionName )
-            {
-                const ActionEntry* pOther = otherName == action ? nullptr : findAction( otherName );
-                if ( pOther == nullptr )
-                    continue;
-                for ( const ActionBinding& other : pOther->_listBinding )
-                {
-                    bool bSameInput = other._kind == binding._kind && other._layer == binding._layer && other._trigger == binding._trigger &&
-                                      other._modifierMask == binding._modifierMask;
-                    for ( uint32 slotIndex = 0; bSameInput && slotIndex < slotCount; ++slotIndex )
-                    {
-                        bSameInput = other._arrSlot[slotIndex] == binding._arrSlot[slotIndex];
-                    }
-                    if ( bSameInput == false )
-                        continue;
-                    SW_LOG_ERROR( "InputMap %#: action '%#' uses the same input as '%#' in layer '%#' - one press would fire both", sourceName, action.c_str(), otherName.c_str(),
-                                  binding._layer.c_str() );
-                    ++conflictCount;
-                }
-            }
+            SW_LOG_ERROR( "InputMap %#: action '%#' uses the same input as '%#' in layer '%#' - one press would fire both", sourceName, action.c_str(), otherName.c_str(),
+                          pEntry->_listBinding[bindIndex]._layer.c_str() );
+            ++conflictCount;
         }
         return conflictCount;
     }
@@ -1607,6 +1590,16 @@ namespace sw
         if ( bValid == false )
             SW_LOG_ERROR( "user bindings %# have invalid attribute values (listed above)", filePath );
         return bCursorConflict == false && bValid;
+    }
+
+    bool InputMap::tryParseModifierNames( string_view text, uint8& outModifierMask )
+    {
+        return InputMapSerializationInternal::tryParseModifierNames( text, outModifierMask );
+    }
+
+    string InputMap::formatModifierNames( uint8 modifierMask )
+    {
+        return InputMapSerializationInternal::formatModifierNames( modifierMask );
     }
 
     ActionTrigger InputMap::actionTriggerFromName( string_view name )

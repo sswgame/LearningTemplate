@@ -508,6 +508,23 @@ namespace sw
         bool rebindSlot( const hashed_string& action, InputSlot slot, uint32 bindIndex = 0 );
         bool rebindWithResolution( const hashed_string& action, InputSlot newSlot, ConflictResolution strategy = ConflictResolution::Swap, uint32 bindIndex = 0 );
         /**
+         * @brief 키보드 바인딩 @p bindIndex 를 키 + 수정 키 마스크로 바꿉니다(단축키 재배치 — 수정 키도 바꾼다). 마스크가 0 이면 단일 키, 아니면 단축키가 됩니다.
+         * @details 키보드의 단일 키 · 단축키 바인딩만 바꾼다. `rebindSlot` 은 방아쇠 키만 바꿔 Ctrl+D 를 Ctrl+Shift+D 로 옮길 수 없다.
+         * @return 액션 · 바인딩이 없거나, 키보드 단일 키 · 단축키가 아니거나, 키가 없거나 모르는 수정 키 비트면 false 입니다.
+         */
+        [[nodiscard]] bool rebindKeyShortcut( const hashed_string& action, uint32 bindIndex, Key key, uint8 modifierMask );
+        /** @brief 처음 등록한 기본 바인딩(`resetActionToDefault` 가 되돌리는 대상)입니다. 없으면 nullptr 입니다. */
+        const ActionBinding* getDefaultBinding( const hashed_string& action, uint32 bindIndex ) const;
+        /**
+         * @brief 바인딩 @p bindIndex 와 같은 레이어 · 같은 발화 규칙 · 같은 입력(키 · 수정 키 · 단추)을 다른 액션이 쓰면 그 이름을 @p outOtherAction 에 담고 true 입니다.
+         * @details 한 번 눌러 둘이 발화하는 겹침이다. 맵 더하기(`appendFromResource`)와 재배치 창이 같은 검사를 쓴다.
+         */
+        [[nodiscard]] bool findSameLayerInputConflict( const hashed_string& action, uint32 bindIndex, hashed_string& outOtherAction ) const;
+        /** @brief `modifier` 속성 글자(`Ctrl`, `Ctrl+Shift` …)를 수정 키 마스크로 읽습니다. 모르는 이름 · 빈 글 · 같은 이름 두 번이면 false 입니다. */
+        [[nodiscard]] static bool tryParseModifierNames( string_view text, uint8& outModifierMask );
+        /** @brief 수정 키 마스크를 `modifier` 속성 글자로 씁니다(`Ctrl+Shift`). 0 이면 빈 글입니다. */
+        static string formatModifierNames( uint8 modifierMask );
+        /**
          * @brief 바인딩 @p bindIndex 가 리바인딩으로 바꾸는 슬롯(`BindingKinds::getRebindSlotIndex`)의 현재 키를 반환합니다.
          * @return 액션이나 바인딩이 없거나 키 하나로 바꿀 수 없는 종류면 false 입니다.
          */

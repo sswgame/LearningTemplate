@@ -25,6 +25,12 @@ namespace sw
         constexpr const utf8* kIndexAttr    = "index";
         constexpr const utf8* kSlotAttr     = "slot";
         constexpr int32       kMaxBindIndex = 16; ///< 한 액션이 가질 수 있는 바인딩 번호의 상한입니다(잘못된 파일이 큰 번호를 주지 못하게).
+        /**
+         * @brief 키보드 키 · 단축키 바인딩의 수정 키(`Ctrl+Shift`, 없으면 `None`)입니다. 이 속성이 있으면 수정 키까지 바꾼 재배치다(`InputMap::rebindKeyShortcut`).
+         * @details 없는 줄은 방아쇠 키만 바꾼다(`rebindSlot`) — 수정 키를 적기 전에 저장한 파일의 뜻 그대로다.
+         */
+        constexpr const utf8* kModifierAttr = "modifier";
+        constexpr const utf8* kNoModifier   = "None";
     } // namespace
 
     ShellInputActions::ShellInputActions()
@@ -107,7 +113,13 @@ namespace sw
                 // 키 하나로 바꿀 수 없는 바인딩(합성 축, 스틱)은 재배치 대상이 아니다.
                 if ( map.findRebindSlot( action, bindIndex, current ) == false || map.findDefaultRebindSlot( action, bindIndex, defaultSlot ) == false )
                     continue;
-                if ( current == defaultSlot )
+                // 키보드 키 · 단축키는 수정 키도 재배치의 일부다 — Ctrl+D 를 Ctrl+Shift+D 로 바꾸면 방아쇠 키가 같아도 바뀐 것이다.
+                const ActionBinding* pCurrent       = map.getBinding( action, bindIndex );
+                const ActionBinding* pDefault       = map.getDefaultBinding( action, bindIndex );
+                const bool           bKeyboardChord = pCurrent != nullptr && pDefault != nullptr && pCurrent->_arrSlot[0]._deviceKind == InputDeviceKind::Keyboard &&
+                                            ( pCurrent->_kind == BindingKind::SingleSlot || pCurrent->_kind == BindingKind::Shortcut );
+                const bool bModifierChanged = bKeyboardChord && pCurrent->_modifierMask != pDefault->_modifierMask;
+                if ( current == defaultSlot && bModifierChanged == false )
                     continue;
                 const string slotText = InputSlotUtil::toText( current );
                 if ( slotText.empty() )
@@ -116,6 +128,11 @@ namespace sw
                 bindNode.appendAttribute( kActionAttr, action.c_str() );
                 bindNode.appendAttribute( kIndexAttr, static_cast<int32>( bindIndex ) );
                 bindNode.appendAttribute( kSlotAttr, slotText.c_str() );
+                if ( bKeyboardChord )
+                {
+                    const string modifierText = InputMap::formatModifierNames( pCurrent->_modifierMask );
+                    bindNode.appendAttribute( kModifierAttr, modifierText.empty() ? kNoModifier : modifierText.c_str() );
+                }
                 ++changedCount;
             }
         }
@@ -163,7 +180,21 @@ namespace sw
                 continue;
             }
             const hashed_string action( string( actionText ).c_str() );
-            if ( map.hasAction( action ) == false || map.rebindSlot( action, slot, static_cast<uint32>( bindIndex ) ) == false )
+            const utf8*         pModifierText = bindNode.findAttribute( kModifierAttr );
+            bool                bApplied      = false;
+            if ( map.hasAction( action ) && pModifierText == nullptr )
+            {
+                bApplied = map.rebindSlot( action, slot, static_cast<uint32>( bindIndex ) );
+            }
+            else if ( map.hasAction( action ) )
+            {
+                uint8      modifierMask = ModifierKey::None;
+                const bool bNoModifier  = StringUtil::equals( pModifierText, kNoModifier, true );
+                const bool bKnown       = bNoModifier || InputMap::tryParseModifierNames( pModifierText, modifierMask );
+                bApplied                = bKnown && slot._deviceKind == InputDeviceKind::Keyboard &&
+                           map.rebindKeyShortcut( action, static_cast<uint32>( bindIndex ), static_cast<Key>( slot._controlIndex ), modifierMask );
+            }
+            if ( bApplied == false )
                 SW_LOG_WARNING( "Shell user bindings '%#': action '%#' cannot take '%#' as binding %# - skipped", filePath, string( actionText ).c_str(), string( slotText ).c_str(), bindIndex );
         }
         return true;

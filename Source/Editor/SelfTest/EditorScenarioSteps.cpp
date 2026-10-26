@@ -12,13 +12,12 @@
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
-#include "Editor/Common/Commands/Dev/EditorShortcutOverrides.h"
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
-#include "Editor/Common/GUI/EditorCommandGUI.h"
 #include "Editor/Common/GUI/EditorComponentIcon.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/Input/EditorInputActions.h"
 #include "Editor/Common/Widgets/EditorNodeGraph.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorCamera.h"
@@ -1544,10 +1543,10 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 사용자 단축키 덮어쓰기 수입니다. 기본과 다른 커맨드의 수입니다. */
+            /** @brief 사용자가 바꾼 단축키 수입니다. 에디터 입력 맵에서 첫 바인딩이 기본과 다른 액션의 수입니다. */
             [[nodiscard]] static bool readShortcutOverrideCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                outValue = static_cast<float64>( EditorCommandGUI::getShortcutOverrides().getOverrides().size() );
+                outValue = static_cast<float64>( editor::getSubsystem<EditorContext>().getSubsystem<EditorInputActions>().countModifiedShortcuts() );
                 return true;
             }
 

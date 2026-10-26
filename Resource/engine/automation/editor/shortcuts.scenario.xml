@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   에디터 시나리오 — 단축키 편집기(P3): Undo 줄의 Set 을 누르고 Ctrl+U 를 보내면 Undo 가 Ctrl+U 가 된다. 오브젝트를 만들고 Ctrl+U 로 되돌린다.
-  Redo 에 같은 Ctrl+U 를 받으면 충돌을 묻는다(Cancel). 끝에 Reset All 로 덮어쓰기를 지운다. 저장 파일은 빈 상태 폴더의 Shortcuts.json 이다.
+  Redo 에 같은 Ctrl+U 를 받으면 충돌을 묻는다(Cancel). 끝에 Reset All 로 재배치를 지운다. 저장 파일은 빈 상태 폴더의 editorbindings.xml(입력 맵 재배치 형식)이다.
   실행: py -3 -m Scripts scenario shortcuts
 -->
 <Scenario name="editor.shortcuts" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">

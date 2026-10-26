@@ -30,5 +30,10 @@ namespace sw::editor
         static void appendKeyChanges( vector<RawInputEvent>& outListEvent );
         /** @brief 이번 프레임에 ImGui 가 받은 글자 입력(`io.InputQueueCharacters`)을 글자마다 `TextInput` 사건으로 @p outListEvent 에 덧붙입니다. */
         static void appendTextInput( vector<RawInputEvent>& outListEvent );
+        /**
+         * @brief 이번 프레임에 새로 눌린 수정 키가 아닌 키 하나와 지금 누른 수정 키 마스크(`ModifierKey`)를 돌려줍니다(단축키 재배치가 받는 조합). 없으면 false 입니다.
+         * @details 수정 키만 누른 프레임은 조합이 아니다 — Ctrl 을 먼저 누르고 U 를 누르면 U 의 프레임에 `Ctrl+U` 가 된다.
+         */
+        [[nodiscard]] static bool findPressedChord( Key& outKey, uint8& outModifierMask );
     };
 } // namespace sw::editor

@@ -5,6 +5,7 @@
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
+#include "Engine/Input/ShellInputActions.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -228,4 +229,48 @@ SW_TEST_CASE( InputMapToolInputTest, ToolFocusHidesKeysFromGameButNotFromToolMap
     shellMap.setInputManager( nullptr );
     toolMap.setInputManager( nullptr );
     input.shutdown();
+}
+
+/**
+ * @brief [InputMapToolInputTest] 키 + 수정 키 재배치는 종류(단일 키 · 단축키)를 함께 바꾸고, 같은 레이어 겹침을 찾고, 사용자 재배치 파일에 수정 키까지 남는다
+ * @details 방아쇠 키만 바꾸는 재배치(`rebindSlot`)로는 Ctrl+D 를 Ctrl+Shift+D 로 옮길 수 없다. 에디터 단축키 창과 셸 맵이 같은 파일 형식을 쓴다.
+ */
+SW_TEST_CASE( InputMapToolInputTest, KeyShortcutRebindKeepsModifiersThroughUserFile )
+{
+    sw::InputMap inputMap;
+    inputMap.bindShortcut( "Duplicate", sw::Key::D, sw::ModifierKey::Ctrl, sw::ActionTrigger::Pressed, "Editor.Global" );
+    inputMap.bind( "Delete", sw::Key::Delete, sw::ActionTrigger::Pressed, "Editor.Global" );
+
+    SW_ASSERT_TRUE( inputMap.rebindKeyShortcut( "Duplicate", 0, sw::Key::D, sw::ModifierKey::Ctrl | sw::ModifierKey::Shift ) );
+    SW_EXPECT_TRUE( inputMap.getBinding( "Duplicate", 0 )->_kind == sw::BindingKind::Shortcut );
+    SW_ASSERT_TRUE( inputMap.rebindKeyShortcut( "Delete", 0, sw::Key::X, sw::ModifierKey::None ) );
+    SW_EXPECT_TRUE( inputMap.getBinding( "Delete", 0 )->_kind == sw::BindingKind::SingleSlot );
+
+    sw::hashed_string other{};
+    SW_EXPECT_FALSE( inputMap.findSameLayerInputConflict( "Duplicate", 0, other ) );
+    SW_ASSERT_TRUE( inputMap.rebindKeyShortcut( "Delete", 0, sw::Key::D, sw::ModifierKey::Ctrl | sw::ModifierKey::Shift ) );
+    SW_EXPECT_TRUE( inputMap.findSameLayerInputConflict( "Delete", 0, other ) );
+    SW_EXPECT_TRUE( other == sw::hashed_string( "Duplicate" ) );
+    SW_ASSERT_TRUE( inputMap.rebindKeyShortcut( "Delete", 0, sw::Key::X, sw::ModifierKey::Alt ) );
+
+    const sw::string path = test::makeTempPath( "toolbindings.xml" );
+    SW_ASSERT_TRUE( sw::ShellInputActions::saveUserBindings( inputMap, path ) );
+
+    sw::InputMap reloaded;
+    reloaded.bindShortcut( "Duplicate", sw::Key::D, sw::ModifierKey::Ctrl, sw::ActionTrigger::Pressed, "Editor.Global" );
+    reloaded.bind( "Delete", sw::Key::Delete, sw::ActionTrigger::Pressed, "Editor.Global" );
+    SW_ASSERT_TRUE( sw::ShellInputActions::loadUserBindings( reloaded, path ) );
+    SW_EXPECT_EQUAL( static_cast<int32>( sw::ModifierKey::Ctrl | sw::ModifierKey::Shift ), static_cast<int32>( reloaded.getBinding( "Duplicate", 0 )->_modifierMask ) );
+    SW_EXPECT_EQUAL( static_cast<int32>( sw::ModifierKey::Alt ), static_cast<int32>( reloaded.getBinding( "Delete", 0 )->_modifierMask ) );
+    SW_EXPECT_EQUAL( static_cast<uint16>( sw::Key::X ), reloaded.getBinding( "Delete", 0 )->_arrSlot[0]._controlIndex );
+
+    // 기본으로 되돌리면 파일이 지워진다(남은 차이가 없다).
+    reloaded.resetAllBindingsToDefault();
+    SW_ASSERT_TRUE( sw::ShellInputActions::saveUserBindings( reloaded, path ) );
+    SW_EXPECT_FALSE( sw::FileUtil::exists( path ) );
+
+    uint8 modifierMask = 0;
+    SW_EXPECT_TRUE( sw::InputMap::tryParseModifierNames( "Ctrl+Alt", modifierMask ) );
+    SW_EXPECT_STREQ( "Ctrl+Alt", sw::InputMap::formatModifierNames( modifierMask ).c_str() );
+    SW_EXPECT_FALSE( sw::InputMap::tryParseModifierNames( "Ctrl+Ctrl", modifierMask ) );
 }

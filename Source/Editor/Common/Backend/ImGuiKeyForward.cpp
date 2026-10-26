@@ -137,6 +137,26 @@ namespace sw::editor
         return Key::Unknown;
     }
 
+    bool ImGuiKeyForward::findPressedChord( Key& outKey, uint8& outModifierMask )
+    {
+        for ( int32 keyIndex = static_cast<int32>( Key::Unknown ) + 1; keyIndex < static_cast<int32>( Key::Count ); ++keyIndex )
+        {
+            const Key  key       = static_cast<Key>( keyIndex );
+            const bool bModifier = key == Key::LeftControl || key == Key::RightControl || key == Key::LeftShift || key == Key::RightShift || key == Key::LeftAlt ||
+                                   key == Key::RightAlt || key == Key::LeftSuper || key == Key::RightSuper;
+            if ( bModifier )
+                continue;
+            const ImGuiKey imguiKey = ImGuiKeyForwardInternal::toImGuiKey( key );
+            const bool     bPressed = imguiKey != ImGuiKey_None && ImGui::IsKeyPressed( imguiKey, false );
+            if ( bPressed == false )
+                continue;
+            outKey          = key;
+            outModifierMask = ImGuiKeyForwardInternal::makeModifierMask();
+            return true;
+        }
+        return false;
+    }
+
     void ImGuiKeyForward::appendKeyChanges( vector<RawInputEvent>& outListEvent )
     {
         const uint8 modifierMask = ImGuiKeyForwardInternal::makeModifierMask();

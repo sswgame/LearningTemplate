@@ -580,6 +580,68 @@ namespace sw
         return true;
     }
 
+    bool InputMap::rebindKeyShortcut( const hashed_string& action, uint32 bindIndex, Key key, uint8 modifierMask )
+    {
+        ActionEntry* pEntry      = findAction( action );
+        const bool   bValidChord = key != Key::Unknown && ( modifierMask & ~ModifierKey::All ) == 0;
+        const bool   bNoBinding  = pEntry == nullptr || bindIndex >= pEntry->_listBinding.size();
+        if ( bNoBinding || bValidChord == false )
+            return false;
+        ActionBinding& binding        = pEntry->_listBinding[bindIndex];
+        const bool     bKeyboardSlot  = binding._arrSlot[0]._deviceKind == InputDeviceKind::Keyboard;
+        const bool     bKeyOrShortcut = binding._kind == BindingKind::SingleSlot || binding._kind == BindingKind::Shortcut;
+        if ( bKeyboardSlot == false || bKeyOrShortcut == false )
+        {
+            SW_LOG_WARNING( "rebind: binding %# of '%#' is not a keyboard key or shortcut - a key with modifiers cannot replace it", bindIndex, action.c_str() );
+            return false;
+        }
+        // 수정 키가 없으면 단일 키, 있으면 단축키다 — 읽기(`<bind modifier>`)와 같은 규칙이라 저장 · 다시 읽기에서 종류가 바뀌지 않는다.
+        binding._kind         = modifierMask == ModifierKey::None ? BindingKind::SingleSlot : BindingKind::Shortcut;
+        binding._modifierMask = modifierMask;
+        binding._arrSlot[0]   = InputSlot::fromKey( key );
+        reseedBindingState( *pEntry, bindIndex );
+        return true;
+    }
+
+    bool InputMap::findSameLayerInputConflict( const hashed_string& action, uint32 bindIndex, hashed_string& outOtherAction ) const
+    {
+        const ActionBinding* pBinding = getBinding( action, bindIndex );
+        if ( pBinding == nullptr )
+            return false;
+        const uint32 slotCount = BindingKinds::getConflictSlotCount( pBinding->_kind );
+        if ( slotCount == 0 )
+            return false;
+        for ( const hashed_string& otherName : _listActionName )
+        {
+            const ActionEntry* pOther = otherName == action ? nullptr : findAction( otherName );
+            if ( pOther == nullptr )
+                continue;
+            for ( const ActionBinding& other : pOther->_listBinding )
+            {
+                bool bSameInput = other._kind == pBinding->_kind && other._layer == pBinding->_layer && other._trigger == pBinding->_trigger &&
+                                  other._modifierMask == pBinding->_modifierMask;
+                for ( uint32 slotIndex = 0; bSameInput && slotIndex < slotCount; ++slotIndex )
+                {
+                    bSameInput = other._arrSlot[slotIndex] == pBinding->_arrSlot[slotIndex];
+                }
+                if ( bSameInput )
+                {
+                    outOtherAction = otherName;
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    const ActionBinding* InputMap::getDefaultBinding( const hashed_string& action, uint32 bindIndex ) const
+    {
+        const ActionEntry* pEntry = findAction( action );
+        if ( pEntry == nullptr || bindIndex >= pEntry->_listDefaultBinding.size() )
+            return nullptr;
+        return &pEntry->_listDefaultBinding[bindIndex];
+    }
+
     bool InputMap::rebindWithResolution( const hashed_string& action, InputSlot newSlot, ConflictResolution strategy, uint32 bindIndex )
     {
         ActionEntry* pEntry = findAction( action );

@@ -60,8 +60,9 @@ namespace sw
          */
         static string makeUserBindingsPath( string_view userSettingsFilePath );
         /**
-         * @brief @p map 에서 **기본 바인딩과 다른 슬롯만** @p filePath 에 씁니다. 다른 것이 없으면 파일을 지웁니다.
-         * @details 전체 스냅샷(`InputMap::saveUserBindings`)을 두지 않는 까닭: 읽을 때 `bind*` 가 기본 바인딩 위에 더해져 재배치가 아니라 중복이 되고, 그 뒤 리소스의 기본 키를 바꿔도
+         * @brief @p map 에서 **기본 바인딩과 다른 슬롯만** @p filePath 에 씁니다. 다른 것이 없으면 파일을 지웁니다. 키보드 키 · 단축키는 수정 키(`modifier`)도 함께 적습니다.
+         * @details 셸 맵과 에디터 입력 맵(`EditorInputActions`)이 같은 형식 · 같은 함수로 사용자 재배치를 저장한다.
+         *          전체 스냅샷(`InputMap::saveUserBindings`)을 두지 않는 까닭: 읽을 때 `bind*` 가 기본 바인딩 위에 더해져 재배치가 아니라 중복이 되고, 그 뒤 리소스의 기본 키를 바꿔도
          *          스냅샷이 옛 기본 키를 붙든다. 사용자가 바꾼 슬롯만 적으면 사용자 설정(`applyKeyBinding`)처럼 "기본값에서의 차이" 가 된다.
          */
         [[nodiscard]] static bool saveUserBindings( const InputMap& map, string_view filePath );
