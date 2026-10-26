@@ -20,21 +20,9 @@ namespace sw
 {
     namespace
     {
-        struct LinuxFileWatcherInternal
-        {
-            static constexpr uint32 kInotifyEventBufferSize = 64 * 1024;
-            // IN_ATTRIB 는 mtime 만 바뀐 변경(`touch`, 시각을 지키는 복사)을 알린다. Windows 의 FILE_NOTIFY_CHANGE_ATTRIBUTES 에 해당한다.
-            static constexpr uint32 kInotifyMask = IN_CREATE | IN_DELETE | IN_MODIFY | IN_ATTRIB | IN_MOVED_FROM | IN_MOVED_TO | IN_CLOSE_WRITE | IN_DELETE_SELF | IN_MOVE_SELF;
-
-            static string makeRelativePath( string_view root, string_view absolutePath )
-            {
-                const string rootNorm = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( root ) );
-                const string absNorm  = FileUtil::normalizeSeparators( absolutePath );
-                if ( FileUtil::startsWithPathComponent( absNorm, rootNorm ) == false )
-                    return FileUtil::getFileNamePart( absNorm );
-                return FileUtil::suffixAfterPathComponent( absNorm, rootNorm );
-            }
-        };
+        constexpr uint32 kInotifyEventBufferSize = 64 * 1024;
+        // IN_ATTRIB 는 mtime 만 바뀐 변경(`touch`, 시각을 지키는 복사)을 알린다. Windows 의 FILE_NOTIFY_CHANGE_ATTRIBUTES 에 해당한다.
+        constexpr uint32 kInotifyMask = IN_CREATE | IN_DELETE | IN_MODIFY | IN_ATTRIB | IN_MOVED_FROM | IN_MOVED_TO | IN_CLOSE_WRITE | IN_DELETE_SELF | IN_MOVE_SELF;
     } // namespace
 } // namespace sw
 
@@ -153,7 +141,7 @@ namespace sw
         const ScopedMemoryTag threadMemoryTag{ memoryTag };
         // 이 스레드에서 스택이 넘쳐도 크래시 리포트가 남게 한다(ThreadCrashStack::initializeCurrentThread 설명).
         ThreadCrashStack::initializeCurrentThread();
-        alignas( inotify_event ) uint8 buffer[LinuxFileWatcherInternal::kInotifyEventBufferSize];
+        alignas( inotify_event ) uint8 buffer[kInotifyEventBufferSize];
 
         while ( _bIsWatching )
         {
@@ -302,7 +290,7 @@ namespace sw
     bool LinuxFileWatcher::addWatchDirectory( string_view directoryPath )
     {
         const string normalized = FileUtil::normalizeSeparators( directoryPath );
-        const int32  wd         = inotify_add_watch( _inotifyFd, normalized.c_str(), LinuxFileWatcherInternal::kInotifyMask );
+        const int32  wd         = inotify_add_watch( _inotifyFd, normalized.c_str(), kInotifyMask );
         if ( wd < 0 )
         {
             SW_LOG_TRACE( "inotify_add_watch failed (%#): %#", normalized.c_str(), strerror( errno ) );
@@ -329,10 +317,11 @@ namespace sw
         // inotify 는 watch 를 건 디렉터리를 기준으로 이름을 준다. 소비자는 `_directory` 와 `_filename` 을 이어 붙여 쓰므로
         // (감시 루트 기준 상대 경로) 여기서 루트 기준으로 되돌린다.
         const string absoluteFile = FileUtil::joinPath( absoluteDirectory, name );
-        const string relative     = LinuxFileWatcherInternal::makeRelativePath( _directoryPath, absoluteFile );
+        string       relative;
+        const bool   bUnderRoot = FileUtil::tryMakePathUnderRoot( _directoryPath, absoluteFile, relative );
 
         // 상한 · 넘침 표시 · 연속 중복 합치기는 IFileWatcher::pushChange 가 한다.
-        pushChange( action, _directoryPath, relative.empty() ? name : string_view{ relative } );
+        pushChange( action, _directoryPath, bUnderRoot ? string_view{ relative } : name );
     }
 } // namespace sw
 

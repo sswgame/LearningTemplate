@@ -110,6 +110,11 @@ namespace sw
 
         /** @brief rootDir 기준 상대 경로를 만듭니다. */
         static bool makeRelativePath( string_view rootDir, string_view path, string& outResult );
+        /**
+         * @brief @p path 가 @p root 아래(경로 구간 경계 기준)에 있으면 그 아래 부분을 `/` 구분자로 돌려주고 true 입니다. 루트 자신이거나 밖이면 false 입니다.
+         * @details 글로만 비교합니다(파일 시스템을 보지 않고 `..` 를 만들지 않습니다). `makeRelativePath` 는 `std::filesystem::relative` 라 루트 밖이면 `../` 를 만듭니다.
+         */
+        [[nodiscard]] static bool tryMakePathUnderRoot( string_view root, string_view path, string& outRelative, bool bIgnoreCase = false );
         /** @brief 절대 경로를 만듭니다. */
         static bool makeAbsolutePath( string_view path, string& outResult );
         /** @brief 비교 · 맵 키가 아니라 **실제** 경로를 만듭니다(링크 · `.` · `..` · 8.3 짧은 이름을 풀어서). 경로가 없으면 false 입니다. 구분자는 `/` 입니다. */

@@ -103,19 +103,6 @@ namespace sw::editor
                 void onStreamReceived( StreamConnectionHandle /*handle*/, const uint8* /*pData*/, int32 /*size*/ ) override {}
                 void onStreamClosed( StreamConnectionHandle /*handle*/, StreamCloseReason /*reason*/ ) override {}
             };
-
-#if SW_PROFILER_TRACE_ENABLED
-            /** @brief 경로의 구분자를 `/` 로 바꿉니다. 명령줄에서 `\"` 가 따옴표를 깨지 않게 하며, 트레이스 폴더 인자에만 씁니다. */
-            static string toForwardSlashes( string path )
-            {
-                for ( utf8& character : path )
-                {
-                    if ( character == '\\' )
-                        character = '/';
-                }
-                return path;
-            }
-#endif
         };
     } // namespace
 } // namespace sw::editor
@@ -299,7 +286,8 @@ namespace sw::editor
                                 ? FileUtil::joinPath( FileUtil::joinPath( ResourcePaths::getProjectFolderPath(), "Saved/Traces" ),
                                                       "netplay_" + to_string( WallClock::nowUnixMilliseconds() ) )
                                 : settings._traceDirectory;
-            _traceDirectory = EditorNetPlaySessionInternal::toForwardSlashes( _traceDirectory );
+            // 구분자를 `/` 로 — 명령줄에서 `\"` 가 따옴표를 깨지 않게 한다.
+            _traceDirectory = FileUtil::normalizeSeparators( _traceDirectory );
             if ( FileUtil::ensureDirectoryExists( _traceDirectory ) == false )
             {
                 SW_LOG_ERROR( "Trace folder %# could not be created - the multiplayer session was not started", _traceDirectory );

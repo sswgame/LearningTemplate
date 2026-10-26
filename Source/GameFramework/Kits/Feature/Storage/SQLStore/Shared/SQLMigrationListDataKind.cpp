@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/File/FileUtil.h"
+
 #include "Engine/Resource/ResourceDataKind.h"
 
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Shared/SQL/SQLDriverRegistry.h"
@@ -17,11 +19,11 @@ namespace sw
          */
         [[nodiscard]] bool loadSQLMigrationList( const string& resourceID )
         {
-            const size_t slash = resourceID.rfind( '/' );
-            if ( slash == string::npos )
+            string_view folder;
+            FileUtil::getDirectoryPart( resourceID, folder );
+            if ( folder.empty() )
                 return false;
-            const string_view folder( resourceID.data(), slash );
-            vector<string>    listDriverName;
+            vector<string> listDriverName;
             SQLDriverRegistry::getDriverNames( listDriverName );
             string error;
             if ( SQLMigrationRunner::collectDialectDriverNames( folder, listDriverName, error ) == false )

@@ -93,13 +93,10 @@ namespace sw
                 return string( text.view() );
             }
 
-            /** @brief 폴더(리소스 경로나 절대 경로) 아래 파일 경로입니다. 리소스 키는 `/` 로 잇는다. */
-            static string joinPath( string_view folder, string_view fileName ) { return formatText( "%#/%#", folder, fileName ); }
-
             /** @brief 목록 파일(`<SQLMigrationList><Migration _name="NNNN_이름" />…</SQLMigrationList>`)을 읽습니다. 다른 요소 · 속성 · 빈 이름 · 빈 목록은 오류입니다. */
             [[nodiscard]] static bool readList( string_view folder, vector<string>& outListStem, string& outError )
             {
-                const string listPath = joinPath( folder, SQLMigrationRunner::kListFileName );
+                const string listPath = FileUtil::joinPath( folder, SQLMigrationRunner::kListFileName );
                 string       text;
                 if ( ResourceIO::readTextResource( listPath, text ) == false )
                 {
@@ -203,8 +200,8 @@ namespace sw
                 return false;
             }
             // 방언 분기 파일이 있으면 공통 파일 대신 쓴다. 다른 드라이버의 방언 파일은 읽지 않는다.
-            const string driverPath = SQLMigrationRunnerInternal::joinPath( folder, SQLMigrationRunnerInternal::formatText( "%#.%#.sql", stem, driverName ) );
-            const string commonPath = SQLMigrationRunnerInternal::joinPath( folder, SQLMigrationRunnerInternal::formatText( "%#.sql", stem ) );
+            const string driverPath = FileUtil::joinPath( folder, SQLMigrationRunnerInternal::formatText( "%#.%#.sql", stem, driverName ) );
+            const string commonPath = FileUtil::joinPath( folder, SQLMigrationRunnerInternal::formatText( "%#.sql", stem ) );
             const bool   bHasDriver = ResourceIO::hasResource( driverPath );
             if ( bHasDriver == false && ResourceIO::hasResource( commonPath ) == false )
             {

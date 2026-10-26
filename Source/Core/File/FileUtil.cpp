@@ -581,6 +581,17 @@ namespace sw
         return string{ path.substr( component.size() + 1 ) };
     }
 
+    bool FileUtil::tryMakePathUnderRoot( string_view root, string_view path, string& outRelative, bool bIgnoreCase )
+    {
+        const string rootText   = trimTrailingSlashes( normalizeSeparators( root ) );
+        const string pathText   = normalizeSeparators( path );
+        const bool   bUnderRoot = rootText.empty() == false && pathText.size() > rootText.size() + 1 && pathText[rootText.size()] == '/' && StringUtil::startsWith( pathText, rootText, bIgnoreCase );
+        if ( bUnderRoot == false )
+            return false;
+        outRelative = pathText.substr( rootText.size() + 1 );
+        return true;
+    }
+
     bool FileUtil::ensureParentDirectoryExists( string_view filePath )
     {
         // 구분자 정규화까지 `ensureDirectoryExists` 와 같게 한다.

@@ -57,8 +57,7 @@ namespace sw::editor
             AssetImportPathFilter filter;
             filter._listIncludePattern.push_back( entry._relativePath );
             const string   directory = FileUtil::joinPath( projectRoot, string_view( entry._relativePath ).substr( 0, slash ) );
-            const size_t   dot       = entry._relativePath.rfind( '.' );
-            const string   extension = dot != string::npos && dot > slash ? entry._relativePath.substr( dot ) : string();
+            const string   extension = FileUtil::getExtension( entry._relativePath );
             vector<string> listFile;
             if ( FileUtil::collectFiles( directory, extension, listFile, false ) == false )
                 continue;
