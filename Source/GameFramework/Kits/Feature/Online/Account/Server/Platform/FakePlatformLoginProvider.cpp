@@ -30,7 +30,7 @@ namespace sw
     {
     }
 
-    uint64 FakePlatformLoginProvider::submitVerification( const vector<uint8>& ticketBytes, int64 nowMs )
+    uint64 FakePlatformLoginProvider::submitVerification( const vector<uint8>& ticketBytes, UnixMilliseconds nowMs )
     {
         (void)nowMs;
         PendingTicket& pending  = _listPending.emplace_back();
@@ -51,7 +51,7 @@ namespace sw
         return count;
     }
 
-    void FakePlatformLoginProvider::update( int64 nowMs )
+    void FakePlatformLoginProvider::update( UnixMilliseconds nowMs )
     {
         (void)nowMs;
         const string_view prefix{ FakePlatformLoginProviderInternal::kSubjectPrefix };
@@ -83,7 +83,7 @@ namespace sw
         _listPending.clear();
     }
 
-    uint64 FakePlatformLoginProvider::submitRevocation( string_view linkSecret, int64 nowMs )
+    uint64 FakePlatformLoginProvider::submitRevocation( string_view linkSecret, UnixMilliseconds nowMs )
     {
         (void)nowMs;
         PendingRevocation& pending = _listPendingRevocation.emplace_back();

@@ -65,7 +65,7 @@ namespace sw
         return url;
     }
 
-    uint64 TicketQueryLoginProvider::submitVerification( const vector<uint8>& ticketBytes, int64 nowMs )
+    uint64 TicketQueryLoginProvider::submitVerification( const vector<uint8>& ticketBytes, UnixMilliseconds nowMs )
     {
         const uint64      verificationID = _nextVerificationID++;
         const string_view ticket( reinterpret_cast<const utf8*>( ticketBytes.data() ), ticketBytes.size() );
@@ -81,7 +81,7 @@ namespace sw
         request._url       = makeRequestURL( ticket );
         request._timeoutMs = _settings._requestTimeoutMs;
         request._listHeader.push_back( HTTPHeader{ "Accept", "application/json" } );
-        _mapRequestToVerification[_pHTTPClient->submitRequest( request, nowMs )] = verificationID;
+        _mapRequestToVerification[_pHTTPClient->submitRequest( request, nowMs.count() )] = verificationID;
         return verificationID;
     }
 
@@ -96,9 +96,9 @@ namespace sw
         return count;
     }
 
-    void TicketQueryLoginProvider::update( int64 nowMs )
+    void TicketQueryLoginProvider::update( UnixMilliseconds nowMs )
     {
-        _pHTTPClient->update( nowMs );
+        _pHTTPClient->update( nowMs.count() );
         vector<HTTPClientResponse> listResponse;
         (void)_pHTTPClient->pollResponses( listResponse );
         for ( const HTTPClientResponse& response : listResponse )

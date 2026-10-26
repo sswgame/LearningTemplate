@@ -496,13 +496,13 @@ namespace sw
         submitStep( EphemeralRequest::makeGet( makeAccountPartyKey( accountID ) ), StepKind::IndexRead, request );
     }
 
-    void PartyLobbyService::createLobby( AccountID accountID, const LobbySnapshot& lobbyRequest, int64 nowMs, uint64 requestTag )
+    void PartyLobbyService::createLobby( AccountID accountID, const LobbySnapshot& lobbyRequest, UnixMilliseconds nowMs, uint64 requestTag )
     {
         Request request;
         request._operation        = PartyLobbyOperation::LobbyCreate;
         request._actorID          = accountID;
         request._lobby            = lobbyRequest;
-        request._lobby._createdMs = nowMs;
+        request._lobby._createdMs = nowMs.count();
         request._lobbyID          = allocateID();
         request._nowMs            = nowMs;
         request._requestTag       = requestTag;

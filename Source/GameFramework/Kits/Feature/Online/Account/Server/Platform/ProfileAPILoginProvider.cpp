@@ -17,7 +17,7 @@ namespace sw
     {
     }
 
-    uint64 ProfileAPILoginProvider::submitVerification( const vector<uint8>& ticketBytes, int64 nowMs )
+    uint64 ProfileAPILoginProvider::submitVerification( const vector<uint8>& ticketBytes, UnixMilliseconds nowMs )
     {
         const uint64      verificationID = _nextVerificationID++;
         HTTPClientRequest request;
@@ -25,7 +25,7 @@ namespace sw
         request._timeoutMs = _settings._requestTimeoutMs;
         request._listHeader.push_back( HTTPHeader{ "Authorization", "Bearer " + string( reinterpret_cast<const utf8*>( ticketBytes.data() ), ticketBytes.size() ) } );
         request._listHeader.push_back( HTTPHeader{ "Accept", "application/json" } );
-        _mapRequestToVerification[_pHTTPClient->submitRequest( request, nowMs )] = verificationID;
+        _mapRequestToVerification[_pHTTPClient->submitRequest( request, nowMs.count() )] = verificationID;
         return verificationID;
     }
 
@@ -40,9 +40,9 @@ namespace sw
         return count;
     }
 
-    void ProfileAPILoginProvider::update( int64 nowMs )
+    void ProfileAPILoginProvider::update( UnixMilliseconds nowMs )
     {
-        _pHTTPClient->update( nowMs );
+        _pHTTPClient->update( nowMs.count() );
         vector<HTTPClientResponse> listResponse;
         (void)_pHTTPClient->pollResponses( listResponse );
         for ( const HTTPClientResponse& response : listResponse )

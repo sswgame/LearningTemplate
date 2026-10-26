@@ -22,6 +22,7 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Message/NetRequest.h"
+#include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Base/Online/Ledger/IBalanceNotice.h"
 #include "GameFramework/Base/Online/Observability/ServiceMetrics.h"
@@ -67,7 +68,7 @@ namespace sw
     struct EconomyCall
     {
         /** @param nowMs 요청의 시각(서버 루프의 유닉스 밀리초)입니다. 필수입니다 — 서비스가 다른 시각으로 메우지 않습니다. */
-        explicit EconomyCall( int64 nowMs )
+        explicit EconomyCall( UnixMilliseconds nowMs )
             : _nowMs{ nowMs }
         {
         }
@@ -78,7 +79,7 @@ namespace sw
         EconomyHistoryRequest  _history{};
         NetIdempotencyKey      _idempotencyKey{};
         AccountID              _accountID{ kInvalidAccountID };
-        int64                  _nowMs;
+        UnixMilliseconds       _nowMs;
         uint16                 _method{ 0 };
     };
 } // namespace sw
@@ -106,12 +107,12 @@ namespace sw
         /** @brief 요청 하나를 맡깁니다. 서비스 스레드에서 부릅니다. @p onReply 는 정확히 한 번 불리며, 규칙 위반 거절은 바로, 나머지는 저장소 완료에서 불립니다. */
         void submitCall( const EconomyCall& call, ReplyDelegate onReply );
         /** @brief 영수증 결과를 회수해 지급 작업을 맡기고 지표를 갱신합니다. 호스트가 있으면 `onServiceTick` 이 부릅니다. */
-        void update( int64 nowMs );
+        void update( UnixMilliseconds nowMs );
 
         // IOnlineHostService
         const OnlineProtocolEntry& getProtocol() const override { return EconomyProtocol::kOnlineEntry; }
         void                       onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override;
-        void                       onServiceTick( OnlineServiceHost& host, int64 nowMs ) override;
+        void                       onServiceTick( OnlineServiceHost& host, UnixMilliseconds nowMs ) override;
         void                       onHostShutdown( OnlineServiceHost& host ) override;
         // IBalanceNotice: 이 서버에 붙은 계정이면 바로, 다른 서버에 붙었으면 접속 상태를 찾아 중계한다
         void notifyBalancesChanged( AccountID accountID, const vector<LedgerBalance>& listBalance ) override;
@@ -165,6 +166,6 @@ namespace sw
         uint8                                        _bAuditPending;
         uint8                                        _bAuditRunHeld;
         uint8                                        _bLastAuditBalanced;
-        int64                                        _nowMs;
+        UnixMilliseconds                             _nowMs;
     };
 } // namespace sw

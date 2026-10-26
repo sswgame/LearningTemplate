@@ -11,6 +11,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Network/Message/NetRequest.h"
+#include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
 #include "GameFramework/Base/Online/Identity/AccountPresence.h"
@@ -37,7 +38,7 @@ namespace sw
 
         const OnlineProtocolEntry& getProtocol() const override { return TradeProtocol::kOnlineEntry; }
         void                       onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override;
-        void                       onServiceTick( OnlineServiceHost& host, int64 nowMs ) override;
+        void                       onServiceTick( OnlineServiceHost& host, UnixMilliseconds nowMs ) override;
         void                       onAccountLeft( OnlineServiceHost& host, AccountID accountID ) override;
 
         static constexpr const utf8* kFeatureFlag = "feature.trade_enabled";
@@ -51,9 +52,9 @@ namespace sw
 
         struct PendingLookup
         {
-            NetRequestToken _token{};
-            AccountID       _accountID{ kInvalidAccountID };
-            int64           _nowMs{ 0 };
+            NetRequestToken  _token{};
+            AccountID        _accountID{ kInvalidAccountID };
+            UnixMilliseconds _nowMs{ 0 };
         };
 
         void pushSnapshot( OnlineServiceHost& host, const TradeSnapshot& snapshot );
@@ -74,6 +75,6 @@ namespace sw
         const IAccountDirectory*                     _pDirectory;
         IAccountPresence*                            _pPresence;
         uint64                                       _nextTag;
-        int64                                        _nowMs;
+        UnixMilliseconds                             _nowMs;
     };
 } // namespace sw

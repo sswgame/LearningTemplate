@@ -8,6 +8,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Time/TimePoint.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProvider.h"
@@ -24,11 +25,11 @@ namespace sw
         explicit FakePlatformLoginProvider( string_view name );
 
         const utf8* getName() const override { return _name.c_str(); }
-        uint64      submitVerification( const vector<uint8>& ticketBytes, int64 nowMs ) override;
+        uint64      submitVerification( const vector<uint8>& ticketBytes, UnixMilliseconds nowMs ) override;
         int32       pollVerifications( vector<PlatformLoginVerification>& outListVerification ) override;
-        void        update( int64 nowMs ) override;
+        void        update( UnixMilliseconds nowMs ) override;
         bool        supportsRevocation() const override { return _bRevocationEnabled == SW_TRUE; }
-        uint64      submitRevocation( string_view linkSecret, int64 nowMs ) override;
+        uint64      submitRevocation( string_view linkSecret, UnixMilliseconds nowMs ) override;
         int32       pollRevocations( vector<PlatformLoginRevocation>& outListRevocation ) override;
 
         int32 getSubmittedCount() const { return _submittedCount; }

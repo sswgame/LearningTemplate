@@ -51,7 +51,7 @@ namespace sw
         class AdminSeedWork final : public IServiceStoreWork
         {
         public:
-            AdminSeedWork( AdminService* pService, AccountID accountID, AdminRole role, int64 nowMs )
+            AdminSeedWork( AdminService* pService, AccountID accountID, AdminRole role, UnixMilliseconds nowMs )
                 : _pService{ pService }
                 , _accountID{ accountID }
                 , _nowMs{ nowMs }
@@ -60,15 +60,15 @@ namespace sw
             {
             }
 
-            void run( IServiceStoreConnection& connection ) override { _result = AdminStoreLogic::seedRole( connection, _accountID, _role, _nowMs ); }
+            void run( IServiceStoreConnection& connection ) override { _result = AdminStoreLogic::seedRole( connection, _accountID, _role, _nowMs.count() ); }
             void complete() override { _pService->completeSeed( _result ); }
 
         private:
-            AdminService* _pService;
-            AccountID     _accountID;
-            int64         _nowMs;
-            AdminRole     _role;
-            AdminResult   _result;
+            AdminService*    _pService;
+            AccountID        _accountID;
+            UnixMilliseconds _nowMs;
+            AdminRole        _role;
+            AdminResult      _result;
         };
     } // namespace
 } // namespace sw
@@ -118,14 +118,14 @@ namespace sw
         _pStore = nullptr;
     }
 
-    void AdminService::submitCall( AccountID adminID, uint16 method, const AdminRequest& request, const NetIdempotencyKey& idempotencyKey, int64 nowMs, ReplyDelegate onReply )
+    void AdminService::submitCall( AccountID adminID, uint16 method, const AdminRequest& request, const NetIdempotencyKey& idempotencyKey, UnixMilliseconds nowMs, ReplyDelegate onReply )
     {
         PendingCall pending;
         pending._onReply = onReply;
         startCall( adminID, method, request, idempotencyKey, nowMs, pending );
     }
 
-    void AdminService::startCall( AccountID adminID, uint16 method, const AdminRequest& request, const NetIdempotencyKey& idempotencyKey, int64 nowMs, PendingCall pending )
+    void AdminService::startCall( AccountID adminID, uint16 method, const AdminRequest& request, const NetIdempotencyKey& idempotencyKey, UnixMilliseconds nowMs, PendingCall pending )
     {
         pending._callID              = _nextCallID++;
         pending._receivedNanoseconds = MonotonicClock::nowNanoseconds(); // 예외 — 지연 지표는 실제 처리 시간을 잰다(가짜 시각으로 재면 뜻이 없다, 프로파일러와 같은 자리)
@@ -146,7 +146,7 @@ namespace sw
         command._adminID    = adminID;
         command._keyHigh    = idempotencyKey._high;
         command._keyLow     = idempotencyKey._low;
-        command._nowMs      = pending._nowMs;
+        command._nowMs      = pending._nowMs.count();
         command._method     = method;
 
         AdminReply refused;
@@ -165,7 +165,7 @@ namespace sw
         _pStore->submit( make_unique<AdminCommandWork>( this, command, pending._callID ) );
     }
 
-    void AdminService::seedRole( AccountID accountID, AdminRole role, int64 nowMs )
+    void AdminService::seedRole( AccountID accountID, AdminRole role, UnixMilliseconds nowMs )
     {
         const bool bInvalidSeed = _pStore == nullptr || accountID == kInvalidAccountID || role == AdminRole::None || role >= AdminRole::Count;
         if ( bInvalidSeed )
@@ -174,7 +174,7 @@ namespace sw
         _pStore->submit( make_unique<AdminSeedWork>( this, accountID, role, nowMs ) );
     }
 
-    void AdminService::update( int64 nowMs )
+    void AdminService::update( UnixMilliseconds nowMs )
     {
         (void)nowMs; // 요청마다 시각을 인자로 받으므로 틱 시각을 들고 있지 않는다
         pollForwardedCompletions();
@@ -195,7 +195,7 @@ namespace sw
         startCall( context._accountID, context._method, request, context._idempotencyKey, context._nowMs, pending );
     }
 
-    void AdminService::onServiceTick( OnlineServiceHost& host, int64 nowMs )
+    void AdminService::onServiceTick( OnlineServiceHost& host, UnixMilliseconds nowMs )
     {
         (void)host;
         update( nowMs );

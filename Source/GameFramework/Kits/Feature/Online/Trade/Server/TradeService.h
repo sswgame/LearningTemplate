@@ -14,6 +14,7 @@
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Base/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -63,18 +64,18 @@ namespace sw
         void initialize( IServiceStore* pStore, const ITradePolicy* pPolicy, const ILedgerPolicy* pLedgerPolicy, uint64 serverID, const TradeServiceConfig& settings );
         void shutdown();
         /** @brief 이 서버가 연 열린 거래를 모두 닫습니다. 기동할 때 한 번 부르며 닫힌 거래는 `drainUpdates` 로 회수합니다. */
-        void recoverOwnedTrades( int64 nowMs );
+        void recoverOwnedTrades( UnixMilliseconds nowMs );
 
-        void invite( AccountID fromID, AccountID toID, int64 nowMs, uint64 requestTag );
-        void respondInvite( AccountID responderID, uint64 tradeID, bool bAccept, int64 nowMs, uint64 requestTag );
-        void setOffer( AccountID actorID, uint64 tradeID, const vector<TradeLeg>& listLeg, int64 nowMs, uint64 requestTag );
-        void lock( AccountID actorID, uint64 tradeID, int64 nowMs, uint64 requestTag );
-        void confirm( AccountID actorID, uint64 tradeID, uint32 seenOwnRevision, uint32 seenPeerRevision, int64 nowMs, uint64 requestTag );
-        void cancel( AccountID actorID, uint64 tradeID, int64 nowMs, uint64 requestTag );
+        void invite( AccountID fromID, AccountID toID, UnixMilliseconds nowMs, uint64 requestTag );
+        void respondInvite( AccountID responderID, uint64 tradeID, bool bAccept, UnixMilliseconds nowMs, uint64 requestTag );
+        void setOffer( AccountID actorID, uint64 tradeID, const vector<TradeLeg>& listLeg, UnixMilliseconds nowMs, uint64 requestTag );
+        void lock( AccountID actorID, uint64 tradeID, UnixMilliseconds nowMs, uint64 requestTag );
+        void confirm( AccountID actorID, uint64 tradeID, uint32 seenOwnRevision, uint32 seenPeerRevision, UnixMilliseconds nowMs, uint64 requestTag );
+        void cancel( AccountID actorID, uint64 tradeID, UnixMilliseconds nowMs, uint64 requestTag );
         /** @brief 계정이 떠나거나 제재됐을 때 부릅니다. 그 계정의 열린 거래를 닫으며 완료는 없고 변경만 발생합니다. */
-        void closeForAccount( AccountID accountID, TradeCloseReason reason, int64 nowMs );
+        void closeForAccount( AccountID accountID, TradeCloseReason reason, UnixMilliseconds nowMs );
         /** @brief 아는 거래의 시한을 확인합니다. */
-        void update( int64 nowMs );
+        void update( UnixMilliseconds nowMs );
 
         void drainCompletions( vector<TradeCompletion>& outListCompletion ) { _completionBuffer.drainTo( outListCompletion ); }
         void drainUpdates( vector<TradeSnapshot>& outListUpdate ) { _updateBuffer.drainTo( outListUpdate ); }
@@ -85,7 +86,7 @@ namespace sw
         void applyCompletion( TradeCompletion&& completion, const vector<TradeSnapshot>& listChanged );
 
     private:
-        void submitCommand( TradeOperation operation, uint64 tradeID, const TradeCommand& command, int64 nowMs, uint64 requestTag );
+        void submitCommand( TradeOperation operation, uint64 tradeID, const TradeCommand& command, UnixMilliseconds nowMs, uint64 requestTag );
         void trackTrade( const TradeSnapshot& snapshot );
 
         EventBuffer<TradeCompletion> _completionBuffer;

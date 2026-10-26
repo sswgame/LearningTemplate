@@ -51,7 +51,7 @@ namespace sw
 
             void setService( ChatService* pService ) { _pService = pService; }
 
-            void addGroupMember( GroupChannelKind kind, uint64 groupID, AccountID accountID, int64 nowMs ) override
+            void addGroupMember( GroupChannelKind kind, uint64 groupID, AccountID accountID, UnixMilliseconds nowMs ) override
             {
                 if ( _pService == nullptr )
                     return;

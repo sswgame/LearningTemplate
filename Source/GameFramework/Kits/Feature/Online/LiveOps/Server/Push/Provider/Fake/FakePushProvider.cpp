@@ -19,7 +19,7 @@ namespace sw
         script._retryAfterMs   = retryAfterMs;
     }
 
-    void FakePushProvider::send( uint64 deliveryID, const string& deviceToken, const string& locale, const PushNotificationMessage& message, int64 nowMs )
+    void FakePushProvider::send( uint64 deliveryID, const string& deviceToken, const string& locale, const PushNotificationMessage& message, UnixMilliseconds nowMs )
     {
         (void)locale;
         (void)nowMs;
@@ -27,7 +27,7 @@ namespace sw
         queueResult( deliveryID, deviceToken );
     }
 
-    void FakePushProvider::sendToTopic( uint64 deliveryID, string_view topic, const PushNotificationMessage& message, int64 nowMs )
+    void FakePushProvider::sendToTopic( uint64 deliveryID, string_view topic, const PushNotificationMessage& message, UnixMilliseconds nowMs )
     {
         (void)nowMs;
         _listSent.push_back( SentRecord{ message, {}, string( topic ), deliveryID } );

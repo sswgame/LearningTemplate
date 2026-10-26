@@ -56,7 +56,7 @@ namespace sw
                 uint8             _arrDeviceSecret[LoginConstant::kDeviceSecretSize];
                 uint8             _bUpdateRecommended;
 
-                LoginWork( LoginService* pService, ILoginCrypto* pCrypto, const LoginServiceConfig& settings, LoginOperation operation, uint64 requestTag, int64 nowMs )
+                LoginWork( LoginService* pService, ILoginCrypto* pCrypto, const LoginServiceConfig& settings, LoginOperation operation, uint64 requestTag, UnixMilliseconds nowMs )
                     : _credential{}
                     , _token{}
                     , _serverID{}
@@ -95,72 +95,72 @@ namespace sw
                         }
                         case LoginOperation::Login:
                         {
-                            _completion._result = logic.login( _credential, _nowMs, _completion._grant );
+                            _completion._result = logic.login( _credential, _nowMs.count(), _completion._grant );
                             break;
                         }
                         case LoginOperation::GuestLogin:
                         {
-                            _completion._result = logic.guestLogin( _arrDeviceSecret, _nowMs, _completion._grant );
+                            _completion._result = logic.guestLogin( _arrDeviceSecret, _nowMs.count(), _completion._grant );
                             break;
                         }
                         case LoginOperation::PlatformLogin:
                         {
-                            _completion._result = logic.platformLogin( _provider, _subject, _displayNameHint, &_listSealedLinkSecret, _nowMs, _completion._grant );
+                            _completion._result = logic.platformLogin( _provider, _subject, _displayNameHint, &_listSealedLinkSecret, _nowMs.count(), _completion._grant );
                             break;
                         }
                         case LoginOperation::Resume:
                         {
-                            _completion._result = logic.resumeSession( _token, _nowMs, _completion._grant );
+                            _completion._result = logic.resumeSession( _token, _nowMs.count(), _completion._grant );
                             break;
                         }
                         case LoginOperation::Validate:
                         {
-                            _completion._result = logic.validateSession( _token, _nowMs, _completion._identity, &_completion._grant._revokeReason );
+                            _completion._result = logic.validateSession( _token, _nowMs.count(), _completion._identity, &_completion._grant._revokeReason );
                             break;
                         }
                         case LoginOperation::Logout:
                         {
-                            _completion._result = logic.logout( _token, _nowMs );
+                            _completion._result = logic.logout( _token, _nowMs.count() );
                             break;
                         }
                         case LoginOperation::IssueGameTicket:
                         {
-                            _completion._result = logic.issueGameTicket( _token, _serverID, _nowMs, _completion._ticket );
+                            _completion._result = logic.issueGameTicket( _token, _serverID, _nowMs.count(), _completion._ticket );
                             break;
                         }
                         case LoginOperation::Revoke:
                         {
-                            _completion._result = logic.revokeAccountSessions( _accountID, _revokeReason, _nowMs );
+                            _completion._result = logic.revokeAccountSessions( _accountID, _revokeReason, _nowMs.count() );
                             break;
                         }
                         case LoginOperation::LinkCredential:
                         {
-                            _completion._result = logic.linkCredential( _token, _credential, _nowMs, _completion._identity );
+                            _completion._result = logic.linkCredential( _token, _credential, _nowMs.count(), _completion._identity );
                             break;
                         }
                         case LoginOperation::LinkPlatform:
                         {
-                            _completion._result = logic.linkPlatform( _token, _provider, _subject, &_listSealedLinkSecret, _nowMs, _completion._identity );
+                            _completion._result = logic.linkPlatform( _token, _provider, _subject, &_listSealedLinkSecret, _nowMs.count(), _completion._identity );
                             break;
                         }
                         case LoginOperation::UnlinkPlatform:
                         {
-                            _completion._result = logic.unlinkPlatform( _token, _provider, _nowMs );
+                            _completion._result = logic.unlinkPlatform( _token, _provider, _nowMs.count() );
                             break;
                         }
                         case LoginOperation::ListLinks:
                         {
-                            _completion._result = logic.listLinks( _token, _nowMs, _completion._linkSummary );
+                            _completion._result = logic.listLinks( _token, _nowMs.count(), _completion._linkSummary );
                             break;
                         }
                         case LoginOperation::RequestDeletion:
                         {
-                            _completion._result = logic.requestDeletion( _token, _nowMs, _completion._grant._deletionDueMs );
+                            _completion._result = logic.requestDeletion( _token, _nowMs.count(), _completion._grant._deletionDueMs );
                             break;
                         }
                         case LoginOperation::CancelDeletion:
                         {
-                            _completion._result = logic.cancelDeletion( _token, _nowMs );
+                            _completion._result = logic.cancelDeletion( _token, _nowMs.count() );
                             break;
                         }
                     }
@@ -183,14 +183,14 @@ namespace sw
                 LoginServiceConfig _settings; ///< 복사한 값이다. 서비스 설정이 바뀌어도 이 작업은 맡길 때의 값으로 실행한다
                 LoginService*      _pService;
                 ILoginCrypto*      _pCrypto;
-                int64              _nowMs;
+                UnixMilliseconds   _nowMs;
             };
 
             /** @brief 탈퇴한 계정의 연동 비밀 철회 대기열을 읽는 작업입니다. 읽은 항목은 서비스가 비밀을 풀어 제공자에 철회를 맡깁니다. */
             class LoginRevocationScanWork final : public IServiceStoreWork
             {
             public:
-                LoginRevocationScanWork( LoginService* pService, int32 maxCount, int64 nowMs )
+                LoginRevocationScanWork( LoginService* pService, int32 maxCount, UnixMilliseconds nowMs )
                     : _listEntry{}
                     , _pService{ pService }
                     , _maxCount{ maxCount }
@@ -210,7 +210,7 @@ namespace sw
                 vector<LoginRevocationEntry> _listEntry;
                 LoginService*                _pService;
                 int32                        _maxCount;
-                int64                        _nowMs;
+                UnixMilliseconds             _nowMs;
                 uint8                        _bReadOk;
             };
 
@@ -240,7 +240,7 @@ namespace sw
                 uint64                  _disconnectedSessionID;
                 int32                   _purgeCount;
 
-                LoginMaintenanceWork( LoginService* pService, ILoginCrypto* pCrypto, const LoginServiceConfig& settings, int64 nowMs )
+                LoginMaintenanceWork( LoginService* pService, ILoginCrypto* pCrypto, const LoginServiceConfig& settings, UnixMilliseconds nowMs )
                     : _listOnline{}
                     , _disconnectedSessionID{ 0 }
                     , _purgeCount{ 0 }
@@ -256,11 +256,11 @@ namespace sw
                 {
                     LoginStoreLogic logic{ connection, *_pCrypto, _settings, _pService->getTicketAuthority(), _outcome };
                     if ( _disconnectedSessionID != 0 )
-                        logic.markDisconnected( _disconnectedSessionID, _nowMs );
+                        logic.markDisconnected( _disconnectedSessionID, _nowMs.count() );
                     if ( _listOnline.empty() == false )
-                        logic.refreshSessions( _listOnline, _nowMs );
+                        logic.refreshSessions( _listOnline, _nowMs.count() );
                     if ( _purgeCount > 0 )
-                        (void)logic.purgeDueDeletions( _nowMs, _purgeCount );
+                        (void)logic.purgeDueDeletions( _nowMs.count(), _purgeCount );
                 }
 
                 void complete() override
@@ -275,7 +275,7 @@ namespace sw
                 LoginServiceConfig _settings;
                 LoginService*      _pService;
                 ILoginCrypto*      _pCrypto;
-                int64              _nowMs;
+                UnixMilliseconds   _nowMs;
             };
         };
     } // namespace
@@ -347,7 +347,7 @@ namespace sw
         return _registeredPlatformProvider.addLogged( pProvider, "Platform login provider", pProvider->getName() ) == RegistrationResult::Added;
     }
 
-    void LoginService::update( int64 nowMs )
+    void LoginService::update( UnixMilliseconds nowMs )
     {
         for ( IPlatformLoginProvider* pProvider : _registeredPlatformProvider.getItems() )
         {
@@ -372,7 +372,7 @@ namespace sw
         updateRevocations( nowMs );
     }
 
-    void LoginService::updateRevocations( int64 nowMs )
+    void LoginService::updateRevocations( UnixMilliseconds nowMs )
     {
         bool bAnyRevoker = false;
         for ( IPlatformLoginProvider* pProvider : _registeredPlatformProvider.getItems() )
@@ -409,7 +409,7 @@ namespace sw
         _pStore->submit( make_unique<LoginServiceInternal::LoginRevocationScanWork>( this, _settings._revocationBatchSize, nowMs ) );
     }
 
-    void LoginService::applyRevocationScan( vector<LoginRevocationEntry>&& listEntry, bool bReadOk, int64 nowMs )
+    void LoginService::applyRevocationScan( vector<LoginRevocationEntry>&& listEntry, bool bReadOk, UnixMilliseconds nowMs )
     {
         --_pendingCount;
         _bRevocationScanInFlight = SW_FALSE;
@@ -437,7 +437,7 @@ namespace sw
         }
     }
 
-    void LoginService::registerAccount( const LoginCredential& credential, int64 nowMs, uint64 requestTag )
+    void LoginService::registerAccount( const LoginCredential& credential, UnixMilliseconds nowMs, uint64 requestTag )
     {
         unique_ptr<LoginServiceInternal::LoginWork> work = make_unique<LoginServiceInternal::LoginWork>( this, _pCrypto, _settings, LoginOperation::Register, requestTag, nowMs );
         work->_credential                                = credential;
@@ -445,7 +445,7 @@ namespace sw
         _pStore->submit( std::move( work ) );
     }
 
-    void LoginService::login( const LoginCredential& credential, const AccountClientInfo& clientInfo, uint64 clientKey, int64 nowMs, uint64 requestTag )
+    void LoginService::login( const LoginCredential& credential, const AccountClientInfo& clientInfo, uint64 clientKey, UnixMilliseconds nowMs, uint64 requestTag )
     {
         LoginGrant        buildGrant;
         const LoginResult build = evaluateClientBuild( clientInfo, buildGrant );
@@ -467,7 +467,7 @@ namespace sw
         _pStore->submit( std::move( work ) );
     }
 
-    void LoginService::guestLogin( const uint8 ( &arrDeviceSecret )[LoginConstant::kDeviceSecretSize], const AccountClientInfo& clientInfo, uint64 clientKey, int64 nowMs,
+    void LoginService::guestLogin( const uint8 ( &arrDeviceSecret )[LoginConstant::kDeviceSecretSize], const AccountClientInfo& clientInfo, uint64 clientKey, UnixMilliseconds nowMs,
                                    uint64 requestTag )
     {
         LoginGrant        buildGrant;
@@ -491,7 +491,7 @@ namespace sw
         _pStore->submit( std::move( work ) );
     }
 
-    void LoginService::platformLogin( string_view provider, const vector<uint8>& ticketBytes, const AccountClientInfo& clientInfo, uint64 clientKey, int64 nowMs,
+    void LoginService::platformLogin( string_view provider, const vector<uint8>& ticketBytes, const AccountClientInfo& clientInfo, uint64 clientKey, UnixMilliseconds nowMs,
                                       uint64 requestTag )
     {
         LoginGrant        buildGrant;
@@ -509,7 +509,7 @@ namespace sw
         beginVerification( LoginOperation::PlatformLogin, provider, ticketBytes, LoginSessionToken{}, buildGrant, nowMs, requestTag );
     }
 
-    void LoginService::resumeSession( const LoginSessionToken& token, const AccountClientInfo& clientInfo, uint64 clientKey, int64 nowMs, uint64 requestTag )
+    void LoginService::resumeSession( const LoginSessionToken& token, const AccountClientInfo& clientInfo, uint64 clientKey, UnixMilliseconds nowMs, uint64 requestTag )
     {
         LoginGrant        buildGrant;
         const LoginResult build = evaluateClientBuild( clientInfo, buildGrant );
@@ -531,7 +531,7 @@ namespace sw
         _pStore->submit( std::move( work ) );
     }
 
-    void LoginService::validateSession( const LoginSessionToken& token, int64 nowMs, uint64 requestTag )
+    void LoginService::validateSession( const LoginSessionToken& token, UnixMilliseconds nowMs, uint64 requestTag )
     {
         unique_ptr<LoginServiceInternal::LoginWork> work =
             make_unique<LoginServiceInternal::LoginWork>( this, _pCrypto, _settings, LoginOperation::Validate, requestTag, nowMs );
@@ -540,7 +540,7 @@ namespace sw
         _pStore->submit( std::move( work ) );
     }
 
-    void LoginService::logout( const LoginSessionToken& token, int64 nowMs, uint64 requestTag )
+    void LoginService::logout( const LoginSessionToken& token, UnixMilliseconds nowMs, uint64 requestTag )
     {
         unique_ptr<LoginServiceInternal::LoginWork> work = make_unique<LoginServiceInternal::LoginWork>( this, _pCrypto, _settings, LoginOperation::Logout, requestTag, nowMs );
         work->_token                                     = token;
@@ -548,7 +548,7 @@ namespace sw
         _pStore->submit( std::move( work ) );
     }
 
-    void LoginService::issueGameTicket( const LoginSessionToken& token, const hashed_string& serverID, int64 nowMs, uint64 requestTag )
+    void LoginService::issueGameTicket( const LoginSessionToken& token, const hashed_string& serverID, UnixMilliseconds nowMs, uint64 requestTag )
     {
         unique_ptr<LoginServiceInternal::LoginWork> work =
             make_unique<LoginServiceInternal::LoginWork>( this, _pCrypto, _settings, LoginOperation::IssueGameTicket, requestTag, nowMs );
@@ -558,7 +558,7 @@ namespace sw
         _pStore->submit( std::move( work ) );
     }
 
-    void LoginService::revokeAccountSessions( uint64 accountID, LoginRevokeReason reason, int64 nowMs, uint64 requestTag )
+    void LoginService::revokeAccountSessions( uint64 accountID, LoginRevokeReason reason, UnixMilliseconds nowMs, uint64 requestTag )
     {
         unique_ptr<LoginServiceInternal::LoginWork> work = make_unique<LoginServiceInternal::LoginWork>( this, _pCrypto, _settings, LoginOperation::Revoke, requestTag, nowMs );
         work->_accountID                                 = accountID;
@@ -567,7 +567,7 @@ namespace sw
         _pStore->submit( std::move( work ) );
     }
 
-    void LoginService::linkCredential( const LoginSessionToken& token, const LoginCredential& credential, int64 nowMs, uint64 requestTag )
+    void LoginService::linkCredential( const LoginSessionToken& token, const LoginCredential& credential, UnixMilliseconds nowMs, uint64 requestTag )
     {
         unique_ptr<LoginServiceInternal::LoginWork> work =
             make_unique<LoginServiceInternal::LoginWork>( this, _pCrypto, _settings, LoginOperation::LinkCredential, requestTag, nowMs );
@@ -577,12 +577,12 @@ namespace sw
         _pStore->submit( std::move( work ) );
     }
 
-    void LoginService::linkPlatform( const LoginSessionToken& token, string_view provider, const vector<uint8>& ticketBytes, int64 nowMs, uint64 requestTag )
+    void LoginService::linkPlatform( const LoginSessionToken& token, string_view provider, const vector<uint8>& ticketBytes, UnixMilliseconds nowMs, uint64 requestTag )
     {
         beginVerification( LoginOperation::LinkPlatform, provider, ticketBytes, token, LoginGrant{}, nowMs, requestTag );
     }
 
-    void LoginService::unlinkPlatform( const LoginSessionToken& token, string_view provider, int64 nowMs, uint64 requestTag )
+    void LoginService::unlinkPlatform( const LoginSessionToken& token, string_view provider, UnixMilliseconds nowMs, uint64 requestTag )
     {
         unique_ptr<LoginServiceInternal::LoginWork> work =
             make_unique<LoginServiceInternal::LoginWork>( this, _pCrypto, _settings, LoginOperation::UnlinkPlatform, requestTag, nowMs );
@@ -592,7 +592,7 @@ namespace sw
         _pStore->submit( std::move( work ) );
     }
 
-    void LoginService::listLinks( const LoginSessionToken& token, int64 nowMs, uint64 requestTag )
+    void LoginService::listLinks( const LoginSessionToken& token, UnixMilliseconds nowMs, uint64 requestTag )
     {
         unique_ptr<LoginServiceInternal::LoginWork> work =
             make_unique<LoginServiceInternal::LoginWork>( this, _pCrypto, _settings, LoginOperation::ListLinks, requestTag, nowMs );
@@ -601,7 +601,7 @@ namespace sw
         _pStore->submit( std::move( work ) );
     }
 
-    void LoginService::requestDeletion( const LoginSessionToken& token, int64 nowMs, uint64 requestTag )
+    void LoginService::requestDeletion( const LoginSessionToken& token, UnixMilliseconds nowMs, uint64 requestTag )
     {
         unique_ptr<LoginServiceInternal::LoginWork> work =
             make_unique<LoginServiceInternal::LoginWork>( this, _pCrypto, _settings, LoginOperation::RequestDeletion, requestTag, nowMs );
@@ -610,7 +610,7 @@ namespace sw
         _pStore->submit( std::move( work ) );
     }
 
-    void LoginService::cancelDeletion( const LoginSessionToken& token, int64 nowMs, uint64 requestTag )
+    void LoginService::cancelDeletion( const LoginSessionToken& token, UnixMilliseconds nowMs, uint64 requestTag )
     {
         unique_ptr<LoginServiceInternal::LoginWork> work =
             make_unique<LoginServiceInternal::LoginWork>( this, _pCrypto, _settings, LoginOperation::CancelDeletion, requestTag, nowMs );
@@ -619,7 +619,7 @@ namespace sw
         _pStore->submit( std::move( work ) );
     }
 
-    void LoginService::purgeDueDeletions( int64 nowMs, int32 maxCount )
+    void LoginService::purgeDueDeletions( UnixMilliseconds nowMs, int32 maxCount )
     {
         if ( maxCount <= 0 )
             return;
@@ -629,7 +629,7 @@ namespace sw
         _pStore->submit( std::move( work ) );
     }
 
-    void LoginService::markDisconnected( uint64 sessionID, int64 nowMs )
+    void LoginService::markDisconnected( uint64 sessionID, UnixMilliseconds nowMs )
     {
         unique_ptr<LoginServiceInternal::LoginMaintenanceWork> work = make_unique<LoginServiceInternal::LoginMaintenanceWork>( this, _pCrypto, _settings, nowMs );
         work->_disconnectedSessionID                                = sessionID;
@@ -637,7 +637,7 @@ namespace sw
         _pStore->submit( std::move( work ) );
     }
 
-    void LoginService::refreshOnlineSessions( int64 nowMs, int32 maxCount )
+    void LoginService::refreshOnlineSessions( UnixMilliseconds nowMs, int32 maxCount )
     {
         if ( _mapAccountToSession.empty() || maxCount <= 0 )
             return;
@@ -757,9 +757,9 @@ namespace sw
             _completionBuffer.push( std::move( completion ) );
     }
 
-    bool LoginService::consumeAttempt( uint64 clientKey, int64 nowMs, int64& outRetryAfterMs )
+    bool LoginService::consumeAttempt( uint64 clientKey, UnixMilliseconds nowMs, int64& outRetryAfterMs )
     {
-        return _mapClientToAttemptBucket.tryConsume( clientKey, nowMs, outRetryAfterMs );
+        return _mapClientToAttemptBucket.tryConsume( clientKey, nowMs.count(), outRetryAfterMs );
     }
 
     void LoginService::pushImmediate( LoginOperation operation, uint64 requestTag, LoginResult result, const LoginGrant& grant )
@@ -794,7 +794,7 @@ namespace sw
     }
 
     void LoginService::beginVerification( LoginOperation operation, string_view provider, const vector<uint8>& ticketBytes, const LoginSessionToken& token,
-                                          const LoginGrant& buildGrant, int64 nowMs, uint64 requestTag )
+                                          const LoginGrant& buildGrant, UnixMilliseconds nowMs, uint64 requestTag )
     {
         IPlatformLoginProvider* pProvider = _registeredPlatformProvider.findByName( provider );
         if ( pProvider == nullptr )

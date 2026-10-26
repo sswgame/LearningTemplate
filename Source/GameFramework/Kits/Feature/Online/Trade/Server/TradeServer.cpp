@@ -139,7 +139,7 @@ namespace sw
         _mapTagToCall[tag] = PendingCall{ context._token, context._accountID };
     }
 
-    void TradeServer::onServiceTick( OnlineServiceHost& host, int64 nowMs )
+    void TradeServer::onServiceTick( OnlineServiceHost& host, UnixMilliseconds nowMs )
     {
         _nowMs = nowMs;
         if ( _pPresence != nullptr )

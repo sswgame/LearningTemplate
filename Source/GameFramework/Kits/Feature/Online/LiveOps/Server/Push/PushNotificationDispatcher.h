@@ -14,6 +14,7 @@
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Base/Online/Guard/TokenBucketMap.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -79,21 +80,21 @@ namespace sw
         [[nodiscard]] bool registerProvider( IPushNotificationProvider* pProvider );
 
         /** @brief 계정의 모든 기기에 보냅니다. 도배 제한에 걸리면 보내지 않고 false 를 반환합니다. */
-        bool notifyAccount( AccountID accountID, const PushNotificationMessage& message, int64 nowMs );
+        bool notifyAccount( AccountID accountID, const PushNotificationMessage& message, UnixMilliseconds nowMs );
         /**
          * @brief 토픽을 구독한 모든 기기에 한 번에 보냅니다(전체 대상 알림 — 계정마다 보내지 않는다). 토픽 발송을 하는 제공자(`supportsTopics`)마다 한 번씩 맡기고 맡긴 수를 반환합니다.
          * @details 0 이면 토픽을 보낼 제공자가 없다는 뜻이다(호출하는 쪽이 알 수 있게 숫자로 돌려준다). 같은 알림을 서버 여럿이 보내지 않게 하는 일은 호출하는 쪽의 몫이다.
          *          재시도는 기기 배달과 같다. 계정 도배 제한은 적용하지 않는다(계정이 없다).
          */
-        int32 notifyTopic( string_view topic, const PushNotificationMessage& message, int64 nowMs );
+        int32 notifyTopic( string_view topic, const PushNotificationMessage& message, UnixMilliseconds nowMs );
         /**
          * @brief `notifyTopic` 을 같은 @p claimKey 로 한 번만 합니다 — 저장소의 `liveops_push` 에 "없어야 한다" 조건으로 표를 쓰고, 쓴 서버만 보냅니다.
          * @details 서버 여럿이 같은 이벤트 시작을 보고도 전체 대상 알림이 한 번만 나가게 한다. 키는 저장소 키 규칙(`[0-9a-z_./-]`)을 지켜야 한다. 저장소에 닿지 못하면 보내지 않고 센다
          *          (다음 시작 알림이 아니라 이번 알림을 놓치는 쪽이 중복보다 낫다). 표는 지우지 않는다 — 창마다 하나뿐이다.
          */
-        void notifyTopicOnce( string_view claimKey, string_view topic, const PushNotificationMessage& message, int64 nowMs );
+        void notifyTopicOnce( string_view claimKey, string_view topic, const PushNotificationMessage& message, UnixMilliseconds nowMs );
         /** @brief 제공자의 결과를 회수하고, 백오프가 끝난 배달을 다시 보냅니다. 저장소 완료는 호스트(또는 서버 루프)가 비웁니다. */
-        void update( int64 nowMs );
+        void update( UnixMilliseconds nowMs );
 
         // 기기 등록 함수들이며 바인딩이 부른다. 완료는 요청 태그로 받고, 태그가 0이면 완료가 없다
         void registerDevice( AccountID accountID, const PushDeviceRegistration& registration, uint64 requestTag );
@@ -109,9 +110,9 @@ namespace sw
         static string makeAccountPrefix( AccountID accountID );
 
         /** @brief 저장소 작업의 `complete` 가 호출합니다. 키트 안에서만 씁니다. */
-        void applyDevices( AccountID accountID, const PushNotificationMessage& message, vector<PushDeviceRegistration>&& listDevice, int64 nowMs );
+        void applyDevices( AccountID accountID, const PushNotificationMessage& message, vector<PushDeviceRegistration>&& listDevice, UnixMilliseconds nowMs );
         void applyWrite( uint64 requestTag, LiveOpsResult result );
-        void applyTopicClaim( const string& topic, const PushNotificationMessage& message, ServiceStoreResult result, int64 nowMs );
+        void applyTopicClaim( const string& topic, const PushNotificationMessage& message, ServiceStoreResult result, UnixMilliseconds nowMs );
 
     private:
         struct Delivery
@@ -127,7 +128,7 @@ namespace sw
         };
 
         IPushNotificationProvider* findProvider( string_view providerID ) const;
-        void                       sendDelivery( uint64 deliveryID, Delivery& delivery, int64 nowMs );
+        void                       sendDelivery( uint64 deliveryID, Delivery& delivery, UnixMilliseconds nowMs );
 
         unordered_map<uint64, Delivery>    _mapDelivery;
         vector<IPushNotificationProvider*> _listProvider;

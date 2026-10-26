@@ -15,6 +15,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Time/TimePoint.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -61,16 +62,16 @@ namespace sw
 
         virtual const utf8* getName() const = 0;
         /** @brief 티켓 확인을 맡깁니다. 0이 아닌 확인 id 를 반환하며 `pollVerifications` 의 결과와 짝이 됩니다. */
-        virtual uint64 submitVerification( const vector<uint8>& ticketBytes, int64 nowMs ) = 0;
+        virtual uint64 submitVerification( const vector<uint8>& ticketBytes, UnixMilliseconds nowMs ) = 0;
         /** @brief 끝난 확인을 @p outListVerification 뒤에 붙이고 붙인 개수를 반환합니다. */
         virtual int32 pollVerifications( vector<PlatformLoginVerification>& outListVerification ) = 0;
         /** @brief 진행 중인 작업(네트워크 I/O, 시한)을 처리합니다. 서비스 `tick` 이 부릅니다. */
-        virtual void update( int64 nowMs ) { (void)nowMs; }
+        virtual void update( UnixMilliseconds nowMs ) { (void)nowMs; }
 
         /** @brief 탈퇴한 계정의 연동 비밀을 철회하는 제공자면 true 입니다. 기본은 false 이며 true 인 제공자만 `submitRevocation` 을 구현합니다. */
         virtual bool supportsRevocation() const { return false; }
         /** @brief 연동 비밀(`PlatformLoginVerification::_linkSecret`)의 철회를 맡깁니다. 0이 아닌 철회 id 를 반환하며 `pollRevocations` 의 결과와 짝이 됩니다. */
-        virtual uint64 submitRevocation( string_view linkSecret, int64 nowMs )
+        virtual uint64 submitRevocation( string_view linkSecret, UnixMilliseconds nowMs )
         {
             (void)linkSecret;
             (void)nowMs;

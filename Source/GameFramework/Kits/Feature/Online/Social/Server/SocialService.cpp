@@ -110,7 +110,7 @@ namespace sw
 
             /** @brief 줄 하나의 새 상태를 트랜잭션에 붙입니다. 상태가 같으면 아무것도 쓰지 않습니다. */
             static void stageLink( ServiceTransaction& inoutTransaction, const string& key, const ServiceRecord& record, SocialLinkState oldState, SocialLinkState newState,
-                                   int64 nowMs )
+                                   UnixMilliseconds nowMs )
             {
                 if ( newState == SocialLinkState::None )
                 {
@@ -119,7 +119,7 @@ namespace sw
                     return;
                 }
                 if ( newState != oldState )
-                    inoutTransaction.put( getLinkTable(), key, encodeLink( newState, nowMs ), record._version );
+                    inoutTransaction.put( getLinkTable(), key, encodeLink( newState, nowMs.count() ), record._version );
             }
 
             /** @brief 개수 변화를 트랜잭션에 붙입니다. 바뀌지 않아도 버전은 확인합니다. 상한 판정의 근거가 그사이 바뀌면 안 되기 때문입니다. */
@@ -140,7 +140,7 @@ namespace sw
         {
         public:
             SocialLinkWork( SocialService* pService, const IAccountNameIndex* pNameIndex, SocialLinkOperation operation, AccountID accountID, AccountID otherID,
-                            string_view displayName, int64 nowMs, uint64 requestTag )
+                            string_view displayName, UnixMilliseconds nowMs, uint64 requestTag )
                 : _decision{}
                 , _displayName{ displayName }
                 , _pService{ pService }
@@ -247,7 +247,7 @@ namespace sw
             const IAccountNameIndex* _pNameIndex;
             AccountID                _accountID;
             AccountID                _otherID;
-            int64                    _nowMs;
+            UnixMilliseconds         _nowMs;
             uint64                   _requestTag;
             SocialLinkOperation      _operation;
         };
@@ -334,19 +334,19 @@ namespace sw
         _dependencies = SocialServiceDependencies{};
     }
 
-    void SocialService::update( int64 nowMs )
+    void SocialService::update( UnixMilliseconds nowMs )
     {
         for ( auto& [accountID, local] : _mapAccountToLocal ) // 접속 상태의 시한을 연장한다
         {
-            if ( local._status == SocialPresenceStatus::Offline || nowMs - local._presenceWrittenMs < SocialServiceInternal::kPresenceRefreshMs )
+            if ( local._status == SocialPresenceStatus::Offline || nowMs.count() - local._presenceWrittenMs < SocialServiceInternal::kPresenceRefreshMs )
                 continue;
-            local._presenceWrittenMs = nowMs;
+            local._presenceWrittenMs = nowMs.count();
             if ( writePresenceRecord( SocialPresence{ local._activity, accountID, local._status } ) == false )
                 SW_LOG_WARNING( "SocialService: presence of account %# was not refreshed - it expires from the cache", accountID );
         }
     }
 
-    void SocialService::changeLink( SocialLinkOperation operation, AccountID accountID, AccountID otherID, int64 nowMs, uint64 requestTag )
+    void SocialService::changeLink( SocialLinkOperation operation, AccountID accountID, AccountID otherID, UnixMilliseconds nowMs, uint64 requestTag )
     {
         if ( otherID == kInvalidAccountID || otherID == accountID )
         {
@@ -356,7 +356,7 @@ namespace sw
         submitLinkWork( operation, accountID, otherID, string_view{}, nowMs, requestTag );
     }
 
-    void SocialService::requestFriendByName( AccountID accountID, string_view displayName, int64 nowMs, uint64 requestTag )
+    void SocialService::requestFriendByName( AccountID accountID, string_view displayName, UnixMilliseconds nowMs, uint64 requestTag )
     {
         if ( displayName.empty() )
         {
@@ -366,7 +366,7 @@ namespace sw
         submitLinkWork( SocialLinkOperation::Request, accountID, kInvalidAccountID, displayName, nowMs, requestTag );
     }
 
-    void SocialService::submitLinkWork( SocialLinkOperation operation, AccountID accountID, AccountID otherID, string_view displayName, int64 nowMs, uint64 requestTag )
+    void SocialService::submitLinkWork( SocialLinkOperation operation, AccountID accountID, AccountID otherID, string_view displayName, UnixMilliseconds nowMs, uint64 requestTag )
     {
         (void)ensureLocal( accountID );
         ++_pendingCount;
@@ -444,7 +444,7 @@ namespace sw
         return false;
     }
 
-    void SocialService::setPresence( AccountID accountID, SocialPresenceStatus status, string_view activity, int64 nowMs, uint64 requestTag )
+    void SocialService::setPresence( AccountID accountID, SocialPresenceStatus status, string_view activity, UnixMilliseconds nowMs, uint64 requestTag )
     {
         const bool bValid = status != SocialPresenceStatus::Offline && status < SocialPresenceStatus::Count &&
                             activity.size() <= static_cast<size_t>( SocialLimit::kMaxActivitySize );
@@ -461,7 +461,7 @@ namespace sw
         LocalAccount& local      = ensureLocal( accountID );
         local._status            = status;
         local._activity          = string( activity );
-        local._presenceWrittenMs = nowMs;
+        local._presenceWrittenMs = nowMs.count();
         publishPresence( accountID, local );
         pushCompletion( requestTag, SocialResult::Ok );
     }

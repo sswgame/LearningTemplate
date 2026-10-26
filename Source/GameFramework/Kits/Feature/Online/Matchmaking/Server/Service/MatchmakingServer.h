@@ -16,6 +16,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"
 #include "GameFramework/Base/Online/Service/OnlineServiceHost.h"
@@ -53,7 +54,7 @@ namespace sw
         // IOnlineHostService
         const OnlineProtocolEntry& getProtocol() const override { return MatchmakingProtocol::kOnlineEntry; }
         void                       onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override;
-        void                       onServiceTick( OnlineServiceHost& host, int64 nowMs ) override;
+        void                       onServiceTick( OnlineServiceHost& host, UnixMilliseconds nowMs ) override;
         void                       onHostShutdown( OnlineServiceHost& host ) override;
         void                       onAccountJoined( OnlineServiceHost& host, AccountID accountID ) override;
         void                       onAccountLeft( OnlineServiceHost& host, AccountID accountID ) override;
@@ -63,7 +64,7 @@ namespace sw
     private:
         void attachHost( OnlineServiceHost& host );
         /** @brief 유예가 끝난 계정을 접속 상태로 묻거나(서버 여러 대) 바로 뺍니다. */
-        void expireGrace( int64 nowMs );
+        void expireGrace( UnixMilliseconds nowMs );
         void onGracePresenceFound( const AccountPresenceResult& result );
         void onPartyFound( uint64 lookupTag, MatchmakingResult result, const PartySnapshot& party );
         /** @brief 이 서버 계정 @p recipientID 가 받은 파티 스냅숏으로 파티 채널 멤버를 맞춥니다. 멤버가 비었으면 빠진 것이다. */
@@ -90,7 +91,7 @@ namespace sw
         IAccountPresence*                   _pPresence;
         IGroupChannelMembership*            _pGroupChannels;
         OnlineServiceHost*                  _pHost; ///< 붙은 호스트이다(첫 서비스 틱에 붙는다). 붙었는지만 본다
-        int64                               _nowMs;
+        UnixMilliseconds                    _nowMs;
         int64                               _reconnectGraceMs;
     };
 } // namespace sw

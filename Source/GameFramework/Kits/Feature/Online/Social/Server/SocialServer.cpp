@@ -143,9 +143,9 @@ namespace sw
             (void)host.respondError( context._token, OnlineError::kInvalidRequest );
             return;
         }
-        const uint64    requestTag = _pendingTable.add( context._token );
-        const AccountID selfID     = context._accountID;
-        const int64     nowMs      = context._nowMs;
+        const uint64           requestTag = _pendingTable.add( context._token );
+        const AccountID        selfID     = context._accountID;
+        const UnixMilliseconds nowMs      = context._nowMs;
         if ( context._method == SocialMethod::kRequestFriendByName )
         {
             _pSocialService->requestFriendByName( selfID, request._text, nowMs, requestTag );
@@ -195,7 +195,7 @@ namespace sw
         }
     }
 
-    void SocialServer::onServiceTick( OnlineServiceHost& host, int64 nowMs )
+    void SocialServer::onServiceTick( OnlineServiceHost& host, UnixMilliseconds nowMs )
     {
         if ( _pHost == nullptr )
             attachHost( host );

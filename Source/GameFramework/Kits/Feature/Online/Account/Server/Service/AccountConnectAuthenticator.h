@@ -12,6 +12,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Network/Connection/NetHostSecurity.h"
 #include "Core/String/hashed_string.h"
+#include "Core/Time/TimePoint.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -33,7 +34,7 @@ namespace sw
          */
         AccountConnectAuthenticator( const LoginTicketAuthority* pAuthority, const hashed_string& serverID, const IConnectAdmission& admission );
 
-        void setNowMs( int64 nowMs ) { _nowMs.store( nowMs, std::memory_order_relaxed ); }
+        void setNowMs( UnixMilliseconds nowMs ) { _nowMs.store( nowMs.count(), std::memory_order_relaxed ); }
 
         [[nodiscard]] bool findSessionSecret( const uint8* pToken, int32 tokenSize, NetSessionSecret& outSecret, uint64& outPrincipalID ) override;
 

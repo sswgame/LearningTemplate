@@ -14,6 +14,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Time/TimePoint.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProvider.h"
@@ -37,9 +38,9 @@ namespace sw
         ~TicketQueryLoginProvider() override;
 
         const utf8* getName() const override { return _settings._name.c_str(); }
-        uint64      submitVerification( const vector<uint8>& ticketBytes, int64 nowMs ) override;
+        uint64      submitVerification( const vector<uint8>& ticketBytes, UnixMilliseconds nowMs ) override;
         int32       pollVerifications( vector<PlatformLoginVerification>& outListVerification ) override;
-        void        update( int64 nowMs ) override;
+        void        update( UnixMilliseconds nowMs ) override;
 
         /** @brief 쿼리에 그대로 실을 수 있는 글(영숫자 · `-` · `_` · `.`)이면 true 입니다. 키와 티켓을 검사합니다. */
         static bool isQuerySafe( string_view text );

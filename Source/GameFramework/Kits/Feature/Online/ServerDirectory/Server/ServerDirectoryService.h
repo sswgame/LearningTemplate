@@ -17,6 +17,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Time/TimePoint.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -104,43 +105,43 @@ namespace sw
         void shutdown();
 
         /** @brief 목록 읽기, 주기적인 다시 읽기, 기간 경계 판정을 합니다. 라우터와 저장소의 완료는 호스트(또는 서버 루프)가 비웁니다. */
-        void update( int64 nowMs );
+        void update( UnixMilliseconds nowMs );
         /** @brief 다른 서버가 점검이나 공지를 바꿨음을 버스(`ServerDirectoryBus::kChangedTopic`)로 받았을 때 부릅니다. 다음 tick 에 다시 읽습니다. */
         void notifyChanged();
         /** @brief 보이는 상태가 지난번 이후 바뀌었으면 true 입니다. 읽으면 표시를 지웁니다. */
         [[nodiscard]] bool takeStatusChange();
 
         // 클라이언트 요청 함수들이며 동기이고 메모리에서 처리한다
-        ServerDirectoryStatus makeStatus( int64 nowMs ) const;
-        ServerAssignment      assignServer( AccountID accountID, const ServerAssignmentRequest& request, int64 nowMs );
-        ServerDirectoryResult listServers( string_view kind, int64 nowMs, vector<ServerListEntry>& outListEntry ) const;
+        ServerDirectoryStatus makeStatus( UnixMilliseconds nowMs ) const;
+        ServerAssignment      assignServer( AccountID accountID, const ServerAssignmentRequest& request, UnixMilliseconds nowMs );
+        ServerDirectoryResult listServers( string_view kind, UnixMilliseconds nowMs, vector<ServerListEntry>& outListEntry ) const;
         /** @brief 지금 @p kind 에 걸린 점검이 @p accountID 를 막으면 true 입니다. 계정 서버와 게임 서버가 조립 단계에서 물을 수 있습니다. 막으면 그 점검 창을 @p pOutWindow 에 채웁니다. */
-        bool isBlockedByMaintenance( string_view kind, AccountID accountID, int64 nowMs, MaintenanceWindow* pOutWindow = nullptr ) const;
+        bool isBlockedByMaintenance( string_view kind, AccountID accountID, UnixMilliseconds nowMs, MaintenanceWindow* pOutWindow = nullptr ) const;
 
         // 변경 함수들이며 비동기이다. 완료는 drainCompletions 로 받는다. @p actorID 는 감사 기록의 GM 계정이며 0이면 system 이다.
-        void setMaintenance( const MaintenanceWindow& window, AccountID actorID, string_view memo, int64 nowMs, uint64 requestTag );
-        void clearMaintenance( string_view scope, AccountID actorID, string_view memo, int64 nowMs, uint64 requestTag ) override;
-        void postNotice( const ServiceNotice& notice, AccountID actorID, int64 nowMs, uint64 requestTag );
-        void removeNotice( uint64 noticeID, AccountID actorID, int64 nowMs, uint64 requestTag ) override;
+        void setMaintenance( const MaintenanceWindow& window, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag );
+        void clearMaintenance( string_view scope, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag ) override;
+        void postNotice( const ServiceNotice& notice, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag );
+        void removeNotice( uint64 noticeID, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag ) override;
 
         void drainCompletions( vector<ServerDirectoryCompletion>& outListCompletion ) { _completionBuffer.drainTo( outListCompletion ); }
 
         // IServerDirectoryControl — GM 키트가 서버 조립 문맥으로 부른다
-        void setMaintenance( const ServerDirectoryMaintenanceChange& change, AccountID actorID, string_view memo, int64 nowMs, uint64 requestTag ) override;
-        void postNotice( const ServerDirectoryNoticeChange& change, AccountID actorID, int64 nowMs, uint64 requestTag ) override;
+        void setMaintenance( const ServerDirectoryMaintenanceChange& change, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag ) override;
+        void postNotice( const ServerDirectoryNoticeChange& change, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag ) override;
         void drainControlCompletions( vector<ServerDirectoryControlCompletion>& outListCompletion ) override;
 
         uint64 getStatusRevision() const { return _statusRevision; }
         int32  getPendingCount() const { return _pendingCount; }
 
         /** @brief 저장소 작업의 `complete` 가 호출합니다. 키트 안에서만 씁니다. */
-        void applyReload( vector<MaintenanceWindow>&& listMaintenance, vector<ServiceNotice>&& listNotice, bool bReadOk, int64 nowMs );
+        void applyReload( vector<MaintenanceWindow>&& listMaintenance, vector<ServiceNotice>&& listNotice, bool bReadOk, UnixMilliseconds nowMs );
         void applyWrite( uint64 requestTag, ServerDirectoryResult result );
 
     private:
-        void                  startReload( int64 nowMs );
-        void                  markStatusIfChanged( int64 nowMs );
-        uint64                computeVisibleHash( int64 nowMs ) const;
+        void                  startReload( UnixMilliseconds nowMs );
+        void                  markStatusIfChanged( UnixMilliseconds nowMs );
+        uint64                computeVisibleHash( UnixMilliseconds nowMs ) const;
         ServerRegistryReader* findReader( string_view kind ) const;
         void                  submitWrite( unique_ptr<ServerDirectoryWriteWork> work );
 
@@ -150,7 +151,7 @@ namespace sw
         EventBuffer<ServerDirectoryCompletion>   _completionBuffer;
         ServerDirectoryServiceConfig             _settings;
         ServerDirectoryDependencies              _dependencies;
-        int64                                    _lastReloadMs;
+        UnixMilliseconds                         _lastReloadMs;
         uint64                                   _lastVisibleHash;
         uint64                                   _statusRevision;
         int32                                    _pendingCount;

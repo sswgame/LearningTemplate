@@ -109,7 +109,7 @@ namespace sw
         return _clientSecret;
     }
 
-    uint64 AppleLoginProvider::submitForm( const string& url, const vector<HTTPHeader>& listForm, int64 nowMs )
+    uint64 AppleLoginProvider::submitForm( const string& url, const vector<HTTPHeader>& listForm, UnixMilliseconds nowMs )
     {
         const string      body = HTTPUtil::encodeForm( listForm );
         HTTPClientRequest request;
@@ -119,10 +119,10 @@ namespace sw
         request._bodyBytes = AppleLoginProviderInternal::toBytes( body );
         request._listHeader.push_back( HTTPHeader{ "Content-Type", "application/x-www-form-urlencoded" } );
         request._listHeader.push_back( HTTPHeader{ "Accept", "application/json" } );
-        return _pAppleHTTPClient->submitRequest( request, nowMs );
+        return _pAppleHTTPClient->submitRequest( request, nowMs.count() );
     }
 
-    uint64 AppleLoginProvider::submitVerification( const vector<uint8>& ticketBytes, int64 nowMs )
+    uint64 AppleLoginProvider::submitVerification( const vector<uint8>& ticketBytes, UnixMilliseconds nowMs )
     {
         string idToken;
         string nonce;
@@ -137,9 +137,9 @@ namespace sw
         return pending._outerID;
     }
 
-    void AppleLoginProvider::submitExchange( PendingVerification& pending, int64 nowMs )
+    void AppleLoginProvider::submitExchange( PendingVerification& pending, UnixMilliseconds nowMs )
     {
-        const string clientSecret = makeClientSecret( UnixMilliseconds{ nowMs } ); // 서버 루프의 nowMs 는 유닉스 밀리초다
+        const string clientSecret = makeClientSecret( nowMs );
         if ( clientSecret.empty() )
         {
             _listDone.push_back( pending._verified ); // 연동 비밀 없이 끝낸다 — 로그인은 성공이다
@@ -181,7 +181,7 @@ namespace sw
         return count;
     }
 
-    void AppleLoginProvider::update( int64 nowMs )
+    void AppleLoginProvider::update( UnixMilliseconds nowMs )
     {
         _oidc.update( nowMs );
         _listInnerScratch.clear();
@@ -205,7 +205,7 @@ namespace sw
                 break;
             }
         }
-        _pAppleHTTPClient->update( nowMs );
+        _pAppleHTTPClient->update( nowMs.count() );
         vector<HTTPClientResponse> listResponse;
         (void)_pAppleHTTPClient->pollResponses( listResponse );
         for ( const HTTPClientResponse& response : listResponse )
@@ -237,10 +237,10 @@ namespace sw
         }
     }
 
-    uint64 AppleLoginProvider::submitRevocation( string_view linkSecret, int64 nowMs )
+    uint64 AppleLoginProvider::submitRevocation( string_view linkSecret, UnixMilliseconds nowMs )
     {
         const uint64 revocationID = _nextRevocationID++;
-        const string clientSecret = makeClientSecret( UnixMilliseconds{ nowMs } ); // 서버 루프의 nowMs 는 유닉스 밀리초다
+        const string clientSecret = makeClientSecret( nowMs );
         if ( clientSecret.empty() )
         {
             PlatformLoginRevocation& done = _listRevocationDone.emplace_back();

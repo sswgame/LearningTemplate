@@ -98,7 +98,7 @@ namespace sw
                 (void)host.respondError( context._token, OnlineError::kInvalidRequest );
                 return;
             }
-            registration._registeredMs = context._nowMs; // 등록 시각은 서버 시계로 정한다. 한도를 넘으면 가장 오래된 것을 밀어낸다
+            registration._registeredMs = context._nowMs.count(); // 등록 시각은 서버 시계로 정한다. 한도를 넘으면 가장 오래된 것을 밀어낸다
             _pDispatcher->registerDevice( context._accountID, registration, _pendingTable.add( context._token ) );
             return;
         }
@@ -111,7 +111,7 @@ namespace sw
         _pDispatcher->unregisterDevice( context._accountID, key._providerID, key._token, _pendingTable.add( context._token ) );
     }
 
-    void LiveOpsServer::onServiceTick( OnlineServiceHost& host, int64 nowMs )
+    void LiveOpsServer::onServiceTick( OnlineServiceHost& host, UnixMilliseconds nowMs )
     {
         if ( _pHost == nullptr )
             attachHost( host );
@@ -150,7 +150,7 @@ namespace sw
             _pService->notifyChanged(); // 못 읽으면(의미 버전이 다름) 주기 다시 읽기를 기다린다
     }
 
-    void LiveOpsServer::announceStarts( int64 nowMs )
+    void LiveOpsServer::announceStarts( UnixMilliseconds nowMs )
     {
         _listStartScratch.clear();
         _pService->takeStartedEvents( _listStartScratch );

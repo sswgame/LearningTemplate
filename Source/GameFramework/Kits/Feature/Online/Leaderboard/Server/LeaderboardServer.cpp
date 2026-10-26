@@ -135,7 +135,7 @@ namespace sw
             _pService->dropAccountStats( accountID );
     }
 
-    void LeaderboardServer::onServiceTick( OnlineServiceHost& host, int64 nowMs )
+    void LeaderboardServer::onServiceTick( OnlineServiceHost& host, UnixMilliseconds nowMs )
     {
         (void)nowMs;
         if ( _pService == nullptr )

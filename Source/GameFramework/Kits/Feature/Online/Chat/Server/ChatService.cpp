@@ -54,7 +54,7 @@ namespace sw
         class ChatSanctionWork final : public IServiceStoreWork
         {
         public:
-            ChatSanctionWork( ChatService* pService, AccountID accountID, int64 nowMs )
+            ChatSanctionWork( ChatService* pService, AccountID accountID, UnixMilliseconds nowMs )
                 : _pService{ pService }
                 , _accountID{ accountID }
                 , _nowMs{ nowMs }
@@ -69,7 +69,7 @@ namespace sw
                 const ServiceStoreResult result = ServiceSanction::readState( connection, _accountID, state );
                 if ( result != ServiceStoreResult::Ok )
                     return;
-                if ( ServiceSanction::isActive( state, ServiceSanctionKind::ChatMute, _nowMs ) )
+                if ( ServiceSanction::isActive( state, ServiceSanctionKind::ChatMute, _nowMs.count() ) )
                     _muteUntilMs = state._arrUntilMs[static_cast<int32>( ServiceSanctionKind::ChatMute )];
                 _bReadOk = SW_TRUE;
             }
@@ -77,11 +77,11 @@ namespace sw
             void complete() override { _pService->applySanction( _accountID, _muteUntilMs, _bReadOk == SW_TRUE, _nowMs ); }
 
         private:
-            ChatService* _pService;
-            AccountID    _accountID;
-            int64        _nowMs;
-            int64        _muteUntilMs;
-            uint8        _bReadOk;
+            ChatService*     _pService;
+            AccountID        _accountID;
+            UnixMilliseconds _nowMs;
+            int64            _muteUntilMs;
+            uint8            _bReadOk;
         };
 
         /** @brief 쌓인 기록을 한 트랜잭션으로 쓰고, 정리할 채널이 있으면 보존 기간이 지난 기록을 지웁니다. */
@@ -207,7 +207,7 @@ namespace sw
         class ChatReportWork final : public IServiceStoreWork
         {
         public:
-            ChatReportWork( ChatService* pService, const ChatReportRequest& request, AccountID reporterID, uint64 uniqueID, int64 nowMs, uint64 requestTag )
+            ChatReportWork( ChatService* pService, const ChatReportRequest& request, AccountID reporterID, uint64 uniqueID, UnixMilliseconds nowMs, uint64 requestTag )
                 : _request{ request }
                 , _pService{ pService }
                 , _reporterID{ reporterID }
@@ -254,7 +254,7 @@ namespace sw
                 report._context    = _request._channelID;
                 report._reason     = _request._reason;
                 report._reporterID = _reporterID;
-                report._createdMs  = _nowMs;
+                report._createdMs  = _nowMs.count();
                 ServiceTransaction transaction;
                 if ( ServiceReportStore::stageOpen( transaction, report, _uniqueID ) == false )
                 {
@@ -272,7 +272,7 @@ namespace sw
             ChatService*      _pService;
             AccountID         _reporterID;
             uint64            _uniqueID;
-            int64             _nowMs;
+            UnixMilliseconds  _nowMs;
             uint64            _requestTag;
             ChatResult        _result;
         };
@@ -356,7 +356,7 @@ namespace sw
         return channelIt != _mapChannelToMember.end() ? static_cast<int32>( channelIt->second.size() ) : 0;
     }
 
-    ChatService::Member* ChatService::ensureMember( AccountID accountID, int64 nowMs )
+    ChatService::Member* ChatService::ensureMember( AccountID accountID, UnixMilliseconds nowMs )
     {
         const auto memberIt = _mapAccountToMember.find( accountID );
         if ( memberIt != _mapAccountToMember.end() )
@@ -370,12 +370,12 @@ namespace sw
         return &member;
     }
 
-    bool ChatService::isSanctionFresh( const Member& member, int64 nowMs ) const
+    bool ChatService::isSanctionFresh( const Member& member, UnixMilliseconds nowMs ) const
     {
-        return member._sanctionReadMs >= 0 && nowMs - member._sanctionReadMs < _settings._sanctionCacheMs;
+        return member._sanctionReadMs >= 0 && nowMs.count() - member._sanctionReadMs < _settings._sanctionCacheMs;
     }
 
-    void ChatService::startSanctionRead( AccountID accountID, Member& member, int64 nowMs )
+    void ChatService::startSanctionRead( AccountID accountID, Member& member, UnixMilliseconds nowMs )
     {
         if ( member._bSanctionReading == SW_TRUE )
             return;
@@ -384,7 +384,7 @@ namespace sw
         _dependencies._pStore->submit( make_unique<ChatSanctionWork>( this, accountID, nowMs ) );
     }
 
-    void ChatService::applySanction( AccountID accountID, int64 muteUntilMs, bool bReadOk, int64 nowMs )
+    void ChatService::applySanction( AccountID accountID, int64 muteUntilMs, bool bReadOk, UnixMilliseconds nowMs )
     {
         --_pendingStoreCount;
         const auto memberIt = _mapAccountToMember.find( accountID );
@@ -395,7 +395,7 @@ namespace sw
         if ( bReadOk )
         {
             member._muteUntilMs    = muteUntilMs;
-            member._sanctionReadMs = nowMs;
+            member._sanctionReadMs = nowMs.count();
         }
         vector<PendingSend> listPending;
         listPending.swap( member._listPendingSend );
@@ -460,7 +460,7 @@ namespace sw
             _busTopicBuffer.push( ChatBusTopicChange{ ChatProtocol::makeChannelTopic( channelID ), SW_FALSE } );
     }
 
-    ChatResult ChatService::addMember( AccountID accountID, string_view channelID, int64 nowMs )
+    ChatResult ChatService::addMember( AccountID accountID, string_view channelID, UnixMilliseconds nowMs )
     {
         ChatChannelKind kind = ChatChannelKind::World;
         if ( ChatChannelID::parseKind( channelID, kind ) == false || kind == ChatChannelKind::Whisper )
@@ -502,7 +502,7 @@ namespace sw
         _spamGuard.forget( accountID );
     }
 
-    void ChatService::joinChannel( AccountID accountID, string_view channelID, int64 nowMs, uint64 requestTag )
+    void ChatService::joinChannel( AccountID accountID, string_view channelID, UnixMilliseconds nowMs, uint64 requestTag )
     {
         ChatChannelKind kind = ChatChannelKind::World;
         if ( ChatChannelID::parseKind( channelID, kind ) == false )
@@ -530,12 +530,12 @@ namespace sw
         completeSimple( ChatMethod::kLeave, requestTag, ChatResult::Ok );
     }
 
-    void ChatService::sendMessage( AccountID accountID, string_view channelID, string_view text, int64 nowMs, uint64 requestTag )
+    void ChatService::sendMessage( AccountID accountID, string_view channelID, string_view text, UnixMilliseconds nowMs, uint64 requestTag )
     {
         submitSend( accountID, PendingSend{ string( channelID ), string( text ), requestTag, nowMs, kInvalidAccountID } );
     }
 
-    void ChatService::sendWhisper( AccountID accountID, AccountID recipientID, string_view text, int64 nowMs, uint64 requestTag )
+    void ChatService::sendWhisper( AccountID accountID, AccountID recipientID, string_view text, UnixMilliseconds nowMs, uint64 requestTag )
     {
         if ( recipientID == kInvalidAccountID || recipientID == accountID )
         {
@@ -561,7 +561,7 @@ namespace sw
                 completeSimple( method, send._requestTag, ChatResult::RateLimited, _settings._pendingSendRetryAfterMs );
                 return;
             }
-            const int64 nowMs = send._nowMs;
+            const UnixMilliseconds nowMs = send._nowMs;
             pMember->_listPendingSend.push_back( std::move( send ) );
             startSanctionRead( accountID, *pMember, nowMs );
             return;
@@ -571,17 +571,17 @@ namespace sw
         processSend( accountID, *pMember, send );
     }
 
-    ChatResult ChatService::prepareText( AccountID accountID, Member& member, string_view text, int64 nowMs, string& outText, int64& outRetryAfterMs )
+    ChatResult ChatService::prepareText( AccountID accountID, Member& member, string_view text, UnixMilliseconds nowMs, string& outText, int64& outRetryAfterMs )
     {
         outRetryAfterMs = 0;
         if ( text.empty() || text.size() > static_cast<size_t>( ChatLimit::kMaxTextSize ) )
             return ChatResult::Invalid;
-        if ( member._muteUntilMs != 0 && nowMs < member._muteUntilMs )
+        if ( member._muteUntilMs != 0 && nowMs.count() < member._muteUntilMs )
         {
-            outRetryAfterMs = member._muteUntilMs - nowMs;
+            outRetryAfterMs = member._muteUntilMs - nowMs.count();
             return ChatResult::Muted;
         }
-        const ChatSpamVerdict spam = _spamGuard.check( accountID, text, nowMs, outRetryAfterMs );
+        const ChatSpamVerdict spam = _spamGuard.check( accountID, text, nowMs.count(), outRetryAfterMs );
         if ( spam == ChatSpamVerdict::RateLimited )
             return ChatResult::RateLimited;
         if ( spam == ChatSpamVerdict::Repeated )
@@ -627,7 +627,7 @@ namespace sw
         message._senderName  = member._displayName;
         message._recipientID = send._recipientID;
         message._text        = std::move( filtered );
-        message._sentMs      = send._nowMs;
+        message._sentMs      = send._nowMs.count();
         message._serverID    = _dependencies._serverID;
         message._sequence    = ++_sequence;
 
@@ -736,7 +736,7 @@ namespace sw
         _listHistoryQueue.push_back( message );
     }
 
-    void ChatService::update( int64 nowMs )
+    void ChatService::update( UnixMilliseconds nowMs )
     {
         const bool bNothingToFlush = _dependencies._pStore == nullptr || _bHistoryWriting == SW_TRUE || _listHistoryQueue.empty();
         if ( bNothingToFlush )
@@ -753,7 +753,7 @@ namespace sw
         }
         _bHistoryWriting = SW_TRUE;
         ++_pendingStoreCount;
-        _dependencies._pStore->submit( sw::make_unique<ChatHistoryWriteWork>( this, std::move( listMessage ), std::move( listTrimChannel ), nowMs - _settings._historyRetentionMs ) );
+        _dependencies._pStore->submit( sw::make_unique<ChatHistoryWriteWork>( this, std::move( listMessage ), std::move( listTrimChannel ), nowMs.count() - _settings._historyRetentionMs ) );
     }
 
     void ChatService::applyHistoryWrite( bool bCommitted, int32 messageCount, int32 rejectedCount )
@@ -823,7 +823,7 @@ namespace sw
         return VectorUtil::contains( listChannel, channelID );
     }
 
-    void ChatService::reportMessage( AccountID accountID, const ChatReportRequest& request, int64 nowMs, uint64 requestTag )
+    void ChatService::reportMessage( AccountID accountID, const ChatReportRequest& request, UnixMilliseconds nowMs, uint64 requestTag )
     {
         ChatChannelKind kind           = ChatChannelKind::World;
         const bool      bInvalidReport = ChatChannelID::parseKind( request._channelID, kind ) == false || request._sentMs < 0 ||
@@ -839,7 +839,7 @@ namespace sw
             return;
         }
         int64 retryAfterMs = 0;
-        if ( _reportGuard.tryConsume( accountID, nowMs, retryAfterMs ) == false )
+        if ( _reportGuard.tryConsume( accountID, nowMs.count(), retryAfterMs ) == false )
         {
             completeSimple( ChatMethod::kReport, requestTag, ChatResult::RateLimited, retryAfterMs );
             return;

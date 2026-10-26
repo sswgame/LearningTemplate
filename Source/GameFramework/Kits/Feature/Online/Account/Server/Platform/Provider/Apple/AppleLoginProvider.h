@@ -53,11 +53,11 @@ namespace sw
         ~AppleLoginProvider() override;
 
         const utf8* getName() const override { return _settings._name.c_str(); }
-        uint64      submitVerification( const vector<uint8>& ticketBytes, int64 nowMs ) override;
+        uint64      submitVerification( const vector<uint8>& ticketBytes, UnixMilliseconds nowMs ) override;
         int32       pollVerifications( vector<PlatformLoginVerification>& outListVerification ) override;
-        void        update( int64 nowMs ) override;
+        void        update( UnixMilliseconds nowMs ) override;
         bool        supportsRevocation() const override { return true; }
-        uint64      submitRevocation( string_view linkSecret, int64 nowMs ) override;
+        uint64      submitRevocation( string_view linkSecret, UnixMilliseconds nowMs ) override;
         int32       pollRevocations( vector<PlatformLoginRevocation>& outListRevocation ) override;
 
         /** @brief 티켓 `ID 토큰|nonce|인가 코드` 를 나눕니다. 인가 코드가 없으면 @p outCode 가 빕니다. */
@@ -75,10 +75,10 @@ namespace sw
             uint64                    _exchangeRequestID{ 0 }; ///< 0 이면 교환 전이다
         };
 
-        void   submitExchange( PendingVerification& pending, int64 nowMs );
+        void   submitExchange( PendingVerification& pending, UnixMilliseconds nowMs );
         void   finishExchange( PendingVerification& pending, const HTTPClientResponse& response );
         void   finishRevocation( uint64 revocationID, const HTTPClientResponse& response );
-        uint64 submitForm( const string& url, const vector<HTTPHeader>& listForm, int64 nowMs );
+        uint64 submitForm( const string& url, const vector<HTTPHeader>& listForm, UnixMilliseconds nowMs );
 
         PlatformLoginProviderConfig       _settings;
         OidcLoginProvider                 _oidc;

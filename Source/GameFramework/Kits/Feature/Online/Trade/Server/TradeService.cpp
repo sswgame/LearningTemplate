@@ -23,7 +23,7 @@ namespace sw
                 uint64       _seed;
 
                 TradeWork( TradeService* pService, const ITradePolicy* pPolicy, const ILedgerPolicy* pLedgerPolicy, uint64 serverID, TradeOperation operation,
-                           uint64 requestTag, int64 nowMs )
+                           uint64 requestTag, UnixMilliseconds nowMs )
                     : _command{}
                     , _tradeID{ 0 }
                     , _fromID{ kInvalidAccountID }
@@ -49,22 +49,22 @@ namespace sw
                     {
                         case TradeOperation::Invite:
                         {
-                            _completion._result = logic.invite( _fromID, _toID, _seed, _nowMs, _completion._snapshot );
+                            _completion._result = logic.invite( _fromID, _toID, _seed, _nowMs.count(), _completion._snapshot );
                             break;
                         }
                         case TradeOperation::Expire:
                         {
-                            _completion._result = logic.closeIfIdle( _tradeID, _nowMs, _completion._snapshot );
+                            _completion._result = logic.closeIfIdle( _tradeID, _nowMs.count(), _completion._snapshot );
                             break;
                         }
                         case TradeOperation::Leave:
                         {
-                            _completion._result = logic.closeForAccount( _fromID, _command._reason, _nowMs, _completion._snapshot );
+                            _completion._result = logic.closeForAccount( _fromID, _command._reason, _nowMs.count(), _completion._snapshot );
                             break;
                         }
                         case TradeOperation::Recover:
                         {
-                            _completion._result = logic.recoverOwned( _nowMs, _listChanged );
+                            _completion._result = logic.recoverOwned( _nowMs.count(), _listChanged );
                             break;
                         }
                         case TradeOperation::Respond:
@@ -73,7 +73,7 @@ namespace sw
                         case TradeOperation::Confirm:
                         case TradeOperation::Cancel:
                         {
-                            _completion._result = logic.applyCommand( _tradeID, _command, _nowMs, _completion._snapshot, _completion._ledger );
+                            _completion._result = logic.applyCommand( _tradeID, _command, _nowMs.count(), _completion._snapshot, _completion._ledger );
                             break;
                         }
                     }
@@ -93,7 +93,7 @@ namespace sw
                 const ITradePolicy*   _pPolicy;
                 const ILedgerPolicy*  _pLedgerPolicy;
                 uint64                _serverID;
-                int64                 _nowMs;
+                UnixMilliseconds      _nowMs;
             };
         };
     } // namespace
@@ -131,7 +131,7 @@ namespace sw
         _pStore = nullptr;
     }
 
-    void TradeService::recoverOwnedTrades( int64 nowMs )
+    void TradeService::recoverOwnedTrades( UnixMilliseconds nowMs )
     {
         unique_ptr<TradeServiceInternal::TradeWork> work =
             make_unique<TradeServiceInternal::TradeWork>( this, _pPolicy, _pLedgerPolicy, _serverID, TradeOperation::Recover, uint64{ 0 }, nowMs );
@@ -139,18 +139,18 @@ namespace sw
         _pStore->submit( std::move( work ) );
     }
 
-    void TradeService::invite( AccountID fromID, AccountID toID, int64 nowMs, uint64 requestTag )
+    void TradeService::invite( AccountID fromID, AccountID toID, UnixMilliseconds nowMs, uint64 requestTag )
     {
         unique_ptr<TradeServiceInternal::TradeWork> work =
             make_unique<TradeServiceInternal::TradeWork>( this, _pPolicy, _pLedgerPolicy, _serverID, TradeOperation::Invite, requestTag, nowMs );
         work->_fromID = fromID;
         work->_toID   = toID;
-        work->_seed   = ++_nextSeed ^ static_cast<uint64>( nowMs );
+        work->_seed   = ++_nextSeed ^ static_cast<uint64>( nowMs.count() );
         ++_pendingCount;
         _pStore->submit( std::move( work ) );
     }
 
-    void TradeService::respondInvite( AccountID responderID, uint64 tradeID, bool bAccept, int64 nowMs, uint64 requestTag )
+    void TradeService::respondInvite( AccountID responderID, uint64 tradeID, bool bAccept, UnixMilliseconds nowMs, uint64 requestTag )
     {
         TradeCommand command;
         command._actorID = responderID;
@@ -158,7 +158,7 @@ namespace sw
         submitCommand( TradeOperation::Respond, tradeID, command, nowMs, requestTag );
     }
 
-    void TradeService::setOffer( AccountID actorID, uint64 tradeID, const vector<TradeLeg>& listLeg, int64 nowMs, uint64 requestTag )
+    void TradeService::setOffer( AccountID actorID, uint64 tradeID, const vector<TradeLeg>& listLeg, UnixMilliseconds nowMs, uint64 requestTag )
     {
         TradeCommand command;
         command._actorID = actorID;
@@ -167,7 +167,7 @@ namespace sw
         submitCommand( TradeOperation::SetOffer, tradeID, command, nowMs, requestTag );
     }
 
-    void TradeService::lock( AccountID actorID, uint64 tradeID, int64 nowMs, uint64 requestTag )
+    void TradeService::lock( AccountID actorID, uint64 tradeID, UnixMilliseconds nowMs, uint64 requestTag )
     {
         TradeCommand command;
         command._actorID = actorID;
@@ -175,7 +175,7 @@ namespace sw
         submitCommand( TradeOperation::Lock, tradeID, command, nowMs, requestTag );
     }
 
-    void TradeService::confirm( AccountID actorID, uint64 tradeID, uint32 seenOwnRevision, uint32 seenPeerRevision, int64 nowMs, uint64 requestTag )
+    void TradeService::confirm( AccountID actorID, uint64 tradeID, uint32 seenOwnRevision, uint32 seenPeerRevision, UnixMilliseconds nowMs, uint64 requestTag )
     {
         TradeCommand command;
         command._actorID          = actorID;
@@ -185,7 +185,7 @@ namespace sw
         submitCommand( TradeOperation::Confirm, tradeID, command, nowMs, requestTag );
     }
 
-    void TradeService::cancel( AccountID actorID, uint64 tradeID, int64 nowMs, uint64 requestTag )
+    void TradeService::cancel( AccountID actorID, uint64 tradeID, UnixMilliseconds nowMs, uint64 requestTag )
     {
         TradeCommand command;
         command._actorID = actorID;
@@ -194,7 +194,7 @@ namespace sw
         submitCommand( TradeOperation::Cancel, tradeID, command, nowMs, requestTag );
     }
 
-    void TradeService::closeForAccount( AccountID accountID, TradeCloseReason reason, int64 nowMs )
+    void TradeService::closeForAccount( AccountID accountID, TradeCloseReason reason, UnixMilliseconds nowMs )
     {
         unique_ptr<TradeServiceInternal::TradeWork> work =
             make_unique<TradeServiceInternal::TradeWork>( this, _pPolicy, _pLedgerPolicy, _serverID, TradeOperation::Leave, uint64{ 0 }, nowMs );
@@ -204,11 +204,11 @@ namespace sw
         _pStore->submit( std::move( work ) );
     }
 
-    void TradeService::update( int64 nowMs )
+    void TradeService::update( UnixMilliseconds nowMs )
     {
         for ( auto tradeIt = _mapTradeToDeadline.begin(); tradeIt != _mapTradeToDeadline.end(); )
         {
-            if ( nowMs < tradeIt->second )
+            if ( nowMs.count() < tradeIt->second )
             {
                 ++tradeIt;
                 continue;
@@ -236,7 +236,7 @@ namespace sw
             _completionBuffer.push( std::move( completion ) );
     }
 
-    void TradeService::submitCommand( TradeOperation operation, uint64 tradeID, const TradeCommand& command, int64 nowMs, uint64 requestTag )
+    void TradeService::submitCommand( TradeOperation operation, uint64 tradeID, const TradeCommand& command, UnixMilliseconds nowMs, uint64 requestTag )
     {
         unique_ptr<TradeServiceInternal::TradeWork> work =
             make_unique<TradeServiceInternal::TradeWork>( this, _pPolicy, _pLedgerPolicy, _serverID, operation, requestTag, nowMs );

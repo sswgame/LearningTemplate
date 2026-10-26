@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Container/unordered_map.h"
+#include "Core/Time/TimePoint.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/PushNotificationProvider.h"
@@ -31,9 +32,9 @@ namespace sw
         void scriptResult( string_view deviceToken, PushDeliveryStatus status, int32 count = 1, int64 retryAfterMs = 0 );
 
         string_view getProviderID() const override { return "fake"; }
-        void        send( uint64 deliveryID, const string& deviceToken, const string& locale, const PushNotificationMessage& message, int64 nowMs ) override;
+        void        send( uint64 deliveryID, const string& deviceToken, const string& locale, const PushNotificationMessage& message, UnixMilliseconds nowMs ) override;
         bool        supportsTopics() const override { return true; }
-        void        sendToTopic( uint64 deliveryID, string_view topic, const PushNotificationMessage& message, int64 nowMs ) override;
+        void        sendToTopic( uint64 deliveryID, string_view topic, const PushNotificationMessage& message, UnixMilliseconds nowMs ) override;
         int32       pollResults( vector<PushDeliveryResult>& outListResult ) override;
 
         const vector<SentRecord>& getSent() const { return _listSent; }

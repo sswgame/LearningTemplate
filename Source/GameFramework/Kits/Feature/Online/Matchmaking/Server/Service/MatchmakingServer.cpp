@@ -205,7 +205,7 @@ namespace sw
             for ( const auto& [requestID, accountID] : _mapPresenceRequestToAccount )
             {
                 _pPresence->cancel( requestID );
-                _mapAccountToGraceEnd[accountID] = _nowMs;
+                _mapAccountToGraceEnd[accountID] = _nowMs.count();
             }
         }
         _mapPresenceRequestToAccount.clear();
@@ -263,7 +263,7 @@ namespace sw
         MatchmakingServerInternal::dispatch( *_pPartyLobby, *_pQueue, context, request, _pendingTable.add( context._token ) );
     }
 
-    void MatchmakingServer::onServiceTick( OnlineServiceHost& host, int64 nowMs )
+    void MatchmakingServer::onServiceTick( OnlineServiceHost& host, UnixMilliseconds nowMs )
     {
         _nowMs = nowMs;
         if ( _pHost == nullptr )
@@ -364,14 +364,14 @@ namespace sw
             _pPartyLobby->removeAccount( accountID );
             return;
         }
-        _mapAccountToGraceEnd[accountID] = _nowMs + _reconnectGraceMs;
+        _mapAccountToGraceEnd[accountID] = _nowMs.count() + _reconnectGraceMs;
     }
 
-    void MatchmakingServer::expireGrace( int64 nowMs )
+    void MatchmakingServer::expireGrace( UnixMilliseconds nowMs )
     {
         for ( auto graceIt = _mapAccountToGraceEnd.begin(); graceIt != _mapAccountToGraceEnd.end(); )
         {
-            if ( nowMs < graceIt->second )
+            if ( nowMs.count() < graceIt->second )
             {
                 ++graceIt;
                 continue;

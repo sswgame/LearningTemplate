@@ -17,6 +17,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Base/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/Base/Online/Cache/EphemeralStore.h"
@@ -71,7 +72,7 @@ namespace sw
         /** @brief 계정이 이 프로세스에서 떠났을 때 부릅니다. */
         void noteOffline( AccountID accountID );
         /** @brief 캐시에 다시 기록하는 주기를 처리합니다. */
-        void update( int64 nowMs );
+        void update( UnixMilliseconds nowMs );
         /** @brief 이 서버의 알림 주제(`push.<서버>`) 메시지를 이 빌드의 알림으로 바꿔 접속해 있는 계정에게 넘깁니다. 이 주제가 아니면 false 를 반환합니다. */
         bool handlePushMessage( const ServerBusMessage& message );
 
@@ -132,6 +133,6 @@ namespace sw
         OnlineServiceHost*                        _pHost;
         uint64                                    _serverID;
         uint64                                    _nextLookupID;
-        int64                                     _nextRefreshMs;
+        UnixMilliseconds                          _nextRefreshMs;
     };
 } // namespace sw

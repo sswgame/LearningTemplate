@@ -92,7 +92,7 @@ namespace sw
                 return true;
             }
 
-            void update( int64 nowMs ) override
+            void update( UnixMilliseconds nowMs ) override
             {
                 if ( _pAuthenticator != nullptr )
                     _pAuthenticator->setNowMs( nowMs );

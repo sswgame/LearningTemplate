@@ -33,7 +33,7 @@ namespace sw
             {
             }
 
-            bool sendOfflinePush( AccountID accountID, string_view titleKey, string_view bodyKey, string_view deepLink, int64 nowMs ) override
+            bool sendOfflinePush( AccountID accountID, string_view titleKey, string_view bodyKey, string_view deepLink, UnixMilliseconds nowMs ) override
             {
                 PushNotificationMessage message;
                 message._titleKey = string( titleKey );

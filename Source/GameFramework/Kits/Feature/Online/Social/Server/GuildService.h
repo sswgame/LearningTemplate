@@ -26,6 +26,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Time/TimePoint.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Social/Shared/SocialTypes.h"
@@ -71,10 +72,10 @@ namespace sw
             MemberAttached
         };
 
-        AccountID _accountID{ kInvalidAccountID };
-        uint64    _guildID{ 0 };
-        int64     _nowMs{ 0 }; ///< 이벤트를 낸 요청의 시각이다
-        Kind      _kind{ Kind::Joined };
+        AccountID        _accountID{ kInvalidAccountID };
+        uint64           _guildID{ 0 };
+        UnixMilliseconds _nowMs{ 0 }; ///< 이벤트를 낸 요청의 시각이다
+        Kind             _kind{ Kind::Joined };
     };
 
     using GuildEventDelegate = Delegate<void( const GuildEvent& )>;
@@ -85,17 +86,17 @@ namespace sw
     /** @brief 길드 요청 하나입니다. */
     struct GuildRequest
     {
-        string         _text{};                         ///< 이름이나 공지이다
-        string         _assetID{};                      ///< Deposit · Withdraw 의 자산이다
-        string         _journalKey{};                   ///< Deposit · Withdraw 의 분개 키이다. `LedgerJournalKey::makeFromIdempotency( makeAccountScope( 계정 ), 멱등 키 )`
-        AccountID      _accountID{ kInvalidAccountID }; ///< 요청한 사람이다
-        AccountID      _targetID{ kInvalidAccountID };  ///< 초대, 내보내기, 역할 변경의 대상이다
-        uint64         _guildID{ 0 };                   ///< 수락할 길드이다
-        int64          _amount{ 0 };                    ///< Deposit · Withdraw 의 양, AddExperience 의 경험치이다
-        int64          _nowMs{ 0 };
-        GuildRole      _role{ GuildRole::Member };
-        GuildOperation _operation{ GuildOperation::Get };
-        uint8          _bOpen{ SW_FALSE }; ///< SetJoinPolicy 의 값이다
+        string           _text{};                         ///< 이름이나 공지이다
+        string           _assetID{};                      ///< Deposit · Withdraw 의 자산이다
+        string           _journalKey{};                   ///< Deposit · Withdraw 의 분개 키이다. `LedgerJournalKey::makeFromIdempotency( makeAccountScope( 계정 ), 멱등 키 )`
+        AccountID        _accountID{ kInvalidAccountID }; ///< 요청한 사람이다
+        AccountID        _targetID{ kInvalidAccountID };  ///< 초대, 내보내기, 역할 변경의 대상이다
+        uint64           _guildID{ 0 };                   ///< 수락할 길드이다
+        int64            _amount{ 0 };                    ///< Deposit · Withdraw 의 양, AddExperience 의 경험치이다
+        UnixMilliseconds _nowMs{ 0 };
+        GuildRole        _role{ GuildRole::Member };
+        GuildOperation   _operation{ GuildOperation::Get };
+        uint8            _bOpen{ SW_FALSE }; ///< SetJoinPolicy 의 값이다
     };
 } // namespace sw
 
@@ -146,9 +147,9 @@ namespace sw
 
         void submit( const GuildRequest& request, uint64 requestTag );
         /** @brief 로그인한 계정의 길드를 찾아 `MemberAttached` 이벤트를 냅니다. 완료는 없습니다. */
-        void attachAccount( AccountID accountID, int64 nowMs );
+        void attachAccount( AccountID accountID, UnixMilliseconds nowMs );
         /** @brief 서버 시스템(퀘스트, 전투)이 길드 경험치를 @p amount(1 이상)만큼 늘립니다. 완료는 없고 멤버에게 GuildChanged 를 알립니다. */
-        void addExperience( uint64 guildID, int64 amount, int64 nowMs );
+        void addExperience( uint64 guildID, int64 amount, UnixMilliseconds nowMs );
         /**
          * @brief 레벨 테이블을 정합니다. @p listLevelExperience 의 i 번째 값은 레벨 i + 2 가 되는 누적 경험치이며 1 이상이고 늘어나야 합니다.
          * @return 규칙에 맞지 않으면 false 이고 테이블을 바꾸지 않습니다. 비어 있으면 모든 길드가 레벨 1 입니다.
@@ -173,7 +174,7 @@ namespace sw
         void applyOutcome( const GuildRequest& request, uint64 requestTag, GuildOutcome&& outcome );
 
     private:
-        void raiseEvent( AccountID accountID, uint64 guildID, GuildEvent::Kind kind, int64 nowMs );
+        void raiseEvent( AccountID accountID, uint64 guildID, GuildEvent::Kind kind, UnixMilliseconds nowMs );
 
         EventBuffer<GuildCompletion>    _completionBuffer;
         EventBuffer<SocialNotification> _notificationBuffer;

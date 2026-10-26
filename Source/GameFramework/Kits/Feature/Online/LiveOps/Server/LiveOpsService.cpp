@@ -43,7 +43,7 @@ namespace sw
     class LiveOpsReloadWork final : public IServiceStoreWork
     {
     public:
-        LiveOpsReloadWork( LiveOpsService* pService, int64 nowMs )
+        LiveOpsReloadWork( LiveOpsService* pService, UnixMilliseconds nowMs )
             : _listEvent{}
             , _pService{ pService }
             , _nowMs{ nowMs }
@@ -78,7 +78,7 @@ namespace sw
     private:
         vector<LiveEventDefinition> _listEvent;
         LiveOpsService*             _pService;
-        int64                       _nowMs;
+        UnixMilliseconds            _nowMs;
         uint8                       _bReadOk;
     };
 } // namespace sw
@@ -160,7 +160,7 @@ namespace sw
         SW_ASSERT( dependencies._pStore != nullptr );
         _dependencies     = dependencies;
         _bReloadRequested = SW_TRUE;
-        _lastOpenHash     = computeOpenHash( 0 ); // 빈 상태는 알리지 않는다
+        _lastOpenHash     = computeOpenHash( UnixMilliseconds{ 0 } ); // 빈 상태는 알리지 않는다
     }
 
     void LiveOpsService::shutdown()
@@ -168,7 +168,7 @@ namespace sw
         _dependencies._pBus = nullptr;
     }
 
-    void LiveOpsService::update( int64 nowMs )
+    void LiveOpsService::update( UnixMilliseconds nowMs )
     {
         if ( _dependencies._pStore == nullptr )
             return;
@@ -178,7 +178,7 @@ namespace sw
         markIfChanged( nowMs ); // 시작, 끝, 회차 경계는 다시 읽지 않아도 열린 이벤트 목록이 바뀐다
     }
 
-    void LiveOpsService::startReload( int64 nowMs )
+    void LiveOpsService::startReload( UnixMilliseconds nowMs )
     {
         _bReloadRequested = SW_FALSE;
         _bReloading       = SW_TRUE;
@@ -187,7 +187,7 @@ namespace sw
         _dependencies._pStore->submit( make_unique<LiveOpsReloadWork>( this, nowMs ) );
     }
 
-    void LiveOpsService::applyReload( vector<LiveEventDefinition>&& listEvent, bool bReadOk, int64 nowMs )
+    void LiveOpsService::applyReload( vector<LiveEventDefinition>&& listEvent, bool bReadOk, UnixMilliseconds nowMs )
     {
         --_pendingCount;
         _bReloading = SW_FALSE;
@@ -213,7 +213,7 @@ namespace sw
         _listStarted.clear();
     }
 
-    void LiveOpsService::collectStarts( int64 nowMs )
+    void LiveOpsService::collectStarts( UnixMilliseconds nowMs )
     {
         vector<OpenWindow> listOpen;
         if ( isKillSwitchOff() == false )
@@ -222,13 +222,13 @@ namespace sw
             {
                 int64 windowStartMs = 0;
                 int64 windowEndMs   = 0;
-                if ( LiveEventRules::findOpenWindow( definition, nowMs, windowStartMs, windowEndMs ) == false )
+                if ( LiveEventRules::findOpenWindow( definition, nowMs.count(), windowStartMs, windowEndMs ) == false )
                     continue;
                 listOpen.push_back( OpenWindow{ definition._eventID, windowEndMs } );
                 const auto isSameWindow = [&definition, windowEndMs]( const OpenWindow& window )
                 { return window._eventID == definition._eventID && window._windowEndMs == windowEndMs; };
                 const bool bKnown      = std::any_of( _listOpenWindow.begin(), _listOpenWindow.end(), isSameWindow );
-                const bool bJustOpened = nowMs - windowStartMs <= LiveOpsPush::kStartGraceMs;
+                const bool bJustOpened = nowMs.count() - windowStartMs <= LiveOpsPush::kStartGraceMs;
                 if ( bKnown || bJustOpened == false )
                     continue;
                 PushNotificationMessage message;
@@ -247,7 +247,7 @@ namespace sw
         _listOpenWindow = std::move( listOpen );
     }
 
-    void LiveOpsService::markIfChanged( int64 nowMs )
+    void LiveOpsService::markIfChanged( UnixMilliseconds nowMs )
     {
         collectStarts( nowMs );
         const uint64 hash = computeOpenHash( nowMs );
@@ -257,7 +257,7 @@ namespace sw
         _bStateChanged = SW_TRUE;
     }
 
-    uint64 LiveOpsService::computeOpenHash( int64 nowMs ) const
+    uint64 LiveOpsService::computeOpenHash( UnixMilliseconds nowMs ) const
     {
         using Internal = LiveOpsServiceInternal;
         uint64 hash    = HashUtil::kFnvOffset64;
@@ -268,7 +268,7 @@ namespace sw
         for ( const LiveEventDefinition& definition : _listEvent )
         {
             int64 windowEndMs = 0;
-            if ( LiveEventRules::isWindowOpen( definition, nowMs, windowEndMs ) == false )
+            if ( LiveEventRules::isWindowOpen( definition, nowMs.count(), windowEndMs ) == false )
                 continue;
             hash = Internal::combineText( hash, definition._eventID );
             hash = HashUtil::combine( hash, static_cast<uint64>( windowEndMs ) ); // 반복 회차가 바뀌어도 해시가 바뀐다
@@ -313,7 +313,7 @@ namespace sw
         return VectorUtil::findBy<&LiveEventDefinition::_eventID>( _listEvent, eventID );
     }
 
-    void LiveOpsService::computeActiveEvents( AccountID accountID, string_view region, uint32 buildVersion, int64 nowMs, bool bClientOnly,
+    void LiveOpsService::computeActiveEvents( AccountID accountID, string_view region, uint32 buildVersion, UnixMilliseconds nowMs, bool bClientOnly,
                                               vector<LiveEventState>& outListEvent ) const
     {
         if ( isKillSwitchOff() )
@@ -323,7 +323,7 @@ namespace sw
             int64 windowEndMs = 0;
             if ( bClientOnly && definition._bClientVisible == SW_FALSE )
                 continue;
-            if ( LiveEventRules::isWindowOpen( definition, nowMs, windowEndMs ) == false || LiveEventRules::isAudienceMatch( definition, accountID, region, buildVersion ) == false )
+            if ( LiveEventRules::isWindowOpen( definition, nowMs.count(), windowEndMs ) == false || LiveEventRules::isAudienceMatch( definition, accountID, region, buildVersion ) == false )
                 continue;
             LiveEventState& state = outListEvent.emplace_back();
             state._eventID        = definition._eventID;
@@ -336,11 +336,11 @@ namespace sw
         }
     }
 
-    bool LiveOpsService::isEventActive( string_view eventID, AccountID accountID, string_view region, uint32 buildVersion, int64 nowMs ) const
+    bool LiveOpsService::isEventActive( string_view eventID, AccountID accountID, string_view region, uint32 buildVersion, UnixMilliseconds nowMs ) const
     {
         const LiveEventDefinition* pDefinition = findEvent( eventID );
         int64                      windowEndMs = 0;
-        return pDefinition != nullptr && isKillSwitchOff() == false && LiveEventRules::isWindowOpen( *pDefinition, nowMs, windowEndMs ) &&
+        return pDefinition != nullptr && isKillSwitchOff() == false && LiveEventRules::isWindowOpen( *pDefinition, nowMs.count(), windowEndMs ) &&
                LiveEventRules::isAudienceMatch( *pDefinition, accountID, region, buildVersion );
     }
 
@@ -360,7 +360,7 @@ namespace sw
         return false;
     }
 
-    void LiveOpsService::putEvent( const LiveEventDefinition& definition, AccountID actorID, string_view memo, int64 nowMs, uint64 requestTag )
+    void LiveOpsService::putEvent( const LiveEventDefinition& definition, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag )
     {
         if ( LiveEventRules::isValid( definition ) == false )
         {
@@ -378,12 +378,12 @@ namespace sw
         work->_auditEntry._action  = "liveops.event.put";
         work->_auditEntry._subject = "liveops/" + definition._eventID;
         work->_auditEntry._memo    = string( memo );
-        work->_auditEntry._timeMs  = nowMs;
+        work->_auditEntry._timeMs  = nowMs.count();
         work->_requestTag          = requestTag;
         submitWrite( std::move( work ) );
     }
 
-    void LiveOpsService::putEventJSON( string_view definitionJSON, AccountID actorID, string_view memo, int64 nowMs, uint64 requestTag )
+    void LiveOpsService::putEventJSON( string_view definitionJSON, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag )
     {
         LiveEventDefinition definition;
         if ( LiveOpsProtocol::readEventJSON( definitionJSON, definition ) == false )
@@ -421,7 +421,7 @@ namespace sw
         }
     }
 
-    void LiveOpsService::removeEvent( string_view eventID, AccountID actorID, string_view memo, int64 nowMs, uint64 requestTag )
+    void LiveOpsService::removeEvent( string_view eventID, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag )
     {
         if ( LiveOpsLimit::isValidKey( eventID, LiveOpsLimit::kMaxIDSize ) == false )
         {
@@ -434,7 +434,7 @@ namespace sw
         work->_auditEntry._action         = "liveops.event.remove";
         work->_auditEntry._subject        = "liveops/" + work->_key;
         work->_auditEntry._memo           = string( memo );
-        work->_auditEntry._timeMs         = nowMs;
+        work->_auditEntry._timeMs         = nowMs.count();
         work->_requestTag                 = requestTag;
         submitWrite( std::move( work ) );
     }
