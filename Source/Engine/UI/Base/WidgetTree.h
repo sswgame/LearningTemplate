@@ -79,6 +79,12 @@ namespace sw
 
         /** @brief 루트부터 모든 위젯을 깊이 우선 문서 순서(부모 다음 자식, 자식은 앞에서부터)로 @p outListWidget 에 담습니다. */
         void collectWidgetsInDocumentOrder( vector<Widget*>& outListWidget ) const;
+        /**
+         * @brief 구조 세대입니다. 위젯이 붙거나 떨어지거나(자식 넣기 · 빼기 · 루트 바꾸기) 이름이 바뀔 때마다 오릅니다. 값 · 레이아웃 · 그리기 무효화로는 오르지 않습니다.
+         * @details 트리에 들고 나는 길은 모두 `registerWidget` · `unregisterWidget`, 이름은 `registerName` · `unregisterName` 을 지나므로 거기서만 올린다.
+         *          자식 순서도 넣기 · 빼기로만 바뀐다(`PanelWidget::insertChild` · `removeChild`). 위젯 목록을 캐시하는 쪽(UI 미리보기)이 이것만 비교한다.
+         */
+        uint64 getStructureGeneration() const { return _structureGeneration; }
 
     private:
         friend class Widget;
@@ -118,5 +124,6 @@ namespace sw
         uint32                                                         _paintAtlasGeneration; ///< 지난 그리기 순회의 글리프 아틀라스 세대입니다(바뀌면 텍스트 위젯을 다시 칠합니다).
         unique_ptr<CanvasDrawList>                                     _paintOutput;          ///< 지난 그리기 순회가 이어 붙인 트리 전체의 목록입니다(바뀐 것이 없으면 순회하지 않고 이것을 냅니다).
         uint8                                                          _bPaintOutputStale;    ///< 지난 순회 뒤 무효화가 하나라도 있었는지 나타냅니다(구조, 레이아웃, 스타일, 그리기 무엇이든).
+        uint64                                                         _structureGeneration;  ///< 붙기 · 떨어지기 · 이름 바꾸기마다 오릅니다(`getStructureGeneration`).
     };
 } // namespace sw

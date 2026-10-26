@@ -47,6 +47,7 @@ namespace sw
         , _paintAtlasGeneration{ 0 }
         , _paintOutput{}
         , _bPaintOutputStale{ SW_TRUE }
+        , _structureGeneration{ 1 }
     {
     }
 
@@ -157,6 +158,7 @@ namespace sw
 
     void WidgetTree::registerWidget( Widget& widget )
     {
+        ++_structureGeneration;
         _mapIDToWidget[widget._id] = &widget;
         if ( widget._name.empty() == false )
             registerName( widget );
@@ -164,6 +166,7 @@ namespace sw
 
     void WidgetTree::unregisterWidget( Widget& widget )
     {
+        ++_structureGeneration;
         _mapIDToWidget.erase( widget._id );
         if ( widget._name.empty() == false )
             unregisterName( widget );
@@ -173,6 +176,7 @@ namespace sw
 
     void WidgetTree::registerName( Widget& widget )
     {
+        ++_structureGeneration; // 이름을 바꾸면(`Widget::setName`) 빼고 다시 넣는다 — 같은 이름이 있어 등록을 거절해도 표시 이름은 바뀌었다
         if ( widget._name.empty() )
             return;
         const auto iter = _mapNameToWidget.find( widget._name );
@@ -186,6 +190,7 @@ namespace sw
 
     void WidgetTree::unregisterName( Widget& widget )
     {
+        ++_structureGeneration;
         if ( widget._name.empty() )
             return;
         const auto iter = _mapNameToWidget.find( widget._name );

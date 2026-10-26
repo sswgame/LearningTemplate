@@ -180,3 +180,29 @@ SW_TEST_CASE( WidgetTreeTest, DetachedInvalidationArrivesOnAttach )
     SW_EXPECT_TRUE( WidgetTreeTestUtil::containsID( tree.getPaintDirtyWidgets(), pBox->getID() ) );
     SW_EXPECT_TRUE( WidgetTreeTestUtil::containsID( tree.getStyleDirtyWidgets(), pBox->getID() ) );
 }
+
+/** @brief [WidgetTreeTest] 구조 세대는 붙기 · 떨어지기 · 이름 바꾸기에서만 오르고 무효화로는 그대로다 — 위젯 목록을 캐시하는 UI 미리보기가 이것만 본다 */
+SW_TEST_CASE( WidgetTreeTest, StructureGenerationTracksAttachDetachAndRename )
+{
+    sw::WidgetTree   tree;
+    auto             root  = sw::make_unique<sw::uitest::TestPanelWidget>( "root" );
+    sw::PanelWidget* pRoot = root.get();
+    tree.setRoot( std::move( root ) );
+
+    const uint64      afterRoot = tree.getStructureGeneration();
+    sw::Widget* const pA        = pRoot->addChild( sw::make_unique<sw::uitest::TestBoxWidget>( "a" ) );
+    const uint64      afterAdd  = tree.getStructureGeneration();
+    SW_EXPECT_TRUE( afterAdd > afterRoot );
+
+    pA->invalidate( sw::WidgetDirty::kPaint | sw::WidgetDirty::kLayout );
+    tree.clearAllDirty();
+    SW_EXPECT_EQUAL( afterAdd, tree.getStructureGeneration() );
+
+    pA->setName( "renamed" );
+    const uint64 afterRename = tree.getStructureGeneration();
+    SW_EXPECT_TRUE( afterRename > afterAdd );
+
+    sw::unique_ptr<sw::Widget> removed = pRoot->removeChild( pA );
+    SW_ASSERT_TRUE( removed != nullptr );
+    SW_EXPECT_TRUE( tree.getStructureGeneration() > afterRename );
+}
