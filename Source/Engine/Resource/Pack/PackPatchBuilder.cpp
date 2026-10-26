@@ -56,7 +56,11 @@ namespace sw
                     return false;
                 }
                 vector<string> listFile;
-                FileUtil::collectFiles( packsDirectory, "", listFile, false );
+                if ( FileUtil::collectFiles( packsDirectory, "", listFile, false ) == false )
+                {
+                    SW_LOG_ERROR( "Pack folder '%#' could not be listed completely", packsDirectory );
+                    return false;
+                }
                 std::sort( listFile.begin(), listFile.end() );
                 for ( const string& file : listFile )
                 {

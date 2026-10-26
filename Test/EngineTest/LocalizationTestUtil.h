@@ -30,7 +30,7 @@ namespace sw::test
          */
         static string writeProject( const string& folder, string_view sourceCulture, string_view culturesJSON, string_view extraFields = {} )
         {
-            (void)FileUtil::ensureDirectoryExists( folder );
+            (void)FileUtil::ensureDirectoryExists( folder ); // 테스트 준비 — 못 만들면 ensure 가 폴더와 이유를 남기고 뒤따르는 쓰기가 실패로 답한다
             const string projectPath = FileUtil::joinPath( folder, "test.locproject.xml" );
             string       json        = "{ \"cultures\": " + string( culturesJSON ) + ", \"stringTables\": [ \"test.strings.xml\" ]";
             if ( extraFields.empty() == false )
@@ -78,7 +78,7 @@ namespace sw::test
                     entry._listOrigin.push_back( origins.at( index ).asString() );
                 }
             }
-            (void)FileUtil::ensureDirectoryExists( folder );
+            (void)FileUtil::ensureDirectoryExists( folder );                            // 테스트 준비 — 못 만들면 ensure 가 폴더와 이유를 남기고 뒤따르는 쓰기가 실패로 답한다
             (void)table.saveToFile( FileUtil::joinPath( folder, "test.strings.xml" ) ); // 테스트 준비 — 실패는 오류로 남고 뒤의 읽기 단언이 드러낸다
         }
 
@@ -101,7 +101,7 @@ namespace sw::test
                 if ( hash.isValid() )
                     (void)LocalizationTextUtil::tryParseSourceHash( hash.asString(), entry._sourceHash ); // 틀린 해시는 0(확인 안 함)으로 남는다 — 해시 오류는 loadFromXMLText 테스트가 따로 본다
             }
-            (void)FileUtil::ensureDirectoryExists( folder );
+            (void)FileUtil::ensureDirectoryExists( folder );                                                // 테스트 준비 — 못 만들면 ensure 가 폴더와 이유를 남기고 뒤따르는 쓰기가 실패로 답한다
             (void)table.saveToFile( FileUtil::joinPath( folder, string( culture ) + ".translation.xml" ) ); // 테스트 준비 — 실패는 오류로 남고 뒤의 읽기 단언이 드러낸다
         }
 

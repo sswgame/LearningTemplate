@@ -4,6 +4,7 @@ fallible_verb = [
     "load", "save", "read", "write", "parse", "deserialize", "serialize", "apply", "restore", "import", "export",
     "cook", "compile", "revert", "convert", "try", "open", "attach", "spawn", "instantiate", "reload",
     "remove", "copy", "create", "delete", "move", "rename",
+    "ensure", "collect", "makeRelativePath", "makeAbsolutePath", "getFileStamp", "initRHI",
 ]
 
 # 폴더 패턴(fnmatch) 또는 `<파일>:<이름>` → 속성을 달지 않는 까닭.

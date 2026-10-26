@@ -244,7 +244,7 @@ SW_TEST_CASE( AppearancePreloadTest, FitTablesNameTheHiddenRegions )
     const string folderDisk = test::makeTempPath( "appearanceregions" );
     const string folder     = test::makeTempResourceID( folderDisk );
     const string tablesPath = FileUtil::joinPath( folder, "body.fit.xml" );
-    FileUtil::ensureParentDirectoryExists( FileUtil::joinPath( folderDisk, "slots.xml" ) );
+    SW_EXPECT_TRUE( FileUtil::ensureParentDirectoryExists( FileUtil::joinPath( folderDisk, "slots.xml" ) ) );
     SW_ASSERT_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( folderDisk, "body.fit.xml" ), "<FitTables><Region name='LowerArm' bones='lowerarm'/></FitTables>" ) );
     SW_ASSERT_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( folderDisk, "slots.xml" ), "<SlotTable><Slot name='Hands' accept='Glove'/></SlotTable>" ) );
     const auto writeVisuals = [&folderDisk, &tablesPath]( const utf8* pRegion )
@@ -296,7 +296,7 @@ SW_TEST_CASE( AppearanceSocketRigTest, SocketCacheSeesAHotReloadedSocketAsset )
     SW_ASSERT_TRUE( ResourcePaths::initialize() );
     const string pathDisk = FileUtil::joinPath( test::makeTempPath( "appearancesocketreload" ), "gun.sockets.xml" );
     const string path     = test::makeTempResourceID( pathDisk );
-    FileUtil::ensureParentDirectoryExists( pathDisk );
+    SW_EXPECT_TRUE( FileUtil::ensureParentDirectoryExists( pathDisk ) );
     SW_ASSERT_TRUE( FileUtil::writeTextFile( pathDisk, Internal::kShortSocketXML ) );
 
     AppearanceSocketSetCache cache;

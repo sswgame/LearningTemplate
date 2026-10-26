@@ -64,7 +64,12 @@ namespace sw
         }
 
         vector<string> listFile;
-        FileUtil::collectFiles( absDir, extension, listFile, false );
+        if ( FileUtil::collectFiles( absDir, extension, listFile, false ) == false )
+        {
+            // 일부 템플릿만 읽으면 빠진 템플릿의 출력이 조용히 비어 나온다 — 읽지 않는다(경로는 collectFiles 가 알린다).
+            SW_LOG_ERROR( "Emit templates under '%#' could not all be listed", absDir );
+            return false;
+        }
 
         uint32 count = 0;
         for ( const string& filePath : listFile )

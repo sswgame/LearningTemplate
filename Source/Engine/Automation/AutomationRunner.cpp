@@ -1049,8 +1049,8 @@ namespace sw
             const string      path      = runner.resolveOutputPath( *step.findAttribute( "file" ) );
             const string      directory = FileUtil::getDirectoryPart( path );
             if ( directory.empty() == false )
-                (void)FileUtil::ensureDirectoryExists( directory );
-            (void)FileUtil::tryRemoveFile( path ); // 지난 실행의 이미지를 읽지 않게 지운다
+                (void)FileUtil::ensureDirectoryExists( directory ); // 못 만들면 ensure 가 폴더와 이유를 남기고 뒤따르는 쓰기가 실패로 답한다
+            (void)FileUtil::tryRemoveFile( path );                  // 지난 실행의 이미지를 읽지 않게 지운다
             runner._listPendingScreenshot.push_back( path );
             ++runner._screenshotRequestedCount;
             return true;

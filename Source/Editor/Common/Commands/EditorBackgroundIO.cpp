@@ -33,7 +33,8 @@ namespace sw::editor
             return;
 
         vector<string> listFile;
-        FileUtil::collectFiles( input._folder, input._extension, listFile, input._bRecursive );
+        // 표시용 목록이다 — 폴더가 없으면 빈 목록이 맞고, 도중에 멈춘 목록은 collectFiles 가 경로와 함께 알린 뒤 모은 데까지 보인다.
+        (void)FileUtil::collectFiles( input._folder, input._extension, listFile, input._bRecursive );
 
         publish( pState, generation, std::move( listFile ) );
     }
@@ -88,7 +89,8 @@ namespace sw::editor
             return;
 
         vector<GameDataFileEntry> listEntry;
-        EditorDataTableCommands::collectGameDataFiles( listEntry );
+        // 표시용 목록이다 — data 폴더가 없으면 빈 목록이 맞고, 도중에 멈춘 목록은 경로와 함께 알린 뒤 모은 데까지 보인다.
+        (void)EditorDataTableCommands::collectGameDataFiles( listEntry );
 
         publish( pState, generation, std::move( listEntry ) );
     }

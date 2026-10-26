@@ -2,6 +2,7 @@
 
 #include "Engine/Renderer/Scene/GPUScene.h"
 
+#include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -235,8 +236,10 @@ namespace sw
         SW_PROFILE_SCOPE( "RT.GPUScene.visibleBuffers" );
         for ( GPUCullViewResources& view : _listCullView )
         {
-            view._visibleInstances.ensureCapacity( pDevice, static_cast<uint32>( sizeof( uint32 ) ), instanceCount, kVisibleUsage, true,
-                                                   true, nullptr );
+            // 인스턴스가 0 이면 버퍼를 놓는 것이라 false 가 맞다.
+            const bool bVisibleBuffer = view._visibleInstances.ensureCapacity( pDevice, static_cast<uint32>( sizeof( uint32 ) ), instanceCount, kVisibleUsage, true, true, nullptr );
+            if ( bVisibleBuffer == false && instanceCount > 0 )
+                SW_LOG_ERROR_ONCE( "Failed to create the visible instance buffer (%# instances) of a cull view", instanceCount );
         }
     }
 

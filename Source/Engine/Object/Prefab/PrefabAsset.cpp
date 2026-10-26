@@ -848,10 +848,8 @@ namespace sw
             return false;
         }
 
-        // 상위 폴더가 없으면 쓰기가 실패한다. 실패는 로그로 남긴다(SceneDocument::saveXML 과 같은 형태).
-        FileUtil::ensureParentDirectoryExists( absPath );
-
-        const bool writeOk = xmlDoc.saveFile( absPath );
+        // 상위 폴더를 만들지 못하면 쓰지 않는다(폴더 쪽 이유는 ensure 가 남긴다). 실패는 로그로 남긴다(SceneDocument::saveXML 과 같은 형태).
+        const bool writeOk = FileUtil::ensureParentDirectoryExists( absPath ) && xmlDoc.saveFile( absPath );
         if ( writeOk == false )
         {
             SW_LOG_ERROR( "Failed to write prefab XML: %#", absPath );
@@ -892,10 +890,8 @@ namespace sw
             jsonStr = doc.dump( 0 );
         }
 
-        FileUtil::ensureParentDirectoryExists( absPath );
-
-        const bool writeOk = FileUtil::writeFile( absPath, reinterpret_cast<const uint8*>( jsonStr.data() ),
-                                                  jsonStr.size() );
+        const bool writeOk = FileUtil::ensureParentDirectoryExists( absPath ) &&
+                             FileUtil::writeFile( absPath, reinterpret_cast<const uint8*>( jsonStr.data() ), jsonStr.size() );
         if ( writeOk == false )
         {
             SW_LOG_ERROR( "Failed to write prefab JSON: %#", absPath );
@@ -935,8 +931,7 @@ namespace sw
             arch << node._name << node._prefabPath << node._prefabGuid << node._attachKey << node._overrideXML << node._resolvedStateXML << node._partPath << node._parentIndex;
         }
 
-        FileUtil::ensureParentDirectoryExists( absPath );
-        if ( arch.saveFile( absPath ) == false )
+        if ( FileUtil::ensureParentDirectoryExists( absPath ) == false || arch.saveFile( absPath ) == false )
         {
             SW_LOG_ERROR( "Failed to write prefab binary: %#", absPath );
             return false;
@@ -1718,7 +1713,12 @@ namespace sw
         }
 
         vector<string> listFile;
-        FileUtil::collectFiles( sourceRoot, {}, listFile, true );
+        if ( FileUtil::collectFiles( sourceRoot, {}, listFile, true ) == false )
+        {
+            SW_LOG_ERROR( "Prefab cook could not list '%#' - nothing is cooked", sourceRoot );
+            ++outFailedCount;
+            return 0;
+        }
         // 순서를 정한다 — 같은 쿠킹본을 쓰는 두 소스 가운데 어느 것이 먼저인지가 실행마다 같아야 한다.
         std::sort( listFile.begin(), listFile.end() );
 

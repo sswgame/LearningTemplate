@@ -267,7 +267,7 @@ namespace sw
             pScene = pSceneManager->createEmptyActiveScene( "BenchScene" );
         if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
             return;
-        pScene->ensureDefaultCameras();
+        (void)pScene->ensureDefaultCameras(); // 오브젝트 관리자는 위에서 확인했다 — 못 고르면 렌더 경로가 "카메라 없음" 으로 알린다
         GameObjectManager& objects = *pScene->getObjectManager();
         const bool         bRig    = gv_benchRigEnabled != 0;
 

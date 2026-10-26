@@ -417,7 +417,7 @@ SW_TEST_CASE( PoseModifierTest, HotReloadRebindsRig )
         R"(<RigAsset><targets><item name="A" object="A" /><item name="B" object="B" /></targets><nodes><item type="Position" name="Reach" bone="bone2" target="A" /></nodes></RigAsset>)";
     const string_view secondJSON =
         R"(<RigAsset><targets><item name="A" object="A" /><item name="B" object="B" /></targets><nodes><item type="Position" name="Reach" bone="bone2" target="B" /></nodes></RigAsset>)";
-    FileUtil::ensureParentDirectoryExists( pathDisk );
+    SW_EXPECT_TRUE( FileUtil::ensureParentDirectoryExists( pathDisk ) );
     SW_ASSERT_TRUE( FileUtil::writeTextFile( pathDisk, firstJSON ) );
 
     GameObjectManager      manager;

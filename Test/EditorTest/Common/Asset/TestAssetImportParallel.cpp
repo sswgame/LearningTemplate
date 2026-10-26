@@ -220,7 +220,7 @@ namespace
         {
             const sw::string       folder = sw::FileUtil::joinPath( root, "game/test" );
             sw::vector<sw::string> listFile;
-            (void)sw::FileUtil::collectFiles( folder, "", listFile, true );
+            (void)sw::FileUtil::collectFiles( folder, "", listFile, true ); // 폴더가 없으면 빈 스냅샷이 답이다
             for ( sw::string& file : listFile )
             {
                 file = sw::FileUtil::normalizeSeparators( file );

@@ -122,8 +122,8 @@ namespace sw
          * @details 조회와 생성이 **한 임계 구역**입니다. RenderGraph::executeParallel 이 여러 스레드에서 동시에 beginRenderPass 를
          *          부르므로, 나눠 놓으면 같은 키를 둘이 만들어 하나가 누수됩니다. 첨부 뷰는 부르는 쪽이 미리 찾아서 넘깁니다.
          */
-        bool ensureComposite( VkDevice device, const CompositeKey& key, const RenderPassSpec& spec, const VkImageView* pAttachmentView,
-                              uint32 attachmentCount, uint32 width, uint32 height, CompositeRecord& outRecord );
+        [[nodiscard]] bool ensureComposite( VkDevice device, const CompositeKey& key, const RenderPassSpec& spec, const VkImageView* pAttachmentView,
+                                            uint32 attachmentCount, uint32 width, uint32 height, CompositeRecord& outRecord );
         /**
          * @brief 이 텍스처를 쓰는 합성 프레임버퍼를 캐시에서 분리해 반환합니다. 파괴는 부르는 쪽이 GPU 펜스 뒤로 미룹니다.
          * @details 실행 중인 커맨드버퍼가 아직 참조할 수 있어 여기서 바로 부수면 안 됩니다(게임뷰 리사이즈가 대표 경로).

@@ -63,8 +63,9 @@ namespace sw::editor
 
         vector<string> listFolder;
         vector<string> listFile;
-        FileUtil::collectFolders( folderAbs, listFolder, false );
-        FileUtil::collectFiles( folderAbs, {}, listFile, bRecursive );
+        // 표시용 목록이다(폴더는 위에서 확인했다) — 도중에 멈춘 목록은 collect 가 경로와 함께 알리고, 모은 데까지 보인다.
+        (void)FileUtil::collectFolders( folderAbs, listFolder, false );      // 표시용 — 모은 데까지 보인다
+        (void)FileUtil::collectFiles( folderAbs, {}, listFile, bRecursive ); // 표시용 — 모은 데까지 보인다
 
         const string& resourceRoot = ResourcePaths::getRootFolderPath();
         const string  rootNorm     = resourceRoot.empty() ? string{} : FileUtil::normalizePath( resourceRoot );
@@ -86,7 +87,7 @@ namespace sw::editor
         if ( folderAbs.empty() || FileUtil::isDirectory( folderAbs ) == false )
             return;
 
-        FileUtil::collectFolders( folderAbs, outList, false );
+        (void)FileUtil::collectFolders( folderAbs, outList, false ); // 표시용 목록 — 도중에 멈춘 것은 collectFolders 가 알리고 모은 데까지 보인다
         for ( string& child : outList )
         {
             child = FileUtil::normalizeSeparators( child );

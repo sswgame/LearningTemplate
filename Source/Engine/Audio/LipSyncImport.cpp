@@ -25,7 +25,12 @@ namespace sw
     uint32 LipSyncImport::importAll( const string& resourceRoot, const LipSyncSettings& settings, uint32& outFailedCount )
     {
         vector<string> listFile;
-        FileUtil::collectFiles( resourceRoot, "", listFile, true );
+        if ( FileUtil::collectFiles( resourceRoot, "", listFile, true ) == false )
+        {
+            SW_LOG_ERROR( "Lip sync import could not list '%#' - nothing is imported", resourceRoot );
+            ++outFailedCount;
+            return 0;
+        }
         const string normalizedRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) );
         uint32       writtenCount   = 0;
         for ( const string& filePath : listFile )

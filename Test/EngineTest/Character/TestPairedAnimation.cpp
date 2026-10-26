@@ -529,7 +529,7 @@ SW_TEST_CASE( PairedAnimationTest, ComponentStartsWithEditedAssetAfterCacheReloa
     const string folder = TestPairedAnimationInternal::writeClips( "pairedreload", 0.0f );
     SW_ASSERT_FALSE( folder.empty() );
     const string path = FileUtil::joinPath( test::makeTempPath( "pairedreloadasset" ), "edited.pairedanim.xml" );
-    FileUtil::ensureParentDirectoryExists( path );
+    SW_EXPECT_TRUE( FileUtil::ensureParentDirectoryExists( path ) );
     SW_ASSERT_TRUE( FileUtil::writeTextFile(
         path, R"(<PairedAnimation duration="1"><Role name="Leader" anchor="true" required="true" clip="Lead" enterBlend="0" exitState="Idle" exitBlend="0"/></PairedAnimation>)" ) );
 
@@ -579,7 +579,7 @@ SW_TEST_CASE( PairedAnimationTest, ComponentBindsRolesNamedByOtherComponents )
     const string folder = TestPairedAnimationInternal::writeClips( "pairedrolecomponents", 0.0f );
     SW_ASSERT_FALSE( folder.empty() );
     const string path = FileUtil::joinPath( test::makeTempPath( "pairedrolecomponentsasset" ), "props.pairedanim.xml" );
-    FileUtil::ensureParentDirectoryExists( path );
+    SW_EXPECT_TRUE( FileUtil::ensureParentDirectoryExists( path ) );
     SW_ASSERT_TRUE( FileUtil::writeTextFile( path, R"(<PairedAnimation duration="1">
         <Role name="Leader" anchor="true" required="true" clip="Lead" enterBlend="0" exitState="Idle" exitBlend="0"/>
         <Role name="Follower" required="true" clip="Follow" align="none" enterBlend="0" exitState="Idle" exitBlend="0"/>

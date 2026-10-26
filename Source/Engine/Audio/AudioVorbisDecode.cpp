@@ -78,7 +78,7 @@ namespace sw
         struct OggCommentHeaderGuard
         {
             /** @brief 첫 논리 스트림의 @p packetIndex 번째 패킷을 페이지를 건너 모읍니다. 페이지가 잘렸거나 패킷이 끝나지 않으면 false 입니다. */
-            static bool collectPacket( const uint8* pBytes, size_t byteCount, uint32 packetIndex, vector<uint8>& outPacketBytes )
+            [[nodiscard]] static bool collectPacket( const uint8* pBytes, size_t byteCount, uint32 packetIndex, vector<uint8>& outPacketBytes )
             {
                 outPacketBytes.clear();
                 constexpr size_t kPageHeaderSize = 27;

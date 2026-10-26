@@ -519,7 +519,7 @@ namespace sw
         /** @brief 주 시점의 트랜지언트 텍스처를 확보합니다. 크기는 출력 크기 × 사각형 × 해상도 배율이며, 출력 크기는 덮어쓴 크기가 있으면 그 값, 없으면 백버퍼입니다. */
         void ensureTransientResources( uint32 overrideWidth = 0, uint32 overrideHeight = 0 );
         /** @brief 뷰 하나의 트랜지언트를 이 크기로 맞춥니다. 크기가 같으면 그대로 두고, 다시 만들었으면 true 입니다. */
-        bool ensureViewTransients( ViewTarget& view, uint32 width, uint32 height );
+        [[nodiscard]] bool ensureViewTransients( ViewTarget& view, uint32 width, uint32 height );
         /** @brief 뷰 하나의 트랜지언트와 TAA 히스토리를 해제합니다. 디바이스가 없으면 핸들만 잊습니다. */
         void releaseViewTransients( ViewTarget& view );
         /** @brief 추가 뷰 하나를 통째로 해제합니다. 트랜지언트, 컬링 상수 버퍼, 리스트, 빌린 렌더 텍스처가 해당합니다. */
@@ -1096,10 +1096,10 @@ namespace sw
         /** @brief 배치 목록에서 (퍼뮤테이션, 컬 반전) 조합을 중복 없이 모읍니다. 퍼뮤테이션이 없는 배치도 넣습니다. */
         static void collectMaterialPSORequests( vector_reference<const GPUMeshBatch> listBatch, vector<MaterialPSORequest>& outListRequest );
         /** @brief 요청 하나에 대해 이번 프레임의 보기 모드마다 변형을 만들어 둡니다. @return 새 변형을 하나라도 만들었으면 true 입니다. */
-        bool ensureRequestMaterialPSOs( RHIPipelineStateHandle passPSO, RenderPassType passType, const MaterialPSORequest& request, uint32 viewModeMask );
+        [[nodiscard]] bool ensureRequestMaterialPSOs( RHIPipelineStateHandle passPSO, RenderPassType passType, const MaterialPSORequest& request, uint32 viewModeMask );
         /** @brief 변형 하나가 캐시에 없으면 만들어 넣습니다. @return 새로 만들었으면 true 입니다. */
-        bool ensureMaterialPSOVariant( RHIPipelineStateHandle passPSO, RenderPassType passType, const GPUShaderPermutation* pPermutation, uint64 permutationHash,
-                                       bool bReverseCulling, RenderViewMode viewMode );
+        [[nodiscard]] bool ensureMaterialPSOVariant( RHIPipelineStateHandle passPSO, RenderPassType passType, const GPUShaderPermutation* pPermutation, uint64 permutationHash,
+                                                     bool bReverseCulling, RenderViewMode viewMode );
         /** @brief 패스 PSO 의 컬러 RT 수와 포맷을 정합니다. 고정 배열이 있으면 그것을, 없으면 출력 선언 순서를, 둘 다 없으면 RGBA8 을 씁니다. */
         void fillPassRenderTargetFormats( RHIPipelineStateDesc& desc, const RenderGraphPassDesc* pPassDesc, const RHIFormat* pRtvFormats, uint32 numRenderTargets ) const;
         /// @brief 배치 하나가 한 프레임에 몇 개의 지오메트리 패스(그림자, 프리패스, 불투명, 반투명)에서 그려지는지의 어림값입니다.

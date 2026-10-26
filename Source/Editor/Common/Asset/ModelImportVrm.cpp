@@ -180,8 +180,7 @@ namespace sw::editor
         if ( result._listIgnoredAvatarKey.empty() == false )
             SW_LOG_WARNING( "VRM '%#': avatar values that are not imported (ignored): %#", sourcePath, Internal::joinNames( result._listIgnoredAvatarKey ).c_str() );
         const string avatarPath = FileUtil::joinPath( sideFolder, string( stem ) + string( VrmAvatarImporter::kExtension ) );
-        FileUtil::ensureDirectoryExists( sideFolder );
-        if ( FileUtil::writeTextFile( avatarPath, VrmAvatarImporter::makeAvatarXML( result._avatar ) ) == false )
+        if ( FileUtil::ensureDirectoryExists( sideFolder ) == false || FileUtil::writeTextFile( avatarPath, VrmAvatarImporter::makeAvatarXML( result._avatar ) ) == false )
         {
             SW_LOG_ERROR( "Failed to write avatar %#", avatarPath.c_str() );
             return false;

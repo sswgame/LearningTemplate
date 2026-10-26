@@ -408,7 +408,7 @@ namespace sw
             outListOption = def._listOption;
             return;
         }
-        (void)_registry.collectOptions( def._optionProvider, outListOption );
+        (void)_registry.collectOptions( def._optionProvider, outListOption ); // 공급자가 없거나 비면 아래 고정 선택지가 채운다
         if ( def._listOption.empty() )
             return;
         if ( outListOption.empty() )

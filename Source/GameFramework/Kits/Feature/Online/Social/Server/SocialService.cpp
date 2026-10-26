@@ -368,7 +368,7 @@ namespace sw
 
     void SocialService::submitLinkWork( SocialLinkOperation operation, AccountID accountID, AccountID otherID, string_view displayName, int64 nowMs, uint64 requestTag )
     {
-        (void)ensureLocal( accountID );
+        (void)ensureLocal( accountID ); // 항목을 있게만 한다 — 쓰는 쪽은 저마다 다시 찾는다
         ++_pendingCount;
         _dependencies._pStore->submit( sw::make_unique<SocialLinkWork>( this, _dependencies._pNameIndex, operation, accountID, otherID, displayName, nowMs, requestTag ) );
     }

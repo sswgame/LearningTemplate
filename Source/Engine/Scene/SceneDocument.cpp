@@ -358,8 +358,7 @@ namespace sw
             SW_LOG_ERROR( "Cannot resolve save path: %#", path );
             return false;
         }
-        FileUtil::ensureParentDirectoryExists( absPath );
-        if ( xmlDoc.saveFile( absPath ) == false )
+        if ( FileUtil::ensureParentDirectoryExists( absPath ) == false || xmlDoc.saveFile( absPath ) == false )
         {
             SW_LOG_ERROR( "Failed to write: %#", absPath );
             return false;
@@ -493,8 +492,7 @@ namespace sw
             SW_LOG_ERROR( "Cannot resolve save path: %#", path );
             return false;
         }
-        FileUtil::ensureParentDirectoryExists( absPath );
-        const bool bOk = arch.saveFile( absPath );
+        const bool bOk = FileUtil::ensureParentDirectoryExists( absPath ) && arch.saveFile( absPath );
         if ( bOk )
             SW_LOG_INFO( "Saved binary '%#' (%# entities, %# streaming cells) -> %#", _name, static_cast<uint32>( computeTotalEntityCount() ),
                          static_cast<uint32>( _listStreamingCell.size() ), absPath );

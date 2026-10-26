@@ -338,7 +338,7 @@ namespace sw
             crashReports.initialize( crashFolder, reportsFolder, CrashHandler::getSessionID() );
             crashReports.bindConsentSetting( userSettings );
             crashReports.setReporterExecutable( FileUtil::getExecutablePath() ); // App 이 -crash-reporter 를 알아듣는다(App::initialize 헤드리스 분기)
-            (void)crashReports.collectNewCrashes();
+            (void)crashReports.collectNewCrashes();                              // 모은 수는 쓰지 않는다 — 보고 프로세스가 폴더를 다시 본다
             (void)crashReports.launchReporterProcess();
         }
         return SubsystemInitResult::Succeeded;

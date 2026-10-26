@@ -386,7 +386,7 @@ namespace test
 
         const sw::string backend    = pBackendSwitch[0] == '-' ? sw::string( pBackendSwitch + 1 ) : sw::string( "default" );
         const sw::string outputBase = sw::string( sw::kAutomationOutputFolder ) + "/" + outputStem + "_" + backend;
-        (void)sw::FileUtil::ensureDirectoryExists( sw::kAutomationOutputFolder );
+        (void)sw::FileUtil::ensureDirectoryExists( sw::kAutomationOutputFolder ); // 테스트 준비 — 못 만들면 ensure 가 폴더와 이유를 남기고 뒤따르는 쓰기가 실패로 답한다
         // 못 띄우거나 죽은 판이 지난 실행의 보고를 남긴 것처럼 읽히지 않게 한다(체인은 단계마다 보고가 있다).
         const sw::vector<sw::string> listStagePath = AppTestUtilInternal::splitScenarioArgument( scenarioArgument );
         (void)sw::FileUtil::tryRemoveFile( outputBase + ".json" ); // 지난 실행이 없으면 지울 것이 없다 — 없는 것이 정상이라 실패를 따지지 않는다

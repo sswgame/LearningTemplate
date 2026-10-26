@@ -112,14 +112,16 @@ namespace sw
             pJob->recordInput( resourceID, 0 );
     }
 
-    void CookJob::collectFiles( string_view folderPath, string_view extension, vector<string>& outListFile )
+    bool CookJob::collectFiles( string_view folderPath, string_view extension, vector<string>& outListFile )
     {
         outListFile.clear();
-        FileUtil::collectFiles( folderPath, extension, outListFile, true );
+        // 폴더가 없으면 빈 목록이 맞다(목록 해시 0 으로 기록된다). 도중에 멈춘 부분 목록은 구울 것을 빠뜨리므로 실패다(`FileUtil::collectFiles` 가 경로를 알린다).
+        if ( FileUtil::isDirectory( folderPath ) && FileUtil::collectFiles( folderPath, extension, outListFile, true ) == false )
+            return false;
         std::sort( outListFile.begin(), outListFile.end() );
         CookJob* pJob = CookJobInternal::_t_pCurrent;
         if ( pJob == nullptr )
-            return;
+            return true;
         CookInput input;
         input._kind = CookInputKind::Listing;
         // 폴더는 받은 경로 그대로 둔다 — 도메인 폴더(`engine`)는 리소스 id 로 줄이면 다시 풀 때 같은 폴더로 돌아오지 않는다.
@@ -127,6 +129,7 @@ namespace sw
         input._extension   = string( extension );
         input._contentHash = computeListingHash( folderPath, extension );
         pJob->recordInput( input );
+        return true;
     }
 
     uint64 CookJob::computeListingHash( string_view folderPath, string_view extension )
@@ -134,7 +137,9 @@ namespace sw
         if ( FileUtil::isDirectory( folderPath ) == false )
             return 0;
         vector<string> listFile;
-        FileUtil::collectFiles( folderPath, extension, listFile, true );
+        // 도중에 멈춘 목록의 해시는 믿을 수 없다 — "폴더 없음"(0)으로 돌려 기록과 어긋나게 해 다음 검사가 다시 굽게 한다(경로는 `FileUtil::collectFiles` 가 알린다).
+        if ( FileUtil::collectFiles( folderPath, extension, listFile, true ) == false )
+            return 0;
         const string   root = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( folderPath ) );
         vector<string> listRelative;
         listRelative.reserve( listFile.size() );

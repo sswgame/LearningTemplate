@@ -144,7 +144,7 @@ namespace sw
         string writeEffectFile( const VfxEffectDef& effect, string_view fileName )
         {
             const string path = test::makeTempPath( fileName );
-            FileUtil::ensureParentDirectoryExists( path );
+            SW_EXPECT_TRUE( FileUtil::ensureParentDirectoryExists( path ) );
             if ( XMLSerializer::saveFile( path, &effect, *VfxEffectDef::StaticType() ) == false )
                 return string{};
             return path;
@@ -299,7 +299,7 @@ SW_TEST_CASE( VfxEffectDefTest, EmptyAndDuplicateEmittersAreRejected )
 SW_TEST_CASE( VfxEffectDefTest, UnknownNamesFailTheLoad )
 {
     const sw::string path = test::makeTempPath( "unknown.vfx.xml" );
-    sw::FileUtil::ensureParentDirectoryExists( path );
+    SW_EXPECT_TRUE( sw::FileUtil::ensureParentDirectoryExists( path ) );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( path, "<VfxEffectDef><_listEmitters/></VfxEffectDef>" ) );
 
     sw::VfxEffectDef          effect;

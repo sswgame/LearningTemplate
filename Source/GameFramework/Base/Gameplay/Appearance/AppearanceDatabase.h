@@ -102,16 +102,16 @@ namespace sw
          * @brief 몸 부품이 가리키는 피팅 표(`fitTables`)들의 영역 이름을 모읍니다. 읽지 못한 표는 오류로 남깁니다.
          * @return 피팅 표를 가리키는 부품이 하나라도 있으면 true 입니다(그때만 숨김 영역 이름을 대조한다).
          */
-        bool collectBodyRegions( vector<hashed_string>& outListRegion );
-        void validateItems();
-        void validateSets();
-        void validateVisuals( const vector<hashed_string>* pListKnownBodyRegion );
-        void validateSchemas();
-        void validateRules( const vector<hashed_string>* pListKnownBodyRegion );
-        void validatePresets();
-        void validateItemValues( const CustomizationValueSet& values, const hashed_string& schemaID, const utf8* pWhere );
-        bool isVariantDeclared( const hashed_string& variant ) const;
-        bool isPartDeclared( const hashed_string& part ) const;
+        [[nodiscard]] bool collectBodyRegions( vector<hashed_string>& outListRegion );
+        void               validateItems();
+        void               validateSets();
+        void               validateVisuals( const vector<hashed_string>* pListKnownBodyRegion );
+        void               validateSchemas();
+        void               validateRules( const vector<hashed_string>* pListKnownBodyRegion );
+        void               validatePresets();
+        void               validateItemValues( const CustomizationValueSet& values, const hashed_string& schemaID, const utf8* pWhere );
+        bool               isVariantDeclared( const hashed_string& variant ) const;
+        bool               isPartDeclared( const hashed_string& part ) const;
 
         SlotTable                  _slotTable;
         EquipSetCatalog            _sets;

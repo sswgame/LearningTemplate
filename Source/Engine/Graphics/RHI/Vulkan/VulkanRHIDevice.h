@@ -484,7 +484,7 @@ namespace sw
         VkRenderPass createRenderPassFromSpec( const VulkanRHIRenderPassCache::RenderPassSpec& spec ) const;
 
         /** @brief 텍스처 배열 세트(set 1: 무제한 텍스처 배열과 immutable sampler)를 확보합니다. */
-        bool ensureTextureSet();
+        [[nodiscard]] bool ensureTextureSet();
         /** @brief 정적 샘플러, 세트 레이아웃 2개, 파이프라인 레이아웃, 풀(텍스처용 1개와 프레임별 슬롯용), 더미 UBO 를 만듭니다. */
         [[nodiscard]] bool createDescriptorResources();
         /** @brief 텍스처 배열(set 1 binding 0)의 원소 하나를 갱신합니다. */
@@ -537,7 +537,7 @@ namespace sw
          */
         void transitionTextureLayout( VkCommandBuffer cmd, VulkanTextureRecord& record, uint32 targetLayout, uint32 aspect );
         /** @brief 오프스크린 VkRenderPass 를 확보합니다. */
-        bool ensureOffscreenRenderPass( uint32 vkFormat );
+        [[nodiscard]] bool ensureOffscreenRenderPass( uint32 vkFormat );
         /** @brief 오프스크린 텍스처용 프레임버퍼를 만듭니다. */
         [[nodiscard]] bool createOffscreenFramebuffer( VulkanTextureRecord& record );
         /** @brief 오프스크린 프레임버퍼를 파괴합니다. */
@@ -547,7 +547,7 @@ namespace sw
         /** @brief 파이프라인용 VkRenderPass 를 확보합니다. */
         VkRenderPass ensurePipelineRenderPass( const RHIPipelineStateDesc& desc );
         /** @brief 합성 프레임버퍼를 확보합니다. */
-        bool ensureCompositeFramebuffer( const VulkanRHIRenderPassCache::CompositeKey& key, VulkanRHIRenderPassCache::CompositeRecord& outRecord );
+        [[nodiscard]] bool ensureCompositeFramebuffer( const VulkanRHIRenderPassCache::CompositeKey& key, VulkanRHIRenderPassCache::CompositeRecord& outRecord );
         /** @brief 이 텍스처를 쓰는 합성 프레임버퍼를 캐시에서 빼서 GPU 펜스 뒤에 파괴합니다. */
         void destroyCompositeFramebuffersUsing( RHITextureHandle texture );
         /** @brief usageFlags 로 VkBuffer 를 만들고 초기 데이터를 올립니다. */

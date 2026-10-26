@@ -481,14 +481,9 @@ namespace sw::editor
         const string text   = makeDifferenceText();
         bool         bSaved = false;
         if ( isElementMode() )
-        {
             bSaved = saveElement( text );
-        }
         else
-        {
-            FileUtil::ensureParentDirectoryExists( _path );
-            bSaved = FileUtil::writeTextFile( _path, text );
-        }
+            bSaved = FileUtil::ensureParentDirectoryExists( _path ) && FileUtil::writeTextFile( _path, text );
         if ( bSaved == false )
         {
             SW_LOG_WARNING( "Project settings could not be saved to %#", _path.c_str() );

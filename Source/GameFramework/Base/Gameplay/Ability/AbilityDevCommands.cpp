@@ -27,7 +27,7 @@ namespace sw
         struct AbilityDevCommandsInternal
         {
             /** @brief 활성 씬의 어빌리티 시스템을 모읍니다. 씬이 없거나 하나도 없으면 답을 채우고 false 입니다. */
-            static bool collectAbilitySystems( vector<AbilitySystemComponent*>& outListComponent, string& outReply )
+            [[nodiscard]] static bool collectAbilitySystems( vector<AbilitySystemComponent*>& outListComponent, string& outReply )
             {
                 GameObjectManager* pManager = GameInstanceBase::findActiveObjectManager();
                 if ( pManager == nullptr )

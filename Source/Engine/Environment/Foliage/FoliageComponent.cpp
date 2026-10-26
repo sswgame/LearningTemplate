@@ -547,8 +547,8 @@ namespace sw
         float4             arrSphere[FoliageInfluencerComponent::kMaxInfluencerCount]{};
         if ( pManager != nullptr )
         {
-            (void)WindComponent::findWind( *pManager, wind ); // 없으면 기본 바람
-            (void)FoliageInfluencerComponent::collectNearest( *pManager, viewPosition, arrSphere );
+            (void)WindComponent::findWind( *pManager, wind );                                       // 없으면 기본 바람
+            (void)FoliageInfluencerComponent::collectNearest( *pManager, viewPosition, arrSphere ); // 모은 수는 쓰지 않는다 — 남은 칸은 위에서 0 으로 비워 두었다
         }
         for ( uint32 layerIndex = 0; layerIndex < _listLayerMaterial.size() && layerIndex < _listLayer.size(); ++layerIndex )
         {

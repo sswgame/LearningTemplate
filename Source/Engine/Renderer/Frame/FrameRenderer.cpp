@@ -556,8 +556,7 @@ namespace sw
             return false;
 
         // 주 시점은 씬의 게임 카메라다. 없으면 기본 카메라로 대신 그리지 않고 멈춘다 — 카메라가 없다는 씬 데이터의 결함이 화면으로 가려진다.
-        scene.ensureDefaultCameras();
-        CameraComponent* pMainCamera = scene.getActiveGameCamera();
+        CameraComponent* pMainCamera = scene.ensureDefaultCameras() ? scene.getActiveGameCamera() : nullptr;
         if ( pMainCamera == nullptr )
         {
             SW_LOG_ERROR( "Scene '%#' has no usable camera - nothing is drawn", scene.getName() );

@@ -693,8 +693,8 @@ namespace sw
             vector<uint8> listCacheData( dataSize );
             if ( vkGetPipelineCacheData( _device, _pipelineCache, &dataSize, listCacheData.data() ) == VK_SUCCESS )
             {
-                FileUtil::ensureDirectoryExists( "Saved/ShaderCache" );
-                if ( FileUtil::writeFile( "Saved/ShaderCache/vk_pipeline_cache.bin", listCacheData.data(), static_cast<uint64>( listCacheData.size() ) ) )
+                if ( FileUtil::ensureDirectoryExists( "Saved/ShaderCache" ) &&
+                     FileUtil::writeFile( "Saved/ShaderCache/vk_pipeline_cache.bin", listCacheData.data(), static_cast<uint64>( listCacheData.size() ) ) )
                     SW_LOG_INFO( "Saved pipeline cache (%# bytes).", static_cast<uint32>( dataSize ) );
                 else
                     SW_LOG_WARNING( "Could not save the pipeline cache - the next run builds pipelines from scratch" );

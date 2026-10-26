@@ -82,7 +82,7 @@ namespace sw
         {
             const shared_ptr<Mesh>& mesh = listMesh[index];
             if ( mesh != nullptr )
-                (void)mesh->initRHI( pDevice );
+                (void)mesh->initRHI( pDevice ); // 실패는 메시가 자기 코드에서 로그로 남긴다(RHIRenderResource::initRHI 와 같다)
         };
 
         const bool bParallelUploadPossible = _bParallel == SW_TRUE && count > 1 && _pTaskManager != nullptr;

@@ -328,7 +328,7 @@ SW_TEST_CASE( ShaderBindingValidatorTest, AllCookedShadersMatchContract )
             if ( sw::FileUtil::isDirectory( binDir ) == false )
                 continue;
             sw::vector<sw::string> listFile;
-            sw::FileUtil::collectFiles( binDir, sw::string( sw::ShaderCooker::getExtensionForFormat( target._format ) ), listFile, false );
+            SW_EXPECT_TRUE( sw::FileUtil::collectFiles( binDir, sw::string( sw::ShaderCooker::getExtensionForFormat( target._format ) ), listFile, false ) );
             for ( const sw::string& path : listFile )
             {
                 sw::vector<uint8> bytecode;
@@ -395,7 +395,7 @@ SW_TEST_CASE( ShaderBindingValidatorTest, ReflectionNamesAreUniformAcrossBackend
                                                                       sw::string( sw::ShaderCooker::getSubfolderForFormat( format ) ) );
         sw::vector<sw::string>       listFile;
         if ( sw::FileUtil::isDirectory( binDir ) )
-            sw::FileUtil::collectFiles( binDir, sw::string( sw::ShaderCooker::getExtensionForFormat( format ) ), listFile, false );
+            SW_EXPECT_TRUE( sw::FileUtil::collectFiles( binDir, sw::string( sw::ShaderCooker::getExtensionForFormat( format ) ), listFile, false ) );
         for ( const sw::string& path : listFile )
         {
             sw::vector<uint8> bytecode;
@@ -582,7 +582,7 @@ SW_TEST_CASE( ShaderBindingValidatorTest, MaterialTextureIndexFieldsAreRecognize
                                                                       sw::string( sw::ShaderCooker::getSubfolderForFormat( format ) ) );
         sw::vector<sw::string>       listFile;
         if ( sw::FileUtil::isDirectory( binDir ) )
-            sw::FileUtil::collectFiles( binDir, sw::string( sw::ShaderCooker::getExtensionForFormat( format ) ), listFile, false );
+            SW_EXPECT_TRUE( sw::FileUtil::collectFiles( binDir, sw::string( sw::ShaderCooker::getExtensionForFormat( format ) ), listFile, false ) );
         for ( const sw::string& path : listFile )
         {
             const sw::string fileName = sw::FileUtil::getFileNamePart( path );
@@ -689,7 +689,7 @@ SW_TEST_CASE( ShaderBindingValidatorTest, InstanceElementLayoutMatchesCPUStruct 
                                                                       sw::string( sw::ShaderCooker::getSubfolderForFormat( format ) ) );
         sw::vector<sw::string>       listFile;
         if ( sw::FileUtil::isDirectory( binDir ) )
-            sw::FileUtil::collectFiles( binDir, sw::string( sw::ShaderCooker::getExtensionForFormat( format ) ), listFile, false );
+            SW_EXPECT_TRUE( sw::FileUtil::collectFiles( binDir, sw::string( sw::ShaderCooker::getExtensionForFormat( format ) ), listFile, false ) );
 
         for ( const sw::string& path : listFile )
         {
@@ -785,7 +785,7 @@ SW_TEST_CASE( ShaderBindingValidatorTest, LightElementLayoutMatchesCPUStruct )
                                                                       sw::string( sw::ShaderCooker::getSubfolderForFormat( format ) ) );
         sw::vector<sw::string>       listFile;
         if ( sw::FileUtil::isDirectory( binDir ) )
-            sw::FileUtil::collectFiles( binDir, sw::string( sw::ShaderCooker::getExtensionForFormat( format ) ), listFile, false );
+            SW_EXPECT_TRUE( sw::FileUtil::collectFiles( binDir, sw::string( sw::ShaderCooker::getExtensionForFormat( format ) ), listFile, false ) );
         for ( const sw::string& path : listFile )
         {
             sw::vector<uint8> bytecode;
@@ -1071,7 +1071,7 @@ SW_TEST_CASE( ShaderBindingValidatorTest, ConsumedVertexAttributeMaskFollowsShad
 
     // 쿠킹된 Vulkan 정점 셰이더 전부: 셰이더가 읽는 입력은 모두 마스크에 있다(입력 수 = 비트 수).
     sw::vector<sw::string> listFile;
-    sw::FileUtil::collectFiles( binDir, sw::string( sw::ShaderCooker::getExtensionForFormat( sw::ShaderTargetFormat::SPIRV_Vulkan ) ), listFile, false );
+    SW_EXPECT_TRUE( sw::FileUtil::collectFiles( binDir, sw::string( sw::ShaderCooker::getExtensionForFormat( sw::ShaderTargetFormat::SPIRV_Vulkan ) ), listFile, false ) );
     uint32 checkedCount{ 0 };
     for ( const sw::string& path : listFile )
     {
@@ -1111,8 +1111,8 @@ SW_TEST_CASE( ShaderBindingValidatorTest, LayoutNumbersAreDefinedOnlyInBindingSl
     {
         const sw::string shaderFolder = sw::ResourcePaths::findLooseDomainFolder( pDomain, "shaders" ).getDiskPath();
         SW_ASSERT_FALSE( shaderFolder.empty() );
-        sw::FileUtil::collectFiles( shaderFolder, ".hlsl", listFile, true );
-        sw::FileUtil::collectFiles( shaderFolder, ".hlsli", listFile, true );
+        SW_EXPECT_TRUE( sw::FileUtil::collectFiles( shaderFolder, ".hlsl", listFile, true ) );
+        SW_EXPECT_TRUE( sw::FileUtil::collectFiles( shaderFolder, ".hlsli", listFile, true ) );
     }
     SW_ASSERT_TRUE( listFile.size() >= 10 );
     for ( const utf8* pMacro : arrMacro )
@@ -1146,8 +1146,8 @@ SW_TEST_CASE( ShaderBindingValidatorTest, RootConstantLimitIsTheShaderContract )
 {
     const sw::string       rhiFolder = sw::FileUtil::joinPath( sw::ResourcePaths::getProjectFolderPath(), "Source/Engine/Graphics/RHI" );
     sw::vector<sw::string> listFile;
-    sw::FileUtil::collectFiles( rhiFolder, ".h", listFile, true );
-    sw::FileUtil::collectFiles( rhiFolder, ".cpp", listFile, true );
+    SW_EXPECT_TRUE( sw::FileUtil::collectFiles( rhiFolder, ".h", listFile, true ) );
+    SW_EXPECT_TRUE( sw::FileUtil::collectFiles( rhiFolder, ".cpp", listFile, true ) );
     SW_ASSERT_TRUE( listFile.size() >= 20 );
     sw::string listOffender;
     for ( const sw::string& path : listFile )

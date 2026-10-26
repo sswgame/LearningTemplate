@@ -245,11 +245,7 @@ namespace sw
             return false;
         }
 
-        const string outputDir = FileUtil::getDirectoryPart( outputPath );
-        if ( outputDir.empty() == false )
-            FileUtil::ensureDirectoryExists( outputDir );
-
-        if ( FileUtil::writeFile( outputPath, compileResult._bytecode.data(), compileResult._bytecode.size() ) == false )
+        if ( FileUtil::ensureParentDirectoryExists( outputPath ) == false || FileUtil::writeFile( outputPath, compileResult._bytecode.data(), compileResult._bytecode.size() ) == false )
         {
             SW_LOG_ERROR( "Failed to write cooked bytecode to %#", outputPath );
             return false;

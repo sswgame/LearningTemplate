@@ -497,7 +497,8 @@ namespace sw
             if ( FileUtil::isDirectory( llvmClangDir ) )
             {
                 vector<string> listClangSubFolder;
-                FileUtil::collectFolders( llvmClangDir, listClangSubFolder, false );
+                if ( FileUtil::collectFolders( llvmClangDir, listClangSubFolder, false ) == false )
+                    SW_LOG_ERROR( "clang resource folders under '%#' could not all be listed - the built-in headers may be left out", llvmClangDir );
                 for ( const string& folder : listClangSubFolder )
                 {
                     const string resourceDir = FileUtil::normalizeSeparators( folder );

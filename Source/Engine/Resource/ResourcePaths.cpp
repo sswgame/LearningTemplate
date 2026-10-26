@@ -748,7 +748,8 @@ namespace sw
                 if ( gameDir.empty() == false && FileUtil::isDirectory( gameDir ) )
                 {
                     vector<string> listPackFolder;
-                    FileUtil::collectFolders( gameDir, listPackFolder, false );
+                    if ( FileUtil::collectFolders( gameDir, listPackFolder, false ) == false )
+                        SW_LOG_ERROR( "Pack folders under '%#' could not all be listed - the packs left out are not searched", gameDir );
                     for ( const string& packFolder : listPackFolder )
                     {
                         const string normPack = FileUtil::normalizeSeparators( packFolder );

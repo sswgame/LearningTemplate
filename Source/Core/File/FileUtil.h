@@ -109,9 +109,9 @@ namespace sw
         static void removeExtension( string_view fileName, string_view& outFileName );
 
         /** @brief rootDir 기준 상대 경로를 만듭니다. */
-        static bool makeRelativePath( string_view rootDir, string_view path, string& outResult );
+        [[nodiscard]] static bool makeRelativePath( string_view rootDir, string_view path, string& outResult );
         /** @brief 절대 경로를 만듭니다. */
-        static bool makeAbsolutePath( string_view path, string& outResult );
+        [[nodiscard]] static bool makeAbsolutePath( string_view path, string& outResult );
         /** @brief 비교 · 맵 키가 아니라 **실제** 경로를 만듭니다(링크 · `.` · `..` · 8.3 짧은 이름을 풀어서). 경로가 없으면 false 입니다. 구분자는 `/` 입니다. */
         [[nodiscard]] static bool makeCanonicalPath( string_view path, string& outResult );
         /** @brief 경로가 절대 경로인지 확인합니다. */
@@ -151,13 +151,13 @@ namespace sw
          * @brief 대상 파일이 들어갈 상위 디렉터리가 있게 합니다(없으면 재귀적으로 만듭니다). 폴더 부분이 없는 이름이면 할 일이 없어 true 입니다.
          * @return 디렉터리가 있으면 true. 만들지 못했으면 경로와 이유를 알리고 false 입니다.
          */
-        static bool ensureParentDirectoryExists( string_view filePath );
+        [[nodiscard]] static bool ensureParentDirectoryExists( string_view filePath );
         /**
          * @brief 디렉터리가 있게 합니다(필요하면 상위 디렉터리도).
          * @details 만들지 못하면 여기서 알린다 — 말없이 넘어가면 뒤따르는 쓰기가 "열 수 없다" 로만 실패해 어느 폴더가 왜 막혔는지 모른다.
          * @return 디렉터리가 있으면 true. 만들지 못했으면 경로와 이유를 알리고 false 입니다.
          */
-        static bool ensureDirectoryExists( string_view directoryPath );
+        [[nodiscard]] static bool ensureDirectoryExists( string_view directoryPath );
         /** @brief 경로에 **항목(파일 또는 디렉터리)** 이 있는지 반환합니다. 디렉터리인지는 `isDirectory` 로 묻습니다. */
         static bool exists( string_view path );
         /** @brief 경로에 디렉터리가 있는지 반환합니다. */
@@ -214,7 +214,7 @@ namespace sw
          * @details 파일 내용에서 뽑은 값(해시 등)을 캐시해 두고 "그 뒤로 파일이 바뀌었나" 만 확인할 때 씁니다. 파일을 여는 것보다
          *          쌉니다(이 PC 에서 열기는 ~200 us, 이 조회는 ~75 us 입니다. 둘 다 필터 드라이버를 거칩니다).
          */
-        static bool getFileStamp( string_view fileName, FileStamp& outStamp );
+        [[nodiscard]] static bool getFileStamp( string_view fileName, FileStamp& outStamp );
         /**
          * @brief 이 프로세스가 파일 · 폴더를 만들었거나 바꿔 끼운 횟수입니다(`writeFile` · `writeTextFile` · `copyFile` 이 성공할 때, `ensureDirectoryExists` 가 폴더를 만들 때마다 오릅니다).
          * @details "없는 파일" 을 기억하는 캐시(`ResourcePaths`)가 이 값이 바뀌면 기억을 버립니다 — 파일이 생겼는데 옛 "없음" 을 돌려주지 않게. 이 값을 보는 쪽은
@@ -291,7 +291,7 @@ namespace sw
         /**
          * @brief 디렉터리를 훑으며 항목마다 @p visit 를 부릅니다. 들어갈 수 없는 하위 폴더는 건너뜁니다. 예외를 던지지 않습니다.
          * @details 순회가 도중에 멈추면(폴더가 순회 중에 지워짐 등) 경고하고 거기까지로 끝납니다. 항목 경로는 버퍼 하나를 다시 써서 넘깁니다.
-         * @return 디렉터리를 열지 못했으면 false 입니다(콜백이 멈춘 것은 실패가 아닙니다).
+         * @return 디렉터리를 열지 못했거나 순회가 도중에 멈췄으면 false 입니다(콜백이 멈춘 것은 실패가 아닙니다).
          */
         [[nodiscard]] static bool forEachDirectoryEntry( string_view directory, bool bRecursive, DirectoryEntryVisitFn visit, void* pContext );
         /** @brief 람다 · 함수 객체를 받는 판입니다. 할당하지 않습니다(함수 객체의 주소를 문맥으로 넘긴다). `func` 는 `bool( const DirectoryEntry& )` 입니다. */
@@ -328,9 +328,11 @@ namespace sw
          * @details 실제 파일 시스템을 훑어 얻은 경로라 **대소문자를 그대로 돌려줍니다**(구분자만 `/` 로 바꿉니다). 그대로 열 수
          *          있는 경로여야 하기 때문입니다. 대소문자를 구분하는 파일 시스템에서는 소문자로 바꾼 경로가 곧 "파일 없음" 입니다.
          *          맵 키가 필요하면 받는 쪽에서 normalizePath 하십시오.
+         * @return 폴더가 없으면 알리지 않고 false(없으면 빈 목록이 맞는지는 부른 쪽이 정한다 — 맞으면 `(void)` 와 이유), 순회가 도중에 멈췄으면 경로를 알리고
+         *         false(목록은 모은 데까지 — 부분 목록을 전부로 믿으면 지울 것 · 구울 것을 빠뜨린다)입니다.
          */
-        static bool collectFiles( string_view directory, string_view filterExtension, vector<string>& outListFilePath, bool bRecursive );
-        /** @brief 디렉터리 아래의 폴더를 모읍니다(경로 규칙은 collectFiles 와 같습니다). */
-        static bool collectFolders( string_view directory, vector<string>& outListFolder, bool bRecursive );
+        [[nodiscard]] static bool collectFiles( string_view directory, string_view filterExtension, vector<string>& outListFilePath, bool bRecursive );
+        /** @brief 디렉터리 아래의 폴더를 모읍니다(경로 규칙 · 반환은 collectFiles 와 같습니다). */
+        [[nodiscard]] static bool collectFolders( string_view directory, vector<string>& outListFolder, bool bRecursive );
     };
 } // namespace sw

@@ -128,7 +128,7 @@ namespace sw
          * @details CPU 텍스처는 여기서 업로드하지 않습니다. 빌린 머티리얼이 디바이스 교체 때 놓았다가 다시 빌리면 `TextureCache::acquire` 가 업로드합니다.
          *          참조가 0 인 CPU 텍스처는 GPU 자원이 없다는 캐시의 불변식을 지키기 위해서입니다.
          */
-        bool initRHI( IRHIDevice* pDevice ) override;
+        [[nodiscard]] bool initRHI( IRHIDevice* pDevice ) override;
 
         bool isRHIValid() const { return getHandle() != 0 && getSrv() != kInvalidDescriptorIndex; }
         /** @brief GPU 텍스처 핸들입니다. 스트리밍이 렌더 스레드에서 바꿔 끼우므로 원자값으로 읽는다(`upgradeResidency`). */

@@ -297,7 +297,7 @@ namespace sw
         [[nodiscard]] uint32 getReadbackBuffer( const RHIStagingSpan& span ) const;
 
         /** @brief 컴퓨트 루트 상수 UBO 를 확보합니다. */
-        bool ensureComputeRootConstantUbo();
+        [[nodiscard]] bool ensureComputeRootConstantUbo();
         /** @brief MRT 합성 FBO 를 확보합니다. */
         uint32 ensureCompositeFboMrt( const RHITextureHandle* pColor, const uint16* pColorSlice, uint32 colorCount, RHITextureHandle depth, uint32 depthSlice );
         /** @brief 불투명 핸들로 GLuint 이름을 찾습니다. */

@@ -281,8 +281,7 @@ namespace sw
                     SW_LOG_WARNING( "Could not replace the shader cache record '%#' - the cache entry is skipped", recordPath );
                     return;
                 }
-                FileUtil::ensureParentDirectoryExists( cachePath );
-                if ( FileUtil::writeFile( cachePath, result._bytecode.data(), result._bytecode.size() ) == false )
+                if ( FileUtil::ensureParentDirectoryExists( cachePath ) == false || FileUtil::writeFile( cachePath, result._bytecode.data(), result._bytecode.size() ) == false )
                 {
                     SW_LOG_WARNING( "Could not write the shader cache '%#'", cachePath );
                     return;
@@ -753,7 +752,8 @@ namespace sw
         if ( cacheDir.empty() == false && FileUtil::isDirectory( cacheDir ) )
         {
             vector<string> listFile;
-            FileUtil::collectFiles( cacheDir, "", listFile, false );
+            if ( FileUtil::collectFiles( cacheDir, "", listFile, false ) == false )
+                SW_LOG_WARNING( "Shader cache '%#' could not be listed completely - the files left out stay in the cache", cacheDir.c_str() );
             for ( const string& file : listFile )
             {
                 if ( FileUtil::removeFile( file ) == false )

@@ -416,7 +416,7 @@ namespace sw
             SW_LOG_ERROR( "[Bench] Failed to create the scene." );
             return nullptr;
         }
-        pScene->ensureDefaultCameras();
+        (void)pScene->ensureDefaultCameras(); // 못 고르면 렌더 경로가 "카메라 없음" 으로 알린다(카메라는 프레임마다 다시 고른다)
         return pScene;
     }
 
@@ -706,7 +706,7 @@ namespace sw
             pScene = pSceneManager->createEmptyActiveScene( "BenchScene" );
         if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
             return;
-        pScene->ensureDefaultCameras();
+        (void)pScene->ensureDefaultCameras(); // 오브젝트 관리자는 위에서 확인했다 — 못 고르면 렌더 경로가 알린다
         vector<GameObjectHandle> listObject;
         BenchCombatComponent::spawnScene( *pScene, _settings, listObject );
         for ( const GameObjectHandle& handle : listObject )
@@ -731,7 +731,7 @@ namespace sw
             pScene = pSceneManager->createEmptyActiveScene( "BenchScene" );
         if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
             return;
-        pScene->ensureDefaultCameras();
+        (void)pScene->ensureDefaultCameras(); // 오브젝트 관리자는 위에서 확인했다 — 못 고르면 렌더 경로가 알린다
         GameObjectManager* pObjects = pScene->getObjectManager();
 
         const uint32  columns    = static_cast<uint32>( MathUtil::ceil( MathUtil::sqrt( static_cast<float32>( ragdollCount ) ) ) );
@@ -821,7 +821,7 @@ namespace sw
             SW_LOG_ERROR( "[Bench] Failed to create the scene." );
             return;
         }
-        pScene->ensureDefaultCameras();
+        (void)pScene->ensureDefaultCameras(); // 못 고르면 렌더 경로가 "카메라 없음" 으로 알린다
         GameObjectManager* pObjects = pScene->getObjectManager();
         // 머리는 원점에 서서 +Z 방향을 봅니다. 카메라(-Z 쪽)를 보도록 돌리고, 눈은 카메라 높이의 앞쪽 지점을 바라봅니다.
         const float32 origin = -0.5f * static_cast<float32>( faceCount - 1 ) * _settings._faceSpacing;

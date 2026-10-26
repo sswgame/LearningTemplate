@@ -404,7 +404,8 @@ namespace sw
                 }
             }
         }
-        ensureDefaultCameras();
+        // 카메라는 프레임마다 다시 고른다 — 여기서 못 고르면(오브젝트 관리자 없음) 렌더 경로가 "카메라 없음" 으로 알린다.
+        (void)ensureDefaultCameras();
         SceneInternal::bindSceneMeshDefaults( this, _services._pAssetManager, pRHIDevice );
         return true;
     }

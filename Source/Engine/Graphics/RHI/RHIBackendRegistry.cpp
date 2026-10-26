@@ -67,7 +67,7 @@ namespace sw
             }
 
             /** @brief 요청한 RHI MODULE 을 필요할 때 하나씩 로드합니다(한꺼번에 로드하지 않습니다). */
-            static bool ensureBackendModuleLoaded( RHIBackend backend )
+            [[nodiscard]] static bool ensureBackendModuleLoaded( RHIBackend backend )
             {
                 RHIBackendRegistry&    reg    = engine::getSubsystem<RHIBackendRegistry>();
                 const RHIBackendEntry* pEntry = reg.findBackend( backend );
@@ -143,7 +143,8 @@ namespace sw
     unique_ptr<IRHIDevice> RHIBackendRegistry::createDevice( RHIBackend backend ) const
     {
 #if !defined( SW_SHIPPING )
-        RHIBackendRegistryInternal::ensureBackendModuleLoaded( backend );
+        // 못 올렸으면 바로 아래 조회가 등록되지 않은 백엔드로 보고 무엇이 있는지와 함께 알린다.
+        (void)RHIBackendRegistryInternal::ensureBackendModuleLoaded( backend );
 #endif
 
         const RHIBackendEntry* pEntry = findBackend( backend );

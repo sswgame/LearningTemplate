@@ -1085,7 +1085,7 @@ SW_TEST_CASE_PER_PARAMETER( AppSmokeTest, BenchFrameMatchesGoldenImage, collectB
         {
             // 케이스 임시 폴더는 케이스가 끝나면 지워진다 — 진 그림은 build/<프리셋>/GoldenDiff 에 남겨 열어 볼 수 있게 한다.
             const string diffDirectory = FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::getCurrentPath() ), "GoldenDiff" );
-            FileUtil::ensureDirectoryExists( diffDirectory );
+            SW_EXPECT_TRUE( FileUtil::ensureDirectoryExists( diffDirectory ) );
             const string keptPath = FileUtil::joinPath( diffDirectory, imageName + ".ppm" );
             SW_EXPECT_TRUE( FileUtil::writeFile( keptPath, screenshotBytes.data(), screenshotBytes.size() ) );
             SW_LOG_WARNING( "Golden mismatch kept at %#", keptPath.c_str() );

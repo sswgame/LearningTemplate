@@ -290,7 +290,7 @@ SW_TEST_CASE( ShaderCompilerTest, MultiBackendDiskCacheFileSeparation )
     if ( sw::FileUtil::isDirectory( cacheDir ) )
     {
         sw::vector<sw::string> listFiles;
-        sw::FileUtil::collectFiles( cacheDir, "", listFiles, false );
+        SW_EXPECT_TRUE( sw::FileUtil::collectFiles( cacheDir, "", listFiles, false ) );
         SW_EXPECT_TRUE( listFiles.size() >= 2u );
     }
 

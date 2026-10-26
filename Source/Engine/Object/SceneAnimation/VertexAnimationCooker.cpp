@@ -179,7 +179,12 @@ namespace sw
                                            uint32& outFailedCount )
     {
         vector<string> listFile;
-        FileUtil::collectFiles( resourceRoot, ".xml", listFile, true );
+        if ( FileUtil::collectFiles( resourceRoot, ".xml", listFile, true ) == false )
+        {
+            SW_LOG_ERROR( "Vertex animation cook could not list '%#' - nothing is cooked", resourceRoot );
+            ++outFailedCount;
+            return 0;
+        }
         std::sort( listFile.begin(), listFile.end() );
         const string      normalizedRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) );
         const string      activePackRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizePath( engine::getSubsystem<GameConfig>()._packRoot.get() ) );

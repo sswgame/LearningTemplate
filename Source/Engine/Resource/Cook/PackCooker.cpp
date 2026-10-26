@@ -99,7 +99,7 @@ namespace sw
             }
 
             /** @brief 굽을 도메인(`engine` · `common` · `game/<팩>`)을 모읍니다. 고른 게임 팩 폴더가 없으면 오류를 남기고 false 입니다. */
-            static bool collectDomains( const PackCookParams& params, vector<string>& outListDomain )
+            [[nodiscard]] static bool collectDomains( const PackCookParams& params, vector<string>& outListDomain )
             {
                 outListDomain.clear();
                 for ( const utf8* pShared : { "engine", "common" } )
@@ -119,7 +119,9 @@ namespace sw
                     return true;
                 }
                 vector<string> listGameFolder;
-                (void)FileUtil::collectFolders( gameRoot, listGameFolder, false ); // 게임 폴더가 없으면 공용 팩만 베이크한다
+                // 게임 폴더가 없으면 공용 팩만 베이크한다. 도중에 멈춘 목록이면 빠진 게임 팩을 모른 채 넘어가므로 실패다(경로는 collectFolders 가 알린다).
+                if ( FileUtil::isDirectory( gameRoot ) && FileUtil::collectFolders( gameRoot, listGameFolder, false ) == false )
+                    return false;
                 std::sort( listGameFolder.begin(), listGameFolder.end() );
                 for ( const string& gameFolder : listGameFolder )
                 {
@@ -197,7 +199,8 @@ namespace sw
 
                 // 목록도 입력이다 — 파일이 생기거나 사라지면 다시 베이크한다(`CookJob::collectFiles` 가 기록한다).
                 vector<string> listSourceFile;
-                CookJob::collectFiles( domainDir, "", listSourceFile );
+                if ( CookJob::collectFiles( domainDir, "", listSourceFile ) == false )
+                    return CookStep::Failed;
                 vector<string> listStale;
                 bool           bHasMeta = false;
                 for ( const string& absPath : listSourceFile )
@@ -224,7 +227,8 @@ namespace sw
                                     listStale.front() );
 
                 vector<string> listStagedFile;
-                CookJob::collectFiles( stagedDir, "", listStagedFile );
+                if ( CookJob::collectFiles( stagedDir, "", listStagedFile ) == false )
+                    return CookStep::Failed;
                 bool bHasRegistry = false;
                 for ( const string& absPath : listStagedFile )
                 {

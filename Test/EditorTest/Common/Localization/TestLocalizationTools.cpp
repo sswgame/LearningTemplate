@@ -63,7 +63,7 @@ namespace
                                                     "\"menu.start\": { \"text\": \"게임 시작\", \"sourceHash\": \"" + hashOf( "Start Game" ) +
                                                         "\", \"translatorComment\": \"버튼이 좁다\" }, \"menu.quit\": { \"text\": \"종료\", \"sourceHash\": \"" + hashOf( "Quit" ) +
                                                         "\" }, \"menu.removed\": { \"text\": \"사라진 메뉴\" }" );
-            (void)sw::FileUtil::ensureDirectoryExists( sw::FileUtil::joinPath( folder, "tm" ) );
+            (void)sw::FileUtil::ensureDirectoryExists( sw::FileUtil::joinPath( folder, "tm" ) ); // 테스트 준비 — 못 만들면 ensure 가 폴더와 이유를 남기고 뒤따르는 쓰기가 실패로 답한다
             // 테스트 준비 — 실패는 writeTextFile 이 오류로 남기고 뒤의 읽기 단언이 드러낸다
             (void)sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( folder, "tm/ko.tm.xml" ),
                                                R"(<TranslationMemory culture="ko"><entries><entry source="Quit" text="종료" /><entry source="Load game" text="불러오기" /></entries></TranslationMemory>)" );

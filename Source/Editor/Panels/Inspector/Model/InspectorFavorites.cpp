@@ -142,8 +142,7 @@ namespace sw::editor
     {
         if ( filePath.empty() )
             return false;
-        FileUtil::ensureParentDirectoryExists( filePath );
-        if ( FileUtil::writeTextFile( filePath, toText() ) == false )
+        if ( FileUtil::ensureParentDirectoryExists( filePath ) == false || FileUtil::writeTextFile( filePath, toText() ) == false )
         {
             SW_LOG_WARNING( "Inspector favorites could not be saved to %#", string( filePath ).c_str() );
             return false;

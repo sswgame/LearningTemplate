@@ -269,7 +269,7 @@ namespace sw::editor
         const string dataFolder = getGameDataFolderPath();
 
         vector<string> listFile;
-        FileUtil::collectFiles( dataFolder, ".xml", listFile, false );
+        const bool     bListed = FileUtil::collectFiles( dataFolder, ".xml", listFile, false );
 
         for ( const string& file : listFile )
         {
@@ -281,6 +281,6 @@ namespace sw::editor
             entry._absolutePath = FileUtil::normalizeSeparators( file );
             outList.push_back( std::move( entry ) );
         }
-        return true;
+        return bListed;
     }
 } // namespace sw::editor

@@ -112,7 +112,7 @@ namespace sw
         /** @brief 청크 배치를 모두 놓고, 칠한 칸이 있는 청크만 다시 만들어 모든 칸을 놓습니다. 바디는 건드리지 않습니다. 관리자가 없으면 false 입니다. */
         bool rebuildChunks();
         /** @brief 청크 하나의 배치를 만듭니다(이미 있으면 그대로). 만들었거나 있으면 true 입니다. */
-        bool ensureChunkBatch( int32 chunkIndex );
+        [[nodiscard]] bool ensureChunkBatch( int32 chunkIndex );
         /** @brief 청크 배치를 모두 놓습니다. */
         void releaseChunks();
         /** @brief 청크 안의 칸을 모두 다시 놓습니다. */

@@ -133,10 +133,7 @@ namespace sw
         const bool    bSameBytes = FileUtil::exists( localCachePath ) && FileUtil::readFile( localCachePath, existingBytes ) && existingBytes == result._bytecode;
         if ( bSameBytes == false )
         {
-            const string localDir = FileUtil::getDirectoryPart( localCachePath );
-            if ( localDir.empty() == false )
-                FileUtil::ensureDirectoryExists( localDir );
-            if ( FileUtil::writeFile( localCachePath, result._bytecode.data(), result._bytecode.size() ) == false )
+            if ( FileUtil::ensureParentDirectoryExists( localCachePath ) == false || FileUtil::writeFile( localCachePath, result._bytecode.data(), result._bytecode.size() ) == false )
             {
                 SW_LOG_WARNING( "Could not write the shader cache '%#' - the next run recompiles it", localCachePath );
                 return true;

@@ -85,7 +85,7 @@ namespace sw
         /** @brief (RHIRenderResource) 디바이스가 이미 없을 때 부릅니다. 핸들만 버립니다. */
         void forgetRHI( IRHIDevice* pDevice ) override;
         /** @brief (RHIRenderResource) 새 디바이스에 상수 버퍼와 텍스처를 다시 올립니다. */
-        bool initRHI( IRHIDevice* pDevice ) override;
+        [[nodiscard]] bool initRHI( IRHIDevice* pDevice ) override;
         /** @brief GPU 자원이 올라가 있으면 true 입니다. 캐시가 따로 세지 않고 이 값을 봅니다. */
         bool isRHIValid() const { return _constantBuffer != 0; }
 

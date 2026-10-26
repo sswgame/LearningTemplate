@@ -82,7 +82,7 @@ SW_TEST_CASE( ConfigManagerTest, RelativePathResolvesAgainstRootDirectory )
     const string relativePath = "TestEngineConfig.json";
     const string absolutePath = FileUtil::joinPath( rootDir, relativePath );
 
-    FileUtil::ensureDirectoryExists( rootDir );
+    SW_EXPECT_TRUE( FileUtil::ensureDirectoryExists( rootDir ) );
     SW_EXPECT_TRUE( FileUtil::writeTextFile( absolutePath, makeEngineConfigJSON( 1920, 1080 ) ) );
 
     // 1) 루트를 알려 주지 않으면 못 찾는다 (작업 디렉터리에도 실행 파일 옆에도 없다).
@@ -170,7 +170,7 @@ SW_TEST_CASE( ConfigManagerTest, ReloadConfigFileUpdatesInPlaceAndNotifies )
 
     const string rootDir = test::makeTempPath( "sw_config_reload_test" );
     const string path    = FileUtil::joinPath( rootDir, "ReloadEngineConfig.json" );
-    FileUtil::ensureDirectoryExists( rootDir );
+    SW_EXPECT_TRUE( FileUtil::ensureDirectoryExists( rootDir ) );
     SW_ASSERT_TRUE( FileUtil::writeTextFile( path, makeEngineConfigJSON( 800, 600 ) ) );
 
     ConfigManager manager;
@@ -214,7 +214,7 @@ SW_TEST_CASE( ConfigManagerTest, InvalidFileStopsAndNamesTheKey )
 #else
     const string rootDir = test::makeTempPath( "sw_config_invalid_test" );
     const string path    = FileUtil::joinPath( rootDir, "InvalidEngineConfig.json" );
-    FileUtil::ensureDirectoryExists( rootDir );
+    SW_EXPECT_TRUE( FileUtil::ensureDirectoryExists( rootDir ) );
 
     struct Case
     {

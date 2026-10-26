@@ -132,9 +132,10 @@ namespace sw
          * @brief @p folderPath 아래(하위 폴더 포함) @p extension 으로 끝나는 파일을 경로 순서로 모읍니다. 이 스레드에 작업이 있으면 그 목록을 입력으로 기록합니다.
          * @details 폴더를 훑어 출력을 정하는 쿠커는 `FileUtil::collectFiles` 대신 이것을 쓴다 — 파일이 생기거나 사라지면 다시 베이크한다.
          *          목록 입력의 id 는 받은 폴더 경로 그대로다(리소스 id 로 줄이지 않는다). 쿠커는 절대 경로를 넘긴다.
+         * @return 폴더가 없으면 빈 목록으로 true, 순회가 도중에 멈췄으면(부분 목록 — 구울 것을 빠뜨린다) false 입니다.
          */
-        static void collectFiles( string_view folderPath, string_view extension, vector<string>& outListFile );
-        /** @brief 목록 입력의 해시입니다. 폴더 기준 상대 경로를 정렬해 해시합니다. 폴더가 없으면 0 입니다. */
+        [[nodiscard]] static bool collectFiles( string_view folderPath, string_view extension, vector<string>& outListFile );
+        /** @brief 목록 입력의 해시입니다. 폴더 기준 상대 경로를 정렬해 해시합니다. 폴더가 없거나 순회가 도중에 멈췄으면 0 입니다. */
         static uint64 computeListingHash( string_view folderPath, string_view extension );
 
         /** @brief 파일 입력 하나를 기록합니다. 같은 리소스를 다시 읽으면 처음 것만 둡니다. 바깥 작업에도 기록합니다. */

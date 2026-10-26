@@ -184,8 +184,8 @@ namespace sw
              * @brief 지어 둔 오브젝트마다 셀 · 플래그를 정하고, 그 오브젝트가 가리키는 다른 엔티티(파일 id)를 모읍니다.
              * @return 엔티티가 지어지지 않았으면 오류를 남기고 false 입니다.
              */
-            static bool collectCellRecords( const SceneDocument& doc, const WorldCellGrid& grid, const unordered_map<uint64, GameObject*>& mapObjectByFileID, const ObjectSavedIDMap& mapSavedID,
-                                            string_view scenePath, vector<WorldCellObjectRecord>& outListRecord, vector<WorldCellReference>& outListReference )
+            [[nodiscard]] static bool collectCellRecords( const SceneDocument& doc, const WorldCellGrid& grid, const unordered_map<uint64, GameObject*>& mapObjectByFileID, const ObjectSavedIDMap& mapSavedID,
+                                                          string_view scenePath, vector<WorldCellObjectRecord>& outListRecord, vector<WorldCellReference>& outListReference )
             {
                 outListRecord.reserve( doc._listSceneObjectNode.size() );
                 vector<uint64> listReferencedID;
@@ -550,7 +550,12 @@ namespace sw
         }
 
         vector<string> listSceneFile;
-        FileUtil::collectFiles( resourceRoot, ".xml", listSceneFile, true );
+        if ( FileUtil::collectFiles( resourceRoot, ".xml", listSceneFile, true ) == false )
+        {
+            SW_LOG_ERROR( "Scene cook could not list '%#' - nothing is cooked", resourceRoot );
+            ++outFailedCount;
+            return 0;
+        }
         std::sort( listSceneFile.begin(), listSceneFile.end() );
 
         const string      normalizedRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) );
