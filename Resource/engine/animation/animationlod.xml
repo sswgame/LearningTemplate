@@ -1,5 +1,6 @@
 <AnimationLODSettings _offscreenUpdateRateDivisor="0"
                       _budgetMilliseconds="2.0"
+                      _unitCostMicroseconds="20.0"
                       _maxUpdateRateDivisor="16"
                       _vertexAnimationScreenSize="0.05">
 	<_listRateLevel>

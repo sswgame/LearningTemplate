@@ -58,6 +58,11 @@ namespace sw
             SW_LOG_ERROR( "Animation LOD settings '%#': the last rate level must have _minScreenSize 0", sourceLabel );
             return false;
         }
+        if ( _budgetMilliseconds > 0.0f && _unitCostMicroseconds <= 0.0f )
+        {
+            SW_LOG_ERROR( "Animation LOD settings '%#': _budgetMilliseconds is set but _unitCostMicroseconds is not - the budget needs a modelled unit cost", sourceLabel );
+            return false;
+        }
         return true;
     }
 

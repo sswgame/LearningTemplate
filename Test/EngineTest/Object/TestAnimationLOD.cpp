@@ -127,6 +127,7 @@ SW_TEST_CASE( AnimationLODTest, SettingsParseAndSelectLevel )
     AnimationLODSettings settings;
     SW_ASSERT_TRUE( settings.parseXML( R"(<AnimationLODSettings _offscreenUpdateRateDivisor="0"
                       _budgetMilliseconds="1.5"
+                      _unitCostMicroseconds="25"
                       _maxUpdateRateDivisor="16"
                       _vertexAnimationScreenSize="0.02">
 	<_listRateLevel>
@@ -141,6 +142,7 @@ SW_TEST_CASE( AnimationLODTest, SettingsParseAndSelectLevel )
     SW_EXPECT_EQUAL( 1u, settings.selectRateLevel( 0.1f ) );
     SW_EXPECT_EQUAL( 2u, settings.selectRateLevel( 0.01f ) );
     SW_EXPECT_NEAR_EQUAL( 1.5f, settings._budgetMilliseconds, 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 25.0f, settings._unitCostMicroseconds, 1e-6f );
 
     const AnimationLODState farState = AnimationLODUtil::makeState( settings, 0.01f, true, nullptr );
     SW_EXPECT_EQUAL( 8u, farState._updateRateDivisor );
@@ -164,6 +166,8 @@ SW_TEST_CASE( AnimationLODTest, SettingsParseAndSelectLevel )
 </AnimationLODSettings>)",
                                    "test" ) );
     SW_EXPECT_TRUE( bad._listRateLevel.empty() );
+    // 예산을 켜고 단가가 없으면 오류다 — 측정값으로 대신하지 않는다.
+    SW_EXPECT_FALSE( bad.parseXML( R"(<AnimationLODSettings _budgetMilliseconds="2.0"><_listRateLevel><AnimationLODRateLevel _minScreenSize="0.0" _updateRateDivisor="1" _bInterpolate="false" /></_listRateLevel></AnimationLODSettings>)", "test" ) );
 }
 
 /**
@@ -498,7 +502,8 @@ SW_TEST_CASE( AnimationLODTest, UpdateRateFromScreenSizeInterpolates )
 }
 
 /**
- * @brief [AnimationLODTest] 예산 — 평균 비용 × 유닛 수가 예산을 넘으면 화면이 작은(덜 중요한) 유닛부터 주기가 늘고, 큰 유닛은 매 프레임이다
+ * @brief [AnimationLODTest] 예산 — 표의 단가 × 유닛 수가 예산을 넘으면 화면이 작은(덜 중요한) 유닛부터 주기가 늘고, 큰 유닛은 매 프레임이다
+ * @details 배분은 벽시계 측정과 무관하다 — 두 번째 프레임(첫 프레임의 측정 평균이 생긴 뒤)도 같은 주기 · 같은 예상 비용이다.
  */
 SW_TEST_CASE( AnimationLODTest, BudgetAllocatorThrottlesSmallUnits )
 {
@@ -509,17 +514,20 @@ SW_TEST_CASE( AnimationLODTest, BudgetAllocatorThrottlesSmallUnits )
     manager.flushSceneTransforms();
     AnimationLODSettings settings{};
     settings._listRateLevel.push_back( AnimationLODRateLevel{ 0.0f, 1u, static_cast<uint8>( SW_FALSE ) } );
-    settings._budgetMilliseconds   = 0.15f; // 150 us
+    settings._budgetMilliseconds   = 0.15f;  // 150 us
+    settings._unitCostMicroseconds = 100.0f; // 둘이면 200 us — 예산을 넘는다
     settings._maxUpdateRateDivisor = 8;
     AnimationSystem& system        = manager.getSubsystem<AnimationSystem>();
     system.setLODSettings( settings );
     system.setLODViews( vector<AnimationLODView>{ TestAnimationLODInternal::makeForwardView( float3{}, float3{ 0.0f, 0.0f, 1.0f } ) } );
-    system.setAverageEvaluationMicroseconds( 100.0f ); // 둘이면 200 us — 예산을 넘는다
-    system.evaluate( 0.016f );
-    SW_EXPECT_EQUAL( 1u, pNear->getAnimationLODState()._updateRateDivisor );
-    SW_EXPECT_EQUAL( 2u, pFar->getAnimationLODState()._updateRateDivisor );
-    SW_EXPECT_TRUE( pFar->getAnimationLODState()._bInterpolate == SW_TRUE );
-    SW_EXPECT_NEAR_EQUAL( 150.0f, system.getExpectedEvaluationMicroseconds(), 1e-3f );
+    for ( int32 frame = 0; frame < 2; ++frame )
+    {
+        system.evaluate( 0.016f );
+        SW_EXPECT_EQUAL( 1u, pNear->getAnimationLODState()._updateRateDivisor );
+        SW_EXPECT_EQUAL( 2u, pFar->getAnimationLODState()._updateRateDivisor );
+        SW_EXPECT_TRUE( pFar->getAnimationLODState()._bInterpolate == SW_TRUE );
+        SW_EXPECT_NEAR_EQUAL( 150.0f, system.getExpectedEvaluationMicroseconds(), 1e-3f );
+    }
 }
 
 /**

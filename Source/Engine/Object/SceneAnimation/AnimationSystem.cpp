@@ -352,8 +352,9 @@ namespace sw
                 _listScratchBudgetItem.push_back( AnimationBudgetItem{ state._significance, state._updateRateDivisor } );
         }
 
+        // 단가는 표의 비용 모형이다 — 측정 평균(`_averageEvaluationMicroseconds`)을 넣으면 같은 입력이 기계 · 부하마다 다른 주기가 된다.
         _expectedEvaluationMicroseconds = AnimationLODUtil::allocateBudget( _listScratchBudgetItem.data(), static_cast<uint32>( _listScratchBudgetItem.size() ),
-                                                                            _averageEvaluationMicroseconds, _lodSettings._budgetMilliseconds * constant::kMicrosecondsPerMillisecond,
+                                                                            _lodSettings._unitCostMicroseconds, _lodSettings._budgetMilliseconds * constant::kMicrosecondsPerMillisecond,
                                                                             _lodSettings._maxUpdateRateDivisor );
         size_t budgetIndex              = 0;
         // 예산을 칸마다 풀어 두는 단계 — 훅이 없으니 목록이 그대로다. 예산 순번은 여기서만 센다(아래 순회가 해제된 칸을 건너뛰어도 어긋나지 않게).
@@ -578,7 +579,7 @@ namespace sw
 
     void AnimationSystem::runPosePhases()
     {
-        // 포즈 단계의 벽시계 시간을 측정한다 — 예산 배분이 "유닛 하나에 얼마" 를 이 평균으로 본다(언리얼 예산 배분기도 전체 시간을 측정해서 나눈다).
+        // 포즈 단계의 벽시계 시간을 측정한다 — 보기 전용이다. 예산 배분은 표의 단가를 쓴다(언리얼 예산 배분기는 측정값으로 나누지만 그러면 배분이 결정적이지 않다).
         uint32 poseUnitCount = 0;
         for ( const SkeletalMeshComponent* pUnit : _componentActive.getUnits() )
         {
