@@ -23,6 +23,8 @@ from common.ExitCode import ExitCode  # noqa: E402
 from common.AppRun import AppRunResult, kAppRhiUnusableExitCode, readRhiUnusableExitCode, computeSlopePerMinute, findUsableBackends, loadGameTable, parseProfileTable, parseProfileWall  # noqa: E402
 from common.ImageMetrics import (RgbImage, compareMetrics, computeMetrics, decodePng, deriveTolerance, downscale,  # noqa: E402
                                  encodePng, parsePpm)
+from common.AppRun import kStartupRe, splitRunSeconds  # noqa: E402
+from qa.GoldenImages import formatCaseLine  # noqa: E402
 from qa.PerfRegression import compareInternal  # noqa: E402
 
 
@@ -151,6 +153,27 @@ class PerfCompareTest(unittest.TestCase):
         self.assertEqual(1, len(listRegression))
         _, listNote = compareInternal(baseline, {"GT.Frame": {"p50_us": 500.0, "p99_us": 2000.0}}, tolerance, 150.0)
         self.assertTrue(any("faster" in note for note in listNote))
+
+
+class CaseSecondsTest(unittest.TestCase):
+    def testGoldenLineCarriesTheCaseSeconds(self) -> None:
+        line = formatCaseLine("NileCity", "dx12", "pass", 12.34, "foreground 0.5")
+        self.assertIn("PASS", line)
+        self.assertIn("12.3s", line)
+
+    def testStartupAndMeasureSecondsSplitTheRun(self) -> None:
+        startupSeconds, measureSeconds = splitRunSeconds(60.0, 2500.0)
+        self.assertAlmostEqual(2.5, startupSeconds)
+        self.assertAlmostEqual(57.5, measureSeconds)
+
+    def testSplitNeedsAStartupReport(self) -> None:
+        self.assertEqual((None, None), splitRunSeconds(60.0, None))
+
+    def testStartupLineIsParsed(self) -> None:
+        match = kStartupRe.search("[Info] startup 1830 ms, 412 file opens")
+        self.assertIsNotNone(match)
+        self.assertEqual("1830", match.group(1))
+        self.assertEqual("412", match.group(2))
 
 
 class RhiUnusableExitCodeTest(unittest.TestCase):

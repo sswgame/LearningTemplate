@@ -44,7 +44,8 @@ from common.Paths import getProjectRoot  # noqa: E402
 from common.Process import runProcess  # noqa: E402
 from common.BuildTree import BuildTree  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
-from common.AppRun import kBackendSwitch, computeSlopePerMinute, loadGameTable, parseProfileTable, parseProfileWall, runApp  # noqa: E402
+from common.AppRun import (kBackendSwitch, kStartupRe, computeSlopePerMinute, loadGameTable, parseProfileTable, parseProfileWall,  # noqa: E402
+                           runApp, splitRunSeconds)
 from common.ProcessLimits import ProcessLimits  # noqa: E402
 from common.ScenarioFile import readLoadSpec  # noqa: E402
 
@@ -64,7 +65,6 @@ kWarmupFraction = 0.25
 _kHitchRe = re.compile(r"\[Profile\] hitch\s+worst (\d+) (\d+) (\d+) (\d+) (\d+) us\s+over16ms (\d+)\s+over33ms (\d+)\s+over100ms (\d+)")
 _kAllocRe = re.compile(r"\[Profile\] alloc/frame\s+(\d+)\.(\d)")
 _kGpuMemoryRe = re.compile(r"\[Profile\] GPU memory by kind .*?\s(\d+)\.(\d+) MB in")
-_kStartupRe = re.compile(r"startup (\d+) ms(?:, (\d+) file opens)?")
 _kWorkerRe = re.compile(r"Initialized with (\d+) worker threads")
 _kLoadMetricRe = re.compile(r"\[LoadMetric\] (\w+)=(-?[\d.]+)")
 
@@ -231,13 +231,22 @@ def readAppMetricsInternal(listLine: list[str]) -> dict[str, float]:
             metrics["alloc.per_frame"] = float(f"{match.group(1)}.{match.group(2)}")
         elif (match := _kGpuMemoryRe.search(line)) is not None:
             metrics["gpu_memory_mb"] = float(f"{match.group(1)}.{match.group(2)}")
-        elif (match := _kStartupRe.search(line)) is not None:
+        elif (match := kStartupRe.search(line)) is not None:
             metrics["startup_ms"] = float(match.group(1))
             if match.group(2) is not None:
                 metrics["startup_file_opens"] = float(match.group(2))  # 기동이 연 파일 수 — 느린 디스크에서 기동 시간을 정한다
         elif (match := _kWorkerRe.search(line)) is not None:
             metrics["workers"] = float(match.group(1))  # 하드웨어 흉내가 워커 풀까지 줄였는지(친화도 → 워커 수)
     return metrics
+
+
+def addTimingMetricsInternal(metrics: dict[str, float], seconds: float) -> None:
+    """판의 전체 시간과, 기동 보고(`startup_ms`)가 있으면 기동(로딩) · 측정 구간 시간을 지표로 더합니다 — 보고가 없으면 두 칸은 비운다."""
+    metrics["run_seconds"] = seconds
+    startupSeconds, measureSeconds = splitRunSeconds(seconds, metrics.get("startup_ms"))
+    if startupSeconds is not None and measureSeconds is not None:
+        metrics["startup_seconds"] = startupSeconds
+        metrics["measure_seconds"] = measureSeconds
 
 
 def readScalabilityPresetInternal(repositoryRoot: Path, quality: str) -> dict[str, str]:
@@ -310,6 +319,7 @@ def runAppDriver(declaration: LoadDeclaration, profile: HardwareProfile, tree: B
     measurement.listLine = result.listLine
     measurement.metrics = readAppMetricsInternal(result.listLine)
     addResourceMetricsInternal(measurement.metrics, result.listSample, result.seconds)
+    addTimingMetricsInternal(measurement.metrics, result.seconds)
     if "GT.Frame.p99_us" not in measurement.metrics:
         measurement.listFailure.append("no [Profile] table in the output (Shipping drops it - measure a Release build)")
     return measurement
@@ -350,6 +360,7 @@ def runLoadBotDriver(declaration: LoadDeclaration, profile: HardwareProfile, tre
     measurement.metrics["actions"] = float(completedCount)
     measurement.metrics["error_percent"] = 100.0 * errorCount / completedCount if completedCount else 100.0
     addResourceMetricsInternal(measurement.metrics, result.listSample, result.seconds)
+    addTimingMetricsInternal(measurement.metrics, result.seconds)
     return measurement
 
 
@@ -376,6 +387,7 @@ def runClusterDriver(declaration: LoadDeclaration, profile: HardwareProfile, tre
     if not measurement.metrics:
         measurement.listFailure.append("no [LoadMetric] lines in the test output")
     addResourceMetricsInternal(measurement.metrics, result.listSample, result.seconds)
+    addTimingMetricsInternal(measurement.metrics, result.seconds)
     return measurement
 
 
@@ -579,7 +591,8 @@ def saveBaselinesInternal(catalog: LoadCatalog) -> None:
 def printTableInternal(listResult: list[dict]) -> None:
     """결과 표 — 가운데 값(최소..최대)."""
     listColumn = ("GT.Frame.p99_us", "RT.Frame.p99_us", "GPU.Frame.p99_us", "hitch.worst_us", "private_mb.max", "tick_p99_us", "error_percent")
-    print("[Load] scenario x profile | verdict | " + " | ".join(listColumn), flush=True)
+    listSecondColumn = ("run_seconds", "startup_seconds", "measure_seconds")  # 시간 칸 — 초 단위라 소수 한 자리
+    print("[Load] scenario x profile | verdict | " + " | ".join(listColumn + listSecondColumn), flush=True)
     for result in listResult:
         if result.get("verdict") == "skip":
             continue
@@ -587,6 +600,9 @@ def printTableInternal(listResult: list[dict]) -> None:
         for column in listColumn:
             entry = result["metrics"].get(column)
             cells.append(f"{entry['median']:.0f} ({entry['min']:.0f}..{entry['max']:.0f})" if entry else "-")
+        for column in listSecondColumn:
+            entry = result["metrics"].get(column)
+            cells.append(f"{entry['median']:.1f}" if entry else "-")
         print(f"[Load] {result['scenario']} x {result['profile']}{'*' if result['emulated'] else ''} | {result['verdict']} | " + " | ".join(cells), flush=True)
 
 
