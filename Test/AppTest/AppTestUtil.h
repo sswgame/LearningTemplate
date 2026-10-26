@@ -61,7 +61,9 @@ namespace test
          * @details 경로에 공백이 있을 수 있어 첫 토큰(실행 파일 경로)은 따옴표로 감싸고, 사람이 지켜보지 않으므로 `-unattended` 를 붙인다
          *          (에디터를 켜도 단언 대화상자를 걸지 않는다 — Debug 단언은 멈춘다). 작업 폴더는 `getRunFolder` 다.
          *          `-EnableEditor` 가 있는데 에디터 상태 폴더(`-gv_editorStateDir`)를 주지 않았으면 쓰기 루트 아래 상태 폴더를 붙인다 — 주지 않으면 에디터가
-         *          프로젝트 루트의 `Saved/Editor`(사용자의 레이아웃 · 설정)를 읽고 써 실행끼리 겹친다. 입구가 여기 하나라 케이스가 빠뜨릴 수 없다.
+         *          프로젝트 루트의 `Saved/Editor`(사용자의 레이아웃 · 설정)를 읽고 써 실행끼리 겹친다. 같은 까닭으로 `-gv_userSettingsFile` 이 없으면 쓰기 루트 아래
+         *          설정 파일을 붙인다(사용자 폴더의 `usersettings.json` 대신). 둘 다 붙일 때마다 비우고 배포본에는 붙이지 않는다(`gv_` 를 모른다).
+         *          입구가 여기 하나라 케이스가 빠뜨릴 수 없다.
          */
         [[nodiscard]] static AppLaunch makeAppLaunch( sw::string_view arguments );
         // 이 구성에 없는 기능이 필요한 인자(`-EnableEditor` · `-game=`)는 케이스가 `SW_TEST_REQUIRES_FEATURE` 로 먼저 선언해야 한다 — 선언이 빠졌으면 실패를 기록하고 빈 명령을 돌려준다.

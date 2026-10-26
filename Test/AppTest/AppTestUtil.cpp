@@ -144,23 +144,34 @@ namespace test
             }
 
             /**
-             * @brief `-EnableEditor` 가 있는데 에디터 상태 폴더를 주지 않은 실행에 붙일 인자(따옴표로 감싼 `-gv_editorStateDir=<쓰기 루트>/Saved/Automation/EditorState/default`)입니다. 붙일 것이 없으면 빈 글입니다.
-             * @details 주지 않으면 에디터가 프로젝트 루트의 `Saved/Editor` 를 읽고 써(레이아웃 · 테마 · 설정) 동시에 도는 실행끼리 같은 JSON 을 고친다.
-             *          폴더는 붙일 때마다 비운다 — 지난 실행의 레이아웃 · 설정을 읽지 않고 늘 같은 상태로 시작한다(이어 쓸 상태가 필요한 케이스는 폴더를 직접 준다).
-             *          배포본은 에디터가 없고 `gv_` 를 몰라 읽기 오류(11)로 끝난다 — `-EnableEditor` 는 `hasFeaturesForArguments` 가 먼저 막는다.
+             * @brief 사용자 폴더 대신 실행 쓰기 루트를 쓰게 하는 인자들입니다(앞에 공백, 값은 따옴표로 감싼다). 붙일 것이 없으면 빈 글입니다.
+             * @details 둘을 붙이고 붙일 때마다 비운다 — 지난 실행 · 사용자의 상태를 읽지 않고 늘 같은 상태로 시작한다(이어 쓸 상태가 필요한 케이스는 값을 직접 준다).
+             *          - `-EnableEditor` 인데 `-gv_editorStateDir` 가 없으면 `<쓰기 루트>/Saved/Automation/EditorState/default` — 없으면 에디터가 프로젝트 루트의
+             *            `Saved/Editor`(레이아웃 · 테마 · 설정)를 읽고 써 동시에 도는 실행끼리 같은 JSON 을 고친다.
+             *          - `-gv_userSettingsFile` 이 없으면 `<쓰기 루트>/Saved/UserSettings/usersettings.json` — 없으면 App 이 사용자 폴더(`%LOCALAPPDATA%/SWEngine/<게임>/`)의
+             *            설정을 읽어 결과가 그 PC 의 설정에 달리고, 설정을 바꾸는 시나리오가 그 파일을 고친다.
+             *          배포본은 `gv_` 를 몰라 읽기 오류(11)로 끝나므로 붙이지 않는다 — 배포본의 사용자 설정은 사용자 폴더 그대로다(HostGpuIsolation W11).
              */
-            static sw::string makeDefaultEditorStateArgument( sw::string_view arguments, const sw::string& runFolder )
+            static sw::string makeIsolationArguments( sw::string_view arguments, const sw::string& runFolder )
             {
                 sw::string argument;
 #if !defined( SW_SHIPPING )
                 const sw::string editorSwitch = AppTestUtil::makeSwitchArgument( sw::CommandLineArgument::ENABLE_EDITOR );
                 const sw::string statePrefix  = sw::string( "-" ) + sw::kAutomationEditorStateVariable + "=";
                 const bool       bNeedsState  = arguments.find( editorSwitch.c_str() ) != sw::string_view::npos && arguments.find( statePrefix.c_str() ) == sw::string_view::npos;
-                if ( bNeedsState == false )
-                    return argument;
-                const sw::string stateFolder = sw::FileUtil::joinPath( runFolder, sw::string( sw::kAutomationOutputFolder ) + "/" + sw::kAutomationEditorStateFolder + "/default" );
-                SW_EXPECT_TRUE_MSG( sw::FileUtil::removeDirectory( stateFolder ), ( "에디터 상태 폴더를 비우지 못했다: " + stateFolder ).c_str() );
-                argument = " \"" + statePrefix + stateFolder + "\"";
+                if ( bNeedsState )
+                {
+                    const sw::string stateFolder = sw::FileUtil::joinPath( runFolder, sw::string( sw::kAutomationOutputFolder ) + "/" + sw::kAutomationEditorStateFolder + "/default" );
+                    SW_EXPECT_TRUE_MSG( sw::FileUtil::removeDirectory( stateFolder ), ( "에디터 상태 폴더를 비우지 못했다: " + stateFolder ).c_str() );
+                    argument += " \"" + statePrefix + stateFolder + "\"";
+                }
+                const sw::string settingsPrefix = sw::string( "-" ) + sw::kAutomationUserSettingsVariable + "=";
+                if ( arguments.find( settingsPrefix.c_str() ) == sw::string_view::npos )
+                {
+                    const sw::string settingsFile = sw::FileUtil::joinPath( runFolder, "Saved/UserSettings/usersettings.json" );
+                    SW_EXPECT_TRUE_MSG( sw::FileUtil::tryRemoveFile( settingsFile ), ( "사용자 설정 파일을 지우지 못했다: " + settingsFile ).c_str() );
+                    argument += " \"" + settingsPrefix + settingsFile + "\"";
+                }
 #else
                 (void)arguments;
                 (void)runFolder;
@@ -254,7 +265,7 @@ namespace test
         launch._command += makeSwitchArgument( sw::CommandLineArgument::UNATTENDED );
         launch._command += " ";
         launch._command += arguments;
-        launch._command += AppTestUtilInternal::makeDefaultEditorStateArgument( arguments, runFolder );
+        launch._command += AppTestUtilInternal::makeIsolationArguments( arguments, runFolder );
         launch._options._workingDirectory = runFolder;
         return launch;
     }

@@ -94,7 +94,9 @@ GPU 경합은 프레임 시간 · 타이밍에 기대는 단언, 골든 이미�
 2026-10-27 구현에서 더 볼 것:
 
 - 빌드 뒤 `-L nogpu`(`AutomationScratchTest.ScratchIDsBindToThisProcess` — 작업자 문법 검사 도구가 이 파일을 "command line is too long" 으로 못 봤다), `-L lint`, `-L hostgpu` Shipping 전체, `AppSmokeTest.EveryBackendStartsRendersAndExitsCleanly` 시간 전후(셰이더 캐시가 `Bin/Saved/ShaderCache` 그대로인지).
-- 두 App 이 같은 때 끝나면 `Bin/Saved/ShaderCache/vk_pipeline_cache.bin` 을 같이 쓴다(원자적 쓰기지만 바꿔 끼우기가 겹치면 `Could not save the pipeline cache` 경고 → 시나리오 15). 6절 반복에서 보이면 파일 이름에 pid 를 넣는다.
+- 공유 캐시(W6 · W7)는 코드로 닫혀 있다: `Bin/Saved/ShaderCache/vk_pipeline_cache.bin` · 셰이더 라이브 캐시 · `Saved/DDC`(내용 해시 키) · `Saved/CookRecord` 는 모두 `FileUtil::writeFile`/`writeTextFile` 로 쓰고, 이것은 같은 폴더의 `<파일>.tmp<pid>_<번호>` 에 다 쓴 뒤 POSIX 방식 이름 바꾸기(`FILE_RENAME_FLAG_POSIX_SEMANTICS` — 대상을 누가 열고 있어도 바꿔 끼운다, 실패하면 20 ms 간격 열 번 다시)로 교체한다. 두 App 이 같은 때 끝나면 나중 것이 이기고 읽는 쪽은 옛 파일을 끝까지 읽는다. 6절 반복에서 `Could not save the pipeline cache` · `Failed to replace` 가 보이면 그때 파일 이름에 pid 를 넣는다. 원자성은 NTFS 기준이다(FAT · 네트워크 드라이브는 `MoveFileExW` 로 내려간다).
+- W11: 개발 빌드의 AppTest 는 `-gv_userSettingsFile=<쓰기 루트>/Saved/UserSettings/usersettings.json` 을 붙여 사용자 폴더의 설정을 읽지도 쓰지도 않는다(`makeAppLaunch`). 남은 것은 배포본(`gv_` 를 모른다)의 설정과 로컬 저장(`LocalStoreFactory` → `UserDataPath::resolve`, 세이브 · 프로필)이다 — H1 스냅숏의 `localAppData` 뿌리에 새 파일이 생기는 시나리오가 있으면 그 실행에만 `LOCALAPPDATA` · `XDG_*` 를 쓰기 루트로 돌리는 환경 변수 칸(`ProcessOptions` 에 없음)을 더한다. 이 변경으로 AppTest 가 그 PC 의 `usersettings.json` 대신 하드웨어 자동 감지 프리셋으로 시작하므로 골든 · 프레임 단언이 달라지는지 본다.
+- 에디터 Test Runner 패널(`TestRunnerPanel`)이 띄우는 App 의 상태 폴더는 `Saved/Automation/TestRunnerEditorState_p<pid>` 이고 띄울 때마다 비운다(손 실행이라 작업 폴더는 `Bin` 그대로다).
 - `packaging` 시나리오는 `Bin` 을 쓰기 루트 아래 `Saved/Packages/` 로 복사한다 — 경로가 길어져 260 자를 넘는지.
 - 옛 `Bin/Saved/Automation` 의 보고는 더 갱신되지 않는다 — `scenario-logs` 가 낡은 보고를 읽지 않게 통합이 한 번 지운다.
 - H1 `host-write-snapshot` 을 돌려 2절 표 밖의 쓰기가 없는지.
