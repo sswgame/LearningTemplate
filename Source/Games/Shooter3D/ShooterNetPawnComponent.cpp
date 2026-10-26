@@ -348,7 +348,9 @@ namespace sw
         input._bSprint = reader.readBool() ? SW_TRUE : SW_FALSE;
         input._bJump   = reader.readBool() ? SW_TRUE : SW_FALSE;
         // 이동 길이는 1 이하다(`makeInput`) — 넘는 입력은 손상이거나 속인 입력이다. 서버가 잘라 받지 않고 버린다.
-        if ( reader.hasOverflowed() || input._move.getLength() > 1.0f + MathUtil::kEpsilon )
+        // "1 이하인가" 로 묻는다 — "1 을 넘는가" 로 물으면 NaN 이 거짓이 되어 통과한다.
+        const bool bLengthOk = input._move.getLength() <= 1.0f + MathUtil::kEpsilon;
+        if ( reader.hasOverflowed() || bLengthOk == false )
             return false;
         outInput = input;
         return true;
