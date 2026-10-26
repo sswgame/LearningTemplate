@@ -144,8 +144,9 @@ namespace sw
         if ( graphContext._pCmdList != nullptr )
             passContext._pCmd = graphContext._pCmdList;
         // 상수 버퍼도 패스마다 따로 잡는다. 커맨드 기록은 지연되는데 상수 쓰기는 즉시 일어나므로,
-        // 하나를 공유하면 재생 시점에 마지막 패스 값만 남는다.
-        acquirePassCb( passContext );
+        // 하나를 공유하면 재생 시점에 마지막 패스 값만 남는다. 못 잡으면(링 고갈, 오류는 링이 남겼다) 이 패스를 그리지 않는다.
+        if ( acquirePassCb( passContext ) == false )
+            return;
 
         const vector<RenderGraphPassDesc>& listPass = _pipelineResource.getGraphPass();
         // 타입은 로드 시점에 한 번 해석해 둔 값을 쓴다. 여기서 문자열을 다시 비교하면 디스패치와
@@ -1000,7 +1001,8 @@ namespace sw
                 context._pCmd->setViewport( viewport );
                 // 타일마다 새 상수 슬롯을 잡는다. 슬롯은 패스당 하나라서 같은 슬롯에 행렬만 다시 올리면, GPU 가 나중에 읽는 DX12 · Vulkan 에서는
                 // 모든 타일이 마지막에 쓴 행렬을 본다(DX11 · GL 은 업데이트가 명령 순서대로 들어가 가려진다).
-                acquirePassCb( context );
+                if ( acquirePassCb( context ) == false ) // 링 고갈 — 이 타일은 그리지 않는다(앞 타일의 행렬로 그리지 않는다)
+                    continue;
                 context._passValues.setMatrix( names._lightViewProj, tile._viewProj );
                 drawSceneMeshes( context, pso, bTransparentBatch );
             }

@@ -511,9 +511,9 @@ namespace sw
          * @brief 이번 프레임의 패스 상수 버퍼 슬롯을 하나 골라 context 에 붙입니다.
          * @details 커맨드 기록은 지연되고 상수 버퍼 쓰기는 즉시 일어난다. 그래서 패스마다 별도 버퍼를
          *          써야 재생 시점에 각 패스의 상수가 남는다. 커서는 원자적이라
-         *          병렬 기록에서도 안전하다. 슬롯이 모자라면 마지막 슬롯을 공유한다.
+         *          병렬 기록에서도 안전하다. 슬롯이 모자라면 false 이고 부르는 쪽은 그리지 않는다(앞 슬롯을 공유하지 않는다).
          */
-        void acquirePassCb( FramePassContext& context );
+        [[nodiscard]] bool acquirePassCb( FramePassContext& context );
         /** @brief 프레임을 시작할 때마다 패스 상수 슬롯 커서를 되감고 시드를 0번 슬롯에 맞춥니다. */
         void resetPassCbRing();
         /** @brief 주 시점의 트랜지언트 텍스처를 확보합니다. 크기는 출력 크기 × 사각형 × 해상도 배율이며, 출력 크기는 덮어쓴 크기가 있으면 그 값, 없으면 백버퍼입니다. */

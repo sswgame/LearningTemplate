@@ -35,13 +35,12 @@ namespace sw
      *          락이 걸려 레벨 병렬 기록이 직렬화된다.
      *          그래서 커맨드 버퍼 쌍(VulkanCommandListEntry)이 자기 풀 묶음을 가지고 다니고, 그 버퍼가 GPU 펜스를 통과해
      *          재사용 풀로 돌아온 뒤에야 통째로 리셋된다. 락이 없다. 디바이스 프레임 스트림은 링 슬롯마다 하나를 쓴다.
-     *          풀 하나가 차면 다음 풀을 만든다(kMaxPoolsPerDescriptorPoolSet 까지).
+     *          풀 하나가 차면 다음 풀을 만든다(상한 없음 — 한 번의 기록이 쓴 세트 수만큼 자란다. 만들지 못하면 멈춘다).
      */
     struct VulkanDescriptorPoolSet
     {
         vector<VkDescriptorPool> _listPool;
-        uint32                   _cursor{ 0 };                  ///< 지금 할당 중인 풀
-        uint8                    _bExhaustedLogged{ SW_FALSE }; ///< 상한에 도달했다는 로그를 한 번만 남긴다.
+        uint32                   _cursor{ 0 }; ///< 지금 할당 중인 풀
     };
 } // namespace sw
 
@@ -412,8 +411,6 @@ namespace sw
         static constexpr uint32 kBindlessStorageImageCount = shaderslot::bindless::kVkStorageImageCount;
         /** @brief 슬롯 세트(set 0) 풀 하나의 세트 수입니다. 바인딩 상태가 바뀔 때마다 하나씩 쓰며(배치, 패스 단위), 차면 풀을 하나 더 만듭니다. */
         static constexpr uint32 kSlotSetsPerPool = 4096;
-        /** @brief 풀 묶음 하나가 가질 수 있는 최대 풀 수입니다. 넘으면 에러 로그를 남기고 직전 세트로 그립니다. */
-        static constexpr uint32 kMaxPoolsPerDescriptorPoolSet = 16;
 
         /// @brief VkBuffer 와 메모리, 사용 플래그입니다.
         struct VulkanBufferRecord
@@ -488,7 +485,7 @@ namespace sw
         /** @brief RW 텍스처 배열(set 1 binding 3)의 원소 하나를 갱신합니다(GENERAL 레이아웃). */
         void writeBindlessStorageImageSlot( RHIDescriptorIndex index, VkImageView view );
         /**
-         * @brief 풀 묶음에서 슬롯 세트(set 0) 하나를 할당합니다. 풀이 차면 다음 풀을 만듭니다(kMaxPoolsPerDescriptorPoolSet 까지).
+         * @brief 풀 묶음에서 슬롯 세트(set 0) 하나를 할당합니다. 풀이 차면 다음 풀을 만듭니다(상한 없음). 풀 · 세트를 만들지 못하면(장치 메모리 부족) 멈춥니다 — 앞 세트로 그리지 않습니다.
          * @details 락이 없다. 풀 묶음은 커맨드 버퍼 하나(기록 스레드 하나)의 것이다.
          */
         VkDescriptorSet allocateSlotSet( VulkanDescriptorPoolSet& poolSet );

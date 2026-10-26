@@ -412,19 +412,12 @@ namespace sw
         {
             if ( cursor >= listPool.size() )
             {
-                // 언리얼처럼 풀이 차면 하나 더 만든다. 만든 풀은 묶음이 사는 동안 유지된다(리셋만 한다).
-                if ( listPool.size() >= kMaxPoolsPerDescriptorPoolSet )
-                {
-                    if ( poolSet._bExhaustedLogged == SW_FALSE )
-                    {
-                        poolSet._bExhaustedLogged = SW_TRUE;
-                        SW_LOG_ERROR( "The slot set pool group hit its limit (%#x%#) - the remaining draws of this buffer use the previous set.", kMaxPoolsPerDescriptorPoolSet, kSlotSetsPerPool );
-                    }
-                    return VK_NULL_HANDLE;
-                }
+                // 언리얼처럼 풀이 차면 하나 더 만든다 — 상한을 두지 않는다. 묶음은 커맨드 버퍼 하나가 한 번 기록하는 동안 쓴 세트 수만큼 자라고
+                // (바인딩이 바뀌는 드로우 · 디스패치마다 하나), 만든 풀은 묶음이 사는 동안 유지된다(리셋만 한다). 상한을 두면 넘친 드로우가
+                // 앞 세트로 조용히 그려진다. 풀을 더 만들지 못하는 것은 장치 메모리 부족이라 그릴 길이 없어 멈춘다.
                 const VkDescriptorPool pool = createSlotPool();
                 if ( pool == VK_NULL_HANDLE )
-                    return VK_NULL_HANDLE;
+                    SW_FATAL( "Could not create another slot set descriptor pool (%# pools x %# sets in use) - out of device memory", static_cast<uint32>( listPool.size() ), kSlotSetsPerPool );
                 listPool.push_back( pool );
             }
 
@@ -437,9 +430,9 @@ namespace sw
             const VkResult  result = vkAllocateDescriptorSets( _device, &allocInfo, &set );
             if ( result == VK_SUCCESS )
                 return set;
-            // 풀이 찬 것(다음 풀로)만 정상 응답이다. 그 밖의 실패는 오류로 남긴다(isVkSuccess 가 로그를 남기고 false 다).
+            // 풀이 찬 것(다음 풀로)만 정상 응답이다. 그 밖의 실패(장치 메모리 부족)는 세트 없이 그리면 앞 세트로 그려지므로 멈춘다.
             if ( result != VK_ERROR_OUT_OF_POOL_MEMORY && result != VK_ERROR_FRAGMENTED_POOL )
-                return isVkSuccess( result, "vkAllocateDescriptorSets (slot set)" ) ? set : VK_NULL_HANDLE;
+                requireVk( result, "vkAllocateDescriptorSets (slot set)" );
             ++cursor; // 이 풀은 찼다. 다음 풀로
         }
     }
@@ -469,7 +462,6 @@ namespace sw
             }
         }
         poolSet._listPool.clear();
-        poolSet._cursor           = 0;
-        poolSet._bExhaustedLogged = SW_FALSE;
+        poolSet._cursor = 0;
     }
 } // namespace sw

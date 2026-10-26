@@ -577,7 +577,8 @@ namespace sw
             _pCmd->setViewport( viewport );
             context._resourceRegistry.reset();
             context._resourceRegistry.registerTexture( attachmentNames()._sourceColor, draw._pTexture->getHandle(), draw._pTexture->getSrv() );
-            acquirePassCb( context );
+            if ( acquirePassCb( context ) == false ) // 링 고갈 — 이 쿠키 칸은 그리지 않는다
+                continue;
             drawFullscreen( context, pso );
         }
         _pCmd->endRenderPass();

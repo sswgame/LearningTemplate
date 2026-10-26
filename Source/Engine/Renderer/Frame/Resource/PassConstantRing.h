@@ -30,7 +30,7 @@ namespace sw
     public:
         /// @brief 처음 만들어 두는 슬롯 수입니다. 배치 수에 따라 `ensureCapacity` 가 더 키웁니다.
         static constexpr uint32 kInitialSlotCount = 64;
-        /// @brief 슬롯 상한입니다. 넘으면 에러를 남기고 마지막 슬롯을 공유합니다(그 프레임은 배치 상수가 섞입니다).
+        /// @brief 슬롯 상한입니다. 모자라면 슬롯을 빌려주지 않고(그 패스는 그리지 않는다) 오류를 남깁니다 — 마지막 슬롯을 공유하지 않습니다.
         static constexpr uint32 kMaxSlotCount = 4096;
         /// @brief 슬롯 하나의 바이트 수입니다. 엔진 PassCB 레이아웃(리플렉션 — 하늘 대기 · 안개 행이 들어와 768 을 넘었다)이 이 안에 들어야 합니다. DX12 상수 버퍼 뷰는 256 바이트 배수여야 합니다.
         ///        넘는 레이아웃은 `ShaderParameterBinder` 가 올리지 않고 오류로 알린다(작은 슬롯 뒤를 쓰지 않는다).
@@ -52,11 +52,11 @@ namespace sw
         /** @brief 프레임 시작: 커서를 1번 슬롯으로 되돌리고 고갈 경고 래치를 해제합니다. */
         void beginFrame();
         /**
-         * @brief 슬롯을 하나 빌립니다. **드로우마다** 하나씩입니다. 슬롯이 하나도 없으면 false 입니다.
+         * @brief 슬롯을 하나 빌립니다. **드로우마다** 하나씩입니다. 슬롯이 없거나 이번 프레임 몫이 다 나갔으면 false 입니다.
          * @details 커서는 원자적이라 병렬 기록에서도 안전합니다. 슬롯 배열은 기록 시작 전에 잡아 두고 병렬 구간에서
-         *          크기가 변하지 않습니다. 모자라면 마지막 슬롯을 공유하고 프레임당 한 번 경고합니다.
+         *          크기가 변하지 않습니다. 모자라면 앞 슬롯을 공유하지 않고 false 를 돌려주며 프레임당 한 번 오류를 남깁니다(다음 프레임이 키운다).
          */
-        bool acquire( RHIBufferHandle& outBuffer, RHIDescriptorIndex& outIndex );
+        [[nodiscard]] bool acquire( RHIBufferHandle& outBuffer, RHIDescriptorIndex& outIndex );
         /**
          * @brief 슬롯 수를 `needed` 이상으로 늘립니다. **기록 시작 전에만** 부릅니다.
          * @details 버퍼 생성과 bindless 등록은 레지스트리를 바꾸므로 병렬 기록 중에는 할 수 없습니다

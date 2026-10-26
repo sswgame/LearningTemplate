@@ -223,7 +223,8 @@ namespace sw
             if ( _bOnlineHeapExhaustedLogged == SW_FALSE )
             {
                 _bOnlineHeapExhaustedLogged = SW_TRUE;
-                SW_LOG_ERROR( "Out of online descriptor blocks (%#x%#) - later draws use the previous slot table.",
+                // 실제 동작은 건너뛰기다 — flushSlotTables 가 false 를 받아 드로우 · 디스패치를 내지 않는다(앞 테이블로 그리지 않는다).
+                SW_LOG_ERROR( "Out of online descriptor blocks (%#x%#) - draws and dispatches that need a new slot table are skipped.",
                               kOnlineBlockCount, kOnlineBlockDescriptorCount );
             }
             return UINT32_MAX;
