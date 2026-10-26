@@ -85,7 +85,7 @@ namespace test
         return timeoutSeconds * SW_TEST_TIMEOUT_SCALE;
     }
 
-    ProcessRunResult runProcessWithDeadline( sw::string_view command, const sw::ProcessOptions& options, uint32 timeoutSeconds )
+    ProcessRunResult runProcessWithDeadline( const sw::ProcessCommand& command, const sw::ProcessOptions& options, uint32 timeoutSeconds )
     {
         return runProcessWithDeadline( command, options, timeoutSeconds, []( sw::Process&, const sw::string& ) {} );
     }

@@ -31,11 +31,18 @@ SW_TEST_CASE( EditorAssetValidationTest, FindingLinesAreSplitIntoFields )
 }
 
 /**
- * @brief [EditorAssetValidationTest] 검증 명령은 스크립트와 파일 경로를 따옴표로 감싸고 경고까지 묻는다
+ * @brief [EditorAssetValidationTest] 검증 명령은 스크립트와 파일 경로를 인자 하나씩으로 넘기고 경고까지 묻는다 — 공백이 든 경로도 한 인자다
  */
-SW_TEST_CASE( EditorAssetValidationTest, CommandQuotesScriptAndFiles )
+SW_TEST_CASE( EditorAssetValidationTest, CommandPassesScriptAndFilesAsArguments )
 {
-    const string command = EditorAssetValidation::makeCommand( "C:/My Project", { "game/a b/x.scene.xml", "engine/m.material" } );
-    SW_EXPECT_TRUE( command.find( "\"C:/My Project/Scripts/qa/ValidateAssets.py\"" ) != string::npos );
-    SW_EXPECT_TRUE( command.find( "--severity warning --files \"game/a b/x.scene.xml\" \"engine/m.material\"" ) != string::npos );
+    const ProcessCommand  command      = EditorAssetValidation::makeCommand( "C:/My Project", { "game/a b/x.scene.xml", "engine/m.material" } );
+    const vector<string>& listArgument = command._listArgument;
+    SW_ASSERT_TRUE( listArgument.size() >= 6 );
+    const size_t scriptIndex = listArgument.size() - 6; // 실행기 앞 인자(`py -3` 의 `-3`)는 플랫폼마다 다르다
+    SW_EXPECT_EQUAL( string( "C:/My Project/Scripts/qa/ValidateAssets.py" ), listArgument[scriptIndex] );
+    SW_EXPECT_EQUAL( string( "--severity" ), listArgument[scriptIndex + 1] );
+    SW_EXPECT_EQUAL( string( "warning" ), listArgument[scriptIndex + 2] );
+    SW_EXPECT_EQUAL( string( "--files" ), listArgument[scriptIndex + 3] );
+    SW_EXPECT_EQUAL( string( "game/a b/x.scene.xml" ), listArgument[scriptIndex + 4] );
+    SW_EXPECT_EQUAL( string( "engine/m.material" ), listArgument[scriptIndex + 5] );
 }

@@ -62,7 +62,7 @@ namespace test
      * @param onLine `void( sw::Process&, const sw::string& )` — 표준 입력으로 답하거나(`writeInput`) 신호를 보낼 때 쓴다.
      */
     template <typename TOnLine>
-    ProcessRunResult runProcessWithDeadline( sw::string_view command, const sw::ProcessOptions& options, uint32 timeoutSeconds, TOnLine&& onLine )
+    ProcessRunResult runProcessWithDeadline( const sw::ProcessCommand& command, const sw::ProcessOptions& options, uint32 timeoutSeconds, TOnLine&& onLine )
     {
         ProcessRunResult result;
         sw::Process      process;
@@ -85,5 +85,5 @@ namespace test
     }
 
     /** @brief 줄마다 할 일이 없는 판 — 출력만 모은다. */
-    ProcessRunResult runProcessWithDeadline( sw::string_view command, const sw::ProcessOptions& options, uint32 timeoutSeconds );
+    ProcessRunResult runProcessWithDeadline( const sw::ProcessCommand& command, const sw::ProcessOptions& options, uint32 timeoutSeconds );
 } // namespace test

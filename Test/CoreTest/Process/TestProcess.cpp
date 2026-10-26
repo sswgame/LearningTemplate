@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Common/PlatformOsHeaders.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Process/Process.h"
 #include "Core/Time/MonotonicClock.h"
@@ -10,7 +11,9 @@
 #include <chrono>
 #include <thread>
 
-#if !defined( SW_PLATFORM_WINDOWS )
+#if defined( SW_PLATFORM_WINDOWS )
+    #include <shellapi.h>
+#else
     #include <csignal>
     #include <unistd.h>
 #endif
@@ -25,9 +28,12 @@ SW_TEST_CASE( ProcessTest, LaunchAndReadOutput )
 {
     sw::Process proc;
 #if defined( SW_PLATFORM_WINDOWS )
-    const sw::string cmd = "cmd.exe /c echo SW_PROCESS_TEST_OUTPUT";
+    const sw::ProcessCommand cmd{
+        "cmd.exe",
+        { "/c", "echo", "SW_PROCESS_TEST_OUTPUT" }
+    };
 #else
-    const sw::string cmd = "echo SW_PROCESS_TEST_OUTPUT";
+    const sw::ProcessCommand cmd{ "echo", { "SW_PROCESS_TEST_OUTPUT" } };
 #endif
 
     const bool bLaunched = proc.launch( cmd );
@@ -51,10 +57,17 @@ SW_TEST_CASE( ProcessTest, LaunchAndReadOutput )
  */
 SW_TEST_CASE( ProcessTest, ExecuteHelper )
 {
+    // 셸 문법(`&&`)이 필요하면 셸을 실행 파일로 적고 셸 줄을 인자 하나로 준다 — `Process` 는 셸을 거치지 않는다.
 #if defined( SW_PLATFORM_WINDOWS )
-    const sw::string cmd = "cmd.exe /c echo LINE1 && echo LINE2";
+    const sw::ProcessCommand cmd{
+        "cmd.exe",
+        { "/c", "echo LINE1 && echo LINE2" }
+    };
 #else
-    const sw::string cmd = "echo LINE1 && echo LINE2";
+    const sw::ProcessCommand cmd{
+        "/bin/sh",
+        { "-c", "echo LINE1 && echo LINE2" }
+    };
 #endif
 
     sw::vector<sw::string> listLines;
@@ -81,7 +94,10 @@ SW_TEST_CASE( ProcessTest, ExitCodeStillActiveIsNotMistakenForRunning )
 #if defined( SW_PLATFORM_WINDOWS )
     sw::Process proc;
 
-    SW_ASSERT_TRUE( proc.launch( "cmd.exe /c exit 259" ) );
+    SW_ASSERT_TRUE( proc.launch( sw::ProcessCommand{
+        "cmd.exe",
+        { "/c", "exit", "259" }
+    } ) );
     SW_EXPECT_EQUAL( 259, proc.waitForExit() );
     SW_EXPECT_FALSE( proc.isRunning() );
 #else
@@ -103,11 +119,14 @@ SW_TEST_CASE( ProcessTest, TerminateProcess )
     sw::Process proc;
 
 #if defined( SW_PLATFORM_WINDOWS )
-    const sw::string cmd              = "ping.exe 127.0.0.1 -n 10";
-    const int32      expectedExitCode = 99;
+    const sw::ProcessCommand cmd{
+        "ping.exe",
+        { "127.0.0.1", "-n", "10" }
+    };
+    const int32 expectedExitCode = 99;
 #else
-    const sw::string cmd              = "sleep 10";
-    const int32      expectedExitCode = 128 + SIGKILL;
+    const sw::ProcessCommand cmd{ "sleep", { "10" } };
+    const int32              expectedExitCode = 128 + SIGKILL;
 #endif
 
     SW_ASSERT_TRUE( proc.launch( cmd ) );
@@ -134,9 +153,15 @@ SW_TEST_CASE( ProcessTest, IsRunningTurnsFalseWithoutEatingTheExitCode )
     sw::Process proc;
 
 #if defined( SW_PLATFORM_WINDOWS )
-    const sw::string cmd = "cmd.exe /c exit 7";
+    const sw::ProcessCommand cmd{
+        "cmd.exe",
+        { "/c", "exit", "7" }
+    };
 #else
-    const sw::string cmd = "exit 7";
+    const sw::ProcessCommand cmd{
+        "/bin/sh",
+        { "-c", "exit 7" }
+    };
 #endif
 
     SW_ASSERT_TRUE( proc.launch( cmd ) );
@@ -174,11 +199,14 @@ SW_TEST_CASE( ProcessTest, ChildInheritsOnlyItsOwnPipe )
     HANDLE hForeignRead        = nullptr;
     HANDLE hForeignWrite       = nullptr;
     SW_ASSERT_TRUE( CreatePipe( &hForeignRead, &hForeignWrite, &inheritable, 0 ) != FALSE );
-    const sw::string longCommand = "ping.exe 127.0.0.1 -n 4";
+    const sw::ProcessCommand longCommand{
+        "ping.exe",
+        { "127.0.0.1", "-n", "4" }
+    };
 #else
     int32 arrForeignFd[2] = { -1, -1 };
     SW_ASSERT_TRUE( pipe( arrForeignFd ) == 0 );
-    const sw::string longCommand = "sleep 3";
+    const sw::ProcessCommand longCommand{ "sleep", { "3" } };
 #endif
 
     sw::Process child;
@@ -217,20 +245,23 @@ SW_TEST_CASE( ProcessTest, ChildInheritsOnlyItsOwnPipe )
 SW_TEST_CASE( ProcessTest, DetachedLaunchReturnsWithoutWaiting )
 {
     const sw::string markerPath = test::makeTempPath( "detached_marker.txt" );
+    // 셸 줄에 경로를 넣지 않는다 — 작업 폴더를 표식의 폴더로 두고 파일 이름만 쓴다(셸 인용을 이 테스트가 떠안지 않게).
+    sw::ProcessOptions options;
+    options._workingDirectory = sw::FileUtil::getDirectoryPart( markerPath );
 #if defined( SW_PLATFORM_WINDOWS )
-    sw::string windowsMarkerPath = markerPath;
-    for ( utf8& ch : windowsMarkerPath )
-    {
-        if ( ch == '/' )
-            ch = '\\';
-    }
-    const sw::string command = "cmd.exe /c ping.exe 127.0.0.1 -n 2 > nul & echo done> \"" + windowsMarkerPath + "\"";
+    const sw::ProcessCommand command{
+        "cmd.exe",
+        { "/c", "ping.exe 127.0.0.1 -n 2 > nul & echo done> detached_marker.txt" }
+    };
 #else
-    const sw::string command = "sleep 1; echo done > '" + markerPath + "'";
+    const sw::ProcessCommand command{
+        "/bin/sh",
+        { "-c", "sleep 1; echo done > detached_marker.txt" }
+    };
 #endif
 
     const sw::Stopwatch stopwatch;
-    SW_ASSERT_TRUE( sw::Process::launchDetached( command ) );
+    SW_ASSERT_TRUE( sw::Process::launchDetached( command, options ) );
     const int64 launchMilli = stopwatch.getElapsedMilliseconds();
     SW_EXPECT_TRUE_MSG( launchMilli < 700, "분리 실행이 명령이 끝나기를 기다렸다" );
 
@@ -256,9 +287,9 @@ SW_TEST_CASE( ProcessTest, StandardInputPipeReachesTheChild )
     options._bPipeStandardInput = true;
     sw::Process process;
 #if defined( SW_PLATFORM_WINDOWS )
-    SW_ASSERT_TRUE( process.launch( "cmd.exe /c findstr x", options ) );
+    SW_ASSERT_TRUE( process.launch( sw::ProcessCommand{ "findstr.exe", { "x" } }, options ) );
 #else
-    SW_ASSERT_TRUE( process.launch( "grep x", options ) );
+    SW_ASSERT_TRUE( process.launch( sw::ProcessCommand{ "grep", { "x" } }, options ) );
 #endif
     SW_ASSERT_TRUE( process.writeInput( "axb\nccc\n" ) );
     process.closeInput();
@@ -270,4 +301,112 @@ SW_TEST_CASE( ProcessTest, StandardInputPipeReachesTheChild )
     }
     SW_EXPECT_EQUAL( 0, process.waitForExit() );
     SW_EXPECT_STREQ( "axb\n", output.c_str() );
+}
+
+// ------------------------------------------------------------------------------
+// 2) Core_Process — 인자 목록(`ProcessCommand`): 셸 없이 인자가 그대로 닿는다
+// ------------------------------------------------------------------------------
+namespace
+{
+    /** @brief 인용이 틀리기 쉬운 인자들 — 공백 · 따옴표 · 역슬래시(따옴표 앞 · 끝) · 빈 인자 · 비ASCII(한글) · 셸 글자. */
+    sw::vector<sw::string> makeTrickyProcessArguments()
+    {
+        return { "plain",
+                 "with space",
+                 "quote\"inside",
+                 "back\\slash",
+                 "trailing\\",
+                 "space then slash quote\\\"x",
+                 "\\\\server\\share\\",
+                 "",
+                 "\xED\x95\x9C\xEA\xB8\x80 arg",
+                 "$HOME;&|<>^`x`" };
+    }
+} // namespace
+
+/**
+ * @brief [ProcessTest] Windows 명령줄은 CommandLineToArgvW 로 되읽으면 넣은 인자와 같다
+ * @details `CreateProcessW` 에 주는 글이 `toCommandLine` 이고, 자식(MSVC C 런타임)은 그것을 CommandLineToArgvW 와 같은 규칙으로 나눈다.
+ *          예전에는 부르는 쪽이 따옴표만 붙여 따옴표 · 끝 역슬래시가 든 경로가 인자를 깨거나 늘렸다.
+ */
+SW_TEST_CASE( ProcessTest, WindowsCommandLineRoundTripsThroughTheArgumentSplitter )
+{
+#if defined( SW_PLATFORM_WINDOWS )
+    const sw::ProcessCommand command{ "C:\\Program Files\\Tool\\tool.exe", makeTrickyProcessArguments() };
+    const sw::wstring        wideLine      = sw::StringUtil::utf8ToUtf16( command.toCommandLine().c_str() );
+    int32                    argumentCount = 0;
+    LPWSTR*                  ppArgument    = CommandLineToArgvW( wideLine.c_str(), &argumentCount );
+    SW_ASSERT_TRUE( ppArgument != nullptr );
+    sw::vector<sw::string> listParsed;
+    for ( int32 index = 0; index < argumentCount; ++index )
+    {
+        listParsed.push_back( sw::StringUtil::utf16ToUtf8( ppArgument[index] ) );
+    }
+    LocalFree( ppArgument );
+
+    const sw::string commandLine = command.toCommandLine();
+    SW_ASSERT_TRUE_MSG( command._listArgument.size() + 1 == listParsed.size(), commandLine.c_str() );
+    SW_EXPECT_EQUAL( command._executable, listParsed[0] );
+    for ( size_t index = 0; index < command._listArgument.size(); ++index )
+    {
+        SW_EXPECT_TRUE_MSG( command._listArgument[index] == listParsed[index + 1], commandLine.c_str() );
+    }
+#else
+    SW_TEST_REQUIRES_FEATURE( WindowsPlatform ); // POSIX 는 인자 배열을 execv 에 그대로 넘긴다 — 아래 케이스가 실제 자식으로 본다
+#endif
+}
+
+/**
+ * @brief [ProcessTest] POSIX 자식은 셸 없이 인자를 한 글자도 바뀌지 않고 받는다 — `$` `;` `&` 도 글자 그대로다
+ * @details `printf '%s\n' <인자…>` 를 띄워 한 줄에 인자 하나씩 되읽는다. 예전에는 `sh -c` 가 명령 글을 다시 해석했다.
+ */
+SW_TEST_CASE( ProcessTest, PosixChildReceivesArgumentsUnchanged )
+{
+#if defined( SW_PLATFORM_WINDOWS )
+    SW_TEST_REQUIRES_FEATURE( LinuxPlatform ); // Windows 는 위 케이스가 CommandLineToArgvW 로 본다
+#else
+    const sw::vector<sw::string> listArgument = makeTrickyProcessArguments();
+    sw::ProcessCommand           command{ "printf", { "%s\\n" } };
+    command._listArgument.insert( command._listArgument.end(), listArgument.begin(), listArgument.end() );
+
+    sw::vector<sw::string> listLine;
+    const int32            exitCode = sw::Process::execute( command, {}, sw::ProcessOutputDelegate::create( [&listLine]( sw::string_view line )
+    {
+        listLine.push_back( sw::string( line ) );
+    } ) );
+    SW_EXPECT_EQUAL( 0, exitCode );
+    SW_ASSERT_EQUAL( listArgument.size(), listLine.size() );
+    for ( size_t index = 0; index < listArgument.size(); ++index )
+    {
+        SW_EXPECT_EQUAL( listArgument[index], listLine[index] );
+    }
+#endif
+}
+
+/**
+ * @brief [ProcessTest] 사람이 적은 인자 줄은 공백으로 나뉘고, 큰따옴표 사이는 한 인자다(따옴표는 빠진다)
+ */
+SW_TEST_CASE( ProcessTest, SplitArgumentLineKeepsQuotedSpaces )
+{
+    const sw::vector<sw::string> listArgument = sw::ProcessCommand::splitArgumentLine( "  -vk \"a b\" -cfg=\"C:/My Dir/x.json\" \"\"  $HOME;rm\t-x " );
+    SW_ASSERT_EQUAL( static_cast<size_t>( 6 ), listArgument.size() );
+    SW_EXPECT_EQUAL( sw::string( "-vk" ), listArgument[0] );
+    SW_EXPECT_EQUAL( sw::string( "a b" ), listArgument[1] );
+    SW_EXPECT_EQUAL( sw::string( "-cfg=C:/My Dir/x.json" ), listArgument[2] );
+    SW_EXPECT_EQUAL( sw::string( "" ), listArgument[3] );
+    SW_EXPECT_EQUAL( sw::string( "$HOME;rm" ), listArgument[4] );
+    SW_EXPECT_EQUAL( sw::string( "-x" ), listArgument[5] );
+    SW_EXPECT_TRUE( sw::ProcessCommand::splitArgumentLine( "   " ).empty() );
+}
+
+/**
+ * @brief [ProcessTest] 없는 실행 파일 · 빈 실행 파일은 띄우기에서 진다(POSIX 도 셸의 127 로 넘어가지 않는다)
+ */
+SW_TEST_CASE( ProcessTest, MissingExecutableFailsToLaunch )
+{
+    SW_TEST_DEFENSIVE_SCOPE( "launching a missing executable fails" );
+    sw::Process process;
+    SW_EXPECT_FALSE( process.launch( sw::ProcessCommand{ "sw_no_such_program_7f3a", { "x" } } ) );
+    SW_EXPECT_FALSE( process.launch( sw::ProcessCommand{} ) );
+    SW_EXPECT_FALSE( sw::Process::launchDetached( sw::ProcessCommand{} ) );
 }
