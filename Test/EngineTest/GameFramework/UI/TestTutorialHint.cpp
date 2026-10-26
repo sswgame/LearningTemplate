@@ -64,3 +64,34 @@ SW_TEST_CASE( TutorialHintTest, PostsOnceAndHonorsTheSetting )
     input.shutdown();
     settings.shutdown();
 }
+
+/** @brief [TutorialHintTest] 설정 서비스가 있는데 스키마에 `gameplay.showTutorials` 가 없으면 오류로 알리고 띄우지 않는다(데이터 결함을 "켜짐" 으로 덮지 않는다) */
+SW_TEST_CASE( TutorialHintTest, MissingSettingIsAnErrorNotOn )
+{
+    UserSettingsManager settings;
+    settings.initialize( UserSettingsTargets{} );
+    SW_ASSERT_TRUE( settings.loadSchemaFromXMLText( R"(<UserSettingsSchema version="1"><Category id="gameplay"/></UserSettingsSchema>)", "nohint.settings.xml" ) );
+    SubsystemScope        scope; // settings 보다 먼저 사라진다(뒤에 선언)
+    game::ScopedGameScope activeScope( scope );
+    SW_EXPECT_TRUE( scope.bind( &settings ) );
+
+    GameObjectManager objects;
+    GameObject*       pVolume = objects.createGameObject( hashed_string( "HintVolume" ) );
+    GameObject*       pPlayer = objects.createGameObject( hashed_string( "Player" ) );
+    SW_ASSERT_NOT_NULL( pVolume );
+    TutorialHintComponent* pHint = pVolume->addComponent<TutorialHintComponent>();
+    SW_ASSERT_NOT_NULL( pHint );
+    pHint->configure( "hint", TagID{} );
+    objects.mergePendingAdds();
+
+    ::test::ScopedLogCollector logs;
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a settings schema without gameplay.showTutorials" );
+        SW_EXPECT_FALSE( pHint->activate( pPlayer ) );
+    }
+    SW_EXPECT_FALSE( pHint->hasFired() );
+    SW_EXPECT_EQUAL( 1u, logs.countWithID( "UserSettings.KeyUnresolved" ) );
+
+    scope.unbind<UserSettingsManager>();
+    settings.shutdown();
+}
