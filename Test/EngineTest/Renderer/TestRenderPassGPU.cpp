@@ -7625,6 +7625,124 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, TaaLeavesNoGhostOfAMovedObject, t
 }
 
 /**
+ * @brief [RenderPassGPUTest] 조리개를 0 → 양수 → 0 으로 바꾸면 피사계 심도 출력은 TAA 출력을 가리키다가 자기 타깃에 흐린 그림을 그리고 다시 가리킨다 — TAA 기록은 끊기지 않는다(4 백엔드, 디퍼드)
+ * @details 꺼진 피사계 심도는 패스를 기록하지 않고 출력 이름이 원본(TaaColor)을 가리킨다(`applyViewPassSelection`). 켜는 프레임에 타깃을 처음 만들어 그 프레임에 다 쓴다.
+ *          피사계 심도는 TAA 뒤라 뷰 상태가 바뀌어도 TAA 기록은 이어진다 — 서 있는 장면의 TaaColor 는 켜기 전과 같다.
+ */
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, DepthOfFieldToggleForwardsAndKeepsTaaHistory, test::listRHIBackendParameter, 0.4 )
+{
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string     label = sw::string( device->getBackendName() ) + ": ";
+        sw::FrameRenderer    renderer;
+        LitCubeScene         stage;
+        bool                 bOk     = renderer.initialize( device.get(), test::getEngineDefaultAssets()._defaultDeferredPipeline.get() ) && renderer.isReady() && stage.populate();
+        sw::CameraComponent* pCamera = bOk ? stage._scene.getActiveGameCamera() : nullptr;
+        bOk                          = bOk && pCamera != nullptr;
+        for ( uint32 frameIndex = 0; frameIndex < 4 && bOk; ++frameIndex )
+        {
+            bOk = renderSceneFrame( renderer, device.get(), stage._scene );
+        }
+        test::RHITestImage pinholeDof;
+        test::RHITestImage pinholeTaa;
+        bOk = bOk && pinholeDof.readTransient( renderer, "DepthOfFieldColor" ) && pinholeTaa.readTransient( renderer, "TaaColor" );
+        // 초점을 아주 가깝게 두면 큐브 · 바닥이 모두 최대 반지름으로 흐려진다.
+        sw::CameraDepthOfFieldValues lens;
+        lens._focusDistance = 0.1f;
+        lens._aperture      = 1.4f;
+        if ( bOk )
+            pCamera->setDepthOfField( lens );
+        bOk = bOk && renderSceneFrame( renderer, device.get(), stage._scene );
+        test::RHITestImage blurredDof;
+        test::RHITestImage blurredTaa;
+        bOk            = bOk && blurredDof.readTransient( renderer, "DepthOfFieldColor" ) && blurredTaa.readTransient( renderer, "TaaColor" );
+        lens._aperture = 0.0f;
+        if ( bOk )
+            pCamera->setDepthOfField( lens );
+        bOk = bOk && renderSceneFrame( renderer, device.get(), stage._scene );
+        test::RHITestImage closedDof;
+        test::RHITestImage closedTaa;
+        bOk = bOk && closedDof.readTransient( renderer, "DepthOfFieldColor" ) && closedTaa.readTransient( renderer, "TaaColor" );
+        renderer.shutdown();
+        SW_EXPECT_TRUE_MSG( bOk, ( label + "디퍼드 피사계 심도 그리기 · 되읽기" ).c_str() );
+        if ( bOk == false )
+            continue;
+        const test::RHITestImageDifference pinhole = test::RHITestImage::compare( pinholeDof, pinholeTaa, 8 );
+        const test::RHITestImageDifference blurred = test::RHITestImage::compare( blurredDof, blurredTaa, 24 );
+        const test::RHITestImageDifference history = test::RHITestImage::compare( blurredTaa, pinholeTaa, 24 );
+        const test::RHITestImageDifference closed  = test::RHITestImage::compare( closedDof, closedTaa, 8 );
+        SW_LOG_INFO( "%#DoF vs TAA: pinhole %#, blurred %#, closed %#; TAA before vs after opening %# of %#", label, pinhole._differingCount, blurred._differingCount,
+                     closed._differingCount, history._differingCount, history._pixelCount );
+        SW_EXPECT_TRUE_MSG( pinhole._pixelCount > 0 && pinhole._differingCount == 0,
+                            ( label + "조리개 0 인데 피사계 심도 출력이 TAA 출력과 다르다 — 꺼진 패스의 출력이 원본을 가리키지 않는다" ).c_str() );
+        SW_EXPECT_TRUE_MSG( blurred._differingCount > 50u,
+                            ( label + "조리개를 연 프레임에 피사계 심도가 흐리지 않았다 — 켜진 패스가 돌지 않았다 (" + sw::to_string( blurred._differingCount ) + ")" ).c_str() );
+        SW_EXPECT_TRUE_MSG( history._pixelCount > 0 && history._differingCount * 100u <= history._pixelCount,
+                            ( label + "조리개를 연 프레임에 TAA 출력이 바뀌었다 — TAA 뒤의 효과가 TAA 기록을 끊거나 흐렸다 (" + sw::to_string( history._differingCount ) + ")" ).c_str() );
+        SW_EXPECT_TRUE_MSG( closed._pixelCount > 0 && closed._differingCount == 0, ( label + "조리개를 다시 닫은 프레임에 피사계 심도 출력이 원본을 가리키지 않는다" ).c_str() );
+    }
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the depth-of-field toggle test" );
+}
+
+/**
+ * @brief [RenderPassGPUTest] 후처리를 껐다 다시 켠 첫 프레임은 TAA 기록을 버린다 — 꺼진 동안 옮긴 큐브의 가장자리에 끄기 전 그림이 섞이지 않는다(4 백엔드, 디퍼드)
+ * @details 후처리를 끈 프레임의 TAA 는 원본을 넘기고 기록을 쓰지 않는다. 다시 켠 프레임의 기록은 끄기 전 화면이라 섞으면 이웃 클램프가 잡지 못하는 가장자리(이웃에 두 색이 다 있다)에
+ *          옛 그림이 남는다. `beginViewHistory` 가 그 프레임을 TAA 컷(`_bTaaHistoryReset`)으로 정하면 기록 슬롯에 이번 원본이 걸려 TaaColor 가 원본(OutlineColor)과 같다.
+ */
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, PostProcessReenableResetsTaaHistory, test::listRHIBackendParameter, 0.4 )
+{
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string     label = sw::string( device->getBackendName() ) + ": ";
+        sw::FrameRenderer    renderer;
+        LitCubeScene         stage;
+        bool                 bOk     = renderer.initialize( device.get(), test::getEngineDefaultAssets()._defaultDeferredPipeline.get() ) && renderer.isReady() && stage.populate();
+        sw::CameraComponent* pCamera = bOk ? stage._scene.getActiveGameCamera() : nullptr;
+        bOk                          = bOk && pCamera != nullptr;
+        for ( uint32 frameIndex = 0; frameIndex < 4 && bOk; ++frameIndex )
+        {
+            bOk = renderSceneFrame( renderer, device.get(), stage._scene );
+        }
+        test::RHITestImage before;
+        bOk = bOk && before.readTransient( renderer, "OutlineColor" );
+        // 후처리를 끄고 큐브를 옮긴다 — 이 동안 TAA 기록은 쓰이지 않는다.
+        sw::CameraRenderOutput output = bOk ? pCamera->getRenderOutput() : sw::CameraRenderOutput{};
+        output._bPostProcess          = false;
+        if ( bOk )
+        {
+            pCamera->setRenderOutput( output );
+            stage._pCube->setLocalPosition( sw::float3{ 1.5f, 1.0f, 0.0f } );
+        }
+        for ( uint32 frameIndex = 0; frameIndex < 2 && bOk; ++frameIndex )
+        {
+            bOk = renderSceneFrame( renderer, device.get(), stage._scene );
+        }
+        output._bPostProcess = true;
+        if ( bOk )
+            pCamera->setRenderOutput( output );
+        bOk = bOk && renderSceneFrame( renderer, device.get(), stage._scene );
+        test::RHITestImage resolved;
+        test::RHITestImage source;
+        bOk = bOk && resolved.readTransient( renderer, "TaaColor" ) && source.readTransient( renderer, "OutlineColor" );
+        renderer.shutdown();
+        SW_EXPECT_TRUE_MSG( bOk, ( label + "디퍼드 후처리 껐다 켜기 그리기 · 되읽기" ).c_str() );
+        if ( bOk == false )
+            continue;
+        const test::RHITestImageDifference moved = test::RHITestImage::compare( before, source, 24 );
+        const test::RHITestImageDifference stale = test::RHITestImage::compare( resolved, source, 24 );
+        SW_LOG_INFO( "%#post re-enable: moved %#, TAA differs from its source at %# of %#", label, moved._differingCount, stale._differingCount, stale._pixelCount );
+        SW_EXPECT_TRUE_MSG( moved._differingCount > 100u, ( label + "큐브를 옮겨도 원본이 바뀌지 않았다 — 테스트가 기록을 재지 못한다" ).c_str() );
+        SW_EXPECT_TRUE_MSG( stale._pixelCount > 0 && stale._differingCount * 1000u <= stale._pixelCount,
+                            ( label + "후처리를 다시 켠 프레임에 끄기 전 TAA 기록이 섞였다 (" + sw::to_string( stale._differingCount ) + ")" ).c_str() );
+    }
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the post-process re-enable TAA test" );
+}
+
+/**
  * @brief [RenderPassGPUTest] 자동 노출은 장면 밝기를 재어 노출을 맞추고, 컷 프레임은 지난 EV 를 버리고 그 프레임의 측정값을 쓴다 — 고정 노출은 재지 않고 2^-EV 를 곱한다(4 백엔드, 포워드)
  * @details 적응 속도를 거의 0 으로 둔다. 어두운 장면의 EV 가 남아 있으면 장면을 밝게 바꾼 프레임은 컷이 없을 때 그대로 밝고, 컷을 표시하면 밝은 장면을 측정한 EV 로
  *          노출이 내려가 어둡다. 범위가 한 점(최소 = 최대 = 2 EV)이면 노출이 1/4 이라 범위 0 · 0(중립)보다 어둡다.

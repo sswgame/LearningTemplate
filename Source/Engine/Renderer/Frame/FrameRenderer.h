@@ -455,9 +455,16 @@ namespace sw
             /**
              * @brief 이번 프레임은 시간 누적 기록을 버린다 — 처음 그리는 프레임이거나 컷(`RenderViewSettings::_bCut`)이다(언리얼 `bCameraCut`).
              * @details `applyViewProjection` 이 프레임마다 한 번 정하고 TAA(이번 원본만) · 모션 블러(지난 뷰-투영 = 이번 것) · 자동 노출(측정값을 그대로)이 모두 이것 하나를 본다.
-             *          기능마다 컷을 따로 읽으면 한 기능만 컷을 빠뜨린다.
+             *          기능마다 컷을 따로 읽으면 한 기능만 컷을 빠뜨린다. TAA 는 이것을 포함한 `_bTaaHistoryReset` 을 본다.
              */
             uint8 _bHistoryReset{ SW_TRUE };
+            /**
+             * @brief 이번 프레임은 TAA 기록만 더 버린다 — `_bHistoryReset` 이거나 지난 프레임이 TAA 기록을 쓰지 않았다(후처리를 끈 프레임, `_bTaaHistoryWritten`).
+             * @details 후처리를 끈 뷰의 TAA 는 원본을 넘기고 기록을 쓰지 않는다(`executeTaaPass`). 다시 켠 첫 프레임의 기록은 끄기 전 화면이라 섞으면 그동안 움직인 것의 가장자리에 옛 그림이 남는다.
+             *          `beginViewHistory` 가 `_bHistoryReset` 과 같은 자리에서 정한다(기능마다 따로 정하지 않는다).
+             */
+            uint8 _bTaaHistoryReset{ SW_TRUE };
+            uint8 _bTaaHistoryWritten{ SW_FALSE };     ///< 이번 프레임의 TAA 가 기록을 쓴다(후처리를 켠 뷰). 다음 프레임의 `beginViewHistory` 가 읽는다
             uint8 _autoExposureWrite{ 0 };             ///< 이번 프레임에 쓰는 자동 노출 기록 칸(0 · 1). 톤맵은 이 칸을 읽는다
             uint8 _bAutoExposureThisFrame{ SW_FALSE }; ///< 이번 프레임에 이 뷰의 노출을 측정한다(`prepareAutoExposure`)
             uint8 _bAutoExposureMeasured{ SW_FALSE };  ///< 지금 자동 노출 기록에 측정한 값이 있다(기록을 새로 만들면 내린다 — 첫 측정은 지난 칸을 섞지 않는다)

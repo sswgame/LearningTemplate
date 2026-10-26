@@ -652,10 +652,10 @@ namespace sw
                 return;
             }
         }
-        // 기록을 버리는 프레임(처음 그리는 프레임 · 컷 — `ViewTarget::_bHistoryReset`)에서는 지난 화면의 히스토리를 버린다. 이번 프레임은 히스토리 슬롯에 **이번 원본**을
+        // 기록을 버리는 프레임(처음 그리는 프레임 · 컷 · 후처리를 다시 켠 첫 프레임 — `ViewTarget::_bTaaHistoryReset`)에서는 지난 화면의 히스토리를 버린다. 이번 프레임은 히스토리 슬롯에 **이번 원본**을
         // 바인딩해 섞어도 이번 이미지만 남게 한다. 원본을 히스토리 텍스처에 복사하지 않는 것은 포맷이 다를 수 있어서다(원본 R8G8B8A8, 히스토리 R16G16B16A16이며
         // D3D 의 복사는 같은 포맷만 받는다). 패스 끝의 복사(TAA 출력에서 히스토리로)가 히스토리를 새로 채운다.
-        const bool bCut = ( activeView._bHistoryReset == SW_TRUE || bSkipPost ) && pSrcName != nullptr;
+        const bool bCut = ( activeView._bTaaHistoryReset == SW_TRUE || bSkipPost ) && pSrcName != nullptr;
         if ( bCut )
             registerPassTexture( context, names._gbufferAlbedo, pSrcName );
         else if ( activeView._taaHistory != 0 )
