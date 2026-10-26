@@ -560,25 +560,25 @@ SW_TEST_CASE( InputManagerTest, XInputGamepadDeviceDefaultStateAndStickQuery )
 SW_TEST_CASE( InputManagerTest, LockFreeInputQueue_PushPopDrain )
 {
     sw::ConcurrentQueue<sw::RawInputEvent, 16> queue;
-    SW_EXPECT_TRUE( queue.isEmpty() );
+    SW_EXPECT_TRUE( queue.empty() );
     SW_EXPECT_EQUAL( 0u, queue.size() );
 
     // 1) 5개 아이템 Push
     for ( uint16 index = 0; index < 5; ++index )
     {
-        SW_EXPECT_TRUE( queue.push( sw::RawInputEvent::makeKeyDown( sw::Key::A, index ) ) );
+        SW_EXPECT_TRUE( queue.enqueue( sw::RawInputEvent::makeKeyDown( sw::Key::A, index ) ) );
     }
-    SW_EXPECT_FALSE( queue.isEmpty() );
+    SW_EXPECT_FALSE( queue.empty() );
     SW_EXPECT_EQUAL( 5u, queue.size() );
 
     // 2) 2개 아이템 Pop
     sw::RawInputEvent item0{};
-    SW_EXPECT_TRUE( queue.pop( item0 ) );
+    SW_EXPECT_TRUE( queue.dequeue( item0 ) );
     SW_EXPECT_TRUE( item0._type == sw::RawInputEventType::KeyDown );
     SW_EXPECT_EQUAL( 0u, static_cast<uint32>( item0._payload._keyData._nativeVirtualKey ) );
 
     sw::RawInputEvent item1{};
-    SW_EXPECT_TRUE( queue.pop( item1 ) );
+    SW_EXPECT_TRUE( queue.dequeue( item1 ) );
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( item1._payload._keyData._nativeVirtualKey ) );
     SW_EXPECT_EQUAL( 3u, queue.size() );
 
@@ -589,7 +589,7 @@ SW_TEST_CASE( InputManagerTest, LockFreeInputQueue_PushPopDrain )
     SW_EXPECT_EQUAL( 2u, static_cast<uint32>( arrDrained[0]._payload._keyData._nativeVirtualKey ) );
     SW_EXPECT_EQUAL( 3u, static_cast<uint32>( arrDrained[1]._payload._keyData._nativeVirtualKey ) );
     SW_EXPECT_EQUAL( 4u, static_cast<uint32>( arrDrained[2]._payload._keyData._nativeVirtualKey ) );
-    SW_EXPECT_TRUE( queue.isEmpty() );
+    SW_EXPECT_TRUE( queue.empty() );
 }
 
 /**
@@ -608,7 +608,7 @@ SW_TEST_CASE( InputManagerTest, LockFreeInputQueue_MultiThreadStress )
         for ( uint32 index = 0; index < kTotalItems; ++index )
         {
             sw::RawInputEvent evt = sw::RawInputEvent::makeKeyDown( sw::Key::Space, static_cast<uint16>( index ) );
-            while ( queue.push( evt ) == false )
+            while ( queue.enqueue( evt ) == false )
             {
                 std::this_thread::yield();
             }
@@ -621,7 +621,7 @@ SW_TEST_CASE( InputManagerTest, LockFreeInputQueue_MultiThreadStress )
     uint32 nextExpectedIndex = 0;
     bool   bOrderingValid    = true;
 
-    while ( bProducerDone.load( std::memory_order_acquire ) == false || queue.isEmpty() == false )
+    while ( bProducerDone.load( std::memory_order_acquire ) == false || queue.empty() == false )
     {
         sw::RawInputEvent arrBatch[64]{};
         const uint32      drained = queue.drain( arrBatch, 64 );
@@ -641,7 +641,7 @@ SW_TEST_CASE( InputManagerTest, LockFreeInputQueue_MultiThreadStress )
 
     SW_EXPECT_TRUE( bOrderingValid );
     SW_EXPECT_EQUAL( kTotalItems, consumedCount );
-    SW_EXPECT_TRUE( queue.isEmpty() );
+    SW_EXPECT_TRUE( queue.empty() );
 }
 
 /**

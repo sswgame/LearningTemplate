@@ -222,7 +222,7 @@ namespace sw
 
         RawInputEvent stamped     = rawEvent;
         stamped._timeMicroseconds = _pfnNowMicroseconds();
-        const bool bPushed        = _queueRawEvent.push( stamped );
+        const bool bPushed        = _queueRawEvent.enqueue( stamped );
         if ( bPushed == false )
             _droppedRawEventCount.fetch_add( 1, std::memory_order_relaxed );
         return bPushed;
@@ -234,7 +234,7 @@ namespace sw
         // 음소거가 풀린 뒤에도 그 전의 눌림이 남아 있으면 안 된다.
         RawInputEvent stamped     = rawEvent;
         stamped._timeMicroseconds = _pfnNowMicroseconds();
-        const bool bPushed        = _queueRawEvent.push( stamped );
+        const bool bPushed        = _queueRawEvent.enqueue( stamped );
         if ( bPushed == false )
             _droppedRawEventCount.fetch_add( 1, std::memory_order_relaxed );
         return bPushed;

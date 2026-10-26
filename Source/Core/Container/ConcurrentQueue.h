@@ -105,14 +105,6 @@ namespace sw
             return true;
         }
 
-        /** @brief enqueue 의 별칭입니다. */
-        SW_INLINE bool push( const T& item ) { return enqueue( item ); }
-        /** @brief enqueue( T&& ) 의 별칭입니다. */
-        SW_INLINE bool push( T&& item ) { return enqueue( std::move( item ) ); }
-
-        /** @brief dequeue 의 별칭입니다. */
-        SW_INLINE bool pop( T& outItem ) { return dequeue( outItem ); }
-
         /** @brief 대기 중인 항목을 모두 꺼내 outList 뒤에 붙이고, 꺼낸 개수를 반환합니다. */
         uint32 drain( vector<T>& outList )
         {
@@ -159,8 +151,6 @@ namespace sw
 
         /** @brief 비어 있는지 반환합니다. */
         SW_INLINE bool empty() const { return size() == 0; }
-        /** @brief empty 의 별칭입니다. */
-        SW_INLINE bool isEmpty() const { return empty(); }
 
         /** @brief 용량을 반환합니다. */
         constexpr uint32 capacity() const { return Capacity; }
