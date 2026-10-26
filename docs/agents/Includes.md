@@ -32,12 +32,11 @@
 - **Core folders are tiers** (`Common` → `Concurrency` · `Math` → `Memory` → `Container` → … → `Diagnostics` → `LogSink`, table in
   `Scripts/lint/rules/CheckCoreLayers.toml`): a file includes only its own folder or a lower tier, `.cpp` included. A lower tier that must
   reach up takes an interface or a function pointer (`ILockObserver`, `IAllocationTracker`, `RaceDetectContext::setReportFunction`).
-  Recompute the table with `Scripts/lint/report/RunCoreLayerGraph.py`. Enforced by `CheckCoreLayers.py`, which also computes the tiers from the include graph and
-  fails when the table differs (a table value above the computed one needs a reason in `[tierReason]`).
+  `CheckCoreLayers.py` computes the tiers from the include graph and fails when the table differs (a table value above the computed one needs a reason in `[tierReason]`);
+  recompute with `Scripts/lint/report/RunCoreLayerGraph.py`.
   Tiers below `Log` also get **no `Logger.h`**: their `.cpp` files build as `Core_low_objects` with `Core/pchLow.h` (no Logger, File or String), so
-  `SW_LOG_*`, `StringBuilder`, `FileUtil` … that the full pch used to hand over silently fail to compile — report with `SW_LOW_LEVEL_*` and include what you use.
-  Headers of those tiers are still compiled under the full pch by other TUs, so the compile cannot see them; `CheckCoreLayers.py` bans `SW_LOG_*` there, and
-  keeps `pchLow.h` equal to `CoreMinimal.h` minus the `Log`-and-above headers.
+  `SW_LOG_*`, `StringBuilder`, `FileUtil` … fail to compile — report with `SW_LOW_LEVEL_*` and include what you use.
+  Headers of those tiers compile under the full pch in other TUs, so `CheckCoreLayers.py` bans `SW_LOG_*` there and keeps `pchLow.h` equal to `CoreMinimal.h` minus the `Log`-and-above headers.
 - Use the project type aliases from `Types.h`.
 - Prefer Core and Engine facilities over STL or direct system facilities when
   they meet the need.
@@ -46,10 +45,8 @@
   `SW_PLATFORM_WINDOWS` / `SW_PLATFORM_LINUX` (macOS is not a supported platform), `SW_X64` / `SW_ARM64`, and
   `SW_COMPILER_CLANG` (clang-cl included) / `SW_COMPILER_MSVC` (cl.exe only) / `SW_COMPILER_GCC`. clang-cl defines both
   `__clang__` and `_MSC_VER`, so "may I use an MSVC extension" (`__forceinline`, `__declspec`, MS intrinsics,
-  `__FUNCSIG__`) is `SW_PLATFORM_WINDOWS` — Windows builds only with an MS-ABI toolchain — not `SW_COMPILER_MSVC`.
-  The engine builds 64-bit only, so there are no 32-bit branches. The one file that reads built-ins is
-  `Core/Common/TargetMacroCheck.h`, which fails the build when CMake's choice disagrees with the compiler.
-  Enforced by `CheckTargetMacros.py`.
+  `__FUNCSIG__`) is `SW_PLATFORM_WINDOWS`, not `SW_COMPILER_MSVC`. The engine builds 64-bit only. The one file that reads built-ins is
+  `Core/Common/TargetMacroCheck.h` (`CheckTargetMacros.py` enforces the rest).
 - **Ask the build target (`SW_TARGET_TYPE`: Game, Client, Server) only through `SW_WITH_CLIENT_CODE` (Game, Client),
   `SW_WITH_SERVER_CODE` (Game, Server) and `sw::build::kTargetName`**, and only inside `.cpp` bodies — never gate reflection
   declarations (`REFLECT`, `PROPERTY`) or a header's class layout on them. A feature that splits between client and server
@@ -57,12 +54,11 @@
 - **Read time through `Core/Time/MonotonicClock.h`**, never a `std::chrono` clock (`steady_clock`, `high_resolution_clock`,
   `system_clock` — aliases and `using namespace` included): `MonotonicClock::nowNanoseconds()`, `Stopwatch` for elapsed time,
   `Deadline::afterMilliseconds( ms )` + `isExpired()` for a bounded wait. Tests too. Duration values (`sleep_for`) are fine.
-  A UTC timestamp (expiry, record time, event windows) is `WallClock::nowUnixMilliseconds()` (`Core/Time/WallClock.h`); services take it
-  as a `nowMs` parameter so tests can pass a fake time.
-  Exceptions live in one table with their reason. Enforced by `CheckClockReads.py`.
-- **Start threads with `sw::thread`** (`Core/Concurrency/thread.h`), never `std::thread` in `Source/`: it has the same shape, tells the lock
-  observer what `join` waits for (so a join cycle shows up in the deadlock detector), and asserts instead of hanging when `join` runs under the
-  loader lock (`DllMain`, a module's static destructor). Tests may use `std::thread`. Enforced by `CheckStdThread.py`.
+  A UTC timestamp is `WallClock::nowUnixMilliseconds()` (`Core/Time/WallClock.h`); services take it as a `nowMs` parameter so tests can pass a fake time.
+  Exceptions live in one table with their reason (`CheckClockReads.py`).
+- **Start threads with `sw::thread`** (`Core/Concurrency/thread.h`), never `std::thread` in `Source/`: it tells the lock
+  observer what `join` waits for (a join cycle shows up in the deadlock detector) and asserts instead of hanging when `join` runs under the
+  loader lock (`DllMain`, a module's static destructor). Tests may use `std::thread` (`CheckStdThread.py`).
 - **Reach a service through the window of its lifetime**: `getSubsystem<T>()` (must exist, returns `T&`) or `findSubsystem<T>()` (may be missing,
   returns `T*`; check it) on `engine::`, `game::`, `editor::` or the owning object (`GameObjectManager` for a scene, `EditorContext`, `GameInstanceBase`).
   A new service is a subsystem added to a scope; an engine service read on hot paths also gets a row in `EngineServiceList.xxx`. No named accessors
@@ -74,13 +70,11 @@
 - Allocate on the heap through an **owning type**, never a bare pointer: `make_unique<T>( ... )` for one object,
   `vector<T>` or `make_unique<T[]>( n )` for arrays (`FixedCountArray<T, N>` when the elements have destructors),
   `MemoryBlock` (`Core/Memory/MemoryBlock.h`) for a raw byte block (arena chunks, slabs, scratch state). A bare
-  `new T` / `new T[n]` is invisible to memory tags and leak checks and is rejected (`CheckCodeConventions.py`,
-  `Style/RawNew`); the old `sw_new` macro no longer exists, so the bare-pointer form is not expressible. Where
+  `new T` / `new T[n]` is invisible to memory tags and leak checks and is rejected (`Style/RawNew`). Where
   ownership has to leave the type system (a lock-free slot table, a COM refcount, a C-ABI handle, an OS-held overlapped
   operation), write `make_unique<T>( ... ).release()` so the hand-off is one greppable word.
   `Memory::allocate` / `allocateAligned` outside `Source/Core/Memory` are listed with a reason in
-  `Scripts/lint/rules/CheckRawAllocation.toml` (library allocator callbacks and the like, which cannot take an owning type);
-  `CheckRawAllocation.py` rejects any file not on that list.
+  `Scripts/lint/rules/CheckRawAllocation.toml` (`CheckRawAllocation.py`).
 - **Borrow with a pointer, keep with a handle.** A `GameObject*` / `Component*` you do not own is valid
   only inside the current call (at most the current frame). Anything kept across frames — members,
   selection lists, undo records — holds a `GameObjectHandle` / `ComponentHandle` (`Core/Container`) and

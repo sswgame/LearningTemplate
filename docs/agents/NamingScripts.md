@@ -49,10 +49,9 @@ section on every `.hlsl` / `.hlsli` (CI gate and pre-commit hook).
   function that makes a struct or needs no instance is a `static` member function (`InstanceData::load( slot )`,
   `PixelContext::make( … )`, `Bindless::sampleIndex( index, uv )`, `View::getViewProjection()`).
   A shared header declares the struct with its member functions and defines them outside it
-  (`static float4 Bindless::sampleIndex( … ) { … }` — the definition repeats `static`, FXC rejects a mismatch),
-  so resource declarations and backend `#if` variants can sit between the definitions. `public` / `private` are
-  reserved words and `const` member functions do not compile. A helper that lives in one `.hlsl` is a free
-  function (`isVisible`, `hashSeed`), so the name says where to look.
+  (`static float4 Bindless::sampleIndex( … ) { … }` — the definition repeats `static`, FXC rejects a mismatch).
+  `public` / `private` are reserved words and `const` member functions do not compile. A helper that lives in one `.hlsl` is a free
+  function (`isVisible`, `hashSeed`).
   The C++ function-name rules apply: an acronym is one word (`Bindless::loadRwTexture2D`, never `LoadRWTex2D`),
   words are spelled out (`Tex` → `Texture`, `Cmp` → `Comparison`), and the verb table applies — a value
   worked out from inputs is `compute…`, not an `…Of` suffix (`Transform::computeWorldPosition`).
@@ -60,13 +59,11 @@ section on every `.hlsl` / `.hlsli` (CI gate and pre-commit hook).
   Entry points stay `VSMain` / `PSMain` / `CSMain` (the compiler and pipeline XML name them as strings).
 - **A pass or feature switch picks a definition, not a branch inside a body.** A step that a switch changes is a
   member function with one definition per case, chosen by a file-level `#if` (a switched-off case is an empty
-  definition), so the calling body reads the same in every permutation — the material skeleton's entry points
-  have no `#if` (`surface.applyAlphaCutoff()`, `context.storeSurface( surface )` in `materialshadermain.hlsli`;
-  a view-mode switch is `ViewMode::overrideLightingAlbedo()` or one `computeMaterialLighting` per case).
+  definition), so the calling body reads the same in every permutation (`surface.applyAlphaCutoff()`,
+  `context.storeSurface( surface )` in `materialshadermain.hlsli`).
   The gate flags a `#if` inside a function body unless its condition names a backend macro (`backend_macro` in
-  `Scripts/lint/rules/CheckShaderConventions.toml`: `DX11`, `DX12`, `__spirv__`, `SW_NATIVE_BINDLESS`) — the backends
-  differ in syntax and resources (FXC literal branches, SPIR-V attributes, bindless emulation), so one definition
-  cannot cover them. A `#if` directly inside a struct body (a field that exists only in some permutations) is a
+  `Scripts/lint/rules/CheckShaderConventions.toml`: `DX11`, `DX12`, `__spirv__`, `SW_NATIVE_BINDLESS`), because the backends
+  differ in syntax and resources. A `#if` directly inside a struct body (a field that exists only in some permutations) is a
   declaration, not a body branch.
 - **Types** are `PascalCase` with no `_t` suffix and no `Sw` prefix (`InstanceData`, `PixelContext`, `PSInput`).
   A struct that mirrors a C++ struct takes the C++ type name (`RHIDrawIndirectCommand`).
@@ -74,9 +71,8 @@ section on every `.hlsl` / `.hlsli` (CI gate and pre-commit hook).
   A field that mirrors a C++ member has the same name (`_startVertexLocation`), so no conversion rule exists. A
   member function reads its own fields by bare name (`_position`). No opaque abbreviations: `_position`, `_normal`,
   `_color`, `_worldPosition`, `_vertexId` — not `_pos`, `_nrm`, `_col`, `_wpos`, `_vid`. Material struct fields
-  (`SW_MATERIAL_BEGIN`) follow the same rule, and they are string-bound: a `.material` property `name` and a C++
-  parameter name (`setVectorParameter( hashed_string( "_color" ), … )`) are the field name with its `_`, so renaming
-  a field changes the shader, the assets and the C++ in one commit.
+  (`SW_MATERIAL_BEGIN`) follow the same rule and are string-bound: a `.material` property `name` and a C++
+  parameter name are the field name with its `_`, so renaming a field changes the shader, the assets and the C++ in one commit.
 - **Locals and parameters** are `camelCase` and descriptive — no single letters, no `i` / `j` / `k`, no
   `idx` / `inst` / `ao` / `dtid`. `out` / `inout` parameters start with `out` / `inout` (`outPosition`).
   A fixed-size local array takes `arr` + a singular noun (`arrOffset[4]`). `groupshared` variables take `s_`
