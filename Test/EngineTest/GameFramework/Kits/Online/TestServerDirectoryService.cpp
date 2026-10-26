@@ -113,12 +113,12 @@ SW_TEST_CASE( ServerDirectoryServiceTest, AssignsOpenServerAndHonoursMaintenance
 {
     using Internal = ServerDirectoryServiceTestInternal;
     MemoryServiceDatabase   database;
-    MemoryEphemeralDatabase cacheDatabase;
-    cacheDatabase.setManualTimeMs( 0 );
-    LocalServerBusHub  hub;
-    DirectoryNode      node( &database, &cacheDatabase, &hub, 1 );
-    ServerRegistration openServer;
-    ServerRegistration maintenanceServer;
+    ManualClock             cacheClock{ 0 };
+    MemoryEphemeralDatabase cacheDatabase{ cacheClock };
+    LocalServerBusHub       hub;
+    DirectoryNode           node( &database, &cacheDatabase, &hub, 1 );
+    ServerRegistration      openServer;
+    ServerRegistration      maintenanceServer;
     Internal::registerGameServer( node._router, openServer, 10, ServerState::Open );
     Internal::registerGameServer( node._router, maintenanceServer, 11, ServerState::Maintenance );
     node.step( 0 );
@@ -159,7 +159,8 @@ SW_TEST_CASE( ServerDirectoryServiceTest, AssignsOpenServerAndHonoursMaintenance
 SW_TEST_CASE( ServerDirectoryServiceTest, MaintenanceSetOnOneServerReachesTheOtherBeforeThePeriodicReload )
 {
     MemoryServiceDatabase   database;
-    MemoryEphemeralDatabase cacheDatabase;
+    SystemMonotonicClock    cacheClock;
+    MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     LocalServerBusHub       hub;
     DirectoryNode           first( &database, &cacheDatabase, &hub, 1 );
     DirectoryNode           second( &database, &cacheDatabase, &hub, 2 );
@@ -190,7 +191,8 @@ SW_TEST_CASE( ServerDirectoryServiceTest, MaintenanceSetOnOneServerReachesTheOth
 SW_TEST_CASE( ServerDirectoryServiceTest, NoticeAppearsAndDisappearsAtItsWindowEdges )
 {
     MemoryServiceDatabase   database;
-    MemoryEphemeralDatabase cacheDatabase;
+    SystemMonotonicClock    cacheClock;
+    MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     LocalServerBusHub       hub;
     DirectoryNode           node( &database, &cacheDatabase, &hub, 1 );
     ServiceNotice           notice;
@@ -223,7 +225,8 @@ SW_TEST_CASE( ServerDirectoryServiceTest, NoticeAppearsAndDisappearsAtItsWindowE
 SW_TEST_CASE( ServerDirectoryServiceTest, StoreFailureLeavesNothingAndBadInputIsRefused )
 {
     MemoryServiceDatabase   database;
-    MemoryEphemeralDatabase cacheDatabase;
+    SystemMonotonicClock    cacheClock;
+    MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     LocalServerBusHub       hub;
     DirectoryNode           node( &database, &cacheDatabase, &hub, 1 );
     node.step( 0 );

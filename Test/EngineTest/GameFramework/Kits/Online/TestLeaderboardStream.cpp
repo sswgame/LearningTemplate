@@ -77,7 +77,8 @@ SW_TEST_CASE( LeaderboardStreamTest, ClientSubmitOnlyOnOpenBoardsAndAchievementP
 {
     LoopbackStreamNetwork   network( 11u );
     MemoryServiceDatabase   database;
-    MemoryEphemeralDatabase cacheDatabase;
+    SystemMonotonicClock    cacheClock;
+    MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     LocalServerBusHub       hub;
     LeaderboardOnServer     leaderboard;
     test::OnlineTestServer  server( network, &database, &cacheDatabase, &hub, 1 );

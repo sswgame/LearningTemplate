@@ -67,7 +67,8 @@ namespace
 
 SW_TEST_CASE( PartyLobbyTest, PartyLifecycleWithLeaderHandover )
 {
-    MemoryEphemeralDatabase cacheDatabase;
+    SystemMonotonicClock    cacheClock;
+    MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     PartyNode               node( &cacheDatabase, 1 );
     node._service.createParty( 10, 1 );
     node.step();
@@ -117,7 +118,8 @@ SW_TEST_CASE( PartyLobbyTest, PartyLifecycleWithLeaderHandover )
 
 SW_TEST_CASE( PartyLobbyTest, OneAccountOnePartyAcrossServers )
 {
-    MemoryEphemeralDatabase cacheDatabase;
+    SystemMonotonicClock    cacheClock;
+    MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     PartyNode               first( &cacheDatabase, 1 );
     PartyNode               second( &cacheDatabase, 2 );
     first._service.createParty( 10, 1 );
@@ -143,7 +145,8 @@ SW_TEST_CASE( PartyLobbyTest, OneAccountOnePartyAcrossServers )
 
 SW_TEST_CASE( PartyLobbyTest, KickBreaksTheQueuedTicketAndFreesTheIndex )
 {
-    MemoryEphemeralDatabase cacheDatabase;
+    SystemMonotonicClock    cacheClock;
+    MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     PartyNode               node( &cacheDatabase, 1 );
     node._service.createParty( 10, 1 );
     node.step();
@@ -178,7 +181,8 @@ SW_TEST_CASE( PartyLobbyTest, KickBreaksTheQueuedTicketAndFreesTheIndex )
 
 SW_TEST_CASE( PartyLobbyTest, LobbyJoinReadyAndStartRequest )
 {
-    MemoryEphemeralDatabase cacheDatabase;
+    SystemMonotonicClock    cacheClock;
+    MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     PartyNode               node( &cacheDatabase, 1 );
     LobbySnapshot           request;
     request._name           = "friday night";
@@ -233,10 +237,10 @@ SW_TEST_CASE( PartyLobbyTest, LobbyJoinReadyAndStartRequest )
 
 SW_TEST_CASE( PartyLobbyTest, LobbyLeaveHandsOverOwnerAndListDropsGoneLobbies )
 {
-    MemoryEphemeralDatabase cacheDatabase;
-    cacheDatabase.setManualTimeMs( 0 );
-    PartyNode     node( &cacheDatabase, 1 );
-    LobbySnapshot request;
+    ManualClock             cacheClock{ 0 };
+    MemoryEphemeralDatabase cacheDatabase{ cacheClock };
+    PartyNode               node( &cacheDatabase, 1 );
+    LobbySnapshot           request;
     request._name           = "practice";
     request._modeID         = "arena";
     request._maxMemberCount = 4;
@@ -277,9 +281,9 @@ SW_TEST_CASE( PartyLobbyTest, LobbyLeaveHandsOverOwnerAndListDropsGoneLobbies )
     node.step();
     const uint64 newerLobbyID = node.last()._lobby._lobbyID;
     node._service.joinLobby( 22, newerLobbyID, 9 ); // 바뀌면 만료가 연장된다
-    cacheDatabase.advanceTimeMs( PartyLobbyLimit::kLobbyTtlMs - 1 );
+    cacheClock.advanceMilliseconds( PartyLobbyLimit::kLobbyTtlMs - 1 );
     node.step();
-    cacheDatabase.advanceTimeMs( 2 ); // 첫 로비만 만료
+    cacheClock.advanceMilliseconds( 2 ); // 첫 로비만 만료
     node._service.listLobbies( "arena", 10 );
     node.step();
     SW_ASSERT_EQUAL( node.last()._listLobby.size(), size_t( 1 ) );
@@ -288,7 +292,8 @@ SW_TEST_CASE( PartyLobbyTest, LobbyLeaveHandsOverOwnerAndListDropsGoneLobbies )
 
 SW_TEST_CASE( PartyLobbyTest, RemoveAccountLeavesPartyAndLobby )
 {
-    MemoryEphemeralDatabase cacheDatabase;
+    SystemMonotonicClock    cacheClock;
+    MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     PartyNode               node( &cacheDatabase, 1 );
     node._service.createParty( 10, 1 );
     LobbySnapshot request;
@@ -312,7 +317,8 @@ SW_TEST_CASE( PartyLobbyTest, RemoveAccountLeavesPartyAndLobby )
 SW_TEST_CASE( PartyLobbyTest, InitializeRefusesOutOfRangePartySize )
 {
     test::ScopedDefensiveTestLog expected( "an out-of-range max party size is refused" );
-    MemoryEphemeralDatabase      cacheDatabase;
+    SystemMonotonicClock         cacheClock;
+    MemoryEphemeralDatabase      cacheDatabase{ cacheClock };
     MemoryEphemeralStore         cache{ &cacheDatabase };
     EphemeralStoreRouter         router;
     router.initialize( &cache );

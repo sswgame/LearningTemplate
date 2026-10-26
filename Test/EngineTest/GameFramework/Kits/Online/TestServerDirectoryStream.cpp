@@ -94,7 +94,8 @@ SW_TEST_CASE( ServerDirectoryStreamTest, ListBeforeLoginAssignAfterLoginAndMaint
 {
     LoopbackStreamNetwork   network( 3u );
     MemoryServiceDatabase   database;
-    MemoryEphemeralDatabase cacheDatabase;
+    SystemMonotonicClock    cacheClock;
+    MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     LocalServerBusHub       hub;
     DirectoryOnServer       directory;
     test::OnlineTestServer  server( network, &database, &cacheDatabase, &hub, 1 );
@@ -168,7 +169,8 @@ SW_TEST_CASE( ServerDirectoryStreamTest, MaintenanceSetOnAnotherServerIsPushedTo
 {
     LoopbackStreamNetwork   network( 4u );
     MemoryServiceDatabase   database;
-    MemoryEphemeralDatabase cacheDatabase;
+    SystemMonotonicClock    cacheClock;
+    MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     LocalServerBusHub       hub;
     DirectoryOnServer       firstDirectory;
     DirectoryOnServer       secondDirectory;

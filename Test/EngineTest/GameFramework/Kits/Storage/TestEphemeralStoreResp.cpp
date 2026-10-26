@@ -46,7 +46,8 @@ namespace
 
         IEphemeralStore& getStore() { return *_store; }
         IEphemeralStore& getSecondStore() { return *_secondStore; }
-        void             advanceTimeMs( int64 deltaMs ) { std::this_thread::sleep_for( std::chrono::milliseconds( deltaMs ) ); }
+        // 만료는 실제 서버의 시계가 잰다 — 손으로 밀 수 없어 그만큼 잔다(수동 시계로 도는 계약은 메모리 · 가짜 RESP 서버 픽스처가 맡는다).
+        void advanceTimeMs( int64 deltaMs ) { std::this_thread::sleep_for( std::chrono::milliseconds( deltaMs ) ); }
 
         string makeKey( const utf8* pName )
         {

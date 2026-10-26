@@ -843,7 +843,8 @@ SW_TEST_CASE( OnlineServiceHostTest, RetryWithTheSameIdempotencyKeyRunsTheHandle
 
 SW_TEST_CASE( OnlineServiceHostTest, EphemeralRepliesReachOnlyTheSubmittingService )
 {
-    MemoryEphemeralDatabase database;
+    SystemMonotonicClock    clock;
+    MemoryEphemeralDatabase database{ clock };
     MemoryEphemeralStore    writer( &database );
     MemoryEphemeralStore    hostCache( &database );
     OnlineServiceHostConfig settings = HostRig::makeSettings();
@@ -894,7 +895,8 @@ SW_TEST_CASE( OnlineServiceHostTest, ShutdownTellsEveryServiceOnceAfterPendingCa
 {
     // 서비스 객체는 호스트보다 늦게 내려가도 된다 — 호스트가 내려가며 서비스마다 한 번 알리고(그 뒤로 서비스는 호스트를 부르지 않는다),
     // 알리기 전에 기다리던 캐시 요청은 Unavailable 로 끝낸다.
-    MemoryEphemeralDatabase database;
+    SystemMonotonicClock    clock;
+    MemoryEphemeralDatabase database{ clock };
     MemoryEphemeralStore    hostCache( &database );
     LocalServerBusHub       hub;
     LocalServerBus          busOfHost( &hub, 1 );

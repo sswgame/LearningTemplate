@@ -22,6 +22,9 @@ using namespace sw;
 
 namespace
 {
+    /** @brief 서버 루프가 넘기는 시각(유닉스 밀리초) 대신 쓰는 고정 시각입니다. 제공자는 시계를 읽지 않으므로 이 값만 흐른다. */
+    constexpr int64 kTestNowMs = 1792576800000ll; // 2026-10-21T10:00:00 UTC
+
     ReceiptValidationRequest makeRequest( sw::string_view storeName, sw::string_view payload, uint64 ticket )
     {
         ReceiptValidationRequest request;
@@ -33,13 +36,14 @@ namespace
     }
 
     /** @brief 검증 결과 @p count 개가 모일 때까지 서버와 제공자를 번갈아 돌립니다. */
-    vector<ReceiptValidationResult> collectResults( test::FakeHTTPSFixture& https, IReceiptValidator& validator, size_t count )
+    vector<ReceiptValidationResult> collectResults( test::FakeHTTPSFixture& https, IReceiptValidator& validator, int64 nowMs, size_t count )
     {
         vector<ReceiptValidationResult> listResult;
         const Deadline                  deadline = Deadline::afterMilliseconds( 10000 );
         while ( listResult.size() < count && deadline.isExpired() == false )
         {
             https.pump();
+            validator.update( nowMs );
             validator.pollCompletions( listResult );
         }
         return listResult;
@@ -56,7 +60,7 @@ namespace
     }
 
     /** @brief 환불 알림이 @p count 개 모일 때까지 돕니다(검증 결과도 함께 거둔다 — 같은 제공자가 두 가지를 모두 낸다). */
-    vector<ReceiptRefundNotice> collectRefunds( test::FakeHTTPSFixture& https, IReceiptValidator& validator, size_t count, int64 waitMilliseconds )
+    vector<ReceiptRefundNotice> collectRefunds( test::FakeHTTPSFixture& https, IReceiptValidator& validator, int64 nowMs, size_t count, int64 waitMilliseconds )
     {
         vector<ReceiptRefundNotice>     listNotice;
         vector<ReceiptValidationResult> listIgnored;
@@ -64,6 +68,7 @@ namespace
         while ( listNotice.size() < count && deadline.isExpired() == false )
         {
             https.pump();
+            validator.update( nowMs );
             validator.pollCompletions( listIgnored );
             validator.pollRefunds( listNotice );
         }
@@ -138,11 +143,10 @@ namespace
         static SteamReceiptSettings makeSettings( const test::FakeHTTPSFixture& https, const utf8* pKey, bool bSandbox )
         {
             SteamReceiptSettings settings;
-            settings._appID                = "480";
-            settings._key                  = pKey;
-            settings._baseURL              = "https://localhost:" + to_string( static_cast<int32>( https._server.getListenPort() ) );
-            settings._reportPollIntervalMs = 1; // 두 번째 조회가 곧 나가게 한다
-            settings._bSandbox             = bSandbox ? SW_TRUE : SW_FALSE;
+            settings._appID    = "480";
+            settings._key      = pKey;
+            settings._baseURL  = "https://localhost:" + to_string( static_cast<int32>( https._server.getListenPort() ) );
+            settings._bSandbox = bSandbox ? SW_TRUE : SW_FALSE;
             return settings;
         }
 
@@ -264,9 +268,8 @@ namespace
             sw::string            error;
             const bool            bRead = ServiceAccountCredentials::read( serviceAccount, settings._credentials, error );
             SW_EXPECT_TRUE( bRead );
-            settings._packageName          = "com.example.game";
-            settings._baseURL              = "https://localhost:" + to_string( static_cast<int32>( https._server.getListenPort() ) );
-            settings._voidedPollIntervalMs = 1;
+            settings._packageName = "com.example.game";
+            settings._baseURL     = "https://localhost:" + to_string( static_cast<int32>( https._server.getListenPort() ) );
             return settings;
         }
 
@@ -282,12 +285,12 @@ namespace
 SW_TEST_CASE( SteamReceiptTest, QueryTxnStatusesBecomeReceiptStatuses )
 {
     SteamFixture fixture;
-    fixture._validator.submitValidation( makeRequest( "steam", "1001", 1 ) );
-    fixture._validator.submitValidation( makeRequest( "steam", "1002", 2 ) );
-    fixture._validator.submitValidation( makeRequest( "steam", "1003", 3 ) );
-    fixture._validator.submitValidation( makeRequest( "steam", "1004", 4 ) );
-    fixture._validator.submitValidation( makeRequest( "steam", "9999", 5 ) );
-    const vector<ReceiptValidationResult> listResult = collectResults( fixture._https, fixture._validator, 5 );
+    fixture._validator.submitValidation( makeRequest( "steam", "1001", 1 ), kTestNowMs );
+    fixture._validator.submitValidation( makeRequest( "steam", "1002", 2 ), kTestNowMs );
+    fixture._validator.submitValidation( makeRequest( "steam", "1003", 3 ), kTestNowMs );
+    fixture._validator.submitValidation( makeRequest( "steam", "1004", 4 ), kTestNowMs );
+    fixture._validator.submitValidation( makeRequest( "steam", "9999", 5 ), kTestNowMs );
+    const vector<ReceiptValidationResult> listResult = collectResults( fixture._https, fixture._validator, kTestNowMs, 5 );
     SW_ASSERT_EQUAL( listResult.size(), size_t( 5 ) );
     const ReceiptValidationResult* pValid = findByTicket( listResult, 1 );
     SW_ASSERT_TRUE( pValid != nullptr );
@@ -307,10 +310,10 @@ SW_TEST_CASE( SteamReceiptTest, QueryTxnStatusesBecomeReceiptStatuses )
 SW_TEST_CASE( SteamReceiptTest, ReceiptsThatCannotGoIntoAQueryAreRefusedWithoutAskingSteam )
 {
     SteamFixture fixture;
-    fixture._validator.submitValidation( makeRequest( "steam", "1001&key=other", 1 ) );
-    fixture._validator.submitValidation( makeRequest( "steam", "", 2 ) );
-    fixture._validator.submitValidation( makeRequest( "steam", "123456789012345678901", 3 ) ); // 21 자리
-    const vector<ReceiptValidationResult> listResult = collectResults( fixture._https, fixture._validator, 3 );
+    fixture._validator.submitValidation( makeRequest( "steam", "1001&key=other", 1 ), kTestNowMs );
+    fixture._validator.submitValidation( makeRequest( "steam", "", 2 ), kTestNowMs );
+    fixture._validator.submitValidation( makeRequest( "steam", "123456789012345678901", 3 ), kTestNowMs ); // 21 자리
+    const vector<ReceiptValidationResult> listResult = collectResults( fixture._https, fixture._validator, kTestNowMs, 3 );
     SW_ASSERT_EQUAL( listResult.size(), size_t( 3 ) );
     for ( const ReceiptValidationResult& result : listResult )
     {
@@ -324,8 +327,8 @@ SW_TEST_CASE( SteamReceiptTest, AWrongPublisherKeyIsRetriedNotBlamedOnThePlayer 
     SteamFixture fixture( "wrong-key" );
     {
         SW_TEST_DEFENSIVE_SCOPE( "the provider logs that steam rejected the key" );
-        fixture._validator.submitValidation( makeRequest( "steam", "1001", 1 ) );
-        const vector<ReceiptValidationResult> listResult = collectResults( fixture._https, fixture._validator, 1 );
+        fixture._validator.submitValidation( makeRequest( "steam", "1001", 1 ), kTestNowMs );
+        const vector<ReceiptValidationResult> listResult = collectResults( fixture._https, fixture._validator, kTestNowMs, 1 );
         SW_ASSERT_EQUAL( listResult.size(), size_t( 1 ) );
         SW_EXPECT_TRUE( listResult[0]._status == ReceiptStatus::Retry );
     }
@@ -334,15 +337,15 @@ SW_TEST_CASE( SteamReceiptTest, AWrongPublisherKeyIsRetriedNotBlamedOnThePlayer 
 SW_TEST_CASE( SteamReceiptTest, TheRefundReportNotifiesEachRefundedOrderOnce )
 {
     SteamFixture                      fixture;
-    const vector<ReceiptRefundNotice> listNotice = collectRefunds( fixture._https, fixture._validator, 1, 10000 );
+    const vector<ReceiptRefundNotice> listNotice = collectRefunds( fixture._https, fixture._validator, kTestNowMs, 1, 10000 );
     SW_ASSERT_EQUAL( listNotice.size(), size_t( 1 ) );
     SW_EXPECT_EQUAL( listNotice[0]._transactionID, sw::string( "1002" ) ); // 성공한 주문(1001)은 환불이 아니다
     SW_EXPECT_EQUAL( listNotice[0]._storeName, sw::string( "steam" ) );
     SW_EXPECT_EQUAL( listNotice[0]._refundedMs, int64( 1792582200000ll ) ); // 2026-10-21T11:30:00 UTC
 
-    // 조회 주기(1 ms)가 지나 두 번째 보고서가 와도 같은 주문을 다시 알리지 않는다.
+    // 시각을 조회 주기만큼 밀면 두 번째 보고서가 온다 — 그래도 같은 주문을 다시 알리지 않는다.
     const int32                       reportHits = fixture._handler._reportHits;
-    const vector<ReceiptRefundNotice> listAgain  = collectRefunds( fixture._https, fixture._validator, 1, 300 );
+    const vector<ReceiptRefundNotice> listAgain  = collectRefunds( fixture._https, fixture._validator, kTestNowMs + SteamReceiptSettings{}._reportPollIntervalMs, 1, 300 );
     SW_EXPECT_TRUE( fixture._handler._reportHits > reportHits );
     SW_EXPECT_EQUAL( listAgain.size(), size_t( 0 ) );
 }
@@ -350,8 +353,8 @@ SW_TEST_CASE( SteamReceiptTest, TheRefundReportNotifiesEachRefundedOrderOnce )
 SW_TEST_CASE( SteamReceiptTest, TheSandboxInterfaceMarksResultsAsSandboxPurchases )
 {
     SteamFixture fixture( "publisher-key", true );
-    fixture._validator.submitValidation( makeRequest( "steam", "1001", 1 ) );
-    const vector<ReceiptValidationResult> listResult = collectResults( fixture._https, fixture._validator, 1 );
+    fixture._validator.submitValidation( makeRequest( "steam", "1001", 1 ), kTestNowMs );
+    const vector<ReceiptValidationResult> listResult = collectResults( fixture._https, fixture._validator, kTestNowMs, 1 );
     SW_ASSERT_EQUAL( listResult.size(), size_t( 1 ) );
     SW_EXPECT_TRUE( listResult[0]._bSandbox == SW_TRUE );
     SW_EXPECT_TRUE( fixture._handler._bSandboxInterface == SW_TRUE );
@@ -381,13 +384,13 @@ SW_TEST_CASE( SteamReceiptTest, TimesRoundTripAndOrderIDsAreChecked )
 SW_TEST_CASE( GoogleReceiptTest, PurchaseStatesBecomeReceiptStatusesAndValidPurchasesAreAcknowledged )
 {
     GoogleFixture fixture;
-    fixture._validator.submitValidation( makeRequest( "google", "gems100|tokenOK", 1 ) );
-    fixture._validator.submitValidation( makeRequest( "google", "gems100|tokenCanceled", 2 ) );
-    fixture._validator.submitValidation( makeRequest( "google", "gems100|tokenPending", 3 ) );
-    fixture._validator.submitValidation( makeRequest( "google", "gems100|tokenTest", 4 ) );
-    fixture._validator.submitValidation( makeRequest( "google", "gems100|tokenUnknown", 5 ) );
-    fixture._validator.submitValidation( makeRequest( "google", "gems100|tokenAcked", 6 ) );
-    const vector<ReceiptValidationResult> listResult = collectResults( fixture._https, fixture._validator, 6 );
+    fixture._validator.submitValidation( makeRequest( "google", "gems100|tokenOK", 1 ), kTestNowMs );
+    fixture._validator.submitValidation( makeRequest( "google", "gems100|tokenCanceled", 2 ), kTestNowMs );
+    fixture._validator.submitValidation( makeRequest( "google", "gems100|tokenPending", 3 ), kTestNowMs );
+    fixture._validator.submitValidation( makeRequest( "google", "gems100|tokenTest", 4 ), kTestNowMs );
+    fixture._validator.submitValidation( makeRequest( "google", "gems100|tokenUnknown", 5 ), kTestNowMs );
+    fixture._validator.submitValidation( makeRequest( "google", "gems100|tokenAcked", 6 ), kTestNowMs );
+    const vector<ReceiptValidationResult> listResult = collectResults( fixture._https, fixture._validator, kTestNowMs, 6 );
     SW_ASSERT_EQUAL( listResult.size(), size_t( 6 ) );
     SW_EXPECT_TRUE( fixture._handler._bAssertionValid == SW_TRUE );
     SW_EXPECT_EQUAL( fixture._handler._tokenHits, 1 ); // 여섯 요청이 토큰 하나를 나눠 쓴다
@@ -411,6 +414,7 @@ SW_TEST_CASE( GoogleReceiptTest, PurchaseStatesBecomeReceiptStatusesAndValidPurc
     {
         vector<ReceiptValidationResult> listIgnored;
         fixture._https.pump();
+        fixture._validator.update( kTestNowMs );
         fixture._validator.pollCompletions( listIgnored );
     }
     SW_EXPECT_EQUAL( fixture._handler._acknowledgeHits, 1 );
@@ -419,10 +423,10 @@ SW_TEST_CASE( GoogleReceiptTest, PurchaseStatesBecomeReceiptStatusesAndValidPurc
 SW_TEST_CASE( GoogleReceiptTest, MalformedReceiptsAreRefusedWithoutAskingGoogle )
 {
     GoogleFixture fixture;
-    fixture._validator.submitValidation( makeRequest( "google", "no-bar", 1 ) );
-    fixture._validator.submitValidation( makeRequest( "google", "gems100|tok/../x", 2 ) );
-    fixture._validator.submitValidation( makeRequest( "google", "|token", 3 ) );
-    const vector<ReceiptValidationResult> listResult = collectResults( fixture._https, fixture._validator, 3 );
+    fixture._validator.submitValidation( makeRequest( "google", "no-bar", 1 ), kTestNowMs );
+    fixture._validator.submitValidation( makeRequest( "google", "gems100|tok/../x", 2 ), kTestNowMs );
+    fixture._validator.submitValidation( makeRequest( "google", "|token", 3 ), kTestNowMs );
+    const vector<ReceiptValidationResult> listResult = collectResults( fixture._https, fixture._validator, kTestNowMs, 3 );
     SW_ASSERT_EQUAL( listResult.size(), size_t( 3 ) );
     for ( const ReceiptValidationResult& result : listResult )
     {
@@ -435,13 +439,14 @@ SW_TEST_CASE( GoogleReceiptTest, MalformedReceiptsAreRefusedWithoutAskingGoogle 
 SW_TEST_CASE( GoogleReceiptTest, TheVoidedPurchaseListNotifiesEachRefundOnce )
 {
     GoogleFixture                     fixture;
-    const vector<ReceiptRefundNotice> listNotice = collectRefunds( fixture._https, fixture._validator, 1, 10000 );
+    const vector<ReceiptRefundNotice> listNotice = collectRefunds( fixture._https, fixture._validator, kTestNowMs, 1, 10000 );
     SW_ASSERT_EQUAL( listNotice.size(), size_t( 1 ) );
     SW_EXPECT_EQUAL( listNotice[0]._transactionID, sw::string( "GPA.2" ) );
     SW_EXPECT_EQUAL( listNotice[0]._storeName, sw::string( "google" ) );
     SW_EXPECT_EQUAL( listNotice[0]._refundedMs, int64( 1700000000000ll ) );
+    // 시각을 조회 주기만큼 밀면 두 번째 목록이 온다 — 그래도 같은 주문을 다시 알리지 않는다.
     const int32                       voidedHits = fixture._handler._voidedHits;
-    const vector<ReceiptRefundNotice> listAgain  = collectRefunds( fixture._https, fixture._validator, 1, 300 );
+    const vector<ReceiptRefundNotice> listAgain  = collectRefunds( fixture._https, fixture._validator, kTestNowMs + GoogleReceiptSettings{}._voidedPollIntervalMs, 1, 300 );
     SW_EXPECT_TRUE( fixture._handler._voidedHits > voidedHits );
     SW_EXPECT_EQUAL( listAgain.size(), size_t( 0 ) );
 }

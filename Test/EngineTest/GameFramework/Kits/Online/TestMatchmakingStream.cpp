@@ -74,7 +74,8 @@ SW_TEST_CASE( MatchmakingStreamTest, PartyLobbyAndQueueOverTheWire )
 {
     LoopbackStreamNetwork   network( 3u );
     MemoryServiceDatabase   database;
-    MemoryEphemeralDatabase cacheDatabase;
+    SystemMonotonicClock    cacheClock;
+    MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     LocalServerBusHub       hub;
     MatchmakingOnServer     matchmaking;
     test::OnlineTestServer  server( network, &database, &cacheDatabase, &hub, 1 );
@@ -182,7 +183,8 @@ SW_TEST_CASE( MatchmakingStreamTest, DroppedAccountLeavesThePartyAfterTheReconne
 {
     LoopbackStreamNetwork   network( 3u );
     MemoryServiceDatabase   database;
-    MemoryEphemeralDatabase cacheDatabase;
+    SystemMonotonicClock    cacheClock;
+    MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     LocalServerBusHub       hub;
     MatchmakingOnServer     matchmaking;
     test::OnlineTestServer  server( network, &database, &cacheDatabase, &hub, 1 );

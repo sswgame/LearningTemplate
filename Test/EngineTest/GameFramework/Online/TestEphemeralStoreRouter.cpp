@@ -34,7 +34,8 @@ namespace
 
 SW_TEST_CASE( EphemeralStoreRouterTest, RepliesGoOnlyToTheirOwnDelegate )
 {
-    MemoryEphemeralDatabase database;
+    SystemMonotonicClock    clock;
+    MemoryEphemeralDatabase database{ clock };
     MemoryEphemeralStore    store( &database );
     EphemeralStoreRouter    router;
     router.initialize( &store );
@@ -57,7 +58,8 @@ SW_TEST_CASE( EphemeralStoreRouterTest, RepliesGoOnlyToTheirOwnDelegate )
 
 SW_TEST_CASE( EphemeralStoreRouterTest, TwoSubscribersShareOneChannelAndCanLeaveDuringDispatch )
 {
-    MemoryEphemeralDatabase database;
+    SystemMonotonicClock    clock;
+    MemoryEphemeralDatabase database{ clock };
     MemoryEphemeralStore    publisher( &database );
     MemoryEphemeralStore    store( &database );
     EphemeralStoreRouter    router;
@@ -83,7 +85,8 @@ SW_TEST_CASE( EphemeralStoreRouterTest, TwoSubscribersShareOneChannelAndCanLeave
 
 SW_TEST_CASE( EphemeralStoreRouterTest, ShutdownAnswersPendingRequestsOnceWithUnavailable )
 {
-    MemoryEphemeralDatabase database;
+    SystemMonotonicClock    clock;
+    MemoryEphemeralDatabase database{ clock };
     MemoryEphemeralStore    store( &database );
     RouterRecorder          recorder;
     {
@@ -99,7 +102,8 @@ SW_TEST_CASE( EphemeralStoreRouterTest, ShutdownAnswersPendingRequestsOnceWithUn
 
 SW_TEST_CASE( EphemeralStoreRouterTest, CancelledRequestsAreNeverAnswered )
 {
-    MemoryEphemeralDatabase database;
+    SystemMonotonicClock    clock;
+    MemoryEphemeralDatabase database{ clock };
     MemoryEphemeralStore    store( &database );
     EphemeralStoreRouter    router;
     router.initialize( &store );
