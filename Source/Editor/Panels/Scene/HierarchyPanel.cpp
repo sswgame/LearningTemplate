@@ -621,7 +621,7 @@ namespace sw::editor
                     (void)EditorSceneCommands::rename( pObj, renameBuffer.c_str() ); // 빈 이름은 거절하므로 이름이 그대로 남는다
                     renamingObjectID = 0;
                 }
-                const bool bCanceled = EditorInputGUI::wasTextEditCanceled();
+                const bool bCanceled = EditorInputGUI::wasCancelPressed();
                 if ( ImGui::IsItemDeactivated() && bCanceled == false )
                 {
                     (void)EditorSceneCommands::rename( pObj, renameBuffer.c_str() ); // 빈 이름은 거절하므로 이름이 그대로 남는다

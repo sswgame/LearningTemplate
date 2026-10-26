@@ -24,6 +24,8 @@ namespace sw::editor
         Left = 0,
         Right,
         Middle,
+        Back,    ///< 뒤로 단추(X1)
+        Forward, ///< 앞으로 단추(X2)
         Count
     };
 
@@ -140,8 +142,11 @@ namespace sw::editor
         static EditorPointerState readPointer();
         /** @brief 지금 누른 수정 키(`ModifierKey` 비트)입니다. */
         static uint8 getModifierMask();
-        /** @brief 글 칸(이름 바꾸기)에서 Esc 로 편집을 취소했으면 true 입니다. 단축키가 아니라 글 칸의 편집 키라 입력 맵이 아니다(글을 치는 동안 액션은 멈춘다). */
-        static bool wasTextEditCanceled();
+        /**
+         * @brief 이번 프레임에 Esc 로 취소했으면 true 입니다(글 칸의 편집 취소 · 확인 창 닫기).
+         * @details 단축키가 아니라 글 칸 · 모달의 편집 키라 입력 맵에 두지 않는다 — 글을 치는 동안 액션은 멈추는데 이 키는 그때 들어야 한다.
+         */
+        static bool wasCancelPressed();
 
         // ------------------------------------------------------------------------------
         // 4) 비맥락 팝업(확인 창 · 도구 팝업) 열기

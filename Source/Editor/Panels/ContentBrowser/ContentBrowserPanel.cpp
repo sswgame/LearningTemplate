@@ -14,15 +14,16 @@
 #include "Editor/Common/Commands/Asset/EditorAssetCommands.h"
 #include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
 #include "Editor/Common/Commands/Asset/EditorFolderListing.h"
+#include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Config/EditorPreferences.h"
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
-#include "Editor/Common/GUI/EditorContextMenuExtension.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorTextExtentImGui.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/SourceControl/EditorSourceControl.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
@@ -84,6 +85,9 @@ namespace sw::editor
             static constexpr const utf8* kReferenceResultsPopupName = "References##ContentBrowserReferences";
             /** @brief 게임 팩 루트의 표시 이름 접두입니다(`game/<팩>`). */
             static constexpr const utf8* kGameDomainPrefix = "game/";
+            /** @brief 폴더 이동 액션입니다. 키는 `editor.input.xml` 의 `Editor.Panel.content_browser` 레이어가 정한다. */
+            static constexpr string_view kActionNavigateBack    = "contentBrowser.navigateBack";
+            static constexpr string_view kActionNavigateForward = "contentBrowser.navigateForward";
             /** @brief 이미지 썸네일이 없는 종류의 아이콘 크기입니다. 썸네일 짧은 변에 대한 비율입니다. */
             static constexpr float32 kFallbackGlyphSizeRatio = 0.5f;
             /** @brief 참조 결과 테이블이 스크롤 없이 보이는 최대 행 수입니다. */
@@ -195,6 +199,118 @@ namespace sw::editor
                 outValue = static_cast<float64>( pPanel->getReferenceResultCount() );
                 return true;
             }
+
+            // ------------------------------------------------------------------------------
+            // 에셋 명령 — 맥락 메뉴 · 단축키(`editor.input.xml` 의 `Editor.Panel.content_browser`)가 같은 명령을 부른다.
+            // 대상 id 는 절대 경로를 페이로드 이름 표(`EditorInputGUI::registerPayloadName`)에 올린 값이다. 대상이 없으면(단축키) 이 창의 선택이다.
+            // ------------------------------------------------------------------------------
+            static ContentBrowserPanel* findWritablePanel()
+            {
+                EditorContext* pContext = editor::findSubsystem<EditorContext>();
+                return pContext != nullptr ? pContext->getSubsystem<EditorPanelManager>().findPanel<ContentBrowserPanel>() : nullptr;
+            }
+
+            /** @brief 대상 에셋의 절대 경로입니다. 누른 항목 → 선택 스냅숏 → 창의 지금 선택 순서로 고릅니다. 없으면 빈 문자열입니다. */
+            static string findTargetPath( const EditorCommandTarget& target )
+            {
+                string       path;
+                const uint64 targetID = target._hoveredID != 0 ? target._hoveredID : ( target._listSelectedID.empty() ? 0 : target._listSelectedID.front() );
+                if ( targetID != 0 )
+                {
+                    (void)EditorInputGUI::findPayloadName( EditorPayloadKind::Asset, targetID, path ); // 모르는 id 면 빈 경로 — 명령이 꺼진다
+                    return path;
+                }
+                const ContentBrowserPanel* pPanel = findPanel();
+                if ( pPanel != nullptr )
+                    path = pPanel->getSelectedAssetPath();
+                return path;
+            }
+
+            static bool hasTarget( const EditorCommandTarget& target ) { return findTargetPath( target ).empty() == false; }
+
+            /** @brief 대상이 폴더가 아닌 파일이면 true 입니다(이름 바꾸기 · 복제 · 지우기 · 참조 · 잠금). */
+            static bool hasFileTarget( const EditorCommandTarget& target )
+            {
+                const string path = findTargetPath( target );
+                return path.empty() == false && FileUtil::isDirectory( path ) == false;
+            }
+
+            static bool hasTextAssetTarget( const EditorCommandTarget& target )
+            {
+                const string path = findTargetPath( target );
+                return path.empty() == false && EditorReferenceIndex::isTextAsset( path );
+            }
+
+            static void showInExplorer( const EditorCommandTarget& target ) { EditorAssetFileCommands::showInFileExplorer( findTargetPath( target ) ); }
+
+            static void copyRelativePath( const EditorCommandTarget& target ) { ImGui::SetClipboardText( ResourcePaths::toResourceID( findTargetPath( target ) ).c_str() ); }
+
+            static void copyAbsolutePath( const EditorCommandTarget& target ) { ImGui::SetClipboardText( findTargetPath( target ).c_str() ); }
+
+            static void findReferences( const EditorCommandTarget& target )
+            {
+                ContentBrowserPanel* pPanel = findWritablePanel();
+                if ( pPanel != nullptr )
+                    pPanel->showReferences( findTargetPath( target ), false );
+            }
+
+            static void showDependencies( const EditorCommandTarget& target )
+            {
+                ContentBrowserPanel* pPanel = findWritablePanel();
+                if ( pPanel != nullptr )
+                    pPanel->showReferences( findTargetPath( target ), true );
+            }
+
+            static EditorSourceControl& getSourceControl() { return editor::getSubsystem<EditorContext>().getSubsystem<EditorSourceControl>(); }
+
+            static bool canLock( const EditorCommandTarget& target )
+            {
+                return hasFileTarget( target ) && getSourceControl().getProvider().canLock() && getSourceControl().findLock( findTargetPath( target ) ) == nullptr;
+            }
+
+            static bool canUnlock( const EditorCommandTarget& target )
+            {
+                return hasFileTarget( target ) && getSourceControl().getProvider().canLock() && getSourceControl().findLock( findTargetPath( target ) ) != nullptr;
+            }
+
+            static bool canRefreshSourceControl( const EditorCommandTarget& target ) { return hasFileTarget( target ) && getSourceControl().getProvider().canLock(); }
+
+            static void lockAsset( const EditorCommandTarget& target ) { (void)getSourceControl().requestLock( findTargetPath( target ) ); } // 결과는 공급자가 알린다
+
+            static void unlockAsset( const EditorCommandTarget& target ) { (void)getSourceControl().requestUnlock( findTargetPath( target ) ); } // 결과는 공급자가 알린다
+
+            static void refreshSourceControl( const EditorCommandTarget& /*target*/ ) { getSourceControl().requestRefresh(); }
+
+            static void renameAsset( const EditorCommandTarget& target )
+            {
+                ContentBrowserPanel* pPanel = findWritablePanel();
+                if ( pPanel != nullptr )
+                    pPanel->beginRename( findTargetPath( target ) );
+            }
+
+            static void duplicateAsset( const EditorCommandTarget& target )
+            {
+                ContentBrowserPanel* pPanel = findWritablePanel();
+                if ( pPanel != nullptr )
+                    (void)pPanel->duplicateAsset( findTargetPath( target ) ); // 실패는 copyFile 이 알린다
+            }
+
+            static void deleteAsset( const EditorCommandTarget& target )
+            {
+                // 지우기 전에 확인한다. 파일은 휴지통으로 보낸다. 모달은 메뉴 밖의 창 단위에서 연다.
+                ContentBrowserPanel* pPanel = findWritablePanel();
+                if ( pPanel != nullptr )
+                    pPanel->requestDeleteAsset( findTargetPath( target ) );
+            }
+
+            /** @brief 선택 밖 항목에서 메뉴를 열면 그 항목만 고릅니다(R2). */
+            static void selectOnlyAsset( uint64 assetID )
+            {
+                ContentBrowserPanel* pPanel = findWritablePanel();
+                string               path;
+                if ( pPanel != nullptr && EditorInputGUI::findPayloadName( EditorPayloadKind::Asset, assetID, path ) )
+                    pPanel->selectAssetPath( path );
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -219,6 +335,29 @@ namespace sw::editor
                          &ContentBrowserPanelInternal::readReferenceCount );
     SW_DEV_COMMAND( ContentOpen, "content.open", "content.open <resource folder>", "Show a resource folder in the Content Browser (e.g. game/empty/models)",
                     &ContentBrowserPanelInternal::runContentOpen );
+    // 에셋 맥락 메뉴 · 단축키(R4 — 메뉴 · 키 · 팔레트가 같은 명령). 순서 칸: 100 탐색기 · 경로, 200 참조, 300 버전 관리, 900 파일 편집.
+    SW_EDITOR_CONTEXT_COMMAND( AssetShowInExplorer, "asset.showInExplorer", "Show in Explorer", editoricon::kFolderOpen, "Asset", Asset, 100, nullptr,
+                               &ContentBrowserPanelInternal::showInExplorer, &ContentBrowserPanelInternal::hasTarget, NoScene, nullptr );
+    SW_EDITOR_CONTEXT_COMMAND( AssetCopyRelativePath, "asset.copyRelativePath", "Copy Relative Path", nullptr, "Asset", Asset, 110, nullptr,
+                               &ContentBrowserPanelInternal::copyRelativePath, &ContentBrowserPanelInternal::hasTarget, NoScene, nullptr );
+    SW_EDITOR_CONTEXT_COMMAND( AssetCopyAbsolutePath, "asset.copyAbsolutePath", "Copy Absolute Path", nullptr, "Asset", Asset, 120, nullptr,
+                               &ContentBrowserPanelInternal::copyAbsolutePath, &ContentBrowserPanelInternal::hasTarget, NoScene, nullptr );
+    SW_EDITOR_CONTEXT_COMMAND( AssetFindReferences, "asset.findReferences", "Find References", nullptr, "Asset", Asset, 200, nullptr,
+                               &ContentBrowserPanelInternal::findReferences, &ContentBrowserPanelInternal::hasFileTarget, NoScene, nullptr );
+    SW_EDITOR_CONTEXT_COMMAND( AssetShowDependencies, "asset.showDependencies", "Show Dependencies", nullptr, "Asset", Asset, 210, nullptr,
+                               &ContentBrowserPanelInternal::showDependencies, &ContentBrowserPanelInternal::hasTextAssetTarget, NoScene, nullptr );
+    SW_EDITOR_CONTEXT_COMMAND( AssetLock, "asset.lock", "Check Out (Lock)", editoricon::kLock, "Asset", Asset, 300, nullptr, &ContentBrowserPanelInternal::lockAsset,
+                               &ContentBrowserPanelInternal::canLock, NoScene, nullptr );
+    SW_EDITOR_CONTEXT_COMMAND( AssetUnlock, "asset.unlock", "Release Lock", editoricon::kUnlock, "Asset", Asset, 310, nullptr, &ContentBrowserPanelInternal::unlockAsset,
+                               &ContentBrowserPanelInternal::canUnlock, NoScene, nullptr );
+    SW_EDITOR_CONTEXT_COMMAND( AssetRefreshSourceControl, "asset.refreshSourceControl", "Refresh Source Control", nullptr, "Asset", Asset, 320, nullptr,
+                               &ContentBrowserPanelInternal::refreshSourceControl, &ContentBrowserPanelInternal::canRefreshSourceControl, NoScene, nullptr );
+    SW_EDITOR_CONTEXT_COMMAND( AssetRename, "asset.rename", "Rename", nullptr, "Asset", Asset, 900, "asset.rename", &ContentBrowserPanelInternal::renameAsset,
+                               &ContentBrowserPanelInternal::hasFileTarget, NoScene, nullptr );
+    SW_EDITOR_CONTEXT_COMMAND( AssetDuplicate, "asset.duplicate", "Duplicate", nullptr, "Asset", Asset, 910, "asset.duplicate", &ContentBrowserPanelInternal::duplicateAsset,
+                               &ContentBrowserPanelInternal::hasFileTarget, NoScene, nullptr );
+    SW_EDITOR_CONTEXT_COMMAND( AssetDelete, "asset.delete", "Delete...", editoricon::kTrash, "Asset", Asset, 920, "asset.delete", &ContentBrowserPanelInternal::deleteAsset,
+                               &ContentBrowserPanelInternal::hasFileTarget, NoScene, nullptr );
 
     void ContentBrowserPanel::drawAssetThumbnail( ImDrawList* pDrawList, const float2& minPos, const float2& maxPos,
                                                   const AssetEntry& entry )
@@ -349,74 +488,26 @@ namespace sw::editor
 
     void ContentBrowserPanel::drawAssetContextMenu( const AssetEntry& entry )
     {
-        if ( ImGui::BeginPopupContextItem( "AssetCtx" ) )
+        // 항목은 `asset.*` 명령이다(이 파일의 등록 줄). 대상 id 는 절대 경로를 페이로드 이름 표에 올린 값이다.
+        EditorContextMenuSubject subject{};
+        subject._pPopupID  = "AssetCtx";
+        subject._kind      = EditorCommandTargetKind::Asset;
+        subject._hoveredID = EditorInputGUI::registerPayloadName( EditorPayloadKind::Asset, entry._absolutePath );
+        if ( _selectedAssetAbs.empty() == false )
+            subject._listSelectedID.push_back( EditorInputGUI::registerPayloadName( EditorPayloadKind::Asset, _selectedAssetAbs ) );
+        subject._selectOnly = &ContentBrowserPanelInternal::selectOnlyAsset;
+        (void)EditorInputGUI::drawContextMenuFor( subject ); // 열렸는지는 쓰지 않는다
+    }
+
+    void ContentBrowserPanel::selectAssetPath( string_view absolutePath )
+    {
+        for ( const AssetEntry& entry : _listEntry )
         {
-            void ( *pfnExtensionAction )( const EditorContextMenuTarget& ) = nullptr;
-            if ( ImGui::MenuItem( "Show in Explorer" ) )
-                EditorAssetFileCommands::showInFileExplorer( entry._absolutePath );
-
-            if ( ImGui::MenuItem( "Copy Relative Path" ) )
-                ImGui::SetClipboardText( entry._relativePath.c_str() );
-
-            if ( ImGui::MenuItem( "Copy Absolute Path" ) )
-                ImGui::SetClipboardText( entry._absolutePath.c_str() );
-
-            // 참조는 텍스트 에셋을 스캔한 역색인으로 찾는다. 결과 창은 이 메뉴 밖의 창 단위에서 연다.
-            if ( entry._bIsDirectory == false )
+            if ( FileUtil::pathsEqualNormalized( entry._absolutePath, absolutePath ) )
             {
-                ImGui::Separator();
-                if ( ImGui::MenuItem( "Find References" ) )
-                    showReferences( entry._absolutePath, false );
-                EditorSelfTestMarks::note( "contentBrowser.menu.findReferences" );
-                if ( ImGui::MenuItem( "Show Dependencies", nullptr, false, EditorReferenceIndex::isTextAsset( entry._absolutePath ) ) )
-                    showReferences( entry._absolutePath, true );
-                EditorSelfTestMarks::note( "contentBrowser.menu.showDependencies" );
+                selectAsset( entry );
+                return;
             }
-
-            // 버전 관리는 사용자가 선택한 파일만 잠그고 푼다. 공급자가 없으면 메뉴가 꺼져 있다.
-            EditorContext& editorContext = editor::getSubsystem<EditorContext>();
-            if ( entry._bIsDirectory == false )
-            {
-                EditorSourceControl& sourceControl = editorContext.getSubsystem<EditorSourceControl>();
-                const bool           bCanLock      = sourceControl.getProvider().canLock();
-                const bool           bLocked       = sourceControl.findLock( entry._absolutePath ) != nullptr;
-                ImGui::Separator();
-                if ( ImGui::MenuItem( EditorThemeUtil::makeIconLabel( editoricon::kLock, "Check Out (Lock)" ), nullptr, false, bCanLock && bLocked == false ) )
-                    (void)sourceControl.requestLock( entry._absolutePath );
-                if ( ImGui::MenuItem( EditorThemeUtil::makeIconLabel( editoricon::kUnlock, "Release Lock" ), nullptr, false, bCanLock && bLocked ) )
-                    (void)sourceControl.requestUnlock( entry._absolutePath );
-                if ( ImGui::MenuItem( "Refresh Source Control", nullptr, false, bCanLock ) )
-                    sourceControl.requestRefresh();
-            }
-
-            // 확장 항목(`SW_EDITOR_CONTEXT_MENU_ENTRY`). 고른 동작은 메뉴를 닫은 뒤 부른다 — 동작이 모듈을 언로드해 목록이 바뀌어도 순회 중인 배열을 읽지 않는다.
-            EditorContextMenuTarget extensionTarget{};
-            extensionTarget._kind         = EditorContextMenuKind::Asset;
-            extensionTarget._pAssetPath   = entry._absolutePath.c_str();
-            extensionTarget._bIsDirectory = entry._bIsDirectory;
-            if ( EditorContextMenuExtensionUtil::countEntries( EditorContextMenuKind::Asset ) != 0 )
-            {
-                ImGui::Separator();
-                pfnExtensionAction = EditorContextMenuExtensionUtil::visitEntries( EditorContextMenuKind::Asset, [&]( const EditorContextMenuEntryRegistration& extension )
-                {
-                    return ImGui::MenuItem( extension._pLabel, nullptr, false, EditorContextMenuExtensionUtil::isEnabled( extension, extensionTarget ) );
-                } );
-            }
-
-            ImGui::Separator();
-            if ( ImGui::MenuItem( "Rename", "F2", false, entry._bIsDirectory == false ) )
-                beginRename( entry._absolutePath );
-            EditorSelfTestMarks::note( "contentBrowser.menu.rename" );
-            if ( ImGui::MenuItem( "Duplicate", "Ctrl+D", false, entry._bIsDirectory == false ) )
-                (void)duplicateAsset( entry._absolutePath ); // 실패는 copyFile 이 알린다
-            EditorSelfTestMarks::note( "contentBrowser.menu.duplicate" );
-            // 지우기 전에 확인한다. 파일은 휴지통으로 보낸다. 모달은 이 메뉴 밖의 창 단위에서 연다.
-            if ( ImGui::MenuItem( "Delete...", "Del", false, entry._bIsDirectory == false ) )
-                requestDeleteAsset( entry._absolutePath );
-            ImGui::EndPopup();
-
-            if ( pfnExtensionAction != nullptr )
-                pfnExtensionAction( extensionTarget );
         }
     }
 
@@ -476,7 +567,7 @@ namespace sw::editor
     {
         if ( _bOpenDeleteConfirm == SW_TRUE )
         {
-            ImGui::OpenPopup( ContentBrowserPanelInternal::kDeleteConfirmPopupName );
+            EditorInputGUI::openPopup( ContentBrowserPanelInternal::kDeleteConfirmPopupName );
             _bOpenDeleteConfirm = SW_FALSE;
         }
         if ( EditorWidgets::beginCenteredModal( ContentBrowserPanelInternal::kDeleteConfirmPopupName ) == false )
@@ -507,7 +598,7 @@ namespace sw::editor
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();
-        if ( ImGui::Button( "Cancel" ) || ImGui::IsKeyPressed( ImGuiKey_Escape ) )
+        if ( ImGui::Button( "Cancel" ) || EditorInputGUI::wasCancelPressed() )
         {
             _fileActions.cancelDelete();
             ImGui::CloseCurrentPopup();
@@ -662,7 +753,7 @@ namespace sw::editor
         const bool bEntered = ImGui::InputText( "##cb_rename", _renameBuffer.data(), _renameBuffer.capacity(),
                                                 ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll );
         EditorSelfTestMarks::note( "contentBrowser.rename" );
-        const bool bEscaped = ImGui::IsKeyPressed( ImGuiKey_Escape );
+        const bool bEscaped = EditorInputGUI::wasCancelPressed();
         if ( bEscaped )
         {
             _fileActions.cancelRename();
@@ -692,23 +783,6 @@ namespace sw::editor
         ImGui::EndPopup();
     }
 
-    void ContentBrowserPanel::handleAssetShortcuts()
-    {
-        // 다른 패널과 같은 규칙이다. 이 창에 포커스가 있고 텍스트를 입력 중이 아닐 때만 처리한다. Hierarchy 의 F2, Ctrl+D, Delete 와 같다.
-        const bool bFocused          = ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows );
-        const bool bShortcutsBlocked = bFocused == false || ImGui::GetIO().WantTextInput || _fileActions.getRenamingPath().empty() == false || _selectedAssetAbs.empty();
-        if ( bShortcutsBlocked )
-            return;
-        if ( FileUtil::isDirectory( _selectedAssetAbs ) )
-            return;
-        if ( ImGui::IsKeyPressed( ImGuiKey_F2, false ) )
-            beginRename( _selectedAssetAbs );
-        else if ( ImGui::GetIO().KeyCtrl && ImGui::IsKeyPressed( ImGuiKey_D, false ) )
-            (void)duplicateAsset( _selectedAssetAbs ); // 실패는 copyFile 이 알린다
-        else if ( ImGui::IsKeyPressed( ImGuiKey_Delete, false ) )
-            requestDeleteAsset( _selectedAssetAbs );
-    }
-
     void ContentBrowserPanel::showReferences( string_view absolutePath, bool bDependencies )
     {
         _referenceSearch.query( absolutePath, bDependencies );
@@ -719,7 +793,7 @@ namespace sw::editor
     {
         if ( _bOpenReferenceResults == SW_TRUE )
         {
-            ImGui::OpenPopup( ContentBrowserPanelInternal::kReferenceResultsPopupName );
+            EditorInputGUI::openPopup( ContentBrowserPanelInternal::kReferenceResultsPopupName );
             _bOpenReferenceResults = SW_FALSE;
             // 마우스 위치에 열면 아래쪽 도킹 노드에서 테이블이 화면 밖으로 나간다. 주 뷰포트 가운데에 연다.
             ImGui::SetNextWindowPos( ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Always, ImVec2( 0.5f, 0.5f ) );
@@ -763,7 +837,7 @@ namespace sw::editor
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex( 0 );
                 ImGui::Selectable( shownPath.c_str(), false, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowDoubleClick );
-                if ( ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked( ImGuiMouseButton_Left ) )
+                if ( EditorInputGUI::wasItemDoubleClicked() )
                     openPath = shownPath;
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "OpenOnDoubleClick" ) );
                 ImGui::TableSetColumnIndex( 1 );
@@ -786,29 +860,21 @@ namespace sw::editor
 
     void ContentBrowserPanel::drawContent()
     {
-        // 마우스 X1, X2 버튼(뒤로, 앞으로)과 단축키(Alt+Left, Alt+Right, Backspace)로 폴더를 이동한다
-        if ( ImGui::IsWindowHovered( ImGuiHoveredFlags_RootAndChildWindows ) )
-        {
-            if ( ImGui::IsKeyPressed( ImGuiKey_MouseX1 ) )
-                navigateBack();
-            else if ( ImGui::IsKeyPressed( ImGuiKey_MouseX2 ) )
-                navigateForward();
-        }
-
-        if ( ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows ) && ImGui::IsAnyItemActive() == false )
-        {
-            const ImGuiIO& io = ImGui::GetIO();
-            if ( ( io.KeyAlt && ImGui::IsKeyPressed( ImGuiKey_LeftArrow ) ) || ImGui::IsKeyPressed( ImGuiKey_Backspace ) )
-                navigateBack();
-            else if ( io.KeyAlt && ImGui::IsKeyPressed( ImGuiKey_RightArrow ) )
-                navigateForward();
-        }
+        // 폴더 이동: 마우스 뒤로 · 앞으로 단추(창 위에서)와 창 액션(`Editor.Panel.content_browser` 의 Alt+Left · Backspace · Alt+Right).
+        // 이름 바꾸기 · 복제 · 지우기는 `asset.*` 명령이라 입력 계층이 실행한다.
+        const EditorPointerState pointer  = EditorInputGUI::readPointer();
+        const bool               bHovered = ImGui::IsWindowHovered( ImGuiHoveredFlags_RootAndChildWindows );
+        const bool               bBack    = ( bHovered && pointer.wasPressed( EditorMouseButton::Back ) ) || EditorInputGUI::wasActionTriggered( ContentBrowserPanelInternal::kActionNavigateBack );
+        const bool               bForward = ( bHovered && pointer.wasPressed( EditorMouseButton::Forward ) ) || EditorInputGUI::wasActionTriggered( ContentBrowserPanelInternal::kActionNavigateForward );
+        if ( bBack )
+            navigateBack();
+        else if ( bForward )
+            navigateForward();
 
         _lastFallbackGlyphCount = _fallbackGlyphCount;
         _fallbackGlyphCount     = 0;
         _thumbnailCache.update();
 
-        handleAssetShortcuts();
         // 검색어가 있으면 하위 폴더의 파일까지 본다. 언리얼과 유니티의 프로젝트 검색과 같다.
         const bool bWantRecursive = EditorListFilter{ _searchBuffer.c_str() }.isActive();
         if ( bWantRecursive != ( _bListingRecursive == SW_TRUE ) )
@@ -1002,7 +1068,7 @@ namespace sw::editor
 
         ImGui::SameLine();
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kPlus, "Add" ) ) )
-            ImGui::OpenPopup( "##cb_add" );
+            EditorInputGUI::openPopup( "##cb_add" );
         EditorSelfTestMarks::note( "contentBrowser.add" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "AddAsset" ) );
         drawAddMenu();
@@ -1177,7 +1243,7 @@ namespace sw::editor
             ContentBrowserPanelInternal::noteMark( "contentBrowser.folder.", ResourcePaths::toResourceID( absPath ) );
         acceptAssetDrop( absPath );
 
-        if ( ImGui::IsItemClicked() && ImGui::IsItemToggledOpen() == false )
+        if ( EditorInputGUI::wasItemClicked() && ImGui::IsItemToggledOpen() == false )
         {
             vector<ContentBrowserCrumb> listCrumb;
             makeTrailForFolder( absPath, listCrumb );
@@ -1336,7 +1402,7 @@ namespace sw::editor
                         selectAsset( entry );
                     ContentBrowserPanelInternal::noteMark( "contentBrowser.asset.", entry._name );
                     drawAssetContextMenu( entry );
-                    if ( ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked( ImGuiMouseButton_Left ) )
+                    if ( EditorInputGUI::wasItemDoubleClicked() )
                         openAsset( entry );
                     if ( entry._bIsDirectory == false )
                         EditorWidgets::drawAssetDragSource( entry._relativePath.c_str(), true );
@@ -1397,7 +1463,7 @@ namespace sw::editor
                     if ( bSelected )
                     {
                         selectAsset( entry );
-                        if ( ImGui::IsMouseDoubleClicked( ImGuiMouseButton_Left ) )
+                        if ( EditorInputGUI::wasItemDoubleClicked() )
                             openAsset( entry );
                     }
                     if ( statusText.empty() == false && ImGui::IsItemHovered() )

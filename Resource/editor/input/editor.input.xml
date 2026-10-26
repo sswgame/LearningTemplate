@@ -84,4 +84,24 @@
 			<bind source="key" code="Down"/>
 		</action>
 	</layer>
+
+	<!-- Content Browser: asset commands act on the selected asset; navigateBack / navigateForward are read by the panel (folder history). -->
+	<layer name="Editor.Panel.content_browser">
+		<action name="asset.rename" trigger="Pressed">
+			<bind source="key" code="F2"/>
+		</action>
+		<action name="asset.duplicate" trigger="Pressed">
+			<bind source="key" modifier="Ctrl" code="D"/>
+		</action>
+		<action name="asset.delete" trigger="Pressed">
+			<bind source="key" code="Delete"/>
+		</action>
+		<action name="contentBrowser.navigateBack" trigger="Pressed">
+			<bind source="key" modifier="Alt" code="Left"/>
+			<bind source="key" code="Backspace"/>
+		</action>
+		<action name="contentBrowser.navigateForward" trigger="Pressed">
+			<bind source="key" modifier="Alt" code="Right"/>
+		</action>
+	</layer>
 </InputMap>

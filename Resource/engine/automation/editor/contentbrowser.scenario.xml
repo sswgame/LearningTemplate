@@ -24,8 +24,8 @@
 	<At frame="125"><EditorText value="crate_medium.mesh"/></At>
 	<At frame="145"><EditorClick mark="contentBrowser.asset.crate_medium.mesh" button="1" state="down"/></At>
 	<At frame="148"><EditorClick mark="contentBrowser.asset.crate_medium.mesh" button="1" state="up"/></At>
-	<At frame="160"><EditorClick mark="contentBrowser.menu.findReferences" state="down"/></At>
-	<At frame="163"><EditorClick mark="contentBrowser.menu.findReferences" state="up"/></At>
+	<At frame="160"><EditorClick mark="menu.asset.findReferences" state="down"/></At>
+	<At frame="163"><EditorClick mark="menu.asset.findReferences" state="up"/></At>
 	<At frame="180">
 		<Expect probe="Editor.ReferenceResultCount" atLeast="1"/>
 		<CaptureWindow file="references.png"/>

@@ -96,8 +96,12 @@ namespace sw::editor
         /** @brief 마지막 참조 찾기의 결과 행 수를 반환합니다. */
         uint32 getReferenceResultCount() const { return static_cast<uint32>( _referenceSearch.getResultList().size() ); }
         // ------------------------------------------------------------------------------
-        // 1-3) 에셋 관리. 툴바 Add, 우클릭 Rename, Duplicate, Delete, 단축키 F2, Ctrl+D, Delete, 폴더로 드래그 앤 드롭이 부르는 함수와 같다
+        // 1-3) 에셋 관리. 툴바 Add, `asset.*` 명령(맥락 메뉴 · 단축키), 폴더로 드래그 앤 드롭이 부르는 함수다
         // ------------------------------------------------------------------------------
+        /** @brief 지금 고른 에셋의 절대 경로입니다. 없으면 빈 문자열입니다. */
+        const string& getSelectedAssetPath() const { return _selectedAssetAbs; }
+        /** @brief 지금 목록에 있는 @p absolutePath 항목을 고릅니다. 목록에 없으면 아무 일도 없습니다. */
+        void selectAssetPath( string_view absolutePath );
         /** @brief 현재 폴더에 새 폴더를 만들고 목록을 다시 읽게 합니다. */
         [[nodiscard]] bool createNewFolder();
         /** @brief 현재 폴더에 새 에셋을 만들고 선택합니다. */
@@ -194,8 +198,6 @@ namespace sw::editor
         bool isRenaming( const AssetEntry& entry ) const;
         /** @brief 이름을 바꾸는 중인 항목의 입력란을 그립니다. Enter 를 누르거나 다른 곳을 클릭하면 확정하고, Escape 를 누르면 취소합니다. */
         void drawRenameField( float32 width );
-        /** @brief 창에 포커스가 있을 때 F2, Ctrl+D, Delete 단축키를 처리합니다. */
-        void handleAssetShortcuts();
         /** @brief 바로 앞 위젯을 에셋 드롭 대상으로 만듭니다. 에셋을 놓으면 @p folderAbs 로 옮깁니다. */
         void acceptAssetDrop( string_view folderAbs );
         /** @brief 목록과 폴더 트리를 다시 읽게 하고 @p absolutePath 를 선택합니다. */

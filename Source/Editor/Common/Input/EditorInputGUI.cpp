@@ -291,7 +291,7 @@ namespace sw::editor
         return mask;
     }
 
-    bool EditorInputGUI::wasTextEditCanceled()
+    bool EditorInputGUI::wasCancelPressed()
     {
         return ImGui::IsKeyPressed( ImGuiKey_Escape, false );
     }
