@@ -2,6 +2,7 @@
 
 #include "Engine/Graphics/RHI/DX11/D3D11RHIResourceFactory.h"
 
+#include "Core/Concurrency/mutex.h"
 #include "Core/Container/IndexFreeList.h"
 #include "Core/Math/MathUtil.h"
 
@@ -259,7 +260,7 @@ namespace sw
         if ( _pDevice->_gpuBuffers.take( buffer, owned ) == false )
             return;
 
-        std::unique_lock<std::shared_mutex> registryLock{ _pDevice->_bindlessMutex };
+        std::unique_lock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
         for ( size_t bindlessIndex = 0; bindlessIndex < _pDevice->_listRegisteredBindless.size(); ++bindlessIndex )
         {
             if ( _pDevice->_listRegisteredBindless[bindlessIndex] != buffer )
@@ -741,7 +742,7 @@ namespace sw
             return;
 
         {
-            std::unique_lock<std::shared_mutex> registryLock{ _pDevice->_bindlessMutex };
+            std::unique_lock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
             for ( size_t textureIndex = 0; textureIndex < _pDevice->_listRegisteredTexture.size(); ++textureIndex )
             {
                 if ( _pDevice->_listRegisteredTexture[textureIndex] != texture )

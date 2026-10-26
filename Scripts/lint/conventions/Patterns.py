@@ -411,18 +411,19 @@ _kConstructorInitRe = re.compile(
 )
 
 # [클래스 / 구조체 선언 검사]
-# 정규식 패턴: r'^\s*(?:template\s*<[^>]*>\s*)?(?:class|struct)\s+(?:(?:SW_\w*API|alignas\([^)]*\))\s+)*([A-Za-z0-9_]+)(?:\s*final|\s*:\s*[^{;]+)?\s*\{?'
+# 정규식 패턴: r'^\s*(?:template\s*<[^>]*>\s*)?(?:class|struct)\s+(?:(?:SW_\w*API|alignas\([^)]*\)|SW_CAPABILITY\([^)]*\)|SW_SCOPED_CAPABILITY)\s+)*([A-Za-z0-9_]+)(?:\s*final|\s*:\s*[^{;]+)?\s*\{?'
 #   - 클래스 또는 구조체의 정의부와 클래스명을 추출하여 멤버 선언 순서 및 생성자 순서 검증에 활용합니다.
 _kClassDeclRe = re.compile(
-    r'^\s*(?:template\s*<[^>]*>\s*)?(?:class|struct)\s+(?:(?:SW_\w*API|alignas\([^)]*\))\s+)*([A-Za-z0-9_]+)(?:\s*final|\s*:\s*[^{;]+)?\s*\{?'
+    r'^\s*(?:template\s*<[^>]*>\s*)?(?:class|struct)\s+(?:(?:SW_\w*API|alignas\([^)]*\)|SW_CAPABILITY\([^)]*\)|SW_SCOPED_CAPABILITY)\s+)*([A-Za-z0-9_]+)(?:\s*final|\s*:\s*[^{;]+)?\s*\{?'
 )
 
 # [클래스 멤버 변수 선언 검사]
-# 정규식 패턴: r'^\s*(?:\[\[[^\]]*\]\]\s*)?(?:(?:alignas\([^)]*\)|mutable|static|inline|const|volatile|constexpr)\s+)*(?:[A-Za-z0-9_:]+(?:<[^;]+>)?(?:\s*(?:[\*&]|const\b))*\s+)(_[a-zA-Z0-9_]+)\s*(?::\s*\d+)?\s*(?:\[[^\]]*\])?\s*(?:\{[^}]*\}|\([^)]*\))?\s*(?:=\s*[^;]+)?\s*;'
+# 정규식 패턴: r'^\s*(?:\[\[[^\]]*\]\]\s*)?(?:(?:alignas\([^)]*\)|mutable|static|inline|const|volatile|constexpr)\s+)*(?:[A-Za-z0-9_:]+(?:<[^;]+>)?(?:\s*(?:[\*&]|const\b))*\s+)(_[a-zA-Z0-9_]+)\s*(?::\s*\d+)?\s*(?:\[[^\]]*\])?\s*(?:(?:SW_GUARDED_BY|SW_ACQUIRED_AFTER)\([^)]*\)\s*)*(?:\{[^}]*\}|\([^)]*\))?\s*(?:=\s*[^;]+)?\s*;'
 #   - 클래스 내부에서 '_'로 시작하는 모든 멤버 변수 선언의 순서를 순차 추출합니다.
 #   - 타입 뒤의 `*` · `&` · `const` 는 몇 번이든 온다(`Widget* const* _ppWidget`). 못 읽은 멤버가 생성자 목록에 있으면 순서 위반으로 잘못 걸린다.
+#   - 이름 뒤의 잠금 계약 주석(`SW_GUARDED_BY( _mutex )` · `SW_ACQUIRED_AFTER( _mutex )`, `Core/Concurrency/ThreadSafety.h`)은 건너뛴다.
 _kClassMemberRe = re.compile(
-    r'^\s*(?:\[\[[^\]]*\]\]\s*)?(?:(?:alignas\([^)]*\)|mutable|static|inline|const|volatile|constexpr)\s+)*(?:[A-Za-z0-9_:]+(?:<[^;]+>)?(?:\s*(?:[\*&]|const\b))*\s+)(_[a-zA-Z0-9_]+)\s*(?::\s*\d+)?\s*(?:\[[^\]]*\])?\s*(?:\{[^}]*\}|\([^)]*\))?\s*(?:=\s*[^;]+)?\s*;'
+    r'^\s*(?:\[\[[^\]]*\]\]\s*)?(?:(?:alignas\([^)]*\)|mutable|static|inline|const|volatile|constexpr)\s+)*(?:[A-Za-z0-9_:]+(?:<[^;]+>)?(?:\s*(?:[\*&]|const\b))*\s+)(_[a-zA-Z0-9_]+)\s*(?::\s*\d+)?\s*(?:\[[^\]]*\])?\s*(?:(?:SW_GUARDED_BY|SW_ACQUIRED_AFTER)\([^)]*\)\s*)*(?:\{[^}]*\}|\([^)]*\))?\s*(?:=\s*[^;]+)?\s*;'
 )
 
 # [함수 포인터 멤버 변수 선언 검사]

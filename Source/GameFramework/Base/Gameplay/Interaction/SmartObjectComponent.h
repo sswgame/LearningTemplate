@@ -6,6 +6,7 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/mutex.h"
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
@@ -112,9 +113,9 @@ namespace sw
         PROPERTY( Category = "Smart Object", DisplayName = "Claimants", Tooltip = "Who holds each slot (runtime)" )
         vector<GameObjectHandle> _listClaimant;
 
-        SmartObjectSlots   _slots;
-        mutable std::mutex _mutex;
-        uint32             _seenCatalogReloadCount; ///< 정의를 찾았을 때의 `InteractionCatalog::getSharedReloadCount` 값. 달라지면 다시 찾는다
-        uint8              _bHasOverride;
+        SmartObjectSlots _slots;
+        mutable mutex    _mutex;
+        uint32           _seenCatalogReloadCount; ///< 정의를 찾았을 때의 `InteractionCatalog::getSharedReloadCount` 값. 달라지면 다시 찾는다
+        uint8            _bHasOverride;
     };
 } // namespace sw

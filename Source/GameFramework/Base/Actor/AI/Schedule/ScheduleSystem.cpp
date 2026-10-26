@@ -3,6 +3,7 @@
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleSystem.h"
 
 #include "Core/Common/HashUtil.h"
+#include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
@@ -52,7 +53,7 @@ namespace sw
         /** @brief 살아 있는 일정 시스템 목록입니다. 에디터 디버그 창(`collectLiveSystems`)만 읽습니다. */
         struct ScheduleSystemRegistry
         {
-            std::mutex                    _mutex;
+            mutex                         _mutex;
             vector<const ScheduleSystem*> _listSystem;
         };
 
@@ -117,7 +118,7 @@ namespace sw
             outListSystem.clear(); // 아직 일정 시스템이 하나도 서지 않았다
             return;
         }
-        std::lock_guard<std::mutex> lock( pRegistry->_mutex );
+        std::lock_guard<mutex> lock( pRegistry->_mutex );
         outListSystem = pRegistry->_listSystem;
     }
 
@@ -148,7 +149,7 @@ namespace sw
         ScheduleSystemRegistry* const pRegistry = s_scheduleSystemRegistry.getOrCreate();
         if ( pRegistry == nullptr )
             return; // 엔진 수명 범위가 닫힌 뒤다(Debug 는 `getOrCreate` 가 단언한다) — 올릴 목록이 없다
-        std::lock_guard<std::mutex> lock( pRegistry->_mutex );
+        std::lock_guard<mutex> lock( pRegistry->_mutex );
         pRegistry->_listSystem.push_back( this );
     }
 
@@ -158,7 +159,7 @@ namespace sw
         ScheduleSystemRegistry* const pRegistry = s_scheduleSystemRegistry.find();
         if ( pRegistry == nullptr )
             return; // 목록이 먼저 사라졌다(엔진 종료 · 프로세스 끝) — 뺄 것이 없다
-        std::lock_guard<std::mutex> lock( pRegistry->_mutex );
+        std::lock_guard<mutex> lock( pRegistry->_mutex );
         for ( size_t systemIndex = 0; systemIndex < pRegistry->_listSystem.size(); ++systemIndex )
         {
             if ( pRegistry->_listSystem[systemIndex] != this )

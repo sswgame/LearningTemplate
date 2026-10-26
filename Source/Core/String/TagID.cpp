@@ -3,6 +3,7 @@
 #include "Core/String/TagID.h"
 
 #include "Core/Common/StdHeaders.h"
+#include "Core/Concurrency/mutex.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Memory/LifetimeScope.h"
 #include "Core/String/hashed_string.h"
@@ -13,7 +14,7 @@ namespace sw
     {
         struct TagRegistryInternal
         {
-            static inline std::shared_mutex s_mutex;
+            static inline shared_mutex s_mutex;
             /**
              * @brief 태그 id → 이름 풀 글자입니다. 엔진 수명 범위가 소유합니다 — 글자를 든 이름 풀(`HashedStringPool::shutdown`)보다 먼저 닫히고,
              *        기동 뒤에 새 태그(`tag.add` 등)가 키운 표가 종료 누수 보고 전에 돌아갑니다.
@@ -28,7 +29,7 @@ namespace sw
                 unordered_map<uint64, const utf8*>* const pMap = s_mapIDToStr.getOrCreate();
                 if ( pMap == nullptr )
                     return;
-                std::unique_lock<std::shared_mutex> lock{ s_mutex };
+                std::unique_lock<shared_mutex> lock{ s_mutex };
                 const auto [iter, bInserted] = pMap->try_emplace( tagID, pStr );
                 // 이름 풀은 철자마다 따로 글자를 두므로(`Player` · `player` 는 같은 이름, 다른 포인터) 포인터가 아니라 이름 같음(대소문자 무시)으로 본다.
                 // 같은 id 에 다른 이름이 오면 64 비트 해시가 부딪힌 것이다 — 덮어쓰면 한 태그가 다른 태그의 이름으로 조용히 바뀌므로 처음 등록을 지키고 개발 빌드에서 멈춘다.
@@ -42,8 +43,8 @@ namespace sw
                 const unordered_map<uint64, const utf8*>* const pMap = s_mapIDToStr.find();
                 if ( tagID == 0 || pMap == nullptr )
                     return nullptr;
-                std::shared_lock<std::shared_mutex> lock{ s_mutex };
-                const auto                          iter = pMap->find( tagID );
+                std::shared_lock<shared_mutex> lock{ s_mutex };
+                const auto                     iter = pMap->find( tagID );
                 return iter != pMap->end() ? iter->second : nullptr;
             }
         };

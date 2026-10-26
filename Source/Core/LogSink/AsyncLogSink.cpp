@@ -38,6 +38,9 @@ namespace sw
              *          `open` · `close` 에는 걸지 않습니다 — 그 안의 로그는 정상 경로로 가야 하고, 장치가 락을 쥐지 않는 것이 계약입니다(`ILogOutput::open`).
              */
             uint32 deviceWrite{ 0 };
+
+            /// @brief 지금 "잠금을 쥔 채 로그" 단언을 보고하는 중인 깊이입니다. 단언의 보고도 로그로 오므로 그 줄은 다시 단언하지 않는다.
+            uint32 heldLockReport{ 0 };
         };
         thread_local LogReentryDepth t_reentryDepth{};
 
@@ -553,6 +556,16 @@ namespace sw
             std::fputs( arrLine, stderr );
             std::fputs( "\n", stderr );
             return;
+        }
+        // 잠금은 잎 잠금이다(결정 5-3) — 쥔 채 남긴 로그는 그 잠금을 다시 잡는 싱크 · 장치 · 리스너와 맞물려 멈출 수 있다.
+        // 형식(-Wthread-safety)은 호출 그래프를 건너는 위반을 못 보므로 Debug 에서 쥔 잠금 수를 센다. 줄은 그대로 남긴다.
+        const bool bLoggedUnderLock = mutex::getHeldLockDepth() != 0 && t_reentryDepth.heldLockReport == 0;
+        if ( bLoggedUnderLock )
+        {
+            ++t_reentryDepth.heldLockReport;
+            SW_LOW_LEVEL_ASSERT( bLoggedUnderLock == false, "Logged while holding a sw::mutex (%u held) - locks are leaf locks, log after releasing: %s",
+                                 mutex::getHeldLockDepth(), pMessage != nullptr ? pMessage : "" );
+            --t_reentryDepth.heldLockReport;
         }
         // 로그 레코드는 부른 쪽이 아니라 로거의 몫이다. 리스너(에디터 콘솔 등)는 자기 태그를 붙인다.
         SW_MEMORY_SCOPE( EngineMisc );

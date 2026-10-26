@@ -3,6 +3,7 @@
 #include "Engine/Reflection/ReflectionCore.h"
 
 #include "Core/Concurrency/atomic.h"
+#include "Core/Concurrency/mutex.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
@@ -757,7 +758,7 @@ namespace sw
 
     void TypeRegistry::registerClass( const TypeInfo& info )
     {
-        std::unique_lock<std::shared_mutex> lock{ _mutex };
+        std::unique_lock<shared_mutex> lock{ _mutex };
 
         TypeInfo stored = info;
         if ( _activeModuleName.empty() == false )
@@ -829,8 +830,8 @@ namespace sw
 
     void TypeRegistry::registerEnum( const EnumInfo& info )
     {
-        std::unique_lock<std::shared_mutex> lock{ _mutex };
-        EnumInfo                            stored = info;
+        std::unique_lock<shared_mutex> lock{ _mutex };
+        EnumInfo                       stored = info;
         if ( _activeModuleName.empty() == false )
             stored._moduleName = _activeModuleName;
         else if ( stored._moduleName.empty() )
@@ -1030,7 +1031,7 @@ namespace sw
     {
         vector<const TypeInfo*> listType;
         {
-            std::shared_lock<std::shared_mutex> lock{ _mutex };
+            std::shared_lock<shared_mutex> lock{ _mutex };
             listType.reserve( _mapFqnToClassType.size() );
             for ( const auto& [fqn, pInfo] : _mapFqnToClassType )
             {
@@ -1069,8 +1070,8 @@ namespace sw
 
     void TypeRegistry::unregisterTypesByModule( string_view moduleName )
     {
-        std::unique_lock<std::shared_mutex> lock{ _mutex };
-        hashed_string                       hashModule( moduleName.data(), static_cast<uint32>( moduleName.size() ) );
+        std::unique_lock<shared_mutex> lock{ _mutex };
+        hashed_string                  hashModule( moduleName.data(), static_cast<uint32>( moduleName.size() ) );
 
         // 지우지 않고 **묘비**를 남긴다. 밖에서 가진 포인터(`TypeLookupCache` 의 정적 슬롯, 다른 모듈 타입의 부모 포인터)가
         // 허공을 가리키지 않도록 객체는 그 자리에 둔다. `findType` 은 해제된 타입을 nullptr 로 답하고, 같은 FQN 이
@@ -1142,7 +1143,7 @@ namespace sw
         if ( StringUtil::equals( pAliasName, pCanonicalName ) )
             return;
 
-        std::unique_lock<std::shared_mutex> lock{ _mutex };
+        std::unique_lock<shared_mutex> lock{ _mutex };
 
         // pCanonicalName 자체가 짧은 이름(별칭)일 수 있으므로 FQN 까지 한 번 더 따라간다.
         hashed_string canonicalKey{ pCanonicalName };
@@ -1185,8 +1186,8 @@ namespace sw
         if ( StringUtil::equals( pAliasName, pCanonicalName ) )
             return;
 
-        std::unique_lock<std::shared_mutex> lock{ _mutex };
-        auto                                it = _mapNameToEnum.find( hashed_string( pCanonicalName ) );
+        std::unique_lock<shared_mutex> lock{ _mutex };
+        auto                           it = _mapNameToEnum.find( hashed_string( pCanonicalName ) );
         if ( it == _mapNameToEnum.end() )
             return;
 
@@ -1203,7 +1204,7 @@ namespace sw
 
     const TypeInfo* TypeRegistry::findType( const hashed_string& nameOrFqn ) const
     {
-        std::shared_lock<std::shared_mutex> lock{ _mutex };
+        std::shared_lock<shared_mutex> lock{ _mutex };
 
         // 해제된 타입(모듈 해제, 묘비)은 없는 것으로 답한다. 객체는 남아 있어도 이름 조회는 살아 있는 것만 반환한다.
         const auto it = _mapFqnToClassType.find( nameOrFqn );
@@ -1239,8 +1240,8 @@ namespace sw
 
     const EnumInfo* TypeRegistry::findEnum( const hashed_string& nameOrFqn ) const
     {
-        std::shared_lock<std::shared_mutex> lock{ _mutex };
-        auto                                it = _mapNameToEnum.find( nameOrFqn );
+        std::shared_lock<shared_mutex> lock{ _mutex };
+        auto                           it = _mapNameToEnum.find( nameOrFqn );
         return it != _mapNameToEnum.end() ? it->second : nullptr;
     }
 
@@ -1265,7 +1266,7 @@ namespace sw
     {
         if ( nameHash == 0 )
             return nullptr;
-        std::shared_lock<std::shared_mutex> lock{ _mutex };
+        std::shared_lock<shared_mutex> lock{ _mutex };
         for ( const auto& [name, pEnumInfo] : _mapNameToEnum )
         {
             if ( name.getHash() == nameHash )
@@ -1276,8 +1277,8 @@ namespace sw
 
     hashed_string TypeRegistry::canonicalTypeNameByHash( const uint32 nameHash ) const
     {
-        std::shared_lock<std::shared_mutex> lock{ _mutex };
-        auto                                it = _mapHashToCanonicalName.find( nameHash );
+        std::shared_lock<shared_mutex> lock{ _mutex };
+        auto                           it = _mapHashToCanonicalName.find( nameHash );
         return it != _mapHashToCanonicalName.end() ? it->second : hashed_string{};
     }
 

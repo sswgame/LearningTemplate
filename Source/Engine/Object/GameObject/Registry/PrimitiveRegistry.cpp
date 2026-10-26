@@ -17,7 +17,7 @@ namespace sw
         if ( pComp == nullptr )
             return;
 
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         // 슬롯이 정말 이 레지스트리에서 자기를 가리키고 있을 때만 "이미 등록됨"이다. 인덱스는 컴포넌트가 들고 있어서, 목록이 다른 것을
         // 가리키는데 그대로 믿으면 조용히 미등록으로 남는다(컴포넌트 이동은 막혀 있지만 인덱스를 그대로 믿지 않는다).
         const uint32 existing           = pComp->getPrimitiveIndex();
@@ -67,7 +67,7 @@ namespace sw
         if ( pComp == nullptr )
             return;
 
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         // 에셋을 기다리던 것도 뺀다 — 사라진 컴포넌트의 함수를 부르지 않는다.
         for ( size_t waiterIndex = 0; waiterIndex < _listAssetWaiter.size(); ++waiterIndex )
         {
@@ -112,7 +112,7 @@ namespace sw
     void PrimitiveRegistry::addAssetWaiter( ScenePrimitive* pPrimitive, AssetWaitFunction pFunction )
     {
         SW_ASSERT( pPrimitive != nullptr && pFunction != nullptr );
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         for ( AssetWaiter& waiter : _listAssetWaiter )
         {
             if ( waiter._pPrimitive != pPrimitive )
@@ -128,13 +128,13 @@ namespace sw
     void PrimitiveRegistry::addLODPrimitive( ScenePrimitive* pPrimitive )
     {
         SW_ASSERT( pPrimitive != nullptr );
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         (void)_listLODPrimitive.add( pPrimitive ); // 이미 걸려 있으면 무시한다
     }
 
     void PrimitiveRegistry::removeLODPrimitive( ScenePrimitive* pPrimitive )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         (void)_listLODPrimitive.remove( pPrimitive ); // 걸려 있지 않았으면 할 일이 없다
     }
 
@@ -152,7 +152,7 @@ namespace sw
                 ++waiterIndex;
                 continue;
             }
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             VectorUtil::removeAtSwap( _listAssetWaiter, waiterIndex );
         }
     }
@@ -224,7 +224,7 @@ namespace sw
     {
         if ( pBatch == nullptr )
             return;
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         if ( pBatch->_pRegistry == this )
             return;
         SW_LOG_ASSERT( pBatch->_pRegistry == nullptr, "ScenePrimitiveBatch is already registered to another registry" );
@@ -250,7 +250,7 @@ namespace sw
     {
         if ( listBatch.empty() )
             return;
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         // 이 레지스트리에 든 배치만 모은다(널 · 다른 레지스트리 · 미등록 · 두 번 넘긴 배치는 건너뛴다). 모으면서 `_pRegistry` 를 비워 "빠질 배치" 표시로 쓴다.
         vector<ScenePrimitiveBatch*> listRemoved;
         listRemoved.reserve( listBatch.size() );
@@ -337,7 +337,7 @@ namespace sw
 
     void PrimitiveRegistry::clearDirty()
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         clearDirtyLocked();
     }
 
@@ -345,7 +345,7 @@ namespace sw
     {
         outListStateSlot.clear();
         outListTransformSlot.clear();
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         if ( hasDirty() == false )
             return;
         // "하나라도" 를 훑기 **전에** 내린다. 훑는 동안 워커가 새로 찍으면 다시 서서 다음 프레임에 잡힌다.

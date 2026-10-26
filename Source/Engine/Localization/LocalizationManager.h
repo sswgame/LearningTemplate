@@ -6,6 +6,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/mutex.h"
 #include "Core/Container/map.h"
 #include "Core/Container/set.h"
 #include "Core/Container/string.h"
@@ -231,7 +232,7 @@ namespace sw
         void notifyLanguageChanged( string_view oldLanguage, string_view newLanguage );
 
     private:
-        mutable std::shared_mutex                      _mutex;
+        mutable shared_mutex                           _mutex;
         string                                         _currentLanguage;
         string                                         _fallbackLanguage;
         CultureTable                                   _cultureTable;
@@ -244,7 +245,7 @@ namespace sw
         vector<string>                                 _listLookupCulture;
         unordered_map<uint32, LanguageChangedCallback> _mapCallback;
 
-        mutable std::mutex  _missingMutex;
+        mutable mutex       _missingMutex;
         mutable set<string> _uniqueMissingKey;
 
         std::atomic<uint32> _textRevision;

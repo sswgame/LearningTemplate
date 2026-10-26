@@ -2,6 +2,7 @@
 
 #include "Engine/Resource/AssetDatabase.h"
 
+#include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
@@ -92,8 +93,8 @@ namespace sw
 
         BLOCK( "Check Existing Meta" )
         {
-            std::shared_lock<std::shared_mutex> lock{ _mutex };
-            const auto                          it = _mapPathToGuid.find( path );
+            std::shared_lock<shared_mutex> lock{ _mutex };
+            const auto                     it = _mapPathToGuid.find( path );
             if ( it != _mapPathToGuid.end() )
             {
                 result = it->second;
@@ -135,7 +136,7 @@ namespace sw
 
         BLOCK( "Register Meta" )
         {
-            std::unique_lock<std::shared_mutex> lock{ _mutex };
+            std::unique_lock<shared_mutex> lock{ _mutex };
             _mapPathToGuid[path]   = result;
             _mapGuidToPath[result] = path;
         }
@@ -149,7 +150,7 @@ namespace sw
         if ( path.empty() || guid.isNull() )
             return;
 
-        std::unique_lock<std::shared_mutex> lock{ _mutex };
+        std::unique_lock<shared_mutex> lock{ _mutex };
         _mapPathToGuid[path] = guid;
         _mapGuidToPath[guid] = path;
     }
@@ -164,7 +165,7 @@ namespace sw
         if ( loadMetaFile( path, guid ) != AssetMetaReadResult::Loaded )
             return false;
 
-        std::unique_lock<std::shared_mutex> lock{ _mutex };
+        std::unique_lock<shared_mutex> lock{ _mutex };
         _mapPathToGuid[path] = guid;
         _mapGuidToPath[guid] = path;
         return true;
@@ -177,8 +178,8 @@ namespace sw
         // 씬 XML 의 `prefab` 경로처럼 대문자가 섞인 값으로 물을 때 등록돼 있어도 못 찾는다.
         const string path = FileUtil::normalizePath( relativePath );
 
-        std::shared_lock<std::shared_mutex> lock{ _mutex };
-        const auto                          it = _mapPathToGuid.find( path );
+        std::shared_lock<shared_mutex> lock{ _mutex };
+        const auto                     it = _mapPathToGuid.find( path );
         if ( it == _mapPathToGuid.end() )
             return false;
         outGuid = it->second;
@@ -187,8 +188,8 @@ namespace sw
 
     bool AssetDatabase::tryGetPath( const UUID& guid, string& outPath ) const
     {
-        std::shared_lock<std::shared_mutex> lock{ _mutex };
-        const auto                          it = _mapGuidToPath.find( guid );
+        std::shared_lock<shared_mutex> lock{ _mutex };
+        const auto                     it = _mapGuidToPath.find( guid );
         if ( it == _mapGuidToPath.end() )
             return false;
         outPath = it->second;
@@ -197,7 +198,7 @@ namespace sw
 
     size_t AssetDatabase::getAssetCount() const
     {
-        std::shared_lock<std::shared_mutex> lock{ _mutex };
+        std::shared_lock<shared_mutex> lock{ _mutex };
         return _mapPathToGuid.size();
     }
 
@@ -401,7 +402,7 @@ namespace sw
 
     void AssetDatabase::clear()
     {
-        std::unique_lock<std::shared_mutex> lock{ _mutex };
+        std::unique_lock<shared_mutex> lock{ _mutex };
         _mapPathToGuid.clear();
         _mapGuidToPath.clear();
     }

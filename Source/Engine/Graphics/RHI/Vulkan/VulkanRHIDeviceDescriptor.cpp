@@ -8,6 +8,8 @@
  */
 #include "pch.h"
 
+#include "Core/Concurrency/mutex.h"
+
 #include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDeviceInternal.h"
@@ -24,14 +26,14 @@ namespace sw
 
     RHIBufferHandle VulkanRHIDevice::bindlessSourceBufferAt( RHIDescriptorIndex index ) const
     {
-        std::shared_lock<std::shared_mutex> lock{ _bindlessMutex };
+        std::shared_lock<shared_mutex> lock{ _bindlessMutex };
         return index < _listBindlessSourceBuffer.size() ? _listBindlessSourceBuffer[index] : RHIBufferHandle{ 0 };
     }
 
 #if !defined( SW_SHIPPING )
     bool VulkanRHIDevice::isBindlessIndexLive( RHIBindlessIndexSpace space, RHIDescriptorIndex index ) const
     {
-        std::shared_lock<std::shared_mutex> lock{ _bindlessMutex };
+        std::shared_lock<shared_mutex> lock{ _bindlessMutex };
         if ( space == RHIBindlessIndexSpace::Buffer )
             return index < _listBindlessSourceBuffer.size() && _listBindlessSourceBuffer[index] != 0;
         // 1 = 사용 중. 2(해제 대기)는 원소가 아직 옛 이미지를 가리키지만 그 이미지는 같은 펜스 뒤에 파괴된다.
@@ -41,7 +43,7 @@ namespace sw
 
     RHIBufferHandle VulkanRHIDevice::uavSourceBufferAt( RHIDescriptorIndex index ) const
     {
-        std::shared_lock<std::shared_mutex> lock{ _bindlessMutex };
+        std::shared_lock<shared_mutex> lock{ _bindlessMutex };
         return index < _listUavSourceBuffer.size() ? _listUavSourceBuffer[index] : RHIBufferHandle{ 0 };
     }
 

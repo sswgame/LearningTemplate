@@ -4,6 +4,7 @@
 
 #include "Core/Common/HashUtil.h"
 #include "Core/Common/StdHeaders.h"
+#include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Memory/LifetimeScope.h"
 #include "Core/Memory/MemoryBlock.h"
@@ -90,8 +91,8 @@ namespace sw
     const utf8* StringTable::findByHash( uint64 keyHash ) const
     {
         // 가리키는 문자열은 `LocalizedTextArena` 에 있어 테이블이 바뀌어도 사라지지 않는다. 락을 놓은 뒤 가지고 있어도 된다.
-        std::shared_lock<std::shared_mutex> lock( _mutex );
-        const auto                          iter = _mapTable.find( keyHash );
+        std::shared_lock<shared_mutex> lock( _mutex );
+        const auto                     iter = _mapTable.find( keyHash );
         if ( iter != _mapTable.end() )
             return iter->second;
         return nullptr;
@@ -105,7 +106,7 @@ namespace sw
 
     bool StringTable::contains( const hashed_string& key ) const
     {
-        std::shared_lock<std::shared_mutex> lock( _mutex );
+        std::shared_lock<shared_mutex> lock( _mutex );
         return _mapTable.find( key.getHash() ) != _mapTable.end();
     }
 
@@ -119,25 +120,25 @@ namespace sw
         const utf8* const pStored = store( value );
         if ( pStored == nullptr )
             return;
-        std::unique_lock<std::shared_mutex> lock( _mutex );
+        std::unique_lock<shared_mutex> lock( _mutex );
         _mapTable[keyHash] = pStored;
     }
 
     void StringTable::clear()
     {
-        std::unique_lock<std::shared_mutex> lock( _mutex );
+        std::unique_lock<shared_mutex> lock( _mutex );
         _mapTable.clear();
     }
 
     size_t StringTable::size() const
     {
-        std::shared_lock<std::shared_mutex> lock( _mutex );
+        std::shared_lock<shared_mutex> lock( _mutex );
         return _mapTable.size();
     }
 
     bool StringTable::empty() const
     {
-        std::shared_lock<std::shared_mutex> lock( _mutex );
+        std::shared_lock<shared_mutex> lock( _mutex );
         return _mapTable.empty();
     }
 } // namespace sw

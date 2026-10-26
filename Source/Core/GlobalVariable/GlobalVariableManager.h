@@ -6,6 +6,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Delegate/Delegate.h"
@@ -240,7 +241,7 @@ namespace sw
         uint32 getVariableCount() const;
 
     private:
-        mutable std::shared_mutex _mutex;
+        mutable shared_mutex _mutex;
         /**
          * @brief 이름 → 변수 맵입니다. **값이 `unique_ptr` 인 이유는 주소 안정성**입니다(`findVariable` 참고).
          */

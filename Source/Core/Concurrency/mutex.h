@@ -1,11 +1,19 @@
 /**
  * @file mutex.h
- * @brief 데드락 탐지를 내장한 뮤텍스 래퍼입니다.
+ * @brief 엔진의 잠금 타입(`sw::mutex` · `sw::shared_mutex`)과 잠금 가드(`ScopedLock` · `ScopedSharedLock`)입니다.
+ * @details 잠금은 잎 잠금이다 — 쥔 채 로그 · 콜백 · 장치 · 외부 호출을 하지 않는다(결정 5-3). 그 규칙을 세 겹으로 지킨다.
+ *          - 형식: 잠금 타입은 `SW_CAPABILITY` 이고(`ThreadSafety.h`), clang 빌드는 `-Wthread-safety` 로 `SW_GUARDED_BY` · `SW_REQUIRES_LOCK` 계약을 컴파일 때 본다.
+ *          - 실행(Debug): 이 스레드가 쥔 잠금 수(`mutex::getHeldLockDepth`)를 세고 로거가 0 을 단언한다 — 호출 그래프를 건너는 위반은 형식이 못 본다.
+ *          - 교착 검출(`SW_ENABLE_DEADLOCK_DETECTION`): 독점 잠금의 시도 · 획득 · 해제를 관찰자에 알린다.
+ *          `std::mutex` · `std::shared_mutex` 를 직접 쓰면 셋이 모두 꺼지므로 `CheckStdMutex` 게이트가 막는다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
+#include "Core/Common/Types.h"
+#include "Core/Concurrency/ThreadSafety.h"
 
 #include <mutex>
+#include <shared_mutex>
 
 namespace sw
 {
@@ -42,12 +50,12 @@ namespace sw
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // 2) mutex — std::mutex 래퍼. 디버그 빌드에서 데드락 사이클을 탐지한다
+    // 2) mutex — std::mutex 래퍼. 교착 검출 빌드에서 잠금 사이클을 탐지하고 Debug 에서 쥔 잠금 수를 센다
     // ------------------------------------------------------------------------------
     /**
-     * @brief std::mutex 를 감싸 디버그 빌드에서 데드락 사이클을 탐지합니다.
+     * @brief std::mutex 를 감싸 교착 검출 빌드에서 잠금 사이클을 탐지하고, Debug 에서 이 스레드가 쥔 잠금 수를 셉니다.
      */
-    class SW_API mutex
+    class SW_API SW_CAPABILITY( "mutex" ) mutex
     {
     public:
         /** @brief 내부 std::mutex 만 준비합니다. */
@@ -61,13 +69,13 @@ namespace sw
         mutex& operator=( const mutex& ) = delete;
 
         /** @brief 락을 얻을 때까지 기다립니다. */
-        void lock();
+        void lock() SW_ACQUIRE_LOCK();
 
         /** @brief 락을 한 번만 시도합니다. 얻으면 true 입니다. */
-        bool try_lock();
+        bool try_lock() SW_TRY_ACQUIRE_LOCK( true );
 
         /** @brief 잡고 있는 락을 풉니다. */
-        void unlock();
+        void unlock() SW_RELEASE_LOCK();
 
         /**
          * @brief 잠금 관찰자를 겁니다. 이미 다른 관찰자가 걸려 있으면 아무것도 하지 않습니다.
@@ -79,14 +87,122 @@ namespace sw
         /** @brief 걸린 잠금 관찰자입니다. 없으면 nullptr 입니다. */
         static ILockObserver* getLockObserver();
 
+        /**
+         * @brief 이 스레드가 지금 쥔 `mutex` · `shared_mutex` 수입니다(공유 잠금 포함). Debug 만 세고 다른 구성은 늘 0 입니다.
+         * @details 관찰자(교착 검출기)의 훅 안에서는 0 입니다 — 검출기의 보고는 잠금 진단 자체라 잎 규칙 밖이다. 로거가 0 을 단언합니다.
+         */
+        static uint32 getHeldLockDepth();
+
     private:
-        void notifyLockAttempt();
-        void notifyAcquired();
-        void notifyReleased();
+        friend class shared_mutex;
+
+#if defined( SW_DEBUG )
+        /** @brief 이 스레드가 쥔 잠금 수를 @p delta 만큼 바꿉니다. 수는 Engine 이미지의 TU 하나(`mutex.cpp`)에 있다 — 헤더에 두면 모듈마다 따로 센다. */
+        static void changeHeldLockDepth( int32 delta );
+#else
+        static void changeHeldLockDepth( int32 /*delta*/ ) {}
+#endif
+
+        static void notifyLockAttempt( void* pLock );
+        static void notifyAcquired( void* pLock );
+        static void notifyReleased( void* pLock );
 
         std::mutex _mutex;
     };
 
+    // ------------------------------------------------------------------------------
+    // 3) shared_mutex — std::shared_mutex 래퍼. 독점 잠금은 mutex 와 같이 알리고, 공유 잠금은 수만 센다
+    // ------------------------------------------------------------------------------
+    /**
+     * @brief std::shared_mutex 를 감쌉니다. 독점 잠금은 `mutex` 와 같이 관찰자에 알리고 쥔 잠금 수를 셉니다.
+     * @details 공유 잠금은 관찰자에 알리지 않습니다 — 검출기는 주인이 하나인 잠금만 모델링해, 읽기 둘을 알리면 주인 표가 서로 덮인다. 쥔 잠금 수는 셉니다.
+     */
+    class SW_CAPABILITY( "shared_mutex" ) shared_mutex
+    {
+    public:
+        /** @brief 내부 std::shared_mutex 만 준비합니다. */
+        shared_mutex() = default;
+        /** @brief 잠금이 풀린 상태에서 파괴해야 합니다. */
+        ~shared_mutex() = default;
+
+        /** @brief 복사를 금지합니다. */
+        shared_mutex( const shared_mutex& ) = delete;
+        /** @brief 복사 대입을 금지합니다. */
+        shared_mutex& operator=( const shared_mutex& ) = delete;
+
+        /** @brief 독점 락을 얻을 때까지 기다립니다. */
+        void lock() SW_ACQUIRE_LOCK();
+        /** @brief 독점 락을 한 번만 시도합니다. 얻으면 true 입니다. */
+        bool try_lock() SW_TRY_ACQUIRE_LOCK( true );
+        /** @brief 독점 락을 풉니다. */
+        void unlock() SW_RELEASE_LOCK();
+
+        /** @brief 공유 락을 얻을 때까지 기다립니다. */
+        void lock_shared() SW_ACQUIRE_SHARED_LOCK();
+        /** @brief 공유 락을 한 번만 시도합니다. 얻으면 true 입니다. */
+        bool try_lock_shared() SW_TRY_ACQUIRE_SHARED_LOCK( true );
+        /** @brief 공유 락을 풉니다. */
+        void unlock_shared() SW_RELEASE_SHARED_LOCK();
+
+    private:
+        std::shared_mutex _mutex;
+    };
+
+    // ------------------------------------------------------------------------------
+    // 4) 잠금 가드 — 분석(-Wthread-safety)이 알아보는 RAII. std::scoped_lock 은 표준 라이브러리에 주석이 없어 분석이 못 본다
+    // ------------------------------------------------------------------------------
+    /**
+     * @brief 생성에서 @p TLock 을 독점으로 잡고 소멸에서 풉니다. `SW_GUARDED_BY` 멤버를 만지는 자리는 이 가드를 씁니다.
+     */
+    template <class TLock>
+    class SW_SCOPED_CAPABILITY ScopedLock
+    {
+    public:
+        explicit ScopedLock( TLock& lock ) SW_ACQUIRE_LOCK( lock )
+            : _lock{ lock }
+        {
+            _lock.lock();
+        }
+
+        ~ScopedLock() SW_RELEASE_LOCK()
+        {
+            _lock.unlock();
+        }
+
+        ScopedLock( const ScopedLock& )            = delete;
+        ScopedLock& operator=( const ScopedLock& ) = delete;
+
+    private:
+        TLock& _lock;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @brief 생성에서 @p TLock 을 공유로 잡고 소멸에서 풉니다.
+     */
+    template <class TLock>
+    class SW_SCOPED_CAPABILITY ScopedSharedLock
+    {
+    public:
+        explicit ScopedSharedLock( TLock& lock ) SW_ACQUIRE_SHARED_LOCK( lock )
+            : _lock{ lock }
+        {
+            _lock.lock_shared();
+        }
+
+        ~ScopedSharedLock() SW_RELEASE_LOCK()
+        {
+            _lock.unlock_shared();
+        }
+
+        ScopedSharedLock( const ScopedSharedLock& )            = delete;
+        ScopedSharedLock& operator=( const ScopedSharedLock& ) = delete;
+
+    private:
+        TLock& _lock;
+    };
 } // namespace sw
 
 namespace sw
@@ -109,6 +225,9 @@ namespace sw
 
         explicit operator bool() const { return _bEntered; }
 
+        /** @brief 이 스레드가 지금 관찰자 훅 안인지입니다. */
+        static bool isInHook() { return _s_bInHook; }
+
         bool _bEntered;
 
     private:
@@ -120,69 +239,119 @@ namespace sw
         static inline thread_local bool _s_bInHook{ false };
     };
 
-    inline void mutex::notifyLockAttempt()
+    inline void mutex::notifyLockAttempt( void* pLock )
     {
         MutexReentryGuard guard;
         if ( guard )
         {
             ILockObserver* pObserver = getLockObserver();
             if ( pObserver != nullptr )
-                pObserver->recordLockAttempt( this );
+                pObserver->recordLockAttempt( pLock );
         }
     }
 
-    inline void mutex::notifyAcquired()
+    inline void mutex::notifyAcquired( void* pLock )
     {
         MutexReentryGuard guard;
         if ( guard )
         {
             ILockObserver* pObserver = getLockObserver();
             if ( pObserver != nullptr )
-                pObserver->recordLockAcquired( this );
+                pObserver->recordLockAcquired( pLock );
         }
     }
 
-    inline void mutex::notifyReleased()
+    inline void mutex::notifyReleased( void* pLock )
     {
         MutexReentryGuard guard;
         if ( guard )
         {
             ILockObserver* pObserver = getLockObserver();
             if ( pObserver != nullptr )
-                pObserver->recordLockReleased( this );
+                pObserver->recordLockReleased( pLock );
         }
     }
 #else
-    inline void mutex::notifyLockAttempt()
+    inline void mutex::notifyLockAttempt( void* /*pLock*/ )
     {
     }
-    inline void mutex::notifyAcquired()
+    inline void mutex::notifyAcquired( void* /*pLock*/ )
     {
     }
-    inline void mutex::notifyReleased()
+    inline void mutex::notifyReleased( void* /*pLock*/ )
     {
     }
 #endif
 
-    inline void mutex::lock()
+    // 잠금 타입 자신의 구현은 주석 없는 원시 잠금(std::mutex)을 부르므로 분석하지 않는다(SW_NO_THREAD_SAFETY_ANALYSIS).
+    SW_NO_THREAD_SAFETY_ANALYSIS inline void mutex::lock()
     {
-        notifyLockAttempt();
+        notifyLockAttempt( this );
         _mutex.lock();
-        notifyAcquired();
+        notifyAcquired( this );
+        mutex::changeHeldLockDepth( 1 );
     }
 
-    inline bool mutex::try_lock()
+    SW_NO_THREAD_SAFETY_ANALYSIS inline bool mutex::try_lock()
     {
         if ( _mutex.try_lock() == false )
             return false;
 
-        notifyAcquired();
+        notifyAcquired( this );
+        mutex::changeHeldLockDepth( 1 );
         return true;
     }
 
-    inline void mutex::unlock()
+    SW_NO_THREAD_SAFETY_ANALYSIS inline void mutex::unlock()
     {
-        notifyReleased();
+        mutex::changeHeldLockDepth( -1 );
+        notifyReleased( this );
         _mutex.unlock();
+    }
+
+    SW_NO_THREAD_SAFETY_ANALYSIS inline void shared_mutex::lock()
+    {
+        mutex::notifyLockAttempt( this );
+        _mutex.lock();
+        mutex::notifyAcquired( this );
+        mutex::changeHeldLockDepth( 1 );
+    }
+
+    SW_NO_THREAD_SAFETY_ANALYSIS inline bool shared_mutex::try_lock()
+    {
+        if ( _mutex.try_lock() == false )
+            return false;
+
+        mutex::notifyAcquired( this );
+        mutex::changeHeldLockDepth( 1 );
+        return true;
+    }
+
+    SW_NO_THREAD_SAFETY_ANALYSIS inline void shared_mutex::unlock()
+    {
+        mutex::changeHeldLockDepth( -1 );
+        mutex::notifyReleased( this );
+        _mutex.unlock();
+    }
+
+    SW_NO_THREAD_SAFETY_ANALYSIS inline void shared_mutex::lock_shared()
+    {
+        _mutex.lock_shared();
+        mutex::changeHeldLockDepth( 1 );
+    }
+
+    SW_NO_THREAD_SAFETY_ANALYSIS inline bool shared_mutex::try_lock_shared()
+    {
+        if ( _mutex.try_lock_shared() == false )
+            return false;
+
+        mutex::changeHeldLockDepth( 1 );
+        return true;
+    }
+
+    SW_NO_THREAD_SAFETY_ANALYSIS inline void shared_mutex::unlock_shared()
+    {
+        mutex::changeHeldLockDepth( -1 );
+        _mutex.unlock_shared();
     }
 } // namespace sw

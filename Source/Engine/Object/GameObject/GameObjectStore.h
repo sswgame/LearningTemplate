@@ -9,7 +9,7 @@
  *          함께 다시 빌드해야 한다. 스레드별 상태와 정적 상태(`WalkScope` 의 깊이, id 발급 카운터)는 Engine 의 TU 에 있다. 헤더의
  *          `inline thread_local` 로 옮기면 모듈마다 별도 변수가 생겨 모듈의 순회를 세지 못한다.
  *
- *          잠금 순서: `_mutex` → `_beginPlayMutex` → `TickRegistry` 의 잠금(가장 안쪽).
+ *          잠금 순서: `_mutex` → `_beginPlayMutex`(선언의 `SW_ACQUIRED_AFTER`) → `TickRegistry` 의 잠금(가장 안쪽).
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -137,8 +137,8 @@ namespace sw
         template <typename Func>
         void forEachGameObject( Func&& func ) const
         {
-            std::shared_lock<std::shared_mutex> lock{ _mutex };
-            const WalkScope                     walkScope{};
+            std::shared_lock<shared_mutex> lock{ _mutex };
+            const WalkScope                walkScope{};
             for ( GameObject* pObj : _listGameObject )
             {
                 if ( pObj != nullptr && pObj->isPendingDestroy() == false )
@@ -168,8 +168,8 @@ namespace sw
         {
             if ( pToType == nullptr )
                 return;
-            std::shared_lock<std::shared_mutex> lock{ _mutex };
-            const WalkScope                     walkScope{};
+            std::shared_lock<shared_mutex> lock{ _mutex };
+            const WalkScope                walkScope{};
             for ( const ComponentPoolEntry* pEntry : _listComponentPoolEntry )
             {
                 if ( pEntry->_pType == nullptr || pEntry->_pType->isDerivedFrom( pToType ) == false )
@@ -366,7 +366,7 @@ namespace sw
         vector<GameObject*>     _listProcessingDestroyObject;
         vector<ComponentHandle> _listProcessingDestroyComponent;
 
-        mutable std::shared_mutex _mutex;
+        mutable shared_mutex _mutex;
         /**
          * @brief 오브젝트 id 발급 카운터입니다. **프로세스 전체에서 하나**입니다(컴포넌트 id `Component::_s_nextComponentID` 와 같은 규칙).
          * @details 씬을 넘어 옮긴 오브젝트(`SceneManager::markPersistent`)가 같은 id 를 유지하려면 다른 매니저의 발급과 겹치지 않아야 한다.
@@ -374,11 +374,11 @@ namespace sw
          */
         static atomic<uint64> _s_nextObjectID;
 
-        bool                    _bProcessingDestruction;  ///< 지연 파괴를 처리하는 중이다. 소멸자에서 다시 들어오면 단언한다
-        vector<GameObject*>     _listPlayWalk;            ///< beginPlay 와 endPlay 가 잠금 없이 순회할 오브젝트 목록이다(할당 재사용)
-        atomic<bool>            _bHasBegunPlay;           ///< 플레이 중(`hasBegunPlay`)
-        mutex                   _beginPlayMutex;          ///< 시작 대기열을 보호한다(비동기 씬 로드는 워커에서 컴포넌트를 붙인다)
-        vector<ComponentHandle> _listPendingBeginPlay;    ///< 플레이 중에 붙어 onBeginPlay 를 기다리는 컴포넌트
-        vector<ComponentHandle> _listProcessingBeginPlay; ///< 처리 중인 시작 대기열이다(할당 재사용)
+        bool                                          _bProcessingDestruction;          ///< 지연 파괴를 처리하는 중이다. 소멸자에서 다시 들어오면 단언한다
+        vector<GameObject*>                           _listPlayWalk;                    ///< beginPlay 와 endPlay 가 잠금 없이 순회할 오브젝트 목록이다(할당 재사용)
+        atomic<bool>                                  _bHasBegunPlay;                   ///< 플레이 중(`hasBegunPlay`)
+        mutex _beginPlayMutex                         SW_ACQUIRED_AFTER( _mutex );      ///< 시작 대기열을 보호한다(비동기 씬 로드는 워커에서 컴포넌트를 붙인다)
+        vector<ComponentHandle> _listPendingBeginPlay SW_GUARDED_BY( _beginPlayMutex ); ///< 플레이 중에 붙어 onBeginPlay 를 기다리는 컴포넌트
+        vector<ComponentHandle>                       _listProcessingBeginPlay;         ///< 처리 중인 시작 대기열이다(할당 재사용)
     };
 } // namespace sw

@@ -3,6 +3,7 @@
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHICommandContext.h"
 
 #include "Core/Common/PlatformOsHeaders.h"
+#include "Core/Concurrency/mutex.h"
 
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/Support/RHIDrawDiagnostics.h"
@@ -657,8 +658,8 @@ namespace sw
         {
             // 링 상수버퍼(createConstantBuffer)는 프레임 슬롯마다 slotSize 만큼 떨어진 자리에 쓴다. updateConstantBuffer 가
             // 이번 프레임 슬롯에 썼으므로 같은 구간을 건다. 표는 게임 스레드가 만들고 부수며 바꾸므로 짧은 읽기 락을 쥔다.
-            std::shared_lock<std::shared_mutex> registryLock{ _pDevice->_bindlessMutex };
-            const auto                          slotIt = _pDevice->_mapCbSlotSize.find( handle );
+            std::shared_lock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
+            const auto                     slotIt = _pDevice->_mapCbSlotSize.find( handle );
             if ( slotIt != _pDevice->_mapCbSlotSize.end() )
             {
                 candidate._range  = slotIt->second;

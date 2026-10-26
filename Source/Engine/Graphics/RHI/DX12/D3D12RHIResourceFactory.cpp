@@ -2,6 +2,7 @@
 
 #include "Engine/Graphics/RHI/DX12/D3D12RHIResourceFactory.h"
 
+#include "Core/Concurrency/mutex.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Common/EnginePlatformHeaders.h"
@@ -29,7 +30,7 @@ namespace sw
         {
             // 상수버퍼 맵은 렌더 스레드가 드로우마다 읽는다(`resolveBufferAddress`). 에디터가 없는 빌드는 게임 틱과 기록이 겹치므로, 게임 스레드의
             // 삽입(해시 표 재배치)이 그 읽기와 겹치지 않게 배타 락으로 넣는다.
-            std::unique_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
+            std::unique_lock<shared_mutex> lock{ _pDevice->_bindlessMutex };
             _pDevice->_mapCbAlignedSize[handle] = alignedSize;
             _pDevice->_mapCbMapped[handle]      = pMapped;
         }
@@ -44,7 +45,7 @@ namespace sw
         // 이번 프레임 칸에 쓰고, 나머지 칸은 링이 그 칸으로 돌아올 때 채운다(`RHIConstantBufferMirror` — 값이 바뀔 때만 쓰는 머티리얼 버퍼가
         // 세 프레임 중 두 프레임을 옛 값으로 그리지 않게). 조회와 복사는 읽기 락 안에서 한다 — 다른 스레드의 `destroyBuffer` 가 Unmap 하는
         // 도중에 쓰면 안 된다.
-        std::shared_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
+        std::shared_lock<shared_mutex> lock{ _pDevice->_bindlessMutex };
         if ( _pDevice->_mapCbMapped.contains( buffer ) == false )
             return;
         _pDevice->_constantBufferMirror.write( buffer, _pDevice->_frameRing.currentIndex(), pData, size,
@@ -75,7 +76,7 @@ namespace sw
         }
         {
             // 등록(registerBindlessBufferSrv · registerBindlessBufferUav)이 같은 배타 락 안에서 읽는다. 다른 스레드의 생성과 겹쳐 재해시되지 않게 한다.
-            std::unique_lock<std::shared_mutex> registryLock{ _pDevice->_bindlessMutex };
+            std::unique_lock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
             _pDevice->_mapStructuredStride[handle] = elementSize > 0 ? elementSize : 4u;
         }
         return handle;
@@ -761,8 +762,8 @@ namespace sw
             std::scoped_lock<mutex> lock{ _pDevice->_resourceStateMutex };
             _pDevice->_mapStructuredBufferState.erase( buffer );
         }
-        std::unique_lock<std::shared_mutex> registryLock{ _pDevice->_bindlessMutex };
-        const auto                          mapIt = _pDevice->_mapCbMapped.find( buffer );
+        std::unique_lock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
+        const auto                     mapIt = _pDevice->_mapCbMapped.find( buffer );
         if ( mapIt != _pDevice->_mapCbMapped.end() && mapIt->second != nullptr )
         {
             ID3D12Resource* pResource = _pDevice->resolveBuffer( buffer );
@@ -1058,7 +1059,7 @@ namespace sw
             return;
 
         {
-            std::unique_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
+            std::unique_lock<shared_mutex> lock{ _pDevice->_bindlessMutex };
             for ( D3D12RHIDevice::BindlessResourceRecord& record : _pDevice->_listRegisteredBindless )
             {
                 if ( record._texture != texture )

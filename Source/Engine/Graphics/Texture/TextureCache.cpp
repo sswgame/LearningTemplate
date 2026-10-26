@@ -156,7 +156,7 @@ namespace sw
         vector<RegionUpdate>                    _listFlushingRegion; ///< 렌더 스레드만 쓰는 맞바꾸기 자리(저장소를 재사용한다)
         mutex                                   _regionMutex;
         unordered_map<string, RenderTargetSize> _mapRenderTargetSize; ///< `declareRenderTarget` 이 알린 크기
-        std::shared_mutex                       _mutex;
+        shared_mutex                            _mutex;
         std::condition_variable_any             _cvLoaded;              ///< 항목의 `_bLoading` 이 내려갈 때 깨운다
         atomic<uint32>                          _reloadGeneration{ 0 }; ///< SRV 가 바뀌었을 수 있는 횟수 — 머티리얼이 SRV 인덱스를 다시 받을 때를 안다
         mutex                                   _awaitingMutex;
@@ -176,22 +176,31 @@ namespace sw
         /** @brief 참조를 하나 놓습니다. 0 이 되면 GPU 자원까지 해제합니다(`TextureCache::release` · 로드 블록 소멸). */
         void releaseReference( const string& key, IRHIDevice* pDevice )
         {
-            std::unique_lock<std::shared_mutex> lock{ _mutex };
-            auto                                it = _mapEntry.find( key );
-            if ( it == _mapEntry.end() )
-                return;
-            if ( it->second._refCount > 0 )
-                --it->second._refCount;
-            // 올리는 중(acquire · reload · 스트리밍)이면 지우지 않는다 — 그 스레드가 끝날 때 참조 수를 보고 정리한다.
-            const bool bUnused = it->second._refCount == 0 && it->second._bLoading == false && it->second._bUpgrading == false;
-            if ( bUnused )
+            // 표에서 지우는 항목의 텍스처는 꺼내서 잠금을 놓은 뒤 내린다(장치 호출 — 잠금은 잎 잠금, 결정 5-3).
+            unique_ptr<Texture2D> pErased;
             {
-                if ( it->second._texture != nullptr )
-                    it->second._texture->releaseRHI( pDevice );
-                // CPU 텍스처는 원본을 남긴다 — 소유자가 `releaseCPUTexture` 로 지운다.
-                if ( it->second._bPinned == false )
-                    _mapEntry.erase( it );
+                std::unique_lock<shared_mutex> lock{ _mutex };
+                auto                           it = _mapEntry.find( key );
+                if ( it == _mapEntry.end() )
+                    return;
+                if ( it->second._refCount > 0 )
+                    --it->second._refCount;
+                // 올리는 중(acquire · reload · 스트리밍)이면 지우지 않는다 — 그 스레드가 끝날 때 참조 수를 보고 정리한다.
+                const bool bUnused = it->second._refCount == 0 && it->second._bLoading == false && it->second._bUpgrading == false;
+                if ( bUnused == false )
+                    return;
+                // CPU 텍스처는 원본을 남긴다 — 소유자가 `releaseCPUTexture` 로 지운다. 표에 남는 항목은 다른 스레드가 곧 다시 쥘 수 있어 잠금 안에서 내린다.
+                if ( it->second._bPinned )
+                {
+                    if ( it->second._texture != nullptr )
+                        it->second._texture->releaseRHI( pDevice );
+                    return;
+                }
+                pErased = std::move( it->second._texture );
+                _mapEntry.erase( it );
             }
+            if ( pErased != nullptr )
+                pErased->releaseRHI( pDevice );
         }
 
         /**
@@ -201,8 +210,8 @@ namespace sw
         void finishLoad( const string& key, bool bReady )
         {
             {
-                std::unique_lock<std::shared_mutex> lock{ _mutex };
-                const auto                          it = _mapEntry.find( key );
+                std::unique_lock<shared_mutex> lock{ _mutex };
+                const auto                     it = _mapEntry.find( key );
                 SW_ASSERT( it != _mapEntry.end() && it->second._bLoading );
                 Entry& entry      = it->second;
                 entry._bLoading   = false;
@@ -248,9 +257,9 @@ namespace sw
         // 디스크 읽기와 GPU 생성은 잠금 밖에서 한다. 잠금 안에서는 "진행 중" 표시(_bLoading)와 그 로드의 블록만 적고, 같은 키를 동시에
         // 원한 쪽은 같은 블록을 받는다(이중 생성 없음). Texture2D 는 unique_ptr 이라 맵이 원소를 옮겨도 주소가 그대로다. 진행 중인 항목은
         // release · 실패 정리가 지우지 않는다.
-        std::unique_lock<std::shared_mutex> lock{ _impl->_mutex };
-        Texture2D*                          pTexture = nullptr;
-        TextureLoadBlock::Source            source   = TextureLoadBlock::Source::File;
+        std::unique_lock<shared_mutex> lock{ _impl->_mutex };
+        Texture2D*                     pTexture = nullptr;
+        TextureLoadBlock::Source       source   = TextureLoadBlock::Source::File;
         for ( ;; )
         {
             const auto it = _impl->_mapEntry.find( key );
@@ -335,9 +344,9 @@ namespace sw
         if ( pTexture == nullptr )
             return nullptr;
         // 핸들 몫의 참조는 이 함수를 나가며 놓인다 — 돌려주는 포인터 몫(짝 `release`)을 하나 더 센다. 핸들이 쥐고 있으므로 항목은 있다.
-        const string                        key = FileUtil::normalizePath( relativePath );
-        std::unique_lock<std::shared_mutex> lock{ _impl->_mutex };
-        const auto                          it = _impl->_mapEntry.find( key );
+        const string                   key = FileUtil::normalizePath( relativePath );
+        std::unique_lock<shared_mutex> lock{ _impl->_mutex };
+        const auto                     it = _impl->_mapEntry.find( key );
         SW_ASSERT( it != _impl->_mapEntry.end() );
         ++it->second._refCount;
         return pTexture.get();
@@ -404,8 +413,8 @@ namespace sw
         {
             Texture2D* pTexture = nullptr;
             {
-                std::unique_lock<std::shared_mutex> lock{ _impl->_mutex };
-                const auto                          it = _impl->_mapEntry.find( upgrade._key );
+                std::unique_lock<shared_mutex> lock{ _impl->_mutex };
+                const auto                     it = _impl->_mapEntry.find( upgrade._key );
                 // 놓였으면 버린다. 다시 읽는 중(`reload` · 디바이스 교체)이면 그쪽이 밉 전부를 올린다.
                 const bool bUpgradable = it != _impl->_mapEntry.end() && it->second._bLoading == false && it->second._bPublished && it->second._texture != nullptr &&
                                          it->second._texture->isFullyResident() == false;
@@ -417,20 +426,23 @@ namespace sw
             // 업로드는 잠금 밖에서 — 게임 스레드의 find · acquire 를 붙잡지 않는다. 표시가 항목을 지키고(놓여도 지우지 않는다), 다시 읽기는 끝을 기다린다.
             Texture2DRetiredResource retired{};
             const bool               bUpgraded = pTexture->upgradeResidency( pDevice, *upgrade._pImage, retired );
+            unique_ptr<Texture2D>    pErased;
             {
-                std::unique_lock<std::shared_mutex> lock{ _impl->_mutex };
-                const auto                          it = _impl->_mapEntry.find( upgrade._key );
+                std::unique_lock<shared_mutex> lock{ _impl->_mutex };
+                const auto                     it = _impl->_mapEntry.find( upgrade._key );
                 SW_ASSERT( it != _impl->_mapEntry.end() && it->second._bUpgrading );
                 it->second._bUpgrading = false;
                 if ( bUpgraded )
                     _impl->_retired.add( pDevice, retired );
-                // 업로드하는 사이 마지막 참조가 놓였으면 여기서 내린다(`reload` 와 같다).
+                // 업로드하는 사이 마지막 참조가 놓였으면 표에서 지우고 잠금 밖에서 내린다(`reload` 와 같다).
                 if ( it->second._refCount == 0 && it->second._bPinned == false )
                 {
-                    pTexture->releaseRHI( pDevice );
+                    pErased = std::move( it->second._texture );
                     _impl->_mapEntry.erase( it );
                 }
             }
+            if ( pErased != nullptr )
+                pErased->releaseRHI( pDevice );
             if ( bUpgraded )
             {
                 ++upgradedCount;
@@ -471,7 +483,7 @@ namespace sw
             std::scoped_lock<mutex> lock{ _impl->_streamingMutex };
             count += static_cast<uint32>( _impl->_listStreamingUpgrade.size() );
         }
-        std::shared_lock<std::shared_mutex> lock{ _impl->_mutex };
+        std::shared_lock<shared_mutex> lock{ _impl->_mutex };
         for ( const auto& [key, entry] : _impl->_mapEntry )
         {
             if ( entry._bLoading || entry._bUpgrading )
@@ -496,8 +508,8 @@ namespace sw
         const bool bValidRequest = isCPUTexturePath( relativePath ) && bSizeMatches;
         if ( _impl == nullptr || bValidRequest == false )
             return false;
-        const string                        key = FileUtil::normalizePath( relativePath );
-        std::unique_lock<std::shared_mutex> lock{ _impl->_mutex };
+        const string                   key = FileUtil::normalizePath( relativePath );
+        std::unique_lock<shared_mutex> lock{ _impl->_mutex };
         if ( _impl->_mapEntry.find( key ) != _impl->_mapEntry.end() )
             return false;
         Impl::Entry& entry = _impl->_mapEntry[key];
@@ -512,9 +524,9 @@ namespace sw
     {
         if ( _impl == nullptr || isCPUTexturePath( relativePath ) == false )
             return;
-        const string                        key = FileUtil::normalizePath( relativePath );
-        std::unique_lock<std::shared_mutex> lock{ _impl->_mutex };
-        const auto                          it = _impl->_mapEntry.find( key );
+        const string                   key = FileUtil::normalizePath( relativePath );
+        std::unique_lock<shared_mutex> lock{ _impl->_mutex };
+        const auto                     it = _impl->_mapEntry.find( key );
         if ( it == _impl->_mapEntry.end() )
             return;
         it->second._bPinned = false;
@@ -528,11 +540,11 @@ namespace sw
         const bool bInvalidDeclaration = _impl == nullptr || isRenderTargetPath( relativePath ) == false || width == 0 || height == 0;
         if ( bInvalidDeclaration )
             return;
-        const string                        key = FileUtil::normalizePath( relativePath );
-        std::unique_lock<std::shared_mutex> lock{ _impl->_mutex };
-        Impl::RenderTargetSize&             size = _impl->_mapRenderTargetSize[key];
-        size._width                              = width;
-        size._height                             = height;
+        const string                   key = FileUtil::normalizePath( relativePath );
+        std::unique_lock<shared_mutex> lock{ _impl->_mutex };
+        Impl::RenderTargetSize&        size = _impl->_mapRenderTargetSize[key];
+        size._width                         = width;
+        size._height                        = height;
     }
 
     bool TextureCache::resizeRenderTarget( string_view relativePath, uint32 width, uint32 height, IRHIDevice* pDevice )
@@ -544,11 +556,11 @@ namespace sw
         const string key = FileUtil::normalizePath( relativePath );
 
         // 크기를 먼저 알린다 — 아직 만들지 않았으면 다음 acquire 가 이 크기로 만든다. 다시 만드는 일은 reload 와 같이 잠금 밖에서 한다.
-        std::unique_lock<std::shared_mutex> lock{ _impl->_mutex };
-        Impl::RenderTargetSize&             size = _impl->_mapRenderTargetSize[key];
-        size._width                              = width;
-        size._height                             = height;
-        Texture2D* pTexture                      = nullptr;
+        std::unique_lock<shared_mutex> lock{ _impl->_mutex };
+        Impl::RenderTargetSize&        size = _impl->_mapRenderTargetSize[key];
+        size._width                         = width;
+        size._height                        = height;
+        Texture2D* pTexture                 = nullptr;
         for ( ;; )
         {
             const auto it = _impl->_mapEntry.find( key );
@@ -577,15 +589,18 @@ namespace sw
             SW_LOG_ERROR( "Failed to resize render texture %# to %#x%#", key.c_str(), width, height );
 
         lock.lock();
-        const auto it = _impl->_mapEntry.find( key );
+        const auto            it = _impl->_mapEntry.find( key );
+        unique_ptr<Texture2D> pErased;
         SW_ASSERT( it != _impl->_mapEntry.end() && it->second._bLoading );
         it->second._bLoading = false;
         if ( it->second._refCount == 0 )
         {
-            pTexture->releaseRHI( pDevice );
+            pErased = std::move( it->second._texture );
             _impl->_mapEntry.erase( it );
         }
         lock.unlock();
+        if ( pErased != nullptr )
+            pErased->releaseRHI( pDevice ); // 장치 호출은 잠금 밖에서(잠금은 잎 잠금, 결정 5-3)
         // 새 SRV 인덱스를 받았다 — 빌려 간 머티리얼이 다시 받게 한다(reload 와 같은 순서: 진행 중 표시를 내린 뒤에 올린다).
         _impl->_reloadGeneration.fetch_add( 1u, std::memory_order_acq_rel );
         _impl->_cvLoaded.notify_all();
@@ -604,8 +619,8 @@ namespace sw
 
         // 기다림(waitIdle)과 다시 올리기는 잠금 밖에서 한다. 잠금을 쥔 채 waitIdle 을 부르면 같은 잠금을 기다리는
         // 렌더 스레드와 서로 기다릴 수 있다. 진행 중 표시를 세워 두면 그사이 acquire 는 기다리고 release 는 지우지 않는다.
-        std::unique_lock<std::shared_mutex> lock{ _impl->_mutex };
-        Texture2D*                          pTexture = nullptr;
+        std::unique_lock<shared_mutex> lock{ _impl->_mutex };
+        Texture2D*                     pTexture = nullptr;
         for ( ;; )
         {
             const auto it = _impl->_mapEntry.find( key );
@@ -633,16 +648,19 @@ namespace sw
             SW_LOG_ERROR( "Hot-Reload failed for Texture %#", key.c_str() );
 
         lock.lock();
-        const auto it = _impl->_mapEntry.find( key );
+        const auto            it = _impl->_mapEntry.find( key );
+        unique_ptr<Texture2D> pErased;
         SW_ASSERT( it != _impl->_mapEntry.end() && it->second._bLoading );
         it->second._bLoading = false;
-        // 다시 올리는 사이 마지막 참조가 놓였으면 release 대신 여기서 내린다.
+        // 다시 올리는 사이 마지막 참조가 놓였으면 release 대신 여기서 지우고, 장치 호출은 잠금 밖에서 한다(잠금은 잎 잠금, 결정 5-3).
         if ( it->second._refCount == 0 )
         {
-            pTexture->releaseRHI( pDevice );
+            pErased = std::move( it->second._texture );
             _impl->_mapEntry.erase( it );
         }
         lock.unlock();
+        if ( pErased != nullptr )
+            pErased->releaseRHI( pDevice );
         // 다시 올린 텍스처는 새 SRV 인덱스를 받았다(실패했으면 인덱스가 없다). 옛 인덱스는 이미 돌려줬으므로 빌려 간 머티리얼이 다시 받게 한다.
         // 세대는 진행 중 표시를 내린 **뒤에** 올린다 — 먼저 올리면 새 세대를 본 쪽의 find 가 아직 nullptr 를 받고 그 세대를 소비해 버린다.
         _impl->_reloadGeneration.fetch_add( 1u, std::memory_order_acq_rel );
@@ -653,9 +671,9 @@ namespace sw
     {
         if ( relativePath.empty() || _impl == nullptr )
             return nullptr;
-        const string                        key = FileUtil::normalizePath( relativePath );
-        std::shared_lock<std::shared_mutex> lock{ _impl->_mutex };
-        const auto                          it = _impl->_mapEntry.find( key );
+        const string                   key = FileUtil::normalizePath( relativePath );
+        std::shared_lock<shared_mutex> lock{ _impl->_mutex };
+        const auto                     it = _impl->_mapEntry.find( key );
         // 올리는 중(처음 acquire · reload)인 항목은 내주지 않는다 — 그 스레드가 잠금 없이 같은 객체의 핸들 · SRV 를 바꾸고 있다.
         const bool bReady = it != _impl->_mapEntry.end() && it->second._bPublished && it->second._bLoading == false;
         if ( bReady == false )
@@ -710,10 +728,10 @@ namespace sw
                 continue;
             }
             // 올리는 동안 같은 텍스처를 놓거나 다시 올리지 못하게 읽기 잠금을 쥔다(release · reload 는 쓰기 잠금을 잡는다).
-            std::shared_lock<std::shared_mutex> lock{ _impl->_mutex };
-            const auto                          it     = _impl->_mapEntry.find( update._key );
-            Texture2D*                          pFound = it != _impl->_mapEntry.end() ? it->second._texture.get() : nullptr;
-            RHITextureRegionUploadDesc          desc{};
+            std::shared_lock<shared_mutex> lock{ _impl->_mutex };
+            const auto                     it     = _impl->_mapEntry.find( update._key );
+            Texture2D*                     pFound = it != _impl->_mapEntry.end() ? it->second._texture.get() : nullptr;
+            RHITextureRegionUploadDesc     desc{};
             desc._pData     = update._rgbaBytes.data();
             desc._sizeBytes = static_cast<uint32>( update._rgbaBytes.size() );
             desc._x         = update._x;
@@ -807,8 +825,8 @@ namespace sw
         if ( relativePath.empty() || _impl == nullptr )
             return false;
 
-        const string                        key = FileUtil::normalizePath( relativePath );
-        std::shared_lock<std::shared_mutex> lock{ _impl->_mutex };
+        const string                   key = FileUtil::normalizePath( relativePath );
+        std::shared_lock<shared_mutex> lock{ _impl->_mutex };
         return _impl->_mapEntry.find( key ) != _impl->_mapEntry.end();
     }
 
@@ -816,7 +834,7 @@ namespace sw
     {
         if ( _impl == nullptr )
             return 0;
-        std::shared_lock<std::shared_mutex> lock{ _impl->_mutex };
+        std::shared_lock<shared_mutex> lock{ _impl->_mutex };
         return _impl->_mapEntry.size();
     }
 
@@ -846,7 +864,7 @@ namespace sw
             std::scoped_lock<mutex> streamingLock{ _impl->_streamingMutex };
             _impl->_listStreamingUpgrade.clear(); // 위쪽 밉을 기다리던 텍스처도 함께 사라진다
         }
-        std::unique_lock<std::shared_mutex> lock{ _impl->_mutex };
+        std::unique_lock<shared_mutex> lock{ _impl->_mutex };
         _impl->_mapEntry.clear();
         getTextureCacheStats().recordClear();
     }

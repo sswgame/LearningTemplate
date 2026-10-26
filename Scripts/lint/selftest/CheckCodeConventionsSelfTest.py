@@ -313,6 +313,15 @@ _kWholeScanCleanCase: dict[str, str] = {
     "Source/Probe/RangeTable.cpp": (
         '#include "pch.h"\n\nRangeTable::RangeTable()\n    : _first{ 1 }\n    , _ppWidget{ nullptr }\n    , _last{ 2 }\n{\n}\n'
     ),
+    # 이름 뒤에 잠금 계약 주석(`SW_GUARDED_BY` · `SW_ACQUIRED_AFTER`)이 붙은 멤버도 멤버 선언이다 — 못 읽으면 순서대로 초기화해도 잘못 걸린다.
+    "Source/Probe/GuardedTable.h": (
+        "#pragma once\n\nclass GuardedTable\n{\npublic:\n    GuardedTable();\n\nprivate:\n"
+        "    int32 _first SW_GUARDED_BY( _mutex );\n    mutex _mutex;\n    mutex _innerMutex SW_ACQUIRED_AFTER( _mutex );\n"
+        "    int32 _last;\n};\n"
+    ),
+    "Source/Probe/GuardedTable.cpp": (
+        '#include "pch.h"\n\nGuardedTable::GuardedTable()\n    : _first{ 1 }\n    , _mutex{}\n    , _innerMutex{}\n    , _last{ 2 }\n{\n}\n'
+    ),
     # 같은 이름이 두 폭으로 선언돼 있으면 **어느 쪽을 쓴 것인지 단정할 수 없다** — 건너뛴다.
     "Source/Probe/WidthClash.h": (
         "#pragma once\n\nstruct NarrowFlags\n{\n    uint8 _bReady : 1;\n};\n\n"

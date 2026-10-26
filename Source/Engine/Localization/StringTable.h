@@ -2,6 +2,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/String/hashed_string.h"
@@ -39,7 +40,7 @@ namespace sw
         bool   empty() const;
 
     private:
-        mutable std::shared_mutex _mutex;
+        mutable shared_mutex _mutex;
         /// @brief 키 해시 → 번역 문자열 테이블입니다. 문자열은 추가 전용 저장소(StringTable.cpp 의 `LocalizedTextArena`)에 있어 테이블이 바뀌어도 엔진 종료까지 사라지지 않습니다.
         unordered_map<uint64, const utf8*> _mapTable;
     };

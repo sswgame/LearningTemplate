@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Common/StdHeaders.h"
+#include "Core/Concurrency/mutex.h"
 
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
@@ -59,7 +60,7 @@ namespace sw
         void triggerReloadAll();
 
     private:
-        mutable std::shared_mutex _mutex;
+        mutable shared_mutex      _mutex;
         vector<ShaderCompileDesc> _listPendingReload;
         ShaderRecompiledDelegate  _onAnyRecompiled;
         string                    _label;

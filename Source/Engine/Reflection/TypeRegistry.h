@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Common/EnumUtil.h"
 #include "Core/Common/StdHeaders.h"
+#include "Core/Concurrency/mutex.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Task/TaskTypes.h"
 
@@ -312,7 +313,7 @@ namespace sw
         template <typename Func>
         void forEachType( Func&& func ) const
         {
-            std::shared_lock<std::shared_mutex> lock( _mutex );
+            std::shared_lock<shared_mutex> lock( _mutex );
             for ( const auto& [fqn, pTypeInfo] : _mapFqnToClassType )
             {
                 (void)fqn;
@@ -325,7 +326,7 @@ namespace sw
         template <typename Func>
         void forEachEnum( Func&& func ) const
         {
-            std::shared_lock<std::shared_mutex> lock( _mutex );
+            std::shared_lock<shared_mutex> lock( _mutex );
             for ( const auto& [key, pEnumInfo] : _mapNameToEnum )
             {
                 if ( key == pEnumInfo->_fullyQualifiedName )
@@ -344,7 +345,7 @@ namespace sw
             const hashed_string&    baseFqn = pBaseType->_fullyQualifiedName;
             vector<const TypeInfo*> listResult;
 
-            std::shared_lock<std::shared_mutex> lock( _mutex );
+            std::shared_lock<shared_mutex> lock( _mutex );
             for ( const auto& [fqn, pTypeInfo] : _mapFqnToClassType )
             {
                 (void)fqn;
@@ -445,7 +446,7 @@ namespace sw
             return findEnumByTypeFqn( typeFqn<E>() );
         }
 
-        mutable std::shared_mutex _mutex;
+        mutable shared_mutex _mutex;
         /**
          * @brief FQN 하나당 TypeInfo **하나**입니다. 짧은 이름과 별칭은 값을 복사하지 않고 `_mapAliasToFqn`
          *        으로 이 항목을 가리킵니다. `const TypeInfo*` 를 키로 쓰는 쪽(컴포넌트 풀 등)이

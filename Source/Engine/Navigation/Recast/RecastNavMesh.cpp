@@ -705,7 +705,8 @@ namespace sw
         return count;
     }
 
-    dtNavMeshQuery* RecastNavMesh::acquireQuery( bool& outLocked ) const
+    // 잠갔는지가 값(`outLocked`)으로 `releaseQuery` 에 건너가는 조건부 잠금이라 잠금 분석이 따라가지 못한다.
+    SW_NO_THREAD_SAFETY_ANALYSIS dtNavMeshQuery* RecastNavMesh::acquireQuery( bool& outLocked ) const
     {
         using Internal = RecastNavMeshInternal;
         outLocked      = false;
@@ -740,7 +741,7 @@ namespace sw
         return _pSharedQuery;
     }
 
-    void RecastNavMesh::releaseQuery( bool bLocked ) const
+    SW_NO_THREAD_SAFETY_ANALYSIS void RecastNavMesh::releaseQuery( bool bLocked ) const
     {
         if ( bLocked )
             _sharedQueryMutex.unlock();

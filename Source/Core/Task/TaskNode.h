@@ -235,8 +235,8 @@ namespace sw
         unique_ptr<vector<TaskNode*>> _pOverflow;
         mutable SpinLock              _lock;
 
-        void lock() const noexcept { _lock.lock(); }
-        void unlock() const noexcept { _lock.unlock(); }
+        void lock() const noexcept SW_ACQUIRE_LOCK( _lock ) { _lock.lock(); }
+        void unlock() const noexcept SW_RELEASE_LOCK( _lock ) { _lock.unlock(); }
 
         /**
          * @brief 후속을 붙입니다. 이 태스크가 이미 끝나 목록이 닫혔으면 붙이지 않고 false 를 돌려줍니다.

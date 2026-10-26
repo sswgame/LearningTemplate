@@ -127,7 +127,7 @@ namespace sw
         XMLDocument _defaultsDoc;
         string      _customDefaultsPath;
 
-        mutable std::shared_mutex                                    _resolvedMutex;
+        mutable shared_mutex                                         _resolvedMutex;
         unordered_map<const TypeInfo*, unique_ptr<ResolvedDefaults>> _mapResolved;
         vector<unique_ptr<ResolvedDefaults>>                         _listReplacedResolved; ///< 세대가 지나 갈아 끼운 결과(문서를 다시 읽을 때 버린다)
 
