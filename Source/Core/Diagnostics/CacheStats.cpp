@@ -39,22 +39,40 @@ namespace sw
                 return registry._entryCount;
             }
 
-            /** @brief 새 칸을 올립니다(잠금 아래). 이름이 비었거나 길거나 칸이 없으면 오류를 남기고 nullptr 입니다. */
-            static CacheStatsCounters* addEntry( Registry& registry, string_view name )
+            /** @brief 새 칸을 올리지 못한 까닭입니다. 잠금은 잎이라 로그는 잠금을 놓은 뒤에 쓴다(`reportAddFailure`). */
+            enum class AddFailure : uint8
             {
+                None,
+                Full,
+                BadName,
+            };
+
+            /** @brief 새 칸을 올립니다(잠금 아래). 이름이 비었거나 길거나 칸이 없으면 nullptr 이고 까닭을 @p outFailure 에 적습니다. */
+            static CacheStatsCounters* addEntry( Registry& registry, string_view name, AddFailure& outFailure )
+            {
+                outFailure = AddFailure::None;
                 if ( registry._entryCount >= CacheStats::kMaxCacheCount )
                 {
-                    SW_LOG_ERROR( "Cache stats registry is full (%# entries) - '%#' is not counted. Raise CacheStats::kMaxCacheCount", CacheStats::kMaxCacheCount, name );
+                    outFailure = AddFailure::Full;
                     return nullptr;
                 }
                 CacheStatsCounters& entry = registry._arrEntry[registry._entryCount];
                 if ( entry.trySetName( name ) == false )
                 {
-                    SW_LOG_ERROR( "Cache stats name '%#' is empty or longer than %# characters - the cache is not counted", name, CacheStatsCounters::kMaxNameLength );
+                    outFailure = AddFailure::BadName;
                     return nullptr;
                 }
                 ++registry._entryCount;
                 return &entry;
+            }
+
+            /** @brief `addEntry` 가 올리지 못한 까닭을 오류 로그로 남깁니다(잠금 밖). */
+            static void reportAddFailure( AddFailure failure, string_view name )
+            {
+                if ( failure == AddFailure::Full )
+                    SW_LOG_ERROR( "Cache stats registry is full (%# entries) - '%#' is not counted. Raise CacheStats::kMaxCacheCount", CacheStats::kMaxCacheCount, name );
+                else if ( failure == AddFailure::BadName )
+                    SW_LOG_ERROR( "Cache stats name '%#' is empty or longer than %# characters - the cache is not counted", name, CacheStatsCounters::kMaxNameLength );
             }
         };
     } // namespace
@@ -64,28 +82,34 @@ namespace sw
 {
     CacheStatsHandle CacheStats::registerCache( string_view name )
     {
-        CacheStatsInternal::Registry& registry = CacheStatsInternal::getRegistry();
-        bool                          bDuplicate{ false };
-        CacheStatsHandle              handle{};
+        CacheStatsInternal::Registry&  registry = CacheStatsInternal::getRegistry();
+        bool                           bDuplicate{ false };
+        CacheStatsInternal::AddFailure failure{ CacheStatsInternal::AddFailure::None };
+        CacheStatsHandle               handle{};
         {
             std::scoped_lock<mutex> lock{ registry._mutex };
             bDuplicate = CacheStatsInternal::findIndex( registry, name ) != registry._entryCount;
             if ( bDuplicate == false )
-                handle = CacheStatsHandle{ CacheStatsInternal::addEntry( registry, name ) };
+                handle = CacheStatsHandle{ CacheStatsInternal::addEntry( registry, name, failure ) };
         }
         if ( bDuplicate ) // 잠금은 잎이다 — 로그는 놓은 뒤에 쓴다
             SW_LOG_ERROR( "Cache stats name '%#' is already registered - keeping the first", name );
+        CacheStatsInternal::reportAddFailure( failure, name );
         return handle;
     }
 
     CacheStatsHandle CacheStats::getOrCreate( string_view name )
     {
-        CacheStatsInternal::Registry& registry = CacheStatsInternal::getRegistry();
-        std::scoped_lock<mutex>       lock{ registry._mutex };
-        const uint32                  index = CacheStatsInternal::findIndex( registry, name );
-        if ( index != registry._entryCount )
-            return CacheStatsHandle{ &registry._arrEntry[index] };
-        return CacheStatsHandle{ CacheStatsInternal::addEntry( registry, name ) };
+        CacheStatsInternal::Registry&  registry = CacheStatsInternal::getRegistry();
+        CacheStatsInternal::AddFailure failure{ CacheStatsInternal::AddFailure::None };
+        CacheStatsHandle               handle{};
+        {
+            std::scoped_lock<mutex> lock{ registry._mutex };
+            const uint32            index = CacheStatsInternal::findIndex( registry, name );
+            handle                        = index != registry._entryCount ? CacheStatsHandle{ &registry._arrEntry[index] } : CacheStatsHandle{ CacheStatsInternal::addEntry( registry, name, failure ) };
+        }
+        CacheStatsInternal::reportAddFailure( failure, name );
+        return handle;
     }
 
     void CacheStats::markWindowStart()

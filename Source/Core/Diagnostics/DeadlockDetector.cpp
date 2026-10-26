@@ -180,6 +180,9 @@ namespace sw
      */
     void DeadlockDetector::dumpDeadlock( const vector<std::thread::id>& listCycle )
     {
+#if defined( SW_ENABLE_DEADLOCK_DETECTION )
+        const MutexReentryGuard hookGuard; // 검출기의 보고는 잠금 진단 자체라 잎 잠금 규칙 밖이다(`mutex::getHeldLockDepth` 가 0 을 돌려준다)
+#endif
         StringBuilder<constant::kMaxBuffer8192> builder;
         builder.append( "\n=======================================================\n" );
         builder.append( "[FATAL ERROR] DEADLOCK DETECTED!\n" );
