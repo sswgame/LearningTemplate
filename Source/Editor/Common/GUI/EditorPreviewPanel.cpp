@@ -9,6 +9,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Probe/AutomationProbe.h"
 #include "Engine/Scene/ObjectUndoUtil.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
@@ -17,6 +18,27 @@
 
 namespace sw::editor
 {
+    namespace
+    {
+        /** @brief 탐침 `Editor.PreviewTickCount` — 씬 매니저가 미리보기 씬들을 틱한 횟수의 합입니다. 숨은 창이면 늘지 않아야 한다. */
+        [[nodiscard]] bool readPreviewTickCount( const GameObjectManager* /*pManager*/, float64& outValue )
+        {
+            const SceneManager* pSceneManager = findSubsystem<SceneManager>();
+            if ( pSceneManager == nullptr )
+                return false;
+            uint64 tickCount = 0;
+            for ( const PreviewSceneEntry& entry : pSceneManager->getPreviewScenes() )
+            {
+                tickCount += entry._tickCount;
+            }
+            outValue = static_cast<float64>( tickCount );
+            return true;
+        }
+    } // namespace
+
+    SW_AUTOMATION_PROBE( editorPreviewTickCount, "Editor.PreviewTickCount", "Ticks the scene manager gave all preview scenes (a hidden preview window adds none)",
+                         &readPreviewTickCount );
+
     EditorPreviewPanel::EditorPreviewPanel( EditorAssetType kind, bool bLoadOnOpen )
         : EditorDocumentPanel{ kind, bLoadOnOpen }
         , _viewport{}
@@ -59,8 +81,9 @@ namespace sw::editor
 
     ScenePreviewPolicy EditorPreviewPanel::getPreviewPolicy() const
     {
+        // 틱은 창이 이번 프레임에 그려질 때만이다(`ScenePreviewTick::WhenDrawn`) — 뒤 탭 · 접힌 창의 씬은 시간이 멈춘다.
         ScenePreviewPolicy policy;
-        policy._bTick    = true;
+        policy._tick     = ScenePreviewTick::WhenDrawn;
         policy._bPhysics = false;
         policy._bAudio   = false;
         policy._bPlay    = false;

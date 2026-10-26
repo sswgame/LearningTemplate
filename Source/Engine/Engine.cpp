@@ -13,6 +13,7 @@
 #include "Core/Event/EventDispatcher.h"
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/hashed_string.h"
@@ -582,9 +583,10 @@ namespace sw
         }
     }
 
-    void Engine::updateScenes( float32 deltaTime, const HostViewTarget& mainOutput, uint32 vpWidth, uint32 vpHeight, bool bTickScene )
+    void Engine::updateScenes( float32 deltaTime, const HostViewTargets& views, uint32 vpWidth, uint32 vpHeight, bool bTickScene )
     {
-        _sceneDeltaSeconds = bTickScene ? deltaTime : 0.0f;
+        const HostViewTarget& mainOutput = views.getMainOutput();
+        _sceneDeltaSeconds               = bTickScene ? deltaTime : 0.0f;
         BLOCK( "Scene update" )
         {
             SW_PROFILE_SCOPE( "GT.Scene.tick" );
@@ -601,8 +603,20 @@ namespace sw
             if ( _pSceneManager != nullptr && bTickScene )
                 _pSceneManager->update( deltaTime );
             // 미리보기 씬은 활성 씬의 정지 · 재생과 무관하게 자기 정책으로 돈다(에디터가 멈춘 중에도 애니메이션 창은 돈다).
+            // 틱 여부는 이번 프레임에 그려지는지다 — 렌더 패킷(`RenderPacketBuilder::populateScenePreviews`)과 같은 요청 · 같은 조건(유효한 타깃)으로 고른다.
             if ( _pSceneManager != nullptr )
-                _pSceneManager->updatePreviewScenes( deltaTime );
+            {
+                uint32       arrDrawnSceneKey[kMaxHostSceneView]{};
+                uint32       drawnSceneCount = 0;
+                const uint32 requestCount    = MathUtil::min( views._sceneViewCount, kMaxHostSceneView );
+                for ( uint32 requestIndex = 0; requestIndex < requestCount; ++requestIndex )
+                {
+                    const HostSceneView& request = views._arrSceneView[requestIndex];
+                    if ( request._target.isValid() )
+                        arrDrawnSceneKey[drawnSceneCount++] = request._sceneKey;
+                }
+                _pSceneManager->updatePreviewScenes( deltaTime, vector_reference<const uint32>( arrDrawnSceneKey, drawnSceneCount ) );
+            }
         }
     }
 
@@ -732,7 +746,7 @@ namespace sw
 
         // 프레임 순서가 곧 의미다: 서비스 → 씬 틱 → 디버그 그리기 → 관찰자 → 런타임 UI → 렌더 패킷.
         updateFrameServices( deltaTime );
-        updateScenes( deltaTime, mainOutput, vpWidth, vpHeight, bTickScene );
+        updateScenes( deltaTime, views, vpWidth, vpHeight, bTickScene );
 
         // 물리 · 내비 디버그 선 — 씬 틱이 이번 프레임의 바디 · 경로를 정한 **뒤**, 관찰자 · UI · 패킷 **앞**이다(이번 프레임에 넣은 선이 endFrame 에서 확정된다).
         if ( _pSceneManager != nullptr )
