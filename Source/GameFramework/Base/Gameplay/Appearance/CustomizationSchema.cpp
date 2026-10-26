@@ -8,6 +8,7 @@
 
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceTypes.h"
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceXMLUtil.h"
@@ -125,11 +126,11 @@ namespace sw
                 (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrOptionAttribute, report, sourceName );
                 CustomizationOptionDef option;
                 option._name               = AppearanceXMLUtil::readRequiredName( node, "name", report, sourceName );
-                option._visual             = AppearanceXMLUtil::readOptionalName( node, "visual" );
-                option._variant            = AppearanceXMLUtil::readOptionalName( node, "variant" );
-                option._materialVariant    = AppearanceXMLUtil::readOptionalName( node, "materialVariant" );
-                const hashed_string prefab = AppearanceXMLUtil::readOptionalName( node, "prefab" );
-                const hashed_string sprite = AppearanceXMLUtil::readOptionalName( node, "sprite" );
+                option._visual             = XMLReadUtil::readOptionalName( node, "visual" );
+                option._variant            = XMLReadUtil::readOptionalName( node, "variant" );
+                option._materialVariant    = XMLReadUtil::readOptionalName( node, "materialVariant" );
+                const hashed_string prefab = XMLReadUtil::readOptionalName( node, "prefab" );
+                const hashed_string sprite = XMLReadUtil::readOptionalName( node, "sprite" );
                 option._asset              = prefab.empty() ? sprite : prefab;
                 AppearanceXMLUtil::readOptionalFloat3( node, "offset", option._offset, report, sourceName );
                 AppearanceXMLUtil::readOptionalFloat3( node, "rotation", option._rotation, report, sourceName );
@@ -188,9 +189,9 @@ namespace sw
                 CustomizationParamDef param;
                 param._kind     = kind;
                 param._name     = AppearanceXMLUtil::readRequiredName( node, "name", report, sourceName );
-                param._category = AppearanceXMLUtil::readOptionalName( node, "category" );
-                param._symmetry = AppearanceXMLUtil::readOptionalName( node, "symmetry" );
-                param._socket   = AppearanceXMLUtil::readOptionalName( node, "socket" ); // 부착 매개변수만 필수 — 아래에서 확인한다
+                param._category = XMLReadUtil::readOptionalName( node, "category" );
+                param._symmetry = XMLReadUtil::readOptionalName( node, "symmetry" );
+                param._socket   = XMLReadUtil::readOptionalName( node, "socket" ); // 부착 매개변수만 필수 — 아래에서 확인한다
                 AppearanceXMLUtil::readOptionalFloat( node, "min", -MathUtil::kMaxFloat, MathUtil::kMaxFloat, param._min, report, sourceName );
                 AppearanceXMLUtil::readOptionalFloat( node, "max", -MathUtil::kMaxFloat, MathUtil::kMaxFloat, param._max, report, sourceName );
                 if ( param._name.empty() || inoutSchema.findParameter( param._name ) != nullptr )
@@ -223,7 +224,7 @@ namespace sw
                 }
                 if ( kind == CustomizationKind::Choice || kind == CustomizationKind::Attachment )
                 {
-                    param._defaultOption = AppearanceXMLUtil::readOptionalName( node, "default" ); // 적지 않으면 첫 선택지
+                    param._defaultOption = XMLReadUtil::readOptionalName( node, "default" ); // 적지 않으면 첫 선택지
                     if ( param._listOption.empty() )
                         report.addErrorWithID( "Appearance.ParameterNoOption", "%#: schema '%#' parameter '%#' has no <Option>", sourceName, inoutSchema._id.c_str(), param._name.c_str() );
                     else if ( param._defaultOption.empty() )
@@ -403,7 +404,7 @@ namespace sw
                 if ( bInRange == false )
                     return false;
             }
-            else if ( AppearanceXMLUtil::containsName( condition._listOption, pValue->_option ) == false )
+            else if ( VectorUtil::contains( condition._listOption, pValue->_option ) == false )
             {
                 return false;
             }

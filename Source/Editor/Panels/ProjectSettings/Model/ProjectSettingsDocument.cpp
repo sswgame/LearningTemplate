@@ -26,11 +26,6 @@ namespace sw::editor
             /** @brief 요소 모드가 파일에 넣는 요소의 들여쓰기 한 단계입니다(팩 `gamesettings.xml` 이 공백 둘이다). */
             static constexpr string_view kIndent = "  ";
 
-            static bool isEqualKey( const vector<string>& listEqual, const string& path )
-            {
-                return VectorUtil::contains( listEqual, path );
-            }
-
             static string makePath( const string& prefix, const string& key )
             {
                 return prefix.empty() ? key : string( prefix + "." + key );
@@ -49,7 +44,7 @@ namespace sw::editor
                 for ( const string& key : source.getMemberNames() )
                 {
                     const string path = makePath( prefix, key );
-                    if ( isEqualKey( listEqual, path ) )
+                    if ( VectorUtil::contains( listEqual, path ) )
                         continue;
                     const JSONValue child = source.get( key, false );
                     keptCount += isNestedObject( child ) ? countKept( child, path, listEqual ) : 1u;
@@ -66,7 +61,7 @@ namespace sw::editor
                 for ( const string& key : source.getMemberNames() )
                 {
                     const string path = makePath( prefix, key );
-                    if ( isEqualKey( listEqual, path ) )
+                    if ( VectorUtil::contains( listEqual, path ) )
                         continue;
                     const JSONValue child = source.get( key, false );
                     if ( isNestedObject( child ) )

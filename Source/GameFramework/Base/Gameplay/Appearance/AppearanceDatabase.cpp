@@ -4,6 +4,8 @@
 
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Character/CharacterDataCache.h"
@@ -140,15 +142,18 @@ namespace sw
     bool AppearanceDatabase::collectBodyRegions( vector<hashed_string>& outListRegion )
     {
         outListRegion.clear();
-        vector<hashed_string> listTablesPath;
+        // 처음 나온 순서를 지키며 중복을 거른다 — 집합이 거르고 목록이 순서를 든다.
+        vector<hashed_string>        listTablesPath;
+        unordered_set<hashed_string> uniqueSetTablesPath;
         for ( const ItemVisualDef& visual : _visuals.getVisuals() )
         {
             for ( const AppearancePartDef& part : visual._listPart )
             {
-                if ( part._fitTables.empty() == false && AppearanceXMLUtil::containsName( listTablesPath, part._fitTables ) == false )
+                if ( part._fitTables.empty() == false && uniqueSetTablesPath.insert( part._fitTables ).second )
                     listTablesPath.push_back( part._fitTables );
             }
         }
+        unordered_set<hashed_string> uniqueSetRegion;
         for ( const hashed_string& path : listTablesPath )
         {
             const shared_ptr<const FitTables> tables = SharedAssetCache<FitTables>::acquire( path.c_str() );
@@ -159,7 +164,7 @@ namespace sw
             }
             for ( const BodyRegionDef& region : tables->getRegions() )
             {
-                if ( AppearanceXMLUtil::containsName( outListRegion, region._name ) == false )
+                if ( uniqueSetRegion.insert( region._name ).second )
                     outListRegion.push_back( region._name );
             }
         }
@@ -348,7 +353,7 @@ namespace sw
             {
                 for ( const hashed_string& region : part._listHiddenRegion )
                 {
-                    if ( AppearanceXMLUtil::containsName( *pListKnownBodyRegion, region ) == false )
+                    if ( VectorUtil::contains( *pListKnownBodyRegion, region ) == false )
                         _report.addErrorWithID( "Appearance.BodyRegionUnknown", "visual '%#' part '%#' hides unknown body region '%#'", visual._id.c_str(), part._name.c_str(), region.c_str() );
                 }
             }
@@ -393,7 +398,7 @@ namespace sw
                     _report.addErrorWithID( "Appearance.VisualUndeclared", "rule '%#' chooses variant '%#' no visual declares", rule._id.c_str(), action._name.c_str() );
                 if ( action._part.empty() == false && isPartDeclared( action._part ) == false )
                     _report.addErrorWithID( "Appearance.VisualUndeclared", "rule '%#' names part '%#' no visual declares", rule._id.c_str(), action._part.c_str() );
-                const bool bUnknownBodyRegion = action._kind == AppearanceRuleActionKind::HideRegion && pListKnownBodyRegion != nullptr && AppearanceXMLUtil::containsName( *pListKnownBodyRegion, action._name ) == false;
+                const bool bUnknownBodyRegion = action._kind == AppearanceRuleActionKind::HideRegion && pListKnownBodyRegion != nullptr && VectorUtil::contains( *pListKnownBodyRegion, action._name ) == false;
                 if ( bUnknownBodyRegion )
                     _report.addErrorWithID( "Appearance.BodyRegionUnknown", "rule '%#' hides unknown body region '%#'", rule._id.c_str(), action._name.c_str() );
             }

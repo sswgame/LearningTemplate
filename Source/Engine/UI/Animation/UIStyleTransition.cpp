@@ -184,27 +184,20 @@ namespace sw
 
     bool UIStyleTransitionSpec::parse( string_view text, UIStyleTransitionSpec& outSpec, string& outError )
     {
-        outSpec       = UIStyleTransitionSpec{};
-        size_t begin  = 0;
-        bool   bFirst = true;
-        while ( begin <= text.size() )
+        outSpec                            = UIStyleTransitionSpec{};
+        const vector<string_view> listItem = StringUtil::split( text, ",", { ._bTrim = true } );
+        // 빈 글 하나(항목 없음)는 받고, 항목이 여럿인데 빈 것이 끼면 오류다.
+        if ( listItem.size() == 1 && listItem[0].empty() )
+            return true;
+        for ( const string_view item : listItem )
         {
-            const size_t      comma = text.find( ',', begin );
-            const string_view item  = StringUtil::trim( text.substr( begin, comma == string_view::npos ? string_view::npos : comma - begin ) );
-            if ( item.empty() == false )
-            {
-                if ( UIStyleTransitionInternal::parseEntry( item, outSpec, outError ) == false )
-                    return false;
-            }
-            else if ( bFirst == false || comma != string_view::npos )
+            if ( item.empty() )
             {
                 outError = "transition '" + string( text ) + "' has an empty item";
                 return false;
             }
-            bFirst = false;
-            if ( comma == string_view::npos )
-                break;
-            begin = comma + 1;
+            if ( UIStyleTransitionInternal::parseEntry( item, outSpec, outError ) == false )
+                return false;
         }
         return true;
     }

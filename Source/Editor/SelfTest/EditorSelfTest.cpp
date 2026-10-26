@@ -2,6 +2,7 @@
 
 #include "Editor/SelfTest/EditorSelfTest.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
@@ -160,16 +161,10 @@ namespace sw::editor
 
     bool EditorSelfTestRunner::matchesPattern( string_view id, string_view pattern )
     {
-        size_t begin = 0;
-        while ( begin <= pattern.size() )
+        for ( const string_view piece : StringUtil::split( pattern, ",", { ._bDropEmpty = true } ) )
         {
-            size_t end = pattern.find( ',', begin );
-            if ( end == string_view::npos )
-                end = pattern.size();
-            const string_view piece = pattern.substr( begin, end - begin );
-            if ( piece.empty() == false && EditorSelfTestInternal::matchesGlob( id, piece ) )
+            if ( EditorSelfTestInternal::matchesGlob( id, piece ) )
                 return true;
-            begin = end + 1;
         }
         return false;
     }

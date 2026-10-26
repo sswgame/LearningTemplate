@@ -79,6 +79,8 @@ namespace sw
         int64 getSourceOffset() const;
         /** @brief 속성 값을 반환합니다. 없으면 nullptr 입니다. */
         const utf8* findAttribute( const utf8* pName, bool bIgnoreCaseKeys = true ) const;
+        /** @brief 속성이 있으면 true 입니다(값은 비어 있어도 된다). */
+        [[nodiscard]] bool hasAttribute( const utf8* pName, bool bIgnoreCaseKeys = true ) const { return findAttribute( pName, bIgnoreCaseKeys ) != nullptr; }
         /**
          * @brief 속성 값을 문자열로 반환합니다. 없으면 빈 문자열입니다.
          * @details `string_view` 를 받는 함수(`KeyCodeUtil::fromName` 등)에 넘길 때 쓴다. `findAttribute` 가 반환한 nullptr 로 `string_view` 를 만들면 미정의 동작(strlen)이다.

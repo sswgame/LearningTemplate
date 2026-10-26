@@ -3,7 +3,6 @@
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceXMLUtil.h"
 
 #include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
 
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -112,11 +111,6 @@ namespace sw
         report.addErrorWithID( "Appearance.UnknownElement", "%#: <%#> has unknown element <%#>", sourceName, parent.getName(), child.getName() );
     }
 
-    hashed_string AppearanceXMLUtil::readOptionalName( const XMLNode& node, const utf8* pAttribute )
-    {
-        return XMLReadUtil::readOptionalName( node, pAttribute );
-    }
-
     hashed_string AppearanceXMLUtil::readRequiredName( const XMLNode& node, const utf8* pAttribute, AppearanceLoadReport& report, string_view sourceName )
     {
         const hashed_string name = XMLReadUtil::readOptionalName( node, pAttribute );
@@ -180,10 +174,5 @@ namespace sw
         {
             outTags.addTag( TagID::request( token ) );
         } );
-    }
-
-    bool AppearanceXMLUtil::containsName( const vector<hashed_string>& listName, const hashed_string& name )
-    {
-        return VectorUtil::contains( listName, name );
     }
 } // namespace sw

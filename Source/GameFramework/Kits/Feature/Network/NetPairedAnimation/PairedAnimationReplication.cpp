@@ -22,12 +22,6 @@ namespace sw
 
     namespace
     {
-        /** @brief 세션 id 목록에 @p sessionID 가 있으면 true 입니다. */
-        bool containsPairedSessionID( const vector<uint32>& listSessionID, uint32 sessionID )
-        {
-            return VectorUtil::contains( listSessionID, sessionID );
-        }
-
         /** @brief 애니메이터를 가진 오브젝트의 번호(`NetObjectTable`)입니다. 핸들이 풀리지 않거나 번호가 없으면 0 입니다. */
         uint32 findAnimatorNetID( GameObjectManager& manager, const TComponentHandle<SkeletalAnimatorComponent>& animator )
         {
@@ -269,12 +263,12 @@ namespace sw
 
     bool PairedAnimationReplicationServer::hasAnnounced( uint32 sessionID ) const
     {
-        return containsPairedSessionID( _listAnnouncedID, sessionID );
+        return VectorUtil::contains( _listAnnouncedID, sessionID );
     }
 
     bool PairedAnimationReplicationServer::hasRefused( uint32 sessionID ) const
     {
-        return containsPairedSessionID( _listRefusedID, sessionID );
+        return VectorUtil::contains( _listRefusedID, sessionID );
     }
 } // namespace sw
 

@@ -26,7 +26,7 @@
 | - | [OnlineKits](docs/plans/OnlineKits.md) — 온라인 키트 마감 계획 (2026-10-21) | 구현중 | 1/6 | 없음 | network | D7-5 |
 | - | [PackedTypes](docs/plans/PackedTypes.md) — 저장 전용 압축 타입 | 구현중 | 3/6 | 없음 | graphics | 없음 |
 | - | [PreloadAndLod](docs/plans/PreloadAndLod.md) — 프리로딩 · LOD · 사전 준비 | 구현중 | 10/11 | 없음 | gameplay | D4-7 |
-| - | [ReuseExistingFacilities](docs/plans/ReuseExistingFacilities.md) — 이미 있는 기능으로 옮기기 | 구현중 | 6/13 | 없음 | quality | 없음 |
+| - | [ReuseExistingFacilities](docs/plans/ReuseExistingFacilities.md) — 이미 있는 기능으로 옮기기 | 구현중 | 11/16 | 없음 | quality | 없음 |
 | - | [RhiAsyncUploads](docs/plans/RhiAsyncUploads.md) — RHI 비동기 업로드 · 머티리얼 초기화 · PSO 준비 상태 | 구현중 | 8/15 | 없음 | graphics | 없음 |
 | - | [RuntimeQualityAdjust](docs/plans/RuntimeQualityAdjust.md) — 부하 검증의 남은 것과 자동 품질 조정 | 구현중 | 1/4 | 없음 | quality | C-29 |
 | - | [ServerDebug](docs/plans/ServerDebug.md) — 서버 디버깅 계획 — 에디터에서 서버 · 멀티플레이를 손쉽게 보는 길 | 구현중 | 9/15 | 없음 | network | D7-3 |

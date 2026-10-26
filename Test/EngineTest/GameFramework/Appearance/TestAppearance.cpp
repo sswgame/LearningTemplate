@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/Container/VectorUtil.h"
+
 #include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -217,10 +219,10 @@ SW_TEST_CASE( AppearanceTest, PresetInheritanceAndSeededCandidates )
         SW_EXPECT_TRUE( 0.8f <= height && height <= 1.4f );
         if ( std::find( listHeight.begin(), listHeight.end(), height ) == listHeight.end() )
             listHeight.push_back( height );
-        if ( AppearanceXMLUtil::containsName( listShape, villager._bodyShape ) == false )
+        if ( VectorUtil::contains( listShape, villager._bodyShape ) == false )
             listShape.push_back( villager._bodyShape );
         const hashed_string body = villager.findSlot( hashed_string( "Body" ) )->_itemID;
-        if ( AppearanceXMLUtil::containsName( listBody, body ) == false )
+        if ( VectorUtil::contains( listBody, body ) == false )
             listBody.push_back( body );
         if ( villager._customization.findValue( hashed_string( "Hair" ) )->_option == hashed_string( "Bald" ) )
             ++baldCount;

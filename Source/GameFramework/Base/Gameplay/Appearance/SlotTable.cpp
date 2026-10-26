@@ -6,6 +6,7 @@
 #include "Core/Container/VectorUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceTypes.h"
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceXMLUtil.h"
@@ -42,7 +43,7 @@ namespace sw
                 (void)AppearanceXMLUtil::reportUnknownAttributes( child, SlotTableInternal::kArrSlotAttribute, report, sourceName );
                 AppearanceSlotDef slot;
                 slot._name   = AppearanceXMLUtil::readRequiredName( child, "name", report, sourceName );
-                slot._accept = AppearanceXMLUtil::readOptionalName( child, "accept" ); // 적지 않으면 슬롯 이름
+                slot._accept = XMLReadUtil::readOptionalName( child, "accept" ); // 적지 않으면 슬롯 이름
                 if ( slot._accept.empty() )
                     slot._accept = slot._name;
                 if ( slot._name.empty() )

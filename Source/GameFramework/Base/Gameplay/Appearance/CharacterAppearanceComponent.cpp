@@ -3,7 +3,9 @@
 #include "GameFramework/Base/Gameplay/Appearance/CharacterAppearanceComponent.h"
 
 #include "Core/Common/HashUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/formatString.h"
+#include "Core/Container/unordered_set.h"
 
 #include "Engine/Character/CharacterDataCache.h"
 #include "Engine/Character/Fit/CharacterMeshUtil.h"
@@ -885,23 +887,25 @@ namespace sw
         PoseModifierComponent* pModifier = getOwner() != nullptr ? getOwner()->getComponent<PoseModifierComponent>() : nullptr;
         if ( pModifier == nullptr )
             return;
-        vector<hashed_string> listBound;
+        vector<hashed_string>        listBound;
+        unordered_set<hashed_string> uniqueSetBound; // 묶은 칸 — 목록은 묶은 순서를 들고 집합은 이미 묶었는지 답한다
         for ( const SpawnedPart& spawned : _listSpawnedPart )
         {
             const ResolvedPart& part     = _state.getResolved()._listPart[spawned._partIndex];
             const bool          bRigUnit = spawned._bSocketPart == SW_TRUE && part._owner.empty() == false && part._socketSet.empty() == false;
-            if ( bRigUnit == false || AppearanceXMLUtil::containsName( listBound, part._owner ) )
+            if ( bRigUnit == false || uniqueSetBound.contains( part._owner ) )
                 continue; // 한 칸에 소켓 에셋을 가진 부품이 둘이면 소켓 테이블처럼 첫 부품이 그 칸의 이름을 갖는다
             GameObject*                       pObject = manager.resolveGameObject( spawned._object );
             const shared_ptr<const SocketSet> sockets = _socketCache.findSharedSocketSet( part._socketSet );
             if ( pObject == nullptr || sockets == nullptr )
                 continue; // 소켓 에셋을 읽지 못한 것은 소켓 테이블을 다시 만들 때 이미 알렸다
             pModifier->bindRigidUnit( part._owner, pObject, sockets );
+            uniqueSetBound.insert( part._owner );
             listBound.push_back( part._owner );
         }
         for ( const hashed_string& slot : _listRigUnit )
         {
-            if ( AppearanceXMLUtil::containsName( listBound, slot ) == false )
+            if ( uniqueSetBound.contains( slot ) == false )
                 pModifier->bindRigidUnit( slot, nullptr, nullptr );
         }
         _listRigUnit = std::move( listBound );
@@ -950,7 +954,7 @@ namespace sw
         {
             // 숨기는 칸의 부품은 몸이 보여도 숨긴다(1인칭의 머리 · 손 무기).
             const hashed_string& owner    = _state.getResolved()._listPart[spawned._partIndex]._owner;
-            const bool           bVisible = _bPartsVisible && ( owner.empty() || AppearanceXMLUtil::containsName( _listHiddenSlot, owner ) == false );
+            const bool           bVisible = _bPartsVisible && ( owner.empty() || VectorUtil::contains( _listHiddenSlot, owner ) == false );
             forEachPartMesh( manager, spawned, [bVisible]( MeshComponent& mesh )
             { mesh.setVisible( bVisible ); } );
         }

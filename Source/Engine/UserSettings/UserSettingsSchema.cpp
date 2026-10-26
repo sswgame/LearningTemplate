@@ -124,18 +124,9 @@ namespace sw
             /** @brief `a=b;c!=d` 를 읽습니다. */
             [[nodiscard]] static bool parseConditions( string_view text, UserSettingDef& inoutDef, string_view sourceName )
             {
-                bool   bOk   = true;
-                size_t start = 0;
-                while ( start <= text.size() && text.empty() == false )
+                bool bOk = true;
+                for ( const string_view part : StringUtil::split( text, ";", { ._bTrim = true, ._bDropEmpty = true } ) )
                 {
-                    size_t end = text.find( ';', start );
-                    if ( end == string_view::npos )
-                        end = text.size();
-                    const string_view part = StringUtil::trim( text.substr( start, end - start ) );
-                    start                  = end + 1;
-                    if ( part.empty() )
-                        continue;
-
                     UserSettingCondition condition;
                     size_t               operatorPos = part.find( "!=" );
                     size_t               valuePos    = operatorPos + 2;

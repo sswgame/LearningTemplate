@@ -265,7 +265,7 @@ namespace sw
         PairedAnimationDefInternal::requireNonNegative( reader, node, "exitBlend", role._exitBlendSeconds );
 
         // 앵커는 기준이라 정렬을 적지 않는다. 앵커 밖의 역할은 정렬 방식을 꼭 적는다(적지 않음 = 맞추지 않음으로 두지 않는다).
-        const bool bHasAlign = CharacterDataReader::hasAttribute( node, "align" );
+        const bool bHasAlign = node.hasAttribute( "align" );
         if ( role._bAnchor && bHasAlign )
             reader.addError( "Character.PairedAnchorHasAlign", node, "is the anchor and must not have 'align'" );
         else if ( role._bAnchor == false )
@@ -291,7 +291,7 @@ namespace sw
         {
             for ( const utf8* pName : PairedAnimationDefInternal::kArrAlignOnlyAttribute )
             {
-                if ( CharacterDataReader::hasAttribute( node, pName ) )
+                if ( node.hasAttribute( pName ) )
                     reader.addError( "Character.PairedAlignOnlyAttribute", node, string( "has '" ) + pName + "' but does not align (align is snap or warp)" );
             }
         }
@@ -303,7 +303,7 @@ namespace sw
             if ( role._warpEndSeconds <= role._enterBlendSeconds )
                 reader.addError( "Character.PairedWarpEndOrder", node, "attribute 'warpEnd' must be after 'enterBlend'" );
         }
-        else if ( CharacterDataReader::hasAttribute( node, "warpEnd" ) )
+        else if ( node.hasAttribute( "warpEnd" ) )
         {
             reader.addError( "Character.PairedWarpEndNotWarp", node, "has 'warpEnd' but align is not warp" );
         }

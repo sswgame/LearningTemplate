@@ -8,6 +8,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Serialization/BitStream.h"
+#include "Core/String/HexUtil.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionCore.h"
@@ -85,15 +86,7 @@ namespace test
         /** @brief 바이트를 소문자 16진 글로 씁니다. 저장소 레코드의 바이트가 바뀌지 않았는지 골든과 비교할 때 씁니다. */
         static sw::string toHexString( const sw::vector<uint8>& bytes )
         {
-            static constexpr const utf8* kDigits = "0123456789abcdef";
-            sw::string                   text;
-            text.reserve( bytes.size() * 2 );
-            for ( const uint8 byte : bytes )
-            {
-                text.push_back( kDigits[byte >> 4] );
-                text.push_back( kDigits[byte & 0x0F] );
-            }
-            return text;
+            return sw::HexUtil::encodeBytes( bytes.data(), bytes.size() );
         }
     };
 } // namespace test

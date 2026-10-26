@@ -7,6 +7,7 @@
 #include "Core/Common/PlatformOsHeaders.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/String/HexUtil.h"
 #include "Core/String/StringBuilder.h"
 
 #if defined( SW_PLATFORM_LINUX )
@@ -21,12 +22,7 @@ namespace sw
         {
             static void appendHex( StringBuilder<constant::kMaxBuffer256>& text, const uint8* pBytes, size_t count, bool bUpper )
             {
-                for ( size_t index = 0; index < count; ++index )
-                {
-                    utf8 arrPair[3] = {};
-                    HexDigitUtil::writeDigits( arrPair, pBytes[index], 2, bUpper ? HexCase::Upper : HexCase::Lower );
-                    text.append( arrPair );
-                }
+                text.append( HexUtil::encodeBytes( pBytes, count, bUpper ? HexCase::Upper : HexCase::Lower ) );
             }
 
 #if defined( SW_PLATFORM_WINDOWS )

@@ -7,6 +7,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Network/DebugReplyLine.h"
+#include "Core/String/HexUtil.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Common/StateHashBuilder.h"
@@ -38,7 +39,12 @@ namespace sw
                 return builder.getHash();
             }
 
-            static constexpr const utf8* kUpperHexDigit = "0123456789ABCDEF";
+            struct Entry
+            {
+                string _name;
+                uint8  _bActive{ 0 };
+                float3 _position{};
+            };
 
             /** @brief 줄 구분 · 로그 꼬리 구분에 쓰는 글자와 제어 문자, '%' 자신은 `%XX` 로 씁니다. */
             static bool needsEscape( utf8 ch )
@@ -128,13 +134,9 @@ namespace sw
 
     void SceneStateHash::writeObjectReport( const vector<SceneObjectHash>& listObject, string& outText )
     {
-        constexpr const utf8* kHexDigit = "0123456789abcdef";
         for ( const SceneObjectHash& object : listObject )
         {
-            for ( int32 nibble = 15; nibble >= 0; --nibble )
-            {
-                outText += kHexDigit[( object._hash >> ( nibble * 4 ) ) & 0xF];
-            }
+            HexUtil::appendUint64( outText, object._hash );
             outText += ' ';
             outText += object._name;
             outText += '\n';
@@ -213,10 +215,7 @@ namespace sw
         {
             if ( index > 0 )
                 outLine += ',';
-            for ( int32 nibble = 15; nibble >= 0; --nibble )
-            {
-                outLine += "0123456789abcdef"[( listObject[index]._hash >> ( nibble * 4 ) ) & 0xF];
-            }
+            HexUtil::appendUint64( outLine, listObject[index]._hash );
             outLine += ':';
             for ( const utf8 ch : listObject[index]._name )
             {
@@ -224,8 +223,7 @@ namespace sw
                 {
                     const uint8 code = static_cast<uint8>( ch );
                     outLine += '%';
-                    outLine += SceneStateHashInternal::kUpperHexDigit[code >> 4];
-                    outLine += SceneStateHashInternal::kUpperHexDigit[code & 0xF];
+                    HexUtil::appendBytes( outLine, &code, 1, HexCase::Upper );
                 }
                 else
                 {
@@ -259,24 +257,18 @@ namespace sw
             return false; // 쓰는 쪽이 만들 수 없는 길이 — 잘린 줄이거나 다른 글이다
         if ( body != "-" )
         {
-            size_t itemStart = 0;
-            while ( itemStart <= body.size() )
+            for ( const string_view item : StringUtil::split( body, "," ) )
             {
-                size_t itemEnd = body.find( ',', itemStart );
-                if ( itemEnd == string_view::npos )
-                    itemEnd = body.size();
-                const string_view item  = body.substr( itemStart, itemEnd - itemStart );
-                const size_t      colon = item.find( ':' );
-                SceneObjectHash   object;
-                const bool        bHasHash = colon == 16 && StringUtil::parseUint64( item.substr( 0, colon ), object._hash, 16 );
-                const bool        bHasName = bHasHash && colon + 1 < item.size() && SceneStateHashInternal::unescapeName( item.substr( colon + 1 ), object._name );
+                const size_t    colon = item.find( ':' );
+                SceneObjectHash object;
+                const bool      bHasHash = colon == 16 && StringUtil::parseUint64( item.substr( 0, colon ), object._hash, 16 );
+                const bool      bHasName = bHasHash && colon + 1 < item.size() && SceneStateHashInternal::unescapeName( item.substr( colon + 1 ), object._name );
                 if ( bHasName == false )
                 {
                     outListObject.clear();
                     return false;
                 }
                 outListObject.push_back( std::move( object ) );
-                itemStart = itemEnd + 1;
             }
         }
         outTick = tick;
@@ -385,17 +377,13 @@ namespace sw
 
     void StateHashHistory::writeReport( const vector<StateHashSample>& listSample, string& outText )
     {
-        constexpr const utf8* kHexDigit = "0123456789abcdef";
         for ( const StateHashSample& sample : listSample )
         {
             utf8                       arrBuffer[constant::kMaxBuffer32];
             const std::to_chars_result result = std::to_chars( arrBuffer, arrBuffer + sizeof( arrBuffer ), sample._tick );
             outText.append( arrBuffer, result.ptr );
             outText += ' ';
-            for ( int32 nibble = 15; nibble >= 0; --nibble )
-            {
-                outText += kHexDigit[( sample._hash >> ( nibble * 4 ) ) & 0xF];
-            }
+            HexUtil::appendUint64( outText, sample._hash );
             outText += '\n';
         }
     }
@@ -442,24 +430,18 @@ namespace sw
             return false; // 쓰는 쪽이 만들 수 없는 길이 — 잘린 줄이거나 다른 글이다
         if ( body == "-" )
             return true;
-        size_t itemStart = 0;
-        while ( itemStart <= body.size() )
+        for ( const string_view item : StringUtil::split( body, "," ) )
         {
-            size_t itemEnd = body.find( ',', itemStart );
-            if ( itemEnd == string_view::npos )
-                itemEnd = body.size();
-            const string_view item  = body.substr( itemStart, itemEnd - itemStart );
-            const size_t      colon = item.find( ':' );
-            StateHashSample   sample;
-            const bool        bHasTick = colon != string_view::npos && StringUtil::parseUint64( item.substr( 0, colon ), sample._tick );
-            const bool        bHasHash = bHasTick && StringUtil::parseUint64( item.substr( colon + 1 ), sample._hash, 16 );
+            const size_t    colon = item.find( ':' );
+            StateHashSample sample;
+            const bool      bHasTick = colon != string_view::npos && StringUtil::parseUint64( item.substr( 0, colon ), sample._tick );
+            const bool      bHasHash = bHasTick && StringUtil::parseUint64( item.substr( colon + 1 ), sample._hash, 16 );
             if ( bHasHash == false )
             {
                 outListSample.clear();
                 return false;
             }
             outListSample.push_back( sample );
-            itemStart = itemEnd + 1;
         }
         return true;
     }

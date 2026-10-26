@@ -94,8 +94,8 @@ namespace sw
                     reportMisplacedAssetAttributes( child, inoutPart._kind, report, sourceName, visualID );
                     AppearancePartVariantDef variant;
                     variant._name     = AppearanceXMLUtil::readRequiredName( child, "name", report, sourceName );
-                    variant._asset    = AppearanceXMLUtil::readOptionalName( child, getAssetAttribute( inoutPart._kind ) );
-                    variant._material = AppearanceXMLUtil::readOptionalName( child, "material" );
+                    variant._asset    = XMLReadUtil::readOptionalName( child, getAssetAttribute( inoutPart._kind ) );
+                    variant._material = XMLReadUtil::readOptionalName( child, "material" );
                     if ( variant._name.empty() || inoutPart.findVariant( variant._name ) != nullptr )
                         report.addErrorWithID( "Appearance.VariantNameInvalid", "%#: visual '%#' part '%#' has a variant without a name or a duplicate '%#'", sourceName, visualID.c_str(), inoutPart._name.c_str(), variant._name.c_str() );
                     else
@@ -159,23 +159,23 @@ namespace sw
                 }
                 reportMisplacedAssetAttributes( node, part._kind, report, sourceName, inoutVisual._id );
                 const utf8* pAssetAttribute = getAssetAttribute( part._kind );
-                part._asset                 = pAssetAttribute != nullptr ? AppearanceXMLUtil::readOptionalName( node, pAssetAttribute ) : hashed_string{};
-                part._material              = AppearanceXMLUtil::readOptionalName( node, "material" );
-                part._skeleton              = AppearanceXMLUtil::readOptionalName( node, "skeleton" );
-                part._socketSet             = AppearanceXMLUtil::readOptionalName( node, "sockets" );
-                part._rig                   = AppearanceXMLUtil::readOptionalName( node, "rig" );
-                part._breakStage            = AppearanceXMLUtil::readOptionalName( node, "breakStage" );
+                part._asset                 = pAssetAttribute != nullptr ? XMLReadUtil::readOptionalName( node, pAssetAttribute ) : hashed_string{};
+                part._material              = XMLReadUtil::readOptionalName( node, "material" );
+                part._skeleton              = XMLReadUtil::readOptionalName( node, "skeleton" );
+                part._socketSet             = XMLReadUtil::readOptionalName( node, "sockets" );
+                part._rig                   = XMLReadUtil::readOptionalName( node, "rig" );
+                part._breakStage            = XMLReadUtil::readOptionalName( node, "breakStage" );
                 // 자기 리그는 자기 뼈를 움직인다 — 스킨드 부품이고 몸과 다른 자기 스켈레톤을 적어야 한다(몸 스켈레톤을 빌리면 몸 리더 포즈와 다툰다).
                 const bool bRigWithoutOwnSkeleton = part._rig.empty() == false && ( part._kind != AppearancePartKind::Skinned || part._skeleton.empty() );
                 if ( bRigWithoutOwnSkeleton )
                     report.addErrorWithID( "Appearance.PartRigNeedsSkeleton", "%#: visual '%#' part '%#' has a 'rig' but is not a Skinned part with its own 'skeleton'", sourceName, inoutVisual._id.c_str(), part._name.c_str() );
-                part._fit                  = AppearanceXMLUtil::readOptionalName( node, "fit" );
-                part._fitTables            = AppearanceXMLUtil::readOptionalName( node, "fitTables" );
+                part._fit                  = XMLReadUtil::readOptionalName( node, "fit" );
+                part._fitTables            = XMLReadUtil::readOptionalName( node, "fitTables" );
                 const bool bFitOnRigidPart = ( part._fit.empty() == false || part._fitTables.empty() == false ) && part._kind != AppearancePartKind::Skinned;
                 if ( bFitOnRigidPart )
                     report.addErrorWithID( "Appearance.PartFitNotAllowed", "%#: visual '%#' part '%#' of kind %# cannot have 'fit' or 'fitTables' (only Skinned parts are fitted)", sourceName, inoutVisual._id.c_str(),
                                            part._name.c_str(), getEnumName( part._kind ) );
-                part._bodyShapes = AppearanceXMLUtil::readOptionalName( node, "bodyShapes" );
+                part._bodyShapes = XMLReadUtil::readOptionalName( node, "bodyShapes" );
                 if ( part._bodyShapes.empty() == false && part._kind != AppearancePartKind::Skinned )
                     report.addErrorWithID( "Appearance.PartFitNotAllowed", "%#: visual '%#' part '%#' of kind %# cannot have 'bodyShapes' (only the Skinned body has body shape axes)", sourceName, inoutVisual._id.c_str(),
                                            part._name.c_str(), getEnumName( part._kind ) );
@@ -275,7 +275,7 @@ namespace sw
                     {
                         (void)AppearanceXMLUtil::reportUnknownAttributes( child, kArrStageMaterialAttribute, report, sourceName );
                         AppearanceMaterialValueDef value;
-                        value._part = AppearanceXMLUtil::readOptionalName( child, "part" );
+                        value._part = XMLReadUtil::readOptionalName( child, "part" );
                         value._name = AppearanceXMLUtil::readRequiredName( child, "name", report, sourceName );
                         AppearanceXMLUtil::readRequiredShaderValue( child, "value", value._value, report, sourceName );
                         if ( value._part.empty() || hasPart( inoutVisual, value._part, report, sourceName, "damage <Material>" ) )
@@ -292,9 +292,9 @@ namespace sw
             static void readVisual( const XMLNode& node, ItemVisualDef& outVisual, AppearanceLoadReport& report, string_view sourceName )
             {
                 (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrVisualAttribute, report, sourceName );
-                outVisual._occupancy     = AppearanceXMLUtil::readOptionalName( node, "occupancy" );
-                outVisual._customization = AppearanceXMLUtil::readOptionalName( node, "customization" );
-                outVisual._defaultState  = AppearanceXMLUtil::readOptionalName( node, "defaultState" );
+                outVisual._occupancy     = XMLReadUtil::readOptionalName( node, "occupancy" );
+                outVisual._customization = XMLReadUtil::readOptionalName( node, "customization" );
+                outVisual._defaultState  = XMLReadUtil::readOptionalName( node, "defaultState" );
                 AppearanceXMLUtil::readTags( node, "tags", outVisual._tags );
                 // 부품을 먼저 모두 읽는다. 상태와 피해 단계가 파일 안의 순서와 상관없이 부품을 가리킬 수 있게 하기 위해서다.
                 for ( XMLNode child = node.findChild( "Part" ); child; child = child.findNextSibling( "Part" ) )

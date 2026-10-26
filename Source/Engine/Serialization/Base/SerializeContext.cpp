@@ -312,19 +312,15 @@ namespace sw
             template <typename TElem, int32 kCount>
             [[nodiscard]] static bool readNumberList( string_view strView, TElem* pOut )
             {
-                TElem  arrParsed[kCount]{};
-                size_t start{ 0 };
+                // 칸 수가 정확히 kCount 가 아니면(남거나 모자라면) 거절한다.
+                const vector<string_view> listToken = StringUtil::split( strView, "," );
+                if ( listToken.size() != static_cast<size_t>( kCount ) )
+                    return false;
+                TElem arrParsed[kCount]{};
                 for ( int32 axisIndex = 0; axisIndex < kCount; ++axisIndex )
                 {
-                    const size_t      sep   = strView.find( ',', start );
-                    const string_view token = strView.substr( start, sep == string_view::npos ? string_view::npos : sep - start );
-                    if ( parseScalarValue<TElem>( token, arrParsed[axisIndex] ) == false )
+                    if ( parseScalarValue<TElem>( listToken[axisIndex], arrParsed[axisIndex] ) == false )
                         return false;
-                    const bool isLast = axisIndex == kCount - 1;
-                    // 마지막 칸 뒤에 쉼표가 더 있으면(칸이 남으면) 거절하고, 마지막 전에 쉼표가 없으면(칸이 모자라면) 거절한다.
-                    if ( ( sep == string_view::npos ) != isLast )
-                        return false;
-                    start = sep + 1;
                 }
                 for ( int32 axisIndex = 0; axisIndex < kCount; ++axisIndex )
                 {

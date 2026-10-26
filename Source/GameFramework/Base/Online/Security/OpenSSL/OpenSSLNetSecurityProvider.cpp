@@ -4,6 +4,7 @@
 
 #include "Core/Container/vector.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/HexUtil.h"
 
 #include <cstring>
 #include <openssl/bio.h>
@@ -50,19 +51,6 @@ namespace sw
 
             static int32 toOpenSSLVersion( TLSVersion version ) { return version == TLSVersion::TLS12 ? TLS1_2_VERSION : TLS1_3_VERSION; }
 
-            static string toHex( const uint8* pData, int32 size )
-            {
-                static constexpr utf8 kDigit[] = "0123456789abcdef";
-                string                text;
-                text.reserve( static_cast<size_t>( size ) * 2 );
-                for ( int32 index = 0; index < size; ++index )
-                {
-                    text.push_back( kDigit[pData[index] >> 4] );
-                    text.push_back( kDigit[pData[index] & 0x0F] );
-                }
-                return text;
-            }
-
             /** @brief PEM 의 인증서를 모두 읽습니다(체인). 없으면 빈 목록. 받은 X509 는 부르는 쪽이 X509_free. */
             static vector<X509*> readCertificates( const string& pem )
             {
@@ -86,7 +74,7 @@ namespace sw
                 uint32 digestSize = 0;
                 if ( X509_digest( pCertificate, EVP_sha256(), arrDigest, &digestSize ) != 1 )
                     return false;
-                outHex = toHex( arrDigest, static_cast<int32>( digestSize ) );
+                outHex = HexUtil::encodeBytes( arrDigest, static_cast<size_t>( digestSize ) );
                 return true;
             }
 

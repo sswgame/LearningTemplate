@@ -5,6 +5,7 @@
 #include "Core/Common/HashUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Container/formatString.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Reflection/EnumName.h"
@@ -135,10 +136,15 @@ namespace sw
                 out._listMaterialValue.push_back( entry );
             }
 
-            static void addHiddenRegion( ResolvedAppearance& out, const hashed_string& region )
+            /** @brief 숨길 영역을 더합니다. 중복은 해석 끝에서 한 번 거른다(`removeRepeatedHiddenRegions`). */
+            static void addHiddenRegion( ResolvedAppearance& out, const hashed_string& region ) { out._listHiddenRegion.push_back( region ); }
+
+            /** @brief 숨길 영역의 중복을 처음 나온 자리를 지켜 지웁니다 — 순서가 해시에 들어간다. */
+            static void removeRepeatedHiddenRegions( ResolvedAppearance& out )
             {
-                if ( AppearanceXMLUtil::containsName( out._listHiddenRegion, region ) == false )
-                    out._listHiddenRegion.push_back( region );
+                unordered_set<hashed_string> uniqueSetSeen;
+                VectorUtil::removeIf( out._listHiddenRegion, [&uniqueSetSeen]( const hashed_string& region )
+                { return uniqueSetSeen.insert( region ).second == false; } );
             }
 
             static int32 findEntry( const vector<Entry>& listEntry, const hashed_string& owner, bool bVisibleOnly )
@@ -293,12 +299,12 @@ namespace sw
                     }
                     case AppearanceRuleConditionKind::BodyShape:
                     {
-                        bMet = AppearanceXMLUtil::containsName( condition._listName, spec._bodyShape );
+                        bMet = VectorUtil::contains( condition._listName, spec._bodyShape );
                         break;
                     }
                     case AppearanceRuleConditionKind::BodyType:
                     {
-                        bMet = AppearanceXMLUtil::containsName( condition._listName, spec._bodyType );
+                        bMet = VectorUtil::contains( condition._listName, spec._bodyType );
                         break;
                     }
                 }
@@ -362,7 +368,7 @@ namespace sw
             static bool emitDetachedPart( const ItemVisualDef& visual, const Entry& entry, const AppearancePartDef& part, const AppearancePlacement& placement, int32 stageIndex,
                                           ResolvedAppearance& out )
             {
-                const bool  bHitOff    = entry._pRequest != nullptr && AppearanceXMLUtil::containsName( entry._pRequest->_listDetachedPart, part._name );
+                const bool  bHitOff    = entry._pRequest != nullptr && VectorUtil::contains( entry._pRequest->_listDetachedPart, part._name );
                 const int32 breakIndex = part._breakStage.empty() ? -1 : visual.findDamageStageIndex( part._breakStage );
                 const bool  bStageOff  = breakIndex >= 0 && stageIndex >= breakIndex;
                 if ( bHitOff && part._bBreakable == SW_FALSE )
@@ -478,7 +484,7 @@ namespace sw
                 const Decision*                 pRuleVariant = findDecision( listDecision, AppearanceRuleActionKind::ChooseVariant, entry._owner, hashed_string{} );
                 for ( const AppearancePartDef& part : visual._listPart )
                 {
-                    if ( pState != nullptr && AppearanceXMLUtil::containsName( pState->_listHiddenPart, part._name ) )
+                    if ( pState != nullptr && VectorUtil::contains( pState->_listHiddenPart, part._name ) )
                         continue;
                     const AppearancePlacement placement = findPartPlacement( pState, part );
                     if ( emitDetachedPart( visual, entry, part, placement, stageIndex, out ) )
@@ -767,7 +773,7 @@ namespace sw
 
     bool ResolvedAppearance::isRegionHidden( const hashed_string& region ) const
     {
-        return AppearanceXMLUtil::containsName( _listHiddenRegion, region );
+        return VectorUtil::contains( _listHiddenRegion, region );
     }
 
     const ResolvedMorph* ResolvedAppearance::findMorph( const hashed_string& owner, const hashed_string& name ) const
@@ -818,6 +824,7 @@ namespace sw
             Internal::emitEntry( database, listEntry[index], listEntry, static_cast<int32>( index ), listDecision, outResolved );
         }
         Internal::emitDecisions( spec, listDecision, outResolved );
+        Internal::removeRepeatedHiddenRegions( outResolved );
         outResolved._meshHash = computeMeshHash( outResolved );
         outResolved._hash     = computeHash( outResolved );
     }

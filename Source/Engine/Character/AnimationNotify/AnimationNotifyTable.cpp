@@ -227,7 +227,7 @@ namespace sw
         // 선언한 인자는 모두 채운다 — 적지 않은 선택 인자는 선언의 "적지 않음" 값이고, 처리기는 대신할 값을 따로 들지 않는다.
         for ( const AnimationNotifyParamDef& def : listDef )
         {
-            if ( CharacterDataReader::hasAttribute( node, def._pName ) )
+            if ( node.hasAttribute( def._pName ) )
                 entry._listParam.push_back( AnimationNotifyTableInternal::readParam( node, def, reader ) );
             else if ( def._bRequired )
                 reader.addError( "Character.NotifyArgumentMissing", node, string( "needs argument '" ) + def._pName + "' for handler '" + entry._handlerName.c_str() + "'" );

@@ -3,6 +3,8 @@
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceSelection.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/Serialization/BitStream.h"
 #include "Core/String/Base64Util.h"
 
@@ -51,10 +53,19 @@ namespace sw
                 return makePlaceholder( hash );
             }
 
-            static void addUnique( vector<hashed_string>& inoutList, const hashed_string& name )
+            /** @brief 빈 이름이 아니면 더합니다. 중복은 다 모은 뒤 `removeRepeatedNames` 가 한 번 거른다. */
+            static void addName( vector<hashed_string>& inoutList, const hashed_string& name )
             {
-                if ( name.empty() == false && AppearanceXMLUtil::containsName( inoutList, name ) == false )
+                if ( name.empty() == false )
                     inoutList.push_back( name );
+            }
+
+            /** @brief 이름의 중복을 처음 나온 자리를 지켜 지웁니다. */
+            static void removeRepeatedNames( vector<hashed_string>& inoutList )
+            {
+                unordered_set<hashed_string> uniqueSetSeen;
+                VectorUtil::removeIf( inoutList, [&uniqueSetSeen]( const hashed_string& name )
+                { return uniqueSetSeen.insert( name ).second == false; } );
             }
 
             /** @brief 몸 종류, 체형, 얼굴은 열린 이름이므로 데이터에 나오는 모든 이름을 후보로 모은다. */
@@ -64,24 +75,25 @@ namespace sw
                 {
                     for ( const hashed_string& name : preset._listBodyType )
                     {
-                        addUnique( outListName, name );
+                        addName( outListName, name );
                     }
                     for ( const hashed_string& name : preset._listBodyShape )
                     {
-                        addUnique( outListName, name );
+                        addName( outListName, name );
                     }
                     for ( const hashed_string& name : preset._listFace )
                     {
-                        addUnique( outListName, name );
+                        addName( outListName, name );
                     }
                 }
                 for ( const EquipSetDef& set : database.getSets().getSets() )
                 {
                     for ( const EquipSetVariantDef& variant : set._listVariant )
                     {
-                        addUnique( outListName, variant._bodyType );
+                        addName( outListName, variant._bodyType );
                     }
                 }
+                removeRepeatedNames( outListName );
             }
 
             static const ItemVisualDef* findShownVisual( const AppearanceDatabase& database, const hashed_string& itemID, const hashed_string& visibleVisual )
@@ -245,7 +257,7 @@ namespace sw
 {
     bool AppearanceSelection::includesCategory( const hashed_string& category ) const
     {
-        return _listCategory.empty() || AppearanceXMLUtil::containsName( _listCategory, category );
+        return _listCategory.empty() || VectorUtil::contains( _listCategory, category );
     }
 
     void AppearanceSelectionUtil::captureSelection( const CharacterAppearanceSpec& spec, AppearanceSelection& outSelection )
@@ -503,9 +515,10 @@ namespace sw
             listSchemaID.push_back( schema._id );
             for ( const CustomizationParamDef& param : schema._listParameter )
             {
-                Internal::addUnique( listCategory, param._category );
+                Internal::addName( listCategory, param._category );
             }
         }
+        Internal::removeRepeatedNames( listCategory );
         vector<hashed_string> listBodyName;
         Internal::collectBodyNames( database, listBodyName );
 

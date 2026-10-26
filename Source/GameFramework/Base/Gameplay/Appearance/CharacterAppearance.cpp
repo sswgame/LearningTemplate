@@ -116,7 +116,7 @@ namespace sw
             static void readEquip( const XMLNode& node, CharacterAppearanceDef& inoutDef, AppearanceLoadReport& report, string_view sourceName )
             {
                 (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrEquipAttribute, report, sourceName );
-                const hashed_string setID = AppearanceXMLUtil::readOptionalName( node, "set" ); // 세트 또는 슬롯 중 하나라 아래에서 확인한다
+                const hashed_string setID = XMLReadUtil::readOptionalName( node, "set" ); // 세트 또는 슬롯 중 하나라 아래에서 확인한다
                 if ( setID.empty() == false )
                 {
                     if ( node.findAttribute( "slot" ) != nullptr )
@@ -125,12 +125,12 @@ namespace sw
                     return;
                 }
                 CharacterAppearanceSlotDef slot;
-                slot._slot = AppearanceXMLUtil::readOptionalName( node, "slot" ); // 세트가 없으면 필수 — 아래에서 확인한다
+                slot._slot = XMLReadUtil::readOptionalName( node, "slot" ); // 세트가 없으면 필수 — 아래에서 확인한다
                 AppearanceXMLUtil::readNameList( node, "item", slot._listItem );
                 AppearanceXMLUtil::readNameList( node, "items", slot._listItem );
                 slot._bClear        = node.findAttribute( "item" ) != nullptr && slot._listItem.empty() ? SW_TRUE : SW_FALSE;
-                slot._visibleVisual = AppearanceXMLUtil::readOptionalName( node, "visible" );
-                slot._state         = AppearanceXMLUtil::readOptionalName( node, "state" );
+                slot._visibleVisual = XMLReadUtil::readOptionalName( node, "visible" );
+                slot._state         = XMLReadUtil::readOptionalName( node, "state" );
                 AppearanceXMLUtil::readOptionalFloat( node, "damage", 0.0f, 1.0f, slot._damage, report, sourceName );
                 for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
                 {
@@ -158,8 +158,8 @@ namespace sw
             static void readPreset( const XMLNode& node, CharacterAppearanceDef& outDef, AppearanceLoadReport& report, string_view sourceName )
             {
                 (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrPresetAttribute, report, sourceName );
-                outDef._parent = AppearanceXMLUtil::readOptionalName( node, "parent" );
-                outDef._schema = AppearanceXMLUtil::readOptionalName( node, "schema" ); // 부모에서 이어받을 수 있다
+                outDef._parent = XMLReadUtil::readOptionalName( node, "parent" );
+                outDef._schema = XMLReadUtil::readOptionalName( node, "schema" ); // 부모에서 이어받을 수 있다
                 AppearanceXMLUtil::readNameList( node, "bodyType", outDef._listBodyType );
                 AppearanceXMLUtil::readNameList( node, "bodyShape", outDef._listBodyShape );
                 AppearanceXMLUtil::readNameList( node, "face", outDef._listFace );
