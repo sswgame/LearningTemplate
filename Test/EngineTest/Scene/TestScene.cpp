@@ -2151,8 +2151,8 @@ SW_TEST_CASE( SceneTest, PreviewScenesTickByTheirOwnPolicy )
     SW_EXPECT_TRUE( pPlaying->getObjectManager()->hasBegunPlay() );
 
     // 세 창이 모두 그려지는 프레임이다 — 틱 여부는 정책(외부 틱)과 이 프레임 입력이 정한다.
-    const sw::uint32                             arrDrawnKey[] = { manager.getPreviewSceneKey( pTicking ), manager.getPreviewSceneKey( pStill ), manager.getPreviewSceneKey( pPlaying ) };
-    const sw::vector_reference<const sw::uint32> listDrawnKey( arrDrawnKey );
+    const uint32                             arrDrawnKey[] = { manager.getPreviewSceneKey( pTicking ), manager.getPreviewSceneKey( pStill ), manager.getPreviewSceneKey( pPlaying ) };
+    const sw::vector_reference<const uint32> listDrawnKey( arrDrawnKey );
 
     // 미리보기 틱만 부르면 활성 씬은 서 있다(에디터 정지 중에도 창의 월드는 돈다).
     manager.updatePreviewScenes( 0.016f, listDrawnKey );
@@ -2252,8 +2252,8 @@ SW_TEST_CASE( SceneTest, PreviewSceneTickScalesDeltaByPolicy )
     SW_ASSERT_NOT_NULL( pHalfMesh );
     SW_ASSERT_NOT_NULL( pFrozenMesh );
 
-    const sw::uint32 arrDrawnKey[] = { manager.getPreviewSceneKey( pHalf ), manager.getPreviewSceneKey( pFrozen ) };
-    manager.updatePreviewScenes( 0.02f, sw::vector_reference<const sw::uint32>( arrDrawnKey ) );
+    const uint32 arrDrawnKey[] = { manager.getPreviewSceneKey( pHalf ), manager.getPreviewSceneKey( pFrozen ) };
+    manager.updatePreviewScenes( 0.02f, sw::vector_reference<const uint32>( arrDrawnKey ) );
     SW_EXPECT_EQUAL( 1, pHalfMesh->_tickCount );
     SW_EXPECT_NEAR_EQUAL( 0.01f, pHalfMesh->_lastDeltaTime, 1e-6f );
     // 배율 0 이면 틱은 돌되 시간은 멈춘다.
@@ -2278,18 +2278,18 @@ SW_TEST_CASE( SceneTest, HiddenPreviewSceneFreezesUntilDrawnAgain )
     auto* pMesh = pPreview->getObjectManager()->createGameObject( sw::hashed_string( "A" ) )->addComponent<sw::MockMeshComponent>();
     SW_ASSERT_NOT_NULL( pMesh );
 
-    const sw::uint32 arrDrawnKey[] = { manager.getPreviewSceneKey( pPreview ) };
-    manager.updatePreviewScenes( 0.016f, sw::vector_reference<const sw::uint32>( arrDrawnKey ) );
+    const uint32 arrDrawnKey[] = { manager.getPreviewSceneKey( pPreview ) };
+    manager.updatePreviewScenes( 0.016f, sw::vector_reference<const uint32>( arrDrawnKey ) );
     SW_EXPECT_EQUAL( 1, pMesh->_tickCount );
 
     // 숨은 동안(요청 없음) 틱도 시간도 없다.
     manager.updatePreviewScenes( 0.016f, {} );
     manager.updatePreviewScenes( 0.016f, {} );
     SW_EXPECT_EQUAL( 1, pMesh->_tickCount );
-    SW_EXPECT_EQUAL( sw::uint64{ 1 }, manager.getPreviewScenes()[0]._tickCount );
+    SW_EXPECT_EQUAL( uint64{ 1 }, manager.getPreviewScenes()[0]._tickCount );
 
     // 다시 보이면 그 프레임의 델타 하나만 받는다(숨었던 두 프레임을 몰아 받지 않는다).
-    manager.updatePreviewScenes( 0.016f, sw::vector_reference<const sw::uint32>( arrDrawnKey ) );
+    manager.updatePreviewScenes( 0.016f, sw::vector_reference<const uint32>( arrDrawnKey ) );
     SW_EXPECT_EQUAL( 2, pMesh->_tickCount );
     SW_EXPECT_NEAR_EQUAL( 0.016f, pMesh->_lastDeltaTime, 1e-6f );
 

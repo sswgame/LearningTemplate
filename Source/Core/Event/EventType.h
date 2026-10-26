@@ -20,14 +20,9 @@ namespace sw
     /** @brief EventDispatcher 의 키로 쓰는 이벤트 타입 식별자입니다. */
     using EventTypeID = uint32;
 
-    /**
-     * @brief 엔진 예약 이벤트 ID(1..255)입니다. 0 은 무효입니다.
-     * @details 번호가 겹치지 않도록 여기 한곳에 적습니다. 이벤트 **타입**은 그 개념이 사는 층에 둡니다 — 창 이벤트는
-     *          `Engine/Window/WindowEvents.h` 입니다.
-     */
-    inline constexpr EventTypeID kEventWindowActivate = 1;
-    inline constexpr EventTypeID kEventWindowClose    = 2;
-    inline constexpr EventTypeID kEventWindowResize   = 3;
+    // 엔진 예약 구간(1..255, 0 은 무효)에는 지금 이벤트가 없다. 창 이벤트 셋은 발행하는 곳이 없어 지웠다 — 창의 최소화 · 포커스는
+    // `IWindow` 가 들고, 크기는 `IWindow::setResizeCallback` 이 알린다. 고정 ID 가 필요해지면 번호가 겹치지 않게 이 자리에 상수를 두고
+    // `SW_REGISTER_EVENT_ID` 로 등록한다.
 
     /** @brief 컴파일 타임 FNV-1a 32비트 해시로 게임플레이 이벤트 ID 를 만듭니다. StringUtil 과 같은 상수 · 알고리즘입니다. */
     constexpr EventTypeID eventTypeIDFromString( const utf8* pStr ) noexcept
@@ -60,9 +55,6 @@ namespace sw
 private:                                                      \
     static constexpr sw::EventTypeID kType = ( eventTypeID ); \
     friend class sw::EventDispatcher
-
-/** @brief 엔진 이벤트를 등록합니다(kEvent##Name 상수를 씁니다). */
-#define SW_REGISTER_ENGINE_EVENT( Name ) SW_REGISTER_EVENT_ID( sw::kEvent##Name )
 
 /** @brief 타입 이름 문자열의 해시로 게임플레이 이벤트를 등록합니다. */
 #define SW_DECLARE_GAMEPLAY_EVENT( TypeName ) SW_REGISTER_EVENT_ID( sw::eventTypeIDFromString( #TypeName ) )
