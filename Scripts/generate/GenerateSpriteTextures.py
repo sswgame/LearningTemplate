@@ -16,7 +16,6 @@
 from __future__ import annotations
 
 import argparse
-import json
 import struct
 import sys
 from pathlib import Path
@@ -110,10 +109,36 @@ def makeMissingTextureInternal() -> tuple[int, int, bytearray]:
     return kMissingTextureSize, kMissingTextureSize, pixels
 
 
+#: 목록 칸 이름 → 원소 요소 이름(`SpriteClipAsset` 의 PROPERTY 목록 원소 타입).
+kListItemTag: dict[str, str] = {"_listFrame": "SpriteClipFrame", "_listAnimation": "SpriteClipAnimation"}
+
+
+def appendXmlElementInternal(listLine: list[str], tag: str, fields: dict, depth: int) -> None:
+    """엔진 XML 직렬화와 같은 모양의 요소 하나를 줄로 더합니다 — 스칼라 칸은 속성(PROPERTY 순서), 목록 칸은 자식 요소, 들여쓰기는 탭, 빈 요소는 ` />`."""
+    indent = "\t" * depth
+    attributes = "".join(f' {key}="{value}"' for key, value in fields.items() if not isinstance(value, list))
+    listChild = [(key, value) for key, value in fields.items() if isinstance(value, list)]
+    if not listChild:
+        listLine.append(f"{indent}<{tag}{attributes} />")
+        return
+    listLine.append(f"{indent}<{tag}{attributes}>")
+    for key, listItem in listChild:
+        if not listItem:
+            listLine.append(f"{indent}\t<{key} />")
+            continue
+        listLine.append(f"{indent}\t<{key}>")
+        for item in listItem:
+            appendXmlElementInternal(listLine, kListItemTag[key], item, depth + 2)
+        listLine.append(f"{indent}\t</{key}>")
+    listLine.append(f"{indent}</{tag}>")
+
+
 def makeClipText(atlasPath: str, listFrame: list, listAnimation: list) -> str:
-    """`SpriteClipAsset::toJSON` 과 같은 키 · 순서의 클립 글을 만듭니다(PROPERTY 순서, 들여쓰기 2). 아틀라스 크기는 테두리가 없어 0 입니다."""
+    """`SpriteClipAsset` 의 XML 직렬화와 같은 칸 · 순서의 클립 글(`.sprite.xml`)을 만듭니다. 아틀라스 크기는 테두리가 없어 0 입니다. 끝은 줄바꿈 하나다."""
     clip = {"_atlasPath": atlasPath, "_atlasPixelSize": formatFloat2Internal(0, 0), "_listFrame": listFrame, "_listKey": [], "_listAnimation": listAnimation}
-    return json.dumps(clip, indent=2)  # 엔진이 쓰는 글처럼 끝 줄바꿈이 없다 — 읽고 다시 저장해도 바이트가 같다
+    listLine: list[str] = []
+    appendXmlElementInternal(listLine, "SpriteClipAsset", clip, 0)
+    return "\n".join(listLine) + "\n"
 
 
 def writeFileInternal(path: Path, data: bytes) -> None:
@@ -128,7 +153,7 @@ def generate(repositoryRoot: str) -> None:
 
     width, height, pixels, listFrame = makeQuadrantTextureInternal()
     writeFileInternal(resourceRoot / kQuadrantsTexturePath, makeDdsBytes(width, height, pixels))
-    listAnimation = [{"_name": "cycle", "_listNotify": [], "_firstFrame": 0, "_frameCount": 4, "_bLoop": 1}]
+    listAnimation = [{"_name": "cycle", "_firstFrame": 0, "_frameCount": 4, "_bLoop": 1, "_listNotify": []}]
     writeFileInternal(resourceRoot / "engine/textures/test/quadrants.sprite.xml",
                       makeClipText(kQuadrantsTexturePath, listFrame, listAnimation).encode("utf-8"))
     width, height, maskPixels = makeMaskTextureInternal()
