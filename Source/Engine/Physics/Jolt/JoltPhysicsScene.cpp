@@ -2,6 +2,7 @@
 
 #include "Engine/Physics/Jolt/JoltPhysicsScene.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 
@@ -113,6 +114,8 @@ namespace sw
         , _contactTracker{}
         , _listContactEvent{}
         , _listContactReport{}
+        , _listMovedBody{}
+        , _listActiveBodyID{}
         , _reportMutex{}
         , _bodyCount{ 0 }
     {
@@ -167,13 +170,29 @@ namespace sw
         SW_MEMORY_SCOPE( Physics );
         _listContactEvent.clear();
         _listContactReport.clear();
+        // 스텝 앞에 깨어 있던 바디와 뒤에 깨어 있는 바디를 함께 든다(`getMovedBodies`) — 이 스텝에 잠든 바디도 마지막으로 조금 움직였다.
+        _listMovedBody.clear();
+        appendActiveBodies();
         if ( fixedDeltaTime > 0.0f )
         {
             const JPH::EPhysicsUpdateError error = _system.Update( fixedDeltaTime, 1, &_tempAllocator, _pJobSystem );
             if ( error != JPH::EPhysicsUpdateError::None )
                 SW_LOG_WARNING( "Jolt step reported overflow flags 0x%# - raise the body pair / contact limits", static_cast<uint32>( error ) );
         }
+        appendActiveBodies();
+        VectorUtil::sortUnique( _listMovedBody );
         flushContactReports();
+    }
+
+    void JoltPhysicsScene::appendActiveBodies()
+    {
+        _system.GetActiveBodies( JPH::EBodyType::RigidBody, _listActiveBodyID );
+        for ( const JPH::BodyID& bodyID : _listActiveBodyID )
+        {
+            const PhysicsBodyHandle body = findHandle( bodyID );
+            if ( body.isValid() )
+                _listMovedBody.push_back( body );
+        }
     }
 
     void JoltPhysicsScene::setGravity( const float3& gravity )

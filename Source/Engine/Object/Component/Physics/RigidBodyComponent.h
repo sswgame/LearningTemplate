@@ -124,7 +124,6 @@ namespace sw
     protected:
         void beginPhysicsFrame( ScenePhysics& physics ) override;
         void prePhysicsStep( ScenePhysics& physics, float32 fixedDeltaTime, uint32 stepIndex, uint32 stepCount ) override;
-        void postPhysicsStep( ScenePhysics& physics ) override;
         void endPhysicsFrame( ScenePhysics& physics, float32 alpha ) override;
         void releasePhysics( ScenePhysics& physics ) override;
         /** @brief 정적이고 트리거가 아니면 지금 자리의 바디 서술자 하나를 냅니다(`createBody` 와 같은 서술자). */
@@ -137,6 +136,10 @@ namespace sw
         void validateMaterial( ValidationContext& context ) const;
 
     private:
+        friend class ScenePhysics; ///< 스텝 뒤 움직인 바디의 주인만 `readSteppedPose` 로 부른다
+
+        /** @brief 이 스텝에 깨어 있던 바디의 자세 · 속도를 읽습니다. `ScenePhysics` 가 백엔드의 움직인 바디 목록(`getMovedBodies`)을 돌며 부릅니다. */
+        void readSteppedPose( const IPhysicsBodyScene3D& scene, uint64 stepCount );
         /** @brief 지금 속성과 자세 @p position · @p rotation · @p scale 의 바디 서술자입니다. */
         PhysicsBodyDesc3D makeBodyDesc( const ScenePhysics& physics, const float3& position, const quaternion& rotation, const float3& scale ) const;
         /** @brief 지금 속성 · 자세로 바디를 만듭니다. */
@@ -173,19 +176,19 @@ namespace sw
         PhysicsBodyHandle                      _body;
         PhysicsBodyCommand<PhysicsDimension3D> _command;
         mutable SpinLock                       _commandLock;
+        uint64                                 _movedStep; ///< 바디가 마지막으로 깨어 있던 스텝 번호(`ScenePhysics::getStepCount`, `readSteppedPose`)
         float3                                 _previousPosition;
         float3                                 _currentPosition;
-        float3                                 _writtenPosition;
+        float3                                 _worldScale; ///< 트랜스폼에서 마지막으로 읽은 월드 배율(변경 번호가 같으면 그대로다)
         float3                                 _kinematicStartPosition;
         float3                                 _kinematicTargetPosition;
         float3                                 _lastLinearVelocity;
         float3                                 _lastAngularVelocity;
         quaternion                             _previousRotation;
         quaternion                             _currentRotation;
-        quaternion                             _writtenRotation;
         quaternion                             _kinematicStartRotation;
         quaternion                             _kinematicTargetRotation;
-        PhysicsBodyType                        _appliedBodyType; ///< 바디에 든 종류(`_bodyType` 이 바뀌면 다음 프레임에 맞춘다)
-        bool                                   _bHasWritten;     ///< `_written*` 이 유효한지
+        PhysicsBodyType                        _appliedBodyType;  ///< 바디에 든 종류(`_bodyType` 이 바뀌면 다음 프레임에 맞춘다)
+        bool                                   _bRestPoseWritten; ///< 잠든 자세를 트랜스폼에 이미 썼다 — 깨기 전까지 다시 쓰지 않는다
     };
 } // namespace sw

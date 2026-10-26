@@ -103,7 +103,6 @@ namespace sw
     protected:
         void beginPhysicsFrame( ScenePhysics& physics ) override;
         void prePhysicsStep( ScenePhysics& physics, float32 fixedDeltaTime, uint32 stepIndex, uint32 stepCount ) override;
-        void postPhysicsStep( ScenePhysics& physics ) override;
         void endPhysicsFrame( ScenePhysics& physics, float32 alpha ) override;
         void releasePhysics( ScenePhysics& physics ) override;
 
@@ -114,6 +113,12 @@ namespace sw
         void validateMaterial( ValidationContext& context ) const;
 
     private:
+        friend class ScenePhysics; ///< 스텝 뒤 움직인 바디의 주인만 `readSteppedPose` 로 부른다
+
+        /** @brief 이 스텝에 깨어 있던 바디의 자세 · 속도를 읽습니다. `ScenePhysics` 가 백엔드의 움직인 바디 목록(`getMovedBodies`)을 돌며 부릅니다. */
+        void readSteppedPose( const IPhysicsBodyScene2D& scene, uint64 stepCount );
+        /** @brief 트랜스폼에서 월드 자세를 읽어 `_world*` 에 두고, 2D 자리 · 각을 돌려줍니다. */
+        void readWorldPose2D( float2& outPosition, float32& outAngle );
         /** @brief 지금 속성 · 자세로 바디를 만듭니다. */
         void createBody( ScenePhysics& physics, IPhysicsBodyScene2D& scene, const float2& position, float32 angle, const float3& scale );
 
@@ -147,19 +152,21 @@ namespace sw
         PhysicsBodyHandle                      _body;
         PhysicsBodyCommand<PhysicsDimension2D> _command;
         mutable SpinLock                       _commandLock;
+        uint64                                 _movedStep; ///< 바디가 마지막으로 깨어 있던 스텝 번호(`ScenePhysics::getStepCount`, `readSteppedPose`)
         float2                                 _previousPosition;
         float2                                 _currentPosition;
         float2                                 _kinematicStartPosition;
         float2                                 _kinematicTargetPosition;
         float2                                 _lastLinearVelocity;
-        float3                                 _writtenPosition; ///< 쓴 월드 자리(Z 포함) — 바깥 변화 비교용
-        quaternion                             _writtenRotation;
+        float3                                 _worldPosition; ///< 트랜스폼에서 마지막으로 읽은 월드 자리(Z 를 쓴다). 변경 번호가 같으면 그대로다
+        quaternion                             _worldRotation; ///< 마지막으로 읽은 월드 회전(Z 둘레 각 밖의 회전을 지킨다)
+        float3                                 _worldScale;    ///< 마지막으로 읽은 월드 배율
         float32                                _previousAngle;
         float32                                _currentAngle;
         float32                                _kinematicStartAngle;
         float32                                _kinematicTargetAngle;
         float32                                _lastAngularVelocity;
-        PhysicsBodyType                        _appliedBodyType; ///< 바디에 든 종류(`_bodyType` 이 바뀌면 다음 프레임에 맞춘다)
-        bool                                   _bHasWritten;     ///< `_written*` 이 유효한지
+        PhysicsBodyType                        _appliedBodyType;  ///< 바디에 든 종류(`_bodyType` 이 바뀌면 다음 프레임에 맞춘다)
+        bool                                   _bRestPoseWritten; ///< 잠든 자세를 트랜스폼에 이미 썼다 — 깨기 전까지 다시 쓰지 않는다
     };
 } // namespace sw

@@ -250,10 +250,8 @@ SW_TEST_CASE( PhysicsWiringTest, ControllerFollowsMovingGroundYawAndKeepsItsMome
     for ( uint32 frame = 1; frame <= 60; ++frame )
     {
         const float32 angle = kFrame * static_cast<float32>( frame );
-        float3        writtenPosition{};
-        quaternion    writtenRotation{};
         PhysicsComponentUtil::writeWorldPose( *pTurntable, float3{ 0.0f, -0.5f, 0.0f }, quaternion::makeFromAxisAngle( float3{ 0.0f, 1.0f, 0.0f }, angle ),
-                                              writtenPosition, writtenRotation );
+                                              float3{ 1.0f, 1.0f, 1.0f } );
         test::updateFrames( manager, 1 );
     }
     float3     heroPosition{};

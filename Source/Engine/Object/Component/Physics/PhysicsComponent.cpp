@@ -12,6 +12,7 @@ namespace sw
     PhysicsComponent::PhysicsComponent( PhysicsComponentPhase phase )
         : _pScenePhysics{ nullptr }
         , _physicsIndex{ kNotRegistered }
+        , _syncedTransformVersion{ 0 }
         , _phase{ phase }
         , _bRebuildPending{ false }
         , _bTeleportPending{ false }
@@ -75,24 +76,17 @@ namespace sw
         outRotation.normalize();
     }
 
-    void PhysicsComponentUtil::writeWorldPose( SceneComponent& component, const float3& position, const quaternion& rotation, float3& outWrittenPosition,
-                                               quaternion& outWrittenRotation )
+    void PhysicsComponentUtil::writeWorldPose( SceneComponent& component, const float3& position, const quaternion& rotation, const float3& scale )
     {
-        float3     currentPosition{};
-        quaternion currentRotation{};
-        float3     scale{};
-        readWorldPose( component, currentPosition, currentRotation, scale );
+        // 부모가 없으면 월드가 곧 로컬이다 — 행렬을 만들어 다시 분해하지 않는다(동적 바디 대부분이 루트에 있다).
+        if ( component.getParent() == nullptr )
+        {
+            component.setLocalPosition( position );
+            component.setLocalRotation( rotation.getEulerAngles() );
+            component.setLocalScale( scale );
+            return;
+        }
         component.setWorldTransform( float4x4::makeTrs( position, rotation, scale ) );
-        readWorldPose( component, outWrittenPosition, outWrittenRotation, scale );
-    }
-
-    bool PhysicsComponentUtil::hasMoved( const float3& position, const quaternion& rotation, const float3& otherPosition, const quaternion& otherRotation )
-    {
-        if ( float3::getDistanceSquared( position, otherPosition ) > 1.0e-6f )
-            return true;
-        // |q · r| 가 1 에서 멀면 다른 회전이다(q 와 -q 는 같은 회전). 1 - cos(θ/2) 로 약 0.06 도.
-        const float32 dot = MathUtil::abs( rotation.dot( otherRotation ) );
-        return dot < 1.0f - 1.0e-7f;
     }
 
     float32 PhysicsComponentUtil::getAngle2D( const quaternion& rotation )

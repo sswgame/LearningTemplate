@@ -23,12 +23,12 @@ namespace sw
         , _commandLock{}
         , _previousPosition{}
         , _moveVelocity{ 0.0f }
-        , _writtenPosition{}
-        , _writtenRotation{}
+        , _worldPosition{}
+        , _worldRotation{}
+        , _worldScale{ 1.0f, 1.0f, 1.0f }
         , _verticalSpeed{ 0.0f }
         , _pendingJumpSpeed{ 0.0f }
         , _airVelocity{ 0.0f }
-        , _bHasWritten{ false }
     {
     }
 
@@ -75,12 +75,16 @@ namespace sw
         if ( consumeRebuild() )
             releasePhysics( physics );
 
-        float3     position3{};
-        quaternion rotation{};
-        float3     scale{};
-        PhysicsComponentUtil::readWorldPose( *this, position3, rotation, scale );
-        const float2 position{ position3._x, position3._y };
-        if ( _character.isValid() == false )
+        // 트랜스폼의 바깥 변화는 칸의 변경 번호로 안다 — 같으면 월드 행렬을 풀지 않는다(3D 컨트롤러와 같은 규칙).
+        const bool bTransformChanged = consumeTransformChange();
+        const bool bCreate           = _character.isValid() == false;
+        const bool bTeleported       = consumeTeleport();
+        const bool bUnchanged        = bCreate == false && bTransformChanged == false && bTeleported == false;
+        if ( bUnchanged )
+            return;
+        PhysicsComponentUtil::readWorldPose( *this, _worldPosition, _worldRotation, _worldScale );
+        const float2 position{ _worldPosition._x, _worldPosition._y };
+        if ( bCreate )
         {
             PhysicsCharacterDesc2D desc;
             desc._position      = position;
@@ -93,24 +97,14 @@ namespace sw
             _state              = PhysicsCharacterState2D{};
             _state._position    = position;
             _previousPosition   = position;
-            _writtenPosition    = position3;
-            _writtenRotation    = rotation;
             _verticalSpeed      = 0.0f;
-            _bHasWritten        = true;
-            (void)consumeTeleport();
             return;
         }
-        const bool bTeleported = consumeTeleport();
-        if ( bTeleported || PhysicsComponentUtil::hasMoved( position3, rotation, _writtenPosition, _writtenRotation ) )
-        {
-            pScene->setCharacterPosition( _character, position );
-            _state._position  = position;
-            _previousPosition = position;
-            if ( bTeleported )
-                _verticalSpeed = 0.0f;
-        }
-        _writtenPosition = position3;
-        _writtenRotation = rotation;
+        pScene->setCharacterPosition( _character, position );
+        _state._position  = position;
+        _previousPosition = position;
+        if ( bTeleported )
+            _verticalSpeed = 0.0f;
     }
 
     void CharacterController2DComponent::prePhysicsStep( ScenePhysics& physics, float32 fixedDeltaTime, uint32 stepIndex, uint32 stepCount )
@@ -159,12 +153,11 @@ namespace sw
         if ( _character.isValid() == false )
             return;
         const float2 position = float2::lerp( _previousPosition, _state._position, alpha );
-        float3       current{};
-        quaternion   rotation{};
-        float3       scale{};
-        PhysicsComponentUtil::readWorldPose( *this, current, rotation, scale );
-        PhysicsComponentUtil::writeWorldPose( *this, float3{ position._x, position._y, current._z }, rotation, _writtenPosition, _writtenRotation );
-        _bHasWritten = true;
+        // Z · 회전 · 배율은 트랜스폼의 것이다. 이 프레임 시작 뒤에 누가 옮겼을 때만 다시 읽는다.
+        if ( consumeTransformChange() )
+            PhysicsComponentUtil::readWorldPose( *this, _worldPosition, _worldRotation, _worldScale );
+        PhysicsComponentUtil::writeWorldPose( *this, float3{ position._x, position._y, _worldPosition._z }, _worldRotation, _worldScale );
+        markTransformSynced();
     }
 
     void CharacterController2DComponent::releasePhysics( ScenePhysics& physics )
@@ -174,8 +167,7 @@ namespace sw
         IPhysicsScene2D* pScene = physics.findScene2D();
         if ( pScene != nullptr )
             pScene->destroyCharacter( _character );
-        _character   = PhysicsCharacterHandle{};
-        _bHasWritten = false;
+        _character = PhysicsCharacterHandle{};
     }
 } // namespace sw
 

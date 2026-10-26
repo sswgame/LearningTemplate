@@ -2,6 +2,7 @@
 
 #include "Engine/Physics/Box2D/Box2DPhysicsScene.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 
@@ -58,6 +59,7 @@ namespace sw
         , _listContactScratch{}
         , _contactTracker{}
         , _listContactEvent{}
+        , _listMovedBody{}
         , _bodyCount{ 0 }
     {
         _layers = _settings.makeCollisionLayers();
@@ -95,8 +97,20 @@ namespace sw
     {
         SW_MEMORY_SCOPE( Physics );
         _listContactEvent.clear();
+        _listMovedBody.clear();
         if ( fixedDeltaTime > 0.0f )
+        {
             b2World_Step( _worldID, fixedDeltaTime, static_cast<int32>( _settings._subStepCount2D ) );
+            // 이동 이벤트는 이 스텝에 풀린 바디마다 하나다 — 이 스텝에 잠든 바디(`fellAsleep`)도 든다. 바닥 바디처럼 사용자 값이 없으면 무효 핸들이다.
+            const b2BodyEvents events = b2World_GetBodyEvents( _worldID );
+            for ( int32 eventIndex = 0; eventIndex < events.moveCount; ++eventIndex )
+            {
+                const PhysicsBodyHandle body = Box2DUtil::fromUserData( events.moveEvents[eventIndex].userData );
+                if ( body.isValid() )
+                    _listMovedBody.push_back( body );
+            }
+            VectorUtil::sortUnique( _listMovedBody ); // 이벤트 순서는 일꾼 수를 따를 수 있다 — 핸들 순으로 고정한다
+        }
         flushEvents();
     }
 

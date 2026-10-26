@@ -64,9 +64,10 @@ namespace sw
         void              setBodyEnabled( PhysicsBodyHandle body, bool bEnabled ) override;
         bool              isBodyEnabled( PhysicsBodyHandle body ) const override;
 
-        bool getBodyTransform( PhysicsBodyHandle body, float2& outPosition, float32& outRotation ) const override;
-        void setBodyTransform( PhysicsBodyHandle body, const float2& position, const float32& rotation ) override;
-        void moveKinematic( PhysicsBodyHandle body, const float2& targetPosition, const float32& targetRotation, float32 deltaTime ) override;
+        const vector<PhysicsBodyHandle>& getMovedBodies() const override { return _listMovedBody; }
+        bool                             getBodyTransform( PhysicsBodyHandle body, float2& outPosition, float32& outRotation ) const override;
+        void                             setBodyTransform( PhysicsBodyHandle body, const float2& position, const float32& rotation ) override;
+        void                             moveKinematic( PhysicsBodyHandle body, const float2& targetPosition, const float32& targetRotation, float32 deltaTime ) override;
 
         float2  getLinearVelocity( PhysicsBodyHandle body ) const override;
         void    setLinearVelocity( PhysicsBodyHandle body, const float2& velocity ) override;
@@ -202,6 +203,7 @@ namespace sw
         mutable vector<b2ContactData>             _listContactScratch; ///< 충격량을 읽을 때 쓰는 버퍼다(할당을 재사용한다).
         PhysicsContactTracker<PhysicsDimension2D> _contactTracker;
         vector<PhysicsContactEvent2D>             _listContactEvent;
+        vector<PhysicsBodyHandle>                 _listMovedBody; ///< 마지막 스텝에 풀린 바디(이동 이벤트, `getMovedBodies`, 핸들 순)
         uint32                                    _bodyCount;
     };
 } // namespace sw
