@@ -196,7 +196,7 @@ namespace
             const std::optional<JSONText> payload = writer.finish();
             string                        compact;
             if ( payload.has_value() )
-                (void)JSONWebToken::makeSigned( NetSecurity::getProvider(), key._algorithm, key._keyID, *payload, key._privateKeyPem, compact );
+                (void)JwtUtil::makeSigned( NetSecurity::getProvider(), key._algorithm, key._keyID, *payload, key._privateKeyPem, compact );
             return compact;
         }
 

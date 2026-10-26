@@ -137,6 +137,9 @@ namespace sw
         /** @brief 계정마다 한꺼번에 받는 요청 수입니다. */
         PROPERTY( Min = 1, Max = 1000000 )
         int32 _requestBurstPerAccount{ 30 };
+        /** @brief 주소(IP)마다 동시에 여는 서비스 연결 상한입니다. 넘는 연결은 바로 닫습니다. 한 주소에서 많이 붙는 부하 봇이나 NAT 뒤 사무실은 올립니다. */
+        PROPERTY( Min = 1, Max = 1000000 )
+        int32 _maxConnectionsPerRemote{ 64 };
         /** @brief 감사 기록(`service_audit`)을 남기는 기간(일)입니다. 0 이면 지우지 않습니다. */
         PROPERTY( Min = 0, Max = 36500 )
         int32 _retentionAuditDays{ 365 };

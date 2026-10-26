@@ -2,6 +2,7 @@
 
 #include "GameFramework/Base/Online/Security/JSONWebToken.h"
 
+#include "Core/Common/Defines.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/String/Base64Util.h"
@@ -41,7 +42,7 @@ namespace sw
 
 namespace sw
 {
-    JSONWebToken::JSONWebToken()
+    JwtUnverified::JwtUnverified()
         : _payload{ make_unique<JSONDocument>() }
         , _listCertificateDer{}
         , _signatureBytes{}
@@ -51,9 +52,19 @@ namespace sw
     {
     }
 
-    JSONWebToken::~JSONWebToken() = default;
+    JwtUnverified::~JwtUnverified() = default;
 
-    bool JSONWebToken::parse( string_view compact )
+    JwtVerified::JwtVerified( unique_ptr<JSONDocument> payload, string keyID )
+        : _payload{ std::move( payload ) }
+        , _keyID{ std::move( keyID ) }
+    {
+    }
+
+    JwtVerified::~JwtVerified()                                         = default;
+    JwtVerified::JwtVerified( JwtVerified&& other ) noexcept            = default;
+    JwtVerified& JwtVerified::operator=( JwtVerified&& other ) noexcept = default;
+
+    bool JwtUnverified::parse( string_view compact )
     {
         using Internal = JSONWebTokenInternal;
         if ( compact.empty() || compact.size() > static_cast<size_t>( Internal::kMaxCompactSize ) )
@@ -101,7 +112,38 @@ namespace sw
         return true;
     }
 
-    bool JSONWebToken::findText( string_view claim, string& outValue ) const
+    std::optional<JwtVerified> JwtUnverified::verify( INetSecurityProvider& provider, const NetPublicKey& publicKey, const JwtClaimRule& rule ) &&
+    {
+        if ( _signingInput.empty() || publicKey._algorithm != _algorithm )
+            return std::nullopt; // 읽지 않았거나 키 알고리즘이 머리와 다르다
+        const bool bSigned = provider.verifySignature( publicKey, reinterpret_cast<const uint8*>( _signingInput.data() ), static_cast<int32>( _signingInput.size() ),
+                                                       _signatureBytes.data(), static_cast<int32>( _signatureBytes.size() ) );
+        if ( bSigned == false )
+            return std::nullopt;
+        JwtVerified verified( std::move( _payload ), std::move( _keyID ) );
+        _payload = make_unique<JSONDocument>(); // 넘긴 뒤에도 객체는 쓸 수 있는 빈 상태로 둔다
+        _signingInput.clear();
+        if ( rule._bCheckClaims == SW_FALSE )
+            return verified;
+        SW_ASSERT( rule._pListAudience != nullptr );
+        string     issuer;
+        int64      expiresAt = 0;
+        int64      issuedAt  = 0;
+        bool       bAudience = false;
+        const bool bIssuerOk = verified.findText( "iss", issuer ) && issuer == rule._issuer;
+        for ( const string& audience : *rule._pListAudience )
+        {
+            bAudience = bAudience || verified.hasAudience( audience );
+        }
+        const bool bExpiresOk = verified.findInteger( "exp", expiresAt ) && rule._nowMs < expiresAt * constant::kMillisecondsPerSecond + rule._clockSkewMs;
+        const bool bIssuedOk  = verified.findInteger( "iat", issuedAt ) == false || issuedAt * constant::kMillisecondsPerSecond <= rule._nowMs + rule._clockSkewMs;
+        const bool bClaimsOk  = bIssuerOk && bAudience && bExpiresOk && bIssuedOk;
+        if ( bClaimsOk == false )
+            return std::nullopt;
+        return verified;
+    }
+
+    bool JwtVerified::findText( string_view claim, string& outValue ) const
     {
         const JSONValue value = _payload->getRoot().get( claim, false );
         if ( value.isString() == false )
@@ -110,7 +152,7 @@ namespace sw
         return true;
     }
 
-    bool JSONWebToken::findTextPath( string_view path, string& outValue ) const
+    bool JwtVerified::findTextPath( string_view path, string& outValue ) const
     {
         JSONValue current = _payload->getRoot();
         while ( path.empty() == false )
@@ -130,7 +172,7 @@ namespace sw
         return true;
     }
 
-    bool JSONWebToken::findInteger( string_view claim, int64& outValue ) const
+    bool JwtVerified::findInteger( string_view claim, int64& outValue ) const
     {
         // 시각 클레임(NumericDate)은 소수 초도 허용된다(RFC 7519 2절) — 실수로 읽어 초 단위로 버린다. 값은 2^53 보다 작다.
         const JSONValue              value  = _payload->getRoot().get( claim, false );
@@ -141,7 +183,7 @@ namespace sw
         return true;
     }
 
-    bool JSONWebToken::hasAudience( string_view audience ) const
+    bool JwtVerified::hasAudience( string_view audience ) const
     {
         const JSONValue value = _payload->getRoot().get( "aud", false );
         if ( value.isString() )
@@ -157,16 +199,8 @@ namespace sw
         return false;
     }
 
-    bool JSONWebToken::verifySignature( INetSecurityProvider& provider, const NetPublicKey& publicKey ) const
-    {
-        if ( publicKey._algorithm != _algorithm )
-            return false;
-        return provider.verifySignature( publicKey, reinterpret_cast<const uint8*>( _signingInput.data() ), static_cast<int32>( _signingInput.size() ), _signatureBytes.data(),
-                                         static_cast<int32>( _signatureBytes.size() ) );
-    }
-
-    bool JSONWebToken::makeSigned( INetSecurityProvider& provider, NetSignatureAlgorithm algorithm, string_view keyID, const JSONText& payload, const string& privateKeyPem,
-                                   string& outCompact )
+    bool JwtUtil::makeSigned( INetSecurityProvider& provider, NetSignatureAlgorithm algorithm, string_view keyID, const JSONText& payload,
+                              const string& privateKeyPem, string& outCompact )
     {
         using Internal = JSONWebTokenInternal;
         string     header;

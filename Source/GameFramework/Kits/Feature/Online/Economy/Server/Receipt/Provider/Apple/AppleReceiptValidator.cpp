@@ -93,16 +93,20 @@ namespace sw
         return url;
     }
 
-    bool AppleReceiptValidator::verifyJws( string_view compact, int64 unixSeconds, JSONWebToken& outToken ) const
+    std::optional<JwtVerified> AppleReceiptValidator::verifyJws( string_view compact, int64 unixSeconds ) const
     {
-        if ( outToken.parse( compact ) == false || outToken.getAlgorithm() != NetSignatureAlgorithm::EcdsaP256Sha256 )
-            return false;
+        JwtUnverified token;
+        if ( token.parse( compact ) == false || token.getAlgorithm() != NetSignatureAlgorithm::EcdsaP256Sha256 )
+            return std::nullopt;
         const bool   bMarkers = _settings._bRequireAppleMarkers == SW_TRUE;
         NetPublicKey leafKey;
-        const bool   bChainOk = _pSecurity->verifyCertificateChain( outToken.getCertificateChain(), _settings._trustedRootsPem, unixSeconds,
+        const bool   bChainOk = _pSecurity->verifyCertificateChain( token.getCertificateChain(), _settings._trustedRootsPem, unixSeconds,
                                                                   bMarkers ? string_view( AppleReceiptSettings::kLeafOid ) : string_view{},
                                                                   bMarkers ? string_view( AppleReceiptSettings::kIntermediateOid ) : string_view{}, leafKey );
-        return bChainOk && outToken.verifySignature( *_pSecurity, leafKey );
+        if ( bChainOk == false )
+            return std::nullopt;
+        // 애플 서명 거래에는 iss · aud · exp 가 없다 — 신뢰는 위에서 확인한 애플 루트 사슬의 리프 키에서 온다.
+        return std::move( token ).verify( *_pSecurity, leafKey, JwtClaimRule::makeSignatureOnly() );
     }
 
     string AppleReceiptValidator::makeAuthorization( UnixMilliseconds now )
@@ -128,7 +132,7 @@ namespace sw
         const std::optional<JSONText> payload = writer.finish();
         string                        token;
         const bool                    bSigned =
-            payload.has_value() && JSONWebToken::makeSigned( *_pSecurity, NetSignatureAlgorithm::EcdsaP256Sha256, _settings._keyID, *payload, _settings._privateKeyPem, token );
+            payload.has_value() && JwtUtil::makeSigned( *_pSecurity, NetSignatureAlgorithm::EcdsaP256Sha256, _settings._keyID, *payload, _settings._privateKeyPem, token );
         if ( bSigned == false )
         {
             SW_LOG_ERROR( "Could not sign the App Store Server API token with the key '%#'", _settings._keyID.c_str() );
@@ -225,18 +229,20 @@ namespace sw
             result._failureText = "apple does not know this transaction (status " + to_string( response._statusCode ) + ")";
             return;
         }
-        const JSONValue signedInfo = document.getRoot().get( "signedTransactionInfo", false );
-        JSONWebToken    token;
-        if ( signedInfo.isString() == false || verifyJws( signedInfo.asString(), now.toSeconds(), token ) == false )
+        const JSONValue                  signedInfo = document.getRoot().get( "signedTransactionInfo", false );
+        const std::optional<JwtVerified> verified =
+            signedInfo.isString() ? verifyJws( signedInfo.asString(), now.toSeconds() ) : std::nullopt;
+        if ( verified.has_value() == false )
         {
             result._failureText = "the signed transaction does not verify against the Apple root";
             SW_LOG_ERROR( "The signed transaction %# from Apple does not verify - check rootCertificateFile", call._transactionID.c_str() );
             return;
         }
-        string     transactionID;
-        string     bundleID;
-        const bool bIDsOk           = token.findText( "transactionId", transactionID ) && token.findText( "bundleId", bundleID );
-        const bool bSameTransaction = bIDsOk && transactionID == call._transactionID && bundleID == _settings._bundleID;
+        const JwtVerified& token = *verified;
+        string             transactionID;
+        string             bundleID;
+        const bool         bIDsOk           = token.findText( "transactionId", transactionID ) && token.findText( "bundleId", bundleID );
+        const bool         bSameTransaction = bIDsOk && transactionID == call._transactionID && bundleID == _settings._bundleID;
         if ( bSameTransaction == false )
         {
             result._failureText = "the signed transaction belongs to another transaction or bundle";
@@ -294,10 +300,11 @@ namespace sw
         const JSONValue history = document.getRoot().get( "notificationHistory", false );
         for ( size_t index = 0; history.isArray() && index < history.size(); ++index )
         {
-            const JSONValue item          = history.at( index );
-            const JSONValue signedPayload = item.get( "signedPayload", false );
-            JSONWebToken    notification;
-            if ( signedPayload.isString() == false || verifyJws( signedPayload.asString(), now.toSeconds(), notification ) == false )
+            const JSONValue                  item          = history.at( index );
+            const JSONValue                  signedPayload = item.get( "signedPayload", false );
+            const std::optional<JwtVerified> notification =
+                signedPayload.isString() ? verifyJws( signedPayload.asString(), now.toSeconds() ) : std::nullopt;
+            if ( notification.has_value() == false )
             {
                 SW_LOG_ERROR( "An Apple notification does not verify against the Apple root - it is skipped" );
                 continue;
@@ -305,14 +312,14 @@ namespace sw
             string     notificationType;
             string     bundleID;
             string     signedTransaction;
-            const bool bShapeOk = notification.findText( "notificationType", notificationType ) && notification.findTextPath( "data.bundleId", bundleID ) &&
-                                  notification.findTextPath( "data.signedTransactionInfo", signedTransaction );
+            const bool bShapeOk = notification->findText( "notificationType", notificationType ) && notification->findTextPath( "data.bundleId", bundleID ) &&
+                                  notification->findTextPath( "data.signedTransactionInfo", signedTransaction );
             const bool bOurRefund = bShapeOk && notificationType == "REFUND" && bundleID == _settings._bundleID;
             if ( bOurRefund == false )
                 continue;
-            JSONWebToken transaction;
-            string       transactionID;
-            if ( verifyJws( signedTransaction, now.toSeconds(), transaction ) == false || transaction.findText( "transactionId", transactionID ) == false )
+            const std::optional<JwtVerified> transaction = verifyJws( signedTransaction, now.toSeconds() );
+            string                           transactionID;
+            if ( transaction.has_value() == false || transaction->findText( "transactionId", transactionID ) == false )
                 continue;
             if ( _uniqueSetNotifiedRefund.count( transactionID ) != 0 )
                 continue;
@@ -321,7 +328,7 @@ namespace sw
             _uniqueSetNotifiedRefund.insert( transactionID );
             int64 refundedMs   = now.count();
             int64 revocationMs = 0;
-            if ( transaction.findInteger( "revocationDate", revocationMs ) )
+            if ( transaction->findInteger( "revocationDate", revocationMs ) )
                 refundedMs = revocationMs;
             _listRefund.push_back( ReceiptRefundNotice{ getStoreName(), transactionID, refundedMs } );
         }

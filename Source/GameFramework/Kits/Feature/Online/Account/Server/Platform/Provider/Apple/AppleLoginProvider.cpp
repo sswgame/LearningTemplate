@@ -110,7 +110,7 @@ namespace sw
         const std::optional<JSONText> payload = writer.finish();
         string                        secret;
         const bool                    bSigned =
-            payload.has_value() && JSONWebToken::makeSigned( *_pSecurity, NetSignatureAlgorithm::EcdsaP256Sha256, _settings._signingKeyID, *payload, _signingKeyPem, secret );
+            payload.has_value() && JwtUtil::makeSigned( *_pSecurity, NetSignatureAlgorithm::EcdsaP256Sha256, _settings._signingKeyID, *payload, _signingKeyPem, secret );
         if ( bSigned == false )
         {
             SW_LOG_ERROR( "Could not sign the client secret of login provider '%#' with its key", _settings._name.c_str() );

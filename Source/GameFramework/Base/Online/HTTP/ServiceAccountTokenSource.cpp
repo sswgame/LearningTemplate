@@ -116,7 +116,7 @@ namespace sw
         const std::optional<JSONText> payload = writer.finish();
         string                        assertion;
         const bool                    bSigned = payload.has_value() &&
-                             JSONWebToken::makeSigned( *_pSecurity, NetSignatureAlgorithm::RsaPkcs1Sha256, _credentials._keyID, *payload, _credentials._privateKeyPem, assertion );
+                             JwtUtil::makeSigned( *_pSecurity, NetSignatureAlgorithm::RsaPkcs1Sha256, _credentials._keyID, *payload, _credentials._privateKeyPem, assertion );
         if ( bSigned == false )
         {
             SW_LOG_ERROR( "Could not sign the token request of service account '%#' with its key", _credentials._clientEmail.c_str() );

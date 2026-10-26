@@ -236,7 +236,7 @@ SW_TEST_CASE( NetSecureHostTest, UnknownTokenAndWrongSecretAreRefused )
 
 SW_TEST_CASE( NetSecureHostTest, OneSidedEncryptionIsRefusedAsSecurityMismatch )
 {
-    SecurePair                   pair( NetSecurityMode::Encrypted, NetSecurityMode::Off, true );
+    SecurePair                   pair( NetSecurityMode::Encrypted, NetSecurityMode::LanUnsecured, true );
     TaskFuture<NetConnectResult> future = pair._client.connectAsync( NetAddress::makeLoopback( 4000 ) );
     {
         SW_TEST_DEFENSIVE_SCOPE( "both hosts log the refused protocol" );

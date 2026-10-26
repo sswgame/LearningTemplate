@@ -58,7 +58,7 @@ namespace sw
         uint8                   _gamePortCount{ 1 };           ///< 디렉터리에 알릴 게임 포트 수(`ServerDescriptor::_portCount` — 연이은 포트 샤드 수, 한 포트를 나누면 1)
         uint8                   _bTLS{ SW_TRUE };              ///< 서비스 스트림을 TLS 1.3 으로 받는다(테스트와 봇은 끈다)
         uint8                   _bManualCacheTime{ SW_FALSE }; ///< 메모리 캐시의 만료를 `tick` 의 시각으로 측정한다(가짜 시각 테스트, 봇)
-        uint8                   _bAdminListener{ SW_FALSE };   ///< GM 리슨을 따로 연다(`OnlineServiceExposure`). 끄면 서비스 리슨 하나가 GM 서비스도 받는다
+        uint8                   _bAdminListener{ SW_FALSE };   ///< GM 리슨을 따로 연다(`OnlineServiceExposure`). 끄면 GM 서비스(GM 키트)를 올릴 수 없다(기동 실패)
     };
 } // namespace sw
 

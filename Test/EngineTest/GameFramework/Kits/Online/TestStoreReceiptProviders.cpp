@@ -241,11 +241,14 @@ namespace
                         assertion = pair._value;
                 }
             }
-            JSONWebToken token;
-            sw::string   issuer;
-            sw::string   scope;
-            _bAssertionValid = token.parse( assertion ) && token.verifySignature( NetSecurity::getProvider(), _publicKey ) && token.findText( "iss", issuer ) &&
-                               issuer == "svc@proj.iam" && token.findText( "scope", scope ) && scope == GoogleReceiptSettings::kScope;
+            JwtUnverified                    unverified;
+            const bool                       bParsed = unverified.parse( assertion );
+            const std::optional<JwtVerified> token =
+                bParsed ? std::move( unverified ).verify( NetSecurity::getProvider(), _publicKey, JwtClaimRule::makeSignatureOnly() ) : std::nullopt;
+            sw::string issuer;
+            sw::string scope;
+            _bAssertionValid =
+                token.has_value() && token->findText( "iss", issuer ) && issuer == "svc@proj.iam" && token->findText( "scope", scope ) && scope == GoogleReceiptSettings::kScope;
         }
     };
 

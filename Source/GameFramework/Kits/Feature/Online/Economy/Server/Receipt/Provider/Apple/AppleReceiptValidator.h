@@ -22,14 +22,16 @@
 #include "Core/Container/vector.h"
 
 #include "GameFramework/Base/Online/HTTP/HTTPTypes.h"
+#include "GameFramework/Base/Online/Security/JSONWebToken.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/ReceiptValidator.h"
+
+#include <optional>
 
 namespace sw
 {
     class HTTPClient;
     class INetSecurityProvider;
-    class JSONWebToken;
 
     /** @brief 애플 제공자의 설정입니다. 시간은 밀리초입니다. */
     struct AppleReceiptSettings
@@ -79,8 +81,8 @@ namespace sw
 
         /** @brief 거래 id(1~20 자리 십진 숫자)면 true 입니다. 경로에 그대로 싣기 전의 검사다. */
         static bool isTransactionID( string_view text );
-        /** @brief JWS 를 확인합니다 — `x5c` 사슬이 애플 루트까지 이어지고 리프 키로 서명이 맞아야 true 이고 @p outToken 에 본문이 담긴다. */
-        [[nodiscard]] bool verifyJws( string_view compact, int64 unixSeconds, JSONWebToken& outToken ) const;
+        /** @brief JWS 를 확인합니다 — `x5c` 사슬이 애플 루트까지 이어지고 리프 키로 서명이 맞아야 본문이 담긴 값이고, 아니면 비어 있다. */
+        [[nodiscard]] std::optional<JwtVerified> verifyJws( string_view compact, int64 unixSeconds ) const;
 
         string makeTransactionURL( string_view transactionID ) const;
         string makeHistoryURL( string_view paginationToken ) const;

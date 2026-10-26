@@ -8,6 +8,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Automation/AutomationScenario.h"
@@ -40,7 +41,7 @@ namespace sw
                 return false;
             }
 
-            /** @brief `move="x,y"` 를 읽습니다(없으면 0,0). */
+            /** @brief `move="x,y"` 를 읽습니다(없으면 0,0, 길이가 1 을 넘으면 오류). */
             [[nodiscard]] static bool readMove( const AutomationStep& step, float2& outMove, string& outError )
             {
                 outMove              = float2{};
@@ -52,9 +53,11 @@ namespace sw
                 const bool        bParsed =
                     comma != string_view::npos && StringUtil::parseFloat( StringUtil::trim( text.substr( 0, comma ) ), outMove._x ) &&
                     StringUtil::parseFloat( StringUtil::trim( text.substr( comma + 1 ) ), outMove._y );
-                if ( bParsed )
+                // 이동 길이는 1 이하다(`ControlIntent::_move`) — 선 · 파일은 넘는 값을 거절하므로 시나리오도 받지 않는다. NaN 도 여기서 걸린다.
+                const bool bLengthOk = bParsed && outMove._x * outMove._x + outMove._y * outMove._y <= 1.0f + MathUtil::kEpsilon;
+                if ( bLengthOk )
                     return true;
-                outError = step.describe() + ": move must be \"x,y\", got '" + *pValue + "'";
+                outError = step.describe() + ": move must be \"x,y\" with length at most 1, got '" + *pValue + "'";
                 return false;
             }
 

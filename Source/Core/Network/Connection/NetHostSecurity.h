@@ -20,8 +20,8 @@ namespace sw
     /** @brief UDP 보안 방식입니다 — 양쪽이 같아야 한다(다르면 `SecurityMismatch` 로 거절, 협상 없음 = 다운그레이드 없음). */
     enum class NetSecurityMode : uint8
     {
-        Off = 0,  ///< 평문(테스트 · LAN)
-        Encrypted ///< X25519 + AEAD. 인증기가 있으면 세션 비밀에 묶이고(중간자 불가), 없으면 일회 키만(도청만 막는다 — 개발 빌드 전용, Shipping 서버는 listen 실패)
+        LanUnsecured = 0, ///< 평문 — 테스트 · 루프백 · LAN 전용임을 이름이 말한다. Shipping 서버는 루프백 리슨일 때만 연다(`GameNetSession::makeServerParams`)
+        Encrypted         ///< X25519 + AEAD. 인증기가 있으면 세션 비밀에 묶이고(중간자 불가), 없으면 일회 키만(도청만 막는다 — 개발 빌드 전용, Shipping 서버는 listen 실패)
     };
 } // namespace sw
 
@@ -53,7 +53,7 @@ namespace sw
     {
         INetSecurityProvider*     _pProvider{ nullptr };      ///< Encrypted 면 필수(`NetSecurity::getProvider()`)
         INetConnectAuthenticator* _pAuthenticator{ nullptr }; ///< 서버 — 있으면 토큰 없는 · 모르는 토큰 · 증명이 틀린 연결을 거절한다
-        NetSecurityMode           _mode{ NetSecurityMode::Off };
+        NetSecurityMode           _mode{ NetSecurityMode::LanUnsecured };
         NetAeadAlgorithm          _algorithm{ NetAeadAlgorithm::Aes256Gcm };
     };
 } // namespace sw

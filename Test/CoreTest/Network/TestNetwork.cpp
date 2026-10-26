@@ -811,6 +811,39 @@ SW_TEST_CASE( NetworkTest, ReceivedMessageBuffersAreReusedThroughTheCallerBuffer
     SW_EXPECT_TRUE( received.data() == pFirstStorage );
 }
 
+SW_TEST_CASE( NetworkTest, ReceiveQueueOverflowIsFlaggedAndDrainingFreesRoom )
+{
+    // 게임이 꺼내지 않는 동안 상대가 계속 넣으면 받은 큐가 상한에서 멈추고 표시가 선다(호스트는 이 표시로 끊는다). 꺼낸 만큼은 다시 들어간다.
+    NetConnection       sender;
+    NetConnection       receiver;
+    const vector<uint8> message( 1000, 0x30 );
+    const int32         perMessage    = 1000 + NetConnection::kIncomingMessageOverheadBytes;
+    const int32         fitCount      = NetConnection::kMaxPendingReceiveBytes / perMessage;
+    int32               deliveredSeen = 0;
+    SW_TEST_DEFENSIVE_SCOPE( "a receive queue overflow is reported with a warning" );
+    test::ScopedLogCollector log;
+    for ( int32 round = 0; round <= fitCount; ++round )
+    {
+        SW_ASSERT_TRUE( sender.sendMessage( NetChannelType::Unreliable, message.data(), static_cast<int32>( message.size() ) ) );
+        BitWriter packet;
+        sender.writePacket( 0.001 * round, packet, 1200 );
+        BitReader reader( packet.getBytes().data(), packet.getByteCount() );
+        SW_ASSERT_TRUE( receiver.readPacket( 0.001 * round, reader ) );
+        if ( round < fitCount )
+            SW_ASSERT_FALSE( receiver.hasReceiveOverflowed() );
+    }
+    SW_EXPECT_TRUE( receiver.hasReceiveOverflowed() );
+    SW_EXPECT_EQUAL( 1u, log.countWithID( "Net.ReceiveOverflow" ) );
+    vector<uint8> received;
+    while ( receiver.receiveMessage( NetChannelType::Unreliable, received ) )
+    {
+        ++deliveredSeen;
+    }
+    SW_EXPECT_EQUAL( fitCount, deliveredSeen ); // 넘친 하나는 버렸다
+    receiver.reset();
+    SW_EXPECT_FALSE( receiver.hasReceiveOverflowed() );
+}
+
 SW_TEST_CASE( NetworkTest, HostsHandshakeExchangeAndSurviveBadNetworks )
 {
     NetHostConfig settings;

@@ -63,7 +63,7 @@ namespace sw
          * @return 단계가 범위를 넘어 쓰지 못하면 false 입니다. 단계는 쓰기 전에 범위로 잘리므로 정상 값에서는 늘 true 입니다.
          */
         [[nodiscard]] bool write( BitWriter& writer ) const;
-        /** @brief `write` 의 바이트를 읽습니다. 넘침이거나 단계가 범위를 넘으면 false 이고 값은 0 입니다. */
+        /** @brief `write` 의 바이트를 읽습니다. 넘침이거나 단계가 범위를 넘거나 `_move` 길이가 1 을 넘으면 false 이고 값은 0 입니다. */
         [[nodiscard]] bool read( BitReader& reader );
         /** @brief 선 · 파일을 거친 것과 같은 값으로 자릅니다(할당 없음). */
         void quantize();

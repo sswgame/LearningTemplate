@@ -66,8 +66,9 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 서비스가 어느 리슨의 연결에서 요청을 받는지입니다(노출 면). 호스트에 GM 리슨(`OnlineServiceHostConfig::_pAdminTransport`)이 있을 때만 갈린다.
-     * @details GM 리슨이 없으면 리슨 하나가 모든 서비스를 받는다 — GM 키트만 적은 온라인 설정으로 서버를 하나 더 띄우는 운영도 그대로 된다.
+     * @brief 서비스가 어느 리슨의 연결에서 요청을 받는지입니다(노출 면).
+     * @details `Admin` 서비스는 GM 리슨(`OnlineServiceHostConfig::_pAdminTransport`)의 연결만 받는다. GM 리슨 없이 `Admin` 서비스를 올리면 `initialize` · `registerHostService` 가
+     *          거절한다 — 플레이어 포트가 GM 서비스를 받는 숨은 폴백은 두지 않는다(GM 도구를 공용 포트에 여는 설정 실수를 기동에서 잡는다).
      */
     enum class OnlineServiceExposure : uint8
     {
@@ -156,6 +157,8 @@ namespace sw
         int64                 _requestRefillMsPerAccount{ 100 };
         int32                 _requestBurstPerRemote{ 10 }; ///< 로그인 전(주소마다)
         int64                 _requestRefillMsPerRemote{ 500 };
+        int64                 _helloTimeoutMs{ 5000 };        ///< 연결이 Hello 를 끝내야 하는 기한. 넘으면 닫는다(열기만 하고 슬롯을 잡는 연결을 막는다)
+        int32                 _maxConnectionsPerRemote{ 64 }; ///< 주소(IP)마다 동시 연결 상한. 넘는 연결은 바로 닫는다. 한 주소에서 많이 붙이는 부하 봇은 올린다
     };
 } // namespace sw
 
@@ -250,8 +253,10 @@ namespace sw
         {
             uint64    _remoteKey{ 0 };
             AccountID _accountID{ kInvalidAccountID };
+            int64     _openedMs{ 0 }; ///< 연결이 열린 시각(호스트 시계). Hello 기한(`_helloTimeoutMs`)의 기준
             uint8     _bHelloDone{ SW_FALSE };
             uint8     _bAdminListener{ SW_FALSE }; ///< GM 리슨으로 들어온 연결
+            uint8     _bClosing{ SW_FALSE };       ///< 주소별 상한이나 Hello 기한으로 닫는 중 — 요청을 받지 않는다
         };
 
         struct BusSubscription
@@ -274,6 +279,8 @@ namespace sw
         bool                sendPushToConnection( StreamConnectionHandle connection, uint16 kind, const BitWriter& body );
         void                dispatchServerBusMessage( const ServerBusMessage& message );
         void                notifyAccountLeft( AccountID accountID );
+        /** @brief Hello 를 `_helloTimeoutMs` 안에 끝내지 않은 연결을 닫습니다. `update` 가 부르며 `kHelloSweepIntervalMs` 마다 한 번 표를 돈다. */
+        void closeExpiredHelloConnections();
 
         OnlineServiceHostConfig                          _settings;
         StreamMessageEndpoint                            _endpoint;
@@ -287,10 +294,13 @@ namespace sw
         vector<uint8>                                    _responseBytes;
         unordered_map<uint64, ConnectionState>           _mapConnection; ///< 연결(packed) → 상태
         unordered_map<AccountID, StreamConnectionHandle> _mapAccountToConnection;
-        unique_ptr<ServerBus>                            _pServerBus;        ///< `_settings._pServerBusTransport` 의 앞이다
-        unique_ptr<ListenerTransport>                    _listenerTransport; ///< 빌린 전송(플레이어 · GM)을 묶은 것. 엔드포인트는 이것 하나를 본다
+        unordered_map<uint64, int32>                     _mapRemoteConnectionCount; ///< 주소 키(`_remoteKey`) → 열린 연결 수. `_maxConnectionsPerRemote` 를 넘는 연결은 닫는다
+        vector<StreamConnectionHandle>                   _listHandleScratch;        ///< Hello 기한을 넘겨 닫을 연결(표를 돌며 닫지 않으려고 모은다)
+        unique_ptr<ServerBus>                            _pServerBus;               ///< `_settings._pServerBusTransport` 의 앞이다
+        unique_ptr<ListenerTransport>                    _listenerTransport;        ///< 빌린 전송(플레이어 · GM)을 묶은 것. 엔드포인트는 이것 하나를 본다
         int64                                            _nowMs;
         uint64                                           _nextBusSubscriptionID; ///< 다음 버스 구독 번호(0 은 쓰지 않는다)
+        int64                                            _nextHelloSweepMs;      ///< 다음 Hello 기한 검사 시각
         uint64                                           _schemaHash;            ///< `initialize` 때 `OnlineProtocolRegistry::computeSchemaHash` 로 정한다
         uint8                                            _bInitialized;
     };

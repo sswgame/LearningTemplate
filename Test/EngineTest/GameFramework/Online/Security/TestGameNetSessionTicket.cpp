@@ -177,7 +177,7 @@ SW_TEST_CASE( GameNetSessionTicketTest, TicketParamsRefuseWhatCannotBindACredent
         SW_EXPECT_FALSE( session.makeTicketClientParams( NetAddress{}, makeTicket( 0x5A ), params ) );
     }
     SW_ASSERT_TRUE( session.makeTicketClientParams( NetAddress::makeLoopback( 7777 ), makeTicket( 0x5A ), params ) );
-    params._hostSettings._security._mode = NetSecurityMode::Off; // 평문으로 바꾸면 비밀을 싣지 못한다
+    params._hostSettings._security._mode = NetSecurityMode::LanUnsecured; // 평문으로 바꾸면 비밀을 싣지 못한다
     {
         SW_TEST_DEFENSIVE_SCOPE( "the plaintext ticket client is logged" );
         SW_EXPECT_FALSE( session.initialize( params ) );

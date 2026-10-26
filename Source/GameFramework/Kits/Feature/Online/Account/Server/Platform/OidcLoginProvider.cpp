@@ -121,36 +121,28 @@ namespace sw
 
     OidcLoginProvider::Decision OidcLoginProvider::evaluate( const PendingTicket& pending, UnixMilliseconds now, PlatformLoginVerification& outVerification )
     {
-        JSONWebToken token;
-        if ( token.parse( pending._token ) == false )
+        JwtUnverified unverified;
+        if ( unverified.parse( pending._token ) == false )
         {
             outVerification._bRejected = SW_TRUE;
             return Decision::Done;
         }
-        const NetPublicKey* pKey = _keyCache.findKey( token.getKeyID() );
+        const NetPublicKey* pKey = _keyCache.findKey( unverified.getKeyID() );
         if ( pKey == nullptr )
             return Decision::NeedKey;
-        if ( token.verifySignature( *_pProvider, *pKey ) == false )
+        // 서명과 iss · aud · exp · iat 는 `verify` 가 한 번에 본다. 여기서는 제공자마다 다른 nonce · subject 만 본다.
+        const std::optional<JwtVerified> token =
+            std::move( unverified ).verify( *_pProvider, *pKey, JwtClaimRule::makeIDToken( _settings._issuer, _settings._listClientID, nowMs, _settings._clockSkewMs ) );
+        if ( token.has_value() == false )
         {
             outVerification._bRejected = SW_TRUE;
             return Decision::Done;
         }
-        string issuer;
-        string subject;
-        string nonce;
-        int64  expiresAt = 0;
-        int64  issuedAt  = 0;
-        bool   bAudience = false;
-        for ( const string& clientID : _settings._listClientID )
-        {
-            bAudience = bAudience || token.hasAudience( clientID );
-        }
-        const bool bIssuerOk      = token.findText( "iss", issuer ) && issuer == _settings._issuer;
-        const bool bExpiresOk     = token.findInteger( "exp", expiresAt ) && now.count() < expiresAt * constant::kMillisecondsPerSecond + _settings._clockSkewMs;
-        const bool bIssuedOk      = token.findInteger( "iat", issuedAt ) == false || issuedAt * constant::kMillisecondsPerSecond <= now.count() + _settings._clockSkewMs;
-        const bool bNonceOk       = _settings._bRequireNonce == SW_FALSE || ( pending._nonce.empty() == false && token.findText( "nonce", nonce ) && nonce == pending._nonce );
-        const bool bSubjectOk     = token.findText( _settings._subjectPath, subject ) && subject.empty() == false;
-        const bool bTokenRejected = bAudience == false || bIssuerOk == false || bExpiresOk == false || bIssuedOk == false || bNonceOk == false || bSubjectOk == false;
+        string     subject;
+        string     nonce;
+        const bool bNonceOk       = _settings._bRequireNonce == SW_FALSE || ( pending._nonce.empty() == false && token->findText( "nonce", nonce ) && nonce == pending._nonce );
+        const bool bSubjectOk     = token->findText( _settings._subjectPath, subject ) && subject.empty() == false;
+        const bool bTokenRejected = bNonceOk == false || bSubjectOk == false;
         if ( bTokenRejected )
         {
             outVerification._bRejected = SW_TRUE;
@@ -158,7 +150,7 @@ namespace sw
         }
         outVerification._subject = subject;
         if ( _settings._displayNamePath.empty() == false )
-            (void)token.findText( _settings._displayNamePath, outVerification._displayName );
+            (void)token->findText( _settings._displayNamePath, outVerification._displayName );
         return Decision::Done;
     }
 } // namespace sw

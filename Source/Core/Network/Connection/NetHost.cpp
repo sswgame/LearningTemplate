@@ -57,6 +57,7 @@ namespace sw
                     case NetDisconnectReason::Remote:
                     case NetDisconnectReason::Timeout:
                     case NetDisconnectReason::Rejected:
+                    case NetDisconnectReason::ReceiveOverflow:
                         break;
                 }
                 return NetDisconnectReason::Rejected;
@@ -777,6 +778,8 @@ namespace sw
             slot._lastReceiveTime  = nowSeconds;
             slot._bRemoteDebugHold = bRemoteDebugHold;
         }
+        if ( slot._connection.hasReceiveOverflowed() )
+            closeSlot( slotIndex, NetDisconnectReason::ReceiveOverflow, true );
     }
 
     void NetHost::handleControlPacket( PacketType type, const ControlPacket& packet, BitReader& reader )
@@ -997,6 +1000,8 @@ namespace sw
             pSlot->_lastReceiveTime  = nowSeconds;
             pSlot->_bRemoteDebugHold = bRemoteDebugHold;
         }
+        if ( pSlot->_connection.hasReceiveOverflowed() )
+            closeSlot( slotIndex, NetDisconnectReason::ReceiveOverflow, true );
     }
 
     void NetHost::closeSlot( int32 slotIndex, NetDisconnectReason reason, bool bNotifyRemote )

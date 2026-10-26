@@ -3,6 +3,8 @@
 #include "GameFramework/Kits/Feature/Network/NetTurnRelay/TurnRelay.h"
 
 #include "Core/Common/HashUtil.h"
+#include "Core/Common/SecureUtil.h"
+#include "Core/Container/LittleEndianUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Connection/NetHost.h"
@@ -20,16 +22,13 @@ namespace sw
     {
         struct TurnRelayInternal
         {
-            /** @brief 운영체제 난수 64비트(`UUID::generate`)를 반환합니다. 실행마다, 서버마다 다르고 미리 알 수 없습니다. */
-            static uint64 makeTokenSeed()
+            /** @brief 자리 토큰 키입니다. @p tokenSeed 가 0 이면 운영체제 난수(`UUID::generate` 의 16 바이트), 아니면 시드에서 만든다(테스트 — 키를 맞힐 수 있다). */
+            static SipHashKey makeTokenKey( uint64 tokenSeed )
             {
-                const UUID uuid  = UUID::generate();
-                uint64     value = 0;
-                for ( const uint8 byte : uuid._arrBytes )
-                {
-                    value = HashUtil::mix64( value ^ byte );
-                }
-                return value != 0 ? value : HashUtil::kGoldenRatio64;
+                if ( tokenSeed != 0 )
+                    return SipHashKey{ HashUtil::mix64( tokenSeed ), HashUtil::mix64( ~tokenSeed ) };
+                const UUID uuid = UUID::generate();
+                return SipHashKey{ LittleEndianUtil::readUint64( uuid._arrBytes ), LittleEndianUtil::readUint64( uuid._arrBytes + 8 ) };
             }
 
             /** @brief @p token 이 맞는 차지된 자리를 반환합니다. 토큰이 0 이거나 맞는 자리가 없으면 -1 입니다. */
@@ -75,7 +74,7 @@ namespace sw
         , _defaultPolicy{}
         , _pHost{ nullptr }
         , _pPolicy{ nullptr }
-        , _tokenSecret{ 0 }
+        , _tokenKey{}
         , _tokenCount{ 0 }
         , _seatCount{ 2 }
         , _messageWriter{}
@@ -92,11 +91,11 @@ namespace sw
             SW_LOG_ERROR( "TurnRelayServer: refused to start - settings '%#'", rangeError.c_str() );
             return false;
         }
-        _pHost       = pHost;
-        _seatCount   = settings._seatCount;
-        _pPolicy     = pPolicy != nullptr ? pPolicy : &_defaultPolicy;
-        _tokenSecret = tokenSeed != 0 ? tokenSeed : TurnRelayInternal::makeTokenSeed();
-        _tokenCount  = 0;
+        _pHost      = pHost;
+        _seatCount  = settings._seatCount;
+        _pPolicy    = pPolicy != nullptr ? pPolicy : &_defaultPolicy;
+        _tokenKey   = TurnRelayInternal::makeTokenKey( tokenSeed );
+        _tokenCount = 0;
         _listRoom.clear();
         _listPending.clear();
         _eventBuffer.clear();
@@ -105,9 +104,11 @@ namespace sw
 
     uint32 TurnRelayServer::nextToken()
     {
-        // 비밀 키에 카운터 값을 섞는다. 받은 토큰에서 다음 토큰을 계산할 수 없게 하려는 것이며 암호학적 MAC 은 아니다.
+        // 키 있는 PRF(SipHash-2-4)에 카운터를 넣는다. 옛 식(비밀 + n × 황금비 의 mix64)은 splitmix 수열이라 받은 토큰에서 키를 되찾아 남의 자리 토큰을 맞힐 수 있었다.
         ++_tokenCount;
-        const uint32 token = static_cast<uint32>( HashUtil::mix64( _tokenSecret + _tokenCount * HashUtil::kGoldenRatio64 ) );
+        uint8 arrCounter[8];
+        LittleEndianUtil::writeUint64( arrCounter, _tokenCount );
+        const uint32 token = static_cast<uint32>( SecureUtil::sipHash24( _tokenKey, arrCounter, sizeof( arrCounter ) ) );
         return token != 0 ? token : 1u;
     }
 
