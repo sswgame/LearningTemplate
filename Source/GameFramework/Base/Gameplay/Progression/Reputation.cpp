@@ -7,8 +7,8 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 
 #include <algorithm>
@@ -34,7 +34,7 @@ namespace sw
         uint32 loadedCount = 0;
         for ( XMLNode node = root.findChild( "Faction" ); node; node = node.findNextSibling( "Faction" ) )
         {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
+            const utf8* pID = XMLReadUtil::findRequiredID( node, sourceName );
             if ( pID == nullptr )
                 continue;
             FactionDef faction;
@@ -43,16 +43,16 @@ namespace sw
             faction._name     = pName != nullptr ? pName : pID;
             // 적지 않은 칸은 FactionDef 의 초기값이다. 깨진 값 · 범위 밖 값은 그 세력을 넣지 않는 오류다(자르지 않는다).
             constexpr int32 kAnyInt = MathUtil::kMaxInt32;
-            bool            bValid  = GameDataXML::readOptionalNumber( node, "min", sourceName, MathUtil::kMinInt32, kAnyInt, faction._minValue );
-            bValid                  = GameDataXML::readOptionalNumber( node, "max", sourceName, faction._minValue, kAnyInt, faction._maxValue ) && bValid;
-            bValid                  = GameDataXML::readOptionalNumber( node, "start", sourceName, faction._minValue, faction._maxValue, faction._startValue ) && bValid;
-            bValid                  = GameDataXML::readOptionalNumber( node, "decay", sourceName, 0, kAnyInt, faction._dailyDecay ) && bValid;
+            bool            bValid  = XMLReadUtil::readOptionalNumber( node, "min", sourceName, MathUtil::kMinInt32, kAnyInt, faction._minValue );
+            bValid                  = XMLReadUtil::readOptionalNumber( node, "max", sourceName, faction._minValue, kAnyInt, faction._maxValue ) && bValid;
+            bValid                  = XMLReadUtil::readOptionalNumber( node, "start", sourceName, faction._minValue, faction._maxValue, faction._startValue ) && bValid;
+            bValid                  = XMLReadUtil::readOptionalNumber( node, "decay", sourceName, 0, kAnyInt, faction._dailyDecay ) && bValid;
             for ( XMLNode child = node.findChild( "Tier" ); child; child = child.findNextSibling( "Tier" ) )
             {
                 // 단계의 하한을 적지 않으면 세력의 하한이다(이 데이터의 값).
                 ReputationTier tier{ hashed_string{}, faction._minValue };
-                const bool     bNamed = GameDataXML::readRequiredName( child, "name", sourceName, tier._name );
-                bValid                = GameDataXML::readOptionalNumber( child, "min", sourceName, faction._minValue, faction._maxValue, tier._minValue ) && bValid;
+                const bool     bNamed = XMLReadUtil::readRequiredName( child, "name", sourceName, tier._name );
+                bValid                = XMLReadUtil::readOptionalNumber( child, "min", sourceName, faction._minValue, faction._maxValue, tier._minValue ) && bValid;
                 if ( bNamed )
                 {
                     faction._listTier.push_back( tier );

@@ -48,21 +48,21 @@ namespace sw
 
     bool BrCatalog::loadElement( const XMLNode& node, string_view name, string_view sourceName )
     {
-        if ( GameDataXML::isElement( name, "Armor" ) )
+        if ( XMLReadUtil::isElement( name, "Armor" ) )
             return GameDataXML::readInto( node, sourceName, _armorCatalog );
-        if ( GameDataXML::isElement( name, "Backpack" ) )
+        if ( XMLReadUtil::isElement( name, "Backpack" ) )
             return GameDataXML::readInto( node, sourceName, _backpackCatalog );
-        if ( GameDataXML::isElement( name, "LootSpot" ) )
+        if ( XMLReadUtil::isElement( name, "LootSpot" ) )
             return GameDataXML::readInto( node, sourceName, _lootSpotCatalog );
-        if ( GameDataXML::isElement( name, "Player" ) )
+        if ( XMLReadUtil::isElement( name, "Player" ) )
             return GameDataXML::readSetting( node, sourceName, _player );
-        if ( GameDataXML::isElement( name, "Flight" ) )
+        if ( XMLReadUtil::isElement( name, "Flight" ) )
             return GameDataXML::readSetting( node, sourceName, _flight );
-        if ( GameDataXML::isElement( name, "Fall" ) )
+        if ( XMLReadUtil::isElement( name, "Fall" ) )
             return GameDataXML::readSetting( node, sourceName, _fall );
-        if ( GameDataXML::isElement( name, "Zone" ) )
+        if ( XMLReadUtil::isElement( name, "Zone" ) )
             return loadZone( node, sourceName );
-        if ( GameDataXML::isElement( name, "SupplyDrop" ) )
+        if ( XMLReadUtil::isElement( name, "SupplyDrop" ) )
             return loadSupplyDrop( node, sourceName );
         SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, name );
         return false;

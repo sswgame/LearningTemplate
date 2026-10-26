@@ -119,19 +119,19 @@ namespace sw
 
     bool JRPGCatalog::loadElement( const XMLNode& node, string_view name, string_view sourceName )
     {
-        if ( GameDataXML::isElement( name, "ExperienceCurve" ) )
+        if ( XMLReadUtil::isElement( name, "ExperienceCurve" ) )
             return _curve.loadFromNode( node, sourceName );
-        if ( GameDataXML::isElement( name, "Class" ) )
+        if ( XMLReadUtil::isElement( name, "Class" ) )
             return loadClass( node, sourceName );
-        if ( GameDataXML::isElement( name, "Spell" ) )
+        if ( XMLReadUtil::isElement( name, "Spell" ) )
             return GameDataXML::readInto( node, sourceName, _spellCatalog );
-        if ( GameDataXML::isElement( name, "Combo" ) )
+        if ( XMLReadUtil::isElement( name, "Combo" ) )
             return loadCombo( node, sourceName );
-        if ( GameDataXML::isElement( name, "Manual" ) )
+        if ( XMLReadUtil::isElement( name, "Manual" ) )
             return loadManual( node, sourceName );
-        if ( GameDataXML::isElement( name, "Enemy" ) )
+        if ( XMLReadUtil::isElement( name, "Enemy" ) )
             return loadEnemy( node, sourceName );
-        if ( GameDataXML::isElement( name, "Area" ) )
+        if ( XMLReadUtil::isElement( name, "Area" ) )
             return loadArea( node, sourceName );
         SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, name );
         return false;
@@ -161,8 +161,8 @@ namespace sw
         JRPGComboDef def;
         if ( GameDataXML::readFields( node, def, sourceName, { "members", "types" } ) == false )
             return false;
-        GameDataXML::appendNameList( node.getAttributeText( "members" ), ",; \t", def._listMemberID );
-        GameDataXML::appendNameList( node.getAttributeText( "types" ), ",; \t", def._listDamageType );
+        XMLReadUtil::appendNameList( node.getAttributeText( "members" ), ",; \t", def._listMemberID );
+        XMLReadUtil::appendNameList( node.getAttributeText( "types" ), ",; \t", def._listDamageType );
         if ( def._listMemberID.size() < 2 )
         {
             SW_LOG_ERROR( "%#: combo '%#' needs two or more members", sourceName, def._id.c_str() );
@@ -192,8 +192,8 @@ namespace sw
         bool         bValid = GameDataXML::readFields( node, def, sourceName, { "hp", "mp", "str", "agi", "vit", "intellect", "luck", "weak", "locks" } );
         bValid              = Internal::readStats( node, Internal::kArrStatName, sourceName, def._arrStat ) && bValid;
         bValid              = Internal::checkMaxHp( def._arrStat, node, sourceName ) && bValid;
-        GameDataXML::appendNameList( node.getAttributeText( "weak" ), ",; \t", def._listWeakness );
-        GameDataXML::appendNameList( node.getAttributeText( "locks" ), ",; \t", def._listLock );
+        XMLReadUtil::appendNameList( node.getAttributeText( "weak" ), ",; \t", def._listWeakness );
+        XMLReadUtil::appendNameList( node.getAttributeText( "locks" ), ",; \t", def._listLock );
         if ( bValid )
             (void)_enemyCatalog.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
         return bValid;
@@ -207,7 +207,7 @@ namespace sw
         {
             JRPGEncounterGroup group;
             bValid = GameDataXML::readFields( groupNode, group, sourceName, { "enemies" } ) && bValid;
-            GameDataXML::appendNameList( groupNode.getAttributeText( "enemies" ), ",; \t", group._listEnemyID );
+            XMLReadUtil::appendNameList( groupNode.getAttributeText( "enemies" ), ",; \t", group._listEnemyID );
             if ( group._listEnemyID.empty() )
             {
                 SW_LOG_ERROR( "%#: area '%#' has a <Group> without enemies", sourceName, def._id.c_str() );

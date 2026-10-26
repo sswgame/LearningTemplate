@@ -63,13 +63,13 @@ namespace sw
         if ( pPrefix != nullptr )
             _prefix = pPrefix;
         // 적지 않은 칸은 생성자의 초기값이다. 깨진 값 · 범위 밖 값은 읽기 실패이고 그 칸은 바꾸지 않는다(자르거나 다른 값으로 바꿔 쓰지 않는다).
-        bool bValid = GameDataXML::readOptionalNumber( root, "interval", sourceName, 0.0f, MathUtil::kMaxFloat, _interval );
-        bValid      = GameDataXML::readOptionalNumber( root, "minimumGap", sourceName, 0.0f, MathUtil::kMaxFloat, _minimumGap ) && bValid;
-        bValid      = GameDataXML::readOptionalNumber( root, "slots", sourceName, 1, AutosaveInternal::kMaxSlotCount, _slotCount ) && bValid;
-        bValid      = GameDataXML::readOptionalFlag( root, "areaChange", _bOnAreaChange ) && bValid;
-        bValid      = GameDataXML::readOptionalFlag( root, "checkpoint", _bOnCheckpoint ) && bValid;
-        bValid      = GameDataXML::readOptionalFlag( root, "beforeBoss", _bOnBeforeBoss ) && bValid;
-        bValid      = GameDataXML::readOptionalFlag( root, "quit", _bOnQuit ) && bValid;
+        bool bValid = XMLReadUtil::readOptionalNumber( root, "interval", sourceName, 0.0f, MathUtil::kMaxFloat, _interval );
+        bValid      = XMLReadUtil::readOptionalNumber( root, "minimumGap", sourceName, 0.0f, MathUtil::kMaxFloat, _minimumGap ) && bValid;
+        bValid      = XMLReadUtil::readOptionalNumber( root, "slots", sourceName, 1, AutosaveInternal::kMaxSlotCount, _slotCount ) && bValid;
+        bValid      = XMLReadUtil::readOptionalFlag( root, "areaChange", _bOnAreaChange ) && bValid;
+        bValid      = XMLReadUtil::readOptionalFlag( root, "checkpoint", _bOnCheckpoint ) && bValid;
+        bValid      = XMLReadUtil::readOptionalFlag( root, "beforeBoss", _bOnBeforeBoss ) && bValid;
+        bValid      = XMLReadUtil::readOptionalFlag( root, "quit", _bOnQuit ) && bValid;
         return bValid;
     }
 

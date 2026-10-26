@@ -32,7 +32,7 @@ namespace sw
             {
                 outListGarrison.clear();
                 bool bAllValid = true;
-                GameDataXML::forEachNamedNumber( text, ",; ", ConquestGarrisonDef{}._count, GameDataXML::MissingValue::UseDefault,
+                XMLReadUtil::forEachNamedNumber( text, ",; ", ConquestGarrisonDef{}._count, XMLReadUtil::MissingValue::UseDefault,
                                                  [&]( string_view token, string_view unitName, int32 count, bool bValid )
                 {
                     if ( bValid == false || count < 0 )
@@ -143,7 +143,7 @@ namespace sw
         ConquestBuildingDef building;
         if ( GameDataXML::readFields( node, building, sourceName, { "trains" } ) == false )
             return false;
-        GameDataXML::parseNameList( node.getAttributeText( "trains" ), ",; ", building._listTrainable );
+        XMLReadUtil::parseNameList( node.getAttributeText( "trains" ), ",; ", building._listTrainable );
         ConquestCatalogInternal::loadStatChild( node, "Cost", building._cost );
         (void)_buildingCatalog.add( building ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
         return true;

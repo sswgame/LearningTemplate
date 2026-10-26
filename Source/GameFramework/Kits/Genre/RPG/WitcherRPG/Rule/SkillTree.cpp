@@ -7,8 +7,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
-
-#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 namespace sw
 {
@@ -28,14 +27,14 @@ namespace sw
         uint32 loadedCount = 0;
         for ( XMLNode treeNode = root.findChild( "Tree" ); treeNode; treeNode = treeNode.findNextSibling( "Tree" ) )
         {
-            const utf8* pTreeID = GameDataXML::findRequiredID( treeNode, sourceName );
+            const utf8* pTreeID = XMLReadUtil::findRequiredID( treeNode, sourceName );
             if ( pTreeID == nullptr )
                 continue;
             SkillTreeDef tree;
             tree._id = hashed_string( pTreeID );
             for ( XMLNode node = treeNode.findChild( "Skill" ); node; node = node.findNextSibling( "Skill" ) )
             {
-                const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
+                const utf8* pID = XMLReadUtil::findRequiredID( node, sourceName );
                 if ( pID == nullptr )
                     continue;
                 SkillDef skill;
@@ -48,12 +47,12 @@ namespace sw
                 skill._ability       = pAbility != nullptr ? hashed_string( pAbility ) : hashed_string{};
                 // 적지 않은 칸은 SkillDef 의 초기값이다. 깨진 값 · 범위 밖 값은 그 스킬을 넣지 않는 오류다(자르지 않는다).
                 constexpr int32 kAnyInt = MathUtil::kMaxInt32;
-                bool            bValid  = GameDataXML::readOptionalNumber( node, "maxRank", sourceName, 1, kAnyInt, skill._maxRank );
-                bValid                  = GameDataXML::readOptionalNumber( node, "cost", sourceName, 0, kAnyInt, skill._cost ) && bValid;
-                bValid                  = GameDataXML::readOptionalNumber( node, "level", sourceName, MathUtil::kMinInt32, kAnyInt, skill._requiredLevel ) && bValid;
-                bValid                  = GameDataXML::readOptionalNumber( node, "spent", sourceName, 0, kAnyInt, skill._requiredSpent ) && bValid;
+                bool            bValid  = XMLReadUtil::readOptionalNumber( node, "maxRank", sourceName, 1, kAnyInt, skill._maxRank );
+                bValid                  = XMLReadUtil::readOptionalNumber( node, "cost", sourceName, 0, kAnyInt, skill._cost ) && bValid;
+                bValid                  = XMLReadUtil::readOptionalNumber( node, "level", sourceName, MathUtil::kMinInt32, kAnyInt, skill._requiredLevel ) && bValid;
+                bValid                  = XMLReadUtil::readOptionalNumber( node, "spent", sourceName, 0, kAnyInt, skill._requiredSpent ) && bValid;
                 // "basic:2,stance" 형식이며, 이름:랭크로 적고 랭크를 생략하면 SkillRequirement 의 초기값(1)이다. 읽히지 않거나 1 아래인 랭크는 오류다.
-                GameDataXML::forEachNamedNumber( node.getAttributeText( "requires" ), ", ", SkillRequirement{}._rank, GameDataXML::MissingValue::UseDefault,
+                XMLReadUtil::forEachNamedNumber( node.getAttributeText( "requires" ), ", ", SkillRequirement{}._rank, XMLReadUtil::MissingValue::UseDefault,
                                                  [&]( string_view token, string_view skillName, int32 rank, bool bNumberValid )
                 {
                     if ( bNumberValid == false || rank < 1 )

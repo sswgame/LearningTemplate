@@ -7,8 +7,8 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceXMLUtil.h"
 #include "GameFramework/Base/Gameplay/Appearance/CustomizationSchema.h"
@@ -40,7 +40,7 @@ namespace sw
                 StringUtil::forEachToken( text, ";", [&]( string_view token )
                 {
                     float4 color{};
-                    if ( GameDataXML::parseFloat4( token, color ) )
+                    if ( XMLReadUtil::parseFloat4( token, color ) )
                         outListColor.push_back( color );
                     else
                         report.addErrorWithID( "Appearance.ColorShape", "%#: color '%#' must be four numbers \"r g b a\"", sourceName, token );

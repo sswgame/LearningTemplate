@@ -15,7 +15,7 @@ namespace sw
     /**
      * @struct XMLCatalogLoader
      * @brief `XMLCatalog` 가 부르는 문서 열기와 루트 찾기의 몸통입니다. 템플릿 밖에 두어서 카탈로그 헤더가 XML 헤더를 끌어오지 않게 합니다.
-     * @details 실패 경고 문구는 `GameDataXML::loadRoot` 와 `parseRoot` 와 같다. 루트 읽기가 0 개이거나 false 이면 실패이다.
+     * @details 실패 경고 문구는 `XMLReadUtil::loadRootOrWarn` 와 `parseRoot` 와 같다. 루트 읽기가 0 개이거나 false 이면 실패이다.
      */
     struct SW_GF_API XMLCatalogLoader
     {

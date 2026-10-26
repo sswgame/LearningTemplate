@@ -65,17 +65,17 @@ namespace sw
 
     bool ActionPlatformerCatalog::loadElement( const XMLNode& node, string_view name, string_view sourceName )
     {
-        if ( GameDataXML::isElement( name, "Stage" ) )
+        if ( XMLReadUtil::isElement( name, "Stage" ) )
             return loadStage( node, sourceName );
-        if ( GameDataXML::isElement( name, "Combo" ) )
+        if ( XMLReadUtil::isElement( name, "Combo" ) )
             return loadCombo( node, sourceName );
-        if ( GameDataXML::isElement( name, "Pattern" ) )
+        if ( XMLReadUtil::isElement( name, "Pattern" ) )
             return loadPattern( node, sourceName );
-        if ( GameDataXML::isElement( name, "Grading" ) )
+        if ( XMLReadUtil::isElement( name, "Grading" ) )
             return loadGrading( node, sourceName );
-        if ( GameDataXML::isElement( name, "Body" ) )
+        if ( XMLReadUtil::isElement( name, "Body" ) )
             return GameDataXML::readSetting( node, sourceName, _bodySettings );
-        if ( GameDataXML::isElement( name, "Parry" ) )
+        if ( XMLReadUtil::isElement( name, "Parry" ) )
             return GameDataXML::readSetting( node, sourceName, _parryRules );
         SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, name );
         return false;
@@ -116,8 +116,8 @@ namespace sw
         ActionStageDef stage;
         if ( GameDataXML::readFields( node, stage, sourceName, { "checkpoints", "secrets" } ) == false )
             return false;
-        GameDataXML::parseNameList( node.getAttributeText( "checkpoints" ), Internal::kNameSeparators, stage._listCheckpoint );
-        GameDataXML::parseNameList( node.getAttributeText( "secrets" ), Internal::kNameSeparators, stage._listSecret );
+        XMLReadUtil::parseNameList( node.getAttributeText( "checkpoints" ), Internal::kNameSeparators, stage._listCheckpoint );
+        XMLReadUtil::parseNameList( node.getAttributeText( "secrets" ), Internal::kNameSeparators, stage._listSecret );
         (void)_stageCatalog.add( stage ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
         return true;
     }
@@ -128,7 +128,7 @@ namespace sw
         ActionComboDef combo;
         if ( GameDataXML::readFields( node, combo, sourceName, { "moves" } ) == false )
             return false;
-        GameDataXML::parseNameList( node.getAttributeText( "moves" ), Internal::kNameSeparators, combo._listMove );
+        XMLReadUtil::parseNameList( node.getAttributeText( "moves" ), Internal::kNameSeparators, combo._listMove );
         if ( combo._listMove.empty() )
         {
             SW_LOG_ERROR( "%#: <Combo id=\"%#\"> needs moves=\"...\" with at least one move", sourceName, combo._id.c_str() );

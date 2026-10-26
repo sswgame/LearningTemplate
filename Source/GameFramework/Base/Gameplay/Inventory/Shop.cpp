@@ -7,8 +7,8 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Base/Gameplay/Inventory/ItemCatalog.h"
@@ -175,7 +175,7 @@ namespace sw
         uint32 loadedCount = 0;
         for ( XMLNode node = root.findChild( "Shop" ); node; node = node.findNextSibling( "Shop" ) )
         {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
+            const utf8* pID = XMLReadUtil::findRequiredID( node, sourceName );
             if ( pID == nullptr )
                 continue;
             ShopDef def;
@@ -184,12 +184,12 @@ namespace sw
             def._currency         = pCurrency != nullptr && pCurrency[0] != '\0' ? hashed_string( pCurrency ) : Wallet::getDefaultCurrency();
             // 적지 않은 칸은 ShopDef 의 초기값이다. 깨진 값 · 범위 밖 값은 그 상점을 넣지 않는 오류다(자르지 않는다).
             constexpr float32 kAnyFloat = MathUtil::kMaxFloat;
-            bool              bValid    = GameDataXML::readOptionalNumber( node, "buyMultiplier", sourceName, 0.0f, kAnyFloat, def._buyMultiplier );
-            bValid                      = GameDataXML::readOptionalNumber( node, "sellMultiplier", sourceName, 0.0f, kAnyFloat, def._sellMultiplier ) && bValid;
-            bValid                      = GameDataXML::readOptionalNumber( node, "saturation", sourceName, 0.0f, kAnyFloat, def._saturation ) && bValid;
-            bValid                      = GameDataXML::readOptionalNumber( node, "minSellFactor", sourceName, 0.0f, 1.0f, def._minSellFactor ) && bValid;
-            bValid                      = GameDataXML::readOptionalNumber( node, "recovery", sourceName, 0.0f, kAnyFloat, def._recoveryPerDay ) && bValid;
-            bValid                      = GameDataXML::readOptionalNumber( node, "restockDays", sourceName, 0, MathUtil::kMaxInt32, def._restockDays ) && bValid;
+            bool              bValid    = XMLReadUtil::readOptionalNumber( node, "buyMultiplier", sourceName, 0.0f, kAnyFloat, def._buyMultiplier );
+            bValid                      = XMLReadUtil::readOptionalNumber( node, "sellMultiplier", sourceName, 0.0f, kAnyFloat, def._sellMultiplier ) && bValid;
+            bValid                      = XMLReadUtil::readOptionalNumber( node, "saturation", sourceName, 0.0f, kAnyFloat, def._saturation ) && bValid;
+            bValid                      = XMLReadUtil::readOptionalNumber( node, "minSellFactor", sourceName, 0.0f, 1.0f, def._minSellFactor ) && bValid;
+            bValid                      = XMLReadUtil::readOptionalNumber( node, "recovery", sourceName, 0.0f, kAnyFloat, def._recoveryPerDay ) && bValid;
+            bValid                      = XMLReadUtil::readOptionalNumber( node, "restockDays", sourceName, 0, MathUtil::kMaxInt32, def._restockDays ) && bValid;
             StringUtil::forEachToken( node.getAttributeText( "refuses" ), ",; ", [&]( string_view token )
             {
                 def._listRefusedCategory.push_back( hashed_string( token ) );
@@ -205,9 +205,9 @@ namespace sw
                 }
                 ShopStockDef stock;
                 stock._itemID            = hashed_string( pItem );
-                bValid                   = GameDataXML::readOptionalNumber( stockNode, "price", sourceName, MathUtil::kMinInt32, MathUtil::kMaxInt32, stock._price ) && bValid;
-                bValid                   = GameDataXML::readOptionalNumber( stockNode, "count", sourceName, -1, MathUtil::kMaxInt32, stock._count ) && bValid;
-                bValid                   = GameDataXML::readOptionalNumber( stockNode, "restock", sourceName, 0, MathUtil::kMaxInt32, stock._restock ) && bValid;
+                bValid                   = XMLReadUtil::readOptionalNumber( stockNode, "price", sourceName, MathUtil::kMinInt32, MathUtil::kMaxInt32, stock._price ) && bValid;
+                bValid                   = XMLReadUtil::readOptionalNumber( stockNode, "count", sourceName, -1, MathUtil::kMaxInt32, stock._count ) && bValid;
+                bValid                   = XMLReadUtil::readOptionalNumber( stockNode, "restock", sourceName, 0, MathUtil::kMaxInt32, stock._restock ) && bValid;
                 const utf8* pRequirement = stockNode.findAttribute( "requires" );
                 if ( pRequirement != nullptr )
                     stock._requirement = pRequirement;

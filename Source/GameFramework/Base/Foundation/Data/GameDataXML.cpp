@@ -4,7 +4,6 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
-#include "Core/Math/MathUtil.h"
 
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
@@ -23,8 +22,6 @@ namespace sw
     {
         struct GameDataXMLInternal
         {
-            static constexpr const utf8* kNumberSeparators = ", \t;";
-
             static constexpr const utf8* kArrCurveChild[]        = { "Key" };
             static constexpr const utf8* kArrCurveKeyAttribute[] = { "time", "value", "interpolation" };
 
@@ -42,49 +39,6 @@ namespace sw
                 return attribute;
             }
 
-            /** @brief @p text 가 정확히 `Count` 개의 실수로 읽힐 때만 @p outArr 를 채우고 true 입니다(규칙은 `StringUtil::parseExactFloats`, 구분자만 이 형식의 것). */
-            template <uint32 Count>
-            [[nodiscard]] static bool parseExactFloats( string_view text, float32 ( &outArr )[Count] )
-            {
-                return StringUtil::parseExactFloats( text, kNumberSeparators, outArr, Count );
-            }
-
-            /**
-             * @brief 속성 하나를 @p pParse 로 읽어 @p inoutValue 에 담습니다. 선택 속성(@p bRequired = false)은 없으면 값을 두고 true 입니다.
-             * @details 있는데 읽히지 않거나 필수인데 없으면 어느 파일 · 원소 · 속성인지 오류로 알리고 false 입니다(값은 그대로).
-             */
-            template <typename TVector>
-            [[nodiscard]] static bool readFloatAttribute( const XMLNode& node, const utf8* pAttribute, string_view sourceName, bool bRequired, const utf8* pShape, TVector& inoutValue,
-                                                          bool ( *pParse )( string_view, TVector& ) )
-            {
-                const utf8* pText = node.findAttribute( pAttribute );
-                if ( pText == nullptr )
-                {
-                    if ( bRequired == false )
-                        return true;
-                    SW_LOG_ERROR_ID( "GameData.AttributeMissing", "%#: <%#> needs %#=\"%#\"", sourceName, node.getName(), pAttribute, pShape );
-                    return false;
-                }
-                TVector parsed{};
-                if ( pParse( string_view( pText ), parsed ) == false )
-                {
-                    SW_LOG_ERROR_ID( "GameData.AttributeShapeMismatch", "%#: <%#> %#=\"%#\" must be numbers shaped \"%#\"", sourceName, node.getName(), pAttribute, pText, pShape );
-                    return false;
-                }
-                inoutValue = parsed;
-                return true;
-            }
-
-            /** @brief `GameDataXML::readOptionalNumber` 의 몸통입니다. 읽기 · 범위 검사는 `XMLNode` 하나가 하고, 여기서는 어느 파일인지만 덧붙입니다. */
-            template <typename T>
-            [[nodiscard]] static bool readOptionalInRange( const XMLNode& node, const utf8* pAttribute, string_view sourceName, T minValue, T maxValue, T& inoutValue )
-            {
-                if ( node.readOptionalAttributeInRange( pAttribute, minValue, maxValue, inoutValue ) )
-                    return true;
-                SW_LOG_ERROR_ID( "GameData.ValueInvalid", "%#: <%#> has an invalid %# (listed above)", sourceName, node.getName(), pAttribute );
-                return false;
-            }
-
             static bool isHandRead( string_view attribute, std::initializer_list<string_view> listHandRead )
             {
                 return VectorUtil::contains( listHandRead, attribute );
@@ -95,64 +49,19 @@ namespace sw
 
 namespace sw
 {
-    bool GameDataXML::loadRoot( XMLDocument& doc, string_view path, const utf8* pRootName, XMLNode& outRoot, string& outSourceName )
-    {
-        outSourceName = string( path );
-        switch ( XMLReadUtil::loadRoot( doc, path, pRootName, outRoot, &outSourceName ) )
-        {
-            case XMLRootStatus::Found:
-            {
-                return true;
-            }
-            case XMLRootStatus::NotLoaded:
-            {
-                SW_LOG_WARNING( "Failed to read %#", path );
-                return false;
-            }
-            case XMLRootStatus::RootMissing:
-            {
-                SW_LOG_WARNING( "Missing <%#> root in %#", pRootName, outSourceName );
-                return false;
-            }
-        }
-        return false;
-    }
-
-    bool GameDataXML::parseRoot( XMLDocument& doc, string_view xmlText, string_view sourceName, const utf8* pRootName, XMLNode& outRoot )
-    {
-        switch ( XMLReadUtil::parseRoot( doc, xmlText, sourceName, pRootName, outRoot ) )
-        {
-            case XMLRootStatus::Found:
-            {
-                return true;
-            }
-            case XMLRootStatus::NotLoaded:
-            {
-                SW_LOG_WARNING( "Failed to parse %#", sourceName );
-                return false;
-            }
-            case XMLRootStatus::RootMissing:
-            {
-                SW_LOG_WARNING( "Missing <%#> root in %#", pRootName, sourceName );
-                return false;
-            }
-        }
-        return false;
-    }
-
     bool GameDataXML::loadFileWith( void* pCall, ReadRootFunction pReadRoot, string_view path, const utf8* pRootName )
     {
         XMLDocument doc;
         XMLNode     root;
         string      sourceName;
-        return loadRoot( doc, path, pRootName, root, sourceName ) && pReadRoot( pCall, root, sourceName );
+        return XMLReadUtil::loadRootOrWarn( doc, path, pRootName, root, sourceName ) && pReadRoot( pCall, root, sourceName );
     }
 
     bool GameDataXML::loadTextWith( void* pCall, ReadRootFunction pReadRoot, string_view xmlText, string_view sourceName, const utf8* pRootName )
     {
         XMLDocument doc;
         XMLNode     root;
-        return parseRoot( doc, xmlText, sourceName, pRootName, root ) && pReadRoot( pCall, root, sourceName );
+        return XMLReadUtil::parseRootOrWarn( doc, xmlText, sourceName, pRootName, root ) && pReadRoot( pCall, root, sourceName );
     }
 
     bool GameDataXML::readFields( const XMLNode& node, void* pInstance, const TypeInfo& typeInfo, string_view sourceName, std::initializer_list<string_view> listHandRead,
@@ -219,141 +128,6 @@ namespace sw
         return bOk;
     }
 
-    const utf8* GameDataXML::findRequiredID( const XMLNode& node, string_view sourceName )
-    {
-        const utf8* pID = node.findAttribute( "id" );
-        if ( StringUtil::isNullOrEmpty( pID ) )
-        {
-            SW_LOG_WARNING( "%#: <%#> without an id - skipped", sourceName, node.getName() );
-            return nullptr;
-        }
-        return pID;
-    }
-
-    hashed_string GameDataXML::readOptionalName( const XMLNode& node, const utf8* pAttribute )
-    {
-        return XMLReadUtil::readOptionalName( node, pAttribute );
-    }
-
-    bool GameDataXML::readRequiredName( const XMLNode& node, const utf8* pAttribute, string_view sourceName, hashed_string& outName )
-    {
-        outName = XMLReadUtil::readOptionalName( node, pAttribute );
-        if ( outName.empty() == false )
-            return true;
-        SW_LOG_ERROR( "%#: <%#> needs a non-empty name attribute '%#'", sourceName, node.getName() != nullptr ? node.getName() : "?", pAttribute );
-        return false;
-    }
-
-    void GameDataXML::parseNameList( string_view text, string_view separators, vector<hashed_string>& outListName )
-    {
-        outListName.clear();
-        appendNameList( text, separators, outListName );
-    }
-
-    void GameDataXML::appendNameList( string_view text, string_view separators, vector<hashed_string>& outListName )
-    {
-        StringUtil::forEachToken( text, separators, [&]( string_view token )
-        {
-            const hashed_string name( token );
-            // 빈 이름의 철자(`none`)는 이름이 될 수 없다 — 목록에 빈 이름이 조용히 들어가지 않게 오류로 알리고 넣지 않는다.
-            if ( name.empty() )
-            {
-                SW_LOG_ERROR( "A name list holds '%#', which spells the empty name - skipped", token );
-                return;
-            }
-            outListName.push_back( name );
-        } );
-    }
-
-    bool GameDataXML::parseFloatList( string_view text, uint32 maxCount, vector<float32>& outListValue )
-    {
-        vector<float32> listValue;
-        bool            bValid = true;
-        StringUtil::forEachToken( text, GameDataXMLInternal::kNumberSeparators, [&]( string_view token )
-        {
-            float32 value = 0.0f;
-            if ( listValue.size() >= maxCount || StringUtil::parseFloat( token, value ) == false )
-                bValid = false;
-            else
-                listValue.push_back( value );
-        } );
-        if ( bValid == false || listValue.empty() )
-            return false;
-        outListValue = std::move( listValue );
-        return true;
-    }
-
-    bool GameDataXML::parseFloat2( string_view text, float2& outValue )
-    {
-        float32 arrValue[2] = {};
-        if ( GameDataXMLInternal::parseExactFloats( text, arrValue ) == false )
-            return false;
-        outValue = float2{ arrValue[0], arrValue[1] };
-        return true;
-    }
-
-    bool GameDataXML::parseFloat3( string_view text, float3& outValue )
-    {
-        float32 arrValue[3] = {};
-        if ( GameDataXMLInternal::parseExactFloats( text, arrValue ) == false )
-            return false;
-        outValue = float3{ arrValue[0], arrValue[1], arrValue[2] };
-        return true;
-    }
-
-    bool GameDataXML::parseFloat4( string_view text, float4& outValue )
-    {
-        float32 arrValue[4] = {};
-        if ( GameDataXMLInternal::parseExactFloats( text, arrValue ) == false )
-            return false;
-        outValue = float4{ arrValue[0], arrValue[1], arrValue[2], arrValue[3] };
-        return true;
-    }
-
-    bool GameDataXML::readOptionalFloat2( const XMLNode& node, const utf8* pAttribute, string_view sourceName, float2& inoutValue )
-    {
-        return GameDataXMLInternal::readFloatAttribute( node, pAttribute, sourceName, false, "x y", inoutValue, &GameDataXML::parseFloat2 );
-    }
-
-    bool GameDataXML::readOptionalFloat3( const XMLNode& node, const utf8* pAttribute, string_view sourceName, float3& inoutValue )
-    {
-        return GameDataXMLInternal::readFloatAttribute( node, pAttribute, sourceName, false, "x y z", inoutValue, &GameDataXML::parseFloat3 );
-    }
-
-    bool GameDataXML::readRequiredFloat3( const XMLNode& node, const utf8* pAttribute, string_view sourceName, float3& outValue )
-    {
-        return GameDataXMLInternal::readFloatAttribute( node, pAttribute, sourceName, true, "x y z", outValue, &GameDataXML::parseFloat3 );
-    }
-
-    bool GameDataXML::readOptionalNumber( const XMLNode& node, const utf8* pAttribute, string_view sourceName, int32 minValue, int32 maxValue, int32& inoutValue )
-    {
-        return GameDataXMLInternal::readOptionalInRange( node, pAttribute, sourceName, minValue, maxValue, inoutValue );
-    }
-
-    bool GameDataXML::readOptionalNumber( const XMLNode& node, const utf8* pAttribute, string_view sourceName, float32 minValue, float32 maxValue, float32& inoutValue )
-    {
-        return GameDataXMLInternal::readOptionalInRange( node, pAttribute, sourceName, minValue, maxValue, inoutValue );
-    }
-
-    bool GameDataXML::readOptionalBool( const XMLNode& node, const utf8* pAttribute, bool& inoutValue )
-    {
-        std::optional<bool> value;
-        if ( node.readOptionalAttribute( pAttribute, value ) == false )
-            return false;
-        if ( value.has_value() )
-            inoutValue = *value;
-        return true;
-    }
-
-    bool GameDataXML::readOptionalFlag( const XMLNode& node, const utf8* pAttribute, uint8& inoutFlag )
-    {
-        bool bValue = inoutFlag != SW_FALSE;
-        if ( readOptionalBool( node, pAttribute, bValue ) == false )
-            return false;
-        inoutFlag = bValue ? SW_TRUE : SW_FALSE;
-        return true;
-    }
-
     bool GameDataXML::readFloatCurve( const XMLNode& parent, const utf8* pElement, float32 minValue, FloatCurve& outCurve, string_view sourceName )
     {
         outCurve._listKey.clear();
@@ -403,15 +177,5 @@ namespace sw
         }
         outCurve.sortAndComputeAutoTangents();
         return bValid;
-    }
-
-    bool GameDataXML::parseNumber( string_view token, int32& outValue )
-    {
-        return StringUtil::parseInt( token, outValue );
-    }
-
-    bool GameDataXML::parseNumber( string_view token, float32& outValue )
-    {
-        return StringUtil::parseFloat( token, outValue );
     }
 } // namespace sw

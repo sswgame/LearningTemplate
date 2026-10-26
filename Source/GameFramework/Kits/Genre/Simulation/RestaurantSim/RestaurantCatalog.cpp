@@ -140,7 +140,7 @@ namespace sw
     {
         CustomerTypeDef customerType;
         const bool      bValid = GameDataXML::readFields( node, customerType, sourceName, { "categories" } );
-        GameDataXML::parseNameList( node.getAttributeText( "categories" ), ",;| ", customerType._listCategory );
+        XMLReadUtil::parseNameList( node.getAttributeText( "categories" ), ",;| ", customerType._listCategory );
         if ( bValid )
             addCustomerType( customerType );
         return bValid;

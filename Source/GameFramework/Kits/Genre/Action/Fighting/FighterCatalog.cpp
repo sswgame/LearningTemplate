@@ -84,7 +84,7 @@ namespace sw
             [[nodiscard]] static bool readMove( const XMLNode& node, const InputCommandParser& parser, const MoveCatalog& moveCatalog, string_view sourceName,
                                                 FighterMove& outMove )
             {
-                const utf8* pMoveID = GameDataXML::findRequiredID( node, sourceName );
+                const utf8* pMoveID = XMLReadUtil::findRequiredID( node, sourceName );
                 if ( pMoveID == nullptr )
                     return false;
                 FighterMove          move;

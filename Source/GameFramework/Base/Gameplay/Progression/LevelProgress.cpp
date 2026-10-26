@@ -6,8 +6,8 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
@@ -42,7 +42,7 @@ namespace sw
     {
         XMLDocument doc;
         XMLNode     root;
-        if ( GameDataXML::parseRoot( doc, xmlText, sourceName, "ExperienceCurve", root ) == false )
+        if ( XMLReadUtil::parseRootOrWarn( doc, xmlText, sourceName, "ExperienceCurve", root ) == false )
             return false;
         return loadFromNode( root, sourceName );
     }
@@ -76,10 +76,10 @@ namespace sw
         float32 exponent = _exponent;
         float32 linear   = _linear;
         int32   maxLevel = _maxLevel;
-        bValid           = GameDataXML::readOptionalNumber( node, "base", sourceName, 0.0f, MathUtil::kMaxFloat, base );
-        bValid           = GameDataXML::readOptionalNumber( node, "exponent", sourceName, -MathUtil::kMaxFloat, MathUtil::kMaxFloat, exponent ) && bValid;
-        bValid           = GameDataXML::readOptionalNumber( node, "linear", sourceName, -MathUtil::kMaxFloat, MathUtil::kMaxFloat, linear ) && bValid;
-        bValid           = GameDataXML::readOptionalNumber( node, "maxLevel", sourceName, 1, MathUtil::kMaxInt32, maxLevel ) && bValid;
+        bValid           = XMLReadUtil::readOptionalNumber( node, "base", sourceName, 0.0f, MathUtil::kMaxFloat, base );
+        bValid           = XMLReadUtil::readOptionalNumber( node, "exponent", sourceName, -MathUtil::kMaxFloat, MathUtil::kMaxFloat, exponent ) && bValid;
+        bValid           = XMLReadUtil::readOptionalNumber( node, "linear", sourceName, -MathUtil::kMaxFloat, MathUtil::kMaxFloat, linear ) && bValid;
+        bValid           = XMLReadUtil::readOptionalNumber( node, "maxLevel", sourceName, 1, MathUtil::kMaxInt32, maxLevel ) && bValid;
         if ( bValid )
             setFormula( base, exponent, linear, maxLevel );
         return bValid;

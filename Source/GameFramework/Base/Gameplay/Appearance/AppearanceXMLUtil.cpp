@@ -10,7 +10,6 @@
 #include "Engine/Serialization/XML/XMLNameCheck.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceTypes.h"
 
 namespace sw
@@ -52,11 +51,11 @@ namespace sw
                 float3  vec3{};
                 float2  vec2{};
                 float32 scalar = 0.0f;
-                if ( GameDataXML::parseFloat4( text, vec4 ) )
+                if ( XMLReadUtil::parseFloat4( text, vec4 ) )
                     outValue = vec4;
-                else if ( GameDataXML::parseFloat3( text, vec3 ) )
+                else if ( XMLReadUtil::parseFloat3( text, vec3 ) )
                     outValue = float4( vec3._x, vec3._y, vec3._z, 0.0f );
-                else if ( GameDataXML::parseFloat2( text, vec2 ) )
+                else if ( XMLReadUtil::parseFloat2( text, vec2 ) )
                     outValue = float4( vec2._x, vec2._y, 0.0f, 0.0f );
                 else if ( StringUtil::parseFloat( text, scalar ) )
                     outValue = float4( scalar, 0.0f, 0.0f, 0.0f );
@@ -128,36 +127,36 @@ namespace sw
 
     void AppearanceXMLUtil::readNameList( const XMLNode& node, const utf8* pAttribute, vector<hashed_string>& outListName )
     {
-        GameDataXML::appendNameList( node.getAttributeText( pAttribute ), ",; ", outListName );
+        XMLReadUtil::appendNameList( node.getAttributeText( pAttribute ), ",; ", outListName );
     }
 
     void AppearanceXMLUtil::readOptionalFloat3( const XMLNode& node, const utf8* pAttribute, float3& inoutValue, AppearanceLoadReport& report, string_view sourceName )
     {
-        AppearanceXMLUtilInternal::readVector( node, pAttribute, false, "x y z", inoutValue, &GameDataXML::parseFloat3, report, sourceName );
+        AppearanceXMLUtilInternal::readVector( node, pAttribute, false, "x y z", inoutValue, &XMLReadUtil::parseFloat3, report, sourceName );
     }
 
     void AppearanceXMLUtil::readOptionalFloat4( const XMLNode& node, const utf8* pAttribute, float4& inoutValue, AppearanceLoadReport& report, string_view sourceName )
     {
-        AppearanceXMLUtilInternal::readVector( node, pAttribute, false, "r g b a", inoutValue, &GameDataXML::parseFloat4, report, sourceName );
+        AppearanceXMLUtilInternal::readVector( node, pAttribute, false, "r g b a", inoutValue, &XMLReadUtil::parseFloat4, report, sourceName );
     }
 
     void AppearanceXMLUtil::readOptionalFloat( const XMLNode& node, const utf8* pAttribute, float32 minValue, float32 maxValue, float32& inoutValue, AppearanceLoadReport& report,
                                                string_view sourceName )
     {
-        if ( GameDataXML::readOptionalNumber( node, pAttribute, sourceName, minValue, maxValue, inoutValue ) == false )
+        if ( XMLReadUtil::readOptionalNumber( node, pAttribute, sourceName, minValue, maxValue, inoutValue ) == false )
             report.addErrorWithID( "Appearance.ValueInvalid", "%#: <%#> has an invalid %#", sourceName, node.getName(), pAttribute );
     }
 
     void AppearanceXMLUtil::readOptionalInt( const XMLNode& node, const utf8* pAttribute, int32 minValue, int32 maxValue, int32& inoutValue, AppearanceLoadReport& report,
                                              string_view sourceName )
     {
-        if ( GameDataXML::readOptionalNumber( node, pAttribute, sourceName, minValue, maxValue, inoutValue ) == false )
+        if ( XMLReadUtil::readOptionalNumber( node, pAttribute, sourceName, minValue, maxValue, inoutValue ) == false )
             report.addErrorWithID( "Appearance.ValueInvalid", "%#: <%#> has an invalid %#", sourceName, node.getName(), pAttribute );
     }
 
     void AppearanceXMLUtil::readRequiredFloat4( const XMLNode& node, const utf8* pAttribute, float4& outValue, AppearanceLoadReport& report, string_view sourceName )
     {
-        AppearanceXMLUtilInternal::readVector( node, pAttribute, true, "r g b a", outValue, &GameDataXML::parseFloat4, report, sourceName );
+        AppearanceXMLUtilInternal::readVector( node, pAttribute, true, "r g b a", outValue, &XMLReadUtil::parseFloat4, report, sourceName );
     }
 
     void AppearanceXMLUtil::readRequiredShaderValue( const XMLNode& node, const utf8* pAttribute, float4& outValue, AppearanceLoadReport& report, string_view sourceName )

@@ -20,7 +20,7 @@ namespace sw
             [[nodiscard]] static bool readWeapon( const XMLNode& node, string_view sourceName, MechWeaponSlotDef& outSlot )
             {
                 bool bValid = GameDataXML::readFields( node, outSlot, sourceName, { "moves" } );
-                GameDataXML::appendNameList( node.getAttributeText( "moves" ), ",; ", outSlot._listMoveID );
+                XMLReadUtil::appendNameList( node.getAttributeText( "moves" ), ",; ", outSlot._listMoveID );
                 if ( outSlot._kind != MechWeaponKind::Shot && node.findAttribute( "range" ) == nullptr )
                 {
                     SW_LOG_ERROR( "%#: <Weapon id=\"%#\"> of kind Melee or Special needs range=\"...\"", sourceName, outSlot._id.c_str() );
@@ -136,7 +136,7 @@ namespace sw
 
     bool MechCatalog::loadClass( const XMLNode& node, string_view sourceName )
     {
-        const utf8*    pID        = GameDataXML::findRequiredID( node, sourceName );
+        const utf8*    pID        = XMLReadUtil::findRequiredID( node, sourceName );
         MechRangeClass rangeClass = MechRangeClass::Near;
         if ( pID == nullptr )
             return false;

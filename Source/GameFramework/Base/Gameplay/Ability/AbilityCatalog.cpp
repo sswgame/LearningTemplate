@@ -7,8 +7,8 @@
 
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Gameplay/Ability/CombatAttributeSet.h"
 
@@ -45,7 +45,7 @@ namespace sw
                 for ( XMLNode grantNode = node.findChild( "GrantAbility" ); grantNode; grantNode = grantNode.findNextSibling( "GrantAbility" ) )
                 {
                     hashed_string abilityID;
-                    if ( GameDataXML::readRequiredName( grantNode, "id", sourceName, abilityID ) == false )
+                    if ( XMLReadUtil::readRequiredName( grantNode, "id", sourceName, abilityID ) == false )
                     {
                         SW_LOG_ERROR( "%#: effect '%#' has a <GrantAbility> without an id - skipped", sourceName, pID );
                         return false;
@@ -66,7 +66,7 @@ namespace sw
             /** @brief `<Modifier>` 하나를 읽습니다. 어트리뷰트가 없거나 열거형 이름을 알 수 없으면 경고를 남기고 false 를 반환합니다. */
             [[nodiscard]] static bool readModifier( const XMLNode& node, const utf8* pEffectID, string_view sourceName, GameplayEffectModifier& outModifier )
             {
-                if ( GameDataXML::readRequiredName( node, "attribute", sourceName, outModifier._attribute ) == false )
+                if ( XMLReadUtil::readRequiredName( node, "attribute", sourceName, outModifier._attribute ) == false )
                 {
                     SW_LOG_WARNING( "%#: effect '%#' has a <Modifier> without an attribute - skipped", sourceName, pEffectID );
                     return false;
@@ -88,13 +88,13 @@ namespace sw
 
                 // 적지 않은 칸은 모디파이어 구조체의 초기값이다. 깨진 값은 그 모디파이어를 넣지 않는 오류다.
                 constexpr float32 kAny        = MathUtil::kMaxFloat;
-                bool              bValid      = GameDataXML::readOptionalNumber( node, "magnitude", sourceName, -kAny, kAny, outModifier._scalableMagnitude._baseValue );
-                bValid                        = GameDataXML::readOptionalNumber( node, "perLevel", sourceName, -kAny, kAny, outModifier._scalableMagnitude._perLevel ) && bValid;
-                bValid                        = GameDataXML::readOptionalNumber( node, "coefficient", sourceName, -kAny, kAny, outModifier._coefficient ) && bValid;
-                bValid                        = GameDataXML::readOptionalNumber( node, "pre", sourceName, -kAny, kAny, outModifier._preMultiplyAdditive ) && bValid;
-                bValid                        = GameDataXML::readOptionalNumber( node, "post", sourceName, -kAny, kAny, outModifier._postMultiplyAdditive ) && bValid;
-                outModifier._backingAttribute = GameDataXML::readOptionalName( node, "backing" ); // 아래에서 AttributeBased 일 때 필수로 확인한다
-                outModifier._setByCallerName  = GameDataXML::readOptionalName( node, "name" );    // 아래에서 SetByCaller 일 때 필수로 확인한다
+                bool              bValid      = XMLReadUtil::readOptionalNumber( node, "magnitude", sourceName, -kAny, kAny, outModifier._scalableMagnitude._baseValue );
+                bValid                        = XMLReadUtil::readOptionalNumber( node, "perLevel", sourceName, -kAny, kAny, outModifier._scalableMagnitude._perLevel ) && bValid;
+                bValid                        = XMLReadUtil::readOptionalNumber( node, "coefficient", sourceName, -kAny, kAny, outModifier._coefficient ) && bValid;
+                bValid                        = XMLReadUtil::readOptionalNumber( node, "pre", sourceName, -kAny, kAny, outModifier._preMultiplyAdditive ) && bValid;
+                bValid                        = XMLReadUtil::readOptionalNumber( node, "post", sourceName, -kAny, kAny, outModifier._postMultiplyAdditive ) && bValid;
+                outModifier._backingAttribute = XMLReadUtil::readOptionalName( node, "backing" ); // 아래에서 AttributeBased 일 때 필수로 확인한다
+                outModifier._setByCallerName  = XMLReadUtil::readOptionalName( node, "name" );    // 아래에서 SetByCaller 일 때 필수로 확인한다
                 if ( bValid == false )
                 {
                     SW_LOG_ERROR( "%#: effect '%#' has a <Modifier> with invalid numbers - skipped", sourceName, pEffectID );
@@ -374,12 +374,12 @@ namespace sw
         }
         // 적지 않은 칸은 GameplayEffectDef 의 초기값이다. 깨진 값 · 범위 밖 값은 그 이펙트를 넣지 않는 오류다(자르지 않는다).
         constexpr float32 kAny   = MathUtil::kMaxFloat;
-        bool              bValid = GameDataXML::readOptionalNumber( node, "seconds", sourceName, -kAny, kAny, outDef._duration._baseValue );
-        bValid                   = GameDataXML::readOptionalNumber( node, "secondsPerLevel", sourceName, -kAny, kAny, outDef._duration._perLevel ) && bValid;
-        bValid                   = GameDataXML::readOptionalNumber( node, "period", sourceName, 0.0f, kAny, outDef._period ) && bValid;
-        bValid                   = GameDataXML::readOptionalFlag( node, "executeOnApplication", outDef._bExecutePeriodicOnApplication ) && bValid;
-        bValid                   = GameDataXML::readOptionalFlag( node, "refreshOnStack", outDef._bRefreshDurationOnStack ) && bValid;
-        bValid                   = GameDataXML::readOptionalNumber( node, "stackLimit", sourceName, 1, MathUtil::kMaxInt32, outDef._stackLimit ) && bValid;
+        bool              bValid = XMLReadUtil::readOptionalNumber( node, "seconds", sourceName, -kAny, kAny, outDef._duration._baseValue );
+        bValid                   = XMLReadUtil::readOptionalNumber( node, "secondsPerLevel", sourceName, -kAny, kAny, outDef._duration._perLevel ) && bValid;
+        bValid                   = XMLReadUtil::readOptionalNumber( node, "period", sourceName, 0.0f, kAny, outDef._period ) && bValid;
+        bValid                   = XMLReadUtil::readOptionalFlag( node, "executeOnApplication", outDef._bExecutePeriodicOnApplication ) && bValid;
+        bValid                   = XMLReadUtil::readOptionalFlag( node, "refreshOnStack", outDef._bRefreshDurationOnStack ) && bValid;
+        bValid                   = XMLReadUtil::readOptionalNumber( node, "stackLimit", sourceName, 1, MathUtil::kMaxInt32, outDef._stackLimit ) && bValid;
         if ( bValid == false )
         {
             SW_LOG_ERROR( "%#: effect '%#' has invalid fields - skipped", sourceName, pID );
@@ -413,7 +413,7 @@ namespace sw
         for ( XMLNode executionNode = node.findChild( "Execution" ); executionNode; executionNode = executionNode.findNextSibling( "Execution" ) )
         {
             hashed_string className;
-            if ( GameDataXML::readRequiredName( executionNode, "class", sourceName, className ) == false )
+            if ( XMLReadUtil::readRequiredName( executionNode, "class", sourceName, className ) == false )
             {
                 SW_LOG_ERROR( "%#: effect '%#' has an <Execution> without a class - skipped", sourceName, pID );
                 return false;
@@ -445,11 +445,11 @@ namespace sw
             return false;
         }
         outDef._cueTag     = TagID::request( string_view( pTag ) );
-        outDef._prefab     = GameDataXML::readOptionalName( node, "prefab" ); // 둘 중 하나는 아래에서 필수로 확인한다
-        outDef._soundEvent = GameDataXML::readOptionalName( node, "sound" );
-        bool bValid        = GameDataXML::readOptionalFloat3( node, "offset", sourceName, outDef._offset );
-        bValid             = GameDataXML::readOptionalFlag( node, "onRemoved", outDef._bOnRemoved ) && bValid;
-        bValid             = GameDataXML::readOptionalFlag( node, "positional", outDef._bPositional ) && bValid;
+        outDef._prefab     = XMLReadUtil::readOptionalName( node, "prefab" ); // 둘 중 하나는 아래에서 필수로 확인한다
+        outDef._soundEvent = XMLReadUtil::readOptionalName( node, "sound" );
+        bool bValid        = XMLReadUtil::readOptionalFloat3( node, "offset", sourceName, outDef._offset );
+        bValid             = XMLReadUtil::readOptionalFlag( node, "onRemoved", outDef._bOnRemoved ) && bValid;
+        bValid             = XMLReadUtil::readOptionalFlag( node, "positional", outDef._bPositional ) && bValid;
         if ( bValid == false )
         {
             SW_LOG_ERROR( "%#: gameplay cue '%#' has invalid fields - skipped", sourceName, pTag );
@@ -473,7 +473,7 @@ namespace sw
             return false;
         }
         outDef._id = hashed_string( pID );
-        if ( GameDataXML::readRequiredName( node, "class", sourceName, outDef._className ) == false )
+        if ( XMLReadUtil::readRequiredName( node, "class", sourceName, outDef._className ) == false )
         {
             SW_LOG_WARNING( "%#: ability '%#' has no class - skipped", sourceName, pID );
             return false;
@@ -484,8 +484,8 @@ namespace sw
         config._id                    = outDef._id;
         config._pCostEffect           = resolveEffectReference( node.findAttribute( "cost" ), pID, sourceName );
         config._pCooldownEffect       = resolveEffectReference( node.findAttribute( "cooldown" ), pID, sourceName );
-        bool bValid                   = GameDataXML::readOptionalFlag( node, "retrigger", config._bRetriggerInstancedAbility );
-        bValid                        = GameDataXML::readOptionalFlag( node, "activateOnGranted", config._bActivateOnGranted ) && bValid;
+        bool bValid                   = XMLReadUtil::readOptionalFlag( node, "retrigger", config._bRetriggerInstancedAbility );
+        bValid                        = XMLReadUtil::readOptionalFlag( node, "activateOnGranted", config._bActivateOnGranted ) && bValid;
 
         AbilityCatalogInternal::readTagChildren( node, "AbilityTag", config._abilityTags );
         AbilityCatalogInternal::readTagChildren( node, "CancelTag", config._cancelAbilitiesWithTags );
@@ -499,7 +499,7 @@ namespace sw
         for ( XMLNode paramNode = node.findChild( "Param" ); paramNode; paramNode = paramNode.findNextSibling( "Param" ) )
         {
             hashed_string paramName;
-            if ( GameDataXML::readRequiredName( paramNode, "name", sourceName, paramName ) == false )
+            if ( XMLReadUtil::readRequiredName( paramNode, "name", sourceName, paramName ) == false )
             {
                 bValid = false; // 이름 없는 매개변수를 조용히 건너뛰지 않는다
                 continue;
@@ -535,7 +535,7 @@ namespace sw
         for ( XMLNode setNode = node.findChild( "AttributeSet" ); setNode; setNode = setNode.findNextSibling( "AttributeSet" ) )
         {
             AbilitySetAttributeSetEntry setEntry;
-            if ( GameDataXML::readRequiredName( setNode, "class", sourceName, setEntry._className ) == false )
+            if ( XMLReadUtil::readRequiredName( setNode, "class", sourceName, setEntry._className ) == false )
             {
                 SW_LOG_ERROR( "%#: ability set '%#' has an <AttributeSet> without a class - skipped", sourceName, pID );
                 return false;
@@ -544,7 +544,7 @@ namespace sw
             for ( XMLNode attributeNode = setNode.findChild( "Attribute" ); attributeNode; attributeNode = attributeNode.findNextSibling( "Attribute" ) )
             {
                 AbilitySetAttributeEntry attributeEntry;
-                if ( GameDataXML::readRequiredName( attributeNode, "name", sourceName, attributeEntry._attribute ) == false )
+                if ( XMLReadUtil::readRequiredName( attributeNode, "name", sourceName, attributeEntry._attribute ) == false )
                 {
                     SW_LOG_ERROR( "%#: ability set '%#' has an <Attribute> without a name - skipped", sourceName, pID );
                     return false;
@@ -553,9 +553,9 @@ namespace sw
                 constexpr float32 kAny      = MathUtil::kMaxFloat;
                 const bool        bHasRange = attributeNode.findAttribute( "min" ) != nullptr || attributeNode.findAttribute( "max" ) != nullptr;
                 attributeEntry._bHasRange   = bHasRange ? SW_TRUE : SW_FALSE;
-                bool bAttributeValid        = GameDataXML::readOptionalNumber( attributeNode, "base", sourceName, -kAny, kAny, attributeEntry._baseValue );
-                bAttributeValid             = GameDataXML::readOptionalNumber( attributeNode, "min", sourceName, -kAny, kAny, attributeEntry._minValue ) && bAttributeValid;
-                bAttributeValid             = GameDataXML::readOptionalNumber( attributeNode, "max", sourceName, -kAny, kAny, attributeEntry._maxValue ) && bAttributeValid;
+                bool bAttributeValid        = XMLReadUtil::readOptionalNumber( attributeNode, "base", sourceName, -kAny, kAny, attributeEntry._baseValue );
+                bAttributeValid             = XMLReadUtil::readOptionalNumber( attributeNode, "min", sourceName, -kAny, kAny, attributeEntry._minValue ) && bAttributeValid;
+                bAttributeValid             = XMLReadUtil::readOptionalNumber( attributeNode, "max", sourceName, -kAny, kAny, attributeEntry._maxValue ) && bAttributeValid;
                 if ( bAttributeValid == false )
                 {
                     SW_LOG_ERROR( "%#: ability set '%#' attribute '%#' has invalid numbers - skipped", sourceName, pID, attributeEntry._attribute.c_str() );
@@ -569,13 +569,13 @@ namespace sw
         for ( XMLNode abilityNode = node.findChild( "Ability" ); abilityNode; abilityNode = abilityNode.findNextSibling( "Ability" ) )
         {
             AbilitySetAbilityEntry abilityEntry;
-            if ( GameDataXML::readRequiredName( abilityNode, "id", sourceName, abilityEntry._abilityID ) == false )
+            if ( XMLReadUtil::readRequiredName( abilityNode, "id", sourceName, abilityEntry._abilityID ) == false )
             {
                 SW_LOG_ERROR( "%#: ability set '%#' has an <Ability> without an id - skipped", sourceName, pID );
                 return false;
             }
-            bool bEntryValid = GameDataXML::readOptionalNumber( abilityNode, "level", sourceName, 1, MathUtil::kMaxInt32, abilityEntry._level );
-            bEntryValid      = GameDataXML::readOptionalNumber( abilityNode, "input", sourceName, -1, MathUtil::kMaxInt32, abilityEntry._inputID ) && bEntryValid;
+            bool bEntryValid = XMLReadUtil::readOptionalNumber( abilityNode, "level", sourceName, 1, MathUtil::kMaxInt32, abilityEntry._level );
+            bEntryValid      = XMLReadUtil::readOptionalNumber( abilityNode, "input", sourceName, -1, MathUtil::kMaxInt32, abilityEntry._inputID ) && bEntryValid;
             if ( bEntryValid == false )
             {
                 SW_LOG_ERROR( "%#: ability set '%#' grants ability '%#' with invalid fields - skipped", sourceName, pID, abilityEntry._abilityID.c_str() );
@@ -587,12 +587,12 @@ namespace sw
         for ( XMLNode effectNode = node.findChild( "Effect" ); effectNode; effectNode = effectNode.findNextSibling( "Effect" ) )
         {
             AbilitySetEffectEntry effectEntry;
-            if ( GameDataXML::readRequiredName( effectNode, "id", sourceName, effectEntry._effectID ) == false )
+            if ( XMLReadUtil::readRequiredName( effectNode, "id", sourceName, effectEntry._effectID ) == false )
             {
                 SW_LOG_ERROR( "%#: ability set '%#' has an <Effect> without an id - skipped", sourceName, pID );
                 return false;
             }
-            if ( GameDataXML::readOptionalNumber( effectNode, "level", sourceName, 1, MathUtil::kMaxInt32, effectEntry._level ) == false )
+            if ( XMLReadUtil::readOptionalNumber( effectNode, "level", sourceName, 1, MathUtil::kMaxInt32, effectEntry._level ) == false )
             {
                 SW_LOG_ERROR( "%#: ability set '%#' applies effect '%#' with an invalid level - skipped", sourceName, pID, effectEntry._effectID.c_str() );
                 return false;

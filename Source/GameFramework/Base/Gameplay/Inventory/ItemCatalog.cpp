@@ -8,8 +8,7 @@
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLNameCheck.h"
-
-#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 namespace sw
 {
@@ -47,7 +46,7 @@ namespace sw
                 {
                     // `pieces` 를 적지 않으면(초기값 0) 세트를 다 갖춘 조건이다.
                     outCondition._setID     = hashed_string( pSet );
-                    const bool bPiecesValid = GameDataXML::readOptionalNumber( node, "pieces", sourceName, 0, MathUtil::kMaxInt32, outCondition._pieceCount );
+                    const bool bPiecesValid = XMLReadUtil::readOptionalNumber( node, "pieces", sourceName, 0, MathUtil::kMaxInt32, outCondition._pieceCount );
                     outCondition._kind      = outCondition._pieceCount > 0 ? EquipConditionKind::SetPieces : EquipConditionKind::SetComplete;
                     return bPiecesValid && outCondition._setID.empty() == false;
                 }
@@ -89,7 +88,7 @@ namespace sw
         uint32 loadedCount = 0;
         for ( XMLNode node = root.findChild( "Item" ); node; node = node.findNextSibling( "Item" ) )
         {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
+            const utf8* pID = XMLReadUtil::findRequiredID( node, sourceName );
             if ( pID == nullptr )
                 continue;
             ItemDef def;
@@ -112,11 +111,11 @@ namespace sw
                 SW_LOG_ERROR( "%#: item '%#' has unknown breakPolicy '%#'", sourceName, pID, pPolicy );
                 bValid = false;
             }
-            bValid = GameDataXML::readOptionalNumber( node, "weight", sourceName, 0.0f, MathUtil::kMaxFloat, def._weight ) && bValid;
-            bValid = GameDataXML::readOptionalNumber( node, "durability", sourceName, 0.0f, MathUtil::kMaxFloat, def._maxDurability ) && bValid;
-            bValid = GameDataXML::readOptionalNumber( node, "maxStack", sourceName, 1, MathUtil::kMaxInt32, def._maxStack ) && bValid;
-            bValid = GameDataXML::readOptionalNumber( node, "value", sourceName, 0, MathUtil::kMaxInt32, def._value ) && bValid;
-            bValid = GameDataXML::readOptionalNumber( node, "rarity", sourceName, MathUtil::kMinInt32, MathUtil::kMaxInt32, def._rarity ) && bValid;
+            bValid = XMLReadUtil::readOptionalNumber( node, "weight", sourceName, 0.0f, MathUtil::kMaxFloat, def._weight ) && bValid;
+            bValid = XMLReadUtil::readOptionalNumber( node, "durability", sourceName, 0.0f, MathUtil::kMaxFloat, def._maxDurability ) && bValid;
+            bValid = XMLReadUtil::readOptionalNumber( node, "maxStack", sourceName, 1, MathUtil::kMaxInt32, def._maxStack ) && bValid;
+            bValid = XMLReadUtil::readOptionalNumber( node, "value", sourceName, 0, MathUtil::kMaxInt32, def._value ) && bValid;
+            bValid = XMLReadUtil::readOptionalNumber( node, "rarity", sourceName, MathUtil::kMinInt32, MathUtil::kMaxInt32, def._rarity ) && bValid;
             StringUtil::forEachToken( node.getAttributeText( "tags" ), ",; ", [&]( string_view token )
             {
                 def._listTag.push_back( hashed_string( token ) );

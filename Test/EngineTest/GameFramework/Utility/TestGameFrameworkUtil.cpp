@@ -400,39 +400,39 @@ SW_TEST_CASE( GameFrameworkUtilTest, DataXMLReadsRootsIDsNumbersAndTokens )
 {
     sw::XMLDocument doc;
     XMLNode         root;
-    SW_EXPECT_FALSE( GameDataXML::parseRoot( doc, "<Other/>", "GameFrameworkUtilTest", "Catalog", root ) );
-    SW_ASSERT_TRUE( GameDataXML::parseRoot( doc, R"(<Catalog><Item id="a"/><Item name="NoId"/></Catalog>)", "GameFrameworkUtilTest", "Catalog", root ) );
+    SW_EXPECT_FALSE( XMLReadUtil::parseRootOrWarn( doc, "<Other/>", "GameFrameworkUtilTest", "Catalog", root ) );
+    SW_ASSERT_TRUE( XMLReadUtil::parseRootOrWarn( doc, R"(<Catalog><Item id="a"/><Item name="NoId"/></Catalog>)", "GameFrameworkUtilTest", "Catalog", root ) );
     int32 idCount = 0;
     for ( XMLNode node = root.findChild( "Item" ); node; node = node.findNextSibling( "Item" ) )
     {
-        idCount += GameDataXML::findRequiredID( node, "GameFrameworkUtilTest" ) != nullptr ? 1 : 0;
+        idCount += XMLReadUtil::findRequiredID( node, "GameFrameworkUtilTest" ) != nullptr ? 1 : 0;
     }
     SW_EXPECT_EQUAL( 1, idCount );
 
     // 벡터는 정확히 그 개수의 실수여야 한다 — 모자라거나 남거나 숫자가 아니면 실패이고 값은 그대로다(빠진 성분을 기본값으로 메우지 않는다).
     float4 color{ 9.0f, 9.0f, 9.0f, 0.75f };
-    SW_EXPECT_TRUE( GameDataXML::parseFloat4( "0.5, 0.25  1 0.125", color ) );
+    SW_EXPECT_TRUE( XMLReadUtil::parseFloat4( "0.5, 0.25  1 0.125", color ) );
     SW_EXPECT_NEAR_EQUAL( 0.5f, color._x, 1.0e-6f );
     SW_EXPECT_NEAR_EQUAL( 1.0f, color._z, 1.0e-6f );
     SW_EXPECT_NEAR_EQUAL( 0.125f, color._w, 1.0e-6f );
     color = float4{ 9.0f, 9.0f, 9.0f, 0.75f };
-    SW_EXPECT_FALSE( GameDataXML::parseFloat4( "0.5, 0.25  1", color ) );
-    SW_EXPECT_FALSE( GameDataXML::parseFloat4( "0.5 0.25 1 0 7", color ) );
-    SW_EXPECT_FALSE( GameDataXML::parseFloat4( "0.5 x 1 0", color ) );
+    SW_EXPECT_FALSE( XMLReadUtil::parseFloat4( "0.5, 0.25  1", color ) );
+    SW_EXPECT_FALSE( XMLReadUtil::parseFloat4( "0.5 0.25 1 0 7", color ) );
+    SW_EXPECT_FALSE( XMLReadUtil::parseFloat4( "0.5 x 1 0", color ) );
     SW_EXPECT_NEAR_EQUAL( 9.0f, color._x, 1.0e-6f );
     SW_EXPECT_NEAR_EQUAL( 0.75f, color._w, 1.0e-6f );
     float3 position{ 1.0f, 2.0f, 3.0f };
-    SW_EXPECT_FALSE( GameDataXML::parseFloat3( "", position ) );
-    SW_EXPECT_FALSE( GameDataXML::parseFloat3( "4 5", position ) );
+    SW_EXPECT_FALSE( XMLReadUtil::parseFloat3( "", position ) );
+    SW_EXPECT_FALSE( XMLReadUtil::parseFloat3( "4 5", position ) );
     SW_EXPECT_NEAR_EQUAL( 3.0f, position._z, 1.0e-6f );
-    SW_EXPECT_TRUE( GameDataXML::parseFloat3( "-0.5,0,0", position ) );
+    SW_EXPECT_TRUE( XMLReadUtil::parseFloat3( "-0.5,0,0", position ) );
     SW_EXPECT_NEAR_EQUAL( -0.5f, position._x, 1.0e-6f );
     vector<float32> listValue{ -1.0f };
-    SW_EXPECT_FALSE( GameDataXML::parseFloatList( "x;3", 2, listValue ) );
-    SW_EXPECT_FALSE( GameDataXML::parseFloatList( "1 2 3", 2, listValue ) );
-    SW_EXPECT_FALSE( GameDataXML::parseFloatList( "", 2, listValue ) );
+    SW_EXPECT_FALSE( XMLReadUtil::parseFloatList( "x;3", 2, listValue ) );
+    SW_EXPECT_FALSE( XMLReadUtil::parseFloatList( "1 2 3", 2, listValue ) );
+    SW_EXPECT_FALSE( XMLReadUtil::parseFloatList( "", 2, listValue ) );
     SW_EXPECT_EQUAL( size_t{ 1 }, listValue.size() ); // 실패하면 그대로
-    SW_EXPECT_TRUE( GameDataXML::parseFloatList( "4;3", 2, listValue ) );
+    SW_EXPECT_TRUE( XMLReadUtil::parseFloatList( "4;3", 2, listValue ) );
     SW_EXPECT_EQUAL( size_t{ 2 }, listValue.size() );
     SW_EXPECT_NEAR_EQUAL( 3.0f, listValue[1], 1.0e-6f );
 
@@ -456,19 +456,19 @@ SW_TEST_CASE( GameFrameworkUtilTest, DataXMLReadFieldsLeavesRangesToTheCommonRea
     SW_ASSERT_NOT_NULL( pStageType );
     sw::XMLDocument doc;
     XMLNode         root;
-    SW_ASSERT_TRUE( GameDataXML::parseRoot( doc, R"(<Stage text="go" time="2.5"/>)", "GameFrameworkUtilTest", "Stage", root ) );
+    SW_ASSERT_TRUE( XMLReadUtil::parseRootOrWarn( doc, R"(<Stage text="go" time="2.5"/>)", "GameFrameworkUtilTest", "Stage", root ) );
     QuestStageRowDef inRange;
     SW_EXPECT_TRUE( GameDataXML::readFields( root, &inRange, *pStageType, "GameFrameworkUtilTest" ) );
     SW_EXPECT_NEAR_EQUAL( 2.5f, inRange._time, 1.0e-6f );
 
     SW_TEST_DEFENSIVE_SCOPE( "a value below PROPERTY( Min ) and an unknown attribute are data errors" );
-    SW_ASSERT_TRUE( GameDataXML::parseRoot( doc, R"(<Stage time="-1" complete="true" bogus="1"/>)", "GameFrameworkUtilTest", "Stage", root ) );
+    SW_ASSERT_TRUE( XMLReadUtil::parseRootOrWarn( doc, R"(<Stage time="-1" complete="true" bogus="1"/>)", "GameFrameworkUtilTest", "Stage", root ) );
     QuestStageRowDef outOfRange;
     SW_EXPECT_FALSE( GameDataXML::readFields( root, &outOfRange, *pStageType, "GameFrameworkUtilTest" ) );
     SW_EXPECT_NEAR_EQUAL( -1.0f, outOfRange._time, 1.0e-6f ); // 자르지 않는다
     SW_EXPECT_TRUE( outOfRange._bComplete );                  // 뒤의 칸도 읽는다
 
-    SW_ASSERT_TRUE( GameDataXML::parseRoot( doc, R"(<Stage time="-1"/>)", "GameFrameworkUtilTest", "Stage", root ) );
+    SW_ASSERT_TRUE( XMLReadUtil::parseRootOrWarn( doc, R"(<Stage time="-1"/>)", "GameFrameworkUtilTest", "Stage", root ) );
     QuestStageRowDef onlyRange;
     SW_EXPECT_FALSE( GameDataXML::readFields( root, &onlyRange, *pStageType, "GameFrameworkUtilTest" ) );
 }
@@ -481,7 +481,7 @@ SW_TEST_CASE( GameFrameworkUtilTest, DataXMLReadsFloatCurveKeys )
 {
     sw::XMLDocument doc;
     XMLNode         root;
-    SW_ASSERT_TRUE( GameDataXML::parseRoot( doc, R"(<Table><Curve><Key time="600" value="2"/><Key time="0" value="0.5"/></Curve></Table>)", "GameFrameworkUtilTest", "Table", root ) );
+    SW_ASSERT_TRUE( XMLReadUtil::parseRootOrWarn( doc, R"(<Table><Curve><Key time="600" value="2"/><Key time="0" value="0.5"/></Curve></Table>)", "GameFrameworkUtilTest", "Table", root ) );
     FloatCurve curve;
     SW_EXPECT_TRUE( GameDataXML::readFloatCurve( root, "Curve", 0.5f, curve, "GameFrameworkUtilTest" ) );
     SW_ASSERT_EQUAL( 2u, static_cast<uint32>( curve._listKey.size() ) );
@@ -491,7 +491,7 @@ SW_TEST_CASE( GameFrameworkUtilTest, DataXMLReadsFloatCurveKeys )
     SW_EXPECT_NEAR_EQUAL( 2.0f, curve.evaluate( 900.0f ).value(), 1.0e-6f );
 
     // 하한 아래 값은 올리지 않고 오류다 — 그 키는 들어가지 않는다.
-    SW_ASSERT_TRUE( GameDataXML::parseRoot( doc, R"(<Table><Curve><Key time="0" value="-1"/></Curve></Table>)", "GameFrameworkUtilTest", "Table", root ) );
+    SW_ASSERT_TRUE( XMLReadUtil::parseRootOrWarn( doc, R"(<Table><Curve><Key time="0" value="-1"/></Curve></Table>)", "GameFrameworkUtilTest", "Table", root ) );
     {
         SW_TEST_DEFENSIVE_SCOPE( "a curve key below the minimum is a data error" );
         SW_EXPECT_FALSE( GameDataXML::readFloatCurve( root, "Curve", 0.5f, curve, "GameFrameworkUtilTest" ) );
@@ -499,16 +499,16 @@ SW_TEST_CASE( GameFrameworkUtilTest, DataXMLReadsFloatCurveKeys )
     SW_EXPECT_TRUE( curve._listKey.empty() );
 
     // 원소가 없으면 키도 없다 — 값이 없는 커브다(부르는 쪽이 뜻을 정한다).
-    SW_ASSERT_TRUE( GameDataXML::parseRoot( doc, "<Table/>", "GameFrameworkUtilTest", "Table", root ) );
+    SW_ASSERT_TRUE( XMLReadUtil::parseRootOrWarn( doc, "<Table/>", "GameFrameworkUtilTest", "Table", root ) );
     SW_EXPECT_TRUE( GameDataXML::readFloatCurve( root, "Curve", 0.0f, curve, "GameFrameworkUtilTest" ) );
     SW_EXPECT_TRUE( curve._listKey.empty() );
     SW_EXPECT_FALSE( curve.evaluate( 5.0f ).has_value() );
 
     // 보간 이름과 틀린 속성
-    SW_ASSERT_TRUE( GameDataXML::parseRoot( doc, R"(<Table><Curve><Key time="0" value="0" interpolation="constant"/><Key time="10" value="4"/></Curve></Table>)", "GameFrameworkUtilTest", "Table", root ) );
+    SW_ASSERT_TRUE( XMLReadUtil::parseRootOrWarn( doc, R"(<Table><Curve><Key time="0" value="0" interpolation="constant"/><Key time="10" value="4"/></Curve></Table>)", "GameFrameworkUtilTest", "Table", root ) );
     SW_EXPECT_TRUE( GameDataXML::readFloatCurve( root, "Curve", 0.0f, curve, "GameFrameworkUtilTest" ) );
     SW_EXPECT_NEAR_EQUAL( 0.0f, curve.evaluate( 9.0f ).value(), 1.0e-6f );
-    SW_ASSERT_TRUE( GameDataXML::parseRoot( doc, R"(<Table><Curve><Key time="0" scale="1"/></Curve></Table>)", "GameFrameworkUtilTest", "Table", root ) );
+    SW_ASSERT_TRUE( XMLReadUtil::parseRootOrWarn( doc, R"(<Table><Curve><Key time="0" scale="1"/></Curve></Table>)", "GameFrameworkUtilTest", "Table", root ) );
     SW_TEST_DEFENSIVE_SCOPE( "an unknown <Key> attribute is a data warning" );
     SW_EXPECT_FALSE( GameDataXML::readFloatCurve( root, "Curve", 0.0f, curve, "GameFrameworkUtilTest" ) );
 }
@@ -647,17 +647,17 @@ SW_TEST_CASE( GameFrameworkUtilTest, DataXMLRequiredNameFailsWhenMissingBlankOrN
 {
     sw::XMLDocument doc;
     XMLNode         root;
-    SW_ASSERT_TRUE( GameDataXML::parseRoot( doc, R"(<Row id="sword" blank=" " tag="None"/>)", "GameFrameworkUtilTest", "Row", root ) );
+    SW_ASSERT_TRUE( XMLReadUtil::parseRootOrWarn( doc, R"(<Row id="sword" blank=" " tag="None"/>)", "GameFrameworkUtilTest", "Row", root ) );
     hashed_string name;
-    SW_EXPECT_TRUE( GameDataXML::readRequiredName( root, "id", "GameFrameworkUtilTest", name ) );
+    SW_EXPECT_TRUE( XMLReadUtil::readRequiredName( root, "id", "GameFrameworkUtilTest", name ) );
     SW_EXPECT_TRUE( name == hashed_string( "sword" ) );
-    SW_EXPECT_TRUE( GameDataXML::readOptionalName( root, "missing" ).empty() );
+    SW_EXPECT_TRUE( XMLReadUtil::readOptionalName( root, "missing" ).empty() );
 
     SW_TEST_DEFENSIVE_SCOPE( "a missing, blank or none-spelled required name is a data error" );
-    SW_EXPECT_FALSE( GameDataXML::readRequiredName( root, "missing", "GameFrameworkUtilTest", name ) );
+    SW_EXPECT_FALSE( XMLReadUtil::readRequiredName( root, "missing", "GameFrameworkUtilTest", name ) );
     SW_EXPECT_TRUE( name.empty() );
-    SW_EXPECT_FALSE( GameDataXML::readRequiredName( root, "blank", "GameFrameworkUtilTest", name ) );
-    SW_EXPECT_FALSE( GameDataXML::readRequiredName( root, "tag", "GameFrameworkUtilTest", name ) );
+    SW_EXPECT_FALSE( XMLReadUtil::readRequiredName( root, "blank", "GameFrameworkUtilTest", name ) );
+    SW_EXPECT_FALSE( XMLReadUtil::readRequiredName( root, "tag", "GameFrameworkUtilTest", name ) );
 
     TimingJudge judge;
     SW_EXPECT_FALSE( judge.loadFromXMLText( R"(<TimingWindows><Window early="0.1" late="0.1"/></TimingWindows>)", "GameFrameworkUtilTest" ) );

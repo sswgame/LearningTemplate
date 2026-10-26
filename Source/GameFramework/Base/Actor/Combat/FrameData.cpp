@@ -7,8 +7,8 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
@@ -80,7 +80,7 @@ namespace sw
         uint32 loadedCount = 0;
         for ( XMLNode node = root.findChild( "Move" ); node; node = node.findNextSibling( "Move" ) )
         {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
+            const utf8* pID = XMLReadUtil::findRequiredID( node, sourceName );
             if ( pID == nullptr )
                 continue;
             MoveFrameData move;
@@ -90,18 +90,18 @@ namespace sw
             // 적지 않은 칸은 MoveFrameData 의 초기값이다. 깨진 값 · 범위 밖 값은 그 기술을 넣지 않는 오류다(자르지 않는다).
             constexpr int32   kAnyInt   = MathUtil::kMaxInt32;
             constexpr float32 kAnyFloat = MathUtil::kMaxFloat;
-            bool              bValid    = GameDataXML::readOptionalNumber( node, "startup", sourceName, 1, kAnyInt, move._startup );
-            bValid                      = GameDataXML::readOptionalNumber( node, "active", sourceName, 1, kAnyInt, move._active ) && bValid;
-            bValid                      = GameDataXML::readOptionalNumber( node, "recovery", sourceName, 0, kAnyInt, move._recovery ) && bValid;
-            bValid                      = GameDataXML::readOptionalNumber( node, "damage", sourceName, -kAnyFloat, kAnyFloat, move._damage ) && bValid;
-            bValid                      = GameDataXML::readOptionalNumber( node, "chip", sourceName, 0.0f, kAnyFloat, move._chipDamage ) && bValid;
-            bValid                      = GameDataXML::readOptionalNumber( node, "hitstun", sourceName, 0, kAnyInt, move._hitstun ) && bValid;
-            bValid                      = GameDataXML::readOptionalNumber( node, "blockstun", sourceName, 0, kAnyInt, move._blockstun ) && bValid;
-            bValid                      = GameDataXML::readOptionalNumber( node, "hitstop", sourceName, 0, kAnyInt, move._hitstop ) && bValid;
-            bValid                      = GameDataXML::readOptionalFlag( node, "launcher", move._bLauncher ) && bValid;
-            bValid                      = GameDataXML::readOptionalFlag( node, "knockdown", move._bKnockdown ) && bValid;
-            bValid                      = GameDataXML::readOptionalFlag( node, "wallSplat", move._bWallSplat ) && bValid;
-            bValid                      = GameDataXML::readOptionalFlag( node, "unblockable", move._bUnblockable ) && bValid;
+            bool              bValid    = XMLReadUtil::readOptionalNumber( node, "startup", sourceName, 1, kAnyInt, move._startup );
+            bValid                      = XMLReadUtil::readOptionalNumber( node, "active", sourceName, 1, kAnyInt, move._active ) && bValid;
+            bValid                      = XMLReadUtil::readOptionalNumber( node, "recovery", sourceName, 0, kAnyInt, move._recovery ) && bValid;
+            bValid                      = XMLReadUtil::readOptionalNumber( node, "damage", sourceName, -kAnyFloat, kAnyFloat, move._damage ) && bValid;
+            bValid                      = XMLReadUtil::readOptionalNumber( node, "chip", sourceName, 0.0f, kAnyFloat, move._chipDamage ) && bValid;
+            bValid                      = XMLReadUtil::readOptionalNumber( node, "hitstun", sourceName, 0, kAnyInt, move._hitstun ) && bValid;
+            bValid                      = XMLReadUtil::readOptionalNumber( node, "blockstun", sourceName, 0, kAnyInt, move._blockstun ) && bValid;
+            bValid                      = XMLReadUtil::readOptionalNumber( node, "hitstop", sourceName, 0, kAnyInt, move._hitstop ) && bValid;
+            bValid                      = XMLReadUtil::readOptionalFlag( node, "launcher", move._bLauncher ) && bValid;
+            bValid                      = XMLReadUtil::readOptionalFlag( node, "knockdown", move._bKnockdown ) && bValid;
+            bValid                      = XMLReadUtil::readOptionalFlag( node, "wallSplat", move._bWallSplat ) && bValid;
+            bValid                      = XMLReadUtil::readOptionalFlag( node, "unblockable", move._bUnblockable ) && bValid;
             const utf8* pHeight         = node.findAttribute( "height" );
             if ( pHeight != nullptr && parseAttackHeight( pHeight, move._height ) == false )
             {
@@ -116,12 +116,12 @@ namespace sw
                 MoveHitbox hitbox;
                 hitbox._fromFrame = move._startup;
                 hitbox._toFrame   = move.getLastActiveFrame();
-                bool bHitboxValid = GameDataXML::readOptionalNumber( child, "from", sourceName, 0, kAnyInt, hitbox._fromFrame );
-                bHitboxValid      = GameDataXML::readOptionalNumber( child, "to", sourceName, 0, kAnyInt, hitbox._toFrame ) && bHitboxValid;
-                bHitboxValid      = GameDataXML::readOptionalNumber( child, "x", sourceName, -kAnyFloat, kAnyFloat, hitbox._x ) && bHitboxValid;
-                bHitboxValid      = GameDataXML::readOptionalNumber( child, "y", sourceName, -kAnyFloat, kAnyFloat, hitbox._y ) && bHitboxValid;
-                bHitboxValid      = GameDataXML::readOptionalNumber( child, "w", sourceName, 0.0f, kAnyFloat, hitbox._width ) && bHitboxValid;
-                bHitboxValid      = GameDataXML::readOptionalNumber( child, "h", sourceName, 0.0f, kAnyFloat, hitbox._height ) && bHitboxValid;
+                bool bHitboxValid = XMLReadUtil::readOptionalNumber( child, "from", sourceName, 0, kAnyInt, hitbox._fromFrame );
+                bHitboxValid      = XMLReadUtil::readOptionalNumber( child, "to", sourceName, 0, kAnyInt, hitbox._toFrame ) && bHitboxValid;
+                bHitboxValid      = XMLReadUtil::readOptionalNumber( child, "x", sourceName, -kAnyFloat, kAnyFloat, hitbox._x ) && bHitboxValid;
+                bHitboxValid      = XMLReadUtil::readOptionalNumber( child, "y", sourceName, -kAnyFloat, kAnyFloat, hitbox._y ) && bHitboxValid;
+                bHitboxValid      = XMLReadUtil::readOptionalNumber( child, "w", sourceName, 0.0f, kAnyFloat, hitbox._width ) && bHitboxValid;
+                bHitboxValid      = XMLReadUtil::readOptionalNumber( child, "h", sourceName, 0.0f, kAnyFloat, hitbox._height ) && bHitboxValid;
                 if ( FrameDataInternal::readShape( child, hitbox._shape ) == false )
                 {
                     SW_LOG_ERROR( "%#: move '%#' has a hitbox with an unknown shape '%#' (Box, Capsule)", sourceName, pID, child.getAttributeText( "shape" ) );
@@ -143,9 +143,9 @@ namespace sw
                 MoveCancelWindow window;
                 window._fromFrame = move.getLastActiveFrame() + 1;
                 window._toFrame   = lastFrame;
-                bool bWindowValid = GameDataXML::readOptionalNumber( child, "from", sourceName, 0, kAnyInt, window._fromFrame );
-                bWindowValid      = GameDataXML::readOptionalNumber( child, "to", sourceName, 0, kAnyInt, window._toFrame ) && bWindowValid;
-                bWindowValid      = GameDataXML::readOptionalFlag( child, "onHit", window._bOnHitOnly ) && bWindowValid;
+                bool bWindowValid = XMLReadUtil::readOptionalNumber( child, "from", sourceName, 0, kAnyInt, window._fromFrame );
+                bWindowValid      = XMLReadUtil::readOptionalNumber( child, "to", sourceName, 0, kAnyInt, window._toFrame ) && bWindowValid;
+                bWindowValid      = XMLReadUtil::readOptionalFlag( child, "onHit", window._bOnHitOnly ) && bWindowValid;
                 StringUtil::forEachToken( child.getAttributeText( "moves" ), ",; \t", [&]( string_view token )
                 { window._listMoveID.push_back( hashed_string( token ) ); } );
                 if ( bWindowValid && ( window._listMoveID.empty() || window._toFrame < window._fromFrame ) )

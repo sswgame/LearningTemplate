@@ -226,7 +226,7 @@ namespace sw
             StringUtil::forEachToken( node.getAttributeText( "pattern" ), " ;\t", [&]( string_view token )
             {
                 float2 cell{};
-                if ( GameDataXML::parseFloat2( token, cell ) )
+                if ( XMLReadUtil::parseFloat2( token, cell ) )
                     def._listMapOffset.push_back( int2{ static_cast<int32>( cell._x ), static_cast<int32>( cell._y ) } );
                 else
                 {
@@ -258,8 +258,8 @@ namespace sw
         bool        bValid = GameDataXML::readFields( node, def, sourceName, { "size", "aptitude", "weapons", "developsTo" } );
         bValid             = Internal::readSize( node, sourceName, def._size ) && bValid;
         bValid             = Internal::readFour( node, "aptitude", sourceName, &SRPGCatalog::parseAptitude, def._arrAptitude ) && bValid;
-        GameDataXML::parseNameList( node.getAttributeText( "weapons" ), ",; \t", def._listWeaponID );
-        GameDataXML::forEachNamedNumber( node.getAttributeText( "developsTo" ), ",; \t", SRPGDevelopTarget{}._requiredLevel, GameDataXML::MissingValue::UseDefault,
+        XMLReadUtil::parseNameList( node.getAttributeText( "weapons" ), ",; \t", def._listWeaponID );
+        XMLReadUtil::forEachNamedNumber( node.getAttributeText( "developsTo" ), ",; \t", SRPGDevelopTarget{}._requiredLevel, XMLReadUtil::MissingValue::UseDefault,
                                          [&]( string_view token, string_view unitName, int32 requiredLevel, bool bLevel )
         {
             if ( bLevel == false || requiredLevel < 1 )

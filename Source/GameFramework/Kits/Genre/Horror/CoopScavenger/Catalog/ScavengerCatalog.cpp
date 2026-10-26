@@ -96,9 +96,9 @@ namespace sw
 
     bool ScavengerCatalog::loadElement( const XMLNode& node, string_view name, string_view sourceName )
     {
-        if ( GameDataXML::isElement( name, "Quota" ) )
+        if ( XMLReadUtil::isElement( name, "Quota" ) )
             return GameDataXML::readSetting( node, sourceName, _quota );
-        if ( GameDataXML::isElement( name, "BuyRate" ) )
+        if ( XMLReadUtil::isElement( name, "BuyRate" ) )
         {
             ScavengerBuyRatePoint point;
             if ( GameDataXML::readFields( node, point, sourceName ) == false )
@@ -106,15 +106,15 @@ namespace sw
             _listBuyRate.push_back( point );
             return true;
         }
-        if ( GameDataXML::isElement( name, "Day" ) )
+        if ( XMLReadUtil::isElement( name, "Day" ) )
             return GameDataXML::readSetting( node, sourceName, _day );
-        if ( GameDataXML::isElement( name, "Carry" ) )
+        if ( XMLReadUtil::isElement( name, "Carry" ) )
             return GameDataXML::readSetting( node, sourceName, _carry );
-        if ( GameDataXML::isElement( name, "Penalty" ) )
+        if ( XMLReadUtil::isElement( name, "Penalty" ) )
             return GameDataXML::readSetting( node, sourceName, _penalty );
-        if ( GameDataXML::isElement( name, "Facility" ) )
+        if ( XMLReadUtil::isElement( name, "Facility" ) )
             return GameDataXML::readSetting( node, sourceName, _facility );
-        if ( GameDataXML::isElement( name, "Scrap" ) )
+        if ( XMLReadUtil::isElement( name, "Scrap" ) )
         {
             ScavengerScrapDef def;
             if ( GameDataXML::readFields( node, def, sourceName ) == false )
@@ -122,7 +122,7 @@ namespace sw
             (void)_scrapCatalog.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
             return true;
         }
-        if ( GameDataXML::isElement( name, "Moon" ) )
+        if ( XMLReadUtil::isElement( name, "Moon" ) )
             return loadMoon( node, sourceName );
         SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, name );
         return false;
@@ -133,7 +133,7 @@ namespace sw
         ScavengerMoonDef def;
         if ( GameDataXML::readFields( node, def, sourceName, { "scraps" } ) == false )
             return false;
-        GameDataXML::parseNameList( node.getAttributeText( "scraps" ), ",; ", def._listScrap );
+        XMLReadUtil::parseNameList( node.getAttributeText( "scraps" ), ",; ", def._listScrap );
         (void)_moonCatalog.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
         return true;
     }

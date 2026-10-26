@@ -7,13 +7,13 @@
 #include "Engine/Automation/AutomationStepRegistry.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 #include "Engine/UI/Base/WidgetTree.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/Widgets/BorderPanel.h"
 #include "Engine/UI/Widgets/SliderWidget.h"
 #include "Engine/UI/Widgets/TextWidget.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/Foundation/Data/GameSettings.h"
 #include "GameFramework/Base/Foundation/Framework/Flow/ScreenTransitionManager.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
@@ -194,7 +194,7 @@ namespace sw
         XMLDocument doc;
         XMLNode     root;
         string      sourceName;
-        if ( GameDataXML::loadRoot( doc, path, "LoadingTips", root, sourceName ) == false )
+        if ( XMLReadUtil::loadRootOrWarn( doc, path, "LoadingTips", root, sourceName ) == false )
             return false;
         return readTips( root, sourceName, outListTip );
     }
@@ -204,7 +204,7 @@ namespace sw
         outListTip.clear();
         XMLDocument doc;
         XMLNode     root;
-        if ( GameDataXML::parseRoot( doc, xmlText, sourceName, "LoadingTips", root ) == false )
+        if ( XMLReadUtil::parseRootOrWarn( doc, xmlText, sourceName, "LoadingTips", root ) == false )
             return false;
         return readTips( root, sourceName, outListTip );
     }

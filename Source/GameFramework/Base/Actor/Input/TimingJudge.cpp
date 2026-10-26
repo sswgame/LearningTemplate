@@ -5,8 +5,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
-
-#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include <algorithm>
 
@@ -31,15 +30,15 @@ namespace sw
         for ( XMLNode child = node.findChild( "Window" ); child; child = child.findNextSibling( "Window" ) )
         {
             TimingWindow window;
-            bValid             = GameDataXML::readRequiredName( child, "grade", sourceName, window._grade ) && bValid;
+            bValid             = XMLReadUtil::readRequiredName( child, "grade", sourceName, window._grade ) && bValid;
             float32 width      = window._earlyWidth;
-            bValid             = GameDataXML::readOptionalNumber( child, "width", sourceName, 0.0f, kAnyFloat, width ) && bValid;
+            bValid             = XMLReadUtil::readOptionalNumber( child, "width", sourceName, 0.0f, kAnyFloat, width ) && bValid;
             window._earlyWidth = width;
             window._lateWidth  = width;
-            bValid             = GameDataXML::readOptionalNumber( child, "early", sourceName, 0.0f, kAnyFloat, window._earlyWidth ) && bValid;
-            bValid             = GameDataXML::readOptionalNumber( child, "late", sourceName, 0.0f, kAnyFloat, window._lateWidth ) && bValid;
-            bValid             = GameDataXML::readOptionalNumber( child, "score", sourceName, MathUtil::kMinInt32, MathUtil::kMaxInt32, window._score ) && bValid;
-            bValid             = GameDataXML::readOptionalFlag( child, "breaksCombo", window._bBreaksCombo ) && bValid;
+            bValid             = XMLReadUtil::readOptionalNumber( child, "early", sourceName, 0.0f, kAnyFloat, window._earlyWidth ) && bValid;
+            bValid             = XMLReadUtil::readOptionalNumber( child, "late", sourceName, 0.0f, kAnyFloat, window._lateWidth ) && bValid;
+            bValid             = XMLReadUtil::readOptionalNumber( child, "score", sourceName, MathUtil::kMinInt32, MathUtil::kMaxInt32, window._score ) && bValid;
+            bValid             = XMLReadUtil::readOptionalFlag( child, "breaksCombo", window._bBreaksCombo ) && bValid;
             listWindow.push_back( window );
         }
         if ( bValid )
@@ -51,7 +50,7 @@ namespace sw
     {
         XMLDocument doc;
         XMLNode     root;
-        if ( GameDataXML::parseRoot( doc, xmlText, sourceName, "TimingWindows", root ) == false )
+        if ( XMLReadUtil::parseRootOrWarn( doc, xmlText, sourceName, "TimingWindows", root ) == false )
             return false;
         return loadFromNode( root, sourceName ) && _listWindow.empty() == false;
     }

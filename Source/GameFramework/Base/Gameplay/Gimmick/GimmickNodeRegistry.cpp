@@ -8,8 +8,8 @@
 
 #include "Engine/Animation/Graph/BlendCurve.h"
 #include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Gameplay/Gimmick/GimmickCircuitState.h"
 
@@ -486,7 +486,7 @@ namespace sw
             static bool initializeElevator( GimmickNodeContext& context )
             {
                 vector<float32> listFloor;
-                if ( GameDataXML::parseFloatList( context.getText( 0 ), kMaxElevatorFloor, listFloor ) == false )
+                if ( XMLReadUtil::parseFloatList( context.getText( 0 ), kMaxElevatorFloor, listFloor ) == false )
                     return failParam( context, "floors needs 1..kMaxElevatorFloor numeric heights (\"0 4 8\")" );
                 const uint32 floorCount = static_cast<uint32>( listFloor.size() );
                 for ( uint32 floor = 0; floor < floorCount; ++floor )

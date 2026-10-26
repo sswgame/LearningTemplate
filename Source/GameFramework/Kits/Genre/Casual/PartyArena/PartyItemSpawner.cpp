@@ -207,7 +207,7 @@ namespace sw
                 continue;
             }
             // 아이템의 효과 수치는 속성 이름이 곧 스탯 이름이라 스키마가 없다 — id · effect · weight 만 형식이 있다.
-            const utf8*                 pID    = GameDataXML::findRequiredID( itemNode, sourceName );
+            const utf8*                 pID    = XMLReadUtil::findRequiredID( itemNode, sourceName );
             const std::optional<string> effect = itemNode.readRequiredAttribute<string>( "effect" );
             std::optional<float32>      weight;
             const bool                  bWeight = itemNode.readOptionalAttribute( "weight", weight ) && ( weight.has_value() == false || *weight >= 0.0f );

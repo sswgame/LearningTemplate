@@ -1,16 +1,15 @@
 /**
  * @file GameDataXML.h
- * @brief 게임 데이터 XML 의 공통 읽기를 정의합니다.
- * @details 문서 열기, 루트 찾기, id 확인, 숫자 목록("1 0.5 0.2")과 토큰 목록("Spring,Fall") 읽기를 제공한다.
+ * @brief 게임 데이터 카탈로그의 읽기 묶음 — 파일 · 글을 열어 카탈로그의 루트 읽기에 넘기는 것과 리플렉션 Def 로 원소를 읽는 것입니다.
+ * @details 속성 하나하나의 손 읽기(이름 · 이름 목록 · 실수 묶음 · 범위 숫자 · 불리언 · 커브 · id)는 엔진의 `XMLReadUtil` 이 정본이다 — 여기에 별칭을 두지 않는다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
-#include "Core/Container/StringUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-#include "Core/Math/Math.h"
-#include "Core/String/hashed_string.h"
+
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -32,10 +31,6 @@ namespace sw
      */
     struct SW_GF_API GameDataXML
     {
-        /** @brief 리소스 경로의 XML 을 읽고 @p pRootName 루트를 찾습니다. 실패하면 경고하고 false 를 반환합니다. */
-        [[nodiscard]] static bool loadRoot( XMLDocument& doc, string_view path, const utf8* pRootName, XMLNode& outRoot, string& outSourceName );
-        /** @brief XML 문자열을 읽고 루트를 찾습니다. 테스트와 에디터 미리보기가 씁니다. 실패하면 경고하고 false 를 반환합니다. */
-        [[nodiscard]] static bool parseRoot( XMLDocument& doc, string_view xmlText, string_view sourceName, const utf8* pRootName, XMLNode& outRoot );
         /**
          * @brief 리소스 경로의 XML 을 열어 @p pRootName 루트를 카탈로그의 루트 읽기(@p pLoadRoot)에 넘깁니다. 문서나 루트가 없거나 읽은 것이 없으면 false 입니다.
          * @details 카탈로그마다 같았던 `loadFromResource` 의 몸통이다. 카탈로그는 이 한 줄만 두면 된다.
@@ -135,123 +130,21 @@ namespace sw
             return true;
         }
 
-        /** @brief 원소 이름 @p name 이 @p pElement 와 대소문자를 무시하고 같은지 답합니다. 카탈로그의 `loadElement` 가 원소 이름으로 갈라질 때 씁니다. */
-        [[nodiscard]] static bool isElement( string_view name, const utf8* pElement ) { return StringUtil::equals( name, string_view( pElement ), true ); }
-
-        /** @brief `id` 속성을 반환합니다. 없거나 비면 "<원소> without an id - skipped" 를 경고하고 nullptr 를 반환합니다. */
-        static const utf8* findRequiredID( const XMLNode& node, string_view sourceName );
-        /**
-         * @brief **선택** 이름 속성 @p pAttribute 를 앞뒤 공백을 뺀 이름으로 읽습니다. 속성이 없거나 비어 있으면(공백뿐이어도) 빈 이름이고, 글 `none` 은 오류입니다(`XMLReadUtil::readOptionalName`).
-         * @details 적지 않아도 되는 이름만 이 함수로 읽는다. 없으면 로드가 실패해야 하는 이름은 `readRequiredName` 이다.
-         */
-        static hashed_string readOptionalName( const XMLNode& node, const utf8* pAttribute );
-        /**
-         * @brief **필수** 이름 속성 @p pAttribute 를 읽어 @p outName 에 넣습니다. 속성이 없거나 비었거나 글 `none` 이면 원소 · 속성 이름과 함께 오류를 알리고 false 입니다.
-         * @details 반환값을 버릴 수 없다(`[[nodiscard]]`) — 호출부가 "이 원소를 넣을지"를 정한다. @p outName 은 실패하면 빈 이름이다.
-         */
-        [[nodiscard]] static bool readRequiredName( const XMLNode& node, const utf8* pAttribute, string_view sourceName, hashed_string& outName );
-
-        /**
-         * @brief @p separators 의 아무 글자로 나뉜 이름 목록을 @p outListName 에 채웁니다. 먼저 목록을 비웁니다.
-         * @details 키트마다 구분자가 다르다(",; " · ",;| " · ",; \t"). 기존 항목을 두고 덧붙이려면 `appendNameList` 를 쓴다.
-         */
-        static void parseNameList( string_view text, string_view separators, vector<hashed_string>& outListName );
-        /** @brief `parseNameList` 와 같지만 목록을 비우지 않고 뒤에 덧붙입니다. */
-        static void appendNameList( string_view text, string_view separators, vector<hashed_string>& outListName );
-
-        /**
-         * @brief 쉼표, 공백, 탭, 세미콜론으로 나뉜 실수를 하나 이상 @p maxCount 개 이하로 읽습니다.
-         * @details 하나도 없거나 @p maxCount 를 넘거나 숫자가 아닌 토큰이 있으면 false 이고 @p outListValue 는 그대로입니다. 개수가 정해져 있으면 `parseFloat2` · `parseFloat3` · `parseFloat4` 를 쓴다.
-         */
-        [[nodiscard]] static bool parseFloatList( string_view text, uint32 maxCount, vector<float32>& outListValue );
-        /**
-         * @brief "x y" 처럼 정확히 두 실수를 읽습니다. 개수가 모자라거나 남거나 숫자가 아닌 토큰이 있으면 false 이고 @p outValue 는 그대로입니다.
-         * @details `parseFloat3` · `parseFloat4` 도 같다. 빠진 성분을 기본값으로 메우지 않으므로 호출부가 실패를 로드 오류로 올려야 한다.
-         */
-        [[nodiscard]] static bool parseFloat2( string_view text, float2& outValue );
-        /** @brief "x y z" 처럼 정확히 세 실수를 읽습니다. 규칙은 `parseFloat2` 와 같습니다. */
-        [[nodiscard]] static bool parseFloat3( string_view text, float3& outValue );
-        /** @brief "r g b a" 처럼 정확히 네 실수를 읽습니다. 규칙은 `parseFloat2` 와 같습니다. */
-        [[nodiscard]] static bool parseFloat4( string_view text, float4& outValue );
-
-        /**
-         * @brief 선택 속성 @p pAttribute 를 "x y" 두 실수로 읽습니다. 속성이 없으면 @p inoutValue 를 그대로 두고 true 입니다(호출부가 초기값을 정한다).
-         * @details 속성이 있는데 정확히 두 실수가 아니면 속성 이름과 함께 오류를 알리고 false 이며 @p inoutValue 는 그대로입니다. `readOptionalFloat3` 도 같다.
-         */
-        [[nodiscard]] static bool readOptionalFloat2( const XMLNode& node, const utf8* pAttribute, string_view sourceName, float2& inoutValue );
-        /** @brief 선택 속성 @p pAttribute 를 "x y z" 세 실수로 읽습니다. 규칙은 `readOptionalFloat2` 와 같습니다. */
-        [[nodiscard]] static bool readOptionalFloat3( const XMLNode& node, const utf8* pAttribute, string_view sourceName, float3& inoutValue );
-        /** @brief 필수 속성 @p pAttribute 를 "x y z" 세 실수로 읽습니다. 속성이 없거나 정확히 세 실수가 아니면 오류를 알리고 false 입니다. */
-        [[nodiscard]] static bool readRequiredFloat3( const XMLNode& node, const utf8* pAttribute, string_view sourceName, float3& outValue );
-
-        /**
-         * @brief 선택 숫자 속성을 손으로 읽습니다(스키마 구조체가 없는 손 읽기용 — 카탈로그 원소는 `readFields`).
-         * @details 없으면 @p inoutValue 를 두고 true 다 — 기본값은 부르는 쪽 Def 의 초기값이고 여기서 정하지 않는다.
-         *          깨진 값이나 [@p minValue, @p maxValue] 밖 값은 원소 · 속성 이름과 함께 오류이고 false 이며 @p inoutValue 는 그대로다(자르지 않는다).
-         */
-        [[nodiscard]] static bool readOptionalNumber( const XMLNode& node, const utf8* pAttribute, string_view sourceName, int32 minValue, int32 maxValue, int32& inoutValue );
-        /** @brief `readOptionalNumber` 의 실수 버전입니다. */
-        [[nodiscard]] static bool readOptionalNumber( const XMLNode& node, const utf8* pAttribute, string_view sourceName, float32 minValue, float32 maxValue,
-                                                      float32& inoutValue );
-        /** @brief 선택 불리언 속성을 손으로 읽습니다. 없으면 @p inoutValue 를 두고 true, 깨졌으면 오류와 false 입니다. */
-        [[nodiscard]] static bool readOptionalBool( const XMLNode& node, const utf8* pAttribute, bool& inoutValue );
-        /** @brief `readOptionalBool` 의 `uint8` 표시(`SW_TRUE` · `SW_FALSE`) 버전입니다. */
-        [[nodiscard]] static bool readOptionalFlag( const XMLNode& node, const utf8* pAttribute, uint8& inoutFlag );
-
-        /** @brief 루트 읽기가 읽은 항목 수를 성공 여부로 바꿉니다. 0 이면 실패입니다. */
-        static constexpr bool isLoaded( uint32 loadedCount ) { return loadedCount > 0; }
-        /** @brief 루트 읽기의 성공 여부를 그대로 반환합니다. */
-        static constexpr bool isLoaded( bool bLoaded ) { return bLoaded; }
-
         /**
          * @brief @p parent 의 첫 @p pElement 자식(`<Curve>`)이 든 `<Key time value interpolation/>` 를 읽어 @p outCurve 를 채웁니다. 먼저 키를 비웁니다.
          * @details `time` · `value` 는 필수이고 값이 @p minValue 아래면 오류다(자르지 않는다). `interpolation` 은 `linear`(기본) · `constant` · `cubic` 이고, 접선은 이웃 키로 센다.
          *          원소가 없으면 키도 없다(커브가 대체값을 쓴다). 모르는 속성 · 원소 · 보간 이름, 빠진 · 깨진 값이 있으면 오류를 남기고 false 를 반환한다(그 키는 넣지 않는다).
+         *          손 읽기 정본(`XMLReadUtil`)이 아니라 여기 있는 까닭: 엔진의 Serialization 과 Utility(`FloatCurve`)가 같은 티어라 서로 include 하지 못한다(`CheckEngineLayers`).
          * @code
          *     <Curve><Key time="0" value="0.5"/><Key time="600" value="2" interpolation="cubic"/></Curve>
          * @endcode
          */
         [[nodiscard]] static bool readFloatCurve( const XMLNode& parent, const utf8* pElement, float32 minValue, FloatCurve& outCurve, string_view sourceName );
 
-        /** @brief `forEachNamedNumber` 에서 토큰에 콜론(`:값`)이 없을 때의 처리입니다. */
-        enum class MissingValue : uint8
-        {
-            UseDefault, //!< 기본값으로 읽고 유효로 친다("stance" = "stance:1").
-            Reject,     //!< 값이 꼭 있어야 한다. 유효하지 않은 토큰으로 넘긴다.
-        };
-
-        /**
-         * @brief "이름:숫자" 토큰 목록("spearman:3,archer:2")을 읽어 토큰마다 @p callback( token, name, value, bValid ) 을 부릅니다. 할당하지 않습니다.
-         * @details @p TValue 는 `int32` 또는 `float32` 이다. 숫자가 읽히지 않거나 @p missing 이 `Reject` 인데 콜론이 없으면
-         *          @p value 는 @p defaultValue, @p bValid 는 false 다. 경고와 범위 제한은 호출부가 한다(경고에 카탈로그 문맥이 들어가야 한다).
-         * @code
-         *     GameDataXML::forEachNamedNumber( text, ",; ", 1, GameDataXML::MissingValue::UseDefault,
-         *                                      [&]( string_view token, string_view name, int32 count, bool bValid ) { ... } );
-         * @endcode
-         */
-        template <typename TValue, typename TCallback>
-        static void forEachNamedNumber( string_view text, string_view separators, TValue defaultValue, MissingValue missing, TCallback&& callback )
-        {
-            StringUtil::forEachToken( text, separators, [&]( string_view token )
-            {
-                const size_t      colon = token.find( ':' );
-                const string_view name  = colon == string_view::npos ? token : token.substr( 0, colon );
-                TValue            value = defaultValue;
-                bool              bValid{ missing == MissingValue::UseDefault };
-                if ( colon != string_view::npos )
-                {
-                    bValid = parseNumber( token.substr( colon + 1 ), value );
-                    if ( bValid == false )
-                        value = defaultValue;
-                }
-                callback( token, name, value, bValid );
-            } );
-        }
-
-        /** @brief `forEachNamedNumber` 의 값 읽기입니다. 실패하면 false 입니다. */
-        [[nodiscard]] static bool parseNumber( string_view token, int32& outValue );
-        /** @brief `forEachNamedNumber` 의 실수 값 읽기입니다. 실패하면 false 입니다. */
-        [[nodiscard]] static bool parseNumber( string_view token, float32& outValue );
+        /** @brief 루트 읽기가 읽은 항목 수를 성공 여부로 바꿉니다. 0 이면 실패입니다. */
+        static constexpr bool isLoaded( uint32 loadedCount ) { return loadedCount > 0; }
+        /** @brief 루트 읽기의 성공 여부를 그대로 반환합니다. */
+        static constexpr bool isLoaded( bool bLoaded ) { return bLoaded; }
 
     private:
         template <typename TLoader, typename TResult>

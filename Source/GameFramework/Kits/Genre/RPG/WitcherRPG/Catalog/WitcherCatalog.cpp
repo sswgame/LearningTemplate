@@ -71,18 +71,18 @@ namespace sw
 
     bool WitcherCatalog::loadElement( const XMLNode& node, string_view name, string_view sourceName )
     {
-        if ( GameDataXML::isElement( name, "Alchemy" ) )
+        if ( XMLReadUtil::isElement( name, "Alchemy" ) )
         {
             WitcherAlchemyRuleDef rule;
             if ( GameDataXML::readSetting( node, sourceName, rule, { "alcohol" } ) == false )
                 return false;
-            GameDataXML::parseNameList( node.getAttributeText( "alcohol" ), ",; ", rule._listAlcohol );
+            XMLReadUtil::parseNameList( node.getAttributeText( "alcohol" ), ",; ", rule._listAlcohol );
             _alchemy = rule;
             return true;
         }
-        if ( GameDataXML::isElement( name, "Combat" ) )
+        if ( XMLReadUtil::isElement( name, "Combat" ) )
             return GameDataXML::readSetting( node, sourceName, _combat );
-        if ( GameDataXML::isElement( name, "SlotGroup" ) )
+        if ( XMLReadUtil::isElement( name, "SlotGroup" ) )
         {
             WitcherSlotGroupDef group;
             if ( GameDataXML::readFields( node, group, sourceName ) == false )
@@ -90,11 +90,11 @@ namespace sw
             _listSlotGroup.push_back( group );
             return true;
         }
-        if ( GameDataXML::isElement( name, "SkillColor" ) )
+        if ( XMLReadUtil::isElement( name, "SkillColor" ) )
             return GameDataXML::readInto( node, sourceName, _skillColorCatalog );
-        if ( GameDataXML::isElement( name, "Monster" ) )
+        if ( XMLReadUtil::isElement( name, "Monster" ) )
             return loadMonster( node, sourceName );
-        if ( GameDataXML::isElement( name, "Item" ) )
+        if ( XMLReadUtil::isElement( name, "Item" ) )
         {
             WitcherAlchemyDef item;
             if ( readAlchemyItem( node, sourceName, item ) == false )
@@ -102,11 +102,11 @@ namespace sw
             (void)_alchemyCatalog.add( item ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
             return true;
         }
-        if ( GameDataXML::isElement( name, "Sign" ) )
+        if ( XMLReadUtil::isElement( name, "Sign" ) )
             return GameDataXML::readInto( node, sourceName, _signCatalog );
-        if ( GameDataXML::isElement( name, "Mutagen" ) )
+        if ( XMLReadUtil::isElement( name, "Mutagen" ) )
             return GameDataXML::readInto( node, sourceName, _mutagenCatalog );
-        if ( GameDataXML::isElement( name, "Contract" ) )
+        if ( XMLReadUtil::isElement( name, "Contract" ) )
             return loadContract( node, sourceName );
         SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, name );
         return false;
@@ -116,7 +116,7 @@ namespace sw
     {
         WitcherMonsterDef monster;
         bool              bValid = GameDataXML::readFields( node, monster, sourceName, { "elements" } );
-        GameDataXML::parseNameList( node.getAttributeText( "elements" ), ",; ", monster._listElement );
+        XMLReadUtil::parseNameList( node.getAttributeText( "elements" ), ",; ", monster._listElement );
         if ( monster._listElement.empty() && monster._category.empty() == false )
             monster._listElement.push_back( monster._category ); // 방어 속성을 적지 않으면 분류 하나다(`_listElement` 의 정의)
         for ( XMLNode child = node.findChild( "Weakness" ); child; child = child.findNextSibling( "Weakness" ) )

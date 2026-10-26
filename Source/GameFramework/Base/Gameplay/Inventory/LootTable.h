@@ -44,7 +44,7 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief `<Table>` 속성의 스키마입니다(`id` 는 `GameDataXML::findRequiredID` 가 따로 읽는다).
+     * @brief `<Table>` 속성의 스키마입니다(`id` 는 `XMLReadUtil::findRequiredID` 가 따로 읽는다).
      * @details `rollsMax` 를 적지 않으면 `rolls` 와 같습니다.
      */
     REFLECT()

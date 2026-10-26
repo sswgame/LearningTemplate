@@ -49,7 +49,7 @@ namespace sw
         uint32 loadedCount = 0;
         for ( XMLNode node = root.findChild( "Table" ); node; node = node.findNextSibling( "Table" ) )
         {
-            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
+            const utf8* pID = XMLReadUtil::findRequiredID( node, sourceName );
             if ( pID == nullptr )
                 continue;
             // 기본값 · 범위는 스키마(LootTableRowDef · LootEntryRowDef)가 정한다. 오류가 있는 테이블 · 항목은 넣지 않는다(오류는 readFields 가 남긴다).
