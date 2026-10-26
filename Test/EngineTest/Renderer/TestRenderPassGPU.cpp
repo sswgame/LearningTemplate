@@ -7139,7 +7139,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, PresentCaptureFollowsOffscreenOut
  * @details `RenderThread::requestScreenshot` 이 렌더 스레드에서 부르는 두 함수다(`FrameCapture::dumpTextureToFile` · `dumpPresentToFile`). PNG 머리(IHDR)의
  *          너비 · 높이가 출력 크기인지 본다. 단추부터 파일까지의 경로는 에디터 시나리오 `editor/screenshotbutton` 이 본다.
  */
-SW_TEST_CASE( RenderPassGPUTest, ScreenshotDumpWritesPngAndPpm )
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, ScreenshotDumpWritesPngAndPpm, test::listRHIBackendParameter, 0.4 )
 {
     constexpr uint32 kOutputWidth  = 160;
     constexpr uint32 kOutputHeight = 96;
@@ -7184,7 +7184,7 @@ SW_TEST_CASE( RenderPassGPUTest, ScreenshotDumpWritesPngAndPpm )
     }
     SW_EXPECT_TRUE( bOk );
 
-    const sw::string folder     = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_screenshot_dump_test" );
+    const sw::string folder     = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), sw::string( "sw_screenshot_dump_test_" ) + device->getBackendName() ); // 백엔드마다 케이스가 갈려 병렬로 돌므로 폴더도 백엔드마다 둔다
     const sw::string texturePng = sw::FileUtil::joinPath( folder, "texture.png" );
     const sw::string capturePng = sw::FileUtil::joinPath( folder, "capture.png" );
     const sw::string capturePpm = sw::FileUtil::joinPath( folder, "capture.ppm" );
