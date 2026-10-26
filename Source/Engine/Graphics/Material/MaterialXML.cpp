@@ -20,6 +20,18 @@ namespace sw
         /** @brief 머티리얼 XML 의 반복 구조(enum 항목 · 문자열 목록)를 읽고 쓰는 TU 로컬 도우미입니다. */
         struct MaterialXMLInternal
         {
+            /** @brief 블렌드 모드 이름 표의 한 줄입니다. `AlphaBlend` 는 `Transparent` 와 같은 모드다. 읽기(`parseBlendMode`)와 이름 목록(`listBlendModeNames`)이 이 표 하나를 본다. */
+            struct BlendModeName
+            {
+                string_view  _name;
+                RHIBlendMode _mode;
+            };
+            static constexpr BlendModeName kArrBlendModeName[] = {
+                {     "Opaque",      RHIBlendMode::Opaque},
+                {"Transparent", RHIBlendMode::Transparent},
+                { "AlphaBlend", RHIBlendMode::Transparent},
+            };
+
             static string nodeText( XMLNode node )
             {
                 if ( node.isValid() == false || node.getText() == nullptr )
@@ -193,15 +205,26 @@ namespace sw
 
     bool MaterialUtil::parseBlendMode( string_view modeName, RHIBlendMode& outMode )
     {
-        const bool bTransparent = StringUtil::equals( modeName, "Transparent", true ) || StringUtil::equals( modeName, "AlphaBlend", true );
-        const bool bOpaque      = StringUtil::equals( modeName, "Opaque", true );
-        if ( bTransparent == false && bOpaque == false )
+        for ( const MaterialXMLInternal::BlendModeName& entry : MaterialXMLInternal::kArrBlendModeName )
         {
-            SW_LOG_ERROR( "Material blend mode '%#' is unknown (Opaque, Transparent, AlphaBlend)", modeName );
-            return false;
+            if ( StringUtil::equals( modeName, entry._name, true ) )
+            {
+                outMode = entry._mode;
+                return true;
+            }
         }
-        outMode = bTransparent ? RHIBlendMode::Transparent : RHIBlendMode::Opaque;
-        return true;
+        SW_LOG_ERROR( "Material blend mode '%#' is unknown (Opaque, Transparent, AlphaBlend)", modeName );
+        return false;
+    }
+
+    vector<string_view> MaterialUtil::listBlendModeNames()
+    {
+        vector<string_view> listName;
+        for ( const MaterialXMLInternal::BlendModeName& entry : MaterialXMLInternal::kArrBlendModeName )
+        {
+            listName.push_back( entry._name );
+        }
+        return listName;
     }
 
     const utf8* MaterialUtil::blendModeToString( RHIBlendMode mode )

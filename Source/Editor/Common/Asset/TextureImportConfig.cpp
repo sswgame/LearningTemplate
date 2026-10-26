@@ -33,26 +33,44 @@ namespace sw::editor
             {   "exclude_paths", "string[]",          "",                                                                                                                        "들어 있으면 빼는 폴더 마디"},
         };
 
-        /** @brief `format` 이름 표의 한 줄입니다 — DXGI 이름(로그에 쓰는 이름)과 짧은 이름이 같은 형식입니다. */
+        /**
+         * @brief `format` 이름 표의 한 줄입니다 — DXGI 이름(로그에 쓰는 이름)과 짧은 이름이 같은 형식이고, 임포터가 써 내는 DXGI 번호와 sRGB 짝을 함께 든다.
+         * @details sRGB 짝이 없으면 `_srgbName` 이 비고 `_srgbDxgiFormat` 이 `_dxgiFormat` 과 같다. 번호는 `dxgiformat.h` 의 값이다(이 파일은 DirectXTex 를 끌어오지 않는다).
+         */
         struct TextureImportFormatName
         {
             string_view         _dxgiName;
             string_view         _shortName;
             TextureImportFormat _format;
+            uint32              _dxgiFormat;
+            string_view         _srgbName;
+            uint32              _srgbDxgiFormat;
         };
         static constexpr TextureImportFormatName kArrTextureImportFormatName[] = {
-            {         "BC1_UNORM",     "bc1",               TextureImportFormat::BC1},
-            {         "BC2_UNORM",     "bc2",               TextureImportFormat::BC2},
-            {         "BC3_UNORM",     "bc3",               TextureImportFormat::BC3},
-            {         "BC4_UNORM",     "bc4",               TextureImportFormat::BC4},
-            {         "BC5_UNORM",     "bc5",               TextureImportFormat::BC5},
-            {         "BC6H_UF16",    "bc6h",              TextureImportFormat::BC6H},
-            {         "BC7_UNORM",     "bc7",               TextureImportFormat::BC7},
-            {    "B8G8R8A8_UNORM",   "bgra8",          TextureImportFormat::B8G8R8A8},
-            {    "R8G8B8A8_UNORM",   "rgba8",          TextureImportFormat::R8G8B8A8},
-            {"R16G16B16A16_FLOAT", "rgba16f", TextureImportFormat::R16G16B16A16Float},
-            {          "R8_UNORM",      "r8",                TextureImportFormat::R8},
+            {         "BC1_UNORM",     "bc1",               TextureImportFormat::BC1, 71,      "BC1_UNORM_SRGB", 72},
+            {         "BC2_UNORM",     "bc2",               TextureImportFormat::BC2, 74,      "BC2_UNORM_SRGB", 75},
+            {         "BC3_UNORM",     "bc3",               TextureImportFormat::BC3, 77,      "BC3_UNORM_SRGB", 78},
+            {         "BC4_UNORM",     "bc4",               TextureImportFormat::BC4, 80,                    "", 80},
+            {         "BC5_UNORM",     "bc5",               TextureImportFormat::BC5, 83,                    "", 83},
+            {         "BC6H_UF16",    "bc6h",              TextureImportFormat::BC6H, 95,                    "", 95},
+            {         "BC7_UNORM",     "bc7",               TextureImportFormat::BC7, 98,      "BC7_UNORM_SRGB", 99},
+            {    "B8G8R8A8_UNORM",   "bgra8",          TextureImportFormat::B8G8R8A8, 87, "B8G8R8A8_UNORM_SRGB", 91},
+            {    "R8G8B8A8_UNORM",   "rgba8",          TextureImportFormat::R8G8B8A8, 28, "R8G8B8A8_UNORM_SRGB", 29},
+            {"R16G16B16A16_FLOAT", "rgba16f", TextureImportFormat::R16G16B16A16Float, 10,                    "", 10},
+            {          "R8_UNORM",      "r8",                TextureImportFormat::R8, 61,                    "", 61},
         };
+
+        /** @brief @p format 의 표 줄입니다. 표는 열거자를 모두 담는다. */
+        [[nodiscard]] const TextureImportFormatName& findFormatEntryInternal( TextureImportFormat format )
+        {
+            for ( const TextureImportFormatName& entry : kArrTextureImportFormatName )
+            {
+                if ( entry._format == format )
+                    return entry;
+            }
+            SW_ASSERT( false ); // 표는 열거자를 모두 담는다
+            return kArrTextureImportFormatName[0];
+        }
 
         /** @brief 채널 순서 이름을 읽습니다. 모르는 이름이면 false 입니다(기본 RGBA 로 조용히 가지 않는다). */
         [[nodiscard]] bool parseSwizzleInternal( string_view swizzleStr, TextureSwizzle& outSwizzle )
@@ -260,13 +278,25 @@ namespace sw::editor
 
     string_view TextureImportFormatUtil::getName( TextureImportFormat format )
     {
+        return findFormatEntryInternal( format )._dxgiName;
+    }
+
+    uint32 TextureImportFormatUtil::getDxgiFormat( TextureImportFormat format, bool bSrgb )
+    {
+        const TextureImportFormatName& entry = findFormatEntryInternal( format );
+        return bSrgb ? entry._srgbDxgiFormat : entry._dxgiFormat;
+    }
+
+    vector<string_view> TextureImportFormatUtil::getWrittenFormatNames()
+    {
+        vector<string_view> listName;
         for ( const TextureImportFormatName& entry : kArrTextureImportFormatName )
         {
-            if ( entry._format == format )
-                return entry._dxgiName;
+            listName.push_back( entry._dxgiName );
+            if ( entry._srgbName.empty() == false )
+                listName.push_back( entry._srgbName );
         }
-        SW_ASSERT( false ); // 표는 열거자를 모두 담는다
-        return {};
+        return listName;
     }
 
     bool TextureImportConfig::isCatchAllRule( const TextureImportRule& rule )

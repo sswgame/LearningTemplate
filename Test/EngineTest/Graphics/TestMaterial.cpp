@@ -13,6 +13,7 @@
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflection.h"
 #include "Engine/Resource/ResourcePaths.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 
 #include "TestFramework/Harness/TestHostRuntime.h"
 #include "TestFramework/TestEnvironment.h"
@@ -1375,4 +1376,46 @@ SW_TEST_CASE( MaterialTest, FormatCheckDoesNotNeedTheAssetManager )
         SW_EXPECT_FALSE( instance->loadFromFile( ::test::makeTempResourceID( futureInstancePath ) ) );
     }
     SW_EXPECT_TRUE( sw::engine::areEngineServicesBound() );
+}
+
+/**
+ * @brief [MaterialTest] 에셋 검증 규칙의 `allowed_blend_modes` 는 로더가 받는 블렌드 모드 이름과 같은 집합이다
+ * @details 정본은 로더의 이름 표(`MaterialUtil::listBlendModeNames`)다. 규칙 파일(`Config/Editor/AssetValidationRules.json`, `material` 검사)이 따로 적혀 있어
+ *          로더에 이름을 더해도 규칙이 그 머티리얼을 커밋 게이트에서 떨어뜨리거나, 규칙에 로더가 모르는 이름이 남을 수 있었다(텍스처 형식과 같은 틈 — R8TextureSampling).
+ *          두 방향을 본다: 로더 이름은 모두 어느 `material` 규칙이 허용하고, 규칙의 이름은 모두 로더가 읽는다.
+ */
+SW_TEST_CASE( MaterialTest, AssetRuleBlendModesMatchTheLoader )
+{
+    const sw::string& projectRoot = sw::ResourcePaths::getProjectFolderPath();
+    SW_ASSERT_FALSE( projectRoot.empty() );
+    sw::string text;
+    SW_ASSERT_TRUE( sw::FileUtil::readTextFile( sw::FileUtil::joinPath( projectRoot, "Config/Editor/AssetValidationRules.json" ), text ) );
+    sw::JSONDocument document;
+    SW_ASSERT_TRUE( document.parse( text, "AssetValidationRules.json" ) );
+    const sw::JSONValue rules = document.getRoot().get( "rules" );
+    SW_ASSERT_TRUE( rules.isArray() );
+
+    sw::vector<sw::string> listRuleName;
+    for ( size_t index = 0; index < rules.size(); ++index )
+    {
+        const sw::JSONValue rule      = rules.at( index );
+        const sw::JSONValue listValue = rule.get( "allowed_blend_modes" );
+        for ( size_t nameIndex = 0; rule.get( "check" ).asString() == "material" && listValue.isArray() && nameIndex < listValue.size(); ++nameIndex )
+        {
+            listRuleName.push_back( listValue.at( nameIndex ).asString() );
+        }
+    }
+    SW_ASSERT_FALSE( listRuleName.empty() );
+
+    const sw::vector<sw::string_view> listLoaderName = sw::MaterialUtil::listBlendModeNames();
+    for ( const sw::string_view loaderName : listLoaderName )
+    {
+        const bool bAllowed = std::find( listRuleName.begin(), listRuleName.end(), sw::string( loaderName ) ) != listRuleName.end();
+        SW_EXPECT_TRUE_MSG( bAllowed, "blend mode " + sw::string( loaderName ) + " is read by the loader but no material rule allows it" );
+    }
+    for ( const sw::string& ruleName : listRuleName )
+    {
+        const bool bKnown = std::find( listLoaderName.begin(), listLoaderName.end(), sw::string_view( ruleName ) ) != listLoaderName.end();
+        SW_EXPECT_TRUE_MSG( bKnown, "the material rule allows blend mode " + ruleName + " that the loader does not read" );
+    }
 }

@@ -8,11 +8,13 @@
 #include "Editor/Common/Asset/ImageUtil.h"
 #include "Editor/Common/Asset/TextureImportConfig.h"
 #include "Editor/Common/Asset/TextureImporter.h"
+#include "Editor/Common/Config/EditorPaths.h"
 
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Resource/Image/DDSLoader.h"
 #include "Engine/Resource/ResourcePaths.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -435,6 +437,76 @@ namespace sw::editor
         TextureImportConfig config;
         SW_EXPECT_FALSE( config.loadFromJSONString( R"({"rules":[{"name":"Mask","format":"R8_SNORM"}]})" ) );
         SW_EXPECT_TRUE( config.loadFromJSONString( R"({"rules":[{"name":"Mask","format":"r8","srgb":false}]})" ) );
+    }
+
+    /**
+     * @brief [EditorTexturePipelineTest] 형식 표의 DXGI 번호가 `dxgiformat.h` 와 같다 — 임포터는 이 표로만 DXGI 를 고른다
+     * @details 표(`TextureImportConfig.cpp`)는 DirectXTex 를 끌어오지 않아 번호를 숫자로 든다. 여기서 헤더의 열거자와 견준다. sRGB 짝이 없는 형식은 sRGB 를 물어도 UNORM 이다.
+     */
+    SW_TEST_CASE( EditorTexturePipelineTest, ImportFormatTableMatchesDxgiFormats )
+    {
+        struct Expected
+        {
+            TextureImportFormat _format;
+            DXGI_FORMAT         _linear;
+            DXGI_FORMAT         _srgb;
+        };
+        const Expected kArrExpected[] = {
+            {              TextureImportFormat::BC1,          DXGI_FORMAT_BC1_UNORM,      DXGI_FORMAT_BC1_UNORM_SRGB},
+            {              TextureImportFormat::BC2,          DXGI_FORMAT_BC2_UNORM,      DXGI_FORMAT_BC2_UNORM_SRGB},
+            {              TextureImportFormat::BC3,          DXGI_FORMAT_BC3_UNORM,      DXGI_FORMAT_BC3_UNORM_SRGB},
+            {              TextureImportFormat::BC4,          DXGI_FORMAT_BC4_UNORM,           DXGI_FORMAT_BC4_UNORM},
+            {              TextureImportFormat::BC5,          DXGI_FORMAT_BC5_UNORM,           DXGI_FORMAT_BC5_UNORM},
+            {             TextureImportFormat::BC6H,          DXGI_FORMAT_BC6H_UF16,           DXGI_FORMAT_BC6H_UF16},
+            {              TextureImportFormat::BC7,          DXGI_FORMAT_BC7_UNORM,      DXGI_FORMAT_BC7_UNORM_SRGB},
+            {         TextureImportFormat::B8G8R8A8,     DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_FORMAT_B8G8R8A8_UNORM_SRGB},
+            {         TextureImportFormat::R8G8B8A8,     DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_R8G8B8A8_UNORM_SRGB},
+            {TextureImportFormat::R16G16B16A16Float, DXGI_FORMAT_R16G16B16A16_FLOAT,  DXGI_FORMAT_R16G16B16A16_FLOAT},
+            {               TextureImportFormat::R8,           DXGI_FORMAT_R8_UNORM,            DXGI_FORMAT_R8_UNORM},
+        };
+        for ( const Expected& expected : kArrExpected )
+        {
+            const string name{ TextureImportFormatUtil::getName( expected._format ) };
+            SW_EXPECT_TRUE_MSG( TextureImportFormatUtil::getDxgiFormat( expected._format, false ) == static_cast<uint32>( expected._linear ), name );
+            SW_EXPECT_TRUE_MSG( TextureImportFormatUtil::getDxgiFormat( expected._format, true ) == static_cast<uint32>( expected._srgb ), name );
+        }
+    }
+
+    /**
+     * @brief [EditorTexturePipelineTest] 임포터가 써 낼 수 있는 모든 형식이 에셋 검증 규칙에서 허용 · 거절 중 하나로 적혀 있다
+     * @details 정본은 임포터의 형식 표(`TextureImportFormatUtil::getWrittenFormatNames`)다. 규칙 파일(`Config/Editor/AssetValidationRules.json`, 텍스처 규칙의
+     *          `allowed_formats` · `rejected_formats`)이 따로 적혀 있어 임포터가 낸 R8 마스크가 커밋 게이트에서 진 적이 있다(R8TextureSampling).
+     *          새 형식을 더하면 규칙 파일에 그 이름을 어느 쪽으로든 적어야 이 테스트가 통과한다. 모르는 이름 · 겹친 이름은 규칙 로드(파이썬)가 거절한다.
+     */
+    SW_TEST_CASE( EditorTexturePipelineTest, EveryImportOutputFormatIsDecidedByTheAssetRules )
+    {
+        string text;
+        SW_ASSERT_TRUE( FileUtil::readTextFile( EditorPaths::resolveProjectRelativePath( "Config/Editor/AssetValidationRules.json" ), text ) );
+        JSONDocument document;
+        SW_ASSERT_TRUE( document.parse( text, "AssetValidationRules.json" ) );
+        const JSONValue rules = document.getRoot().get( "rules" );
+        SW_ASSERT_TRUE( rules.isArray() );
+
+        vector<string> listDecided;
+        for ( size_t index = 0; index < rules.size(); ++index )
+        {
+            const JSONValue rule = rules.at( index );
+            if ( rule.get( "check" ).asString() != "texture" )
+                continue;
+            for ( const utf8* pKey : { "allowed_formats", "rejected_formats" } )
+            {
+                const JSONValue listName = rule.get( pKey );
+                for ( size_t nameIndex = 0; listName.isArray() && nameIndex < listName.size(); ++nameIndex )
+                {
+                    listDecided.push_back( listName.at( nameIndex ).asString() );
+                }
+            }
+        }
+        for ( const string_view outputName : TextureImportFormatUtil::getWrittenFormatNames() )
+        {
+            const bool bDecided = std::find( listDecided.begin(), listDecided.end(), string( outputName ) ) != listDecided.end();
+            SW_EXPECT_TRUE_MSG( bDecided, "import output format " + string( outputName ) + " is neither allowed nor rejected by any texture rule" );
+        }
     }
 
     /**

@@ -48,14 +48,15 @@
     {
       "name": "texture-limits",
       "check": "texture",
-      "description": "Every runtime texture: at most 4096, a known GPU format, and a power of two when it has mips (a mip chain halves each side; UI images and pixel-art atlases have none).",
+      "description": "Every runtime texture: at most 4096, a known GPU format, and a power of two when it has mips (a mip chain halves each side; UI images and pixel-art atlases have none). Every format the texture importer can write is either allowed or rejected here (EditorTexturePipelineTest.EveryImportOutputFormatIsDecidedByTheAssetRules). BC2 is rejected: BC3 holds the same alpha better at the same size (Unreal and Unity offer no BC2 setting).",
       "severity": "error",
       "include_patterns": ["**/textures/**/*.dds"],
       "max_size": 4096,
       "mipped_power_of_two": true,
       "allowed_formats": ["BC1_UNORM", "BC1_UNORM_SRGB", "BC3_UNORM", "BC3_UNORM_SRGB", "BC4_UNORM", "BC5_UNORM", "BC6H_UF16",
                           "BC7_UNORM", "BC7_UNORM_SRGB", "R8G8B8A8_UNORM", "R8G8B8A8_UNORM_SRGB", "B8G8R8A8_UNORM",
-                          "B8G8R8A8_UNORM_SRGB", "R16G16B16A16_FLOAT", "R8_UNORM", "UNCOMPRESSED_32BPP"]
+                          "B8G8R8A8_UNORM_SRGB", "R16G16B16A16_FLOAT", "R8_UNORM", "UNCOMPRESSED_32BPP"],
+      "rejected_formats": ["BC2_UNORM", "BC2_UNORM_SRGB"]
     },
     {
       "name": "texture-palette-no-mips",

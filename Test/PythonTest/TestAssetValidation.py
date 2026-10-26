@@ -172,6 +172,21 @@ class CheckTest(AssetValidationFixture):
                                       "mipped_power_of_two": True, "allowed_formats": ["BC7_UNORM"]})
         self.assertEqual(3, len(messages), messages)   # 밉 없는 2 의 거듭제곱 아님(npotnomips)은 통과한다
 
+    def testTextureFormatListsAreCheckedAtLoad(self) -> None:
+        """형식 목록의 모르는 이름 · 허용과 거절에 함께 든 이름은 규칙 로드 오류다 — 오타가 "그 형식은 늘 진다" 로 조용히 바뀌지 않는다."""
+        base = {"name": "t", "check": "texture", "severity": "error", "include_patterns": ["*.dds"]}
+        with self.assertRaisesRegex(RuleConfigError, "unknown format"):
+            parseRules({"rules": [{**base, "allowed_formats": ["BC7_UNROM"]}]})
+        with self.assertRaisesRegex(RuleConfigError, "both allows and rejects"):
+            parseRules({"rules": [{**base, "allowed_formats": ["BC7_UNORM"], "rejected_formats": ["BC7_UNORM"]}]})
+        parseRules({"rules": [{**base, "allowed_formats": ["BC7_UNORM", "UNCOMPRESSED_32BPP"], "rejected_formats": ["BC2_UNORM"]}]})
+
+    def testRejectedTextureFormat(self) -> None:
+        self.put("Resource/a/legacy.dds", makeDdsInternal(256, 256, 1, 74))
+        self.put("Resource/a/fine.dds", makeDdsInternal(256, 256, 1, 98))
+        messages = self.findMessages({"name": "t", "check": "texture", "include_patterns": ["*.dds"], "rejected_formats": ["BC2_UNORM"]})
+        self.assertEqual(["format BC2_UNORM is rejected here (rejected_formats)"], messages)
+
     def testTextureMipPolicy(self) -> None:
         self.put("Resource/a/partial.dds", makeDdsInternal(256, 256, 3, 98))
         self.put("Resource/a/full.dds", makeDdsInternal(256, 256, 9, 98))

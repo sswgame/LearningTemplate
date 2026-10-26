@@ -81,6 +81,17 @@ _kLegacyFourCcName: dict[bytes, str] = {
     b"DXT1": "BC1_UNORM", b"DXT3": "BC2_UNORM", b"DXT5": "BC3_UNORM", b"ATI2": "BC5_UNORM", b"BC5U": "BC5_UNORM",
     struct.pack("<I", 113): "R16G16B16A16_FLOAT", struct.pack("<I", 116): "R32G32B32A32_FLOAT",
 }
+#: 마스크만 있는 옛 머리의 형식 이름(`readDdsInfo` 가 비트 수로 짓는다).
+_kUncompressedFormatRe = re.compile(r"^UNCOMPRESSED_\d+BPP$")
+#: 텍스처 규칙의 형식 목록 키 — 이름은 `readDdsInfo` 가 지을 수 있는 이름이어야 하고(모르는 이름은 규칙 로드 오류) 두 목록은 겹치지 않는다.
+#: 임포터가 낼 수 있는 형식(`TextureImportFormatUtil::getWrittenFormatNames`)이 모두 어느 규칙에서 허용 · 거절 중 하나인지는
+#: `EditorTexturePipelineTest.EveryImportOutputFormatIsDecidedByTheAssetRules` 가 본다 — 정본은 그 C++ 표다.
+_kTextureFormatListKey: tuple[str, ...] = ("allowed_formats", "rejected_formats")
+
+
+def isKnownTextureFormatName(name: str) -> bool:
+    """`readDdsInfo` 가 지을 수 있는 형식 이름인가."""
+    return name in _kDxgiFormatName.values() or name in _kLegacyFourCcName.values() or _kUncompressedFormatRe.match(name) is not None
 
 
 class RuleConfigError(ValueError):
@@ -418,10 +429,31 @@ def checkTextureInternal(rule: Rule, relPath: str, context: ValidationContext) -
         listMessage.append(f"has {info.mipCount} mip level(s), expected the full chain ({fullMipCount})")
     if requireMips is False and info.mipCount > 1:
         listMessage.append(f"has {info.mipCount} mip levels, this folder expects none")
+    listRejected = rule.params.get("rejected_formats")
     listFormat = rule.params.get("allowed_formats")
-    if listFormat and info.formatName not in listFormat:
+    if listRejected and info.formatName in listRejected:
+        listMessage.append(f"format {info.formatName} is rejected here (rejected_formats)")
+    elif listFormat and info.formatName not in listFormat:
         listMessage.append(f"format {info.formatName} is not allowed here ({', '.join(listFormat)})")
     return listMessage
+
+
+def validateTextureFormatListsInternal(name: str, params: dict) -> None:
+    """텍스처 규칙의 `allowed_formats` · `rejected_formats` 가 아는 이름의 목록이고 서로 겹치지 않는지 봅니다. 틀리면 RuleConfigError 입니다."""
+    mapList: dict[str, list[str]] = {}
+    for key in _kTextureFormatListKey:
+        if key not in params:
+            continue
+        value = params[key]
+        if not isinstance(value, list) or not value or not all(isinstance(item, str) for item in value):
+            raise RuleConfigError(f"rule '{name}' needs '{key}' as a non-empty list of format names")
+        unknown = [item for item in value if not isKnownTextureFormatName(item)]
+        if unknown:
+            raise RuleConfigError(f"rule '{name}' lists unknown format name(s) in '{key}': {', '.join(unknown)}")
+        mapList[key] = value
+    overlap = sorted(set(mapList.get("allowed_formats", [])) & set(mapList.get("rejected_formats", [])))
+    if overlap:
+        raise RuleConfigError(f"rule '{name}' both allows and rejects {', '.join(overlap)}")
 
 
 def checkMeshBudgetInternal(rule: Rule, relPath: str, context: ValidationContext) -> list[str]:
@@ -534,6 +566,7 @@ def checkMaterialInternal(rule: Rule, relPath: str, context: ValidationContext) 
     listMessage: list[str] = []
     if not root.get("shaderPath"):
         listMessage.append("has no shaderPath")
+    # 이름의 정본은 로더의 표(`MaterialUtil::listBlendModeNames`)다 — 규칙의 목록과 같은 집합인지 `MaterialTest.AssetRuleBlendModesMatchTheLoader` 가 본다.
     allowedBlend = rule.params.get("allowed_blend_modes")
     if allowedBlend and root.get("blendMode") not in allowedBlend:
         listMessage.append(f"blendMode '{root.get('blendMode')}' is not one of {', '.join(allowedBlend)}")
@@ -761,7 +794,7 @@ kAssetRuleConfigRelative = "Config/Editor/AssetValidationRules.json"
 
 _kCheckRegistry: dict[str, tuple[CheckFunction, frozenset[str], frozenset[str]]] = {
     "naming": (checkNamingInternal, frozenset(), frozenset({"name_pattern", "allowed_suffixes"})),
-    "texture": (checkTextureInternal, frozenset(), frozenset({"max_size", "mipped_power_of_two", "require_mips", "allowed_formats"})),
+    "texture": (checkTextureInternal, frozenset(), frozenset({"max_size", "mipped_power_of_two", "require_mips", "allowed_formats", "rejected_formats"})),
     "mesh_budget": (checkMeshBudgetInternal, frozenset(), frozenset({"max_triangles", "max_bounding_radius"})),
     "xml_wellformed": (checkXmlWellFormedInternal, frozenset(), frozenset()),
     "missing_reference": (checkMissingReferenceInternal, frozenset(), frozenset({"transient_folders"})),
@@ -816,6 +849,8 @@ def parseRules(data: dict) -> list[Rule]:
         missingKey = sorted(requiredKey - set(params))
         if missingKey:
             raise RuleConfigError(f"rule '{name}' ({check}) is missing required key(s) {', '.join(missingKey)}")
+        if check == "texture":
+            validateTextureFormatListsInternal(name, params)
         listInclude = entry["include_patterns"]
         if not isinstance(listInclude, list) or not listInclude:
             raise RuleConfigError(f"rule '{name}' needs a non-empty include_patterns list")

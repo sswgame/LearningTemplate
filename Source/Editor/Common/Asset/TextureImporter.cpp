@@ -42,35 +42,11 @@ namespace sw::editor
         /**
          * @brief 규칙의 형식을 DXGI 형식으로 바꿉니다. 규칙은 이미 푼 형식(`TextureImportFormat`)을 들므로 실패가 없다 — 모르는 이름은 설정 로드가 거절했다.
          * @details sRGB 짝이 없는 형식(BC4 · BC5 · BC6H · R16G16B16A16_FLOAT · R8)은 @p bSrgb 와 무관하게 UNORM 이며, 원본 바이트를 곡선 없이 그대로 옮긴다.
+         *          번호는 이름 표 하나(`TextureImportFormatUtil::getDxgiFormat`)에서 온다 — 에셋 규칙과 대조하는 테스트가 같은 표를 읽는다.
          */
         [[nodiscard]] DXGI_FORMAT resolveFormatInternal( TextureImportFormat format, bool bSrgb )
         {
-            switch ( format )
-            {
-                case TextureImportFormat::BC1:
-                    return bSrgb ? DXGI_FORMAT_BC1_UNORM_SRGB : DXGI_FORMAT_BC1_UNORM;
-                case TextureImportFormat::BC2:
-                    return bSrgb ? DXGI_FORMAT_BC2_UNORM_SRGB : DXGI_FORMAT_BC2_UNORM;
-                case TextureImportFormat::BC3:
-                    return bSrgb ? DXGI_FORMAT_BC3_UNORM_SRGB : DXGI_FORMAT_BC3_UNORM;
-                case TextureImportFormat::BC4:
-                    return DXGI_FORMAT_BC4_UNORM;
-                case TextureImportFormat::BC5:
-                    return DXGI_FORMAT_BC5_UNORM;
-                case TextureImportFormat::BC6H:
-                    return DXGI_FORMAT_BC6H_UF16;
-                case TextureImportFormat::BC7:
-                    return bSrgb ? DXGI_FORMAT_BC7_UNORM_SRGB : DXGI_FORMAT_BC7_UNORM;
-                case TextureImportFormat::B8G8R8A8:
-                    return bSrgb ? DXGI_FORMAT_B8G8R8A8_UNORM_SRGB : DXGI_FORMAT_B8G8R8A8_UNORM;
-                case TextureImportFormat::R8G8B8A8:
-                    return bSrgb ? DXGI_FORMAT_R8G8B8A8_UNORM_SRGB : DXGI_FORMAT_R8G8B8A8_UNORM;
-                case TextureImportFormat::R16G16B16A16Float:
-                    return DXGI_FORMAT_R16G16B16A16_FLOAT;
-                case TextureImportFormat::R8:
-                    return DXGI_FORMAT_R8_UNORM;
-            }
-            return DXGI_FORMAT_UNKNOWN;
+            return static_cast<DXGI_FORMAT>( TextureImportFormatUtil::getDxgiFormat( format, bSrgb ) );
         }
 
         /**
