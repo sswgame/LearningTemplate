@@ -11,6 +11,7 @@
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
+#include "Editor/Common/GUI/EditorTextExtentImGui.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -175,7 +176,7 @@ namespace sw::editor
 
         // 왼쪽은 파일 · 레이어 · 팔레트, 오른쪽은 캔버스다(유니티 Tile Palette 와 씬 뷰를 한 창에).
         const float32 statusHeight = ImGui::GetFrameHeightWithSpacing();
-        const float32 sideWidth    = 300.0f * EditorThemeUtil::getDpiScale();
+        const float32 sideWidth    = measureExtent( EditorTextExtent::ofText( 40.0f, 0.0f ) ).x;
         if ( ImGui::BeginChild( "##tileMapSide", ImVec2( sideWidth, -statusHeight ), ImGuiChildFlags_Borders | ImGuiChildFlags_ResizeX ) )
         {
             drawTileMapFileControls();

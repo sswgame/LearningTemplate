@@ -16,6 +16,7 @@
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
+#include "Editor/Common/GUI/EditorTextExtentImGui.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
@@ -106,7 +107,7 @@ namespace sw::editor
     {
         struct UIPreviewPanelInternal
         {
-            static constexpr float32     kLeftWidth            = 340.0f;
+            static constexpr float32     kLeftColumns          = 45.0f;
             static constexpr float32     kIndentPerLevel       = 12.0f;
             static constexpr float32     kTreeRatio            = 0.28f; ///< 왼쪽 영역에서 위젯 트리가 차지하는 높이 비율
             static constexpr float32     kPaletteRatio         = 0.22f; ///< 팔레트가 차지하는 높이 비율(나머지는 인스펙터)
@@ -1894,7 +1895,7 @@ namespace sw::editor
 
         // 왼쪽 영역: 위젯 트리, 팔레트, 고른 위젯의 프로퍼티(인스펙터)를 위에서 아래로. 오른쪽: 미리보기 이미지.
         const float32 dpi = EditorThemeUtil::getDpiScale();
-        ImGui::BeginChild( "##uipreviewleft", ImVec2{ Internal::kLeftWidth * dpi, 0.0f }, ImGuiChildFlags_None );
+        ImGui::BeginChild( "##uipreviewleft", measureExtent( EditorTextExtent::ofText( Internal::kLeftColumns, 0.0f ) ), ImGuiChildFlags_None );
         const float32 treeHeight    = ImGui::GetContentRegionAvail().y * Internal::kTreeRatio;
         const float32 paletteHeight = ImGui::GetContentRegionAvail().y * Internal::kPaletteRatio;
         ImGui::BeginChild( "##uipreviewtree", ImVec2{ 0.0f, treeHeight }, ImGuiChildFlags_Borders );

@@ -13,6 +13,7 @@
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
+#include "Editor/Common/GUI/EditorTextExtentImGui.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -219,14 +220,14 @@ namespace sw::editor
         pDrawList->AddRect( meterMin, meterMax, EditorColorUtil::toImU32( Color{ 0.35f, 0.35f, 0.40f, 1.0f } ) );
 
         ImGui::PushStyleColor( ImGuiCol_Button, EditorColorUtil::toImVec4( status._bMuted ? EditorThemeUtil::getErrorColor() : EditorThemeUtil::getToggleInactiveColor() ) );
-        if ( ImGui::Button( "M", ImVec2{ 32.0f * dpi, 0.0f } ) )
+        if ( ImGui::Button( "M", measureExtent( EditorTextExtent::ofText( 4.0f, 0.0f ) ) ) )
             engine.setBusMuted( status._name, status._bMuted == false );
         ImGui::PopStyleColor();
         EditorSelfTestMarks::note( ( "audiomixer.mute." + name ).c_str() );
         EditorWidgets::drawTooltip( "Mute" );
         ImGui::SameLine();
         ImGui::PushStyleColor( ImGuiCol_Button, EditorColorUtil::toImVec4( status._bSolo ? EditorThemeUtil::getWarningColor() : EditorThemeUtil::getToggleInactiveColor() ) );
-        if ( ImGui::Button( "S", ImVec2{ 32.0f * dpi, 0.0f } ) )
+        if ( ImGui::Button( "S", measureExtent( EditorTextExtent::ofText( 4.0f, 0.0f ) ) ) )
             engine.setBusSolo( status._name, status._bSolo == false );
         ImGui::PopStyleColor();
         EditorSelfTestMarks::note( ( "audiomixer.solo." + name ).c_str() );

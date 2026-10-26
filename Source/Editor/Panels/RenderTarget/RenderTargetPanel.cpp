@@ -9,6 +9,7 @@
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
+#include "Editor/Common/GUI/EditorTextExtentImGui.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
@@ -33,7 +34,7 @@ namespace sw::editor
     namespace
     {
         /// @brief 목록 열의 너비입니다. 이름이 길어도(GBufferAlbedo) 잘리지 않을 만큼 잡습니다.
-        constexpr float32 kListWidth = 220.0f;
+        constexpr float32 kListColumns = 29.0f; ///< 목록 폭(글자 칸 수)
         /// @brief Auto 일 때 스냅샷을 다시 읽는 간격(UI 프레임)입니다. 읽기는 GPU 를 기다리므로 매 프레임 하지 않는다.
         constexpr uint32 kAutoRefreshFrames = 30;
 
@@ -283,7 +284,7 @@ namespace sw::editor
     {
         const EditorListFilter filter{ _searchFilter.c_str() };
 
-        ImGui::BeginChild( "##rtlist", ImVec2{ kListWidth, 0.0f }, ImGuiChildFlags_Borders );
+        ImGui::BeginChild( "##rtlist", measureExtent( EditorTextExtent::ofText( kListColumns, 0.0f ) ), ImGuiChildFlags_Borders );
         uint32 shownCount = 0;
         for ( const RenderTargetInfo& info : _listTarget )
         {

@@ -13,7 +13,11 @@ Scripts/lint/gate/CheckEditorSizeLiterals.py
 위반(주석 · 문자열은 가린 글에서 본다):
   - `ImGui::SetNextItemWidth(` 인자에 0 · 1 이 아닌 숫자 리터럴이 있고 글꼴 기준(measureExtent · GetFontSize · CalcTextSize · GetFrameHeight · GetContentRegionAvail · GetStyle)이 없다
   - `ImGui::SetNextWindowSize(` 직접 호출(EditorChrome.cpp 와 SelfTest 제외)
-  - `ImGui::BeginChild(` · `ImGui::BeginTable(` 의 크기 인자에 0 이 아닌 숫자 리터럴이 있고 글꼴 기준이 없다
+  - `ImGui::BeginChild(` · `BeginTable(` · `Button(` · `ProgressBar(` · `PlotLines(` 의 크기 인자에 0 · 1 이 아닌 숫자 리터럴이 있고 글꼴 기준이 없다
+
+`Dummy(` · `InvisibleButton(` 은 보지 않는다: 크기가 그린 도형의 반지름에서 와서(`radius * 2.0f`) 픽셀 리터럴이 아니다.
+이름 있는 픽셀 상수(`kListWidth = 220.0f`)는 보지 않는다: 값이 픽셀인지 글자 칸 · 줄 수인지는 이름으로만 가를 수 있어 오탐이 많다.
+대신 상수는 `…Columns` · `…Lines` 로 이름 붙여 `measureExtent` / `setNextItemWidthColumns` 로만 크기가 되게 했다(명명 규칙이며 게이트가 지키지는 않는다).
 
 기준선은 현재 건수다(`rules/CheckEditorSizeLiterals.toml`). 커밋 훅은 추가한 줄만, 전체 훑기는 기준선을 넘을 때만 실패한다.
 
@@ -40,11 +44,16 @@ _kSuffixes = (".h", ".hpp", ".inl", ".cc", ".cpp", ".cxx")
 _kExemptPrefix = ("Source/Editor/Common/GUI/EditorChrome.", "Source/Editor/Common/GUI/EditorTextExtentImGui.", "Source/Editor/SelfTest/")
 _kNumberRe = re.compile(r"(?<![\w.])(?:\d+(?:\.\d*)?(?:[eE][-+]?\d+)?[fFuUlL]*|\.\d+[fF]?)(?![\w.])")
 _kFontBasisRe = re.compile(r"measureExtent|GetFontSize|CalcTextSize|GetFrameHeight|GetTextLineHeight|GetContentRegionAvail|GetStyle|GetWindowWidth|GetWindowHeight")
-_kRuleHead: tuple[tuple[str, re.Pattern[str]], ...] = (
-    ("SetNextItemWidth", re.compile(r"\bImGui::SetNextItemWidth\s*\(")),
-    ("SetNextWindowSize", re.compile(r"\bImGui::SetNextWindowSize\s*\(")),
-    ("BeginChild", re.compile(r"\bImGui::BeginChild\s*\(")),
-    ("BeginTable", re.compile(r"\bImGui::BeginTable\s*\(")),
+#: (이름, 머리 정규식, 크기 인자 위치) — 위치가 None 이면 호출 자체가 위반이다(SetNextWindowSize).
+_kRuleHead: tuple[tuple[str, re.Pattern[str], int | None], ...] = (
+    ("SetNextItemWidth", re.compile(r"\bImGui::SetNextItemWidth\s*\("), 0),
+    ("SetNextWindowSize", re.compile(r"\bImGui::SetNextWindowSize\s*\("), None),
+    ("BeginChild", re.compile(r"\bImGui::BeginChild\s*\("), 1),
+    ("BeginTable", re.compile(r"\bImGui::BeginTable\s*\("), 3),
+    ("Button", re.compile(r"\bImGui::Button\s*\("), 1),
+    ("ProgressBar", re.compile(r"\bImGui::ProgressBar\s*\("), 1),
+    ("PlotLines", re.compile(r"\bImGui::PlotLines\s*\("), 7),
+    ("PlotHistogram", re.compile(r"\bImGui::PlotHistogram\s*\("), 7),
 )
 
 
@@ -98,7 +107,7 @@ def findSizeLiterals(text: str, masked: str | None = None) -> list[SizeLiteral]:
     if len(masked) != len(text):
         return []
     listFound: list[SizeLiteral] = []
-    for kind, pattern in _kRuleHead:
+    for kind, pattern, sizeIndex in _kRuleHead:
         for match in pattern.finditer(masked):
             lineBegin = masked.rfind("\n", 0, match.start()) + 1
             if masked[lineBegin:match.start()].lstrip().startswith("#"):
@@ -108,14 +117,8 @@ def findSizeLiterals(text: str, masked: str | None = None) -> list[SizeLiteral]:
             if close < 0:
                 continue
             listArg = splitArgumentsInternal(masked[open_ + 1:close])
-            if kind == "SetNextWindowSize":
-                bViolation = True
-            elif kind == "SetNextItemWidth":
-                bViolation = hasPixelLiteralInternal(listArg[0])
-            else:
-                # BeginChild( id, size, ...) · BeginTable( id, column, flags, outer_size, ...) — 크기 인자만 본다.
-                sizeIndex = 1 if kind == "BeginChild" else 3
-                bViolation = len(listArg) > sizeIndex and hasPixelLiteralInternal(listArg[sizeIndex])
+            # 크기 인자만 본다 — BeginChild( id, size ) · BeginTable( id, column, flags, outer_size ) · Button( label, size ) · PlotLines( …, graph_size ).
+            bViolation = True if sizeIndex is None else len(listArg) > sizeIndex and hasPixelLiteralInternal(listArg[sizeIndex])
             if bViolation:
                 listFound.append(SizeLiteral(text.count("\n", 0, match.start()) + 1, text.count("\n", 0, close) + 1, kind))
     return sorted(listFound, key=lambda item: item.firstLine)
@@ -124,7 +127,7 @@ def findSizeLiterals(text: str, masked: str | None = None) -> list[SizeLiteral]:
 class CheckEditorSizeLiteralsGate(BaselineSourceGate):
     """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다."""
 
-    description = "에디터 코드의 픽셀 리터럴 크기(SetNextItemWidth · SetNextWindowSize · BeginChild/BeginTable)는 글자 칸 · 줄 수(EditorTextExtent)로(훅은 추가한 줄만, 전체는 기준선 초과만)"
+    description = "에디터 코드의 픽셀 리터럴 크기(SetNextItemWidth · SetNextWindowSize · BeginChild/BeginTable · Button/ProgressBar/PlotLines)는 글자 칸 · 줄 수(EditorTextExtent)로(훅은 추가한 줄만, 전체는 기준선 초과만)"
     buildComment = "Checking that editor code sizes windows and items in text columns and lines..."
     timeoutSeconds = 120
     preCommitPattern = tuple(f"{root}/*" for root in _kScanRoot)

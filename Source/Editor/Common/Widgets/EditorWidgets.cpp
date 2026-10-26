@@ -9,6 +9,7 @@
 
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
+#include "Editor/Common/GUI/EditorTextExtentImGui.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorAssetFilter.h"
 #include "Editor/Common/Widgets/EditorLabelLayout.h"
@@ -404,7 +405,7 @@ namespace sw::editor
         if ( bShowClear )
         {
             ImGui::SameLine();
-            if ( ImGui::Button( "X", ImVec2{ 22.0f * EditorThemeUtil::getDpiScale(), 0.0f } ) && pBuffer[0] != '\0' )
+            if ( ImGui::Button( "X", measureExtent( EditorTextExtent::ofText( 3.0f, 0.0f ) ) ) && pBuffer[0] != '\0' )
             {
                 pBuffer[0] = '\0';
                 bChanged   = true;
