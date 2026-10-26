@@ -397,3 +397,56 @@ SW_TEST_CASE( PackedValueSerializationTest, BuiltinClassFollowsTheTable )
     SW_EXPECT_TRUE( UIBindingValueUtil::classifyType( hashed_string( "bool" ) ) == UIBindingValueKind::Bool );
     SW_EXPECT_TRUE( UIBindingValueUtil::classifyType( hashed_string( "string" ) ) == UIBindingValueKind::Text );
 }
+
+/**
+ * @brief [PackedValueSerializationTest] 값 하나를 숫자로 읽는 길(`readNumber` · `readInteger`)은 내장 타입 표에서 나온다 — 범위 검사 · EditCondition · 탐침이 함께 쓴다
+ * @details 예전에는 부르는 곳마다 타입 이름 글 사슬이라 float 이 빠지고 uint64 를 int64 로 읽고 압축 타입의 Min · Max 가 조용히 통과했다.
+ */
+SW_TEST_CASE( PackedValueSerializationTest, ReadNumberFollowsTheBuiltinTable )
+{
+    const auto indexOf = []( const utf8* pName )
+    { return ReflectValueUtil::findBuiltinIndex( hashed_string( pName ) ); };
+    float64 number{ 0.0 };
+    int64   integer{ 0 };
+
+    // 실수 · 큰 uint64 는 값 그대로 숫자다.
+    const float32 floatValue = 2.5f;
+    SW_EXPECT_TRUE( ReflectValueUtil::readNumber( indexOf( "float32" ), &floatValue, number ) );
+    SW_EXPECT_EQUAL( 2.5, number );
+    const uint64 bigValue = 1ull << 63;
+    SW_EXPECT_TRUE( ReflectValueUtil::readNumber( indexOf( "uint64" ), &bigValue, number ) );
+    SW_EXPECT_EQUAL( 9223372036854775808.0, number );
+
+    // 성분이 하나인 압축 타입은 숫자다 - 범위 검사가 이제 이 값을 본다.
+    const half halfValue = half::fromFloat( 0.75f );
+    SW_EXPECT_TRUE( ReflectValueUtil::readNumber( indexOf( "half" ), &halfValue, number ) );
+    SW_EXPECT_EQUAL( 0.75, number );
+    const unorm8 unitValue = unorm8::fromRaw( 255 );
+    SW_EXPECT_TRUE( ReflectValueUtil::readNumber( indexOf( "unorm8" ), &unitValue, number ) );
+    SW_EXPECT_EQUAL( 1.0, number );
+
+    // 숫자가 아닌 갈래(bool · 글 · 성분이 여럿인 압축 타입)와 표 밖 자리는 읽지 않고 값을 그대로 둔다.
+    number                = -1.0;
+    const bool   flag     = true;
+    const string text     = "3";
+    const half2  halfPair = half2::fromFloat2( float2{ 0.25f, 0.5f } );
+    SW_EXPECT_FALSE( ReflectValueUtil::readNumber( indexOf( "bool" ), &flag, number ) );
+    SW_EXPECT_FALSE( ReflectValueUtil::readNumber( indexOf( "string" ), &text, number ) );
+    SW_EXPECT_FALSE( ReflectValueUtil::readNumber( indexOf( "half2" ), &halfPair, number ) );
+    SW_EXPECT_FALSE( ReflectValueUtil::readNumber( -1, &floatValue, number ) );
+    SW_EXPECT_FALSE( ReflectValueUtil::readNumber( indexOf( "float32" ), nullptr, number ) );
+    SW_EXPECT_EQUAL( -1.0, number );
+
+    // 정수판은 정수 · bool 만 읽는다. 실수 · 압축 타입은 소수부를 버리지 않게 거절한다.
+    const int16 smallValue = -7;
+    SW_EXPECT_TRUE( ReflectValueUtil::readInteger( indexOf( "int16" ), &smallValue, integer ) );
+    SW_EXPECT_EQUAL( int64{ -7 }, integer );
+    SW_EXPECT_TRUE( ReflectValueUtil::readInteger( indexOf( "bool" ), &flag, integer ) );
+    SW_EXPECT_EQUAL( int64{ 1 }, integer );
+    SW_EXPECT_FALSE( ReflectValueUtil::readInteger( indexOf( "float32" ), &floatValue, integer ) );
+    SW_EXPECT_FALSE( ReflectValueUtil::readInteger( indexOf( "half" ), &halfValue, integer ) );
+
+    // 글 갈래는 표의 서식으로 보인다(탐침 `Object.Property` 의 글).
+    SW_EXPECT_STREQ( "3", ReflectValueUtil::formatBuiltin( indexOf( "string" ), &text ).c_str() );
+    SW_EXPECT_TRUE( ReflectValueUtil::formatBuiltin( -1, &text ).empty() );
+}
