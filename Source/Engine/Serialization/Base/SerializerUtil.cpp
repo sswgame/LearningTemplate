@@ -8,14 +8,13 @@
 #include "Core/Log/LogOnce.h"
 #include "Core/Log/Logger.h"
 
+#include "Engine/Reflection/ReflectValue.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Base/ContainerVisitor.h"
+#include "Engine/Serialization/Base/NestedObjectCodec.h"
 #include "Engine/Serialization/Base/SchemaMigrate.h"
-#include "Engine/Serialization/Format/BinarySerializer.h"
-#include "Engine/Serialization/Format/JSONSerializer.h"
-#include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw
@@ -45,33 +44,13 @@ namespace sw
     {
         struct SerializerUtilInternal
         {
-            /** @brief 숫자 칸 하나를 float64 로 읽습니다. 숫자 타입이 아니면 false 입니다(범위 검사가 보지 않는 칸). */
-            [[nodiscard]] static bool readRangeNumber( const string_view typeName, const ValueAddress value, float64& outValue )
+            /**
+             * @brief 숫자 칸 하나를 float64 로 읽습니다. 숫자 타입이 아니면 false 입니다(범위 검사가 보지 않는 칸).
+             * @details 숫자 판정은 내장 타입 표 한 곳(`ReflectValueUtil::readNumber`)이 한다 — 성분이 하나인 압축 타입(half · unorm · snorm)도 범위를 본다.
+             */
+            [[nodiscard]] static bool readRangeNumber( const hashed_string& typeName, const ValueAddress value, float64& outValue )
             {
-                const void* const pValue = value.get();
-                if ( typeName == "float32" || typeName == "float" )
-                    outValue = static_cast<float64>( *static_cast<const float32*>( pValue ) );
-                else if ( typeName == "float64" || typeName == "double" )
-                    outValue = *static_cast<const float64*>( pValue );
-                else if ( typeName == "int32" || typeName == "int" )
-                    outValue = static_cast<float64>( *static_cast<const int32*>( pValue ) );
-                else if ( typeName == "uint32" )
-                    outValue = static_cast<float64>( *static_cast<const uint32*>( pValue ) );
-                else if ( typeName == "int64" )
-                    outValue = static_cast<float64>( *static_cast<const int64*>( pValue ) );
-                else if ( typeName == "uint64" )
-                    outValue = static_cast<float64>( *static_cast<const uint64*>( pValue ) );
-                else if ( typeName == "int16" )
-                    outValue = static_cast<float64>( *static_cast<const int16*>( pValue ) );
-                else if ( typeName == "uint16" )
-                    outValue = static_cast<float64>( *static_cast<const uint16*>( pValue ) );
-                else if ( typeName == "int8" )
-                    outValue = static_cast<float64>( *static_cast<const int8*>( pValue ) );
-                else if ( typeName == "uint8" )
-                    outValue = static_cast<float64>( *static_cast<const uint8*>( pValue ) );
-                else
-                    return false;
-                return true;
+                return ReflectValueUtil::readNumber( ReflectValueUtil::findBuiltinIndex( typeName ), value.get(), outValue );
             }
 
             /** @brief @p value 가 @p range 밖이면 "경로 = 값 is outside [아래, 위]" 한 줄을 더합니다. */
@@ -85,7 +64,7 @@ namespace sw
             }
 
             /** @brief @p value(@p typeName 의 숫자)가 @p range 안인지입니다. 숫자가 아니면 범위가 없으므로 true 입니다. */
-            static bool isNumberWithinRange( const string_view typeName, const ValueAddress value, const PropertyAllowedRange& range )
+            static bool isNumberWithinRange( const hashed_string& typeName, const ValueAddress value, const PropertyAllowedRange& range )
             {
                 float64 number = 0.0;
                 if ( readRangeNumber( typeName, value, number ) == false )
@@ -126,7 +105,7 @@ namespace sw
                             // 구조체 원소의 값 주소는 그 원소 타입의 객체 주소다.
                             const void* const pElementValue = pSequence->getElementConst( pValue, elementIndex );
                             const bool        bWithin       = pElement != nullptr ? isEveryValueWithinRange( *pElement, ObjectAddress{ pElementValue } )
-                                                                                  : isNumberWithinRange( prop._elementTypeName.view(), ValueAddress{ pElementValue }, range );
+                                                                                  : isNumberWithinRange( prop._elementTypeName, ValueAddress{ pElementValue }, range );
                             if ( bWithin == false )
                                 return false;
                         }
@@ -134,7 +113,7 @@ namespace sw
                     }
                     // 숫자 칸은 범위를 선언했을 때만 본다. 숫자가 아닌 칸만 중첩 구조체인지 찾는다(숫자 칸마다 타입 조회를 하지 않는다).
                     float64 value = 0.0;
-                    if ( readRangeNumber( prop._typeName.view(), ValueAddress{ pValue }, value ) )
+                    if ( readRangeNumber( prop._typeName, ValueAddress{ pValue }, value ) )
                     {
                         if ( prop._metadata->hasAllowedRange() && prop._metadata->computeAllowedRange( pInstance ).contains( value ) == false )
                             return false;
@@ -347,7 +326,7 @@ namespace sw
                 LittleEndianUtil::appendUint32( buffer, 0 );
 
                 const size_t bodyStart = buffer.size();
-                const bool   bWritten  = BinarySerializer::serialize( pObject, *pRuntimeType, buffer, context );
+                const bool   bWritten  = NestedObjectCodec::writeBinary( pObject, *pRuntimeType, buffer, context );
                 const uint32 bodySize  = static_cast<uint32>( buffer.size() - bodyStart );
                 LittleEndianUtil::writeUint32( buffer.data() + sizePos, bodySize );
                 return bWritten;
@@ -401,7 +380,7 @@ namespace sw
                     return ContainerReadResult::Read;
                 }
 
-                switch ( BinarySerializer::deserializeNested( pObj, *pType, pData + bodyStart, bodySize, context ) )
+                switch ( NestedObjectCodec::readBinary( pObj, *pType, pData + bodyStart, bodySize, context ) )
                 {
                     case FieldReadResult::Read:
                         return ContainerReadResult::Read;
@@ -411,43 +390,6 @@ namespace sw
                         return ContainerReadResult::ObjectRejected;
                 }
                 return ContainerReadResult::ObjectRejected;
-            }
-
-            /**
-             * @brief 텍스트(JSON, XML)를 임시 인스턴스로 읽어 바이너리로 다시 씁니다. `deserializeText` 가 텍스트 형식을 고릅니다.
-             * @return 텍스트를 읽지 못하면 false 이고, 그때 `outBinary` 는 건드리지 않습니다.
-             */
-            template <typename DeserializeTextFunc>
-            static bool transcodeTextToBinary( string_view text, const TypeInfo& typeInfo, vector<uint8>& outBinary,
-                                               const SerializeContext& context, DeserializeTextFunc&& deserializeText )
-            {
-                if ( text.empty() || typeInfo._size == 0 )
-                    return false;
-
-                ScopedScratchInstance scratch( typeInfo );
-                if ( scratch.isValid() == false || deserializeText( scratch.get() ) == false )
-                    return false;
-
-                return BinarySerializer::serialize( scratch.get(), typeInfo, outBinary, context );
-            }
-
-            /**
-             * @brief 바이너리를 임시 인스턴스로 읽어 텍스트로 다시 씁니다. `serializeText` 가 텍스트 형식을 고릅니다.
-             * @return 바이너리를 읽지 못하면 빈 문자열입니다.
-             */
-            template <typename SerializeTextFunc>
-            static string transcodeBinaryToText( const uint8* pData, size_t dataSize, const TypeInfo& typeInfo, const SerializeContext& context,
-                                                 SerializeTextFunc&& serializeText )
-            {
-                const bool bEmptyTranscodeInput = pData == nullptr || dataSize == 0 || typeInfo._size == 0;
-                if ( bEmptyTranscodeInput )
-                    return {};
-
-                ScopedScratchInstance scratch( typeInfo );
-                if ( scratch.isValid() == false || BinarySerializer::deserialize( scratch.get(), typeInfo, pData, dataSize, context ) == false )
-                    return {};
-
-                return serializeText( scratch.get() );
             }
 
             /** @brief 컨테이너를 바이너리로 적습니다. 원소 수(uint32) 뒤에 원소를 적고, 맵은 항목마다 키와 값을 적습니다. 소유 포인터 원소는 `[이름][본문크기][본문]` 입니다. */
@@ -684,7 +626,7 @@ namespace sw
                 LittleEndianUtil::appendUint32( listBuffer, 0 );
 
                 const size_t structStart = listBuffer.size();
-                const bool   bWritten    = BinarySerializer::serialize( pValuePtr, *pStructInfo, listBuffer, context );
+                const bool   bWritten    = NestedObjectCodec::writeBinary( pValuePtr, *pStructInfo, listBuffer, context );
                 const uint32 structSize  = static_cast<uint32>( listBuffer.size() - structStart );
 
                 LittleEndianUtil::writeUint32( listBuffer.data() + sizePos, structSize );
@@ -704,7 +646,7 @@ namespace sw
             return true;
         }
 
-        // 실을 수 없는 타입은 아무 바이트도 쓰지 않고 실패를 돌려준다. 이유는 부른 쪽이 프로퍼티 이름과 함께 알린다(`BinarySerializer::serialize`).
+        // 실을 수 없는 타입은 아무 바이트도 쓰지 않고 실패를 돌려준다. 이유는 부른 쪽이 프로퍼티 이름과 함께 알린다(바이너리 직렬화기).
         return false;
     }
 
@@ -732,7 +674,7 @@ namespace sw
                 if ( SerializerUtilInternal::readSizedBlock( pData, dataSize, offset, blockStart, blockSize ) == false )
                     return FieldReadResult::FieldFailed;
                 // 구조체 안의 객체째 실패(금지된 필드)는 그대로 올린다. bool 로 접으면 부른 쪽이 이 칸만 되돌리고 orphan 으로 넘긴다.
-                return BinarySerializer::deserializeNested( pValuePtr, *pStructInfo, pData + blockStart, blockSize, context );
+                return NestedObjectCodec::readBinary( pValuePtr, *pStructInfo, pData + blockStart, blockSize, context );
             }
         }
 
@@ -795,7 +737,7 @@ namespace sw
         {
             if ( pStructInfo->isPrimitive() == false )
             {
-                ss.append( JSONSerializer::serialize( pValPtr, *pStructInfo, context ) );
+                ss.append( NestedObjectCodec::writeJSON( pValPtr, *pStructInfo, context ) );
                 return;
             }
         }
@@ -840,9 +782,9 @@ namespace sw
                 if ( bQuotedStruct )
                 {
                     const string unescaped = JSONDocument::unescapeString( sv.substr( 1, sv.size() - 2 ) );
-                    return JSONSerializer::deserialize( pValPtr, *pStructInfo, unescaped, context );
+                    return NestedObjectCodec::readJSON( pValPtr, *pStructInfo, unescaped, context );
                 }
-                return JSONSerializer::deserialize( pValPtr, *pStructInfo, sv, context );
+                return NestedObjectCodec::readJSON( pValPtr, *pStructInfo, sv, context );
             }
         }
 
@@ -1089,42 +1031,6 @@ namespace sw
         return listProp.size();
     }
 
-    bool SerializerUtil::transcodeJSONToBinary( string_view jsonStr, const TypeInfo& typeInfo, vector<uint8>& outBinary,
-                                                const SerializeContext& context )
-    {
-        return SerializerUtilInternal::transcodeTextToBinary( jsonStr, typeInfo, outBinary, context, [&]( void* pScratch )
-        {
-            return JSONSerializer::deserialize( pScratch, typeInfo, jsonStr, context );
-        } );
-    }
-
-    string SerializerUtil::transcodeBinaryToJSON( const uint8* pData, size_t dataSize, const TypeInfo& typeInfo, bool bPretty,
-                                                  const SerializeContext& context )
-    {
-        return SerializerUtilInternal::transcodeBinaryToText( pData, dataSize, typeInfo, context, [&]( const void* pScratch )
-        {
-            return bPretty ? JSONSerializer::serializePretty( pScratch, typeInfo, 4, context ) : JSONSerializer::serialize( pScratch, typeInfo, context );
-        } );
-    }
-
-    bool SerializerUtil::transcodeXMLToBinary( string_view xmlStr, const TypeInfo& typeInfo, vector<uint8>& outBinary,
-                                               const SerializeContext& context )
-    {
-        return SerializerUtilInternal::transcodeTextToBinary( xmlStr, typeInfo, outBinary, context, [&]( void* pScratch )
-        {
-            return XMLSerializer::deserialize( pScratch, typeInfo, xmlStr, context );
-        } );
-    }
-
-    string SerializerUtil::transcodeBinaryToXML( const uint8* pData, size_t dataSize, const TypeInfo& typeInfo,
-                                                 const SerializeContext& context )
-    {
-        return SerializerUtilInternal::transcodeBinaryToText( pData, dataSize, typeInfo, context, [&]( const void* pScratch )
-        {
-            return XMLSerializer::serialize( pScratch, typeInfo, context );
-        } );
-    }
-
     void SerializerUtil::collectRangeErrors( const TypeInfo& typeInfo, const ObjectAddress instance, const string& prefix, vector<string>& outListError )
     {
         using Internal              = SerializerUtilInternal;
@@ -1156,7 +1062,7 @@ namespace sw
                     // 구조체 원소의 값 주소는 그 원소 타입의 객체 주소다.
                     if ( pElement != nullptr )
                         collectRangeErrors( *pElement, ObjectAddress{ pElementValue }, elementPath, outListError );
-                    else if ( Internal::readRangeNumber( prop._elementTypeName.view(), ValueAddress{ pElementValue }, value ) )
+                    else if ( Internal::readRangeNumber( prop._elementTypeName, ValueAddress{ pElementValue }, value ) )
                         Internal::appendRangeError( elementPath, value, range, outListError );
                 }
                 continue;
@@ -1168,7 +1074,7 @@ namespace sw
                 continue;
             }
             float64 value = 0.0;
-            if ( prop._metadata->hasAllowedRange() && Internal::readRangeNumber( prop._typeName.view(), ValueAddress{ pValue }, value ) )
+            if ( prop._metadata->hasAllowedRange() && Internal::readRangeNumber( prop._typeName, ValueAddress{ pValue }, value ) )
                 Internal::appendRangeError( path, value, prop._metadata->computeAllowedRange( pInstance ), outListError );
         }
     }

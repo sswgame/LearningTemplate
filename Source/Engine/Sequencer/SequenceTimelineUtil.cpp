@@ -13,6 +13,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
+#include "Engine/Reflection/ReflectValue.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Sequencer/SequenceAsset.h"
@@ -67,7 +68,10 @@ namespace sw
                 return value._z;
             }
 
-            /** @brief 프로퍼티 트랙이 가리키는 컴포넌트와 숫자 프로퍼티를 찾습니다. 못 찾거나 숫자(`float32`, `int32`)가 아니면 false 를 반환합니다. */
+            /**
+             * @brief 프로퍼티 트랙이 가리키는 컴포넌트와 숫자 프로퍼티를 찾습니다. 못 찾거나 숫자가 아니면 false 를 반환합니다.
+             * @details 숫자 여부는 내장 타입 표의 갈래(`ReflectBuiltinClass::Number` — 정수 · 실수 · 성분이 하나인 압축 타입)로 가른다. 값은 `ReflectValueUtil::readNumber` · `writeNumber` 로만 읽고 쓴다.
+             */
             static bool findTrackProperty( GameObject* pTarget, const SequenceKeyTrack& track, Component*& pOutComponent, const PropertyInfo*& pOutProperty )
             {
                 pOutComponent    = nullptr;
@@ -81,7 +85,8 @@ namespace sw
                 const PropertyInfo* pProperty = pComponent->getTypeInfo()->findPropertyInHierarchy( hashed_string( track._propertyPath.substr( dot + 1 ).c_str() ) );
                 if ( pProperty == nullptr )
                     return false;
-                if ( pProperty->_typeName != hashed_string( "float32" ) && pProperty->_typeName != hashed_string( "int32" ) )
+                const int32 builtinIndex = ReflectValueUtil::findBuiltinIndex( pProperty->_typeName );
+                if ( ReflectValueUtil::getBuiltinClass( builtinIndex ) != ReflectBuiltinClass::Number )
                     return false;
                 pOutComponent = pComponent;
                 pOutProperty  = pProperty;
@@ -124,12 +129,9 @@ namespace sw
                     return;
                 // 위에서 채널 0 에 키가 있음을 확인했다.
                 const float32 value = *track._listChannel[0].evaluate( frame );
-                if ( pProperty->_typeName == hashed_string( "float32" ) )
-                {
-                    *pProperty->getValuePtr<float32>( pComponent ) = value;
-                    return;
-                }
-                *pProperty->getValuePtr<int32>( pComponent ) = static_cast<int32>( MathUtil::round( value ) );
+                // 그 타입이 담지 못하는 값(정수 범위 밖 · unorm 범위 밖)은 쓰지 않고 지금 값을 둔다.
+                (void)ReflectValueUtil::writeNumber( ReflectValueUtil::findBuiltinIndex( pProperty->_typeName ), pProperty->getRawPtr( static_cast<void*>( pComponent ) ),
+                                                     static_cast<float64>( value ) );
             }
 
             /** @brief 리그 슬롯 트랙의 가중치를 대상의 `PoseModifierComponent` 에 씁니다. 키나 슬롯 이름이 없으면 건드리지 않습니다. */
@@ -356,10 +358,10 @@ namespace sw
         const PropertyInfo* pProperty{ nullptr };
         if ( SequenceTimelineUtilInternal::findTrackProperty( pTarget, track, pComponent, pProperty ) == false )
             return false;
-        if ( pProperty->_typeName == hashed_string( "float32" ) )
-            pOutArrValue[0] = *pProperty->getValuePtr<float32>( pComponent );
-        else
-            pOutArrValue[0] = static_cast<float32>( *pProperty->getValuePtr<int32>( pComponent ) );
+        float64 number{ 0.0 };
+        if ( ReflectValueUtil::readNumber( ReflectValueUtil::findBuiltinIndex( pProperty->_typeName ), pProperty->getRawPtr( static_cast<const void*>( pComponent ) ), number ) == false )
+            return false;
+        pOutArrValue[0] = static_cast<float32>( number );
         return true;
     }
 

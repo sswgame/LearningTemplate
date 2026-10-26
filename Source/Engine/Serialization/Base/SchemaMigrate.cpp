@@ -494,7 +494,8 @@ namespace sw
         // 숫자로 기록된 값 → 문자열. 대상이 문자열 타입이면 텍스트를 그대로 담는다.
         if ( SchemaMigrateInternal::isStringType( typeName ) )
         {
-            if ( engine::getSubsystem<TypeRegistry>().isType( typeName, "hashed_string" ) )
+            // 캐스트할 C++ 타입의 내장 자리로 묻는다(별칭도 같은 자리) — 이름 리터럴을 두지 않는다.
+            if ( ReflectValueUtil::findBuiltinIndex( typeName ) == ReflectBuiltinOf<hashed_string>::kIndex )
             {
                 *static_cast<hashed_string*>( pValPtr ) =
                     hashed_string( stripped.data(), static_cast<uint32>( stripped.size() ) );

@@ -9,6 +9,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Localization/LocalizationDocuments.h"
 #include "Engine/Localization/TextFormatter.h"
+#include "Engine/Reflection/ReflectValue.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
@@ -403,8 +404,8 @@ namespace sw
 
             static bool isStringProperty( const PropertyInfo& property )
             {
-                static const hashed_string s_string( "string" );
-                return property._typeName == s_string && property._containerKind == ContainerKind::None;
+                // 글 타입 판정은 내장 타입 표의 자리로 한다(별칭도 같은 자리) — 이름 리터럴을 두지 않는다.
+                return property._containerKind == ContainerKind::None && ReflectValueUtil::findBuiltinIndex( property._typeName ) == ReflectBuiltinOf<string>::kIndex;
             }
 
             static string_view readPropertyValue( const XMLNode& node, const PropertyInfo& property )

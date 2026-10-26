@@ -10,11 +10,12 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Serialization/Base/SchemaMigrate.h"
-#include "Engine/Serialization/Base/SerializerUtil.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
+#include "Engine/Serialization/Format/SerializerTranscodeUtil.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw
@@ -701,7 +702,7 @@ namespace sw
         }
 
         vector<uint8> outBytes;
-        if ( SerializerUtil::transcodeJSONToBinary( jsonStr, typeInfo, outBytes ) == false )
+        if ( SerializerTranscodeUtil::transcodeJSONToBinary( jsonStr, typeInfo, outBytes ) == false )
         {
             _bError = SW_TRUE;
             return false;
@@ -717,7 +718,7 @@ namespace sw
         if ( bNothingToConvert )
             return {};
 
-        return SerializerUtil::transcodeBinaryToJSON( _pData + _offset, _dataSize - _offset, typeInfo, bPretty );
+        return SerializerTranscodeUtil::transcodeBinaryToJSON( _pData + _offset, _dataSize - _offset, typeInfo, bPretty );
     }
 
     bool Archive::serializeXMLObject( const void* pInstance, const TypeInfo& typeInfo )
@@ -758,7 +759,7 @@ namespace sw
         }
 
         vector<uint8> outBytes;
-        if ( SerializerUtil::transcodeXMLToBinary( xmlStr, typeInfo, outBytes ) == false )
+        if ( SerializerTranscodeUtil::transcodeXMLToBinary( xmlStr, typeInfo, outBytes ) == false )
         {
             _bError = SW_TRUE;
             return false;
