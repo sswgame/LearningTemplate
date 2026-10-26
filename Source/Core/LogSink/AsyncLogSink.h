@@ -11,6 +11,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Concurrency/thread.h"
 #include "Core/Container/ConcurrentQueue.h"
+#include "Core/Container/pair.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
@@ -122,14 +123,19 @@ namespace sw
          */
         uint32 snapshotOutputs( ILogOutput* ( &outArrDevice )[_s_kMaxOutput] );
 
-        LogWrittenMulticast              _onLogWritten;
-        vector<unique_ptr<ILogOutput>>   _listOutput;
-        FileLogOutput*                   _pFileOutput; ///< _listOutput 이 소유한다. getLogFolderPath 용 비소유 포인터
-        ConcurrentQueue<LogRecord, 4096> _queue;
-        sw::thread                       _workerThread;
-        std::condition_variable_any      _cv;
-        mutex                            _mutex;   ///< 리스너 목록과 출력 목록을 보호한다
-        mutex                            _cvMutex; ///< 조건 변수 대기용 뮤텍스
+        LogWrittenMulticast _onLogWritten;
+        /**
+         * @brief 등록된 리스너의 구독과, 그 구독을 찾는 핸들입니다. _mutex 로 보호한다.
+         * @details 싱크 계약(`ILogSink::registerLogWrittenListener`)이 아직 핸들을 돌려주므로 핸들로 구독을 찾아 지운다(구독이 항목을 뺀다).
+         */
+        vector<pair<DelegateHandle, Subscription>> _listListenerSubscription;
+        vector<unique_ptr<ILogOutput>>             _listOutput;
+        FileLogOutput*                             _pFileOutput; ///< _listOutput 이 소유한다. getLogFolderPath 용 비소유 포인터
+        ConcurrentQueue<LogRecord, 4096>           _queue;
+        sw::thread                                 _workerThread;
+        std::condition_variable_any                _cv;
+        mutex                                      _mutex;   ///< 리스너 목록과 출력 목록을 보호한다
+        mutex                                      _cvMutex; ///< 조건 변수 대기용 뮤텍스
         /** @brief 리스너 목록의 불변 사본입니다. 리스너가 없으면 nullptr 입니다. _mutex 로 보호하고, 생산자는 참조만 잡아 락 밖에서 부른다. */
         shared_ptr<const LogWrittenMulticast> _listenerSnapshot;
         atomic<uint32>                        _arrBroadcastInFlight[2]; ///< 리스너를 부르는 중인 방송 수(세대 두 슬롯). 제거가 이전 세대가 빌 때까지 기다린다

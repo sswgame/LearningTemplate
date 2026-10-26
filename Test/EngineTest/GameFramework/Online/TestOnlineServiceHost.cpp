@@ -870,10 +870,13 @@ SW_TEST_CASE( OnlineServiceHostTest, ServerBusMessagesFanOutToSubscribedServices
     LocalServerBus          busOfOther( &hub, 2 );
     OnlineServiceHostConfig settings = HostRig::makeSettings();
     settings._pServerBusTransport    = &busOfHost;
-    HostRig rig( settings );
-    rig._host.subscribeServerBus( "sd.changed", &rig._serviceA );
-    rig._host.subscribeServerBus( "sd.changed", &rig._serviceB );
-    rig._host.subscribeServerBus( "sd.changed", &rig._serviceB ); // 두 번 — 한 번만 받는다
+    HostRig            rig( settings );
+    Subscription       subscriptionA = rig._host.subscribeServerBus( "sd.changed", &rig._serviceA );
+    const Subscription subscriptionB = rig._host.subscribeServerBus( "sd.changed", &rig._serviceB );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "the same service subscribing twice is refused with an error" );
+        SW_EXPECT_FALSE( rig._host.subscribeServerBus( "sd.changed", &rig._serviceB ).isActive() ); // 두 번 — 받지 않는다(한 번만 받는다)
+    }
     const uint8 arrPayload[1] = { 4 };
     busOfOther.publish( "sd.changed", arrPayload, 1 );
     rig.step( 1 );
@@ -883,7 +886,7 @@ SW_TEST_CASE( OnlineServiceHostTest, ServerBusMessagesFanOutToSubscribedServices
     SW_ASSERT_TRUE( rig._host.getServerBus() != nullptr ); // 키트는 전송이 아니라 타입 있는 앞을 받는다
     SW_EXPECT_EQUAL( uint64( 1 ), rig._host.getServerBus()->getServerID() );
 
-    rig._host.unsubscribeServerBus( "sd.changed", &rig._serviceA );
+    subscriptionA.reset();
     busOfOther.publish( "sd.changed", arrPayload, 1 );
     rig.step( 1 );
     SW_EXPECT_EQUAL( size_t( 1 ), rig._serviceA._listBusMessage.size() );
@@ -897,7 +900,7 @@ SW_TEST_CASE( OnlineServiceHostTest, SubscribingWithoutABusTransportIsAnAssembly
     test::ScopedLogCollector logs;
     {
         SW_TEST_DEFENSIVE_SCOPE( "subscribing on a host without a server bus transport" );
-        rig._host.subscribeServerBus( "sd.changed", &rig._serviceA );
+        SW_EXPECT_FALSE( rig._host.subscribeServerBus( "sd.changed", &rig._serviceA ).isActive() ); // 빈 구독 — 부르는 쪽이 `getServerBus` 로 먼저 가른다
     }
     SW_EXPECT_EQUAL( uint32( 1 ), logs.countWithID( "OnlineHost.BusSubscribeWithoutTransport" ) );
 }
@@ -913,8 +916,8 @@ SW_TEST_CASE( OnlineServiceHostTest, ShutdownTellsEveryServiceOnceAfterPendingCa
     OnlineServiceHostConfig settings = HostRig::makeSettings();
     settings._pEphemeralStore        = &hostCache;
     settings._pServerBusTransport    = &busOfHost;
-    HostRig rig( settings );
-    rig._host.subscribeServerBus( "sd.changed", &rig._serviceA );
+    HostRig            rig( settings );
+    const Subscription subscription = rig._host.subscribeServerBus( "sd.changed", &rig._serviceA );
     (void)rig._host.getEphemeralRouter()->submit( EphemeralRequest::makeGet( "never.pumped" ),
                                                   EphemeralStoreRouter::ReplyDelegate::create<&FakeOnlineService::onCacheReply>( &rig._serviceA ) );
     rig._host.shutdown();

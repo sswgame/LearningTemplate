@@ -102,7 +102,7 @@ namespace sw
      * @code
      *     server.initialize( &host, &manager, settings );
      *     server.registerObject( netID, *pFracture );           // 서버와 클라이언트가 같은 번호를 쓴다(씬 엔티티 순서 등)
-     *     router.registerHandler( &server );                         // 라우터가 연결 이벤트도 넘겨 준다(늦은 참가 스냅숏)
+     *     _subscription = router.registerHandler( &server );         // 라우터가 연결 이벤트도 넘겨 준다(늦은 참가 스냅숏). 구독이 사라지면 뗀다
      *     server.update( serverTick );                          // 월드 틱 뒤에 부른다
      * @endcode
      */
@@ -184,7 +184,7 @@ namespace sw
      * @code
      *     client.initialize( &host, &manager, settings );
      *     client.registerObject( netID, *pFracture );          // 권한을 끈다
-     *     router.registerHandler( &client );
+     *     _subscription = router.registerHandler( &client );
      *     client.update( deltaTime );                          // 월드 틱 앞에 부른다(받은 메시지를 분배한 뒤)
      * @endcode
      */

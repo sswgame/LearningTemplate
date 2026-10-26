@@ -100,7 +100,7 @@ namespace sw
      *     for ( each entity ) server.setEntity( id, typeID, bytes );
      *     server.endTick();
      *     server.sendSnapshots();
-     *     // 받은 메시지와 연결 이벤트: router.registerHandler( &server ) 한 뒤 매 틱 router.pump( host ) 를 부른다.
+     *     // 받은 메시지와 연결 이벤트: router.registerHandler( &server ) 가 돌려준 구독을 쥔 뒤 매 틱 router.pump( host ) 를 부른다.
      *     //                           직접 처리하려면 server.handleMessage( connectionID, bytes ), server.onConnectionOpened / onConnectionClosed 를 쓴다
      *     // 시뮬레이션: server.popInput( connectionID, tick, inputBytes ); ... (void)server.setOwnerState( connectionID, tick, pawnStateBytes );
      * @endcode

@@ -92,10 +92,14 @@ SW_TEST_CASE( UserSettingsFileTest, MakeWritesTypedValuesThatParseBack )
     sw::UserSettingsSchema schema;
     SW_ASSERT_TRUE( schema.loadFromXMLText( Internal::kSchemaXML, "file.settings.xml" ) );
 
-    const sw::vector<sw::UserSettingsFileEntry> listEntry{
-        {"a.volume",       "0.25"},
-        {  "a.mode", "borderless"},
-        {  "a.flag",       "true"},
+    const sw::UserSettingDef* pVolumeDef = schema.findSetting( "a.volume" );
+    const sw::UserSettingDef* pModeDef   = schema.findSetting( "a.mode" );
+    const sw::UserSettingDef* pFlagDef   = schema.findSetting( "a.flag" );
+    SW_ASSERT_TRUE( pVolumeDef != nullptr && pModeDef != nullptr && pFlagDef != nullptr );
+    const sw::vector<sw::UserSettingsWriteEntry> listEntry{
+        {*pVolumeDef,       "0.25"},
+        {  *pModeDef, "borderless"},
+        {  *pFlagDef,       "true"},
     };
     const sw::string json = sw::UserSettingsFile::makeJSON( schema, listEntry );
     SW_EXPECT_TRUE( json.find( "\"version\": 3" ) != sw::string::npos );

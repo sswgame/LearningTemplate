@@ -300,9 +300,9 @@ namespace sw
         TaskHandle          _loadHandle;
         /** @brief 이 매니저가 띄운 씬 로드 태스크 전부(핸들 하나는 다시 띄우면 덮인다). 종료 · 취소는 엔진 전체(`waitAll`)가 아니라 이것만 기다린다. */
         TaskHandleTracker               _loadTracker;
-        string                          _saveBlockReason;           ///< 비어 있지 않으면 씬 저장을 막는다(`setSaveBlockReason`)
-        SceneObjectsInvalidatedDelegate _onSceneObjectsInvalidated; ///< `onSceneObjectsInvalidated`
-        DelegateHandle                  _commandStackClearHandle;   ///< 기동 순서가 건 되돌리기 기록 비우기 구독(`initializeSubsystem`)
+        string                          _saveBlockReason;               ///< 비어 있지 않으면 씬 저장을 막는다(`setSaveBlockReason`)
+        SceneObjectsInvalidatedDelegate _onSceneObjectsInvalidated;     ///< `onSceneObjectsInvalidated`
+        Subscription                    _commandStackClearSubscription; ///< 기동 순서가 건 되돌리기 기록 비우기 구독(`initializeSubsystem`)
         bool                            _bInitialized;
 
         /** @brief 요청한 씬의 프리로드 목록을 열어 파일을 미리 읽기 시작합니다. 목록이 없으면 아무것도 하지 않습니다(`tryGetLoadProgress` 참고). */

@@ -637,10 +637,9 @@ SW_TEST_CASE( SequencerTest, PlayerComponentBroadcastsCrossedEvents )
 
     sw::vector<sw::string> listFirst;
     sw::vector<sw::string> listSecond;
-    pPlayer->registerSequenceEvent( [&listFirst]( const sw::SequenceTrackItem& item )
+    const sw::Subscription firstSubscription  = pPlayer->registerSequenceEvent( [&listFirst]( const sw::SequenceTrackItem& item )
     { listFirst.push_back( item._name ); } );
-    const sw::DelegateHandle secondHandle =
-        pPlayer->registerSequenceEvent( [&listSecond]( const sw::SequenceTrackItem& item )
+    sw::Subscription       secondSubscription = pPlayer->registerSequenceEvent( [&listSecond]( const sw::SequenceTrackItem& item )
     { listSecond.push_back( item._name ); } );
 
     pPlayer->play();
@@ -648,7 +647,7 @@ SW_TEST_CASE( SequencerTest, PlayerComponentBroadcastsCrossedEvents )
     SW_EXPECT_EQUAL( "Open", listFirst[0] );
     SW_EXPECT_EQUAL( size_t( 1 ), listSecond.size() );
 
-    pPlayer->unregisterSequenceEvent( secondHandle );
+    secondSubscription.reset();
     pPlayer->onTick( 12.0f / 30.0f );
     SW_ASSERT_EQUAL( size_t( 2 ), listFirst.size() );
     SW_EXPECT_EQUAL( "Close", listFirst[1] );
@@ -737,7 +736,7 @@ SW_TEST_CASE( SequencerTest, PlayerComponentReopensItsSequenceAfterStateLoad )
     SW_EXPECT_FALSE( pLoaded->hasBegunPlay() );
 
     sw::vector<sw::string> listEvent;
-    pLoaded->registerSequenceEvent( [&listEvent]( const sw::SequenceTrackItem& item )
+    const sw::Subscription subscription = pLoaded->registerSequenceEvent( [&listEvent]( const sw::SequenceTrackItem& item )
     { listEvent.push_back( item._name ); } );
     pLoaded->play();
     SW_ASSERT_EQUAL( size_t( 1 ), listEvent.size() );
@@ -999,9 +998,8 @@ SW_TEST_CASE( SequencerTest, PlayerComponentBroadcastsCameraSignals )
         sw::vector<sw::SequenceCameraSignal> _listSignal;
         void                                 record( const sw::SequenceCameraSignal& signal ) { _listSignal.push_back( signal ); }
     };
-    Recorder                 recorder;
-    const sw::DelegateHandle handle =
-        pPlayer->registerCameraSignal( SW_DELEGATE_METHOD( sw::OnSequenceCameraSignalDelegate, &Recorder::record, &recorder ) );
+    Recorder         recorder;
+    sw::Subscription subscription = pPlayer->registerCameraSignal( SW_DELEGATE_METHOD( sw::OnSequenceCameraSignalDelegate, &Recorder::record, &recorder ) );
 
     pPlayer->play();
     const float32 secondsPerFrame = 1.0f / pPlayer->getFramesPerSecond();
@@ -1023,7 +1021,7 @@ SW_TEST_CASE( SequencerTest, PlayerComponentBroadcastsCameraSignals )
     pPlayer->stop(); // 컷 안에서 멈춘다
     SW_ASSERT_EQUAL( size_t{ 1 }, recorder._listSignal.size() );
     SW_EXPECT_TRUE( recorder._listSignal[0]._kind == sw::SequenceCameraSignalKind::CinematicEnd );
-    pPlayer->unregisterCameraSignal( handle );
+    subscription.reset();
 }
 
 /**

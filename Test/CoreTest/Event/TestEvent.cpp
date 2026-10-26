@@ -120,8 +120,8 @@ SW_TEST_CASE( EventTest, DispatcherPushAndDispatch )
     s_LastResizeHeight = 0;
 
     sw::EventDispatcher                           dispatcher;
-    sw::Delegate<void( const ResizeProbeEvent& )> del = SW_DELEGATE_FUNCTION( sw::Delegate<void( const ResizeProbeEvent& )>, onResizeProbe );
-    dispatcher.subscribe<ResizeProbeEvent>( del );
+    sw::Delegate<void( const ResizeProbeEvent& )> del          = SW_DELEGATE_FUNCTION( sw::Delegate<void( const ResizeProbeEvent& )>, onResizeProbe );
+    sw::Subscription                              subscription = dispatcher.subscribe<ResizeProbeEvent>( del );
 
     ResizeProbeEvent event;
     event._width  = 1920;
@@ -135,7 +135,7 @@ SW_TEST_CASE( EventTest, DispatcherPushAndDispatch )
     SW_EXPECT_EQUAL( 1920, s_LastResizeWidth );
     SW_EXPECT_EQUAL( 1080, s_LastResizeHeight );
 
-    dispatcher.unsubscribe<ResizeProbeEvent>( del );
+    subscription.reset();
     dispatcher.clear();
 }
 
@@ -151,8 +151,8 @@ SW_TEST_CASE( EventTest, DispatcherCloseAndActivateEvents )
     sw::Delegate<void( const CloseProbeEvent& )>    closeDel    = SW_DELEGATE_FUNCTION( sw::Delegate<void( const CloseProbeEvent& )>, onCloseProbe );
     sw::Delegate<void( const ActivateProbeEvent& )> activateDel = SW_DELEGATE_FUNCTION( sw::Delegate<void( const ActivateProbeEvent& )>, onActivateProbe );
 
-    dispatcher.subscribe<CloseProbeEvent>( closeDel );
-    dispatcher.subscribe<ActivateProbeEvent>( activateDel );
+    const sw::Subscription closeSubscription    = dispatcher.subscribe<CloseProbeEvent>( closeDel );
+    const sw::Subscription activateSubscription = dispatcher.subscribe<ActivateProbeEvent>( activateDel );
 
     CloseProbeEvent    closeEvt;
     ActivateProbeEvent activateEvt;
@@ -179,8 +179,8 @@ SW_TEST_CASE( EventTest, DeferredEventQueueTest )
     s_LastResizeHeight = 0;
 
     sw::EventDispatcher                           dispatcher;
-    sw::Delegate<void( const ResizeProbeEvent& )> resizeDel = SW_DELEGATE_FUNCTION( sw::Delegate<void( const ResizeProbeEvent& )>, onResizeProbe );
-    dispatcher.subscribe<ResizeProbeEvent>( resizeDel );
+    sw::Delegate<void( const ResizeProbeEvent& )> resizeDel    = SW_DELEGATE_FUNCTION( sw::Delegate<void( const ResizeProbeEvent& )>, onResizeProbe );
+    sw::Subscription                              subscription = dispatcher.subscribe<ResizeProbeEvent>( resizeDel );
 
     ResizeProbeEvent event;
     event._width  = 2560;
@@ -190,7 +190,10 @@ SW_TEST_CASE( EventTest, DeferredEventQueueTest )
     SW_EXPECT_EQUAL( 2560, s_LastResizeWidth );
     SW_EXPECT_EQUAL( 1440, s_LastResizeHeight );
 
-    dispatcher.unsubscribe<ResizeProbeEvent>( resizeDel );
+    subscription.reset();
+    s_LastResizeWidth = 0;
+    dispatcher.publish( event );
+    SW_EXPECT_TRUE_MSG( s_LastResizeWidth == 0, "풀린 구독이 아직 받는다" );
     dispatcher.clear();
 }
 
@@ -213,8 +216,8 @@ SW_TEST_CASE( EventTest, EventDispatcherChannelFiltering )
     sw::Delegate<void( const ResizeProbeEvent& )> audioDel = SW_DELEGATE_LAMBDA( sw::Delegate<void( const ResizeProbeEvent& )>, []( const ResizeProbeEvent& e )
     { s_audioChannelReceived = e._height; } );
 
-    dispatcher.subscribe<ResizeProbeEvent>( uiChannel, uiDel );
-    dispatcher.subscribe<ResizeProbeEvent>( audioChannel, audioDel );
+    const sw::Subscription uiSubscription    = dispatcher.subscribe<ResizeProbeEvent>( uiChannel, uiDel );
+    const sw::Subscription audioSubscription = dispatcher.subscribe<ResizeProbeEvent>( audioChannel, audioDel );
 
     ResizeProbeEvent event;
     event._width  = 1280;
@@ -247,7 +250,7 @@ SW_TEST_CASE( EventTest, FrameAllocatorOverflowFallback )
         lastReceivedIndex = e._width;
     } );
 
-    dispatcher.subscribe<ResizeProbeEvent>( del );
+    const sw::Subscription subscription = dispatcher.subscribe<ResizeProbeEvent>( del );
 
     // Push 3000 events (> 90 KB, exceeding default 64KB linear arena)
     constexpr int32 kTotalEvents = 3000;
@@ -330,9 +333,9 @@ SW_TEST_CASE( EventTest, PushFromWorkerThreadsReachesPumpingThread )
 {
     sw::EventDispatcher dispatcher;
 
-    int32 receivedCount = 0;
-    int32 widthSum      = 0;
-    dispatcher.subscribe<ResizeProbeEvent>( SW_DELEGATE_LAMBDA(
+    int32                  receivedCount = 0;
+    int32                  widthSum      = 0;
+    const sw::Subscription subscription  = dispatcher.subscribe<ResizeProbeEvent>( SW_DELEGATE_LAMBDA(
         sw::Delegate<void( const ResizeProbeEvent& )>, [&]( const ResizeProbeEvent& e )
     {
         ++receivedCount;
@@ -383,8 +386,8 @@ SW_TEST_CASE( EventTest, ReleaseCodeWithinDropsTheSubscriptionsAndEntriesTheImag
     using ResizeDelegate = sw::Delegate<void( const ResizeProbeEvent& )>;
 
     sw::EventDispatcher dispatcher;
-    s_releaseProbeCount = 0;
-    dispatcher.subscribe<ResizeProbeEvent>( SW_DELEGATE_FUNCTION( ResizeDelegate, onReleaseProbeResize ) );
+    s_releaseProbeCount          = 0;
+    const sw::Subscription first = dispatcher.subscribe<ResizeProbeEvent>( SW_DELEGATE_FUNCTION( ResizeDelegate, onReleaseProbeResize ) );
 
     ResizeProbeEvent event;
     event._width  = 10;
@@ -402,9 +405,10 @@ SW_TEST_CASE( EventTest, ReleaseCodeWithinDropsTheSubscriptionsAndEntriesTheImag
 
     dispatcher.publish( event );
     SW_EXPECT_EQUAL( 1, s_releaseProbeCount );
+    SW_EXPECT_FALSE_MSG( first.isActive(), "지워진 채널 항목의 구독이 아직 살아 있다고 답한다" );
 
     // 항목이 지워졌어도 다시 구독하면 이쪽에서 새 항목을 만든다.
-    dispatcher.subscribe<ResizeProbeEvent>( SW_DELEGATE_FUNCTION( ResizeDelegate, onReleaseProbeResize ) );
+    const sw::Subscription second = dispatcher.subscribe<ResizeProbeEvent>( SW_DELEGATE_FUNCTION( ResizeDelegate, onReleaseProbeResize ) );
     dispatcher.publish( event );
     SW_EXPECT_EQUAL( 2, s_releaseProbeCount );
 
@@ -446,7 +450,7 @@ SW_TEST_CASE( EventTest, ReleaseQueuedEventsDestroysTheEventsTheImageDefined )
     DestructorCountingEvent::s_liveCount = 0;
     s_keptProbeSum                       = 0;
     using KeptDelegate                   = sw::Delegate<void( const KeptProbeEvent& )>;
-    dispatcher.subscribe<KeptProbeEvent>( SW_DELEGATE_FUNCTION( KeptDelegate, onKeptProbe ) );
+    const sw::Subscription subscription  = dispatcher.subscribe<KeptProbeEvent>( SW_DELEGATE_FUNCTION( KeptDelegate, onKeptProbe ) );
     {
         DestructorCountingEvent dropped;
         dispatcher.push( dropped );
@@ -480,9 +484,9 @@ SW_TEST_CASE( EventTest, ChannelCreatedByTheImageKeepsItMappedWhileOtherCodeSubs
 {
     using KeptDelegate = sw::Delegate<void( const KeptProbeEvent& )>;
     sw::EventDispatcher dispatcher;
-    s_keptProbeSum                                          = 0;
-    const KeptDelegate                           subscriber = SW_DELEGATE_FUNCTION( KeptDelegate, onKeptProbe );
-    const sw::EventDispatcher::EventSubscription token      = dispatcher.subscribe<KeptProbeEvent>( subscriber );
+    s_keptProbeSum                  = 0;
+    const KeptDelegate subscriber   = SW_DELEGATE_FUNCTION( KeptDelegate, onKeptProbe );
+    sw::Subscription   subscription = dispatcher.subscribe<KeptProbeEvent>( subscriber );
 
     const void* pImageBegin{ nullptr };
     const void* pImageEnd{ nullptr };
@@ -511,11 +515,11 @@ SW_TEST_CASE( EventTest, ChannelCreatedByTheImageKeepsItMappedWhileOtherCodeSubs
     SW_EXPECT_EQUAL( 5, s_keptProbeSum );
 
     // 구독이 빠지면 같은 범위가 채널을 치우고 이미지를 내려도 된다고 답한다. 다시 구독하면 새 채널로 돈다.
-    dispatcher.unsubscribe( token );
+    subscription.reset();
     bool bKeepImageMapped{ false };
     (void)dispatcher.onModuleUnloading( arrRangeBegin[keepIndex], arrRangeEnd[keepIndex], bKeepImageMapped );
     SW_EXPECT_FALSE( bKeepImageMapped );
-    dispatcher.subscribe<KeptProbeEvent>( subscriber );
+    const sw::Subscription resubscription = dispatcher.subscribe<KeptProbeEvent>( subscriber );
     dispatcher.publish( event );
     SW_EXPECT_EQUAL( 10, s_keptProbeSum );
     dispatcher.clear();

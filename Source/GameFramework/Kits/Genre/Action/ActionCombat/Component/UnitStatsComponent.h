@@ -42,11 +42,9 @@ namespace sw
          * @brief HP 가 깎일 때 호출할 델리게이트를 등록합니다(언리얼 `OnTakeAnyDamage` 처럼 액터에 붙는 멀티캐스트입니다).
          * @details 피해는 게임 스레드에서 적용된다. 틱 중의 피해는 틱 직후(같은 프레임)로 미뤄지고, 근접 판정의 전달과 게임 코드도 게임 스레드에서 돈다.
          *          그래서 구독자는 같은 프레임에 받는다. 구독은 저장되지 않으므로, 컴포넌트를 다시 만들면(되돌리기, 핫 리로드) 다시 등록해야 한다.
-         * @return 해제할 때 쓰는 핸들
+         * @return 등록을 소유하는 구독. 사라지면 해제된다
          */
-        DelegateHandle registerDamageApplied( const DamageAppliedDelegate& delegate );
-        /** @brief `registerDamageApplied` 로 등록한 델리게이트를 해제합니다. */
-        void unregisterDamageApplied( DelegateHandle handle );
+        [[nodiscard]] Subscription registerDamageApplied( const DamageAppliedDelegate& delegate );
 
         FUNCTION( Category = "Actions", DisplayName = "Heal 20 HP", CallInEditor )
         void heal20() { heal( 20 ); }

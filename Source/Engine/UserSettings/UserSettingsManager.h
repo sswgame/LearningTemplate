@@ -86,6 +86,37 @@ namespace sw
 
 namespace sw
 {
+    class UserSettingsManager;
+
+    /**
+     * @brief 형식이 정해진 설정 값을 읽는 핸들입니다. `UserSettingsManager::resolveKey` 만 만들고, 그때 id 가 스키마에 있고 타입이 @p T 와 맞는지 확인합니다.
+     * @details 글 id 로 바로 읽으면 모르는 id 와 타입이 틀린 설정이 조용히 false · 0 이 된다. 읽기 API 가 이 핸들만 받으므로 그 확인은 핸들을 푸는 한 곳에서 오류로 끝난다.
+     *          핸들은 그것을 푼 관리자의 스키마가 살아 있는 동안만 쓴다(`shutdown` 이 스키마를 비우면 다시 푼다).
+     */
+    template <typename T>
+    class UserSettingKey
+    {
+        static_assert( std::is_same_v<T, bool> || std::is_same_v<T, int32> || std::is_same_v<T, float32>, "UserSettingKey reads bool, int32 or float32" );
+
+    public:
+        const hashed_string& getID() const { return _settingID; }
+
+    private:
+        friend class UserSettingsManager;
+
+        UserSettingKey( const hashed_string& settingID, uint32 settingIndex )
+            : _settingID{ settingID }
+            , _settingIndex{ settingIndex }
+        {
+        }
+
+        hashed_string _settingID;
+        uint32        _settingIndex;
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 키 바인딩 겹침 하나입니다. `_settingID` 가 비면 스키마 밖의 액션(`_action`)과 겹친 것입니다. */
     struct UserSettingBindingConflict
     {
@@ -208,9 +239,16 @@ namespace sw
         string_view getAppliedValue( const hashed_string& settingID ) const;
         /** @brief 기본값(게임 프리셋 덮어쓰기 포함)입니다. */
         string_view getDefaultValue( const hashed_string& settingID ) const;
-        bool        getBoolValue( const hashed_string& settingID ) const;
-        int32       getIntValue( const hashed_string& settingID ) const;
-        float32     getFloatValue( const hashed_string& settingID ) const;
+        /**
+         * @brief 형식이 정해진 읽기 핸들을 풉니다. id 가 스키마에 없거나 타입이 @p T 와 다르면 오류를 남기고 비어 있습니다(`UserSettings.KeyUnresolved`).
+         * @details bool 은 `Bool`, int32 는 `Int`, float32 는 `Float` 설정만 받는다. 열거형 · 키 바인딩 · 글은 `getValue` 로 읽는다.
+         */
+        template <typename T>
+        [[nodiscard]] std::optional<UserSettingKey<T>> resolveKey( const hashed_string& settingID ) const;
+        /** @brief 메뉴가 보일 값(보류 값이 있으면 그것)입니다. 값은 정규화를 거쳐 들어오므로 해석은 실패하지 않습니다. */
+        bool    getBoolValue( const UserSettingKey<bool>& key ) const;
+        int32   getIntValue( const UserSettingKey<int32>& key ) const;
+        float32 getFloatValue( const UserSettingKey<float32>& key ) const;
         /** @brief 열거형의 선택지입니다(공급자 설정은 지금 공급자가 주는 것). */
         void collectOptions( const hashed_string& settingID, vector<UserSettingOption>& outListOption ) const;
 
@@ -292,8 +330,12 @@ namespace sw
          * @brief 설정의 지금 선택지를 모읍니다. 공급자가 있으면 공급자 것, 비었으면 고정 `<Option>` 이 대체합니다.
          * @details 공급자와 고정 선택지를 함께 적은 설정(해상도)은 기본값과 지금 값이 목록에 없으면 뒤에 붙인다. 모니터를 바꿔도 현재 선택이 목록에서 사라지지 않게 하기 위해서다.
          */
-        void                 collectOptionsOf( const UserSettingDef& def, vector<UserSettingOption>& outListOption ) const;
-        uint32               findIndex( const hashed_string& settingID ) const;
+        void   collectOptionsOf( const UserSettingDef& def, vector<UserSettingOption>& outListOption ) const;
+        uint32 findIndex( const hashed_string& settingID ) const;
+        /** @brief `resolveKey` 의 본문입니다. 없거나 타입이 다르면 오류를 남기고 `invalid_index::kUint32` 입니다. */
+        uint32 resolveKeyIndex( const hashed_string& settingID, UserSettingType expectedType ) const;
+        /** @brief 핸들이 가리키는 지금 값입니다. 다른 스키마에서 푼 핸들이면 단언으로 멈춥니다. */
+        const string&        getKeyValue( const hashed_string& settingID, uint32 settingIndex ) const;
         const string&        getEffectiveValue( uint32 settingIndex ) const;
         bool                 isEnabledAt( uint32 settingIndex ) const;
         bool                 isAvailableAt( uint32 settingIndex ) const;
@@ -318,4 +360,14 @@ namespace sw
         bool                                    _bStartupApplied;        ///< 첫 `reapplyAll`(기동 적용)이 지났는지 나타냅니다. 그 뒤로 `NeedsRestart` 값은 바뀌지 않습니다.
         vector<DataPath EngineDefaultAssets::*> _listStartupSchemaField; ///< `addStartupSchema` 가 더한 스키마 칸(기동이 사용자 파일보다 먼저 읽는다)
     };
+
+    template <typename T>
+    std::optional<UserSettingKey<T>> UserSettingsManager::resolveKey( const hashed_string& settingID ) const
+    {
+        constexpr UserSettingType kExpectedType = std::is_same_v<T, bool> ? UserSettingType::Bool : ( std::is_same_v<T, int32> ? UserSettingType::Int : UserSettingType::Float );
+        const uint32              settingIndex  = resolveKeyIndex( settingID, kExpectedType );
+        if ( settingIndex == invalid_index::kUint32 )
+            return std::nullopt;
+        return UserSettingKey<T>( settingID, settingIndex );
+    }
 } // namespace sw

@@ -65,12 +65,14 @@ namespace sw
     {
     }
 
-    bool NetMessageRouter::registerHandler( INetMessageHandler* pHandler )
+    Subscription NetMessageRouter::registerHandler( INetMessageHandler* pHandler )
     {
         if ( pHandler == nullptr )
-            return false;
-        if ( VectorUtil::contains( _listHandler, pHandler ) )
-            return true;
+        {
+            SW_LOG_ERROR( "NetMessageRouter: registerHandler got a null handler" );
+            return Subscription{};
+        }
+        // 이미 단 처리기를 다시 달면 자기가 맡은 종류와 겹쳐 아래에서 거절된다. 종류를 맡지 않는(사건만 받는) 처리기는 등록마다 항목 하나 · 구독 하나다.
         const uint8  rangeBase   = pHandler->getMessageRangeBase();
         const uint16 kindMask    = pHandler->getMessageKindMask();
         const uint16 noticedMask = pHandler->getNotifiedKindMask();
@@ -81,24 +83,24 @@ namespace sw
             if ( bClaimed )
             {
                 SW_LOG_ERROR( "NetMessageRouter: message kind 0x%02x is already claimed - the new handler is refused (give it its own range or a disjoint kind mask)", kind );
-                return false;
+                return Subscription{};
             }
             const bool bNoticeClaimed = ( ( noticedMask >> offset ) & 1u ) != 0 && kind < kKindCount && _arrNoticeHandler[kind] != nullptr;
             if ( bNoticeClaimed )
             {
                 SW_LOG_ERROR( "NetMessageRouter: delivery notices of message kind 0x%02x are already claimed - the new handler is refused", kind );
-                return false;
+                return Subscription{};
             }
         }
         _listHandler.push_back( pHandler );
         rebuildKindTable();
-        return true;
+        return issueSubscription( static_cast<uint64>( reinterpret_cast<uintptr_t>( pHandler ) ) );
     }
 
-    void NetMessageRouter::unregisterHandler( INetMessageHandler* pHandler )
+    void NetMessageRouter::releaseSubscription( uint64 id )
     {
-        VectorUtil::removeIf( _listHandler, [pHandler]( const INetMessageHandler* pRegistered )
-        { return pRegistered == pHandler; } );
+        const INetMessageHandler* const pHandler = reinterpret_cast<const INetMessageHandler*>( static_cast<uintptr_t>( id ) );
+        VectorUtil::removeFirst( _listHandler, pHandler );
         rebuildKindTable();
     }
 

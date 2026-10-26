@@ -13,7 +13,7 @@ namespace sw
         if ( engine::areEngineServicesBound() == false )
             return pSourceText;
         const LocalizationManager& localization = engine::getSubsystem<LocalizationManager>();
-        const utf8*                pFound       = localization.getStringByText( fullKey, nullptr );
+        const utf8*                pFound       = localization.findStringByText( fullKey );
         if ( pFound != nullptr )
             return pFound;
         localization.reportMissingKey( fullKey );

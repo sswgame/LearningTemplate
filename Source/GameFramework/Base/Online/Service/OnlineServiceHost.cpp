@@ -205,6 +205,7 @@ namespace sw
         , _pServerBus{}
         , _listenerTransport{}
         , _nowMs{ 0 }
+        , _nextBusSubscriptionID{ 1 }
         , _schemaHash{ 0 }
         , _bInitialized{ SW_FALSE }
     {
@@ -280,9 +281,17 @@ namespace sw
         {
             _listService[index - 1]->onHostShutdown( *this );
         }
+        // 서비스가 풀지 않은 구독은 무효로 만들고 버스 구독을 닫는다(같은 주제의 항목이 여럿이어도 버스에는 한 번 구독했다).
+        detachAllSubscriptions();
+        vector<string> listOpenTopic;
         for ( const BusSubscription& subscription : _listBusSubscription )
         {
-            _settings._pServerBusTransport->unsubscribe( subscription._topic );
+            listOpenTopic.push_back( subscription._topic );
+        }
+        VectorUtil::sortUnique( listOpenTopic );
+        for ( const string& topic : listOpenTopic )
+        {
+            _settings._pServerBusTransport->unsubscribe( topic );
         }
         _listBusSubscription.clear();
         releaseTransportSide();
@@ -446,43 +455,47 @@ namespace sw
         return _settings._pEphemeralStore != nullptr ? &_ephemeralRouter : nullptr;
     }
 
-    void OnlineServiceHost::subscribeServerBus( string_view topic, IOnlineHostService* pService )
+    Subscription OnlineServiceHost::subscribeServerBus( string_view topic, IOnlineHostService* pService )
     {
-        if ( _settings._pServerBusTransport == nullptr )
+        // 버스가 없을 때 조용히 넘기면 `initialize` 전에 부른 구독이 소리 없이 사라진다 — 서버 한 대인지는 부르는 쪽이 가른다.
+        if ( _settings._pServerBusTransport == nullptr || _bInitialized == SW_FALSE )
         {
-            // 버스 없는 호스트에 구독을 건 것은 조립 오류다 — 조용히 넘기면 그 주제의 다른 서버 알림이 영영 오지 않는다.
-            SW_LOG_ERROR_ID( "OnlineHost.BusSubscribeWithoutTransport", "Server bus topic '%#' was subscribed on a host without a server bus transport", topic );
-            return;
+            SW_LOG_ERROR_ID( "OnlineHost.BusSubscribeWithoutTransport", "OnlineServiceHost: subscribeServerBus('%#') without a server bus - check getServerBus() first (single server, or called before initialize)", topic );
+            return Subscription{};
+        }
+        if ( pService == nullptr )
+        {
+            SW_LOG_ERROR( "OnlineServiceHost: subscribeServerBus('%#') got a null service", topic );
+            return Subscription{};
         }
         bool bTopicOpen = false;
         for ( const BusSubscription& subscription : _listBusSubscription )
         {
             if ( subscription._topic == topic && subscription._pService == pService )
-                return;
+            {
+                // 두 구독이 한 항목을 나눠 가지면 먼저 풀린 쪽이 다른 쪽의 구독까지 끊는다 — 처음 받은 구독을 쥔다.
+                SW_LOG_ERROR( "OnlineServiceHost: the service already subscribes '%#' - keep the first Subscription", topic );
+                return Subscription{};
+            }
             bTopicOpen = bTopicOpen || subscription._topic == topic;
         }
         if ( bTopicOpen == false )
             _settings._pServerBusTransport->subscribe( topic );
-        _listBusSubscription.push_back( BusSubscription{ string( topic ), pService } );
+        const uint64 subscriptionID = _nextBusSubscriptionID++;
+        _listBusSubscription.push_back( BusSubscription{ string( topic ), pService, subscriptionID } );
+        return issueSubscription( subscriptionID );
     }
 
-    void OnlineServiceHost::unsubscribeServerBus( string_view topic, IOnlineHostService* pService )
+    void OnlineServiceHost::releaseSubscription( uint64 id )
     {
-        bool bTopicStillOpen = false;
-        bool bRemoved        = false;
-        for ( size_t index = 0; index < _listBusSubscription.size(); )
-        {
-            if ( _listBusSubscription[index]._topic == topic && _listBusSubscription[index]._pService == pService )
-            {
-                _listBusSubscription.erase( _listBusSubscription.begin() + static_cast<ptrdiff_t>( index ) );
-                bRemoved = true;
-                continue;
-            }
-            bTopicStillOpen = bTopicStillOpen || _listBusSubscription[index]._topic == topic;
-            ++index;
-        }
-        const bool bUnsubscribeTopic = bRemoved && bTopicStillOpen == false && _settings._pServerBusTransport != nullptr;
-        if ( bUnsubscribeTopic )
+        const std::optional<size_t> index = VectorUtil::findIndexBy<&BusSubscription::_subscriptionID>( _listBusSubscription, id );
+        if ( index.has_value() == false )
+            return;
+        const string topic = _listBusSubscription[*index]._topic;
+        _listBusSubscription.erase( _listBusSubscription.begin() + static_cast<ptrdiff_t>( *index ) );
+        const bool bTopicStillOpen = VectorUtil::containsIf( _listBusSubscription, [&topic]( const BusSubscription& subscription )
+        { return subscription._topic == topic; } );
+        if ( bTopicStillOpen == false )
             _settings._pServerBusTransport->unsubscribe( topic );
     }
 

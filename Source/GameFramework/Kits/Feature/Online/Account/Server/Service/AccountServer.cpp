@@ -139,9 +139,9 @@ namespace sw
         : _mapTagToCall{}
         , _mapAccountToSession{}
         , _mapAccountToReasonCode{}
-        , _presencePushTopic{}
         , _listCompletionScratch{}
         , _listEventScratch{}
+        , _listBusSubscription{}
         , _presence{}
         , _settings{}
         , _pLoginService{ nullptr }
@@ -165,20 +165,16 @@ namespace sw
         _mapTagToCall.clear();
         _mapAccountToSession.clear();
         _mapAccountToReasonCode.clear();
+        _listBusSubscription.clear();
         _presence.shutdown();
         _pLoginService = nullptr;
     }
 
     void AccountServer::onHostShutdown( OnlineServiceHost& host )
     {
-        // `attachHost` 가 구독한 주제를 같은 호스트에서 푼다 — 다시 붙는 호스트(재시작)에 옛 구독이 남지 않는다.
-        if ( _presencePushTopic.empty() == false )
-        {
-            host.unsubscribeServerBus( AccountBus::kRevokeTopic.getName(), this );
-            host.unsubscribeServerBus( _presencePushTopic, this );
-            _presencePushTopic.clear();
-        }
-        _presence.detach(); // 캐시 응답은 호스트가 이미 Unavailable 로 회수했다
+        (void)host;
+        _listBusSubscription.clear(); // attachHost 가 건 구독을 같은 짝에서 푼다(다른 키트 서버와 같이)
+        _presence.detach();           // 캐시 응답은 호스트가 이미 Unavailable 로 회수했다
         _bHostAttached = SW_FALSE;
     }
 
@@ -454,9 +450,8 @@ namespace sw
         _presence.attach( &host );
         if ( _presence.isEnabled() == false )
             return; // 서버가 한 대이다
-        _presencePushTopic = OnlinePresence::makePushTopic( host.getServerBus()->getServerID() );
-        host.subscribeServerBus( AccountBus::kRevokeTopic.getName(), this );
-        host.subscribeServerBus( _presencePushTopic, this );
+        _listBusSubscription.push_back( host.subscribeServerBus( AccountBus::kRevokeTopic.getName(), this ) );
+        _listBusSubscription.push_back( host.subscribeServerBus( OnlinePresence::makePushTopic( host.getServerBus()->getServerID() ), this ) );
     }
 
     void AccountServer::publishRemoteRevocations( OnlineServiceHost& host )

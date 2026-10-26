@@ -137,8 +137,9 @@ namespace sw
         /**
          * @brief 게임 프로젝트를 로드하고(앞의 게임 프로젝트는 언로드합니다) 활성 언어와 폴백 언어를 정합니다. 순서는 명령줄 `-lang`, @p defaultLanguage, 폴백, 아무 언어입니다.
          * @return 프로젝트를 로드했으면 true 입니다.
+         * @details 언어 기본값은 코드에 두지 않는다 — 게임은 `GameSettings` 의 기본 · 폴백 언어를 넘긴다.
          */
-        bool initialize( string_view projectPath, string_view defaultLanguage = "ko_KR", string_view fallbackLanguage = "en_US" );
+        bool initialize( string_view projectPath, string_view defaultLanguage, string_view fallbackLanguage );
 
         // ------------------------------------------------------------------------------
         // 3) 언어 설정 및 조회
@@ -171,15 +172,22 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 4) 문자열 조회와 포맷
         // ------------------------------------------------------------------------------
-        /** @brief 조회 사슬에서 키를 찾습니다. 어디에도 없으면 빠진 키로 알리고 @p pDefaultText 입니다. */
-        const utf8* getString( const hashed_string& key, const utf8* pDefaultText = "" ) const;
         /**
-         * @brief 키를 **intern 하지 않고** 조회합니다. 빠진 키로 알리지 않습니다.
-         * @details 물어보는 텍스트가 키가 아닐 수도 있는 곳(대사 원문 등)에서 쓴다. `hashed_string` 을 만들면 그 텍스트가 intern 아레나에 영구히 남는다.
+         * @brief 조회 사슬에서 키를 찾아 보일 글을 돌려줍니다. 어디에도 없으면 빠진 키로 알리고(`Localization.MissingKey`) **키 이름**을 돌려줍니다.
+         * @details 빈 글로 숨기지 않는다 — 빠진 번역이 화면에서 키로 보여야 고칠 수 있다(언리얼 FText 가 빠진 키를 키 그대로 보이는 것과 같다).
+         *          없음을 스스로 다룰 곳은 `findString` 을 쓴다.
          */
-        const utf8* getStringByText( string_view keyText, const utf8* pDefaultText = "" ) const;
-        /** @brief 지정한 언어에서만 찾습니다(사슬 없음). */
-        const utf8* getStringFromLanguage( string_view languageCode, const hashed_string& key, const utf8* pDefaultText = nullptr ) const;
+        const utf8* getString( const hashed_string& key ) const;
+        /** @brief 조회 사슬에서 키를 찾습니다. 없으면 nullptr 이고 빠진 키로 알리지 않습니다. */
+        [[nodiscard]] const utf8* findString( const hashed_string& key ) const;
+        /**
+         * @brief 키를 **intern 하지 않고** 찾습니다. 없으면 nullptr 이고 빠진 키로 알리지 않습니다.
+         * @details 물어보는 텍스트가 키가 아닐 수도 있는 곳(대사 원문 등)에서 쓴다. `hashed_string` 을 만들면 그 텍스트가 intern 아레나에 영구히 남는다.
+         *          없을 때 무엇을 보일지(텍스트 그대로 · 원문)는 부르는 쪽이 정한다.
+         */
+        [[nodiscard]] const utf8* findStringByText( string_view keyText ) const;
+        /** @brief 지정한 언어에서만 찾습니다(사슬 없음). 없으면 nullptr 입니다. */
+        [[nodiscard]] const utf8* findStringFromLanguage( string_view languageCode, const hashed_string& key ) const;
         /** @brief 조회 사슬 어딘가에 그 키가 있는지 확인합니다. */
         bool hasString( const hashed_string& key ) const;
         /** @brief 지정한 언어의 실행 테이블입니다(없으면 nullptr). 테이블 객체는 언어가 사는 동안 같은 주소입니다. */
@@ -187,8 +195,8 @@ namespace sw
 
         /** @brief 메시지 패턴을 지금 문화권으로 포맷합니다(`TextFormatter`). 오류는 경고로 알리고, 텍스트는 그래도 돌려줍니다. */
         string formatText( string_view pattern, const TextArgumentList& arguments ) const;
-        /** @brief 키의 글을 찾아 포맷합니다. */
-        string getFormattedString( const hashed_string& key, const TextArgumentList& arguments, const utf8* pDefaultText = "" ) const;
+        /** @brief 키의 글을 찾아 포맷합니다. 없으면 빠진 키로 알리고 @p pFallbackPattern 을 포맷합니다(부르는 쪽이 정한다 — 숨은 빈 글은 없다). */
+        string getFormattedString( const hashed_string& key, const TextArgumentList& arguments, const utf8* pFallbackPattern ) const;
 
         /** @brief 빠진 키를 기록합니다(처음 한 번 경고). 로드한 텍스트가 하나도 없으면 기록하지 않습니다. `SW_LOCTEXT` 가 부릅니다. */
         void reportMissingKey( string_view key ) const;

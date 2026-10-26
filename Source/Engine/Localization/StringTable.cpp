@@ -75,7 +75,7 @@ namespace sw
 
 namespace sw
 {
-    const utf8* StringTable::getString( const hashed_string& key ) const
+    const utf8* StringTable::findString( const hashed_string& key ) const
     {
         return findByHash( key.getHash() );
     }
@@ -95,12 +95,6 @@ namespace sw
         if ( iter != _mapTable.end() )
             return iter->second;
         return nullptr;
-    }
-
-    const utf8* StringTable::getString( const hashed_string& key, const utf8* pDefaultText ) const
-    {
-        const utf8* pFound = getString( key );
-        return pFound != nullptr ? pFound : pDefaultText;
     }
 
     bool StringTable::contains( const hashed_string& key ) const

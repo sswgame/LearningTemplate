@@ -58,13 +58,14 @@ namespace
     public:
         TurnRelayNetSimSession( NetSimWorld& world, TurnRelayServer* pServer, TurnRelayClient* pClient )
             : _pServer{ pServer }
+            , _routerSubscription{}
         {
             if ( pServer != nullptr )
-                world.getRouter().registerHandler( pServer );
+                _routerSubscription = world.getRouter().registerHandler( pServer );
             if ( pClient != nullptr )
             {
                 pClient->initialize( &world.getPeers() );
-                world.getRouter().registerHandler( pClient );
+                _routerSubscription = world.getRouter().registerHandler( pClient );
             }
         }
 
@@ -78,6 +79,7 @@ namespace
 
     private:
         TurnRelayServer* _pServer;
+        sw::Subscription _routerSubscription; ///< 이 월드 라우터에 단 서버 또는 클라이언트 — 세션(월드)이 사라지면 뗀다(같은 클라이언트가 다음 월드에 다시 붙는다)
     };
 
     /** @brief 서버를 갖고, 다음에 들어오는 클라이언트 월드에 `_pNextClient` 를 붙입니다(떠났다 돌아온 클라이언트는 같은 객체 — 표 · 받은 행동이 남는다). */

@@ -47,10 +47,9 @@ namespace sw
         /** @brief 집합의 태그마다 `updateCount` 를 부릅니다. */
         void updateCounts( const TagContainer& tags, int32 delta );
 
-        /** @brief 태그가 새로 생기거나(개수 0 → 1) 사라질 때(1 → 0) 부를 델리게이트를 겁니다. 인자는 태그와 새 개수입니다. */
-        DelegateHandle registerChanged( const TagChangedDelegate& delegate );
-        void           unregisterChanged( DelegateHandle handle );
-        /** @brief 모든 구독을 풉니다(소유자가 사라질 때). */
+        /** @brief 태그가 새로 생기거나(개수 0 → 1) 사라질 때(1 → 0) 부를 델리게이트를 겁니다. 인자는 태그와 새 개수입니다. 돌려준 구독이 사라지면 풉니다. */
+        [[nodiscard]] Subscription registerChanged( const TagChangedDelegate& delegate );
+        /** @brief 모든 구독을 풉니다(소유자가 사라질 때). 구독은 무효가 됩니다. */
         void unregisterAllChanged();
         /** @brief [@p pBegin, @p pEnd) 안의 코드를 가리키는 구독을 풉니다(모듈 언로드). 푼 수입니다. */
         uint32 unregisterChangedWithin( const void* pBegin, const void* pEnd );

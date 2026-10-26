@@ -73,24 +73,24 @@ namespace sw
         template <typename TBody>
         void push( OnlineServiceHost& host, AccountID accountID, uint16 kind, const TBody& message );
 
-        ServicePendingTable              _pendingTable;
-        vector<PartyLobbyCompletion>     _listPartyCompletionScratch;
-        vector<PartyLobbyNotification>   _listPartyNotificationScratch;
-        vector<LobbyStartRequest>        _listLobbyStartScratch;
-        vector<uint64>                   _listBrokenTicketScratch;
-        vector<MatchQueueCompletion>     _listQueueCompletionScratch;
-        vector<MatchQueueNotification>   _listQueueNotificationScratch;
-        vector<MatchQueueTopicChange>    _listTopicChangeScratch;
-        vector<string>                   _listSubscribedTopic;
-        PartyLobbyService*               _pPartyLobby;
-        MatchQueueService*               _pQueue;
-        MatchServerAgent*                _pAgent;
-        unordered_map<AccountID, int64>  _mapAccountToGraceEnd;        ///< 떠났지만 파티와 로비에 남겨 둔 계정과 유예 끝 시각이다
-        unordered_map<uint64, AccountID> _mapPresenceRequestToAccount; ///< 유예가 끝나 접속 상태를 묻는 중인 계정이다
-        IAccountPresence*                _pPresence;
-        IGroupChannelMembership*         _pGroupChannels;
-        OnlineServiceHost*               _pHost; ///< 버스를 구독한 호스트이다. 구독을 해제할 때 쓴다
-        int64                            _nowMs;
-        int64                            _reconnectGraceMs;
+        ServicePendingTable                 _pendingTable;
+        vector<PartyLobbyCompletion>        _listPartyCompletionScratch;
+        vector<PartyLobbyNotification>      _listPartyNotificationScratch;
+        vector<LobbyStartRequest>           _listLobbyStartScratch;
+        vector<uint64>                      _listBrokenTicketScratch;
+        vector<MatchQueueCompletion>        _listQueueCompletionScratch;
+        vector<MatchQueueNotification>      _listQueueNotificationScratch;
+        vector<MatchQueueTopicChange>       _listTopicChangeScratch;
+        unordered_map<string, Subscription> _mapTopicSubscription; ///< 버스 주제 → 그 구독(배정 주제와 큐가 고른 주제). 서버가 한 대면 비어 있다
+        PartyLobbyService*                  _pPartyLobby;
+        MatchQueueService*                  _pQueue;
+        MatchServerAgent*                   _pAgent;
+        unordered_map<AccountID, int64>     _mapAccountToGraceEnd;        ///< 떠났지만 파티와 로비에 남겨 둔 계정과 유예 끝 시각이다
+        unordered_map<uint64, AccountID>    _mapPresenceRequestToAccount; ///< 유예가 끝나 접속 상태를 묻는 중인 계정이다
+        IAccountPresence*                   _pPresence;
+        IGroupChannelMembership*            _pGroupChannels;
+        OnlineServiceHost*                  _pHost; ///< 붙은 호스트이다(첫 서비스 틱에 붙는다). 붙었는지만 본다
+        int64                               _nowMs;
+        int64                               _reconnectGraceMs;
     };
 } // namespace sw

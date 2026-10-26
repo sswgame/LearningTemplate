@@ -72,7 +72,8 @@ namespace sw
 
         /**
          * @brief @p manager 의 씬 오브젝트를 번호표에 잡고, 번호가 있는 파괴 오브젝트를 등록하고, 복제 처리기를 @p router 에 답니다. 클라이언트면 피해를 내는 기믹을 끕니다.
-         * @details 이미 시작했으면 먼저 `shutdown` 한다. @p router 와 @p host 는 `shutdown` 까지 살아 있어야 한다.
+         * @details 이미 시작했으면 먼저 `shutdown` 한다. @p host 는 `shutdown` 까지 살아 있어야 한다. 처리기 등록은 구독이 소유한다 — @p router 가 먼저 사라지면
+         *          등록이 무효가 되어 세션이 멈춘다(`isActive` 가 false). 라우터가 처리기를 받지 않아도(겹치는 영역, 오류가 남는다) 멈춘 채로 둔다.
          */
         void initialize( INetPeers& host, NetMessageRouter& router, GameObjectManager& manager, DestructionNetSide side, const DestructionReplicationConfig& settings );
         /** @brief 처리기를 떼고 클라이언트면 해시 대조 요약 한 줄을 남깁니다. 두 번 불러도 됩니다. */
@@ -83,7 +84,7 @@ namespace sw
          */
         void update( float32 deltaTime );
 
-        bool               isActive() const { return _pRouter != nullptr; }
+        bool               isActive() const { return _routerSubscription.isActive(); }
         DestructionNetSide getSide() const { return _side; }
         uint32             getObjectCount() const { return static_cast<uint32>( _listEntry.size() ); }
         /** @brief 등록한 오브젝트의 번호입니다(등록 순서). */
@@ -119,8 +120,8 @@ namespace sw
         vector<Entry>                 _listEntry;
         unordered_map<uint32, uint32> _mapEntryIndex; ///< 번호 → `_listEntry` 위치. 항목은 더하기만 하므로 위치가 바뀌지 않는다(`_listEntry` 와 함께 고친다)
         vector<DestructionHashRecord> _listRecord;
-        GameObjectManager*            _pManager; ///< 번호표가 있는 씬(빌린 것)
-        NetMessageRouter*             _pRouter;  ///< 처리기를 단 라우터(빌린 것). nullptr 이면 시작하지 않았다
+        GameObjectManager*            _pManager;           ///< 번호표가 있는 씬(빌린 것)
+        Subscription                  _routerSubscription; ///< 라우터에 단 처리기(`_server` 또는 `_client`)의 등록. 처리기보다 뒤에 선언한다 — 먼저 풀린다
         uint32                        _serverTick;
         uint32                        _seenSpawnedRevision; ///< 마지막으로 훑은 번호표의 생성 번호 판
         DestructionNetSide            _side;

@@ -117,7 +117,7 @@ namespace
             , _startDelayTicks{ startDelayTicks }
             , _localFrame{ 0 }
         {
-            world.getRouter().registerHandler( &_session );
+            _routerSubscription = world.getRouter().registerHandler( &_session );
         }
 
         void onTickEnd( NetSimWorld& world, float32 deltaTime ) override
@@ -142,6 +142,7 @@ namespace
         int32           _player;
         int32           _startDelayTicks;
         int32           _localFrame;
+        Subscription    _routerSubscription;
     };
 
     class RollbackNetSimGame final : public INetSimGame
@@ -309,8 +310,8 @@ namespace
             , _hash{ sw::HashUtil::kFnvOffset32 }
             , _bStarted{ false }
         {
-            world.getRouter().registerHandler( &_session );
-            world.getRouter().registerHandler( this );
+            _sessionSubscription = world.getRouter().registerHandler( &_session );
+            _startSubscription   = world.getRouter().registerHandler( this );
         }
 
         uint8           getMessageRangeBase() const override { return NetMessageRange::kGame; }
@@ -368,6 +369,8 @@ namespace
         int32        _checksumInterval;
         uint32       _hash;
         bool         _bStarted;
+        Subscription _sessionSubscription;
+        Subscription _startSubscription;
     };
 
     class LeaveLockstepGame final : public INetSimGame
