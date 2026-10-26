@@ -48,7 +48,7 @@
 옛번호: C-54
 왜 필요한가: 넷 키트 전부 · `MatchMaker` · `ScheduleSystem` · `RoundSeries` · `WorldClock` · `SessionStateComponent` · `Vitality` · `ResourceGauge` 와 그 받는 쪽, 그 밖의 설정 구조체 열다섯 안팎은 "선언된 범위 + 받을 때 거절"로 옮겼다(공통 형식은 `Base/Foundation/Utility/ConfigRangeUtil.h` 머리 주석, 빌드 전). 카탈로그가 없을 때 기본 규칙으로 대신 서던 곳도 오류로 멈춘다.
 확인 대기: 매니페스트 id `config-range-reject-tests`(테스트 필터 묶음 — 빌드와 함께 처음 돈다).
-남은 것: 위 밖에서 `initialize` 안의 `MathUtil::max` · `clamp` 로 설정을 맞추는 곳(카드 게임 Poker · Matgo · Uno, SRPG, CityBuilder 등 — 같은 모양의 `grep` 으로 찾는다). 하나씩 같은 방식으로 옮긴다.
+남은 것: 위 밖에서 `initialize` 안의 `MathUtil::max` · `clamp` 로 설정을 맞추는 곳. Uno · Matgo · CityBuilder 의 크기는 옮겼다(2026-10-27, 빌드 전). 같은 모양의 `grep` 을 다른 장르 키트(`Kits/Genre` 의 나머지)에서 돌려 남은 곳이 있으면 하나씩 같은 방식으로 옮긴다. 확인한 범위에서 SRPG · Poker 는 `initialize` 에서 맞추는 곳이 없다(게임 진행 중 값 한계는 규칙이다).
 함정: 구조체를 `REFLECT` + `PROPERTY( Min · Max )` 로 바꾸고 `initialize` 가 `ConfigRangeUtil` 로 거절한다. 받는 쪽에서 손으로 맞추지 않는다. 목록 필드나 함수 호출 기본값이 있어 `REFLECT` 로 못 쓰는 설정(`RhythmPlaySettings` · `InteractionConfig` · `CoasterPhysicsParams` · `AutosaveSettings`)은 `initialize` 안에서 손으로 보고 거절한다.
 
 ## 기능
