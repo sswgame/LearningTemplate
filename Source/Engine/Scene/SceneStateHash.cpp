@@ -2,7 +2,6 @@
 
 #include "Engine/Scene/SceneStateHash.h"
 
-#include "Core/Common/BitUtil.h"
 #include "Core/Common/HashUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
@@ -10,9 +9,11 @@
 #include "Core/Network/DebugReplyLine.h"
 
 #include "Engine/Common/EngineServices.h"
-#include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Common/StateHashBuilder.h"
+#include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 
@@ -26,18 +27,16 @@ namespace sw
     {
         struct SceneStateHashInternal
         {
-            static void foldFloat( uint64& inoutHash, float32 value )
+            /** @brief 오브젝트 하나의 해시입니다 — 이름 · 활성, 그리고 컴포넌트마다(소유 순서) `Component::foldStateHash` 가 접은 상태. */
+            static uint64 hashObject( const GameObject& object, string_view name )
             {
-                const uint32 bits = BitUtil::floatToBits( value );
-                inoutHash         = HashUtil::appendBytes64( inoutHash, &bits, sizeof( bits ) );
+                StateHashBuilder builder;
+                builder.addString( name );
+                builder.addUint8( object.isActive() ? 1 : 0 );
+                object.forEachComponent( [&builder]( const Component* pComponent )
+                { pComponent->foldStateHash( builder ); } );
+                return builder.getHash();
             }
-
-            struct Entry
-            {
-                string _name;
-                uint8  _bActive{ 0 };
-                float3 _position{};
-            };
 
             static constexpr const utf8* kUpperHexDigit = "0123456789ABCDEF";
 
@@ -95,63 +94,32 @@ namespace sw
 
     uint64 SceneStateHash::compute( const GameObjectManager& manager )
     {
-        vector<SceneStateHashInternal::Entry> listEntry;
-        manager.forEachGameObject( [&listEntry]( GameObject* pObject )
-        {
-            if ( pObject->getName().empty() )
-                return;
-            SceneStateHashInternal::Entry& entry = listEntry.emplace_back();
-            entry._name                          = pObject->getName().c_str();
-            entry._bActive                       = pObject->isActive() ? 1 : 0;
-            const SceneComponent* pRoot          = pObject->getComponent<SceneComponent>();
-            if ( pRoot != nullptr )
-                entry._position = pRoot->getWorldPosition();
-        } );
-        // 이름이 같은 오브젝트끼리는 값으로 정렬해 프로세스마다 순회 순서가 달라도 같은 결과가 되게 한다.
-        std::sort( listEntry.begin(), listEntry.end(), []( const SceneStateHashInternal::Entry& left, const SceneStateHashInternal::Entry& right )
-        {
-            if ( left._name != right._name )
-                return left._name < right._name;
-            if ( left._bActive != right._bActive )
-                return left._bActive < right._bActive;
-            if ( left._position._x != right._position._x )
-                return left._position._x < right._position._x;
-            if ( left._position._y != right._position._y )
-                return left._position._y < right._position._y;
-            return left._position._z < right._position._z;
-        } );
+        // 오브젝트 해시를 (이름, 해시) 정수 순으로 접는다 — 실수 비교로 정렬하면 NaN 에서 순서가 깨진다(std::sort 미정의 동작).
+        vector<SceneObjectHash> listObject;
+        collectObjects( manager, listObject );
         uint64 hash = HashUtil::kFnvOffset64;
-        for ( const SceneStateHashInternal::Entry& entry : listEntry )
+        for ( const SceneObjectHash& object : listObject )
         {
-            hash = HashUtil::appendBytes64( hash, entry._name.data(), entry._name.size() );
-            hash = HashUtil::appendBytes64( hash, &entry._bActive, sizeof( entry._bActive ) );
-            SceneStateHashInternal::foldFloat( hash, entry._position._x );
-            SceneStateHashInternal::foldFloat( hash, entry._position._y );
-            SceneStateHashInternal::foldFloat( hash, entry._position._z );
+            hash = HashUtil::appendBytes64( hash, object._name.data(), object._name.size() );
+            hash = HashUtil::appendValue64( hash, object._hash );
         }
         return hash;
     }
 
     void SceneStateHash::collectObjects( const GameObjectManager& manager, vector<SceneObjectHash>& outListObject )
     {
+        // 비용은 이름 있는 오브젝트 × 컴포넌트 수의 가상 호출이다 — 이력이 켜진 틱에만 돈다. 측정은 이 구간과 오브젝트 수 카운터로 본다.
+        SW_PROFILE_SCOPE( "GT.StateHash.collect" );
         outListObject.clear();
         manager.forEachGameObject( [&outListObject]( GameObject* pObject )
         {
             if ( pObject->getName().empty() )
                 return;
-            SceneObjectHash& object        = outListObject.emplace_back();
-            object._name                   = pObject->getName().c_str();
-            const uint8           bActive  = pObject->isActive() ? 1 : 0;
-            const SceneComponent* pRoot    = pObject->getComponent<SceneComponent>();
-            const float3          position = pRoot != nullptr ? pRoot->getWorldPosition() : float3{};
-            uint64                hash     = HashUtil::kFnvOffset64;
-            hash                           = HashUtil::appendBytes64( hash, object._name.data(), object._name.size() );
-            hash                           = HashUtil::appendBytes64( hash, &bActive, sizeof( bActive ) );
-            SceneStateHashInternal::foldFloat( hash, position._x );
-            SceneStateHashInternal::foldFloat( hash, position._y );
-            SceneStateHashInternal::foldFloat( hash, position._z );
-            object._hash = hash;
+            SceneObjectHash& object = outListObject.emplace_back();
+            object._name            = pObject->getName().c_str();
+            object._hash            = SceneStateHashInternal::hashObject( *pObject, object._name );
         } );
+        SW_PROFILE_COUNT( "GT.StateHash.objects", static_cast<uint32>( outListObject.size() ) );
         std::sort( outListObject.begin(), outListObject.end(), []( const SceneObjectHash& left, const SceneObjectHash& right )
         {
             return left._name != right._name ? left._name < right._name : left._hash < right._hash;

@@ -108,6 +108,8 @@ namespace sw
 
         /** @brief 농장 상태(밭, 출하함 구간, 농부, 날씨)를 씁니다. 달력, 가방, 돈은 공유 상태(`SessionStateComponent`)가 싣습니다. `ComponentStateStore::capture` 가 부릅니다. */
         void writeState( Archive& outArchive ) const override;
+        /** @brief 상태 해시에 날씨 난수 상태를 접습니다(서버 ↔ 클라이언트가 같은 날씨를 굴렸는지). */
+        void foldStateHash( StateHashBuilder& inoutBuilder ) const override;
 
         // ---- 뷰가 읽는 것(PostUpdate. 디렉터가 쓰지 않는 그룹) ----
         /** @brief 공유 시계의 시각(0~24)입니다. 디렉터가 틱마다 옮겨 적으며, 뷰는 PostUpdate 에서 이것만 읽습니다. */

@@ -2,6 +2,7 @@
 
 #include "Engine/Object/Component/Physics/RigidBodyComponent.h"
 
+#include "Engine/Common/StateHashBuilder.h"
 #include "Engine/Object/Component/ComponentNameValidation.h"
 #include "Engine/Object/Component/Physics/ScenePhysics.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -181,6 +182,13 @@ namespace sw
     {
         const IPhysicsBodyScene3D* pScene = findScene();
         return pScene != nullptr && pScene->isBodySleeping( _body );
+    }
+
+    void RigidBodyComponent::foldStateHash( StateHashBuilder& inoutBuilder ) const
+    {
+        PhysicsComponent::foldStateHash( inoutBuilder );
+        inoutBuilder.addFloat3( _lastLinearVelocity );
+        inoutBuilder.addFloat3( _lastAngularVelocity );
     }
 
     PhysicsBodyDesc3D RigidBodyComponent::makeBodyDesc( const ScenePhysics& physics, const float3& position, const quaternion& rotation, const float3& scale ) const

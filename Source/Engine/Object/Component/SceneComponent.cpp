@@ -4,6 +4,7 @@
 
 #include "Core/Container/VectorUtil.h"
 
+#include "Engine/Common/StateHashBuilder.h"
 #include "Engine/Object/Component/ComponentStableKey.h"
 #include "Engine/Object/Component/SceneTransformHierarchy.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -184,6 +185,13 @@ namespace sw
     float3 SceneComponent::getLocalScale() const
     {
         return _pTransformPage->_arrLocalScale[getPageIndex()];
+    }
+
+    void SceneComponent::foldStateHash( StateHashBuilder& inoutBuilder ) const
+    {
+        inoutBuilder.addFloat3( getWorldPosition() );
+        inoutBuilder.addFloat3( getLocalRotation() );
+        inoutBuilder.addFloat3( getLocalScale() );
     }
 
     float3 SceneComponent::getWorldPosition() const

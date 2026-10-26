@@ -23,6 +23,7 @@ namespace sw
 
     class GameObject;
     class GameObjectManager;
+    class StateHashBuilder;
     /**
      * @enum TickGroup
      * @brief 한 프레임 안에서 컴포넌트 틱이 도는 순서 슬롯입니다.
@@ -408,6 +409,12 @@ namespace sw
          *          비동기 씬 로드에서는 워커 스레드에서 불릴 수 있으므로 공유 상태는 잠금을 지원하는 API 로만 만진다.
          */
         virtual void onPostLoad() {}
+        /**
+         * @brief 씬 상태 해시(`SceneStateHash`)에 이 컴포넌트의 시뮬레이션 상태를 접습니다. 기본은 아무것도 넣지 않습니다(렌더 · 연출 컴포넌트).
+         * @details 두 프로세스가 같은 입력으로 같은 상태가 되었는지 견주는 값이라 게임플레이를 바꾸는 상태(트랜스폼 · 속도 · 난수 상태 · 남은 시간)만 넣는다.
+         *          게임 스레드에서, 해시 이력이 켜진 틱에만 불린다(`-gv_stateHashHistory`). 파생 타입은 부모 것을 먼저 부른다.
+         */
+        virtual void foldStateHash( StateHashBuilder& inoutBuilder ) const { (void)inoutBuilder; }
         /**
          * @brief 리플렉션 값을 직렬화기로 **직접** 쓴 뒤 부릅니다. 프로퍼티마다 `onPropertyChanged` 를 부르고, 그다음 `onPostLoad` 를 부릅니다(언리얼의
          *        `PostEditChangeProperty`, 유니티의 `OnValidate` 에 해당).

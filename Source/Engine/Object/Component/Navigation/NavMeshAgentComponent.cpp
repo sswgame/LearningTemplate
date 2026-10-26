@@ -2,6 +2,7 @@
 
 #include "Engine/Object/Component/Navigation/NavMeshAgentComponent.h"
 
+#include "Engine/Common/StateHashBuilder.h"
 #include "Engine/Object/Component/Navigation/SceneNavigation.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -88,6 +89,14 @@ namespace sw
             _pSceneNavigation->unregisterAgent( this );
         _pSceneNavigation = nullptr;
         Component::onUnregister( manager );
+    }
+
+    void NavMeshAgentComponent::foldStateHash( StateHashBuilder& inoutBuilder ) const
+    {
+        Component::foldStateHash( inoutBuilder );
+        inoutBuilder.addFloat3( _agentPosition );
+        inoutBuilder.addFloat3( _velocity );
+        inoutBuilder.addUint8( static_cast<uint8>( _moveStatus ) );
     }
 
     void NavMeshAgentComponent::onBeginPlay()

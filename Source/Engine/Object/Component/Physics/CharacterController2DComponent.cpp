@@ -4,6 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Common/StateHashBuilder.h"
 #include "Engine/Object/Component/ComponentNameValidation.h"
 #include "Engine/Object/Component/Physics/ScenePhysics.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -60,6 +61,13 @@ namespace sw
     {
         _maxSlopeAngle = angle;
         requestRebuild();
+    }
+
+    void CharacterController2DComponent::foldStateHash( StateHashBuilder& inoutBuilder ) const
+    {
+        PhysicsComponent::foldStateHash( inoutBuilder );
+        inoutBuilder.addFloat2( getVelocity() );
+        inoutBuilder.addUint8( isGrounded() ? 1 : 0 );
     }
 
     void CharacterController2DComponent::beginPhysicsFrame( ScenePhysics& physics )

@@ -51,6 +51,8 @@ namespace sw
         float2 getSimulatedPosition() const { return _state._position; }
         /** @brief 캐릭터 핸들입니다(시작 전이면 무효). */
         PhysicsCharacterHandle getCharacterHandle() const { return _character; }
+        /** @brief 상태 해시에 트랜스폼과 속도 · 접지를 접습니다. */
+        void foldStateHash( StateHashBuilder& inoutBuilder ) const override;
 
         float32 getRadius() const { return _radius; }
         void    setRadius( float32 radius );
