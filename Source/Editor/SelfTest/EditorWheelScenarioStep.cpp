@@ -22,7 +22,7 @@ namespace sw::editor
     {
         struct EditorWheelStepInternal
         {
-            static constexpr const utf8* kKind = "EditorWheel";
+            static constexpr const utf8* kWheelKind = "EditorWheel";
 
             [[nodiscard]] static bool readNotches( const AutomationStep& step, float64& outNotches, string& outError )
             {
@@ -67,7 +67,7 @@ namespace sw::editor
         };
     } // namespace
 
-    SW_AUTOMATION_STEP_WITH_HOOKS( editorWheel, EditorWheelStepInternal::kKind, &EditorWheelStepInternal::run, &EditorWheelStepInternal::validate, &EditorWheelStepInternal::prepare, nullptr,
+    SW_AUTOMATION_STEP_WITH_HOOKS( editorWheel, EditorWheelStepInternal::kWheelKind, &EditorWheelStepInternal::run, &EditorWheelStepInternal::validate, &EditorWheelStepInternal::prepare, nullptr,
                                    false );
-    SW_AUTOMATION_STEP_VALIDATOR( editorWheel, EditorWheelStepInternal::kKind, &EditorWheelStepInternal::validate );
+    SW_AUTOMATION_STEP_VALIDATOR( editorWheel, EditorWheelStepInternal::kWheelKind, &EditorWheelStepInternal::validate );
 } // namespace sw::editor
