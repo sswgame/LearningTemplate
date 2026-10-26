@@ -83,6 +83,7 @@ _kSubcommand: tuple[Subcommand, ...] = (
     Subcommand("ci-jobs", "dev.ListCiJobs", "GitHub Actions 실행 · 잡 · 실패 주석을 공개 API 로 읽는다"),
     Subcommand("plans", "dev.ListPlans", "계획 문서(docs/plans)를 머리 줄의 상태 · 영역으로 골라 보인다(--status · --area · --file · --section)"),
     Subcommand("doc", "dev.RunDoc", "큰 마크다운 문서의 목차(제목 · 행 번호 · 절 크기)나 한 절만 보인다(--section, 5-4 같은 번호도 된다)"),
+    Subcommand("move-sources", "dev.MoveSources", "Source 폴더 · 파일을 옮기고 옛 경로를 적은 모든 곳(include · CMake · 문서 · 데이터)을 새 경로로 다시 쓴다 — 옛 경로가 남거나 CMake 글롭 파일 수가 줄면 실패한다(--map 표.toml · --dry-run)"),
     Subcommand("edit-file", "dev.RunEditFile", "파일의 한 곳을 정확히 한 번 바꾼다 — 줄 끝(CRLF) · BOM 보존, NUL 거부, 여러 곳도 한꺼번에 검증한 뒤 쓴다(--old-file · --new-file · --changes)"),
     Subcommand("agent-log", "dev.RunAgentLog", "docs/12_Agents.md '토큰 측정값' 표에 한 줄(날짜 · 일 · 조각 · 에이전트 · 토큰 · 도구 호출)을 더한다"),
     Subcommand("status-board", "dev.RunStatusBoard", "StatusBoard.md 의 '지금 진행 상황' 표를 계획 문서 · 로드맵 · 후보 문서에서 만든다(--write · --check, 통합 담당만)"),
