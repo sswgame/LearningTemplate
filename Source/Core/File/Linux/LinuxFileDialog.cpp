@@ -7,6 +7,7 @@
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Process/Process.h"
 #include "Core/Process/ProcessEnvironment.h"
 
 #if defined( SW_PLATFORM_LINUX )
@@ -149,29 +150,27 @@ namespace sw
                 return ( params._type == FileDialogParams::Type::Save ) ? "Save File" : "Open File";
             }
 
-            /** @brief 셸 명령을 실행하고 표준 출력(stdout)을 문자열로 받아 반환합니다. */
+            /**
+             * @brief 셸 명령을 실행하고 표준 출력(stdout)을 문자열로 받아 반환합니다.
+             * @details `Process` 는 표준 오류를 표준 출력에 합치므로 표준 오류는 버린다(`2>/dev/null`) — 대화상자 도구가 찍는 GTK 경고가 경로로 읽히지 않게.
+             */
             static string runCommandCapture( string_view command, int32& outExitCode )
             {
                 outExitCode = -1;
-                const string commandNt( command );
-                FILE*        pPipe = popen( commandNt.c_str(), "r" );
-                if ( pPipe == nullptr )
+                string commandWithoutStderr( command );
+                commandWithoutStderr.append( " 2>/dev/null" );
+                Process process;
+                if ( process.launch( commandWithoutStderr ) == false )
                     return {};
 
-                utf8   arrBuffer[constant::kMaxBuffer4096];
                 string output;
-                while ( fgets( arrBuffer, sizeof( arrBuffer ), pPipe ) != nullptr )
+                string line;
+                while ( process.readOutputLine( line ) )
                 {
-                    output += arrBuffer;
+                    output.append( line );
+                    output.push_back( '\n' );
                 }
-
-                const int32 status = pclose( pPipe );
-                if ( status == -1 )
-                    outExitCode = -1;
-                else if ( WIFEXITED( status ) )
-                    outExitCode = WEXITSTATUS( status );
-                else
-                    outExitCode = -1;
+                outExitCode = process.waitForExit();
 
                 while ( output.empty() == false && ( output.back() == '\n' || output.back() == '\r' ) )
                 {

@@ -702,6 +702,40 @@ namespace sw
         return true;
     }
 
+    bool FileUtil::readStreamTextFile( string_view fileName, string& outText, const uint64 maxBytes )
+    {
+        outText.clear();
+        const string filePath = normalizeSeparators( fileName );
+        FILE*        pFile    = PlatformFileUtil::openFile( filePath.c_str(), "rb" );
+        if ( pFile == nullptr )
+        {
+            SW_LOG_ERROR( "File not found: %#", fileName );
+            return false;
+        }
+        // 크기를 재지 않고 끝(EOF)까지 덩이로 읽는다 — 의사 파일은 크기를 0 으로 알린다.
+        utf8 arrChunk[constant::kMaxBuffer4096];
+        bool bWithinLimit = true;
+        while ( bWithinLimit )
+        {
+            const size_t readBytes = std::fread( arrChunk, 1, sizeof( arrChunk ), pFile );
+            if ( readBytes == 0 )
+                break;
+            bWithinLimit = outText.size() + readBytes <= maxBytes;
+            if ( bWithinLimit )
+                outText.append( arrChunk, readBytes );
+        }
+        const bool bReadError = std::ferror( pFile ) != 0;
+        std::fclose( pFile );
+        if ( bReadError || bWithinLimit == false )
+        {
+            outText.clear();
+            SW_LOG_ERROR( "Failed to read %# to the end (%#)", fileName, bReadError ? "read error" : "larger than the limit" );
+            return false;
+        }
+        PlatformFileUtil::noteFileOpenedForRead( fileName, outText.size() );
+        return true;
+    }
+
     bool FileUtil::readTextFile( string_view fileName, string& outText )
     {
         if ( FileUtilInternal::readRange( fileName, 0, std::numeric_limits<uint64>::max(), outText ) == false )

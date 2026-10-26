@@ -256,6 +256,11 @@ namespace sw
         [[nodiscard]] static bool readFile( string_view fileName, vector<uint8>& outBytes, uint64 offset = 0, uint64 maxReadCount = MathUtil::kMaxUInt64 );
         /** @brief 파일 전체를 UTF-8 텍스트로 읽습니다(UTF-8 BOM 은 자동으로 뗍니다). 잘린 읽기는 false 입니다. */
         [[nodiscard]] static bool readTextFile( string_view fileName, string& outText );
+        /**
+         * @brief 크기를 알리지 않는 파일(리눅스 `/proc` · `/sys` 의 의사 파일)을 끝까지 읽습니다. @p maxBytes 를 넘으면 false 입니다.
+         * @details `readTextFile` 은 먼저 잰 크기만큼 읽으므로 크기를 0 으로 알리는 의사 파일은 빈 글이 됩니다. 의사 파일은 이것으로 읽고 `fopen` 을 직접 부르지 않습니다.
+         */
+        [[nodiscard]] static bool readStreamTextFile( string_view fileName, string& outText, uint64 maxBytes );
         /** @brief UTF-8 텍스트를 파일로 씁니다. `writeFile` 과 같이 원자적이고, 쓰기 · 닫기 결과를 확인합니다. */
         [[nodiscard]] static bool writeTextFile( string_view fileName, string_view text );
         /** @brief 문자열이 UTF-8 BOM(0xEF, 0xBB, 0xBF)으로 시작하면 그것을 건너뛴 string_view 를 반환합니다. */

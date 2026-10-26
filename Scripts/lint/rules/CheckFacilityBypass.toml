@@ -4,8 +4,8 @@
 [baseline]
 stdout = 10
 random = 6
-fileOpen = 2
-processSpawn = 1
+fileOpen = 0
+processSpawn = 0
 numberParse = 7
 
 # 직접 불러도 되는 자리 → 이유. 키는 `<규칙>:<경로 글롭>`. 그 기능을 구현하는 파일 자신만 둔다 — 옮겨야 할 호출부는 여기가 아니라 [baseline] 에 센다.
@@ -19,5 +19,6 @@ numberParse = 7
 "stdout:Test/TestFramework/*" ="테스트 실행기의 보고 출력 — CTest · CI 가 표준 출력을 읽는다"
 "random:Source/Core/Math/MathUtil.cpp" = "MathUtil::getRandomBits64 의 엔진 생성기(mt19937_64) 자리 — <random> 을 모든 TU 가 읽지 않게 여기 둔다"
 "fileOpen:Source/Core/File/PlatformFileUtil.cpp" = "FileUtil 의 플랫폼 구현 — 파일을 여는 유일한 자리"
+"fileOpen:Test/EngineTest/Resource/TestResource.cpp" = "잠긴 파일을 흉내 낸다 — 공유 삭제 없이 연 핸들이 필요하고 FileUtil 은 늘 공유 삭제를 허용해 연다"
 "processSpawn:Source/Core/Process/Posix/PosixProcess.cpp" = "sw::Process 의 POSIX 구현(fork · exec)"
 "processSpawn:Source/Core/Process/Windows/WindowsProcess.cpp" = "sw::Process 의 Windows 구현(CreateProcessW)"
