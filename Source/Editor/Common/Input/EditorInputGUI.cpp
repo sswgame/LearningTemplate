@@ -324,4 +324,9 @@ namespace sw::editor
     {
         return editor::getSubsystem<EditorContext>().getSubsystem<EditorInputActions>().isActionDown( action );
     }
+
+    void EditorInputGUI::setModeLayerEnabled( string_view layer, bool bEnabled )
+    {
+        editor::getSubsystem<EditorContext>().getSubsystem<EditorInputActions>().setModeLayerEnabled( layer, bEnabled );
+    }
 } // namespace sw::editor

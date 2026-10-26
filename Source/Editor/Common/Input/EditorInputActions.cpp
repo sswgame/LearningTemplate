@@ -160,6 +160,14 @@ namespace sw::editor
         return areActionsBlocked() == false && _map.isActionDown( hashed_string( string( action ).c_str() ) );
     }
 
+    void EditorInputActions::setModeLayerEnabled( string_view layer, bool bEnabled )
+    {
+        const hashed_string layerName( string( layer ).c_str() );
+        SW_ASSERT( _map.hasLayer( layerName ) ); // 모드 레이어는 editor.input.xml 에 있다 — 없으면 이름을 잘못 적은 것이다
+        if ( _map.isLayerEnabled( layerName ) != bEnabled )
+            _map.setLayerEnabled( layerName, bEnabled );
+    }
+
     void EditorInputActions::executeTriggeredCommands()
     {
         const EditorCommandRegistry& registry = editor::getSubsystem<EditorContext>().getSubsystem<EditorCommandRegistry>();

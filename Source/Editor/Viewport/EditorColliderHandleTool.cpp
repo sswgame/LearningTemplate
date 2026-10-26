@@ -8,6 +8,7 @@
 #include "Editor/Common/EditorColor.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
@@ -216,7 +217,7 @@ namespace sw::editor
         if ( pHovered != nullptr )
         {
             state._bCapturing = true;
-            if ( ImGui::IsMouseClicked( ImGuiMouseButton_Left ) )
+            if ( EditorInputGUI::readPointer().wasPressed( EditorMouseButton::Left ) )
             {
                 state._active     = *pHovered;
                 state._object     = pObject->getHandle();

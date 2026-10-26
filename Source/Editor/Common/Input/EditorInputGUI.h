@@ -169,5 +169,10 @@ namespace sw::editor
         static bool wasActionTriggered( string_view action );
         /** @brief 에디터 입력 맵의 액션이 눌려 있으면 true 입니다(`EditorInputActions::isActionDown`). */
         static bool isActionDown( string_view action );
+        /**
+         * @brief 몸짓 동안만 켜는 모드 레이어(`Editor.Viewport.Fly` — 오른쪽 단추를 누른 동안의 WASD)를 켜고 끕니다(`EditorInputActions::setModeLayerEnabled`).
+         * @details 패널 레이어는 포커스가 정하지만 모드 레이어는 몸짓의 주인(뷰포트)이 정한다. 같은 키(W)를 패널 레이어(기즈모)와 나눠 쓰려면 레이어가 달라야 한다.
+         */
+        static void setModeLayerEnabled( string_view layer, bool bEnabled );
     };
 } // namespace sw::editor

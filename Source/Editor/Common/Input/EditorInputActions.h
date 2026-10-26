@@ -88,6 +88,8 @@ namespace sw::editor
         bool wasActionTriggered( string_view action ) const;
         /** @brief 액션이 눌려 있으면 true 입니다(비행처럼 누르는 동안 하는 일). 조건은 `wasActionTriggered` 와 같습니다. */
         bool isActionDown( string_view action ) const;
+        /** @brief 몸짓 동안만 켜는 모드 레이어를 켜고 끕니다(뷰포트 비행). 맵에 없는 레이어면 부른 쪽의 잘못이라 멈춥니다. 바뀐 것은 다음 `processFrame` 의 갱신부터 보입니다. */
+        void setModeLayerEnabled( string_view layer, bool bEnabled );
         /**
          * @brief 메뉴에서 고른 명령을 다음 `processFrame` 첫머리에 실행하도록 넣습니다(패널을 그리기 전).
          * @details 맥락 메뉴는 패널이 목록을 그리는 중에 닫힌다. 그 자리에서 실행하면 지운 컴포넌트 · 오브젝트를 그리던 루프가 계속 읽는다 —

@@ -5,10 +5,12 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/GUI/EditorPreviewPanel.h"
+#include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
 #include "Editor/Viewport/Model/EditorPreviewPick.h"
 #include "Editor/Viewport/Model/EditorViewportRayPick.h"
 
+#include "Engine/Input/RawInputEvent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"
 
@@ -45,18 +47,18 @@ namespace sw::editor
         _gizmo.draw( selection, arrView, arrProj, viewport.getImagePosition(), imageSize, _settings );
 
         // 클릭 피킹 — 왼쪽 끌기는 오빗이라 끌지 않고 놓은 클릭만 집는다. 기즈모 위의 클릭은 기즈모의 것이다.
-        const ImGuiIO& io             = ImGui::GetIO();
-        const float2&  imagePos       = viewport.getImagePosition();
-        const bool     bInsideImage   = imagePos._x <= io.MousePos.x && io.MousePos.x < imagePos._x + imageSize._x && imagePos._y <= io.MousePos.y && io.MousePos.y < imagePos._y + imageSize._y;
-        const bool     bDragged       = io.MouseDragMaxDistanceSqr[ImGuiMouseButton_Left] > io.MouseDragThreshold * io.MouseDragThreshold;
-        const bool     bOverGizmo     = hasMouse() || ImGuizmo::IsOver() || ImGuizmo::IsUsing();
-        const bool     bClickToPick   = ImGui::IsMouseReleased( ImGuiMouseButton_Left ) && bDragged == false && bOverGizmo == false;
-        const bool     bPickThisClick = bClickToPick && bInsideImage && ImGui::IsWindowHovered( ImGuiHoveredFlags_RootAndChildWindows );
+        const EditorPointerState pointer        = EditorInputGUI::readPointer();
+        const float2&            imagePos       = viewport.getImagePosition();
+        const float2&            mouse          = pointer._position;
+        const bool               bInsideImage   = imagePos._x <= mouse._x && mouse._x < imagePos._x + imageSize._x && imagePos._y <= mouse._y && mouse._y < imagePos._y + imageSize._y;
+        const bool               bOverGizmo     = hasMouse() || ImGuizmo::IsOver() || ImGuizmo::IsUsing();
+        const bool               bClickToPick   = pointer.wasClickedWithoutDrag( EditorMouseButton::Left ) && bOverGizmo == false; // 끌었으면 오빗이었다(입력 맵의 끌기 문턱)
+        const bool               bPickThisClick = bClickToPick && bInsideImage && ImGui::IsWindowHovered( ImGuiHoveredFlags_RootAndChildWindows );
         if ( bPickThisClick == false )
             return;
         const float4x4 invViewProj = ( view * projection ).invert();
         EditorPickRay  ray{};
         if ( EditorViewportProjectionUtil::makeMouseRay( invViewProj, imagePos, imageSize, ray ) )
-            (void)EditorPreviewPickUtil::pickIntoSelection( selection, ray, io.KeyCtrl ? SelectionMode::Toggle : SelectionMode::Replace ); // 빈 곳이면 비운다 — 결과는 선택에 남는다
+            (void)EditorPreviewPickUtil::pickIntoSelection( selection, ray, pointer.hasModifier( ModifierKey::Ctrl ) ? SelectionMode::Toggle : SelectionMode::Replace ); // 빈 곳이면 비운다 — 결과는 선택에 남는다
     }
 } // namespace sw::editor

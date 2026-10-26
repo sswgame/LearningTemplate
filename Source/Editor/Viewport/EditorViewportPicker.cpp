@@ -7,6 +7,7 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Editor/Common/EditorProfile.h"
+#include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -17,6 +18,7 @@
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 #include "Editor/Viewport/Model/EditorViewportRayPick.h"
 
+#include "Engine/Input/RawInputEvent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -57,7 +59,7 @@ namespace sw::editor
             return;
         if ( ImGuizmo::IsOver() || ImGuizmo::IsUsing() )
             return;
-        if ( ImGui::GetIO().KeyAlt )
+        if ( ( EditorInputGUI::getModifierMask() & ModifierKey::Alt ) != 0 )
             return;
         GameObject*      pObject    = nullptr;
         Component*       pComponent = nullptr;
@@ -72,9 +74,11 @@ namespace sw::editor
                                              const ViewportToolbarSettings& settings )
     {
         // 호버는 마우스가 씬 뷰 위에만 있고(다른 패널이나 팝업이 마우스를 가지고 있지 않고) 드래그, 비행, 궤도, 기즈모 위가 아닐 때만 처리한다(언리얼과 유니티의 호버 강조).
-        const ImGuiIO& io       = ImGui::GetIO();
-        const bool     bBlocked = bCanvasHovered == false || pCamera == nullptr || io.KeyAlt || io.MouseDown[0] || io.MouseDown[1] || io.MouseDown[2] ||
-                              ImGui::IsAnyItemActive() || ImGuizmo::IsOver() || ImGuizmo::IsUsing() || bGizmoDragging;
+        const EditorPointerState pointer     = EditorInputGUI::readPointer();
+        const bool               bAnyButton  = pointer.isDown( EditorMouseButton::Left ) || pointer.isDown( EditorMouseButton::Right ) || pointer.isDown( EditorMouseButton::Middle );
+        const bool               bNavigating = pointer.hasModifier( ModifierKey::Alt ) || bAnyButton;
+        const bool               bGizmoBusy  = ImGuizmo::IsOver() || ImGuizmo::IsUsing() || bGizmoDragging;
+        const bool               bBlocked    = bCanvasHovered == false || pCamera == nullptr || bNavigating || ImGui::IsAnyItemActive() || bGizmoBusy;
         if ( bBlocked )
         {
             _hoveredObjectID = 0;
@@ -82,7 +86,7 @@ namespace sw::editor
             return;
         }
         // 마우스가 그대로면 지난 결과를 쓴다. 프레임당 많아야 한 번이고 대개는 0번이다. 카메라를 움직이는 동안은 위에서 막힌다.
-        const float2 mouse{ io.MousePos.x, io.MousePos.y };
+        const float2 mouse = pointer._position;
         if ( mouse._x == _hoverMousePos._x && mouse._y == _hoverMousePos._y )
             return;
         // 피킹이 비싼 씬은 마우스가 움직이는 동안 0.1초에 한 번만 찾는다. 레이 피킹은 오브젝트 수에 비례하며, 8000개이면 Debug 에서 약 20 ms 가 걸린다.
@@ -130,7 +134,7 @@ namespace sw::editor
         {
             vector<EditorViewportBillboardItem> listItem;
             EditorViewportBillboard::collect( *pManager, viewProj, canvasPos, canvasSize, pCamera, listItem );
-            const ImVec2 mouse = ImGui::GetIO().MousePos;
+            const ImVec2 mouse = ImGui::GetMousePos();
             const uint32 index = EditorViewportBillboard::findAt( listItem, float2{ mouse.x, mouse.y } );
             if ( index != invalid_index::kUint32 )
             {

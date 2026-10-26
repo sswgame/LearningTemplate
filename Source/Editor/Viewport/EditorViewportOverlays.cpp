@@ -10,6 +10,7 @@
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorViewportToolbar.h"
@@ -147,7 +148,7 @@ namespace sw::editor
     {
         ensureLoaded();
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kLayout, "Overlays" ) ) )
-            ImGui::OpenPopup( "##ViewportOverlaysMenu" );
+            EditorInputGUI::openPopup( "##ViewportOverlaysMenu" );
         EditorSelfTestMarks::note( "sceneView.overlays" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "OverlaysMenu" ) );
         if ( ImGui::BeginPopup( "##ViewportOverlaysMenu" ) )
@@ -317,7 +318,7 @@ namespace sw::editor
         if ( runtime._bDragging && ImGui::IsItemActive() )
         {
             // 끄는 동안에도 뷰포트 밖으로는 나가지 않는다.
-            const ImVec2 delta    = ImGui::GetIO().MouseDelta;
+            const ImVec2 delta    = ImVec2{ EditorInputGUI::readPointer()._delta._x, EditorInputGUI::readPointer()._delta._y };
             runtime._dragPosition = float2{ MathUtil::clamp( runtime._dragPosition._x + delta.x, 0.0f, MathUtil::max( canvasSize._x - runtime._lastSize._x, 0.0f ) ),
                                             MathUtil::clamp( runtime._dragPosition._y + delta.y, 0.0f, MathUtil::max( canvasSize._y - runtime._lastSize._y, 0.0f ) ) };
         }
@@ -329,7 +330,7 @@ namespace sw::editor
                                                     EditorViewportOverlaysInternal::kSnapDistance * scale );
             save();
         }
-        if ( ImGui::BeginPopupContextItem( "##overlayMenu" ) )
+        if ( EditorInputGUI::beginItemContextMenu( "##overlayMenu" ) )
         {
             drawBarMenuItems();
             ImGui::EndPopup();
