@@ -174,10 +174,11 @@ namespace sw
         /**
          * @brief 빈 도시를 엽니다. 돈은 빌린 지갑(@p refs 의 지갑, 통화는 `CitySettings::_currency`)에서 나가고 들어옵니다.
          * @details 지갑이 없으면 알리고, 건설과 도로 놓기는 모두 돈 부족으로 거절된다. 달 결산에서 돈이 모자라면 지갑이 빚(`Wallet::charge`)을 진다.
+         *          @p width 나 @p height 가 1 미만이면 오류를 남기고 false 입니다(조용히 1 로 맞추지 않습니다).
          */
-        void initialize( const CityCatalog* pCatalog, int32 width, int32 height, const CitySettings& settings, const SessionStateRefs& refs );
-        void setTerrain( int32 x, int32 y, CityTerrain terrain );
-        void fillTerrain( int32 minX, int32 minY, int32 maxX, int32 maxY, CityTerrain terrain );
+        [[nodiscard]] bool initialize( const CityCatalog* pCatalog, int32 width, int32 height, const CitySettings& settings, const SessionStateRefs& refs );
+        void               setTerrain( int32 x, int32 y, CityTerrain terrain );
+        void               fillTerrain( int32 minX, int32 minY, int32 maxX, int32 maxY, CityTerrain terrain );
         /**
          * @brief 공유 땅을 빌립니다. 도시 셀 (0, 0) 이 땅 셀 @p origin 에 해당합니다. 이후 도로와 건물은 놓기 전에 땅을 얻고(건물은 막힘, 도로는 막히지 않음) 허물면 반납합니다.
          * @details 지형(`setTerrain`)은 땅 테이블과 무관하다. 이미 놓인 도로와 건물은 땅을 얻지 않으므로 건설하기 전에 호출해야 한다. @p pLand 가 nullptr 이면 빌린 땅을 반납한다.

@@ -500,7 +500,7 @@ SW_TEST_CASE( CardGameTest, MatgoPpeokSweepJjokAndGoStopFlow )
     } );
     CardDeckUtil::makePileInDrawOrder( { makeHwatu( 1, 3 ), makeHwatu( 6, 3 ), makeHwatu( 10, 3 ), makeHwatu( 2, 2 ) }, layout._drawPile );
     MatgoGame game;
-    game.initializeFromLayout( MatgoSettings::makeMatgo(), layout );
+    SW_ASSERT_TRUE( game.initializeFromLayout( MatgoSettings::makeMatgo(), layout ) );
 
     SW_EXPECT_FALSE( game.playCard( 1, makeHwatu( 1, 1 )._id ) ); // 차례가 아니다
     SW_EXPECT_FALSE( game.playCard( 0, makeHwatu( 5, 0 )._id ) ); // 손에 없다
@@ -547,7 +547,7 @@ SW_TEST_CASE( CardGameTest, MatgoPpeokSweepJjokAndGoStopFlow )
     } );
     CardDeckUtil::makePileInDrawOrder( { makeHwatu( 9, 2 ), makeHwatu( 10, 2 ), makeHwatu( 6, 2 ), makeHwatu( 6, 3 ) }, goLayout._drawPile );
     MatgoGame goGame;
-    goGame.initializeFromLayout( MatgoSettings::makeMatgo(), goLayout );
+    SW_ASSERT_TRUE( goGame.initializeFromLayout( MatgoSettings::makeMatgo(), goLayout ) );
     SW_EXPECT_TRUE( goGame.playCard( 0, makeHwatu( 5, 2 )._id ) ); // 띠 다섯 → 3 광 3 + 홍단 3 + 띠 1 = 7
     SW_EXPECT_TRUE( goGame.getPhase() == MatgoPhase::GoStopChoice );
     SW_EXPECT_EQUAL( goGame.computePlayerScore( 0 )._total, 7 );
@@ -568,8 +568,8 @@ SW_TEST_CASE( CardGameTest, MatgoPpeokSweepJjokAndGoStopFlow )
     // 씨앗 판 — 같은 씨앗이면 같은 손패, 고스톱은 셋에게 7 장 · 바닥 6 장.
     MatgoGame seededA;
     MatgoGame seededB;
-    seededA.initialize( MatgoSettings::makeGoStop(), 99 );
-    seededB.initialize( MatgoSettings::makeGoStop(), 99 );
+    SW_ASSERT_TRUE( seededA.initialize( MatgoSettings::makeGoStop(), 99 ) );
+    SW_ASSERT_TRUE( seededB.initialize( MatgoSettings::makeGoStop(), 99 ) );
     SW_EXPECT_EQUAL( seededA.getPlayerCount(), 3 );
     SW_EXPECT_EQUAL( seededA.getPlayer( 2 )._hand.getCount(), 7 );
     SW_EXPECT_EQUAL( seededA.getFloor().getCount(), 6 );
@@ -679,7 +679,7 @@ SW_TEST_CASE( CardGameTest, UnoSkipReverseDrawFourUnoPenaltyAndStacking )
                                          makeUnoNumber( UnoColor::Red, 9, 56 ) },
                                        layout._drawPile );
     UnoGame game;
-    game.initializeFromLayout( UnoSettings{}, layout );
+    SW_ASSERT_TRUE( game.initializeFromLayout( UnoSettings{}, layout ) );
 
     SW_EXPECT_FALSE( game.playCard( 0, 1 ) ); // 파랑 7 은 빨강 5 위에 못 낸다
     SW_EXPECT_TRUE( game.playCard( 0, 0 ) );  // 빨강 스킵 — 1 을 건너뛴다
@@ -731,7 +731,7 @@ SW_TEST_CASE( CardGameTest, UnoSkipReverseDrawFourUnoPenaltyAndStacking )
     stackLayout._color = UnoColor::Red;
     UnoGame::makeDeck( stackLayout._drawPile );
     UnoGame stackGame;
-    stackGame.initializeFromLayout( stackSettings, stackLayout, 3 );
+    SW_ASSERT_TRUE( stackGame.initializeFromLayout( stackSettings, stackLayout, 3 ) );
     SW_EXPECT_TRUE( stackGame.playCard( 0, 0 ) );
     SW_EXPECT_EQUAL( stackGame.getPendingDraw(), 2 );
     SW_EXPECT_FALSE( stackGame.playCard( 1, 11 ) ); // 벌칙이 쌓였으면 +2 만
@@ -749,10 +749,40 @@ SW_TEST_CASE( CardGameTest, UnoSkipReverseDrawFourUnoPenaltyAndStacking )
     UnoGame::makeDeck( fullDeck );
     SW_EXPECT_EQUAL( fullDeck.getCount(), 108 );
     UnoGame seeded;
-    seeded.initialize( UnoSettings{}, 11 );
+    SW_ASSERT_TRUE( seeded.initialize( UnoSettings{}, 11 ) );
     SW_EXPECT_EQUAL( seeded.getHand( 3 ).getCount(), 7 );
     SW_EXPECT_EQUAL( seeded.getDrawPile().getCount(), 108 - 28 - 1 );
     SW_EXPECT_TRUE( seeded.getCurrentColor() != UnoColor::Wild );
+}
+
+SW_TEST_CASE( CardGameTest, UnoAndMatgoRefuseOutOfRangeSettingsInsteadOfClamping )
+{
+    UnoSettings unoTooFew;
+    unoTooFew._playerCount = 1;
+    UnoGame uno;
+    SW_EXPECT_FALSE( uno.initialize( unoTooFew, 1 ) );
+    UnoSettings unoTooManyCards;
+    unoTooManyCards._playerCount = 10;
+    unoTooManyCards._handSize    = 15; // 범위 안이지만 곱이 덱을 넘는다
+    SW_EXPECT_FALSE( uno.initialize( unoTooManyCards, 1 ) );
+    UnoLayout wrongHandCount;
+    wrongHandCount._listHand = { CardPile{}, CardPile{} }; // 기본 인원은 4
+    SW_EXPECT_FALSE( uno.initializeFromLayout( UnoSettings{}, wrongHandCount ) );
+    UnoLayout wrongFirstPlayer;
+    wrongFirstPlayer._listHand    = { CardPile{}, CardPile{}, CardPile{}, CardPile{} };
+    wrongFirstPlayer._firstPlayer = 4;
+    SW_EXPECT_FALSE( uno.initializeFromLayout( UnoSettings{}, wrongFirstPlayer ) );
+
+    MatgoSettings matgoSolo = MatgoSettings::makeMatgo();
+    matgoSolo._playerCount  = 1;
+    MatgoGame matgo;
+    SW_EXPECT_FALSE( matgo.initialize( matgoSolo, 1 ) );
+    MatgoSettings matgoZeroThreshold = MatgoSettings::makeMatgo();
+    matgoZeroThreshold._goThreshold  = 0;
+    SW_EXPECT_FALSE( matgo.initialize( matgoZeroThreshold, 1 ) );
+    MatgoLayout matgoWrongHands;
+    matgoWrongHands._listHand = { CardPile{} }; // 맞고는 2인
+    SW_EXPECT_FALSE( matgo.initializeFromLayout( MatgoSettings::makeMatgo(), matgoWrongHands ) );
 }
 
 SW_TEST_CASE( CardGameTest, DeckBattlePlaysATurnWithEnergyBlockExhaustAndReshuffle )
@@ -876,7 +906,7 @@ SW_TEST_CASE( CardGameTest, StateRoundTripContinuesTheSameTables )
 
     // 맞고 — 두 차례 낸 판. 다른 씨앗으로 나눈 판에 읽는다.
     MatgoGame matgo;
-    matgo.initialize( MatgoSettings::makeMatgo(), 99 );
+    SW_ASSERT_TRUE( matgo.initialize( MatgoSettings::makeMatgo(), 99 ) );
     for ( int32 turn = 0; turn < 2; ++turn )
     {
         const int32 player = matgo.getCurrentPlayer();
@@ -884,7 +914,7 @@ SW_TEST_CASE( CardGameTest, StateRoundTripContinuesTheSameTables )
     }
     const vector<uint8> matgoBytes = captureCardBytes( matgo );
     MatgoGame           restoredMatgo;
-    restoredMatgo.initialize( MatgoSettings::makeMatgo(), 5 );
+    SW_ASSERT_TRUE( restoredMatgo.initialize( MatgoSettings::makeMatgo(), 5 ) );
     SW_ASSERT_TRUE( restoreCardBytes( matgoBytes, restoredMatgo ) );
     SW_EXPECT_EQUAL( matgo.getCurrentPlayer(), restoredMatgo.getCurrentPlayer() );
     SW_EXPECT_EQUAL( matgo.getFloor().getCount(), restoredMatgo.getFloor().getCount() );
@@ -898,7 +928,7 @@ SW_TEST_CASE( CardGameTest, StateRoundTripContinuesTheSameTables )
     }
     SW_EXPECT_TRUE( captureCardBytes( matgo ) == captureCardBytes( restoredMatgo ) );
     MatgoGame truncatedMatgo;
-    truncatedMatgo.initialize( MatgoSettings::makeMatgo(), 5 );
+    SW_ASSERT_TRUE( truncatedMatgo.initialize( MatgoSettings::makeMatgo(), 5 ) );
     const int32 untouchedDrawCount = truncatedMatgo.getDrawPile().getCount();
     SW_EXPECT_FALSE( restoreTruncatedCardBytes( matgoBytes, truncatedMatgo ) );
     SW_EXPECT_EQUAL( untouchedDrawCount, truncatedMatgo.getDrawPile().getCount() );
@@ -929,14 +959,14 @@ SW_TEST_CASE( CardGameTest, StateRoundTripContinuesTheSameTables )
 
     // 우노 — 세 사람이 뽑았다. 난수(버린 더미 섞기)까지 이어진다.
     UnoGame uno;
-    uno.initialize( UnoSettings{}, 11 );
+    SW_ASSERT_TRUE( uno.initialize( UnoSettings{}, 11 ) );
     for ( int32 turn = 0; turn < 3; ++turn )
     {
         SW_EXPECT_TRUE( uno.drawCard( uno.getCurrentPlayer() ) );
     }
     const vector<uint8> unoBytes = captureCardBytes( uno );
     UnoGame             restoredUno;
-    restoredUno.initialize( UnoSettings{}, 99 );
+    SW_ASSERT_TRUE( restoredUno.initialize( UnoSettings{}, 99 ) );
     SW_ASSERT_TRUE( restoreCardBytes( unoBytes, restoredUno ) );
     SW_EXPECT_EQUAL( uno.getCurrentPlayer(), restoredUno.getCurrentPlayer() );
     SW_EXPECT_TRUE( uno.getTopCard() == restoredUno.getTopCard() );
@@ -949,7 +979,7 @@ SW_TEST_CASE( CardGameTest, StateRoundTripContinuesTheSameTables )
     }
     SW_EXPECT_TRUE( captureCardBytes( uno ) == captureCardBytes( restoredUno ) );
     UnoGame truncatedUno;
-    truncatedUno.initialize( UnoSettings{}, 99 );
+    SW_ASSERT_TRUE( truncatedUno.initialize( UnoSettings{}, 99 ) );
     SW_EXPECT_FALSE( restoreTruncatedCardBytes( unoBytes, truncatedUno ) );
     SW_EXPECT_EQUAL( 108 - 28 - 1, truncatedUno.getDrawPile().getCount() );
 

@@ -150,14 +150,20 @@ namespace sw
     {
     }
 
-    void CitySimulation::initialize( const CityCatalog* pCatalog, int32 width, int32 height, const CitySettings& settings, const SessionStateRefs& refs )
+    bool CitySimulation::initialize( const CityCatalog* pCatalog, int32 width, int32 height, const CitySettings& settings, const SessionStateRefs& refs )
     {
+        // 칸 수가 1 미만이면 맞추지 않고 거절한다(예전에는 `MathUtil::max( 1, … )` 로 조용히 1 칸 도시를 열었다).
+        if ( width < 1 || height < 1 )
+        {
+            SW_LOG_ERROR( "CitySimulation: refused size %# x %# - both must be at least 1", width, height );
+            return false;
+        }
         _pCatalog = pCatalog;
         _pWallet  = refs._pWallet;
         if ( _pWallet == nullptr )
             SW_LOG_WARNING( "CitySimulation: no wallet was lent - every road and building is refused" );
         _settings = settings;
-        _topology = GridTopology{ MathUtil::max( 1, width ), MathUtil::max( 1, height ) };
+        _topology = GridTopology{ width, height };
         _listTile.assign( static_cast<size_t>( _topology.getCellCount() ), CityTile{} );
         _listBuilding.clear();
         _listWalker.clear();
@@ -172,6 +178,7 @@ namespace sw
         _employed           = 0;
         _bRoadsDirty        = SW_FALSE;
         _bDesirabilityDirty = SW_TRUE;
+        return true;
     }
 
     void CitySimulation::setTerrain( int32 x, int32 y, CityTerrain terrain )

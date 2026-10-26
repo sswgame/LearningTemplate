@@ -617,7 +617,7 @@
     {"id": "surface-shader-check", "title": "표면 셰이더(E6) — 젖음 · 흙 · 피 · 찢김이 Surface_* 이름을 읽어 그려지는지", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true, "need_command": "game/empty/automation/surfaceshowcase.scenario.xml 을 네 백엔드로 돌리고 사진을 본다(파일 이동 · 쿠킹은 통합 O 가 했다)", "source": "docs/plans/CharacterAppearanceIntegration.md 남은 것", "result_doc": "docs/plans/CharacterAppearanceIntegration.md 남은 것"},
     {
       "id": "config-range-reject-tests", "title": "설정 범위 거절 리팩터의 테스트(Vitality · ResourceGauge · 장르 키트 설정)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 40,
-      "filter": "CombatStateTest.*,ActionAdventureTest.*,MechArenaTest.*,RealTimeStrategyTest.*,PartyArenaTest.*,FightingTest.*,CardGameTest.*,CoopScavengerTest.*,MetroidvaniaTest.*,SurvivalHorrorTest.*,OpenWorldWesternTest.*,WitcherRPGTest.*,RhythmTest.*,CoasterTest.*,ElementRuleTest.*,BaseValueStateArchiveTest.*,WorldSystemsTest.*,AutosaveTest.*",
+      "filter": "CombatStateTest.*,ActionAdventureTest.*,MechArenaTest.*,RealTimeStrategyTest.*,PartyArenaTest.*,FightingTest.*,CardGameTest.*,CityBuilderTest.*,CoopScavengerTest.*,MetroidvaniaTest.*,SurvivalHorrorTest.*,OpenWorldWesternTest.*,WitcherRPGTest.*,RhythmTest.*,CoasterTest.*,ElementRuleTest.*,BaseValueStateArchiveTest.*,WorldSystemsTest.*,AutosaveTest.*",
       "source": "docs/plans/Candidates-network.md ConfigRangeRejectRemaining", "result_doc": "docs/plans/Candidates-network.md ConfigRangeRejectRemaining"
     },
     {
