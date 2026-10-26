@@ -62,6 +62,7 @@ namespace sw
         , _beginPlayMutex{}
         , _listPendingBeginPlay{}
         , _listProcessingBeginPlay{}
+        , _structureGeneration{ allocateID() << kStructureGenerationShift }
     {
     }
 
@@ -123,6 +124,7 @@ namespace sw
         }
 
         _listPendingAdd.push_back( pObj );
+        notifyStructureChanged();
         return pObj;
     }
 
@@ -138,6 +140,7 @@ namespace sw
         std::unique_lock<std::shared_mutex> lock{ _mutex };
         if ( findRegisteredUnlocked( pObj->getObjectID() ) != pObj )
             return;
+        notifyStructureChanged();
 
         const auto oldIt         = _mapNameToObject.find( oldName );
         const bool bOwnsOldEntry = oldIt != _mapNameToObject.end() && oldIt->second._pObject == pObj;
@@ -260,42 +263,6 @@ namespace sw
         outListGameObject.insert( outListGameObject.end(), _listPendingAdd.begin(), _listPendingAdd.end() );
     }
 
-    GameObject* GameObjectStore::findGameObjectByTag( TagID tag ) const
-    {
-        std::shared_lock<std::shared_mutex> lock{ _mutex };
-        for ( GameObject* pObj : _listGameObject )
-        {
-            const bool bLiveTaggedObject = pObj != nullptr && pObj->isPendingDestroy() == false && pObj->hasTag( tag );
-            if ( bLiveTaggedObject )
-                return pObj;
-        }
-        for ( GameObject* pObj : _listPendingAdd )
-        {
-            const bool bLiveTaggedPendingObject = pObj != nullptr && pObj->isPendingDestroy() == false && pObj->hasTag( tag );
-            if ( bLiveTaggedPendingObject )
-                return pObj;
-        }
-        return nullptr;
-    }
-
-    void GameObjectStore::findGameObjectsByTag( TagID tag, vector<GameObject*>& outListGameObject ) const
-    {
-        outListGameObject.clear();
-        std::shared_lock<std::shared_mutex> lock{ _mutex };
-        for ( GameObject* pObj : _listGameObject )
-        {
-            const bool bCollectTaggedObject = pObj != nullptr && pObj->isPendingDestroy() == false && pObj->hasTag( tag );
-            if ( bCollectTaggedObject )
-                outListGameObject.push_back( pObj );
-        }
-        for ( GameObject* pObj : _listPendingAdd )
-        {
-            const bool bCollectTaggedPendingObject = pObj != nullptr && pObj->isPendingDestroy() == false && pObj->hasTag( tag );
-            if ( bCollectTaggedPendingObject )
-                outListGameObject.push_back( pObj );
-        }
-    }
-
     void GameObjectStore::beginPlay()
     {
         // 표시를 먼저 켠다. 순회하는 동안 onBeginPlay 가 붙이는 컴포넌트도 대기열에 들어간다(이미 시작했으면 비트가 걸러 낸다).
@@ -380,6 +347,8 @@ namespace sw
         // 계층 활성은 다시 맞추지 않는다. 삭제 대기는 그 값의 입력이 아니다.
         if ( pObj->tryMarkPendingDestroy() == false )
             return;
+        // 표시한 순간 순회에서 빠진다. 해체(지연 파괴 · `clear`)는 늘 세대가 오른 뒤라, 포인터를 캐시한 쪽은 쓰기 전에 세대만 보면 해체된 포인터를 읽지 않는다.
+        notifyStructureChanged();
 
         vector<GameObject*> listChildren;
         if ( bDestroyChildren )
@@ -580,6 +549,7 @@ namespace sw
             _overflowObjectCount.store( 0, std::memory_order_release );
             _objectSlotTable.clear();
         }
+        notifyStructureChanged(); // 아래에서 해체한다 — 포인터를 캐시한 쪽이 세대로 알아챈다
 
         for ( GameObject* pObj : listToDestroy )
         {

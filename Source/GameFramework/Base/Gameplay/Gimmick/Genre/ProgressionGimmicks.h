@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Object/Component/Component.h"
@@ -46,7 +47,8 @@ namespace sw
         PROPERTY( RuntimeState, Category = "Gate", DisplayName = "Open", Tooltip = "Runtime / progress" )
         bool _bOpen;
 
-        FixedStepTimer _clock;
+        FixedStepTimer      _clock;
+        vector<GameObject*> _listTagged; ///< 스텝마다 태그 색인의 답을 받는 버퍼(용량 재사용, `TagIndex::findObjectsWithTags`)
     };
 } // namespace sw
 

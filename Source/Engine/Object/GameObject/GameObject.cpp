@@ -311,6 +311,15 @@ namespace sw
             pChildSc->detachFromComponent( rule );
     }
 
+    void GameObject::setSiblingIndex( uint16 siblingIndex )
+    {
+        if ( _siblingIndex == siblingIndex )
+            return;
+        _siblingIndex = siblingIndex;
+        if ( _pOwnerManager != nullptr )
+            _pOwnerManager->notifyStructureChanged();
+    }
+
     GameObject* GameObject::getParent() const
     {
         SceneComponent* pSceneComp = getPrimarySceneComponent();
@@ -620,6 +629,7 @@ namespace sw
         _listComponent.push_back( pComp );
         // 오브젝트 목록에 넣는 바로 그 시점에 매니저의 타입별 목록(버킷)에도 넣는다. `onRegister` 안에서 씬을 찾는 코드가 둘 중 어느 순회로든 같은 답을 받는다.
         _pOwnerManager->registerTypedComponent( pComp );
+        _pOwnerManager->notifyStructureChanged();
         if ( pComp->isSceneComponent() && _pPrimaryScene.load( std::memory_order_relaxed ) == nullptr )
             _pPrimaryScene.store( pComp, std::memory_order_relaxed );
         // 어느 레지스트리에 들어갈지는 컴포넌트가 안다. GameObject 는 타입을 몰라도 된다.
@@ -703,6 +713,8 @@ namespace sw
             if ( pComp != nullptr )
                 destroyOwnedComponent( pComp );
         }
+        if ( _pOwnerManager != nullptr )
+            _pOwnerManager->notifyStructureChanged();
         if ( bTickWork )
             markTickOrderDirty();
         // primary 가 없어졌으니 부모도 없다(자식들은 부모 컴포넌트의 소멸자가 분리하며 스스로 맞췄다).
@@ -783,6 +795,8 @@ namespace sw
             _pPrimaryScene.store( nullptr, std::memory_order_relaxed );
 
         destroyOwnedComponent( pComp );
+        if ( _pOwnerManager != nullptr )
+            _pOwnerManager->notifyStructureChanged();
         if ( bTickWork )
             markTickOrderDirty();
         // primary 가 바뀌면 부모(primary 의 부모)도 바뀐다. 값이 그대로면 재계산은 O(1) 로 끝난다.

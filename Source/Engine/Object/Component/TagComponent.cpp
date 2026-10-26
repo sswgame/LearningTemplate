@@ -4,11 +4,13 @@
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Registry/TagIndex.h"
 
 namespace sw
 {
     TagComponent::TagComponent()
         : _tags{}
+        , _pTagIndex{ nullptr }
     {
     }
 
@@ -25,6 +27,7 @@ namespace sw
             return;
         }
         _tags.addTag( tag );
+        syncTagIndex();
     }
 
     void TagComponent::removeTag( TagID tag )
@@ -35,6 +38,7 @@ namespace sw
             return;
         }
         _tags.removeTag( tag );
+        syncTagIndex();
     }
 
     void TagComponent::clearTags()
@@ -45,6 +49,39 @@ namespace sw
             return;
         }
         _tags.clear();
+        syncTagIndex();
+    }
+
+    void TagComponent::onRegister( GameObjectManager& manager )
+    {
+        Component::onRegister( manager );
+        _pTagIndex = &manager.getTagIndex();
+        syncTagIndex();
+    }
+
+    void TagComponent::onUnregister( GameObjectManager& manager )
+    {
+        manager.getTagIndex().remove( *this );
+        _pTagIndex = nullptr;
+        Component::onUnregister( manager );
+    }
+
+    void TagComponent::onPropertyChanged( hashed_string propertyName )
+    {
+        Component::onPropertyChanged( propertyName );
+        syncTagIndex();
+    }
+
+    void TagComponent::onPostLoad()
+    {
+        Component::onPostLoad();
+        syncTagIndex();
+    }
+
+    void TagComponent::syncTagIndex()
+    {
+        if ( _pTagIndex != nullptr )
+            _pTagIndex->update( *this, getOwner(), _tags );
     }
 
     bool TagComponent::isStructureFrozen() const

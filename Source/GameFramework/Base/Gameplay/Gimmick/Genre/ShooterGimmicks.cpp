@@ -143,6 +143,8 @@ namespace sw
         , _cooldownSteps{ 0 }
         , _shotCount{ 0 }
         , _clock{ GenreGimmickUtil::makeClock() }
+        , _listCandidate{}
+        , _listTagged{}
     {
     }
 
@@ -172,23 +174,22 @@ namespace sw
         viewer._position = origin;
         viewer._forward  = float3::transformVector( float3{ 0.0f, 0.0f, 1.0f }, pScene->getWorldMatrix() );
         viewer._objectID = pOwner->getObjectID();
-        vector<InteractionCandidate> listCandidate;
-        const TagContainer&          targetTags = _targetTags;
-        const float32                range      = _range;
-        const float32                viewAngle  = _viewAngle;
-        pManager->forEachGameObject( [&listCandidate, &targetTags, range, viewAngle]( GameObject* pObject )
+        // 후보는 태그 색인에서만 모은다(씬을 훑지 않는다). 대상 태그가 비면 색인이 아무것도 돌려주지 않는다.
+        vector<InteractionCandidate>& listCandidate = _listCandidate;
+        listCandidate.clear();
+        pManager->getTagIndex().findObjectsWithTags( _targetTags, _listTagged );
+        for ( const GameObject* pObject : _listTagged )
         {
-            const SceneComponent* pOther      = pObject != nullptr ? pObject->getPrimarySceneComponent() : nullptr;
-            const bool            bSkipTarget = pOther == nullptr || pObject->isActiveInHierarchy() == false || targetTags.getTagCount() == 0 || pObject->getTags().hasAllTags( targetTags ) == false;
-            if ( bSkipTarget )
-                return;
+            const SceneComponent* pOther = pObject->getPrimarySceneComponent();
+            if ( pOther == nullptr || pObject->isActiveInHierarchy() == false )
+                continue;
             InteractionCandidate candidate;
             candidate._position    = pOther->getWorldPosition();
             candidate._objectID    = pObject->getObjectID();
-            candidate._maxDistance = range;
-            candidate._maxAngle    = viewAngle;
+            candidate._maxDistance = _range;
+            candidate._maxAngle    = _viewAngle;
             listCandidate.push_back( candidate );
-        } );
+        }
         const WorldLineOfSightQuery lineOfSight{ *pManager };
         const int32                 pick = InteractionSelector::selectBest( viewer, listCandidate, &lineOfSight );
         _target                          = pick >= 0 ? GameObjectHandle::make( listCandidate[static_cast<size_t>( pick )]._objectID ) : GameObjectHandle{};

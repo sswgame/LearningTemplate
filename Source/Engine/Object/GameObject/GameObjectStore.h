@@ -114,6 +114,16 @@ namespace sw
         bool hasMergedObjects() const { return _listGameObject.empty() == false; }
 
         /**
+         * @brief 구조 세대입니다(`GameObjectManager::getStructureGeneration`). 읽기는 잠금이 없습니다.
+         * @details 시작 값은 저장소마다 한 번 받는 오브젝트 id 를 위 비트(`kStructureGenerationShift`)에 둔 값이다. id 는 프로세스 전체에서 한 번만 나오므로
+         *          저장소끼리 세대가 겹치지 않는다(전역 카운터를 새로 두지 않는다). 한 저장소가 2^24 번 넘게 올려야 다른 저장소의 범위에 닿고,
+         *          그래도 캐시가 틀리려면 그 저장소가 같은 주소에 있어야 한다.
+         */
+        uint64 getStructureGeneration() const { return _structureGeneration.load( std::memory_order_relaxed ); }
+        /** @brief 구조 세대를 올립니다(`GameObjectManager::notifyStructureChanged`). 어느 스레드에서나 됩니다. */
+        void notifyStructureChanged() { _structureGeneration.fetch_add( 1, std::memory_order_relaxed ); }
+
+        /**
          * @struct WalkScope
          * @brief `forEachGameObject` 가 공유 잠금을 쥔 동안을 표시합니다(스레드별 깊이). 그 안에서 구조를 바꾸는 호출은 Debug 에서 단언합니다.
          * @details `_mutex` 는 재진입하지 않는다. 순회 콜백이 오브젝트를 만들거나(배타 잠금) 컴포넌트를 붙이면(풀 맵의 배타 잠금) 같은
@@ -188,11 +198,6 @@ namespace sw
 
         /** @brief 버킷의 타입 포인터를 가진 항목 수(비어 있지 않은 버킷 수)입니다. 진단과 회귀 테스트(묘비)용입니다. */
         uint32 getTypedComponentBucketCount() const;
-
-        /** @brief 태그를 가진 첫 GameObject 를 반환합니다. 없으면 nullptr 입니다. */
-        GameObject* findGameObjectByTag( TagID tag ) const;
-        /** @brief 태그를 가진 GameObject 를 outListGameObject 에 넣습니다. */
-        void findGameObjectsByTag( TagID tag, vector<GameObject*>& outListGameObject ) const;
 
         /** @brief 플레이를 시작합니다(`GameObjectManager::beginPlay`). */
         void beginPlay();
@@ -380,5 +385,9 @@ namespace sw
         mutex                   _beginPlayMutex;          ///< 시작 대기열을 보호한다(비동기 씬 로드는 워커에서 컴포넌트를 붙인다)
         vector<ComponentHandle> _listPendingBeginPlay;    ///< 플레이 중에 붙어 onBeginPlay 를 기다리는 컴포넌트
         vector<ComponentHandle> _listProcessingBeginPlay; ///< 처리 중인 시작 대기열이다(할당 재사용)
+
+        /** @brief 구조 세대의 시작 값에서 오브젝트 id 를 올려 둘 비트 수입니다(`getStructureGeneration`). */
+        static constexpr uint32 kStructureGenerationShift = 24;
+        atomic<uint64>          _structureGeneration; ///< 구조 세대(`getStructureGeneration`)
     };
 } // namespace sw

@@ -5,6 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/3D/PointLightComponent.h"
 #include "Engine/Object/Component/3D/SpotLightComponent.h"
@@ -28,8 +29,9 @@ namespace sw
         {
             static constexpr float32 kSunDistance = 100.0f;
 
-            static TagID getHiddenTag() { return TagID::request( "State.Hidden" ); }
-            static TagID getHideActivityTag() { return TagID::request( "Activity.Hide" ); }
+            // 리터럴 태그다 — 스텝마다 부르는 곳에서 문자열을 intern 하지 않는다.
+            static constexpr TagID getHiddenTag() { return "State.Hidden"_tag; }
+            static constexpr TagID getHideActivityTag() { return "Activity.Hide"_tag; }
 
             /** @brief 라이트까지 막는 것이 있으면 true 입니다. 가림을 검사할 때만 씁니다. */
             static bool isOccluded( const GameObjectManager& manager, const float3& position, const float3& lightPosition, uint64 ignoreObjectID, uint64 lightObjectID )
@@ -239,40 +241,44 @@ namespace sw
     {
         using Internal   = HorrorStealthGimmicksInternal;
         float32 exposure = 0.0f;
-        manager.forEachGameObject( [&manager, &exposure, &position, bOcclusion, ignoreObjectID]( GameObject* pObject )
+        // 빛은 씬의 컴포넌트 레지스트리가 종류별 칸으로 든다(`LightComponent::onRegister`). 씬을 훑지 않고 오브젝트마다 컴포넌트를 세 번 찾지 않는다.
+        // 칸 번호가 곧 빛 종류라 그 칸의 항목은 그 타입이다. 활성(`isActive`)은 소유 오브젝트의 계층 활성을 함께 본다.
+        const ComponentRegistry& registry = manager.getComponentRegistry();
+        for ( const LightComponent* pLight : registry.getAll<LightComponent>( shaderslot::kLightTypeDirectional ) )
         {
-            if ( pObject == nullptr || pObject->isActiveInHierarchy() == false )
-                return;
-            const DirectionalLightComponent* pSun = pObject->getComponent<DirectionalLightComponent>();
-            if ( pSun != nullptr && pSun->isActive() )
-            {
-                const float3 toward = position - pSun->getLightDirection().normalize() * Internal::kSunDistance;
-                if ( bOcclusion == false || Internal::isOccluded( manager, position, toward, ignoreObjectID, pObject->getObjectID() ) == false )
-                    exposure += pSun->getIntensity();
-            }
-            const PointLightComponent* pPoint            = pObject->getComponent<PointLightComponent>();
-            const bool                 bPointLightActive = pPoint != nullptr && pPoint->isActive() && pPoint->getRadius() > 0.0f;
-            if ( bPointLightActive )
-            {
-                const float32 distance = float3::getDistance( position, pPoint->getLightPosition() );
-                const float32 falloff  = MathUtil::max( 0.0f, 1.0f - distance / pPoint->getRadius() );
-                const bool    bBlocked = bOcclusion && falloff > 0.0f && Internal::isOccluded( manager, position, pPoint->getLightPosition(), ignoreObjectID, pObject->getObjectID() );
-                if ( bBlocked == false )
-                    exposure += pPoint->getIntensity() * falloff * falloff;
-            }
-            const SpotLightComponent* pSpot            = pObject->getComponent<SpotLightComponent>();
-            const bool                bSpotLightActive = pSpot != nullptr && pSpot->isActive() && pSpot->getRadius() > 0.0f;
-            if ( bSpotLightActive )
-            {
-                const float3  offset   = position - pSpot->getLightPosition();
-                const float32 distance = offset.getLength();
-                const float32 falloff  = MathUtil::max( 0.0f, 1.0f - distance / pSpot->getRadius() );
-                const bool    bInCone  = distance <= 1.0e-4f || pSpot->getLightDirection().normalize().dot( offset / distance ) >= MathUtil::cos( pSpot->getOuterConeAngle() );
-                const bool    bBlocked = bOcclusion && falloff > 0.0f && Internal::isOccluded( manager, position, pSpot->getLightPosition(), ignoreObjectID, pObject->getObjectID() );
-                if ( bInCone && bBlocked == false )
-                    exposure += pSpot->getIntensity() * falloff * falloff;
-            }
-        } );
+            const DirectionalLightComponent* pSun = static_cast<const DirectionalLightComponent*>( pLight );
+            if ( pSun->isPendingDestroy() || pSun->isActive() == false )
+                continue;
+            const float3 toward = position - pSun->getLightDirection().normalize() * Internal::kSunDistance;
+            if ( bOcclusion == false || Internal::isOccluded( manager, position, toward, ignoreObjectID, pSun->getOwner()->getObjectID() ) == false )
+                exposure += pSun->getIntensity();
+        }
+        for ( const LightComponent* pLight : registry.getAll<LightComponent>( shaderslot::kLightTypePoint ) )
+        {
+            const PointLightComponent* pPoint            = static_cast<const PointLightComponent*>( pLight );
+            const bool                 bPointLightActive = pPoint->isPendingDestroy() == false && pPoint->isActive() && pPoint->getRadius() > 0.0f;
+            if ( bPointLightActive == false )
+                continue;
+            const float32 distance = float3::getDistance( position, pPoint->getLightPosition() );
+            const float32 falloff  = MathUtil::max( 0.0f, 1.0f - distance / pPoint->getRadius() );
+            const bool    bBlocked = bOcclusion && falloff > 0.0f && Internal::isOccluded( manager, position, pPoint->getLightPosition(), ignoreObjectID, pPoint->getOwner()->getObjectID() );
+            if ( bBlocked == false )
+                exposure += pPoint->getIntensity() * falloff * falloff;
+        }
+        for ( const LightComponent* pLight : registry.getAll<LightComponent>( shaderslot::kLightTypeSpot ) )
+        {
+            const SpotLightComponent* pSpot            = static_cast<const SpotLightComponent*>( pLight );
+            const bool                bSpotLightActive = pSpot->isPendingDestroy() == false && pSpot->isActive() && pSpot->getRadius() > 0.0f;
+            if ( bSpotLightActive == false )
+                continue;
+            const float3  offset   = position - pSpot->getLightPosition();
+            const float32 distance = offset.getLength();
+            const float32 falloff  = MathUtil::max( 0.0f, 1.0f - distance / pSpot->getRadius() );
+            const bool    bInCone  = distance <= 1.0e-4f || pSpot->getLightDirection().normalize().dot( offset / distance ) >= MathUtil::cos( pSpot->getOuterConeAngle() );
+            const bool    bBlocked = bOcclusion && falloff > 0.0f && Internal::isOccluded( manager, position, pSpot->getLightPosition(), ignoreObjectID, pSpot->getOwner()->getObjectID() );
+            if ( bInCone && bBlocked == false )
+                exposure += pSpot->getIntensity() * falloff * falloff;
+        }
         return exposure;
     }
 } // namespace sw

@@ -195,6 +195,45 @@ SW_TEST_CASE( EditorSiblingOrderTest, MoveStepStopsAtTheEnds )
 }
 
 /**
+ * @brief [EditorSiblingOrderTest] 형제 순서 옮기기 · 이름 바꾸기와 그 되돌리기 · 다시 하기가 모두 구조 세대를 올린다 — 계층 창의 행 모델이 이 세대로만 다시 짓는다
+ */
+SW_TEST_CASE( EditorSiblingOrderTest, ReorderAndRenameBumpStructureGenerationThroughUndo )
+{
+    using Internal = EditorSiblingOrderTestInternal;
+    SceneManager sceneManager;
+    Scene*       pScene = sceneManager.createEmptyActiveScene( "StructureGenerationProbe" );
+    SW_ASSERT_NOT_NULL( pScene );
+    ScopedSceneManagerService scopedScene{ sceneManager };
+    CommandStack              stack;
+    ScopedCommandStackService scopedStack{ stack };
+    GameObjectManager*        pManager = pScene->getObjectManager();
+    Internal::spawnRoots( *pManager, { "A", "B", "C" } );
+
+    uint64 generation = pManager->getStructureGeneration();
+    SW_ASSERT_TRUE( EditorSiblingOrder::moveStep( *pManager, Internal::find( *pManager, "A" ), true ) );
+    SW_EXPECT_TRUE( pManager->getStructureGeneration() != generation );
+    SW_EXPECT_EQUAL( string( "BAC" ), Internal::rootNames( *pManager ) );
+
+    generation = pManager->getStructureGeneration();
+    stack.undo();
+    SW_EXPECT_TRUE( pManager->getStructureGeneration() != generation );
+    SW_EXPECT_EQUAL( string( "ABC" ), Internal::rootNames( *pManager ) );
+    generation = pManager->getStructureGeneration();
+    stack.redo();
+    SW_EXPECT_TRUE( pManager->getStructureGeneration() != generation );
+
+    generation = pManager->getStructureGeneration();
+    SW_ASSERT_TRUE( EditorSceneCommands::rename( Internal::find( *pManager, "B" ), "Bee" ) );
+    SW_EXPECT_TRUE( pManager->getStructureGeneration() != generation );
+    SW_EXPECT_NOT_NULL( Internal::find( *pManager, "Bee" ) );
+
+    generation = pManager->getStructureGeneration();
+    stack.undo();
+    SW_EXPECT_TRUE( pManager->getStructureGeneration() != generation );
+    SW_EXPECT_NOT_NULL( Internal::find( *pManager, "B" ) );
+}
+
+/**
  * @brief [EditorSiblingOrderTest] 폴더는 태그가 붙은 빈 오브젝트이고 만들기는 되돌리기 한 단계다 — 자식을 폴더에 넣을 수 있다
  */
 SW_TEST_CASE( EditorSiblingOrderTest, FolderIsATaggedEmptyObject )
