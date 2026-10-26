@@ -31,6 +31,7 @@ import os
 import re
 import shlex
 import subprocess
+import tempfile
 from pathlib import Path
 from typing import Sequence
 
@@ -188,9 +189,20 @@ def makeSyntaxOnlyCommand(entry: dict, probeSource: Path, listExtraFlag: Sequenc
 
 
 def compileSyntaxOnly(entry: dict, probeSource: Path, buildDir: Path, listExtraFlag: Sequence[str] = ()) -> tuple[bool, str]:
-    """`probeSource` 를 `entry` 의 플래그로 `-fsyntax-only` 컴파일한다. (성공 여부, 컴파일러 출력 전부)."""
-    completed = subprocess.run(" ".join(makeSyntaxOnlyCommand(entry, probeSource, listExtraFlag)), shell=True, capture_output=True,
-                               text=True, errors="replace", cwd=str(buildDir))
+    """`probeSource` 를 `entry` 의 플래그로 `-fsyntax-only` 컴파일한다. (성공 여부, 컴파일러 출력 전부).
+
+    컴파일러 뒤의 인자는 응답 파일(`@파일`)로 넘긴다 — include 경로가 많은 TU(EngineTest)는 명령줄이 cmd.exe 한도(8191 자)를 넘어
+    "The command line is too long" 으로 컴파일러가 돌지도 못한다. clang · clang-cl · gcc 가 모두 `@파일` 을 읽는다.
+    """
+    listCommand = makeSyntaxOnlyCommand(entry, probeSource, listExtraFlag)
+    with tempfile.NamedTemporaryFile("w", suffix=".rsp", delete=False, encoding="utf-8") as responseFile:
+        responseFile.write(" ".join(listCommand[1:]))
+        responsePath = responseFile.name
+    try:
+        completed = subprocess.run(f'{listCommand[0]} "@{responsePath}"', shell=True, capture_output=True, text=True, errors="replace",
+                                   cwd=str(buildDir))
+    finally:
+        os.remove(responsePath)
     return completed.returncode == 0, (completed.stdout or "") + (completed.stderr or "")
 
 
