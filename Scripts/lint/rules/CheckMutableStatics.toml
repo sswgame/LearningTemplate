@@ -89,7 +89,7 @@
 "Source/Editor/Common/Workspace/EditorAssetTypeActions.cpp" = 1
 "Source/Editor/Common/Workspace/EditorExtensionRegistry.cpp" = 1
 "Source/Editor/Common/Workspace/EditorExtensionRegistry.h" = 1
-"Source/Editor/Common/Workspace/EditorService.cpp" = 6
+"Source/Editor/Common/Workspace/EditorService.cpp" = 5
 # Source/Editor/Panels — 이전 대기
 "Source/Editor/Panels/Catalog/CatalogPanel.cpp" = 3
 # Source/Editor/Viewport — 이전 대기

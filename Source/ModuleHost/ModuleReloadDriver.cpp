@@ -105,6 +105,7 @@ namespace sw
         : _liveReloadManager{ nullptr }
         , _pHostScope{ nullptr }
         , _reloadTargetCount{ 0 }
+        , _scenesReleasedHook{}
 #endif
     {
     }
@@ -120,7 +121,7 @@ namespace sw
         SW_ASSERT( bBound );
         (void)bBound;
         // 모듈 DLL 을 언로드할 수 있는 곳은 "씬은 사라졌고 서비스는 아직 있는" 좁은 구간뿐이다. 호스트 범위의 모듈 이미지 창구가 엔진 종료 안에서 그 자리를 부른다.
-        moduleImageHost.setScenesReleasedHook( SW_DELEGATE_LAMBDA( Delegate<void()>, [this]()
+        _scenesReleasedHook = moduleImageHost.bindScenesReleasedHook( SW_DELEGATE_LAMBDA( Delegate<void()>, [this]()
         {
             if ( _pHostScope != nullptr )
                 _pHostScope->unbind<ModuleReloadDriver>();

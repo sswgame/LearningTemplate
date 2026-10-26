@@ -451,6 +451,8 @@ namespace sw
         UIOffscreenScreens                 _offscreen;  ///< 스택 밖의 화면입니다(에디터 미리보기이며 입력이 없습니다).
         UIDocumentCache                    _documentCache;
         UIStyleSheetCache                  _styleSheetCache;
+        Subscription                       _documentReloadedSubscription;   ///< 문서 캐시의 다시 읽기 알림 칸 구독(`initialize` 가 걸고 `shutdown` 이 놓는다)
+        Subscription                       _styleSheetReloadedSubscription; ///< 스타일 시트 캐시의 다시 읽기 알림 칸 구독
         UIThemeController                  _theme;
         vector<string>                     _listReopenDocument; ///< 모듈 다시 로드로 닫은 문서 화면입니다(다음 update 가 다시 엽니다).
         UIBindingConverterRegistry         _bindingConverters;

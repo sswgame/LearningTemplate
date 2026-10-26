@@ -145,28 +145,12 @@ namespace sw
     {
         (void)outKeepImageMapped;
         uint32 releasedCount{ 0 };
-        if ( _onActiveDeviceChanged.isCodeWithin( pBegin, pEnd ) )
-        {
-            _onActiveDeviceChanged = {};
-            ++releasedCount;
-        }
-        if ( _onGamepadConnectionChanged.isCodeWithin( pBegin, pEnd ) )
-        {
-            _onGamepadConnectionChanged = {};
-            ++releasedCount;
-        }
+        releasedCount += _onActiveDeviceChanged.releaseIfCodeWithin( pBegin, pEnd ) ? 1u : 0u;
+        releasedCount += _onGamepadConnectionChanged.releaseIfCodeWithin( pBegin, pEnd ) ? 1u : 0u;
         for ( size_t focusIndex = 0; focusIndex < kKeyboardFocusCount; ++focusIndex )
         {
-            if ( _arrOnTextInput[focusIndex].isCodeWithin( pBegin, pEnd ) )
-            {
-                _arrOnTextInput[focusIndex] = {};
-                ++releasedCount;
-            }
-            if ( _arrOnTextComposition[focusIndex].isCodeWithin( pBegin, pEnd ) )
-            {
-                _arrOnTextComposition[focusIndex] = {};
-                ++releasedCount;
-            }
+            releasedCount += _arrOnTextInput[focusIndex].releaseIfCodeWithin( pBegin, pEnd ) ? 1u : 0u;
+            releasedCount += _arrOnTextComposition[focusIndex].releaseIfCodeWithin( pBegin, pEnd ) ? 1u : 0u;
         }
 
         // 모듈이 등록한 장치는 vtable 이 그 이미지에 있다. 언로드한 뒤 폴링하면 사라진 코드로 점프한다. 소멸자가 아직 있는 지금 제거한다.
@@ -641,7 +625,7 @@ namespace sw
                 if ( rawEvent._bSynthetic == SW_TRUE && pPad != nullptr )
                     pPad->setVirtualConnected( rawEvent._payload._gamepadData._bConnected == SW_TRUE );
                 if ( _onGamepadConnectionChanged.isBound() )
-                    _onGamepadConnectionChanged( rawEvent._deviceIndex, rawEvent._payload._gamepadData._bConnected == SW_TRUE );
+                    _onGamepadConnectionChanged.get()( rawEvent._deviceIndex, rawEvent._payload._gamepadData._bConnected == SW_TRUE );
                 break;
             }
 
@@ -798,16 +782,20 @@ namespace sw
         }
     }
 
-    void InputManager::setTextInputCallback( TextInputDelegate callback, InputKeyboardFocus owner )
+    Subscription InputManager::bindTextInputCallback( TextInputDelegate callback, InputKeyboardFocus owner )
     {
-        if ( owner != InputKeyboardFocus::Count )
-            _arrOnTextInput[static_cast<size_t>( owner )] = std::move( callback );
+        SW_ASSERT( owner != InputKeyboardFocus::Count );
+        if ( owner == InputKeyboardFocus::Count )
+            return Subscription{};
+        return _arrOnTextInput[static_cast<size_t>( owner )].bind( std::move( callback ) );
     }
 
-    void InputManager::setTextCompositionCallback( TextInputDelegate callback, InputKeyboardFocus owner )
+    Subscription InputManager::bindTextCompositionCallback( TextInputDelegate callback, InputKeyboardFocus owner )
     {
-        if ( owner != InputKeyboardFocus::Count )
-            _arrOnTextComposition[static_cast<size_t>( owner )] = std::move( callback );
+        SW_ASSERT( owner != InputKeyboardFocus::Count );
+        if ( owner == InputKeyboardFocus::Count )
+            return Subscription{};
+        return _arrOnTextComposition[static_cast<size_t>( owner )].bind( std::move( callback ) );
     }
 
     void InputManager::setActiveGlyphStyle( InputGlyphStyle type )
@@ -816,7 +804,7 @@ namespace sw
         {
             _activeGlyphStyle = type;
             if ( _onActiveDeviceChanged.isBound() )
-                _onActiveDeviceChanged( type );
+                _onActiveDeviceChanged.get()( type );
         }
     }
 
@@ -880,14 +868,14 @@ namespace sw
 
     void InputManager::onTextInput( string_view text )
     {
-        TextInputDelegate& onTextInput = _arrOnTextInput[static_cast<size_t>( _keyboardFocus )];
+        const TextInputDelegate& onTextInput = _arrOnTextInput[static_cast<size_t>( _keyboardFocus )].get();
         if ( text.empty() == false && onTextInput.isBound() )
             onTextInput( text );
     }
 
     void InputManager::onTextComposition( string_view text )
     {
-        TextInputDelegate& onTextComposition = _arrOnTextComposition[static_cast<size_t>( _keyboardFocus )];
+        const TextInputDelegate& onTextComposition = _arrOnTextComposition[static_cast<size_t>( _keyboardFocus )].get();
         if ( text.empty() == false && onTextComposition.isBound() )
             onTextComposition( text );
     }

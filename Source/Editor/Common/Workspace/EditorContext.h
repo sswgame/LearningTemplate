@@ -26,8 +26,11 @@ namespace sw::editor
         EditorContext();
         ~EditorContext();
 
-        /** @brief 에디터 서브시스템들을 만들고 초기화합니다. */
-        void initialize();
+        /**
+         * @brief 에디터 서브시스템들을 만들고 초기화합니다.
+         * @param toolDefaults 에디터 도구 시드 — 셸(ImGuiEditor)이 소유하고 이 컨텍스트보다 오래 산다. 서브시스템을 세우기 전에 범위에 빌려 건다(`getEditorToolDefaults`).
+         */
+        void initialize( EditorToolDefaults& toolDefaults );
         /** @brief 에디터 서브시스템들을 정리하고 해제합니다. */
         void shutdown();
         /**

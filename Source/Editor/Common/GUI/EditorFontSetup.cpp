@@ -104,7 +104,7 @@ namespace sw::editor
 {
     SW_LOG_CALLER( "EditorFontSetup" );
 
-    bool EditorFontSetup::apply()
+    bool EditorFontSetup::apply( const EditorToolDefaults& toolDefaults )
     {
         ImGuiIO& io = ImGui::GetIO();
         io.Fonts->Clear();
@@ -113,7 +113,7 @@ namespace sw::editor
         io.Fonts->SetFontLoader( ImGuiFreeType::GetFontLoader() );
         io.Fonts->FontLoaderFlags = ImGuiFreeTypeLoaderFlags_LightHinting;
 
-        const EditorToolDefaults& data = editor::getEditorToolDefaults();
+        const EditorToolDefaults& data = toolDefaults;
         float32                   fontSize{ 0.0f };
         float32                   iconScale{ 0.0f };
         if ( EditorFontSetupInternal::readTypography( fontSize, iconScale ) == false )

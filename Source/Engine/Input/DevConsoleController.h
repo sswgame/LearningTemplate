@@ -7,6 +7,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Console/DevConsole.h"
@@ -82,6 +83,7 @@ namespace sw
         string                        _pendingText; /**< 이번 프레임에 온 글자입니다(`update` 가 비웁니다). */
         unique_ptr<IDevConsoleWindow> _pWindow;
         InputManager*                 _pInput;
+        Subscription                  _textInputSubscription; ///< 입력 관리자의 콘솔 포커스 글자 칸 구독
         uint8                         _bOpen             : 1;
         uint8                         _bShellMapChecked  : 1; /**< 셸 맵을 한 번 검사했는지 나타냅니다. */
         uint8                         _bShellMapComplete : 1; /**< 검사한 셸 맵에 콘솔 레이어와 액션이 모두 있었는지 나타냅니다. */

@@ -53,8 +53,6 @@
 
 #include "sw/config/ConfigConstants.h"
 
-#include <cstdio>
-
 namespace sw
 {
     /** @brief `-gv_serverExitAfterTicks=N`: N 틱을 돈 뒤 스스로 정상 종료합니다(기동과 종료 테스트용). Shipping 에도 등록하며, 배포 서버 산출물을 같은 테스트가 실행합니다. */
@@ -102,7 +100,7 @@ namespace sw
 
         /**
          * @brief 호스트 범위의 종료 신호 처리기(POSIX SIGTERM · SIGINT, Windows 콘솔 제어)입니다. 엔진보다 먼저 걸고 엔진 종료가 끝난 뒤 뗀다.
-         * @details 걸지 못해도 서버는 선다(표준 입력 `quit` 로 끝낸다) — 로거가 서기 전이라 표준 오류로 알린다. 떼기는 건 것이 없으면 아무것도 하지 않는다.
+         * @details 걸지 못해도 서버는 선다(표준 입력 `quit` 로 끝낸다) — 로거가 서기 전이라 로그 아래 티어(`SW_LOW_LEVEL_WARNING`)로 알린다. 떼기는 건 것이 없으면 아무것도 하지 않는다.
          */
         class ShutdownSignalSubsystem final : public ISubsystem
         {
@@ -110,7 +108,7 @@ namespace sw
             SubsystemInitResult initializeSubsystem() override
             {
                 if ( ShutdownSignal::install() == false )
-                    std::fprintf( stderr, "[ServerApp] Shutdown signal handlers are not installed - stop the server with the 'quit' console command\n" );
+                    SW_LOW_LEVEL_WARNING( "Shutdown signal handlers are not installed - stop the server with the 'quit' console command" );
                 return SubsystemInitResult::Succeeded;
             }
             void        shutdownSubsystem() override { ShutdownSignal::uninstall(); }

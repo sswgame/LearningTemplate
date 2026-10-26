@@ -572,16 +572,16 @@ namespace sw
             public:
                 Bridge( UISystem& ui, IWindow& window )
                     : _pCore{ make_unique<Core>().release() } // 참조 수로 사는 객체다 — 마지막 `release()` 가 `sw_delete` 로 푼다
-                    , _pWindow{ &window }
+                    , _getObjectSubscription{}
                 {
-                    _pCore->_pUI     = &ui;
-                    _pCore->_pWindow = &window;
-                    window.setAccessibilityQueryHandler( SW_DELEGATE_METHOD( WindowAccessibilityQueryDelegate, &Bridge::handleGetObject, this ) );
+                    _pCore->_pUI           = &ui;
+                    _pCore->_pWindow       = &window;
+                    _getObjectSubscription = window.bindAccessibilityQueryHandler( SW_DELEGATE_METHOD( WindowAccessibilityQueryDelegate, &Bridge::handleGetObject, this ) );
                 }
 
                 ~Bridge() override
                 {
-                    _pWindow->setAccessibilityQueryHandler( {} );
+                    _getObjectSubscription.reset(); // 이 다리가 건 칸만 놓는다(창이 먼저 사라졌으면 무효라 아무 일도 없다)
                     const HWND hwnd = _pCore->getHwnd();
                     if ( hwnd != nullptr )
                         (void)UiaReturnRawElementProvider( hwnd, 0, 0, nullptr ); // 창에 건 제공자를 푼다
@@ -635,8 +635,8 @@ namespace sw
                     return true;
                 }
 
-                Core*    _pCore;
-                IWindow* _pWindow;
+                Core*        _pCore;
+                Subscription _getObjectSubscription; ///< 창의 접근성 요청 칸(`WM_GETOBJECT`) 구독 — 다리가 사라지면 놓는다
             };
         };
 

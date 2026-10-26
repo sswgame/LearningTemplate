@@ -101,6 +101,8 @@ namespace sw
         , _userSettingsHost{}
         , _sceneViewCameraProvider{}
         , _configReloadedSubscription{}
+        , _windowResizeSubscription{}
+        , _windowMessageSubscription{}
         , _initializeStartMicro{ 0 }
         , _hostParts{}
         , _bEnableEditor{ SW_FALSE }
@@ -441,8 +443,9 @@ namespace sw
 
     void App::bindHostCallbacks()
     {
-        _pWindow->setResizeCallback( SW_DELEGATE_METHOD( WindowResizeDelegate, &App::onResize, this ) );
-        _pWindow->setCustomMessageHandler( SW_DELEGATE_METHOD( WindowMessageHandlerDelegate, &App::onWindowMessage, this ) );
+        // 주 창의 처리기 칸은 주인이 하나다 — 구독을 쥐고, 창(엔진 종료 때 파괴)이 먼저 사라지면 구독이 무효가 된다.
+        _windowResizeSubscription  = _pWindow->bindResizeCallback( SW_DELEGATE_METHOD( WindowResizeDelegate, &App::onResize, this ) );
+        _windowMessageSubscription = _pWindow->bindCustomMessageHandler( SW_DELEGATE_METHOD( WindowMessageHandlerDelegate, &App::onWindowMessage, this ) );
 
         // 연결 대상이 프레임마다 바뀌지 않으므로 루프 안이 아니라 여기서 한 번만 연결한다.
         // 에디터 뷰 카메라는 에디터 모드에서만 연결한다. 비어 있다는 사실이 곧 "씬 카메라를 쓴다"는 뜻이므로 루프에서 모드를

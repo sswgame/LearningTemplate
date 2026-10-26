@@ -2,7 +2,7 @@
  * @file AccountGmLogin.h
  * @brief 운영 도구(에디터 GM 도구 · 봇)가 서버에 계정 이름과 비밀번호로 한 번 로그인하는 도우미입니다. `AccountClient` 와 응답 꺼내기를 한 덩어리로 들고 상태를 글로 보입니다.
  * @details GM 연결도 일반 계정 로그인을 거친다. 에디터 확장(Admin)은 자기 키트만 include 할 수 있어 계정 키트를 모르므로, 두 쪽을 이어 붙이는 일은 둘을 함께 아는 조립 쪽(도구 실행 파일 · 게임)이 한다:
- *          `attach` 로 서비스 클라이언트에 계정 클라이언트를 등록하고(연결을 열기 전), 연결이 Ready 가 될 때 `onReady` 를 부르게 하고(`AdminToolConnection::setLoginHook`), 프레임마다 `update` 를 부른다.
+ *          `attach` 로 서비스 클라이언트에 계정 클라이언트를 등록하고(연결을 열기 전), 연결이 Ready 가 될 때 `onReady` 를 부르게 하고(`AdminToolConnection::bindLoginHook`), 프레임마다 `update` 를 부른다.
  *          다시 연결되면 로그인은 `AccountClient` 가 보관한 토큰으로 스스로 재접속하므로 `onReady` 는 토큰이 없을 때만 로그인을 보낸다.
  *          비밀번호는 이 객체의 메모리에만 있고 로그인 응답을 받으면(성공이든 실패든) 지운다. 계정이 서버에 없으면 가입하지 않는다(GM 계정은 운영이 만든다).
  */

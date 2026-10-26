@@ -54,9 +54,10 @@ SW_TEST_CASE( ConfigHotReloadTest, ChangedFileGoesToItsOwner )
     // 에디터 도구 시드 파일(저장소에 있다)의 "변경" 은 에디터가 들고 있는 값을 파일 값으로 통째로 바꾼다.
     EditorToolDefaults toolDefaults{};
     toolDefaults._listBaseFont = { "stale.ttf" }; // 경로 칸(DataPath)은 데이터 읽기만 채우므로 글꼴 목록으로 "앞 값" 을 둔다
-    setEditorToolDefaults( &toolDefaults );
-    const string toolDefaultsPath = EditorPaths::resolveProjectRelativePath( config::kFileRuntimeEditorToolDefaults );
+    SubsystemScope toolScope;                     // 에디터 컨텍스트처럼 범위에 빌려 건다(`EditorContext::initialize`)
+    SW_ASSERT_TRUE( toolScope.bind( &toolDefaults ) );
+    const ScopedEditorScope scopedEditor{ toolScope };
+    const string            toolDefaultsPath = EditorPaths::resolveProjectRelativePath( config::kFileRuntimeEditorToolDefaults );
     SW_EXPECT_TRUE( ConfigHotReload::reloadChangedFile( nullptr, toolDefaultsPath ) == ReloadOutcome::Reloaded );
     SW_EXPECT_TRUE( toolDefaults._listBaseFont.empty() == false && toolDefaults._listBaseFont.front() != "stale.ttf" );
-    setEditorToolDefaults( nullptr );
 }

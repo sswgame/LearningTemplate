@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Delegate/DelegateSlot.h"
 #include "Core/Module/ModuleUnloadListener.h"
 
 #include "Engine/EngineMinimal.h"
@@ -180,7 +181,7 @@ namespace sw
 
         /**
          * @brief 창 방식과 (창 모드일 때의) 클라이언트 크기를 바꿉니다.
-         * @details 크기가 바뀌면 플랫폼의 크기 통보가 `setResizeCallback` 의 콜백을 부른다. 스왑체인은 이 경로(App::onResize 가 렌더 스레드를
+         * @details 크기가 바뀌면 플랫폼의 크기 통보가 `bindResizeCallback` 의 콜백을 부른다. 스왑체인은 이 경로(App::onResize 가 렌더 스레드를
          *          기다린 뒤 resize)로만 바뀐다. Win32 는 이 호출 안에서 같은 스레드로 통보하고, X11 은 다음 `processMessages` 에서 통보한다.
          *          **창 스레드(메인 스레드)에서만 부른다.** `BorderlessFullscreen` 이면 @p width 와 @p height 는 무시하고 모니터 크기를 쓴다.
          * @return 지원하지 않는 플랫폼이면 false 입니다.
@@ -270,21 +271,23 @@ namespace sw
          */
         bool isVisibleRequested() const { return _bVisibleRequested == SW_TRUE; }
 
-        /** @brief 외부 이벤트 처리기(예: ImGui)를 연결합니다. */
-        void setCustomMessageHandler( WindowMessageHandlerDelegate handler ) { _customHandler = std::move( handler ); }
+        // 아래 네 처리기는 칸마다 주인이 하나다 — 거는 쪽이 구독을 쥐고, 놓으면 칸이 빈다(이미 차 있으면 단언, `DelegateSlot`). 창 스레드(메인 스레드)에서 걸고 부른다.
+
+        /** @brief 외부 이벤트 처리기(예: ImGui)를 겁니다. */
+        [[nodiscard]] Subscription bindCustomMessageHandler( WindowMessageHandlerDelegate handler ) { return _customHandler.bind( std::move( handler ) ); }
 
         /**
-         * @brief 접근성 클라이언트(스크린 리더)의 객체 요청에 답하는 처리기를 설정합니다(Win32 `WM_GETOBJECT`). X11 은 보내는 메시지가 없어 부르지 않는다.
-         * @details 외부 이벤트 처리기(`setCustomMessageHandler`)와 따로 둔다 — 그쪽은 결과 값을 돌려줄 수 없고(처리하면 늘 1), 접근성 요청은 결과(제공자 핸들)가 답이다.
-         *          처리기는 @p outResult 에 창 프로시저가 돌려줄 값을 적고 true 를 돌려준다. false 면 기본 처리로 간다. 창 스레드(메인 스레드)에서 불린다. 빼려면 빈 델리게이트를 넘긴다.
+         * @brief 접근성 클라이언트(스크린 리더)의 객체 요청에 답하는 처리기를 겁니다(Win32 `WM_GETOBJECT`). X11 은 보내는 메시지가 없어 부르지 않는다.
+         * @details 외부 이벤트 처리기(`bindCustomMessageHandler`)와 따로 둔다 — 그쪽은 결과 값을 돌려줄 수 없고(처리하면 늘 1), 접근성 요청은 결과(제공자 핸들)가 답이다.
+         *          처리기는 @p outResult 에 창 프로시저가 돌려줄 값을 적고 true 를 돌려준다. false 면 기본 처리로 간다.
          */
-        void setAccessibilityQueryHandler( WindowAccessibilityQueryDelegate handler ) { _accessibilityQuery = std::move( handler ); }
+        [[nodiscard]] Subscription bindAccessibilityQueryHandler( WindowAccessibilityQueryDelegate handler ) { return _accessibilityQuery.bind( std::move( handler ) ); }
 
-        /** @brief 창 크기가 바뀔 때 부를 콜백을 설정합니다. */
-        void setResizeCallback( WindowResizeDelegate callback ) { _onResize = std::move( callback ); }
+        /** @brief 창 크기가 바뀔 때 부를 콜백을 겁니다. */
+        [[nodiscard]] Subscription bindResizeCallback( WindowResizeDelegate callback ) { return _onResize.bind( std::move( callback ) ); }
 
-        /** @brief 닫기 전에 불리는 처리기를 설정합니다. false 를 반환하면 닫기를 보류합니다. */
-        void setCloseQueryHandler( WindowCloseQueryDelegate handler ) { _closeQuery = std::move( handler ); }
+        /** @brief 닫기 전에 불리는 처리기를 겁니다. false 를 반환하면 닫기를 보류합니다. */
+        [[nodiscard]] Subscription bindCloseQueryHandler( WindowCloseQueryDelegate handler ) { return _closeQuery.bind( std::move( handler ) ); }
         /** @brief 확인 없이 종료 플래그를 켭니다. */
         void requestClose();
         /** @brief 닫기 쿼리를 거쳐 종료를 시도합니다. 허용되면 true 입니다. */
@@ -349,14 +352,14 @@ namespace sw
          * @brief `recreate` 가 같은 제목으로 다시 만들 제목입니다.
          * @details 창 안의 고정 버퍼다. 창은 엔진 종료 뒤에 파괴되므로, 힙 문자열이면 기동 뒤에 바꾼 제목(에디터)이 엔진 종료 누수 보고에 그 태그의 증가로 남았다.
          */
-        utf8                             _arrTitle[kTitleCapacity];
-        WindowMessageHandlerDelegate     _customHandler;
-        WindowAccessibilityQueryDelegate _accessibilityQuery;
-        WindowResizeDelegate             _onResize;
-        WindowCloseQueryDelegate         _closeQuery;
-        uint32                           _width;
-        uint32                           _height;
-        uint8                            _bShouldClose : 1;
+        utf8                                           _arrTitle[kTitleCapacity];
+        DelegateSlot<WindowMessageHandlerDelegate>     _customHandler;
+        DelegateSlot<WindowAccessibilityQueryDelegate> _accessibilityQuery;
+        DelegateSlot<WindowResizeDelegate>             _onResize;
+        DelegateSlot<WindowCloseQueryDelegate>         _closeQuery;
+        uint32                                         _width;
+        uint32                                         _height;
+        uint8                                          _bShouldClose : 1;
         /**
          * @brief 다시 만드는 중인지 나타냅니다.
          * @details 플랫폼 메시지 처리기가 이 플래그를 보고 그 사이의 리사이즈와 닫기 통보를 삼킨다.

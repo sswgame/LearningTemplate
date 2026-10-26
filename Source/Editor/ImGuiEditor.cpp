@@ -411,8 +411,17 @@ namespace sw::editor
         {
         }
 
-        SubsystemInitResult     initializeSubsystem() override { return _editor.initializeWindowCloseQuery(); }
-        void                    shutdownSubsystem() override { _editor.shutdownWindowCloseQuery(); }
+        SubsystemInitResult initializeSubsystem() override
+        {
+            // 창의 닫기 확인 칸은 주인이 하나다 — 이 단계가 구독을 쥐고, 내려갈 때 이 에디터가 건 것만 놓는다(창이 먼저 사라졌으면 구독은 이미 무효다).
+            _closeQuery = _editor._pWindow->bindCloseQueryHandler( SW_DELEGATE_METHOD( WindowCloseQueryDelegate, &ImGuiEditor::onWindowCloseQuery, &_editor ) );
+            return _editor.initializeWindowCloseQuery();
+        }
+        void shutdownSubsystem() override
+        {
+            _closeQuery.reset();
+            _editor.shutdownWindowCloseQuery();
+        }
         const utf8*             getSubsystemName() const override { return kSubsystemName; }
         span<const utf8* const> getSubsystemDependencies() const override
         {
@@ -424,6 +433,7 @@ namespace sw::editor
 
     private:
         ImGuiEditor& _editor;
+        Subscription _closeQuery; ///< 창의 닫기 확인 칸 구독
     };
 } // namespace sw::editor
 
@@ -512,13 +522,12 @@ namespace sw::editor
         _editorToolDefaults = make_unique<EditorToolDefaults>();
         if ( _editorToolDefaults->loadFromHostPath() == false )
             return SubsystemInitResult::Failed;
-        editor::setEditorToolDefaults( _editorToolDefaults.get() );
+        // 정적 칸에 걸지 않는다 — 범위가 서기 전의 단계(글꼴)는 인자로 받고, 에디터 컨텍스트가 자기 범위에 빌려 건다(`initializeEditorContext`).
         return SubsystemInitResult::Succeeded;
     }
 
     void ImGuiEditor::shutdownEditorData()
     {
-        editor::setEditorToolDefaults( nullptr );
         _editorToolDefaults.reset();
     }
 
@@ -547,7 +556,7 @@ namespace sw::editor
         _dockLayout.applyIniFilename();
 
         // 글꼴은 데이터(editortooldefaults.json 후보 · 테마 글자 크기)에서 온다. 못 찾으면 이유를 남겼고 기동을 멈춘다.
-        if ( EditorFontSetup::apply() == false )
+        if ( EditorFontSetup::apply( *_editorToolDefaults ) == false )
         {
             shutdownImGuiContext();
             return SubsystemInitResult::Failed;
@@ -664,7 +673,7 @@ namespace sw::editor
     SubsystemInitResult ImGuiEditor::initializeEditorContext()
     {
         _editorContext = make_unique<EditorContext>();
-        _editorContext->initialize();
+        _editorContext->initialize( *_editorToolDefaults );
         _editorContext->setDockLayout( &_dockLayout );
         _pUICapture = &_editorContext->getSubsystem<EditorUICapture>();
         // 테마는 컨텍스트가 활성화된 뒤에 읽어야 한다. 테마 상태를 컨텍스트가 보관하므로, 그 전에 부르면 적용한 테마가 갈 곳이
@@ -736,18 +745,17 @@ namespace sw::editor
 
     SubsystemInitResult ImGuiEditor::initializeWindowCloseQuery()
     {
-        _pWindow->setCloseQueryHandler( SW_DELEGATE_METHOD( WindowCloseQueryDelegate, &ImGuiEditor::onWindowCloseQuery, this ) );
+        // 닫기 확인 칸의 구독은 기동 단계 객체(`WindowCloseQuerySubsystem`)가 쥔다 — 이 셸에 더 할 일이 없다.
         return SubsystemInitResult::Succeeded;
     }
 
     void ImGuiEditor::shutdownWindowCloseQuery()
     {
-        // 선택 조회(②): 종료 경로 - 창이 이미 닫혔으면 되돌릴 핸들러도 제목도 없다.
+        // 선택 조회(②): 종료 경로 - 창이 이미 닫혔으면 되돌릴 제목도 없다.
         MainWindowSubsystem* pWindowHost   = editor::findSubsystem<MainWindowSubsystem>();
         IWindow*             pActiveWindow = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
         if ( pActiveWindow == nullptr )
             return;
-        pActiveWindow->setCloseQueryHandler( {} );
         // 에디터를 종료하면 창 제목은 팩 설정 그대로 돌아간다. 창 제목의 출처는 팩 설정(`<Engine _windowTitle>`) 하나뿐이다.
         // 평소 제목만 돌린다 — 창에 거는 일은 엔진이 다음 프레임 끝에 한다(창 제목을 거는 길은 하나).
         pWindowHost->setBaseTitle( editor::getSubsystem<const PackEngineSettings>()._windowTitle ); // 창이 살아 있으면 팩 설정도 있다

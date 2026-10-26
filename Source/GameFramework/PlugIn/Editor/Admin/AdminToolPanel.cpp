@@ -157,7 +157,7 @@ namespace sw::editor
             EditorSelfTestMarks::note( "admin.role" );
         }
 
-        // 서버의 GM 포트(서버 설정 `_adminServicePort`)에 연결한다. 로그인은 `getConnection().setLoginHook` 으로 끼운 쪽이 한다.
+        // 서버의 GM 포트(서버 설정 `_adminServicePort`)에 연결한다. 로그인은 `getConnection().bindLoginHook` 으로 끼운 쪽이 한다.
         EditorWidgets::drawTextField( "GM port (host:port)", _gmAddressText, 200.0f * EditorThemeUtil::getDpiScale() );
         ImGui::SameLine();
         const bool bConnected = session.getConnection().getState() != AdminToolConnectionState::Disconnected;

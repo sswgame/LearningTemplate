@@ -1120,7 +1120,7 @@ namespace sw
             windowEvent.setNativeWindow( NativeSurfaceKind::Wayland, state._pSurface );
             windowEvent._message = NativeWindowEvent::kMessageWayland;
             windowEvent._lParam  = reinterpret_cast<intptr_t>( &input );
-            (void)_customHandler( windowEvent ); // 받은 쪽이 먹었는지는 Wayland 에서 할 일을 바꾸지 않는다
+            (void)_customHandler.get()( windowEvent ); // 받은 쪽이 먹었는지는 Wayland 에서 할 일을 바꾸지 않는다
         }
 
         const bool bResized = state._configuredWidth > 0 && state._configuredHeight > 0 &&
@@ -1130,7 +1130,7 @@ namespace sw
             _width  = static_cast<uint32>( state._configuredWidth );
             _height = static_cast<uint32>( state._configuredHeight );
             if ( _onResize.isBound() )
-                _onResize( _width, _height );
+                _onResize.get()( _width, _height );
         }
         if ( state._bCloseRequested && _bRecreating == SW_FALSE )
         {
@@ -1170,7 +1170,7 @@ namespace sw
         _width  = width;
         _height = height;
         if ( _onResize.isBound() )
-            _onResize( _width, _height );
+            _onResize.get()( _width, _height );
         return true;
     }
 

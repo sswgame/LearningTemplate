@@ -83,7 +83,7 @@ namespace sw
         }
         _mapPathToAsset[key] = asset;
         if ( _reloadedHandler.isBound() )
-            _reloadedHandler( key );
+            _reloadedHandler.get()( key );
     }
 
     void UITextAssetCache::clear()

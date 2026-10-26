@@ -14,7 +14,7 @@ namespace sw
     /**
      * @class KeyboardDevice
      * @brief 키보드 키 상태를 맡는 IInputDevice 구현입니다.
-     * @details 글자 입력(WM_CHAR, X11 KeyPress 의 문자)은 키가 아니라 앱 수준 이벤트이므로 `InputManager::setTextInputCallback` 으로 받는다
+     * @details 글자 입력(WM_CHAR, X11 KeyPress 의 문자)은 키가 아니라 앱 수준 이벤트이므로 `InputManager::bindTextInputCallback` 으로 받는다
      *          (언리얼의 `FSlateApplication::OnKeyChar` 에 해당한다).
      */
     class SW_API KeyboardDevice : public IInputDevice

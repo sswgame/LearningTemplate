@@ -9,6 +9,7 @@
 #include "Core/Container/ConcurrentQueue.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Delegate/DelegateSlot.h"
 #include "Core/Module/ModuleUnloadListener.h"
 #include "Core/Subsystem/ISubsystem.h"
 
@@ -177,12 +178,13 @@ namespace sw
 
         InputGlyphStyle getActiveGlyphStyle() const { return _activeGlyphStyle; }
         void            setActiveGlyphStyle( InputGlyphStyle type );
-        void            setActiveDeviceChangedCallback( ActiveDeviceChangedDelegate callback ) { _onActiveDeviceChanged = std::move( callback ); }
-        void            setGamepadConnectionCallback( GamepadConnectionDelegate callback ) { _onGamepadConnectionChanged = std::move( callback ); }
-        /** @brief 키보드 포커스가 @p owner 일 때 오는 글자(UTF-8)를 받을 콜백을 등록합니다. 주인마다 하나이며, 다시 등록하면 덮어씁니다. */
-        void setTextInputCallback( TextInputDelegate callback, InputKeyboardFocus owner = InputKeyboardFocus::Game );
-        /** @brief 키보드 포커스가 @p owner 일 때 오는 조합 중 글자(IME)를 받을 콜백을 등록합니다. */
-        void setTextCompositionCallback( TextInputDelegate callback, InputKeyboardFocus owner = InputKeyboardFocus::Game );
+        // 아래 콜백 칸은 칸마다 주인이 하나다 — 거는 쪽이 구독을 쥐고, 놓으면 칸이 빈다(이미 차 있으면 단언, `DelegateSlot`).
+        [[nodiscard]] Subscription bindActiveDeviceChangedCallback( ActiveDeviceChangedDelegate callback ) { return _onActiveDeviceChanged.bind( std::move( callback ) ); }
+        [[nodiscard]] Subscription bindGamepadConnectionCallback( GamepadConnectionDelegate callback ) { return _onGamepadConnectionChanged.bind( std::move( callback ) ); }
+        /** @brief 키보드 포커스가 @p owner 일 때 오는 글자(UTF-8)를 받을 콜백을 겁니다. 주인(포커스)마다 칸 하나다. */
+        [[nodiscard]] Subscription bindTextInputCallback( TextInputDelegate callback, InputKeyboardFocus owner = InputKeyboardFocus::Game );
+        /** @brief 키보드 포커스가 @p owner 일 때 오는 조합 중 글자(IME)를 받을 콜백을 겁니다. */
+        [[nodiscard]] Subscription bindTextCompositionCallback( TextInputDelegate callback, InputKeyboardFocus owner = InputKeyboardFocus::Game );
 
         /**
          * @brief 키보드를 받을 쪽을 바꿉니다(개발 콘솔이 열고 닫을 때).
@@ -369,7 +371,7 @@ namespace sw
                 pGamepad->setConnectionCallback( [this]( uint32 index, bool bConnected )
                 {
                     if ( _onGamepadConnectionChanged.isBound() )
-                        _onGamepadConnectionChanged( index, bConnected );
+                        _onGamepadConnectionChanged.get()( index, bConnected );
                 } );
                 registerDevice( std::move( pGamepad ) );
             }
@@ -420,42 +422,42 @@ namespace sw
         static constexpr size_t kKeyboardFocusCount = static_cast<size_t>( InputKeyboardFocus::Count );
         static constexpr size_t kKeyMaskWordCount   = ( static_cast<size_t>( Key::Count ) + 63 ) / 64;
 
-        ConcurrentQueue<RawInputEvent, 2048> _queueRawEvent;        /**< OS 와 폴러 스레드가 postRawEvent() 로 넣는 락프리 원시 이벤트 큐입니다. beginFrame() 이 매 프레임 비웁니다. */
-        atomic<uint32>                       _droppedRawEventCount; /**< 큐가 가득 차서 버린 원시 이벤트의 누적 개수입니다. beginFrame() 에서 요약 로그를 남기고 0 으로 초기화합니다. */
-        vector<unique_ptr<IInputDevice>>     _listDevice;           /**< 등록된 모든 장치(키보드, 마우스, 게임패드 등)를 소유하는 목록입니다. */
-        KeyboardDevice*                      _pKeyboard;            /**< 편의 API 용 캐시 포인터입니다. 소유는 _listDevice 가 합니다. */
-        MouseDevice*                         _pMouse;               /**< 편의 API 용 캐시 포인터입니다. */
-        GamepadDevice*                       _pGamepad;             /**< 0번 게임패드 편의 API 용 캐시 포인터입니다(1~3번은 getGamepad(index) 로 조회). */
-        unique_ptr<InputMap>                 _pInputMap;            /**< 이 InputManager 에 연결된 기본 InputMap 인스턴스입니다. */
-        vector<RawInputEvent>                _listDrainedEvent;     /**< beginFrame() 에서 큐를 비워 담아 두는 임시 버퍼입니다(매 프레임 재사용). */
-        vector<FramePress>                   _listFramePress;       /**< 이번 프레임에 눌린 컨트롤마다 첫 누름 순간입니다(beginFrame 이 비우고 채운다). */
-        float2                               _frameLookDelta;       /**< 이번 프레임에 적용한 마우스 원시 이동량의 합입니다. */
-        ClockFunction                        _pfnNowMicroseconds;   /**< 이벤트 시각과 프레임 창을 측정하는 시계입니다(`setClock`). */
-        int64                                _frameEndMicroseconds; /**< 이번 `beginFrame` 의 시각입니다(폴링한 누름의 순간). */
-        IVirtualInputSource*                 _pVirtualInput;        /**< 붙인 가상 입력 원천입니다(빌림). nullptr 이면 OS 입력만 받습니다. */
-        VirtualCursor                        _virtualCursor;        /**< 패드 스틱으로 마우스 커서를 움직이는 가상 커서입니다. */
-        InputViewRect                        _gameView;             ///< 게임 화면의 창 안 사각형(`setGameViewRect`)
-        uint32                               _virtualFrameIndex;    /**< 붙인 뒤 `beginFrame` 횟수이며, 원천에 넘기는 프레임 번호입니다. */
-        uint32                               _beginFrameCount;      /**< `beginFrame` 을 부른 횟수입니다. */
-        InputGlyphStyle                      _activeGlyphStyle;     /**< 마지막으로 조작이 감지된 장치 종류입니다(UI 글리프 자동 전환용). */
-        ActiveDeviceChangedDelegate          _onActiveDeviceChanged;
-        GamepadConnectionDelegate            _onGamepadConnectionChanged;
-        TextInputDelegate                    _arrOnTextInput[kKeyboardFocusCount];       /**< 키보드 포커스 주인마다의 글자 콜백입니다. */
-        TextInputDelegate                    _arrOnTextComposition[kKeyboardFocusCount]; /**< 키보드 포커스 주인마다의 조합 중 글자 콜백입니다. */
-        uint64                               _arrCapturedKeyMask[kKeyMaskWordCount];     /**< 포커스가 `Game` 이 아닐 때 눌려서 게임에 보이지 않게 가린 키입니다(뗀 다음 프레임에 해제). */
-        uint32                               _arrCapturedGamepadMask[kMaxGamepadSlot];   /**< 개발 콘솔이 키보드를 쥔 동안 눌려서 게임에 보이지 않게 가린 패드 컨트롤입니다(비트는 `makeGamepadControlBit`). */
-        InputKeyboardFocus                   _keyboardFocus;                             /**< 지금 키보드를 받는 쪽입니다. */
-        VirtualInputMode                     _virtualInputMode;                          /**< 붙인 가상 입력 원천의 모드입니다. */
-        CursorShape                          _cursorShape;                               /**< OS 커서 모양입니다(`setCursorShape`). */
-        [[maybe_unused]] uint16              _pendingHighSurrogate;                      /**< 짝을 기다리는 서로게이트의 앞 반쪽입니다(Win32 WM_CHAR). 0 이면 없습니다. */
-        uint8                                _consumedButtonMask;                        /**< 잠금을 다시 잡느라 삼킨, 아직 떼지 않은 마우스 버튼 비트입니다(`1 << MouseButton`). */
-        uint8                                _bInitialized          : 1;
-        uint8                                _bInputMuted           : 1;
-        uint8                                _bWindowFocused        : 1; /**< 창이 포커스를 가지고 있는지 나타냅니다(포커스 메시지로 갱신하며, 창 없는 테스트에서는 true). */
-        uint8                                _bMouseLockEngaged     : 1; /**< 포커스를 잃은 뒤 클라이언트를 눌러 잠금을 다시 잡았는지 나타냅니다. */
-        uint8                                _bAltHeld              : 1; /**< Alt 를 누르고 있는지 나타냅니다(누르는 동안 잠금을 쉽니다). */
-        uint8                                _bCursorHiddenApplied  : 1; /**< OS 커서를 숨겨 둔 상태인지 나타냅니다. `ShowCursor` 는 카운터라서 전이할 때만 부릅니다. */
-        uint8                                _bOsDeviceInputBlocked : 1; /**< 무인 자동화가 창 메시지 단계에서 사람의 마우스와 키보드 이벤트를 버리는지 나타냅니다(`setOsDeviceInputBlocked`). */
-        [[maybe_unused]] uint8               _reserved              : 1;
+        ConcurrentQueue<RawInputEvent, 2048>      _queueRawEvent;        /**< OS 와 폴러 스레드가 postRawEvent() 로 넣는 락프리 원시 이벤트 큐입니다. beginFrame() 이 매 프레임 비웁니다. */
+        atomic<uint32>                            _droppedRawEventCount; /**< 큐가 가득 차서 버린 원시 이벤트의 누적 개수입니다. beginFrame() 에서 요약 로그를 남기고 0 으로 초기화합니다. */
+        vector<unique_ptr<IInputDevice>>          _listDevice;           /**< 등록된 모든 장치(키보드, 마우스, 게임패드 등)를 소유하는 목록입니다. */
+        KeyboardDevice*                           _pKeyboard;            /**< 편의 API 용 캐시 포인터입니다. 소유는 _listDevice 가 합니다. */
+        MouseDevice*                              _pMouse;               /**< 편의 API 용 캐시 포인터입니다. */
+        GamepadDevice*                            _pGamepad;             /**< 0번 게임패드 편의 API 용 캐시 포인터입니다(1~3번은 getGamepad(index) 로 조회). */
+        unique_ptr<InputMap>                      _pInputMap;            /**< 이 InputManager 에 연결된 기본 InputMap 인스턴스입니다. */
+        vector<RawInputEvent>                     _listDrainedEvent;     /**< beginFrame() 에서 큐를 비워 담아 두는 임시 버퍼입니다(매 프레임 재사용). */
+        vector<FramePress>                        _listFramePress;       /**< 이번 프레임에 눌린 컨트롤마다 첫 누름 순간입니다(beginFrame 이 비우고 채운다). */
+        float2                                    _frameLookDelta;       /**< 이번 프레임에 적용한 마우스 원시 이동량의 합입니다. */
+        ClockFunction                             _pfnNowMicroseconds;   /**< 이벤트 시각과 프레임 창을 측정하는 시계입니다(`setClock`). */
+        int64                                     _frameEndMicroseconds; /**< 이번 `beginFrame` 의 시각입니다(폴링한 누름의 순간). */
+        IVirtualInputSource*                      _pVirtualInput;        /**< 붙인 가상 입력 원천입니다(빌림). nullptr 이면 OS 입력만 받습니다. */
+        VirtualCursor                             _virtualCursor;        /**< 패드 스틱으로 마우스 커서를 움직이는 가상 커서입니다. */
+        InputViewRect                             _gameView;             ///< 게임 화면의 창 안 사각형(`setGameViewRect`)
+        uint32                                    _virtualFrameIndex;    /**< 붙인 뒤 `beginFrame` 횟수이며, 원천에 넘기는 프레임 번호입니다. */
+        uint32                                    _beginFrameCount;      /**< `beginFrame` 을 부른 횟수입니다. */
+        InputGlyphStyle                           _activeGlyphStyle;     /**< 마지막으로 조작이 감지된 장치 종류입니다(UI 글리프 자동 전환용). */
+        DelegateSlot<ActiveDeviceChangedDelegate> _onActiveDeviceChanged;
+        DelegateSlot<GamepadConnectionDelegate>   _onGamepadConnectionChanged;
+        DelegateSlot<TextInputDelegate>           _arrOnTextInput[kKeyboardFocusCount];       /**< 키보드 포커스 주인마다의 글자 콜백입니다. */
+        DelegateSlot<TextInputDelegate>           _arrOnTextComposition[kKeyboardFocusCount]; /**< 키보드 포커스 주인마다의 조합 중 글자 콜백입니다. */
+        uint64                                    _arrCapturedKeyMask[kKeyMaskWordCount];     /**< 포커스가 `Game` 이 아닐 때 눌려서 게임에 보이지 않게 가린 키입니다(뗀 다음 프레임에 해제). */
+        uint32                                    _arrCapturedGamepadMask[kMaxGamepadSlot];   /**< 개발 콘솔이 키보드를 쥔 동안 눌려서 게임에 보이지 않게 가린 패드 컨트롤입니다(비트는 `makeGamepadControlBit`). */
+        InputKeyboardFocus                        _keyboardFocus;                             /**< 지금 키보드를 받는 쪽입니다. */
+        VirtualInputMode                          _virtualInputMode;                          /**< 붙인 가상 입력 원천의 모드입니다. */
+        CursorShape                               _cursorShape;                               /**< OS 커서 모양입니다(`setCursorShape`). */
+        [[maybe_unused]] uint16                   _pendingHighSurrogate;                      /**< 짝을 기다리는 서로게이트의 앞 반쪽입니다(Win32 WM_CHAR). 0 이면 없습니다. */
+        uint8                                     _consumedButtonMask;                        /**< 잠금을 다시 잡느라 삼킨, 아직 떼지 않은 마우스 버튼 비트입니다(`1 << MouseButton`). */
+        uint8                                     _bInitialized          : 1;
+        uint8                                     _bInputMuted           : 1;
+        uint8                                     _bWindowFocused        : 1; /**< 창이 포커스를 가지고 있는지 나타냅니다(포커스 메시지로 갱신하며, 창 없는 테스트에서는 true). */
+        uint8                                     _bMouseLockEngaged     : 1; /**< 포커스를 잃은 뒤 클라이언트를 눌러 잠금을 다시 잡았는지 나타냅니다. */
+        uint8                                     _bAltHeld              : 1; /**< Alt 를 누르고 있는지 나타냅니다(누르는 동안 잠금을 쉽니다). */
+        uint8                                     _bCursorHiddenApplied  : 1; /**< OS 커서를 숨겨 둔 상태인지 나타냅니다. `ShowCursor` 는 카운터라서 전이할 때만 부릅니다. */
+        uint8                                     _bOsDeviceInputBlocked : 1; /**< 무인 자동화가 창 메시지 단계에서 사람의 마우스와 키보드 이벤트를 버리는지 나타냅니다(`setOsDeviceInputBlocked`). */
+        [[maybe_unused]] uint8                    _reserved              : 1;
     };
 } // namespace sw

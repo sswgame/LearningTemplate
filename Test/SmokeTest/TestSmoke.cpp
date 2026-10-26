@@ -693,8 +693,8 @@ SW_TEST_CASE( ArchitectureTest, ReleaseModuleCodeSweepsEveryRegistryTheEditorUse
 
     // 창의 닫기 처리기(살아 있는 모든 창이 훑긴다 — 주 창일 필요가 없다)
     sw::HandlerOnlyWindow              window;
-    const sw::WindowCloseQueryDelegate onClose = SW_DELEGATE_FUNCTION( sw::WindowCloseQueryDelegate, sw::refuseSweepProbeClose );
-    window.setCloseQueryHandler( onClose );
+    const sw::WindowCloseQueryDelegate onClose      = SW_DELEGATE_FUNCTION( sw::WindowCloseQueryDelegate, sw::refuseSweepProbeClose );
+    const sw::Subscription             closeBinding = window.bindCloseQueryHandler( onClose ); // 훑기가 칸을 비우면 이 구독은 아무것도 풀지 않는다
     SW_EXPECT_FALSE( window.tryBeginClose() );
     SW_EXPECT_EQUAL( 1u, sw::releaseStubOf( onClose ) );
     SW_EXPECT_TRUE( window.tryBeginClose() );

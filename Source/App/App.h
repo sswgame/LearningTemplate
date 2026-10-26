@@ -155,6 +155,9 @@ namespace sw
         ViewCameraProviderDelegate _sceneViewCameraProvider;
         /** @brief 설정 다시 읽기 알림(`ConfigManager::onConfigReloaded`)의 구독입니다. 엔진이 설정 표를 내리면 무효가 된다. */
         Subscription _configReloadedSubscription;
+        /** @brief 주 창의 크기 · 메시지 처리기 칸 구독입니다(`bindHostCallbacks`). 창이 엔진 종료 때 파괴되면 무효가 된다. */
+        Subscription _windowResizeSubscription;
+        Subscription _windowMessageSubscription;
         /// @brief `initialize` 가 시작된 시각(마이크로초, `MonotonicClock`)입니다. 메인 루프에 들어갈 때 로그에 시작 시간을 찍습니다.
         int64 _initializeStartMicro;
         /**

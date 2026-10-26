@@ -119,7 +119,7 @@ namespace sw
     {
         if ( _bShouldClose == SW_TRUE )
             return true;
-        if ( _closeQuery.isBound() && _closeQuery() == false )
+        if ( _closeQuery.isBound() && _closeQuery.get()() == false )
             return false;
         _bShouldClose = SW_TRUE;
         return true;
@@ -128,26 +128,10 @@ namespace sw
     uint32 IWindow::removeCodeWithin( const void* pBegin, const void* pEnd )
     {
         uint32 releasedCount{ 0 };
-        if ( _customHandler.isCodeWithin( pBegin, pEnd ) )
-        {
-            _customHandler = {};
-            ++releasedCount;
-        }
-        if ( _accessibilityQuery.isCodeWithin( pBegin, pEnd ) )
-        {
-            _accessibilityQuery = {};
-            ++releasedCount;
-        }
-        if ( _onResize.isCodeWithin( pBegin, pEnd ) )
-        {
-            _onResize = {};
-            ++releasedCount;
-        }
-        if ( _closeQuery.isCodeWithin( pBegin, pEnd ) )
-        {
-            _closeQuery = {};
-            ++releasedCount;
-        }
+        releasedCount += _customHandler.releaseIfCodeWithin( pBegin, pEnd ) ? 1u : 0u;
+        releasedCount += _accessibilityQuery.releaseIfCodeWithin( pBegin, pEnd ) ? 1u : 0u;
+        releasedCount += _onResize.releaseIfCodeWithin( pBegin, pEnd ) ? 1u : 0u;
+        releasedCount += _closeQuery.releaseIfCodeWithin( pBegin, pEnd ) ? 1u : 0u;
         return releasedCount;
     }
 

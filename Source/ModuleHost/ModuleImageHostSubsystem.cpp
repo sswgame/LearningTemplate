@@ -15,9 +15,9 @@ namespace sw
     {
     }
 
-    void ModuleImageHostSubsystem::setScenesReleasedHook( Delegate<void()> hook )
+    Subscription ModuleImageHostSubsystem::bindScenesReleasedHook( Delegate<void()> hook )
     {
-        _scenesReleasedHook = std::move( hook );
+        return _scenesReleasedHook.bind( std::move( hook ) );
     }
 
     bool ModuleImageHostSubsystem::loadTypeProviders()
@@ -28,7 +28,7 @@ namespace sw
     void ModuleImageHostSubsystem::onScenesReleased()
     {
         if ( _scenesReleasedHook.isBound() )
-            _scenesReleasedHook();
+            _scenesReleasedHook.get()();
     }
 
     ModuleImageHostSubsystem* ModuleImageHostSubsystem::initializeHostScope( SubsystemScope& hostScope, ModuleTypeLoaderDelegate moduleTypeLoader, const utf8* pHostName )

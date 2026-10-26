@@ -231,7 +231,7 @@ namespace sw
         {
             resizedWidth  = _width;
             resizedHeight = _height;
-            _onResize( resizedWidth, resizedHeight );
+            _onResize.get()( resizedWidth, resizedHeight );
         }
         _bResizing = SW_FALSE;
     }
@@ -273,7 +273,7 @@ namespace sw
                 event._message = msg;
                 event._wParam  = wParam;
                 event._lParam  = lParam;
-                if ( pThis->_customHandler( event ) )
+                if ( pThis->_customHandler.get()( event ) )
                     return true;
             }
 
@@ -283,7 +283,7 @@ namespace sw
                 {
                     // 접근성 클라이언트(내레이터)가 창의 UI Automation 제공자를 청한다. 답이 있으면 그 값을 돌려주고, 없으면 기본 처리(창 자체의 제공자)로 간다.
                     intptr_t result = 0;
-                    if ( pThis->_accessibilityQuery.isBound() && pThis->_accessibilityQuery( static_cast<uintptr_t>( wParam ), static_cast<intptr_t>( lParam ), result ) )
+                    if ( pThis->_accessibilityQuery.isBound() && pThis->_accessibilityQuery.get()( static_cast<uintptr_t>( wParam ), static_cast<intptr_t>( lParam ), result ) )
                         return static_cast<LRESULT>( result );
                     break;
                 }

@@ -88,6 +88,8 @@ namespace sw
         , _consumption{}
         , _uiInputMap{}
         , _pInput{ nullptr }
+        , _textInputSubscription{}
+        , _textCompositionSubscription{}
         , _lastPointerPosition{}
         , _lastMousePixel{}
         , _stickRepeatSeconds{ 0.0f }
@@ -107,8 +109,9 @@ namespace sw
         _pInput        = &inputManager;
         _bPointerKnown = SW_FALSE;
         _consumption.clear();
-        _pInput->setTextInputCallback( SW_DELEGATE_METHOD( InputManager::TextInputDelegate, &UIInputRouter::onTextInput, this ), InputKeyboardFocus::UI );
-        _pInput->setTextCompositionCallback( SW_DELEGATE_METHOD( InputManager::TextInputDelegate, &UIInputRouter::onTextComposition, this ), InputKeyboardFocus::UI );
+        _textInputSubscription = _pInput->bindTextInputCallback( SW_DELEGATE_METHOD( InputManager::TextInputDelegate, &UIInputRouter::onTextInput, this ), InputKeyboardFocus::UI );
+        _textCompositionSubscription =
+            _pInput->bindTextCompositionCallback( SW_DELEGATE_METHOD( InputManager::TextInputDelegate, &UIInputRouter::onTextComposition, this ), InputKeyboardFocus::UI );
         if ( uiInputMapPath.empty() )
             return true;
         _uiInputMap = make_unique<InputMap>();
@@ -131,9 +134,9 @@ namespace sw
         {
             if ( _pInput->getKeyboardFocus() == InputKeyboardFocus::UI )
                 _pInput->setKeyboardFocus( InputKeyboardFocus::Game );
-            _pInput->setTextInputCallback( {}, InputKeyboardFocus::UI );
-            _pInput->setTextCompositionCallback( {}, InputKeyboardFocus::UI );
         }
+        _textInputSubscription.reset(); // 이 라우터가 건 UI 포커스 칸만 놓는다
+        _textCompositionSubscription.reset();
         _uiInputMap.reset();
         _consumption.clear();
         _pInput = nullptr;

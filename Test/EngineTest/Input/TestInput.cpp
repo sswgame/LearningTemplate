@@ -1396,13 +1396,14 @@ SW_TEST_CASE( InputManagerTest, ReleaseModuleCodeDropsTheCallbacksAndDevicesOfTh
     const sw::InputManager::GamepadConnectionDelegate   onConnection  = SW_DELEGATE_FUNCTION( sw::InputManager::GamepadConnectionDelegate, onProbeGamepadConnection );
     const sw::InputManager::TextInputDelegate           onText        = SW_DELEGATE_FUNCTION( sw::InputManager::TextInputDelegate, onProbeTextInput );
     const sw::InputManager::TextInputDelegate           onComposition = SW_DELEGATE_FUNCTION( sw::InputManager::TextInputDelegate, onProbeTextComposition );
-    input.setActiveDeviceChangedCallback( onActive );
-    input.setGamepadConnectionCallback( onConnection );
-    input.setTextInputCallback( onText );
-    input.setTextCompositionCallback( onComposition );
-    sw::unique_ptr<ProbeInputDevice> pProbe    = sw::make_unique<ProbeInputDevice>();
-    ProbeInputDevice*                pProbeRaw = pProbe.get();
-    const uint8*                     pVtable   = static_cast<const uint8*>( sw::IModuleUnloadListener::findVtableAddress( static_cast<const sw::IInputDevice*>( pProbeRaw ) ) );
+    // 훑기가 칸을 비우면 이 구독들은 아무것도 풀지 않는다(주인이 내려간 모듈 안에 있을 수 있다).
+    const sw::Subscription           activeBinding      = input.bindActiveDeviceChangedCallback( onActive );
+    const sw::Subscription           connectionBinding  = input.bindGamepadConnectionCallback( onConnection );
+    const sw::Subscription           textBinding        = input.bindTextInputCallback( onText );
+    const sw::Subscription           compositionBinding = input.bindTextCompositionCallback( onComposition );
+    sw::unique_ptr<ProbeInputDevice> pProbe             = sw::make_unique<ProbeInputDevice>();
+    ProbeInputDevice*                pProbeRaw          = pProbe.get();
+    const uint8*                     pVtable            = static_cast<const uint8*>( sw::IModuleUnloadListener::findVtableAddress( static_cast<const sw::IInputDevice*>( pProbeRaw ) ) );
     input.registerDevice( std::move( pProbe ) );
     SW_EXPECT_TRUE( input.getDevice( sw::InputDeviceKind::Custom ) == pProbeRaw );
 
@@ -1444,7 +1445,7 @@ namespace
 } // namespace
 
 /**
- * @brief [InputManagerTest] WM_CHAR 의 글자가 다음 프레임에 `InputManager::setTextInputCallback` 콜백으로 UTF-8 로 온다
+ * @brief [InputManagerTest] WM_CHAR 의 글자가 다음 프레임에 `InputManager::bindTextInputCallback` 콜백으로 UTF-8 로 온다
  * @details 글자 입력의 창구는 이것 하나다(언리얼 `FSlateApplication::OnKeyChar` 자리). 메시지 펌프가 원시 이벤트로 넣고 `beginFrame` 이 콜백을 부른다.
  *          제어 문자(백스페이스 등)는 글자가 아니므로 오지 않는다.
  */
@@ -1452,7 +1453,7 @@ SW_TEST_CASE( InputManagerTest, WmCharReachesTheTextInputCallback )
 {
     sw::InputManager input;
     SW_ASSERT_TRUE( input.initialize() );
-    input.setTextInputCallback( SW_DELEGATE_FUNCTION( sw::InputManager::TextInputDelegate, onRecordTextInput ) );
+    sw::Subscription textBinding = input.bindTextInputCallback( SW_DELEGATE_FUNCTION( sw::InputManager::TextInputDelegate, onRecordTextInput ) );
     s_receivedText.clear();
 
     sw::NativeWindowEvent charEvent{};
@@ -1471,7 +1472,7 @@ SW_TEST_CASE( InputManagerTest, WmCharReachesTheTextInputCallback )
     SW_EXPECT_TRUE( s_receivedText.empty() );
     input.endFrame();
 
-    input.setTextInputCallback( {} );
+    textBinding.reset();
     input.shutdown();
 }
 
@@ -1484,7 +1485,7 @@ SW_TEST_CASE( InputManagerTest, WmCharSurrogatePairBecomesOneUtf8Character )
 {
     sw::InputManager input;
     SW_ASSERT_TRUE( input.initialize() );
-    input.setTextInputCallback( SW_DELEGATE_FUNCTION( sw::InputManager::TextInputDelegate, onRecordTextInput ) );
+    sw::Subscription textBinding = input.bindTextInputCallback( SW_DELEGATE_FUNCTION( sw::InputManager::TextInputDelegate, onRecordTextInput ) );
 
     const auto sendChars = [&input]( std::initializer_list<WPARAM> listCodeUnit ) -> sw::string
     {
@@ -1513,7 +1514,7 @@ SW_TEST_CASE( InputManagerTest, WmCharSurrogatePairBecomesOneUtf8Character )
     SW_EXPECT_TRUE( sendChars( { 0xD83D } ).empty() );
     SW_EXPECT_TRUE( sendChars( { 0xDE00 } ) == "\xF0\x9F\x98\x80" );
 
-    input.setTextInputCallback( {} );
+    textBinding.reset();
     input.shutdown();
 }
 #endif
@@ -1619,8 +1620,9 @@ SW_TEST_CASE( InputManagerTest, TextInputGoesToFocusOwner )
     sw::InputManager input;
     SW_ASSERT_TRUE( input.initialize() );
     FocusTextRecorder recorder;
-    input.setTextInputCallback( SW_DELEGATE_METHOD( sw::InputManager::TextInputDelegate, &FocusTextRecorder::onGameText, &recorder ) );
-    input.setTextInputCallback( SW_DELEGATE_METHOD( sw::InputManager::TextInputDelegate, &FocusTextRecorder::onConsoleText, &recorder ), sw::InputKeyboardFocus::DevConsole );
+    sw::Subscription  gameBinding = input.bindTextInputCallback( SW_DELEGATE_METHOD( sw::InputManager::TextInputDelegate, &FocusTextRecorder::onGameText, &recorder ) );
+    sw::Subscription  consoleBinding =
+        input.bindTextInputCallback( SW_DELEGATE_METHOD( sw::InputManager::TextInputDelegate, &FocusTextRecorder::onConsoleText, &recorder ), sw::InputKeyboardFocus::DevConsole );
 
     runInputFrame( input, { sw::RawInputEvent::makeTextInput( "a" ) } );
     input.endFrame();
@@ -1634,8 +1636,8 @@ SW_TEST_CASE( InputManagerTest, TextInputGoesToFocusOwner )
     SW_EXPECT_STREQ( "ac", recorder._game.c_str() );
     SW_EXPECT_STREQ( "b", recorder._console.c_str() );
 
-    input.setTextInputCallback( {} );
-    input.setTextInputCallback( {}, sw::InputKeyboardFocus::DevConsole );
+    gameBinding.reset();
+    consoleBinding.reset();
     input.shutdown();
 }
 
