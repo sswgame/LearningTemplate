@@ -15,6 +15,7 @@
  */
 #pragma once
 #include "Core/Common/Macros.h"
+#include "Core/Common/SecureUtil.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
@@ -234,7 +235,7 @@ namespace sw
         ITurnPolicy                 _defaultPolicy;
         INetPeers*                  _pHost;
         const ITurnPolicy*          _pPolicy;
-        uint64                      _tokenSecret;
+        SipHashKey                  _tokenKey; ///< 자리 토큰 PRF 의 비밀 키
         uint64                      _tokenCount;
         int32                       _seatCount;
         NetMessageWriter            _messageWriter; ///< 보낼 메시지. 버퍼를 재사용한다

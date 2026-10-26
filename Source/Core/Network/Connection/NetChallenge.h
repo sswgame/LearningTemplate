@@ -3,7 +3,7 @@
  * @brief 연결 핸드셰이크의 상태 없는 챌린지 값과 솔트를 만듭니다.
  * @details 서버는 연결 요청에 슬롯을 잡지 않고 챌린지 값만 돌려준다. 값은 비밀 키, 주소, 클라이언트 솔트, 시간 윈도우를 섞어 만들고,
  *          그 값을 되돌려 주는 응답이 값을 만든 윈도우나 그다음 윈도우 안(`kWindowSeconds` 의 1~2배)에 와야 유효하다.
- *          값은 128 비트 키의 SipHash-2-4(키 있는 PRF, `SecureUtil::sipHash24`)이고, 키는 솔트 수열과 따로 운영체제 난수에서 뽑는다(솔트는 선에 실린다).
+ *          값은 128 비트 키의 SipHash-2-4(키 있는 PRF, `SecureUtil::sipHash24`)이고, 솔트도 다른 키의 SipHash 이고, 두 키 모두 운영체제 난수에서 뽑는다(솔트는 선에 실린다).
  *          위조한 주소로 슬롯을 채우는 공격을 막는다. 64 비트 값이라 긴 메시지 인증에는 쓰지 않는다.
  *
  *          **스레드**: 잠금이 없다. `NetHost` 의 값 멤버로 그 잠금 안에서만 쓴다.
@@ -31,7 +31,7 @@ namespace sw
         /** @brief 솔트 수열을 시드하고 챌린지 키를 정합니다. @p saltSeed 가 0이면 둘 다 운영체제 난수입니다(위조 연결을 막는다). 0 이 아니면 키도 시드에서 만든다(테스트 · 결정적 시뮬레이션). */
         void initialize( uint64 saltSeed );
 
-        /** @brief 솔트 수열의 다음 값입니다. */
+        /** @brief 다음 솔트입니다 — 솔트 키의 SipHash(순번). 0 이 되지 않고, 앞 솔트들에서 맞힐 수 없다. */
         uint64 nextSalt();
         /** @brief @p nowSeconds 가 속한 윈도우의 챌린지 값입니다. 0 이 되지 않습니다. */
         uint64 makeToken( const NetAddress& address, uint64 clientSalt, float64 nowSeconds ) const;
@@ -43,7 +43,8 @@ namespace sw
     private:
         uint64 makeTokenForWindow( const NetAddress& address, uint64 clientSalt, int64 window ) const;
 
-        uint64     _saltState;
-        SipHashKey _key; ///< 서버 전용. 챌린지 값의 비밀 키(솔트 수열과 따로 뽑는다).
+        SipHashKey _saltKey;   ///< 솔트 PRF 의 비밀 키. 솔트는 (키, 순번) 의 SipHash 라 받은 솔트에서 다음 솔트를 맞힐 수 없다
+        SipHashKey _key;       ///< 서버 전용. 챌린지 값의 비밀 키(솔트 키와 따로 뽑는다).
+        uint64     _saltCount; ///< 지금까지 낸 솔트 수(PRF 입력)
     };
 } // namespace sw
