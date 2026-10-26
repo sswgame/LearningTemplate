@@ -12,9 +12,8 @@
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Base/ContainerVisitor.h"
+#include "Engine/Serialization/Base/NestedObjectCodec.h"
 #include "Engine/Serialization/Base/SchemaMigrate.h"
-#include "Engine/Serialization/Format/BinarySerializer.h"
-#include "Engine/Serialization/Format/JSONSerializer.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw
@@ -340,7 +339,7 @@ namespace sw
                 appendUint32( buffer, 0 );
 
                 const size_t bodyStart = buffer.size();
-                const bool   bWritten  = BinarySerializer::serialize( pObject, *pRuntimeType, buffer, context );
+                const bool   bWritten  = NestedObjectCodec::writeBinary( pObject, *pRuntimeType, buffer, context );
                 const uint32 bodySize  = static_cast<uint32>( buffer.size() - bodyStart );
                 Memory::copy( buffer.data() + sizePos, &bodySize, sizeof( uint32 ) );
                 return bWritten;
@@ -394,7 +393,7 @@ namespace sw
                     return ContainerReadResult::Read;
                 }
 
-                switch ( BinarySerializer::deserializeNested( pObj, *pType, pData + bodyStart, bodySize, context ) )
+                switch ( NestedObjectCodec::readBinary( pObj, *pType, pData + bodyStart, bodySize, context ) )
                 {
                     case FieldReadResult::Read:
                         return ContainerReadResult::Read;
@@ -642,7 +641,7 @@ namespace sw
                 listBuffer.insert( listBuffer.end(), pDummy, pDummy + sizeof( uint32 ) );
 
                 const size_t structStart = listBuffer.size();
-                const bool   bWritten    = BinarySerializer::serialize( pValuePtr, *pStructInfo, listBuffer, context );
+                const bool   bWritten    = NestedObjectCodec::writeBinary( pValuePtr, *pStructInfo, listBuffer, context );
                 const uint32 structSize  = static_cast<uint32>( listBuffer.size() - structStart );
 
                 Memory::copy( listBuffer.data() + sizePos, &structSize, sizeof( uint32 ) );
@@ -662,7 +661,7 @@ namespace sw
             return true;
         }
 
-        // 실을 수 없는 타입은 아무 바이트도 쓰지 않고 실패를 돌려준다. 이유는 부른 쪽이 프로퍼티 이름과 함께 알린다(`BinarySerializer::serialize`).
+        // 실을 수 없는 타입은 아무 바이트도 쓰지 않고 실패를 돌려준다. 이유는 부른 쪽이 프로퍼티 이름과 함께 알린다(바이너리 직렬화기).
         return false;
     }
 
@@ -690,7 +689,7 @@ namespace sw
                 if ( SerializerUtilInternal::readSizedBlock( pData, dataSize, offset, blockStart, blockSize ) == false )
                     return FieldReadResult::FieldFailed;
                 // 구조체 안의 객체째 실패(금지된 필드)는 그대로 올린다. bool 로 접으면 부른 쪽이 이 칸만 되돌리고 orphan 으로 넘긴다.
-                return BinarySerializer::deserializeNested( pValuePtr, *pStructInfo, pData + blockStart, blockSize, context );
+                return NestedObjectCodec::readBinary( pValuePtr, *pStructInfo, pData + blockStart, blockSize, context );
             }
         }
 
@@ -753,7 +752,7 @@ namespace sw
         {
             if ( pStructInfo->isPrimitive() == false )
             {
-                ss.append( JSONSerializer::serialize( pValPtr, *pStructInfo, context ) );
+                ss.append( NestedObjectCodec::writeJSON( pValPtr, *pStructInfo, context ) );
                 return;
             }
         }
@@ -798,9 +797,9 @@ namespace sw
                 if ( bQuotedStruct )
                 {
                     const string unescaped = JSONDocument::unescapeString( sv.substr( 1, sv.size() - 2 ) );
-                    return JSONSerializer::deserialize( pValPtr, *pStructInfo, unescaped, context );
+                    return NestedObjectCodec::readJSON( pValPtr, *pStructInfo, unescaped, context );
                 }
-                return JSONSerializer::deserialize( pValPtr, *pStructInfo, sv, context );
+                return NestedObjectCodec::readJSON( pValPtr, *pStructInfo, sv, context );
             }
         }
 

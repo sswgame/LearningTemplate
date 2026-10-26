@@ -9,6 +9,7 @@
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Serialization/Base/ContainerVisitor.h"
+#include "Engine/Serialization/Base/NestedObjectCodec.h"
 #include "Engine/Serialization/Base/SchemaMigrate.h"
 #include "Engine/Serialization/Base/SerializerUtil.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
@@ -647,4 +648,18 @@ namespace sw
         } ) );
     }
 
+} // namespace sw
+
+namespace sw
+{
+    // Base 가 선언한 구조체 칸 창구의 JSON 몸통이다(`NestedObjectCodec.h` — Base 가 이 형식을 include 하지 않게).
+    string NestedObjectCodec::writeJSON( const void* pObject, const TypeInfo& typeInfo, const SerializeContext& context )
+    {
+        return JSONSerializer::serialize( pObject, typeInfo, context );
+    }
+
+    bool NestedObjectCodec::readJSON( void* pObject, const TypeInfo& typeInfo, string_view jsonText, const SerializeContext& context )
+    {
+        return JSONSerializer::deserialize( pObject, typeInfo, jsonText, context );
+    }
 } // namespace sw

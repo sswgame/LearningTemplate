@@ -10,6 +10,7 @@
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Serialization/Base/BinaryStream.h"
 #include "Engine/Serialization/Base/ContainerVisitor.h"
+#include "Engine/Serialization/Base/NestedObjectCodec.h"
 #include "Engine/Serialization/Base/SchemaMigrate.h"
 #include "Engine/Serialization/Base/SerializerUtil.h"
 #include "Engine/Serialization/Format/Archive.h"
@@ -701,5 +702,19 @@ namespace sw
         {
             return deserializeCompressed( pInstance, typeInfo, pData, dataSize, context );
         } );
+    }
+} // namespace sw
+
+namespace sw
+{
+    // Base 가 선언한 구조체 칸 창구의 바이너리 몸통이다(`NestedObjectCodec.h` — Base 가 이 형식을 include 하지 않게).
+    bool NestedObjectCodec::writeBinary( const void* pObject, const TypeInfo& typeInfo, vector<uint8>& outListBuffer, const SerializeContext& context )
+    {
+        return BinarySerializer::serialize( pObject, typeInfo, outListBuffer, context );
+    }
+
+    FieldReadResult NestedObjectCodec::readBinary( void* pObject, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize, const SerializeContext& context )
+    {
+        return BinarySerializer::deserializeNested( pObject, typeInfo, pData, dataSize, context );
     }
 } // namespace sw
