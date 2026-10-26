@@ -63,6 +63,8 @@ namespace sw::editor
         void focusOnPoint( const float3& target, float32 radius ) { _camera.focusOnPoint( target, radius ); }
 
         const float3& getCameraPosition() const { return _camera.getPosition(); }
+        /** @brief 씬 뷰 카메라의 궤도 거리(m)입니다. 프로브 `Editor.SceneViewOrbitDistance` 가 읽습니다. */
+        float32 getCameraOrbitDistance() const { return _camera.getOrbitDistance(); }
         /** @brief 씬 뷰 카메라(위치 · 회전 · 직교 · 속도)를 새 에디터 세션이 시작하는 값으로 되돌립니다. 씬을 다시 열어도 카메라 값은 이어지므로 따로 되돌린다. */
         void resetCameraToDefault();
         /** @brief 씬 뷰 카메라를 위치 @p position, 회전 @p rotation(도, 피치 · 요 · 롤)에 놓습니다(개발 명령 `camera.set`). */

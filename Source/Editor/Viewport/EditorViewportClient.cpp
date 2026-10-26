@@ -102,13 +102,28 @@ namespace sw::editor
                     processShortcutKeys();
             }
 
-            const bool bOrthographicZoom = _camera.isOrthographicView() && bWindowHovered && MathUtil::abs( io.MouseWheel ) > 0.01f;
+            // 휠은 직교 보기에서 확대 · 축소, 원근 보기에서 궤도 거리 줌(dolly)이다. 가운데 단추 끌기는 팬이다(언리얼 · 유니티 · Godot).
+            const bool bWheel = bWindowHovered && MathUtil::abs( io.MouseWheel ) > 0.01f;
             if ( io.KeyAlt )
+            {
                 _camera.processOrbitInput();
+            }
             else if ( io.MouseDown[1] )
+            {
                 _camera.processFlyInput( deltaTime, _toolbarSettings._cameraSpeed );
-            else if ( bOrthographicZoom )
-                _camera.zoomOrthographic( io.MouseWheel );
+            }
+            else
+            {
+                if ( io.MouseDown[2] && bWindowHovered )
+                    _camera.pan( io.MouseDelta.x, io.MouseDelta.y );
+                if ( bWheel )
+                {
+                    if ( _camera.isOrthographicView() )
+                        _camera.zoomOrthographic( io.MouseWheel );
+                    else
+                        _camera.dolly( io.MouseWheel );
+                }
+            }
         }
 
         _camera.applyToCamera( getSceneViewCamera() );
