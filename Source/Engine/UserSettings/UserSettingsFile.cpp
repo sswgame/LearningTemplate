@@ -151,7 +151,12 @@ namespace sw
             {
                 case UserSettingStorageKind::Bool:
                 {
-                    field.setBool( StringUtil::parseBool( entry._value, false ) );
+                    // 불로 읽히지 않는 글을 false 로 바꿔 적지 않는다 — 글 그대로 적으면 다음 읽기가 경고하고 기본값을 쓴다(숫자 칸과 같다).
+                    bool bValue{ false };
+                    if ( StringUtil::tryParseBool( entry._value, bValue ) )
+                        field.setBool( bValue );
+                    else
+                        field.setString( entry._value );
                     break;
                 }
                 case UserSettingStorageKind::Number:
