@@ -310,6 +310,17 @@
       "source": "docs/plans/Candidates-engine.md NavMeshExtensions", "result_doc": "docs/plans/Candidates-engine.md NavMeshExtensions 절을 지운다"
     },
     {
+      "id": "shooter3d-keyrebind-scenario", "title": "shooter3d/rebind 시나리오(점프 키 Space→J 다시 잡기, 패드 A 는 그대로)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": false,
+      "covered": ["game/shooter3d/automation/rebind.scenario.xml"], "covered_by": "app-scenarios-release",
+      "source": "docs/plans/Candidates-ui.md", "result_doc": "docs/plans/Candidates-ui.md",
+      "note": "설정 파일을 Saved/Automation 아래로 돌리고 시작할 때 Space 로 되돌려 반복 실행해도 같다. 개발 명령이 없는 구성은 건너뛴다."
+    },
+    {
+      "id": "usersettings-keybinding-restart", "title": "다시 잡은 키가 재시작(새 설정 관리자 · 새 입력 맵) 뒤에도 남는다", "kind": "covered", "config": "Debug", "platform": "windows", "gpu": "none", "pending": false,
+      "covered": ["UserSettingsTest.KeyBindingSurvivesRestart"], "covered_by": "ctest-nogpu",
+      "source": "docs/plans/Candidates-ui.md", "result_doc": "docs/plans/Candidates-ui.md"
+    },
+    {
       "id": "terrainedits-scenario", "title": "terrainedits 시나리오(differingFraction 문턱)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": false,
       "covered": ["engine/automation/rhiswap/terrainedits.scenario.xml"], "covered_by": "app-scenarios-release",
       "source": "docs/plans/NEXT.md 0000절 표 B 단계", "result_doc": "docs/plans/NEXT.md 0000절",

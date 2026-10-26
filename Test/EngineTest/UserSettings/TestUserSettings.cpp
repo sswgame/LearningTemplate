@@ -667,6 +667,55 @@ SW_TEST_CASE( UserSettingsTest, KeyBindingReachesAnAddedInputMap )
 }
 
 /**
+ * @brief [UserSettingsTest] 다시 잡은 키는 재시작(저장 → 새 설정 관리자와 새 입력 맵이 파일을 읽어 기동 적용) 뒤에도 남고, 안 바꾼 액션은 기본 키 그대로다
+ * @details 변이: 키 설정을 사용자 파일에 쓰지 않거나 `reapplyAll` 이 키 설정을 입력 맵에 넣지 않으면 두 번째 판의 Jump 가 Space 에 머물러 진다.
+ */
+SW_TEST_CASE( UserSettingsTest, KeyBindingSurvivesRestart )
+{
+    using Internal                     = UserSettingsTestInternal;
+    const sw::string      path         = Internal::makeTempPath( "sw_usersettingstest_keybinding.json" );
+    const sw::string_view kSchema      = R"(<UserSettingsSchema version="1"><Category id="controls"/>
+        <Setting id="controls.jump" category="controls" type="keyBinding" action="Jump" default=""/>
+        <Setting id="controls.fire" category="controls" type="keyBinding" action="Fire" default=""/></UserSettingsSchema>)";
+    const auto            bindDefaults = []( sw::InputMap& map )
+    {
+        map.registerLayer( "Gameplay", 0, true, false, false );
+        map.bind( "Jump", sw::Key::Space, sw::ActionTrigger::Pressed, "Gameplay" );
+        map.bind( "Fire", sw::MouseButton::Left, sw::ActionTrigger::Pressed, "Gameplay" );
+    };
+    {
+        sw::InputMap inputMap;
+        bindDefaults( inputMap );
+        sw::UserSettingsManager settings;
+        sw::UserSettingsTargets targets;
+        targets._pInputMap = &inputMap;
+        settings.initialize( targets );
+        SW_ASSERT_TRUE( settings.loadSchemaFromXMLText( kSchema, "restart.settings.xml" ) );
+        settings.setUserFilePath( path );
+        settings.reapplyAll();
+        SW_EXPECT_TRUE( settings.setPendingBinding( "controls.jump", "Key.J", sw::UserSettingBindingPolicy::Reject ) == sw::UserSettingSetResult::Accepted );
+        SW_EXPECT_TRUE( settings.applyPending()._bSaved );
+    }
+    {
+        sw::InputMap inputMap; // 기본 바인딩으로 새로 만든다 — 재시작한 프로세스
+        bindDefaults( inputMap );
+        sw::UserSettingsManager settings;
+        sw::UserSettingsTargets targets;
+        targets._pInputMap = &inputMap;
+        settings.initialize( targets );
+        SW_ASSERT_TRUE( settings.loadSchemaFromXMLText( kSchema, "restart.settings.xml" ) );
+        SW_ASSERT_TRUE( settings.loadUserFile( path ) );
+        settings.reapplyAll();
+        sw::InputSlot slot;
+        SW_ASSERT_TRUE( inputMap.findRebindSlot( "Jump", 0, slot ) );
+        SW_EXPECT_TRUE( slot == sw::InputSlot::fromKey( sw::Key::J ) );
+        SW_ASSERT_TRUE( inputMap.findRebindSlot( "Fire", 0, slot ) );
+        SW_EXPECT_TRUE( slot == sw::InputSlot::fromMouseButton( sw::MouseButton::Left ) );
+    }
+    SW_EXPECT_TRUE( sw::FileUtil::removeFile( path ) );
+}
+
+/**
  * @brief [UserSettingsTest] 입력 슬롯 글 표기는 왕복한다 — 키 · 마우스 · 패드 번호 · 모르는 이름
  */
 SW_TEST_CASE( UserSettingsTest, InputSlotTextRoundTrips )

@@ -12,10 +12,9 @@
 옛번호: D6-4
 왜 필요한가: `Engine/UI/README.md` 의 옵션 · 일시정지 메뉴 중 확인이 남았다.
 남은 것:
-- 키 바인딩이 재시작 뒤에도 유지되는지의 실기동 확인(Shooter3D · 패드): 두 번 기동해야 하고 사용자 설정 파일을 쓰므로 시나리오 하나로 못 한다(15 초 되돌림은 `engine/automation/displayrevert.scenario.xml` 이 본다).
-- "타이틀로" 단추: 타이틀 씬(`titleScene`)을 가진 게임이 아직 없어 어느 게임에서도 접혀 있다. 타이틀 화면을 만드는 게임이 생기면 그 게임으로 확인한다.
-못 하는 이유(2026-10-24): 패드 실기 입력과 두 번 기동이 필요하고, 타이틀 씬을 가진 게임이 없다. 풀리는 조건: 패드가 있는 실기에서 두 번 기동해 보거나 타이틀 씬을 가진 게임이 생길 때.
-2026-10-27 재확인: `Resource` 의 어느 게임 `gamesettings.xml` 에도 `titleScene` 이 없다. 그대로 둔다.
+- "타이틀로" 단추: 타이틀 씬(`titleScene`)을 가진 게임이 아직 없어 어느 게임에서도 접혀 있다(단추 보임 · 눌림은 `UIOptionsMenuTest.PauseMenuSessionButtonsFollowGlobalCommands` 가 보고, 게임 쪽 `GameInstanceBase` 의 등록 · 씬 로드는 테스트가 없다). 타이틀 화면을 만드는 게임이 생기면 그 게임으로 시나리오를 만든다.
+2026-10-27 자동화: 키 다시 잡기는 `game/shooter3d/automation/rebind.scenario.xml`(옵션 메뉴와 같은 길로 점프 키를 바꾸고 가상 패드 A 는 그대로임을 본다 — 패드 실기가 필요 없다)과 `UserSettingsTest.KeyBindingSurvivesRestart`(저장 → 새 설정 관리자 · 새 입력 맵이 읽어 기동 적용)로 옮겼다(매니페스트 `shooter3d-keyrebind-scenario` · `usersettings-keybinding-restart`). 진짜 두 번 기동은 `Engine.cpp` 의 사용자 바인딩 경로 배선만 더 보며, 같은 설정 파일로 두 번 도는 시나리오 실행기는 아직 없다.
+못 하는 이유: 타이틀 씬을 가진 게임이 없다(2026-10-27 `Resource` 의 어느 게임 `gamesettings.xml` 에도 `titleScene` 이 없다). 풀리는 조건: 타이틀 씬을 가진 게임이 생길 때.
 
 ### DetachedGameViewKeyboard
 제목: 떼어 낸 게임 뷰 창의 키보드를 실제 OS 창에서 확인
@@ -45,7 +44,7 @@
 제목: 화면 마커의 투영 · 컬링을 컴퓨트로
 옛번호: G-13
 왜 필요한가: 이름표 2,000 개의 남은 게임 스레드 몫 `GT.UI.Markers` p50 0.49 ~ 0.52 ms(마커마다 월드 위치 읽기 · 투영 · 앵커 쓰기. 위치 · 배율 적용은 이미 GPU 앵커다 — [결정 기록](../09_Decisions.md) 5-7).
-착수 조건: 게임 HUD 에서 마커가 2,000 개를 넘거나 이 구간이 0.5 ms 를 꾸준히 넘을 때.
+착수 조건: 게임 HUD 에서 마커가 2,000 개를 넘거나 이 구간이 0.5 ms 를 꾸준히 넘을 때. 구간의 측정은 이미 자동이다(`perf-compare` 의 `uiNameplates` 케이스, 매니페스트 `perf-compare-ui` 의 GT.UI.* 합 0.5 ms 한도) — 조건의 앞쪽(게임 HUD 의 마커 수)은 게임 내용의 사실이라 측정할 수 없다.
 남은 것: 컴퓨트가 GPUScene 변환을 읽어 앵커 표를 쓰는 모양이다(마커 ↔ GPU 인스턴스 대응이 필요하다). 데미지 숫자처럼 시간 함수로만 움직이는 UI 의 GPU 애니메이션도 같은 길이다.
 함정: 측정은 Release `App -gv_benchMeshes=2000 -gv_benchUiNameplates=2000 -gv_profileFrames=600` 의 `GT.UI.Markers` · `GT.UI.Paint`.
 2026-10-24 확인: 마커를 쓰는 곳은 벤치 장면(`Source/Games/Empty/BenchScene*`)뿐이라 게임 HUD 에는 조건이 닿지 않았다. 그대로 둔다(2026-10-27 재확인: `Source/Games` 에서 마커는 여전히 `Empty` 벤치뿐이다). 컴퓨트 패스 · 셰이더 · 마커 ↔ GPU 인스턴스 대응이 렌더러 영역이다.
