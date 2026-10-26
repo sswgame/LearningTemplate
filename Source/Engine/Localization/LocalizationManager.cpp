@@ -811,22 +811,29 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 4) 조회와 포맷
     // ------------------------------------------------------------------------------
-    const utf8* LocalizationManager::getString( const hashed_string& key, const utf8* pDefaultText ) const
+    const utf8* LocalizationManager::getString( const hashed_string& key ) const
     {
-        // intern 된 키는 해시를 이미 가지고 있다. 다시 계산하지 않는다.
-        const utf8* pFound = findByHash( key.getHash() );
+        // 빈 키는 "글 없음" 이다. `hashed_string` 의 빈 이름은 "None" 으로 읽히므로 키 이름으로 돌려주지 않는다.
+        if ( key.empty() )
+            return "";
+        const utf8* pFound = findString( key );
         if ( pFound != nullptr )
             return pFound;
-        reportMissingKey( key.c_str() );
-        return pDefaultText;
+        reportMissingKey( key.view() );
+        return key.c_str();
     }
 
-    const utf8* LocalizationManager::getStringByText( string_view keyText, const utf8* pDefaultText ) const
+    const utf8* LocalizationManager::findString( const hashed_string& key ) const
+    {
+        // intern 된 키는 해시를 이미 가지고 있다. 다시 계산하지 않는다.
+        return findByHash( key.getHash() );
+    }
+
+    const utf8* LocalizationManager::findStringByText( string_view keyText ) const
     {
         if ( keyText.empty() )
-            return pDefaultText;
-        const utf8* pFound = findByHash( hashed_string::computeHash( keyText ) );
-        return pFound != nullptr ? pFound : pDefaultText;
+            return nullptr;
+        return findByHash( hashed_string::computeHash( keyText ) );
     }
 
     const utf8* LocalizationManager::findByHash( uint64 keyHash ) const
@@ -844,18 +851,12 @@ namespace sw
         return nullptr;
     }
 
-    const utf8* LocalizationManager::getStringFromLanguage( string_view languageCode, const hashed_string& key, const utf8* pDefaultText ) const
+    const utf8* LocalizationManager::findStringFromLanguage( string_view languageCode, const hashed_string& key ) const
     {
         const string                        code = normalizeLanguageCode( languageCode );
         std::shared_lock<std::shared_mutex> lock( _mutex );
         const auto                          it = _mapLanguageTable.find( code );
-        if ( it != _mapLanguageTable.end() )
-        {
-            const utf8* pFound = it->second->getString( key );
-            if ( pFound != nullptr )
-                return pFound;
-        }
-        return pDefaultText;
+        return it != _mapLanguageTable.end() ? it->second->getString( key ) : nullptr;
     }
 
     bool LocalizationManager::hasString( const hashed_string& key ) const
@@ -885,9 +886,14 @@ namespace sw
         return text;
     }
 
-    string LocalizationManager::getFormattedString( const hashed_string& key, const TextArgumentList& arguments, const utf8* pDefaultText ) const
+    string LocalizationManager::getFormattedString( const hashed_string& key, const TextArgumentList& arguments, const utf8* pFallbackPattern ) const
     {
-        const utf8* pPattern = getString( key, pDefaultText );
+        const utf8* pPattern = findString( key );
+        if ( pPattern == nullptr )
+        {
+            reportMissingKey( key.view() );
+            pPattern = pFallbackPattern;
+        }
         return formatText( pPattern != nullptr ? string_view( pPattern ) : string_view{}, arguments );
     }
 
@@ -909,7 +915,7 @@ namespace sw
             bFirst = _uniqueMissingKey.insert( string( key ) ).second;
         }
         if ( bFirst )
-            SW_LOG_WARNING( "Missing localized text for key '%#' (culture '%#')", key, language.c_str() );
+            SW_LOG_WARNING_ID( "Localization.MissingKey", "Missing localized text for key '%#' (culture '%#')", key, language.c_str() );
     }
 
     vector<string> LocalizationManager::getMissingKeys() const

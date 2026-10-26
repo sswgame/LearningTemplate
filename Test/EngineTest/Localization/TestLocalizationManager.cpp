@@ -106,27 +106,31 @@ SW_TEST_CASE( LocalizationManagerTest, ProjectCultureChainSkipsStaleAndReviewTra
 }
 
 /**
- * @brief [LocalizationManagerTest] 어디에도 없는 키는 빠진 키로 한 번 기록된다 — 글을 하나도 올리지 않은 실행은 기록하지 않는다
+ * @brief [LocalizationManagerTest] 어디에도 없는 키는 빠진 키로 한 번 기록되고 빈 글이 아니라 키 이름으로 보인다 — 글을 하나도 올리지 않은 실행은 기록하지 않는다
  */
 SW_TEST_CASE( LocalizationManagerTest, MissingKeysAreReportedOnce )
 {
     sw::LocalizationManager empty;
-    (void)empty.getString( sw::hashed_string( "nothing.loaded" ), "x" );
+    SW_EXPECT_STREQ( "nothing.loaded", empty.getString( sw::hashed_string( "nothing.loaded" ) ) );
     SW_EXPECT_TRUE( empty.getMissingKeys().empty() );
 
     const sw::string        folder = test::makeTempDirectory( "loc_missing" );
     sw::LocalizationManager loc;
     SW_ASSERT_TRUE( loc.mountProject( ::test::makeTempResourceID( writeSampleProject( folder ) ), sw::LocalizationScope::Game ) );
     test::ScopedLogCollector logs;
-    SW_EXPECT_STREQ( "fallback", loc.getString( sw::hashed_string( "ui.unknown" ), "fallback" ) );
-    SW_EXPECT_STREQ( "fallback", loc.getString( sw::hashed_string( "ui.unknown" ), "fallback" ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a key that no table has" );
+        SW_EXPECT_STREQ( "ui.unknown", loc.getString( sw::hashed_string( "ui.unknown" ) ) );
+        SW_EXPECT_STREQ( "ui.unknown", loc.getString( sw::hashed_string( "ui.unknown" ) ) );
+    }
     const sw::vector<sw::string> listMissing = loc.getMissingKeys();
     SW_ASSERT_EQUAL( size_t( 1 ), listMissing.size() );
     SW_EXPECT_STREQ( "ui.unknown", listMissing[0].c_str() );
-    SW_EXPECT_TRUE( logs.joined().find( "ui.unknown" ) != sw::string::npos );
+    SW_EXPECT_EQUAL( 1u, logs.countWithID( "Localization.MissingKey" ) );
 
-    // 키가 아닐 수도 있는 글로 묻는 길(대사 원문)은 기록하지 않는다.
-    SW_EXPECT_STREQ( "Hello traveler", loc.getStringByText( "Hello traveler", "Hello traveler" ) );
+    // 없음을 스스로 다루는 길(`findString`)과 키가 아닐 수도 있는 글로 묻는 길(대사 원문)은 기록하지 않는다.
+    SW_EXPECT_NULL( loc.findString( sw::hashed_string( "ui.unknown2" ) ) );
+    SW_EXPECT_NULL( loc.findStringByText( "Hello traveler" ) );
     SW_EXPECT_EQUAL( size_t( 1 ), loc.getMissingKeys().size() );
 }
 
@@ -302,7 +306,7 @@ SW_TEST_CASE( LocalizationManagerTest, GameServiceMountsTheGameProject )
     SW_EXPECT_STREQ( "신비의 섬", pLoc->getString( sw::hashed_string( "ui.title" ) ) );
     SW_EXPECT_STREQ( "종료(한국)", pLoc->getString( sw::hashed_string( "ui.quit" ) ) );
     SW_EXPECT_TRUE( pLoc->hasLanguage( "ja" ) );
-    SW_EXPECT_STREQ( "Mystery Island", pLoc->getStringFromLanguage( "en", sw::hashed_string( "ui.title" ) ) );
+    SW_EXPECT_STREQ( "Mystery Island", pLoc->findStringFromLanguage( "en", sw::hashed_string( "ui.title" ) ) );
 
     sw::string   notifiedNewLang;
     const uint32 callbackID = pLoc->registerLanguageChangedCallback( [&]( sw::string_view, sw::string_view newLang )
