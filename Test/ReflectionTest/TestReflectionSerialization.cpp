@@ -71,8 +71,7 @@ namespace
     {
         if ( actual == pExpected )
             return true;
-        std::fprintf( stdout, "[golden %s]\n---expected---\n%s\n---actual---\n%s\n", pLabel, pExpected, actual.c_str() );
-        std::fflush( stdout );
+        test::printTestNote( "[golden %s]\n---expected---\n%s\n---actual---\n%s", pLabel, pExpected, actual.c_str() );
         return false;
     }
 
@@ -1545,7 +1544,7 @@ SW_TEST_CASE( ReflectionSerializationTest, NestedContainerRoundtripAllFormats )
     const auto verify = [&]( const sw::NestedContainerActor& dst, const utf8* pLabel )
     {
         // 실패 시 어느 포맷인지 알 수 있게 라벨을 먼저 남긴다.
-        std::fprintf( stdout, "[nested roundtrip] format=%s\n", pLabel );
+        test::printTestNote( "[nested roundtrip] format=%s", pLabel );
         SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), dst._grid.size() );
         SW_EXPECT_EQUAL( 5, dst._grid[1][2] );
         SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), dst._namedRows.size() );
@@ -2893,24 +2892,24 @@ SW_TEST_CASE( ReflectionSerializationTest, GoldenOutputFormatsStable )
 
     const sw::string json = sw::JSONSerializer::serialize( &src, *typeInfo );
     if ( json != kGoldenJSON )
-        std::fprintf( stdout, "[golden json]\n  expected: %s\n  actual  : %s\n", kGoldenJSON.c_str(), json.c_str() );
+        test::printTestNote( "[golden json]\n  expected: %s\n  actual  : %s", kGoldenJSON.c_str(), json.c_str() );
     SW_EXPECT_TRUE( json == kGoldenJSON );
 
     const sw::string pretty = sw::JSONSerializer::serializePretty( &src, *typeInfo, 4 );
     if ( pretty != kGoldenPretty )
-        std::fprintf( stdout, "[golden pretty]\n---expected---\n%s\n---actual---\n%s\n", kGoldenPretty.c_str(), pretty.c_str() );
+        test::printTestNote( "[golden pretty]\n---expected---\n%s\n---actual---\n%s", kGoldenPretty.c_str(), pretty.c_str() );
     SW_EXPECT_TRUE( pretty == kGoldenPretty );
 
     const sw::string xml = sw::XMLSerializer::serialize( &src, *typeInfo );
     if ( xml != kGoldenXML )
-        std::fprintf( stdout, "[golden xml]\n---expected---\n%s\n---actual---\n%s\n", kGoldenXML.c_str(), xml.c_str() );
+        test::printTestNote( "[golden xml]\n---expected---\n%s\n---actual---\n%s", kGoldenXML.c_str(), xml.c_str() );
     SW_EXPECT_TRUE( xml == kGoldenXML );
 
     sw::vector<uint8> bin;
     SW_EXPECT_TRUE( sw::BinarySerializer::serialize( &src, *typeInfo, bin ) );
     const sw::string binHex = toHexString( bin );
     if ( binHex != kGoldenBinHex )
-        std::fprintf( stdout, "[golden binhex]\n  expected: %s\n  actual  : %s\n", kGoldenBinHex.c_str(), binHex.c_str() );
+        test::printTestNote( "[golden binhex]\n  expected: %s\n  actual  : %s", kGoldenBinHex.c_str(), binHex.c_str() );
     SW_EXPECT_TRUE( binHex == kGoldenBinHex );
 
     // 역방향: 골든 문자열을 다시 읽어 원본과 같은지 (안전망 자체가 유효한지 확인)

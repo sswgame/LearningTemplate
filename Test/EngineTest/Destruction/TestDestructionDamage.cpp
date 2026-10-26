@@ -13,8 +13,6 @@
 #include "TestFramework/TestFramework.h"
 
 #include <cinttypes>
-#include <cstdio>
-#include <cstdlib>
 
 // DestructionDamageTest — 변형 임계값(깊이별) · 넘친 몫이 아래 레벨로 · 연결 세기 · 부딪힘 충격량 · 폭발 감쇠, 같은 사건열 = 같은 상태(네트워크 동기화).
 
@@ -250,7 +248,7 @@ SW_TEST_CASE( DestructionDamageTest, EventLogHashMatchesTheRecordedValueOnEveryB
     {
         for ( size_t index = 0; index < listHash.size(); ++index )
         {
-            std::fprintf( stdout, "golden[%zu] = 0x%016" PRIX64 "ull\n", index, listHash[index] );
+            test::printTestNote( "golden[%zu] = 0x%016" PRIX64 "ull", index, listHash[index] );
         }
     }
     // Windows Debug 에서 뜬 값 — Windows Shipping 에서도 같다(적용 때 확인). 리눅스는 CI 의 리눅스 잡이 지킨다.

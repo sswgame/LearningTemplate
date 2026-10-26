@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Common/HashUtil.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
@@ -15,9 +16,6 @@
 #include "TestFramework/TestFramework.h"
 
 #include <cinttypes>
-#include <cstdio>
-#include <cstdlib>
-#include <random>
 
 using namespace sw;
 
@@ -208,11 +206,14 @@ namespace
         inoutBytes.resize( writeIndex );
     }
 
-    uint64 readEnvironmentNumber( const utf8* pName, uint64 fallback )
+    /** @brief 환경 변수의 정수(10 진 또는 `0x` 16 진)입니다. 없거나 비면 @p fallback 이고, 값이 있는데 숫자가 아니면 false 입니다. */
+    [[nodiscard]] bool tryReadEnvironmentNumber( const utf8* pName, uint64 fallback, uint64& outValue )
     {
-        sw::string  pValueText;
-        const utf8* pValue = sw::ProcessEnvironment::tryRead( pName, pValueText ) ? pValueText.c_str() : nullptr;
-        return pValue != nullptr && pValue[0] != '\0' ? std::strtoull( pValue, nullptr, 0 ) : fallback;
+        sw::string valueText;
+        outValue = fallback;
+        if ( sw::ProcessEnvironment::tryReadNonEmpty( pName, valueText ) == false )
+            return true;
+        return StringUtil::parseUint64( valueText, outValue, 0 );
     }
 
     /** @brief libFuzzer 가 먼저 먹이는 빈 입력 다음의 경계 입력입니다(1 바이트 · 공백 · 널 · 잘린 문서). */
@@ -269,9 +270,13 @@ namespace
  */
 SW_TEST_CASE_PER_PARAMETER( LoaderFuzzTest, EveryLoaderSurvivesMutatedInput, listFuzzTargetName, 0.5 )
 {
-    const uint64              iterationCount = readEnvironmentNumber( "SW_FUZZ_ITERATIONS", 120 );
-    const uint64              baseSeed       = readEnvironmentNumber( "SW_FUZZ_SEED", 0x5EED );
-    const bool                bTrace         = readEnvironmentNumber( "SW_FUZZ_TRACE", 0 ) != 0;
+    uint64 iterationCount = 0;
+    uint64 baseSeed       = 0;
+    uint64 traceFlag      = 0;
+    SW_ASSERT_TRUE_MSG( tryReadEnvironmentNumber( "SW_FUZZ_ITERATIONS", 120, iterationCount ), "SW_FUZZ_ITERATIONS is not a number" );
+    SW_ASSERT_TRUE_MSG( tryReadEnvironmentNumber( "SW_FUZZ_SEED", 0x5EED, baseSeed ), "SW_FUZZ_SEED is not a number" );
+    SW_ASSERT_TRUE_MSG( tryReadEnvironmentNumber( "SW_FUZZ_TRACE", 0, traceFlag ), "SW_FUZZ_TRACE is not a number" );
+    const bool                bTrace = traceFlag != 0;
     test::ScopedLogSuppressor suppressor;
 
     for ( const test::LoaderFuzzTarget& target : test::getLoaderFuzzTargets() )
@@ -305,9 +310,7 @@ SW_TEST_CASE_PER_PARAMETER( LoaderFuzzTest, EveryLoaderSurvivesMutatedInput, lis
                 mutateBytes( input, random, target._bText, listSeed );
             if ( bTrace )
             {
-                std::printf( "[Fuzz] %s seed %zu iteration %" PRIu64 " size %zu\n", target._pName, seedIndex, static_cast<uint64>( iteration ),
-                             input.size() );
-                std::fflush( stdout );
+                test::printTestNote( "[Fuzz] %s seed %zu iteration %" PRIu64 " size %zu", target._pName, seedIndex, static_cast<uint64>( iteration ), input.size() );
                 // 죽은 입력을 그대로 남긴다 — 프로세스가 죽어도 파일은 남는다(회귀 테스트의 재료).
                 (void)FileUtil::writeFile( test::makeFuzzTracePath( target._pName ), input.data(), input.size() );
             }

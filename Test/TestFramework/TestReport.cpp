@@ -9,6 +9,8 @@
 #include "TestFramework/TestRunOptions.h"
 
 #include <algorithm>
+#include <cstdarg>
+#include <cstdio>
 #include <cstdlib>
 
 namespace test
@@ -27,6 +29,16 @@ namespace test
 
 namespace test
 {
+    void printTestNote( const utf8* pFormat, ... )
+    {
+        va_list arguments;
+        va_start( arguments, pFormat );
+        std::vfprintf( stdout, pFormat, arguments );
+        va_end( arguments );
+        std::fputc( '\n', stdout );
+        std::fflush( stdout );
+    }
+
     bool TestRunSummary::isPassed() const
     {
         const bool bAnyFailure = _failedCount > 0 || _bEmptySuiteIsFailure || _declarationMismatchCount > 0 || _bKindOnlyRanNothing;

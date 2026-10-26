@@ -2,11 +2,11 @@
 
 # 전체 훑기의 기준선 — 규칙별로 지금 있는 건수다(docs/plans/ReuseExistingFacilities.md 의 이전 단위가 옮기며 낮춘다). 늘면 실패한다(커밋 훅은 추가한 줄만 본다).
 [baseline]
-stdout = 31
+stdout = 17
 random = 6
 fileOpen = 2
 processSpawn = 1
-numberParse = 8
+numberParse = 7
 
 # 직접 불러도 되는 자리 → 이유. 키는 `<규칙>:<경로 글롭>`. 그 기능을 구현하는 파일 자신만 둔다 — 옮겨야 할 호출부는 여기가 아니라 [baseline] 에 센다.
 [exemption]
