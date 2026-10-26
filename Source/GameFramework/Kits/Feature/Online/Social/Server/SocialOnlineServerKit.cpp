@@ -51,7 +51,6 @@ namespace sw
                 , _socialServer{}
                 , _blockList{ &_socialService }
                 , _pGroupChannels{ nullptr }
-                , _bStarted{ false }
             {
             }
 
@@ -79,10 +78,7 @@ namespace sw
                     outError = "social: guildLevelExperience must be positive, increasing and at most 100 levels";
                     return false;
                 }
-                if ( registerHostService( context, entry, &_socialServer, outError ) == false )
-                    return false;
-                context._pBlockList = &_blockList;
-                return true;
+                return registerHostService( context, entry, &_socialServer, outError ) && exposeInterface<IAccountBlockList>( context, entry, _blockList, outError );
             }
 
             bool start( OnlineServerKitContext& context, string& outError ) override
@@ -92,33 +88,38 @@ namespace sw
                 dependencies._pStore     = context._pStore;
                 dependencies._pRouter    = context._pRouter;
                 dependencies._pBus       = context._pBus;
-                dependencies._pNameIndex = context._pNameIndex;
+                dependencies._pNameIndex = context._kits.find<const IAccountNameIndex>();
                 _socialService.initialize( dependencies );
                 _guildService.initialize( context._pStore );
-                _guildService.setLedgerPolicy( context._pLedgerPolicy ); // 창고에서 꺼낼 때 화폐 상한을 본다. 경제 키트가 없으면 원장 상한만 본다
-                _pGroupChannels = context._pGroupChannels;
+                _guildService.setLedgerPolicy( context._kits.find<const ILedgerPolicy>() ); // 창고에서 꺼낼 때 화폐 상한을 본다. 경제 키트가 없으면 원장 상한만 본다
+                // 채팅 키트는 의존으로 적지 않는다 — 채팅이 이 키트의 차단 목록에 의존해 순환이 된다. 채팅의 멤버 창은 채팅 서비스가 서기 전과 내린 뒤의 호출을 무시하므로
+                // 순서가 없어도 되고, 찾기는 모든 키트의 `initialize` 뒤인 여기서 한다.
+                _pGroupChannels = context._kits.find<IGroupChannelMembership>();
                 if ( _pGroupChannels != nullptr )
                     _guildService.setEventDelegate( GuildEventDelegate::create<&SocialOnlineServerKit::onGuildEvent>( this ) );
-                _socialServer.initialize( &_socialService, &_guildService, context._pPresence );
-                _bStarted = true;
+                _socialServer.initialize( &_socialService, &_guildService, context._kits.find<IAccountPresence>() );
                 return true;
             }
 
             void stop() override
             {
-                if ( _bStarted )
+                if ( isStarted() )
                     _socialServer.shutdown();
             }
 
             void shutdown() override
             {
                 // 친구 · 길드 로직은 저장소 일을 회수한 뒤(호스트와 저장소를 종료한 뒤) 종료한다 — 서비스 계약.
-                if ( _bStarted )
-                {
-                    _guildService.shutdown();
-                    _socialService.shutdown();
-                }
-                _bStarted = false;
+                if ( isStarted() == false )
+                    return;
+                _guildService.shutdown();
+                _socialService.shutdown();
+            }
+
+            span<const utf8* const> getOptionalKits() const override
+            {
+                static constexpr const utf8* kArrKit[] = { OnlineServerKitName::kAccount, OnlineServerKitName::kEconomy }; // 이름 찾기 · 접속 상태, 원장 정책
+                return kArrKit;
             }
 
         private:
@@ -138,12 +139,11 @@ namespace sw
             SocialServer             _socialServer;
             SocialBlockList          _blockList;
             IGroupChannelMembership* _pGroupChannels; ///< 채팅 키트가 없으면 null 이고 길드 이벤트를 받지 않는다
-            bool                     _bStarted;
         };
     } // namespace
 } // namespace sw
 
 namespace sw
 {
-    SW_REGISTER_ONLINE_SERVER_KIT( SocialOnlineServerKit, "social", OnlineServerKitOrder::kSocial );
+    SW_REGISTER_ONLINE_SERVER_KIT( SocialOnlineServerKit, OnlineServerKitName::kSocial );
 } // namespace sw

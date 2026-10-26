@@ -73,7 +73,7 @@ FCM HTTP v1 제공자(`Provider/Fcm/FcmPushProvider`)와 이벤트 시작 토픽
 게임 포트는 게임 인스턴스가 설 때 열리고 인증기를 만드는 온라인 키트는 그 뒤에 서므로 자리 하나로 풀었습니다.
 
 - `ServerConfig::_bGameConnectTicket` 을 켜면 `GameNetSession::makeServerParams` 가 게임 포트를 암호화하고 인증기 자리에 `GameConnectSecurity`(Engine/Net)를 끼웁니다. 암호 제공자(OpenSSL)가 없으면 게임 포트를 열지 않습니다.
-- 계정 키트의 조립 `gameConnect`(옵션 `ticketKeySecretEnvironment` · `serverName` 필수)가 로그인 서버와 같은 키로 티켓 확인기를 세워 `AccountConnectAuthenticator` 를 자리에 묶습니다. 매칭 키트의 `gameServer` 옵션이 `MatchServerAgent` 를 세워 받아들이기 정책(`_pConnectAdmission`)을 내놓고 없으면 티켓이 맞는 모든 계정을 받습니다.
+- 계정 키트의 조립 `gameConnect`(옵션 `ticketKeySecretEnvironment` · `serverName` 필수)가 로그인 서버와 같은 키로 티켓 확인기를 세워 `AccountConnectAuthenticator` 를 자리에 묶습니다. 매칭 키트의 `gameServer` 옵션이 `MatchServerAgent` 를 세워 받아들이기 정책(`IConnectAdmission`)을 문맥의 키트 범위에 내놓고 없으면 티켓이 맞는 모든 계정을 받습니다.
 - 묶이기 전에 온 접속은 거절하고 서비스가 선 뒤에도 안 묶였으면 `ServerApp` 이 기동을 멈춥니다(폴백 없음).
 - 클라이언트: `GameNetSession::makeTicketClientParams( 주소, 티켓, 인자 )`(주소 `ServerDescriptor::pickPort`, 티켓 `AccountClient::makeConnectCredentials`). `-gv_netConnectAddress` 는 자격 없는 길이라 티켓 서버에는 `SecurityMismatch` 로 거절됩니다. 거절된 티켓은 지워 새 티켓 없이 `reconnect` 하지 않습니다.
 - **남은 것**: 두 프로세스 시나리오(서버 `_bGameConnectTicket` + 로그인 서버, 클라이언트가 로그인해 티켓을 받아 붙는 흐름) — 로그인 서버와 게임 서버를 함께 띄우는 시나리오 시설이 필요합니다.
@@ -107,4 +107,4 @@ GM 전용 호스트 포트. 계약은 `OnlineServiceHost.h` 머리 주석과 `Se
 
 ### I7
 
-`IBalanceNotice`(`Base/Online/Ledger/`)를 경제 키트가 구현해 서버 조립 문맥 `_pBalanceNotice` 에 내놓습니다. 알림은 `EconomyPushName::BalanceChanged`(바뀐 자산의 잔액 절댓값 목록)이며 클라이언트가 캐시를 덮으므로 늦거나 중복돼도 같습니다. 이 서버에 붙어 있으면 바로, 다른 서버면 `OnlinePushRelay` 로 중계하고 접속하지 않은 계정에는 보내지 않습니다(다음 로그인이 지갑을 읽음). 부르는 곳은 GM 지급 · 회수(`AdjustAsset`, 재시도 응답 제외), 스토어 환불 회수, 우편 만료 반환입니다. 거래 정산은 거래 키트의 알림이 가므로 쓰지 않습니다.
+`IBalanceNotice`(`Base/Online/Ledger/`)를 경제 키트가 구현해 서버 조립 문맥의 키트 범위(`_kits`)에 내놓습니다. 알림은 `EconomyPushName::BalanceChanged`(바뀐 자산의 잔액 절댓값 목록)이며 클라이언트가 캐시를 덮으므로 늦거나 중복돼도 같습니다. 이 서버에 붙어 있으면 바로, 다른 서버면 `OnlinePushRelay` 로 중계하고 접속하지 않은 계정에는 보내지 않습니다(다음 로그인이 지갑을 읽음). 부르는 곳은 GM 지급 · 회수(`AdjustAsset`, 재시도 응답 제외), 스토어 환불 회수, 우편 만료 반환입니다. 거래 정산은 거래 키트의 알림이 가므로 쓰지 않습니다.

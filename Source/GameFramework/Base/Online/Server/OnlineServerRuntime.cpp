@@ -75,6 +75,17 @@ namespace sw
                 return settings;
             }
 
+            /** @brief 설정의 키트 목록에 @p name 이 있는지입니다. */
+            static bool isKitListed( const OnlineServerConfig& config, string_view name )
+            {
+                for ( const OnlineServerKitEntry& entry : config._listKit )
+                {
+                    if ( entry._name == name )
+                        return true;
+                }
+                return false;
+            }
+
             /** @brief 비밀을 0 으로 덮고 비웁니다. 드라이버에 넘긴 뒤 부릅니다. */
             static void wipeSecret( string& inoutSecret )
             {
@@ -85,25 +96,71 @@ namespace sw
                 inoutSecret.clear();
             }
         };
+
+        /**
+         * @class OnlineServerKitNode
+         * @brief 키트 하나를 지역 컬렉션의 노드로 둡니다. 의존은 공통 기반 + 필수 키트 + 설정에 있는 선택 키트입니다.
+         */
+        class OnlineServerKitNode final : public ISubsystem
+        {
+        public:
+            OnlineServerKitNode( unique_ptr<IOnlineServerKit> kit, const utf8* pName, const OnlineServerKitEntry& entry, vector<const utf8*> listDependency,
+                                 OnlineServerKitContext& context, string& outError )
+                : _kit{ std::move( kit ) }
+                , _entry{ entry }
+                , _listDependency{ std::move( listDependency ) }
+                , _context{ context }
+                , _error{ outError }
+                , _pName{ pName }
+            {
+            }
+
+            SubsystemInitResult initializeSubsystem() override
+            {
+                string error;
+                if ( _kit->initialize( _context, _entry, error ) )
+                    return SubsystemInitResult::Succeeded;
+                _error = "online kit '" + _entry._name + "' could not initialize: " + error;
+                return SubsystemInitResult::Failed;
+            }
+            void stopSubsystem() override { _kit->stop(); }
+            void shutdownSubsystem() override { _kit->shutdown(); }
+
+            const utf8*             getSubsystemName() const override { return _pName; }
+            span<const utf8* const> getSubsystemDependencies() const override { return { _listDependency.data(), _listDependency.size() }; }
+
+            [[nodiscard]] bool start( string& outError )
+            {
+                string error;
+                if ( _kit->startKit( _context, error ) )
+                    return true;
+                outError = "online kit '" + _entry._name + "' could not start: " + error;
+                return false;
+            }
+            void          update( int64 nowMs ) { _kit->update( nowMs ); }
+            const string& getKitName() const { return _entry._name; }
+
+        private:
+            unique_ptr<IOnlineServerKit> _kit;
+            OnlineServerKitEntry         _entry;
+            vector<const utf8*>          _listDependency; ///< 이 노드가 살아 있는 동안 컬렉션이 읽는다
+            OnlineServerKitContext&      _context;
+            string&                      _error; ///< 런타임의 기동 오류 칸(컬렉션 오류는 어느 노드인지만 적는다)
+            const utf8*                  _pName; ///< 팩토리의 이름(키트 모듈 이미지의 상수, 노드보다 오래 산다)
+        };
     } // namespace
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 조립의 부품입니다. 선언 순서가 사라지는 순서의 반대입니다 — 버스와 키트는 호스트(라우터)보다 먼저, 저장소는 호스트보다 나중에 사라집니다. */
+    /** @brief 조립의 부품입니다. 키트 범위가 키트와 기반 노드를 소유하고, `shutdown` 이 범위를 비운 뒤에야 나머지 부품이 사라집니다. */
     struct OnlineServerRuntime::Parts
     {
-        /** @brief 붙은 키트 하나입니다. */
-        struct KitInstance
-        {
-            unique_ptr<IOnlineServerKit> _kit{};
-            OnlineServerKitEntry         _entry{};
-        };
-
         MemoryServiceDatabase          _memoryDatabase{};
         MemoryEphemeralDatabase        _memoryCacheDatabase{};
         OnlineServerConfig             _config{};
-        OnlineServerKitContext         _context{};
+        SubsystemScope                 _kitScope{}; ///< 기반 노드와 키트 노드를 소유하고, 키트가 내놓은 인터페이스를 타입으로 찾게 한다
+        OnlineServerKitContext         _context{ _kitScope };
         unique_ptr<IServiceStore>      _store{};
         unique_ptr<IEphemeralStore>    _cache{};
         unique_ptr<IStreamTransport>   _ownedTransport{};
@@ -116,13 +173,69 @@ namespace sw
         unique_ptr<EphemeralServerBus> _bus{};
         unique_ptr<ServerBus>          _busFront{}; ///< 키트 문맥에 넘기는 타입 있는 앞이다. 전송(`_bus`)은 호스트만 받는다
         ServerRegistration             _registration{};
-        vector<KitInstance>            _listKit{};
+        vector<OnlineServerKitNode*>   _listKit{};      ///< 초기화한 키트(초기화 순서). 소유는 `_kitScope`
+        string                         _startupError{}; ///< 노드가 남긴 기동 오류(어느 키트 · 무엇)
         ServiceHealthRegistry*         _pHealthRegistry{ nullptr };
         int64                          _nextRemoteConfigReloadMs{ 0 };
         int32                          _healthCheckIndex{ -1 };
         uint8                          _bMemoryCache{ SW_FALSE };
         uint8                          _bManualCacheTime{ SW_FALSE };
         uint8                          _bRegistered{ SW_FALSE };
+    };
+
+    /**
+     * @class OnlineServerRuntime::BaseNode
+     * @brief 공통 기반(저장소 · 캐시 · 버스 · 예약 작업 · 호스트)의 노드입니다. 모든 키트가 이것에 의존하므로 처음 서고, 키트가 모두 멈춘 뒤 멈추며, 키트가 모두 종료한 뒤 종료합니다.
+     * @details 호스트는 이 노드의 `initialize` 가 아니라 키트 `initialize` 뒤에 런타임이 띄운다(키트가 바인딩을 먼저 등록한다). 내리는 것은 이 노드의 `stop` 이다.
+     */
+    class OnlineServerRuntime::BaseNode final : public ISubsystem
+    {
+    public:
+        /** @p settings 는 `initialize` 의 인자이고 그 함수가 도는 동안(컬렉션 초기화)만 읽는다. */
+        BaseNode( OnlineServerRuntime& runtime, OnlineServerRuntimeConfig& settings, int64 nowMs )
+            : _runtime{ runtime }
+            , _settings{ settings }
+            , _nowMs{ nowMs }
+        {
+        }
+
+        SubsystemInitResult initializeSubsystem() override
+        {
+            if ( _runtime.createStores( _settings, _nowMs, _runtime._parts->_startupError ) )
+                return SubsystemInitResult::Succeeded;
+            // 컬렉션은 초기화에 실패한 노드를 종료하지 않는다 — 반쯤 만든 저장소 · 캐시를 여기서 내린다.
+            stopSubsystem();
+            shutdownSubsystem();
+            return SubsystemInitResult::Failed;
+        }
+
+        void stopSubsystem() override
+        {
+            // 키트가 모두 멈춘 뒤다. 시작하지 않았어도 종료해도 된다 — 호스트는 자기 초기화 비트를 보고, 스케줄러는 목록과 저장소 포인터를 비울 뿐이다.
+            Parts& parts = *_runtime._parts;
+            parts._host.shutdown();
+            parts._retention.shutdown(); // 저장소가 살아 있을 때 맡긴 쓸기를 회수한다
+            parts._scheduler.shutdown();
+            if ( parts._store != nullptr )
+            {
+                parts._store->shutdown();
+                (void)parts._store->pollCompletions(); // 남은 완료가 로그인 서비스 같은 로직을 부른다 — 키트 shutdown 전에
+            }
+        }
+
+        void shutdownSubsystem() override
+        {
+            Parts& parts = *_runtime._parts;
+            if ( parts._cache != nullptr )
+                parts._cache->shutdown();
+        }
+
+        const utf8* getSubsystemName() const override { return OnlineServerKitName::kBase; }
+
+    private:
+        OnlineServerRuntime&       _runtime;
+        OnlineServerRuntimeConfig& _settings;
+        int64                      _nowMs;
     };
 } // namespace sw
 
@@ -152,16 +265,27 @@ namespace sw
         if ( parts._pHealthRegistry != nullptr )
             parts._healthCheckIndex = parts._pHealthRegistry->registerCheck( kHealthCheckName, true );
 
-        const bool bAssembled = createStores( settings, nowMs, outError ) && createKits( settings, outError ) && startHost( settings, outError );
-        if ( bAssembled == false )
+        SubsystemCollection& collection = parts._kitScope.getCollection();
+        const ISubsystem&    baseNode   = collection.add( make_unique<BaseNode>( *this, settings, nowMs ) );
+        if ( addKits( outError ) == false )
             return false;
-        for ( Parts::KitInstance& instance : parts._listKit )
+        if ( collection.initializeAll( SubsystemHostMask::All ) == false )
         {
-            if ( instance._kit->start( parts._context, outError ) == false )
-            {
-                outError = "online kit '" + instance._entry._name + "' could not start: " + outError;
+            outError = parts._startupError.empty() ? collection.getError() : parts._startupError; // 정렬 오류(순환)는 컬렉션 글이다
+            return false;
+        }
+        for ( const uint32 index : collection.getInitializedIndices() )
+        {
+            ISubsystem& node = collection.getSubsystem( index );
+            if ( &node != &baseNode )
+                parts._listKit.push_back( static_cast<OnlineServerKitNode*>( &node ) );
+        }
+        if ( startHost( settings, outError ) == false )
+            return false;
+        for ( OnlineServerKitNode* pKit : parts._listKit )
+        {
+            if ( pKit->start( outError ) == false )
                 return false;
-            }
         }
         if ( registerServer( outError ) == false )
             return false;
@@ -262,12 +386,11 @@ namespace sw
         return true;
     }
 
-    bool OnlineServerRuntime::createKits( const OnlineServerRuntimeConfig& settings, string& outError )
+    bool OnlineServerRuntime::addKits( string& outError )
     {
-        (void)settings;
         Parts&                          parts = *_parts;
         vector<OnlineServerKitFactory*> listFactory;
-        OnlineServerKitRegistry::collectFactories( listFactory ); // 시작 순서대로
+        OnlineServerKitRegistry::collectFactories( listFactory );
         vector<const OnlineServerKitEntry*> listEntryByFactory( listFactory.size(), nullptr );
         if ( parts._config._listKit.empty() )
         {
@@ -303,24 +426,35 @@ namespace sw
                 return false;
             }
         }
-        // 설정에 적힌 순서와 상관없이 시작 순서(인터페이스를 내놓는 키트가 먼저)로 붙인다.
+        // 순서는 설정에 적힌 순서가 아니라 노드의 이름 의존이 정한다(컬렉션의 위상 정렬).
         for ( size_t factoryIndex = 0; factoryIndex < listFactory.size(); ++factoryIndex )
         {
-            if ( listEntryByFactory[factoryIndex] == nullptr )
+            const OnlineServerKitEntry* pEntry = listEntryByFactory[factoryIndex];
+            if ( pEntry == nullptr )
                 continue;
-            Parts::KitInstance& instance = parts._listKit.emplace_back();
-            instance._entry              = *listEntryByFactory[factoryIndex];
-            instance._kit                = listFactory[factoryIndex]->_pCreate();
-            if ( instance._kit == nullptr )
+            unique_ptr<IOnlineServerKit> kit = listFactory[factoryIndex]->_pCreate();
+            if ( kit == nullptr )
             {
-                outError = "online kit '" + instance._entry._name + "' could not be created";
+                outError = "online kit '" + pEntry->_name + "' could not be created";
                 return false;
             }
-            if ( instance._kit->initialize( parts._context, instance._entry, outError ) == false )
+            vector<const utf8*> listDependency{ OnlineServerKitName::kBase };
+            for ( const utf8* pRequired : kit->getRequiredKits() )
             {
-                outError = "online kit '" + instance._entry._name + "' could not initialize: " + outError;
-                return false;
+                if ( OnlineServerRuntimeInternal::isKitListed( parts._config, pRequired ) == false )
+                {
+                    outError = "online kit '" + pEntry->_name + "' needs kit '" + pRequired + "', which the online service config does not list (_listKit)";
+                    return false;
+                }
+                listDependency.push_back( pRequired );
             }
+            for ( const utf8* pOptional : kit->getOptionalKits() )
+            {
+                if ( OnlineServerRuntimeInternal::isKitListed( parts._config, pOptional ) )
+                    listDependency.push_back( pOptional );
+            }
+            (void)parts._kitScope.getCollection().add(
+                make_unique<OnlineServerKitNode>( std::move( kit ), listFactory[factoryIndex]->_pName, *pEntry, std::move( listDependency ), parts._context, parts._startupError ) );
         }
         return true;
     }
@@ -405,31 +539,10 @@ namespace sw
         Parts& parts  = *_parts;
         if ( parts._bRegistered == SW_TRUE )
             parts._registration.shutdown();
-        // 키트 — 캐시 요청을 취소하고 구독을 풀고 저장 일을 회수한다(호스트와 저장소가 살아 있을 때). 반대 순서다.
-        for ( size_t index = parts._listKit.size(); index > 0; --index )
-        {
-            Parts::KitInstance& instance = parts._listKit[index - 1];
-            if ( instance._kit != nullptr )
-                instance._kit->stop();
-        }
-        // 둘 다 시작하지 않았어도 종료해도 된다 — 호스트는 자기 초기화 비트를 보고, 스케줄러는 목록과 저장소 포인터를 비울 뿐이다.
-        parts._host.shutdown();
-        parts._retention.shutdown(); // 저장소가 살아 있을 때 맡긴 쓸기를 회수한다
-        parts._scheduler.shutdown();
-        if ( parts._store != nullptr )
-        {
-            parts._store->shutdown();
-            (void)parts._store->pollCompletions(); // 남은 완료가 로그인 서비스 같은 로직을 부른다 — 키트 shutdown 전에
-        }
-        for ( size_t index = parts._listKit.size(); index > 0; --index )
-        {
-            Parts::KitInstance& instance = parts._listKit[index - 1];
-            if ( instance._kit != nullptr )
-                instance._kit->shutdown();
-        }
+        // 키트 stop(역순) → 기반 stop(호스트 → 예약 작업 → 저장소와 남은 완료) → 키트 shutdown(역순) → 기반 shutdown(캐시) → 역순 소멸.
+        // 순서는 모든 키트가 기반 노드에 의존하는 것 하나에서 나온다. 초기화에 성공한 노드만 종료를 받는다.
         parts._listKit.clear();
-        if ( parts._cache != nullptr )
-            parts._cache->shutdown();
+        parts._kitScope.destroyAll();
         if ( parts._pHealthRegistry != nullptr && parts._healthCheckIndex >= 0 )
             parts._pHealthRegistry->setCheck( parts._healthCheckIndex, HealthState::Failing, "stopped" );
         _parts.reset();
@@ -445,9 +558,9 @@ namespace sw
             parts._memoryCacheDatabase.setManualTimeMs( nowMs );
         parts._host.update( nowMs );
         parts._scheduler.update( nowMs );
-        for ( Parts::KitInstance& instance : parts._listKit )
+        for ( OnlineServerKitNode* pKit : parts._listKit )
         {
-            instance._kit->update( nowMs );
+            pKit->update( nowMs );
         }
         if ( parts._bRegistered == SW_TRUE )
         {
@@ -483,9 +596,9 @@ namespace sw
         outListName.clear();
         if ( _parts == nullptr )
             return;
-        for ( const Parts::KitInstance& instance : _parts->_listKit )
+        for ( const OnlineServerKitNode* pKit : _parts->_listKit )
         {
-            outListName.push_back( instance._entry._name );
+            outListName.push_back( pKit->getKitName() );
         }
     }
 

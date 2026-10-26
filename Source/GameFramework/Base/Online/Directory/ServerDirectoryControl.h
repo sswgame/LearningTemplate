@@ -1,6 +1,6 @@
 /**
  * @file ServerDirectoryControl.h
- * @brief 서버 디렉터리의 점검과 공지를 바꾸는 인터페이스입니다. 서버 디렉터리 키트가 구현해 서버 조립 문맥(`OnlineServerKitContext::_pDirectoryControl`)에 내놓고, GM 키트가 읽어 부릅니다.
+ * @brief 서버 디렉터리의 점검과 공지를 바꾸는 인터페이스입니다. 서버 디렉터리 키트가 구현해 서버 조립 문맥(`OnlineServerKitContext::_kits`)에 내놓고, GM 키트가 읽어 부릅니다.
  * @details - 키트끼리 include 하지 않도록 값은 기반 타입으로만 주고받습니다. 서버 디렉터리 키트가 자기 형식(`MaintenanceWindow`, `ServiceNotice`)으로 옮기고 같은 규칙으로 검사합니다.
  *          - 변경은 비동기입니다. 결과는 부른 쪽이 준 요청 태그와 함께 `drainControlCompletions` 로 받습니다. 감사 기록은 구현이 변경과 같은 트랜잭션에 씁니다.
  *          - 서비스 스레드 하나에서만 씁니다.

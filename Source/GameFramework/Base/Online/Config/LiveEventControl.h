@@ -1,6 +1,6 @@
 /**
  * @file LiveEventControl.h
- * @brief 라이브 이벤트를 운영하는 인터페이스입니다. 라이브 운영 키트가 구현해 서버 조립 문맥(`OnlineServerKitContext::_pLiveEventControl`)에 내놓고, GM 키트가 읽어 부릅니다.
+ * @brief 라이브 이벤트를 운영하는 인터페이스입니다. 라이브 운영 키트가 구현해 서버 조립 문맥(`OnlineServerKitContext::_kits`)에 내놓고, GM 키트가 읽어 부릅니다.
  * @details - 키트끼리 include 하지 않도록 이벤트 정의는 리플렉션 JSON 글(`LiveEventDefinition` 의 필드 이름)로 주고받습니다. 정의의 형식과 검사는 라이브 운영 키트 한 곳에 있습니다.
  *          - 바꾸기는 비동기입니다. 결과는 요청 태그와 함께 `drainControlCompletions` 로 받습니다. 감사 기록은 구현이 변경과 같은 트랜잭션에 씁니다.
  *          - 서비스 스레드 하나에서만 씁니다.

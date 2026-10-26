@@ -11,8 +11,8 @@
 
 #include "TestFramework/TestFramework.h"
 
-// 온라인 서비스 서버 조립 — 키트를 시작 순서대로 붙이고(설정 순서와 상관없이) 반대로 내린다, 앞 키트가 내놓은 인터페이스를 뒤 키트가 받는다,
-// 모르는 키트와 시작 실패는 기동을 멈추고 만든 것을 되돌린다, 온라인 설정 파일 경로, 상태 검사.
+// 온라인 서비스 서버 조립 — 키트를 이름 의존 순서로 세우고(설정 순서 · 이름 순서와 상관없이) 반대로 내린다, 앞 키트가 지역 범위에 건 인터페이스를 뒤 키트가 받는다,
+// 모르는 키트 · 빠진 필수 키트 · 초기화와 시작 실패는 기동을 멈추고 만든 것을 되돌린다, 온라인 설정 파일 경로, 상태 검사.
 
 using namespace sw;
 
@@ -77,11 +77,8 @@ namespace
 
         bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
         {
-            (void)entry;
-            (void)outError;
             OnlineServerRuntimeTestInternal::add( kName, context._pHost != nullptr && context._pStore != nullptr ? "init" : "init-without-base" );
-            context._pAccountDirectory = &_directory;
-            return true;
+            return exposeInterface<IAccountDirectory>( context, entry, _directory, outError );
         }
         bool start( OnlineServerKitContext& context, string& outError ) override
         {
@@ -96,7 +93,7 @@ namespace
         TestDirectory _directory;
     };
 
-    /** @brief 앞 키트의 신원을 받아 쓰는 키트입니다. 옵션 `fail=start` 이면 시작에 실패합니다. */
+    /** @brief 앞 키트의 신원을 받아 쓰는 키트입니다(필수 의존). 옵션 `fail=init` · `fail=start` 이면 그 단계에 실패합니다. */
     class ConsumerTestKit final : public IOnlineServerKit
     {
     public:
@@ -111,6 +108,11 @@ namespace
             },
                                     outError ) == false )
                 return false;
+            if ( failStage == "init" )
+            {
+                outError = "test init failure";
+                return false;
+            }
             _bFailStart = failStage == "start";
             OnlineServerRuntimeTestInternal::add( kName, "init" );
             return true;
@@ -122,10 +124,17 @@ namespace
                 outError = "test start failure";
                 return false;
             }
-            OnlineServerRuntimeTestInternal::add( kName, context._pAccountDirectory != nullptr && context._pAccountDirectory->isAccountOnline( 7 ) ? "start" : "start-without-directory" );
+            OnlineServerRuntimeTestInternal::add( kName, context._kits.get<IAccountDirectory>().isAccountOnline( 7 ) ? "start" : "start-without-directory" );
             return true;
         }
-        void stop() override { OnlineServerRuntimeTestInternal::add( kName, "stop" ); }
+        void stop() override { OnlineServerRuntimeTestInternal::add( kName, isStarted() ? "stop" : "stop-unstarted" ); }
+        void shutdown() override { OnlineServerRuntimeTestInternal::add( kName, "shutdown" ); }
+
+        span<const utf8* const> getRequiredKits() const override
+        {
+            static constexpr const utf8* kArrKit[] = { ProviderTestKit::kName };
+            return kArrKit;
+        }
 
     private:
         bool _bFailStart{ false };
@@ -136,12 +145,12 @@ SW_TEST_CASE( OnlineServerRuntimeTest, KitsStartInOrderShareInterfacesAndStopInR
 {
     OnlineServerRuntimeTestInternal::reset();
     {
-        const OnlineServerKitRegistrar<ConsumerTestKit> consumer{ ConsumerTestKit::kName, 9100 };
-        const OnlineServerKitRegistrar<ProviderTestKit> provider{ ProviderTestKit::kName, 9000 };
+        const OnlineServerKitRegistrar<ConsumerTestKit> consumer{ ConsumerTestKit::kName };
+        const OnlineServerKitRegistrar<ProviderTestKit> provider{ ProviderTestKit::kName };
         LoopbackStreamNetwork                           network;
         unique_ptr<IStreamTransport>                    transport = network.createTransport();
         ServiceHealthRegistry                           health;
-        // 설정에는 거꾸로 적어도 시작 순서(인터페이스를 내놓는 키트가 먼저)로 붙는다.
+        // 설정에 거꾸로 적고 이름 순으로도 소비자가 앞이지만, 필수 의존이 내놓는 키트를 먼저 세운다.
         OnlineServerRuntimeConfig settings = OnlineServerRuntimeTestInternal::makeSettings( { ConsumerTestKit::kName, ProviderTestKit::kName } );
         settings._pTransport               = transport.get();
         settings._pHealthRegistry          = &health;
@@ -162,21 +171,70 @@ SW_TEST_CASE( OnlineServerRuntimeTest, KitsStartInOrderShareInterfacesAndStopInR
         SW_EXPECT_FALSE( health.isReady( 10 ) ); // 내리면 다시 Failing
     }
     const vector<string>& listLine = OnlineServerRuntimeTestInternal::getLog();
-    SW_ASSERT_EQUAL( listLine.size(), size_t( 7 ) );
+    SW_ASSERT_EQUAL( listLine.size(), size_t( 8 ) );
     SW_EXPECT_TRUE( listLine[0] == "test.provider:init" );
     SW_EXPECT_TRUE( listLine[1] == "test.consumer:init" );
     SW_EXPECT_TRUE( listLine[2] == "test.provider:start" );
     SW_EXPECT_TRUE( listLine[3] == "test.consumer:start" );
     SW_EXPECT_TRUE( listLine[4] == "test.consumer:stop" );
     SW_EXPECT_TRUE( listLine[5] == "test.provider:stop" );
-    SW_EXPECT_TRUE( listLine[6] == "test.provider:shutdown" ); // 저장소를 내리고 남은 완료를 돌린 뒤
+    SW_EXPECT_TRUE( listLine[6] == "test.consumer:shutdown" ); // 저장소를 내리고 남은 완료를 돌린 뒤
+    SW_EXPECT_TRUE( listLine[7] == "test.provider:shutdown" );
+    OnlineServerRuntimeTestInternal::reset();
+}
+
+SW_TEST_CASE( OnlineServerRuntimeTest, MissingRequiredKitStopsStartup )
+{
+    OnlineServerRuntimeTestInternal::reset();
+    {
+        const OnlineServerKitRegistrar<ConsumerTestKit> consumer{ ConsumerTestKit::kName };
+        const OnlineServerKitRegistrar<ProviderTestKit> provider{ ProviderTestKit::kName };
+        LoopbackStreamNetwork                           network;
+        unique_ptr<IStreamTransport>                    transport = network.createTransport();
+        OnlineServerRuntimeConfig                       settings  = OnlineServerRuntimeTestInternal::makeSettings( { ConsumerTestKit::kName } );
+        settings._pTransport                                      = transport.get();
+        OnlineServerRuntime runtime;
+        string              error;
+        SW_EXPECT_FALSE( runtime.initialize( settings, 1000, error ) );
+        SW_EXPECT_TRUE( error.find( "needs kit 'test.provider'" ) != string::npos ); // 필수 인터페이스를 내놓을 키트가 없으면 기동 오류다(빈 칸으로 돌지 않는다)
+        runtime.shutdown();
+    }
+    SW_EXPECT_TRUE( OnlineServerRuntimeTestInternal::getLog().empty() );
+    OnlineServerRuntimeTestInternal::reset();
+}
+
+SW_TEST_CASE( OnlineServerRuntimeTest, KitInitializeFailureSkipsItsOwnShutdown )
+{
+    OnlineServerRuntimeTestInternal::reset();
+    {
+        const OnlineServerKitRegistrar<ConsumerTestKit> consumer{ ConsumerTestKit::kName };
+        const OnlineServerKitRegistrar<ProviderTestKit> provider{ ProviderTestKit::kName };
+        LoopbackStreamNetwork                           network;
+        unique_ptr<IStreamTransport>                    transport = network.createTransport();
+        OnlineServerRuntimeConfig                       settings  = OnlineServerRuntimeTestInternal::makeSettings( { ProviderTestKit::kName, ConsumerTestKit::kName } );
+        OnlineServerOption&                             option    = settings._config._listKit[1]._listOption.emplace_back();
+        option._key                                               = "fail";
+        option._value                                             = "init";
+        settings._pTransport                                      = transport.get();
+        OnlineServerRuntime runtime;
+        string              error;
+        SW_EXPECT_FALSE( runtime.initialize( settings, 1000, error ) );
+        SW_EXPECT_TRUE( error.find( "test.consumer" ) != string::npos && error.find( "test init failure" ) != string::npos );
+        runtime.shutdown();
+    }
+    // 초기화에 실패한 키트는 스스로 되돌리므로 종료를 받지 않고, 먼저 선 키트만 역순으로 내린다.
+    const vector<string>& listLine = OnlineServerRuntimeTestInternal::getLog();
+    SW_ASSERT_EQUAL( listLine.size(), size_t( 3 ) );
+    SW_EXPECT_TRUE( listLine[0] == "test.provider:init" );
+    SW_EXPECT_TRUE( listLine[1] == "test.provider:stop" );
+    SW_EXPECT_TRUE( listLine[2] == "test.provider:shutdown" );
     OnlineServerRuntimeTestInternal::reset();
 }
 
 SW_TEST_CASE( OnlineServerRuntimeTest, UnknownKitStopsStartup )
 {
     OnlineServerRuntimeTestInternal::reset();
-    const OnlineServerKitRegistrar<ProviderTestKit> provider{ ProviderTestKit::kName, 9000 };
+    const OnlineServerKitRegistrar<ProviderTestKit> provider{ ProviderTestKit::kName };
     LoopbackStreamNetwork                           network;
     unique_ptr<IStreamTransport>                    transport = network.createTransport();
     OnlineServerRuntimeConfig                       settings  = OnlineServerRuntimeTestInternal::makeSettings( { ProviderTestKit::kName, "test.missing" } );
@@ -194,8 +252,8 @@ SW_TEST_CASE( OnlineServerRuntimeTest, KitStartFailureUnwindsEveryKit )
 {
     OnlineServerRuntimeTestInternal::reset();
     {
-        const OnlineServerKitRegistrar<ConsumerTestKit> consumer{ ConsumerTestKit::kName, 9100 };
-        const OnlineServerKitRegistrar<ProviderTestKit> provider{ ProviderTestKit::kName, 9000 };
+        const OnlineServerKitRegistrar<ConsumerTestKit> consumer{ ConsumerTestKit::kName };
+        const OnlineServerKitRegistrar<ProviderTestKit> provider{ ProviderTestKit::kName };
         LoopbackStreamNetwork                           network;
         unique_ptr<IStreamTransport>                    transport = network.createTransport();
         OnlineServerRuntimeConfig                       settings  = OnlineServerRuntimeTestInternal::makeSettings( { ProviderTestKit::kName, ConsumerTestKit::kName } );
@@ -211,12 +269,13 @@ SW_TEST_CASE( OnlineServerRuntimeTest, KitStartFailureUnwindsEveryKit )
         runtime.shutdown();
     }
     const vector<string>& listLine = OnlineServerRuntimeTestInternal::getLog();
-    // 실패한 키트도 stop 을 받고, 먼저 붙은 키트는 반대 순서로 내린다.
-    SW_ASSERT_EQUAL( listLine.size(), size_t( 6 ) );
+    // 시작에 실패한 키트도 (초기화에 성공했으므로) stop · shutdown 을 받되 isStarted 는 false 이고, 먼저 선 키트는 반대 순서로 내린다.
+    SW_ASSERT_EQUAL( listLine.size(), size_t( 7 ) );
     SW_EXPECT_TRUE( listLine[2] == "test.provider:start" );
-    SW_EXPECT_TRUE( listLine[3] == "test.consumer:stop" );
+    SW_EXPECT_TRUE( listLine[3] == "test.consumer:stop-unstarted" );
     SW_EXPECT_TRUE( listLine[4] == "test.provider:stop" );
-    SW_EXPECT_TRUE( listLine[5] == "test.provider:shutdown" );
+    SW_EXPECT_TRUE( listLine[5] == "test.consumer:shutdown" );
+    SW_EXPECT_TRUE( listLine[6] == "test.provider:shutdown" );
     OnlineServerRuntimeTestInternal::reset();
 }
 

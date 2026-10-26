@@ -2,6 +2,11 @@
 
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
 
+#include "GameFramework/Base/Online/Identity/AccountDirectory.h"
+#include "GameFramework/Base/Online/Identity/AccountNameIndex.h"
+#include "GameFramework/Base/Online/Identity/AccountPresence.h"
+#include "GameFramework/Base/Online/Identity/AccountSessionControl.h"
+#include "GameFramework/Base/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Base/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Base/Online/Server/OnlineServerKit.h"
 #include "GameFramework/Base/Online/Server/OnlineServerRuntime.h"
@@ -65,9 +70,10 @@ SW_TEST_CASE( OnlineServerKitsTest, AccountMailboxTradeAndAdminAssembleAndShutDo
     string              error;
     SW_ASSERT_TRUE_MSG( runtime.initialize( settings, Internal::kStartMs, error ), error.c_str() );
     const OnlineServerKitContext& context = runtime.getContext();
-    SW_EXPECT_TRUE( context._pAccountDirectory != nullptr ); // 계정 키트가 내놓았다
-    SW_EXPECT_TRUE( context._pPresence != nullptr && context._pSessionControl != nullptr && context._pNameIndex != nullptr );
-    SW_EXPECT_TRUE( context._pLedgerPolicy == nullptr ); // 경제 키트를 올리지 않았다
+    SW_EXPECT_TRUE( context._kits.find<IAccountDirectory>() != nullptr ); // 계정 키트가 내놓았다
+    const bool bAccountExposed = context._kits.find<IAccountPresence>() != nullptr && context._kits.find<IAccountSessionControl>() != nullptr && context._kits.find<const IAccountNameIndex>() != nullptr;
+    SW_EXPECT_TRUE( bAccountExposed );
+    SW_EXPECT_TRUE( context._kits.find<const ILedgerPolicy>() == nullptr ); // 경제 키트를 올리지 않았다
     vector<string> listKitName;
     runtime.collectKitNames( listKitName );
     SW_ASSERT_EQUAL( listKitName.size(), size_t( 4 ) );
@@ -100,7 +106,7 @@ SW_TEST_CASE( OnlineServerKitsTest, StartupStopsOnUnknownOptionsAndMissingDepend
         OnlineServerRuntime runtime;
         string              error;
         SW_EXPECT_FALSE( runtime.initialize( settings, Internal::kStartMs, error ) );
-        SW_EXPECT_TRUE( error.find( "account kit" ) != string::npos );
+        SW_EXPECT_TRUE( error.find( "needs kit 'account'" ) != string::npos );
     }
     {
         LoopbackStreamNetwork        network;

@@ -64,7 +64,6 @@ namespace sw
             AdminOnlineServerKit()
                 : _service{}
                 , _listSeed{}
-                , _bStarted{ false }
             {
             }
 
@@ -94,21 +93,21 @@ namespace sw
             bool start( OnlineServerKitContext& context, string& outError ) override
             {
                 AdminServiceConfig settings;
-                settings._pDirectory        = context._pAccountDirectory;
-                settings._pSessionControl   = context._pSessionControl;
+                SubsystemScope&    kits     = context._kits;
+                settings._pDirectory        = kits.find<IAccountDirectory>();
+                settings._pSessionControl   = kits.find<IAccountSessionControl>();
                 settings._pBus              = context._pBus;
-                settings._pPolicy           = context._pLedgerPolicy;
-                settings._pBalanceNotice    = context._pBalanceNotice; // 경제 키트(지급 · 회수 뒤 잔액 변경 알림)
+                settings._pPolicy           = kits.find<const ILedgerPolicy>();
+                settings._pBalanceNotice    = kits.find<IBalanceNotice>(); // 경제 키트(지급 · 회수 뒤 잔액 변경 알림)
                 settings._pMetricRegistry   = context._pMetricRegistry;
-                settings._pDirectoryControl = context._pDirectoryControl;
-                settings._pNameIndex        = context._pNameIndex; // 접속하지 않은 계정도 이름으로 찾는다
-                settings._pLiveEventControl = context._pLiveEventControl;
+                settings._pDirectoryControl = kits.find<IServerDirectoryControl>();
+                settings._pNameIndex        = kits.find<const IAccountNameIndex>(); // 접속하지 않은 계정도 이름으로 찾는다
+                settings._pLiveEventControl = kits.find<ILiveEventControl>();
                 if ( _service.initialize( context._pStore, settings ) == false )
                 {
                     outError = "the admin service needs a store";
                     return false;
                 }
-                _bStarted = true;
                 for ( const AdminOnlineServerKitInternal::SeedAdmin& seed : _listSeed )
                 {
                     _service.seedRole( seed._accountID, seed._role, context._nowMs );
@@ -119,20 +118,25 @@ namespace sw
             void stop() override
             {
                 // 맡긴 GM 명령과 첫 관리자 넣기를 회수한다 — 저장소를 종료하기 전.
-                if ( _bStarted )
+                if ( isStarted() )
                     _service.shutdown();
-                _bStarted = false;
+            }
+
+            span<const utf8* const> getOptionalKits() const override
+            {
+                static constexpr const utf8* kArrKit[] = { OnlineServerKitName::kAccount, OnlineServerKitName::kDirectory, OnlineServerKitName::kEconomy,
+                                                           OnlineServerKitName::kLiveOps };
+                return kArrKit;
             }
 
         private:
             AdminService                                    _service;
             vector<AdminOnlineServerKitInternal::SeedAdmin> _listSeed;
-            bool                                            _bStarted;
         };
     } // namespace
 } // namespace sw
 
 namespace sw
 {
-    SW_REGISTER_ONLINE_SERVER_KIT( AdminOnlineServerKit, "admin", OnlineServerKitOrder::kAdmin );
+    SW_REGISTER_ONLINE_SERVER_KIT( AdminOnlineServerKit, OnlineServerKitName::kAdmin );
 } // namespace sw

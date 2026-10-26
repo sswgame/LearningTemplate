@@ -32,7 +32,6 @@ namespace sw
                 , _listInlineBoardID{}
                 , _service{}
                 , _server{}
-                , _bStarted{ false }
             {
             }
 
@@ -52,10 +51,8 @@ namespace sw
                 }
                 if ( catalogPath.empty() && _listInlineBoardID.empty() )
                     SW_LOG_WARNING( "Leaderboard kit: neither a catalog nor a board option - no boards are registered" );
-                if ( registerHostService( context, entry, &_server, outError ) == false )
-                    return false;
-                context._pStatSource = &_service; // 매칭 키트가 실력 모드의 통계를 읽는다. 접속한 계정의 통계만 메모리에 있다
-                return true;
+                // 매칭 키트가 실력 모드의 통계를 읽는다. 접속한 계정의 통계만 메모리에 있다.
+                return registerHostService( context, entry, &_server, outError ) && exposeInterface<IAccountStatSource>( context, entry, _service, outError );
             }
 
             bool start( OnlineServerKitContext& context, string& outError ) override
@@ -69,8 +66,39 @@ namespace sw
                 dependencies._pStore  = context._pStore;
                 dependencies._pRouter = context._pRouter;
                 _service.initialize( dependencies );
-                _bStarted = true;
                 _service.setScheduler( context._pScheduler ); // 보드 등록 전 — 시즌 보드의 정산 작업이 예약 테이블에 걸린다
+                if ( registerDefinitions( outError ) == false )
+                {
+                    _service.shutdown(); // 실패한 start 는 `stop` · `shutdown` 이 보지 않으므로 세운 서비스를 여기서 내린다
+                    return false;
+                }
+                _server.initialize( &_service, context._kits.find<IAccountDirectory>(), context._kits.find<IAccountPresence>() );
+                return true;
+            }
+
+            void stop() override
+            {
+                if ( isStarted() )
+                    _server.shutdown();
+            }
+
+            void shutdown() override
+            {
+                // 순위표 로직은 맡긴 저장 일을 회수한 뒤(저장소를 종료한 뒤) 종료한다 — 서비스 계약.
+                if ( isStarted() )
+                    _service.shutdown();
+            }
+
+            span<const utf8* const> getOptionalKits() const override
+            {
+                static constexpr const utf8* kArrKit[] = { OnlineServerKitName::kAccount }; // 표시 이름 · 접속 여부 · 접속 상태
+                return kArrKit;
+            }
+
+        private:
+            /** @brief 보드 · 업적 정의를 서비스에 올립니다. 규칙을 어긴 정의가 있으면 false 와 까닭입니다. */
+            [[nodiscard]] bool registerDefinitions( string& outError )
+            {
                 for ( const LeaderboardDefinition& board : _catalog.getBoards() )
                 {
                     if ( _service.registerBoard( board ) == false )
@@ -97,35 +125,18 @@ namespace sw
                         return false;
                     }
                 }
-                _server.initialize( &_service, context._pAccountDirectory, context._pPresence );
                 return true;
             }
 
-            void stop() override
-            {
-                if ( _bStarted )
-                    _server.shutdown();
-            }
-
-            void shutdown() override
-            {
-                // 순위표 로직은 맡긴 저장 일을 회수한 뒤(저장소를 종료한 뒤) 종료한다 — 서비스 계약.
-                if ( _bStarted )
-                    _service.shutdown();
-                _bStarted = false;
-            }
-
-        private:
             LeaderboardCatalog _catalog;
             vector<string>     _listInlineBoardID; ///< 옵션 `board` 의 id
             LeaderboardService _service;
             LeaderboardServer  _server;
-            bool               _bStarted;
         };
     } // namespace
 } // namespace sw
 
 namespace sw
 {
-    SW_REGISTER_ONLINE_SERVER_KIT( LeaderboardOnlineServerKit, "leaderboard", OnlineServerKitOrder::kLeaderboard );
+    SW_REGISTER_ONLINE_SERVER_KIT( LeaderboardOnlineServerKit, OnlineServerKitName::kLeaderboard );
 } // namespace sw

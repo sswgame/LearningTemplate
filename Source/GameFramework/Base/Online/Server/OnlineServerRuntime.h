@@ -2,12 +2,14 @@
  * @file OnlineServerRuntime.h
  * @brief 온라인 서비스 서버 조립입니다. 저장소, 캐시, 버스, 예약 작업, 원격 설정, 서비스 호스트를 만들고 로드된 키트(`IOnlineServerKit`)를 설정대로 연결합니다.
  * @details - 전용 서버는 서버 서비스(`OnlineServerService`)로 이것을 띄웁니다. 부하 테스트 봇의 `--local-server` 와 끝단 테스트도 같은 조립을 씁니다.
- *          - 시작 순서는 저장소와 캐시 → 버스 → 키트 `initialize`(바인딩을 등록한다) → 호스트(전송, TLS) → 버스를 라우터에 연결 → 키트 `start` → 서버 등록입니다.
- *            종료는 서버 등록 → 키트 `stop` → 호스트 → 예약 작업 → 저장소(남은 완료를 돌린다) → 키트 `shutdown` → 캐시 순입니다. 온라인 기반의 종료 계약과 같습니다.
+ *          - 공통 기반(저장소 · 캐시 · 버스 · 예약 작업 · 호스트)과 키트는 지역 `SubsystemScope` 의 노드입니다. 모든 키트가 기반 노드(`OnlineServerKitName::kBase`)에
+ *            의존하고 키트끼리는 이름 의존(`IOnlineServerKit::getRequiredKits` · `getOptionalKits`)으로 정렬되어, 순서를 손으로 적는 곳이 없습니다.
+ *          - 시작: 기반 `initialize`(저장소와 캐시, 버스) → 키트 `initialize`(바인딩을 등록하고 인터페이스를 건다) → 호스트(전송, TLS) → 버스를 라우터에 연결
+ *            → 키트 `start`(초기화 순서) → 서버 등록입니다. 종료: 서버 등록 → 컬렉션 `shutdownAll` 이 키트 `stop`(역순) → 기반 stop(호스트 → 예약 작업 → 저장소와
+ *            남은 완료) → 키트 `shutdown`(역순) → 기반 shutdown(캐시)을 돕니다. 온라인 기반의 종료 계약과 같습니다.
+ *          - `start` 는 컬렉션의 단계가 아니라 런타임이 초기화 순서(`getInitializedIndices`)로 부릅니다 — 호스트 기동이 모든 키트의 `initialize` 와 `start` 사이에 있어서다.
  *          - 버스는 캐시 위 버스(`EphemeralServerBus`)이고 캐시 앞은 호스트의 라우터로 서비스와 나눠 씁니다. 메모리 캐시이면 이 프로세스 안에서만 돕니다(서버 한 대).
  *          - 서비스 스레드 하나(`tick` 을 부르는 스레드)에서 씁니다.
- * @note 이 조립은 `SubsystemCollection` 으로 옮기지 않는다. 키트 계약은 "만든 키트는 어느 단계에서 멈췄든 모두 stop 과 shutdown 을 받는다" 인데,
- *       컬렉션은 초기화에 성공한 것만 종료한다. 그러면 키트 초기화나 호스트 기동이 실패했을 때 키트가 stop 을 받지 못한다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -101,8 +103,11 @@ namespace sw
     private:
         struct Parts;
 
+        class BaseNode;
+
         [[nodiscard]] bool createStores( OnlineServerRuntimeConfig& settings, int64 nowMs, string& outError );
-        [[nodiscard]] bool createKits( const OnlineServerRuntimeConfig& settings, string& outError );
+        /** @brief 설정의 키트를 만들어 노드로 더합니다(모르는 키트 · 두 번 적은 키트 · 설정에 없는 필수 키트는 오류). */
+        [[nodiscard]] bool addKits( string& outError );
         [[nodiscard]] bool startHost( OnlineServerRuntimeConfig& settings, string& outError );
         [[nodiscard]] bool registerServer( string& outError );
 

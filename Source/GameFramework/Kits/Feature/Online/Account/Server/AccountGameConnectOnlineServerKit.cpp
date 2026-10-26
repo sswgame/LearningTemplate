@@ -69,9 +69,9 @@ namespace sw
             bool start( OnlineServerKitContext& context, string& outError ) override
             {
                 // 받아들이기 정책은 매칭 키트(`gameServer`)가 `initialize` 에서 내놓는다 — 없으면 티켓이 맞는 계정은 모두 받는 서버다(배정 없는 상시 서버).
-                const IConnectAdmission& admission = context._pConnectAdmission != nullptr ? *context._pConnectAdmission
-                                                                                           : static_cast<const IConnectAdmission&>( _admitEveryAccount );
-                _pAuthenticator                    = make_unique<AccountConnectAuthenticator>( &_ticketAuthority, hashed_string( _serverName.c_str() ), admission );
+                const IConnectAdmission* pAdmission = context._kits.find<const IConnectAdmission>();
+                const IConnectAdmission& admission  = pAdmission != nullptr ? *pAdmission : static_cast<const IConnectAdmission&>( _admitEveryAccount );
+                _pAuthenticator                     = make_unique<AccountConnectAuthenticator>( &_ticketAuthority, hashed_string( _serverName.c_str() ), admission );
                 _pAuthenticator->setNowMs( context._nowMs );
                 // 접속 보안 자리는 엔진의 네트워크 세션이 들고 있다(서비스).
                 GameNetSession* pNetSession = game::findSubsystem<GameNetSession>();
@@ -107,6 +107,12 @@ namespace sw
                 _pAuthenticator.reset();
             }
 
+            span<const utf8* const> getOptionalKits() const override
+            {
+                static constexpr const utf8* kArrKit[] = { OnlineServerKitName::kMatchmaking }; // 받아들이기 정책(gameServer)
+                return kArrKit;
+            }
+
         private:
             NetSecurityLoginCrypto                  _crypto;
             LoginTicketAuthority                    _ticketAuthority;
@@ -120,5 +126,5 @@ namespace sw
 
 namespace sw
 {
-    SW_REGISTER_ONLINE_SERVER_KIT( AccountGameConnectOnlineServerKit, "gameConnect", OnlineServerKitOrder::kIdentity + 1 );
+    SW_REGISTER_ONLINE_SERVER_KIT( AccountGameConnectOnlineServerKit, OnlineServerKitName::kGameConnect );
 } // namespace sw
