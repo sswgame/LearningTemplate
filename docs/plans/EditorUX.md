@@ -298,7 +298,7 @@ ImGui 의 `BeginPopupContextItem` · `BeginPopupContextWindow` 는 **뗄 때** �
 
 파일 영역이 겹치지 않게 나눴습니다. IE → I0 → I1 은 차례로, I2 는 I0 와 함께, I3 들은 I1 뒤에 서로 나란히 할 수 있습니다.
 
-상태(2026-10-27): 첫 안(범위 · 몸짓 바인딩 형식을 `Common/Commands` 에 새로 만드는 것)으로 시작한 작업자가 엔진 입력 맵과 겹치는 것을 확인하고 구현 전에 멈췄습니다. 아래는 개정한 단위이고 아직 아무것도 구현하지 않았습니다.
+상태(2026-10-27): 첫 안(범위 · 몸짓 바인딩 형식을 `Common/Commands` 에 새로 만드는 것)은 엔진 입력 맵과 겹쳐 버리고 아래로 다시 나눴습니다. **IE 는 구현했습니다**(브랜치 `wt/inputlayer`, 통합 빌드 · EngineTest `TestInputMapToolInput` 확인 전). 이때 `<bind modifier>` 를 왼쪽 수정 키 Chord 에서 수정 키 마스크 Shortcut(`modifier="Ctrl+Shift"`)으로 바꿨습니다 — 셸 · UI 맵의 수정 키 바인딩이 오른쪽 수정 키에도 듣고, 다른 수정 키를 함께 누르면 발화하지 않습니다. I0 · I1 · I2 는 아직입니다. I1 이 풀 것: 셸 사용자 바인딩 파일(`ShellInputActions::saveUserBindings`)은 방아쇠 슬롯만 적어 단축키의 수정 키를 바꾼 재배치를 담지 못합니다 — 에디터 단축키 재배치는 수정 키 마스크도 적게 넓힙니다.
 
 | 단위 | 파일 영역 | 할 일 | 선행 |
 |---|---|---|---|
