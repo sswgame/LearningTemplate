@@ -327,6 +327,11 @@
       "source": "docs/plans/Candidates-ui.md", "result_doc": "docs/plans/Candidates-ui.md"
     },
     {
+      "id": "ui-candidates-new-tests", "title": "타이틀로 등록 · 떼어 낸 창 키 놓기 · AT-SPI 번호 규칙 테스트", "kind": "covered", "config": "Debug", "platform": "windows", "gpu": "none", "pending": false,
+      "covered": ["GameFrameworkTest.GameInstanceBaseReturnToTitleFollowsTitleScene", "ImGuiKeyForwardTest.DetachedForwarderReleasesHeldKeysWhenFocusIsLost", "AtSpiMappingTest.RolesMapToAtspiRoleNumbers", "AtSpiMappingTest.StatesMapToAtspiStateBits", "AtSpiMappingTest.InterfacesFollowTheRole"], "covered_by": "ctest-nogpu",
+      "source": "docs/plans/Candidates-ui.md", "result_doc": "docs/plans/Candidates-ui.md"
+    },
+    {
       "id": "terrainedits-scenario", "title": "terrainedits 시나리오(differingFraction 문턱)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": false,
       "covered": ["engine/automation/rhiswap/terrainedits.scenario.xml"], "covered_by": "app-scenarios-release",
       "source": "docs/plans/NEXT.md 0000절 표 B 단계", "result_doc": "docs/plans/NEXT.md 0000절",

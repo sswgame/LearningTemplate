@@ -1,6 +1,8 @@
 /**
  * @file X11DevConsoleWindow.cpp
- * @brief 개발 콘솔의 X11 창입니다. 게임 창의 자식 창에 iso10646-1 코어 글꼴로 UTF-8 줄을 그립니다(`XDrawString16`, 기본 다국어 평면).
+ * @brief 개발 콘솔의 X11 창입니다. 게임 창의 자식 창에 Xft(fontconfig)로 UTF-8 줄을 그립니다 — 기본 글꼴에 없는 글자(한글 · 일본어)는 fontconfig 가 고른 폴백 글꼴로 그립니다.
+ * @details 코어 X 글꼴(iso10646-1)은 X 서버가 그 글자를 가진 만큼만 나와 한글 · 일본어가 비어 보였다. Xft 는 클라이언트 쪽 글꼴이라 서버 글꼴 설치와 무관하다.
+ *          Xft 가 필요하다(`libxft-dev`, CMake `PkgConfig::SW_XFT`). 글꼴을 못 열면 콘솔을 세우지 않는다(깨진 글자로 그리지 않는다).
  */
 #include "pch.h"
 
@@ -9,6 +11,7 @@
 #if SW_DEV_COMMANDS_ENABLED && defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
 
     #include "Core/Container/StringUtil.h"
+    #include "Core/Container/map.h"
     #include "Core/Log/Logger.h"
 
     #include "Engine/Window/IWindow.h"
@@ -16,34 +19,20 @@
     #include "Core/Common/PlatformOsHeaders.h"
     #include "Core/Common/X11Headers.h"
 
+    #include <X11/Xft/Xft.h>
+    #include <fontconfig/fontconfig.h>
+
+    #include "Core/Common/X11MacroUndef.h" // Xft 헤더 뒤에 X11 매크로를 다시 지운다
+
 namespace sw
 {
     namespace
     {
         struct X11DevConsoleWindowInternal
         {
-            static constexpr int32 kLineHeight = 16;
-            static constexpr int32 kPadding    = 6;
-            /// 코어 X 글꼴 후보입니다(앞에서부터 처음 열리는 것). 모두 UCS-2(iso10646-1) 글꼴이라 로캘(`setlocale` 을 아무도 부르지 않는다)과 무관하게 UTF-8 글을 그릴 수 있다.
-            static constexpr const utf8* kArrFontPattern[] = { "-*-*-medium-r-normal--16-*-*-*-*-*-iso10646-1", "-*-*-medium-r-*--14-*-*-*-*-*-iso10646-1", "-*-*-*-*-*--*-*-*-*-*-*-iso10646-1" };
-
-            /**
-             * @brief UTF-8 글을 UCS-2(`XDrawString16` 의 글자)로 바꿉니다. 기본 다국어 평면 밖(이모지 등)과 잘못된 바이트는 U+FFFD 한 글자가 된다.
-             * @details `XDrawString` 은 Latin-1 이라 한글 · 일본어가 깨진다. 글자 모양은 X 서버의 iso10646-1 글꼴이 그 글자를 가진 만큼만 나온다.
-             */
-            static void toUcs2Chars( const string& text, vector<XChar2b>& outListChar )
-            {
-                vector<uint16> listUnit;
-                StringUtil::utf8ToUcs2( text, listUnit );
-                outListChar.clear();
-                for ( const uint16 unit : listUnit )
-                {
-                    XChar2b character{};
-                    character.byte1 = static_cast<uint8>( unit >> 8 );
-                    character.byte2 = static_cast<uint8>( unit & 0xFF );
-                    outListChar.push_back( character );
-                }
-            }
+            static constexpr int32 kPadding = 6;
+            /// 기본 글꼴입니다(fontconfig 이름). `monospace` 는 시스템이 정한 고정폭 글꼴로 풀린다 — 글자가 없으면 폴백 글꼴을 따로 찾는다(`findFontFor`).
+            static constexpr const utf8* kFontName = "monospace-11";
         };
     } // namespace
 } // namespace sw
@@ -61,8 +50,13 @@ namespace sw
             : _pDisplay{ pDisplay }
             , _ownerWindow{ ownerWindow }
             , _window{ 0 }
-            , _gc{ nullptr }
+            , _pDraw{ nullptr }
             , _pFont{ nullptr }
+            , _lineHeight{ 16 }
+            , _color{}
+            , _bColorAllocated{ false }
+            , _mapFallbackFont{}
+            , _listUnit{}
             , _listLine{}
             , _listErrorFlag{}
         {
@@ -70,10 +64,17 @@ namespace sw
 
         ~X11DevConsoleWindow() override
         {
+            for ( auto& entry : _mapFallbackFont )
+            {
+                if ( entry.second != nullptr )
+                    XftFontClose( _pDisplay, entry.second );
+            }
             if ( _pFont != nullptr )
-                XFreeFont( _pDisplay, _pFont );
-            if ( _gc != nullptr )
-                XFreeGC( _pDisplay, _gc );
+                XftFontClose( _pDisplay, _pFont );
+            if ( _bColorAllocated )
+                XftColorFree( _pDisplay, DefaultVisual( _pDisplay, DefaultScreen( _pDisplay ) ), DefaultColormap( _pDisplay, DefaultScreen( _pDisplay ) ), &_color );
+            if ( _pDraw != nullptr )
+                XftDrawDestroy( _pDraw );
             if ( _window != 0 )
                 XDestroyWindow( _pDisplay, _window );
             XFlush( _pDisplay );
@@ -88,20 +89,16 @@ namespace sw
             _window            = XCreateSimpleWindow( _pDisplay, _ownerWindow, 0, 0, 1, 1, 0, WhitePixel( _pDisplay, screen ), BlackPixel( _pDisplay, screen ) );
             if ( _window == 0 )
                 return false;
-            _gc = XCreateGC( _pDisplay, _window, 0, nullptr );
-            if ( _gc == nullptr )
-                return false;
-            // 글꼴이 없으면 콘솔을 세우지 않는다(Latin-1 로 깨뜨려 그리지 않는다). 호출한 쪽이 경고를 남긴다.
-            for ( const utf8* pPattern : X11DevConsoleWindowInternal::kArrFontPattern )
-            {
-                _pFont = XLoadQueryFont( _pDisplay, pPattern );
-                if ( _pFont != nullptr )
-                    break;
-            }
+            // 글꼴이 없으면 콘솔을 세우지 않는다(깨뜨려 그리지 않는다). 호출한 쪽이 경고를 남긴다.
+            _pFont = XftFontOpenName( _pDisplay, screen, X11DevConsoleWindowInternal::kFontName );
             if ( _pFont == nullptr )
                 return false;
-            XSetFont( _pDisplay, _gc, _pFont->fid );
-            return true;
+            _lineHeight = _pFont->ascent + _pFont->descent + 2;
+            _pDraw      = XftDrawCreate( _pDisplay, _window, DefaultVisual( _pDisplay, screen ), DefaultColormap( _pDisplay, screen ) );
+            if ( _pDraw == nullptr )
+                return false;
+            _bColorAllocated = XftColorAllocName( _pDisplay, DefaultVisual( _pDisplay, screen ), DefaultColormap( _pDisplay, screen ), "white", &_color ) != 0;
+            return _bColorAllocated;
         }
 
         void setVisible( bool bVisible ) override
@@ -133,34 +130,89 @@ namespace sw
             if ( XGetWindowAttributes( _pDisplay, _ownerWindow, &attributes ) == 0 )
                 return;
             const int32 lineCount = static_cast<int32>( _listLine.empty() ? 1 : _listLine.size() );
-            const int32 height    = lineCount * X11DevConsoleWindowInternal::kLineHeight + X11DevConsoleWindowInternal::kPadding * 2;
+            const int32 height    = lineCount * _lineHeight + X11DevConsoleWindowInternal::kPadding * 2;
             XMoveResizeWindow( _pDisplay, _window, 0, 0, static_cast<uint32>( attributes.width > 1 ? attributes.width : 1 ), static_cast<uint32>( height ) );
+        }
+
+        /**
+         * @brief 글자 @p unit 을 그릴 글꼴입니다. 기본 글꼴에 있으면 그것이고, 없으면 fontconfig 에게 그 글자를 가진 글꼴을 물어 연 것(없으면 nullptr — 그 글자는 건너뛴다)입니다.
+         * @details 한 번 물은 결과(없음 포함)는 글자별로 기억해 프레임마다 fontconfig 를 다시 부르지 않는다. 글꼴 개체는 소멸자가 닫는다.
+         */
+        XftFont* findFontFor( uint16 unit )
+        {
+            if ( XftCharExists( _pDisplay, _pFont, unit ) != 0 )
+                return _pFont;
+            const auto found = _mapFallbackFont.find( unit );
+            if ( found != _mapFallbackFont.end() )
+                return found->second;
+            XftFont*   pFallback = nullptr;
+            FcCharSet* pCharSet  = FcCharSetCreate();
+            FcPattern* pPattern  = FcPatternDuplicate( _pFont->pattern );
+            if ( pCharSet != nullptr && pPattern != nullptr )
+            {
+                FcCharSetAddChar( pCharSet, unit );
+                FcPatternAddCharSet( pPattern, FC_CHARSET, pCharSet );
+                FcDefaultSubstitute( pPattern );
+                FcResult   result = FcResultNoMatch;
+                FcPattern* pMatch = FcFontMatch( nullptr, pPattern, &result );
+                if ( pMatch != nullptr )
+                {
+                    pFallback = XftFontOpenPattern( _pDisplay, pMatch ); // 성공하면 XftFont 가 pMatch 를 소유한다
+                    if ( pFallback == nullptr )
+                        FcPatternDestroy( pMatch );
+                    else if ( XftCharExists( _pDisplay, pFallback, unit ) == 0 )
+                    {
+                        XftFontClose( _pDisplay, pFallback ); // 시스템에 그 글자를 가진 글꼴이 없다
+                        pFallback = nullptr;
+                    }
+                }
+            }
+            if ( pPattern != nullptr )
+                FcPatternDestroy( pPattern );
+            if ( pCharSet != nullptr )
+                FcCharSetDestroy( pCharSet );
+            _mapFallbackFont[unit] = pFallback;
+            return pFallback;
         }
 
         void redraw()
         {
             XClearWindow( _pDisplay, _window );
-            const int32 screen = DefaultScreen( _pDisplay );
-            int32       lineY  = X11DevConsoleWindowInternal::kPadding + X11DevConsoleWindowInternal::kLineHeight - 4;
+            int32 lineY = X11DevConsoleWindowInternal::kPadding + _pFont->ascent;
             for ( size_t index = 0; index < _listLine.size(); ++index )
             {
-                XSetForeground( _pDisplay, _gc, WhitePixel( _pDisplay, screen ) );
-                X11DevConsoleWindowInternal::toUcs2Chars( _listLine[index], _listChar );
-                XDrawString16( _pDisplay, _window, _gc, X11DevConsoleWindowInternal::kPadding, lineY, _listChar.data(), static_cast<int32>( _listChar.size() ) );
-                lineY += X11DevConsoleWindowInternal::kLineHeight;
+                // UTF-8 → UCS-2(기본 다국어 평면 밖과 잘못된 바이트는 U+FFFD 한 글자). 글자마다 글꼴을 골라 이어 그린다.
+                StringUtil::utf8ToUcs2( _listLine[index], _listUnit );
+                int32 penX = X11DevConsoleWindowInternal::kPadding;
+                for ( const uint16 unit : _listUnit )
+                {
+                    XftFont* pFont = findFontFor( unit );
+                    if ( pFont == nullptr )
+                        continue;
+                    const FcChar16 character = unit;
+                    XftDrawString16( _pDraw, &_color, pFont, penX, lineY, &character, 1 );
+                    XGlyphInfo extents{};
+                    XftTextExtents16( _pDisplay, pFont, &character, 1, &extents );
+                    penX += extents.xOff;
+                }
+                lineY += _lineHeight;
             }
             XFlush( _pDisplay );
         }
 
     private:
-        Display*        _pDisplay;
-        ::Window        _ownerWindow;
-        ::Window        _window;
-        GC              _gc;
-        XFontStruct*    _pFont;
-        vector<XChar2b> _listChar; ///< 한 줄을 UCS-2 로 바꾼 글자(그릴 때마다 다시 쓴다)
-        vector<string>  _listLine;
-        vector<uint8>   _listErrorFlag;
+        Display*              _pDisplay;
+        ::Window              _ownerWindow;
+        ::Window              _window;
+        XftDraw*              _pDraw;
+        XftFont*              _pFont;
+        int32                 _lineHeight;
+        XftColor              _color;
+        bool                  _bColorAllocated;
+        map<uint16, XftFont*> _mapFallbackFont; ///< 기본 글꼴에 없는 글자 → fontconfig 가 고른 폴백 글꼴(nullptr = 시스템에 없음)
+        vector<uint16>        _listUnit;        ///< 한 줄을 UCS-2 로 바꾼 글자(그릴 때마다 다시 쓴다)
+        vector<string>        _listLine;
+        vector<uint8>         _listErrorFlag;
     };
 } // namespace sw
 
@@ -182,7 +234,7 @@ namespace sw
         unique_ptr<X11DevConsoleWindow> pWindow     = make_unique<X11DevConsoleWindow>( pDisplay, ownerWindow );
         if ( pWindow->initialize() == false )
         {
-            SW_LOG_WARNING( "Dev console: could not create the console window (no X window, GC or iso10646-1 font)" );
+            SW_LOG_WARNING( "Dev console: could not create the console window (no X window, Xft font or color)" );
             return nullptr;
         }
         return pWindow;
