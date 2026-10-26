@@ -226,6 +226,10 @@ def reportLoad(resultsPath: Path) -> int:
         emitErrorInternal("load", f"no load results in {resultsPath} - the load run did not finish")
         return ExitCode.Passed
     for result in listResult[:_kMaxTestCount]:
+        # 측정 기계가 아닌 러너에서 넘은 시간 예산(Load.py --report-time-budgets)은 판정 대신 알림 — 진 조합이 아니어도 올린다.
+        if result.get("time_budget_overruns"):
+            print(f"::notice title=load time budget {result.get('scenario')} x {result.get('profile')}::"
+                  f"{escapeAnnotationInternal(kNewline.join(result['time_budget_overruns']))}")
         if result.get("verdict") != "fail":
             continue
         listMetric = [f"{name} {values['median']:.1f} ({values['min']:.1f}..{values['max']:.1f})" for name, values in result.get("metrics", {}).items()

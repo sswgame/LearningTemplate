@@ -434,9 +434,16 @@ def classifyBottleneck(metricName: str, summary: dict[str, dict[str, float]]) ->
     return "server / network (load bot)"
 
 
-def judgeBudget(budget: dict[str, float], summary: dict[str, dict[str, float]]) -> tuple[list[str], list[str]]:
-    """예산 — 지표의 가운데 값이 상한을 넘으면 실패(병목 갈래를 붙인다). 측정되지 않은 예산은 알림."""
+def isTimeMetric(metricName: str) -> bool:
+    """기계 속도에 따라 움직이는 지표(시간 · 히치 횟수) — 측정 기계가 아닌 곳에서는 판정하지 않는다. 정확성 · 메모리 · 오류율은 어디서든 판정한다."""
+    return metricName.endswith(("_us", "_ms")) or metricName.startswith("hitch.")
+
+
+def judgeBudget(budget: dict[str, float], summary: dict[str, dict[str, float]], bJudgeTime: bool = True) -> tuple[list[str], list[str], list[str]]:
+    """예산 — 지표의 가운데 값이 상한을 넘으면 실패(병목 갈래를 붙인다). bJudgeTime 이 거짓이면 시간 예산을 넘은 것은 실패 대신 둘째 목록(알림).
+    측정되지 않은 예산은 셋째 목록(알림)."""
     listFailure: list[str] = []
+    listTimeOverrun: list[str] = []
     listNote: list[str] = []
     for metricName, limit in sorted(budget.items()):
         if metricName.startswith("_"):
@@ -448,9 +455,10 @@ def judgeBudget(budget: dict[str, float], summary: dict[str, dict[str, float]]) 
         bMinimum = metricName in ("converged",)  # 아래로 지켜야 하는 지표(1 = 수렴)
         bBroken = entry["median"] < limit if bMinimum else entry["median"] > limit
         if bBroken:
-            listFailure.append(f"{classifyBottleneck(metricName, summary)}: {metricName} {entry['median']:.1f} "
-                               f"{'<' if bMinimum else '>'} budget {limit:g} (runs {entry['min']:.1f}..{entry['max']:.1f})")
-    return listFailure, listNote
+            line = (f"{classifyBottleneck(metricName, summary)}: {metricName} {entry['median']:.1f} "
+                    f"{'<' if bMinimum else '>'} budget {limit:g} (runs {entry['min']:.1f}..{entry['max']:.1f})")
+            (listFailure if bJudgeTime or not isTimeMetric(metricName) else listTimeOverrun).append(line)
+    return listFailure, listTimeOverrun, listNote
 
 
 def makeToleranceInternal(metricName: str) -> tuple[float, float] | None:
@@ -525,7 +533,8 @@ def runCombination(catalog: LoadCatalog, scenarioName: str, profileName: str, tr
     summary = summarizeRuns(listMeasurement)
     listFailure = [failure for measurement in listMeasurement for failure in measurement.listFailure]
     budget = catalog.findBudget(scenarioName, profileName)
-    budgetFailure, budgetNote = judgeBudget(budget, summary)
+    budgetFailure, timeOverrun, budgetNote = judgeBudget(budget, summary, bJudgeTime=not args.report_time_budgets)
+    budgetNote += [f"time budget reported, not judged (not a measurement machine) - {line}" for line in timeOverrun]
     machineKey = makeMachineKey()
     baselineKey = f"{scenarioName}|{profileName}|{backend}{f'|{qualityOverride}' if qualityOverride else ''}"
     machineEntry = catalog.baselines["machines"].setdefault(machineKey, {})
@@ -538,7 +547,8 @@ def runCombination(catalog: LoadCatalog, scenarioName: str, profileName: str, tr
         "quality": qualityOverride or profile.data["quality"], "build": tree.name, "build_type": buildType, "judged": bJudged,
         "machine": machineKey, "commit": readCommitInternal(catalog.repositoryRoot), "time": datetime.datetime.now().isoformat(timespec="seconds"),
         "runs": len(listMeasurement), "command": listMeasurement[0].command, "metrics": summary, "budget": budget,
-        "failures": listFailure, "budget_failures": budgetFailure, "baseline_regressions": baselineFailure, "notes": budgetNote + baselineNote,
+        "failures": listFailure, "budget_failures": budgetFailure, "time_budget_overruns": timeOverrun, "baseline_regressions": baselineFailure,
+        "notes": budgetNote + baselineNote,
         "verdict": "fail" if listVerdictFailure else "pass",
     }
     if args.record and not listFailure:
@@ -599,6 +609,8 @@ def addRunArgumentsInternal(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--runs", type=int, default=3, help="조합마다 돌리는 횟수(가운데 값과 분산을 적는다)")
     parser.add_argument("--record", action="store_true", help="이 기계의 기준선을 남긴다(Test/Load/Baselines.json)")
     parser.add_argument("--allow-debug", action="store_true", help="Release 가 아닌 빌드도 판정한다(숫자는 의미가 적다)")
+    parser.add_argument("--report-time-budgets", action="store_true",
+                        help="시간 예산(_us · _ms · hitch.*)은 넘어도 알림만 — 측정 기계가 아닌 CI 러너용(정확성 · 메모리 · 오류율 예산과 실행 실패는 그대로 판정)")
     parser.add_argument("--out", type=Path, default=None, help="결과 JSON 경로(기본 <빌드>/LoadResults/<시각>.json)")
     parser.add_argument("--app-arg", action="append", default=[], help="App 에 더 넘길 인자(진단용, 여러 번 — 예: --app-arg=-gv_ioLogReads=1)")
 
@@ -696,6 +708,9 @@ def main(listArgument: list[str] | None = None) -> int:
                 return ExitCode.CheckInvalid
             return commandRun(catalog, [(scenario, profile) for scenario, profile in listPair], args)
         if args.command == "scale":
+            if args.report_time_budgets:
+                print("[Load] scale picks a quality level by its time budgets - --report-time-budgets would make every level pass", file=sys.stderr)
+                return ExitCode.CheckInvalid
             return commandScale(catalog, args.scenario, args.profile, args)
         return commandTrend(BuildTree.fromPreset(args.preset, catalog.repositoryRoot), args.scenario, args.metric)
     except (KeyError, ValueError, ElementTree.ParseError) as error:

@@ -3,7 +3,8 @@ name: Load (Linux | Release, nightly)
 # 부하 검증 — Release 로 지어 부하 스위트(ctest -L load, 시간 예산 판정)와 부하 묶음 nightly(Test/Load/Suites.json — 온라인 봇 · 루프백 클러스터)를 돈다.
 # 밤마다(KST 04 시) + 손으로. 일반 CI(ci.yml)의 nogpu 집합은 부하 스위트를 빼므로 느려지지 않는다. GPU 가 없어 App 드라이버 조합은 묶음에 넣지 않는다.
 # 진 테스트 · 진 조합은 주석으로 올린다(작업 로그 · 아티팩트는 밖에서 403) — Scripts/dev/CiFailureReport.py tests · load.
-# 러너는 측정 기계가 아니다: 예산은 이 PC 기준이라 러너가 크게 느리면 시간 예산이 질 수 있다. 기준선은 기계마다라 러너에는 없다(알림만).
+# 러너는 측정 기계가 아니다: 묶음의 시간 예산(tick · 프레임 p99 등, 이 PC 기준 제품 목표)은 --report-time-budgets 로 알림만 내고
+# 정확성(수렴 · 오류율) · 메모리 예산과 실행 실패만 판정한다. 기준선은 기계마다라 러너에는 없다(알림만). 시간 회귀는 이 PC 의 기준선이 본다.
 on:
   schedule:
     - cron: '0 19 * * *'
@@ -82,13 +83,14 @@ jobs:
       shell: bash
       run: |
         set +e
-        $PY -m Scripts load suite nightly --preset CI-Release --runs 3 --out build/CI-Release/LoadResults/nightly.json
+        $PY -m Scripts load suite nightly --preset CI-Release --runs 3 --report-time-budgets --out build/CI-Release/LoadResults/nightly.json
         code=$?
         if [ "$code" = "77" ]; then exit 0; fi
         exit $code
 
-    - name: Report failed load scenarios as annotations
-      if: failure() && steps.scenarios.outcome == 'failure'
+    # 통과해도 돈다 — 러너에서 넘은 시간 예산을 알림(::notice)으로 올린다.
+    - name: Report load scenarios as annotations
+      if: always() && (steps.scenarios.outcome == 'success' || steps.scenarios.outcome == 'failure')
       shell: bash
       run: |
         $PY Scripts/dev/CiFailureReport.py load --results build/CI-Release/LoadResults/nightly.json
