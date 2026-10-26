@@ -109,12 +109,9 @@ namespace sw
     {
         if ( OnlinePushRelayInternal::getList().add( pEntry, OnlinePushRelayInternal::kListName ) )
             return;
-        // 오르지 못한 항목의 알림은 다른 서버에서 받지 못한다. 고칠 곳은 항목 선언이므로 모든 구성에서 멈춘다. 모듈 로드(정적 초기화) 중이라 표준 오류에도 쓴다.
+        // 오르지 못한 항목의 알림은 다른 서버에서 받지 못한다. 고칠 곳은 항목 선언이므로 모든 구성에서 멈춘다. 모듈 로드(정적 초기화) 중이라도 `SW_FATAL` 은 표준 오류에 먼저 쓴다.
         const utf8* pName = pEntry->_pName != nullptr ? pEntry->_pName : "(no name)";
-        std::fprintf( stderr, "Online push relay entry '%s' could not be registered (missing or duplicate name)\n", pName );
-        std::fflush( stderr );
-        SW_LOG_ERROR( "Online push relay entry '%#' could not be registered (missing or duplicate name)", pName );
-        std::abort();
+        SW_FATAL( "Online push relay entry '%#' could not be registered (missing or duplicate name)", pName );
     }
 
     void OnlinePushRelayRegistry::unregisterEntry( OnlinePushRelayEntry* pEntry )

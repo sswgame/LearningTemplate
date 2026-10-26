@@ -56,13 +56,14 @@ namespace sw::internal
     void reportLowLevel( LowLevelReportLevel level, const utf8* pFile, int32 line, const utf8* pMessage ) noexcept
     {
         // Error 는 보고자가 있어도 먼저 동기로 쓴다 — 비동기 로거의 큐는 크래시 직전 메시지를 잃는다(SW_ASSERT 가 멈추기 전에 쓰는 것과 같다).
-        if ( level == LowLevelReportLevel::Error )
-            LowLevelReportInternal::writeStderr( level, pFile, line, pMessage );
+        const bool bWarning = level == LowLevelReportLevel::Warning;
+        if ( bWarning == false )
+            LowLevelReportInternal::writeStderr( LowLevelReportLevel::Error, pFile, line, pMessage ); // Fatal 도 stderr 에는 Error 로 쓴다
 
         const LowLevelReporterFunc pfnReporter = s_pfnLowLevelReporter.load( std::memory_order_acquire );
         const bool                 bReported   = pfnReporter != nullptr && pfnReporter( level, pFile, line, pMessage );
-        // 로거가 서기 전이거나 로거가 없는 도구이거나 싱크가 없다 — 경고를 잃지 않게 stderr 에 남긴다(Error 는 위에서 이미 썼다).
-        if ( bReported == false && level != LowLevelReportLevel::Error )
+        // 로거가 서기 전이거나 로거가 없는 도구이거나 싱크가 없다 — 경고를 잃지 않게 stderr 에 남긴다(Error · Fatal 은 위에서 이미 썼다).
+        if ( bReported == false && bWarning )
             LowLevelReportInternal::writeStderr( level, pFile, line, pMessage );
     }
 
@@ -196,11 +197,20 @@ namespace sw::internal
     {
         utf8 arrText[kLowLevelMessageCapacity];
         formatLowLevelMessage( arrText, kLowLevelMessageCapacity, "Required lookup is missing: %s", pLookup );
-        reportLowLevel( LowLevelReportLevel::Error, __FILE__, static_cast<int32>( __LINE__ ), arrText ); // Error 는 stderr 에 먼저 동기로 쓴다 — 멈추기 전에 남는다
 #if defined( SW_DEBUG )
         if ( tryCaptureAssert() )
-            return; // 단언 가로채기를 건 테스트(`ScopedAssertCapture`)만 멈추지 않고 개수를 센다 — 가로채기는 Debug 에만 있다
+        {
+            // 단언 가로채기를 건 테스트(`ScopedAssertCapture`)만 멈추지 않고 개수를 센다 — 가로채기는 Debug 에만 있다
+            reportLowLevel( LowLevelReportLevel::Error, __FILE__, static_cast<int32>( __LINE__ ), arrText );
+            return;
+        }
 #endif
+        reportFatal( __FILE__, static_cast<int32>( __LINE__ ), arrText );
+    }
+
+    void reportFatal( const utf8* pFile, int32 line, const utf8* pMessage ) noexcept
+    {
+        reportLowLevel( LowLevelReportLevel::Fatal, pFile, line, pMessage ); // stderr 동기 + 로그 줄 · 싱크 비우기(`forwardLowLevelReport`)
         std::abort();
     }
 } // namespace sw::internal

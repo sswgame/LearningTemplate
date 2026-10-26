@@ -303,12 +303,8 @@ namespace sw
                 {
                     if ( joinStopwatch.getElapsedMilliseconds() >= static_cast<int64>( kShutdownJoinGraceMs ) )
                     {
-                        SW_LOG_ERROR( "Task manager shutdown: %# worker(s) did not exit within %# ms after stop - task '%#' blocks the join; aborting instead of hanging",
-                                      _runningWorkerCount.load( std::memory_order_acquire ), kShutdownJoinGraceMs, unfinishedTaskName );
-                        Logger::flushGlobalForCrash();
-                        std::fprintf( stderr, "[TaskManager] shutdown aborted: task '%s' never finished\n", unfinishedTaskName.c_str() );
-                        std::fflush( stderr );
-                        std::abort();
+                        SW_FATAL( "Task manager shutdown: %# worker(s) did not exit within %# ms after stop - task '%#' blocks the join; aborting instead of hanging",
+                                  _runningWorkerCount.load( std::memory_order_acquire ), kShutdownJoinGraceMs, unfinishedTaskName );
                     }
                     std::this_thread::sleep_for( std::chrono::milliseconds( kPollMilliseconds ) );
                 }

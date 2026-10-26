@@ -186,6 +186,25 @@ SW_TEST_CASE( LowLevelReportTest, ErrorIsWrittenToStderrBeforeReporter )
 }
 
 /**
+ * @brief [LowLevelReportTest] 치명 보고(`SW_FATAL` · `SW_LOW_LEVEL_FATAL` 이 멈추기 직전에 하는 일)는 오류처럼 stderr 에 먼저 쓰이고 보고자는 Fatal 로 받는다
+ * @details 보고자(로그)는 Fatal 을 받으면 비동기 싱크를 비운다. 멈춤(`reportFatal` 의 abort)은 프로세스 안에서 볼 수 없어 그 앞 단계만 부른다.
+ */
+SW_TEST_CASE( LowLevelReportTest, FatalIsWrittenToStderrBeforeReporter )
+{
+    const ScopedLowLevelCapture capture( &LowLevelReportTestInternal::reporter );
+    sw::internal::reportLowLevel( sw::internal::LowLevelReportLevel::Fatal, __FILE__, static_cast<int32>( __LINE__ ), "fatal probe" );
+
+    const LowLevelReceived& received = LowLevelReportTestInternal::_s_received;
+    SW_EXPECT_EQUAL( 1u, received._count );
+    SW_EXPECT_TRUE( received._level == sw::internal::LowLevelReportLevel::Fatal );
+    SW_EXPECT_TRUE_MSG( received._bStderrHadTextAtCall, "stderr was still empty when the reporter ran" );
+
+    const std::string stderrText = capture.readStderr();
+    SW_EXPECT_TRUE_MSG( LowLevelReportTestInternal::contains( stderrText, "[Error] " ), stderrText.c_str() );
+    SW_EXPECT_TRUE_MSG( LowLevelReportTestInternal::contains( stderrText, "fatal probe" ), stderrText.c_str() );
+}
+
+/**
  * @brief [LowLevelReportTest] 단언 실패는 식 · 메시지 · 위치를 한 오류로 보고하고, stderr 에 먼저 쓴다
  */
 SW_TEST_CASE( LowLevelReportTest, AssertReportsExpressionMessageAndSite )

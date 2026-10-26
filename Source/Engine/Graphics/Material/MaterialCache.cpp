@@ -95,9 +95,7 @@ namespace sw
                     ++_impl._initDepth;
                     return;
                 }
-                SW_LOG_ERROR( "Materials are initialized on two threads at once - initialize them on the game thread (MaterialCache::acquire with a device, reload, initializePending)" );
-                Logger::flushGlobalForCrash(); // 비동기 싱크가 보관하고 있는 위 한 줄을 멈추기 전에 내보낸다
-                std::abort();
+                SW_FATAL( "Materials are initialized on two threads at once - initialize them on the game thread (MaterialCache::acquire with a device, reload, initializePending)" );
             }
 
             ~DeviceInitScope()

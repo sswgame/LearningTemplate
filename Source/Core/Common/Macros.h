@@ -72,7 +72,7 @@
  *   - `SW_LOG_ASSERT` : Debug 에서만 멈추고, 그 밖의 빌드에서는 Error 로그를 남깁니다. 배포본에서도 계약이 깨진 순간을
  *                       놓치지 않습니다(Logger.h 의 비-Debug 분기 참고).
  *
- * 배포본에서도 반드시 막아야 하는 조건에는 둘 다 맞지 않습니다. 직접 if 로 검사하고 빠져나가십시오.
+ * 배포본에서도 반드시 막아야 하는 조건에는 둘 다 맞지 않습니다. 직접 if 로 검사하고 빠져나가거나, 이어 갈 수 없으면 `SW_FATAL`(Logger.h)로 멈추십시오.
  * 로그보다 아래 티어(메모리 · 수학 · 컨테이너 등)는 `SW_LOG_ASSERT` · `SW_LOG_*` 를 쓸 수 없으므로 아래 10) 의 `SW_LOW_LEVEL_ASSERT` · `SW_LOW_LEVEL_ERROR` · `SW_LOW_LEVEL_WARNING` 을 씁니다.
  */
 #if defined( SW_DEBUG )
@@ -228,6 +228,7 @@ namespace sw::internal
     {
         Warning,
         Error,
+        Fatal, ///< `reportFatal` 만 쓴다 — Error 처럼 stderr 에 먼저 쓰고, 보고자(로그)는 줄을 남긴 뒤 싱크를 비운다(곧 멈추므로).
     };
 
     /** @brief 한 보고의 글 버퍼 크기(널 포함)입니다. 넘치면 끝이 잘리고 `...[truncated]` 가 붙습니다. */
@@ -256,6 +257,12 @@ namespace sw::internal
      *          멈춤을 프로세스 안에서 확인하는 테스트는 `ScopedAssertCapture::kAssertsAreActive` 인 구성에서만 부른다. 반환 뒤의 결과는 읽지 않는다.
      */
     SW_API void reportMissingRequiredService( const utf8* pLookup ) noexcept;
+    /**
+     * @brief 치명 오류 한 줄을 남기고 프로세스를 멈춥니다. 엔진에서 `std::abort` 를 부르는 **유일한** 자리입니다(`SW_FATAL` · `SW_LOW_LEVEL_FATAL` 이 부른다).
+     * @details stderr 에 먼저 동기로 쓰고(로거 이전 · 정적 초기화 중에도 남는다) 로그 보고자에게 넘긴다. 보고자는 줄을 쓰고 비동기 싱크를 비운다
+     *          (`Logger::flushGlobalForCrash`) — 직접 `std::abort` 를 부르면 이 둘을 빠뜨려 크래시 직전 줄을 잃는다(`CheckDirectAbort`).
+     */
+    [[noreturn]] SW_API void reportFatal( const utf8* pFile, int32 line, const utf8* pMessage ) noexcept;
 } // namespace sw::internal
 
 /**
@@ -275,6 +282,15 @@ namespace sw::internal
 
 /** @brief 로그보다 아래 티어의 `SW_LOG_WARNING` 입니다. 서식은 `printf` 문법입니다. */
 #define SW_LOW_LEVEL_WARNING( ... ) SW_LOW_LEVEL_INTERNAL( ::sw::internal::LowLevelReportLevel::Warning, __VA_ARGS__ )
+
+/** @brief 로그보다 아래 티어의 `SW_FATAL` 입니다. 한 줄을 남기고(stderr 동기 + 로그 · 싱크 비우기) 멈춥니다. 서식은 `printf` 문법입니다. */
+#define SW_LOW_LEVEL_FATAL( ... )                                                                                           \
+    do                                                                                                                      \
+    {                                                                                                                       \
+        utf8 arrLowLevelMessage[::sw::internal::kLowLevelMessageCapacity];                                                  \
+        ::sw::internal::formatLowLevelMessage( arrLowLevelMessage, ::sw::internal::kLowLevelMessageCapacity, __VA_ARGS__ ); \
+        ::sw::internal::reportFatal( __FILE__, static_cast<int32>( __LINE__ ), arrLowLevelMessage );                        \
+    } while ( false )
 
 #if defined( SW_DEBUG )
     /**
