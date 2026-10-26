@@ -4,7 +4,7 @@
 > 독자: 작업자(에이전트), 통합 담당, 사람.
 > 결론: 작업자는 자기 워크트리에서 코드만 짜고 린트와 `syntax-check`(바꾼 파일만 문법 검사) 후 커밋하고 멈춘다. 통합 담당이 브랜치를 한 통합 워크트리에 모아 빌드 · 검증 · 측정을 각각 한 번만 돌린 뒤 main 에 넣고 push 한다.
 
-규칙의 원본은 한 곳씩입니다. 코딩 규칙과 편집 함정은 [AGENTS.md](../AGENTS.md) 목차의 `docs/agents/` 파일, 검증 명령과 측정법은 [검증과 측정](08_Verification.md), 정한 방향과 기각한 안은 [결정 기록](09_Decisions.md), 남은 일은 [계획 문서](plans/Roadmap.md)입니다. 이 문서는 진행 방식만 적습니다.
+규칙의 원본은 한 곳씩입니다. 코딩 규칙은 [AGENTS.md](../AGENTS.md) 목차의 `docs/agents/`, 검증 명령과 측정법은 [검증과 측정](08_Verification.md), 정한 방향과 기각한 안은 [결정 기록](09_Decisions.md), 남은 일은 [계획 문서](plans/Roadmap.md)입니다. 이 문서는 진행 방식만 적습니다.
 
 | 역할 | 하는 일 | 하지 않는 일 |
 |---|---|---|
@@ -13,71 +13,62 @@
 
 ## 1. 일을 나누는 방식 — 워크트리와 통합
 
-큰 작업 배치는 단위로 나누어 워크트리 하나에 브랜치 하나씩 진행합니다. 워크트리는 main 체크아웃과 같은 저장소를 공유하는 별도 작업 폴더입니다.
+큰 작업 배치는 단위로 나누어 워크트리 하나에 브랜치 하나씩 진행합니다.
 
 ```powershell
 py -3 -m Scripts worktree-make <이름> --base main      # <드라이브>:\w\<이름>(Windows) · <main 의 부모>/LT-wt/<이름>, 브랜치 wt/<이름>
 py -3 -m Scripts worktree-make <이름> --base wt/apply5 # 다른 브랜치에서 갈라 만든다
 py -3 -m Scripts worktree-remove <이름>                # 공유 링크를 먼저 끊고 지운다. 다른 세션이 쓰는 중이면 건너뛴다
-py -3 -m Scripts worktree-list                         # 워크트리마다 브랜치와 주인(쓰는 중 · 주인 프로세스 끝남 · 기록 없음)
-py -3 -m Scripts shared-lock acquire vcpkg --owner <이름> --purpose "configure"   # vcpkg 를 부르기 전. 쓰는 쪽이 있으면 기다린다
+py -3 -m Scripts worktree-list                         # 워크트리마다 브랜치와 주인
+py -3 -m Scripts shared-lock acquire vcpkg --owner <이름> --purpose "configure"   # vcpkg 를 부르기 전
 py -3 -m Scripts shared-lock release vcpkg --owner <이름>                          # 끝나면 바로 놓는다(status 로 누가 쓰는지 본다)
 ```
 
-- **`--base` 를 반드시 줍니다.** 주지 않으면 `origin/main` 에서 갈라지는데, 로컬 main 이 push 전이면 낡은 기준입니다. 지울 때는 `git merge-base --is-ancestor wt/<이름> main` 으로 병합을 확인한 뒤 `worktree-remove` 를 씁니다(브랜치도 지웁니다).
-- **워크트리에는 주인이 있습니다.** `worktree-make` 가 주인 이름 · 프로세스 번호(`CLAUDE_PID`, 사람 셸은 `--pid $PID`) · 세션 · 시작 시각을 워크트리의 git 디렉터리에 적습니다.
-  `worktree-remove` 는 주인 프로세스가 살아 있고 내 것이 아니면 지우지 않습니다(`--even-if-owned` 는 사용자가 시킨 때만). 주인 기록이 없는 워크트리는 지우기 전에 사용자에게 묻습니다.
-  쿠킹 스탬프(`cook.stamp`)만 바뀐 워크트리는 변경으로 치지 않고 지우고, 다른 변경이 있으면 그 경로를 보이며 건너뜁니다.
-- 워크트리 폴더 밖(`D:/w` 같은 공유 위치)에 검증 출력(로그 · 캡처 · 측정값)을 쌓지 않습니다. 워크트리 안의 임시 폴더나 세션 스크래치패드에 둡니다.
-- `.claude/skills` 는 추적하지 않아 새 워크트리에 없습니다. ponytail · graphify 스킬을 쓰려면 세션을 시작하기 전에 main 체크아웃의 `.claude/skills` 를 워크트리의 같은 위치로 복사합니다.
-- 워크트리는 내려받은 도구(LLVM, Ninja, vcpkg)와 vcpkg 설치 폴더를 main 체크아웃과 링크로 나눠 씁니다. 이 링크 폴더(`Tools/*`, `build/vcpkg_*`)는 지우거나 고치지 않습니다.
-  그래서 `vcpkg.json`, 포트, `cmake/Modules/Toolchain/Vcpkg/*` 를 바꿔야 하면 통합 담당이 main 에서 먼저 바꿉니다.
-- **공유 설치 폴더를 건드리기 전에 쓰는 쪽이 있는지 묻습니다.** `cmake --preset`, `--clean-first` 빌드, vcpkg 설치처럼 vcpkg 를 부르는 일은 먼저 `shared-lock acquire vcpkg` 로 잡고 끝나면 놓습니다.
-  의존성 정의가 다른 트리가 같은 `build/vcpkg_installed` 에 설치하면 main 의 라이브러리가 지워져 main 빌드가 `libpq.lib` 같은 링크 오류로 섭니다. 기다려도 안 풀리면 사용자에게 알립니다.
-- 작업자는 자기 워크트리에서, 통합 담당은 통합 워크트리에서 일합니다. main 체크아웃은 읽기 전용이고, 통합 담당만 검증을 마친 커밋을 fast-forward 로 넣거나 위 vcpkg 정의를 고칩니다.
+- **`--base` 를 반드시 줍니다.** 주지 않으면 `origin/main` 에서 갈라져 로컬 main 이 push 전이면 낡은 기준입니다. 지울 때는 `git merge-base --is-ancestor wt/<이름> main` 으로 병합을 확인한 뒤 `worktree-remove` 를 씁니다(브랜치도 지웁니다).
+- `worktree-remove` 는 주인 프로세스가 살아 있고 내 것이 아니면 지우지 않고(`--even-if-owned` 는 사용자가 시킨 때만), 주인 기록이 없으면 지우기 전에 사용자에게 묻습니다. 사람 셸은 `worktree-make --pid $PID` 입니다.
+- 검증 출력(로그 · 캡처 · 측정값)은 워크트리 안의 임시 폴더나 세션 스크래치패드에 둡니다.
+- `.claude/skills` 는 추적하지 않으므로 스킬을 쓰려면 세션 시작 전에 main 체크아웃에서 워크트리의 같은 위치로 복사합니다.
+- 링크 폴더(`Tools/*`, `build/vcpkg_*`)는 main 체크아웃과 나눠 쓰므로 지우거나 고치지 않습니다. `vcpkg.json`, 포트, `cmake/Modules/Toolchain/Vcpkg/*` 는 통합 담당이 main 에서 먼저 바꿉니다.
+- **vcpkg 를 부르는 일**(`cmake --preset`, `--clean-first` 빌드, vcpkg 설치)은 먼저 `shared-lock acquire vcpkg` 로 잡고 끝나면 놓습니다(의존성이 다른 트리가 같은 `build/vcpkg_installed` 에 설치하면 main 빌드가 링크 오류로 섭니다). 기다려도 안 풀리면 사용자에게 알립니다.
+- main 체크아웃은 읽기 전용이고, 통합 담당만 검증을 마친 커밋을 fast-forward 로 넣습니다.
 
 ### 작업자
 
-- 자기 워크트리 안에서만 일합니다. 전체 빌드 · 링크 · 테스트 · 실행 · 병합 · push 는 하지 않습니다. 코드를 꼼꼼히 읽고 쓴 뒤 린트하고 `py -3 -m Scripts syntax-check` 로 **바꾼 파일만** 단일 파일 문법 검사(`-fsyntax-only`)를 하고 커밋하고 멈춥니다. 이 검사는 템플릿 인스턴스화 · 링크 오류 · 다른 파일로의 파급을 못 잡으므로 그런 곳에 확신이 없으면 보고에 "컴파일 확인 필요" 로 적습니다(쓰는 법 · 한계: [작업자 규칙](plans/WorkerRules.md) 2절).
-- 같은 파일을 건드리는 단위는 한 작업자에게 몰아 줍니다. 동시에 띄우는 수는 파일 소유가 겹치지 않는 만큼이고 상한은 [에이전트와 토큰](12_Agents.md) 4절입니다.
+- 자기 워크트리 안에서만 일합니다. 전체 빌드 · 링크 · 테스트 · 실행 · 병합 · push 는 하지 않고, 코드를 읽고 쓴 뒤 린트하고 `py -3 -m Scripts syntax-check` 로 **바꾼 파일만** 문법 검사(`-fsyntax-only`)를 하고 커밋하고 멈춥니다. 이 검사가 못 잡는 곳(템플릿 인스턴스화 · 링크 · 다른 파일로의 파급)은 보고에 "컴파일 확인 필요" 로 적습니다(쓰는 법 · 한계: [작업자 규칙](plans/WorkerRules.md) 2절).
+- 같은 파일을 건드리는 단위는 한 작업자에게 몰아 줍니다. 동시에 띄우는 수의 상한은 [에이전트와 토큰](12_Agents.md) 4절입니다.
 - 기계적 변경(이동, 이름 바꾸기, 일괄 재작성)은 커밋만 단계별로 나눕니다.
-- 사용 한도(`rate_limit`)로 끊기면 워크트리 작업은 그대로 남습니다. 한도가 풀린 뒤 `SendMessage` 로 이어서 시킵니다.
+- 사용 한도(`rate_limit`)로 끊기면 워크트리 작업은 남습니다. 한도가 풀린 뒤 `SendMessage` 로 이어서 시킵니다.
 
 ### 통합 담당
 
-- **준비된 브랜치부터 한 통합 워크트리에 병합하고, 빌드 · 검증 · 측정은 그 워크트리에서 각각 한 번만 돕니다.** 브랜치 하나가 끝났다고 따로 병합하거나 전체 빌드를 하지 않습니다. 검증이 통과하기 전에는 push 하지 않습니다.
-- **통합이 검증 중이어도 기다리지 않고 선행 통합을 얹습니다.** 앞선 통합이 GPU 검증 같은 긴 단계에 있는 동안 새로 끝난 브랜치는 `worktree-make 통합-다음 --base wt/<앞선 통합>` 으로 그 위에 미리 병합해 충돌을 풀고 `-k 0` 컴파일과 lint · nogpu 까지만 돕니다.
-  GPU 를 쓰는 실행은 하지 않고, 빌드는 코어 수를 절반으로 줄이며, main 병합과 push 도 하지 않습니다.
-  앞선 통합이 main 에 들어가면 선행 통합을 그 위로 다시 얹고 컴파일 확인과 GPU 검증만 한 번 돕니다. 그 사이에 끝나는 브랜치는 같은 선행 통합 워크트리에 이어서 병합합니다. 앞선 통합의 워크트리와 브랜치는 건드리지 않습니다.
-- 충돌은 통합 담당이 병합하면서 풉니다. 셰이더 매니페스트, 쿠킹 바이너리, `import.stamp` 같은 생성 산출물은 한쪽을 고르지 않고 `App --cook-shaders` 나 `--import-models` 로 다시 만듭니다. 문서 충돌은 양쪽을 남기는 것이 보통이고, 생성 문서(`docs/Config/*`)는 `GenerateConfigReference.py` 로 다시 만듭니다.
-- 넓게 건드리는 변경(폴더 이동, 헤더, 매크로 철자)을 먼저 넣습니다. 병합 전에 `code-reviewer` 에이전트로 읽기 전용 검토를 시킬 수 있습니다.
-- 병합이 끝난 워크트리는 바로 지웁니다.
-- vcpkg 가 갑자기 포트 전체를 다시 빌드하면(20 분 넘게) `Tools/vcpkg/packages/*/share/*/vcpkg_abi_info.txt` 의 `triplet_abi` 가 흔들리는지 봅니다. 설치 도중에는 건드리지 않습니다.
+순서(모으기 → Debug → Shipping → Release → verify-batch → push → NEXT 덮어쓰기 → 정리 → 보고)는 `/integrate` 스킬이 정본이고, 아래는 규칙과 이유입니다.
+
+- **준비된 브랜치부터 한 통합 워크트리에 병합하고, 빌드 · 검증 · 측정은 그 워크트리에서 각각 한 번만 돕니다.** 브랜치 하나가 끝났다고 따로 병합하거나 전체 빌드를 하지 않고, 검증 전에는 push 하지 않습니다.
+- **앞선 통합이 긴 단계(GPU 검증)에 있어도 기다리지 않고 선행 통합을 얹습니다.** 새로 끝난 브랜치는 `worktree-make 통합-다음 --base wt/<앞선 통합>` 으로 그 위에 병합해 충돌을 풀고 `-k 0` 컴파일과 lint · nogpu 까지만 돕니다. GPU 실행 · main 병합 · push 는 하지 않고 빌드는 코어 수를 절반으로 줄입니다. 앞선 통합이 main 에 들어가면 그 위로 다시 얹고 컴파일 확인과 GPU 검증만 한 번 돕니다. 앞선 통합의 워크트리와 브랜치는 건드리지 않습니다.
+- 충돌은 병합하면서 풉니다. 생성 산출물(셰이더 매니페스트, 쿠킹 바이너리, `import.stamp`)은 한쪽을 고르지 않고 `App --cook-shaders` 나 `--import-models` 로 다시 만들고, 생성 문서(`docs/Config/*`)는 `GenerateConfigReference.py` 로 다시 만듭니다. 문서 충돌은 양쪽을 남기는 것이 보통입니다.
+- 넓게 건드리는 변경(폴더 이동, 헤더, 매크로 철자)을 먼저 넣습니다. 병합 전에 `code-reviewer` 로 읽기 전용 검토를 시킬 수 있고, 병합이 끝난 워크트리는 바로 지웁니다.
 
 ## 2. 빌드와 CPU
 
-- **동시에 빌드하는 작업은 최대 둘입니다.** 작업자는 빌드하지 않으므로 이 한도에 걸리는 것은 통합 담당뿐입니다. 전체 빌드가 겹치면 CPU 가 100 % 에 붙어 테스트 시간 제한이 가짜로 집니다.
-- **한도는 빌드 슬롯 잠금(`build`, 공유 슬롯 둘)이 강제합니다.** 검증 빌드는 `full-build`(3절)가 스스로 잡고, 그 밖의 빌드는 이렇게 돌립니다.
+- **동시에 빌드하는 작업은 최대 둘입니다**(작업자는 빌드하지 않으므로 통합 담당뿐). 전체 빌드가 겹치면 CPU 가 100 % 에 붙어 테스트 시간 제한이 가짜로 집니다.
+- **빌드 슬롯 잠금(`build`, 공유 슬롯 둘)이 한도를 강제합니다.** 검증 빌드는 `full-build`(3절)가 스스로 잡고, 그 밖의 빌드는 이렇게 돌립니다. 슬롯 대기가 시한(기본 30 분)을 넘기면 사용자에게 알립니다.
   `py -3 -m Scripts shared-lock run build --shared --owner <이름> [--below-normal] -- cmake --build --preset Ninja-Debug --target <타깃>`
-  `run` 은 명령이 지거나 끊겨도 슬롯을 놓습니다. 슬롯이 비기를 기다리다 시한(기본 30 분)을 넘기면 사용자에게 알립니다.
-- 다른 일과 겹치는 빌드와 테스트는 낮은 우선순위로 돌립니다(`--below-normal`). `--target` 없는 빌드는 테스트를 짓지 않으므로, 테스트를 돌리려면 테스트까지 먼저 짓습니다(`ctest` · `py -3 -m Scripts test` 가 대신 지으면 슬롯 없이 돕니다).
-- **게임 코드는 `Ninja-Debug` 한 빌드가 모두 짓습니다(`SW_GAMES=ALL`).** 게임 실행 확인은 `App.exe -game=<게임>` 으로 합니다. `Ninja-Debug-Lean` 처럼 게임을 줄인 구성으로 지었으면 "게임 빌드 미확인" 으로 보고합니다.
-- **GPU 실행은 잠금 모드로 나눕니다.** 결정적 설정으로 기능만 보는 시나리오 · `hostgpu` · 캡처는 공유 모드(동시에 두 프로세스, 백엔드를 나눠 병렬로 돌린다), Release 측정 · 부하 기준선 · 실제 장치 제거(TDR) 실험 · 실제 마우스와 창 포커스에 기대는 시나리오는 독점으로 혼자 돌립니다. 독점은 공유 보유자가 모두 놓을 때까지 기다리고, 그동안 새 공유는 들어오지 못합니다.
-  `py -3 -m Scripts shared-lock acquire gpu --owner <이름> --shared`(독점은 `--shared` 없이)로 잡고, 끝나면(실패해도) 같은 모드로 `release` 합니다. 쥔 채 오래 있지 않습니다. GPU 실행만 맡기려면 `gpu-verifier` 에이전트를 씁니다.
-- 컴파일러 경고 전체 조사(`Scripts/lint/report/RunBuildWarnings.py`, 세 프리셋)는 사용자가 요청할 때만 돌립니다.
-- 스크립트로 파일을 고칠 때의 규칙(heredoc 금지 등)은 [EditingTraps](agents/EditingTraps.md)가 원본입니다. 임시 파일은 스크래치패드에 두고 이름 앞에 에이전트 이름을 붙입니다.
+- 다른 일과 겹치는 빌드와 테스트는 `--below-normal` 로 돌립니다. `--target` 없는 빌드는 테스트를 짓지 않으므로 테스트를 돌리려면 테스트까지 먼저 짓습니다.
+- **게임 코드는 `Ninja-Debug` 한 빌드가 모두 짓습니다(`SW_GAMES=ALL`).** 게임 실행 확인은 `App.exe -game=<게임>` 입니다. 게임을 줄인 구성(`Ninja-Debug-Lean`)으로 지었으면 "게임 빌드 미확인" 으로 보고합니다.
+- **GPU 실행은 잠금 모드로 나눕니다.** 결정적 설정으로 기능만 보는 시나리오 · `hostgpu` · 캡처는 공유 모드(동시에 두 프로세스), Release 측정 · 부하 기준선 · 장치 제거(TDR) 실험 · 실제 마우스와 창 포커스에 기대는 시나리오는 독점입니다. `py -3 -m Scripts shared-lock acquire gpu --owner <이름> --shared`(독점은 `--shared` 없이)로 잡고, 끝나면(실패해도) `release` 합니다. GPU 실행만 맡기려면 `gpu-verifier` 를 씁니다.
+- 컴파일러 경고 전체 조사(`Scripts/lint/report/RunBuildWarnings.py`)는 사용자가 요청할 때만 돌립니다.
+- 스크립트로 파일을 고칠 때의 규칙은 [EditingTraps](agents/EditingTraps.md)가 원본입니다.
 
 ## 3. 검증 단계
 
-어떤 명령으로 무엇을 보는지는 [검증과 측정](08_Verification.md)이 원본입니다. 여기에는 언제 어디까지 돌리는지만 적습니다.
+명령과 측정법은 [검증과 측정](08_Verification.md)이 원본이고, 여기에는 언제 어디까지 돌리는지만 적습니다.
 
-**검증 빌드는 늘 전체입니다 — `py -3 -m Scripts full-build --owner <이름>`(`all AllTests`, 빌드 슬롯을 잡는다).** 바꾼 영역의 테스트만 지으면 다른 영역의 테스트가 쓰는 헤더 · 매크로를 바꾼 것이 병합 뒤에야 깨집니다. "검증했다" 고 보고하는 빌드는 `full-build` 이고 통합 담당이 병합 결과에서 한 번만 돌립니다.
+**검증 빌드는 늘 전체입니다 — `py -3 -m Scripts full-build --owner <이름>`(`all AllTests`, 빌드 슬롯을 잡는다).** 바꾼 영역의 테스트만 지으면 다른 영역이 쓰는 헤더 · 매크로를 바꾼 것이 병합 뒤에야 깨집니다. "검증했다" 고 보고하는 빌드는 통합 담당이 병합 결과에서 한 번 돌린 `full-build` 입니다.
 
-- `full-build` 는 커밋하지 않은 변경이 없을 때만 짓고, 성공하면 그 커밋의 빌드 입력(트리에서 마크다운 · `.claude/` · 빌드가 실행하지 않는 `Scripts/` 폴더 · 파이썬 단위 테스트를 뺀 것)의 증거를 공통 `.git` 에 남깁니다. 문서만 바꾼 커밋은 직전 증거가 맞아 다시 짓지 않습니다.
-- **main 으로의 push 는 pre-push 훅이 그 증거를 요구합니다**(`Scripts/setup/InstallGitHooks.py` 가 설치합니다. 훅이 없는 체크아웃은 그 스크립트를 한 번 돌립니다).
-- `full-build` 와 `py -3 -m Scripts test` 는 출력을 로그 파일(공통 `.git/sw-build-logs/`)에 쓰고 성공이면 끝 몇 줄과 소요 시간, 실패면 원인 줄과 그 주변만 보입니다. 전부 보려면 `--verbose`.
+- `full-build` 는 커밋하지 않은 변경이 없을 때만 짓고, 성공하면 그 커밋의 빌드 입력(마크다운 · `.claude/` 등 빌드가 쓰지 않는 파일을 뺀 트리)의 증거를 공통 `.git` 에 남깁니다. 문서만 바꾼 커밋은 직전 증거가 맞습니다.
+- **main 으로의 push 는 pre-push 훅이 그 증거를 요구합니다**(`Scripts/setup/InstallGitHooks.py` 로 설치). `full-build` · `py -3 -m Scripts test` 는 로그를 `.git/sw-build-logs/` 에 쓰고 요약만 보이며 전부 보려면 `--verbose` 입니다.
 
-검증은 통합 워크트리에서 구성별로 한 번씩 돕니다: Debug → Shipping → Release → push 뒤 CI(리눅스). 같은 구성이 필요한 일은 전부 그 구성에서 이어서 하고, 실패하면 그 단계부터 다시 합니다. 확인 · 측정 후보마다 따로 돌리지 않습니다. 측정 질문은 Release 단계에 한 줄로 더하며, 이번 묶음의 실제 표는 [NEXT](plans/NEXT.md)에 있습니다.
+검증은 통합 워크트리에서 구성별로 한 번씩 돕니다: Debug → Shipping → Release → push 뒤 CI(리눅스). 같은 구성이 필요한 일은 그 구성에서 이어서 하고, 실패하면 그 단계부터 다시 합니다. 확인 · 측정 후보마다 따로 돌리지 않으며 측정 질문은 Release 단계에 한 줄로 더합니다. 이번 묶음의 실제 표는 [NEXT](plans/NEXT.md)에 있습니다.
 
 | 단계 | Debug | Shipping | 그 밖 |
 |---|---|---|---|
@@ -85,34 +76,31 @@ py -3 -m Scripts shared-lock release vcpkg --owner <이름>                     
 | 통합(배치마다) | `full-build` 경고 0, `-L lint`, `-L nogpu`, `-L race` | 빌드, `-L nogpu`, `-L hostgpu`, 확인 대기 전부 | `Empty` 렌더 테스트 씬 + 개발 중인 게임 하나(지금 Shooter3D) × 네 백엔드 |
 | 큰 단계 끝(출시 · 큰 마일스톤 직전) | 위 + `-L hostgpu` 전체 한 번 | 위와 같음 | 모든 게임 × 모든 백엔드, Release 빌드와 성능 기준, 전용 서버 전체(리눅스 빌드는 CI) |
 
-- **기능 시나리오(`hostgpu`)는 Shipping 이 기본입니다.** Debug 한 바퀴는 같은 검증의 수십 배가 걸립니다. 레이스 검사(`DataRaceDetector`)는 `SW_DEBUG` 에서만 켜지므로 Debug 는 스레드 경로를 지나는 묶음 `race` 만 돕니다(묶음은 `Test/TestPolicy.json` 의 `raceCases`). 게임 선택이 필요한 검증은 Shipping 이 `-game=` 을 무시하므로 Release(`SW_GAMES=ALL`)로 합니다.
-- 통합 담당의 ctest 는 `-j`(값 없이 — 스레드 수)로 돌립니다. `hostgpu` 를 뺀 항목은 병렬로 돌 수 있습니다. 테스트가 끝나면 남은 `Server` · `ServerTest` · `EngineTest` 프로세스가 없는지 확인합니다.
-- CI 러너는 GPU 가 없어 `nogpu` 만 돕니다. `race` 는 GPU 있는 PC 의 Debug 가 맡고, 리눅스 `CI-Debug-TSAN`(nogpu)이 보조입니다.
-- 엔진 런타임 전체를 바꾸는 변경이면 배치 안에서도 큰 단계 끝의 검증을 돌립니다. 의존성을 올렸다면 그 변경에 걸린 기능(TLS, Tracy, 검증 레이어)도 봅니다.
-- **에디터 변경은 에디터 시나리오로 확인합니다.** 시나리오 실행기의 에디터 단계(`-EnableEditor`)로 그 흐름을 하나 더하고 AppScenarioTest 로 돌립니다.
-- **"확인 대기"는 쌓아 두지 않고 통합 단계에서 한 번에 돌립니다.** 작업자는 GPU · 눈 확인을 하지 않고 "GPU 확인 대기"로 보고하며, 적용 담당은 병합 · `full-build` 직후 그 대기 항목을 모아 `gpu-verifier`(Shipping, 기존 시나리오 · 네 백엔드)로 한 번에 돌려 결과를 계획 문서에 반영합니다. 대기 목록을 인계 문서나 후보로 넘기는 것은 시나리오로 만들 수 없는 것에 한합니다.
-- **측정 항목은 매니페스트 하나(`Test/QA/VerifyBatch.json`)에 두고 `py -3 -m Scripts verify-batch --owner <이름>` 한 명령으로 돌립니다**(사용자 지시). ctest · 테스트 필터 · 쿠킹 · 골든 · 측정을 구성별(Debug → Shipping → Release)로 모아 이어 돌리고(GPU 공유 · 독점 잠금을 묶음마다 한 번), 한 항목이 져도 나머지를 돌려 결과 표 하나를 남깁니다. Release 단계는 쿠킹 · 골든 다시 뜨기 뒤 `perf` · `load` · `perf-compare` · 네트 벤치 · 후보의 측정 질문을 혼자 이어서(GPU 독점) 돌립니다. 확인 대기도 글로 쌓지 않고 항목 id 로 적습니다(`매니페스트 id` 와 id — `plans --check` 와 린트 `CheckVerifyPending` 이 없는 id 와 가리키는 줄이 없는 일회성 항목을 막습니다). 한 명령으로 안 도는 확인은 항목의 `need_command` 에 이유를 적어 결과 표에 남깁니다. 이번 묶음의 실제 표는 `NEXT.md` 0000절입니다.
-- **main 앞의 증거는 `integ-gate` 가 요구합니다.** 병합 결과(커밋한 트리)에서 `py -3 -m Scripts integ-gate run --owner <이름>` 이 `-k 0` 으로 끝까지 지어 컴파일 오류를 한 번에 모으고, 빌드가 서지 않았으면 `ctest -L "nogpu|lint"` 를 돌려 통과 · 실패 요약을 `<공통 .git>/sw-integration-evidence/<빌드 입력 해시>.json` 에 남깁니다(`full-build` 와 같은 키라 마크다운 · `.claude/` 만 바뀐 커밋은 직전 증거가 맞고, 통과한 `-k 0` 빌드는 `full-build` 증거도 함께 씁니다). 통합 담당은 push 앞에 `integ-gate check` 가 0 인지 봅니다 — 증거가 없거나 실패한 증거거나 라벨이 좁거나 항목이 0 개면 이유를 찍고 1 입니다. pre-push 훅에는 아직 걸지 않았습니다(걸려면 훅이 `integ-gate check-push` 를 `full-build check-push` 옆에서 부릅니다).
-- **GPU 항목은 정해진 시각에 `verify-batch` 로 몰아 돌립니다.** 위 증거는 GPU 없이 도는 것만 요구하고 `hostgpu` · 시나리오 · 골든 · 측정은 매니페스트 항목으로 두었다가 정해 둔 시각(예: 밤)에 돌립니다. 통합 워크트리에서 `py -3 -m Scripts verify-batch --owner nightly --config Shipping --config Release` 를 부르면 구성별로 GPU 잠금을 한 번씩만 잡고 `build/verify-batch/<시각>/result.md` 에 표 하나를 남기며, 다음 통합이 그 표를 읽습니다. 예약 작업의 등록은 사용자 PC 설정이라 이 저장소는 명령만 정합니다(Windows 작업 스케줄러라면 동작에 이 명령을, 시작 위치에 통합 워크트리를 둡니다). 먼저 `verify-batch --dry-run` 으로 순서를 봅니다.
-- **손 확인을 사용자에게 넘기지 않습니다.** 화면에서 확인할 일은 자동화 시나리오(`Resource/<영역>/automation/*.scenario.xml`)로 만들어 직접 확인합니다. 시나리오로 못 하는 것만 이유와 함께 `Candidates-<영역>.md` 에 후보 절로 씁니다.
-- 성능 주장은 Release 측정값으로만 하고, 측정 없이 최적화하지 않습니다. 측정하는 법은 [검증과 측정](08_Verification.md) 2절이고, 결함을 고치는 순서(재현 테스트, 고침, 변이 검사)는 1절입니다.
+- **기능 시나리오(`hostgpu`)는 Shipping 이 기본입니다.** 레이스 검사(`DataRaceDetector`)는 `SW_DEBUG` 에서만 켜지므로 Debug 는 묶음 `race`(`Test/TestPolicy.json` 의 `raceCases`)만 돕니다. 게임 선택이 필요한 검증은 Shipping 이 `-game=` 을 무시하므로 Release(`SW_GAMES=ALL`)로 합니다.
+- 통합 담당의 ctest 는 `-j` 로 돌리고, 끝나면 남은 `Server` · `ServerTest` · `EngineTest` 프로세스가 없는지 봅니다. CI 러너는 `nogpu` 만 돌며 `race` 는 GPU 있는 PC 의 Debug 가 맡습니다(리눅스 `CI-Debug-TSAN` 이 보조).
+- 엔진 런타임 전체를 바꾸는 변경이면 배치 안에서도 큰 단계 끝의 검증을 돌립니다. 의존성을 올렸다면 걸린 기능(TLS, Tracy, 검증 레이어)도 봅니다. 에디터 변경은 에디터 시나리오(`-EnableEditor`)를 하나 더해 AppScenarioTest 로 확인합니다.
+- **"확인 대기"는 쌓지 않고 통합 단계에서 한 번에 돌립니다.** 작업자는 GPU · 눈 확인 없이 "GPU 확인 대기"로 보고하고, 통합이 `full-build` 직후 대기 항목을 `gpu-verifier`(Shipping, 네 백엔드)로 돌려 계획 문서에 반영합니다.
+- **측정 항목은 매니페스트 하나(`Test/QA/VerifyBatch.json`)에 두고 `py -3 -m Scripts verify-batch --owner <이름>` 한 명령으로 돌립니다.** 구성별로 모아 돌리고, 한 항목이 져도 나머지를 돌려 표 하나를 남깁니다. Release 단계는 쿠킹 · 골든 다시 뜨기 뒤 `perf` · `load` · `perf-compare` · 네트 벤치를 GPU 독점으로 돕니다. 확인 대기는 글 대신 `매니페스트 id` 와 항목 id 로 적고(`plans --check` 와 `CheckVerifyPending` 이 막습니다), 한 명령으로 안 도는 확인은 항목의 `need_command` 에 이유를 적습니다.
+- **main 앞의 증거는 `integ-gate` 가 요구합니다.** 병합 결과에서 `py -3 -m Scripts integ-gate run --owner <이름>` 이 `-k 0` 으로 끝까지 짓고(빌드가 서지 않았으면 `ctest -L "nogpu|lint"`) 결과를 `<공통 .git>/sw-integration-evidence/` 에 남깁니다. push 앞에 `integ-gate check` 가 0 인지 봅니다(pre-push 훅에는 아직 안 걸었습니다).
+- **GPU 항목은 정해진 시각에 몰아 돌립니다.** 통합 워크트리에서 `py -3 -m Scripts verify-batch --owner nightly --config Shipping --config Release`(먼저 `--dry-run`)로 돌리면 `build/verify-batch/<시각>/result.md` 에 표가 남고 다음 통합이 읽습니다. 예약 작업 등록은 사용자 PC 설정입니다.
+- **손 확인을 사용자에게 넘기지 않습니다.** 화면에서 확인할 일은 자동화 시나리오(`Resource/<영역>/automation/*.scenario.xml`)로 만들고, 못 하는 것만 이유와 함께 `Candidates-<영역>.md` 에 씁니다.
+- 성능 주장은 Release 측정값으로만 합니다([검증과 측정](08_Verification.md) 1 · 2절).
 
 ## 4. 내보내기 — push 와 CI
 
-- **검증을 마친 main 은 묻지 않고 push 합니다.** 통합 워크트리에서 검증한 커밋을 main 에 fast-forward 로 넣고 push 합니다. 사용자에게는 결과만 짧게 알립니다: 들어간 것, 검증 수치, 상용 엔진(언리얼, 유니티, Godot)과 비교한 위치와 빠진 것.
+- **검증을 마친 main 은 묻지 않고 push 합니다.** 통합 워크트리에서 검증한 커밋을 main 에 fast-forward 로 넣고 push 하며, 사용자에게는 들어간 것 · 검증 수치 · 상용 엔진(언리얼, 유니티, Godot)과 비교한 위치와 빠진 것만 짧게 알립니다.
 - 로컬 빌드 · 검증이 통과하면 CI 를 기다리지 않고 `git fetch` 로 origin 을 본 뒤 force 없이 push 한다(사용자 승인).
-- 작업자는 push 하지 않습니다. 검증되지 않은 브랜치가 원격에 가지 않게 하기 위해서입니다.
+- 작업자는 push 하지 않습니다.
 - main push 가 "전체 빌드 증거가 없다" 로 막히면 그 커밋에서 `full-build` 를 돌립니다. 훅을 우회하지 않습니다.
-- 검증이 초록이면 바로 넣고, 뒤에 문제가 드러나면 그 단위를 되돌립니다. 배치 사이에 사용자 확인을 기다리지 않고 다음 배치를 시작합니다.
-- **push 뒤 CI 결과를 기다리며 멈추지 않습니다.** 사용자가 실패를 알려 주거나, 세션 시작에 세션 가드가 main CI 실패(잡과 연속 실패 수, `py -3 -m Scripts ci-jobs --summary`)를 알리면 그때 원인을 찾습니다. 며칠 이어진 실패는 먼저 봅니다. 실패를 읽는 방법은 [검증과 측정](08_Verification.md) 4절입니다.
+- 뒤에 문제가 드러나면 그 단위를 되돌립니다. 배치 사이에 사용자 확인을 기다리지 않습니다.
+- **push 뒤 CI 결과를 기다리며 멈추지 않습니다.** 사용자가 실패를 알려 주거나 세션 시작에 세션 가드가 main CI 실패(`py -3 -m Scripts ci-jobs --summary`)를 알리면 그때 원인을 찾고, 며칠 이어진 실패는 먼저 봅니다. 읽는 법은 [검증과 측정](08_Verification.md) 4절입니다.
 
 ## 5. 결정하는 방식
 
-- **기술 결정은 상용 엔진의 같은 기능과 비교해 정하고, 근거 한 줄과 함께 [결정 기록](09_Decisions.md) 5절이 가리키는 영역 파일(`docs/decisions/5-<번호>_*.md`)의 끝에 남깁니다.** 비교 대상은 언리얼, 유니티, Godot 이고 온라인 기능은 PlayFab, EOS, Nakama 도 봅니다. 우리 구조가 더 낫거나 확장성이 좋으면 상용 엔진을 따르지 않고 더 발전시킵니다.
-- 사용자에게는 결과 요약에서 "정한 것" 으로만 알리고 결정 표를 올려 고르게 하지 않습니다. **"사용자 결정 대기" 를 인계 문서에 쌓지 않습니다.** 판정이 필요하면 `design-reviewer` 로 상용 엔진과 비교해 그 자리에서 정하고 결정 기록에 남깁니다(작업자의 "하지 않기로 한 것" 판정도 같습니다).
-- 사용자에게 묻는 것은 다음뿐입니다. 법과 라이선스, 외부 공개(PR, 게시), 비용이나 계정이 드는 연동, 사용자가 보류로 정한 항목, 되돌리기 어려운 큰 데이터 삭제입니다.
-- 게임 리소스는 CC0 급만 넣습니다. 조건과 예는 [결정 기록](09_Decisions.md) 5-1 에 있습니다.
-- 이름을 바꿀 때 옛 이름 별칭을 두지 않고 데이터를 다시 씁니다([결정 기록](09_Decisions.md) 5-4).
+- **기술 결정은 상용 엔진의 같은 기능과 비교해 정하고, 근거 한 줄과 함께 [결정 기록](09_Decisions.md) 5절이 가리키는 영역 파일(`docs/decisions/5-<번호>_*.md`)의 끝에 남깁니다.** 비교 대상은 언리얼, 유니티, Godot 이고 온라인 기능은 PlayFab, EOS, Nakama 도 봅니다. 우리 구조가 더 낫거나 확장성이 좋으면 따르지 않고 더 발전시킵니다.
+- 사용자에게는 "정한 것" 으로만 알리고 결정 표를 올려 고르게 하지 않습니다. **"사용자 결정 대기" 를 인계 문서에 쌓지 않습니다.** 판정이 필요하면 `design-reviewer` 로 비교해 그 자리에서 정합니다.
+- 사용자에게 묻는 것은 법과 라이선스, 외부 공개(PR, 게시), 비용이나 계정이 드는 연동, 사용자가 보류로 정한 항목, 되돌리기 어려운 큰 데이터 삭제뿐입니다.
+- 게임 리소스는 CC0 급만 넣습니다([결정 기록](09_Decisions.md) 5-1). 이름을 바꿀 때 옛 이름 별칭을 두지 않고 데이터를 다시 씁니다(5-4).
 
 ## 6. 할 일을 다루는 방식
 
@@ -125,27 +113,26 @@ py -3 -m Scripts shared-lock release vcpkg --owner <이름>                     
 | `docs/plans/Roadmap.md` | 순서만. 일은 이름 링크로만 가리킵니다 |
 | `docs/plans/NEXT.md` | 지금 상태만. 통합 담당만 고칩니다. 일지가 아니라 한 장이라 고정 세 절(마지막 통합 한 줄 요약 / 남은 일 / 확인할 것)만 두고 통합이 끝날 때 덮어쓰며, 절을 새로 추가하지 않고 20KB 를 넘기지 않습니다(`CheckNextSize` 게이트, `<!-- next-format: one-page -->` 줄이 있을 때 검사) |
 
-- 일의 식별자는 이름입니다(`ClusteredLighting`, 단위는 `ClusteredLighting.S2`). 코드 주석 · 결정 기록에 남은 옛 번호(`C-30` 등)는 `py -3 -m Scripts plans --find <옛번호>` 로 새 이름을 찾습니다. 새 일에 번호를 매기지 않습니다.
-- 목록은 `py -3 -m Scripts plans`, 링크 점검은 `plans --check` 입니다. 루트 `StatusBoard.md` 의 진행 표는 `py -3 -m Scripts status-board --write` 가 만든 생성물이라 손으로 고치지 않고, 병합 뒤 통합 담당만 다시 만듭니다(작업자가 만들면 브랜치마다 같은 파일이 바뀌어 병합이 충돌합니다).
-- **일을 끝낸 사람이 직접 고칩니다.** 단위를 끝내면 그 계획 문서의 단위 절을 지우고 머리 줄 `진행` 을 올립니다. 후보를 착수하면 절을 계획 문서로 옮기고 후보 문서에서 지웁니다. 마지막 단위를 끝내 진행이 `n/n` 이 되면 머리 줄 상태도 올립니다: 실행 확인(GPU · 측정)이 남았으면 `측정대기`, 다 끝났으면 `끝`(`plans --check` 가 `n/n` 인데 `구현중` 인 문서를 위반으로 잡습니다).
-- **상태가 `끝` 인 계획 문서는 지웁니다**(2026-10-24 사용자 지시). 남길 교훈은 먼저 코드 헤더 주석 · [결정 기록](09_Decisions.md) · [검증과 측정](08_Verification.md)으로 옮기고, 지운 문서를 가리키던 링크(Roadmap, 다른 문서, 코드 주석)를 모두 고칩니다. 끝난 일은 `Roadmap.md` 에서도 지웁니다.
-- 갱신은 묻지 않고 작업 커밋에 함께 넣습니다. 이 점검은 `plans --check` 와 `status-board --check` 가 맡습니다(표 신선도는 통합 담당의 일이라 작업자 커밋 훅은 보지 않습니다).
-- 여러 PC 에서 고치는 파일이라 작업 중에 pull 과 충돌이 날 수 있습니다. 병합 중이면(`.git/MERGE_HEAD`) 충돌 파일이 내가 만진 것인지부터 봅니다. 커밋 훅 없이 올라온 커밋은 포맷 위반을 달고 올 수 있으므로, `.clang-format` 과 `Tools/LLVM` 버전이 같은지 확인한 뒤 `py -3 Scripts/lint/fixer/FormatModified.py` 로 정리합니다.
+- 일의 식별자는 이름입니다(`ClusteredLighting`, 단위는 `ClusteredLighting.S2`). 옛 번호(`C-30` 등)는 `py -3 -m Scripts plans --find <옛번호>` 로 새 이름을 찾습니다. 새 일에 번호를 매기지 않습니다.
+- 목록은 `py -3 -m Scripts plans`, 링크 점검은 `plans --check` 입니다. 루트 `StatusBoard.md` 는 `py -3 -m Scripts status-board --write` 가 만든 생성물이라 손으로 고치지 않고 병합 뒤 통합 담당만 다시 만듭니다(작업자가 만들면 병합이 충돌합니다).
+- **일을 끝낸 사람이 직접 고칩니다.** 단위를 끝내면 그 단위 절을 지우고 머리 줄 `진행` 을 올립니다. 후보를 착수하면 절을 계획 문서로 옮기고 후보 문서에서 지웁니다. 마지막 단위를 끝내 `n/n` 이 되면 상태도 올립니다: 실행 확인(GPU · 측정)이 남았으면 `측정대기`, 다 끝났으면 `끝`(`plans --check` 가 `n/n` 인데 `구현중` 인 문서를 잡습니다).
+- **상태가 `끝` 인 계획 문서는 지웁니다**(2026-10-24 사용자 지시). 남길 교훈은 먼저 코드 헤더 주석 · [결정 기록](09_Decisions.md) · [검증과 측정](08_Verification.md)으로 옮기고, 지운 문서를 가리키던 링크(Roadmap, 다른 문서, 코드 주석)를 모두 고칩니다.
+- 갱신은 묻지 않고 작업 커밋에 함께 넣습니다(`plans --check` 와 `status-board --check` 가 점검).
+- 병합 중이면(`.git/MERGE_HEAD`) 충돌 파일이 내가 만진 것인지부터 봅니다. 커밋 훅 없이 올라온 커밋은 포맷 위반을 달고 올 수 있으므로 `py -3 Scripts/lint/fixer/FormatModified.py` 로 정리합니다.
 
 ## 7. 커밋 메시지와 글
 
-- **커밋 제목은 `<영역> - <요약>` 입니다.** 본문은 `문제점:`(증상과 원인), `해결방안:`(바꾼 타입, 함수, 파일), `결과:`(통과한 테스트, 동작, 측정값) 세 절이고, 맨 끝에 모델에 맞는 `Co-Authored-By` 줄을 둡니다. 병합 커밋 메시지도 한국어로 씁니다(`병합 - main(<해시>)을 wt/<이름> 으로(<무엇이 들어왔나>)`).
-- **커밋 훅의 출력은 요약입니다.** 통과 · 건너뜀 게이트는 한 줄로 접히고 실패한 게이트만 상세가 나옵니다. 전부 보려면 `py -3 -m Scripts lint --verbose`.
-- **커밋 훅을 우회하지 않습니다(`--no-verify` 금지).** 훅이 린트를 돌리므로 `git commit -m x` 같은 임시 커밋으로 린트를 테스트하지 않습니다. 서식은 `py -3 Scripts/lint/fixer/FormatModified.py` 로 맞춥니다.
-- 코딩 규칙은 [AGENTS.md](../AGENTS.md), 해결 원칙(구조로 푼다, 폴백 금지, 근본 원인 보고)은 [CLAUDE.md](../CLAUDE.md) 가 원본입니다.
-- 커밋 메시지는 프로그래머 용어로 씁니다. 경위와 배경은 커밋 메시지에 쓰고, 주석과 문서에는 현재형의 계약과 주의만 씁니다.
-- 사용자에게 보이는 모든 글은 한국어로 씁니다(답변, 진행 한 줄, 표, 질문, 계획, 에이전트 프롬프트와 보고). 식별자, 경로, 명령, 로그 문자열은 원문 그대로 둡니다. 문체는 [문서 쓰기 지침](10_WritingDocs.md)을 따릅니다.
+- **커밋 제목은 `<영역> - <요약>` 입니다.** 본문은 `문제점:`(증상과 원인), `해결방안:`(바꾼 타입, 함수, 파일), `결과:`(통과한 테스트, 동작, 측정값) 세 절이고, 맨 끝에 모델에 맞는 `Co-Authored-By` 줄을 둡니다. 병합 커밋도 한국어로 씁니다(`병합 - main(<해시>)을 wt/<이름> 으로(<무엇이 들어왔나>)`).
+- **커밋 훅을 우회하지 않습니다(`--no-verify` 금지).** 훅이 린트를 돌리므로 임시 커밋으로 린트를 테스트하지 않습니다. 서식은 `py -3 Scripts/lint/fixer/FormatModified.py` 로 맞추고, 훅 출력은 요약이며 전부 보려면 `py -3 -m Scripts lint --verbose` 입니다.
+- 코딩 규칙은 [AGENTS.md](../AGENTS.md), 해결 원칙은 [CLAUDE.md](../CLAUDE.md) 가 원본입니다.
+- 커밋 메시지는 프로그래머 용어로 쓰고 경위와 배경을 담습니다. 주석과 문서에는 현재형의 계약과 주의만 씁니다.
+- 사용자에게 보이는 모든 글은 한국어로 씁니다. 식별자, 경로, 명령, 로그 문자열은 원문 그대로 둡니다. 문체는 [문서 쓰기 지침](10_WritingDocs.md)을 따릅니다.
 
 ## 8. 리눅스 빌드
 
-리눅스는 WSL 안의 별도 클론에서 빌드합니다. Windows 체크아웃에서 `WSL-*` 프리셋을 돌리면 공유 vcpkg 설치 트리를 망가뜨립니다. 클론 위치, gdb 없는 환경의 진단법, 뒤처진 클론을 맞추는 법은 [Scripts/setup README](../Scripts/setup/README.md) "함정 · 계약" 절에 있습니다.
-**리눅스 확인은 CI 가 합니다**(사용자 지시). 리눅스 분기 코드를 고쳤어도 로컬 WSL 빌드를 돌리지 않고 main 을 push 한 뒤 `py -3 -m Scripts ci-jobs --summary` 로 리눅스 잡 결과를 봅니다. 실패하면 그때 원인을 찾고, "리눅스 미확인" 으로 보고하며 대기 항목으로 남기지 않습니다.
+리눅스는 WSL 안의 별도 클론에서 빌드합니다. Windows 체크아웃에서 `WSL-*` 프리셋을 돌리면 공유 vcpkg 설치 트리를 망가뜨립니다. 클론 위치와 진단법은 [Scripts/setup README](../Scripts/setup/README.md) "함정 · 계약" 절에 있습니다.
+**리눅스 확인은 CI 가 합니다**(사용자 지시). 로컬 WSL 빌드를 돌리지 않고 main 을 push 한 뒤 `py -3 -m Scripts ci-jobs --summary` 로 리눅스 잡을 봅니다. 실패하면 그때 원인을 찾고, "리눅스 미확인" 으로 보고하며 대기 항목으로 남기지 않습니다.
 
 ## 9. 에이전트와 토큰
 
-에이전트를 띄우거나 토큰을 따질 때만 [에이전트와 토큰](12_Agents.md)을 읽습니다(일과 에이전트 · 모델 · effort 표, 토큰 규칙, 일을 쪼개는 기준). 지시문 틀과 보고 틀은 [작업자 규칙](plans/WorkerRules.md)입니다.
+에이전트를 띄우거나 토큰을 따질 때만 [에이전트와 토큰](12_Agents.md)을 읽습니다. 지시문 틀과 보고 틀은 [작업자 규칙](plans/WorkerRules.md)입니다.

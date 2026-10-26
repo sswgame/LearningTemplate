@@ -107,11 +107,17 @@ Resource/Cache/
 **/ShaderCache/
 **/shader_cache/
 *.shadercache
-
+# Claude Code — 에이전트 정의 · 훅 · 공유 설정 · 저장소 스킬 넷(integrate · ci-triage · worker-brief · doc-slim)만 추적한다(개인 권한 목록은 settings.local.json)
 # Claude Code — 에이전트 정의 · 훅 · 공유 설정만 추적한다(개인 권한 목록은 settings.local.json)
 .claude/*
 !.claude/agents/
 !.claude/hooks/
+!.claude/skills/
+.claude/skills/*
+!.claude/skills/integrate/
+!.claude/skills/ci-triage/
+!.claude/skills/worker-brief/
+!.claude/skills/doc-slim/
 !.claude/settings.json
 
 # graphify 산출물(코드 그래프 · 로컬 캐시)
