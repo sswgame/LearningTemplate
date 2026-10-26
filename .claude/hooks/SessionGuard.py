@@ -88,6 +88,8 @@ def inspectTranscript( path ):
     try:
         size = os.path.getsize( path )
         compactCount = 0
+        if size < kTranscriptWarnBytes:  # 압축은 기록이 큰 세션에서만 생긴다 — 짧은 대화는 읽지 않는다
+            return size, 0
         with open( path, "rb" ) as f:
             for line in f:
                 if b'"compact_boundary"' in line:
@@ -215,7 +217,7 @@ def onSessionStart( data, root ):
         notes.append( "ponytail 스킬을 지금 Skill 로 호출할 것(모든 작업에 켠다는 CLAUDE.md 규칙, 자동으로 켜지지 않는다)." )
     listParallel = readParallelItems( root )
     if listParallel:
-        notes.append( "로드맵에서 [병렬 가능] 표시된 일: " + " / ".join( listParallel ) + " — 파일 소유가 겹치지 않으면 한 번에 병렬로 띄울 것(작업자 규칙)." )
+        notes.append( f"로드맵에 [병렬 가능] 일이 {len( listParallel )} 개 있다(`plans` 로 확인). 맡기기 전에 /worker-brief 0번(놀고 있는 같은 레벨 작업자 재사용 먼저)을 따를 것." )
     failingCi = readFailingCi( root )
     if failingCi:
         notes.append( failingCi )
