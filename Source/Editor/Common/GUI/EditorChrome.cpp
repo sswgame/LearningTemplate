@@ -162,6 +162,11 @@ namespace sw::editor
         return float2{ width, height };
     }
 
+    void EditorChrome::setNextItemWidthColumns( float32 columns )
+    {
+        ImGui::SetNextItemWidth( columns * ImGui::CalcTextSize( "0" ).x );
+    }
+
     void EditorChrome::setNextWindowExtent( const EditorTextExtent& extent, bool bAlways )
     {
         const float2 size = resolveTextExtent( extent );

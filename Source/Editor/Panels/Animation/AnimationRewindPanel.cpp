@@ -5,8 +5,10 @@
 #include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
+#include "Editor/Common/GUI/EditorTextExtentImGui.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -140,7 +142,7 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationRewind", "RecordTip" ) );
         ImGui::SameLine();
         float32 seconds = AnimationRewindRecorder::getRequestedWindowSeconds();
-        ImGui::SetNextItemWidth( 120.0f * EditorThemeUtil::getDpiScale() );
+        EditorChrome::setNextItemWidthColumns( 16.0f );
         if ( ImGui::SliderFloat( "Window (s)", &seconds, 1.0f, 60.0f, "%.0f" ) )
             AnimationRewindRecorder::setRequestedWindowSeconds( seconds );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationRewind", "WindowTip" ) );
@@ -163,7 +165,7 @@ namespace sw::editor
         const float32 history = static_cast<float32>( rewind.getLatestTime() - rewind.getEarliestTime() );
         if ( rewind.isScrubbing() == false )
             _scrubSecondsAgo = 0.0f;
-        ImGui::SetNextItemWidth( -90.0f );
+        EditorChrome::setNextItemWidthColumns( -12.0f );
         // 왼쪽이 과거다 — 값은 "가장 늦은 기록에서 몇 초 전" 이라 막대를 뒤집어 그린다.
         float32 position = history - _scrubSecondsAgo;
         if ( ImGui::SliderFloat( "##RewindTimeline", &position, 0.0f, MathUtil::max( history, 0.001f ), "%.2f s" ) )
@@ -213,7 +215,7 @@ namespace sw::editor
             }
         }
         if ( state._listCurveName.empty() == false && ImGui::BeginTable( "##RewindCurves", 2, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY,
-                                                                         ImVec2{ 0.0f, 160.0f } ) )
+                                                                         measureExtent( EditorTextExtent::ofText( 0.0f, 8.0f ) ) ) )
         {
             ImGui::TableSetupColumn( "Curve" );
             ImGui::TableSetupColumn( "Value" );

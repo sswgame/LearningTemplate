@@ -7,6 +7,7 @@
 #include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
+#include "Editor/Common/GUI/EditorTextExtentImGui.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
@@ -42,8 +43,9 @@ namespace sw::editor
         if ( listNotification.empty() )
             return;
 
-        constexpr float32 toastColumns = 40.0f;
-        constexpr float32 toastMargin  = 12.0f;
+        constexpr float32 toastColumns    = 40.0f;
+        constexpr float32 toastMargin     = 12.0f;
+        const float32     toastSlotHeight = EditorChrome::resolveTextExtent( EditorTextExtent::ofText( 0.0f, 4.0f ) )._y; ///< 토스트 하나가 쌓이는 세로 간격(글자 줄 4 줄)
 
         // 메인 뷰포트는 ImGui 프레임 안에서 항상 있다 — 없으면 호출 시점이 틀린 것이라 임의 크기로 계속하지 않고 멈춘다
         float2     viewportPos{};
@@ -69,7 +71,7 @@ namespace sw::editor
             const Color typeColor = getNotificationTypeColor( item._type ).withAlpha( alpha );
 
             float32 posX = viewportPos._x + screenWidth - EditorChrome::resolveTextExtent( EditorTextExtent::ofText( toastColumns, 0.0f ) )._x - toastMargin;
-            currentY -= 75.0f;
+            currentY -= toastSlotHeight;
 
             fixed_string<constant::kMaxBuffer32> windowID;
             formatstring( windowID.data(), windowID.capacity(), "##Toast_%#", static_cast<uint64>( notificationIndex ) );
@@ -114,7 +116,7 @@ namespace sw::editor
 
                 if ( item._progress >= 0.0f )
                 {
-                    ImGui::ProgressBar( item._progress, ImVec2{ -1.0f, 4.0f * EditorThemeUtil::getDpiScale() }, "" );
+                    ImGui::ProgressBar( item._progress, ImVec2{ -1.0f, measureExtent( EditorTextExtent::ofText( 0.0f, 0.25f ) ).y }, "" );
                 }
             }
             EditorChrome::endOverlay();

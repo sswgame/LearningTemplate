@@ -21,6 +21,7 @@
 #include "Editor/Common/GUI/EditorContextMenuExtension.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
+#include "Editor/Common/GUI/EditorTextExtentImGui.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/SourceControl/EditorSourceControl.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -753,7 +754,7 @@ namespace sw::editor
         const size_t              visibleCount = std::min( listReferenceResult.size(), ContentBrowserPanelInternal::kReferenceVisibleRowCount );
         const float32             tableHeight  = ImGui::GetTextLineHeightWithSpacing() * static_cast<float32>( visibleCount + 2 );
         string                    openPath;
-        if ( ImGui::BeginTable( "##cb_references", 2, kTableFlags, ImVec2( 560.0f * dpiScale, tableHeight ) ) )
+        if ( ImGui::BeginTable( "##cb_references", 2, kTableFlags, ImVec2( measureExtent( EditorTextExtent::ofText( 75.0f, 0.0f ) ).x, tableHeight ) ) )
         {
             ImGui::TableSetupColumn( "Asset", ImGuiTableColumnFlags_WidthStretch );
             ImGui::TableSetupColumn( "Line", ImGuiTableColumnFlags_WidthFixed, 48.0f * dpiScale );
@@ -1027,7 +1028,7 @@ namespace sw::editor
         const utf8*                     pPreview = "All";
         if ( _filterIndex < filterCount )
             pPreview = pFilter[_filterIndex]._pLabel;
-        ImGui::SetNextItemWidth( 110.0f * EditorThemeUtil::getDpiScale() );
+        EditorChrome::setNextItemWidthColumns( 15.0f );
         if ( ImGui::BeginCombo( "##cb_type", pPreview ) )
         {
             for ( uint32 filterIdx = 0; filterIdx < filterCount; ++filterIdx )
@@ -1055,7 +1056,7 @@ namespace sw::editor
         if ( _viewMode == ViewMode::Tiles )
         {
             ImGui::SameLine();
-            ImGui::SetNextItemWidth( 80.0f * EditorThemeUtil::getDpiScale() );
+            EditorChrome::setNextItemWidthColumns( 11.0f );
             ImGui::SliderFloat( "##cb_tile", &_tileSize, 64.0f, 160.0f, "%.0f" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "TileSize" ) );
         }

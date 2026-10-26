@@ -6,8 +6,10 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
+#include "Editor/Common/GUI/EditorTextExtentImGui.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -55,11 +57,11 @@ namespace sw::editor
             static constexpr const utf8* kDefaultExportID          = "MyCharacter";
             static constexpr float32     kDragSpeed                = 0.005f;
             static constexpr float32     kRotationDragSpeed        = 0.5f;
-            static constexpr float32     kPathButtonsWidth         = 240.0f;
-            static constexpr float32     kSocketListHeight         = 140.0f;
-            static constexpr float32     kBoneTreeHeight           = 200.0f;
-            static constexpr float32     kPresetListHeight         = 90.0f;
-            static constexpr float32     kExplanationListHeight    = 130.0f;
+            static constexpr float32     kPathButtonsColumns       = 32.0f;
+            static constexpr float32     kSocketListLines          = 7.0f;
+            static constexpr float32     kBoneTreeLines            = 10.0f;
+            static constexpr float32     kPresetListLines          = 5.0f;
+            static constexpr float32     kExplanationListLines     = 7.0f;
             static constexpr float32     kPreviewHeight            = 260.0f;  ///< 미리보기 뷰포트 높이(96 DPI 픽셀)
             static constexpr float32     kCustomizationReserve     = 150.0f;  ///< 꾸미기 머리글이 펼쳐졌을 때 뷰포트 아래에 남기는 높이(머리글 + 슬라이더 몇 줄, 96 DPI 픽셀)
             static constexpr float32     kPreviewFrameRadius       = 1.4f;    ///< 미리보기 카메라가 담는 반지름(m) — 사람 키 하나
@@ -788,7 +790,7 @@ namespace sw::editor
             ImGui::TextDisabled( "No animation clips in '%s'", _clipFolder.c_str() );
             return;
         }
-        ImGui::SetNextItemWidth( 240.0f * EditorThemeUtil::getDpiScale() );
+        EditorChrome::setNextItemWidthColumns( 32.0f );
         if ( ImGui::BeginCombo( "##PreviewClip", _selectedClip.empty() ? "(select a clip)" : _selectedClip.c_str() ) )
         {
             bool bFirst = true;
@@ -847,7 +849,7 @@ namespace sw::editor
 
     void CharacterEditorPanel::drawFileRow()
     {
-        ImGui::SetNextItemWidth( -CharacterEditorPanelInternal::kPathButtonsWidth );
+        EditorChrome::setNextItemWidthColumns( -CharacterEditorPanelInternal::kPathButtonsColumns );
         ImGui::InputText( "##SocketPath", _path.data(), _path.max_size() );
         ImGui::SameLine();
         if ( ImGui::Button( "Load" ) )
@@ -920,7 +922,7 @@ namespace sw::editor
                 _selectedSocket = name;
         }
 
-        if ( ImGui::BeginChild( "##SocketList", ImVec2( 0.0f, CharacterEditorPanelInternal::kSocketListHeight ), ImGuiChildFlags_Borders ) )
+        if ( ImGui::BeginChild( "##SocketList", measureExtent( EditorTextExtent::ofText( 0.0f, CharacterEditorPanelInternal::kSocketListLines ) ), ImGuiChildFlags_Borders ) )
         {
             bool bFirst = true;
             for ( const SocketDef& socket : _sockets.getSockets().getSockets() )
@@ -945,7 +947,7 @@ namespace sw::editor
     {
         const hashed_string name = socket._name;
 
-        ImGui::SetNextItemWidth( 180.0f );
+        EditorChrome::setNextItemWidthColumns( 24.0f );
         ImGui::InputText( "##Rename", _renameBuffer.data(), _renameBuffer.max_size() );
         ImGui::SameLine();
         if ( ImGui::Button( "Rename" ) )
@@ -1012,14 +1014,14 @@ namespace sw::editor
 
     void CharacterEditorPanel::drawSkeletonTab()
     {
-        ImGui::SetNextItemWidth( -CharacterEditorPanelInternal::kPathButtonsWidth );
+        EditorChrome::setNextItemWidthColumns( -CharacterEditorPanelInternal::kPathButtonsColumns );
         ImGui::InputText( "##SkeletonPath", _skeletonPath.data(), _skeletonPath.max_size() );
         ImGui::SameLine();
         if ( ImGui::Button( "Load skeleton" ) )
             loadSkeleton();
         EditorSelfTestMarks::note( "charactereditor.loadSkeleton" );
 
-        ImGui::SetNextItemWidth( -CharacterEditorPanelInternal::kPathButtonsWidth );
+        EditorChrome::setNextItemWidthColumns( -CharacterEditorPanelInternal::kPathButtonsColumns );
         ImGui::InputText( "##RefPosePath", _refPosePath.data(), _refPosePath.max_size() );
         ImGui::SameLine();
         if ( ImGui::Button( "Load pose" ) )
@@ -1057,7 +1059,7 @@ namespace sw::editor
             ImGui::TextDisabled( "Load a skeleton to see its bones. The skeleton is read-only; edits go to the reference pose file." );
             return;
         }
-        if ( ImGui::BeginChild( "##BoneTree", ImVec2( 0.0f, CharacterEditorPanelInternal::kBoneTreeHeight ), ImGuiChildFlags_Borders ) )
+        if ( ImGui::BeginChild( "##BoneTree", measureExtent( EditorTextExtent::ofText( 0.0f, CharacterEditorPanelInternal::kBoneTreeLines ) ), ImGuiChildFlags_Borders ) )
         {
             vector<uint32> listRoot;
             _pose.collectChildren( -1, listRoot );
@@ -1177,9 +1179,9 @@ namespace sw::editor
 
     void CharacterEditorPanel::drawAppearanceDataRow()
     {
-        ImGui::SetNextItemWidth( -CharacterEditorPanelInternal::kPathButtonsWidth );
+        EditorChrome::setNextItemWidthColumns( -CharacterEditorPanelInternal::kPathButtonsColumns );
         ImGui::InputText( "##ItemsPath", _itemsPath.data(), _itemsPath.max_size() );
-        ImGui::SetNextItemWidth( -CharacterEditorPanelInternal::kPathButtonsWidth );
+        EditorChrome::setNextItemWidthColumns( -CharacterEditorPanelInternal::kPathButtonsColumns );
         ImGui::InputText( "##AppearanceFolder", _appearanceFolder.data(), _appearanceFolder.max_size() );
         ImGui::SameLine();
         if ( ImGui::Button( "Load data" ) )
@@ -1466,7 +1468,7 @@ namespace sw::editor
             ImGui::TextColored( ImVec4( 1.0f, 0.75f, 0.3f, 1.0f ), "Slot %s: %s -> %s (%s)", fallback._slot.c_str(), fallback._requestedItem.c_str(), fallback._fallbackItem.c_str(),
                                 getEnumName( fallback._reason ) );
         }
-        if ( ImGui::BeginChild( "##RuleTrace", ImVec2( 0.0f, CharacterEditorPanelInternal::kExplanationListHeight ), ImGuiChildFlags_Borders ) )
+        if ( ImGui::BeginChild( "##RuleTrace", measureExtent( EditorTextExtent::ofText( 0.0f, CharacterEditorPanelInternal::kExplanationListLines ) ), ImGuiChildFlags_Borders ) )
         {
             if ( resolved._listTrace.empty() )
                 ImGui::TextDisabled( "No rule fired." );
@@ -1509,7 +1511,7 @@ namespace sw::editor
     {
         if ( ImGui::CollapsingHeader( "Presets (file)", ImGuiTreeNodeFlags_DefaultOpen ) == false )
             return;
-        ImGui::SetNextItemWidth( -CharacterEditorPanelInternal::kPathButtonsWidth );
+        EditorChrome::setNextItemWidthColumns( -CharacterEditorPanelInternal::kPathButtonsColumns );
         ImGui::InputText( "##PresetPath", _presetPath.data(), _presetPath.max_size() );
         ImGui::SameLine();
         if ( ImGui::Button( "Load presets" ) )
@@ -1520,7 +1522,7 @@ namespace sw::editor
             else
                 _status.clear();
         }
-        ImGui::SetNextItemWidth( 180.0f );
+        EditorChrome::setNextItemWidthColumns( 24.0f );
         ImGui::InputText( "##PresetName", _presetName.data(), _presetName.max_size() );
         ImGui::SameLine();
         ImGui::BeginDisabled( _bDatabaseLoaded == false );
@@ -1546,7 +1548,7 @@ namespace sw::editor
         EditorSelfTestMarks::note( "charactereditor.saveThumbnail" );
         EditorWidgets::drawTooltip( "Writes the Preview tab's picture next to the preset file and attaches it to the preset of this name (save the preset first; it is saved again with the current selection)" );
 
-        if ( ImGui::BeginChild( "##PresetList", ImVec2( 0.0f, CharacterEditorPanelInternal::kPresetListHeight ), ImGuiChildFlags_Borders ) )
+        if ( ImGui::BeginChild( "##PresetList", measureExtent( EditorTextExtent::ofText( 0.0f, CharacterEditorPanelInternal::kPresetListLines ) ), ImGuiChildFlags_Borders ) )
         {
             for ( const UserAppearancePreset& preset : _presetStore.getPresets() )
             {
@@ -1565,10 +1567,10 @@ namespace sw::editor
         if ( ImGui::CollapsingHeader( "Data preset (scene use)", ImGuiTreeNodeFlags_DefaultOpen ) == false )
             return;
         ImGui::TextDisabled( "A scene's Character Appearance component names this id." );
-        ImGui::SetNextItemWidth( -CharacterEditorPanelInternal::kPathButtonsWidth );
+        EditorChrome::setNextItemWidthColumns( -CharacterEditorPanelInternal::kPathButtonsColumns );
         ImGui::InputText( "##ExportFolder", _exportFolder.data(), _exportFolder.max_size() );
         EditorSelfTestMarks::note( "charactereditor.exportFolder" );
-        ImGui::SetNextItemWidth( 180.0f );
+        EditorChrome::setNextItemWidthColumns( 24.0f );
         ImGui::InputText( "##ExportID", _exportID.data(), _exportID.max_size() );
         EditorSelfTestMarks::note( "charactereditor.exportID" );
         ImGui::SameLine();

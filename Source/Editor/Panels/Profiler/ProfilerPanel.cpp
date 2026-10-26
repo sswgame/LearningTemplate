@@ -15,6 +15,7 @@
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
+#include "Editor/Common/GUI/EditorTextExtentImGui.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -879,7 +880,7 @@ namespace sw::editor
             formatstring( overlay.data(), overlay.capacity(), "%# %# ms", pSeriesName,
                           Fmt( static_cast<float64>( _listScratchSeries.back() ), Format().precision( 2 ) ) );
             ImGui::PlotLines( pSeriesName, _listScratchSeries.data(), static_cast<int32>( _listScratchSeries.size() ), 0, overlay.c_str(), 0.0f,
-                              maxMs, ImVec2{ 0.0f, 48.0f } );
+                              maxMs, measureExtent( EditorTextExtent::ofText( 0.0f, 2.5f ) ) );
             // 그래프의 한 프레임을 누르면 테이블의 "Last" 가 그 프레임 값이 된다. 유니티 Profiler 의 프레임 선택과 같다. 선택한 프레임에는 세로줄을 그린다.
             const ImVec2  plotMin    = ImGui::GetItemRectMin();
             const ImVec2  plotMax    = ImGui::GetItemRectMax();
@@ -1007,7 +1008,7 @@ namespace sw::editor
                      static_cast<float64>( minMs ), static_cast<float64>( maxMs ) );
 
         ImGui::PlotLines( "Frame Time (ms)", _arrFrameTimeHistory, 120, static_cast<int32>( _historyOffset ),
-                          nullptr, 0.0f, 33.3f, ImVec2{ 0.0f, 80.0f } );
+                          nullptr, 0.0f, 33.3f, measureExtent( EditorTextExtent::ofText( 0.0f, 4.0f ) ) );
 
         ImGui::Separator();
 

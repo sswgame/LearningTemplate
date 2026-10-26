@@ -10,6 +10,7 @@
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
+#include "Editor/Common/GUI/EditorTextExtentImGui.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -377,7 +378,7 @@ namespace sw::editor
         const AudioEngineStats stats = engine.getStats();
 
         const float32 dpi = EditorThemeUtil::getDpiScale();
-        ImGui::BeginChild( "##AudioEventList", ImVec2{ 220.0f * dpi, 0.0f }, ImGuiChildFlags_Borders | ImGuiChildFlags_ResizeX );
+        ImGui::BeginChild( "##AudioEventList", measureExtent( EditorTextExtent::ofText( 29.0f, 0.0f ) ), ImGuiChildFlags_Borders | ImGuiChildFlags_ResizeX );
         drawEventList();
         ImGui::EndChild();
         ImGui::SameLine();

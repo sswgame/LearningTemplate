@@ -8,8 +8,10 @@
 
 #include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
+#include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
+#include "Editor/Common/GUI/EditorTextExtentImGui.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -174,7 +176,7 @@ namespace sw::editor
 
         // 왼쪽은 파일 · 레이어 · 팔레트, 오른쪽은 캔버스다(유니티 Tile Palette 와 씬 뷰를 한 창에).
         const float32 statusHeight = ImGui::GetFrameHeightWithSpacing();
-        const float32 sideWidth    = 300.0f * EditorThemeUtil::getDpiScale();
+        const float32 sideWidth    = measureExtent( EditorTextExtent::ofText( 40.0f, 0.0f ) ).x;
         if ( ImGui::BeginChild( "##tileMapSide", ImVec2( sideWidth, -statusHeight ), ImGuiChildFlags_Borders | ImGuiChildFlags_ResizeX ) )
         {
             drawTileMapFileControls();
@@ -744,15 +746,15 @@ namespace sw::editor
         for ( int32 edgeIndex = 0; edgeIndex < 4; ++edgeIndex )
         {
             ImGui::PushID( edgeIndex );
-            ImGui::SetNextItemWidth( 180.0f * EditorThemeUtil::getDpiScale() );
+            EditorChrome::setNextItemWidthColumns( 24.0f );
             ImGui::InputText( edges[edgeIndex], bufs[edgeIndex]->data(), bufs[edgeIndex]->capacity() );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "EdgeTargetTip" ) );
             ImGui::SameLine();
-            ImGui::SetNextItemWidth( 50.0f * EditorThemeUtil::getDpiScale() );
+            EditorChrome::setNextItemWidthColumns( 7.0f );
             ImGui::InputInt( "##tx", &_arrEdgeTx[edgeIndex] );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "EdgeTargetXTip" ) );
             ImGui::SameLine();
-            ImGui::SetNextItemWidth( 50.0f * EditorThemeUtil::getDpiScale() );
+            EditorChrome::setNextItemWidthColumns( 7.0f );
             ImGui::InputInt( "##ty", &_arrEdgeTy[edgeIndex] );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "EdgeTargetYTip" ) );
             ImGui::SameLine();

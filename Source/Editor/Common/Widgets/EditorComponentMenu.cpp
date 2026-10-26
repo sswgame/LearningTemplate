@@ -8,6 +8,7 @@
 #include "Core/Log/LogOnce.h"
 
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
+#include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
@@ -38,7 +39,7 @@ namespace sw::editor
 
         if ( bFocusSearch )
             ImGui::SetKeyboardFocusHere();
-        ImGui::SetNextItemWidth( 180.0f * EditorThemeUtil::getDpiScale() );
+        EditorChrome::setNextItemWidthColumns( 24.0f );
         const bool   bEnter = ImGui::InputTextWithHint( "##compSearch", SW_LOCKEY( "EdCommon", "SearchHint" ), search.data(), search.capacity(), ImGuiInputTextFlags_EnterReturnsTrue );
         const string markPrefix{ pMarkPrefix };
         EditorSelfTestMarks::note( ( markPrefix + ".search" ).c_str() );

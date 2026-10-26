@@ -10,6 +10,7 @@
 #include "Editor/Common/EditorColor.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
+#include "Editor/Common/GUI/EditorTextExtentImGui.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/ConfigHotReload.h"
@@ -343,7 +344,7 @@ namespace sw::editor
             return;
         }
 
-        const float32 listWidth = 220.0f * EditorThemeUtil::getDpiScale();
+        const float32 listWidth = measureExtent( EditorTextExtent::ofText( 29.0f, 0.0f ) ).x;
         ImGui::BeginChild( "##ProjectSettingsPages", ImVec2{ listWidth, 0.0f }, ImGuiChildFlags_Borders );
         drawPageList();
         ImGui::EndChild();

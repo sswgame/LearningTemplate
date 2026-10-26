@@ -2,7 +2,9 @@
 
 #include "GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.h"
 
+#include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
+#include "Editor/Common/GUI/EditorTextExtentImGui.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
@@ -79,7 +81,7 @@ namespace sw::editor
             _systemIndex = 0;
         if ( listActive.size() > 1 )
         {
-            ImGui::SetNextItemWidth( 120.0f );
+            EditorChrome::setNextItemWidthColumns( 16.0f );
             ImGui::InputInt( SW_LOCKEY( "EdSchedule", "SystemIndex" ), &_systemIndex );
             if ( _systemIndex < 0 || _systemIndex >= static_cast<int32>( listActive.size() ) )
                 _systemIndex = 0;
@@ -87,7 +89,7 @@ namespace sw::editor
         const ScheduleSystem& system = *listActive[static_cast<size_t>( _systemIndex )];
         published._npcCount          = static_cast<uint32>( system.getNpcCount() );
 
-        if ( ImGui::BeginChild( "##ScheduleNpcList", ImVec2{ 200.0f, 0.0f }, ImGuiChildFlags_Borders | ImGuiChildFlags_ResizeX ) )
+        if ( ImGui::BeginChild( "##ScheduleNpcList", measureExtent( EditorTextExtent::ofText( 27.0f, 0.0f ) ), ImGuiChildFlags_Borders | ImGuiChildFlags_ResizeX ) )
             drawNpcList( system );
         ImGui::EndChild();
         ImGui::SameLine();
@@ -140,7 +142,7 @@ namespace sw::editor
 
         ScheduleTimelineRows::populate( system.getPlan( npcIndex ), _previewMinute, _listRow );
         const ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable;
-        if ( ImGui::BeginTable( "##ScheduleTimeline", 5, flags, ImVec2{ 0.0f, 260.0f } ) )
+        if ( ImGui::BeginTable( "##ScheduleTimeline", 5, flags, measureExtent( EditorTextExtent::ofText( 0.0f, 14.0f ) ) ) )
         {
             ImGui::TableSetupScrollFreeze( 0, 1 );
             ImGui::TableSetupColumn( SW_LOCKEY( "EdSchedule", "ColumnTime" ) );

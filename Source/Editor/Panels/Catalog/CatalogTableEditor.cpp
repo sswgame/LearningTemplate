@@ -8,6 +8,7 @@
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
+#include "Editor/Common/GUI/EditorTextExtentImGui.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Panels/Catalog/Model/CatalogDocument.h"
@@ -356,7 +357,7 @@ namespace sw::editor
         ImGui::PushID( curve._elementIndex );
         ImGui::TextUnformatted( curve._label.c_str() );
         if ( CatalogCurveModel::sample( curve, CatalogCurveModel::computeEndTime( curve ), 48, _listSample ) )
-            ImGui::PlotLines( "##plot", _listSample.data(), static_cast<int32>( _listSample.size() ), 0, nullptr, FLT_MAX, FLT_MAX, ImVec2{ ImGui::GetContentRegionAvail().x, 56.0f } );
+            ImGui::PlotLines( "##plot", _listSample.data(), static_cast<int32>( _listSample.size() ), 0, nullptr, FLT_MAX, FLT_MAX, ImVec2{ ImGui::GetContentRegionAvail().x, measureExtent( EditorTextExtent::ofText( 0.0f, 3.0f ) ).y } );
         else
             ImGui::TextDisabled( "No keys yet" );
         for ( const CatalogCurveKey& key : curve._listKey )

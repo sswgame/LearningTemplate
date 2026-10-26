@@ -15,8 +15,10 @@
 #include "Core/String/TagID.h"
 
 #include "Editor/Common/Commands/Asset/EditorResourceIndex.h"
+#include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
+#include "Editor/Common/GUI/EditorTextExtentImGui.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
@@ -135,9 +137,10 @@ namespace sw::editor
                 AssetFieldAction action       = AssetFieldAction::None;
 
                 ImGui::PushID( _pLabel );
-                const float32 itemWidth    = ImGui::CalcItemWidth();
-                const float32 buttonsWidth = ( kButtonWidth + ImGui::GetStyle().ItemSpacing.x ) * 3.0f;
-                ImGui::SetNextItemWidth( ( itemWidth > buttonsWidth + 10.0f ) ? itemWidth - buttonsWidth : itemWidth );
+                const float32     itemWidth      = ImGui::CalcItemWidth();
+                const float32     buttonsWidth   = ( kButtonWidth + ImGui::GetStyle().ItemSpacing.x ) * 3.0f;
+                constexpr float32 kMinFieldWidth = 10.0f; ///< 단추 셋을 빼고도 입력란에 남아야 하는 최소 폭
+                ImGui::SetNextItemWidth( ( itemWidth > buttonsWidth + kMinFieldWidth ) ? itemWidth - buttonsWidth : itemWidth );
 
                 drawInput( "##assetInput" );
 
@@ -161,13 +164,13 @@ namespace sw::editor
                     AssetPickerState& picker = getAssetPickerState();
                     if ( ImGui::IsWindowAppearing() )
                         ImGui::SetKeyboardFocusHere();
-                    ImGui::SetNextItemWidth( 320.0f * EditorThemeUtil::getDpiScale() );
+                    EditorChrome::setNextItemWidthColumns( 43.0f );
                     const bool bEnter = ImGui::InputTextWithHint( "##pickerSearch", SW_LOCKEY( "EditorInspector", "SearchAssetsHint" ), picker._search.data(), picker._search.capacity(),
                                                                   ImGuiInputTextFlags_EnterReturnsTrue );
                     EditorSelfTestMarks::note( "inspector.assetPicker.search" );
                     const EditorListFilter filter{ picker._search.c_str() };
                     uint32                 shownCount{ 0 };
-                    ImGui::BeginChild( "##pickerList", ImVec2{ 320.0f * EditorThemeUtil::getDpiScale(), 260.0f * EditorThemeUtil::getDpiScale() } );
+                    ImGui::BeginChild( "##pickerList", measureExtent( EditorTextExtent::ofText( 43.0f, 14.0f ) ) );
                     for ( const EditorResourceIndexEntry& entry : picker._listEntry )
                     {
                         if ( InspectorPropertyLayout::matchesFileFilter( prop._metadata->_fileFilter, entry._path ) == false ||

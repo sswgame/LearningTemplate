@@ -7,6 +7,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 
+#include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -320,7 +321,7 @@ namespace sw::editor
 
     void RetargetPanel::drawNewDocumentRow()
     {
-        ImGui::SetNextItemWidth( 360.0f * EditorThemeUtil::getDpiScale() );
+        EditorChrome::setNextItemWidthColumns( 48.0f );
         ImGui::InputTextWithHint( "##NewRetargetPath", "<resource id>.retarget.xml", _newDocumentPath.data(), _newDocumentPath.max_size() );
         EditorSelfTestMarks::note( "retarget.newPath" );
         ImGui::SameLine();
@@ -420,7 +421,7 @@ namespace sw::editor
         for ( uint32 index = 0; index < 4; ++index )
         {
             ImGui::PushID( static_cast<int32>( index ) );
-            ImGui::SetNextItemWidth( 160.0f * EditorThemeUtil::getDpiScale() );
+            EditorChrome::setNextItemWidthColumns( 21.0f );
             ImGui::InputText( arrLabel[index], _arrPairName[index].data(), _arrPairName[index].max_size() );
             bChanged = ImGui::IsItemDeactivatedAfterEdit() || bChanged;
             if ( index % 2 == 0 )
@@ -437,7 +438,7 @@ namespace sw::editor
     void RetargetPanel::drawOptionRows()
     {
         int32 mode = static_cast<int32>( _profile.getTranslationMode() );
-        ImGui::SetNextItemWidth( 200.0f * EditorThemeUtil::getDpiScale() );
+        EditorChrome::setNextItemWidthColumns( 27.0f );
         if ( ImGui::Combo( "Translation", &mode, RetargetPanelInternal::kArrTranslationMode, static_cast<int32>( SW_COUNT_OF( RetargetPanelInternal::kArrTranslationMode ) ) ) )
         {
             _profile.setRootAndPelvis( _profile.getSourceRoot(), _profile.getTargetRoot(), _profile.getSourcePelvis(), _profile.getTargetPelvis(),
@@ -453,7 +454,7 @@ namespace sw::editor
         }
         ImGui::SameLine();
         float32 heightRatio = _profile.getHeightRatioOverride();
-        ImGui::SetNextItemWidth( 120.0f * EditorThemeUtil::getDpiScale() );
+        EditorChrome::setNextItemWidthColumns( 16.0f );
         ImGui::DragFloat( "Height ratio (0 = pelvis)", &heightRatio, 0.01f, 0.0f, 10.0f, "%.3f" );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
         {
@@ -506,7 +507,7 @@ namespace sw::editor
             bChanged = true;
         }
 
-        ImGui::SetNextItemWidth( 160.0f * EditorThemeUtil::getDpiScale() );
+        EditorChrome::setNextItemWidthColumns( 21.0f );
         ImGui::InputText( "##NewChain", _newChainName.data(), _newChainName.max_size() );
         ImGui::SameLine();
         const hashed_string newName( _newChainName.c_str() );
@@ -563,7 +564,7 @@ namespace sw::editor
             listPose.erase( listPose.begin() + removeIndex );
             bChanged = true;
         }
-        ImGui::SetNextItemWidth( 160.0f * EditorThemeUtil::getDpiScale() );
+        EditorChrome::setNextItemWidthColumns( 21.0f );
         ImGui::InputTextWithHint( "##NewPoseBone", "target bone", _newPoseBone.data(), _newPoseBone.max_size() );
         EditorSelfTestMarks::note( "retarget.targetPose.newBone" );
         ImGui::SameLine();
@@ -607,10 +608,10 @@ namespace sw::editor
             listPair.erase( listPair.begin() + removeIndex );
             bChanged = true;
         }
-        ImGui::SetNextItemWidth( 140.0f * EditorThemeUtil::getDpiScale() );
+        EditorChrome::setNextItemWidthColumns( 19.0f );
         ImGui::InputTextWithHint( "##PairSource", "source bone", _newPairSource.data(), _newPairSource.max_size() );
         ImGui::SameLine();
-        ImGui::SetNextItemWidth( 140.0f * EditorThemeUtil::getDpiScale() );
+        EditorChrome::setNextItemWidthColumns( 19.0f );
         ImGui::InputTextWithHint( "##PairTarget", "target bone", _newPairTarget.data(), _newPairTarget.max_size() );
         ImGui::SameLine();
         const bool bPairComplete = _newPairSource.size() > 0 && _newPairTarget.size() > 0;

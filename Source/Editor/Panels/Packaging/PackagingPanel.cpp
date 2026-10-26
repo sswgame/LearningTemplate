@@ -8,6 +8,7 @@
 #include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/EditorUtil.h"
+#include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
@@ -221,7 +222,7 @@ namespace sw::editor
         { return Internal::kArrBackend[index]; }, _rhiIndex );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorPackaging", "RHIBackend" ) );
 
-        ImGui::SetNextItemWidth( 320.0f * dpiScale );
+        EditorChrome::setNextItemWidthColumns( 43.0f );
         (void)EditorWidgets::drawTextField( "Output Folder", _outputFolder ); // 바뀐 값은 다음 Package 가 쓴다
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorPackaging", "OutputFolder" ) );
 

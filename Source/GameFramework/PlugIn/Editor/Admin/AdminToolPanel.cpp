@@ -6,7 +6,9 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/Time/WallClock.h"
 
+#include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
+#include "Editor/Common/GUI/EditorTextExtentImGui.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
@@ -144,7 +146,7 @@ namespace sw::editor
             // 메모리 제공자일 때만 보내는 GM 의 등급을 고른다. 서버에서는 계정의 등급을 서버가 읽는다.
             FakeAdminProvider&  fake       = session.getFakeProvider();
             constexpr AdminRole kArrRole[] = { AdminRole::Viewer, AdminRole::Support, AdminRole::Operator, AdminRole::Super };
-            ImGui::SetNextItemWidth( 140.0f * EditorThemeUtil::getDpiScale() );
+            EditorChrome::setNextItemWidthColumns( 19.0f );
             if ( ImGui::BeginCombo( "Acting role", toString( fake.getActingRole() ) ) )
             {
                 for ( const AdminRole role : kArrRole )
@@ -238,7 +240,7 @@ namespace sw::editor
         EditorWidgets::drawSectionHeader( "Grant / Revoke" );
 
         EditorWidgets::drawTextField( "Asset id", _assetText, 160.0f * EditorThemeUtil::getDpiScale() );
-        ImGui::SetNextItemWidth( 160.0f * EditorThemeUtil::getDpiScale() );
+        EditorChrome::setNextItemWidthColumns( 21.0f );
         ImGui::InputScalar( "Amount", ImGuiDataType_S64, &_amount );
         EditorSelfTestMarks::note( "admin.amount" );
         EditorWidgets::drawTextField( "Memo (ticket)", _memoText, 240.0f * EditorThemeUtil::getDpiScale() );
@@ -267,7 +269,7 @@ namespace sw::editor
         EditorWidgets::drawSectionHeader( "Sanction" );
 
         constexpr ServiceSanctionKind kArrKind[] = { ServiceSanctionKind::ChatMute, ServiceSanctionKind::Suspend, ServiceSanctionKind::Ban };
-        ImGui::SetNextItemWidth( 160.0f * EditorThemeUtil::getDpiScale() );
+        EditorChrome::setNextItemWidthColumns( 21.0f );
         if ( ImGui::BeginCombo( "Kind", getEnumName( _sanctionKind ) ) )
         {
             for ( const ServiceSanctionKind kind : kArrKind )
@@ -277,7 +279,7 @@ namespace sw::editor
             }
             ImGui::EndCombo();
         }
-        ImGui::SetNextItemWidth( 160.0f * EditorThemeUtil::getDpiScale() );
+        EditorChrome::setNextItemWidthColumns( 21.0f );
         ImGui::InputScalar( "Seconds", ImGuiDataType_S64, &_sanctionSeconds );
         EditorWidgets::drawTextField( "Reason code", _reasonText, 160.0f * EditorThemeUtil::getDpiScale() );
 
@@ -309,7 +311,7 @@ namespace sw::editor
         EditorSelfTestMarks::note( "admin.audit.list" );
 
         constexpr ImGuiTableFlags kTableFlags = ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingStretchProp;
-        if ( ImGui::BeginTable( "##AdminAudit", 5, kTableFlags, ImVec2{ 0.0f, 120.0f * EditorThemeUtil::getDpiScale() } ) == false )
+        if ( ImGui::BeginTable( "##AdminAudit", 5, kTableFlags, measureExtent( EditorTextExtent::ofText( 0.0f, 6.0f ) ) ) == false )
             return;
         ImGui::TableSetupColumn( "Time (UTC)" );
         ImGui::TableSetupColumn( "Action" );
@@ -349,7 +351,7 @@ namespace sw::editor
             session.requestReports( false );
 
         constexpr ImGuiTableFlags kTableFlags = ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingStretchProp;
-        if ( ImGui::BeginTable( "##AdminReport", 5, kTableFlags, ImVec2{ 0.0f, 140.0f * EditorThemeUtil::getDpiScale() } ) == false )
+        if ( ImGui::BeginTable( "##AdminReport", 5, kTableFlags, measureExtent( EditorTextExtent::ofText( 0.0f, 7.0f ) ) ) == false )
             return;
         ImGui::TableSetupColumn( "Time (UTC)" );
         ImGui::TableSetupColumn( "Reason" );
@@ -393,7 +395,7 @@ namespace sw::editor
 
         EditorWidgets::drawTextField( "Scope (all or server kind)", _scopeText, 160.0f * EditorThemeUtil::getDpiScale() );
         EditorWidgets::drawTextField( "Message key", _maintenanceKeyText, 200.0f * EditorThemeUtil::getDpiScale() );
-        ImGui::SetNextItemWidth( 160.0f * EditorThemeUtil::getDpiScale() );
+        EditorChrome::setNextItemWidthColumns( 21.0f );
         ImGui::InputScalar( "Maintenance seconds (0 = until cleared)", ImGuiDataType_S64, &_maintenanceSeconds );
         ImGui::BeginDisabled( _memoText.empty() );
         if ( ImGui::Button( "Start maintenance" ) )
@@ -404,11 +406,11 @@ namespace sw::editor
             session.requestClearMaintenance( _scopeText, _memoText );
         ImGui::EndDisabled();
 
-        ImGui::SetNextItemWidth( 120.0f * EditorThemeUtil::getDpiScale() );
+        EditorChrome::setNextItemWidthColumns( 16.0f );
         ImGui::InputScalar( "Notice id", ImGuiDataType_S64, &_noticeID );
-        ImGui::SetNextItemWidth( 120.0f * EditorThemeUtil::getDpiScale() );
+        EditorChrome::setNextItemWidthColumns( 16.0f );
         ImGui::InputInt( "Priority", &_noticePriority );
-        ImGui::SetNextItemWidth( 160.0f * EditorThemeUtil::getDpiScale() );
+        EditorChrome::setNextItemWidthColumns( 21.0f );
         ImGui::InputScalar( "Notice seconds (0 = until removed)", ImGuiDataType_S64, &_noticeSeconds );
         EditorWidgets::drawTextField( "Notice text", _noticeText, 360.0f * EditorThemeUtil::getDpiScale() );
         const bool bNoticeReady = _memoText.empty() == false && _noticeID > 0;
