@@ -164,7 +164,7 @@ namespace sw
         uint32 getTypedComponentBucketCount() const { return _store.getTypedComponentBucketCount(); }
 
         /**
-         * @brief 태그 → 오브젝트 색인입니다. 태그로 오브젝트를 찾는 곳은 씬을 훑지 않고 `getTagIndex().forEachObjectWithTags( required, … )` 를 씁니다.
+         * @brief 태그 → 오브젝트 색인입니다. 태그로 오브젝트를 찾는 곳은 씬을 훑지 않고 `getTagIndex().findObjectsWithTags( required, 버퍼 )` 를 씁니다.
          * @details 카메라 · 프리미티브 레지스트리와 같은 자리입니다. 태그 컴포넌트가 등록 · 해제 · 태그 쓰기마다 칸을 맞춥니다(TagIndex.h).
          */
         TagIndex& getTagIndex() { return _tagIndex; }

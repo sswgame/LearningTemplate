@@ -183,7 +183,7 @@ namespace sw
         /** @brief 상태를 바꾼 뒤 액추에이터 자세를 다시 적용하고 `_state` 를 맞춥니다. */
         void           commitRestoredState();
         GameObject*    resolveTarget( GameObjectManager& manager, int32 node ) const;
-        float32        computeProximity( GameObjectManager& manager, int32 node, const GameObject& target ) const;
+        float32        computeProximity( GameObjectManager& manager, int32 node, const GameObject& target );
         float32        computeLaserBlocked( GameObjectManager& manager, int32 node, const GameObject& target ) const;
         static Binding findBinding( const hashed_string& kind );
 
@@ -204,6 +204,7 @@ namespace sw
         GimmickCircuit       _circuit;
         vector<Binding>      _listBinding;
         vector<TagContainer> _listNodeTag; ///< 노드마다 근접 센서의 태그(`bindNodes` 가 `tag` 매개변수에서 한 번 만든다). 근접 노드가 아니거나 태그가 없으면 비어 있다
+        vector<GameObject*>  _listTagged;  ///< 근접 노드가 태그 색인의 답을 받는 버퍼(용량 재사용, `TagIndex::findObjectsWithTags`)
         vector<string>       _listError;
         GimmickCircuitState  _checkpoint; ///< 비어 있으면 잡은 체크포인트가 없다
     };

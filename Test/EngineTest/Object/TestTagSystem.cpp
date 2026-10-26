@@ -17,14 +17,16 @@ namespace
 {
     struct TagIndexTestInternal
     {
-        /** @brief 색인의 답(`TagIndex::forEachObjectWithTags`)과 전 오브젝트를 훑은 답(`hasAllTags` — 하위 태그 인정)이 같으면 true 입니다. */
+        /** @brief 색인의 답(`TagIndex::findObjectsWithTags`)과 전 오브젝트를 훑은 답(`hasAllTags` — 하위 태그 인정)이 같으면 true 입니다. */
         static bool matchesFullScan( const GameObjectManager& manager, const TagContainer& required )
         {
+            vector<GameObject*> listFound;
+            manager.getTagIndex().findObjectsWithTags( required, listFound );
             vector<uint64> listIndexed;
-            manager.getTagIndex().forEachObjectWithTags( required, [&listIndexed]( GameObject* pObject )
+            for ( const GameObject* pObject : listFound )
             {
                 listIndexed.push_back( pObject->getObjectID() );
-            } );
+            }
             vector<uint64> listScanned;
             manager.forEachGameObject( [&listScanned, &required]( GameObject* pObject )
             {
@@ -36,15 +38,12 @@ namespace
             return listIndexed == listScanned;
         }
 
-        /** @brief 색인이 @p required 로 방문한 오브젝트 수입니다. */
+        /** @brief 색인이 @p required 로 돌려준 오브젝트 수입니다. */
         static uint32 countIndexed( const GameObjectManager& manager, const TagContainer& required )
         {
-            uint32 count = 0;
-            manager.getTagIndex().forEachObjectWithTags( required, [&count]( GameObject* /*pObject*/ )
-            {
-                ++count;
-            } );
-            return count;
+            vector<GameObject*> listFound;
+            manager.getTagIndex().findObjectsWithTags( required, listFound );
+            return static_cast<uint32>( listFound.size() );
         }
 
         /** @brief 질의 묶음 모두에서 색인과 전 훑기가 같은지 봅니다. */
@@ -473,6 +472,32 @@ SW_TEST_CASE( TagIndexTest, HierarchicalQueryMatchesFullScanThroughEveryWrite )
     SW_EXPECT_TRUE( pPlayer->removeComponent( pPlayerTags ) );
     SW_EXPECT_EQUAL( 0u, Internal::countIndexed( manager, TagContainer{ "Role"_tag } ) );
     SW_EXPECT_TRUE( Internal::allQueriesMatchFullScan( manager ) );
+}
+
+/**
+ * @brief [TagIndexTest] 받은 목록을 돌며 태그를 바꿔도 멈추지 않는다 — 질의가 잠금을 놓은 뒤 목록을 돌려준다
+ */
+SW_TEST_CASE( TagIndexTest, WritingTagsWhileWalkingTheResultDoesNotDeadlock )
+{
+    GameObjectManager manager;
+    for ( uint32 index = 0; index < 4; ++index )
+    {
+        GameObject* pObject = manager.createGameObject( hashed_string( "Tagged" ) );
+        SW_ASSERT_NOT_NULL( pObject );
+        pObject->addTag( "Faction.Enemy"_tag );
+    }
+    vector<GameObject*> listFound;
+    manager.getTagIndex().findObjectsWithTags( TagContainer{ "Faction"_tag }, listFound );
+    SW_EXPECT_EQUAL( size_t{ 4 }, listFound.size() );
+    for ( GameObject* pObject : listFound )
+    {
+        pObject->removeTag( "Faction.Enemy"_tag ); // 색인의 배타 잠금을 잡는다 — 질의가 공유 잠금을 쥐고 있으면 여기서 멈춘다
+        pObject->addTag( "Faction.Player"_tag );
+    }
+    manager.getTagIndex().findObjectsWithTags( TagContainer{ "Faction.Enemy"_tag }, listFound );
+    SW_EXPECT_TRUE( listFound.empty() );
+    manager.getTagIndex().findObjectsWithTags( TagContainer{ "Faction.Player"_tag }, listFound );
+    SW_EXPECT_EQUAL( size_t{ 4 }, listFound.size() );
 }
 
 // ------------------------------------------------------------------------------

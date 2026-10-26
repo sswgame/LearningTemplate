@@ -52,38 +52,14 @@ namespace sw
         void remove( const TagComponent& tagComponent );
 
         /**
-         * @brief @p required 의 태그를 모두 가진(`TagContainer::hasAllTags` — 하위 태그도 인정) 살아 있는 오브젝트를 방문합니다. @p required 가 비면 아무것도 방문하지 않습니다.
+         * @brief @p required 의 태그를 모두 가진(`TagContainer::hasAllTags` — 하위 태그도 인정) 살아 있는 오브젝트를 @p outListObject 에 채웁니다(비우고 채운다).
+         *        @p required 가 비면 비어 있습니다.
          * @details 요구 태그마다 칸을 찾아 가장 작은 칸 하나만 돈다. 요구 태그가 둘 이상이면 그 칸의 오브젝트마다 나머지를 컨테이너로 확인한다.
          *          삭제 대기 오브젝트는 건너뛴다(오브젝트 순회와 같은 답). 활성 여부는 부르는 쪽이 본다. **순서는 약속하지 않는다.**
-         * @note 공유 잠금 안에서 콜백을 부른다. **콜백 안에서 태그를 바꾸면 안 된다** — 잠금은 재진입하지 않아 같은 스레드가 자기 공유 잠금을 기다리며 멈춘다.
-         *       틱 안의 태그 쓰기는 틱 뒤로 미뤄지므로(`GameObject::addTag`) 기믹 · 컴포넌트 틱의 질의는 이 경우가 없다.
+         *          **콜백을 받지 않고 목록을 돌려주는 까닭**: 잠금을 쥔 채 부르는 쪽 코드를 돌리면, 그 코드가 태그를 바꿀 때 같은 스레드가 자기 공유 잠금을
+         *          기다리며 멈춘다(잠금은 재진입하지 않는다). 목록을 복사하고 잠금을 놓은 뒤 돌게 하면 그 모양이 생길 수 없다. 버퍼는 부르는 쪽이 들고 재사용한다.
          */
-        template <typename Func>
-        void forEachObjectWithTags( const TagContainer& required, Func&& func ) const
-        {
-            const vector<TagID>& listRequired = required.getTags();
-            if ( listRequired.empty() )
-                return;
-            std::shared_lock<std::shared_mutex> lock{ _mutex };
-            const vector<GameObject*>*          pSmallest = nullptr;
-            for ( const TagID& tag : listRequired )
-            {
-                const auto it = _mapKeyToObject.find( tag._id );
-                if ( it == _mapKeyToObject.end() || it->second.empty() )
-                    return;
-                if ( pSmallest == nullptr || it->second.size() < pSmallest->size() )
-                    pSmallest = &it->second;
-            }
-            const bool bCheckOtherTags = listRequired.size() > 1;
-            for ( GameObject* pObject : *pSmallest )
-            {
-                if ( pObject->isPendingDestroy() )
-                    continue;
-                if ( bCheckOtherTags && pObject->getTags().hasAllTags( required ) == false )
-                    continue;
-                func( pObject );
-            }
-        }
+        void findObjectsWithTags( const TagContainer& required, vector<GameObject*>& outListObject ) const;
 
         /** @brief 칸이 바뀔 때마다 오르는 세대입니다. 태그 필터 결과를 캐시하는 쪽(계층 창)이 마지막 값과 비교합니다. 읽기는 잠금이 없습니다. */
         uint64 getGeneration() const { return _generation.load( std::memory_order_relaxed ); }

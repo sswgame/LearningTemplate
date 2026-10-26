@@ -116,6 +116,7 @@ namespace sw
 
         FixedStepTimer               _clock;
         vector<InteractionCandidate> _listCandidate; ///< 스텝마다 대상 후보를 모으는 버퍼(용량 재사용)
+        vector<GameObject*>          _listTagged;    ///< 스텝마다 태그 색인의 답을 받는 버퍼(용량 재사용, `TagIndex::findObjectsWithTags`)
     };
 } // namespace sw
 

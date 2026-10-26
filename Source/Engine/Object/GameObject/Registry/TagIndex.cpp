@@ -84,6 +84,31 @@ namespace sw
         _generation.fetch_add( 1, std::memory_order_relaxed );
     }
 
+    void TagIndex::findObjectsWithTags( const TagContainer& required, vector<GameObject*>& outListObject ) const
+    {
+        outListObject.clear();
+        const vector<TagID>& listRequired = required.getTags();
+        if ( listRequired.empty() )
+            return;
+        std::shared_lock<std::shared_mutex> lock{ _mutex };
+        const vector<GameObject*>*          pSmallest = nullptr;
+        for ( const TagID& tag : listRequired )
+        {
+            const auto bucketIt = _mapKeyToObject.find( tag._id );
+            if ( bucketIt == _mapKeyToObject.end() || bucketIt->second.empty() )
+                return;
+            if ( pSmallest == nullptr || bucketIt->second.size() < pSmallest->size() )
+                pSmallest = &bucketIt->second;
+        }
+        const bool bCheckOtherTags = listRequired.size() > 1;
+        for ( GameObject* pObject : *pSmallest )
+        {
+            const bool bSkipObject = pObject->isPendingDestroy() || ( bCheckOtherTags && pObject->getTags().hasAllTags( required ) == false );
+            if ( bSkipObject == false )
+                outListObject.push_back( pObject );
+        }
+    }
+
     void TagIndex::removeFromBucketsUnlocked( const Record& record )
     {
         for ( const uint64 key : record._listKey )

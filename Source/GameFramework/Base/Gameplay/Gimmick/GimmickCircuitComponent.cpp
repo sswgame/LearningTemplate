@@ -163,6 +163,7 @@ namespace sw
         , _circuit{}
         , _listBinding{}
         , _listNodeTag{}
+        , _listTagged{}
         , _listError{}
         , _checkpoint{}
     {
@@ -376,7 +377,7 @@ namespace sw
         }
     }
 
-    float32 GimmickCircuitComponent::computeProximity( GameObjectManager& manager, int32 node, const GameObject& target ) const
+    float32 GimmickCircuitComponent::computeProximity( GameObjectManager& manager, int32 node, const GameObject& target )
     {
         const size_t          index        = static_cast<size_t>( node );
         const SceneComponent* pScene       = target.getPrimarySceneComponent();
@@ -387,17 +388,18 @@ namespace sw
         const float3 origin   = pScene->getWorldPosition();
         float32      nearest  = GimmickCircuitComponentInternal::kFarDistance;
         const uint64 targetID = target.getObjectID();
-        manager.getTagIndex().forEachObjectWithTags( _listNodeTag[index], [&]( GameObject* pObject )
+        manager.getTagIndex().findObjectsWithTags( _listNodeTag[index], _listTagged );
+        for ( const GameObject* pObject : _listTagged )
         {
             const SceneComponent* pOther         = pObject->getPrimarySceneComponent();
             const bool            bSkipCandidate = pOther == nullptr || pObject->getObjectID() == targetID || pObject->isActiveInHierarchy() == false;
             if ( bSkipCandidate )
-                return;
+                continue;
             float3 delta = pOther->getWorldPosition() - origin;
             if ( bPlanar )
                 delta._z = 0.0f;
             nearest = MathUtil::min( nearest, delta.getLength() );
-        } );
+        }
         return nearest;
     }
 
