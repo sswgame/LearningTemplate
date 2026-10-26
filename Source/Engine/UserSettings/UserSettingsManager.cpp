@@ -376,7 +376,8 @@ namespace sw
 
     bool UserSettingsManager::getBoolValue( const hashed_string& settingID ) const
     {
-        return StringUtil::parseBool( getValue( settingID ), false );
+        bool bValue{ false };
+        return StringUtil::tryParseBool( getValue( settingID ), bValue ) && bValue; // 값은 normalizeValue 가 true · false 로 맞춰 둔다. 없는 설정은 getIntValue 처럼 false
     }
 
     int32 UserSettingsManager::getIntValue( const hashed_string& settingID ) const

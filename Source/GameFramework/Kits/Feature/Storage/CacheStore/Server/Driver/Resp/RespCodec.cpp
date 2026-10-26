@@ -29,15 +29,15 @@ namespace sw
                 outBytes.push_back( '\n' );
             }
 
-            /** @brief RESP 의 길이 줄과 정수 줄을 읽습니다. 부호와 숫자만 허용하므로 `StringUtil` 보다 엄격합니다. */
+            /**
+             * @brief RESP 의 길이 줄과 정수 줄을 읽습니다. `-` 와 숫자만 허용합니다.
+             * @details `StringUtil::parseInt64` 는 앞뒤 공백과 `+` 를 받으므로, 줄의 첫 글자(`-` 또는 숫자)와 끝 글자(숫자)를 먼저 확인해 프로토콜 모양을 지킵니다.
+             */
             [[nodiscard]] static bool parseLineInteger( const uint8* pBegin, const uint8* pEnd, int64& outValue )
             {
-                const utf8* pTextBegin = reinterpret_cast<const utf8*>( pBegin );
-                const utf8* pTextEnd   = reinterpret_cast<const utf8*>( pEnd );
-                if ( pTextBegin == pTextEnd )
-                    return false;
-                const std::from_chars_result result = std::from_chars( pTextBegin, pTextEnd, outValue );
-                return result.ec == std::errc{} && result.ptr == pTextEnd;
+                const string_view text{ reinterpret_cast<const utf8*>( pBegin ), static_cast<size_t>( pEnd - pBegin ) };
+                const bool        bRespShape = text.empty() == false && ( text.front() == '-' || StringUtil::isDigitChar( text.front() ) ) && StringUtil::isDigitChar( text.back() );
+                return bRespShape && StringUtil::parseInt64( text, outValue );
             }
         };
     } // namespace

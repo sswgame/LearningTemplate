@@ -320,13 +320,8 @@ namespace sw
         static const utf16* strchr( const utf16* pStr, utf16 ch );
 
         /**
-         * @brief true/false/1/0/yes/no/on/off 토큰을 bool 로 파싱합니다(대소문자 무시).
-         * @details 앞뒤 공백을 자른 뒤 비교합니다. 비어 있거나 알 수 없는 값이면 bFallback 을 반환합니다.
-         */
-        [[nodiscard]] static bool parseBool( string_view token, bool bFallback = false );
-        /**
          * @brief 불리언 토큰(`true` · `false` · `1` · `0` · `yes` · `no` · `on` · `off`, 대소문자 무시)을 읽습니다. 아니면 false 이고 값은 그대로입니다.
-         * @details `parseBool` 은 읽지 못한 글을 폴백으로 돌려줘 "ture" 가 조용히 false 가 됩니다 — 실패를 알아야 하는 곳은 이것을 씁니다.
+         * @details 앞뒤 공백을 자른 뒤 비교합니다. 폴백 값을 받는 형식은 두지 않습니다 — "ture" 가 조용히 false 가 되지 않게 호출부가 실패를 다룹니다.
          */
         [[nodiscard]] static bool tryParseBool( string_view token, bool& outValue );
 

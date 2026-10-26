@@ -1037,12 +1037,6 @@ namespace sw
         return wcschr( pStr, ch );
     }
 
-    bool StringUtil::parseBool( string_view token, bool bFallback )
-    {
-        bool value{ bFallback };
-        return tryParseBool( token, value ) ? value : bFallback;
-    }
-
     bool StringUtil::tryParseBool( string_view token, bool& outValue )
     {
         const string_view trimmed    = trim( token );

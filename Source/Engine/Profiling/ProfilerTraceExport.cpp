@@ -4,6 +4,7 @@
 
 #if SW_PROFILER_TRACE_ENABLED
 
+    #include "Core/Container/StringUtil.h"
     #include "Core/File/FileUtil.h"
     #include "Core/GlobalVariable/GlobalVariableManager.h"
     #include "Core/Memory/Memory.h"
@@ -638,7 +639,12 @@ namespace sw
                 continue;
             // trace_<유닉스 밀리초>.trace.json — 숫자 부분이 가장 큰 것이 최근이다.
             const size_t underscore = name.find( '_' );
-            const int64  stamp      = underscore == string::npos ? 0 : static_cast<int64>( std::strtoll( name.c_str() + underscore + 1, nullptr, 10 ) );
+            if ( underscore == string::npos )
+                continue;
+            const size_t stampEnd = name.find( '.', underscore );
+            int64        stamp{ -1 };
+            if ( StringUtil::parseInt64( string_view( name ).substr( underscore + 1, stampEnd - underscore - 1 ), stamp ) == false )
+                continue; // 이름에 시각이 없으면 이 도구가 쓴 파일이 아니다
             if ( stamp > latestStamp )
             {
                 latestStamp = stamp;
@@ -1007,13 +1013,14 @@ namespace sw
                 for ( size_t index = 2; index < listArgument.size(); ++index )
                 {
                     const string& argument = listArgument[index];
-                    if ( argument.empty() == false && argument.find_first_not_of( "0123456789" ) == string::npos )
-                        budget = static_cast<uint32>( std::stoul( std::string( argument.c_str() ) ) );
+                    int32         number{ 0 };
+                    if ( argument.find_first_not_of( "0123456789" ) == string::npos && StringUtil::parseInt( argument, number ) )
+                        budget = static_cast<uint32>( number );
                     else
                         recordPath = argument;
                 }
-                const float64 seconds = std::strtod( listArgument[1].c_str(), nullptr );
-                if ( seconds <= 0.0 )
+                float64 seconds{ 0.0 };
+                if ( StringUtil::parseDouble( listArgument[1], seconds ) == false || seconds <= 0.0 )
                 {
                     outReply = "usage: profile.trace record <seconds> [<path>] [<eventBudgetPerThread>]";
                     return false;
@@ -1025,8 +1032,9 @@ namespace sw
             for ( size_t index = 1; index < listArgument.size(); ++index )
             {
                 const string& argument = listArgument[index];
-                if ( argument.empty() == false && argument.find_first_not_of( "0123456789" ) == string::npos )
-                    frameCount = static_cast<uint32>( std::stoul( std::string( argument.c_str() ) ) );
+                int32         number{ 0 };
+                if ( argument.find_first_not_of( "0123456789" ) == string::npos && StringUtil::parseInt( argument, number ) )
+                    frameCount = static_cast<uint32>( number );
                 else
                     path = argument;
             }

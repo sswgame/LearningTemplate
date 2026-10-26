@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Server/Driver/Postgres/PostgresDriver.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/String/StringBuilder.h"
 
@@ -199,8 +200,14 @@ namespace sw
                     if ( pOutRowSet != nullptr )
                     {
                         readRows( result.get(), *pOutRowSet );
-                        const utf8* pAffected         = PQcmdTuples( result.get() );
-                        pOutRowSet->_affectedRowCount = ( pAffected != nullptr && pAffected[0] != '\0' ) ? std::atoll( pAffected ) : 0;
+                        // PQcmdTuples 는 행 수가 없는 명령이면 빈 글을 준다 — 그때만 0 이고, 숫자가 아닌 글은 드라이버 오류다.
+                        const utf8* pAffected    = PQcmdTuples( result.get() );
+                        const bool  bHasRowCount = pAffected != nullptr && pAffected[0] != '\0';
+                        if ( bHasRowCount && StringUtil::parseInt64( pAffected, pOutRowSet->_affectedRowCount ) == false )
+                        {
+                            _lastError = "PQcmdTuples returned a non-numeric row count";
+                            return SQLResult::Error;
+                        }
                     }
                     return SQLResult::Ok;
                 }
