@@ -86,6 +86,8 @@ namespace sw
         , _latestText{}
         , _parsedText{}
         , _listServerPose{}
+        , _listLocalPose{}
+        , _localStructureGeneration{ 0 }
         , _listDelta{}
         , _thread{}
         , _bStop{ 0 }
@@ -141,6 +143,7 @@ namespace sw
             AuthorityPose& pose = outListPose.emplace_back();
             pose._name          = pObject->getName().c_str();
             pose._position      = pRoot->getWorldPosition();
+            pose._object        = pObject->getHandle();
         } );
         std::sort( outListPose.begin(), outListPose.end(), []( const AuthorityPose& left, const AuthorityPose& right )
         { return left._name < right._name; } );
@@ -256,10 +259,25 @@ namespace sw
                 parsePoses( _parsedText, _listServerPose );
             }
         }
-        vector<AuthorityPose> listLocal;
-        collectPoses( *pManager, listLocal );
+        // 이름 있는 오브젝트 목록(이름 순)은 구조 세대가 바뀔 때만 씬을 훑어 다시 모은다. 그 사이에는 핸들로 위치만 읽는다.
+        const uint64 structureGeneration = pManager->getStructureGeneration();
+        if ( structureGeneration != _localStructureGeneration )
+        {
+            _localStructureGeneration = structureGeneration;
+            collectPoses( *pManager, _listLocalPose );
+        }
+        else
+        {
+            for ( AuthorityPose& pose : _listLocalPose )
+            {
+                const GameObject*     pObject = pManager->resolveGameObject( pose._object );
+                const SceneComponent* pRoot   = pObject != nullptr ? pObject->getComponent<SceneComponent>() : nullptr;
+                if ( pRoot != nullptr )
+                    pose._position = pRoot->getWorldPosition();
+            }
+        }
         vector<AuthorityDelta> listDelta;
-        computeDeltas( listLocal, _listServerPose, listDelta );
+        computeDeltas( _listLocalPose, _listServerPose, listDelta );
         const float4        ghostColor{ 0.2f, 0.9f, 1.0f, 1.0f };
         const float4        errorColor{ 1.0f, 0.6f, 0.1f, 1.0f };
         const hashed_string category( "AuthorityGhost" );
