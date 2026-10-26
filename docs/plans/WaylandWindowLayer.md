@@ -2,7 +2,7 @@
 
 > 상태: 구현중 · 선행: 없음 · 영역: engine · 옛번호: D1-6 · 진행: 1/3
 
-**남은 확인(통합에서 확인):** 매니페스트 id `wayland-ci-job`(W2, push 뒤 CI). main CI 실행 `40180268417` 에서 잡 `Build Linux Debug Wayland (Clang)` 가 success 로 보고돼 W3 의 코어 프로토콜 부분(클립보드 · 배율)에 착수했다 — 그 잡의 다음 실행이 이 코드를 처음 컴파일한다.
+**CI 확인:** 잡 `Build Linux Debug Wayland (Clang)`(W2) — push 뒤 `py -3 -m Scripts ci-jobs --summary` 로 본다(리눅스 확인은 CI 가 하므로 검증 묶음 항목을 두지 않는다). main CI 실행 `40180268417` 에서 잡 `Build Linux Debug Wayland (Clang)` 가 success 로 보고돼 W3 의 코어 프로토콜 부분(클립보드 · 배율)에 착수했다 — 그 잡의 다음 실행이 이 코드를 처음 컴파일한다.
 
 `Engine/Window/Linux` 가 X11 뿐이었다. 컴포지터 없이 지을 수 있는 백엔드 코드는 들어갔고(W1) 확인은 CI 리눅스 잡의 headless 컴포지터에서만 한다(결정 기록 5-12 — 로컬 WSL 빌드는 하지 않는다).
 

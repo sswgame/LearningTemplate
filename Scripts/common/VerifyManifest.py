@@ -6,15 +6,19 @@
 한 줄이고, 그 id 가 매니페스트에 없거나(오타 · 지운 항목) 일회성 항목(`pending`)을 가리키는 줄이 하나도 없으면 `plans --check` 와 린트가 막는다.
 실행은 `dev/RunVerifyBatch.py`(`py -3 -m Scripts verify-batch`)가 하고, 여기는 읽기 · 검증 · 실행 순서 · 명령 만들기 · 결과 표만 안다.
 
-항목 종류(`kind`)는 일곱이고 실행 순서도 이 순서다(빌드 → 쿠킹 → ctest · 테스트 → 골든 → 측정 — 쿠킹한 셰이더를 쓰는 실행이 쿠킹 뒤에 돈다):
+항목 종류(`kind`)는 여덟이고 실행 순서도 이 순서다(빌드 → 쿠킹 → 검사 → ctest · 테스트 → 골든 → 측정 — 쿠킹한 셰이더를 쓰는 실행이 쿠킹 뒤에 돈다):
 
 - `build`   : `full-build --preset <구성의 프리셋>`. 실패하면 같은 구성의 나머지는 막힌다.
 - `ctest`   : `ctest --test-dir build/<프리셋> -L <label>`.
 - `test`    : `Scripts test <filter> --preset <프리셋> --no-build <extra_args>`(호스트 스위트 · 벤치는 `--host_suites=all` · `--load_suites=only` 를 extra_args 에).
 - `covered` : 다른 항목(`covered_by`)이 도는 동안 같이 도는 시나리오 파일 · 테스트 케이스. 따로 돌리지 않고 덮개 항목의 결과를 따른다.
-- `cook` · `golden` · `measure` : 기존 도구를 `tool`(`scripts` = `py -3 -m Scripts <args>`, `app` = 그 구성의 App 실행 파일)과 `args` 로 부른다.
+- `cook` · `check` · `golden` · `measure` : 기존 도구를 `tool`(`scripts` = `py -3 -m Scripts <args>`, `app` = 그 구성의 App 실행 파일)과 `args` 로 부른다.
+  `check` 는 빌드한 App 의 헤드리스 검사(`--check-text` 처럼 종료 코드로 판정하고 산출물이 없는 것)다. 측정이 아니라 한계 · 판정 칸이 없다.
 
-`need_command` 가 있는 항목은 아직 한 명령으로 돌지 않는 확인이다(없는 명령을 지어내지 않는다) — 실행기는 돌리지 않고 이유를 표에 적는다.
+명령이 없는 항목은 이유가 둘 중 하나로 갈린다 — 실행기는 어느 쪽이든 돌리지 않고 이유를 표에 적는다(없는 명령을 지어내지 않는다).
+`manual` 은 사람 눈 · 귀 · 장비 · 외부 에셋이 있어야 하는 확인이라 명령이 영영 없을 수 있는 것이고, `need_command` 는 사람이 필요 없는데 아직 명령이 없는 것(케이스 · 시나리오를 더하면 `kind` 의 칸으로 도는 것)이다.
+**일회성(`pending`) 항목은 명령이 있거나 `manual` 이어야 한다** — 명령 없는 `need_command` 가 일회성이면 통합이 영영 돌릴 수 없는 확인을 기다리게 되므로 읽을 때 막는다.
+명령 없는 항목(`need_command` · `manual`)은 어느 문서의 `매니페스트 id` 줄이 가리켜야 한다 — 누가 명령을 만들 것인지, 누가 사람 확인을 할 것인지의 주인 문서(후보 문서 포함)가 있어야 한다.
 `platform` 이 `wsl` 인 항목은 사용자가 요청할 때만 하므로 기본으로 돌리지 않는다. 필수 칸이 빠지거나 모르는 칸이 있으면 `VerifyManifestError` 로 멈춘다(기본값 없음).
 `gpu` 는 GPU 잠금 방식이다: `none` · `shared`(공유 칸) · `exclusive`(GPU 와 빌드 칸을 혼자 — 측정이 다른 빌드에 오염되지 않게).
 """
@@ -37,7 +41,7 @@ from .Plans import listPlanFiles
 kManifestRelPath = "Test/QA/VerifyBatch.json"
 
 #: 항목 종류 — 실행 순서도 이 순서다.
-kListKind: tuple[str, ...] = ("build", "cook", "ctest", "test", "covered", "golden", "measure")
+kListKind: tuple[str, ...] = ("build", "cook", "check", "ctest", "test", "covered", "golden", "measure")
 #: GPU 잠금 방식 — 실행 순서에서 이 순서로 모은다(없음 → 공유 → 독점).
 kListGpuMode: tuple[str, ...] = ("none", "shared", "exclusive")
 kListPlatform: tuple[str, ...] = ("windows", "wsl")
@@ -71,10 +75,11 @@ _kMapKindKeys: dict[str, tuple[str, ...]] = {
     "test": ("filter",),
     "covered": ("covered", "covered_by"),
     "cook": ("tool", "args"),
+    "check": ("tool", "args"),
     "golden": ("tool", "args"),
     "measure": ("tool", "args", "limit", "judge"),
 }
-_kOptionalKeys: tuple[str, ...] = ("need_command", "note", "extra_args", "metrics", "timeout_minutes")
+_kOptionalKeys: tuple[str, ...] = ("need_command", "manual", "note", "extra_args", "metrics", "timeout_minutes")
 _kMetricKeys: tuple[str, ...] = ("name", "pattern", "unit", "max", "min")
 
 
@@ -116,6 +121,7 @@ class VerifyItem:
     bPending: bool
     index: int
     needCommand: str
+    manual: str
     note: str
     timeoutMinutes: int
     label: str
@@ -135,9 +141,14 @@ class VerifyItem:
         return self.kind == "covered"
 
     @property
+    def bUnrunnable(self) -> bool:
+        """명령이 없는 항목인가 — 사람이 해야 하거나(`manual`) 아직 명령을 못 만든(`need_command`) 것."""
+        return bool(self.needCommand or self.manual)
+
+    @property
     def bRunnable(self) -> bool:
         """이번 실행기가 돌릴 수 있는가 — 한 명령으로 도는 항목이고 Windows 쪽이다."""
-        return not self.bCovered and not self.needCommand and self.platform == "windows"
+        return not self.bCovered and not self.bUnrunnable and self.platform == "windows"
 
 
 @dataclass(frozen=True)
@@ -216,11 +227,19 @@ def readItemInternal(entry: object, index: int, setConfig: set[str]) -> VerifyIt
     needCommand = str(entry["need_command"]).strip() if "need_command" in entry else ""
     if "need_command" in entry and not needCommand:
         raise VerifyManifestError(f"{where}: `need_command` 는 이유가 든 글입니다")
+    if bPending and needCommand:
+        raise VerifyManifestError(f"{where}: 일회성(`pending`) 항목은 명령이 있거나 `manual` 이어야 합니다 — 명령이 아직 없으면 `pending` 을 false 로 두고 명령을 만드는 일을 후보 문서가 맡게 합니다")
+    manual = str(entry["manual"]).strip() if "manual" in entry else ""
+    if "manual" in entry and not manual:
+        raise VerifyManifestError(f"{where}: `manual` 은 사람이 해야 하는 까닭이 든 글입니다")
+    if needCommand and manual:
+        raise VerifyManifestError(f"{where}: `need_command`(사람이 필요 없는데 명령이 아직 없다)와 `manual`(사람이 해야 한다)은 함께 쓰지 않는다")
+    bUnrunnable = bool(needCommand or manual)
     listMissing = [key for key in _kMapKindKeys[kind] if key not in entry]
-    if listMissing and not needCommand:
-        raise VerifyManifestError(f"{where}: 종류 `{kind}` 에 필요한 칸 {listMissing} 가 없습니다(한 명령으로 안 도는 확인이면 `need_command` 에 이유를 적는다)")
+    if listMissing and not bUnrunnable:
+        raise VerifyManifestError(f"{where}: 종류 `{kind}` 에 필요한 칸 {listMissing} 가 없습니다(명령이 없는 확인이면 사람이 해야 할 때 `manual`, 아직 명령을 못 만들었으면 `need_command` 에 이유를 적는다)")
     timeoutMinutes = entry.get("timeout_minutes", 0)
-    bNeedsTimeout = kind != "covered" and not needCommand
+    bNeedsTimeout = kind != "covered" and not bUnrunnable
     if isinstance(timeoutMinutes, bool) or not isinstance(timeoutMinutes, int) or (bNeedsTimeout and timeoutMinutes <= 0):
         raise VerifyManifestError(f"{where}: 도는 항목에는 양의 정수 `timeout_minutes` 가 필요합니다")
     judge = requireChoiceInternal(entry, "judge", where, kListJudge) if "judge" in entry else ""
@@ -233,7 +252,7 @@ def readItemInternal(entry: object, index: int, setConfig: set[str]) -> VerifyIt
         itemId=itemId, title=requireTextInternal(entry, "title", where), kind=kind, config=config,
         platform=requireChoiceInternal(entry, "platform", where, kListPlatform), gpu=requireChoiceInternal(entry, "gpu", where, kListGpuMode),
         source=requireTextInternal(entry, "source", where), resultDoc=requireTextInternal(entry, "result_doc", where), bPending=bPending,
-        index=index, needCommand=needCommand, note=str(entry.get("note", "")), timeoutMinutes=timeoutMinutes,
+        index=index, needCommand=needCommand, manual=manual, note=str(entry.get("note", "")), timeoutMinutes=timeoutMinutes,
         label=requireTextInternal(entry, "label", where) if "label" in entry else "",
         testFilter=requireTextInternal(entry, "filter", where) if "filter" in entry else "",
         listExtraArg=requireTextListInternal(entry, "extra_args", where, bAllowEmpty=True) if "extra_args" in entry else (),
@@ -253,7 +272,7 @@ def checkCrossReferencesInternal(listItem: list[VerifyItem], listConfig: list[Ve
         mapById[item.itemId] = item
     for item in listItem:
         where = f"{kManifestRelPath}: 항목 `{item.itemId}`"
-        if item.bCovered and not item.needCommand:
+        if item.bCovered and not item.bUnrunnable:
             cover = mapById.get(item.coveredBy)
             if cover is None or cover.kind not in ("ctest", "test"):
                 raise VerifyManifestError(f"{where}: `covered_by` `{item.coveredBy}` 는 `ctest` · `test` 항목의 id 여야 합니다")
@@ -442,7 +461,9 @@ def interpretOutcome(item: VerifyItem, returnCode: int, bLaunched: bool, bTimedO
 
 
 def makeNotRunResult(item: VerifyItem, finishedAt: str) -> ItemResult:
-    """돌리지 않는 항목(명령이 없다 · wsl)의 결과 — 이유를 표에 적는다."""
+    """돌리지 않는 항목(명령이 없다 · 사람이 해야 한다 · wsl)의 결과 — 이유를 표에 적는다."""
+    if item.manual:
+        return makeResult(item.itemId, kStatusSkipped, f"사람 확인: {item.manual}", finishedAt)
     if item.needCommand:
         return makeResult(item.itemId, kStatusSkipped, f"명령 없음: {item.needCommand}", finishedAt)
     return makeResult(item.itemId, kStatusSkipped, "wsl — 사용자가 요청할 때만", finishedAt)
@@ -450,7 +471,7 @@ def makeNotRunResult(item: VerifyItem, finishedAt: str) -> ItemResult:
 
 def resolveCoveredResult(item: VerifyItem, mapResult: dict[str, ItemResult], finishedAt: str) -> ItemResult:
     """덮개 항목의 결과 — 덮개 항목(`covered_by`)이 통과하면 통과, 졌으면 실패, 안 돌았으면 그 상태를 이어받는다(어느 쪽이든 이유에 덮개 id 를 적는다)."""
-    if item.needCommand:
+    if item.bUnrunnable:
         return makeNotRunResult(item, finishedAt)
     cover = mapResult.get(item.coveredBy)
     if cover is None:
@@ -478,6 +499,9 @@ def formatReport(manifest: VerifyManifest, listResult: list[ItemResult], title: 
     listNeed = [item for item in manifest.listItem if item.itemId in mapResult and item.needCommand]
     if listNeed:
         listLine += ["## 명령이 없어 돌지 않은 항목(need_command)", *(f"- `{item.itemId}` {item.title}: {item.needCommand}" for item in listNeed), ""]
+    listManual = [item for item in manifest.listItem if item.itemId in mapResult and item.manual]
+    if listManual:
+        listLine += ["## 사람이 확인할 항목(manual)", *(f"- `{item.itemId}` {item.title}: {item.manual}" for item in listManual), ""]
     return "\n".join(listLine)
 
 
@@ -571,6 +595,7 @@ def findPendingLineViolations(repositoryRoot: Path, manifest: VerifyManifest | N
 
     (a) `확인 대기` · `실행 대기` · `통합에서 확인` · `통합에서 실행` · `**남은 확인` 이 든 줄(제목 줄 제외)에는 `매니페스트 id` 와 id 가 있어야 하고 그 id 가 매니페스트에 있어야 한다.
     (b) `pending` 인 항목은 어느 문서의 `매니페스트 id` 줄이 가리켜야 한다 — 문서의 대기 줄을 지운 뒤 항목을 남기면 낡은 확인이 쌓인다.
+    (c) 명령 없는 항목(`need_command` · `manual`)도 어느 문서의 `매니페스트 id` 줄이 가리켜야 한다 — 명령을 만들 일 · 사람 확인의 주인 문서(후보 문서 포함)가 없으면 아무도 안 하는 확인이 남는다.
     `manifest` 가 None(파일 없음)이면 대기 줄이 하나라도 있을 때 그 사실을 알린다.
     """
     setReferenced: set[str] = set()
@@ -596,6 +621,9 @@ def findPendingLineViolations(repositoryRoot: Path, manifest: VerifyManifest | N
     if manifest is not None:
         listViolation += [f"{kManifestRelPath}: 일회성 항목 `{item.itemId}`(pending)를 가리키는 문서 줄이 없습니다 — 확인이 끝나 줄을 지웠으면 항목도 지웁니다"
                           for item in manifest.listItem if item.bPending and item.itemId not in setReferenced]
+        listViolation += [f"{kManifestRelPath}: 명령 없는 항목 `{item.itemId}`({'manual' if item.manual else 'need_command'})를 가리키는 문서 줄이 없습니다 — "
+                          "명령을 만들 일 · 사람 확인의 주인 문서(후보 문서)에 `매니페스트 id` 줄을 두거나 일이 사라졌으면 항목을 지웁니다"
+                          for item in manifest.listItem if item.bUnrunnable and not item.bPending and item.itemId not in setReferenced]
     return listViolation
 
 

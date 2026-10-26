@@ -13,7 +13,7 @@
 남은 것:
 - 사람 눈 확인: 일본어 화면의 잘림, `he` · `fa` 의 RTL 배치와 `۰-۹` 숫자, Shooter3D HUD 의 아이템 이름 줄 자리(무기 이름 위).
 - `App --check-text` 로 출시 문화권 `ja` 에 빠지거나 낡은 번역이 없는지.
-못 하는 이유(2026-10-24): 눈 확인은 사람이 화면을 봐야 한다. `--check-text` 는 빌드된 App 이 있어야 돌려서 통합에서 실행 대기다(매니페스트 id `localization-check-text`). 풀리는 조건: 사람이 일본어 · RTL 화면을 보고, 통합 담당이 `--check-text` 를 돌린다.
+못 하는 이유(2026-10-24): 눈 확인은 사람이 화면을 봐야 한다. `--check-text` 는 빌드된 App 이 있어야 돌려서 통합에서 실행 대기다(매니페스트 id `localization-check-text`). 눈 확인은 매니페스트 id `localization-eye-check`(사람 몫). 풀리는 조건: 사람이 일본어 · RTL 화면을 보고, 통합 담당이 `--check-text` 를 돌린다.
 
 ### NpcScheduleFollowUp
 제목: NPC 하루 일정의 남은 것
