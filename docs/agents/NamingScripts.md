@@ -19,23 +19,13 @@
 - Module/file names use `PascalCase.py`.
 - JSON keys of Python-owned contracts (`Config/Engine/CookContract.json`, hand-read import configs) use `snake_case`. Configs read through reflection use the C++ member name as the key (`_width`).
 
-Shape. `CheckPythonConventions.py` checks every tracked `.py` against the rules below; the bracketed word is the rule name in its
-violations and in `Scripts/lint/rules/CheckPythonConventions.toml` exemption keys (`<rule>:<path>`). The code must still run on Python 3.10,
-the CI runners' interpreter: syntax and standard-library APIs alike (no `hashlib.file_digest`, TOML only through `common.RuleData`).
-The single source is `kMinimumPythonVersion` in `Scripts/common/Constants.py`; importing `common` stops on an older interpreter, and
-`CheckPythonMinimumVersion.py` checks syntax against it.
+Shape. `CheckPythonConventions.py` checks every tracked `.py` (rule names `docstring` · `future` · `annotation` · `typing` · `encoding` · `osPath` · `exit` · `mainGuard` · `exitCode` · `argparse`;
+exemption keys `<rule>:<path>` in `Scripts/lint/rules/CheckPythonConventions.toml`): a module docstring and `from __future__ import annotations`; every function annotated (`__init__` → `-> None`);
+`X | None` and built-in generics, never `typing.Optional` / `List` / `Dict`; text I/O names `encoding="utf-8"`; `pathlib.Path` (`os.path` only for `normpath`, `relpath`, `commonpath`, `commonprefix`, `expandvars`, `splitext`);
+`sys.exit(…)` never `raise SystemExit(…)`, with the `__main__` guard the single line `sys.exit(main())` (tests: `unittest.main()`); under `Scripts/`, `main( argv )` returns `ExitCode` values (`CheckScriptEntryPoints.py`);
+`argparse.ArgumentParser` gets a `description=`. Examples are in `docs/04_CodingGuidelines.md` 8. The code must run on Python 3.10 (`kMinimumPythonVersion` in `Scripts/common/Constants.py`; `CheckPythonMinimumVersion.py`).
 
-- A module opens with a docstring `[docstring]`; a module with any code also has `from __future__ import annotations` `[future]`.
-- Every function annotates its parameters (except `self` / `cls`, including `*args` / `**kwargs`) and its return type, `__init__` included (`-> None`) `[annotation]`.
-- Types are written `X | None` and with built-in generics (`list[str]`, `dict[str, int]`), never `typing.Optional` · `Union` · `List` · `Dict` · `Tuple` · `Set` `[typing]`.
-- Text file I/O names its encoding — `open(…, encoding="utf-8")`, `read_text(encoding="utf-8")`, `write_text(…, encoding="utf-8")`; binary I/O (`"rb"`, `read_bytes`) needs none `[encoding]`.
-- Paths are `pathlib.Path`. `os.path` is used only for the string operations pathlib lacks: `normpath`, `relpath`, `commonpath`, `commonprefix`, `expandvars`, `splitext` `[osPath]`.
-- A script exits with `sys.exit(…)`, never `raise SystemExit(…)` `[exit]`. Its `__main__` guard is the single line `sys.exit(main())` — a test file's is `unittest.main()` `[mainGuard]`; under `Scripts/`, `main` (and any `f` in `sys.exit(f())`) returns `ExitCode` values, never a bare number `[exitCode]`;
-  `main` takes `argv` and returns the exit code (`CheckScriptEntryPoints.py`).
-- `argparse.ArgumentParser` gets a `description=` `[argparse]`.
-- Not checked by a gate: child processes go through `common.Process.runProcess` under `Scripts/` (`CheckScriptCommonHelpers.py`); console output is plain `print` (there is no logging wrapper —
-  gates, fixers and reports print through their base class); catch the exceptions you expect, and `except Exception` only at a boundary that must keep going and reports what it swallowed
-  (a setup step, a session hook).
+- Not checked by a gate: console output is plain `print`; catch the exceptions you expect, and `except Exception` only at a boundary that must keep going and reports what it swallowed (a setup step, a session hook).
 
 ### HLSL
 
@@ -52,9 +42,7 @@ section on every `.hlsl` / `.hlsli` (CI gate and pre-commit hook).
   (`static float4 Bindless::sampleIndex( … ) { … }` — the definition repeats `static`, FXC rejects a mismatch).
   `public` / `private` are reserved words and `const` member functions do not compile. A helper that lives in one `.hlsl` is a free
   function (`isVisible`, `hashSeed`).
-  The C++ function-name rules apply: an acronym is one word (`Bindless::loadRwTexture2D`, never `LoadRWTex2D`),
-  words are spelled out (`Tex` → `Texture`, `Cmp` → `Comparison`), and the verb table applies — a value
-  worked out from inputs is `compute…`, not an `…Of` suffix (`Transform::computeWorldPosition`).
+  The C++ function-name rules apply (`Bindless::loadRwTexture2D`, `Tex` → `Texture`; a value worked out from inputs is `compute…`, not an `…Of` suffix).
   GPU access verbs: `load` / `store` for buffer and RW-texture elements, `sample` / `gather` for texture reads.
   Entry points stay `VSMain` / `PSMain` / `CSMain` (the compiler and pipeline XML name them as strings).
 - **A pass or feature switch picks a definition, not a branch inside a body.** A step that a switch changes is a
@@ -62,9 +50,7 @@ section on every `.hlsl` / `.hlsli` (CI gate and pre-commit hook).
   definition), so the calling body reads the same in every permutation (`surface.applyAlphaCutoff()`,
   `context.storeSurface( surface )` in `materialshadermain.hlsli`).
   The gate flags a `#if` inside a function body unless its condition names a backend macro (`backend_macro` in
-  `Scripts/lint/rules/CheckShaderConventions.toml`: `DX11`, `DX12`, `__spirv__`, `SW_NATIVE_BINDLESS`), because the backends
-  differ in syntax and resources. A `#if` directly inside a struct body (a field that exists only in some permutations) is a
-  declaration, not a body branch.
+  `Scripts/lint/rules/CheckShaderConventions.toml`); a `#if` directly inside a struct body is a declaration, not a body branch.
 - **Types** are `PascalCase` with no `_t` suffix and no `Sw` prefix (`InstanceData`, `PixelContext`, `PSInput`).
   A struct that mirrors a C++ struct takes the C++ type name (`RHIDrawIndirectCommand`).
 - **Struct fields** are `_camelCase`, as in a C++ plain-data struct (`PSInput::_position`, `context._worldPosition`).
@@ -85,17 +71,12 @@ section on every `.hlsl` / `.hlsli` (CI gate and pre-commit hook).
 - **Globals and cbuffer members** are `g_` + `PascalCase` (`g_ViewProj`, `g_SwInstances`). C++ binds them
   **by name** (`shaderslot::resname` / `cbname`, `PassConstantNames`, the `g_<Name>Index` registry convention),
   so they are not renamed for style and the container, plural and abbreviation rules do not apply to them.
-  The same holds for every other string-bound name: cbuffer names (`PassCB`, `CullParams`, `SwRootConstants`),
-  semantics, externally supplied defines (`DX11`, `SW_PASS_*`, `MATERIAL_*`), the macros in `bindingslots.hlsli`
-  (C++ includes that file) and shader file names.
-  An exemption from the rules above is a named entry with its reason in the gate (`kStringBoundName`).
-- **Formatting**: `clang-format` formats shaders as it does C++ (`Resource/.clang-format` inherits the root file;
-  the commit hook checks staged shaders, `FormatModified.py` fixes them). A compute entry point takes
-  `SW_NUMTHREADS( x, y, z )` (`common.hlsli`), not `[numthreads(…)]`, so the attribute stays on its own line.
-- **Renaming a string-bound name changes C++ in the same commit.** `ShaderBindingValidator::validate` skips
-  a reflected name it does not know, so a one-sided rename silently switches that resource's check off;
-  `ShaderBindingValidatorTest.EveryBoundNameIsInCookedReflection` fails instead when a name C++ binds is missing
-  from the cooked `reflection.manifest`.
+  The same holds for every other string-bound name: cbuffer names, semantics, externally supplied defines (`DX11`, `SW_PASS_*`, `MATERIAL_*`),
+  the macros in `bindingslots.hlsli` and shader file names (a named entry with its reason in the gate, `kStringBoundName`).
+- **Formatting**: `clang-format` formats shaders as it does C++ (`FormatModified.py` fixes them). A compute entry point takes
+  `SW_NUMTHREADS( x, y, z )` (`common.hlsli`), not `[numthreads(…)]`.
+- **Renaming a string-bound name changes C++ in the same commit** (`ShaderBindingValidator::validate` skips an unknown reflected name;
+  `ShaderBindingValidatorTest.EveryBoundNameIsInCookedReflection` catches a name C++ binds that is missing from the cooked reflection).
 
 ### Resource Assets
 

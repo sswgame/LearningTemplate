@@ -116,7 +116,7 @@
     {
       "id": "pack-cook-parallel-tests", "title": "팩 쿠킹 병렬 압축이 직렬과 같은 바이트를 내는지 · 내용 해시 값이 그대로인지", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": false, "timeout_minutes": 20,
       "filter": "PackLayoutTest.*,ContentHashTest.*,ResourcePakTest.*",
-      "source": "docs/09_Decisions.md 5-2 팩 쿠킹 병렬 압축", "result_doc": "docs/08_Verification.md 증분 쿠킹 단계별 시간"
+      "source": "docs/09_Decisions.md 5-2 팩 쿠킹 병렬 압축", "result_doc": "docs/plans/NEXT.md 0000절"
     },
     {
       "id": "pack-patch-app-start", "title": "만든 패치를 실제 Packs/ 폴더에 두고 App 이 시작해 적용하는 실행", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
@@ -344,12 +344,12 @@
     {
       "id": "perf-frame", "title": "프레임 p50 · p99 를 이 기계의 기준과 견주기", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": false, "timeout_minutes": 60,
       "tool": "scripts", "args": ["perf", "--app", "{app}"], "limit": "Test/QA/Perf 기준 — p50 · 평균 +15 %, p99 +35 %, 모두 +150 us", "judge": "exit",
-      "source": "docs/08_Verification.md 2절 측정 명령", "result_doc": "docs/08_Verification.md 2절 영역별 측정값"
+      "source": "docs/08_Verification.md 2절 측정 명령", "result_doc": "docs/plans/NEXT.md 0000절"
     },
     {
       "id": "load-baseline-suite", "title": "부하 검증 baseline 묶음(렌더 · AI · 접속 · 복제 × 하드웨어 프로필)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": false, "timeout_minutes": 240,
       "tool": "scripts", "args": ["load", "suite", "baseline", "--runs", "3"], "limit": "Test/Load/Budgets.json 예산(p50 · p99 · max)과 Baselines.json 기준선", "judge": "exit",
-      "source": "docs/08_Verification.md 2-1절 부하 검증", "result_doc": "docs/08_Verification.md 2-1절"
+      "source": "docs/08_Verification.md 2-1절 부하 검증", "result_doc": "docs/plans/NEXT.md 0000절"
     },
     {
       "id": "load-auto-render-scale", "title": "자동 렌더 배율(-gv_autoRenderScale=1) 켠 LowEnd 렌더 부하 - 로그의 Auto render scale 전환과 예산 판정", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": true, "timeout_minutes": 60,
@@ -359,17 +359,17 @@
     {
       "id": "soak-autoplay", "title": "자동 플레이 10 분 soak(메모리 · 핸들 증가)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": false, "timeout_minutes": 40,
       "tool": "scripts", "args": ["soak", "--app", "{app}", "--minutes", "10"], "limit": "사유 메모리 증가 ≤ 2 MB/분, 핸들 증가 ≤ 10 개/분", "judge": "exit",
-      "source": "docs/08_Verification.md 2절 측정 명령", "result_doc": "docs/08_Verification.md 2절 영역별 측정값"
+      "source": "docs/08_Verification.md 2절 측정 명령", "result_doc": "docs/plans/NEXT.md 0000절"
     },
     {
       "id": "scene-load-bench", "title": "씬 로드(XML 대 쿠킹본, 8000 엔티티, 5 회)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": false, "timeout_minutes": 60,
       "tool": "scripts", "args": ["scene-load-bench", "--app", "{app}", "--count", "8000", "--runs", "5"], "limit": "보고만 — 기준값은 08_Verification 2절 씬 로드(XML 파싱 25.6 · 인스턴스화 86.8 ms, 쿠킹본 6.2 · 26.7 ms)", "judge": "exit",
-      "source": "docs/08_Verification.md 2절 씬 로드 측정", "result_doc": "docs/08_Verification.md 2절 씬 로드 측정"
+      "source": "docs/08_Verification.md 2절 씬 로드 측정", "result_doc": "docs/plans/NEXT.md 0000절"
     },
     {
       "id": "perf-compare-ui", "title": "UI 대량(이름표 2000 · 한글 새 글리프 400)의 스위치 A/B", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": false, "timeout_minutes": 60,
       "tool": "scripts", "args": ["perf-compare", "--app", "{app}", "--cases", "uiNameplates", "hangulGlyphs", "--runs", "3"], "limit": "GT.UI.* 합 0.5 ms 안(이름표), 최악 프레임 max 4 ms 안(한글 첫 프레임)", "judge": "exit",
-      "source": "docs/plans/Candidates-ui.md", "result_doc": "docs/08_Verification.md 2절 런타임 UI 벤치"
+      "source": "docs/plans/Candidates-ui.md", "result_doc": "docs/plans/NEXT.md 0000절"
     },
     {
       "id": "perf-compare-clustered-lighting", "title": "클러스터드 라이팅 S3 — 라이트 16 · 128 · 1024 × 그리드 없음 대 CPU · GPU 생산자", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": false, "timeout_minutes": 120,
@@ -394,12 +394,12 @@
       "id": "net-udp-bench", "title": "UDP 소켓 계층 벤치(Windows Release, 패킷당 시간)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": true, "timeout_minutes": 30,
       "tool": "scripts", "args": ["test", "NetUDPBenchTest.*", "--preset", "{preset}", "--no-build", "--host_suites=all"],
       "limit": "보고만 — 패킷당 약 6.5 us(08_Verification 2절 UDP 소켓 계층)와 나란히 둔다. 일괄 받기는 시스템 호출이 지배적일 때만 착수", "judge": "exit",
-      "source": "docs/plans/Candidates-network.md UdpSocketLayerScaling", "result_doc": "docs/08_Verification.md 2절 UDP 소켓 계층"
+      "source": "docs/plans/Candidates-network.md UdpSocketLayerScaling", "result_doc": "docs/plans/NEXT.md 0000절"
     },
     {
       "id": "net-udp-bench-wsl", "title": "UDP 소켓 계층 벤치(WSL Release, ulimit -n 8192)", "kind": "measure", "config": "Release", "platform": "wsl", "gpu": "exclusive", "pending": true, "timeout_minutes": 60,
       "tool": "scripts", "args": ["test", "NetUDPBenchTest.*", "--preset", "WSL-Release", "--no-build", "--load_suites=only", "--host_suites=all"], "limit": "보고만 — Windows 값과 나란히", "judge": "exit",
-      "source": "docs/plans/Candidates-network.md UdpSocketLayerScaling", "result_doc": "docs/08_Verification.md 2절 UDP 소켓 계층",
+      "source": "docs/plans/Candidates-network.md UdpSocketLayerScaling", "result_doc": "docs/plans/NEXT.md 0000절",
       "note": "WSL 은 사용자가 요청할 때만 한다. 위 명령은 WSL 셸에서 ulimit -n 8192 를 건 뒤 같은 이름으로 부르는 모양이고 이 실행기는 돌리지 않는다."
     },
     {
@@ -429,7 +429,7 @@
       "id": "terrain-height-write-release", "title": "지형 높이 쓰기 · 콜라이더 다시 짓기(Debug 값을 Release 로)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": false, "timeout_minutes": 30,
       "tool": "scripts", "args": ["test", "TerrainBenchTest.ColliderRebuildAfterBrushWrite,TerrainBenchTest.LODSweepWorstFrame", "--preset", "{preset}", "--no-build", "--load_suites=only", "--host_suites=all"],
       "limit": "보고만 — Debug 값(전체 바디 1416 ms · 청크 바디 17.0 ms)을 Release 로 다시 적는다", "judge": "exit",
-      "source": "docs/plans/Candidates-project.md InvalidMeasurementCleanup", "result_doc": "docs/08_Verification.md 2절 영역별 측정값"
+      "source": "docs/plans/Candidates-project.md InvalidMeasurementCleanup", "result_doc": "docs/plans/NEXT.md 0000절"
     },
     {
       "id": "half-resolution-bloom", "title": "반해상도 블룸 — GPU.PostBloom(전) 대 GPU.BloomDownsample + GPU.PostBloom(후)의 p50 · p99", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": false,
@@ -585,7 +585,7 @@
     {"id": "retarget-test", "title": "RetargetTest 필터(리타깃 포즈 target_pose)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20, "filter": "RetargetTest.*", "source": "docs/plans/AnimationAdvancedFeatures.md A4", "result_doc": "docs/plans/AnimationAdvancedFeatures.md 상태를 끝으로"},
     {"id": "facial-animation-test", "title": "FacialAnimationTest 필터(아바타 연결 표)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20, "filter": "FacialAnimationTest.*", "source": "docs/plans/FacialAnimation.md F4", "result_doc": "docs/plans/FacialAnimation.md 상태를 끝으로"},
     {"id": "appearance-preload-test", "title": "AppearancePreloadTest 필터(체형 축 bodyShapes)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20, "filter": "AppearancePreloadTest.*", "source": "docs/plans/CharacterAppearanceIntegration.md 남은 것", "result_doc": "docs/plans/CharacterAppearanceIntegration.md 남은 것"},
-    {"id": "animation-cost-curve", "title": "합성 리그 벤치 비용 곡선(own+fullbody 모드, 코덱 디코드 비용)", "kind": "test", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": true, "timeout_minutes": 60, "filter": "SyntheticRigBenchTest.*", "extra_args": ["--load_suites=only"], "source": "docs/plans/AnimationAdvancedFeatures.md A1 · A3", "result_doc": "docs/08_Verification.md 애니메이션 갱신 표"},
+    {"id": "animation-cost-curve", "title": "합성 리그 벤치 비용 곡선(own+fullbody 모드, 코덱 디코드 비용)", "kind": "test", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": true, "timeout_minutes": 60, "filter": "SyntheticRigBenchTest.*", "extra_args": ["--load_suites=only"], "source": "docs/plans/AnimationAdvancedFeatures.md A1 · A3", "result_doc": "docs/plans/NEXT.md 0000절"},
     {"id": "editor-retarget-scenario", "title": "editor/retarget 시나리오(새 프로필 · 열기 · 3D 미리보기 · 리타깃 포즈)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true, "covered": ["engine/automation/editor/retarget.scenario.xml"], "covered_by": "app-scenarios-release", "source": "docs/plans/AnimationAdvancedFeatures.md A4", "result_doc": "docs/plans/AnimationAdvancedFeatures.md 상태를 끝으로"},
     {"id": "editor-charactereditor-scenario", "title": "editor/charactereditor 시나리오(꾸미기 슬라이더 사진 포함)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true, "covered": ["engine/automation/editor/charactereditor.scenario.xml"], "covered_by": "app-scenarios-release", "source": "docs/plans/EditorCharacterEditor.md 남은 것", "result_doc": "docs/plans/EditorCharacterEditor.md 남은 것"},
     {"id": "shooter-stride-warping-scenario", "title": "Shooter3D stridewarping 시나리오(서 있을 때 배율 1, 뒷걸음 달리기 사진)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true, "covered": ["game/shooter3d/automation/stridewarping.scenario.xml"], "covered_by": "app-scenarios-release", "source": "docs/plans/ShooterStrideWarping.md S2", "result_doc": "docs/plans/ShooterStrideWarping.md 상태를 끝으로"},
@@ -751,7 +751,7 @@
     {
       "id": "world-streaming-hitch-measure", "title": "WildWest 초원 스트리밍 히치(셀이 오르내리는 프레임의 GT.Scene.tick.destroyPost 최대값, 정점 풀 repack 0)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": true,
       "need_command": "셀을 가로질러 걷는 WildWest 시나리오와 perf-compare 케이스가 없다(카메라를 prairie 한 끝에서 다른 끝으로 옮기는 시나리오를 먼저 만든다)",
-      "source": "docs/plans/WorldStreaming.md W7", "result_doc": "docs/plans/WorldStreaming.md · docs/08_Verification.md"
+      "source": "docs/plans/WorldStreaming.md W7", "result_doc": "docs/plans/WorldStreaming.md"
     },
     {
       "id": "world-cells-panel-capture", "title": "World Cells 창 캡처(ux-reviewer)와 uiaudit 시나리오에 창이 잡히는지, 문구 열 개 --check-text", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
@@ -791,7 +791,7 @@
     {
       "id": "engine-partition-e3-cube-bench", "title": "큐브 20,000 개 벤치의 GT.Frame p50 · p99 전후 비교(E3 의 ScenePrimitive 기반, Release · VSync 끔 · 3 ~ 5 판)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": true,
       "need_command": "큐브 2만 개 벤치를 도는 perf-compare 케이스가 없고, 전(E3 이전 커밋)과 후를 같은 기계에서 번갈아 빌드해 비교해야 한다",
-      "source": "docs/plans/EnginePartition.md 6.4 E3", "result_doc": "docs/plans/EnginePartition.md 6.4 · docs/08_Verification.md"
+      "source": "docs/plans/EnginePartition.md 6.4 E3", "result_doc": "docs/plans/EnginePartition.md 6.4"
     },
     {
       "id": "physics-unknown-material-3d-test", "title": "PhysicsScene3DTest.UnknownMaterialNameRejectsTheBody(적은 재질 이름이 틀리면 다른 재질로 만들지 않고 바디 거절)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,

@@ -37,57 +37,35 @@
   Tiers below `Log` also get **no `Logger.h`**: their `.cpp` files build as `Core_low_objects` with `Core/pchLow.h` (no Logger, File or String), so
   `SW_LOG_*`, `StringBuilder`, `FileUtil` … fail to compile — report with `SW_LOW_LEVEL_*` and include what you use.
   Headers of those tiers compile under the full pch in other TUs, so `CheckCoreLayers.py` bans `SW_LOG_*` there and keeps `pchLow.h` equal to `CoreMinimal.h` minus the `Log`-and-above headers.
-- Use the project type aliases from `Types.h`.
-- Prefer Core and Engine facilities over STL or direct system facilities when
-  they meet the need.
+- Use the project type aliases from `Types.h`. Prefer Core and Engine facilities over STL or direct system facilities when they meet the need.
 - **Ask platform, architecture and compiler questions with the macros CMake defines**, never with compiler
-  built-ins (`_WIN32`, `__linux__`, `_MSC_VER`, `__clang__`, `__GNUC__`, `_M_X64`, `__x86_64__`, `__aarch64__`, ...):
-  `SW_PLATFORM_WINDOWS` / `SW_PLATFORM_LINUX` (macOS is not a supported platform), `SW_X64` / `SW_ARM64`, and
+  built-ins (`_WIN32`, `__linux__`, `_MSC_VER`, `__clang__`, `_M_X64`, ...): `SW_PLATFORM_WINDOWS` / `SW_PLATFORM_LINUX`, `SW_X64` / `SW_ARM64`,
   `SW_COMPILER_CLANG` (clang-cl included) / `SW_COMPILER_MSVC` (cl.exe only) / `SW_COMPILER_GCC`. clang-cl defines both
-  `__clang__` and `_MSC_VER`, so "may I use an MSVC extension" (`__forceinline`, `__declspec`, MS intrinsics,
-  `__FUNCSIG__`) is `SW_PLATFORM_WINDOWS`, not `SW_COMPILER_MSVC`. The engine builds 64-bit only. The one file that reads built-ins is
-  `Core/Common/TargetMacroCheck.h` (`CheckTargetMacros.py` enforces the rest).
-- **Ask the build target (`SW_TARGET_TYPE`: Game, Client, Server) only through `SW_WITH_CLIENT_CODE` (Game, Client),
-  `SW_WITH_SERVER_CODE` (Game, Server) and `sw::build::kTargetName`**, and only inside `.cpp` bodies — never gate reflection
-  declarations (`REFLECT`, `PROPERTY`) or a header's class layout on them. A feature that splits between client and server
-  splits into modules instead: shared `GF_<X>`, server-only `GF_Server_<X>`, client-only `GF_Client_<X>` (manifest `_listTarget`).
-- **Read time through `Core/Time/MonotonicClock.h`**, never a `std::chrono` clock (`steady_clock`, `high_resolution_clock`,
-  `system_clock` — aliases and `using namespace` included): `MonotonicClock::nowNanoseconds()`, `Stopwatch` for elapsed time,
-  `Deadline::afterMilliseconds( ms )` + `isExpired()` for a bounded wait. Tests too. Duration values (`sleep_for`) are fine.
-  A UTC timestamp is `WallClock::nowUnixMilliseconds()` (`Core/Time/WallClock.h`); services take it as a `nowMs` parameter so tests can pass a fake time.
-  Exceptions live in one table with their reason (`CheckClockReads.py`).
-- **Start threads with `sw::thread`** (`Core/Concurrency/thread.h`), never `std::thread` in `Source/`: it tells the lock
-  observer what `join` waits for (a join cycle shows up in the deadlock detector) and asserts instead of hanging when `join` runs under the
-  loader lock (`DllMain`, a module's static destructor). Tests may use `std::thread` (`CheckStdThread.py`).
-- **Reach a service through the window of its lifetime**: `getSubsystem<T>()` (must exist, returns `T&`) or `findSubsystem<T>()` (may be missing,
-  returns `T*`; check it) on `engine::`, `game::`, `editor::` or the owning object (`GameObjectManager` for a scene, `EditorContext`, `GameInstanceBase`).
-  A new service is a subsystem added to a scope; an engine service read on hot paths also gets a row in `EngineServiceList.xxx`. No named accessors
-  (`engine::getFooManager()`) and no `static getInstance()` (stateless codecs and link-time registries are the listed exceptions). Tests inject mocks through
-  scopes (`test::ScopedEngineServiceOverride`, `game::ScopedGameScope`, `editor::ScopedEditorScope`). Enforced by `CheckServiceAccess.py`.
-- Construct into memory you already hold with `sw_placement_new( pMemory ) T( ... )`
-  (`Core/Memory/Memory.h`), never a bare `new ( pMemory ) T( ... )`. Enforced by
-  `CheckCodeConventions.py` (`Style/PlacementNew`).
-- Allocate on the heap through an **owning type**, never a bare pointer: `make_unique<T>( ... )` for one object,
-  `vector<T>` or `make_unique<T[]>( n )` for arrays (`FixedCountArray<T, N>` when the elements have destructors),
-  `MemoryBlock` (`Core/Memory/MemoryBlock.h`) for a raw byte block (arena chunks, slabs, scratch state). A bare
-  `new T` / `new T[n]` is invisible to memory tags and leak checks and is rejected (`Style/RawNew`). Where
-  ownership has to leave the type system (a lock-free slot table, a COM refcount, a C-ABI handle, an OS-held overlapped
-  operation), write `make_unique<T>( ... ).release()` so the hand-off is one greppable word.
-  `Memory::allocate` / `allocateAligned` outside `Source/Core/Memory` are listed with a reason in
-  `Scripts/lint/rules/CheckRawAllocation.toml` (`CheckRawAllocation.py`).
+  `__clang__` and `_MSC_VER`, so "may I use an MSVC extension" (`__forceinline`, `__declspec`, `__FUNCSIG__`) is `SW_PLATFORM_WINDOWS`
+  (`CheckTargetMacros.py`).
+- **Ask the build target only through `SW_WITH_CLIENT_CODE` (Game, Client), `SW_WITH_SERVER_CODE` (Game, Server) and `sw::build::kTargetName`**,
+  and only inside `.cpp` bodies — never gate reflection declarations (`REFLECT`, `PROPERTY`) or a header's class layout on them. A feature that splits
+  between client and server splits into modules instead: shared `GF_<X>`, server-only `GF_Server_<X>`, client-only `GF_Client_<X>`.
+- **Read time through `Core/Time/MonotonicClock.h`** (`MonotonicClock::nowNanoseconds()`, `Stopwatch`, `Deadline`), never a `std::chrono` clock; a UTC timestamp is
+  `WallClock::nowUnixMilliseconds()` and services take it as a `nowMs` parameter so tests can pass a fake time (`CheckClockReads.py`).
+- **Start threads with `sw::thread`**, never `std::thread` in `Source/` (the lock observer sees what `join` waits for; tests may use `std::thread`; `CheckStdThread.py`).
+- **Reach a service through the window of its lifetime**: `getSubsystem<T>()` (must exist, `T&`) or `findSubsystem<T>()` (may be missing, `T*`) on `engine::`, `game::`, `editor::`
+  or the owning object. A new service is a subsystem added to a scope; an engine service read on hot paths also gets a row in `EngineServiceList.xxx`. No named accessors
+  and no `static getInstance()`. Tests inject mocks through scopes (`test::ScopedEngineServiceOverride`, `game::ScopedGameScope`, `editor::ScopedEditorScope`) (`CheckServiceAccess.py`).
+- Construct into memory you already hold with `sw_placement_new( pMemory ) T( ... )`, never a bare `new ( pMemory ) T( ... )` (`Style/PlacementNew`).
+- Allocate on the heap through an **owning type**, never a bare pointer: `make_unique<T>( ... )`, `vector<T>` or `make_unique<T[]>( n )`,
+  `MemoryBlock` for a raw byte block. A bare `new` is rejected (`Style/RawNew`). Where ownership has to leave the type system (a lock-free slot table,
+  a COM refcount, a C-ABI handle), write `make_unique<T>( ... ).release()`. `Memory::allocate` outside `Source/Core/Memory` is listed with a reason in
+  `Scripts/lint/rules/CheckRawAllocation.toml`.
 - **Borrow with a pointer, keep with a handle.** A `GameObject*` / `Component*` you do not own is valid
   only inside the current call (at most the current frame). Anything kept across frames — members,
   selection lists, undo records — holds a `GameObjectHandle` / `ComponentHandle` (`Core/Container`) and
   resolves it on each use through the owning manager (`resolveGameObject` / `resolveComponent`, `nullptr`
-  once the target is gone). Handles are ids that are never reused, so they survive renames; editor undo,
-  play-session restore and hot reload recreate objects with their original ids. Ids are unique across the
-  process, but a handle resolves only through the manager (scene) that owns the object. Structural links the
-  object model maintains itself (owner, scene hierarchy, registries) stay raw pointers.
-- **Saved state never points at another object by name.** A parent reference is the parent's id (a scene file's
-  own entity id, or the runtime id in same-process snapshots), resolved by `ObjectStateBatch` after every
+  once the target is gone). Handles are never-reused ids, so they survive renames, undo and hot reload, but a handle resolves only
+  through the manager (scene) that owns the object. Structural links the object model maintains itself (owner, hierarchy, registries) stay raw pointers.
+- **Saved state never points at another object by name.** A parent reference is the parent's id, resolved by `ObjectStateBatch` after every
   object of the batch is loaded. Any new path that loads object state goes through a batch
-  (`ObjectLoadContext::_pBatch` + `finish()`); names are uniquified by the manager, so a lookup by name lands on
-  a namesake.
+  (`ObjectLoadContext::_pBatch` + `finish()`); names are uniquified by the manager, so a lookup by name lands on a namesake.
 - Do not spell out buffer/path-size magic numbers (e.g. `char buf[64]`,
   `fixed_string<256>`, `StringBuilder<32>`). Use the sentinels in the
   `constant` namespace (`Core/Common/Defines.h`) instead: `kMaxBuffer16`

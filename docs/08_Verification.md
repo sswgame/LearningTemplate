@@ -8,236 +8,133 @@
 
 ## 1. 손대기 전에 — 검증 규칙
 
-숫자 기준선(테스트 수 · 창 수 · 시간)은 적어 두지 않는다. 금방 낡는다. **비교가 필요하면 바꾸기 전과 후를 그 자리에서 측정한다.**
+숫자 기준선(테스트 수 · 창 수 · 시간)은 적어 두지 않는다. **비교가 필요하면 바꾸기 전과 후를 그 자리에서 측정한다.**
 통과 기준은 "전부 통과, 스킵은 Dev 전용 케이스 · 그 플랫폼에 없는 타깃뿐" 이다. 시나리오(`-scenario`)는 종료 코드 0 만으로 통과가 아니다 — 아래 "시나리오 통과 기준" 이다.
 
 개발 기본 빌드(`cmake --build --preset Ninja-Debug`)는 테스트 실행 파일을 짓지 않는다. 테스트까지 지으려면 `--target all AllTests` 를 붙인다.
-`ctest` 는 실행 파일 테스트 앞에 셋업 항목 `BuildTestBinaries` 를 스스로 돌려 둘을 먼저 짓는다(빌드 없이 돌리려면 `-FS SWTestBinaries` — 픽스처 이름이다. CI 의 Test 단계가 그렇게 돈다).
-`py -3 -m Scripts test` 도 먼저 짓는다(`--no-build` 로 건너뛴다). CI · 검증 프리셋(`CI-*`, `*-Shipping*`, `Ninja-Debug-ASAN`)의 `cmake --build --preset` 은 테스트까지 짓는다.
+`ctest` 는 테스트 앞에 셋업 항목 `BuildTestBinaries` 를 스스로 돌려 둘을 먼저 짓는다(빌드 없이 돌리려면 `-FS SWTestBinaries`). `py -3 -m Scripts test` 도 먼저 짓는다(`--no-build` 로 건너뛴다).
 
 ```powershell
-cmake --build --preset Ninja-Debug            # 경고 0 이어야 한다(테스트 제외 — 테스트까지는 --target all AllTests)
+cmake --build --preset Ninja-Debug            # 경고 0 이어야 한다(테스트까지는 --target all AllTests)
 cmake --build --preset Ninja-Shipping         # Debug 가 숨기는 결함이 여기서 드러난다(테스트까지)
 ctest --preset Ninja-Debug-lint               # 컨벤션 · include 순서 · 린트 자기 테스트
-# 커밋 훅(py -3 -m Scripts lint) · full-build · Scripts test 의 출력은 요약이다 — 통과는 한 줄, 실패만 상세. 전부는 --verbose
-py -3 Scripts/lint/gate/CheckDataDrivenStructure.py --summary  # 데이터 주도 구조 위반 영역별 표 — 기준선은 0 으로 수렴해야 한다
-# -j 는 값 없이 준다(CMake 3.29+). 항목끼리는 병렬로 돌 수 있다 — 직렬은 빌드 셋업 · Load · QA 셋, GPU 항목은 GPU 슬롯(gpuSlots)만큼.
-# 예외: AppTest 의 hostgpu 조각 · Race 와 QaGoldenImages 는 AppBin 잠금으로 서로 직렬이다(푸는 계획: docs/plans/HostGpuIsolation.md).
+# 커밋 훅 · full-build · Scripts test 의 출력은 요약이다(실패만 상세, 전부는 --verbose)
+py -3 Scripts/lint/gate/CheckDataDrivenStructure.py --summary  # 데이터 주도 구조 위반 영역별 표(기준선 0 으로 수렴)
+# -j 는 값 없이 준다(CMake 3.29+). 직렬은 빌드 셋업 · Load · QA 셋, GPU 항목은 GPU 슬롯(gpuSlots)만큼. AppTest 의 hostgpu 조각 · Race · QaGoldenImages 는 AppBin 잠금으로 서로 직렬(docs/plans/HostGpuIsolation.md).
 ctest --test-dir build/Ninja-Debug -L nogpu -j --output-on-failure
 ctest --test-dir build/Ninja-Shipping -L nogpu -j --output-on-failure
 
-# CI 가 못 도는 부분(CI 러너는 nogpu 만) — GPU 있는 PC 에서 일을 끝내기 전에 반드시 돌린다. 단계별 내용은 11_Workflow.md 3절 표.
-# AppSmokeTest 가 네 백엔드 + 에디터(dx12 · gl)를 띄워 종료 코드 0 · 로그 [Error] 0건을 본다.
-ctest --test-dir build/Ninja-Shipping -L hostgpu -j --output-on-failure   # 기능 시나리오 — Shipping 이 기본
+# CI 가 못 도는 부분(CI 러너는 nogpu 만) — GPU 있는 PC 에서 일을 끝내기 전에 돌린다. 단계별 내용은 11_Workflow.md 3절 표.
+ctest --test-dir build/Ninja-Shipping -L hostgpu -j --output-on-failure   # 기능 시나리오 — Shipping 이 기본(AppSmokeTest 가 네 백엔드 + 에디터를 띄워 종료 코드 0 · [Error] 0건을 본다)
 ctest --test-dir build/Ninja-Debug -L race -j --output-on-failure         # 레이스 묶음(Debug 전용 — DataRaceDetector 는 SW_DEBUG 에서만)
 ctest --test-dir build/Ninja-Debug -L hostgpu -j --output-on-failure      # Debug 전체 — 큰 단계 끝에 한 번
 
-# ASan (Windows)
-cmake --preset Ninja-Debug-ASAN
-cmake --build --preset Ninja-Debug-ASAN
-ctest --test-dir build/Ninja-Debug-ASAN -L nogpu -j
-
-# 정적 분석 — 게이트가 아니라 판단 자료다(Scripts/docs/TrapsLint.md "함정 · 계약" 의 clang-tidy 참고)
-py -3 Scripts/lint/report/RunClangTidy.py [--filter Core] [--clang-tidy <경로>]
+cmake --preset Ninja-Debug-ASAN; cmake --build --preset Ninja-Debug-ASAN; ctest --test-dir build/Ninja-Debug-ASAN -L nogpu -j   # ASan (Windows)
+py -3 Scripts/lint/report/RunClangTidy.py [--filter Core]   # 정적 분석 — 게이트가 아니라 판단 자료
 
 # 눈으로 봐야 할 때 — 종료 코드 0, 로그에 [Error] 0건
-cd build/Ninja-Debug/Bin
-./App.exe -gv_profileFrames=40 -dx12 -EnableEditor      # -dx11 / -vk / -gl 도 같게
+cd build/Ninja-Debug/Bin; ./App.exe -gv_profileFrames=40 -dx12 -EnableEditor      # -dx11 / -vk / -gl 도 같게
 ```
 
-**시나리오 통과 기준.** 시나리오는 종료 코드 0 이고 처리하지 않은 `[Warning]` · `[Error]` 줄이 없을 때만 통과다. 처리하지 않은 줄이 하나라도 남으면 실행기가 15(`UnhandledLog`)로 끝나며 미확정(14)보다 항상 앞선다.
-줄이 처리됐다는 것은 ① 그 시나리오의 `<ExpectLog id="…">`(로그 id 있는 줄) 또는 `<ExpectLog contains="…">`(id 없는 줄)가 선언한 줄이거나 ② 로그 id(`SW_LOG_WARNING_ID` · `SW_LOG_ERROR_ID`)가 붙은 줄이 `Resource/engine/automation/allowedlogs.json` 의 항목(id · 시나리오 하나 · 사유 · 처리 계획 문서)에 있다는 뜻이다. **id 없는 줄은 목록으로 가릴 수 없다** — 소스에 id 를 붙이거나 고친다.
-**선언은 줄을 정확히 가린다** — id 가 있는 줄은 `id` 로만, id 없는 줄은 `contains` 가 본문 전체와 같을 때만 가리고(부분 문자열은 다른 줄까지 가려 규칙을 무력화) `count="0"` 은 선언이 아니다.
-**시한과 종료 코드 12.** 프레임 시한(`timeoutFrames`)은 시나리오 시계를 붙잡은 프레임을 세지 않으므로 실행기가 시나리오 한 편의 벽시계 상한(`wallTimeoutSeconds`, 기본 150 초, 양수만)을 따로 본다. 넘으면 12(`TimedOut`)로 끝나고 이유에 어느 단계에서 얼마나 붙잡혔는지가 든다. 프로세스 시한(`AppTestUtil::kScenarioTimeoutSeconds` 180 초)이 먼저 죽이면 보고가 없으므로 이 상한이 더 짧아야 한다(순서는 `AutomationTimeLimits.h` 의 `static_assert`). 부하 시나리오(`<Load>`)는 이 상한을 보지 않는다. 프레임이 멈춘 행은 감시 스레드가 상한 + 유예(5 초) 뒤에 잡아 보고(`"hang": true`)를 쓰고 12 로 끝낸다. `startAfter="Immediately"` 도 시작 차단 조건(로딩 화면 · 감시 울타리)이 풀린 뒤에 시작하고 끝내 안 풀리면 시작 시한 뒤 12 로 끝난다.
-**진 실행의 로그.** 로그 게이트는 시작한 시나리오 모두에 돌아 처리하지 않은 줄을 보고의 `unhandledLogs` 에 싣는다. 이미 진 실행(10 · 12 …)의 결과 숫자는 바뀌지 않는다 — 15 는 통과했을 때만 된다.
-**보고 필드.** `name` · `result` · `exitCode` · `frames` · `reason` · `failures[]` · `unconfirmed[]` · `unhandledLogs[]` · `allowedLogs[]` · `metrics[]` · `records[]` 에 더해 실행 환경 칸(`backend` · `game` · `startedAt` · `startedAtUnixMs` · `wallMilliseconds` · `wallLimitMilliseconds` · `lastStep` · `reproduce`)이 있다. 필드는 더하기만 하고 `records[]` 는 끝에 둔다. `reproduce` 는 같은 실행을 다시 띄우는 App 명령줄이며 token · secret · password · apikey · credential · auth · license 가 든 인자의 값은 `REDACTED` 로 가린다. 크래시 · 행 뒤 덤프에는 컨텍스트 키 `Scenario` 와 빵부스러기(최근 단계 전환)가 남는다.
-**게이트 결과**는 `통과 | 건너뜀(사유) | 불성립` 셋이다(`Scripts/lint/GateVerdict.py`). 통합(`lint-suite` · CTest)에서 불성립(종료 5 — 빌드 폴더 · 도구 · 훑을 파일이 없다)은 실패이고 `RunLintSuite --strict` 는 건너뜀도 실패로 센다.
-목록의 칸이 비었거나 `TODO` 이면 모든 시나리오가 읽기 오류(11)로 선다. 호스트 테스트 스위트(`hostgpu`)는 같은 목록의 `suite` 항목을 쓴다. 허용 목록에 없는 Warning · Error 가 하나라도 있으면 보고는 "통과" 가 아니라 "실패(UnhandledLog)" 다.
-시나리오를 돌린 뒤에는 `py -3 -m Scripts scenario-logs --check` 로 목록에 있으나 더 나오지 않는 항목(지운다)과 15 로 끝난 보고를 센다. 처음 목록을 채울 때는 `--regen` 이 초안을 만든다. 절차와 이유는 [GPU 검증](plans/GpuVerification.md) 4절이다.
+**시나리오 통과 기준.** 종료 코드 0 이고 처리하지 않은 `[Warning]` · `[Error]` 줄이 없을 때만 통과다. 남은 줄이 있으면 실행기가 15(`UnhandledLog`)로 끝나며 미확정(14)보다 앞선다.
+줄이 처리됐다는 것은 ① 그 시나리오의 `<ExpectLog id="…">`(id 있는 줄) 또는 `<ExpectLog contains="…">`(id 없는 줄, 본문 전체와 같아야 하고 `count="0"` 은 선언이 아니다)가 선언한 줄이거나 ② 로그 id(`SW_LOG_WARNING_ID` · `SW_LOG_ERROR_ID`)가 붙은 줄이 `Resource/engine/automation/allowedlogs.json` 의 항목(id · 시나리오 하나 · 사유 · 처리 계획 문서)에 있다는 뜻이다. **id 없는 줄은 목록으로 가릴 수 없다** — 소스에 id 를 붙이거나 고친다. 목록의 칸이 비었거나 `TODO` 이면 모든 시나리오가 읽기 오류(11)로 선다. 호스트 테스트 스위트(`hostgpu`)는 같은 목록의 `suite` 항목을 쓴다.
+보고에는 허용 목록에 없는 Warning · Error 가 하나라도 있으면 "통과" 가 아니라 "실패(UnhandledLog)" 라고 쓴다. 이미 진 실행(10 · 12 …)의 결과 숫자는 바뀌지 않는다 — 15 는 통과했을 때만 된다.
+돌린 뒤에는 `py -3 -m Scripts scenario-logs --check` 로 목록에 있으나 더 나오지 않는 항목(지운다)과 15 로 끝난 보고를 센다(`--regen` 은 초안 생성). 절차와 이유는 [GPU 검증](plans/GpuVerification.md) 4절이다.
+**시한과 종료 코드 12.** 프레임 시한(`timeoutFrames`)은 시계를 붙잡은 프레임을 세지 않으므로 실행기가 시나리오 한 편의 벽시계 상한(`wallTimeoutSeconds`, 기본 150 초)을 따로 보고, 넘으면 12(`TimedOut`)로 끝난다. 프로세스 시한(180 초)이 먼저 죽이면 보고가 없으므로 이 상한이 더 짧아야 한다(`AutomationTimeLimits.h` 의 `static_assert`). 부하 시나리오(`<Load>`)는 이 상한을 보지 않는다. 멈춘 행은 감시 스레드가 상한 + 유예 5 초 뒤에 `"hang": true` 보고를 쓰고 12 로 끝낸다.
+**보고 필드.** `name` · `result` · `exitCode` · `frames` · `reason` · `failures[]` · `unconfirmed[]` · `unhandledLogs[]` · `allowedLogs[]` · `metrics[]` · `records[]` 와 실행 환경 칸(`backend` · `game` · `startedAt` · `wallMilliseconds` · `lastStep` · `reproduce` 등). 필드는 더하기만 하고 `records[]` 는 끝에 둔다. `reproduce`(같은 실행을 다시 띄우는 명령줄)는 token · secret · password 류 인자의 값을 `REDACTED` 로 가린다.
+**린트 게이트 결과**는 `통과 | 건너뜀(사유) | 불성립` 이고, 통합(`lint-suite` · CTest)에서 불성립(종료 5)은 실패, `RunLintSuite --strict` 는 건너뜀도 실패다(`Scripts/lint/GateVerdict.py`).
 
-**단위마다 이 순서로 한다.** 테스트 먼저(이전 코드에서 지는 것을 확인) → 고침 → 변이 검사(고침을 되돌리면 테스트가 지는가) →
-Debug(`nogpu` · `race`) · Shipping(`hostgpu`) → 커밋. 변이로 죽지 않는 테스트는 아무것도 지키지 않는다.
+**단위마다 이 순서로 한다.** 테스트 먼저(이전 코드에서 지는 것을 확인) → 고침 → 변이 검사(고침을 되돌리면 테스트가 지는가) → Debug(`nogpu` · `race`) · Shipping(`hostgpu`) → 커밋. 변이로 죽지 않는 테스트는 아무것도 지키지 않는다.
 
-**에디터 패널에는 단위 테스트가 없다.** 컴파일이 통과해도 화면이 비어 있을 수 있다. 패널 · 위젯을 건드렸으면 실행해서 본다.
-화면을 볼 수 없으면 `-gv_editorPanelDump=N` — N 번째 ImGui 프레임에 창 하나당 한 줄(이름 · 크기 · 정점 수 · 상태)을 남긴다.
-**보이는데 정점이 0 인 패널**이 빈 패널이다. 의미 있는 신호는 "내용 없는 패널 0개" 쪽이고, 창 수는 패널이 늘면 바뀐다.
-도구 패널까지 보려면 `-gv_editorOpenPanel=all` 을 같이 준다(모두 열고 · 저장된 도킹을 쓰지 않고 · 첫 크기 900×620, 그 실행의 레이아웃은 저장하지 않는다).
+**에디터 패널에는 단위 테스트가 없다.** 컴파일이 통과해도 화면이 비어 있을 수 있으니 패널 · 위젯을 건드렸으면 실행해서 본다.
+화면을 볼 수 없으면 `-gv_editorPanelDump=N` — N 번째 ImGui 프레임에 창 하나당 한 줄(이름 · 크기 · 정점 수 · 상태)을 남긴다. **보이는데 정점이 0 인 패널**이 빈 패널이다(창 수는 패널이 늘면 바뀌니 "내용 없는 패널 0개" 를 신호로 본다).
+도구 패널까지 보려면 `-gv_editorOpenPanel=all` 을 같이 준다(저장된 도킹을 쓰지 않고 그 실행의 레이아웃은 저장하지 않는다). 고친 뒤 같은 명령으로 로그를 떠서 비교한다.
 
-```powershell
-./App.exe -gv_profileFrames=60 -dx12 -EnableEditor -gv_editorOpenPanel=all -gv_editorPanelDump=40 > before.log
-# ... 고친 뒤 같은 명령으로 after.log 를 떠서 비교한다
-```
+**기본 실기동은 테스트 씬을 연다.** Empty 팩 `data/gamesettings.xml` 의 `startMap` 이 `game/empty/maps/editortest.scene.xml` 이다. 그 씬의 메시는 `_meshID` 가 비어 **화면에 기하가 없다** — 픽셀 비교에는 벤치 큐브(`-gv_benchMeshes=N`)를 쓴다.
+다른 씬은 `"-gv_editorStartupScene=<경로>"` 로 연다(**PowerShell 은 점이 든 인자를 쪼갠다 — 따옴표로 감쌀 것**). 씬 · 프리팹 에셋은 **엔진 직렬화기로 만든다**(손으로 쓴 XML 은 깨진다).
 
-**기본 실기동은 테스트 씬을 연다.** Empty 팩 `data/gamesettings.xml` 의 `startMap` 이 `game/empty/maps/editortest.scene.xml` 이다(배포본도 같다).
-그 씬의 메시는 `_meshID` 가 비어 **화면에 기하가 없다** — 픽셀 비교에는 벤치 큐브(`-gv_benchMeshes=N`)를 쓴다.
-다른 씬은 `"-gv_editorStartupScene=<경로>"` 로 연다. **PowerShell 은 점이 든 인자를 쪼갠다 — 따옴표로 감쌀 것.**
-씬 · 프리팹 에셋은 **엔진 직렬화기로 만든다**(손으로 쓴 XML 은 깨진다).
-
-**렌더 결과는 픽셀로 측정한다.** `-gv_screenshot=out.ppm`(`-gv_screenshotFrame=N`)은 톤맵까지 든 최종 화면이다. 눈으로 보지 말고
-배경과 다른 픽셀 수 · 채널 평균을 센다. `-gv_viewMode=<이름>`(Lit · Unlit · Wireframe 등 `RenderViewMode` 의 열거자 이름, 숫자는 오류)는 에디터 없이도 고른다.
+**렌더 결과는 픽셀로 측정한다.** `-gv_screenshot=out.ppm`(`-gv_screenshotFrame=N`)은 톤맵까지 든 최종 화면이다. 눈으로 보지 말고 배경과 다른 픽셀 수 · 채널 평균을 센다. `-gv_viewMode=<이름>`(`RenderViewMode` 의 열거자 이름, 숫자는 오류)은 에디터 없이도 고른다.
 **벤치는 `-gv_benchAnimate=0` 이어야 결정적이다**(네 백엔드 0 바이트 차이). 애니메이션을 켠 채 차이를 주장하려면 같은 조건 두 판으로 잡음 바닥을 먼저 측정한다.
-
-```powershell
-./App.exe -dx12 -gv_benchMeshes=8 -gv_benchAnimate=0 -gv_profileFrames=20 -gv_viewMode=Wireframe "-gv_screenshot=wire.ppm"
-```
-
-**사진만 찍고 끝낼 때는 `-gv_screenshotQuit=1`.** `-gv_screenshot` · `-gv_screenshotEditor` 는 사진을 쓰고도 앱을 끝내지 않는다(`-gv_profileFrames=N` 이나 시나리오가 끝내거나 표준 입력으로 `quit` 을 보내야 하고, 아니면 시한(124)으로 죽는다).
-`-gv_screenshotQuit=1` 을 더하면 요청한 사진을 모두 쓴 프레임에 종료 코드 0 으로 끝나고, 파일을 쓰지 못했으면 14 로 끝난다.
-기본은 끄기다 — `-gv_profileFrames` 와 같이 쓰는 측정이 사진 뒤에 일찍 끝나면 프로파일이 잘린다. 사진 인자 없이 이것만 주면 아무 일도 하지 않는다.
+**사진만 찍고 끝낼 때는 `-gv_screenshotQuit=1`.** `-gv_screenshot` · `-gv_screenshotEditor` 는 사진을 쓰고도 앱을 끝내지 않는다(안 쓰면 시한 124 로 죽는다). 요청한 사진을 모두 쓴 프레임에 코드 0 으로 끝나고, 파일을 쓰지 못했으면 14 다. `-gv_profileFrames` 와 같이 쓰는 측정은 사진 뒤 일찍 끝나 프로파일이 잘리므로 기본은 끄기다.
 
 **함정**
 
-- 백엔드는 `-dx11 / -dx12 / -vk / -gl` 로 고른다. 명시한 백엔드를 쓸 수 없으면 폴백하지 않고 에러로 선다(`RHIBackendUtil::findCommandLineBackend`
-  한 자리 — `-gv_rhiBackend=Vulkan`(열거자 이름 또는 숫자, 모르는 이름이면 기동이 멈춘다)도 같은 판정을 지난다). 실제로 뜬 백엔드는 로그 `Initializing RHI with backend:` 로 확인한다.
-- 에디터는 `-EnableEditor` 를 줘야 뜬다. 없이 돌린 검증은 에디터 OFF 검증이다 — 로그로 실제로 로드됐는지 본다.
-- 테스트 바이너리는 모든 구성에서 `build/<프리셋>/TestBin/` 에 있고 작업 디렉터리는 `Bin/` 이다. 모듈 DLL 은 `Bin/Modules/`, 서드파티 DLL 은 `Bin/` 한 벌, Dev PDB 는 `Bin/Symbols/` 에 있다.
-  `Bin/` 에 남은 옛 자리 산출물과 꺼진 모듈의 DLL 은 configure 가 지운다(`sw_removeStaleBinaryOutputs`) — 실행 중이라 못 지운 것은 경고로 남는다.
-- 셰이더 소스(.hlsl/.hlsli)를 고쳤으면 다시 쿠킹한다. 빌드는 HLSL 을 다시 쿠킹하지 않는다 — `App.exe --cook-shaders` 뒤에 재고 비교한다.
-  "최신" 은 셰이더마다 판정한다: `.hlsl` 을 고치면 그 셰이더, `.hlsli` 를 고치면 **그 헤더를 (전이로라도) 연 셰이더만** 다시 구워진다(스탬프에 소스별로 연 헤더와 해시가 적힌다).
-  Shipping 쿠킹은 `cook.stamp` 의 내용 해시로 검증하고 어긋나면 빌드를 세운다(`App --cook-all --verify-shaders`). 스탬프 판이 바뀐 뒤 첫 쿠킹은 모두 다시 굽는다.
-  쿠킹(`ShaderCookDriver::cookRequests`)은 요청 × 포맷의 컴파일 · 리플렉션을 엔진 워커(`engine::runParallel`)로 나눠 돌리고 합치기는 요청 순서대로 직렬로 한다 — 산출물은 직렬로 돌 때와 바이트까지 같다.
-  끝줄의 `compile` · `reflection` 시간은 작업마다 잰 것의 합이라 병렬이면 `total` 보다 길다. 쿠킹은 최신 바이너리도 매번 읽어 리플렉션을 다시 뽑는다(이유는 결정 기록 5-5).
-- GPU 확인은 이미 통과가 증명된 항목을 다시 돌리지 않는다. 통과 증거(`verify-batch` 결과 · 증거 파일 · `NEXT.md` 의 통과 기록)가 있고, 그 증거 커밋 이후 항목이 쓰는 코드 · 셰이더 · 에셋 · 시나리오가 안 바뀌었음(`git diff <증거커밋>..HEAD -- <관련 경로>` 가 빔)을 둘 다 보였을 때만 건너뛴다. 증거가 모호하거나, 고쳐진 항목이거나, GPU 에서 처음 도는 항목이면 돌린다. 보고에는 건너뜀 표(항목 · 증거 커밋 · 바뀐 경로 없음)를 따로 둔다.
-- 비결정적 실패는 한 번 재현으로 "확정" 이라 부르지 않는다. 3~5 회 다시 돌려 재현율을 본다. 간헐 실패를 보면 `--output-on-failure` 출력 전체를 파일로 남긴다(요약만 남으면 어느 케이스인지 모른다).
+- 백엔드는 `-dx11 / -dx12 / -vk / -gl` 로 고른다. 명시한 백엔드를 쓸 수 없으면 폴백하지 않고 에러로 선다(`-gv_rhiBackend=Vulkan` 도 같은 판정). 실제로 뜬 백엔드는 로그 `Initializing RHI with backend:` 로 확인한다.
+- 에디터는 `-EnableEditor` 를 줘야 뜬다. 없이 돌린 검증은 에디터 OFF 검증이다.
+- 테스트 바이너리는 `build/<프리셋>/TestBin/`, 작업 디렉터리는 `Bin/` 이다. 모듈 DLL 은 `Bin/Modules/`, Dev PDB 는 `Bin/Symbols/`. 옛 자리 산출물은 configure 가 지운다(실행 중이라 못 지운 것은 경고).
+- 셰이더 소스(.hlsl/.hlsli)를 고쳤으면 다시 쿠킹한다 — 빌드는 HLSL 을 다시 쿠킹하지 않으므로 `App.exe --cook-shaders` 뒤에 재고 비교한다. `.hlsli` 를 고치면 그 헤더를 (전이로라도) 연 셰이더만 다시 구워진다.
+  Shipping 쿠킹은 `cook.stamp` 의 내용 해시로 검증하고 어긋나면 빌드를 세운다(`App --cook-all --verify-shaders`). 쿠킹은 병렬이어도 산출물이 직렬과 바이트까지 같고, 끝줄의 `compile` · `reflection` 시간은 작업별 합이라 `total` 보다 길 수 있다.
+- GPU 확인은 이미 통과가 증명된 항목을 다시 돌리지 않는다. 통과 증거(`verify-batch` 결과 · 증거 파일 · `NEXT.md` 의 통과 기록)가 있고 그 증거 커밋 이후 항목이 쓰는 코드 · 셰이더 · 에셋 · 시나리오가 안 바뀌었음(`git diff <증거커밋>..HEAD -- <관련 경로>` 가 빔)을 둘 다 보였을 때만 건너뛴다. 모호하거나 고쳐진 항목이거나 GPU 에서 처음 도는 항목이면 돌린다. 보고에는 건너뜀 표(항목 · 증거 커밋 · 바뀐 경로 없음)를 따로 둔다.
+- 비결정적 실패는 한 번 재현으로 "확정" 이라 부르지 않는다. 3~5 회 다시 돌려 재현율을 보고, 출력 전체를 파일로 남긴다.
 - 직접 실행으로 통과해도 CTest 에서 질 수 있다(병렬 부하 · 시한). 끝내기 전 검증은 CTest 로 한다. 멈추면 `LastTest.log` 의 마지막 `[ RUN ]` 을 본다.
-- 테스트 실행 파일은 `AllTests` 를 지어야 최신이다. 옛 exe 로 돌리면 모듈 ABI 불일치로 진다.
-- 옛 대소문자 이름의 CMake 빌드 폴더(`EditorUiTest` 같은 것)가 남아 있으면 `-Wnonportable-include-path` 경고가 난다 — 그 폴더를 지우고 다시 구성한다.
+- 테스트 실행 파일은 `AllTests` 를 지어야 최신이다. 옛 exe 는 모듈 ABI 불일치로 진다.
 
 ## 2. 측정 · 프로파일
 
-- **성능은 Release 로 측정한다.** Debug 는 레이스 검출기 · 이터레이터 프록시로 컨테이너 코드를 과장한다(668 vs 87 us). 이전 · 이후 바이너리를 같은 스크립트로
-  **번갈아** 2~3 회 측정한다(`git stash -u` → 빌드 → 복사 → `stash pop` → 빌드). 아침 기준선과 오후 결과를 비교하면 기계 상태가 결과로 읽힌다.
-- **에디터 모듈의 계측은 `SW_EDITOR_PROFILE_SCOPE`**(`Editor/Common/EditorProfile.h`) — 엔진 `SW_PROFILE_SCOPE` 는 엔진 창구를 불러 에디터 모듈에서 쓸 수 없다. 같은 표에 쌓이고 이름은 엔진이 복사해 든다.
-  `GT.Editor.updateUI` 의 하위 구간은 `waitDrawSnapshot · newFrame · frameSteps · endFrame(render · platformWindows · captureDrawSnapshot)` 이고, `frameSteps` 는 `GT.Editor.step.<id>` 로 나뉜다. 패널별 시간은 `-gv_editorPanelTimes=N`.
+- **성능은 Release 로 측정한다.** Debug 는 레이스 검출기 · 이터레이터 프록시로 컨테이너 코드를 과장한다(668 vs 87 us). 이전 · 이후 바이너리를 같은 스크립트로 **번갈아** 2~3 회 측정한다(`git stash -u` → 빌드 → 복사 → `stash pop` → 빌드). 아침 기준선과 오후 결과를 비교하면 기계 상태가 결과로 읽힌다.
+- **에디터 모듈의 계측은 `SW_EDITOR_PROFILE_SCOPE`**(`Editor/Common/EditorProfile.h`) — 엔진 `SW_PROFILE_SCOPE` 는 엔진 창구를 불러 에디터 모듈에서 쓸 수 없다. 패널별 시간은 `-gv_editorPanelTimes=N`, 하위 구간은 `GT.Editor.updateUI` 아래 `frameSteps` → `GT.Editor.step.<id>`.
 - **AppSmokeTest 의 Unknown 태그 상한(8 KB)은 파일 수에도 걸린다** — 태그 없는 호출자가 공유 캐시(`ResourcePaths` 경로 캐시)의 재해시를 일으키면 그 버킷 배열이 Unknown 으로 센다. 공유 캐시는 넣는 자리에서 자기 태그를 건다.
 - **측정 명령**(Release · VSync 꺼짐, 측정하는 동안 다른 빌드를 막는다):
-  - 묶어서 한 번에 — `py -3 -m Scripts verify-batch --owner <이름> [--config Release] [--only <id>…]`(`--list` · `--check` · `--dry-run`). 아래 명령과 ctest · 테스트 필터를 `Test/QA/VerifyBatch.json` 의 항목(종류 · 구성 · GPU 잠금 · 한계 · 결과를 옮길 문서)으로 구성별로 이어 돌려 `build/verify-batch/<시각>/result.md` 에 표 하나(항목 · 값 · 한계 · 통과/실패 · 측정 환경 · 날짜)를 남긴다. 새 측정은 그 파일에 항목을 더한다(한 명령으로 안 도는 것은 `need_command`). 한 구성 안에서는 `--jobs N`(기본 2)개까지 겹쳐 돈다: 빌드 · 쿠킹 · 골든 · 측정 · GPU 독점 항목은 언제나 혼자, GPU 공유 항목끼리는 순서대로, 잠금 없는 `ctest` · `test` 항목과 GPU 공유 항목은 겹친다(이유는 [결정 기록](09_Decisions.md) 검증 묶음 행). 결과 표 · `result.json` 은 매니페스트 순서이고 항목 출력은 `logs/<id>.log` 로 따로 간다. 겹친 항목이 CPU 경합으로 시간 제한에 걸린 것 같으면 `--jobs 1 --only <id>` 로 다시 돈다.
-  - 전 · 후 비교 — `py -3 -m Scripts perf-compare --app <후>/App.exe [--app-before <전>/App.exe] [--cases <이름…>] [--runs N]`. 케이스마다 A · B 를 번갈아 재고 구간 · `[Bench]` 값의 중앙값 표를 낸다. `--app-before` 가 없으면 같은 바이너리의 `-gv_` 스위치 A/B 케이스만 돈다.
+  - 묶어서 한 번에 — `py -3 -m Scripts verify-batch --owner <이름> [--config Release] [--only <id>…]`(`--list` · `--check` · `--dry-run` · `--jobs N` 기본 2). `Test/QA/VerifyBatch.json` 의 항목(종류 · 구성 · GPU 잠금 · 한계 · 결과를 옮길 문서)을 구성별로 이어 돌려 `build/verify-batch/<시각>/result.md` 에 표 하나(항목 · 값 · 한계 · 통과/실패 · 측정 환경 · 날짜)를 남긴다. 새 측정은 그 파일에 항목을 더한다(한 명령으로 안 도는 것은 `need_command`).
+    빌드 · 쿠킹 · 골든 · 측정 · GPU 독점 항목은 언제나 혼자 돌고 잠금 없는 `ctest` · `test` 항목과 GPU 공유 항목은 겹친다(이유는 [결정 기록](09_Decisions.md) 검증 묶음 행). 겹친 항목이 CPU 경합으로 시간 제한에 걸린 것 같으면 `--jobs 1 --only <id>` 로 다시 돈다.
+  - 전 · 후 비교 — `py -3 -m Scripts perf-compare --app <후>/App.exe [--app-before <전>/App.exe] [--cases <이름…>] [--runs N]`(케이스마다 A · B 를 번갈아 재 중앙값 표. `--app-before` 가 없으면 같은 바이너리의 `-gv_` 스위치 A/B).
   - 이 기계의 기준과 견주기 — `py -3 -m Scripts perf`(프레임 p50 · p99).
-  - 씬 로드 — `py -3 -m Scripts scene-load-bench --app <Release>/App.exe [--count 8000] [--runs 5] [--asset-report]`. 원본 XML 을 먼저 여러 번, 쿠킹한 뒤 쿠킹본을 여러 번 잰다.
-  - 모프 · 스킨 풀 준비는 `RT.Deform.preparePool` 아래 `RT.Deform.rebuildMorphPool` · `uploadSkinPalettes` · `rebuildVertexAnimationPool` 구간으로 나눠 본다.
-- **프로파일러가 없으면** `Ninja-Release`(PDB 있음 — 줄 표) + `py -3 -m Scripts stacks <pid>`(DbgHelp 샘플러)를 쓴다. ICF 로 함수가 남의 이름으로 보인다. 코어가 적은 기계(i5-8500, 6 코어)에서는 틱이 쓰는 CPU 총량이 벽시계를 정한다.
-- **표 읽기.** 열은 avg · p50 · p99 · min · max · per_frame 이고 카운터 값은 per_frame 열에 있다(시간 열 0 을 "죽은 경로" 로 읽지 말 것). 평균이 히치를 가린다 —
-  p50 · p99 · 최악 프레임을 본다. 백분위는 옥타브 × 8 칸 히스토그램의 아래 끝(±9 %)이다. 구간 표는 스레드마다 **일한 시간**이고, 프레임이 빨라졌는지는
-  `[Profile] wall N frames … us/frame` 와 `startup N ms` 로 본다. 중첩 합이 바깥보다 크면 표부터 의심한다.
-- **캐시 적중률은 측정 창 끝의 `[CacheStats]` 줄로 본다**(`-gv_profileFrames`). 캐시마다 한 줄 — 이름 · `items` · `hit` · `miss` · `rate` · `clear`(통째로 비운 횟수)이고,
-  hit / miss / clear 는 워밍업 뒤 측정 창 시작부터의 값이다. `no counters (<사유>)` 는 조회가 없어 세지 않는 캐시다. 캐시를 늘리거나 상한을 정할 때 이 줄의 숫자를 근거로 쓴다
-  (규칙: [결정 기록](09_Decisions.md) "캐시는 `CacheStats` 레지스트리에…"). 센 값은 `Core/Diagnostics/CacheStats.h` 의 이름별 원자 카운터이고, 모든 `IAssetCache` 는 생성자에서 `CacheTracking` 으로 칸을 올리거나 세지 않는 사유를 적는다. `ResourcePath` / `ResourcePathMissing` 줄은 경로 캐시의 적중과 음성 결과 적중이다.
-- **`RT.Frame` = `RT.BeginFrame`(펜스 대기 = GPU 백프레셔) + `RT.ExecutePacket` + `RT.Present`.** `GT.Packet.submit` 이 크면 GT 가 RT 를 기다린다. `GT.Frame` 은
-  `Engine::update` 만 재고 게임 모듈은 `App::run` 의 `GT.Game.update` · `GT.Game.fixedUpdate` · `GT.Editor.updateUI` 다.
-- **대기 지점 스코프**(측정만 한다 — 이 값이 크면 그 대기를 비동기로 바꾸는 근거가 된다). 이름은 `<스레드>.<영역>.<동작>` 이다.
-
-  | 스코프 | 위치 | 재는 것 |
-  | --- | --- | --- |
-  | `GT.Material.waitIdle` | `Engine::submitRenderPacket` | 새 머티리얼 첫 사용 때 GT 가 `RenderThread::waitIdle`(RT + GPU)을 기다린 시간 |
-  | `RT.Upload.waitIdle` | `VulkanOneShotCommands::endSubmitAndWait` | Vulkan 업로드 · 리드백의 제출 락 + `vkQueueWaitIdle` |
-  | `RT.Upload.flush` | `D3D12RHIDevice::flushPendingUploads` | DX12 구조 버퍼 갱신 복사 리스트 닫기 · 제출(기다리지는 않는다) |
-  | `RT.PSO.create` | `FrameRendererPSO.cpp` 의 `createPipelineStateTimed` | 패스 · 머티리얼 변형 · 파티클 PSO 의 동기 생성(셰이더 컴파일 포함) |
-  | `GT.Load.sync` | `AssetLoadBlock::startLoad` 의 `OnCallingThread` 분기 | 프리팹 · 머티리얼 · 텍스처 · 메시 · 셰이더 동기 로드(호출 스레드가 GT 가 아니면 그 스레드 몫) |
-  | `GT.Settings.save` | `UserSettingsManager::saveUserFile` | 사용자 설정 쓰기(교체 재시도 sleep 포함) |
-
-  시동은 로그 한 줄 `Startup phases: hostScope · engine · window · modules · finalize+show · total | subsystems: 이름=ms …`(서브시스템은 1 ms 이상만, 오래 걸린 순)로 본다. `Test/Load/Baselines.json` 의 `startup_ms` 와는 별개다.
+  - 씬 로드 — `py -3 -m Scripts scene-load-bench --app <Release>/App.exe [--count 8000] [--runs 5] [--asset-report]`.
+  - 프로파일러가 없으면 `Ninja-Release`(PDB 있음) + `py -3 -m Scripts stacks <pid>`(DbgHelp 샘플러). ICF 로 함수가 남의 이름으로 보인다.
+- **표 읽기.** 열은 avg · p50 · p99 · min · max · per_frame 이고 카운터 값은 per_frame 열에 있다(시간 열 0 을 "죽은 경로" 로 읽지 말 것). 평균이 히치를 가린다 — p50 · p99 · 최악 프레임을 본다. 백분위는 옥타브 × 8 칸 히스토그램의 아래 끝(±9 %)이다. 구간 표는 스레드마다 **일한 시간**이고, 프레임이 빨라졌는지는 `[Profile] wall N frames … us/frame` 와 `startup N ms` 로 본다. 중첩 합이 바깥보다 크면 표부터 의심한다.
+- **캐시 적중률은 측정 창 끝의 `[CacheStats]` 줄로 본다**(`-gv_profileFrames`). 캐시마다 한 줄 — 이름 · `items` · `hit` · `miss` · `rate` · `clear`(통째로 비운 횟수)이고 hit / miss / clear 는 워밍업 뒤 측정 창 시작부터의 값이다. `no counters (<사유>)` 는 조회가 없어 세지 않는 캐시다. 캐시를 늘리거나 상한을 정할 때 이 숫자를 근거로 쓴다(규칙: [결정 기록](09_Decisions.md) "캐시는 `CacheStats` 레지스트리에…").
+- **`RT.Frame` = `RT.BeginFrame`(펜스 대기 = GPU 백프레셔) + `RT.ExecutePacket` + `RT.Present`.** `GT.Packet.submit` 이 크면 GT 가 RT 를 기다린다. `GT.Frame` 은 `Engine::update` 만 재고 게임 모듈은 `GT.Game.update` · `GT.Game.fixedUpdate` · `GT.Editor.updateUI` 다.
+- **대기 지점 스코프**(`<스레드>.<영역>.<동작>`; 이 값이 크면 그 대기를 비동기로 바꾸는 근거): `GT.Material.waitIdle`(새 머티리얼 첫 사용 때 GT 가 RT + GPU 를 기다림) · `RT.Upload.waitIdle`(Vulkan 업로드 · 리드백의 `vkQueueWaitIdle`) · `RT.Upload.flush`(DX12 갱신 복사 제출) · `RT.PSO.create`(PSO 동기 생성, 셰이더 컴파일 포함) · `GT.Load.sync`(동기 에셋 로드) · `GT.Settings.save`(사용자 설정 쓰기).
+  시동은 로그 한 줄 `Startup phases: hostScope · engine · window · modules · finalize+show · total | subsystems: 이름=ms …`(서브시스템은 1 ms 이상만)로 본다. `Test/Load/Baselines.json` 의 `startup_ms` 와는 별개다.
 - **병목은 씬 크기에 따라 뒤집힌다.** 큐브 2000 은 GPU 대기, 8000 은 게임 스레드다. 어느 쪽을 깎을지는 재고 나서 정한다. GT 가 병목이면 RT 구간이 늘어 보여도 경합일 뿐이다.
-- **타임라인은 Tracy 로 본다**(`-gv_tracy=1` + 같은 판 0.14.1 뷰어). 표(`-gv_profileFrames`)는 구간마다 접은 숫자라 "어느 스레드가 무엇을 기다렸나" 는 Tracy 의 스레드 타임라인으로 본다. 계측은 `SW_PROFILE_SCOPE` 하나가 둘 다에 남긴다. GPU 줄도 쿼리는 한 벌이다.
-  DX11 · Vulkan 은 GPU 시계를 컨텍스트를 열 때 한 번만 맞춰 긴 실행에서 GPU 줄이 조금씩 밀린다.
+- **타임라인은 Tracy 로 본다**(`-gv_tracy=1` + 같은 판 0.14.1 뷰어). 표는 구간마다 접은 숫자라 "어느 스레드가 무엇을 기다렸나" 는 Tracy 스레드 타임라인으로 본다. `SW_PROFILE_SCOPE` 하나가 둘 다에 남긴다. DX11 · Vulkan 은 GPU 시계를 컨텍스트를 열 때 한 번만 맞춰 긴 실행에서 GPU 줄이 조금씩 밀린다.
 - **GPU 비용은 `GPU.<패스>` 타임스탬프로 나눈다.** 패스를 지워서 나누면 타깃 사슬이 바뀌어 답이 뒤집힌다(추정 38 us, 실측 123 us). `RT.BeginFrame` 은 GPU 시간의 대리값이 아니다.
-- **재기 전에 VSync 가 꺼졌는지 본다** — 1/RT.Frame 이 주사율과 같으면 VSync 다. DXGI 는 스왑체인 생성과 `ResizeBuffers` **둘 다**에 `ALLOW_TEARING` +
-  `Present( 0, DXGI_PRESENT_ALLOW_TEARING )`(짝이 안 맞으면 `INVALID_CALL`, `RHI/DX/RHIDxgiTearing.h`). Vulkan 은 present 모드. CLI 는 `-vsync`.
-- **셰이더를 고쳤으면 재기 전에 `App.exe --cook-shaders`.** 빌드는 HLSL 을 다시 쿠킹하지 않는다.
-- **벤치 스위치**(`Source/Games/Empty/BenchScene.cpp`): `-gv_benchMeshes=N` · `-gv_benchLights=N` · `-gv_benchGround=1` · `-gv_benchMovePercent=%` · `-gv_benchInstanced=1` ·
-  `-gv_benchTickMovers=N`(틱 **안** 세터 — 실제 게임플레이 경로) · `-gv_benchSpawnChurn=N` · `-gv_benchMeshVariants` · `-gv_benchMeshShapes=N` ·
-  `-gv_benchMaterialChurn*` · `-gv_benchAnimate=0`(컴퓨트 회전과 `update` 사인파를 **둘 다** 멈춘다), `-gv_deferred=1`, `-gv_useRenderThread=0`.
-  틱 경로는 `-gv_tickBatch=0`(타입별 일괄 틱을 끈다 — 같은 바이너리 A/B)과 표의 `GT.Scene.tick.objectRange` · `pendingSlotApply` · 카운터 `objectEntries` · `batchElements` · `pendingSlots` · `queuedWrites` 로 가른다. "무버 8000" 은 `-gv_benchMeshes=8000 -gv_benchTickMovers=1` 이다(`TickMovers=N` 은 큐브마다 N 개).
-- **`-gv_profileFrames=N` 은 프레임 수다** — VSync 가 꺼진 가벼운 장면은 1500 fps 라 90000 프레임이 1 분에 끝난다. 시간으로 측정하려면 `-gv_profileSeconds=S`(먼저 닿는 쪽이 끝낸다 — soak 이 쓴다).
-- **프레임당 힙 할당**은 `-gv_profileFrames` 보고의 `alloc/frame`, 콜스택은 `-gv_profileAllocSites=N`(Debug App — 횟수는 최적화와 무관, 시간은 같이 측정하지 말 것).
-- **씬 로드 측정**: `Scripts/dev/MakeStressScene.py` 로 큰 씬 → `-gv_firstScene=<씬>`(또는 Empty 팩 `data/gamesettings.xml` 의 `startMap`) → `[SceneLoad]` 줄. Dev 는 `Cooked/` 를 마운트하지
-  않으므로 쿠킹 효과는 `--cooked-dir=<repo>/Resource` 로 쿠킹하고 재고 지운다. 쿠킹본을 읽었는지는 `[SceneDocument] Loaded … from binary` 줄이나 하니스 표 아래 source 줄(`binary …scene.bin`)로 본다 — `[SceneLoad]` 줄은 쿠킹본이어도 `.scene.xml` 을 찍는다.
-  기준값(`scene-load-bench --count 8000`, Release dx12, 5 회 가운데 값, Empty 팩): XML 은 파싱 25.6 ms · 인스턴스화 86.8 ms, 쿠킹본은 파싱 6.2 ms · 인스턴스화 26.7 ms. 로드 중 `GT.Frame` 최악은 판 사이 변동이 크다(XML 18~30 ms · 쿠킹본 14 ms).
+- **재기 전에 VSync 가 꺼졌는지 본다** — 1/RT.Frame 이 주사율과 같으면 VSync 다. DXGI 는 스왑체인 생성과 `ResizeBuffers` **둘 다**에 `ALLOW_TEARING` + `Present( 0, DXGI_PRESENT_ALLOW_TEARING )`(짝이 안 맞으면 `INVALID_CALL`). Vulkan 은 present 모드, CLI 는 `-vsync`.
+- **셰이더를 고쳤으면 재기 전에 `App.exe --cook-shaders`.**
+- **벤치 스위치**(`Source/Games/Empty/BenchScene.cpp`): `-gv_benchMeshes=N` · `-gv_benchLights=N` · `-gv_benchGround=1` · `-gv_benchMovePercent=%` · `-gv_benchInstanced=1` · `-gv_benchTickMovers=N`(틱 **안** 세터 — 실제 게임플레이 경로) · `-gv_benchSpawnChurn=N` · `-gv_benchMeshVariants` · `-gv_benchMeshShapes=N` · `-gv_benchMaterialChurn*` · `-gv_benchAnimate=0`(컴퓨트 회전과 `update` 사인파를 **둘 다** 멈춘다), `-gv_deferred=1`, `-gv_useRenderThread=0`.
+  틱 경로는 `-gv_tickBatch=0`(타입별 일괄 틱을 끈다 — 같은 바이너리 A/B)과 표의 `GT.Scene.tick.objectRange` · `pendingSlotApply` · 카운터 `objectEntries` · `batchElements` · `pendingSlots` · `queuedWrites` 로 가른다. "무버 8000" 은 `-gv_benchMeshes=8000 -gv_benchTickMovers=1`.
+- **`-gv_profileFrames=N` 은 프레임 수다** — VSync 가 꺼진 가벼운 장면은 1500 fps 라 90000 프레임이 1 분에 끝난다. 시간으로 재려면 `-gv_profileSeconds=S`(먼저 닿는 쪽이 끝낸다). 프레임당 힙 할당은 보고의 `alloc/frame`, 콜스택은 `-gv_profileAllocSites=N`(Debug App — 횟수는 최적화와 무관, 시간은 같이 재지 말 것).
+- **씬 로드 측정**: `Scripts/dev/MakeStressScene.py` 로 큰 씬 → `-gv_firstScene=<씬>` → `[SceneLoad]` 줄. Dev 는 `Cooked/` 를 마운트하지 않으므로 쿠킹 효과는 `--cooked-dir=<repo>/Resource` 로 쿠킹하고 재고 지운다. 쿠킹본을 읽었는지는 `[SceneDocument] Loaded … from binary` 줄이나 하니스 표의 source 줄(`binary …scene.bin`)로 본다(`[SceneLoad]` 줄은 늘 `.scene.xml` 을 찍는다).
 - **벤치가 상태를 공유하면 단계 순서를 측정한다.** 손대지 않은 대조군이 움직이면 하니스를 의심한다. 벤치 메시가 공유라 배치 결함을 가린 적이 있다 — 씬에서 온 메시로도 본다.
-- **GPU 업로드 비용은 호출당이다**(DX12 ~3.3 us) — 쪼개면 느려진다. 구간을 배열로 묶어 한 번에.
-- **워커가 쓴 데이터를 다른 코어가 읽으면** 캐시 이동이 항목당 일(~40 ns)보다 비싸다. 쓰는 스레드와 읽는 스레드를 같게 둔다.
-- **워커는 공유 카운터 · 비트필드에 쓰지 않는다.** `fetch_add` 한 줄이 병렬 플러시를 직렬보다 느리게 했다. "하나라도" 플래그는 프레임에 한 번 쓰고 읽기만 한다.
-- **도구**: `RunDuplicateCode.py --filter <dir> --no-headers`, `RunEngineLayerGraph.py`, `Scripts/dev/RunBackendSmoke.py`(4 백엔드 평균 RGB),
-  Release 로 읽는 `TaskManagerBenchTest` · `GameObjectBenchTest` · `ContainerBenchTest` · `NetReplicationBenchTest`(클라이언트 16 × 엔티티 1000), `Test/TestFramework/Harness/TestBench.h`.
-- **측정 라운드마다 매니저 · 풀 · 레지스트리를 새로 만듭니다.** best-of-N 반복은 자라는 컨테이너가 만든 오염을 거르지 못합니다. 같은 값이 연달아 세 번 나올 때까지 수치를 믿지 않습니다.
-- **한 번만 일어나는 이벤트(백엔드 교체 프레임의 최대값 등)는 3 회 이상 되풀이해 이상치를 거릅니다.** 프레임 1 에만 일어나는 일(업로드 · PSO 생성)은 워밍업(`FrameProfileSession::kWarmupFrames`) 뒤의 측정 창 밖입니다.
-  측정 창 안에서 전량 재생성을 일으키려면 시나리오 단계 `<SwapBackend backend="other"/>` 를 워밍업보다 뒤의 프레임에 둡니다. 히치 최적화는 평균이 아니라 최악 프레임으로 판정합니다.
-- **성능 워크로드는 움직여야 합니다.** 정지한 씬은 "바뀐 것 없음" 빠른 경로만 측정합니다. 워크로드가 지나지 않은 경로는 "검증됨" 이 아니라 "실행된 적 없음" 으로 보고,
-  최적화 대상은 프로파일 표에서 고르고 전후 숫자를 커밋 메시지에 남깁니다. 새 프로파일 구간을 넣을 때는 그 상위 구간도 함께 넣습니다. 하위 구간의 합과 전체의 차가 대개 진짜 병목입니다.
-- **렌더 성능은 디스크에서 읽은 씬으로 배치 수를 먼저 셉니다.** 인스턴스 수와 배치 수가 비슷하면 인스턴싱이 꺼진 것입니다.
-- **측정 표에는 측정한 PC 이름과 CPU 를 적습니다.** 다른 빌드가 도는 동안 잰 값은 오염되므로, 측정하는 동안은 다른 빌드를 막습니다(아래 "빌드 속도" 의 슬롯 잠금).
+- **GPU 업로드 비용은 호출당이다**(DX12 ~3.3 us) — 쪼개면 느려진다. **워커가 쓴 데이터를 다른 코어가 읽으면** 캐시 이동이 항목당 일(~40 ns)보다 비싸다. **워커는 공유 카운터 · 비트필드에 쓰지 않는다**(`fetch_add` 한 줄이 병렬 플러시를 직렬보다 느리게 했다).
+- **측정 라운드마다 매니저 · 풀 · 레지스트리를 새로 만든다.** best-of-N 반복은 자라는 컨테이너가 만든 오염을 거르지 못한다. 같은 값이 연달아 세 번 나올 때까지 수치를 믿지 않는다.
+- **한 번만 일어나는 이벤트(백엔드 교체 프레임의 최대값 등)는 3 회 이상 되풀이해 이상치를 거른다.** 프레임 1 에만 일어나는 일(업로드 · PSO 생성)은 워밍업(`FrameProfileSession::kWarmupFrames`) 뒤의 측정 창 밖이다. 창 안에서 전량 재생성을 일으키려면 시나리오 단계 `<SwapBackend backend="other"/>` 를 워밍업보다 뒤에 둔다. 히치 최적화는 최악 프레임으로 판정한다.
+- **성능 워크로드는 움직여야 한다.** 정지한 씬은 "바뀐 것 없음" 빠른 경로만 잰다. 워크로드가 지나지 않은 경로는 "검증됨" 이 아니라 "실행된 적 없음" 으로 보고, 최적화 대상은 프로파일 표에서 고르고 전후 숫자를 커밋 메시지에 남긴다. 새 프로파일 구간을 넣을 때는 상위 구간도 함께 넣는다(하위 합과 전체의 차가 대개 진짜 병목).
+- **렌더 성능은 디스크에서 읽은 씬으로 배치 수를 먼저 센다.** 인스턴스 수와 배치 수가 비슷하면 인스턴싱이 꺼진 것이다.
+- **측정 표에는 측정한 PC 이름과 CPU 를 적는다.** 다른 빌드가 도는 동안 잰 값은 오염되므로 측정하는 동안은 다른 빌드를 막는다(아래 "빌드 속도" 의 슬롯 잠금).
 
 ### 영역별 측정값 (계획 문서 · 후보의 기준선)
 
-계획 문서 · 후보 절이 결과를 옮기는 자리입니다. 다시 잴 때는 같은 명령과 구성으로 잽니다. 값은 항목마다 대표 한두 개만 두고, 전체 표는 `build/verify-batch` 결과와 커밋 메시지에 있습니다.
+**결과는 `verify-batch` 보고(`build/verify-batch/<시각>/result.md`)와 `git log` 가 정본이다.** 이 절에는 다시 잴 명령과 대표값만 두고 날짜 · 전후 표는 쌓지 않는다. 다시 잴 때는 같은 명령과 구성으로 잰다.
 
-- **런타임 UI 벤치**(Release · DX12 · VSync 꺼짐 · 600 프레임 × 세 번): `-gv_benchUiWidgets=10000`(엔진 `UIBenchScreen`) · `-gv_benchUiChurn=M`(프레임마다 글 M 칸) · `-gv_benchUiMarkers=K`(Empty 벤치 큐브에 화면 마커).
-  글 10 칸/프레임 기준 `GT.UI.Paint` p50 약 0.3 ms, `GT.UI.Layout` p50 0.06 ms, `RT.Canvas.Upload` p50 0.04 ms. 구간 `GT.UI.*` · `RT.Canvas.*`, 카운터 `UI.LayoutWidgets` · `UI.PaintWidgets` · `UI.CanvasQuads`(값은 per_frame 열).
-- **디버그 HUD**: 꺼진 상태 `GT.DebugHUD` 는 Release 에서 1 us 미만이고 할당이 0 이다. 켜짐의 `GT.DebugHUD.Sections` 는 17~36 us(4 Hz).
-- **텍스처 임포트 압축**(Release App `--import-textures`): 띠 병렬 압축으로 BC7 512² 밉 10 단이 약 62 s → 8 s 가 됐고 결과 DDS 는 스탬프 해시까지 바이트가 같다. BC7 은 BC1 · BC3 보다 수천 배 느려 무거운 것은 BC7 원본 수다.
-  측정하는 법: 그 원본의 스탬프 줄만 지우고 `App --import-textures` — 로그 `Compressed WxH (… bands on N workers): T ms`.
-  일괄 임포트(`AssetImportStampUtil::importAll`)는 **원본 파일도 워커와 나눠 임포트한다**(텍스처 · 모델 · 지형): 원본 폴더마다 사슬(같은 결과 자리에 쓰는 파일의 묶음)을 원자 카운터로 가져가는 동적 분배이고 띠 압축은 그 안에서 중첩된다.
-  요약과 `import.stamp` 는 파일 순서대로 직렬로 합쳐 직렬로 돌 때와 같다(`AssetImportParallelTest.ParallelImportMatchesSerialImport`). 몸 메시를 읽는 장비 메시(`body_surface`)는 의존 없는 모델이 끝난 뒤 직렬로 임포트한다. 병렬 전후 전체 시간은 아직 재지 않았다(스탬프를 비우고 `--import-textures` · `--import-models`, 끝난 뒤 `git status` 에 바이트 변화가 없어야 한다).
-  에디터 핫 리로드의 원본 임포트는 **백그라운드 잡에서 바뀐 원본만** 돌린다(결정 기록 5-11). 시나리오가 `Resource/` 의 원본을 쓴 뒤 결과를 읽으려면 탐침 `Editor.AssetImportBusy`(0 이 될 때까지)와 `Editor.AssetImportFinishedCount`(시작 값보다 커질 때까지)를 `WaitUntil` 로 기다린다. 검증: `EditorTest --test_filter=AssetHotReloadImportTest.*`.
-- **틱 디스패치 벤치**(`GameObjectBenchTest`, Release, `--load_suites=only` 로 `Bin` 에서 직접): `SmallGroupTickKnee` · `PrerequisiteChainDepthSweep` · `PrerequisiteFanOut` · `PrerequisiteSpawnChurn` · `FollowerOrderingGroupVersusPrerequisite` · `IntraObjectPhaseOrdering`.
-  작은 그룹은 직렬이 병렬보다 빨라 손익분기가 약 1000 개(항목당 ~25 ns)다. `TaskManager::runParallelByCost` 가 앞 항목을 직접 돌아 재고 고른다(`TaskManagerTest.RunParallelByCost*`).
-- **타입별 컴포넌트 질의 벤치**(`TypedComponentBenchTest`, Release, `Bin` 에서 `../TestBin/EngineTest.exe --test_filter=TypedComponentBenchTest.* --load_suites=only --host_suites=all`): 오브젝트 1만 · 10만 × 정확한 타입 수 50 · 200 · 500 에서 `forEachComponentOfType`(버킷) · `ComponentRegistry::getAll` · 오브젝트 훑기를 말단 · 기반 타입으로 견주고, 만들고 지우기 비용 · 잠금 한 쌍 · `sizeof( Component )` 를 찍는다.
-  버킷 순회는 옛 훑기보다 말단에서 70 ~ 2000 배, 기반에서 4 ~ 15 배 빠르고, 검사 없는 등록형 목록보다는 말단이 느리다(10만 · K 50 에서 2.0 배 — 컴포넌트마다 읽는 삭제 대기 표시와 K 에 비례하는 버킷 훑기 때문).
-  오브젝트 하나 만들고 지우기는 p50 433 ns, 경합 없는 `std::shared_mutex` 배타 잠금 한 쌍은 약 4.3 ns, `resolveComponent<T>` 의 타입 확인은 핸들당 약 4 ns 다. 게임별 버킷 수 K 는 Empty 3 에서 WildWest 21 까지라 K 50 줄이 실제 게임에 해당한다.
-  K 가 수백인 씬에서 자주 묻는 질의는 조회 타입마다 버킷 목록을 캐시하는 안(타입 레지스트리 세대로 무효화)이 먼저 필요하며, 측정으로 필요가 확인될 때만 넣는다.
-- **증분 쿠킹 단계별 시간**(Release App, 활성 게임 Empty, 세 번, 단위 초): 깨끗한 실행 = `Saved`(기록 · DDC), 쿠킹 폴더, 팩 폴더, 셰이더 `bin` 산출물을 지움. 바뀐 것 없는 실행 = 바로 이어 같은 명령 다시. 셰이더는 컴파일러 디스크 캐시(`Resource/cache/shaders`)까지 지운 것이 "차가운" 실행이다.
-  명령은 `App --cook-shaders`, `App --cook-scenes --cooked-dir=<폴더>`, 팩 쿠킹(`-cook-all`).
-
-  | 단계 | 깨끗함 | 바뀐 것 없음 |
-  |---|---|---|
-  | 셰이더 6180 개 | 약 252 (컴파일 캐시만 켠 실행 약 5.4) | 2.3 |
-  | `--cook-scenes` 전체(씬 7 · 프리팹 98 · 레지스트리 12 · 내비메시 1) | 1.4 | 0.9 |
-  | 팩 13 개(약 118 MB) | 12.1~12.4 | 1.7 |
-
-  바뀐 것 없는 실행은 씬 · 프리팹 등이 모두 `reused from the DDC` 이고 팩은 `.packrec` 로 다시 쓰지 않는다. **바이트 같음**: 두 실행의 쿠킹 폴더 · 팩 · 셰이더 산출물의 SHA-256 이 전부 같다(줄바꿈은 LF 로 맞춰 견줌 — `cook.stamp` 는 쓸 때 LF, 저장소는 CRLF).
-  이득은 셰이더 컴파일 캐시와 팩 증분에서 나오고, 씬 · 프리팹 등의 DDC 몫은 0.5 s 안팎이다.
-  팩은 항목별 압축 · CRC 를 병렬로 돌린다(결정 기록 5-2). 요약 로그 한 줄로 잰다 — `Pack cook: N packs written or reused ... in X ms - read ..., compress W ms wall / C ms cpu, layout ..., hash ..., write ..., other ...`.
-  `compress` 의 벽시계 / CPU 합이 병렬 효과이고, 바뀐 것 없는 실행은 `hash` 가 거의 전부다. 병렬 뒤 팩 바이트가 직렬과 같음은 `PackLayoutTest.ParallelCompressionGivesTheSerialBytes` 가 지킨다.
-- **지형 LOD 교체**(`TerrainBenchTest.LODSweepWorstFrame`, Release, 쇼케이스 지형을 600 프레임 동안 가로지름): 교체 프레임에서 updateLODs p50 0.1 ms · 최악 4~5 ms, GPUScene 수집 최악 5 ms. 기준은 GT 2 ms.
-- **지형 높이 쓰기**(**Debug**, 257 × 257 · 청크 32 칸): 5 × 5 샘플을 쓴 뒤 물리 틱이 지형 전체 한 바디면 1416 ms, 청크마다 바디면 17.0 ms 다(`TerrainBenchTest.ColliderRebuildAfterBrushWrite`). `writeHeights` 의 쓰기 프레임은 청크 메시를 넷까지만 다시 만들고 나머지는 미룬다(`WriteHeightsRectSizes`).
-- **애니메이션 갱신 — 본 수 × 캐릭터 수**(`SyntheticRigBenchTest.EvaluateByBonesCharactersAndMode`, Release, 다섯 번의 중앙값, 단위 us): `EditorTest.exe --load_suites=only --test_filter=SyntheticRigBenchTest.*` 를 `Bin` 에서 돌린다.
-  데이터는 대표 합성 리그(`game/empty/rigs_raw/`), 캐릭터 절반씩 clip_00 · clip_01 을 엇갈려 재생하고 `AnimationSystem::evaluate` 한 프레임(워커 병렬)을 잰다. own = 캐릭터마다 포즈, +rig = 다리 TwoBoneIK · 사슬 SpringChain, crowd = 군중 포즈 공유. GPU 스키닝은 재지 않았다.
-
-  | 리그(본) | x1000 own p50 · p99 | x1000 +rig p50 | x1000 crowd p50 |
-  |---|---|---|---|
-  | biped 20 | 551 · 921 | 1251 | 204 |
-  | biped 150 | 3223 · 3969 | 7193 | 225 |
-  | multileg 300 | 8066 · 16659 | 13773 | 257 |
-
-  캐릭터 하나 직렬은 본당 약 130 ns 로 본 수에 선형이다. crowd 는 버킷 수(클립 2 × 위상 4)에 묶여 본 · 캐릭터 수와 거의 무관하다.
-- **파괴 첫 프레임**(`FractureBenchTest.ShowcaseBeginPlay`, Release): 잎 셰이프를 시작 때 모두 지으면(`-gv_fractureShapeWarmMicroseconds=-1`) p50 19.4 ms, 기본(틱마다 약 0.57 ms 예산으로 나눠 지음)은 7.7 ms 다. 대신 셰이프가 준비된 뒤 벽이 깨지는 프레임이 p50 2.4 → 3.2 ms 로 늘었고, 첫 프레임 12 ms 절감과 맞바꾼 값으로 유지한다(`PerfCompare.py` fractureWarm · `fractureDefer`).
-- **UDP 소켓 계층**(`NetUDPBenchTest`, 호스트 스위트, 서버 20 Hz 200 B · 클라이언트 30 Hz 40 B, 서버와 클라이언트가 한 PC, Windows, Release): 클라이언트 500 은 서버 스레드 14 %, 클라이언트 2000 은 받기 42.1k · 보내기 42.5k pkt/s, 서버 스레드 54 %, 패킷당 약 6.5 us, 커널 버림 0 이다. RTT 는 대부분 같은 PC 의 클라이언트 드라이버 지연이다.
-- **온라인 부하 봇**(Debug, `--local-server` — 봇과 서버가 한 스레드라 서로의 시간을 잰다)의 값은 참고용이고, 판단 근거는 Release 서버 한 대 측정이다(후보 `EpollAndRealStoreVerification`).
-- **`DynamicBitset` · 기믹 회로 상태 벤치**(`DynamicBitsetBenchTest.*` · `GimmickStateBenchTest.*`, Release, `--load_suites=only` 로 `Bin` 에서): 사본을 돌려주는 비트셋 연산 · `resize` 는 작은 크기에서 힙 할당(약 45 ns)이 전부이고, 큰 크기의 `&=` · `==` · `to_string` · `parse` 는 `std::bitset` 과 같은 자릿수다.
-  기믹 회로 상태는 가장 큰 회로가 244 바이트(한 조각, `kMaxCircuitBytes` 의 약 6 %), `saveState` 가 60 ns 이하 · 할당 0 이다. Debug 의 시간은 단언 때문에 의미가 없다.
-- **Vulkan VSync 프레임 놓침**: 창 모드 Vulkan(165 Hz)은 가끔 한 프레임이 12 ~ 24 ms 였고 DXGI 는 회당 한 주기 이하였다. 느린 프레임은 이미지가 한 주기 늦게 돌아온 것과 GPU 일이 0.3 ms 인 프레임의 펜스가 13 ms 뒤에 신호된 것(합성기 경로)으로 갈렸다. 평소 Vulkan 은 `vkAcquireNextImageKHR` 에서 약 5.2 ms 를 기다린다.
+- **런타임 UI 벤치**(Release · DX12 · 600 프레임 × 세 번): `-gv_benchUiWidgets=10000` · `-gv_benchUiChurn=M`(프레임마다 글 M 칸) · `-gv_benchUiMarkers=K`. 글 10 칸/프레임에서 `GT.UI.Paint` p50 약 0.3 ms, `GT.UI.Layout` 0.06 ms, `RT.Canvas.Upload` 0.04 ms. 구간 `GT.UI.*` · `RT.Canvas.*`, 카운터 `UI.LayoutWidgets` · `UI.PaintWidgets` · `UI.CanvasQuads`.
+- **디버그 HUD**: 꺼진 `GT.DebugHUD` 는 1 us 미만에 할당 0, 켜진 `GT.DebugHUD.Sections` 는 17~36 us(4 Hz).
+- **텍스처 임포트 압축**(`App --import-textures`): 띠 병렬 압축으로 BC7 512² 밉 10 단 약 62 s → 8 s, 결과 DDS 는 바이트가 같다. 재는 법: 그 원본의 스탬프 줄만 지우고 실행 — 로그 `Compressed WxH (… bands on N workers): T ms`.
+  일괄 임포트(`AssetImportStampUtil::importAll`)는 원본 파일도 워커와 나눠 임포트하고(폴더마다 사슬을 원자 카운터로 가져가는 동적 분배, 띠 압축은 그 안에서 중첩), 요약과 `import.stamp` 는 파일 순서대로 합쳐 직렬과 같다(`AssetImportParallelTest.ParallelImportMatchesSerialImport`). 병렬 전후 전체 시간은 아직 재지 않았다(스탬프를 비우고 `--import-textures` · `--import-models`).
+  에디터 핫 리로드는 **백그라운드 잡에서 바뀐 원본만** 임포트한다(결정 기록 5-11). 시나리오가 `Resource/` 원본을 쓴 뒤 결과를 읽으려면 탐침 `Editor.AssetImportBusy`(0 까지) · `Editor.AssetImportFinishedCount`(시작 값보다 커질 때까지)를 `WaitUntil` 로 기다린다.
+- **틱 디스패치 벤치**(`GameObjectBenchTest`, Release, `Bin` 에서 `--load_suites=only`): 작은 그룹은 직렬이 병렬보다 빨라 손익분기가 약 1000 개(항목당 ~25 ns)이고 `TaskManager::runParallelByCost` 가 앞 항목을 직접 돌아 재고 고른다.
+- **타입별 컴포넌트 질의 벤치**(`TypedComponentBenchTest`, Release, `Bin` 에서 `../TestBin/EngineTest.exe --test_filter=TypedComponentBenchTest.* --load_suites=only --host_suites=all`): 오브젝트 1만 · 10만 × 정확한 타입 수 50 · 200 · 500 에서 버킷 순회 · `ComponentRegistry::getAll` · 오브젝트 훑기를 견준다. 버킷 순회는 옛 훑기보다 말단에서 70 ~ 2000 배, 기반에서 4 ~ 15 배 빠르고, 검사 없는 등록형 목록보다는 말단이 2.0 배 느리다(K 50). 오브젝트 생성 + 삭제 p50 433 ns, `resolveComponent<T>` 타입 확인 약 4 ns. K 가 수백인 씬은 조회 타입별 버킷 목록 캐시가 먼저 필요하며 측정으로 필요가 확인될 때만 넣는다.
+- **증분 쿠킹 단계별 시간**(Release App, Empty, 단위 초): 깨끗한 실행 = `Saved`(기록 · DDC), 쿠킹 · 팩 폴더, 셰이더 `bin` 을 지움, 바뀐 것 없는 실행 = 바로 이어 같은 명령. 명령은 `App --cook-shaders` · `App --cook-scenes --cooked-dir=<폴더>` · `-cook-all`. 셰이더 6180 개 약 252 → 2.3(컴파일 캐시만 켜면 약 5.4), 씬 · 프리팹 등 1.4 → 0.9, 팩 13 개 약 12 → 1.7.
+  두 실행의 산출물 SHA-256 은 전부 같다(줄바꿈은 LF 로 맞춰 견줌). 팩은 항목별 압축 · CRC 를 병렬로 돌리고(결정 기록 5-2) 요약 로그 `Pack cook: … compress W ms wall / C ms cpu, … hash …` 로 잰다. 병렬 뒤 바이트 동일은 `PackLayoutTest.ParallelCompressionGivesTheSerialBytes` 가 지킨다.
+- **지형**: LOD 교체(`TerrainBenchTest.LODSweepWorstFrame`)는 최악 4~5 ms(기준 GT 2 ms), 높이 쓰기(Debug)는 한 바디 1416 ms vs 청크마다 바디 17 ms(`ColliderRebuildAfterBrushWrite`)이고 쓰기 프레임은 청크 메시를 넷까지만 다시 만든다.
+- **애니메이션 갱신 — 본 수 × 캐릭터 수**(`SyntheticRigBenchTest.EvaluateByBonesCharactersAndMode`, Release, 5 회 중앙값): `EditorTest.exe --load_suites=only --test_filter=SyntheticRigBenchTest.*` 를 `Bin` 에서. `AnimationSystem::evaluate` 한 프레임(워커 병렬) — x1000 own 은 biped 20 본 551 us, biped 150 본 3223 us, multileg 300 본 8066 us(본당 약 130 ns, 선형), crowd(군중 포즈 공유)는 본 · 캐릭터 수와 거의 무관하게 약 200~260 us. GPU 스키닝은 재지 않았다.
+- **파괴 첫 프레임**(`FractureBenchTest.ShowcaseBeginPlay`): 잎 셰이프를 틱마다 약 0.57 ms 예산으로 나눠 지어 p50 19.4 → 7.7 ms 로 줄였고 대신 벽이 깨지는 프레임이 2.4 → 3.2 ms 로 늘었다(맞바꾼 값으로 유지).
+- **UDP 소켓 계층**(`NetUDPBenchTest`, 호스트 스위트, 한 PC, Release): 클라이언트 2000 에서 받기 42k · 보내기 42k pkt/s, 서버 스레드 54 %, 패킷당 약 6.5 us, 커널 버림 0. RTT 는 대부분 같은 PC 의 클라이언트 드라이버 지연이다. 온라인 부하 봇(Debug `--local-server`)의 값은 참고용이다.
+- **`DynamicBitset` · 기믹 회로 상태 벤치**: 사본을 돌려주는 비트셋 연산은 작은 크기에서 힙 할당(약 45 ns)이 전부이고, 가장 큰 기믹 회로는 244 바이트(한 조각), `saveState` 60 ns 이하 · 할당 0 이다(Release 만 의미 있음).
+- **Vulkan VSync 프레임 놓침**: 창 모드 Vulkan 은 가끔 한 프레임이 12 ~ 24 ms 였고 DXGI 는 한 주기 이하였다(이미지가 한 주기 늦게 돌아오거나 합성기 경로에서 펜스가 13 ms 뒤에 신호됨). 평소 `vkAcquireNextImageKHR` 대기 약 5.2 ms.
 
 ### 빌드 속도
 
-- **빌드 시간 기준선은 `Scripts/dev/RunBuildBaseline.py`** — 풀 빌드(별도 폴더) · 헤더 하나 수정 · `.cpp` 하나 수정 · 워크트리 콜드(구성 + 빌드)를 각 3 회 측정해서 중앙값 표를 내고 머리에 PC 이름 · CPU 를 적는다. 다른 빌드가 돌면 멈춘다.
-  헤더별 누적 파싱 시간 상위는 `Scripts/lint/report/RunIncludeCost.py --preset Ninja-Debug --jobs 8`(전 TU `-ftime-trace`, PCH 없이 — 다른 빌드와 겹치면 순위만 믿는다)다. 테스트 TU 는 코드젠 산출물이 있어야 하므로 `--target all AllTests` 로 지은 뒤 돌린다.
-  표는 같은 PC 의 전후만 견준다. 측정하는 동안은 빌드 슬롯을 독점으로 잡아(`py -3 -m Scripts shared-lock acquire build --owner <이름>`, 공유 슬롯 보유자가 모두 놓을 때까지 기다린다) 다른 에이전트의 빌드를 막는다. 남은 단계는 [빌드 속도 계획](plans/BuildSpeed.md)에 있다.
-  `cmake --preset` · `--clean-first` 는 공유 vcpkg 설치 폴더를 다시 깔 수 있으니 `py -3 -m Scripts shared-lock acquire vcpkg` 를 쥐고 측정한다(다른 쪽이 설치 중이면 헤더가 사라져 빌드가 진다).
-- **기준선**(PC `SW` · Ryzen 7 6800H 논리 코어 16, `Ninja-Debug`, 타깃 `all`, 테스트 제외, 3 회 중앙값): 풀 빌드 약 131 s, 헤더 하나(`Core/Container/vector.h`) 수정 약 132 s(Core 기본 헤더 하나가 사실상 전 TU 를 다시 컴파일한다), `.cpp` 하나 수정 약 7 s, 워크트리 콜드 약 143 s.
-  최근 이음매 기준선(Debug · Lean 구성의 콜드 풀 빌드와 파일별 증분)은 [ArchitectureSeams](plans/ArchitectureSeams.md) 2 절에 있다. 일반 컴파일이 CPU 시간의 약 85 % 이고 헤더 파싱이 컴파일 시간의 절반을 넘는다(`-ftime-trace` 의 `Total Source`).
-- **헤더 다이어트의 효과는 PCH 를 끈 구성에서 크다.** `EngineMinimal.h` 의 OS 헤더와 `StdHeaders.h` 의 스트림 · `<random>` · `<regex>` 등을 빼면 PCH 없는 TU 하나가 각각 약 −19 % 줄지만 PCH 를 켠 개발 풀 빌드는 −3 % 뿐이다.
-  헤더 시간의 바닥은 UCRT `wchar.h` → clang `intrin.h` → `immintrin.h` 로 TU 하나에 약 0.25 s 다(엔진이 피할 수 없다). PCH 없이 재는 법: `compile_commands.json` 의 명령에서 `/Yu` · `/Fp` · PCH 강제 포함 · `/Fo` 를 정규식으로 빼고 `-fsyntax-only -include Source/Engine/pch.h` 를 붙여 5 회 돌린다(문자열을 다시 쪼개면 `-DSW_LOG_TAG=\"…\"` 의 따옴표가 깨진다).
-  `-ftime-trace` 는 구문 검사만으로는 파일을 쓰지 않으므로 `/Fo<임시>.obj` 로 실제 컴파일하고, `/clang:-ftime-trace` 는 `-c --` 앞에 넣는다(뒤에 두면 파일 이름으로 읽힌다).
-- **킷 PCH 공유(`sw_useSharedPch`)** 는 풀 빌드를 약 −15 % 줄인다. `REUSE_PRECOMPILE_HEADERS_FROM` 속성이 무시되면 킷이 PCH 없이 지어져 잘못 빠르게 읽힌다 — 같은 폴더에서 `--clean-first` 교차 3 쌍으로 잰다.
-  에이전트 빌드가 겹친 측정은 편차가 ±40 s 라 쓸 수 없다(`busy_before` 로 겹침을 먼저 센다). `.ninja_log` 는 `--clean-first` 뒤에도 이전 실행 항목이 남아 CPU 합을 그대로 더하면 틀린다.
-- **임포트 라이브러리는 바뀔 때만 갱신한다.** `Engine.lib` 이 바이트까지 같은데 수정 시각만 바뀌면 킷 · 게임 · 에디터 DLL 84 개가 다시 링크된다(고친 뒤 `.cpp` 하나 증분이 13.9 s → 약 5 s).
-- **PCH 에서 자주 바뀌는 헤더(`Component.h` · `GameObject.h` · `Scene.h` · `RHITypes.h` 등)는 뺀다** — 헤더를 건드린 증분 빌드가 131 s → 14~77 s 로 줄고 풀 빌드는 약 +15 %다. 큰 팬아웃이 남은 것은 Reflection 헤더(TU 1,150 ~ 1,250 개)다.
-- **Jolt 백엔드 TU**(`Physics/Jolt/*.cpp`)는 자기 PCH(`EngineJolt_objects`)로 한 파일 수정 뒤 다시 짓는 시간이 1.9 ~ 2.5 s → 0.3 ~ 0.8 s 다.
+- **빌드 시간 기준선은 `Scripts/dev/RunBuildBaseline.py`** — 풀 빌드(별도 폴더) · 헤더 하나 수정 · `.cpp` 하나 수정 · 워크트리 콜드를 각 3 회 재 중앙값 표를 낸다. 헤더별 누적 파싱 시간 상위는 `Scripts/lint/report/RunIncludeCost.py --preset Ninja-Debug --jobs 8`(PCH 없이 — 다른 빌드와 겹치면 순위만 믿는다)이다.
+  표는 같은 PC 의 전후만 견준다. 측정하는 동안은 빌드 슬롯을 독점으로 잡는다(`py -3 -m Scripts shared-lock acquire build --owner <이름>`). `cmake --preset` · `--clean-first` 는 공유 vcpkg 설치 폴더를 다시 깔 수 있으니 `shared-lock acquire vcpkg` 도 쥔다. 남은 단계는 [빌드 속도 계획](plans/BuildSpeed.md), 최근 기준선은 [ArchitectureSeams](plans/ArchitectureSeams.md) 2 절.
+- **대표값**(Ryzen 7 6800H 16 스레드, `Ninja-Debug` `all`): 풀 빌드 약 131 s, Core 기본 헤더 하나 수정 약 132 s(사실상 전 TU), `.cpp` 하나 약 7 s. 헤더 파싱이 컴파일 시간의 절반을 넘는다(`-ftime-trace` 의 `Total Source`).
+- **PCH 없이 헤더 비용 재는 법**: `compile_commands.json` 의 명령에서 `/Yu` · `/Fp` · PCH 강제 포함 · `/Fo` 를 정규식으로 빼고 `-fsyntax-only -include Source/Engine/pch.h` 를 붙여 5 회 돈다(문자열을 다시 쪼개면 `-DSW_LOG_TAG=\"…\"` 따옴표가 깨진다). `-ftime-trace` 는 구문 검사만으로는 파일을 쓰지 않으니 `/Fo<임시>.obj` 로 실제 컴파일하고 `/clang:-ftime-trace` 는 `-c --` 앞에 넣는다.
+- **함정**: 킷 PCH 공유(`sw_useSharedPch`)는 `REUSE_PRECOMPILE_HEADERS_FROM` 이 무시되면 킷이 PCH 없이 지어져 잘못 빠르게 읽힌다(같은 폴더에서 `--clean-first` 교차 3 쌍으로 잰다). 에이전트 빌드가 겹친 측정은 편차가 ±40 s 라 쓸 수 없고(`busy_before` 로 겹침을 센다) `.ninja_log` 는 `--clean-first` 뒤에도 이전 항목이 남아 CPU 합을 그대로 더하면 틀린다.
+  임포트 라이브러리는 바뀔 때만 갱신한다(`Engine.lib` 이 바이트 같은데 시각만 바뀌면 DLL 84 개가 다시 링크된다). PCH 에서 자주 바뀌는 헤더(`Component.h` · `GameObject.h` · `Scene.h` · `RHITypes.h` 등)는 뺀다 — 그 헤더를 건드린 증분이 131 s → 14~77 s 가 된다.
 
 ## 2-1. 부하 검증
 
-부하 시나리오 × 하드웨어 프로필을 Release 로 여러 번 돌려 p50 · p99 · max 를 **예산**(제품 목표, `Test/Load/Budgets.json`)과 **기준선**(이 기계의 회귀, `Test/Load/Baselines.json`)에 견주고,
-진 조합은 어디(CPU 게임 스레드 · 렌더 스레드 · GPU · 메모리 · IO · 서버)가 예산을 깼는지 적습니다. 결정과 근거는 [결정 기록](09_Decisions.md) 5-2 끝입니다.
+부하 시나리오 × 하드웨어 프로필을 Release 로 여러 번 돌려 p50 · p99 · max 를 **예산**(제품 목표, `Test/Load/Budgets.json`)과 **기준선**(이 기계의 회귀, `Test/Load/Baselines.json` — 현재 값의 정본)에 견주고, 진 조합은 어디(CPU 게임 스레드 · 렌더 스레드 · GPU · 메모리 · IO · 서버)가 예산을 깼는지 적습니다. 결정과 근거는 [결정 기록](09_Decisions.md) 5-2 끝입니다.
 
 ```powershell
 py -3 -m Scripts load list                                       # 시나리오 · 프로필 · 묶음(Test/Load/Suites.json)
@@ -248,172 +145,89 @@ py -3 -m Scripts load trend renderbench --metric GT.Frame.p99_us # <빌드>/Load
 ctest --test-dir build/Ninja-Release -L load                     # 부하 스위트(벤치 · 클러스터) — 시간 예산은 Release 에서만 판정
 ```
 
-- **시나리오.** 자동화 시나리오에 `<Load clients rampUpSeconds durationSeconds network meshes movers/>` 한 줄을 더한 것이 부하 시나리오입니다(`Resource/**/automation/load/` — `AppScenarioTest` 가 줍지 않는 폴더).
-  엔진이 시작 프레임에 측정 창을 열고, 창이 닫히면 보고와 함께 끝납니다(`<Pass/>` 를 두지 않는다). 서버 쪽은 `Test/Load/Scenarios/*.load.xml` 의 `<LoadScenario driver="loadbot|cluster">` 가 같은 `<Load>` 를 씁니다 —
-  `loadbot` 은 OnlineLoadBot(`--local-server`), `cluster` 는 EngineTest 의 부하 스위트 `NetSimLoadTest`(루프백 클러스터, 끝에 모든 클라이언트의 상태 해시가 서버와 같은지)입니다.
-- **하드웨어 프로필**(`Test/Load/Profiles.json`): CPU 코어 · 메모리는 Job Object, 엔진 워커 수는 친화도를 따르고(로그 `Initialized with N worker threads`), VRAM · 디스크 · 회선 · 해상도 · 품질은 스위치입니다.
-  소프트웨어 제한이라 결과에 `emulated` 가 붙고(표의 `*`), 기준선 키가 실제 기기 측정(`Native`)과 갈립니다. 클럭 · 캐시 · GPU 성능은 흉내 내지 않습니다 — GPU 숫자는 해상도 · 품질 차이만 반영하고, 코어가 적은 프로필의 프레임이 오히려 짧을 수 있습니다(경합이 준다).
-- **지표.** 프로파일 표(`GT.Frame` · `RT.Frame` · `GPU.Frame` · `RT.BeginFrame` · `GT.Packet.submit` …의 p50 · p99 · max), 히치 꼬리(`[Profile] hitch` — 최악 프레임 다섯과 16 · 33 · 100 ms 를 넘은 프레임 수),
-  `alloc.per_frame`, `gpu_memory_mb`, `startup_ms`, 밖에서 뜬 `private_mb.max` · `handles.max` 와 소크 기울기(`private_mb_per_minute` · `handles_per_minute`, 워밍업 1/4 제외 최소제곱), 봇의 동작별 p99 · `error_percent`, 클러스터의 `tick_p99_us` · `converged`.
-- **판정.** 여러 판(기본 3)의 가운데 값으로만 견주고 최소..최대를 같이 적습니다. 기준선은 p50 15 % · p99 35 % + 바닥(150 us · 32 MB)을 넘으면 회귀이고, max · 히치 수는 기준선과 견주지 않고 예산으로만 봅니다.
-  Release 가 아니면 숫자만 적고 판정하지 않습니다(`--allow-debug` 로 덮는다). 판마다의 출력 전체는 `<빌드>/LoadResults/logs/`, 결과는 `<빌드>/LoadResults/<시각>.json` 입니다.
-- **병목 갈래**는 같은 판의 하위 구간 비율로 가릅니다 — `RT.BeginFrame` 이 `RT.Frame` 의 절반을 넘으면 GPU(펜스 대기), `GT.Packet.submit` 이 `GT.Frame` 의 절반을 넘으면 게임 스레드가 렌더 스레드를 기다린 것, 아니면 가장 무거운 `GT.*` 구간을 붙입니다.
-- **측정하기 전에** 다른 빌드 · GPU 실행이 없는지 봅니다 — `py -3 -m Scripts shared-lock acquire gpu --owner <이름>`(독점 — 공유 보유자가 다 놓을 때까지 기다린다)을 쥐고 재며, 다른 에이전트의 빌드가 돌면 기다립니다. VSync 는 기본으로 꺼져 있습니다(`display.vsync`).
-- **디스크 흉내는 장치 하나 · 큐 깊이 1 입니다**(고해상도 마감 대기 — `sleep_for` 는 Windows 타이머 주기 15.6 ms 로 반올림돼 1 ms 와 8 ms 를 구분하지 못한다). 기동은 대략 `Native 기동 + 열기 수 × 지연` 이고,
-  열기 수는 결과의 `startup_file_opens`(로그 `startup … ms, … file opens`)입니다. 어디서 읽는지는 `--app-arg=-gv_ioLogReads=1` 로 돌려 판 로그의 `[IO] open <경로> bytes=… thread=…` 를 봅니다(측정 창 안의 줄이 히치 후보).
-- **`--app-arg` 로 진단 스위치를 App 에 더 넘깁니다** — `-gv_ioLogReads=1`, `-gv_profileAllocSites=12`(Release 로도 콜스택이 나온다). 진단을 켠 판은 기준선을 남기지(`--record`) 않습니다.
-- **aiskirmish 의 `alloc.per_frame` 은 워커 수가 아니라 측정 창의 프레임 수를 따라갑니다** — 고정 델타라 프레임이 많을수록 게임 시간이 길어 유닛이 늘어난다. 할당 자리를 견줄 때는 `wall.frames` 도 같이 봅니다.
-- **aiskirmish 는 StarSkirmish 가 든 빌드가 필요합니다** — Release 프리셋은 활성 게임만 지으므로 `cmake --preset Ninja-Release -DSW_GAMES=StarSkirmish` 로 구성합니다. 없으면 그 조합은 건너뜀(77)입니다.
-  OnlineLoadBot 은 Windows 에서 키트 DLL 사본과 함께 `ToolBin` 에 있고 작업 폴더는 `Bin` 입니다.
-- **기준선의 정본은 `Test/Load/Baselines.json`** 입니다. 부하 스위트의 시간 예산(`SW_TEST_TIME_BUDGET`)은 Release 세 번 중 최대 케이스 시간의 네 배입니다.
-- **CI 야간 잡**(`.github/workflows/load.yml`, 리눅스 `CI-Release`)이 `ctest -L load` 와 묶음 `nightly`(봇 · 클러스터 — GPU 가 없어 App 드라이버 제외)를 돌리고 진 조합을 주석으로 올립니다(`CiFailureReport.py load`). 러너는 측정 기계가 아니므로 기준선은 알림뿐입니다.
-  봇이 보고서를 남기지 못하면 그 판의 실패로 기록됩니다. "the load run did not finish" 로 지면 주석의 `exit` 와 오류 줄로 봇이 왜 끝났는지 읽습니다.
+- **시나리오.** 자동화 시나리오에 `<Load clients rampUpSeconds durationSeconds network meshes movers/>` 한 줄을 더한 것이다(`Resource/**/automation/load/` — `AppScenarioTest` 가 줍지 않는 폴더). 엔진이 시작 프레임에 측정 창을 열고 창이 닫히면 보고와 함께 끝난다(`<Pass/>` 를 두지 않는다). 서버 쪽은 `Test/Load/Scenarios/*.load.xml` 의 `<LoadScenario driver="loadbot|cluster">` 가 같은 `<Load>` 를 쓴다 — `loadbot` 은 OnlineLoadBot(`--local-server`), `cluster` 는 `NetSimLoadTest`(루프백 클러스터, 끝에 모든 클라이언트의 상태 해시가 서버와 같은지).
+- **하드웨어 프로필**(`Test/Load/Profiles.json`): CPU 코어 · 메모리는 Job Object, 엔진 워커 수는 친화도를 따르고(로그 `Initialized with N worker threads`), VRAM · 디스크 · 회선 · 해상도 · 품질은 스위치다. 소프트웨어 제한이라 결과에 `emulated`(표의 `*`)가 붙고 기준선 키가 실제 기기(`Native`)와 갈린다. 클럭 · 캐시 · GPU 성능은 흉내 내지 않는다(코어가 적은 프로필의 프레임이 오히려 짧을 수 있다).
+- **지표.** 프로파일 표(`GT.Frame` · `RT.Frame` · `GPU.Frame` · `RT.BeginFrame` · `GT.Packet.submit` …의 p50 · p99 · max), 히치 꼬리(`[Profile] hitch` — 최악 프레임 다섯과 16 · 33 · 100 ms 를 넘은 수), `alloc.per_frame`, `gpu_memory_mb`, `startup_ms`, `private_mb.max` · `handles.max` 와 소크 기울기, 봇의 동작별 p99 · `error_percent`, 클러스터의 `tick_p99_us` · `converged`.
+- **판정.** 여러 판(기본 3)의 가운데 값으로만 견주고 최소..최대를 같이 적는다. 기준선은 p50 15 % · p99 35 % + 바닥(150 us · 32 MB)을 넘으면 회귀이고, max · 히치 수는 예산으로만 본다. Release 가 아니면 숫자만 적고 판정하지 않는다(`--allow-debug`). 판마다의 출력은 `<빌드>/LoadResults/logs/`, 결과는 `<빌드>/LoadResults/<시각>.json`.
+- **병목 갈래**는 하위 구간 비율로 가른다 — `RT.BeginFrame` 이 `RT.Frame` 의 절반을 넘으면 GPU(펜스 대기), `GT.Packet.submit` 이 `GT.Frame` 의 절반을 넘으면 게임 스레드가 렌더 스레드를 기다린 것, 아니면 가장 무거운 `GT.*` 구간.
+- **측정하기 전에** `py -3 -m Scripts shared-lock acquire gpu --owner <이름>`(독점)을 쥐고 다른 빌드 · GPU 실행이 없는지 본다. VSync 는 기본으로 꺼져 있다(`display.vsync`).
+- **디스크 흉내는 장치 하나 · 큐 깊이 1 이다**(고해상도 마감 대기 — `sleep_for` 는 Windows 타이머 주기 15.6 ms 로 반올림돼 쓸 수 없다). 기동은 대략 `Native 기동 + 열기 수 × 지연` 이고 열기 수는 결과의 `startup_file_opens` 다. 어디서 읽는지는 `--app-arg=-gv_ioLogReads=1` 로 돌려 판 로그의 `[IO] open <경로> bytes=… thread=…` 를 본다(`--app-arg` 는 `-gv_profileAllocSites=12` 같은 진단 스위치도 넘기며, 진단을 켠 판은 `--record` 하지 않는다).
+- **aiskirmish 의 `alloc.per_frame` 은 측정 창의 프레임 수를 따라간다**(고정 델타라 프레임이 많을수록 유닛이 늘어난다) — 할당 자리를 견줄 때는 `wall.frames` 도 본다. aiskirmish 는 StarSkirmish 가 든 빌드가 필요하다(`cmake --preset Ninja-Release -DSW_GAMES=StarSkirmish`, 없으면 건너뜀 77). OnlineLoadBot 은 Windows 에서 키트 DLL 사본과 함께 `ToolBin` 에 있고 작업 폴더는 `Bin` 이다.
+- **CI 야간 잡**(`.github/workflows/load.yml`)이 `ctest -L load` 와 묶음 `nightly`(봇 · 클러스터)를 돌리고 진 조합을 주석으로 올린다(`CiFailureReport.py load`). 러너는 측정 기계가 아니라 기준선은 알림뿐이다. "the load run did not finish" 로 지면 주석의 `exit` 와 오류 줄로 봇이 왜 끝났는지 읽는다. 부하 스위트의 시간 예산(`SW_TEST_TIME_BUDGET`)은 Release 세 번 중 최대 케이스 시간의 네 배다.
 
 ## 3. 검증할 때의 함정
 
-테스트를 쓸 때의 규칙(스위트 이름, 도우미, 단언, 샤드, 골든 기준, EditorTest · CoreTest 의 제약)은 [Test README](../Test/README.md) "단언과 도우미" 와 "함정과 주의" 절이 원본입니다.
-이 절은 변경을 확인하고 결함을 좁힐 때의 함정만 다룹니다.
+테스트를 쓸 때의 규칙은 [Test README](../Test/README.md) "단언과 도우미" · "함정과 주의" 절이 원본이다. 이 절은 변경을 확인하고 결함을 좁힐 때의 함정만 다룬다.
 
-- **`-gv_fixedFrameDelta=<초>` 는 프레임마다 그 시간만 흘린다**(벽시계 무시) — 시나리오 · 픽셀 비교 · 벤치 재현이 기계와 상관없이 같은 게임 시간을 본다.
-  App 의 종료 코드는 `Engine::requestQuit( code )` 가 정한다(0 성공, 시나리오 10 실패 · 11 읽기 오류 · 12 시간 초과 · 13 건너뜀).
-- **시나리오를 직접 `App.exe` 로 조립하지 말고 `py -3 -m Scripts scenario <이름 조각 또는 경로> [--backend dx12|dx11|vulkan|gl|all] [--config Release|Shipping|Debug] [--app <App.exe>] [--screenshot-dir <폴더>]` 를 쓴다.** 시나리오의 `<Launch>`(`-gv_firstScene` 같은 기동 변수)와 게임 · `-unattended` · `-scenario-report` 를 그대로 붙이고(손으로 조립하다 `-gv_firstScene` 을 빠뜨리면 읽기 오류 11), 백엔드마다 GPU 칸을 잡아 한 판씩 돌려 종료 코드를 뜻으로 풀고 `failures[]` · `unconfirmed[]` · `unhandledLogs[]` 를 한 표로 보인다. 하나라도 통과가 아니면 종료 코드 1, 이름이 모호하거나 선언을 인자로 풀 수 없으면(부하 `<Load>` · 배포 빌드의 개발 변수) 2 이다. `--dry-run` 은 조립한 명령만 찍고 `--app-arg=<인자>`(반복 가능)는 `-gv_deferred=1` · `-EnableEditor` 같은 변형 인자를 맨 뒤에 더하며 조립이 정하는 인자와 겹치면 오류다. 인자 철자의 정본은 `Source/Core/Predefined/ArgumentList.xxx`, 산출물 · 에디터 상태 폴더 이름은 `Source/Engine/Automation/AutomationScenario.h` 상수다.
-- **검증 중 본 화면이 어느 실행인지는 창 제목과 `timeline.log` 로 읽는다.** 시나리오 · 벤치 실행 중 제목은 `<게임 제목> — <시나리오> · <백엔드> · step <번호> <단계> · f<프레임>`(벤치는 `bench <gv_bench 인자> · <백엔드> · f<프레임>`, 에디터는 `<게임> — <씬>[*] — SW Editor` 앞부분, 제목은 `AutomationRunTitleTracker` 한 곳만 건다)이고 로그에 `[Scenario] <이름> step <번호> <단계> frame <F>` · `finished <결과> frames <N>` 이 같은 정보를 남긴다. 검증 폴더의 `timeline.log`(`HH:MM:SS 시작|끝|앱시작|앱끝 <항목 id> …`, 앱 줄에 pid · 게임 · 시나리오 · 백엔드 · `-gv_*`)에서 시각에 맞춰 본다(단독 실행은 `build/timeline/<시각>.log`, 시작 칸이 `—(안 돎)` 이면 건너뜀 · 막힘).
-- **`AppScenarioTest` 는 시나리오 × 백엔드마다 독립 케이스 `AppScenarioTest.<시나리오>.<백엔드>`(백엔드 `dx11` · `dx12` · `vk` · `gl`, 배포본 `default`)다.** 실행 시작에 폴더를 훑어 만들므로(`SW_TEST_CASE_GENERATOR`) 파일을 두면 케이스가 생기고 목록을 적지 않는다. 한 시나리오는 `--test_filter=AppScenarioTest.vfxgpulights.*`, 한 백엔드는 `--test_filter=AppScenarioTest.*.gl` 이고 하나가 져도 나머지는 돈다. 실패 메시지에는 시나리오 · 백엔드 · 종료 코드와 뜻(10 단언 실패 · 15 처리하지 않은 Warning/Error 줄 · 12 시간 초과 …)과 `failures[]` · `unhandledLogs[]` 줄이 든다. 같은 이름의 시나리오가 둘이면 폴더까지 넣은 이름(`game_empty_automation_foo`)을 쓴다. 같은 빌드가 지은 게임 팩(`Bin/Games/<게임>/`)의 시나리오는 `-game=<게임>` 으로 도는 `AppScenarioTest.<게임>.<시나리오>.<백엔드>` 다(Shipping 에는 없고 빌드의 활성 게임은 뺀다 — 활성 게임 케이스가 이미 같은 판을 돈다). `<Record>` 를 가진 시나리오의 백엔드끼리 기록 비교는 `AppScenarioTest.RecordsMatchAcrossBackends` 가 한 번 더 돈다. 백엔드 루프가 있던 `RecordedPlayReplaysOnEveryBackend` · `ChainedScenariosShareOneProcess` · `AppSmokeTest.*` · `BenchFrameMatchesGoldenImage` 도 `<케이스>.<백엔드>` 로 갈렸고(`SW_TEST_CASE_PER_PARAMETER`) 프로세스를 띄우거나 비싼 항목 루프(`ServerBootTest.EveryBuiltGameStartsAsADedicatedServer.<게임>` · `LoaderFuzzTest.EveryLoaderSurvivesMutatedInput.<대상>` · `CrashReportTest.EveryCrashKindLeavesAReport.<방식>`)와 GPU 디바이스 케이스(`RHIDeviceTest` · `RenderPassGPUTest` 110개, `<케이스>.<dx11|dx12|vk|gl>`)도 같은 매크로로 갈렸다. 백엔드끼리 결과를 견주는 케이스(`TransparentOrderMatchesAcrossBackends` · `FrameRendererParityAllBackends` · `CanvasDrawsOnEveryBackend` · `AppUITest.DemoScreenMatchesAcrossBackends` 등)는 목적이 견줌이라 한 케이스로 둔다. 에디터 시나리오(`EditorScenariosPassOn<백엔드>`)는 백엔드당 체인 하나(한 프로세스)이고 실패 메시지의 `chain sub-results:` 가 시나리오마다 결과를 나열한다. 저장소 파일을 훑는 `Every…` 데이터 검사는 한 케이스로 둔다.
-- **시나리오 단계 속성은 앱 없이(nogpu) 먼저 본다** — `AutomationScenarioDataTest.EveryScenarioStepPassesItsValidation` 가 모든 `*.scenario.xml` 의 단계를 등록된 검사 함수(`_pValidate`, `SW_AUTOMATION_STEP_VALIDATOR`)로 훑는다. 모듈이 안 올라온 탐침 · 개발 명령 · `Variable` 의 이름은 이름만 받아 주는 대역으로 올리므로 **이름이 있는지와 탐침의 `target` · `key` 요구는 린트 `CheckNameReferences` 가 본다**. 테스트가 못 보는 것은 `[ScenarioData] not seen …` 로그에 이유별로 남고(통과로 세지 않는다) 준비 함수(`_pPrepare`)에서만 보는 것(`Action` 의 입력 맵 액션 이름, 누를 수 없는 슬롯, `EditorKey` 의 ImGui 키 이름, `EditorExpectObject` 의 컴포넌트 타입 이름)은 GPU 검증의 시작 프레임이 본다.
-- **실기동 확인은 시나리오로 남긴다** — `Resource/<영역>/automation/*.scenario.xml` 을 두면 그 게임 프리셋의 `ctest -L hostgpu`(`AppScenarioTest`)가 백엔드마다 돈다.
-  손 확인 목록을 후보 절에 적지 말고 시나리오를 쓴다 — 못 쓰는 것만 이유와 함께 손 확인으로. 값을 보려면 `Expect probe`(게임 .cpp 의 `SW_AUTOMATION_PROBE` 한 줄), 그림은 `Screenshot` + `ExpectImage`(지표 값은 보고 JSON 에 늘 적힌다).
-  "다르다 · 같다" 는 기준 캡처를 같은 시나리오에서 찍어 `differingFraction`(화소 비율)으로 쓴다 — `differentFrom`(평균 차)은 `near` 만 받는다.
-  문서를 여는 시나리오는 `WaitUntil` 이 기본 문서와 **구별되는** 값을 기다려야 한다 — 기본 문서와 같은 값을 기다리면 파일이 뒤늦게 열려 클릭이 어긋난다.
-  키 `Tap` 은 사람의 누름처럼 여러 프레임(`hold="6"`)을 누른다 — 한 프레임짜리 누름은 UI 층이 켜지기 전에 떼어져, 누른 키를 같은 프레임 뒤에 읽는 결함을 가린다.
-- **게임 로직은 기반 탐침으로 단언하고 결정성은 백엔드끼리 비교한다** — 입력은 액션 이름(`Action` · `ActionAxis`), NPC 일정은 `AdvanceGameTime` + `Schedule.*`, AI 는 `AI.State` + `ExpectVisited`,
-  "N 초 안에" 는 `WaitUntil timeoutSeconds`. 시나리오 끝에 `<Record probe="Scene.TransformHash"/>` 같은 기록을 두면 `AppScenarioTest` 가 네 백엔드의 `records` 를 비교해 다른 줄을 로그로 낸다.
-  녹화(`-scenario-record` · `-scenario-record-probes`)를 다시 돌려 같은 검사점이 나오는지는 `AppScenarioTest.RecordedPlayReplaysOnEveryBackend` 가 본다. 형식은 `Source/Engine/Automation/README.md`.
-  시나리오는 선언하지 않은 `[Warning]` · `[Error]` 한 줄 · 빠진 현지화 키 하나로 진다(로그 게이트). 일부러 내는 줄은 그 시나리오에 `<ExpectLog id="…">`(id 없는 줄만 `contains="…"`; 린트 `CheckExpectLogPhrases` 가 id · 문구가 소스에 있는지 본다), 고칠 수 없는 줄만 `Resource/engine/automation/allowedlogs.json` 에 이유와 함께 둔다.
-  게이트에 걸린 줄은 실패 메시지의 `unexpected log:` 줄과 `Saved/Automation/<이름>_<백엔드>.log` 에 있다.
-- **에디터 시나리오 백엔드 사례는 한 체크아웃에서 하나씩 돌린다** — `AppScenarioTest.EditorScenariosPassOn<백엔드>` 는 리소스 트리(`assetmanage/probe.material` 이름 바꾸기 · 새 머티리얼 · `editor/automationtemp/`)를 고친다.
-  같은 워크트리에서 두 백엔드를 동시에 돌리면 서로의 파일을 지우고 남겨 assetmanage · chainreloadgame(고아 에셋 경고) · flowterrain · flowimport 가 함께 진다.
-  GPU 공유 칸의 병렬은 워크트리가 다를 때만 쓰고, 진 뒤에는 `git status` 로 리소스 트리를 되돌린다.
-- **결과를 로그로 늦게 내는 백그라운드 작업은 시나리오 시계를 잡는다** — 저장 검증(`EditorAssetValidation`, 파이썬 몇 초)은 저장 뒤 파일을 늦게 읽는다. 시계가 앞서 가면 시나리오의 뒤 단계(임시 폴더 지우기)가 바뀐 트리를 읽히고,
-  그 결과(`[prefab-guids] … neither is known`)가 다음 시나리오 창에 떨어져 로그 게이트로 진다. 그런 작업은 `SW_AUTOMATION_CLOCK_HOLDER` 로 등록한다 —
-  참인 동안 실행기가 시계를 멈추고 다음 시나리오를 시작하지 않는다(`[Scenario] <이름> held the clock for N frame(s)` 줄).
-  답을 내는 백그라운드 색인도 같다 — 콘텐츠 브라우저의 참조 역색인은 보이는 패널의 색인이 마지막 `Resource/` 변경을 따라오기 전이면 `ContentBrowserReferenceIndex` 가 시계를 잡고,
-  탐침 `Editor.ReferenceIndexReady` · `Editor.ReferenceCount` 와 이름 바꾸기는 따라온 색인만 쓴다("한 번 만들었다" 를 준비로 보면 사본 복사 전에 시작한 스캔이 답해 `assetmanage` 가 졌다).
-  `materialpreview` 가 지면 탐침 `Editor.MaterialDocumentIsProbeAsset` · `Editor.MaterialSwitchPending` 의 값으로 문서가 안 바뀐 것인지 계산이 안 따라온 것인지 가른다.
+- **`-gv_fixedFrameDelta=<초>` 는 프레임마다 그 시간만 흘린다**(벽시계 무시) — 시나리오 · 픽셀 비교 · 벤치 재현이 기계와 상관없이 같은 게임 시간을 본다. 종료 코드는 `Engine::requestQuit( code )` 가 정한다(0 성공, 시나리오 10 실패 · 11 읽기 오류 · 12 시간 초과 · 13 건너뜀).
+- **시나리오는 `App.exe` 로 직접 조립하지 말고 `py -3 -m Scripts scenario <이름 조각 또는 경로> [--backend dx12|dx11|vulkan|gl|all] [--config Release|Shipping|Debug] [--app <App.exe>] [--screenshot-dir <폴더>]` 로 돌린다.** `<Launch>` 의 기동 변수(`-gv_firstScene` 등)를 그대로 붙이고(손으로 조립하다 빠뜨리면 읽기 오류 11), 백엔드마다 GPU 칸을 잡아 한 판씩 돌려 종료 코드를 뜻으로 풀고 `failures[]` · `unconfirmed[]` · `unhandledLogs[]` 를 표로 보인다. 하나라도 통과가 아니면 종료 코드 1, 이름이 모호하거나 선언을 인자로 풀 수 없으면(`<Load>` · 배포 빌드의 개발 변수) 2. `--dry-run` 은 조립한 명령만 찍고 `--app-arg=<인자>` 는 변형 인자를 맨 뒤에 더한다(조립이 정하는 인자와 겹치면 오류).
+- **검증 중 본 화면이 어느 실행인지는 창 제목과 `timeline.log` 로 읽는다.** 제목은 `<게임 제목> — <시나리오> · <백엔드> · step <번호> <단계> · f<프레임>`(벤치는 `bench <인자> · <백엔드> · f<프레임>`)이고 로그의 `[Scenario] <이름> step … frame <F>` 가 같은 정보를 남긴다. 검증 폴더의 `timeline.log`(`HH:MM:SS 시작|끝|앱시작|앱끝 <항목 id> …`; 단독 실행은 `build/timeline/<시각>.log`, 시작 칸이 `—(안 돎)` 이면 건너뜀 · 막힘)에서 시각에 맞춰 본다.
+- **`AppScenarioTest` 는 시나리오 × 백엔드마다 독립 케이스 `AppScenarioTest.<시나리오>.<백엔드>`(`dx11` · `dx12` · `vk` · `gl`, 배포본 `default`)다.** 폴더를 훑어 만들므로 파일을 두면 케이스가 생긴다(`SW_TEST_CASE_GENERATOR`). 한 시나리오는 `--test_filter=AppScenarioTest.vfxgpulights.*`, 한 백엔드는 `--test_filter=AppScenarioTest.*.gl`. 같은 이름의 시나리오가 둘이면 폴더까지 넣은 이름(`game_empty_automation_foo`)을 쓴다. 빌드가 지은 다른 게임 팩의 시나리오는 `AppScenarioTest.<게임>.<시나리오>.<백엔드>`(Shipping 에는 없다). 백엔드끼리 기록 비교는 `AppScenarioTest.RecordsMatchAcrossBackends`, 백엔드 루프가 있던 스모크 · 골든 · GPU 디바이스 케이스도 같은 매크로(`SW_TEST_CASE_PER_PARAMETER`)로 `<케이스>.<백엔드>` 로 갈렸다. 백엔드끼리 결과를 견주는 케이스(`…MatchesAcrossBackends` 등)는 한 케이스다. 에디터 시나리오(`EditorScenariosPassOn<백엔드>`)는 백엔드당 체인 하나이고 실패 메시지의 `chain sub-results:` 가 시나리오마다 결과를 나열한다.
+- **실기동 확인은 시나리오로 남긴다** — `Resource/<영역>/automation/*.scenario.xml` 을 두면 `ctest -L hostgpu`(`AppScenarioTest`)가 백엔드마다 돈다. 손 확인 목록을 후보 절에 적지 말고 시나리오를 쓴다(못 쓰는 것만 이유와 함께 손 확인으로). 값은 `Expect probe`(게임 .cpp 의 `SW_AUTOMATION_PROBE` 한 줄), 그림은 `Screenshot` + `ExpectImage`로 본다.
+  "다르다 · 같다" 는 기준 캡처를 같은 시나리오에서 찍어 `differingFraction`(화소 비율)으로 쓴다 — `differentFrom`(평균 차)은 `near` 만 받는다. 문서를 여는 시나리오는 `WaitUntil` 이 기본 문서와 **구별되는** 값을 기다려야 한다(같은 값이면 파일이 뒤늦게 열려 클릭이 어긋난다). 키 `Tap` 은 사람의 누름처럼 여러 프레임(`hold="6"`)을 눌러야 한다(한 프레임짜리는 UI 층이 켜지기 전에 떼어져 결함을 가린다).
+- **게임 로직은 기반 탐침으로 단언하고 결정성은 백엔드끼리 비교한다** — 입력은 `Action` · `ActionAxis`, NPC 일정은 `AdvanceGameTime` + `Schedule.*`, AI 는 `AI.State` + `ExpectVisited`, "N 초 안에" 는 `WaitUntil timeoutSeconds`. 시나리오 끝에 `<Record probe="Scene.TransformHash"/>` 를 두면 네 백엔드의 `records` 를 비교한다. 녹화(`-scenario-record`)의 재생 일치는 `AppScenarioTest.RecordedPlayReplaysOnEveryBackend`. 형식은 `Source/Engine/Automation/README.md`.
+  일부러 내는 로그 줄은 그 시나리오에 `<ExpectLog id="…">`(id 없는 줄만 `contains="…"`; `CheckExpectLogPhrases` 가 소스와 맞는지 본다), 고칠 수 없는 줄만 `allowedlogs.json` 에 이유와 함께 둔다. 걸린 줄은 실패 메시지의 `unexpected log:` 와 `Saved/Automation/<이름>_<백엔드>.log` 에 있다.
+- **에디터 시나리오 백엔드 사례는 한 체크아웃에서 하나씩 돌린다** — `EditorScenariosPassOn<백엔드>` 는 리소스 트리(`assetmanage/probe.material` · `editor/automationtemp/`)를 고치므로 같은 워크트리에서 두 백엔드를 동시에 돌리면 서로의 파일을 지워 assetmanage · chainreloadgame · flowterrain · flowimport 가 함께 진다. GPU 공유 칸의 병렬은 워크트리가 다를 때만 쓰고, 진 뒤에는 `git status` 로 리소스 트리를 되돌린다.
+- **결과를 로그로 늦게 내는 백그라운드 작업은 시나리오 시계를 잡는다.** 저장 검증(`EditorAssetValidation`)처럼 파일을 늦게 읽는 작업은 시계가 앞서 가면 뒤 단계(임시 폴더 지우기)가 바뀐 트리를 읽혀 그 결과가 다음 시나리오 창에 떨어져 로그 게이트로 진다. `SW_AUTOMATION_CLOCK_HOLDER` 로 등록하면 참인 동안 실행기가 시계를 멈추고 다음 시나리오를 시작하지 않는다(`[Scenario] <이름> held the clock for N frame(s)`). 답을 내는 백그라운드 색인도 같다(콘텐츠 브라우저의 참조 역색인은 `ContentBrowserReferenceIndex` 가 시계를 잡고, 탐침 `Editor.ReferenceIndexReady` · `Editor.ReferenceCount` 와 이름 바꾸기는 따라온 색인만 쓴다).
 - **ThreadSanitizer 는 이 리눅스 환경의 clang 18 에 런타임이 없다** — clang 으로 `-fsanitize=thread` 컴파일하고 링크만 gcc 의 `/usr/lib/x86_64-linux-gnu/libtsan.so.2` 를 직접 붙이면 돈다(`setarch -R` 으로 ASLR 을 끈다). 잠금 · 스레드를 바꾼 뒤 `NetworkThreadTest` 만 이렇게 돌린다.
-- **에디터 확장의 순서는 등록 순서가 아니라 `SW_EDITOR_*` 의 order 키다.** 등록이 빠지거나 순서가 바뀐 것은 `AppSmokeTest.EditorRegistriesKeepTheirOrder`(`-gv_editorRegistryDump=1`, hostgpu)만 잡는다 — 패널 · 메뉴를 고치면 hostgpu 를 돌릴 것.
-- **워크트리와 vcpkg 스탬프:** 스탬프 해시는 트립릿 파일(`cmake/Modules/Toolchain/Vcpkg/*-{windows,linux,osx}.cmake`)의 **바이트**로 계산한다. 작업 사본의
-  줄끝이 체크아웃과 다르면(git 은 같은 파일로 본다) main 과 워크트리가 서로의 스탬프를 "매니페스트 변경" 으로 보고 configure 마다 vcpkg install 이 돈다.
-  워크트리를 만들기 전에 `git diff --quiet` 로 같은지 보고, 다르면 그 파일을 지우고 `git checkout` 으로 다시 받는다.
-- **배포 구성(Shipping · Shipping-Server) 빌드 폴더의 `Bin/Packs` 는 활성 게임(empty) 팩만 굽는다** — 오래 쓴 빌드 폴더에는 예전에 구운 다른 게임 팩이 남아 있어, 다른 게임의 씬 · 프리팹을 읽는 테스트가 그 낡은 팩으로 통과한다. 새 워크트리에서는 진다.
-  그런 케이스는 맨 앞에 `SW_TEST_REQUIRES_FEATURE( SourceResources )` 를 두고, `SW_TEST_SKIP`(환경 건너뜀)보다 **먼저** 둔다 — 환경 건너뜀이 남은 스위트는 "아무것도 검증 안 함" 으로 실패한다.
-  `CheckTestSuites` 규칙 10 이 막는다 — 케이스 본문 · 같은 파일 상수에 `game/<활성이 아닌 실제 팩>/` 리터럴이 있고 선언이 없으면 린트가 거절한다(경로 문자열만 다루는 케이스는 게이트 안 데이터로 예외).
-- **통합 검증에서 에디터를 한 번은 실제로 띄운다** — Release `-EnableEditor` 에디터 시나리오 하나 × 네 백엔드와 Debug 에디터 시나리오 하나(dx12). Shipping `hostgpu` 에는 에디터가 없고 Debug `nogpu` 는 ImGui 렌더러 백엔드를 띄우지 않아,
-  에디터가 기동하자마자 멈추는 결함이 초록 뒤에 숨는다.
-- **Debug App 이 크래시로 끝나면 `Bin/Saved` 에 크래시 묶음이 남고, 다음 `ServerTest` 샤드들이 같은 폴더를 동시에 묶다가 `manifest.json` 을 못 찾는 Error 로 진다**(`ServerBootTest.EveryBuiltGameStartsAsADedicatedServer`). 다시 돌리면 통과한다 — 크래시를 낸 실행 뒤의 첫 실패는 이것부터 의심한다(쓰기 위치 격리는 [HostGpuIsolation](plans/HostGpuIsolation.md)).
-- **렌더 변경은 스크린샷까지 봐야 검증이다.** 로그 · 테스트가 다 초록인데 화면만 찢어진 적이 있다. 정적 씬은 바이트까지 결정적이라 4 백엔드 전후 sha 로 비교한다.
-  4 백엔드 대조는 Debug 로(Shipping 은 `SW_SHIPPING_RHI_BACKEND` 하나만 링크하고 `-vk` 를 거절한다).
-- **픽셀 지표는 튼튼하게.** "특정 색 픽셀 수" 는 클리어 색 · 톤맵에 무너진다 — 모서리 기준 배경 제거 + 평균(R−B) 대소, 또는 "고유 색 ≥ 2". sin(시간) 구동
-  지표는 "달라진 픽셀 수" 로. define 이 GPU 에 닿았는지는 PSO 디스크립터가 아니라 픽셀로 본다. 막히면 PPM 을 덤프한다.
-- **D3D12 디버그 레이어 경고는 Debug DX12 로그의 `D3D12 debug layer (severity S, id N)` 줄이다**(앞 16 개만 적고 나머지는 센다 — `IRHIDevice::getValidationMessageCount`). 렌더 변경 뒤 이 줄이 0 인지 본다.
-  테스트는 그리기 전후의 수를 비교해 단언한다(`CanvasDrawsOnEveryBackend` · `GPUTimestampsMarkUnwrittenSlotsAllBackends`).
-- **`-gv_screenshot` 은 PrintWindow 가 아니다** — PPM 이 원본이다. `-gv_screenshotFrame=N` 으로 프레임을, `-gv_screenshotAttachment=<이름>` 으로 첨부를 고른다.
-  게임 화면은 `-gv_screenshotSettledFrames=N`(로딩 화면 · 페이드 · 에셋 읽기가 끝난 뒤 N 프레임, 120 초 안에 자리 잡지 않으면 오류 14)으로 찍는다 — 로딩 화면 최소 표시와 페이드는 실제 시간이라 빠른 기계에서 고정 프레임이 로딩 화면을 찍는다.
-- **에디터 UI 는 `-gv_screenshotEditor=<경로>.png`**(`-gv_screenshotEditorFrame=N`) 나 시나리오 단계 `<CaptureEditorUI file="….png" maxMagentaFraction="0"/>` 로 찍는다. 주 출력이 아니라 ImGui 패널 · 플로팅 창까지 든 에디터 화면이고, 창 전경 · 가림과 무관하다(원리는 [에디터 UX 기반](plans/EditorUX.md) 6 절).
-  "가끔 튄다" 는 한 장으로 안 잡힌다 — `-gv_screenshotCount=30 -gv_screenshotInterval=2` 로 연속으로 찍어(`_000` … 이 붙는다) 장을 나란히 본다.
-- **"조용한 프레임" 버그는 벤치가 가린다**(회전 큐브라 매 프레임 dirty). 에디터 정지 화면으로 본다: `-EnableEditor -gv_benchMeshes=1 -gv_screenshot -gv_screenshotFrame=60`.
-  그리는 것이 의심스러우면 `-gv_gpuCulling=false` · `-gv_drawMerge=false` · `-gv_vertexPool=false` 으로 경로를 하나씩 뗀다.
-- **백엔드 교체는 시나리오로 재현한다**: `py -3 -m Scripts scenario swapother`(한 번 건너기 — 단계 `SwapBackend`, 시점은 단계의 프레임이 정한다). 투명 큐브가 카나리아다. 텍스처 경로는 `-gv_defaultMaterial=engine/materials/benchtextured.material`.
-  전역 변수는 `GlobalVariableInfo::setValueAsInt` 로 넣는다 — **C++ 대입은 변경 콜백을 부르지 않는다.**
-- **실제 백엔드는 로그 `Initializing RHI with backend: <이름>` 으로 확인한다**(설정값에 덮여 "네 백엔드 확인" 이 DX12 네 번이던 적이 있다). "인자가 적혔는가" 는
-  `CommandLineManager::isArgumentProvided` 로(`getArgument` 는 기본값이 있으면 안 적어도 true).
-- **리사이즈는 창을 실제로 흔들어야 검증된다.** 블로킹을 걷을 때는 그것이 무엇을 가리던지 먼저 찾는다(에디터 모드가 DX12 DEVICE_HUNG 을 가렸다).
-- **레이스 테스트는 "돌았다" 가 아니라 결과를 대조한다**(직렬 1 판 · 병렬 3 판 평균 ±1 %, 검출률 ~7/8). 이 테스트는 hostgpu 라 CI 가 못 돈다 — 병렬 기록을 건드리면
-  로컬 hostgpu 를 여러 번 돌린다. 레이스는 deferred 파이프라인으로 돌려야 드러난다. 겨루는 테스트는 상대가 **돌기 시작한 뒤** 겨루고 "겹친 횟수 ≥ N" 을 단언한다.
-- **변이 검사 함정** — 조건을 지우는 변이는 방향에 따라 우연히 통과한다. 백업을 `Copy-Item` 으로 되돌리면 mtime 이 과거라 ninja 가 안 짓는다(touch). 변이한 코드를 태우는
-  스위트가 어느 실행 파일에 있는지 먼저 본다. "깨끗하게 실패했는가" 까지 본다(부정 단언 메시지는 `SW_EXPECT_FALSE_MSG`). 성공 쪽이 조용한지도 본다. 저장소 밖
-  `mutlib` 은 기준선을 돌리지 않는다 — 테스트가 먼저 통과하는지 확인한다. 변이 뒤에는 전체를 다시 빌드한다(부분 빌드는 모듈 DLL ABI 가 섞인다).
-- **새 테스트만 걸러 돌리고 커밋하지 말 것.** 빌드가 깨진 채 돈 ctest 는 **옛 바이너리**로 통과한다. 빌드가 진 프리셋(DLL 잠김 — `Scripts/setup/AddDefenderExclusions.py`)에서 테스트를 돌리지 말 것.
-- **간헐 실패를 다룰 때** — `ConsoleLogOutput` 은 Error 만 flush 해서 ctest `--output-on-failure` 의 마지막 `[ RUN ]` 은 크래시 위치가 아니다. 같은 명령을 직접 돌려 파일로
-  받는다. 테스트 실행 파일에도 크래시 핸들러가 있다(`Test/TestFramework/main.cpp`). 단독으로 통과하고 스위트에서만 지면 전역 상태 오염부터(VFS 는 `GlobalVfsScope`).
-- **측정은 혼자, 기능 확인은 둘까지.** 빌드 · 스모크 · 벤치 · GPU 스위트를 마구 겹치면 가짜 실패(파일 잠김 · CMake 프로브 레이스 `LNK1107`)와 수치 오염이 난다.
-  결정적 설정으로 기능만 보는 시나리오 · `hostgpu` 는 GPU 공유 잠금(`--shared`, 두 프로세스)으로 백엔드를 나눠 함께 돌려도 되고, 성능 측정 · 부하 기준선 · 장치 제거 실험은 독점으로 혼자 돌린다.
-  단 같은 빌드 폴더(`Bin`)의 에디터 체인 둘을 함께 돌리지 않는다 — 시나리오 산출물(`Saved/Automation/<시나리오>/`)과 리소스를 고치는 시나리오(`assetmanage`)가 겹친다.
-  나눌 때는 빌드 폴더가 다른 둘(워크트리 둘, Debug 와 Shipping)이나 산출물이 겹치지 않는 실행을 짝짓는다.
-  샤드를 동시에 돌려도(`ctest -j3`) 시간 제한이 가짜로 진다 — 의심되면 그 샤드 하나만 다시 돌린다. 백그라운드 셸은 `taskkill /T` 로 트리째 내린다. 창을 만드는 GPU 테스트를 Bash 로 돌리면 타임아웃에 걸린 것처럼 보인다 — PowerShell `Start-Process`.
-- **Shipping 에서만 나는 것** — Info 로그 · `SW_ASSERT` 가 사라지고(반응이 로그 한 줄뿐인 기능은 배포본에서 없는 것과 같다), 리소스는 팩에만 있고 `.hlsl` 원본이 없으며,
-  쿠킹한 바이너리 씬만 읽는다(씬 · 프리팹 테스트는 `SceneDocument::saveBinary` 로 `.bin` 도 쓴다). 풀 블록을 힙으로 반납하는 손상은 Shipping 에서만 터진다 — 풀 자유 목록이
-  LIFO 인 것을 써서 "다음 할당이 같은 주소" 로 검사하면 Debug 에서도 잡힌다.
-- **빌드 출력을 `| head` 로 자르지 말 것** — 파이프가 닫히면 빌드가 중간에 죽고 낡은 바이너리가 남는다. 파일로 받은 뒤 본다.
-- **Windows ASan 이 `stack-overflow` 만 내고 스택을 풀지 못하면** 후보 함수마다 `fopen` · `fflush` · `fclose` 로 호출을 한 줄씩 남기고(줄 수 상한을 둡니다) 되풀이되는 모양을 봅니다.
-- **변경 전후 그림이 다르면 어느 쪽이 맞는지는 네 백엔드의 일치도로 가립니다.** 변경 전 그림이 백엔드끼리 이미 어긋나 있었다면 변경 전은 기준이 아닙니다.
-  네 백엔드가 같은 증상을 내면 공유 호출부를 먼저 보고, 한 백엔드만 다르면 그 백엔드의 산출물과 계약부터 봅니다(한 백엔드만 깨지면 배리어 누락 레이스를 먼저 의심).
-- **여러 번 띄우는 하니스는 프로세스를 이름(`taskkill /IM App.exe`)이 아니라 PID 로 내립니다.** 로그의 `[Error]` 를 세는 실행은 강제 종료(`taskkill /F`)하지 않습니다 — 비동기 로거의 뒷부분이 사라져 "오류 0" 이 거짓이 되므로 `-gv_profileFrames` 로 스스로 끝나게 합니다.
-- **레이스가 의심되면 추론하지 말고 드러나는 구성(`-gv_deferred=1`)으로 Debug 실행해 로그의 `Concurrent … access detected` 건수를 고치기 전후로 셉니다.** "도달 불가" 는 정적 추론이 아니라 진입 횟수 계측으로 확인합니다.
-- **"사용처 0 · 죽은 코드" 판정은 테스트 파일까지 직접 grep 하고, 지우기 직전에 한 번 더 확인합니다.** 무관해 보이는 선행 실패는 `git log -S` 로 코드와 테스트 양쪽의 도입 커밋을 대조해 되돌려 본 뒤에만 "선행 실패" 라고 부릅니다.
-- **렌더 검증 씬에는 메시 2 종과 머티리얼 2 종 이상을 넣습니다.** 하나짜리 씬은 다중 배치 · 바인딩 경로를 지나지 않습니다. GPU 정렬 · 압축 테스트는 물체마다 보이는 면의 색을 다르게 둡니다(같은 색 · 같은 알파의 층은 순서와 무관해 테스트가 헛돕니다).
-- **셰이더 결과가 화면에 안 보이면 이 순서로 좁힙니다.** ① 게이트 값(PSO · CB · UAV 핸들, 인스턴스 수)을 찍는다 ② 셰이더가 무조건 눈에 띄는 일을 하게 한다 ③ CB 멤버를 하나씩 조건으로 건다 ④ 임계값을 쓰기 전에 그 값의 실제 범위를 확인한다.
-  시간에 따라 움직이는 기능은 `-gv_screenshotFrame` 을 다르게 준 두 장으로 먼저 캡처 시점이 다른지 봅니다.
-- **디바이스 손실(Vulkan `VK_ERROR_DEVICE_LOST`, DX12 `DEVICE_HUNG` · `DEVICE_REMOVED`)이 나면 이 세 단계를 먼저 합니다.** Debug 로 돌립니다.
-  ① 결함 주소를 읽습니다. Vulkan 은 `<자리>: VkResult=-4 (VK_ERROR_DEVICE_LOST) — last pass put in the submission order: '<패스>'` 다음 줄의 `fault address 0: read-invalid at 0x…`(VK_EXT_device_fault)를,
-  DX12 는 DRED 의 `PageFault VA=0x…` 와 그 아래 `PageFault VA is inside live/recently freed allocation 'SW Buffer <핸들> …'` 를 봅니다. 실행마다 같은 주소이고 주소가 서술자 힙 · 배열 시작 + 약 4 GB(0xFFFFFFFF × 서술자 크기)이면
-  무효 bindless 번호로 서술자를 읽은 것입니다(`binding.hlsli` 의 `Bindless::textureSlot` 주석과 머리의 "bindless 입문" 절).
-  ② 같은 명령을 `-gv_validateBindlessIndex=2` 로 다시 돌려 `[BindlessIndex]` 줄을 셉니다. `is not a live` 오류가 있으면 그 패스 · 필드가 원인 후보 1 순위이고, 없으면 `= absent` 목록에서 손실 패스의 필드를 고릅니다.
-  ③ 후보 하나만 셰이더에서 바꿔(첨자를 배열 안으로 자르기, 값을 상수로) 3 회 이상 다시 돌려 재현율을 견줍니다. 셰이더는 개발 빌드에서 라이브 컴파일되므로 다시 빌드할 필요가 없고, 끝나면 `App --cook-shaders` 로 다시 굽습니다.
-- **백엔드 교체 · 장치 제거는 `engine/automation/rhiswap/` 시나리오로 본다**(네 백엔드가 모두 있는 PC 에서만 통과해 AppScenarioTest 가 줍지 않는다). `swapbackends`(네 백엔드 건너기),
-  `terrainedits`(저장하지 않은 지형 편집 · 씬 뷰 카메라가 교체를 넘는지), `removedevice`(개발 명령 `rhi.removeDevice` 로 DX12 장치를 제거하거나 Vulkan 장치를 손실 상태로 둔 뒤 프레임 · 종료가 멈추지 않는지 — `-dx12` · `-vk` 로 돌린다).
-  교체 전후 그림을 견줄 때는 한 번 먼저 건너 도킹 배치를 안정시킨다 — imgui.ini 가 노드 크기를 정수로 저장해 첫 리로드에서 씬 뷰 너비가 1 픽셀 바뀔 수 있다.
-- **미리보기 창 시나리오와 검증 레이어.** `editor/previewreopen`(머티리얼 · 프리팹 창을 연 채 8 번 여닫기)과 `editor/previewswap`(창을 연 채 `SwapBackend other` → `start`)는 GPU 오류를 직접 못 보고 로그로 본다.
-  검증 레이어를 켜는 `-gv_` 스위치는 없다 — DX12 디버그 레이어와 Vulkan 검증 레이어는 Debug 빌드에서만 켜지므로 레이어 오류를 보려면 `build/Ninja-Debug` 로 돌린다. 오류는 `[Warning]` · `[Error]` 줄이라 시나리오의 로그 게이트가 지고,
-  손으로 세려면 `Saved/Automation/<이름>_<백엔드>.log` 에서 `D3D12 debug layer` 와 `[Error]` 줄(Vulkan)을 찾는다. 미리보기 타깃의 그림은 `previewswap` 이 저장하는 `Saved/Automation/previewswap_*.ppm` 을 눈으로 본다.
+- **에디터 확장의 순서는 등록 순서가 아니라 `SW_EDITOR_*` 의 order 키다.** 순서가 바뀐 것은 `AppSmokeTest.EditorRegistriesKeepTheirOrder`(hostgpu)만 잡으므로 패널 · 메뉴를 고치면 hostgpu 를 돌린다.
+- **워크트리와 vcpkg 스탬프:** 스탬프 해시는 트립릿 파일(`cmake/Modules/Toolchain/Vcpkg/*-{windows,linux,osx}.cmake`)의 **바이트**로 계산한다. 작업 사본의 줄끝이 체크아웃과 다르면 main 과 워크트리가 서로의 스탬프를 "매니페스트 변경" 으로 보고 configure 마다 vcpkg install 이 돈다. 워크트리를 만들기 전에 `git diff --quiet` 로 같은지 보고, 다르면 그 파일을 지우고 `git checkout` 으로 다시 받는다.
+- **배포 구성(Shipping · Shipping-Server) 빌드 폴더의 `Bin/Packs` 는 활성 게임(empty) 팩만 굽는다** — 오래 쓴 폴더에 남은 다른 게임의 낡은 팩으로 통과하던 테스트가 새 워크트리에서 진다. 그런 케이스는 맨 앞에 `SW_TEST_REQUIRES_FEATURE( SourceResources )` 를 `SW_TEST_SKIP` 보다 **먼저** 둔다(`CheckTestSuites` 규칙 10 이 막는다).
+- **통합 검증에서 에디터를 한 번은 실제로 띄운다** — Release `-EnableEditor` 시나리오 하나 × 네 백엔드와 Debug 시나리오 하나(dx12). Shipping `hostgpu` 에는 에디터가 없고 Debug `nogpu` 는 ImGui 렌더러 백엔드를 띄우지 않아 기동하자마자 멈추는 결함이 초록 뒤에 숨는다.
+- **Debug App 이 크래시로 끝나면 `Bin/Saved` 에 크래시 묶음이 남아 다음 `ServerTest` 샤드들이 같은 폴더를 동시에 묶다가 `manifest.json` 을 못 찾는 Error 로 진다**(`ServerBootTest.EveryBuiltGameStartsAsADedicatedServer`, 다시 돌리면 통과). 크래시를 낸 실행 뒤의 첫 실패는 이것부터 의심한다([HostGpuIsolation](plans/HostGpuIsolation.md)).
+- **렌더 변경은 스크린샷까지 봐야 검증이다.** 로그 · 테스트가 다 초록인데 화면만 찢어진 적이 있다. 정적 씬은 바이트까지 결정적이라 4 백엔드 전후 sha 로 비교한다. 4 백엔드 대조는 Debug 로(Shipping 은 `SW_SHIPPING_RHI_BACKEND` 하나만 링크하고 `-vk` 를 거절한다).
+- **픽셀 지표는 튼튼하게.** "특정 색 픽셀 수" 는 클리어 색 · 톤맵에 무너진다 — 모서리 기준 배경 제거 + 평균(R−B) 대소, 또는 "고유 색 ≥ 2". sin(시간) 구동 지표는 "달라진 픽셀 수" 로. define 이 GPU 에 닿았는지는 PSO 디스크립터가 아니라 픽셀로 본다. 막히면 PPM 을 덤프한다.
+- **D3D12 디버그 레이어 경고는 Debug DX12 로그의 `D3D12 debug layer (severity S, id N)` 줄이다**(앞 16 개만 적고 나머지는 센다). 렌더 변경 뒤 이 줄이 0 인지 본다. 테스트는 그리기 전후의 수를 비교해 단언한다. 검증 레이어를 켜는 `-gv_` 스위치는 없다 — 레이어는 Debug 빌드에서만 켜지므로 레이어 오류를 보려면 `build/Ninja-Debug` 로 돌린다. 오류는 `[Warning]` · `[Error]` 줄이라 시나리오 로그 게이트가 지고, 손으로는 `Saved/Automation/<이름>_<백엔드>.log` 에서 찾는다.
+- **`-gv_screenshot` 은 PrintWindow 가 아니다** — PPM 이 원본이고 `-gv_screenshotFrame=N` 으로 프레임을, `-gv_screenshotAttachment=<이름>` 으로 첨부를 고른다. 게임 화면은 `-gv_screenshotSettledFrames=N`(로딩 화면 · 페이드 · 에셋 읽기가 끝난 뒤 N 프레임, 120 초 안에 안 잡히면 오류 14)으로 찍는다 — 로딩 화면 최소 표시와 페이드는 실제 시간이라 빠른 기계에서 고정 프레임이 로딩 화면을 찍는다.
+- **에디터 UI 는 `-gv_screenshotEditor=<경로>.png`**(`-gv_screenshotEditorFrame=N`) 나 시나리오 단계 `<CaptureEditorUI file="….png" maxMagentaFraction="0"/>` 로 찍는다(ImGui 패널 · 플로팅 창까지 든 화면, 창 전경 · 가림과 무관 — [에디터 UX 기반](plans/EditorUX.md) 6 절). "가끔 튄다" 는 `-gv_screenshotCount=30 -gv_screenshotInterval=2` 로 연속으로 찍어 나란히 본다.
+- **백엔드 교체는 시나리오로 재현한다**: `py -3 -m Scripts scenario swapother`(한 번 건너기). 투명 큐브가 카나리아다. 텍스처 경로는 `-gv_defaultMaterial=engine/materials/benchtextured.material`. 전역 변수는 `GlobalVariableInfo::setValueAsInt` 로 넣는다 — **C++ 대입은 변경 콜백을 부르지 않는다.**
+  `engine/automation/rhiswap/` 시나리오는 네 백엔드가 모두 있는 PC 에서만 통과해 AppScenarioTest 가 줍지 않는다 — `swapbackends`(네 백엔드 건너기), `terrainedits`(저장하지 않은 지형 편집 · 씬 뷰 카메라가 교체를 넘는지), `removedevice`(`rhi.removeDevice` 로 DX12 장치를 제거하거나 Vulkan 장치를 손실 상태로 둔 뒤 프레임 · 종료가 멈추지 않는지 — `-dx12` · `-vk`). 교체 전후 그림을 견줄 때는 한 번 먼저 건너 도킹 배치를 안정시킨다(imgui.ini 가 노드 크기를 정수로 저장해 첫 리로드에서 씬 뷰 너비가 1 픽셀 바뀔 수 있다). `editor/previewreopen` · `editor/previewswap` 은 GPU 오류를 로그로 본다.
+- **"인자가 적혔는가" 는 `CommandLineManager::isArgumentProvided` 로 본다**(`getArgument` 는 기본값이 있으면 안 적어도 true). **리사이즈는 창을 실제로 흔들어야 검증된다.** 블로킹을 걷을 때는 그것이 무엇을 가리던지 먼저 찾는다(에디터 모드가 DX12 DEVICE_HUNG 을 가렸다).
+- **레이스 테스트는 "돌았다" 가 아니라 결과를 대조한다**(직렬 1 판 · 병렬 3 판 평균 ±1 %, 검출률 ~7/8). hostgpu 라 CI 가 못 돌므로 병렬 기록을 건드리면 로컬 hostgpu 를 여러 번 돌린다. 레이스는 deferred 파이프라인으로 돌려야 드러난다. 겨루는 테스트는 상대가 **돌기 시작한 뒤** 겨루고 "겹친 횟수 ≥ N" 을 단언한다. 레이스가 의심되면 추론하지 말고 `-gv_deferred=1` Debug 실행의 `Concurrent … access detected` 건수를 고치기 전후로 센다("도달 불가" 는 진입 횟수 계측으로 확인).
+- **변이 검사 함정** — 조건을 지우는 변이는 방향에 따라 우연히 통과한다. 백업을 `Copy-Item` 으로 되돌리면 mtime 이 과거라 ninja 가 안 짓는다(touch). 변이한 코드를 태우는 스위트가 어느 실행 파일에 있는지 먼저 보고, "깨끗하게 실패했는가"(부정 단언 메시지는 `SW_EXPECT_FALSE_MSG`)와 성공 쪽이 조용한지도 본다. 저장소 밖 `mutlib` 은 기준선을 돌리지 않으니 테스트가 먼저 통과하는지 확인하고, 변이 뒤에는 전체를 다시 빌드한다(부분 빌드는 모듈 DLL ABI 가 섞인다).
+- **새 테스트만 걸러 돌리고 커밋하지 말 것.** 빌드가 깨진 채 돈 ctest 는 **옛 바이너리**로 통과한다. 빌드가 진 프리셋(DLL 잠김 — `Scripts/setup/AddDefenderExclusions.py`)에서 테스트를 돌리지 말 것. 빌드 출력을 `| head` 로 자르지 말 것(파이프가 닫히면 빌드가 죽고 낡은 바이너리가 남는다 — 파일로 받은 뒤 본다).
+- **간헐 실패를 다룰 때** — `ConsoleLogOutput` 은 Error 만 flush 해서 ctest `--output-on-failure` 의 마지막 `[ RUN ]` 은 크래시 위치가 아니다. 같은 명령을 직접 돌려 파일로 받는다. 단독으로 통과하고 스위트에서만 지면 전역 상태 오염부터 본다(VFS 는 `GlobalVfsScope`).
+- **측정은 혼자, 기능 확인은 둘까지.** 빌드 · 스모크 · 벤치 · GPU 스위트를 겹치면 가짜 실패(파일 잠김 · CMake 프로브 레이스 `LNK1107`)와 수치 오염이 난다. 결정적 설정으로 기능만 보는 시나리오 · `hostgpu` 는 GPU 공유 잠금(`--shared`, 두 프로세스)으로 백엔드를 나눠 함께 돌려도 되고, 성능 측정 · 부하 기준선 · 장치 제거 실험은 독점이다. 같은 빌드 폴더(`Bin`)의 에디터 체인 둘은 함께 돌리지 않는다(산출물과 리소스를 고치는 시나리오가 겹친다) — 짝은 빌드 폴더가 다른 둘이나 산출물이 안 겹치는 실행으로 짓는다.
+  샤드를 동시에 돌려도(`ctest -j3`) 시간 제한이 가짜로 지니 의심되면 그 샤드 하나만 다시 돌린다. 백그라운드 셸은 `taskkill /T` 로 트리째 내린다. 창을 만드는 GPU 테스트를 Bash 로 돌리면 타임아웃처럼 보인다 — PowerShell `Start-Process`.
+- **Shipping 에서만 나는 것** — Info 로그 · `SW_ASSERT` 가 사라지고(반응이 로그 한 줄뿐인 기능은 배포본에서 없는 것과 같다), 리소스는 팩에만 있고 `.hlsl` 원본이 없으며, 쿠킹한 바이너리 씬만 읽는다(씬 · 프리팹 테스트는 `SceneDocument::saveBinary` 로 `.bin` 도 쓴다). 풀 블록을 힙으로 반납하는 손상은 Shipping 에서만 터지는데, 풀 자유 목록이 LIFO 인 것을 써서 "다음 할당이 같은 주소" 로 검사하면 Debug 에서도 잡힌다.
+- **변경 전후 그림이 다르면 어느 쪽이 맞는지는 네 백엔드의 일치도로 가린다.** 변경 전 그림이 백엔드끼리 이미 어긋나 있었다면 변경 전은 기준이 아니다. 네 백엔드가 같은 증상이면 공유 호출부를, 한 백엔드만 다르면 그 백엔드의 산출물과 계약을 먼저 본다(한 백엔드만 깨지면 배리어 누락 레이스를 의심).
+- **여러 번 띄우는 하니스는 프로세스를 이름(`taskkill /IM App.exe`)이 아니라 PID 로 내린다.** 로그의 `[Error]` 를 세는 실행은 강제 종료하지 않는다 — 비동기 로거의 뒷부분이 사라져 "오류 0" 이 거짓이 되므로 `-gv_profileFrames` 로 스스로 끝나게 한다.
+- **셰이더 결과가 화면에 안 보이면 이 순서로 좁힌다.** ① 게이트 값(PSO · CB · UAV 핸들, 인스턴스 수)을 찍는다 ② 셰이더가 무조건 눈에 띄는 일을 하게 한다 ③ CB 멤버를 하나씩 조건으로 건다 ④ 임계값을 쓰기 전에 그 값의 실제 범위를 확인한다. 시간에 따라 움직이는 기능은 `-gv_screenshotFrame` 을 다르게 준 두 장으로 캡처 시점이 다른지 먼저 본다.
+- **디바이스 손실(Vulkan `VK_ERROR_DEVICE_LOST`, DX12 `DEVICE_HUNG` · `DEVICE_REMOVED`)이 나면 Debug 로 이 세 단계를 먼저 한다.** ① 결함 주소를 읽는다 — Vulkan 은 `last pass put in the submission order: '<패스>'` 다음 줄의 `fault address 0: read-invalid at 0x…`(VK_EXT_device_fault), DX12 는 DRED 의 `PageFault VA=0x…` 와 `PageFault VA is inside live/recently freed allocation …`. 실행마다 같은 주소이고 서술자 힙 · 배열 시작 + 약 4 GB(0xFFFFFFFF × 서술자 크기)이면 무효 bindless 번호로 서술자를 읽은 것이다(`binding.hlsli` 의 "bindless 입문" 절).
+  ② 같은 명령을 `-gv_validateBindlessIndex=2` 로 다시 돌려 `[BindlessIndex]` 줄을 센다. `is not a live` 오류가 있으면 그 패스 · 필드가 1순위 후보이고, 없으면 `= absent` 목록에서 손실 패스의 필드를 고른다. ③ 후보 하나만 셰이더에서 바꿔(첨자를 배열 안으로 자르기, 값을 상수로) 3 회 이상 돌려 재현율을 견준다. 셰이더는 개발 빌드에서 라이브 컴파일되어 다시 빌드할 필요가 없고, 끝나면 `App --cook-shaders` 로 다시 굽는다.
 
 ## 4. CI
 
 push 뒤 결과를 기다리지 않는 것은 [작업 방식](11_Workflow.md) 4절의 규칙입니다. 실패를 알게 되면 공개 API 로 실행, 잡, 실패 주석을 읽습니다.
 
-**CI 단계 분류.** 단계마다 시간 예산이 달라 한 곳에 몰지 않습니다. GPU 가 필요한 것은 어느 CI 도 돌리지 않습니다(러너에 GPU · 창이 없음) — 로컬 `hostgpu` 가 맡습니다.
+**CI 단계 분류.** GPU 가 필요한 것은 어느 CI 도 돌리지 않습니다(러너에 GPU · 창이 없음) — 로컬 `hostgpu` 가 맡습니다.
 
 | 단계 | 언제 | 무엇 | 파일 | 예산 |
 |---|---|---|---|---|
-| 린트 | 모든 push · PR (문서만 바뀌어도) | 게이트 + 셀프테스트 전부(훅이 건너뛰는 트리 전체 게이트 포함 — 아래 "커밋 훅과 린트 잡의 나눔"), 린트가 지면 non-main 은 같은 실행의 빌드를 취소한다 | `ci.yml` `lint` | 약 1 분 |
-| 빌드 · `nogpu` | push · PR, 린트와 동시에 시작(바뀐 파일이 문서뿐이면 `changes` 잡이 건너뛰게 한다) | 구성 열 개 — Windows Debug · STL · Shipping · 전용 서버 Shipping, Linux Debug · ASan · TSan · Shipping · 전용 서버 Shipping | `ci.yml` `build` | 15 ~ 30 분(가장 긴 잡이 전체 시간) |
+| 린트 | 모든 push · PR (문서만 바뀌어도) | 게이트 + 셀프테스트 전부(훅이 건너뛰는 트리 전체 게이트 포함), 지면 non-main 은 같은 실행의 빌드를 취소 | `ci.yml` `lint` | 약 1 분 |
+| 빌드 · `nogpu` | push · PR(문서만 바뀌면 `changes` 잡이 건너뜀) | 구성 열 개 — Windows Debug · STL · Shipping · 전용 서버 Shipping, Linux Debug · ASan · TSan · Shipping · 전용 서버 Shipping | `ci.yml` `build` | 15 ~ 30 분 |
 | 매일 컴파일 검사 | 03:00 KST · 수동 | 헤더 단독 컴파일, `SW_ENABLE_DEADLOCK_DETECTION` 구성 컴파일 | `header-self-contained.yml` | 약 30 분 |
 | 매일 퍼징 | 03:00 KST · 수동 | 로더 퍼저(ASan) | `fuzz.yml` | 최대 2 시간 |
 | 야간 부하 | 04:00 KST · 수동 | Release 부하 스위트 · 봇 · 클러스터 | `load.yml` | 최대 2.5 시간 |
 
-판단 기준: push 마다 돌려도 잡 시간을 늘리지 않는 것만 `ci.yml` 에 둔다. 전 트리를 다시 훑는 검사(14 분 이상)나 평소 어느 프리셋도 켜지 않는 구성은 매일 잡으로 보낸다. 새 검사를 더할 때는 위 표에서 줄을 고른다.
+판단 기준: push 마다 돌려도 잡 시간을 늘리지 않는 것만 `ci.yml` 에 둔다. 전 트리를 다시 훑는 검사(14 분 이상)나 평소 어느 프리셋도 켜지 않는 구성은 매일 잡으로 보낸다. 새 검사는 위 표에서 줄을 고른다.
 
-**커밋 훅과 린트 잡의 나눔.** 커밋 훅은 staged 파일로 볼 수 있는 게이트만 돈다. 파일 사이를 대조해 트리 전체를 읽어야 하는 무거운 게이트는 훅에서 빼고(`preCommitSkipReason`)
-린트 잡이 push 마다 트리 전체로 본다 — `CheckNameReferences`(코드의 정의 ↔ 인자 · 시나리오 · 데이터의 쓰임) · `CheckKitNamespaces`(트리 전체의 같은 상태 표 · 로그 범주). 린트 잡(`RunLintSuite`)과 `ctest -L lint` 는 훅의 건너뜀과 상관없이 `LintCatalog` 의 목록 전부를 돌린다
-(`TestPreCommitLint.testTreeWideCrossFileGatesAreLeftToCi` 가 목록에 남아 있는지 본다). 한계: 이 둘의 위반은 커밋이 아니라 push 뒤 CI 에서 처음 보인다 —
-이름 · 상태 표를 바꾸는 커밋은 push 전에 `py -3 -m Scripts gate CheckNameReferences` 를 손으로 돌린다.
+**커밋 훅과 린트 잡의 나눔.** 커밋 훅은 staged 파일로 볼 수 있는 게이트만 돈다. 트리 전체를 읽어야 하는 무거운 게이트(`CheckNameReferences` · `CheckKitNamespaces`)는 훅에서 빼고(`preCommitSkipReason`) 린트 잡이 push 마다 본다. 린트 잡(`RunLintSuite`)과 `ctest -L lint` 는 `LintCatalog` 의 목록 전부를 돌린다.
+한계: 이 둘의 위반은 push 뒤 CI 에서 처음 보이므로 이름 · 상태 표를 바꾸는 커밋은 push 전에 `py -3 -m Scripts gate CheckNameReferences` 를 손으로 돌린다.
 
 ```powershell
-py -3 -m Scripts ci-jobs --summary                 # main 의 가장 새로 끝난 실행 한 줄(실패한 잡과 연속 실패 수) — 세션 가드가 세션 시작에 부른다
+py -3 -m Scripts ci-jobs --summary                 # main 의 가장 새로 끝난 실행 한 줄(실패한 잡과 연속 실패 수) — 세션 가드가 부른다
 py -3 -m Scripts ci-jobs --runs                    # main 의 최근 실행
 py -3 -m Scripts ci-jobs <실행 id> --annotations   # 실패한 잡과 실패 주석
 ```
 
-- **CI 가 끝까지 돌게 하는 세 가지**(`.github/workflows/ci.yml`). ① main 은 `cancel-in-progress: false`(push 가 실행 시간보다 잦으면 끝나는 실행이 0 건이 된다).
-  ② vcpkg 바이너리 캐시는 구성 직후 `actions/cache/save` 로 저장한다(post 저장은 잡이 성공할 때만 돈다). 키는 OS 별 하나.
-  ③ 모든 잡이 PCH 를 켠 채 짓는다(로컬과 같은 구성). PCH 가 가리는 include 누락은 매일 도는 헤더 단독 컴파일 잡이 잡는다.
-  작업 로그 · 아티팩트는 API 로 403 이라 진 테스트는 주석(annotation)으로 올린다 — 실행 목록 · 잡 단계 · 주석은 로그인 없이 읽힌다(시간당 60 회 한도를 여럿이 나눠 쓴다).
-- **리눅스 CI 는 ubuntu-24.04 의 `libclang-dev`(18)다.** 파서에 새 libclang API 를 쓰면 리눅스 잡만 선다 — `CINDEX_VERSION` 으로 가른다. 16 미만은 한정 없이 적은
-  타입도 FQN(`sw::editor::Foo`)으로 철자하므로 타입 이름은 `TypeNameMap::normalize` 가 잎 이름으로 맞춘다. CI 러너 파이썬은 3.12 이지만 최소 지원이 3.10(`kMinimumPythonVersion`)이라
-  f-string 식 안의 백슬래시 · 여러 줄 식이 configure 를 죽인다(`CheckPythonMinimumVersion.py`). GH Windows 러너는 cp1252 라 한글을 print 하는 스크립트가 빌드째 죽는다
-  (증상: 구성 단계의 파이썬 생성기가 `UnicodeEncodeError`) — 진입점은 `Scripts/common` 을 **모듈 수준에서** import 한다(UTF-8 stdout, 게이트 `CheckScriptEntryPoints` —
-  함수 안의 import 는 치지 않는다). 재현은 `PYTHONIOENCODING=cp1252`(cp949 는 `—` 에서 죽는다).
-- **CI 실패는 실패한 잡과 같은 프리셋으로 재현한다.** Debug(Engine SHARED)는 Shipping 정적 링크 결함을 원리상 못 낸다. Windows CI 러너의 TEMP 는 8.3 짧은 이름
-  (`RUNNER~1`)이라 경로를 글자로 비교하면 틀린다. 빨간 CI 는 다음 결함을 숨긴다 — 런 상태:
-  `curl -s "https://api.github.com/repos/sswgame/LearningTemplate/actions/runs?per_page=30&branch=main"`. 스킵은 실패보다 조용하다.
-- **`SW_ENABLE_DEADLOCK_DETECTION` 은 매일 도는 `header-self-contained.yml` 이 `RunBuildWarnings.py --define SW_ENABLE_DEADLOCK_DETECTION --fail-on error` 로 지킨다.** push 마다 돌리지 않으니 이 옵션을 건드린 변경은 같은 명령을 로컬에서 먼저 돌린다.
-- **CI 실패는 `Scripts/dev/CiFailureReport.py` 가 주석으로 올린다**(테스트 · 구성 실패의 vcpkg 포트 로그 · 크래시 스택 `Bin/Saved/Logs/crash_*.stack.txt`).
-  정기 잡도 같다 — 헤더 단독 컴파일 잡의 빌드 오류(`build`), 퍼징 잡의 새니타이저 보고 · 스택 · 재현 입력(`fuzz`, libFuzzer 가 짧은 입력에 찍는 `Base64:` 줄).
-  퍼징 실패는 그 Base64 를 풀어 대상 이름과 함께 `SW_FUZZ_TARGET=<대상> LoaderFuzzer <파일>` 로 재현하고, 고친 뒤 그 입력을 대상의 씨앗(`LoaderFuzzTargets.cpp`)에 더한다.
-  `Base64:` 가 비어 있고 재현 입력이 빈 파일(`crash-da39a3ee…`)이면 입력 밖의 죽음이다 — 새니타이저 스택이 `exit` · 하네스 `stop` 아래면 종료 경로(정적 소멸 순서)를 고친다.
-  저장소 주인 계정으로 로그인한 `gh` 가 있으면 잡 로그 전문을 받는다 — `gh api --allow-escape-sequences repos/sswgame/LearningTemplate/actions/jobs/<잡 id>/logs > job.log`.
-  진 테스트 주석의 제목에 결과가 붙는다. `[Timeout 180.0 s / 180 s]` 는 ctest 가 한도에서 죽인 것(멈춤이거나 느려진 것)이고, `[exit 1 after …]` 는 스스로 진 것,
-  `[no exit line after …]` 는 한도 전에 종료 줄 없이 끝난 것(크래시)이다. `py -3 -m Scripts ci-jobs <실행 id> --annotations` 의 잡 표는 실패한 단계의 경과 시간 · 종료 코드와 ctest Timeout 수를 보인다. 응답은 임시 폴더에 캐시한다(익명 한도는 시간당 60 회).
-- **리눅스 CI 에서만 드러나는 결함 모양.** libstdc++ 의 `file_clock` 은 기원이 2174 년이라 파일 시각을 다른 시계로 옮길 때 기원을 맞춘다. 경로 구분자는 POSIX 쪽으로 정규화한다. 헤드리스(서버) 입력에는 게임패드 슬롯과 창 포커스가 없다.
-  테스트가 자식 셸을 띄우면 `exec` 를 붙인다(dash 의 `sh -c` 는 SIGTERM 에 먼저 죽어 143 이 된다). 단조 시계로 잰 캐시 TTL 은 느린 빌드에서 임대를 풀어 버리므로 서버 틱 시각을 쓴다. epoll 전송은 멈춘 동안 읽지 않으므로 전송 모델마다 테스트 기대를 나눈다.
-  경합 검출기는 비 const `operator[]` 와 공유 읽기 버퍼를 쓰기로 보므로 읽기 경로는 const 로 둔다.
-- **Windows STL containers 잡은 sw 할당자와 기록 해시에 기대는 테스트를 건너뛴다**(`MemoryTagTest` 둘, `DestructionDamageTest.EventLogHash…`). 기본 컨테이너 구성에서 같은 테스트가 가끔 지는지는 후보 `NightlyCiFollowups` 에서 지켜본다.
+- **CI 가 끝까지 돌게 하는 세 가지**(`ci.yml`). ① main 은 `cancel-in-progress: false`(push 가 실행 시간보다 잦으면 끝나는 실행이 0 건이 된다). ② vcpkg 바이너리 캐시는 구성 직후 `actions/cache/save` 로 저장한다(post 저장은 잡이 성공할 때만 돈다). ③ 모든 잡이 PCH 를 켠 채 짓는다 — 가려진 include 누락은 헤더 단독 컴파일 잡이 잡는다.
+  작업 로그 · 아티팩트는 API 로 403 이라 진 테스트는 주석으로 올린다 — 실행 목록 · 잡 단계 · 주석은 로그인 없이 읽힌다(시간당 60 회 한도를 여럿이 나눠 쓴다).
+- **리눅스 CI 는 ubuntu-24.04 의 `libclang-dev`(18)다.** 파서에 새 libclang API 를 쓰면 리눅스 잡만 선다 — `CINDEX_VERSION` 으로 가른다. 16 미만은 한정 없이 적은 타입도 FQN 으로 철자하므로 `TypeNameMap::normalize` 가 잎 이름으로 맞춘다. 파이썬 최소 지원이 3.10(`kMinimumPythonVersion`)이라 f-string 식 안의 백슬래시 · 여러 줄 식이 configure 를 죽인다(`CheckPythonMinimumVersion.py`). GH Windows 러너는 cp1252 라 한글을 print 하는 스크립트가 `UnicodeEncodeError` 로 빌드째 죽는다 — 진입점은 `Scripts/common` 을 **모듈 수준에서** import 한다(`CheckScriptEntryPoints`). 재현은 `PYTHONIOENCODING=cp1252`.
+- **CI 실패는 실패한 잡과 같은 프리셋으로 재현한다.** Debug(Engine SHARED)는 Shipping 정적 링크 결함을 원리상 못 낸다. Windows CI 러너의 TEMP 는 8.3 짧은 이름(`RUNNER~1`)이라 경로를 글자로 비교하면 틀린다. 빨간 CI 는 다음 결함을 숨긴다. 스킵은 실패보다 조용하다.
+- **`SW_ENABLE_DEADLOCK_DETECTION` 은 매일 도는 `header-self-contained.yml` 이 `RunBuildWarnings.py --define SW_ENABLE_DEADLOCK_DETECTION --fail-on error` 로 지킨다.** push 마다 돌지 않으니 이 옵션을 건드린 변경은 같은 명령을 로컬에서 먼저 돌린다.
+- **CI 실패는 `Scripts/dev/CiFailureReport.py` 가 주석으로 올린다**(테스트 · 구성 실패의 vcpkg 포트 로그 · 크래시 스택 `Bin/Saved/Logs/crash_*.stack.txt`). 정기 잡도 같다 — 헤더 단독 컴파일 잡의 빌드 오류(`build`), 퍼징 잡의 새니타이저 보고 · 스택 · 재현 입력(`fuzz`).
+  퍼징 실패는 libFuzzer 가 짧은 입력에 찍는 `Base64:` 줄을 풀어 `SW_FUZZ_TARGET=<대상> LoaderFuzzer <파일>` 로 재현하고, 고친 뒤 그 입력을 대상의 씨앗(`LoaderFuzzTargets.cpp`)에 더한다. `Base64:` 가 비고 재현 입력이 빈 파일(`crash-da39a3ee…`)이면 입력 밖의 죽음이다 — 새니타이저 스택이 `exit` · 하네스 `stop` 아래면 종료 경로(정적 소멸 순서)를 고친다.
+  저장소 주인 계정으로 로그인한 `gh` 가 있으면 잡 로그 전문을 받는다 — `gh api --allow-escape-sequences repos/sswgame/LearningTemplate/actions/jobs/<잡 id>/logs > job.log`. 진 테스트 주석의 제목: `[Timeout 180.0 s / 180 s]` 는 ctest 가 한도에서 죽인 것(멈춤이거나 느려짐), `[exit 1 after …]` 는 스스로 진 것, `[no exit line after …]` 는 종료 줄 없이 끝난 것(크래시). `ci-jobs <실행 id> --annotations` 의 잡 표는 실패한 단계의 경과 시간 · 종료 코드와 ctest Timeout 수를 보인다.
+- **리눅스 CI 에서만 드러나는 결함 모양.** libstdc++ 의 `file_clock` 은 기원이 2174 년이라 파일 시각을 다른 시계로 옮길 때 기원을 맞춘다. 경로 구분자는 POSIX 쪽으로 정규화한다. 헤드리스(서버) 입력에는 게임패드 슬롯과 창 포커스가 없다. 테스트가 자식 셸을 띄우면 `exec` 를 붙인다(dash 의 `sh -c` 는 SIGTERM 에 먼저 죽어 143). 단조 시계로 잰 캐시 TTL 은 느린 빌드에서 임대를 풀어 버리므로 서버 틱 시각을 쓴다. epoll 전송은 멈춘 동안 읽지 않으므로 전송 모델마다 테스트 기대를 나눈다. 경합 검출기는 비 const `operator[]` 와 공유 읽기 버퍼를 쓰기로 보므로 읽기 경로는 const 로 둔다.
+- **Windows STL containers 잡은 sw 할당자와 기록 해시에 기대는 테스트를 건너뛴다**(`MemoryTagTest` 둘, `DestructionDamageTest.EventLogHash…`). 같은 테스트가 기본 컨테이너 구성에서 가끔 지는지는 후보 `NightlyCiFollowups` 에서 본다.
