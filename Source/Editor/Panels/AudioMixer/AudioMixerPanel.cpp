@@ -9,6 +9,7 @@
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/EditorColor.h"
+#include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
@@ -145,7 +146,7 @@ namespace sw::editor
 
         ImGui::TextUnformatted( "Event" );
         ImGui::SameLine();
-        ImGui::SetNextItemWidth( 200.0f * EditorThemeUtil::getDpiScale() );
+        EditorChrome::setNextItemWidthColumns( 27.0f );
         const utf8* pPreview = _listEventName.empty() ? "(no event library loaded)" : _listEventName[_selectedEvent].c_str();
         if ( ImGui::BeginCombo( "##AudioMixerEvent", pPreview ) )
         {
@@ -166,7 +167,7 @@ namespace sw::editor
         ImGui::SameLine();
         ImGui::TextUnformatted( "Clip" );
         ImGui::SameLine();
-        ImGui::SetNextItemWidth( 240.0f * EditorThemeUtil::getDpiScale() );
+        EditorChrome::setNextItemWidthColumns( 32.0f );
         (void)ImGui::InputTextWithHint( "##AudioMixerClip", "audio/sample.wav", _clipPath.data(), _clipPath.capacity() );
         EditorSelfTestMarks::note( "audiomixer.clipPath" );
         ImGui::SameLine();

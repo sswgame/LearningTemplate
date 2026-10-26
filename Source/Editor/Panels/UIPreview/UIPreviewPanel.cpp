@@ -13,6 +13,7 @@
 
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
+#include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
@@ -878,7 +879,7 @@ namespace sw::editor
     void UIPreviewPanel::drawLanguageCombo()
     {
         const string preview = _language.empty() ? string( "(game language)" ) : _language;
-        ImGui::SetNextItemWidth( 150.0f * EditorThemeUtil::getDpiScale() );
+        EditorChrome::setNextItemWidthColumns( 20.0f );
         const bool bOpen = ImGui::BeginCombo( "##uipreviewlang", preview.c_str() );
         UIPreviewPanelInternal::noteMark( "uipreview", "language" );
         EditorWidgets::drawTooltip( "Language the preview text is resolved in. The game UI keeps its own language; qps-ploc and qps-plocm are pseudo-languages "
@@ -927,7 +928,7 @@ namespace sw::editor
         EditorWidgets::drawTooltip( "Write the edited widget properties back to the document (UIDocumentWriter). Disabled after input simulation or animation playback "
                                     "changed the preview tree - Reload first." );
         ImGui::SameLine();
-        ImGui::SetNextItemWidth( 190.0f * EditorThemeUtil::getDpiScale() );
+        EditorChrome::setNextItemWidthColumns( 25.0f );
         const UIResolutionPreset* pSelectedResolution = findSelectedResolution();
         const bool                bResolutionOpen     = ImGui::BeginCombo( "##uipreviewres", pSelectedResolution != nullptr ? pSelectedResolution->_name.c_str() : "-" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorUIPreview", "ResolutionTip" ) );
@@ -941,7 +942,7 @@ namespace sw::editor
             ImGui::EndCombo();
         }
         ImGui::SameLine();
-        ImGui::SetNextItemWidth( 150.0f * EditorThemeUtil::getDpiScale() );
+        EditorChrome::setNextItemWidthColumns( 20.0f );
         const bool bThemeOpen = ImGui::BeginCombo( "##uipreviewtheme", _theme.empty() ? "(game theme)" : _theme.c_str() );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorUIPreview", "ThemeTip" ) );
         if ( bThemeOpen )
@@ -957,15 +958,15 @@ namespace sw::editor
         }
         ImGui::SameLine();
         drawLanguageCombo();
-        ImGui::SetNextItemWidth( 140.0f * EditorThemeUtil::getDpiScale() );
+        EditorChrome::setNextItemWidthColumns( 19.0f );
         ImGui::SliderFloat( "UI scale", &_uiScale, 0.5f, 2.0f, "%.2f" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorUIPreview", "UIScaleTip" ) );
         ImGui::SameLine();
-        ImGui::SetNextItemWidth( 140.0f * EditorThemeUtil::getDpiScale() );
+        EditorChrome::setNextItemWidthColumns( 19.0f );
         ImGui::SliderFloat( "Text scale", &_textScale, 0.75f, 2.0f, "%.2f" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorUIPreview", "TextScaleTip" ) );
         ImGui::SameLine();
-        ImGui::SetNextItemWidth( 140.0f * EditorThemeUtil::getDpiScale() );
+        EditorChrome::setNextItemWidthColumns( 19.0f );
         ImGui::SliderFloat( "Safe zone", &_safeZone, 0.0f, 0.1f, "%.3f" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorUIPreview", "SafeZoneTip" ) );
         ImGui::SameLine();
@@ -1067,7 +1068,7 @@ namespace sw::editor
         if ( _animation.empty() || player.findAnimation( _animation ) == nullptr )
             _animation = listAnimation[0]._name;
         ImGui::SameLine();
-        ImGui::SetNextItemWidth( 120.0f * EditorThemeUtil::getDpiScale() );
+        EditorChrome::setNextItemWidthColumns( 16.0f );
         const bool bOpen = ImGui::BeginCombo( "##uipreviewanimation", _animation.c_str() );
         UIPreviewPanelInternal::noteMark( "uipreview", "animation" );
         EditorWidgets::drawTooltip( "Document animation to preview. The preview never plays Open by itself - the document values are what you see until you play one." );
@@ -1122,7 +1123,7 @@ namespace sw::editor
             time     = MathUtil::clamp( _animationScrub, 0.0f, duration );
         }
         float32 scrubSeconds = time;
-        ImGui::SetNextItemWidth( 220.0f * EditorThemeUtil::getDpiScale() );
+        EditorChrome::setNextItemWidthColumns( 29.0f );
         if ( ImGui::SliderFloat( "##uipreviewanimationtime", &scrubSeconds, 0.0f, MathUtil::max( duration, 0.001f ), "%.2f s" ) )
         {
             _animationScrub   = scrubSeconds;

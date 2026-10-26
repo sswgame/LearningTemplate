@@ -393,9 +393,10 @@ namespace sw::editor
             ImGui::SetNextItemWidth( width );
         else
         {
-            const float32 avail      = ImGui::GetContentRegionAvail().x;
-            const float32 clearWidth = bShowClear ? 28.0f : 0.0f;
-            ImGui::SetNextItemWidth( ( avail > clearWidth + 4.0f ) ? ( avail - clearWidth ) : avail );
+            const float32     avail          = ImGui::GetContentRegionAvail().x;
+            const float32     clearWidth     = bShowClear ? 28.0f : 0.0f;
+            constexpr float32 kMinFieldWidth = 4.0f; ///< 지우기 단추를 빼고도 입력란에 남아야 하는 최소 폭
+            ImGui::SetNextItemWidth( ( avail > clearWidth + kMinFieldWidth ) ? ( avail - clearWidth ) : avail );
         }
 
         const utf8* pHintText = ( pHint != nullptr ) ? pHint : SW_LOCKEY( "EdCommon", "SearchHint" );

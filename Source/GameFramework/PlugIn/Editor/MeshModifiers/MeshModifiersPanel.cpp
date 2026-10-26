@@ -10,6 +10,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
@@ -811,8 +812,7 @@ namespace sw::editor
         }
         MeshModifiersPanelInternal::drawItemTooltip( SW_LOCKEY( "EdMeshModifiers", "CurveEditHint" ) );
 
-        const float32 scale = EditorThemeUtil::getDpiScale();
-        ImGui::SetNextWindowSize( ImVec2{ 560.0f * scale, 320.0f * scale }, ImGuiCond_Appearing );
+        EditorChrome::setNextWindowExtent( EditorTextExtent::ofText( 75.0f, 17.0f ), false );
         if ( ImGui::BeginPopup( "##CurveEditor", ImGuiWindowFlags_NoScrollbar ) == false )
             return;
         const bool bSameParam = _pCurveModifier == &modifier && _curveParamIndex == paramIndex;
@@ -1124,7 +1124,7 @@ namespace sw::editor
         {
             ImGui::SameLine();
             int32 axis = static_cast<int32>( session.getMirrorAxis() );
-            ImGui::SetNextItemWidth( 60.0f );
+            EditorChrome::setNextItemWidthColumns( 8.0f );
             if ( ImGui::Combo( "##MirrorAxis", &axis, MeshModifiersPanelInternal::kAxisNames ) )
                 session.setMirrorAxis( static_cast<uint32>( MathUtil::clamp( axis, 0, 2 ) ) );
         }

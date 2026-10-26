@@ -10,8 +10,10 @@
 
 #include "Editor/Common/Backend/ImGuiKeyForward.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
+#include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
+#include "Editor/Common/GUI/EditorTextExtentImGui.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
@@ -599,7 +601,7 @@ namespace sw::editor
 
             ImGui::SameLine();
             const utf8* arrTypes[] = { "Boolean", "Axis 1D", "Vector 2D" };
-            ImGui::SetNextItemWidth( 120.0f * EditorThemeUtil::getDpiScale() );
+            EditorChrome::setNextItemWidthColumns( 16.0f );
             ImGui::Combo( "Type", &_newActionValueType, arrTypes, 3 );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "NewActionTypeTip" ) );
 
@@ -639,7 +641,7 @@ namespace sw::editor
             }
 
             // 버튼 리스트 폴백
-            ImGui::BeginChild( "KeyGrid", ImVec2( 450.0f * EditorThemeUtil::getDpiScale(), 200.0f * EditorThemeUtil::getDpiScale() ), true );
+            ImGui::BeginChild( "KeyGrid", measureExtent( EditorTextExtent::ofText( 60.0f, 11.0f ) ), true );
             for ( int32 keyIndex = 1; keyIndex < static_cast<int32>( Key::Count ); ++keyIndex )
             {
                 const Key   key      = static_cast<Key>( keyIndex );
@@ -812,11 +814,11 @@ namespace sw::editor
 
                 ImGui::Separator();
                 ImGui::Text( "Haptic Vibration Test:" );
-                ImGui::SetNextItemWidth( 120.0f * EditorThemeUtil::getDpiScale() );
+                EditorChrome::setNextItemWidthColumns( 16.0f );
                 ImGui::SliderFloat( "Left Motor", &_testVibLeft, 0.0f, 1.0f );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "LeftMotorTip" ) );
                 ImGui::SameLine();
-                ImGui::SetNextItemWidth( 120.0f * EditorThemeUtil::getDpiScale() );
+                EditorChrome::setNextItemWidthColumns( 16.0f );
                 ImGui::SliderFloat( "Right Motor", &_testVibRight, 0.0f, 1.0f );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "RightMotorTip" ) );
                 ImGui::SameLine();
@@ -894,7 +896,7 @@ namespace sw::editor
         const utf8* arrCommonKeys[] = { "Space", "Enter", "Escape", "W", "A", "S", "D", "E", "F", "Shift", "Control" };
         const Key   arrKeyValues[]  = { Key::Space, Key::Enter, Key::Escape, Key::W, Key::A, Key::S, Key::D, Key::E, Key::F, Key::LeftShift, Key::LeftControl };
 
-        ImGui::SetNextItemWidth( 150.0f * EditorThemeUtil::getDpiScale() );
+        EditorChrome::setNextItemWidthColumns( 20.0f );
         ImGui::Combo( "Key", &_simKeyToInject, arrCommonKeys, 11 );
         ImGui::SameLine();
         if ( ImGui::Button( "Inject KeyDown" ) )

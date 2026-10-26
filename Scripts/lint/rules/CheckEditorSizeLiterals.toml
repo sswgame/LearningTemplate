@@ -1,0 +1,7 @@
+# CheckEditorSizeLiterals 의 규칙 데이터 — 게이트는 Scripts/lint/gate/CheckEditorSizeLiterals.py.
+# 왜 형식으로 못 막는가: 패널이 <imgui.h> 를 직접 포함해서 ImGui 원 API(SetNextItemWidth 등)를 숫자로 부르는 길을 컴파일로 닫을 수 없다.
+# 창 크기 입구(EditorTextExtent)는 형식으로 막았고 이 게이트는 원 API 로 돌아가는 길만 본다.
+
+# 전체 훑기의 기준선 — 지금 있는 건수다. 늘면 실패한다(커밋 훅은 추가한 줄만 본다).
+[baseline]
+total = 0

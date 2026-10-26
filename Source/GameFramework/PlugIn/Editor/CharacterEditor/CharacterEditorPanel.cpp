@@ -6,6 +6,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
@@ -776,7 +777,7 @@ namespace sw::editor
             ImGui::TextDisabled( "No animation clips in '%s'", _clipFolder.c_str() );
             return;
         }
-        ImGui::SetNextItemWidth( 240.0f * EditorThemeUtil::getDpiScale() );
+        EditorChrome::setNextItemWidthColumns( 32.0f );
         if ( ImGui::BeginCombo( "##PreviewClip", _selectedClip.empty() ? "(select a clip)" : _selectedClip.c_str() ) )
         {
             bool bFirst = true;
@@ -933,7 +934,7 @@ namespace sw::editor
     {
         const hashed_string name = socket._name;
 
-        ImGui::SetNextItemWidth( 180.0f );
+        EditorChrome::setNextItemWidthColumns( 24.0f );
         ImGui::InputText( "##Rename", _renameBuffer.data(), _renameBuffer.max_size() );
         ImGui::SameLine();
         if ( ImGui::Button( "Rename" ) )
@@ -1508,7 +1509,7 @@ namespace sw::editor
             else
                 _status.clear();
         }
-        ImGui::SetNextItemWidth( 180.0f );
+        EditorChrome::setNextItemWidthColumns( 24.0f );
         ImGui::InputText( "##PresetName", _presetName.data(), _presetName.max_size() );
         ImGui::SameLine();
         ImGui::BeginDisabled( _bDatabaseLoaded == false );
@@ -1556,7 +1557,7 @@ namespace sw::editor
         ImGui::SetNextItemWidth( -CharacterEditorPanelInternal::kPathButtonsWidth );
         ImGui::InputText( "##ExportFolder", _exportFolder.data(), _exportFolder.max_size() );
         EditorSelfTestMarks::note( "charactereditor.exportFolder" );
-        ImGui::SetNextItemWidth( 180.0f );
+        EditorChrome::setNextItemWidthColumns( 24.0f );
         ImGui::InputText( "##ExportID", _exportID.data(), _exportID.max_size() );
         EditorSelfTestMarks::note( "charactereditor.exportID" );
         ImGui::SameLine();

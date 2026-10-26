@@ -610,7 +610,7 @@ namespace sw::editor
                     return;
 
                 ImGui::SameLine();
-                ImGui::SetNextItemWidth( 160.0f * EditorThemeUtil::getDpiScale() );
+                EditorChrome::setNextItemWidthColumns( 21.0f );
                 if ( bFocusRenameInput )
                 {
                     ImGui::SetKeyboardFocusHere();

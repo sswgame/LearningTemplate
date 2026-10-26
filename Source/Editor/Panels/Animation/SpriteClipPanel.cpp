@@ -9,6 +9,7 @@
 #include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
+#include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
@@ -221,11 +222,11 @@ namespace sw::editor
     {
         ImGui::Separator();
         ImGui::TextUnformatted( "Atlas cells (click: selected frame, Shift+click: new frame)" );
-        ImGui::SetNextItemWidth( 90.0f * EditorThemeUtil::getDpiScale() );
+        EditorChrome::setNextItemWidthColumns( 12.0f );
         ImGui::InputInt( "Columns", &_sliceColumns );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "SliceColumnsTip" ) );
         ImGui::SameLine();
-        ImGui::SetNextItemWidth( 90.0f * EditorThemeUtil::getDpiScale() );
+        EditorChrome::setNextItemWidthColumns( 12.0f );
         ImGui::InputInt( "Rows", &_sliceRows );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "SliceRowsTip" ) );
         _sliceColumns = MathUtil::clamp( _sliceColumns, 1, 64 );

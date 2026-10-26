@@ -8,6 +8,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 
+#include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
@@ -503,7 +504,7 @@ namespace sw::editor
                 if ( state._resizeResolution == 0 || pTerrain == nullptr )
                     state._resizeResolution = current;
                 const string preview = state._resizeResolution > 0 ? to_string( state._resizeResolution ) : string{ "-" };
-                ImGui::SetNextItemWidth( 120.0f );
+                EditorChrome::setNextItemWidthColumns( 16.0f );
                 if ( ImGui::BeginCombo( "Resolution", preview.c_str() ) )
                 {
                     for ( uint32 resolution = 2; pTerrain != nullptr && resolution <= kMaxResolution; ++resolution )

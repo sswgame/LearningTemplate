@@ -8,6 +8,7 @@
 
 #include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
+#include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
@@ -744,15 +745,15 @@ namespace sw::editor
         for ( int32 edgeIndex = 0; edgeIndex < 4; ++edgeIndex )
         {
             ImGui::PushID( edgeIndex );
-            ImGui::SetNextItemWidth( 180.0f * EditorThemeUtil::getDpiScale() );
+            EditorChrome::setNextItemWidthColumns( 24.0f );
             ImGui::InputText( edges[edgeIndex], bufs[edgeIndex]->data(), bufs[edgeIndex]->capacity() );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "EdgeTargetTip" ) );
             ImGui::SameLine();
-            ImGui::SetNextItemWidth( 50.0f * EditorThemeUtil::getDpiScale() );
+            EditorChrome::setNextItemWidthColumns( 7.0f );
             ImGui::InputInt( "##tx", &_arrEdgeTx[edgeIndex] );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "EdgeTargetXTip" ) );
             ImGui::SameLine();
-            ImGui::SetNextItemWidth( 50.0f * EditorThemeUtil::getDpiScale() );
+            EditorChrome::setNextItemWidthColumns( 7.0f );
             ImGui::InputInt( "##ty", &_arrEdgeTy[edgeIndex] );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "EdgeTargetYTip" ) );
             ImGui::SameLine();

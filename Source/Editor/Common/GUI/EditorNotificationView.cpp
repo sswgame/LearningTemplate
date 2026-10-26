@@ -40,9 +40,10 @@ namespace sw::editor
         if ( listNotification.empty() )
             return;
 
-        constexpr float32 toastColumns = 40.0f;
-        constexpr float32 toastMargin  = 12.0f;
-        float32           currentY     = screenHeight - toastMargin;
+        constexpr float32 toastColumns    = 40.0f;
+        constexpr float32 toastMargin     = 12.0f;
+        const float32     toastSlotHeight = EditorChrome::resolveTextExtent( EditorTextExtent::ofText( 0.0f, 4.0f ) )._y; ///< 토스트 하나가 쌓이는 세로 간격(글자 줄 4 줄)
+        float32           currentY        = screenHeight - toastMargin;
 
         float2 viewportPos{};
         float2 viewportSize{ screenWidth, screenHeight };
@@ -66,7 +67,7 @@ namespace sw::editor
             const Color typeColor = getNotificationTypeColor( item._type ).withAlpha( alpha );
 
             float32 posX = viewportPos._x + screenWidth - EditorChrome::resolveTextExtent( EditorTextExtent::ofText( toastColumns, 0.0f ) )._x - toastMargin;
-            currentY -= 75.0f;
+            currentY -= toastSlotHeight;
 
             fixed_string<constant::kMaxBuffer32> windowID;
             formatstring( windowID.data(), windowID.capacity(), "##Toast_%#", static_cast<uint64>( notificationIndex ) );
