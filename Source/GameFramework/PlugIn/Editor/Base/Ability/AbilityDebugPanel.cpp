@@ -191,5 +191,5 @@ namespace sw::editor
         }
     }
 
-    SW_EDITOR_PANEL( AbilityDebugPanel, "ability_debugger", EditorPanelCategory::Custom, 9310 );
+    SW_EDITOR_PANEL( AbilityDebugPanel, AbilityDebugPanel::kPanelID, EditorPanelCategory::Custom, 9310 );
 } // namespace sw::editor

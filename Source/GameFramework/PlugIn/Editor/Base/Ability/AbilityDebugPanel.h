@@ -29,6 +29,9 @@ namespace sw::editor
     class AbilityDebugPanel final : public IEditorPanel
     {
     public:
+        /** @brief 패널 id — 등록(`SW_EDITOR_PANEL`)과 조회가 같은 상수를 쓴다. */
+        static constexpr const utf8* kPanelID = "ability_debugger";
+
         AbilityDebugPanel()
             : IEditorPanel( false ) // 필요할 때 여는 도구라 닫힌 채 시작한다
         {
