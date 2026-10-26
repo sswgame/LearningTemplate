@@ -44,7 +44,7 @@
 
 ### 단계 6 — 틀 위에 올라간 창과 나머지 창의 자리
 
-이펙트(`VfxPreviewPanel`) · 캐릭터 편집([EditorCharacterEditor.md](EditorCharacterEditor.md)) · 페어드 애니메이션 창이 틀 위에 올랐습니다. 메시/모델 · 애니메이션 클립 · 카메라 프리셋 · 래그돌 · 장르 도구 창은 [Candidates-editor](Candidates-editor.md) `PreviewWindowsRemaining` 후보입니다.
+이펙트(`VfxPreviewPanel`) · 캐릭터 편집([결정 기록 5-11](../decisions/5-11_Editor.md)) · 페어드 애니메이션 창이 틀 위에 올랐습니다. 메시/모델 · 애니메이션 클립 · 카메라 프리셋 · 래그돌 · 장르 도구 창은 [Candidates-editor](Candidates-editor.md) `PreviewWindowsRemaining` 후보입니다.
 
 ## 5. 되돌리기 어려운 결정
 
@@ -64,6 +64,6 @@
 4. **풀 공유** — PSO 캐시는 주 렌더러의 것을 함께 씁니다(`FrameRenderer::_pPSOCache`). 미리보기 렌더러는 캐시에 없는 것만 만들고 해제는 소유자만 합니다(예전엔 창을 다시 열 때마다 엔진 PSO 를 다 다시 만듦). 정점 풀 · 머티리얼 그룹 버퍼는 씬마다 그대로입니다. 남은 것(`preview-window-reopen-cost`): 창 여럿을 띄운 메모리와 창을 다시 여는 첫 프레임 시간을 재서(공유 전 커밋과 비교) 정점 풀까지 나눌 값이 있는지 정합니다.
 5. **미리보기 렌더러 내리기의 GPU 안전** — 구조는 `FrameRendererScenePreview.cpp` 머리 주석(해제 큐가 GPU 완료 뒤로 미룸). 시나리오 `editor/previewreopen` 이 네 백엔드에서 통과했습니다(DX12 디버그 레이어 · Vulkan 검증 레이어 오류 0, 탐침 `Editor.ScenePreviewRenderers` 가 닫을 때 줄고 열면 돌아옴). 검증 레이어는 Debug 에서만 켜지므로 `build/Ninja-Debug` 로 돌립니다. 한계: 닫은 프레임에 바로 여는 경합과 창 여러 개를 동시에 닫는 것은 넣지 않았습니다.
    - 실행: `App.exe -EnableEditor -gv_editorStateDir=Saved/Automation/EditorState/previewreopen -scenario=engine/automation/editor/previewreopen.scenario.xml -dx12` (`-vk` · `-dx11` · `-gl`, 상태 폴더는 빈 곳).
-6. **미리보기 씬의 백엔드 교체** — 시나리오 `editor/previewswap` 이 머티리얼 창이 열려 그려지는 프레임에 `SwapBackend` 로 `other` 로 건너고 `start` 로 돌아오는 교체를 두 번 거치며 `RHI.SwapFailedCount` 0 · `Module.BindingsOk` · 교체 앞 · 뒤 `Editor.ScenePreviewRenderers` 같음을 봅니다(네 백엔드 통과, 교체 앞 · 뒤 · 복귀 뒤 타깃 `Saved/Automation/previewswap_<before|after1|after2>.ppm` 을 눈으로 봄). **자동 단언으로 못 한 것**: 타깃의 그림(평균 색 문턱값을 GPU 로 보기 전에는 못 맞춤). 모르는 것: 교체로 에디터 인스턴스가 다시 서므로 머티리얼 창의 열린 문서가 남는지(시나리오가 교체 뒤 문서를 무조건 다시 엶). 남은 것: 캐릭터 편집 창이 `EditorPreviewPanel` 을 이어받기([EditorCharacterEditor](EditorCharacterEditor.md)).
+6. **미리보기 씬의 백엔드 교체** — 시나리오 `editor/previewswap` 이 머티리얼 창이 열려 그려지는 프레임에 `SwapBackend` 로 `other` 로 건너고 `start` 로 돌아오는 교체를 두 번 거치며 `RHI.SwapFailedCount` 0 · `Module.BindingsOk` · 교체 앞 · 뒤 `Editor.ScenePreviewRenderers` 같음을 봅니다(네 백엔드 통과, 교체 앞 · 뒤 · 복귀 뒤 타깃 `Saved/Automation/previewswap_<before|after1|after2>.ppm` 을 눈으로 봄). **자동 단언으로 못 한 것**: 타깃의 그림(평균 색 문턱값을 GPU 로 보기 전에는 못 맞춤). 모르는 것: 교체로 에디터 인스턴스가 다시 서므로 머티리얼 창의 열린 문서가 남는지(시나리오가 교체 뒤 문서를 무조건 다시 엶). 남은 것: 캐릭터 편집 창이 `EditorPreviewPanel` 을 이어받기([결정 기록 5-11](../decisions/5-11_Editor.md)).
    - 실행: `App.exe -EnableEditor -gv_editorStateDir=Saved/Automation/EditorState/previewswap -scenario=engine/automation/editor/previewswap.scenario.xml -dx12` (`-vk` · `-gl` 로 시작해도 `other` 는 DX12).
    - 두 시나리오(reopen · swap)는 `AppScenarioTest.EditorScenariosPassOn<백엔드>` 체인이 줍습니다. 처음에는 위 한 줄로 단독 실행한 뒤 체인에 맡깁니다(교체 · 렌더러 내리기가 터지면 체인 프로세스가 죽음). Quick Open 파일 목록이 벽시계라 `QuickLauncherPopup` 이 자동화 시계를 잡습니다(`SW_AUTOMATION_CLOCK_HOLDER`).

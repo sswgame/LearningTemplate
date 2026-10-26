@@ -7,7 +7,7 @@
 같은 엔티티 이름이 이미 있으면 다시 놓지 않습니다(여러 번 돌려도 같은 씬). 다 놓은 뒤 `models/` 의 메시 가운데 씬 · 프리팹 · 데이터 어디에서도 부르지 않는 것이
 있으면 그 목록을 알리고 실패합니다(에셋 검증 `orphans` 와 같은 판정). 머티리얼 · 메시 파일이 없으면 씬을 고치지 않고 실패합니다.
 
-화면은 이 스크립트가 보지 않습니다 — 놓은 뒤 게임을 띄워 크기 · 머티리얼 색을 눈으로 확인합니다(계획 `GameSceneCc0Meshes`).
+화면은 이 스크립트가 보지 않습니다 — 놓은 뒤 게임을 띄워 크기 · 머티리얼 색을 눈으로 확인합니다(`docs/plans/Candidates-gameplay.md` 의 `Cc0PropsVisualReview`).
 
 사용법: py -3 Scripts/dev/MakeCc0SceneProps.py [--root <repo>] [--game <이름>] [--check]
   --check  씬을 고치지 않고, 놓을 것이 남았거나 부르지 않는 메시가 있으면 실패합니다.

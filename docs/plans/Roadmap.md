@@ -22,23 +22,21 @@
    - 간접 조명 [IndirectLighting](IndirectLighting.md). [단독: 셰이더 재베이크]
    - 월드 스트리밍 [WorldStreaming](WorldStreaming.md). [단독: 히치 측정은 Release 에서 혼자]
 3. **기능 묶음**(분류는 결정 기록 5-12)
-   1. 카메라 디렉터 · 직교 리그 [CameraRendererIntegration](CameraRendererIntegration.md) → [GamepadVirtualCursor](GamepadVirtualCursor.md), 에디터 시나리오 GraphSaveScenarioRun, [ScenarioRecorderAndInspectorGaps](Candidates-editor.md#scenariorecorderandinspectorgaps). [병렬 가능]
+   1. 에디터 시나리오 GraphSaveScenarioRun, [ScenarioRecorderAndInspectorGaps](Candidates-editor.md#scenariorecorderandinspectorgaps). [병렬 가능]
    2. 미리보기 창 [EditorMultiWorld](EditorMultiWorld.md) 6절. [병렬 가능]
    3. 지형 · 식생 [TerrainEditCost](TerrainEditCost.md), 서버 파괴 호스트 [DestructionNetSessionScene](Candidates-network.md#destructionnetsessionscene) → [EncryptedTickCost](Candidates-network.md#encryptedtickcost). [단독: 셰이더 재베이크, 측정은 Release 에서 혼자]
    4. 오디오 [AudioEngineExtensions](AudioEngineExtensions.md), 온라인 키트 마감 [OnlineKits](OnlineKits.md). [병렬 가능]
-   5. 애니메이션 · 게임플레이: [PairedAnimation](PairedAnimation.md) · [RigEditing](RigEditing.md) · [AnimationLodAndCrowd](AnimationLodAndCrowd.md), 천 [ClothFollowups](ClothFollowups.md), 물리 [PhysicsExtensions](PhysicsExtensions.md), Shooter3D [ShooterCharacterIntegration](ShooterCharacterIntegration.md) · [ShooterStrideWarping](ShooterStrideWarping.md) · [KayKitMaterials](KayKitMaterials.md), [FacialAnimation](FacialAnimation.md), [AnimationAdvancedFeatures](AnimationAdvancedFeatures.md), 서버 디버깅 [ServerDebug](ServerDebug.md), 네트워크 [RollbackPrediction](RollbackPrediction.md), 게임플레이 키트 [MovingGroundFollowUps](MovingGroundFollowUps.md) · [AbilitySystemExtensions](AbilitySystemExtensions.md) · [IntentNetworkWiring](IntentNetworkWiring.md) · [CharacterAppearanceIntegration](CharacterAppearanceIntegration.md) · [InteractionHighlightAndMontage](InteractionHighlightAndMontage.md) · [WildWestHorseMount](WildWestHorseMount.md) · [GameSceneCc0Meshes](GameSceneCc0Meshes.md). [병렬 가능]
+   5. 애니메이션 · 게임플레이: 천 [ClothFollowups](ClothFollowups.md), 물리 [PhysicsExtensions](PhysicsExtensions.md), Shooter3D [ShooterCharacterIntegration](ShooterCharacterIntegration.md), [AnimationAdvancedFeatures](AnimationAdvancedFeatures.md), 서버 디버깅 [ServerDebug](ServerDebug.md), 네트워크 [RollbackPrediction](RollbackPrediction.md), 게임플레이 키트 [WildWestHorseMount](WildWestHorseMount.md). [병렬 가능]
    6. 그래픽스 형식 묶음 [GraphicsFormatBundle](GraphicsFormatBundle.md). [단독: 셰이더 재베이크 · 에셋 재작성]
    7. 런타임 UI: [UiInputRemaining](UiInputRemaining.md) · [UiNotificationRemaining](UiNotificationRemaining.md) · [WorldWidgetInput](WorldWidgetInput.md) · [ScreenReaderSupport](ScreenReaderSupport.md) · [MsdfGlyphs](MsdfGlyphs.md) · [GlyphRasterizationHitch](GlyphRasterizationHitch.md) · [UiDrawPerformance](UiDrawPerformance.md)(측정이 이득을 보일 때만). [병렬 가능]
    8. 조건부에서 착수한 것: [PanelIDLiterals](PanelIDLiterals.md) · [DesignerDataToolsAudit](DesignerDataToolsAudit.md) · [UiTooltipAndCursor](UiTooltipAndCursor.md). [병렬 가능]
-   9. 사용자 설정 소비자 [UserSettingsConsumers](UserSettingsConsumers.md). [단독: 셰이더 재베이크]
-   10. 키트 조립 둘째 게임 [KitCompositionGames](KitCompositionGames.md). [병렬 가능]
    11. 프리로딩 · LOD [PreloadAndLod](PreloadAndLod.md). [단독: `.mesh` 판 올림 · 셰이더 재베이크]
    12. 뒤 순서: [WaylandWindowLayer](WaylandWindowLayer.md) · [DedicatedServerNoRenderer](DedicatedServerNoRenderer.md) · [MeshModifierPreviewCost](MeshModifierPreviewCost.md). [병렬 가능]
 4. **파일이 겹쳐 미룬 정리**(위 1 ~ 2 뒤에): [LongFunctions](LongFunctions.md) · [EngineCleanups](EngineCleanups.md). [단독: 헤더 · include 를 바꿔 여러 모듈이 다시 빌드됨]
 5. **새로 쓴 정리**(정리 → 기능 순서): [SerializerSilentSkips](SerializerSilentSkips.md) · [FunctorLambdaCommonization](Candidates-engine.md#functorlambdacommonization) · [DiskPathVsResourceId](DiskPathVsResourceId.md) · [InvalidMeasurementCleanup](Candidates-project.md#invalidmeasurementcleanup) · [DecisionMeasurementColumn](Candidates-project.md#decisionmeasurementcolumn) · [CarriedOverChecks](Candidates-project.md#carriedoverchecks) · [SilentFallbackAudit](SilentFallbackAudit.md). [병렬 가능]
 6. **구조 단순화 네 정책**(필수 설정 → 팩 쿠킹을 C++ 로 → 에셋 종류 등록 줄 하나 → 텍스트 형식 역할별 하나): [StructureSimplification](StructureSimplification.md). DataDriven D8 · D9 와 겹치는 지점은 그 문서 2절. [단독: `AssetFormat.h` · `GameConfig.h` 를 바꿔 여러 모듈이 다시 빌드됨]
 7. **Scripts 구조**(import 루트 하나 · 3층 · 층 게이트) [ScriptsStructure](ScriptsStructure.md). [병렬 가능]
-8. **조건부에서 착수한 일**: [ModuleRenderPass](ModuleRenderPass.md) · [CrossFileObjectReference](CrossFileObjectReference.md) · [ThirdPartyGaps](ThirdPartyGaps.md) · [InteractionSpatialGrid](InteractionSpatialGrid.md) · [TilemapCellDataLayers](TilemapCellDataLayers.md). [병렬 가능]
+8. **조건부에서 착수한 일**: [ModuleRenderPass](ModuleRenderPass.md) · [CrossFileObjectReference](CrossFileObjectReference.md) · [ThirdPartyGaps](ThirdPartyGaps.md) · [InteractionSpatialGrid](InteractionSpatialGrid.md). [병렬 가능]
 9. **빌드 속도 12 단계**(리플렉션 헤더 팬아웃) [BuildSpeed](BuildSpeed.md). [단독: 다른 작업이 모두 끝난 뒤 혼자, 빌드가 도는 동안은 측정이 무효]
 10. **2026-10-23 사용자와 정한 일**
     - Automation 분리 [AutomationSplit](AutomationSplit.md). [병렬 가능: 셰이더 · 층 게이트와 파일이 다르다]
@@ -46,7 +44,6 @@
 11. **병렬 · 비동기 트랙의 남은 단위**(2026-10-25 통합 I 에서 들어온 설계)
     - `hostgpu` 의 AppBin 잠금 풀기 [HostGpuIsolation](HostGpuIsolation.md) H1 → H4. [단독: H1 은 앱을 돌려 쓰기 위치를 스냅샷한다 — 통합 · gpu-verifier]
     - RHI 비동기 업로드 [RhiAsyncUploads](RhiAsyncUploads.md) — B0 골격 번들은 통합 L, U8 · U9 의 프레임 경로 몫(글리프 아틀라스 · 텍스처 구간 갱신)은 통합 M, Vulkan 비동기 전송(U6, 매니페스트 id `rhi-transfer-vk-u6`)은 통합 N 에서 들어갔다. DX12 비동기 전송(U5, 매니페스트 id `rhi-transfer-dx12-u5`)은 코드가 끝났고 GPU 확인은 통합이 돌린다. U7(테스트) · U8 남은 몫(새 텍스처 업로드 세 단계) · U9 남은 몫(렌더 타깃 읽기 티켓) · U11(PSO 상태)을 단위별로, 그 뒤 U10 · U12 ~ U14. [병렬 가능: 단위마다 소유 폴더가 다르다(계획 문서 표), GPU 확인은 통합]
-    - 애니메이션 성분 단위 평가 [AnimationComponentChain](AnimationComponentChain.md) — U3 · U4 는 통합 L 에서 들어갔다(Debug `race` 통과). 남은 것은 4 절 측정(K = 0 · 2 · 4 대조군, 무기 L = 3). [단독: 측정은 Release 에서 혼자]
     - 저장 전용 압축 타입 [PackedTypes](PackedTypes.md) P4(G 버퍼 법선 — 설계는 문서에 있고 코드는 GPU 확인과 재쿠킹을 하는 통합이 쓴다) → P5 → P6. [단독: P4 는 셰이더 재베이크]
 
 ## 지금 하지 않는 것

@@ -57,6 +57,7 @@ kGoodItems = (
     makeItem("later-bench", "measure", "Release", "exclusive", tool="scripts", args=["test", "B.*", "--preset", "{preset}"], limit="보고만", judge="exit"),
     makeItem("cook-shaders", "cook", "Release", "none", tool="app", args=["--cook-shaders"]),
     makeItem("not-yet", "measure", "Release", "exclusive", need_command="케이스가 아직 없다"),
+    makeItem("by-hand", "test", "Release", "shared", manual="실제 장치를 쥔 사람이 감각으로 판정한다"),
 )
 
 
@@ -67,6 +68,8 @@ class ParseManifestTest(unittest.TestCase):
         self.assertTrue(manifest.findItem("full-build").bRunnable)
         self.assertTrue(manifest.findItem("a-scenario").bCovered)
         self.assertFalse(manifest.findItem("not-yet").bRunnable)
+        self.assertFalse(manifest.findItem("by-hand").bRunnable)
+        self.assertTrue(manifest.findItem("by-hand").bUnrunnable)
 
     def testMissingRequiredKeyStops(self) -> None:
         item = makeItem("ctest-nogpu", "ctest", "Debug", "none")   # label 없음
@@ -81,6 +84,19 @@ class ParseManifestTest(unittest.TestCase):
         parseManifest(makeData(makeItem("later", "measure", "Release", "exclusive", need_command="이유", timeout_minutes=0)))
         with self.assertRaisesRegex(VerifyManifestError, "need_command"):
             parseManifest(makeData(makeItem("later", "measure", "Release", "exclusive", need_command="  ")))
+
+    def testManualExcusesKindKeysAndExcludesNeedCommand(self) -> None:
+        parseManifest(makeData(makeItem("hand", "measure", "Release", "exclusive", manual="사람 귀가 필요하다", timeout_minutes=0)))
+        with self.assertRaisesRegex(VerifyManifestError, "manual"):
+            parseManifest(makeData(makeItem("hand", "measure", "Release", "exclusive", manual="  ")))
+        with self.assertRaisesRegex(VerifyManifestError, "함께 쓰지 않는다"):
+            parseManifest(makeData(makeItem("hand", "measure", "Release", "exclusive", manual="귀", need_command="명령")))
+
+    def testPendingItemWithoutCommandMustBeManual(self) -> None:
+        with self.assertRaisesRegex(VerifyManifestError, "일회성"):
+            parseManifest(makeData(makeItem("later", "measure", "Release", "exclusive", need_command="이유", pending=True)))
+        parseManifest(makeData(makeItem("hand", "measure", "Release", "exclusive", manual="사람 눈", pending=True)))   # 사람이 해야 하는 일회성은 된다
+        parseManifest(makeData(makeItem("later", "measure", "Release", "exclusive", need_command="이유", pending=False)))
 
     def testUnknownKeyDuplicateIdAndBadValuesStop(self) -> None:
         with self.assertRaisesRegex(VerifyManifestError, "모르는 칸"):
@@ -123,11 +139,11 @@ class OrderingTest(unittest.TestCase):
         self.assertEqual(["Debug", "Release"], [name for name, _ in listGroup])
         self.assertEqual(["full-build", "ctest-nogpu", "some-test"], [item.itemId for item in listGroup[0][1]])
         # 쿠킹(셰이더 바이너리를 쓰는 실행보다 앞) → 테스트 → 덮개 → 측정(독점은 맨 끝, 파일 순서)
-        self.assertEqual(["cook-shaders", "scenario-run", "a-scenario", "perf-frame", "later-bench", "not-yet"], [item.itemId for item in listGroup[1][1]])
+        self.assertEqual(["cook-shaders", "scenario-run", "by-hand", "a-scenario", "perf-frame", "later-bench", "not-yet"], [item.itemId for item in listGroup[1][1]])
 
     def testGpuGroupsAreConsecutiveRunsOfTheSameMode(self) -> None:
         listItem = orderItems(self.manifest, list(self.manifest.listItem))[1][1]
-        self.assertEqual([("none", ["cook-shaders"]), ("shared", ["scenario-run", "a-scenario"]), ("exclusive", ["perf-frame", "later-bench", "not-yet"])],
+        self.assertEqual([("none", ["cook-shaders"]), ("shared", ["scenario-run", "by-hand", "a-scenario"]), ("exclusive", ["perf-frame", "later-bench", "not-yet"])],
                          [(mode, [item.itemId for item in group]) for mode, group in groupByGpuMode(listItem)])
 
     def testSelectItemsByIdAndConfig(self) -> None:
@@ -216,6 +232,8 @@ class OutcomeTest(unittest.TestCase):
         self.assertEqual("", resolveCoveredResult(covered, {"scenario-run": blocked}, "d").startedAt)
         notRun = makeNotRunResult(manifest.findItem("not-yet"), "d")
         self.assertEqual((kStatusSkipped, "명령 없음: 케이스가 아직 없다"), (notRun.status, notRun.detail))
+        byHand = makeNotRunResult(manifest.findItem("by-hand"), "d")
+        self.assertEqual((kStatusSkipped, "사람 확인: 실제 장치를 쥔 사람이 감각으로 판정한다"), (byHand.status, byHand.detail))
 
     def testResultTableHasOneRowPerResultWithEnvironment(self) -> None:
         listResult = [makeResult("judged", kStatusPassed, "", "2026-10-24 10:00", valueText="p50 90 us")]
@@ -326,6 +344,17 @@ class PendingLineTest(unittest.TestCase):
         self.assertEqual(1, len(listViolation))
         self.assertIn("some-test", listViolation[0])
         self.assertEqual([], checkVerifyPending(self.makeRoot("확인 대기: 매니페스트 id `some-test`.\n", pendingItem=True)))
+
+    def testItemWithoutCommandNeedsAnOwnerLineEvenWhenNotPending(self) -> None:
+        for key, value in (("need_command", "케이스가 아직 없다"), ("manual", "사람 눈이 필요하다")):
+            root = self.makeRoot("본문\n")
+            item = makeItem("some-test", "test", "Debug", "none", filter="SomeTest.*", **{key: value})
+            (root / "Test" / "QA" / "VerifyBatch.json").write_text(json.dumps(makeData(item)), encoding="utf-8")
+            listViolation = checkVerifyPending(root)
+            self.assertEqual(1, len(listViolation))
+            self.assertIn(f"명령 없는 항목 `some-test`({key})", listViolation[0])
+            (root / "docs" / "plans" / "A.md").write_text(self.kPlanHeader + "후보: 매니페스트 id `some-test`.\n", encoding="utf-8")
+            self.assertEqual([], checkVerifyPending(root))
 
     def testMissingManifestOnlyMattersWhenAPendingLineExists(self) -> None:
         root = self.makeRoot("본문\n")

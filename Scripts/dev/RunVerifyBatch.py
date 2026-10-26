@@ -15,7 +15,7 @@
 `ctest` · `test` · `perf` · `load` · `perf-compare` · `soak` · `scene-load-bench` · `golden` 을 부른다. 순서는 구성(매니페스트의 `configs` 순서)마다
 종류 → GPU 방식이다. GPU 방식이 같은 이어진 항목은 잠금을 한 번만 잡는다: `shared` 는 GPU 공유 칸, `exclusive` 는 GPU 와 빌드 칸을 혼자(측정이 다른 빌드에
 오염되지 않게 — 작업 방식 2 절). 한 항목이 져도 나머지는 계속 돈다. 다만 `build` 항목이 지면 같은 구성의 나머지는 `막힘` 이다(없는 바이너리를 돌리지 않는다).
-`need_command` 항목은 돌지 않고 이유를 표에 적으며, `wsl` 항목은 사용자가 요청할 때만 하므로 돌지 않는다. 덮개(`covered`) 항목은 덮개 항목의 결과를 따른다.
+`manual`(사람이 해야 한다) · `need_command`(명령을 아직 못 만들었다) 항목은 돌지 않고 이유를 표에 적으며, `wsl` 항목은 사용자가 요청할 때만 하므로 돌지 않는다. 덮개(`covered`) 항목은 덮개 항목의 결과를 따른다.
 
 `--jobs N`(기본 2)이면 한 구성 안에서 서로 충돌하지 않는 단위를 N 개까지 겹쳐 돌린다(`hasConflict`). 단위는 잠금 한 번에 이어 도는 같은 GPU 방식 묶음이고, 잠금 없는
 `none` 은 항목 하나가 단위다. 빌드 · 쿠킹 · 골든 · 측정 · 독점 항목은 혼자 돌고, 같은 잠금 자원을 쥔 단위(GPU 공유끼리)는 순서대로 돈다. 그래서 겹치는 것은 잠금 없는
@@ -208,7 +208,7 @@ def printList(manifest: VerifyManifest) -> None:
     """항목 표 — 돌 수 있는지(실행 · 덮개 · 명령 없음 · wsl)와 일회성(pending) 여부까지."""
     listRow = [("id", "종류", "구성", "gpu", "상태", "일회성")]
     for item in manifest.listItem:
-        state = "덮개" if item.bCovered and not item.needCommand else "명령 없음" if item.needCommand else "wsl" if item.platform == "wsl" else "실행"
+        state = ("사람 확인" if item.manual else "명령 없음" if item.needCommand else "덮개" if item.bCovered else "wsl" if item.platform == "wsl" else "실행")
         listRow.append((item.itemId, item.kind, item.config, item.gpu, state, "예" if item.bPending else "-"))
     listWidth = [max(len(row[column]) for row in listRow) for column in range(len(listRow[0]))]
     for row in listRow:
@@ -226,7 +226,7 @@ def printDryRun(manifest: VerifyManifest, listItem: list[VerifyItem], repository
             print(f"-- gpu {gpuMode}: {lockText}")
             for item in listGroup:
                 if item.bCovered or not item.bRunnable:
-                    reason = "덮개 " + item.coveredBy if item.bCovered and not item.needCommand else item.needCommand or "wsl"
+                    reason = "덮개 " + item.coveredBy if item.bCovered and not item.bUnrunnable else item.manual or item.needCommand or "wsl"
                     print(f"   {item.itemId}: 돌지 않음 — {reason}")
                     continue
                 try:

@@ -1,6 +1,6 @@
 # CharacterEditor — 캐릭터 편집 에디터 플러그인
 
-`GF_EditorPlugIn_CharacterEditor` 는 캐릭터 편집 창(`docs/plans/EditorCharacterEditor.md`)입니다. 화면 없이 테스트할 수 있는 편집 모델과 그 모델을 그리고 선택을 입은 몸을 미리보기 씬에 세우는 창이 들어 있습니다. 남은 일은 계획 문서의 "남은 것" 절에 있습니다.
+`GF_EditorPlugIn_CharacterEditor` 는 캐릭터 편집 창(`docs/decisions/5-11_Editor.md`)입니다. 화면 없이 테스트할 수 있는 편집 모델과 그 모델을 그리고 선택을 입은 몸을 미리보기 씬에 세우는 창이 들어 있습니다. 남은 일은 계획 문서의 "남은 것" 절에 있습니다.
 
 ## 구조
 

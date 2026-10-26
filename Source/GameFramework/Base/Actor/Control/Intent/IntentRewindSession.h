@@ -3,7 +3,7 @@
  * @brief 의도 재생의 되감기 실행입니다 — 키 상태(`IntentRewindBuffer`)로 되돌린 뒤 목표 틱까지 같은 고정 프레임으로 다시 돕니다.
  * @details 세션은 세계의 모양(`IIntentRewindWorld`)만 안다: 키를 찍고, 키로 되돌리고, 고정 틱 하나를 돈다. 장면 하나를 실제로 다루는 짝은
  *          `ControlSceneRewindWorld` 이고, 이 파일은 순서(찾기 → 미래 버리기 → 되돌리기 → 다시 돌기)와 한 프레임에 돌 틱 수의 나눔만 가진다.
- *          설계는 `docs/plans/IntentNetworkWiring.md` 3절이다.
+ *          설계는 `docs/decisions/5-8_GameFramework.md`이다.
  *
  *          - **키 찍기**: 호스트가 틱 하나를 돌리기 전에 `captureIfDue` 를 부른다. 간격의 배수 틱이고 그 틱의 키가 아직 없을 때만 찍는다(되감은 자리를 다시 돌 때 같은 키를 두 번 넣지 않는다).
  *          - **되감기**: `beginSeek( 목표 )` 가 목표 이하의 가장 가까운 키로 세계를 되돌리고 그 뒤의 키를 버린다(되돌린 자리에서 다시 돌면 미래가 갈라진다).
