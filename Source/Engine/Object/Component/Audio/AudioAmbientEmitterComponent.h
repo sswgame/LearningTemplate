@@ -32,6 +32,8 @@ namespace sw
 
         /** @brief 리스너 쪽 가장 가까운 점입니다(점 모양은 월드 위치). */
         float3 computeAudioPosition( const float3& listenerPosition ) const override;
+        /** @brief 모양이 바뀌었을 수 있으니 다음 갱신에 소리 자리를 다시 구하게 합니다. */
+        void onPropertyChanged( hashed_string propertyName ) override;
 
         /** @brief 모양을 정합니다. */
         void setShape( AudioVolumeShape shape, const float3& halfExtents, float32 radius );

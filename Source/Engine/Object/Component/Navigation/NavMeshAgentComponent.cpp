@@ -63,6 +63,7 @@ namespace sw
         , _crowdAgentID{ NavigationConstant::kInvalidAgentID }
         , _navIndex{ SceneNavigation::kNotRegistered }
         , _crowdIndex{ SceneNavigation::kNotRegistered }
+        , _writtenTransformVersion{ 0 }
         , _moveStatus{ NavMoveStatus::Idle }
         , _bHasDestination{ SW_FALSE }
         , _bDestinationDirty{ SW_FALSE }

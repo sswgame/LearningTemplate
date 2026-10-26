@@ -136,8 +136,9 @@ namespace sw
         if ( pEngine == nullptr )
             return;
         std::scoped_lock<mutex> lock{ _mutex };
+        const float3            previousListenerPosition = _primaryListenerPosition;
         updateListeners( *pEngine, deltaSeconds, pCamera );
-        updateEmitters( *pEngine, deltaSeconds );
+        updateEmitters( *pEngine, deltaSeconds, previousListenerPosition != _primaryListenerPosition );
         updateOcclusion( *pEngine, pScene3D, pScene2D );
         updateReverbZones( *pEngine );
     }
@@ -151,11 +152,16 @@ namespace sw
         {
             if ( SceneAudioInternal::isUsable( pListener ) == false )
                 continue;
-            const uint32       listenerIndex = MathUtil::min( pListener->getListenerIndex(), AudioEngine::kMaxListenerCount - 1 );
-            AudioListenerState state         = pListener->makeListenerState();
-            state._velocity                  = SceneAudioInternal::computeVelocity( state._position, pListener->_lastPosition, pListener->_bHasLastPosition, deltaSeconds );
-            pListener->_lastPosition         = state._position;
-            pListener->_bHasLastPosition     = true;
+            const uint32 listenerIndex = MathUtil::min( pListener->getListenerIndex(), AudioEngine::kMaxListenerCount - 1 );
+            // 트랜스폼이 그대로면(월드 변경 번호) 자리 · 앞 · 위를 지난 상태에서 잇는다 — 자리가 같으니 속도는 0 이다. 모드 · 반폭은 세터가 바꾸므로 늘 넣는다.
+            const uint32       version        = pListener->getWorldTransformVersion();
+            const bool         bPoseUnchanged = pListener->_bHasLastState && version == pListener->_seenTransformVersion;
+            AudioListenerState state          = pListener->makeListenerState( bPoseUnchanged );
+            if ( bPoseUnchanged == false )
+                state._velocity = SceneAudioInternal::computeVelocity( state._position, pListener->_lastState._position, pListener->_bHasLastState, deltaSeconds );
+            pListener->_lastState            = state;
+            pListener->_seenTransformVersion = version;
+            pListener->_bHasLastState        = true;
             audioEngine.setListener( listenerIndex, state );
             listenerMask |= 1u << listenerIndex;
             if ( listenerIndex == 0 || bHavePrimary == false )
@@ -192,17 +198,22 @@ namespace sw
         _activeListenerMask = listenerMask;
     }
 
-    void SceneAudio::updateEmitters( AudioEngine& audioEngine, float32 deltaSeconds )
+    void SceneAudio::updateEmitters( AudioEngine& audioEngine, float32 deltaSeconds, bool bListenerMoved )
     {
-        // 에미터 자리 · 속도.
+        // 에미터 자리 · 속도. 자리는 에미터의 트랜스폼과(넓은 소리는) 리스너 자리를 따르므로, 둘 다 그대로면(월드 변경 번호 · 리스너 자리) 지난 자리를
+        // 그대로 쓰고 속도는 0 이다. 엔진에는 그래도 넣는다 — 엔진이 지난 값을 들고 있는지에 기대지 않는다.
         _listEmitterSnapshot.clear();
         for ( AudioEmitterComponent* pEmitter : _emitter.items() )
         {
             if ( SceneAudioInternal::isUsable( pEmitter ) == false )
                 continue;
-            const float3 position            = pEmitter->computeAudioPosition( _primaryListenerPosition );
-            const float3 velocity            = SceneAudioInternal::computeVelocity( position, pEmitter->_lastAudioPosition, pEmitter->_bHasLastAudioPosition, deltaSeconds );
+            const uint32 version             = pEmitter->getWorldTransformVersion();
+            const bool   bUnmoved            = pEmitter->_bHasLastAudioPosition && bListenerMoved == false && version == pEmitter->_seenTransformVersion;
+            const float3 position            = bUnmoved ? pEmitter->_lastAudioPosition : pEmitter->computeAudioPosition( _primaryListenerPosition );
+            const float3 velocity            = bUnmoved ? float3{}
+                                                        : SceneAudioInternal::computeVelocity( position, pEmitter->_lastAudioPosition, pEmitter->_bHasLastAudioPosition, deltaSeconds );
             pEmitter->_lastAudioPosition     = position;
+            pEmitter->_seenTransformVersion  = version;
             pEmitter->_bHasLastAudioPosition = true;
             audioEngine.setEmitter( pEmitter->getEmitterID(), position, velocity );
             _listEmitterSnapshot.push_back( pEmitter );

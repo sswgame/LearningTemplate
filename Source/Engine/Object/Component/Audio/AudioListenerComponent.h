@@ -25,10 +25,12 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        /** @brief 지난 프레임의 자리입니다(속도). `SceneAudio` 만 씁니다. */
-        float3 _lastPosition;
-        /** @brief `_lastPosition` 이 유효한지입니다. `SceneAudio` 만 씁니다. */
-        bool _bHasLastPosition;
+        /** @brief 지난 프레임에 엔진에 넣은 상태입니다(속도는 자리 차이로, 트랜스폼이 그대로면 자리 · 앞 · 위를 이것에서 잇는다). `SceneAudio` 만 씁니다. */
+        AudioListenerState _lastState;
+        /** @brief `_lastState` 를 만든 때의 월드 변경 번호입니다(`getWorldTransformVersion`). `SceneAudio` 만 씁니다. */
+        uint32 _seenTransformVersion;
+        /** @brief `_lastState` 가 유효한지입니다. `SceneAudio` 만 씁니다. */
+        bool _bHasLastState;
 
         /** @brief 칸 0 · 3D 로 만듭니다. */
         AudioListenerComponent();
@@ -40,8 +42,11 @@ namespace sw
         /** @brief 씬 오디오에서 뺍니다. */
         void onUnregister( GameObjectManager& manager ) override;
 
-        /** @brief 이 리스너의 상태입니다(자리 · 앞 · 위 · 모드 · 반폭). 속도는 `SceneAudio` 가 넣습니다. */
-        AudioListenerState makeListenerState() const;
+        /**
+         * @brief 이 리스너의 상태입니다(자리 · 앞 · 위 · 모드 · 반폭). 속도는 `SceneAudio` 가 넣습니다.
+         * @param bPoseUnchanged 참이면 자리 · 앞 · 위를 지난 상태(`_lastState`)에서 잇고 월드 행렬을 읽지 않습니다(트랜스폼 변경 번호가 같을 때).
+         */
+        AudioListenerState makeListenerState( bool bPoseUnchanged ) const;
 
         /** @brief 칸 번호입니다. */
         uint32 getListenerIndex() const { return _listenerIndex; }

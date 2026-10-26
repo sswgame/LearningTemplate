@@ -11,6 +11,7 @@ namespace sw
 {
     AudioEmitterComponent::AudioEmitterComponent()
         : _lastAudioPosition{}
+        , _seenTransformVersion{ 0 }
         , _bHasLastAudioPosition{ false }
         , _event{}
         , _bPlayOnBeginPlay{ true }

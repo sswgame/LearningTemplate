@@ -21,6 +21,7 @@
 
 namespace sw
 {
+    class SceneComponent;
     class SpriteInstanceBatch;
     class ValidationContext;
 
@@ -152,6 +153,8 @@ namespace sw
         vector<PhysicsBodyHandle>               _listBody;          ///< 만든 2D 물리 정적 바디(씬의 Box2D 씬)
         vector<unique_ptr<SpriteInstanceBatch>> _listChunkBatch;    ///< 청크마다 배치(빈 청크는 nullptr). 청크 안 칸마다 항목 하나
         float4x4                                _lastOwnerWorld;    ///< 마지막으로 칸을 놓은 오브젝트 월드 행렬
+        const SceneComponent*                   _pLastOwnerRoot;    ///< `_lastOwnerWorld` 를 읽은 장면 컴포넌트(비교만 한다 — 번호는 같은 칸끼리만 견준다)
+        uint32                                  _lastOwnerVersion;  ///< 그때의 월드 변경 번호 — 같으면 행렬을 읽어 비교하지 않는다
         float32                                 _elapsedSeconds;    ///< 애니메이션 시각
         uint8                                   _bLoaded;           ///< 맵 · 타일셋을 읽었는가
         uint8                                   _bChunkBuildQueued; ///< 빈 청크에 칠해 배치를 틱 뒤에 만들기로 했는가

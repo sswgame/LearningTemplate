@@ -253,7 +253,9 @@ namespace sw
         const bool bTransformChanged = consumeTransformChange();
         float3     position{};
         quaternion rotation{};
-        if ( _body.isValid() == false || pScene->isBodyValid( _body ) == false )
+        // 바디는 이 컴포넌트만 지운다(씬을 내릴 때는 `ScenePhysics::onSceneCleared` 가 먼저 놓게 한다) — 프레임마다 백엔드에 묻지 않고 Debug 에서만 확인한다.
+        SW_ASSERT( _body.isValid() == false || pScene->isBodyValid( _body ) );
+        if ( _body.isValid() == false )
         {
             PhysicsComponentUtil::readWorldPose( *this, position, rotation, _worldScale );
             createBody( physics, *pScene, position, rotation, _worldScale );
