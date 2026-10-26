@@ -54,3 +54,39 @@ namespace sw::editor
         bool hasSingleSelection() const { return _listSelectedID.size() == 1; }
     };
 } // namespace sw::editor
+
+namespace sw::editor
+{
+    /**
+     * @struct EditorContextMenuRules
+     * @brief 맥락 메뉴가 열리는 순간의 대상 규칙(EditorUX 10-3 R2 · R3)입니다. ImGui 를 쓰지 않아 EditorTest 가 테스트하고, 어댑터(`EditorInputGUI`)가 이것 하나를 부른다.
+     */
+    struct EditorContextMenuRules
+    {
+        /**
+         * @brief 메뉴의 대상을 만듭니다. 누른 항목(@p hoveredID)이 선택 밖이면 그것만 고른 선택이 대상이고 @p outbSelectOnlyHovered 가 true 입니다(부른 쪽이 선택을 바꾼다).
+         *        선택 안이면 선택 전체가, 빈 곳(0)이면 선택을 바꾸지 않은 지금 선택이 대상입니다.
+         * @details 선택을 누를 때가 아니라 열 때 바꾸는 까닭은 뷰포트에서 누름이 비행이 될 수 있어서다(R2). 메뉴가 고른 한 행에만 작동하는 패널마다 다른 동작을 없앤다(R3).
+         */
+        static EditorCommandTarget makeMenuTarget( EditorCommandTargetKind kind, uint64 hoveredID, const vector<uint64>& listSelectedID, bool& outbSelectOnlyHovered )
+        {
+            EditorCommandTarget target{};
+            target._kind          = kind;
+            target._hoveredID     = hoveredID;
+            outbSelectOnlyHovered = false;
+            bool bHoveredSelected = false;
+            for ( const uint64 selectedID : listSelectedID )
+            {
+                bHoveredSelected = bHoveredSelected || selectedID == hoveredID;
+            }
+            if ( hoveredID != 0 && bHoveredSelected == false )
+            {
+                outbSelectOnlyHovered  = true;
+                target._listSelectedID = { hoveredID };
+                return target;
+            }
+            target._listSelectedID = listSelectedID;
+            return target;
+        }
+    };
+} // namespace sw::editor
