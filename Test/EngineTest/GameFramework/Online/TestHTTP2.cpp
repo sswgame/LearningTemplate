@@ -174,6 +174,19 @@ SW_TEST_CASE( HTTP2Test, HpackStaticTableMatchesTheRfcAppendixA )
 }
 
 /**
+ * @brief [HTTP2Test] HPACK 정수가 uint32 를 넘으면 감아 읽지 않고 오류다
+ * @details 색인 127 + 0xFFFFFF83 = 2^32 + 2 는 32 비트로 모으면 2(`:method GET`)로 감겨 읽혔다.
+ */
+SW_TEST_CASE( HTTP2Test, HpackIntegerOverflowIsAnError )
+{
+    HpackDecoder        decoder;
+    vector<HpackHeader> listHeader;
+    string              error;
+    const uint8         arrBlock[] = { 0xFF, 0x83, 0xFF, 0xFF, 0xFF, 0x0F };
+    SW_EXPECT_FALSE( decoder.decode( arrBlock, sizeof( arrBlock ), listHeader, error ) );
+}
+
+/**
  * @brief [HTTP2Test] 응답 줄의 사유 문구는 RFC 9110 의 이름이고, 표에 없는 코드는 일반 문구로 쓴다
  */
 SW_TEST_CASE( HTTP2Test, HTTPReasonPhrasesMatchTheRfc )
