@@ -124,7 +124,7 @@ namespace sw
         static constexpr uint32 kCullFront             = SW_BIT( 12 ); ///< PSO 기본값으로 앞면 컬링을 쓴다(인버티드 헐 외곽선). XML 은 None 으로만 바꿀 수 있다.
         static constexpr uint32 kPremultipliedAlpha    = SW_BIT( 13 ); ///< 블렌드가 켜지면 원본 색이 이미 알파를 곱한 값이다(One/InvSrcAlpha, `_bPremultipliedAlpha`).
         /**
-         * @brief 후처리를 끈 뷰(CCTV, 표면 값 보기)와 품질(`_minPostQuality`)로 꺼지는 효과 패스다(SSAO, 블룸, 외곽선, 피사계 심도, 모션 블러). `kGenericFullscreen` 에만 붙는다.
+         * @brief 후처리를 끈 뷰(CCTV, 표면 값 보기)와 품질(`_minPostQuality`)로 꺼지는 효과 패스다(SSAO, 블룸, 외곽선, 피사계 심도, 모션 블러)와 TAA 다. TAA 말고는 `kGenericFullscreen` 에만 붙는다.
          * @details 꺼진 패스는 기록하지 않는다 — 어떻게 빠지는지는 `kBypassesToSource`(출력이 원본을 가리킨다) 또는 `kOmittedWhenOff`(출력이 없다) 가 정하고, 둘 중 하나가 꼭 붙는다.
          *          조명과 톤맵은 효과가 아니라 이미지를 만드는 단계라 이 비트가 없다.
          */
@@ -142,7 +142,7 @@ namespace sw
          */
         static constexpr uint32 kRequiresPassDesc = SW_BIT( 16 );
         /**
-         * @brief 꺼진 뷰에서는 패스를 기록하지 않고 출력 이름이 원본(SourceColor 입력)을 가리킨다 — 출력 타깃도 처음 켜질 때까지 만들지 않는다(블룸 · 외곽선 · 피사계 심도 · 모션 블러).
+         * @brief 꺼진 뷰에서는 패스를 기록하지 않고 출력 이름이 원본(SourceColor 입력)을 가리킨다 — 출력 타깃도 처음 켜질 때까지 만들지 않는다(블룸 · 외곽선 · 피사계 심도 · 모션 블러 · TAA. TAA 출력은 셋업이 기록 형식으로 읽어 늘 만든다).
          * @details 원본을 복사하거나 셰이더가 원본을 고르던 길은 꺼져 있어도 전 화면을 한 번 읽고 쓰고, 출력 타깃이 늘 메모리를 차지했다.
          *          뷰마다 프레임에 한 번 정한다(`FrameRenderer::applyViewPassSelection`).
          *          출력이 원본과 형식 · 크기가 같아야 하고 그 출력을 쓰는 패스가 하나뿐이어야 한다 — 로드가 검사한다(`RenderPipelineAsset::validate` 3-6).

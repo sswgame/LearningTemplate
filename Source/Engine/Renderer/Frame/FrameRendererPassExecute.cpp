@@ -626,6 +626,10 @@ namespace sw
         const AttachmentNames& names     = attachmentNames();
         const hashed_string&   taaTarget = input._declaredColor[0]._attachment;
         const utf8*            pSrcName{ nullptr };
+        // 후처리를 끈 뷰는 셋업이 출력 이름을 원본에 이었다(`applyViewPassSelection`, kBypassesToSource). 기록하지 않고 히스토리도 건드리지 않는다
+        // — 원본을 TaaColor 로 복사하거나 셰이더로 옮기던 길은 지웠다. 다시 켠 첫 프레임은 `_bTaaHistoryReset` 이 기록을 버린다.
+        if ( activePool().isForwarded( taaTarget.view() ) )
+            return;
         registerDeclaredInputs( context, input._passDesc );
         for ( const RenderGraphPassDesc::ResolvedAttachment& sourceInput : input._passDesc._listResolvedInput )
         {
@@ -634,28 +638,11 @@ namespace sw
         }
         // 히스토리 생성과 bindless 등록은 ensureTaaHistory() 가 셋업 단계에서 끝냈다. 이 콜백은
         // 병렬 기록에서 태스크 스레드가 실행하므로 여기서 레지스트리를 건드리면 안 된다. 히스토리는 뷰마다 하나다.
-        const ViewTarget&      activeView = *_pActiveView;
-        const RHITextureHandle source     = pSrcName != nullptr ? findTransient( pSrcName ) : RHITextureHandle{ 0 };
-        // 후처리를 끈 뷰는 시간 누적 없이 원본을 넘긴다(히스토리도 건드리지 않는다). 포맷이 같으면 복사하고, 다르면(원본 R8G8B8A8, 출력
-        // R16G16B16A16이며 D3D 의 복사는 같은 포맷만 받는다) 아래 컷 프레임과 같이 히스토리 슬롯에 원본을 바인딩해 TAA 셰이더가 원본을 옮기게 한다.
-        const bool bSkipPost = activeView._settings.usesPostProcess() == false;
-        if ( bSkipPost )
-        {
-            const RHITextureHandle target              = findTransient( taaTarget.view() );
-            IRHIResourceFactory*   pFactory            = _pDevice->getResourceFactory();
-            const bool             bSameFormat         = source != 0 && target != 0 && pFactory->getTextureFormat( source ) == pFactory->getTextureFormat( target );
-            const bool             bNoShaderPassNeeded = bSameFormat || source == 0 || target == 0 || source == target;
-            if ( bNoShaderPassNeeded )
-            {
-                if ( bSameFormat && source != target )
-                    context._pCmd->blitTexture( source, target );
-                return;
-            }
-        }
-        // 기록을 버리는 프레임(처음 그리는 프레임 · 컷 — `ViewTarget::_bHistoryReset`)에서는 지난 화면의 히스토리를 버린다. 이번 프레임은 히스토리 슬롯에 **이번 원본**을
+        const ViewTarget& activeView = *_pActiveView;
+        // 기록을 버리는 프레임(처음 그리는 프레임 · 컷 · 후처리를 다시 켠 첫 프레임 — `ViewTarget::_bTaaHistoryReset`)에서는 지난 화면의 히스토리를 버린다. 이번 프레임은 히스토리 슬롯에 **이번 원본**을
         // 바인딩해 섞어도 이번 이미지만 남게 한다. 원본을 히스토리 텍스처에 복사하지 않는 것은 포맷이 다를 수 있어서다(원본 R8G8B8A8, 히스토리 R16G16B16A16이며
         // D3D 의 복사는 같은 포맷만 받는다). 패스 끝의 복사(TAA 출력에서 히스토리로)가 히스토리를 새로 채운다.
-        const bool bCut = ( activeView._bHistoryReset == SW_TRUE || bSkipPost ) && pSrcName != nullptr;
+        const bool bCut = activeView._bTaaHistoryReset == SW_TRUE && pSrcName != nullptr;
         if ( bCut )
             registerPassTexture( context, names._gbufferAlbedo, pSrcName );
         else if ( activeView._taaHistory != 0 )
@@ -671,7 +658,7 @@ namespace sw
         }
 
         const RHITextureHandle taaOut              = findTransient( taaTarget.view() );
-        const bool             bTaaHistoryWritable = taaOut != 0 && activeView._taaHistory != 0 && bSkipPost == false;
+        const bool             bTaaHistoryWritable = taaOut != 0 && activeView._taaHistory != 0;
         if ( bTaaHistoryWritable )
             context._pCmd->blitTexture( taaOut, activeView._taaHistory );
     }

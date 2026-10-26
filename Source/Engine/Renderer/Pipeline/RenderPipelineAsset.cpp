@@ -516,6 +516,8 @@ namespace sw
                     }
                     if ( sourceCount != 1 )
                         continue; // 원본이 없거나 둘이면 입력 계약 검사(4)가 이미 알렸다(이 타입들은 원본이 필수 입력이다)
+                    if ( pass._listResolvedColorOutput.empty() )
+                        continue; // 컬러 출력이 없으면 3-1 · 3-2 가 이미 알렸다(이 타입들은 모두 kDrawsDeclaredColor 다)
                     if ( pass._listResolvedColorOutput.size() != 1 )
                     {
                         SW_LOG_ERROR( "[%#] pass '%#' (%#): needs one color output - when the effect is off the output names the source",

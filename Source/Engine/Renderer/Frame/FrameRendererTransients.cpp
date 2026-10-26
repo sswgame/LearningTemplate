@@ -55,12 +55,14 @@ namespace sw
             }
 
             /**
-             * @brief 이 뷰에서 빠질 수 있는 패스면 true 입니다 — 일반 풀스크린 패스이고 컬러 출력을 모두 혼자 쓴다.
+             * @brief 이 뷰에서 빠질 수 있는 패스면 true 입니다 — 일반 풀스크린 패스이거나 꺼지면 원본을 가리키는 패스(TAA)이고, 컬러 출력을 모두 혼자 쓴다.
              * @details 출력을 혼자 써야 그 이름을 원본에 잇거나 비워도 다른 쓰기와 섞이지 않는다(꺼질 수 있는 효과는 로드 검증 3-6 · 3-7 이 그것을 요구한다).
              */
             static bool isSelectable( const vector<RenderGraphPassDesc>& listPass, const RenderGraphPassDesc& pass )
             {
-                if ( getRenderPassTypeInfo( pass._resolvedType ).hasFlag( RenderPassTraitFlag::kGenericFullscreen ) == false || pass._listResolvedColorOutput.empty() )
+                const RenderPassTypeInfo& info            = getRenderPassTypeInfo( pass._resolvedType );
+                const bool                bSelectableType = info.hasFlag( RenderPassTraitFlag::kGenericFullscreen ) || info.hasFlag( RenderPassTraitFlag::kBypassesToSource );
+                if ( bSelectableType == false || pass._listResolvedColorOutput.empty() )
                     return false;
                 return std::all_of( pass._listResolvedColorOutput.begin(), pass._listResolvedColorOutput.end(),
                                     [&listPass]( const RenderGraphPassDesc::ResolvedAttachment& output )
@@ -383,7 +385,17 @@ namespace sw
         listNeeded.assign( listAttachment.size(), SW_FALSE );
         bool bForwardSet = false;
         bool bAllocated  = false;
-        auto ensureMade  = [&]( const hashed_string& name )
+        bool bReleased   = false;
+        // 빠진 패스의 출력 타깃은 이어서 오래(`TransientAttachmentPool::kIdleFramesBeforeRelease`) 빠져 있으면 놓는다. 처음 돌 때 만드는 타깃만이다
+        // — 나머지(TAA 출력 · 지오메트리 출력)는 셋업이 늘 있다고 보고 읽는다. 놓은 GPU 자원은 백엔드 해제 큐가 앞 프레임들이 끝난 뒤에 지운다.
+        auto ageOutput = [&]( const hashed_string& name, bool bUsedThisFrame )
+        {
+            if ( Internal::isMadeOnFirstUse( listPass, name ) )
+                bReleased = pool.releaseIfIdle( _pDevice, name.view(), bUsedThisFrame ) || bReleased;
+        };
+        // TAA 가 이번 프레임에 기록을 쓰는지는 이 고르기 하나가 정한다(실행은 같은 결과 — 출력이 이어졌는지 — 를 본다). 다음 프레임의 `beginViewHistory` 가 읽는다.
+        view._bTaaHistoryWritten = SW_FALSE;
+        auto ensureMade          = [&]( const hashed_string& name )
         {
             if ( pool.contains( name.view() ) )
                 return;
@@ -402,6 +414,8 @@ namespace sw
             const RenderGraphPassDesc& pass = listPass[passIndex];
             if ( Internal::isSelectable( listPass, pass ) == false )
             {
+                if ( pass._resolvedType == RenderPassType::TAA )
+                    view._bTaaHistoryWritten = SW_TRUE;
                 Internal::markReads( listAttachment, pass, true, listNeeded );
                 for ( const RenderGraphPassDesc::ResolvedAttachment& output : pass._listResolvedColorOutput )
                 {
@@ -420,6 +434,7 @@ namespace sw
             {
                 // 꺼진 효과의 출력은 원본을 가리킨다 — 출력을 읽는 쪽이 원본을 읽는다.
                 bForwardSet = pool.forward( pass._listResolvedColorOutput[0]._attachment.view(), pSource->view() ) || bForwardSet;
+                ageOutput( pass._listResolvedColorOutput[0]._attachment, false );
                 if ( bOutputNeeded )
                     Internal::markNeeded( listAttachment, *pSource, listNeeded );
                 continue;
@@ -430,22 +445,27 @@ namespace sw
                 for ( const RenderGraphPassDesc::ResolvedAttachment& output : pass._listResolvedColorOutput )
                 {
                     bForwardSet = pool.markAbsent( output._attachment.view() ) || bForwardSet;
+                    ageOutput( output._attachment, false );
                 }
                 continue;
             }
+            if ( pass._resolvedType == RenderPassType::TAA )
+                view._bTaaHistoryWritten = SW_TRUE;
             for ( const RenderGraphPassDesc::ResolvedAttachment& output : pass._listResolvedColorOutput )
             {
                 bForwardSet = pool.stopForward( output._attachment.view() ) || bForwardSet;
                 ensureMade( output._attachment );
+                ageOutput( output._attachment, true );
             }
             Internal::markReads( listAttachment, pass, false, listNeeded );
         }
         if ( &view != &_mainView )
             return;
-        // 화면에 나가는 첨부 표시(`_bPresented`)가 가리키는 곳을 따라가므로 가리키는 곳이 바뀌어도 다시 싣는다.
-        if ( bForwardSet || bAllocated )
+        // 화면에 나가는 첨부 표시(`_bPresented`)가 가리키는 곳을 따라가므로 가리키는 곳이 바뀌어도 다시 싣는다. 놓은 타깃도 목록에서 뺀다(죽은 핸들을 남기지 않는다).
+        const bool bTargetsChanged = bAllocated || bReleased;
+        if ( bForwardSet || bTargetsChanged )
             publishRenderTargets();
-        if ( bAllocated )
+        if ( bTargetsChanged )
             reportRenderTargetMemory();
     }
 

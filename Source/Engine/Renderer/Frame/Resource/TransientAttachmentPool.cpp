@@ -59,6 +59,24 @@ namespace sw
         }
         const RHIDescriptorIndex srv = pDevice->getResourceFactory()->registerBindlessTexture( handle );
         _mapAttachment.emplace( name, Attachment{ handle, srv, desc._width, desc._height, format, clearColor } );
+        ++_allocationCount;
+        return true;
+    }
+
+    bool TransientAttachmentPool::releaseIfIdle( IRHIDevice* pDevice, string_view name, bool bUsedThisFrame )
+    {
+        const auto it = _mapAttachment.find( name );
+        if ( it == _mapAttachment.end() || advanceIdleFrames( it->second._idleFrames, bUsedThisFrame ) == false )
+            return false;
+        // 앞 프레임들이 아직 GPU 에서 이 타깃을 읽을 수 있다 — 백엔드의 해제 큐가 그 프레임들이 끝난 뒤에 지운다(release 와 같은 순서: SRV 먼저).
+        if ( pDevice != nullptr && pDevice->getResourceFactory() != nullptr )
+        {
+            if ( it->second._srv != kInvalidDescriptorIndex )
+                pDevice->getResourceFactory()->unregisterBindlessTexture( it->second._srv );
+            if ( it->second._texture != 0 )
+                pDevice->getResourceFactory()->destroyTexture( it->second._texture );
+        }
+        _mapAttachment.erase( it );
         return true;
     }
 

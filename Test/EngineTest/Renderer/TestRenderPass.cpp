@@ -880,7 +880,8 @@ SW_TEST_CASE( RenderPassTest, PipelineValidationCatchesInconsistencies )
  */
 SW_TEST_CASE( RenderPassTest, BypassPassOutputMustMatchItsSource )
 {
-    for ( const sw::RenderPassType type : { sw::RenderPassType::DepthOfField, sw::RenderPassType::MotionBlur, sw::RenderPassType::Bloom, sw::RenderPassType::Outline } )
+    for ( const sw::RenderPassType type : { sw::RenderPassType::DepthOfField, sw::RenderPassType::MotionBlur, sw::RenderPassType::Bloom, sw::RenderPassType::Outline,
+                                            sw::RenderPassType::TAA } )
     {
         SW_EXPECT_TRUE( sw::getRenderPassTypeInfo( type ).hasFlag( sw::RenderPassTraitFlag::kBypassesToSource ) );
     }

@@ -282,6 +282,8 @@ namespace sw
         bool findPSODesc( RHIPipelineStateHandle pso, RHIPipelineStateDesc& outDesc ) const;
         /** @brief 주 시점의 TAA 히스토리 텍스처입니다. 파이프라인에 TAA 패스가 없거나 아직 만들지 않았으면 0 입니다(진단과 테스트용). */
         RHITextureHandle getTaaHistory() const { return _mainView._taaHistory; }
+        /** @brief 주 시점의 첨부 풀입니다. 어느 타깃이 있고 몇 번 만들었는지 보는 진단 · 테스트용입니다(고치지 않는다). */
+        const TransientAttachmentPool& getMainViewPool() const { return _mainView._transientPool; }
         /**
          * @brief 씬 직접 경로(`execute( scene )`)의 출력 크기를 정합니다. 0 이면 백버퍼 크기를 씁니다. 초상화 베이크처럼 창과 다른 크기로 그릴 때 씁니다.
          * @details 패킷 경로는 패킷의 뷰포트 크기를 따르므로 이 값을 보지 않는다.
@@ -455,9 +457,16 @@ namespace sw
             /**
              * @brief 이번 프레임은 시간 누적 기록을 버린다 — 처음 그리는 프레임이거나 컷(`RenderViewSettings::_bCut`)이다(언리얼 `bCameraCut`).
              * @details `applyViewProjection` 이 프레임마다 한 번 정하고 TAA(이번 원본만) · 모션 블러(지난 뷰-투영 = 이번 것) · 자동 노출(측정값을 그대로)이 모두 이것 하나를 본다.
-             *          기능마다 컷을 따로 읽으면 한 기능만 컷을 빠뜨린다.
+             *          기능마다 컷을 따로 읽으면 한 기능만 컷을 빠뜨린다. TAA 는 이것을 포함한 `_bTaaHistoryReset` 을 본다.
              */
             uint8 _bHistoryReset{ SW_TRUE };
+            /**
+             * @brief 이번 프레임은 TAA 기록만 더 버린다 — `_bHistoryReset` 이거나 지난 프레임이 TAA 기록을 쓰지 않았다(TAA 가 빠진 프레임, `_bTaaHistoryWritten`).
+             * @details 빠진 TAA(후처리를 끈 뷰 · 품질 · 읽는 쪽 없음)는 출력이 원본을 가리키거나 없고 기록을 쓰지 않는다. 다시 도는 첫 프레임의 기록은 그 앞 화면이라 섞으면 그동안 움직인 것의 가장자리에 옛 그림이 남는다.
+             *          `beginViewHistory` 가 `_bHistoryReset` 과 같은 자리에서 정한다(기능마다 따로 정하지 않는다).
+             */
+            uint8 _bTaaHistoryReset{ SW_TRUE };
+            uint8 _bTaaHistoryWritten{ SW_FALSE };     ///< 이번 프레임의 TAA 가 돌아 기록을 쓴다 — 패스 고르기(`applyViewPassSelection`)의 결과 하나다. 다음 프레임의 `beginViewHistory` 가 읽는다
             uint8 _autoExposureWrite{ 0 };             ///< 이번 프레임에 쓰는 자동 노출 기록 칸(0 · 1). 톤맵은 이 칸을 읽는다
             uint8 _bAutoExposureThisFrame{ SW_FALSE }; ///< 이번 프레임에 이 뷰의 노출을 측정한다(`prepareAutoExposure`)
             uint8 _bAutoExposureMeasured{ SW_FALSE };  ///< 지금 자동 노출 기록에 측정한 값이 있다(기록을 새로 만들면 내린다 — 첫 측정은 지난 칸을 섞지 않는다)
