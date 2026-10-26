@@ -46,6 +46,8 @@ namespace sw
 
         /** @brief Windows 메시지 큐(PeekMessage)를 처리합니다. */
         bool processMessages() override;
+        /** @brief `MsgWaitForMultipleObjects` 로 메시지가 올 때까지 잡니다. */
+        void waitForMessages( uint32 timeoutMilliseconds ) override;
         /** @brief 핸들은 HWND 입니다. */
         NativeSurfaceKind getSurfaceKind() const override { return NativeSurfaceKind::Win32; }
 
@@ -75,6 +77,11 @@ namespace sw
         static LRESULT CALLBACK wndProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam );
         /** @brief `WM_SIZE` 를 처리합니다. 최소화(0x0)는 창 크기로 기억하지 않고, 재진입한 메시지는 크기만 적고 콜백을 건너뜁니다. */
         void onSizeMessage( WPARAM wParam, LPARAM lParam );
+        /**
+         * @brief `WM_SIZE` · `WM_ACTIVATEAPP` 로 최소화 · 포커스 상태를 적습니다.
+         * @details 외부 처리기(ImGui)보다 먼저 부른다 — 처리기가 메시지를 먹어도 상태는 놓치지 않는다.
+         */
+        void trackActivityMessage( UINT msg, WPARAM wParam );
         /** @brief `WM_GETMINMAXINFO` 의 최소 추적 크기를 `setMinimumClientSize` 로 채웁니다. 창 모드가 아니거나 하한이 없으면 false 입니다(기본 처리로 간다). */
         bool fillMinimumTrackSize( LPARAM lParam ) const;
 

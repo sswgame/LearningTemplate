@@ -34,6 +34,8 @@ namespace sw
         void destroy() override;
         /** @brief 쌓인 Wayland 이벤트를 처리합니다(막지 않는다). 종료 요청이면 false 입니다. */
         bool processMessages() override;
+        /** @brief 보낼 요청을 내보내고 컴포지터 연결 소켓을 `poll` 로 기다립니다. */
+        void waitForMessages( uint32 timeoutMilliseconds ) override;
         /** @brief 핸들은 wl_surface*, 디스플레이는 wl_display* 입니다. */
         NativeSurfaceKind getSurfaceKind() const override { return NativeSurfaceKind::Wayland; }
 

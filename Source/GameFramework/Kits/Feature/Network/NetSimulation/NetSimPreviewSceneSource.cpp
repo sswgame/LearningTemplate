@@ -26,7 +26,7 @@ namespace sw
     Scene* NetSimPreviewSceneSource::acquireScene( NetSimRole role, int32 worldIndex )
     {
         ScenePreviewPolicy policy{};
-        policy._bTick       = false; // 하니스가 고정 스텝으로 매니저를 직접 틱한다 — 씬 매니저가 한 번 더 틱하면 두 배로 간다
+        policy._tick        = ScenePreviewTick::External; // 하니스가 고정 스텝으로 매니저를 직접 틱한다 — 씬 매니저가 한 번 더 틱하면 두 배로 간다
         policy._bPhysics    = true;
         policy._bAudio      = false;
         policy._bPlay       = false; // 하니스가 세션을 만든 뒤 `beginPlay` 를 부른다

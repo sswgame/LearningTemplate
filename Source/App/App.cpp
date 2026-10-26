@@ -26,6 +26,7 @@
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Net/GameNetSession.h"
 #include "Engine/Object/Component/CameraComponent.h"
+#include "Engine/Probe/AutomationProbe.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
 #include "Engine/Renderer/RenderThread.h"
@@ -72,6 +73,16 @@ namespace sw
                 params._maxFixedStepPerFrame = config._maxFixedStepPerFrame;
                 return params;
             }
+
+            /** @brief 탐침 `Engine.FramePacingState` — 앱 루프가 이번 프레임에 고른 페이싱 상태 번호입니다. 주 창 서비스가 없으면(헤드리스) 값이 없습니다. */
+            [[nodiscard]] static bool readFramePacingState( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
+                if ( pWindowHost == nullptr )
+                    return false;
+                outValue = static_cast<float64>( static_cast<uint32>( pWindowHost->getFramePacer().getState() ) );
+                return true;
+            }
         };
     } // namespace
 
@@ -81,6 +92,10 @@ namespace sw
      *          시나리오의 `fixedDelta` 로 설정합니다.
      */
     SW_TEST_GLOBAL_VARIABLE_SHIPPED( float32, gv_fixedFrameDelta, 0.0f, "프레임마다 흘릴 고정 시간(초, 0=실시간) — 결정적 실행" );
+
+    SW_AUTOMATION_PROBE( engineFramePacingState, "Engine.FramePacingState",
+                         "App loop pacing this frame: 0 Foreground, 1 Background (gv_backgroundFrameRate), 2 Minimized, 3 Automation, 4 Server, 5 FullSpeed (gv_framePacing), 6 EditorIdle",
+                         &AppInternal::readFramePacingState );
 } // namespace sw
 
 namespace sw
@@ -446,8 +461,16 @@ namespace sw
         _fixedTimestep.start();
         _devConsole.initialize( _pWindow, _bEnableEditor == SW_TRUE );
 
-        uint64 frameNumber      = 0;
-        bool   bFrameClockShown = false;
+        // 페이서는 주 창 서비스가 든다 — 창(`_pWindow`)을 그 서비스에서 받았으므로 여기서 없으면 결함이다.
+        MainWindowSubsystem* const pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
+        if ( pWindowHost == nullptr )
+        {
+            SW_LOG_ERROR( "The engine scope has no MainWindow subsystem - the main loop cannot pace frames" );
+            return;
+        }
+        FramePacer& framePacer       = pWindowHost->getFramePacer();
+        uint64      frameNumber      = 0;
+        bool        bFrameClockShown = false;
         while ( _pWindow->processMessages() )
         {
             // 리슨 호스트(이 App 의 넷 세션이 서버)이면 줄마다 프레임 번호를 붙인다. 고정 틱이 없어 전용 서버의 `[tick=N]` 과 구분해
@@ -460,6 +483,8 @@ namespace sw
                 Logger::clearClockNumber();
             bFrameClockShown = bListenHost;
             ++frameNumber;
+
+            framePacer.markFrameStart();
 
             _devConsole.runPendingExec();
             // 프로파일 실행(-gv_profileFrames=N)과 자동화 시나리오(-scenario)는 스스로 끝난다(종료 코드는 `getExitCode`). 부모 프로세스는 표준 입력의 quit 으로 끝낸다.
@@ -507,6 +532,18 @@ namespace sw
                 _moduleHost->updateEditorUI( frameTime._deltaTime );
             }
 
+            // 이번 프레임의 페이싱 상태를 정한다 — 에디터가 이번 프레임의 다시 그릴 까닭을 정한 뒤다. 실행 인자(`-gv_framePacing` · 시나리오 · 프로파일 · 리슨 포트)가
+            // 고른 상태가 창 · 에디터 상태(최소화 · 유휴 · 포커스)보다 앞선다.
+            {
+                FramePacingInputs pacingInputs;
+                pacingInputs._bAutomationRun = _pAutomationSession->isBusy() || _engine.isProfileRunActive();
+                pacingInputs._bListenHost    = bListenHost;
+                pacingInputs._bMinimized     = _pWindow->isMinimized();
+                pacingInputs._bFocused       = _pWindow->hasFocus();
+                pacingInputs._bEditorQuiet   = _moduleHost->getFrameState()._bEditorQuiet == SW_TRUE;
+                framePacer.beginFrame( pacingInputs );
+            }
+
             // 카메라 포인터를 미리 잡아 두면 tick 안의 씬 전환이나 핫 리로드가 그 GameObject 를 파괴한 뒤 역참조하게 된다. 그래서
             // 조회 자체를 tick 안으로 넘긴다.
             //
@@ -528,6 +565,8 @@ namespace sw
             _backendSwap.applyIfPending();
 
             _engine.endFrame();
+            // 배경이면 상한 주기까지, 최소화면 창 메시지가 올 때까지 잔다. 다른 상태는 바로 다음 프레임이다.
+            framePacer.endFrame( *_pWindow );
         }
         // 창이 닫혀 끝났으면 자동화 시나리오가 그 결과를 종료 코드로 정한다(시나리오가 이미 끝냈으면 아무 일도 없다).
         _engine.onWindowClosed();

@@ -29,6 +29,7 @@
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorAssetTypeActions.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
@@ -809,6 +810,9 @@ namespace sw::editor
         _lastFallbackGlyphCount = _fallbackGlyphCount;
         _fallbackGlyphCount     = 0;
         _thumbnailCache.update();
+        // 썸네일은 워커가 읽고 프레임마다 몇 개씩 올린다 — 끝날 때까지 에디터 유휴(창 메시지까지 잠)로 들지 않게 연속 프레임을 청한다.
+        if ( _thumbnailCache.hasPendingLoads() )
+            editor::getSubsystem<EditorContext>().getSubsystem<EditorRenderViews>().requestAnimationFrame();
 
         handleAssetShortcuts();
         // 검색어가 있으면 하위 폴더의 파일까지 본다. 언리얼과 유니티의 프로젝트 검색과 같다.

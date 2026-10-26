@@ -56,6 +56,8 @@ namespace sw::editor
         void* findTexture( string_view resourceID );
         /** @brief 지금 보관하고 있는 썸네일 수입니다. */
         uint32 getCachedCount() const { return static_cast<uint32>( _listEntry.size() ); }
+        /** @brief 읽기를 기다리거나 읽는 중인 썸네일이 있으면 true 입니다. 그동안 패널은 연속 프레임을 청한다(워커가 끝내도 창 메시지는 오지 않는다). */
+        bool hasPendingLoads() const { return _listPendingID.empty() == false || _listLoading.empty() == false; }
 
     private:
         /** @brief 썸네일 하나입니다. */

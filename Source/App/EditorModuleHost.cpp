@@ -190,6 +190,9 @@ namespace sw
         // endEditorFrame 에서 소비된다. 이 질의를 프레임 앞으로 옮기면 Step 이 틱 없이 소비되어 아무 일도 일어나지 않는다.
         getMutableFrameState()._bTickScene = queryTickScene() ? SW_TRUE : SW_FALSE;
         sampleViewTargets();
+        // 다시 그릴 까닭은 이번 프레임의 UI 를 다 돈 뒤에 묻는다(입력 · 잡은 항목 · 알림 · 패널 요청이 이 프레임 것으로 정해졌다).
+        const bool bQuiet                    = _editorAPI.getRedrawReasons != nullptr && _editorAPI.getRedrawReasons( _editor ) == 0u;
+        getMutableFrameState()._bEditorQuiet = bQuiet ? SW_TRUE : SW_FALSE;
     }
 
     void EditorModuleHost::endEditorFrame()

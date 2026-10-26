@@ -115,6 +115,14 @@ namespace sw::editor
         /** @brief 지금 가진 미리보기 타깃 수입니다(테스트용). */
         uint32 getPreviewTargetCount() const { return static_cast<uint32>( _listPreviewTarget.size() ); }
 
+        /**
+         * @brief 이번 프레임 뒤에 곧바로 다음 프레임이 필요하다고 알립니다(시간으로 움직이는 패널). 프레임을 시작할 때 지웁니다.
+         * @details 요청이 없고 다른 까닭도 없으면 호스트 루프가 창 메시지까지 잔다(`EditorRedrawReason::Animation`). 미리보기 뷰를 낸 프레임은 스스로 요청한다(그 씬이 틱한다).
+         */
+        void requestAnimationFrame() { _bAnimationRequested = SW_TRUE; }
+        /** @brief 이번 프레임에 연속 프레임 요청이 있었으면 true 입니다. */
+        bool isAnimationRequested() const { return _bAnimationRequested == SW_TRUE; }
+
     private:
         /** @brief 뷰 렌더 타깃 하나를 놓습니다. */
         void destroyTarget( EditorViewTarget& view );
@@ -129,7 +137,8 @@ namespace sw::editor
         EditorViewTarget                _arrViewTarget[static_cast<uint32>( EditorViewKind::Count )]{};
         vector<EditorPreviewViewTarget> _listPreviewTarget{}; ///< 툴 창의 미리보기 타깃(`allocatePreviewTarget`)
         IDAllocator<uint32>             _previewTargetIDAllocator;
-        uint8                           _bGameViewHovered{ SW_FALSE }; ///< 게임 뷰 창 위에 마우스가 있다
-        uint8                           _bGameViewFocused{ SW_FALSE }; ///< 게임 뷰 창이 포커스를 가졌다
+        uint8                           _bGameViewHovered{ SW_FALSE };    ///< 게임 뷰 창 위에 마우스가 있다
+        uint8                           _bGameViewFocused{ SW_FALSE };    ///< 게임 뷰 창이 포커스를 가졌다
+        uint8                           _bAnimationRequested{ SW_FALSE }; ///< 이번 프레임에 연속 프레임 요청이 있었다(`requestAnimationFrame`)
     };
 } // namespace sw::editor

@@ -291,7 +291,6 @@
 "Test/EngineTest/UI/TestUIScreenSwitch.cpp" = 3
 "Test/EngineTest/UI/TestUITextInput.cpp" = 1
 "Test/EngineTest/UserSettings/TestUserSettings.cpp" = 1
-"Test/EngineTest/Window/TestWindowEvents.cpp" = 3
 # Test/FuzzTest — 이전 대기
 "Test/FuzzTest/LoaderFuzzer.cpp" = 2
 # Test/ReflectionTest — 이전 대기

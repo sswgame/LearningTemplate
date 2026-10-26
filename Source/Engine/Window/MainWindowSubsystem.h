@@ -13,6 +13,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/ISubsystem.h"
 
+#include "Engine/Window/FramePacer.h"
 #include "Engine/Window/IWindowTitleTarget.h"
 
 namespace sw
@@ -62,11 +63,16 @@ namespace sw
         /** @brief 제목을 거는 이음매입니다(엔진의 `AutomationRunTitleTracker` 전용). 창이 없으면 nullptr 입니다. `IWindow::setTitle` 은 이 서브시스템만 부를 수 있다. */
         IWindowTitleTarget* getTitleTarget() { return _window != nullptr ? this : nullptr; }
 
+        /** @brief 주 창을 도는 앱 루프의 프레임 페이싱입니다. App 루프가 프레임마다 갱신하고 탐침 `Engine.FramePacingState` 가 읽는다. */
+        FramePacer&       getFramePacer() { return _framePacer; }
+        const FramePacer& getFramePacer() const { return _framePacer; }
+
     private:
         const utf8* getCurrentTitle() const override;
         void        applyWindowTitle( const utf8* pTitle ) override;
 
         unique_ptr<IWindow> _window;
         string              _baseTitle;
+        FramePacer          _framePacer;
     };
 } // namespace sw

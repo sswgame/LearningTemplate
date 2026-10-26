@@ -199,6 +199,26 @@ namespace sw
         return _bShouldClose == SW_FALSE;
     }
 
+    void Win32Window::waitForMessages( uint32 timeoutMilliseconds )
+    {
+        // 이미 큐에 든 메시지에도 깨도록 QS_ALLINPUT 이다(입력 · 페인트 · 타이머 · 보낸 메시지).
+        (void)MsgWaitForMultipleObjects( 0, nullptr, FALSE, timeoutMilliseconds, QS_ALLINPUT );
+    }
+
+    void Win32Window::trackActivityMessage( UINT msg, WPARAM wParam )
+    {
+        if ( msg == WM_SIZE )
+        {
+            // SIZE_MAXHIDE · SIZE_MAXSHOW 는 다른 창의 소식이라 상태를 바꾸지 않는다.
+            if ( wParam == SIZE_MINIMIZED )
+                setMinimizedState( true );
+            else if ( wParam == SIZE_RESTORED || wParam == SIZE_MAXIMIZED )
+                setMinimizedState( false );
+        }
+        else if ( msg == WM_ACTIVATEAPP )
+            setFocusState( wParam != FALSE );
+    }
+
     void Win32Window::onSizeMessage( WPARAM wParam, LPARAM lParam )
     {
         // **최소화한 크기를 창 크기로 기억하지 않는다.** 최소화는 클라이언트 영역
@@ -266,6 +286,7 @@ namespace sw
 
         if ( pThis != nullptr )
         {
+            pThis->trackActivityMessage( msg, wParam );
             if ( pThis->_customHandler.isBound() )
             {
                 NativeWindowEvent event{};
@@ -390,6 +411,11 @@ namespace sw
     bool Win32Window::processMessages()
     {
         return _bShouldClose == SW_FALSE;
+    }
+
+    void Win32Window::waitForMessages( uint32 )
+    {
+        // 이 플랫폼에는 메시지가 오지 않는다 — 기다릴 것이 없다.
     }
 
     void Win32Window::applyTitle()

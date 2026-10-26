@@ -37,6 +37,9 @@ namespace sw
         /** @brief 목표 프레임을 채워 종료하려 하면 true 입니다. */
         bool isQuitRequested() const { return _bQuitRequested == SW_TRUE; }
 
+        /** @brief 계측을 시작했으면(기동 인자든 뒤늦은 시작이든) true 입니다. 앱 루프는 이 동안 포커스와 상관없이 전속으로 돈다(`FramePacingState::Automation`). */
+        bool isActive() const { return _bActive == SW_TRUE; }
+
         /**
          * @brief 보고를 이미 냈으면 true 입니다. 이 타입이 볼 수 없는 표(GPU 메모리 — Graphics 는 Utility 위 층이다)는 이 값이 바뀐 프레임에
          *        부르는 쪽(`Engine`)이 이어서 남깁니다.

@@ -3,6 +3,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/span.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
@@ -39,16 +40,27 @@ namespace sw
         Preview, ///< 미리보기 씬 목록에 더한다(활성 · 저장 · 전환에 끼지 않음)
     };
 
+    /** @brief 미리보기 씬을 누가 틱하는지입니다(`ScenePreviewPolicy::_tick`). */
+    enum class ScenePreviewTick : uint8
+    {
+        /**
+         * 씬 매니저가 틱하되 호스트가 이번 프레임에 그 씬의 뷰를 요청한(그려질) 프레임에만 한다(`updatePreviewScenes` 의 프레임 입력).
+         * 숨은 창(뒤 탭 · 접힌 창)의 씬은 시간이 멈춘다 — 다시 보이면 그 프레임의 델타로 이어 가므로 숨었던 시간만큼 튀지 않는다.
+         */
+        WhenDrawn = 0,
+        External, ///< 씬 매니저는 틱하지 않는다 — 씬의 주인(하니스)이 직접 틱한다.
+    };
+
     /**
      * @brief 미리보기 씬의 틱 정책입니다(`SceneManager::createPreviewScene`). 프리팹 창은 틱 · 물리 없음, 애니메이션 창은 틱만, 래그돌 창은 물리까지입니다.
      */
     struct ScenePreviewPolicy
     {
-        bool    _bTick{ true };     ///< false 면 `tickPreviewScenes` 가 이 씬을 건너뛴다
-        float32 _timeScale{ 1.0f }; ///< 이 씬의 시간 배율(틱 델타에 곱한다). 0 이면 틱은 돌되 시간은 멈춘다
-        bool    _bPhysics{ false }; ///< 물리 단계를 돌릴지
-        bool    _bAudio{ false };   ///< 오디오 엔진에 리스너 · 에미터를 넣을지(보통 끈다)
-        bool    _bPlay{ false };    ///< 만들 때 `beginPlay`, 내릴 때 `endPlay` 를 부를지(컴포넌트의 `onBeginPlay` 에 기대는 창)
+        ScenePreviewTick _tick{ ScenePreviewTick::WhenDrawn }; ///< 누가 언제 틱하는지
+        float32          _timeScale{ 1.0f };                   ///< 이 씬의 시간 배율(틱 델타에 곱한다). 0 이면 틱은 돌되 시간은 멈춘다
+        bool             _bPhysics{ false };                   ///< 물리 단계를 돌릴지
+        bool             _bAudio{ false };                     ///< 오디오 엔진에 리스너 · 에미터를 넣을지(보통 끈다)
+        bool             _bPlay{ false };                      ///< 만들 때 `beginPlay`, 내릴 때 `endPlay` 를 부를지(컴포넌트의 `onBeginPlay` 에 기대는 창)
         /**
          * @brief 이 씬 물리의 고정 스텝(초)입니다. 0 이면 엔진 설정의 고정 스텝(`EngineConfig::_fixedDeltaTime`)을 쓴다 — 정책의 기본값이지 빠진 값의 대체가 아니다.
          * @details 래그돌 · 물리 에셋 창이 관절 한계를 촘촘한 스텝으로 보려고 쓴다(`ScenePhysics::setFixedStepOverride`). 음수는 오류다.
@@ -65,6 +77,7 @@ namespace sw
         uint32             _key{ kInvalidSceneKey };
         unique_ptr<Scene>  _scene{};
         ScenePreviewPolicy _policy{};
+        uint64             _tickCount{ 0 }; ///< 씬 매니저가 이 씬을 틱한 횟수(`updatePreviewScenes`, 탐침 `Editor.PreviewTickCount`)
     };
 } // namespace sw
 
@@ -175,10 +188,11 @@ namespace sw
         /** @brief 미리보기 씬 목록입니다(만든 순서). */
         const vector<PreviewSceneEntry>& getPreviewScenes() const { return _listPreviewScene; }
         /**
-         * @brief 정책이 틱을 켠 미리보기 씬을 `deltaTime * 시간 배율` 로 틱합니다. 전역 `GameTimeScale` 은 곱하지 않습니다(게임 월드 전용).
-         * @details 활성 씬 틱과 별개로 프레임마다 한 번 부릅니다(`EngineLoop`). 틱 중에 미리보기 씬을 만들거나 내리지 마십시오.
+         * @brief 이번 프레임에 그려질 미리보기 씬(@p listDrawnSceneKey)을 `deltaTime * 시간 배율` 로 틱합니다. 전역 `GameTimeScale` 은 곱하지 않습니다(게임 월드 전용).
+         * @details 활성 씬 틱과 별개로 프레임마다 한 번 부릅니다(`Engine::updateScenes` 가 호스트의 미리보기 뷰 요청에서 키를 모아 넘긴다).
+         *          정책이 `ScenePreviewTick::External` 이거나 키가 목록에 없는 씬은 건너뜁니다. 틱 중에 미리보기 씬을 만들거나 내리지 마십시오.
          */
-        void updatePreviewScenes( float32 deltaTime );
+        void updatePreviewScenes( float32 deltaTime, vector_reference<const uint32> listDrawnSceneKey );
 
         /**
          * @brief 툴(인스펙터 · 선택 · 기즈모)이 겨누는 씬을 고릅니다. 로드된 씬이나 미리보기 씬이어야 하고, 아니면 false 입니다(바뀌지 않음).

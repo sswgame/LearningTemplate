@@ -27,6 +27,8 @@ namespace sw
         , _bShouldClose{ SW_FALSE }
         , _bRecreating{ SW_FALSE }
         , _bVisibleRequested{ SW_FALSE }
+        , _bMinimized{ SW_FALSE }
+        , _bFocused{ SW_FALSE }
         , _reserved{ 0 }
         , _displayMode{ WindowDisplayMode::Windowed }
         , _arrReserved{}

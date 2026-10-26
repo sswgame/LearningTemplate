@@ -11,22 +11,24 @@
 
 namespace
 {
-    /**
-     * @brief 고정 ID 이벤트(`SW_REGISTER_ENGINE_EVENT`) 테스트용입니다 — 엔진 예약 ID 를 쓰는 값 타입의 모양(크기 페이로드)만 흉내 냅니다.
-     * @details 테스트는 디스패처(Core)를 보므로 Engine 의 창 이벤트 타입을 쓰지 않습니다. 그 타입 자체는 EngineTest 의 `WindowEventTest` 가 봅니다.
-     */
+    /** @brief 고정 ID 이벤트(`SW_REGISTER_EVENT_ID`) 테스트가 쓰는 엔진 예약 구간(1..255)의 번호입니다. */
+    constexpr sw::EventTypeID kActivateProbeEventID = 1;
+    constexpr sw::EventTypeID kCloseProbeEventID    = 2;
+    constexpr sw::EventTypeID kResizeProbeEventID   = 3;
+
+    /** @brief 고정 ID 이벤트 테스트용입니다 — 예약 ID 를 쓰는 값 타입의 모양(크기 페이로드)만 흉내 냅니다. */
     struct ResizeProbeEvent final : sw::IEvent
     {
         int32 _width{ 0 };
         int32 _height{ 0 };
 
-        SW_REGISTER_ENGINE_EVENT( WindowResize );
+        SW_REGISTER_EVENT_ID( kResizeProbeEventID );
     };
 
     /** @brief 페이로드 없는 고정 ID 이벤트입니다. */
     struct CloseProbeEvent final : sw::IEvent
     {
-        SW_REGISTER_ENGINE_EVENT( WindowClose );
+        SW_REGISTER_EVENT_ID( kCloseProbeEventID );
     };
 
     /** @brief 불리언 하나를 싣는 고정 ID 이벤트입니다. */
@@ -34,7 +36,7 @@ namespace
     {
         bool _bActive{ false };
 
-        SW_REGISTER_ENGINE_EVENT( WindowActivate );
+        SW_REGISTER_EVENT_ID( kActivateProbeEventID );
     };
 
     int32 s_LastResizeWidth{ 0 };
@@ -164,8 +166,8 @@ SW_TEST_CASE( EventTest, DispatcherCloseAndActivateEvents )
     SW_EXPECT_TRUE( s_bCloseReceived );
     SW_EXPECT_TRUE( s_bActivateReceived );
 
-    SW_EXPECT_EQUAL( sw::kEventWindowClose, closeEvt.getEventType() );
-    SW_EXPECT_EQUAL( sw::kEventWindowActivate, activateEvt.getEventType() );
+    SW_EXPECT_EQUAL( kCloseProbeEventID, closeEvt.getEventType() );
+    SW_EXPECT_EQUAL( kActivateProbeEventID, activateEvt.getEventType() );
 
     dispatcher.clear();
 }

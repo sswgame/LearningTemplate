@@ -60,6 +60,7 @@ namespace sw::editor
         {
             preview._target._bDrawn = SW_FALSE;
         }
+        _bAnimationRequested = SW_FALSE;
     }
 
     void EditorRenderViews::markViewDrawn( EditorViewKind kind, const float2& imageClientPos )
@@ -139,6 +140,7 @@ namespace sw::editor
         pPreview->_viewProj       = viewProj;
         pPreview->_cameraPos      = cameraPos;
         pPreview->_target._bDrawn = SW_TRUE;
+        requestAnimationFrame(); // 보인 미리보기 씬은 이번 프레임에 틱한다(`ScenePreviewTick::WhenDrawn`) — 그 움직임을 그리려면 다음 프레임이 곧 와야 한다
     }
 
     uint32 EditorRenderViews::collectSceneViews( HostSceneView* pOutView, uint32 capacity ) const

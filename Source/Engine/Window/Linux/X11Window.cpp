@@ -335,6 +335,17 @@ namespace sw
             XEvent event;
             XNextEvent( pDisplay, &event );
 
+            // 최소화 · 포커스는 외부 처리기(ImGui)가 이벤트를 먹기 전에 적는다. 최소화(iconify)는 창 관리자가 창을 내리는(unmap) 것으로 온다.
+            // 포커스의 Grab · Ungrab 은 키보드를 잠깐 쥔 것이라(메뉴 · 드래그) 포커스 변화로 보지 않는다.
+            const bool bOwnWindowEvent = event.xany.window == static_cast<Window>( _x11Window );
+            const bool bMapChange      = bOwnWindowEvent && ( event.type == UnmapNotify || event.type == MapNotify );
+            const bool bFocusEvent     = bOwnWindowEvent && ( event.type == FocusIn || event.type == FocusOut );
+            const bool bGrabFocus      = bFocusEvent && ( event.xfocus.mode == NotifyGrab || event.xfocus.mode == NotifyUngrab );
+            if ( bMapChange )
+                setMinimizedState( event.type == UnmapNotify );
+            else if ( bFocusEvent && bGrabFocus == false )
+                setFocusState( event.type == FocusIn );
+
             // 선택 이벤트는 입력이 아니다 — 외부 처리기(ImGui)가 먹기 전에 답한다. 답하지 않으면 붙여넣는 프로그램이 시간 제한까지 기다린다.
             if ( handleSelectionEvent( &event ) || handleIncrPropertyEvent( &event ) )
                 continue;
@@ -381,6 +392,18 @@ namespace sw
         }
 
         return _bShouldClose == SW_FALSE;
+    }
+
+    void X11Window::waitForMessages( uint32 timeoutMilliseconds )
+    {
+        if ( _pX11Display == nullptr )
+            return;
+        // XPending 이 보낼 요청을 내보내고 이미 읽힌 이벤트를 센다 — 큐에 있으면 소켓을 기다리지 않는다.
+        Display* pDisplay = static_cast<Display*>( _pX11Display );
+        if ( XPending( pDisplay ) > 0 )
+            return;
+        pollfd pollEntry{ ConnectionNumber( pDisplay ), POLLIN, 0 };
+        (void)poll( &pollEntry, 1, static_cast<int32>( timeoutMilliseconds ) );
     }
 
     bool X11Window::writeClipboardText( string_view text )
@@ -764,6 +787,12 @@ namespace sw
     bool X11Window::processMessages()
     {
         return _bShouldClose == SW_FALSE;
+    }
+
+    void X11Window::waitForMessages( uint32 timeoutMilliseconds )
+    {
+        // 이 플랫폼에는 메시지가 오지 않는다 — 기다릴 것이 없다.
+        (void)timeoutMilliseconds;
     }
 
     void X11Window::applyWindowVisibility( bool bShow )

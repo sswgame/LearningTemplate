@@ -60,6 +60,8 @@ namespace sw
         void destroy() override;
         /** @brief X11 이벤트를 처리합니다. 종료 요청이 있으면 false 를 반환합니다. */
         bool processMessages() override;
+        /** @brief 큐가 비었으면 서버 연결 소켓을 `poll` 로 기다립니다. */
+        void waitForMessages( uint32 timeoutMilliseconds ) override;
         /** @brief 핸들은 X11 Window, 디스플레이는 Display* 입니다. */
         NativeSurfaceKind getSurfaceKind() const override { return NativeSurfaceKind::X11; }
 

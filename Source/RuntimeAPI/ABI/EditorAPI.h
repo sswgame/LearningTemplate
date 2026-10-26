@@ -18,6 +18,22 @@ namespace sw
 
     class ISubsystemLocator;
 
+    /**
+     * @brief 에디터가 이번 프레임 뒤에 곧바로 다음 프레임을 그려야 하는 까닭입니다(비트 묶음, `EditorAPI::getRedrawReasons`). C ABI 로는 uint32 로 건넵니다.
+     * @details 하나도 없으면 에디터는 조용하다 — 호스트의 앱 루프가 창 메시지가 올 때까지 잔다(`FramePacingState::EditorIdle`).
+     *          까닭을 빠뜨리면 그 화면이 다음 창 메시지(또는 깨움 상한)까지 멈추므로, 시간으로 움직이는 것은 모두 여기에 든다.
+     */
+    enum class EditorRedrawReason : uint32
+    {
+        None           = 0,
+        Input          = 1u << 0, ///< ImGui 가 이번 프레임에 입력 이벤트를 받았거나 마우스 단추가 눌려 있다
+        ActiveItem     = 1u << 1, ///< 끌기 · 글 입력 · 창 옮기기 · 끌어 놓기처럼 잡고 있는 항목이 있다
+        Simulation     = 1u << 2, ///< 에디터 플레이 · 시뮬레이션이 돈다
+        Notification   = 1u << 3, ///< 알림 토스트 · 진행 막대가 떠 있다(시간이 지나면 사라진다)
+        Animation      = 1u << 4, ///< 패널이 연속 프레임을 청했다(틱하는 미리보기 씬 · 읽는 중인 썸네일, `EditorRenderViews::requestAnimationFrame`)
+        BackgroundWork = 1u << 5, ///< 프레임마다 나아가는 일이 있다(원본 임포트 · 라이트 · 반사 프로브 굽기) — 워커가 끝내도 창 메시지는 오지 않는다
+    };
+
     // ------------------------------------------------------------------------------
     // 1) EditorAPI — C ABI 함수 테이블
     //    IEditor 구현은 EditorModule 안에 두고, App 은 이 포인터만 부른다
@@ -45,6 +61,8 @@ namespace sw
         void ( *endFrame )( EditorHandle editor ){ nullptr };                                                   /**< @brief 월드 틱 이후 Step 소비 등 프레임 마감을 합니다. */
         /** @brief 이번 프레임에 보인 미리보기 씬 뷰(툴 창)를 @p pOutView 에 최대 @p capacity 개 씁니다. 쓴 개수를 반환합니다(`HostSceneView`, Engine 의 값 타입). */
         uint32 ( *getSceneViews )( EditorHandle editor, HostSceneView* pOutView, uint32 capacity ){ nullptr };
+        /** @brief 이번 프레임의 다시 그릴 까닭(`EditorRedrawReason` 비트 묶음)입니다. `updateUI` 뒤에 부릅니다. 0 이면 에디터가 조용합니다. */
+        uint32 ( *getRedrawReasons )( EditorHandle editor ){ nullptr };
     };
 
     /** @brief EditorModule 이 export 하는 API 테이블 함수의 형입니다(심볼 이름: exportEditorAPI). */

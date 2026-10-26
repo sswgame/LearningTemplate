@@ -30,7 +30,6 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Window/IWindow.h"
-#include "Engine/Window/WindowEvents.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -206,6 +205,7 @@ namespace sw
             bool                  initializeWindow( const utf8*, uint32, uint32 ) override { return true; }
             void                  destroy() override {}
             bool                  processMessages() override { return true; }
+            void                  waitForMessages( uint32 ) override {}                                    // 메시지가 오지 않는 창 — 기다릴 것이 없다
             sw::NativeSurfaceKind getSurfaceKind() const override { return sw::NativeSurfaceKind::Win32; } // 표면을 만들지 않는 창 — 종류는 쓰이지 않는다
 
         protected:
@@ -215,8 +215,14 @@ namespace sw
         // 모듈 코드 정리 테스트가 레지스트리마다 하나씩 다는 함수들이다. 몸통을 서로 다르게 둔다 — 같으면 링커가 접어 스텁 주소가 겹칠 수 있다.
         int32 s_sweepProbeValue{ 0 };
 
+        /** @brief 이벤트 버스에 싣는 시험용 이벤트입니다(페이로드 없음). */
+        struct SweepProbeEvent final : sw::IEvent
+        {
+            SW_DECLARE_GAMEPLAY_EVENT( SweepProbeEvent );
+        };
+
         /** @brief 이벤트 버스에 구독하는 처리기입니다. */
-        void onSweepProbeResize( const sw::WindowResizeEvent& )
+        void onSweepProbeEvent( const SweepProbeEvent& )
         {
             s_sweepProbeValue += 1;
         }
@@ -662,15 +668,13 @@ SW_TEST_CASE( ArchitectureTest, ReleaseModuleCodeSweepsEveryRegistryTheEditorUse
     sw::s_sweepProbeValue = 0;
 
     // 이벤트 버스
-    using ResizeDelegate          = sw::Delegate<void( const sw::WindowResizeEvent& )>;
-    const ResizeDelegate onResize = SW_DELEGATE_FUNCTION( ResizeDelegate, sw::onSweepProbeResize );
+    using ProbeEventDelegate         = sw::Delegate<void( const sw::SweepProbeEvent& )>;
+    const ProbeEventDelegate onEvent = SW_DELEGATE_FUNCTION( ProbeEventDelegate, sw::onSweepProbeEvent );
     // 구독은 쥐고 있되 떼지 않은 채로 훑기에 맡긴다(모듈이 해제를 빠뜨린 모양). 훑기가 항목을 떼면 구독의 소멸은 찾을 것이 없다.
-    const sw::Subscription resizeSubscription = sw::engine::getSubsystem<sw::EventDispatcher>().subscribe<sw::WindowResizeEvent>( onResize );
-    SW_EXPECT_EQUAL( 1u, sw::releaseStubOf( onResize ) );
-    sw::WindowResizeEvent resize;
-    resize._width  = 1;
-    resize._height = 1;
-    sw::engine::getSubsystem<sw::EventDispatcher>().publish( resize );
+    const sw::Subscription probeSubscription = sw::engine::getSubsystem<sw::EventDispatcher>().subscribe<sw::SweepProbeEvent>( onEvent );
+    SW_EXPECT_EQUAL( 1u, sw::releaseStubOf( onEvent ) );
+    const sw::SweepProbeEvent probeEvent;
+    sw::engine::getSubsystem<sw::EventDispatcher>().publish( probeEvent );
 
     // 전역 로그 리스너
     const sw::LogWrittenDelegate onLog           = SW_DELEGATE_FUNCTION( sw::LogWrittenDelegate, sw::onSweepProbeLog );

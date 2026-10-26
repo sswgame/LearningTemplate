@@ -134,6 +134,8 @@ namespace sw
          * @details 창 수명은 App 이 쥐고 있으므로 여기서는 의사만 알립니다.
          */
         bool isQuitRequested() const { return _bQuitRequested || _profileSession.isQuitRequested(); }
+        /** @brief `-gv_profileFrames` · `-gv_profileSeconds` 계측이 시작됐으면 true 입니다(앱 루프의 프레임 페이싱이 읽는다). */
+        bool isProfileRunActive() const { return _profileSession.isActive(); }
         /** @brief 이번 프레임이 끝나면 루프를 끝내라고 요청합니다(프레임 관찰자 · 도구). 여럿이면 처음 것의 코드를 씁니다. */
         void requestQuit( int32 exitCode );
         /** @brief App 이 돌려줄 종료 코드입니다(요청이 없었으면 0). */
@@ -197,8 +199,11 @@ namespace sw
         EngineFrameContext makeFrameContext() const;
         /** @brief 프레임 앞 서비스를 돌립니다 — 셰이더 핫 리로드, 파일 대화 상자 결과, 에셋 스트리밍 큐, 씬 전환, 이벤트, 오디오(`update` 의 첫 구간). */
         void updateFrameServices( float32 deltaTime );
-        /** @brief 활성 씬을 틱합니다. 게임 카메라와 입력이 쓰는 게임 화면 크기를 틱 전에 적고(@p vpWidth · @p vpHeight), 미리보기 씬은 활성 씬의 정지 · 재생과 무관하게 돌립니다. */
-        void updateScenes( float32 deltaTime, const HostViewTarget& mainOutput, uint32 vpWidth, uint32 vpHeight, bool bTickScene );
+        /**
+         * @brief 활성 씬을 틱합니다. 게임 카메라와 입력이 쓰는 게임 화면 크기를 틱 전에 적고(@p vpWidth · @p vpHeight), 미리보기 씬은 활성 씬의 정지 · 재생과 무관하게 돌립니다.
+         * @details 미리보기 씬은 @p views 가 이번 프레임에 그려 달라고 한 씬만 틱합니다(`ScenePreviewTick::WhenDrawn`).
+         */
+        void updateScenes( float32 deltaTime, const HostViewTargets& views, uint32 vpWidth, uint32 vpHeight, bool bTickScene );
         /** @brief 런타임 UI 를 이번 프레임의 게임 상태로 돌립니다(게임 틱 뒤 · 렌더 패킷 앞). 디버그 HUD 와 음성 자막을 먼저 넘기고, 뷰포트는 게임이 그려지는 화면으로 정합니다. */
         void updateRuntimeUI( const HostViewTarget& mainOutput, uint32 vpWidth, uint32 vpHeight );
         /** @brief 머티리얼을 올리고 렌더 프레임 패킷을 채워 렌더 스레드에 냅니다. Server 타깃에는 렌더러가 없어 아무 일도 하지 않습니다. */

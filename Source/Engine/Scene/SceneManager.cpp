@@ -707,16 +707,18 @@ namespace sw
         return nullptr;
     }
 
-    void SceneManager::updatePreviewScenes( float32 deltaTime )
+    void SceneManager::updatePreviewScenes( float32 deltaTime, vector_reference<const uint32> listDrawnSceneKey )
     {
         if ( _listPreviewScene.empty() )
             return;
         SW_MEMORY_SCOPE( Scene );
         for ( PreviewSceneEntry& entry : _listPreviewScene )
         {
-            if ( entry._policy._bTick == false )
+            const bool bManagerTicks = entry._policy._tick == ScenePreviewTick::WhenDrawn;
+            if ( bManagerTicks == false || VectorUtil::contains( listDrawnSceneKey, entry._key ) == false )
                 continue;
             entry._scene->update( deltaTime * entry._policy._timeScale );
+            ++entry._tickCount;
         }
     }
 

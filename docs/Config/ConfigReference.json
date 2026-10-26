@@ -3237,6 +3237,14 @@
    "source": "Source/Engine/Renderer/Frame/Packet/RenderPacketBuilder.cpp"
   },
   {
+   "name": "gv_backgroundFrameRate",
+   "type": "int32",
+   "default": "30",
+   "kind": "일반",
+   "description": "포커스 없는 창의 초당 프레임 상한 (0=상한 없음)",
+   "source": "Source/Engine/Window/FramePacer.cpp"
+  },
+  {
    "name": "gv_benchAnimate",
    "type": "int32",
    "default": "1",
@@ -3939,6 +3947,14 @@
    "kind": "테스트",
    "description": "파괴 잎 셰이프를 온전한 동안 미리 짓는 시간(us, 스레드마다 4 ms 창마다). 0=처음 깨질 때 모두, 음수=상태를 시작할 때 모두(전/후 비교용)",
    "source": "Source/Engine/Destruction/FractureComponentBase.cpp"
+  },
+  {
+   "name": "gv_framePacing",
+   "type": "FramePacingRequest",
+   "default": "Auto",
+   "kind": "일반",
+   "description": "앱 루프 페이싱 요청 (Auto=실행 방식과 창 상태대로, FullSpeed=늘 전속, WindowState=자동화여도 창 상태대로)",
+   "source": "Source/Engine/Window/FramePacer.cpp"
   },
   {
    "name": "gv_frontierAutoPlay",
