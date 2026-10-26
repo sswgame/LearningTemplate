@@ -69,7 +69,7 @@ namespace sw
         // ---- 뷰가 읽는 것(PostUpdate. 디렉터가 쓰지 않는 그룹) ----
         const CitySimulation& getCity() const { return _city; }
         /** @brief 커서가 땅 위에 있으면 true 를 반환하고, @p outTile 과 @p outSize 에 타일과 선택한 것의 크기(타일 수)를 채웁니다. */
-        bool findCursor( int2& outTile, int32& outSize ) const;
+        [[nodiscard]] bool findCursor( int2& outTile, int32& outSize ) const;
         /** @brief 일꾼 종류와 서비스의 모습을 반환합니다. 아직 없으면 비어 있습니다. */
         const shared_ptr<MaterialInstance>& findWalkerLook( const CityWalker& walker ) const;
 

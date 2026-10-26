@@ -43,7 +43,7 @@ namespace sw
          * @param pRenderThread 렌더 스레드(워커 비우기용)
          * @param bEnableEditor 에디터 모드 여부
          */
-        bool initialize( LiveReloadManager* pLiveReloadManager, RHI* pRHI, IWindow* pWindow, RenderThread* pRenderThread, bool bEnableEditor );
+        [[nodiscard]] bool initialize( LiveReloadManager* pLiveReloadManager, RHI* pRHI, IWindow* pWindow, RenderThread* pRenderThread, bool bEnableEditor );
 
         /**
          * @brief 에디터 인스턴스 없이 에디터 모듈만 로드해 @p kind 원본을 임포트하거나 대조합니다(`App --import-textures`, `--import-models` 와 `--check-*`).
@@ -97,7 +97,7 @@ namespace sw
         void onEditorReloadFault( uint32 faultCode );
 
         /** @brief 에디터 DLL 에서 API 테이블을 받아 바인딩합니다. ABI 버전이나 스탬프가 다르면 실패합니다. */
-        bool bindEditorAPI( void* pLibraryModule );
+        [[nodiscard]] bool bindEditorAPI( void* pLibraryModule );
 #if !defined( SW_SHIPPING )
         /**
          * @brief 이미 만든 에디터 인스턴스와 그 API 테이블을 호스트에 연결합니다.
@@ -109,7 +109,7 @@ namespace sw
 #endif
 
         /** @brief RHI 핫스왑 뒤 게임, 에디터 순서(기동과 같다)로 다시 초기화합니다. 실패하면 false 를 반환합니다. */
-        bool reinitializeAfterRHISwap( void* pEditorModule, void* pGameModule );
+        [[nodiscard]] bool reinitializeAfterRHISwap( void* pEditorModule, void* pGameModule );
 
     protected:
         /**

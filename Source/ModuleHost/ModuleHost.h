@@ -186,7 +186,7 @@ namespace sw
 
         // 4) 모듈 바인딩
         /** @brief 게임 API 테이블을 바인딩합니다. 배포 구성은 정적 `exportGameAPI` 를, 개발 구성은 DLL 심볼을 씁니다. */
-        bool bindGameAPI( void* pLibraryModule );
+        [[nodiscard]] bool bindGameAPI( void* pLibraryModule );
 #if !defined( SW_SHIPPING )
         /**
          * @brief 이미 만든 게임 인스턴스와 그 API 테이블을 호스트에 연결합니다.

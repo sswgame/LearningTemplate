@@ -97,7 +97,7 @@ namespace sw
          * @param moduleName DLL/SO 기본 이름(확장자 없음)
          * @param listDependsOn 이 모듈이 의존하는 모듈 이름(먼저 로드됩니다)
          */
-        bool registerModule( string_view moduleName, const vector<string>& listDependsOn = {} );
+        [[nodiscard]] bool registerModule( string_view moduleName, const vector<string>& listDependsOn = {} );
 
         /**
          * @brief 핫 리로드하지 않는 공용 모듈(GameFramework)을 섀도 복사 없이 로드하고, 그 정적 레지스트리를 **제 이름으로** 등록합니다.
@@ -227,7 +227,7 @@ namespace sw
         /** @brief 섀도 복사본을 LoadLibrary 로 로드합니다. */
         [[nodiscard]] bool loadShadowCopyModule( ModuleRecord& context );
         /** @brief 섀도 복사본을 만들고 로드만 합니다(아직 교체하지 않습니다). */
-        bool prepareShadowCopy( ModuleRecord& context, PreparedShadow& outShadow );
+        [[nodiscard]] bool prepareShadowCopy( ModuleRecord& context, PreparedShadow& outShadow );
         /** @brief 섀도 핸들로 교체하고 콜백을 부릅니다. */
         bool commitShadowCopy( ModuleRecord& context, PreparedShadow& prepared );
         /** @brief @p context 의 리로드 직후 콜백을 `ModuleCallGuard` 안에서 부릅니다. 결함이 나면 그래프를 막고 결함 콜백을 부릅니다. */

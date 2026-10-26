@@ -98,8 +98,8 @@ namespace sw
         /** @brief 콘솔 명령 한 줄(종료 낱말은 `StandardInputCommands` 가 먼저 거른다)을 이 스레드(게임 스레드)에서 처리합니다. */
         void executeCommand( string_view command );
         /** @brief Dev 의 일시정지 명령(`pause` · `resume` · `step [N]`)이면 처리하고 true 입니다. Shipping 은 늘 false 입니다. */
-        bool executePauseCommand( string_view command );
-        void logStatus() const;
+        [[nodiscard]] bool executePauseCommand( string_view command );
+        void               logStatus() const;
 #if !defined( SW_SHIPPING )
         /** @brief 디버그 채널을 열고 상태 해시 이력을 켭니다(실행 인자가 없으면 아무 일도 하지 않습니다). 열려고 했는데 못 열면 false 입니다(기동 실패). */
         [[nodiscard]] bool startDebugTools();

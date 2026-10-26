@@ -145,7 +145,7 @@ namespace sw
         }
 
         SplashWindow splash;
-        splash.initialize( "SW Engine", "Initializing Engine Subsystems..." );
+        (void)splash.initialize( "SW Engine", "Initializing Engine Subsystems..." ); // 스플래시 없이 기동하는 것도 정상 경로다(SplashWindow::initialize 설명)
         splash.setProgress( 0.05f );
 
         splash.updateStatus( "Loading Configuration & Display...", 0.40f );

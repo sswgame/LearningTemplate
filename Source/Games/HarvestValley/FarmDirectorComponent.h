@@ -136,7 +136,7 @@ namespace sw
         static const utf8* getButtonName( FarmButton button );
 
         /** @brief 농부가 바라보는 타일을 반환합니다. 밭 밖이면 false 입니다. */
-        bool findTargetTile( int32& outX, int32& outY ) const;
+        [[nodiscard]] bool findTargetTile( int32& outX, int32& outY ) const;
         /** @brief 흙 상태(0 풀, 1 갈았음, 2 물 줌)의 모습을 반환합니다. 아직 없으면 비어 있습니다. */
         const shared_ptr<MaterialInstance>& getSoilLook( int32 soilState ) const;
         /** @brief 작물 모습을 반환합니다. 시든 것은 갈색이고, @p bCropColored 면 작물 색(제 모델이 없는 다 자란 작물), 아니면 정점 색 그대로(흰색)입니다. */

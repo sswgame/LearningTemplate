@@ -77,6 +77,6 @@ namespace sw
          *          찾지 않고 파일에서 표식 문자열을 찾습니다.
          * @return 표식과 그 뒤 16진 40 글자가 온전히 있으면 true 입니다(@p outStamp 는 표식을 포함한 전체).
          */
-        static bool findEngineAbiStamp( const vector<uint8>& bytes, string& outStamp );
+        [[nodiscard]] static bool findEngineAbiStamp( const vector<uint8>& bytes, string& outStamp );
     };
 } // namespace sw

@@ -48,7 +48,7 @@ namespace sw
         ~App();
 
         /** @brief 창을 만들고 모듈과 엔진을 초기화합니다. */
-        bool initialize( int32 argc, utf8* pArgv[] );
+        [[nodiscard]] bool initialize( int32 argc, utf8* pArgv[] );
         /** @brief 모든 자원을 해제합니다. */
         void shutdown();
         /** @brief 메인 루프입니다(할 일은 최소한만 합니다). */

@@ -58,7 +58,7 @@ namespace sw
         const hashed_string& getBreakButton() const { return _breakButton; }
         const hashed_string& getPlaceButton() const { return _placeButton; }
         /** @brief 바라보는 블록입니다. 없으면 false 입니다. */
-        bool findTarget( VoxelCoord& outBlock ) const;
+        [[nodiscard]] bool findTarget( VoxelCoord& outBlock ) const;
         /** @brief 몸의 위치, 핫바, 부순 블록 수와 놓은 블록 수를 기록합니다. `ComponentStateStore::capture` 가 부릅니다. */
         void writeState( Archive& outArchive ) const;
         /** @brief `writeState` 가 기록한 바이트로 복원합니다. 플레이 시작 전이면 보관했다가 `onBeginPlay` 끝에 적용합니다. 읽지 못하면 처음 위치에서 시작합니다. */

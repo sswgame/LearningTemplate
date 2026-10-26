@@ -148,13 +148,13 @@ namespace sw
         if ( pBinding->getState() == SocketBindingState::Bound && pBinding->getHolder() == enemy.getHandle() )
             pBinding->updateSocketTransform( hand );
         else if ( _stage < 3 )
-            (void)pBinding->bindToSocket( &enemy, hashed_string( BenchCombatComponentInternal::kHandSocket ), hand );
+            (void)pBinding->bindToSocket( &enemy, hashed_string( BenchCombatComponentInternal::kHandSocket ), hand ); // 못 붙이면 바인딩이 그대로이고 다음 갱신이 다시 붙인다
     }
 
     void BenchCombatComponent::shootAt( GameObjectManager& manager, GameObject& enemy, const utf8* pBone, bool bFatal )
     {
         float3 target{};
-        (void)SocketLookupUtil::findSocketWorldPosition( enemy, hashed_string( pBone ), target );
+        (void)SocketLookupUtil::findSocketWorldPosition( enemy, hashed_string( pBone ), target ); // 벤치 — 없으면 원점을 쏠 뿐이다
         // 머리와 가슴 뼈는 해당 바디의 아래쪽 끝에 있습니다. 바디 가운데 높이에 맞도록 조금 올려서 쏩니다.
         target._y += 0.15f;
         const float3 muzzle = target + float3{ 0.0f, 0.0f, -_shooterRange };
