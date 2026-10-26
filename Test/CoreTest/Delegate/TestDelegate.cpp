@@ -21,6 +21,24 @@ namespace
         DelegateLiveCapture& operator=( const DelegateLiveCapture& ) noexcept = default;
         ~DelegateLiveCapture() { --s_liveCount; }
     };
+
+    /** @brief 구독을 내고 풀린 수를 세는 출처입니다(여러 스레드가 동시에 만들고 푸는 목록 잠금 확인용). */
+    class CountingSubscriptionSource final : public sw::SubscriptionSource
+    {
+    public:
+        sw::Subscription issue() { return issueSubscription( _nextID.fetch_add( 1 ) + 1 ); }
+        uint32           getReleasedCount() const { return _releasedCount.load(); }
+
+    private:
+        void releaseSubscription( uint64 id ) override
+        {
+            (void)id;
+            _releasedCount.fetch_add( 1 );
+        }
+
+        std::atomic<uint64> _nextID{ 0 };
+        std::atomic<uint32> _releasedCount{ 0 };
+    };
 } // namespace
 
 struct DummyListener
@@ -242,6 +260,40 @@ SW_TEST_CASE( DelegateTest, MovingSubscriptionKeepsTheRegistration )
 
     listSubscription.clear();
     SW_EXPECT_FALSE( movedSource.isBound() );
+}
+
+/**
+ * @brief [DelegateTest] 여러 스레드가 한 출처의 구독을 동시에 만들고 옮기고 풀어도 목록이 깨지지 않는다(출처의 목록 잠금)
+ * @details 로그 리스너처럼 등록 · 해제가 아무 스레드에서나 오는 출처가 쓴다. 목록이 깨지면 풀린 수가 맞지 않거나 출처 소멸이 사라진 구독을 쓴다.
+ */
+SW_TEST_CASE( DelegateTest, SubscriptionsFromManyThreadsKeepTheListConsistent )
+{
+    constexpr int32            kThreadCount     = 4;
+    constexpr int32            kRoundsPerThread = 500;
+    CountingSubscriptionSource source;
+    sw::vector<std::thread>    listWorker;
+    for ( int32 threadIndex = 0; threadIndex < kThreadCount; ++threadIndex )
+    {
+        listWorker.emplace_back( [&source]()
+        {
+            for ( int32 round = 0; round < kRoundsPerThread; ++round )
+            {
+                sw::Subscription first  = source.issue();
+                sw::Subscription second = source.issue();
+                sw::Subscription moved  = std::move( first ); // 옮기기도 이웃을 고친다
+                second.reset();
+            }
+        } );
+    }
+    for ( std::thread& worker : listWorker )
+    {
+        worker.join();
+    }
+    SW_EXPECT_EQUAL( static_cast<uint32>( kThreadCount * kRoundsPerThread * 2 ), source.getReleasedCount() );
+
+    // 스레드가 끝난 뒤에도 출처는 새 구독을 낸다(목록이 빈 채로 남았다)
+    const sw::Subscription leftover = source.issue();
+    SW_EXPECT_TRUE( leftover.isActive() );
 }
 
 struct ConstListener

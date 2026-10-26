@@ -101,15 +101,10 @@ namespace test
             }
         }
 
-        sw::DelegateHandle registerLogWrittenListener( const sw::LogWrittenDelegate& listener ) override
+        sw::Subscription registerLogWrittenListener( const sw::LogWrittenDelegate& listener ) override
         {
-            return _pWrappedSink != nullptr ? _pWrappedSink->registerLogWrittenListener( listener ) : sw::DelegateHandle{};
-        }
-
-        void unregisterLogWrittenListener( const sw::DelegateHandle& handle ) override
-        {
-            if ( _pWrappedSink != nullptr )
-                _pWrappedSink->unregisterLogWrittenListener( handle );
+            // 감싼 싱크의 구독을 그대로 돌려준다 — 이 스코프가 먼저 끝나도 구독은 감싼 싱크에서 풀린다.
+            return _pWrappedSink != nullptr ? _pWrappedSink->registerLogWrittenListener( listener ) : sw::Subscription{};
         }
 
         uint32 removeListenerCodeWithin( const void* pBegin, const void* pEnd ) override
@@ -141,7 +136,7 @@ namespace test
     /**
      * @brief 스코프 내에서 전역 로그 출력을 임시 억제하는 RAII 헬퍼
      * @details 전역 싱크를 비우지 않고 줄을 버리는 싱크로 바꾼다. 싱크가 비면 `Logger::registerGlobalListener` 가 순서 위반으로 멈추는데(시나리오 로그 포착이
-     *          억제 구간에서 리스너를 붙인다), 버리는 싱크는 리스너 붙임을 받아 빈 핸들을 돌려준다.
+     *          억제 구간에서 리스너를 붙인다), 버리는 싱크는 리스너 붙임을 받아 빈 구독을 돌려준다.
      */
     class ScopedLogSuppressor
     {
@@ -262,7 +257,7 @@ namespace test
     public:
         ScopedLogCollector()
         {
-            _handle = sw::Logger::registerGlobalListener( SW_DELEGATE_LAMBDA( sw::LogWrittenDelegate, [this]( const sw::LogEntry& entry )
+            _subscription = sw::Logger::registerGlobalListener( SW_DELEGATE_LAMBDA( sw::LogWrittenDelegate, [this]( const sw::LogEntry& entry )
             {
                 if ( entry._level != sw::LogLevel::Error && entry._level != sw::LogLevel::Warning )
                     return;
@@ -271,8 +266,6 @@ namespace test
                 _listID.push_back( entry._pID != nullptr ? sw::string( entry._pID ) : sw::string{} );
             } ) );
         }
-
-        ~ScopedLogCollector() { sw::Logger::unregisterGlobalListener( _handle ); }
 
         ScopedLogCollector( const ScopedLogCollector& )            = delete;
         ScopedLogCollector& operator=( const ScopedLogCollector& ) = delete;
@@ -317,8 +310,8 @@ namespace test
     private:
         mutable sw::mutex      _mutex;
         sw::vector<sw::string> _listMessage;
-        sw::vector<sw::string> _listID; ///< `_listMessage` 와 같은 순서. id 없는 줄은 빈 글
-        sw::DelegateHandle     _handle;
+        sw::vector<sw::string> _listID;       ///< `_listMessage` 와 같은 순서. id 없는 줄은 빈 글
+        sw::Subscription       _subscription; ///< 마지막 멤버라 먼저 풀린다 — 콜백이 만지는 목록보다 먼저
     };
 } // namespace test
 

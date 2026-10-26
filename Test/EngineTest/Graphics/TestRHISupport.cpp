@@ -841,17 +841,17 @@ SW_TEST_CASE( RHIMemoryLedgerTest, ReportPrintsUsedKindsAndUnknownDriverValues )
     deviceBudget._scope           = sw::RHIMemoryScope::Device;
     ledger.setDriverBudget( deviceBudget );
 
-    sw::mutex                mutex;
-    sw::vector<sw::string>   listLine;
-    const sw::DelegateHandle handle = sw::Logger::registerGlobalListener( SW_DELEGATE_LAMBDA( sw::LogWrittenDelegate, [&mutex, &listLine]( const sw::LogEntry& entry )
-    {
+    sw::mutex              mutex;
+    sw::vector<sw::string> listLine;
+    sw::Subscription       subscription = sw::Logger::registerGlobalListener( SW_DELEGATE_LAMBDA( sw::LogWrittenDelegate, [&mutex, &listLine]( const sw::LogEntry& entry )
+          {
         if ( entry._message.find( "[Profile]" ) == sw::string::npos )
             return;
         std::scoped_lock<sw::mutex> lock{ mutex };
         listLine.push_back( entry._message );
     } ) );
     ledger.report( "FakeBackend" );
-    sw::Logger::unregisterGlobalListener( handle );
+    subscription.reset();
 
     sw::string joined;
     for ( const sw::string& line : listLine )
