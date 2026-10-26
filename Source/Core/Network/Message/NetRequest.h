@@ -11,6 +11,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/IDAllocator.h"
 #include "Core/Container/deque.h"
 #include "Core/Container/pair.h"
 #include "Core/Container/unordered_map.h"
@@ -187,7 +188,7 @@ namespace sw
         unordered_map<uint64, Pending> _mapPending;
         BitWriter                      _writer; ///< _mutex 안에서만 쓴다.
         StreamMessageEndpoint*         _pEndpoint;
-        uint64                         _nextRequestID;
+        IDAllocator<uint64>            _requestIDAllocator;
         int32                          _maxPendingRequests;
     };
 } // namespace sw

@@ -90,7 +90,7 @@ namespace sw
         , _missingMutex{}
         , _uniqueMissingKey{}
         , _textRevision{ 0 }
-        , _nextCallbackID{ 1 }
+        , _callbackIDAllocator{}
     {
     }
 
@@ -932,7 +932,7 @@ namespace sw
         if ( callback == nullptr )
             return 0;
         std::unique_lock<std::shared_mutex> lock( _mutex );
-        const uint32                        callbackID = _nextCallbackID++;
+        const uint32                        callbackID = _callbackIDAllocator.allocate();
         _mapCallback[callbackID]                       = std::move( callback );
         return callbackID;
     }

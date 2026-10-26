@@ -7,6 +7,7 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Container/IDAllocator.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
@@ -127,7 +128,7 @@ namespace sw::editor
         IImGuiRendererBackend*          _pRendererBackend{ nullptr }; ///< 렌더 타깃을 ImGui 텍스처로 등록하는 백엔드(셸이 알린다)
         EditorViewTarget                _arrViewTarget[static_cast<uint32>( EditorViewKind::Count )]{};
         vector<EditorPreviewViewTarget> _listPreviewTarget{}; ///< 툴 창의 미리보기 타깃(`allocatePreviewTarget`)
-        uint32                          _nextPreviewTargetID{ 1 };
+        IDAllocator<uint32>             _previewTargetIDAllocator;
         uint8                           _bGameViewHovered{ SW_FALSE }; ///< 게임 뷰 창 위에 마우스가 있다
         uint8                           _bGameViewFocused{ SW_FALSE }; ///< 게임 뷰 창이 포커스를 가졌다
     };

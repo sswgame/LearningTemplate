@@ -6,6 +6,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/IDAllocator.h"
 #include "Core/Container/map.h"
 #include "Core/Container/set.h"
 #include "Core/Container/string.h"
@@ -248,6 +249,6 @@ namespace sw
         mutable set<string> _uniqueMissingKey;
 
         std::atomic<uint32> _textRevision;
-        uint32              _nextCallbackID;
+        IDAllocator<uint32> _callbackIDAllocator;
     };
 } // namespace sw

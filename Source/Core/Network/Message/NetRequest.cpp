@@ -83,7 +83,7 @@ namespace sw
         , _mapPending{}
         , _writer{}
         , _pEndpoint{ nullptr }
-        , _nextRequestID{ 1 }
+        , _requestIDAllocator{}
         , _maxPendingRequests{ 1024 }
     {
     }
@@ -139,7 +139,7 @@ namespace sw
             }
             else
             {
-                requestID = _nextRequestID++;
+                requestID = _requestIDAllocator.allocate();
                 _writer.clear();
                 _writer.writeVarUint( requestID );
                 _writer.writeBits( method, 16 );

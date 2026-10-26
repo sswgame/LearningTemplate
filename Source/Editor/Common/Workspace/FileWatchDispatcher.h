@@ -6,6 +6,7 @@
 #include "Core/Common/Defines.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/IDAllocator.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
@@ -108,7 +109,7 @@ namespace sw
 
         unique_ptr<IFileWatcher>      _fileWatcher;
         vector<WatchEntry>            _listWatch;
-        uint64                        _nextWatchID{ 1 };
+        IDAllocator<uint64>           _watchIDAllocator;
         unordered_map<string, uint64> _mapPollMtime;
         uint64                        _lastDrainTimestamp{ 0 }; ///< 직전 update() 가 큐를 비운 시각(파일 시계, 초)
         bool                          _bUseMtimePoll{ false };
