@@ -62,9 +62,9 @@ namespace sw
             def._bTargetsGround = false;
             StringUtil::forEachToken( targets, ",; ", [&]( string_view token )
             {
-                if ( StringUtil::equals( token, string_view( "Ground" ), true ) )
+                if ( StringUtil::equals( token, string_view( "Ground" ) ) )
                     def._bTargetsGround = true;
-                else if ( StringUtil::equals( token, string_view( "Air" ), true ) )
+                else if ( StringUtil::equals( token, string_view( "Air" ) ) )
                     def._bTargetsAir = true;
                 else
                 {

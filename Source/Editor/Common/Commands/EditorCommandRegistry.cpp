@@ -332,7 +332,7 @@ namespace sw::editor
     {
         for ( size_t keyIndex = 1; keyIndex < static_cast<size_t>( EditorCommandKey::Count ); ++keyIndex )
         {
-            if ( StringUtil::equals( name, EditorCommandRegistryInternal::_s_arrKeyName[keyIndex], true ) )
+            if ( StringUtil::equals( name, EditorCommandRegistryInternal::_s_arrKeyName[keyIndex] ) )
             {
                 outKey = static_cast<EditorCommandKey>( keyIndex );
                 return true;

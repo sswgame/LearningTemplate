@@ -149,6 +149,8 @@ namespace sw
             if ( intervalMicro > kArrHitchThresholdMicro[index] )
                 ++_arrHitchCount[index];
         }
+        const int64 binIndex = MathUtil::clamp<int64>( intervalMicro / kPacingBinMicro, 0, static_cast<int64>( kPacingBinCount ) - 1 );
+        ++_arrPacingBin[binIndex];
         // 큰 순으로 다섯 칸 — 들어갈 자리부터 뒤로 민다.
         for ( uint32 index = 0; index < kWorstFrameCount; ++index )
         {
@@ -168,6 +170,46 @@ namespace sw
         // 줄 모양은 `Scripts/qa/Load.py` 가 읽는다 — 바꾸면 그 정규식도 고친다.
         SW_LOG_INFO( "[Profile] hitch  worst %# %# %# %# %# us  over16ms %#  over33ms %#  over100ms %#", _arrWorstFrameMicro[0], _arrWorstFrameMicro[1], _arrWorstFrameMicro[2],
                      _arrWorstFrameMicro[3], _arrWorstFrameMicro[4], _arrHitchCount[0], _arrHitchCount[1], _arrHitchCount[2] );
+        // VSync 를 켠 실행이면 중앙 간격이 화면 주기라 over1.5x 가 주기를 하나 이상 놓친 프레임 수다(Test/QA/VerifyBatch.json `vsync-frame-miss` 가 읽는다).
+        [[maybe_unused]] const FramePacing pacing = computePacing( _arrPacingBin, kPacingBinCount );
+        SW_LOG_INFO( "[Profile] pacing  median %# us  over1.5x %#  over2.5x %#", pacing._medianMicro, pacing._overOneAndHalfMedian, pacing._overTwoAndHalfMedian );
+    }
+
+    FrameProfileSession::FramePacing FrameProfileSession::computePacing( const uint32* pArrBin, uint32 binCount )
+    {
+        FramePacing pacing{};
+        uint64      total = 0;
+        for ( uint32 index = 0; index < binCount; ++index )
+        {
+            total += pArrBin[index];
+        }
+        if ( total == 0 )
+            return pacing;
+
+        // 중앙값이 든 칸 — 누적이 (n + 1) / 2 에 처음 닿는 칸
+        const uint64 medianRank = ( total + 1 ) / 2;
+        uint64       seen       = 0;
+        uint32       medianBin  = 0;
+        for ( ; medianBin < binCount; ++medianBin )
+        {
+            seen += pArrBin[medianBin];
+            if ( seen >= medianRank )
+                break;
+        }
+        pacing._medianMicro = static_cast<int64>( medianBin ) * kPacingBinMicro + kPacingBinMicro / 2;
+
+        // 칸 아래 끝이 문턱 이상인 칸만 센다 — 문턱이 걸친 칸을 빼서 놓침을 부풀리지 않는다.
+        const int64 oneAndHalf = pacing._medianMicro * 3 / 2;
+        const int64 twoAndHalf = pacing._medianMicro * 5 / 2;
+        for ( uint32 index = 0; index < binCount; ++index )
+        {
+            const int64 lowerMicro = static_cast<int64>( index ) * kPacingBinMicro;
+            if ( lowerMicro >= oneAndHalf )
+                pacing._overOneAndHalfMedian += pArrBin[index];
+            if ( lowerMicro >= twoAndHalf )
+                pacing._overTwoAndHalfMedian += pArrBin[index];
+        }
+        return pacing;
     }
 
     void FrameProfileSession::reportAllocations( [[maybe_unused]] uint64 frames )

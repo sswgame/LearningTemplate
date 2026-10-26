@@ -53,15 +53,14 @@ SW_TEST_CASE( MeshPrimitiveTest, AcquireSharesOneMeshPerIDWhileCreateMakesNew )
     SW_ASSERT_TRUE( sharedA != nullptr );
     SW_EXPECT_TRUE( sharedA.get() == sharedB.get() );
 
-    // 2. 별칭도 같은 자리다 — "Quad" 와 "Rect" 는 같은 기하이므로 배치가 갈리면 안 된다.
+    // 2. 다른 도형은 다른 자리다.
     sw::shared_ptr<sw::Mesh> quad = sw::MeshUtil::acquirePrimitive( "Quad" );
-    sw::shared_ptr<sw::Mesh> rect = sw::MeshUtil::acquirePrimitive( "Rect" );
     SW_ASSERT_TRUE( quad != nullptr );
-    SW_EXPECT_TRUE( quad.get() == rect.get() );
     SW_EXPECT_TRUE( quad.get() != sharedA.get() );
 
-    // 3. 대소문자가 달라도 같은 자리다.
-    SW_EXPECT_TRUE( sw::MeshUtil::acquirePrimitive( "cube" ).get() == sharedA.get() );
+    // 3. 이름은 철자 그대로만 받는다 — 별칭(`Rect`)과 대소문자가 다른 이름(`cube`)은 모르는 id 다(같은 기하를 여러 철자로 적지 않게).
+    SW_EXPECT_TRUE( sw::MeshUtil::acquirePrimitive( "Rect" ) == nullptr );
+    SW_EXPECT_TRUE( sw::MeshUtil::acquirePrimitive( "cube" ) == nullptr );
 
     // 4. create 는 **매번 새로** 만든다 — 벤치가 이 성질로 배치를 나눈다.
     sw::shared_ptr<sw::Mesh> freshA = sw::MeshUtil::createPrimitive( "Cube" );

@@ -481,14 +481,14 @@ SW_TEST_CASE( InputManagerTest, InputMapGamepadStick2D )
  */
 SW_TEST_CASE( InputManagerTest, GamepadButtonUtilNameMapping )
 {
-    // 1) 이름 -> 버튼 열거형 (대소문자 무시)
+    // 1) 이름 -> 버튼 열거형 (철자 그대로 — 대소문자가 다르면 모르는 이름)
     SW_EXPECT_TRUE( sw::GamepadButtonUtil::fromName( "A" ) == sw::GamepadButton::A );
-    SW_EXPECT_TRUE( sw::GamepadButtonUtil::fromName( "a" ) == sw::GamepadButton::A );
+    SW_EXPECT_TRUE( sw::GamepadButtonUtil::fromName( "a" ) == sw::GamepadButton::Count );
     SW_EXPECT_TRUE( sw::GamepadButtonUtil::fromName( "B" ) == sw::GamepadButton::B );
     SW_EXPECT_TRUE( sw::GamepadButtonUtil::fromName( "X" ) == sw::GamepadButton::X );
     SW_EXPECT_TRUE( sw::GamepadButtonUtil::fromName( "Y" ) == sw::GamepadButton::Y );
     SW_EXPECT_TRUE( sw::GamepadButtonUtil::fromName( "DPadUp" ) == sw::GamepadButton::DPadUp );
-    SW_EXPECT_TRUE( sw::GamepadButtonUtil::fromName( "dpadup" ) == sw::GamepadButton::DPadUp );
+    SW_EXPECT_TRUE( sw::GamepadButtonUtil::fromName( "dpadup" ) == sw::GamepadButton::Count );
     SW_EXPECT_TRUE( sw::GamepadButtonUtil::fromName( "DPadDown" ) == sw::GamepadButton::DPadDown );
     SW_EXPECT_TRUE( sw::GamepadButtonUtil::fromName( "DPadLeft" ) == sw::GamepadButton::DPadLeft );
     SW_EXPECT_TRUE( sw::GamepadButtonUtil::fromName( "DPadRight" ) == sw::GamepadButton::DPadRight );

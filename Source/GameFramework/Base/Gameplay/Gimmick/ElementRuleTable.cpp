@@ -265,9 +265,9 @@ namespace sw
         outRule._stepsParam       = hashed_string( string( node.getAttributeText( "stepsParam" ) ).c_str() );
         outRule._event            = hashed_string( string( node.getAttributeText( "event" ) ).c_str() );
         const string_view pattern = node.getAttributeText( "pattern" );
-        if ( pattern.empty() || StringUtil::equals( pattern, "Neighbors4", true ) )
+        if ( pattern.empty() || StringUtil::equals( pattern, "Neighbors4" ) )
             outRule._pattern = ElementSpreadPattern::Neighbors4;
-        else if ( StringUtil::equals( pattern, "Wind", true ) )
+        else if ( StringUtil::equals( pattern, "Wind" ) )
             outRule._pattern = ElementSpreadPattern::Wind;
         else
         {
@@ -307,9 +307,9 @@ namespace sw
             {
                 const string_view kindText = child.getAttributeText( "kind" );
                 ElementStatusKind kind{ ElementStatusKind::Age };
-                if ( StringUtil::equals( kindText, "Countdown", true ) )
+                if ( StringUtil::equals( kindText, "Countdown" ) )
                     kind = ElementStatusKind::Countdown;
-                else if ( StringUtil::equals( kindText, "Age", true ) == false )
+                else if ( StringUtil::equals( kindText, "Age" ) == false )
                 {
                     SW_LOG_WARNING( "%#: <Status> has unknown kind '%#' (Age, Countdown)", sourceName, kindText );
                     bValid = false;

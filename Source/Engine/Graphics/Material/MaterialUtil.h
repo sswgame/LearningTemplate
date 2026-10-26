@@ -74,9 +74,15 @@ namespace sw
         static void appendAttribute( XMLNode parent, const utf8* pName, string_view value );
         static void appendBoolAttribute( XMLNode parent, const utf8* pName, bool value );
 
-        /** @brief 블렌드 모드 이름(`Opaque` · `Transparent` · `AlphaBlend`, 대소문자 무시)을 읽습니다. 모르는 이름이면 오류를 남기고 false 이며 @p outMode 는 그대로입니다. */
+        /** @brief 블렌드 모드 이름(`Opaque` · `Transparent`, 철자 그대로 — 대소문자가 다르면 모르는 이름)을 읽습니다. 모르는 이름이면 오류를 남기고 false 이며 @p outMode 는 그대로입니다. */
         [[nodiscard]] static bool parseBlendMode( string_view modeName, RHIBlendMode& outMode );
         static const utf8*        blendModeToString( RHIBlendMode mode );
+        /**
+         * @brief `parseBlendMode` 가 받는 모든 이름입니다(이름 표 하나 — 읽기와 이 목록이 같은 표를 본다).
+         * @details 에셋 검증 규칙(`Config/Editor/AssetValidationRules.json` 의 `allowed_blend_modes`)이 이 이름을 모두 적었는지, 적은 이름이 모두 이 목록에 있는지
+         *          `MaterialTest.AssetRuleBlendModesMatchTheLoader` 가 본다.
+         */
+        [[nodiscard]] static vector<string_view> listBlendModeNames();
         /** @brief 품질 이름을 읽습니다. 모르는 이름이면 오류를 남기고 false 이며 @p outQuality 는 그대로입니다. */
         [[nodiscard]] static bool parseQuality( string_view qualityName, MaterialQualityLevel& outQuality );
         static const utf8*        qualityToString( MaterialQualityLevel quality );

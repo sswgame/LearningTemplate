@@ -191,7 +191,7 @@ namespace sw
     {
         for ( uint32 tagIndex = 0; tagIndex < kMemoryTagCount; ++tagIndex )
         {
-            if ( StringUtil::equals( name, MemoryProfilerInternal::kArrTagName[tagIndex], true ) )
+            if ( StringUtil::equals( name, MemoryProfilerInternal::kArrTagName[tagIndex] ) )
             {
                 outTag = static_cast<MemoryTag>( tagIndex );
                 return true;

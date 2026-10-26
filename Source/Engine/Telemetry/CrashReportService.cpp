@@ -45,7 +45,7 @@ namespace sw
             {
                 for ( uint32 index = 0; index < kStateCount; ++index )
                 {
-                    if ( StringUtil::equals( text, kArrStateName[index], true ) )
+                    if ( StringUtil::equals( text, kArrStateName[index] ) )
                     {
                         outState = static_cast<CrashReportState>( index );
                         return true;
@@ -192,7 +192,7 @@ namespace sw
     {
         for ( uint32 index = 0; index < 3; ++index )
         {
-            if ( StringUtil::equals( text, CrashReportServiceInternal::kArrConsentName[index], true ) )
+            if ( StringUtil::equals( text, CrashReportServiceInternal::kArrConsentName[index] ) )
             {
                 outConsent = static_cast<CrashReportConsent>( index );
                 return true;

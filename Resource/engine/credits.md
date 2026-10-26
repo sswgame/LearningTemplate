@@ -21,6 +21,7 @@
 | `textures/missing.dds` | `Scripts/generate/GenerateSpriteTextures.py` 가 만든 누락 표시 체커(마젠타 · 검정) | 이 저장소 |
 | `textures/loading.dds` | `Scripts/generate/GenerateSpriteTextures.py` 가 만든 로드 중 표시(고른 중간 회색) | 이 저장소 |
 | `textures/test/quadrants.dds` | `Scripts/generate/GenerateSpriteTextures.py` 가 만든 네 칸 테스트 텍스처 | 이 저장소 |
+| `textures/test/mask_r8.dds` | `Scripts/generate/GenerateSpriteTextures.py` 가 만든 1 채널 R8 마스크(왼쪽 반 255 · 오른쪽 반 96) | 이 저장소 |
 | `textures/test/checker.dds` · `textures/test/pixelstripes.dds` | 이 저장소에서 만든 테스트 패턴(체커 · 줄무늬 — 커밋 `6361d2d54` · `bb857b284`) | 이 저장소 |
 
 - 내려받은 묶음의 `License.txt` 원문으로 CC0 인지 확인했다("License: (Creative Commons Zero, CC0)"). 파일 이름은 원본의 공백을 소문자 `_` 로 바꾼 것이다(바이트는 그대로).

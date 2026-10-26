@@ -21,13 +21,13 @@ namespace sw
         {
             [[nodiscard]] static bool parseEffectKind( string_view text, DeckBattleEffectKind& outKind )
             {
-                if ( StringUtil::equals( text, "Damage", true ) )
+                if ( StringUtil::equals( text, "Damage" ) )
                     outKind = DeckBattleEffectKind::Damage;
-                else if ( StringUtil::equals( text, "Block", true ) )
+                else if ( StringUtil::equals( text, "Block" ) )
                     outKind = DeckBattleEffectKind::Block;
-                else if ( StringUtil::equals( text, "Draw", true ) )
+                else if ( StringUtil::equals( text, "Draw" ) )
                     outKind = DeckBattleEffectKind::Draw;
-                else if ( StringUtil::equals( text, "Energy", true ) )
+                else if ( StringUtil::equals( text, "Energy" ) )
                     outKind = DeckBattleEffectKind::Energy;
                 else
                     return false;

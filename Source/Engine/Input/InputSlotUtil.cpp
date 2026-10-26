@@ -15,7 +15,7 @@ namespace sw
             static constexpr string_view kGamepadPrefix = "Gamepad";
 
             /** @brief 열거자 이름으로 읽은 값이 실제로 그 이름인지 확인합니다. 리플렉션 조회는 모르는 이름에 기본값을 반환할 수 있기 때문입니다. */
-            static bool isSameName( const utf8* pCanonical, string_view name ) { return pCanonical != nullptr && StringUtil::equals( string_view( pCanonical ), name, true ); }
+            static bool isSameName( const utf8* pCanonical, string_view name ) { return pCanonical != nullptr && StringUtil::equals( string_view( pCanonical ), name ); }
         };
     } // namespace
 } // namespace sw
@@ -31,7 +31,7 @@ namespace sw
         const string_view device = text.substr( 0, dotPos );
         const string_view name   = text.substr( dotPos + 1 );
 
-        if ( StringUtil::equals( device, InputSlotUtilInternal::kKeyPrefix, true ) )
+        if ( StringUtil::equals( device, InputSlotUtilInternal::kKeyPrefix ) )
         {
             const Key key = KeyCodeUtil::fromName( name );
             if ( key == Key::Unknown || InputSlotUtilInternal::isSameName( KeyCodeUtil::toName( key ), name ) == false )
@@ -39,7 +39,7 @@ namespace sw
             outSlot = InputSlot::fromKey( key );
             return true;
         }
-        if ( StringUtil::equals( device, InputSlotUtilInternal::kMousePrefix, true ) )
+        if ( StringUtil::equals( device, InputSlotUtilInternal::kMousePrefix ) )
         {
             const MouseButton button = MouseButtonUtil::fromName( name );
             if ( button == MouseButton::Count || InputSlotUtilInternal::isSameName( MouseButtonUtil::toName( button ), name ) == false )

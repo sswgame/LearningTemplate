@@ -6,6 +6,7 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/EnumNameTable.h"
 
 #include "Engine/Input/InputSlotUtil.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -27,14 +28,6 @@ namespace sw
 
             /** @brief 키 바인딩 설정이 대상을 적지 않았을 때 쓰는 핸들러입니다(입력 맵 리바인딩). */
             static constexpr utf8 kKeyBindingHandler[] = "input.keyBinding";
-
-            /** @brief 이름 → 열거자 표의 한 줄입니다. */
-            template <typename TEnum>
-            struct NamedValue
-            {
-                const utf8* _pName;
-                TEnum       _value;
-            };
 
             static constexpr uint32 kBooleanVariable = SW_BIT( static_cast<uint32>( GlobalVariableType::Boolean ) );
             static constexpr uint32 kInt32Variable   = SW_BIT( static_cast<uint32>( GlobalVariableType::Int32 ) );
@@ -79,20 +72,6 @@ namespace sw
             static constexpr const utf8* kArrUpgradeAttribute[]     = { "version", "op", "key", "to", "valueFrom", "valueTo", "scale" };
             static constexpr const utf8* kArrRootAttribute[]        = { "version" };
 
-            template <typename TEnum, size_t Count>
-            static bool findNamedValue( const NamedValue<TEnum> ( &arrEntry )[Count], string_view name, TEnum& outValue )
-            {
-                for ( const NamedValue<TEnum>& entry : arrEntry )
-                {
-                    if ( StringUtil::equals( name, entry._pName, true ) )
-                    {
-                        outValue = entry._value;
-                        return true;
-                    }
-                }
-                return false;
-            }
-
             /**
              * @brief 실수 하나를 읽습니다. 속성이 없으면 @p inoutValue 를 두고 true 입니다(기본값은 정의 구조체의 초기값 — 여기서 정하지 않는다).
              * @details 텍스트가 숫자가 아니면 오류를 알리고 false 이며 @p inoutValue 는 그대로입니다.
@@ -125,13 +104,13 @@ namespace sw
                 {
                     const string_view kind = text.substr( 0, colonPos );
                     const string_view name = text.substr( colonPos + 1 );
-                    if ( StringUtil::equals( kind, "gv", true ) )
+                    if ( StringUtil::equals( kind, "gv" ) )
                     {
                         inoutDef._targetKind = UserSettingTargetKind::GlobalVariable;
                         inoutDef._targetName = hashed_string( name );
                         return true;
                     }
-                    if ( StringUtil::equals( kind, "handler", true ) )
+                    if ( StringUtil::equals( kind, "handler" ) )
                     {
                         inoutDef._targetKind = UserSettingTargetKind::Handler;
                         inoutDef._targetName = hashed_string( name );
@@ -193,7 +172,7 @@ namespace sw
                 StringUtil::forEachToken( text, " ,", [&]( string_view name )
                 {
                     uint8 bit = 0;
-                    if ( findNamedValue( kArrPlatformName, name, bit ) == false )
+                    if ( NamedValueUtil::find( kArrPlatformName, name, bit ) == false )
                     {
                         SW_LOG_ERROR( "%#: setting '%#' names an unknown platform '%#'", sourceName, settingID.c_str(), name );
                         bOk = false;
@@ -229,12 +208,12 @@ namespace sw
                 return MathUtil::abs( inoutValue - original ) > 1.0e-6;
             }
 
-            /** @brief 스키마 XML 의 `type` 값(대소문자 무시)으로 설정 종류를 찾습니다. */
+            /** @brief 스키마 XML 의 `type` 값(철자 그대로)으로 설정 종류를 찾습니다. */
             static bool findTypeByName( string_view name, UserSettingType& outType )
             {
                 for ( const UserSettingTypeTraits& traits : kArrTypeTraits )
                 {
-                    if ( StringUtil::equals( name, traits._pName, true ) )
+                    if ( StringUtil::equals( name, traits._pName ) )
                     {
                         outType = traits._type;
                         return true;
@@ -337,7 +316,7 @@ namespace sw
                     bOk = false;
                 }
                 const string_view timingText = node.getAttributeText( "apply" );
-                if ( timingText.empty() == false && findNamedValue( kArrTimingName, timingText, outDef._applyTiming ) == false )
+                if ( timingText.empty() == false && NamedValueUtil::find( kArrTimingName, timingText, outDef._applyTiming ) == false )
                 {
                     SW_LOG_ERROR( "%#: setting '%#' has an unknown apply timing '%#'", sourceName, outDef._id.c_str(), timingText );
                     bOk = false;
@@ -434,7 +413,7 @@ namespace sw
                 outStep._fromValue   = string( node.getAttributeText( "valueFrom" ) );
                 outStep._toValue     = string( node.getAttributeText( "valueTo" ) );
                 bOk                  = readNumberAttribute( node, "scale", outStep._scale, sourceName ) && bOk;
-                if ( findNamedValue( kArrUpgradeName, node.getAttributeText( "op" ), outStep._operation ) == false )
+                if ( NamedValueUtil::find( kArrUpgradeName, node.getAttributeText( "op" ), outStep._operation ) == false )
                 {
                     SW_LOG_ERROR( "%#: <Upgrade> has an unknown op '%#'", sourceName, node.getAttributeText( "op" ) );
                     bOk = false;
@@ -471,7 +450,7 @@ namespace sw
                 {
                     for ( size_t otherIndex = optionIndex + 1; otherIndex < def._listOption.size(); ++otherIndex )
                     {
-                        if ( StringUtil::equals( def._listOption[optionIndex]._value, def._listOption[otherIndex]._value, true ) )
+                        if ( StringUtil::equals( def._listOption[optionIndex]._value, def._listOption[otherIndex]._value ) )
                         {
                             SW_LOG_ERROR( "setting '%#' lists option '%#' twice", pID, def._listOption[optionIndex]._value );
                             bOk = false;
@@ -638,12 +617,12 @@ namespace sw
                 // 선택지 하나하나(custom 제외)가 프리셋 하나다. 프리셋이 없는 선택지를 고르면 묶인 설정이 아무것도 바뀌지 않는다.
                 for ( const UserSettingOption& option : pGroupSetting->_listOption )
                 {
-                    if ( StringUtil::equals( option._value, group._customValue, true ) )
+                    if ( StringUtil::equals( option._value, group._customValue ) )
                         continue;
                     bool bHasPreset = false;
                     for ( const ScalabilityPresetDef& preset : group._listPreset )
                     {
-                        bHasPreset = bHasPreset || StringUtil::equals( preset._name.c_str(), option._value, true );
+                        bHasPreset = bHasPreset || StringUtil::equals( preset._name.c_str(), option._value );
                     }
                     if ( bHasPreset == false )
                     {
@@ -940,7 +919,7 @@ namespace sw
                 }
                 for ( const UserSettingOption& option : def._listOption )
                 {
-                    if ( StringUtil::equals( value, option._value, true ) )
+                    if ( StringUtil::equals( value, option._value ) )
                     {
                         outValue = option._value;
                         return UserSettingValueResult::Accepted;

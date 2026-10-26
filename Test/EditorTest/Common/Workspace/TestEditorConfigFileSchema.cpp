@@ -70,6 +70,7 @@ namespace
             { "TextureImportConfig.json",      &loadTextureImport},
             {   "ModelImportConfig.json",        &loadModelImport},
             {"AssetValidationRules.json",                 nullptr}, // Scripts/common/AssetValidation.py · CheckAssetRules
+            {          "DdsFormats.json",                 nullptr}, // Scripts/common/AssetValidation.py · EditorTexturePipelineTest.DDSFormatFileMatchesTheLoaderTables
             {    "Cc0PropPlacement.json",                 nullptr}, // Scripts/dev/MakeCc0SceneProps.py
         };
 

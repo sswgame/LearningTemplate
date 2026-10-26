@@ -36,7 +36,7 @@ namespace sw
         {
             for ( uint32 optionIndex = 0; optionIndex < static_cast<uint32>( def._listOption.size() ); ++optionIndex )
             {
-                if ( StringUtil::equals( def._listOption[optionIndex]._value, value, true ) )
+                if ( StringUtil::equals( def._listOption[optionIndex]._value, value ) )
                     return optionIndex;
             }
             return invalid_index::kUint32;
@@ -432,7 +432,7 @@ namespace sw
             bool bListed = pValue->empty();
             for ( const UserSettingOption& option : outListOption )
             {
-                bListed = bListed || StringUtil::equals( option._value, *pValue, true );
+                bListed = bListed || StringUtil::equals( option._value, *pValue );
             }
             if ( bListed == false )
             {
@@ -466,7 +466,7 @@ namespace sw
             bool bFound = listOption.empty();
             for ( const UserSettingOption& option : listOption )
             {
-                if ( StringUtil::equals( option._value, normalized, true ) )
+                if ( StringUtil::equals( option._value, normalized ) )
                 {
                     normalized = option._value;
                     bFound     = true;
@@ -834,7 +834,7 @@ namespace sw
             const uint32 otherIndex = findIndex( condition._settingID );
             if ( otherIndex == invalid_index::kUint32 )
                 return false;
-            const bool bEqual     = StringUtil::equals( getEffectiveValue( otherIndex ), condition._value, true );
+            const bool bEqual     = StringUtil::equals( getEffectiveValue( otherIndex ), condition._value );
             const bool bSatisfied = condition._operator == UserSettingConditionOperator::Equal ? bEqual : bEqual == false;
             if ( bSatisfied == false )
                 return false;

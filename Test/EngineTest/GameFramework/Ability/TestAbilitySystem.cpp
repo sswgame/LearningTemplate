@@ -948,7 +948,7 @@ SW_TEST_CASE( AbilitySystemTest, ModuleCodeReleaseRetiresOnlyAbilitiesFromThatMo
 /**
  * @brief [AbilitySystemTest] 데이터가 쓰는 열거자 이름은 리플렉션 이름으로 모두 왕복한다 — 손으로 쓴 표가 따로 없다
  * @details 카탈로그 XML 의 `op` · `source` · `duration` · `stacking` · `stackExpiration` 은 `ENUM()` 이름(`TypeRegistry::enumFromString`)로 읽는다.
- *          열거자를 더하면 이름도 함께 생긴다. 대소문자는 가리지 않고, 모르는 이름은 false 다.
+ *          열거자를 더하면 이름도 함께 생긴다. 철자는 그대로여야 하고(대소문자가 다르면 모르는 이름), 모르는 이름은 false 다.
  */
 SW_TEST_CASE( AbilitySystemTest, EnumNamesRoundTrip )
 {
@@ -978,7 +978,8 @@ SW_TEST_CASE( AbilitySystemTest, EnumNamesRoundTrip )
         SW_EXPECT_TRUE( registry.enumFromString( pName, parsed ) && parsed == value );
     }
     EffectStackingPolicy stacking{ EffectStackingPolicy::None };
-    SW_EXPECT_TRUE( registry.enumFromString( "aggregatebytarget", stacking ) && stacking == EffectStackingPolicy::AggregateByTarget );
+    SW_EXPECT_TRUE( registry.enumFromString( "AggregateByTarget", stacking ) && stacking == EffectStackingPolicy::AggregateByTarget );
+    SW_EXPECT_FALSE( registry.enumFromString( "aggregatebytarget", stacking ) ); // 철자 그대로만 — 대소문자가 다르면 모르는 이름
     EffectStackExpirationPolicy expiration{ EffectStackExpirationPolicy::ClearEntireStack };
     SW_EXPECT_TRUE( registry.enumFromString( "RemoveSingleStackAndRefreshDuration", expiration ) &&
                     expiration == EffectStackExpirationPolicy::RemoveSingleStackAndRefreshDuration );

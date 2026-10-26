@@ -10,6 +10,7 @@
 #include "Engine/Engine.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
+#include "Engine/Renderer/RenderThread.h"
 #include "Engine/Utility/EditSessionState.h"
 
 #include "sw/config/ConfigConstants.h"
@@ -76,6 +77,17 @@ namespace sw
         RHI* pRHI = _pEngine != nullptr ? _pEngine->getRHI() : nullptr;
         return pRHI != nullptr && pRHI->getDevice().debugRemoveDevice();
     }
+
+#if SW_DEV_COMMANDS_ENABLED
+    bool RHIBackendSwitcher::removeDeviceAfterDriverWaitForTest( uint32 waitMilliseconds )
+    {
+        RenderThread* pRenderThread = _pEngine != nullptr ? _pEngine->getRenderThread() : nullptr;
+        if ( pRenderThread == nullptr )
+            return false;
+        pRenderThread->requestDeviceLossAfterDriverWait( waitMilliseconds );
+        return true;
+    }
+#endif
 
     bool RHIBackendSwitcher::isSwapPending() const
     {

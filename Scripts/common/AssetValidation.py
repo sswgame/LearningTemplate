@@ -71,16 +71,44 @@ _kClassBaseRe = re.compile(r"\b(?:class|struct)\s+(?:SW_[A-Z_]+\s+)?([A-Za-z_][A
 #: 폴더를 가리키는 값 — 도메인으로 시작하고 확장자가 없다(`game/shooter3d/models/knight/clips`). 이름이 `…Folder` 인 속성만 이것으로 본다.
 _kResourceFolderRe = re.compile(r"^(engine|common|editor|game/[a-z0-9_]+)/[A-Za-z0-9_/\-]+$")
 
-#: DXGI 형식 번호 → 이름(검증에 쓰는 것만). 레거시 DDS 는 FourCC · 마스크에서 이름을 만든다.
-_kDxgiFormatName: dict[int, str] = {
-    2: "R32G32B32A32_FLOAT", 10: "R16G16B16A16_FLOAT", 24: "R10G10B10A2_UNORM", 28: "R8G8B8A8_UNORM", 29: "R8G8B8A8_UNORM_SRGB",
-    61: "R8_UNORM", 71: "BC1_UNORM", 72: "BC1_UNORM_SRGB", 74: "BC2_UNORM", 75: "BC2_UNORM_SRGB", 77: "BC3_UNORM", 78: "BC3_UNORM_SRGB",
-    80: "BC4_UNORM", 83: "BC5_UNORM", 87: "B8G8R8A8_UNORM", 91: "B8G8R8A8_UNORM_SRGB", 95: "BC6H_UF16", 98: "BC7_UNORM", 99: "BC7_UNORM_SRGB",
-}
-_kLegacyFourCcName: dict[bytes, str] = {
-    b"DXT1": "BC1_UNORM", b"DXT3": "BC2_UNORM", b"DXT5": "BC3_UNORM", b"ATI2": "BC5_UNORM", b"BC5U": "BC5_UNORM",
-    struct.pack("<I", 113): "R16G16B16A16_FLOAT", struct.pack("<I", 116): "R32G32B32A32_FLOAT",
-}
+#: DDS 형식 이름표의 자리(저장소 기준). C++ 표(임포터 · DDSLoader · Texture2D)와 같은지는 `EditorTexturePipelineTest.DDSFormatFileMatchesTheLoaderTables` 가 본다.
+kDdsFormatFileRelative = "Config/Editor/DdsFormats.json"
+
+
+def _readDdsFormatTables() -> tuple[dict[int, str], dict[bytes, str], dict[tuple[int, ...], str]]:
+    """`DdsFormats.json` 에서 (DXGI 번호 → 이름, 옛 머리 FourCC 바이트 → 이름, 옛 머리 (비트 수, R, G, B, A 마스크) → 이름)을 읽습니다.
+    손으로 적은 사본은 로더의 표와 어긋났다(DXT2 · ATI1 · D3DFMT 111 …, 마스크만 있는 머리를 `UNCOMPRESSED_32BPP` 로 부름)."""
+    path = Path(__file__).resolve().parents[2] / kDdsFormatFileRelative
+    data = json.loads(path.read_text(encoding="utf-8"))
+    mapName = {int(entry["dxgi"]): str(entry["name"]) for entry in data["dxgi_formats"]}
+
+    def nameOf(entry: dict, table: str) -> str:
+        if entry["dxgi"] not in mapName:
+            raise RuntimeError(f"{path}: {table} row {entry} names DXGI {entry['dxgi']} that dxgi_formats does not list")
+        return mapName[entry["dxgi"]]
+
+    mapLegacy: dict[bytes, str] = {}
+    for entry in data["legacy_fourcc"]:
+        code = entry["fourcc"].encode("ascii") if "fourcc" in entry else struct.pack("<I", int(entry["d3dfmt"]))
+        mapLegacy[code] = nameOf(entry, "legacy_fourcc")
+    mapMask: dict[tuple[int, ...], str] = {}
+    for entry in data["legacy_rgb_masks"]:
+        key = (int(entry["bits"]), int(entry["r"], 16), int(entry["g"], 16), int(entry["b"], 16), int(entry["a"], 16))
+        mapMask[key] = nameOf(entry, "legacy_rgb_masks")
+    return mapName, mapLegacy, mapMask
+
+
+#: DXGI 형식 번호 → 이름, 옛 머리 FourCC → 이름, 옛 머리 (비트 수, R, G, B, A 마스크) → 이름.
+_kDxgiFormatName, _kLegacyFourCcName, _kLegacyRgbMaskName = _readDdsFormatTables()
+#: 텍스처 규칙의 형식 목록 키 — 이름은 `readDdsInfo` 가 지을 수 있는 이름이어야 하고(모르는 이름은 규칙 로드 오류) 두 목록은 겹치지 않는다.
+#: 임포터가 낼 수 있는 형식(`TextureImportFormatUtil::getWrittenFormatNames`)이 모두 어느 규칙에서 허용 · 거절 중 하나인지는
+#: `EditorTexturePipelineTest.EveryImportOutputFormatIsDecidedByTheAssetRules` 가 본다 — 정본은 그 C++ 표다.
+_kTextureFormatListKey: tuple[str, ...] = ("allowed_formats", "rejected_formats")
+
+
+def isKnownTextureFormatName(name: str) -> bool:
+    """`readDdsInfo` 가 지을 수 있는 형식 이름인가."""
+    return name in _kDxgiFormatName.values()   # 옛 머리 표의 이름도 모두 이 표의 이름이다(`_readDdsFormatTables` 가 확인)
 
 
 class RuleConfigError(ValueError):
@@ -310,8 +338,9 @@ def readDdsInfo(data: bytes) -> DdsInfo:
     elif pixelFlags & 0x4:  # DDPF_FOURCC
         formatName = _kLegacyFourCcName.get(fourCc, f"FOURCC_{fourCc!r}")
     else:
-        bitCount = struct.unpack_from("<I", data, 88)[0]
-        formatName = f"UNCOMPRESSED_{bitCount}BPP"
+        masks = struct.unpack_from("<5I", data, 88)   # 비트 수 · R · G · B · A 마스크
+        # 표에 없는 모양은 엔진이 읽지 못한다 — 이름이 어느 규칙에도 없어 검증에서 진다.
+        formatName = _kLegacyRgbMaskName.get(masks, "RGB_MASKS_" + "_".join(f"{value:X}" for value in masks))
     return DdsInfo(width, height, mipCount, formatName)
 
 
@@ -418,10 +447,31 @@ def checkTextureInternal(rule: Rule, relPath: str, context: ValidationContext) -
         listMessage.append(f"has {info.mipCount} mip level(s), expected the full chain ({fullMipCount})")
     if requireMips is False and info.mipCount > 1:
         listMessage.append(f"has {info.mipCount} mip levels, this folder expects none")
+    listRejected = rule.params.get("rejected_formats")
     listFormat = rule.params.get("allowed_formats")
-    if listFormat and info.formatName not in listFormat:
+    if listRejected and info.formatName in listRejected:
+        listMessage.append(f"format {info.formatName} is rejected here (rejected_formats)")
+    elif listFormat and info.formatName not in listFormat:
         listMessage.append(f"format {info.formatName} is not allowed here ({', '.join(listFormat)})")
     return listMessage
+
+
+def validateTextureFormatListsInternal(name: str, params: dict) -> None:
+    """텍스처 규칙의 `allowed_formats` · `rejected_formats` 가 아는 이름의 목록이고 서로 겹치지 않는지 봅니다. 틀리면 RuleConfigError 입니다."""
+    mapList: dict[str, list[str]] = {}
+    for key in _kTextureFormatListKey:
+        if key not in params:
+            continue
+        value = params[key]
+        if not isinstance(value, list) or not value or not all(isinstance(item, str) for item in value):
+            raise RuleConfigError(f"rule '{name}' needs '{key}' as a non-empty list of format names")
+        unknown = [item for item in value if not isKnownTextureFormatName(item)]
+        if unknown:
+            raise RuleConfigError(f"rule '{name}' lists unknown format name(s) in '{key}': {', '.join(unknown)}")
+        mapList[key] = value
+    overlap = sorted(set(mapList.get("allowed_formats", [])) & set(mapList.get("rejected_formats", [])))
+    if overlap:
+        raise RuleConfigError(f"rule '{name}' both allows and rejects {', '.join(overlap)}")
 
 
 def checkMeshBudgetInternal(rule: Rule, relPath: str, context: ValidationContext) -> list[str]:
@@ -534,6 +584,7 @@ def checkMaterialInternal(rule: Rule, relPath: str, context: ValidationContext) 
     listMessage: list[str] = []
     if not root.get("shaderPath"):
         listMessage.append("has no shaderPath")
+    # 이름의 정본은 로더의 표(`MaterialUtil::listBlendModeNames`)다 — 규칙의 목록과 같은 집합인지 `MaterialTest.AssetRuleBlendModesMatchTheLoader` 가 본다.
     allowedBlend = rule.params.get("allowed_blend_modes")
     if allowedBlend and root.get("blendMode") not in allowedBlend:
         listMessage.append(f"blendMode '{root.get('blendMode')}' is not one of {', '.join(allowedBlend)}")
@@ -761,7 +812,7 @@ kAssetRuleConfigRelative = "Config/Editor/AssetValidationRules.json"
 
 _kCheckRegistry: dict[str, tuple[CheckFunction, frozenset[str], frozenset[str]]] = {
     "naming": (checkNamingInternal, frozenset(), frozenset({"name_pattern", "allowed_suffixes"})),
-    "texture": (checkTextureInternal, frozenset(), frozenset({"max_size", "mipped_power_of_two", "require_mips", "allowed_formats"})),
+    "texture": (checkTextureInternal, frozenset(), frozenset({"max_size", "mipped_power_of_two", "require_mips", "allowed_formats", "rejected_formats"})),
     "mesh_budget": (checkMeshBudgetInternal, frozenset(), frozenset({"max_triangles", "max_bounding_radius"})),
     "xml_wellformed": (checkXmlWellFormedInternal, frozenset(), frozenset()),
     "missing_reference": (checkMissingReferenceInternal, frozenset(), frozenset({"transient_folders"})),
@@ -816,6 +867,8 @@ def parseRules(data: dict) -> list[Rule]:
         missingKey = sorted(requiredKey - set(params))
         if missingKey:
             raise RuleConfigError(f"rule '{name}' ({check}) is missing required key(s) {', '.join(missingKey)}")
+        if check == "texture":
+            validateTextureFormatListsInternal(name, params)
         listInclude = entry["include_patterns"]
         if not isinstance(listInclude, list) or not listInclude:
             raise RuleConfigError(f"rule '{name}' needs a non-empty include_patterns list")

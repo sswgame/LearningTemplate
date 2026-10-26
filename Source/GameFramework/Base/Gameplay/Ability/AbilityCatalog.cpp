@@ -102,7 +102,7 @@ namespace sw
                 }
 
                 const utf8* pFrom        = node.findAttribute( "from" );
-                const bool  bFromTarget  = pFrom != nullptr && StringUtil::equals( pFrom, "Target", true );
+                const bool  bFromTarget  = pFrom != nullptr && StringUtil::equals( pFrom, "Target" );
                 outModifier._bFromSource = bFromTarget ? SW_FALSE : SW_TRUE;
 
                 const bool bMissingBacking = outModifier._magnitudeSource == EffectMagnitudeSource::AttributeBased && outModifier._backingAttribute.empty();

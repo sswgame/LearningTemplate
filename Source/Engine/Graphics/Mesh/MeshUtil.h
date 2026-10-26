@@ -82,8 +82,8 @@ namespace sw
 
         /**
          * @brief 프리미티브 id 로 내장 도형을 새로 만듭니다.
-         * @details 비었거나 "Cube" 면 큐브, "Quad"/"Rect" 면 쿼드, "Sprite" 면 양면 스프라이트 사각형, "Plane"/"Ground" 면 바닥 평면,
-         *          "Sphere", "Cylinder", "Capsule", "Cone" 은 각각의 곡면 도형, "GrassClump" 는 풀 한 포기입니다. 모르면 nullptr 입니다.
+         * @details 비었거나 "Cube" 면 큐브, "Quad" 면 쿼드, "Sprite" 면 양면 스프라이트 사각형, "Plane" 면 바닥 평면,
+         *          "Sphere", "Cylinder", "Capsule", "Cone" 은 각각의 곡면 도형, "GrassClump" 는 풀 한 포기입니다. 철자 그대로만 받고(별칭 · 대소문자 무시 없음) 모르면 nullptr 입니다.
          *          씬 XML 의 `_meshID` 와 벤치의 도형 섞기가 같은 이름을 씁니다. 정점 색은 @p vertexColor 입니다(기본 흰색이며 게임이 쓰는 색입니다).
          */
         static shared_ptr<Mesh> createPrimitive( string_view meshID, PrimitiveVertexColor vertexColor = PrimitiveVertexColor::White );

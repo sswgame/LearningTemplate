@@ -25,9 +25,9 @@ namespace sw
                 const utf8* pText = node.findAttribute( "shape" );
                 if ( pText == nullptr )
                     return true;
-                if ( StringUtil::equals( pText, "Capsule", true ) )
+                if ( StringUtil::equals( pText, "Capsule" ) )
                     inoutShape = HitboxShape::Capsule;
-                else if ( StringUtil::equals( pText, "Box", true ) )
+                else if ( StringUtil::equals( pText, "Box" ) )
                     inoutShape = HitboxShape::Box;
                 else
                     return false;
@@ -62,13 +62,13 @@ namespace sw
 
     bool MoveCatalog::parseAttackHeight( string_view text, AttackHeight& outHeight )
     {
-        if ( StringUtil::equals( text, "High", true ) )
+        if ( StringUtil::equals( text, "High" ) )
             outHeight = AttackHeight::High;
-        else if ( StringUtil::equals( text, "Mid", true ) )
+        else if ( StringUtil::equals( text, "Mid" ) )
             outHeight = AttackHeight::Mid;
-        else if ( StringUtil::equals( text, "Low", true ) )
+        else if ( StringUtil::equals( text, "Low" ) )
             outHeight = AttackHeight::Low;
-        else if ( StringUtil::equals( text, "Throw", true ) )
+        else if ( StringUtil::equals( text, "Throw" ) )
             outHeight = AttackHeight::Throw;
         else
             return false;

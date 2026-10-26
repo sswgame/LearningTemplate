@@ -7,6 +7,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/LifetimeScope.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/EnumNameTable.h"
 
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Resource/Cache/BuiltInAssetCache.h"
@@ -327,31 +328,27 @@ namespace sw
     }
 
     /**
-     * @brief 프리미티브 id 를 기준 이름 하나로 모읍니다(별칭 · 대소문자 흡수). 모르면 nullptr 입니다.
-     * @details 만들기와 공유 캐시가 **같은 판정**을 써야 합니다. 따로 적으면 "Quad" 와 "Rect" 가
-     *          같은 기하인데 캐시에서는 다른 자리를 차지합니다(배치도 그만큼 갈립니다).
+     * @brief 프리미티브 id 를 공유 캐시 키 하나로 바꿉니다. 모르면 nullptr 입니다.
+     * @details 만들기와 공유 캐시가 **같은 판정**을 써야 합니다. id 는 표의 철자 그대로만 받는다 — 별칭(`Rect` · `Ground`)과 대소문자 무시는
+     *          같은 기하를 여러 철자로 적게 해 캐시 자리와 배치를 가르므로 두지 않는다. 빈 id 는 큐브다(기본 메시).
      */
     static const utf8* canonicalPrimitiveIDVal( string_view meshID )
     {
-        if ( meshID.empty() || StringUtil::equals( meshID, "Cube", true ) )
+        static constexpr NamedValue<const utf8*> kArrPrimitive[] = {
+            {      "Cube",       "cube"},
+            {      "Quad",       "quad"},
+            {    "Sprite",     "sprite"},
+            {     "Plane",      "plane"},
+            {    "Sphere",     "sphere"},
+            {  "Cylinder",   "cylinder"},
+            {   "Capsule",    "capsule"},
+            {      "Cone",       "cone"},
+            {"GrassClump", "grassclump"},
+        };
+        if ( meshID.empty() )
             return "cube";
-        if ( StringUtil::equals( meshID, "Quad", true ) || StringUtil::equals( meshID, "Rect", true ) )
-            return "quad";
-        if ( StringUtil::equals( meshID, "Sprite", true ) )
-            return "sprite";
-        if ( StringUtil::equals( meshID, "Plane", true ) || StringUtil::equals( meshID, "Ground", true ) )
-            return "plane";
-        if ( StringUtil::equals( meshID, "Sphere", true ) )
-            return "sphere";
-        if ( StringUtil::equals( meshID, "Cylinder", true ) )
-            return "cylinder";
-        if ( StringUtil::equals( meshID, "Capsule", true ) )
-            return "capsule";
-        if ( StringUtil::equals( meshID, "Cone", true ) )
-            return "cone";
-        if ( StringUtil::equals( meshID, "GrassClump", true ) )
-            return "grassclump";
-        return nullptr;
+        const utf8* pKey = nullptr;
+        return NamedValueUtil::find( kArrPrimitive, meshID, pKey ) ? pKey : nullptr;
     }
 
     shared_ptr<Mesh> MeshUtil::createPrimitive( string_view meshID, PrimitiveVertexColor vertexColor )

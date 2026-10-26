@@ -70,12 +70,12 @@ namespace sw
                 {"RightStick", InputMapVirtualCursor::RightStick},
             };
 
-            /** @brief `virtualCursor` 특성을 읽습니다. 모르는 이름이면 false 입니다(대소문자는 무시한다). */
+            /** @brief `virtualCursor` 특성을 읽습니다. 모르는 이름이면 false 입니다(철자 그대로 견준다). */
             [[nodiscard]] static bool tryParseVirtualCursor( const utf8* pText, InputMapVirtualCursor& outStick )
             {
                 for ( const VirtualCursorNameEntry& entry : kArrVirtualCursorNames )
                 {
-                    if ( StringUtil::equals( pText, entry._pName, true ) )
+                    if ( StringUtil::equals( pText, entry._pName ) )
                     {
                         outStick = entry._stick;
                         return true;
@@ -163,7 +163,7 @@ namespace sw
             {
                 for ( const ValueTypeNameEntry& entry : kArrValueTypeNames )
                 {
-                    if ( StringUtil::equals( name, entry._pName, true ) )
+                    if ( StringUtil::equals( name, entry._pName ) )
                     {
                         outValueType = entry._valueType;
                         return true;
@@ -406,12 +406,12 @@ namespace sw
                 const utf8* pAxisStr = node.findAttribute( "axis" );
                 if ( StringUtil::isNullOrEmpty( pAxisStr ) )
                     return true;
-                if ( StringUtil::equals( pAxisStr, "X", true ) )
+                if ( StringUtil::equals( pAxisStr, "X" ) )
                 {
                     outAxis = GamepadStickAxis::X;
                     return true;
                 }
-                if ( StringUtil::equals( pAxisStr, "Y", true ) )
+                if ( StringUtil::equals( pAxisStr, "Y" ) )
                 {
                     outAxis = GamepadStickAxis::Y;
                     return true;
@@ -511,7 +511,7 @@ namespace sw
             [[nodiscard]] static bool tryReadAxisSlots( XMLNode node, const utf8* pNegativeName, const utf8* pPositiveName, InputSlot& outNegative, InputSlot& outPositive )
             {
                 const utf8* pSource = node.findAttribute( InputMapXML::kAttrSource );
-                if ( pSource != nullptr && StringUtil::equals( pSource, InputMapXML::kSourceGamepad, true ) )
+                if ( pSource != nullptr && StringUtil::equals( pSource, InputMapXML::kSourceGamepad ) )
                 {
                     uint8 padIndex{ 0 };
                     if ( tryGetPadIndex( node, padIndex ) == false )
@@ -528,7 +528,7 @@ namespace sw
                     outPositive = InputSlot::fromGamepadButton( positiveButton, padIndex );
                     return true;
                 }
-                if ( pSource != nullptr && StringUtil::equals( pSource, InputMapXML::kSourceKey, true ) == false )
+                if ( pSource != nullptr && StringUtil::equals( pSource, InputMapXML::kSourceKey ) == false )
                 {
                     SW_LOG_WARNING( "axis1d source '%#' is neither 'key' nor 'gamepad' - binding dropped", pSource );
                     return false;
@@ -697,7 +697,7 @@ namespace sw
                 if ( tryGetPadIndex( bindNode, pad ) == false )
                     return; // 이미 경고했으므로 이 바인딩을 버린다
                 const utf8*        pStickStr = bindNode.findAttribute( "stick" );
-                const GamepadStick stick     = StringUtil::equals( pStickStr, "Right", true ) ? GamepadStick::Right : GamepadStick::Left;
+                const GamepadStick stick     = StringUtil::equals( pStickStr, "Right" ) ? GamepadStick::Right : GamepadStick::Left;
                 float32            deadzone{};
                 float32            outerDeadzone{};
                 float32            exp{};
@@ -751,19 +751,19 @@ namespace sw
             {
                 const utf8*         pSourceStr    = bindNode.findAttribute( "source" );
                 const ActionTrigger singleTrigger = readUserBindingTrigger( bindNode, ActionTrigger::Pressed );
-                if ( StringUtil::equals( pSourceStr, "key", true ) )
+                if ( StringUtil::equals( pSourceStr, "key" ) )
                 {
                     const Key key = KeyCodeUtil::fromName( bindNode.getAttributeText( "key" ) );
                     if ( key != Key::Unknown )
                         map.bind( hashed_string( pAction ), key, singleTrigger, hashed_string( layer ) );
                 }
-                else if ( StringUtil::equals( pSourceStr, "mouse", true ) )
+                else if ( StringUtil::equals( pSourceStr, "mouse" ) )
                 {
                     const MouseButton button = MouseButtonUtil::fromName( bindNode.getAttributeText( "button" ) );
                     if ( button != MouseButton::Count )
                         map.bind( hashed_string( pAction ), button, singleTrigger, hashed_string( layer ) );
                 }
-                else if ( StringUtil::equals( pSourceStr, "gamepad", true ) )
+                else if ( StringUtil::equals( pSourceStr, "gamepad" ) )
                 {
                     const GamepadButton button = GamepadButtonUtil::fromName( bindNode.getAttributeText( "code" ) );
                     uint8               padIndex{ 0 };
@@ -994,11 +994,11 @@ namespace sw
                     Key modifierKey = KeyCodeUtil::fromName( pModifierAttr );
                     if ( modifierKey == Key::Unknown )
                     {
-                        if ( StringUtil::equals( pModifierAttr, "Ctrl", true ) || StringUtil::equals( pModifierAttr, "Control", true ) )
+                        if ( StringUtil::equals( pModifierAttr, "Ctrl" ) )
                             modifierKey = Key::LeftControl;
-                        else if ( StringUtil::equals( pModifierAttr, "Shift", true ) )
+                        else if ( StringUtil::equals( pModifierAttr, "Shift" ) )
                             modifierKey = Key::LeftShift;
-                        else if ( StringUtil::equals( pModifierAttr, "Alt", true ) )
+                        else if ( StringUtil::equals( pModifierAttr, "Alt" ) )
                             modifierKey = Key::LeftAlt;
                     }
                     const Key triggerKey = KeyCodeUtil::fromName( pCode );
@@ -1010,16 +1010,16 @@ namespace sw
                     }
                 }
 
-                if ( StringUtil::equals( pSource, Internal::InputMapXML::kSourceKey, true ) )
+                if ( StringUtil::equals( pSource, Internal::InputMapXML::kSourceKey ) )
                 {
                     const Key key = KeyCodeUtil::fromName( pCode );
                     if ( key != Key::Unknown )
                         _map.bind( _action, key, trigger, bindLayer );
                 }
-                else if ( StringUtil::equals( pSource, Internal::InputMapXML::kSourceGamepad, true ) )
+                else if ( StringUtil::equals( pSource, Internal::InputMapXML::kSourceGamepad ) )
                 {
-                    const bool bLeftStick  = StringUtil::equals( pCode, "LeftStick", true );
-                    const bool bRightStick = StringUtil::equals( pCode, "RightStick", true );
+                    const bool bLeftStick  = StringUtil::equals( pCode, "LeftStick" );
+                    const bool bRightStick = StringUtil::equals( pCode, "RightStick" );
                     if ( bLeftStick || bRightStick )
                     {
                         float32 deadzone = InputMapDefaults::kStickDeadzone;
@@ -1034,7 +1034,7 @@ namespace sw
                             _map.bind( _action, InputSlot::fromGamepadButton( button, padIndex ), trigger, bindLayer );
                     }
                 }
-                else if ( StringUtil::equals( pSource, Internal::InputMapXML::kSourceMouse, true ) )
+                else if ( StringUtil::equals( pSource, Internal::InputMapXML::kSourceMouse ) )
                 {
                     const MouseButton mouse = MouseButtonUtil::fromName( pCode );
                     if ( mouse != MouseButton::Count )
@@ -1089,7 +1089,7 @@ namespace sw
                 if ( Internal::tryGetPadIndex( stickNode, padIndex ) == false )
                     continue; // 이미 경고했으므로 엉뚱한 패드에 묶지 않고 이 바인딩을 버린다
                 const utf8*        pStickName = stickNode.findAttribute( "stick" );
-                const GamepadStick stick      = ( pStickName != nullptr && StringUtil::equals( pStickName, "Right", true ) ) ? GamepadStick::Right : GamepadStick::Left;
+                const GamepadStick stick      = ( pStickName != nullptr && StringUtil::equals( pStickName, "Right" ) ) ? GamepadStick::Right : GamepadStick::Left;
                 float32            deadzone   = InputMapDefaults::kStickDeadzone;
                 Internal::readOptional( stickNode, "deadzone", deadzone, _bValid );
                 const hashed_string stickLayer       = resolveLayer( stickNode, "layer" );
@@ -1432,7 +1432,7 @@ namespace sw
             return ActionTrigger::Count;
         for ( const InputMapSerializationInternal::TriggerNameEntry& entry : InputMapSerializationInternal::kArrTriggerNames )
         {
-            if ( StringUtil::equals( name, entry._pName, true ) )
+            if ( StringUtil::equals( name, entry._pName ) )
                 return entry._trigger;
         }
         return ActionTrigger::Count;

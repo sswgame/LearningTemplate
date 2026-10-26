@@ -4,10 +4,10 @@
 
 #if SW_DEV_COMMANDS_ENABLED
 
-    #include "Core/Container/StringUtil.h"
-
     #include "Engine/Automation/AutomationScenario.h"
     #include "Engine/Automation/AutomationStepValidation.h"
+
+    #include "sw/config/CookContract.gen.h"
 
 namespace sw
 {
@@ -18,19 +18,15 @@ namespace sw
             const utf8* _pName;
             RHIBackend  _backend;
         };
+        // 이름은 쿠킹 표(`SW_RHI_BACKEND_TABLE`)의 명령줄 이름 하나뿐이다(`-vk` 와 같은 철자) — 별칭(`vulkan` · `directx12`)과 대소문자 무시는 두지 않는다.
         static constexpr NameRow kArrName[] = {
-            {     "dx11", RHIBackend::DirectX11},
-            {"directx11", RHIBackend::DirectX11},
-            {     "dx12", RHIBackend::DirectX12},
-            {"directx12", RHIBackend::DirectX12},
-            {   "vulkan",    RHIBackend::Vulkan},
-            {       "vk",    RHIBackend::Vulkan},
-            {   "opengl",    RHIBackend::OpenGL},
-            {       "gl",    RHIBackend::OpenGL},
+    #define SW_SWAP_BACKEND_NAME_ROW( Backend, ShaderFolder, ShaderTarget, Argument, CommandLineName ) { CommandLineName, RHIBackend::Backend },
+            SW_RHI_BACKEND_TABLE( SW_SWAP_BACKEND_NAME_ROW )
+    #undef SW_SWAP_BACKEND_NAME_ROW
         };
         for ( const NameRow& row : kArrName )
         {
-            if ( StringUtil::equals( text, row._pName, true ) )
+            if ( text == row._pName )
             {
                 outBackend = row._backend;
                 return true;
@@ -54,7 +50,7 @@ namespace sw
         const bool    bRelative = pBackend != nullptr && ( *pBackend == kOtherBackend || *pBackend == kStartBackend );
         if ( pBackend == nullptr || ( bRelative == false && tryParseBackend( *pBackend, backend ) == false ) )
         {
-            outError = step.describe() + ": needs backend=\"dx11|dx12|vulkan|opengl|other|start\"";
+            outError = step.describe() + ": needs backend=\"dx11|dx12|vk|gl|other|start\"";
             return false;
         }
         return true;

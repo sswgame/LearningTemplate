@@ -375,11 +375,11 @@ namespace sw
             static bool initializeMover( GimmickNodeContext& context )
             {
                 const string& mode = context.getText( 1 );
-                if ( StringUtil::equals( mode, "Once", true ) )
+                if ( StringUtil::equals( mode, "Once" ) )
                     context._pIntState[3] = static_cast<int32>( MoverMode::Once );
-                else if ( StringUtil::equals( mode, "Loop", true ) )
+                else if ( StringUtil::equals( mode, "Loop" ) )
                     context._pIntState[3] = static_cast<int32>( MoverMode::Loop );
-                else if ( StringUtil::equals( mode, "PingPong", true ) )
+                else if ( StringUtil::equals( mode, "PingPong" ) )
                     context._pIntState[3] = static_cast<int32>( MoverMode::PingPong );
                 else
                     return failParam( context, "mode must be Once, Loop or PingPong" );

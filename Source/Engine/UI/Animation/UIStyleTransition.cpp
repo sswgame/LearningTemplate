@@ -117,7 +117,7 @@ namespace sw
                     outError = "transition item '" + string( item ) + "' must be 'field seconds [curve] [delay]' with a delay of zero or more";
                     return false;
                 }
-                const bool bAll = StringUtil::equals( arrToken[0], string_view( kAllName ), true );
+                const bool bAll = StringUtil::equals( arrToken[0], string_view( kAllName ) );
                 if ( bAll == false )
                 {
                     if ( UIStyleFieldTable::tryFindField( arrToken[0], entry._field ) == false )

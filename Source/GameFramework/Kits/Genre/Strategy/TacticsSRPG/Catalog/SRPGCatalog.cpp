@@ -74,7 +74,7 @@ namespace sw
                     return true;
                 for ( int32 index = 0; index < static_cast<int32>( std::size( kArrSizeName ) ); ++index )
                 {
-                    if ( StringUtil::equals( text, string_view( kArrSizeName[index] ), true ) )
+                    if ( StringUtil::equals( text, string_view( kArrSizeName[index] ) ) )
                     {
                         inoutSize = index;
                         return true;
@@ -145,7 +145,7 @@ namespace sw
         };
         for ( const NamedAptitude& named : kArrNamed )
         {
-            if ( StringUtil::equals( token, string_view( named._pName ), true ) )
+            if ( StringUtil::equals( token, string_view( named._pName ) ) )
             {
                 outAptitude = named._percent;
                 return true;

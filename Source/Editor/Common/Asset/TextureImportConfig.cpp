@@ -20,39 +20,56 @@ namespace sw::editor
         };
         /** @brief 프리셋 · 규칙 하나입니다. 적지 않은 필드는 `inherits` 의 값, 그것도 없으면 기본값입니다. */
         static constexpr ConfigKeyDoc kArrTextureImportRuleKeyDoc[] = {
-            {            "name",   "string",          "",                                                                                           "규칙 이름(로그 · 경고에 나온다). 프리셋은 키가 이름이다"},
-            {        "inherits",   "string",          "",                                                                                   "값을 물려받을 프리셋 이름 — 위에 정의되지 않은 이름은 로드 오류"},
-            {          "format",   "string", "BC7_UNORM",       "DXGI 포맷 이름(BC1~BC5_UNORM · BC6H_UF16 · BC7_UNORM · B8G8R8A8_UNORM · R8G8B8A8_UNORM · R16G16B16A16_FLOAT · R8_UNORM) — 그 밖은 로드 오류"},
-            {         "swizzle",   "string",      "RGBA",                                                                                          "채널 순서: RGBA · BGRA · ARGB · RGB1 — 그 밖은 로드 오류"},
-            {   "generate_mips",     "bool",      "true",                                                                                                                                     "밉맵을 만든다"},
-            {            "srgb",     "bool",      "true",                                                                                             "sRGB 색 공간으로 읽는다(노멀 · 데이터 텍스처는 false)"},
-            {    "invert_green",     "bool",     "false",                                                                                                       "G 채널을 뒤집는다(DirectX ↔ OpenGL 노멀 맵)"},
-            {"include_patterns", "string[]",          "", "맞아야 하는 와일드카드(`*` · `?`, 대소문자 무시). `/` 없으면 파일 이름에, 있으면 경로 마디에 맞춘다 — `*` 는 폴더를 넘지 않고 마디 `**` 만 넘는다"},
-            {"exclude_patterns", "string[]",          "",                                                                                                        "맞으면 빼는 와일드카드(포함보다 먼저 본다)"},
-            {   "include_paths", "string[]",          "",                                                                                           "들어 있어야 하는 폴더 마디(`ui/` 는 `…/ui/…` 에 맞는다)"},
-            {   "exclude_paths", "string[]",          "",                                                                                                                        "들어 있으면 빼는 폴더 마디"},
+            {            "name",   "string",          "",                                                                                                                     "규칙 이름(로그 · 경고에 나온다). 프리셋은 키가 이름이다"},
+            {        "inherits",   "string",          "",                                                                                                             "값을 물려받을 프리셋 이름 — 위에 정의되지 않은 이름은 로드 오류"},
+            {          "format",   "string", "BC7_UNORM", "DXGI 포맷 이름(BC1_UNORM · BC3_UNORM · BC4_UNORM · BC5_UNORM · BC6H_UF16 · BC7_UNORM · B8G8R8A8_UNORM · R8G8B8A8_UNORM · R16G16B16A16_FLOAT · R8_UNORM) — 그 밖은 로드 오류"},
+            {         "swizzle",   "string",      "RGBA",                                                                                                                    "채널 순서: RGBA · BGRA · ARGB · RGB1 — 그 밖은 로드 오류"},
+            {   "generate_mips",     "bool",      "true",                                                                                                                                                               "밉맵을 만든다"},
+            {            "srgb",     "bool",      "true",                                                                                                                       "sRGB 색 공간으로 읽는다(노멀 · 데이터 텍스처는 false)"},
+            {    "invert_green",     "bool",     "false",                                                                                                                                 "G 채널을 뒤집는다(DirectX ↔ OpenGL 노멀 맵)"},
+            {"include_patterns", "string[]",          "",                           "맞아야 하는 와일드카드(`*` · `?`, 대소문자 무시). `/` 없으면 파일 이름에, 있으면 경로 마디에 맞춘다 — `*` 는 폴더를 넘지 않고 마디 `**` 만 넘는다"},
+            {"exclude_patterns", "string[]",          "",                                                                                                                                  "맞으면 빼는 와일드카드(포함보다 먼저 본다)"},
+            {   "include_paths", "string[]",          "",                                                                                                                     "들어 있어야 하는 폴더 마디(`ui/` 는 `…/ui/…` 에 맞는다)"},
+            {   "exclude_paths", "string[]",          "",                                                                                                                                                  "들어 있으면 빼는 폴더 마디"},
         };
 
-        /** @brief `format` 이름 표의 한 줄입니다 — DXGI 이름(로그에 쓰는 이름)과 짧은 이름이 같은 형식입니다. */
+        /**
+         * @brief `format` 이름 표의 한 줄입니다 — DXGI 이름(로그에 쓰는 이름)과 짧은 이름이 같은 형식이고, 임포터가 써 내는 DXGI 번호와 sRGB 짝을 함께 든다.
+         * @details sRGB 짝이 없으면 `_srgbName` 이 비고 `_srgbDxgiFormat` 이 `_dxgiFormat` 과 같다. 번호는 `dxgiformat.h` 의 값이다(이 파일은 DirectXTex 를 끌어오지 않는다).
+         */
         struct TextureImportFormatName
         {
             string_view         _dxgiName;
             string_view         _shortName;
             TextureImportFormat _format;
+            uint32              _dxgiFormat;
+            string_view         _srgbName;
+            uint32              _srgbDxgiFormat;
         };
         static constexpr TextureImportFormatName kArrTextureImportFormatName[] = {
-            {         "BC1_UNORM",     "bc1",               TextureImportFormat::BC1},
-            {         "BC2_UNORM",     "bc2",               TextureImportFormat::BC2},
-            {         "BC3_UNORM",     "bc3",               TextureImportFormat::BC3},
-            {         "BC4_UNORM",     "bc4",               TextureImportFormat::BC4},
-            {         "BC5_UNORM",     "bc5",               TextureImportFormat::BC5},
-            {         "BC6H_UF16",    "bc6h",              TextureImportFormat::BC6H},
-            {         "BC7_UNORM",     "bc7",               TextureImportFormat::BC7},
-            {    "B8G8R8A8_UNORM",   "bgra8",          TextureImportFormat::B8G8R8A8},
-            {    "R8G8B8A8_UNORM",   "rgba8",          TextureImportFormat::R8G8B8A8},
-            {"R16G16B16A16_FLOAT", "rgba16f", TextureImportFormat::R16G16B16A16Float},
-            {          "R8_UNORM",      "r8",                TextureImportFormat::R8},
+            {         "BC1_UNORM",     "bc1",               TextureImportFormat::BC1, 71,      "BC1_UNORM_SRGB", 72},
+            {         "BC3_UNORM",     "bc3",               TextureImportFormat::BC3, 77,      "BC3_UNORM_SRGB", 78},
+            {         "BC4_UNORM",     "bc4",               TextureImportFormat::BC4, 80,                    "", 80},
+            {         "BC5_UNORM",     "bc5",               TextureImportFormat::BC5, 83,                    "", 83},
+            {         "BC6H_UF16",    "bc6h",              TextureImportFormat::BC6H, 95,                    "", 95},
+            {         "BC7_UNORM",     "bc7",               TextureImportFormat::BC7, 98,      "BC7_UNORM_SRGB", 99},
+            {    "B8G8R8A8_UNORM",   "bgra8",          TextureImportFormat::B8G8R8A8, 87, "B8G8R8A8_UNORM_SRGB", 91},
+            {    "R8G8B8A8_UNORM",   "rgba8",          TextureImportFormat::R8G8B8A8, 28, "R8G8B8A8_UNORM_SRGB", 29},
+            {"R16G16B16A16_FLOAT", "rgba16f", TextureImportFormat::R16G16B16A16Float, 10,                    "", 10},
+            {          "R8_UNORM",      "r8",                TextureImportFormat::R8, 61,                    "", 61},
         };
+
+        /** @brief @p format 의 표 줄입니다. 표는 열거자를 모두 담는다. */
+        [[nodiscard]] const TextureImportFormatName& findFormatEntryInternal( TextureImportFormat format )
+        {
+            for ( const TextureImportFormatName& entry : kArrTextureImportFormatName )
+            {
+                if ( entry._format == format )
+                    return entry;
+            }
+            SW_ASSERT( false ); // 표는 열거자를 모두 담는다
+            return kArrTextureImportFormatName[0];
+        }
 
         /** @brief 채널 순서 이름을 읽습니다. 모르는 이름이면 false 입니다(기본 RGBA 로 조용히 가지 않는다). */
         [[nodiscard]] bool parseSwizzleInternal( string_view swizzleStr, TextureSwizzle& outSwizzle )
@@ -260,13 +277,25 @@ namespace sw::editor
 
     string_view TextureImportFormatUtil::getName( TextureImportFormat format )
     {
+        return findFormatEntryInternal( format )._dxgiName;
+    }
+
+    uint32 TextureImportFormatUtil::getDxgiFormat( TextureImportFormat format, bool bSrgb )
+    {
+        const TextureImportFormatName& entry = findFormatEntryInternal( format );
+        return bSrgb ? entry._srgbDxgiFormat : entry._dxgiFormat;
+    }
+
+    vector<string_view> TextureImportFormatUtil::getWrittenFormatNames()
+    {
+        vector<string_view> listName;
         for ( const TextureImportFormatName& entry : kArrTextureImportFormatName )
         {
-            if ( entry._format == format )
-                return entry._dxgiName;
+            listName.push_back( entry._dxgiName );
+            if ( entry._srgbName.empty() == false )
+                listName.push_back( entry._srgbName );
         }
-        SW_ASSERT( false ); // 표는 열거자를 모두 담는다
-        return {};
+        return listName;
     }
 
     bool TextureImportConfig::isCatchAllRule( const TextureImportRule& rule )

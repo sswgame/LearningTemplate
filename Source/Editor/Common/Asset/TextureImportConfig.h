@@ -36,11 +36,11 @@ namespace sw::editor
      * @enum TextureImportFormat
      * @brief 임포트 결과의 픽셀 형식입니다. 규칙의 `format` 이름은 `TextureImportFormatUtil::parse` 로만 이 값이 됩니다.
      * @details 이름 표는 하나뿐입니다. 설정 로드가 모르는 이름을 거절하고, 임포터는 이 열거형을 DXGI 로 바꿀 뿐이라 "모르는 이름이면 BC7" 같은 기본값이 설 자리가 없습니다.
+     *          BC2 는 없다 — 같은 크기에 BC3 가 알파를 더 잘 담고 언리얼 · 유니티의 압축 설정에도 없다(규칙의 `bc2` 는 로드 오류).
      */
     enum class TextureImportFormat : uint8
     {
         BC1 = 0,
-        BC2,
         BC3,
         BC4,
         BC5,
@@ -66,6 +66,17 @@ namespace sw::editor
         [[nodiscard]] static bool parse( string_view name, TextureImportFormat& outFormat );
         /** @brief @p format 의 DXGI 이름(`BC7_UNORM` …)입니다. 로그에 씁니다. */
         [[nodiscard]] static string_view getName( TextureImportFormat format );
+        /**
+         * @brief 임포터가 @p format · @p bSrgb 로 써 내는 DDS 의 DXGI 형식 번호입니다. sRGB 짝이 없는 형식(BC4 · BC5 · BC6H · R16G16B16A16_FLOAT · R8)은 @p bSrgb 를 보지 않습니다.
+         * @details 임포터(`TextureImporter`)는 이 함수로만 DXGI 를 고른다 — 이름 · 번호 · sRGB 짝이 한 표에 있어 에셋 규칙과 대조하는 테스트가 같은 표를 읽는다.
+         */
+        [[nodiscard]] static uint32 getDxgiFormat( TextureImportFormat format, bool bSrgb );
+        /**
+         * @brief 임포터가 써 낼 수 있는 모든 DDS 형식의 DXGI 이름입니다(형식마다 UNORM 과, 있으면 sRGB 짝).
+         * @details 에셋 검증 규칙(`Config/Editor/AssetValidationRules.json` 의 `allowed_formats` · `rejected_formats`)이 이 이름을 모두 허용 · 거절 중 하나로 적었는지
+         *          테스트가 본다(`EditorTexturePipelineTest.EveryImportOutputFormatIsDecidedByTheAssetRules`). 새 형식을 더하면 규칙 파일도 고쳐야 그 테스트가 통과한다.
+         */
+        [[nodiscard]] static vector<string_view> getWrittenFormatNames();
     };
 } // namespace sw::editor
 

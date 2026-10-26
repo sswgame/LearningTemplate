@@ -61,7 +61,7 @@ namespace sw
             {
                 for ( uint32 index = 0; index < 4; ++index )
                 {
-                    if ( StringUtil::equals( text, kArrFieldTypeName[index], true ) )
+                    if ( StringUtil::equals( text, kArrFieldTypeName[index] ) )
                     {
                         outType = static_cast<TelemetryFieldType>( index );
                         return true;

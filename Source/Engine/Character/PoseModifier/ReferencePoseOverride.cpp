@@ -66,7 +66,7 @@ namespace sw
             bool bKnownAxis = false;
             for ( uint8 axis = 0; axis < 3; ++axis )
             {
-                if ( StringUtil::equals( axisText, ReferencePoseOverrideInternal::kArrAxisName[axis], true ) )
+                if ( StringUtil::equals( axisText, ReferencePoseOverrideInternal::kArrAxisName[axis] ) )
                 {
                     _mirrorAxis = axis;
                     bKnownAxis  = true;

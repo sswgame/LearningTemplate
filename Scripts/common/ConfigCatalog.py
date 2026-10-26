@@ -232,6 +232,11 @@ kListConfigFile: tuple[ConfigFileEntry, ...] = (
         readWhen="저장 · 임포트 직후(에디터) · `CheckAssetRules` 게이트 · `py -3 -m Scripts validate-assets`",
         shipping="없음", bCommitted=True, ownerDoc="Scripts/common/AssetValidation.py"),
     ConfigFileEntry(
+        page="", pathPattern="Config/Editor/DdsFormats.json", layer=kLayerEditor, fileFormat="json",
+        reader="`Scripts/common/AssetValidation.py` (DDS 형식 이름 · 옛 FourCC 표, 모듈을 읽을 때)",
+        readWhen="에셋 검증(`CheckAssetRules` · `validate-assets`) — C++ 표와 같은지는 `EditorTexturePipelineTest.DDSFormatFileMatchesTheLoaderTables`",
+        shipping="없음", bCommitted=True, ownerDoc="Scripts/common/AssetValidation.py"),
+    ConfigFileEntry(
         page="", pathPattern="Config/Editor/Cc0PropPlacement.json", layer=kLayerEditor, fileFormat="json",
         reader="`Scripts/dev/MakeCc0SceneProps.py` (손으로 돌린다)", readWhen="게임 씬에 CC0 모델을 놓거나 다시 놓을 때",
         shipping="없음", bCommitted=True, ownerDoc="Scripts/dev/MakeCc0SceneProps.py"),

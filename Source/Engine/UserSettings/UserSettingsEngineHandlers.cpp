@@ -144,12 +144,12 @@ namespace sw
 
     bool UserSettingsEngineHandlers::tryParseWindowMode( string_view text, WindowDisplayMode& outMode )
     {
-        if ( StringUtil::equals( text, UserSettingsEngineHandlersInternal::kWindowed, true ) )
+        if ( StringUtil::equals( text, UserSettingsEngineHandlersInternal::kWindowed ) )
         {
             outMode = WindowDisplayMode::Windowed;
             return true;
         }
-        if ( StringUtil::equals( text, UserSettingsEngineHandlersInternal::kBorderless, true ) )
+        if ( StringUtil::equals( text, UserSettingsEngineHandlersInternal::kBorderless ) )
         {
             outMode = WindowDisplayMode::BorderlessFullscreen;
             return true;
@@ -182,7 +182,7 @@ namespace sw
         using Internal = UserSettingsEngineHandlersInternal;
         for ( uint32 modeIndex = 0; modeIndex < SW_COUNT_OF( Internal::kArrSpeakerModeName ); ++modeIndex )
         {
-            if ( StringUtil::equals( text, Internal::kArrSpeakerModeName[modeIndex], true ) )
+            if ( StringUtil::equals( text, Internal::kArrSpeakerModeName[modeIndex] ) )
             {
                 outMode = static_cast<AudioSpeakerMode>( modeIndex );
                 return true;
@@ -264,7 +264,7 @@ namespace sw
         // 액션은 게임이 입력 맵을 만든 뒤에야 있다. 없으면 건너뛰고, 게임이 맵을 만든 뒤의 다시 적용(`reapplyAll`)에서 적용된다.
         if ( _targets._pInputMap == nullptr || _targets._pInputMap->hasAction( action ) == false )
             return true;
-        _targets._pInputMap->setToggleMode( action, StringUtil::equals( context._value, UserSettingsEngineHandlersInternal::kToggle, true ) );
+        _targets._pInputMap->setToggleMode( action, StringUtil::equals( context._value, UserSettingsEngineHandlersInternal::kToggle ) );
         return true;
     }
 
@@ -378,8 +378,8 @@ namespace sw
 
     bool UserSettingsEngineHandlers::isToggleModeName( string_view value )
     {
-        return StringUtil::equals( value, UserSettingsEngineHandlersInternal::kHold, true ) ||
-               StringUtil::equals( value, UserSettingsEngineHandlersInternal::kToggle, true );
+        return StringUtil::equals( value, UserSettingsEngineHandlersInternal::kHold ) ||
+               StringUtil::equals( value, UserSettingsEngineHandlersInternal::kToggle );
     }
 
     bool UserSettingsEngineHandlers::isWindowModeName( string_view value )

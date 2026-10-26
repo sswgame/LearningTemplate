@@ -135,7 +135,7 @@ namespace sw
         bool              bFound   = modeName.empty();
         for ( const Internal::SortModeName& entry : Internal::kArrSortModeName )
         {
-            if ( StringUtil::equals( modeName, entry._pName, true ) )
+            if ( StringUtil::equals( modeName, entry._pName ) )
             {
                 _sortMode = entry._mode;
                 bFound    = true;

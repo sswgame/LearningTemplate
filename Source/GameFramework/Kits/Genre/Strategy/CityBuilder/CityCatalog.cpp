@@ -47,7 +47,7 @@ namespace sw
     {
         for ( const CityCatalogInternal::NamedService& entry : CityCatalogInternal::kArrServiceName )
         {
-            if ( StringUtil::equals( text, string_view( entry._pName ), true ) )
+            if ( StringUtil::equals( text, string_view( entry._pName ) ) )
             {
                 outService = entry._service;
                 return true;

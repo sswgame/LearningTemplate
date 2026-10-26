@@ -22,21 +22,22 @@ TAA 패스스루(wt/taabypass): 후처리를 끈 뷰(CCTV)의 TAA 가 원본을 
 제목: Vulkan VSync 에서 프레임이 주기를 놓침
 옛번호: E-3
 왜 필요한가: Vulkan(FIFO) + VSync 에서 가끔 한 프레임이 여러 주기를 놓친다(Release 큐브 100, 165 Hz). 조사 결과는 [검증과 측정](../08_Verification.md) 2절 "Vulkan VSync 프레임 놓침", 스왑체인 이미지 4 개는 결정 기록 3절에서 기각했다.
-착수 조건 / 남은 것: 다시 보이면 `-gv_tracy=1` 로 acquire · 펜스 · present 를 시간축으로 보고 전체 화면(독점) · NVIDIA "Vulkan/OpenGL 프레젠트 방식" 설정을 바꿔 가른다.
-왜 지금 못 하는가: 가끔만 일어나고 모니터 주사율 · 드라이버 설정에 달려 있어 재현 시나리오가 없다. 풀리는 조건: 실기 재현.
+끝난 것(wt/gfxc, 빌드 · 실행 안 함): 측정 항목 — 프로파일 보고에 `[Profile] pacing  median <us>  over1.5x <n>  over2.5x <n>` 줄을 더했다(`FrameProfileSession::computePacing`, 100 us 칸 히스토그램). VSync 를 켜면 중앙 간격이 화면 주기라 over1.5x 가 주기를 하나 이상, over2.5x 가 둘 이상 놓친 프레임 수다. 고정 문턱 `over16ms` 는 60 Hz 기준이라 165 Hz 에서 주기 하나를 놓친 12 ms 프레임을 세지 못했다. 재는 판 — 검증 묶음 항목 `vsync-frame-miss`(Release · `-vk -vsync -gv_benchMeshes=100 -gv_profileSeconds=60`, 지표 셋은 보고만). 코드 수정은 없다 — 문서의 원인(이미지가 한 주기 늦게 돌아옴 · 합성기 경로의 펜스 지연)은 드라이버 · 합성기 쪽이고 엔진이 고칠 자리가 적혀 있지 않다(스왑체인 이미지 4 개는 결정 기록 3절에서 기각).
+남은 것(통합): 확인 대기: 매니페스트 id `vsync-frame-miss`. 같은 판을 `-dx12 -vsync` 로 견주고, 놓침이 보이면 `-gv_tracy=1` 로 acquire · 펜스 · present 를 시간축으로 보고 전체 화면(독점) · NVIDIA "Vulkan/OpenGL 프레젠트 방식" 설정을 바꿔 가른다. 주기를 놓친 프레임이 0 이 아니어도 실패 판정은 하지 않는다(기준이 없다) — 값이 쌓이면 `max` 를 단다.
 
 ### DeviceLossHangRepro
 제목: 실제 TDR 뒤 행을 재현하지 못함
 옛번호: E-13, A-2
 왜 필요한가: `rhi.removeDevice` 로 DX12(장치 제거) · Vulkan(손실 상태로 둠) 모두 프레임을 계속 돌고 종료 코드 0 으로 끝난다. 남은 것은 드라이버 안의 대기(첫 `VK_ERROR_DEVICE_LOST` 를 돌려주기 전)뿐이다.
-착수 조건 / 남은 것: 다시 보이면 `py -3 -m Scripts stacks <pid>` 로 매달린 스레드의 스택을 남긴다.
-왜 지금 못 하는가: 진짜 TDR 은 GPU 를 2 초 넘게 붙잡는 컴퓨트로 일으킬 수 있으나 화면이 깨지고 쿠킹한 셰이더가 하나 더 필요해 실기에서 사용자가 승인한 때만 시험한다. 풀리는 조건: 실기 TDR 재현 또는 그 승인.
+끝난 것(wt/gfxc, 빌드 · 실행 안 함): `rhi.removeDevice <ms>` 가 드라이버 대기를 흉내 낸다 — 렌더 스레드가 다음 프레임의 `beginFrame`(펜스 대기 자리) 바로 앞에서 그만큼 잠든 뒤 장치를 제거한다(`RenderThread::requestDeviceLossAfterDriverWait`, Shipping 에는 없음). 시나리오 둘을 `engine/automation/rhiswap/` 에 더했다 — `removedevicewait`(2.5 초 대기 뒤 손실, 프레임이 다시 돌고 종료 코드 0), `removedevicehang`(40 초 대기, 상한 20 초 + 유예 5 초 뒤 행 감시가 보고를 쓰고 종료 코드 12 — 이것이 통과다).
+남은 것(통합): 두 시나리오를 `-dx12` · `-vk` 로 돌린다. hang 은 보고 JSON 의 `hang: true` 와 `lastStep` 을 보고, 멈춘 동안 `py -3 -m Scripts stacks <pid>` 로 렌더 스레드가 `RenderThread::consumeDeviceLossRequest` 에 있는지 스택을 남긴다. 실제 TDR 이 다시 보이면 같은 명령으로 매달린 스레드의 스택을 남긴다.
+왜 지금 못 하는가(실제 TDR 만): 진짜 TDR 은 GPU 를 2 초 넘게 붙잡는 컴퓨트로 일으킬 수 있으나 화면이 깨지고 쿠킹한 셰이더가 하나 더 필요해 실기에서 사용자가 승인한 때만 시험한다. 풀리는 조건: 실기 TDR 재현 또는 그 승인.
 
 ### ShaderPrefixAndFormat
 제목: 셰이더 이름의 sw 접두를 없애고 clang-format 을 셰이더에도 건다
 옛번호: 없음
-끝난 것: (1) 셰이더 60 개에 clang-format 을 건다(설정 `Resource/.clang-format` — 루트를 물려받고 `MacroBlockBegin/End`(`SW_ROOT_CONSTANTS_*`), `AlignConsecutiveDeclarations`, `StatementMacros: [SW_NUMTHREADS]`, `AttributeMacros: [SW_GL_BINDING]`, `BreakConstructorInitializers: BeforeColon`). 루트에 두지 않은 까닭은 `AlignFunctionDeclarations: false` 가 C++ 정렬을 바꾸기 때문. `FormatClangFormat` · `FormatModified` · 커밋 훅이 셰이더를 대상에 넣었고 두 번째 포맷은 바뀌는 파일이 0 이다. 남은 한계: `SW_ROOT_CONSTANTS_BEGIN/END` 정의가 여러 줄로 갈린다(매크로 구조 변경은 폐기). 반복 · 분기 힌트는 속성 매크로 `SW_UNROLL` · `SW_LOOP` · `SW_BRANCH`(`common.hlsli`, `.clang-format` 의 `AttributeMacros`)로 풀렸다 — 2026-10-27 에 다시 보니 `probeupdate.hlsl` 만 맨 `[unroll]` 열 곳이 남았다(실시간 GI 패치가 나중에 들어옴). 셰이더 원본을 고치면 쿠킹 스탬프가 바뀌므로 다음 셰이더 쿠킹 때 `SW_UNROLL` 로 바꾸고 `CheckShaderConventions` 가 맨 힌트를 막게 한다. (2) 구조체 필드 261 개를 `_camelCase` 로 바꿨다(셰이더 46 개, 머티리얼 구조체 필드 68 이름은 `.material` 75 개와 C++ 문자열 · `customization.xml` · 테스트를 같은 커밋에서). 함수 본문 안의 `#if` 를 정의로 몰았다(남은 본문 `#if` 는 백엔드 매크로 `DX11` · `DX12` · `__spirv__` · `SW_NATIVE_BINDLESS` 뿐이고 게이트가 그 밖의 조건을 막는다). `CheckShaderConventions.py` 와 [NamingScripts](../agents/NamingScripts.md) HLSL 절을 같은 커밋에서 고쳤다. 셰이더 컴파일 · 쿠킹은 네 백엔드로 했다.
-남은 것(통합 검증): 새로 빌드한 Release App 으로 쿠킹이 같은 결과인지(필드 · 프로퍼티 이름이 바뀌어 리플렉션이 달라진다), 게임별 골든(`Scripts golden`), `MaterialTest` · `ShaderBindingValidatorTest` · `RenderPassGPUTest`. 에디터 머티리얼 패널은 `displayName` 이 없는 프로퍼티에 `_color` 처럼 밑줄 이름을 그대로 보인다. 자원을 가리키는 매크로 별칭 셋은 아직 매크로다 — `SW_MATERIAL( index )`(원소 형식이 셰이더마다 달라 함수 반환형을 못 적는다), `SW_SAMPLER_STATE`(백엔드마다 배열 · 개별 변수), `SW_APPEARANCE_*`(필드 유무가 퍼뮤테이션). 셰이더를 고친 뒤 `FormatModified.py` 로 포맷한다.
+끝난 것: (1) 셰이더 60 개에 clang-format 을 건다(설정 `Resource/.clang-format` — 루트를 물려받고 `MacroBlockBegin/End`(`SW_ROOT_CONSTANTS_*`), `AlignConsecutiveDeclarations`, `StatementMacros: [SW_NUMTHREADS]`, `AttributeMacros: [SW_GL_BINDING]`, `BreakConstructorInitializers: BeforeColon`). 루트에 두지 않은 까닭은 `AlignFunctionDeclarations: false` 가 C++ 정렬을 바꾸기 때문. `FormatClangFormat` · `FormatModified` · 커밋 훅이 셰이더를 대상에 넣었고 두 번째 포맷은 바뀌는 파일이 0 이다. 남은 한계: `SW_ROOT_CONSTANTS_BEGIN/END` 정의가 여러 줄로 갈리고(매크로 구조 변경은 폐기), 흐름 속성은 `common.hlsli` 의 속성 매크로 `SW_UNROLL` · `SW_LOOP` · `SW_BRANCH`(`.clang-format` AttributeMacros)로 쓰고, 마지막 맨 `[unroll]` 열 곳(`probeupdate.hlsl`)도 바꿨다(wt/gfxc, 소스만 — 아래 통합 몫). `CheckShaderConventions` 가 문장 머리의 맨 `[unroll]` · `[loop]` · `[branch]` · `[flatten]` 을 막는다(포맷 설정만으로는 못 막는다). (2) 구조체 필드 261 개를 `_camelCase` 로 바꿨다(셰이더 46 개, 머티리얼 구조체 필드 68 이름은 `.material` 75 개와 C++ 문자열 · `customization.xml` · 테스트를 같은 커밋에서). 함수 본문 안의 `#if` 를 정의로 몰았다(남은 본문 `#if` 는 백엔드 매크로 `DX11` · `DX12` · `__spirv__` · `SW_NATIVE_BINDLESS` 뿐이고 게이트가 그 밖의 조건을 막는다). `CheckShaderConventions.py` 와 [NamingScripts](../agents/NamingScripts.md) HLSL 절을 같은 커밋에서 고쳤다. 셰이더 컴파일 · 쿠킹은 네 백엔드로 했다.
+남은 것(통합 검증): wt/gfxc 의 셰이더 소스 변경(커밋 훅이 쿠킹 바이너리를 요구해 작업자가 커밋하지 못한 몫 — `probeupdate.hlsl` 과 PostEffectBypass 의 다섯 진입점)을 넣고 `App --cook-shaders` 로 네 백엔드를 굽는다. 그 전에는 전체 `CheckShaderConventions` 가 `probeupdate.hlsl` 에서 진다. 새로 빌드한 Release App 으로 쿠킹이 같은 결과인지(필드 · 프로퍼티 이름이 바뀌어 리플렉션이 달라진다), 게임별 골든(`Scripts golden`), `MaterialTest` · `ShaderBindingValidatorTest` · `RenderPassGPUTest`. 에디터 머티리얼 패널은 `displayName` 이 없는 프로퍼티에 `_color` 처럼 밑줄 이름을 그대로 보인다. 자원을 가리키는 매크로 별칭 셋은 아직 매크로다 — `SW_MATERIAL( index )`(원소 형식이 셰이더마다 달라 함수 반환형을 못 적는다), `SW_SAMPLER_STATE`(백엔드마다 배열 · 개별 변수), `SW_APPEARANCE_*`(필드 유무가 퍼뮤테이션). 셰이더를 고친 뒤 `FormatModified.py` 로 포맷한다.
 결정(사용자, 2026-10-23):
 - 셰이더에도 `.clang-format` 을 적용한다. 폐기한 안: `#endif` 주석 자동 달기, 매크로 구조 변경, 매크로 헤더만 `clang-format off`. 포맷한 뒤 다시 돌려 멱등을 확인한다.
 - `sw` 접두(FXC 에 네임스페이스가 없어 붙였던 것)는 **구조체로 묶어** 없앤다: 구조체를 첫 인자로 받던 함수는 멤버 함수(`context.computeLit( albedo )`), 구조체 없이 쓰거나 만드는 함수는 `static` 멤버 함수(`PixelContext::make( … )`, `View::getViewProjection()`). 멤버 · static 멤버 함수와 안에서 전역 cbuffer 읽기는 FXC `ps_5_0` · DXC `ps_6_6` · SPIR-V 모두 컴파일된다(실행 결과와 OpenGL 경로는 못 봄). `public` / `private` / `const` 멤버 함수는 안 되고 접근을 막는 린트는 두지 않는다. `SW_` 매크로 접두와 `g_` 전역은 그대로 둔다.
@@ -49,5 +50,5 @@ TAA 패스스루(wt/taabypass): 후처리를 끈 뷰(CCTV)의 TAA 가 원본을 
 제목: R8 텍스처를 네 백엔드에서 샘플링
 옛번호: G-12
 왜 필요한가: `App --import-textures` 가 1 채널 `R8_UNORM` DDS 를 내고 로더가 읽지만(결정 기록 5절 "텍스처 임포트의 형식 이름은") 실제 샘플링은 네 백엔드에서 본 적이 없습니다.
-착수 조건 / 남은 것: 규칙 표의 `Mask_Textures`(`*_mask.*`)에 맞는 원본이 생기면 그 게임의 시나리오가 봅니다.
-왜 지금 못 하는가: 맞는 원본이 아직 없습니다. 확인 대기: 매니페스트 id `r8-texture-sampling`.
+끝난 것(wt/gfxc, 빌드 · 실행 안 함): 외부 원본 없이 푼다 — `Scripts/generate/GenerateSpriteTextures.py` 가 임포터와 같은 형식(DX10 머리, DXGI 61)의 마스크 `engine/textures/test/mask_r8.dds`(64², 왼쪽 반 255 · 오른쪽 반 96)를 만들고, `RenderPassGPUTest.R8MaskTextureSamplesAsRedOnEveryBackend` 가 그것을 스프라이트로 그려 네 백엔드가 (r, 0, 0, 1) 로 샘플하는지 본다(초록 · 파랑 0, 알파 1 이라 그려짐, 두 반쪽이 갈림). 임포터가 그 형식을 낸다는 것은 `EditorTexturePipelineTest.SingleChannelR8ImportRoundTrips` 가 이미 본다.
+남은 것(통합): 확인 대기: 매니페스트 id `r8-texture-sampling`(이제 한 명령으로 돈다). 실제 `*_mask.*` 원본이 생기면 그 게임의 시나리오도 본다.

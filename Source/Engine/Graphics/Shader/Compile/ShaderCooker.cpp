@@ -124,7 +124,7 @@ namespace sw
     {
         const string_view stageTag          = getShaderStageInfo( stage )._pTag;
         const string_view defaultEntryPoint = getShaderStageInfo( stage )._pEntryPoint;
-        const bool        bStdEntry         = entryPoint.empty() || StringUtil::equals( entryPoint, defaultEntryPoint, true );
+        const bool        bStdEntry         = entryPoint.empty() || StringUtil::equals( entryPoint, defaultEntryPoint );
 
         string basePart = string( stemLower ) + "_";
         if ( bStdEntry )

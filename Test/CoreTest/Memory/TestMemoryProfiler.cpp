@@ -635,12 +635,13 @@ SW_TEST_CASE( MemoryProfilerTest, LeakWindowStampTravelsThroughTheAllocatorHeade
 }
 
 /**
- * @brief [MemoryProfilerTest] 데이터가 적는 태그 이름은 대소문자를 가리지 않고 찾고, 모르는 이름은 거절한다
+ * @brief [MemoryProfilerTest] 데이터가 적는 태그 이름은 철자 그대로 찾고(대소문자가 다르면 모르는 이름), 모르는 이름은 거절한다
  */
 SW_TEST_CASE( MemoryProfilerTest, FindsTagsByName )
 {
     MemoryTag tag{ MemoryTag::Unknown };
-    SW_EXPECT_TRUE( MemoryProfiler::findMemoryTagByName( "texture", tag ) );
+    SW_EXPECT_FALSE( MemoryProfiler::findMemoryTagByName( "texture", tag ) );
+    SW_EXPECT_TRUE( MemoryProfiler::findMemoryTagByName( "Texture", tag ) );
     SW_EXPECT_TRUE( tag == MemoryTag::Texture );
     SW_EXPECT_TRUE( MemoryProfiler::findMemoryTagByName( "UI", tag ) );
     SW_EXPECT_TRUE( tag == MemoryTag::UI );

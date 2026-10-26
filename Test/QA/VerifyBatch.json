@@ -163,9 +163,11 @@
       "note": "리눅스 클립보드 왕복(WindowTest.X11ClipboardRoundTripsBetweenWindowsIncludingIncr)은 CI 리눅스 xvfb 의 swrender 묶음이 돈다 — 푸시 뒤 ci-jobs --summary 로 본다."
     },
     {
-      "id": "r8-texture-sampling", "title": "R8 텍스처를 네 백엔드에서 실제로 샘플링", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": false,
-      "need_command": "맞는 원본(*_mask.*)이 아직 없다 — 생기면 그 게임의 시나리오가 본다",
-      "source": "docs/09_Decisions.md 텍스처 임포트의 1 채널 R8 항목", "result_doc": "docs/09_Decisions.md 텍스처 임포트의 1 채널 R8 항목"
+      "id": "r8-texture-sampling", "title": "R8 텍스처를 네 백엔드에서 실제로 샘플링", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true, "timeout_minutes": 20,
+      "filter": "RenderPassGPUTest.R8MaskTextureSamplesAsRedOnEveryBackend.*",
+      "extra_args": ["--host_suites=all"],
+      "source": "docs/09_Decisions.md 텍스처 임포트의 1 채널 R8 항목", "result_doc": "docs/plans/Candidates-graphics.md R8TextureSampling",
+      "note": "외부 *_mask.* 원본 대신 Scripts/generate/GenerateSpriteTextures.py 가 만든 engine/textures/test/mask_r8.dds(DX10 머리, DXGI 61)를 스프라이트로 그린다."
     },
     {
       "id": "shipping-build", "title": "Shipping 빌드", "kind": "build", "config": "Shipping", "platform": "windows", "gpu": "none", "pending": false, "timeout_minutes": 240,
@@ -331,6 +333,17 @@
       "id": "perf-frame", "title": "프레임 p50 · p99 를 이 기계의 기준과 견주기", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": false, "timeout_minutes": 60,
       "tool": "scripts", "args": ["perf", "--app", "{app}"], "limit": "Test/QA/Perf 기준 — p50 · 평균 +15 %, p99 +35 %, 모두 +150 us", "judge": "exit",
       "source": "docs/08_Verification.md 2절 측정 명령", "result_doc": "docs/08_Verification.md 2절 영역별 측정값"
+    },
+    {
+      "id": "vsync-frame-miss", "title": "Vulkan(FIFO) · VSync 창 모드에서 주기를 놓친 프레임 수(큐브 100, 60 초)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": true, "timeout_minutes": 10,
+      "tool": "app", "args": ["-vk", "-vsync", "-gv_benchMeshes=100", "-gv_profileSeconds=60"], "limit": "보고만 — 중앙 간격이 화면 주기와 같아야 VSync 가 걸린 판이다. over1.5x 가 주기를 하나 이상 놓친 프레임, over2.5x 가 둘 이상", "judge": "exit",
+      "metrics": [
+        { "name": "pacing.median", "pattern": "\\[Profile\\] pacing\\s+median (\\d+) us", "unit": "us" },
+        { "name": "pacing.over1.5x", "pattern": "\\[Profile\\] pacing\\s+median \\d+ us\\s+over1\\.5x (\\d+)", "unit": "frames" },
+        { "name": "pacing.over2.5x", "pattern": "\\[Profile\\] pacing\\s+median \\d+ us\\s+over1\\.5x \\d+\\s+over2\\.5x (\\d+)", "unit": "frames" }
+      ],
+      "source": "docs/plans/Candidates-graphics.md VulkanVsyncFrameMiss", "result_doc": "docs/plans/Candidates-graphics.md VulkanVsyncFrameMiss",
+      "note": "같은 판을 -dx12 -vsync 로 한 번 더 돌려 견준다(DXGI 는 한 주기 이하였다). 놓침이 보이면 -gv_tracy=1 로 acquire · 펜스 · present 를 시간축으로 본다."
     },
     {
       "id": "load-baseline-suite", "title": "부하 검증 baseline 묶음(렌더 · AI · 접속 · 복제 × 하드웨어 프로필)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": false, "timeout_minutes": 240,

@@ -8,11 +8,13 @@
 #include "Editor/Common/Asset/ImageUtil.h"
 #include "Editor/Common/Asset/TextureImportConfig.h"
 #include "Editor/Common/Asset/TextureImporter.h"
+#include "Editor/Common/Config/EditorPaths.h"
 
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Resource/Image/DDSLoader.h"
 #include "Engine/Resource/ResourcePaths.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -435,6 +437,186 @@ namespace sw::editor
         TextureImportConfig config;
         SW_EXPECT_FALSE( config.loadFromJSONString( R"({"rules":[{"name":"Mask","format":"R8_SNORM"}]})" ) );
         SW_EXPECT_TRUE( config.loadFromJSONString( R"({"rules":[{"name":"Mask","format":"r8","srgb":false}]})" ) );
+    }
+
+    /**
+     * @brief [EditorTexturePipelineTest] 형식 표의 DXGI 번호가 `dxgiformat.h` 와 같다 — 임포터는 이 표로만 DXGI 를 고른다
+     * @details 표(`TextureImportConfig.cpp`)는 DirectXTex 를 끌어오지 않아 번호를 숫자로 든다. 여기서 헤더의 열거자와 견준다. sRGB 짝이 없는 형식은 sRGB 를 물어도 UNORM 이다.
+     */
+    SW_TEST_CASE( EditorTexturePipelineTest, ImportFormatTableMatchesDxgiFormats )
+    {
+        struct Expected
+        {
+            TextureImportFormat _format;
+            DXGI_FORMAT         _linear;
+            DXGI_FORMAT         _srgb;
+        };
+        const Expected kArrExpected[] = {
+            {              TextureImportFormat::BC1,          DXGI_FORMAT_BC1_UNORM,      DXGI_FORMAT_BC1_UNORM_SRGB},
+            {              TextureImportFormat::BC3,          DXGI_FORMAT_BC3_UNORM,      DXGI_FORMAT_BC3_UNORM_SRGB},
+            {              TextureImportFormat::BC4,          DXGI_FORMAT_BC4_UNORM,           DXGI_FORMAT_BC4_UNORM},
+            {              TextureImportFormat::BC5,          DXGI_FORMAT_BC5_UNORM,           DXGI_FORMAT_BC5_UNORM},
+            {             TextureImportFormat::BC6H,          DXGI_FORMAT_BC6H_UF16,           DXGI_FORMAT_BC6H_UF16},
+            {              TextureImportFormat::BC7,          DXGI_FORMAT_BC7_UNORM,      DXGI_FORMAT_BC7_UNORM_SRGB},
+            {         TextureImportFormat::B8G8R8A8,     DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_FORMAT_B8G8R8A8_UNORM_SRGB},
+            {         TextureImportFormat::R8G8B8A8,     DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_R8G8B8A8_UNORM_SRGB},
+            {TextureImportFormat::R16G16B16A16Float, DXGI_FORMAT_R16G16B16A16_FLOAT,  DXGI_FORMAT_R16G16B16A16_FLOAT},
+            {               TextureImportFormat::R8,           DXGI_FORMAT_R8_UNORM,            DXGI_FORMAT_R8_UNORM},
+        };
+        for ( const Expected& expected : kArrExpected )
+        {
+            const string name{ TextureImportFormatUtil::getName( expected._format ) };
+            SW_EXPECT_TRUE_MSG( TextureImportFormatUtil::getDxgiFormat( expected._format, false ) == static_cast<uint32>( expected._linear ), name );
+            SW_EXPECT_TRUE_MSG( TextureImportFormatUtil::getDxgiFormat( expected._format, true ) == static_cast<uint32>( expected._srgb ), name );
+        }
+    }
+
+    /**
+     * @brief [EditorTexturePipelineTest] 임포터가 써 낼 수 있는 모든 형식이 에셋 검증 규칙에서 허용 · 거절 중 하나로 적혀 있다
+     * @details 정본은 임포터의 형식 표(`TextureImportFormatUtil::getWrittenFormatNames`)다. 규칙 파일(`Config/Editor/AssetValidationRules.json`, 텍스처 규칙의
+     *          `allowed_formats` · `rejected_formats`)이 따로 적혀 있어 임포터가 낸 R8 마스크가 커밋 게이트에서 진 적이 있다(R8TextureSampling).
+     *          새 형식을 더하면 규칙 파일에 그 이름을 어느 쪽으로든 적어야 이 테스트가 통과한다. 모르는 이름 · 겹친 이름은 규칙 로드(파이썬)가 거절한다.
+     */
+    SW_TEST_CASE( EditorTexturePipelineTest, EveryImportOutputFormatIsDecidedByTheAssetRules )
+    {
+        string text;
+        SW_ASSERT_TRUE( FileUtil::readTextFile( EditorPaths::resolveProjectRelativePath( "Config/Editor/AssetValidationRules.json" ), text ) );
+        JSONDocument document;
+        SW_ASSERT_TRUE( document.parse( text, "AssetValidationRules.json" ) );
+        const JSONValue rules = document.getRoot().get( "rules" );
+        SW_ASSERT_TRUE( rules.isArray() );
+
+        vector<string> listDecided;
+        for ( size_t index = 0; index < rules.size(); ++index )
+        {
+            const JSONValue rule = rules.at( index );
+            if ( rule.get( "check" ).asString() != "texture" )
+                continue;
+            for ( const utf8* pKey : { "allowed_formats", "rejected_formats" } )
+            {
+                const JSONValue listName = rule.get( pKey );
+                for ( size_t nameIndex = 0; listName.isArray() && nameIndex < listName.size(); ++nameIndex )
+                {
+                    listDecided.push_back( listName.at( nameIndex ).asString() );
+                }
+            }
+        }
+        for ( const string_view outputName : TextureImportFormatUtil::getWrittenFormatNames() )
+        {
+            const bool bDecided = std::find( listDecided.begin(), listDecided.end(), string( outputName ) ) != listDecided.end();
+            SW_EXPECT_TRUE_MSG( bDecided, "import output format " + string( outputName ) + " is neither allowed nor rejected by any texture rule" );
+        }
+    }
+
+    /**
+     * @brief [EditorTexturePipelineTest] DDS 형식 이름 파일(`Config/Editor/DdsFormats.json`)이 C++ 의 세 표와 같다
+     * @details 파일은 파이썬 에셋 검증이 읽는 이름표의 정본이다(파이썬은 C++ 를 읽지 못하고, C++ 에서 만든 JSON 은 빌드가 있어야 해서 데이터 파일 하나를 둘이 본다).
+     *          (1) 임포터 표 — 형식마다 UNORM 번호의 이름이 `getName` 과 같고 써 낼 수 있는 이름은 모두 파일에 있다. (2) DDSLoader 의 옛 FourCC 표와 옛 RGB 마스크 표 — 두 방향 모두 같은 줄.
+     *          (3) Texture2D 가 읽는 DXGI 번호는 모두 이름이 있다(없으면 검증이 `DXGI_<번호>` 로 적고 규칙이 그 형식을 적을 길이 없다).
+     */
+    SW_TEST_CASE( EditorTexturePipelineTest, DDSFormatFileMatchesTheLoaderTables )
+    {
+        string text;
+        SW_ASSERT_TRUE( FileUtil::readTextFile( EditorPaths::resolveProjectRelativePath( "Config/Editor/DdsFormats.json" ), text ) );
+        JSONDocument document;
+        SW_ASSERT_TRUE( document.parse( text, "DdsFormats.json" ) );
+        const JSONValue formats = document.getRoot().get( "dxgi_formats" );
+        const JSONValue legacy  = document.getRoot().get( "legacy_fourcc" );
+        SW_ASSERT_TRUE( formats.isArray() && legacy.isArray() );
+
+        const auto findName = [&formats]( uint32 dxgiFormat ) -> string
+        {
+            for ( size_t index = 0; index < formats.size(); ++index )
+            {
+                if ( formats.at( index ).get( "dxgi" ).read<uint32>() == dxgiFormat )
+                    return formats.at( index ).get( "name" ).asString();
+            }
+            return {};
+        };
+
+        // (1) 임포터 표
+        const TextureImportFormat kArrFormat[] = { TextureImportFormat::BC1, TextureImportFormat::BC3, TextureImportFormat::BC4,
+                                                   TextureImportFormat::BC5, TextureImportFormat::BC6H, TextureImportFormat::BC7,
+                                                   TextureImportFormat::B8G8R8A8, TextureImportFormat::R8G8B8A8, TextureImportFormat::R16G16B16A16Float,
+                                                   TextureImportFormat::R8 };
+        vector<string>            listWrittenByNumber;
+        for ( const TextureImportFormat format : kArrFormat )
+        {
+            const string expected{ TextureImportFormatUtil::getName( format ) };
+            SW_EXPECT_TRUE_MSG( findName( TextureImportFormatUtil::getDxgiFormat( format, false ) ) == expected, "import table name differs from DdsFormats.json: " + expected );
+            listWrittenByNumber.push_back( findName( TextureImportFormatUtil::getDxgiFormat( format, false ) ) );
+            listWrittenByNumber.push_back( findName( TextureImportFormatUtil::getDxgiFormat( format, true ) ) );
+        }
+        for ( const string_view writtenName : TextureImportFormatUtil::getWrittenFormatNames() )
+        {
+            const bool bKnown = std::find( listWrittenByNumber.begin(), listWrittenByNumber.end(), string( writtenName ) ) != listWrittenByNumber.end();
+            SW_EXPECT_TRUE_MSG( bKnown, "import output " + string( writtenName ) + " has no matching number in DdsFormats.json" );
+        }
+
+        // (2) DDSLoader 의 옛 FourCC 표 — 줄 수가 같고 로더의 줄이 모두 파일에 있다
+        const vector<DDSLegacyFourCc> listLoaderRow = DDSLoader::getLegacyFourCcTable();
+        SW_EXPECT_EQUAL( listLoaderRow.size(), legacy.size() );
+        for ( const DDSLegacyFourCc& loaderRow : listLoaderRow )
+        {
+            bool bFound = false;
+            for ( size_t index = 0; index < legacy.size() && bFound == false; ++index )
+            {
+                const JSONValue row = legacy.at( index );
+                uint32          code{ 0 };
+                if ( row.has( "fourcc" ) )
+                {
+                    const string letters = row.get( "fourcc" ).asString();
+                    SW_ASSERT_TRUE( letters.size() == 4 );
+                    code = static_cast<uint32>( static_cast<uint8>( letters[0] ) ) | ( static_cast<uint32>( static_cast<uint8>( letters[1] ) ) << 8 ) |
+                           ( static_cast<uint32>( static_cast<uint8>( letters[2] ) ) << 16 ) | ( static_cast<uint32>( static_cast<uint8>( letters[3] ) ) << 24 );
+                }
+                else
+                {
+                    const std::optional<uint32> d3dFormat = row.get( "d3dfmt" ).read<uint32>();
+                    SW_ASSERT_TRUE( d3dFormat.has_value() );
+                    code = *d3dFormat;
+                }
+                bFound = code == loaderRow._fourCC && row.get( "dxgi" ).read<uint32>() == loaderRow._dxgiFormat;
+            }
+            SW_EXPECT_TRUE_MSG( bFound, "DDSLoader FourCC row " + to_string( loaderRow._fourCC ) + " -> " + to_string( loaderRow._dxgiFormat ) + " is not in DdsFormats.json" );
+        }
+
+        // (2b) DDSLoader 의 옛 RGB 마스크 표 — 줄 수가 같고 로더의 줄이 모두 파일에 있다(마스크는 "0x…" 16 진 글)
+        const JSONValue masks = document.getRoot().get( "legacy_rgb_masks" );
+        SW_ASSERT_TRUE( masks.isArray() );
+        const auto readHex = []( const JSONValue& value ) -> uint32
+        {
+            const string hexText = value.asString();
+            uint32       number{ 0 };
+            for ( size_t index = 2; index < hexText.size(); ++index )
+            {
+                const utf8   letter = hexText[index];
+                const uint32 digit  = ( letter >= '0' && letter <= '9' ) ? static_cast<uint32>( letter - '0' ) : static_cast<uint32>( ( letter | 0x20 ) - 'a' + 10 );
+                number              = ( number << 4 ) | digit;
+            }
+            return number;
+        };
+        const vector<DDSLegacyRgbMask> listLoaderMask = DDSLoader::getLegacyRgbMaskTable();
+        SW_EXPECT_EQUAL( listLoaderMask.size(), masks.size() );
+        for ( const DDSLegacyRgbMask& loaderRow : listLoaderMask )
+        {
+            bool bFound = false;
+            for ( size_t index = 0; index < masks.size() && bFound == false; ++index )
+            {
+                const JSONValue row = masks.at( index );
+                bFound              = row.get( "bits" ).read<uint32>() == loaderRow._bitCount && readHex( row.get( "r" ) ) == loaderRow._rMask && readHex( row.get( "g" ) ) == loaderRow._gMask &&
+                         readHex( row.get( "b" ) ) == loaderRow._bMask && readHex( row.get( "a" ) ) == loaderRow._aMask && row.get( "dxgi" ).read<uint32>() == loaderRow._dxgiFormat;
+            }
+            SW_EXPECT_TRUE_MSG( bFound, "DDSLoader RGB mask row -> DXGI " + to_string( loaderRow._dxgiFormat ) + " is not in DdsFormats.json" );
+        }
+
+        // (3) Texture2D 가 읽는 번호는 모두 이름이 있다(DXGI 번호는 0 ~ 132 안이다)
+        for ( uint32 dxgiFormat = 1; dxgiFormat <= 132; ++dxgiFormat )
+        {
+            if ( Texture2D::toRHIFormatFromDxgi( dxgiFormat ) == RHIFormat::Unknown )
+                continue;
+            SW_EXPECT_TRUE_MSG( findName( dxgiFormat ).empty() == false, "Texture2D reads DXGI " + to_string( dxgiFormat ) + " but DdsFormats.json has no name for it" );
+        }
     }
 
     /**

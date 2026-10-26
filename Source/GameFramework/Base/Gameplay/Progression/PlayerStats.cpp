@@ -45,7 +45,7 @@ namespace sw
         };
         for ( const KindName& entry : kArrKind )
         {
-            if ( StringUtil::equals( text, entry._pName, true ) )
+            if ( StringUtil::equals( text, entry._pName ) )
             {
                 outKind = entry._kind;
                 return true;

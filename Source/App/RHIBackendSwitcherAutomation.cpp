@@ -26,6 +26,7 @@
     #include "Engine/Common/EngineServices.h"
     #include "Engine/Config/RHIBackendType.h"
     #include "Engine/Graphics/RHI/RHI.h"
+    #include "Engine/Renderer/RenderThread.h"
 
 namespace sw
 {
@@ -85,12 +86,34 @@ namespace sw
                 return true;
             }
 
-            /** @brief 개발 명령 `rhi.removeDevice` — 장치 제거(TDR)를 흉내 낸다. 제거 뒤 프레임 · 종료가 멈추지 않는지 보는 데 쓴다. */
+            /**
+             * @brief 개발 명령 `rhi.removeDevice [driverWaitMs]` — 장치 제거(TDR)를 흉내 낸다. 제거 뒤 프레임 · 종료가 멈추지 않는지 보는 데 쓴다.
+             * @details 대기를 주면 렌더 스레드가 다음 프레임의 펜스 대기 자리에서 그만큼 잠든 뒤 제거한다(`RenderThread::requestDeviceLossAfterDriverWait`) — 실제 TDR 이 첫 손실 결과를 돌려주기 전 드라이버 안에서 막히는 모양이다.
+             */
             static bool runRemoveDevice( const vector<string>& listArgument, string& outReply )
             {
-                if ( listArgument.empty() == false )
+                if ( listArgument.size() > 1 )
                     return false;
                 RHIBackendSwitcher* pSwitcher = engine::findSubsystem<RHIBackendSwitcher>();
+                if ( listArgument.size() == 1 )
+                {
+                    int32 waitMilliseconds = 0;
+                    if ( StringUtil::parseInt( listArgument[0], waitMilliseconds ) == false )
+                        return false;
+                    const bool bInRange = 1 <= waitMilliseconds && static_cast<uint32>( waitMilliseconds ) <= RenderThread::kMaxDeviceLossDriverWaitMilliseconds;
+                    if ( bInRange == false )
+                    {
+                        outReply = "driver wait must be 1.." + to_string( RenderThread::kMaxDeviceLossDriverWaitMilliseconds ) + " ms";
+                        return false;
+                    }
+                    if ( pSwitcher == nullptr || pSwitcher->removeDeviceAfterDriverWaitForTest( static_cast<uint32>( waitMilliseconds ) ) == false )
+                    {
+                        outReply = "no render thread to hold";
+                        return false;
+                    }
+                    outReply = "next render frame waits " + to_string( waitMilliseconds ) + " ms where the fence wait is, then removes the device";
+                    return true;
+                }
                 if ( pSwitcher == nullptr || pSwitcher->removeDeviceForTest() == false )
                 {
                     outReply = "this backend cannot remove its device on request (DirectX 12 only)";
@@ -130,7 +153,8 @@ namespace sw
         };
     } // namespace
 
-    SW_DEV_COMMAND( rhiRemoveDevice, "rhi.removeDevice", "rhi.removeDevice", "Remove the GPU device as a TDR would (DirectX 12; Vulkan marks it lost) to check that frames and shutdown do not hang",
+    SW_DEV_COMMAND( rhiRemoveDevice, "rhi.removeDevice", "rhi.removeDevice [driverWaitMs]",
+                    "Remove the GPU device as a TDR would (DirectX 12; Vulkan marks it lost) to check that frames and shutdown do not hang; with a wait, the render thread first blocks that long where the fence wait is",
                     &RHIBackendSwitcherAutomationInternal::runRemoveDevice );
     SW_AUTOMATION_STEP_WITH_HOOKS( swapBackend, AutomationBackendSteps::kSwapBackendKind, &RHIBackendSwitcherAutomationInternal::runSwapBackend,
                                    &AutomationBackendSteps::validateSwapBackend, &RHIBackendSwitcherAutomationInternal::prepareSwapBackend, nullptr, false );

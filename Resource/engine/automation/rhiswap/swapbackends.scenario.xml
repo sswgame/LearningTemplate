@@ -25,7 +25,7 @@
 		<Expect probe="Module.GraphBroken" equals="0"/>
 		<Expect probe="Scene.ObjectCount" atLeast="1"/>
 	</At>
-	<At frame="90"><SwapBackend backend="vulkan"/></At>
+	<At frame="90"><SwapBackend backend="vk"/></At>
 	<At frame="92"><WaitUntil probe="RHI.SwapPending" equals="0" timeoutFrames="900"/></At>
 	<At frame="100">
 		<Expect probe="RHI.Backend" equals="2"/>
@@ -34,7 +34,7 @@
 		<Expect probe="Module.GraphBroken" equals="0"/>
 		<Expect probe="Scene.ObjectCount" atLeast="1"/>
 	</At>
-	<At frame="120"><SwapBackend backend="opengl"/></At>
+	<At frame="120"><SwapBackend backend="gl"/></At>
 	<At frame="122"><WaitUntil probe="RHI.SwapPending" equals="0" timeoutFrames="900"/></At>
 	<At frame="130">
 		<Expect probe="RHI.Backend" equals="3"/>

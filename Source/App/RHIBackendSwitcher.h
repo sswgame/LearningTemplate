@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Console/DevCommandsEnabled.h"
 
 namespace sw
 {
@@ -70,6 +71,13 @@ namespace sw
         [[nodiscard]] bool requestSwap( RHIBackend backend );
         /** @brief 지금 디바이스를 제거된 상태로 만듭니다(개발 명령 `rhi.removeDevice`, `IRHIDevice::debugRemoveDevice`). 할 수 없는 백엔드면 false 입니다. */
         [[nodiscard]] bool removeDeviceForTest();
+#if SW_DEV_COMMANDS_ENABLED
+        /**
+         * @brief 렌더 스레드가 다음 프레임의 펜스 대기 자리에서 @p waitMilliseconds 동안 잠든 뒤 디바이스를 제거하게 합니다(개발 명령 `rhi.removeDevice <ms>`,
+         *        `RenderThread::requestDeviceLossAfterDriverWait`). 렌더 스레드가 없으면(엔진이 붙지 않음) false 입니다.
+         */
+        [[nodiscard]] bool removeDeviceAfterDriverWaitForTest( uint32 waitMilliseconds );
+#endif
 
     private:
         /** @brief gv_rhiBackend 변경 이벤트 훅입니다. */

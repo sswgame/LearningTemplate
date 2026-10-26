@@ -541,7 +541,7 @@ namespace
             pLight->setCastShadow( false );
 
             // 정점 색은 흰색이다 — 생성기의 검증 색(무지개)이 그대로 남으면 계단 위에 색 그라데이션이 얹혀 단계 수를 셀 수 없다.
-            _mesh = sw::MeshUtil::createPrimitive( "sphere", sw::PrimitiveVertexColor::White );
+            _mesh = sw::MeshUtil::createPrimitive( "Sphere", sw::PrimitiveVertexColor::White );
             if ( _mesh == nullptr )
                 return false;
             sw::GameObject* pObject = _scene.getObjectManager()->createGameObject( sw::hashed_string( "Sphere" ) );
@@ -6197,6 +6197,114 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, SpriteFramesAndTintsArePerInstanc
 }
 
 /**
+ * @brief [RenderPassGPUTest] 1 채널 `R8_UNORM` 텍스처를 네 백엔드가 (r, 0, 0, 1) 로 샘플한다(매니페스트 `r8-texture-sampling`)
+ * @details 텍스처 임포트 규칙 `format: R8_UNORM` 은 DX10 머리 DDS(DXGI 61)를 내고 로더 · 업로드는 테스트가 있었지만(EditorTexturePipelineTest), 실제 샘플링은
+ *          본 적이 없었다. 외부 `*_mask.*` 원본 대신 `Scripts/generate/GenerateSpriteTextures.py` 가 같은 형식으로 만든 마스크(왼쪽 반 255 · 오른쪽 반 96)를
+ *          스프라이트 하나로 그린다. 빠진 채널이 0 이 아니면(스위즐 · 형식 대응이 틀림) 초록 · 파랑이 보이고, 알파가 1 이 아니면 스프라이트가 배경과 섞이거나
+ *          사라지며, 두 반쪽의 차가 사라지면 값이 아니라 상수를 읽은 것이다.
+ */
+SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, R8MaskTextureSamplesAsRedOnEveryBackend, test::listRHIBackendParameter, 0.4 )
+{
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+    constexpr const utf8* kMaskTexture = "engine/textures/test/mask_r8.dds";
+    constexpr int32       kWindow      = 1; // 표본 자리에서 ±1 픽셀 창의 평균
+
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string label = sw::string( device->getBackendName() ) + ": ";
+
+        sw::FrameRenderer renderer;
+        bool              bOk = renderer.initialize( device.get() ) && renderer.isReady();
+        sw::Scene         scene( "R8MaskScene" );
+        // 2D 카메라 — +Z 를 보므로 화면 오른쪽이 +X 다. 원점이 화면 가운데다.
+        sw::GameObject*      pCameraObject = scene.getObjectManager()->createGameObject( sw::hashed_string( "MaskCamera" ) );
+        sw::CameraComponent* pCamera       = ( pCameraObject != nullptr ) ? pCameraObject->addComponent<sw::CameraComponent>() : nullptr;
+        bOk                                = bOk && pCamera != nullptr;
+        if ( bOk )
+        {
+            pCamera->setRole( sw::CameraRole::Game );
+            pCamera->setLocalPosition( sw::float3{ 0.0f, 0.0f, -4.0f } );
+            bOk = scene.ensureDefaultCameras();
+        }
+        sw::GameObject*      pObj    = bOk ? scene.getObjectManager()->createGameObject( sw::hashed_string( "Mask" ) ) : nullptr;
+        sw::SpriteComponent* pSprite = ( pObj != nullptr ) ? pObj->addComponent<sw::SpriteComponent>() : nullptr;
+        bOk                          = bOk && pSprite != nullptr;
+        if ( bOk )
+        {
+            pSprite->setTextureName( kMaskTexture );
+            pSprite->setLocalPosition( sw::float3{ 0.0f, 0.0f, 0.0f } );
+            pSprite->setLocalScale( sw::float3{ 1.0f, 1.0f, 1.0f } );
+            pSprite->setUvRect( sw::float4{ 0.0f, 0.0f, 1.0f, 1.0f } );
+            pSprite->setTint( sw::float4{ 1.0f, 1.0f, 1.0f, 1.0f } );
+            pSprite->resolveRenderAssets();
+            scene.getObjectManager()->flushSceneTransforms();
+            sw::engine::getSubsystem<sw::AssetManager>().getAssetCache<sw::MaterialCache>().initializePending( device.get() );
+            // 첫 프레임에는 GPUScene 업로드 · 텍스처가 아직이라 몇 장 돌린다.
+            constexpr uint32 kWarmupFrameCount = 4;
+            for ( uint32 frameIndex = 0; frameIndex < kWarmupFrameCount && bOk; ++frameIndex )
+            {
+                bOk = renderSceneFrame( renderer, device.get(), scene );
+            }
+            SW_EXPECT_TRUE_MSG( bOk, ( label + "프레임 실행 실패" ).c_str() );
+        }
+        if ( bOk == false )
+            continue;
+
+        test::RHITestImage image;
+        SW_ASSERT_TRUE_MSG( image.readTransient( renderer, "SceneColor" ), ( label + "failed to read back SceneColor" ).c_str() );
+        const int32 row = static_cast<int32>( image.getHeight() / 2 );
+        // 가운데 줄에서 그려진 구간 하나를 찾는다(배경 = 지운 색).
+        int32 spanStart = -1;
+        int32 spanEnd   = -1;
+        for ( uint32 x = 0; x < image.getWidth(); ++x )
+        {
+            if ( test::RHITestImage::isDefaultClearBackground( image.getPixel( x, static_cast<uint32>( row ) ) ) )
+                continue;
+            if ( spanStart < 0 )
+                spanStart = static_cast<int32>( x );
+            spanEnd = static_cast<int32>( x );
+        }
+        SW_ASSERT_TRUE_MSG( spanStart >= 0 && spanEnd - spanStart > 8, ( label + "the R8 mask sprite was not drawn (alpha is not 1 or the texture did not load)" ).c_str() );
+
+        const auto meanAround = [&image]( int32 x, int32 y )
+        {
+            sw::float3 sum{};
+            float32    count{ 0.0f };
+            for ( int32 offsetY = -kWindow; offsetY <= kWindow; ++offsetY )
+            {
+                for ( int32 offsetX = -kWindow; offsetX <= kWindow; ++offsetX )
+                {
+                    const test::Rgba8 pixel = image.getPixel( static_cast<uint32>( x + offsetX ), static_cast<uint32>( y + offsetY ) );
+                    sum += sw::float3{ static_cast<float32>( pixel._r ), static_cast<float32>( pixel._g ), static_cast<float32>( pixel._b ) };
+                    count += 1.0f;
+                }
+            }
+            return sum * ( 1.0f / count );
+        };
+        const auto describe = []( const sw::float3& color )
+        {
+            return "(" + sw::to_string( static_cast<int32>( color._x ) ) + ", " + sw::to_string( static_cast<int32>( color._y ) ) + ", " +
+                   sw::to_string( static_cast<int32>( color._z ) ) + ")";
+        };
+        const int32      quarter = ( spanEnd - spanStart + 1 ) / 4;
+        const sw::float3 left    = meanAround( spanStart + quarter, row );
+        const sw::float3 right   = meanAround( spanEnd - quarter, row );
+
+        // 톤매핑을 지나므로 정확한 값이 아니라 우세 채널과 두 반쪽의 순서로 본다.
+        constexpr float32 kHigh = 120.0f;
+        constexpr float32 kLow  = 40.0f;
+        SW_EXPECT_TRUE_MSG( left._x > kHigh && left._y < kLow && left._z < kLow, ( label + "R8 255 칸이 빨강만이 아니다 " + describe( left ) ).c_str() );
+        SW_EXPECT_TRUE_MSG( right._y < kLow && right._z < kLow && right._x > kLow, ( label + "R8 96 칸이 어두운 빨강이 아니다 " + describe( right ) ).c_str() );
+        SW_EXPECT_TRUE_MSG( right._x < left._x * 0.85f, ( label + "R8 두 반쪽이 갈리지 않는다 — 왼쪽 " + describe( left ) + " 오른쪽 " + describe( right ) ).c_str() );
+        SW_LOG_INFO( "%#R8 mask colors left %# right %#", label, describe( left ), describe( right ) );
+    }
+
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend available for the R8 mask sampling test" );
+}
+
+/**
  * @brief [RenderPassGPUTest] 나눗수 2 로 선언한 첨부는 반 크기로 만들어지고, 그 첨부에 그리는 패스는 첨부 전체를 덮는다 — 4 백엔드
  * @details `RenderPassAttachment::_resolutionDivisor` 는 첨부를 프레임 크기 / 나눗수로 만든다. 패스는 출력 첨부의 크기로 렌더 패스(뷰포트)를
  *          열어야 한다 — 프레임 크기로 열면 반 크기 타깃에 화면의 왼쪽 위 4 분의 1 만 들어간다. 나눈 후처리 파이프라인의 BloomColor 를 반
@@ -6808,7 +6916,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, PrototypeGridMaterialIsAnchoredTo
     {
         const sw::string                     label   = sw::string( device->getBackendName() ) + ": ";
         sw::shared_ptr<sw::Material>         grid    = sw::Material::create();
-        sw::shared_ptr<sw::Mesh>             plane   = sw::MeshUtil::createPrimitive( "plane", sw::PrimitiveVertexColor::White );
+        sw::shared_ptr<sw::Mesh>             plane   = sw::MeshUtil::createPrimitive( "Plane", sw::PrimitiveVertexColor::White );
         bool                                 bOk     = grid->initialize( device.get(), "engine/materials/prototypegrid_light.material" ) && plane != nullptr;
         sw::shared_ptr<sw::MaterialInstance> checker = bOk ? sw::MaterialInstance::create( grid.get() ) : nullptr;
         bOk                                          = checker != nullptr;

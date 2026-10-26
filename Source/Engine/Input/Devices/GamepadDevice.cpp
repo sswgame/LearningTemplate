@@ -43,7 +43,7 @@ namespace sw
             return GamepadButton::Count;
         for ( const GamepadDeviceInternal::GamepadNameEntry& entry : GamepadDeviceInternal::kArrGamepadNames )
         {
-            if ( StringUtil::equals( name, entry._pName, true ) )
+            if ( StringUtil::equals( name, entry._pName ) )
                 return entry._button;
         }
         return GamepadButton::Count;

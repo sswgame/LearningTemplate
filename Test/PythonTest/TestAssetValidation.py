@@ -172,6 +172,35 @@ class CheckTest(AssetValidationFixture):
                                       "mipped_power_of_two": True, "allowed_formats": ["BC7_UNORM"]})
         self.assertEqual(3, len(messages), messages)   # 밉 없는 2 의 거듭제곱 아님(npotnomips)은 통과한다
 
+    def testTextureFormatListsAreCheckedAtLoad(self) -> None:
+        """형식 목록의 모르는 이름 · 허용과 거절에 함께 든 이름은 규칙 로드 오류다 — 오타가 "그 형식은 늘 진다" 로 조용히 바뀌지 않는다."""
+        base = {"name": "t", "check": "texture", "severity": "error", "include_patterns": ["*.dds"]}
+        with self.assertRaisesRegex(RuleConfigError, "unknown format"):
+            parseRules({"rules": [{**base, "allowed_formats": ["BC7_UNROM"]}]})
+        with self.assertRaisesRegex(RuleConfigError, "both allows and rejects"):
+            parseRules({"rules": [{**base, "allowed_formats": ["BC7_UNORM"], "rejected_formats": ["BC7_UNORM"]}]})
+        parseRules({"rules": [{**base, "allowed_formats": ["BC7_UNORM", "B8G8R8X8_UNORM"], "rejected_formats": ["BC2_UNORM"]}]})
+
+    def testLegacyRgbMaskHeaderIsNamedLikeTheLoader(self) -> None:
+        """마스크만 있는 옛 머리는 로더와 같은 표(`DdsFormats.json` legacy_rgb_masks)로 이름을 짓는다 — 표에 없는 모양은 어느 규칙에도 없는 이름이다."""
+        def makeLegacy(masks: tuple[int, int, int, int, int]) -> bytes:
+            header = bytearray(128)
+            header[0:4] = b"DDS "
+            struct.pack_into("<I", header, 4, 124)
+            struct.pack_into("<II", header, 12, 4, 4)
+            struct.pack_into("<I", header, 80, 0x41)   # DDPF_RGB | ALPHAPIXELS
+            struct.pack_into("<5I", header, 88, *masks)
+            return bytes(header)
+        self.assertEqual("R8G8B8A8_UNORM", readDdsInfo(makeLegacy((32, 0xFF, 0xFF00, 0xFF0000, 0xFF000000))).formatName)
+        self.assertEqual("B8G8R8X8_UNORM", readDdsInfo(makeLegacy((32, 0xFF0000, 0xFF00, 0xFF, 0))).formatName)
+        self.assertTrue(readDdsInfo(makeLegacy((16, 0xF800, 0x7E0, 0x1F, 0))).formatName.startswith("RGB_MASKS_"))
+
+    def testRejectedTextureFormat(self) -> None:
+        self.put("Resource/a/legacy.dds", makeDdsInternal(256, 256, 1, 74))
+        self.put("Resource/a/fine.dds", makeDdsInternal(256, 256, 1, 98))
+        messages = self.findMessages({"name": "t", "check": "texture", "include_patterns": ["*.dds"], "rejected_formats": ["BC2_UNORM"]})
+        self.assertEqual(["format BC2_UNORM is rejected here (rejected_formats)"], messages)
+
     def testTextureMipPolicy(self) -> None:
         self.put("Resource/a/partial.dds", makeDdsInternal(256, 256, 3, 98))
         self.put("Resource/a/full.dds", makeDdsInternal(256, 256, 9, 98))
