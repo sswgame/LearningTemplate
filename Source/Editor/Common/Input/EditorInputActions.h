@@ -13,6 +13,7 @@
 
 #include "Editor/Common/EditorSubsystem.h"
 
+#include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 
 namespace sw::editor
@@ -45,7 +46,7 @@ namespace sw::editor
         SubsystemInitResult initializeSubsystem() override;
         void                shutdownSubsystem() override;
 
-        /** @brief 한 프레임: 포커스 창의 레이어를 켜고 맵을 갱신합니다. 엔진 입력 매니저의 `beginFrame` 뒤에 부릅니다. */
+        /** @brief 한 프레임: 키보드 주인을 맞추고, 떼어 낸 창의 키를 넘기고, 포커스 창의 레이어를 켜고 맵을 갱신합니다. ImGui 프레임 안에서, 엔진 입력 매니저의 `beginFrame` 뒤에 부릅니다. */
         void processFrame( float32 deltaSeconds );
         /** @brief 에디터 입력 맵입니다(값으로 소유 — 늘 있다. 초기화 전 · 종료 뒤에는 입력 매니저가 끊겨 갱신해도 아무것도 하지 않는다). */
         InputMap&       getInputMap() { return _map; }
@@ -56,9 +57,25 @@ namespace sw::editor
     private:
         /** @brief 포커스 패널을 찾아 그 레이어만 켭니다. 바뀌었을 때만 레이어를 건드립니다. */
         void syncFocusedPanelLayer();
+        /**
+         * @brief 에디터 창이 키보드를 가진 동안 엔진 키보드 포커스를 `Tool` 로 두고, 놓으면 앞의 주인으로 돌립니다.
+         * @details 키는 늘 엔진 입력 매니저로 간다(`ImGuiEditor::processEvent`). 에디터 창(게임 뷰 밖)에 친 키를 게임 · 셸 · UI 맵이 보지 않게 막는 것이 이 포커스다.
+         *          Simulate 중에는 게임 뷰가 포커스여도 게임에 키를 주지 않는다(월드만 돈다).
+         */
+        void syncKeyboardOwner();
+        /**
+         * @brief 떼어 낸 에디터 창(ImGui 보조 뷰포트)이 포커스면 그 창의 키를 엔진 입력 매니저에 넣습니다. 포커스를 잃으면 누른 채 남은 키를 놓습니다.
+         * @details 보조 뷰포트의 키 메시지는 ImGui 백엔드만 받아 입력 매니저에 닿지 않는다. 떼어 낸 게임 뷰는 `GameViewPanel` 이 같은 일을 한다.
+         */
+        void forwardDetachedKeyboard();
+        /** @brief 떼어 낸 창에서 넣은 눌린 키를 모두 놓습니다. 큐가 차서 못 넣은 키는 다음에 다시 시도합니다. */
+        void releaseForwardedKeys( InputManager& input );
 
     private:
-        InputMap      _map;
-        hashed_string _focusedPanelLayer; ///< 지금 켠 패널 레이어(없으면 빈 이름)
+        InputMap           _map;
+        hashed_string      _focusedPanelLayer;                                    ///< 지금 켠 패널 레이어(없으면 빈 이름)
+        bool               _arrForwardedKey[static_cast<size_t>( Key::Count )]{}; ///< 떼어 낸 창에서 넣은 눌린 키(포커스를 잃으면 놓는다)
+        InputKeyboardFocus _focusBeforeTool{ InputKeyboardFocus::Game };          ///< `Tool` 로 바꾸기 전의 키보드 주인
+        bool               _bToolOwnsKeyboard{ false };                           ///< 이 서브시스템이 키보드 포커스를 `Tool` 로 둔 중이면 true
     };
 } // namespace sw::editor

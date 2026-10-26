@@ -973,27 +973,20 @@ namespace sw::editor
             _platformBackend->processEvent( event );
         }
 
-        // ImGui 가 가져간 입력은 게임으로 넘기지 않는다. 게임 뷰 위에서는 예외다. 씬 뷰 위의 입력은 에디터 카메라가 처리한다.
+        // ImGui 가 가져간 마우스는 게임으로 넘기지 않는다. 게임 뷰 위에서는 예외다. 씬 뷰 위의 입력은 에디터 카메라가 처리한다.
+        // 키보드는 늘 엔진 입력 매니저로 넘긴다 — 에디터 단축키도 그 장치를 읽는 입력 맵(`EditorInputActions`)이 판정한다. 에디터 창이 키보드를 가진 동안(Simulate 포함)
+        // 게임 · 셸 · UI 맵이 키를 보지 않는 것은 키보드 포커스 `Tool` 이 막는다(`EditorInputActions::syncKeyboardOwner`).
         const ImGuiIO& io               = ImGui::GetIO();
         const bool     bGameViewHovered = _editorContext != nullptr && _editorContext->getSubsystem<EditorRenderViews>().isGameViewHovered();
-        const bool     bGameViewFocused = _editorContext != nullptr && _editorContext->getSubsystem<EditorRenderViews>().isGameViewFocused();
 
-        // Simulate 는 월드만 실행하므로 게임 입력을 주지 않는다. 에디터 카메라와 패널은 위의 ImGui 처리에서 이미 입력을 받았다.
-        if ( EditorPlaySession::isSimulating() && ( event.isMouseInput() || event.isKeyboardInput() ) )
-            return true;
-
+        // Simulate 는 월드만 실행하므로 게임 마우스 입력을 주지 않는다. 에디터 카메라와 패널은 위의 ImGui 처리에서 이미 입력을 받았다.
         if ( event.isMouseInput() )
         {
+            if ( EditorPlaySession::isSimulating() )
+                return true;
             if ( io.WantCaptureMouse && bGameViewHovered == false )
                 return true;
             return false;
-        }
-
-        if ( event.isKeyboardInput() )
-        {
-            const bool bKeyboardCapturedByEditor = event.isInputRelease() == false && io.WantCaptureKeyboard && bGameViewFocused == false;
-            if ( bKeyboardCapturedByEditor )
-                return true;
         }
 
         return false;

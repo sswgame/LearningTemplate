@@ -6,14 +6,19 @@
 
 #include "Editor/Common/Input/EditorInputActions.h"
 
+#include "Editor/Common/Backend/ImGuiKeyForward.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/IEditorPanel.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorPlaySession.h"
+#include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
-#include "Engine/Input/InputManager.h"
+#include "Engine/Input/RawInputEvent.h"
+
+#include <imgui.h>
 
 namespace sw::editor
 {
@@ -52,14 +57,84 @@ namespace sw::editor
 
     void EditorInputActions::shutdownSubsystem()
     {
-        // 입력 매니저는 에디터보다 오래 산다 — 맵이 그것을 가리킨 채 남지 않게 끊는다(끊긴 맵의 `update` 는 아무것도 하지 않는다).
+        // 입력 매니저는 에디터보다 오래 산다 — 키보드 주인과 넣은 키를 돌려 두고, 맵이 그것을 가리킨 채 남지 않게 끊는다(끊긴 맵의 `update` 는 아무것도 하지 않는다).
+        InputManager& input = editor::getSubsystem<InputManager>();
+        releaseForwardedKeys( input );
+        if ( _bToolOwnsKeyboard && input.getKeyboardFocus() == InputKeyboardFocus::Tool )
+            input.setKeyboardFocus( _focusBeforeTool );
+        _bToolOwnsKeyboard = false;
         _map.setInputManager( nullptr );
     }
 
     void EditorInputActions::processFrame( float32 deltaSeconds )
     {
+        syncKeyboardOwner();
+        forwardDetachedKeyboard();
         syncFocusedPanelLayer();
         _map.update( deltaSeconds );
+    }
+
+    void EditorInputActions::syncKeyboardOwner()
+    {
+        const bool               bGameViewFocused = editor::getSubsystem<EditorContext>().getSubsystem<EditorRenderViews>().isGameViewFocused();
+        const bool               bEditorOwns      = EditorPlaySession::isSimulating() || ( ImGui::GetIO().WantCaptureKeyboard && bGameViewFocused == false );
+        InputManager&            input            = editor::getSubsystem<InputManager>();
+        const InputKeyboardFocus current          = input.getKeyboardFocus();
+        if ( bEditorOwns && current != InputKeyboardFocus::Tool )
+        {
+            _focusBeforeTool   = current;
+            _bToolOwnsKeyboard = true;
+            input.setKeyboardFocus( InputKeyboardFocus::Tool );
+            return;
+        }
+        if ( bEditorOwns == false && _bToolOwnsKeyboard )
+        {
+            // 그동안 다른 주인(콘솔)이 포커스를 바꿨으면 그쪽을 존중하고 돌리지 않는다.
+            if ( current == InputKeyboardFocus::Tool )
+                input.setKeyboardFocus( _focusBeforeTool );
+            _bToolOwnsKeyboard = false;
+        }
+    }
+
+    void EditorInputActions::forwardDetachedKeyboard()
+    {
+        InputManager&          input      = editor::getSubsystem<InputManager>();
+        const ImGuiPlatformIO& platformIO = ImGui::GetPlatformIO();
+        const ImGuiViewport*   pMain      = ImGui::GetMainViewport();
+        bool                   bDetached  = false;
+        for ( const ImGuiViewport* pViewport : platformIO.Viewports )
+        {
+            bDetached = bDetached || ( pViewport != pMain && ( pViewport->Flags & ImGuiViewportFlags_IsFocused ) != 0 );
+        }
+        // 떼어 낸 게임 뷰의 키는 `GameViewPanel` 이 넘긴다 — 같은 키를 두 번 넣지 않는다.
+        const bool bGameViewFocused = editor::getSubsystem<EditorContext>().getSubsystem<EditorRenderViews>().isGameViewFocused();
+        if ( bDetached == false || bGameViewFocused )
+        {
+            releaseForwardedKeys( input );
+            return;
+        }
+        vector<RawInputEvent> listEvent;
+        ImGuiKeyForward::appendKeyChanges( listEvent );
+        for ( const RawInputEvent& event : listEvent )
+        {
+            if ( input.postRawEvent( event ) == false )
+                continue; // 큐가 차면 이 사건만 잃는다
+            const size_t keyIndex = static_cast<size_t>( event._payload._keyData._key );
+            if ( event._type == RawInputEventType::KeyDown )
+                _arrForwardedKey[keyIndex] = true;
+            else if ( event._type == RawInputEventType::KeyUp )
+                _arrForwardedKey[keyIndex] = false;
+        }
+    }
+
+    void EditorInputActions::releaseForwardedKeys( InputManager& input )
+    {
+        for ( size_t keyIndex = 0; keyIndex < std::size( _arrForwardedKey ); ++keyIndex )
+        {
+            // 큐가 차서 못 넣은 뗌은 다음 프레임에 다시 시도한다.
+            if ( _arrForwardedKey[keyIndex] && input.postRawEvent( RawInputEvent::makeKeyUp( static_cast<Key>( keyIndex ) ) ) )
+                _arrForwardedKey[keyIndex] = false;
+        }
     }
 
     void EditorInputActions::syncFocusedPanelLayer()
