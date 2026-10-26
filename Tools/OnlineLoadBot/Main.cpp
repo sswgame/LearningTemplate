@@ -52,9 +52,9 @@ namespace sw
                 _bootstrap.add( make_unique<NamePoolSubsystem>() );
                 _bootstrap.add( make_unique<LoggerSubsystem>() );
                 _bootstrap.add( make_unique<CrashHandlerSubsystem>( nullptr ) );
-                // 정렬 오류(선언 오타 · 순환)는 로거가 서기 전이다 — 표준 오류로 낸다.
+                // 정렬 오류(선언 오타 · 순환)는 로거가 서기 전일 수 있다 — 낮은 층 보고는 보고자(로거)가 없으면 표준 오류로 낸다.
                 if ( _bootstrap.initializeAll( SubsystemHostMask::All ) == false )
-                    std::fprintf( stderr, "OnlineLoadBot: bootstrap failed: %s\n", _bootstrap.getError().c_str() );
+                    SW_LOW_LEVEL_ERROR( "OnlineLoadBot: bootstrap failed: %s", _bootstrap.getError().c_str() );
             }
 
             ~ToolProcessScope() { _bootstrap.destroyAll(); }

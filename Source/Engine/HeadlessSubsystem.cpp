@@ -5,6 +5,7 @@
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Process/StandardOutput.h"
 #include "Core/String/string_splitter.h"
 
 #include "Engine/Animation/Facial/LipSync.h"
@@ -241,9 +242,11 @@ namespace sw
                     return false;
                 inoutState.enterHeadless();
                 // 로거를 거치지 않는다 — 도움말은 로그 줄(시각 · 범주 머리)이 아니라 그대로 읽을 글이고, 로그 수준을 낮춘 실행에서도 나와야 한다.
-                const string usage = commandLine.makeUsageText();
-                std::fputs( usage.c_str(), stdout );
-                std::fflush( stdout );
+                if ( StandardOutput::write( commandLine.makeUsageText() ) == false )
+                {
+                    SW_LOG_ERROR( "Could not write the -help text to standard output" );
+                    inoutState._bFailed = true;
+                }
                 return true;
             }
 
