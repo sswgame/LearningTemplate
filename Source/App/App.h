@@ -130,6 +130,8 @@ namespace sw
         Engine             _engine;
         /** @brief 자동화 구동기를 엔진 프레임 관찰자로 붙인 구독입니다. 엔진보다 뒤에 선언해 먼저 사라진다(`shutdown` 이 엔진 종료 전에 놓는다). */
         Subscription _automationFrameSubscription;
+        /** @brief `installRuntimeUIHooks` 가 등록한 UI 전역 명령 `QuitGame` 의 구독입니다(`removeRuntimeUIHooks` 가 놓는다). */
+        Subscription _quitCommandRegistration;
         /** @brief 모듈 핫 리로드입니다(Engine 가 아니라 런처의 일 — Server 와 같은 구동기). 자신을 `_host` 에 겁니다. Shipping 에서는 아무것도 하지 않습니다. */
         ModuleReloadDriver _moduleReload;
         /** @brief 게임 창의 개발 콘솔(`~`)과 표준 입력 명령 채널입니다. Shipping 에서는 아무것도 하지 않습니다. */
@@ -154,9 +156,8 @@ namespace sw
         /// @brief `initialize` 가 시작된 시각(마이크로초, `MonotonicClock`)입니다. 메인 루프에 들어갈 때 로그에 시작 시간을 찍습니다.
         int64 _initializeStartMicro;
 
-        uint8                  _bEnableEditor          : 1;
-        uint8                  _bQuitAfterInitialize   : 1; ///< 한 번 하고 끝나는 작업(`--render-portraits`)을 마쳤다. 루프에 들어가지 않는다.
-        uint8                  _bQuitCommandRegistered : 1; ///< `installRuntimeUIHooks` 가 UI 전역 명령 `QuitGame` 을 등록했다(뗄 때 이것만 거둔다).
-        [[maybe_unused]] uint8 _reserved               : 5;
+        uint8                  _bEnableEditor        : 1;
+        uint8                  _bQuitAfterInitialize : 1; ///< 한 번 하고 끝나는 작업(`--render-portraits`)을 마쳤다. 루프에 들어가지 않는다.
+        [[maybe_unused]] uint8 _reserved             : 5;
     };
 } // namespace sw

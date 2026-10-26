@@ -104,7 +104,6 @@ namespace sw
         , _initializeStartMicro{ 0 }
         , _bEnableEditor{ SW_FALSE }
         , _bQuitAfterInitialize{ SW_FALSE }
-        , _bQuitCommandRegistered{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -550,8 +549,7 @@ namespace sw
         // 스크린 리더: 창의 접근성 요청(Windows `WM_GETOBJECT`)에 런타임 UI 로 답한다. 이 플랫폼에 연결이 없으면 nullptr 이고 UI 는 그대로 동작한다.
         if ( _pWindow != nullptr )
             pUI->setAccessibilityBridge( UIAccessibilityBridgeFactory::createForWindow( *pUI, *_pWindow ) );
-        pUI->getGlobalCommands().registerCommand( hashed_string( UIGlobalCommandRegistry::kQuitGame ), SW_DELEGATE_METHOD( UICommandDelegate, &App::onQuitGameCommand, this ) );
-        _bQuitCommandRegistered = SW_TRUE;
+        _quitCommandRegistration = pUI->getGlobalCommands().registerCommand( hashed_string( UIGlobalCommandRegistry::kQuitGame ), SW_DELEGATE_METHOD( UICommandDelegate, &App::onQuitGameCommand, this ) );
     }
 
     void App::removeRuntimeUIHooks()
@@ -561,10 +559,7 @@ namespace sw
             return;
         pUI->getClipboard().setAPI( UIClipboardAPI{} );
         pUI->setAccessibilityBridge( nullptr ); // 창이 사라지기 전에 창의 접근성 훅을 푼다
-        if ( _bQuitCommandRegistered == SW_FALSE )
-            return;
-        pUI->getGlobalCommands().unregisterCommand( hashed_string( UIGlobalCommandRegistry::kQuitGame ), SW_DELEGATE_METHOD( UICommandDelegate, &App::onQuitGameCommand, this ) );
-        _bQuitCommandRegistered = SW_FALSE;
+        _quitCommandRegistration.reset();
     }
 
     void App::onQuitGameCommand( [[maybe_unused]] const hashed_string& command, [[maybe_unused]] Widget& source )

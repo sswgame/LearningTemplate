@@ -333,15 +333,13 @@ namespace sw
         // 창이 없는 호스트(전용 서버 · 테스트)는 UI 가 없다(`bindEngineServices`) — 타이틀로 돌아갈 메뉴도 없다.
         if ( _pUISystem == nullptr || _bootstrap._data._titleScene.isSet() == false )
             return;
-        _pUISystem->getGlobalCommands().registerCommand( hashed_string( UIGlobalCommandRegistry::kReturnToTitle ),
-                                                         SW_DELEGATE_METHOD( UICommandDelegate, &GameInstanceBase::onReturnToTitleCommand, this ) );
+        _returnToTitleRegistration = _pUISystem->getGlobalCommands().registerCommand( hashed_string( UIGlobalCommandRegistry::kReturnToTitle ),
+                                                                                      SW_DELEGATE_METHOD( UICommandDelegate, &GameInstanceBase::onReturnToTitleCommand, this ) );
     }
 
     void GameInstanceBase::unregisterSessionCommands()
     {
-        if ( _pUISystem != nullptr )
-            _pUISystem->getGlobalCommands().unregisterCommand( hashed_string( UIGlobalCommandRegistry::kReturnToTitle ),
-                                                               SW_DELEGATE_METHOD( UICommandDelegate, &GameInstanceBase::onReturnToTitleCommand, this ) );
+        _returnToTitleRegistration.reset(); // 핫 리로드의 새 인스턴스가 그 사이 교체했으면 그 등록은 지우지 않는다
     }
 
     void GameInstanceBase::onReturnToTitleCommand( [[maybe_unused]] const hashed_string& command, [[maybe_unused]] Widget& source )

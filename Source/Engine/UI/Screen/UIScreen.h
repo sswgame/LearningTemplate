@@ -9,6 +9,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
@@ -76,7 +77,7 @@ namespace sw
      *          **애니메이션**: 화면마다 재생기 하나(`getAnimationPlayer`)가 문서의 `<_listAnimation>` 을 가진다. `Open` 은 올릴 때, `Close` 는 닫을 때
      *          재생하고, 닫기는 `Close` 가 끝난 뒤에 실제로 지운다(그동안 화면은 입력과 포커스를 받지 않는다).
      */
-    class SW_API UIScreen
+    class SW_API UIScreen : private SubscriptionSource
     {
     public:
         UIScreen( const UIScreenDesc& desc, unique_ptr<Widget> root );
@@ -127,10 +128,11 @@ namespace sw
         UIAnimationPlayer&       getAnimationPlayer() { return _animationPlayer; }
         const UIAnimationPlayer& getAnimationPlayer() const { return _animationPlayer; }
 
-        /** @brief 명령 @p command 를 받을 함수를 등록합니다. 같은 명령에 다시 등록하면 교체합니다. */
-        void registerCommand( const hashed_string& command, const UICommandDelegate& handler );
-        /** @brief 명령 @p command 의 함수를 해제합니다. */
-        void unregisterCommand( const hashed_string& command );
+        /**
+         * @brief 명령 @p command 를 받을 함수를 등록하고 그 구독을 돌려줍니다. 구독이 사라지면 해제합니다. 같은 명령에 다시 등록하면 교체합니다.
+         * @details 교체된 옛 구독은 놓아도 새 등록을 지우지 않습니다. 화면이 먼저 닫히면 구독은 무효가 됩니다.
+         */
+        [[nodiscard]] Subscription registerCommand( const hashed_string& command, const UICommandDelegate& handler );
 
         /**
          * @brief 트리의 위젯 @p source 가 명령 @p command 를 냈을 때 불립니다. 처리했으면 true 입니다.
@@ -167,21 +169,32 @@ namespace sw
         friend class UIInputRouter;     // 포커스 복원이 `_lastFocused` 를 읽는다
         friend class UIThemeController; // 스타일 세트를 짓는다
 
-        WidgetTree                                                               _tree;
-        UIScreenDesc                                                             _desc;
-        string                                                                   _documentPath;    ///< 생성한 문서입니다(코드로 만들었으면 빈 문자열).
-        vector<UIBindingDesc>                                                    _listBinding;     ///< 문서에서 분리한 바인딩 식입니다.
-        vector<string>                                                           _listStyleSheet;  ///< 문서와 조각이 지정한 스타일 시트입니다.
-        unique_ptr<UIStyleSet>                                                   _styleSet;        ///< 테마, 문서 시트 순서의 스타일 세트입니다(UISystem 이 설정합니다).
-        unique_ptr<UIBindingSet>                                                 _bindingSet;      ///< 바인딩 식을 해석한 것입니다(뷰모델, 설정과 위젯 필드를 연결합니다).
-        UIAnimationPlayer                                                        _animationPlayer; ///< 문서 애니메이션과 코드 트윈 재생기입니다(트리를 가리키므로 `_tree` 뒤에 생성합니다).
-        unordered_map<hashed_string, UICommandDelegate, hashed_string::HashFunc> _mapCommandToHandler;
-        UISystem*                                                                _pUISystem; ///< 이 화면을 올린 시스템입니다(올리기 전에는 nullptr).
-        UIScreenHandle                                                           _handle;
-        WidgetID                                                                 _lastFocused; ///< 다른 화면에 덮일 때의 포커스 위젯입니다. 다시 활성이 되면 돌려줍니다.
-        uint32                                                                   _pushOrder;   ///< 같은 레이어 안의 쌓인 순서입니다(클수록 위).
-        uint8                                                                    _bClosing;
-        uint8                                                                    _bHiddenByLayer;            ///< 레이어 가시성 요청이 숨기는 중이다(`UISystem` 이 적는다)
-        uint8                                                                    _bReportsUnhandledCommands; ///< 처리하지 않은 명령을 경고로 남긴다(`setReportsUnhandledCommands`)
+        /** @brief 명령 처리 함수와 그 등록 구독 번호입니다. */
+        struct CommandEntry
+        {
+            UICommandDelegate _handler{};
+            uint64            _id{ 0 };
+        };
+
+        /** @brief 명령 등록 구독 @p id 가 풀렸습니다. 그 명령의 지금 등록이 이 구독이면 해제합니다. */
+        void releaseSubscription( uint64 id ) override;
+
+        WidgetTree                                                          _tree;
+        UIScreenDesc                                                        _desc;
+        string                                                              _documentPath;    ///< 생성한 문서입니다(코드로 만들었으면 빈 문자열).
+        vector<UIBindingDesc>                                               _listBinding;     ///< 문서에서 분리한 바인딩 식입니다.
+        vector<string>                                                      _listStyleSheet;  ///< 문서와 조각이 지정한 스타일 시트입니다.
+        unique_ptr<UIStyleSet>                                              _styleSet;        ///< 테마, 문서 시트 순서의 스타일 세트입니다(UISystem 이 설정합니다).
+        unique_ptr<UIBindingSet>                                            _bindingSet;      ///< 바인딩 식을 해석한 것입니다(뷰모델, 설정과 위젯 필드를 연결합니다).
+        UIAnimationPlayer                                                   _animationPlayer; ///< 문서 애니메이션과 코드 트윈 재생기입니다(트리를 가리키므로 `_tree` 뒤에 생성합니다).
+        unordered_map<hashed_string, CommandEntry, hashed_string::HashFunc> _mapCommandToHandler;
+        uint64                                                              _nextCommandID; ///< 다음 명령 등록 구독 번호(0 은 쓰지 않는다)
+        UISystem*                                                           _pUISystem;     ///< 이 화면을 올린 시스템입니다(올리기 전에는 nullptr).
+        UIScreenHandle                                                      _handle;
+        WidgetID                                                            _lastFocused; ///< 다른 화면에 덮일 때의 포커스 위젯입니다. 다시 활성이 되면 돌려줍니다.
+        uint32                                                              _pushOrder;   ///< 같은 레이어 안의 쌓인 순서입니다(클수록 위).
+        uint8                                                               _bClosing;
+        uint8                                                               _bHiddenByLayer;            ///< 레이어 가시성 요청이 숨기는 중이다(`UISystem` 이 적는다)
+        uint8                                                               _bReportsUnhandledCommands; ///< 처리하지 않은 명령을 경고로 남긴다(`setReportsUnhandledCommands`)
     };
 } // namespace sw

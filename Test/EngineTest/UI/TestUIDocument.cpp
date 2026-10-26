@@ -291,7 +291,7 @@ SW_TEST_CASE( UIDocumentTest, CommandRoutesToScreen )
     const sw::UIScreenHandle handle  = fixture._ui.openScreen( "test/command.ui.xml" );
     sw::UIScreen*            pScreen = fixture._ui.findScreen( handle );
     SW_ASSERT_NOT_NULL( pScreen );
-    pScreen->registerCommand( "Go", SW_DELEGATE_LAMBDA( sw::UICommandDelegate, [&goCount]( const sw::hashed_string&, sw::Widget& )
+    const sw::Subscription goCommand = pScreen->registerCommand( "Go", SW_DELEGATE_LAMBDA( sw::UICommandDelegate, [&goCount]( const sw::hashed_string&, sw::Widget& )
     { ++goCount; } ) );
     Util::runFrame( fixture._input, fixture._ui );
     SW_EXPECT_TRUE( fixture._input.postRawEvent( sw::RawInputEvent::makeMouseMove( 200, 130 ) ) );

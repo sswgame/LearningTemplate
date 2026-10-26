@@ -187,7 +187,7 @@ namespace sw
         UserSettingsManager* findUserSettings() const;
         /**
          * @brief 화면이 처리하지 않은 UI 명령의 전역 표입니다. 게임 흐름이 `ReturnToTitle` · 호스트가 `QuitGame` 같은 명령을 등록하면 일시정지 메뉴가 그 버튼을 보입니다.
-         * @details 함수가 모듈 이미지 안에 있으면 그 모듈이 언로드될 때 제거됩니다. 등록한 쪽은 끝날 때 `unregisterCommand` 로 거둡니다.
+         * @details 함수가 모듈 이미지 안에 있으면 그 모듈이 언로드될 때 제거됩니다. 등록한 쪽은 돌려받은 구독을 들고, 끝날 때 놓습니다.
          */
         UIGlobalCommandRegistry&       getGlobalCommands() { return _globalCommands; }
         const UIGlobalCommandRegistry& getGlobalCommands() const { return _globalCommands; }
