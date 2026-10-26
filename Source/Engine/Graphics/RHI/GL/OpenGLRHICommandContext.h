@@ -61,7 +61,7 @@ namespace sw
          * @details 드로우 진입점 네 개가 모두 이것을 씁니다. 따로 고르는 진입점은 PSO 토폴로지를 놓쳐 GL_TRIANGLES 로 굳기 쉽습니다.
          * @return 프로그램이 0 이라 그릴 수 없으면 false 입니다.
          */
-        bool resolveDrawProgram( uint32& outProgram, uint32& outMode ) const;
+        [[nodiscard]] bool resolveDrawProgram( uint32& outProgram, uint32& outMode ) const;
         /**
          * @brief 인덱스 없는 드로우의 몸통입니다. `draw` 와 `drawInstanced` 가 함께 씁니다.
          * @details 메시 정점 버퍼가 설정되어 있으면 그 VAO 로, 아니면 디바이스 기본 VAO 로 그립니다. 인스턴스가 하나면 `glDrawArrays`,

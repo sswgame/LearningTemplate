@@ -287,7 +287,7 @@ namespace sw
                 SW_LOG_WARNING( "Failed to create fullscreen triangle vertex buffer." );
         }
 
-        initializePipelineCache();
+        (void)initializePipelineCache(); // 캐시가 없으면 파이프라인을 처음부터 만들 뿐이다 — 실패는 initializePipelineCache 가 경고로 남긴다
         _frameStreamContext = sw::make_unique<VulkanRHICommandContext>( this );
 
         SW_LOG_INFO( "Vulkan RHI Backend Device Initialized Successfully (Validation Layers: %#)", _bEnableValidationLayers == SW_TRUE ? "ENABLED" : "DISABLED" );

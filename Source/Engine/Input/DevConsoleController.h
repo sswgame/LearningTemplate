@@ -46,7 +46,7 @@ namespace sw
          * @brief @p pInput 에 콘솔용 글자 콜백을 등록하고, @p pOwner 가 있으면 그 위에 그릴 플랫폼 창을 만듭니다.
          * @return 그릴 창을 만들었으면 true 입니다. 만들지 못해도 입력은 받습니다.
          */
-        bool initialize( InputManager* pInput, IWindow* pOwner );
+        [[nodiscard]] bool initialize( InputManager* pInput, IWindow* pOwner );
         /** @brief 글자 콜백을 해제하고 키보드 포커스를 게임에 돌려준 뒤 플랫폼 창을 없앱니다. `InputManager` 보다 먼저 부릅니다. */
         void shutdown();
 

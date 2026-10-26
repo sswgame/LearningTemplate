@@ -57,7 +57,7 @@ namespace sw
          *       길이가 사라지고, 뷰가 더 큰 버퍼의 일부면 널 종단이 없어 파서가 끝을 넘어 읽습니다. `XMLDocument::parse` 도
          *       `string_view` 를 받아 `load_buffer(data, size)` 로 읽습니다.
          */
-        virtual bool initializeXMLDeserialization( string_view xmlStr, const utf8* pRootTagName ) = 0;
+        [[nodiscard]] virtual bool initializeXMLDeserialization( string_view xmlStr, const utf8* pRootTagName ) = 0;
         /** @brief XML 자식 요소에서 값을 읽습니다. */
         [[nodiscard]] virtual bool readValue( const utf8* pTagName, string& outValue ) = 0;
         /** @brief 현재 부모 요소의 XML 속성을 읽습니다. */
@@ -152,7 +152,7 @@ namespace sw
         string endSerialize() override;
 
         /** @brief XML 역직렬화를 시작합니다. */
-        bool initializeXMLDeserialization( string_view xmlStr, const utf8* pRootTagName ) override;
+        [[nodiscard]] bool initializeXMLDeserialization( string_view xmlStr, const utf8* pRootTagName ) override;
         /** @brief XML 자식 요소에서 값을 읽습니다. */
         [[nodiscard]] bool readValue( const utf8* pTagName, string& outValue ) override;
         /** @brief 현재 부모 요소의 XML 속성을 읽습니다. */

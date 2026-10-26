@@ -107,11 +107,11 @@ namespace sw
 
         void bindModuleServices( SubsystemScope& outScope, bool bGameModuleOnly )
         {
-#define SW_ENGINE_SERVICE( Tag, Type, requirement, visibility )                                                         \
-    {                                                                                                                   \
-        Type* const pService = static_cast<Type*>( s_arrService[EngineServiceSlot<Type>::kIndex] );                     \
-        if ( pService != nullptr && ( bGameModuleOnly == false || ( SW_SERVICE_IS_GAME_VISIBLE( visibility ) == 1 ) ) ) \
-            (void)outScope.bind( pService ); /* 행마다 타입이 달라 겹치지 않는다 — 부른 쪽이 새 범위를 넘긴다 */        \
+#define SW_ENGINE_SERVICE( Tag, Type, requirement, visibility )                                                                                                            \
+    {                                                                                                                                                                      \
+        Type* const pService = static_cast<Type*>( s_arrService[EngineServiceSlot<Type>::kIndex] );                                                                        \
+        if ( pService != nullptr && ( bGameModuleOnly == false || ( SW_SERVICE_IS_GAME_VISIBLE( visibility ) == 1 ) ) )                                                    \
+            SW_LOW_LEVEL_ASSERT( outScope.bind( pService ), "Engine service %s is bound twice - each row is a distinct type and the caller passes a fresh scope", #Type ); \
     }
 #define SW_ENGINE_SERVICE_CONST( Tag, Type, requirement, visibility ) SW_ENGINE_SERVICE( Tag, Type, requirement, visibility )
 #define SW_ENGINE_SERVICE_OPT( Tag, Type, visibility )                SW_ENGINE_SERVICE( Tag, Type, Optional, visibility )

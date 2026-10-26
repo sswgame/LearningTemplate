@@ -45,7 +45,7 @@ namespace sw
         void        setIntensity( float32 intensity ) { _intensity = intensity; }
 
         /** @brief @p manager 의 첫 활성 하늘입니다. 없으면 @p outGradient 를 비우고(세기 0) false 입니다. 읽기만 합니다. */
-        static bool findSky( const GameObjectManager& manager, SkyGradient& outGradient );
+        [[nodiscard]] static bool findSky( const GameObjectManager& manager, SkyGradient& outGradient );
 
     private:
         PROPERTY( Category = "Sky", DisplayName = "Zenith Color", Meta = "Color", Tooltip = "Linear RGB straight up" )

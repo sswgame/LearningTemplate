@@ -48,7 +48,7 @@ namespace sw
          * @brief `-gv_tracy` 를 읽어 켤 출력을 고릅니다. 부트스트랩이 명령줄을 반영한 직후 한 번 부릅니다.
          * @return 출력을 켰으면 true 입니다.
          */
-        static bool initialize();
+        [[nodiscard]] static bool initialize();
         /** @brief 메모리 관찰을 떼고 활성 출력을 비웁니다. 출력 객체는 살려 둡니다(늦게 닫히는 구간이 그것을 부른다). */
         static void shutdown();
 

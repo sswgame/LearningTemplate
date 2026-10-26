@@ -880,7 +880,7 @@ namespace sw
 
         // --- 준비(`AutomationStepPrepareFunction`): 입력 단계는 가상 입력 원천으로 옮긴다. 인자는 검사와 같은 `parse*` 로 읽고, 실패하면 버리지 않고 오류다 ---
 
-        static bool prepareSlotStep( AutomationStepContext& context, const AutomationStep& step, string& outError )
+        [[nodiscard]] static bool prepareSlotStep( AutomationStepContext& context, const AutomationStep& step, string& outError )
         {
             AutomationRunner&                      runner = asRunner( context );
             AutomationRunnerInternal::SlotStepArgs args;
@@ -897,7 +897,7 @@ namespace sw
             return bAdded;
         }
 
-        static bool prepareWheel( AutomationStepContext& context, const AutomationStep& step, string& outError )
+        [[nodiscard]] static bool prepareWheel( AutomationStepContext& context, const AutomationStep& step, string& outError )
         {
             AutomationRunner&                      runner = asRunner( context );
             AutomationRunnerInternal::AxisPairArgs args;
@@ -910,7 +910,7 @@ namespace sw
             return true;
         }
 
-        static bool prepareMouseDelta( AutomationStepContext& context, const AutomationStep& step, string& outError )
+        [[nodiscard]] static bool prepareMouseDelta( AutomationStepContext& context, const AutomationStep& step, string& outError )
         {
             AutomationRunner&                      runner = asRunner( context );
             AutomationRunnerInternal::AxisPairArgs args;
@@ -920,7 +920,7 @@ namespace sw
             return true;
         }
 
-        static bool prepareMousePosition( AutomationStepContext& context, const AutomationStep& step, string& outError )
+        [[nodiscard]] static bool prepareMousePosition( AutomationStepContext& context, const AutomationStep& step, string& outError )
         {
             AutomationRunner& runner = asRunner( context );
             // 창 클라이언트 영역의 비율을 픽셀로 바꾼다(시작할 때의 창 크기). 창이 없으면(헤드리스) 그 위치를 낼 수 없다.
@@ -941,7 +941,7 @@ namespace sw
             return true;
         }
 
-        static bool prepareGamepadAxis( AutomationStepContext& context, const AutomationStep& step, string& outError )
+        [[nodiscard]] static bool prepareGamepadAxis( AutomationStepContext& context, const AutomationStep& step, string& outError )
         {
             AutomationRunner&                         runner = asRunner( context );
             AutomationRunnerInternal::GamepadAxisArgs args;
@@ -953,7 +953,7 @@ namespace sw
             return true;
         }
 
-        static bool prepareText( AutomationStepContext& context, const AutomationStep& step, string& outError )
+        [[nodiscard]] static bool prepareText( AutomationStepContext& context, const AutomationStep& step, string& outError )
         {
             AutomationRunner& runner = asRunner( context );
             const string*     pValue = step.requireAttribute( "value", outError );
@@ -964,7 +964,7 @@ namespace sw
         }
 
         /** @brief 붙잡는 동안 같은 프레임의 다른 단계가 여러 번 돌거나(입력 전 단계) 조건보다 먼저 돌지 않게, 기다림은 그 프레임에 혼자 둔다. */
-        static bool prepareWaitUntil( AutomationStepContext& context, const AutomationStep& step, string& outError )
+        [[nodiscard]] static bool prepareWaitUntil( AutomationStepContext& context, const AutomationStep& step, string& outError )
         {
             AutomationRunner&     runner     = asRunner( context );
             const AutomationStep* pOtherStep = runner._scenario.findOtherStepAtSameFrame( step );

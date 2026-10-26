@@ -13,7 +13,7 @@ namespace sw
     struct RigNodeLibrary
     {
         /** @brief 아래 모두를 등록합니다. 늘 true 입니다(정적 초기화에 쓰려고 값을 돌려줍니다). */
-        static bool registerEngineNodes( RigNodeRegistry& registry );
+        [[nodiscard]] static bool registerEngineNodes( RigNodeRegistry& registry );
         /** @brief IK 노드(`TwoBoneIK`, `FabrikChain`, `CcdChain`, `Aim`, `FootPlacement`, `StrideWarping`, `FullBodyIK`)를 등록합니다. */
         static void registerIKNodes( RigNodeRegistry& registry );
         /** @brief 제약 노드(`CopyTransform`, `Position`, `Rotation`, `ParentSwitch`, `Distance`, `LimitRotation`, `TwistDistribution`)를 등록합니다. */

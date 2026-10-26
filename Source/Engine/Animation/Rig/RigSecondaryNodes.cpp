@@ -166,7 +166,7 @@ namespace sw
                 return bOk && reader.isOk();
             }
 
-            bool bind( const RigBindContext& context ) override
+            [[nodiscard]] bool bind( const RigBindContext& context ) override
             {
                 if ( context.findBones( _listBoneName, _listBone, true ) == false )
                     return false;
@@ -269,7 +269,7 @@ namespace sw
                 return bOk && reader.isOk();
             }
 
-            bool bind( const RigBindContext& context ) override
+            [[nodiscard]] bool bind( const RigBindContext& context ) override
             {
                 if ( context.findBone( _driverName, _driver ) == false )
                     return false;

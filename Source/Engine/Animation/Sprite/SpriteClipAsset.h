@@ -151,7 +151,7 @@ namespace sw
          * @details 이름 붙은 애니메이션이 하나도 없는 클립은 **어떤 이름이든 프레임 전체**를 반복 구간으로 반환한다. 클립 하나가 곧
          *          애니메이션 하나다. 이름 붙은 것이 있는데 그 이름이 없으면 false 를 반환한다.
          */
-        bool findFrameRange( string_view name, SpriteClipAnimation& outRange ) const;
+        [[nodiscard]] bool findFrameRange( string_view name, SpriteClipAnimation& outRange ) const;
         /** @brief 클립 타임라인에서 프레임 @p frameIndex 가 시작하는 시각(초)을 반환합니다. 앞 프레임들의 시간 합이며, 시간이 없는 프레임은 @p animatorFrameSeconds 로 셉니다. */
         float32 computeFrameStartSeconds( int32 frameIndex, float32 animatorFrameSeconds ) const;
         /** @brief 트랜스폼 키가 하나라도 있으면 true 입니다. */

@@ -103,8 +103,8 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 1) 수명 주기와 프레임 제어
         // ------------------------------------------------------------------------------
-        bool initialize();
-        void shutdown();
+        [[nodiscard]] bool initialize();
+        void               shutdown();
 
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
         static constexpr const utf8* kSubsystemName = "Input";

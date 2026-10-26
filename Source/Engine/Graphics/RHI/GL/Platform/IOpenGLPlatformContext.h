@@ -54,7 +54,7 @@ namespace sw
          * @param outHandles 성공하면 불투명 핸들 한 쌍을 채웁니다.
          * @return 실패하면 false 입니다. 실패 시 만든 것은 스스로 되돌립니다.
          */
-        virtual bool initialize( const RHISwapChainDesc& desc, OpenGLContextHandles& outHandles ) = 0;
+        [[nodiscard]] virtual bool initialize( const RHISwapChainDesc& desc, OpenGLContextHandles& outHandles ) = 0;
 
         /** @brief 컨텍스트를 해제합니다. 두 번 불러도 안전합니다. */
         virtual void destroy() = 0;

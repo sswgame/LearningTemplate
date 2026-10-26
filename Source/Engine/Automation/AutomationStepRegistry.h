@@ -102,20 +102,20 @@ namespace sw
     {
     public:
         /** @brief 등록합니다. 같은 이름이 이미 있거나 실행 · 준비 함수가 둘 다 없으면 false 이고 등록하지 않습니다. */
-        static bool registerStep( const AutomationStepRegistration* pRegistration );
-        static void unregisterStep( const AutomationStepRegistration* pRegistration );
+        [[nodiscard]] static bool registerStep( const AutomationStepRegistration* pRegistration );
+        static void               unregisterStep( const AutomationStepRegistration* pRegistration );
         /** @brief 이름으로 찾습니다. 없으면 nullptr 입니다. */
         static const AutomationStepRegistration* find( string_view kind );
 
         /** @brief 검사 함수만 올립니다. 이름이 비었거나 함수가 없거나 같은 이름이 이미 있으면 false 이고 올리지 않습니다. 단계 등록(`registerStep`)과 별개입니다. */
-        static bool registerValidator( const AutomationStepValidatorRegistration* pRegistration );
-        static void unregisterValidator( const AutomationStepValidatorRegistration* pRegistration );
+        [[nodiscard]] static bool registerValidator( const AutomationStepValidatorRegistration* pRegistration );
+        static void               unregisterValidator( const AutomationStepValidatorRegistration* pRegistration );
         /** @brief 검사 함수만 올린 등록을 이름으로 찾습니다. 없으면 nullptr 입니다(올라온 단계의 검사 함수는 `AutomationStepValidation::findValidator` 가 함께 봅니다). */
         static const AutomationStepValidatorRegistration* findValidator( string_view kind );
 
         /** @brief 차단 조건을 등록합니다. 같은 이름이 있으면 false 입니다. */
-        static bool registerBlocker( const AutomationBlocker* pBlocker );
-        static void unregisterBlocker( const AutomationBlocker* pBlocker );
+        [[nodiscard]] static bool registerBlocker( const AutomationBlocker* pBlocker );
+        static void               unregisterBlocker( const AutomationBlocker* pBlocker );
         /** @brief 시작을 미루는 조건(`Start` · `Clock`) 중 하나라도 참이면 true 입니다. */
         static bool isStartBlocked();
         /** @brief 지금 화면 캡처를 미루는 조건(모든 범위)의 이름입니다. 없으면 nullptr 입니다. */

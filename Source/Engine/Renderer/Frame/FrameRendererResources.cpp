@@ -7,6 +7,8 @@
  */
 #include "pch.h"
 
+#include "Core/Log/LogOnce.h"
+
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/Material/MaterialUtil.h"
@@ -26,7 +28,12 @@ namespace sw
             return;
 
         // 패스마다 자기 상수 버퍼를 갖도록 슬롯을 미리 만들어 둔다.
-        _passCbRing.initialize( _pDevice );
+        if ( _passCbRing.initialize( _pDevice ) == false )
+        {
+            // 준비 깃발을 세우지 않아 다음 프레임에 다시 시도한다 — 같은 실패를 프레임마다 남기지 않게 한 번만 알린다.
+            SW_LOG_ERROR_ONCE( "Pass constant buffer slots could not be created - passes stay unprepared" );
+            return;
+        }
         // 직렬 경로 시드는 0번 슬롯을 쓴다(패스별 경로는 acquirePassCb 로 덮어쓴다).
         _passCbRing.getSeedSlot( _frameContext._passCb, _frameContext._passCbIndex );
 

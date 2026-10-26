@@ -101,7 +101,7 @@ namespace sw
                 return bOk;
             }
 
-            bool bind( const RigBindContext& context ) override { return context.findBone( _boneName, _bone ) && context.findTarget( _targetName, _target ); }
+            [[nodiscard]] bool bind( const RigBindContext& context ) override { return context.findBone( _boneName, _bone ) && context.findTarget( _targetName, _target ); }
 
             void evaluate( RigEvaluateContext& context ) override
             {
@@ -169,7 +169,7 @@ namespace sw
                 return bOk;
             }
 
-            bool bind( const RigBindContext& context ) override
+            [[nodiscard]] bool bind( const RigBindContext& context ) override
             {
                 if ( context.findBone( _boneName, _bone ) == false )
                     return false;
@@ -270,7 +270,7 @@ namespace sw
                 return bOk;
             }
 
-            bool bind( const RigBindContext& context ) override { return context.findBone( _boneName, _bone ) && context.findTarget( _targetName, _target ); }
+            [[nodiscard]] bool bind( const RigBindContext& context ) override { return context.findBone( _boneName, _bone ) && context.findTarget( _targetName, _target ); }
 
             void evaluate( RigEvaluateContext& context ) override
             {
@@ -312,7 +312,7 @@ namespace sw
                        reader.readFloat3( "max_degrees", _maxAngle, true );
             }
 
-            bool bind( const RigBindContext& context ) override
+            [[nodiscard]] bool bind( const RigBindContext& context ) override
             {
                 if ( context.findBone( _boneName, _bone ) == false )
                     return false;
@@ -374,7 +374,7 @@ namespace sw
                 return bOk && reader.isOk();
             }
 
-            bool bind( const RigBindContext& context ) override
+            [[nodiscard]] bool bind( const RigBindContext& context ) override
             {
                 if ( context.findBone( _sourceName, _source ) == false )
                     return false;
@@ -462,7 +462,7 @@ namespace sw
                 return bOk;
             }
 
-            bool bind( const RigBindContext& context ) override { return context.findBone( _boneName, _bone ); }
+            [[nodiscard]] bool bind( const RigBindContext& context ) override { return context.findBone( _boneName, _bone ); }
 
             void evaluate( RigEvaluateContext& context ) override
             {

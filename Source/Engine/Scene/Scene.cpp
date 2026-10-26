@@ -300,12 +300,12 @@ namespace sw
                 for ( const auto& [objectID, prefabPath] : mapPrefabSource )
                 {
                     (void)objectID;
-                    (void)findPrefabBaseState( *pAssetManager, inoutInputs._mapPrefabBaseState, prefabPath );
+                    (void)findPrefabBaseState( *pAssetManager, inoutInputs._mapPrefabBaseState, prefabPath ); // 캐시를 미리 채운다 — 못 찾은 것은 쓰는 쪽이 다시 묻는다
                 }
                 for ( const auto& [objectID, prefabPath] : inoutInputs._mapDetachedPartPrefab )
                 {
                     (void)objectID;
-                    (void)findPrefabBaseState( *pAssetManager, inoutInputs._mapPrefabBaseState, prefabPath );
+                    (void)findPrefabBaseState( *pAssetManager, inoutInputs._mapPrefabBaseState, prefabPath ); // 캐시를 미리 채운다 — 못 찾은 것은 쓰는 쪽이 다시 묻는다
                 }
                 // 인스턴스마다 부품에 덮어쓴 것도 순회 밖에서 뽑는다 — 기준 부품을 임시 매니저에 스폰한다.
                 collectInstancePartOverrides( objects, pAssetManager->getAssetCache<PrefabCache>(), mapPrefabSource, inoutInputs._mapPartOverride );
@@ -405,7 +405,7 @@ namespace sw
             }
         }
         // 카메라는 프레임마다 다시 고른다 — 여기서 못 고르면(오브젝트 관리자 없음) 렌더 경로가 "카메라 없음" 으로 알린다.
-        (void)ensureDefaultCameras();
+        pickActiveGameCamera();
         SceneInternal::bindSceneMeshDefaults( this, _services._pAssetManager, pRHIDevice );
         return true;
     }
@@ -679,7 +679,7 @@ namespace sw
     /**
      * @brief 씬에 게임 카메라가 있는지 보고, 없으면 기본 위치에 만듭니다.
      */
-    bool Scene::ensureDefaultCameras()
+    bool Scene::pickActiveGameCamera()
     {
         if ( _objectManager == nullptr )
             return false;

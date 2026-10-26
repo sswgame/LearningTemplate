@@ -80,7 +80,7 @@ namespace sw
             static constexpr const utf8* kArrRootAttribute[]        = { "version" };
 
             template <typename TEnum, size_t Count>
-            static bool findNamedValue( const NamedValue<TEnum> ( &arrEntry )[Count], string_view name, TEnum& outValue )
+            [[nodiscard]] static bool findNamedValue( const NamedValue<TEnum> ( &arrEntry )[Count], string_view name, TEnum& outValue )
             {
                 for ( const NamedValue<TEnum>& entry : arrEntry )
                 {
@@ -230,7 +230,7 @@ namespace sw
             }
 
             /** @brief 스키마 XML 의 `type` 값(대소문자 무시)으로 설정 종류를 찾습니다. */
-            static bool findTypeByName( string_view name, UserSettingType& outType )
+            [[nodiscard]] static bool findTypeByName( string_view name, UserSettingType& outType )
             {
                 for ( const UserSettingTypeTraits& traits : kArrTypeTraits )
                 {

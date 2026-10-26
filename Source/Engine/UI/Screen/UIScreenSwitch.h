@@ -38,8 +38,8 @@ namespace sw
     {
     public:
         /** @brief 등록합니다. 같은 이름이 이미 있으면 false 이고 등록하지 않습니다. */
-        static bool registerSwitch( const UIScreenSwitchRegistration* pRegistration );
-        static void unregisterSwitch( const UIScreenSwitchRegistration* pRegistration );
+        [[nodiscard]] static bool registerSwitch( const UIScreenSwitchRegistration* pRegistration );
+        static void               unregisterSwitch( const UIScreenSwitchRegistration* pRegistration );
         /** @brief 이름으로 찾습니다. 없으면 nullptr 입니다. */
         static const UIScreenSwitchRegistration* find( string_view name );
         /** @brief 등록 수입니다. */

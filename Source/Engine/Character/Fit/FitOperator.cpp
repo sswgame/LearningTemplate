@@ -363,9 +363,9 @@ namespace sw
 
     void FitOperatorRegistry::registerDefaultOperators()
     {
-        (void)registerOperator( make_unique<FitShrinkOperator>() );
-        (void)registerOperator( make_unique<FitPushOperator>() );
-        (void)registerOperator( make_unique<FitCutOperator>() );
-        (void)registerOperator( make_unique<FitReportOperator>() );
+        (void)registerOperator( make_unique<FitShrinkOperator>() ); // 실패(이름 없음 · 중복)는 등록이 오류로 남긴다
+        (void)registerOperator( make_unique<FitPushOperator>() );   // 실패(이름 없음 · 중복)는 등록이 오류로 남긴다
+        (void)registerOperator( make_unique<FitCutOperator>() );    // 실패(이름 없음 · 중복)는 등록이 오류로 남긴다
+        (void)registerOperator( make_unique<FitReportOperator>() ); // 실패(이름 없음 · 중복)는 등록이 오류로 남긴다
     }
 } // namespace sw

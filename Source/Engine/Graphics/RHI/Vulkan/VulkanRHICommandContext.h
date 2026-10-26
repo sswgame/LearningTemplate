@@ -85,7 +85,7 @@ namespace sw
          * @details 모든 draw 계열이 직전 상태에 의존하지 않고 스스로 파이프라인을 바인딩하도록 합니다. 슬롯 세트(set 0)도 여기서 확정합니다(flushSlotSet).
          * @return 바인딩할 파이프라인이 있으면 true, 없으면 false 입니다(드로우를 건너뛰어야 함).
          */
-        bool bindActiveGraphicsPipeline();
+        [[nodiscard]] bool bindActiveGraphicsPipeline();
 
         /** @brief 메시 VB(없으면 풀스크린 정점 버퍼)를 바인딩 0 에, 인스턴스 슬롯 스트림(없으면 바인딩 0 의 버퍼)을 바인딩 1 에 설정합니다. 모든 드로우 진입점이 이것을 쓰고, false(설정한 메시 VB 가 파괴됨, 또는 커맨드 버퍼 없음)면 드로우를 버립니다. */
         [[nodiscard]] bool bindMeshVertexBufferForDraw();

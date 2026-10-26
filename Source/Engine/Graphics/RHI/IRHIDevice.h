@@ -119,7 +119,7 @@ namespace sw
         IRHIDevice& operator=( const IRHIDevice& ) = delete;
 
         /** @brief 표면(`setRenderSurface`)에서 스왑체인 서술(크기, 백버퍼 3개, 포맷, VSync)을 채우고 `initializeInternal` 을 부릅니다. */
-        virtual bool initialize();
+        [[nodiscard]] virtual bool initialize();
         /**
          * @brief 마지막 `initialize` 의 결과입니다. 실패한 경우 원인이 환경(드라이버가 기능을 제공하지 않음)인지, 결함일 수 있는지를 구분합니다.
          * @details 백엔드는 환경 때문에 물러날 때만 `initializeInternal` 안에서 `_initResult` 를 `DriverUnsupported` 로 기록하고 false 를 반환한다.
@@ -141,7 +141,7 @@ namespace sw
         void shutdown();
 
         /** @brief RHI 디바이스와 스왑체인을 초기화합니다. */
-        virtual bool initializeInternal( const RHISwapChainDesc& desc ) = 0;
+        [[nodiscard]] virtual bool initializeInternal( const RHISwapChainDesc& desc ) = 0;
 
         /** @brief 종료 4단계입니다. 백엔드 자원, 스왑체인, 네이티브 디바이스를 해제합니다. GPU 대기와 커맨드 리스트 분리는 이미 끝나 있습니다. */
         virtual void shutdownInternal() = 0;

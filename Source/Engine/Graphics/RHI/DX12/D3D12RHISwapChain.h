@@ -36,7 +36,7 @@ namespace sw
          * @details 창 핸들이 없거나 크기가 0 이면 **네이티브 스왑체인 없이 크기만 기억한 상태**로
          *          성공합니다. 오프스크린 전용(테스트, 헤드리스) 디바이스가 그 경로입니다.
          */
-        bool initialize( IDXGIFactory4* pFactory, ID3D12CommandQueue* pQueue, const RHISwapChainDesc& desc );
+        [[nodiscard]] bool initialize( IDXGIFactory4* pFactory, ID3D12CommandQueue* pQueue, const RHISwapChainDesc& desc );
 
         /** @brief 백버퍼와 네이티브 스왑체인을 모두 놓습니다. */
         void shutdown();

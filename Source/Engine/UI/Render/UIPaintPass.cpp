@@ -48,7 +48,7 @@ namespace sw
              *          아래 변도 자르기 위에 있다. 끝은 위 변이 자르기 아래를 넘는 첫 자식이다. 탐색이 Collapsed 자식(지난 슬롯이 낡았다)을 만나면
              *          범위를 줄이지 않는다(0 부터 자식 수까지). 패널 기하가 축 정렬이 아니거나 자르기가 없으면 false 를 반환한다.
              */
-            static bool findVisibleChildRange( const PanelWidget& panel, const CanvasPainter& painter, uint32& outBegin, uint32& outEnd )
+            [[nodiscard]] static bool findVisibleChildRange( const PanelWidget& panel, const CanvasPainter& painter, uint32& outBegin, uint32& outEnd )
             {
                 outBegin           = 0;
                 outEnd             = panel.getChildCount();

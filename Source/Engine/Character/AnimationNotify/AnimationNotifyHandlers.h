@@ -28,7 +28,7 @@ namespace sw
     struct SW_API AnimationNotifyHandlerUtil
     {
         /** @brief 내장 처리기를 @p registry 에 추가합니다. 레지스트리의 기본 테이블이 처음 만들어질 때 호출합니다. */
-        static bool registerBuiltInHandlers( AnimationNotifyHandlerRegistry& registry );
+        [[nodiscard]] static bool registerBuiltInHandlers( AnimationNotifyHandlerRegistry& registry );
         /**
          * @brief 카메라 흔들림 요청을 받는 리스너입니다(엔진 수명). 카메라 매니저가 플레이 시작에 구독하고 끝에 해제합니다.
          * @details 엔진은 카메라를 모른다. 요청만 내고, 게임 프레임워크의 카메라가 자기 충격 목록에 추가한다. 게임 스레드에서 호출한다.

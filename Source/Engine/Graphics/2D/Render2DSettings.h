@@ -77,7 +77,7 @@ namespace sw
          * @brief 이름과 순서로 키를 만듭니다. 이름을 모르면 false 를 반환하고 @p outSortKey 는 기본 키가 됩니다. 호출한 쪽이 잘못된 이름을 알려야 합니다.
          * @details 빈 이름은 `Default` 입니다.
          */
-        bool resolveSortKey( const hashed_string& layerName, int32 orderInLayer, uint32& outSortKey ) const;
+        [[nodiscard]] bool resolveSortKey( const hashed_string& layerName, int32 orderInLayer, uint32& outSortKey ) const;
 
         /** @brief 투명 정렬 방식입니다. */
         TransparencySortMode getTransparencySortMode() const { return _sortMode; }

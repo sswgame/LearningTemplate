@@ -56,7 +56,7 @@ namespace sw
          * @brief Resource/ 검색 루트를 잡고 서비스를 준비합니다. 팩 마운트는 `mountContent` 가 합니다.
          * @return 프로젝트 루트를 찾으면 true 입니다.
          */
-        bool initialize();
+        [[nodiscard]] bool initialize();
 
         /**
          * @brief 콘텐츠를 로드합니다. 검색 우선순위 적용, 시작 팩 마운트, 에셋 레지스트리 적재 순서로 진행합니다.
@@ -73,7 +73,7 @@ namespace sw
          *          `initialize()` 와 나눈 이유가 그것이다. "설정이 먼저"라는 전제가 부르는 쪽에 드러나고,
          *          우선순위 적용과 마운트가 한 호출로 묶여 사이가 벌어지지 않는다.
          */
-        bool mountContent( const vector<string>& listSearchPriority, ContentSource source = ContentSource::Cooked );
+        [[nodiscard]] bool mountContent( const vector<string>& listSearchPriority, ContentSource source = ContentSource::Cooked );
         /** @brief 마지막 `mountContent` 가 로드한 콘텐츠의 출처입니다. 마운트 전에는 `ContentSource::Cooked` 입니다. */
         ContentSource getContentSource() const { return _contentSource; }
 
@@ -108,7 +108,7 @@ namespace sw
          *          되돌릴 때도 이 함수를 쓴다. 후보 경로 목록을 두 곳에 복사해 두면 한쪽만 바뀌기 때문이다.
          * @return 하나라도 마운트했으면 true 입니다.
          */
-        bool mountStartupPacks();
+        [[nodiscard]] bool mountStartupPacks();
 
         /** @brief 스트리밍 큐의 완료 기록을 비웁니다. 캐시는 참조가 0 이 되는 시점에 스스로 지우므로 여기서는 할 일이 없습니다. */
         void garbageCollectUnusedAssets();

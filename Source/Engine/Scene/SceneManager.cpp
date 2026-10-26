@@ -192,8 +192,8 @@ namespace sw
         activateScene( pScene );
         ++_sceneGeneration;
 
-        if ( _pRHIDevice != nullptr )
-            pScene->initialize( _pRHIDevice );
+        if ( _pRHIDevice != nullptr && pScene->initialize( _pRHIDevice ) == false )
+            SW_LOG_WARNING( "Scene '%#' could not acquire its default material", string( name ).c_str() );
 
         broadcastSceneObjectsInvalidated();
 
@@ -565,7 +565,8 @@ namespace sw
         if ( _pRHIDevice != nullptr )
         {
             _pRHIDevice->waitIdle();
-            pendingScene->initialize( _pRHIDevice );
+            if ( pendingScene->initialize( _pRHIDevice ) == false )
+                SW_LOG_WARNING( "Scene '%#' could not acquire its default material", pendingScene->getName() );
         }
 
         Scene* const pPreviousActive = _pActiveScene;

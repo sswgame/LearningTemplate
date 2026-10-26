@@ -381,7 +381,7 @@ namespace sw
         PhysicsComponent::onHitReceived( hit );
         int32 bodyIndex = hit._bodyIndex;
         if ( bodyIndex < 0 )
-            (void)findHitZone( hit._body, bodyIndex );
+            (void)findHitZone( hit._body, bodyIndex ); // 못 찾으면 bodyIndex 가 -1 로 남는다
         const float3 impulse = hit._direction * hit._impulse;
         if ( hit._bFatal && _bRagdollOnFatalHit )
         {

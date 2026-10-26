@@ -49,12 +49,12 @@ namespace sw
     public:
         explicit SpriteAnimatorLODClient( SpriteAnimatorComponent& owner );
 
-        bool             findAnimationLODBounds( float3& outCenter, float32& outRadius ) const override;
-        bool             isRendered() const override;
-        void             applyAnimationLOD( const AnimationLODState& state ) override;
-        const Component* findRewindTarget() const override;
-        void             collectDebugState( AnimationDebugState& inoutState ) const override;
-        void             applyRewindState( const AnimationDebugState& state ) override;
+        [[nodiscard]] bool findAnimationLODBounds( float3& outCenter, float32& outRadius ) const override;
+        bool               isRendered() const override;
+        void               applyAnimationLOD( const AnimationLODState& state ) override;
+        const Component*   findRewindTarget() const override;
+        void               collectDebugState( AnimationDebugState& inoutState ) const override;
+        void               applyRewindState( const AnimationDebugState& state ) override;
 
     private:
         SpriteAnimatorComponent& _owner;

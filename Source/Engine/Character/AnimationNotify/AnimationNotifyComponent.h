@@ -109,7 +109,7 @@ namespace sw
         /** @brief 2D 물리 씬에 묻는지 반환합니다(같은 오브젝트에 스켈레탈 유닛이 없는 경우). */
         bool is2D() const;
         /** @brief 소켓(또는 본) 이름의 월드 변환입니다. 이름이 비었거나 없으면 오브젝트 루트이고 false 입니다. */
-        bool findSocketWorldTransform( const hashed_string& socketName, float4x4& outWorldTransform ) const;
+        [[nodiscard]] bool findSocketWorldTransform( const hashed_string& socketName, float4x4& outWorldTransform ) const;
         /** @brief 소켓의 월드 위치를 반환합니다. 찾지 못하면 오브젝트 루트 위치를 반환합니다. */
         float3 findSocketWorldPosition( const hashed_string& socketName ) const;
         /**

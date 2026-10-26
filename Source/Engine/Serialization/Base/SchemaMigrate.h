@@ -111,8 +111,8 @@ namespace sw
      *          버려진 것이므로, 타입 이름과 필드 이름을 담아 **로드마다 한 번** 경고한다. JSON 과 XML 의 Ignore 정책도 여기서 알린다
      *          (숫자 필드의 "abc" 가 말없이 기본값으로 남지 않게 하려는 것이다).
      */
-    SW_API bool finishVersionedRead( uint32 fromVersion, uint32 currentVersion, const TypeInfo& typeInfo, const vector<SchemaOrphanValue>& listOrphan,
-                                     SchemaOrphanPolicy orphanPolicy );
+    [[nodiscard]] SW_API bool finishVersionedRead( uint32 fromVersion, uint32 currentVersion, const TypeInfo& typeInfo, const vector<SchemaOrphanValue>& listOrphan,
+                                                   SchemaOrphanPolicy orphanPolicy );
 
     /** @brief JSON/XML 루트에 기록하는 스키마 버전 키입니다. */
     inline constexpr auto kSchemaVersionKey = "_schemaVersion";

@@ -173,7 +173,7 @@ namespace sw
         IAnimationLODClient& operator=( const IAnimationLODClient& ) = delete;
 
         /** @brief 월드 경계 구를 반환합니다. 없으면 false 이며, 이 경우 항상 보이고 가장 중요한 것으로 취급합니다. */
-        virtual bool findAnimationLODBounds( float3& outCenter, float32& outRadius ) const = 0;
+        [[nodiscard]] virtual bool findAnimationLODBounds( float3& outCenter, float32& outRadius ) const = 0;
         /**
          * @brief 그려지는지 반환합니다. false 면 뷰에 들어도 화면 밖과 같게 판정합니다(포즈를 만들지 않는다 — 언리얼 `OnlyTickPoseWhenRendered`).
          * @details 1인칭에서 숨긴 몸처럼 그리지 않는 유닛이 포즈 비용을 내지 않게 한다. 숨긴 채 포즈가 필요한 유닛은 `_bAnimateWhenOffscreen` 을 켠다(화면 밖과 같은 규칙).
@@ -550,7 +550,7 @@ namespace sw
         /** @brief 주 시점 위치를 지웁니다. */
         void clearLODViewPosition() { _bHasLODViewPosition = SW_FALSE; }
         /** @brief 주 시점 위치를 찾습니다. 정하지 않았으면 false 입니다. */
-        bool findLODViewPosition( float3& outPosition ) const;
+        [[nodiscard]] bool findLODViewPosition( float3& outPosition ) const;
 
     private:
         /** @brief LOD 판정(가시성, 화면 크기, 주기, 본 LOD, 예산)을 하고 클라이언트에 알립니다. */

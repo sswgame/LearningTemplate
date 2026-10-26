@@ -98,9 +98,9 @@ namespace sw
 
     private:
         /** @brief 이 오브젝트부터 조상으로 올라가 처음 만난 스켈레탈 메시의 본 @p boneName 의 월드 행렬입니다. 없으면 false 입니다. */
-        bool findBoneWorld( const hashed_string& boneName, float4x4& outBoneWorld ) const;
+        [[nodiscard]] bool findBoneWorld( const hashed_string& boneName, float4x4& outBoneWorld ) const;
         /** @brief `_listPinBone` 순서대로 본 월드 행렬을 채웁니다. 하나라도 없으면 false 입니다. */
-        bool findPinBoneWorlds( vector<float4x4>& outListBoneWorld ) const;
+        [[nodiscard]] bool findPinBoneWorlds( vector<float4x4>& outListBoneWorld ) const;
         /** @brief 스킨 구속에 이번 뼈 자세를 줍니다. @p bHardSkinAll 이면 스킨 위치에 바로 둡니다(만든 프레임). */
         void applySkinningPose( ScenePhysics& physics, bool bHardSkinAll );
         /** @brief 같은 오브젝트의 `MeshComponent` 에 이번 정점으로 만든 동적 메시를 겁니다. 메시 컴포넌트나 정점이 없으면 아무것도 하지 않습니다. */

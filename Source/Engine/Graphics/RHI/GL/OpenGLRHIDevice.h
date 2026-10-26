@@ -87,7 +87,7 @@ namespace sw
         virtual ~OpenGLRHIDevice() override;
 
         /** @brief 플랫폼 GL 컨텍스트(WGL, GLX)를 만들고 glad 로 GL 함수를 불러옵니다. */
-        bool initializeInternal( const RHISwapChainDesc& desc ) override;
+        [[nodiscard]] bool initializeInternal( const RHISwapChainDesc& desc ) override;
 
         /** @brief GL 객체와 컨텍스트를 해제합니다. */
         void shutdownInternal() override;
@@ -178,7 +178,7 @@ namespace sw
          * @details 렌더 워커와 자원 생성 가드(ScopedOpenGLContext)가 같은 규칙을 쓴다. 한 번만 시도하면 자원 생성 가드가 잡은 짧은 순간에 렌더 스레드가
          *          `[Error]` 를 남기고 그 프레임의 GL 호출을 모두 잃는다.
          */
-        bool bindGraphicsContext() override;
+        [[nodiscard]] bool bindGraphicsContext() override;
         /** @brief 이 스레드에 이미 우리 컨텍스트가 current 인지 묻습니다. ScopedOpenGLContext 가 남의 바인딩을 해제하지 않게 하는 근거입니다. */
         bool isGraphicsContextCurrent() const;
         /** @brief 그래픽스 컨텍스트 바인딩을 해제합니다. */

@@ -323,7 +323,7 @@ namespace sw
         /** @brief 클립 하나를 비동기로 요청합니다. 이름이 비었거나 이미 표에 있거나 요청한 클립이면 아무것도 하지 않습니다. */
         void requestClipLoad( const hashed_string& clipName );
         /** @brief 요청한 클립이 다 읽혔으면 표에 넣고 그래프를 지은 뒤 미뤄 둔 재생을 합니다. 아직 읽는 중이면 false 입니다. */
-        bool finishClipLoadsIfComplete();
+        [[nodiscard]] bool finishClipLoadsIfComplete();
         /** @brief 시작 상태를 재생합니다(핫 리로드로 되살아났으면 그 상태 · 시각에서 잇는다). */
         void startInitialState();
         /** @brief 클립을 기다리는 동안 미룬 재생(코드의 `play`, 없으면 시작 상태)을 합니다. */

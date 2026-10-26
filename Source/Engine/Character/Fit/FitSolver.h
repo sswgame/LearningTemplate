@@ -194,8 +194,8 @@ namespace sw
         bool solve( const FitTables& tables, const FitInput& input, FitResult& outResult ) const;
 
     private:
-        bool prepareState( const FitTables& tables, const FitInput& input, FitSolveState& outState, FitReport& outReport ) const;
-        void runPhase( FitPhase phase, const FitTables& tables, FitSolveState& state ) const;
+        [[nodiscard]] bool prepareState( const FitTables& tables, const FitInput& input, FitSolveState& outState, FitReport& outReport ) const;
+        void               runPhase( FitPhase phase, const FitTables& tables, FitSolveState& state ) const;
 
     private:
         FitOperatorRegistry _operatorRegistry;

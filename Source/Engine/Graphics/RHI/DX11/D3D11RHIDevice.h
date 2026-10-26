@@ -103,7 +103,7 @@ namespace sw
         virtual ~D3D11RHIDevice() override;
 
         /** @brief Direct3D 11 디바이스와 스왑체인(백버퍼 RTV 포함)을 만듭니다. */
-        bool initializeInternal( const RHISwapChainDesc& desc ) override;
+        [[nodiscard]] bool initializeInternal( const RHISwapChainDesc& desc ) override;
 
         /** @brief D3D11 자원을 해제합니다. */
         void shutdownInternal() override;
@@ -199,7 +199,7 @@ namespace sw
         const utf8* getBackendName() const override { return "Direct3D 11"; }
 
         /** @brief 즉시 컨텍스트가 있는지 답합니다. MakeCurrent 가 없어 바인딩할 것은 없습니다. 다른 스레드와의 직렬화는 `D3D11ImmediateContext` 가 맡습니다. */
-        bool bindGraphicsContext() override;
+        [[nodiscard]] bool bindGraphicsContext() override;
         /** @brief MakeCurrent 가 없어 놓을 것이 없습니다. 소유 스레드를 바꾸는 것은 부르는 쪽(RenderThread)의 순서가 정합니다. */
         void unbindGraphicsContext() override {}
 

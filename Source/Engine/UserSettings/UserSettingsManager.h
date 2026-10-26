@@ -251,7 +251,7 @@ namespace sw
         // 6) 키 바인딩과 글리프
         // ------------------------------------------------------------------------------
         /** @brief @p slotText 를 이 설정에 줄 때 겹치는 것을 찾습니다. 같은 범위(`context` 와 입력 맵 레이어)의 다른 키 바인딩 설정을 먼저 보고, 그다음 스키마 밖 액션을 봅니다. */
-        bool findBindingConflict( const hashed_string& settingID, string_view slotText, UserSettingBindingConflict& outConflict ) const;
+        [[nodiscard]] bool findBindingConflict( const hashed_string& settingID, string_view slotText, UserSettingBindingConflict& outConflict ) const;
         /** @brief 키를 보류합니다. 겹치면 @p policy 대로 거절하거나 맞바꿉니다(겹친 설정에 이 설정의 지금 키). */
         UserSettingSetResult setPendingBinding( const hashed_string& settingID, string_view slotText, UserSettingBindingPolicy policy );
         /** @brief 메뉴가 보일 키 표기(보류 값 기준, 빈 값이면 입력 맵의 기본 키)입니다. 모르면 `[ ? ]` 입니다. */
@@ -301,7 +301,7 @@ namespace sw
         UserSettingSetResult setPendingAt( uint32 settingIndex, const string& normalized, UserSettingValueResult normalizeResult );
         void                 refreshScalabilityGroup( const ScalabilityGroupDef& group, bool bCommitted );
         void                 applyScalabilityPreset( const ScalabilityGroupDef& group, const hashed_string& presetName, bool bCommitted );
-        bool                 findEffectiveSlot( uint32 settingIndex, InputSlot& outSlot ) const;
+        [[nodiscard]] bool   findEffectiveSlot( uint32 settingIndex, InputSlot& outSlot ) const;
         hashed_string        findBindingContext( uint32 settingIndex ) const;
         void                 broadcast( const hashed_string& settingID, UserSettingEventKind kind );
         [[nodiscard]] bool   saveIfPathSet();

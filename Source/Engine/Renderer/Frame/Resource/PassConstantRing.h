@@ -43,7 +43,7 @@ namespace sw
         PassConstantRing& operator=( const PassConstantRing& ) = delete;
 
         /** @brief 초기 슬롯(kInitialSlotCount)을 만듭니다. 이미 있으면 그대로 true 입니다. */
-        bool initialize( IRHIDevice* pDevice );
+        [[nodiscard]] bool initialize( IRHIDevice* pDevice );
         /** @brief 슬롯을 디바이스에 돌려주고 비웁니다. 디바이스가 **살아 있을 때** 부릅니다. */
         void release( IRHIDevice* pDevice );
         /** @brief 디바이스가 이미 사라졌을 때 부릅니다. 핸들만 잊습니다(destroy 를 부르면 해제 후 사용입니다). */

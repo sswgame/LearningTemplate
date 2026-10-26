@@ -63,7 +63,7 @@ namespace sw
         ResourceDataKindRegistry();
 
         /** @brief 종류를 올립니다. 이름이 비었거나 이미 있거나 로더가 없으면 false 입니다. */
-        bool registerKind( const ResourceDataKind* pKind );
+        [[nodiscard]] bool registerKind( const ResourceDataKind* pKind );
         /** @brief 종류를 뺍니다(없으면 아무 일도 없습니다). */
         void unregisterKind( const ResourceDataKind* pKind );
         /**

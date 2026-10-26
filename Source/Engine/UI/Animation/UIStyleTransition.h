@@ -100,7 +100,7 @@ namespace sw
          * @brief 부모가 필드 @p field 를 옮기는 중이고 자식의 새 값(@p newArr)이 그 목표와 같으면 부모의 채널을 @p outChannel 에 복사합니다(물려받은 값은 부모의 시간표를 따른다).
          * @details 부모의 채널이 방금 만들어졌든(같은 스타일 패스) 진행 중이든 같은 출발값 · 지연 · 진행을 그대로 가져와 두 위젯이 같은 값을 보이게 한다.
          */
-        static bool findParentChannel( const Widget& widget, UIStyleField field, const float32 ( &newArr )[4], UIStyleTransitionState::Channel& outChannel );
+        [[nodiscard]] static bool findParentChannel( const Widget& widget, UIStyleField field, const float32 ( &newArr )[4], UIStyleTransitionState::Channel& outChannel );
         /**
          * @brief 바뀐 필드 하나의 새 채널을 만듭니다. 목표값은 새 스타일이 정했으면 그 값, 아니면 위젯이 자기 필드로 그리는 값입니다.
          * @param inoutFrom 출발값입니다. @p bHaveFrom 이 참이면(진행 중이던 채널의 지금 값) 그대로 쓰고, 아니면 옛 스타일 · 위젯의 옛 값으로 채웁니다.

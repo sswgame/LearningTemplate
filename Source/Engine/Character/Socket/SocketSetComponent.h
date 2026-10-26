@@ -71,8 +71,8 @@ namespace sw
          * @details 유닛 공간은 `SkeletalMeshComponent` 의 월드 변환 아래에 있고, 유닛이 없으면 오브젝트 루트 아래에 있다.
          * @return 테이블에도 본에도 없으면 false 를 반환합니다.
          */
-        static bool findSocketWorldTransform( const GameObject& object, const hashed_string& name, float4x4& outWorldTransform );
+        [[nodiscard]] static bool findSocketWorldTransform( const GameObject& object, const hashed_string& name, float4x4& outWorldTransform );
         /** @brief 소켓의 월드 위치를 반환합니다. 찾지 못하면 오브젝트 루트 위치를 반환하고 false 를 반환합니다. */
-        static bool findSocketWorldPosition( const GameObject& object, const hashed_string& name, float3& outPosition );
+        [[nodiscard]] static bool findSocketWorldPosition( const GameObject& object, const hashed_string& name, float3& outPosition );
     };
 } // namespace sw

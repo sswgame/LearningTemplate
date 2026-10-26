@@ -89,7 +89,7 @@ namespace sw
                     static const hashed_string s_attach( "attach" );
                     const string               prefab = context._entry.getTextParam( s_prefab );
                     float4x4                   world;
-                    (void)context._component.findSocketWorldTransform( context._entry.getNameParam( s_socket ), world );
+                    (void)context._component.findSocketWorldTransform( context._entry.getNameParam( s_socket ), world ); // 없으면 오브젝트 루트 변환이 담긴다(선언 설명)
                     const float3       offset   = context._entry.getVectorParam( s_offset );
                     const float3       position = float3::transform( offset, world );
                     GameObjectManager* pManager = context._owner.getManager();

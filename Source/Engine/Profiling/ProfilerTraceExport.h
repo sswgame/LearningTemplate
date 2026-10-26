@@ -119,7 +119,7 @@ namespace sw
          * @brief 진행 중인 긴 캡처를 지금 멈추고 저장합니다. 게임 스레드가 부릅니다.
          * @return 파일을 썼으면 true(진행 중이 아니었거나 사건이 없거나 쓰기에 실패하면 false — 이유는 로그에)
          */
-        static bool finishRecording( FrameProfiler& profiler );
+        [[nodiscard]] static bool finishRecording( FrameProfiler& profiler );
 
         /** @brief 느린 틱을 넘긴 뒤 몇 프레임을 더 모아 저장하는가입니다 — 원인이 틱 뒤에 이어지는 것(밀린 일)도 보이게. */
         static constexpr uint32 kSlowFrameFramesAfter = 3;

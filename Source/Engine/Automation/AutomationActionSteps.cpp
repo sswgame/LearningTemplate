@@ -242,7 +242,7 @@ namespace sw
                 return bComposite || binding._kind == BindingKind::GamepadStick2D || binding._kind == BindingKind::MouseDelta2D;
             }
 
-            static bool prepareAction( AutomationStepContext& runner, const AutomationStep& step, string& outError )
+            [[nodiscard]] static bool prepareAction( AutomationStepContext& runner, const AutomationStep& step, string& outError )
             {
                 ActionArgs args{};
                 if ( parseAction( &runner, step, args, outError ) == false )
@@ -268,7 +268,7 @@ namespace sw
                 return true;
             }
 
-            static bool preparePressOrRelease( AutomationStepContext& runner, const AutomationStep& step, string& outError )
+            [[nodiscard]] static bool preparePressOrRelease( AutomationStepContext& runner, const AutomationStep& step, string& outError )
             {
                 DeviceFilter device{};
                 if ( readDevice( step, device, outError ) == false )
@@ -300,7 +300,7 @@ namespace sw
              * @brief 축 값을 @p frames 동안 냅니다. 스틱은 그 값 그대로, 합성 축은 부호의 방향 키(크기는 1), 마우스 이동은 프레임마다 그 픽셀만큼입니다.
              * @details 합성 축 값의 크기가 1 이 아니어도 키는 켜고 끄는 것뿐이다 — 아날로그 크기가 필요하면 `device="gamepad"` 로 스틱을 고른다.
              */
-            static bool prepareAxis( AutomationStepContext& runner, const AutomationStep& step, string& outError )
+            [[nodiscard]] static bool prepareAxis( AutomationStepContext& runner, const AutomationStep& step, string& outError )
             {
                 AxisArgs args{};
                 if ( parseAxis( &runner, step, args, outError ) == false )

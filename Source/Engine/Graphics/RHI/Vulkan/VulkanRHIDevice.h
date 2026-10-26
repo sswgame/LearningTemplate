@@ -167,7 +167,7 @@ namespace sw
         virtual ~VulkanRHIDevice() override;
 
         /** @brief Vulkan 인스턴스, 서피스, 디바이스, 스왑체인, 커맨드 풀, 동기화 객체를 만듭니다. */
-        bool initializeInternal( const RHISwapChainDesc& desc ) override;
+        [[nodiscard]] bool initializeInternal( const RHISwapChainDesc& desc ) override;
 
         /** @brief Vulkan 파이프라인과 자원을 해제합니다. */
         void shutdownInternal() override;
@@ -386,14 +386,14 @@ namespace sw
         void reportDeviceFault();
 
         /** @brief 파이프라인 캐시를 초기화합니다. */
-        bool initializePipelineCache();
+        [[nodiscard]] bool initializePipelineCache();
         /** @brief 파이프라인 캐시를 디스크에 저장하고 정리합니다. */
         void savePipelineCache();
 
         /**
          * @brief 메모리 타입을 찾습니다. 찾으면 true 를 반환하며 outIndex 를 채웁니다.
          */
-        bool findMemoryType( uint32 typeFilter, uint32 properties, uint32& outIndex );
+        [[nodiscard]] bool findMemoryType( uint32 typeFilter, uint32 properties, uint32& outIndex );
         struct VulkanBufferRecord;
         struct VulkanTextureRecord;
         /** @brief 불투명 버퍼 핸들로 VulkanBufferRecord 를 찾습니다. */

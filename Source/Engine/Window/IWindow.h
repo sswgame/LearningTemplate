@@ -83,7 +83,7 @@ namespace sw
          * @param height 클라이언트 영역 세로 크기
          * @return 만들었으면 true 입니다.
          */
-        virtual bool initializeWindow( const utf8* pTitle, uint32 width, uint32 height ) = 0;
+        [[nodiscard]] virtual bool initializeWindow( const utf8* pTitle, uint32 width, uint32 height ) = 0;
 
         /** @brief 창 리소스를 놓고 화면에서 없앱니다. */
         virtual void destroy() = 0;

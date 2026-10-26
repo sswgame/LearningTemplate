@@ -853,7 +853,7 @@ namespace sw
                 SW_LOG_ERROR( "Failed to restore previous RHI backend — device is gone." );
                 return false;
             }
-            (void)rebindSceneAfterDeviceRecreate();
+            (void)rebindSceneAfterDeviceRecreate(); // 되돌린 장치에 장면을 다시 묶는다 — 이 경로는 이미 실패로 답한다
             return false;
         }
 
@@ -884,7 +884,7 @@ namespace sw
 
         Scene* pScene = _pSceneManager != nullptr ? _pSceneManager->getActiveScene() : nullptr;
         if ( pScene != nullptr )
-            (void)pScene->ensureDefaultCameras(); // 못 고르면 렌더 경로가 "카메라 없음" 으로 알린다(카메라는 프레임마다 다시 고른다)
+            pScene->pickActiveGameCamera();
         return bRestarted;
     }
 

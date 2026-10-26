@@ -30,7 +30,7 @@ namespace sw
          * @param width 창 가로 크기(기본 480)
          * @param height 창 세로 크기(기본 280)
          */
-        bool initialize( const utf8* pTitle, const utf8* pInitialStatus, uint32 width = 480, uint32 height = 280 );
+        [[nodiscard]] bool initialize( const utf8* pTitle, const utf8* pInitialStatus, uint32 width = 480, uint32 height = 280 );
 
         /** @brief 현재 진행 상황 텍스트와 진행률(0.0f ~ 1.0f)을 갱신하고 화면을 바로 다시 그립니다. */
         void updateStatus( const utf8* pStatus, float32 progress = -1.0f );

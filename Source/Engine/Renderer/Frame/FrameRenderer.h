@@ -125,10 +125,10 @@ namespace sw
         FrameRenderer& operator=( const FrameRenderer& ) = delete;
 
         /** @brief 디바이스와 파이프라인 XML 로 초기화합니다. */
-        bool initialize( IRHIDevice* pDevice, string_view pipelineXMLPath = {} );
+        [[nodiscard]] bool initialize( IRHIDevice* pDevice, string_view pipelineXMLPath = {} );
         /** @brief 디바이스, TaskManager, 파이프라인 XML 로 초기화합니다. */
-        bool initialize( IRHIDevice* pDevice, TaskManager* pTaskManager,
-                         string_view pipelineXMLPath = {} );
+        [[nodiscard]] bool initialize( IRHIDevice* pDevice, TaskManager* pTaskManager,
+                                       string_view pipelineXMLPath = {} );
         /** @brief 핫패스에서 쓰는 TaskManager 를 연결합니다. */
         void bindServices( TaskManager* pTaskManager );
         /** @brief GPU 자원을 해제하고 종료합니다. */
@@ -141,15 +141,15 @@ namespace sw
         [[nodiscard]] bool loadPipeline( string_view pipelineXMLPath );
         /**
          * @brief 컴파일된 그래프를 실행합니다. 자기 빌더로 scene 의 스냅샷을 만들고, 패킷 경로와 같은 경로로 GPU 에 올립니다.
-         * @details 주 시점은 scene 의 게임 카메라(`Scene::ensureDefaultCameras`)다. 쓸 카메라가 없으면 오류로 알리고 그리지 않은 채 false 입니다.
+         * @details 주 시점은 scene 의 게임 카메라(`Scene::pickActiveGameCamera`)다. 쓸 카메라가 없으면 오류로 알리고 그리지 않은 채 false 입니다.
          */
-        bool execute( IRHIDevice* pDevice, Scene& scene );
+        [[nodiscard]] bool execute( IRHIDevice* pDevice, Scene& scene );
         /**
          * @brief 렌더 스레드 경로입니다. 미리 만들어 둔 packet 의 GPUScene 을 쓰며 Scene 에는 접근하지 않습니다.
          * @details 주 시점이 없는 패킷(`RenderFramePacket::_bHasViewProj` 가 0 — 활성 씬이 없거나 씬에 카메라가 없다)은 그리지 않고 false 입니다.
          *          3D 내용을 실은 채 주 시점이 없으면 오류로 한 번 알립니다. 주 시점은 `RenderFramePacket::setMainView` 로 싣습니다.
          */
-        bool executePacket( IRHIDevice* pDevice, RenderFramePacket& packet );
+        [[nodiscard]] bool executePacket( IRHIDevice* pDevice, RenderFramePacket& packet );
         /**
          * @brief 미리보기 씬 패킷(`RenderFramePacket::_listScenePreview` 의 하나)을 그 씬 키의 렌더러로 그립니다. 렌더 스레드에서 주 패킷 뒤에 부릅니다.
          * @details **씬마다 렌더러 하나**를 둔다 — GPUScene(인스턴스 · 배치 · 컬링 산출물) · 트랜지언트 · 패스 상수가 씬별이라 메인 씬과 섞이지 않는다.
@@ -157,7 +157,7 @@ namespace sw
          *          미리보기 렌더러는 프로파일러 · 렌더 타깃 목록 공개 · Present 캡처를 하지 않는다(주 렌더러의 것을 덮지 않게).
          *          출력은 패킷의 `_outputRenderTarget` 이고, 그 타깃의 상태 전환(렌더 타깃 → 셰이더 읽기)은 부르는 쪽(`RenderThread`)이 한다.
          */
-        bool executeScenePreviewPacket( IRHIDevice* pDevice, RenderFramePacket& packet );
+        [[nodiscard]] bool executeScenePreviewPacket( IRHIDevice* pDevice, RenderFramePacket& packet );
         /** @brief @p mainPacket 의 미리보기 목록에 없는 씬의 렌더러를 내립니다(창을 닫았거나 가렸다). 미리보기 패킷을 다 그린 뒤 부릅니다. */
         void retireScenePreviews( const RenderFramePacket& mainPacket );
         /**
@@ -277,7 +277,7 @@ namespace sw
          * @details 어떤 퍼뮤테이션이 실제로 적용되었는지 밖에서 확인할 수 있는 유일한 방법이다.
          *          픽셀로는 드러나지 않는 차이(알파 경로가 컴파일되었는가 등)를 테스트가 여기서 확인한다.
          */
-        bool findPSODesc( RHIPipelineStateHandle pso, RHIPipelineStateDesc& outDesc ) const;
+        [[nodiscard]] bool findPSODesc( RHIPipelineStateHandle pso, RHIPipelineStateDesc& outDesc ) const;
         /** @brief 주 시점의 TAA 히스토리 텍스처입니다. 파이프라인에 TAA 패스가 없거나 아직 만들지 않았으면 0 입니다(진단과 테스트용). */
         RHITextureHandle getTaaHistory() const { return _mainView._taaHistory; }
         /**
@@ -425,7 +425,7 @@ namespace sw
             float4x4 _prevViewProj{};
             /**
              * @brief 자동 노출의 적응 EV 기록 둘(1x1 R32 실수 RT)과 그 SRV 입니다. 프레임마다 번갈아 한쪽을 읽고 다른 쪽(`_autoExposureWrite`)에 씁니다.
-             * @details 풀과 수명이 같다 — `ensureViewTransients` 가 만들고 `releaseViewTransients` 가 놓는다. 새로 만든 기록은 값이 없으므로 그 프레임은 기록을 버린다.
+             * @details 풀과 수명이 같다 — `updateViewTransients` 가 만들고 `releaseViewTransients` 가 놓는다. 새로 만든 기록은 값이 없으므로 그 프레임은 기록을 버린다.
              */
             RHITextureHandle   _arrAutoExposure[2]{};
             RHIDescriptorIndex _arrAutoExposureSrv[2]{ kInvalidDescriptorIndex, kInvalidDescriptorIndex };
@@ -447,7 +447,7 @@ namespace sw
             uint8                _bUsesViewSlotStream{ SW_FALSE }; ///< 이번 프레임에 `_instanceSlotStream` 으로 그린다.
             /**
              * @brief 지금 풀로 이 뷰를 한 번 이상 그렸다 — 시간 누적 기록(TAA 히스토리 · `_prevViewProj` · 자동 노출 EV)에 지난 프레임 값이 있다.
-             * @details 풀을 새로 만들면(`ensureViewTransients`) 기록도 새것이라 내린다.
+             * @details 풀을 새로 만들면(`updateViewTransients`) 기록도 새것이라 내린다.
              */
             uint8 _bHasHistory{ SW_FALSE };
             /**
@@ -519,7 +519,7 @@ namespace sw
         /** @brief 주 시점의 트랜지언트 텍스처를 확보합니다. 크기는 출력 크기 × 사각형 × 해상도 배율이며, 출력 크기는 덮어쓴 크기가 있으면 그 값, 없으면 백버퍼입니다. */
         void ensureTransientResources( uint32 overrideWidth = 0, uint32 overrideHeight = 0 );
         /** @brief 뷰 하나의 트랜지언트를 이 크기로 맞춥니다. 크기가 같으면 그대로 두고, 다시 만들었으면 true 입니다. */
-        [[nodiscard]] bool ensureViewTransients( ViewTarget& view, uint32 width, uint32 height );
+        bool updateViewTransients( ViewTarget& view, uint32 width, uint32 height );
         /** @brief 뷰 하나의 트랜지언트와 TAA 히스토리를 해제합니다. 디바이스가 없으면 핸들만 잊습니다. */
         void releaseViewTransients( ViewTarget& view );
         /** @brief 추가 뷰 하나를 통째로 해제합니다. 트랜지언트, 컬링 상수 버퍼, 리스트, 빌린 렌더 텍스처가 해당합니다. */
@@ -895,13 +895,13 @@ namespace sw
          * @param pCallerName 오류 로그에 찍을 호출자 이름
          * @return 성공하면 true 입니다. false 면 호출자가 바로 반환해야 합니다.
          */
-        bool prepareCommandList( IRHIDevice* pDevice, const utf8* pCallerName );
+        [[nodiscard]] bool prepareCommandList( IRHIDevice* pDevice, const utf8* pCallerName );
 
         /**
          * @brief execute() 와 executePacket() 이 공통으로 쓰는 함수입니다. graph 를 실행하고 commandList 를 제출합니다.
          * @return graph.execute() 의 결과
          */
-        bool submitGraph( IRHIDevice* pDevice );
+        [[nodiscard]] bool submitGraph( IRHIDevice* pDevice );
         /** @brief 이번 프레임에 그릴 추가 뷰 가운데 출력 종류가 @p outputKind 인 것을 그리고 그린 수를 돌려줍니다. */
         uint32 renderExtraViewsOfKind( IRHIDevice* pDevice, RenderViewOutputKind outputKind );
         /** @brief 주 시점의 그래프를 실행합니다. 병렬 기록이 되면 레벨마다 여러 리스트로, 아니면 주 리스트 하나로 직렬 기록해 제출합니다. */
@@ -912,7 +912,7 @@ namespace sw
          * @details 두 진입점이 이 단계를 각자 가지면 한쪽만 빠지기 쉽다. 예를 들어 시드를 채우는 순서가 갈리면 한쪽만 상수가 빠진다. 그래서 한 함수로 둔다.
          * @param pCallerName 오류 로그에 찍을 호출자 이름
          */
-        bool uploadSceneAndSubmit( IRHIDevice* pDevice, const utf8* pCallerName );
+        [[nodiscard]] bool uploadSceneAndSubmit( IRHIDevice* pDevice, const utf8* pCallerName );
         /**
          * @brief 라이트 버퍼를 올리고 뷰마다 라이트 그리드를 준비합니다. 업로드 전에, 추가 뷰가 정해진 뒤에 부릅니다(생산자는 `selectLightGridProducer`).
          * @details 라이트와 그림자 타일은 앞서 `GPULightBuffer::populate` 로 담겨 있어야 한다. 뷰의 그리드 번호는 `ViewTarget::_lightGridIndex` 에 남는다.

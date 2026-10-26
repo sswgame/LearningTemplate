@@ -200,7 +200,7 @@ namespace sw
         packet._bHasSky                         = ( pActiveObjects != nullptr && SkyComponent::findSky( *pActiveObjects, packet._sky ) ) ? SW_TRUE : SW_FALSE;
 
         // 고르지 못하면 아래 게임 카메라 조회가 nullptr 이고, 주 시점 없는 프레임으로 한 번 알린다(`_bMissingCameraReported`).
-        (void)pActiveScene->ensureDefaultCameras();
+        pActiveScene->pickActiveGameCamera();
         // 핫 리로드 · 씬 전환 · 씬 틱이 GameObject 를 파괴했을 수 있으므로 여기서 조회한다. 씬 뷰 카메라는 씬 뷰가 있을 때만 묻는다.
         CameraComponent* pSceneViewCamera = ( views._scene.isValid() && sceneViewCameraProvider.isBound() ) ? sceneViewCameraProvider() : nullptr;
         if ( pSceneViewCamera != nullptr && pSceneViewCamera->isActive() == false )

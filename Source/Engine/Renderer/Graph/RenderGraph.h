@@ -234,7 +234,7 @@ namespace sw
          *                 기록하지 않을 뿐입니다(GPU 없는 테스트가 추론만 따로 볼 수 있습니다).
          * @return 실행에 성공하면 true 입니다. 사이클이 있거나 컴파일에 실패하면 false 입니다.
          */
-        bool execute( RenderGraphExecutionContext& context, IRHICommandList* pCmdList = nullptr );
+        [[nodiscard]] bool execute( RenderGraphExecutionContext& context, IRHICommandList* pCmdList = nullptr );
 
         /**
          * @brief TaskManager 워커 스레드로 렌더 패스 명령을 병렬로 기록하고 제출합니다.
@@ -243,7 +243,7 @@ namespace sw
          * @param pDevice RHI 디바이스입니다(커맨드 리스트 생성과 제출에 씁니다).
          * @return 실행에 성공하면 true 입니다.
          */
-        bool executeParallel( RenderGraphExecutionContext& context, TaskManager* pTaskManager, IRHIDevice* pDevice );
+        [[nodiscard]] bool executeParallel( RenderGraphExecutionContext& context, TaskManager* pTaskManager, IRHIDevice* pDevice );
 
         /**
          * @brief 최종 대상 출력에 닿지 않아 쓰이지 않는 패스를 컬링합니다.

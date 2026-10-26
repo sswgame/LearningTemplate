@@ -87,9 +87,9 @@ namespace sw
          * @details 이 매니저와 이 매니저가 만드는 씬(동기 · 비동기 로드)은 이 묶음만 씁니다. 빈 칸의 일(로드 띄우기 · 에셋 정리 · 되돌리기 비우기)은 건너뛰고,
          *          타입 표가 없으면 씬 로드를 거절합니다.
          */
-        bool initialize( const SceneEngineServices& services );
+        [[nodiscard]] bool initialize( const SceneEngineServices& services );
         /** @brief 생성자가 읽어 둔 묶음으로 초기화합니다(테스트가 손으로 만든 매니저). */
-        bool initialize();
+        [[nodiscard]] bool initialize();
         /** @brief 로드된 씬을 내리고 종료합니다. */
         void shutdown();
 

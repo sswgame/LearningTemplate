@@ -62,7 +62,7 @@ namespace sw
         void registerMapping( string_view relativePath, const UUID& guid );
 
         /** @brief .meta 가 있으면 로드하고 등록합니다. 없거나 무효면 false 입니다. */
-        bool registerExisting( string_view relativePath );
+        [[nodiscard]] bool registerExisting( string_view relativePath );
 
         /**
          * @brief 상대 경로의 GUID 를 찾아 복사합니다(스레드 안전). 경로는 안에서 정규화합니다.
