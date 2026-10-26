@@ -96,7 +96,7 @@ namespace sw
         // 큐가 참조 하나를 가진다. 태스크가 실행한 뒤에 해제한다.
         pJob->AddRef();
         {
-            std::scoped_lock<mutex> lock{ _queueMutex };
+            ScopedLock<mutex> lock{ _queueMutex };
             _listQueuedJob.push_back( pJob );
         }
         if ( engine::areEngineServicesBound() == false )
@@ -182,7 +182,7 @@ namespace sw
 
     JPH::JobSystem::Job* JoltJobSystem::popQueuedJob()
     {
-        std::scoped_lock<mutex> lock{ _queueMutex };
+        ScopedLock<mutex> lock{ _queueMutex };
         if ( _listQueuedJob.empty() )
             return nullptr;
         Job* pJob = _listQueuedJob.front();
