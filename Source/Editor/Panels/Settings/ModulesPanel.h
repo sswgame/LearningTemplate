@@ -28,10 +28,10 @@ namespace sw::editor
 
         ModulesPanel();
 
-        const utf8* getPanelTitle() const override { return "Modules"; }
-        bool        isToolPanel() const override { return true; }
-        void        drawContent() override;
-        float2      getInitialPanelSize() const override { return float2{ 720.0f, 620.0f }; }
+        const utf8*      getPanelTitle() const override { return "Modules"; }
+        bool             isToolPanel() const override { return true; }
+        void             drawContent() override;
+        EditorTextExtent getInitialPanelSize() const override { return EditorTextExtent::ofText( 96.0f, 33.0f ); }
 
         /** @brief 지금 묻고 있는 미리보기에서 새로 꺼지는 모듈 수입니다(탐침 `Editor.ModulePreviewNewlyInactive`). 묻지 않으면 0 입니다. */
         static uint32 getPreviewNewlyInactiveCount();

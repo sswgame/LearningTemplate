@@ -129,8 +129,8 @@ py -3 -m Scripts editor-theme export-figma Resource/editor/theme/dark.tokens.jso
 
 | 우선순위 | 패널 | 결함 |
 |---|---|---|
-| P0 | Output Log · Content Browser(아래 도크) | 도크 높이가 낮아 로그 본문이 한 줄도 안 보이고 콘텐츠 타일은 윗부분만 보인다 |
-| P0 | Scene(뷰포트) | 통계 오버레이가 뷰포트 절반을 덮고 오른쪽 툴바와 겹쳐 마지막 줄이 잘린다 |
+| P0 고침 | Output Log · Content Browser(아래 도크) | 아래 도크 높이를 비율(0.28)이 아니라 글자 높이의 16 배(`kBottomDockTextLines`)로 정했다. `defaultlayout` 시나리오가 `Editor.PanelContentLines` 8 줄 이상을 지킨다(통합에서 측정 확인 필요) |
+| P0 고침 | Scene(뷰포트) | HUD 상자 기본값을 껐다(`EditorPreferences::_bShowHUD`). 켜는 것은 툴바 HUD 단추다. `debughudcontrols` 가 직접 켠다 |
 | P1 | 도킹 탭 줄 · Profiler 하위 탭 | 탭이 많으면 제목이 말줄임으로 뭉개진다. Profiler 표 헤더의 단위가 사라진다 |
 | P1 | Hierarchy | 이름이 말줄임 · 툴팁 · 가로 스크롤 없이 잘린다 |
 | P1 | Keyboard Shortcuts · Global Variables · Data Table · Project Settings · Modules | 열 폭 · 콤보 폭이 좁아 말줄임 없이 잘린다. Global Variables 는 Reset 열이 창 밖이다 |

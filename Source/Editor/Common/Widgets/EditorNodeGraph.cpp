@@ -5,6 +5,7 @@
 #include "Core/Container/StringUtil.h"
 
 #include "Editor/Common/Config/EditorPaths.h"
+#include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
@@ -128,7 +129,7 @@ namespace sw::editor
         {
             if ( ImGui::IsWindowAppearing() )
                 ImGui::SetKeyboardFocusHere();
-            ImGui::SetNextItemWidth( 220.0f * EditorThemeUtil::getDpiScale() );
+            EditorChrome::setNextItemWidthColumns( 29.0f );
             const bool bEnter = ImGui::InputTextWithHint( "##addNodeSearch", SW_LOCKEY( "EdCommon", "SearchNodesHint" ), _addNodeFilter.data(), _addNodeFilter.capacity(),
                                                           ImGuiInputTextFlags_EnterReturnsTrue );
             EditorSelfTestMarks::note( "graph.addNode.search" );

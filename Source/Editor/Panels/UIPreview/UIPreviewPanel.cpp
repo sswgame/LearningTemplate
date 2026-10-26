@@ -13,8 +13,10 @@
 
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
+#include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
+#include "Editor/Common/GUI/EditorTextExtentImGui.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
@@ -105,7 +107,7 @@ namespace sw::editor
     {
         struct UIPreviewPanelInternal
         {
-            static constexpr float32     kLeftWidth            = 340.0f;
+            static constexpr float32     kLeftColumns          = 45.0f;
             static constexpr float32     kIndentPerLevel       = 12.0f;
             static constexpr float32     kTreeRatio            = 0.28f; ///< 왼쪽 영역에서 위젯 트리가 차지하는 높이 비율
             static constexpr float32     kPaletteRatio         = 0.22f; ///< 팔레트가 차지하는 높이 비율(나머지는 인스펙터)
@@ -878,7 +880,7 @@ namespace sw::editor
     void UIPreviewPanel::drawLanguageCombo()
     {
         const string preview = _language.empty() ? string( "(game language)" ) : _language;
-        ImGui::SetNextItemWidth( 150.0f * EditorThemeUtil::getDpiScale() );
+        EditorChrome::setNextItemWidthColumns( 20.0f );
         const bool bOpen = ImGui::BeginCombo( "##uipreviewlang", preview.c_str() );
         UIPreviewPanelInternal::noteMark( "uipreview", "language" );
         EditorWidgets::drawTooltip( "Language the preview text is resolved in. The game UI keeps its own language; qps-ploc and qps-plocm are pseudo-languages "
@@ -927,7 +929,7 @@ namespace sw::editor
         EditorWidgets::drawTooltip( "Write the edited widget properties back to the document (UIDocumentWriter). Disabled after input simulation or animation playback "
                                     "changed the preview tree - Reload first." );
         ImGui::SameLine();
-        ImGui::SetNextItemWidth( 190.0f * EditorThemeUtil::getDpiScale() );
+        EditorChrome::setNextItemWidthColumns( 25.0f );
         const UIResolutionPreset* pSelectedResolution = findSelectedResolution();
         const bool                bResolutionOpen     = ImGui::BeginCombo( "##uipreviewres", pSelectedResolution != nullptr ? pSelectedResolution->_name.c_str() : "-" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorUIPreview", "ResolutionTip" ) );
@@ -941,7 +943,7 @@ namespace sw::editor
             ImGui::EndCombo();
         }
         ImGui::SameLine();
-        ImGui::SetNextItemWidth( 150.0f * EditorThemeUtil::getDpiScale() );
+        EditorChrome::setNextItemWidthColumns( 20.0f );
         const bool bThemeOpen = ImGui::BeginCombo( "##uipreviewtheme", _theme.empty() ? "(game theme)" : _theme.c_str() );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorUIPreview", "ThemeTip" ) );
         if ( bThemeOpen )
@@ -957,15 +959,15 @@ namespace sw::editor
         }
         ImGui::SameLine();
         drawLanguageCombo();
-        ImGui::SetNextItemWidth( 140.0f * EditorThemeUtil::getDpiScale() );
+        EditorChrome::setNextItemWidthColumns( 19.0f );
         ImGui::SliderFloat( "UI scale", &_uiScale, 0.5f, 2.0f, "%.2f" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorUIPreview", "UIScaleTip" ) );
         ImGui::SameLine();
-        ImGui::SetNextItemWidth( 140.0f * EditorThemeUtil::getDpiScale() );
+        EditorChrome::setNextItemWidthColumns( 19.0f );
         ImGui::SliderFloat( "Text scale", &_textScale, 0.75f, 2.0f, "%.2f" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorUIPreview", "TextScaleTip" ) );
         ImGui::SameLine();
-        ImGui::SetNextItemWidth( 140.0f * EditorThemeUtil::getDpiScale() );
+        EditorChrome::setNextItemWidthColumns( 19.0f );
         ImGui::SliderFloat( "Safe zone", &_safeZone, 0.0f, 0.1f, "%.3f" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorUIPreview", "SafeZoneTip" ) );
         ImGui::SameLine();
@@ -1067,7 +1069,7 @@ namespace sw::editor
         if ( _animation.empty() || player.findAnimation( _animation ) == nullptr )
             _animation = listAnimation[0]._name;
         ImGui::SameLine();
-        ImGui::SetNextItemWidth( 120.0f * EditorThemeUtil::getDpiScale() );
+        EditorChrome::setNextItemWidthColumns( 16.0f );
         const bool bOpen = ImGui::BeginCombo( "##uipreviewanimation", _animation.c_str() );
         UIPreviewPanelInternal::noteMark( "uipreview", "animation" );
         EditorWidgets::drawTooltip( "Document animation to preview. The preview never plays Open by itself - the document values are what you see until you play one." );
@@ -1122,7 +1124,7 @@ namespace sw::editor
             time     = MathUtil::clamp( _animationScrub, 0.0f, duration );
         }
         float32 scrubSeconds = time;
-        ImGui::SetNextItemWidth( 220.0f * EditorThemeUtil::getDpiScale() );
+        EditorChrome::setNextItemWidthColumns( 29.0f );
         if ( ImGui::SliderFloat( "##uipreviewanimationtime", &scrubSeconds, 0.0f, MathUtil::max( duration, 0.001f ), "%.2f s" ) )
         {
             _animationScrub   = scrubSeconds;
@@ -1893,7 +1895,7 @@ namespace sw::editor
 
         // 왼쪽 영역: 위젯 트리, 팔레트, 고른 위젯의 프로퍼티(인스펙터)를 위에서 아래로. 오른쪽: 미리보기 이미지.
         const float32 dpi = EditorThemeUtil::getDpiScale();
-        ImGui::BeginChild( "##uipreviewleft", ImVec2{ Internal::kLeftWidth * dpi, 0.0f }, ImGuiChildFlags_None );
+        ImGui::BeginChild( "##uipreviewleft", measureExtent( EditorTextExtent::ofText( Internal::kLeftColumns, 0.0f ) ), ImGuiChildFlags_None );
         const float32 treeHeight    = ImGui::GetContentRegionAvail().y * Internal::kTreeRatio;
         const float32 paletteHeight = ImGui::GetContentRegionAvail().y * Internal::kPaletteRatio;
         ImGui::BeginChild( "##uipreviewtree", ImVec2{ 0.0f, treeHeight }, ImGuiChildFlags_Borders );

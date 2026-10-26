@@ -9,6 +9,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
 #include "Editor/Common/GUI/EditorPanelManager.h"
+#include "Editor/Common/GUI/IEditorPanel.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -24,6 +25,7 @@ namespace sw::editor
 {
     SW_EXTERN_GLOBAL_VARIABLE( sw::string, gv_editorProbeProperty );
     SW_EXTERN_GLOBAL_VARIABLE( sw::string, gv_editorProbeObject );
+    SW_EXTERN_GLOBAL_VARIABLE( sw::string, gv_editorProbePanel );
 
     namespace
     {
@@ -81,6 +83,35 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief `gv_editorProbePanel` 패널의 내용 영역 폭이 숫자 "0" 몇 칸인지입니다(`IEditorPanel::getContentColumnCount`). 값을 내지 않는 조건은 줄 수 탐침과 같습니다. */
+            [[nodiscard]] static bool readPanelContentColumns( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                EditorContext* pContext = editor::findSubsystem<EditorContext>();
+                if ( pContext == nullptr )
+                    return false;
+                const IEditorPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanelByID( gv_editorProbePanel );
+                if ( pPanel == nullptr || pPanel->hasDrawnContent() == false )
+                    return false;
+                outValue = static_cast<float64>( pPanel->getContentColumnCount() );
+                return true;
+            }
+
+            /**
+             * @brief `gv_editorProbePanel` 패널이 마지막 그리기에서 내용 영역에 글자 줄을 몇 줄 담았는지입니다(`IEditorPanel::getContentLineCount`).
+             * @details 패널이 없거나 한 번도 그려지지 않았으면(접힘 · 가려진 탭) 값을 내지 않는다 — 0 줄로 읽혀 "너무 작다" 와 섞이지 않게 한다.
+             */
+            [[nodiscard]] static bool readPanelContentLines( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                EditorContext* pContext = editor::findSubsystem<EditorContext>();
+                if ( pContext == nullptr )
+                    return false;
+                const IEditorPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanelByID( gv_editorProbePanel );
+                if ( pPanel == nullptr || pPanel->hasDrawnContent() == false )
+                    return false;
+                outValue = static_cast<float64>( pPanel->getContentLineCount() );
+                return true;
+            }
+
             /** @brief 저장하지 않은 편집이 있는 문서 패널 수입니다(`EditorPanelManager::countDirtyDocuments`). 저장 명령이 패널까지 닿았는지는 이 수가 줄어드는 것으로 본다. */
             [[nodiscard]] static bool readDirtyDocumentCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
@@ -96,5 +127,11 @@ namespace sw::editor
     SW_AUTOMATION_PROBE( editorSelectedEnumValue, "Editor.SelectedEnumValue",
                          "Enumerator value of gv_editorProbeProperty (<ComponentType>.<property>, an enum) on the primary selection", &EditorSelfTestProbesInternal::readSelectedEnumValue );
     SW_AUTOMATION_PROBE( editorObjectDepth, "Editor.ObjectDepth", "Parent levels above the object named by gv_editorProbeObject (0 = a root)", &EditorSelfTestProbesInternal::readObjectDepth );
+    SW_AUTOMATION_PROBE( editorPanelContentLines, "Editor.PanelContentLines",
+                         "Text lines (content height / text line height) the panel named by gv_editorProbePanel fit in its content area in the last draw",
+                         &EditorSelfTestProbesInternal::readPanelContentLines );
+    SW_AUTOMATION_PROBE( editorPanelContentColumns, "Editor.PanelContentColumns",
+                         "Digit widths (content width / width of '0') the panel named by gv_editorProbePanel fit in its content area in the last draw",
+                         &EditorSelfTestProbesInternal::readPanelContentColumns );
     SW_AUTOMATION_PROBE( editorDirtyDocumentCount, "Editor.DirtyDocumentCount", "Document panels that hold edits not yet saved", &EditorSelfTestProbesInternal::readDirtyDocumentCount );
 } // namespace sw::editor

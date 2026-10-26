@@ -314,7 +314,7 @@ namespace sw::editor
         editor::EditorSearchOverlayDesc overlayDesc{};
         overlayDesc._pID          = "##QuickLauncherOverlay";
         overlayDesc._pOpen        = &_bOpen;
-        overlayDesc._size         = float2{ 620.0f, 400.0f };
+        overlayDesc._size         = EditorTextExtent::ofText( 83.0f, 21.0f );
         overlayDesc._pFocusOnOpen = &_bJustOpened;
 
         if ( EditorChrome::beginSearchOverlay( overlayDesc ) == false )

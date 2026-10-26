@@ -19,5 +19,15 @@
 	</At>
 	<At frame="85"><EditorClick mark="sceneView.canvas"/></At>
 
-	<At frame="100"><Pass/></At>
+	<!-- 기본 배치의 아래 도크는 글자 높이의 배수라 Output Log 내용 영역에 글자 줄이 8줄 넘게 든다(첫 화면에서 로그가 한두 줄만 보이던 결함) -->
+	<At frame="90"><Variable name="gv_editorProbePanel" value="console"/></At>
+	<At frame="95"><Expect probe="Editor.PanelContentLines" atLeast="8"/></At>
+
+	<!-- 좌우 도크 폭도 글자 너비의 배수 아래로 내려가지 않는다(Hierarchy 왼쪽 40칸, Inspector 오른쪽 48칸). 내용 영역은 창 안쪽 여백을 뺀 값이라 조금 작다 -->
+	<At frame="100"><Variable name="gv_editorProbePanel" value="hierarchy"/></At>
+	<At frame="105"><Expect probe="Editor.PanelContentColumns" atLeast="34"/></At>
+	<At frame="110"><Variable name="gv_editorProbePanel" value="inspector"/></At>
+	<At frame="115"><Expect probe="Editor.PanelContentColumns" atLeast="42"/></At>
+
+	<At frame="120"><Pass/></At>
 </Scenario>

@@ -6,6 +6,7 @@
 
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
+#include "Editor/Common/GUI/EditorTextExtentImGui.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
 
@@ -40,9 +41,10 @@ namespace sw::editor
         if ( listNotification.empty() )
             return;
 
-        constexpr float32 toastWidth  = 300.0f;
-        constexpr float32 toastMargin = 12.0f;
-        float32           currentY    = screenHeight - toastMargin;
+        constexpr float32 toastColumns    = 40.0f;
+        constexpr float32 toastMargin     = 12.0f;
+        const float32     toastSlotHeight = EditorChrome::resolveTextExtent( EditorTextExtent::ofText( 0.0f, 4.0f ) )._y; ///< 토스트 하나가 쌓이는 세로 간격(글자 줄 4 줄)
+        float32           currentY        = screenHeight - toastMargin;
 
         float2 viewportPos{};
         float2 viewportSize{ screenWidth, screenHeight };
@@ -65,8 +67,8 @@ namespace sw::editor
             const Color bgColor   = EditorThemeUtil::getOverlayBgColor().withAlpha( 0.92f * alpha );
             const Color typeColor = getNotificationTypeColor( item._type ).withAlpha( alpha );
 
-            float32 posX = viewportPos._x + screenWidth - toastWidth - toastMargin;
-            currentY -= 75.0f;
+            float32 posX = viewportPos._x + screenWidth - EditorChrome::resolveTextExtent( EditorTextExtent::ofText( toastColumns, 0.0f ) )._x - toastMargin;
+            currentY -= toastSlotHeight;
 
             fixed_string<constant::kMaxBuffer32> windowID;
             formatstring( windowID.data(), windowID.capacity(), "##Toast_%#", static_cast<uint64>( notificationIndex ) );
@@ -74,7 +76,7 @@ namespace sw::editor
             editor::EditorOverlayDesc toastDesc{};
             toastDesc._pID        = windowID.c_str();
             toastDesc._anchorPos  = float2{ posX, currentY };
-            toastDesc._size       = float2{ toastWidth, 0.0f };
+            toastDesc._size       = EditorTextExtent::ofText( toastColumns, 0.0f );
             toastDesc._rounding   = 6.0f;
             toastDesc._borderSize = 1.5f;
             toastDesc._bgAlpha    = bgColor._a;
@@ -100,7 +102,7 @@ namespace sw::editor
 
                 if ( item._progress >= 0.0f )
                 {
-                    ImGui::ProgressBar( item._progress, ImVec2{ -1.0f, 4.0f * EditorThemeUtil::getDpiScale() }, "" );
+                    ImGui::ProgressBar( item._progress, ImVec2{ -1.0f, measureExtent( EditorTextExtent::ofText( 0.0f, 0.25f ) ).y }, "" );
                 }
             }
             EditorChrome::endOverlay();

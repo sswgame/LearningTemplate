@@ -50,7 +50,7 @@ namespace sw::editor
         /** @brief 모듈별 그룹 또는 평면 모드로 변수 테이블을 그립니다. */
         void drawVariableTable( const vector<GlobalVariableInfo*>& listFiltered );
         /** @brief 기본 창 크기를 반환합니다. */
-        float2 getInitialPanelSize() const override { return float2{ 680.0f, 480.0f }; }
+        EditorTextExtent getInitialPanelSize() const override { return EditorTextExtent::ofText( 91.0f, 25.0f ); }
         /** @brief 필요할 때 여는 도구라 닫힌 채 시작합니다. */
         bool               isToolPanel() const override { return true; }
         [[nodiscard]] bool saveDocument() override;

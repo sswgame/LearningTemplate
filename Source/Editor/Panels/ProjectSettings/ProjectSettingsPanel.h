@@ -37,10 +37,10 @@ namespace sw::editor
         ProjectSettingsPanel();
         ~ProjectSettingsPanel() override;
 
-        const utf8* getPanelTitle() const override { return "Project Settings"; }
-        bool        isToolPanel() const override { return true; }
-        void        drawContent() override;
-        float2      getInitialPanelSize() const override { return float2{ 820.0f, 520.0f }; }
+        const utf8*      getPanelTitle() const override { return "Project Settings"; }
+        bool             isToolPanel() const override { return true; }
+        void             drawContent() override;
+        EditorTextExtent getInitialPanelSize() const override { return EditorTextExtent::ofText( 109.0f, 27.0f ); }
 
         /** @brief 지난 프레임 목록에 오른 설정 파일 수입니다(탐침 `Editor.ProjectSettingsPageCount`). */
         static uint32 getPageCount();

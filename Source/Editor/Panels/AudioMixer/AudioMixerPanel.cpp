@@ -9,9 +9,11 @@
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/EditorColor.h"
+#include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
+#include "Editor/Common/GUI/EditorTextExtentImGui.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -145,7 +147,7 @@ namespace sw::editor
 
         ImGui::TextUnformatted( "Event" );
         ImGui::SameLine();
-        ImGui::SetNextItemWidth( 200.0f * EditorThemeUtil::getDpiScale() );
+        EditorChrome::setNextItemWidthColumns( 27.0f );
         const utf8* pPreview = _listEventName.empty() ? "(no event library loaded)" : _listEventName[_selectedEvent].c_str();
         if ( ImGui::BeginCombo( "##AudioMixerEvent", pPreview ) )
         {
@@ -166,7 +168,7 @@ namespace sw::editor
         ImGui::SameLine();
         ImGui::TextUnformatted( "Clip" );
         ImGui::SameLine();
-        ImGui::SetNextItemWidth( 240.0f * EditorThemeUtil::getDpiScale() );
+        EditorChrome::setNextItemWidthColumns( 32.0f );
         (void)ImGui::InputTextWithHint( "##AudioMixerClip", "audio/sample.wav", _clipPath.data(), _clipPath.capacity() );
         EditorSelfTestMarks::note( "audiomixer.clipPath" );
         ImGui::SameLine();
@@ -218,14 +220,14 @@ namespace sw::editor
         pDrawList->AddRect( meterMin, meterMax, EditorColorUtil::toImU32( Color{ 0.35f, 0.35f, 0.40f, 1.0f } ) );
 
         ImGui::PushStyleColor( ImGuiCol_Button, EditorColorUtil::toImVec4( status._bMuted ? EditorThemeUtil::getErrorColor() : EditorThemeUtil::getToggleInactiveColor() ) );
-        if ( ImGui::Button( "M", ImVec2{ 32.0f * dpi, 0.0f } ) )
+        if ( ImGui::Button( "M", measureExtent( EditorTextExtent::ofText( 4.0f, 0.0f ) ) ) )
             engine.setBusMuted( status._name, status._bMuted == false );
         ImGui::PopStyleColor();
         EditorSelfTestMarks::note( ( "audiomixer.mute." + name ).c_str() );
         EditorWidgets::drawTooltip( "Mute" );
         ImGui::SameLine();
         ImGui::PushStyleColor( ImGuiCol_Button, EditorColorUtil::toImVec4( status._bSolo ? EditorThemeUtil::getWarningColor() : EditorThemeUtil::getToggleInactiveColor() ) );
-        if ( ImGui::Button( "S", ImVec2{ 32.0f * dpi, 0.0f } ) )
+        if ( ImGui::Button( "S", measureExtent( EditorTextExtent::ofText( 4.0f, 0.0f ) ) ) )
             engine.setBusSolo( status._name, status._bSolo == false );
         ImGui::PopStyleColor();
         EditorSelfTestMarks::note( ( "audiomixer.solo." + name ).c_str() );

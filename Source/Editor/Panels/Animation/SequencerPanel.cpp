@@ -11,6 +11,7 @@
 #include "Editor/Common/Commands/Scene/EditorViewportPreview.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
+#include "Editor/Common/GUI/EditorTextExtentImGui.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -127,7 +128,7 @@ namespace sw::editor
             /** @brief 트랙 이름 필드의 폭(픽셀, DPI 전)입니다. 나머지 폭이 키 띠다. */
             static constexpr float32 kTrackLabelWidth = 180.0f;
             /** @brief 커브 편집기 구역의 높이(픽셀, DPI 전)입니다. */
-            static constexpr float32 kCurveAreaHeight = 220.0f;
+            static constexpr float32 kCurveAreaLines = 12.0f; ///< 커브 영역 높이(글자 줄 수)
             /** @brief 키 마름모의 반지름(픽셀, DPI 전)입니다. */
             static constexpr float32 kKeyMarkerRadius = 4.0f;
 
@@ -524,7 +525,7 @@ namespace sw::editor
         // 끄는 중 · 필드 입력 중이 아니면 채널에서 다시 뜬다(되돌리기 · 값 필드의 편집이 편집기에 보인다).
         if ( _curveState._drag == EditorCurveDrag::None && ImGui::IsAnyItemActive() == false )
             _curveState._working = channel;
-        if ( ImGui::BeginChild( "##sequencerCurve", ImVec2( 0.0f, SequencerPanelInternal::kCurveAreaHeight * EditorThemeUtil::getDpiScale() ), ImGuiChildFlags_Borders ) )
+        if ( ImGui::BeginChild( "##sequencerCurve", measureExtent( EditorTextExtent::ofText( 0.0f, SequencerPanelInternal::kCurveAreaLines ) ), ImGuiChildFlags_Borders ) )
         {
             if ( EditorCurveEditor::drawEditor( _curveState ) )
             {

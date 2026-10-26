@@ -50,7 +50,7 @@ namespace sw::editor
         /** @brief 목록, 검색, 미리보기를 그립니다. */
         void drawContent() override;
         /** @brief 기본 창 크기를 반환합니다. */
-        float2 getInitialPanelSize() const override { return float2{ 820.0f, 520.0f }; }
+        EditorTextExtent getInitialPanelSize() const override { return EditorTextExtent::ofText( 109.0f, 27.0f ); }
         /** @brief 필요할 때 여는 도구이므로 닫힌 채로 시작합니다. */
         bool isToolPanel() const override { return true; }
         /** @brief ImGui 에 등록한 미리보기 텍스처를 해제합니다. */

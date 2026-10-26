@@ -6,6 +6,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/YawUtil.h"
 
+#include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -184,7 +185,7 @@ namespace sw::editor
     void PairedAnimationPanel::drawTimeline()
     {
         float32 duration = _model.getContent()._duration;
-        ImGui::SetNextItemWidth( 120.0f * EditorThemeUtil::getDpiScale() );
+        EditorChrome::setNextItemWidthColumns( 16.0f );
         if ( ImGui::DragFloat( "Duration (s)", &duration, 0.01f, 0.01f, 60.0f, "%.3f" ) )
             reportEdit( _model.setDuration( duration, true, _editError ) );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
@@ -243,7 +244,7 @@ namespace sw::editor
             if ( role._bAnchor == false )
             {
                 float32 start = role._startSeconds;
-                ImGui::SetNextItemWidth( 120.0f * EditorThemeUtil::getDpiScale() );
+                EditorChrome::setNextItemWidthColumns( 16.0f );
                 if ( ImGui::DragFloat( "Start (s)", &start, 0.01f, 0.0f, _model.getContent()._duration, "%.3f" ) )
                     reportEdit( _model.setRoleStart( roleIndex, start, true, _editError ) );
                 if ( ImGui::IsItemDeactivatedAfterEdit() )
@@ -251,7 +252,7 @@ namespace sw::editor
                 ImGui::SameLine();
             }
             float32 arrBlend[2] = { role._enterBlendSeconds, role._exitBlendSeconds };
-            ImGui::SetNextItemWidth( 200.0f * EditorThemeUtil::getDpiScale() );
+            EditorChrome::setNextItemWidthColumns( 27.0f );
             if ( ImGui::DragFloat2( "Enter / exit blend (s)", arrBlend, 0.01f, 0.0f, 5.0f, "%.3f" ) )
                 reportEdit( _model.setRoleBlend( roleIndex, arrBlend[0], arrBlend[1], true, _editError ) );
             if ( ImGui::IsItemDeactivatedAfterEdit() )
@@ -262,11 +263,11 @@ namespace sw::editor
             {
                 float3  offset     = role._offset;
                 float32 yawDegrees = role._yawRadians * MathUtil::kRadianToDegree;
-                ImGui::SetNextItemWidth( 240.0f * EditorThemeUtil::getDpiScale() );
+                EditorChrome::setNextItemWidthColumns( 32.0f );
                 const bool bOffsetChanged = ImGui::DragFloat3( "Offset (m)", offset.data(), 0.01f, -10.0f, 10.0f, "%.3f" );
                 const bool bOffsetDone    = ImGui::IsItemDeactivatedAfterEdit();
                 ImGui::SameLine();
-                ImGui::SetNextItemWidth( 100.0f * EditorThemeUtil::getDpiScale() );
+                EditorChrome::setNextItemWidthColumns( 13.0f );
                 const bool bYawChanged = ImGui::DragFloat( "Yaw (deg)", &yawDegrees, 0.5f, -180.0f, 180.0f, "%.1f" );
                 const bool bYawDone    = ImGui::IsItemDeactivatedAfterEdit();
                 if ( bOffsetChanged || bYawChanged )
@@ -279,7 +280,7 @@ namespace sw::editor
             if ( role._bAnchor == false && role._align == PairedAnimationAlign::Warp )
             {
                 float32 warpEnd = role._warpEndSeconds;
-                ImGui::SetNextItemWidth( 120.0f * EditorThemeUtil::getDpiScale() );
+                EditorChrome::setNextItemWidthColumns( 16.0f );
                 if ( ImGui::DragFloat( "Warp end (s)", &warpEnd, 0.01f, 0.0f, 10.0f, "%.3f" ) )
                     reportEdit( _model.setRoleWarpEnd( roleIndex, warpEnd, true, _editError ) );
                 if ( ImGui::IsItemDeactivatedAfterEdit() )
@@ -300,14 +301,14 @@ namespace sw::editor
             ImGui::Text( "%s", notify._name.c_str() );
             ImGui::SameLine();
             float32 time = notify._time;
-            ImGui::SetNextItemWidth( 200.0f * EditorThemeUtil::getDpiScale() );
+            EditorChrome::setNextItemWidthColumns( 27.0f );
             if ( ImGui::SliderFloat( "##Time", &time, 0.0f, content._duration, "%.3f s" ) )
                 reportEdit( _model.setNotifyTime( notifyIndex, time, true, _editError ) );
             if ( ImGui::IsItemDeactivatedAfterEdit() )
                 _model.endContinuousEdit();
             EditorSelfTestMarks::note( ( string( "pairedanim.notify." ) + notify._name.c_str() + ".time" ).c_str() );
             ImGui::SameLine();
-            ImGui::SetNextItemWidth( 140.0f * EditorThemeUtil::getDpiScale() );
+            EditorChrome::setNextItemWidthColumns( 19.0f );
             if ( ImGui::BeginCombo( "##Role", notify._role.c_str() ) )
             {
                 for ( const PairedAnimationRoleDef& role : content._listRole )
@@ -325,7 +326,7 @@ namespace sw::editor
         if ( removeIndex != invalid_index::kUint32 )
             reportEdit( _model.removeNotify( removeIndex, _editError ) );
 
-        ImGui::SetNextItemWidth( 160.0f * EditorThemeUtil::getDpiScale() );
+        EditorChrome::setNextItemWidthColumns( 21.0f );
         ImGui::InputText( "##NewNotify", _newNotifyName.data(), _newNotifyName.max_size() );
         ImGui::SameLine();
         const bool bCanAdd = content._listRole.empty() == false;

@@ -94,7 +94,7 @@ namespace sw::editor
             const RenderViewMode currentMode = ( pRenderer != nullptr ) ? pRenderer->getSceneViewMode() : RenderViewMode::Lit;
 
             ImGui::BeginDisabled( pRenderer == nullptr );
-            ImGui::SetNextItemWidth( 95.0f * EditorThemeUtil::getDpiScale() );
+            EditorChrome::setNextItemWidthColumns( 13.0f );
             const bool bOpen = ImGui::BeginCombo( "##ViewMode", getRenderViewModeInfo( currentMode )._pName );
             EditorSelfTestMarks::note( "viewport.viewMode" ); // 시나리오가 콤보를 열고 항목(`viewport.viewMode.<이름>`)을 누른다
             if ( bOpen )
@@ -128,7 +128,7 @@ namespace sw::editor
         }
 
         nextItem( bVertical );
-        ImGui::SetNextItemWidth( 70.0f * EditorThemeUtil::getDpiScale() );
+        EditorChrome::setNextItemWidthColumns( 9.0f );
         ImGui::SliderFloat( "##CamSpeed", &settings._cameraSpeed, 0.5f, 20.0f, "%.1f" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "CameraSpeed" ) );
     }

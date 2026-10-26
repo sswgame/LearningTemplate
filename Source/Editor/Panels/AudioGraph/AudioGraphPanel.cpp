@@ -6,6 +6,7 @@
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Config/EditorPaths.h"
+#include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
@@ -363,7 +364,7 @@ namespace sw::editor
 
     void AudioGraphPanel::drawContent()
     {
-        ImGui::SetNextItemWidth( -120.0f * EditorThemeUtil::getDpiScale() );
+        EditorChrome::setNextItemWidthColumns( -16.0f );
         (void)ImGui::InputTextWithHint( "##AudioGraphPath", SW_LOCKEY( "EditorAudioGraph", "PathHint" ), _pathInput.data(), _pathInput.capacity() );
         ImGui::SameLine();
         if ( ImGui::Button( SW_LOCKEY( "EditorAudioGraph", "Open" ) ) )
