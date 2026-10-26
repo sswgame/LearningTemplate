@@ -467,7 +467,7 @@ namespace sw
         // 실시간 프로브 갱신 - 라이트 업로드 뒤, 조명 패스(그래프) 앞이다. 프로브 버퍼를 쓴다.
         dispatchRealtimeProbes();
         // 월드 공간 UI 의 렌더 텍스처다. 장면 뷰가 그 텍스처를 읽기 전에 먼저 제출하는 프리패스 리스트(같은 큐)로 그린다.
-        _canvasRenderer.drawTargets( *_pCmd, *pDevice, _canvasFrame, *_pPSOCache, getEnginePSO( RenderPassType::Canvas ) );
+        _canvasRenderer.drawTargets( *_pCmd, *pDevice, _canvasFrame, *_pPSOCache );
         // 2D 빛 쿠키 아틀라스 — 새로 칸을 받은 쿠키만 그 칸에 그린다. 빛 받는 스프라이트 패스가 읽기 전에 같은 프리패스 리스트에서 끝난다.
         drawLight2DCookieAtlas();
 
@@ -819,7 +819,7 @@ namespace sw
         warmPinnedMaterialPSOs();
 
         // 캔버스의 아틀라스 텍스처, 사각형 버퍼, 렌더 텍스처 대상도 기록 전에 갖춘다(Canvas 패스와 대상 그리기는 그리기만 한다).
-        _canvasRenderer.prepareFrame( *pDevice, _canvasFrame );
+        _canvasRenderer.prepareFrame( *pDevice, _canvasFrame, *_pPSOCache );
         // 입자 버퍼 · 입자 텍스처 · 입자 PSO 도 같다(투명 패스는 그리기만 한다).
         ensureParticlePSO();
         _particleRenderer.prepareFrame( *pDevice, _gpuScene.getParticleBatches(), _gpuScene.getVfxMeshEmitters(), makeVfxSimulationInput() );
