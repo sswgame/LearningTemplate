@@ -4,6 +4,7 @@
  * @details `OnlineMultiServerLatency` 후보의 한 PC 판이다. 서버 둘(또는 서버와 클라이언트)이 각자 전송을 이것으로 감싸면 왕복에 지연의 두 배가 더해진다.
  *          UDP 쪽 흉내(`NetEmulationTransport`)는 데이터그램용이라 TCP 스트림에는 이것이 같은 일을 한다. 지연은 보내는 쪽에서만 걸고 받는 쪽은 안쪽 전송의 콜백 그대로다.
  *          **한계**: `send` 는 안쪽 전송에 아직 쌓지 않은 채 `Queued` 를 반환한다 — 보낼 줄 물금(`QueuedAboveHighWatermark`) · `QueueFull` 은 이 층에서 알 수 없다.
+ *          `_ioThreadCount == 0`(루프백처럼 부르는 쪽이 `pollIO` 를 도는 전송)이면 타이머 스레드를 두지 않고 `pollIO` 가 때가 된 것을 안쪽에 넘긴다 — 안쪽이 한 스레드 전용이라서다.
  *          그래서 처리량이 아니라 지연(왕복 시간) 측정에만 쓴다. 한 연결의 순서는 지켜진다(지연이 고정이고 보낸 순서대로 안쪽에 넘긴다).
  */
 #pragma once
@@ -34,7 +35,7 @@ namespace sw
         StreamSendResult       send( StreamConnectionHandle handle, const uint8* pData, int32 size ) override;
         void                   close( StreamConnectionHandle handle, StreamCloseMode mode ) override;
         void                   setReceivePaused( StreamConnectionHandle handle, bool bPaused ) override { _pInner->setReceivePaused( handle, bPaused ); }
-        int32                  pollIO( int32 timeoutMilli ) override { return _pInner->pollIO( timeoutMilli ); }
+        int32                  pollIO( int32 timeoutMilli ) override;
         NetAddress             getRemoteAddress( StreamConnectionHandle handle ) const override { return _pInner->getRemoteAddress( handle ); }
         StreamTransportStats   getStats() const override { return _pInner->getStats(); }
 
@@ -49,13 +50,15 @@ namespace sw
             uint8                  _bClose{ SW_FALSE };
         };
 
-        void runTimer();
+        void  runTimer();
+        int32 flushDue();
 
         unique_ptr<IStreamTransport> _pInner;
         int64                        _delayNanoseconds;
         mutex                        _mutex;
         deque<DelayedItem>           _listItem; ///< 지연 시각 순서(고정 지연이라 보낸 순서와 같다)
         atomic<uint8>                _bStopping;
+        uint8                        _bManualPoll;
         sw::thread                   _timerThread;
     };
 } // namespace sw

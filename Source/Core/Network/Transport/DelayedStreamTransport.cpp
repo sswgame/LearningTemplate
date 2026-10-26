@@ -17,6 +17,7 @@ namespace sw
         , _mutex{}
         , _listItem{}
         , _bStopping{ SW_FALSE }
+        , _bManualPoll{ SW_FALSE }
         , _timerThread{}
     {
     }
@@ -30,10 +31,13 @@ namespace sw
     {
         if ( _pInner == nullptr || _timerThread.joinable() )
             return false;
+        _bManualPoll = SW_FALSE;
         if ( _pInner->initialize( pHandler, settings ) == false )
             return false;
         _bStopping.store( SW_FALSE, std::memory_order_release );
-        _timerThread = sw::thread( &DelayedStreamTransport::runTimer, this );
+        _bManualPoll = settings._ioThreadCount == 0 ? SW_TRUE : SW_FALSE;
+        if ( _bManualPoll == SW_FALSE )
+            _timerThread = sw::thread( &DelayedStreamTransport::runTimer, this );
         return true;
     }
 
@@ -78,29 +82,45 @@ namespace sw
         _listItem.push_back( std::move( item ) );
     }
 
+    int32 DelayedStreamTransport::pollIO( int32 timeoutMilli )
+    {
+        // 수동 판은 부르는 쪽 스레드가 때가 된 것을 안쪽에 넘긴다(안쪽이 한 스레드 전용). 스레드 판은 안쪽이 스스로 돈다.
+        if ( _bManualPoll == SW_TRUE )
+            (void)flushDue();
+        return _pInner->pollIO( timeoutMilli );
+    }
+
+    int32 DelayedStreamTransport::flushDue()
+    {
+        // 때가 된 것을 앞에서부터 꺼내 안쪽에 넘긴다(잠금 밖에서 넘긴다).
+        const int64 nowNanoseconds = MonotonicClock::nowNanoseconds();
+        int32       flushedCount   = 0;
+        for ( ;; )
+        {
+            DelayedItem item;
+            {
+                std::scoped_lock<mutex> lock{ _mutex };
+                if ( _listItem.empty() || _listItem.front()._dueNanoseconds > nowNanoseconds )
+                    break;
+                item = std::move( _listItem.front() );
+                _listItem.pop_front();
+            }
+            if ( item._bClose == SW_TRUE )
+                _pInner->close( item._handle, item._closeMode );
+            else
+                (void)_pInner->send( item._handle, item._bytes.data(), static_cast<int32>( item._bytes.size() ) ); // 실패는 안쪽이 연결을 닫아 알린다
+            ++flushedCount;
+        }
+        return flushedCount;
+    }
+
     void DelayedStreamTransport::runTimer()
     {
         ThreadName::setCurrentThreadName( "DelayedStream" );
         while ( _bStopping.load( std::memory_order_acquire ) == false )
         {
-            // 때가 된 것을 앞에서부터 꺼내 안쪽에 넘긴다(잠금 밖에서). 한 번 돌 때 1 ms 안쪽 해상도로 잔다 — 측정 도구라 바쁘게 돌지 않는다.
-            const int64 nowNanoseconds = MonotonicClock::nowNanoseconds();
-            for ( ;; )
-            {
-                DelayedItem item;
-                {
-                    std::scoped_lock<mutex> lock{ _mutex };
-                    if ( _listItem.empty() || _listItem.front()._dueNanoseconds > nowNanoseconds )
-                        break;
-                    item = std::move( _listItem.front() );
-                    _listItem.pop_front();
-                }
-                if ( item._bClose == SW_TRUE )
-                    _pInner->close( item._handle, item._closeMode );
-                else
-                    (void)_pInner->send( item._handle, item._bytes.data(), static_cast<int32>( item._bytes.size() ) ); // 실패는 안쪽이 연결을 닫아 알린다
-            }
-            std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
+            (void)flushDue();
+            std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) ); // 1 ms 해상도 — 측정 도구라 바쁘게 돌지 않는다
         }
     }
 } // namespace sw
