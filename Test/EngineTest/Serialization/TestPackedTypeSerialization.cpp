@@ -450,3 +450,42 @@ SW_TEST_CASE( PackedValueSerializationTest, ReadNumberFollowsTheBuiltinTable )
     SW_EXPECT_STREQ( "3", ReflectValueUtil::formatBuiltin( indexOf( "string" ), &text ).c_str() );
     SW_EXPECT_TRUE( ReflectValueUtil::formatBuiltin( -1, &text ).empty() );
 }
+
+/**
+ * @brief [PackedValueSerializationTest] 숫자 쓰기(`writeNumber`)는 정수를 반올림하고, 그 타입이 담지 못하는 값은 쓰지 않는다 — 시퀀서 프로퍼티 트랙이 이 길이다
+ * @details 예전 시퀀서는 float32 · int32 이름만 받았고 int32 로 바꿀 때 범위를 보지 않았다.
+ */
+SW_TEST_CASE( PackedValueSerializationTest, WriteNumberRoundsAndRejectsWhatTheTypeCannotHold )
+{
+    const auto indexOf = []( const utf8* pName )
+    { return ReflectValueUtil::findBuiltinIndex( hashed_string( pName ) ); };
+
+    // 정수는 가장 가까운 정수로, 범위 밖은 거절하고 값을 그대로 둔다.
+    int16 smallValue = 0;
+    SW_EXPECT_TRUE( ReflectValueUtil::writeNumber( indexOf( "int16" ), &smallValue, 2.6 ) );
+    SW_EXPECT_EQUAL( int16{ 3 }, smallValue );
+    SW_EXPECT_FALSE( ReflectValueUtil::writeNumber( indexOf( "int16" ), &smallValue, 40000.0 ) );
+    SW_EXPECT_EQUAL( int16{ 3 }, smallValue );
+    uint8 byteValue = 7;
+    SW_EXPECT_FALSE( ReflectValueUtil::writeNumber( indexOf( "uint8" ), &byteValue, -1.0 ) );
+    SW_EXPECT_EQUAL( uint8{ 7 }, byteValue );
+    // int64 의 상한(2^63)은 열린 끝이다 - float64 로는 max + 1 이 2^63 으로 접힌다.
+    int64 wideValue = 0;
+    SW_EXPECT_FALSE( ReflectValueUtil::writeNumber( indexOf( "int64" ), &wideValue, 9223372036854775808.0 ) );
+
+    // 실수 · 성분이 하나인 압축 타입
+    float32 floatValue = 0.0f;
+    SW_EXPECT_TRUE( ReflectValueUtil::writeNumber( indexOf( "float32" ), &floatValue, 1.25 ) );
+    SW_EXPECT_EQUAL( 1.25f, floatValue );
+    SW_EXPECT_FALSE( ReflectValueUtil::writeNumber( indexOf( "float32" ), &floatValue, 1.0e300 ) );
+    unorm8 unitValue = unorm8::fromRaw( 0 );
+    SW_EXPECT_TRUE( ReflectValueUtil::writeNumber( indexOf( "unorm8" ), &unitValue, 1.0 ) );
+    SW_EXPECT_EQUAL( uint8{ 255 }, unitValue.getRaw() );
+    SW_EXPECT_FALSE( ReflectValueUtil::writeNumber( indexOf( "unorm8" ), &unitValue, 2.0 ) );
+    SW_EXPECT_EQUAL( uint8{ 255 }, unitValue.getRaw() );
+
+    // 숫자가 아닌 갈래는 쓰지 않는다.
+    bool flag = false;
+    SW_EXPECT_FALSE( ReflectValueUtil::writeNumber( indexOf( "bool" ), &flag, 1.0 ) );
+    SW_EXPECT_FALSE( flag );
+}
