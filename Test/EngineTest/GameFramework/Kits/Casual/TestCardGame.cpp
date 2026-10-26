@@ -291,13 +291,29 @@ SW_TEST_CASE( CardGameTest, PokerSidePotsGoToTheRightPlayersAndOddChipsSplitFrom
     SW_EXPECT_EQUAL( listWon[2], 0 );
 }
 
+SW_TEST_CASE( CardGameTest, PokerTableRefusesOutOfRangeSettingsInsteadOfClampingThem )
+{
+    PokerTable    table;
+    PokerSettings settings;
+    settings._smallBlind = 0;
+    SW_EXPECT_FALSE( table.initialize( settings, { 100, 100 } ) );
+
+    settings._smallBlind = 10;
+    settings._bigBlind   = 5; // 큰 블라인드가 작은 블라인드보다 작다
+    SW_EXPECT_FALSE( table.initialize( settings, { 100, 100 } ) );
+
+    settings._bigBlind = 20;
+    SW_EXPECT_FALSE( table.initialize( settings, { 100, -1 } ) ); // 음수 칩
+    SW_EXPECT_TRUE( table.initialize( settings, { 100, 100 } ) );
+}
+
 SW_TEST_CASE( CardGameTest, PokerTableEnforcesBlindsMinRaiseAllInAndShowdown )
 {
     PokerSettings settings;
     settings._smallBlind = 5;
     settings._bigBlind   = 10;
     PokerTable table;
-    table.initialize( settings, { 100, 50, 200 } );
+    SW_ASSERT_TRUE( table.initialize( settings, { 100, 50, 200 } ) );
 
     // 버튼 0 · SB 1 · BB 2. 나누기는 SB 부터 한 바퀴씩 — 1, 2, 0, 1, 2, 0, 그다음 보드 다섯.
     CardPile deck;
@@ -851,14 +867,14 @@ SW_TEST_CASE( CardGameTest, StateRoundTripContinuesTheSameTables )
     pokerSettings._smallBlind = 5;
     pokerSettings._bigBlind   = 10;
     PokerTable table;
-    table.initialize( pokerSettings, { 100, 50, 200 } );
+    SW_ASSERT_TRUE( table.initialize( pokerSettings, { 100, 50, 200 } ) );
     GameRandom pokerRandom( 7 );
     SW_ASSERT_TRUE( table.startHand( pokerRandom ) );
     SW_EXPECT_TRUE( table.act( 0, PokerActionKind::Call ) );
     SW_EXPECT_TRUE( table.act( 1, PokerActionKind::Call ) );
     const vector<uint8> tableBytes = captureCardBytes( table );
     PokerTable          restoredTable;
-    restoredTable.initialize( pokerSettings, { 100, 50, 200 } );
+    SW_ASSERT_TRUE( restoredTable.initialize( pokerSettings, { 100, 50, 200 } ) );
     SW_ASSERT_TRUE( restoreCardBytes( tableBytes, restoredTable ) );
     SW_EXPECT_EQUAL( table.getCurrentSeat(), restoredTable.getCurrentSeat() );
     SW_EXPECT_EQUAL( table.computePotTotal(), restoredTable.computePotTotal() );
@@ -870,7 +886,7 @@ SW_TEST_CASE( CardGameTest, StateRoundTripContinuesTheSameTables )
     SW_EXPECT_TRUE( table.getBoard().getTop() == restoredTable.getBoard().getTop() );
     SW_EXPECT_TRUE( captureCardBytes( table ) == captureCardBytes( restoredTable ) );
     PokerTable truncatedTable;
-    truncatedTable.initialize( pokerSettings, { 100, 50, 200 } );
+    SW_ASSERT_TRUE( truncatedTable.initialize( pokerSettings, { 100, 50, 200 } ) );
     SW_EXPECT_FALSE( restoreTruncatedCardBytes( tableBytes, truncatedTable ) );
     SW_EXPECT_TRUE( truncatedTable.getStreet() == PokerStreet::HandOver );
 

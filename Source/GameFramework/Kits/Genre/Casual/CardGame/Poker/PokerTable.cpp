@@ -7,6 +7,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
+#include "GameFramework/Base/Foundation/Utility/ConfigRangeUtil.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 
 #include <algorithm>
@@ -123,8 +124,22 @@ namespace sw
     {
     }
 
-    void PokerTable::initialize( const PokerSettings& settings, const vector<int32>& listStack )
+    bool PokerTable::initialize( const PokerSettings& settings, const vector<int32>& listStack )
     {
+        const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
+        if ( rangeError.empty() == false )
+        {
+            SW_LOG_ERROR( "PokerTable: refused settings - %#", rangeError.c_str() );
+            return false;
+        }
+        for ( const int32 stack : listStack )
+        {
+            if ( stack < 0 )
+            {
+                SW_LOG_ERROR( "PokerTable: refused a negative starting stack %#", stack );
+                return false;
+            }
+        }
         _settings = settings;
         _listSeat.clear();
         _listSeat.resize( listStack.size() );
@@ -137,6 +152,7 @@ namespace sw
         _street      = PokerStreet::HandOver;
         _eventBuffer.clear();
         _listLastPot.clear();
+        return true;
     }
 
     bool PokerTable::startHand( GameRandom& random )
