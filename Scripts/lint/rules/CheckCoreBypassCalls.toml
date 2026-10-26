@@ -1,0 +1,14 @@
+# CheckCoreBypassCalls 의 규칙 데이터 — 게이트는 Scripts/lint/gate/CheckCoreBypassCalls.py.
+
+# Core 창구를 거치지 않고 직접 불러도 되는 `종류:경로` → 이유. 종류는 parse · random · stderr.
+[exemption]
+"parse:Source/Core/Container/StringUtil.cpp" = "StringUtil::parse* 자신 — from_chars 를 부르는 유일한 자리"
+"stderr:Source/Core/Common/Macros.cpp" = "낮은 층 보고(SW_LOW_LEVEL_*)가 stderr 로 가는 유일한 자리"
+"stderr:Source/Core/Common/Macros.h" = "SW_ASSERT 가 멈추기 직전 식 · 위치를 쓰는 자리 — 보고자 함수보다 아래(헤더 인라인)라 할당 · 잠금 없이 써야 한다"
+"stderr:Source/Core/Container/formatString.h" = "formatstring 인자 어긋남 보고 — 낮은 층 보고의 서식기가 formatstring 이 아니어도 로거로 넘기면 재귀가 될 수 있어 직접 쓴다"
+"stderr:Source/Core/Log/Logger.cpp" = "로거 자신의 SW_LOG_ASSERT · 싱크 없는 출력 — 로거가 stderr 로 내보내는 자리"
+"stderr:Source/Core/LogSink/AsyncLogSink.cpp" = "로그 싱크 자신 — 출력 안에서 다시 로그한 줄 · 방송 대기 초과를 로거로 되돌리면 재귀다"
+"stderr:Source/Core/Diagnostics/CrashContext.cpp" = "크래시 스택 글(512 자를 넘는다)을 할당 없이 쓰고, stderr 를 쥔 채 멈춘 스레드를 재현하는 크래시 테스트가 stderr 잠금을 직접 쥔다"
+"stderr:Source/Core/Diagnostics/MemoryProfiler.cpp" = "프로세스 끝 CRT 누수 보고 — 로거와 보고자가 내려간 뒤에 돈다"
+"stderr:Source/Engine/Automation/AutomationHangWatch.cpp" = "멈춤 감시 스레드의 할당 없는 마지막 기록 — 막힌 게임 스레드가 로거 잠금을 쥐고 있을 수 있어 보고자를 거치지 않는다"
+"random:Source/Editor/Common/Workspace/EditorNetPlaySession.cpp" = "같은 파일을 procargs 작업자 단위가 고치는 중이라 이번 단위에서 옮기지 않았다 — 다음 단위에서 SecureRandom::nextUint64 로 옮기고 이 줄을 지운다"
