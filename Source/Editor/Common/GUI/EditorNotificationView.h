@@ -15,7 +15,7 @@ namespace sw::editor
      */
     struct EditorNotificationView
     {
-        /** @brief 떠 있는 알림을 메인 뷰포트 오른쪽 아래부터 쌓아 그립니다. 메인 뷰포트를 모르면 @p screenWidth x @p screenHeight 를 씁니다. */
-        static void draw( const EditorNotificationManager& manager, float32 screenWidth, float32 screenHeight );
+        /** @brief 떠 있는 알림을 메인 뷰포트 오른쪽 아래부터 쌓아 그립니다. 메인 뷰포트가 없으면 호출 시점이 틀린 것이라 멈춥니다. */
+        static void draw( const EditorNotificationManager& manager );
     };
 } // namespace sw::editor

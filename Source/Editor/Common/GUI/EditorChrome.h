@@ -166,7 +166,7 @@ namespace sw::editor
         static void endSection();
 
         /** @brief 가로 툴바 섹션을 엽니다. 반환값과 관계없이 endToolbar() 를 호출해야 합니다. */
-        static bool beginToolbar( const utf8* pID = "##Toolbar" );
+        static bool beginToolbar( const utf8* pID );
         /** @brief beginToolbar()와 짝을 이룹니다. */
         static void endToolbar();
 

@@ -181,7 +181,8 @@ namespace sw::editor
 
     bool EditorChrome::beginSection( const EditorSectionDesc& desc )
     {
-        const utf8* pID = desc._pID != nullptr ? desc._pID : "##Section";
+        SW_ASSERT( desc._pID != nullptr ); // id 는 필수다 — 기본 id 를 주면 서로 다른 섹션이 같은 창으로 겹친다
+        const utf8* pID = desc._pID;
         if ( EditorChromeInternal::getState()._sectionDepth < EditorChromeInternal::kMaxSectionDepth )
         {
             EditorChromeInternal::getState()._arrSectionStack[EditorChromeInternal::getState()._sectionDepth] = desc._kind;
@@ -248,7 +249,8 @@ namespace sw::editor
 
     bool EditorChrome::beginFloatingBar( const EditorFloatingBarDesc& desc )
     {
-        const utf8* pID = desc._pID != nullptr ? desc._pID : "##FloatingBar";
+        SW_ASSERT( desc._pID != nullptr ); // id 는 필수다 — 기본 id 를 주면 서로 다른 바가 같은 창으로 겹친다
+        const utf8* pID = desc._pID;
 
         ImGui::SetNextWindowPos( ImVec2{ desc._anchorPos._x, desc._anchorPos._y }, ImGuiCond_Always,
                                  ImVec2{ desc._pivot._x, desc._pivot._y } );
@@ -298,7 +300,8 @@ namespace sw::editor
 
     bool EditorChrome::beginOverlay( const EditorOverlayDesc& desc )
     {
-        const utf8* pID = desc._pID != nullptr ? desc._pID : "##Overlay";
+        SW_ASSERT( desc._pID != nullptr ); // id 는 필수다 — 기본 id 를 주면 서로 다른 오버레이가 같은 창으로 겹친다
+        const utf8* pID = desc._pID;
 
         ImGui::SetNextWindowPos( ImVec2{ desc._anchorPos._x, desc._anchorPos._y }, ImGuiCond_Always,
                                  ImVec2{ desc._pivot._x, desc._pivot._y } );
@@ -357,7 +360,7 @@ namespace sw::editor
     bool EditorChrome::beginToolbar( const utf8* pID )
     {
         EditorSectionDesc desc{};
-        desc._pID  = pID != nullptr ? pID : "##Toolbar";
+        desc._pID  = pID; // null 이면 beginSection 이 멈춘다
         desc._kind = EditorSectionKind::Toolbar;
         return beginSection( desc );
     }
@@ -378,7 +381,7 @@ namespace sw::editor
             return false;
 
         EditorOverlayDesc overlayDesc{};
-        overlayDesc._pID        = desc._pID != nullptr ? desc._pID : "##SearchOverlay";
+        overlayDesc._pID        = desc._pID; // null 이면 beginOverlay 가 멈춘다
         overlayDesc._pOpen      = desc._pOpen;
         overlayDesc._anchorPos  = float2{ viewportPos._x + viewportSize._x * 0.5f,
                                          viewportPos._y + viewportSize._y * desc._viewportYFrac };
