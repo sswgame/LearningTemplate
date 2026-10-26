@@ -153,7 +153,7 @@ ctest --test-dir build/Ninja-Release -L load                     # 부하 스위
 - **측정하기 전에** `py -3 -m Scripts shared-lock acquire gpu --owner <이름>`(독점)을 쥐고 다른 빌드 · GPU 실행이 없는지 본다. VSync 는 기본으로 꺼져 있다(`display.vsync`).
 - **디스크 흉내는 장치 하나 · 큐 깊이 1 이다**(고해상도 마감 대기 — `sleep_for` 는 Windows 타이머 주기 15.6 ms 로 반올림돼 쓸 수 없다). 기동은 대략 `Native 기동 + 열기 수 × 지연` 이고 열기 수는 결과의 `startup_file_opens` 다. 어디서 읽는지는 `--app-arg=-gv_ioLogReads=1` 로 돌려 판 로그의 `[IO] open <경로> bytes=… thread=…` 를 본다(`--app-arg` 는 `-gv_profileAllocSites=12` 같은 진단 스위치도 넘기며, 진단을 켠 판은 `--record` 하지 않는다).
 - **aiskirmish 의 `alloc.per_frame` 은 측정 창의 프레임 수를 따라간다**(고정 델타라 프레임이 많을수록 유닛이 늘어난다) — 할당 자리를 견줄 때는 `wall.frames` 도 본다. aiskirmish 는 StarSkirmish 가 든 빌드가 필요하다(`cmake --preset Ninja-Release -DSW_GAMES=StarSkirmish`, 없으면 건너뜀 77). OnlineLoadBot 은 Windows 에서 키트 DLL 사본과 함께 `ToolBin` 에 있고 작업 폴더는 `Bin` 이다.
-- **CI 야간 잡**(`.github/workflows/load.yml`)이 `ctest -L load` 와 묶음 `nightly`(봇 · 클러스터)를 돌리고 진 조합을 주석으로 올린다(`CiFailureReport.py load`). 러너는 측정 기계가 아니라 기준선은 알림뿐이다. "the load run did not finish" 로 지면 주석의 `exit` 와 오류 줄로 봇이 왜 끝났는지 읽는다. 부하 스위트의 시간 예산(`SW_TEST_TIME_BUDGET`)은 Release 세 번 중 최대 케이스 시간의 네 배다.
+- **CI 야간 잡**(`.github/workflows/load.yml`)이 `ctest -L load` 와 묶음 `nightly`(봇 · 클러스터)를 돌리고 진 조합을 주석으로 올린다(`CiFailureReport.py load`). 러너는 측정 기계가 아니라 기준선은 알림뿐이고, 묶음은 `--report-time-budgets` 로 돌아 시간 예산(`_us` · `_ms` · `hitch.*`)을 넘어도 지지 않는다 — 넘은 줄은 결과 JSON 의 `time_budget_overruns` 에 남고 주석은 `::notice` 로 올라온다. 정확성(수렴 · 오류율) · 메모리 예산과 실행 실패는 러너에서도 판정한다. 시간 회귀는 이 PC 의 기준선이 본다. "the load run did not finish" 로 지면 주석의 `exit` 와 오류 줄로 봇이 왜 끝났는지 읽는다. 부하 스위트의 시간 예산(`SW_TEST_TIME_BUDGET`)은 Release 세 번 중 최대 케이스 시간의 네 배다.
 
 ## 3. 검증할 때의 함정
 

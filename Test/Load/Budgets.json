@@ -1,6 +1,6 @@
 {
   "_doc": [
-    "부하 예산 — 시나리오 × 하드웨어 프로필마다 지표의 상한(가운데 값 기준, 여러 판). Scripts/qa/Load.py 가 Release 결과에만 판정한다.",
+    "부하 예산 — 시나리오 × 하드웨어 프로필마다 지표의 상한(가운데 값 기준, 여러 판). Scripts/qa/Load.py 가 Release 결과에만 판정한다. 측정 기계가 아닌 CI 러너(--report-time-budgets)는 시간 지표(_us · _ms · hitch.*)를 알림으로만 올린다.",
     "이 값은 제품 목표다(측정값을 옮겨 적지 않는다). 회귀는 기준선(Baselines.json)이 따로 본다. '*' 는 모든 프로필의 기본이고 프로필 줄이 덮는다.",
     "지표 이름: <구간>.p50_us · .p99_us · .max_us(프로파일 표 — GT.Frame · RT.Frame · GPU.Frame · GT.Scene.tick …), hitch.worst_us · hitch.over33ms(프레임 간격),",
     "alloc.per_frame(프레임당 sw 할당), private_mb.max · gpu_memory_mb(메모리), private_mb_per_minute · handles_per_minute(소크 기울기), startup_ms(기동 — 디스크 흉내),",
