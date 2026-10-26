@@ -27,10 +27,13 @@ namespace sw
         : _shape{ NavObstacleShape::Box }
         , _halfExtents{ 0.5f, 0.5f, 0.5f }
         , _center{ 0.0f, 0.5f, 0.0f }
+        , _volume{}
+        , _pSeenScene{ nullptr }
         , _carvedBounds{}
         , _carvedPosition{}
         , _carvedYaw{ 0.0f }
         , _navIndex{ SceneNavigation::kNotRegistered }
+        , _seenTransformVersion{ 0 }
         , _bCarved{ SW_FALSE }
         , _bShapeDirty{ SW_FALSE }
         , _reserved{ 0 }
@@ -106,6 +109,25 @@ namespace sw
             outVolume._listPoint.push_back( float3{ worldCenter._x + MathUtil::cos( angle ) * radius, worldCenter._y, worldCenter._z + MathUtil::sin( angle ) * radius } );
         }
         return true;
+    }
+
+    bool NavMeshObstacleComponent::refreshVolume()
+    {
+        const GameObject*     pOwner = getOwner();
+        const SceneComponent* pScene = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
+        if ( pScene == nullptr )
+        {
+            _volume._listPoint.clear();
+            _pSeenScene = nullptr;
+            return false;
+        }
+        const uint32 version    = pScene->getWorldTransformVersion();
+        const bool   bUnchanged = pScene == _pSeenScene && version == _seenTransformVersion && _bShapeDirty == SW_FALSE;
+        if ( bUnchanged )
+            return false;
+        _pSeenScene           = pScene;
+        _seenTransformVersion = version;
+        return makeVolume( _volume );
     }
 
     bool NavMeshObstacleComponent::makeCacheObstacle( NavCacheObstacleDesc& outDesc ) const

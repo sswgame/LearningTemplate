@@ -70,12 +70,12 @@ namespace sw
 
     void NavTileRebaker::collectObstacleVolumes( const vector<NavMeshObstacleComponent*>& listObstacle, vector<NavConvexVolume>& outListVolume )
     {
+        // 뚫린 장애물의 부피는 `updateObstacles` 가 만들어 둔 것이다(컴포넌트의 `_volume`). 베이크 워커가 읽는 사본이라 베낀다.
         outListVolume.clear();
         for ( const NavMeshObstacleComponent* pObstacle : listObstacle )
         {
-            NavConvexVolume volume;
-            if ( pObstacle->_bCarved == SW_TRUE && pObstacle->makeVolume( volume ) )
-                outListVolume.push_back( std::move( volume ) );
+            if ( pObstacle->_bCarved == SW_TRUE && pObstacle->_volume._listPoint.empty() == false )
+                outListVolume.push_back( pObstacle->_volume );
         }
     }
 
@@ -133,8 +133,12 @@ namespace sw
                     forgetObstacle( *pObstacle, listRuntime );
                 continue;
             }
-            NavConvexVolume volume;
-            if ( pObstacle->makeVolume( volume ) == false || volume._listPoint.size() < 2 )
+            // 따르는 트랜스폼(칸의 변경 번호)도 모양도 그대로인 뚫린 장애물은 부피를 다시 만들지 않고 건너뛴다 — 정수 비교 하나다.
+            const bool bVolumeChanged = pObstacle->refreshVolume();
+            if ( bVolumeChanged == false && pObstacle->_bCarved == SW_TRUE )
+                continue;
+            const NavConvexVolume& volume = pObstacle->_volume;
+            if ( volume._listPoint.size() < 2 )
                 continue;
             const AABB    bounds   = volume.computeBounds();
             const float3  center   = ( bounds._min + bounds._max ) * 0.5f;
