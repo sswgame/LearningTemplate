@@ -21,7 +21,7 @@ namespace sw
             static bool isSeparator( utf8 character ) { return character == ' ' || character == ',' || character == '\t'; }
 
             /** @brief @p text 의 @p offset 부터 다음 낱말을 찾습니다. 없으면 false 입니다. */
-            static bool findNextToken( string_view text, size_t& inoutOffset, string_view& outToken )
+            [[nodiscard]] static bool findNextToken( string_view text, size_t& inoutOffset, string_view& outToken )
             {
                 size_t begin = inoutOffset;
                 while ( begin < text.size() && isSeparator( text[begin] ) )

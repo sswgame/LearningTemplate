@@ -121,7 +121,7 @@ namespace sw
         DebugHUDRegistry();
 
         /** @brief 섹션을 올립니다. 이름이 비었거나 · 예약어거나 · 이미 있거나 · 본문이 없으면 false 입니다. */
-        bool registerSection( const DebugHUDSectionRegistration* pRegistration );
+        [[nodiscard]] bool registerSection( const DebugHUDSectionRegistration* pRegistration );
         /** @brief 섹션을 뺍니다(없으면 아무 일도 없습니다). */
         void unregisterSection( const DebugHUDSectionRegistration* pRegistration );
         /** @brief 이름(대소문자 무시)으로 섹션을 찾습니다. */

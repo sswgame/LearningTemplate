@@ -31,6 +31,6 @@ namespace sw
          * @brief @p listCandidate 안에서 순환 하나를 찾아 경로(`A, B, …, A`)로 돌려줍니다. 오류 메시지가 "무엇이 무엇을 기다리는가" 를 말하게 합니다.
          * @return 순환을 찾았으면 true 입니다.
          */
-        static bool findCycle( const vector<vector<uint32>>& listDependency, const vector<uint32>& listCandidate, vector<uint32>& outListCycle );
+        [[nodiscard]] static bool findCycle( const vector<vector<uint32>>& listDependency, const vector<uint32>& listCandidate, vector<uint32>& outListCycle );
     };
 } // namespace sw

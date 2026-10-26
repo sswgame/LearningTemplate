@@ -54,7 +54,7 @@ namespace sw
          * @param threadCount 만들 워커 스레드 수(0 이면 시스템의 논리 CPU 코어 수에 맞춰 자동으로 정합니다)
          * @return 초기화에 성공하면 true
          */
-        bool initialize( uint32 threadCount = 0 );
+        [[nodiscard]] bool initialize( uint32 threadCount = 0 );
 
         /** @brief 모든 워커 스레드를 멈추고 풀을 종료합니다. */
         void shutdown();

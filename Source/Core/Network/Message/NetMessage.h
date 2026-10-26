@@ -170,8 +170,8 @@ namespace sw
          * @details 영역이 겹친 게임은 false 를 기동 실패로 다룬다. 키트는 자기 영역(`NetKitMessageRange`)을 쓰고, 게임 처리기 여럿은 영역 안에서 서로 다른 마스크를 쓴다.
          *          이미 단 처리기를 다시 달면 true 입니다.
          */
-        bool registerHandler( INetMessageHandler* pHandler );
-        void unregisterHandler( INetMessageHandler* pHandler );
+        [[nodiscard]] bool registerHandler( INetMessageHandler* pHandler );
+        void               unregisterHandler( INetMessageHandler* pHandler );
         /** @brief 메시지 하나를 그 종류의 처리기에 넘깁니다. 처리기가 없으면(빈 메시지도) NotMine 을 반환합니다. */
         NetHandleResult dispatch( const NetMessageContext& context, const uint8* pData, int32 size );
         /** @brief 연결 사건 하나를 모든 처리기에 등록 순서대로 알립니다. */
