@@ -950,6 +950,28 @@
       "id": "host-write-snapshot", "title": "HostGpuIsolation H1 — 시나리오마다 Scripts/qa/WriteSnapshot.py 로 App 을 돌려 HostWriteLocations.json 에 없는 쓰기 위치를 찾는다", "kind": "test", "config": "Shipping", "platform": "windows", "gpu": "shared", "pending": false,
       "need_command": "시나리오(엔진 · 게임 팩 · 에디터)마다 `py -3 -m Scripts.qa.WriteSnapshot --app <App> --label <이름> -- <그 시나리오 인자>` 를 도는 반복이 매니페스트에 없다. 에디터 시나리오는 -EnableEditor 가 든 인자로 따로 돈다",
       "source": "docs/plans/HostGpuIsolation.md 5절 H1", "result_doc": "docs/plans/HostGpuIsolation.md 2절 표"
+    },
+    {
+      "id": "app-hang-watch", "title": "AppHangWatchTest — 게임 스레드 교착을 행 감시가 12 · hang:true 로 끝낸다", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "shared", "pending": true, "timeout_minutes": 20,
+      "filter": "AppHangWatchTest.*", "extra_args": ["--host_suites=all"],
+      "source": "docs/plans/AutomationSplit.md 7절", "result_doc": "docs/plans/AutomationSplit.md 7절",
+      "note": "지면 보고의 reason 을 먼저 본다 — 기동이 wallTimeoutSeconds(3 초)를 넘겼으면 hang 없이 일반 시간 초과로 끝난 것이라 hang.scenario.xml 의 wallTimeoutSeconds 를 올린다."
+    },
+    {
+      "id": "scenario-timeline-measure", "title": "시나리오 보고의 timeline 으로 고정 대기 · 조건 대기 · 기동 몫 재기(app-scenarios-release 뒤)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 10,
+      "tool": "scripts", "args": ["scenario-waits", "--measured-dir", "{bin}/Saved/Automation", "--top", "20"], "limit": "보고만 — 어림 프레임 대 잰 초, 시작 전 · 고정 대기 · 조건 대기 · 단계 몫", "judge": "exit",
+      "source": "docs/plans/AutomationSplit.md 7절", "result_doc": "docs/plans/AutomationSplit.md 7절"
+    },
+    {
+      "id": "scenario-thresholds-promote", "title": "어림값 문턱 38 개를 잰 값으로 승격하는 제안 표(네 백엔드 보고)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 10,
+      "tool": "scripts", "args": ["scenario-thresholds", "--reports", "{bin}/Saved/Automation"], "limit": "보고만 — 승격 가능 · 결함 의심 · 사람이 정함을 나눠 보인다(--apply 는 표를 보고 사람이 따로 돌린다)", "judge": "exit",
+      "source": "docs/plans/GpuVerification.md 3절", "result_doc": "docs/plans/GpuVerification.md 3절"
+    },
+    {
+      "id": "scenarios-new-q2", "title": "시나리오 없던 기능 일곱(패널 셋 · 반사 프로브 베이크 · 자동 플레이 셋)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "covered": ["engine/automation/editor/audiographpanel.scenario.xml", "engine/automation/editor/behaviortreepanel.scenario.xml", "engine/automation/editor/worldcellspanel.scenario.xml", "engine/automation/editor/reflectionprobebake.scenario.xml", "game/wildwest/automation/autoplaymount.scenario.xml", "game/frontiertown/automation/autoplayclock.scenario.xml", "game/meadowvillage/automation/autoplayclock.scenario.xml"], "covered_by": "app-scenarios-release",
+      "source": "docs/plans/AutomationSplit.md 8절", "result_doc": "docs/plans/AutomationSplit.md 8절",
+      "note": "처음 도는 시나리오들이다. 지면 보고의 failures · unhandledLogs 를 본다 — 패널은 Editor.PanelOpen 이 안 서면 panel.focus 철자부터, 자동 플레이는 시한(30 · 40 초)이 8 배속 가정과 맞는지부터."
     }
   ]
 }
