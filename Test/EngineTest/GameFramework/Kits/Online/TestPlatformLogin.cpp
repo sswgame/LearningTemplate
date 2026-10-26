@@ -8,6 +8,7 @@
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
 #include "Core/String/Base64Util.h"
+#include "Core/Time/Clock.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "GameFramework/Base/Online/HTTP/HTTPClient.h"
@@ -206,6 +207,7 @@ namespace
         unique_ptr<ITLSContext> _serverContext;
         unique_ptr<ITLSContext> _clientContext;
         HTTPServer              _server;
+        ManualClock             _clock; ///< 제공자 HTTP 시한을 재는 시계(`verify` 가 `_nowMs` 와 같은 만큼 민다). 클라이언트보다 먼저 선언한다
         HTTPClient              _client;
         UnixMilliseconds        _nowMs;
 
@@ -215,7 +217,8 @@ namespace
             , _serverContext{}
             , _clientContext{}
             , _server{}
-            , _client{}
+            , _clock{ MonotonicMilliseconds{ 0 } }
+            , _client{ _clock }
             , _nowMs{ kNowMs }
         {
             INetSecurityProvider& provider = NetSecurity::getProvider();
@@ -273,6 +276,7 @@ namespace
                         return std::move( verification );
                 }
                 _nowMs += 10;
+                _clock.advanceMilliseconds( 10 );
                 std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
             }
             PlatformLoginVerification lost;
@@ -415,7 +419,8 @@ SW_TEST_CASE( PlatformLoginTest, TicketQueryProviderChecksTheResultPath )
     SW_EXPECT_FALSE( PlatformLoginProviderFactory::readSettings( "{\"providers\":[{\"name\":\"steam\",\"kind\":\"ticketQuery\",\"profileUrl\":\"https://x/a\"}]}", listSettings,
                                                                  error ) );
     // 키 환경 변수가 없으면 만들지 않는다(서버 기동 실패 — 키 없는 확인으로 대신 뜨지 않는다).
-    HTTPClient unused;
+    const SystemMonotonicClock clock;
+    HTTPClient                 unused{ clock };
     settings._keySecretEnvironment = "SW_TEST_TICKET_KEY_THAT_IS_NOT_SET";
     SW_EXPECT_TRUE( PlatformLoginProviderFactory::create( settings, nullptr, &unused ) == nullptr );
 }
@@ -436,7 +441,8 @@ SW_TEST_CASE( PlatformLoginTest, ProviderSettingsComeFromData )
     SW_EXPECT_TRUE( listSettings[0]._bRequireNonce == SW_TRUE );
     SW_EXPECT_EQUAL( string( "sub" ), listSettings[1]._subjectPath );
     SW_EXPECT_TRUE( listSettings[2]._kind == PlatformLoginProviderKind::AccessTokenProfile );
-    HTTPClient unused;
+    const SystemMonotonicClock clock;
+    HTTPClient                 unused{ clock };
     SW_EXPECT_TRUE( PlatformLoginProviderFactory::create( listSettings[2], nullptr, &unused ) != nullptr );
     SW_EXPECT_TRUE( PlatformLoginProviderFactory::create( listSettings[0], nullptr, &unused ) == nullptr ); // OIDC 는 서명 제공자가 있어야
 
@@ -451,7 +457,7 @@ SW_TEST_CASE( PlatformLoginTest, PcLoopbackPkceFlowGetsAnIDTokenWithNonce )
     using Internal = TestPlatformLoginInternal;
     IssuerFixture           fixture;
     RecordingBrowser        browser;
-    LoopbackPkceLoginClient client;
+    LoopbackPkceLoginClient client{ fixture._clock };
     PkceLoginProviderConfig settings;
     settings._provider         = "google";
     settings._authorizationURL = fixture.makeURL( "/authorize?prompt=select_account" );
@@ -464,7 +470,7 @@ SW_TEST_CASE( PlatformLoginTest, PcLoopbackPkceFlowGetsAnIDTokenWithNonce )
     client.getHTTPClient().registerTLSContext( "localhost", fixture._clientContext.get() );
 
     const SigningKey key       = Internal::makeKey( "k1", NetSignatureAlgorithm::EcdsaP256Sha256 );
-    const uint64     requestID = client.beginLogin( "google", kNowMs.count() );
+    const uint64     requestID = client.beginLogin( "google", MonotonicMilliseconds{ kNowMs.count() } );
     SW_ASSERT_FALSE( browser._lastURL.empty() );
     SW_EXPECT_EQUAL( string( "select_account" ), Internal::findQuery( browser._lastURL, "prompt" ) ); // 설정의 쿼리를 지킨다
     SW_EXPECT_EQUAL( string( "S256" ), Internal::findQuery( browser._lastURL, "code_challenge_method" ) );
@@ -479,18 +485,18 @@ SW_TEST_CASE( PlatformLoginTest, PcLoopbackPkceFlowGetsAnIDTokenWithNonce )
     HTTPClient&       browserClient = fixture._client;
     HTTPClientRequest forged;
     forged._url = redirectUri + "?code=" + fixture._handler._expectedCode + "&state=forged";
-    (void)browserClient.submitRequest( forged, kNowMs.count() );
+    (void)browserClient.submitRequest( forged );
     HTTPClientRequest redirect;
     redirect._url = redirectUri + "?code=" + fixture._handler._expectedCode + "&state=" + HTTPUtil::encodePercent( state );
-    (void)browserClient.submitRequest( redirect, kNowMs.count() );
+    (void)browserClient.submitRequest( redirect );
     vector<PlatformLoginClientResult> listResult;
     vector<HTTPClientResponse>        listPage;
     for ( const Deadline deadline = Deadline::afterMilliseconds( 10000 ); listResult.empty() && deadline.isExpired() == false; )
     {
         fixture._server.update();
-        browserClient.update( kNowMs.count() );
+        browserClient.update();
         (void)browserClient.pollResponses( listPage );
-        client.update( kNowMs.count() );
+        client.update( MonotonicMilliseconds{ kNowMs.count() } );
         (void)client.pollResults( listResult );
         std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
     }
@@ -508,18 +514,18 @@ SW_TEST_CASE( PlatformLoginTest, PcLoopbackPkceFlowGetsAnIDTokenWithNonce )
     SW_EXPECT_EQUAL( 1, rejectedPageCount );
 
     // 사용자가 거절했다 — 취소로 끝난다.
-    (void)client.beginLogin( "google", kNowMs.count() );
+    (void)client.beginLogin( "google", MonotonicMilliseconds{ kNowMs.count() } );
     const string      secondState = Internal::findQuery( browser._lastURL, "state" );
     HTTPClientRequest denied;
     denied._url = redirectUri + "?error=access_denied&state=" + HTTPUtil::encodePercent( secondState );
-    (void)browserClient.submitRequest( denied, kNowMs.count() );
+    (void)browserClient.submitRequest( denied );
     listResult.clear();
     for ( const Deadline deadline = Deadline::afterMilliseconds( 10000 ); listResult.empty() && deadline.isExpired() == false; )
     {
         fixture._server.update();
-        browserClient.update( kNowMs.count() );
+        browserClient.update();
         (void)browserClient.pollResponses( listPage );
-        client.update( kNowMs.count() );
+        client.update( MonotonicMilliseconds{ kNowMs.count() } );
         (void)client.pollResults( listResult );
         std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
     }
@@ -529,9 +535,9 @@ SW_TEST_CASE( PlatformLoginTest, PcLoopbackPkceFlowGetsAnIDTokenWithNonce )
 
     // 모르는 제공자 · 시한
     listResult.clear();
-    (void)client.beginLogin( "apple", kNowMs.count() );
-    (void)client.beginLogin( "google", kNowMs.count() );
-    client.update( ( kNowMs + settings._timeoutMs ).count() );
+    (void)client.beginLogin( "apple", MonotonicMilliseconds{ kNowMs.count() } );
+    (void)client.beginLogin( "google", MonotonicMilliseconds{ kNowMs.count() } );
+    client.update( MonotonicMilliseconds{ ( kNowMs + settings._timeoutMs ).count() } );
     (void)client.pollResults( listResult );
     SW_ASSERT_EQUAL( size_t( 2 ), listResult.size() );
     SW_EXPECT_TRUE( listResult[0]._bSucceeded == SW_FALSE );
@@ -586,16 +592,17 @@ SW_TEST_CASE( PlatformLoginTest, ProviderSetNeedsATrustFileForHTTPSProviders )
     plain._kind        = PlatformLoginProviderKind::AccessTokenProfile;
     plain._profileURL  = "http://127.0.0.1:9/v1/nid/me";
     plain._subjectPath = "response.id";
-    PlatformLoginProviderSet set;
-    string                   error;
-    SW_ASSERT_TRUE( set.initialize( { plain }, "", error ) );
+    const SystemMonotonicClock clock;
+    PlatformLoginProviderSet   set;
+    string                     error;
+    SW_ASSERT_TRUE( set.initialize( { plain }, "", clock, error ) );
     SW_ASSERT_EQUAL( 1, set.getProviderCount() );
     SW_EXPECT_EQUAL( string( "naver" ), string( set.getProvider( 0 )->getName() ) );
 
     PlatformLoginProviderConfig secure = plain;
     secure._name                       = "kakao";
     secure._profileURL                 = "https://kapi.kakao.com/v2/user/me";
-    SW_EXPECT_FALSE( set.initialize( { plain, secure }, "", error ) ); // 신뢰 파일 없이 개발용 인증서로 바꾸지 않는다
+    SW_EXPECT_FALSE( set.initialize( { plain, secure }, "", clock, error ) ); // 신뢰 파일 없이 개발용 인증서로 바꾸지 않는다
     SW_EXPECT_TRUE( error.find( "platformTrustFile" ) != string::npos );
     SW_EXPECT_EQUAL( 0, set.getProviderCount() ); // 실패하면 만든 것을 모두 버린다
     set.shutdown();

@@ -3,6 +3,7 @@
 #include "pch.h"
 
 #include "Core/Network/Security/INetSecurityProvider.h"
+#include "Core/Time/Clock.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Serialization/JSON/JSONDocument.h"
@@ -352,12 +353,13 @@ SW_TEST_CASE( PushProviderSetTest, SettingsAreReadStrictlyAndTheSecretComesFromT
     SW_EXPECT_FALSE( PushProviderSet::readSettings( "[]", listSettings, error ) );
 
     // 환경 변수가 없으면 제공자를 만들지 못하고 기동이 멈춘다 — 가짜로 대신 뜨지 않는다.
+    const SystemMonotonicClock clock;
     PushProviderSet            providerSet;
     vector<PushProviderConfig> listMissing;
     SW_ASSERT_TRUE( PushProviderSet::readSettings( "{\"providers\":[{\"kind\":\"fcm\",\"serviceAccountEnvironment\":\"SW_TEST_FCM_ACCOUNT_THAT_IS_NOT_SET\"}]}", listMissing, error ) );
     {
         SW_TEST_DEFENSIVE_SCOPE( "the missing environment variable is logged" );
-        SW_EXPECT_FALSE( providerSet.initialize( listMissing, "", error ) );
+        SW_EXPECT_FALSE( providerSet.initialize( listMissing, "", clock, error ) );
     }
     SW_EXPECT_TRUE( error.find( "SW_TEST_FCM_ACCOUNT_THAT_IS_NOT_SET" ) != sw::string::npos );
     SW_EXPECT_EQUAL( providerSet.getProviderCount(), 0 );

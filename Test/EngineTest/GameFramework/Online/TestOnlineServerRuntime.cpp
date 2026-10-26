@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
+#include "Core/Time/Clock.h"
 
 #include "Engine/Observability/ServiceHealthRegistry.h"
 
@@ -37,11 +38,14 @@ namespace
 
         static void reset() { vector<string>{}.swap( getLog() ); }
 
+        /** @brief 런타임이 빌리는 단조 시계입니다. 상태가 없는 운영 시계라 테스트끼리 나눠도 된다(메모리 캐시 만료가 테스트 안에서 오지 않는다). */
+        static inline const SystemMonotonicClock kClock{};
+
         static OnlineServerRuntimeConfig makeSettings( std::initializer_list<const utf8*> listKitName )
         {
             OnlineServerRuntimeConfig settings;
             settings._bTLS                  = SW_FALSE;
-            settings._bManualCacheTime      = SW_TRUE;
+            settings._pClock                = &kClock;
             settings._config._ioThreadCount = 0;
             for ( const utf8* pName : listKitName )
             {

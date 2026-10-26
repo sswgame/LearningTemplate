@@ -18,7 +18,7 @@ namespace
         MemoryEphemeralStore    _secondStore;
 
         MemoryEphemeralFixture()
-            : _clock{ 1000000 }
+            : _clock{ MonotonicMilliseconds{ 1000000 } }
             , _database{ _clock }
             , _store{ &_database }
             , _secondStore{ &_database }
@@ -42,7 +42,7 @@ SW_EPHEMERAL_STORE_CONTRACT_SUITE( EphemeralStoreMemoryTest, MemoryEphemeralFixt
 
 SW_TEST_CASE( EphemeralStoreMemoryTest, ShutdownAnswersUnavailableAndDropsSubscriptions )
 {
-    ManualClock             clock{ 1000000 };
+    ManualClock             clock{ MonotonicMilliseconds{ 1000000 } };
     MemoryEphemeralDatabase database{ clock };
     MemoryEphemeralStore    publisher{ &database };
     MemoryEphemeralStore    subscriber{ &database };

@@ -347,7 +347,7 @@ namespace test
             _requestClient.update();
             for ( sw::unique_ptr<sw::OnlineServiceClient>& client : _listClient )
             {
-                client->update( nowMs );
+                client->update( sw::MonotonicMilliseconds{ nowMs } ); // 클라이언트는 테스트의 같은 틱 카운터를 단조 시각으로 쓴다
             }
         }
 

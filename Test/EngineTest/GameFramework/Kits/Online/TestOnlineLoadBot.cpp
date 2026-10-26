@@ -4,6 +4,7 @@
 #include "pch.h"
 
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
+#include "Core/Time/Clock.h"
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Kits/Feature/Online/Chat/Shared/ChatProtocol.h"
@@ -67,11 +68,13 @@ namespace
             LoopbackStreamNetwork        network( static_cast<uint32>( networkSeed ) );
             unique_ptr<IStreamTransport> serverTransport = network.createTransport();
             unique_ptr<IStreamTransport> botTransport    = network.createTransport();
+            ManualClock                  serverClock{ MonotonicMilliseconds{ 0 } }; // 서버 캐시 만료를 실행기와 같은 가짜 경과로 잰다
             LoadBotLocalServer           server;
             LoadBotLocalServerSettings   serverSettings;
             serverSettings._port               = kServerPort;
             serverSettings._startMs            = kServerStartMs; // 첫 tick 과 같은 서비스 시각 — 실행마다 같은 표가 나와야 한다
             serverSettings._bLightPasswordHash = SW_TRUE;
+            serverSettings._pClock             = &serverClock;
             SW_EXPECT_TRUE_MSG( server.initialize( serverTransport.get(), serverSettings, error ), error.c_str() );
 
             LoadBotRunner         runner;
@@ -85,6 +88,7 @@ namespace
             {
                 const int64 nowMs = tickCount * kTickMs;
                 runner.setManualClock( nowMs );
+                serverClock.setMilliseconds( MonotonicMilliseconds{ nowMs } );
                 bRunning = runner.update();
                 server.update( kServerStartMs + nowMs );
                 ++tickCount;

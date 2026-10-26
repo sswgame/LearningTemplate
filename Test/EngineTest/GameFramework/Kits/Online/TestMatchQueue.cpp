@@ -186,7 +186,7 @@ namespace
 SW_TEST_CASE( MatchQueueTest, RatedModeNeedsAStatSourceAndRefusesAccountsWhoseStatsAreNotLoaded )
 {
     using Internal = MatchQueueTestInternal;
-    ManualClock             cacheClock{ 0 };
+    ManualClock             cacheClock{ MonotonicMilliseconds{ 0 } };
     MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     MemoryEphemeralStore    cache{ &cacheDatabase };
     EphemeralStoreRouter    router;
@@ -250,7 +250,7 @@ SW_TEST_CASE( MatchQueueTest, AgentAdmitsOnlyAssignedAccounts )
 SW_TEST_CASE( MatchQueueTest, SingleServerPlacesMatchOnRegisteredGameServer )
 {
     using Internal = MatchQueueTestInternal;
-    ManualClock             cacheClock{ 0 };
+    ManualClock             cacheClock{ MonotonicMilliseconds{ 0 } };
     MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     QueueNode               node( &cacheDatabase, nullptr, 1 );
     ServerRegistration      gameServer;
@@ -296,7 +296,7 @@ SW_TEST_CASE( MatchQueueTest, SingleServerPlacesMatchOnRegisteredGameServer )
 SW_TEST_CASE( MatchQueueTest, TicketsFromAnotherServerReachTheAuthorityAndResultsComeBack )
 {
     using Internal = MatchQueueTestInternal;
-    ManualClock             cacheClock{ 0 };
+    ManualClock             cacheClock{ MonotonicMilliseconds{ 0 } };
     MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     LocalServerBusHub       hub;
     QueueNode               first( &cacheDatabase, &hub, 1 );
@@ -343,7 +343,7 @@ SW_TEST_CASE( MatchQueueTest, TicketsFromAnotherServerReachTheAuthorityAndResult
 
 SW_TEST_CASE( MatchQueueTest, AuthorityFailoverLosesQueuedTicketsWhichTimeOutAtTheOrigin )
 {
-    ManualClock             cacheClock{ 0 };
+    ManualClock             cacheClock{ MonotonicMilliseconds{ 0 } };
     MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     LocalServerBusHub       hub;
     const int64             maxWaitMs = 20000;
@@ -382,7 +382,7 @@ SW_TEST_CASE( MatchQueueTest, NoServerWaitsThenPlacesWhenOneAppears )
 {
     using Internal = MatchQueueTestInternal;
     {
-        ManualClock             cacheClock{ 0 };
+        ManualClock             cacheClock{ MonotonicMilliseconds{ 0 } };
         MemoryEphemeralDatabase cacheDatabase{ cacheClock };
         QueueNode               node( &cacheDatabase, nullptr, 1 );
         for ( AccountID accountID = 1; accountID <= 4; ++accountID )
@@ -402,7 +402,7 @@ SW_TEST_CASE( MatchQueueTest, NoServerWaitsThenPlacesWhenOneAppears )
         }
     }
     {
-        ManualClock             cacheClock{ 0 };
+        ManualClock             cacheClock{ MonotonicMilliseconds{ 0 } };
         MemoryEphemeralDatabase cacheDatabase{ cacheClock };
         QueueNode               node( &cacheDatabase, nullptr, 1 );
         for ( AccountID accountID = 1; accountID <= 4; ++accountID )
@@ -425,7 +425,7 @@ SW_TEST_CASE( MatchQueueTest, NoServerWaitsThenPlacesWhenOneAppears )
 SW_TEST_CASE( MatchQueueTest, PartyLeaderQueuesTheWholePartyAsOneTeam )
 {
     using Internal = MatchQueueTestInternal;
-    ManualClock             cacheClock{ 0 };
+    ManualClock             cacheClock{ MonotonicMilliseconds{ 0 } };
     MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     QueueNode               node( &cacheDatabase, nullptr, 1 );
     ServerRegistration      gameServer;
@@ -474,7 +474,7 @@ SW_TEST_CASE( MatchQueueTest, PartyLeaderQueuesTheWholePartyAsOneTeam )
 SW_TEST_CASE( MatchQueueTest, LobbyStartPlacesTheLobbyTeams )
 {
     using Internal = MatchQueueTestInternal;
-    ManualClock             cacheClock{ 0 };
+    ManualClock             cacheClock{ MonotonicMilliseconds{ 0 } };
     MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     QueueNode               node( &cacheDatabase, nullptr, 1 );
     LobbySnapshot           request;

@@ -2,6 +2,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
+#include "Core/Time/Clock.h"
 
 #include "EngineTest/GameFramework/Online/ServiceStoreContract.h"
 
@@ -148,11 +149,12 @@ SW_TEST_CASE( ServiceStoreSQLiteTest, ServerRuntimeOpensTheSQLiteStoreThroughThe
 {
     // 키트가 실리면 서버 조립의 저장소 만들기가 이 팩토리에 묶여 있다(`OnlineStoreDriverBinding`) — memory 밖의 드라이버로도 서버가 선다.
     SW_EXPECT_TRUE( OnlineStoreDriverTable::findServiceStoreFactory() == &ServiceStoreFactory::createServiceStore );
+    const SystemMonotonicClock   clock; // 런타임이 빌린다. 런타임보다 먼저 선언한다
     LoopbackStreamNetwork        network;
     unique_ptr<IStreamTransport> transport = network.createTransport();
     OnlineServerRuntimeConfig    settings;
     settings._bTLS                                 = SW_FALSE;
-    settings._bManualCacheTime                     = SW_TRUE;
+    settings._pClock                               = &clock;
     settings._config._ioThreadCount                = 0;
     settings._store._driver                        = "sqlite";
     settings._store._connection                    = test::makeTempPath( "runtime.db" );

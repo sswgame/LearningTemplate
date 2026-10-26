@@ -297,7 +297,7 @@ namespace
                 _nowMs += 10;
                 for ( ClientSide* pClient : _listClient )
                 {
-                    pClient->_client.update( _nowMs.count() );
+                    pClient->_client.update( MonotonicMilliseconds{ _nowMs.count() } );
                 }
                 _host.update( _nowMs );
             }

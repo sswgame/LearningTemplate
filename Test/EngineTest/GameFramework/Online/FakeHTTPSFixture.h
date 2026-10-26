@@ -8,6 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
+#include "Core/Time/Clock.h"
 
 #include "GameFramework/Base/Online/HTTP/HTTPClient.h"
 #include "GameFramework/Base/Online/HTTP/HTTPServer.h"
@@ -32,15 +33,17 @@ namespace test
         sw::unique_ptr<sw::ITLSContext> _serverContext;
         sw::unique_ptr<sw::ITLSContext> _clientContext;
         sw::HTTPServer                  _server;
+        sw::ManualClock                 _clock; ///< HTTP 시한을 재는 단조 시계(`pump` 가 민다). 클라이언트보다 먼저 선언한다
         sw::HTTPClient                  _client;
-        int64                           _nowMs;
+        sw::UnixMilliseconds            _nowMs; ///< 제공자에 넘기는 가짜 서버 시각(`pump` 가 같은 만큼 민다)
 
         explicit FakeHTTPSFixture( sw::IHTTPRequestHandler* pHandler )
             : _network{ 21u }
             , _serverContext{}
             , _clientContext{}
             , _server{}
-            , _client{}
+            , _clock{ sw::MonotonicMilliseconds{ 0 } }
+            , _client{ _clock }
             , _nowMs{ 1000000 }
         {
             sw::INetSecurityProvider& provider = sw::NetSecurity::getProvider();
@@ -70,7 +73,7 @@ namespace test
         /** @brief 같은 망 위의 HTTP 클라이언트를 하나 더 만듭니다(응답을 따로 회수해야 하는 제공자 — 애플 로그인의 JWKS 와 교환 · 철회). */
         sw::unique_ptr<sw::HTTPClient> createClient()
         {
-            sw::unique_ptr<sw::HTTPClient> client = sw::make_unique<sw::HTTPClient>();
+            sw::unique_ptr<sw::HTTPClient> client = sw::make_unique<sw::HTTPClient>( _clock );
             sw::StreamTransportConfig      transportSettings;
             transportSettings._ioThreadCount = 0;
             (void)client->initialize( _network.createTransport(), transportSettings, sw::HTTPClientConfig{} );
@@ -85,6 +88,7 @@ namespace test
         {
             _server.update();
             _nowMs += advanceMs;
+            _clock.advanceMilliseconds( advanceMs );
             std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
         }
     };

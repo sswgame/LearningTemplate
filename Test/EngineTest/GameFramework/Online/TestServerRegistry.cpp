@@ -85,7 +85,7 @@ namespace
 SW_TEST_CASE( ServerRegistryTest, RegisteredServerIsSeenAndExpiresWhenHeartbeatStops )
 {
     using Internal = ServerRegistryTestInternal;
-    ManualClock             clock{ 0 };
+    ManualClock             clock{ MonotonicMilliseconds{ 0 } };
     MemoryEphemeralDatabase database{ clock };
     RegistryNode            gameNode( &database );
     RegistryNode            lobbyNode( &database );
@@ -114,7 +114,7 @@ SW_TEST_CASE( ServerRegistryTest, RegisteredServerIsSeenAndExpiresWhenHeartbeatS
 SW_TEST_CASE( ServerRegistryTest, HeartbeatKeepsTheRecordAliveAndStateChangesAreWrittenAtOnce )
 {
     using Internal = ServerRegistryTestInternal;
-    ManualClock             clock{ 0 };
+    ManualClock             clock{ MonotonicMilliseconds{ 0 } };
     MemoryEphemeralDatabase database{ clock };
     RegistryNode            node( &database );
     ServerRegistration      registration;
@@ -124,7 +124,7 @@ SW_TEST_CASE( ServerRegistryTest, HeartbeatKeepsTheRecordAliveAndStateChangesAre
     reader.initialize( &node._router, "game", 2000 );
     for ( UnixMilliseconds nowMs = UnixMilliseconds{ 0 }; nowMs <= UnixMilliseconds{ 3 * ServerRegistration::kRecordTtlMs }; nowMs += 1000 )
     {
-        clock.setMilliseconds( nowMs.count() );
+        clock.setMilliseconds( MonotonicMilliseconds{ nowMs.count() } );
         registration.update( nowMs );
         (void)node._router.pump();
     }
@@ -146,7 +146,7 @@ SW_TEST_CASE( ServerRegistryTest, HeartbeatKeepsTheRecordAliveAndStateChangesAre
 SW_TEST_CASE( ServerRegistryTest, ShutdownRemovesImmediatelyAndPickAddsPendingLoad )
 {
     using Internal = ServerRegistryTestInternal;
-    ManualClock             clock{ 0 };
+    ManualClock             clock{ MonotonicMilliseconds{ 0 } };
     MemoryEphemeralDatabase database{ clock };
     RegistryNode            node( &database );
     ServerRegistration      first;

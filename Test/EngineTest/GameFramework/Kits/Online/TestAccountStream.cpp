@@ -186,7 +186,7 @@ namespace
                 _nowMs += 20;
                 for ( ClientSide* pClient : _listClient )
                 {
-                    pClient->_client.update( _nowMs.count() );
+                    pClient->_client.update( MonotonicMilliseconds{ _nowMs.count() } );
                 }
                 if ( _server != nullptr )
                     _server->_host.update( _nowMs );

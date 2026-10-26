@@ -237,7 +237,7 @@ SW_TEST_CASE( PartyLobbyTest, LobbyJoinReadyAndStartRequest )
 
 SW_TEST_CASE( PartyLobbyTest, LobbyLeaveHandsOverOwnerAndListDropsGoneLobbies )
 {
-    ManualClock             cacheClock{ 0 };
+    ManualClock             cacheClock{ MonotonicMilliseconds{ 0 } };
     MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     PartyNode               node( &cacheDatabase, 1 );
     LobbySnapshot           request;

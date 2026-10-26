@@ -5,6 +5,7 @@
 #include "Core/Network/NetTypes.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
+#include "Core/Time/Clock.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "GameFramework/Base/Online/HTTP/BlockingHTTPClient.h"
@@ -52,13 +53,15 @@ namespace
         LoopbackStreamNetwork _network;
         EchoHandler           _handler;
         HTTPServer            _server;
+        ManualClock           _clock; ///< 클라이언트 시한을 재는 시계(`run` 이 단계마다 민다). 클라이언트보다 먼저 선언한다
         HTTPClient            _client;
 
         HTTPPair()
             : _network{ 7u }
             , _handler{}
             , _server{}
-            , _client{}
+            , _clock{ MonotonicMilliseconds{ 0 } }
+            , _client{ _clock }
         {
         }
 
@@ -77,13 +80,12 @@ namespace
         /** @brief 요청 하나를 끝까지 돌립니다. @p bServe 가 false 면 서버를 돌리지 않는다(시한 테스트). */
         HTTPClientResponse run( const HTTPClientRequest& request, bool bServe = true )
         {
-            int64        nowMs     = 0;
-            const uint64 requestID = _client.submitRequest( request, nowMs );
+            const uint64 requestID = _client.submitRequest( request );
             for ( int32 step = 0; step < 400; ++step )
             {
                 if ( bServe )
                     _server.update();
-                _client.update( nowMs );
+                _client.update();
                 vector<HTTPClientResponse> listResponse;
                 (void)_client.pollResponses( listResponse );
                 for ( HTTPClientResponse& response : listResponse )
@@ -91,7 +93,7 @@ namespace
                     if ( response._requestID == requestID )
                         return std::move( response );
                 }
-                nowMs += 100;
+                _clock.advanceMilliseconds( 100 );
                 std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) ); // 이름(localhost)은 해석 스레드가 푼다 — 실제 시간을 조금 준다
             }
             HTTPClientResponse lost;

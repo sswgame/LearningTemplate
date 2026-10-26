@@ -158,7 +158,7 @@ namespace
         void step()
         {
             _nowMs += 20;
-            _player._client.update( _nowMs.count() );
+            _player._client.update( MonotonicMilliseconds{ _nowMs.count() } );
             _server._host.update( _nowMs );
         }
 

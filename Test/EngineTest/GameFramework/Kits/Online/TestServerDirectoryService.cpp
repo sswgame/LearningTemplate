@@ -113,7 +113,7 @@ SW_TEST_CASE( ServerDirectoryServiceTest, AssignsOpenServerAndHonoursMaintenance
 {
     using Internal = ServerDirectoryServiceTestInternal;
     MemoryServiceDatabase   database;
-    ManualClock             cacheClock{ 0 };
+    ManualClock             cacheClock{ MonotonicMilliseconds{ 0 } };
     MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     LocalServerBusHub       hub;
     DirectoryNode           node( &database, &cacheDatabase, &hub, 1 );

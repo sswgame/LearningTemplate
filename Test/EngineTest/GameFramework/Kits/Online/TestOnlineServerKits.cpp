@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
+#include "Core/Time/Clock.h"
 
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
 #include "GameFramework/Base/Online/Identity/AccountNameIndex.h"
@@ -40,11 +41,14 @@ namespace
             option._value              = pValue;
         }
 
+        /** @brief 런타임이 빌리는 단조 시계입니다. 상태가 없는 운영 시계라 테스트끼리 나눠도 된다. */
+        static inline const SystemMonotonicClock kClock{};
+
         static OnlineServerRuntimeConfig makeSettings( IStreamTransport* pTransport, uint16 port )
         {
             OnlineServerRuntimeConfig settings;
             settings._bTLS                  = SW_FALSE;
-            settings._bManualCacheTime      = SW_TRUE;
+            settings._pClock                = &kClock;
             settings._pTransport            = pTransport;
             settings._listenAddress         = NetAddress::makeLoopback( port );
             settings._config._ioThreadCount = 0;

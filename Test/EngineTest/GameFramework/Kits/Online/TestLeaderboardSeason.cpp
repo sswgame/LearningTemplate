@@ -310,12 +310,12 @@ SW_TEST_CASE( LeaderboardSeasonTest, PeriodRanksExpireFromTheCacheAfterTheirPeri
 {
     // 주간 보드의 캐시 순위(정렬 집합)는 그 주가 끝나고 하루 뒤 캐시가 지운다 — 기간마다 쌓이지 않는다. 초기화 없는 보드는 지우지 않는다.
     MemoryServiceDatabase      database;
-    ManualClock                cacheClock{ 1000000 };
+    ManualClock                cacheClock{ MonotonicMilliseconds{ 1000000 } };
     MemoryEphemeralDatabase    cacheDatabase{ cacheClock };
     constexpr UnixMilliseconds kNowMs{ 1767225600000 }; // 2026-01-01 00:00 UTC(목요일)
     constexpr int64            kWeekMs = 604800000;
     constexpr int64            kDayMs  = 86400000;
-    cacheClock.setMilliseconds( kNowMs.count() );
+    cacheClock.setMilliseconds( MonotonicMilliseconds{ kNowMs.count() } );
     SeasonNode            node( &database, &cacheDatabase );
     LeaderboardDefinition weekly;
     weekly._boardID = "weekly";
@@ -333,9 +333,9 @@ SW_TEST_CASE( LeaderboardSeasonTest, PeriodRanksExpireFromTheCacheAfterTheirPeri
     const string foreverKey = LeaderboardService::makeRankKey( "forever", 0 );
     SW_EXPECT_EQUAL( cacheDatabase.execute( EphemeralRequest::makeScoreRange( weeklyKey, 0, 10 ) )._listMember.size(), size_t( 1 ) );
 
-    cacheClock.setMilliseconds( static_cast<int64>( weekStart ) + kWeekMs + kDayMs - 1 ); // 끝나고 하루 안 — 아직 있다
+    cacheClock.setMilliseconds( MonotonicMilliseconds{ static_cast<int64>( weekStart ) + kWeekMs + kDayMs - 1 } ); // 끝나고 하루 안 — 아직 있다
     SW_EXPECT_EQUAL( cacheDatabase.execute( EphemeralRequest::makeScoreRange( weeklyKey, 0, 10 ) )._listMember.size(), size_t( 1 ) );
-    cacheClock.setMilliseconds( static_cast<int64>( weekStart ) + kWeekMs + kDayMs + 1 );
+    cacheClock.setMilliseconds( MonotonicMilliseconds{ static_cast<int64>( weekStart ) + kWeekMs + kDayMs + 1 } );
     SW_EXPECT_TRUE( cacheDatabase.execute( EphemeralRequest::makeScoreRange( weeklyKey, 0, 10 ) )._listMember.empty() );
     SW_EXPECT_EQUAL( cacheDatabase.execute( EphemeralRequest::makeScoreRange( foreverKey, 0, 10 ) )._listMember.size(), size_t( 1 ) );
 }

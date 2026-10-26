@@ -4,6 +4,7 @@
 #include "pch.h"
 
 #include "Core/Network/Security/INetSecurityProvider.h"
+#include "Core/Time/Clock.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Serialization/JSON/JSONDocument.h"
@@ -486,13 +487,14 @@ SW_TEST_CASE( ReceiptProviderSetTest, SettingsAreReadStrictlyAndTheSecretComesFr
 
     // 환경 변수가 없으면 제공자를 만들지 못하고 기동이 멈춘다 — 가짜로 대신 뜨지 않는다.
     ReceiptProviderSet            providerSet;
+    const SystemMonotonicClock    clock;
     vector<ReceiptProviderConfig> listMissing;
     SW_ASSERT_TRUE( ReceiptProviderSet::readSettings(
         "{\"providers\":[{\"kind\":\"steam\",\"appId\":\"480\",\"keySecretEnvironment\":\"SW_TEST_STEAM_KEY\"}]}", listMissing, error ) );
     bool bInitialized = true;
     {
         SW_TEST_DEFENSIVE_SCOPE( "the missing environment variable is logged" );
-        bInitialized = providerSet.initialize( listMissing, "", error );
+        bInitialized = providerSet.initialize( listMissing, "", clock, error );
     }
     SW_EXPECT_FALSE( bInitialized );
     SW_EXPECT_TRUE( error.find( "SW_TEST_STEAM_KEY" ) != sw::string::npos );
