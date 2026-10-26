@@ -13,6 +13,11 @@
 부른 것은 결과를 쓰는 것이다. D3D 메서드는 `->` 로 부른 것만 본다(`ComPtr::Reset()` 은 `.` 이라 아니다). D3D12 의 void 생성 함수(뷰 · 샘플러)와
 디버그 이름(`SetName`)은 보지 않는다 — 앞은 결과가 없고 뒤는 실패해도 진단 이름만 빠진다.
 
+둘째 규칙: D3D 장치 메서드(생성 · Map · Close · Reset · Signal · Present · ResizeBuffers · GetBuffer)를 `SUCCEEDED( … )` · `FAILED( … )` 로 **바로**
+감싸지 않는다. 그 모양은 실패하면 오류 없이 건너뛰거나 돌아가기 쉽다(`if ( SUCCEEDED( Map ) ) { 쓰기 }` — 업로드가 조용히 빠진다). `isHrSuccess`
+(실패 이유를 남긴다) 로 받거나 HRESULT 를 이름 붙인 변수로 받아 실패 갈래에서 값을 남긴다. 선택 기능 질의(`CheckFeatureSupport` · `As` · `GetDesc*`)는
+실패가 "없다" 는 정상 응답이라 보지 않는다.
+
   python Scripts/lint/gate/CheckDiscardedDeviceResult.py [--root <repo>] [--files a.cpp b.h]
 """
 
@@ -45,6 +50,10 @@ _kDxCallRe = re.compile(
 )
 # D3D12 에서 void 를 돌려주는 생성 함수 — DX12 파일에서만 뺀다(D3D11 의 같은 이름은 HRESULT 다).
 _kD3D12VoidRe = re.compile(r"^Create(?:RenderTarget|DepthStencil|ShaderResource|UnorderedAccess|ConstantBuffer)View$|^CreateSampler$")
+# 둘째 규칙: 장치 메서드를 SUCCEEDED · FAILED 로 바로 감싼 것(선택 기능 질의는 빼고).
+_kWrappedDxCallRe = re.compile(
+    r"\b(?P<macro>SUCCEEDED|FAILED)\(\s*[\w.\[\]()\->:]*?->(?P<method>Create\w+|Close|Reset|Map|Present1?|Signal|ResizeBuffers|GetBuffer)\s*\("
+)
 _kStatementEndRe = re.compile(r"(?:[;{})]|\belse|:)\s*$")
 
 
@@ -63,6 +72,11 @@ def findDiscardedDeviceResults(source: SourceFile) -> list[str]:
             continue
         bStatementStart = _kStatementEndRe.search(previousCode) is not None or previousCode.startswith("#")
         previousCode = stripped
+        for wrapped in _kWrappedDxCallRe.finditer(line):
+            method = wrapped.group("method")
+            if _isDx12File(relative) and _kD3D12VoidRe.match(method) is not None:
+                continue
+            listViolation.append(f"{relative}:{lineIndex}: {wrapped.group('macro')}( {method} )  | {source.listLine[lineIndex - 1].strip()}")
         if bStatementStart == False or stripped.startswith("return"):
             continue
         name = ""
@@ -132,6 +146,20 @@ class CheckDiscardedDeviceResultGate(LintGate):
                     "void probe( ID3D11Device* pDevice, ID3D11Resource* pRes, ID3D11RenderTargetView** ppRtv )\n"
                     "{\n"
                     "    pDevice->CreateRenderTargetView( pRes, nullptr, ppRtv );\n"
+                    "}\n"
+                ),
+            },
+        },
+        {
+            "name": "Map 실패를 SUCCEEDED 로 감싸 조용히 건너뜀",
+            "expectedViolation": "Source/Engine/Graphics/RHI/DX11/ProbeMap.cpp:4: SUCCEEDED( Map )",
+            "files": {
+                "Source/Engine/Graphics/RHI/DX11/ProbeMap.cpp": (
+                    "void probe( ID3D11DeviceContext* pContext, ID3D11Buffer* pBuffer, D3D11_MAPPED_SUBRESOURCE& mapped )\n"
+                    "{\n"
+                    "    // 실패하면 아무것도 쓰지 않고 지나간다\n"
+                    "    if ( SUCCEEDED( pContext->Map( pBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped ) ) )\n"
+                    "        pContext->Unmap( pBuffer, 0 );\n"
                     "}\n"
                 ),
             },

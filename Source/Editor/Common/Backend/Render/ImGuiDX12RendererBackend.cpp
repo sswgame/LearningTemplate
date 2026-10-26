@@ -4,6 +4,7 @@
 
 #include "Editor/Common/Backend/Render/ImGuiViewportSizeGuard.h"
 
+#include "Engine/Graphics/RHI/DX/RHIDxResultCheck.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 
 #include <imgui.h>
@@ -62,7 +63,7 @@ namespace sw::editor
         desc.Type                       = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
         desc.NumDescriptors             = _maxDescriptors;
         desc.Flags                      = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-        if ( FAILED( pDevice->CreateDescriptorHeap( &desc, IID_PPV_ARGS( &_d3d12SrvHeap ) ) ) )
+        if ( isHrSuccess( pDevice->CreateDescriptorHeap( &desc, IID_PPV_ARGS( &_d3d12SrvHeap ) ), "CreateDescriptorHeap" ) == false )
             return false;
 
         _descriptorSize = pDevice->GetDescriptorHandleIncrementSize( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV );

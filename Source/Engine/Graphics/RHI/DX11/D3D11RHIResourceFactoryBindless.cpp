@@ -102,7 +102,7 @@ namespace sw
         }
 
         Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> uav;
-        if ( FAILED( _pDevice->_device->CreateUnorderedAccessView( pResource, &uavDesc, uav.GetAddressOf() ) ) )
+        if ( isHrSuccess( _pDevice->_device->CreateUnorderedAccessView( pResource, &uavDesc, uav.GetAddressOf() ), "CreateUnorderedAccessView" ) == false )
             return kInvalidDescriptorIndex;
 
         return registerUavView( uav.Get(), buffer );
@@ -119,7 +119,7 @@ namespace sw
 
         // 텍스처 UAV: bindComputeUav( index, kComputeTextureUav0 + 서수 ) 가 CSSetUnorderedAccessViews 로 바인딩한다.
         Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> uav;
-        if ( FAILED( _pDevice->_device->CreateUnorderedAccessView( pRecord->_texture.Get(), nullptr, uav.GetAddressOf() ) ) )
+        if ( isHrSuccess( _pDevice->_device->CreateUnorderedAccessView( pRecord->_texture.Get(), nullptr, uav.GetAddressOf() ), "CreateUnorderedAccessView" ) == false )
             return kInvalidDescriptorIndex;
 
         return registerUavView( uav.Get(), RHIBufferHandle{ 0 } );

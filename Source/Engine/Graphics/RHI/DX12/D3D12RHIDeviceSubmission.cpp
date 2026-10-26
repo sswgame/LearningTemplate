@@ -64,7 +64,7 @@ namespace sw
             return nullptr;
 
         // 풀에서 나온 쌍은 이미 펜스를 통과했으므로 곧바로 Reset 해도 된다.
-        if ( FAILED( entry._allocator->Reset() ) || FAILED( entry._list->Reset( entry._allocator.Get(), nullptr ) ) )
+        if ( isHrSuccess( entry._allocator->Reset(), "Reset" ) == false || isHrSuccess( entry._list->Reset( entry._allocator.Get(), nullptr ), "Reset" ) == false )
             return nullptr;
 
         bindBindlessRootState( entry._list.Get() );
@@ -467,7 +467,7 @@ namespace sw
         D3D12_QUERY_HEAP_DESC heapDesc{};
         heapDesc.Type  = D3D12_QUERY_HEAP_TYPE_TIMESTAMP;
         heapDesc.Count = constant::kMaxGPUTimestampSlot * constant::kMaxFrameCountInFlight;
-        if ( FAILED( _device->CreateQueryHeap( &heapDesc, IID_PPV_ARGS( &_timestampHeap ) ) ) )
+        if ( isHrSuccess( _device->CreateQueryHeap( &heapDesc, IID_PPV_ARGS( &_timestampHeap ) ), "CreateQueryHeap" ) == false )
             return;
 
         // 읽기 전용 버퍼 하나에 링 전체 분량을 담는다. 슬롯마다 구간이 겹치지 않는다.
@@ -481,9 +481,10 @@ namespace sw
         bufferDesc.MipLevels        = 1;
         bufferDesc.SampleDesc.Count = 1;
         bufferDesc.Layout           = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-        if ( FAILED( _device->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &bufferDesc,
-                                                       D3D12_RESOURCE_STATE_COPY_DEST, nullptr,
-                                                       IID_PPV_ARGS( &_timestampReadback ) ) ) )
+        if ( isHrSuccess( _device->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &bufferDesc,
+                                                            D3D12_RESOURCE_STATE_COPY_DEST, nullptr,
+                                                            IID_PPV_ARGS( &_timestampReadback ) ),
+                          "CreateCommittedResource" ) == false )
         {
             _timestampHeap.Reset();
             return;
@@ -505,7 +506,7 @@ namespace sw
         D3D12_RANGE  range{ byteOffset, byteOffset + sizeof( uint64 ) * constant::kMaxGPUTimestampSlot };
 
         void* pMapped{ nullptr };
-        if ( FAILED( _timestampReadback->Map( 0, &range, &pMapped ) ) || pMapped == nullptr )
+        if ( isHrSuccess( _timestampReadback->Map( 0, &range, &pMapped ), "ID3D12Resource::Map (timestamp readback)" ) == false || pMapped == nullptr )
             return;
 
         // DX12 는 쿼리 힙을 리셋하지 않는다. 안 적은 칸에는 **지난 사이클의 값**이 그대로 남는다.
@@ -539,7 +540,7 @@ namespace sw
             // 디바이스가 제거된 상태에서는 Reset() 이 실패해 커맨드 리스트가 여전히 closed 로 남는다.
             // 그것을 무시하고 _bRecording=1 로 넘어가면 이후의 모든 커맨드 리스트 호출이 "closed command
             // list" 에러를 매번 뱉으며 프레임마다 반복 폭주하게 된다. 실패하면 이번 프레임을 건너뛴다.
-            if ( FAILED( pAllocator->Reset() ) || FAILED( _commandList->Reset( pAllocator, nullptr ) ) )
+            if ( isHrSuccess( pAllocator->Reset(), "Reset" ) == false || isHrSuccess( _commandList->Reset( pAllocator, nullptr ), "Reset" ) == false )
                 return;
             _frameStreamState._bRecording      = SW_TRUE;
             _frameStreamState._arrSlotState[0] = D3D12SlotTableState{}; // 새 리스트라 슬롯 테이블은 첫 드로우가 다시 굳힌다

@@ -323,11 +323,12 @@ namespace sw
 
         const D3D12_HEAP_PROPERTIES heapProps    = D3D12RHIResourcePreset::heapProperties( D3D12_HEAP_TYPE_UPLOAD );
         const D3D12_RESOURCE_DESC   resourceDesc = D3D12RHIResourcePreset::bufferDesc( sizeBytes );
-        if ( FAILED( _device->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
-                                                       IID_PPV_ARGS( outBuffer.GetAddressOf() ) ) ) )
+        if ( isHrSuccess( _device->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
+                                                            IID_PPV_ARGS( outBuffer.GetAddressOf() ) ),
+                          "CreateCommittedResource (mapped upload buffer)" ) == false )
             return false;
 
-        if ( FAILED( outBuffer->Map( 0, nullptr, &pOutMapped ) ) || pOutMapped == nullptr )
+        if ( isHrSuccess( outBuffer->Map( 0, nullptr, &pOutMapped ), "ID3D12Resource::Map (mapped upload buffer)" ) == false || pOutMapped == nullptr )
         {
             pOutMapped = nullptr;
             outBuffer.Reset();

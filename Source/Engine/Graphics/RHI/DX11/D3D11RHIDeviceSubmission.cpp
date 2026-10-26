@@ -127,7 +127,7 @@ namespace sw
         {
             D3D11_QUERY_DESC stampDesc{};
             stampDesc.Query = D3D11_QUERY_TIMESTAMP;
-            if ( FAILED( _device->CreateQuery( &stampDesc, &_clockQuery ) ) )
+            if ( isHrSuccess( _device->CreateQuery( &stampDesc, &_clockQuery ), "CreateQuery" ) == false )
                 return false;
         }
 
@@ -183,11 +183,11 @@ namespace sw
         for ( uint32 frameIndex = 0; frameIndex < constant::kMaxFrameCountInFlight; ++frameIndex )
         {
             D3D11TimestampFrame& frame = _arrTimestampFrame[frameIndex];
-            if ( FAILED( _device->CreateQuery( &disjointDesc, &frame._disjoint ) ) )
+            if ( isHrSuccess( _device->CreateQuery( &disjointDesc, &frame._disjoint ), "CreateQuery" ) == false )
                 return;
             for ( uint32 slotIndex = 0; slotIndex < constant::kMaxGPUTimestampSlot; ++slotIndex )
             {
-                if ( FAILED( _device->CreateQuery( &stampDesc, &frame._arrQuery[slotIndex] ) ) )
+                if ( isHrSuccess( _device->CreateQuery( &stampDesc, &frame._arrQuery[slotIndex] ), "CreateQuery" ) == false )
                     return;
             }
         }
@@ -408,7 +408,7 @@ namespace sw
         D3D11_QUERY_DESC eventDesc{};
         eventDesc.Query = D3D11_QUERY_EVENT;
         Microsoft::WRL::ComPtr<ID3D11Query> query;
-        if ( FAILED( _device->CreateQuery( &eventDesc, query.GetAddressOf() ) ) )
+        if ( isHrSuccess( _device->CreateQuery( &eventDesc, query.GetAddressOf() ), "CreateQuery" ) == false )
         {
             SW_LOG_ERROR( "acquireTransferQuery: failed to create the event query that marks a transfer's end" );
             return nullptr;

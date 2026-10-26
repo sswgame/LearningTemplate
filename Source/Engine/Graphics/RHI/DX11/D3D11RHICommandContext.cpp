@@ -414,7 +414,9 @@ namespace sw
         const bool bFrameStream = _pState == &_pDevice->_recordingState;
         if ( bFrameStream == false )
         {
-            if ( SUCCEEDED( _pContext->Map( pResource, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped ) ) )
+            // Map 실패(장치 제거 · 메모리 부족)는 오류로 남긴다 — 조용히 건너뛰면 이전 프레임의 상수로 그려 원인이 화면에서만 보인다.
+            // 장치 제거는 다음 Present 가 분실로 처리하므로 여기서 멈추지 않는다(아래도 같다).
+            if ( isHrSuccess( _pContext->Map( pResource, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped ), "ID3D11DeviceContext::Map (deferred constant buffer)" ) )
             {
                 Memory::copy( mapped.pData, pData, size );
                 _pContext->Unmap( pResource, 0 );
@@ -422,7 +424,7 @@ namespace sw
             return;
         }
         const D3D11ImmediateContext::ScopedLock context = _pDevice->_immediateContext.lock();
-        if ( SUCCEEDED( context->Map( pResource, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped ) ) )
+        if ( isHrSuccess( context->Map( pResource, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped ), "ID3D11DeviceContext::Map (constant buffer)" ) )
         {
             Memory::copy( mapped.pData, pData, size );
             context->Unmap( pResource, 0 );
@@ -544,7 +546,7 @@ namespace sw
         // 버퍼가 새로 이름 지어져(rename) 앞 드로우가 읽던 내용과 섞이지 않는다. 버퍼와 그림자는
         // **기록 스트림마다** 따로다. 전역이면 병렬 기록이 서로의 값을 덮는다(D3D11RecordingState 주석).
         D3D11_MAPPED_SUBRESOURCE mapped{};
-        if ( FAILED( _pContext->Map( _pState->_rootConstantCb.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped ) ) )
+        if ( isHrSuccess( _pContext->Map( _pState->_rootConstantCb.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped ), "ID3D11DeviceContext::Map (root constants)" ) == false )
             return;
         Memory::copy( mapped.pData, _pState->_arrRootConstantShadow, sizeof( _pState->_arrRootConstantShadow ) );
         _pContext->Unmap( _pState->_rootConstantCb.Get(), 0 );

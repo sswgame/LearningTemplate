@@ -132,10 +132,10 @@ namespace sw
         {
             D3D11_QUERY_DESC eventDesc{};
             eventDesc.Query              = D3D11_QUERY_EVENT;
-            bool bCompletionQueriesReady = SUCCEEDED( _device->CreateQuery( &eventDesc, _idleQuery.GetAddressOf() ) );
+            bool bCompletionQueriesReady = isHrSuccess( _device->CreateQuery( &eventDesc, _idleQuery.GetAddressOf() ), "CreateQuery" );
             for ( Microsoft::WRL::ComPtr<ID3D11Query>& frameDoneQuery : _arrFrameDoneQuery )
             {
-                bCompletionQueriesReady = bCompletionQueriesReady && SUCCEEDED( _device->CreateQuery( &eventDesc, frameDoneQuery.GetAddressOf() ) );
+                bCompletionQueriesReady = bCompletionQueriesReady && isHrSuccess( _device->CreateQuery( &eventDesc, frameDoneQuery.GetAddressOf() ), "CreateQuery" );
             }
             if ( bCompletionQueriesReady == false )
             {
@@ -194,7 +194,7 @@ namespace sw
                 staticDesc.MinLOD         = 0.0f;
                 staticDesc.MaxLOD         = D3D11_FLOAT32_MAX;
                 // 정적 샘플러는 셰이더가 번호로 고르는 필수 세트다. 빠지면 그 샘플러로 읽는 텍스처가 조용히 검정이 되므로 초기화를 실패시킨다.
-                if ( FAILED( _device->CreateSamplerState( &staticDesc, _arrStaticSampler[samplerIndex].GetAddressOf() ) ) )
+                if ( isHrSuccess( _device->CreateSamplerState( &staticDesc, _arrStaticSampler[samplerIndex].GetAddressOf() ), "CreateSamplerState" ) == false )
                 {
                     SW_LOG_ERROR( "CreateSamplerState failed for static sampler %#.", samplerIndex );
                     return false;
@@ -215,7 +215,7 @@ namespace sw
             vbDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
             D3D11_SUBRESOURCE_DATA vbData{};
             vbData.pSysMem = constant::arrFallbackVertex;
-            if ( FAILED( _device->CreateBuffer( &vbDesc, &vbData, _vertexBuffer.GetAddressOf() ) ) )
+            if ( isHrSuccess( _device->CreateBuffer( &vbDesc, &vbData, _vertexBuffer.GetAddressOf() ), "CreateBuffer" ) == false )
                 SW_LOG_WARNING( "Failed to create the fullscreen triangle vertex buffer." );
         }
 

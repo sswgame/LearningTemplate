@@ -689,10 +689,11 @@ namespace sw
             return;
 
         size_t dataSize{ 0 };
-        if ( vkGetPipelineCacheData( _device, _pipelineCache, &dataSize, nullptr ) == VK_SUCCESS && dataSize > 0 )
+        // 캐시를 읽지 못하면 오류로 남기고 저장만 건너뛴다(다음 실행이 파이프라인을 새로 만들 뿐이다).
+        if ( isVkSuccess( vkGetPipelineCacheData( _device, _pipelineCache, &dataSize, nullptr ), "vkGetPipelineCacheData (size)" ) && dataSize > 0 )
         {
             vector<uint8> listCacheData( dataSize );
-            if ( vkGetPipelineCacheData( _device, _pipelineCache, &dataSize, listCacheData.data() ) == VK_SUCCESS )
+            if ( isVkSuccess( vkGetPipelineCacheData( _device, _pipelineCache, &dataSize, listCacheData.data() ), "vkGetPipelineCacheData (data)" ) )
             {
                 if ( FileUtil::ensureDirectoryExists( "Saved/ShaderCache" ) &&
                      FileUtil::writeFile( "Saved/ShaderCache/vk_pipeline_cache.bin", listCacheData.data(), static_cast<uint64>( listCacheData.size() ) ) )

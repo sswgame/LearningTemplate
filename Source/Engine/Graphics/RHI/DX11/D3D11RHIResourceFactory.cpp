@@ -61,7 +61,8 @@ namespace sw
         // 기록 중의 갱신은 리스트의 Deferred Context 로 가는 `IRHICommandList::updateConstantBuffer` 다.
         D3D11_MAPPED_SUBRESOURCE                mapped{};
         const D3D11ImmediateContext::ScopedLock context = _pDevice->_immediateContext.lock();
-        if ( SUCCEEDED( context->Map( pResource, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped ) ) )
+        // Map 실패는 오류로 남긴다 — 조용히 건너뛰면 머티리얼 파라미터가 옛 값으로 남는다(장치 제거는 다음 Present 가 분실로 처리한다).
+        if ( isHrSuccess( context->Map( pResource, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped ), "ID3D11DeviceContext::Map (constant buffer, factory)" ) )
         {
             Memory::copy( mapped.pData, pData, size );
             context->Unmap( pResource, 0 );
@@ -86,7 +87,7 @@ namespace sw
         bufferDesc.StructureByteStride = elementSize;
 
         Microsoft::WRL::ComPtr<ID3D11Buffer> buffer;
-        if ( FAILED( _pDevice->_device->CreateBuffer( &bufferDesc, nullptr, buffer.GetAddressOf() ) ) )
+        if ( isHrSuccess( _pDevice->_device->CreateBuffer( &bufferDesc, nullptr, buffer.GetAddressOf() ), "CreateBuffer" ) == false )
             return 0;
 
         // 그래픽스 VS/PS 가 StructuredBuffer 로 읽을 수 있도록 SRV 를 만들어 둔다 (GPUScene 인스턴스 버퍼 등).
@@ -134,7 +135,7 @@ namespace sw
         }
 
         Microsoft::WRL::ComPtr<ID3D11Buffer> buffer;
-        if ( FAILED( _pDevice->_device->CreateBuffer( &bufferDesc, pInitData, buffer.GetAddressOf() ) ) )
+        if ( isHrSuccess( _pDevice->_device->CreateBuffer( &bufferDesc, pInitData, buffer.GetAddressOf() ), "CreateBuffer" ) == false )
         {
             SW_LOG_ERROR( "createBuffer: failed to create the indirect argument buffer (%# bytes)", sizeBytes );
             return 0;
@@ -241,7 +242,7 @@ namespace sw
         init.pSysMem = pData;
 
         Microsoft::WRL::ComPtr<ID3D11Buffer> buffer;
-        if ( FAILED( _pDevice->_device->CreateBuffer( &bufferDesc, &init, buffer.GetAddressOf() ) ) )
+        if ( isHrSuccess( _pDevice->_device->CreateBuffer( &bufferDesc, &init, buffer.GetAddressOf() ), "CreateBuffer" ) == false )
             return 0;
 
         return _pDevice->storeBuffer( std::move( buffer ) );
@@ -297,7 +298,7 @@ namespace sw
         bufferDesc.StructureByteStride = elementSize;
 
         Microsoft::WRL::ComPtr<ID3D11Buffer> buffer;
-        if ( FAILED( _pDevice->_device->CreateBuffer( &bufferDesc, nullptr, buffer.GetAddressOf() ) ) )
+        if ( isHrSuccess( _pDevice->_device->CreateBuffer( &bufferDesc, nullptr, buffer.GetAddressOf() ), "CreateBuffer" ) == false )
             return 0;
         return _pDevice->storeBuffer( std::move( buffer ) );
     }
@@ -321,7 +322,7 @@ namespace sw
         // 기다리는 Map 은 그 추적만 맞추고 곧 돌아온다. 장치를 잃었으면 Map 이 오류로 바로 돌아와 무한히 기다리지 않는다.
         D3D11_MAPPED_SUBRESOURCE                mapped{};
         const D3D11ImmediateContext::ScopedLock context = _pDevice->_immediateContext.lock();
-        if ( FAILED( context->Map( pBuffer, 0, D3D11_MAP_READ, 0, &mapped ) ) || mapped.pData == nullptr )
+        if ( isHrSuccess( context->Map( pBuffer, 0, D3D11_MAP_READ, 0, &mapped ), "ID3D11DeviceContext::Map (readback buffer)" ) == false || mapped.pData == nullptr )
             return false;
         Memory::copy( pDestination, mapped.pData, sizeBytes );
         context->Unmap( pBuffer, 0 );
@@ -565,7 +566,7 @@ namespace sw
         stagingDesc.CPUAccessFlags       = D3D11_CPU_ACCESS_READ;
         stagingDesc.MiscFlags            = 0;
         D3D11RHIDevice::TextureReadbackRecord readback;
-        if ( FAILED( _pDevice->_device->CreateTexture2D( &stagingDesc, nullptr, readback._staging.GetAddressOf() ) ) )
+        if ( isHrSuccess( _pDevice->_device->CreateTexture2D( &stagingDesc, nullptr, readback._staging.GetAddressOf() ), "CreateTexture2D" ) == false )
         {
             SW_LOG_ERROR( "submitTextureReadback: failed to create the staging texture (%#x%#)", outLayout._width, outLayout._height );
             return RHITransferSubmit::rejected();
@@ -639,7 +640,7 @@ namespace sw
         record._bDepth    = bDepth ? 1 : 0;
         record._reserved  = 0;
 
-        if ( FAILED( _pDevice->_device->CreateTexture2D( &texDesc, nullptr, record._texture.GetAddressOf() ) ) )
+        if ( isHrSuccess( _pDevice->_device->CreateTexture2D( &texDesc, nullptr, record._texture.GetAddressOf() ), "CreateTexture2D" ) == false )
         {
             SW_LOG_ERROR( "Failed to create Texture2D (%#×%#).", desc._width, desc._height );
             return 0;
@@ -657,7 +658,7 @@ namespace sw
                 rtvDesc.Texture2DArray.FirstArraySlice = slice;
                 rtvDesc.Texture2DArray.ArraySize       = 1;
                 Microsoft::WRL::ComPtr<ID3D11RenderTargetView> rtv;
-                if ( FAILED( _pDevice->_device->CreateRenderTargetView( record._texture.Get(), &rtvDesc, rtv.GetAddressOf() ) ) )
+                if ( isHrSuccess( _pDevice->_device->CreateRenderTargetView( record._texture.Get(), &rtvDesc, rtv.GetAddressOf() ), "CreateRenderTargetView" ) == false )
                 {
                     SW_LOG_ERROR( "Failed to create RTV for Texture2D (slice %#).", slice );
                     return 0;
@@ -680,7 +681,7 @@ namespace sw
                 dsvDesc.Texture2DArray.FirstArraySlice = slice;
                 dsvDesc.Texture2DArray.ArraySize       = 1;
                 Microsoft::WRL::ComPtr<ID3D11DepthStencilView> dsv;
-                if ( FAILED( _pDevice->_device->CreateDepthStencilView( record._texture.Get(), &dsvDesc, dsv.GetAddressOf() ) ) )
+                if ( isHrSuccess( _pDevice->_device->CreateDepthStencilView( record._texture.Get(), &dsvDesc, dsv.GetAddressOf() ), "CreateDepthStencilView" ) == false )
                 {
                     SW_LOG_ERROR( "Failed to create DSV for Texture2D (slice %#).", slice );
                     return 0;
@@ -721,7 +722,7 @@ namespace sw
                     break;
                 }
             }
-            if ( FAILED( _pDevice->_device->CreateShaderResourceView( record._texture.Get(), &srvDesc, record._srv.GetAddressOf() ) ) )
+            if ( isHrSuccess( _pDevice->_device->CreateShaderResourceView( record._texture.Get(), &srvDesc, record._srv.GetAddressOf() ), "CreateShaderResourceView" ) == false )
             {
                 SW_LOG_ERROR( "Failed to create SRV for Texture2D." );
                 return 0;

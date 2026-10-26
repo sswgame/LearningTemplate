@@ -302,7 +302,8 @@ namespace sw
         const uint32 slotSize  = slotIt->second;
         const uint32 copyBytes = MathUtil::min( size, slotSize );
         void*        pMapped{ nullptr };
-        if ( vkMapMemory( _device, pRecord->_memory, static_cast<VkDeviceSize>( slot ) * slotSize, copyBytes, 0, &pMapped ) != VK_SUCCESS )
+        // Map 실패는 오류로 남긴다 — 조용히 건너뛰면 옛 상수로 그려 원인이 화면에서만 보인다.
+        if ( isVkSuccess( vkMapMemory( _device, pRecord->_memory, static_cast<VkDeviceSize>( slot ) * slotSize, copyBytes, 0, &pMapped ), "vkMapMemory (constant buffer slot)" ) == false || pMapped == nullptr )
             return;
         Memory::copy( pMapped, pData, copyBytes );
         vkUnmapMemory( _device, pRecord->_memory );

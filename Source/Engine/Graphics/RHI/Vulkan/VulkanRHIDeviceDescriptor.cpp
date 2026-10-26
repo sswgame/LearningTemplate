@@ -437,8 +437,9 @@ namespace sw
             const VkResult  result = vkAllocateDescriptorSets( _device, &allocInfo, &set );
             if ( result == VK_SUCCESS )
                 return set;
+            // 풀이 찬 것(다음 풀로)만 정상 응답이다. 그 밖의 실패는 오류로 남긴다(isVkSuccess 가 로그를 남기고 false 다).
             if ( result != VK_ERROR_OUT_OF_POOL_MEMORY && result != VK_ERROR_FRAGMENTED_POOL )
-                return VK_NULL_HANDLE;
+                return isVkSuccess( result, "vkAllocateDescriptorSets (slot set)" ) ? set : VK_NULL_HANDLE;
             ++cursor; // 이 풀은 찼다. 다음 풀로
         }
     }

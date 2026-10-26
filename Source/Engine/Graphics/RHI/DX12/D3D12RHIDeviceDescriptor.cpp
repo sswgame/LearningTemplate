@@ -212,7 +212,7 @@ namespace sw
                 SW_LOG_ERROR( "Root Signature Serialize Error: %s", static_cast<const utf8*>( errorBlob->GetBufferPointer() ) );
             return false;
         }
-        if ( FAILED( _device->CreateRootSignature( 0, signatureBlob->GetBufferPointer(), signatureBlob->GetBufferSize(), IID_PPV_ARGS( _rootSignature.GetAddressOf() ) ) ) )
+        if ( isHrSuccess( _device->CreateRootSignature( 0, signatureBlob->GetBufferPointer(), signatureBlob->GetBufferSize(), IID_PPV_ARGS( _rootSignature.GetAddressOf() ) ), "CreateRootSignature" ) == false )
         {
             SW_LOG_ERROR( "CreateRootSignature failed." );
             return false;

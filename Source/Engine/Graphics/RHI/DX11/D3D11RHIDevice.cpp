@@ -204,7 +204,7 @@ namespace sw
         desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
         // `ID3D11Device::CreateBuffer` 는 free-threaded 라 병렬 기록 중에 만들어도 된다.
         // 스레드마다 자기 상태의 버퍼를 만들 뿐, 공유 테이블을 건드리지 않는다.
-        if ( FAILED( _device->CreateBuffer( &desc, nullptr, state._rootConstantCb.GetAddressOf() ) ) )
+        if ( isHrSuccess( _device->CreateBuffer( &desc, nullptr, state._rootConstantCb.GetAddressOf() ), "CreateBuffer" ) == false )
         {
             SW_LOG_ERROR( "Failed to create root-constant cbuffer." );
             return false;

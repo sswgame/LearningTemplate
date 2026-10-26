@@ -75,9 +75,9 @@ namespace sw
             return;
 
         // 여기까지 왔으면 이 쌍은 이 리스트 전용이고 GPU 펜스도 통과한 상태다. 바로 Reset 해도 된다.
-        if ( FAILED( _entry._allocator->Reset() ) )
+        if ( isHrSuccess( _entry._allocator->Reset(), "Reset" ) == false )
             return;
-        if ( FAILED( _entry._list->Reset( _entry._allocator.Get(), nullptr ) ) )
+        if ( isHrSuccess( _entry._list->Reset( _entry._allocator.Get(), nullptr ), "Reset" ) == false )
             return;
 
         _bEntryDirty       = SW_TRUE;
