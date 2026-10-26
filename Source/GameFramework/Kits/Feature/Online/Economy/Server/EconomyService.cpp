@@ -300,6 +300,8 @@ namespace sw
         _nowMs = nowMs;
         if ( _pStore == nullptr )
             return;
+        if ( _settings._pReceiptRegistry != nullptr )
+            _settings._pReceiptRegistry->update( nowMs ); // 영수증 제공자는 시계를 읽지 않고 서버 루프의 시각으로 진행한다
         pollReceipts();
         pollRefunds();
         _metrics.setPendingStoreWorkCount( static_cast<int32>( _listPendingCall.size() ) );
@@ -330,7 +332,7 @@ namespace sw
         if ( call._method == EconomyMethod::kRedeemReceipt )
         {
             const uint64 ticket = _settings._pReceiptRegistry != nullptr
-                                    ? _settings._pReceiptRegistry->submitValidation( call._redeem._storeName, call._redeem._payload, call._accountID )
+                                    ? _settings._pReceiptRegistry->submitValidation( call._redeem._storeName, call._redeem._payload, call._accountID, _nowMs )
                                     : 0;
             if ( ticket == 0 )
             {

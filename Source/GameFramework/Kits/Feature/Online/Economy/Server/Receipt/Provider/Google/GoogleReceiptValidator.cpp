@@ -3,8 +3,6 @@
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/Provider/Google/GoogleReceiptValidator.h"
 
 #include "Core/Container/StringUtil.h"
-#include "Core/Time/MonotonicClock.h"
-#include "Core/Time/WallClock.h"
 
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
@@ -22,8 +20,6 @@ namespace sw
             static constexpr int32  kStatusTooManyRequests  = 429;
             static constexpr int32  kStatusServerError      = 500;
             static constexpr size_t kMaxNotifiedRefundCount = 100000;
-
-            static int64 nowMonotonicMs() { return MonotonicClock::nowNanoseconds() / constant::kNanosecondsPerMillisecond; }
 
             static bool isFieldText( string_view text )
             {
@@ -155,9 +151,8 @@ namespace sw
         _mapRequestToCall[_pHTTPClient->submitRequest( Internal::makeRequest( url, _settings._requestTimeoutMs, _tokenSource.getToken(), method ), nowMs )] = call;
     }
 
-    void GoogleReceiptValidator::submitValidation( const ReceiptValidationRequest& request )
+    void GoogleReceiptValidator::submitValidation( const ReceiptValidationRequest& request, int64 nowMs )
     {
-        using Internal = GoogleReceiptValidatorInternal;
         WaitingCall call;
         call._kind             = WaitingCall::Kind::Validate;
         call._pending._request = request;
@@ -171,7 +166,6 @@ namespace sw
             result._failureText             = "google receipt must be <product id>|<purchase token>";
             return;
         }
-        const int64 nowMs = Internal::nowMonotonicMs();
         if ( _tokenSource.hasValidToken( nowMs ) )
         {
             submitCall( call, nowMs );
@@ -274,7 +268,7 @@ namespace sw
         }
     }
 
-    void GoogleReceiptValidator::finishVoided( const HTTPClientResponse& response, int64 nowWall )
+    void GoogleReceiptValidator::finishVoided( const HTTPClientResponse& response, int64 nowMs )
     {
         using Internal   = GoogleReceiptValidatorInternal;
         _bVoidedInFlight = SW_FALSE;
@@ -302,7 +296,7 @@ namespace sw
             if ( _uniqueSetNotifiedRefund.size() >= Internal::kMaxNotifiedRefundCount )
                 _uniqueSetNotifiedRefund.clear(); // 상한 — 겹친 알림은 서비스가 거래 id 로 한 번만 처리한다
             _uniqueSetNotifiedRefund.insert( orderID );
-            int64 voidedMs     = nowWall;
+            int64 voidedMs     = nowMs;
             int64 parsedVoided = 0;
             if ( StringUtil::parseInt64( Internal::readText( entry, "voidedTimeMillis" ), parsedVoided ) )
                 voidedMs = parsedVoided;
@@ -310,17 +304,15 @@ namespace sw
         }
     }
 
-    void GoogleReceiptValidator::service()
+    void GoogleReceiptValidator::update( int64 nowMs )
     {
-        using Internal      = GoogleReceiptValidatorInternal;
-        const int64 nowMs   = Internal::nowMonotonicMs();
-        const int64 nowWall = WallClock::nowUnixMilliseconds();
+        // 서버 루프의 시각(유닉스 밀리초) 하나로 HTTP 시한 · 토큰 만료 · 조회 주기 · 취소 목록 구간을 모두 잰다.
         _pHTTPClient->update( nowMs );
         const bool bMayPoll = _bStopped == SW_FALSE && _bVoidedInFlight == SW_FALSE;
         if ( bMayPoll && nowMs >= _nextVoidedMs )
         {
             // 처음에는 바로, 그 뒤로는 주기마다. 이번 조회의 시작 시각을 먼저 정해 두고, 응답이 성공하면 다음 조회의 기준이 된다.
-            _voidedStartUnixMs = nowWall;
+            _voidedStartUnixMs = nowMs;
             WaitingCall call;
             call._kind       = WaitingCall::Kind::Voided;
             _bVoidedInFlight = SW_TRUE;
@@ -352,7 +344,7 @@ namespace sw
             if ( call._kind == WaitingCall::Kind::Validate )
                 finishValidation( call._pending, response, nowMs );
             else if ( call._kind == WaitingCall::Kind::Voided )
-                finishVoided( response, nowWall );
+                finishVoided( response, nowMs );
             else if ( response.isSuccess() == false )
                 SW_LOG_WARNING( "Google purchase acknowledge failed (status %#) - it is sent again when the token is validated again", response._statusCode );
         }
@@ -360,7 +352,6 @@ namespace sw
 
     void GoogleReceiptValidator::pollCompletions( vector<ReceiptValidationResult>& outListResult )
     {
-        service();
         for ( ReceiptValidationResult& result : _listDone )
         {
             outListResult.push_back( std::move( result ) );
@@ -370,7 +361,6 @@ namespace sw
 
     void GoogleReceiptValidator::pollRefunds( vector<ReceiptRefundNotice>& outListNotice )
     {
-        service();
         for ( ReceiptRefundNotice& notice : _listRefund )
         {
             outListNotice.push_back( std::move( notice ) );

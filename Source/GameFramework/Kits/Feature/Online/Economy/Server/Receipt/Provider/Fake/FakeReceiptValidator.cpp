@@ -70,8 +70,9 @@ namespace sw
         _listRefund.push_back( ReceiptRefundNotice{ getStoreName(), string( transactionID ), refundedMs } );
     }
 
-    void FakeReceiptValidator::submitValidation( const ReceiptValidationRequest& request )
+    void FakeReceiptValidator::submitValidation( const ReceiptValidationRequest& request, int64 nowMs )
     {
+        (void)nowMs; // 결과가 영수증 글로 정해진다 — 시각을 보지 않는다
         ReceiptValidationResult& result = _listPending.emplace_back();
         result._storeName               = request._storeName;
         result._ticket                  = request._ticket;

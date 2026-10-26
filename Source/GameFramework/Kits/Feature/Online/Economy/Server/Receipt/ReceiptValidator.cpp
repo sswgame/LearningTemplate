@@ -68,7 +68,7 @@ namespace sw
         return false;
     }
 
-    uint64 ReceiptValidatorRegistry::submitValidation( string_view storeName, string_view payload, uint64 accountID )
+    uint64 ReceiptValidatorRegistry::submitValidation( string_view storeName, string_view payload, uint64 accountID, int64 nowMs )
     {
         IReceiptValidator* pValidator = findValidator( storeName );
         if ( pValidator == nullptr )
@@ -78,8 +78,16 @@ namespace sw
         request._payload   = string( payload );
         request._accountID = accountID;
         request._ticket    = _nextTicket++;
-        pValidator->submitValidation( request );
+        pValidator->submitValidation( request, nowMs );
         return request._ticket;
+    }
+
+    void ReceiptValidatorRegistry::update( int64 nowMs )
+    {
+        for ( IReceiptValidator* pValidator : _listValidator )
+        {
+            pValidator->update( nowMs );
+        }
     }
 
     void ReceiptValidatorRegistry::pollCompletions( vector<ReceiptValidationResult>& outListResult )

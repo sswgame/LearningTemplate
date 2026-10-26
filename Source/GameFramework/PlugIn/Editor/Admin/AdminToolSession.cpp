@@ -35,7 +35,7 @@ namespace sw::editor
 namespace sw::editor
 {
     AdminToolSession::AdminToolSession()
-        : _fake{}
+        : _fake{ WallClock::nowUnixMilliseconds() }
         , _live{}
         , _pActive{ &_fake }
         , _connection{}
@@ -211,6 +211,7 @@ namespace sw::editor
     void AdminToolSession::send( uint16 method, const AdminRequest& request, const NetIdempotencyKey& key )
     {
         ++_pendingCount;
+        _fake.setNowMs( WallClock::nowUnixMilliseconds() ); // 메모리 제공자는 시계를 읽지 않는다 — 도구의 뿌리인 세션이 명령마다 넣는다
         _pActive->sendCommand( method, request, key, AdminClient::ReplyDelegate::create<&AdminToolSession::onReply>( this ) );
     }
 
