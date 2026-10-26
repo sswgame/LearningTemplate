@@ -36,11 +36,6 @@ namespace sw
         static void reportUnknownChild( const XMLNode& parent, const XMLNode& child, AppearanceLoadReport& report, string_view sourceName );
 
         /**
-         * @brief **선택** 이름 속성을 읽습니다. 없으면 빈 이름입니다.
-         * @details 적지 않아도 되는 이름만 이 함수로 읽는다. 빈 이름이 "적지 않음"과 "잘못 적음"을 가르지 못하므로, 필수 이름은 `readRequiredName` 이다.
-         */
-        static hashed_string readOptionalName( const XMLNode& node, const utf8* pAttribute );
-        /**
          * @brief **필수** 이름 속성을 읽습니다. 없거나 비었거나 글 `none` 이면 @p report 에 오류를 더하고 빈 이름을 돌려줍니다.
          * @details 오류가 보고서에 남으므로 부르는 쪽이 빈 이름을 걸러 넣지 않더라도 로드는 실패한다. 걸러 넣지 않는 것은 부르는 쪽 몫이다(`name.empty()`).
          */
@@ -74,7 +69,10 @@ namespace sw
         static void readPlacement( const XMLNode& node, const utf8* pSocketAttribute, AppearancePlacement& outPlacement, AppearanceLoadReport& report, string_view sourceName );
         /** @brief 쉼표로 나뉜 계층 태그를 추가합니다(`Helmet.FullFace, Armor.Heavy`). */
         static void readTags( const XMLNode& node, const utf8* pAttribute, TagContainer& outTags );
-        /** @brief 이름이 목록에 있으면 true 입니다. */
+        /**
+         * @brief 이름이 목록에 있으면 true 입니다(`VectorUtil::contains` 와 같다).
+         * @details 지울 별칭이다 — 남은 호출 다섯은 목록에 넣기 전 중복 검사(`CheckContainsPushBack` 의 모양)라 집합으로 고친 뒤 지운다(계획 ReuseExistingFacilities.ContainsNameAlias).
+         */
         static bool containsName( const vector<hashed_string>& listName, const hashed_string& name );
     };
 } // namespace sw

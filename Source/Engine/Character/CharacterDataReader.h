@@ -83,8 +83,6 @@ namespace sw
         hashed_string readName( const XMLNode& node, const utf8* pName, bool bRequired );
         /** @brief 공백이나 쉼표로 나눈 이름 목록 필드를 읽습니다(비우고 채웁니다). */
         void readNameList( const XMLNode& node, const utf8* pName, vector<hashed_string>& outListName );
-        /** @brief 필드가 있으면 true 를 반환합니다. */
-        static bool hasAttribute( const XMLNode& node, const utf8* pName );
 
         /** @brief 오류가 하나라도 있으면 true 입니다. */
         bool hasError() const { return _listError.empty() == false; }

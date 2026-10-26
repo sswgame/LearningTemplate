@@ -112,11 +112,6 @@ namespace sw
         report.addErrorWithID( "Appearance.UnknownElement", "%#: <%#> has unknown element <%#>", sourceName, parent.getName(), child.getName() );
     }
 
-    hashed_string AppearanceXMLUtil::readOptionalName( const XMLNode& node, const utf8* pAttribute )
-    {
-        return XMLReadUtil::readOptionalName( node, pAttribute );
-    }
-
     hashed_string AppearanceXMLUtil::readRequiredName( const XMLNode& node, const utf8* pAttribute, AppearanceLoadReport& report, string_view sourceName )
     {
         const hashed_string name = XMLReadUtil::readOptionalName( node, pAttribute );

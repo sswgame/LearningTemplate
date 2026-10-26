@@ -32,7 +32,7 @@ namespace sw
                 (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrWhenAttribute, report, sourceName );
                 if ( XMLReadUtil::readOptionalFlag( node, "not", outCondition._bNegate ) == false )
                     report.addErrorWithID( "Appearance.RuleWhenNotInvalid", "%#: rule '%#' <When> has an invalid not", sourceName, ruleID.c_str() );
-                outCondition._target       = AppearanceXMLUtil::readOptionalName( node, "target" ); // 태그 조건에서만 쓰는 선택 이름
+                outCondition._target       = XMLReadUtil::readOptionalName( node, "target" ); // 태그 조건에서만 쓰는 선택 이름
                 const utf8* pTag           = node.findAttribute( "tag" );
                 const utf8* pCharacterTag  = node.findAttribute( "characterTag" );
                 const utf8* pOccupied      = node.findAttribute( "occupied" );
@@ -71,8 +71,8 @@ namespace sw
             [[nodiscard]] static bool readAction( const XMLNode& node, AppearanceRuleAction& outAction, AppearanceLoadReport& report, string_view sourceName, const hashed_string& ruleID )
             {
                 const utf8* pName = node.getName();
-                outAction._target = AppearanceXMLUtil::readOptionalName( node, "target" ); // 동작 종류마다 필수 여부가 달라 아래에서 확인한다
-                outAction._part   = AppearanceXMLUtil::readOptionalName( node, "part" );
+                outAction._target = XMLReadUtil::readOptionalName( node, "target" ); // 동작 종류마다 필수 여부가 달라 아래에서 확인한다
+                outAction._part   = XMLReadUtil::readOptionalName( node, "part" );
                 if ( StringUtil::equals( pName, "Hide", true ) )
                 {
                     (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrHideAttribute, report, sourceName );

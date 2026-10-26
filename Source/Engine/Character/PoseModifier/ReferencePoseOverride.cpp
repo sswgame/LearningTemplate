@@ -82,17 +82,17 @@ namespace sw
                 reader.reportUnknownAttributes( child, ReferencePoseOverrideInternal::kArrBoneAttribute );
                 BoneOverride boneOverride;
                 boneOverride._bone = reader.readName( child, "name", true );
-                if ( CharacterDataReader::hasAttribute( child, "translation" ) )
+                if ( child.hasAttribute( "translation" ) )
                 {
                     boneOverride._translation = reader.readFloat3( child, "translation" );
                     boneOverride._fieldMask |= BoneOverride::kTranslationBit;
                 }
-                if ( CharacterDataReader::hasAttribute( child, "rotation" ) )
+                if ( child.hasAttribute( "rotation" ) )
                 {
                     boneOverride._rotation = reader.readRotation( child, "rotation" );
                     boneOverride._fieldMask |= BoneOverride::kRotationBit;
                 }
-                if ( CharacterDataReader::hasAttribute( child, "scale" ) )
+                if ( child.hasAttribute( "scale" ) )
                 {
                     boneOverride._scale = reader.readFloat3( child, "scale" );
                     boneOverride._fieldMask |= BoneOverride::kScaleBit;

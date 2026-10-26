@@ -24,11 +24,6 @@ namespace sw
     {
     }
 
-    bool CharacterDataReader::hasAttribute( const XMLNode& node, const utf8* pName )
-    {
-        return node.findAttribute( pName ) != nullptr;
-    }
-
     bool CharacterDataReader::parseRoot( XMLDocument& outDocument, string_view xmlText, const utf8* pRootName, XMLNode& outRoot )
     {
         return reportRootStatus( outDocument, XMLReadUtil::parseRoot( outDocument, xmlText, _sourceName, pRootName, outRoot ), pRootName );

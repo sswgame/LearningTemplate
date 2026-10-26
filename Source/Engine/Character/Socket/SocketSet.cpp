@@ -177,44 +177,44 @@ namespace sw
             reader.addError( "Character.SocketRepeated", node, string( "repeats socket '" ) + socket._name.c_str() + "'" );
             return;
         }
-        if ( CharacterDataReader::hasAttribute( node, "parent" ) )
+        if ( node.hasAttribute( "parent" ) )
         {
             socket._parent = reader.readName( node, "parent", false );
             socket._fieldMask |= SocketFieldBit::kParent;
         }
-        if ( CharacterDataReader::hasAttribute( node, "kind" ) )
+        if ( node.hasAttribute( "kind" ) )
         {
             socket._kind = reader.readName( node, "kind", true );
             socket._fieldMask |= SocketFieldBit::kKind;
             if ( socket._kind.empty() == false && kinds.hasKind( socket._kind ) == false )
                 reader.addError( "Character.SocketKindUnknown", node, string( "has unknown kind '" ) + socket._kind.c_str() + "'" );
         }
-        if ( CharacterDataReader::hasAttribute( node, "translation" ) )
+        if ( node.hasAttribute( "translation" ) )
         {
             socket._translation = reader.readFloat3( node, "translation" );
             socket._fieldMask |= SocketFieldBit::kTranslation;
         }
-        if ( CharacterDataReader::hasAttribute( node, "rotation" ) )
+        if ( node.hasAttribute( "rotation" ) )
         {
             socket._rotation = reader.readRotation( node, "rotation" );
             socket._fieldMask |= SocketFieldBit::kRotation;
         }
-        if ( CharacterDataReader::hasAttribute( node, "scale" ) )
+        if ( node.hasAttribute( "scale" ) )
         {
             socket._scale = reader.readFloat3( node, "scale" );
             socket._fieldMask |= SocketFieldBit::kScale;
         }
-        if ( CharacterDataReader::hasAttribute( node, "preview" ) )
+        if ( node.hasAttribute( "preview" ) )
         {
             socket._previewMesh = string( StringUtil::trim( node.getAttributeText( "preview" ) ) );
             socket._fieldMask |= SocketFieldBit::kPreview;
         }
-        if ( CharacterDataReader::hasAttribute( node, "fallback" ) )
+        if ( node.hasAttribute( "fallback" ) )
         {
             reader.readNameList( node, "fallback", socket._listFallback );
             socket._fieldMask |= SocketFieldBit::kFallback;
         }
-        if ( CharacterDataReader::hasAttribute( node, "anchor" ) )
+        if ( node.hasAttribute( "anchor" ) )
         {
             const string_view anchorText = StringUtil::trim( node.getAttributeText( "anchor" ) );
             if ( engine::getSubsystem<TypeRegistry>().enumFromString( anchorText, socket._anchor ) == false )
