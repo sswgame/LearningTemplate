@@ -7,16 +7,12 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
-#include "Core/Concurrency/thread.h"
-#include "Core/Container/deque.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Task/DedicatedWorker.h"
 
 #include "GameFramework/Base/Online/Local/LocalSlotStorage.h"
 #include "GameFramework/GameFrameworkExports.h"
-
-#include <condition_variable>
-#include <thread>
 
 namespace sw
 {
@@ -41,17 +37,15 @@ namespace sw
 
     private:
         uint64 enqueueRequest( LocalStoreRequest request );
-        void   runWorker();
+        /** @brief 작업 스레드에서 요청 하나를 실행해 완료를 쌓습니다. 종료 중에도 쓰기 · 지우기는 끝까지 하고, 읽기 · 나열은 받을 사람이 없어 실패로 끝냅니다. */
+        void processRequest( LocalStoreRequest& request, bool bStopping );
 
-        deque<LocalStoreRequest>      _listQueuedRequest;
-        vector<LocalStoreCompletion>  _listCompletion;
-        LocalSealContext              _sealContext;
-        unique_ptr<ILocalSlotStorage> _storage;
-        sw::thread                    _worker;
-        mutable mutex                 _mutex;
-        std::condition_variable_any   _requestReady;
-        uint64                        _nextRequestID;
-        int32                         _pendingCount;
-        uint8                         _bStopping;
+        vector<LocalStoreCompletion>       _listCompletion;
+        LocalSealContext                   _sealContext;
+        unique_ptr<ILocalSlotStorage>      _storage;
+        DedicatedWorker<LocalStoreRequest> _worker;
+        mutable mutex                      _mutex; ///< 완료 목록과 대기 수를 보호한다
+        uint64                             _nextRequestID;
+        int32                              _pendingCount;
     };
 } // namespace sw
