@@ -199,9 +199,11 @@
       "note": "리눅스 클립보드 왕복(WindowTest.X11ClipboardRoundTripsBetweenWindowsIncludingIncr)은 CI 리눅스 xvfb 의 swrender 묶음이 돈다 — 푸시 뒤 ci-jobs --summary 로 본다."
     },
     {
-      "id": "r8-texture-sampling", "title": "R8 텍스처를 네 백엔드에서 실제로 샘플링", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
-      "need_command": "맞는 원본(*_mask.*)이 아직 없다 — 생기면 그 게임의 시나리오가 본다",
-      "source": "docs/09_Decisions.md 텍스처 임포트의 1 채널 R8 항목", "result_doc": "docs/09_Decisions.md 텍스처 임포트의 1 채널 R8 항목"
+      "id": "r8-texture-sampling", "title": "R8 텍스처를 네 백엔드에서 실제로 샘플링", "kind": "test", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true, "timeout_minutes": 20,
+      "filter": "RenderPassGPUTest.R8MaskTextureSamplesAsRedOnEveryBackend.*",
+      "extra_args": ["--host_suites=all"],
+      "source": "docs/09_Decisions.md 텍스처 임포트의 1 채널 R8 항목", "result_doc": "docs/plans/Candidates-graphics.md R8TextureSampling",
+      "note": "외부 *_mask.* 원본 대신 Scripts/generate/GenerateSpriteTextures.py 가 만든 engine/textures/test/mask_r8.dds(DX10 머리, DXGI 61)를 스프라이트로 그린다."
     },
     {
       "id": "shipping-build", "title": "Shipping 빌드", "kind": "build", "config": "Shipping", "platform": "windows", "gpu": "none", "pending": false, "timeout_minutes": 240,

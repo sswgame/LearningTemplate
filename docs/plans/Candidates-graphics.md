@@ -47,5 +47,5 @@
 제목: R8 텍스처를 네 백엔드에서 샘플링
 옛번호: G-12
 왜 필요한가: `App --import-textures` 가 1 채널 `R8_UNORM` DDS 를 내고 로더가 읽지만(결정 기록 5절 "텍스처 임포트의 형식 이름은") 실제 샘플링은 네 백엔드에서 본 적이 없습니다.
-착수 조건 / 남은 것: 규칙 표의 `Mask_Textures`(`*_mask.*`)에 맞는 원본이 생기면 그 게임의 시나리오가 봅니다.
-왜 지금 못 하는가: 맞는 원본이 아직 없습니다. 확인 대기: 매니페스트 id `r8-texture-sampling`.
+끝난 것(wt/gfxc, 빌드 · 실행 안 함): 외부 원본 없이 푼다 — `Scripts/generate/GenerateSpriteTextures.py` 가 임포터와 같은 형식(DX10 머리, DXGI 61)의 마스크 `engine/textures/test/mask_r8.dds`(64², 왼쪽 반 255 · 오른쪽 반 96)를 만들고, `RenderPassGPUTest.R8MaskTextureSamplesAsRedOnEveryBackend` 가 그것을 스프라이트로 그려 네 백엔드가 (r, 0, 0, 1) 로 샘플하는지 본다(초록 · 파랑 0, 알파 1 이라 그려짐, 두 반쪽이 갈림). 임포터가 그 형식을 낸다는 것은 `EditorTexturePipelineTest.SingleChannelR8ImportRoundTrips` 가 이미 본다.
+남은 것(통합): 확인 대기: 매니페스트 id `r8-texture-sampling`(이제 한 명령으로 돈다). 실제 `*_mask.*` 원본이 생기면 그 게임의 시나리오도 본다.
