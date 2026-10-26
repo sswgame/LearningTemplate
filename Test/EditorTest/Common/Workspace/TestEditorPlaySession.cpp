@@ -356,7 +356,7 @@ SW_TEST_CASE( EditorPlaySessionTest, PlayRequestedWhileASceneLoadsStartsAfterThe
     SW_ASSERT_FALSE( scenePath.empty() );
 
     SceneManager sceneManager;
-    SW_ASSERT_TRUE( sceneManager.initialize() );
+    SW_ASSERT_TRUE( sceneManager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
     SW_ASSERT_NOT_NULL( sceneManager.createEmptyActiveScene( "EditedLevel" ) );
     ScopedSceneManagerService scopedScene{ sceneManager };
 
@@ -381,7 +381,7 @@ SW_TEST_CASE( EditorPlaySessionTest, PlayRequestedWhileASceneLoadsStartsAfterThe
     EditorPlaySession::setState( data, PlaySessionState::Stopped );
     SW_ASSERT_NOT_NULL( sceneManager.getActiveScene() );
     SW_EXPECT_TRUE( sceneManager.getActiveScene()->getName() == "LoadedLevel" );
-    sceneManager.shutdown();
+    sceneManager.shutdownSubsystem();
 }
 
 /**
@@ -393,7 +393,7 @@ SW_TEST_CASE( EditorPlaySessionTest, StopCancelsAQueuedPlay )
     SW_ASSERT_FALSE( scenePath.empty() );
 
     SceneManager sceneManager;
-    SW_ASSERT_TRUE( sceneManager.initialize() );
+    SW_ASSERT_TRUE( sceneManager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
     SW_ASSERT_NOT_NULL( sceneManager.createEmptyActiveScene( "EditedLevel" ) );
     ScopedSceneManagerService scopedScene{ sceneManager };
 
@@ -409,7 +409,7 @@ SW_TEST_CASE( EditorPlaySessionTest, StopCancelsAQueuedPlay )
     EditorPlaySession::update( data );
     SW_EXPECT_TRUE_MSG( data._state == PlaySessionState::Stopped, "거둔 Play 가 로드 뒤에 시작했습니다" );
     SW_EXPECT_FALSE( sceneManager.isWorldPlaying() );
-    sceneManager.shutdown();
+    sceneManager.shutdownSubsystem();
 }
 
 /**

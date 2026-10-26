@@ -321,7 +321,7 @@ SW_TEST_CASE( EditorToolAssetCommandsTest, RevertingAnOverrideRemovesItFromTheSa
     }
 
     SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
     SceneDocument                  authored;
     SceneDocument::SceneObjectNode entity;
     entity._name   = "Crate";
@@ -365,7 +365,7 @@ SW_TEST_CASE( EditorToolAssetCommandsTest, RevertingAnOverrideRemovesItFromTheSa
     SW_ASSERT_EQUAL( size_t( 1 ), resaved._listSceneObjectNode.size() );
     SW_EXPECT_TRUE_MSG( resaved._listSceneObjectNode[0]._prefabOverrideXML.empty(), resaved._listSceneObjectNode[0]._prefabOverrideXML.c_str() );
     SW_EXPECT_TRUE( resaved._listSceneObjectNode[0]._embeddedXML.empty() );
-    manager.shutdown();
+    manager.shutdownSubsystem();
 }
 
 /**

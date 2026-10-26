@@ -77,7 +77,7 @@ SW_TEST_CASE( SceneCookTest, PrefabEditCooksOnlyTheScenesThatUseIt )
 {
     using Internal = TestSceneIncrementalCookInternal;
     sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
     const sw::string root      = test::makeTempDirectory( "incremental_cook_root" );
     const sw::string cooked    = test::makeTempDirectory( "incremental_cook_out" );
     const sw::string recordDir = test::makeTempDirectory( "incremental_cook_record" );
@@ -145,7 +145,7 @@ SW_TEST_CASE( SceneCookTest, PrefabEditCooksOnlyTheScenesThatUseIt )
         SW_EXPECT_TRUE_MSG( Internal::readBytes( sw::FileUtil::joinPath( cooked, pOutput ) ) == listBefore[outputIndex], pOutput );
         ++outputIndex;
     }
-    manager.shutdown();
+    manager.shutdownSubsystem();
 }
 
 /**
@@ -156,7 +156,7 @@ SW_TEST_CASE( SceneCookTest, CookRemovesOutputsOfVanishedSources )
 {
     using Internal = TestSceneIncrementalCookInternal;
     sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
     const sw::string root      = test::makeTempDirectory( "stale_cook_root" );
     const sw::string cooked    = test::makeTempDirectory( "stale_cook_out" );
     const sw::string recordDir = test::makeTempDirectory( "stale_cook_record" );
@@ -193,7 +193,7 @@ SW_TEST_CASE( SceneCookTest, CookRemovesOutputsOfVanishedSources )
     SW_EXPECT_TRUE( sw::FileUtil::isRegularFile( keepOutput ) );
     SW_EXPECT_TRUE( sw::FileUtil::isRegularFile( strayFile ) );
     SW_EXPECT_EQUAL( 0u, store.removeUnrequestedOutputs( cooked, removeFailedCount ) ); // 한 번 치웠으면 더 지울 것이 없다
-    manager.shutdown();
+    manager.shutdownSubsystem();
 }
 
 /**

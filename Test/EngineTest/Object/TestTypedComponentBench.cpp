@@ -606,7 +606,7 @@ SW_TEST_CASE( TypedComponentBenchTest, QueryWhileAsyncSceneLoad )
     logNanoSamples( "single bucket query, idle (N=10000 K=200 leaf)", listIdle );
 
     sw::SceneManager sceneManager;
-    SW_ASSERT_TRUE( sceneManager.initialize() );
+    SW_ASSERT_TRUE( sceneManager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
     sw::vector<int64>   listDuring;
     const sw::Stopwatch loadStopwatch;
     SW_ASSERT_TRUE( sceneManager.requestLoadAsync( ::test::makeTempResourceID( xmlPath ) ) );
@@ -630,5 +630,5 @@ SW_TEST_CASE( TypedComponentBenchTest, QueryWhileAsyncSceneLoad )
     sceneManager.getActiveScene()->getObjectManager()->update( 0.0f );
     SW_EXPECT_EQUAL( static_cast<size_t>( kLoadedObjectCount ), sceneManager.getActiveScene()->getObjectManager()->getAllGameObjects().size() );
     SW_EXPECT_TRUE( sink != 0 );
-    sceneManager.shutdown();
+    sceneManager.shutdownSubsystem();
 }

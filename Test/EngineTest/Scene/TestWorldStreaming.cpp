@@ -122,7 +122,7 @@ SW_TEST_CASE( WorldStreamingTest, CookerSplitsEntitiesIntoCells )
 {
     using Internal = sw::WorldStreamingTestInternal;
     sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
 
     sw::SceneDocument doc{};
     doc._name          = "SplitTown";
@@ -139,7 +139,7 @@ SW_TEST_CASE( WorldStreamingTest, CookerSplitsEntitiesIntoCells )
     SW_EXPECT_TRUE( doc._listStreamingCell[0]._cell == ( sw::WorldCellCoord{ 2, -1 } ) ); // z 오름차순
     SW_EXPECT_TRUE( doc._listStreamingCell[1]._cell == ( sw::WorldCellCoord{ 0, 0 } ) );
     SW_EXPECT_EQUAL( size_t( 2 ), doc._listStreamingCell[1]._listSceneObjectNode.size() );
-    manager.shutdown();
+    manager.shutdownSubsystem();
 }
 
 /**
@@ -150,7 +150,7 @@ SW_TEST_CASE( WorldStreamingTest, CookerGroupsInterleavedEntitiesPerCellInDocume
 {
     using Internal = sw::WorldStreamingTestInternal;
     sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
 
     sw::SceneDocument doc{};
     doc._name          = "InterleavedTown";
@@ -188,7 +188,7 @@ SW_TEST_CASE( WorldStreamingTest, CookerGroupsInterleavedEntitiesPerCellInDocume
             SW_EXPECT_EQUAL( arrExpected[cellIndex]._listFileID[nodeIndex], cell._listSceneObjectNode[nodeIndex]._fileID );
         }
     }
-    manager.shutdown();
+    manager.shutdownSubsystem();
 }
 
 /**
@@ -198,7 +198,7 @@ SW_TEST_CASE( WorldStreamingTest, CrossCellReferenceFailsTheCook )
 {
     using Internal = sw::WorldStreamingTestInternal;
     sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
 
     // Lamp(셀 (5,0) 자리)가 셀 (0,0) 의 Post 에 붙는다. 붙은 자식은 부모 셀을 따르므로 붙음 자체는 셀 안의 참조다 —
     // 위반을 만들려고 Lamp 를 늘 올라 있게 표시한다(늘 올라 있는 쪽이 셀의 오브젝트를 가리키면 셀이 내려갈 때 끊긴다).
@@ -213,7 +213,7 @@ SW_TEST_CASE( WorldStreamingTest, CrossCellReferenceFailsTheCook )
     }
     SW_EXPECT_TRUE( doc._listStreamingCell.empty() ); // 실패하면 문서는 그대로다
     SW_EXPECT_EQUAL( size_t( 2 ), doc._listSceneObjectNode.size() );
-    manager.shutdown();
+    manager.shutdownSubsystem();
 }
 
 /**
@@ -224,7 +224,7 @@ SW_TEST_CASE( WorldStreamingTest, CellPreviewPointsAtSceneObjects )
 {
     using Internal = sw::WorldStreamingTestInternal;
     sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
 
     sw::SceneDocument splitDoc{};
     splitDoc._name          = "PreviewTown";
@@ -269,7 +269,7 @@ SW_TEST_CASE( WorldStreamingTest, CellPreviewPointsAtSceneObjects )
     SW_ASSERT_EQUAL( size_t( 1 ), preview._listViolation.size() );
     SW_EXPECT_EQUAL( pLamp->getObjectID(), preview._listViolation[0]._fromObjectID );
     SW_EXPECT_EQUAL( pPost->getObjectID(), preview._listViolation[0]._toObjectID );
-    manager.shutdown();
+    manager.shutdownSubsystem();
 }
 
 /**
@@ -279,7 +279,7 @@ SW_TEST_CASE( WorldStreamingTest, CellsFollowStreamingSources )
 {
     using Internal = sw::WorldStreamingTestInternal;
     sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
 
     sw::SceneDocument doc{};
     doc._name          = "LiveTown";
@@ -338,5 +338,5 @@ SW_TEST_CASE( WorldStreamingTest, CellsFollowStreamingSources )
         SW_TEST_DEFENSIVE_SCOPE( "saving a streaming scene" );
         SW_EXPECT_FALSE( pScene->serializeToDocument( saved ) );
     }
-    manager.shutdown();
+    manager.shutdownSubsystem();
 }

@@ -820,7 +820,7 @@ SW_TEST_CASE( ActionCombatTest, ObjectReferencesSurviveASceneRoundTripAsTheSameO
     pReloadedObjects->beginPlay();
     pReloadedObjects->update( 0.1f );
     SW_EXPECT_EQUAL( 90, pNewVictimStats->getHp() );
-    sceneManager.shutdown();
+    sceneManager.shutdownSubsystem();
 }
 
 /**

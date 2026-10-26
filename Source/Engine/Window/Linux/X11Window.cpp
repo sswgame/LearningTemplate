@@ -11,7 +11,11 @@
 #if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
     #include "Core/Common/X11Headers.h"
 
+    #include <X11/XKBlib.h>
+    #include <X11/cursorfont.h>
     #include <poll.h>
+
+    #include "Core/Common/X11MacroUndef.h"
 #endif
 
 #include <cstring>
@@ -111,6 +115,10 @@ namespace sw
         , _pX11Display{ nullptr }
         , _x11Window{ 0 }
         , _x11WmDelete{ 0 }
+        , _pInputMethod{ nullptr }
+        , _pInputContext{ nullptr }
+        , _invisibleCursor{ 0 }
+        , _arrShapeCursor{}
         , _reservedX11{ 0 }
         , _padding{ 0 }
     {
@@ -155,6 +163,9 @@ namespace sw
                       ExposureMask | KeyPressMask | KeyReleaseMask | StructureNotifyMask |
                           ButtonPressMask | ButtonReleaseMask | PointerMotionMask | FocusChangeMask |
                           PropertyChangeMask ); // 클립보드의 큰 글(INCR) 조각 알림이다(`readClipboardText`)
+        // 누르고 있으면 X 서버는 기본으로 Release/Press 쌍을 반복해서 보낸다 — 입력 쪽에 눌림과 뗌 엣지가 계속 생긴다. 감지 가능한 자동 반복을 켜면 반복은 Press 만 온다.
+        Bool bAutoRepeatSupported = 0;
+        XkbSetDetectableAutoRepeat( pDisplay, 1, &bAutoRepeatSupported ); // 1 == True. X11MacroUndef.h 가 True 매크로를 지운다.
         XFlush( pDisplay );
 
         _pX11Display  = pDisplay;
@@ -173,6 +184,7 @@ namespace sw
         if ( _pX11Display != nullptr )
         {
             Display* pDisplay = static_cast<Display*>( _pX11Display );
+            releaseInputResources(); // 커서 · XIC 는 이 창과 Display 의 것이다 — 창을 다시 만들면 옛 창을 가리키는 문맥이 남지 않는다
             if ( _x11Window != 0 )
             {
                 XDestroyWindow( pDisplay, _x11Window );
@@ -582,6 +594,132 @@ namespace sw
         XSendEvent( pDisplay, request.requestor, 0, 0, &replyEvent );
         XFlush( pDisplay );
         return true;
+    }
+
+    bool X11Window::setCursorShape( CursorShape shape )
+    {
+        if ( _pX11Display == nullptr || _x11Window == 0 )
+            return false;
+        Display* pDisplay = static_cast<Display*>( _pX11Display );
+        uint64&  cached   = _arrShapeCursor[static_cast<size_t>( shape )];
+        if ( cached == 0 )
+        {
+            uint32 fontCursorID = XC_left_ptr;
+            switch ( shape )
+            {
+                case CursorShape::Arrow:
+                {
+                    fontCursorID = XC_left_ptr;
+                    break;
+                }
+                case CursorShape::Hand:
+                {
+                    fontCursorID = XC_hand2;
+                    break;
+                }
+                case CursorShape::TextBeam:
+                {
+                    fontCursorID = XC_xterm;
+                    break;
+                }
+                case CursorShape::ResizeHorizontal:
+                {
+                    fontCursorID = XC_sb_h_double_arrow;
+                    break;
+                }
+                case CursorShape::ResizeVertical:
+                {
+                    fontCursorID = XC_sb_v_double_arrow;
+                    break;
+                }
+                case CursorShape::NotAllowed:
+                {
+                    fontCursorID = XC_X_cursor;
+                    break;
+                }
+            }
+            cached = XCreateFontCursor( pDisplay, fontCursorID );
+        }
+        XDefineCursor( pDisplay, _x11Window, cached );
+        XFlush( pDisplay );
+        return true;
+    }
+
+    bool X11Window::setCursorVisible( bool bVisible )
+    {
+        if ( _pX11Display == nullptr || _x11Window == 0 )
+            return false;
+        Display* pDisplay = static_cast<Display*>( _pX11Display );
+        if ( bVisible )
+        {
+            XUndefineCursor( pDisplay, _x11Window );
+            XFlush( pDisplay );
+            return true;
+        }
+        if ( _invisibleCursor == 0 )
+        {
+            XColor      dummyColor{};
+            const uint8 arrPixelData[1] = { 0 };
+            Pixmap      pixmap          = XCreateBitmapFromData( pDisplay, _x11Window, reinterpret_cast<const utf8*>( arrPixelData ), 1, 1 );
+            _invisibleCursor            = XCreatePixmapCursor( pDisplay, pixmap, pixmap, &dummyColor, &dummyColor, 0, 0 );
+            XFreePixmap( pDisplay, pixmap );
+        }
+        XDefineCursor( pDisplay, _x11Window, _invisibleCursor );
+        XFlush( pDisplay );
+        return true;
+    }
+
+    uint32 X11Window::readCommittedText( const void* pKeyPressEvent, utf8* pOutBuffer, uint32 capacity )
+    {
+        const bool bCannotRead = _pX11Display == nullptr || _x11Window == 0 || pKeyPressEvent == nullptr || pOutBuffer == nullptr || capacity == 0;
+        if ( bCannotRead )
+            return 0;
+        if ( _pInputContext == nullptr )
+        {
+            if ( _pInputMethod == nullptr )
+            {
+                XSetLocaleModifiers( "" );
+                _pInputMethod = XOpenIM( static_cast<Display*>( _pX11Display ), nullptr, nullptr, nullptr );
+                if ( _pInputMethod == nullptr )
+                    return 0;
+            }
+            _pInputContext = XCreateIC( static_cast<XIM>( _pInputMethod ),
+                                        XNInputStyle, XIMPreeditNothing | XIMStatusNothing,
+                                        XNClientWindow, static_cast<Window>( _x11Window ),
+                                        XNFocusWindow, static_cast<Window>( _x11Window ),
+                                        nullptr );
+            if ( _pInputContext == nullptr )
+                return 0;
+        }
+        KeySym      lookupKeySym{};
+        Status      lookupStatus{};
+        const int32 byteCount  = Xutf8LookupString( static_cast<XIC>( _pInputContext ), const_cast<XKeyPressedEvent*>( static_cast<const XKeyPressedEvent*>( pKeyPressEvent ) ),
+                                                    pOutBuffer, static_cast<int32>( capacity - 1 ), &lookupKeySym, &lookupStatus );
+        const bool  bCommitted = ( lookupStatus == XLookupChars || lookupStatus == XLookupBoth ) && byteCount > 0;
+        if ( bCommitted == false )
+            return 0;
+        pOutBuffer[byteCount] = '\0';
+        return static_cast<uint32>( byteCount );
+    }
+
+    void X11Window::releaseInputResources()
+    {
+        Display* pDisplay = static_cast<Display*>( _pX11Display );
+        for ( uint64& cursor : _arrShapeCursor )
+        {
+            if ( cursor != 0 )
+                XFreeCursor( pDisplay, cursor );
+            cursor = 0;
+        }
+        if ( _invisibleCursor != 0 )
+            XFreeCursor( pDisplay, _invisibleCursor );
+        _invisibleCursor = 0;
+        if ( _pInputContext != nullptr )
+            XDestroyIC( static_cast<XIC>( _pInputContext ) );
+        _pInputContext = nullptr;
+        if ( _pInputMethod != nullptr )
+            XCloseIM( static_cast<XIM>( _pInputMethod ) );
+        _pInputMethod = nullptr;
     }
 #else
     bool X11Window::initializeWindow( const utf8* pTitle, uint32 width, uint32 height )

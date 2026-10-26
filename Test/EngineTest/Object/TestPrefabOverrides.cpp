@@ -131,7 +131,7 @@ SW_TEST_CASE( PrefabOverridesTest, PrefabEditReachesPlacedInstancesButNotTheirOv
         sw::PrefabOverridesTestInternal::makeCratePrefab( sw::float3( 1.0f, 2.0f, 3.0f ), sw::float3( 2.0f, 2.0f, 2.0f ) ), prefabPathDisk ) );
 
     sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
     sw::SceneDocument authored;
     for ( const utf8* pName : { "CrateA", "CrateB" } )
     {
@@ -199,7 +199,7 @@ SW_TEST_CASE( PrefabOverridesTest, PrefabEditReachesPlacedInstancesButNotTheirOv
     SW_ASSERT_TRUE( pCooked->instantiate( cooked ) );
     Check::run( pCooked, "binary" );
 
-    manager.shutdown();
+    manager.shutdownSubsystem();
 }
 
 /**
@@ -236,7 +236,7 @@ SW_TEST_CASE( PrefabOverridesTest, FullStatePrefabEntityIsReadAndResavedAsOverri
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( legacyPathDisk, legacyScene ) );
 
     sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
     sw::SceneDocument legacy;
     SW_ASSERT_TRUE( legacy.loadXML( legacyPath ) );
     sw::Scene* pOpened = manager.createScene( "LegacyWorld" );
@@ -268,7 +268,7 @@ SW_TEST_CASE( PrefabOverridesTest, FullStatePrefabEntityIsReadAndResavedAsOverri
     SW_ASSERT_NOT_NULL( pReopenedOld );
     SW_EXPECT_STREQ( openedState.c_str(), sw::ObjectStateSerializer::saveToXMLString( pReopenedOld, sw::ObjectSaveOptions{ sw::SerializePurpose::Authoring } ).c_str() );
 
-    manager.shutdown();
+    manager.shutdownSubsystem();
 }
 
 /**
@@ -408,7 +408,7 @@ SW_TEST_CASE( PrefabOverridesTest, NestedPartsAreRespawnedNotSavedAndUnlinkKeeps
     SW_ASSERT_TRUE( sw::PrefabOverridesTestInternal::writePrefab( crate, cratePathDisk ) );
 
     sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
     sw::SceneDocument                  authored;
     sw::SceneDocument::SceneObjectNode entity;
     entity._name   = "Cart";
@@ -446,7 +446,7 @@ SW_TEST_CASE( PrefabOverridesTest, NestedPartsAreRespawnedNotSavedAndUnlinkKeeps
     SW_EXPECT_TRUE( pSavedCart->_prefab.empty() );
     SW_EXPECT_TRUE( pSavedWheel->_prefab == wheelPath );
 
-    manager.shutdown();
+    manager.shutdownSubsystem();
 }
 
 /**
@@ -519,7 +519,7 @@ SW_TEST_CASE( PrefabOverridesTest, SceneEditOfANestedPartIsSavedOnTheOuterInstan
     SW_ASSERT_TRUE( sw::PrefabOverridesTestInternal::writePrefab( crate, cratePathDisk ) );
 
     sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
     sw::SceneDocument                  authored;
     sw::SceneDocument::SceneObjectNode entity;
     entity._name   = "Cart";
@@ -566,5 +566,5 @@ SW_TEST_CASE( PrefabOverridesTest, SceneEditOfANestedPartIsSavedOnTheOuterInstan
     SW_ASSERT_NOT_NULL( pResavedCart );
     SW_EXPECT_STREQ( pSavedCart->_prefabOverrideXML.c_str(), pResavedCart->_prefabOverrideXML.c_str() );
 
-    manager.shutdown();
+    manager.shutdownSubsystem();
 }

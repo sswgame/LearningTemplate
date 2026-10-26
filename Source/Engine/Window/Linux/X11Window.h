@@ -90,6 +90,20 @@ namespace sw
          * @return 주인이 없거나, UTF-8 글을 주지 않거나, 시간 안에 답하지 않으면 false 입니다.
          */
         [[nodiscard]] bool readClipboardText( string& outText ) override;
+
+        // ---- 창이 소유하는 입력 자원(커서 · 입력기). 모두 이 창의 Display 리소스라 `destroy` 가 창과 함께 내린다 ----
+        /** @brief X11 창은 글꼴 커서(`XC_*`)로 모양을 바꾼다. */
+        [[nodiscard]] bool supportsCursorShape() const override { return true; }
+        /** @brief 모양의 글꼴 커서를 처음 쓸 때 만들어 두고 창에 겁니다. */
+        [[nodiscard]] bool setCursorShape( CursorShape shape ) override;
+        /** @brief 숨기면 1x1 투명 커서를 겁니다(처음 쓸 때 만든다). 보이면 창 커서를 풀어 부모 창의 커서로 돌린다. */
+        [[nodiscard]] bool setCursorVisible( bool bVisible ) override;
+        /**
+         * @brief 키 누름 @p pKeyPressEvent(`XKeyPressedEvent*`)가 입력기(XIM)로 커밋한 UTF-8 글을 @p pOutBuffer 에 담고 바이트 수를 반환합니다. 글이 없으면 0 입니다.
+         * @details 입력기 · 입력 문맥(XIC)은 처음 쓸 때 이 창을 클라이언트 창으로 만든다. 완전한 프리에딧(조합 후보 창) 렌더링은 하지 않는다.
+         * @param capacity @p pOutBuffer 의 크기(끝의 널 한 자리를 포함). 글은 널로 끝난다.
+         */
+        [[nodiscard]] uint32 readCommittedText( const void* pKeyPressEvent, utf8* pOutBuffer, uint32 capacity );
 #endif
 
     protected:
@@ -122,14 +136,22 @@ namespace sw
         void beginClipboardIncr( uint64 requestor, uint64 property );
         /** @brief 기한이 지난(상대가 사라진) INCR 건을 버립니다. */
         void expireClipboardIncr();
+        /** @brief 커서 · 입력 문맥 · 입력기를 내립니다. Display 를 닫기 전에 `destroy` 가 부른다. */
+        void releaseInputResources();
 #endif
 
     private:
+        static constexpr size_t kCursorShapeCount = static_cast<size_t>( CursorShape::NotAllowed ) + 1;
+
         string                           _clipboardText;     ///< CLIPBOARD 주인일 때 내주는 글(UTF-8). 주인인지는 서버에 묻는다(`XGetSelectionOwner`) — 따로 표시하지 않는다
         vector<X11ClipboardIncrTransfer> _listClipboardIncr; ///< 큰 글을 조각으로 보내는 중인 건
         [[maybe_unused]] void*           _pX11Display;
         [[maybe_unused]] uint64          _x11Window;
         [[maybe_unused]] uint64          _x11WmDelete;
+        [[maybe_unused]] void*           _pInputMethod;                      ///< XIM(`readCommittedText` 가 처음 쓸 때 연다)
+        [[maybe_unused]] void*           _pInputContext;                     ///< 이 창을 클라이언트 창으로 둔 XIC
+        [[maybe_unused]] uint64          _invisibleCursor;                   ///< 숨길 때 거는 투명 커서(0 이면 아직 없음)
+        [[maybe_unused]] uint64          _arrShapeCursor[kCursorShapeCount]; ///< 모양마다 만든 글꼴 커서(0 이면 아직 없음)
         [[maybe_unused]] uint8           _reservedX11 : 8;
         [[maybe_unused]] uint16          _padding;
     };

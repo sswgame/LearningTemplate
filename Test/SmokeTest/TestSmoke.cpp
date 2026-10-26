@@ -1808,8 +1808,8 @@ SW_TEST_CASE( ModuleAPITest, FullGameSceneAndComponentLifecycle )
     if ( api.bindService )
         api.bindService( nullptr );
 
-    sw::engine::getSubsystem<sw::SceneManager>().shutdown();
-    sw::engine::getSubsystem<sw::SceneManager>().initialize();
+    sw::engine::getSubsystem<sw::SceneManager>().shutdownSubsystem();
+    sw::engine::getSubsystem<sw::SceneManager>().initializeSubsystem();
 
     sw::engine::unregisterModuleTypes( "SWGame" );
     SW_EXPECT_TRUE( sw::ModuleImageUtil::unloadModuleImage( "SWGame", handle ) );
@@ -2040,8 +2040,8 @@ SW_TEST_CASE( ModuleAPITest, GameModuleRepeatedReloadCycle )
         if ( api.bindService )
             api.bindService( nullptr );
 
-        sw::engine::getSubsystem<sw::SceneManager>().shutdown();
-        sw::engine::getSubsystem<sw::SceneManager>().initialize();
+        sw::engine::getSubsystem<sw::SceneManager>().shutdownSubsystem();
+        sw::engine::getSubsystem<sw::SceneManager>().initializeSubsystem();
 
         sw::engine::unregisterModuleTypes( "SWGame" );
         SW_EXPECT_TRUE( sw::ModuleImageUtil::unloadModuleImage( "SWGame", handle ) );
@@ -2185,8 +2185,8 @@ SW_TEST_CASE( ModuleAPITest, UnloadChildReleasesTheChannelsItsImageCreated )
     api.destroy( game );
     if ( api.bindService != nullptr )
         api.bindService( nullptr );
-    sw::engine::getSubsystem<sw::SceneManager>().shutdown();
-    sw::engine::getSubsystem<sw::SceneManager>().initialize();
+    sw::engine::getSubsystem<sw::SceneManager>().shutdownSubsystem();
+    sw::engine::getSubsystem<sw::SceneManager>().initializeSubsystem();
 
     sw::EventDispatcher& dispatcher = sw::engine::getSubsystem<sw::EventDispatcher>();
     SW_ASSERT_TRUE_MSG( dispatcher.countChannelsCreatedWithin( pFrameworkBegin, pFrameworkEnd ) > 0,

@@ -31,6 +31,14 @@ namespace sw
     /** @brief 미리보기 씬이 아닌 씬(또는 없는 키)을 가리키는 키입니다. */
     inline constexpr uint32 kInvalidSceneKey = 0;
 
+    /** @brief 매니저가 받아들인 씬의 자리입니다(`SceneManager::adoptScene`). */
+    enum class SceneRole : uint8
+    {
+        Loaded,  ///< 로드된 씬 목록에 더한다. 활성 씬이 없을 때만 활성이 된다
+        Active,  ///< 로드된 씬 목록에 더하고 활성으로 바꾼 뒤 이전 활성 씬을 내린다
+        Preview, ///< 미리보기 씬 목록에 더한다(활성 · 저장 · 전환에 끼지 않음)
+    };
+
     /**
      * @brief 미리보기 씬의 틱 정책입니다(`SceneManager::createPreviewScene`). 프리팹 창은 틱 · 물리 없음, 애니메이션 창은 틱만, 래그돌 창은 물리까지입니다.
      */
@@ -71,10 +79,10 @@ namespace sw
     public:
         /**
          * @brief 빈 매니저로 만듭니다. 엔진 서비스 묶음은 바인딩된 표에서 한 번 읽어 둡니다(`SceneEngineServices::makeFromBoundEngine`).
-         * @details 서비스 저장소(`EngineServiceCollection`)는 표를 묶기 **전에** 이것을 만든다 — 그래서 호스트는 `initialize( services )` 로 다시 넘깁니다.
+         * @details 서비스 저장소(`EngineServiceCollection`)는 표를 묶기 **전에** 이것을 만든다 — 그래서 `initializeSubsystem` 이 묶인 뒤의 표를 다시 읽습니다.
          */
         SceneManager();
-        /** @brief 매니저를 해제합니다. */
+        /** @brief 매니저를 해제합니다(`shutdownSubsystem` 을 부르지 않았으면 여기서 내린다). */
         ~SceneManager() override;
 
         /** @brief 복사를 금지합니다. */
@@ -82,24 +90,16 @@ namespace sw
         /** @brief 대입을 금지합니다. */
         SceneManager& operator=( const SceneManager& ) = delete;
 
-        /**
-         * @brief 엔진 서비스 묶음 @p services 를 받아 매니저를 초기화합니다. 호스트(`Engine` · 테스트 하네스)가 표를 묶은 뒤 부릅니다.
-         * @details 이 매니저와 이 매니저가 만드는 씬(동기 · 비동기 로드)은 이 묶음만 씁니다. 빈 칸의 일(로드 띄우기 · 에셋 정리 · 되돌리기 비우기)은 건너뛰고,
-         *          타입 표가 없으면 씬 로드를 거절합니다.
-         */
-        bool initialize( const SceneEngineServices& services );
-        /** @brief 생성자가 읽어 둔 묶음으로 초기화합니다(테스트가 손으로 만든 매니저). */
-        bool initialize();
-        /** @brief 로드된 씬을 내리고 종료합니다. */
-        void shutdown();
-
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
         static constexpr const utf8* kSubsystemName = "Scene";
         /**
-         * @brief 기동 순서의 자리 — 묶인 표의 씬 쪽 묶음으로 초기화하고, 씬이 바뀌면(오브젝트 무효) 되돌리기 기록(있으면)을 비우게 구독합니다.
-         * @details 컴포넌트가 입력 · 오디오 · 모듈 코드 · 에셋 · 물리 씬을 들고, 스트리밍은 비동기 IO 다. 종료도 기록을 비운 뒤 구독을 뗀다.
+         * @brief 매니저의 유일한 초기화 길입니다 — 묶인 표의 씬 쪽 묶음을 읽어 초기화하고, 씬이 바뀌면(오브젝트 무효) 되돌리기 기록(있으면)을 비우게 구독합니다.
+         * @details 기동 순서와 손으로 만든 매니저(테스트)가 모두 이것을 부릅니다. 이 매니저와 이 매니저가 만드는 씬(동기 · 비동기 로드)은 이 묶음만 씁니다.
+         *          빈 칸의 일(로드 띄우기 · 에셋 정리 · 되돌리기 비우기)은 건너뛰고, 타입 표가 없으면 씬 로드를 거절합니다.
+         *          컴포넌트가 입력 · 오디오 · 모듈 코드 · 에셋 · 물리 씬을 들고, 스트리밍은 비동기 IO 다. 종료도 기록을 비운 뒤 구독을 뗀다.
          */
-        SubsystemInitResult     initializeSubsystem() override;
+        SubsystemInitResult initializeSubsystem() override;
+        /** @brief 로드된 씬을 모두 내리고 종료합니다(유일한 종료 길, 소멸자도 이 길을 탄다). */
         void                    shutdownSubsystem() override;
         const utf8*             getSubsystemName() const override { return kSubsystemName; }
         span<const utf8* const> getSubsystemDependencies() const override;
@@ -153,9 +153,9 @@ namespace sw
          * @details 언리얼 `FPreviewScene` · 유니티 `PreviewRenderUtility` 자리입니다(`docs/plans/EditorMultiWorld.md` 2.1). 씬마다 오브젝트 매니저와 씬 범위
          *          (`GameObjectManager::getSceneScope`)가 따로라 서비스(물리 · 오디오 · 내비)도 월드마다 하나씩입니다.
          *          틱은 `tickPreviewScenes` 가 정책대로 하고, 월드 플레이 상태(`setWorldPlaying`)는 따르지 않습니다(`ScenePreviewPolicy::_bPlay` 가 따로 정한다).
-         *          디바이스가 걸려 있으면(`setRHIDevice`) 만들 때 `Scene::initialize( pRHIDevice )` 로 기본 머티리얼 · 카메라를 겁니다 — 미리보기 창은 곧바로 그리기 때문입니다.
+         *          디바이스가 걸려 있으면(`setRHIDevice`) 다른 씬과 같이 `adoptScene` 이 기본 머티리얼 · 카메라를 겁니다 — 미리보기 창은 곧바로 그리기 때문입니다.
          *          그림은 호스트가 이 씬의 키로 뷰를 요청할 때만 나옵니다(`HostSceneView` · `RenderPacketBuilder::populateScenePreviews`).
-         * @return 만든 씬. 매니저가 소유하며 `destroyPreviewScene` 이나 `shutdown` 이 내립니다.
+         * @return 만든 씬. 매니저가 소유하며 `destroyPreviewScene` 이나 `shutdownSubsystem` 이 내립니다.
          */
         Scene* createPreviewScene( string_view name, const ScenePreviewPolicy& policy = {} );
         /** @brief 미리보기 씬 @p pScene 을 내립니다(플레이 중이면 끝낸 뒤). 초점이던 씬이면 초점을 활성 씬으로 되돌립니다. 미리보기 씬이 아니면 false 입니다. */
@@ -250,6 +250,13 @@ namespace sw
         SceneObjectsInvalidatedDelegate& onSceneObjectsInvalidated() { return _onSceneObjectsInvalidated; }
 
     private:
+        /** @brief 로드된 씬을 내리고 종료합니다(`shutdownSubsystem` 과 소멸자가 부른다). */
+        void shutdown();
+        /**
+         * @brief 씬을 받아들이는 유일한 길입니다 — 디바이스가 걸려 있으면 `Scene::initialize` 를 부르고 @p role 의 목록에 넣습니다.
+         * @details 만들기(`createScene` · `createEmptyActiveScene` · `createPreviewScene`)와 비동기 로드 결과가 모두 여기로 옵니다. 길마다 초기화 여부가 갈리지 않게 하려고 한 곳에 둡니다.
+         */
+        Scene* adoptScene( unique_ptr<Scene> scene, SceneRole role );
         /** @brief 씬을 언로드하고 목록에서 제거합니다. */
         void unloadScene( Scene* pScene );
         /** @brief 활성 씬을 바꿉니다. `_pActiveScene` 대입은 모두 여기로 옵니다. */
@@ -278,7 +285,7 @@ namespace sw
             atomic<bool>        _bAccepting{ true };
             TaskPromise<Scene*> _promise{};
             uint32              _typeTableGeneration{ 0 }; ///< 로드를 띄울 때의 `TypeRegistry::getGeneration` — 다르면 짓는 동안 타입(생성 함수)이 바뀌었다
-            SceneEngineServices _services{};               ///< 워커가 짓는 씬에 넘길 묶음(`initialize` 가 적는다 — 워커는 전역 표를 읽지 않는다)
+            SceneEngineServices _services{};               ///< 워커가 짓는 씬에 넘길 묶음(`initializeSubsystem` 이 적는다 — 워커는 전역 표를 읽지 않는다)
         };
 
         vector<unique_ptr<Scene>> _listLoadedScene;
@@ -290,7 +297,7 @@ namespace sw
         bool                      _bWorldPlaying;    ///< `setWorldPlaying`
         uint64                    _sceneGeneration;
         IRHIDevice*               _pRHIDevice;
-        SceneEngineServices       _services; ///< 생성자가 읽거나 `initialize` 가 받은 엔진 서비스 묶음(빌림)
+        SceneEngineServices       _services; ///< 생성자가 읽고 `initializeSubsystem` 이 다시 읽은 엔진 서비스 묶음(빌림)
 
         shared_ptr<AsyncLoadSlot> _asyncLoad;
         string                    _queuedPath;

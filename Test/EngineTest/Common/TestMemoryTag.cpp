@@ -109,7 +109,7 @@ SW_TEST_CASE( MemoryTagTest, AsyncSceneLoadOnWorkerIsTaggedScene )
     SW_ASSERT_TRUE( sw::FileUtil::writeFile( xmlPath, reinterpret_cast<const uint8*>( xmlText.data() ), static_cast<uint64>( xmlText.size() ) ) );
 
     sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
     const sw::MemoryTag outerTag = sw::Memory::getCurrentMemoryTag();
     SW_ASSERT_TRUE( outerTag == sw::MemoryTag::Unknown );
 
@@ -131,7 +131,7 @@ SW_TEST_CASE( MemoryTagTest, AsyncSceneLoadOnWorkerIsTaggedScene )
     SW_EXPECT_TRUE_MSG( sceneAfterWorker > sceneBefore + 4096, ( sw::string( "Scene bytes grew by " ) + sw::to_string( sceneAfterWorker - sceneBefore ) ).c_str() );
     SW_EXPECT_TRUE( sw::Memory::getCurrentMemoryTag() == outerTag );
 
-    manager.shutdown();
+    manager.shutdownSubsystem();
 }
 
 /**
