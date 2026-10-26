@@ -104,7 +104,7 @@ namespace sw
         const string payload     = "{\"iss\":" + Internal::quote( _credentials._clientEmail ) + ",\"scope\":" + Internal::quote( _scope ) +
                                ",\"aud\":" + Internal::quote( _credentials._tokenURL ) + ",\"iat\":" + to_string( issuedAtSec ) + ",\"exp\":" + to_string( expiresSec ) + "}";
         string assertion;
-        if ( JSONWebToken::makeSigned( *_pSecurity, NetSignatureAlgorithm::RsaPkcs1Sha256, _credentials._keyID, payload, _credentials._privateKeyPem, assertion ) == false )
+        if ( JwtUtil::makeSigned( *_pSecurity, NetSignatureAlgorithm::RsaPkcs1Sha256, _credentials._keyID, payload, _credentials._privateKeyPem, assertion ) == false )
         {
             SW_LOG_ERROR( "Could not sign the token request of service account '%#' with its key", _credentials._clientEmail.c_str() );
             return false;

@@ -99,7 +99,7 @@ namespace sw
                                ",\"exp\":" + to_string( expiresAtMs / constant::kMillisecondsPerSecond ) + ",\"aud\":" + Internal::quote( kAudience ) +
                                ",\"sub\":" + Internal::quote( clientID ) + "}";
         string secret;
-        if ( JSONWebToken::makeSigned( *_pSecurity, NetSignatureAlgorithm::EcdsaP256Sha256, _settings._signingKeyID, payload, _signingKeyPem, secret ) == false )
+        if ( JwtUtil::makeSigned( *_pSecurity, NetSignatureAlgorithm::EcdsaP256Sha256, _settings._signingKeyID, payload, _signingKeyPem, secret ) == false )
         {
             SW_LOG_ERROR( "Could not sign the client secret of login provider '%#' with its key", _settings._name.c_str() );
             return {};

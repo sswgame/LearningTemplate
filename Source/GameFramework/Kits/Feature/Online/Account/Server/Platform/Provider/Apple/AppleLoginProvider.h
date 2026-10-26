@@ -3,7 +3,7 @@
  * @brief 애플 로그인 제공자입니다(OnlineKits A4). ID 토큰 확인은 공통 OIDC 구현(`OidcLoginProvider`)이 하고, 인가 코드 교환과 탈퇴 때 토큰 철회를 더합니다.
  * @details 애플은 탈퇴한 계정의 토큰을 철회하라고 요구한다(App Store 심사 지침 5.1.1(v)). 철회에는 ID 토큰이 아니라 인가 코드를 교환해 받은 refresh token 이 필요하다.
  *          - 티켓은 `ID 토큰|nonce|인가 코드`다(nonce 가 없으면 `ID 토큰||인가 코드`, 인가 코드가 없으면 `OidcLoginProvider` 와 같은 `ID 토큰[|nonce]` — 그때는 연동 비밀이 없어 철회할 것이 없다).
- *          - client secret 은 서버가 서명 키(.p8 PEM)로 만드는 JWT 다(`JSONWebToken::makeSigned`, ES256): `kid` = 서명 키 id, `iss` = 팀 id, `sub` = client id(`clientIds` 의 첫 값),
+ *          - client secret 은 서버가 서명 키(.p8 PEM)로 만드는 JWT 다(`JwtUtil::makeSigned`, ES256): `kid` = 서명 키 id, `iss` = 팀 id, `sub` = client id(`clientIds` 의 첫 값),
  *            `aud` = `https://appleid.apple.com`, 수명 24 시간(애플 상한 6 개월보다 짧다). 만료 1 시간 전에 다시 만든다.
  *          - 인가 코드 교환(`POST /auth/token`, form `grant_type=authorization_code`)의 `refresh_token` 이 `PlatformLoginVerification::_linkSecret` 이다. 교환이 실패해도 로그인은
  *            성공한다(ID 토큰은 이미 확인했다) — 연동 비밀만 없다.

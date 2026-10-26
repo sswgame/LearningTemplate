@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/Rule/LoginStoreLogic.h"
 
+#include "Core/Common/SecureUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Network/BitStream.h"
 
@@ -269,17 +270,6 @@ namespace sw
             {
                 const int32 size = static_cast<int32>( password.size() );
                 return LoginConstant::kMinPasswordSize <= size && size <= LoginConstant::kMaxPasswordSize;
-            }
-
-            /** @brief 상수 시간으로 비교합니다. 처음 다른 바이트에서 멈추지 않습니다. */
-            static bool isEqualConstantTime( const uint8* pFirst, const uint8* pSecond, int32 size )
-            {
-                uint8 difference = 0;
-                for ( int32 byteIndex = 0; byteIndex < size; ++byteIndex )
-                {
-                    difference = static_cast<uint8>( difference | ( pFirst[byteIndex] ^ pSecond[byteIndex] ) );
-                }
-                return difference == 0;
             }
 
             [[nodiscard]] static bool computeTokenDigest( ILoginCrypto& crypto, const uint8 ( &arrSecret )[LoginConstant::kTokenSecretSize],
@@ -591,7 +581,7 @@ namespace sw
             if ( _crypto.computePasswordHash( credential._password, account._arrSalt, LoginConstant::kSaltSize, account._params, arrHash, LoginConstant::kPasswordHashSize ) ==
                  false )
                 return LoginResult::StoreUnavailable;
-            if ( Internal::isEqualConstantTime( arrHash, account._arrPasswordHash, LoginConstant::kPasswordHashSize ) == false )
+            if ( SecureUtil::equalsConstantTime( arrHash, account._arrPasswordHash, LoginConstant::kPasswordHashSize ) == false )
                 return recordFailure( nameKey, accountRaw._bytes, accountRaw._version, nowMs, outGrant._retryAfterMs );
 
             const LoginResult sanction = evaluateSanction( account._accountID, nowMs, outGrant );
@@ -785,7 +775,7 @@ namespace sw
             Internal::SessionRecord session;
             if ( Internal::decodeSession( sessionRaw._bytes, session ) == false )
                 return LoginResult::StoreUnavailable;
-            if ( Internal::isEqualConstantTime( arrDigest, session._arrTokenDigest, LoginConstant::kDigestSize ) == false )
+            if ( SecureUtil::equalsConstantTime( arrDigest, session._arrTokenDigest, LoginConstant::kDigestSize ) == false )
                 return LoginResult::InvalidToken;
             const LoginResult state = Internal::evaluateSession( session, nowMs );
             if ( state != LoginResult::Ok )
@@ -843,7 +833,7 @@ namespace sw
         uint8 arrDigest[LoginConstant::kDigestSize];
         if ( Internal::computeTokenDigest( _crypto, token._arrSecret, arrDigest ) == false )
             return LoginResult::StoreUnavailable;
-        if ( Internal::isEqualConstantTime( arrDigest, session._arrTokenDigest, LoginConstant::kDigestSize ) == false )
+        if ( SecureUtil::equalsConstantTime( arrDigest, session._arrTokenDigest, LoginConstant::kDigestSize ) == false )
             return LoginResult::InvalidToken;
         const LoginResult state = Internal::evaluateSession( session, nowMs );
         if ( pOutRevokeReason != nullptr )

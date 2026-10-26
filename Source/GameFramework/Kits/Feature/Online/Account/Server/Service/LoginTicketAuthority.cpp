@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginTicketAuthority.h"
 
 #include "Core/Common/HashUtil.h"
+#include "Core/Common/SecureUtil.h"
 #include "Core/Container/LittleEndianUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Memory/Memory.h"
@@ -23,17 +24,6 @@ namespace sw
 
             /** @brief 서버 id 는 `hashed_string` 규칙대로 대소문자를 구분하지 않습니다. */
             static uint64 computeServerHash( const hashed_string& serverID ) { return HashUtil::computeStringHash64( serverID.c_str(), serverID.size(), true ); }
-
-            /** @brief 상수 시간으로 비교합니다. 처음 다른 바이트에서 멈추지 않습니다. */
-            static bool isEqualConstantTime( const uint8* pFirst, const uint8* pSecond, int32 size )
-            {
-                uint8 difference = 0;
-                for ( int32 byteIndex = 0; byteIndex < size; ++byteIndex )
-                {
-                    difference = static_cast<uint8>( difference | ( pFirst[byteIndex] ^ pSecond[byteIndex] ) );
-                }
-                return difference == 0;
-            }
 
             /** @brief 정보를 라벨 뒤에 본문을 붙인 값으로 하여 키를 쓰는 해시를 계산합니다. */
             static bool computeLabeled( ILoginCrypto& crypto, const uint8* pMasterKey, int32 masterKeySize, const utf8* pLabel, int32 labelSize, const uint8* pBody,
@@ -97,7 +87,7 @@ namespace sw
         uint8 arrTag[NetGameTicket::kTagSize];
         if ( computeTag( pToken, arrTag ) == false )
             return false;
-        if ( LoginTicketAuthorityInternal::isEqualConstantTime( arrTag, pToken + NetGameTicket::kBodySize, NetGameTicket::kTagSize ) == false )
+        if ( SecureUtil::equalsConstantTime( arrTag, pToken + NetGameTicket::kBodySize, NetGameTicket::kTagSize ) == false )
             return false;
         const int64 expiresAtMs = static_cast<int64>( LittleEndianUtil::readUint64( pToken + 16 ) );
         if ( nowMs >= expiresAtMs )

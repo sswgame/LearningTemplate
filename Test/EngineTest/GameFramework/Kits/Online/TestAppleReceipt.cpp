@@ -149,14 +149,17 @@ namespace
             _bAuthValid = SW_FALSE;
             if ( pAuthorization == nullptr || pAuthorization->_value.rfind( "Bearer ", 0 ) != 0 )
                 return;
-            JSONWebToken token;
-            sw::string   issuer;
-            sw::string   audience;
-            sw::string   bundle;
-            const bool   bTokenOk = token.parse( string_view( pAuthorization->_value ).substr( 7 ) ) && token.getAlgorithm() == NetSignatureAlgorithm::EcdsaP256Sha256 &&
-                                  token.getKeyID() == "KEY1" && token.verifySignature( NetSecurity::getProvider(), _authPublicKey );
-            const bool bClaimsOk = bTokenOk && token.findText( "iss", issuer ) && issuer == "ISSUER1" && token.findText( "aud", audience ) &&
-                                   audience == AppleReceiptSettings::kAudience && token.findText( "bid", bundle ) && bundle == "com.example.game";
+            JwtUnverified unverified;
+            const bool    bHeaderOk = unverified.parse( string_view( pAuthorization->_value ).substr( 7 ) ) &&
+                                   unverified.getAlgorithm() == NetSignatureAlgorithm::EcdsaP256Sha256 && unverified.getKeyID() == "KEY1";
+            if ( bHeaderOk == false )
+                return;
+            const std::optional<JwtVerified> token = std::move( unverified ).verify( NetSecurity::getProvider(), _authPublicKey, JwtClaimRule::makeSignatureOnly() );
+            sw::string                       issuer;
+            sw::string                       audience;
+            sw::string                       bundle;
+            const bool                       bClaimsOk = token.has_value() && token->findText( "iss", issuer ) && issuer == "ISSUER1" && token->findText( "aud", audience ) &&
+                                   audience == AppleReceiptSettings::kAudience && token->findText( "bid", bundle ) && bundle == "com.example.game";
             _bAuthValid = bClaimsOk ? SW_TRUE : SW_FALSE;
         }
 

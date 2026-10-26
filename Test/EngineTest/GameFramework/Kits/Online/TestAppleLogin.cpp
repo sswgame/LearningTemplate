@@ -86,15 +86,18 @@ namespace
     private:
         bool checkClientSecret( const sw::string& secret, const sw::string& clientID ) const
         {
-            JSONWebToken token;
-            sw::string   issuer;
-            sw::string   subject;
-            sw::string   audience;
-            int64        expiresAt = 0;
-            return token.parse( secret ) && token.getAlgorithm() == NetSignatureAlgorithm::EcdsaP256Sha256 && token.getKeyID() == "KEY1" &&
-                   token.verifySignature( NetSecurity::getProvider(), _secretPublicKey ) && token.findText( "iss", issuer ) && issuer == "TEAM1" &&
-                   token.findText( "sub", subject ) && subject == clientID && clientID == "com.example.app" && token.findText( "aud", audience ) &&
-                   audience == AppleLoginProvider::kAudience && token.findInteger( "exp", expiresAt ) && expiresAt > 1000;
+            JwtUnverified unverified;
+            const bool    bHeaderOk = unverified.parse( secret ) && unverified.getAlgorithm() == NetSignatureAlgorithm::EcdsaP256Sha256 && unverified.getKeyID() == "KEY1";
+            if ( bHeaderOk == false )
+                return false;
+            const std::optional<JwtVerified> token = std::move( unverified ).verify( NetSecurity::getProvider(), _secretPublicKey, JwtClaimRule::makeSignatureOnly() );
+            sw::string                       issuer;
+            sw::string                       subject;
+            sw::string                       audience;
+            int64                            expiresAt = 0;
+            return token.has_value() && token->findText( "iss", issuer ) && issuer == "TEAM1" && token->findText( "sub", subject ) && subject == clientID &&
+                   clientID == "com.example.app" && token->findText( "aud", audience ) && audience == AppleLoginProvider::kAudience && token->findInteger( "exp", expiresAt ) &&
+                   expiresAt > 1000;
         }
     };
 
@@ -137,7 +140,7 @@ namespace
         {
             const sw::string payload = sw::string( "{\"iss\":\"https://issuer.test\",\"aud\":\"" ) + pAudience + "\",\"sub\":\"" + pSubject + "\",\"iat\":900,\"exp\":2000}";
             sw::string       compact;
-            (void)JSONWebToken::makeSigned( NetSecurity::getProvider(), NetSignatureAlgorithm::RsaPkcs1Sha256, "id-key", payload, _idPrivateKeyPem, compact );
+            (void)JwtUtil::makeSigned( NetSecurity::getProvider(), NetSignatureAlgorithm::RsaPkcs1Sha256, "id-key", payload, _idPrivateKeyPem, compact );
             return compact;
         }
 

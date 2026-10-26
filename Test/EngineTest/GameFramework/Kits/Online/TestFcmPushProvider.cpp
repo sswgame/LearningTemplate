@@ -89,15 +89,16 @@ namespace
                         grantType = pair._value;
                 }
             }
-            JSONWebToken token;
-            sw::string   issuer;
-            sw::string   scope;
-            sw::string   audience;
-            const bool   bParsed = token.parse( assertion );
-            _bAssertionValid     = bParsed && grantType == "urn:ietf:params:oauth:grant-type:jwt-bearer" && token.getAlgorithm() == NetSignatureAlgorithm::RsaPkcs1Sha256 &&
-                               token.verifySignature( NetSecurity::getProvider(), _publicKey ) && token.findText( "iss", issuer ) && issuer == "svc@proj.iam" &&
-                               token.findText( "scope", scope ) && scope == "https://www.googleapis.com/auth/firebase.messaging" && token.findText( "aud", audience ) &&
-                               audience == _tokenURL;
+            JwtUnverified                    unverified;
+            const bool                       bParsed = unverified.parse( assertion ) && unverified.getAlgorithm() == NetSignatureAlgorithm::RsaPkcs1Sha256;
+            const std::optional<JwtVerified> token =
+                bParsed ? std::move( unverified ).verify( NetSecurity::getProvider(), _publicKey, JwtClaimRule::makeSignatureOnly() ) : std::nullopt;
+            sw::string issuer;
+            sw::string scope;
+            sw::string audience;
+            _bAssertionValid = token.has_value() && grantType == "urn:ietf:params:oauth:grant-type:jwt-bearer" && token->findText( "iss", issuer ) &&
+                               issuer == "svc@proj.iam" && token->findText( "scope", scope ) && scope == "https://www.googleapis.com/auth/firebase.messaging" &&
+                               token->findText( "aud", audience ) && audience == _tokenURL;
         }
 
         void respondByDevice( HTTPServerResponse& outResponse ) const

@@ -4,6 +4,7 @@
 
 #if SW_DEV_COMMANDS_ENABLED
 
+    #include "Core/Common/SecureUtil.h"
     #include "Core/Container/StringUtil.h"
     #include "Core/Log/Logger.h"
     #include "Core/Time/MonotonicClock.h"
@@ -19,18 +20,6 @@ namespace sw
         struct DebugChannelInternal
         {
             static constexpr int64 kPollSleepNanoseconds = 1 * constant::kNanosecondsPerSecond / constant::kMillisecondsPerSecond;
-
-            /** @brief 길이에 걸리는 시간이 같은 비교입니다(토큰의 앞부분이 맞는 만큼 빨리 거절하지 않는다). */
-            static bool equalsConstantTime( string_view left, string_view right )
-            {
-                uint8        difference = left.size() == right.size() ? 0 : 1;
-                const size_t common     = left.size() < right.size() ? left.size() : right.size();
-                for ( size_t index = 0; index < common; ++index )
-                {
-                    difference |= static_cast<uint8>( left[index] ^ right[index] );
-                }
-                return difference == 0;
-            }
 
             static void appendNumber( string& outText, uint64 value )
             {
@@ -169,7 +158,7 @@ namespace sw
                 const string_view line  = StringUtil::trim( string_view( pConnection->_buffer ).substr( 0, lineEnd ) );
                 const size_t      space = line.find( ' ' );
                 const string_view token = space == string_view::npos ? line : line.substr( 0, space );
-                if ( DebugChannelInternal::equalsConstantTime( token, _settings._token ) == false )
+                if ( SecureUtil::equalsConstantTime( token, _settings._token ) == false )
                     bReject = true;
                 else if ( static_cast<int32>( _listRequest.size() ) >= _settings._maxQueuedLines )
                     bTooBusy = true;

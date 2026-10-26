@@ -177,7 +177,7 @@ namespace
                 payload += string( ",\"nonce\":\"" ) + pNonce + "\"";
             payload += "}";
             string compact;
-            (void)JSONWebToken::makeSigned( NetSecurity::getProvider(), key._algorithm, key._keyID, payload, key._privateKeyPem, compact );
+            (void)JwtUtil::makeSigned( NetSecurity::getProvider(), key._algorithm, key._keyID, payload, key._privateKeyPem, compact );
             return compact;
         }
 
