@@ -114,7 +114,7 @@ namespace sw::editor
 
         // 활성 팩의 `<Engine>` 요소(창 제목 · 렌더 파이프라인 · 스키마 · UI 규칙) — 게임의 엔진 설정은 프리셋이 아니라 팩 gamesettings.xml 에 있다.
         // 유니티 · 언리얼의 Project Settings 처럼 열린 프로젝트(활성 게임) 하나만 고친다.
-        const DataPath& packRoot = GameConfig::getActive()._packRoot;
+        const DataPath& packRoot = editor::getSubsystem<const GameConfig>()._packRoot;
         if ( packRoot.isSet() )
         {
             unique_ptr<Page> pPackPage      = make_unique<Page>();
@@ -194,7 +194,7 @@ namespace sw::editor
         page._bDirty = false;
         // 호스트가 파일에서 읽은 설정(EngineConfig · GameConfig …)이면 제자리에서 다시 읽는다. 팩 설정이나 모르는 파일은 NotTracked — 다음 실행부터 반영된다.
         // 방금 쓴 파일을 다시 읽지 못하면(Failed) 읽는 쪽이 오류를 남겼다 — 적용하지 않은 것으로 알린다.
-        outApplied = ConfigHotReload::reloadChangedFile( ConfigManager::findPrimary(), page._absolutePath ) == ReloadOutcome::Reloaded;
+        outApplied = ConfigHotReload::reloadChangedFile( editor::findSubsystem<ConfigManager>(), page._absolutePath ) == ReloadOutcome::Reloaded;
         return true;
     }
 

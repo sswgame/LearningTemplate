@@ -459,7 +459,7 @@ namespace sw
             }
         }
         else
-            listGameFolder.push_back( ResourcePaths::findLooseDomainFolder( GameConfig::getActive()._packRoot.get(), localizationFolder ).getDiskPath() );
+            listGameFolder.push_back( ResourcePaths::findLooseDomainFolder( editor::getSubsystem<const GameConfig>()._packRoot.get(), localizationFolder ).getDiskPath() );
 
         for ( const string& gameFolder : listGameFolder )
         {

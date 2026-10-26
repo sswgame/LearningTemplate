@@ -2,6 +2,8 @@
 
 #include "Core/File/FileUtil.h"
 
+#include "Engine/Common/EngineServices.h"
+#include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/Pack/ResourcePakManager.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Resource/ResourcePaths.h"
@@ -33,7 +35,7 @@ SW_TEST_CASE( AppearancePackTest, PresetFolderInPackIsRead )
                                                                    {
                                                                        { presetPath, R"(<CharacterAppearance id="PackOnlyProbe" parent="ShooterPlayer"/>)" }
     } ) );
-    sw::ResourcePakManager& packManager = sw::ResourceIO::getPackManager();
+    sw::ResourcePakManager& packManager = sw::engine::getSubsystem<sw::AssetManager>().getPackManager();
     SW_ASSERT_TRUE( packManager.mountPack( packPath, 1000 ) );
 
     sw::AppearanceDatabase database;

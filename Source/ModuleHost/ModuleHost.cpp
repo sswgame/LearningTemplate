@@ -8,6 +8,7 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Config/ConfigManager.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Module/ModuleCatalog.h"
@@ -558,7 +559,11 @@ namespace sw
         engine::bindModuleServices( outScope, bGameModule );
         // 호스트 전용 서비스 — 에디터 모듈만 찾는다(게임 모듈의 범위에는 걸지 않는다).
         if ( bGameModule == false )
+        {
             (void)outScope.bind( getModuleCompiler() ); // 엔진 행과 타입이 달라 겹치지 않는다(없으면 걸지 않는다)
+            // 설정 테이블은 서비스 목록 밖이다(게임 모듈이 볼 이유가 없다) — 에디터의 설정 감시 · 프로젝트 설정 창이 범위에서 찾게 건다.
+            (void)outScope.bind( engine::findSubsystem<ConfigManager>() );
+        }
     }
 
     void ModuleHost::rebindGameService()

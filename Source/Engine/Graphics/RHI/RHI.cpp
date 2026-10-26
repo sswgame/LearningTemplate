@@ -283,7 +283,7 @@ namespace sw
         gv_rhiBackend = currentBackend;
         SW_LOG_INFO( "Initializing RHI with backend: %#", getBackendTypeName( currentBackend ) );
 
-        _device = createDevice( currentBackend );
+        _device = engine::getSubsystem<RHIBackendRegistry>().createDevice( currentBackend );
         if ( _device == nullptr )
         {
             SW_LOG_ERROR( "Failed to create RHI Device!" );
@@ -353,7 +353,7 @@ namespace sw
         }
 
         gv_rhiBackend = backend;
-        _device       = createDevice( backend );
+        _device       = engine::getSubsystem<RHIBackendRegistry>().createDevice( backend );
         if ( _device == nullptr )
             return false;
 
@@ -393,11 +393,6 @@ namespace sw
     {
         _bPendingBackendChange = SW_FALSE;
         return _pendingRHIBackend;
-    }
-
-    unique_ptr<IRHIDevice> RHI::createDevice( RHIBackend backend )
-    {
-        return engine::getSubsystem<RHIBackendRegistry>().createDevice( backend );
     }
 
     const utf8* RHI::getBackendTypeName( RHIBackend backend )

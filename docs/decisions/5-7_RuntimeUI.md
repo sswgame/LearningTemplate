@@ -14,7 +14,7 @@
     `Engine` 는 전용 서버(`bDedicatedServer`)면 `createNull()` 을 골라 기동 단계에 `addSubsystem` 한다. 소비자는 구현 종류를 모르고 `IAudioService` 만 본다. 언리얼 오디오 믹서가 플랫폼별 `IAudioMixerPlatformInterface` 를 고르는 모양으로 알고 있다.
   - **물리는 갈아 끼우는 쌍이 아니라 함께 쓰는 둘이다.** `PhysicsSystem`(서브시스템 `Physics`) 하나가 Jolt(3D, `createScene3D`)와 Box2D(2D, `createScene2D`)를 같은 때에 쓴다. 한 역할에 구현이 둘이 아니라 역할이 둘이라 호스트 종류로 고를 것이 없다.
     그래서 팩토리나 서브시스템을 더 나누지 않는다. 언리얼은 PhysX · Chaos 처럼 한 역할의 구현을 모듈로 고르지만, 3D · 2D 를 함께 켜는 것은 Paper2D 가 Box2D 를 3D 물리와 따로 쓰는 것과 비슷하게 알고 있다.
-  - **`ResourcePakManager` 는 서브시스템이 아니다.** `AssetManager`(서브시스템)가 `_pPackManager` 로 소유하고 `ResourceIO::getPackManager()` 로만 닿는다. 종료 때 `AssetManager::shutdown` 이 `unmountAll` 로 비우고(마운트를 부르는 곳은 엔진 코드에 없고 호스트 · 도구 · 테스트가 건다),
+  - **`ResourcePakManager` 는 서브시스템이 아니다.** `AssetManager`(서브시스템)가 `_pPackManager` 로 소유하고 `engine::getSubsystem<AssetManager>().getPackManager()` 로 닿는다(정적 창구는 2026-10-27 에 지웠다). 종료 때 `AssetManager::shutdown` 이 `unmountAll` 로 비우고(마운트를 부르는 곳은 엔진 코드에 없고 호스트 · 도구 · 테스트가 건다),
     자기만의 의존 순서나 별도 수명 범위가 없다. 서브시스템으로 올리면 `AssetManager` 와 둘 사이에 의존 칸만 늘 뿐이다. 판정 기준의 "소유한 서브시스템 안의 객체" 이고, RHI 부품과 같은 이유로 타입 있는 멤버로 둔다.
   - **`ServerServiceManager` 는 엔진 범위 서브시스템이 아니다.** 소유자가 엔진 루프가 아니라 `ServerApp`(호스트)이고, 수명이 엔진 기동 · 종료가 아니라 모듈 리로드 직전의 `stopAll` 과 리로드 뒤 `startAll` 로 되풀이된다.
     서버 서비스의 코드는 모듈(DLL)에 있어 모듈 언로드 전에 멈춰야 하므로, 엔진 범위 종료 순서가 아니라 호스트의 모듈 리로드 순서를 따른다. 전용 서버 호스트에만 있고 의존 서브시스템 선언으로 순서를 정할 것도 없다.

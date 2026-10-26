@@ -155,12 +155,8 @@ namespace sw
         /** @brief 다시 읽을 수 있는(파일에서 읽은) 설정 수입니다. */
         uint32 getReloadableCount() const { return static_cast<uint32>( _mapSource.size() ); }
 
-        /**
-         * @brief 호스트가 기동 때 만든 테이블입니다(에디터가 설정 파일 감시에 씁니다). 엔진 범위가 서 있지 않으면 nullptr 입니다.
-         * @details 테이블은 엔진 기동 범위의 서브시스템이고 이 함수는 그 범위에서 찾는다(`engine::findSubsystem<ConfigManager>()`) — 따로 든 정적 포인터가 없다.
-         *          서비스 목록에 올리지 않은 것은 게임 모듈이 볼 이유가 없기 때문이다.
-         */
-        static ConfigManager* findPrimary();
+        // 호스트가 기동 때 만든 테이블은 엔진 기동 범위의 서브시스템이다 — 엔진은 `engine::findSubsystem<ConfigManager>()`, 에디터는 모듈 호스트가 에디터 서비스 범위에
+        // 건 것을 `editor::findSubsystem<ConfigManager>()` 로 찾는다(정적 창구를 두지 않는다). 서비스 목록에 올리지 않은 것은 게임 모듈이 볼 이유가 없기 때문이다.
 
         /**
          * @brief 설정 하나를 JSON 본문에서 엄격하게(`readConfigJSON`) 읽어 등록합니다. 틀리면 테이블을 바꾸지 않습니다.

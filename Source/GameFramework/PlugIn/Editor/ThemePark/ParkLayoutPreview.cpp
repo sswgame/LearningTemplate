@@ -7,6 +7,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
+#include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Resource/ResourceIO.h"
@@ -76,7 +77,7 @@ namespace sw::editor
 
     bool ParkLayoutPreview::refresh( bool bForce )
     {
-        const string& packRoot = GameConfig::getActive()._packRoot.get();
+        const string& packRoot = editor::getSubsystem<const GameConfig>()._packRoot.get();
         string        coasterPath;
         string        error;
         if ( GamePackDataUtil::tryMakeKindPath( packRoot, ParkLayout::kDataKind, _layoutPath, error ) == false ||

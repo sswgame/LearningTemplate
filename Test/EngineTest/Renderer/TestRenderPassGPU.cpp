@@ -2746,7 +2746,7 @@ SW_TEST_CASE( RenderPassGPUTest, RegistryRestoresResourcesOnNewDevice )
 /**
  * @brief 디바이스가 죽으면 **어디서 죽었든** 세대가 올라가야 한다 — 그래야 GPU 핸들이 스스로 무효가 된다.
  * @details 세대 카운터가 있는 이유는 "GPU 핸들을 든 CPU 객체(Mesh · MaterialInstance)가 디바이스보다 오래 산다" 는 것
- *          하나다. 세대를 올리는 일이 `RHI` 매니저의 경로(shutdown · recreateDevice)에만 있으면 `RHI::createDevice`
+ *          하나다. 세대를 올리는 일이 `RHI` 매니저의 경로(shutdown · recreateDevice)에만 있으면 `RHIBackendRegistry::createDevice`
  *          로 직접 만든 디바이스(테스트가 그렇게 쓴다)는 죽어도 세대가 그대로라, 그 디바이스에 올라간 메시가 계속
  *          "상주" 라고 답한다. 그러면 새 디바이스에 옛 핸들을 그대로 돌려주고, 해제는 죽은 디바이스에 destroy 를
  *          부른다(UAF).

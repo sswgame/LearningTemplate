@@ -159,7 +159,13 @@ namespace sw
         _pRHIDevice     = pRHIDevice;
         _bResumingWorld = findActiveObjectManager() != nullptr ? SW_TRUE : SW_FALSE;
         configureBootstrap( _bootstrap );
-        _bootstrap._packRoot = GameConfig::getActive()._packRoot;
+        const GameConfig* const pGameConfig = game::findSubsystem<const GameConfig>();
+        if ( pGameConfig == nullptr )
+        {
+            SW_LOG_ERROR( "Game instance cannot start - the required engine service GameConfig is missing from the game services" );
+            return false;
+        }
+        _bootstrap._packRoot = pGameConfig->_packRoot;
         // gamesettings.xml 은 필수다. 못 읽으면 기본값으로 서지 않고 게임 초기화를 멈춘다.
         if ( loadGameSettings() == false )
         {
