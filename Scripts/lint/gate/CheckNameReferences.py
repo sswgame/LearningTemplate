@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-코드 · 실행 인자 · 시나리오가 **이름으로** 부르는 전역 변수 · 입력 액션 · 오디오 이벤트 · 시나리오 단계 · 탐침 · 개발 명령이 정의돼 있는지 봅니다.
+코드 · 실행 인자 · 시나리오가 **이름으로** 부르는 전역 변수 · 입력 액션 · 시나리오 단계 · 탐침 · 개발 명령이 정의돼 있는지 봅니다.
 
 런타임은 모르는 이름을 오류로 멈추지 않는다.
 - 명령줄의 `-gv_<이름>` 은 모듈이 나중에 등록할 수 있어 보류표에 남고, 아무도 가져가지 않으면 App 이 기동 뒤에 경고 한 줄만 남긴다.
@@ -17,9 +17,9 @@
 - `NameReference/InputAction`: 입력 맵 질의(`wasActionTriggered` · `isActionDown` · `getVector2D` …)에 문자열로 적은 액션 이름과
   `k…Action` 상수(배열 포함)의 값이 입력 맵(`*.input.xml` 의 `<action name>`)에 있다. `Source/Games/<게임>` 은 엔진 맵 + 그 게임 팩의 맵만,
   나머지 코드는 엔진 맵 + 모든 팩의 맵에서 찾는다. 게임의 팩은 그 폴더 코드가 가장 많이 부르는 `game/<팩>/` 이다.
-- `NameReference/AudioEvent`: `postEvent` · `postEventAt` 에 문자열로 적은 이벤트 이름이 `*.audioevents.xml` 의 `<AudioEventDesc _name>` 에 있다
-  (팩 범위는 입력 액션과 같다). 런타임은 모르는 이벤트를 오류 한 줄로 알리고 소리를 내지 않는다.
-코드 쪽 두 규칙은 주석을 지운 글만 본다(문서 주석의 예는 코드가 아니다). 이름 종류는 `_kListCodeNameKind` 의 한 줄이다.
+- 오디오 이벤트 이름은 보지 않는다: 코드가 `postEvent` 에 이름을 리터럴로 넘기는 곳이 없고(전부 데이터 표의 이름을 변수로 넘긴다) 런타임이
+  모르는 이벤트를 `Unknown audio event` 오류로 알려 시나리오의 처리하지 않은 로그 게이트(15)가 잡는다. 리터럴 호출이 없어 0건을 보던 죽은 규칙이라 지웠다.
+코드 쪽 규칙은 주석을 지운 글만 본다(문서 주석의 예는 코드가 아니다). 이름 종류는 `_kListCodeNameKind` 의 한 줄이다.
 - `NameReference/ScenarioStep` · `ScenarioProbe` · `DevCommand`: 시나리오(`*.scenario.xml`)의 `<At>` 안 단계 이름, `probe` 속성,
   `<DevCommand line>` 의 첫 낱말이 `SW_AUTOMATION_STEP` · `SW_AUTOMATION_PROBE` · `SW_DEV_COMMAND` 로 등록된 이름이다. 실행기는 이것을
   시나리오를 올린 실기동(hostgpu 의 AppScenarioTest)에서야 오류로 낸다 — CI(nogpu)는 단계 · 명령 이름을 바꿔도 통과했다.
@@ -40,7 +40,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common.Paths import normalizePath  # noqa: E402
-from common.Search import collectRepositoryFiles, collectSourceFiles  # noqa: E402
 from lint.LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 #: 전역 변수 정의 — 매크로(첫 인자 타입, 둘째 이름)와 이름 문자열로 등록하는 두 호출.
@@ -61,8 +60,6 @@ _kActionQueryRe = re.compile(
 _kActionConstantRe = re.compile(r"\bk[A-Z]\w*Action(?:Name)?\s*(?:\[\s*\])?\s*=\s*(\{[^}]*\}|\"[^\"]*\")")
 #: 액션 이름의 모양(`Move` · `Park.Build`) — 같은 이름 꼴의 상수 중 데이터 낱말(`"action"` · `"discarded"`)은 액션이 아니다.
 _kActionNameRe = re.compile(r"[A-Z][A-Za-z0-9]*(?:\.[A-Z][A-Za-z0-9]*)*")
-#: 이름으로 오디오 이벤트를 올리는 호출(`GameSound::postEvent` · `AudioEngine::postEvent` · `postEventAt`).
-_kAudioEventCallRe = re.compile(r"\bpostEvent(?:At)?\s*\(\s*(?:hashed_string\s*\(\s*)?\"([^\"]+)\"")
 #: 시나리오 단계 · 탐침 · 개발 명령의 등록 — 둘째 인자가 이름(리터럴 또는 `k…Kind` 상수)이다.
 _kStepRegistrationRe = re.compile(r'SW_AUTOMATION_STEP(?:_WITH_HOOKS)?\s*\(\s*\w+\s*,\s*"([^"]+)"')
 _kStepRegistrationByConstantRe = re.compile(r"SW_AUTOMATION_STEP(?:_WITH_HOOKS)?\s*\(\s*\w+\s*,\s*(?:\w+::)?(k\w+Kind)\b")
@@ -90,7 +87,7 @@ _kLintSelfTestDir = "Scripts/lint/"
 def collectDefinedGlobalVariables(repositoryRoot: Path) -> set[str]:
     """`Source` · `Test` 의 전역 변수 정의 이름."""
     unique: set[str] = set()
-    listPath = collectSourceFiles([repositoryRoot / "Source", repositoryRoot / "Test"], _kCppSuffixes)
+    listPath = LintGate.walkSources([repositoryRoot / "Source", repositoryRoot / "Test"], _kCppSuffixes, what="전역 변수 정의 걷기", bMustFind=True)
     for _, text in LintGate.readFiles(listPath, mustContain="gv_"):
         unique.update(_kDefinitionMacroRe.findall(text))
         unique.update(_kDefinitionCallRe.findall(text))
@@ -101,7 +98,7 @@ def collectGlobalVariableUses(repositoryRoot: Path) -> list[tuple[str, str]]:
     """(위치, 이름) — 실행 인자 `-gv_…` 와 시나리오 `<Variable name>`."""
     listUse: list[tuple[str, str]] = []
     listRoot = [repositoryRoot / root for root in _kArgumentScanRoots if (repositoryRoot / root).is_dir()]
-    listPath = collectSourceFiles(listRoot, _kArgumentSuffixes)
+    listPath = LintGate.walkSources(listRoot, _kArgumentSuffixes, what="전역 변수 인자 걷기", bMustFind=True)
     presetPath = repositoryRoot / "CMakePresets.json"
     if presetPath.is_file():
         listPath.append(presetPath)
@@ -136,8 +133,6 @@ class CodeNameKind:
 _kListCodeNameKind: tuple[CodeNameKind, ...] = (
     CodeNameKind(rule="InputAction", label="입력 맵 액션", listCodeRe=(_kActionQueryRe,), constantRe=_kActionConstantRe,
                  dataGlob="*.input.xml", element="action", attribute="name", marker="Action"),
-    CodeNameKind(rule="AudioEvent", label="오디오 이벤트", listCodeRe=(_kAudioEventCallRe,), constantRe=None,
-                 dataGlob="*.audioevents.xml", element="AudioEventDesc", attribute="_name", marker="Event"),
 )
 
 
@@ -146,7 +141,7 @@ def collectDataNames(repositoryRoot: Path, kind: CodeNameKind) -> tuple[set[str]
     resourceRoot = repositoryRoot / "Resource"
     uniqueShared: set[str] = set()
     mapPackName: dict[str, set[str]] = collections.defaultdict(set)
-    for path in (path for path in collectRepositoryFiles(repositoryRoot, ("Resource",), suffixes=(".xml",)) if path.name.endswith(kind.dataGlob[1:])):
+    for path in LintGate.walkRepository(repositoryRoot, ("Resource",), what=f"{kind.label} 데이터 걷기", bMustFind=True, suffixes=(".xml",), accept=lambda candidate: candidate.name.endswith(kind.dataGlob[1:])):
         try:
             root = ElementTree.parse(path).getroot()
         except ElementTree.ParseError as error:
@@ -180,7 +175,7 @@ def collectSourceByGame(repositoryRoot: Path) -> dict[str, list[tuple[str, str]]
     """게임 폴더 이름(게임 밖은 "") → (위치, 글) 목록."""
     gamesRoot = repositoryRoot / "Source" / "Games"
     mapGameText: dict[str, list[tuple[str, str]]] = collections.defaultdict(list)
-    for path, text in LintGate.readFiles(collectSourceFiles([repositoryRoot / "Source"], _kCppSuffixes)):
+    for path, text in LintGate.readFiles(LintGate.walkSources([repositoryRoot / "Source"], _kCppSuffixes, what="코드 이름 걷기", bMustFind=True)):
         try:
             gameName = path.relative_to(gamesRoot).parts[0]
         except ValueError:
@@ -205,6 +200,7 @@ def findCodeNameViolations(repositoryRoot: Path) -> tuple[list[str], dict[str, i
         uniqueShared, mapPackName = collectDataNames(repositoryRoot, kind)
         uniqueAll = uniqueShared.union(*mapPackName.values()) if mapPackName else set(uniqueShared)
         checkedCount = 0
+        bMarkerSeen = False
         for gameName, listFile in sorted(mapGameText.items()):
             known, scope = uniqueAll, f"어느 {kind.dataGlob}"
             if gameName:
@@ -213,10 +209,14 @@ def findCodeNameViolations(repositoryRoot: Path) -> tuple[list[str], dict[str, i
             for relative, text in listFile:
                 if kind.marker not in text:
                     continue
+                bMarkerSeen = True
                 for name in collectCodeNames(stripCommentsInternal(text), kind):
                     checkedCount += 1
                     if name not in known:
                         listViolation.append(f"[NameReference/{kind.rule}] {relative}: {kind.label} '{name}' 이(가) {scope}에 없습니다")
+        # 데이터에 이름이 있고 코드에 표지 글도 있는데 이름을 하나도 못 주웠다면 정규식이 죽은 것이다 — "0곳 위반 없음" 을 통과로 두지 않는다.
+        if uniqueAll and bMarkerSeen and checkedCount == 0:
+            raise GateError(f"{kind.label}: 데이터에는 이름이 있는데 코드에서 이름을 하나도 찾지 못했습니다 — 호출 · 상수 모양이 바뀌었나요?")
         mapCheckedCount[kind.rule] = checkedCount
     return listViolation, mapCheckedCount
 
@@ -274,7 +274,7 @@ def collectAutomationNames(repositoryRoot: Path) -> tuple[set[str], set[str], se
     uniqueEditorCommand: set[str] = set()
     mapKindConstant: dict[str, str] = {}
     listKindIdentifier: list[str] = []
-    for _, text in LintGate.readFiles(collectSourceFiles([repositoryRoot / "Source"], _kCppSuffixes)):
+    for _, text in LintGate.readFiles(LintGate.walkSources([repositoryRoot / "Source"], _kCppSuffixes, what="자동화 등록 걷기", bMustFind=True)):
         mapKindConstant.update(dict(_kStepKindConstantRe.findall(text)))
         if "SW_AUTOMATION_" in text:
             uniqueStep.update(_kStepRegistrationRe.findall(text))
@@ -322,7 +322,8 @@ def findScenarioViolations(repositoryRoot: Path) -> tuple[list[str], int]:
     listViolation: list[str] = []
     scenarioCount = 0
     resourceRoot = repositoryRoot / "Resource"
-    for path in (path for path in collectRepositoryFiles(repositoryRoot, ("Resource",), suffixes=(".xml",)) if path.name.endswith(".scenario.xml")):
+    listScenarioPath = LintGate.walkRepository(repositoryRoot, ("Resource",), what="시나리오 걷기", bMustFind=True, suffixes=(".xml",), accept=lambda candidate: candidate.name.endswith(".scenario.xml"))
+    for path in listScenarioPath:
         relative = normalizePath(str(path.relative_to(repositoryRoot)))
         try:
             root = ElementTree.parse(path).getroot()
@@ -349,14 +350,16 @@ def findScenarioViolations(repositoryRoot: Path) -> tuple[list[str], int]:
             bEditorCommandLine = len(listToken) >= 2 and listToken[0] == "editor" and bEditorCommandSource
             if bEditorCommandLine and listToken[1] not in uniqueEditorCommand:
                 listViolation.append(f"[NameReference/EditorCommand] {relative}: 에디터 명령 '{listToken[1]}' 이(가) 등록돼 있지 않습니다(SW_EDITOR_COMMAND · 원본 표)")
+    if listScenarioPath and scenarioCount == 0:
+        raise GateError("시나리오 파일은 있는데 하나도 읽지 못했습니다 — 전부 깨진 XML 이면 시나리오 이름 검사가 아무것도 보지 않은 채 통과합니다")
     return listViolation, scenarioCount
 
 
 class CheckNameReferencesGate(LintGate):
     """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다 — 규칙과 증거가 한 자리에 있다."""
 
-    description = "코드 · 실행 인자 · 시나리오가 이름으로 부르는 전역 변수 · 입력 액션 · 오디오 이벤트 · 시나리오 단계 · 탐침 · 개발 명령이 정의돼 있는지 검사"
-    buildComment = "Checking that names used by code, arguments and scenarios (global variables, input actions, audio events, steps, probes, dev commands) are defined..."
+    description = "코드 · 실행 인자 · 시나리오가 이름으로 부르는 전역 변수 · 입력 액션 · 시나리오 단계 · 탐침 · 개발 명령이 정의돼 있는지 검사"
+    buildComment = "Checking that names used by code, arguments and scenarios (global variables, input actions, steps, probes, dev commands) are defined..."
     timeoutSeconds = 60
     # 이름의 정의(코드)와 쓰임(인자 · 시나리오 · 데이터)이 서로 다른 파일이라 staged 부분집합으로는 볼 수 없고, 트리 전체 대조가 거의 모든 커밋에서
     # 6~7 s 로 훅의 바닥이었다. 커밋마다가 아니라 push 마다 본다 — CI 린트 잡(RunLintSuite)과 ctest -L lint 가 트리 전체로 돌린다.
@@ -364,7 +367,7 @@ class CheckNameReferencesGate(LintGate):
     violationHeader = "정의되지 않은 이름"
     hint = (
         "  전역 변수: 정의(SW_*GLOBAL_VARIABLE)의 이름으로 고치거나, 지운 스위치면 그 인자 · 시나리오 줄을 지웁니다.\n"
-        "  입력 액션 · 오디오 이벤트: 그 팩의 *.input.xml · *.audioevents.xml 에 이름을 더하거나 코드의 이름을 데이터의 이름으로 고칩니다.\n"
+        "  입력 액션: 그 팩의 *.input.xml 에 이름을 더하거나 코드의 이름을 데이터의 이름으로 고칩니다.\n"
         "  시나리오: 단계 · 탐침 · 개발 명령의 이름을 등록된 이름(SW_AUTOMATION_STEP · SW_AUTOMATION_PROBE · SW_DEV_COMMAND)으로 고치고, 탐침의 target · key 는 그 탐침의 등록(씬 탐침은 받지 않고 질의 탐침은 bNeedsTarget · bNeedsKey)에 맞춥니다."
     )
     selfTestCases = [
@@ -400,14 +403,6 @@ class CheckNameReferencesGate(LintGate):
             "files": {
                 "Resource/engine/input/default.input.xml": "<InputMap><action name=\"Group0\"/></InputMap>\n",
                 "Source/Engine/Probe.cpp": "constexpr const char* kArrGroupAction[] = { \"Group0\", \"Group1\" };\n",
-            },
-        },
-        {
-            "name": "코드가 라이브러리에 없는 오디오 이벤트를 올린다",
-            "expectedViolation": "[NameReference/AudioEvent] Source/Engine/Probe.cpp: 오디오 이벤트 'Hti' 이(가) 어느 *.audioevents.xml에 없습니다",
-            "files": {
-                "Resource/engine/audio/probe.audioevents.xml": "<AudioEventLibrary><AudioEventDesc _name=\"Hit\"/></AudioEventLibrary>\n",
-                "Source/Engine/Probe.cpp": "// postEvent( \"Commented\" ) 는 보지 않는다\nvoid f() { (void)GameSound::postEvent( \"Hti\" ); }\n",
             },
         },
         {

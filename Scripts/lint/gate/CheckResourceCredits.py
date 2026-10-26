@@ -36,7 +36,6 @@ from pathlib import Path, PurePosixPath
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common.PathPattern import matchesPattern  # noqa: E402
-from common.Search import collectRepositoryFiles  # noqa: E402
 from lint.LintGate import GateResult, LintGate  # noqa: E402
 
 _kResourceRoot = "Resource"
@@ -200,7 +199,7 @@ class CheckResourceCreditsGate(LintGate):
 
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
         listAllPath = [path.relative_to(repositoryRoot).as_posix()
-                       for path in collectRepositoryFiles(repositoryRoot, (_kResourceRoot,), bAnySuffix=True)]
+                       for path in LintGate.walkRepository(repositoryRoot, (_kResourceRoot,), what="리소스 걷기", bMustFind=True, bAnySuffix=True)]
         setAllPath = set(listAllPath)
         mapDomainToRow: dict[str, list[tuple[list[str], str]]] = {}
         for relPath in listAllPath:

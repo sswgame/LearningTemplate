@@ -39,7 +39,6 @@ from common.Constants import (  # noqa: E402
     kDirSourceServer,
 )
 from common.ExitCode import ExitCode  # noqa: E402
-from common.Search import collectSourceFiles  # noqa: E402
 from lint.LintGate import GateResult, LintGate  # noqa: E402
 
 _kScanRoots = (
@@ -116,7 +115,7 @@ class CheckSourceGlobGate(LintGate):
         violations: list[str] = []
 
         scanDirs = [repositoryRoot / rel for rel in _kScanRoots]
-        sources = collectSourceFiles(scanDirs, extensions=kCppSourceExtensions)
+        sources = LintGate.walkSources(scanDirs, kCppSourceExtensions, what="소스 글롭 걷기", bMustFind=True)
         self.noteSelection(len(sources))   # 소스가 하나도 없으면(--root 가 저장소가 아니다) 기반이 불성립으로 바꾼다
         summary = f"{len(sources)} sources scanned under Source/"
 

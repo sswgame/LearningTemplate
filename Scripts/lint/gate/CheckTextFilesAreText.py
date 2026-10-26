@@ -129,7 +129,7 @@ class CheckTextFilesAreTextGate(LintGate):
         self.addFilesArgument(parser)
 
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        listPath = self.selectTargetFiles(repositoryRoot, args.files, suffixes=kTextSuffix, excludedDirNames=kExcludedDirName)
+        listPath = self.selectTargetFiles(repositoryRoot, args.files, bMustFind=True, suffixes=kTextSuffix, excludedDirNames=kExcludedDirName)
 
         listViolation: list[str] = []
         for path in listPath:

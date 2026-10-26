@@ -69,7 +69,7 @@ class CheckResourceCasingGate(LintGate):
         self.addFilesArgument(parser, "검사할 파일 (생략 시 전체 Resource/)")
 
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        listPath = self.selectTargetFiles(repositoryRoot, args.files, listScanRoot=("Resource",), bAnySuffix=True)
+        listPath = self.selectTargetFiles(repositoryRoot, args.files, bMustFind=True, listScanRoot=("Resource",), bAnySuffix=True)
         violations = findCasingViolations(repositoryRoot, listPath)
         return GateResult(listViolation=violations, summary="Resource 하위 모든 파일/폴더 소문자")
 

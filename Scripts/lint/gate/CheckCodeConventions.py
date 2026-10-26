@@ -44,7 +44,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 from common.Constants import kCppAllExtensions, kLintTargetRelDirs, kNotOurCodeDirNames, kNotOurDirNames  # noqa: E402
 from common.Parallel import flatMapInProcesses  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
-from common.Search import collectRepositoryFiles  # noqa: E402
 from lint.LintGate import GateResult, LintGate  # noqa: E402
 from lint.conventions.InternalHelperScan import kBaselineSchema  # noqa: E402
 from lint.conventions.Model import ConventionViolation  # noqa: E402
@@ -114,7 +113,7 @@ def runConventionsCheckInternal(rootDir: Path | None, specificFiles: list[str] |
         return allViolations
 
     # 전체 스캔의 대상 고르기는 게이트 · 픽서와 같은 걷기(`collectRepositoryFiles` — 빌드 산출물 · 내려받은 도구로 내려가지 않는다).
-    filesToScan = collectRepositoryFiles(projectRoot, kLintTargetRelDirs, suffixes=kCppAllExtensions,
+    filesToScan = LintGate.walkRepository(projectRoot, kLintTargetRelDirs, what="코드 규약 대상 걷기", bMustFind=True, suffixes=kCppAllExtensions,
                                          excludedDirNames=kNotOurDirNames | _kExcludedDirNames)
     LintGate.noteSelection(len(filesToScan))   # 전체 훑기에 파일이 0 이면 통과가 아니라 불성립(`LintGate.judgeOutcome`)
     # 파일별 검사는 파이썬 정규식이 대부분이라 스레드로는 한 코어다 — 프로세스 덩어리로 나눈다(`flatMapInProcesses`).

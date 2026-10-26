@@ -77,7 +77,7 @@ class CheckHeaderSelfContainedGate(LintGate):
             # 빌드 폴더가 없으면 헤더를 하나도 검사하지 못했다 — 통과가 아니라 불성립이다(종료 5). 통합에서는 실패이고 훅(빌드 없는 PC)에서만 허용된다.
             return GateResult.unavailable(f"빌드 폴더 준비 안 됨 — {problem}")
 
-        listPath = self.selectTargetFiles(repositoryRoot, args.files, listScanRoot=(kHeaderScanRoot,), suffixes=(".h",))
+        listPath = self.selectTargetFiles(repositoryRoot, args.files, bMustFind=True, listScanRoot=(kHeaderScanRoot,), suffixes=(".h",))
         listHeader = [path for path in listPath if isCheckedHeader(path)]
         if not listHeader:
             return GateResult.skipped("검사 대상 헤더 없음 — 고른 파일이 생성 헤더 · pch.h 뿐이다")

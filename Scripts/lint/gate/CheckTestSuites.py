@@ -75,7 +75,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common.CodeText import blankComments, blankCommentsAndLiterals  # noqa: E402
-from common.Search import collectRepositoryFiles  # noqa: E402
 from lint.LintGate import GateResult, LintGate  # noqa: E402
 
 _kTestRoot = "Test"
@@ -120,7 +119,7 @@ _kPathOnlyKeyPrefix = "pathOnly:"
 
 def listTestSourceInternal(rootDir: Path) -> list[Path]:
     """`Test/` 아래 .cpp 전부(빌드 산출물 · 생성 폴더로는 내려가지 않는다 — `collectRepositoryFiles`)."""
-    return collectRepositoryFiles(rootDir, (_kTestRoot,), suffixes=(".cpp",))
+    return LintGate.walkRepository(rootDir, (_kTestRoot,), what="테스트 소스 걷기", bMustFind=True, suffixes=(".cpp",))
 
 
 def collectCases(rootDir: Path) -> tuple[list[tuple[str, str, str]], list[str]]:
@@ -220,7 +219,7 @@ def checkPolicy(rootDir: Path, policy: dict, cases: list[tuple[str, str, str]]) 
     labels = set(policy.get("labels", {}))
     rows: dict = policy.get("executables", {})
     declared: dict[str, str] = {}
-    for cmakePath in collectRepositoryFiles(rootDir, (_kTestRoot,), fileNames=("CMakeLists.txt",)):
+    for cmakePath in LintGate.walkRepository(rootDir, (_kTestRoot,), what="테스트 CMakeLists 걷기", bMustFind=True, fileNames=("CMakeLists.txt",)):
         relPath = cmakePath.relative_to(rootDir).as_posix()
         code = "\n".join(line.split("#", 1)[0] for line in cmakePath.read_text(encoding="utf-8", errors="ignore").splitlines())
         for match in _kAddExecutableRe.finditer(code):
@@ -296,7 +295,7 @@ def checkCoreTestIsEngineFree(rootDir: Path) -> list[str]:
     if folder.is_dir() is False:
         return []
     errors: list[str] = []
-    for path in collectRepositoryFiles(rootDir, (_kCoreTestFolder,), suffixes=(".cpp", ".h")):
+    for path in LintGate.walkRepository(rootDir, (_kCoreTestFolder,), what="코어 테스트 걷기", bMustFind=True, suffixes=(".cpp", ".h")):
         relPath = path.relative_to(rootDir).as_posix()
         code = blankComments(path.read_text(encoding="utf-8", errors="ignore"))
         for match in _kCoreTestForbiddenIncludeRe.finditer(code):

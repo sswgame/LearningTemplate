@@ -100,7 +100,7 @@ class CheckTextureFoldersGate(LintGate):
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
         resourceRoot = (repositoryRoot / "Resource").resolve()
         listPath = [path.resolve().relative_to(resourceRoot).as_posix()
-                    for path in self.selectTargetFiles(repositoryRoot, args.files, listScanRoot=("Resource",), bAnySuffix=True)]
+                    for path in self.selectTargetFiles(repositoryRoot, args.files, bMustFind=True, listScanRoot=("Resource",), bAnySuffix=True)]
         violations = findTextureFolderViolations(listPath)
         return GateResult(listViolation=violations, summary=f"Resource 파일 {len(listPath)}개")
 

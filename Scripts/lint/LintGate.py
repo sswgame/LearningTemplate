@@ -25,7 +25,7 @@ class CheckSomethingGate(LintGate):
 
     def scan(self, repositoryRoot, args):
         # 파일 고르기: --files 와 전체 훑기가 같은 규칙, 빌드 산출물 · 내려받은 외부 도구로는 내려가지 않는다
-        listPath = self.selectTargetFiles(repositoryRoot, args.files, listScanRoot=("Source",), suffixes=(".h", ".cpp"))
+        listPath = self.selectTargetFiles(repositoryRoot, args.files, bMustFind=True, listScanRoot=("Source",), suffixes=(".h", ".cpp"))
         # 읽기: 동시에, 찾는 표식이 없는 파일은 거른다(비싼 정규식 앞에서)
         listViolation = [f"{path}: ..." for path, text in readTextFiles(listPath, mustContain="SOMETHING") if ...]
         return GateResult(listViolation=listViolation, summary=f"{len(listPath)} files scanned")
@@ -76,13 +76,13 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import ModuleType
-from typing import Iterable
+from typing import Any, Callable, Iterable
 
 
 from common.Constants import kNotOurDirNames  # noqa: E402
 from common.Host import getMergeHeadRevisions, runGit  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
-from common.Search import collectRepositoryFiles, readTextFiles, resolveFileArguments  # noqa: E402
+from common.Search import collectRepositoryFiles, collectSourceFiles, readTextFiles, resolveFileArguments  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
 from common.RuleData import RuleDataError, kExemptionKey, kKindInteger, kKindReason, kRuleDataRelDir, readRuleFile  # noqa: E402
 from lint.GateVerdict import formatOutcomeLine  # noqa: E402
@@ -507,6 +507,7 @@ class LintGate:
     def selectTargetFiles(repositoryRoot: Path,
                           listFileArgument: list[str] | None,
                           *,
+                          bMustFind: bool,
                           listScanRoot: Iterable[str] = ("",),
                           suffixes: Iterable[str] = (),
                           fileNames: Iterable[str] = (),
@@ -523,6 +524,9 @@ class LintGate:
 
         게이트마다 이 일을 따로 하지 말 것 — 상대 경로를 푸는 기준과 제외 목록이 갈리고, `--files` 에 제외를 빠뜨리면
         **커밋 훅과 전체 검사가 서로 다른 파일을 본다.** 픽서도 같은 함수로 고른다(`LintFixer.selectFixerTargetFiles`).
+
+        `bMustFind`(필수): True 면 **전체 훑기**(`--files` 없음)가 이 저장소에서 0건을 고르면 GateError — 게이트가 걷기를 여러 번 할 때 `judgeOutcome` 은
+        전부 0건일 때만 잡으므로 걷기마다 적는다(`walkRepository` 와 같은 뜻). `--files` 의 0건은 정상(건너뜀)이라 보지 않고, 자기 증거 조각의 임시 트리도 뺀다.
         """
         listScanRoot = tuple(listScanRoot)
         if not listFileArgument:
@@ -531,6 +535,8 @@ class LintGate:
         else:
             listPath = resolveFileArguments(repositoryRoot, listFileArgument, listScanRoot=listScanRoot, suffixes=suffixes, fileNames=fileNames,
                                             excludedDirNames=excludedDirNames, bAnySuffix=bAnySuffix)
+        if bMustFind and not listPath and not listFileArgument and LintGate.isOwnRepositoryInternal(repositoryRoot):
+            raise GateError(f"대상 고르기: 전체 훑기가 {', '.join(listScanRoot)} 에서 파일을 하나도 고르지 못했습니다 — 폴더 · 접미사가 바뀌었나요?")
         LintGate.noteSelection(len(listPath))
         return listPath
 
@@ -541,6 +547,34 @@ class LintGate:
         `endRun` 이 통과로 두지 않는다(`GateResult.checkedCount`).
         """
         LintGate._listSelectionCount.append(count)
+
+    @staticmethod
+    def isOwnRepositoryInternal(repositoryRoot: Path) -> bool:
+        """`repositoryRoot` 가 이 스크립트가 든 저장소의 루트인가(자기 증거 조각의 임시 트리가 아닌가)."""
+        return repositoryRoot.resolve() == getProjectRoot().resolve()
+
+    @staticmethod
+    def walkRepository(repositoryRoot: Path, listRoot: Iterable[str], *, what: str, bMustFind: bool,
+                       accept: Callable[[Path], bool] | None = None, **walkOptions: Any) -> list[Path]:
+        """
+        게이트의 **보조 걷기**(전체 훑기 안에서 정의 · 데이터 · 시나리오를 모으는 걷기)가 쓰는 창구 — `common.Search.collectRepositoryFiles` 를 직접 부르지 않는다
+        (`CheckGateFileWalk` 가 막는다). `bMustFind` 에 값을 꼭 적게 해서 "걷기가 0건을 모았는데 위반 없음 = 통과" 를 쓸 수 없게 한다:
+        True 면 `accept` 를 거친 결과가 0건일 때 GateError(걷는 경로 · 접미사가 바뀐 것). False 는 0건이 정상인 걷기(선택 폴더)이고 이유를 호출 옆에 적는다.
+        True 는 이 스크립트가 든 저장소를 훑을 때만 지킨다 — 자기 증거 조각(`selfTestCases`)의 임시 트리는 조각이 필요한 파일만 가져 걷기가 비는 것이 정상이다.
+        """
+        listPath = [path for path in collectRepositoryFiles(repositoryRoot, tuple(listRoot), **walkOptions) if accept is None or accept(path)]
+        if bMustFind and not listPath and LintGate.isOwnRepositoryInternal(repositoryRoot):
+            raise GateError(f"{what}: 걷기가 파일을 하나도 모으지 못했습니다 — 폴더 · 접미사가 바뀌었나요?")
+        return listPath
+
+    @staticmethod
+    def walkSources(listRoot: Iterable[Path], extensions: set[str] | None = None, *, what: str, bMustFind: bool, **walkOptions: Any) -> list[Path]:
+        """`walkRepository` 의 `common.Search.collectSourceFiles` 판 — 같은 뜻의 `bMustFind`."""
+        listRoot = list(listRoot)
+        listPath = collectSourceFiles(listRoot, extensions, **walkOptions)
+        if bMustFind and not listPath and any(LintGate.isOwnRepositoryInternal(root.parent) for root in listRoot):
+            raise GateError(f"{what}: 걷기가 파일을 하나도 모으지 못했습니다 — 폴더 · 확장자가 바뀌었나요?")
+        return listPath
 
     @staticmethod
     def readFiles(listPath: Iterable[Path], *, encoding: str = "utf-8", errors: str = "replace",

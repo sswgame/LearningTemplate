@@ -239,7 +239,7 @@ class CheckDataDrivenStructureGate(LintGate):
                 raise GateError(f"git ls-files 실패 — {result.stderr.strip()}")
             return [repositoryRoot / line for line in result.stdout.splitlines() if line.endswith(listEnding)]
         listDirRoot = [root for root in ruleSet.listScanRoot if not (repositoryRoot / root).is_file()]
-        listPath = self.selectTargetFiles(repositoryRoot, listFileArgument, listScanRoot=listDirRoot or ("",), bAnySuffix=True)
+        listPath = self.selectTargetFiles(repositoryRoot, listFileArgument, bMustFind=True, listScanRoot=listDirRoot or ("",), bAnySuffix=True)
         if not listFileArgument:
             listPath += [repositoryRoot / root for root in ruleSet.listScanRoot if (repositoryRoot / root).is_file()]
         return [path for path in listPath if path.as_posix().endswith(listEnding)]
