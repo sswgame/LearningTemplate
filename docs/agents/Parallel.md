@@ -12,8 +12,11 @@ Prefer a shape that cannot race over a rule; the two gates below exist only for 
 - A test never writes to `Bin`, to a fixed file name, or to a fixed port. Temporary files come from `test::makeTempPath` /
   `makeTempDirectory` (`%TEMP%/sw_<pid>/…`); sockets bind port 0 and read the assigned port back.
   `Test/SmokeTest/CMakeLists.txt` is the model: no `RUN_SERIAL` because it touches none of those.
-- A new `RESOURCE_LOCK` or `RUN_SERIAL` states its reason in the policy JSON (`Test/TestPolicy.json`, key `_…Reason`,
-  as in `_hostResourceLockReason`). A lock without a reason is a defect. See also `Test/README.md` ("`RUN_SERIAL` 은 이유와 함께만").
+- A test that launches `App` goes through `AppTestUtil::makeAppLaunch` / `runApp`: the child's working folder is the case's run
+  folder (`build/<preset>/AppRuns/shard<i>of<n>/<Suite_Case>`), so its relative `Saved/…` writes never meet another shard's.
+  A child that writes into `Resource/` uses a per-process name (`AutomationScratch::makeInstanceID`, `<name>_p<pid>`).
+- A new `RESOURCE_LOCK` or `RUN_SERIAL` states its reason in the policy JSON (`Test/TestPolicy.json`, a `_…Reason` key next to
+  the lock key, e.g. `hostResourceLock` with `_hostResourceLockReason`). A lock without a reason is a defect. See also `Test/README.md` ("`RUN_SERIAL` 은 이유와 함께만").
 
 ### Lint gates
 

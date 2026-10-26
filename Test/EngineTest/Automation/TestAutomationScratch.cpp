@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Automation/AutomationScenario.h"
@@ -19,6 +20,31 @@ SW_TEST_CASE( AutomationScratchTest, RebaseReplacesWholeIDsOnly )
     const sw::string text = "_materialPath=\"engine/fx/a.material\" other=\"xengine/fx/a.material\" path=engine/fx/a.material";
     const sw::string out  = sw::AutomationScratch::rebaseText( text, "engine/fx", "scratch/run/fx" );
     SW_EXPECT_TRUE( out == "_materialPath=\"scratch/run/fx/a.material\" other=\"xengine/fx/a.material\" path=scratch/run/fx/a.material" );
+    // 뒤도 경계여야 한다 — 더 긴 이름(`scratch/s2`, 이미 꼬리가 붙은 `scratch/s_p1`)의 앞머리는 바꾸지 않는다.
+    SW_EXPECT_TRUE( sw::AutomationScratch::rebaseText( "scratch/s2/a scratch/s_p1/a scratch/s", "scratch/s", "scratch/t" ) == "scratch/s2/a scratch/s_p1/a scratch/t" );
+}
+
+/**
+ * @brief [AutomationScratchTest] 실행기는 사본 id 에 이 프로세스의 꼬리를 붙이고 단계 글의 사본 id 도 같이 바꾼다 — 같은 체크아웃의 App 들이 서로의 사본을 지우지 않는다
+ */
+SW_TEST_CASE( AutomationScratchTest, ScratchIDsBindToThisProcess )
+{
+    const sw::string instanceID = sw::AutomationScratch::makeInstanceID( "scratch/s" );
+    SW_EXPECT_TRUE( sw::StringUtil::startsWith( instanceID, "scratch/s_p" ) && instanceID.size() > sizeof( "scratch/s_p" ) - 1 );
+
+    sw::AutomationScenario scenario;
+    sw::string             error;
+    SW_ASSERT_TRUE( scenario.parse( "<Scenario name=\"s\"><Scratch from=\"engine/automation/editor/assetmanage\" as=\"scratch/s\"/>"
+                                    "<At frame=\"1\"><DevCommand line=\"content.open scratch/s\"/><ExpectLog contains=\"'scratch/s/a.material'\"/></At>"
+                                    "<At frame=\"2\"><Pass/></At></Scenario>",
+                                    "scratchBind", error ) );
+    scenario.bindScratchInstances();
+    SW_EXPECT_TRUE( scenario.getTestOptions()._listScratchFolder[0]._scratchID == instanceID );
+    const sw::string* pLine     = scenario.getSteps()[0].findAttribute( "line" );
+    const sw::string* pContains = scenario.getSteps()[1].findAttribute( "contains" );
+    SW_ASSERT_TRUE( pLine != nullptr && pContains != nullptr );
+    SW_EXPECT_TRUE( *pLine == "content.open " + instanceID );
+    SW_EXPECT_TRUE( *pContains == "'" + instanceID + "/a.material'" );
 }
 
 /**

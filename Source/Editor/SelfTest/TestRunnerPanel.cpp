@@ -17,6 +17,7 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Automation/AutomationScenario.h"
+#include "Engine/Automation/AutomationScratch.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Renderer/Capture/BugItReport.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
@@ -251,8 +252,12 @@ namespace sw::editor
         {
             const string& scenarioPath = _listScenarioPath[_selectedScenarioIndex];
             const bool    bEditor      = ( "/" + scenarioPath ).find( TestRunnerPanelInternal::kEditorScenarioFolder ) != string::npos;
-            const string  stateDir     = FileUtil::joinPath( TestRunnerPanelInternal::getBinDirectory(), string( kAutomationOutputFolder ) + "/TestRunnerEditorState" );
-            string        command      = "\"" + FileUtil::getExecutablePath() + "\"" + TestRunnerPanelInternal::makeBackendArgument();
+            // 상태 폴더는 이 에디터 프로세스의 것이고 띄울 때마다 비운다 — 고정 이름이면 같은 Bin 의 다른 에디터 · 지난 실행의 레이아웃 · 설정을 읽는다.
+            const string stateDir = FileUtil::joinPath( TestRunnerPanelInternal::getBinDirectory(),
+                                                        string( kAutomationOutputFolder ) + "/" + AutomationScratch::makeInstanceID( "TestRunnerEditorState" ) );
+            if ( bEditor )
+                (void)FileUtil::removeDirectory( stateDir ); // 못 비우면 FileUtil 이 경고를 남기고 남은 상태로 띄운다 — 사람이 보는 손 실행이다
+            string command = "\"" + FileUtil::getExecutablePath() + "\"" + TestRunnerPanelInternal::makeBackendArgument();
             if ( bEditor )
             {
                 command += " -" + string( getCommandLineArgumentSpelling( CommandLineArgument::ENABLE_EDITOR ) );

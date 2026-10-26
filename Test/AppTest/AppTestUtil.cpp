@@ -127,6 +127,58 @@ namespace test
                 return reason;
             }
 
+            /** @brief 실행 쓰기 루트들을 모으는 폴더 이름(`build/<프리셋>/AppRuns`) — `Bin` 밖, `GoldenDiff` 옆이다. */
+            static constexpr const utf8* kRunsFolderName = "AppRuns";
+
+            /** @brief 폴더 이름에 넣어도 되는 글자만 남깁니다(케이스 이름의 `.` · `/` 는 `_`). */
+            static sw::string toFolderName( sw::string_view text )
+            {
+                sw::string name;
+                name.reserve( text.size() );
+                for ( const utf8 ch : text )
+                {
+                    const bool bSafe = ( 'a' <= ch && ch <= 'z' ) || ( 'A' <= ch && ch <= 'Z' ) || ( '0' <= ch && ch <= '9' );
+                    name.push_back( bSafe ? ch : '_' );
+                }
+                return name;
+            }
+
+            /**
+             * @brief 사용자 폴더 대신 실행 쓰기 루트를 쓰게 하는 인자들입니다(앞에 공백, 값은 따옴표로 감싼다). 붙일 것이 없으면 빈 글입니다.
+             * @details 둘을 붙이고 붙일 때마다 비운다 — 지난 실행 · 사용자의 상태를 읽지 않고 늘 같은 상태로 시작한다(이어 쓸 상태가 필요한 케이스는 값을 직접 준다).
+             *          - `-EnableEditor` 인데 `-gv_editorStateDir` 가 없으면 `<쓰기 루트>/Saved/Automation/EditorState/default` — 없으면 에디터가 프로젝트 루트의
+             *            `Saved/Editor`(레이아웃 · 테마 · 설정)를 읽고 써 동시에 도는 실행끼리 같은 JSON 을 고친다.
+             *          - `-gv_userSettingsFile` 이 없으면 `<쓰기 루트>/Saved/UserSettings/usersettings.json` — 없으면 App 이 사용자 폴더(`%LOCALAPPDATA%/SWEngine/<게임>/`)의
+             *            설정을 읽어 결과가 그 PC 의 설정에 달리고, 설정을 바꾸는 시나리오가 그 파일을 고친다.
+             *          배포본은 `gv_` 를 몰라 읽기 오류(11)로 끝나므로 붙이지 않는다 — 배포본의 사용자 설정은 사용자 폴더 그대로다(HostGpuIsolation W11).
+             */
+            static sw::string makeIsolationArguments( sw::string_view arguments, const sw::string& runFolder )
+            {
+                sw::string argument;
+#if !defined( SW_SHIPPING )
+                const sw::string editorSwitch = AppTestUtil::makeSwitchArgument( sw::CommandLineArgument::ENABLE_EDITOR );
+                const sw::string statePrefix  = sw::string( "-" ) + sw::kAutomationEditorStateVariable + "=";
+                const bool       bNeedsState  = arguments.find( editorSwitch.c_str() ) != sw::string_view::npos && arguments.find( statePrefix.c_str() ) == sw::string_view::npos;
+                if ( bNeedsState )
+                {
+                    const sw::string stateFolder = sw::FileUtil::joinPath( runFolder, sw::string( sw::kAutomationOutputFolder ) + "/" + sw::kAutomationEditorStateFolder + "/default" );
+                    SW_EXPECT_TRUE_MSG( sw::FileUtil::removeDirectory( stateFolder ), ( "에디터 상태 폴더를 비우지 못했다: " + stateFolder ).c_str() );
+                    argument += " \"" + statePrefix + stateFolder + "\"";
+                }
+                const sw::string settingsPrefix = sw::string( "-" ) + sw::kAutomationUserSettingsVariable + "=";
+                if ( arguments.find( settingsPrefix.c_str() ) == sw::string_view::npos )
+                {
+                    const sw::string settingsFile = sw::FileUtil::joinPath( runFolder, "Saved/UserSettings/usersettings.json" );
+                    SW_EXPECT_TRUE_MSG( sw::FileUtil::tryRemoveFile( settingsFile ), ( "사용자 설정 파일을 지우지 못했다: " + settingsFile ).c_str() );
+                    argument += " \"" + settingsPrefix + settingsFile + "\"";
+                }
+#else
+                (void)arguments;
+                (void)runFolder;
+#endif
+                return argument;
+            }
+
             /** @brief 체인의 단계 보고 경로입니다(`<base>.<단계>.json` — 단계가 둘 이상일 때 `AutomationScenarioChain::makeStageReportPath` 가 정한다). */
             static sw::string makeStageReportPath( const sw::string& outputBase, size_t stageNumber )
             {
@@ -197,21 +249,60 @@ namespace test
         return candidate;
     }
 
-    sw::string AppTestUtil::makeAppCommand( sw::string_view arguments )
+    AppLaunch AppTestUtil::makeAppLaunch( sw::string_view arguments )
     {
+        AppLaunch launch;
         if ( AppTestUtilInternal::hasFeaturesForArguments( arguments ) == false )
-            return {};
+            return launch;
         const sw::string executablePath = findAppExecutablePath();
-        if ( executablePath.empty() )
-            return {};
+        const sw::string runFolder      = getRunFolder();
+        if ( executablePath.empty() || runFolder.empty() )
+            return launch;
 
-        sw::string command{ "\"" };
-        command += executablePath;
-        command += "\" ";
-        command += makeSwitchArgument( sw::CommandLineArgument::UNATTENDED );
-        command += " ";
-        command += arguments;
-        return command;
+        launch._command = "\"";
+        launch._command += executablePath;
+        launch._command += "\" ";
+        launch._command += makeSwitchArgument( sw::CommandLineArgument::UNATTENDED );
+        launch._command += " ";
+        launch._command += arguments;
+        launch._command += AppTestUtilInternal::makeIsolationArguments( arguments, runFolder );
+        launch._options._workingDirectory = runFolder;
+        return launch;
+    }
+
+    sw::string AppTestUtil::getRunFolder()
+    {
+        // 반환은 이 변수 하나로만 한다 — 분기마다 다른 객체를 돌려주면 NRVO 가 막힌다(-Wnrvo).
+        sw::string       folder;
+        const sw::string testName = TestRegistry::getInstance().getCurrentContext()->getTestName();
+        SW_EXPECT_TRUE_MSG( testName.empty() == false, "App 은 케이스 안에서만 띄운다 — 실행 쓰기 루트가 케이스 이름으로 갈린다" );
+        if ( testName.empty() )
+            return folder;
+        // 같은 케이스가 동시에 도는 곳은 다른 ctest 항목뿐이다(호스트 조각과 레이스 묶음이 같은 케이스를 돈다) — 항목마다 조각 번호가 달라 조각으로 가른다.
+        const TestRunOptions& options    = TestRegistry::getInstance().getOptions();
+        const sw::string      shardName  = "shard" + sw::to_string( options._shardIndex ) + "of" + sw::to_string( options._shardCount );
+        const sw::string      runsFolder = sw::FileUtil::joinPath( sw::FileUtil::getDirectoryPart( sw::FileUtil::getBinaryDirectory() ), AppTestUtilInternal::kRunsFolderName );
+        folder                           = sw::FileUtil::joinPath( sw::FileUtil::joinPath( runsFolder, shardName ), AppTestUtilInternal::toFolderName( testName ) );
+        // 비우지 않는다 — 한 케이스의 뒤 실행이 앞 실행의 산출물을 읽고(녹화 → 재생), 끝난 뒤에도 로그 · 사진 · 보고를 열어 보며 `scenario-logs` 가 읽는다.
+        // 지난 실행의 산출물을 읽지 않게 하는 것은 그것을 읽는 자리의 몫이다(보고 · 녹화 · 그림은 실행 전에 지운다, 에디터 상태 폴더는 붙일 때 비운다).
+        const bool bReady = sw::FileUtil::ensureDirectoryExists( folder );
+        SW_EXPECT_TRUE_MSG( bReady, ( "App 실행 쓰기 루트를 만들지 못했다: " + folder ).c_str() );
+        if ( bReady == false )
+            folder.clear();
+        return folder;
+    }
+
+    sw::string AppTestUtil::makeRunPath( sw::string_view relativePath )
+    {
+        sw::string path;
+        const bool bOutside = relativePath.empty() || sw::FileUtil::isAbsolutePath( relativePath ) || sw::ResourcePaths::hasParentDirectoryComponent( relativePath );
+        SW_EXPECT_TRUE_MSG( bOutside == false, ( "실행 쓰기 루트 기준 상대 경로만 받는다: " + sw::string( relativePath ) ).c_str() );
+        if ( bOutside )
+            return path;
+        path = getRunFolder();
+        if ( path.empty() == false )
+            path = sw::FileUtil::joinPath( path, relativePath );
+        return path;
     }
 
     sw::string AppTestUtil::readPackRoot( sw::string_view gameName )
@@ -263,7 +354,7 @@ namespace test
     sw::string AppTestUtil::makeReportPath( const sw::string& scenarioPath, const utf8* pBackendSwitch )
     {
         const sw::string backend = pBackendSwitch[0] == '-' ? sw::string( pBackendSwitch + 1 ) : sw::string( "default" );
-        return sw::string( sw::kAutomationOutputFolder ) + "/" + sw::getAutomationScenarioStem( scenarioPath ) + "_" + backend + ".json";
+        return makeRunPath( sw::string( sw::kAutomationOutputFolder ) + "/" + sw::getAutomationScenarioStem( scenarioPath ) + "_" + backend + ".json" );
     }
 
     sw::vector<sw::string> AppTestUtil::readReportRecords( const sw::string& reportPath )
@@ -385,8 +476,10 @@ namespace test
             return AppRunOutcome::Skipped;
 
         const sw::string backend    = pBackendSwitch[0] == '-' ? sw::string( pBackendSwitch + 1 ) : sw::string( "default" );
-        const sw::string outputBase = sw::string( sw::kAutomationOutputFolder ) + "/" + outputStem + "_" + backend;
-        (void)sw::FileUtil::ensureDirectoryExists( sw::kAutomationOutputFolder );
+        const sw::string outputBase = makeRunPath( sw::string( sw::kAutomationOutputFolder ) + "/" + outputStem + "_" + backend );
+        if ( outputBase.empty() )
+            return AppRunOutcome::Failed; // 실행 쓰기 루트를 얻지 못한 이유는 `getRunFolder` 가 기록했다
+        (void)sw::FileUtil::ensureDirectoryExists( sw::FileUtil::getDirectoryPart( outputBase ) );
         // 못 띄우거나 죽은 판이 지난 실행의 보고를 남긴 것처럼 읽히지 않게 한다(체인은 단계마다 보고가 있다).
         const sw::vector<sw::string> listStagePath = AppTestUtilInternal::splitScenarioArgument( scenarioArgument );
         (void)sw::FileUtil::tryRemoveFile( outputBase + ".json" ); // 지난 실행이 없으면 지울 것이 없다 — 없는 것이 정상이라 실패를 따지지 않는다
@@ -394,8 +487,9 @@ namespace test
         {
             (void)sw::FileUtil::tryRemoveFile( AppTestUtilInternal::makeStageReportPath( outputBase, index + 1 ) ); // 지난 실행의 단계 보고가 없으면 지울 것이 없다 — 실패를 따지지 않는다
         }
-        sw::string arguments = makeValueArgument( sw::CommandLineArgument::SCENARIO, scenarioArgument ) + " " +
-                               makeValueArgument( sw::CommandLineArgument::SCENARIO_REPORT, outputBase + ".json" ) + " " + pBackendSwitch;
+        // 보고 경로는 실행 쓰기 루트의 절대 경로라 공백이 들 수 있다 — 따옴표로 감싼다.
+        sw::string arguments = makeValueArgument( sw::CommandLineArgument::SCENARIO, scenarioArgument ) + " \"" +
+                               makeValueArgument( sw::CommandLineArgument::SCENARIO_REPORT, outputBase + ".json" ) + "\" " + pBackendSwitch;
         if ( extraArguments.empty() == false )
         {
             arguments += " ";

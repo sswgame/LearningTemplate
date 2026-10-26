@@ -395,9 +395,9 @@ namespace
 SW_TEST_CASE( AppSmokeTest, WindowCloseEndsTheApp )
 {
 #if defined( SW_PLATFORM_WINDOWS )
-    Process      process;
-    const string command = test::AppTestUtil::makeAppCommand( "" );
-    SW_ASSERT_TRUE( command.empty() == false && process.launch( command ) );
+    Process               process;
+    const test::AppLaunch launch = test::AppTestUtil::makeAppLaunch( "" );
+    SW_ASSERT_TRUE( launch._command.empty() == false && process.launch( launch._command, launch._options ) );
     // 출력 파이프가 차면 App 이 쓰기에서 멈춘다 — 다른 스레드가 비운다.
     std::thread drainThread( [&process]()
     {
@@ -1133,7 +1133,8 @@ SW_TEST_CASE( AppSmokeTest, ShippingSceneMatchesGoldenImage )
     const string goldenDirectory = findGoldenDirectory();
     SW_ASSERT_TRUE_MSG( goldenDirectory.empty() == false, "Test/AppTest/Golden not found - is the working directory build/<preset>/Bin?" );
 
-    (void)FileUtil::tryRemoveFile( kImagePath ); // 지난 실행의 그림을 읽지 않게 지운다
+    const string imagePath = test::AppTestUtil::makeRunPath( kImagePath ); // App 이 작업 폴더(실행 쓰기 루트) 기준으로 쓴 그림
+    (void)FileUtil::tryRemoveFile( imagePath );                            // 지난 실행의 그림을 읽지 않게 지운다
     string                    scenarioLines;
     const test::AppRunOutcome outcome = test::AppTestUtil::runScenario( kScenarioPath, "", scenarioLines );
     if ( test::hasRunHere( outcome ) == false )
@@ -1143,8 +1144,8 @@ SW_TEST_CASE( AppSmokeTest, ShippingSceneMatchesGoldenImage )
 
     vector<uint8> screenshotBytes;
     PpmImage      actual{};
-    const bool    bRead = FileUtil::readFile( kImagePath, screenshotBytes ) && parsePpm( screenshotBytes, actual );
-    SW_ASSERT_TRUE_MSG( bRead, ( string( "Failed to read the screenshot: " ) + kImagePath ).c_str() );
+    const bool    bRead = FileUtil::readFile( imagePath, screenshotBytes ) && parsePpm( screenshotBytes, actual );
+    SW_ASSERT_TRUE_MSG( bRead, ( "Failed to read the screenshot: " + imagePath ).c_str() );
 
     const string imageName  = string( "shippingframe_" ) + kBackendName;
     const string goldenPath = FileUtil::joinPath( goldenDirectory, imageName + kGoldenPlatformSuffix + ".ppm.z" );

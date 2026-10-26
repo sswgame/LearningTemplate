@@ -120,7 +120,7 @@ namespace sw
          */
         static string makePrecookedRelativePath( const ShaderCompileDesc& desc );
         /**
-         * @brief 이 컴파일 요청의 로컬 라이브 캐시 경로입니다(`Saved/ShaderCache/<rhi>/<소스 지문>-<opt|dbg>/<이름>`). 이름 규칙은 위와 같습니다.
+         * @brief 이 컴파일 요청의 로컬 라이브 캐시 경로입니다(`<Bin>/Saved/ShaderCache/<rhi>/<소스 지문>-<opt|dbg>/<이름>`, 절대 경로 — 작업 폴더와 무관). 이름 규칙은 위와 같습니다.
          * @details 런타임 컴파일 결과와 ShaderRecompiler 의 재컴파일 결과가 같은 자리에 쓰입니다. 여기도 해시가 빠져
          *          있으면 처음 컴파일된 퍼뮤테이션 하나가 같은 셰이더의 다른 퍼뮤테이션 모두를 덮습니다.
          *          경로의 지문은 소스(와 도구 지문)만 본다 — 헤더는 컴파일 뒤에야 알아서 경로에 넣을 수 없고, 바이트코드 옆의 의존 기록(`<경로>.deps`)이 맡는다(`readLocalCache`).

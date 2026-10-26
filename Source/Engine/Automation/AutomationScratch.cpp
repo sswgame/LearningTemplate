@@ -7,6 +7,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Process/Process.h"
 #include "Core/UUID/UUID.h"
 
 #include "Engine/Resource/AssetMeta.h"
@@ -25,11 +26,57 @@ namespace sw
              */
             static inline atomic<uint64> s_prepareCount{ 0 };
 
+            /** @brief 프로세스 꼬리의 앞머리(`<이름>_p<pid>`)입니다. */
+            static constexpr string_view kInstanceMark = "_p";
+
             /** @brief 리소스 id 에 들어가는 글자인지입니다(id 경계 판정). */
             static bool isIDCharacter( utf8 character )
             {
                 const bool bLetterOrDigit = ( 'a' <= character && character <= 'z' ) || ( 'A' <= character && character <= 'Z' ) || ( '0' <= character && character <= '9' );
                 return bLetterOrDigit || character == '_' || character == '.' || character == '/' || character == '-';
+            }
+
+            /** @brief @p text 가 비지 않은 10 진 숫자만이면 그 값을 @p outValue 에 넣고 true 입니다. */
+            [[nodiscard]] static bool parseProcessID( string_view text, int32& outValue )
+            {
+                const bool bDigits = text.empty() == false && std::all_of( text.begin(), text.end(), []( utf8 character )
+                {
+                    return '0' <= character && character <= '9';
+                } );
+                return bDigits && StringUtil::parseInt( text, outValue );
+            }
+
+            /**
+             * @brief 사본 폴더 @p scratchDir(`…/<이름>_p<pid>`) 옆의 같은 이름 사본(`<이름>_p<다른 pid>`) 가운데 끝난 프로세스의 것을 지웁니다.
+             * @details 사본은 실행이 끝나도 남는다(실패를 열어 보게, 그리고 에디터가 감시 중인 폴더를 끝에 지우면 그 사건이 로그를 낸다). 대신 다음 실행이 죽은 프로세스의
+             *          사본을 거둔다. 살아 있는 프로세스의 사본은 건드리지 않는다. 못 지운 것(다른 도구가 연 파일)은 `FileUtil` 이 경고를 남기고 다음 실행이 다시 거둔다 —
+             *          이 실행의 사본과 무관하므로 실패로 멈추지 않는다.
+             *          프로세스 꼬리가 없는 이름(`makeInstanceID` 를 거치지 않은 사본 — 단위 테스트)은 거둘 형제가 없다.
+             */
+            static void removeDeadInstances( const string& scratchDir )
+            {
+                const string folderName = FileUtil::getFileNamePart( FileUtil::trimTrailingSlashes( scratchDir ) );
+                const size_t markAt     = folderName.rfind( kInstanceMark );
+                int32        ownID      = 0;
+                if ( markAt == string::npos || parseProcessID( string_view( folderName ).substr( markAt + kInstanceMark.size() ), ownID ) == false )
+                    return;
+                const string   prefix = folderName.substr( 0, markAt + kInstanceMark.size() );
+                vector<string> listDeadDir;
+                (void)FileUtil::forEachDirectoryEntry( FileUtil::getDirectoryPart( scratchDir ), false, [&prefix, ownID, &listDeadDir]( const DirectoryEntry& entry )
+                {
+                    string_view name;
+                    FileUtil::getFileNamePart( entry._path, name );
+                    int32      processID = 0;
+                    const bool bSibling  = entry._bDirectory && StringUtil::startsWith( name, prefix ) && parseProcessID( name.substr( prefix.size() ), processID );
+                    const bool bDead     = bSibling && processID != ownID && Process::isProcessAlive( processID ) == false;
+                    if ( bDead )
+                        listDeadDir.emplace_back( entry._path );
+                    return true;
+                } ); // 상위 폴더를 못 열면 거둘 것도 없다 — 이 실행의 사본은 prepare 가 따로 만든다
+                for ( const string& deadDir : listDeadDir )
+                {
+                    (void)FileUtil::removeDirectory( deadDir ); // 못 지우면 경고가 남고 다음 실행이 다시 거둔다(위 설명)
+                }
             }
 
             /**
@@ -88,13 +135,21 @@ namespace sw
             const size_t hit = text.find( fromID, cursor );
             if ( hit == string_view::npos || fromID.empty() )
                 break;
-            const bool bAtBoundary = hit == 0 || AutomationScratchInternal::isIDCharacter( text[hit - 1] ) == false;
+            const size_t end            = hit + fromID.size();
+            const bool   bStartBoundary = hit == 0 || AutomationScratchInternal::isIDCharacter( text[hit - 1] ) == false;
+            const bool   bEndBoundary   = end == text.size() || text[end] == '/' || AutomationScratchInternal::isIDCharacter( text[end] ) == false;
+            const bool   bAtBoundary    = bStartBoundary && bEndBoundary;
             result.append( text.substr( cursor, hit - cursor ) );
             result.append( bAtBoundary ? toID : fromID );
-            cursor = hit + fromID.size();
+            cursor = end;
         }
         result.append( text.substr( cursor ) ); // 찾은 끝(`hit + fromID.size()`)은 글 길이를 넘지 않는다
         return result;
+    }
+
+    string AutomationScratch::makeInstanceID( string_view name )
+    {
+        return string( name ) + string( AutomationScratchInternal::kInstanceMark ) + to_string( Process::getCurrentProcessID() );
     }
 
     bool AutomationScratch::prepare( const AutomationScratchFolder& folder, string& outError )
@@ -109,6 +164,7 @@ namespace sw
             outError = "<Scratch from=\"" + folder._sourceID + "\"> is not a folder under Resource/";
             return false;
         }
+        AutomationScratchInternal::removeDeadInstances( scratchDir );
         // 지난 실행(중단된 것 포함)이 남긴 사본을 통째로 지운다 — 잔여 파일이 다음 실행의 이름을 바꾸지 않게 한다.
         if ( FileUtil::removeDirectory( scratchDir ) == false || FileUtil::ensureDirectoryExists( scratchDir ) == false )
         {

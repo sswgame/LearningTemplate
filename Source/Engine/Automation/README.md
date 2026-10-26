@@ -136,6 +136,7 @@ AI 의 상태를 보려면 `AIControllerComponent` 파생의 `think` 에서 상�
 - **`ExpectImage` 의 문턱은 근거 속성이 있어야 읽힙니다**: `measured="2026-10-22 dx12:0.095 vk:0.095"`(날짜와 백엔드별 잰 값, 모두 같으면 `all:0.095`) 또는 `provisional="이유"` 중 정확히 하나. 어림값 문턱이 맞은 시나리오는 14 로 끝나고 보고 JSON 의 `unconfirmed` 에 줄이 남으며(틀리면 실패) `metrics` 의 값을 `measured` 로 옮기면 확정입니다.
 - **글 값 탐침은 `is` 로만 비교합니다**(수 탐침은 `is` 로도 비교할 수 있고 끝의 0 을 정리한 글과 견준다).
 - **리소스에 쓰는 시나리오는 원본 폴더에 쓰지 않습니다.** `<Scratch from="engine/automation/editor/assetmanage" as="scratch/assetmanage"/>` 로 선언하면 실행기가 시작할 때 `Resource/scratch/…`(저장소에 넣지 않음)를 지우고 원본을 복사하며(글 파일의 원본 id 는 사본 id 로, `.meta` 의 guid 는 새로) 단계는 사본 id 를 씁니다(`AutomationScratch`).
+  실제 사본 이름은 프로세스 꼬리가 붙은 `scratch/assetmanage_p<pid>` 이고 단계 글의 `scratch/assetmanage` 도 실행기가 같이 바꿉니다 — 같은 체크아웃에서 동시에 도는 App 이 서로의 사본을 지우지 않게 합니다(끝난 프로세스의 사본은 다음 실행이 거둔다).
   사본의 에셋은 Quick Open(원본이 걸릴 수 있다)이 아니라 `asset.openScratch <사본 id>` 로 엽니다.
 - **한 틱에 끝나는 작업만 있는 행동 트리는 도는 잎이 없습니다.** `AI.BehaviorTask` · `Skirmish.AITask` 는 그 틱에 마지막으로 성공한 작업을 보이므로 늘 성공하는 작업이 대부분의 프레임을 차지합니다.
 

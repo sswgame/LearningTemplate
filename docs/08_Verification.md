@@ -20,7 +20,7 @@ cmake --build --preset Ninja-Shipping         # Debug 가 숨기는 결함이 �
 ctest --preset Ninja-Debug-lint               # 컨벤션 · include 순서 · 린트 자기 테스트
 # 커밋 훅 · full-build · Scripts test 의 출력은 요약이다(실패만 상세, 전부는 --verbose)
 py -3 Scripts/lint/gate/CheckDataDrivenStructure.py --summary  # 데이터 주도 구조 위반 영역별 표(기준선 0 으로 수렴)
-# -j 는 값 없이 준다(CMake 3.29+). 직렬은 빌드 셋업 · Load · QA 셋, GPU 항목은 GPU 슬롯(gpuSlots)만큼. AppTest 의 hostgpu 조각 · Race · QaGoldenImages 는 AppBin 잠금으로 서로 직렬(docs/plans/HostGpuIsolation.md).
+# -j 는 값 없이 준다(CMake 3.29+). 직렬은 빌드 셋업 · Load · QA 셋, GPU 항목은 GPU 슬롯(gpuSlots)만큼. AppTest 의 hostgpu 조각 · Race · QaGoldenImages 는 잠금 없이 GPU 슬롯만큼 겹친다 — App 은 케이스마다의 작업 폴더 build/<프리셋>/AppRuns/ 에서 뜬다(docs/plans/HostGpuIsolation.md).
 ctest --test-dir build/Ninja-Debug -L nogpu -j --output-on-failure
 ctest --test-dir build/Ninja-Shipping -L nogpu -j --output-on-failure
 

@@ -47,8 +47,9 @@ kRanToEndExitCodes: tuple[int, ...] = (_mapOutcomeExitCode["Passed"], _mapOutcom
 kUnhandledLogExitCode = _mapOutcomeExitCode["UnhandledLog"]
 #: `unhandledLogs` 줄의 id 부분 — `[Warning] [호출자] (id=영역.사건) 본문`. id 가 없는 줄은 `(no log id)` 라 맞지 않는다.
 _kUnhandledIdRe = re.compile(r"\(id=([A-Za-z0-9_.]+)\)")
-#: 보고를 찾을 폴더(저장소 기준) — 시나리오 실행의 작업 폴더가 `Bin` 이라 보고가 `Bin/Saved/Automation` 에 쌓인다.
-_kReportFolderPatterns: tuple[str, ...] = ("build/*/Bin/Saved/Automation", "Saved/Automation")
+#: 보고를 찾을 폴더(저장소 기준) — 손 실행(`scenario`)은 작업 폴더가 `Bin` 이라 `Bin/Saved/Automation` 에, 호스트 테스트(`AppTestUtil::getRunFolder`)는
+#: 케이스마다의 실행 쓰기 루트 `build/<프리셋>/AppRuns/shard<i>of<n>/<케이스>/Saved/Automation` 에 쌓인다.
+_kReportFolderPatterns: tuple[str, ...] = ("build/*/Bin/Saved/Automation", "build/*/AppRuns/*/*/Saved/Automation", "Saved/Automation")
 
 
 @dataclass(frozen=True)
@@ -155,7 +156,7 @@ def mergeDraft(data: dict, listNew: list[dict[str, str]]) -> dict:
 
 
 def discoverReportFolders(repositoryRoot: Path) -> list[Path]:
-    """기본 보고 폴더들(빌드 폴더별 `Bin/Saved/Automation` 과 저장소의 `Saved/Automation`)."""
+    """기본 보고 폴더들(빌드 폴더별 `Bin/Saved/Automation` · 호스트 테스트의 `AppRuns/…/Saved/Automation` 과 저장소의 `Saved/Automation`)."""
     listFolder: list[Path] = []
     for pattern in _kReportFolderPatterns:
         listFolder.extend(sorted(repositoryRoot.glob(pattern)))

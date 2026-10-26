@@ -17,12 +17,14 @@ namespace sw
     // 시나리오를 띄우는 쪽(`AppScenarioTest`, 스크립트 `py -3 -m Scripts scenario`)과 실행기가 나누는 글의 정본이다. 스크립트(`Scripts/common/ScenarioArguments.py`)가
     // 이 아래 `inline constexpr const utf8* kXxx = "…";` 줄을 읽으므로 이름이나 줄 모양을 바꾸면 스크립트가 멈춘다. 명령줄 철자(`-scenario` · `-unattended` …)는
     // `Core/Predefined/ArgumentList.xxx` 가 정본이다(`getCommandLineArgumentSpelling`).
-    /** @brief 자동화 산출물(시나리오 보고 · 로그 · 사진 · 녹화)을 쓰는 폴더 — 작업 폴더(`Bin`) 기준입니다. 시나리오의 사진은 그 아래 `<시나리오 name>/` 에 쌓인다. */
+    /** @brief 자동화 산출물(시나리오 보고 · 로그 · 사진 · 녹화)을 쓰는 폴더 — 작업 폴더 기준입니다(손 실행은 `Bin`, 호스트 테스트는 케이스의 실행 쓰기 루트 — `AppTestUtil::getRunFolder`). 시나리오의 사진은 그 아래 `<시나리오 name>/` 에 쌓인다. */
     inline constexpr const utf8* kAutomationOutputFolder = "Saved/Automation";
     /** @brief `kAutomationOutputFolder` 아래에서 에디터 상태 폴더들을 모으는 폴더 이름 — 사용자의 `Saved/Editor` 대신 시나리오마다 비운 폴더를 쓴다. */
     inline constexpr const utf8* kAutomationEditorStateFolder = "EditorState";
     /** @brief 에디터 상태 폴더를 주는 전역 변수 이름(에디터 모듈이 선언한다 — `EditorPaths.cpp`). 명령줄에는 `-<이름>=<폴더>` 로 준다. */
     inline constexpr const utf8* kAutomationEditorStateVariable = "gv_editorStateDir";
+    /** @brief 사용자 설정 파일을 주는 전역 변수 이름(`UserSettingsVariables.cpp`). 자동화가 사용자 폴더의 `usersettings.json` 을 읽고 쓰지 않게 한다(`AppTestUtil::makeAppLaunch`). */
+    inline constexpr const utf8* kAutomationUserSettingsVariable = "gv_userSettingsFile";
 
     /**
      * @brief 시나리오 경로의 이름 줄기(`game/empty/automation/fog.scenario.xml` → `fog`)입니다 — 보고 · 로그 · 에디터 상태 폴더 이름의 앞머리(`<줄기>_<백엔드>`)입니다.
@@ -166,6 +168,14 @@ namespace sw
         const AutomationStep* findOtherStepAtSameFrame( const AutomationStep& step ) const;
         /** @brief 실행기와 테스트만 읽는 선언 묶음입니다(`AutomationTestOptions`). 시나리오의 단계 형식과 섞이지 않게 따로 둔다. */
         const AutomationTestOptions& getTestOptions() const { return _testOptions; }
+        /**
+         * @brief `<Scratch as>` 의 사본 id 를 이 프로세스의 이름(`AutomationScratch::makeInstanceID` — `scratch/assetmanage_p<pid>`)으로 바꾸고,
+         *        단계 속성 글 안의 옛 사본 id 도 같은 규칙(`AutomationScratch::rebaseText`)으로 바꿉니다.
+         * @details 실행기가 사본을 만들기 전에 한 번 부른다(`AutomationRunner::prepareScratchFolders`). 읽기(`parse`)는 선언한 id 를 그대로 둔다 — 시나리오를 읽기만 하는
+         *          쪽(테스트 · 도구)은 프로세스가 달라 꼬리가 맞지 않는다. `<Launch>` 값은 바꾸지 않는다 — 띄우는 쪽이 명령줄에 준 값과 같은지 실행기가 보므로
+         *          사본 id 를 기동 값에 쓰지 않는다.
+         */
+        void bindScratchInstances();
 
     private:
         /** @brief `<Load>` 요소를 읽습니다. 모르는 속성 · 틀린 값이면 false 와 이유입니다. */

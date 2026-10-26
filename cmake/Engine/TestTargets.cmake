@@ -323,8 +323,9 @@ function(sw_registerTestPolicy TARGET_NAME)
 	sw_computeTestTimeout(swTimeout ${swSeconds} ${swShards} ${swMaxCaseSeconds})
 	math(EXPR swShardCost "(${swSeconds} + ${swShards} - 1) / ${swShards}")
 
-	# 같은 `Bin` 에 산출물을 쓰는 호스트 실행은 정책의 `hostResourceLock` 으로 서로 비켜 간다(호스트 조각 · 레이스 묶음이 같이 쓴다).
-	# 선택 키다 — 키가 없으면 "다른 항목과 겹쳐도 되는 실행" 이라는 뜻이다(EngineTest 호스트 조각은 App 을 띄우지 않는다).
+	# 공유 자리(고정 이름 파일 · 폴더)에 쓰는 호스트 실행은 정책의 `hostResourceLock` 으로 서로 비켜 간다(호스트 조각 · 레이스 묶음이 같이 쓴다).
+	# 선택 키다 — 키가 없으면 "다른 항목과 겹쳐도 되는 실행" 이라는 뜻이다. 지금은 쓰는 실행 파일이 없다: AppTest 는 App 을 케이스마다의 작업 폴더
+	# (`AppTestUtil::getRunFolder`)에서 띄워 잠금을 풀었다(docs/plans/HostGpuIsolation.md). 다시 잠그면 `QaGoldenImages` 도 같은 키를 읽는다.
 	sw_readOptionalJsonValue(swHostLock "${swPolicy}" executables ${TARGET_NAME} hostResourceLock)
 	set(swHostLockArgs "")
 	if(DEFINED swHostLock)
