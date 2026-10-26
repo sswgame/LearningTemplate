@@ -291,24 +291,18 @@ namespace sw
             return false; // 쓰는 쪽이 만들 수 없는 길이 — 잘린 줄이거나 다른 글이다
         if ( body != "-" )
         {
-            size_t itemStart = 0;
-            while ( itemStart <= body.size() )
+            for ( const string_view item : StringUtil::split( body, "," ) )
             {
-                size_t itemEnd = body.find( ',', itemStart );
-                if ( itemEnd == string_view::npos )
-                    itemEnd = body.size();
-                const string_view item  = body.substr( itemStart, itemEnd - itemStart );
-                const size_t      colon = item.find( ':' );
-                SceneObjectHash   object;
-                const bool        bHasHash = colon == 16 && StringUtil::parseUint64( item.substr( 0, colon ), object._hash, 16 );
-                const bool        bHasName = bHasHash && colon + 1 < item.size() && SceneStateHashInternal::unescapeName( item.substr( colon + 1 ), object._name );
+                const size_t    colon = item.find( ':' );
+                SceneObjectHash object;
+                const bool      bHasHash = colon == 16 && StringUtil::parseUint64( item.substr( 0, colon ), object._hash, 16 );
+                const bool      bHasName = bHasHash && colon + 1 < item.size() && SceneStateHashInternal::unescapeName( item.substr( colon + 1 ), object._name );
                 if ( bHasName == false )
                 {
                     outListObject.clear();
                     return false;
                 }
                 outListObject.push_back( std::move( object ) );
-                itemStart = itemEnd + 1;
             }
         }
         outTick = tick;
@@ -474,24 +468,18 @@ namespace sw
             return false; // 쓰는 쪽이 만들 수 없는 길이 — 잘린 줄이거나 다른 글이다
         if ( body == "-" )
             return true;
-        size_t itemStart = 0;
-        while ( itemStart <= body.size() )
+        for ( const string_view item : StringUtil::split( body, "," ) )
         {
-            size_t itemEnd = body.find( ',', itemStart );
-            if ( itemEnd == string_view::npos )
-                itemEnd = body.size();
-            const string_view item  = body.substr( itemStart, itemEnd - itemStart );
-            const size_t      colon = item.find( ':' );
-            StateHashSample   sample;
-            const bool        bHasTick = colon != string_view::npos && StringUtil::parseUint64( item.substr( 0, colon ), sample._tick );
-            const bool        bHasHash = bHasTick && StringUtil::parseUint64( item.substr( colon + 1 ), sample._hash, 16 );
+            const size_t    colon = item.find( ':' );
+            StateHashSample sample;
+            const bool      bHasTick = colon != string_view::npos && StringUtil::parseUint64( item.substr( 0, colon ), sample._tick );
+            const bool      bHasHash = bHasTick && StringUtil::parseUint64( item.substr( colon + 1 ), sample._hash, 16 );
             if ( bHasHash == false )
             {
                 outListSample.clear();
                 return false;
             }
             outListSample.push_back( sample );
-            itemStart = itemEnd + 1;
         }
         return true;
     }

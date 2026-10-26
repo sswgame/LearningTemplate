@@ -279,24 +279,21 @@ namespace test
     {
         _caseCostText = text;
         _mapCaseCost.clear();
-        size_t start = 0;
-        while ( start < text.size() )
+        if ( text.empty() )
+            return;
+        // 빈 항목(`a,,b` · 끝 쉼표)도 항목이다 — 잘못된 항목으로 알린다.
+        for ( const std::string_view entry : sw::StringUtil::split( text, "," ) )
         {
-            size_t separator = text.find( ',', start );
-            if ( separator == sw::string::npos )
-                separator = text.size();
-            const sw::string entry      = text.substr( start, separator - start );
-            const size_t     equals     = entry.rfind( '=' );
-            float64          cost       = 0.0;
-            const bool       bValidCost = equals != sw::string::npos && sw::StringUtil::parseDouble( std::string_view( entry.c_str(), entry.size() ).substr( equals + 1 ), cost ) && cost > 0.0;
+            const size_t equals     = entry.rfind( '=' );
+            float64      cost       = 0.0;
+            const bool   bValidCost = equals != std::string_view::npos && sw::StringUtil::parseDouble( entry.substr( equals + 1 ), cost ) && cost > 0.0;
             if ( bValidCost == false )
             {
                 _bInvalidArgument = true;
-                std::fprintf( stdout, "Invalid --test_costs entry '%s' (expected Suite.Case=<seconds>)\n", entry.c_str() );
+                std::fprintf( stdout, "Invalid --test_costs entry '%s' (expected Suite.Case=<seconds>)\n", sw::string( entry ).c_str() );
             }
             else
-                _mapCaseCost[entry.substr( 0, equals )] = cost;
-            start = separator + 1;
+                _mapCaseCost[sw::string( entry.substr( 0, equals ) )] = cost;
         }
     }
 
@@ -304,14 +301,11 @@ namespace test
     {
         _requiredBackendText = text;
         _listRequiredBackend.clear();
-        size_t start = 0;
-        while ( start < text.size() )
+        if ( text.empty() )
+            return;
+        for ( const std::string_view name : sw::StringUtil::split( text, "," ) )
         {
-            size_t separator = text.find( ',', start );
-            if ( separator == sw::string::npos )
-                separator = text.size();
-            const std::string_view name( text.c_str() + start, separator - start );
-            bool                   bKnown = false;
+            bool bKnown = false;
             for ( const TestRunOptionsInternal::BackendName& row : TestRunOptionsInternal::kArrBackendName )
             {
                 if ( row._name != name )
@@ -326,7 +320,6 @@ namespace test
                 std::fprintf( stdout, "Unknown --required_backends entry '%s' (expected the cook table's command line names: dx11, dx12, vk, gl)\n",
                               sw::string( name ).c_str() );
             }
-            start = separator + 1;
         }
     }
 

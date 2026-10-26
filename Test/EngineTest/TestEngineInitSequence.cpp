@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Subsystem/SubsystemScope.h"
@@ -149,16 +150,7 @@ namespace
     /** @brief 이름 목록(공백으로 구분)을 거꾸로 이어 붙입니다. */
     string reverseNames( const string& names )
     {
-        vector<string_view> listName;
-        size_t              cursor = 0;
-        while ( cursor < names.size() )
-        {
-            size_t end = names.find( ' ', cursor );
-            if ( end == string::npos )
-                end = names.size();
-            listName.push_back( string_view{ names }.substr( cursor, end - cursor ) );
-            cursor = end + 1;
-        }
+        const vector<string_view>               listName = StringUtil::split( names, " ", { ._bDropEmpty = true } );
         StringBuilder<constant::kMaxBuffer1024> sb;
         for ( size_t index = listName.size(); index > 0; --index )
         {

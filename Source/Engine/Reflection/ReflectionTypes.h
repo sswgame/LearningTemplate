@@ -7,6 +7,7 @@
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Task/TaskTypes.h"
 
@@ -741,28 +742,18 @@ namespace sw
         /** @brief `A | B` 를 읽습니다. 토큰마다 알려진 이름(대소문자 무시)이어야 하며, 하나라도 모르면 false 입니다. 표식 값 검사는 부르는 쪽이 합니다. */
         [[nodiscard]] bool tryParseFlags( string_view text, int64& outValue ) const
         {
-            int64  result{ 0 };
-            size_t startPos{ 0 };
-            bool   bAnyToken = false;
-            while ( startPos <= text.size() )
+            int64 result{ 0 };
+            bool  bAnyToken = false;
+            for ( const string_view token : StringUtil::split( text, "|", { ._bTrim = true, ._bDropEmpty = true } ) )
             {
-                const size_t      delimiterPos = text.find( '|', startPos );
-                const size_t      endPos       = ( delimiterPos != string_view::npos ) ? delimiterPos : text.size();
-                const string_view token        = StringUtil::trim( text.substr( startPos, endPos - startPos ) );
-                if ( token.empty() == false )
-                {
-                    int64      tokenValue{ 0 };
-                    const bool bKnown = findValueByText( token, tokenValue );
-                    if ( bKnown )
-                        result |= tokenValue;
-                    // `None` 은 0 열거자가 없는 플래그에 `toStringFlags` 가 0 을 적는 이름이다 . 읽을 때도 0 이어야 왕복이 맞는다.
-                    if ( bKnown == false && StringUtil::equals( token, constant::reflection::kNone, true ) == false )
-                        return false;
-                    bAnyToken = true;
-                }
-                if ( delimiterPos == string_view::npos )
-                    break;
-                startPos = delimiterPos + 1;
+                int64      tokenValue{ 0 };
+                const bool bKnown = findValueByText( token, tokenValue );
+                if ( bKnown )
+                    result |= tokenValue;
+                // `None` 은 0 열거자가 없는 플래그에 `toStringFlags` 가 0 을 적는 이름이다 . 읽을 때도 0 이어야 왕복이 맞는다.
+                if ( bKnown == false && StringUtil::equals( token, constant::reflection::kNone, true ) == false )
+                    return false;
+                bAnyToken = true;
             }
             if ( bAnyToken == false )
                 return false;

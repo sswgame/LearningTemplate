@@ -65,21 +65,12 @@ namespace sw
                 if ( ProcessEnvironment::tryReadNonEmpty( "PATH", pathEnvStr ) == false )
                     return {};
 
-                size_t start{ 0 };
-                while ( start <= pathEnvStr.size() )
+                // 빈 항목은 현재 폴더다(POSIX PATH 규칙) — 빈 토큰을 남겨 "." 로 읽는다.
+                for ( const string_view dir : StringUtil::split( pathEnvStr, ":" ) )
                 {
-                    size_t end = pathEnvStr.find( ':', start );
-                    string dir = pathEnvStr.substr( start, ( end == string::npos ) ? string::npos : end - start );
-                    if ( dir.empty() )
-                        dir = ".";
-
-                    const string candidate = FileUtil::joinPath( dir, pName );
+                    const string candidate = FileUtil::joinPath( dir.empty() ? string_view( "." ) : dir, pName );
                     if ( isExecutableFile( candidate ) )
                         return candidate;
-
-                    if ( end == string::npos )
-                        break;
-                    start = end + 1;
                 }
                 return {};
             }
