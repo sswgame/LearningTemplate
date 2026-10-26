@@ -485,14 +485,8 @@ namespace sw
     {
         if ( _reporterExecutable.empty() || countPendingUploads() == 0 )
             return false;
-        string command( "\"" );
-        command += _reporterExecutable;
-        command += "\" ";
-        command += kReporterArgument;
-        command += "=\"";
-        command += _reportsFolder;
-        command += "\"";
-        const bool bLaunched = Process::launchDetached( command );
+        const ProcessCommand command{ _reporterExecutable, { string( kReporterArgument ) + "=" + _reportsFolder } };
+        const bool           bLaunched = Process::launchDetached( command );
         SW_LOG_INFO( "Crash report: %# the reporter process for '%#'", bLaunched ? "launched" : "could not launch", _reportsFolder.c_str() );
         return bLaunched;
     }

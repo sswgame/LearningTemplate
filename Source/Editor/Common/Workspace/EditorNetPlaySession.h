@@ -176,9 +176,9 @@ namespace sw::editor
         /**
          * @brief `App` 창 @p windowIndex 번째(0 부터 — 리슨 호스트가 있으면 호스트가 0)의 창 크기 · 위치 인자(`-W=… -H=… -WinX=… -WinY=…`)입니다.
          * @details 창은 왼쪽 위부터 `_windowColumnCount` 개씩 한 줄에 놓고 다음 줄로 내려간다. 셀 사이는 창 틀(제목 줄 · 테두리)만큼 띄운다 — 위치는 틀의 왼쪽 위이고
-         *          크기는 클라이언트 영역이기 때문이다. 창 배치를 끈 구성이면 빈 문자열이다.
+         *          크기는 클라이언트 영역이기 때문이다. 창 배치를 끈 구성이면 빈 목록이다.
          */
-        static string makeWindowArguments( const EditorNetPlaySettings& settings, int32 windowIndex );
+        static vector<string> makeWindowArguments( const EditorNetPlaySettings& settings, int32 windowIndex );
         /** @brief 비어 있는 UDP 포트 하나를 고릅니다. 포트를 잠깐 열었다 닫으므로 고른 뒤에 다른 프로세스가 가져갈 수 있습니다. 고르지 못하면 0 입니다. */
         static uint16 findFreeUDPPort();
         /** @brief 루프백의 비어 있는 TCP 포트 하나를 고릅니다(디버그 채널). 고른 뒤에 다른 프로세스가 가져갈 수 있는 것은 UDP 와 같습니다. 고르지 못하면 0 입니다. */
@@ -189,8 +189,8 @@ namespace sw::editor
 
         /** @brief 읽기 스레드 본문입니다. 파이프가 닫힐 때까지 줄을 쌓고 종료 코드를 수집합니다. */
         static void readChildOutput( ChildProcess* pChild );
-        /** @brief 프로세스 하나를 띄우고 읽기 스레드를 붙입니다. */
-        [[nodiscard]] bool launchChild( const string& label, const string& executablePath, const string& arguments, const string& tracePath );
+        /** @brief 프로세스 하나를 인자 목록 @p listArgument 로 띄우고 읽기 스레드를 붙입니다(셸을 거치지 않는다 — `ProcessCommand`). */
+        [[nodiscard]] bool launchChild( const string& label, const string& executablePath, vector<string> listArgument, const string& tracePath );
         /** @brief 트레이스 폴더 안의 `<이름>.trace.json` 경로를 만듭니다. 트레이스가 꺼져 있으면 빈 문자열입니다. */
         string makeTracePath( const string& fileStem ) const;
         /** @brief 트레이스를 남긴 프로세스의 파일을 모아 합칩니다. 둘 미만이면 빈 문자열입니다. */

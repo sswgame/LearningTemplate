@@ -42,11 +42,11 @@ namespace test
         static sw::string findAppExecutablePath();
 
         /**
-         * @brief App 을 `arguments` 로 띄우는 명령줄입니다. 실행 파일을 못 찾으면 빈 문자열입니다.
-         * @details 경로에 공백이 있을 수 있어 첫 토큰(실행 파일 경로)은 따옴표로 감싸고, 사람이 지켜보지 않으므로 `-unattended` 를 붙인다
+         * @brief App 을 `arguments` 로 띄우는 명령입니다. 실행 파일을 못 찾으면 실행 파일이 빈 명령입니다.
+         * @details @p arguments 는 `ProcessCommand::splitArgumentLine` 으로 나눈다(공백이 든 값은 큰따옴표로 묶는다). 사람이 지켜보지 않으므로 `-unattended` 를 붙인다
          *          (에디터를 켜도 단언 대화상자를 걸지 않는다 — Debug 단언은 멈춘다).
          */
-        static sw::string makeAppCommand( sw::string_view arguments );
+        static sw::ProcessCommand makeAppCommand( sw::string_view arguments );
         // 이 구성에 없는 기능이 필요한 인자(`-EnableEditor` · `-game=`)는 케이스가 `SW_TEST_REQUIRES_FEATURE` 로 먼저 선언해야 한다 — 선언이 빠졌으면 실패를 기록하고 빈 명령을 돌려준다.
 
         /**
@@ -58,8 +58,8 @@ namespace test
         template <typename TOnLine>
         static ProcessRunResult runApp( sw::string_view arguments, uint32 timeoutSeconds, TOnLine&& onLine )
         {
-            const sw::string command = makeAppCommand( arguments );
-            if ( command.empty() )
+            const sw::ProcessCommand command = makeAppCommand( arguments );
+            if ( command._executable.empty() )
                 return ProcessRunResult{};
             return runProcessWithDeadline( command, sw::ProcessOptions{}, timeoutSeconds, onLine );
         }

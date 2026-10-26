@@ -15,7 +15,7 @@ generic_name = [
     "MessageBox", "MessageBoxEx", "DialogBoxParam", "CreateDialogParam", "DrawText", "DrawTextEx", "TextOut", "CreateFont",
     "CreateFontIndirect", "GetObject", "GetTextExtentPoint32", "GetTextMetrics", "CreateDC", "AddFontResource",
     "AddFontResourceEx", "RegisterClipboardFormat", "GetOpenFileName", "GetSaveFileName", "SHBrowseForFolder",
-    "SHGetPathFromIDList", "SHGetFolderPath", "SHFileOperation", "ShellExecute", "ShellExecuteEx",
+    "SHGetPathFromIDList", "ILCreateFromPath", "SHGetFolderPath", "SHFileOperation", "ShellExecute", "ShellExecuteEx",
     # 키보드
     "MapVirtualKey", "MapVirtualKeyEx", "GetKeyNameText", "VkKeyScan", "VkKeyScanEx", "CharUpper", "CharLower", "ImmGetCompositionString",
     # 모듈 · 파일 · 프로세스
@@ -27,7 +27,7 @@ generic_name = [
     "CreateHardLink", "CreateSymbolicLink", "GetDriveType", "GetVolumeInformation", "GetDiskFreeSpace", "GetDiskFreeSpaceEx",
     "FindFirstChangeNotification", "ReadDirectoryChanges", "SearchPath", "GetSystemDirectory", "GetWindowsDirectory", "GetEnvironmentVariable",
     "SetEnvironmentVariable", "ExpandEnvironmentStrings", "GetEnvironmentStrings", "FreeEnvironmentStrings",
-    "CreateProcess", "GetCommandLine", "GetStartupInfo", "CreateNamedPipe", "WaitNamedPipe", "CallNamedPipe",
+    "CreateProcess", "GetCommandLine", "CommandLineToArgv", "GetStartupInfo", "CreateNamedPipe", "WaitNamedPipe", "CallNamedPipe",
     "Process32First", "Process32Next", "Module32First", "Module32Next",
     # 동기화 객체 · 진단 · 시스템
     "CreateEvent", "CreateEventEx", "OpenEvent", "CreateMutex", "CreateMutexEx", "OpenMutex", "CreateSemaphore",

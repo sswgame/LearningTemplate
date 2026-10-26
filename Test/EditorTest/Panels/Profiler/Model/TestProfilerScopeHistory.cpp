@@ -182,9 +182,9 @@ SW_TEST_CASE( EditorTracyLauncherTest, FindsViewerAndBuildsConnectCommand )
     SW_EXPECT_FALSE( sw::editor::EditorTracyLauncher::findViewerPath( "Tools/Tracy", sw::FileUtil::joinPath( root, "missing" ), found ) );
     SW_EXPECT_TRUE( found.empty() );
 
-    const sw::string command = sw::editor::EditorTracyLauncher::makeViewerCommand( "C:/Tools/Tracy/tracy-profiler.exe", 8087 );
+    const sw::string command = sw::editor::EditorTracyLauncher::makeViewerCommand( "C:/Tools Dir/Tracy/tracy-profiler.exe", 8087 ).toCommandLine();
     SW_EXPECT_TRUE_MSG( command.find( "-a 127.0.0.1 -p 8087" ) != sw::string::npos, command.c_str() );
-    SW_EXPECT_TRUE_MSG( command.front() == '"', command.c_str() );
+    SW_EXPECT_TRUE_MSG( command.front() == '"', command.c_str() ); // 공백이 든 실행 파일 경로는 감싼다
 }
 
 /**

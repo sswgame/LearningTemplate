@@ -1,10 +1,10 @@
 /**
  * @file SystemExternalBrowser.h
- * @brief `IExternalBrowser` 의 OS 구현입니다. 시스템 기본 브라우저로 주소를 엽니다(Windows `url.dll` 의 FileProtocolHandler, 리눅스 `xdg-open`).
+ * @brief `IExternalBrowser` 의 OS 구현입니다. 시스템 기본 브라우저로 주소를 엽니다(`Process::launchURL` — Windows `ShellExecuteW`, 리눅스 `xdg-open`).
  * @details - 받는 주소는 `http://` 와 `https://` 뿐입니다. 다른 스킴(`file:`, `javascript:`, 사용자 정의 프로토콜)은 OS 가 다른 프로그램을 띄우므로 거절합니다.
- *          - 주소는 명령 줄에 그대로 실리므로 RFC 3986 의 글자(비예약, 예약, `%`) 가운데 셸이 해석하는 따옴표, 백슬래시, `$`, 백틱을 뺀 것만 받습니다.
+ *          - RFC 3986 의 글자(비예약, 예약, `%`) 가운데 따옴표, 백슬래시, `$`, 백틱을 뺀 것만 받습니다(주소는 인자 하나로 넘어가 셸을 거치지 않지만, 잘못 만든 주소를 일찍 거른다).
  *            외부 로그인 주소는 쿼리를 퍼센트 인코딩하므로(`HTTPUtil::encodePercent`) 이 규칙에 걸리지 않습니다.
- *          - 띄우고 기다리지 않습니다(`Process::launchDetached`). 알 수 있는 실패는 "띄우지 못했다" 뿐입니다.
+ *          - 기다리지 않습니다. 알 수 있는 실패는 "열지 못했다" 뿐입니다.
  */
 #pragma once
 #include "Core/Container/string.h"

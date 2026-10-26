@@ -210,18 +210,24 @@ namespace sw
         const string targetDisplayName = targetName.empty() ? "all" : targetName;
         SW_LOG_INFO( "Starting compilation for target '%#' (Build dir: %#)...", targetDisplayName.c_str(), buildDir.c_str() );
 
-        string cmdLine = "cmake --build \"" + buildDir + "\"";
+        ProcessCommand command{
+            "cmake",
+            { "--build", buildDir }
+        };
         if ( targetName.empty() == false )
-            cmdLine += " --target " + targetName;
+        {
+            command._listArgument.push_back( "--target" );
+            command._listArgument.push_back( targetName );
+        }
 
         ProcessOptions options{};
         options._workingDirectory = buildDir;
         options._bCreateWindow    = false;
 
         unique_ptr<Process> pProcess = make_unique<Process>();
-        if ( pProcess->launch( cmdLine, options ) == false )
+        if ( pProcess->launch( command, options ) == false )
         {
-            SW_LOG_ERROR( "Failed to launch CMake process! Command: %#", cmdLine.c_str() );
+            SW_LOG_ERROR( "Failed to launch CMake process! Command: %#", command.toCommandLine() );
             failBeforeBuild( targetName );
             return;
         }

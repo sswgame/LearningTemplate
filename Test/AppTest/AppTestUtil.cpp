@@ -197,7 +197,7 @@ namespace test
         return candidate;
     }
 
-    sw::string AppTestUtil::makeAppCommand( sw::string_view arguments )
+    sw::ProcessCommand AppTestUtil::makeAppCommand( sw::string_view arguments )
     {
         if ( AppTestUtilInternal::hasFeaturesForArguments( arguments ) == false )
             return {};
@@ -205,12 +205,9 @@ namespace test
         if ( executablePath.empty() )
             return {};
 
-        sw::string command{ "\"" };
-        command += executablePath;
-        command += "\" ";
-        command += makeSwitchArgument( sw::CommandLineArgument::UNATTENDED );
-        command += " ";
-        command += arguments;
+        sw::ProcessCommand           command{ executablePath, { makeSwitchArgument( sw::CommandLineArgument::UNATTENDED ) } };
+        const sw::vector<sw::string> listArgument = sw::ProcessCommand::splitArgumentLine( arguments );
+        command._listArgument.insert( command._listArgument.end(), listArgument.begin(), listArgument.end() );
         return command;
     }
 

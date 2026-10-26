@@ -6,6 +6,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_set.h"
+#include "Core/Process/Process.h"
 
 namespace sw::editor
 {
@@ -42,8 +43,11 @@ namespace sw::editor
          * @return 둘 다 없으면 false 입니다.
          */
         [[nodiscard]] static bool findLogEntryLocation( string_view message, string_view entryFile, int32 entryLine, EditorSourceLocation& outLocation );
-        /** @brief IDE 명령 템플릿(`code -g {file}:{line}`)의 자리 표시자를 채웁니다. 템플릿이 비어 있으면 빈 문자열입니다. */
-        static string makeOpenCommand( string_view commandTemplate, const EditorSourceLocation& location );
+        /**
+         * @brief IDE 명령 템플릿(`code -g {file}:{line}`)을 인자로 나눈 **뒤에** 자리 표시자를 채웁니다. 템플릿이나 파일이 비어 있으면 실행 파일이 빈 명령입니다.
+         * @details 나누기를 먼저 하므로 파일 경로의 공백 · 따옴표가 인자를 늘리거나 명령을 바꾸지 못한다(`ProcessCommand::splitArgumentLine`).
+         */
+        static ProcessCommand makeOpenCommand( string_view commandTemplate, const EditorSourceLocation& location );
         /**
          * @brief 쓸 IDE 명령 템플릿을 반환합니다. 환경설정 General 의 `_ideOpenCommand` 이고, 비어 있으면 플랫폼 기본값(VS Code)입니다.
          * @details Windows 의 `code` 는 `code.cmd` 이므로 `CreateProcess` 가 바로 실행하지 못한다. 그래서 `cmd /c` 를 붙인다.

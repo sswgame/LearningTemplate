@@ -52,14 +52,13 @@ namespace sw::editor
         return true;
     }
 
-    string EditorTracyLauncher::makeViewerCommand( string_view viewerPath, uint16 port )
+    ProcessCommand EditorTracyLauncher::makeViewerCommand( string_view viewerPath, uint16 port )
     {
         // `-a <주소>` 는 뜨자마자 그 주소에 붙는다(Tracy 뷰어 명령줄). 같은 PC 라 localhost 다.
-        string command = "\"";
-        command += FileUtil::toNativeSeparators( viewerPath );
-        command += "\" -a 127.0.0.1 -p ";
-        command += to_string( static_cast<uint32>( port ) );
-        return command;
+        return ProcessCommand{
+            FileUtil::toNativeSeparators( viewerPath ),
+            { "-a", "127.0.0.1", "-p", to_string( static_cast<uint32>( port ) ) }
+        };
     }
 
     EditorTracyLaunchResult EditorTracyLauncher::openViewer()
@@ -79,13 +78,13 @@ namespace sw::editor
         if ( ProfilerBackend::startTracy() == false )
             return EditorTracyLaunchResult::TracyNotCompiled;
 
-        const string command = makeViewerCommand( viewerPath, ProfilerBackend::getTracyPort() );
+        const ProcessCommand command = makeViewerCommand( viewerPath, ProfilerBackend::getTracyPort() );
         if ( Process::launchDetached( command ) == false )
         {
-            SW_LOG_WARNING( "Failed to launch the Tracy viewer: %#", command );
+            SW_LOG_WARNING( "Failed to launch the Tracy viewer: %#", command.toCommandLine() );
             return EditorTracyLaunchResult::ViewerLaunchFailed;
         }
-        SW_LOG_INFO( "Tracy viewer launched: %#", command );
+        SW_LOG_INFO( "Tracy viewer launched: %#", command.toCommandLine() );
         return EditorTracyLaunchResult::Launched;
     }
 

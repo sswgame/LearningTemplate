@@ -351,24 +351,8 @@ namespace sw::editor
             return false;
 
         const string path = FileUtil::normalizeSeparators( absolutePath );
-        string       command;
-#if defined( SW_PLATFORM_WINDOWS )
-        // explorer 는 백슬래시만 받는다. 슬래시를 주면 선택이 안 되고 내 문서를 연다.
-        string windowsPath = path;
-        for ( utf8& ch : windowsPath )
-        {
-            if ( ch == '/' )
-                ch = '\\';
-        }
-        command = "explorer.exe /select,\"" + windowsPath + "\"";
-#else
-        // 리눅스 파일 관리자에는 "선택한 채로 열기" 표준이 없다. 그래서 폴더까지만 연다.
-        command = "xdg-open \"" + FileUtil::getDirectoryPart( path ) + "\"";
-#endif
-
-        // 실행하고 기다리지 않는다. `Process::execute` 로 기다리면 UI 스레드가 탐색기(또는 탐색기가 띄운 창)가 출력 파이프를 놓을
-        // 때까지 멈추고, `explorer.exe /select,` 는 성공해도 종료 코드 1 을 반환한다. 알 수 있는 실패는 "실행하지 못했다" 뿐이다.
-        if ( Process::launchDetached( command ) == false )
+        // 기다리지 않는다(Windows 는 셸 API, 리눅스는 분리 실행한 xdg-open). 알 수 있는 실패는 "열지 못했다" 뿐이다.
+        if ( Process::showInFileManager( path ) == false )
         {
             SW_LOG_WARNING( "Failed to open file explorer for %#", path.c_str() );
             return false;

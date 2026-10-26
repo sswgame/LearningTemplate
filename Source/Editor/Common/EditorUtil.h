@@ -1,11 +1,12 @@
 /**
  * @file EditorUtil.h
- * @brief EditorModule 유틸리티입니다(파이썬 실행기, 계층 뱃지). 경로는 EditorPaths. UI 에 의존하지 않습니다.
+ * @brief EditorModule 유틸리티입니다(파이썬 스크립트 명령, 계층 뱃지). 경로는 EditorPaths. UI 에 의존하지 않습니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Process/Process.h"
 
 namespace sw::editor
 {
@@ -13,12 +14,21 @@ namespace sw::editor
     class EditorUtil
     {
     public:
-        /** @brief 저장소 파이썬 스크립트를 띄우는 실행기입니다. 저장소 스크립트가 쓰는 것과 같다(Windows 는 런처 `py -3`). */
+        /**
+         * @brief 저장소 파이썬 스크립트 @p scriptPath 를 띄우는 명령입니다. 스크립트 인자는 돌려받은 `_listArgument` 뒤에 덧붙인다.
+         * @details 실행기는 저장소 스크립트가 쓰는 것과 같다(Windows 는 런처 `py -3`, 그 밖은 `python3`).
+         */
+        static ProcessCommand makePythonScriptCommand( string scriptPath )
+        {
 #if defined( SW_PLATFORM_WINDOWS )
-        static constexpr const utf8* kPythonCommand = "py -3";
+            return ProcessCommand{
+                "py",
+                { "-3", std::move( scriptPath ) }
+            };
 #else
-        static constexpr const utf8* kPythonCommand = "python3";
+            return ProcessCommand{ "python3", { std::move( scriptPath ) } };
 #endif
+        }
 
         /**
          * @brief 계층 라벨에 붙일 `[Category]` 뱃지를 덧붙입니다.

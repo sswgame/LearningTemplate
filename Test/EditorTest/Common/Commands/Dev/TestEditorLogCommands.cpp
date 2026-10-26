@@ -51,16 +51,22 @@ SW_TEST_CASE( EditorLogCommandsTest, EntryLocationPrefersTheMessage )
 }
 
 /**
- * @brief [EditorLogCommandsTest] IDE 명령 틀의 {file} · {line} 을 모두 채운다
+ * @brief [EditorLogCommandsTest] IDE 명령 틀의 {file} · {line} 을 모두 채운다 — 틀을 먼저 인자로 나누므로 경로의 공백 · 따옴표는 인자를 늘리지 않는다
  */
 SW_TEST_CASE( EditorLogCommandsTest, OpenCommandFillsThePlaceholders )
 {
     EditorSourceLocation location;
     location._file = "D:\\Proj\\Foo.cpp";
     location._line = 77;
-    SW_EXPECT_STREQ( "code -g \"D:\\Proj\\Foo.cpp:77\"", EditorLogCommands::makeOpenCommand( "code -g \"{file}:{line}\"", location ).c_str() );
-    SW_EXPECT_STREQ( "rider --line 77 D:\\Proj\\Foo.cpp", EditorLogCommands::makeOpenCommand( "rider --line {line} {file}", location ).c_str() );
-    SW_EXPECT_TRUE( EditorLogCommands::makeOpenCommand( "", location ).empty() );
+    SW_EXPECT_STREQ( "code -g D:\\Proj\\Foo.cpp:77", EditorLogCommands::makeOpenCommand( "code -g \"{file}:{line}\"", location ).toCommandLine().c_str() );
+    SW_EXPECT_STREQ( "rider --line 77 D:\\Proj\\Foo.cpp", EditorLogCommands::makeOpenCommand( "rider --line {line} {file}", location ).toCommandLine().c_str() );
+    SW_EXPECT_TRUE( EditorLogCommands::makeOpenCommand( "", location )._executable.empty() );
+
+    location._file                = "/src/a b\" & rm x/Foo.cpp";
+    const ProcessCommand injected = EditorLogCommands::makeOpenCommand( "code -g {file}:{line}", location );
+    SW_EXPECT_EQUAL( string( "code" ), injected._executable );
+    SW_ASSERT_EQUAL( static_cast<size_t>( 2 ), injected._listArgument.size() );
+    SW_EXPECT_EQUAL( string( "/src/a b\" & rm x/Foo.cpp:77" ), injected._listArgument[1] );
 }
 
 /**

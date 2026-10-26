@@ -139,6 +139,7 @@ def createDirectoryLink(linkPath: Path, targetPath: Path) -> bool:
     """`linkPath` 에 `targetPath` 를 가리키는 디렉터리 링크를 만듭니다(Windows 정션 — 관리자 권한이 필요 없다)."""
     linkPath.parent.mkdir(parents=True, exist_ok=True)
     if os.name == "nt":
+        # mklink 는 cmd 내장 명령이라 실행 파일이 없다 — cmd 를 거친다(경로는 목록 인자로 넘겨 subprocess 가 인용한다).
         result = runProcess(["cmd", "/c", "mklink", "/J", str(linkPath), str(targetPath)])
         if not result.bSucceeded:
             print(f"[Worktree] 정션을 만들지 못했습니다: {linkPath} -> {targetPath}\n{result.output.strip()}", file=sys.stderr)

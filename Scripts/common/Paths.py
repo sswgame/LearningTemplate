@@ -106,6 +106,6 @@ def platformScriptCommand(scriptPath: PathLike) -> list[str]:
     """
     resolved = str(scriptPath)
     if platform.system() == "Windows":
-        return ["cmd", "/c", resolved]
+        return ["cmd", "/c", resolved]  # .bat · .cmd 는 cmd 만 돌린다(CreateProcess 가 직접 띄우지 못한다)
     return ["bash", resolved]
 

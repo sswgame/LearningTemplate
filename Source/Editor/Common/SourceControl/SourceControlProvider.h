@@ -6,6 +6,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Process/Process.h"
 
 namespace sw::editor
 {
@@ -23,8 +24,8 @@ namespace sw::editor
     /**
      * @class ISourceControlProvider
      * @brief 버전 관리 공급자(언리얼 `ISourceControlProvider` 의 작은 버전) — 잠금 목록 · 잠그기 · 풀기 명령과 그 출력 해석만 듭니다.
-     * @details 공급자는 프로세스를 띄우지 않는다. 그래서 명령 문자열 · 출력 해석을 단위 테스트로 보고, 띄우기 · 기다리기는 한 자리
-     *          (`EditorExternalToolJob`)에 둔다. 빈 명령은 "할 일이 없다" 이다(`NullSourceControlProvider`).
+     * @details 공급자는 프로세스를 띄우지 않는다. 그래서 명령(실행 파일 · 인자) · 출력 해석을 단위 테스트로 보고, 띄우기 · 기다리기는 한 자리
+     *          (`EditorExternalToolJob`)에 둔다. 실행 파일이 빈 명령은 "할 일이 없다" 이다(`NullSourceControlProvider`).
      */
     class ISourceControlProvider
     {
@@ -35,14 +36,14 @@ namespace sw::editor
         virtual string_view getName() const = 0;
         /** @brief 잠그기 · 풀기를 할 수 있으면 true 입니다. */
         virtual bool canLock() const = 0;
-        /** @brief 잠금 목록을 묻는 명령입니다. 비면 묻지 않습니다. */
-        virtual string makeRefreshCommand() const = 0;
+        /** @brief 잠금 목록을 묻는 명령입니다. 실행 파일이 비면 묻지 않습니다. */
+        virtual ProcessCommand makeRefreshCommand() const = 0;
         /** @brief 잠금 목록 명령의 출력을 읽습니다. 형식이 틀리면 false 이고 @p outListLock 은 비어 있습니다. */
         [[nodiscard]] virtual bool parseRefreshOutput( const vector<string>& listLine, vector<SourceControlLock>& outListLock ) const = 0;
-        /** @brief 파일 하나(저장소 기준 경로)를 잠그는 명령입니다. 비면 잠글 수 없습니다. */
-        virtual string makeLockCommand( string_view repositoryPath ) const = 0;
-        /** @brief 파일 하나의 잠금을 푸는 명령입니다. 비면 풀 수 없습니다. */
-        virtual string makeUnlockCommand( string_view repositoryPath ) const = 0;
+        /** @brief 파일 하나(저장소 기준 경로)를 잠그는 명령입니다. 실행 파일이 비면 잠글 수 없습니다. */
+        virtual ProcessCommand makeLockCommand( string_view repositoryPath ) const = 0;
+        /** @brief 파일 하나의 잠금을 푸는 명령입니다. 실행 파일이 비면 풀 수 없습니다. */
+        virtual ProcessCommand makeUnlockCommand( string_view repositoryPath ) const = 0;
     };
 } // namespace sw::editor
 
@@ -54,14 +55,14 @@ namespace sw::editor
     public:
         string_view        getName() const override { return "None"; }
         bool               canLock() const override { return false; }
-        string             makeRefreshCommand() const override { return {}; }
+        ProcessCommand     makeRefreshCommand() const override { return {}; }
         [[nodiscard]] bool parseRefreshOutput( const vector<string>& /*listLine*/, vector<SourceControlLock>& outListLock ) const override
         {
             outListLock.clear();
             return true;
         }
-        string makeLockCommand( string_view /*repositoryPath*/ ) const override { return {}; }
-        string makeUnlockCommand( string_view /*repositoryPath*/ ) const override { return {}; }
+        ProcessCommand makeLockCommand( string_view /*repositoryPath*/ ) const override { return {}; }
+        ProcessCommand makeUnlockCommand( string_view /*repositoryPath*/ ) const override { return {}; }
     };
 } // namespace sw::editor
 
@@ -77,12 +78,12 @@ namespace sw::editor
     public:
         string_view        getName() const override { return "Git LFS"; }
         bool               canLock() const override { return true; }
-        string             makeRefreshCommand() const override;
+        ProcessCommand     makeRefreshCommand() const override;
         [[nodiscard]] bool parseRefreshOutput( const vector<string>& listLine, vector<SourceControlLock>& outListLock ) const override;
-        string             makeLockCommand( string_view repositoryPath ) const override;
-        string             makeUnlockCommand( string_view repositoryPath ) const override;
+        ProcessCommand     makeLockCommand( string_view repositoryPath ) const override;
+        ProcessCommand     makeUnlockCommand( string_view repositoryPath ) const override;
 
         /** @brief 공급자를 쓸 수 있는지 묻는 명령(`git lfs version`)입니다 — 종료 코드 0 이면 씁니다. */
-        static string makeProbeCommand();
+        static ProcessCommand makeProbeCommand();
     };
 } // namespace sw::editor

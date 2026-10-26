@@ -43,8 +43,6 @@ namespace sw::editor
             /** @brief 로그가 보이는 최대 줄 수입니다. */
             static constexpr size_t kVisibleLineCount = 400;
 
-            static string quote( string_view text ) { return "\"" + string{ text } + "\""; }
-
             /** @brief 이름 목록에서 하나를 고르는 콤보입니다. @p getName 이 순번의 이름을 돌려주고, 고르면 @p inoutIndex 를 바꿉니다. */
             template <typename GetName>
             static void drawOptionCombo( const utf8* pLabel, float32 width, const utf8* pPreview, uint32 count, GetName&& getName, uint32& inoutIndex )
@@ -140,25 +138,26 @@ namespace sw::editor
         _bGamesLoaded = SW_TRUE;
     }
 
-    string PackagingPanel::makeCommand() const
+    ProcessCommand PackagingPanel::makeCommand() const
     {
-        using Internal           = PackagingPanelInternal;
-        const string projectRoot = EditorPaths::getProjectRootPath();
-        string       command     = string{ EditorUtil::kPythonCommand } + " " + Internal::quote( FileUtil::joinPath( projectRoot, Internal::kScriptRelativePath ) );
-        command += string{ " --target " } + Internal::kArrTarget[_targetIndex];
+        using Internal               = PackagingPanelInternal;
+        const string    projectRoot  = EditorPaths::getProjectRootPath();
+        ProcessCommand  command      = EditorUtil::makePythonScriptCommand( FileUtil::joinPath( projectRoot, Internal::kScriptRelativePath ) );
+        vector<string>& listArgument = command._listArgument;
+        listArgument.insert( listArgument.end(), { "--target", Internal::kArrTarget[_targetIndex] } );
         if ( _gameIndex < _listGame.size() )
-            command += " --game " + _listGame[_gameIndex];
+            listArgument.insert( listArgument.end(), { "--game", _listGame[_gameIndex] } );
         if ( _rhiIndex > 0 )
-            command += string{ " --rhi " } + Internal::kArrBackend[_rhiIndex];
+            listArgument.insert( listArgument.end(), { "--rhi", Internal::kArrBackend[_rhiIndex] } );
         if ( _outputFolder.empty() == false )
-            command += " --output " + Internal::quote( _outputFolder );
+            listArgument.insert( listArgument.end(), { "--output", _outputFolder } );
         if ( _bSkipBuild == SW_TRUE )
         {
             // 빌드를 건너뛰면 이 에디터의 Bin 을 스테이징한다(그 타깃의 Shipping 빌드가 없어도 흐름을 볼 수 있다).
-            command += " --skip-build --bin-dir " + Internal::quote( FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ) );
+            listArgument.insert( listArgument.end(), { "--skip-build", "--bin-dir", FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ) } );
         }
         if ( _bSkipCook == SW_TRUE )
-            command += " --skip-cook";
+            listArgument.push_back( "--skip-cook" );
         return command;
     }
 
@@ -169,7 +168,7 @@ namespace sw::editor
         _listLine.clear();
         _progress        = PackagingProgress{};
         _progress._state = PackagingState::Running;
-        SW_LOG_INFO( "Packaging started: %#", makeCommand() );
+        SW_LOG_INFO( "Packaging started: %#", makeCommand().toCommandLine() );
         return true;
     }
 
