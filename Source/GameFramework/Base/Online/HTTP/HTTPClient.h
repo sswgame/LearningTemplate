@@ -13,6 +13,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Concurrency/thread.h"
+#include "Core/Container/IDAllocator.h"
 #include "Core/Container/deque.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
@@ -117,7 +118,7 @@ namespace sw
         HTTPClientConfig                        _settings;
         sw::thread                              _resolver; ///< 처음 이름을 받을 때 띄운다
         std::condition_variable_any             _resolveReady;
-        uint64                                  _nextRequestID;
+        IDAllocator<uint64>                     _requestIDAllocator;
         int32                                   _ioThreadCount;
         uint8                                   _bInitialized;
         uint8                                   _bResolverStopping;

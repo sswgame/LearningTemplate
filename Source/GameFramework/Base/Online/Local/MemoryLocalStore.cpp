@@ -91,7 +91,7 @@ namespace sw
         : _listCompletion{}
         , _sealContext{ sealContext }
         , _pDatabase{ pDatabase }
-        , _nextRequestID{ 1 }
+        , _requestIDAllocator{}
         , _bShutdown{ SW_FALSE }
     {
     }
@@ -148,7 +148,7 @@ namespace sw
 
     uint64 MemoryLocalStore::executeRequest( LocalStoreRequest& request )
     {
-        request._requestID = _nextRequestID++;
+        request._requestID = _requestIDAllocator.allocate();
         if ( _bShutdown == SW_TRUE )
             _listCompletion.push_back( LocalStoreRequestUtil::makeCompletion( request, LocalStoreResult::IOError ) );
         else

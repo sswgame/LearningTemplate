@@ -7,6 +7,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/IDAllocator.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Task/DedicatedWorker.h"
@@ -45,7 +46,7 @@ namespace sw
         unique_ptr<ILocalSlotStorage>      _storage;
         DedicatedWorker<LocalStoreRequest> _worker;
         mutable mutex                      _mutex; ///< 완료 목록과 대기 수를 보호한다
-        uint64                             _nextRequestID;
+        IDAllocator<uint64>                _requestIDAllocator;
         int32                              _pendingCount;
     };
 } // namespace sw

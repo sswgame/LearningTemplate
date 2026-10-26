@@ -22,7 +22,7 @@ namespace sw
         , _settings{}
         , _resolver{}
         , _resolveReady{}
-        , _nextRequestID{ 1 }
+        , _requestIDAllocator{}
         , _ioThreadCount{ 0 }
         , _bInitialized{ SW_FALSE }
         , _bResolverStopping{ SW_FALSE }
@@ -90,7 +90,7 @@ namespace sw
     uint64 HTTPClient::submitRequest( const HTTPClientRequest& request, int64 nowMs )
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        const uint64            requestID = _nextRequestID++;
+        const uint64            requestID = _requestIDAllocator.allocate();
         HTTPAddress             url;
         if ( _bInitialized == SW_FALSE )
         {

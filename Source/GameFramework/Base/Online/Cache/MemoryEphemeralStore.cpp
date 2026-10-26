@@ -79,7 +79,7 @@ namespace sw
         , _mapScoreSet{}
         , _mapInbox{}
         , _manualTimeMs{ 0 }
-        , _nextInboxID{ 1 }
+        , _inboxIDAllocator{}
         , _bManualTime{ SW_FALSE }
     {
     }
@@ -124,7 +124,7 @@ namespace sw
     uint64 MemoryEphemeralDatabase::registerInbox()
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        const uint64            inboxID = _nextInboxID++;
+        const uint64            inboxID = _inboxIDAllocator.allocate();
         _mapInbox[inboxID]              = Inbox{};
         return inboxID;
     }
@@ -467,7 +467,7 @@ namespace sw
         : _listReply{}
         , _pDatabase{ pDatabase }
         , _inboxID{ pDatabase->registerInbox() }
-        , _nextRequestID{ 1 }
+        , _requestIDAllocator{}
         , _bShutdown{ SW_FALSE }
     {
     }
@@ -480,7 +480,7 @@ namespace sw
 
     uint64 MemoryEphemeralStore::submit( const EphemeralRequest& request )
     {
-        const uint64   requestID = _nextRequestID++;
+        const uint64   requestID = _requestIDAllocator.allocate();
         EphemeralReply reply;
         if ( _bShutdown == SW_TRUE )
             reply._result = EphemeralResult::Unavailable;

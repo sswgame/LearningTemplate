@@ -14,6 +14,7 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Container/IDAllocator.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Network/Message/NetRequest.h"
 #include "Core/Serialization/BitStream.h"
@@ -64,7 +65,7 @@ namespace sw
         OnlineKitClient()
             : _callTable{}
             , _pClient{ nullptr }
-            , _nextRequestID{ 1 }
+            , _requestIDAllocator{}
         {
         }
 
@@ -97,7 +98,7 @@ namespace sw
         {
             if ( _pClient == nullptr )
                 return failCall( method, key, onReply, OnlineError::kUnavailable );
-            const Call        call{ onReply, context, key, _nextRequestID++, method };
+            const Call        call{ onReply, context, key, _requestIDAllocator.allocate(), method };
             NetRequestOptions options;
             options._idempotencyKey = key;
             (void)_callTable.template sendMessage<typename TProtocol::MessageTypes>( *_pClient, method, request, options,
@@ -110,7 +111,7 @@ namespace sw
         {
             if ( _pClient == nullptr )
                 return failCall( method, key, onReply, OnlineError::kUnavailable );
-            const Call        call{ onReply, context, key, _nextRequestID++, method };
+            const Call        call{ onReply, context, key, _requestIDAllocator.allocate(), method };
             NetRequestOptions options;
             options._idempotencyKey = key;
             (void)_callTable.send( *_pClient, method, body, options, OnlineResponseDelegate::create<&OnlineKitClient::onResponse>( this ), call ); // 응답은 call._requestID 로 알린다
@@ -129,7 +130,7 @@ namespace sw
         uint64 failCall( uint16 method, const NetIdempotencyKey& key, const ReplyDelegate& onReply, uint16 errorCode )
         {
             Reply reply;
-            reply._requestID      = _nextRequestID++;
+            reply._requestID      = _requestIDAllocator.allocate();
             reply._method         = method;
             reply._idempotencyKey = key;
             reply._errorCode      = errorCode;
@@ -158,6 +159,6 @@ namespace sw
 
         ServiceClientCallTable<Call> _callTable;
         OnlineServiceClient*         _pClient;
-        uint64                       _nextRequestID;
+        IDAllocator<uint64>          _requestIDAllocator;
     };
 } // namespace sw

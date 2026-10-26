@@ -10,7 +10,7 @@ namespace sw
         , _storage{ std::move( storage ) }
         , _worker{}
         , _mutex{}
-        , _nextRequestID{ 1 }
+        , _requestIDAllocator{}
         , _pendingCount{ 0 }
     {
         _worker.start( "LocalStore", DedicatedWorker<LocalStoreRequest>::ProcessDelegate::create<&ThreadedLocalStore::processRequest>( this ) );
@@ -86,7 +86,7 @@ namespace sw
         uint64 requestID = 0;
         {
             std::scoped_lock<mutex> lock{ _mutex };
-            requestID          = _nextRequestID++;
+            requestID          = _requestIDAllocator.allocate();
             request._requestID = requestID;
             ++_pendingCount;
         }

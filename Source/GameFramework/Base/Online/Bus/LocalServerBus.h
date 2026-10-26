@@ -6,6 +6,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/IDAllocator.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
@@ -44,7 +45,7 @@ namespace sw
 
         mutable mutex                _mutex;
         unordered_map<uint64, Inbox> _mapInbox;
-        uint64                       _nextInboxID;
+        IDAllocator<uint64>          _inboxIDAllocator;
     };
 } // namespace sw
 

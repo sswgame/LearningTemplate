@@ -43,7 +43,7 @@ namespace sw
         , _serverTimeMs{ 0 }
         , _remoteConfigHash{ 0 }
         , _schemaHash{ 0 }
-        , _nextRequestID{ 1 }
+        , _requestIDAllocator{}
         , _gateOwnerRange{ 0 }
         , _state{ OnlineClientState::Disconnected }
         , _bGateClosed{ SW_FALSE }
@@ -211,7 +211,7 @@ namespace sw
         if ( call._options._traceID.isValid() == false )
             call._options._traceID = LogContext::getCurrent()._traceID; // Hello 전에 모았다 보내도 부른 쪽의 추적 id 로
         call._onResponse       = onResponse;
-        call._requestID        = _nextRequestID++;
+        call._requestID        = _requestIDAllocator.allocate();
         call._deadlineMs       = _nowMs + static_cast<int64>( options._timeoutSeconds * constant::kMillisecondsPerSecond );
         call._method           = method;
         const uint64 requestID = call._requestID;
@@ -239,7 +239,7 @@ namespace sw
     uint64 OnlineServiceClient::rejectRequest( uint16 errorCode, OnlineResponseDelegate onResponse )
     {
         OnlineResponse response;
-        response._requestID = _nextRequestID++;
+        response._requestID = _requestIDAllocator.allocate();
         response._status    = NetRequestStatus::ApplicationError;
         response._errorCode = errorCode;
         if ( onResponse.isBound() )

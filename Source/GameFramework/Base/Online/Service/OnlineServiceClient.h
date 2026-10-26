@@ -19,6 +19,7 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Container/IDAllocator.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
@@ -165,7 +166,7 @@ namespace sw
          */
         uint64 rejectRequest( uint16 errorCode, OnlineResponseDelegate onResponse );
         /** @brief 다음 `sendRequest` 가 돌려줄 id 입니다. 보내는 중에 바로 온 응답을 그 요청의 것으로 맞춰 보는 데 씁니다(`ServiceClientCallTable`). */
-        uint64 peekNextRequestID() const { return _nextRequestID; }
+        uint64 peekNextRequestID() const { return _requestIDAllocator.getNextValue(); }
         /**
          * @brief 요청 문을 열고 닫습니다. 닫히면 @p ownerRange(계정 키트) 밖의 요청은 문이 열릴 때까지 모읍니다.
          * @details 다시 연결한 뒤 재접속 응답이 오기 전에 다른 키트의 요청이 서버에 닿으면 "로그인 안 됨" 으로 끝난다. 그것을 막으려고 계정 키트가 문을 닫고 연다.
@@ -242,7 +243,7 @@ namespace sw
         int64                              _serverTimeMs;
         uint64                             _remoteConfigHash;
         uint64                             _schemaHash; ///< `initialize` 때 `OnlineProtocolRegistry::computeSchemaHash` 로 정한다
-        uint64                             _nextRequestID;
+        IDAllocator<uint64>                _requestIDAllocator;
         uint16                             _gateOwnerRange;
         OnlineClientState                  _state;
         uint8                              _bGateClosed;
