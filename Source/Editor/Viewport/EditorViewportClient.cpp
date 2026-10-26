@@ -52,6 +52,7 @@ namespace sw::editor
 {
     EditorViewportClient::EditorViewportClient()
         : _toolbarSettings{}
+        , _canvasHeight{ 0.0f }
         , _camera{}
         , _picker{}
         , _gizmo{}

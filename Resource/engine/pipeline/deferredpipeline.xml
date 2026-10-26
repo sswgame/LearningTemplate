@@ -19,7 +19,10 @@
 		<RenderPassAttachment _name="DepthOfFieldColor" _format="R16G16B16A16_FLOAT" _clearColor="0,0,0,1" _bClear="true" />
 		<RenderPassAttachment _name="MotionBlurColor" _format="R16G16B16A16_FLOAT" _clearColor="0,0,0,1" _bClear="true" />
 		<!-- 외곽선은 톤맵 앞의 HDR 색에 그린다 — 원본(BloomColor)과 같은 형식이어야 꺼진 뷰에서 출력이 원본을 가리킬 수 있다(RGBA8 이면 TAA · 톤맵 앞에서 1 이 넘는 색이 잘렸다). -->
-		<RenderPassAttachment _name="OutlineColor" _format="R16G16B16A16_FLOAT" _clearColor="0.12,0.15,0.18,1" _bClear="true" />
+		<RenderPassAttachment _name="OutlineColor"
+		                      _format="R16G16B16A16_FLOAT"
+		                      _clearColor="0.12,0.15,0.18,1"
+		                      _bClear="true" />
 		<RenderPassAttachment _name="TonemapColor" _format="R8G8B8A8_UNORM" _clearColor="0.12,0.15,0.18,1" _bClear="true" />
 	</_listAttachment>
 	<_listPass>

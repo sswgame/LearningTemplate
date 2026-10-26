@@ -54,6 +54,7 @@ class LintGateSelectionTest(unittest.TestCase):
         self._tempDir.cleanup()
 
     def select(self, listFile: list[str] | None, **kwargs: object) -> list[str]:
+        kwargs.setdefault("bMustFind", True)  # 임시 트리는 이 저장소가 아니라 0건이어도 오류가 아니다
         listPath = LintGate.selectTargetFiles(self.root, listFile, suffixes=(".h", ".cpp"), **kwargs)
         return [path.relative_to(self.root).as_posix() for path in listPath]
 
@@ -173,7 +174,7 @@ class _OutcomeGate(LintGate):
         self.addFilesArgument(parser)
 
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        listPath = self.selectTargetFiles(repositoryRoot, args.files, listScanRoot=("Source",), suffixes=(".h",))
+        listPath = self.selectTargetFiles(repositoryRoot, args.files, bMustFind=True, listScanRoot=("Source",), suffixes=(".h",))
         return self.result if self.result is not None else GateResult(summary=f"{len(listPath)} files")
 
 
@@ -252,8 +253,8 @@ class LintGateOutcomeTest(unittest.TestCase):
 
         class _TwoSelections(_OutcomeGate):
             def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-                self.selectTargetFiles(repositoryRoot, None, listScanRoot=("Nowhere",), suffixes=(".h",))
-                self.selectTargetFiles(repositoryRoot, None, listScanRoot=("Source",), suffixes=(".h",))
+                self.selectTargetFiles(repositoryRoot, None, bMustFind=True, listScanRoot=("Nowhere",), suffixes=(".h",))
+                self.selectTargetFiles(repositoryRoot, None, bMustFind=True, listScanRoot=("Source",), suffixes=(".h",))
                 return GateResult(summary="둘 가운데 하나는 찼다")
 
         with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
