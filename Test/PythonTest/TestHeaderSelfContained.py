@@ -146,6 +146,7 @@ class WorktreeRehomeTest(unittest.TestCase):
             (worktree / "Source" / "Engine").mkdir(parents=True)
             header = worktree / "Source" / "Engine" / "A.h"
             header.write_text("#pragma once\n", encoding="utf-8")
+            (worktree / "Source" / "Engine" / "A.cpp").write_text("", encoding="utf-8")   # 워크트리에 있는 경로만 옮겨진다
             mainSource = (mainRoot / "Source" / "Engine" / "A.cpp").as_posix()
             (buildDir / "compile_commands.json").write_text(json.dumps([{
                 "directory": buildDir.as_posix(), "file": mainSource,
