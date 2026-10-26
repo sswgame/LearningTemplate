@@ -68,4 +68,4 @@ main 은 통합 R 그대로다. 아래는 워크트리 브랜치에만 있고 �
 | 중단 | `wt/finitefloat` `wt/determ` `wt/edperf` `wt/unixloop` `wt/netsec` `wt/candnet` | 이어 시킨다. `wt/netsec` 212995371(평문 UDP 정책)은 병합 금지(사용자 결정) |
 | 아직 안 띄움 | — | `ResourceID` 타입, `Candidates-engine/quality/gameplay.md` 처리 |
 
-사용자 결정 대기: 평문 UDP 정책(Shipping), 장르 키트 21개(232 파일) 삭제, Steam/Epic SDK, 말 모델 에셋, H-3 운영 문서. 사용자 영향: Shortcuts.json 초기화, `<bind modifier>` 형식, 레이아웃 dockspace v7→v8, foliageDensity/reduceFlashing 설정 제거.
+사용자 결정(2026-10-27): 장르 키트 21개(232 파일)는 앞으로 쓰므로 유지, Steam/Epic SDK 와 H-3 운영 문서는 보류. 말 모델은 BlendSwap "Horse Rigged All Gaits"(CC0 표기, 라이선스·클립은 받아서 확인)를 사용자가 받아 `models_raw/` 에 넣는다. 결정 대기: 평문 UDP 정책(Shipping, 병합 권고). 사용자 영향: Shortcuts.json 초기화, `<bind modifier>` 형식, 레이아웃 dockspace v7→v8, foliageDensity/reduceFlashing 설정 제거.
