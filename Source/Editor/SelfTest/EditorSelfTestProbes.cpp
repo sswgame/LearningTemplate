@@ -2,7 +2,7 @@
  * @file EditorSelfTestProbes.cpp
  * @brief 입력 흉내 진입점(`EditorClick` · `EditorDrag` …)로 만든 결과를 시나리오가 읽을 에디터 탐침 몇 개입니다 — 열거형 프로퍼티 값, 오브젝트의 부모 깊이, 저장하지 않은 문서 수.
  * @details 값을 고르는 쪽(인스펙터 콤보, Hierarchy 끌어 놓기, 문서 패널 저장)이 바뀐 결과가 화면이 아니라 데이터에서 읽히게 한다. 대상은 `gv_editorProbeProperty` · `gv_editorProbeObject`
- *          (`EditorScenarioSteps.cpp` 가 정의하는 시나리오용 전역 변수)가 정한다.
+ *          (`EditorProbeSupport.h` 가 선언하는 시나리오용 전역 변수)가 정한다.
  */
 #include "pch.h"
 
@@ -13,6 +13,7 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/SelfTest/EditorProbeSupport.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -23,10 +24,6 @@
 
 namespace sw::editor
 {
-    SW_EXTERN_GLOBAL_VARIABLE( sw::string, gv_editorProbeProperty );
-    SW_EXTERN_GLOBAL_VARIABLE( sw::string, gv_editorProbeObject );
-    SW_EXTERN_GLOBAL_VARIABLE( sw::string, gv_editorProbePanel );
-
     namespace
     {
         struct EditorSelfTestProbesInternal
