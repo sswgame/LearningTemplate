@@ -57,7 +57,7 @@ namespace sw::editor
 
     void EditorSourceControl::requestRefresh()
     {
-        if ( _pProvider->makeRefreshCommand().empty() == false )
+        if ( _pProvider->makeRefreshCommand()._executable.empty() == false )
             enqueue( SourceControlOperation::Refresh, {} );
     }
 
@@ -93,7 +93,7 @@ namespace sw::editor
 
         const PendingOperation next = _listPending.front();
         _listPending.erase( _listPending.begin() );
-        string command;
+        ProcessCommand command;
         switch ( next._operation )
         {
             case SourceControlOperation::Probe:
@@ -121,9 +121,9 @@ namespace sw::editor
                 break;
             }
         }
-        if ( command.empty() )
+        if ( command._executable.empty() )
             return;
-        if ( _pJob->request( command, _repositoryRoot ) )
+        if ( _pJob->request( std::move( command ), _repositoryRoot ) )
             _running = next;
     }
 

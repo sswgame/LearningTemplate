@@ -6,30 +6,20 @@
 
 namespace sw::editor
 {
-    namespace
+    ProcessCommand GitLfsSourceControlProvider::makeProbeCommand()
     {
-        /** @brief 명령줄 인자 하나를 큰따옴표로 감쌉니다. 경로 안의 큰따옴표는 파일 이름에 쓸 수 없으므로 빼 버립니다. */
-        string quoteArgument( string_view value )
-        {
-            string quoted{ "\"" };
-            for ( const utf8 character : value )
-            {
-                if ( character != '"' )
-                    quoted += character;
-            }
-            quoted += "\"";
-            return quoted;
-        }
-    } // namespace
-
-    string GitLfsSourceControlProvider::makeProbeCommand()
-    {
-        return "git lfs version";
+        return ProcessCommand{
+            "git",
+            { "lfs", "version" }
+        };
     }
 
-    string GitLfsSourceControlProvider::makeRefreshCommand() const
+    ProcessCommand GitLfsSourceControlProvider::makeRefreshCommand() const
     {
-        return "git lfs locks --json";
+        return ProcessCommand{
+            "git",
+            { "lfs", "locks", "--json" }
+        };
     }
 
     bool GitLfsSourceControlProvider::parseRefreshOutput( const vector<string>& listLine, vector<SourceControlLock>& outListLock ) const
@@ -70,13 +60,19 @@ namespace sw::editor
         return true;
     }
 
-    string GitLfsSourceControlProvider::makeLockCommand( string_view repositoryPath ) const
+    ProcessCommand GitLfsSourceControlProvider::makeLockCommand( string_view repositoryPath ) const
     {
-        return "git lfs lock " + quoteArgument( repositoryPath );
+        return ProcessCommand{
+            "git",
+            { "lfs", "lock", string( repositoryPath ) }
+        };
     }
 
-    string GitLfsSourceControlProvider::makeUnlockCommand( string_view repositoryPath ) const
+    ProcessCommand GitLfsSourceControlProvider::makeUnlockCommand( string_view repositoryPath ) const
     {
-        return "git lfs unlock " + quoteArgument( repositoryPath );
+        return ProcessCommand{
+            "git",
+            { "lfs", "unlock", string( repositoryPath ) }
+        };
     }
 } // namespace sw::editor

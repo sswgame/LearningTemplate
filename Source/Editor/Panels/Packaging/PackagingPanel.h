@@ -7,6 +7,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Process/Process.h"
 
 #include "Editor/Common/GUI/IEditorPanel.h"
 #include "Editor/Panels/Packaging/Model/PackagingProgressParser.h"
@@ -40,8 +41,8 @@ namespace sw::editor
 
         /** @brief 지금 패키징 상태입니다(탐침 `Editor.PackagingState`). */
         PackagingState getState() const { return _progress._state; }
-        /** @brief 지금 설정으로 진입점 명령 한 줄을 만듭니다(작업 폴더는 저장소 루트). */
-        string makeCommand() const;
+        /** @brief 지금 설정으로 진입점 명령을 만듭니다(작업 폴더는 저장소 루트). */
+        ProcessCommand makeCommand() const;
         /** @brief 패키징을 띄웁니다. 이미 돌면 false 입니다. */
         bool startPackaging();
 

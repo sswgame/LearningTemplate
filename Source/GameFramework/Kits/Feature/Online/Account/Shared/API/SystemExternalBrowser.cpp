@@ -49,11 +49,13 @@ namespace sw
             return false;
         }
 #if defined( SW_PLATFORM_WINDOWS )
-        // cmd 를 거치지 않으므로 `&` 가 명령을 나누지 않는다. url.dll 이 기본 브라우저를 고른다
-        const string command = "rundll32.exe url.dll,FileProtocolHandler " + string( url );
+        // rundll32 는 `<dll>,<함수>` 뒤의 줄을 인자로 나누지 않고 통째로 넘긴다 — 표준 인용의 따옴표가 주소에 남으므로 날 인자 줄로 준다.
+        // 주소에는 공백 · 따옴표가 없다(isOpenableURL). url.dll 이 기본 브라우저를 고른다.
+        ProcessCommand command;
+        command._executable             = "rundll32.exe";
+        command._rawWindowsArgumentLine = "url.dll,FileProtocolHandler " + string( url );
 #else
-        // `sh -c` 를 거치므로 작은따옴표로 감싼다. 주소에는 따옴표가 없다(isOpenableURL)
-        const string command = "xdg-open '" + string( url ) + "'";
+        const ProcessCommand command{ "xdg-open", { string( url ) } };
 #endif
         if ( Process::launchDetached( command ) == false )
         {

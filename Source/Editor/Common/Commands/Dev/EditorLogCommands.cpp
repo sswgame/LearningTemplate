@@ -124,12 +124,19 @@ namespace sw::editor
         return true;
     }
 
-    string EditorLogCommands::makeOpenCommand( string_view commandTemplate, const EditorSourceLocation& location )
+    ProcessCommand EditorLogCommands::makeOpenCommand( string_view commandTemplate, const EditorSourceLocation& location )
     {
-        if ( commandTemplate.empty() || location._file.empty() )
+        vector<string> listToken = ProcessCommand::splitArgumentLine( commandTemplate );
+        if ( listToken.empty() || location._file.empty() )
             return {};
-        const string withFile = StringUtil::replace( commandTemplate, kFilePlaceholder, location._file );
-        return StringUtil::replace( withFile, kLinePlaceholder, to_string( location._line ) );
+        const string line = to_string( location._line );
+        for ( string& token : listToken )
+        {
+            token = StringUtil::replace( StringUtil::replace( token, kFilePlaceholder, location._file ), kLinePlaceholder, line );
+        }
+        string executable = std::move( listToken.front() );
+        listToken.erase( listToken.begin() );
+        return ProcessCommand{ std::move( executable ), std::move( listToken ) };
     }
 
     string EditorLogCommands::getOpenCommandTemplate()
@@ -146,18 +153,18 @@ namespace sw::editor
 
     bool EditorLogCommands::openInIde( const EditorSourceLocation& location )
     {
-        const string command = makeOpenCommand( getOpenCommandTemplate(), location );
-        if ( command.empty() )
+        const ProcessCommand command = makeOpenCommand( getOpenCommandTemplate(), location );
+        if ( command._executable.empty() )
         {
             SW_LOG_WARNING( "Open in IDE: no command template (Editor/General IDE open command in Preferences) or no file." );
             return false;
         }
         if ( Process::launchDetached( command ) == false )
         {
-            SW_LOG_WARNING( "Open in IDE: failed to launch '%#'", command.c_str() );
+            SW_LOG_WARNING( "Open in IDE: failed to launch '%#'", command.toCommandLine() );
             return false;
         }
-        SW_LOG_INFO( "Open in IDE: %#", command.c_str() );
+        SW_LOG_INFO( "Open in IDE: %#", command.toCommandLine() );
         return true;
     }
 

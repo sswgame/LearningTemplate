@@ -9,21 +9,17 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Process/Process.h"
 
 #include "Editor/Common/Task/EditorBackgroundTask.h"
 
-namespace sw
-{
-    class Process;
-} // namespace sw
-
 namespace sw::editor
 {
-    /** @brief 띄울 명령 한 줄과 작업 폴더입니다. */
+    /** @brief 띄울 명령(실행 파일과 인자)과 작업 폴더입니다. */
     struct EditorExternalToolInput
     {
-        string _command;
-        string _workingDirectory;
+        ProcessCommand _command;
+        string         _workingDirectory;
     };
 } // namespace sw::editor
 
@@ -60,7 +56,7 @@ namespace sw::editor
         EditorExternalToolJob& operator=( const EditorExternalToolJob& ) = delete;
 
         /** @brief 명령을 띄웁니다. 앞 실행이 아직 돌면 아무것도 하지 않고 false 입니다. */
-        [[nodiscard]] bool request( string_view command, string_view workingDirectory );
+        [[nodiscard]] bool request( ProcessCommand command, string_view workingDirectory );
 
         /** @brief 도는 자식이 있으면 끝내고 스레드를 기다립니다. */
         void cancelAndWait();
