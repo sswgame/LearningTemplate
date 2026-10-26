@@ -6,6 +6,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
+#include "GameFramework/Base/Foundation/Utility/ConfigRangeUtil.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
@@ -46,6 +47,28 @@ namespace sw
             }
 
             static int32 computeCountScore( int32 count, int32 threshold ) { return count >= threshold ? count - threshold + 1 : 0; }
+
+            /**
+             * @brief 설정이 선언된 범위 안이고 나눌 패가 덱에 있는지 봅니다. 밖이면 오류를 남기고 false 입니다(맞추지 않는다).
+             * @details 인원 × 손패 + 바닥이 덱을 넘거나 뒤집을 더미가 남지 않으면 나누기가 모자라 손패가 조용히 짧아지거나 첫 차례부터 뒤집을 패가 없다.
+             */
+            [[nodiscard]] static bool acceptSettings( const MatgoSettings& settings )
+            {
+                const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
+                if ( rangeError.empty() == false )
+                {
+                    SW_LOG_ERROR( "MatgoGame: refused settings - %#", rangeError.c_str() );
+                    return false;
+                }
+                const int32 dealtCount = settings._playerCount * settings._handSize + settings._floorSize;
+                if ( dealtCount >= HwatuDeck::kCardCount )
+                {
+                    SW_LOG_ERROR( "MatgoGame: refused settings - %# players x %# cards + %# floor cards leaves no draw pile (deck has %# cards)", settings._playerCount,
+                                  settings._handSize, settings._floorSize, HwatuDeck::kCardCount );
+                    return false;
+                }
+                return true;
+            }
         };
     } // namespace
 } // namespace sw
@@ -65,8 +88,10 @@ namespace sw
     {
     }
 
-    void MatgoGame::initialize( const MatgoSettings& settings, uint32 seed )
+    bool MatgoGame::initialize( const MatgoSettings& settings, uint32 seed )
     {
+        if ( MatgoGameInternal::acceptSettings( settings ) == false )
+            return false;
         GameRandom  random( seed );
         MatgoLayout layout;
         for ( int32 attempt = 0; attempt < MatgoGameInternal::kDealAttemptCount; ++attempt )
@@ -75,7 +100,7 @@ namespace sw
             HwatuDeck::makeDeck( deck );
             deck.shuffle( random );
             layout._listHand.clear();
-            layout._listHand.resize( static_cast<size_t>( MathUtil::max( 1, settings._playerCount ) ) );
+            layout._listHand.resize( static_cast<size_t>( settings._playerCount ) );
             layout._floor.clear();
             (void)deck.deal( layout._listHand, settings._handSize );
             (void)deck.drawInto( layout._floor, settings._floorSize );
@@ -83,30 +108,47 @@ namespace sw
             if ( MatgoGameInternal::hasFourOfMonth( layout._floor ) == false )
                 break; // 바닥에 같은 월 넷이 나오면 다시 섞는다
         }
-        initializeFromLayout( settings, layout );
+        return initializeFromLayout( settings, layout );
     }
 
-    void MatgoGame::initializeFromLayout( const MatgoSettings& settings, const MatgoLayout& layout )
+    bool MatgoGame::initializeFromLayout( const MatgoSettings& settings, const MatgoLayout& layout )
     {
+        if ( MatgoGameInternal::acceptSettings( settings ) == false )
+            return false;
+        const size_t playerCount = static_cast<size_t>( settings._playerCount );
+        if ( layout._listHand.size() != playerCount )
+        {
+            SW_LOG_ERROR( "MatgoGame: refused layout - %# hands for %# players", layout._listHand.size(), playerCount );
+            return false;
+        }
+        if ( layout._listCaptured.empty() == false && layout._listCaptured.size() != playerCount )
+        {
+            SW_LOG_ERROR( "MatgoGame: refused layout - %# captured piles for %# players (leave it empty for none)", layout._listCaptured.size(), playerCount );
+            return false;
+        }
+        if ( layout._firstPlayer < 0 || layout._firstPlayer >= settings._playerCount )
+        {
+            SW_LOG_ERROR( "MatgoGame: refused layout - first player %# is outside 0..%#", layout._firstPlayer, settings._playerCount - 1 );
+            return false;
+        }
         _settings = settings;
         _listPlayer.clear();
-        _listPlayer.resize( static_cast<size_t>( MathUtil::max( 1, settings._playerCount ) ) );
-        for ( size_t player = 0; player < _listPlayer.size() && player < layout._listHand.size(); ++player )
+        _listPlayer.resize( playerCount );
+        for ( size_t player = 0; player < playerCount; ++player )
         {
             _listPlayer[player]._hand = layout._listHand[player];
-        }
-        for ( size_t player = 0; player < _listPlayer.size() && player < layout._listCaptured.size(); ++player )
-        {
-            _listPlayer[player]._captured = layout._listCaptured[player];
+            if ( layout._listCaptured.empty() == false )
+                _listPlayer[player]._captured = layout._listCaptured[player];
         }
         _floor         = layout._floor;
         _drawPile      = layout._drawPile;
-        _currentPlayer = MathUtil::clamp( layout._firstPlayer, 0, getPlayerCount() - 1 );
+        _currentPlayer = layout._firstPlayer;
         _winner        = -1;
         _phase         = MatgoPhase::Play;
         _listSettlement.clear();
         _listSettlement.resize( _listPlayer.size(), 0 );
         _eventBuffer.clear();
+        return true;
     }
 
     bool MatgoGame::playCard( int32 player, uint16 cardID, uint16 targetID )

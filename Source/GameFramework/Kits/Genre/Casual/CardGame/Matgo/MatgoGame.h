@@ -17,6 +17,8 @@
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Casual/CardGame/CardDeck.h"
 #include "GameFramework/Kits/Genre/Casual/CardGame/Matgo/HwatuDeck.h"
@@ -25,23 +27,44 @@ namespace sw
 {
     class Archive;
 
-    /** @brief 규칙 설정입니다. */
-    struct MatgoSettings
+    /**
+     * @brief 규칙 설정입니다.
+     * @details 범위는 필드의 `PROPERTY( Min · Max )` 이고, 벗어난 값은 `MatgoGame::initialize*` 가 오류로 거절한다(`ConfigRangeUtil`). 인원 × 손패 + 바닥이 덱(48장)을 채우는 짝도 거절한다.
+     *          값을 조용히 맞추지 않는다(폴백 금지 원칙).
+     */
+    REFLECT()
+    struct SW_KIT_API MatgoSettings
     {
+        REFLECT_BODY();
+        PROPERTY( Min = 2, Max = 3 )
         int32 _playerCount{ 2 };
+        PROPERTY( Min = 1 )
         int32 _handSize{ 10 };
+        PROPERTY( Min = 0 )
         int32 _floorSize{ 8 };
-        int32 _goThreshold{ 7 };     ///< 이 점수가 나면 고와 스톱을 고른다(맞고 7, 고스톱 3)
+        PROPERTY( Min = 1 )
+        int32 _goThreshold{ 7 }; ///< 이 점수가 나면 고와 스톱을 고른다(맞고 7, 고스톱 3)
+        PROPERTY( Min = 0 )
         int32 _gwangThreeScore{ 3 }; ///< 비광 없는 3광의 점수이다
+        PROPERTY( Min = 0 )
         int32 _gwangRainThreeScore{ 2 };
+        PROPERTY( Min = 0 )
         int32 _gwangFourScore{ 4 };
+        PROPERTY( Min = 0 )
         int32 _gwangFiveScore{ 15 };
+        PROPERTY( Min = 0 )
         int32 _godoriScore{ 5 };
-        int32 _danScore{ 3 };          ///< 홍단, 청단, 초단 각각의 점수이다
-        int32 _yeolThreshold{ 5 };     ///< 열끗이 이 장수부터 1점이고 한 장마다 1점씩 늘어난다
-        int32 _ttiThreshold{ 5 };      ///< 띠가 이 장수부터 1점이다
-        int32 _piThreshold{ 10 };      ///< 피가 이 장수부터 1점이다
-        int32 _pibakBelow{ 6 };        ///< 진 쪽의 피가 이보다 적으면 피박이다(이긴 쪽이 피로 점수를 냈을 때)
+        PROPERTY( Min = 0 )
+        int32 _danScore{ 3 }; ///< 홍단, 청단, 초단 각각의 점수이다
+        PROPERTY( Min = 1 )
+        int32 _yeolThreshold{ 5 }; ///< 열끗이 이 장수부터 1점이고 한 장마다 1점씩 늘어난다
+        PROPERTY( Min = 1 )
+        int32 _ttiThreshold{ 5 }; ///< 띠가 이 장수부터 1점이다
+        PROPERTY( Min = 1 )
+        int32 _piThreshold{ 10 }; ///< 피가 이 장수부터 1점이다
+        PROPERTY( Min = 0 )
+        int32 _pibakBelow{ 6 }; ///< 진 쪽의 피가 이보다 적으면 피박이다(이긴 쪽이 피로 점수를 냈을 때)
+        PROPERTY( Min = 1 )
         int32 _meongbakYeolCount{ 7 }; ///< 이긴 쪽의 열끗이 이 장수이면 멍박(멍따)이다
         uint8 _bPibak{ SW_TRUE };
         uint8 _bGwangbak{ SW_TRUE };
@@ -179,9 +202,13 @@ namespace sw
 
         MatgoGame();
 
-        /** @brief 48장을 @p seed 로 섞어 나눕니다(사람마다 손패, 바닥, 남은 더미 순). 바닥에 같은 월 넷이 나오면 다시 섞습니다. */
-        void initialize( const MatgoSettings& settings, uint32 seed );
-        void initializeFromLayout( const MatgoSettings& settings, const MatgoLayout& layout );
+        /**
+         * @brief 48장을 @p seed 로 섞어 나눕니다(사람마다 손패, 바닥, 남은 더미 순). 바닥에 같은 월 넷이 나오면 다시 섞습니다.
+         * @return 설정이 범위 안이면 true 입니다. 밖이면 오류를 남기고 false 이며 상태를 바꾸지 않습니다.
+         */
+        [[nodiscard]] bool initialize( const MatgoSettings& settings, uint32 seed );
+        /** @brief 정해진 배치로 시작합니다. 설정이 범위 밖이거나 손패 수 · 먹은 패 더미 수(비우면 없음)가 인원과 다르거나 첫 차례가 인원 밖이면 오류를 남기고 false 이며 상태를 바꾸지 않습니다. */
+        [[nodiscard]] bool initializeFromLayout( const MatgoSettings& settings, const MatgoLayout& layout );
 
         /** @brief 차례인 @p player 가 손패 @p cardID 를 냅니다. 같은 월 바닥이 두 장이면 @p targetID 를 먹고, 지정하지 않으면 센 것을 먹습니다. */
         [[nodiscard]] bool playCard( int32 player, uint16 cardID, uint16 targetID = Card::kNoCard );

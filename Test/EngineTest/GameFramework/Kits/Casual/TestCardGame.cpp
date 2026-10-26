@@ -497,6 +497,40 @@ SW_TEST_CASE( CardGameTest, MatgoScoresGwangGodoriDanPiAndAppliesBakAndGoMultipl
     SW_EXPECT_EQUAL( MatgoGame::computePayout( winner, loser, 4, settings )._multiplier, 16 );
 }
 
+SW_TEST_CASE( CardGameTest, MatgoRefusesOutOfRangeSettingsAndLayoutsInsteadOfClampingThem )
+{
+    MatgoGame     game;
+    MatgoSettings settings = MatgoSettings::makeMatgo();
+    settings._playerCount  = 1; // 예전에는 조용히 1 로 두었다
+    SW_EXPECT_FALSE( game.initialize( settings, 1 ) );
+
+    settings           = MatgoSettings::makeGoStop();
+    settings._handSize = 15; // 3 x 15 + 6 >= 48
+    SW_EXPECT_FALSE( game.initialize( settings, 1 ) );
+
+    settings              = MatgoSettings::makeMatgo();
+    settings._goThreshold = 0;
+    SW_EXPECT_FALSE( game.initialize( settings, 1 ) );
+
+    SW_ASSERT_TRUE( game.initialize( MatgoSettings::makeMatgo(), 1 ) );
+    SW_EXPECT_EQUAL( game.getPlayerCount(), 2 );
+
+    MatgoLayout layout; // 손패 수가 인원과 다르다
+    layout._listHand = { CardPile{} };
+    SW_EXPECT_FALSE( game.initializeFromLayout( MatgoSettings::makeMatgo(), layout ) );
+    SW_EXPECT_EQUAL( game.getPlayerCount(), 2 ); // 거절하면 상태가 그대로이다
+
+    layout._listHand     = { CardPile{}, CardPile{} };
+    layout._listCaptured = { CardPile{} }; // 먹은 패 더미는 비우거나 인원만큼이어야 한다
+    SW_EXPECT_FALSE( game.initializeFromLayout( MatgoSettings::makeMatgo(), layout ) );
+
+    layout._listCaptured = {};
+    layout._firstPlayer  = 2; // 인원 밖
+    SW_EXPECT_FALSE( game.initializeFromLayout( MatgoSettings::makeMatgo(), layout ) );
+    layout._firstPlayer = 1;
+    SW_EXPECT_TRUE( game.initializeFromLayout( MatgoSettings::makeMatgo(), layout ) );
+}
+
 SW_TEST_CASE( CardGameTest, MatgoPpeokSweepJjokAndGoStopFlow )
 {
     // 첫째 판 — 0 이 1 월로 뻑, 1 이 넷째로 뻑을 먹고(피 뺏기) 바닥을 쓸어(피 뺏기), 0 이 쪽.
@@ -516,7 +550,7 @@ SW_TEST_CASE( CardGameTest, MatgoPpeokSweepJjokAndGoStopFlow )
     } );
     CardDeckUtil::makePileInDrawOrder( { makeHwatu( 1, 3 ), makeHwatu( 6, 3 ), makeHwatu( 10, 3 ), makeHwatu( 2, 2 ) }, layout._drawPile );
     MatgoGame game;
-    game.initializeFromLayout( MatgoSettings::makeMatgo(), layout );
+    SW_ASSERT_TRUE( game.initializeFromLayout( MatgoSettings::makeMatgo(), layout ) );
 
     SW_EXPECT_FALSE( game.playCard( 1, makeHwatu( 1, 1 )._id ) ); // 차례가 아니다
     SW_EXPECT_FALSE( game.playCard( 0, makeHwatu( 5, 0 )._id ) ); // 손에 없다
@@ -563,7 +597,7 @@ SW_TEST_CASE( CardGameTest, MatgoPpeokSweepJjokAndGoStopFlow )
     } );
     CardDeckUtil::makePileInDrawOrder( { makeHwatu( 9, 2 ), makeHwatu( 10, 2 ), makeHwatu( 6, 2 ), makeHwatu( 6, 3 ) }, goLayout._drawPile );
     MatgoGame goGame;
-    goGame.initializeFromLayout( MatgoSettings::makeMatgo(), goLayout );
+    SW_ASSERT_TRUE( goGame.initializeFromLayout( MatgoSettings::makeMatgo(), goLayout ) );
     SW_EXPECT_TRUE( goGame.playCard( 0, makeHwatu( 5, 2 )._id ) ); // 띠 다섯 → 3 광 3 + 홍단 3 + 띠 1 = 7
     SW_EXPECT_TRUE( goGame.getPhase() == MatgoPhase::GoStopChoice );
     SW_EXPECT_EQUAL( goGame.computePlayerScore( 0 )._total, 7 );
@@ -584,8 +618,8 @@ SW_TEST_CASE( CardGameTest, MatgoPpeokSweepJjokAndGoStopFlow )
     // 씨앗 판 — 같은 씨앗이면 같은 손패, 고스톱은 셋에게 7 장 · 바닥 6 장.
     MatgoGame seededA;
     MatgoGame seededB;
-    seededA.initialize( MatgoSettings::makeGoStop(), 99 );
-    seededB.initialize( MatgoSettings::makeGoStop(), 99 );
+    SW_ASSERT_TRUE( seededA.initialize( MatgoSettings::makeGoStop(), 99 ) );
+    SW_ASSERT_TRUE( seededB.initialize( MatgoSettings::makeGoStop(), 99 ) );
     SW_EXPECT_EQUAL( seededA.getPlayerCount(), 3 );
     SW_EXPECT_EQUAL( seededA.getPlayer( 2 )._hand.getCount(), 7 );
     SW_EXPECT_EQUAL( seededA.getFloor().getCount(), 6 );
@@ -919,7 +953,7 @@ SW_TEST_CASE( CardGameTest, StateRoundTripContinuesTheSameTables )
 
     // 맞고 — 두 차례 낸 판. 다른 씨앗으로 나눈 판에 읽는다.
     MatgoGame matgo;
-    matgo.initialize( MatgoSettings::makeMatgo(), 99 );
+    SW_ASSERT_TRUE( matgo.initialize( MatgoSettings::makeMatgo(), 99 ) );
     for ( int32 turn = 0; turn < 2; ++turn )
     {
         const int32 player = matgo.getCurrentPlayer();
@@ -927,7 +961,7 @@ SW_TEST_CASE( CardGameTest, StateRoundTripContinuesTheSameTables )
     }
     const vector<uint8> matgoBytes = captureCardBytes( matgo );
     MatgoGame           restoredMatgo;
-    restoredMatgo.initialize( MatgoSettings::makeMatgo(), 5 );
+    SW_ASSERT_TRUE( restoredMatgo.initialize( MatgoSettings::makeMatgo(), 5 ) );
     SW_ASSERT_TRUE( restoreCardBytes( matgoBytes, restoredMatgo ) );
     SW_EXPECT_EQUAL( matgo.getCurrentPlayer(), restoredMatgo.getCurrentPlayer() );
     SW_EXPECT_EQUAL( matgo.getFloor().getCount(), restoredMatgo.getFloor().getCount() );
@@ -941,7 +975,7 @@ SW_TEST_CASE( CardGameTest, StateRoundTripContinuesTheSameTables )
     }
     SW_EXPECT_TRUE( captureCardBytes( matgo ) == captureCardBytes( restoredMatgo ) );
     MatgoGame truncatedMatgo;
-    truncatedMatgo.initialize( MatgoSettings::makeMatgo(), 5 );
+    SW_ASSERT_TRUE( truncatedMatgo.initialize( MatgoSettings::makeMatgo(), 5 ) );
     const int32 untouchedDrawCount = truncatedMatgo.getDrawPile().getCount();
     SW_EXPECT_FALSE( restoreTruncatedCardBytes( matgoBytes, truncatedMatgo ) );
     SW_EXPECT_EQUAL( untouchedDrawCount, truncatedMatgo.getDrawPile().getCount() );
