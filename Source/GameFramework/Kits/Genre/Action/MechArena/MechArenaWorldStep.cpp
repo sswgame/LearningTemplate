@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Math/DeterministicMathUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/BitStream.h"
 
@@ -38,15 +39,16 @@ namespace sw
             static float3 rotateToward( const float3& direction, const float3& desired, float32 maxRadian )
             {
                 const float32 cosAngle = MathUtil::clamp( direction.dot( desired ), -1.0f, 1.0f );
-                const float32 angle    = MathUtil::acos( cosAngle );
+                // 결정적 시뮬레이션 TU 라 libm 대신 `DeterministicMathUtil` 이다(`sw_markDeterministicSources`).
+                const float32 angle = DeterministicMathUtil::acos( cosAngle );
                 if ( angle <= maxRadian || angle < kTiny )
                     return desired;
-                const float32 sinAngle = MathUtil::sin( angle );
+                const float32 sinAngle = DeterministicMathUtil::sin( angle );
                 if ( sinAngle < kTiny )
                     return direction; // 정반대 방향이라 돌 축이 정해지지 않는다
                 const float32 ratio    = maxRadian / angle;
-                const float32 fromPart = MathUtil::sin( ( 1.0f - ratio ) * angle ) / sinAngle;
-                const float32 toPart   = MathUtil::sin( ratio * angle ) / sinAngle;
+                const float32 fromPart = DeterministicMathUtil::sin( ( 1.0f - ratio ) * angle ) / sinAngle;
+                const float32 toPart   = DeterministicMathUtil::sin( ratio * angle ) / sinAngle;
                 return normalizeOr( direction * fromPart + desired * toPart, direction );
             }
 

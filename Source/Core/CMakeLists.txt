@@ -92,10 +92,13 @@ target_compile_definitions(Core_objects PRIVATE "SW_LOG_TAG=\"Engine\"")
 sw_addCoreObjects(Core_low_objects corelow pchLow.h ${listCoreLowSource})
 # 벡터 거리 · 길이(`float3::getDistance` 등)는 파괴 · 파쇄가 쓰는 줄 밖 함수다 — 구성마다 같은 비트여야 한다(`sw_markDeterministicSources`).
 # 여기서 축약을 끄는 비용은 이 함수들의 FMA 하나씩이다(인라인이 아니라 호출 비용이 이미 더 크다). Math 는 낮은 티어라 낮은 쪽에 건다.
-if(NOT "${CMAKE_CURRENT_SOURCE_DIR}/Math/VectorMath.cpp" IN_LIST listCoreLowSource)
-	message(FATAL_ERROR "[Core] Math/VectorMath.cpp 가 낮은 티어 소스에 없다 — 결정성 표시(sw_markDeterministicSources)가 걸릴 타깃을 다시 정한다")
-endif()
-sw_markDeterministicSources(Core_low_objects Math/VectorMath.cpp)
+# 결정적 삼각함수(`DeterministicMathUtil`)는 롤백 시뮬레이션이 libm 대신 부르는 줄 밖 함수라 같은 표시를 건다.
+foreach(swDeterministicSource IN ITEMS Math/VectorMath.cpp Math/DeterministicMathUtil.cpp)
+	if(NOT "${CMAKE_CURRENT_SOURCE_DIR}/${swDeterministicSource}" IN_LIST listCoreLowSource)
+		message(FATAL_ERROR "[Core] ${swDeterministicSource} 가 낮은 티어 소스에 없다 — 결정성 표시(sw_markDeterministicSources)가 걸릴 타깃을 다시 정한다")
+	endif()
+endforeach()
+sw_markDeterministicSources(Core_low_objects Math/VectorMath.cpp Math/DeterministicMathUtil.cpp)
 
 # ------------------------------------------------------------------------------
 # 4) Core STATIC — 파서가 링크하는 껍데기. Engine 은 OBJECT 들을 직접 가져간다

@@ -178,6 +178,8 @@ endfunction()
 #   clang-cl 의 기본 /fp:precise 는 축약을 허락하므로(-ffp-contract=on) 축약만 따로 끈다.
 #   유니티 묶음에서 뺀다 — 묶음 파일은 묶음의 옵션 하나로 컴파일되므로 파일별 옵션이 묶음 전체에 퍼지거나 빠진다.
 #   PCH 는 그대로 쓴다(축약 옵션은 PCH 호환 검사 대상이 아니다).
+#   표시한 TU 는 libm 삼각함수(`MathUtil::sin` 등) 대신 `DeterministicMathUtil` 을 쓴다 — CRT 판 · 벡터화 판이 끝 비트를 바꾼다.
+#   표시한 타깃은 전역 속성 `SW_DETERMINISTIC_TARGETS` 에 남는다(`sw_requireDeterministicMarkForRollback` 이 대조한다).
 # ------------------------------------------------------------------------------
 function(sw_markDeterministicSources TARGET_NAME)
 	if(NOT TARGET ${TARGET_NAME})
@@ -200,4 +202,41 @@ function(sw_markDeterministicSources TARGET_NAME)
 			COMPILE_OPTIONS "${contractOff}"
 			SKIP_UNITY_BUILD_INCLUSION ON)
 	endforeach()
+	set_property(GLOBAL APPEND PROPERTY SW_DETERMINISTIC_TARGETS ${TARGET_NAME})
+endfunction()
+
+# ------------------------------------------------------------------------------
+# sw_requireDeterministicMarkForRollback — 롤백 게임 계약(`IRollbackGame::saveState( vector<uint8>& )` 과 같은 서명)을 구현하는 모듈은
+#   결정성 표시(`sw_markDeterministicSources`)가 필수다. `sw_addModuleLibrary` 가 모든 모듈 타깃에 부른다.
+#   게이트인 이유: 부동소수점 축약은 컴파일 옵션이라 C++ 형식이 알 수 없고, 표시를 빠뜨려도 빌드는 서고 Debug ↔ Release 의 롤백 해시만 갈린다.
+#   모듈 헤더에서 그 서명을 찾으면(순수 가상 `= 0` 인 계약 선언 자체는 뺀다) 그 디렉터리의 CMakeLists 가 끝날 때 표시가 걸렸는지 본다 —
+#   표시는 모듈을 만든 뒤 같은 CMakeLists 에서 부르므로 지금 보면 늘 없다.
+# ------------------------------------------------------------------------------
+function(sw_requireDeterministicMarkForRollback TARGET_NAME)
+	set(listRollbackHeader "")
+	foreach(src IN LISTS ARGN)
+		if(NOT src MATCHES "\\.h$" OR src MATCHES "^\\$<")
+			continue()
+		endif()
+		if(NOT IS_ABSOLUTE "${src}")
+			set(src "${CMAKE_CURRENT_SOURCE_DIR}/${src}")
+		endif()
+		file(STRINGS "${src}" listSaveStateLine REGEX "void[ \t]+saveState[ \t]*\\([ \t]*vector<uint8>[ \t]*&")
+		list(FILTER listSaveStateLine EXCLUDE REGEX "=[ \t]*0[ \t]*;")
+		if(listSaveStateLine)
+			list(APPEND listRollbackHeader "${src}")
+		endif()
+	endforeach()
+	if(listRollbackHeader)
+		# DEFER 의 인자는 실행할 때 풀리므로 지금 값을 글로 박아 넘긴다.
+		cmake_language(EVAL CODE "cmake_language(DEFER CALL sw_verifyDeterministicMark [[${TARGET_NAME}]] [[${listRollbackHeader}]])")
+	endif()
+endfunction()
+
+function(sw_verifyDeterministicMark TARGET_NAME ROLLBACK_HEADERS)
+	get_property(listMarked GLOBAL PROPERTY SW_DETERMINISTIC_TARGETS)
+	if(NOT TARGET_NAME IN_LIST listMarked)
+		message(FATAL_ERROR "${TARGET_NAME} implements the rollback contract (saveState( vector<uint8>& ) in ${ROLLBACK_HEADERS}) "
+			"but marks no deterministic sources - call sw_markDeterministicSources(${TARGET_NAME} <simulation .cpp files>) in its CMakeLists")
+	endif()
 endfunction()

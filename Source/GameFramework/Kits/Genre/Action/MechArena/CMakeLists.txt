@@ -4,3 +4,14 @@
 # ==============================================================================
 
 sw_addGameFrameworkKit(GF_MechArena)
+if(NOT TARGET GF_MechArena)
+	return()
+endif()
+# 판 걸음(`step`)과 상태 직렬화는 서버와 리플레이가 같은 입력으로 다시 도는 시뮬레이션이다 — 구성마다 같은 비트여야 한다(`sw_markDeterministicSources`).
+# 카탈로그 읽기는 계산이 아니라 넣지 않는다.
+sw_markDeterministicSources(GF_MechArena
+	MechArenaWorld.cpp
+	MechArenaWorldCombat.cpp
+	MechArenaWorldState.cpp
+	MechArenaWorldStep.cpp
+)

@@ -4,3 +4,9 @@
 # ==============================================================================
 
 sw_addGameFrameworkKit(GF_Fighting)
+if(NOT TARGET GF_Fighting)
+	return()
+endif()
+# 대전은 롤백 넷코드로 입력만 주고받고 양쪽이 같은 프레임을 다시 돈다 — 구성마다 같은 비트여야 한다(`sw_markDeterministicSources`,
+# `FightingTest.RollbackHashMatchesTheRecordedValueOnEveryBuild`). 카탈로그 읽기는 계산이 아니라 넣지 않는다.
+sw_markDeterministicSources(GF_Fighting FightingMatch.cpp)
