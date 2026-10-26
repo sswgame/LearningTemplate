@@ -75,7 +75,7 @@ function(sw_addCoreObjects TARGET_NAME PCH_ENTRY_NAME PCH_FILE)
 	endif()
 
 	if(WIN32)
-		target_link_libraries(${TARGET_NAME} PUBLIC comdlg32 ole32 shell32 dbghelp synchronization ws2_32)
+		target_link_libraries(${TARGET_NAME} PUBLIC bcrypt comdlg32 ole32 shell32 dbghelp synchronization ws2_32)
 	endif()
 
 	sw_configurePch(${TARGET_NAME} "${CMAKE_CURRENT_SOURCE_DIR}/${PCH_FILE}")
@@ -108,7 +108,7 @@ target_link_libraries(Core PUBLIC sw_public_source_includes)
 target_link_libraries(Core PUBLIC sw_third_party_includes)
 
 if(WIN32)
-	target_link_libraries(Core PUBLIC comdlg32 ole32 shell32 dbghelp synchronization ws2_32)
+	target_link_libraries(Core PUBLIC bcrypt comdlg32 ole32 shell32 dbghelp synchronization ws2_32)
 endif()
 
 # Engine 이 $<TARGET_OBJECTS:...> 를 가져갈 수 있도록 의존성을 드러낸다

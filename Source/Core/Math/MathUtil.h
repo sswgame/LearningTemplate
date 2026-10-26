@@ -313,8 +313,8 @@ namespace sw
         }
 
         /**
-         * @brief 스레드마다 씨앗이 다른 64 비트 난수입니다(비결정 — 결정적 난수는 `XorShift32` · `HashUtil::splitMix64Next`).
-         * @details 엔진(`std::mt19937_64`)은 MathUtil.cpp 에 둔다 — `<random>` 을 모든 TU 가 읽지 않게.
+         * @brief 스레드마다 씨앗이 다른 64 비트 난수입니다(비결정 — 결정적 난수는 `DeterministicRandom32` · `64`, 비밀은 `SecureRandom`).
+         * @details 엔진(`std::mt19937_64`, 씨앗은 `SecureRandom`)은 MathUtil.cpp 에 둔다 — `<random>` 을 모든 TU 가 읽지 않게.
          */
         static SW_API uint64 getRandomBits64();
 

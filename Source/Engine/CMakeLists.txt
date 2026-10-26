@@ -203,12 +203,13 @@ elseif(SW_SHIPPING_BUILD)
 endif()
 
 # ------------------------------------------------------------------------------
-# 6) Windows 시스템 라이브러리 — Input(XInput) + 파일 대화상자 + 셰이더 컴파일러 유틸리티. 지연 로드(/DELAYLOAD)는 쓰지 않는다(docs/09_Decisions.md):
+# 6) Windows 시스템 라이브러리 — Input(XInput) + 파일 대화상자 + 셰이더 컴파일러 유틸리티 + OS 난수(bcrypt, Core 의 SecureRandom). 지연 로드(/DELAYLOAD)는 쓰지 않는다(docs/09_Decisions.md):
 #    없을 수 있는 DLL(Media Foundation — Windows N · XAudio2)은 쓰는 쪽이 LoadLibrary + 함수 표로 올리므로 import 라이브러리를 링크하지 않는다
 #    (`XAudio2AudioBackend.cpp`). d3dcompiler_47 은 Windows 8.1 부터 System32 에 늘 있어 일반 import 다(DX 백엔드 모듈도 그렇다).
 # ------------------------------------------------------------------------------
 if(WIN32)
 	target_link_libraries(Engine PRIVATE
+		bcrypt.lib
 		comdlg32.lib
 		d3dcompiler.lib
 		dbghelp.lib
