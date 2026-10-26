@@ -15,6 +15,7 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
+#include "Engine/Serialization/Format/SerializerTranscodeUtil.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleSaveState.h"
@@ -1166,10 +1167,10 @@ SW_TEST_CASE( ArchiveTest, SerializerUtilTranscodingAndScopedScratch )
     SW_EXPECT_FALSE( jsonSource.empty() );
 
     sw::vector<uint8> transcodedBinary;
-    SW_EXPECT_TRUE( sw::SerializerUtil::transcodeJSONToBinary( jsonSource, *pPlayerType, transcodedBinary ) );
+    SW_EXPECT_TRUE( sw::SerializerTranscodeUtil::transcodeJSONToBinary( jsonSource, *pPlayerType, transcodedBinary ) );
     SW_EXPECT_FALSE( transcodedBinary.empty() );
 
-    const sw::string transcodedJSON = sw::SerializerUtil::transcodeBinaryToJSON( transcodedBinary.data(), transcodedBinary.size(), *pPlayerType );
+    const sw::string transcodedJSON = sw::SerializerTranscodeUtil::transcodeBinaryToJSON( transcodedBinary.data(), transcodedBinary.size(), *pPlayerType );
     SW_EXPECT_FALSE( transcodedJSON.empty() );
 
     TestReflectedPlayer deserializedFromJSON;
@@ -1183,10 +1184,10 @@ SW_TEST_CASE( ArchiveTest, SerializerUtilTranscodingAndScopedScratch )
     SW_EXPECT_FALSE( xmlSource.empty() );
 
     sw::vector<uint8> transcodedXMLBinary;
-    SW_EXPECT_TRUE( sw::SerializerUtil::transcodeXMLToBinary( xmlSource, *pPlayerType, transcodedXMLBinary ) );
+    SW_EXPECT_TRUE( sw::SerializerTranscodeUtil::transcodeXMLToBinary( xmlSource, *pPlayerType, transcodedXMLBinary ) );
     SW_EXPECT_FALSE( transcodedXMLBinary.empty() );
 
-    const sw::string transcodedXML = sw::SerializerUtil::transcodeBinaryToXML( transcodedXMLBinary.data(), transcodedXMLBinary.size(), *pPlayerType );
+    const sw::string transcodedXML = sw::SerializerTranscodeUtil::transcodeBinaryToXML( transcodedXMLBinary.data(), transcodedXMLBinary.size(), *pPlayerType );
     SW_EXPECT_FALSE( transcodedXML.empty() );
 
     TestReflectedPlayer deserializedFromXML;
@@ -1298,7 +1299,7 @@ SW_TEST_CASE( ArchiveTest, TranscodingFailureCasesAndInvalidInputs )
     {
         const sw::string  brokenJSON = "{\"_level\": 42, \"_name\": \"Unfinished";
         sw::vector<uint8> outBinary;
-        SW_EXPECT_FALSE( sw::SerializerUtil::transcodeJSONToBinary( brokenJSON, *pPlayerType, outBinary ) );
+        SW_EXPECT_FALSE( sw::SerializerTranscodeUtil::transcodeJSONToBinary( brokenJSON, *pPlayerType, outBinary ) );
         SW_EXPECT_TRUE( outBinary.empty() );
     }
 
@@ -1306,23 +1307,23 @@ SW_TEST_CASE( ArchiveTest, TranscodingFailureCasesAndInvalidInputs )
     {
         const sw::string  brokenXML = "<TestReflectedPlayer _level=\"42\" <unclosed_tag";
         sw::vector<uint8> outBinary;
-        SW_EXPECT_FALSE( sw::SerializerUtil::transcodeXMLToBinary( brokenXML, *pPlayerType, outBinary ) );
+        SW_EXPECT_FALSE( sw::SerializerTranscodeUtil::transcodeXMLToBinary( brokenXML, *pPlayerType, outBinary ) );
         SW_EXPECT_TRUE( outBinary.empty() );
     }
 
     // 3. Null / empty binary data transcoding to JSON and XML
     {
-        const sw::string jsonResult = sw::SerializerUtil::transcodeBinaryToJSON( nullptr, 0, *pPlayerType );
+        const sw::string jsonResult = sw::SerializerTranscodeUtil::transcodeBinaryToJSON( nullptr, 0, *pPlayerType );
         SW_EXPECT_TRUE( jsonResult.empty() );
 
-        const sw::string xmlResult = sw::SerializerUtil::transcodeBinaryToXML( nullptr, 0, *pPlayerType );
+        const sw::string xmlResult = sw::SerializerTranscodeUtil::transcodeBinaryToXML( nullptr, 0, *pPlayerType );
         SW_EXPECT_TRUE( xmlResult.empty() );
     }
 
     // 4. Truncated binary data transcoding to JSON
     {
         const uint8      truncatedBytes[2] = { 0x01, 0x00 };
-        const sw::string jsonResult        = sw::SerializerUtil::transcodeBinaryToJSON( truncatedBytes, 2, *pPlayerType );
+        const sw::string jsonResult        = sw::SerializerTranscodeUtil::transcodeBinaryToJSON( truncatedBytes, 2, *pPlayerType );
         SW_EXPECT_TRUE( jsonResult.empty() );
     }
 }

@@ -285,22 +285,6 @@ namespace sw
 
         /** @brief 저작 파일에 있으면 안 되는 필드(`isForbiddenInFile`)를 타입과 필드 이름으로 오류 로그에 남깁니다. */
         SW_API static void reportForbiddenProperty( const TypeInfo& owner, const PropertyInfo& prop );
-
-        /** @brief JSON 문자열을 바이너리 버퍼로 트랜스코딩합니다. */
-        SW_API static bool transcodeJSONToBinary( string_view jsonStr, const TypeInfo& typeInfo, vector<uint8>& outBinary,
-                                                  const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
-
-        /** @brief 바이너리 데이터를 JSON 문자열로 트랜스코딩합니다. */
-        SW_API static string transcodeBinaryToJSON( const uint8* pData, size_t dataSize, const TypeInfo& typeInfo, bool bPretty = false,
-                                                    const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
-
-        /** @brief XML 문자열을 바이너리 버퍼로 트랜스코딩합니다. */
-        SW_API static bool transcodeXMLToBinary( string_view xmlStr, const TypeInfo& typeInfo, vector<uint8>& outBinary,
-                                                 const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
-
-        /** @brief 바이너리 데이터를 XML 문자열로 트랜스코딩합니다. */
-        SW_API static string transcodeBinaryToXML( const uint8* pData, size_t dataSize, const TypeInfo& typeInfo,
-                                                   const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
     };
 } // namespace sw
 

@@ -15,7 +15,6 @@
 #include "Engine/Serialization/Base/SchemaMigrate.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
-#include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw
@@ -405,43 +404,6 @@ namespace sw
                         return ContainerReadResult::ObjectRejected;
                 }
                 return ContainerReadResult::ObjectRejected;
-            }
-
-            /**
-             * @brief 텍스트(JSON, XML)를 임시 인스턴스로 읽어 바이너리로 다시 씁니다. `deserializeText` 가 텍스트 형식을 고릅니다.
-             * @return 텍스트를 읽지 못하면 false 이고, 그때 `outBinary` 는 건드리지 않습니다.
-             */
-            template <typename DeserializeTextFunc>
-            static bool transcodeTextToBinary( string_view text, const TypeInfo& typeInfo, vector<uint8>& outBinary,
-                                               const SerializeContext& context, DeserializeTextFunc&& deserializeText )
-            {
-                if ( text.empty() || typeInfo._size == 0 )
-                    return false;
-
-                ScopedScratchInstance scratch( typeInfo );
-                if ( scratch.isValid() == false || deserializeText( scratch.get() ) == false )
-                    return false;
-
-                return BinarySerializer::serialize( scratch.get(), typeInfo, outBinary, context );
-            }
-
-            /**
-             * @brief 바이너리를 임시 인스턴스로 읽어 텍스트로 다시 씁니다. `serializeText` 가 텍스트 형식을 고릅니다.
-             * @return 바이너리를 읽지 못하면 빈 문자열입니다.
-             */
-            template <typename SerializeTextFunc>
-            static string transcodeBinaryToText( const uint8* pData, size_t dataSize, const TypeInfo& typeInfo, const SerializeContext& context,
-                                                 SerializeTextFunc&& serializeText )
-            {
-                const bool bEmptyTranscodeInput = pData == nullptr || dataSize == 0 || typeInfo._size == 0;
-                if ( bEmptyTranscodeInput )
-                    return {};
-
-                ScopedScratchInstance scratch( typeInfo );
-                if ( scratch.isValid() == false || BinarySerializer::deserialize( scratch.get(), typeInfo, pData, dataSize, context ) == false )
-                    return {};
-
-                return serializeText( scratch.get() );
             }
 
             /** @brief 컨테이너를 바이너리로 적습니다. 원소 수(uint32) 뒤에 원소를 적고, 맵은 항목마다 키와 값을 적습니다. 소유 포인터 원소는 `[이름][본문크기][본문]` 입니다. */
@@ -1083,42 +1045,6 @@ namespace sw
                 return propIndex;
         }
         return listProp.size();
-    }
-
-    bool SerializerUtil::transcodeJSONToBinary( string_view jsonStr, const TypeInfo& typeInfo, vector<uint8>& outBinary,
-                                                const SerializeContext& context )
-    {
-        return SerializerUtilInternal::transcodeTextToBinary( jsonStr, typeInfo, outBinary, context, [&]( void* pScratch )
-        {
-            return JSONSerializer::deserialize( pScratch, typeInfo, jsonStr, context );
-        } );
-    }
-
-    string SerializerUtil::transcodeBinaryToJSON( const uint8* pData, size_t dataSize, const TypeInfo& typeInfo, bool bPretty,
-                                                  const SerializeContext& context )
-    {
-        return SerializerUtilInternal::transcodeBinaryToText( pData, dataSize, typeInfo, context, [&]( const void* pScratch )
-        {
-            return bPretty ? JSONSerializer::serializePretty( pScratch, typeInfo, 4, context ) : JSONSerializer::serialize( pScratch, typeInfo, context );
-        } );
-    }
-
-    bool SerializerUtil::transcodeXMLToBinary( string_view xmlStr, const TypeInfo& typeInfo, vector<uint8>& outBinary,
-                                               const SerializeContext& context )
-    {
-        return SerializerUtilInternal::transcodeTextToBinary( xmlStr, typeInfo, outBinary, context, [&]( void* pScratch )
-        {
-            return XMLSerializer::deserialize( pScratch, typeInfo, xmlStr, context );
-        } );
-    }
-
-    string SerializerUtil::transcodeBinaryToXML( const uint8* pData, size_t dataSize, const TypeInfo& typeInfo,
-                                                 const SerializeContext& context )
-    {
-        return SerializerUtilInternal::transcodeBinaryToText( pData, dataSize, typeInfo, context, [&]( const void* pScratch )
-        {
-            return XMLSerializer::serialize( pScratch, typeInfo, context );
-        } );
     }
 
     void SerializerUtil::collectRangeErrors( const TypeInfo& typeInfo, const ObjectAddress instance, const string& prefix, vector<string>& outListError )
