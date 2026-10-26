@@ -26,6 +26,7 @@ namespace sw
 {
     struct OnlineServerKitContext;
 
+    class IClock;
     class IStreamTransport;
     class MetricRegistry;
     class OnlineServiceHost;
@@ -57,10 +58,10 @@ namespace sw
         IStreamTransport*       _pAdminTransport{ nullptr }; ///< `_bAdminListener` 일 때 GM 리슨의 전송. 빌려 쓴다. null 이면 플랫폼 전송을 만든다
         MetricRegistry*         _pMetricRegistry{ nullptr };
         ServiceHealthRegistry*  _pHealthRegistry{ nullptr };
+        const IClock*           _pClock{ nullptr };                       ///< 필수. 메모리 캐시 만료 · 외부 HTTP 시한을 재는 단조 시계(운영 `SystemMonotonicClock`, 가짜 시각 테스트 · 봇 `ManualClock`). 빌려 쓴다
         uint16                  _gamePort{ 0 };                           ///< 디렉터리에 알릴 게임(UDP) 포트(샤드 여럿이면 첫 포트)
         uint8                   _gamePortCount{ 1 };                      ///< 디렉터리에 알릴 게임 포트 수(`ServerDescriptor::_portCount` — 연이은 포트 샤드 수, 한 포트를 나누면 1)
         uint8                   _bTLS{ SW_TRUE };                         ///< 서비스 스트림을 TLS 1.3 으로 받는다(테스트와 봇은 끈다)
-        uint8                   _bManualCacheTime{ SW_FALSE };            ///< 메모리 캐시의 만료를 `tick` 의 시각으로 측정한다(가짜 시각 테스트, 봇)
         uint8                   _bAdminListener{ SW_FALSE };              ///< GM 리슨을 따로 연다(`OnlineServiceExposure`). 끄면 서비스 리슨 하나가 GM 서비스도 받는다
         uint8                   _bReverseIndependentKitOrder{ SW_FALSE }; ///< 의존이 없는 키트끼리를 이름 역순으로 세운다(테스트 — 적지 않은 의존을 이름 순서가 가리는지 잡는다)
     };

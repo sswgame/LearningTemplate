@@ -119,7 +119,7 @@ namespace sw
         httpRequest._timeoutMs = _requestTimeoutMs;
         httpRequest._bodyBytes.assign( reinterpret_cast<const uint8*>( body.data() ), reinterpret_cast<const uint8*>( body.data() ) + body.size() );
         httpRequest._listHeader.push_back( HTTPHeader{ "Content-Type", "application/x-www-form-urlencoded" } );
-        _requestID = _pHTTPClient->submitRequest( httpRequest, now.count() );
+        _requestID = _pHTTPClient->submitRequest( httpRequest );
         return true;
     }
 

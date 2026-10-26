@@ -53,7 +53,8 @@ namespace sw
         [[nodiscard]] static bool makeClientRequest( const HTTPRequest& request, HTTPClientRequest& outRequest );
 
     private:
-        mutex      _sendMutex; ///< `send` 를 한 번에 하나로 묶는다
-        HTTPClient _client;
+        mutex                _sendMutex; ///< `send` 를 한 번에 하나로 묶는다
+        SystemMonotonicClock _clock;     ///< 시한을 재는 시계. `_client` 가 빌리므로 먼저 선언한다
+        HTTPClient           _client;
     };
 } // namespace sw

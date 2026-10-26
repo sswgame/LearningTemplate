@@ -8,6 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Time/Clock.h"
 
 #include "GameFramework/Base/Online/HTTP/HTTPClient.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -23,7 +24,8 @@ namespace sw
     class SW_GF_API OwnedHTTPClient
     {
     public:
-        OwnedHTTPClient();
+        /** @param clock 요청 시한을 재는 단조 시계입니다. 빌려 쓰므로 이 객체보다 오래 살아야 합니다. */
+        explicit OwnedHTTPClient( const IClock& clock );
         ~OwnedHTTPClient();
 
         OwnedHTTPClient( const OwnedHTTPClient& )            = delete;

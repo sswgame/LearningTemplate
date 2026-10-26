@@ -204,13 +204,17 @@ namespace sw
     /** @brief 조립의 부품입니다. 키트 범위가 키트와 기반 노드를 소유하고, `shutdown` 이 범위를 비운 뒤에야 나머지 부품이 사라집니다. */
     struct OnlineServerRuntime::Parts
     {
-        MemoryServiceDatabase               _memoryDatabase{};
-        SystemMonotonicClock                _cacheSystemClock{};    ///< 메모리 캐시의 운영 시계
-        ManualClock                         _cacheManualClock{ 0 }; ///< `_bManualCacheTime` 이면 메모리 캐시가 이것을 받고 `update` 가 서비스 시각으로 민다
-        unique_ptr<MemoryEphemeralDatabase> _memoryCacheDatabase{}; ///< 캐시 드라이버가 메모리일 때만 있다. 받는 시계보다 나중에 선언한다(먼저 사라진다)
+        MemoryServiceDatabase _memoryDatabase{};
+        explicit Parts( const IClock& clock )
+            : _clock{ clock }
+        {
+        }
+
+        const IClock&                       _clock;                 ///< 설정이 준 단조 시계(메모리 캐시 · 키트의 HTTP 시한)
+        unique_ptr<MemoryEphemeralDatabase> _memoryCacheDatabase{}; ///< 캐시 드라이버가 메모리일 때만 있다
         OnlineServerConfig                  _config{};
         SubsystemScope                      _kitScope{}; ///< 기반 노드와 키트 노드를 소유하고, 키트가 내놓은 인터페이스를 타입으로 찾게 한다
-        OnlineServerKitContext              _context{ _kitScope };
+        OnlineServerKitContext              _context{ _kitScope, _clock };
         unique_ptr<IServiceStore>           _store{};
         unique_ptr<IEphemeralStore>         _cache{};
         unique_ptr<IStreamTransport>        _ownedTransport{};
@@ -228,7 +232,6 @@ namespace sw
         ServiceHealthRegistry*              _pHealthRegistry{ nullptr };
         UnixMilliseconds                    _nextRemoteConfigReloadMs{ 0 };
         int32                               _healthCheckIndex{ -1 };
-        uint8                               _bManualCacheTime{ SW_FALSE };
         uint8                               _bRegistered{ SW_FALSE };
     };
 
@@ -304,13 +307,17 @@ namespace sw
     bool OnlineServerRuntime::initialize( OnlineServerRuntimeConfig settings, UnixMilliseconds nowMs, string& outError )
     {
         SW_ASSERT( _bInitialized == SW_FALSE );
-        _parts        = make_unique<Parts>();
+        if ( settings._pClock == nullptr )
+        {
+            outError = "the online runtime needs a monotonic clock (_pClock)";
+            return false;
+        }
+        _parts        = make_unique<Parts>( *settings._pClock );
         _bInitialized = SW_TRUE; // 실패해도 `shutdown` 이 만든 것까지 정리한다
         Parts& parts  = *_parts;
 
-        parts._config           = settings._config;
-        parts._bManualCacheTime = settings._bManualCacheTime;
-        parts._pHealthRegistry  = settings._pHealthRegistry;
+        parts._config          = settings._config;
+        parts._pHealthRegistry = settings._pHealthRegistry;
         if ( parts._pHealthRegistry != nullptr )
             parts._healthCheckIndex = parts._pHealthRegistry->registerCheck( kHealthCheckName, true );
 
@@ -380,9 +387,7 @@ namespace sw
 
         if ( Internal::isMemoryDriver( settings._cache._driver ) )
         {
-            parts._cacheManualClock.setMilliseconds( nowMs.count() );
-            const IClock& cacheClock   = parts._bManualCacheTime == SW_TRUE ? static_cast<const IClock&>( parts._cacheManualClock ) : parts._cacheSystemClock;
-            parts._memoryCacheDatabase = make_unique<MemoryEphemeralDatabase>( cacheClock );
+            parts._memoryCacheDatabase = make_unique<MemoryEphemeralDatabase>( parts._clock );
             parts._cache               = make_unique<MemoryEphemeralStore>( parts._memoryCacheDatabase.get() );
         }
         else
@@ -609,9 +614,6 @@ namespace sw
         if ( _bInitialized == SW_FALSE )
             return;
         Parts& parts = *_parts;
-        // 메모리 캐시의 만료(TTL)를 서비스와 같은 시계로 계산한다 — 캐시가 제 단조 시계를 쓰면 가짜 시계에서 서버 등록 · 매칭 테이블이 서비스 시각보다 먼저 만료된다.
-        // 수동 시계를 받지 않은 캐시에는 닿지 않는다(운영 시계를 받았다).
-        parts._cacheManualClock.setMilliseconds( nowMs.count() );
         parts._host.update( nowMs );
         parts._scheduler.update( nowMs );
         for ( OnlineServerKitNode* pKit : parts._listKit )

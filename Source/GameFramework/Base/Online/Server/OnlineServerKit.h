@@ -31,6 +31,7 @@ namespace sw
     struct OnlineServerKitEntry;
 
     class EphemeralStoreRouter;
+    class IClock;
     class IEphemeralStore;
     class IOnlineHostService;
     class IServiceStore;
@@ -68,7 +69,8 @@ namespace sw
     /** @brief 키트가 받는 서버 조립의 문맥입니다. 런타임이 채우는 기반 칸과 키트끼리 인터페이스를 거는 지역 범위가 있습니다. 포인터는 모두 빌려 쓰며 키트보다 오래 삽니다. */
     struct OnlineServerKitContext
     {
-        SubsystemScope& _kits; ///< 키트가 `initialize` 에서 인터페이스를 걸고(`exposeInterface`) 다른 키트가 `get` · `find` 로 찾는 지역 범위다
+        SubsystemScope& _kits;  ///< 키트가 `initialize` 에서 인터페이스를 걸고(`exposeInterface`) 다른 키트가 `get` · `find` 로 찾는 지역 범위다
+        const IClock&   _clock; ///< 시한 · 백오프를 재는 단조 시계(외부 HTTP 클라이언트가 받는다). 요청 시각(`_nowMs`)과 형식이 달라 섞이지 않는다
 
         // 런타임이 채운다.
         OnlineServiceHost*        _pHost{ nullptr };

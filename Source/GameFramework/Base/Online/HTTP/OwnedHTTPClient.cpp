@@ -11,10 +11,10 @@
 
 namespace sw
 {
-    OwnedHTTPClient::OwnedHTTPClient()
+    OwnedHTTPClient::OwnedHTTPClient( const IClock& clock )
         : _listTLSContext{}
         , _listHost{}
-        , _client{}
+        , _client{ clock }
     {
     }
 

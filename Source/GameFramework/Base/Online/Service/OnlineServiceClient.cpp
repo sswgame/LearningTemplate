@@ -172,7 +172,7 @@ namespace sw
         _state = OnlineClientState::Disconnected;
     }
 
-    void OnlineServiceClient::update( int64 nowMs )
+    void OnlineServiceClient::update( MonotonicMilliseconds nowMs )
     {
         if ( _bInitialized == SW_FALSE )
             return;
