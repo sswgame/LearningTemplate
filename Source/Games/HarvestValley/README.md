@@ -45,17 +45,9 @@ cd build/Ninja-Debug/Bin
 
 농장은 씬 하나(`Resource/game/harvestvalley/maps/farm.scene.xml`)입니다. Play 를 누르면 디렉터가 밭을 만들고 Stop 은 플레이 전 씬으로 돌아갑니다.
 
-| 무엇 | 어디 |
-|------|------|
-| 땅, 해, 카메라, 집, 출하함, 가게, 장식, 농부, 바라보는 타일 표시, 디렉터 | 씬 |
-| 농부 폰 | 씬의 농부 오브젝트의 `PawnComponent`(이동 `Farm.Move`, 버튼 `Farm.Use` 등, 자동 빙의 `Player0`) |
-| 농부를 잡는 조종자 | 플레이어는 GameFramework `PlayerControllerComponent`, 자동 플레이는 `FarmAutoFarmerAIComponent`(`prefabs/autofarmer.prefab.xml`) |
-| 밭의 흙과 작물(12 × 8) | 프리팹 `farmsoil.prefab.xml`, `farmcrop.prefab.xml`. 디렉터가 플레이 시작에 만듭니다 |
-| 규칙과 상태 | 키트의 `FarmField`, `FarmShippingBin`, `CropCatalog` |
-| 달력, 돈, 가방 | 공유 상태 `SessionStateComponent`(디렉터 오브젝트의 맨 앞 컴포넌트, 하루 144초, 계절 넷, 가방 24슬롯) |
-| 농부의 위치, 도구, 체력, 시간, 가게, 출하, 잠, 날씨, 빙의 바꾸기 | `FarmDirectorComponent` |
-| 모습 | 뷰 `FarmSoilComponent`, `FarmCropComponent`, `FarmerComponent`, `FarmSunComponent` |
-| 카메라 | GameFramework `CameraDirectorComponent` + 프리셋 `data/farm.cameras.xml`(입력 없음). 디렉터가 초점을 밭 가운데와 농부 사이에 넣습니다(`setFocusPoint`) |
+땅 · 해 · 카메라 · 집 · 출하함 · 가게 · 장식 · 농부 · 디렉터는 씬에 있고 밭의 흙과 작물(12 × 8)은 프리팹(`farmsoil` · `farmcrop`)을 디렉터가 플레이 시작에 만듭니다. 농부 폰은 씬의 농부 오브젝트의 `PawnComponent`(이동 `Farm.Move`, 버튼 `Farm.Use` 등, 자동 빙의 `Player0`)이고
+조종자는 플레이어 `PlayerControllerComponent`, 자동 플레이 `FarmAutoFarmerAIComponent`(`prefabs/autofarmer.prefab.xml`)입니다. 규칙과 상태는 키트의 `FarmField` · `FarmShippingBin` · `CropCatalog`, 달력 · 돈 · 가방은 공유 상태 `SessionStateComponent`(디렉터 오브젝트의 맨 앞 컴포넌트, 하루 144초, 계절 넷, 가방 24슬롯)입니다.
+`FarmDirectorComponent` 가 농부의 위치 · 도구 · 체력 · 시간 · 가게 · 출하 · 잠 · 날씨 · 빙의 바꾸기를 맡고 모습은 뷰(`FarmSoilComponent` · `FarmCropComponent` · `FarmerComponent` · `FarmSunComponent`)입니다. 카메라는 `CameraDirectorComponent` + `data/farm.cameras.xml`(입력 없음)이고 디렉터가 초점을 밭 가운데와 농부 사이에 넣습니다(`setFocusPoint`).
 
 농부의 위치와 체력과 도구는 게임 상태(세이브 대상)라 디렉터가 갖고 무엇을 할지는 농부 폰의 의도로 받습니다.
 

@@ -47,15 +47,9 @@ cd build/Ninja-Debug/Bin
 
 공원은 씬 하나(`Resource/game/themepark/maps/park.scene.xml`)입니다. 에디터에서 열면 고정 배치가 계층에 보이고 Play 를 누르면 디렉터가 공원을 열며 Stop 은 플레이 전 씬으로 돌아갑니다.
 
-| 무엇 | 어디 |
-|------|------|
-| 땅, 해, 카메라, 정문, 광장 시설, 나무 흩뿌리기 설정, 디렉터 | 씬 |
-| 손님, 코스터 차, 레일 조각, 기둥, 승강장, 놀이기구 입구, 길, 평지 놀이기구 | 프리팹(`prefabs/`). 디렉터가 런타임에 스폰합니다 |
-| 규칙과 상태(돈, 손님, 놀이기구, 코스터 물리) | 키트의 `ThemeParkSimulation`, `CoasterTrackBuilder`, `CoasterTrain` |
-| 규칙을 돌리고 스폰을 지시 | `ParkDirectorComponent` |
-| 엔티티의 모습 | 뷰 `ParkGuestComponent`, `CoasterCarComponent`, `FlatRideComponent` |
-| 카메라와 나무 | GameFramework `CameraDirectorComponent` + 프리셋 `data/park.cameras.xml`, `PropScatterComponent` |
-| 머티리얼 | 팔레트 `materials/palette.material`(키트 색 텍스처), 잔디 `grass.material`. 실행 중 바뀌는 색만 머티리얼 인스턴스 |
+땅 · 해 · 카메라 · 정문 · 광장 시설 · 나무 흩뿌리기 설정 · 디렉터는 씬에 있고 손님 · 코스터 차 · 레일 조각 · 기둥 · 승강장 · 놀이기구 입구 · 길 · 평지 놀이기구는 프리팹(`prefabs/`)을 디렉터가 런타임에 스폰합니다.
+규칙과 상태(돈, 손님, 놀이기구, 코스터 물리)는 키트의 `ThemeParkSimulation` · `CoasterTrackBuilder` · `CoasterTrain`, 그것을 돌리고 스폰을 지시하는 것은 `ParkDirectorComponent`, 모습은 뷰(`ParkGuestComponent` · `CoasterCarComponent` · `FlatRideComponent`)입니다.
+카메라는 `CameraDirectorComponent` + `data/park.cameras.xml`, 나무는 `PropScatterComponent` 이고 머티리얼은 팔레트(키트 색 텍스처)와 잔디이며 실행 중 바뀌는 색만 머티리얼 인스턴스입니다.
 
 **틱.** 디렉터는 `PrePhysics` 그룹에서 시뮬레이션과 입력과 자동 건설을 돌리고 뷰는 `PostUpdate`, 카메라 디렉터는 `PostPhysics` 틱 뒤에 그 결과를 읽습니다(그룹은 차례로 돈다). 같은 그룹의 오브젝트는 병렬이므로 뷰는 자기 오브젝트에만 쓰고 디렉터의 목록은 첨자 대신 `data()` 로 읽습니다.
 코스터에 타면(V) 디렉터가 `PrePhysics` 에서 카메라 디렉터에 원근 시점을 넣고(`setViewOverride`) 카메라 디렉터가 `PostPhysics` 틱 뒤에 그것을 씁니다. 틱 안에서는 오브젝트를 만들 수 없어 디렉터는 지을 것과 효과음을 쌓아 두고 틱 뒤에 만들며, 뷰는 디렉터를 `GameObjectHandle` 로 가지고 매 프레임 찾습니다.

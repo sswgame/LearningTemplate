@@ -45,19 +45,8 @@ cd build/Ninja-Debug/Bin
 
 ## 구조
 
-아레나는 씬 하나(`Resource/game/abilityarena/maps/arena.scene.xml`)입니다.
-
-| 무엇 | 어디 |
-|------|------|
-| 바닥, 벽, 기둥, 소품, 함정, 해, 카메라, 디렉터 | 씬 |
-| 플레이어, Grunt, Caster, 투사체 | 프리팹(`prefabs/`). 디렉터가 런타임에 스폰합니다 |
-| 적 AI 와 자동 전투 AI 조종자 | 프리팹 `gruntai`, `casterai`, `autobattleai`. 디렉터가 만들어 폰에 빙의시킵니다 |
-| 어빌리티, 이펙트, 어트리뷰트, 태그 | `AbilitySystemComponent` 와 데이터 `data/abilities.xml` |
-| 웨이브, 쓰러뜨린 수, 플레이어 다시 세우기, 투사체 스폰, 로그 | `ArenaDirectorComponent` |
-| 유닛 하나의 몸(폰) | `PawnComponent`(버튼 `Arena.Melee` · `Fireball` · `Heal` · `Dash`, 이동 `Arena.Move`)과 `ArenaUnitComponent` |
-| 유닛을 잡는 조종자 | 플레이어 `PlayerControllerComponent`(자동 빙의 `Player0`), 적 `ArenaEnemyAIComponent`, 자동 전투 `ArenaAutoBattleAIComponent` |
-| 투사체 · 카메라 | `ArenaProjectileComponent`(자기를 옮기고 처음 닿은 적대 유닛에 이펙트), `ArenaCameraComponent`(플레이어 메시의 이번 프레임 위치를 위에서 봄) |
-| 머티리얼 | 팔레트 `materials/palette.material`. 편 색과 투사체 색은 디렉터의 PROPERTY 이고 디렉터가 머티리얼 인스턴스를 만들어 나눠 씁니다 |
+아레나는 씬 하나(`Resource/game/abilityarena/maps/arena.scene.xml`)이고 플레이어 · Grunt · Caster · 투사체 · AI 조종자(`gruntai` · `casterai` · `autobattleai`)는 디렉터(`ArenaDirectorComponent` — 웨이브, 쓰러뜨린 수, 플레이어 다시 세우기, 로그)가 프리팹으로 스폰하고 빙의시킵니다.
+유닛의 몸은 `PawnComponent`(버튼 `Arena.Melee` · `Fireball` · `Heal` · `Dash`, 이동 `Arena.Move`)와 `ArenaUnitComponent`, 어빌리티 · 이펙트 · 어트리뷰트 · 태그는 `AbilitySystemComponent` 와 `data/abilities.xml` 입니다. 편 색과 투사체 색은 디렉터의 PROPERTY 이고 디렉터가 머티리얼 인스턴스를 만들어 나눠 씁니다.
 
 **조종.** 유닛은 폰이고 의도(`ControlIntent`)만 읽습니다. 플레이어와 적과 자동 전투가 같은 몸(`ArenaUnitComponent`)으로 움직이고 다른 것은 의도를 내는 조종자뿐입니다. 몸은 의도 버튼이 발동하면 `abilityInputPressed( 입력 번호 )` 를 부릅니다(`pressAbilityButtons`).
 
