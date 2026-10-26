@@ -85,16 +85,21 @@ namespace sw
             outError = "SQL connection pool has no driver";
             return false;
         }
+        // 연결 수는 설정이 정한다 — 범위 밖 값을 조용히 1로 맞추면 설정을 틀리게 준 쪽이 모른다(폴백 금지).
+        if ( settings._workerCount < 1 )
+        {
+            outError = "SQL connection pool needs _workerCount >= 1";
+            return false;
+        }
         unique_ptr<ISQLConnection> probe = pDriver->openConnection( settings._connection, settings._secret, outError );
         if ( probe == nullptr )
             return false;
         probe.reset();
-        _pDriver                = pDriver;
-        _settings               = settings;
-        _bStopping              = SW_FALSE;
-        const int32 workerCount = std::max( settings._workerCount, 1 );
-        _listWorker.reserve( static_cast<size_t>( workerCount ) );
-        for ( int32 workerIndex = 0; workerIndex < workerCount; ++workerIndex )
+        _pDriver   = pDriver;
+        _settings  = settings;
+        _bStopping = SW_FALSE;
+        _listWorker.reserve( static_cast<size_t>( settings._workerCount ) );
+        for ( int32 workerIndex = 0; workerIndex < settings._workerCount; ++workerIndex )
         {
             _listWorker.emplace_back( &SQLConnectionPool::runWorker, this, workerIndex );
         }
