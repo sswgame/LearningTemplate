@@ -167,7 +167,7 @@ namespace sw
     struct MatgoLayout
     {
         vector<CardPile> _listHand{};
-        vector<CardPile> _listCaptured{}; ///< 이미 먹은 패이다(비우면 없다. 이어 하기와 테스트용)
+        vector<CardPile> _listCaptured{}; ///< 이미 먹은 패이다(비우면 없다, 채우면 인원 수와 같아야 한다. 이어 하기와 테스트용)
         CardPile         _floor{};
         CardPile         _drawPile{};
         int32            _firstPlayer{ 0 };

@@ -22,6 +22,18 @@ namespace sw
             static constexpr int32 kDeckCardCount  = 108;
             static constexpr int32 kFirstCardTries = kDeckCardCount;
 
+            /** @brief 설정이 선언된 범위 안인지 봅니다. 밖이면 오류를 남기고 false 입니다(맞추지 않는다). */
+            [[nodiscard]] static bool acceptSettings( const UnoSettings& settings )
+            {
+                const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
+                if ( rangeError.empty() == false )
+                {
+                    SW_LOG_ERROR( "UnoGame: refused settings - %#", rangeError.c_str() );
+                    return false;
+                }
+                return true;
+            }
+
             static bool isWildValue( uint8 rank ) { return rank == static_cast<uint8>( UnoValue::Wild ) || rank == static_cast<uint8>( UnoValue::WildDrawFour ); }
 
             /**

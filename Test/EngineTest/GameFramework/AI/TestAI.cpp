@@ -268,7 +268,7 @@ SW_TEST_CASE( AITest, BlackboardObserverAbortsSwitchBranches )
 SW_TEST_CASE( AITest, PerceptionSeesHearsAndForgets )
 {
     NavGrid grid;
-    grid.initialize( 30, 30, 1.0f, float3{} );
+    SW_ASSERT_TRUE( grid.initialize( 30, 30, 1.0f, float3{} ) );
     grid.setAreaCost( 15, 0, 15, 20, kNavBlockedCost );
     AIPerceptionSettings settings;
     settings._sightRange     = 7.0f;

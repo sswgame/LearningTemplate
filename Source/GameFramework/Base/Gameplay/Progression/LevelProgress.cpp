@@ -23,13 +23,19 @@ namespace sw
     {
     }
 
-    void ExperienceCurve::setFormula( float32 base, float32 exponent, float32 linear, int32 maxLevel )
+    bool ExperienceCurve::setFormula( float32 base, float32 exponent, float32 linear, int32 maxLevel )
     {
+        if ( base < 0.0f || maxLevel < 1 )
+        {
+            SW_LOG_ERROR( "ExperienceCurve: refused formula base %# maxLevel %# - base must not be negative and maxLevel must be at least 1", base, maxLevel );
+            return false;
+        }
         _listXpToNext.clear();
-        _base     = MathUtil::max( 0.0f, base );
+        _base     = base;
         _exponent = exponent;
         _linear   = linear;
-        _maxLevel = MathUtil::max( 1, maxLevel );
+        _maxLevel = maxLevel;
+        return true;
     }
 
     void ExperienceCurve::setTable( const vector<int64>& listXpToNext )
@@ -80,9 +86,7 @@ namespace sw
         bValid           = GameDataXML::readOptionalNumber( node, "exponent", sourceName, -MathUtil::kMaxFloat, MathUtil::kMaxFloat, exponent ) && bValid;
         bValid           = GameDataXML::readOptionalNumber( node, "linear", sourceName, -MathUtil::kMaxFloat, MathUtil::kMaxFloat, linear ) && bValid;
         bValid           = GameDataXML::readOptionalNumber( node, "maxLevel", sourceName, 1, MathUtil::kMaxInt32, maxLevel ) && bValid;
-        if ( bValid )
-            setFormula( base, exponent, linear, maxLevel );
-        return bValid;
+        return bValid && setFormula( base, exponent, linear, maxLevel );
     }
 
     int64 ExperienceCurve::getXpToNext( int32 level ) const

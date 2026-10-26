@@ -29,7 +29,8 @@ namespace sw
         void addRecoil( float32 pitchKick, float32 yawKick );
         void setAngles( float32 yaw, float32 pitch );
         /** @brief 피치 한계(라디안)입니다. 기본 85°. */
-        void setMaxPitch( float32 maxPitch );
+        /** @details 0 ~ 90° 밖이면 오류를 남기고 false 입니다(조용히 맞추지 않습니다). */
+        [[nodiscard]] bool setMaxPitch( float32 maxPitch );
 
         float32 getYaw() const { return _yaw; }
         float32 getPitch() const { return _pitch; }

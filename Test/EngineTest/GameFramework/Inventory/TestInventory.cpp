@@ -63,8 +63,10 @@ SW_TEST_CASE( InventoryTest, SlotsStackRespectWeightAndMoveSplitSortAndWear )
     SW_EXPECT_TRUE( pSword->isEquipment() && catalog.find( hashed_string( "herb" ) )->isEquipment() == false );
 
     Inventory inventory;
-    inventory.initialize( &catalog, 4, 20.0f );
+    SW_ASSERT_TRUE( inventory.initialize( &catalog, 4, 20.0f ) );
     SW_EXPECT_EQUAL( 25, inventory.addItem( hashed_string( "herb" ), 25 ) ); // 10 + 10 + 5 — 세 칸
+    SW_EXPECT_FALSE( inventory.initialize( &catalog, -1 ) );                 // 음수 슬롯 수는 맞추지 않고 거절한다
+    SW_EXPECT_FALSE( inventory.setMaxWeight( -1.0f ) );
     SW_EXPECT_EQUAL( 1, inventory.countEmptySlots() );
     SW_EXPECT_EQUAL( 15, inventory.addItem( hashed_string( "herb" ), 20 ) ); // 셋째 칸의 나머지 5 + 빈 칸 10
     SW_EXPECT_TRUE( inventory.hasRoomFor( hashed_string( "herb" ), 1 ) == false );
@@ -116,7 +118,7 @@ SW_TEST_CASE( InventoryTest, EquipmentSlotsAcceptKindsSwapWithInventoryAndSumSta
     ItemCatalog catalog;
     SW_ASSERT_TRUE( catalog.loadFromXMLText( kItemTestXML, "InventoryTest" ) );
     Inventory inventory;
-    inventory.initialize( &catalog, 3 );
+    SW_ASSERT_TRUE( inventory.initialize( &catalog, 3 ) );
     (void)inventory.addItem( hashed_string( "sword" ), 1 );
     (void)inventory.addItem( hashed_string( "axe" ), 1 );
     (void)inventory.addItem( hashed_string( "ring" ), 1 );
@@ -204,7 +206,7 @@ SW_TEST_CASE( InventoryTest, CraftingChecksStationLevelToolsAndQueuesTimedJobs )
     SW_EXPECT_EQUAL( 1, static_cast<int32>( listRecipe.size() ) );
 
     Inventory inventory;
-    inventory.initialize( &catalog, 6 );
+    SW_ASSERT_TRUE( inventory.initialize( &catalog, 6 ) );
     (void)inventory.addItem( hashed_string( "herb" ), 10 );
     (void)inventory.addItem( hashed_string( "ore" ), 4 );
     Crafter crafter;
@@ -253,7 +255,7 @@ SW_TEST_CASE( InventoryTest, CrafterConsumeHandlerAndGridInventoryShapes )
     RecipeCatalog recipes;
     SW_ASSERT_TRUE( recipes.loadFromXMLText( kRecipeTestXML, "InventoryTest" ) );
     Inventory inventory;
-    inventory.initialize( &catalog, 6 );
+    SW_ASSERT_TRUE( inventory.initialize( &catalog, 6 ) );
     (void)inventory.addItem( hashed_string( "herb" ), 3 );
     (void)inventory.addItem( hashed_string( "mortar" ), 1 );
     Crafter crafter;
@@ -281,8 +283,8 @@ SW_TEST_CASE( InventoryTest, CrafterConsumeHandlerAndGridInventoryShapes )
 
     // 기반 격자 가방 — 모양은 연결 함수로.
     GridInventory grid;
-    grid.initialize( GridInventory::ShapeDelegate::create(
-                         []( const hashed_string& itemID, GridItemShape& outShape )
+    SW_ASSERT_TRUE( grid.initialize( GridInventory::ShapeDelegate::create(
+                                         []( const hashed_string& itemID, GridItemShape& outShape )
     {
         if ( itemID == hashed_string( "rifle" ) )
         {
@@ -297,7 +299,7 @@ SW_TEST_CASE( InventoryTest, CrafterConsumeHandlerAndGridInventoryShapes )
         }
         return false;
     } ),
-                     3, 2 );
+                                     3, 2 ) );
     SW_EXPECT_TRUE( grid.placeItem( hashed_string( "rifle" ), 1, 0, 0, false ) > 0 );
     SW_EXPECT_FALSE( grid.canPlace( hashed_string( "rifle" ), 0, 1, true ) );            // 세우면 3 칸 — 2 줄을 넘는다
     SW_EXPECT_EQUAL( -1, grid.placeItem( hashed_string( "unknown" ), 1, 0, 1, false ) ); // 모르는 아이템

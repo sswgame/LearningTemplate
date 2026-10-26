@@ -939,6 +939,25 @@ SW_TEST_CASE( TacticsSRPGTest, RunMapsConnectFloorsWithoutCrossingAndEndAtTheBos
 }
 
 /**
+ * @brief [TacticsSRPGTest] 런 지도 — 범위 밖 설정은 맞추지 않고 거절한다
+ */
+SW_TEST_CASE( TacticsSRPGTest, RunMapRefusesOutOfRangeSettingsInsteadOfClamping )
+{
+    RunMapSettings settings;
+    RunNodeRule    fight;
+    fight._kind          = "Fight";
+    settings._listRule   = { fight };
+    settings._floorCount = 1; // Min 2
+    RunMap map;
+    SW_EXPECT_FALSE( map.generate( settings, 1 ) );
+    settings._floorCount = 6;
+    settings._pathCount  = 0; // Min 1
+    SW_EXPECT_FALSE( map.generate( settings, 1 ) );
+    settings._pathCount = 3;
+    SW_EXPECT_TRUE( map.generate( settings, 1 ) );
+}
+
+/**
  * @brief [TacticsSRPGTest] 런 지도 — 만든 지도 · 지금 자리가 와서 같은 갈림길을 낸다
  */
 SW_TEST_CASE( TacticsSRPGTest, RunMapReplaysAfterRestore )

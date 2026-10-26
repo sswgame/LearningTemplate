@@ -35,7 +35,7 @@ namespace sw
         vector<hashed_string> _listSeason{}; ///< 비면 계절 하나("Default")다. 빈 목록은 틀린 값이 아니라 "계절을 쓰지 않는 게임" 이라는 계약이고, 계절 번호와 이름 계산이 늘 항목 하나 이상을 보게 한다
         PROPERTY( Min = 1, Units = s )
         float32 _secondsPerDay{ 1440.0f }; ///< 하루의 실제 초. 기본은 24 분이다
-        PROPERTY( Min = 0, Max = 24 )
+        PROPERTY( Min = 0, Max = 23.99 )
         float32 _startHour{ 6.0f };
         PROPERTY( Min = 0, Max = 24 )
         float32 _dawnHour{ 5.0f };
@@ -96,9 +96,11 @@ namespace sw
         [[nodiscard]] bool initialize( const WorldClockSettings& settings );
         void               update( float32 deltaTime );
         void               setPaused( bool bPaused ) { _bPaused = bPaused ? SW_TRUE : SW_FALSE; }
-        void               setTimeScale( float32 timeScale );
+        /** @brief 배속이 음수이면 오류를 남기고 false 입니다(조용히 0 으로 맞추지 않습니다). */
+        [[nodiscard]] bool setTimeScale( float32 timeScale );
         /** @brief 그 날 그 시각으로 옮깁니다. 알림은 없으며 로드에 씁니다. */
-        void setTime( int32 day, float32 hour );
+        /** @details 날이 음수이거나 시각이 [0, 24) 밖이면 오류를 남기고 false 입니다(맞추지 않습니다). */
+        [[nodiscard]] bool setTime( int32 day, float32 hour );
         /** @brief 다음 @p hour 시까지 건너뜁니다. 잠에 씁니다. 지나간 경계는 알립니다. */
         void advanceToHour( float32 hour );
         /** @brief 게임 시간 @p gameMinutes 분을 바로 흘립니다(멈춤 · 배율과 무관). 빨리 감기와 자동화 단계 `AdvanceGameTime` 에 씁니다. 지나간 경계는 알립니다. */

@@ -155,7 +155,8 @@ namespace sw
         _pInventory = &inventory;
         _pItemBox   = &itemBox;
         _pFlags     = refs._pFlags;
-        _pInventory->initialize( pCatalog->makeShapeLookup(), rules._gridWidth, rules._gridHeight );
+        if ( _pInventory->initialize( pCatalog->makeShapeLookup(), rules._gridWidth, rules._gridHeight ) == false )
+            return false;
         _sanity  = sanity;
         _battery = battery;
         _uniqueSeenMonster.clear();

@@ -3,6 +3,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
+#include "Core/Network/Transport/DelayedStreamTransport.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
 #include "Core/Network/Transport/StreamSendQueue.h"
@@ -537,4 +538,60 @@ SW_TEST_CASE( StreamTransportTest, PlatformManyConnectionsEchoConcurrently )
     SW_EXPECT_EQUAL( 0, client->getStats()._openCount );
     client->shutdown();
     server->shutdown();
+}
+
+/**
+ * @brief [StreamTransportTest] 지연 장식자 — 양쪽 전송을 30 ms 지연으로 감싸면 왕복이 60 ms 이상이고 순서 · 바이트는 그대로다(한 PC 에서 먼 망의 왕복을 흉내 내는 측정 도구)
+ */
+SW_TEST_CASE( StreamTransportTest, DelayedTransportAddsTheDelayToEachDirectionAndKeepsOrder )
+{
+    if ( StreamTransportFactory::createPlatformTransport() == nullptr )
+        SW_TEST_SKIP( "no platform stream transport on this OS" );
+    constexpr float64 kDelaySeconds = 0.030;
+
+    StreamEchoHandler      echo;
+    StreamRecorder         clientRecorder;
+    DelayedStreamTransport server( StreamTransportFactory::createPlatformTransport(), kDelaySeconds );
+    DelayedStreamTransport client( StreamTransportFactory::createPlatformTransport(), kDelaySeconds );
+    StreamTransportConfig  settings;
+    settings._ioThreadCount = 1;
+    echo.setTransport( &server );
+    SW_ASSERT_TRUE( server.initialize( &echo, settings ) );
+    SW_ASSERT_TRUE( client.initialize( &clientRecorder, settings ) );
+    SW_ASSERT_TRUE( server.listen( NetAddress::makeLoopback( 0 ) ) );
+    const StreamConnectionHandle handle = client.connect( NetAddress::makeLoopback( server.getListenPort() ) );
+    SW_ASSERT_TRUE( handle.isValid() );
+    const Deadline openDeadline = Deadline::afterMilliseconds( 5000 );
+    while ( clientRecorder.getOpenedCount() == 0 && openDeadline.isExpired() == false )
+    {
+        std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
+    }
+    SW_ASSERT_EQUAL( 1, clientRecorder.getOpenedCount() );
+
+    // 작은 덩어리 셋을 연달아 보낸다 — 왕복은 지연 두 번 이상이고 돌아온 바이트는 보낸 순서 그대로다.
+    const vector<uint8> payload = makePattern( 300, 11u );
+    const Stopwatch     stopwatch;
+    SW_EXPECT_TRUE( client.send( handle, payload.data(), 100 ) == StreamSendResult::Queued );
+    SW_EXPECT_TRUE( client.send( handle, payload.data() + 100, 100 ) == StreamSendResult::Queued );
+    SW_EXPECT_TRUE( client.send( handle, payload.data() + 200, 100 ) == StreamSendResult::Queued );
+    const Deadline echoDeadline = Deadline::afterMilliseconds( 5000 );
+    while ( clientRecorder.getReceivedCount() < 300 && echoDeadline.isExpired() == false )
+    {
+        std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
+    }
+    const float64 roundTripSeconds = static_cast<float64>( stopwatch.getElapsedMilliseconds() ) * 0.001;
+    SW_EXPECT_TRUE( clientRecorder.copyReceived() == payload );
+    SW_EXPECT_TRUE( roundTripSeconds >= 2.0 * kDelaySeconds );
+    SW_EXPECT_TRUE( roundTripSeconds < 2.0 * kDelaySeconds + 1.0 ); // 느린 PC 의 여유 — 지연이 곱으로 쌓이지 않는다
+
+    client.close( handle, StreamCloseMode::Graceful );
+    const Deadline closeDeadline = Deadline::afterMilliseconds( 5000 );
+    while ( ( echo.getClosedCount() < 1 || clientRecorder.getClosedCount() < 1 ) && closeDeadline.isExpired() == false )
+    {
+        std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
+    }
+    SW_EXPECT_EQUAL( 1, echo.getClosedCount() );
+    SW_EXPECT_EQUAL( 1, clientRecorder.getClosedCount() );
+    client.shutdown();
+    server.shutdown();
 }

@@ -106,7 +106,7 @@ namespace
         /** @brief x = 40 에 벽(z 가 8 이상인 곳만 열림)이 있는 XZ 격자 — 고운 경로가 곧은 선과 다르게 돈다. */
         static void makeWalledGrid( NavGrid& outGrid )
         {
-            outGrid.initialize( 120, 21, 1.0f, float3{ -10.0f, 0.0f, -10.0f } );
+            SW_ASSERT_TRUE( outGrid.initialize( 120, 21, 1.0f, float3{ -10.0f, 0.0f, -10.0f } ) );
             for ( int32 cellY = 0; cellY <= 17; ++cellY )
             {
                 outGrid.setBlocked( 50, cellY, true );
@@ -730,7 +730,7 @@ SW_TEST_CASE( ScheduleTest, RunsOnA2DTileGridInTheXyPlane )
     ScheduleCatalog       catalog;
     SW_ASSERT_TRUE( catalog.loadFromXMLText( kFarmXML, "farm" ) );
     NavGrid grid;
-    grid.initialize( 20, 10, 1.0f, float3{} );
+    SW_ASSERT_TRUE( grid.initialize( 20, 10, 1.0f, float3{} ) );
     for ( int32 cellY = 1; cellY <= 9; ++cellY )
     {
         grid.setBlocked( 10, cellY, true ); // y = 0 줄만 열린 울타리 — 아래로 돌아간다

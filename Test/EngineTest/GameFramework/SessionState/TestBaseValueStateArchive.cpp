@@ -330,7 +330,7 @@ SW_TEST_CASE( BaseValueStateArchiveTest, MoveTimelineReplaysAfterRestore )
 SW_TEST_CASE( BaseValueStateArchiveTest, PlatformerMotorReplaysAfterRestore )
 {
     PlatformTileMap map;
-    map.loadFromText( kValueStateLevelText, 1.0f, float2{ 0.0f, 0.0f } );
+    SW_ASSERT_TRUE( map.loadFromText( kValueStateLevelText, 1.0f, float2{ 0.0f, 0.0f } ) );
     PlatformerInput input;
     input._move         = float2{ 1.0f, 0.0f };
     input._bJumpPressed = SW_TRUE;
@@ -392,14 +392,14 @@ SW_TEST_CASE( BaseValueStateArchiveTest, ShopStateReplaysAfterRestore )
     SW_ASSERT_TRUE( items.loadFromXMLText( kValueStateItemXML, "BaseValueStateArchiveTest" ) );
     SW_ASSERT_TRUE( shops.loadFromXMLText( kValueStateShopXML, "BaseValueStateArchiveTest" ) );
     Inventory inventory;
-    inventory.initialize( &items, 4 );
+    SW_ASSERT_TRUE( inventory.initialize( &items, 4 ) );
     Wallet wallet;
     wallet.add( "Gold", 200 );
 
     ShopState shop;
     shop.initialize( &shops, &items );
     SW_ASSERT_TRUE( shop.buy( "general", "potion", 3, wallet, inventory ) == ShopResult::Ok );
-    shop.setPriceModifier( "general", 1.5f, 0.5f );
+    SW_ASSERT_TRUE( shop.setPriceModifier( "general", 1.5f, 0.5f ) );
     shop.advanceDay();
 
     ShopState restored;
@@ -420,7 +420,7 @@ SW_TEST_CASE( BaseValueStateArchiveTest, CrafterReplaysAfterRestore )
     SW_ASSERT_TRUE( items.loadFromXMLText( kValueStateItemXML, "BaseValueStateArchiveTest" ) );
     SW_ASSERT_TRUE( recipes.loadFromXMLText( kValueStateRecipeXML, "BaseValueStateArchiveTest" ) );
     Inventory inventory;
-    inventory.initialize( &items, 4 );
+    SW_ASSERT_TRUE( inventory.initialize( &items, 4 ) );
     (void)inventory.addItem( "herb", 5 );
 
     Crafter crafter;
@@ -436,7 +436,7 @@ SW_TEST_CASE( BaseValueStateArchiveTest, CrafterReplaysAfterRestore )
     SW_EXPECT_TRUE( replaysAfterRestore( crafter, restored, [&items]( Crafter& state )
     {
         Inventory stepInventory;
-        stepInventory.initialize( &items, 4 );
+        SW_ASSERT_TRUE( stepInventory.initialize( &items, 4 ) );
         vector<hashed_string> listStepFinished;
         state.update( 1.0f, stepInventory, listStepFinished );
     } ) );
@@ -459,7 +459,7 @@ SW_TEST_CASE( BaseValueStateArchiveTest, StatBlockAndLevelProgressReplayAfterRes
     SW_EXPECT_FALSE( restoredStats.hasValue( "Other" ) );
 
     ExperienceCurve curve;
-    curve.setFormula( 100.0f, 1.5f, 0.0f, 50 );
+    SW_ASSERT_TRUE( curve.setFormula( 100.0f, 1.5f, 0.0f, 50 ) );
     LevelProgress progress;
     (void)progress.addXp( curve, 350 );
     LevelProgress restoredProgress;
@@ -570,12 +570,12 @@ SW_TEST_CASE( BaseValueStateArchiveTest, GridInventoryReplaysAfterRestore )
         return true;
     } );
     GridInventory                      grid;
-    grid.initialize( shapeLookup, 4, 3 );
+    SW_ASSERT_TRUE( grid.initialize( shapeLookup, 4, 3 ) );
     SW_ASSERT_TRUE( grid.placeItem( "rifle", 1, 0, 0, false ) > 0 );
     SW_ASSERT_EQUAL( 45, grid.addItem( "ammo", 45 ) );
 
     GridInventory restored;
-    restored.initialize( shapeLookup, 4, 3 );
+    SW_ASSERT_TRUE( restored.initialize( shapeLookup, 4, 3 ) );
     SW_EXPECT_TRUE( replaysAfterRestore( grid, restored, []( GridInventory& state )
     { (void)state.addItem( "ammo", 20 ); } ) );
     SW_EXPECT_EQUAL( grid.getItemCount( "ammo" ), restored.getItemCount( "ammo" ) );

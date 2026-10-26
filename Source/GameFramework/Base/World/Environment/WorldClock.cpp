@@ -45,19 +45,33 @@ namespace sw
         _eventBuffer.clear();
         _timeScale = 1.0f;
         _bPaused   = SW_FALSE;
-        setTime( 0, _settings._startHour );
+        if ( setTime( 0, _settings._startHour ) == false )
+            return false;
         return true;
     }
 
-    void WorldClock::setTimeScale( float32 timeScale )
+    bool WorldClock::setTimeScale( float32 timeScale )
     {
-        _timeScale = MathUtil::max( 0.0f, timeScale );
+        if ( timeScale < 0.0f )
+        {
+            SW_LOG_ERROR( "WorldClock: refused time scale %# - it must not be negative", timeScale );
+            return false;
+        }
+        _timeScale = timeScale;
+        return true;
     }
 
-    void WorldClock::setTime( int32 day, float32 hour )
+    bool WorldClock::setTime( int32 day, float32 hour )
     {
-        _day         = MathUtil::max( 0, day );
-        _secondOfDay = MathUtil::clamp( hour, 0.0f, 23.9999f ) / 24.0f * _settings._secondsPerDay;
+        const bool bInvalid = day < 0 || hour < 0.0f || hour >= 24.0f;
+        if ( bInvalid )
+        {
+            SW_LOG_ERROR( "WorldClock: refused time day %# hour %# - day must not be negative and hour must be within [0, 24)", day, hour );
+            return false;
+        }
+        _day         = day;
+        _secondOfDay = hour / 24.0f * _settings._secondsPerDay;
+        return true;
     }
 
     float32 WorldClock::getHour() const

@@ -314,22 +314,22 @@ SW_TEST_CASE( CreatureLifeTest, VisitorsFollowPhaseWeatherAndAreDeterministic )
     CreatureTown town;
     SW_ASSERT_TRUE( town.initialize( &world._catalog, world.makeRefs(), 10, 10, CreatureTownSettings{} ) );
     weather.forceWeather( "sunny", 0.0f, true );
-    clock.setTime( 0, 9.0f );
+    SW_ASSERT_TRUE( clock.setTime( 0, 9.0f ) );
     SW_EXPECT_EQUAL( 0, town.attractVisitors( clock, weather ) ); // 서식지가 없다
 
     placeTallGrass( town, 0, 0, true );
-    clock.setTime( 0, 22.0f ); // 밤
+    SW_ASSERT_TRUE( clock.setTime( 0, 22.0f ) ); // 밤
     SW_EXPECT_EQUAL( 0, town.attractVisitors( clock, weather ) );
     weather.forceWeather( "rain", 0.0f, true );
-    clock.setTime( 1, 9.0f ); // 낮인데 비
+    SW_ASSERT_TRUE( clock.setTime( 1, 9.0f ) ); // 낮인데 비
     SW_EXPECT_EQUAL( 0, town.attractVisitors( clock, weather ) );
     weather.forceWeather( "sunny", 0.0f, true );
     SW_EXPECT_EQUAL( 0, town.attractVisitors( clock, weather ) ); // 같은 시는 다시 굴리지 않는다
-    clock.setTime( 1, 10.0f );
+    SW_ASSERT_TRUE( clock.setTime( 1, 10.0f ) );
     SW_EXPECT_EQUAL( 1, town.attractVisitors( clock, weather ) );
     SW_ASSERT_NOT_NULL( town.findCreature( "sprout" ) );
     SW_EXPECT_EQUAL( town.getHabitats()[0]._id, town.findCreature( "sprout" )->_habitat );
-    clock.setTime( 1, 11.0f );
+    SW_ASSERT_TRUE( clock.setTime( 1, 11.0f ) );
     SW_EXPECT_EQUAL( 0, town.attractVisitors( clock, weather ) ); // 종마다 한 마리, 풀숲 자리 1
 
     // 연못(자리 2): 밤 · 비의 frog 는 늘, newt 는 35 % — 같은 씨앗이면 두 마을이 같은 시각에 받는다.
@@ -367,7 +367,7 @@ SW_TEST_CASE( CreatureLifeTest, FriendshipTalkAndGiftOncePerDay )
     makeTownWithSprout( town, world );
     SW_ASSERT_NOT_NULL( town.findCreature( "sprout" ) );
     Inventory inventory;
-    inventory.initialize( &world._items, 8 );
+    SW_ASSERT_TRUE( inventory.initialize( &world._items, 8 ) );
     (void)inventory.addItem( "flower", 2 );
     (void)inventory.addItem( "berry", 5 );
 
@@ -405,7 +405,7 @@ SW_TEST_CASE( CreatureLifeTest, RequestsDeliverItemsAndHabitats )
     CreatureTown town;
     makeTownWithSprout( town, world );
     Inventory inventory;
-    inventory.initialize( &world._items, 8 );
+    SW_ASSERT_TRUE( inventory.initialize( &world._items, 8 ) );
     (void)inventory.addItem( "berry", 4 );
     (void)inventory.addItem( "flower", 1 );
 
@@ -446,7 +446,7 @@ SW_TEST_CASE( CreatureLifeTest, AbilitiesEditTilesWithinDailyUses )
     CreatureTown town;
     makeTownWithSprout( town, world );
     Inventory inventory;
-    inventory.initialize( &world._items, 8 );
+    SW_ASSERT_TRUE( inventory.initialize( &world._items, 8 ) );
 
     placeTallGrass( town, 5, 5, false ); // 나무 자리(7, 5)가 비었다
     (void)town.setObject( 0, 8, "rock" );
@@ -529,7 +529,7 @@ SW_TEST_CASE( CreatureLifeTest, RequestsLeaveTheQuestEventsToTheGame )
     CreatureTown town;
     makeTownWithSprout( town, world );
     Inventory inventory;
-    inventory.initialize( &world._items, 8 );
+    SW_ASSERT_TRUE( inventory.initialize( &world._items, 8 ) );
     (void)inventory.addItem( "berry", 3 );
 
     vector<QuestEvent> listEvent;
@@ -584,7 +584,7 @@ SW_TEST_CASE( CreatureLifeTest, TownStateRoundTripContinuesTheSameTown )
     // 받은 부탁도 이어진다 — 복원한 마을이 열매를 건네받아 끝내고 보상한다(호감도는 공유 평판이라 두 마을이 같은 값을 본다)
     const int32 friendshipBefore = town.getFriendship( "sprout" );
     Inventory   inventory;
-    inventory.initialize( &world._items, 8 );
+    SW_ASSERT_TRUE( inventory.initialize( &world._items, 8 ) );
     (void)inventory.addItem( "berry", 3 );
     SW_EXPECT_EQUAL( 1, restored.deliverItem( "berry", 3, inventory ) );
     SW_EXPECT_EQUAL( friendshipBefore + 50, restored.getFriendship( "sprout" ) );

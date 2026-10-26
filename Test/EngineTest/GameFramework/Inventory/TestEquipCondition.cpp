@@ -189,13 +189,13 @@ SW_TEST_CASE( EquipConditionTest, UnequipToInventoryRollsBackTheCascadeWhenFull 
     SW_ASSERT_TRUE( Internal::equip( equipment, "Back", "cape_together" ) == EquipResult::Ok );
 
     Inventory inventory;
-    inventory.initialize( &fixture._items, 1 );
+    SW_ASSERT_TRUE( inventory.initialize( &fixture._items, 1 ) );
     SW_EXPECT_FALSE( equipment.unequipToInventory( hashed_string( "Head" ), inventory ) ); // 투구 + 망토 = 두 칸
     SW_EXPECT_TRUE( equipment.findEquipped( hashed_string( "Head" ) ) != nullptr );
     SW_EXPECT_TRUE( equipment.findEquipped( hashed_string( "Back" ) ) != nullptr );
     SW_EXPECT_EQUAL( 1, inventory.countEmptySlots() );
 
-    inventory.initialize( &fixture._items, 2 );
+    SW_ASSERT_TRUE( inventory.initialize( &fixture._items, 2 ) );
     SW_EXPECT_TRUE( equipment.unequipToInventory( hashed_string( "Head" ), inventory ) );
     SW_EXPECT_EQUAL( 1, inventory.getItemCount( hashed_string( "cape_together" ) ) );
 }
@@ -213,7 +213,7 @@ SW_TEST_CASE( EquipConditionTest, InstanceStateKeepsItemsFromStacking )
     gem._maxStack = 10;
     catalog.add( gem );
     Inventory inventory;
-    inventory.initialize( &catalog, 4 );
+    SW_ASSERT_TRUE( inventory.initialize( &catalog, 4 ) );
     SW_EXPECT_EQUAL( 1, inventory.addItem( hashed_string( "gem" ), 1 ) );
     InventorySlot dyed;
     dyed._itemID = hashed_string( "gem" );

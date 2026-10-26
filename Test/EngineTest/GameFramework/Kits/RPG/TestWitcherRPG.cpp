@@ -243,7 +243,7 @@ SW_TEST_CASE( WitcherRPGTest, AlchemyLimitsToxicityLocksDecoctionsAndMeditationR
     WitcherTestData data;
     SW_ASSERT_TRUE( data.initialize() );
     Inventory inventory;
-    inventory.initialize( &data._itemCatalog, 20 );
+    SW_ASSERT_TRUE( inventory.initialize( &data._itemCatalog, 20 ) );
     SW_EXPECT_EQUAL( 10, inventory.addItem( hashed_string( "celandine" ), 10 ) );
     SW_EXPECT_EQUAL( 2, inventory.addItem( hashed_string( "dwarven_spirit" ), 2 ) );
     WitcherAlchemy alchemy;
@@ -524,7 +524,7 @@ SW_TEST_CASE( WitcherRPGTest, StateRoundTripContinuesTheSameHunt )
 
     // 연금 — 제비를 마시고 오일을 발라 한 번 벴다.
     Inventory inventory;
-    inventory.initialize( &data._itemCatalog, 20 );
+    SW_ASSERT_TRUE( inventory.initialize( &data._itemCatalog, 20 ) );
     SW_EXPECT_EQUAL( 10, inventory.addItem( hashed_string( "celandine" ), 10 ) );
     SW_EXPECT_EQUAL( 2, inventory.addItem( hashed_string( "dwarven_spirit" ), 2 ) );
     WitcherAlchemy alchemy;

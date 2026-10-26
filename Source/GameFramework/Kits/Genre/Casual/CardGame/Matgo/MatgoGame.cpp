@@ -17,6 +17,19 @@ namespace sw
         {
             static constexpr int32 kDealAttemptCount = 16;
             static constexpr int32 kRibbonCount      = 4;
+            static constexpr int32 kDeckSize         = 48;
+
+            /** @brief 설정이 선언된 범위 안인지 봅니다. 밖이면 오류를 남기고 false 입니다(맞추지 않는다). */
+            [[nodiscard]] static bool acceptSettings( const MatgoSettings& settings )
+            {
+                const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
+                if ( rangeError.empty() == false )
+                {
+                    SW_LOG_ERROR( "MatgoGame: refused settings - %#", rangeError.c_str() );
+                    return false;
+                }
+                return true;
+            }
 
             /** @brief 같은 월 바닥 패 중 먼저 먹을 우선순위 값을 반환합니다(광 > 열끗 > 띠 > 쌍피 > 피). */
             static int32 computeCapturePriority( const Card& card )

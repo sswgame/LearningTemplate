@@ -56,7 +56,7 @@ namespace sw
 {
     /** @brief 지도 설정입니다. */
     REFLECT()
-    struct RunMapSettings
+    struct SW_KIT_API RunMapSettings
     {
         REFLECT_BODY();
 

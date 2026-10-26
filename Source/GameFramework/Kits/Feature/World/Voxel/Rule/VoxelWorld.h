@@ -46,7 +46,8 @@ namespace sw
         VoxelWorld();
 
         /** @brief 크기를 정하고 모두 공기로 채웁니다. */
-        void initialize( int32 chunkCountX, int32 chunkCountZ, const VoxelBlockCatalog* pCatalog );
+        /** @brief 청크 수가 1 미만이면 오류를 남기고 false 입니다(조용히 1 로 맞추지 않습니다). */
+        [[nodiscard]] bool initialize( int32 chunkCountX, int32 chunkCountZ, const VoxelBlockCatalog* pCatalog );
         /**
          * @brief 공유 땅을 빌립니다. 복셀 땅은 이 키트의 것이므로 월드 발자국(X × Z 블록, 막힘) 전체를 한 번에 얻습니다. 블록 (0, 0) 이 땅의 @p origin 셀에 해당합니다.
          * @return 그 위치에 다른 키트의 땅이 있으면 false 를 반환하고 아무것도 얻지 않습니다. @p pLand 가 nullptr 이면 true 를 반환합니다. `initialize` 뒤에 호출합니다.

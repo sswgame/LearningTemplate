@@ -73,9 +73,10 @@ namespace sw
     {
     }
 
-    void ActionTerrainGrid::loadFromText( string_view text, float32 tileSize, const float2& origin, PlatformTileMap& outMap )
+    bool ActionTerrainGrid::loadFromText( string_view text, float32 tileSize, const float2& origin, PlatformTileMap& outMap )
     {
-        outMap.loadFromText( text, tileSize, origin );
+        if ( outMap.loadFromText( text, tileSize, origin ) == false )
+            return false;
         _origin   = origin;
         _tileSize = outMap.getTileSize();
         _topology = GridTopology{ outMap.getWidth(), outMap.getHeight() };
@@ -102,6 +103,7 @@ namespace sw
                 }
             }
         }
+        return true;
     }
 
     bool ActionTerrainGrid::isDirt( int32 x, int32 y ) const

@@ -570,7 +570,7 @@
     {"id": "outfit-atlas-bake-run", "title": "appearance.bakeatlas 로 실제 장비 부품 아틀라스 굽기", "kind": "test", "config": "Release", "platform": "windows", "gpu": "none", "pending": false, "manual": "굽기 명세(*.outfitatlas.xml)와 부품 텍스처를 사람이 정하고 결과 PNG 를 --import-textures 로 임포트하는 저작 작업이다", "source": "docs/plans/Candidates-gameplay.md CharacterAppearanceScreenChecks", "result_doc": "docs/plans/Candidates-gameplay.md CharacterAppearanceScreenChecks"},
     {
       "id": "config-range-reject-tests", "title": "설정 범위 거절 리팩터의 테스트(Vitality · ResourceGauge · 장르 키트 설정)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 40,
-      "filter": "CombatStateTest.*,ActionAdventureTest.*,MechArenaTest.*,RealTimeStrategyTest.*,PartyArenaTest.*,FightingTest.*,CardGameTest.*,CoopScavengerTest.*,MetroidvaniaTest.*,SurvivalHorrorTest.*,OpenWorldWesternTest.*,WitcherRPGTest.*,RhythmTest.*,CoasterTest.*,ElementRuleTest.*,BaseValueStateArchiveTest.*,WorldSystemsTest.*,AutosaveTest.*",
+      "filter": "CombatStateTest.*,ActionAdventureTest.*,MechArenaTest.*,RealTimeStrategyTest.*,PartyArenaTest.*,FightingTest.*,CardGameTest.*,CityBuilderTest.*,CoopScavengerTest.*,MetroidvaniaTest.*,SurvivalHorrorTest.*,OpenWorldWesternTest.*,WitcherRPGTest.*,RhythmTest.*,CoasterTest.*,ElementRuleTest.*,BaseValueStateArchiveTest.*,WorldSystemsTest.*,AutosaveTest.*",
       "source": "docs/plans/Candidates-network.md ConfigRangeRejectRemaining", "result_doc": "docs/plans/Candidates-network.md ConfigRangeRejectRemaining"
     },
     {

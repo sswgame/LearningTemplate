@@ -153,10 +153,16 @@ namespace sw
         const MonsterSpeciesDef* pSpecies = catalog.findSpecies( speciesID );
         if ( pSpecies == nullptr )
             return monster;
+        // 범위 밖 레벨은 맞추지 않고 종이 없을 때와 같이 빈 개체로 거절한다.
+        if ( level < 1 || level > MonsterCollectorCatalog::kMaxLevel )
+        {
+            SW_LOG_ERROR( "MonsterRules: refused level %# for %# - it must be within [1, %#]", level, speciesID.c_str(), MonsterCollectorCatalog::kMaxLevel );
+            return monster;
+        }
 
         monster._speciesID = speciesID;
         monster._nickname  = pSpecies->_name;
-        monster._level     = MathUtil::clamp( level, 1, MonsterCollectorCatalog::kMaxLevel );
+        monster._level     = level;
         monster._exp       = MonsterCollectorCatalog::computeTotalExp( pSpecies->_expGroup, monster._level );
         for ( int32& iv : monster._arrIv )
         {
@@ -323,11 +329,17 @@ namespace sw
     {
     }
 
-    void MonsterStorage::initialize( int32 boxCapacity )
+    bool MonsterStorage::initialize( int32 boxCapacity )
     {
+        if ( boxCapacity < 0 )
+        {
+            SW_LOG_ERROR( "MonsterStorage: refused box capacity %# - it must not be negative", boxCapacity );
+            return false;
+        }
         _listParty.clear();
         _listBox.clear();
-        _boxCapacity = MathUtil::max( 0, boxCapacity );
+        _boxCapacity = boxCapacity;
+        return true;
     }
 
     MonsterStoragePlace MonsterStorage::add( const MonsterInstance& monster )

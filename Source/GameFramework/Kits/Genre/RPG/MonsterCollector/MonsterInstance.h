@@ -106,7 +106,7 @@ namespace sw
         static void recomputeStats( const MonsterCollectorCatalog& catalog, MonsterInstance& inoutMonster );
         /**
          * @brief 종과 레벨로 새 개체를 만듭니다. 개체값은 0..31 을 굴리고 성격은 카탈로그의 성격 중 하나를 굴립니다(시드가 같으면 같은 개체가 나옵니다).
-         * @details 기술은 그 레벨까지 배우는 것 중 **마지막 네 개**다. 종이 없으면 빈 종 id 의 개체가 된다.
+         * @details 기술은 그 레벨까지 배우는 것 중 **마지막 네 개**다. 종이 없거나 레벨이 1 ~ `kMaxLevel` 밖이면 빈 종 id 의 개체가 된다(레벨을 맞추지 않는다).
          */
         static MonsterInstance createMonster( const MonsterCollectorCatalog& catalog, const hashed_string& speciesID, int32 level, GameRandom& random );
         /** @brief 쓰러뜨린 종의 노력치를 더합니다(능력치 하나당 252, 합 510 에서 멈춥니다). 능력치는 다시 계산합니다. */
@@ -157,7 +157,8 @@ namespace sw
 
         MonsterStorage();
 
-        void                initialize( int32 boxCapacity );
+        /** @brief 파티를 비우고 상자 크기를 정합니다. @p boxCapacity 가 음수이면 오류를 남기고 false 입니다(맞추지 않습니다). */
+        [[nodiscard]] bool  initialize( int32 boxCapacity );
         MonsterStoragePlace add( const MonsterInstance& monster );
         [[nodiscard]] bool  depositToBox( int32 partyIndex );
         [[nodiscard]] bool  withdrawFromBox( int32 boxIndex );

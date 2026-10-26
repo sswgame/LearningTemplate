@@ -100,7 +100,8 @@ namespace
                 item._value    = 3;
                 _items.add( item );
             }
-            _curve.setFormula( 20.0f, 1.0f, 0.0f, 10 ); // 레벨 L → L+1 에 20 × L
+            if ( _curve.setFormula( 20.0f, 1.0f, 0.0f, 10 ) == false ) // 레벨 L → L+1 에 20 × L
+                return false;
             return _catalog.loadFromXMLText( kRestaurantTestXML, "RestaurantSimTest" ) && _recipes.loadFromXMLText( kRestaurantTestRecipeXML, "RestaurantSimTest" ) &&
                    _shops.loadFromXMLText( kRestaurantTestShopXML, "RestaurantSimTest" ) &&
                    _reputation.loadFromXMLText( kRestaurantTestReputationXML, "RestaurantSimTest" );
@@ -108,7 +109,7 @@ namespace
 
         void initialize( RestaurantSimulation& sim, const RestaurantSettings& settings, RestaurantTestBorrowed& outBorrowed ) const
         {
-            outBorrowed._pantry.initialize( &_items, 40 );
+            SW_ASSERT_TRUE( outBorrowed._pantry.initialize( &_items, 40 ) );
             SW_EXPECT_TRUE( outBorrowed._clock.initialize( WorldClockSettings{} ) );
             outBorrowed._reputation.initialize( &_reputation );
             sim.initialize( &_catalog, &_recipes, &_items, &_shops, &_curve, outBorrowed.makeRefs(), outBorrowed._pantry, settings );
@@ -247,7 +248,7 @@ SW_TEST_CASE( RestaurantSimTest, IngredientsUseOldestFirstAndSpoil )
     RestaurantTestWorld world;
     SW_ASSERT_TRUE( world.load() );
     Inventory inventory;
-    inventory.initialize( &world._items, 8 );
+    SW_ASSERT_TRUE( inventory.initialize( &world._items, 8 ) );
     IngredientStock stock;
     stock.initialize( &inventory );
 

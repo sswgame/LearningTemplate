@@ -154,7 +154,7 @@ SW_TEST_CASE( MetroidvaniaTest, AbilitiesRewriteMotorSettingsAndOpenAreaLocks )
     SW_ASSERT_TRUE( scene._bLoaded );
 
     PlatformTileMap map;
-    map.loadFromText( kMetroidvaniaLevelText, 1.0f, float2{ 0.0f, 0.0f } );
+    SW_ASSERT_TRUE( map.loadFromText( kMetroidvaniaLevelText, 1.0f, float2{ 0.0f, 0.0f } ) );
     MetroAbilitySet abilities;
     abilities.initialize( &scene._catalog, PlatformerSettings{} );
     PlatformerMotor2D motor;

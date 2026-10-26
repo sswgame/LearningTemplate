@@ -134,7 +134,8 @@ namespace sw
         const bool          bFastForward =
             isAutoPlayOn() ||
             ( pInput != nullptr && UIInputMapView( pInput->getInputMap(), game::findSubsystem<UISystem>() ).isActionDown( hashed_string( MeadowVillageData::kFastForwardAction ) ) );
-        pState->getClock().setTimeScale( bFastForward ? _fastTimeScale : 1.0f );
+        if ( pState->getClock().setTimeScale( bFastForward ? _fastTimeScale : 1.0f ) == false )
+            return;
         for ( const WorldClockEvent& clockEvent : pState->getClockEvents() )
         {
             if ( clockEvent._kind == WorldClockEvent::Kind::DayChanged )

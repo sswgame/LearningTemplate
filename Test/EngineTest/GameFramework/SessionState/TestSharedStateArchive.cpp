@@ -220,7 +220,7 @@ SW_TEST_CASE( SharedStateArchiveTest, QuestLogRoundTripDropsUnknownQuests )
 SW_TEST_CASE( SharedStateArchiveTest, InventoryRoundTripKeepsSlotsAndRejectsOtherSlotCount )
 {
     Inventory bag;
-    bag.initialize( nullptr, 4, 30.0f );
+    SW_ASSERT_TRUE( bag.initialize( nullptr, 4, 30.0f ) );
     SW_ASSERT_EQUAL( 2, bag.addItem( "turnip", 2 ) );
     InventorySlot dyed;
     dyed._itemID     = "hat";
@@ -232,7 +232,7 @@ SW_TEST_CASE( SharedStateArchiveTest, InventoryRoundTripKeepsSlotsAndRejectsOthe
     const vector<uint8> bytes = captureStateBytes( bag );
 
     Inventory restored;
-    restored.initialize( nullptr, 4 );
+    SW_ASSERT_TRUE( restored.initialize( nullptr, 4 ) );
     SW_ASSERT_TRUE( restoreStateBytes( restored, bytes ) );
     SW_EXPECT_EQUAL( 2, restored.getItemCount( "turnip" ) );
     SW_EXPECT_NEAR_EQUAL( 30.0f, restored.getMaxWeight(), 1e-6f );
@@ -244,6 +244,6 @@ SW_TEST_CASE( SharedStateArchiveTest, InventoryRoundTripKeepsSlotsAndRejectsOthe
     SW_EXPECT_TRUE( captureStateBytes( restored ) == bytes );
 
     Inventory smaller;
-    smaller.initialize( nullptr, 3 );
+    SW_ASSERT_TRUE( smaller.initialize( nullptr, 3 ) );
     SW_EXPECT_FALSE( restoreStateBytes( smaller, bytes ) );
 }

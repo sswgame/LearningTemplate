@@ -70,8 +70,8 @@ namespace sw
 
         HorrorEncounter();
 
-        /** @brief @p successFace 이상이 나오면 성공으로 봅니다(기본 5이며 여섯 면 중 둘입니다). */
-        void initialize( const HorrorMonsterDef& monster, const vector<HorrorInvestigator>& listInvestigator, uint32 seed, int32 successFace = 5 );
+        /** @brief @p successFace 이상이 나오면 성공으로 봅니다(기본 5이며 여섯 면 중 둘입니다). 1 ~ 6 밖이면 오류를 남기고 false 입니다(맞추지 않습니다). */
+        [[nodiscard]] bool initialize( const HorrorMonsterDef& monster, const vector<HorrorInvestigator>& listInvestigator, uint32 seed, int32 successFace = 5 );
         /** @brief 다음 차례를 진행합니다. 이미 끝났으면 `_actorID` 가 -1 인 빈 결과를 반환합니다. */
         HorrorTurnResult playNextTurn();
 

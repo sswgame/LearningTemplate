@@ -56,7 +56,8 @@ namespace sw
 
         GridInventory();
 
-        void initialize( const ShapeDelegate& shapeLookup, int32 width, int32 height );
+        /** @brief 칸 수가 1 미만이면 오류를 남기고 false 입니다(조용히 1 로 맞추지 않습니다). */
+        [[nodiscard]] bool initialize( const ShapeDelegate& shapeLookup, int32 width, int32 height );
         /** @brief 격자를 키웁니다(허리 가방, 가방 업그레이드). 줄이는 것은 안 되고 false 를 반환합니다. 놓인 아이템은 그대로입니다. */
         [[nodiscard]] bool growGrid( int32 width, int32 height );
         void               clear();

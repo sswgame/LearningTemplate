@@ -30,8 +30,12 @@ namespace sw
 
         [[nodiscard]] bool send( const NetAddress& to, const uint8* pData, int32 size ) override;
         [[nodiscard]] bool receive( NetAddress& outFrom, vector<uint8>& outBuffer ) override;
-        NetAddress         getLocalAddress() const override { return _localAddress; }
-        bool               waitForReceive( float64 timeoutSeconds ) override;
+        /** @brief 리눅스는 `sendmmsg` 로 한 번에 보낸다(`PlatformSocketUtil::sendBatch`). 한도(`kNetMaxPacketSize`)를 넘는 크기가 든 묶음은 그 앞까지만 보낸다. */
+        int32 sendBatch( const NetDatagramView* pViews, int32 count ) override;
+        /** @brief 리눅스는 `recvmmsg` 로 한 번에 받는다. 한도를 넘는 데이터그램은 걸러 낸다. */
+        int32      receiveBatch( NetReceivedDatagram* pOut, int32 maxCount ) override;
+        NetAddress getLocalAddress() const override { return _localAddress; }
+        bool       waitForReceive( float64 timeoutSeconds ) override;
 
     private:
         NetAddress _localAddress;

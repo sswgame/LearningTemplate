@@ -77,7 +77,7 @@ namespace
         ActionScene()
         {
             _bLoaded = _catalog.loadFromXMLText( kActionPlatformerCatalogXML, "action" ) && _moves.loadFromXMLText( kMoveXML, "moves" );
-            _terrain.loadFromText( kRoomText, 1.0f, float2{ 0.0f, 0.0f }, _map );
+            _bLoaded = _bLoaded && _terrain.loadFromText( kRoomText, 1.0f, float2{ 0.0f, 0.0f }, _map );
             _body.initialize( PlatformerSettings{}, _catalog.getBodySettings() );
         }
 

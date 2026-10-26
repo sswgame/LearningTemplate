@@ -54,10 +54,12 @@ namespace sw
 
         Inventory();
 
-        void initialize( const ItemCatalog* pCatalog, int32 slotCount, float32 maxWeight = 0.0f );
+        /** @brief 슬롯 수나 최대 무게가 음수이면 오류를 남기고 false 입니다(조용히 0 으로 맞추지 않습니다). */
+        [[nodiscard]] bool initialize( const ItemCatalog* pCatalog, int32 slotCount, float32 maxWeight = 0.0f );
         /** @brief 슬롯 수를 바꿉니다(가방 교체). 슬롯이 줄어서 넘치는 것은 @p outListOverflow 로 나오며, 바닥에 떨어뜨리는 데 씁니다. */
         void resize( int32 slotCount, vector<InventorySlot>& outListOverflow );
-        void setMaxWeight( float32 maxWeight );
+        /** @brief 최대 무게가 음수이면 오류를 남기고 false 입니다. */
+        [[nodiscard]] bool setMaxWeight( float32 maxWeight );
 
         /** @brief 넣고, 넣은 개수를 반환합니다. 슬롯이나 무게가 모자라면 일부만 넣습니다. */
         int32 addItem( const hashed_string& itemID, int32 count );

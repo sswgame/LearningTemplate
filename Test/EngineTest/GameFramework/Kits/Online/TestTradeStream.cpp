@@ -392,7 +392,7 @@ SW_TEST_CASE( TradeStreamTest, InventorySlotsBecomeLegs )
 </ItemCatalog>)",
                                            "TradeStreamTest" ) );
     Inventory inventory;
-    inventory.initialize( &items, 6 );
+    SW_ASSERT_TRUE( inventory.initialize( &items, 6 ) );
     SW_ASSERT_EQUAL( 12, inventory.addItem( "potion", 12 ) ); // 두 칸(10 + 2)
     SW_ASSERT_EQUAL( 1, inventory.addItem( "quest_key", 1 ) );
     InventorySlot damaged;

@@ -832,6 +832,36 @@ SW_TEST_CASE( CardGameTest, UnoSkipReverseDrawFourUnoPenaltyAndStacking )
     SW_EXPECT_TRUE( seeded.getCurrentColor() != UnoColor::Wild );
 }
 
+SW_TEST_CASE( CardGameTest, UnoAndMatgoRefuseOutOfRangeSettingsInsteadOfClamping )
+{
+    UnoSettings unoTooFew;
+    unoTooFew._playerCount = 1;
+    UnoGame uno;
+    SW_EXPECT_FALSE( uno.initialize( unoTooFew, 1 ) );
+    UnoSettings unoTooManyCards;
+    unoTooManyCards._playerCount = 10;
+    unoTooManyCards._handSize    = 15; // 범위 안이지만 곱이 덱을 넘는다
+    SW_EXPECT_FALSE( uno.initialize( unoTooManyCards, 1 ) );
+    UnoLayout wrongHandCount;
+    wrongHandCount._listHand = { CardPile{}, CardPile{} }; // 기본 인원은 4
+    SW_EXPECT_FALSE( uno.initializeFromLayout( UnoSettings{}, wrongHandCount ) );
+    UnoLayout wrongFirstPlayer;
+    wrongFirstPlayer._listHand    = { CardPile{}, CardPile{}, CardPile{}, CardPile{} };
+    wrongFirstPlayer._firstPlayer = 4;
+    SW_EXPECT_FALSE( uno.initializeFromLayout( UnoSettings{}, wrongFirstPlayer ) );
+
+    MatgoSettings matgoSolo = MatgoSettings::makeMatgo();
+    matgoSolo._playerCount  = 1;
+    MatgoGame matgo;
+    SW_EXPECT_FALSE( matgo.initialize( matgoSolo, 1 ) );
+    MatgoSettings matgoZeroThreshold = MatgoSettings::makeMatgo();
+    matgoZeroThreshold._goThreshold  = 0;
+    SW_EXPECT_FALSE( matgo.initialize( matgoZeroThreshold, 1 ) );
+    MatgoLayout matgoWrongHands;
+    matgoWrongHands._listHand = { CardPile{} }; // 맞고는 2인
+    SW_EXPECT_FALSE( matgo.initializeFromLayout( MatgoSettings::makeMatgo(), matgoWrongHands ) );
+}
+
 SW_TEST_CASE( CardGameTest, DeckBattlePlaysATurnWithEnergyBlockExhaustAndReshuffle )
 {
     constexpr const utf8* kDeckXML = R"(

@@ -258,13 +258,19 @@ namespace sw
         }
     }
 
-    void ShopState::setPriceModifier( const hashed_string& shopID, float32 buyModifier, float32 sellModifier )
+    bool ShopState::setPriceModifier( const hashed_string& shopID, float32 buyModifier, float32 sellModifier )
     {
+        if ( buyModifier < 0.0f || sellModifier < 0.0f )
+        {
+            SW_LOG_ERROR( "ShopState: refused price modifiers %# / %# for %# - neither may be negative", buyModifier, sellModifier, shopID.c_str() );
+            return false;
+        }
         ShopRuntime* pRuntime = findRuntime( shopID );
         if ( pRuntime == nullptr )
-            return;
-        pRuntime->_buyModifier  = MathUtil::max( 0.0f, buyModifier );
-        pRuntime->_sellModifier = MathUtil::max( 0.0f, sellModifier );
+            return false;
+        pRuntime->_buyModifier  = buyModifier;
+        pRuntime->_sellModifier = sellModifier;
+        return true;
     }
 
     void ShopState::refuseCategory( const hashed_string& shopID, const hashed_string& category )

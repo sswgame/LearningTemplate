@@ -33,11 +33,12 @@ namespace sw
     class SW_GF_API PlatformTileMap
     {
     public:
-        void initialize( int32 width, int32 height, float32 tileSize, const float2& origin );
-        void setTile( int32 x, int32 y, PlatformTile tile );
-        void fillTiles( int32 minX, int32 minY, int32 maxX, int32 maxY, PlatformTile tile );
+        /** @brief 타일 크기가 0 이하이거나 칸 수가 음수이면 오류를 남기고 false 입니다(조용히 맞추지 않습니다). */
+        [[nodiscard]] bool initialize( int32 width, int32 height, float32 tileSize, const float2& origin );
+        void               setTile( int32 x, int32 y, PlatformTile tile );
+        void               fillTiles( int32 minX, int32 minY, int32 maxX, int32 maxY, PlatformTile tile );
         /** @brief 글자로 칠합니다. 줄마다 한 행(첫 줄이 맨 위)이고, '#' 는 벽, '-' 는 한쪽 발판, 'H' 는 사다리, '^' 는 위험, 나머지는 빈 타일입니다. */
-        void loadFromText( string_view text, float32 tileSize, const float2& origin );
+        [[nodiscard]] bool loadFromText( string_view text, float32 tileSize, const float2& origin );
 
         /** @brief 맵 밖은 벽으로 봐서 떨어져 나가지 않게 합니다. 아래쪽 밖만 빈 타일(구덩이)입니다. */
         PlatformTile getTile( int32 x, int32 y ) const;

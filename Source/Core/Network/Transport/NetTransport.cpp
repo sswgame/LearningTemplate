@@ -20,6 +20,27 @@ namespace sw
         return false;
     }
 
+    int32 INetTransport::sendBatch( const NetDatagramView* pViews, int32 count )
+    {
+        int32 sentCount = 0;
+        for ( int32 index = 0; index < count; ++index )
+        {
+            if ( send( pViews[index]._to, pViews[index]._pData, pViews[index]._size ) )
+                ++sentCount;
+        }
+        return sentCount;
+    }
+
+    int32 INetTransport::receiveBatch( NetReceivedDatagram* pOut, int32 maxCount )
+    {
+        int32 receivedCount = 0;
+        while ( receivedCount < maxCount && receive( pOut[receivedCount]._from, pOut[receivedCount]._buffer ) )
+        {
+            ++receivedCount;
+        }
+        return receivedCount;
+    }
+
     // ------------------------------------------------------------------------------
     // LoopbackNetwork
     // ------------------------------------------------------------------------------

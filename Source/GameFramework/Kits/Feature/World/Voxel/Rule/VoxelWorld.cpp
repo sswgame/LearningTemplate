@@ -29,17 +29,23 @@ namespace sw
     {
     }
 
-    void VoxelWorld::initialize( int32 chunkCountX, int32 chunkCountZ, const VoxelBlockCatalog* pCatalog )
+    bool VoxelWorld::initialize( int32 chunkCountX, int32 chunkCountZ, const VoxelBlockCatalog* pCatalog )
     {
+        if ( chunkCountX < 1 || chunkCountZ < 1 )
+        {
+            SW_LOG_ERROR( "VoxelWorld: refused chunk counts %# x %# - both must be at least 1", chunkCountX, chunkCountZ );
+            return false;
+        }
         _pCatalog    = pCatalog;
-        _chunkCountX = MathUtil::max( 1, chunkCountX );
-        _chunkCountZ = MathUtil::max( 1, chunkCountZ );
+        _chunkCountX = chunkCountX;
+        _chunkCountZ = chunkCountZ;
         _listChunk.clear();
         _listChunk.resize( static_cast<size_t>( _chunkCountX * _chunkCountZ ) );
         for ( VoxelChunk& chunk : _listChunk )
         {
             chunk._listBlock.assign( static_cast<size_t>( kVoxelChunkVolume ), kVoxelAirBlock );
         }
+        return true;
     }
 
     bool VoxelWorld::bindLand( LandRegistry* pLand, const int2& origin )

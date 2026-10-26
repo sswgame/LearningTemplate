@@ -29,7 +29,7 @@ namespace sw
     {
     }
 
-    void BrMatch::initialize( const BrCatalog* pCatalog, const ItemCatalog* pItemCatalog, const LootCatalog* pLootCatalog, uint32 seed,
+    bool BrMatch::initialize( const BrCatalog* pCatalog, const ItemCatalog* pItemCatalog, const LootCatalog* pLootCatalog, uint32 seed,
                               const IBrZoneTerrain* pTerrain )
     {
         _pCatalog     = pCatalog;
@@ -49,7 +49,8 @@ namespace sw
         settings._scorePerKill          = 0;
         _matchState.initialize( settings );
         if ( pCatalog != nullptr )
-            _zone.initialize( pCatalog->getZoneSettings(), pCatalog->getMapSize(), GameHash::mix32( seed ^ 0x5a4f4e45u ), pTerrain );
+            return _zone.initialize( pCatalog->getZoneSettings(), pCatalog->getMapSize(), GameHash::mix32( seed ^ 0x5a4f4e45u ), pTerrain );
+        return true;
     }
 
     int32 BrMatch::addTeam( const hashed_string& name )
@@ -98,8 +99,7 @@ namespace sw
             return false;
 
         player._loadout.initialize( _pCatalog );
-        player._inventory.initialize( _pItemCatalog, playerSettings._slotCount, player._loadout.computeCarryLimit() );
-        return true;
+        return player._inventory.initialize( _pItemCatalog, playerSettings._slotCount, player._loadout.computeCarryLimit() );
     }
 
     void BrMatch::start()

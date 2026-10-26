@@ -62,6 +62,7 @@
 #include "Core/Network/Connection/NetPacketSealer.h"
 #include "Core/Network/Connection/NetSlotTable.h"
 #include "Core/Network/NetTypes.h"
+#include "Core/Network/Transport/NetTransport.h"
 #include "Core/Task/TaskFuture.h"
 
 namespace sw
@@ -235,6 +236,7 @@ namespace sw
     {
     public:
         static constexpr int32 kMaxDatagramPerUpdate = 512; ///< `update` 한 번에 받는 데이터그램 한도. 나머지는 소켓 버퍼에 남겨 다음 호출에서 받는다.
+        static constexpr int32 kReceiveBatchSize     = 64;  ///< 일괄 받기 한 번에 받는 데이터그램 수. 시스템 호출 한 번이 이만큼을 받는다(`INetTransport::receiveBatch`).
         static constexpr int32 kMaxPacketsPerSend    = 8;   ///< 한 번의 전송에서 연결마다 보내는 패킷 상한. 대역폭 토큰이 남고 보낼 것이 있으면 여러 개를 보낸다.
 
         NetHost();
@@ -364,12 +366,6 @@ namespace sw
             }
         };
 
-        struct ReceivedDatagram
-        {
-            vector<uint8> _buffer{};
-            NetAddress    _from{};
-        };
-
         /** @brief 끝난 비동기 연결입니다. 잠금 밖에서 채웁니다. */
         struct FinishedConnect
         {
@@ -449,7 +445,7 @@ namespace sw
         BitWriter                     _packetWriter;   ///< 보낼 패킷의 몸
         TaskPromise<NetConnectResult> _connectPromise; ///< 기다리는 비동기 연결(`_bConnectPending`).
         vector<FinishedConnect>       _listFinished;   ///< 끝난 비동기 연결. 잠금을 푼 뒤 채운다.
-        vector<ReceivedDatagram>      _listReceived;   ///< `update` 스레드 전용. 잠금 밖에서 받은 배치(버퍼를 다시 쓴다).
+        vector<NetReceivedDatagram>   _listReceived;   ///< `update` 스레드 전용. 잠금 밖에서 받은 배치(버퍼를 다시 쓴다).
         OutgoingBatch                 _flushBatch;     ///< `update` 스레드 전용. 잠금 밖에서 보내는 배치.
         vector<FinishedConnect>       _listDeliver;    ///< `update` 스레드 전용.
         BitWriter                     _plainWriter;    ///< 암호화에서 NetConnection 이 쓴 평문 패킷.

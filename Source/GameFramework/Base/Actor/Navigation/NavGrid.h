@@ -31,7 +31,8 @@ namespace sw
         NavGrid();
 
         /** @brief 크기를 정하고 모든 셀을 `kNavDefaultCost` 로 둡니다. */
-        void initialize( int32 width, int32 height, float32 cellSize, const float3& origin );
+        /** @brief 칸 수가 1 미만이거나 칸 크기가 0 이하이면 오류를 남기고 false 입니다(조용히 맞추지 않습니다). */
+        [[nodiscard]] bool initialize( int32 width, int32 height, float32 cellSize, const float3& origin );
 
         void setCost( int32 x, int32 y, uint8 cost );
         void setBlocked( int32 x, int32 y, bool bBlocked ) { setCost( x, y, bBlocked ? kNavBlockedCost : kNavDefaultCost ); }

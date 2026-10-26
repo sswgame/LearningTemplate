@@ -14,6 +14,16 @@
 
 namespace sw
 {
+    /** @brief 받은 데이터그램 하나입니다. 일괄 받기(`receiveBatch`)가 채우며, 버퍼는 부른 쪽이 다시 쓴다(할당을 되풀이하지 않는다). */
+    struct NetReceivedDatagram
+    {
+        vector<uint8> _buffer{};
+        NetAddress    _from{};
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @class INetTransport
      * @brief 데이터그램 한 개를 보내고 받습니다. 받기는 막히지 않습니다(없으면 바로 false) — 기다리려면 `waitForReceive`.
@@ -31,7 +41,17 @@ namespace sw
 
         [[nodiscard]] virtual bool send( const NetAddress& to, const uint8* pData, int32 size ) = 0;
         [[nodiscard]] virtual bool receive( NetAddress& outFrom, vector<uint8>& outBuffer )     = 0;
-        virtual NetAddress         getLocalAddress() const                                      = 0;
+        /**
+         * @brief @p count 개를 보내고 보낸 개수를 반환합니다(실패는 손실과 같다 — 재전송이 맡는다). 기본은 `send` 를 하나씩 부른다.
+         * @details 시스템 호출이 지배적인 UDP 소켓이 한 번에 보내도록(리눅스 `sendmmsg`) 있는 자리다. 같은 스레드 약속을 지킨다.
+         */
+        virtual int32 sendBatch( const NetDatagramView* pViews, int32 count );
+        /**
+         * @brief 받은 데이터그램을 @p pOut 의 앞에서부터 최대 @p maxCount 개 채우고 채운 개수를 반환합니다(없으면 0). 기본은 `receive` 를 하나씩 부른다.
+         * @details 리눅스 UDP 는 `recvmmsg` 로 한 번에 받는다. 채운 버퍼의 크기가 데이터그램의 크기다.
+         */
+        virtual int32      receiveBatch( NetReceivedDatagram* pOut, int32 maxCount );
+        virtual NetAddress getLocalAddress() const = 0;
         /** @brief 시간이 흐릅니다 — 루프백은 날아가는 패킷을 배달하고, 흉내는 때가 된 패킷을 안쪽 전송에 넘긴다. UDP 는 하는 일이 없다. */
         virtual void update( float64 time ) { (void)time; }
         /**

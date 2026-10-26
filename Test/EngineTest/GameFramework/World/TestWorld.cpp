@@ -66,8 +66,10 @@ SW_TEST_CASE( WorldTest, ClockCountsHoursDaysSeasonsAndYears )
     SW_EXPECT_EQUAL( 1, dayCount );
 
     // 계절 · 해 — 하루 두 번이면 계절, 네 번이면 해.
-    clock.setTimeScale( 2.0f );
-    clock.update( 120.0f ); // 게임 240 초 = 하루
+    SW_ASSERT_TRUE( clock.setTimeScale( 2.0f ) );
+    SW_EXPECT_FALSE( clock.setTimeScale( -1.0f ) ); // 음수 배속은 맞추지 않고 거절한다
+    SW_EXPECT_FALSE( clock.setTime( 0, 24.0f ) );   // 시각이 [0, 24) 밖이면 거절한다
+    clock.update( 120.0f );                         // 게임 240 초 = 하루
     SW_EXPECT_EQUAL( 2, clock.getDay() );
     SW_EXPECT_TRUE( clock.getSeasonName() == hashed_string( "Winter" ) );
     SW_EXPECT_EQUAL( 1, clock.getDayOfSeason() );

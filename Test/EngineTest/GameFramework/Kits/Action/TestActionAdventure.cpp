@@ -618,7 +618,7 @@ SW_TEST_CASE( ActionAdventureTest, CookingSumsSameEffectAndSpoilsMixed )
     Crafter crafter;
     crafter.initialize( &recipes );
     Inventory inventory;
-    inventory.initialize( &items, 8 );
+    SW_ASSERT_TRUE( inventory.initialize( &items, 8 ) );
     SW_EXPECT_EQUAL( 3, inventory.addItem( "hydromelon", 3 ) );
     SW_EXPECT_EQUAL( 1, inventory.addItem( "wildberry", 1 ) );
 
@@ -645,7 +645,7 @@ SW_TEST_CASE( ActionAdventureTest, WeaponWearTowersAndShrines )
     ItemCatalog items;
     SW_ASSERT_TRUE( items.loadFromXMLText( kAdventureItemXML, "ActionAdventureTest" ) );
     Inventory inventory;
-    inventory.initialize( &items, 4 );
+    SW_ASSERT_TRUE( inventory.initialize( &items, 4 ) );
     SW_ASSERT_TRUE( inventory.addItem( "treeBranch", 1 ) == 1 );
     SW_ASSERT_TRUE( inventory.addItem( "masterSword", 1 ) == 1 );
     const int32         branchSlot = inventory.findFirstSlot( "treeBranch" );

@@ -211,7 +211,9 @@ SW_TEST_CASE( MonsterCollectorTest, StatFormulaIvEvNatureAndExpGroups )
     GameRandom            randomB( 77 );
     const MonsterInstance pikachuA = MonsterRules::createMonster( world._catalog, hashed_string( "pikachu" ), 15, randomA );
     const MonsterInstance pikachuB = MonsterRules::createMonster( world._catalog, hashed_string( "pikachu" ), 15, randomB );
-    bool                  bSameIv  = true;
+    SW_EXPECT_TRUE( MonsterRules::createMonster( world._catalog, hashed_string( "pikachu" ), 0, randomA )._speciesID.empty() ); // 범위 밖 레벨은 맞추지 않고 빈 개체로 거절한다
+    SW_EXPECT_TRUE( MonsterRules::createMonster( world._catalog, hashed_string( "pikachu" ), MonsterCollectorCatalog::kMaxLevel + 1, randomA )._speciesID.empty() );
+    bool bSameIv = true;
     for ( int32 index = 0; index < kMonsterStatCount; ++index )
     {
         bSameIv = bSameIv && pikachuA._arrIv[index] == pikachuB._arrIv[index];
@@ -535,7 +537,8 @@ SW_TEST_CASE( MonsterCollectorTest, CaptureShakesPartyBoxAndEscape )
     SW_EXPECT_TRUE( battle.getCaptured()._speciesID == hashed_string( "rattata" ) );
 
     MonsterStorage storage;
-    storage.initialize( 2 );
+    SW_ASSERT_TRUE( storage.initialize( 2 ) );
+    SW_EXPECT_FALSE( storage.initialize( -1 ) ); // 음수 상자 크기는 맞추지 않고 거절한다
     for ( int32 index = 0; index < MonsterStorage::kPartySize; ++index )
     {
         SW_EXPECT_TRUE( storage.add( battle.getCaptured() ) == MonsterStoragePlace::Party );
@@ -549,7 +552,7 @@ SW_TEST_CASE( MonsterCollectorTest, CaptureShakesPartyBoxAndEscape )
         storage.getParty()[static_cast<size_t>( index )]._hp = 0;
     }
     SW_EXPECT_FALSE( storage.depositToBox( 0 ) ); // 박스도 가득
-    storage.initialize( 5 );
+    SW_ASSERT_TRUE( storage.initialize( 5 ) );
     SW_EXPECT_TRUE( storage.add( battle.getCaptured() ) == MonsterStoragePlace::Party );
     MonsterInstance fainted = battle.getCaptured();
     fainted._hp             = 0;
@@ -796,7 +799,7 @@ SW_TEST_CASE( MonsterCollectorTest, StateRoundTripContinuesTheSameBattle )
     SW_ASSERT_TRUE( world.initialize() );
 
     MonsterStorage storage;
-    storage.initialize( 3 );
+    SW_ASSERT_TRUE( storage.initialize( 3 ) );
     GameRandom random( 21 );
     for ( const utf8* pSpecies : { "squirtle", "bulbasaur", "pikachu" } )
     {
@@ -807,7 +810,7 @@ SW_TEST_CASE( MonsterCollectorTest, StateRoundTripContinuesTheSameBattle )
 
     const vector<uint8> storageBytes = captureMonsterBytes( storage );
     MonsterStorage      restoredStorage;
-    restoredStorage.initialize( 3 );
+    SW_ASSERT_TRUE( restoredStorage.initialize( 3 ) );
     Archive storageReader( storageBytes.data(), storageBytes.size() );
     SW_ASSERT_TRUE( restoredStorage.readState( storageReader ) );
     SW_EXPECT_EQUAL( uint64{ 0 }, storageReader.getRemainingBytes() );
@@ -824,11 +827,11 @@ SW_TEST_CASE( MonsterCollectorTest, StateRoundTripContinuesTheSameBattle )
     SW_EXPECT_TRUE( captureMonsterBytes( storage ) == captureMonsterBytes( restoredStorage ) );
 
     MonsterStorage noBox;
-    noBox.initialize( 0 );
+    SW_ASSERT_TRUE( noBox.initialize( 0 ) );
     Archive noBoxReader( storageBytes.data(), storageBytes.size() );
     SW_EXPECT_FALSE( noBox.readState( noBoxReader ) ); // 박스 정원을 넘는다
     MonsterStorage truncatedStorage;
-    truncatedStorage.initialize( 3 );
+    SW_ASSERT_TRUE( truncatedStorage.initialize( 3 ) );
     Archive storageCut( storageBytes.data(), storageBytes.size() - 1 );
     SW_EXPECT_FALSE( truncatedStorage.readState( storageCut ) );
     SW_EXPECT_TRUE( truncatedStorage.getParty().empty() );

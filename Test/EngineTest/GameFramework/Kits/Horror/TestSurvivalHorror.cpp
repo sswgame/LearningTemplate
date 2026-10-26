@@ -26,7 +26,7 @@ namespace
         Inventory     _box;
         GameFlags     _flags; ///< 빌려 주는 플래그
 
-        HorrorTestContainers() { _box.initialize( nullptr, 32 ); }
+        HorrorTestContainers() { SW_EXPECT_TRUE( _box.initialize( nullptr, 32 ) ); }
 
         SessionStateRefs makeRefs()
         {
@@ -139,7 +139,7 @@ SW_TEST_CASE( SurvivalHorrorTest, GridPlacesRotatesFindsFreeSpotsAndStacks )
     HorrorCatalog catalog;
     SW_ASSERT_TRUE( catalog.loadFromXMLText( kHorrorTestXML, "SurvivalHorrorTest" ) );
     GridInventory grid;
-    grid.initialize( catalog.makeShapeLookup(), 3, 3 );
+    SW_ASSERT_TRUE( grid.initialize( catalog.makeShapeLookup(), 3, 3 ) );
 
     const int32 rifle = grid.placeItem( "rifle", 1, 0, 0, false );
     SW_EXPECT_TRUE( rifle > 0 );
@@ -420,8 +420,8 @@ SW_TEST_CASE( SurvivalHorrorTest, TurnBasedEncounterIsDeterministicAndEndsInVict
     // 같은 씨앗이면 차례마다 같은 결과.
     HorrorEncounter first;
     HorrorEncounter second;
-    first.initialize( *pZombie, listInvestigator, 77u );
-    second.initialize( *pZombie, listInvestigator, 77u );
+    SW_ASSERT_TRUE( first.initialize( *pZombie, listInvestigator, 77u ) );
+    SW_ASSERT_TRUE( second.initialize( *pZombie, listInvestigator, 77u ) );
     int32 turn = 0;
     for ( ; turn < 200 && first.getState() == HorrorEncounterState::Ongoing; ++turn )
     {
@@ -443,7 +443,8 @@ SW_TEST_CASE( SurvivalHorrorTest, TurnBasedEncounterIsDeterministicAndEndsInVict
     listInvestigator[0]._strength = 4;
     listInvestigator[1]._strength = 4;
     HorrorEncounter sure;
-    sure.initialize( *pZombie, listInvestigator, 5u, 1 );
+    SW_ASSERT_TRUE( sure.initialize( *pZombie, listInvestigator, 5u, 1 ) );
+    SW_EXPECT_FALSE( sure.initialize( *pZombie, listInvestigator, 5u, 7 ) ); // 성공 눈이 1 ~ 6 밖이면 맞추지 않고 거절한다
     for ( int32 guard = 0; guard < 10 && sure.getState() == HorrorEncounterState::Ongoing; ++guard )
     {
         (void)sure.playNextTurn();
@@ -455,7 +456,7 @@ SW_TEST_CASE( SurvivalHorrorTest, TurnBasedEncounterIsDeterministicAndEndsInVict
     listInvestigator[0]._strength = 0;
     listInvestigator[1]._strength = 0;
     HorrorEncounter hopeless;
-    hopeless.initialize( *pZombie, listInvestigator, 5u );
+    SW_ASSERT_TRUE( hopeless.initialize( *pZombie, listInvestigator, 5u ) );
     for ( int32 guard = 0; guard < 200 && hopeless.getState() == HorrorEncounterState::Ongoing; ++guard )
     {
         (void)hopeless.playNextTurn();
@@ -555,7 +556,7 @@ SW_TEST_CASE( SurvivalHorrorTest, StateRoundTripContinuesTheSameEncounter )
     listInvestigator[1]._health  = 3;
 
     HorrorEncounter encounter;
-    encounter.initialize( *pZombie, listInvestigator, 77u );
+    SW_ASSERT_TRUE( encounter.initialize( *pZombie, listInvestigator, 77u ) );
     for ( int32 turn = 0; turn < 3; ++turn )
     {
         (void)encounter.playNextTurn();
@@ -564,7 +565,7 @@ SW_TEST_CASE( SurvivalHorrorTest, StateRoundTripContinuesTheSameEncounter )
     Archive written;
     encounter.writeState( written );
     HorrorEncounter restored;
-    restored.initialize( *pZombie, listInvestigator, 1u );
+    SW_ASSERT_TRUE( restored.initialize( *pZombie, listInvestigator, 1u ) );
     Archive reader( written.getData(), written.getSize() );
     SW_ASSERT_TRUE( restored.readState( reader ) );
     SW_EXPECT_EQUAL( uint64{ 0 }, reader.getRemainingBytes() );
@@ -597,11 +598,11 @@ SW_TEST_CASE( SurvivalHorrorTest, StateRoundTripContinuesTheSameEncounter )
     SW_EXPECT_TRUE( originalBytes == restoredBytes );
 
     HorrorEncounter other;
-    other.initialize( *pElder, listInvestigator, 1u );
+    SW_ASSERT_TRUE( other.initialize( *pElder, listInvestigator, 1u ) );
     Archive otherReader( written.getData(), written.getSize() );
     SW_EXPECT_FALSE( other.readState( otherReader ) );
     HorrorEncounter truncated;
-    truncated.initialize( *pZombie, listInvestigator, 1u );
+    SW_ASSERT_TRUE( truncated.initialize( *pZombie, listInvestigator, 1u ) );
     Archive cut( written.getData(), written.getSize() - 1 );
     SW_EXPECT_FALSE( truncated.readState( cut ) );
     SW_EXPECT_EQUAL( 0, truncated.getTurnCount() );

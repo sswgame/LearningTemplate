@@ -214,7 +214,8 @@ namespace sw
         }
         if ( bBlocksKnown == false )
             return false;
-        _world.initialize( kChunkCountX, kChunkCountZ, pCatalog );
+        if ( _world.initialize( kChunkCountX, kChunkCountZ, pCatalog ) == false )
+            return false;
         VoxelTerrainSettings settings;
         settings._seed                                   = static_cast<uint32>( _terrainSeed );
         [[maybe_unused]] const VoxelTerrainReport report = VoxelTerrainGenerator::fillWorld( _world, settings );

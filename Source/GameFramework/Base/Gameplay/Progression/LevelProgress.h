@@ -25,7 +25,8 @@ namespace sw
     public:
         ExperienceCurve();
 
-        void               setFormula( float32 base, float32 exponent, float32 linear, int32 maxLevel );
+        /** @brief 공식을 정합니다. @p base 가 음수이거나 @p maxLevel 이 1 미만이면 오류를 남기고 false 입니다(조용히 맞추지 않습니다). */
+        [[nodiscard]] bool setFormula( float32 base, float32 exponent, float32 linear, int32 maxLevel );
         void               setTable( const vector<int64>& listXpToNext );
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = {} );
         /** @brief 표(`<Level xp>`) 또는 공식 속성을 읽습니다. 깨진 값 · 범위 밖 값이면 오류를 남기고 곡선을 바꾸지 않은 채 false 입니다. */

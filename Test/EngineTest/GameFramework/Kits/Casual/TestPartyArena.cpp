@@ -623,6 +623,15 @@ SW_TEST_CASE( PartyArenaTest, StateRoundTripContinuesTheSameArena )
     SW_EXPECT_EQUAL( static_cast<int32>( arena.getItemSpawner().getInstances().size() ), static_cast<int32>( restored.getItemSpawner().getInstances().size() ) );
     SW_EXPECT_TRUE( written == captureArenaBytes( restored ) );
 
+    PartyItemSpawner badSpawner;
+    SW_ASSERT_TRUE( badSpawner.loadFromXMLText( kPartyItemXML, "PartyArenaTest" ) );
+    PartyItemSpawnSettings badSettings = badSpawner.getSettings();
+    badSettings._minInterval           = -1.0f; // 범위 밖 규칙은 맞추지 않고 거절한다
+    SW_EXPECT_FALSE( badSpawner.initialize( badSettings, 1u ) );
+    badSettings._minInterval = 4.0f;
+    badSettings._maxInterval = 2.0f;
+    SW_EXPECT_FALSE( badSpawner.initialize( badSettings, 1u ) );
+
     // 같은 입력을 더 넣으면 같은 판 — 다음 아이템 자리(난수) · 부활 대기 · 점수까지 갈리지 않는다.
     runArenaScript( arena, 60 * 3, 60 * 3 );
     runArenaScript( restored, 60 * 3, 60 * 3 );

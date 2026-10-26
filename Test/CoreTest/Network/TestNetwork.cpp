@@ -1381,6 +1381,27 @@ SW_TEST_CASE( NetworkTest, UDPTransportSendsDatagramsOverLocalhost )
     SW_EXPECT_EQUAL( 3, static_cast<int32>( buffer.size() ) );
     SW_EXPECT_EQUAL( static_cast<int32>( serverAddress._port ), static_cast<int32>( from._port ) );
 
+    // 일괄 보내기 · 받기 — 크기가 맞지 않는 데이터그램은 손실로 세고, 나머지는 보낸 순서대로 도착한다.
+    NetDatagramView arrView[3];
+    const uint8     arrBig[kNetMaxPacketSize + 1]{};
+    arrView[0] = NetDatagramView{ serverAddress, arrData, 5 };
+    arrView[1] = NetDatagramView{ serverAddress, arrBig, kNetMaxPacketSize + 1 }; // 한도 초과 — 손실
+    arrView[2] = NetDatagramView{ serverAddress, arrData, 3 };
+    SW_EXPECT_EQUAL( 2, client.sendBatch( arrView, 3 ) );
+    NetReceivedDatagram arrReceived[8];
+    int32               batchReceived = 0;
+    for ( int32 attempt = 0; attempt < 200 && batchReceived < 2; ++attempt )
+    {
+        batchReceived += server.receiveBatch( arrReceived + batchReceived, 8 - batchReceived );
+        if ( batchReceived < 2 )
+            std::this_thread::sleep_for( std::chrono::milliseconds( 5 ) );
+    }
+    SW_ASSERT_EQUAL( 2, batchReceived );
+    SW_EXPECT_EQUAL( 5, static_cast<int32>( arrReceived[0]._buffer.size() ) );
+    SW_EXPECT_EQUAL( 3, static_cast<int32>( arrReceived[1]._buffer.size() ) );
+    SW_EXPECT_EQUAL( static_cast<int32>( client.getLocalAddress()._port ), static_cast<int32>( arrReceived[1]._from._port ) );
+    SW_EXPECT_EQUAL( 0, server.receiveBatch( arrReceived, 8 ) );
+
     NetAddress parsed{};
     SW_EXPECT_TRUE( NetAddress::parse( "10.0.0.7:7777", 1, parsed ) );
     SW_EXPECT_TRUE( parsed == NetAddress::make( 10, 0, 0, 7, 7777 ) );
