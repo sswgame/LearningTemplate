@@ -25,9 +25,8 @@ namespace sw
     AutomationLogCapture::AutomationLogCapture()
         : _listLogLine{}
         , _mutex{}
-        , _listenerHandle{}
+        , _listenerSubscription{}
         , _frameIndex{ 0 }
-        , _bListening{ false }
     {
     }
 
@@ -38,18 +37,14 @@ namespace sw
 
     void AutomationLogCapture::start()
     {
-        if ( _bListening )
+        if ( _listenerSubscription.isActive() )
             return;
-        _listenerHandle = Logger::registerGlobalListener( SW_DELEGATE_METHOD( LogWrittenDelegate, &AutomationLogCapture::onLogWritten, this ) );
-        _bListening     = _listenerHandle.isValid();
+        _listenerSubscription = Logger::registerGlobalListener( SW_DELEGATE_METHOD( LogWrittenDelegate, &AutomationLogCapture::onLogWritten, this ) );
     }
 
     void AutomationLogCapture::stop()
     {
-        if ( _bListening == false )
-            return;
-        Logger::unregisterGlobalListener( _listenerHandle );
-        _bListening = false;
+        _listenerSubscription.reset();
     }
 
     uint32 AutomationLogCapture::countMatchingLines( const string& needle, uint32 sinceFrame ) const

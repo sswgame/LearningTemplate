@@ -769,14 +769,9 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 7) 통보와 모듈
     // ------------------------------------------------------------------------------
-    DelegateHandle UserSettingsManager::registerEventListener( const UserSettingEventListener& listener )
+    Subscription UserSettingsManager::registerEventListener( const UserSettingEventListener& listener )
     {
         return _onEvent.add( listener );
-    }
-
-    void UserSettingsManager::unregisterEventListener( const DelegateHandle& handle )
-    {
-        _onEvent.remove( handle );
     }
 
     uint32 UserSettingsManager::onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped )

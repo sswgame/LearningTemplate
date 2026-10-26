@@ -76,15 +76,14 @@ namespace sw
         void  finish( Task* pTask );
         /** @brief 대기열의 조각 하나를 꺼내 @p workerIndex 로 실행합니다. 꺼낼 것이 없으면 false 입니다. */
         [[nodiscard]] bool tryRunOne( uint32 workerIndex );
-        void               runWorker( uint32 workerIndex );
+        void               runWorker( uint32 workerIndex, ThreadStopToken stopToken );
 
         vector<sw::thread>       _listThread;
         vector<unique_ptr<Task>> _listTask;     ///< 만든 태스크 전부(소유). 스텝 스레드만 만진다.
         vector<Task*>            _listFreeTask; ///< 다시 쓸 태스크. 스텝 스레드만 만진다.
         vector<Range>            _listRange;    ///< 대기열. `_mutex` 를 쥐고 만진다.
         mutex                    _mutex;
-        atomic<uint32>           _wakeWord; ///< 넣을 때마다 올리는 세대 — 워커가 이 워드에서 잠든다(`Futex`).
-        atomic<bool>             _bStopping;
+        atomic<uint32>           _wakeWord;       ///< 넣을 때마다 올리는 세대 — 워커가 이 워드에서 잠든다(`Futex`).
         uint32                   _nextRangeIndex; ///< `_listRange` 에서 다음에 꺼낼 칸. `_mutex` 를 쥐고 만진다.
         uint32                   _workerCount;
     };

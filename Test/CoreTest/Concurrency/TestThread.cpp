@@ -84,6 +84,23 @@ namespace
         }
         return true;
     }
+
+    /** @brief 멤버 함수가 정지 토큰을 마지막 인자로 받는 소유자입니다(`sw::thread( &X::run, this, … )`). */
+    struct StopTokenLastArgumentOwner
+    {
+        sw::atomic<int32> _loopCount{ 0 };
+        sw::atomic<int32> _seenValue{ 0 };
+
+        void run( int32 value, sw::ThreadStopToken stopToken )
+        {
+            _seenValue.store( value );
+            while ( stopToken.stop_requested() == false )
+            {
+                _loopCount.store( _loopCount.load() + 1 );
+                std::this_thread::yield();
+            }
+        }
+    };
 } // namespace
 
 /**
@@ -211,6 +228,24 @@ SW_TEST_CASE( ThreadTest, MoveAssignJoinsTheCurrentThreadFirst )
     worker.request_stop();
     worker.join();
     SW_EXPECT_EQUAL( 11, finishedCount.load() );
+}
+
+/**
+ * @brief [ThreadTest] 정지 토큰을 마지막 인자로 받는 멤버 함수도 토큰을 받는다 — 소멸이 정지를 요청하고 합류한다
+ */
+SW_TEST_CASE( ThreadTest, MemberFunctionTakesTheStopTokenAsLastArgument )
+{
+    StopTokenLastArgumentOwner owner;
+    {
+        sw::thread         worker{ &StopTokenLastArgumentOwner::run, &owner, 7 };
+        const sw::Deadline deadline = sw::Deadline::afterMilliseconds( 5000 );
+        while ( owner._loopCount.load() == 0 && deadline.isExpired() == false )
+        {
+            std::this_thread::yield();
+        }
+    }
+    SW_EXPECT_EQUAL( 7, owner._seenValue.load() );
+    SW_EXPECT_TRUE( owner._loopCount.load() >= 1 );
 }
 
 #if defined( SW_PLATFORM_WINDOWS )

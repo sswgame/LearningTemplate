@@ -1685,12 +1685,11 @@ namespace
             _lastTinySize = tiny.size();
         }
 
-        sw::DelegateHandle registerLogWrittenListener( const sw::LogWrittenDelegate& listener ) override
+        sw::Subscription registerLogWrittenListener( const sw::LogWrittenDelegate& listener ) override
         {
             (void)listener;
-            return sw::DelegateHandle{};
+            return sw::Subscription{}; // 줄을 모으기만 하는 싱크라 리스너를 받지 않는다
         }
-        void   unregisterLogWrittenListener( const sw::DelegateHandle& handle ) override { (void)handle; }
         uint32 removeListenerCodeWithin( const void* pBegin, const void* pEnd ) override
         {
             (void)pBegin;

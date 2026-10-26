@@ -66,6 +66,7 @@ namespace sw
         /**
          * @brief @p function 을 @p args 로 부르는 스레드를 시작합니다(std::thread 와 같이 인자를 복사해 넘긴다).
          * @details @p function 이 `( ThreadStopToken, args... )` 로 불릴 수 있으면 첫 인자로 이 스레드의 정지 토큰을 넘긴다(`std::jthread` 와 같은 규칙).
+         *          그렇지 않고 `( args..., ThreadStopToken )` 로 불릴 수 있으면 마지막에 넘긴다 — 멤버 함수(`sw::thread( &X::run, this )`, `run( ThreadStopToken )`)가 람다 없이 받는다.
          */
         template <typename TFunction, typename... TArgs, typename = std::enable_if_t<!std::is_same_v<std::decay_t<TFunction>, thread>>>
         explicit thread( TFunction&& function, TArgs&&... args )
@@ -120,15 +121,24 @@ namespace sw
         static uint32 getUsableProcessorCount();
 
     private:
-        /** @brief 스레드를 띄웁니다. 함수가 정지 토큰을 첫 인자로 받을 수 있으면 토큰을 앞에 붙입니다. */
+        /** @brief 스레드를 띄웁니다. 함수가 정지 토큰을 첫 인자로(아니면 마지막 인자로) 받을 수 있으면 그 자리에 토큰을 넣습니다. */
         template <typename TFunction, typename... TArgs>
         static std::thread startThread( const std::shared_ptr<atomic<bool>>& pStopFlag, TFunction&& function, TArgs&&... args )
         {
             if constexpr ( std::is_invocable_v<std::decay_t<TFunction>, ThreadStopToken, std::decay_t<TArgs>...> )
+            {
                 return std::thread{ &thread::runThread<std::decay_t<TFunction>, ThreadStopToken, std::decay_t<TArgs>...>, std::forward<TFunction>( function ),
                                     ThreadStopToken{ pStopFlag }, std::forward<TArgs>( args )... };
+            }
+            else if constexpr ( std::is_invocable_v<std::decay_t<TFunction>, std::decay_t<TArgs>..., ThreadStopToken> )
+            {
+                return std::thread{ &thread::runThread<std::decay_t<TFunction>, std::decay_t<TArgs>..., ThreadStopToken>, std::forward<TFunction>( function ),
+                                    std::forward<TArgs>( args )..., ThreadStopToken{ pStopFlag } };
+            }
             else
+            {
                 return std::thread{ &thread::runThread<std::decay_t<TFunction>, std::decay_t<TArgs>...>, std::forward<TFunction>( function ), std::forward<TArgs>( args )... };
+            }
         }
 
         template <typename TFunction, typename... TArgs>

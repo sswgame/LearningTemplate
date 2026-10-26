@@ -11,6 +11,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 
 #include "GameFramework/Base/Online/Bus/ServerBus.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -50,8 +51,8 @@ namespace sw
     private:
         struct TopicSubscription
         {
-            string _topic{};
-            uint64 _subscriptionID{ 0 };
+            string       _topic{};
+            Subscription _subscription{}; ///< 라우터의 채널 구독. 줄이 지워지면 풀린다
         };
 
         /** @brief 라우터가 이 버스의 채널 메시지 하나를 넘겨줍니다. 봉투를 벗겨 큐에 넣습니다. */

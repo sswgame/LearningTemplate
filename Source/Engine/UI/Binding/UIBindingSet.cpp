@@ -86,8 +86,9 @@ namespace sw
         , _listError{}
         , _pScreen{ &screen }
         , _pViewModel{ nullptr }
+        , _viewModelSubscription{}
         , _pSettings{ nullptr }
-        , _settingsListener{}
+        , _settingsSubscription{}
         , _seenSerial{ 0 }
         , _writeCount{ 0 }
         , _polledCount{ 0 }
@@ -107,12 +108,10 @@ namespace sw
     {
         if ( _pSettings == pSettings )
             return;
-        if ( _pSettings != nullptr && _settingsListener.isValid() )
-            _pSettings->unregisterEventListener( _settingsListener );
-        _pSettings        = pSettings;
-        _settingsListener = {};
+        _settingsSubscription.reset();
+        _pSettings = pSettings;
         if ( _pSettings != nullptr )
-            _settingsListener = _pSettings->registerEventListener( SW_DELEGATE_METHOD( UserSettingEventListener, &UIBindingSet::onSettingEvent, this ) );
+            _settingsSubscription = _pSettings->registerEventListener( SW_DELEGATE_METHOD( UserSettingEventListener, &UIBindingSet::onSettingEvent, this ) );
     }
 
     void UIBindingSet::onSettingEvent( const UserSettingEvent& event )
@@ -128,14 +127,13 @@ namespace sw
         releaseViewModel();
         _pViewModel = pViewModel;
         if ( _pViewModel != nullptr )
-            _pViewModel->registerObserver( *this );
+            _viewModelSubscription = _pViewModel->registerObserver( *this );
         _bBound = false;
     }
 
     void UIBindingSet::releaseViewModel()
     {
-        if ( _pViewModel != nullptr )
-            _pViewModel->unregisterObserver( *this );
+        _viewModelSubscription.reset();
         _pViewModel = nullptr;
     }
 

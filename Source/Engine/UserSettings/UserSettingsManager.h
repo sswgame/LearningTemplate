@@ -298,8 +298,8 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 7) 통보, 레지스트리, 화면 요청
         // ------------------------------------------------------------------------------
-        DelegateHandle registerEventListener( const UserSettingEventListener& listener );
-        void           unregisterEventListener( const DelegateHandle& handle );
+        /** @brief 변경 통보 리스너를 붙이고 그 구독을 돌려줍니다. 구독이 사라지면 뗍니다(게임 스레드). */
+        [[nodiscard]] Subscription registerEventListener( const UserSettingEventListener& listener );
         /** @brief 변경 통보를 받는 리스너가 하나라도 있으면 true 입니다(화면이 닫힐 때 해제했는지 테스트가 확인합니다). */
         bool                         hasEventListener() const { return _onEvent.isBound(); }
         UserSettingsHandlerRegistry& getRegistry() { return _registry; }

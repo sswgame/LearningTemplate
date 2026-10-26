@@ -88,7 +88,6 @@ namespace sw
         , _listServerPose{}
         , _listDelta{}
         , _thread{}
-        , _bStop{ 0 }
         , _bStarted{ SW_FALSE }
         , _bReceived{ SW_FALSE }
         , _reserved{ 0 }
@@ -194,14 +193,13 @@ namespace sw
     void AuthorityGhost::startPoller()
     {
         _bStarted = SW_TRUE;
-        _bStop.store( 0 );
-        _thread = sw::thread( &AuthorityGhost::runPoller, this );
+        _thread   = sw::thread( &AuthorityGhost::runPoller, this );
     }
 
-    void AuthorityGhost::runPoller()
+    void AuthorityGhost::runPoller( ThreadStopToken stopToken )
     {
         DebugChannelClient client;
-        while ( _bStop.load() == 0 )
+        while ( stopToken.stop_requested() == false )
         {
             int64 sleepNanoseconds = AuthorityGhostInternal::kPollIntervalNanoseconds;
             if ( client.isConnected() == false &&
@@ -228,9 +226,11 @@ namespace sw
 
     void AuthorityGhost::shutdown()
     {
-        _bStop.store( 1 );
-        if ( _thread.joinable() )
+        if ( _thread.joinable() ) // 이미지가 내려가기 전에 합류한다
+        {
+            _thread.request_stop();
             _thread.join();
+        }
         _bStarted = SW_FALSE;
     }
 

@@ -33,7 +33,7 @@ namespace
         /** @brief 전역 싱크에 리스너를 등록합니다. */
         LogCapture()
         {
-            _handle = sw::Logger::registerGlobalListener( SW_DELEGATE_LAMBDA(
+            _subscription = sw::Logger::registerGlobalListener( SW_DELEGATE_LAMBDA(
                 sw::LogWrittenDelegate,
                 [this]( const sw::LogEntry& entry )
             {
@@ -42,19 +42,13 @@ namespace
             } ) );
         }
 
-        /** @brief 전역 싱크에서 리스너를 뗍니다. */
-        ~LogCapture()
-        {
-            sw::Logger::unregisterGlobalListener( _handle );
-        }
-
         LogCapture( const LogCapture& )            = delete;
         LogCapture& operator=( const LogCapture& ) = delete;
 
         /** @brief 리스너가 실제로 등록되었는지 반환합니다. */
         bool isAttached() const
         {
-            return _handle.isValid();
+            return _subscription.isActive();
         }
 
         /** @brief 수집된 로그 목록입니다. */
@@ -71,7 +65,7 @@ namespace
 
     private:
         sw::vector<sw::LogEntry> _listEntry;
-        sw::DelegateHandle       _handle;
+        sw::Subscription         _subscription; ///< 마지막 멤버라 먼저 풀린다(목록보다 먼저)
     };
 
 // 이 캡처는 Debug 전용 테스트에서만 쓴다 — Verbose/Trace 가 컴파일되지 않는 빌드에서는 잡을 로그가 없다.
@@ -86,7 +80,7 @@ namespace
     public:
         ThreadSafeLogCapture()
         {
-            _handle = sw::Logger::registerGlobalListener( SW_DELEGATE_LAMBDA(
+            _subscription = sw::Logger::registerGlobalListener( SW_DELEGATE_LAMBDA(
                 sw::LogWrittenDelegate,
                 [this]( const sw::LogEntry& entry )
             {
@@ -98,17 +92,12 @@ namespace
             } ) );
         }
 
-        ~ThreadSafeLogCapture()
-        {
-            sw::Logger::unregisterGlobalListener( _handle );
-        }
-
         ThreadSafeLogCapture( const ThreadSafeLogCapture& )            = delete;
         ThreadSafeLogCapture& operator=( const ThreadSafeLogCapture& ) = delete;
 
         bool isAttached() const
         {
-            return _handle.isValid();
+            return _subscription.isActive();
         }
 
         [[maybe_unused]] sw::vector<sw::LogEntry> getEntries() const
@@ -126,7 +115,7 @@ namespace
     private:
         mutable sw::mutex        _mutex;
         sw::vector<sw::LogEntry> _listEntry;
-        sw::DelegateHandle       _handle;
+        sw::Subscription         _subscription; ///< 마지막 멤버라 먼저 풀린다(목록 · 잠금보다 먼저)
     };
 #endif // SW_DEBUG
 
@@ -585,11 +574,11 @@ SW_TEST_CASE( LogTest, ConcurrentListenerAttachDetach )
     // 리스너 등록/해제 100회 반복
     for ( uint32 iteration = 0; iteration < 100; ++iteration )
     {
-        sw::DelegateHandle handle = sw::Logger::registerGlobalListener( SW_DELEGATE_LAMBDA(
+        sw::Subscription subscription = sw::Logger::registerGlobalListener( SW_DELEGATE_LAMBDA(
             sw::LogWrittenDelegate,
             []( const sw::LogEntry& ) {} ) );
-        SW_EXPECT_TRUE( handle.isValid() );
-        sw::Logger::unregisterGlobalListener( handle );
+        SW_EXPECT_TRUE( subscription.isActive() );
+        subscription.reset();
     }
 
     if ( emitter.joinable() )
@@ -686,9 +675,9 @@ SW_TEST_CASE( LogTest, DeadlockChildRoleRunsAScenario )
     else if ( scenario == "addOutput" )
     {
         logger.initialize();
-        uint32                   limitWarningCount = 0;
-        const sw::DelegateHandle handle            = logger.registerLogWrittenListener( SW_DELEGATE_LAMBDA( sw::LogWrittenDelegate, [&limitWarningCount]( const sw::LogEntry& entry )
-                   {
+        uint32           limitWarningCount = 0;
+        sw::Subscription subscription      = logger.registerLogWrittenListener( SW_DELEGATE_LAMBDA( sw::LogWrittenDelegate, [&limitWarningCount]( const sw::LogEntry& entry )
+             {
             if ( sw::StringUtil::contains( entry._message, "At most" ) )
                 ++limitWarningCount;
         } ) );
@@ -708,7 +697,7 @@ SW_TEST_CASE( LogTest, DeadlockChildRoleRunsAScenario )
         SW_EXPECT_TRUE( bRejected );
         SW_EXPECT_EQUAL( 1u, limitWarningCount );
 
-        logger.unregisterLogWrittenListener( handle );
+        subscription.reset();
         logger.shutdown();
     }
     else if ( scenario == "writeLogsBack" )
@@ -778,12 +767,12 @@ SW_TEST_CASE( LogTest, ReleaseListenerCodeWithinDropsOnlyThatRange )
 
     int32                        releasedValue{ 0 };
     int32                        keptValue{ 0 };
-    const sw::LogWrittenDelegate released = SW_DELEGATE_LAMBDA( sw::LogWrittenDelegate, [&releasedValue]( const sw::LogEntry& )
-    { releasedValue += 1; } );
-    const sw::LogWrittenDelegate kept     = SW_DELEGATE_LAMBDA( sw::LogWrittenDelegate, [&keptValue]( const sw::LogEntry& )
-        { keptValue += 10; } );
-    logger.registerLogWrittenListener( released );
-    logger.registerLogWrittenListener( kept );
+    const sw::LogWrittenDelegate released             = SW_DELEGATE_LAMBDA( sw::LogWrittenDelegate, [&releasedValue]( const sw::LogEntry& )
+                { releasedValue += 1; } );
+    const sw::LogWrittenDelegate kept                 = SW_DELEGATE_LAMBDA( sw::LogWrittenDelegate, [&keptValue]( const sw::LogEntry& )
+                    { keptValue += 10; } );
+    const sw::Subscription       releasedSubscription = logger.registerLogWrittenListener( released );
+    const sw::Subscription       keptSubscription     = logger.registerLogWrittenListener( kept );
 
     const uint8* pReleasedCode = static_cast<const uint8*>( released.getCodeAddress() );
     SW_EXPECT_EQUAL( 1u, logger.removeListenerCodeWithin( pReleasedCode, pReleasedCode + 1 ) );
@@ -963,19 +952,19 @@ SW_TEST_CASE( LogTest, FailedLogAssertWritesStandardErrorBeforeStopping )
 }
 
 /**
- * @brief [LogTest] 싱크가 없을 때 리스너를 붙이면 순서 위반으로 보고하고 빈 핸들을 돌려준다(조용히 무시하지 않는다)
+ * @brief [LogTest] 싱크가 없을 때 리스너를 붙이면 순서 위반으로 보고하고 빈 구독을 돌려준다(조용히 무시하지 않는다)
  */
 SW_TEST_CASE( LogTest, RegisteringAListenerWithoutASinkIsReported )
 {
     test::ScopedAssertCapture capture;
-    sw::DelegateHandle        handle;
+    sw::Subscription          subscription;
     sw::ILogSink*             pOldSink = sw::Logger::getGlobalSink();
     {
         sw::Logger::setGlobalSink( nullptr ); // 억제용 싱크(ScopedLogSuppressor)는 리스너를 받으므로 싱크 자체를 비운다
-        handle = sw::Logger::registerGlobalListener( SW_DELEGATE_LAMBDA( sw::LogWrittenDelegate, []( const sw::LogEntry& ) {} ) );
+        subscription = sw::Logger::registerGlobalListener( SW_DELEGATE_LAMBDA( sw::LogWrittenDelegate, []( const sw::LogEntry& ) {} ) );
         sw::Logger::setGlobalSink( pOldSink );
     }
-    SW_EXPECT_FALSE( handle.isValid() );
+    SW_EXPECT_FALSE( subscription.isActive() );
     if constexpr ( test::ScopedAssertCapture::kAssertsAreActive )
         SW_EXPECT_EQUAL( 1u, capture.getCount() );
 }

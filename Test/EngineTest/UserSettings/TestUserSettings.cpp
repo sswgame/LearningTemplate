@@ -262,7 +262,7 @@ SW_TEST_CASE( UserSettingsTest, HandlerRegistryDispatchesByName )
 
     sw::UserSettingsManager settings;
     settings.initialize( sw::UserSettingsTargets{} );
-    settings.getRegistry().registerHandler( "game.record", SW_DELEGATE_METHOD( sw::UserSettingHandlerDelegate, &Recorder::record, &recorder ) );
+    sw::Subscription recordSubscription = settings.getRegistry().registerHandler( "game.record", SW_DELEGATE_METHOD( sw::UserSettingHandlerDelegate, &Recorder::record, &recorder ) );
     SW_ASSERT_TRUE( settings.loadSchemaFromXMLText( R"(<UserSettingsSchema version="1"><Category id="g"/>
         <Setting id="g.level" category="g" type="int" default="3" min="1" max="9" target="handler:game.record" param="slot2"/></UserSettingsSchema>)",
                                                     "game.settings.xml" ) );
@@ -280,7 +280,7 @@ SW_TEST_CASE( UserSettingsTest, HandlerRegistryDispatchesByName )
     SW_EXPECT_STREQ( "9", recorder._value );
 
     // 같은 이름이 레지스트리에 없으면 그 이름을 쓰는 스키마는 읽히지 않는다.
-    settings.getRegistry().unregisterHandler( "game.record" );
+    recordSubscription.reset();
     SW_TEST_DEFENSIVE_SCOPE( "an handler name nobody registered" );
     SW_EXPECT_FALSE( settings.loadSchemaFromXMLText( R"(<UserSettingsSchema version="1"><Category id="h"/>
         <Setting id="h.x" category="h" type="bool" default="true" target="handler:game.record"/></UserSettingsSchema>)",
@@ -301,7 +301,7 @@ SW_TEST_CASE( UserSettingsTest, RejectedApplyIsCountedAndReported )
 
     sw::UserSettingsManager settings;
     settings.initialize( sw::UserSettingsTargets{} );
-    settings.getRegistry().registerHandler( "game.refuse", SW_DELEGATE_METHOD( sw::UserSettingHandlerDelegate, &Refuser::refuse, &refuser ) );
+    sw::Subscription refuseSubscription = settings.getRegistry().registerHandler( "game.refuse", SW_DELEGATE_METHOD( sw::UserSettingHandlerDelegate, &Refuser::refuse, &refuser ) );
     SW_ASSERT_TRUE( settings.loadSchemaFromXMLText( R"(<UserSettingsSchema version="1"><Category id="g"/>
         <Setting id="g.refused" category="g" type="int" default="3" min="1" max="9" target="handler:game.refuse"/></UserSettingsSchema>)",
                                                     "refuse.settings.xml" ) );
@@ -316,7 +316,7 @@ SW_TEST_CASE( UserSettingsTest, RejectedApplyIsCountedAndReported )
     SW_EXPECT_EQUAL( 1u, result._failedCount );
     SW_EXPECT_EQUAL( 0u, result._appliedCount );
     SW_EXPECT_TRUE_MSG( collector.countWithID( "UserSettings.TargetRejected" ) > 0, collector.joined().c_str() );
-    settings.getRegistry().unregisterHandler( "game.refuse" );
+    refuseSubscription.reset();
 }
 
 /**
@@ -528,8 +528,8 @@ SW_TEST_CASE( UserSettingsTest, ConfirmCountdownRevertsWithoutConfirmation )
         sw::vector<sw::UserSettingEventKind>* _pListEvent;
         void                                  onEvent( const sw::UserSettingEvent& event ) { _pListEvent->push_back( event._kind ); }
     };
-    EventSink                sink{ &listEvent };
-    const sw::DelegateHandle handle = settings.registerEventListener( SW_DELEGATE_METHOD( sw::UserSettingEventListener, &EventSink::onEvent, &sink ) );
+    EventSink        sink{ &listEvent };
+    sw::Subscription subscription = settings.registerEventListener( SW_DELEGATE_METHOD( sw::UserSettingEventListener, &EventSink::onEvent, &sink ) );
 
     // 1) 확인하지 않으면 10 초 뒤 되돌린다.
     SW_EXPECT_TRUE( settings.setPendingValue( "video.mode", "c" ) == sw::UserSettingSetResult::Accepted );
@@ -563,7 +563,7 @@ SW_TEST_CASE( UserSettingsTest, ConfirmCountdownRevertsWithoutConfirmation )
     }
     SW_EXPECT_TRUE( bSawTimeout );
     SW_EXPECT_TRUE( bSawConfirmed );
-    settings.unregisterEventListener( handle );
+    subscription.reset();
     UserSettingsTestInternal::resetTestVariables();
 }
 
@@ -727,7 +727,7 @@ SW_TEST_CASE( UserSettingsTest, OptionProviderOverridesFixedOptionsAndFallsBack 
     sw::UserSettingsManager settings;
     sw::UserSettingsTargets targets;
     settings.initialize( targets );
-    settings.getRegistry().registerOptionProvider( "test.modes", SW_DELEGATE_FUNCTION( sw::UserSettingOptionProviderDelegate, &UserSettingsTestInternal::collectTestModes ) );
+    const sw::Subscription modesSubscription = settings.getRegistry().registerOptionProvider( "test.modes", SW_DELEGATE_FUNCTION( sw::UserSettingOptionProviderDelegate, &UserSettingsTestInternal::collectTestModes ) );
     SW_ASSERT_TRUE( settings.loadSchemaFromXMLText( R"(<UserSettingsSchema version="1"><Category id="video"/>
         <Setting id="video.resolution" category="video" type="enum" default="1280x720" optionsFrom="test.modes">
             <Option value="1280x720"/>

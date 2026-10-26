@@ -10,7 +10,7 @@ namespace sw
         : _listReplyScratch{}
         , _listMessageScratch{}
         , _listDispatchScratch{}
-        , _listSubscription{}
+        , _listSubscriber{}
         , _mapRequestToReply{}
         , _pStore{ nullptr }
         , _nextSubscriptionID{ 1 }
@@ -32,16 +32,18 @@ namespace sw
     {
         if ( _pStore == nullptr )
             return;
-        while ( _listSubscription.empty() == false ) // 채널마다 한 번 푼다
+        detachAllSubscriptions(); // 남은 구독은 무효로 — 뒤늦은 해제가 내린 앞을 부르지 않는다
+        vector<string> listChannel;
+        for ( const ChannelSubscriber& subscriber : _listSubscriber )
         {
-            const string channel = _listSubscription.back()._channel;
-            _pStore->unsubscribe( channel );
-            for ( size_t index = _listSubscription.size(); index > 0; --index )
-            {
-                if ( _listSubscription[index - 1]._channel == channel )
-                    _listSubscription.erase( _listSubscription.begin() + static_cast<ptrdiff_t>( index - 1 ) );
-            }
+            listChannel.push_back( subscriber._channel );
         }
+        VectorUtil::sortUnique( listChannel ); // 채널마다 한 번 푼다
+        for ( const string& channel : listChannel )
+        {
+            _pStore->unsubscribe( channel );
+        }
+        _listSubscriber.clear();
 
         unordered_map<uint64, ReplyDelegate> mapPending;
         mapPending = std::move( _mapRequestToReply );
@@ -83,10 +85,10 @@ namespace sw
         for ( const EphemeralMessage& message : _listMessageScratch )
         {
             _listDispatchScratch.clear();
-            for ( const Subscription& subscription : _listSubscription )
+            for ( const ChannelSubscriber& subscriber : _listSubscriber )
             {
-                if ( subscription._channel == message._channel )
-                    _listDispatchScratch.push_back( subscription._onMessage );
+                if ( subscriber._channel == message._channel )
+                    _listDispatchScratch.push_back( subscriber._onMessage );
             }
             for ( const MessageDelegate& onMessage : _listDispatchScratch )
             {
@@ -107,35 +109,36 @@ namespace sw
         return requestID;
     }
 
-    uint64 EphemeralStoreRouter::subscribe( string_view channel, MessageDelegate onMessage )
+    Subscription EphemeralStoreRouter::subscribe( string_view channel, MessageDelegate onMessage )
     {
-        if ( _pStore == nullptr || onMessage.isBound() == false )
-            return 0;
+        const bool bCannotSubscribe = _pStore == nullptr || onMessage.isBound() == false;
+        if ( bCannotSubscribe )
+        {
+            SW_LOG_ERROR( "EphemeralStoreRouter: subscribe('%#') %# - nothing is subscribed", channel, _pStore == nullptr ? "before initialize" : "with an empty delegate" );
+            return Subscription{};
+        }
         if ( hasChannelSubscriber( channel ) == false )
             _pStore->subscribe( channel );
-        Subscription& subscription   = _listSubscription.emplace_back();
-        subscription._channel        = string( channel );
-        subscription._onMessage      = onMessage;
-        subscription._subscriptionID = _nextSubscriptionID++;
-        return subscription._subscriptionID;
+        ChannelSubscriber& subscriber = _listSubscriber.emplace_back();
+        subscriber._channel           = string( channel );
+        subscriber._onMessage         = onMessage;
+        subscriber._subscriptionID    = _nextSubscriptionID++;
+        return issueSubscription( subscriber._subscriptionID );
     }
 
-    void EphemeralStoreRouter::unsubscribe( uint64 subscriptionID )
+    void EphemeralStoreRouter::releaseSubscription( uint64 id )
     {
-        for ( size_t index = 0; index < _listSubscription.size(); ++index )
-        {
-            if ( _listSubscription[index]._subscriptionID != subscriptionID )
-                continue;
-            const string channel = std::move( _listSubscription[index]._channel );
-            _listSubscription.erase( _listSubscription.begin() + static_cast<ptrdiff_t>( index ) );
-            if ( _pStore != nullptr && hasChannelSubscriber( channel ) == false )
-                _pStore->unsubscribe( channel );
+        const std::optional<size_t> index = VectorUtil::findIndexBy<&ChannelSubscriber::_subscriptionID>( _listSubscriber, id );
+        if ( index.has_value() == false )
             return;
-        }
+        const string channel = std::move( _listSubscriber[*index]._channel );
+        _listSubscriber.erase( _listSubscriber.begin() + static_cast<ptrdiff_t>( *index ) );
+        if ( _pStore != nullptr && hasChannelSubscriber( channel ) == false )
+            _pStore->unsubscribe( channel );
     }
 
     bool EphemeralStoreRouter::hasChannelSubscriber( string_view channel ) const
     {
-        return VectorUtil::containsBy<&Subscription::_channel>( _listSubscription, channel );
+        return VectorUtil::containsBy<&ChannelSubscriber::_channel>( _listSubscriber, channel );
     }
 } // namespace sw

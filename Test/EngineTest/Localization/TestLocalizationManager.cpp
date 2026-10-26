@@ -168,10 +168,10 @@ SW_TEST_CASE( LocalizationManagerTest, ReloadChangedFilePicksUpNewTextAndKeepsOl
     const utf8* pHeld = loc.getString( sw::hashed_string( "ui.title" ) );
     SW_EXPECT_STREQ( "신비의 섬", pHeld );
 
-    uint32 notifiedCount{ 0 };
-    (void)loc.registerLanguageChangedCallback( [&notifiedCount]( sw::string_view, sw::string_view )
+    uint32                 notifiedCount{ 0 };
+    const sw::Subscription subscription   = loc.registerLanguageChangedCallback( [&notifiedCount]( sw::string_view, sw::string_view )
     { ++notifiedCount; } );
-    const uint32 revisionBefore = loc.getTextRevision();
+    const uint32           revisionBefore = loc.getTextRevision();
 
     LocalizationTestUtil::writeTranslation( folder, "ko", R"("ui.title": { "text": "수수께끼 섬" })" );
     const sw::string changedPath = sw::FileUtil::joinPath( folder, "ko.translation.xml" );
@@ -261,14 +261,14 @@ SW_TEST_CASE( LocalizationManagerTest, LanguageChangedCallbackNotification )
     sw::string recordedNewLang;
     uint32     callCount{ 0 };
 
-    const uint32 callbackID = loc.registerLanguageChangedCallback(
+    sw::Subscription subscription = loc.registerLanguageChangedCallback(
         [&]( sw::string_view oldLang, sw::string_view newLang )
     {
         recordedOldLang = oldLang;
         recordedNewLang = newLang;
         ++callCount;
     } );
-    SW_EXPECT_TRUE( callbackID > 0 );
+    SW_EXPECT_TRUE( subscription.isActive() );
 
     loc.setCurrentLanguage( "ko_KR" );
     SW_EXPECT_EQUAL( uint32( 1 ), callCount );
@@ -278,7 +278,7 @@ SW_TEST_CASE( LocalizationManagerTest, LanguageChangedCallbackNotification )
     loc.setCurrentLanguage( "ko_KR" );
     SW_EXPECT_EQUAL( uint32( 1 ), callCount );
 
-    loc.unregisterLanguageChangedCallback( callbackID );
+    subscription.reset();
     loc.setCurrentLanguage( "ja_JP" );
     SW_EXPECT_EQUAL( uint32( 1 ), callCount );
     SW_EXPECT_EQUAL( sw::string( "ja_jp" ), loc.getCurrentLanguage() );
@@ -308,13 +308,13 @@ SW_TEST_CASE( LocalizationManagerTest, GameServiceMountsTheGameProject )
     SW_EXPECT_TRUE( pLoc->hasLanguage( "ja" ) );
     SW_EXPECT_STREQ( "Mystery Island", pLoc->findStringFromLanguage( "en", sw::hashed_string( "ui.title" ) ) );
 
-    sw::string   notifiedNewLang;
-    const uint32 callbackID = pLoc->registerLanguageChangedCallback( [&]( sw::string_view, sw::string_view newLang )
+    sw::string       notifiedNewLang;
+    sw::Subscription subscription = pLoc->registerLanguageChangedCallback( [&]( sw::string_view, sw::string_view newLang )
     { notifiedNewLang = newLang; } );
     SW_EXPECT_TRUE( pLoc->setCurrentLanguage( "en" ) );
     SW_EXPECT_STREQ( "en", notifiedNewLang.c_str() );
     SW_EXPECT_STREQ( "Start Game", pLoc->getString( sw::hashed_string( "ui.start" ) ) );
-    pLoc->unregisterLanguageChangedCallback( callbackID );
+    subscription.reset();
 
     pLoc->unmountProjects( sw::LocalizationScope::Game );
     SW_EXPECT_FALSE( sw::engine::getSubsystem<sw::LocalizationManager>().hasString( sw::hashed_string( "ui.title" ) ) );

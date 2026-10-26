@@ -31,12 +31,10 @@ namespace sw::editor
             CatalogWarningCollector()
                 : _mutex{}
                 , _listWarning{}
-                , _handle{}
+                , _subscription{}
             {
-                _handle = Logger::registerGlobalListener( LogWrittenDelegate::create<&CatalogWarningCollector::onLog>( this ) );
+                _subscription = Logger::registerGlobalListener( LogWrittenDelegate::create<&CatalogWarningCollector::onLog>( this ) );
             }
-
-            ~CatalogWarningCollector() { Logger::unregisterGlobalListener( _handle ); }
 
             CatalogWarningCollector( const CatalogWarningCollector& )            = delete;
             CatalogWarningCollector& operator=( const CatalogWarningCollector& ) = delete;
@@ -58,7 +56,7 @@ namespace sw::editor
 
             mutex          _mutex;
             vector<string> _listWarning;
-            DelegateHandle _handle;
+            Subscription   _subscription; ///< 마지막 멤버라 먼저 풀린다 — 콜백이 만지는 `_mutex` · `_listWarning` 보다 먼저
         };
 
         // 시나리오 탐침이 읽는 값입니다. 패널이 그릴 때 갱신하고 탐침은 게임 스레드에서 읽습니다.

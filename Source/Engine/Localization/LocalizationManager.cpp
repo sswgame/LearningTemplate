@@ -933,22 +933,23 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 5) 콜백
     // ------------------------------------------------------------------------------
-    uint32 LocalizationManager::registerLanguageChangedCallback( LanguageChangedCallback callback )
+    Subscription LocalizationManager::registerLanguageChangedCallback( LanguageChangedCallback callback )
     {
         if ( callback == nullptr )
-            return 0;
-        std::unique_lock<std::shared_mutex> lock( _mutex );
-        const uint32                        callbackID = _nextCallbackID++;
-        _mapCallback[callbackID]                       = std::move( callback );
-        return callbackID;
+            return Subscription{};
+        uint64 callbackID{ 0 };
+        {
+            std::unique_lock<std::shared_mutex> lock( _mutex );
+            callbackID               = _nextCallbackID++;
+            _mapCallback[callbackID] = std::move( callback );
+        }
+        return issueSubscription( callbackID );
     }
 
-    void LocalizationManager::unregisterLanguageChangedCallback( uint32 callbackID )
+    void LocalizationManager::releaseSubscription( uint64 id )
     {
-        if ( callbackID == 0 )
-            return;
         std::unique_lock<std::shared_mutex> lock( _mutex );
-        _mapCallback.erase( callbackID );
+        _mapCallback.erase( id );
     }
 
     void LocalizationManager::notifyLanguageChanged( string_view oldLanguage, string_view newLanguage )

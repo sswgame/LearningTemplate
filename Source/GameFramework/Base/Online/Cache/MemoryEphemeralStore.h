@@ -13,6 +13,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 
 #include "GameFramework/Base/Online/Cache/EphemeralStore.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -23,7 +24,7 @@ namespace sw
      * @class MemoryEphemeralDatabase
      * @brief 키별 값과 만료, 정렬 집합, 채널 구독과 받은편지함입니다. 잠금 하나로 모든 호출을 직렬화합니다(프런트 여럿이 같이 쓴다).
      */
-    class SW_GF_API MemoryEphemeralDatabase
+    class SW_GF_API MemoryEphemeralDatabase : private SubscriptionSource
     {
     public:
         MemoryEphemeralDatabase();
@@ -31,12 +32,10 @@ namespace sw
         /** @brief 요청 하나를 실행해 답을 돌려줍니다(요청 id 는 프런트가 채운다). 보내기 전의 형식 검사는 프런트가 맡습니다. */
         EphemeralReply execute( const EphemeralRequest& request );
 
-        /** @brief 앞 하나를 받은편지함 주인으로 등록합니다. 그 id 입니다. */
-        uint64 registerInbox();
-        /** @brief 받은편지함과 그 구독을 모두 해제합니다. */
-        void unregisterInbox( uint64 inboxID );
-        void subscribe( uint64 inboxID, string_view channel );
-        void unsubscribe( uint64 inboxID, string_view channel );
+        /** @brief 앞 하나를 받은편지함 주인으로 등록하고 그 구독을 돌려줍니다. 구독이 사라지면 받은편지함과 그 채널 구독을 모두 지웁니다. 번호는 @p outInboxID 로 받습니다. */
+        [[nodiscard]] Subscription registerInbox( uint64& outInboxID );
+        void                       subscribe( uint64 inboxID, string_view channel );
+        void                       unsubscribe( uint64 inboxID, string_view channel );
         /** @brief @p inboxID 에 온 메시지를 @p outListMessage 뒤에 붙이고 비웁니다. 붙인 수입니다. */
         int32 takeMessages( uint64 inboxID, vector<EphemeralMessage>& outListMessage );
 
@@ -66,6 +65,8 @@ namespace sw
             vector<string>           _listChannel{};
         };
 
+        /** @brief 받은편지함 @p id 의 구독이 풀렸습니다. 받은편지함을 지웁니다(`_mutex`). */
+        void  releaseSubscription( uint64 id ) override;
         int64 getNowMsLocked() const;
         /** @brief 만료됐으면 지우고, 살아 있는 값이면 그것입니다. */
         ValueEntry*    findValue( const string& key, int64 nowMs );
@@ -114,6 +115,7 @@ namespace sw
         vector<EphemeralReply>   _listReply;
         MemoryEphemeralDatabase* _pDatabase;
         uint64                   _inboxID;
+        Subscription             _inboxSubscription; ///< 데이터의 받은편지함. `shutdown` 이나 소멸이 지운다
         uint64                   _nextRequestID;
         uint8                    _bShutdown;
     };

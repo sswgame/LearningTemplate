@@ -155,18 +155,11 @@ namespace sw
         return call( *pFunction, pInstance, listArg, pOutResult );
     }
 
-    DelegateHandle ReflectionInvoke::bindEvent( const EventInfo& event, void* pInstance, const ReflectEventHandler& handler )
+    Subscription ReflectionInvoke::bindEvent( const EventInfo& event, void* pInstance, const ReflectEventHandler& handler )
     {
         if ( event._pOps == nullptr || pInstance == nullptr )
-            return DelegateHandle{};
+            return Subscription{};
         return event._pOps->_pBind( event.getEventPtr( pInstance ), handler );
-    }
-
-    void ReflectionInvoke::unbindEvent( const EventInfo& event, void* pInstance, const DelegateHandle& handle )
-    {
-        if ( event._pOps == nullptr || pInstance == nullptr )
-            return;
-        event._pOps->_pUnbind( event.getEventPtr( pInstance ), handle );
     }
 
     ReflectCallResult ReflectionInvoke::broadcastEvent( const EventInfo& event, void* pInstance, const vector<ReflectValue>& listArg )
@@ -200,15 +193,15 @@ namespace sw
         return true;
     }
 
-    DelegateHandle ReflectionInvoke::bindEventToFunction( const EventInfo& event, void* pSource, const TypeInfo& targetType, const hashed_string& functionName,
-                                                          void* pTarget )
+    Subscription ReflectionInvoke::bindEventToFunction( const EventInfo& event, void* pSource, const TypeInfo& targetType, const hashed_string& functionName,
+                                                        void* pTarget )
     {
         const FunctionInfo* pFunction = targetType.findMethodInHierarchy( functionName );
         if ( pFunction == nullptr || canBindEventToFunction( event, *pFunction ) == false )
         {
             SW_LOG_ERROR( "Event '%#' cannot call '%#::%#' - no such function or its parameters do not take the event arguments", event._name.c_str(),
                           targetType._fullyQualifiedName.c_str(), functionName.c_str() );
-            return DelegateHandle{};
+            return Subscription{};
         }
 
         // 타입 정보는 주소가 고정이다(묘비). 함수는 부를 때마다 이름으로 찾는다 — 모듈을 다시 올리면 함수 목록이 새로 채워진다.

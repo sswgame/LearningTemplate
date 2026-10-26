@@ -60,10 +60,11 @@ namespace sw
         {
             writeLogWithID( level, pTag, pCaller, pMessage, pFile, line, nullptr );
         }
-        /** @brief 한 줄이 쓰일 때 호출할 리스너를 붙입니다. */
-        virtual DelegateHandle registerLogWrittenListener( const LogWrittenDelegate& listener ) = 0;
-        /** @brief 핸들로 리스너를 해제합니다. */
-        virtual void unregisterLogWrittenListener( const DelegateHandle& handle ) = 0;
+        /**
+         * @brief 한 줄이 쓰일 때 호출할 리스너를 붙이고 그 구독을 돌려줍니다. 구독이 사라지면 뗍니다(진행 중인 방송이 끝나기를 기다린다).
+         * @details 감싸는 싱크는 감싼 싱크의 구독을 그대로 돌려줍니다. 리스너를 받지 않는 싱크는 빈 구독을 돌려줍니다.
+         */
+        [[nodiscard]] virtual Subscription registerLogWrittenListener( const LogWrittenDelegate& listener ) = 0;
         /** @brief 호출 스텁이 [@p pBegin, @p pEnd) 안에 있는 리스너를 모두 해제하고, 해제한 수를 반환합니다(핫 리로드가 모듈을 언로드하기 전에 부릅니다). */
         virtual uint32 removeListenerCodeWithin( const void* pBegin, const void* pEnd ) = 0;
         /** @brief 로그 파일이 있는 폴더의 경로를 반환합니다. */
@@ -121,16 +122,12 @@ namespace sw
          */
         static void printAssertFailureToStderr( const utf8* pExpression, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pFunction ) noexcept;
         /**
-         * @brief 전역 싱크에 리스너를 붙입니다. 싱크가 없으면 순서 위반이라 `SW_LOW_LEVEL_ASSERT` 로 보고하고(Debug 는 멈춘다) 빈 핸들을 돌려줍니다.
-         * @details 핸들을 버리면 해제할 수 없으므로 `[[nodiscard]]` 입니다.
+         * @brief 전역 싱크에 리스너를 붙이고 그 구독을 돌려줍니다. 싱크가 없으면 순서 위반이라 `SW_LOW_LEVEL_ASSERT` 로 보고하고(Debug 는 멈춘다) 빈 구독을 돌려줍니다.
+         * @details 구독은 붙인 싱크를 가리킨다 — 그 뒤 전역 싱크가 바뀌어도 붙인 곳에서 떼고, 싱크가 먼저 사라지면 무효가 된다(종료 순서에서 정상).
+         *          구독을 풀면 진행 중인 방송이 끝날 때까지 기다린다(최대 2 초). 그래서 리스너 콜백이 얻는 락을 **쥔 채** 풀지 않는다 — 콜백이 그 락을 기다리면
+         *          2 초 뒤 stderr 경고로 풀린다. 리스너 콜백 안에서 푸는 것은 기다리지 않는다(자기 방송을 기다리지 않게 막아 두었다).
          */
-        [[nodiscard]] static DelegateHandle registerGlobalListener( const LogWrittenDelegate& listener );
-        /**
-         * @brief 전역 싱크에서 리스너를 해제합니다. 싱크가 이미 없으면 리스너도 싱크와 함께 사라졌으므로 할 일이 없습니다(종료 순서에서 정상).
-         * @details 진행 중인 방송이 끝날 때까지 기다린다(최대 2 초). 그래서 리스너 콜백이 얻는 락을 **쥔 채** 해제하지 않는다 — 콜백이 그 락을 기다리면 2 초 뒤 stderr 경고로 풀린다.
-         *          리스너 콜백 안에서 부르는 해제는 기다리지 않는다(자기 방송을 기다리지 않게 막아 두었다).
-         */
-        static void unregisterGlobalListener( const DelegateHandle& handle );
+        [[nodiscard]] static Subscription registerGlobalListener( const LogWrittenDelegate& listener );
         /** @brief 전역 싱크에서 호출 스텁이 [@p pBegin, @p pEnd) 안에 있는 리스너를 모두 해제하고, 해제한 수를 반환합니다. 싱크가 없으면 0 입니다. */
         static uint32 releaseGlobalListenerCodeWithin( const void* pBegin, const void* pEnd );
         /** @brief 현재 전역 싱크를 반환합니다. 없으면 nullptr 입니다. */

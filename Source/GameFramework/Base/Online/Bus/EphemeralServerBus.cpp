@@ -42,14 +42,7 @@ namespace sw
     {
     }
 
-    EphemeralServerBus::~EphemeralServerBus()
-    {
-        // 라우터가 이 객체의 델리게이트를 보관한다. 라우터가 먼저 종료했으면(`shutdown`) 구독 목록이 비어 있어 해지는 아무 일도 하지 않는다.
-        for ( const TopicSubscription& subscription : _listSubscription )
-        {
-            _pRouter->unsubscribe( subscription._subscriptionID );
-        }
-    }
+    EphemeralServerBus::~EphemeralServerBus() = default; // 구독이 라우터의 델리게이트를 뗀다. 라우터가 먼저 내려갔으면(`shutdown`) 구독은 이미 무효다
 
     bool EphemeralServerBus::bindRouter( EphemeralStoreRouter* pRouter )
     {
@@ -100,16 +93,13 @@ namespace sw
             SW_LOG_WARNING( "Bus subscription to '%#' failed - no cache router is bound", topic );
             return;
         }
-        const uint64 subscriptionID = _pRouter->subscribe( EphemeralServerBusInternal::makeChannel( topic ),
-                                                           SW_DELEGATE_METHOD( EphemeralStoreRouter::MessageDelegate, &EphemeralServerBus::onChannelMessage, this ) );
-        if ( subscriptionID == 0 )
-        {
-            SW_LOG_WARNING( "Bus subscription to '%#' failed - the cache router is not initialized", topic );
-            return;
-        }
+        Subscription routerSubscription = _pRouter->subscribe( EphemeralServerBusInternal::makeChannel( topic ),
+                                                               SW_DELEGATE_METHOD( EphemeralStoreRouter::MessageDelegate, &EphemeralServerBus::onChannelMessage, this ) );
+        if ( routerSubscription.isActive() == false )
+            return; // 라우터가 이유(초기화 전)를 오류로 남겼다
         TopicSubscription& subscription = _listSubscription.emplace_back();
         subscription._topic             = string( topic );
-        subscription._subscriptionID    = subscriptionID;
+        subscription._subscription      = std::move( routerSubscription );
     }
 
     void EphemeralServerBus::unsubscribe( string_view topic )
@@ -118,7 +108,6 @@ namespace sw
         {
             if ( _listSubscription[index]._topic != topic )
                 continue;
-            _pRouter->unsubscribe( _listSubscription[index]._subscriptionID );
             _listSubscription.erase( _listSubscription.begin() + static_cast<ptrdiff_t>( index ) );
             return;
         }
