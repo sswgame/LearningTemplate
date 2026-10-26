@@ -115,8 +115,7 @@ namespace sw
             return _authorization;
         const int64 issuedAtSec = nowWallMs / Internal::kMillisecondsPerSecond;
         const int64 expiresMs   = nowWallMs + Internal::kAuthLifetimeMs;
-        string      payload;
-        JSONWriter  writer{ payload };
+        JSONWriter  writer;
         writer.beginObject();
         writer.key( "iss" );
         writer.valueString( _settings._issuerID );
@@ -129,8 +128,11 @@ namespace sw
         writer.key( "bid" );
         writer.valueString( _settings._bundleID );
         writer.endObject();
-        string token;
-        if ( JSONWebToken::makeSigned( *_pSecurity, NetSignatureAlgorithm::EcdsaP256Sha256, _settings._keyID, payload, _settings._privateKeyPem, token ) == false )
+        const std::optional<JSONText> payload = writer.finish();
+        string                        token;
+        const bool                    bSigned =
+            payload.has_value() && JSONWebToken::makeSigned( *_pSecurity, NetSignatureAlgorithm::EcdsaP256Sha256, _settings._keyID, *payload, _settings._privateKeyPem, token );
+        if ( bSigned == false )
         {
             SW_LOG_ERROR( "Could not sign the App Store Server API token with the key '%#'", _settings._keyID.c_str() );
             return {};

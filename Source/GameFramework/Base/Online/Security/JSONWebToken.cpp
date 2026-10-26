@@ -165,8 +165,8 @@ namespace sw
                                          static_cast<int32>( _signatureBytes.size() ) );
     }
 
-    bool JSONWebToken::makeSigned( INetSecurityProvider& provider, NetSignatureAlgorithm algorithm, string_view keyID, string_view payloadJSON,
-                                   const string& privateKeyPem, string& outCompact )
+    bool JSONWebToken::makeSigned( INetSecurityProvider& provider, NetSignatureAlgorithm algorithm, string_view keyID, const JSONText& payload, const string& privateKeyPem,
+                                   string& outCompact )
     {
         using Internal = JSONWebTokenInternal;
         string     header;
@@ -181,7 +181,7 @@ namespace sw
         writer.endObject();
         string signingInput = Internal::encodeText( header );
         signingInput.push_back( '.' );
-        signingInput += Internal::encodeText( payloadJSON );
+        signingInput += Internal::encodeText( payload.view() );
         vector<uint8> signature;
         if ( provider.signData( algorithm, privateKeyPem, reinterpret_cast<const uint8*>( signingInput.data() ), static_cast<int32>( signingInput.size() ), signature ) ==
              false )

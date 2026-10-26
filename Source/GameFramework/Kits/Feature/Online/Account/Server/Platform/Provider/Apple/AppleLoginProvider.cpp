@@ -94,8 +94,7 @@ namespace sw
         const int64  issuedAtSec = nowMs / constant::kMillisecondsPerSecond;
         const int64  expiresAtMs = nowMs + Internal::kSecretLifetimeMs;
         const string clientID    = _settings._listClientID.empty() ? string() : _settings._listClientID.front();
-        string       payload;
-        JSONWriter   writer{ payload };
+        JSONWriter   writer;
         writer.beginObject();
         writer.key( "iss" );
         writer.valueString( _settings._teamID );
@@ -108,8 +107,11 @@ namespace sw
         writer.key( "sub" );
         writer.valueString( clientID );
         writer.endObject();
-        string secret;
-        if ( JSONWebToken::makeSigned( *_pSecurity, NetSignatureAlgorithm::EcdsaP256Sha256, _settings._signingKeyID, payload, _signingKeyPem, secret ) == false )
+        const std::optional<JSONText> payload = writer.finish();
+        string                        secret;
+        const bool                    bSigned =
+            payload.has_value() && JSONWebToken::makeSigned( *_pSecurity, NetSignatureAlgorithm::EcdsaP256Sha256, _settings._signingKeyID, *payload, _signingKeyPem, secret );
+        if ( bSigned == false )
         {
             SW_LOG_ERROR( "Could not sign the client secret of login provider '%#' with its key", _settings._name.c_str() );
             return {};

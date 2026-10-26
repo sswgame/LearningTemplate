@@ -9,16 +9,41 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 
+#include <optional>
+
 namespace sw
 {
     class JSONValue;
 
     /**
+     * @class JSONText
+     * @brief `JSONWriter::finish` 가 돌려주는 다 쓴 JSON 글입니다. 쓰기기만 만들 수 있다.
+     * @details JSON 을 받아 서명하거나 보내는 API(`JSONWebToken::makeSigned`)가 `string_view` 대신 이것을 받으면 이어 붙인 글이 들어올 자리가 없다.
+     */
+    class JSONText
+    {
+    public:
+        string_view view() const { return _text; }
+
+    private:
+        friend class JSONWriter;
+        explicit JSONText( string&& text )
+            : _text{ std::move( text ) }
+        {
+        }
+
+        string _text;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @class JSONWriter
      * @brief `beginObject` · `key` · `value*` · `beginArray` 로 JSON 을 스트림처럼 씁니다.
      * @details
      * - 문자열: `"` · `\` · 제어 문자(`\b \f \n \r \t`, 나머지는 `\u00xx`)를 이스케이프하고 올바른 UTF-8 은 그대로 둔다. 잘못된 UTF-8 바이트는
-     *   `�` 로 바꾼다(출력이 늘 올바른 JSON 이다). 이 규칙은 `JSONDocument::escapeString`(nlohmann `dump`)과 같은 바이트를 낸다.
+     *   U+FFFD 이스케이프로 바꾼다(출력이 늘 올바른 JSON 이다). 이 규칙은 `JSONDocument::escapeString`(nlohmann `dump`)과 같은 바이트를 낸다.
      * - 실수: 가장 짧은 왕복 표기이고 정수처럼 보이면 `.0` 을 붙인다. NaN · 무한대는 JSON 에 없으므로 `null` 을 쓰고 실패로 남긴다(`isComplete` 가 false).
      * - 순서 위반(배열 안의 `key`, 객체 안의 키 없는 값, 짝이 안 맞는 `end*`, 두 번째 루트 값)은 단언이고 실패로 남긴다.
      * - 고정 버퍼 대상은 할당하지 않는다(`valueJSON` 제외). 넘치면 자르고 실패로 남기며 늘 0 으로 끝낸다.
@@ -30,6 +55,8 @@ namespace sw
         /** @brief 중첩 깊이 한도입니다. 고정 배열이라 할당하지 않는다. */
         static constexpr uint32 kMaxDepth = 32;
 
+        /** @brief 쓰기기가 가진 버퍼에 씁니다. 다 쓰면 `finish` 로 `JSONText` 를 꺼낸다(서명 · 전송할 페이로드). */
+        explicit JSONWriter( int32 indent = -1 );
         /** @brief @p outJSON 끝에 덧붙여 씁니다. 큰 출력은 부르는 쪽이 `reserve` 해 둔다. */
         explicit JSONWriter( string& outJSON, int32 indent = -1 );
         /** @brief 고정 버퍼 @p pBuffer ( @p capacity 바이트, 끝 0 포함)에 처음부터 씁니다. 할당하지 않는다. */
@@ -61,6 +88,11 @@ namespace sw
 
         /** @brief 루트 값 하나를 다 닫았고 실패(순서 위반 · NaN · 넘침)가 없으면 true 입니다. */
         [[nodiscard]] bool isComplete() const;
+        /**
+         * @brief 가진 버퍼로 쓴 글을 `JSONText` 로 꺼냅니다. 완성되지 않았으면(`isComplete` 가 false) nullopt 이고, 꺼낸 뒤에는 더 쓰지 않는다.
+         * @details 버퍼를 받은 쓰기기(문자열 · 고정 버퍼)에서 부르면 단언이고 nullopt 다.
+         */
+        [[nodiscard]] std::optional<JSONText> finish();
         /** @brief 이 쓰기기가 쓴 바이트 수입니다(고정 버퍼면 0 앞까지의 길이). */
         size_t getWrittenSize() const { return _writtenSize; }
 
@@ -83,6 +115,7 @@ namespace sw
         void               closeScope( bool bObject, utf8 closing );
         void               fail();
 
+        string  _ownedText; ///< `JSONWriter( indent )` 가 쓰는 버퍼(`finish` 가 꺼낸다)
         string* _pString;
         utf8*   _pBuffer;
         uint32  _capacity;

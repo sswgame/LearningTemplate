@@ -58,8 +58,24 @@ namespace sw
 
 namespace sw
 {
+    JSONWriter::JSONWriter( int32 indent )
+        : _ownedText{}
+        , _pString{ &_ownedText }
+        , _pBuffer{ nullptr }
+        , _capacity{ 0 }
+        , _indent{ indent }
+        , _writtenSize{ 0 }
+        , _arrScope{}
+        , _depth{ 0 }
+        , _bAfterKey{ false }
+        , _bRootWritten{ false }
+        , _bFailed{ false }
+    {
+    }
+
     JSONWriter::JSONWriter( string& outJSON, int32 indent )
-        : _pString{ &outJSON }
+        : _ownedText{}
+        , _pString{ &outJSON }
         , _pBuffer{ nullptr }
         , _capacity{ 0 }
         , _indent{ indent }
@@ -73,7 +89,8 @@ namespace sw
     }
 
     JSONWriter::JSONWriter( utf8* pBuffer, uint32 capacity, int32 indent )
-        : _pString{ nullptr }
+        : _ownedText{}
+        , _pString{ nullptr }
         , _pBuffer{ pBuffer }
         , _capacity{ capacity }
         , _indent{ indent }
@@ -240,6 +257,16 @@ namespace sw
     bool JSONWriter::isComplete() const
     {
         return _bFailed == false && _bRootWritten && _depth == 0;
+    }
+
+    std::optional<JSONText> JSONWriter::finish()
+    {
+        const bool bOwnsBuffer = _pString == &_ownedText;
+        SW_ASSERT( bOwnsBuffer );
+        if ( bOwnsBuffer == false || isComplete() == false )
+            return std::nullopt;
+        _bFailed = true; // 꺼낸 뒤에는 쓰지 않는다 — 이어 쓰면 빈 버퍼에 조각이 생긴다
+        return JSONText{ std::move( _ownedText ) };
     }
 
     void JSONWriter::append( string_view text )

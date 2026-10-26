@@ -100,8 +100,7 @@ namespace sw
             return true;
         const int64 issuedAtSec = nowMs / Internal::kMillisecondsPerSecond;
         const int64 expiresSec  = issuedAtSec + kJwtLifetimeMs / Internal::kMillisecondsPerSecond;
-        string      payload;
-        JSONWriter  writer{ payload };
+        JSONWriter  writer;
         writer.beginObject();
         writer.key( "iss" );
         writer.valueString( _credentials._clientEmail );
@@ -114,8 +113,11 @@ namespace sw
         writer.key( "exp" );
         writer.valueInt( expiresSec );
         writer.endObject();
-        string assertion;
-        if ( JSONWebToken::makeSigned( *_pSecurity, NetSignatureAlgorithm::RsaPkcs1Sha256, _credentials._keyID, payload, _credentials._privateKeyPem, assertion ) == false )
+        const std::optional<JSONText> payload = writer.finish();
+        string                        assertion;
+        const bool                    bSigned = payload.has_value() &&
+                             JSONWebToken::makeSigned( *_pSecurity, NetSignatureAlgorithm::RsaPkcs1Sha256, _credentials._keyID, *payload, _credentials._privateKeyPem, assertion );
+        if ( bSigned == false )
         {
             SW_LOG_ERROR( "Could not sign the token request of service account '%#' with its key", _credentials._clientEmail.c_str() );
             return false;

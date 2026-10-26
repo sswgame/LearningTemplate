@@ -213,3 +213,28 @@ SW_TEST_CASE( JSONWriterTest, MisuseIsReported )
     objectWriter.endObject();
     SW_EXPECT_FALSE( objectWriter.isComplete() );
 }
+
+/**
+ * @brief [JSONWriterTest] 버퍼를 가진 쓰기기만 `JSONText` 를 꺼내고, 완성되지 않았으면 꺼내지 않는다
+ */
+SW_TEST_CASE( JSONWriterTest, FinishHandsOutOnlyCompleteText )
+{
+    sw::JSONWriter writer;
+    writer.beginObject();
+    writer.key( "sub" );
+    writer.valueString( "a\",\"admin\":true" );
+    writer.endObject();
+    const std::optional<sw::JSONText> text = writer.finish();
+    SW_ASSERT_TRUE( text.has_value() );
+    SW_EXPECT_EQUAL( sw::string( R"({"sub":"a\",\"admin\":true"})" ), sw::string( text->view() ) );
+
+    sw::JSONWriter open;
+    open.beginArray();
+    SW_EXPECT_FALSE( open.finish().has_value() );
+
+    test::ScopedAssertCapture assertCapture;
+    sw::string                json;
+    sw::JSONWriter            borrowed{ json };
+    borrowed.valueNull();
+    SW_EXPECT_FALSE( borrowed.finish().has_value() ); // 버퍼를 받은 쓰기기는 꺼낼 글이 없다
+}

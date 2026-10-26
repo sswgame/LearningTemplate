@@ -5,6 +5,8 @@
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "Engine/Serialization/JSON/JSONWriter.h"
+
 #include "EngineTest/GameFramework/Online/FakeHTTPSFixture.h"
 
 #include "GameFramework/Base/Online/Security/JSONWebToken.h"
@@ -135,9 +137,23 @@ namespace
 
         sw::string makeIDToken( const utf8* pSubject, const utf8* pAudience = "com.example.app" ) const
         {
-            const sw::string payload = sw::string( "{\"iss\":\"https://issuer.test\",\"aud\":\"" ) + pAudience + "\",\"sub\":\"" + pSubject + "\",\"iat\":900,\"exp\":2000}";
-            sw::string       compact;
-            (void)JSONWebToken::makeSigned( NetSecurity::getProvider(), NetSignatureAlgorithm::RsaPkcs1Sha256, "id-key", payload, _idPrivateKeyPem, compact );
+            sw::JSONWriter writer;
+            writer.beginObject();
+            writer.key( "iss" );
+            writer.valueString( "https://issuer.test" );
+            writer.key( "aud" );
+            writer.valueString( pAudience );
+            writer.key( "sub" );
+            writer.valueString( pSubject );
+            writer.key( "iat" );
+            writer.valueInt( 900 );
+            writer.key( "exp" );
+            writer.valueInt( 2000 );
+            writer.endObject();
+            const std::optional<sw::JSONText> payload = writer.finish();
+            sw::string                        compact;
+            if ( payload.has_value() )
+                (void)JSONWebToken::makeSigned( NetSecurity::getProvider(), NetSignatureAlgorithm::RsaPkcs1Sha256, "id-key", *payload, _idPrivateKeyPem, compact );
             return compact;
         }
 
