@@ -76,7 +76,7 @@ namespace sw
         /** @brief 글(리치 텍스트 표기를 벗긴 보이는 글)을 이름으로 내보입니다. `accessibleName` 이 있으면 그것을 읽습니다. 글이 비면 역할 `None` 입니다. */
         void describeAccessible( AccessibleInfo& outInfo ) override;
         /** @brief 글 색 · 외곽선 · 글자 크기를 자기 값으로 씁니다(스타일 전환의 "한쪽만 정한 필드"). */
-        uint32 fillOwnStyle( uint32 styleStates, WidgetStyle& outStyle ) const override;
+        void fillOwnStyle( uint32 styleStates, UIOwnStyle& outStyle ) const override;
 
         /** @brief 마지막 칠하기의 배치 결과입니다(테스트와 커서 위치용). */
         const TextLayoutResult& getLastLayout() const { return _layoutCache; }

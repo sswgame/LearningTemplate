@@ -104,15 +104,13 @@ namespace sw
         invalidateText();
     }
 
-    uint32 TextWidget::fillOwnStyle( uint32 styleStates, WidgetStyle& outStyle ) const
+    void TextWidget::fillOwnStyle( uint32 styleStates, UIOwnStyle& outStyle ) const
     {
-        using Table                = UIStyleFieldTable;
-        outStyle._textColor        = _color;
-        outStyle._textOutlineColor = _outlineColor;
-        outStyle._textOutlineWidth = _outlineWidth;
-        outStyle._fontSize         = _style._fontSize;
-        return Widget::fillOwnStyle( styleStates, outStyle ) | Table::makeBit( UIStyleField::TextColor ) | Table::makeBit( UIStyleField::TextOutlineColor ) |
-               Table::makeBit( UIStyleField::TextOutlineWidth ) | Table::makeBit( UIStyleField::FontSize );
+        Widget::fillOwnStyle( styleStates, outStyle );
+        outStyle.set<UIStyleField::TextColor>( _color );
+        outStyle.set<UIStyleField::TextOutlineColor>( _outlineColor );
+        outStyle.set<UIStyleField::TextOutlineWidth>( _outlineWidth );
+        outStyle.set<UIStyleField::FontSize>( _style._fontSize );
     }
 
     void TextWidget::onBoundPropertyChanged( const PropertyInfo& property )

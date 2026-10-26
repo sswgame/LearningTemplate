@@ -212,18 +212,17 @@ namespace sw
     {
         if ( UIStyleFieldTable::getComponentCount( field ) == 0 )
             return false;
-        WidgetStyle  own{};
-        const uint32 ownMask = fillOwnStyle( styleStates, own );
-        if ( ( ownMask & UIStyleFieldTable::makeBit( field ) ) == 0 )
+        UIOwnStyle own{};
+        fillOwnStyle( styleStates, own );
+        if ( own.has( field ) == false )
             return false;
-        UIStyleFieldTable::readComponents( own, field, outArr );
+        UIStyleFieldTable::readComponents( own.getValue(), field, outArr );
         return true;
     }
 
-    uint32 Widget::fillOwnStyle( [[maybe_unused]] uint32 styleStates, WidgetStyle& outStyle ) const
+    void Widget::fillOwnStyle( [[maybe_unused]] uint32 styleStates, UIOwnStyle& outStyle ) const
     {
-        outStyle._opacity = 1.0f; // 스타일 불투명도는 위젯 불투명도에 곱해지는 값이라 정하지 않은 것은 1 이다
-        return UIStyleFieldTable::makeBit( UIStyleField::Opacity );
+        outStyle.set<UIStyleField::Opacity>( 1.0f ); // 스타일 불투명도는 위젯 불투명도에 곱해지는 값이라 정하지 않은 것은 1 이다
     }
 
     float32 Widget::computeEffectiveOpacity() const

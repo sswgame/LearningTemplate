@@ -29,36 +29,38 @@ namespace sw
             /** @brief 서술자 표의 한 줄입니다. 수치 필드는 `WidgetStyle` 안의 오프셋과 성분 수로 읽고 쓰고 견줍니다(성분 수 0 은 수치가 아닌 필드). */
             struct FieldRow
             {
-                uint32 _flags{ 0 };
-                uint32 _offset{ 0 };
-                uint32 _componentCount{ 0 };
+                UIStyleField _field{ UIStyleField::Count };
+                uint32       _flags{ 0 };
+                uint32       _offset{ 0 };
+                uint32       _componentCount{ 0 };
             };
 
-// 줄 하나에 멤버 이름을 한 번만 적는다 — 오프셋과 성분 수가 같은 멤버에서 나와 서로 어긋날 수 없다.
-#define SW_UI_STYLE_FIELD_ROW( member, flags )                                                                                     \
-    FieldRow                                                                                                                       \
-    {                                                                                                                              \
-        flags, static_cast<uint32>( offsetof( WidgetStyle, member ) ), kWidgetStyleComponentCount<decltype( WidgetStyle::member )> \
+// 오프셋과 성분 수는 필드 → 멤버 표(`UIStyleFieldMember`)에서 나온다. 이 줄은 필드 이름과 플래그만 적는다.
+#define SW_UI_STYLE_FIELD_ROW( field, flags )                                                                \
+    FieldRow                                                                                                 \
+    {                                                                                                        \
+        UIStyleField::field, flags, static_cast<uint32>( UIStyleFieldMember<UIStyleField::field>::kOffset ), \
+            kWidgetStyleComponentCount<UIStyleFieldMember<UIStyleField::field>::Type>                        \
     }
 
-            /** @brief 필드마다 한 줄입니다. `UIStyleField` 순서(`WidgetStyle` PROPERTY 선언 순서)입니다. */
+            /** @brief 필드마다 한 줄입니다. `UIStyleField` 순서(`WidgetStyle` PROPERTY 선언 순서)이며 아래 static_assert 가 줄마다 번호를 대어 봅니다. */
             static constexpr FieldRow kArrRow[] = {
-                SW_UI_STYLE_FIELD_ROW( _backgroundColor, 0 ),
-                SW_UI_STYLE_FIELD_ROW( _cornerRadius, 0 ),
-                SW_UI_STYLE_FIELD_ROW( _borderWidth, 0 ),
-                SW_UI_STYLE_FIELD_ROW( _borderColor, 0 ),
-                SW_UI_STYLE_FIELD_ROW( _shadowColor, 0 ),
-                SW_UI_STYLE_FIELD_ROW( _shadowOffset, 0 ),
-                SW_UI_STYLE_FIELD_ROW( _shadowBlur, 0 ),
-                SW_UI_STYLE_FIELD_ROW( _padding, Table::kAffectsLayout ),
-                SW_UI_STYLE_FIELD_ROW( _font, Table::kAffectsLayout | Table::kInherited ),
-                SW_UI_STYLE_FIELD_ROW( _fontSize, Table::kAffectsLayout | Table::kInherited ),
-                SW_UI_STYLE_FIELD_ROW( _textColor, Table::kInherited ),
-                SW_UI_STYLE_FIELD_ROW( _textOutlineColor, Table::kInherited ),
-                SW_UI_STYLE_FIELD_ROW( _textOutlineWidth, Table::kInherited ),
-                SW_UI_STYLE_FIELD_ROW( _focusRingColor, 0 ),
-                SW_UI_STYLE_FIELD_ROW( _opacity, Table::kAffectsSubtree ),
-                SW_UI_STYLE_FIELD_ROW( _transition, 0 ),
+                SW_UI_STYLE_FIELD_ROW( BackgroundColor, 0 ),
+                SW_UI_STYLE_FIELD_ROW( CornerRadius, 0 ),
+                SW_UI_STYLE_FIELD_ROW( BorderWidth, 0 ),
+                SW_UI_STYLE_FIELD_ROW( BorderColor, 0 ),
+                SW_UI_STYLE_FIELD_ROW( ShadowColor, 0 ),
+                SW_UI_STYLE_FIELD_ROW( ShadowOffset, 0 ),
+                SW_UI_STYLE_FIELD_ROW( ShadowBlur, 0 ),
+                SW_UI_STYLE_FIELD_ROW( Padding, Table::kAffectsLayout ),
+                SW_UI_STYLE_FIELD_ROW( Font, Table::kAffectsLayout | Table::kInherited ),
+                SW_UI_STYLE_FIELD_ROW( FontSize, Table::kAffectsLayout | Table::kInherited ),
+                SW_UI_STYLE_FIELD_ROW( TextColor, Table::kInherited ),
+                SW_UI_STYLE_FIELD_ROW( TextOutlineColor, Table::kInherited ),
+                SW_UI_STYLE_FIELD_ROW( TextOutlineWidth, Table::kInherited ),
+                SW_UI_STYLE_FIELD_ROW( FocusRingColor, 0 ),
+                SW_UI_STYLE_FIELD_ROW( Opacity, Table::kAffectsSubtree ),
+                SW_UI_STYLE_FIELD_ROW( Transition, 0 ),
             };
 #undef SW_UI_STYLE_FIELD_ROW
             static_assert( SW_COUNT_OF( kArrRow ) == static_cast<size_t>( UIStyleField::Count ), "UIStyleField and the descriptor table differ" );
@@ -72,6 +74,17 @@ namespace sw
                     count += row._componentCount == 0 ? 1u : 0u;
                 }
                 return count;
+            }
+
+            /** @brief 줄마다 자리 번호가 그 줄의 필드 번호와 같으면 true 입니다(줄 순서가 어긋나면 컴파일이 멈춘다). */
+            static constexpr bool isRowOrderMatching()
+            {
+                for ( uint32 index = 0; index < SW_COUNT_OF( kArrRow ); ++index )
+                {
+                    if ( static_cast<uint32>( kArrRow[index]._field ) != index )
+                        return false;
+                }
+                return true;
             }
 
             static const FieldRow& getRow( UIStyleField field ) { return kArrRow[static_cast<uint32>( field )]; }
@@ -104,6 +117,7 @@ namespace sw
         static_assert( WidgetStyleInternal::kArrRow[static_cast<size_t>( UIStyleField::Font )]._componentCount == 0 &&
                            WidgetStyleInternal::kArrRow[static_cast<size_t>( UIStyleField::Transition )]._componentCount == 0 && WidgetStyleInternal::countNonNumericRows() == 2,
                        "Font and Transition must be the only non-numeric style fields; a new one needs its own comparison in isSameValue" );
+        static_assert( WidgetStyleInternal::isRowOrderMatching(), "descriptor rows must follow the UIStyleField order" );
     } // namespace
 } // namespace sw
 

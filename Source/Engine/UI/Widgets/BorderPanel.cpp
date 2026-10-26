@@ -49,22 +49,19 @@ namespace sw
         invalidate( WidgetDirty::kPaint );
     }
 
-    uint32 BorderPanel::fillOwnStyle( uint32 styleStates, WidgetStyle& outStyle ) const
+    void BorderPanel::fillOwnStyle( uint32 styleStates, UIOwnStyle& outStyle ) const
     {
-        using Table = UIStyleFieldTable;
+        PanelWidget::fillOwnStyle( styleStates, outStyle );
         // 칠하는 쪽(`computeEffectiveBrush`)과 같은 상태 브러시를 읽는다 — 기본 브러시를 읽으면 버튼의 호버 · 누름 · 꺼짐 색으로 옮겨 가지 않고 끝에 튄다.
         const UIBrush& background = selectBackgroundBrush( styleStates );
-        outStyle._backgroundColor = background._color;
-        outStyle._cornerRadius    = background._cornerRadius;
-        outStyle._borderColor     = background._borderColor;
-        outStyle._borderWidth     = background._borderWidth;
-        outStyle._padding         = _contentPadding;
-        outStyle._shadowColor     = _shadowColor;
-        outStyle._shadowOffset    = _shadowOffset;
-        outStyle._shadowBlur      = _shadowBlur;
-        return PanelWidget::fillOwnStyle( styleStates, outStyle ) | Table::makeBit( UIStyleField::BackgroundColor ) | Table::makeBit( UIStyleField::CornerRadius ) |
-               Table::makeBit( UIStyleField::BorderColor ) | Table::makeBit( UIStyleField::BorderWidth ) | Table::makeBit( UIStyleField::Padding ) |
-               Table::makeBit( UIStyleField::ShadowColor ) | Table::makeBit( UIStyleField::ShadowOffset ) | Table::makeBit( UIStyleField::ShadowBlur );
+        outStyle.set<UIStyleField::BackgroundColor>( background._color );
+        outStyle.set<UIStyleField::CornerRadius>( background._cornerRadius );
+        outStyle.set<UIStyleField::BorderColor>( background._borderColor );
+        outStyle.set<UIStyleField::BorderWidth>( background._borderWidth );
+        outStyle.set<UIStyleField::Padding>( _contentPadding );
+        outStyle.set<UIStyleField::ShadowColor>( _shadowColor );
+        outStyle.set<UIStyleField::ShadowOffset>( _shadowOffset );
+        outStyle.set<UIStyleField::ShadowBlur>( _shadowBlur );
     }
 
     float4 BorderPanel::computeEffectivePadding() const
