@@ -206,7 +206,7 @@ namespace sw
     {
         for ( const MaterialXMLInternal::BlendModeName& entry : MaterialXMLInternal::kArrBlendModeName )
         {
-            if ( StringUtil::equals( modeName, entry._name, true ) )
+            if ( modeName == entry._name ) // 철자는 표 그대로만 받는다 — 대소문자를 무시하면 이름마다 별칭이 생긴다
             {
                 outMode = entry._mode;
                 return true;

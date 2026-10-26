@@ -61,6 +61,23 @@ namespace sw
 namespace sw
 {
     /**
+     * @struct DDSLegacyRgbMask
+     * @brief 옛 머리 DDS 의 비트 수 · 채널 마스크(압축 없는 RGB)와 그것이 가리키는 DXGI 형식 번호입니다. 다섯 칸이 모두 같아야 맞습니다.
+     */
+    struct DDSLegacyRgbMask
+    {
+        uint32 _bitCount;
+        uint32 _rMask;
+        uint32 _gMask;
+        uint32 _bMask;
+        uint32 _aMask;
+        uint32 _dxgiFormat;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @struct DDSLoader
      * @brief 외부 라이브러리 없이 표준 DDS 헤더와 바이너리 데이터를 직접 파싱하는 가벼운 로더입니다.
      */
@@ -87,5 +104,7 @@ namespace sw
          *          `EditorTexturePipelineTest.DDSFormatFileMatchesTheLoaderTables` 가 본다.
          */
         [[nodiscard]] static vector<DDSLegacyFourCc> getLegacyFourCcTable();
+        /** @brief 로더가 아는 옛 머리 RGB 마스크 표입니다(읽기가 쓰는 표 그대로). 파일과 같은지는 `getLegacyFourCcTable` 과 같은 테스트가 본다. */
+        [[nodiscard]] static vector<DDSLegacyRgbMask> getLegacyRgbMaskTable();
     };
 } // namespace sw

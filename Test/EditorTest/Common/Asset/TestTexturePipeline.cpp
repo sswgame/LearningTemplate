@@ -511,7 +511,7 @@ namespace sw::editor
     /**
      * @brief [EditorTexturePipelineTest] DDS 형식 이름 파일(`Config/Editor/DdsFormats.json`)이 C++ 의 세 표와 같다
      * @details 파일은 파이썬 에셋 검증이 읽는 이름표의 정본이다(파이썬은 C++ 를 읽지 못하고, C++ 에서 만든 JSON 은 빌드가 있어야 해서 데이터 파일 하나를 둘이 본다).
-     *          (1) 임포터 표 — 형식마다 UNORM 번호의 이름이 `getName` 과 같고 써 낼 수 있는 이름은 모두 파일에 있다. (2) DDSLoader 의 옛 FourCC 표 — 두 방향 모두 같은 줄.
+     *          (1) 임포터 표 — 형식마다 UNORM 번호의 이름이 `getName` 과 같고 써 낼 수 있는 이름은 모두 파일에 있다. (2) DDSLoader 의 옛 FourCC 표와 옛 RGB 마스크 표 — 두 방향 모두 같은 줄.
      *          (3) Texture2D 가 읽는 DXGI 번호는 모두 이름이 있다(없으면 검증이 `DXGI_<번호>` 로 적고 규칙이 그 형식을 적을 길이 없다).
      */
     SW_TEST_CASE( EditorTexturePipelineTest, DDSFormatFileMatchesTheLoaderTables )
@@ -579,6 +579,35 @@ namespace sw::editor
                 bFound = code == loaderRow._fourCC && row.get( "dxgi" ).read<uint32>() == loaderRow._dxgiFormat;
             }
             SW_EXPECT_TRUE_MSG( bFound, "DDSLoader FourCC row " + to_string( loaderRow._fourCC ) + " -> " + to_string( loaderRow._dxgiFormat ) + " is not in DdsFormats.json" );
+        }
+
+        // (2b) DDSLoader 의 옛 RGB 마스크 표 — 줄 수가 같고 로더의 줄이 모두 파일에 있다(마스크는 "0x…" 16 진 글)
+        const JSONValue masks = document.getRoot().get( "legacy_rgb_masks" );
+        SW_ASSERT_TRUE( masks.isArray() );
+        const auto readHex = []( const JSONValue& value ) -> uint32
+        {
+            const string hexText = value.asString();
+            uint32       number{ 0 };
+            for ( size_t index = 2; index < hexText.size(); ++index )
+            {
+                const utf8   letter = hexText[index];
+                const uint32 digit  = ( letter >= '0' && letter <= '9' ) ? static_cast<uint32>( letter - '0' ) : static_cast<uint32>( ( letter | 0x20 ) - 'a' + 10 );
+                number              = ( number << 4 ) | digit;
+            }
+            return number;
+        };
+        const vector<DDSLegacyRgbMask> listLoaderMask = DDSLoader::getLegacyRgbMaskTable();
+        SW_EXPECT_EQUAL( listLoaderMask.size(), masks.size() );
+        for ( const DDSLegacyRgbMask& loaderRow : listLoaderMask )
+        {
+            bool bFound = false;
+            for ( size_t index = 0; index < masks.size() && bFound == false; ++index )
+            {
+                const JSONValue row = masks.at( index );
+                bFound              = row.get( "bits" ).read<uint32>() == loaderRow._bitCount && readHex( row.get( "r" ) ) == loaderRow._rMask && readHex( row.get( "g" ) ) == loaderRow._gMask &&
+                         readHex( row.get( "b" ) ) == loaderRow._bMask && readHex( row.get( "a" ) ) == loaderRow._aMask && row.get( "dxgi" ).read<uint32>() == loaderRow._dxgiFormat;
+            }
+            SW_EXPECT_TRUE_MSG( bFound, "DDSLoader RGB mask row -> DXGI " + to_string( loaderRow._dxgiFormat ) + " is not in DdsFormats.json" );
         }
 
         // (3) Texture2D 가 읽는 번호는 모두 이름이 있다(DXGI 번호는 0 ~ 132 안이다)

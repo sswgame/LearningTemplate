@@ -75,24 +75,31 @@ _kResourceFolderRe = re.compile(r"^(engine|common|editor|game/[a-z0-9_]+)/[A-Za-
 kDdsFormatFileRelative = "Config/Editor/DdsFormats.json"
 
 
-def _readDdsFormatTables() -> tuple[dict[int, str], dict[bytes, str]]:
-    """`DdsFormats.json` 에서 (DXGI 번호 → 이름, 옛 머리 FourCC 바이트 → 이름)을 읽습니다. 손으로 적은 사본은 로더의 FourCC 표와 어긋났다(DXT2 · ATI1 · D3DFMT 111 …)."""
+def _readDdsFormatTables() -> tuple[dict[int, str], dict[bytes, str], dict[tuple[int, ...], str]]:
+    """`DdsFormats.json` 에서 (DXGI 번호 → 이름, 옛 머리 FourCC 바이트 → 이름, 옛 머리 (비트 수, R, G, B, A 마스크) → 이름)을 읽습니다.
+    손으로 적은 사본은 로더의 표와 어긋났다(DXT2 · ATI1 · D3DFMT 111 …, 마스크만 있는 머리를 `UNCOMPRESSED_32BPP` 로 부름)."""
     path = Path(__file__).resolve().parents[2] / kDdsFormatFileRelative
     data = json.loads(path.read_text(encoding="utf-8"))
     mapName = {int(entry["dxgi"]): str(entry["name"]) for entry in data["dxgi_formats"]}
+
+    def nameOf(entry: dict, table: str) -> str:
+        if entry["dxgi"] not in mapName:
+            raise RuntimeError(f"{path}: {table} row {entry} names DXGI {entry['dxgi']} that dxgi_formats does not list")
+        return mapName[entry["dxgi"]]
+
     mapLegacy: dict[bytes, str] = {}
     for entry in data["legacy_fourcc"]:
         code = entry["fourcc"].encode("ascii") if "fourcc" in entry else struct.pack("<I", int(entry["d3dfmt"]))
-        if entry["dxgi"] not in mapName:
-            raise RuntimeError(f"{path}: legacy_fourcc row {entry} names DXGI {entry['dxgi']} that dxgi_formats does not list")
-        mapLegacy[code] = mapName[entry["dxgi"]]
-    return mapName, mapLegacy
+        mapLegacy[code] = nameOf(entry, "legacy_fourcc")
+    mapMask: dict[tuple[int, ...], str] = {}
+    for entry in data["legacy_rgb_masks"]:
+        key = (int(entry["bits"]), int(entry["r"], 16), int(entry["g"], 16), int(entry["b"], 16), int(entry["a"], 16))
+        mapMask[key] = nameOf(entry, "legacy_rgb_masks")
+    return mapName, mapLegacy, mapMask
 
 
-#: DXGI 형식 번호 → 이름, 옛 머리 FourCC → 이름. 마스크만 있는 옛 머리는 `UNCOMPRESSED_<비트>BPP` 로 짓는다.
-_kDxgiFormatName, _kLegacyFourCcName = _readDdsFormatTables()
-#: 마스크만 있는 옛 머리의 형식 이름(`readDdsInfo` 가 비트 수로 짓는다).
-_kUncompressedFormatRe = re.compile(r"^UNCOMPRESSED_\d+BPP$")
+#: DXGI 형식 번호 → 이름, 옛 머리 FourCC → 이름, 옛 머리 (비트 수, R, G, B, A 마스크) → 이름.
+_kDxgiFormatName, _kLegacyFourCcName, _kLegacyRgbMaskName = _readDdsFormatTables()
 #: 텍스처 규칙의 형식 목록 키 — 이름은 `readDdsInfo` 가 지을 수 있는 이름이어야 하고(모르는 이름은 규칙 로드 오류) 두 목록은 겹치지 않는다.
 #: 임포터가 낼 수 있는 형식(`TextureImportFormatUtil::getWrittenFormatNames`)이 모두 어느 규칙에서 허용 · 거절 중 하나인지는
 #: `EditorTexturePipelineTest.EveryImportOutputFormatIsDecidedByTheAssetRules` 가 본다 — 정본은 그 C++ 표다.
@@ -101,7 +108,7 @@ _kTextureFormatListKey: tuple[str, ...] = ("allowed_formats", "rejected_formats"
 
 def isKnownTextureFormatName(name: str) -> bool:
     """`readDdsInfo` 가 지을 수 있는 형식 이름인가."""
-    return name in _kDxgiFormatName.values() or name in _kLegacyFourCcName.values() or _kUncompressedFormatRe.match(name) is not None
+    return name in _kDxgiFormatName.values()   # 옛 머리 표의 이름도 모두 이 표의 이름이다(`_readDdsFormatTables` 가 확인)
 
 
 class RuleConfigError(ValueError):
@@ -331,8 +338,9 @@ def readDdsInfo(data: bytes) -> DdsInfo:
     elif pixelFlags & 0x4:  # DDPF_FOURCC
         formatName = _kLegacyFourCcName.get(fourCc, f"FOURCC_{fourCc!r}")
     else:
-        bitCount = struct.unpack_from("<I", data, 88)[0]
-        formatName = f"UNCOMPRESSED_{bitCount}BPP"
+        masks = struct.unpack_from("<5I", data, 88)   # 비트 수 · R · G · B · A 마스크
+        # 표에 없는 모양은 엔진이 읽지 못한다 — 이름이 어느 규칙에도 없어 검증에서 진다.
+        formatName = _kLegacyRgbMaskName.get(masks, "RGB_MASKS_" + "_".join(f"{value:X}" for value in masks))
     return DdsInfo(width, height, mipCount, formatName)
 
 

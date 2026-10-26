@@ -133,19 +133,30 @@ namespace sw
             }
 
             /**
-             * @brief 32비트 RGB 마스크를 DXGI 포맷으로 바꿉니다. 모르는 모양은 `kDxgiFormatUnknown` 입니다.
+             * @brief 옛 머리의 비트 수 · 채널 마스크가 가리키는 DXGI 포맷의 표입니다. 마스크는 다섯 칸이 모두 같아야 맞는다(비슷한 모양을 어림하지 않는다).
+             * @details 이름의 정본은 `Config/Editor/DdsFormats.json` 의 `legacy_rgb_masks` 이고 테스트가 이 표와 견준다. 알파 마스크가 0 인 RGB 순서는 X 채널 형식이 DXGI 에 없어
+             *          R8G8B8A8 로 읽는다(알파 바이트는 그 파일이 쓴 값이다).
+             */
+            static constexpr DDSLegacyRgbMask kArrRgbMaskRow[] = {
+                {32, 0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000, kDxgiFormatR8G8B8A8Unorm},
+                {32, 0x000000FF, 0x0000FF00, 0x00FF0000, 0x00000000, kDxgiFormatR8G8B8A8Unorm},
+                {32, 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000, kDxgiFormatB8G8R8A8Unorm},
+                {32, 0x00FF0000, 0x0000FF00, 0x000000FF, 0x00000000, kDxgiFormatB8G8R8X8Unorm},
+            };
+
+            /**
+             * @brief 옛 머리의 RGB 마스크를 DXGI 포맷으로 바꿉니다. 표에 없는 모양은 `kDxgiFormatUnknown` 입니다.
              * @details BGRA 계열이면 호출한 쪽이 포맷으로 `_bIsBgra` 를 켠다(`bBgraFormat`) — 여기서 따로 정하지 않는다.
              */
             static uint32 findDxgiFormatOfRgbMasks( const DDSPixelFormatHeader& pixelFormat )
             {
-                if ( pixelFormat._rgbBitCount != 32 )
-                    return kDxgiFormatUnknown;
-                const bool bRgbaMask  = pixelFormat._rBitMask == 0x000000FF && pixelFormat._gBitMask == 0x0000FF00 && pixelFormat._bBitMask == 0x00FF0000;
-                const bool bBgraMasks = pixelFormat._rBitMask == 0x00FF0000 && pixelFormat._gBitMask == 0x0000FF00 && pixelFormat._bBitMask == 0x000000FF;
-                if ( bBgraMasks )
-                    return ( pixelFormat._aBitMask != 0 ) ? kDxgiFormatB8G8R8A8Unorm : kDxgiFormatB8G8R8X8Unorm;
-                if ( bRgbaMask )
-                    return kDxgiFormatR8G8B8A8Unorm;
+                for ( const DDSLegacyRgbMask& row : kArrRgbMaskRow )
+                {
+                    const bool bSame = row._bitCount == pixelFormat._rgbBitCount && row._rMask == pixelFormat._rBitMask && row._gMask == pixelFormat._gBitMask &&
+                                       row._bMask == pixelFormat._bBitMask && row._aMask == pixelFormat._aBitMask;
+                    if ( bSame )
+                        return row._dxgiFormat;
+                }
                 return kDxgiFormatUnknown;
             }
         };
@@ -280,6 +291,16 @@ namespace sw
     {
         vector<DDSLegacyFourCc> listRow;
         for ( const DDSLegacyFourCc& row : DDSLoaderInternal::kArrFourCcRow )
+        {
+            listRow.push_back( row );
+        }
+        return listRow;
+    }
+
+    vector<DDSLegacyRgbMask> DDSLoader::getLegacyRgbMaskTable()
+    {
+        vector<DDSLegacyRgbMask> listRow;
+        for ( const DDSLegacyRgbMask& row : DDSLoaderInternal::kArrRgbMaskRow )
         {
             listRow.push_back( row );
         }

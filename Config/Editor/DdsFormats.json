@@ -1,5 +1,5 @@
 {
-  "_comment": "DDS 형식 이름의 정본 — 파이썬 에셋 검증(Scripts/common/AssetValidation.py)이 읽고, C++ 표(임포터 TextureImportConfig · DDSLoader 옛 FourCC · Texture2D 가 읽는 DXGI 번호)가 이 파일과 같은지 EditorTexturePipelineTest.DDSFormatFileMatchesTheLoaderTables 가 본다. 이름은 dxgiformat.h 의 DXGI_FORMAT_ 뒤 글자다. legacy_fourcc 는 옛 머리의 네 글자 코드(fourcc) 또는 D3DFMT 정수(d3dfmt)가 가리키는 DXGI 번호다.",
+  "_comment": "DDS 형식 이름의 정본 — 파이썬 에셋 검증(Scripts/common/AssetValidation.py)이 읽고, C++ 표(임포터 TextureImportConfig · DDSLoader 옛 FourCC · Texture2D 가 읽는 DXGI 번호)가 이 파일과 같은지 EditorTexturePipelineTest.DDSFormatFileMatchesTheLoaderTables 가 본다. 이름은 dxgiformat.h 의 DXGI_FORMAT_ 뒤 글자다. legacy_fourcc 는 옛 머리의 네 글자 코드(fourcc) 또는 D3DFMT 정수(d3dfmt)가 가리키는 DXGI 번호, legacy_rgb_masks 는 압축 없는 옛 머리의 비트 수 · 채널 마스크(다섯 칸이 모두 같아야 맞는다)가 가리키는 DXGI 번호다.",
   "dxgi_formats": [
     { "dxgi": 2, "name": "R32G32B32A32_FLOAT" },
     { "dxgi": 6, "name": "R32G32B32_FLOAT" },
@@ -43,5 +43,11 @@
     { "d3dfmt": 114, "dxgi": 41 },
     { "d3dfmt": 115, "dxgi": 16 },
     { "d3dfmt": 116, "dxgi": 2 }
+  ],
+  "legacy_rgb_masks": [
+    { "bits": 32, "r": "0x000000FF", "g": "0x0000FF00", "b": "0x00FF0000", "a": "0xFF000000", "dxgi": 28 },
+    { "bits": 32, "r": "0x000000FF", "g": "0x0000FF00", "b": "0x00FF0000", "a": "0x00000000", "dxgi": 28 },
+    { "bits": 32, "r": "0x00FF0000", "g": "0x0000FF00", "b": "0x000000FF", "a": "0xFF000000", "dxgi": 87 },
+    { "bits": 32, "r": "0x00FF0000", "g": "0x0000FF00", "b": "0x000000FF", "a": "0x00000000", "dxgi": 88 }
   ]
 }
