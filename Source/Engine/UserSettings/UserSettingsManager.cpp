@@ -250,8 +250,8 @@ namespace sw
 
     string UserSettingsManager::makeUserJSON() const
     {
-        const vector<UserSettingDef>& listSetting = _schema.getSettings();
-        vector<UserSettingsFileEntry> listEntry;
+        const vector<UserSettingDef>&  listSetting = _schema.getSettings();
+        vector<UserSettingsWriteEntry> listEntry;
         for ( size_t settingIndex = 0; settingIndex < _listState.size(); ++settingIndex )
         {
             const SettingState& state = _listState[settingIndex];
@@ -259,7 +259,7 @@ namespace sw
             const string& value = state._bRollback ? state._rollbackValue : state._committedValue;
             if ( value == state._defaultValue )
                 continue;
-            listEntry.push_back( UserSettingsFileEntry{ string( listSetting[settingIndex]._id.c_str() ), value } );
+            listEntry.push_back( UserSettingsWriteEntry{ listSetting[settingIndex], value } );
         }
         return UserSettingsFile::makeJSON( _schema, listEntry );
     }

@@ -10,13 +10,29 @@
 
 namespace sw
 {
+    struct UserSettingDef;
+
     class UserSettingsSchema;
 
-    /** @brief 사용자 파일의 키와 값 한 줄입니다. 값은 글이고, 쓸 때 스키마의 타입으로 JSON 값을 고릅니다. */
+    /** @brief 사용자 파일에서 읽은 키와 값 한 줄입니다. 키는 플레이어 파일의 글이라 스키마에 없을 수 있다(관리자가 경고하고 버린다). */
     struct UserSettingsFileEntry
     {
         string _key;
         string _value;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @brief 사용자 파일에 쓸 값 한 줄입니다. 키는 스키마의 설정 정의 자체라 모르는 키를 만들 수 없습니다.
+     * @details 읽기는 플레이어 데이터(모르는 키는 경고 후 버림)이고 쓰기는 프로그램이 만든 목록이다 — 쓰기의 모르는 키는 결함이므로 글 키 대신 정의를 받아
+     *          그 경우를 형식에서 없앴다(글 키를 받던 때는 String 타입으로 보고 그대로 썼다).
+     */
+    struct UserSettingsWriteEntry
+    {
+        const UserSettingDef& _def;
+        string                _value;
     };
 } // namespace sw
 
@@ -39,6 +55,6 @@ namespace sw
          */
         [[nodiscard]] static bool parseJSON( string_view jsonText, string_view sourceName, const UserSettingsSchema& schema, vector<UserSettingsFileEntry>& outListEntry );
         /** @brief 스키마 버전과 @p listEntry 를 JSON 글로 만듭니다. 불리언 · 숫자 설정은 JSON 불리언 · 숫자로 쓰고(숫자로 읽히지 않으면 글), 나머지는 글로 씁니다. */
-        static string makeJSON( const UserSettingsSchema& schema, const vector<UserSettingsFileEntry>& listEntry );
+        static string makeJSON( const UserSettingsSchema& schema, const vector<UserSettingsWriteEntry>& listEntry );
     };
 } // namespace sw
