@@ -10,13 +10,13 @@
 #endif
 
 // X11DevConsoleTest — 리눅스 개발 콘솔 오버레이(`X11DevConsoleWindow`)를 진짜 X 창 위에 세워 보고 그려진 픽셀을 읽는다(EditorFeatureGaps Cheat.C2 의 실기 확인을 대신한다).
-// 진짜 X 서버가 필요하다(CI 는 xvfb). 한글 · 일본어는 X 서버의 iso10646-1 글꼴이 글자를 가진 만큼만 나오므로 모양은 단언하지 않고, 줄이 그려지고 UTF-8 글이 죽지 않는지를 본다.
+// 진짜 X 서버가 필요하다(CI 는 xvfb). 한글 · 일본어는 시스템에 그 글자를 가진 글꼴(fontconfig 폴백)이 있느냐에 달려 있어(CI 에는 CJK 글꼴이 없다) 모양은 단언하지 않고, 줄이 그려지고 UTF-8 글이 죽지 않는지를 본다.
 
 SW_TEST_REQUIRES_HOST( X11DevConsoleTest, "creates a real X window; headless CI runners have no display" );
 
 /**
  * @brief [X11DevConsoleTest] 콘솔 오버레이가 서고 줄을 그린다 — 라틴 글 줄에 칠한 픽셀이 있고, 한글 · 일본어가 든 줄을 넘겨도 죽지 않는다
- * @details 변이: `redraw` 가 `XDrawString16` 대신 아무것도 그리지 않으면 첫 줄 띠가 모두 검어 진다. X 서버가 없거나 창을 매핑하지 못하면 건너뛴다.
+ * @details 변이: `redraw` 가 `XftDrawString16` 대신 아무것도 그리지 않으면 첫 줄 띠가 모두 검어 진다. X 서버가 없거나 창을 매핑하지 못하면 건너뛴다.
  */
 SW_TEST_CASE( X11DevConsoleTest, OverlayDrawsLatinLineAndSurvivesUtf8Lines )
 {
@@ -34,7 +34,7 @@ SW_TEST_CASE( X11DevConsoleTest, OverlayDrawsLatinLineAndSurvivesUtf8Lines )
         SW_TEST_SKIP( "the platform window is not an X11 window (the console overlay is X11 only)" );
 
     sw::unique_ptr<sw::IDevConsoleWindow> console = sw::IDevConsoleWindow::createPlatform( *window );
-    SW_ASSERT_TRUE_MSG( console != nullptr, "the console overlay could not be created (no iso10646-1 X font?)" );
+    SW_ASSERT_TRUE_MSG( console != nullptr, "the console overlay could not be created (no Xft font? libxft2 and one font such as fonts-dejavu-core)" );
     console->setVisible( true );
     const sw::vector<sw::string> listLine{ "Console ready", "한글 テスト é" };
     const sw::vector<uint8>      listError{ 0, 0 };

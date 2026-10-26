@@ -149,3 +149,44 @@ SW_TEST_CASE( ImGuiKeyForwardTest, TextInputBecomesOneEventPerCharacter )
     SW_EXPECT_TRUE( string_view{ listEvent[0]._payload._textData._arrUtf8 } == "a" );
     SW_EXPECT_TRUE( string_view{ listEvent[1]._payload._textData._arrUtf8 } == "\xEA\xB0\x80" );
 }
+
+/**
+ * @brief [ImGuiKeyForwardTest] 키를 누른 채 포커스를 잃어도(창을 바꿔도) 게임에 눌린 채 남지 않는다 — 짝 뗌을 넣고, 큐가 차서 못 넣은 뗌은 다음 프레임에 다시 넣는다
+ * @details 떼어 낸 OS 창으로 포커스가 실제로 옮겨 가는 것은 ImGui 백엔드의 일이라 이 테스트가 보지 않는다(사람이 있는 Windows 에디터의 눈 확인).
+ *          변이: 포커스를 잃을 때 기억한 키를 놓지 않으면 눌린 키가 남아 첫 단언이 진다. 못 넣은 뗌을 기억에서 지우면 마지막 단언이 진다.
+ */
+SW_TEST_CASE( ImGuiKeyForwardTest, DetachedForwarderReleasesHeldKeysWhenFocusIsLost )
+{
+    DetachedKeyForwarder  forwarder;
+    vector<RawInputEvent> listPosted;
+    bool                  bQueueFull = false;
+    const auto            post       = [&]( const RawInputEvent& event )
+    {
+        if ( bQueueFull )
+            return false;
+        listPosted.push_back( event );
+        return true;
+    };
+
+    // 포커스가 있을 때 W 를 누르면 게임으로 가고, 눌린 채 기억한다.
+    forwarder.forward( true, vector<RawInputEvent>{ RawInputEvent::makeKeyDown( Key::W ) }, post );
+    SW_ASSERT_EQUAL( 1, static_cast<int32>( listPosted.size() ) );
+    SW_ASSERT_EQUAL( 1, static_cast<int32>( forwarder.getHeldKeys().size() ) );
+
+    // 포커스를 잃으면(그 프레임의 사건은 버린다) 누른 채 남은 W 의 뗌이 간다.
+    forwarder.forward( false, vector<RawInputEvent>{ RawInputEvent::makeKeyDown( Key::A ) }, post );
+    SW_ASSERT_EQUAL( 2, static_cast<int32>( listPosted.size() ) );
+    SW_EXPECT_EQUAL( static_cast<int32>( RawInputEventType::KeyUp ), static_cast<int32>( listPosted[1]._type ) );
+    SW_EXPECT_TRUE( listPosted[1]._payload._keyData._key == Key::W );
+    SW_EXPECT_TRUE( forwarder.getHeldKeys().empty() );
+
+    // 큐가 차서 뗌을 못 넣으면 기억을 남겨 다음 프레임에 다시 시도한다.
+    forwarder.forward( true, vector<RawInputEvent>{ RawInputEvent::makeKeyDown( Key::S ) }, post );
+    bQueueFull = true;
+    forwarder.forward( false, vector<RawInputEvent>{}, post );
+    SW_EXPECT_EQUAL( 1, static_cast<int32>( forwarder.getHeldKeys().size() ) );
+    bQueueFull = false;
+    forwarder.forward( false, vector<RawInputEvent>{}, post );
+    SW_EXPECT_TRUE( forwarder.getHeldKeys().empty() );
+    SW_EXPECT_TRUE( listPosted.back()._payload._keyData._key == Key::S );
+}

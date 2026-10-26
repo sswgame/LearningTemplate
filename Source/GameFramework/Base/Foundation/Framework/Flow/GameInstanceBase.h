@@ -138,6 +138,12 @@ namespace sw
         static GameObjectManager* findActiveObjectManager();
 
     protected:
+        /**
+         * @brief 타이틀 씬이 있으면 @p ui 의 전역 명령 `ReturnToTitle` 을 등록합니다(`initialize` 가 UI 가 있을 때 부른다). `unregisterSessionCommands` 가 거둡니다.
+         * @details UI 를 인자로 받는 까닭: 창 없이 게임 인스턴스를 세우는 테스트가 UI 를 직접 줘서 "타이틀로" 흐름(등록 · 누르면 타이틀 씬 로드)을 본다.
+         */
+        void registerSessionCommands( UISystem& ui );
+        void unregisterSessionCommands( UISystem& ui );
         /** @brief 파생 클래스가 팩 루트 · 부트스트랩을 설정합니다. */
         virtual void configureBootstrap( BootstrapConfig& outConfig ) { (void)outConfig; }
         /** @brief 팩의 gamesettings 를 `_bootstrap` 으로 읽습니다. 실패하면 게임 초기화가 실패합니다(기본값으로 서지 않는다). 팩 없이 만드는 테스트만 XML 문자열(`loadFromXMLText`)로 오버라이드합니다. */
@@ -325,9 +331,6 @@ namespace sw
         [[nodiscard]] bool requestLoadScene( const string& scenePath, const utf8* pWhich );
         /** @brief 끝난 씬 로드마다 `SceneLoadCompletedEvent` 를 냅니다(요청 순서). */
         void publishFinishedSceneLoads();
-        /** @brief 타이틀 씬이 있으면 UI 전역 명령 `ReturnToTitle` 을 등록합니다(`initialize`). `shutdown` 이 거둡니다. */
-        void registerSessionCommands();
-        void unregisterSessionCommands();
         /** @brief UI 전역 명령 `ReturnToTitle` 의 처리 함수입니다(일시정지 메뉴의 "타이틀로"). */
         void onReturnToTitleCommand( const hashed_string& command, Widget& source );
         /** @brief 올린 타입의 상태를 모두 싣고, 그다음 세운 것을 모두 걷습니다(`onBeforeStateSerialize` 앞). */

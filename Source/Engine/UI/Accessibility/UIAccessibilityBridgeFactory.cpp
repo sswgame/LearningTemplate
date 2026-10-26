@@ -4,6 +4,8 @@
 
 #if defined( SW_PLATFORM_WINDOWS ) && defined( SW_WITH_CLIENT_CODE )
     #include "Engine/UI/Accessibility/Windows/UiaAccessibilityBridge.h"
+#elif defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE ) && defined( SW_WITH_ATSPI )
+    #include "Engine/UI/Accessibility/Linux/AtSpiAccessibilityBridge.h"
 #endif
 
 namespace sw
@@ -12,6 +14,8 @@ namespace sw
     {
 #if defined( SW_PLATFORM_WINDOWS ) && defined( SW_WITH_CLIENT_CODE )
         return UiaAccessibility::createBridge( ui, window );
+#elif defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE ) && defined( SW_WITH_ATSPI )
+        return AtSpiAccessibility::createBridge( ui, window );
 #else
         return nullptr;
 #endif

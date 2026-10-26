@@ -64,6 +64,7 @@ _kSubcommand: tuple[Subcommand, ...] = (
     Subcommand("scenario", "qa.ScenarioRun", "시나리오 하나를 선언한 <Launch> 인자 그대로 백엔드마다 돌려(GPU 공유 잠금) 종료 코드를 뜻으로 풀고 failures · unconfirmed · unhandledLogs 를 한 표로 보인다"),
     Subcommand("scenario-waits", "qa.ScenarioWaitCost", "시나리오 파일의 고정 프레임 대기를 정적으로 세어 가장 긴 시나리오 · 조건 대기(WaitUntil)로 바꿀 후보를 찾는다(보고의 timeline 으로 잰 값과 견준다)"),
     Subcommand("scenario-thresholds", "qa.ScenarioThresholds", "어림값 문턱(ExpectImage provisional)을 보고의 잰 값(measured)으로 승격하는 제안 표를 만들고 --apply 로 시나리오에 쓴다"),
+    Subcommand("scenario-seq", "qa.ScenarioSequence", "시나리오를 차례로 새 프로세스로 돌린다(앞 실행이 디스크에 남긴 사용자 설정 같은 상태를 뒤 실행이 읽는다 — 재시작 뒤 유지 확인)"),
     Subcommand("validate-assets", "qa.ValidateAssets", "에셋 검증 규칙(Config/Editor/AssetValidationRules.json)을 Resource/ 에 돌린다"),
     Subcommand("asset-merge", "asset.AssetMerge", "XML 에셋 의미 비교 · 3-way 병합 (git 드라이버로도 쓴다)"),
     Subcommand("golden", "qa.GoldenImages", "테스트 게임 자동 플레이를 네 백엔드로 그려 골든 이미지와 지표로 견준다"),

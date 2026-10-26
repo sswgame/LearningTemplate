@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Shooter3D 키 다시 잡기 두 번 기동 ② — rebindsave 가 남긴 사용자 설정 파일로 새로 기동했을 때 점프 키가 J 로 남아 있다: J 는 점프하고 Space 는 점프하지 않으며 패드 A 는 그대로다.
+  설정은 바꾸지 않는다(첫 단언이 파일에서 읽은 값을 본다). 끝에서 Space 로 되돌려 다음 판이 기본 키로 시작하게 한다. 혼자 돌면 ① 이 없어 진다 — scenario-seq 로만 돈다.
+  실행: py -3 -m Scripts scenario-seq game/shooter3d/automation/sequence/rebindsave game/shooter3d/automation/sequence/rebindrestart (백엔드 선택은 scenario 와 같다)
+-->
+<Scenario name="game.shooter3d.rebindrestart" fixedDelta="0.0166667" timeoutFrames="400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_userSettingsFile" value="Saved/Automation/shooter3d.rebindseq/usersettings.json"/>
+	<At frame="0"><Variable name="gv_shooterAutoPlay" value="0"/></At>
+	<!-- 파일에서 읽은 J 가 점프한다. -->
+	<At frame="12"><Tap slot="Key.J" hold="1"/></At>
+	<At afterSeconds="0.1"><Expect probe="Object.Y" target="Player" atLeast="1.9"/></At>
+	<At after="10"><WaitUntil probe="Object.Y" target="Player" atMost="1.61" timeoutSeconds="1"/></At>
+	<!-- 기본 키 Space 는 점프하지 않는다. -->
+	<At after="2"><Tap slot="Key.Space" hold="1"/></At>
+	<At afterSeconds="0.2"><Expect probe="Object.Y" target="Player" atMost="1.65"/></At>
+	<!-- 같은 액션의 패드 바인딩(A)은 그대로다. -->
+	<At after="2"><Action name="Jump" device="gamepad"/></At>
+	<At afterSeconds="0.1"><Expect probe="Object.Y" target="Player" atLeast="1.9"/></At>
+	<At after="10"><WaitUntil probe="Object.Y" target="Player" atMost="1.61" timeoutSeconds="1"/></At>
+	<At after="2">
+		<DevCommand line="settings.apply controls.jump=Key.Space"/>
+		<Pass/>
+	</At>
+</Scenario>

@@ -6,6 +6,7 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/vector.h"
 
 #include "Engine/Input/KeyCodeUtil.h"
@@ -30,5 +31,56 @@ namespace sw::editor
         static void appendKeyChanges( vector<RawInputEvent>& outListEvent );
         /** @brief 이번 프레임에 ImGui 가 받은 글자 입력(`io.InputQueueCharacters`)을 글자마다 `TextInput` 사건으로 @p outListEvent 에 덧붙입니다. */
         static void appendTextInput( vector<RawInputEvent>& outListEvent );
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    /**
+     * @class DetachedKeyForwarder
+     * @brief 떼어 낸 창의 키 사건을 게임 입력에 넣으면서 "누름을 넣고 아직 뗌을 넣지 않은 키" 를 기억해, 포커스를 잃어도 짝 뗌을 넣게 합니다.
+     * @details ImGui 와 `InputManager` 를 모르는 순수 상태라 실제 OS 창 없이 시험한다(넣는 쪽은 @c post 콜백). 포커스가 OS 창을 따라 옮겨 가는 것 자체는 ImGui 백엔드의 일이다.
+     */
+    class DetachedKeyForwarder
+    {
+    public:
+        /**
+         * @brief 이번 프레임의 사건을 넣습니다. @p bForward 가 거짓(포커스를 잃었거나 패널을 주 창에 되돌림)이면 사건을 버리고 누른 채 남은 키를 모두 뗍니다.
+         * @param post `bool( const RawInputEvent& )` — 큐가 차서 못 넣으면 false. 못 넣은 누름은 기억하지 않고, 못 넣은 뗌은 다음 프레임에 다시 시도한다.
+         */
+        template <class Post>
+        void forward( bool bForward, const vector<RawInputEvent>& listEvent, Post&& post )
+        {
+            if ( bForward == false )
+            {
+                for ( size_t index = _listHeldKey.size(); index > 0; --index )
+                {
+                    if ( post( RawInputEvent::makeKeyUp( _listHeldKey[index - 1] ) ) )
+                        VectorUtil::removeAtSwap( _listHeldKey, index - 1 );
+                }
+                return;
+            }
+            for ( const RawInputEvent& event : listEvent )
+            {
+                if ( post( event ) == false )
+                    continue; // 큐가 차면 이 사건만 잃는다
+                // 누름은 먼저 지우고 넣어 중복 없이 한 번만 든다(자동 반복 누름이 여럿 와도 뗌은 한 번이다).
+                if ( event._type == RawInputEventType::KeyDown )
+                {
+                    VectorUtil::removeValue( _listHeldKey, event._payload._keyData._key );
+                    _listHeldKey.push_back( event._payload._keyData._key );
+                }
+                else if ( event._type == RawInputEventType::KeyUp )
+                {
+                    VectorUtil::removeValue( _listHeldKey, event._payload._keyData._key );
+                }
+            }
+        }
+
+        /** @brief 누름을 넣고 아직 뗌을 넣지 않은 키입니다. */
+        [[nodiscard]] const vector<Key>& getHeldKeys() const { return _listHeldKey; }
+
+    private:
+        vector<Key> _listHeldKey{};
     };
 } // namespace sw::editor

@@ -12,7 +12,7 @@
 | 단위 | 내용 | 상태 |
 |---|---|---|
 | UIPreview.U2 | 앵커 프리셋 직후 부모 여백에서 위젯이 밀리는지 확인 — 계산이 정말 밀었다: 위젯 사각형은 슬롯 안쪽 여백(`_padding`)만큼 들어간 곳이라 프리셋이 위젯 사각형을 그대로 슬롯 사각형으로 삼으면 여백만큼 밀리고 줄었다. `applyAnchorPreset` 이 여백을 도로 더해 슬롯 사각형을 구한다. 테스트 `UIPreviewLogicTest.AnchorPresetKeepsTheWidgetInPlaceWithSlotPadding` | 끝남(빌드 미확인) |
-| Cheat.C2 | 리눅스 오버레이: `XDrawString`(Latin-1)을 `XDrawString16` + iso10646-1 코어 글꼴로 바꿔 UTF-8 글이 깨지지 않는다(글꼴이 없으면 콘솔을 세우지 않는다 — Latin-1 로 되돌아가지 않는다). 모양은 X 서버의 글꼴이 그 글자를 가진 만큼만 나온다 — 한글 글리프 전체는 Xft 가 있어야 해서 [Candidates-ui](Candidates-ui.md) `X11ConsoleXft` 로 옮겼다. 실기 확인은 xvfb 위 `X11DevConsoleTest.OverlayDrawsLatinLineAndSurvivesUtf8Lines`(픽셀을 읽어 줄이 그려졌는지) | 끝남(빌드 미확인) |
+| Cheat.C2 | 리눅스 오버레이: `XDrawString`(Latin-1)을 Xft(fontconfig 폴백 글꼴)로 바꿔 UTF-8 한글 · 일본어 글자가 깨지지 않는다(글꼴이 없으면 콘솔을 세우지 않는다 — Latin-1 로 되돌아가지 않는다). 모양은 시스템에 그 글자를 가진 글꼴이 있느냐에 달려 있다. 실기 확인은 xvfb 위 `X11DevConsoleTest.OverlayDrawsLatinLineAndSurvivesUtf8Lines`(픽셀을 읽어 줄이 그려졌는지) | 끝남(빌드 미확인) |
 | TypedHandle.H3 | 핸들 선택기 화면 확인을 시나리오로: 콤보 · `(none)` · 되돌리기 · Paste 비활성은 기존 `editor.inspectorhandle`, CallInEditor 인자 선택기(`InspectorPropertyManager::drawMethodArg`)가 프로퍼티와 같은 콤보인지는 같은 시나리오의 ⑥(메서드 `Assign Target` 의 인자 콤보로 고르고 Invoke → `_target` 에 같은 값). 맵 값이 원소 프로퍼티로 그려지는지는 `InspectorPropertyLayoutTest` 가 본다(H1) | 끝남(빌드 미확인) |
 
 - Cheat.C2 의 `Vitality` 를 직접 쓰는 다른 키트의 치트는 아직 없다. 생기면 `Vitality::setDamageImmune` 을 그대로 쓴다.

@@ -51,6 +51,10 @@ endif()
 # 확인은 CI 리눅스 잡(headless weston)에서만 한다 — 로컬 WSL 빌드는 하지 않는다(결정 기록 5-12).
 option(SW_ENABLE_WAYLAND "리눅스 클라이언트에 Wayland 창 계층을 짓는다" OFF)
 
+# 리눅스 클라이언트의 AT-SPI 스크린 리더 브리지(`Engine/UI/Accessibility/Linux`). 켜면 libdbus-1(pkg-config `dbus-1`)이 있어야 한다(없으면 구성이 선다).
+# 확인은 Orca + at-spi2 를 올린 세션에서만 한다(docs/plans/Candidates-ui.md AtSpiBridge). 확인 전이라 기본은 끈다.
+option(SW_ENABLE_ATSPI "리눅스 클라이언트에 AT-SPI 접근성 브리지를 짓는다" OFF)
+
 if(NOT SW_TARGET_TYPE MATCHES "^(Game|Client|Server)$")
 	message(FATAL_ERROR "SW_TARGET_TYPE='${SW_TARGET_TYPE}' — one of Game, Client, Server")
 endif()

@@ -168,6 +168,9 @@ def checkGraphicsDevPackages() -> None:
     if not (usrInclude / "vulkan/vulkan.h").is_file() and not (usrInclude / "vulkan/vulkan_core.h").is_file():
         if not any((usrInclude / relPath).is_file() for relPath in ("vulkan/vulkan.h", "vulkan/vulkan.hpp")):
             hints.append("libvulkan-dev")
+    # 개발 콘솔 오버레이가 Xft 로 그린다(cmake/Modules/Platform/Linux.cmake).
+    if not (usrInclude / "X11/Xft/Xft.h").is_file():
+        hints.append("libxft-dev")
     # vcpkg vulkan-validationlayers 는 WSI 백엔드를 끌 수 없어 wayland-client.pc 를 무조건 요구한다.
     # 없으면 포트 configure 가 pkg_check_modules 에서 실패하므로 여기서 미리 잡는다.
     if not (usrInclude / "wayland-client.h").is_file():

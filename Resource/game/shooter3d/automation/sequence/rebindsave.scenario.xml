@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Shooter3D 키 다시 잡기 두 번 기동 ① — 점프 키를 J 로 바꿔 사용자 설정 파일에 남기고 끝낸다(설정을 되돌리지 않는다).
+  ② rebindrestart 가 같은 설정 파일로 다시 기동해 J 가 남았는지 본다. 혼자 돌면 ② 의 전제를 만들 뿐이라 AppScenarioTest 는 이 폴더(sequence/)를 돌지 않는다.
+  실행: py -3 -m Scripts scenario-seq game/shooter3d/automation/sequence/rebindsave game/shooter3d/automation/sequence/rebindrestart (백엔드 선택은 scenario 와 같다)
+-->
+<Scenario name="game.shooter3d.rebindsave" fixedDelta="0.0166667" timeoutFrames="300" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_userSettingsFile" value="Saved/Automation/shooter3d.rebindseq/usersettings.json"/>
+	<At frame="0">
+		<Variable name="gv_shooterAutoPlay" value="0"/>
+		<DevCommand line="settings.apply controls.jump=Key.J"/>
+	</At>
+	<At frame="12"><Tap slot="Key.J" hold="1"/></At>
+	<At afterSeconds="0.1"><Expect probe="Object.Y" target="Player" atLeast="1.9"/></At>
+	<At after="10"><WaitUntil probe="Object.Y" target="Player" atMost="1.61" timeoutSeconds="1"/></At>
+	<At after="2"><Pass/></At>
+</Scenario>

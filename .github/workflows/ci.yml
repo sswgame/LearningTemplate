@@ -270,8 +270,8 @@ jobs:
       shell: bash
       run: |
         sudo apt-get update -q
-        # xfonts-base 는 xvfb 의 권장 패키지라 --no-install-recommends 에서 빠진다. 없으면 X 서버에 iso10646-1 글꼴이 없어 X11DevConsoleTest 가 콘솔 오버레이를 세우지 못한다.
-        sudo apt-get install -y --no-install-recommends mesa-vulkan-drivers libgl1-mesa-dri xvfb xfonts-base
+        # 콘솔 오버레이는 Xft(fontconfig)로 그린다 — 실행에 libxft2 와 글꼴 하나(fonts-dejavu-core)가 있어야 X11DevConsoleTest 가 오버레이를 세운다(글꼴이 없으면 콘솔을 세우지 않는다).
+        sudo apt-get install -y --no-install-recommends mesa-vulkan-drivers libgl1-mesa-dri xvfb libxft2 fonts-dejavu-core
 
     - name: Test on software renderer
       id: swrender

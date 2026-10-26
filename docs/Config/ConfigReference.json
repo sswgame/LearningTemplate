@@ -5259,6 +5259,14 @@
    "presets": []
   },
   {
+   "name": "SW_ENABLE_ATSPI",
+   "type": "BOOL",
+   "default": "OFF",
+   "choices": [],
+   "description": "리눅스 클라이언트에 AT-SPI 접근성 브리지를 짓는다",
+   "presets": []
+  },
+  {
    "name": "SW_ENABLE_COMPLEX_TEXT",
    "type": "BOOL",
    "default": "OFF",

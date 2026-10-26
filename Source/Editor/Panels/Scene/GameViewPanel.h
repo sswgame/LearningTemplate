@@ -6,6 +6,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 
+#include "Editor/Common/Backend/ImGuiKeyForward.h"
 #include "Editor/Common/GUI/IEditorPanel.h"
 #include "Editor/Common/Workspace/EditorPanelID.h"
 #include "Editor/Common/Workspace/EditorViewTargetUtil.h"
@@ -64,6 +65,6 @@ namespace sw::editor
         EditorGameViewAspect _aspect;              ///< 이미지 화면 비율(자유 · 16:9)
         bool                 _bNoCameraHintShown;  ///< 마지막 프레임에 카메라 없음 안내를 띄웠다
         uint8                _forwardedButtonMask; ///< 보조 창에서 게임으로 누름을 넣은 단추(비트 = `kForwardedButtons` 순서). 패널 밖에서 떼도 뗌을 넣는다
-        vector<Key>          _listForwardedKey;    ///< 보조 창에서 게임으로 누름을 넣고 아직 뗌을 넣지 않은 키
+        DetachedKeyForwarder _keyForwarder;        ///< 보조 창의 키를 게임으로 넣고, 누름을 넣은 채 남은 키를 기억한다
     };
 } // namespace sw::editor
