@@ -9,6 +9,7 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Base/Foundation/Data/GameDataXML.h"
+#include "GameFramework/Base/Foundation/Utility/ConfigRangeUtil.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 
 #include <optional>
@@ -31,14 +32,21 @@ namespace sw
     {
     }
 
-    void PartyItemSpawner::initialize( const PartyItemSpawnSettings& settings, uint32 seed )
+    bool PartyItemSpawner::initialize( const PartyItemSpawnSettings& settings, uint32 seed )
     {
+        const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
+        if ( rangeError.empty() == false )
+        {
+            SW_LOG_ERROR( "PartyItemSpawner: refused settings - %#", rangeError.c_str() );
+            return false;
+        }
         _settings = settings;
         _random.setSeed( seed );
         _listInstance.clear();
         _eventBuffer.clear();
         _nextSerial = 1;
-        _spawnTimer.start( MathUtil::max( 0.0f, settings._minInterval ) );
+        _spawnTimer.start( _settings._minInterval );
+        return true;
     }
 
     void PartyItemSpawner::writeState( Archive& outArchive ) const
@@ -88,8 +96,9 @@ namespace sw
 
     float32 PartyItemSpawner::rollInterval()
     {
-        const float32 low  = MathUtil::max( 0.0f, _settings._minInterval );
-        const float32 high = MathUtil::max( low, _settings._maxInterval );
+        // 0 <= 최소 <= 최대 는 `initialize` 가 선언된 범위로 거절해 둔 계약이다.
+        const float32 low  = _settings._minInterval;
+        const float32 high = _settings._maxInterval;
         return high > low ? _random.nextRange( low, high ) : low;
     }
 

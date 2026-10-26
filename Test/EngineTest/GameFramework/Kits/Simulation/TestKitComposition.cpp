@@ -266,7 +266,8 @@ namespace sw
             SW_EXPECT_TRUE( initResult != SessionStateInitResult::Refused );
             if ( initResult == SessionStateInitResult::Refused )
                 return false;
-            initializeTown( _town, *pState );
+            if ( initializeTown( _town, *pState ) == false )
+                return false;
             if ( pState->isFreshGame() )
             {
                 (void)_town.setObject( 0, 0, "grass" );
@@ -287,7 +288,8 @@ namespace sw
             if ( bTownFrameMismatch )
                 return false;
             CreatureTown town;
-            initializeTown( town, *pState );
+            if ( initializeTown( town, *pState ) == false )
+                return false;
             const bool bRead = town.readState( body ) && body.getRemainingBytes() == 0 && archive.getRemainingBytes() == 0;
             if ( bRead == false )
                 return false;
@@ -329,10 +331,10 @@ namespace sw
         }
 
     private:
-        static void initializeTown( CreatureTown& outTown, SessionStateComponent& state )
+        [[nodiscard]] static bool initializeTown( CreatureTown& outTown, SessionStateComponent& state )
         {
             const KitCompositionCatalogs& catalogs = KitCompositionCatalogs::get();
-            outTown.initialize( &catalogs._creatures, state.makeRefs(), kTownSize, kTownSize, CreatureTownSettings{} ); // U14 뒤 모양 — 평판 카탈로그는 공유 상태가
+            return outTown.initialize( &catalogs._creatures, state.makeRefs(), kTownSize, kTownSize, CreatureTownSettings{} ); // U14 뒤 모양 — 평판 카탈로그는 공유 상태가
         }
 
         CreatureTown _town;
@@ -451,8 +453,7 @@ namespace sw
                 pState->getWallet().add( "Deben", LandCompositionCatalogs::kStartingDeben );
                 pState->getWallet().add( "Minerals", LandCompositionCatalogs::kStartingMinerals );
             }
-            initializeCity( _city, *pState );
-            return true;
+            return initializeCity( _city, *pState );
         }
 
         bool readState( Archive& archive ) override
@@ -470,7 +471,8 @@ namespace sw
             if ( bInvalidCityHeader )
                 return false;
             CitySimulation city;
-            initializeCity( city, *pState );
+            if ( initializeCity( city, *pState ) == false )
+                return false;
             const bool bInvalidCityBody = city.readState( body ) == false || body.getRemainingBytes() != 0 || archive.getRemainingBytes() != 0;
             if ( bInvalidCityBody )
                 return false;
@@ -506,10 +508,12 @@ namespace sw
         }
 
     private:
-        static void initializeCity( CitySimulation& outCity, SessionStateComponent& state )
+        [[nodiscard]] static bool initializeCity( CitySimulation& outCity, SessionStateComponent& state )
         {
-            outCity.initialize( &LandCompositionCatalogs::get()._city, LandCompositionCatalogs::kLandSize, LandCompositionCatalogs::kLandSize, CitySettings{}, state.makeRefs() );
+            if ( outCity.initialize( &LandCompositionCatalogs::get()._city, LandCompositionCatalogs::kLandSize, LandCompositionCatalogs::kLandSize, CitySettings{}, state.makeRefs() ) == false )
+                return false;
             outCity.bindLand( &state.getLand(), int2{ 0, 0 } );
+            return true;
         }
 
         CitySimulation _city;

@@ -122,6 +122,16 @@ SW_TEST_CASE( SQLDriverSQLiteTest, PoolCompletesOnThePollingThreadAndSurvivesShu
     SW_EXPECT_EQUAL( int64( kJobCount ), rowSet._listRow[0][0]._integer );
 }
 
+SW_TEST_CASE( SQLDriverSQLiteTest, PoolRefusesAWorkerCountBelowOne )
+{
+    SQLConnectionPool       pool;
+    SQLConnectionPoolConfig settings;
+    settings._workerCount = 0; // 예전에는 조용히 1로 맞췄다
+    string error;
+    SW_EXPECT_FALSE( pool.initialize( &SQLiteDriver::getInstance(), settings, error ) );
+    SW_EXPECT_TRUE( error.find( "_workerCount" ) != string::npos );
+}
+
 SW_TEST_CASE( SQLDriverSQLiteTest, UnknownDriverFailsLoudlyWithTheBuiltDrivers )
 {
     string error;

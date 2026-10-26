@@ -306,8 +306,18 @@ SW_TEST_CASE( BattleRoyaleTest, FlightPathCrossesMapAndLandingIsPredicted )
 {
     BrCatalog catalog;
     SW_ASSERT_TRUE( catalog.loadFromXMLText( kBrCatalogXML, "BattleRoyaleTest" ) );
-    const BrFlightPath path  = BrFlightPath::makeRandom( catalog.getFlightSettings(), 1000.0f, 42u );
-    const BrFlightPath again = BrFlightPath::makeRandom( catalog.getFlightSettings(), 1000.0f, 42u );
+    BrFlightPath path;
+    BrFlightPath again;
+    SW_ASSERT_TRUE( BrFlightPath::makeRandom( catalog.getFlightSettings(), 1000.0f, 42u, path ) );
+    SW_ASSERT_TRUE( BrFlightPath::makeRandom( catalog.getFlightSettings(), 1000.0f, 42u, again ) );
+
+    // 범위 밖은 거절하고 경로를 바꾸지 않는다(예전에는 속도 · 맵 크기를 1 로 조용히 맞췄다).
+    BrFlightPath untouched;
+    BrFlightDef  slow = catalog.getFlightSettings();
+    slow._speed       = 0.0f;
+    SW_EXPECT_FALSE( BrFlightPath::makeRandom( slow, 1000.0f, 42u, untouched ) );
+    SW_EXPECT_FALSE( BrFlightPath::makeRandom( catalog.getFlightSettings(), 0.5f, 42u, untouched ) );
+    SW_EXPECT_NEAR_EQUAL( untouched._speed, 100.0f, 0.0001f );
     SW_EXPECT_NEAR_EQUAL( path._start._x, again._start._x, 0.0001f );
     SW_EXPECT_NEAR_EQUAL( path._end._y, again._end._y, 0.0001f );
 

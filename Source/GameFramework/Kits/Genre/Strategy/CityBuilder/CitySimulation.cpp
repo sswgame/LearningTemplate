@@ -8,6 +8,7 @@
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Base/Foundation/Framework/SessionStateRefs.h"
+#include "GameFramework/Base/Foundation/Utility/ConfigRangeUtil.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Base/Gameplay/Inventory/Shop.h"
 
@@ -150,14 +151,25 @@ namespace sw
     {
     }
 
-    void CitySimulation::initialize( const CityCatalog* pCatalog, int32 width, int32 height, const CitySettings& settings, const SessionStateRefs& refs )
+    bool CitySimulation::initialize( const CityCatalog* pCatalog, int32 width, int32 height, const CitySettings& settings, const SessionStateRefs& refs )
     {
+        if ( width < 1 || height < 1 )
+        {
+            SW_LOG_ERROR( "CitySimulation: refused map size %#x%# (needs >= 1 in both)", width, height );
+            return false;
+        }
+        const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
+        if ( rangeError.empty() == false )
+        {
+            SW_LOG_ERROR( "CitySimulation: refused settings - %#", rangeError.c_str() );
+            return false;
+        }
         _pCatalog = pCatalog;
         _pWallet  = refs._pWallet;
         if ( _pWallet == nullptr )
             SW_LOG_WARNING( "CitySimulation: no wallet was lent - every road and building is refused" );
         _settings = settings;
-        _topology = GridTopology{ MathUtil::max( 1, width ), MathUtil::max( 1, height ) };
+        _topology = GridTopology{ width, height };
         _listTile.assign( static_cast<size_t>( _topology.getCellCount() ), CityTile{} );
         _listBuilding.clear();
         _listWalker.clear();
@@ -172,6 +184,7 @@ namespace sw
         _employed           = 0;
         _bRoadsDirty        = SW_FALSE;
         _bDesirabilityDirty = SW_TRUE;
+        return true;
     }
 
     void CitySimulation::setTerrain( int32 x, int32 y, CityTerrain terrain )

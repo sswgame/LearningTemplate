@@ -629,7 +629,7 @@ SW_TEST_CASE( TacticsSRPGTest, LevelUpDevelopmentAndRogueliteCampaign )
     rule._kind = hashed_string( "Battle" );
     mapSettings._listRule.push_back( rule );
     SRPGCampaign campaign;
-    campaign.initialize( mapSettings, 99 );
+    SW_ASSERT_TRUE( campaign.initialize( mapSettings, 99 ) );
     SW_EXPECT_EQUAL( 0, campaign.addRosterEntry( scene._catalog, hashed_string( "gm" ), hashed_string( "ace" ) ) );
     SW_EXPECT_EQUAL( 1, campaign.addRosterEntry( scene._catalog, hashed_string( "zaku" ), hashed_string( "grunt" ) ) );
     SW_EXPECT_EQUAL( -1, campaign.addRosterEntry( scene._catalog, hashed_string( "nothing" ), hashed_string( "ace" ) ) );
@@ -640,7 +640,7 @@ SW_TEST_CASE( TacticsSRPGTest, LevelUpDevelopmentAndRogueliteCampaign )
     SW_EXPECT_FALSE( campaign.beginMission( listChoice[0] ) ); // 작전 중
     SW_EXPECT_TRUE( campaign.getMissionKind() == hashed_string( "Battle" ) );
     SRPGCampaign twin;
-    twin.initialize( mapSettings, 99 );
+    SW_ASSERT_TRUE( twin.initialize( mapSettings, 99 ) );
     SW_ASSERT_TRUE( twin.beginMission( listChoice[0] ) );
     SW_EXPECT_TRUE( twin.getMissionSeed() == campaign.getMissionSeed() ); // 같은 판 · 같은 칸이면 같은 전장
 
@@ -756,7 +756,7 @@ SW_TEST_CASE( TacticsSRPGTest, StateRoundTripContinuesTheSameCampaign )
     rule._kind = hashed_string( "Battle" );
     mapSettings._listRule.push_back( rule );
     SRPGCampaign campaign;
-    campaign.initialize( mapSettings, 99 );
+    SW_ASSERT_TRUE( campaign.initialize( mapSettings, 99 ) );
     SW_EXPECT_EQUAL( 0, campaign.addRosterEntry( catalog, hashed_string( "gm" ), hashed_string( "ace" ), 2 ) );
     SW_EXPECT_EQUAL( 1, campaign.addRosterEntry( catalog, hashed_string( "zaku" ), hashed_string( "grunt" ) ) );
     vector<int32> listChoice;
@@ -767,7 +767,7 @@ SW_TEST_CASE( TacticsSRPGTest, StateRoundTripContinuesTheSameCampaign )
     Archive written;
     campaign.writeState( written );
     SRPGCampaign restored;
-    restored.initialize( mapSettings, 5 );
+    SW_ASSERT_TRUE( restored.initialize( mapSettings, 5 ) );
     Archive reader( written.getData(), written.getSize() );
     SW_ASSERT_TRUE( restored.readState( reader ) );
     SW_EXPECT_EQUAL( uint64{ 0 }, reader.getRemainingBytes() );
@@ -811,7 +811,7 @@ SW_TEST_CASE( TacticsSRPGTest, StateRoundTripContinuesTheSameCampaign )
     SW_EXPECT_TRUE( originalBytes == restoredBytes );
 
     SRPGCampaign truncated;
-    truncated.initialize( mapSettings, 5 );
+    SW_ASSERT_TRUE( truncated.initialize( mapSettings, 5 ) );
     Archive cut( written.getData(), written.getSize() - 1 );
     SW_EXPECT_FALSE( truncated.readState( cut ) );
     SW_EXPECT_TRUE( truncated.getRoster().empty() );
@@ -840,6 +840,29 @@ SW_TEST_CASE( TacticsSRPGTest, BattlefieldBorrowsItsLandForTheBattleOnly )
     SW_EXPECT_TRUE( land.claimRect( other, 13, 11, 13, 11, false ) );
 }
 
+SW_TEST_CASE( TacticsSRPGTest, RunMapRefusesOutOfRangeSettingsInsteadOfClampingThem )
+{
+    RunNodeRule    fight;
+    RunMapSettings settings;
+    fight._kind          = "Fight";
+    settings._listRule   = { fight };
+    settings._floorCount = 1; // 예전에는 조용히 2로 맞췄다
+    RunMap map;
+    SW_EXPECT_FALSE( map.generate( settings, 1u ) );
+    SW_EXPECT_TRUE( map.getNodes().empty() ); // 거절하면 지도를 바꾸지 않는다
+
+    settings._floorCount  = 4;
+    settings._columnCount = 0;
+    SW_EXPECT_FALSE( map.generate( settings, 1u ) );
+
+    settings._columnCount = 3;
+    settings._pathCount   = 0;
+    SW_EXPECT_FALSE( map.generate( settings, 1u ) );
+
+    settings._pathCount = 2;
+    SW_EXPECT_TRUE( map.generate( settings, 1u ) );
+}
+
 SW_TEST_CASE( TacticsSRPGTest, RunMapsConnectFloorsWithoutCrossingAndEndAtTheBoss )
 {
     RunMapSettings settings;
@@ -850,8 +873,8 @@ SW_TEST_CASE( TacticsSRPGTest, RunMapsConnectFloorsWithoutCrossingAndEndAtTheBos
                                           "TacticsSRPGTest", settings ) );
     RunMap mapA;
     RunMap mapB;
-    mapA.generate( settings, 42u );
-    mapB.generate( settings, 42u );
+    SW_ASSERT_TRUE( mapA.generate( settings, 42u ) );
+    SW_ASSERT_TRUE( mapB.generate( settings, 42u ) );
     SW_ASSERT_TRUE( mapA.getNodes().size() == mapB.getNodes().size() ); // 씨앗이 같으면 같은 지도
     int32 bossCount = 0;
     for ( size_t index = 0; index < mapA.getNodes().size(); ++index )
@@ -931,7 +954,7 @@ SW_TEST_CASE( TacticsSRPGTest, RunMapReplaysAfterRestore )
     settings._columnCount = 4;
     settings._pathCount   = 3;
     RunMap map;
-    map.generate( settings, 17 );
+    SW_ASSERT_TRUE( map.generate( settings, 17 ) );
     vector<int32> listChoice;
     map.collectChoices( listChoice );
     SW_ASSERT_FALSE( listChoice.empty() );

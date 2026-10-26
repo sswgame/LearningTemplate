@@ -29,7 +29,8 @@ namespace
         PartyItemSpawnSettings item;
         item._minInterval = 1000.0f;
         item._maxInterval = 1000.0f;
-        outArena.getItemSpawner().initialize( item, seed );
+        if ( outArena.getItemSpawner().initialize( item, seed ) == false )
+            return false;
         if ( outArena.initialize( settings, 2, roundTime, 0, seed ) == false )
             return false;
         outArena.start();
@@ -328,6 +329,21 @@ SW_TEST_CASE( PartyArenaTest, GroundPoundOnlyPushesLowOpponents )
     SW_EXPECT_TRUE( pushedRuns < poundRuns ); // 높이 떠 있을 때는 밀리지 않는다
 }
 
+SW_TEST_CASE( PartyArenaTest, ItemSpawnerRefusesOutOfRangeIntervalsInsteadOfClampingThem )
+{
+    PartyItemSpawner       spawner;
+    PartyItemSpawnSettings settings;
+    settings._minInterval = -1.0f; // 예전에는 조용히 0으로 맞췄다
+    SW_EXPECT_FALSE( spawner.initialize( settings, 1u ) );
+
+    settings._minInterval = 5.0f;
+    settings._maxInterval = 2.0f; // 최대가 최소보다 작다
+    SW_EXPECT_FALSE( spawner.initialize( settings, 1u ) );
+
+    settings._maxInterval = 5.0f;
+    SW_EXPECT_TRUE( spawner.initialize( settings, 1u ) );
+}
+
 SW_TEST_CASE( PartyArenaTest, ItemsSpawnDeterministicallyAndSuperBounceDoublesHeight )
 {
     // 같은 씨앗이면 같은 자리 · 같은 순서다.
@@ -338,7 +354,7 @@ SW_TEST_CASE( PartyArenaTest, ItemsSpawnDeterministicallyAndSuperBounceDoublesHe
         PartyItemSpawnSettings settings = spawner.getSettings();
         settings._maxActive             = 3;
         settings._lifetime              = 1.0f;
-        spawner.initialize( settings, seed );
+        SW_ASSERT_TRUE( spawner.initialize( settings, seed ) );
         for ( int32 frame = 0; frame < 60 * 3; ++frame )
         {
             spawner.update( kPartyArenaStep );
@@ -561,7 +577,7 @@ SW_TEST_CASE( PartyArenaTest, ItemSpawnRateDoesNotDependOnFrameRate )
         settings._maxInterval           = 0.47f;
         settings._maxActive             = 100000;
         settings._lifetime              = 0.0f; // 주울 때까지 — 자리가 차서 시계가 멈추지 않게
-        spawner.initialize( settings, 5u );
+        SW_ASSERT_TRUE( spawner.initialize( settings, 5u ) );
         const float32          seconds    = 60.0f;
         const int32            frameCount = static_cast<int32>( seconds * framesPerSecond + 0.5f );
         int32                  spawnCount = 0;

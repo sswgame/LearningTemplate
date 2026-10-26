@@ -56,7 +56,8 @@ namespace
             _wallet.add( settings._currency, money );
             SessionStateRefs refs;
             refs._pWallet = &_wallet;
-            _city.initialize( &_catalog, 32, 24, settings, refs );
+            if ( _city.initialize( &_catalog, 32, 24, settings, refs ) == false )
+                return false;
             if ( _city.claimEvents( _eventLease ) == false )
                 return false;
             return true;
@@ -430,7 +431,11 @@ SW_TEST_CASE( CityBuilderTest, StateRoundTripContinuesTheSameCity )
         CityCatalog    catalog;
         CitySimulation smallCity;
         SW_ASSERT_TRUE( catalog.loadFromXMLText( kCityTestXML, "CityBuilderTest" ) );
-        smallCity.initialize( &catalog, 8, 8, CitySettings{}, SessionStateRefs{} );
+        SW_ASSERT_TRUE( smallCity.initialize( &catalog, 8, 8, CitySettings{}, SessionStateRefs{} ) );
+        SW_EXPECT_FALSE( smallCity.initialize( &catalog, 0, 8, CitySettings{}, SessionStateRefs{} ) ); // 예전에는 조용히 1 로 맞췄다
+        CitySettings badSettings;
+        badSettings._fixedStep = 0.0f;
+        SW_EXPECT_FALSE( smallCity.initialize( &catalog, 8, 8, badSettings, SessionStateRefs{} ) );
         Archive smallReader( written.getData(), written.getSize() );
         SW_EXPECT_FALSE( smallCity.readState( smallReader ) );
         SW_EXPECT_TRUE( smallCity.getBuildings().empty() );
