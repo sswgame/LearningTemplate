@@ -85,13 +85,33 @@ namespace sw
             template <typename TEdit>
             static const ResourcePathTable& publishTable( TEdit&& edit )
             {
-                std::scoped_lock<mutex>       lock( _s_state._pathTable._publishMutex );
+                ResourcePathTableStore&       store = _s_state._pathTable;
+                std::scoped_lock<mutex>       lock( store._publishMutex );
                 unique_ptr<ResourcePathTable> next = make_unique<ResourcePathTable>( getTable() );
                 edit( *next );
-                const ResourcePathTable* const pNext = next.get();
-                _s_state._pathTable._listPublished.push_back( std::move( next ) );
-                _s_state._pathTable._pCurrent.store( pNext, std::memory_order_release );
+                // 같은 내용의 표가 이미 있으면 그것으로 되돌린다 — 테스트가 루트를 바꿨다 되돌릴 때(`TestTempPath`) 표가 쌓이지 않게. 지난 표를 놓지 않는 대신 늘어나는 것은
+                // 서로 다른 내용(임시 루트마다 하나)뿐이다. 놓는 훅은 두지 않는다 — 읽는 쪽이 쥔 참조를 끊는 길이 된다.
+                const ResourcePathTable* pNext = isSameTable( store._initial, *next ) ? &store._initial : nullptr;
+                for ( size_t index = 0; pNext == nullptr && index < store._listPublished.size(); ++index )
+                {
+                    if ( isSameTable( *store._listPublished[index], *next ) )
+                        pNext = store._listPublished[index].get();
+                }
+                if ( pNext == nullptr )
+                {
+                    pNext = next.get();
+                    store._listPublished.push_back( std::move( next ) );
+                }
+                store._pCurrent.store( pNext, std::memory_order_release );
                 return *pNext;
+            }
+
+            /** @brief 두 표의 내용이 같으면 true 입니다(`publishTable` 이 같은 표를 다시 쓴다). */
+            static bool isSameTable( const ResourcePathTable& left, const ResourcePathTable& right )
+            {
+                return left._projectFolderPath == right._projectFolderPath && left._resourceRootFolderPath == right._resourceRootFolderPath &&
+                       left._listSearchPriority == right._listSearchPriority && left._listResourceFolder == right._listResourceFolder &&
+                       left._listHostExcludedGroup == right._listHostExcludedGroup;
             }
 
             /** @brief @p root 아래 도메인(과 하위 폴더)의 디스크 폴더입니다. 없으면 빈 글입니다(`findLooseDomainFolder` 의 본체 — 새 표를 짓는 동안 그 표의 루트로 푼다). */
