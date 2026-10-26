@@ -251,3 +251,35 @@ SW_TEST_CASE( TransientAttachmentPoolTest, ForwardedNamesFollowTheSourceChain )
     pool.forget();
     SW_EXPECT_FALSE( pool.isForwarded( "MotionBlurColor" ) );
 }
+
+/**
+ * @brief [TransientAttachmentPoolTest] 꺼진 효과의 타깃은 이어서 `kIdleFramesBeforeRelease` 프레임 쓰이지 않았을 때 한 번만 놓을 때가 된다 — 그보다 짧은 켜고 끄기는 세지 않는다
+ */
+SW_TEST_CASE( TransientAttachmentPoolTest, IdleTargetsReleaseOnlyAfterTheFrameCount )
+{
+    constexpr uint32 kIdle = sw::TransientAttachmentPool::kIdleFramesBeforeRelease;
+    SW_EXPECT_TRUE( kIdle > 1u );
+    // 모션 블러가 카메라가 서고 움직일 때마다 켜지고 꺼지는 꼴: 기준의 절반씩 꺼졌다 한 프레임 켜진다.
+    uint32 idleFrames   = 0;
+    uint32 releaseCount = 0;
+    for ( uint32 frameIndex = 0; frameIndex < kIdle * 8u; ++frameIndex )
+    {
+        const bool bUsed = ( frameIndex % ( kIdle / 2u + 1u ) ) == 0u;
+        releaseCount += sw::TransientAttachmentPool::advanceIdleFrames( idleFrames, bUsed ) ? 1u : 0u;
+    }
+    SW_EXPECT_EQUAL( releaseCount, 0u );
+    // 이어서 꺼져 있으면 기준 프레임에 한 번만 놓을 때가 된다(그 뒤로는 놓을 것이 없다).
+    idleFrames = 0;
+    for ( uint32 frameIndex = 1; frameIndex <= kIdle * 2u; ++frameIndex )
+    {
+        const bool bRelease = sw::TransientAttachmentPool::advanceIdleFrames( idleFrames, false );
+        SW_EXPECT_EQUAL( bRelease, frameIndex == kIdle );
+    }
+    // 쓰이면 처음부터 다시 센다.
+    SW_EXPECT_FALSE( sw::TransientAttachmentPool::advanceIdleFrames( idleFrames, true ) );
+    SW_EXPECT_EQUAL( idleFrames, 0u );
+    // 만든 첨부가 없는 이름은 놓을 것이 없고, 만든 횟수도 0 이다(디바이스 없음).
+    sw::TransientAttachmentPool pool;
+    SW_EXPECT_FALSE( pool.releaseIfIdle( nullptr, "DepthOfFieldColor", false ) );
+    SW_EXPECT_EQUAL( pool.getAllocationCount(), 0u );
+}

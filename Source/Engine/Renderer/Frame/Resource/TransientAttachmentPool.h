@@ -40,7 +40,25 @@ namespace sw
             uint32             _height{ 0 };
             RHIFormat          _format{ RHIFormat::Unknown }; ///< 만들 때의 포맷(파이프라인 XML 의 선언)
             float4             _clearColor{};                 ///< 클리어 색 · 깊이(`_x`) — 파이프라인 XML 의 선언
+            uint32             _idleFrames{ 0 };              ///< 쓰는 패스가 이어서 돌지 않은 프레임 수(`releaseIfIdle`)
         };
+
+        /**
+         * @brief 쓰는 패스가 이만큼 이어서 돌지 않은 첨부(꺼진 효과의 타깃)는 놓습니다. 다시 켜지면 셋업이 다시 만듭니다.
+         * @details 모션 블러는 카메라가 서고 움직일 때마다 켜지고 꺼진다. 바로 놓으면 그때마다 만들고 놓기를 되풀이하므로 60 Hz 에서 약 2 초를 둔다.
+         *          놓은 GPU 자원은 백엔드의 해제 큐가 앞 프레임들이 끝난 뒤에 지운다(`destroyTexture` → `RHIReleaseQueue`, `kGPUReleaseFrameLatency`).
+         */
+        static constexpr uint32 kIdleFramesBeforeRelease = 120;
+
+        /**
+         * @brief 첨부 하나의 쉰 프레임 수를 한 프레임 나아가게 합니다. 놓을 때가 되면 true 입니다(그 프레임에 한 번).
+         * @param ioIdleFrames 쉰 프레임 수입니다. 이번 프레임에 쓰였으면 0 으로 돌아간다.
+         */
+        static constexpr bool advanceIdleFrames( uint32& ioIdleFrames, bool bUsedThisFrame )
+        {
+            ioIdleFrames = bUsedThisFrame ? 0u : ioIdleFrames + 1u;
+            return ioIdleFrames == kIdleFramesBeforeRelease;
+        }
 
         /** @brief 프레임 크기 하나를 나눗수로 줄인 크기입니다(올림, 최소 1). 나눗수 0 은 1 로 봅니다. */
         static constexpr uint32 computeScaledExtent( uint32 extent, uint32 divisor )
@@ -105,6 +123,13 @@ namespace sw
 
         /** @brief 모두 놓고 비웁니다. 디바이스가 **살아 있을 때** 부릅니다. 텍스처 SRV 는 텍스처용 해제로 돌려줍니다(버퍼용과 인덱스 공간이 다릅니다). */
         void release( IRHIDevice* pDevice );
+        /**
+         * @brief 그 이름으로 만든 첨부의 쉰 프레임 수를 나아가게 하고, `kIdleFramesBeforeRelease` 프레임 이어서 쓰이지 않았으면 놓습니다. 셋업(기록 전)에서 프레임마다 부릅니다.
+         * @return 이번에 놓았으면 true 입니다. 첨부가 없으면 false 입니다.
+         */
+        bool releaseIfIdle( IRHIDevice* pDevice, string_view name, bool bUsedThisFrame );
+        /** @brief 이 풀이 지금까지 만든 첨부 수입니다(놓았다 다시 만든 것도 센다 — 진단과 테스트용). */
+        uint32 getAllocationCount() const { return _allocationCount; }
         /** @brief 디바이스가 이미 사라졌을 때 부릅니다. 핸들만 잊습니다. */
         void forget();
 
@@ -127,5 +152,6 @@ namespace sw
         mutable mutex         _clearedMutex;
         uint32                _width;
         uint32                _height;
+        uint32                _allocationCount{ 0 };
     };
 } // namespace sw

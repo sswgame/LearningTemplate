@@ -202,10 +202,10 @@ namespace sw
     {
         view._bHistoryReset = ( view._bHasHistory == SW_FALSE || view._settings._bCut == SW_TRUE ) ? SW_TRUE : SW_FALSE;
         view._bHasHistory   = SW_TRUE;
-        // TAA 기록은 후처리를 켠 프레임만 쓴다(executeTaaPass). 지난 프레임이 쓰지 않았으면 기록은 그 앞 화면이라 버린다 — 뷰 상태(후처리 켬)가 바뀐 첫 프레임이다.
+        // TAA 기록은 TAA 가 도는 프레임만 쓴다. 지난 프레임이 쓰지 않았으면 기록은 그 앞 화면이라 버린다 — 뷰 상태(후처리 켬)가 바뀐 첫 프레임이다.
+        // 지난 프레임에 TAA 가 돌았는지는 그 프레임의 패스 고르기(`applyViewPassSelection`)가 남긴 `_bTaaHistoryWritten` 하나다 — 실행도 같은 결과를 본다.
         // 후처리 뒤의 효과(피사계 심도 · 모션 블러)가 켜지고 꺼지는 것은 TAA 뒤라 기록과 무관하다.
-        view._bTaaHistoryReset   = ( view._bHistoryReset == SW_TRUE || view._bTaaHistoryWritten == SW_FALSE ) ? SW_TRUE : SW_FALSE;
-        view._bTaaHistoryWritten = view._settings.usesPostProcess() ? SW_TRUE : SW_FALSE;
+        view._bTaaHistoryReset = ( view._bHistoryReset == SW_TRUE || view._bTaaHistoryWritten == SW_FALSE ) ? SW_TRUE : SW_FALSE;
     }
 
     void FrameRenderer::setIdentityWorld( FramePassContext& context )
