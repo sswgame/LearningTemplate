@@ -27,7 +27,7 @@
 적격이 아닌 타입은 코덱 없이 등록되고, 그 이유(필드 이름과 타입)는 `.gen.cpp` 주석과 `--dump` 출력에 남습니다. 오류로 멈추지는 않습니다.
 B 가 필요한지는 그 타입을 받는 등록 API(롤백, 넷 채널, 온라인 메서드)가 정하고, 이 API 가 기동 때 코덱이 있는지 확인해 없으면 이유와 함께 멈춥니다. `FixedLayout::write` · `read` 는 저수준 진입점이라 게임 코드는 등록 API 를 씁니다.
 
-비용: 새 번역 단위가 없고(기존 `.gen.cpp` 에 덧붙음) 덧붙는 것은 템플릿 없는 직선 코드이며, `.gen.cpp` 만 `FixedLayout.h` · `BitStream.h` 를 include 합니다. 단계 1 전후 Debug 는 `Engine.dll` +153,088 B(+0.7 %), `GameFramework.dll` +81,408 B(+1.0 %)였고 `REFLECT` 타입 454 개 중 적격은 173 개였습니다. 7-a · 7-b 전후 Release 는 `Engine.dll` +12,800 B(+0.08 %), `GameFramework.dll` +5,120 B(+0.10 %), `App.exe` -512 B 입니다. 단계 1 의 Release 전후 값은 재지 않았고, 재려면 단계 1 직전 커밋과 지금을 같은 Release 구성으로 지어 `Bin` 의 파일 크기를 견줍니다.
+비용: 새 번역 단위가 없고(기존 `.gen.cpp` 에 덧붙음) 덧붙는 것은 템플릿 없는 직선 코드이며, `.gen.cpp` 만 `FixedLayout.h` · `BitStream.h` 를 include 합니다.
 
 ### 3.2 생성 코드의 위치
 

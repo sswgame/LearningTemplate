@@ -36,22 +36,12 @@ cd build/Ninja-Debug/Bin
 
 ## 데이터
 
-| 파일 | 내용 |
-|------|------|
-| `Resource/game/pixeltown/maps/town.scene.xml` | 카메라, 땅 · 소품 레이어, 주인공, 촌장, 디렉터 |
-| `Resource/game/pixeltown/maps/town.tilemap.xml` | 땅(풀 · 길 · 물) 20 x 12 칸과 스폰 칸 |
-| `Resource/game/pixeltown/maps/townprops.tilemap.xml` | 소품(집 · 나무 · 덤불) — 땅과 같은 크기 |
-| `Resource/game/pixeltown/tilesets/town.tileset.xml` | 땅 브러시 — 길 · 물은 규칙 타일, 물은 `solid` |
-| `Resource/game/pixeltown/tilesets/townprops.tileset.xml` | 소품 브러시 — 모두 `solid` |
-| `Resource/game/pixeltown/sprites/*.sprite.xml` | 주인공 4 방향 걷기 · 서기, 촌장 숨쉬기 |
-| `Resource/game/pixeltown/dialogue/elder.dialogue.xml` | 촌장 대화 두 줄 |
+`Resource/game/pixeltown/` 아래: 씬 `maps/town.scene.xml`(카메라, 땅 · 소품 레이어, 주인공, 촌장, 디렉터), 땅 `maps/town.tilemap.xml`(20 x 12 칸과 스폰 칸)과 소품 `maps/townprops.tilemap.xml`(같은 크기),
+브러시 `tilesets/town.tileset.xml`(길 · 물은 규칙 타일, 물은 `solid`)과 `townprops.tileset.xml`(모두 `solid`), 스프라이트 `sprites/*.sprite.xml`, 촌장 대화 `dialogue/elder.dialogue.xml`.
 
 주민은 `DialogueRunnerComponent` 를 단 오브젝트이고, 선 칸이 막힙니다. 선택지가 있는 대화는 이 게임에 선택 UI 가 없어 오류로 알리고 닫습니다.
 
 ## 코드
 
-| 파일 | 하는 일 |
-|------|---------|
-| `PixelTownGame` | 첫 씬을 열고 디렉터를 상태 스냅샷에 올린다 |
-| `TownDirectorComponent` | 걷는 맵을 만들고, 주인공 폰의 의도로 한 칸씩 걷게 하고, 대화 요청을 플러시에서 러너에 넘긴다 |
-| `TownWalkerViewComponent` | 주인공 스프라이트를 디렉터의 자리로 옮기고 방향 · 걸음에 맞는 애니메이션을 고른다. 앞뒤는 깊이(Z = 발 Y × 0.01)로 가린다 |
+`PixelTownGame` 이 첫 씬을 열고 디렉터를 상태 스냅샷에 올립니다. `TownDirectorComponent` 가 걷는 맵을 만들고 주인공 폰의 의도로 한 칸씩 걷게 하며 대화 요청을 플러시에서 러너에 넘깁니다.
+`TownWalkerViewComponent` 는 주인공 스프라이트를 디렉터의 자리로 옮기고 방향 · 걸음에 맞는 애니메이션을 고르며 앞뒤는 깊이(Z = 발 Y × 0.01)로 가립니다.
