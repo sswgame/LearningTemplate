@@ -168,6 +168,7 @@ namespace sw
 {
     AsyncLogSink::AsyncLogSink()
         : _onLogWritten{}
+        , _listListenerSubscription{}
         , _listOutput{}
         , _pFileOutput{ nullptr }
         , _queue{}
@@ -252,6 +253,7 @@ namespace sw
         {
             std::scoped_lock<mutex> lock{ _mutex };
             _onLogWritten.removeAll();
+            _listListenerSubscription.clear(); // removeAll 이 이미 무효로 만들었다 — 푸는 일 없이 비운다
             rebuildListenerSnapshot();
         }
         _bInitialized = false;
@@ -271,7 +273,8 @@ namespace sw
     DelegateHandle AsyncLogSink::registerLogWrittenListener( const LogWrittenDelegate& listener )
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        const DelegateHandle    handle = _onLogWritten.add( listener );
+        const DelegateHandle    handle = DelegateHandle::allocate();
+        _listListenerSubscription.emplace_back( handle, _onLogWritten.add( listener ) );
         rebuildListenerSnapshot();
         return handle;
     }
@@ -284,7 +287,10 @@ namespace sw
         uint32 retiredSlot{ 0 };
         {
             std::scoped_lock<mutex> lock{ _mutex };
-            _onLogWritten.remove( handle );
+            // 구독을 지우면 그 소멸자가 항목을 뺀다(_mutex 안이라 다른 등록 · 해제와 겹치지 않는다).
+            const std::optional<size_t> index = VectorUtil::findIndexBy<&pair<DelegateHandle, Subscription>::first>( _listListenerSubscription, handle );
+            if ( index.has_value() )
+                VectorUtil::removeAtSwap( _listListenerSubscription, *index );
             rebuildListenerSnapshot();
             retiredSlot = retireBroadcastSlot();
         }

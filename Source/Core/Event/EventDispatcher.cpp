@@ -54,7 +54,7 @@ namespace sw
     {
 #if defined( SW_DEBUG )
         SW_LOG_ASSERT( isBusThread(),
-                       "The EventDispatcher bus (subscribe/unsubscribe/publish/processEvents/clear) "
+                       "The EventDispatcher bus (subscribe/Subscription release/publish/processEvents/clear) "
                        "may only be used on the thread that calls processEvents. "
                        "To send an event from another thread, use push." );
 #endif
