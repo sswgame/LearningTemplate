@@ -28,6 +28,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Object/Component/Component.h"
+#include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Base/Gameplay/Gimmick/GimmickCircuit.h"
@@ -200,9 +201,10 @@ namespace sw
         PROPERTY( Category = "Circuit", DisplayName = "Step Time", Min = 0.001, Tooltip = "Fixed simulation step", Units = s )
         float32 _stepTime;
 
-        GimmickCircuit      _circuit;
-        vector<Binding>     _listBinding;
-        vector<string>      _listError;
-        GimmickCircuitState _checkpoint; ///< 비어 있으면 잡은 체크포인트가 없다
+        GimmickCircuit       _circuit;
+        vector<Binding>      _listBinding;
+        vector<TagContainer> _listNodeTag; ///< 노드마다 근접 센서의 태그(`bindNodes` 가 `tag` 매개변수에서 한 번 만든다). 근접 노드가 아니거나 태그가 없으면 비어 있다
+        vector<string>       _listError;
+        GimmickCircuitState  _checkpoint; ///< 비어 있으면 잡은 체크포인트가 없다
     };
 } // namespace sw

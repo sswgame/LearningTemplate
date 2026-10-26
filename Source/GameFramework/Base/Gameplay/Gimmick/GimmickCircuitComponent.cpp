@@ -162,6 +162,7 @@ namespace sw
         , _stepTime{ GimmickCircuitDef::kDefaultStepTime }
         , _circuit{}
         , _listBinding{}
+        , _listNodeTag{}
         , _listError{}
         , _checkpoint{}
     {
@@ -281,6 +282,7 @@ namespace sw
             SW_LOG_ERROR( "%#", error );
         }
         _listBinding.clear();
+        _listNodeTag.clear();
         return bBuilt;
     }
 
@@ -324,6 +326,7 @@ namespace sw
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         _listBinding.assign( static_cast<size_t>( _circuit.getNodeCount() ), Binding::None );
+        _listNodeTag.assign( static_cast<size_t>( _circuit.getNodeCount() ), TagContainer{} );
         _listRestPose.resize( static_cast<size_t>( _circuit.getNodeCount() ) );
         if ( pManager == nullptr )
             return;
@@ -331,7 +334,11 @@ namespace sw
         {
             const Binding binding                     = findBinding( _circuit.getKind( node )._name );
             _listBinding[static_cast<size_t>( node )] = binding;
-            GameObject* pTarget                       = resolveTarget( *pManager, node );
+            // 근접 노드의 태그는 여기서 한 번 TagID 로 바꾼다. 스텝마다 문자열을 intern 하지 않는다.
+            const string* pTag = binding == Binding::Proximity ? GimmickCircuitComponentInternal::readText( _circuit, node, "tag" ) : nullptr;
+            if ( pTag != nullptr && pTag->empty() == false )
+                _listNodeTag[static_cast<size_t>( node )].addTag( TagID::request( *pTag ) );
+            GameObject* pTarget = resolveTarget( *pManager, node );
             if ( pTarget == nullptr )
             {
                 if ( binding != Binding::None )
@@ -371,20 +378,19 @@ namespace sw
 
     float32 GimmickCircuitComponent::computeProximity( GameObjectManager& manager, int32 node, const GameObject& target ) const
     {
-        const string*         pTag         = GimmickCircuitComponentInternal::readText( _circuit, node, "tag" );
+        const size_t          index        = static_cast<size_t>( node );
         const SceneComponent* pScene       = target.getPrimarySceneComponent();
-        const bool            bNoTagFilter = pTag == nullptr || pTag->empty() || pScene == nullptr;
+        const bool            bNoTagFilter = index >= _listNodeTag.size() || _listNodeTag[index].getTagCount() == 0 || pScene == nullptr;
         if ( bNoTagFilter )
             return GimmickCircuitComponentInternal::kFarDistance;
-        const TagID  tag      = TagID::request( *pTag );
         const bool   bPlanar  = GimmickCircuitComponentInternal::readNumber( _circuit, node, "planar", 0.0f ) != 0.0f;
         const float3 origin   = pScene->getWorldPosition();
         float32      nearest  = GimmickCircuitComponentInternal::kFarDistance;
         const uint64 targetID = target.getObjectID();
-        manager.forEachGameObject( [&]( GameObject* pObject )
+        manager.getTagIndex().forEachObjectWithTags( _listNodeTag[index], [&]( GameObject* pObject )
         {
-            const SceneComponent* pOther         = pObject != nullptr ? pObject->getPrimarySceneComponent() : nullptr;
-            const bool            bSkipCandidate = pOther == nullptr || pObject->getObjectID() == targetID || pObject->isActiveInHierarchy() == false || pObject->hasTag( tag ) == false;
+            const SceneComponent* pOther         = pObject->getPrimarySceneComponent();
+            const bool            bSkipCandidate = pOther == nullptr || pObject->getObjectID() == targetID || pObject->isActiveInHierarchy() == false;
             if ( bSkipCandidate )
                 return;
             float3 delta = pOther->getWorldPosition() - origin;

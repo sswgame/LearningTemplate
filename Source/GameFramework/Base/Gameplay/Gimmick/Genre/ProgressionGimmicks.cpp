@@ -52,16 +52,16 @@ namespace sw
         const bool            bCannotCheckDoor = pManager == nullptr || pScene == nullptr || ( _bOpen && _bStaysOpen ) || _requiredTags.getTagCount() == 0;
         if ( bCannotCheckDoor )
             return;
-        const float3        center     = pScene->getWorldPosition();
-        const uint64        selfID     = pOwner->getObjectID();
-        const TagContainer& required   = _requiredTags;
-        const float32       radius     = _openRadius;
-        const bool          bPlanar    = _bPlanar;
-        bool                bQualified = false;
-        pManager->forEachGameObject( [&bQualified, &required, center, selfID, radius, bPlanar]( GameObject* pObject )
+        const float3  center     = pScene->getWorldPosition();
+        const uint64  selfID     = pOwner->getObjectID();
+        const float32 radius     = _openRadius;
+        const bool    bPlanar    = _bPlanar;
+        bool          bQualified = false;
+        // 요구 태그를 가진 것만 태그 색인에서 받는다(씬을 훑지 않는다).
+        pManager->getTagIndex().forEachObjectWithTags( _requiredTags, [&bQualified, center, selfID, radius, bPlanar]( GameObject* pObject )
         {
-            const SceneComponent* pOther      = pObject != nullptr ? pObject->getPrimarySceneComponent() : nullptr;
-            const bool            bSkipObject = bQualified || pOther == nullptr || pObject->getObjectID() == selfID || pObject->getTags().hasAllTags( required ) == false;
+            const SceneComponent* pOther      = pObject->getPrimarySceneComponent();
+            const bool            bSkipObject = bQualified || pOther == nullptr || pObject->getObjectID() == selfID;
             if ( bSkipObject )
                 return;
             float3 offset = pOther->getWorldPosition() - center;
