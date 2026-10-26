@@ -26,7 +26,7 @@ namespace sw::editor
         bool _bGridSnap{ false };
         bool _bRotationSnap{ false };
         bool _bScaleSnap{ false };
-        bool _bShowHUD{ true }; ///< 씬 뷰의 HUD 상자(`EditorDebugHUDView`)
+        bool _bShowHUD{ false }; ///< 씬 뷰의 HUD 상자(`EditorDebugHUDView`)
         bool _bShowGrid{ true };
         bool _bShowOrientationCube{ true };
         bool _bShowRuler{ false };

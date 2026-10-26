@@ -72,6 +72,10 @@ namespace sw::editor
         virtual EditorAssetType getDocumentKind() const { return EditorAssetType::Unknown; }
         /** @brief 마지막 draw 에서 이 패널 창에 포커스가 있었으면 true 입니다. */
         bool isWindowFocused() const { return _bWindowFocused; }
+        /** @brief 마지막 draw 에서 내용 영역에 글자 줄(`GetTextLineHeightWithSpacing`)이 몇 줄 들어갔는지입니다. 기본 배치의 크기 점검(탐침 `Editor.PanelContentLines`)이 읽습니다. */
+        float32 getContentLineCount() const { return _contentLineCount; }
+        /** @brief 내용을 한 번이라도 그렸으면 true 입니다. 접히거나 가려진 채면 false 라서 `getContentLineCount` 가 낡은 값을 낼 일이 없습니다. */
+        bool hasDrawnContent() const { return _bContentDrawn; }
 
         // ------------------------------------------------------------------------------
         // 3) 문서 상태. dirty 비트는 기반 클래스가 보관한다
@@ -183,6 +187,8 @@ namespace sw::editor
         explicit IEditorPanel( bool bOpenByDefault = true )
             : _bOpen{ bOpenByDefault }
             , _bWindowFocused{ false }
+            , _bContentDrawn{ false }
+            , _contentLineCount{ 0.0f }
             , _bDocumentDirty{ false }
             , _bConfirmClose{ false }
         {
@@ -248,9 +254,11 @@ namespace sw::editor
         /** @brief 닫기 확인 모달을 그리고 고른 항목을 적용합니다. */
         void drawCloseConfirm();
 
-        bool _bOpen;
-        bool _bWindowFocused;
-        bool _bDocumentDirty;
-        bool _bConfirmClose; ///< 닫으려다 미저장 확인을 기다리는 중
+        bool    _bOpen;
+        bool    _bWindowFocused;
+        bool    _bContentDrawn;    ///< 마지막 draw 에서 내용을 그렸다(접히거나 가려지지 않았다)
+        float32 _contentLineCount; ///< 마지막으로 그린 draw 의 내용 영역 높이 / 글자 줄 높이
+        bool    _bDocumentDirty;
+        bool    _bConfirmClose; ///< 닫으려다 미저장 확인을 기다리는 중
     };
 } // namespace sw::editor
