@@ -8,6 +8,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Network/DebugReplyLine.h"
+#include "Core/String/HexUtil.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -38,8 +39,6 @@ namespace sw
                 uint8  _bActive{ 0 };
                 float3 _position{};
             };
-
-            static constexpr const utf8* kUpperHexDigit = "0123456789ABCDEF";
 
             /** @brief 줄 구분 · 로그 꼬리 구분에 쓰는 글자와 제어 문자, '%' 자신은 `%XX` 로 씁니다. */
             static bool needsEscape( utf8 ch )
@@ -160,13 +159,9 @@ namespace sw
 
     void SceneStateHash::writeObjectReport( const vector<SceneObjectHash>& listObject, string& outText )
     {
-        constexpr const utf8* kHexDigit = "0123456789abcdef";
         for ( const SceneObjectHash& object : listObject )
         {
-            for ( int32 nibble = 15; nibble >= 0; --nibble )
-            {
-                outText += kHexDigit[( object._hash >> ( nibble * 4 ) ) & 0xF];
-            }
+            HexUtil::appendUint64( outText, object._hash );
             outText += ' ';
             outText += object._name;
             outText += '\n';
@@ -245,10 +240,7 @@ namespace sw
         {
             if ( index > 0 )
                 outLine += ',';
-            for ( int32 nibble = 15; nibble >= 0; --nibble )
-            {
-                outLine += "0123456789abcdef"[( listObject[index]._hash >> ( nibble * 4 ) ) & 0xF];
-            }
+            HexUtil::appendUint64( outLine, listObject[index]._hash );
             outLine += ':';
             for ( const utf8 ch : listObject[index]._name )
             {
@@ -256,8 +248,7 @@ namespace sw
                 {
                     const uint8 code = static_cast<uint8>( ch );
                     outLine += '%';
-                    outLine += SceneStateHashInternal::kUpperHexDigit[code >> 4];
-                    outLine += SceneStateHashInternal::kUpperHexDigit[code & 0xF];
+                    HexUtil::appendBytes( outLine, &code, 1, HexCase::Upper );
                 }
                 else
                 {
@@ -411,17 +402,13 @@ namespace sw
 
     void StateHashHistory::writeReport( const vector<StateHashSample>& listSample, string& outText )
     {
-        constexpr const utf8* kHexDigit = "0123456789abcdef";
         for ( const StateHashSample& sample : listSample )
         {
             utf8                       arrBuffer[constant::kMaxBuffer32];
             const std::to_chars_result result = std::to_chars( arrBuffer, arrBuffer + sizeof( arrBuffer ), sample._tick );
             outText.append( arrBuffer, result.ptr );
             outText += ' ';
-            for ( int32 nibble = 15; nibble >= 0; --nibble )
-            {
-                outText += kHexDigit[( sample._hash >> ( nibble * 4 ) ) & 0xF];
-            }
+            HexUtil::appendUint64( outText, sample._hash );
             outText += '\n';
         }
     }

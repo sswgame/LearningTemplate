@@ -16,6 +16,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/String/HexUtil.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Common/EngineDefines.h"
@@ -72,13 +73,9 @@ namespace sw
             /** @brief uint64 를 16자리 소문자 hex 로 바꿉니다(`parseHex64` 의 짝). */
             static string formatHex64( uint64 value )
             {
-                utf8 arrDigit[16]{};
-                for ( size_t index = 16; index > 0; --index )
-                {
-                    arrDigit[index - 1] = "0123456789abcdef"[value & 0xFu];
-                    value >>= 4;
-                }
-                return string( arrDigit, 16 );
+                string text;
+                HexUtil::appendUint64( text, value );
+                return text;
             }
 
             /** @brief 스탬프 한 줄의 원천입니다. 키와 그 소스의 절대 경로를 가집니다. */

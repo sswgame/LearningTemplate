@@ -2,6 +2,7 @@
 
 #include "Engine/Serialization/Base/SerializeReflectAny.h"
 
+#include "Core/String/HexUtil.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Reflection/ReflectAny.h"
@@ -62,14 +63,7 @@ namespace sw
             {
                 const ReflectAny& any = *static_cast<const ReflectAny*>( pPtr );
                 // 텍스트 표현은 `타입FQN|16진수 바이트` 한 줄이다(JSON 오브젝트로 풀지 않는다).
-                string hex;
-                hex.reserve( any._bytes.size() * 2 );
-                static constexpr const utf8* kDigits = "0123456789abcdef";
-                for ( uint8 byte : any._bytes )
-                {
-                    hex.push_back( kDigits[( byte >> 4 ) & 0xF] );
-                    hex.push_back( kDigits[byte & 0xF] );
-                }
+                const string                           hex = HexUtil::encodeBytes( any._bytes.data(), any._bytes.size() );
                 StringBuilder<constant::kMaxBuffer128> sb;
                 sb.append( any._typeFqn.view() ).append( '|' ).append( hex );
                 return string{ sb.c_str(), sb.size() };

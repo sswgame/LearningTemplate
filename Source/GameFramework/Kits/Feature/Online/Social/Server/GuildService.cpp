@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Network/BitStream.h"
+#include "Core/String/HexUtil.h"
 
 #include "GameFramework/Base/Online/Ledger/Ledger.h"
 #include "GameFramework/Base/Online/Ledger/LedgerTypes.h"
@@ -84,13 +85,11 @@ namespace sw
             /** @brief 이름 키를 만듭니다. ASCII 는 소문자로 바꾼 뒤 모든 바이트를 16진 문자열로 바꾸므로 한글 이름도 키 규칙 안에 들어옵니다. 24바이트는 48글자가 됩니다. */
             static string makeNameKey( string_view name )
             {
-                static constexpr utf8 kHexDigit[] = "0123456789abcdef";
-                string                key;
+                string key;
                 for ( const utf8 character : name )
                 {
                     const uint8 byte = static_cast<uint8>( StringUtil::toLowerChar( character ) );
-                    key.push_back( kHexDigit[byte >> 4] );
-                    key.push_back( kHexDigit[byte & 0xFu] );
+                    HexUtil::appendBytes( key, &byte, 1 );
                 }
                 return key;
             }

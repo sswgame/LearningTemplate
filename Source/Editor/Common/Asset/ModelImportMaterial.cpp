@@ -8,6 +8,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/HexUtil.h"
 
 #include "Editor/Common/Asset/ModelImportUtil.h"
 #include "Editor/Common/Asset/ModelImporter.h"
@@ -340,14 +341,8 @@ namespace sw::editor
         const uint64 high = HashUtil::computeStringHash64( resourceID.data(), resourceID.size(), false );
         const uint64 low  = HashUtil::computeStringHash64( resourceID.data(), resourceID.size(), false, high ^ HashUtil::kGoldenRatio64 );
         // 8-4-4-4-12 글자 16 진. 셋째 그룹 첫 글자는 버전 4, 넷째 그룹 첫 글자는 변형(8..b)이다.
-        auto appendHex = []( string& inoutText, uint64 value, uint32 digitCount )
-        {
-            static constexpr utf8 kArrDigit[] = "0123456789abcdef";
-            for ( uint32 digit = digitCount; digit > 0; --digit )
-            {
-                inoutText += kArrDigit[( value >> ( ( digit - 1 ) * 4 ) ) & 0xFu];
-            }
-        };
+        const auto appendHex = []( string& inoutText, uint64 value, uint32 digitCount )
+        { HexUtil::appendUint64( inoutText, value, digitCount ); };
         string text;
         appendHex( text, high >> 32, 8 );
         text += '-';

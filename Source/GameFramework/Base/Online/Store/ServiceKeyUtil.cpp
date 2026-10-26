@@ -4,26 +4,13 @@
 
 #include "Core/Container/vector.h"
 #include "Core/Network/BitStream.h"
-
-namespace sw
-{
-    namespace
-    {
-        struct ServiceKeyUtilInternal
-        {
-            static constexpr utf8 kHexDigit[] = "0123456789abcdef";
-        };
-    } // namespace
-} // namespace sw
+#include "Core/String/HexUtil.h"
 
 namespace sw
 {
     void ServiceKeyUtil::appendHex64( string& outKey, uint64 value )
     {
-        for ( int32 digitIndex = kHexWidth - 1; digitIndex >= 0; --digitIndex )
-        {
-            outKey.push_back( ServiceKeyUtilInternal::kHexDigit[( value >> ( digitIndex * 4 ) ) & 0xFu] );
-        }
+        HexUtil::appendUint64( outKey, value, static_cast<uint32>( kHexWidth ) );
     }
 
     bool ServiceKeyUtil::parseHex64( string_view text, uint64& outValue )

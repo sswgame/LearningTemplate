@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Network/BitStream.h"
+#include "Core/String/HexUtil.h"
 
 #include "GameFramework/Base/Online/Audit/ServiceAuditLog.h"
 #include "GameFramework/Base/Online/Sanction/ServiceSanction.h"
@@ -27,7 +28,6 @@ namespace sw
             static constexpr utf8  kDigestLabel[]      = "sw-login-token-digest-v1";
             static constexpr utf8  kGuestLabel[]       = "sw-guest-v1";
             static constexpr utf8  kSubjectLabel[]     = "sw-platform-subject-v1:";
-            static constexpr utf8  kHexDigit[]         = "0123456789abcdef";
             static constexpr utf8  kGuestNamePrefix[]  = "Guest-";
             static constexpr utf8  kPlayerNamePrefix[] = "Player";
             static constexpr int32 kMaxHintNameSize    = 12;
@@ -289,25 +289,13 @@ namespace sw
                                                 static_cast<int32>( sizeof( kDigestLabel ) - 1 ), outDigest, LoginConstant::kDigestSize );
             }
 
-            static string makeHex( const uint8* pBytes, int32 size )
-            {
-                string hex;
-                hex.reserve( static_cast<size_t>( size ) * 2 );
-                for ( int32 byteIndex = 0; byteIndex < size; ++byteIndex )
-                {
-                    hex.push_back( kHexDigit[pBytes[byteIndex] >> 4] );
-                    hex.push_back( kHexDigit[pBytes[byteIndex] & 0xFu] );
-                }
-                return hex;
-            }
-
             [[nodiscard]] static bool computeGuestDigestHex( ILoginCrypto& crypto, const uint8 ( &arrDeviceSecret )[LoginConstant::kDeviceSecretSize], string& outHex )
             {
                 uint8 arrDigest[LoginConstant::kDigestSize];
                 if ( crypto.computeKeyedHash( arrDeviceSecret, LoginConstant::kDeviceSecretSize, reinterpret_cast<const uint8*>( kGuestLabel ),
                                               static_cast<int32>( sizeof( kGuestLabel ) - 1 ), arrDigest, LoginConstant::kDigestSize ) == false )
                     return false;
-                outHex = makeHex( arrDigest, LoginConstant::kDigestSize );
+                outHex = HexUtil::encodeBytes( arrDigest, static_cast<size_t>( LoginConstant::kDigestSize ) );
                 return true;
             }
 
@@ -320,7 +308,7 @@ namespace sw
                 if ( crypto.computeKeyedHash( reinterpret_cast<const uint8*>( subject.data() ), static_cast<int32>( subject.size() ), reinterpret_cast<const uint8*>( info.data() ),
                                               static_cast<int32>( info.size() ), arrDigest, LoginConstant::kDigestSize ) == false )
                     return false;
-                outHex = makeHex( arrDigest, LoginConstant::kDigestSize );
+                outHex = HexUtil::encodeBytes( arrDigest, static_cast<size_t>( LoginConstant::kDigestSize ) );
                 return true;
             }
 

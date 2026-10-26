@@ -3,6 +3,7 @@
 #include "GameFramework/Base/Online/Ledger/LedgerTypes.h"
 
 #include "Core/Network/BitStream.h"
+#include "Core/String/HexUtil.h"
 
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 
@@ -15,7 +16,6 @@ namespace sw
             static constexpr int32 kMaxEscrowDomainSize = 16;
             static constexpr int32 kMaxEscrowTokenSize  = 64;
             static constexpr int32 kMaxScopeSize        = 32;
-            static constexpr utf8  kHexDigit[]          = "0123456789abcdef";
 
             static bool isLowerOrDigit( utf8 ch ) { return ( 'a' <= ch && ch <= 'z' ) || ( '0' <= ch && ch <= '9' ); }
 
@@ -170,12 +170,7 @@ namespace sw
         outKey.reserve( scope.size() + 1 + token.size() * 2 );
         outKey += scope;
         outKey.push_back( '/' );
-        for ( const utf8 ch : token )
-        {
-            const uint8 byteValue = static_cast<uint8>( ch );
-            outKey.push_back( LedgerTypesInternal::kHexDigit[byteValue >> 4] );
-            outKey.push_back( LedgerTypesInternal::kHexDigit[byteValue & 0xFu] );
-        }
+        HexUtil::appendBytes( outKey, reinterpret_cast<const uint8*>( token.data() ), token.size() );
         return true;
     }
 
