@@ -149,28 +149,22 @@ namespace sw::editor
         // 새 창은 디스크의 씬을 연다(언리얼 Standalone 처럼) — 저장하지 않은 편집은 들어가지 않는다고 알린다.
         if ( editorContext.getSubsystem<EditorWorkspace>().isSceneDirty() )
             editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyPlayNewWindowTitle" ), SW_LOCKEY( "EdCommon", "NotifyPlayNewWindowUnsaved" ), NotificationType::Warning );
-        const string command = makeStandaloneCommand( FileUtil::getExecutablePath(), pScene->getSourcePath(), getPreferences<EditorPlayPreferences>()._standaloneArguments );
+        const ProcessCommand command =
+            makeStandaloneCommand( FileUtil::getExecutablePath(), pScene->getSourcePath(), getPreferences<EditorPlayPreferences>()._standaloneArguments );
         if ( Process::launchDetached( command ) == false )
         {
-            SW_LOG_WARNING( "Failed to launch the standalone game: %#", command.c_str() );
+            SW_LOG_WARNING( "Failed to launch the standalone game: %#", command.toCommandLine() );
             return false;
         }
-        SW_LOG_INFO( "Standalone game launched: %#", command.c_str() );
+        SW_LOG_INFO( "Standalone game launched: %#", command.toCommandLine() );
         return true;
     }
 
-    string EditorPlayCommands::makeStandaloneCommand( string_view executablePath, string_view scenePath, string_view extraArguments )
+    ProcessCommand EditorPlayCommands::makeStandaloneCommand( string_view executablePath, string_view scenePath, string_view extraArguments )
     {
-        string command = "\"";
-        command += executablePath;
-        command += "\" \"-gv_firstScene=";
-        command += scenePath;
-        command += "\"";
-        if ( extraArguments.empty() == false )
-        {
-            command += " ";
-            command += extraArguments;
-        }
+        ProcessCommand       command{ string( executablePath ), { "-gv_firstScene=" + string( scenePath ) } };
+        const vector<string> listExtraArgument = ProcessCommand::splitArgumentLine( extraArguments );
+        command._listArgument.insert( command._listArgument.end(), listExtraArgument.begin(), listExtraArgument.end() );
         return command;
     }
 } // namespace sw::editor

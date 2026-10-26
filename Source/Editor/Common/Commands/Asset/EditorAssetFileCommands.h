@@ -86,7 +86,7 @@ namespace sw::editor
 
         /**
          * @brief 파일 탐색기에서 이 경로를 선택한 채로 엽니다.
-         * @details 셸 없이 프로세스를 직접 실행한다. 셸(`system`)을 거치면 경로 안의 `&` 와 `"` 가 명령으로 해석되고 콘솔 창이
+         * @details 셸 없이 열도록 `Process::showInFileManager` 로 부른다. 셸(`system`)을 거치면 경로 안의 `&` 와 `"` 가 명령으로 해석되고 콘솔 창이
          *          한 번 깜빡인다.
          */
         static bool showInFileExplorer( string_view absolutePath );

@@ -76,11 +76,17 @@ SW_TEST_CASE( ShadowCopyNameTest, NameCarriesTheProcessThatMadeIt )
 SW_TEST_CASE( ShadowCopyNameTest, CleanupKeepsCopiesOfOtherLiveProcesses )
 {
 #if defined( SW_PLATFORM_WINDOWS )
-    const sw::string liveCommand = "ping.exe 127.0.0.1 -n 30";
-    const sw::string doneCommand = "cmd.exe /c exit 0";
+    const sw::ProcessCommand liveCommand{
+        "ping.exe",
+        { "127.0.0.1", "-n", "30" }
+    };
+    const sw::ProcessCommand doneCommand{
+        "cmd.exe",
+        { "/c", "exit", "0" }
+    };
 #else
-    const sw::string liveCommand = "sleep 30";
-    const sw::string doneCommand = "exit 0";
+    const sw::ProcessCommand liveCommand{ "sleep", { "30" } };
+    const sw::ProcessCommand doneCommand{ "true", {} };
 #endif
 
     ChildProcessScope liveChild;
@@ -125,9 +131,12 @@ SW_TEST_CASE( ShadowCopyNameTest, CleanupKeepsCopiesOfOtherLiveProcesses )
 SW_TEST_CASE( ShadowCopyNameTest, CleanupRemovesCopyFoldersButKeepsOtherLiveProcesses )
 {
 #if defined( SW_PLATFORM_WINDOWS )
-    const sw::string liveCommand = "ping.exe 127.0.0.1 -n 30";
+    const sw::ProcessCommand liveCommand{
+        "ping.exe",
+        { "127.0.0.1", "-n", "30" }
+    };
 #else
-    const sw::string liveCommand = "sleep 30";
+    const sw::ProcessCommand liveCommand{ "sleep", { "30" } };
 #endif
     ChildProcessScope liveChild;
     SW_ASSERT_TRUE( liveChild._process.launch( liveCommand ) );

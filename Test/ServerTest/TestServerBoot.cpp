@@ -100,21 +100,17 @@ namespace
         const string serverPath = findServerPath();
         if ( serverPath.empty() )
             return run;
-        string     fullArguments( arguments );
-        const bool bWriteConfig = fullArguments.find( "-server-config=" ) == string::npos;
+        ProcessCommand command{ serverPath, {} };
+        const bool     bWriteConfig = arguments.find( "-server-config=" ) == string_view::npos;
         if ( bWriteConfig )
         {
             const string configPath = writeServerConfig( 0 );
             if ( configPath.empty() )
                 return run;
-            fullArguments = "-server-config=\"" + configPath + "\" " + fullArguments;
+            command._listArgument.push_back( "-server-config=" + configPath );
         }
-#if defined( SW_PLATFORM_WINDOWS )
-        const string command = "\"" + serverPath + "\" " + fullArguments;
-#else
-        // POSIX 는 `sh -c` 가 명령을 띄운다. `exec` 가 없으면(dash) sh 가 부모로 남아 SIGTERM 에 서버보다 먼저 죽고 종료 코드가 143 이 된다.
-        const string command = "exec \"" + serverPath + "\" " + fullArguments;
-#endif
+        const vector<string> listArgument = ProcessCommand::splitArgumentLine( arguments );
+        command._listArgument.insert( command._listArgument.end(), listArgument.begin(), listArgument.end() );
         const test::ProcessRunResult result =
             test::runProcessWithDeadline( command, options, kRunTimeoutSeconds, [&run, &onReady, &onLine]( Process& process, const string& line )
         {

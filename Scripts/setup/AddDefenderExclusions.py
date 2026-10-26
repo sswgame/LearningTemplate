@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import ctypes
+import os
 import sys
 from pathlib import Path
 
@@ -40,9 +41,17 @@ def requestAdminElevation() -> None:
     sys.exit(ExitCode.Passed)
 
 
-def runPowerShellInternal(command: str) -> None:
-    """PowerShell 명령 하나 — 실패하면 멈춘다(관리자 권한이 없으면 Add-MpPreference 가 진다, 그때 "성공" 을 찍지 않는다)."""
-    if not runProcess(["powershell", "-NoProfile", "-Command", command], bCapture=False).bSucceeded:
+#: 명령 글에 프로젝트 경로를 끼워 넣지 않고 환경 변수로 넘긴다 — 경로의 `"` · `$` 가 PowerShell 식을 바꾸지 못하게.
+_kProjectDirVariable = "SW_DEFENDER_PROJECT_DIR"
+
+
+def runPowerShellInternal(command: str, projectDir: str) -> None:
+    """PowerShell 명령 하나 — 실패하면 멈춘다(관리자 권한이 없으면 Add-MpPreference 가 진다, 그때 "성공" 을 찍지 않는다).
+
+    Defender cmdlet 은 PowerShell 에만 있어 셸을 거친다. 바뀌는 값(프로젝트 경로)은 `$env:SW_DEFENDER_PROJECT_DIR` 로만 읽는다.
+    """
+    environment = {**os.environ, _kProjectDirVariable: projectDir}
+    if not runProcess(["powershell", "-NoProfile", "-Command", command], bCapture=False, env=environment).bSucceeded:
         raise RuntimeError(f"PowerShell 명령이 실패했습니다(관리자 권한으로 실행했는지 보십시오): {command}")
 
 
@@ -58,8 +67,8 @@ def addDefenderExclusions() -> None:
 
     # 1. 제외 경로 등록
     print("[*] 1/4. 프로젝트 및 빌드 출력 디렉터리 실시간 감시 제외 등록 중...")
-    cmdPath = f'Add-MpPreference -ExclusionPath @("{projectDir}", "{projectDir}\\build")'
-    runPowerShellInternal(cmdPath)
+    cmdPath = f"Add-MpPreference -ExclusionPath @($env:{_kProjectDirVariable}, (Join-Path $env:{_kProjectDirVariable} 'build'))"
+    runPowerShellInternal(cmdPath, projectDir)
 
     # 2. 프로세스 제외 등록
     print("[*] 2/4. 빌드 및 엔진 도구 프로세스 제외 등록 중...")
@@ -76,17 +85,17 @@ def addDefenderExclusions() -> None:
     ]
     procListStr = "@(" + ", ".join(f"'{p}'" for p in processes) + ")"
     cmdProc = f"Add-MpPreference -ExclusionProcess {procListStr}"
-    runPowerShellInternal(cmdProc)
+    runPowerShellInternal(cmdProc, projectDir)
 
     # 3. DLL 및 바이너리 확장자 제외 등록 (RHI 모듈 / 엔진 DLL 등)
     print("[*] 3/4. RHI 백엔드 및 엔진 DLL / 아카이브 확장자 제외 등록 중...")
     cmdExt = 'Add-MpPreference -ExclusionExtension @("dll", "pdb", "pack", "pak", "rhi")'
-    runPowerShellInternal(cmdExt)
+    runPowerShellInternal(cmdExt, projectDir)
 
     # 4. 다운로드 및 빌드된 바이너리 잠금 해제
     print("[*] 4/4. 프로젝트 내부 파일 및 DLL 잠금 해제 (Unblock-File) 중...")
-    cmdUnblock = f'Get-ChildItem -Path "{projectDir}" -Recurse -ErrorAction SilentlyContinue | Unblock-File'
-    runPowerShellInternal(cmdUnblock)
+    cmdUnblock = f"Get-ChildItem -LiteralPath $env:{_kProjectDirVariable} -Recurse -ErrorAction SilentlyContinue | Unblock-File"
+    runPowerShellInternal(cmdUnblock, projectDir)
 
     print("\n" + "=" * 60)
     print("  [성공] Windows Defender 예외 등록이 모두 완료되었습니다!")

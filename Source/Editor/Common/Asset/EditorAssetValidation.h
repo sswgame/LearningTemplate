@@ -7,6 +7,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Process/Process.h"
 
 #include "Editor/Common/EditorSubsystem.h"
 
@@ -60,8 +61,8 @@ namespace sw::editor
          */
         bool isBusy() const;
 
-        /** @brief 검증 명령 한 줄을 만듭니다(파이썬 실행기 · 스크립트 · `--files` · 경고까지). */
-        static string makeCommand( string_view projectRoot, const vector<string>& listResourcePath );
+        /** @brief 검증 명령을 만듭니다(파이썬 실행기 · 스크립트 · `--files` · 경고까지). 경로는 인자 하나씩이다. */
+        static ProcessCommand makeCommand( string_view projectRoot, const vector<string>& listResourcePath );
 
         /** @brief 출력 한 줄을 결과로 나눕니다. 결과 줄이 아니면(요약 · 빈 줄) false 입니다. */
         [[nodiscard]] static bool parseFindingLine( string_view line, AssetValidationFinding& outFinding );

@@ -75,15 +75,14 @@ namespace test
             TestChildProcessInternal::setEnvironmentVariable( variable._pName, variable._value.c_str() );
         }
 
-        sw::StringBuilder<sw::constant::kMaxPathSize> command;
-        command.append( '"' ).append( sw::FileUtil::getExecutablePath().c_str() ).append( "\" " ).append( arguments );
+        const sw::ProcessCommand command{ sw::FileUtil::getExecutablePath(), sw::ProcessCommand::splitArgumentLine( arguments ) };
 
         sw::ProcessOptions options;
         options._workingDirectory = sw::FileUtil::getCurrentPath();
 
         // 자식은 띄우는 순간의 환경을 물려받는다 — 첫 줄을 받았을 때는 이미 떠 있으니 그때 되돌려도 되지만, 출력이 없는 자식도 있어
         // 판이 끝난 뒤 되돌린다. 그 사이 부모의 다른 스레드가 이 변수를 읽지 않는다(케이스는 한 번에 하나다).
-        ProcessRunResult result = runProcessWithDeadline( command.view(), options, timeoutSeconds );
+        ProcessRunResult result = runProcessWithDeadline( command, options, timeoutSeconds );
 
         for ( const SavedVariable& saved : listSaved )
         {

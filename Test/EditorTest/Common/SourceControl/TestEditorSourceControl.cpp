@@ -34,14 +34,15 @@ SW_TEST_CASE( EditorSourceControlTest, GitLfsLockListIsParsed )
 }
 
 /**
- * @brief [EditorSourceControlTest] 잠그기 · 풀기 명령은 경로를 따옴표로 감싼다(공백이 든 경로)
+ * @brief [EditorSourceControlTest] 잠그기 · 풀기 명령은 경로를 인자 하나로 넘긴다(공백이 든 경로)
  */
-SW_TEST_CASE( EditorSourceControlTest, GitLfsCommandsQuoteThePath )
+SW_TEST_CASE( EditorSourceControlTest, GitLfsCommandsPassThePathAsOneArgument )
 {
     const GitLfsSourceControlProvider provider;
-    SW_EXPECT_EQUAL( string( "git lfs lock \"Resource/game/a b/x.scene.xml\"" ), provider.makeLockCommand( "Resource/game/a b/x.scene.xml" ) );
-    SW_EXPECT_EQUAL( string( "git lfs unlock \"Resource/x.material\"" ), provider.makeUnlockCommand( "Resource/x.material" ) );
-    SW_EXPECT_EQUAL( string( "git lfs locks --json" ), provider.makeRefreshCommand() );
+    SW_EXPECT_EQUAL( string( "git lfs lock \"Resource/game/a b/x.scene.xml\"" ), provider.makeLockCommand( "Resource/game/a b/x.scene.xml" ).toCommandLine() );
+    SW_EXPECT_EQUAL( string( "git lfs unlock Resource/x.material" ), provider.makeUnlockCommand( "Resource/x.material" ).toCommandLine() );
+    SW_EXPECT_EQUAL( string( "git lfs locks --json" ), provider.makeRefreshCommand().toCommandLine() );
+    SW_EXPECT_EQUAL( string( "Resource/game/a b/x.scene.xml" ), provider.makeLockCommand( "Resource/game/a b/x.scene.xml" )._listArgument.back() );
 }
 
 /**

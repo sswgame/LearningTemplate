@@ -438,10 +438,8 @@ namespace sw::editor
         state._lastCommand = command;
         if ( state._bDryRun )
             return true;
-
-        // 실행하고 기다리지 않는다. `Process::execute` 로 기다리면 UI 스레드가 탐색기(또는 탐색기가 띄운 창)가 출력 파이프를 놓을
-        // 때까지 멈추고, `explorer.exe /select,` 는 성공해도 종료 코드 1 을 반환한다. 알 수 있는 실패는 "실행하지 못했다" 뿐이다.
-        if ( Process::launchDetached( command ) == false )
+        // 기다리지 않는다(Windows 는 셸 API, 리눅스는 분리 실행한 xdg-open). 알 수 있는 실패는 "열지 못했다" 뿐이다. `command` 는 기록 · 단언용 글이고 실행하지 않는다.
+        if ( Process::showInFileManager( FileUtil::normalizeSeparators( absolutePath ) ) == false )
         {
             SW_LOG_WARNING( "Failed to open file explorer: %#", command.c_str() );
             return false;

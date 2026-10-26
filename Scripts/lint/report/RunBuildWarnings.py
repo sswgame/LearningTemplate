@@ -91,16 +91,16 @@ def splitCommandInternal(entry: dict) -> tuple[list[str], bool]:
     return listToken, not bIsWindows
 
 
-def buildSyntaxOnlyCommandInternal(entry: dict, listExtraDefine: tuple[str, ...] = ()) -> tuple[list[str] | str, bool]:
+def buildSyntaxOnlyCommandInternal(entry: dict, listExtraDefine: tuple[str, ...] = ()) -> list[str] | str:
     """
     빌드 명령을 **문법 검사 전용**으로 바꾼다. 경고 관련 인자는 하나도 건드리지 않는다 —
     그래야 여기서 나오는 경고가 실제 빌드에서 나오는 경고와 같다.
 
-    @return (실행할 명령, 셸이 필요한가 — 지금은 늘 False)
+    @return 실행할 명령 — 인자 목록, 윈도우의 `command` 문자열 줄이면 `CreateProcess` 명령줄(셸은 태우지 않는다)
     """
     listArgument, bIsArgumentList = splitCommandInternal(entry)
     if not listArgument:
-        return [], False
+        return []
 
     listOut: list[str] = []
     skipNext = False
@@ -139,9 +139,9 @@ def buildSyntaxOnlyCommandInternal(entry: dict, listExtraDefine: tuple[str, ...]
         listOut.insert(1, f"-D{define}")
 
     if bIsArgumentList:
-        return listOut, False
+        return listOut
     # 윈도우만 명령줄 문자열로 돌려준다(위 splitCommandInternal 의 사연). 셸은 어느 쪽도 태우지 않는다.
-    return " ".join(listOut), False
+    return " ".join(listOut)
 
 
 def runOne(entry: dict, listExtraDefine: tuple[str, ...] = ()) -> str:
@@ -151,11 +151,11 @@ def runOne(entry: dict, listExtraDefine: tuple[str, ...] = ()) -> str:
     `listExtraDefine` 은 컴파일러 바로 뒤에 `-D<값>` 으로 더한다 — 아무 프리셋도 켜지 않는 옵션(`SW_ENABLE_DEADLOCK_DETECTION` 등)이
     아직 컴파일되는지를 그 구성을 따로 짓지 않고 묻는다.
     """
-    command, bNeedShell = buildSyntaxOnlyCommandInternal(entry, listExtraDefine)
+    command = buildSyntaxOnlyCommandInternal(entry, listExtraDefine)
     if not command:
         return ""
     try:
-        completed = subprocess.run(command, cwd=entry.get("directory") or None, shell=bNeedShell,
+        completed = subprocess.run(command, cwd=entry.get("directory") or None,
                                    capture_output=True, text=True,
                                    encoding="utf-8", errors="replace", timeout=900)
     except subprocess.TimeoutExpired:

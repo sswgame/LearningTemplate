@@ -8,6 +8,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Process/Process.h"
 
 namespace sw::editor
 {
@@ -42,8 +43,8 @@ namespace sw::editor
          */
         [[nodiscard]] static bool findViewerPath( string_view configuredPath, string_view projectRoot, string& outPath );
 
-        /** @brief 뷰어를 localhost 의 @p port 에 붙여 띄우는 명령 한 줄입니다(경로는 따옴표로 감싼다). */
-        static string makeViewerCommand( string_view viewerPath, uint16 port );
+        /** @brief 뷰어를 localhost 의 @p port 에 붙여 띄우는 명령입니다(실행 파일은 이 OS 의 구분자로). */
+        static ProcessCommand makeViewerCommand( string_view viewerPath, uint16 port );
 
         /** @brief Tracy 출력을 켜고(이미 켜져 있으면 그대로) 뷰어를 띄웁니다. `gv_tracyViewerPath` 와 프로젝트 루트로 찾습니다. */
         static EditorTracyLaunchResult openViewer();

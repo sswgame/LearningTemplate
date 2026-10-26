@@ -7,7 +7,44 @@
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+
+namespace sw
+{
+    /**
+     * @struct ProcessCommand
+     * @brief 띄울 실행 파일과 인자 목록입니다. `Process` 는 명령을 글 하나로 받지 않습니다 — 인자를 인용하는 일은 `Process` 안 한 곳만 합니다.
+     * @details **셸을 거치지 않습니다.** POSIX 는 `execv` 로 인자 배열을 그대로 넘기고, Windows 는 `toCommandLine`(CommandLineToArgvW 규칙)으로
+     *          인용한 줄을 `CreateProcessW` 에 줍니다. 그래서 인자 안의 공백 · 따옴표 · 역슬래시 · `;` `&` `$` 는 그 인자의 글자일 뿐입니다.
+     *          예전에는 부르는 쪽이 따옴표를 손으로 붙였고(이스케이프가 빠진 자리가 여럿이었다), POSIX 는 그 글을 `sh -c` 에 넘겼다.
+     *          셸 문법(파이프 · 리디렉션 · `&&`)이 필요하면 셸을 실행 파일로 적는다(`/bin/sh` + `-c`, `cmd.exe` + `/c`) — 그때 셸 문법은 부르는 쪽 몫이다.
+     *          `_executable` 은 경로이거나 PATH 에서 찾을 이름(`cmake` · `git`)이다. Core 라 Engine 의 `DataPath` 를 쓸 수 없고, PATH 이름은 경로가 아니다.
+     */
+    struct ProcessCommand
+    {
+        ProcessCommand() = default;
+        /** @brief 인자 목록을 반드시 함께 받는다 — 글 하나에서 바뀌는 생성자를 두지 않아 `launch( "a b c" )` 가 컴파일되지 않게. */
+        ProcessCommand( string executable, vector<string> listArgument )
+            : _executable{ std::move( executable ) }
+            , _listArgument{ std::move( listArgument ) }
+        {
+        }
+
+        string         _executable{};
+        vector<string> _listArgument{};
+
+        /** @brief 실행 파일을 포함해 CommandLineToArgvW 규칙으로 인용한 명령줄입니다. Windows 가 `CreateProcessW` 에 넘기는 글이고, 양쪽 모두 로그에 씁니다. */
+        [[nodiscard]] string toCommandLine() const;
+
+        /**
+         * @brief 사람이 적은 인자 줄(설정의 추가 인자 · 명령 템플릿)을 인자 목록으로 나눕니다.
+         * @details 공백이 인자를 가르고, 큰따옴표 사이는 공백이 있어도 한 인자다(따옴표 자체는 뺀다 — `-a="x y"` 는 `-a=x y`). 역슬래시 이스케이프는 없다.
+         *          셸이 아니다 — `$` `;` `&` 는 글자 그대로다. 프로그램이 만든 값은 이 함수를 거치지 말고 `_listArgument` 에 바로 넣는다.
+         */
+        [[nodiscard]] static vector<string> splitArgumentLine( string_view line );
+    };
+} // namespace sw
 
 namespace sw
 {
@@ -68,11 +105,11 @@ namespace sw
 
         /**
          * @brief 자식 프로세스를 비동기로 실행하고 입출력 파이프를 연결합니다.
-         * @param command 실행할 명령(인자 포함)
+         * @param command 실행 파일과 인자(셸을 거치지 않는다 — `ProcessCommand`)
          * @param options 작업 디렉터리 등 프로세스 옵션
-         * @return 프로세스를 만들었으면 true
+         * @return 프로세스를 만들었으면 true. 실행 파일이 비었거나 찾지 못하면 false 입니다(POSIX 도 셸의 127 이 아니라 여기서 진다).
          */
-        bool launch( string_view command, const ProcessOptions& options = {} );
+        bool launch( const ProcessCommand& command, const ProcessOptions& options = {} );
 
         /**
          * @brief 파이프에서 다음 출력 한 줄을 읽습니다.
@@ -99,7 +136,7 @@ namespace sw
          * @details 반환됐다고 해서 자식이 이미 죽은 것은 아닙니다. 죽었는지 확인해야 한다면 `waitForExit` 으로 기다리십시오.
          *          그 전까지는 `isRunning` 도 true 일 수 있습니다. 다른 스레드가 `readOutputLine` 을 돌고 있어도 안전합니다. 자식이
          *          죽으면 파이프의 쓰기 쪽이 닫혀 그 스레드의 읽기가 false 를 반환합니다. POSIX 는 **프로세스 그룹째** 죽입니다.
-         *          `sh` 가 띄운 손자 프로세스(빌드라면 실제 컴파일러)까지 멈춰야 취소가 끝나기 때문입니다.
+         *          자식이 띄운 손자 프로세스(빌드라면 cmake 가 띄운 컴파일러)까지 멈춰야 취소가 끝나기 때문입니다.
          */
         bool terminate( int32 exitCode = 1 );
 
@@ -109,7 +146,7 @@ namespace sw
         void closeInput();
         /**
          * @brief 자식에게 **정상 종료**를 요청합니다(강제 종료인 `terminate` 와 다르다). 보냈으면 true 입니다.
-         * @details POSIX 는 자식의 프로세스 그룹에 SIGTERM(`launch` 가 자식을 제 그룹의 우두머리로 만든다 — `sh -c` 너머의 실제 프로그램까지 닿는다).
+         * @details POSIX 는 자식의 프로세스 그룹에 SIGTERM(`launch` 가 자식을 제 그룹의 우두머리로 만든다 — 자식이 띄운 손자까지 닿는다).
          *          Windows 는 `CTRL_BREAK_EVENT` 를 자식의 프로세스 그룹에 보낸다(`_bNewProcessGroup` 으로 띄운 자식만). 이 프로세스가 콘솔에
          *          붙어 있지 않으면 보낼 수 없어 false 입니다(서비스 · 콘솔 없는 CI) — 부르는 쪽은 표준 입력 명령 같은 다른 길을 씁니다.
          */
@@ -134,23 +171,37 @@ namespace sw
 
         /**
          * @brief 동기 실행 도우미입니다. 프로세스를 실행하고, 출력을 델리게이트로 바로바로 넘기며, 끝날 때까지 기다립니다.
-         * @param command 실행할 명령
+         * @param command 실행 파일과 인자
          * @param options 작업 디렉터리 등 프로세스 옵션
          * @param onOutput 출력 줄을 받을 델리게이트(표준 에러가 합쳐져 들어옵니다)
          * @return 프로세스 종료 코드(-1 = 실행 실패)
          */
-        static int32 execute( string_view command, const ProcessOptions& options = {}, const ProcessOutputDelegate& onOutput = {} );
+        static int32 execute( const ProcessCommand& command, const ProcessOptions& options = {}, const ProcessOutputDelegate& onOutput = {} );
 
         /**
          * @brief 출력을 받지 않고 **기다리지도 않고** 프로세스를 띄웁니다. 띄웠으면 true 입니다(종료 코드는 볼 수 없습니다).
-         * @details 파일 탐색기 · 브라우저처럼 **사용자가 닫을 때까지 사는** 프로그램을 띄울 때 씁니다. `execute` 는 출력 파이프가 닫힐
-         *          때까지 기다리므로, 그런 프로그램(또는 그것이 띄운 손자)이 파이프를 물고 있으면 부른 스레드가 그동안 멈춥니다 —
-         *          에디터의 "탐색기에서 보기" 가 UI 스레드에서 그렇게 불렀습니다. 게다가 `explorer.exe /select,` 는 성공해도 1 을
-         *          돌려줘서 실패 경고가 매번 찍혔습니다. 언리얼의 `CreateProc( bLaunchDetached )` 와 에 해당합니다.
+         * @details 뷰어 · 새 창 게임처럼 **사용자가 닫을 때까지 사는** 프로그램을 띄울 때 씁니다. `execute` 는 출력 파이프가 닫힐
+         *          때까지 기다리므로, 그런 프로그램(또는 그것이 띄운 손자)이 파이프를 물고 있으면 부른 스레드가 그동안 멈춥니다.
+         *          언리얼의 `CreateProc( bLaunchDetached )` 에 해당합니다.
          *          자식은 이 프로세스의 핸들 · 서술자를 하나도 물려받지 않습니다(POSIX 는 표준 입출력을 /dev/null 로, 두 번 fork 해
          *          좀비를 남기지 않습니다).
          */
-        static bool launchDetached( string_view command, const ProcessOptions& options = {} );
+        static bool launchDetached( const ProcessCommand& command, const ProcessOptions& options = {} );
+
+        /**
+         * @brief 기본 브라우저(주소의 기본 처리기)로 @p url 을 엽니다. 기다리지 않습니다. 띄웠으면 true 입니다.
+         * @details Windows 는 `ShellExecuteW( "open" )`, POSIX 는 `xdg-open <주소>`(인자 하나)입니다. 주소가 http(s) 인지는 부르는 쪽이 가린다 —
+         *          이 함수는 무엇이든 그 형식의 기본 처리기에 넘긴다. 언리얼 `FPlatformProcess::LaunchURL` 에 해당합니다.
+         *          예전에는 `rundll32 url.dll,FileProtocolHandler` 를 띄웠는데, rundll32 는 뒤 줄을 인자로 나누지 않아 인용 규칙 밖의 예외가 필요했다.
+         */
+        static bool launchURL( string_view url );
+
+        /**
+         * @brief 파일 관리자에서 @p filePath 를 고른 채 엽니다. 기다리지 않습니다. 열었으면 true 입니다.
+         * @details Windows 는 `SHOpenFolderAndSelectItems`(탐색기 창을 쓰거나 새로 연다), POSIX 는 선택한 채로 열기 표준이 없어 그 폴더를 `xdg-open` 합니다.
+         *          예전에는 `explorer.exe /select,"<경로>"` 를 띄웠는데, explorer 의 인자 규칙이 CommandLineToArgvW 와 달라 인용 규칙 밖의 예외가 필요했다.
+         */
+        static bool showInFileManager( string_view filePath );
 
         /** @brief 이 프로세스의 ID 입니다. 같은 폴더를 나눠 쓰는 프로세스끼리 파일 이름이 겹치지 않게 가를 때 씁니다. */
         static int32 getCurrentProcessID();

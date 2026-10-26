@@ -114,18 +114,11 @@ namespace sw::editor
         return _listPendingPath.empty() == false || _pJob->isPending();
     }
 
-    string EditorAssetValidation::makeCommand( string_view projectRoot, const vector<string>& listResourcePath )
+    ProcessCommand EditorAssetValidation::makeCommand( string_view projectRoot, const vector<string>& listResourcePath )
     {
-        string command{ EditorUtil::kPythonCommand };
-        command += " \"";
-        command += FileUtil::joinPath( projectRoot, EditorAssetValidationInternal::kScriptRelativePath );
-        command += "\" --severity warning --files";
-        for ( const string& path : listResourcePath )
-        {
-            command += " \"";
-            command += path;
-            command += "\"";
-        }
+        ProcessCommand command = EditorUtil::makePythonScriptCommand( FileUtil::joinPath( projectRoot, EditorAssetValidationInternal::kScriptRelativePath ) );
+        command._listArgument.insert( command._listArgument.end(), { "--severity", "warning", "--files" } );
+        command._listArgument.insert( command._listArgument.end(), listResourcePath.begin(), listResourcePath.end() );
         return command;
     }
 

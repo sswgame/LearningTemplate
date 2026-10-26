@@ -3,6 +3,7 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Log/Logger.h"
 #include "Core/Process/Process.h"
+#include "Core/Process/ProcessEnvironment.h"
 
 #if defined( SW_PLATFORM_LINUX )
     #include "Core/Common/PlatformOsHeaders.h"
@@ -38,7 +39,7 @@ namespace sw
 
         /**
          * @brief (자식에서) 표준 입출력 밖의 서술자를 전부 닫습니다. async-signal-safe 한 호출만 쓴다.
-         * @details CLOEXEC 없이 열린 것(로그 파일 · 남의 파이프 · 소켓)이 exec 를 넘어 셸과 그 손자에게 그대로 간다 — 파이썬
+         * @details CLOEXEC 없이 열린 것(로그 파일 · 남의 파이프 · 소켓)이 exec 를 넘어 자식과 그 손자에게 그대로 간다 — 파이썬
          *          subprocess 의 기본값(close_fds)과 같은 이유다.
          */
         void closeDescriptorsAboveStandardInChild( int32 descriptorMax )
@@ -60,6 +61,63 @@ namespace sw
             if ( WIFSIGNALED( status ) )
                 return 128 + static_cast<int32>( WTERMSIG( status ) );
             return -1;
+        }
+
+        /** @brief **fork 전에** 만들어 두는 exec 재료입니다 — 찾은 실행 파일 경로와 `execv` 에 줄 인자 포인터 배열(nullptr 로 끝난다). 자식에서는 할당하지 않는다. */
+        struct PosixExecImage
+        {
+            string              _path;
+            vector<const utf8*> _listArgumentPointer; ///< `ProcessCommand` 의 글을 가리킨다 — 그 명령이 exec 까지 살아 있어야 한다
+        };
+
+        /**
+         * @brief @p command 를 exec 재료로 바꿉니다. 실행 파일이 비었거나 PATH 에서 찾지 못하면 오류를 남기고 false 입니다.
+         * @details 셸을 거치지 않으므로 PATH 검색도 여기서 한다(`execvp` 는 async-signal-safe 목록에 없어 fork 뒤에 부르지 않는다).
+         *          `/` 가 든 이름은 경로 그대로 쓴다 — 상대 경로는 자식이 작업 폴더로 옮긴 뒤 풀린다. PATH 가 없으면 찾지 않고 진다(기본 PATH 로 대신하지 않는다).
+         */
+        [[nodiscard]] bool preparePosixExec( const ProcessCommand& command, PosixExecImage& outImage )
+        {
+            outImage._listArgumentPointer.clear();
+            if ( command._executable.empty() )
+            {
+                SW_LOG_ERROR( "Process launch needs an executable" );
+                return false;
+            }
+            outImage._path.clear();
+            if ( command._executable.find( '/' ) != string::npos )
+            {
+                outImage._path = command._executable;
+            }
+            else
+            {
+                string searchPath;
+                if ( ProcessEnvironment::tryReadNonEmpty( "PATH", searchPath ) )
+                {
+                    size_t begin = 0;
+                    while ( begin <= searchPath.size() && outImage._path.empty() )
+                    {
+                        const size_t end       = std::min( searchPath.find( ':', begin ), searchPath.size() );
+                        const string directory = end == begin ? string( "." ) : searchPath.substr( begin, end - begin ); // 빈 칸은 현재 폴더(POSIX)
+                        const string candidate = directory + "/" + command._executable;
+                        if ( access( candidate.c_str(), X_OK ) == 0 )
+                            outImage._path = candidate;
+                        begin = end + 1;
+                    }
+                }
+                if ( outImage._path.empty() )
+                {
+                    SW_LOG_ERROR( "Executable '%#' was not found in PATH", command._executable );
+                    return false;
+                }
+            }
+            outImage._listArgumentPointer.reserve( command._listArgument.size() + 2 );
+            outImage._listArgumentPointer.push_back( command._executable.c_str() );
+            for ( const string& argument : command._listArgument )
+            {
+                outImage._listArgumentPointer.push_back( argument.c_str() );
+            }
+            outImage._listArgumentPointer.push_back( nullptr );
+            return true;
         }
 
         /** @brief 파이프 서술자 한 쌍에서 열린 것을 닫습니다(열리지 않은 쌍은 -1 이다). */
@@ -114,12 +172,13 @@ namespace sw
         }
 
         /**
-         * @brief (자식에서) 파이프를 표준 입출력에 잇고 셸로 exec 합니다. 돌아오지 않습니다.
+         * @brief (자식에서) 파이프를 표준 입출력에 잇고 @p image 를 셸 없이 exec 합니다. 돌아오지 않습니다.
          * @details 여기서부터 exec 까지는 **async-signal-safe 한 함수만** 부른다. fork 는 부모의 스레드를 하나만 데려오지만
          *          뮤텍스는 통째로 복사되므로, 다른 스레드가 잡고 있던 락(로거의 락이 대표적이다)은 영원히 잠긴 채로 남는다.
          *          여기서 로그를 찍거나 할당을 하면 그대로 멈춘다.
          */
-        [[noreturn]] void runLaunchedChild( const int32 ( &arrPipeFd )[2], const int32 ( &arrInputFd )[2], int32 descriptorMax, const utf8* pWorkingDirectory, const utf8* pCommand )
+        [[noreturn]] void runLaunchedChild( const int32 ( &arrPipeFd )[2], const int32 ( &arrInputFd )[2], int32 descriptorMax, const utf8* pWorkingDirectory,
+                                            const PosixExecImage& image )
         {
             close( arrPipeFd[0] );
             // 표준 에러를 표준 출력에 합친다. `ProcessOutputDelegate` 가 약속한 대로다(빌드 로그는 두 스트림이 원래 순서대로
@@ -142,14 +201,14 @@ namespace sw
 
             closeDescriptorsAboveStandardInChild( descriptorMax );
 
-            // 자기만의 프로세스 그룹을 갖게 한다. `terminate` 가 그룹째 죽여야 `sh` 가 띄운 손자 프로세스(실제 컴파일러)까지
-            // 멈춘다. 셸만 죽이면 손자는 계속 돌면서 파이프를 붙들고 있다.
+            // 자기만의 프로세스 그룹을 갖게 한다. `terminate` 가 그룹째 죽여야 자식이 띄운 손자 프로세스(cmake 가 띄운 컴파일러)까지
+            // 멈춘다. 자식만 죽이면 손자는 계속 돌면서 파이프를 붙들고 있다.
             setpgid( 0, 0 );
 
             if ( pWorkingDirectory != nullptr && chdir( pWorkingDirectory ) != 0 )
                 _exit( 127 );
 
-            execl( "/bin/sh", "sh", "-c", pCommand, static_cast<utf8*>( nullptr ) );
+            execv( image._path.c_str(), const_cast<utf8* const*>( image._listArgumentPointer.data() ) );
             _exit( 127 ); // exec 가 실패했을 때만 여기에 온다
         }
     } // namespace
@@ -178,13 +237,16 @@ namespace sw
         _processID.store( 0 );
     }
 
-    bool Process::launch( string_view command, const ProcessOptions& options )
+    bool Process::launch( const ProcessCommand& command, const ProcessOptions& options )
     {
         shutdown();
 
         // 자식에게 넘길 문자열은 **fork 전에** 만들어 둔다. 자식 블록(`runLaunchedChild`)에서는 할당을 하지 않는다.
-        const string cmd{ command };
-        const utf8*  pCommand          = cmd.c_str();
+        PosixExecImage image;
+        if ( preparePosixExec( command, image ) == false )
+            return false;
+        const string commandLine       = command.toCommandLine(); // 로그용
+        const utf8*  pCommand          = commandLine.c_str();
         const utf8*  pWorkingDirectory = options._workingDirectory.empty() ? nullptr : options._workingDirectory.c_str();
 
         int32 arrPipeFd[2];
@@ -204,7 +266,7 @@ namespace sw
         }
 
         if ( childPid == 0 )
-            runLaunchedChild( arrPipeFd, arrInputFd, descriptorMax, pWorkingDirectory, pCommand );
+            runLaunchedChild( arrPipeFd, arrInputFd, descriptorMax, pWorkingDirectory, image );
 
         // ---- 부모 ----
         close( arrPipeFd[1] );
@@ -236,10 +298,13 @@ namespace sw
         return true;
     }
 
-    bool Process::launchDetached( string_view command, const ProcessOptions& options )
+    bool Process::launchDetached( const ProcessCommand& command, const ProcessOptions& options )
     {
-        const string cmd{ command };
-        const utf8*  pCommand          = cmd.c_str();
+        PosixExecImage image;
+        if ( preparePosixExec( command, image ) == false )
+            return false;
+        const string commandLine       = command.toCommandLine(); // 로그용
+        const utf8*  pCommand          = commandLine.c_str();
         const utf8*  pWorkingDirectory = options._workingDirectory.empty() ? nullptr : options._workingDirectory.c_str();
         const int32  descriptorMax     = getDescriptorLimit();
 
@@ -271,7 +336,7 @@ namespace sw
 
             if ( pWorkingDirectory != nullptr && chdir( pWorkingDirectory ) != 0 )
                 _exit( 127 );
-            execl( "/bin/sh", "sh", "-c", pCommand, static_cast<utf8*>( nullptr ) );
+            execv( image._path.c_str(), const_cast<utf8* const*>( image._listArgumentPointer.data() ) );
             _exit( 127 );
         }
 
@@ -286,6 +351,19 @@ namespace sw
         if ( bLaunched == false )
             SW_LOG_ERROR( "Failed to launch detached command: %#", pCommand );
         return bLaunched;
+    }
+
+    bool Process::launchURL( string_view url )
+    {
+        return launchDetached( ProcessCommand{ "xdg-open", { string( url ) } } );
+    }
+
+    bool Process::showInFileManager( string_view filePath )
+    {
+        // 리눅스 파일 관리자에는 "선택한 채로 열기" 표준이 없다 — 그 폴더를 연다. Process 는 File 보다 아래 층이라 FileUtil 을 쓰지 않는다.
+        const size_t separatorIndex = filePath.find_last_of( '/' );
+        const string directory      = separatorIndex == string_view::npos ? string( "." ) : string( filePath.substr( 0, separatorIndex == 0 ? 1 : separatorIndex ) );
+        return launchDetached( ProcessCommand{ "xdg-open", { directory } } );
     }
 
     bool Process::readOutputLine( string& outLine )
@@ -345,8 +423,7 @@ namespace sw
         if ( childPid <= 0 )
             return false;
 
-        // 그룹 전체에 보낸다. `sh -c "…"` 가 명령을 직접 exec 해 버리는 경우(대부분의 셸이 그렇게 최적화한다)에도 그룹에는
-        // 자식 하나뿐이라 결과가 같고, 손자 프로세스를 띄웠다면 그것까지 죽는다.
+        // 그룹 전체에 보낸다. 자식이 손자 프로세스를 띄웠다면(cmake → 컴파일러) 그것까지 죽는다.
         if ( kill( -childPid, SIGKILL ) != 0 && kill( childPid, SIGKILL ) != 0 )
         {
             SW_LOG_WARNING( "kill(SIGKILL) failed for pid %#", static_cast<int32>( childPid ) );

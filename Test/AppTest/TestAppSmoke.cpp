@@ -407,7 +407,7 @@ SW_TEST_CASE( AppSmokeTest, WindowCloseEndsTheApp )
 #if defined( SW_PLATFORM_WINDOWS )
     Process               process;
     const test::AppLaunch launch = test::AppTestUtil::makeAppLaunch( "" );
-    SW_ASSERT_TRUE( launch._command.empty() == false && process.launch( launch._command, launch._options ) );
+    SW_ASSERT_TRUE( launch._command._executable.empty() == false && process.launch( launch._command, launch._options ) );
     // 출력 파이프가 차면 App 이 쓰기에서 멈춘다 — 다른 스레드가 비운다.
     std::thread drainThread( [&process]()
     {

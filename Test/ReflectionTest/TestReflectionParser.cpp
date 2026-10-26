@@ -57,19 +57,19 @@ namespace
     }
 
     /**
-     * @brief 헤더 하나를 파서에 넣는 명령줄입니다. 파서를 프로세스로 부르는 케이스들이 같은 인자 한 벌을 씁니다.
-     * @details 파서에 인자가 하나 늘면 여기 한 곳만 고칩니다.
+     * @brief 헤더 하나를 파서에 넣는 명령입니다. 파서를 프로세스로 부르는 케이스들이 같은 인자 한 벌을 씁니다.
+     * @details 파서에 인자가 하나 늘면 여기 한 곳만 고칩니다. 인자를 더 붙일 때는 돌려받은 `_listArgument` 에 덧붙입니다.
      */
-    sw::string makeParserCommand( const sw::string& parserExe, const sw::string& headerPath, const sw::string& outGenDir,
-                                  const sw::string& projectRoot )
+    sw::ProcessCommand makeParserCommand( const sw::string& parserExe, const sw::string& headerPath, const sw::string& outGenDir,
+                                          const sw::string& projectRoot )
     {
-        return "\"" + parserExe + "\" " +
-               "--input \"" + headerPath + "\" " +
-               "--output \"" + outGenDir + "\" " +
-               "--include \"" + sw::FileUtil::joinPath( projectRoot, "Source" ) + "\" " +
-               "--annotation-meta \"" + sw::FileUtil::joinPath( projectRoot, "Source/Core/Predefined/AnnotationMeta.txt" ) + "\" " +
-               "--builtins \"" + sw::FileUtil::joinPath( projectRoot, "Source/Engine/Reflection/ReflectBuiltins.xxx" ) + "\" " +
-               "--emit-templates \"" + sw::FileUtil::joinPath( projectRoot, "Tools/ReflectionParser/Templates" ) + "\"";
+        return sw::ProcessCommand{
+            parserExe,
+            { "--input", headerPath, "--output", outGenDir, "--include", sw::FileUtil::joinPath( projectRoot, "Source" ), "--annotation-meta",
+              sw::FileUtil::joinPath( projectRoot, "Source/Core/Predefined/AnnotationMeta.txt" ), "--builtins",
+              sw::FileUtil::joinPath( projectRoot, "Source/Engine/Reflection/ReflectBuiltins.xxx" ), "--emit-templates",
+              sw::FileUtil::joinPath( projectRoot, "Tools/ReflectionParser/Templates" ) }
+        };
     }
 
     /** @brief 파서에 넣을 임시 헤더 하나입니다. */
@@ -108,8 +108,8 @@ namespace
         const sw::string outGenDir   = sw::FileUtil::joinPath( runRoot, "gen" );
         sw::FileUtil::ensureDirectoryExists( outGenDir );
 
-        ParserRunResult result;
-        sw::string      command;
+        ParserRunResult    result;
+        sw::ProcessCommand command;
         for ( const TempHeader& header : listHeader )
         {
             const sw::string headerPath = sw::FileUtil::joinPath( runRoot, header._fileStem + ".h" );
@@ -118,14 +118,14 @@ namespace
                 result._log = "failed to write " + headerPath;
                 return result;
             }
-            // 첫 헤더로 명령줄 한 벌을 만들고, 나머지는 --input 을 덧붙인다.
-            if ( command.empty() )
+            // 첫 헤더로 명령 한 벌을 만들고, 나머지는 --input 을 덧붙인다.
+            if ( command._executable.empty() )
                 command = makeParserCommand( parserExe, headerPath, outGenDir, projectRoot );
             else
-                command += " --input \"" + headerPath + "\"";
+                command._listArgument.insert( command._listArgument.end(), { "--input", headerPath } );
         }
-        if ( extraArguments.empty() == false )
-            command += " " + extraArguments;
+        const sw::vector<sw::string> listExtraArgument = sw::ProcessCommand::splitArgumentLine( extraArguments );
+        command._listArgument.insert( command._listArgument.end(), listExtraArgument.begin(), listExtraArgument.end() );
 
         sw::ProcessOutputDelegate outputCb = SW_DELEGATE_LAMBDA(
             sw::ProcessOutputDelegate,
@@ -1444,7 +1444,7 @@ SW_TEST_CASE( ReflectionParserTest, RegeneratesWhenTheParserItselfIsNewer )
                                      "}\n";
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( headerPath, headerContent ) );
 
-    const sw::string command = makeParserCommand( parserExe, headerPath, outGenDir, projectRoot );
+    const sw::ProcessCommand command = makeParserCommand( parserExe, headerPath, outGenDir, projectRoot );
 
     sw::ProcessOptions options;
     options._workingDirectory = projectRoot;
@@ -1538,7 +1538,7 @@ SW_TEST_CASE( ReflectionParserTest, SameFileNameInOneOutputDirIsRejected )
     sw::string outLog;
     const auto runParser = [&]( const sw::string& headerPath ) -> int32
     {
-        const sw::string cmd = makeParserCommand( parserExe, headerPath, outGenDir, projectRoot );
+        const sw::ProcessCommand cmd = makeParserCommand( parserExe, headerPath, outGenDir, projectRoot );
 
         sw::ProcessOptions options;
         options._workingDirectory = projectRoot;
@@ -1668,7 +1668,7 @@ SW_TEST_CASE( ReflectionParserTest, DumpShowsWhatWasExtracted )
     sw::ProcessOptions options;
     options._workingDirectory = sw::ResourcePaths::getProjectFolderPath();
     sw::string  helpLog;
-    const int32 helpExit = sw::Process::execute( "\"" + parserExe + "\" --help", options,
+    const int32 helpExit = sw::Process::execute( sw::ProcessCommand{ parserExe, { "--help" } }, options,
                                                  SW_DELEGATE_LAMBDA( sw::ProcessOutputDelegate, [&helpLog]( sw::string_view line )
     {
         helpLog.append( line.data(), line.size() );
@@ -1937,8 +1937,8 @@ SW_TEST_CASE( ReflectionParserTest, EditSavedWhileParsingIsNotHiddenByTheStamp )
     // 처음 읽을 때의 헤더 시각을 두 시간 전으로 — 아래의 "편집" 시각을 그 뒤 · 스탬프 앞에 둘 자리를 만든다.
     SW_ASSERT_TRUE( sw::FileUtil::setFileWriteTime( headerPath, sw::FileUtil::getCurrentFileWriteTime() - 2 * kHourTicks ) );
 
-    const sw::string   command = makeParserCommand( parserExe, headerPath, outGenDir, projectRoot );
-    sw::ProcessOptions options;
+    const sw::ProcessCommand command = makeParserCommand( parserExe, headerPath, outGenDir, projectRoot );
+    sw::ProcessOptions       options;
     options._workingDirectory = projectRoot;
     SW_ASSERT_EQUAL( 0, sw::Process::execute( command, options, {} ) );
 
@@ -2010,7 +2010,8 @@ SW_TEST_CASE( ReflectionParserTest, IncludedHeaderChangeRegeneratesAndIsInTheDep
                                                              "    };\n"
                                                              "}\n" ) );
 
-    const sw::string   command = makeParserCommand( parserExe, headerPath, outGenDir, projectRoot ) + " --depfile \"" + depfilePath + "\"";
+    sw::ProcessCommand command = makeParserCommand( parserExe, headerPath, outGenDir, projectRoot );
+    command._listArgument.insert( command._listArgument.end(), { "--depfile", depfilePath } );
     sw::ProcessOptions options;
     options._workingDirectory = projectRoot;
     SW_ASSERT_EQUAL( 0, sw::Process::execute( command, options, {} ) );

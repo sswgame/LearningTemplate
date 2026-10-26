@@ -39,7 +39,7 @@ namespace test
      */
     struct AppLaunch
     {
-        sw::string         _command{};
+        sw::ProcessCommand _command{};
         sw::ProcessOptions _options{};
     };
 } // namespace test
@@ -93,7 +93,7 @@ namespace test
         static ProcessRunResult runApp( sw::string_view arguments, uint32 timeoutSeconds, TOnLine&& onLine )
         {
             const AppLaunch launch = makeAppLaunch( arguments );
-            if ( launch._command.empty() )
+            if ( launch._command._executable.empty() )
                 return ProcessRunResult{};
             return runProcessWithDeadline( launch._command, launch._options, timeoutSeconds, onLine );
         }

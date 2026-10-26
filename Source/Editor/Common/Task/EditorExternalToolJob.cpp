@@ -20,7 +20,7 @@ namespace sw::editor
         cancelAndWait();
     }
 
-    bool EditorExternalToolJob::request( string_view command, string_view workingDirectory )
+    bool EditorExternalToolJob::request( ProcessCommand command, string_view workingDirectory )
     {
         if ( isPending() )
             return false;
@@ -28,7 +28,7 @@ namespace sw::editor
             _thread.join();
 
         EditorExternalToolInput input;
-        input._command          = string{ command };
+        input._command          = std::move( command );
         input._workingDirectory = string{ workingDirectory };
         const uint32 generation = beginRequest( std::move( input ) );
         _pProcess               = sw::make_shared<Process>();

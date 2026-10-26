@@ -7,6 +7,9 @@
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/Common/PlatformOsHeaders.h"
 
+    #include <shellapi.h>
+    #include <shlobj.h>
+
 namespace sw
 {
     SW_LOG_CALLER( "WindowsProcess" );
@@ -145,6 +148,27 @@ namespace sw
                     return true;
                 }
             };
+
+            /**
+             * @brief 셸 호출(`ShellExecuteW` · `SHOpenFolderAndSelectItems`) 동안 이 스레드의 COM 을 엽니다. Microsoft 가 셸 호출 앞에 요구한다.
+             * @details 이미 다른 모델로 열린 스레드(`RPC_E_CHANGED_MODE`)는 그대로 쓰고 닫지 않는다 — 연 쪽이 닫는다.
+             */
+            struct ScopedShellCom
+            {
+                HRESULT _result;
+
+                ScopedShellCom()
+                    : _result{ CoInitializeEx( nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE ) }
+                {
+                }
+                ScopedShellCom( const ScopedShellCom& )            = delete;
+                ScopedShellCom& operator=( const ScopedShellCom& ) = delete;
+                ~ScopedShellCom()
+                {
+                    if ( SUCCEEDED( _result ) )
+                        CoUninitialize();
+                }
+            };
         };
     } // namespace
 
@@ -173,18 +197,24 @@ namespace sw
         _processID.store( 0 );
     }
 
-    bool Process::launch( string_view command, const ProcessOptions& options )
+    bool Process::launch( const ProcessCommand& command, const ProcessOptions& options )
     {
         using Internal = WindowsProcessInternal;
         shutdown();
+
+        if ( command._executable.empty() )
+        {
+            SW_LOG_ERROR( "Process launch needs an executable" );
+            return false;
+        }
 
         Internal::StdPipes pipes;
         if ( Internal::createStdPipes( options._bPipeStandardInput, pipes ) == false )
             return false;
 
-        string  cmdStr     = string( command );
-        wstring wsCmdLine  = StringUtil::utf8ToUtf16( cmdStr.c_str() );
-        wstring wsBuildDir = StringUtil::utf8ToUtf16( options._workingDirectory.c_str() );
+        const string cmdStr     = command.toCommandLine();
+        wstring      wsCmdLine  = StringUtil::utf8ToUtf16( cmdStr.c_str() );
+        wstring      wsBuildDir = StringUtil::utf8ToUtf16( options._workingDirectory.c_str() );
 
         Internal::InheritedHandleList inheritedHandles;
         if ( inheritedHandles.initialize( pipes ) == false )
@@ -241,9 +271,14 @@ namespace sw
         return true;
     }
 
-    bool Process::launchDetached( string_view command, const ProcessOptions& options )
+    bool Process::launchDetached( const ProcessCommand& command, const ProcessOptions& options )
     {
-        const string  cmdStr      = string( command );
+        if ( command._executable.empty() )
+        {
+            SW_LOG_ERROR( "Detached process launch needs an executable" );
+            return false;
+        }
+        const string  cmdStr      = command.toCommandLine();
         wstring       wsCmdLine   = StringUtil::utf8ToUtf16( cmdStr.c_str() );
         const wstring wsDirectory = StringUtil::utf8ToUtf16( options._workingDirectory.c_str() );
 
@@ -262,6 +297,47 @@ namespace sw
 
         CloseHandle( pi.hThread );
         CloseHandle( pi.hProcess );
+        return true;
+    }
+
+    bool Process::launchURL( string_view url )
+    {
+        const WindowsProcessInternal::ScopedShellCom com;
+        const wstring                                wideURL = StringUtil::utf8ToUtf16( string( url ).c_str() );
+        // 32 이하는 오류 코드다(ShellExecute 의 옛 계약).
+        const INT_PTR result = reinterpret_cast<INT_PTR>( ShellExecuteW( nullptr, L"open", wideURL.c_str(), nullptr, nullptr, SW_SHOWNORMAL ) );
+        if ( result <= 32 )
+        {
+            SW_LOG_ERROR( "ShellExecuteW failed (%#) for URL: %#", static_cast<int64>( result ), string( url ) );
+            return false;
+        }
+        return true;
+    }
+
+    bool Process::showInFileManager( string_view filePath )
+    {
+        // 탐색기는 백슬래시 경로만 고른다(슬래시면 ILCreateFromPathW 가 못 찾는다).
+        string windowsPath( filePath );
+        for ( utf8& character : windowsPath )
+        {
+            if ( character == '/' )
+                character = '\\';
+        }
+        const WindowsProcessInternal::ScopedShellCom com;
+        const wstring                                widePath = StringUtil::utf8ToUtf16( windowsPath.c_str() );
+        PIDLIST_ABSOLUTE                             pItem    = ILCreateFromPathW( widePath.c_str() );
+        if ( pItem == nullptr )
+        {
+            SW_LOG_ERROR( "ILCreateFromPathW failed for: %#", windowsPath );
+            return false;
+        }
+        const HRESULT result = SHOpenFolderAndSelectItems( pItem, 0, nullptr, 0 );
+        ILFree( pItem );
+        if ( FAILED( result ) )
+        {
+            SW_LOG_ERROR( "SHOpenFolderAndSelectItems failed (HRESULT %#) for: %#", static_cast<uint32>( result ), windowsPath );
+            return false;
+        }
         return true;
     }
 

@@ -84,12 +84,10 @@ namespace sw::editor
                 return bValid;
             }
 
-            /** @brief 명령줄 인자 하나를 따옴표로 감쌉니다(경로의 공백). */
-            static string quote( string_view text ) { return "\"" + string( text ) + "\""; }
-
             /** @brief 디버그 채널 토큰을 운영체제 난수로 만듭니다 — 같은 PC 의 다른 프로세스가 짐작해 붙지 못하게 세션마다 새로. */
             static string makeDebugChannelToken()
             {
+                // 임시: corebase 의 SecureRandom 이 병합되면 그것으로 옮긴다(이 파일은 인자 목록 이전과 겹쳐 그쪽에서 빼 왔다).
                 std::random_device randomDevice; // 운영체제 난수(Windows RtlGenRandom · 리눅스 getrandom)
                 utf8               arrToken[constant::kMaxBuffer64];
                 formatstring( arrToken, constant::kMaxBuffer64, "netplay-%#-%#-%#-%#", randomDevice(), randomDevice(), randomDevice(), randomDevice() );
@@ -161,7 +159,7 @@ namespace sw::editor
         return _mergedTracePath;
     }
 
-    string EditorNetPlaySession::makeWindowArguments( const EditorNetPlaySettings& settings, int32 windowIndex )
+    vector<string> EditorNetPlaySession::makeWindowArguments( const EditorNetPlaySettings& settings, int32 windowIndex )
     {
         if ( settings._bArrangeWindows == false )
             return {};
@@ -170,7 +168,7 @@ namespace sw::editor
         const int32 row    = windowIndex / settings._windowColumnCount;
         const int32 x      = column * ( settings._windowWidth + EditorNetPlaySessionInternal::kWindowFrameWidth );
         const int32 y      = row * ( settings._windowHeight + EditorNetPlaySessionInternal::kWindowFrameHeight );
-        return "-W=" + to_string( settings._windowWidth ) + " -H=" + to_string( settings._windowHeight ) + " -WinX=" + to_string( x ) + " -WinY=" + to_string( y );
+        return { "-W=" + to_string( settings._windowWidth ), "-H=" + to_string( settings._windowHeight ), "-WinX=" + to_string( x ), "-WinY=" + to_string( y ) };
     }
 
     EditorNetPlaySession::~EditorNetPlaySession()
@@ -229,26 +227,23 @@ namespace sw::editor
         return _traceDirectory.empty() ? string{} : _traceDirectory + "/" + fileStem + EditorNetPlaySessionInternal::kTraceExtension;
     }
 
-    bool EditorNetPlaySession::launchChild( const string& label, const string& executablePath, const string& arguments, const string& tracePath )
+    bool EditorNetPlaySession::launchChild( const string& label, const string& executablePath, vector<string> listArgument, const string& tracePath )
     {
         unique_ptr<ChildProcess> pChild = make_unique<ChildProcess>();
         pChild->_label                  = label;
         pChild->_tracePath              = tracePath;
-        string command                  = EditorNetPlaySessionInternal::quote( executablePath ) + " " + arguments;
         if ( tracePath.empty() == false )
-            command += " " + EditorNetPlaySessionInternal::quote( "-gv_traceSaveOnExit=" + tracePath );
-#if !defined( SW_PLATFORM_WINDOWS )
-        command = "exec " + command; // `sh -c` 가 부모로 남지 않게 한다. 그래야 종료 코드와 신호가 실제 프로그램에 전달된다
-#endif
-        ProcessOptions options;
+            listArgument.push_back( "-gv_traceSaveOnExit=" + tracePath );
+        const ProcessCommand command{ executablePath, std::move( listArgument ) };
+        ProcessOptions       options;
         options._bPipeStandardInput = true; // `quit` 과 `pause` 를 보내는 채널
         if ( FileUtil::exists( executablePath ) == false || pChild->_process.launch( command, options ) == false )
         {
-            SW_LOG_ERROR( "Could not launch %#: %#", label, command );
+            SW_LOG_ERROR( "Could not launch %#: %#", label, command.toCommandLine() );
             return false;
         }
         pChild->_processID = pChild->_process.getProcessID();
-        SW_LOG_INFO( "Launched %# (pid %#): %#", label, pChild->_processID, command );
+        SW_LOG_INFO( "Launched %# (pid %#): %#", label, pChild->_processID, command.toCommandLine() );
         pChild->_reader = sw::thread( &EditorNetPlaySession::readChildOutput, pChild.get() );
         _listProcess.push_back( std::move( pChild ) );
         return true;
@@ -286,8 +281,6 @@ namespace sw::editor
                                 ? FileUtil::joinPath( FileUtil::joinPath( ResourcePaths::getProjectFolderPath(), "Saved/Traces" ),
                                                       "netplay_" + to_string( WallClock::nowUnixMilliseconds() ) )
                                 : settings._traceDirectory;
-            // 구분자를 `/` 로 — 명령줄에서 `\"` 가 따옴표를 깨지 않게 한다.
-            _traceDirectory = FileUtil::normalizeSeparators( _traceDirectory );
             if ( FileUtil::ensureDirectoryExists( _traceDirectory ) == false )
             {
                 SW_LOG_ERROR( "Trace folder %# could not be created - the multiplayer session was not started", _traceDirectory );
@@ -299,9 +292,11 @@ namespace sw::editor
         const string serverPath = settings._serverExecutablePath.empty() ? makeDefaultExecutablePath( "Server" ) : settings._serverExecutablePath;
         const string clientPath = settings._clientExecutablePath.empty() ? makeDefaultExecutablePath( "App" ) : settings._clientExecutablePath;
         const string port       = to_string( _port );
-        const string clientArguments =
-            EditorNetPlaySessionInternal::quote( "-gv_netConnectAddress=127.0.0.1:" + port ) + " -gv_standardInputCommands=1" +
-            " -gv_stateHashHistory=" + to_string( kServerStateHashHistoryTicks ) + " " + settings._clientArguments; // 클라이언트도 서버 틱 번호로 해시를 남긴다(S7)
+        // 사용자가 적은 추가 인자(백엔드 스위치)는 공백으로 나눈다 — 셸이 아니므로 그 글이 명령을 늘리지 못한다.
+        const vector<string> listUserClientArgument = ProcessCommand::splitArgumentLine( settings._clientArguments );
+        vector<string>       listClientArgument{ "-gv_netConnectAddress=127.0.0.1:" + port, "-gv_standardInputCommands=1",
+                                           "-gv_stateHashHistory=" + to_string( kServerStateHashHistoryTicks ) }; // 클라이언트도 서버 틱 번호로 해시를 남긴다(S7)
+        listClientArgument.insert( listClientArgument.end(), listUserClientArgument.begin(), listUserClientArgument.end() );
 
         // 서버를 먼저 띄운다. 클라이언트는 서버가 늦게 떠도 연결 시한 안에서 다시 시도하지만, 서버가 먼저 떠 있으면 첫 시도에 연결된다.
         // `App` 창은 띄우는 순서대로 나란히 놓는다. 리슨 호스트가 첫 위치이고, 전용 서버는 창이 없다.
@@ -314,24 +309,31 @@ namespace sw::editor
             SW_LOG_ERROR( "No free TCP port for the dedicated server's debug channel" );
             return false;
         }
-        string serverArguments = "-gv_netListenPort=" + port;
+        int32 windowIndex = 0;
+        bool  bLaunched   = false;
         if ( bDedicated )
         {
             _debugChannelToken = EditorNetPlaySessionInternal::makeDebugChannelToken();
-            serverArguments += " -gv_debugChannelPort=" + to_string( _debugChannelPort ) + " -gv_debugChannelToken=" + _debugChannelToken +
-                               " -gv_stateHashHistory=" + to_string( kServerStateHashHistoryTicks );
+            vector<string> listServerArgument{ "-gv_netListenPort=" + port, "-gv_debugChannelPort=" + to_string( _debugChannelPort ),
+                                               "-gv_debugChannelToken=" + _debugChannelToken, "-gv_stateHashHistory=" + to_string( kServerStateHashHistoryTicks ) };
+            bLaunched = launchChild( "Server", serverPath, std::move( listServerArgument ), makeTracePath( "server" ) );
         }
-        int32       windowIndex = 0;
-        bool        bLaunched   = bDedicated ? launchChild( "Server", serverPath, serverArguments, makeTracePath( "server" ) )
-                                             : launchChild( "Host", clientPath,
-                                                            "-gv_netListenPort=" + port + " -gv_standardInputCommands=1 " + settings._clientArguments + " " +
-                                                                makeWindowArguments( settings, windowIndex++ ),
-                                                            makeTracePath( "host" ) );
+        else
+        {
+            vector<string> listHostArgument{ "-gv_netListenPort=" + port, "-gv_standardInputCommands=1" };
+            listHostArgument.insert( listHostArgument.end(), listUserClientArgument.begin(), listUserClientArgument.end() );
+            const vector<string> listWindowArgument = makeWindowArguments( settings, windowIndex++ );
+            listHostArgument.insert( listHostArgument.end(), listWindowArgument.begin(), listWindowArgument.end() );
+            bLaunched = launchChild( "Host", clientPath, std::move( listHostArgument ), makeTracePath( "host" ) );
+        }
         const int32 clientCount = bDedicated ? settings._clientCount : settings._clientCount - 1;
         for ( int32 clientIndex = 1; bLaunched && clientIndex <= clientCount; ++clientIndex )
         {
-            const string number = to_string( clientIndex );
-            bLaunched           = launchChild( "Client" + number, clientPath, clientArguments + " " + makeWindowArguments( settings, windowIndex++ ), makeTracePath( "client" + number ) );
+            const string         number             = to_string( clientIndex );
+            vector<string>       listArgument       = listClientArgument;
+            const vector<string> listWindowArgument = makeWindowArguments( settings, windowIndex++ );
+            listArgument.insert( listArgument.end(), listWindowArgument.begin(), listWindowArgument.end() );
+            bLaunched = launchChild( "Client" + number, clientPath, std::move( listArgument ), makeTracePath( "client" + number ) );
         }
         if ( bLaunched == false )
         {
