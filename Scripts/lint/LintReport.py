@@ -28,7 +28,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 
-from common.BuildTree import addBuildTreeArguments, BuildTree, BuildTreeError  # noqa: E402
+from common.BuildTree import addBuildTreeArguments, BuildTree, BuildTreeError, kDefaultPreset  # noqa: E402
 from common.Parallel import getProcessWorkerCount  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
@@ -58,7 +58,7 @@ class LintReport:
     description: str = ""
     bUsesBuildTree: bool = False
     bMultiplePresets: bool = False
-    defaultPreset: str | None = "Ninja-Debug"
+    defaultPreset: str | None = kDefaultPreset
     listDefaultPreset: tuple[str, ...] = ()
     bUsesJobs: bool = False
     bUsesFilter: bool = False

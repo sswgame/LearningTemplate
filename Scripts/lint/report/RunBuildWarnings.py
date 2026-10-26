@@ -52,6 +52,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 from common.TranslationUnits import TranslationUnitSweep
+from common.BuildTree import kMapConfigPreset  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
 from lint.LintReport import LintReport, ReportContext  # noqa: E402
 
@@ -64,7 +65,8 @@ _kDropExact = ("-c", "/c", "/showIncludes", "-MD", "-clang:-MD")
 _kDropWithValue = ("-o", "-MT", "-MF")
 _kDropPrefix = ("/Fo", "/Fd", "/Fp", "/Yu", "/Yc", "-clang:-MT", "-clang:-MF")
 
-_kDefaultPresets = ("Ninja-Debug", "Ninja-Release", "Ninja-Shipping")
+#: 기본으로 훑는 구성 — 구성마다 경고가 다르다(`SW_SHIPPING` 분기 등). 프리셋 이름은 `CMakePresets.json` 에서 읽은 표(`kMapConfigPreset`)에서 온다.
+_kDefaultPresets = tuple(kMapConfigPreset.values())
 
 
 def splitCommandInternal(entry: dict) -> tuple[list[str], bool]:

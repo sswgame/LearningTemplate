@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import sys
 from functools import cached_property
 from pathlib import Path
 from typing import Any, Iterator, Sequence
@@ -20,6 +21,20 @@ from typing import Any, Iterator, Sequence
 from .Paths import getProjectRoot
 
 kDefaultPreset = "Ninja-Debug"
+_kConfigPresetRe = re.compile(r"Ninja-([A-Z][a-z]+)")
+
+
+def readConfigPresets(repositoryRoot: Path) -> dict[str, str]:
+    """구성 이름 → 빌드 폴더 프리셋(`build/<프리셋>`). 정본은 `CMakePresets.json` 의 `Ninja-<구성>` configure 프리셋이다. 하나도 없으면 `sys.exit`."""
+    listPreset = json.loads((repositoryRoot / "CMakePresets.json").read_text(encoding="utf-8"))["configurePresets"]
+    mapPreset = {match.group(1): preset["name"] for preset in listPreset if (match := _kConfigPresetRe.fullmatch(preset["name"])) is not None}
+    if not mapPreset:
+        sys.exit(f"{repositoryRoot / 'CMakePresets.json'}: `Ninja-<구성>` 모양의 configure 프리셋을 찾지 못했다 — 프리셋 이름이 바뀌었나")
+    return mapPreset
+
+
+#: 구성 이름 → 프리셋 표(Debug · Release · Shipping). 프리셋 이름을 코드에 적는 도구는 이 표에서 구성 이름으로 고른다.
+kMapConfigPreset: dict[str, str] = readConfigPresets(getProjectRoot())
 kCompileDatabaseFileName = "compile_commands.json"
 kCMakeCacheFileName = "CMakeCache.txt"
 #: CMake 가 "이 구성이 일부러 짓지 않는 소스" 를 적는 자리(빌드 폴더 기준) — CMake 의 `SW_UNBUILT_SOURCE_LIST`.
