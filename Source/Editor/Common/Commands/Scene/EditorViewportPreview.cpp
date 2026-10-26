@@ -20,6 +20,7 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/ReflectValue.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Resource/AssetManager.h"
@@ -55,8 +56,11 @@ namespace sw::editor
             /** @brief 대사 미리보기 메서드의 시그니처( string speaker, string text )인지입니다. */
             static bool takesDialogueLineArgs( const FunctionInfo& method )
             {
-                return method._listParameter.size() == 2 && method._listParameter[0]._typeName == "string" &&
-                       method._listParameter[1]._typeName == "string" && method._invoker.isBound();
+                // 인자 타입은 넘길 C++ 타입의 내장 자리(`ReflectBuiltinOf<string>`)로 묻는다 — 이름 리터럴을 두지 않는다.
+                const auto isTextParameter = []( const FunctionParameterInfo& parameter )
+                { return ReflectValueUtil::findBuiltinIndex( hashed_string( parameter._typeName.c_str() ) ) == ReflectBuiltinOf<string>::kIndex; };
+                const bool bTwoTextParameters = method._listParameter.size() == 2 && isTextParameter( method._listParameter[0] ) && isTextParameter( method._listParameter[1] );
+                return bTwoTextParameters && method._invoker.isBound();
             }
 
             /**

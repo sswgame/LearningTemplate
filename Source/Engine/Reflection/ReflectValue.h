@@ -125,6 +125,11 @@ namespace sw
          * @return 범위 밖 자리이거나 정수 · bool 이 아니면(실수 · 압축 타입 포함) false(@p outValue 는 그대로)
          */
         [[nodiscard]] static bool readInteger( int32 builtinIndex, const void* pValue, int64& outValue );
+        /**
+         * @brief 갈래가 Number 인 내장 타입 값 하나(@p pValue)에 @p value 를 씁니다. 정수 타입은 가장 가까운 정수로 반올림합니다.
+         * @return 범위 밖 자리 · Number 갈래가 아님 · 그 타입이 담지 못하는 값(정수 · 압축 타입 범위 밖, float32 를 넘는 유한값)이면 false(@p pValue 는 그대로)
+         */
+        [[nodiscard]] static bool writeNumber( int32 builtinIndex, void* pValue, float64 value );
         /** @brief 내장 타입 값 하나(@p pValue)를 사람이 읽는 글로 씁니다(`formatText` 와 같은 서식). 범위 밖 자리는 빈 글입니다. */
         static string formatBuiltin( int32 builtinIndex, const void* pValue );
         /**
