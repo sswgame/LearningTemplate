@@ -133,7 +133,7 @@ namespace sw
         template <typename FillFunc>
         void publish( AudioEngineStats stats, const AudioMusicStatus& music, uint64 appliedPlayingID, FillFunc&& fillPlaying )
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             _listPlaying.clear();
             stats._voiceCount = fillPlaying( _listPlaying );
             std::sort( _listPlaying.begin(), _listPlaying.end() );
@@ -145,7 +145,7 @@ namespace sw
         template <typename FillFunc>
         void publishBuses( FillFunc&& fillBus )
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             _listBusStatus.clear();
             fillBus( _listBusStatus );
         }
@@ -153,7 +153,7 @@ namespace sw
         template <typename FillFunc>
         void publishInstances( FillFunc&& fillInstance )
         {
-            std::scoped_lock<mutex> lock{ _mutex };
+            ScopedLock<mutex> lock{ _mutex };
             _listInstanceStatus.clear();
             fillInstance( _listInstanceStatus );
         }
@@ -173,14 +173,14 @@ namespace sw
         void takeSubtitleCues( vector<AudioSubtitleCue>& outListCue );
 
     private:
-        vector<AudioPlayingID>      _listPlaying{};                /**< 살아 있는 재생 id 입니다. 정렬되어 있습니다. */
-        vector<AudioBusStatus>      _listBusStatus{};              /**< 버스 상태입니다(믹서 그래프 순서). */
-        vector<AudioInstanceStatus> _listInstanceStatus{};         /**< 살아 있는 이벤트 인스턴스 상태입니다(인스턴스 슬롯 순서). */
-        vector<AudioSubtitleCue>    _listSubtitleCue{};            /**< 게임 스레드가 아직 가져가지 않은 자막 신호입니다(시작한 순서). */
-        uint64                      _droppedSubtitleCueCount{ 0 }; /**< 상한을 넘겨 버린 자막 신호 수입니다. `getStats` 가 붙입니다. */
-        AudioEngineStats            _stats{};                      /**< 마지막 블록의 상태입니다. */
-        AudioMusicStatus            _music{};                      /**< 마지막 블록의 음악 위치입니다. */
-        atomic<uint64>              _appliedPlayingID{ 0 };        /**< 게시 시점에 적용된 재생 id 입니다. */
-        mutable mutex               _mutex{};                      /**< 위 사본을 지킵니다. */
+        vector<AudioPlayingID> _listPlaying             SW_GUARDED_BY( _mutex ){};    /**< 살아 있는 재생 id 입니다. 정렬되어 있습니다. */
+        vector<AudioBusStatus> _listBusStatus           SW_GUARDED_BY( _mutex ){};    /**< 버스 상태입니다(믹서 그래프 순서). */
+        vector<AudioInstanceStatus> _listInstanceStatus SW_GUARDED_BY( _mutex ){};    /**< 살아 있는 이벤트 인스턴스 상태입니다(인스턴스 슬롯 순서). */
+        vector<AudioSubtitleCue> _listSubtitleCue       SW_GUARDED_BY( _mutex ){};    /**< 게임 스레드가 아직 가져가지 않은 자막 신호입니다(시작한 순서). */
+        uint64 _droppedSubtitleCueCount                 SW_GUARDED_BY( _mutex ){ 0 }; /**< 상한을 넘겨 버린 자막 신호 수입니다. `getStats` 가 붙입니다. */
+        AudioEngineStats                                _stats{};                     /**< 마지막 블록의 상태입니다. */
+        AudioMusicStatus _music                         SW_GUARDED_BY( _mutex ){};    /**< 마지막 블록의 음악 위치입니다. */
+        atomic<uint64>                                  _appliedPlayingID{ 0 };       /**< 게시 시점에 적용된 재생 id 입니다. */
+        mutable mutex                                   _mutex{};                     /**< 위 사본을 지킵니다. */
     };
 } // namespace sw

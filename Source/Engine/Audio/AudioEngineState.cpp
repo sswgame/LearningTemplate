@@ -22,7 +22,7 @@ namespace sw
 
     void AudioPublishedState::clear()
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         _listPlaying.clear();
         _listBusStatus.clear();
         _listInstanceStatus.clear();
@@ -36,21 +36,21 @@ namespace sw
         // 아직 오디오 스레드가 보지 못한 재생은 살아 있는 것으로 친다.
         if ( playingID > _appliedPlayingID.load( std::memory_order_acquire ) )
             return playingID < nextPlayingID;
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return std::binary_search( _listPlaying.begin(), _listPlaying.end(), playingID );
     }
 
     AudioEngineStats AudioPublishedState::getStats() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        AudioEngineStats        stats  = _stats;
+        ScopedLock<mutex> lock{ _mutex };
+        AudioEngineStats  stats        = _stats;
         stats._droppedSubtitleCueCount = _droppedSubtitleCueCount;
         return stats;
     }
 
     void AudioPublishedState::addSubtitleCue( const AudioSubtitleCue& cue )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         if ( _listSubtitleCue.size() >= kMaxSubtitleCueCount )
         {
             _listSubtitleCue.erase( _listSubtitleCue.begin() );
@@ -62,25 +62,25 @@ namespace sw
     void AudioPublishedState::takeSubtitleCues( vector<AudioSubtitleCue>& outListCue )
     {
         outListCue.clear();
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         outListCue.swap( _listSubtitleCue );
     }
 
     AudioMusicStatus AudioPublishedState::getMusicStatus() const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         return _music;
     }
 
     void AudioPublishedState::getBusStatuses( vector<AudioBusStatus>& outListStatus ) const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         outListStatus = _listBusStatus;
     }
 
     void AudioPublishedState::getInstanceStatuses( vector<AudioInstanceStatus>& outListStatus ) const
     {
-        std::scoped_lock<mutex> lock{ _mutex };
+        ScopedLock<mutex> lock{ _mutex };
         outListStatus = _listInstanceStatus;
     }
 } // namespace sw

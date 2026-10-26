@@ -481,7 +481,7 @@ namespace sw
 
         AudioClipCache _clipStore; /**< 경로에서 클립으로 가는 캐시입니다. */
         // 게임 스레드
-        vector<Command>                                  _listPendingCommand;            /**< 쌓인 명령입니다(`_commandMutex`). */
+        vector<Command> _listPendingCommand              SW_GUARDED_BY( _commandMutex ); /**< 쌓인 명령입니다(`_commandMutex`). */
         vector<Command>                                  _listApplyingCommand;           /**< 오디오 스레드가 꺼내 적용 중인 명령입니다. */
         LibraryMap _mapGameLibrary                       SW_GUARDED_BY( _libraryMutex ); /**< 게임 스레드가 아는 라이브러리입니다. */
         shared_ptr<const AudioMixerDesc> _pGameMixerDesc SW_GUARDED_BY( _libraryMutex ); /**< 게임 스레드가 아는 그래프입니다. 이름으로 대조합니다. */
