@@ -130,6 +130,47 @@ if(SW_ENABLE_LTO AND (CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE ST
 	if(sw_ipo_supported)
 		set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
 		message(STATUS "[BuildConfig] IPO enabled globally (opt-out for Tools/Tests/Editor)")
+
+		# ThinLTO 링크 캐시 — 링크마다 최적화·코드 생성을 처음부터 다시 돌지 않고, 입력 비트코드와 옵션이 같은 모듈의 결과를 재사용한다(lld 가 모듈별 해시로 찾는다).
+		# 실행 파일 · DLL 여덟 개가 같은 엔진 정적 라이브러리를 링크하므로 한 폴더를 같이 쓴다(lld 의 캐시 쓰기는 원자적이라 동시 링크가 안전하다).
+		# 폴더는 빌드 폴더 아래라 `.gitignore`(/build/)가 가린다. 빌드 폴더를 지우면 같이 사라지지만 `ninja clean` 은 지우지 않으므로 빈 캐시로 재려면 폴더를 지운다.
+		# 크기 상한 · 만료는 아래 정책이 정한다(lld 기본은 남은 디스크의 75 % · 만료 1 주일 · 정리 간격 1 시간 — 크기만 8 GB 로 조인다).
+		# clang 은 LLD 가 필수라(`Clang.cmake`) 이 옵션을 알아듣는다. 다른 컴파일러(IPO 가 되더라도)에는 주지 않는다.
+		if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+			set(sw_lto_cache_dir "${CMAKE_BINARY_DIR}/LTOCache")
+			set(sw_lto_cache_policy "cache_size_bytes=8g:prune_after=168h")
+
+			# 링크 풀(`BuildOptions.cmake` 5 — 코어 수 / 4, 2 ~ 4 개)이 동시에 여는 링크 수를 정한다. ThinLTO 백엔드는 링크마다 코어 수만큼 스레드를 띄우므로
+			# 풀이 가득 차면 코어 수 × 풀 크기 스레드가 동시에 코드 생성을 해 풀이 막으려던 메모리 압박이 그대로 온다. 링크 하나의 스레드를 코어 수 / 풀 크기로 나눠
+			# 합이 코어 수에 맞게 한다. 풀이 없는 생성기(Ninja 가 아님)는 상한을 두지 않는다(lld 기본).
+			set(sw_lto_jobs_option "")
+
+			if(DEFINED cpuCount AND DEFINED linkJobs)
+				math(EXPR sw_lto_jobs "${cpuCount} / ${linkJobs}")
+
+				if(sw_lto_jobs LESS 2)
+					set(sw_lto_jobs 2)
+				endif()
+
+				set(sw_lto_jobs_option "${sw_lto_jobs}")
+			endif()
+
+			if(MSVC)
+				target_link_options(sw_global_options INTERFACE "/lldltocache:${sw_lto_cache_dir}" "/lldltocachepolicy:${sw_lto_cache_policy}")
+
+				if(sw_lto_jobs_option)
+					target_link_options(sw_global_options INTERFACE "/opt:lldltojobs=${sw_lto_jobs_option}")
+				endif()
+			else()
+				target_link_options(sw_global_options INTERFACE "LINKER:--thinlto-cache-dir=${sw_lto_cache_dir}" "LINKER:--thinlto-cache-policy=${sw_lto_cache_policy}")
+
+				if(sw_lto_jobs_option)
+					target_link_options(sw_global_options INTERFACE "LINKER:--thinlto-jobs=${sw_lto_jobs_option}")
+				endif()
+			endif()
+
+			message(STATUS "[BuildConfig] ThinLTO link cache: ${sw_lto_cache_dir} (${sw_lto_cache_policy}, backend jobs per link: ${sw_lto_jobs_option})")
+		endif()
 	elseif(sw_ipo_error)
 		message(STATUS "[BuildConfig] IPO unsupported: ${sw_ipo_error}")
 	endif()
