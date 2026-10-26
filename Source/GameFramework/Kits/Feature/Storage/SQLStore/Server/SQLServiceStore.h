@@ -14,6 +14,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Base/Online/Store/ServiceStore.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -37,9 +38,9 @@ namespace sw
         /**
          * @brief 드라이버를 찾고, 마이그레이션을 적용하고, 풀을 시작합니다. 실패하면 false 와 실패 이유를 반환하며 기동 오류입니다. 폴백은 없습니다.
          * @param migrationFolder 리소스 경로(`common/sql/servicestore`)나 디스크 폴더입니다.
-         * @param nowMs 마이그레이션 기록에 남길 벽시계 시각(밀리초)입니다.
+         * @param nowMs 마이그레이션 기록에 남길 벽시계 시각입니다.
          */
-        [[nodiscard]] bool initialize( string_view driverName, const SQLConnectionPoolConfig& settings, string_view migrationFolder, int64 nowMs, string& outError );
+        [[nodiscard]] bool initialize( string_view driverName, const SQLConnectionPoolConfig& settings, string_view migrationFolder, UnixMilliseconds nowMs, string& outError );
 
         void  submit( unique_ptr<IServiceStoreWork> work ) override;
         int32 pollCompletions() override { return _pool.pollCompletions(); }

@@ -9,6 +9,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Time/TimePoint.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -25,9 +26,9 @@ namespace sw
         /**
          * @brief 저장소를 만들고 초기화합니다. 실패하면 nullptr 과 실패 이유를 반환합니다.
          * @param secret 비밀번호(`ServerSecret::read` 로 읽은 것)입니다. 쓰고 나면 호출한 쪽이 비웁니다.
-         * @param nowMs 마이그레이션 기록에 남길 벽시계 시각(밀리초)입니다.
+         * @param nowMs 마이그레이션 기록에 남길 벽시계 시각입니다.
          */
-        static unique_ptr<IServiceStore> createServiceStore( string_view driverName, string_view connection, string_view secret, int32 workerCount, int64 nowMs,
+        static unique_ptr<IServiceStore> createServiceStore( string_view driverName, string_view connection, string_view secret, int32 workerCount, UnixMilliseconds nowMs,
                                                              string& outError );
     };
 } // namespace sw

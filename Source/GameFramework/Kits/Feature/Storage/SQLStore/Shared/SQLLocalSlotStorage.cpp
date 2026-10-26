@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Shared/SQLLocalSlotStorage.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/Time/WallClock.h"
 
 #include "GameFramework/Base/Online/Local/LocalStoreFactory.h"
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Shared/SQL/SQLDriver.h"
@@ -18,6 +19,7 @@ namespace sw
             /** @brief 로컬 슬롯이 쓰는 드라이버의 등록 이름입니다. 제품 이름은 드라이버 폴더만 알며, 레지스트리(`SQLDriverRegistry`)가 드라이버를 고릅니다. */
             static constexpr string_view kLocalSlotDriverName = "sqlite";
 
+            /** @brief 슬롯의 쓴 시각입니다 — 파일 백엔드와 같은 파일 시계(1601 기원)라 유닉스 시각이 아니다(마이그레이션 기록은 `WallClock`). */
             static int64 makeNowMs() { return FileUtil::getCurrentFileWriteTime() / ( FileUtil::kFileTimeTicksPerSecond / constant::kMillisecondsPerSecond ); }
         };
     } // namespace
@@ -46,7 +48,7 @@ namespace sw
         _connection = driver.openConnection( databasePath, "", outError );
         if ( _connection == nullptr )
             return false;
-        if ( SQLMigrationRunner::apply( *_connection, listMigration, SQLLocalSlotStorageInternal::makeNowMs(), outError ) == false )
+        if ( SQLMigrationRunner::apply( *_connection, listMigration, WallClock::nowUnixMilliseconds(), outError ) == false )
         {
             _connection.reset();
             return false;
