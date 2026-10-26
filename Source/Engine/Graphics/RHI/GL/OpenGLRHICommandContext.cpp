@@ -114,14 +114,12 @@ namespace sw
 
     void OpenGLRHICommandContext::setPipelineState( RHIPipelineStateHandle pso )
     {
+        // 등록되지 않은 핸들도 기록한다 — 앞 PSO 를 남겨 두면 다음 드로우가 그것으로 대신 그려진다. 그 드로우는 resolveDrawProgram 에서 멈춘다.
+        _pDevice->_recordingState._boundGraphicsPSO               = pso;
         const OpenGLRHIDevice::OpenGLPipelineStateRecord* pRecord = _pDevice->_pipelineStates.get( pso );
-        if ( pRecord == nullptr )
+        if ( pRecord == nullptr || pRecord->_program == 0 )
             return;
 
-        if ( pRecord->_program == 0 )
-            return;
-
-        _pDevice->_recordingState._boundGraphicsPSO = pso;
         glUseProgram( pRecord->_program );
 
         if ( pRecord->_vao != 0 )
@@ -215,27 +213,28 @@ namespace sw
                 bDepthOnly = true;
         }
 
+        // 프레임버퍼는 합성 FBO 하나로만 만든다. 만들지 못하면 텍스처별 FBO 로 대신하지 않고 멈춘다 — 대신하면 깊이 · 나머지 컬러 첨부가
+        // 조용히 빠진 채 그려진다(다른 백엔드도 패스를 열지 못한 대상에는 그리지 않는다).
         GLuint     fbo{ 0 };
         const bool bUseColorComposite = bBindColor && bDepthOnly == false && colorCount > 0 && colorHandles[0] != 0;
+        const bool bDepthAsColor      = bSingleColorTarget && bDepthOnly; // 깊이 텍스처를 컬러 자리로 건 경우 — 그 텍스처를 깊이 첨부로 쓴다
         if ( bUseColorComposite )
             fbo = _pDevice->ensureCompositeFboMrt( colorHandles, beginInfo._arrColorTargetSlice, colorCount, beginInfo._depthTarget, beginInfo._depthTargetSlice );
+        else if ( bDepthAsColor )
+        {
+            fbo                                                 = _pDevice->ensureCompositeFboMrt( nullptr, nullptr, 0, colorHandles[0], beginInfo._arrColorTargetSlice[0] );
+            const OpenGLRHIDevice::OpenGLTextureRecord* pRecord = _pDevice->resolveTexture( colorHandles[0] );
+            if ( pRecord != nullptr && beginInfo._width == 0 )
+                targetWidth = pRecord->_width;
+            if ( pRecord != nullptr && beginInfo._height == 0 )
+                targetHeight = pRecord->_height;
+        }
         else if ( bBindColor == false && bHasDepth )
             fbo = _pDevice->ensureCompositeFboMrt( nullptr, nullptr, 0, beginInfo._depthTarget, beginInfo._depthTargetSlice );
 
-        const bool bNeedsSingleColorFallback = fbo == 0 && colorCount == 1 && colorHandles[0] != 0;
-        if ( bNeedsSingleColorFallback )
-        {
-            const OpenGLRHIDevice::OpenGLTextureRecord* pRecord = _pDevice->resolveTexture( colorHandles[0] );
-            if ( pRecord != nullptr )
-            {
-                fbo        = pRecord->findSliceFbo( beginInfo._arrColorTargetSlice[0] );
-                bDepthOnly = pRecord->_bDepthStencil != SW_FALSE;
-                if ( beginInfo._width == 0 )
-                    targetWidth = pRecord->_width;
-                if ( beginInfo._height == 0 )
-                    targetHeight = pRecord->_height;
-            }
-        }
+        const bool bOffscreenRequested = bUseColorComposite || bDepthAsColor || ( bBindColor == false && bHasDepth );
+        if ( bOffscreenRequested && fbo == 0 )
+            SW_FATAL( "GL render pass could not build its framebuffer (color0 %#, depth %#) - invalid attachment or incomplete FBO", colorHandles[0], beginInfo._depthTarget );
 
         glBindFramebuffer( GL_FRAMEBUFFER, fbo );
 
@@ -563,17 +562,15 @@ namespace sw
         glBindBuffer( GL_ARRAY_BUFFER, vbo );
     }
 
-    bool OpenGLRHICommandContext::resolveDrawProgram( uint32& outProgram, uint32& outMode ) const
+    void OpenGLRHICommandContext::resolveDrawProgram( uint32& outProgram, uint32& outMode ) const
     {
-        outProgram                                             = _pDevice->_shaderProgram;
-        outMode                                                = GL_TRIANGLES;
+        // 백엔드 계약(네 백엔드 같음): 등록된 그래픽스 PSO 없이 그리면 오류로 멈춘다. 기본 프로그램으로 대신 그리지 않는다 — PSO 가 0 이면
+        // 부르는 쪽이 드로우를 건너뛰는 것이 렌더러의 규칙이라, 여기 닿은 것은 부르는 쪽의 결함이다(지운 핸들 · PSO 를 걸지 않은 드로우).
         const OpenGLRHIDevice::OpenGLPipelineStateRecord* pPSO = _pDevice->_pipelineStates.get( _pDevice->_recordingState._boundGraphicsPSO );
-        if ( pPSO != nullptr && pPSO->_program != 0 )
-        {
-            outProgram = pPSO->_program;
-            outMode    = toGlPrimitive( pPSO->_topology );
-        }
-        return outProgram != 0;
+        if ( pPSO == nullptr || pPSO->_program == 0 )
+            SW_FATAL( "GL draw without a registered graphics PSO (handle %#)", _pDevice->_recordingState._boundGraphicsPSO );
+        outProgram = pPSO->_program;
+        outMode    = toGlPrimitive( pPSO->_topology );
     }
 
     void OpenGLRHICommandContext::drawArrays( uint32 vertexCount, uint32 instanceCount, uint32 startVertex )
@@ -584,8 +581,7 @@ namespace sw
 
         GLuint program{ 0 };
         GLenum mode{ GL_TRIANGLES };
-        if ( resolveDrawProgram( program, mode ) == false )
-            return;
+        resolveDrawProgram( program, mode );
 
         glUseProgram( program );
 
@@ -768,8 +764,7 @@ namespace sw
 
         GLuint program{ 0 };
         GLenum mode{ GL_TRIANGLES };
-        if ( resolveDrawProgram( program, mode ) == false )
-            return;
+        resolveDrawProgram( program, mode );
 
         glUseProgram( program );
 
@@ -827,8 +822,7 @@ namespace sw
 
         GLuint program{ 0 };
         GLenum mode{ GL_TRIANGLES };
-        if ( resolveDrawProgram( program, mode ) == false )
-            return;
+        resolveDrawProgram( program, mode );
 
         glUseProgram( program );
 

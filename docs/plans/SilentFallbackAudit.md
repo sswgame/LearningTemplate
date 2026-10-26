@@ -1,6 +1,6 @@
 # 조용한 폴백과 남은 같은 결함 감사 (2026-10-22)
 
-> 상태: 구현중 · 선행: 없음 · 영역: engine · 옛번호: 없음 · 진행: 10/14
+> 상태: 구현중 · 선행: 없음 · 영역: engine · 옛번호: 없음 · 진행: 12/14
 
 병합 뒤 감사에서 나온 조용한 폴백과 같은 모양의 결함을 모았습니다. 원칙은 [CLAUDE.md](../../CLAUDE.md) "원칙" 1 — 필수 값이 없으면 오류로 멈추고 같은 결함을 쓸 수 없게 형식 · API 를 바꿉니다.
 
@@ -17,17 +17,17 @@
 - **에디터 리소스 id → 디스크 경로**: `CatalogPanel` · `ContentBrowserPanel` · `InspectorPropertyManager` · `EditorDevCommands` · `EditorSceneFileCommands` · `LocalizationTools` 는 루트에 id 를 직접 붙이지 않고 읽기는 `ResourcePaths::findLooseFile`, 쓰기는 `resolveWritePath` 를 쓴다(못 정하면 빈 문자열이라 건너뛴다). 디스크 루트 자체가 필요한 자리(임포터 · 폴더 목록 · 리소스 색인 · 감시자 · 글꼴)는 남겼다.
 - **외형 데이터베이스 수명**: `CharacterAppearanceState` · `CharacterAppearanceComponent` · `AppearanceDataWatcher` 가 `AppearanceDatabase` 를 날 포인터로 쥐지 않는다. 데이터베이스가 `getInstanceID()`(1부터 세는 원자 번호, 복사 금지)를 갖고 상태는 번호만 기억하며 갱신 때마다 지금 데이터베이스를 인자로 받는다 — 번호가 달라지면 스스로 다시 만들어 서비스가 내려갔다 올라와도 허공을 가리키지 않는다(빌려 쥐던 것을 쓸 때 건네는 값으로).
 
-**확인 대기(통합에서 확인):** 매니페스트 id `appearance-database-lifetime-tests`(`AppearanceTest.StateRecognizesItsDatabaseByInstanceID` 포함). 컴파일 확인이 필요한 파일은 위 세 항목의 파일 전부이고 빌드는 통합의 `debug-full-build` 가 돈다.
+- **렌더 타깃 포맷(RenderTargetFormat)**: `fillPassRenderTargetFormats` 는 RGBA8 로 짐작하지 않는다 — 고정 포맷 · 출력 선언 · 렌더 타깃 0 개 중 하나가 없으면 false 이고 `createPSOForPass` 가 오류와 PSO 0 을 낸다. 포맷 근거가 없는 패스 종류(파이프라인에 없는 패스)는 엔진 PSO 를 아예 만들지 않는다(`hasRenderTargetFormatSource`). 주 출력에 그리는 패스는 `RenderPassTraitFlag::kOutputPass`(Present · Canvas · UpscaleRcas)로 표시해 대상 포맷마다 `createOutputPSOVariants` 로만 만들고, 그 밖의 패스가 Swapchain 을 쓰면 파이프라인 검증이 오류다. `collectColorOutputFormats` 는 넘긴 수로 물러나지 않는다(출력 목록이 비었을 때만). 재측정: 일곱 파이프라인 XML 에서 Swapchain 을 쓰는 패스는 Present · Canvas 뿐이었다.
+- **PSO 없는 드로우(네 백엔드 계약)**: 등록된 그래픽스 PSO 없이 그리면 백엔드가 오류로 멈춘다(`SW_FATAL`). 대신 그리던 길을 지웠다 — Vulkan 의 기본 파이프라인(`_pipeline` · `_offscreenPipeline`, 만드는 곳이 없어 늘 비어 있었다), D3D11 의 전역 깊이 상태, GL 의 기본 프로그램(`_shaderProgram`)과 텍스처별 FBO 대체(합성 FBO 를 못 만들면 멈춘다), D3D12 의 조용한 건너뛰기. 등록되지 않은 핸들을 건 `setPipelineState` 는 앞 PSO 를 남기지 않는다(D3D11 · GL). Vulkan 파이프라인 생성 실패는 빈 레코드가 아니라 핸들 0 이다. 렌더러는 PSO 가 0 이면 드로우를 건너뛰므로(`drawFullscreen` · `drawGPUBatches`) 여기 닿는 것은 부르는 쪽 결함이다.
+
+**확인 대기(통합에서 확인):** 매니페스트 id `appearance-database-lifetime-tests`(`AppearanceTest.StateRecognizesItsDatabaseByInstanceID` 포함). 컴파일 확인이 필요한 파일은 위 세 항목의 파일 전부이고 빌드는 통합의 `debug-full-build` 가 돈다. 렌더 타깃 포맷 · PSO 없는 드로우는 네 백엔드 시나리오 실행(`RenderPassTest.PipelineValidationCatchesInconsistencies` 3-1-1 포함)으로 확인한다.
 
 ## 2. 남은 단위
 
-남은 셋은 화면으로만 맞는지 알 수 있는 렌더러 · 셰이더 일이다(2026-10-24 판단).
-
-### SilentFallbackAudit.RenderTargetFormat
-`FrameRenderer::fillPassRenderTargetFormats` 는 고정 포맷도 출력 선언도 없으면 RGBA8 이다. 엔진 PSO 를 패스 종류 표로 모두 만들기 때문에(`FrameRenderer` 의 PSO 등록) 파이프라인에 없는 패스 종류도 이 길로 PSO 를 얻는다. 오류로 바꾸려면 파이프라인에 없는 패스 종류의 PSO 를 만들지 않아야 한다(`kRequiresPassDesc` 를 그래픽스 패스 전체로) — Present · Canvas 의 기본 PSO, Tonemap 대체(`_psoFallbackType`)가 그 PSO 를 쓰는지 먼저 본다. `FrameRendererUtil::collectColorOutputFormats` 도 출력은 있는데 첨부를 못 찾으면 넘긴 수로 물러난다. 어느 패스 종류가 RGBA8 길로 PSO 를 얻는지 네 백엔드 GPU 로 먼저 헤아려야 한다.
+남은 둘은 화면으로만 맞는지 알 수 있는 셰이더 일과 다른 계획의 단위다(2026-10-24 판단, 2026-10-27 재측정).
 
 ### SilentFallbackAudit.EmulatedSlotTable
-에뮬 백엔드(DX11 · GL)의 엔진 텍스처 슬롯 표가 두 곳이다 — `binding.hlsli` 의 `Bindless::sampleIndex`(11-2 절)와 `FrameRenderer::commitBindlessTextureBindings`. 표를 C++ 상수(`ShaderBindingSlots`) 하나에서 내고 셰이더는 생성된 정의를 읽게 한다. 셰이더 패치와 DX11 · GL 화면이 한 묶음이다.
+에뮬 백엔드(DX11 · GL)의 엔진 텍스처 슬롯 표가 두 곳이다 — `binding.hlsli` 의 `Bindless::sampleIndex`(11-2 절)와 `FrameRenderer::commitBindlessTextureBindings`. 표를 C++ 상수(`ShaderBindingSlots`) 하나에서 내고 셰이더는 생성된 정의를 읽게 한다. 셰이더 패치와 DX11 · GL 화면이 한 묶음이다. 2026-10-27 재측정: 표에 없는 인덱스는 셰이더가 슬롯 0 으로 읽고(`sampleIndex` 끝줄), C++ 는 한 슬롯을 나눠 쓰는 텍스처를 우선순위 사슬(그림자 > 원본 등)로 고른다 — 같은 패스가 둘을 함께 읽으면 조용히 하나만 보인다. 생성된 표에서 "패스마다 슬롯 하나에 하나"를 검증하게 하면 둘 다 없어진다.
 
 ### SilentFallbackAudit.ClientCodeGuard
 렌더러 밖에서 `SW_WITH_CLIENT_CODE` 없이 클라이언트 전용 코드를 부르는 곳. 구조로 막는 길은 서버 타깃이 렌더러 폴더를 짓지 않게 하는 것이고 그러면 남은 호출을 컴파일러가 찾는다 — [DedicatedServerNoRenderer](DedicatedServerNoRenderer.md) 의 단위다.

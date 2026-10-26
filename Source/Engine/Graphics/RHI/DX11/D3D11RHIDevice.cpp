@@ -96,8 +96,6 @@ namespace sw
         , _listUavFree{}
         , _pipelineStates{}
         , _renderPassLedger{}
-        , _depthEnabledState{ nullptr }
-        , _depthDisabledState{ nullptr }
         , _arrStaticSampler{}
         , _pHWnd{ nullptr }
         , _releaseQueue{ constant::kGPUReleaseFrameLatency }

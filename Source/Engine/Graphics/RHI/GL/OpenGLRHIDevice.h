@@ -437,7 +437,6 @@ namespace sw
         void*  _pHRC;
         uint32 _width;
         uint32 _height;
-        uint32 _shaderProgram;
         uint32 _vao;
         uint32 _vbo;             ///< 풀스크린 삼각형(정점 3개)
         uint32 _meshVao;         ///< 씬 메시 드로우용 VAO

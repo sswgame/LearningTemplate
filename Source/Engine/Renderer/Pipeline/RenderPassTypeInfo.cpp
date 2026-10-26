@@ -159,7 +159,7 @@ namespace sw
                         // 후처리 체인(postchain.hlsl)을 겸하면 깊이 · AO 를 읽는다.
                         info._pDefaultShader = &EngineDefaultAssets::_shaderFullscreenBlit;
                         info._inputContract  = makeContract( { Role::SourceColor }, { Role::SceneDepth, Role::AmbientOcclusion } );
-                        info._flags          = Flag::kHasInputContract;
+                        info._flags          = Flag::kHasInputContract | Flag::kOutputPass;
                         break;
                     }
                     case RenderPassType::MeshOutline:
@@ -187,7 +187,7 @@ namespace sw
                         // 입력 계약은 비어 있다 — 첨부를 읽지 않으므로 선언한 입력은 검증 오류다.
                         info._pDefaultShader = &EngineDefaultAssets::_shaderCanvas;
                         info._inputContract  = makeContract( {}, {} );
-                        info._flags          = Flag::kBlend | Flag::kPremultipliedAlpha | Flag::kHasInputContract;
+                        info._flags          = Flag::kBlend | Flag::kPremultipliedAlpha | Flag::kHasInputContract | Flag::kOutputPass;
                         break;
                     }
                     case RenderPassType::ForwardOnlyOpaque:
@@ -338,6 +338,7 @@ namespace sw
                         info._pDefaultShader   = &EngineDefaultAssets::_shaderUpscale;
                         info._pPassDefine      = kPassFsrRcasDefine;
                         info._colorTargetCount = 1;
+                        info._flags            = Flag::kOutputPass;
                         break;
                     }
                     case RenderPassType::OcclusionTiles:

@@ -537,8 +537,6 @@ namespace sw
         RHIHandleTable<D3D11PipelineStateRecord> _pipelineStates;
         RHIRenderPassLedger                      _renderPassLedger; ///< 렌더 패스 핸들 장부. 자기 뮤텍스로 직렬화해 어느 스레드에서나 부른다.
 
-        Microsoft::WRL::ComPtr<ID3D11DepthStencilState> _depthEnabledState;
-        Microsoft::WRL::ComPtr<ID3D11DepthStencilState> _depthDisabledState;
         /// @brief 정적 샘플러 세트입니다(bindingslots.hlsli 4, DX12 와 같은 테이블). s9..s15 에 바인딩합니다. 셰이더가 Bindless::sampleIndexWith 의 samplerID 로 고릅니다.
         Microsoft::WRL::ComPtr<ID3D11SamplerState> _arrStaticSampler[shaderslot::kStaticSamplerArrayCount];
         HWND                                       _pHWnd;

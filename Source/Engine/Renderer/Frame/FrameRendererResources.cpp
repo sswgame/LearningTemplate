@@ -61,6 +61,12 @@ namespace sw
             // 셰이더가 파이프라인의 퍼뮤테이션을 요구하는 패스는 그 파이프라인에 있을 때만 만든다(없으면 실행도 없다).
             if ( info.hasFlag( RenderPassTraitFlag::kRequiresPassDesc ) && findPassDescByType( passType ) == nullptr )
                 continue;
+            // 출력 패스는 엔진 PSO 가 없다 — 대상 포맷마다 아래 createOutputPSOVariants 가 만든다.
+            if ( info.hasFlag( RenderPassTraitFlag::kOutputPass ) )
+                continue;
+            // 컬러 포맷을 정할 근거(표의 고정 포맷 · 파이프라인의 출력 선언)가 없는 그래픽스 패스는 이 파이프라인에서 실행되지 않는다 — RGBA8 로 짐작해 만들지 않는다.
+            if ( info.hasFlag( RenderPassTraitFlag::kCompute ) == false && hasRenderTargetFormatSource( passType ) == false )
+                continue;
 
             RHIPipelineStateHandle pso{ 0 };
             if ( info.hasFlag( RenderPassTraitFlag::kCompute ) )
@@ -277,10 +283,13 @@ namespace sw
 
         // 주 출력에 그리는 패스(Present · Canvas · Present 를 대신하는 FSR 의 RCAS)의 대상은 백버퍼(디바이스가 실제 채택한 포맷), 오프스크린 렌더 타깃(에디터 씬 뷰 · 게임 뷰 등,
         // 계약값 kOffscreenColorFormat), 스크린샷 캡처 텍스처(계약값 kBackBufferFormat)다. 모두 **셋업에서** 만들어 둔다.
-        const RenderPassType arrPassType[]     = { RenderPassType::Present, RenderPassType::Canvas, RenderPassType::UpscaleRcas };
-        const RHIFormat      arrTargetFormat[] = { _pDevice->getBackBufferFormat(), constant::kOffscreenColorFormat, constant::kBackBufferFormat };
-        for ( const RenderPassType passType : arrPassType )
+        // 출력 패스는 표의 kOutputPass 가 정한다.
+        const RHIFormat arrTargetFormat[] = { _pDevice->getBackBufferFormat(), constant::kOffscreenColorFormat, constant::kBackBufferFormat };
+        for ( uint32 typeIndex = 0; typeIndex < kRenderPassTypeCount; ++typeIndex )
         {
+            const RenderPassType passType = static_cast<RenderPassType>( typeIndex );
+            if ( getRenderPassTypeInfo( passType ).hasFlag( RenderPassTraitFlag::kOutputPass ) == false )
+                continue;
             for ( const RHIFormat format : arrTargetFormat )
             {
                 RHIPipelineStateHandle existing{ 0 };
@@ -302,14 +311,9 @@ namespace sw
         // 불린다. PSO 생성은 RHIHandleTable(락 없음)과 Vulkan 렌더 패스 캐시(락 없음)를 건드리므로, 같은
         // 레벨의 다른 패스가 드로우하며 그 표를 읽는 중이면 레이스다. assertRegistryMutableNow 는 bindless
         // 레지스트리만 감시해서 이 경우를 못 잡는다. 변종은 createOutputPSOVariants 가 셋업에서 만든다.
-        // 포맷을 모르는 대상(장치가 백버퍼 포맷을 알리지 않음)은 셋업이 만든 엔진 PSO(기본 출력 포맷)를 쓴다 — 셋업 목록의 대체가 아니라 그 대상의 PSO 다.
+        // 셋업에 없는 포맷(장치가 알리지 않은 Unknown 포함)의 대상은 설정 결함이다 — 다른 포맷의 PSO · 복사로 대신 그리지 않고 멈춘다(createOutputPSOVariants 의 목록에 더한다).
         RHIPipelineStateHandle pso{ 0 };
-        if ( targetFormat == RHIFormat::Unknown )
-            pso = getEnginePSO( passType );
-        else if ( _pPSOCache->findOutputPSO( passType, targetFormat, pso ) == false )
-            pso = 0;
-        const bool bFound = pso != 0;
-        // 셋업에 없는 포맷의 대상은 설정 결함이다 — 다른 포맷의 PSO · 복사로 대신 그리지 않고 멈춘다(createOutputPSOVariants 의 목록에 더한다).
+        const bool             bFound = _pPSOCache->findOutputPSO( passType, targetFormat, pso ) && pso != 0;
         if ( bFound == false )
             SW_FATAL( "Output pass %# has no PSO for target format %# from setup - add the format to createOutputPSOVariants", passType, static_cast<uint32>( targetFormat ) );
         return pso;

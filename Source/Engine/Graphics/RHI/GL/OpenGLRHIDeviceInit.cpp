@@ -435,11 +435,6 @@ namespace sw
             glDeleteTextures( 1, &_defaultTexture );
             _defaultTexture = 0;
         }
-        if ( _shaderProgram )
-        {
-            glDeleteProgram( _shaderProgram );
-            _shaderProgram = 0;
-        }
         if ( _vao )
         {
             glDeleteVertexArrays( 1, &_vao );
@@ -545,11 +540,6 @@ namespace sw
         {
             glDeleteVertexArrays( 1, &_meshVao );
             _meshVao = 0;
-        }
-        if ( _shaderProgram != 0 )
-        {
-            glDeleteProgram( _shaderProgram );
-            _shaderProgram = 0;
         }
         if ( _defaultSampler != 0 )
         {

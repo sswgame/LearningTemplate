@@ -113,11 +113,8 @@ namespace sw
         /// @brief 이 스트림에 렌더 패스가 열려 있는지 여부입니다.
         uint8 _bRenderPassActive : 1;
         /// @brief 텍스처 배열 세트(set 1)를 이 버퍼의 두 바인드 포인트에 이미 바인딩했는지 여부입니다.
-        uint8 _bTextureSetBound : 1;
-        /// @brief 지금 열려 있는 렌더 패스가 스왑체인(백버퍼) 렌더 패스인지 여부입니다. PSO 가 등록되어 있지 않을 때
-        ///        폴백 파이프라인을 고르는 기준입니다. 렌더 패스 호환성 때문에 백버퍼용과 오프스크린용이 다릅니다.
-        uint8                  _bActiveSwapchainRT : 1;
-        [[maybe_unused]] uint8 _reserved           : 5;
+        uint8                  _bTextureSetBound : 1;
+        [[maybe_unused]] uint8 _reserved         : 6;
         RHIBufferHandle        _boundIndexBuffer;
         uint32                 _boundIndexStride;
         uint32                 _boundIndexOffset;
@@ -135,7 +132,6 @@ namespace sw
             , _boundInstanceSlotOffset{ 0 }
             , _bRenderPassActive{ SW_FALSE }
             , _bTextureSetBound{ SW_FALSE }
-            , _bActiveSwapchainRT{ SW_FALSE }
             , _reserved{ 0 }
             , _boundIndexBuffer{ 0 }
             , _boundIndexStride{ 4 }
@@ -694,9 +690,7 @@ namespace sw
         VkPipelineLayout _pipelineLayout;
         VkDescriptorPool _descriptorPool;
         VkSampler        _arrStaticSampler[shaderslot::kStaticSamplerCount]; ///< bindingslots.hlsli 4 의 정적 샘플러 세트(set 1 immutable)
-        VkPipeline       _pipeline;
-        VkPipeline       _offscreenPipeline; ///< `_pipeline` 과 같은 셰이더를 `_offscreenRenderPass` 에 맞춘 것
-        VkBuffer         _vertexBuffer;      ///< 풀스크린 삼각형(정점 3개)
+        VkBuffer         _vertexBuffer;                                      ///< 풀스크린 삼각형(정점 3개)
         vector<uint32>   _listBindlessFree;
 
         RHIHandleTable<VulkanBufferRecord> _gpuBuffers;

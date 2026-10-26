@@ -671,6 +671,20 @@ SW_TEST_CASE( RenderPassTest, PipelineValidationCatchesInconsistencies )
         res.getDesc()._listPass.push_back( pass );
         SW_EXPECT_EQUAL( 1u, res.validate( "unit-test" ) );
     }
+    // 3-1-1) 출력 패스(kOutputPass)가 아닌 패스는 Swapchain 을 쓸 수 없다 — PSO 의 렌더 타깃 포맷을 정할 근거가 없다(RGBA8 로 짐작하지 않는다)
+    {
+        sw::RenderPipelineAsset  res;
+        sw::RenderPassAttachment source{};
+        source._name = "SceneColor";
+        res.getDesc()._listAttachment.push_back( source );
+        sw::RenderGraphPassDesc pass{};
+        pass._name = "SkyToScreen";
+        pass._type = "Sky";
+        pass._listInput.push_back( "SceneColor" );
+        pass._listOutput.push_back( "Swapchain" );
+        res.getDesc()._listPass.push_back( pass );
+        SW_EXPECT_TRUE( res.validate( "unit-test" ) > 0u );
+    }
     // 3-2) 컬러를 그리는 패스(외곽선 껍질 · TAA · 일반 풀스크린)도 컬러 출력 선언이 없으면 오류다
     for ( const utf8* pType : { "MeshOutline", "TAA", "Tonemap" } )
     {

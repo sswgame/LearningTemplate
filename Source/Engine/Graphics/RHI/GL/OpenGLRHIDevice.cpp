@@ -20,7 +20,6 @@ namespace sw
         , _pHRC{ nullptr }
         , _width{ 1280 }
         , _height{ 720 }
-        , _shaderProgram{ 0 }
         , _vao{ 0 }
         , _vbo{ 0 }
         , _meshVao{ 0 }

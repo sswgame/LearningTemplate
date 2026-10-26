@@ -199,7 +199,11 @@ namespace sw
         // 내부 슬롯은 대신 그리는 파이프라인 패스의 출력 선언으로 포맷을 정한다(`_targetSourceType`).
         const RenderGraphPassDesc* pTargetDesc =
             ( pPassDesc == nullptr && info._targetSourceType != RenderPassType::Invalid ) ? findPassDescByType( info._targetSourceType ) : pPassDesc;
-        fillPassRenderTargetFormats( desc, pTargetDesc, pRtvFormatOverride != nullptr ? pRtvFormatOverride : info._pColorFormat, info._colorTargetCount );
+        if ( fillPassRenderTargetFormats( desc, pTargetDesc, pRtvFormatOverride != nullptr ? pRtvFormatOverride : info._pColorFormat, info._colorTargetCount ) == false )
+        {
+            SW_LOG_ERROR( "Pass %# has no render target format (no fixed format, and no color output declaration with a known format) - no PSO is created", passType );
+            return 0;
+        }
 
         // 컬러 출력이 없는 패스(그림자, 뎁스 프리패스)는 픽셀 스테이지가 없다. 셰이더에 PSMain 이 있어도 붙이지
         // 않는다. 주의: 여기서 정하지 않으면 백엔드마다 판단이 갈리고, 그 위에 머티리얼 define 을 적용한 변형
@@ -215,7 +219,7 @@ namespace sw
         return handle;
     }
 
-    void FrameRenderer::fillPassRenderTargetFormats( RHIPipelineStateDesc& desc, const RenderGraphPassDesc* pPassDesc, const RHIFormat* pRtvFormats,
+    bool FrameRenderer::fillPassRenderTargetFormats( RHIPipelineStateDesc& desc, const RenderGraphPassDesc* pPassDesc, const RHIFormat* pRtvFormats,
                                                      uint32 numRenderTargets ) const
     {
         desc._numRenderTargets = numRenderTargets;
@@ -227,21 +231,32 @@ namespace sw
             {
                 desc._arrRtvFormat[rtIndex] = pRtvFormats[rtIndex];
             }
+            return true;
         }
-        else if ( pPassDesc != nullptr && pPassDesc->_listOutput.empty() == false )
+        if ( pPassDesc != nullptr && pPassDesc->_listOutput.empty() == false )
         {
-            // 출력 선언에서 컬러 RT 를 센다. 쿠커가 픽셀 스테이지 유무를 판정하는 것과 **같은 함수**다.
-            // 컬러를 찾지 못하면 호출하는 쪽이 넘긴 수로 물러난다(찾지 못한 슬롯의 포맷은 desc 기본값 그대로다).
-            desc._numRenderTargets = FrameRendererUtil::collectColorOutputFormats(
-                *pPassDesc, _pipelineResource.getDesc()._listAttachment, desc._arrRtvFormat, kMaxColorAttachments, numRenderTargets );
-        }
-        else
-        {
+            // 출력 선언에서 컬러 RT 를 센다. 쿠커가 픽셀 스테이지 유무를 판정하는 것과 **같은 함수**다. Swapchain 출력은 포맷을 모른다(Unknown) —
+            // 그 포맷은 출력 패스의 대상 포맷(pRtvFormats)으로만 정하므로 여기까지 오면 근거가 없다.
+            desc._numRenderTargets = FrameRendererUtil::collectColorOutputFormats( *pPassDesc, _pipelineResource.getDesc()._listAttachment, desc._arrRtvFormat,
+                                                                                   kMaxColorAttachments, numRenderTargets );
             for ( uint32 rtIndex = 0; rtIndex < desc._numRenderTargets; ++rtIndex )
             {
-                desc._arrRtvFormat[rtIndex] = RHIFormat::R8G8B8A8_UNORM;
+                if ( desc._arrRtvFormat[rtIndex] == RHIFormat::Unknown )
+                    return false;
             }
+            return true;
         }
+        // 고정 포맷도 출력 선언도 없다 — 컬러가 없는 패스만 맞다(RGBA8 로 짐작하지 않는다).
+        return desc._numRenderTargets == 0;
+    }
+
+    bool FrameRenderer::hasRenderTargetFormatSource( RenderPassType passType ) const
+    {
+        const RenderPassTypeInfo&  info        = getRenderPassTypeInfo( passType );
+        const RenderPassType       sourceType  = info._targetSourceType != RenderPassType::Invalid ? info._targetSourceType : passType;
+        const RenderGraphPassDesc* pTargetDesc = findPassDescByType( sourceType );
+        const bool                 bDeclared   = pTargetDesc != nullptr && pTargetDesc->_listOutput.empty() == false;
+        return info._pColorFormat != nullptr || info._colorTargetCount == 0 || bDeclared;
     }
 
     RenderPSOCache::MaterialPSOEntry FrameRenderer::createMaterialPSOVariant( RHIPipelineStateHandle passPSO, RenderPassType passType,

@@ -141,6 +141,12 @@ namespace sw
          *          그 패스가 없는 파이프라인에서는 PSO 가 없고 실행도 없다. 강조 외곽선의 두께(`SW_HIGHLIGHT_WIDTH`)처럼 기본값을 코드에 두지 않는 값이 그 예다.
          */
         static constexpr uint32 kRequiresPassDesc = SW_BIT( 16 );
+        /**
+         * @brief 주 출력(Swapchain · 오프스크린 출력 · 캡처 텍스처)에 그리는 출력 패스다(Present · Canvas · FSR RCAS).
+         * @details 렌더 타깃 포맷이 대상마다 달라 PSO 는 셋업이 대상 포맷마다 만들고(`FrameRenderer::createOutputPSOVariants`) 엔진 PSO 는 없다.
+         *          파이프라인에서 Swapchain 을 출력으로 적을 수 있는 패스는 이 비트가 있는 패스뿐이다(`RenderPipelineAsset::validate`).
+         */
+        static constexpr uint32 kOutputPass = SW_BIT( 17 );
     };
 } // namespace sw
 

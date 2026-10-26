@@ -88,8 +88,6 @@ namespace sw
         , _pipelineLayout{ nullptr }
         , _descriptorPool{ nullptr }
         , _arrStaticSampler{}
-        , _pipeline{ nullptr }
-        , _offscreenPipeline{ nullptr }
         , _vertexBuffer{ nullptr }
         , _listBindlessFree{}
         , _gpuBuffers{}
@@ -483,13 +481,6 @@ namespace sw
 
             // _vertexBuffer 는 _gpuBuffers 가 소유한다(풀스크린 삼각형 리소스). 두 번 부수지 않는다.
             _vertexBuffer = VK_NULL_HANDLE;
-            if ( _pipeline )
-                vkDestroyPipeline( _device, _pipeline, nullptr );
-            if ( _offscreenPipeline )
-            {
-                vkDestroyPipeline( _device, _offscreenPipeline, nullptr );
-                _offscreenPipeline = nullptr;
-            }
             if ( _pipelineLayout )
                 vkDestroyPipelineLayout( _device, _pipelineLayout, nullptr );
             if ( _descriptorPool )

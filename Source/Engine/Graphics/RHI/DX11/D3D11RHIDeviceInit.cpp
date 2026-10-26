@@ -164,16 +164,7 @@ namespace sw
         _swapChain.acquireNextImage( _device.Get() );
 
         {
-            D3D11_DEPTH_STENCIL_DESC dsDesc{};
-            dsDesc.DepthEnable    = TRUE;
-            dsDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-            dsDesc.DepthFunc      = D3D11_COMPARISON_LESS_EQUAL;
-            _device->CreateDepthStencilState( &dsDesc, _depthEnabledState.GetAddressOf() );
-
-            dsDesc.DepthEnable    = FALSE;
-            dsDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
-            _device->CreateDepthStencilState( &dsDesc, _depthDisabledState.GetAddressOf() );
-
+            // 깊이 상태는 PSO 마다 만든다(createPipelineState). 장치 전역 깊이 상태는 두지 않는다 — PSO 없는 드로우를 대신 그리는 길이 된다.
             // 정적 샘플러 세트 s9..s15. DX12 루트 시그니처 정적 샘플러(D3D12RHIDeviceDescriptor.cpp)와 같은 표다. 비교 샘플러(7)는
             // 에뮬 경로가 깊이를 직접 비교하므로 없다.
             struct StaticSamplerSpec
@@ -240,8 +231,6 @@ namespace sw
         _swapChain.shutdown();
         _gpuTextures.clear();
         _gpuBuffers.clear();
-        _depthEnabledState.Reset();
-        _depthDisabledState.Reset();
         _recordingState._activeGraphicsPSO = 0;
         _listRegisteredBindless.clear();
         _listBindlessFree.clear();

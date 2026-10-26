@@ -224,7 +224,8 @@ namespace sw
          * @details PSO 생성(createPSOForPassType)과 셰이더 쿠커가 **같은 답**을 내야 하는 규칙이다. 컬러
          *          출력이 하나도 없으면 뎁스만 쓰는 패스이고, 그 패스에는 픽셀 스테이지가 없다. 출력 선언이
          *          아예 없으면 여기서는 알 수 없으므로 fallbackCount 를 반환한다(호출하는 쪽이 패스 타입으로 정한 값).
-         *          선언은 있는데 어태치먼트를 하나도 찾지 못해도 같은 값이다.
+         *          Swapchain 출력은 컬러 하나로 세고 포맷은 Unknown 이다(대상 포맷은 출력 패스가 정한다). 첨부에 없는 다른 이름은
+         *          파이프라인 로드가 이미 거절했으므로 세지 않는다 — 선언이 있으면 넘긴 수로 물러나지 않는다.
          * @param pOutFormat 컬러 포맷을 받을 배열입니다. nullptr 이면 개수만 셉니다.
          * @param capacity   pOutFormat 의 크기입니다. 그보다 많은 컬러 출력은 버립니다.
          */
@@ -238,21 +239,23 @@ namespace sw
                 return fallbackCount;
 
             uint32 colorCount{ 0 };
-            bool   bHasDepthOutput{ false };
             for ( const string& outName : pass._listOutput )
             {
                 if ( colorCount >= capacity )
                     break;
+                if ( outName == Attachment::kSwapchain )
+                {
+                    if ( pOutFormat != nullptr )
+                        pOutFormat[colorCount] = RHIFormat::Unknown;
+                    ++colorCount;
+                    continue;
+                }
                 for ( const RenderPassAttachment& attachment : listAttachment )
                 {
                     if ( attachment._name != outName )
                         continue;
                     const RHIFormat format = parseAttachmentFormat( attachment._format );
-                    if ( isDepthFormat( format ) )
-                    {
-                        bHasDepthOutput = true;
-                    }
-                    else
+                    if ( isDepthFormat( format ) == false )
                     {
                         if ( pOutFormat != nullptr )
                             pOutFormat[colorCount] = format;
@@ -261,9 +264,7 @@ namespace sw
                     break;
                 }
             }
-            if ( colorCount > 0 )
-                return colorCount;
-            return bHasDepthOutput ? 0u : fallbackCount;
+            return colorCount;
         }
 
         /**

@@ -85,11 +85,12 @@ namespace sw
 
     void D3D11RHICommandContext::setPipelineState( RHIPipelineStateHandle pso )
     {
+        // 등록되지 않은 핸들도 기록한다 — 앞 PSO 를 남겨 두면 다음 드로우가 그것으로 대신 그려진다. 그 드로우는 bindGraphicsPipelineForDraw 에서 멈춘다.
+        _pState->_activeGraphicsPSO                             = pso;
         const D3D11RHIDevice::D3D11PipelineStateRecord* pRecord = _pDevice->_pipelineStates.get( pso );
         if ( pRecord == nullptr || _pContext == nullptr )
             return;
 
-        _pState->_activeGraphicsPSO = pso;
         if ( pRecord->_vs )
             _pContext->VSSetShader( pRecord->_vs.Get(), nullptr, 0 );
         if ( pRecord->_ps )
@@ -111,7 +112,12 @@ namespace sw
 
     void D3D11RHICommandContext::setComputePipelineState( RHIPipelineStateHandle pso )
     {
-        setPipelineState( pso );
+        // 컴퓨트 셰이더만 건다. 그래픽스 PSO 기록(_activeGraphicsPSO)은 건드리지 않는다 — 컴퓨트 PSO 가 그래픽스 자리에 남으면 다음 드로우가 멈춘다.
+        const D3D11RHIDevice::D3D11PipelineStateRecord* pRecord = _pDevice->_pipelineStates.get( pso );
+        if ( pRecord == nullptr || _pContext == nullptr )
+            return;
+        if ( pRecord->_cs )
+            _pContext->CSSetShader( pRecord->_cs.Get(), nullptr, 0 );
     }
 
     void D3D11RHICommandContext::beginRenderPass( const RHIRenderPassBeginInfo& beginInfo )
@@ -163,26 +169,19 @@ namespace sw
         else
             _pContext->OMSetRenderTargets( 0, nullptr, pDsv );
 
-        // 활성 PSO 의 깊이 · 블렌드 상태(깊이 쓰기 · 알파)를 먼저 쓰고, 없으면 전역 깊이 상태로 물러난다.
+        // 깊이 · 블렌드 상태는 PSO 의 것만 쓴다(setPipelineState 가 건다). 전역 깊이 상태로 대신하지 않는다 — PSO 없이 그리면
+        // bindGraphicsPipelineForDraw 가 멈춘다. 패스 앞에 이미 PSO 가 걸려 있으면 그 상태를 다시 건다.
         const D3D11RHIDevice::D3D11PipelineStateRecord* pRecord = _pDevice->_pipelineStates.get( _pState->_activeGraphicsPSO );
         if ( pRecord != nullptr )
         {
             if ( pRecord->_depthStencilState )
                 _pContext->OMSetDepthStencilState( pRecord->_depthStencilState.Get(), 0 );
-            else if ( pDsv != nullptr && _pDevice->_depthEnabledState )
-                _pContext->OMSetDepthStencilState( _pDevice->_depthEnabledState.Get(), 0 );
-            else if ( _pDevice->_depthDisabledState )
-                _pContext->OMSetDepthStencilState( _pDevice->_depthDisabledState.Get(), 0 );
             if ( pRecord->_blendState )
             {
                 constexpr float32 arrBlendFactor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
                 _pContext->OMSetBlendState( pRecord->_blendState.Get(), arrBlendFactor, MathUtil::kMaxUInt32 );
             }
         }
-        else if ( pDsv != nullptr && _pDevice->_depthEnabledState )
-            _pContext->OMSetDepthStencilState( _pDevice->_depthEnabledState.Get(), 0 );
-        else if ( _pDevice->_depthDisabledState )
-            _pContext->OMSetDepthStencilState( _pDevice->_depthDisabledState.Get(), 0 );
 
         D3D11_VIEWPORT viewport{};
         viewport.Width    = static_cast<float32>( beginInfo._width > 0 ? beginInfo._width : _pDevice->_swapChain.getWidth() );
@@ -339,22 +338,17 @@ namespace sw
         ID3D11PixelShader*                              pPs  = nullptr;
         ID3D11InputLayout*                              pIl  = nullptr;
         const D3D11RHIDevice::D3D11PipelineStateRecord* pPSO = _pDevice->_pipelineStates.get( _pState->_activeGraphicsPSO );
-        if ( pPSO != nullptr )
-        {
-            if ( pPSO->_vs )
-                pVs = pPSO->_vs.Get();
-            if ( pPSO->_ps )
-                pPs = pPSO->_ps.Get();
-            if ( pPSO->_inputLayout )
-                pIl = pPSO->_inputLayout.Get();
-        }
-
-        // 정점 셰이더가 없으면(컴퓨트 PSO · 지운 핸들) 그릴 수 없다. 부르는 쪽은 드로우를 건너뛴다. PS 는 없어도 된다 — 깊이 전용 PSO(그림자 ·
-        // 깊이 프리패스)는 픽셀 스테이지를 붙이지 않고, 아래 PSSetShader( nullptr )가 앞 드로우의 PS 를 뗀다. 주의: PS 까지 요구하면 깊이 전용
-        // 드로우가 **하나도** 나가지 않는다 — 그림자 맵은 클리어 값뿐이고, 깊이 프리패스가 비어 깊이 쓰기를 끈 기본 패스가 그리는 순서대로
-        // 덮는다(배치 순서가 프로세스마다 달라 테스트가 가끔만 진다).
-        if ( pVs == nullptr )
-            return false;
+        // 백엔드 계약(네 백엔드 같음): 등록된 그래픽스 PSO 없이 그리면 오류로 멈춘다. 기본 상태로 대신 그리지 않는다 — PSO 가 0 이면 부르는 쪽이
+        // 드로우를 건너뛰는 것이 렌더러의 규칙이라, 여기 닿은 것은 부르는 쪽의 결함이다(지운 핸들 · 컴퓨트 PSO 를 그래픽스로 건 것).
+        if ( pPSO == nullptr || pPSO->_vs == nullptr )
+            SW_FATAL( "D3D11 draw without a registered graphics PSO (handle %#)", _pState->_activeGraphicsPSO );
+        pVs = pPSO->_vs.Get();
+        if ( pPSO->_ps )
+            pPs = pPSO->_ps.Get();
+        if ( pPSO->_inputLayout )
+            pIl = pPSO->_inputLayout.Get();
+        // PS 는 없어도 된다 — 깊이 전용 PSO(그림자 · 깊이 프리패스)는 픽셀 스테이지를 붙이지 않고, 아래 PSSetShader( nullptr )가 앞 드로우의 PS 를 뗀다.
+        // 주의: PS 까지 요구하면 깊이 전용 드로우가 **하나도** 나가지 않는다(그림자 맵이 클리어 값뿐이 된다).
 
         // 메시가 자기 정점 버퍼를 걸었으면 그것을, 아니면 장치의 공용 버퍼를 쓴다. 건 버퍼가 부서졌으면(세대가 달라 풀리지 않는다) 드로우를 버린다 —
         // IASetVertexBuffers 를 건너뛰면 직전 드로우의 버퍼로 그린다.

@@ -527,9 +527,11 @@ namespace sw
 
     bool D3D12RHICommandContext::bindActiveGraphicsPSO()
     {
+        // 백엔드 계약(네 백엔드 같음): 등록된 그래픽스 PSO 없이 그리면 오류로 멈춘다. 조용히 건너뛰거나 앞 PSO 로 그리지 않는다 — PSO 가 0 이면
+        // 부르는 쪽이 드로우를 건너뛰는 것이 렌더러의 규칙이라, 여기 닿은 것은 부르는 쪽의 결함이다(지운 핸들 · PSO 를 걸지 않은 드로우).
         const D3D12RHIDevice::D3D12PipelineStateRecord* pPSORecord = _pDevice->_pipelineStates.get( _pState->_activeGraphicsPSO );
         if ( pPSORecord == nullptr || pPSORecord->_pso == nullptr )
-            return false;
+            SW_FATAL( "D3D12 draw without a registered graphics PSO (handle %#)", _pState->_activeGraphicsPSO );
 
         if ( _pState->_boundNativeGraphicsPSO != _pState->_activeGraphicsPSO )
         {
@@ -784,6 +786,8 @@ namespace sw
             return;
 
         commandListForRecord()->SetPipelineState( pRecord->_pso.Get() );
+        // 리스트의 PSO 가 컴퓨트로 바뀌었다. 그래픽스 캐시를 비워 다음 드로우가 같은 핸들이어도 다시 건다(안 그러면 컴퓨트 PSO 로 그린다).
+        _pState->_boundNativeGraphicsPSO = 0;
     }
 
     // 길이 유지(긴 함수 정리 기준): 상태 전이 · 타깃 바인딩 · 클리어 · 뷰포트의 순서가 곧 의미라 나누지 않는다.
