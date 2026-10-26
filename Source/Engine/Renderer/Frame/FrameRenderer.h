@@ -978,8 +978,6 @@ namespace sw
          * @details 등록되지 않은 이름 · PSO 가 없는 패스는 오류를 한 번 남기고 그리지 않습니다(다른 셰이더로 대신 그리지 않는다).
          */
         void executeModulePass( FramePassContext& context, const RenderGraphPassDesc& passDesc, const hashed_string& target, const float4& targetClear );
-        /** @brief 패스의 엔진 PSO 를 찾습니다. 없으면 테이블이 정한 대체 패스(`_psoFallbackType`)의 PSO 를 반환합니다. */
-        RHIPipelineStateHandle findPassPSO( RenderPassType passType ) const;
 
         /**
          * @brief 이번 프레임의 배치들이 쓸 머티리얼 퍼뮤테이션 PSO 를 **기록 시작 전에** 모두 만들어 둡니다.
@@ -1030,10 +1028,11 @@ namespace sw
          *          다르면 Vulkan 은 렌더 패스 비호환으로 판단해 검증 레이어가 매 프레임 오류를 낸다. 언리얼이 PSO 초기화자의
          *          RenderTargetFormats 를 바인딩된 타깃에서 뽑아 PSO 캐시 키로 삼는 것과 같은 방식이다.
          *          주 출력에 그리는 패스만 포맷이 키이므로 (패스, 포맷) 맵 하나로 충분하다.
-         *          **조회만 한다.** 패스 실행(태스크 워커) 중에 불리므로 없다고 만들면 안 된다. 없으면 엔진 PSO 로 대체하고 한 번 알린다.
+         *          **조회만 한다.** 패스 실행(태스크 워커) 중에 불리므로 없다고 만들면 안 된다. 셋업에 없는 포맷이면 대신 그리지 않고 멈춘다(`SW_FATAL`) —
+         *          돌려준 PSO 는 0 이 아니다. 포맷을 모르는 대상(`RHIFormat::Unknown`)은 셋업이 만든 그 패스의 엔진 PSO 다.
          */
         RHIPipelineStateHandle findOutputPSO( RenderPassType passType, RHIFormat targetFormat );
-        /** @brief 주 출력에 그리는 패스(Present, Canvas)가 그릴 수 있는 대상 포맷(백버퍼, 오프스크린, 캡처)의 PSO 를 셋업에서 미리 만듭니다. */
+        /** @brief 주 출력에 그리는 패스(Present, Canvas, RCAS)가 그릴 수 있는 대상 포맷(백버퍼, 오프스크린, 캡처)의 PSO 를 셋업에서 미리 만듭니다. 하나라도 못 만들면 멈춥니다. */
         void createOutputPSOVariants();
 
     private:
@@ -1332,8 +1331,6 @@ namespace sw
         atomic<uint8> _viewMode;
         /** @brief 에디터 씬 뷰의 보기 모드(`RenderViewMode`)입니다. UI 스레드가 쓰고, 게임 스레드가 패킷을 만들 때 읽습니다. */
         atomic<uint8> _sceneViewMode;
-        /// @brief 셋업에 없는 출력 대상 포맷(Present, Canvas)을 만났을 때 한 번만 알리기 위한 래치입니다.
-        atomic<uint8> _bOutputPSOMissingLogged;
         /// @brief 머티리얼 폴백 stride 가 없다는 것을 한 번만 알리기 위한 래치입니다. 드로우 경로이므로 프레임마다 로그를 찍으면 안 됩니다.
         atomic<uint8> _bMaterialFallbackMissingLogged;
         /// @brief 컬러 타깃이 없어 패스를 건너뛴다는 것을 한 번만 알리기 위한 래치입니다. 패스 경로이므로 프레임마다 로그를 찍으면 안 됩니다.

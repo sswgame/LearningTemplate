@@ -160,10 +160,8 @@ namespace sw
     void FrameRenderer::drawUpscaleRcas( FramePassContext& context, RHIFormat targetFormat, float32 viewportX, float32 viewportY )
     {
         const ViewTarget&            view = *_pActiveView;
-        const RHIPipelineStateHandle pso  = findOutputPSO( RenderPassType::UpscaleRcas, targetFormat );
-        if ( pso == 0 )
-            return; // findOutputPSO 가 셋업에 없던 포맷을 이미 알렸다
-        IRHICommandList& cmd = *context._pCmd;
+        const RHIPipelineStateHandle pso  = findOutputPSO( RenderPassType::UpscaleRcas, targetFormat ); // 셋업에 없으면 멈춘다
+        IRHICommandList&             cmd  = *context._pCmd;
         cmd.setVertexBuffer( 0, 0, 0, 0 );
         cmd.setVertexBuffer( constant::kInstanceSlotStreamSlot, 0, 0, 0 );
         cmd.setPipelineState( pso );

@@ -144,7 +144,6 @@ namespace sw
         , _bFogVolumeActive{ SW_FALSE }
         , _viewMode{ static_cast<uint8>( RenderViewMode::Lit ) }
         , _sceneViewMode{ static_cast<uint8>( RenderViewMode::Lit ) }
-        , _bOutputPSOMissingLogged{ 0 }
         , _bMaterialFallbackMissingLogged{ 0 }
         , _bMissingColorTargetLogged{ 0 }
         , _bHasExecutedDepthPrepass{ 0 }

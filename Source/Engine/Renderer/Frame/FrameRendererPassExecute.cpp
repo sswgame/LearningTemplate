@@ -2,6 +2,7 @@
 
 #include "Core/Container/VectorUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Log/LogOnce.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
@@ -340,7 +341,7 @@ namespace sw
                 {
                     const float4 clearVal = getTargetClearColor( passDepth.view() );
                     beginDepthOnlyPass( context, passDepth.view(), clearVal._x, colorLoadFor( passDepth ) );
-                    drawSceneMeshes( context, findPassPSO( RenderPassType::DepthPrepass ), input._bTransparentBatch );
+                    drawSceneMeshes( context, getEnginePSO( RenderPassType::DepthPrepass ), input._bTransparentBatch );
                     context._pCmd->endRenderPass();
                     _bHasExecutedDepthPrepass.store( 1 );
                     break;
@@ -461,7 +462,7 @@ namespace sw
         const hashed_string* pTarget = &input._declaredColor[0]._attachment;
 
         // PSO 가 0이면 `drawFullscreen` 이 파이프라인 설정을 건너뛴다. 대체할 PSO 는 테이블이 정한 것만 쓴다(Tonemap 은 Present).
-        const RHIPipelineStateHandle pso = findPassPSO( input._passType );
+        const RHIPipelineStateHandle pso = getEnginePSO( input._passType );
 
         // 클리어 색은 타깃 첨부의 선언이다(SSAO 의 흰색 = 가림 없음도 AOColor 선언에 있다).
         const float4 targetClear = getTargetClearColor( pTarget->view() );
@@ -592,7 +593,7 @@ namespace sw
             return;
         // 메시 투명 배치와 입자(방출기 하나 = 후보 하나)를 그 뷰의 한 순서로 섞어 그린다(GPUSceneBuilder::populateParticleBatches · computeViewTransparentOrders).
         SW_ASSERT( input._bTransparentBatch );
-        drawTransparentQueue( context, findPassPSO( RenderPassType::Transparent ) );
+        drawTransparentQueue( context, getEnginePSO( RenderPassType::Transparent ) );
         context._pCmd->endRenderPass();
     }
 
@@ -699,11 +700,8 @@ namespace sw
             context._resourceRegistry.registerTexture( names._gbufferAlbedo, activeView._taaHistory, activeView._taaHistorySrv );
         if ( beginColorPass( context, taaTarget.view(), "", _clearColor, colorLoadFor( taaTarget ), RHIRenderPassLoadOp::Load ) )
         {
-            const RHIPipelineStateHandle taaPSO = getEnginePSO( RenderPassType::TAA );
-            if ( taaPSO != 0 )
-                drawFullscreen( context, taaPSO );
-            else if ( pSrcName != nullptr && taaTarget.view() != pSrcName )
-                context._pCmd->blitTexture( findTransient( pSrcName ), findTransient( taaTarget.view() ) );
+            // TAA PSO 가 없으면(셋업이 알렸다) 원본을 복사해 TAA 없이 넘기지 않는다 — drawFullscreen 이 그리지 않는다.
+            drawFullscreen( context, getEnginePSO( RenderPassType::TAA ) );
             context._pCmd->endRenderPass();
         }
 
@@ -736,9 +734,9 @@ namespace sw
                                               : bFullRect                                         ? RHIRenderPassLoadOp::DontCare
                                                                                                   : RHIRenderPassLoadOp::Clear;
         const float4&             outputClear = upscaleZoom > 0 ? FrameRendererUtil::kBlackClear : _clearColor;
-        // PSO 는 대상의 실제 포맷으로 고른다. 렌더 타깃 포맷은 PSO 의 일부라 대상마다 PSO 가 다르다.
+        // PSO 는 대상의 실제 포맷으로 고른다. 렌더 타깃 포맷은 PSO 의 일부라 대상마다 PSO 가 다르다. 셋업에 없으면 findOutputPSO 가 멈춘다(복사로 대신하지 않는다).
         const RHIPipelineStateHandle psoBlit = findOutputPSO( RenderPassType::Present, target._format );
-        if ( src != 0 && psoBlit != 0 )
+        if ( src != 0 )
         {
             registerPassTexture( context, attachmentNames()._sourceColor, srcName );
             // 선언한 입력을 **모두** 바인딩한다. Present 가 후처리 체인을 겸하면 깊이(외곽선)와 AO 가 필요하고,
@@ -794,19 +792,14 @@ namespace sw
             if ( bCaptureToBack )
                 context._pCmd->blitTexture( dstTarget, 0 );
         }
-        else if ( src != 0 )
-        {
-            context._pCmd->blitTexture( src, dstTarget );
-            if ( bCaptureToBack )
-                context._pCmd->blitTexture( dstTarget, 0 );
-        }
         else
         {
+            // 원본이 없으면 PSO 없이(백엔드 기본 파이프라인으로) 대신 그리지 않는다. 출력 대상의 상태 전이만 위해 패스를 열고 닫는다.
+            SW_LOG_ERROR_ONCE( "Present source color has no transient (its allocation failed) - the output is not drawn" );
             RHIRenderPassBeginInfo beginInfo{};
             beginInfo.setColorTarget( dstTarget, _clearColor, RHIRenderPassLoadOp::Load );
             beginInfo._bBindColor = SW_TRUE;
             context._pCmd->beginRenderPass( beginInfo );
-            drawFullscreen( context, 0 );
             context._pCmd->endRenderPass();
         }
         if ( target._bCaptureFromOutput == SW_TRUE && isLastSwapchainWriter( passDesc ) )
@@ -818,13 +811,13 @@ namespace sw
         // 화면 2D 를 주 출력(Present 가 그린 것)에 기존 내용을 유지한 채(Load) 그린다. 주 출력에 **마지막으로 그리는 뷰**만 그린다
         // (`_pMainOutputCanvasView` — 화면 사각형 뷰가 있으면 그 마지막 것, 없으면 주 시점). 그래야 PiP · 분할 화면이 UI 를 덮지 않는다.
         // 렌더 텍스처 · 호스트 타깃 뷰에는 그리지 않는다. 그릴 것이 없으면 렌더 패스를 열지 않는다. 대상 전체가 뷰포트다(화면 사각형 설정과 무관).
-        FramePassContext&            context   = input._context;
-        const PresentTarget          target    = resolvePresentTarget();
-        const bool                   bDraw     = _pActiveView == _pMainOutputCanvasView && _canvasFrame._mainOutput.isEmpty() == false && target._width > 0 && target._height > 0;
-        const RHIPipelineStateHandle psoCanvas = bDraw ? findOutputPSO( RenderPassType::Canvas, target._format ) : RHIPipelineStateHandle{ 0 };
-        if ( psoCanvas != 0 )
+        FramePassContext&   context = input._context;
+        const PresentTarget target  = resolvePresentTarget();
+        const bool          bDraw   = _pActiveView == _pMainOutputCanvasView && _canvasFrame._mainOutput.isEmpty() == false && target._width > 0 && target._height > 0;
+        if ( bDraw )
         {
-            RHIRenderPassBeginInfo beginInfo{};
+            const RHIPipelineStateHandle psoCanvas = findOutputPSO( RenderPassType::Canvas, target._format ); // 셋업에 없으면 멈춘다(다른 포맷의 PSO 로 대신하지 않는다)
+            RHIRenderPassBeginInfo       beginInfo{};
             beginInfo._bBindColor        = SW_TRUE;
             beginInfo._arrColorTarget[0] = target._texture;
             beginInfo._colorTargetCount  = 1;

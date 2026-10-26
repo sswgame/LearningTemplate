@@ -508,7 +508,7 @@ namespace sw
     void FrameRenderer::ensureParticlePSO()
     {
         _particlePSOKey                              = 0;
-        const RHIPipelineStateHandle transparentPSO  = findPassPSO( RenderPassType::Transparent );
+        const RHIPipelineStateHandle transparentPSO  = getEnginePSO( RenderPassType::Transparent );
         const bool                   bNoParticlePass = _pDevice == nullptr || transparentPSO == 0 || _gpuScene.getParticleBatches().empty();
         if ( bNoParticlePass )
             return;

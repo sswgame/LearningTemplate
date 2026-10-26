@@ -71,7 +71,6 @@ namespace sw
                         info._pDefaultShader   = &EngineDefaultAssets::_shaderShadowDepth;
                         info._pPassDefine      = kPassDepthPrepassDefine;
                         info._colorTargetCount = 0;
-                        info._psoFallbackType  = RenderPassType::Shadow;
                         info._flags            = Flag::kDepthTest | Flag::kDepthWrite | Flag::kDepthOnly | Flag::kDrawsSceneMeshes;
                         break;
                     }
@@ -102,9 +101,8 @@ namespace sw
                     case RenderPassType::Transparent:
                     {
                         // 블렌드를 켜고 깊이 쓰기를 끄는 것까지가 패스의 몫이다. 어떤 퍼뮤테이션으로 그릴지는 머티리얼이 정한다.
-                        info._pDefaultShader  = &EngineDefaultAssets::_shaderForwardLit;
-                        info._psoFallbackType = RenderPassType::ForwardOpaque;
-                        info._flags           = Flag::kDepthTest | Flag::kBlend | Flag::kDrawsTransparentBatch | kSceneColorPassFlags;
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderForwardLit;
+                        info._flags          = Flag::kDepthTest | Flag::kBlend | Flag::kDrawsTransparentBatch | kSceneColorPassFlags;
                         break;
                     }
                     case RenderPassType::SSAO:
@@ -150,11 +148,9 @@ namespace sw
                     }
                     case RenderPassType::Tonemap:
                     {
-                        // 톤매핑 PSO 가 없어도 그림은 나가야 하므로 Present(단순 블릿)로 대신한다.
-                        info._pDefaultShader  = &EngineDefaultAssets::_shaderTonemap;
-                        info._psoFallbackType = RenderPassType::Present;
-                        info._inputContract   = makeContract( { Role::SourceColor }, {} );
-                        info._flags           = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract;
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderTonemap;
+                        info._inputContract  = makeContract( { Role::SourceColor }, {} );
+                        info._flags          = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract;
                         break;
                     }
                     case RenderPassType::Present:
@@ -415,10 +411,6 @@ namespace sw
                     if ( row.hasFlag( Flag::kCompute ) && ( isPipelinePassType( row._type ) || row.hasFlag( Flag::kDrawsSceneMeshes | Flag::kGenericFullscreen ) ) )
                         return false;
                     if ( row.hasFlag( Flag::kRequiresGPUCulling ) && row.hasFlag( Flag::kCompute ) == false )
-                        return false;
-                    // 대신할 PSO 는 대신하지 않는 패스여야 한다(사슬을 따라가지 않는다).
-                    if ( row._psoFallbackType != RenderPassType::Invalid &&
-                         table._arrRow[static_cast<uint32>( row._psoFallbackType )]._psoFallbackType != RenderPassType::Invalid )
                         return false;
                 }
                 return true;

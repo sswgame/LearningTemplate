@@ -68,15 +68,22 @@ namespace sw
                 // 컬링 · 정렬은 간접 인자 버퍼 능력(_bGPUCulling)을, 애니메이션 · 모프는 구조버퍼 UAV(_bCompute)만 요구한다.
                 // DX11 은 한 버퍼에 STRUCTURED 와 DRAWINDIRECT_ARGS 를 같이 못 걸어 _bGPUCulling 이 0 이지만 _bCompute 는 1 이다.
                 const bool bCapable = info.hasFlag( RenderPassTraitFlag::kRequiresGPUCulling ) ? caps._bGPUCulling != SW_FALSE : caps._bCompute != SW_FALSE;
-                if ( bCapable )
-                    pso = _pDevice->getResourceFactory()->createComputePipelineState( ( engineDefaultAssets.*info._pDefaultShader ).c_str() );
+                if ( bCapable == false )
+                    continue; // 능력이 없는 백엔드는 이 디스패치를 쓰지 않는다(능력 질의로 가린 것이지 실패가 아니다)
+                pso = _pDevice->getResourceFactory()->createComputePipelineState( ( engineDefaultAssets.*info._pDefaultShader ).c_str() );
             }
             else
             {
                 pso = createPSOForPassType( passType );
             }
-            if ( pso != 0 )
-                _pPSOCache->setEnginePSO( passType, pso );
+            // 다른 패스의 PSO 로 대신하지 않는다 — 이 패스는 그리지 않고(drawFullscreen 은 PSO 없이 그리지 않는다) 여기서 이유를 한 번 남긴다.
+            if ( pso == 0 )
+            {
+                SW_LOG_ERROR( "Engine PSO for pass %# could not be created (shader '%#') - the pass draws nothing", passType,
+                              ( engineDefaultAssets.*info._pDefaultShader ).c_str() );
+                continue;
+            }
+            _pPSOCache->setEnginePSO( passType, pso );
         }
 
         // 씬 메시는 **인다이렉트 드로우 하나로만** 그린다(컬링 · 정렬 · 인스턴스 애니메이션이 모두 그 경로에 붙어 있다).
@@ -209,15 +216,6 @@ namespace sw
         return _pPSOCache->findEnginePSO( passType );
     }
 
-    RHIPipelineStateHandle FrameRenderer::findPassPSO( RenderPassType passType ) const
-    {
-        const RHIPipelineStateHandle pso = _pPSOCache->findEnginePSO( passType );
-        if ( pso != 0 )
-            return pso;
-        const RenderPassType fallbackType = getRenderPassTypeInfo( passType )._psoFallbackType;
-        return fallbackType != RenderPassType::Invalid ? _pPSOCache->findEnginePSO( fallbackType ) : 0;
-    }
-
     void FrameRenderer::ensureMaterialFallbackBuffers()
     {
         if ( _pDevice == nullptr || _pDevice->getResourceFactory() == nullptr )
@@ -290,7 +288,9 @@ namespace sw
                     continue;
                 const RHIFormat              arrRtvFormat[] = { format };
                 const RHIPipelineStateHandle pso            = createPSOForPassType( passType, arrRtvFormat );
-                // 실패해도 기록한다. 0 이면 부르는 쪽이 폴백으로 간다(Present 는 blit, Canvas 는 그리지 않는다).
+                // 주 출력에 그리는 PSO 다 — 없으면 화면에 아무것도 낼 수 없고, 다른 PSO · 복사로 대신하지 않으므로 여기서 멈춘다.
+                if ( pso == 0 )
+                    SW_FATAL( "Output pass %# could not create its PSO for target format %# - nothing can be presented", passType, static_cast<uint32>( format ) );
                 _pPSOCache->setOutputPSO( passType, format, pso );
             }
         }
@@ -302,17 +302,16 @@ namespace sw
         // 불린다. PSO 생성은 RHIHandleTable(락 없음)과 Vulkan 렌더 패스 캐시(락 없음)를 건드리므로, 같은
         // 레벨의 다른 패스가 드로우하며 그 표를 읽는 중이면 레이스다. assertRegistryMutableNow 는 bindless
         // 레지스트리만 감시해서 이 경우를 못 잡는다. 변종은 createOutputPSOVariants 가 셋업에서 만든다.
-        if ( targetFormat == RHIFormat::Unknown )
-            return getEnginePSO( passType );
+        // 포맷을 모르는 대상(장치가 백버퍼 포맷을 알리지 않음)은 셋업이 만든 엔진 PSO(기본 출력 포맷)를 쓴다 — 셋업 목록의 대체가 아니라 그 대상의 PSO 다.
         RHIPipelineStateHandle pso{ 0 };
-        if ( _pPSOCache->findOutputPSO( passType, targetFormat, pso ) )
-            return pso;
-
-        if ( _bOutputPSOMissingLogged.exchange( 1 ) == 0 )
-        {
-            SW_LOG_ERROR( "Output pass %# has no PSO for target format %# from setup - add the format to createOutputPSOVariants", passType,
-                          static_cast<uint32>( targetFormat ) );
-        }
-        return getEnginePSO( passType );
+        if ( targetFormat == RHIFormat::Unknown )
+            pso = getEnginePSO( passType );
+        else if ( _pPSOCache->findOutputPSO( passType, targetFormat, pso ) == false )
+            pso = 0;
+        const bool bFound = pso != 0;
+        // 셋업에 없는 포맷의 대상은 설정 결함이다 — 다른 포맷의 PSO · 복사로 대신 그리지 않고 멈춘다(createOutputPSOVariants 의 목록에 더한다).
+        if ( bFound == false )
+            SW_FATAL( "Output pass %# has no PSO for target format %# from setup - add the format to createOutputPSOVariants", passType, static_cast<uint32>( targetFormat ) );
+        return pso;
     }
 } // namespace sw
