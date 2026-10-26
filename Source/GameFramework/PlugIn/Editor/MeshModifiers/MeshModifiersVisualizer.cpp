@@ -18,6 +18,7 @@
 
 #include "Editor/Common/EditorSubsystem.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
+#include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
@@ -711,7 +712,7 @@ namespace sw::editor
                     }
                     if ( hoveredHandle < 0 && set.isValid() )
                         hoveredPoint = ModifierGizmoLogic::findPointOnRay( ray._origin, ray._direction, set._listWorld, frame._worldSize * kPointPickRatio );
-                    if ( ImGui::IsMouseClicked( ImGuiMouseButton_Left ) )
+                    if ( EditorInputGUI::readPointer().wasPressed( EditorMouseButton::Left ) )
                     {
                         if ( hoveredHandle >= 0 )
                         {

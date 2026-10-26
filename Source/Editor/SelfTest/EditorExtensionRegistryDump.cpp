@@ -7,9 +7,9 @@
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
-#include "Editor/Common/GUI/EditorPopupManager.h"
 #include "Editor/Common/GUI/EditorStatusBar.h"
 #include "Editor/Common/Input/EditorInputActions.h"
+#include "Editor/Common/Input/EditorPopupManager.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorFrameStep.h"
 #include "Editor/Panels/Inspector/Model/InspectorComponentManager.h"

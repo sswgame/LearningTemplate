@@ -4,7 +4,7 @@
  */
 #include "pch.h"
 
-#include "Editor/Common/GUI/EditorCommandGUI.h"
+#include "Editor/Common/Input/EditorCommandGUI.h"
 
 #include "Core/File/FileUtil.h"
 #include "Core/String/fixed_string.h"

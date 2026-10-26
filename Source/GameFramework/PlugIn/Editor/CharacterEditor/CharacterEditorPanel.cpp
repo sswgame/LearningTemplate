@@ -11,6 +11,7 @@
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorTextExtentImGui.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
@@ -1087,7 +1088,7 @@ namespace sw::editor
         const bool bOverridden = _pose.hasOverride( bone );
         ImGui::PushID( static_cast<int32>( boneIndex ) );
         const bool bOpen = ImGui::TreeNodeEx( bone.c_str(), flags, "%s%s", bone.c_str(), bOverridden ? " *" : "" );
-        if ( ImGui::IsItemClicked() )
+        if ( EditorInputGUI::wasItemClicked() )
             _selectedBone = bone;
         if ( boneIndex == 0 )
             EditorSelfTestMarks::note( "charactereditor.bone.root" );

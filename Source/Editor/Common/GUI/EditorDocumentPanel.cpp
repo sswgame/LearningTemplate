@@ -7,6 +7,7 @@
 
 #include "Editor/Common/Commands/Asset/EditorResourceIndex.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -58,7 +59,7 @@ namespace sw::editor
             }
             std::sort( _listOpenCandidate.begin(), _listOpenCandidate.end() );
             _openFilter.clear();
-            ImGui::OpenPopup( "##DocumentOpen" );
+            EditorInputGUI::openPopup( "##DocumentOpen" );
         }
         EditorSelfTestMarks::note( markOpen.c_str() );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "DocumentOpen" ) );
@@ -130,7 +131,7 @@ namespace sw::editor
     void EditorDocumentPanel::drawUnsavedDocumentPopup()
     {
         if ( ImGui::IsPopupOpen( "##UnsavedDocumentSwitch" ) == false )
-            ImGui::OpenPopup( "##UnsavedDocumentSwitch" );
+            EditorInputGUI::openPopup( "##UnsavedDocumentSwitch" );
         const EditorUnsavedChoice choice =
             EditorWidgets::drawUnsavedChangesModal( "##UnsavedDocumentSwitch",
                                                     "This document has unsaved changes. Switch anyway?" );

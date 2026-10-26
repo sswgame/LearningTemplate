@@ -7,6 +7,7 @@
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorDockLayout.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
@@ -426,7 +427,7 @@ namespace sw::editor
         if ( bVisible == false )
             return false;
 
-        if ( ImGui::IsKeyPressed( ImGuiKey_Escape ) && desc._pOpen != nullptr )
+        if ( EditorInputGUI::wasCancelPressed() && desc._pOpen != nullptr )
             *desc._pOpen = false;
 
         if ( desc._pFocusOnOpen != nullptr && *desc._pFocusOnOpen == true )

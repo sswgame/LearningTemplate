@@ -171,7 +171,7 @@ namespace sw::editor
 
         ImGui::SameLine( availX - lineHeight * 0.5f );
         if ( ImGui::Button( "+", ImVec2{ lineHeight, lineHeight } ) )
-            ImGui::OpenPopup( "ComponentSettings" );
+            EditorInputGUI::openPopup( "ComponentSettings" );
         drawTooltip( SW_LOCKEY( "EdCommon", "ComponentCardOptions" ) );
 
         if ( ImGui::BeginPopup( "ComponentSettings" ) )

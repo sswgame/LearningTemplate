@@ -194,7 +194,7 @@ ImGui 의 `BeginPopupContextItem` · `BeginPopupContextWindow` 는 **뗄 때** �
 |---|---|---|
 | `Common/Backend/ImGuiKeyForward.cpp` | 8 | KD 109,111,113,115,125 · KP 134,149,151 — OS 입력 전달, 허용 |
 | `Common/GUI/EditorChrome.cpp` | 1 | KP 399 |
-| `Common/GUI/EditorCommandGUI.cpp` | 2 | KP 551,641 — 계층 자신, 허용 |
+| `Common/Input/EditorCommandGUI.cpp` | 2 | KP 551,641 — 계층 자신, 허용 |
 | `Common/GUI/EditorDocumentPanel.cpp` | 2 | OP 61,133 |
 | `Common/GUI/EditorMenuBar.cpp` | 1 | OP 348 |
 | `Common/GUI/EditorPlayToolbar.cpp` | 2 | IC 216 · OP 263 |
@@ -292,7 +292,7 @@ ImGui 의 `BeginPopupContextItem` · `BeginPopupContextWindow` 는 **뗄 때** �
    다른 후보 둘은 버렸습니다: 패널이 `imgui.h` 를 include 하지 못하게 하는 래퍼는 패널이 그리기 함수 수백 개를 다 감싸야 하고, 패널에 액션 핸들만 주는 인터페이스는 같은 이유로 그리기를 막는다.
 2. 린트: 함수 재선언으로 막지 못하는 `ImGuiIO` 입력 필드 읽기(`io.KeyCtrl` · `io.MouseDown` · `io.MouseDelta` · `io.MouseWheel` …)만 셉니다. **형식으로 못 막는 이유**: 같은 `ImGui::GetIO()` 가 입력이 아닌 필드(`DisplaySize` · `Fonts` · `DeltaTime` · `ConfigFlags`)에도 쓰여 함수 하나를 막으면 그것까지 막고, 구조체 필드는 `[[deprecated]]` 로 다시 선언할 수 없다. 기준선은 전체 건수(`[baseline] total`, 지금 87 — 10-2 의 75 보다 넓게 `MousePos` 까지 센다)이고 늘면 실패, 줄면 낮춥니다. 커밋 훅은 추가한 줄의 읽기를 바로 막으므로 파일별 상한은 두지 않았습니다(기존 기준선 게이트 틀 `BaselineSourceGate` 를 그대로 쓴다). 허용은 이유와 함께: `Common/Backend`(OS 입력을 ImGui 로 넣는 곳), `Common/Input`(어댑터 자신), `Panels/Scene/GameViewPanel.cpp`(게임으로 넘기는 전달). 이유를 쓸 수 없는 규칙은 두지 않습니다.
 
-**폴더 이동과의 순서.** 새 파일은 이동이 건드리지 않는 곳에 둡니다: ImGui 없는 형식은 `Common/Commands`, ImGui 어댑터는 새 폴더 `Common/Input`(층 표 `GenerateEditorLayers.toml` 에 티어 4 한 줄). 기존 세 파일(`Common/GUI/EditorCommandGUI.*` · `EditorContextMenuExtension.h` · `EditorPopupManager.*`)을 `Common/Input` 으로 옮기면 `Viewport/EditorViewportClient.cpp` · `EditorViewportToolbar.cpp` 의 include 도 바뀌므로 **옮김은 I3f(뷰포트)와 같은 작업자가** 합니다.
+**폴더 이동과의 순서.** 새 파일은 이동이 건드리지 않는 곳에 둡니다: ImGui 없는 형식은 `Common/Commands`, ImGui 어댑터는 새 폴더 `Common/Input`(층 표 `GenerateEditorLayers.toml` 에 티어 4 한 줄). 기존 세 파일(`Common/Input/EditorCommandGUI.*` · `EditorContextMenuExtension.h` · `EditorPopupManager.*`)을 `Common/Input` 으로 옮기면 `Viewport/EditorViewportClient.cpp` · `EditorViewportToolbar.cpp` 의 include 도 바뀌므로 **옮김은 I3f(뷰포트)와 같은 작업자가** 합니다.
 
 ### 10-5. 구현 단위와 순서
 
@@ -310,7 +310,7 @@ ImGui 의 `BeginPopupContextItem` · `BeginPopupContextWindow` 는 **뗄 때** �
 |---|---|---|---|
 | IE 엔진 입력 맵 | `Source/Engine/Input/Map/`(`InputMap.*` · 평가 · 직렬화), `InputManager.*`(E4 의 포커스 주인), `Resource/engine/input/` 스키마 문서, EngineTest | 10-4 의 E1 ~ E4. 읽기 · 쓰기 · 사용자 재배치 · `InputMapPanel` 이 새 속성을 함께 다룬다 | — |
 | I0 명령 형식 | `Common/Commands/`(`EditorCommandTarget.h` · `EditorDragPayload.h` 새로, `EditorCommandRegistry.*`), EditorTest 새 테스트 | 대상을 받는 동작 · 켜짐, 맥락 메뉴 칸, 페이로드 형식. ImGui 없이 테스트. 단축키 칸은 I1 이 액션 이름으로 바꿀 때까지 둔다 | — |
-| I1 어댑터와 단축키 이전 | 새 `Common/Input/`(`EditorInputActions` · `EditorInputGUI`), `GenerateEditorLayers.toml` 한 줄, 새 `Resource/editor/input/editor.input.xml`, `Common/GUI/EditorCommandGUI.cpp`(표의 단축키 칸 → 액션 이름, `processHotkeys` 삭제), `Common/GUI/EditorPanelManager.cpp`(포커스 창 → 레이어; 패널을 그리는 곳은 `EditorPanelHost` 가 아니라 `EditorPanelManager::drawOpenPanels` 다), `SW_EDITOR_COMMAND` 를 쓰는 등록 줄 전부(에디터 14 파일 · 플러그인 6 파일)와 확장의 `*.input.xml`, `Common/Commands/Dev/EditorShortcutOverrides.*` 삭제, `Panels/Settings/ShortcutsPanel.*`(입력 맵 재배치로) | `editor.input.xml` 과 명령 ↔ 액션 연결, `drawContextMenuFor`, 끌기 원본 · 받기. 옛 단축키 형식 · `Shortcuts.json` 은 읽지 않는다 | IE, I0 |
+| I1 어댑터와 단축키 이전 | 새 `Common/Input/`(`EditorInputActions` · `EditorInputGUI`), `GenerateEditorLayers.toml` 한 줄, 새 `Resource/editor/input/editor.input.xml`, `Common/Input/EditorCommandGUI.cpp`(표의 단축키 칸 → 액션 이름, `processHotkeys` 삭제), `Common/GUI/EditorPanelManager.cpp`(포커스 창 → 레이어; 패널을 그리는 곳은 `EditorPanelHost` 가 아니라 `EditorPanelManager::drawOpenPanels` 다), `SW_EDITOR_COMMAND` 를 쓰는 등록 줄 전부(에디터 14 파일 · 플러그인 6 파일)와 확장의 `*.input.xml`, `Common/Commands/Dev/EditorShortcutOverrides.*` 삭제, `Panels/Settings/ShortcutsPanel.*`(입력 맵 재배치로) | `editor.input.xml` 과 명령 ↔ 액션 연결, `drawContextMenuFor`, 끌기 원본 · 받기. 옛 단축키 형식 · `Shortcuts.json` 은 읽지 않는다 | IE, I0 |
 | I2 형식으로 막기 | 새 `Common/Input/EditorInputBan.h`, `Source/Editor/CMakeLists.txt`(티어 5 · 6 View 부분의 강제 include 와 경고 → 오류, 처음엔 꺼 둠), 그 뒤 `Scripts/lint/gate/CheckEditorInputCalls.py` · 규칙 toml · Python 테스트 | 10-4 "막는 방법" 의 1 을 먼저, 2(린트)는 `ImGuiIO` 입력 필드 읽기만 — 규칙마다 형식으로 못 막는 이유 한 줄 | I0 |
 | I3a 장면 | `Panels/Scene/` | Hierarchy 메뉴 · 단축키 · 끌어 놓기를 계층으로(`EditorInputGUI::drawContextMenuFor` · `editor.input.xml` 의 `Editor.Panel.hierarchy` 레이어). U4 의 장면 오브젝트 명령을 메뉴에 건다. 확장 항목(`SW_EDITOR_CONTEXT_MENU_ENTRY`)을 맥락 메뉴 칸이 있는 `SW_EDITOR_COMMAND` 로 옮긴다(I3b · I3f 와 함께 — 셋 다 쓰는 곳이 바뀐 뒤 옛 헤더를 지운다) | I1, U4 |
 | I3b 콘텐츠 | `Panels/ContentBrowser/` | 에셋 명령(Rename · Duplicate · Delete)을 Asset 범위 명령으로, 빈 곳 메뉴, 에셋 id 페이로드 | I1 |

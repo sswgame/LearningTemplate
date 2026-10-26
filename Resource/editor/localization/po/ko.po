@@ -296,7 +296,7 @@ msgctxt "EdCommon.NotifyBugReportTitle"
 msgid "Bug report"
 msgstr "버그 리포트"
 
-#: Source/Editor/Common/GUI/EditorCommandGUI.cpp
+#: Source/Editor/Common/Input/EditorCommandGUI.cpp
 msgctxt "EdCommon.NotifyClipboardEmpty"
 msgid "Clipboard is empty"
 msgstr "클립보드가 비어 있습니다"
@@ -326,7 +326,7 @@ msgctxt "EdCommon.NotifyNewScene"
 msgid "New scene"
 msgstr "새 씬"
 
-#: Source/Editor/Common/GUI/EditorCommandGUI.cpp
+#: Source/Editor/Common/Input/EditorCommandGUI.cpp
 msgctxt "EdCommon.NotifyPasteTitle"
 msgid "Paste"
 msgstr "붙여넣기"
@@ -346,12 +346,12 @@ msgctxt "EdCommon.NotifyPlayNewWindowUnsaved"
 msgid "Unsaved scene edits are not in the new window"
 msgstr "저장하지 않은 씬 편집은 새 창에 없습니다"
 
-#: Source/Editor/Common/GUI/EditorCommandGUI.cpp
+#: Source/Editor/Common/Input/EditorCommandGUI.cpp
 msgctxt "EdCommon.NotifyPlayTitle"
 msgid "Play"
 msgstr "플레이"
 
-#: Source/Editor/Common/GUI/EditorCommandGUI.cpp
+#: Source/Editor/Common/Input/EditorCommandGUI.cpp
 msgctxt "EdCommon.NotifyPlayUnsaved"
 msgid "The scene has unsaved changes. Use Play on the toolbar to confirm."
 msgstr "씬에 저장하지 않은 변경이 있습니다. 툴바의 Play 로 확인하십시오."
@@ -371,17 +371,17 @@ msgctxt "EdCommon.NotifyPrefabTitle"
 msgid "Prefab"
 msgstr "프리팹"
 
-#: Source/Editor/Common/GUI/EditorCommandGUI.cpp
+#: Source/Editor/Common/Input/EditorCommandGUI.cpp
 msgctxt "EdCommon.NotifyPresetApplyFailed"
 msgid "Failed to apply the preset to this component"
 msgstr "이 컴포넌트에 프리셋을 적용하지 못했습니다"
 
-#: Source/Editor/Common/GUI/EditorCommandGUI.cpp
+#: Source/Editor/Common/Input/EditorCommandGUI.cpp
 msgctxt "EdCommon.NotifyPresetTitle"
 msgid "Preset"
 msgstr "프리셋"
 
-#: Source/Editor/Common/GUI/EditorCommandGUI.cpp
+#: Source/Editor/Common/Input/EditorCommandGUI.cpp
 msgctxt "EdCommon.NotifyPresetWriteFailed"
 msgid "Failed to write the preset file"
 msgstr "프리셋 파일을 쓰지 못했습니다"
@@ -436,12 +436,12 @@ msgctxt "EdCommon.NotifyScreenshotTitle"
 msgid "Screenshot"
 msgstr "스크린샷"
 
-#: Source/Editor/Common/GUI/EditorCommandGUI.cpp
+#: Source/Editor/Common/Input/EditorCommandGUI.cpp
 msgctxt "EdCommon.NotifySelectComponent"
 msgid "Select a component first"
 msgstr "먼저 컴포넌트를 고르십시오"
 
-#: Source/Editor/Common/GUI/EditorCommandGUI.cpp
+#: Source/Editor/Common/Input/EditorCommandGUI.cpp
 msgctxt "EdCommon.NotifySelectObject"
 msgid "Select an object first"
 msgstr "먼저 오브젝트를 고르십시오"

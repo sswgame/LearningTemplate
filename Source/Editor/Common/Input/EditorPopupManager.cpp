@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Common/GUI/EditorPopupManager.h"
+#include "Editor/Common/Input/EditorPopupManager.h"
 
 #include "Core/Container/VectorUtil.h"
 #include "Core/Module/ModuleUnloadListener.h"
