@@ -117,38 +117,7 @@ namespace sw
                 if ( ( UIStyleFieldTable::getFlags( field ) & UIStyleFieldTable::kInherited ) == 0 || pParentStyle->has( field ) == false )
                     continue;
                 style->_setMask |= UIStyleFieldTable::makeBit( field );
-                switch ( field )
-                {
-                    case UIStyleField::Font:
-                    {
-                        style->_value._font = pParentStyle->_value._font;
-                        break;
-                    }
-                    case UIStyleField::FontSize:
-                    {
-                        style->_value._fontSize = pParentStyle->_value._fontSize;
-                        break;
-                    }
-                    case UIStyleField::TextColor:
-                    {
-                        style->_value._textColor = pParentStyle->_value._textColor;
-                        break;
-                    }
-                    case UIStyleField::TextOutlineColor:
-                    {
-                        style->_value._textOutlineColor = pParentStyle->_value._textOutlineColor;
-                        break;
-                    }
-                    case UIStyleField::TextOutlineWidth:
-                    {
-                        style->_value._textOutlineWidth = pParentStyle->_value._textOutlineWidth;
-                        break;
-                    }
-                    default:
-                    {
-                        break;
-                    }
-                }
+                UIStyleFieldTable::copyField( pParentStyle->_value, field, style->_value ); // 어느 필드를 물려받는지는 표의 kInherited 하나가 정한다
             }
         }
         for ( const uint32 ruleIndex : _listMatchScratch )

@@ -5,7 +5,6 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
-#include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -113,23 +112,11 @@ namespace sw
         , _subtitles{ *this }
         , _tooltips{ *this }
         , _viewport{}
-        , _canvas{}
-        , _canvasScratch{}
-        , _paintScratch{}
-        , _canvasRevision{ 1 }
-        , _deferredGlyphCount{ 0 }
-        , _listPaintedTree{}
-        , _bLastCanvasReusable{ SW_FALSE }
-        , _arrLayerHideCount{}
-        , _hiddenLayers{ UILayerMask::None }
-        , _paintedHiddenLayers{ UILayerMask::None }
+        , _paintState{}
+        , _markers{}
         , _activeScreen{ kInvalidUIScreenHandle }
-        , _markerScreen{ kInvalidUIScreenHandle }
         , _accessibleFocusScreen{ kInvalidUIScreenHandle }
         , _accessibleFocusWidget{ kInvalidWidgetID }
-        , _listMarkerAnchor{}
-        , _listCanvasAnchor{}
-        , _listFreeMarkerAnchor{}
         , _listWidgetComponent{}
         , _listTickScratch{}
         , _listSwitchScreen{}
@@ -181,10 +168,7 @@ namespace sw
             pComponent->forgetUISystem();
         }
         _listWidgetComponent.clear();
-        _markerScreen = kInvalidUIScreenHandle;
-        _listMarkerAnchor.clear();
-        _listFreeMarkerAnchor.clear();
-        _listCanvasAnchor.clear();
+        _markers.clear();
         _listSwitchScreen.clear();
         _input.getFocusManager().clearFocus();
         while ( _listScreen.empty() == false )
@@ -198,7 +182,7 @@ namespace sw
         _styleSheetCache.setReloadedHandler( {} );
         refreshActiveScreen();
         _input.shutdown();
-        _paintScratch = UIPaintScratch{}; // 종료 누수 보고는 이 시스템의 소멸보다 먼저다 — 기동 뒤 자란 스크래치를 지금 놓는다
+        _paintState.releasePaintScratch(); // 종료 누수 보고는 이 시스템의 소멸보다 먼저다 — 기동 뒤 자란 스크래치를 지금 놓는다
         _textLayout.reset();
         _pFontService = nullptr;
     }
@@ -377,7 +361,7 @@ namespace sw
         screen->_pushOrder = _nextPushOrder++;
         screen->_bClosing  = SW_FALSE;
         // 숨김 요청이 걸린 레이어에 열리는 화면도 숨긴다(포토 모드 중에 뜬 알림이 그려지지 않게).
-        screen->_bHiddenByLayer = UILayerUtil::contains( _hiddenLayers, screen->_desc._layer ) ? SW_TRUE : SW_FALSE;
+        screen->_bHiddenByLayer = UILayerUtil::contains( _paintState.getHiddenLayers(), screen->_desc._layer ) ? SW_TRUE : SW_FALSE;
         if ( screen->_animationPlayer.findAnimation( hashed_string( UIAnimation::kOpenName ) ) != nullptr )
             (void)screen->_animationPlayer.play( hashed_string( UIAnimation::kOpenName ) );
         // 같은 레이어의 끝(그 레이어에서 맨 위)에 끼운다.
@@ -958,7 +942,7 @@ namespace sw
     UIPaintContext UISystem::makePaintContext() const
     {
         UIPaintContext context{};
-        context._pScratch      = &_paintScratch;
+        context._pScratch      = _paintState.getPaintScratch();
         context._pTextLayout   = _textLayout.get();
         context._uiScale       = _viewport._uiScale > 0.0f ? _viewport._uiScale : 1.0f;
         context._textScale     = gv_uiTextScale > 0.0f ? static_cast<float32>( gv_uiTextScale ) : 1.0f;
@@ -979,7 +963,7 @@ namespace sw
     {
         if ( widget == nullptr )
             return kInvalidWidgetID;
-        UIScreen* pMarkers = findScreen( _markerScreen );
+        UIScreen* pMarkers = findScreen( _markers.getScreen() );
         if ( pMarkers == nullptr || pMarkers->isClosing() )
         {
             unique_ptr<CanvasPanel> root = make_unique<CanvasPanel>();
@@ -988,73 +972,41 @@ namespace sw
             desc._layer       = UILayer::HUD;
             desc._bTakesFocus = false;
             desc._bShowCursor = false;
-            _markerScreen     = pushScreen( sw::make_unique<UIScreen>( desc, std::move( root ) ) );
-            pMarkers          = findScreen( _markerScreen );
+            _markers.setScreen( pushScreen( sw::make_unique<UIScreen>( desc, std::move( root ) ) ) );
+            pMarkers = findScreen( _markers.getScreen() );
         }
         PanelWidget* pRoot = castTo<PanelWidget>( pMarkers->getTree().getRoot() );
         if ( pRoot == nullptr )
             return kInvalidWidgetID;
         // 앵커 번호를 준다(뗀 마커의 번호부터). 첫 위치는 붙인 쪽이 정한다 — 그 전에는 위젯이 접혀 있다.
-        uint32 anchor = static_cast<uint32>( _listMarkerAnchor.size() );
-        if ( _listFreeMarkerAnchor.empty() == false )
-        {
-            anchor = _listFreeMarkerAnchor.back();
-            _listFreeMarkerAnchor.pop_back();
-            _listMarkerAnchor[anchor] = CanvasAnchor{};
-        }
-        else
-        {
-            _listMarkerAnchor.emplace_back();
-        }
-        widget->setPaintAnchor( anchor );
+        widget->setPaintAnchor( _markers.allocateAnchor() );
         return pRoot->addChild( std::move( widget ) )->getID();
     }
 
     void UISystem::removeScreenMarker( WidgetID widget )
     {
-        UIScreen*    pMarkers = findScreen( _markerScreen );
+        UIScreen*    pMarkers = findScreen( _markers.getScreen() );
         Widget*      pWidget  = pMarkers != nullptr ? pMarkers->getTree().findWidgetByID( widget ) : nullptr;
         PanelWidget* pRoot    = pWidget != nullptr ? pWidget->getParent() : nullptr;
         if ( pRoot == nullptr )
             return;
-        _listFreeMarkerAnchor.push_back( pWidget->getPaintAnchor() );
+        _markers.releaseAnchor( pWidget->getPaintAnchor() );
         (void)pRoot->removeChild( pWidget ); // 부모에서 찾은 위젯이므로 항상 제거된다
         if ( pRoot->getChildCount() == 0 )
         {
-            closeScreen( _markerScreen );
-            _markerScreen = kInvalidUIScreenHandle;
-            _listMarkerAnchor.clear();
-            _listFreeMarkerAnchor.clear();
+            closeScreen( _markers.getScreen() );
+            _markers.forgetScreen();
         }
     }
 
     void UISystem::setScreenMarkerAnchor( uint32 anchor, const float2& position, float32 scale )
     {
-        SW_ASSERT( anchor < _listMarkerAnchor.size() ); // 마커 위젯이 살아 있는 동안만 부른다(번호는 `addScreenMarker` 가 줬다)
-        if ( anchor >= _listMarkerAnchor.size() )
-            return;
-        CanvasAnchor& entry = _listMarkerAnchor[anchor];
-        entry._position     = position; // UI 단위 — 물리 픽셀은 그리기 단계가 그 프레임 배율로 바꾼다(`publishCanvasAnchors`)
-        entry._scale        = scale;
-    }
-
-    void UISystem::publishCanvasAnchors()
-    {
-        // 앵커는 물리 픽셀이다(칠하기와 같은 배율). 정수로 맞춰야 앵커 기준으로 맞춘 사각형 가장자리가 픽셀에 남는다(글자가 흐려지지 않는다).
-        const float32 uiScale = _viewport._uiScale > 0.0f ? _viewport._uiScale : 1.0f;
-        _listCanvasAnchor.resize( _listMarkerAnchor.size() );
-        for ( size_t index = 0; index < _listMarkerAnchor.size(); ++index )
-        {
-            const CanvasAnchor& source = _listMarkerAnchor[index];
-            CanvasAnchor&       target = _listCanvasAnchor[index];
-            target._position           = float2{ MathUtil::round( source._position._x * uiScale ), MathUtil::round( source._position._y * uiScale ) };
-            target._scale              = source._scale;
-        }
+        _markers.setAnchor( anchor, position, scale );
     }
 
     Widget* UISystem::findScreenMarker( WidgetID widget ) const
     {
-        const UIScreen* pMarkers = findScreen( _markerScreen );
+        const UIScreen* pMarkers = findScreen( _markers.getScreen() );
         return pMarkers != nullptr ? pMarkers->getTree().findWidgetByID( widget ) : nullptr;
     }
 
@@ -1251,36 +1203,19 @@ namespace sw
 
     void UISystem::addLayerHideRequest( UILayerMask layers )
     {
-        for ( uint32 layerIndex = 0; layerIndex < kUILayerCount; ++layerIndex )
-        {
-            if ( UILayerUtil::contains( layers, static_cast<UILayer>( layerIndex ) ) )
-                ++_arrLayerHideCount[layerIndex];
-        }
+        _paintState.addLayerHideRequest( layers );
         refreshHiddenLayers();
     }
 
     void UISystem::removeLayerHideRequest( UILayerMask layers )
     {
-        for ( uint32 layerIndex = 0; layerIndex < kUILayerCount; ++layerIndex )
-        {
-            if ( UILayerUtil::contains( layers, static_cast<UILayer>( layerIndex ) ) == false )
-                continue;
-            SW_ASSERT( _arrLayerHideCount[layerIndex] > 0 );
-            if ( _arrLayerHideCount[layerIndex] > 0 )
-                --_arrLayerHideCount[layerIndex];
-        }
+        _paintState.removeLayerHideRequest( layers );
         refreshHiddenLayers();
     }
 
     void UISystem::refreshHiddenLayers()
     {
-        UILayerMask hidden = UILayerMask::None;
-        for ( uint32 layerIndex = 0; layerIndex < kUILayerCount; ++layerIndex )
-        {
-            if ( _arrLayerHideCount[layerIndex] > 0 )
-                hidden = EnumUtil::setFlag( hidden, UILayerUtil::toMask( static_cast<UILayer>( layerIndex ) ) );
-        }
-        _hiddenLayers = hidden;
+        const UILayerMask hidden = _paintState.getHiddenLayers();
         for ( const unique_ptr<UIScreen>& screen : _listScreen )
         {
             screen->_bHiddenByLayer = UILayerUtil::contains( hidden, screen->_desc._layer ) ? SW_TRUE : SW_FALSE;
@@ -1293,32 +1228,29 @@ namespace sw
         const UIPaintContext context = makePaintContext();
         // 지난 프레임과 같은 화면이 같은 순서이고 트리마다 지난 출력을 그대로 낼 수 있으며 포커스 테두리가 없으면, 목록은 지난 것과 같다 —
         // 이어 붙이기와 같은 내용 비교(사각형 수 × 144 바이트씩)를 건너뛴다. 움직이는 화면 마커만 있는 프레임이 이 길이다(앵커만 바뀐다).
+        // 판정 순서(프레임 조건 → 트리마다 같은 트리인지 → `canReuseOutput`)를 바꾸지 않는다 — 재사용을 잘못 고르면 화면이 깜박인다.
         const bool bFocusRingMode = _input.getInputMode() == UIInputMode::Navigation && _input.getFocusManager().getFocusedTree() != nullptr;
-        bool       bUnchanged     = _bLastCanvasReusable == SW_TRUE && bFocusRingMode == false && _bOnScreenSuppressed == SW_FALSE &&
-                          _paintedHiddenLayers == _hiddenLayers && _listPaintedTree.size() == _listScreen.size() && _canvas._targetSize == _viewport._physicalSize;
+        const bool bReusableFrame = bFocusRingMode == false && _bOnScreenSuppressed == SW_FALSE;
+        bool       bUnchanged     = _paintState.canReuseLastCanvas( bReusableFrame, _listScreen.size(), _viewport._physicalSize );
         for ( size_t index = 0; bUnchanged && index < _listScreen.size(); ++index )
         {
             const WidgetTree& tree = _listScreen[index]->getTree();
-            bUnchanged             = _listPaintedTree[index] == &tree && UIPaintPass::canReuseOutput( tree, context, _viewport._physicalSize );
+            bUnchanged             = _paintState.isPaintedTree( index, tree ) && UIPaintPass::canReuseOutput( tree, context, _viewport._physicalSize );
         }
         if ( bUnchanged )
         {
-            _deferredGlyphCount = 0; // 미룬 위젯은 다시 무효화되므로 지난 출력을 재사용할 수 있었다면 미룬 글리프가 없다
+            _paintState.markLastCanvasReused();
             SW_PROFILE_COUNT( "UI.PaintWidgets", 0 );
-            SW_PROFILE_COUNT( "UI.CanvasQuads", _canvas._listQuad.size() );
-            publishCanvasAnchors();
+            SW_PROFILE_COUNT( "UI.CanvasQuads", _paintState.getCanvas()._listQuad.size() );
+            _markers.publishCanvasAnchors( context._uiScale );
             return;
         }
-        _listPaintedTree.clear();
+        CanvasDrawList& target = _paintState.beginPaint( bReusableFrame, _viewport._physicalSize );
         for ( const unique_ptr<UIScreen>& screen : _listScreen )
         {
-            _listPaintedTree.push_back( &screen->getTree() );
+            _paintState.addPaintedTree( screen->getTree() );
         }
-        _bLastCanvasReusable = ( bFocusRingMode == false && _bOnScreenSuppressed == SW_FALSE ) ? SW_TRUE : SW_FALSE;
-        _paintedHiddenLayers = _hiddenLayers;
-        _canvasScratch.clear();
-        _canvasScratch._targetSize = _viewport._physicalSize;
-        CanvasPainter painter( _canvasScratch, context._uiScale );
+        CanvasPainter painter( target, context._uiScale );
         uint32        paintedCount = 0;
         for ( const unique_ptr<UIScreen>& screen : _listScreen )
         {
@@ -1327,7 +1259,7 @@ namespace sw
             if ( screen->isHiddenByLayer() )
                 continue; // 레이어 숨김 요청(`addLayerHideRequest`)이 가린 화면 — 포커스 테두리도 그리지 않는다
             WidgetTree& tree = screen->getTree();
-            paintedCount += UIPaintPass::paint( tree, context, painter, _canvasScratch );
+            paintedCount += UIPaintPass::paint( tree, context, painter, target );
             // 포커스 테두리는 패드나 키보드로 다룰 때만 그린다(언리얼 CommonUI, 콘솔 게임과 같다). 그 화면 위, 위 화면 아래에 놓는다.
             if ( _input.getInputMode() != UIInputMode::Navigation || _input.getFocusManager().getFocusedTree() != &tree )
                 continue;
@@ -1335,15 +1267,10 @@ namespace sw
             if ( pFocused != nullptr && pFocused->isVisible() )
                 UIPaintPass::paintFocusRing( *pFocused, painter );
         }
-        _deferredGlyphCount = painter.getDeferredGlyphCount();
         SW_PROFILE_COUNT( "UI.PaintWidgets", paintedCount );
-        SW_PROFILE_COUNT( "UI.CanvasQuads", _canvasScratch._listQuad.size() );
-        publishCanvasAnchors(); // 앵커는 사각형과 따로 프레임마다 낸다(움직인 마커가 그리기 목록 번호를 올리지 않는다)
-        if ( _canvasScratch.isSameContent( _canvas ) )
-            return;
-        // 바뀐 목록은 맞바꾼다(복사하지 않는다). 다음 프레임은 지난 목록을 비우고 칠하기 목록으로 쓴다.
-        std::swap( _canvas, _canvasScratch );
-        ++_canvasRevision;
+        SW_PROFILE_COUNT( "UI.CanvasQuads", target._listQuad.size() );
+        _markers.publishCanvasAnchors( context._uiScale ); // 앵커는 사각형과 따로 프레임마다 낸다(움직인 마커가 그리기 목록 번호를 올리지 않는다)
+        _paintState.endPaint( painter.getDeferredGlyphCount() );
     }
 
     UIViewport UISystem::computeViewport( const float2& physicalSize, float32 contentScale ) const

@@ -702,7 +702,7 @@ SW_TEST_CASE( UIStyleTest, ThemeFollowsUserSetting )
 
 /**
  * @brief [UIStyleTest] 한쪽만 정한 칸: 위젯이 자기 브러시로 그리던 색 ↔ 시트가 정한 색으로 옮겨 가고(들어갈 때도 나올 때도), 끝나면 다시 시트가 정하지 않은 상태로 돌아간다
- * @details 변이: `BorderPanel::tryGetOwnStyleField` 를 지우면 클래스 b 를 붙이는 프레임에 바로 파랑이 되어 진다(전환 없음).
+ * @details 변이: `BorderPanel::fillOwnStyle` 의 배경색 `set` 을 지우면 클래스 b 를 붙이는 프레임에 바로 파랑이 되어 진다(전환 없음).
  */
 SW_TEST_CASE( UIStyleTest, OwnValueTransitionsToAndFromSheetValue )
 {
@@ -735,7 +735,7 @@ SW_TEST_CASE( UIStyleTest, OwnValueTransitionsToAndFromSheetValue )
 
 /**
  * @brief [UIStyleTest] 한쪽만 정한 칸의 자기 값은 그 상태의 브러시다 — 시트 색에서 꺼진 버튼으로 바뀌면 기본 브러시가 아니라 꺼짐 브러시로 옮겨 간다
- * @details 변이: `BorderPanel::tryGetOwnStyleField` 가 상태를 보지 않고 기본 브러시(빨강)를 읽으면 중간값이 파랑 · 빨강 사이라 진다(끝나면 꺼짐 브러시로 튄다).
+ * @details 변이: `BorderPanel::fillOwnStyle` 이 상태를 보지 않고 기본 브러시(빨강)를 읽으면 중간값이 파랑 · 빨강 사이라 진다(끝나면 꺼짐 브러시로 튄다).
  */
 SW_TEST_CASE( UIStyleTest, OwnValueTransitionUsesTheStateBrush )
 {

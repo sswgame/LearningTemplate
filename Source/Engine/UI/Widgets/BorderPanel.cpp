@@ -49,58 +49,19 @@ namespace sw
         invalidate( WidgetDirty::kPaint );
     }
 
-    bool BorderPanel::tryGetOwnStyleField( UIStyleField field, uint32 styleStates, float32 ( &outArr )[4] ) const
+    void BorderPanel::fillOwnStyle( uint32 styleStates, UIOwnStyle& outStyle ) const
     {
+        PanelWidget::fillOwnStyle( styleStates, outStyle );
         // 칠하는 쪽(`computeEffectiveBrush`)과 같은 상태 브러시를 읽는다 — 기본 브러시를 읽으면 버튼의 호버 · 누름 · 꺼짐 색으로 옮겨 가지 않고 끝에 튄다.
         const UIBrush& background = selectBackgroundBrush( styleStates );
-        switch ( field )
-        {
-            case UIStyleField::BackgroundColor:
-            {
-                UIStyleFieldTable::storeFloat4( background._color, outArr );
-                return true;
-            }
-            case UIStyleField::CornerRadius:
-            {
-                UIStyleFieldTable::storeFloat4( background._cornerRadius, outArr );
-                return true;
-            }
-            case UIStyleField::BorderColor:
-            {
-                UIStyleFieldTable::storeFloat4( background._borderColor, outArr );
-                return true;
-            }
-            case UIStyleField::BorderWidth:
-            {
-                outArr[0] = background._borderWidth;
-                return true;
-            }
-            case UIStyleField::Padding:
-            {
-                UIStyleFieldTable::storeFloat4( _contentPadding, outArr );
-                return true;
-            }
-            case UIStyleField::ShadowColor:
-            {
-                UIStyleFieldTable::storeFloat4( _shadowColor, outArr );
-                return true;
-            }
-            case UIStyleField::ShadowOffset:
-            {
-                outArr[0] = _shadowOffset._x;
-                outArr[1] = _shadowOffset._y;
-                return true;
-            }
-            case UIStyleField::ShadowBlur:
-            {
-                outArr[0] = _shadowBlur;
-                return true;
-            }
-            default:
-            {
-                return Widget::tryGetOwnStyleField( field, styleStates, outArr );
-            }
-        }
+        outStyle.set<UIStyleField::BackgroundColor>( background._color );
+        outStyle.set<UIStyleField::CornerRadius>( background._cornerRadius );
+        outStyle.set<UIStyleField::BorderColor>( background._borderColor );
+        outStyle.set<UIStyleField::BorderWidth>( background._borderWidth );
+        outStyle.set<UIStyleField::Padding>( _contentPadding );
+        outStyle.set<UIStyleField::ShadowColor>( _shadowColor );
+        outStyle.set<UIStyleField::ShadowOffset>( _shadowOffset );
+        outStyle.set<UIStyleField::ShadowBlur>( _shadowBlur );
     }
 
     float4 BorderPanel::computeEffectivePadding() const

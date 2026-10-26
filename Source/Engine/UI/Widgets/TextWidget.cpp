@@ -104,35 +104,13 @@ namespace sw
         invalidateText();
     }
 
-    bool TextWidget::tryGetOwnStyleField( UIStyleField field, uint32 styleStates, float32 ( &outArr )[4] ) const
+    void TextWidget::fillOwnStyle( uint32 styleStates, UIOwnStyle& outStyle ) const
     {
-        switch ( field )
-        {
-            case UIStyleField::TextColor:
-            {
-                UIStyleFieldTable::storeFloat4( _color, outArr );
-                return true;
-            }
-            case UIStyleField::TextOutlineColor:
-            {
-                UIStyleFieldTable::storeFloat4( _outlineColor, outArr );
-                return true;
-            }
-            case UIStyleField::TextOutlineWidth:
-            {
-                outArr[0] = _outlineWidth;
-                return true;
-            }
-            case UIStyleField::FontSize:
-            {
-                outArr[0] = _style._fontSize;
-                return true;
-            }
-            default:
-            {
-                return Widget::tryGetOwnStyleField( field, styleStates, outArr );
-            }
-        }
+        Widget::fillOwnStyle( styleStates, outStyle );
+        outStyle.set<UIStyleField::TextColor>( _color );
+        outStyle.set<UIStyleField::TextOutlineColor>( _outlineColor );
+        outStyle.set<UIStyleField::TextOutlineWidth>( _outlineWidth );
+        outStyle.set<UIStyleField::FontSize>( _style._fontSize );
     }
 
     void TextWidget::onBoundPropertyChanged( const PropertyInfo& property )

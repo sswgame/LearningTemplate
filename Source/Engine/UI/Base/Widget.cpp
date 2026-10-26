@@ -208,12 +208,21 @@ namespace sw
         return _computedStyle.get();
     }
 
-    bool Widget::tryGetOwnStyleField( UIStyleField field, [[maybe_unused]] uint32 styleStates, float32 ( &outArr )[4] ) const
+    bool Widget::tryGetOwnStyleField( UIStyleField field, uint32 styleStates, float32 ( &outArr )[4] ) const
     {
-        if ( field != UIStyleField::Opacity )
+        if ( UIStyleFieldTable::getComponentCount( field ) == 0 )
             return false;
-        outArr[0] = 1.0f; // 스타일 불투명도는 위젯 불투명도에 곱해지는 값이라 정하지 않은 것은 1 이다
+        UIOwnStyle own{};
+        fillOwnStyle( styleStates, own );
+        if ( own.has( field ) == false )
+            return false;
+        UIStyleFieldTable::readComponents( own.getValue(), field, outArr );
         return true;
+    }
+
+    void Widget::fillOwnStyle( [[maybe_unused]] uint32 styleStates, UIOwnStyle& outStyle ) const
+    {
+        outStyle.set<UIStyleField::Opacity>( 1.0f ); // 스타일 불투명도는 위젯 불투명도에 곱해지는 값이라 정하지 않은 것은 1 이다
     }
 
     float32 Widget::computeEffectiveOpacity() const
