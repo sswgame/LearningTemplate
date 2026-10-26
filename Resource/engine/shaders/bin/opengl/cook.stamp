@@ -1,7 +1,6 @@
 SWCOOK 5
 02781f02d24a380c vfxmeshinstance.hlsl?vfxsimulate.hlsli
 02781f02d24a380c vfxsimulate.hlsl?vfxsimulate.hlsli
-02fc24d450e4a2cf postbloom.hlsl
 0665c8c8ad7fe443 meshskin.hlsl
 0da7435e1dab8e47 sprite2d.hlsl
 118f150e596ae6e4 meshmorph.hlsl?meshmodifier.hlsli
@@ -153,7 +152,9 @@ SWCOOK 5
 38b79117a2d60dd9 vfxsimulate.hlsl?binding.hlsli
 38b79117a2d60dd9 water.hlsl?binding.hlsli
 3c7fca5631ea73df modulepassdemo.hlsl
+3d5c6f4fabe834bc depthoffield.hlsl
 3e691d89baf20d78 fullscreenblit.hlsl
+44a2b8de139e14df motionblur.hlsl
 453ad8f7ad98310c deferredlighting.hlsl
 45b869a5e8eedd94 deferredlighting.hlsl?lightdata.hlsli
 45b869a5e8eedd94 foliage.hlsl?lightdata.hlsli
@@ -222,12 +223,9 @@ SWCOOK 5
 645e405601714e5d water.hlsl?instancedata.hlsli
 6467b9a46b5b5261 postchain.hlsl?postoutline.hlsli
 6467b9a46b5b5261 postoutline.hlsl?postoutline.hlsli
-647aa32cee9b70ca motionblur.hlsl
 6566357842c7cb63 toon.hlsl
 68882c330eb94775 terrain.hlsl
 6c54e559db7ee2fe fog.hlsl
-6d2e32c15e50b29c depthoffield.hlsl
-740ceafd0b7cc76f postoutline.hlsl
 7ecef0608b9f34f7 ssao.hlsl
 81d5c56d097d2ee6 postchain.hlsl?postgrade.hlsli
 81d5c56d097d2ee6 tonemap.hlsl?postgrade.hlsli
@@ -243,6 +241,7 @@ SWCOOK 5
 97497890b5995fbc autoexposure.hlsl
 97892aba7a9c3910 surfacelit.hlsl
 9bf2ae0ee30a014d vfxmeshinstance.hlsl
+a1d541df47d12bb0 postbloom.hlsl
 a5175c4a2459d369 sprite2dlit.hlsl?lighting2d.hlsli
 a5a381820ea5452d postchain.hlsl
 ab125ebf3dfe6980 sprite2dlit.hlsl
@@ -291,6 +290,7 @@ ac8ffd491b70c811 particle.hlsl
 b484bbfa333f977c water.hlsl?gerstner.hlsli
 b4ea471c0fcfbcdf occlusiontiles.hlsl
 b536aa3df9bce513 @toolchain
+b6f1b4e8f21de82c postoutline.hlsl
 bda31ef542e29853 deferredlighting.hlsl?lighting.hlsli
 bda31ef542e29853 foliage.hlsl?lighting.hlsli
 bda31ef542e29853 forwardlit.hlsl?lighting.hlsli

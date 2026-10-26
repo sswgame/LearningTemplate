@@ -8,7 +8,7 @@
  * 가까운 탭(앞의 물체)은 **자기** 반지름이 이 픽셀까지 닿을 때만 센다 — 초점이 맞은 앞 물체가 뒤의 흐린 배경으로 번져 후광이 생기지 않게 한다.
  * 흐린 앞 물체가 초점이 맞은 뒤 물체 위로 번지는 것(앞 번짐)은 중심 반지름이 0 이라 모으지 않는다 — 산란(scatter) 방식이 아니라서 생기는 한계다.
  *
- * 끈 뷰(조리개 0 · 직교 · 후처리 끔, g_CameraLens.w = 0)와 SW_PASS_FLAG_SKIP_POST 는 원본을 고른다. early-return 이 아니라 값 선택이다(postchain 과 같은 이유).
+ * 끈 뷰(조리개 0 · 직교 · 후처리 끔)는 이 패스를 기록하지 않고 출력 이름이 원본을 가리킨다(RenderPassTraitFlag::kBypassesToSource) — 여기서는 늘 흐린다.
  */
 #include "binding.hlsli"
 
@@ -82,9 +82,5 @@ float4 PSMain( PSInput input ) : SV_TARGET
         colorSum += PassTexture::sampleSource( tapUv ).rgb * weight;
         weightSum += weight;
     }
-    const float3 blurred = colorSum / weightSum;
-
-    const bool bSkipPost = ( g_Flags & SW_PASS_FLAG_SKIP_POST ) != 0u;
-    const bool bEnabled  = g_CameraLens.w > 0.5f && bSkipPost == false;
-    return float4( bEnabled ? blurred : source, 1.0f );
+    return float4( colorSum / weightSum, 1.0f );
 }
