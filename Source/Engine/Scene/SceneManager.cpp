@@ -95,7 +95,7 @@ namespace sw
         _asyncLoad->_bReady.store( false, std::memory_order_release );
         _asyncLoad->_bAccepting.store( true, std::memory_order_release );
         {
-            std::scoped_lock<mutex> lock{ _asyncLoad->_mutex };
+            ScopedLock<mutex> lock{ _asyncLoad->_mutex };
             _asyncLoad->_scene.reset();
         }
         _bLoadInFlight = false;
@@ -134,7 +134,7 @@ namespace sw
 
         if ( _asyncLoad != nullptr )
         {
-            std::scoped_lock<mutex> lock{ _asyncLoad->_mutex };
+            ScopedLock<mutex> lock{ _asyncLoad->_mutex };
             if ( _asyncLoad->_scene != nullptr )
                 _asyncLoad->_scene->shutdown();
             _asyncLoad->_scene.reset();
@@ -375,7 +375,7 @@ namespace sw
 
         const bool bSuccess = ( newScene != nullptr );
         {
-            std::scoped_lock<mutex> lock{ slot->_mutex };
+            ScopedLock<mutex> lock{ slot->_mutex };
             slot->_scene = std::move( newScene );
         }
         slot->_bReady.store( true, std::memory_order_release );
@@ -420,7 +420,7 @@ namespace sw
 
         if ( _asyncLoad != nullptr )
         {
-            std::scoped_lock<mutex> lock{ _asyncLoad->_mutex };
+            ScopedLock<mutex> lock{ _asyncLoad->_mutex };
             _asyncLoad->_scene.reset();
             _asyncLoad->_bReady.store( false, std::memory_order_release );
             _asyncLoad->_bAccepting.store( true, std::memory_order_release );
@@ -499,7 +499,7 @@ namespace sw
 
         unique_ptr<Scene> pendingScene;
         {
-            std::scoped_lock<mutex> lock{ _asyncLoad->_mutex };
+            ScopedLock<mutex> lock{ _asyncLoad->_mutex };
             pendingScene = std::move( _asyncLoad->_scene );
         }
         _asyncLoad->_bReady.store( false, std::memory_order_release );
