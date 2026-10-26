@@ -303,11 +303,10 @@ namespace sw
                 {
                     if ( joinStopwatch.getElapsedMilliseconds() >= static_cast<int64>( kShutdownJoinGraceMs ) )
                     {
-                        SW_LOG_ERROR( "Task manager shutdown: %# worker(s) did not exit within %# ms after stop - task '%#' blocks the join; aborting instead of hanging",
-                                      _runningWorkerCount.load( std::memory_order_acquire ), kShutdownJoinGraceMs, unfinishedTaskName );
+                        // 낮은 층 Error 는 stderr 에 동기로 먼저 쓰고 로그에도 남긴다 — 멈추기 전에 비동기 로그를 비운다.
+                        SW_LOW_LEVEL_ERROR( "Task manager shutdown: %u worker(s) did not exit within %u ms after stop - task '%s' blocks the join; aborting instead of hanging",
+                                            _runningWorkerCount.load( std::memory_order_acquire ), kShutdownJoinGraceMs, unfinishedTaskName.c_str() );
                         Logger::flushGlobalForCrash();
-                        std::fprintf( stderr, "[TaskManager] shutdown aborted: task '%s' never finished\n", unfinishedTaskName.c_str() );
-                        std::fflush( stderr );
                         std::abort();
                     }
                     std::this_thread::sleep_for( std::chrono::milliseconds( kPollMilliseconds ) );
