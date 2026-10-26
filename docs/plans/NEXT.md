@@ -4,7 +4,7 @@
 
 > 질문: 지금 어디까지 왔고, 다음 세션이 처음에 할 일은 무엇인가?
 > 독자: 새로 시작하는 세션(에이전트와 사람).
-> 결론: 통합 Q(브랜치 22 개)와 그 뒤 문서 요약 병합이 main 에 들어가 push 됐다. 첫 일은 아래 "남은 일" 14(통합 R) · 15(CI) · 1~3 이다. 끝난 통합의 일지는 `git log` 가 정본이라 여기 두지 않는다.
+> 결론: 통합 Q(브랜치 22 개)와 그 뒤 문서 요약 병합이 main 에 들어가 push 됐다. 첫 일은 아래 "남은 일" 15(CI) · 1~3 이다. 끝난 통합의 일지는 `git log` 가 정본이라 여기 두지 않는다.
 
 이 문서는 지금 상태 한 장만 둔다. 순서는 [Roadmap](Roadmap.md), 설계는 계획 문서(`py -3 -m Scripts plans`), 결정은 [결정 기록](../09_Decisions.md), 작업 방식은 [11 작업 방식](../11_Workflow.md)이다.
 
@@ -39,8 +39,7 @@
 | 11. 자동화 개선 후보 | 어림값 문턱 승격 도구(provisional 38 개) · 비에디터 게임 시나리오 묶음 실행(HostGpuIsolation H2 선행) · 고정 프레임 대기 계측. 행 감시의 교착 시나리오(`wallTimeoutSeconds="3"` + 게임 스레드 멈춤 → 종료 12 · `"hang": true`)를 `VerifyBatch.json` 항목으로 | [AutomationSplit](AutomationSplit.md) · [HostGpuIsolation](HostGpuIsolation.md) |
 | 12. 린트 후속 | `GenerateLintTargets` 에 `SKIP_RETURN_CODE 77`, `CheckNameReferences` 의 다른 걷기들이 건너뜀을 통과로 내는지 | — |
 | 13. 오래된 결함 후보 | 셰이더 쿠커가 옛 퍼뮤테이션 바이너리를 안 지움 · `--cook-shaders` 실패에도 0 · 손 불리언 파서(`StringUtil::tryParseBool`) · 이름 거절 레지스트리(`RegistrationList`) · `ResourceDataKindRegistry` 단일체 · 누수 탐지 2~4 단계 · 야간 Linux Load 실패 원인 · crowd `CrowdSharedUnits` 가설 셋(임시 로그 실험) · RHI 파일 후보(DX11 staging 합치기 · Vulkan 프레임 밖 펜스 대기 · DX11 Present 실패 로그 반복) | [LeakDetection](LeakDetection.md) · [ShooterCharacterIntegration](ShooterCharacterIntegration.md) · `Candidates-*.md` |
-| 14. 통합 R | `wt/cied`(`AssetDatabase::toRelativePath` 가 루트 밖 경로에 빈 문자열을 돌려주게 한 CI SIGSEGV 수정 + 작업 장부 `Scripts claims`)를 병합해 빌드 · 검증한다 — Shipping 에서 `EditorTest_Shard2` 통과를 본다 | — |
-| 15. CI 원인 재확인 | `MeshAssetTest.MeshComponentResolvesMeshAssetPath`(`TestMeshAsset.cpp:342`, `countAssetWaiters()==0` 기대에서 1)는 통합 Q 의 ab2f0cc71(컴포넌트 쪽 블록을 기다림)이 고쳤을 수 있다 — `ci-jobs --summary` 로 재실행 결과부터 본다. `TestSyntaxCheck.testMsvcAndGccFormats` 경로 구분자도 같이 | — |
+| 15. CI 원인 재확인 | `MeshAssetTest.MeshComponentResolvesMeshAssetPath`(`TestMeshAsset.cpp:342`, `countAssetWaiters()==0` 기대에서 1)는 통합 Q 의 ab2f0cc71(컴포넌트 쪽 블록을 기다림)이 고쳤을 수 있다 — `ci-jobs --summary` 로 재실행 결과부터 본다. `TestSyntaxCheck.testMsvcAndGccFormats` 경로 구분자는 247216e87 이 고쳤다(CI 재실행으로 확인) | — |
 | 16. 추적되는 컴파일 셰이더 | `Resource/engine/shaders` 의 `.spv` · `.dxil` · `.dxbc` 약 1만 3천 개(팩 770 MB)를 git 에 두는 근거를 `docs/decisions/` 에서 찾고, 없으면 생성물로 뺄지 정한다(되돌리기 어려운 삭제라 사용자 확인 뒤) | [결정 기록](../09_Decisions.md) |
 | 17. 남은 작업자 변경 | `wt/onlinekits`(`HpackHuffmanTable.h`) · `wt/wlserver`(`CheckX11Isolation.py`)의 커밋 안 한 변경을 보고 버릴지 살릴지 정한다(브랜치는 main 에 병합됨, 삭제는 사용자 확인 뒤) | — |
 | 18. 사용자 결정 | 말 모델(WildWestHorseMount W3)의 CC0 에셋 · 라이선스 사용 여부 | — |

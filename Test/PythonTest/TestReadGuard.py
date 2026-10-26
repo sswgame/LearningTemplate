@@ -68,7 +68,9 @@ class ReadGuardTest(unittest.TestCase):
         return subprocess.run([sys.executable, str(kHookDir / "ReadGuard.py")], input=stdin.encode("utf-8"), capture_output=True, check=False).returncode
 
     def testHookProcessExitCodes(self) -> None:
-        bigDoc = Path(__file__).resolve().parents[2] / "docs" / "09_Decisions.md"
+        # 문서가 줄어도 깨지지 않게 docs 에서 가장 큰 .md 를 쓴다(한도를 넘는 문서가 하나는 있어야 한다).
+        bigDoc = max((Path(__file__).resolve().parents[2] / "docs").glob("*.md"), key=lambda path: path.stat().st_size)
+        self.assertGreater(bigDoc.stat().st_size, ReadGuard.kMaxUnboundedReadBytes)
         self.assertEqual(self.runHookInternal(json.dumps({"tool_name": "Read", "tool_input": {"file_path": str(bigDoc)}})), 2)
         self.assertEqual(self.runHookInternal(json.dumps({"tool_name": "Read", "tool_input": {"file_path": str(bigDoc), "limit": 10}})), 0)
         self.assertEqual(self.runHookInternal(json.dumps({"tool_name": "Bash", "tool_input": {"file_path": str(bigDoc)}})), 0)
