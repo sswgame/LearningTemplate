@@ -3,6 +3,7 @@
 #include "Editor/Common/Asset/EditorAssetValidation.h"
 #include "Editor/Common/Commands/Play/EditorScreenshotCommands.h"
 #include "Editor/Common/EditorProfile.h"
+#include "Editor/Common/EditorSubsystem.h"
 #include "Editor/Common/GUI/EditorCommandGUI.h"
 #include "Editor/Common/GUI/EditorDockLayout.h"
 #include "Editor/Common/GUI/EditorMenuBar.h"
@@ -13,6 +14,7 @@
 #include "Editor/Common/Workspace/AssetHotReload.h"
 #include "Editor/Common/Workspace/ConfigHotReload.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 #include "Editor/Common/Workspace/EditorFrameStep.h"
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
@@ -35,6 +37,26 @@ namespace sw::editor
 {
     namespace
     {
+        /**
+         * @class EditorWindowTitleState
+         * @brief 창 제목을 마지막으로 지은 입력과 결과입니다(`runWindowTitle` 이 입력이 바뀐 프레임에만 다시 짓는다).
+         * @details 에디터 서브시스템이라 에디터 컨텍스트와 함께 생기고 사라진다 — 정적 칸에 두면 모듈을 다시 올리거나 컨텍스트를 새로 만들 때 지난 값이 남는다.
+         */
+        class EditorWindowTitleState final : public EditorSubsystem
+        {
+        public:
+            static constexpr const utf8* kSubsystemName = "EditorWindowTitleState";
+
+            string      _scenePath{};
+            string      _gameTitle{};
+            string      _title{};
+            const utf8* _pPlayState{ nullptr };
+            bool        _bDirty{ false };
+            bool        _bBuilt{ false }; ///< 한 번이라도 지었는지(첫 프레임은 입력이 기본값과 같아도 짓는다)
+
+            const utf8* getSubsystemName() const override { return kSubsystemName; }
+        };
+
         struct EditorFrameStepsInternal
         {
             /// @brief 알림 뷰가 메인 뷰포트를 모를 때 쓰는 화면 크기입니다.
@@ -91,13 +113,25 @@ namespace sw::editor
                     return;
                 const PackEngineSettings* pPackSettings = &editor::getSubsystem<const PackEngineSettings>(); // 필수 - 창이 있으면 팩 설정도 있다
                 const Scene*              pScene        = editor::getActiveScene();
-                const string              scenePath     = pScene == nullptr ? string{} : ( pScene->getSourcePath().empty() ? pScene->getName() : pScene->getSourcePath() );
-                const bool                bDirty        = context.getSubsystem<EditorWorkspace>().isSceneDirty() || context.getSubsystem<EditorPanelManager>().countDirtyDocuments() > 0;
+                static const string       s_emptyPath{};
+                const string&             scenePath = pScene == nullptr ? s_emptyPath : ( pScene->getSourcePath().empty() ? pScene->getName() : pScene->getSourcePath() );
+                const bool                bDirty    = context.getSubsystem<EditorWorkspace>().isSceneDirty() || context.getSubsystem<EditorPanelManager>().countDirtyDocuments() > 0;
                 const utf8*               pPlayState{ nullptr };
                 if ( EditorPlaySession::isStopped() == false )
                     pPlayState = EditorPlaySession::isSimulating() ? "Simulating" : ( EditorPlaySession::isPaused() ? "Paused" : "Playing" );
-                const string title = EditorWindowTitleUtil::makeTitle( pPackSettings->_windowTitle, scenePath, bDirty, pPlayState );
-                pWindowHost->setBaseTitle( title ); // 창에 거는 일은 엔진이 한다 — 시나리오 실행 정보를 이 제목 뒤에 붙여 건다(AutomationRunTitleTracker)
+                // 입력이 같고 창의 평소 제목도 그대로면(셸 종료가 되돌리지 않았다) 문자열을 다시 짓지 않는다.
+                EditorWindowTitleState& state      = editor::getSubsystem<EditorWindowTitleState>(); // 필수 - 이 파일의 SW_EDITOR_SUBSYSTEM 이 컨텍스트와 함께 만든다
+                const bool              bUnchanged = state._bBuilt && state._pPlayState == pPlayState && state._bDirty == bDirty && state._scenePath == scenePath &&
+                                        state._gameTitle == pPackSettings->_windowTitle && pWindowHost->getBaseTitle() == state._title;
+                if ( bUnchanged )
+                    return;
+                state._scenePath  = scenePath;
+                state._gameTitle  = pPackSettings->_windowTitle;
+                state._pPlayState = pPlayState;
+                state._bDirty     = bDirty;
+                state._bBuilt     = true;
+                state._title      = EditorWindowTitleUtil::makeTitle( pPackSettings->_windowTitle, scenePath, bDirty, pPlayState );
+                pWindowHost->setBaseTitle( state._title ); // 창에 거는 일은 엔진이 한다 — 시나리오 실행 정보를 이 제목 뒤에 붙여 건다(AutomationRunTitleTracker)
             }
 
             /** @brief 6) 끝난 스크린샷 요청의 토스트를 띄웁니다. */
@@ -120,6 +154,8 @@ namespace sw::editor
 
 namespace sw::editor
 {
+    SW_EDITOR_SUBSYSTEM( EditorWindowTitleState, 9600 );
+
     SW_EDITOR_FRAME_STEP( Commands, "commands", EditorFrameStepOrder::kCommands, &EditorFrameStepsInternal::runCommands );
     SW_EDITOR_FRAME_STEP( AssetReload, "assetReload", EditorFrameStepOrder::kAssetReload, &EditorFrameStepsInternal::runAssetReload );
     SW_EDITOR_FRAME_STEP( Panels, "panels", EditorFrameStepOrder::kPanels, &EditorFrameStepsInternal::runPanels );
