@@ -580,6 +580,7 @@ namespace sw
         InputManager*         getInputManager() const { return _pInput; }
         float32               getDoubleClickTime() const { return _doubleClickTime; }
         float32               getDragThreshold() const { return _dragThreshold; }
+        float32               getDoubleClickMaxDistance() const { return _doubleClickMaxDistance; }
         float32               getDoubleTapTime() const { return _doubleTapTime; }
         float32               getHoldThreshold() const { return _holdThreshold; }
         float32               getNavRepeatDelay() const { return _navRepeatDelay; }

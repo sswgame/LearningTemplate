@@ -79,6 +79,13 @@ namespace sw::editor
         const hashed_string& getFocusedPanelLayer() const { return _focusedPanelLayer; }
         /** @brief 단축키 재배치 창이 키를 받는 동안 명령 실행을 멈춥니다. 맵은 계속 갱신합니다. */
         void setCommandsSuspended( bool bSuspended ) { _bCommandsSuspended = bSuspended; }
+        /**
+         * @brief 패널 · 뷰포트가 읽는 액션(명령이 아닌 것 — 화살표 행 이동, 비행 키, 이름 바꾸기 시작)이 이번 프레임에 발화했으면 true 입니다.
+         * @details 글을 치는 중이거나 재배치 창이 키를 받는 중이면 false 다(명령 실행과 같은 조건). 범위는 액션의 레이어가 정한다 — 그 패널이 포커스일 때만 켜진다.
+         */
+        bool wasActionTriggered( string_view action ) const;
+        /** @brief 액션이 눌려 있으면 true 입니다(비행처럼 누르는 동안 하는 일). 조건은 `wasActionTriggered` 와 같습니다. */
+        bool isActionDown( string_view action ) const;
 
         // ------------------------------------------------------------------------------
         // 단축키 글자 · 재배치(단축키 창이 쓴다). 바꾼 것은 곧바로 사용자 재배치 파일에 저장한다
@@ -122,6 +129,8 @@ namespace sw::editor
         void forwardEditorKeyboard( bool bEditorOwnsKeyboard );
         /** @brief 넣은 눌린 키를 모두 놓습니다. 큐가 차서 못 넣은 키는 다음에 다시 시도합니다. */
         void releaseForwardedKeys( InputManager& input );
+        /** @brief 글을 치는 중이거나 재배치 창이 키를 받는 중이면 true 입니다 — 명령 · 패널 액션이 모두 멈춘다. */
+        bool areActionsBlocked() const;
         /** @brief 이번 프레임에 발화한 액션의 명령을 실행합니다. 포커스 패널 레이어의 명령이 있으면 그것만 실행합니다. */
         void executeTriggeredCommands();
         /** @brief 액션의 첫 키보드 바인딩 번호를 찾습니다. 없으면 false 입니다. */

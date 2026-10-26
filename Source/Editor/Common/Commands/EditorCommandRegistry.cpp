@@ -284,7 +284,7 @@ namespace sw::editor
             desc._tooltip         = row._pTooltip != nullptr ? row._pTooltip : "";
             desc._detail          = row._pDetail != nullptr ? row._pDetail : "";
             desc._inputAction     = row._pInputAction != nullptr ? row._pInputAction : "";
-            desc._bPaletteVisible = true;
+            desc._bPaletteVisible = row._bPaletteVisible;
             desc._menuPath        = row._pMenuPath != nullptr ? row._pMenuPath : "";
             desc._menuOrder       = row._order;
             if ( row._pfnAction != nullptr )
@@ -294,6 +294,8 @@ namespace sw::editor
             desc._edit             = row._edit;
             desc._contextMenuKind  = row._contextMenuKind;
             desc._contextMenuOrder = row._contextMenuOrder;
+            if ( row._pfnSubmenu != nullptr )
+                desc._submenu = row._pfnSubmenu;
             registry.registerCommand( std::move( desc ) );
         }
         return excludedCount;

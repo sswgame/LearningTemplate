@@ -19,11 +19,7 @@ namespace sw
 namespace sw::editor
 {
     // ------------------------------------------------------------------------------
-    // 1) 드래그 페이로드 (색 타입 Color 와 style 은 EditorColor.h)
-    // ------------------------------------------------------------------------------
-    /** @brief 콘텐츠 브라우저에서 뷰포트나 인스펙터로 애셋을 드래그할 때 쓰는 페이로드 이름입니다. */
-    inline constexpr const utf8* kAssetPathPayload = "SW_ASSET_PATH";
-
+    // 1) 공유 위젯 클래스(색 타입 Color 와 style 은 EditorColor.h). 에셋 끌어 놓기는 `{Asset, id}` 한 형식(`EditorInputGUI`)이다
     // ------------------------------------------------------------------------------
     // 2) 공유 위젯 클래스: Vec3, 컴포넌트 카드, 헤더, 칩, 프로퍼티 행
     // ------------------------------------------------------------------------------
@@ -173,25 +169,20 @@ namespace sw::editor
         static void popInspectorStyle();
 
         /**
-         * @brief 현재 아이템을 애셋 경로 드래그 소스로 등록합니다.
+         * @brief 현재 아이템을 애셋 끌기 원본으로 만듭니다. 페이로드는 `{Asset, 경로의 id}` 이고 경로는 id 표에 둔다(`EditorInputGUI::registerPayloadName`).
          */
         static void drawAssetDragSource( const utf8* pRelativePath, bool bAllowNullID = false );
 
         /**
-         * @brief BeginDragDropTarget 안에서 애셋 경로 페이로드를 받습니다.
+         * @brief 현재 아이템을 애셋 드롭 타깃으로 만들고, 애셋이 놓였으면 그 상대 경로를 @p outPath 에 담고 true 입니다.
          */
-        [[nodiscard]] static bool tryAcceptAssetPayload( string& outPath );
-
-        /**
-         * @brief 현재 아이템을 애셋 드롭 타깃으로 만들고 경로를 받습니다.
-         */
-        static bool acceptAssetDrop( string& outPath );
+        [[nodiscard]] static bool acceptAssetDrop( string& outPath );
         /**
          * @brief 화면 사각형 [@p minPos, @p maxPos] 를 애셋 드롭 타깃으로 만들고 경로를 받습니다. @p pTargetID 는 창 안에서 타깃을 가리는 이름입니다.
          * @details 뷰포트 캔버스처럼 위에 오버레이 · 기즈모 · HUD 가 그려지는 영역에 씁니다 — "마지막 아이템" 을 타깃으로 잡는 `acceptAssetDrop` 은
          *          캔버스 다음에 그린 아이템(오버레이 단추 등)에 걸려 캔버스에 놓은 것을 받지 못한다.
          */
-        static bool acceptAssetDropInRect( const float2& minPos, const float2& maxPos, const utf8* pTargetID, string& outPath );
+        [[nodiscard]] static bool acceptAssetDropInRect( const float2& minPos, const float2& maxPos, const utf8* pTargetID, string& outPath );
 
         /**
          * @brief 검색 결과 목록에서 Up/Down 으로 선택을 움직입니다. Enter 면 true 입니다.

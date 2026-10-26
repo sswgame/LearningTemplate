@@ -11,6 +11,7 @@
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorTextExtentImGui.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorAssetFilter.h"
 #include "Editor/Common/Widgets/EditorLabelLayout.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -535,48 +536,23 @@ namespace sw::editor
     {
         if ( StringUtil::isNullOrEmpty( pRelativePath ) )
             return;
-
-        ImGuiDragDropFlags flags = 0;
-        if ( bAllowNullID )
-            flags |= ImGuiDragDropFlags_SourceAllowNullID;
-
-        if ( ImGui::BeginDragDropSource( flags ) == false )
-            return;
-
-        const uint32 pathBytes = StringUtil::strlen( pRelativePath ) + 1;
-        ImGui::SetDragDropPayload( kAssetPathPayload, pRelativePath, pathBytes );
-        ImGui::TextUnformatted( pRelativePath );
-        ImGui::EndDragDropSource();
-    }
-
-    bool EditorWidgets::tryAcceptAssetPayload( string& outPath )
-    {
-        const ImGuiPayload* pPayload = ImGui::AcceptDragDropPayload( kAssetPathPayload );
-        if ( pPayload == nullptr || pPayload->Data == nullptr )
-            return false;
-
-        outPath = static_cast<const utf8*>( pPayload->Data );
-        return true;
+        // 경로 문자열을 싣지 않는다 — 끌기는 `{Asset, id}` 한 형식이고 경로는 id 표가 든다(받는 쪽이 이름을 비교하지 않는다).
+        const EditorDragPayload payload{ EditorPayloadKind::Asset, EditorInputGUI::registerPayloadName( EditorPayloadKind::Asset, pRelativePath ) };
+        (void)EditorInputGUI::beginDragSource( payload, pRelativePath, bAllowNullID ); // 끌기가 시작됐는지는 쓰지 않는다
     }
 
     bool EditorWidgets::acceptAssetDrop( string& outPath )
     {
-        if ( ImGui::BeginDragDropTarget() == false )
-            return false;
-
-        const bool bAccepted = tryAcceptAssetPayload( outPath );
-        ImGui::EndDragDropTarget();
-        return bAccepted;
+        EditorDragPayload payload{};
+        return EditorInputGUI::acceptDrop( EditorPayloadKindSet{ EditorPayloadKind::Asset }, payload ) &&
+               EditorInputGUI::findPayloadName( EditorPayloadKind::Asset, payload._id, outPath );
     }
 
     bool EditorWidgets::acceptAssetDropInRect( const float2& minPos, const float2& maxPos, const utf8* pTargetID, string& outPath )
     {
-        const ImRect rect( ImVec2( minPos._x, minPos._y ), ImVec2( maxPos._x, maxPos._y ) );
-        if ( ImGui::BeginDragDropTargetCustom( rect, ImGui::GetID( pTargetID ) ) == false )
-            return false;
-        const bool bAccepted = tryAcceptAssetPayload( outPath );
-        ImGui::EndDragDropTarget();
-        return bAccepted;
+        EditorDragPayload payload{};
+        return EditorInputGUI::acceptDropInRect( minPos, maxPos, pTargetID, EditorPayloadKindSet{ EditorPayloadKind::Asset }, payload ) &&
+               EditorInputGUI::findPayloadName( EditorPayloadKind::Asset, payload._id, outPath );
     }
 
     bool EditorWidgets::updateListSelection( int32& selectedIndex, int32 itemCount, bool bRepeat )

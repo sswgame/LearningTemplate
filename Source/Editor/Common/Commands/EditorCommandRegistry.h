@@ -134,6 +134,12 @@ namespace sw::editor
          */
         EditorCommandTargetKind _contextMenuKind{ EditorCommandTargetKind::None };
         int32                   _contextMenuOrder{ 0 }; ///< 맥락 메뉴 안 순서. 백의 자리가 바뀌면 구분선이 들어간다
+        /**
+         * @brief 바인딩되어 있으면 이 커맨드는 맥락 메뉴에서 실행 항목이 아니라 하위 메뉴(라벨이 이름)이고, 이 함수가 그 안을 그립니다.
+         * @details "Add Component" 의 검색 목록, "Select All With" 의 종류 · 태그 목록처럼 대상에 따라 항목이 바뀌는 메뉴다. 그리는 함수는 어댑터(`EditorInputGUI`)가
+         *          하위 메뉴를 연 동안만 부른다. 이 칸의 형식은 ImGui 를 모른다(그리는 쪽이 안다).
+         */
+        Delegate<void( const EditorCommandTarget& )> _submenu;
     };
 } // namespace sw::editor
 
@@ -247,6 +253,8 @@ namespace sw::editor
         const utf8*             _pMenuPath;        ///< nullptr 이면 메뉴에 나오지 않는다(팔레트와 단축키만 쓴다)
         EditorCommandTargetKind _contextMenuKind;  ///< 놓일 맥락 메뉴(필수 — `None` 이면 맥락 메뉴에 없다)
         int32                   _contextMenuOrder; ///< 맥락 메뉴 안 순서
+        EditorCommandActionFn   _pfnSubmenu;       ///< nullptr 이 아니면 맥락 메뉴의 하위 메뉴를 그린다(`EditorCommandDesc::_submenu`)
+        bool                    _bPaletteVisible;  ///< 팔레트에 나오는지. 대상이 있어야 뜻이 있는 맥락 메뉴 전용 명령은 false
     };
 } // namespace sw::editor
 
@@ -278,4 +286,16 @@ namespace sw::editor
     SW_EDITOR_REGISTER( ::sw::editor::EditorCommandRegistration, Command_##name, { pID, menuOrder }, pLabel, pIcon, pCategory, pTooltip, pDetail,                \
                         pInputAction, ::sw::editor::EditorCommandTargetUtil::toAction<pfnAction>(),                                                              \
                         ::sw::editor::EditorCommandTargetUtil::toEnabled<pfnEnabled>(), ::sw::editor::EditorCommandEdit::edit, pMenuPath,                        \
-                        ::sw::editor::EditorCommandTargetKind::contextMenu, contextMenuOrder )
+                        ::sw::editor::EditorCommandTargetKind::contextMenu, contextMenuOrder, nullptr, true )
+
+/**
+ * @brief 맥락 메뉴에만 나오는 커맨드(대상이 있어야 뜻이 있다 — 메인 메뉴 · 팔레트에 없음)를 등록합니다. @p pfnAction · @p pfnEnabled 는 대상(`EditorCommandTarget`)을 받습니다.
+ *        @p pfnSubmenu 가 nullptr 이 아니면 그 항목은 하위 메뉴이고 그 함수가 안을 그립니다(그때 @p pfnAction 은 nullptr).
+ * @code SW_EDITOR_CONTEXT_COMMAND( ObjectRename, "scene.renameObject", "Rename", editoricon::kEdit, "Scene", GameObject, 120, "hierarchy.rename",
+ *                                  &renameTarget, &isSingleTarget, NoScene, nullptr ); @endcode
+ */
+#define SW_EDITOR_CONTEXT_COMMAND( name, pID, pLabel, pIcon, pCategory, contextMenu, contextMenuOrder, pInputAction, pfnAction, pfnEnabled, edit, pfnSubmenu ) \
+    SW_EDITOR_REGISTER( ::sw::editor::EditorCommandRegistration, Command_##name, { pID, 0 }, pLabel, pIcon, pCategory, nullptr, nullptr, pInputAction,         \
+                        ::sw::editor::EditorCommandTargetUtil::toAction<pfnAction>(), ::sw::editor::EditorCommandTargetUtil::toEnabled<pfnEnabled>(),          \
+                        ::sw::editor::EditorCommandEdit::edit, nullptr, ::sw::editor::EditorCommandTargetKind::contextMenu, contextMenuOrder,                  \
+                        ::sw::editor::EditorCommandTargetUtil::toAction<pfnSubmenu>(), false )

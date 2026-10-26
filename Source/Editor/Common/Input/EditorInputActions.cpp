@@ -120,10 +120,30 @@ namespace sw::editor
         forwardEditorKeyboard( syncKeyboardOwner() );
         syncFocusedPanelLayer();
         _map.update( deltaSeconds );
+        // ImGui 의 클릭 · 끌기 · 더블클릭 판정(항목 단추 · 맥락 메뉴 · 끌어 놓기)도 입력 맵의 값 하나를 쓴다 — 두 곳에 숫자를 두지 않는다.
+        ImGuiIO& io                = ImGui::GetIO();
+        io.MouseDragThreshold      = _map.getDragThreshold();
+        io.MouseDoubleClickTime    = _map.getDoubleClickTime();
+        io.MouseDoubleClickMaxDist = _map.getDoubleClickMaxDistance();
         // 글을 치는 중에는 Ctrl+S 같은 단축키도 그 글 칸의 것이다(예전 처리와 같다). 재배치 창이 키를 받는 중에도 실행하지 않는다.
-        if ( _bCommandsSuspended || ImGui::GetIO().WantTextInput )
+        if ( areActionsBlocked() )
             return;
         executeTriggeredCommands();
+    }
+
+    bool EditorInputActions::areActionsBlocked() const
+    {
+        return _bCommandsSuspended || ImGui::GetIO().WantTextInput;
+    }
+
+    bool EditorInputActions::wasActionTriggered( string_view action ) const
+    {
+        return areActionsBlocked() == false && _map.wasActionTriggered( hashed_string( string( action ).c_str() ) );
+    }
+
+    bool EditorInputActions::isActionDown( string_view action ) const
+    {
+        return areActionsBlocked() == false && _map.isActionDown( hashed_string( string( action ).c_str() ) );
     }
 
     void EditorInputActions::executeTriggeredCommands()
@@ -138,7 +158,12 @@ namespace sw::editor
             const hashed_string action( desc._inputAction.c_str() );
             if ( _map.wasActionTriggered( action ) == false )
                 continue;
-            const bool bPanelLayer = _focusedPanelLayer.empty() == false && _map.findBindingLayer( action, 0 ) == _focusedPanelLayer;
+            // 한 액션이 여러 패널 레이어에 바인딩을 가질 수 있다(Delete 가 계층 창 · 씬 뷰에 각자) — 포커스 레이어의 바인딩이 하나라도 있으면 패널 쪽이다.
+            bool bPanelLayer = false;
+            for ( uint32 bindIndex = 0; _focusedPanelLayer.empty() == false && bindIndex < _map.getBindingCount( action ); ++bindIndex )
+            {
+                bPanelLayer = bPanelLayer || _map.findBindingLayer( action, bindIndex ) == _focusedPanelLayer;
+            }
             ( bPanelLayer ? listPanelCommand : listOtherCommand ).push_back( desc._id );
         }
         // 실행은 순회가 끝난 뒤에 한다 — 명령이 등록부를 다시 만들어도(모듈 리로드) 순회 중인 목록을 읽지 않는다.

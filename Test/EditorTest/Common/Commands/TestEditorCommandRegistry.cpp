@@ -351,7 +351,7 @@ SW_TEST_CASE( EditorCommandRegistryTest, RegistrationLinesAreAppendedAndExcluded
 {
     s_invokeCount = 0;
     const EditorExtensionRegistrar<EditorCommandRegistration> registrar{
-        EditorCommandRegistration{ { "test.registeredCommand", 9100 }, "Registered", "", "Test", "툴팁", "detail", "test.registeredAction", &bumpInvokeCount, nullptr, EditorCommandEdit::NoScene, "MainMenu/TestExtension", EditorCommandTargetKind::GameObject, 300 }
+        EditorCommandRegistration{ { "test.registeredCommand", 9100 }, "Registered", "", "Test", "툴팁", "detail", "test.registeredAction", &bumpInvokeCount, nullptr, EditorCommandEdit::NoScene, "MainMenu/TestExtension", EditorCommandTargetKind::GameObject, 300, nullptr, true }
     };
     const EditorCommandRegistration* pRow = &registrar.getRegistration();
 

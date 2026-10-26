@@ -645,12 +645,9 @@ namespace sw::editor
 
     void ContentBrowserPanel::acceptAssetDrop( string_view folderAbs )
     {
-        if ( ImGui::BeginDragDropTarget() == false )
-            return;
         string resourceID;
-        if ( EditorWidgets::tryAcceptAssetPayload( resourceID ) )
+        if ( EditorWidgets::acceptAssetDrop( resourceID ) )
             (void)moveAssetToFolder( ResourcePaths::findLooseFile( resourceID ).getDiskPath(), folderAbs ); // 실패는 moveAsset 이 알린다
-        ImGui::EndDragDropTarget();
     }
 
     void ContentBrowserPanel::drawRenameField( float32 width )

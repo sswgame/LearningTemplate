@@ -56,4 +56,32 @@
 			<bind source="key" code="F8"/>
 		</action>
 	</layer>
+
+	<!-- Hierarchy window: scene object commands act on the selection; selectAll / selectPrevious / selectNext are read by the panel (row order). -->
+	<layer name="Editor.Panel.hierarchy">
+		<action name="scene.duplicate" trigger="Pressed">
+			<bind source="key" modifier="Ctrl" code="D"/>
+		</action>
+		<action name="scene.copy" trigger="Pressed">
+			<bind source="key" modifier="Ctrl" code="C"/>
+		</action>
+		<action name="scene.paste" trigger="Pressed">
+			<bind source="key" modifier="Ctrl" code="V"/>
+		</action>
+		<action name="scene.delete" trigger="Pressed">
+			<bind source="key" code="Delete"/>
+		</action>
+		<action name="scene.object.rename" trigger="Pressed">
+			<bind source="key" code="F2"/>
+		</action>
+		<action name="hierarchy.selectAll" trigger="Pressed">
+			<bind source="key" modifier="Ctrl" code="A"/>
+		</action>
+		<action name="hierarchy.selectPrevious" trigger="Repeat">
+			<bind source="key" code="Up"/>
+		</action>
+		<action name="hierarchy.selectNext" trigger="Repeat">
+			<bind source="key" code="Down"/>
+		</action>
+	</layer>
 </InputMap>
