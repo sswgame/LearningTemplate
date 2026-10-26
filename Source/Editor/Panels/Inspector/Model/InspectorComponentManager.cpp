@@ -8,12 +8,15 @@
 #include "Editor/Panels/Inspector/Model/InspectorPropertyLayout.h"
 
 #include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Reflection/TypeRegistry.h"
 
 namespace sw::editor
 {
     InspectorComponentManager::InspectorComponentManager()
         : _listEntry{}
+        , _mapTypeInspector{}
         , _syncedGeneration{ kNotSynced }
+        , _cacheTypeGeneration{ 0 }
     {
     }
 
@@ -22,6 +25,7 @@ namespace sw::editor
     void InspectorComponentManager::registerType( string_view typeName, unique_ptr<IInspectorComponent> pInspector )
     {
         const hashed_string name( typeName );
+        resetTypeCache( _cacheTypeGeneration ); // 확장 목록이 바뀐다 — 타입별 목록이 옛 확장을 가리키지 않게 버린다
         for ( InspectorComponentEntry& entry : _listEntry )
         {
             if ( entry._typeName == name )
@@ -48,17 +52,32 @@ namespace sw::editor
         return nullptr;
     }
 
-    void InspectorComponentManager::collectForType( const TypeInfo& type, vector<IInspectorComponent*>& outListInspector ) const
+    const vector<IInspectorComponent*>& InspectorComponentManager::getInspectorsForType( const TypeInfo& type )
     {
-        outListInspector.clear();
-        vector<const TypeInfo*> listType;
+        // 모듈 리로드는 TypeInfo 주소를 바꾼다 — 레지스트리 세대가 바뀌면 타입별 목록을 버린다. 확장 목록이 바뀌면 `resetTypeCache` 가 버린다.
+        const uint32 typeGeneration = TypeRegistry::getGeneration();
+        if ( typeGeneration != _cacheTypeGeneration )
+            resetTypeCache( typeGeneration );
+        const auto iter = _mapTypeInspector.find( &type );
+        if ( iter != _mapTypeInspector.end() )
+            return iter->second;
+
+        vector<IInspectorComponent*> listInspector;
+        vector<const TypeInfo*>      listType;
         InspectorPropertyLayout::collectTypeChain( type, listType );
         for ( const TypeInfo* pType : listType )
         {
             IInspectorComponent* pInspector = find( pType->_name.c_str() );
             if ( pInspector != nullptr )
-                outListInspector.push_back( pInspector );
+                listInspector.push_back( pInspector );
         }
+        return _mapTypeInspector.emplace( &type, std::move( listInspector ) ).first->second;
+    }
+
+    void InspectorComponentManager::resetTypeCache( uint32 typeGeneration )
+    {
+        _mapTypeInspector.clear();
+        _cacheTypeGeneration = typeGeneration;
     }
 
     void InspectorComponentManager::registerDefaults()
@@ -74,6 +93,7 @@ namespace sw::editor
         if ( list.getGeneration() == _syncedGeneration )
             return;
         _syncedGeneration = list.getGeneration();
+        resetTypeCache( _cacheTypeGeneration ); // 아래에서 확장을 지우고 만든다
 
         // 1) 등록 목록에서 사라진 줄의 확장을 지운다
         for ( size_t index = _listEntry.size(); index-- > 0; )
@@ -106,6 +126,7 @@ namespace sw::editor
     uint32 InspectorComponentManager::releaseInspectorsWithin( const void* pBegin, const void* pEnd )
     {
         uint32 releasedCount{ 0 };
+        resetTypeCache( _cacheTypeGeneration ); // 지운 확장을 가리키는 타입별 목록을 버린다
         for ( size_t index = _listEntry.size(); index-- > 0; )
         {
             if ( IModuleUnloadListener::isAddressWithin( _listEntry[index]._pRegistration, pBegin, pEnd ) == false )
