@@ -164,7 +164,7 @@ namespace test
         }
         if ( droppedCount > 0 )
             description += "\n      (+" + sw::to_string( droppedCount ) + " more line(s) over the recording limit)";
-        registry.addFailure( "no unexpected [Error]/[Warning] log in a host suite case", testInfo.fullName(), 0, description );
+        registry.addFailure( "no unexpected [Error]/[Warning] log in a host suite case", testInfo.fullName(), 0, description, true );
     }
 
     void HostLogJudge::printAllowedSummary() const

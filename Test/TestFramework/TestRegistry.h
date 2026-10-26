@@ -51,7 +51,7 @@ namespace test
         sw::vector<const TestCaseInfo*> makeRunOrder( uint32 iteration ) const;
 
         /** @brief 현재 테스트의 실패를 기록합니다(이 스레드의 추적 `ScopedTrace` 를 함께 남긴다). */
-        void addFailure( const sw::string& condition, const sw::string& file, int32 line, const sw::string& message = "" );
+        void addFailure( const sw::string& condition, const sw::string& file, int32 line, const sw::string& message = "", bool bUnhandledLog = false );
         /** @brief 현재 테스트를 실패 없이 건너뜁니다(환경 탓 — "아무것도 검증하지 않은 스위트" 판정에 든다). */
         void skipCurrentTest( const sw::string& reason, const sw::string& file, int32 line );
         /** @brief @p feature 가 이 빌드에 없으면 현재 테스트를 건너뛰고 true 를 돌려줍니다(`SW_TEST_REQUIRES_FEATURE`). */
@@ -101,6 +101,7 @@ namespace test
         TestContext                   _currentContext;
         TestEnvironment               _environment;
         ConsoleTestReporter           _consoleReporter;
+        JSONTestReporter              _jsonReporter; ///< 프로세스 레지스트리만 붙는다(`(nested)` 레지스트리는 파일을 쓰지 않는다)
         HostLogJudge                  _hostLogJudge;
         TimeBudgetJudge               _timeBudgetJudge;
         sw::vector<ITestRunListener*> _listListener; ///< 콘솔 보고기가 맨 앞

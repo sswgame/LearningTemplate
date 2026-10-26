@@ -3,6 +3,7 @@
 #include "TestFramework/TestRunOptions.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/File/FileUtil.h"
 #include "Core/Process/ProcessEnvironment.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -79,6 +80,7 @@ namespace test
 {
     TestRunOptions::TestRunOptions()
         : _filter{}
+        , _reportPath{}
         , _filterText{}
         , _listEngineArgument{}
         , _mapCaseCost{}
@@ -231,6 +233,28 @@ namespace test
                 continue;
             }
 
+            // 케이스 단위 결과 보고 — gtest 의 `--gtest_output=json:<경로>` 도 받는다. 다른 형식(xml)은 만들지 못하니 조용히 무시하지 않고 실행을 실패로 끝낸다.
+            constexpr std::string_view kReportPrefix      = "--test_report=";
+            constexpr std::string_view kGtestOutputPrefix = "--gtest_output=";
+            if ( sw::StringUtil::startsWith( arg, kReportPrefix ) )
+            {
+                _reportPath = TestRunOptionsInternal::trimArgValue( arg.substr( kReportPrefix.size() ) );
+                continue;
+            }
+            if ( sw::StringUtil::startsWith( arg, kGtestOutputPrefix ) )
+            {
+                constexpr std::string_view kJSONValuePrefix = "json:";
+                const std::string_view     value            = arg.substr( kGtestOutputPrefix.size() );
+                if ( sw::StringUtil::startsWith( value, kJSONValuePrefix ) )
+                    _reportPath = TestRunOptionsInternal::trimArgValue( value.substr( kJSONValuePrefix.size() ) );
+                else
+                {
+                    _bInvalidArgument = true;
+                    std::fprintf( stdout, "Unsupported --gtest_output value '%s' (only json:<path> is written)\n", sw::string( value ).c_str() );
+                }
+                continue;
+            }
+
             constexpr std::string_view kCostPrefix = "--test_costs=";
             if ( sw::StringUtil::startsWith( arg, kCostPrefix ) )
             {
@@ -250,6 +274,20 @@ namespace test
 
             listApplicationArg.push_back( argv[argIndex] );
             _listEngineArgument.push_back( sw::string( arg ) );
+        }
+
+        // ctest 항목이 준 보고 폴더 — 인자로 경로를 주지 않았을 때 `<폴더>/<ctest 이름>.json` 이다. 폴더만 있고 이름이 없으면 어디에 쓸지 모르니 실패로 끝낸다.
+        sw::string reportDirectory;
+        if ( _reportPath.empty() && sw::ProcessEnvironment::tryReadNonEmpty( "SW_TEST_REPORT_DIR", reportDirectory ) )
+        {
+            sw::string ctestName;
+            if ( sw::ProcessEnvironment::tryReadNonEmpty( "SW_TEST_CTEST_NAME", ctestName ) )
+                _reportPath = sw::FileUtil::joinPath( reportDirectory, ctestName + ".json" );
+            else
+            {
+                _bInvalidArgument = true;
+                std::fprintf( stdout, "SW_TEST_REPORT_DIR is set but SW_TEST_CTEST_NAME is not - cannot name the report file\n" );
+            }
         }
 
         // 씨앗을 주지 않았으면 여기서 고른다 — 섞기와 `test::getRandomSeed` 가 같은 값을 쓰고, 진 실행은 그 값을 재현 명령에 찍는다.
@@ -361,6 +399,7 @@ namespace test
                       "  --load_suites=exclude|only|all    Exclude or select load and time budget suites (default exclude)\n"
                       "  --enforce_budgets                 Fail cases that exceed their SW_TEST_TIME_BUDGET\n"
                       "  --required_backends=dx11,dx12,... Fail (instead of skip) when one of these RHI backends cannot stand up\n"
+                      "  --test_report=PATH                Write the per-case result report (JSON) to PATH (--gtest_output=json:PATH; ctest sets SW_TEST_REPORT_DIR)\n"
                       "  --allow_empty_suite               Do not fail when a selected suite has no runnable case\n"
                       "Other arguments go to the engine command line (-gv_<name>=<value> and so on).\n" );
         std::fflush( stdout );

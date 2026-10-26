@@ -7,6 +7,7 @@
  */
 #pragma once
 #include "TestFramework/TestCase.h"
+#include "TestFramework/TestContext.h"
 
 namespace test
 {
@@ -27,6 +28,7 @@ namespace test
         CaseResult              _result{ CaseResult::Passed };
         BuildFeature            _missingFeature{ BuildFeature::Count }; ///< 구성 기능이 없어 건너뛰었으면 그 기능(아니면 `Count`)
         sw::vector<SkippedPart> _listSkippedPart;                       ///< 케이스는 돌았지만 구성 기능이 없어 건너뛴 일부(`test::skipPartIfFeatureMissing`)
+        sw::vector<TestFailure> _listFailure;                           ///< 이 회차의 실패 전부(단언 · 판정기가 남긴 것, 처리하지 않은 로그 실패는 `_bUnhandledLog`)
         bool                    _bSeedUsed{ false };                    ///< 케이스가 `test::getRandomSeed()` 를 읽었다
     };
 } // namespace test
@@ -99,5 +101,30 @@ namespace test
         void printReproduction( const TestRunOptions& options, const TestRunSummary& summary ) const;
 
         const utf8* _pLinePrefix;
+    };
+} // namespace test
+
+namespace test
+{
+    /**
+     * @brief 케이스 단위 결과 보고(JSON) 문서를 만듭니다 — 형식은 이것 하나다(`Test/README.md` "케이스 단위 결과 보고").
+     * @details 최상위: `format`(1) · `config` · `shard`{`index`,`count`} · `repeat` · `seed` · `totals`{`passed`,`failed`,`skipped`,`ms`} · `cases`[].
+     *          케이스: `name` · `parameter` · `result`(`passed`/`failed`/`skipped`) · `ms` · `iteration` · `shard` · `failures`[]{`file`,`line`,`condition`,`message`,`trace`} ·
+     *          `partSkips`[]{`feature`,`subject`} · `missingFeature`(없으면 빈 글) · `unhandledLog`[](처리하지 않은 Error · Warning 로그 줄).
+     */
+    sw::string makeTestReportJSON( const TestRunOptions& options, const TestRunSummary& summary );
+
+    /**
+     * @brief 실행이 끝나면 `TestRunOptions::_reportPath` 에 케이스 단위 결과 보고(JSON)를 쓰는 리스너 — 경로가 비면 아무것도 하지 않습니다.
+     * @details 프로세스 레지스트리만 붙는다(`(nested)` 레지스트리는 쓰지 않는다). 쓰지 못하면 이유를 찍고 로그 Error 를 남긴다.
+     */
+    class JSONTestReporter final : public ITestRunListener
+    {
+    public:
+        void onRunStarted( const TestCatalog& catalog, const TestRunOptions& options, uint32 runnableCount ) override;
+        void onIterationStarted( uint32 iteration, uint32 repeatCount ) override;
+        void onCaseStarted( const TestCaseInfo& testInfo ) override;
+        void onCaseFinished( const CaseRecord& record ) override;
+        void onRunFinished( const TestCatalog& catalog, const TestRunOptions& options, const TestRunSummary& summary ) override;
     };
 } // namespace test

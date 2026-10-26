@@ -960,3 +960,43 @@ SW_TEST_CASE( TestFrameworkTest, ScopedTraceIsAttachedToFailuresInsideIt )
     SW_EXPECT_STREQ( "backend=Vulkan > seed=7", listFailure[0]._trace );
     SW_EXPECT_TRUE( listFailure[1]._trace.empty() );
 }
+
+/**
+ * @brief [TestFrameworkTest] 케이스 단위 결과 보고(JSON)에 이름 · 매개변수 · 결과 · 실패 · PARTSKIP · 처리하지 않은 로그 줄 · 회차 · 샤드가 든다
+ * @details 형식은 하나뿐이라(`makeTestReportJSON`) 읽는 쪽이 그대로 믿는다. 따옴표 · 줄바꿈은 이스케이프된다.
+ */
+SW_TEST_CASE( TestFrameworkTest, CaseReportJSONCarriesEveryField )
+{
+    test::TestCaseInfo failedInfo;
+    failedInfo._groupName = "ProbeTest";
+    failedInfo._testName  = "Fails";
+    failedInfo._parameter = "-dx12";
+
+    test::CaseRecord record;
+    record._pTestInfo = &failedInfo;
+    record._result    = test::CaseResult::Failed;
+    record._iteration = 2;
+    record._elapsedMs = 1.5;
+    record._listFailure.push_back( test::TestFailure{ "a == b", "Probe.cpp", 42, "said \"no\"", "backend=Vulkan", false } );
+    record._listFailure.push_back( test::TestFailure{ "no unexpected log", "ProbeTest.Fails", 0, "1 unhandled line(s)\n      [Warning] stale cache", "", true } );
+    record._listSkippedPart.push_back( { test::BuildFeature::AudioAssets, "clip.wav" } );
+
+    test::TestRunOptions options;
+    options._shardIndex = 1;
+    options._shardCount = 3;
+    test::TestRunSummary summary;
+    summary._failedCount = 1;
+    summary._listRecord.push_back( record );
+
+    const sw::string json = test::makeTestReportJSON( options, summary );
+    SW_EXPECT_TRUE_MSG( sw::StringUtil::contains( json, "\"name\":\"ProbeTest.Fails\"" ), json.c_str() );
+    SW_EXPECT_TRUE_MSG( sw::StringUtil::contains( json, "\"parameter\":\"-dx12\"" ), json.c_str() );
+    SW_EXPECT_TRUE_MSG( sw::StringUtil::contains( json, "\"result\":\"failed\"" ), json.c_str() );
+    SW_EXPECT_TRUE_MSG( sw::StringUtil::contains( json, "\"iteration\":2" ), json.c_str() );
+    SW_EXPECT_TRUE_MSG( sw::StringUtil::contains( json, "\"shard\":1," ), json.c_str() );
+    SW_EXPECT_TRUE_MSG( sw::StringUtil::contains( json, "\"shard\":{\"index\":1,\"count\":3}" ), json.c_str() );
+    SW_EXPECT_TRUE_MSG( sw::StringUtil::contains( json, "\"file\":\"Probe.cpp\",\"line\":42,\"condition\":\"a == b\",\"message\":\"said \\\"no\\\"\",\"trace\":\"backend=Vulkan\"" ), json.c_str() );
+    SW_EXPECT_TRUE_MSG( sw::StringUtil::contains( json, "\"partSkips\":[{\"feature\":\"" ), json.c_str() );
+    SW_EXPECT_TRUE_MSG( sw::StringUtil::contains( json, "\"unhandledLog\":[\"1 unhandled line(s)\",\"[Warning] stale cache\"]" ), json.c_str() );
+    SW_EXPECT_FALSE_MSG( sw::StringUtil::contains( json, "no unexpected log" ), "an unhandled-log failure is listed under unhandledLog, not failures" );
+}

@@ -114,6 +114,7 @@ namespace test
         , _currentContext{}
         , _environment{}
         , _consoleReporter{ pLinePrefix }
+        , _jsonReporter{}
         , _hostLogJudge{ _catalog }
         , _timeBudgetJudge{ _catalog, _options }
         , _listListener{ &_consoleReporter }
@@ -121,6 +122,8 @@ namespace test
         , _pFailureCapture{ nullptr }
         , _pLinePrefix{ pLinePrefix }
     {
+        if ( _pLinePrefix[0] == '\0' )
+            _listListener.push_back( &_jsonReporter );
     }
 
     TestRegistry::~TestRegistry() = default;
@@ -156,9 +159,9 @@ namespace test
         _listJudge.erase( std::remove( _listJudge.begin(), _listJudge.end(), pJudge ), _listJudge.end() );
     }
 
-    void TestRegistry::addFailure( const sw::string& condition, const sw::string& file, int32 line, const sw::string& message )
+    void TestRegistry::addFailure( const sw::string& condition, const sw::string& file, int32 line, const sw::string& message, bool bUnhandledLog )
     {
-        const TestFailure                 failure{ condition, file, line, message, ScopedTrace::makeCurrentTrace() };
+        const TestFailure                 failure{ condition, file, line, message, ScopedTrace::makeCurrentTrace(), bUnhandledLog };
         const std::lock_guard<std::mutex> lock( TestRegistryInternal::getRecordMutex() );
         if ( _pFailureCapture != nullptr )
         {

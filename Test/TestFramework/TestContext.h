@@ -14,6 +14,8 @@ namespace test
         int32      _line;
         sw::string _message;
         sw::string _trace; ///< 실패 순간 그 스레드에 걸려 있던 `ScopedTrace` 들(바깥부터, ` > ` 로 잇는다). 없으면 비어 있다
+        /** @brief 처리하지 않은 Error · Warning 로그 판정(`HostLogJudge`)이 남긴 실패인가 — `_message` 가 그 줄들을 든다. 케이스 단위 보고(JSON)가 단언 실패와 가른다. */
+        bool _bUnhandledLog{ false };
     };
 } // namespace test
 
