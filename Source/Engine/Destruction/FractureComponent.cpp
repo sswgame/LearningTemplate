@@ -20,20 +20,20 @@ namespace sw
         , _navGeometrySource{ *this }
         , _pSceneNavigation{ nullptr }
         , _seenReloadCount{ 0 }
+        , _navGeometryRegistration{}
     {
     }
 
     void FractureComponent::onRegister( GameObjectManager& manager )
     {
         FractureComponentBase::onRegister( manager );
-        _pSceneNavigation = &manager.getSubsystem<SceneNavigation>();
-        _pSceneNavigation->registerGeometrySource( &_navGeometrySource );
+        _pSceneNavigation        = &manager.getSubsystem<SceneNavigation>();
+        _navGeometryRegistration = _pSceneNavigation->registerGeometrySource( &_navGeometrySource );
     }
 
     void FractureComponent::onUnregister( GameObjectManager& manager )
     {
-        if ( _pSceneNavigation != nullptr )
-            _pSceneNavigation->unregisterGeometrySource( &_navGeometrySource );
+        _navGeometryRegistration.reset();
         _pSceneNavigation = nullptr;
         FractureComponentBase::onUnregister( manager );
     }

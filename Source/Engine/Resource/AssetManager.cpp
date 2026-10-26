@@ -59,7 +59,7 @@ namespace sw
         std::sort( _listBuiltInAssetCache.begin(), _listBuiltInAssetCache.end(), isKindNameLess );
         for ( IAssetCache* pCache : _listBuiltInAssetCache )
         {
-            registerAssetCache( pCache );
+            (void)addAssetCache( pCache ); // 거절은 목록이 로그로 남겼다
         }
     }
 
@@ -174,14 +174,21 @@ namespace sw
         // 여기서는 아직 할 일이 없다. 있게 되면 레지스트리를 훑는다.
     }
 
-    void AssetManager::registerAssetCache( IAssetCache* pCache )
+    Subscription AssetManager::registerAssetCache( IAssetCache* pCache )
+    {
+        if ( addAssetCache( pCache ) == false )
+            return {};
+        return issueSubscription( reinterpret_cast<uint64>( pCache ) );
+    }
+
+    bool AssetManager::addAssetCache( IAssetCache* pCache )
     {
         if ( pCache == nullptr )
-            return;
+            return false;
         // 이름은 **지금** 복사해 둔다(`RegistrationList`). 모듈이 내리지 않고 사라지면 나중에는 물어볼 수 없다.
         const utf8*       pKindName = pCache->getAssetKindName();
         const string_view kindName  = ( pKindName != nullptr ) ? string_view{ pKindName } : string_view{};
-        (void)_registeredAssetCache.addLogged( pCache, "Asset cache kind", kindName );
+        return _registeredAssetCache.addLogged( pCache, "Asset cache kind", kindName ) == RegistrationResult::Added;
     }
 
     bool AssetManager::isBuiltInAssetCache( const IAssetCache* pCache ) const
@@ -194,9 +201,9 @@ namespace sw
         return false;
     }
 
-    void AssetManager::unregisterAssetCache( const IAssetCache* pCache )
+    void AssetManager::releaseSubscription( uint64 id )
     {
-        (void)_registeredAssetCache.remove( pCache ); // 올라 있지 않으면 할 일이 없다(멱등)
+        (void)_registeredAssetCache.remove( reinterpret_cast<const IAssetCache*>( id ) ); // 언로드 훑기가 먼저 뺐으면 없다
     }
 
     vector<IAssetCache*> AssetManager::getAllAssetCache() const
@@ -239,7 +246,7 @@ namespace sw
 
             // 이름은 사본이라 안전하다. 포인터는 이미 죽었을 수도 있어 **역참조하지 않는다.**
             SW_LOG_WARNING( "Asset cache '%#' is still registered - the registering side (module) must call "
-                            "unregisterAssetCache before it goes down. Otherwise the next clear jumps into dead code.",
+                            "release its registerAssetCache subscription before it goes down. Otherwise the next clear jumps into dead code.",
                             _registeredAssetCache.getNameAt( index ).c_str() );
         }
     }

@@ -8,6 +8,7 @@
 #include "Core/Console/DevCommandsEnabled.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Module/ModuleUnloadListener.h"
@@ -451,6 +452,8 @@ namespace sw
         UIOffscreenScreens                 _offscreen;  ///< 스택 밖의 화면입니다(에디터 미리보기이며 입력이 없습니다).
         UIDocumentCache                    _documentCache;
         UIStyleSheetCache                  _styleSheetCache;
+        Subscription                       _documentCacheRegistration;   ///< 문서 캐시의 에셋 캐시 등록 구독(`initializeSubsystem` 이 받고 `shutdownSubsystem` 이 놓는다)
+        Subscription                       _styleSheetCacheRegistration; ///< 스타일 시트 캐시의 에셋 캐시 등록 구독
         UIThemeController                  _theme;
         vector<string>                     _listReopenDocument; ///< 모듈 다시 로드로 닫은 문서 화면입니다(다음 update 가 다시 엽니다).
         UIBindingConverterRegistry         _bindingConverters;

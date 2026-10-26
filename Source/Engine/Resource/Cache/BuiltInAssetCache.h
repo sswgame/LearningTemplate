@@ -8,7 +8,7 @@
  *          - **소유 캐시**(`SW_BUILT_IN_ASSET_CACHE`): 매니저마다 하나씩 만들고 매니저가 지웁니다.
  *          - **공유 캐시**(`SW_BUILT_IN_SHARED_ASSET_CACHE`): Engine 이미지에 있고 엔진 수명 범위가 소유하는 객체(코드로 짓는 값 표)를 빌려 올립니다. 매니저보다 오래 삽니다.
  *
- * @note 표는 Engine 이미지 안에서만 채웁니다. 모듈(게임 · 키트)의 캐시는 `AssetManager::registerAssetCache` 로 올리고 내려가기 전에 내립니다 —
+ * @note 표는 Engine 이미지 안에서만 채웁니다. 모듈(게임 · 키트)의 캐시는 `AssetManager::registerAssetCache` 로 올리고 내려가기 전에 그 구독을 놓습니다 —
  *       이 표의 항목은 내리지 않으므로, 모듈이 쓰면 언로드 뒤 죽은 함수를 가리킵니다.
  */
 #pragma once

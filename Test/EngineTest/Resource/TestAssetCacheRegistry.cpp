@@ -179,11 +179,11 @@ SW_TEST_CASE( AssetCacheRegistryTest, RegisterIgnoresNullAndDuplicates )
 
     const size_t builtInCount = resources.getAllAssetCache().size();
 
-    resources.registerAssetCache( nullptr );
+    SW_EXPECT_FALSE( resources.registerAssetCache( nullptr ).isActive() );
     SW_EXPECT_EQUAL( builtInCount, resources.getAllAssetCache().size() );
 
-    resources.registerAssetCache( &probe );
-    resources.registerAssetCache( &probe );
+    const sw::Subscription registration = resources.registerAssetCache( &probe );
+    SW_EXPECT_FALSE( resources.registerAssetCache( &probe ).isActive() ); // 둘째는 빈 구독 — 버려져도 첫 등록을 풀지 않는다
     SW_EXPECT_EQUAL( builtInCount + 1, resources.getAllAssetCache().size() );
     SW_EXPECT_TRUE( resources.findAssetCache( "ProbeKind" ) == static_cast<sw::IAssetCache*>( &probe ) );
 }
@@ -201,11 +201,10 @@ SW_TEST_CASE( AssetCacheRegistryTest, SecondCacheWithTheSameKindNameIsRejected )
 
     {
         test::ScopedDefensiveTestLog expected( "a second asset cache claims the kind name Material" );
-        resources.registerAssetCache( &impostor );
+        SW_EXPECT_FALSE( resources.registerAssetCache( &impostor ).isActive() );
     }
     SW_EXPECT_EQUAL( builtInCount, resources.getAllAssetCache().size() );
     SW_EXPECT_TRUE( resources.findAssetCache( "Material" ) == static_cast<sw::IAssetCache*>( &resources.getAssetCache<sw::MaterialCache>() ) );
-    resources.unregisterAssetCache( &impostor ); // 올라 있지 않아도 조용하다
 }
 
 /**
@@ -215,9 +214,9 @@ SW_TEST_CASE( AssetCacheRegistryTest, SecondCacheWithTheSameKindNameIsRejected )
  */
 SW_TEST_CASE( AssetCacheRegistryTest, ClearAssetCachesReachesEveryRegisteredCache )
 {
-    sw::AssetManager resources;
-    ProbeAssetCache  probe;
-    resources.registerAssetCache( &probe );
+    sw::AssetManager       resources;
+    ProbeAssetCache        probe;
+    const sw::Subscription registration = resources.registerAssetCache( &probe );
 
     SW_ASSERT_FALSE( probe._bCleared );
     resources.clearAssetCaches();
@@ -242,11 +241,11 @@ SW_TEST_CASE( AssetCacheRegistryTest, UnregisterRemovesOnlyThatCache )
     sw::AssetManager resources;
     ProbeAssetCache  probe;
 
-    const size_t builtInCount = resources.getAllAssetCache().size();
-    resources.registerAssetCache( &probe );
+    const size_t     builtInCount = resources.getAllAssetCache().size();
+    sw::Subscription registration = resources.registerAssetCache( &probe );
     SW_ASSERT_EQUAL( builtInCount + 1, resources.getAllAssetCache().size() );
 
-    resources.unregisterAssetCache( &probe );
+    registration.reset();
     SW_EXPECT_EQUAL( builtInCount, resources.getAllAssetCache().size() );
     SW_EXPECT_NULL( resources.findAssetCache( "ProbeKind" ) );
 
@@ -255,9 +254,8 @@ SW_TEST_CASE( AssetCacheRegistryTest, UnregisterRemovesOnlyThatCache )
     SW_EXPECT_NOT_NULL( resources.findAssetCache( "Texture" ) );
     SW_EXPECT_NOT_NULL( resources.findAssetCache( "Prefab" ) );
 
-    // 없는 것을 내려도 조용하다(모듈이 두 번 내릴 수 있다).
-    resources.unregisterAssetCache( &probe );
-    resources.unregisterAssetCache( nullptr );
+    // 이미 푼 구독을 또 풀어도 조용하다.
+    registration.reset();
     SW_EXPECT_EQUAL( builtInCount, resources.getAllAssetCache().size() );
 }
 
@@ -283,7 +281,7 @@ SW_TEST_CASE( AssetCacheRegistryTest, LeftoverModuleCacheIsNamedInAWarning )
     resources.warnAboutRemainingModuleCaches();
     SW_EXPECT_TRUE_MSG( warningText.empty(), "내장 캐시를 두고 간 것으로 잘못 보고했습니다" );
 
-    resources.registerAssetCache( &probe );
+    const sw::Subscription registration = resources.registerAssetCache( &probe );
     resources.warnAboutRemainingModuleCaches();
     subscription.reset();
 
@@ -294,16 +292,16 @@ SW_TEST_CASE( AssetCacheRegistryTest, LeftoverModuleCacheIsNamedInAWarning )
 #if !defined( SW_SHIPPING )
 /**
  * @brief [AssetCacheRegistryTest] 모듈 이미지를 내리기 전의 정리(`ModuleImageUtil::releaseModuleCode`)는 그 이미지의 캐시를 레지스트리에서 내린다
- * @details 모듈이 `unregisterAssetCache` 를 빠뜨린 채 내려가면 레지스트리에 vtable 이 사라진 포인터가 남고, 다음 비우기 · 종료가 내려간 코드로
+ * @details 모듈이 등록 구독을 쥔 채(정적 값 등) 내려가면 레지스트리에 vtable 이 사라진 포인터가 남고, 다음 비우기 · 종료가 내려간 코드로
  *          뛴다. 여기서는 가짜 캐시의 vtable 한 바이트를 "모듈 이미지" 로 삼는다 — 그 범위 밖인 내장 캐시는 그대로 남아야 한다.
  */
 SW_TEST_CASE( AssetCacheRegistryTest, ReleaseModuleCodeDropsCachesOfThatImage )
 {
     SW_TEST_DEFENSIVE_SCOPE( "releaseModuleCode warns about a cache the module left registered" );
-    sw::AssetManager resources;
-    ProbeAssetCache  probe;
-    resources.registerAssetCache( &probe );
-    const size_t registeredCount = resources.getAllAssetCache().size();
+    sw::AssetManager       resources;
+    ProbeAssetCache        probe;
+    const sw::Subscription registration    = resources.registerAssetCache( &probe ); // 언로드 훑기가 먼저 빼도 나중의 풀기는 조용하다
+    const size_t           registeredCount = resources.getAllAssetCache().size();
 
     const uint8* pVtable = static_cast<const uint8*>( sw::IModuleUnloadListener::findVtableAddress( static_cast<const sw::IAssetCache*>( &probe ) ) );
     SW_ASSERT_NOT_NULL( pVtable );

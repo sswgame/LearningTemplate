@@ -14,19 +14,22 @@
 
 namespace sw
 {
-    void CameraRegistry::add( CameraComponent* pCamera )
+    Subscription CameraRegistry::add( CameraComponent* pCamera )
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        // nullptr · 이미 등록된 카메라는 목록이 거절한다(멱등).
-        if ( _registeredCamera.addLogged( pCamera, "Camera" ) == RegistrationResult::Added )
-            _registrySerial.fetch_add( 1, std::memory_order_relaxed );
+        // nullptr · 이미 등록된 카메라는 목록이 거절한다 — 먼저 받은 구독이 쥔다.
+        if ( _registeredCamera.addLogged( pCamera, "Camera" ) != RegistrationResult::Added )
+            return {};
+        _registrySerial.fetch_add( 1, std::memory_order_relaxed );
+        return issueSubscription( reinterpret_cast<uint64>( pCamera ) );
     }
 
-    void CameraRegistry::remove( CameraComponent* pCamera )
+    void CameraRegistry::releaseSubscription( uint64 id )
     {
-        // 순서를 지키며 뺀다(목록을 보여 주는 쪽 — 프러스텀 시각화 · 벤치 — 이 순서를 본다). 카메라는 몇 개뿐이다.
+        // 순서를 지키며 뺀다(목록을 보여 주는 쪽 — 프러스텀 시각화 · 벤치 — 이 순서를 본다). 카메라는 몇 개뿐이다. 주소로만 찾고 역참조하지 않는다.
+        CameraComponent* const  pCamera = reinterpret_cast<CameraComponent*>( id );
         std::scoped_lock<mutex> lock{ _mutex };
-        if ( _registeredCamera.remove( pCamera ) ) // 두 번 빼도 된다 — 없으면 할 일이 없다
+        if ( _registeredCamera.remove( pCamera ) )
             _registrySerial.fetch_add( 1, std::memory_order_relaxed );
         if ( _pCutCamera == pCamera )
             _pCutCamera = nullptr;

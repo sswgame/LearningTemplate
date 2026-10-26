@@ -137,9 +137,10 @@ SW_TEST_CASE( NavMeshDynamicTest, GeometrySourceChangeRebakesThatArea )
     Internal::spawnFloorAndSurface( manager );
     sw::GameObject*              pPillar = manager.createGameObject( sw::hashed_string( "Pillar" ) );
     sw::MockPillarGeometrySource source;
-    source._pOwner = pPillar;
-    navigation.registerGeometrySource( &source );
-    navigation.registerGeometrySource( &source ); // 같은 소스를 두 번 올려도 하나만 든다
+    source._pOwner                      = pPillar;
+    sw::Subscription       registration = navigation.registerGeometrySource( &source );
+    const sw::Subscription duplicate    = navigation.registerGeometrySource( &source ); // 같은 소스를 두 번 올려도 하나만 든다(빈 구독)
+    SW_EXPECT_FALSE( duplicate.isActive() );
     SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), navigation.getGeometrySources().size() );
     SW_ASSERT_NOT_NULL( navigation.ensureNavMesh( sw::hashed_string( "TestHumanoid" ) ) );
     SW_EXPECT_TRUE( Internal::findPathLength( navigation ) > 18.0f );
@@ -153,7 +154,7 @@ SW_TEST_CASE( NavMeshDynamicTest, GeometrySourceChangeRebakesThatArea )
     navigation.flushTileBakes();
     SW_EXPECT_TRUE( navigation.getRebakedTileCount() > 0 );
     SW_EXPECT_NEAR_EQUAL( 16.0f, Internal::findPathLength( navigation ), 0.1f );
-    navigation.unregisterGeometrySource( &source );
+    registration.reset();
     SW_EXPECT_TRUE( navigation.getGeometrySources().empty() );
 }
 

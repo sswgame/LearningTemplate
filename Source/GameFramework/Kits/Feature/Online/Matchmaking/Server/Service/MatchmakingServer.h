@@ -88,6 +88,7 @@ namespace sw
         unordered_map<AccountID, int64>     _mapAccountToGraceEnd;        ///< 떠났지만 파티와 로비에 남겨 둔 계정과 유예 끝 시각이다
         unordered_map<uint64, AccountID>    _mapPresenceRequestToAccount; ///< 유예가 끝나 접속 상태를 묻는 중인 계정이다
         IAccountPresence*                   _pPresence;
+        Subscription                        _findOwner; ///< 접속 상태 찾기의 주인 몫(`initialize` 가 열고 `shutdown` 이 놓는다)
         IGroupChannelMembership*            _pGroupChannels;
         OnlineServiceHost*                  _pHost; ///< 붙은 호스트이다(첫 서비스 틱에 붙는다). 붙었는지만 본다
         int64                               _nowMs;

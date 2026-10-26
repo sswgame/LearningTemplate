@@ -13,6 +13,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Delegate/Subscription.h"
 
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
 #include "GameFramework/Base/Online/Identity/OnlinePushRelay.h"
@@ -38,8 +39,10 @@ namespace sw
     /**
      * @class IAccountPresence
      * @brief 접속 상태 인터페이스입니다(서비스 스레드).
+     * @details 찾기는 주인 몫(`openFindOwner` 의 구독)과 함께 맡긴다. 주인이 몫을 놓으면 그 몫으로 맡긴 찾기의 델리게이트는 불리지 않는다 —
+     *          주인이 이 인터페이스보다 먼저 내려가도 사라진 객체를 부르지 않는다. 구현은 `releaseSubscription( 몫 번호 )` 에서 그 찾기를 지운다.
      */
-    class IAccountPresence
+    class IAccountPresence : protected SubscriptionSource
     {
         // 순수 인터페이스라 내보내지 않는다. 인라인 생성자와 소멸자를 GameFramework.dll 이 내보내지 않으므로 dllimport 로 해석되면 키트 링크가 깨진다(C-3).
     public:
@@ -49,10 +52,18 @@ namespace sw
         IAccountPresence( const IAccountPresence& )            = delete;
         IAccountPresence& operator=( const IAccountPresence& ) = delete;
 
-        /** @brief 접속한 계정을 표시 이름(대소문자 무시)으로 찾습니다. 0 이 아닌 요청 id 를 돌려주며, 결과는 @p onFound 로 한 번 옵니다. */
-        virtual uint64 submitFindByDisplayName( string_view displayName, const AccountPresenceDelegate& onFound ) = 0;
-        /** @brief 계정이 지금 접속한 서버를 찾습니다(친구 접속 표시, 다른 서버 귓속말, 매칭 결과를 보낼 곳). 0 이 아닌 요청 id 를 돌려주며, 결과는 @p onFound 로 한 번 옵니다. */
-        virtual uint64 submitFindByAccount( AccountID accountID, const AccountPresenceDelegate& onFound ) = 0;
+        /** @brief 찾기 주인의 몫을 엽니다. 주인이 멤버로 들고, 놓으면(소멸 · `reset`) 그 몫으로 맡긴 찾기의 델리게이트가 불리지 않습니다. */
+        [[nodiscard]] Subscription openFindOwner() { return issueSubscription( _nextFindOwnerID++ ); }
+        /**
+         * @brief 접속한 계정을 표시 이름(대소문자 무시)으로 찾습니다. 0 이 아닌 요청 id 를 돌려주며, 결과는 @p onFound 로 한 번 옵니다.
+         * @details @p owner 가 이 인터페이스가 연 살아 있는 몫이 아니면 맡지 않고 0 입니다.
+         */
+        virtual uint64 submitFindByDisplayName( string_view displayName, const AccountPresenceDelegate& onFound, const Subscription& owner ) = 0;
+        /**
+         * @brief 계정이 지금 접속한 서버를 찾습니다(친구 접속 표시, 다른 서버 귓속말, 매칭 결과를 보낼 곳). 0 이 아닌 요청 id 를 돌려주며, 결과는 @p onFound 로 한 번 옵니다.
+         * @details @p owner 는 `submitFindByDisplayName` 과 같습니다.
+         */
+        virtual uint64 submitFindByAccount( AccountID accountID, const AccountPresenceDelegate& onFound, const Subscription& owner ) = 0;
         /**
          * @brief 다른 서버에 접속한 계정에게 알림을 보냅니다. 그 계정의 서버를 찾아 넘기고, 접속해 있지 않으면 버립니다. 서버 여럿이 아니면 false 입니다.
          * @details 알림 번호와 B 본문이 아니라 알림 열거자와 본문 값을 받습니다. 받는 서버가 자기 빌드의 번호와 B 로 다시 씁니다(`OnlinePushRelay`).
@@ -68,10 +79,8 @@ namespace sw
         }
         /** @brief 만든 중계 봉투(`OnlinePushRelayRegistry::makeRelay`)를 그 계정의 서버로 넘깁니다. 서버 여럿이 아니면 false. */
         virtual bool relayRemotePush( const OnlinePushRelay& relay ) = 0;
-        /**
-         * @brief 요청한 찾기를 취소합니다. 그 델리게이트는 불리지 않습니다. 델리게이트 주인이 이 인터페이스보다 먼저 종료할 때 자기 `shutdown` 에서 부릅니다.
-         *        끝났거나 모르는 id 면 아무것도 하지 않는다.
-         */
-        virtual void cancel( uint64 requestID ) = 0;
+
+    private:
+        uint64 _nextFindOwnerID{ 1 };
     };
 } // namespace sw

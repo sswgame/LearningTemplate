@@ -316,6 +316,7 @@ namespace sw
             return false;
         }
         _dependencies = dependencies;
+        _findOwner    = dependencies._pPresence != nullptr ? dependencies._pPresence->openFindOwner() : Subscription{};
         _settings     = settings;
         _serverTopic  = ChatProtocol::makeServerTopic( dependencies._serverID );
         _spamGuard.initialize( settings._spam );
@@ -336,13 +337,8 @@ namespace sw
         { return _pendingStoreCount <= 0; } );
         if ( _pendingStoreCount > 0 )
             SW_LOG_ERROR( "ChatService shut down with %# store works still pending", _pendingStoreCount );
-        if ( _dependencies._pPresence != nullptr ) // 맡긴 찾기를 회수한다. 접속 상태 관리자가 이 객체보다 오래 살아도 이 객체를 부르지 않게 하려는 것이다. 저장 작업을 회수한 뒤에 한다. 그 완료가 찾기를 낼 수 있기 때문이다
-        {
-            for ( const auto& [requestID, pending] : _mapPresenceRequestToWhisper )
-            {
-                _dependencies._pPresence->cancel( requestID );
-            }
-        }
+        // 맡긴 찾기를 회수한다. 접속 상태 관리자가 이 객체보다 오래 살아도 이 객체를 부르지 않게 하려는 것이다. 저장 작업을 회수한 뒤에 한다. 그 완료가 찾기를 낼 수 있기 때문이다
+        _findOwner.reset();
         _mapAccountToMember.clear();
         _mapChannelToMember.clear();
         _mapPresenceRequestToWhisper.clear();
@@ -652,7 +648,7 @@ namespace sw
             return;
         }
         // 다른 서버에 있으면 접속 상태로 서버를 찾는다. 결과는 항상 나중에 onPresenceFound 로 온다
-        const uint64 requestID = _dependencies._pPresence->submitFindByAccount( send._recipientID, AccountPresenceDelegate::create<&ChatService::onPresenceFound>( this ) );
+        const uint64 requestID = _dependencies._pPresence->submitFindByAccount( send._recipientID, AccountPresenceDelegate::create<&ChatService::onPresenceFound>( this ), _findOwner );
         _mapPresenceRequestToWhisper.emplace( requestID, PendingWhisper{ std::move( message ), send._requestTag } );
     }
 

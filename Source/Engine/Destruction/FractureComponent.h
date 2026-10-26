@@ -8,6 +8,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Delegate/Subscription.h"
 
 #include "Engine/Destruction/FractureComponentBase.h"
 #include "Engine/Object/Component/Navigation/SceneNavigation.h"
@@ -69,7 +70,8 @@ namespace sw
         PROPERTY( Category = "Fracture", DisplayName = "Fracture Asset", AssetPath, Tooltip = "The .fracture asset; empty uses the one beside the object's .mesh" )
         string                    _fracturePath;
         FractureNavGeometrySource _navGeometrySource;
-        SceneNavigation*          _pSceneNavigation; ///< 기하 소스를 등록한 씬의 내비게이션이다(등록하는 동안만 유효하다).
-        uint32                    _seenReloadCount;  ///< 받았을 때의 `SharedAssetCache<FractureAsset>::getReloadCount` 다(핫 리로드 판정에 쓴다).
+        SceneNavigation*          _pSceneNavigation;        ///< 기하 소스를 등록한 씬의 내비게이션이다(등록하는 동안만 유효하다).
+        uint32                    _seenReloadCount;         ///< 받았을 때의 `SharedAssetCache<FractureAsset>::getReloadCount` 다(핫 리로드 판정에 쓴다).
+        Subscription              _navGeometryRegistration; ///< 기하 소스 등록 구독이다(`onRegister` 가 받고 `onUnregister` 가 놓는다).
     };
 } // namespace sw

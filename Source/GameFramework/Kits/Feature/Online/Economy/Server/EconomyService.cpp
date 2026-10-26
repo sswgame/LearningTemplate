@@ -195,6 +195,7 @@ namespace sw
 #endif
         _pStore          = pStore;
         _settings        = settings;
+        _findOwner       = settings._pPresence != nullptr ? settings._pPresence->openFindOwner() : Subscription{};
         _pMetricRegistry = settings._pMetricRegistry;
         if ( settings._pScheduler != nullptr )
         {
@@ -223,6 +224,8 @@ namespace sw
             SW_LOG_ERROR( "EconomyService shut down with %# calls still pending", _listPendingCall.size() );
             _listPendingCall.clear();
         }
+        _findOwner.reset(); // 잔액 알림 찾기가 이 객체를 부르지 않게 한다(저장 작업을 회수한 뒤 — 그 완료가 찾기를 낼 수 있다)
+        _mapPresenceRequestToNotice.clear();
         _pStore = nullptr;
     }
 
@@ -458,7 +461,7 @@ namespace sw
             return; // 이 서버에 붙어 있다
         if ( _settings._pPresence == nullptr )
             return; // 서버가 하나이고 붙어 있지 않다. 다음 로그인이 지갑을 읽는다
-        const uint64 requestID                 = _settings._pPresence->submitFindByAccount( accountID, AccountPresenceDelegate::create<&EconomyService::onBalancePresenceFound>( this ) );
+        const uint64 requestID                 = _settings._pPresence->submitFindByAccount( accountID, AccountPresenceDelegate::create<&EconomyService::onBalancePresenceFound>( this ), _findOwner );
         _mapPresenceRequestToNotice[requestID] = std::move( changed );
     }
 

@@ -27,6 +27,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 
 #include "GameFramework/Base/Online/Guard/TokenBucketMap.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -242,6 +243,7 @@ namespace sw
         TokenBucketMap                           _reportGuard;
         ChatServiceConfig                        _settings;
         ChatServiceDependencies                  _dependencies;
+        Subscription                             _findOwner; ///< 접속 상태 찾기의 주인 몫(`initialize` 가 열고 `shutdown` 이 놓는다)
         string                                   _serverTopic;
         uint32                                   _sequence;
         uint32                                   _reportSequence; ///< 신고 키의 고유 값(서버 id 와 섞는다)

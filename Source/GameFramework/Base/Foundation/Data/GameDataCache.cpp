@@ -13,11 +13,18 @@ namespace sw
         struct GameDataCacheInternal
         {
             /** @brief 캐시 목록과 지금 묶인 매니저입니다. 목록을 바꾸는 쪽(캐시 생성 · 서비스 묶기)이 여럿이라 잠근다. */
+            /** @brief 캐시 하나와, 묶인 매니저에 올린 등록 구독입니다(묶인 매니저가 없으면 빈 구독). */
+            struct CacheEntry
+            {
+                IAssetCache* _pCache{ nullptr };
+                Subscription _registration{};
+            };
+
             struct RegistryState
             {
-                mutex                _mutex;
-                vector<IAssetCache*> _listCache;
-                AssetManager*        _pAssetManager{ nullptr };
+                mutex              _mutex;
+                vector<CacheEntry> _listCache;
+                AssetManager*      _pAssetManager{ nullptr };
             };
 
             /**
@@ -40,10 +47,11 @@ namespace sw
         // nullptr 은 엔진 수명 범위가 닫힌 뒤의 접근이다(Debug 는 `getOrCreate` 가 단언한다) — 캐시를 올릴 레지스트리가 없다.
         if ( pState == nullptr )
             return;
-        std::scoped_lock<mutex> lock{ pState->_mutex };
-        pState->_listCache.push_back( pCache );
+        std::scoped_lock<mutex>            lock{ pState->_mutex };
+        GameDataCacheInternal::CacheEntry& entry = pState->_listCache.emplace_back();
+        entry._pCache                            = pCache;
         if ( pState->_pAssetManager != nullptr )
-            pState->_pAssetManager->registerAssetCache( pCache );
+            entry._registration = pState->_pAssetManager->registerAssetCache( pCache );
     }
 
     void GameDataCacheRegistry::unregisterCache( const IAssetCache* pCache )
@@ -54,7 +62,7 @@ namespace sw
         std::scoped_lock<mutex> lock{ pState->_mutex };
         for ( size_t index = 0; index < pState->_listCache.size(); ++index )
         {
-            if ( pState->_listCache[index] == pCache )
+            if ( pState->_listCache[index]._pCache == pCache ) // 지우면 등록 구독도 함께 풀린다
             {
                 pState->_listCache.erase( pState->_listCache.begin() + static_cast<ptrdiff_t>( index ) );
                 return;
@@ -71,20 +79,11 @@ namespace sw
         std::scoped_lock<mutex> lock{ pState->_mutex };
         if ( pState->_pAssetManager == pAssetManager )
             return;
-        if ( pState->_pAssetManager != nullptr )
-        {
-            for ( const IAssetCache* pCache : pState->_listCache )
-            {
-                pState->_pAssetManager->unregisterAssetCache( pCache );
-            }
-        }
         pState->_pAssetManager = pAssetManager;
-        if ( pAssetManager != nullptr )
+        // 대입이 이전 매니저의 등록을 먼저 푼다. 풀 때(nullptr)는 빈 구독을 넣는다.
+        for ( GameDataCacheInternal::CacheEntry& entry : pState->_listCache )
         {
-            for ( IAssetCache* pCache : pState->_listCache )
-            {
-                pAssetManager->registerAssetCache( pCache );
-            }
+            entry._registration = pAssetManager != nullptr ? pAssetManager->registerAssetCache( entry._pCache ) : Subscription{};
         }
     }
 } // namespace sw

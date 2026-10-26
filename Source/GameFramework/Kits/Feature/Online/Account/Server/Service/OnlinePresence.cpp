@@ -79,16 +79,16 @@ namespace sw
         _listDeferred.clear();
     }
 
-    void OnlinePresence::cancel( uint64 requestID )
+    void OnlinePresence::releaseSubscription( uint64 ownerID )
     {
         for ( auto& [routerRequestID, pending] : _mapRequestToPending )
         {
-            if ( pending._lookupID == requestID && ( pending._pendingKind == PendingKind::FindName || pending._pendingKind == PendingKind::FindAccount ) )
+            if ( pending._ownerID == ownerID )
                 pending._onFound = AccountPresenceDelegate{}; // 캐시 응답은 그대로 받아서 버린다
         }
         for ( size_t index = 0; index < _listDeferred.size(); )
         {
-            if ( _listDeferred[index]._result._requestID == requestID )
+            if ( _listDeferred[index]._ownerID == ownerID )
                 _listDeferred.erase( _listDeferred.begin() + static_cast<ptrdiff_t>( index ) );
             else
                 ++index;
@@ -163,41 +163,53 @@ namespace sw
         return string( OnlinePresenceInternal::kNameKeyPrefix ) + ServiceKeyUtil::makeHex64( HashUtil::computeStringHash64( displayName.data(), displayName.size() ) );
     }
 
-    uint64 OnlinePresence::submitFindByDisplayName( string_view displayName, const AccountPresenceDelegate& onFound )
+    uint64 OnlinePresence::deferNotFound( const AccountPresenceDelegate& onFound, uint64 ownerID )
     {
         const uint64 lookupID = _nextLookupID++;
-        if ( _pHost == nullptr )
+        _listDeferred.push_back( DeferredFound{
+            AccountPresenceResult{ AccountIdentity{}, lookupID, 0 },
+            onFound, ownerID
+        } );
+        return lookupID;
+    }
+
+    uint64 OnlinePresence::submitFindByDisplayName( string_view displayName, const AccountPresenceDelegate& onFound, const Subscription& owner )
+    {
+        const uint64 ownerID = findIssuedID( owner );
+        if ( ownerID == 0 )
         {
-            _listDeferred.push_back( DeferredFound{
-                AccountPresenceResult{ AccountIdentity{}, lookupID, 0 },
-                onFound
-            } );
-            return lookupID;
+            SW_LOG_ERROR( "OnlinePresence: find without a live find owner of this presence - nothing is submitted" );
+            return 0;
         }
+        if ( _pHost == nullptr )
+            return deferNotFound( onFound, ownerID );
+        const uint64     lookupID = _nextLookupID++;
         PendingOperation pending;
         pending._nameKey     = StringUtil::toLower( string( displayName ).c_str() );
         pending._onFound     = onFound;
         pending._lookupID    = lookupID;
+        pending._ownerID     = ownerID;
         pending._pendingKind = PendingKind::FindName;
         submitPending( EphemeralRequest::makeGet( makeNameKey( displayName ) ), std::move( pending ) );
         return lookupID;
     }
 
-    uint64 OnlinePresence::submitFindByAccount( AccountID accountID, const AccountPresenceDelegate& onFound )
+    uint64 OnlinePresence::submitFindByAccount( AccountID accountID, const AccountPresenceDelegate& onFound, const Subscription& owner )
     {
-        const uint64 lookupID = _nextLookupID++;
-        if ( _pHost == nullptr || accountID == kInvalidAccountID )
+        const uint64 ownerID = findIssuedID( owner );
+        if ( ownerID == 0 )
         {
-            _listDeferred.push_back( DeferredFound{
-                AccountPresenceResult{ AccountIdentity{}, lookupID, 0 },
-                onFound
-            } );
-            return lookupID;
+            SW_LOG_ERROR( "OnlinePresence: find without a live find owner of this presence - nothing is submitted" );
+            return 0;
         }
+        if ( _pHost == nullptr || accountID == kInvalidAccountID )
+            return deferNotFound( onFound, ownerID );
+        const uint64     lookupID = _nextLookupID++;
         PendingOperation pending;
         pending._onFound     = onFound;
         pending._accountID   = accountID;
         pending._lookupID    = lookupID;
+        pending._ownerID     = ownerID;
         pending._pendingKind = PendingKind::FindAccount;
         submitPending( EphemeralRequest::makeGet( makeAccountKey( accountID ) ), std::move( pending ) );
         return lookupID;

@@ -197,8 +197,9 @@ namespace sw
             SW_LOG_ERROR( "MailboxService needs a store" );
             return false;
         }
-        _pStore   = pStore;
-        _settings = settings;
+        _pStore    = pStore;
+        _settings  = settings;
+        _findOwner = settings._pPresence != nullptr ? settings._pPresence->openFindOwner() : Subscription{};
         _metrics.initialize<MailboxMethodName, MailboxResult>( settings._pMetricRegistry, "mailbox" );
         if ( settings._pMetricRegistry != nullptr )
         {
@@ -234,14 +235,7 @@ namespace sw
             SW_LOG_ERROR( "MailboxService shut down with %# calls still pending", _listPendingCall.size() );
             _listPendingCall.clear();
         }
-        if ( _settings._pPresence != nullptr )
-        {
-            for ( const auto& [requestID, notice] : _mapPresenceRequestToNotice )
-            {
-                (void)notice;
-                _settings._pPresence->cancel( requestID ); // 알림 하나를 잃는다. 우편은 목록에 있다
-            }
-        }
+        _findOwner.reset(); // 기다리던 찾기의 알림을 잃는다. 우편은 목록에 있다
         _mapPresenceRequestToNotice.clear();
         _pStore = nullptr;
         _pHost  = nullptr;
@@ -306,7 +300,7 @@ namespace sw
                 sendOfflinePush( accountID ); // 서버가 하나이고 붙어 있지 않다
                 continue;
             }
-            const uint64 requestID                 = _settings._pPresence->submitFindByAccount( accountID, AccountPresenceDelegate::create<&MailboxService::onNoticePresenceFound>( this ) );
+            const uint64 requestID                 = _settings._pPresence->submitFindByAccount( accountID, AccountPresenceDelegate::create<&MailboxService::onNoticePresenceFound>( this ), _findOwner );
             _mapPresenceRequestToNotice[requestID] = std::move( newMail );
         }
     }

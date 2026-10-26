@@ -196,17 +196,15 @@ namespace sw
         _pQueue      = pQueue;
         _pAgent      = pAgent;
         _pPresence   = pPresence;
+        _findOwner   = pPresence != nullptr ? pPresence->openFindOwner() : Subscription{};
     }
 
     void MatchmakingServer::shutdown()
     {
-        if ( _pPresence != nullptr )
+        _findOwner.reset(); // 기다리던 찾기가 이 객체를 부르지 않게 한다. 답을 못 받은 계정은 유예를 지금 끝낸다
+        for ( const auto& [requestID, accountID] : _mapPresenceRequestToAccount )
         {
-            for ( const auto& [requestID, accountID] : _mapPresenceRequestToAccount )
-            {
-                _pPresence->cancel( requestID );
-                _mapAccountToGraceEnd[accountID] = _nowMs;
-            }
+            _mapAccountToGraceEnd[accountID] = _nowMs;
         }
         _mapPresenceRequestToAccount.clear();
         if ( _pPartyLobby != nullptr )
@@ -383,7 +381,7 @@ namespace sw
                 _pPartyLobby->removeAccount( accountID ); // 서버가 한 대이고 돌아오지 않았다
                 continue;
             }
-            const uint64 requestID                  = _pPresence->submitFindByAccount( accountID, AccountPresenceDelegate::create<&MatchmakingServer::onGracePresenceFound>( this ) );
+            const uint64 requestID                  = _pPresence->submitFindByAccount( accountID, AccountPresenceDelegate::create<&MatchmakingServer::onGracePresenceFound>( this ), _findOwner );
             _mapPresenceRequestToAccount[requestID] = accountID;
         }
     }

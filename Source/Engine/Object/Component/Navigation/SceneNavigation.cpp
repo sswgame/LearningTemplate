@@ -185,15 +185,17 @@ namespace sw
         pObstacle->_bCarved  = SW_FALSE;
     }
 
-    void SceneNavigation::registerGeometrySource( INavGeometrySource* pSource )
+    Subscription SceneNavigation::registerGeometrySource( INavGeometrySource* pSource )
     {
         // nullptr · 이미 등록한 소스는 목록이 거절한다(같은 소스가 두 번 들면 빼기가 하나만 지워 죽은 포인터가 남는다).
-        (void)_listGeometrySource.addLogged( pSource, "Navigation geometry source" );
+        if ( _listGeometrySource.addLogged( pSource, "Navigation geometry source" ) != RegistrationResult::Added )
+            return {};
+        return issueSubscription( reinterpret_cast<uint64>( pSource ) );
     }
 
-    void SceneNavigation::unregisterGeometrySource( INavGeometrySource* pSource )
+    void SceneNavigation::releaseSubscription( uint64 id )
     {
-        (void)_listGeometrySource.remove( pSource ); // 등록하지 않은 소스를 빼는 것은 할 일이 없다
+        (void)_listGeometrySource.remove( reinterpret_cast<const INavGeometrySource*>( id ) ); // 구독 하나가 등록 하나라 늘 있다
     }
 
     void SceneNavigation::registerLink( NavMeshLinkComponent* pLink )

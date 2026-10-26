@@ -354,8 +354,8 @@ SW_TEST_CASE( AssetHotReloadImportTest, ChangedFilesWaitForTheImportAndReloadOnT
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     TestScopedEditorServices services{ 2 };
     SW_ASSERT_TRUE( services.isReady() );
-    ThreadProbeCache probe;
-    services.getResources().registerAssetCache( &probe );
+    ThreadProbeCache       probe;
+    const sw::Subscription registration = services.getResources().registerAssetCache( &probe );
 
     sw::editor::AssetHotReload reload;
     reload.requestSourceImport( "game/test/models_raw/a.glb", &blockingImport );
@@ -379,7 +379,6 @@ SW_TEST_CASE( AssetHotReloadImportTest, ChangedFilesWaitForTheImportAndReloadOnT
     // 임포트가 없으면 바로 읽는다.
     reload.onResourceFileChanged( changed );
     SW_EXPECT_EQUAL( 2u, probe._reloadCount );
-    services.getResources().unregisterAssetCache( &probe );
 }
 
 /**

@@ -120,8 +120,11 @@ namespace test
             }
         }
 
-        uint64 submitFindByDisplayName( sw::string_view displayName, const sw::AccountPresenceDelegate& onFound ) override
+        uint64 submitFindByDisplayName( sw::string_view displayName, const sw::AccountPresenceDelegate& onFound, const sw::Subscription& owner ) override
         {
+            const uint64 ownerID = findIssuedID( owner );
+            if ( ownerID == 0 )
+                return 0;
             sw::AccountPresenceResult result;
             result._requestID = _nextRequestID++;
             for ( const auto& [accountID, entry] : _mapAccountToEntry )
@@ -132,12 +135,15 @@ namespace test
                     result._serverID = entry._serverID;
                 }
             }
-            _listPending.push_back( Pending{ result, onFound } );
+            _listPending.push_back( Pending{ result, onFound, ownerID } );
             return result._requestID;
         }
 
-        uint64 submitFindByAccount( sw::AccountID accountID, const sw::AccountPresenceDelegate& onFound ) override
+        uint64 submitFindByAccount( sw::AccountID accountID, const sw::AccountPresenceDelegate& onFound, const sw::Subscription& owner ) override
         {
+            const uint64 ownerID = findIssuedID( owner );
+            if ( ownerID == 0 )
+                return 0;
             sw::AccountPresenceResult result;
             result._requestID  = _nextRequestID++;
             const auto entryIt = _mapAccountToEntry.find( accountID );
@@ -146,7 +152,7 @@ namespace test
                 result._identity._accountID = accountID;
                 result._serverID            = entryIt->second._serverID;
             }
-            _listPending.push_back( Pending{ result, onFound } );
+            _listPending.push_back( Pending{ result, onFound, ownerID } );
             return result._requestID;
         }
 
@@ -155,15 +161,6 @@ namespace test
             const sw::OnlinePushRelayEntry* pEntry = sw::OnlinePushRelayRegistry::findEntry( relay ); // 키트가 등록한 알림이어야 번호가 나온다
             _listRemotePush.push_back( RemotePush{ relay._accountID, pEntry != nullptr ? pEntry->getKind() : uint16( 0 ) } );
             return true;
-        }
-
-        void cancel( uint64 requestID ) override
-        {
-            for ( Pending& pending : _listPending )
-            {
-                if ( pending._result._requestID == requestID )
-                    pending._onFound = sw::AccountPresenceDelegate{};
-            }
         }
 
         /** @brief 아직 알릴(취소하지 않은) 찾기 수입니다. */
@@ -188,7 +185,18 @@ namespace test
         {
             sw::AccountPresenceResult   _result{};
             sw::AccountPresenceDelegate _onFound{};
+            uint64                      _ownerID{ 0 }; ///< 맡긴 주인 몫의 번호
         };
+
+        /** @brief 찾기 주인 몫이 풀렸습니다. 그 몫으로 맡긴 찾기는 알리지 않습니다. */
+        void releaseSubscription( uint64 ownerID ) override
+        {
+            for ( Pending& pending : _listPending )
+            {
+                if ( pending._ownerID == ownerID )
+                    pending._onFound = sw::AccountPresenceDelegate{};
+            }
+        }
 
         sw::unordered_map<sw::AccountID, Entry> _mapAccountToEntry;
         sw::vector<Pending>                     _listPending;

@@ -82,10 +82,9 @@ namespace sw
         static string makeNameKey( string_view displayName );
 
         // IAccountPresence
-        uint64 submitFindByDisplayName( string_view displayName, const AccountPresenceDelegate& onFound ) override;
-        uint64 submitFindByAccount( AccountID accountID, const AccountPresenceDelegate& onFound ) override;
+        uint64 submitFindByDisplayName( string_view displayName, const AccountPresenceDelegate& onFound, const Subscription& owner ) override;
+        uint64 submitFindByAccount( AccountID accountID, const AccountPresenceDelegate& onFound, const Subscription& owner ) override;
         bool   relayRemotePush( const OnlinePushRelay& relay ) override;
-        void   cancel( uint64 requestID ) override;
 
     private:
         enum class PendingKind : uint8
@@ -104,6 +103,7 @@ namespace sw
             AccountPresenceDelegate _onFound{}; ///< Find* — 부른 쪽
             AccountID               _accountID{ kInvalidAccountID };
             uint64                  _lookupID{ 0 }; ///< Find* 를 부른 쪽에 준 id 이다
+            uint64                  _ownerID{ 0 };  ///< Find* 를 맡긴 주인 몫의 번호이다
             PendingKind             _pendingKind{ PendingKind::FindName };
         };
 
@@ -111,7 +111,13 @@ namespace sw
         {
             AccountPresenceResult   _result{};
             AccountPresenceDelegate _onFound{};
+            uint64                  _ownerID{ 0 };
         };
+
+        /** @brief 찾기 주인 몫 @p ownerID 가 풀렸습니다. 그 몫으로 맡긴 찾기의 델리게이트를 지웁니다(캐시 답은 그대로 받아서 버린다). */
+        void releaseSubscription( uint64 ownerID ) override;
+        /** @brief 캐시 없이 끝난 찾기를 다음 `tick` 에 알리도록 쌓습니다. */
+        uint64 deferNotFound( const AccountPresenceDelegate& onFound, uint64 ownerID );
 
         void onCacheReply( const EphemeralReply& reply );
         void submitPending( const EphemeralRequest& request, PendingOperation&& pending );

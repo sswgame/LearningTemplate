@@ -49,13 +49,12 @@ SW_TEST_CASE( AssetHotReloadTest, ModuleDataTableReloadsInTheCacheHoldingItsPath
     SW_ASSERT_NOT_NULL( route._pCacheKindName );
     SW_EXPECT_TRUE( sw::string_view( route._pCacheKindName ).empty() );
 
-    sw::AssetManager   resources;
-    HeldPathProbeCache probe;
-    resources.registerAssetCache( &probe );
+    sw::AssetManager       resources;
+    HeldPathProbeCache     probe;
+    const sw::Subscription registration = resources.registerAssetCache( &probe );
     SW_EXPECT_EQUAL( 1u, sw::editor::AssetHotReload::reloadInCachesHolding( resources, "data/held.interactions.xml", nullptr ) );
     SW_EXPECT_EQUAL( 0u, sw::editor::AssetHotReload::reloadInCachesHolding( resources, "data/other.interactions.xml", nullptr ) );
     SW_EXPECT_EQUAL( 1u, probe._reloadCount );
-    resources.unregisterAssetCache( &probe );
 }
 
 /**
