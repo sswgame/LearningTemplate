@@ -90,14 +90,14 @@ namespace sw
             BLOCK( "에디터: 뷰포트 / EditorModule 등록" )
             {
                 SW_MEMORY_SCOPE( Editor );
-                pLiveReloadManager->setOnBeforeReload( config::kTargetEditorModule,
-                                                       SW_DELEGATE_METHOD( LiveReloadManager::OnBeforeReloadDelegate, &EditorModuleHost::onBeforeEditorReload, this ) );
-                pLiveReloadManager->setOnAfterReload( config::kTargetEditorModule,
-                                                      SW_DELEGATE_METHOD( LiveReloadManager::OnAfterReloadDelegate, &EditorModuleHost::onAfterEditorReload, this ) );
-                pLiveReloadManager->setOnReloadFault( config::kTargetEditorModule,
-                                                      SW_DELEGATE_METHOD( LiveReloadManager::OnReloadFaultDelegate, &EditorModuleHost::onEditorReloadFault, this ) );
-                pLiveReloadManager->setOnValidateImage( config::kTargetEditorModule,
-                                                        SW_DELEGATE_METHOD( LiveReloadManager::OnValidateImageDelegate, &EditorModuleHost::isEditorImageUsable, this ) );
+                holdReloadSubscription( pLiveReloadManager->setOnBeforeReload(
+                    config::kTargetEditorModule, SW_DELEGATE_METHOD( LiveReloadManager::OnBeforeReloadDelegate, &EditorModuleHost::onBeforeEditorReload, this ) ) );
+                holdReloadSubscription( pLiveReloadManager->setOnAfterReload(
+                    config::kTargetEditorModule, SW_DELEGATE_METHOD( LiveReloadManager::OnAfterReloadDelegate, &EditorModuleHost::onAfterEditorReload, this ) ) );
+                holdReloadSubscription( pLiveReloadManager->setOnReloadFault(
+                    config::kTargetEditorModule, SW_DELEGATE_METHOD( LiveReloadManager::OnReloadFaultDelegate, &EditorModuleHost::onEditorReloadFault, this ) ) );
+                holdReloadSubscription( pLiveReloadManager->setOnValidateImage(
+                    config::kTargetEditorModule, SW_DELEGATE_METHOD( LiveReloadManager::OnValidateImageDelegate, &EditorModuleHost::isEditorImageUsable, this ) ) );
                 if ( pLiveReloadManager->registerModule( config::kTargetEditorModule ) == false )
                 {
                     SW_LOG_ERROR( "Failed to load the Editor Module." );
@@ -241,7 +241,7 @@ namespace sw
 
     void EditorModuleHost::onBeforeEditorReload()
     {
-        suspendModules( ModuleScope::Editor, true );
+        suspendModules( ModuleScope::Editor, true, DrainReason::Reload );
     }
 
     void EditorModuleHost::onAfterEditorReload( void* pLibraryModule )

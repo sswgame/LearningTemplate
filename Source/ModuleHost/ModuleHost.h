@@ -8,6 +8,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
@@ -34,6 +35,14 @@ namespace sw
         Editor,
         Game,
         Both
+    };
+
+    /** @brief 모듈을 내리기 전에 워커를 비우는 까닭입니다. 비우기가 시한을 넘겼을 때 리로드 그래프를 막을지가 이것으로 갈립니다. */
+    enum class DrainReason : uint8
+    {
+        Reload,      ///< 모듈 리로드 앞 — 시한을 넘기면 그래프를 막는다(옛 이미지를 내리면 도는 태스크가 해제된 코드를 탄다)
+        BackendSwap, ///< RHI 백엔드 교체 앞 — 같은 이미지로 다시 세우지만 리로드와 같이 막는다
+        Shutdown,    ///< 종료 앞 — 다시 설 리로드가 없으니 남은 태스크만 알린다
     };
 
     /**
@@ -111,9 +120,9 @@ namespace sw
          */
         [[nodiscard]] bool initializeDedicatedServer( LiveReloadManager* pLiveReloadManager );
         /**
-         * @brief 모듈 인스턴스를 종료하고, 레지스트리에 등록해 둔 콜백을 **모두** 해제합니다.
-         * @details 콜백은 이 객체의 메서드를 가리킵니다. 실행 파일이 이 객체를 레지스트리보다 먼저 지우므로, 여기서 해제하지 않으면 그 사이에
-         *          리로드가 돌 때 이미 사라진 객체를 부르게 됩니다.
+         * @brief 모듈 인스턴스를 종료하고, 레지스트리에 걸어 둔 이 객체의 콜백(구독)을 놓습니다.
+         * @details 콜백은 이 객체의 메서드를 가리킵니다. 실행 파일이 이 객체를 레지스트리보다 먼저 지우므로, 놓지 않으면 그 사이에
+         *          리로드가 돌 때 이미 사라진 객체를 부르게 됩니다. 놓는 것은 이 객체가 건 것뿐입니다(서버가 건 배치 콜백은 그대로다).
          */
         void shutdown();
 
@@ -172,15 +181,17 @@ namespace sw
          * @param scope 종료할 대상
          * @param bReleaseAPITable true 면 API 테이블과 타입 등록까지 해제합니다(모듈 언로드 직전). RHI 핫스왑처럼 **같은 모듈로 다시
          *        만들** 때는 false 이고, 테이블을 그대로 재사용합니다.
+         * @param reason 워커를 비우는 까닭(`drainRenderWorkers`)
          * @details 종료, 핫 리로드, RHI 핫스왑이 모두 이 순서를 지켜야 합니다. 사유마다 따로 조립하면 한 곳만 고치고 나머지를
          *          빠뜨리게 됩니다.
          */
-        void suspendModules( ModuleScope scope, bool bReleaseAPITable );
+        void suspendModules( ModuleScope scope, bool bReleaseAPITable, DrainReason reason );
         /**
          * @brief 렌더 워커, GPU, 태스크가 하던 일이 모두 끝날 때까지 기다립니다. 모듈을 언로드하기 전에 반드시 거치는 함수입니다.
          * @details 디바이스가 없는 RHI 도 여기에 들어옵니다(백엔드 교체 실패). 그래서 `hasDevice()` 를 먼저 확인합니다.
+         *          태스크 대기가 시한을 넘기면 @p reason 이 종료가 아닐 때만 리로드 그래프를 막습니다.
          */
-        void drainRenderWorkers();
+        void drainRenderWorkers( DrainReason reason );
         /** @brief 리로드 그래프를 깨진 상태로 표시해 이후 리로드를 막습니다. 배포 구성에서는 아무 일도 하지 않습니다. */
         void markReloadGraphBroken( const utf8* pReason );
 
@@ -212,8 +223,10 @@ namespace sw
         /** @brief 이번 프레임 상태를 호스트 모듈이 채웁니다(뷰 RT, 씬 틱 여부). */
         ModuleFrameState&  getMutableFrameState() { return _frameState; }
         LiveReloadManager* getLiveReloadManager() const { return _pLiveReloadManager; }
-        RHI*               getRHI() const { return _pRHI; }
-        IWindow*           getWindow() const { return _pWindow; }
+        /** @brief 리로드 매니저에 건 콜백의 구독을 이 객체의 수명에 묶습니다(`shutdown` 이 놓는다). */
+        void     holdReloadSubscription( Subscription subscription ) { _listReloadSubscription.push_back( std::move( subscription ) ); }
+        RHI*     getRHI() const { return _pRHI; }
+        IWindow* getWindow() const { return _pWindow; }
 
         // 호스트 모듈(App 의 에디터)이 끼어드는 지점. 이 클래스만으로는(전용 서버) 모두 아무 일도 하지 않는다.
         /** @brief 이번 프레임에 게임 로직을 돌려야 하는지 반환합니다. 호스트 모듈이 없으면 항상 true 입니다. */
@@ -249,7 +262,7 @@ namespace sw
          * @param bKeepGameOnCaptureFailure true 면 게임 상태를 저장하지 못했을 때 아무것도 언로드하지 않고 false 를 반환합니다(리로드 직전).
          *        종료나 RHI 교체처럼 상태를 넘겨받을 새 이미지가 없으면 false 로 둡니다.
          */
-        [[nodiscard]] bool suspendModulesInternal( ModuleScope scope, bool bReleaseAPITable, bool bKeepGameOnCaptureFailure );
+        [[nodiscard]] bool suspendModulesInternal( ModuleScope scope, bool bReleaseAPITable, bool bKeepGameOnCaptureFailure, DrainReason reason );
         /** @brief 보존해 둔 상태를 새 인스턴스에 복원합니다. 실패하면 **버리지 않고** 다음 리로드까지 보관합니다. */
         void restoreGameState();
 
@@ -279,7 +292,10 @@ namespace sw
 
         /** @brief 이번 프레임에 고정한 모듈 상태입니다. */
         ModuleFrameState _frameState;
-        /** @brief `shutdown` 안이면 true 입니다. 비우기(`drainRenderWorkers`)가 리로드 앞인지 종료 앞인지 가려 오류 글과 그래프 깨짐 표시를 달리 합니다. */
-        bool _bShuttingDown;
+        /**
+         * @brief 리로드 매니저에 건 이 객체의 콜백(모듈마다의 칸 · 배치 직전 · 워커 비우기)입니다. `shutdown` 이 놓고, 놓지 않았어도 이 객체와 함께 풀립니다.
+         * @details 파생 클래스(에디터 모듈 호스트)도 자기 모듈의 칸을 여기에 담습니다(`holdReloadSubscription`).
+         */
+        vector<Subscription> _listReloadSubscription;
     };
 } // namespace sw

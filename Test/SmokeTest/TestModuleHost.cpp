@@ -102,7 +102,7 @@ SW_TEST_CASE( ModuleHostTest, SuspendStopsTheEditorSimulationBeforeTearingDown )
         host.attachEditorInstance( makeRecordingEditorAPI(), &editorToken );
 
         s_listEditorCall.clear();
-        host.suspendModules( scope, false );
+        host.suspendModules( scope, false, DrainReason::BackendSwap );
 
         SW_ASSERT_FALSE( s_listEditorCall.empty() );
         SW_EXPECT_STREQ( "stopSimulation", s_listEditorCall[0] );
@@ -134,7 +134,7 @@ SW_TEST_CASE( ModuleHostTest, SuspendingAnEditorWithoutStopLeavesTheWorldStopped
     SceneManager& sceneManager     = engine::getSubsystem<SceneManager>();
     const bool    bWasWorldPlaying = sceneManager.isWorldPlaying();
     sceneManager.setWorldPlaying( true );
-    host.suspendModules( ModuleScope::Editor, false );
+    host.suspendModules( ModuleScope::Editor, false, DrainReason::BackendSwap );
     SW_EXPECT_FALSE( sceneManager.isWorldPlaying() );
 
     sceneManager.setWorldPlaying( bWasWorldPlaying );
@@ -144,10 +144,10 @@ SW_TEST_CASE( ModuleHostTest, SuspendingAnEditorWithoutStopLeavesTheWorldStopped
 // 아래 케이스는 **개발 구성 전용**이다 — `LiveReloadManager` 는 배포 빌드에 아예 들어가지 않는다
 // (모듈이 전부 정적 링크라 다시 올릴 것이 없다. `Test/SmokeTest/CMakeLists.txt` 의 소스 목록 참고).
 /**
- * @brief [ModuleHostTest] 종료하면 레지스트리에 남은 콜백이 없다
+ * @brief [ModuleHostTest] 놓은 구독의 콜백은 불리지 않고, 남은 배치 콜백은 나중에 건 것부터 불린다
  * @details 콜백은 `ModuleHost` 의 메서드를 가리킨다. `App` 은 호스트를 먼저 지우고 레지스트리를 나중에
- *          내리므로, 남아 있으면 그 사이의 리로드가 죽은 객체로 뛰어든다. 배수·배치 델리게이트뿐
- *          아니라 **모듈마다 건 것도** 떼야 한다.
+ *          내리므로, 남아 있으면 그 사이의 리로드가 죽은 객체로 뛰어든다. 호스트는 자기가 건 구독만 놓는다 —
+ *          다른 쪽(서버)이 건 배치 콜백은 그대로 남아야 하고, 바깥 층(나중에 건 것)이 먼저 불린다.
  */
 SW_TEST_CASE( ModuleHostTest, ShutdownDetachesEveryCallbackItRegistered )
 {
@@ -158,14 +158,31 @@ SW_TEST_CASE( ModuleHostTest, ShutdownDetachesEveryCallbackItRegistered )
     void* const initialHandle = manager.getModuleHandle( "SWGame" );
     SW_ASSERT_NOT_NULL( initialHandle );
 
-    bool bBeforeCalled = false;
-    manager.setOnBeforeReload( "SWGame", SW_DELEGATE_LAMBDA( LiveReloadManager::OnBeforeReloadDelegate, [&bBeforeCalled]()
-    {
+    bool               bBeforeCalled = false;
+    Subscription       beforeReload  = manager.setOnBeforeReload( "SWGame", SW_DELEGATE_LAMBDA( LiveReloadManager::OnBeforeReloadDelegate, [&bBeforeCalled]()
+           {
         bBeforeCalled = true;
     } ) );
+    vector<string>     listBatchCall;
+    const Subscription innerBatch   = manager.addOnBeforeCommitBatch( SW_DELEGATE_LAMBDA( LiveReloadManager::OnBeforeCommitBatchDelegate, [&listBatchCall]( const vector<string>& )
+      {
+        listBatchCall.push_back( "inner" );
+        return true;
+    } ) );
+    const Subscription outerBatch   = manager.addOnBeforeCommitBatch( SW_DELEGATE_LAMBDA( LiveReloadManager::OnBeforeCommitBatchDelegate, [&listBatchCall]( const vector<string>& )
+      {
+        listBatchCall.push_back( "outer" );
+        return true;
+    } ) );
+    Subscription       droppedBatch = manager.addOnBeforeCommitBatch( SW_DELEGATE_LAMBDA( LiveReloadManager::OnBeforeCommitBatchDelegate, [&listBatchCall]( const vector<string>& )
+          {
+        listBatchCall.push_back( "dropped" );
+        return true;
+    } ) );
 
-    // 호스트가 자기 콜백을 뗄 때 쓰는 바로 그 창구다.
-    manager.clearReloadCallbacks();
+    // 호스트가 자기 콜백을 뗄 때 하는 바로 그 일이다 — 구독을 놓는다.
+    beforeReload.reset();
+    droppedBatch.reset();
     SW_EXPECT_EQUAL( uint32{ 0 }, manager.getCompletedReloadCount() );
 
     // 디바운스(300ms)를 넘겨 **실제로 다시 올린다** — 리로드가 일어나지 않으면 "안 불렸다" 는
@@ -182,6 +199,9 @@ SW_TEST_CASE( ModuleHostTest, ShutdownDetachesEveryCallbackItRegistered )
     SW_EXPECT_TRUE_MSG( manager.getModuleHandle( "SWGame" ) != initialHandle,
                         "리로드가 일어나지 않았습니다 — 이 케이스는 아무것도 검증하지 못합니다" );
     SW_EXPECT_TRUE_MSG( bBeforeCalled == false, "뗀 콜백이 아직 불립니다 — 죽은 객체를 가리키는 자리다" );
+    SW_ASSERT_EQUAL( size_t{ 2 }, listBatchCall.size() );
+    SW_EXPECT_STREQ( "outer", listBatchCall[0].c_str() );
+    SW_EXPECT_STREQ( "inner", listBatchCall[1].c_str() );
     SW_EXPECT_TRUE_MSG( manager.getCompletedReloadCount() == 1, "끝까지 성공한 리로드는 정확히 한 번으로 센다(자동화 `Module.ReloadCount` 가 읽는다)" );
 
     manager.shutdown();
@@ -375,7 +395,7 @@ SW_TEST_CASE( ModuleHostTest, EditorAndGameTearDownInTheSameOrder )
     s_gameUnbindCount          = 0;
     s_bEditorTypesGoneAtUnbind = false;
     s_bGameTypesGoneAtUnbind   = false;
-    host.suspendModules( ModuleScope::Both, true );
+    host.suspendModules( ModuleScope::Both, true, DrainReason::Reload );
 
     SW_EXPECT_EQUAL( 1u, s_editorUnbindCount );
     SW_EXPECT_EQUAL( 1u, s_gameUnbindCount );

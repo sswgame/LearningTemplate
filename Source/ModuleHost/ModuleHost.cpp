@@ -64,7 +64,7 @@ namespace sw
         , _listGameSavedState{}
         , _listGameScopeModule{}
         , _frameState{}
-        , _bShuttingDown{ false }
+        , _listReloadSubscription{}
     {
     }
 
@@ -118,15 +118,20 @@ namespace sw
                 SW_LOG_ERROR( "Kit module register failed (%#)", moduleName );
                 return false;
             }
-            _pLiveReloadManager->setOnBeforeReload( moduleName, SW_DELEGATE_METHOD( LiveReloadManager::OnBeforeReloadDelegate, &ModuleHost::onBeforeGameplayDllReload, this ) );
-            _pLiveReloadManager->setOnAfterReload( moduleName, SW_DELEGATE_METHOD( LiveReloadManager::OnAfterReloadDelegate, &ModuleHost::onAfterGameplayDllReload, this ) );
+            holdReloadSubscription(
+                _pLiveReloadManager->setOnBeforeReload( moduleName, SW_DELEGATE_METHOD( LiveReloadManager::OnBeforeReloadDelegate, &ModuleHost::onBeforeGameplayDllReload, this ) ) );
+            holdReloadSubscription(
+                _pLiveReloadManager->setOnAfterReload( moduleName, SW_DELEGATE_METHOD( LiveReloadManager::OnAfterReloadDelegate, &ModuleHost::onAfterGameplayDllReload, this ) ) );
             listGameModule.push_back( moduleName );
         }
 
         // 게임 모듈은 이미지만 로드한다(타입 등록까지). 리로드 직후 콜백인 인스턴스 생성은 기동(`initializeGame`)이 등록하고 호출한다.
-        _pLiveReloadManager->setOnBeforeReload( sw::config::kTargetGameModule, SW_DELEGATE_METHOD( LiveReloadManager::OnBeforeReloadDelegate, &ModuleHost::onBeforeGameReload, this ) );
-        _pLiveReloadManager->setOnReloadFault( sw::config::kTargetGameModule, SW_DELEGATE_METHOD( LiveReloadManager::OnReloadFaultDelegate, &ModuleHost::onGameReloadFault, this ) );
-        _pLiveReloadManager->setOnValidateImage( sw::config::kTargetGameModule, SW_DELEGATE_METHOD( LiveReloadManager::OnValidateImageDelegate, &ModuleHost::isGameImageUsable, this ) );
+        holdReloadSubscription( _pLiveReloadManager->setOnBeforeReload(
+            sw::config::kTargetGameModule, SW_DELEGATE_METHOD( LiveReloadManager::OnBeforeReloadDelegate, &ModuleHost::onBeforeGameReload, this ) ) );
+        holdReloadSubscription( _pLiveReloadManager->setOnReloadFault(
+            sw::config::kTargetGameModule, SW_DELEGATE_METHOD( LiveReloadManager::OnReloadFaultDelegate, &ModuleHost::onGameReloadFault, this ) ) );
+        holdReloadSubscription( _pLiveReloadManager->setOnValidateImage(
+            sw::config::kTargetGameModule, SW_DELEGATE_METHOD( LiveReloadManager::OnValidateImageDelegate, &ModuleHost::isGameImageUsable, this ) ) );
         _listGameScopeModule = listGameModule; // SWGame 은 이름으로 따로 본다(onBeforeCommitBatch)
         if ( _pLiveReloadManager->registerModule( sw::config::kTargetGameModule, listGameModule ) == false )
         {
@@ -140,8 +145,8 @@ namespace sw
             return false;
         }
 
-        _pLiveReloadManager->setOnBeforeCommitBatch(
-            SW_DELEGATE_METHOD( LiveReloadManager::OnBeforeCommitBatchDelegate, &ModuleHost::onBeforeCommitBatch, this ) );
+        holdReloadSubscription(
+            _pLiveReloadManager->addOnBeforeCommitBatch( SW_DELEGATE_METHOD( LiveReloadManager::OnBeforeCommitBatchDelegate, &ModuleHost::onBeforeCommitBatch, this ) ) );
         return true;
 #endif
     }
@@ -162,8 +167,10 @@ namespace sw
         _moduleCompiler = make_unique<ModuleCompiler>( _pLiveReloadManager );
         if ( _pLiveReloadManager != nullptr )
         {
-            _pLiveReloadManager->setDrainWorkers(
-                SW_DELEGATE_METHOD( LiveReloadManager::DrainWorkersDelegate, &ModuleHost::drainRenderWorkers, this ) );
+            // 매니저가 비우기를 부르는 것은 모듈을 내리기 직전(리로드)뿐이다 — 종료는 `shutdown` 이 이 콜백을 놓은 뒤 매니저를 내린다.
+            holdReloadSubscription( _pLiveReloadManager->setDrainWorkers(
+                SW_DELEGATE_LAMBDA( LiveReloadManager::DrainWorkersDelegate, [this]()
+            { drainRenderWorkers( DrainReason::Reload ); } ) ) );
         }
 #endif
 
@@ -175,7 +182,8 @@ namespace sw
             BLOCK( "SWGame 인스턴스 생성" )
             {
                 SW_MEMORY_SCOPE( Game );
-                _pLiveReloadManager->setOnAfterReload( sw::config::kTargetGameModule, SW_DELEGATE_METHOD( LiveReloadManager::OnAfterReloadDelegate, &ModuleHost::onAfterGameReload, this ) );
+                holdReloadSubscription( _pLiveReloadManager->setOnAfterReload(
+                    sw::config::kTargetGameModule, SW_DELEGATE_METHOD( LiveReloadManager::OnAfterReloadDelegate, &ModuleHost::onAfterGameReload, this ) ) );
                 if ( _pLiveReloadManager->runAfterReload( sw::config::kTargetGameModule ) == false )
                 {
                     SW_LOG_ERROR( "SWGame instance could not be started" );
@@ -202,24 +210,11 @@ namespace sw
 
         // 호스트 모듈과 게임을 한 번의 비우기로 언로드한다. 따로 언로드하면 drainRenderWorkers 가 두 번 돌아 종료 경로에서
         // 태스크 대기 제한 시간을 두 번까지 기다릴 수 있다.
-        _bShuttingDown = true;
-        suspendModules( ModuleScope::Both, true );
-        _bShuttingDown = false;
+        suspendModules( ModuleScope::Both, true, DrainReason::Shutdown );
 
-#if !defined( SW_SHIPPING )
-        // 콜백은 이 객체의 메서드를 가리킨다. 이 객체가 사라지기 전에 해제한다.
-        //
-        // **모듈마다 등록한 것까지 해제한다.** `setOnBeforeReload`/`setOnAfterReload` 로 모듈마다 등록한 델리게이트도 이 객체의 메서드를
-        // 가리킨다. 실행 파일은 호스트를 먼저 지우고 나중에 LiveReloadManager 를 정리하므로, 그 사이에 리로드가 한 번 돌면 이미
-        // 사라진 객체를 부르게 된다. 이름을 여기에 다시 적지 않으려고 레지스트리 쪽에 함수를 두었다(키트 모듈은 설정에서 오므로 이
-        // 위치에서는 이름을 알 수도 없다).
-        if ( _pLiveReloadManager != nullptr )
-        {
-            _pLiveReloadManager->setDrainWorkers( {} );
-            _pLiveReloadManager->setOnBeforeCommitBatch( {} );
-            _pLiveReloadManager->clearReloadCallbacks();
-        }
-#endif
+        // 콜백은 이 객체의 메서드를 가리킨다. 실행 파일은 호스트를 먼저 지우고 나중에 리로드 매니저를 정리하므로, 이 객체가 건 것(모듈마다의 칸 ·
+        // 배치 직전 · 비우기)을 지금 놓는다. 놓는 것은 이 객체의 구독뿐이다 — 다른 쪽(서버)이 건 배치 콜백은 그쪽 수명을 따른다.
+        _listReloadSubscription.clear();
     }
 
     // ======================================================================
@@ -263,7 +258,7 @@ namespace sw
 
     void ModuleHost::onBeforeGameReload()
     {
-        suspendModules( ModuleScope::Game, true );
+        suspendModules( ModuleScope::Game, true, DrainReason::Reload );
     }
 
     void ModuleHost::onAfterGameReload( void* pLibraryModule )
@@ -324,7 +319,7 @@ namespace sw
             if ( bGameScope )
             {
                 // 게임 상태는 새 이미지가 넘겨받을 유일한 것이다. 저장하지 못했으면 언로드하지 않는다. 옛 게임이 그대로 돈다.
-                if ( suspendModulesInternal( ModuleScope::Game, true, true ) == false )
+                if ( suspendModulesInternal( ModuleScope::Game, true, true, DrainReason::Reload ) == false )
                 {
                     SW_LOG_ERROR( "The game could not serialize its state for the reload — keeping the old game modules running" );
                     return false;
@@ -350,7 +345,7 @@ namespace sw
     // 보조 함수. 비우기와 그래프 깨짐 표시.
     // ======================================================================
 
-    void ModuleHost::drainRenderWorkers()
+    void ModuleHost::drainRenderWorkers( DrainReason reason )
     {
 #if defined( SW_WITH_CLIENT_CODE )
         if ( _pRenderThread != nullptr )
@@ -378,7 +373,7 @@ namespace sw
             if ( taskManager.waitAll( LiveReloadManager::kModuleDrainTimeoutMs ) == false )
             {
                 // 종료 앞이면 리로드가 없으니 그래프를 깨뜨릴 까닭이 없다 — 남은 태스크 수와 이름만 남겨 어떤 배경 일이 오래 도는지 좁힌다(스택은 `Scripts stacks <pid>`).
-                if ( _bShuttingDown )
+                if ( reason == DrainReason::Shutdown )
                 {
                     SW_LOG_ERROR( "Task fencing timeout (%# ms) at shutdown — %# task(s) still running (first unfinished: '%#'); the task manager joins them next.", LiveReloadManager::kModuleDrainTimeoutMs,
                                   taskManager.getActiveTaskCount(), taskManager.describeUnfinishedTask() );
@@ -440,15 +435,15 @@ namespace sw
         return _gameAPI.create != nullptr && _gameAPI.destroy != nullptr;
     }
 
-    void ModuleHost::suspendModules( ModuleScope scope, bool bReleaseAPITable )
+    void ModuleHost::suspendModules( ModuleScope scope, bool bReleaseAPITable, DrainReason reason )
     {
         // 종료, RHI 교체, 에디터 리로드에는 게임 상태를 넘겨받을 새 게임 이미지가 없다. 저장에 실패해도 언로드를 막지 않는다.
-        (void)suspendModulesInternal( scope, bReleaseAPITable, false );
+        (void)suspendModulesInternal( scope, bReleaseAPITable, false, reason );
     }
 
-    bool ModuleHost::suspendModulesInternal( ModuleScope scope, bool bReleaseAPITable, bool bKeepGameOnCaptureFailure )
+    bool ModuleHost::suspendModulesInternal( ModuleScope scope, bool bReleaseAPITable, bool bKeepGameOnCaptureFailure, DrainReason reason )
     {
-        drainRenderWorkers();
+        drainRenderWorkers( reason );
 
         const bool bSuspendHostModule = scope != ModuleScope::Game;
         const bool bSuspendGame       = scope != ModuleScope::Editor;

@@ -117,6 +117,7 @@ namespace sw
         , _opsEndpoint{ nullptr }
         , _processMetrics{ nullptr }
         , _serverServices{ nullptr }
+        , _reloadStopsServices{}
         , _serverConfigPath{}
         , _serverServiceContext{}
         , _pServerConfig{ nullptr }
@@ -237,10 +238,11 @@ namespace sw
         if ( _moduleHost->loadModuleImages( _moduleReload.getLiveReloadManager(), _moduleCatalog, _moduleResolution ) == false )
             return false;
 #if !defined( SW_SHIPPING )
-        // 모듈 호스트가 건 리로드 직전 콜백을 감싼다. 서버 서비스 코드가 리로드될 모듈 안에 있으므로 서비스를 먼저 멈춘다.
+        // 서버 서비스 코드가 리로드될 모듈 안에 있으므로 서비스를 먼저 멈춘다. 모듈 호스트보다 나중에 더하므로 먼저 불린다(배치 콜백은 나중 것이 먼저).
         LiveReloadManager* pLiveReloadManager = _moduleReload.getLiveReloadManager();
         if ( pLiveReloadManager != nullptr )
-            pLiveReloadManager->setOnBeforeCommitBatch( SW_DELEGATE_METHOD( LiveReloadManager::OnBeforeCommitBatchDelegate, &ServerApp::onBeforeModuleReload, this ) );
+            _reloadStopsServices = pLiveReloadManager->addOnBeforeCommitBatch(
+                SW_DELEGATE_METHOD( LiveReloadManager::OnBeforeCommitBatchDelegate, &ServerApp::onBeforeModuleReload, this ) );
 #endif
         return true;
     }
@@ -364,7 +366,7 @@ namespace sw
     }
 
 #if !defined( SW_SHIPPING )
-    bool ServerApp::onBeforeModuleReload( const vector<string>& listModuleName )
+    bool ServerApp::onBeforeModuleReload( [[maybe_unused]] const vector<string>& listModuleName )
     {
         if ( _serverServices != nullptr && _serverServices->isRunning() )
         {
@@ -372,7 +374,7 @@ namespace sw
             _serverServices->stopAll();
             _bRestartServerServices = SW_TRUE;
         }
-        return _moduleHost->onBeforeCommitBatch( listModuleName );
+        return true; // 게임 쪽 처리는 모듈 호스트가 건 배치 콜백이 이어서 한다
     }
 #endif
 

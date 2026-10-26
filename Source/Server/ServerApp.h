@@ -22,6 +22,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
@@ -91,7 +92,7 @@ namespace sw
          */
         void collectPreviousCrashes();
 #if !defined( SW_SHIPPING )
-        /** @brief 모듈 리로드 직전입니다. 서버 서비스의 코드는 그 모듈에 있으므로 먼저 멈추고, 게임 쪽 처리는 모듈 호스트에 넘깁니다. 다음 틱에 다시 시작합니다. */
+        /** @brief 모듈 리로드 직전입니다. 서버 서비스의 코드는 그 모듈에 있으므로 먼저 멈춥니다(게임 쪽은 모듈 호스트의 배치 콜백이 뒤이어 한다). 다음 틱에 다시 시작합니다. */
         bool onBeforeModuleReload( const vector<string>& listModuleName );
 #endif
         void updateOnce( float32 deltaSeconds );
@@ -132,6 +133,7 @@ namespace sw
         unique_ptr<OpsHTTPEndpoint>       _opsEndpoint;
         unique_ptr<ProcessMetrics>        _processMetrics;
         unique_ptr<ServerServiceManager>  _serverServices;          ///< 모듈이 올린 서버 서비스(온라인 서비스 호스트 등)
+        Subscription                      _reloadStopsServices;     ///< 리로드 배치 직전에 서버 서비스를 멈추는 콜백(Dev, `onBeforeModuleReload`)
         string                            _serverConfigPath;        ///< 읽은 서버 설정 파일 경로(서비스가 옆 파일을 찾는다)
         ServerServiceContext              _serverServiceContext;    ///< 서버 서비스와 게임 · 키트 모듈(`ServerServiceRegistry::findHostContext`)이 받는 서버 문맥
         const ServerConfig*               _pServerConfig;           // ConfigManager 가 소유한다
