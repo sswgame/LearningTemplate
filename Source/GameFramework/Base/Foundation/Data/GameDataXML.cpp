@@ -42,29 +42,11 @@ namespace sw
                 return attribute;
             }
 
-            /** @brief @p text 가 정확히 `Count` 개의 실수로 읽힐 때만 @p outArr 를 채우고 true 입니다(모자라거나 남거나 숫자가 아닌 토큰이 있으면 false, @p outArr 는 그대로). */
-            template <size_t Count>
+            /** @brief @p text 가 정확히 `Count` 개의 실수로 읽힐 때만 @p outArr 를 채우고 true 입니다(규칙은 `StringUtil::parseExactFloats`, 구분자만 이 형식의 것). */
+            template <uint32 Count>
             [[nodiscard]] static bool parseExactFloats( string_view text, float32 ( &outArr )[Count] )
             {
-                float32 arrValue[Count] = {};
-                size_t  tokenCount      = 0;
-                bool    bValid          = true;
-                StringUtil::forEachToken( text, kNumberSeparators, [&]( string_view token )
-                {
-                    float32 value = 0.0f;
-                    if ( tokenCount >= Count || StringUtil::parseFloat( token, value ) == false )
-                        bValid = false;
-                    else
-                        arrValue[tokenCount] = value;
-                    ++tokenCount;
-                } );
-                if ( bValid == false || tokenCount != Count )
-                    return false;
-                for ( size_t index = 0; index < Count; ++index )
-                {
-                    outArr[index] = arrValue[index];
-                }
-                return true;
+                return StringUtil::parseExactFloats( text, kNumberSeparators, outArr, Count );
             }
 
             /**

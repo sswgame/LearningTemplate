@@ -74,27 +74,6 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    bool MaterialPreviewShading::parseExactFloats( string_view text, float32* pOut, uint32 count )
-    {
-        SW_ASSERT( pOut != nullptr && 1 <= count && count <= 4 );
-        float32 arrValue[4]{};
-        uint32  tokenCount = 0;
-        bool    bValid     = true;
-        StringUtil::forEachToken( text, ", \t", [&]( string_view token )
-        {
-            bValid = tokenCount < count && StringUtil::parseFloat( token, arrValue[tokenCount] );
-            ++tokenCount;
-            return bValid;
-        } );
-        if ( bValid == false || tokenCount != count )
-            return false;
-        for ( uint32 index = 0; index < count; ++index )
-        {
-            pOut[index] = arrValue[index];
-        }
-        return true;
-    }
-
     bool MaterialPreviewShading::parseColor( string_view text, float32 ( &outArrValue )[4] )
     {
         if ( parseFloats( text, outArrValue ) )

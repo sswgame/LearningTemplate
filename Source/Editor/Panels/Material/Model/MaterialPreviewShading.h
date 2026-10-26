@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/VectorMath.h"
@@ -44,7 +45,7 @@ namespace sw::editor
         template <uint32 N>
         [[nodiscard]] static bool parseFloats( string_view text, float32 ( &outArrValue )[N] )
         {
-            return parseExactFloats( text, outArrValue, N );
+            return StringUtil::parseExactFloats( text, ", \t", outArrValue, N );
         }
         /**
          * @brief 색 값(RGB 또는 RGBA)을 읽습니다. 알파를 적지 않은 글은 알파 1 이다 — 엔진이 색을 묶는 규칙(`MaterialPacking`)과 같은 형식이다.
@@ -61,9 +62,5 @@ namespace sw::editor
         static float3 shadePoint( const MaterialPreviewInputs& inputs, float32 nx, float32 ny );
         /** @brief 원 안을 고르게 짚은 점들의 평균 (R - B) 입니다(0..255 — 탐침이 머티리얼 색을 따르는지 본다). */
         static float32 computeMeanRedMinusBlue( const MaterialPreviewInputs& inputs );
-
-    private:
-        /** @brief `parseFloats` 의 몸체입니다 — 토큰이 정확히 @p count 개이고 모두 숫자일 때만 @p pOut 에 쓴다. */
-        [[nodiscard]] static bool parseExactFloats( string_view text, float32* pOut, uint32 count );
     };
 } // namespace sw::editor

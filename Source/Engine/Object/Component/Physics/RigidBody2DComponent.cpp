@@ -14,31 +14,13 @@ namespace sw
 {
     namespace
     {
-        struct RigidBody2DComponentInternal
+        /** @brief 지금 월드 회전에서 Z 축 둘레 각만 바꾼 회전입니다(다른 축 회전은 2D 물리가 모른다 — 그대로 둔다). */
+        quaternion replaceRigidBody2DAngle( const quaternion& current, float32 angle )
         {
-            /** @brief 각 둘을 짧은 쪽으로 보간합니다. */
-            static float32 lerpAngle( float32 from, float32 to, float32 weight )
-            {
-                float32 delta = to - from;
-                while ( delta > MathUtil::kPi )
-                {
-                    delta -= 2.0f * MathUtil::kPi;
-                }
-                while ( delta < -MathUtil::kPi )
-                {
-                    delta += 2.0f * MathUtil::kPi;
-                }
-                return from + delta * weight;
-            }
-
-            /** @brief 지금 월드 회전에서 Z 축 둘레 각만 바꾼 회전입니다(다른 축 회전은 2D 물리가 모른다 — 그대로 둔다). */
-            static quaternion replaceAngle( const quaternion& current, float32 angle )
-            {
-                const float32    currentAngle = PhysicsComponentUtil::getAngle2D( current );
-                const quaternion delta        = PhysicsComponentUtil::makeRotation2D( angle - currentAngle );
-                return delta * current;
-            }
-        };
+            const float32    currentAngle = PhysicsComponentUtil::getAngle2D( current );
+            const quaternion delta        = PhysicsComponentUtil::makeRotation2D( angle - currentAngle );
+            return delta * current;
+        }
     } // namespace
 } // namespace sw
 
@@ -308,7 +290,7 @@ namespace sw
         {
             const float32 fraction = static_cast<float32>( stepIndex + 1 ) / static_cast<float32>( stepCount );
             const float2  target   = float2::lerp( _kinematicStartPosition, _kinematicTargetPosition, fraction );
-            const float32 angle    = RigidBody2DComponentInternal::lerpAngle( _kinematicStartAngle, _kinematicTargetAngle, fraction );
+            const float32 angle    = MathUtil::lerpAngle( _kinematicStartAngle, _kinematicTargetAngle, fraction );
             pScene->moveKinematic( _body, target, angle, fixedDeltaTime );
             return;
         }
@@ -351,12 +333,12 @@ namespace sw
             return;
         const float32 weight   = _bInterpolate ? alpha : 1.0f;
         const float2  position = float2::lerp( _previousPosition, _currentPosition, weight );
-        const float32 angle    = RigidBody2DComponentInternal::lerpAngle( _previousAngle, _currentAngle, weight );
+        const float32 angle    = MathUtil::lerpAngle( _previousAngle, _currentAngle, weight );
         float3        current{};
         quaternion    rotation{};
         float3        scale{};
         PhysicsComponentUtil::readWorldPose( *this, current, rotation, scale );
-        PhysicsComponentUtil::writeWorldPose( *this, float3{ position._x, position._y, current._z }, RigidBody2DComponentInternal::replaceAngle( rotation, angle ),
+        PhysicsComponentUtil::writeWorldPose( *this, float3{ position._x, position._y, current._z }, replaceRigidBody2DAngle( rotation, angle ),
                                               _writtenPosition, _writtenRotation );
         _bHasWritten = true;
     }
