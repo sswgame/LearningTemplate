@@ -3,7 +3,7 @@
 # 전체 훑기의 기준선 — 규칙별로 지금 있는 건수다(docs/plans/ReuseExistingFacilities.md 의 이전 단위가 옮기며 낮춘다). 늘면 실패한다(커밋 훅은 추가한 줄만 본다).
 [baseline]
 stdout = 10
-random = 6
+random = 5
 fileOpen = 0
 processSpawn = 0
 numberParse = 7
