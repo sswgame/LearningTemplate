@@ -14,10 +14,10 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Network/BitStream.h"
 #include "Core/Network/Message/NetRequest.h"
 #include "Core/Network/Message/StreamMessageEndpoint.h"
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
+#include "Core/Serialization/BitStream.h"
 
 #include "EngineTest/GameFramework/Online/OnlineMethodTableTestUtil.h"
 

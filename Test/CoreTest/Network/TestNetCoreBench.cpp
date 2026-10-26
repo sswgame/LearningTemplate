@@ -6,8 +6,8 @@
 #include "pch.h"
 
 #include "Core/Container/vector.h"
-#include "Core/Network/BitStream.h"
 #include "Core/Network/Connection/SequenceBuffer.h"
+#include "Core/Serialization/BitStream.h"
 
 #include "TestFramework/Harness/TestBench.h"
 #include "TestFramework/TestFramework.h"

@@ -2,7 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyService.h"
 
-#include "Core/Network/BitStream.h"
+#include "Core/Serialization/BitStream.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Observability/MetricRegistry.h"

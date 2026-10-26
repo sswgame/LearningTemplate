@@ -2,7 +2,7 @@
 // 조회, 일괄 지급 이어 하기, 캠페인, 자기 등급 금지, 와이어 왕복, 제재 변경 버스 알림 한 번, 신고 목록과 처리, 점검과 공지를 서버 디렉터리 키트에 넘기기.
 #include "pch.h"
 
-#include "Core/Network/BitStream.h"
+#include "Core/Serialization/BitStream.h"
 
 #include "EngineTest/GameFramework/Online/OnlineMessageTestUtil.h"
 

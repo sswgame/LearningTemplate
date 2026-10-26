@@ -5,7 +5,7 @@
 #include "Core/Common/HashUtil.h"
 #include "Core/Container/CompareUtil.h"
 #include "Core/Container/VectorUtil.h"
-#include "Core/Network/BitStream.h"
+#include "Core/Serialization/BitStream.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

@@ -17,9 +17,9 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Log/LogContext.h"
-#include "Core/Network/BitStream.h"
 #include "Core/Network/Message/StreamFrame.h"
 #include "Core/Network/Transport/StreamTypes.h"
+#include "Core/Serialization/BitStream.h"
 
 namespace sw
 {

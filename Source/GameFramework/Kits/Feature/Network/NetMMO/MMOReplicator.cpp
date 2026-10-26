@@ -2,11 +2,11 @@
 
 #include "GameFramework/Kits/Feature/Network/NetMMO/MMOReplicator.h"
 
-#include "Core/Network/BitStream.h"
 #include "Core/Network/Connection/NetConnection.h"
 #include "Core/Network/Connection/NetHost.h"
 #include "Core/Network/Message/NetSendBudget.h"
 #include "Core/Network/NetTypes.h"
+#include "Core/Serialization/BitStream.h"
 
 #include "Engine/Scene/WorldStreamingSubsystem.h"
 

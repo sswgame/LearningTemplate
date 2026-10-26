@@ -1,7 +1,7 @@
 // 라운드 묶음 — 선승(1 위 1 점) · 라운드 시간(걸음) · 라운드 사이 대기 · 무승부 · 서든 데스, 순위 점수(같은 점수 같은 순위 · 목록 밖 0 점), 상태 왕복(고정 배치형) · 거절.
 #include "pch.h"
 
-#include "Core/Network/BitStream.h"
+#include "Core/Serialization/BitStream.h"
 
 #include "Engine/Serialization/Fixed/FixedLayout.h"
 

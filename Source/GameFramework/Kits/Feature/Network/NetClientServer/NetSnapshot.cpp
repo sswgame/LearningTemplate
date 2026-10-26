@@ -4,8 +4,8 @@
 
 #include "Core/Container/CompareUtil.h"
 #include "Core/Container/VectorUtil.h"
-#include "Core/Network/BitStream.h"
 #include "Core/Network/Message/NetSendBudget.h"
+#include "Core/Serialization/BitStream.h"
 
 #include <algorithm>
 

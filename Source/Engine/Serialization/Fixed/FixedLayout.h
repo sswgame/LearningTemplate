@@ -19,7 +19,7 @@
  *          값 하나(0 해시, 빈 결과)를 대신 돌려주면 핸드셰이크 해시에 그 값이 섞이므로 대체 값을 두지 않습니다.
  */
 #pragma once
-#include "Core/Network/BitStream.h"
+#include "Core/Serialization/BitStream.h"
 
 #include "Engine/EngineMinimal.h"
 #include "Engine/Reflection/TypeRegistry.h"

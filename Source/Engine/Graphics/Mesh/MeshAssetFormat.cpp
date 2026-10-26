@@ -50,23 +50,23 @@ namespace sw
                 {
                     for ( const float32 value : vertex._arrPosition )
                     {
-                        appendFloat32( outBytes, value );
+                        LittleEndianUtil::appendFloat32( outBytes, value );
                     }
                     for ( const float32 value : vertex._arrNormal )
                     {
-                        appendFloat32( outBytes, value );
+                        LittleEndianUtil::appendFloat32( outBytes, value );
                     }
                     for ( const float32 value : vertex._arrUv )
                     {
-                        appendFloat32( outBytes, value );
+                        LittleEndianUtil::appendFloat32( outBytes, value );
                     }
                     for ( const float32 value : vertex._arrColor )
                     {
-                        appendFloat32( outBytes, value );
+                        LittleEndianUtil::appendFloat32( outBytes, value );
                     }
                     for ( const float32 value : vertex._arrTangent )
                     {
-                        appendFloat32( outBytes, value );
+                        LittleEndianUtil::appendFloat32( outBytes, value );
                     }
                 }
             }
@@ -80,7 +80,7 @@ namespace sw
                 LittleEndianUtil::appendUint32( outBytes, static_cast<uint32>( listLevel.size() ) );
                 for ( const MeshLODLevel& level : listLevel )
                 {
-                    appendFloat32( outBytes, level._screenSize );
+                    LittleEndianUtil::appendFloat32( outBytes, level._screenSize );
                     LittleEndianUtil::appendUint32( outBytes, static_cast<uint32>( level._listVertex.size() ) );
                     appendVertices( outBytes, level._listVertex );
                 }
@@ -102,7 +102,7 @@ namespace sw
                     if ( pChunkEnd - pChunk < 8 )
                         return false;
                     MeshLODLevel level{};
-                    level._screenSize        = readFloat32( pChunk );
+                    level._screenSize        = LittleEndianUtil::readFloat32( pChunk );
                     const uint32 vertexCount = LittleEndianUtil::readUint32( pChunk + 4 );
                     pChunk += 8;
                     if ( static_cast<uint64>( pChunkEnd - pChunk ) < static_cast<uint64>( vertexCount ) * MeshAssetFormat::kVertexSize )
@@ -125,7 +125,7 @@ namespace sw
                     }
                     for ( const float32 weight : skin._arrWeight )
                     {
-                        appendFloat32( outBytes, weight );
+                        LittleEndianUtil::appendFloat32( outBytes, weight );
                     }
                 }
             }
@@ -250,21 +250,6 @@ namespace sw
             static_assert( sizeof( RHIVertex ) == MeshAssetFormat::kVertexSize, "RHIVertex changed - bump MeshAssetFormat::kVersion and re-import models" );
             static_assert( MeshAssetFormat::kSkinVertexSize == 4 * sizeof( uint16 ) + 4 * sizeof( float32 ), "kSkinVertexSize must match the skin layout" );
 
-            static void appendFloat32( vector<uint8>& outBytes, float32 value )
-            {
-                uint32 bits = 0;
-                Memory::copy( &bits, &value, sizeof( bits ) );
-                LittleEndianUtil::appendUint32( outBytes, bits );
-            }
-
-            static float32 readFloat32( const uint8* pData )
-            {
-                const uint32 bits  = LittleEndianUtil::readUint32( pData );
-                float32      value = 0.0f;
-                Memory::copy( &value, &bits, sizeof( value ) );
-                return value;
-            }
-
             /** @brief 원점에서 가장 먼 정점까지의 거리입니다(`Mesh::getBoundingRadius` 와 같은 정의). */
             static float32 computeBoundingRadius( const vector<RHIVertex>& listVertex )
             {
@@ -296,7 +281,7 @@ namespace sw
                     float32 arrValue[kFloatPerVertex]{};
                     for ( float32& value : arrValue )
                     {
-                        value = readFloat32( pCursor );
+                        value = LittleEndianUtil::readFloat32( pCursor );
                         pCursor += sizeof( float32 );
                     }
                     Memory::copy( vertex._arrPosition, arrValue + 0, sizeof( vertex._arrPosition ) );
@@ -331,7 +316,7 @@ namespace sw
                     }
                     for ( float32& weight : skin._arrWeight )
                     {
-                        weight = readFloat32( pCursor );
+                        weight = LittleEndianUtil::readFloat32( pCursor );
                         pCursor += sizeof( float32 );
                     }
                 }
@@ -364,7 +349,7 @@ namespace sw
                         float32 arrValue[6]{};
                         for ( uint32 valueIndex = 0; valueIndex < 6; ++valueIndex )
                         {
-                            arrValue[valueIndex] = readFloat32( pChunk + 4 + valueIndex * 4 );
+                            arrValue[valueIndex] = LittleEndianUtil::readFloat32( pChunk + 4 + valueIndex * 4 );
                         }
                         delta._position = float3{ arrValue[0], arrValue[1], arrValue[2] };
                         delta._normal   = float3{ arrValue[3], arrValue[4], arrValue[5] };
@@ -464,7 +449,7 @@ namespace sw
         LittleEndianUtil::appendUint32( outBytes, kVersion );
         LittleEndianUtil::appendUint32( outBytes, static_cast<uint32>( data._listVertex.size() ) );
         LittleEndianUtil::appendUint32( outBytes, kVertexSize );
-        MeshAssetFormatInternal::appendFloat32( outBytes, MeshAssetFormatInternal::computeBoundingRadius( data._listVertex ) );
+        LittleEndianUtil::appendFloat32( outBytes, MeshAssetFormatInternal::computeBoundingRadius( data._listVertex ) );
         LittleEndianUtil::appendUint32( outBytes, skinBoneCount );
 
         MeshAssetFormatInternal::appendVertices( outBytes, data._listVertex );
@@ -478,7 +463,7 @@ namespace sw
                 }
                 for ( const float32 weight : skin._arrWeight )
                 {
-                    MeshAssetFormatInternal::appendFloat32( outBytes, weight );
+                    LittleEndianUtil::appendFloat32( outBytes, weight );
                 }
             }
         }
@@ -505,7 +490,7 @@ namespace sw
                     const float32 arrValue[6] = { delta._position._x, delta._position._y, delta._position._z, delta._normal._x, delta._normal._y, delta._normal._z };
                     for ( const float32 value : arrValue )
                     {
-                        MeshAssetFormatInternal::appendFloat32( outBytes, value );
+                        LittleEndianUtil::appendFloat32( outBytes, value );
                     }
                 }
             }
@@ -546,7 +531,7 @@ namespace sw
         const uint32  version        = LittleEndianUtil::readUint32( pData + 4 );
         const uint32  vertexCount    = LittleEndianUtil::readUint32( pData + 8 );
         const uint32  vertexSize     = LittleEndianUtil::readUint32( pData + 12 );
-        const float32 boundingRadius = Internal::readFloat32( pData + 16 );
+        const float32 boundingRadius = LittleEndianUtil::readFloat32( pData + 16 );
         const uint32  skinBoneCount  = LittleEndianUtil::readUint32( pData + 20 );
         if ( version != kVersion || vertexSize != kVertexSize )
         {

@@ -27,10 +27,10 @@
 #include "Core/Container/vector.h"
 #include "Core/Log/LogContext.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Network/BitStream.h"
 #include "Core/Network/Message/NetRequest.h"
 #include "Core/Network/Message/StreamMessageEndpoint.h"
 #include "Core/Network/NetTypes.h"
+#include "Core/Serialization/BitStream.h"
 
 #include "GameFramework/Base/Online/Bus/ServerBus.h"
 #include "GameFramework/Base/Online/Cache/EphemeralStoreRouter.h"

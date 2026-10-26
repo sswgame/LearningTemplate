@@ -13,8 +13,8 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
-#include "Core/Network/BitStream.h"
 #include "Core/Network/Message/NetRequest.h"
+#include "Core/Serialization/BitStream.h"
 
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"
 #include "GameFramework/Base/Online/Service/OnlineServiceClient.h"

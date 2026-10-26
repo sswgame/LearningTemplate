@@ -15,8 +15,8 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Delegate/Delegate.h"
-#include "Core/Network/BitStream.h"
 #include "Core/Network/Message/NetRequest.h"
+#include "Core/Serialization/BitStream.h"
 
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"
 #include "GameFramework/Base/Online/Service/OnlineReplyUtil.h"

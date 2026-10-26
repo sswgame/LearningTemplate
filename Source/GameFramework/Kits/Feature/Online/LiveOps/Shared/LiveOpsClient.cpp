@@ -3,7 +3,7 @@
 #include "GameFramework/Kits/Feature/Online/LiveOps/Shared/LiveOpsClient.h"
 
 #include "Core/Container/VectorUtil.h"
-#include "Core/Network/BitStream.h"
+#include "Core/Serialization/BitStream.h"
 
 namespace sw
 {

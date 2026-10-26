@@ -2,7 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Shared/LeaderboardClient.h"
 
-#include "Core/Network/BitStream.h"
+#include "Core/Serialization/BitStream.h"
 
 namespace sw
 {

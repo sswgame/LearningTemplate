@@ -7,7 +7,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
-#include "Core/Network/BitStream.h"
+#include "Core/Serialization/BitStream.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionCore.h"

@@ -8,7 +8,7 @@
 #include "Core/Container/UnionFindUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Network/BitStream.h"
+#include "Core/Serialization/BitStream.h"
 
 #include "Engine/Common/EngineDefines.h"
 #include "Engine/Destruction/FractureGraph.h"

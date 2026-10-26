@@ -1,7 +1,7 @@
 #include "pch.h"
 
 #include "Core/Math/MathUtil.h"
-#include "Core/Network/BitStream.h"
+#include "Core/Serialization/BitStream.h"
 
 #include "Engine/Serialization/Format/Archive.h"
 

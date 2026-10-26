@@ -2,9 +2,9 @@
 
 #include "Core/Common/HashUtil.h"
 #include "Core/Container/vector.h"
-#include "Core/Network/BitStream.h"
 #include "Core/Network/Connection/NetPacketSealer.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
+#include "Core/Serialization/BitStream.h"
 
 #include "TestFramework/TestFramework.h"
 

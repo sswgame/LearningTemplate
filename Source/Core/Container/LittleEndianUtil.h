@@ -3,6 +3,7 @@
  * @brief 파일 · 네트워크 바이트를 리틀 엔디언 정수로 읽고 쓰는 도우미입니다 — 호스트 바이트 순서와 무관합니다.
  */
 #pragma once
+#include "Core/Common/BitUtil.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 
@@ -35,6 +36,9 @@ namespace sw
         [[nodiscard]] static constexpr int16 readInt16( const uint8* pData ) noexcept { return static_cast<int16>( readUint16( pData ) ); }
 
         [[nodiscard]] static constexpr int64 readInt64( const uint8* pData ) noexcept { return static_cast<int64>( readUint64( pData ) ); }
+
+        /** @brief IEEE 754 비트를 리틀 엔디언 uint32 로 읽습니다(NaN 비트도 그대로). */
+        [[nodiscard]] static constexpr float32 readFloat32( const uint8* pData ) noexcept { return BitUtil::bitsToFloat( readUint32( pData ) ); }
 
         static constexpr void writeUint16( uint8* pOut, const uint16 value ) noexcept
         {
@@ -83,5 +87,9 @@ namespace sw
         }
 
         static void appendInt16( vector<uint8>& inoutBytes, const int16 value ) { appendUint16( inoutBytes, static_cast<uint16>( value ) ); }
+
+        static void appendInt64( vector<uint8>& inoutBytes, const int64 value ) { appendUint64( inoutBytes, static_cast<uint64>( value ) ); }
+
+        static void appendFloat32( vector<uint8>& inoutBytes, const float32 value ) { appendUint32( inoutBytes, BitUtil::floatToBits( value ) ); }
     };
 } // namespace sw

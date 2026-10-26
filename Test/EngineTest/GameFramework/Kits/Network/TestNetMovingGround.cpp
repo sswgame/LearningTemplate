@@ -1,10 +1,10 @@
 #include "pch.h"
 
 #include "Core/Math/MathUtil.h"
-#include "Core/Network/BitStream.h"
 #include "Core/Network/Connection/NetHost.h"
 #include "Core/Network/Transport/NetEmulation.h"
 #include "Core/Network/Transport/NetTransport.h"
+#include "Core/Serialization/BitStream.h"
 
 #include "Engine/Object/Component/Physics/CharacterControllerComponent.h"
 #include "Engine/Object/Component/Physics/RigidBodyComponent.h"

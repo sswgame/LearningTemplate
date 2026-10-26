@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Network/BitStream.h"
+#include "Core/Serialization/BitStream.h"
 
 #include "Core/Common/BitUtil.h"
 #include "Core/Math/MathUtil.h"

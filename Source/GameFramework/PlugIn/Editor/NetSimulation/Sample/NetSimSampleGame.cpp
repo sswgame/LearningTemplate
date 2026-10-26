@@ -6,8 +6,8 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Network/BitStream.h"
 #include "Core/Network/Message/NetMessage.h"
+#include "Core/Serialization/BitStream.h"
 
 #include "Engine/Graphics/Shader/Binding/GPUInstanceHighlight.h"
 #include "Engine/Input/InputManager.h"

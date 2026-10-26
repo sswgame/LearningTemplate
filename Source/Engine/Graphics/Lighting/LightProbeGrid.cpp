@@ -3,7 +3,7 @@
 #include "Engine/Graphics/Lighting/LightProbeGrid.h"
 
 #include "Core/File/FileUtil.h"
-#include "Core/Memory/Memory.h"
+#include "Core/Serialization/ByteStream.h"
 
 #include "Engine/Resource/ResourceIO.h"
 
@@ -19,37 +19,6 @@ namespace sw
             static constexpr size_t kProbeBytes = sizeof( float32 ) * SH9Color::kCoefficientCount;
             /// @brief 한 파일의 프로브 수 상한 — 깨진 머리말이 큰 할당을 일으키지 않게 막는다(256 × 64 × 256).
             static constexpr uint64 kMaxProbeCount = 4194304;
-
-            static void writeUint32( vector<uint8>& outBytes, uint32 value )
-            {
-                for ( uint32 shift = 0; shift < 32; shift += 8 )
-                {
-                    outBytes.push_back( static_cast<uint8>( ( value >> shift ) & 0xFFu ) );
-                }
-            }
-
-            static void writeFloat32( vector<uint8>& outBytes, float32 value )
-            {
-                uint32 bits = 0;
-                Memory::copy( &bits, &value, sizeof( bits ) );
-                writeUint32( outBytes, bits );
-            }
-
-            static uint32 readUint32( const uint8* pData, size_t& inoutOffset )
-            {
-                const uint8* pByte = pData + inoutOffset;
-                inoutOffset += sizeof( uint32 );
-                return static_cast<uint32>( pByte[0] ) | ( static_cast<uint32>( pByte[1] ) << 8 ) | ( static_cast<uint32>( pByte[2] ) << 16 ) |
-                       ( static_cast<uint32>( pByte[3] ) << 24 );
-            }
-
-            static float32 readFloat32( const uint8* pData, size_t& inoutOffset )
-            {
-                const uint32 bits  = readUint32( pData, inoutOffset );
-                float32      value = 0.0f;
-                Memory::copy( &value, &bits, sizeof( value ) );
-                return value;
-            }
 
             static void setError( string* pOutError, const utf8* pMessage )
             {
@@ -117,22 +86,23 @@ namespace sw
         using Internal = LightProbeGridInternal;
         outBytes.clear();
         outBytes.reserve( Internal::kHeaderBytes + Internal::kProbeBytes * _listProbe.size() );
-        Internal::writeUint32( outBytes, kMagic );
-        Internal::writeUint32( outBytes, kVersion );
-        Internal::writeFloat32( outBytes, _layout._origin._x );
-        Internal::writeFloat32( outBytes, _layout._origin._y );
-        Internal::writeFloat32( outBytes, _layout._origin._z );
-        Internal::writeFloat32( outBytes, _layout._spacing._x );
-        Internal::writeFloat32( outBytes, _layout._spacing._y );
-        Internal::writeFloat32( outBytes, _layout._spacing._z );
-        Internal::writeUint32( outBytes, _layout._countX );
-        Internal::writeUint32( outBytes, _layout._countY );
-        Internal::writeUint32( outBytes, _layout._countZ );
+        ByteWriter writer{ outBytes };
+        writer.writeUint32( kMagic );
+        writer.writeUint32( kVersion );
+        writer.writeFloat32( _layout._origin._x );
+        writer.writeFloat32( _layout._origin._y );
+        writer.writeFloat32( _layout._origin._z );
+        writer.writeFloat32( _layout._spacing._x );
+        writer.writeFloat32( _layout._spacing._y );
+        writer.writeFloat32( _layout._spacing._z );
+        writer.writeUint32( _layout._countX );
+        writer.writeUint32( _layout._countY );
+        writer.writeUint32( _layout._countZ );
         for ( const SH9Color& probe : _listProbe )
         {
             for ( const float32 coefficient : probe._arrCoefficient )
             {
-                Internal::writeFloat32( outBytes, coefficient );
+                writer.writeFloat32( coefficient );
             }
         }
     }
@@ -146,29 +116,29 @@ namespace sw
             Internal::setError( pOutError, "probe file is shorter than its header" );
             return false;
         }
-        size_t offset = 0;
-        if ( Internal::readUint32( pData, offset ) != kMagic )
+        ByteReader reader{ pData, size };
+        if ( reader.readUint32() != kMagic )
         {
             Internal::setError( pOutError, "probe file magic is not SWLP" );
             return false;
         }
-        if ( Internal::readUint32( pData, offset ) != kVersion )
+        if ( reader.readUint32() != kVersion )
         {
             Internal::setError( pOutError, "probe file version differs - bake the volume again" );
             return false;
         }
         LightProbeGridLayout layout{};
-        layout._origin._x         = Internal::readFloat32( pData, offset );
-        layout._origin._y         = Internal::readFloat32( pData, offset );
-        layout._origin._z         = Internal::readFloat32( pData, offset );
-        layout._spacing._x        = Internal::readFloat32( pData, offset );
-        layout._spacing._y        = Internal::readFloat32( pData, offset );
-        layout._spacing._z        = Internal::readFloat32( pData, offset );
-        layout._countX            = Internal::readUint32( pData, offset );
-        layout._countY            = Internal::readUint32( pData, offset );
-        layout._countZ            = Internal::readUint32( pData, offset );
+        layout._origin._x         = reader.readFloat32();
+        layout._origin._y         = reader.readFloat32();
+        layout._origin._z         = reader.readFloat32();
+        layout._spacing._x        = reader.readFloat32();
+        layout._spacing._y        = reader.readFloat32();
+        layout._spacing._z        = reader.readFloat32();
+        layout._countX            = reader.readUint32();
+        layout._countY            = reader.readUint32();
+        layout._countZ            = reader.readUint32();
         const uint64 probeCount   = static_cast<uint64>( layout._countX ) * layout._countY * layout._countZ;
-        const bool   bSizeMatches = probeCount <= Internal::kMaxProbeCount && size - offset == probeCount * Internal::kProbeBytes;
+        const bool   bSizeMatches = probeCount <= Internal::kMaxProbeCount && reader.getRemainingByteCount() == probeCount * Internal::kProbeBytes;
         if ( bSizeMatches == false )
         {
             Internal::setError( pOutError, "probe file length does not match its grid size" );
@@ -180,7 +150,7 @@ namespace sw
         {
             for ( float32& coefficient : probe._arrCoefficient )
             {
-                coefficient = Internal::readFloat32( pData, offset );
+                coefficient = reader.readFloat32();
             }
         }
         if ( isValid( pOutError ) == false )

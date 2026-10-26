@@ -2,7 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Server/LeaderboardServer.h"
 
-#include "Core/Network/BitStream.h"
+#include "Core/Serialization/BitStream.h"
 
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
 #include "GameFramework/Base/Online/Identity/AccountPresence.h"

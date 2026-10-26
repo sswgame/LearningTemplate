@@ -2,7 +2,7 @@
 
 #include "Engine/Character/PairedAnimation/PairedAnimationSnapshot.h"
 
-#include "Core/Network/BitStream.h"
+#include "Core/Serialization/BitStream.h"
 
 #include "Engine/Character/PairedAnimation/PairedAnimationDef.h"
 

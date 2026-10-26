@@ -29,21 +29,6 @@ namespace sw
                 float32 _strain;
             };
 
-            static void appendFloat32( vector<uint8>& outBytes, float32 value )
-            {
-                uint32 bits = 0;
-                Memory::copy( &bits, &value, sizeof( bits ) );
-                LittleEndianUtil::appendUint32( outBytes, bits );
-            }
-
-            static float32 readFloat32( const uint8* pData )
-            {
-                const uint32 bits  = LittleEndianUtil::readUint32( pData );
-                float32      value = 0.0f;
-                Memory::copy( &value, &bits, sizeof( value ) );
-                return value;
-            }
-
             /** @brief 노드가 포함한 잎들의 이번 변형 중 가장 큰 값입니다. */
             static float32 findMaxStrain( const FractureNode& node, const vector<float32>& listLeafStrain )
             {
@@ -145,7 +130,7 @@ namespace sw
                                           event._direction._z, event._strain, event._radius, event._impulse };
             for ( const float32 value : arrValue )
             {
-                Internal::appendFloat32( outBytes, value );
+                LittleEndianUtil::appendFloat32( outBytes, value );
             }
         }
     }
@@ -184,11 +169,11 @@ namespace sw
             event._leafHint  = static_cast<int32>( LittleEndianUtil::readUint32( pCursor + 1 ) );
             event._groupID   = LittleEndianUtil::readUint32( pCursor + 5 );
             const uint8* pF  = pCursor + 9;
-            event._position  = float3{ Internal::readFloat32( pF ), Internal::readFloat32( pF + 4 ), Internal::readFloat32( pF + 8 ) };
-            event._direction = float3{ Internal::readFloat32( pF + 12 ), Internal::readFloat32( pF + 16 ), Internal::readFloat32( pF + 20 ) };
-            event._strain    = Internal::readFloat32( pF + 24 );
-            event._radius    = Internal::readFloat32( pF + 28 );
-            event._impulse   = Internal::readFloat32( pF + 32 );
+            event._position  = float3{ LittleEndianUtil::readFloat32( pF ), LittleEndianUtil::readFloat32( pF + 4 ), LittleEndianUtil::readFloat32( pF + 8 ) };
+            event._direction = float3{ LittleEndianUtil::readFloat32( pF + 12 ), LittleEndianUtil::readFloat32( pF + 16 ), LittleEndianUtil::readFloat32( pF + 20 ) };
+            event._strain    = LittleEndianUtil::readFloat32( pF + 24 );
+            event._radius    = LittleEndianUtil::readFloat32( pF + 28 );
+            event._impulse   = LittleEndianUtil::readFloat32( pF + 32 );
             _listEvent.push_back( event );
         }
         _seed = seedLow | ( seedHigh << 32 );

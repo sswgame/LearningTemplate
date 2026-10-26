@@ -27,7 +27,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/unordered_map.h"
-#include "Core/Network/BitStream.h"
+#include "Core/Serialization/BitStream.h"
 
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"
 

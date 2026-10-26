@@ -4,7 +4,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Memory/Memory.h"
+#include "Core/Serialization/ByteStream.h"
 
 #include "Engine/Resource/ResourceIO.h"
 
@@ -20,37 +20,6 @@ namespace sw
             static constexpr size_t kTexelBytes = sizeof( float32 ) * 3;
             /// @brief 거칠기 0 근처의 GGX α 하한 — 셰이더 lighting.hlsli 의 kMinRoughness 와 같은 뜻(0.045² 근처에서 표본이 한 점에 모인다).
             static constexpr float32 kMinRoughness = 0.045f;
-
-            static void writeUint32( vector<uint8>& outBytes, uint32 value )
-            {
-                for ( uint32 shift = 0; shift < 32; shift += 8 )
-                {
-                    outBytes.push_back( static_cast<uint8>( ( value >> shift ) & 0xFFu ) );
-                }
-            }
-
-            static void writeFloat32( vector<uint8>& outBytes, float32 value )
-            {
-                uint32 bits = 0;
-                Memory::copy( &bits, &value, sizeof( bits ) );
-                writeUint32( outBytes, bits );
-            }
-
-            static uint32 readUint32( const uint8* pData, size_t& inoutOffset )
-            {
-                const uint8* pByte = pData + inoutOffset;
-                inoutOffset += sizeof( uint32 );
-                return static_cast<uint32>( pByte[0] ) | ( static_cast<uint32>( pByte[1] ) << 8 ) | ( static_cast<uint32>( pByte[2] ) << 16 ) |
-                       ( static_cast<uint32>( pByte[3] ) << 24 );
-            }
-
-            static float32 readFloat32( const uint8* pData, size_t& inoutOffset )
-            {
-                const uint32 bits  = readUint32( pData, inoutOffset );
-                float32      value = 0.0f;
-                Memory::copy( &value, &bits, sizeof( value ) );
-                return value;
-            }
 
             static void setError( string* pOutError, const utf8* pMessage )
             {
@@ -199,18 +168,19 @@ namespace sw
         using Internal = ReflectionProbeDataInternal;
         outBytes.clear();
         outBytes.reserve( Internal::kHeaderBytes + Internal::kTexelBytes * _listTexel.size() );
-        Internal::writeUint32( outBytes, kMagic );
-        Internal::writeUint32( outBytes, kVersion );
-        Internal::writeFloat32( outBytes, _capturePosition._x );
-        Internal::writeFloat32( outBytes, _capturePosition._y );
-        Internal::writeFloat32( outBytes, _capturePosition._z );
-        Internal::writeUint32( outBytes, _resolution );
-        Internal::writeUint32( outBytes, _levelCount );
+        ByteWriter writer{ outBytes };
+        writer.writeUint32( kMagic );
+        writer.writeUint32( kVersion );
+        writer.writeFloat32( _capturePosition._x );
+        writer.writeFloat32( _capturePosition._y );
+        writer.writeFloat32( _capturePosition._z );
+        writer.writeUint32( _resolution );
+        writer.writeUint32( _levelCount );
         for ( const float3& texel : _listTexel )
         {
-            Internal::writeFloat32( outBytes, texel._x );
-            Internal::writeFloat32( outBytes, texel._y );
-            Internal::writeFloat32( outBytes, texel._z );
+            writer.writeFloat32( texel._x );
+            writer.writeFloat32( texel._y );
+            writer.writeFloat32( texel._z );
         }
     }
 
@@ -223,26 +193,26 @@ namespace sw
             Internal::setError( pOutError, "reflection probe file is shorter than its header" );
             return false;
         }
-        size_t offset = 0;
-        if ( Internal::readUint32( pData, offset ) != kMagic )
+        ByteReader reader{ pData, size };
+        if ( reader.readUint32() != kMagic )
         {
             Internal::setError( pOutError, "reflection probe file magic is not SWRP" );
             return false;
         }
-        if ( Internal::readUint32( pData, offset ) != kVersion )
+        if ( reader.readUint32() != kVersion )
         {
             Internal::setError( pOutError, "reflection probe file version differs - bake the probe again" );
             return false;
         }
         float3 capturePosition{};
-        capturePosition._x        = Internal::readFloat32( pData, offset );
-        capturePosition._y        = Internal::readFloat32( pData, offset );
-        capturePosition._z        = Internal::readFloat32( pData, offset );
-        const uint32 resolution   = Internal::readUint32( pData, offset );
-        const uint32 levelCount   = Internal::readUint32( pData, offset );
+        capturePosition._x        = reader.readFloat32();
+        capturePosition._y        = reader.readFloat32();
+        capturePosition._z        = reader.readFloat32();
+        const uint32 resolution   = reader.readUint32();
+        const uint32 levelCount   = reader.readUint32();
         const bool   bSizeInRange = kMinResolution <= resolution && resolution <= kMaxResolution && kMinLevelCount <= levelCount && levelCount <= kMaxLevelCount;
         const uint64 texelCount   = static_cast<uint64>( resolution ) * resolution * levelCount;
-        if ( bSizeInRange == false || size - offset != texelCount * Internal::kTexelBytes )
+        if ( bSizeInRange == false || reader.getRemainingByteCount() != texelCount * Internal::kTexelBytes )
         {
             Internal::setError( pOutError, "reflection probe file length does not match its size" );
             return false;
@@ -253,9 +223,9 @@ namespace sw
         _listTexel.resize( static_cast<size_t>( texelCount ) );
         for ( float3& texel : _listTexel )
         {
-            texel._x = Internal::readFloat32( pData, offset );
-            texel._y = Internal::readFloat32( pData, offset );
-            texel._z = Internal::readFloat32( pData, offset );
+            texel._x = reader.readFloat32();
+            texel._y = reader.readFloat32();
+            texel._z = reader.readFloat32();
         }
         return true;
     }

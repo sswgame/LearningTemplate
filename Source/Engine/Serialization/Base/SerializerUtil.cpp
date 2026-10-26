@@ -3,6 +3,7 @@
 #include "Engine/Serialization/Base/SerializerUtil.h"
 
 #include "Core/Container/InlineAllocator.h"
+#include "Core/Container/LittleEndianUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Log/Logger.h"
@@ -146,28 +147,14 @@ namespace sw
                 return true;
             }
 
-            /** @brief uint32 하나를 리틀 엔디언 그대로 덧붙입니다. */
-            static void appendUint32( vector<uint8>& buffer, uint32 value )
-            {
-                const uint8* pBytes = reinterpret_cast<const uint8*>( &value );
-                buffer.insert( buffer.end(), pBytes, pBytes + sizeof( uint32 ) );
-            }
-
             /** @brief uint32 하나를 읽고 오프셋을 그만큼 옮깁니다. */
             [[nodiscard]] static bool readUint32( const uint8* pData, size_t dataSize, size_t& inoutOffset, uint32& outValue )
             {
                 if ( inoutOffset + sizeof( uint32 ) > dataSize )
                     return false;
-                Memory::copy( &outValue, pData + inoutOffset, sizeof( uint32 ) );
+                outValue = LittleEndianUtil::readUint32( pData + inoutOffset );
                 inoutOffset += sizeof( uint32 );
                 return true;
-            }
-
-            /** @brief int64 하나를 리틀 엔디언 그대로 덧붙입니다. */
-            static void appendInt64( vector<uint8>& buffer, int64 value )
-            {
-                const uint8* pBytes = reinterpret_cast<const uint8*>( &value );
-                buffer.insert( buffer.end(), pBytes, pBytes + sizeof( int64 ) );
             }
 
             /** @brief int64 하나를 읽고 오프셋을 그만큼 옮깁니다. */
@@ -175,7 +162,7 @@ namespace sw
             {
                 if ( inoutOffset + sizeof( int64 ) > dataSize )
                     return false;
-                Memory::copy( &outValue, pData + inoutOffset, sizeof( int64 ) );
+                outValue = LittleEndianUtil::readInt64( pData + inoutOffset );
                 inoutOffset += sizeof( int64 );
                 return true;
             }
@@ -186,9 +173,9 @@ namespace sw
              */
             static void appendEnumEntry( vector<uint8>& buffer, uint32 nameHash, int64 unnamedValue )
             {
-                appendUint32( buffer, nameHash );
+                LittleEndianUtil::appendUint32( buffer, nameHash );
                 if ( nameHash == 0 )
-                    appendInt64( buffer, unnamedValue );
+                    LittleEndianUtil::appendInt64( buffer, unnamedValue );
             }
 
             /**
@@ -217,12 +204,12 @@ namespace sw
                 }
                 if ( bHashless )
                 {
-                    appendUint32( buffer, 1 );
+                    LittleEndianUtil::appendUint32( buffer, 1 );
                     appendEnumEntry( buffer, 0, value );
                     return;
                 }
                 std::sort( listNameHash.begin(), listNameHash.end() );
-                appendUint32( buffer, static_cast<uint32>( listNameHash.size() + ( unnamedBits != 0 ? 1 : 0 ) ) );
+                LittleEndianUtil::appendUint32( buffer, static_cast<uint32>( listNameHash.size() + ( unnamedBits != 0 ? 1 : 0 ) ) );
                 for ( const uint32 nameHash : listNameHash )
                 {
                     appendEnumEntry( buffer, nameHash, 0 );
@@ -330,10 +317,10 @@ namespace sw
                 SerializeContext::OpaqueElementView opaque{};
                 if ( context.queryOpaqueElement( pObject, opaque ) && opaque._format == SerializeContext::OpaqueFormat::Binary )
                 {
-                    appendUint32( buffer, static_cast<uint32>( opaque._typeName.size() ) );
+                    LittleEndianUtil::appendUint32( buffer, static_cast<uint32>( opaque._typeName.size() ) );
                     const auto* pNameBytes = reinterpret_cast<const uint8*>( opaque._typeName.data() );
                     buffer.insert( buffer.end(), pNameBytes, pNameBytes + opaque._typeName.size() );
-                    appendUint32( buffer, static_cast<uint32>( opaque._byteCount ) );
+                    LittleEndianUtil::appendUint32( buffer, static_cast<uint32>( opaque._byteCount ) );
                     if ( opaque._pBytes != nullptr && opaque._byteCount > 0 )
                         buffer.insert( buffer.end(), opaque._pBytes, opaque._pBytes + opaque._byteCount );
                     return true;
@@ -342,14 +329,14 @@ namespace sw
 
                 if ( pRuntimeType == nullptr )
                 {
-                    appendUint32( buffer, 0 ); // 이름 길이 0 은 빈 슬롯을 뜻한다
-                    appendUint32( buffer, 0 ); // 본문 길이 0
+                    LittleEndianUtil::appendUint32( buffer, 0 ); // 이름 길이 0 은 빈 슬롯을 뜻한다
+                    LittleEndianUtil::appendUint32( buffer, 0 ); // 본문 길이 0
                     return true;
                 }
 
                 const utf8*  pName   = pRuntimeType->_name.c_str();
                 const uint32 nameLen = ( pName != nullptr ) ? static_cast<uint32>( pRuntimeType->_name.size() ) : 0;
-                appendUint32( buffer, nameLen );
+                LittleEndianUtil::appendUint32( buffer, nameLen );
                 if ( nameLen > 0 )
                 {
                     const auto* pNameBytes = reinterpret_cast<const uint8*>( pName );
@@ -357,12 +344,12 @@ namespace sw
                 }
 
                 const size_t sizePos = buffer.size();
-                appendUint32( buffer, 0 );
+                LittleEndianUtil::appendUint32( buffer, 0 );
 
                 const size_t bodyStart = buffer.size();
                 const bool   bWritten  = BinarySerializer::serialize( pObject, *pRuntimeType, buffer, context );
                 const uint32 bodySize  = static_cast<uint32>( buffer.size() - bodyStart );
-                Memory::copy( buffer.data() + sizePos, &bodySize, sizeof( uint32 ) );
+                LittleEndianUtil::writeUint32( buffer.data() + sizePos, bodySize );
                 return bWritten;
             }
 
@@ -474,9 +461,9 @@ namespace sw
                 {
                 }
 
-                void beginSequence( const size_t elementCount ) override { appendUint32( _listBuffer, static_cast<uint32>( elementCount ) ); }
+                void beginSequence( const size_t elementCount ) override { LittleEndianUtil::appendUint32( _listBuffer, static_cast<uint32>( elementCount ) ); }
                 void endSequence() override {}
-                void beginMap( const size_t entryCount ) override { appendUint32( _listBuffer, static_cast<uint32>( entryCount ) ); }
+                void beginMap( const size_t entryCount ) override { LittleEndianUtil::appendUint32( _listBuffer, static_cast<uint32>( entryCount ) ); }
                 void endMap() override {}
                 void beginMapEntry( const ValueAddress key, const hashed_string& keyTypeName ) override
                 {
@@ -693,16 +680,14 @@ namespace sw
         {
             if ( pStructInfo->isPrimitive() == false )
             {
-                const size_t sizePos   = listBuffer.size();
-                const uint32 dummySize = 0;
-                const uint8* pDummy    = reinterpret_cast<const uint8*>( &dummySize );
-                listBuffer.insert( listBuffer.end(), pDummy, pDummy + sizeof( uint32 ) );
+                const size_t sizePos = listBuffer.size();
+                LittleEndianUtil::appendUint32( listBuffer, 0 );
 
                 const size_t structStart = listBuffer.size();
                 const bool   bWritten    = BinarySerializer::serialize( pValuePtr, *pStructInfo, listBuffer, context );
                 const uint32 structSize  = static_cast<uint32>( listBuffer.size() - structStart );
 
-                Memory::copy( listBuffer.data() + sizePos, &structSize, sizeof( uint32 ) );
+                LittleEndianUtil::writeUint32( listBuffer.data() + sizePos, structSize );
                 return bWritten;
             }
         }

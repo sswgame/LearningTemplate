@@ -3,7 +3,7 @@
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceSelection.h"
 
 #include "Core/Container/StringUtil.h"
-#include "Core/Network/BitStream.h"
+#include "Core/Serialization/BitStream.h"
 #include "Core/String/Base64Util.h"
 
 #include "Engine/Reflection/EnumName.h"

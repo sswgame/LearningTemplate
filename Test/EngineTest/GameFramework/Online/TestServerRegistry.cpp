@@ -2,7 +2,7 @@
 // 고른 몫은 다음 읽기 전까지 얹힌다. 읽는 쪽이 라우터보다 먼저 내려가도 기다리던 답이 사라진 객체를 부르지 않는다. 기록 형식은 왕복하고 다른 판은 읽지 않는다.
 #include "pch.h"
 
-#include "Core/Network/BitStream.h"
+#include "Core/Serialization/BitStream.h"
 
 #include "GameFramework/Base/Online/Cache/EphemeralStoreRouter.h"
 #include "GameFramework/Base/Online/Cache/MemoryEphemeralStore.h"

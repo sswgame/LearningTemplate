@@ -2,7 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/AccountServer.h"
 
-#include "Core/Network/BitStream.h"
+#include "Core/Serialization/BitStream.h"
 
 #include "GameFramework/Kits/Feature/Online/Account/Shared/Protocol/AccountProtocol.h"
 

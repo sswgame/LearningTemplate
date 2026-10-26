@@ -1,9 +1,9 @@
 #include "pch.h"
 
-#include "Core/Network/BitStream.h"
 #include "Core/Network/Connection/NetConnection.h"
 #include "Core/Network/Message/NetSendBudget.h"
 #include "Core/Network/Replication/NetInputWindow.h"
+#include "Core/Serialization/BitStream.h"
 
 #include "TestFramework/TestFramework.h"
 

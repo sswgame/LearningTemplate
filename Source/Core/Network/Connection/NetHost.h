@@ -56,12 +56,12 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
-#include "Core/Network/BitStream.h"
 #include "Core/Network/Connection/NetChallenge.h"
 #include "Core/Network/Connection/NetHostSecurity.h"
 #include "Core/Network/Connection/NetPacketSealer.h"
 #include "Core/Network/Connection/NetSlotTable.h"
 #include "Core/Network/NetTypes.h"
+#include "Core/Serialization/BitStream.h"
 #include "Core/Task/TaskFuture.h"
 
 namespace sw

@@ -5,9 +5,9 @@
 #include "Core/Common/HashUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Network/BitStream.h"
 #include "Core/Network/Connection/NetHost.h"
 #include "Core/Network/NetTypes.h"
+#include "Core/Serialization/BitStream.h"
 #include "Core/UUID/UUID.h"
 
 #include "GameFramework/Base/Foundation/Utility/ConfigRangeUtil.h"

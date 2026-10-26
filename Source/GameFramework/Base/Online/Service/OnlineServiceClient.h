@@ -24,10 +24,10 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Network/BitStream.h"
 #include "Core/Network/Message/NetRequest.h"
 #include "Core/Network/Message/StreamMessageEndpoint.h"
 #include "Core/Network/NetTypes.h"
+#include "Core/Serialization/BitStream.h"
 
 #include "GameFramework/Base/Online/Service/OnlineProtocolRegistry.h"
 #include "GameFramework/GameFrameworkExports.h"

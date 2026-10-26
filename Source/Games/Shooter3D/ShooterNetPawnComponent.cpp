@@ -3,8 +3,8 @@
 #include "Games/Shooter3D/ShooterNetPawnComponent.h"
 
 #include "Core/Math/MathUtil.h"
-#include "Core/Network/BitStream.h"
 #include "Core/Network/Connection/NetHost.h"
+#include "Core/Serialization/BitStream.h"
 
 #include "Engine/Net/GameNetSession.h"
 #include "Engine/Object/GameObject/GameObject.h"
