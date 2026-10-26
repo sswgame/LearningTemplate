@@ -122,7 +122,7 @@ frame 900 <ExpectVisited> #3: AI.State(FarmAutoFarmer) never went through 'Till 
 
 새 단계는 `SW_AUTOMATION_STEP( id, "이름", 실행, 검사, 입력 전 여부 )` 로 등록합니다. 입력으로 옮겨지는 단계는 `SW_AUTOMATION_STEP_WITH_HOOKS` 의 준비 함수에서 `runner.getInputScript()` 에 이벤트를 넣고, 속성은 검사 함수에서 모두 확인합니다(모르는 속성은 읽기 오류). 검사 함수는 순수 함수라 실행기 없이 부를 수 있고 `AutomationScenarioDataTest`(nogpu)가 모든 시나리오 파일의 단계를 이 함수로 훑습니다. 등록표에 이름을 묻는 검사(탐침 · 전역 변수 · 개발 명령)는 `AutomationStepValidation::findUnresolvedDependency` 로 "틀렸다" 와 "이 프로세스가 모른다" 를 가리고,
 단계를 등록하는 모듈(에디터 · App)이 안 올라온 프로세스도 검사하게 하려면 검사 함수를 ImGui · 렌더를 모르는 파일에 두고 `SW_AUTOMATION_STEP_VALIDATOR( id, 이름, 검사 )` 로 따로 올립니다(`Editor/SelfTest/EditorScenarioStepValidation.cpp`, `Engine/Automation/AutomationBackendSteps.cpp`). 입력 맵 · 창 · ImGui 가 있어야 답이 나오는 검사는 준비 함수(`_pPrepare`)에 둡니다.
-AI 의 상태를 보려면 `AIControllerComponent` 파생의 `think` 에서 상태가 바뀔 때 `setStateName( "Chase" )` 를 부르고 판단 값은 `getBlackboard()` 에 둡니다(탐침 `AI.State` · `AI.Blackboard`). 게임 로직 단계와 탐침(시계, 판 상태, 일정, AI, 빙의, 탑승)은 `GameFramework/Base/Gameplay/Automation/GameplayAutomationSteps.cpp` 에 있습니다.
+AI 의 상태를 보려면 `AIControllerComponent` 파생의 `think` 에서 상태가 바뀔 때 `setStateName( "Chase" )` 를 부르고 판단 값은 `getBlackboard()` 에 둡니다(탐침 `AI.State` · `AI.Blackboard`). 영역을 넘는 게임 로직 단계(시간 감기, 탑승)는 `GameFramework/Base/Gameplay/Automation/GameplayAutomationSteps.cpp` 에, 탐침(시계, 판 상태, 퀘스트, 일정, AI, 폰, 좌석)은 각 영역 폴더의 `*Probes.cpp` 에 있습니다.
 등록자는 단계 · 탐침을 정의한 .cpp 의 정적 객체입니다. Shipping 은 통째 링크(`sw_linkWholeArchive`)하므로 그 .cpp 를 붙드는 빈 함수를 두지 않습니다.
 
 ## 함정과 주의

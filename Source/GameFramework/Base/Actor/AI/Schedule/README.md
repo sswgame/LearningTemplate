@@ -29,7 +29,7 @@ HarvestValley 의 `FarmVillageDirectorComponent` 가 첫 사용처입니다. 데
 2. 경로를 정합니다. `setPathing( 계획, 고운 )` — HarvestValley 는 계획을 곧은 선(기본), 화면 안 걸음을 마을 내비 격자(`NavGridSchedulePathing`)로 둡니다.
 3. `initialize( &catalog, settings, 0 일 0:00 부터 센 분 )` 으로 NPC 를 집에 세우고 그 시각의 계획을 세웁니다. 설정의 `_clock` 은 게임 `WorldClock` 과 같은 값이어야 계절 · 하루의 때 조건이 맞습니다.
 4. 매 틱 `setWeather` · `setNpcLOD` 를 맞추고 `update( clock )` 한 뒤 `getNpcView( npc )._location` 을 몸에 줍니다(HarvestValley 의 몸은 `NavAgent` 로 그 자리를 쫓는다).
-5. 시나리오로 확인합니다. `Schedule.Activity target="pierre"` 처럼 NPC id 로 묻는 탐침이 `GameplayAutomationSteps.cpp` 에 있습니다(`game/harvestvalley/automation/schedule.scenario.xml`).
+5. 시나리오로 확인합니다. `Schedule.Activity target="pierre"` 처럼 NPC id 로 묻는 탐침이 같은 폴더의 `ScheduleProbes.cpp` 에 있습니다(`game/harvestvalley/automation/schedule.scenario.xml`).
 
 ## 작동 원리
 

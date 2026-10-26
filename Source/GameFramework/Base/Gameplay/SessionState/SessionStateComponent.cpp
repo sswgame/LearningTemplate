@@ -3,6 +3,7 @@
 #include "GameFramework/Base/Gameplay/SessionState/SessionStateComponent.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Base/Foundation/Utility/ConfigRangeUtil.h"
@@ -183,6 +184,26 @@ namespace sw
     {
         GameObject* pOwner = component.getOwner();
         return pOwner != nullptr ? pOwner->getComponent<SessionStateComponent>() : nullptr;
+    }
+
+    void SessionStateComponent::collectOpen( const GameObjectManager* pManager, vector<SessionStateComponent*>& outListState )
+    {
+        outListState.clear();
+        if ( pManager == nullptr )
+            return;
+        pManager->forEachGameObject( [&outListState]( GameObject* pObject )
+        {
+            SessionStateComponent* pState = pObject->getComponent<SessionStateComponent>();
+            if ( pState != nullptr && pState->isInitialized() )
+                outListState.push_back( pState );
+        } );
+    }
+
+    const SessionStateComponent* SessionStateComponent::findFirstOpen( const GameObjectManager* pManager )
+    {
+        vector<SessionStateComponent*> listState;
+        collectOpen( pManager, listState );
+        return listState.empty() ? nullptr : listState.front();
     }
 
     bool SessionStateComponent::applyPendingState()
