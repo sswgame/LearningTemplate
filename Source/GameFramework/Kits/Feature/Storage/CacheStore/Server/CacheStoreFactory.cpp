@@ -7,6 +7,7 @@
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/Network/Transport/PlatformSocketUtil.h"
+#include "Core/Time/Clock.h"
 
 #include "GameFramework/Base/Online/Cache/MemoryEphemeralStore.h"
 #include "GameFramework/Base/Online/Security/NetSecurity.h"
@@ -23,17 +24,23 @@ namespace sw
              * @brief "memory" 캐시의 데이터의 소유자입니다 — 엔진 수명 범위가 소유해 엔진 종료 때 사라진다(처음 만든 "memory" 저장소가 만든다).
              * @details 같은 프로세스의 저장소끼리 나눠 쓴다. 저장소는 이 데이터를 주소로 들므로 엔진이 내려가기 전에 소멸해야 한다(서버 조립이 그렇게 한다).
              */
-            static inline ScopeOwned<MemoryEphemeralDatabase> s_memoryDatabase{};
+            struct MemoryCacheData
+            {
+                SystemMonotonicClock    _clock{}; ///< 데이터보다 먼저 만들어지고 나중에 사라진다(선언 순서)
+                MemoryEphemeralDatabase _database{ _clock };
+            };
+
+            static inline ScopeOwned<MemoryCacheData> s_memoryData{};
 
             static MemoryEphemeralDatabase& getMemoryDatabase()
             {
-                return s_memoryDatabase.getRequired(); // 엔진 수명 범위가 닫힌 뒤의 접근은 결함이다 — "memory" 캐시를 쓸 엔진이 없다
+                return s_memoryData.getRequired()._database; // 엔진 수명 범위가 닫힌 뒤의 접근은 결함이다 — "memory" 캐시를 쓸 엔진이 없다
             }
 
             /** @brief RESP 저장소에 주는 운영 시계입니다. 상태가 없어 저장소들이 나눠 쓴다. */
-            static const RespMonotonicClock& getRespClock()
+            static const SystemMonotonicClock& getRespClock()
             {
-                static const RespMonotonicClock s_clock{};
+                static const SystemMonotonicClock s_clock{};
                 return s_clock;
             }
 
