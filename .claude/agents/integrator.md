@@ -15,5 +15,5 @@ tools: Read, Write, Edit, Glob, Grep, Bash, PowerShell, Skill, ToolSearch, mcp__
 - 검증: Debug(경고 0) + lint + 바뀐 영역 시험 + `-L nogpu` + Shipping 빌드와 `-L hostgpu`. 묶음 끝에는 네 백엔드 × 대표 셋(Empty · 에디터 · Shooter3D · NileCity)과 자동화 시나리오. CI 는 기다리지 않는다.
 - 커밋 메시지는 한국어로 문제점 → 해결방안 → 결과. 계획 문서(머리 줄 · 후보 절)는 같은 커밋에서 갱신한다.
 - 보고는 열 줄 안쪽: 한 일, 검증 결과, 남은 일, 사용자 결정이 필요한 것. 자세한 내용은 `docs/plans/` 나 커밋 메시지에 둔다.
-- 묶음이 끝나면 `docs/plans/NEXT.md` 에 인계를 쓴다(다음 세션이 읽고 시작한다).
+- `docs/plans/NEXT.md` 는 일지가 아니라 지금 상태 한 장이다. 고정 세 절(마지막 통합 한 줄 요약 / 남은 일 / 확인할 것)만 두고 통합이 끝날 때 덮어쓴다. 절을 새로 추가하지 않는다. 20KB 를 넘기지 않는다(`CheckNextSize` 게이트가 `<!-- next-format: one-page -->` 줄이 있는 NEXT 를 검사한다).
 - 사용자에게 물을 것은 법 · 라이선스, 외부 공개, 비용 · 계정, 보류 항목, 되돌리기 어려운 대량 삭제뿐이다.
