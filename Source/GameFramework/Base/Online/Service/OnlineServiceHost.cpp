@@ -449,7 +449,11 @@ namespace sw
     void OnlineServiceHost::subscribeServerBus( string_view topic, IOnlineHostService* pService )
     {
         if ( _settings._pServerBusTransport == nullptr )
+        {
+            // 버스 없는 호스트에 구독을 건 것은 조립 오류다 — 조용히 넘기면 그 주제의 다른 서버 알림이 영영 오지 않는다.
+            SW_LOG_ERROR_ID( "OnlineHost.BusSubscribeWithoutTransport", "Server bus topic '%#' was subscribed on a host without a server bus transport", topic );
             return;
+        }
         bool bTopicOpen = false;
         for ( const BusSubscription& subscription : _listBusSubscription )
         {

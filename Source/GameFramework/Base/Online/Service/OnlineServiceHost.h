@@ -215,7 +215,7 @@ namespace sw
 
         /** @brief 캐시 답과 채널 메시지를 나눠 주는 라우터입니다. 캐시가 없으면(서버 한 대) nullptr 이며, 호스트 `tick` 이 비웁니다. */
         EphemeralStoreRouter* getEphemeralRouter();
-        /** @brief @p pService 가 @p topic 의 버스 메시지를 받게 합니다. 같은 주제를 둘이 구독해도 버스에는 한 번만 구독하며, 버스가 없으면 아무것도 하지 않습니다. */
+        /** @brief @p pService 가 @p topic 의 버스 메시지를 받게 합니다. 같은 주제를 둘이 구독해도 버스에는 한 번만 구독합니다. 버스 전송이 없는 호스트이면 조립 오류로 로그를 남기고 걸지 않습니다. */
         void subscribeServerBus( string_view topic, IOnlineHostService* pService );
         void unsubscribeServerBus( string_view topic, IOnlineHostService* pService );
 

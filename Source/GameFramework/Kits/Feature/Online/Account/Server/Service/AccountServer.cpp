@@ -139,6 +139,7 @@ namespace sw
         : _mapTagToCall{}
         , _mapAccountToSession{}
         , _mapAccountToReasonCode{}
+        , _presencePushTopic{}
         , _listCompletionScratch{}
         , _listEventScratch{}
         , _presence{}
@@ -170,7 +171,13 @@ namespace sw
 
     void AccountServer::onHostShutdown( OnlineServiceHost& host )
     {
-        (void)host;
+        // `attachHost` 가 구독한 주제를 같은 호스트에서 푼다 — 다시 붙는 호스트(재시작)에 옛 구독이 남지 않는다.
+        if ( _presencePushTopic.empty() == false )
+        {
+            host.unsubscribeServerBus( AccountBus::kRevokeTopic.getName(), this );
+            host.unsubscribeServerBus( _presencePushTopic, this );
+            _presencePushTopic.clear();
+        }
         _presence.detach(); // 캐시 응답은 호스트가 이미 Unavailable 로 회수했다
         _bHostAttached = SW_FALSE;
     }
@@ -447,8 +454,9 @@ namespace sw
         _presence.attach( &host );
         if ( _presence.isEnabled() == false )
             return; // 서버가 한 대이다
+        _presencePushTopic = OnlinePresence::makePushTopic( host.getServerBus()->getServerID() );
         host.subscribeServerBus( AccountBus::kRevokeTopic.getName(), this );
-        host.subscribeServerBus( OnlinePresence::makePushTopic( host.getServerBus()->getServerID() ), this );
+        host.subscribeServerBus( _presencePushTopic, this );
     }
 
     void AccountServer::publishRemoteRevocations( OnlineServiceHost& host )

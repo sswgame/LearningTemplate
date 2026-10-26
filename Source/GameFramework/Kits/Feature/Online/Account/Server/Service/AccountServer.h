@@ -112,6 +112,7 @@ namespace sw
         unordered_map<uint64, PendingCall>     _mapTagToCall;
         unordered_map<AccountID, BoundSession> _mapAccountToSession;
         unordered_map<AccountID, string>       _mapAccountToReasonCode;
+        string                                 _presencePushTopic; ///< `attachHost` 가 구독한 이 서버의 push 중계 주제(구독하지 않았으면 빈 글). `onHostShutdown` 이 같은 주제를 푼다
         vector<LoginCompletion>                _listCompletionScratch;
         vector<LoginEvent>                     _listEventScratch;
         OnlinePresence                         _presence;

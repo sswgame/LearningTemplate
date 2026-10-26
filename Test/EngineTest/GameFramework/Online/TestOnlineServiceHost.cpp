@@ -890,6 +890,18 @@ SW_TEST_CASE( OnlineServiceHostTest, ServerBusMessagesFanOutToSubscribedServices
     SW_EXPECT_EQUAL( size_t( 2 ), rig._serviceB._listBusMessage.size() ); // 주제는 아직 열려 있다
 }
 
+SW_TEST_CASE( OnlineServiceHostTest, SubscribingWithoutABusTransportIsAnAssemblyError )
+{
+    // 버스 없는 호스트에 구독을 거는 것은 조립 오류다 — 조용히 넘기면 그 주제의 다른 서버 알림이 영영 오지 않는다.
+    HostRig                  rig( HostRig::makeSettings() );
+    test::ScopedLogCollector logs;
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "subscribing on a host without a server bus transport" );
+        rig._host.subscribeServerBus( "sd.changed", &rig._serviceA );
+    }
+    SW_EXPECT_EQUAL( uint32( 1 ), logs.countWithID( "OnlineHost.BusSubscribeWithoutTransport" ) );
+}
+
 SW_TEST_CASE( OnlineServiceHostTest, ShutdownTellsEveryServiceOnceAfterPendingCacheReplies )
 {
     // 서비스 객체는 호스트보다 늦게 내려가도 된다 — 호스트가 내려가며 서비스마다 한 번 알리고(그 뒤로 서비스는 호스트를 부르지 않는다),
