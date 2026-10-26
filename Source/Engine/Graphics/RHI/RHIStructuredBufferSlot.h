@@ -37,9 +37,8 @@ namespace sw
 
         /**
          * @brief 용량을 확보합니다. 모자라면 다시 만들고, 충분하면 그대로 둡니다.
-         * @details 만들기는 세 단계로 물러섭니다. (1) 요청한 usage 그대로, (2) UnorderedAccess 를 뺀 것,
-         *          (3) createStructuredBuffer. (2)가 있는 이유는 백엔드나 드라이버가 구조 버퍼 UAV 를 거절할
-         *          수 있어서입니다. 그때도 **그리기는 살려야 합니다**(컴퓨트 경로만 꺼집니다).
+         * @details 요청한 usage 그대로 한 번만 만듭니다. 못 만들면 크기와 usage 를 오류로 남기고 false 이며, UAV 를 뺀 버퍼나 다른 생성 함수로
+         *          대신 만들지 않습니다 — 컴퓨트(UAV)를 쓸 수 없는 백엔드는 부르는 쪽이 `RHICapabilities::_bCompute` 로 가려 UAV 를 요청하지 않습니다.
          * @param elementCount 0 이면 버퍼를 해제합니다.
          * @param pInitialData 만들 때 넣을 내용입니다(없으면 nullptr).
          * @return 요청한 용량을 확보했으면 true 입니다.
