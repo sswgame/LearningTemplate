@@ -21,6 +21,7 @@ Scripts/lint/gate/CheckShaderConventions.py
 - 전역 리소스 · cbuffer 멤버는 `g_` + `PascalCase` — C++ 가 문자열로 묶는 이름이라 **고치지 않고**, 컨테이너 · 단수 · 줄임말 규칙에서도 뺀다.
 - 패스 · 기능 스위치는 함수 본문 안의 `#if` 가 아니라 파일 수준 `#if` 가 정의를 고른다. 본문 안의 `#if` 는 백엔드 매크로(`backend_macro`)만 받는다.
   구조체 본문 바로 안(필드 · 멤버 선언의 유무)의 `#if` 는 본문 분기가 아니라서 본다.
+- 흐름 속성은 맨 `[unroll]` · `[loop]` · `[branch]` · `[flatten]` 이 아니라 common.hlsli 의 속성 매크로(`SW_UNROLL` …)로 쓴다.
 
 **정규식으로 본다.** HLSL 파서를 두지 않는다 — 셰이더 문법은 작고, 이 게이트가 보는 것은 선언의 이름뿐이다. 먼저 주석 · 문자열을
 지우고(예시 코드를 위반으로 읽지 않게), 중괄호 깊이와 선언은 전처리 지시문까지 지운 글로 센다 — 매크로 본문의 중괄호가
@@ -115,6 +116,9 @@ kDirectiveRe = re.compile(r"^[ \t]*#(?:[^\n]*\\\n)*[^\n]*", re.MULTILINE)
 kDeclareMacroRe = re.compile(r"\b(?P<macro>SW_DECLARE_\w+)\s*\((?P<args>[^()]*(?:\([^()]*\)[^()]*)*)\)")
 kGuardRe = re.compile(r"^[ \t]*#[ \t]*ifndef[ \t]+(?P<name>\w+)[ \t]*\n[ \t]*#[ \t]*define[ \t]+(?P=name)\b", re.MULTILINE)
 kConditionalRe = re.compile(r"^[ \t]*#[ \t]*(?:if|ifdef|ifndef|elif)\b(?P<condition>[^\n]*)", re.MULTILINE)
+#: 문장 머리의 맨 흐름 속성(`[unroll]` · `[loop]` · `[branch]` · `[flatten]`) — clang-format 이 다음 문장과 한 줄로 붙이므로 common.hlsli 의
+#: 속성 매크로(`SW_UNROLL` · `SW_LOOP` · `SW_BRANCH`, `Resource/.clang-format` AttributeMacros)로 쓴다. 포맷 설정만으로는 맨 속성을 막지 못해 게이트가 본다.
+kBareFlowAttributeRe = re.compile(r"(?:^|(?<=[;{}]))[ \t]*\[\s*(?P<name>unroll|loop|branch|flatten)\b(?:\s*\([^()]*\))?\s*\]", re.MULTILINE)
 kStructBodyRe = re.compile(r"\bstruct\s+\w+\s*\{|\bSW_MATERIAL_BEGIN\s*\{")
 kCbufferBodyRe = re.compile(r"\bcbuffer\s+\w+[^{;]*\{|\bSW_DECLARE_CBUFFER\s*\([^()]*\)\s*\{|\bSW_ROOT_CONSTANTS_BEGIN\s*\{")
 
@@ -380,6 +384,11 @@ def checkShaderTextInternal(text: str, relPath: str) -> list[str]:
         if kBackendMacroRe.search(condition) is None:
             report(offset, f"함수 본문 안의 #if '{condition}': 패스 · 기능 스위치는 파일 수준 #if 로 정의를 고릅니다(본문에서는 백엔드 매크로만 가른다)")
 
+    # 맨 흐름 속성 — 지시문을 지운 글로 보므로 common.hlsli 의 `#define SW_UNROLL [unroll]` 은 걸리지 않는다
+    for match in kBareFlowAttributeRe.finditer(codeBody):
+        name = match.group("name")
+        report(match.start("name"), f"맨 속성 '[{name}]': common.hlsli 의 속성 매크로(SW_UNROLL · SW_LOOP · SW_BRANCH)로 씁니다 — 맨 속성은 clang-format 이 다음 문장과 붙인다(없는 속성은 그 매크로를 더하고 Resource/.clang-format AttributeMacros 에도 적는다)")
+
     # 매크로 · include 가드
     for match in kDefineRe.finditer(code):
         name = match.group("name")
@@ -458,6 +467,7 @@ class CheckShaderConventionsGate(LintGate):
         {"name": "g_ 아닌 cbuffer 멤버", "expectedViolation": "Resource/engine/shaders/probe.hlsl:3 cbuffer 멤버 'tintColor' 는 g_ + PascalCase 여야 합니다", "files": {kProbeSource: "SW_DECLARE_CBUFFER( ProbeParams, 0 )\n{\n    float4 tintColor;\n};\n"}},
         {"name": "g_ 아닌 루트 상수 멤버", "expectedViolation": "Resource/engine/shaders/probe.hlsl:3 cbuffer 멤버 'targetIndex' 는 g_ + PascalCase 여야 합니다", "files": {kProbeSource: "SW_ROOT_CONSTANTS_BEGIN\n{\n    uint targetIndex;\n};\nSW_ROOT_CONSTANTS_END\n"}},
         {"name": "모르는 선언 매크로", "expectedViolation": "Resource/engine/shaders/probe.hlsl:1 모르는 선언 매크로 'SW_DECLARE_APPEND_BUFFER'", "files": {kProbeSource: "SW_DECLARE_APPEND_BUFFER( uint, g_ProbeList, 0 );\n"}},
+        {"name": "맨 흐름 속성", "expectedViolation": "Resource/engine/shaders/probe.hlsl:2 맨 속성 '[unroll]'", "files": {kProbeSource: "float sumIt( float value ) {\n    [unroll] for ( uint index = 0; index < 4; ++index ) value += 1;\n    return value;\n}\n"}},
         {"name": "include 가드 이름", "expectedViolation": "Resource/engine/shaders/probe.hlsli:1 include 가드 'SW_PROBE_HLSLI' 는 'SW_ENGINE_PROBE_HLSLI' 여야 합니다(SW_<도메인>_<파일>_HLSLI)", "files": {kProbeHeader: "#ifndef SW_PROBE_HLSLI\n#define SW_PROBE_HLSLI\n#endif\n"}},
     ]
 
