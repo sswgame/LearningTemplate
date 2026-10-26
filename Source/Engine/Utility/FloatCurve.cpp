@@ -46,18 +46,10 @@ namespace sw
             return _listKey.front()._value;
         if ( time >= _listKey.back()._time )
             return _listKey.back()._value;
-        // 이분 탐색: time 보다 늦은 첫 키 — 그 앞 키와 구간을 이룬다(위 두 줄이 양 끝을 걸렀다).
-        size_t low  = 1;
-        size_t high = _listKey.size() - 1;
-        while ( low < high )
-        {
-            const size_t middle = ( low + high ) / 2;
-            if ( _listKey[middle]._time <= time )
-                low = middle + 1;
-            else
-                high = middle;
-        }
-        return FloatCurveInternal::interpolate( _listKey[low - 1], _listKey[low], time );
+        // time 보다 늦은 첫 키 — 그 앞 키와 구간을 이룬다(위 두 줄이 양 끝을 걸렀으므로 [1, 끝-1) 안에 있다).
+        const auto next = std::upper_bound( _listKey.begin() + 1, _listKey.end() - 1, time, []( float32 value, const FloatCurveKey& key )
+        { return value < key._time; } );
+        return FloatCurveInternal::interpolate( *( next - 1 ), *next, time );
     }
 
     uint32 FloatCurve::addKey( float32 time, float32 value, CurveInterpolation interpolation )

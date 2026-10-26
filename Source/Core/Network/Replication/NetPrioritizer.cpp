@@ -16,17 +16,9 @@ namespace sw
 
     size_t NetPrioritizer::findLowerIndex( uint32 entityID ) const
     {
-        size_t low  = 0;
-        size_t high = _listEntry.size();
-        while ( low < high )
-        {
-            const size_t middle = ( low + high ) / 2;
-            if ( _listEntry[middle]._entityID < entityID )
-                low = middle + 1;
-            else
-                high = middle;
-        }
-        return low;
+        const auto found = std::lower_bound( _listEntry.begin(), _listEntry.end(), entityID, []( const Entry& entry, uint32 id )
+        { return entry._entityID < id; } );
+        return static_cast<size_t>( found - _listEntry.begin() );
     }
 
     NetPrioritizer::Entry* NetPrioritizer::findEntry( uint32 entityID )

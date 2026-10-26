@@ -14,6 +14,8 @@
 #include "Engine/Destruction/FractureGraph.h"
 #include "Engine/Physics/PhysicsSystem.h"
 
+#include <algorithm>
+
 namespace sw
 {
     namespace
@@ -212,17 +214,9 @@ namespace sw
 
     int32 DestructionState::findGroupIndex( uint32 groupID ) const
     {
-        size_t low  = 0;
-        size_t high = _listGroup.size();
-        while ( low < high )
-        {
-            const size_t middle = ( low + high ) / 2;
-            if ( _listGroup[middle]._id < groupID )
-                low = middle + 1;
-            else
-                high = middle;
-        }
-        return ( low < _listGroup.size() && _listGroup[low]._id == groupID ) ? static_cast<int32>( low ) : -1;
+        const auto found = std::lower_bound( _listGroup.begin(), _listGroup.end(), groupID, []( const auto& group, uint32 id )
+        { return group._id < id; } );
+        return ( found != _listGroup.end() && found->_id == groupID ) ? static_cast<int32>( found - _listGroup.begin() ) : -1;
     }
 
     bool DestructionState::hasAnchoredLeaf( uint32 node ) const
