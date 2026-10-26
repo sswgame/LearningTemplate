@@ -19,8 +19,8 @@
 제목: Vulkan VSync 에서 프레임이 주기를 놓침
 옛번호: E-3
 왜 필요한가: Vulkan(FIFO) + VSync 에서 가끔 한 프레임이 여러 주기를 놓친다(Release 큐브 100, 165 Hz). 조사 결과는 [검증과 측정](../08_Verification.md) 2절 "Vulkan VSync 프레임 놓침", 스왑체인 이미지 4 개는 결정 기록 3절에서 기각했다.
-착수 조건 / 남은 것: 다시 보이면 `-gv_tracy=1` 로 acquire · 펜스 · present 를 시간축으로 보고 전체 화면(독점) · NVIDIA "Vulkan/OpenGL 프레젠트 방식" 설정을 바꿔 가른다.
-왜 지금 못 하는가: 가끔만 일어나고 모니터 주사율 · 드라이버 설정에 달려 있어 재현 시나리오가 없다. 풀리는 조건: 실기 재현.
+끝난 것(wt/gfxc, 빌드 · 실행 안 함): 측정 항목 — 프로파일 보고에 `[Profile] pacing  median <us>  over1.5x <n>  over2.5x <n>` 줄을 더했다(`FrameProfileSession::computePacing`, 100 us 칸 히스토그램). VSync 를 켜면 중앙 간격이 화면 주기라 over1.5x 가 주기를 하나 이상, over2.5x 가 둘 이상 놓친 프레임 수다. 고정 문턱 `over16ms` 는 60 Hz 기준이라 165 Hz 에서 주기 하나를 놓친 12 ms 프레임을 세지 못했다. 재는 판 — 검증 묶음 항목 `vsync-frame-miss`(Release · `-vk -vsync -gv_benchMeshes=100 -gv_profileSeconds=60`, 지표 셋은 보고만). 코드 수정은 없다 — 문서의 원인(이미지가 한 주기 늦게 돌아옴 · 합성기 경로의 펜스 지연)은 드라이버 · 합성기 쪽이고 엔진이 고칠 자리가 적혀 있지 않다(스왑체인 이미지 4 개는 결정 기록 3절에서 기각).
+남은 것(통합): 확인 대기: 매니페스트 id `vsync-frame-miss`. 같은 판을 `-dx12 -vsync` 로 견주고, 놓침이 보이면 `-gv_tracy=1` 로 acquire · 펜스 · present 를 시간축으로 보고 전체 화면(독점) · NVIDIA "Vulkan/OpenGL 프레젠트 방식" 설정을 바꿔 가른다. 주기를 놓친 프레임이 0 이 아니어도 실패 판정은 하지 않는다(기준이 없다) — 값이 쌓이면 `max` 를 단다.
 
 ### DeviceLossHangRepro
 제목: 실제 TDR 뒤 행을 재현하지 못함
