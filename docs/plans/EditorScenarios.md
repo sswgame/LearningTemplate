@@ -41,15 +41,6 @@
 | 설정 · 단축키 · 테마 | `preferences` · `shortcuts` · `projectconfigedit` · `commandpalette` | — |
 | 프로파일러 · 디버그 | `profilercapture` · `profilertimeline` · `rendertargetview` · `debughudcontrols` · `outputlog` · `testrunner` | — |
 
-## 흐름 시나리오가 찾아 고친 결함 (2026-10-15)
-
-- 백엔드 교체와 에디터 모듈 리로드 뒤 되돌리기 스택 · 선택 · 미저장 표시가 사라졌다(`flowboundaries`). 새 에디터 인스턴스가 지금 씬을 새 씬으로 보고 비웠다.
-- Apply to Prefab 이 같은 씬의 다른 인스턴스에 퍼지지 않았고 되돌리기에도 남지 않았다(`flowprefab`).
-- 에디터 문구 표(`editor.locproject.json`)가 한 번도 올라가지 않았다(`flowprefab` 의 `ExpectLog`).
-- 저장하지 않은 지형 편집이 플레이 시작과 정지에서 사라졌고, 백엔드 교체가 지형 붓질 되돌리기를 버렸다(`flowterrain`).
-- 메시를 씬 뷰로 끌어 놓으면 배치되지 않고 메시 문서만 열렸다(`flowedit`).
-- 에디터 모듈만 다시 올려도 게임 인스턴스가 내려가 그 뒤 씬 저장이 막혔다(`flowboundaries` 끝의 저장 — 체인에서 뒤 시나리오의 저장이 줄줄이 졌다).
-
 ## 시나리오 규칙 — 임시 자리
 
 - **임시 파일**은 작업 폴더의 `Saved/Automation/<시나리오>/` 에 둔다(`asset.open` · `prefab.create` · `scene.saveAs`). 리소스 트리는 거절한다.
