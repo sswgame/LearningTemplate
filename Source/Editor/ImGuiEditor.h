@@ -42,8 +42,6 @@ namespace sw::editor
         void shutdown() override;
         /** @brief 메인 스레드에서 ImGui 프레임을 갱신하고, 패널을 그리고, 플랫폼 창을 갱신합니다. */
         void updateUI() override;
-        /** @brief UI 를 그리기 전에 패널의 GPU 작업을 합니다. */
-        void preRender( IRHIDevice* pRHIDevice ) override;
         /** @brief 에디터 UI 의 DrawData 를 GPU 로 그립니다. */
         void render( IRHIDevice* pRHIDevice ) override;
         /** @brief 메인 스왑체인 Present 뒤에 멀티 뷰포트를 그립니다. */

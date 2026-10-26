@@ -75,7 +75,7 @@ namespace sw
         /** @brief 이번 프레임에 씬 뷰를 그리는 에디터 카메라를 에디터에서 조회합니다. */
         CameraComponent* getSceneViewCamera() const;
 
-        /** @brief 렌더 스레드의 Present 훅에서 에디터 UI 를 그립니다(`preRender` 다음 `render`). 에디터가 없으면 아무것도 하지 않습니다. */
+        /** @brief 렌더 스레드의 Present 훅에서 에디터 UI 를 그립니다(`render`). 에디터가 없으면 아무것도 하지 않습니다. */
         void renderEditor( IRHIDevice& renderDevice );
         /** @brief Present 뒤에 에디터의 멀티 뷰포트 · 플랫폼 창을 처리합니다. 에디터가 없으면 아무것도 하지 않습니다. */
         void postPresentEditor( IRHIDevice& renderDevice );

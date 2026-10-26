@@ -221,8 +221,6 @@ namespace sw
         SW_MEMORY_SCOPE( Editor );
         if ( hasEditor() == false )
             return;
-        if ( _editorAPI.preRender != nullptr )
-            _editorAPI.preRender( _editor, &renderDevice );
         if ( _editorAPI.render != nullptr )
             _editorAPI.render( _editor, &renderDevice );
     }
