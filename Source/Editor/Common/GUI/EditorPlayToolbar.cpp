@@ -7,6 +7,7 @@
 
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorNetModeCombo.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorCamera.h"
@@ -213,9 +214,15 @@ namespace sw::editor
                 ImGui::SetNextItemWidth( ImGui::GetFontSize() * 5.0f );
                 if ( ImGui::DragFloat( "##TimeScale", &timeScale, 0.01f, GameTimeScale::kMinScale, GameTimeScale::kMaxScale, "x%.2f" ) )
                     GameTimeScale::set( timeScale );
-                if ( ImGui::IsItemClicked( ImGuiMouseButton_Right ) )
-                    GameTimeScale::set( 1.0f );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "PlayTimeScale" ) );
+                // 되돌리기는 보이는 메뉴 항목이다(예전에는 오른쪽 클릭이 말없이 x1 로 되돌렸다 — 숨은 동작).
+                if ( EditorInputGUI::beginItemContextMenu( "##TimeScaleMenu" ) )
+                {
+                    if ( ImGui::MenuItem( "Reset to x1.00", nullptr, false, timeScale != 1.0f ) )
+                        GameTimeScale::set( 1.0f );
+                    EditorSelfTestMarks::note( "toolbar.timeScale.reset" );
+                    ImGui::EndPopup();
+                }
             }
 
             /** @brief 게임이 자동 플레이를 등록했으면(`SW_GAME_AUTOPLAY`) 켜고 끄는 단추를 그립니다. */
@@ -260,7 +267,7 @@ namespace sw::editor
             {
                 if ( getState()._bConfirmUnsavedPlay )
                 {
-                    ImGui::OpenPopup( kUnsavedPopupID );
+                    EditorInputGUI::openPopup( kUnsavedPopupID );
                     getState()._bConfirmUnsavedPlay = false;
                 }
                 if ( EditorWidgets::beginCenteredModal( kUnsavedPopupID ) == false )

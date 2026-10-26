@@ -57,6 +57,10 @@
 		<action name="play.eject" trigger="Pressed">
 			<bind source="key" code="F8"/>
 		</action>
+		<!-- Read by the curve editor widget only while the pointer is over its canvas (the widget lives in popups of several panels). -->
+		<action name="curveEditor.frameAll" trigger="Pressed">
+			<bind source="key" code="F"/>
+		</action>
 	</layer>
 
 	<!-- Hierarchy window: scene object commands act on the selection; selectAll / selectPrevious / selectNext are read by the panel (row order). -->
