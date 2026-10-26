@@ -255,7 +255,7 @@ namespace sw
         ClientState& client = acquireClient( context._connectionID );
         if ( context._kind == NetClientServerMessage::kSnapshotAck )
         {
-            const uint32 tick = static_cast<uint32>( body.readVarUint() );
+            const uint32 tick = body.readVarUint32();
             if ( body.hasOverflowed() )
                 return NetHandleResult::Malformed;
             if ( ( client._bHasAck == SW_FALSE || tick > client._ackedTick ) && tick <= _world._tick )

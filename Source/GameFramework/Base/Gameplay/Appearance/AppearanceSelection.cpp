@@ -510,7 +510,7 @@ namespace sw
         Internal::collectBodyNames( database, listBodyName );
 
         outSelection._basePresetID = Internal::findByHash( reader.readUint32(), listPresetID );
-        outSelection._seed         = static_cast<uint32>( reader.readVarUint() );
+        outSelection._seed         = reader.readVarUint32();
         outSelection._schema       = Internal::findByHash( reader.readUint32(), listSchemaID );
         outSelection._bodyType     = Internal::findByHash( reader.readUint32(), listBodyName );
         outSelection._bodyShape    = Internal::findByHash( reader.readUint32(), listBodyName );

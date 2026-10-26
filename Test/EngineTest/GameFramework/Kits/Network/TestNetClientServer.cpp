@@ -20,6 +20,8 @@
 
 #include "TestFramework/TestFramework.h"
 
+#include <limits>
+
 // 권위 서버 네트워크 키트 — 스냅샷 델타(바뀐 것 · 사라진 것 · 예산 넘침), 지연 · 손실 망 위의 복제와 보간, 확인 기반 입력 전송(연속 손실 뒤 빈틈 없음),
 // 관련 정책, 클라이언트 예측 되맞추기, 랙 보정 되감기.
 
@@ -37,7 +39,8 @@ namespace
     float32 readFloatBytes( const vector<uint8>& buffer )
     {
         BitReader reader( buffer.data(), static_cast<int32>( buffer.size() ) );
-        return reader.readFloat();
+        float32   value{ 0.0f };
+        return reader.readFiniteFloat( value ) ? value : std::numeric_limits<float32>::quiet_NaN(); // 깨진 바이트는 NaN 으로 — 뒤의 비교가 실패한다
     }
 
     /** @brief 권위 서버 키트 영역에서 종류 하나만 받아 세는 처리기입니다(같은 영역을 나눠 쓰는 다른 처리기 — 게임이 키트 영역 끝을 빌리는 자리). */

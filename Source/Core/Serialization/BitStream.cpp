@@ -272,7 +272,21 @@ namespace sw
         return true;
     }
 
-    float32 BitReader::readFloat()
+    bool BitReader::readFiniteFloat( float32& outValue )
+    {
+        const float32 value = readFloatBits();
+        if ( hasOverflowed() )
+            return false;
+        if ( MathUtil::isFinite( value ) == false )
+        {
+            _bOverflow = SW_TRUE; // 쓰는 쪽은 유한한 값만 보내므로 깨진(또는 꾸민) 데이터다
+            return false;
+        }
+        outValue = value;
+        return true;
+    }
+
+    float32 BitReader::readFloatBits()
     {
         return BitUtil::bitsToFloat( readBits( 32 ) );
     }
@@ -317,6 +331,19 @@ namespace sw
         }
         _bOverflow = SW_TRUE; // 끝나지 않는 가변 정수 — 깨진 데이터
         return value;
+    }
+
+    uint32 BitReader::readVarUint32()
+    {
+        const uint64 value = readVarUint();
+        if ( hasOverflowed() )
+            return 0;
+        if ( value > static_cast<uint64>( 0xFFFFFFFFu ) )
+        {
+            _bOverflow = SW_TRUE; // 쓰는 쪽은 uint32 만 쓰므로 깨진 데이터다 — 잘라 읽으면 다른 값이 된다
+            return 0;
+        }
+        return static_cast<uint32>( value );
     }
 
     int64 BitReader::readVarInt()

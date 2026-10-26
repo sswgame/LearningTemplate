@@ -111,7 +111,7 @@ namespace sw
 
             NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override
             {
-                const uint32 clientTick = static_cast<uint32>( body.readVarUint() );
+                const uint32 clientTick = body.readVarUint32();
                 int32        x          = 0;
                 int32        y          = 0;
                 const bool   bRead      = body.readInt( -NetSimSampleGameInternal::kAxisMax, NetSimSampleGameInternal::kAxisMax, x ) &&
@@ -269,15 +269,15 @@ namespace sw
             NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override
             {
                 (void)context; // 서버(연결 0)가 보낸 것뿐이다
-                const uint32   serverTick = static_cast<uint32>( body.readVarUint() );
+                const uint32   serverTick = body.readVarUint32();
                 const uint64   count      = body.readVarUint();
                 vector<Target> listParsed;
                 for ( uint64 index = 0; index < count && body.hasOverflowed() == false; ++index )
                 {
                     Target target;
-                    target._entityID = static_cast<uint32>( body.readVarUint() );
-                    target._x        = body.readFloat();
-                    target._z        = body.readFloat();
+                    target._entityID = body.readVarUint32();
+                    if ( ( body.readFiniteFloat( target._x ) && body.readFiniteFloat( target._z ) ) == false )
+                        return NetHandleResult::Malformed;
                     listParsed.push_back( target );
                 }
                 if ( body.hasOverflowed() )

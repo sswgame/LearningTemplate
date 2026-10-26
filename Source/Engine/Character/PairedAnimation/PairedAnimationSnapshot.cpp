@@ -70,9 +70,10 @@ namespace sw
         if ( reader.readUint32() != kMagic )
             return ReadResult::WrongMagic;
         PairedAnimationSessionSnapshot snapshot{};
-        snapshot._sessionID       = static_cast<uint32>( reader.readVarUint() );
-        snapshot._anchorTime      = reader.readFloat();
-        snapshot._nextNotifyIndex = static_cast<uint32>( reader.readVarUint() );
+        snapshot._sessionID = reader.readVarUint32();
+        if ( reader.readFiniteFloat( snapshot._anchorTime ) == false )
+            return ReadResult::Truncated;
+        snapshot._nextNotifyIndex = reader.readVarUint32();
         const uint64 roleCount    = reader.readVarUint();
         // 역할 수가 남은 비트로 채울 수 있는 만큼이어야 한다 - 깨진 바이트가 큰 수를 말해도 그만큼 잡지 않는다.
         const bool bRoleCountFits = reader.hasOverflowed() == false && roleCount <= static_cast<uint64>( reader.getBitsRemaining() ) / static_cast<uint64>( kPairedSnapshotRoleBits );
@@ -81,8 +82,9 @@ namespace sw
         snapshot._listRole.resize( static_cast<size_t>( roleCount ) );
         for ( PairedAnimationRoleSnapshot& role : snapshot._listRole )
         {
-            role._stage           = static_cast<PairedAnimationRoleStage>( reader.readBits( kPairedSnapshotStageBits ) );
-            role._entryAnchorTime = reader.readFloat();
+            role._stage = static_cast<PairedAnimationRoleStage>( reader.readBits( kPairedSnapshotStageBits ) );
+            if ( reader.readFiniteFloat( role._entryAnchorTime ) == false )
+                return ReadResult::Truncated;
         }
         if ( reader.hasOverflowed() )
             return ReadResult::Truncated;

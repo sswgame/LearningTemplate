@@ -48,19 +48,13 @@ namespace sw
                 const uint32 kind = reader.readBits( 2 );
                 if ( kind >= static_cast<uint32>( DestructionDamageKind::Count ) )
                     return false;
-                outEvent._kind         = static_cast<DestructionDamageKind>( kind );
-                outEvent._leafHint     = static_cast<int32>( reader.readVarInt() );
-                outEvent._groupID      = static_cast<uint32>( reader.readVarUint() );
-                outEvent._position._x  = reader.readFloat();
-                outEvent._position._y  = reader.readFloat();
-                outEvent._position._z  = reader.readFloat();
-                outEvent._direction._x = reader.readFloat();
-                outEvent._direction._y = reader.readFloat();
-                outEvent._direction._z = reader.readFloat();
-                outEvent._strain       = reader.readFloat();
-                outEvent._radius       = reader.readFloat();
-                outEvent._impulse      = reader.readFloat();
-                return reader.hasOverflowed() == false;
+                outEvent._kind     = static_cast<DestructionDamageKind>( kind );
+                outEvent._leafHint = static_cast<int32>( reader.readVarInt() );
+                outEvent._groupID  = reader.readVarUint32();
+                return reader.readFiniteFloat( outEvent._position._x ) && reader.readFiniteFloat( outEvent._position._y ) &&
+                       reader.readFiniteFloat( outEvent._position._z ) && reader.readFiniteFloat( outEvent._direction._x ) &&
+                       reader.readFiniteFloat( outEvent._direction._y ) && reader.readFiniteFloat( outEvent._direction._z ) &&
+                       reader.readFiniteFloat( outEvent._strain ) && reader.readFiniteFloat( outEvent._radius ) && reader.readFiniteFloat( outEvent._impulse );
             }
 
             static void writeExactPose( BitWriter& writer, const float3& position, const quaternion& rotation )
@@ -74,15 +68,12 @@ namespace sw
                 writer.writeFloat( rotation._w );
             }
 
-            static void readExactPose( BitReader& reader, float3& outPosition, quaternion& outRotation )
+            /** @brief 유한하지 않은 값이면 false 이고 읽기는 넘침으로 표시된다. */
+            [[nodiscard]] static bool readExactPose( BitReader& reader, float3& outPosition, quaternion& outRotation )
             {
-                outPosition._x = reader.readFloat();
-                outPosition._y = reader.readFloat();
-                outPosition._z = reader.readFloat();
-                outRotation._x = reader.readFloat();
-                outRotation._y = reader.readFloat();
-                outRotation._z = reader.readFloat();
-                outRotation._w = reader.readFloat();
+                return reader.readFiniteFloat( outPosition._x ) && reader.readFiniteFloat( outPosition._y ) && reader.readFiniteFloat( outPosition._z ) &&
+                       reader.readFiniteFloat( outRotation._x ) && reader.readFiniteFloat( outRotation._y ) && reader.readFiniteFloat( outRotation._z ) &&
+                       reader.readFiniteFloat( outRotation._w );
             }
 
             /**
@@ -207,7 +198,7 @@ namespace sw
 
     NetHandleResult DestructionReplicationServer::handleNetMessage( const NetMessageContext& context, BitReader& body )
     {
-        const uint32 netID = static_cast<uint32>( body.readVarUint() );
+        const uint32 netID = body.readVarUint32();
         if ( body.hasOverflowed() || context._connectionID < 0 )
             return NetHandleResult::Malformed;
         if ( findEntry( netID ) != nullptr )
@@ -510,9 +501,10 @@ namespace sw
         {
             const bool bRest = reader.readBool();
             handlePose( reader, bRest );
-            return NetHandleResult::Handled;
+            // 깨진 자세(모자란 비트, 유한하지 않은 값, 범위 밖 칸)는 읽기가 넘침으로 표시한다 — 깨진 메시지로 돌려준다.
+            return reader.hasOverflowed() ? NetHandleResult::Malformed : NetHandleResult::Handled;
         }
-        const uint32 netID = static_cast<uint32>( reader.readVarUint() );
+        const uint32 netID = reader.readVarUint32();
         if ( reader.hasOverflowed() )
             return NetHandleResult::Malformed;
         Entry* pEntry = findEntry( netID );
@@ -520,8 +512,8 @@ namespace sw
             return NetHandleResult::Handled; // 이 클라이언트에 없는 오브젝트이므로 메시지를 소비하고 버린다
         if ( kind == NetDestructionMessage::kEvent )
         {
-            const uint32 serverTick = static_cast<uint32>( reader.readVarUint() );
-            const uint32 index      = static_cast<uint32>( reader.readVarUint() );
+            const uint32 serverTick = reader.readVarUint32();
+            const uint32 index      = reader.readVarUint32();
             _clock.observeServerTick( serverTick );
             BufferedEvent buffered;
             buffered._index = index;
@@ -531,7 +523,9 @@ namespace sw
                 if ( buffered._bHasPose == SW_TRUE )
                 {
                     buffered._groupPose._groupID = buffered._event._groupID;
-                    DestructionReplicationInternal::readExactPose( reader, buffered._groupPose._position, buffered._groupPose._rotation );
+                    const bool bPoseRead         = DestructionReplicationInternal::readExactPose( reader, buffered._groupPose._position, buffered._groupPose._rotation );
+                    if ( bPoseRead == false )
+                        return NetHandleResult::Malformed;
                 }
                 if ( reader.hasOverflowed() == false )
                     handleEvent( *pEntry, buffered );
@@ -545,7 +539,7 @@ namespace sw
         else
         {
             HashCheck check;
-            check._eventCount = static_cast<uint32>( reader.readVarUint() );
+            check._eventCount = reader.readVarUint32();
             const uint64 low  = reader.readUint32();
             const uint64 high = reader.readUint32();
             check._hash       = low | ( high << 32 );
@@ -621,7 +615,7 @@ namespace sw
 
     bool DestructionReplicationClient::handleSnapshot( Entry& entry, BitReader& reader )
     {
-        const uint32  eventCount = static_cast<uint32>( reader.readVarUint() );
+        const uint32  eventCount = reader.readVarUint32();
         vector<uint8> bytes;
         if ( reader.readBlob( bytes, NetConnection::kMaxReliableMessageSize ) == false || bytes.empty() )
             return false;
@@ -650,8 +644,8 @@ namespace sw
     void DestructionReplicationClient::handlePose( BitReader& reader, bool bRest )
     {
         using Internal     = DestructionReplicationInternal;
-        const uint32 netID = static_cast<uint32>( reader.readVarUint() );
-        const uint32 tick  = static_cast<uint32>( reader.readVarUint() );
+        const uint32 netID = reader.readVarUint32();
+        const uint32 tick  = reader.readVarUint32();
         const uint64 count = reader.readVarUint();
         if ( reader.hasOverflowed() )
             return;
@@ -660,9 +654,12 @@ namespace sw
         for ( uint64 index = 0; index < count && reader.hasOverflowed() == false; ++index )
         {
             ChunkPose    pose;
-            const uint32 groupID = static_cast<uint32>( reader.readVarUint() );
+            const uint32 groupID = reader.readVarUint32();
             if ( bRest )
-                Internal::readExactPose( reader, pose._position, pose._rotation );
+            {
+                if ( Internal::readExactPose( reader, pose._position, pose._rotation ) == false )
+                    return; // 유한하지 않은 자세는 깨진 메시지다 — 부른 쪽이 넘침으로 거절한다
+            }
             else if ( Internal::readQuantizedPose( reader, pose._position, pose._rotation, _settings ) == false )
                 return; // 범위 밖의 칸은 깨진 메시지다. 뒤 자세의 위치도 믿을 수 없다
             if ( pEntry == nullptr || reader.hasOverflowed() )

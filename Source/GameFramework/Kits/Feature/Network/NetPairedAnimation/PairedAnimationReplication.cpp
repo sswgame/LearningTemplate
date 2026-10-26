@@ -82,7 +82,7 @@ namespace sw
         state._listRoleNetID.resize( static_cast<size_t>( roleCount ) );
         for ( uint32& netID : state._listRoleNetID )
         {
-            netID = static_cast<uint32>( reader.readVarUint() );
+            netID = reader.readVarUint32();
         }
         vector<uint8> snapshotBytes;
         if ( reader.readBlob( snapshotBytes, kMaxSnapshotBytes ) == false )
@@ -356,7 +356,7 @@ namespace sw
             return NetHandleResult::Handled; // 시작하지 않은 클라이언트 — 받을 씬이 없다
         if ( context._kind == NetPairedAnimationMessage::kSessionEnd )
         {
-            const uint32 sessionID = static_cast<uint32>( body.readVarUint() );
+            const uint32 sessionID = body.readVarUint32();
             if ( body.hasOverflowed() )
                 return NetHandleResult::Malformed;
             PairedAnimationSystem*        pSystem  = PairedAnimationSystem::find( *_pManager );

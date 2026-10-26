@@ -486,7 +486,8 @@ namespace sw
                     else if ( b32 )
                     {
                         state._write.linef( "writer.writeFloat( %# );", site._expr );
-                        state._read.linef( "%# = reader.readFloat();", site._expr );
+                        // 범위 없는 실수는 비트 그대로 왕복한다(NaN 포함 — `isBitEqual` 과 같은 뜻). 유한 검사는 범위를 적은 필드의 몫이다.
+                        state._read.linef( "%# = reader.readFloatBits();", site._expr );
                     }
                     else
                     {

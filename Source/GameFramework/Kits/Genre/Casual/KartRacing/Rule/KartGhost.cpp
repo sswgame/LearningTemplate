@@ -133,17 +133,20 @@ namespace sw
         BitReader reader( pData, byteCount );
         if ( reader.readUint32() != KartGhostInternal::kMagic || reader.readBits( 8 ) != kVersion )
             return false;
-        float3 startPosition;
-        startPosition._x                = reader.readFloat();
-        startPosition._y                = reader.readFloat();
-        startPosition._z                = reader.readFloat();
-        const float32 startYaw          = reader.readFloat();
-        const float32 step              = reader.readFloat();
-        const float32 finishTime        = reader.readFloat();
-        const uint64  frameCount        = reader.readVarUint();
-        const int32   frameBits         = 8 + 8 + KartGhostInternal::kButtonBits;
-        const bool    bCountFits        = frameCount <= static_cast<uint64>( reader.getBitsRemaining() / frameBits );
-        const bool    bInvalidGhostData = reader.hasOverflowed() || bCountFits == false || step <= 0.0f;
+        float3  startPosition;
+        float32 startYaw{ 0.0f };
+        float32 step{ 0.0f };
+        float32 finishTime{ 0.0f };
+        // NaN 간격은 아래 `step <= 0` 을 빠져나간다 — 유한한 값만 받는다.
+        const bool bFinite = reader.readFiniteFloat( startPosition._x ) && reader.readFiniteFloat( startPosition._y ) &&
+                             reader.readFiniteFloat( startPosition._z ) && reader.readFiniteFloat( startYaw ) && reader.readFiniteFloat( step ) &&
+                             reader.readFiniteFloat( finishTime );
+        if ( bFinite == false )
+            return false;
+        const uint64 frameCount        = reader.readVarUint();
+        const int32  frameBits         = 8 + 8 + KartGhostInternal::kButtonBits;
+        const bool   bCountFits        = frameCount <= static_cast<uint64>( reader.getBitsRemaining() / frameBits );
+        const bool   bInvalidGhostData = reader.hasOverflowed() || bCountFits == false || step <= 0.0f;
         if ( bInvalidGhostData )
             return false;
         vector<KartGhostFrame> listFrame;

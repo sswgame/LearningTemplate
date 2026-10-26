@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Common/BitUtil.h"
 #include "Core/Diagnostics/ProfilerTimeline.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Network/Connection/NetConnection.h"
@@ -18,6 +19,8 @@
 
 #include "TestFramework/Harness/TestLoopbackCluster.h"
 #include "TestFramework/TestFramework.h"
+
+#include <limits>
 
 // 네트워크 공통 계층 — 비트 스트림, 시퀀스 감김, 신뢰성(재전송 · 순서 · 중복 · 옛것 버리기 · RTT), 핸드셰이크(도전 · 가득 참 · 다른 프로토콜),
 // 나쁜 망(지연 · 흔들림 · 손실 · 중복 · 깨짐)에서의 신뢰 순서, 끊기 · 타임아웃, 실제 UDP 소켓, 한가할 때의 유지 패킷, 메시지 라우터, 많은 연결.
@@ -185,7 +188,9 @@ SW_TEST_CASE( NetworkTest, BitStreamPacksRangesFloatsVarIntsAndDetectsOverflow )
     SW_EXPECT_TRUE( reader.readInt( -10, 10, readValue ) && readValue == -5 );
     SW_EXPECT_TRUE( reader.readQuantizedFloat( -100.0f, 100.0f, 0.01f, readQuantized ) );
     SW_EXPECT_NEAR_EQUAL( 12.345f, readQuantized, 0.006f );
-    SW_EXPECT_NEAR_EQUAL( 3.25f, reader.readFloat(), 1.0e-6f );
+    float32 readFloatValue{ 0.0f };
+    SW_EXPECT_TRUE( reader.readFiniteFloat( readFloatValue ) );
+    SW_EXPECT_NEAR_EQUAL( 3.25f, readFloatValue, 1.0e-6f );
     SW_EXPECT_EQUAL( 300, static_cast<int32>( reader.readVarUint() ) );
     SW_EXPECT_EQUAL( -70000, static_cast<int32>( reader.readVarInt() ) );
     reader.alignToByte();
@@ -201,6 +206,44 @@ SW_TEST_CASE( NetworkTest, BitStreamPacksRangesFloatsVarIntsAndDetectsOverflow )
     BitReader   broken( arrBroken, 2 );
     (void)broken.readVarUint(); // 넘침을 일으키는 것이 목적이다 — 아래 단언이 본다
     SW_EXPECT_TRUE( broken.hasOverflowed() );
+}
+
+/**
+ * @brief [NetworkTest] 받은 실수는 유한한 값만 읽히고, uint32 가변 정수는 넘치면 잘리지 않고 깨진 읽기가 된다
+ * @details NaN 은 비교가 모두 거짓이라 뒤의 범위 검사(`x > 1`)를 빠져나간다. 비트 그대로가 필요한 곳만 `readFloatBits` 를 쓴다.
+ */
+SW_TEST_CASE( NetworkTest, BitReaderRejectsNonFiniteFloatsAndTruncatedVarUint32 )
+{
+    const float32 arrNonFinite[3] = { std::numeric_limits<float32>::quiet_NaN(), std::numeric_limits<float32>::infinity(), -std::numeric_limits<float32>::infinity() };
+    for ( const float32 nonFinite : arrNonFinite )
+    {
+        BitWriter writer;
+        writer.writeFloat( nonFinite );
+        BitReader finite( writer.getBytes().data(), writer.getByteCount() );
+        float32   value{ 7.0f };
+        SW_EXPECT_FALSE( finite.readFiniteFloat( value ) );
+        SW_EXPECT_EQUAL( 7.0f, value ); // 실패하면 그대로다
+        SW_EXPECT_TRUE( finite.hasOverflowed() );
+
+        BitReader bits( writer.getBytes().data(), writer.getByteCount() );
+        SW_EXPECT_EQUAL( BitUtil::floatToBits( nonFinite ), BitUtil::floatToBits( bits.readFloatBits() ) ); // 비트 그대로
+        SW_EXPECT_FALSE( bits.hasOverflowed() );
+    }
+
+    // 모자란 비트도 실패다.
+    const uint8 arrShort[2] = { 0, 0 };
+    BitReader   shortReader( arrShort, 2 );
+    float32     shortValue{ 0.0f };
+    SW_EXPECT_FALSE( shortReader.readFiniteFloat( shortValue ) );
+
+    BitWriter varWriter;
+    varWriter.writeVarUint( 0xFFFFFFFFull );
+    varWriter.writeVarUint( 0x100000005ull ); // 잘라 읽으면 5 가 된다
+    BitReader varReader( varWriter.getBytes().data(), varWriter.getByteCount() );
+    SW_EXPECT_EQUAL( 0xFFFFFFFFu, varReader.readVarUint32() );
+    SW_EXPECT_FALSE( varReader.hasOverflowed() );
+    SW_EXPECT_EQUAL( 0u, varReader.readVarUint32() );
+    SW_EXPECT_TRUE( varReader.hasOverflowed() );
 }
 
 /**

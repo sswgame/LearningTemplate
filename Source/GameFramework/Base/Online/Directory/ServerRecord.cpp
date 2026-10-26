@@ -72,7 +72,7 @@ namespace sw
             return false;
         descriptor._port         = static_cast<uint16>( reader.readBits( 16 ) );
         descriptor._portCount    = static_cast<uint8>( reader.readBits( 8 ) );
-        descriptor._buildVersion = static_cast<uint32>( reader.readVarUint() );
+        descriptor._buildVersion = reader.readVarUint32();
         descriptor._capacity     = static_cast<int32>( reader.readVarInt() );
         outStatus._heartbeatMs   = reader.readVarInt();
         outStatus._load          = static_cast<int32>( reader.readVarInt() );

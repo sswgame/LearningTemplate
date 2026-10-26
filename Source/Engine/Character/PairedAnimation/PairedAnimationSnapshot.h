@@ -54,7 +54,7 @@ namespace sw
         {
             Success = 0,
             WrongMagic, ///< 매직이 다릅니다.
-            Truncated,  ///< 바이트가 모자라거나, 역할 수가 남은 바이트보다 큽니다.
+            Truncated,  ///< 바이트가 모자라거나, 역할 수가 남은 바이트보다 크거나, 값이 깨졌습니다(유한하지 않은 시간 · uint32 를 넘는 번호).
         };
 
         uint32                              _sessionID{ 0 };

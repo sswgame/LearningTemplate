@@ -73,8 +73,8 @@ namespace sw
                 for ( uint64 entry = 0; entry < valueCount; ++entry )
                 {
                     index += reader.readVarUint();
-                    const float32 value = reader.readFloat();
-                    if ( index >= count || reader.hasOverflowed() )
+                    float32 value{ 0.0f };
+                    if ( reader.readFiniteFloat( value ) == false || index >= count )
                         return false;
                     outListValue[static_cast<size_t>( index )] = value;
                 }
@@ -656,8 +656,8 @@ namespace sw
         const bool   bGraphShapeMismatch = nodeCount != graph._listNode.size() || linkCount != graph._listLink.size() || leafCount != graph._leafCount;
         if ( bGraphShapeMismatch )
             return false;
-        const uint32 eventCount  = static_cast<uint32>( reader.readVarUint() );
-        const uint32 nextGroupID = static_cast<uint32>( reader.readVarUint() );
+        const uint32 eventCount  = reader.readVarUint32();
+        const uint32 nextGroupID = reader.readVarUint32();
 
         vector<uint8>   listNodeBroken;
         vector<uint8>   listLinkBroken;
@@ -682,8 +682,8 @@ namespace sw
         for ( uint64 groupIndex = 0; groupIndex < groupCount; ++groupIndex )
         {
             DestructionGroup group;
-            group._id                = static_cast<uint32>( reader.readVarUint() );
-            group._parentID          = static_cast<uint32>( reader.readVarUint() );
+            group._id                = reader.readVarUint32();
+            group._parentID          = reader.readVarUint32();
             group._bAnchored         = reader.readBits( 1 ) != 0 ? SW_TRUE : SW_FALSE;
             const uint64 activeCount = reader.readVarUint();
             const bool   bBadGroup   = reader.hasOverflowed() || activeCount == 0 || activeCount > graph._listNode.size() || group._id == 0 || group._id >= nextGroupID;

@@ -317,11 +317,11 @@ namespace sw
     {
         BitReader        reader( bytes.data(), static_cast<int32>( bytes.size() ) );
         ShooterMoveState state;
-        state._position._x   = reader.readFloat();
-        state._position._y   = reader.readFloat();
-        state._position._z   = reader.readFloat();
-        state._verticalSpeed = reader.readFloat();
-        state._bOnGround     = reader.readBool() ? SW_TRUE : SW_FALSE;
+        const bool       bFinite = reader.readFiniteFloat( state._position._x ) && reader.readFiniteFloat( state._position._y ) &&
+                             reader.readFiniteFloat( state._position._z ) && reader.readFiniteFloat( state._verticalSpeed );
+        if ( bFinite == false )
+            return false;
+        state._bOnGround = reader.readBool() ? SW_TRUE : SW_FALSE;
         if ( reader.hasOverflowed() )
             return false;
         outState = state;
@@ -343,8 +343,9 @@ namespace sw
     {
         BitReader        reader( bytes.data(), static_cast<int32>( bytes.size() ) );
         ShooterMoveInput input;
-        input._move._x = reader.readFloat();
-        input._move._z = reader.readFloat();
+        // NaN 이면 아래 길이 검사(`> 1`)가 거짓이 되어 통과한다 — 유한한 값만 받는다.
+        if ( ( reader.readFiniteFloat( input._move._x ) && reader.readFiniteFloat( input._move._z ) ) == false )
+            return false;
         input._bSprint = reader.readBool() ? SW_TRUE : SW_FALSE;
         input._bJump   = reader.readBool() ? SW_TRUE : SW_FALSE;
         // 이동 길이는 1 이하다(`makeInput`) — 넘는 입력은 손상이거나 속인 입력이다. 서버가 잘라 받지 않고 버린다.

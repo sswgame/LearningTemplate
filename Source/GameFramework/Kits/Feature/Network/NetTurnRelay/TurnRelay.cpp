@@ -236,7 +236,7 @@ namespace sw
 
     bool TurnRelayServer::handleJoin( int32 connectionID, BitReader& reader )
     {
-        const uint32 roomID     = static_cast<uint32>( reader.readVarUint() );
+        const uint32 roomID     = reader.readVarUint32();
         const int64  wantedSeat = reader.readVarInt();
         const uint32 token      = reader.readUint32();
         const uint64 knownCount = reader.readVarUint(); // 클라이언트가 이미 가진 행동 수
@@ -333,7 +333,7 @@ namespace sw
 
     bool TurnRelayServer::handleAction( int32 connectionID, BitReader& reader )
     {
-        const uint32  roomID   = static_cast<uint32>( reader.readVarUint() );
+        const uint32  roomID   = reader.readVarUint32();
         const int32   submitID = static_cast<int32>( reader.readVarUint() );
         vector<uint8> actionBuffer;
         if ( reader.readBlob( actionBuffer, NetTurnRelayMessage::kMaxActionBytes ) == false )
@@ -482,7 +482,7 @@ namespace sw
     {
         BitReader&     reader = body;
         TurnRelayEvent event;
-        event._roomID = static_cast<uint32>( reader.readVarUint() );
+        event._roomID = reader.readVarUint32();
         if ( reader.hasOverflowed() )
             return NetHandleResult::Malformed;
         if ( event._roomID != _roomID )

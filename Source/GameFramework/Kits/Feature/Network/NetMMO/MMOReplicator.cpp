@@ -33,13 +33,12 @@ namespace sw
 
             [[nodiscard]] static bool readEntity( BitReader& reader, MMOEntity& outEntity, bool bWithType )
             {
-                outEntity._entityID = static_cast<uint32>( reader.readVarUint() );
+                outEntity._entityID = reader.readVarUint32();
                 if ( bWithType )
-                    outEntity._typeID = static_cast<uint32>( reader.readVarUint() );
-                outEntity._position._x = reader.readFloat();
-                outEntity._position._y = reader.readFloat();
-                outEntity._position._z = reader.readFloat();
-                return reader.readBlob( outEntity._listState, NetMMOMessage::kMaxStateBytes ) && reader.hasOverflowed() == false;
+                    outEntity._typeID = reader.readVarUint32();
+                const bool bFinite = reader.readFiniteFloat( outEntity._position._x ) && reader.readFiniteFloat( outEntity._position._y ) &&
+                                     reader.readFiniteFloat( outEntity._position._z );
+                return bFinite && reader.readBlob( outEntity._listState, NetMMOMessage::kMaxStateBytes ) && reader.hasOverflowed() == false;
             }
 
             /** @brief 메시지에서 엔티티 하나가 쓰는 비트 수입니다. `writeEntity( …, bWithType )` 와 같으며, 새로 보임은 타입까지 쓰고 갱신은 타입 없이 씁니다. */
@@ -475,7 +474,7 @@ namespace sw
         BitReader& reader = body;
         if ( context._kind == NetMMOMessage::kEnter )
         {
-            const uint32 tick = static_cast<uint32>( reader.readVarUint() );
+            const uint32 tick = reader.readVarUint32();
             while ( reader.readBool() )
             {
                 ClientEntity entry;
@@ -494,7 +493,7 @@ namespace sw
             const uint64 count = reader.readVarUint();
             for ( uint64 index = 0; index < count && reader.hasOverflowed() == false; ++index )
             {
-                const uint32 entityID = static_cast<uint32>( reader.readVarUint() );
+                const uint32 entityID = reader.readVarUint32();
                 if ( reader.hasOverflowed() == false && _mapEntity.erase( entityID ) > 0 )
                     _eventBuffer.push( MMOClientEvent{ entityID, MMOClientEvent::Kind::Left } );
             }
@@ -503,7 +502,7 @@ namespace sw
         }
         else
         {
-            const uint32 tick = static_cast<uint32>( reader.readVarUint() );
+            const uint32 tick = reader.readVarUint32();
             if ( reader.hasOverflowed() )
                 return NetHandleResult::Malformed;
             while ( reader.readBool() )
