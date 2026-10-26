@@ -133,7 +133,7 @@ namespace sw
         return true;
     }
 
-    string UserSettingsFile::makeJSON( const UserSettingsSchema& schema, const vector<UserSettingsFileEntry>& listEntry )
+    string UserSettingsFile::makeJSON( const UserSettingsSchema& schema, const vector<UserSettingsWriteEntry>& listEntry )
     {
         using Internal = UserSettingsFileInternal;
         JSONDocument    doc;
@@ -142,16 +142,19 @@ namespace sw
         const JSONValue values = root.set( Internal::kValuesKey );
         values.setObject();
 
-        for ( const UserSettingsFileEntry& entry : listEntry )
+        for ( const UserSettingsWriteEntry& entry : listEntry )
         {
-            const UserSettingDef* pDef  = schema.findSetting( hashed_string( entry._key ) );
-            const UserSettingType type  = pDef != nullptr ? pDef->_type : UserSettingType::String;
-            const JSONValue       field = values.set( entry._key.c_str(), false );
-            switch ( UserSettingsSchema::getTypeTraits( type )._storageKind )
+            const JSONValue field = values.set( entry._def._id.c_str(), false );
+            switch ( UserSettingsSchema::getTypeTraits( entry._def._type )._storageKind )
             {
                 case UserSettingStorageKind::Bool:
                 {
-                    field.setBool( StringUtil::parseBool( entry._value, false ) );
+                    // 불로 읽히지 않는 글을 false 로 바꿔 적지 않는다 — 글 그대로 적으면 다음 읽기가 경고하고 기본값을 쓴다(숫자 칸과 같다).
+                    bool bValue{ false };
+                    if ( StringUtil::tryParseBool( entry._value, bValue ) )
+                        field.setBool( bValue );
+                    else
+                        field.setString( entry._value );
                     break;
                 }
                 case UserSettingStorageKind::Number:

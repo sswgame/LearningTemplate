@@ -392,7 +392,7 @@ SW_TEST_CASE( LocalizationBinaryTableTest, ManagerCooksAndLoadsWithoutAuthoringF
     SW_ASSERT_TRUE( runtime.loadBinaryTable( bytes.data(), bytes.size() ) );
     SW_ASSERT_TRUE( runtime.setCurrentLanguage( "ko" ) );
     SW_EXPECT_STREQ( "시작", runtime.getString( sw::hashed_string( "ui.start" ) ) );
-    SW_EXPECT_STREQ( "none", runtime.getStringByText( "ui.quit", "none" ) ); // 낡은 번역은 베이크해지지 않았다
+    SW_EXPECT_NULL( runtime.findStringByText( "ui.quit" ) ); // 낡은 번역은 베이크해지지 않았다
 
     // 깨진 표는 거절하고 이미 있는 글을 바꾸지 않는다
     test::ScopedLogCollector logs;
@@ -402,5 +402,5 @@ SW_TEST_CASE( LocalizationBinaryTableTest, ManagerCooksAndLoadsWithoutAuthoringF
     SW_EXPECT_STREQ( "시작", runtime.getString( sw::hashed_string( "ui.start" ) ) );
 
     runtime.unloadLanguage( "ko" );
-    SW_EXPECT_STREQ( "gone", runtime.getStringByText( "ui.start", "gone" ) );
+    SW_EXPECT_NULL( runtime.findStringByText( "ui.start" ) );
 }

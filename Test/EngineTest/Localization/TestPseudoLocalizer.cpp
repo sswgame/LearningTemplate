@@ -112,7 +112,7 @@ SW_TEST_CASE( PseudoLocalizerTest, PseudoCultureIsSelectableAtRuntime )
     const sw::string start = loc.getString( sw::hashed_string( "menu.start" ) );
     SW_EXPECT_TRUE( sw::PseudoLocalizer::isPseudoText( start ) );
     SW_EXPECT_FALSE( loc.isRightToLeft() );
-    const sw::string items = loc.getFormattedString( sw::hashed_string( "menu.items" ), sw::TextArgumentList().addInteger( "n", 2 ) );
+    const sw::string items = loc.getFormattedString( sw::hashed_string( "menu.items" ), sw::TextArgumentList().addInteger( "n", 2 ), "menu.items" );
     SW_EXPECT_TRUE( items.find( "2 " ) != sw::string::npos );
 
     SW_ASSERT_TRUE( loc.setCurrentLanguage( "qps-plocm" ) );
