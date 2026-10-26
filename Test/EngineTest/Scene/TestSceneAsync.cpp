@@ -142,7 +142,7 @@ SW_TEST_CASE( SceneAsyncTest, AsyncRequestCompletes )
     SW_ASSERT_TRUE( doc.saveBinary( binPath ) );
 
     sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
     SW_EXPECT_FALSE( manager.isTransitioning() );
 
     SW_ASSERT_TRUE( manager.requestLoadAsync( ::test::makeTempResourceID( xmlPath ) ) );
@@ -161,7 +161,7 @@ SW_TEST_CASE( SceneAsyncTest, AsyncRequestCompletes )
     manager.updateTransitions();
     SW_EXPECT_FALSE_MSG( manager.isTransitioning(), "waitForPendingLoad returned before the load job finished, or dropped its result" );
 
-    manager.shutdown();
+    manager.shutdownSubsystem();
 }
 
 /**
@@ -184,7 +184,7 @@ SW_TEST_CASE( SceneAsyncTest, CarriedChildKeepsItsParentWhenTheNextSceneHasTheSa
     SW_ASSERT_TRUE( doc.saveBinary( binPath ) );
 
     sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
     manager.setWorldPlaying( true );
     sw::Scene* pTown = manager.createEmptyActiveScene( "Town" );
     SW_ASSERT_NOT_NULL( pTown );
@@ -216,7 +216,7 @@ SW_TEST_CASE( SceneAsyncTest, CarriedChildKeepsItsParentWhenTheNextSceneHasTheSa
     SW_EXPECT_TRUE( pCarriedSpeaker->getParent() == pCarriedMount );
 
     manager.setWorldPlaying( false );
-    manager.shutdown();
+    manager.shutdownSubsystem();
 }
 
 /**
@@ -325,7 +325,7 @@ SW_TEST_CASE( SceneAsyncTest, AsyncWarpSequenceQueuesLatest )
     SW_ASSERT_TRUE( docB.saveBinary( binB ) );
 
     sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
     SW_ASSERT_TRUE( manager.requestLoadAsync( ::test::makeTempResourceID( townA ) ) );
     SW_EXPECT_TRUE( manager.requestLoadAsync( ::test::makeTempResourceID( townB ) ) ); // 대기열에 넣고 목적지를 버리지 않음
 
@@ -336,7 +336,7 @@ SW_TEST_CASE( SceneAsyncTest, AsyncWarpSequenceQueuesLatest )
     manager.getActiveScene()->getObjectManager()->update( 0.0f );
     SW_EXPECT_EQUAL( size_t( 2 ), manager.getActiveScene()->getObjectManager()->getAllGameObjects().size() );
 
-    manager.shutdown();
+    manager.shutdownSubsystem();
 }
 
 /**
@@ -361,7 +361,7 @@ SW_TEST_CASE( SceneAsyncTest, AsyncSwapUnloadsPreviousActive )
     SW_ASSERT_TRUE( doc.saveBinary( binPath ) );
 
     sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
     sw::Scene* bootstrap = manager.createScene( "Bootstrap" );
     SW_ASSERT_NOT_NULL( bootstrap );
     SW_EXPECT_EQUAL( size_t( 1 ), manager.getLoadedScenes().size() );
@@ -373,7 +373,7 @@ SW_TEST_CASE( SceneAsyncTest, AsyncSwapUnloadsPreviousActive )
     SW_EXPECT_STREQ( "Replaced", manager.getActiveScene()->getName() );
     SW_EXPECT_EQUAL( size_t( 1 ), manager.getLoadedScenes().size() );
 
-    manager.shutdown();
+    manager.shutdownSubsystem();
 }
 
 /**
@@ -411,7 +411,7 @@ SW_TEST_CASE( SceneAsyncTest, SceneAsyncLoadCancellationAndRecovery )
     SW_ASSERT_TRUE( doc2.saveBinary( binPath2 ) );
 
     sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
 
     // 1차 비동기 요청 후 즉시 2차 비동기 요청 발행 (큐잉 전환)
     SW_ASSERT_TRUE( manager.requestLoadAsync( ::test::makeTempResourceID( scenePath1 ) ) );
@@ -423,7 +423,7 @@ SW_TEST_CASE( SceneAsyncTest, SceneAsyncLoadCancellationAndRecovery )
     SW_ASSERT_NOT_NULL( manager.getActiveScene() );
     SW_EXPECT_STREQ( "SceneSecond", manager.getActiveScene()->getName() );
 
-    manager.shutdown();
+    manager.shutdownSubsystem();
 }
 
 /**
@@ -454,7 +454,7 @@ SW_TEST_CASE( SceneAsyncTest, RequestLoadFutureChaining )
     SW_ASSERT_TRUE( doc.saveBinary( binPath ) );
 
     sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
 
     bool                       bContinuationInvoked = false;
     sw::string                 loadedSceneName{};
@@ -480,7 +480,7 @@ SW_TEST_CASE( SceneAsyncTest, RequestLoadFutureChaining )
     SW_ASSERT_NOT_NULL( future.get() );
     SW_EXPECT_EQUAL( future.get(), manager.getActiveScene() );
 
-    manager.shutdown();
+    manager.shutdownSubsystem();
 }
 
 /**
@@ -513,7 +513,7 @@ SW_TEST_CASE( SceneAsyncTest, RapidConcurrentFutureLoadsAndCancellationsStress )
     }
 
     sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
 
     for ( int32 cycle = 0; cycle < 5; ++cycle )
     {
@@ -528,7 +528,7 @@ SW_TEST_CASE( SceneAsyncTest, RapidConcurrentFutureLoadsAndCancellationsStress )
         SW_EXPECT_STREQ( "StressScene_2", manager.getActiveScene()->getName() );
     }
 
-    manager.shutdown();
+    manager.shutdownSubsystem();
 
     for ( size_t index = 0; index < listXMLPath.size(); ++index )
     {
@@ -577,7 +577,7 @@ SW_TEST_CASE( SceneAsyncTest, QueuedRequestGetsItsOwnScene )
     }
 
     sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
 
     // A 가 돌고, B 가 대기열로, C 가 B 를 밀어낸다.
     sw::TaskFuture<sw::Scene*> futA = manager.requestLoadFuture( ::test::makeTempResourceID( pathA ) );
@@ -602,7 +602,7 @@ SW_TEST_CASE( SceneAsyncTest, QueuedRequestGetsItsOwnScene )
     SW_EXPECT_NULL( futB.get() );
     SW_EXPECT_EQUAL( manager.getActiveScene(), futC.get() );
 
-    manager.shutdown();
+    manager.shutdownSubsystem();
 }
 
 /**
@@ -620,7 +620,7 @@ SW_TEST_CASE( SceneAsyncTest, TypesRegisteredDuringLoadAreNotLost )
     SW_ASSERT_TRUE( sw::writeSceneWithComponent( xmlPath, binPath, "LateType", "LateModuleComponent" ) );
 
     sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
     SW_ASSERT_TRUE( manager.requestLoadAsync( ::test::makeTempResourceID( xmlPath ) ) );
     // 워커가 씬을 다 지은 뒤에(그 타입 없이) 모듈이 올라온다.
     sw::engine::getSubsystem<sw::TaskManager>().waitAll();
@@ -633,7 +633,7 @@ SW_TEST_CASE( SceneAsyncTest, TypesRegisteredDuringLoadAreNotLost )
     SW_EXPECT_TRUE_MSG( pSpeaker->findComponentByTypeName( sw::hashed_string( "LateModuleComponent" ) ) != nullptr,
                         "로드 도중에 등록된 모듈의 컴포넌트가 씬에서 빠졌습니다" );
 
-    manager.shutdown();
+    manager.shutdownSubsystem();
     sw::engine::getSubsystem<sw::TypeRegistry>().unregisterTypesByModule( "LateModule" );
 }
 
@@ -652,7 +652,7 @@ SW_TEST_CASE( SceneAsyncTest, TypesRegisteredDuringLoadAreNotLostWithSamePathQue
     SW_ASSERT_TRUE( sw::writeSceneWithComponent( xmlPath, binPath, "LateTypeQueued", "LateQueuedModuleComponent" ) );
 
     sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
     sw::TaskFuture<sw::Scene*> first  = manager.requestLoadFuture( ::test::makeTempResourceID( xmlPath ) );
     sw::TaskFuture<sw::Scene*> second = manager.requestLoadFuture( ::test::makeTempResourceID( xmlPath ) ); // 같은 씬이 대기열로
     SW_ASSERT_TRUE( first.isValid() );
@@ -672,7 +672,7 @@ SW_TEST_CASE( SceneAsyncTest, TypesRegisteredDuringLoadAreNotLostWithSamePathQue
     SW_EXPECT_EQUAL( manager.getActiveScene(), first.get() );
     SW_EXPECT_EQUAL( manager.getActiveScene(), second.get() );
 
-    manager.shutdown();
+    manager.shutdownSubsystem();
     sw::engine::getSubsystem<sw::TypeRegistry>().unregisterTypesByModule( "LateModuleQueued" );
 }
 
@@ -693,7 +693,7 @@ SW_TEST_CASE( SceneAsyncTest, SaveIsRefusedWhileBlocked )
     SW_ASSERT_TRUE( sw::FileUtil::removeFile( savePath ) );
 
     sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
     SW_ASSERT_TRUE( manager.requestLoadAsync( ::test::makeTempResourceID( xmlPath ) ) );
     sw::drainSceneTransitions( manager );
     SW_ASSERT_NOT_NULL( manager.getActiveScene() );
@@ -708,7 +708,7 @@ SW_TEST_CASE( SceneAsyncTest, SaveIsRefusedWhileBlocked )
     SW_EXPECT_TRUE( manager.saveActiveScene( savePath ) );
     SW_EXPECT_TRUE( sw::FileUtil::exists( savePath ) );
 
-    manager.shutdown();
+    manager.shutdownSubsystem();
 }
 
 /**
@@ -727,7 +727,7 @@ SW_TEST_CASE( SceneAsyncTest, SavedSceneNamesAreCookable )
     SW_ASSERT_TRUE( cooked.saveBinary( binPath ) );
 
     sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
     SW_ASSERT_TRUE( manager.requestLoadAsync( ::test::makeTempResourceID( xmlPath ) ) );
     sw::drainSceneTransitions( manager );
     SW_ASSERT_NOT_NULL( manager.getActiveScene() );
@@ -748,7 +748,7 @@ SW_TEST_CASE( SceneAsyncTest, SavedSceneNamesAreCookable )
     }
     SW_EXPECT_FALSE( sw::FileUtil::exists( "Assets/Scenes/DefaultScene.scene" ) );
 
-    manager.shutdown();
+    manager.shutdownSubsystem();
 }
 
 /**
@@ -800,7 +800,7 @@ SW_TEST_CASE( SceneAsyncTest, CancelDoesNotWaitForForeignPermanentTask )
     SW_ASSERT_TRUE( doc.saveBinary( binPath ) );
 
     sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
     SW_ASSERT_TRUE( manager.requestLoadAsync( ::test::makeTempResourceID( xmlPath ) ) );
 
     const sw::Stopwatch stopwatch;
@@ -808,7 +808,7 @@ SW_TEST_CASE( SceneAsyncTest, CancelDoesNotWaitForForeignPermanentTask )
     SW_EXPECT_TRUE_MSG( stopwatch.getElapsedMilliseconds() < 5000, "cancelPendingAsyncLoads waited for a task it did not submit" );
     SW_EXPECT_FALSE( manager.isTransitioning() );
 
-    manager.shutdown();
+    manager.shutdownSubsystem();
     SW_EXPECT_TRUE_MSG( stopwatch.getElapsedMilliseconds() < 5000, "shutdown waited for a task it did not submit" );
     SW_EXPECT_FALSE( permanent._handle.isCompleted() );
 }

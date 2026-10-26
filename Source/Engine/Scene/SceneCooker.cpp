@@ -295,7 +295,6 @@ namespace sw
                 {
                     SW_LOG_ERROR( "Scene cook: '%#' could not be built to place its entities in cells (%# entities without a prefab)", scenePath,
                                   static_cast<uint32>( placement.getUnresolvedEntityCount() ) );
-                    placement.shutdown();
                     return false;
                 }
                 unordered_map<uint64, GameObject*> mapObjectByFileID;
@@ -306,10 +305,7 @@ namespace sw
                 vector<WorldCellObjectRecord> listRecord;
                 vector<WorldCellReference>    listReference;
                 if ( collectCellRecords( inoutDoc, grid, mapObjectByFileID, mapSavedID, scenePath, listRecord, listReference ) == false )
-                {
-                    placement.shutdown();
                     return false;
-                }
 
                 vector<WorldCellReference> listViolation;
                 WorldCellGrid::findCrossCellReferences( listRecord, listReference, listViolation );
@@ -318,10 +314,8 @@ namespace sw
                     reportCrossCellViolations( listViolation, mapObjectByFileID, scenePath );
                     if ( pOutListViolation != nullptr )
                         *pOutListViolation = std::move( listViolation );
-                    placement.shutdown();
                     return false;
                 }
-                placement.shutdown();
 
                 splitIntoCells( inoutDoc, listRecord );
                 SW_LOG_INFO( "Scene cook: '%#' split into %# cells (%# entities always loaded)", scenePath, static_cast<uint32>( inoutDoc._listStreamingCell.size() ),
@@ -510,8 +504,6 @@ namespace sw
             ++cookedCount;
         }
 
-        verify.shutdown();
-        source.shutdown();
         return cookedCount;
     }
 

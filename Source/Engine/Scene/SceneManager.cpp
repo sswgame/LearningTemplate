@@ -79,16 +79,11 @@ namespace sw
     }
 
     /**
-     * @brief 씬 매니저를 초기화하고 비동기 로드 슬롯을 준비합니다.
+     * @brief 묶인 표의 씬 쪽 묶음을 읽어 매니저를 초기화하고 비동기 로드 슬롯을 준비합니다.
      */
-    bool SceneManager::initialize()
+    SubsystemInitResult SceneManager::initializeSubsystem()
     {
-        return initialize( _services );
-    }
-
-    bool SceneManager::initialize( const SceneEngineServices& services )
-    {
-        _services = services;
+        _services = SceneEngineServices::makeFromBoundEngine();
         if ( _asyncLoad == nullptr )
             _asyncLoad = sw::make_shared<AsyncLoadSlot>();
         _asyncLoad->_services = _services;
@@ -102,8 +97,24 @@ namespace sw
         _queuedPath.clear();
         _bInitialized = true;
 
+        // 되돌리기 기록은 나간 씬의 오브젝트를 가리킨다 — 씬이 바뀌면 비운다. 다시 초기화해도 구독이 겹치지 않는다.
+        if ( _commandStackClearHandle.isValid() )
+            _onSceneObjectsInvalidated.remove( _commandStackClearHandle );
+        _commandStackClearHandle          = DelegateHandle{};
+        CommandStack* const pCommandStack = engine::findSubsystem<CommandStack>();
+        if ( pCommandStack != nullptr )
+            _commandStackClearHandle = _onSceneObjectsInvalidated.add( SW_DELEGATE_METHOD( Delegate<void()>, &CommandStack::clear, pCommandStack ) );
+
         SW_LOG_INFO( "Initialized." );
-        return true;
+        return SubsystemInitResult::Succeeded;
+    }
+
+    void SceneManager::shutdownSubsystem()
+    {
+        shutdown(); // 종료도 알린다(기록을 비운다) — 그 뒤에 구독을 뗀다
+        if ( _commandStackClearHandle.isValid() )
+            _onSceneObjectsInvalidated.remove( _commandStackClearHandle );
+        _commandStackClearHandle = DelegateHandle{};
     }
 
     /**
@@ -135,8 +146,6 @@ namespace sw
         if ( _asyncLoad != nullptr )
         {
             std::scoped_lock<mutex> lock{ _asyncLoad->_mutex };
-            if ( _asyncLoad->_scene != nullptr )
-                _asyncLoad->_scene->shutdown();
             _asyncLoad->_scene.reset();
             _asyncLoad->_bReady.store( false, std::memory_order_release );
         }
@@ -150,58 +159,56 @@ namespace sw
         // 활성을 **씬을 내리기 전에** 비운다 — 플레이 중이면 여기서 활성 씬의 플레이가 끝난다(onEndPlay 가 살아 있는 씬을 본다).
         activateScene( nullptr );
         _bWorldPlaying = false;
-        for ( auto& scene : _listLoadedScene )
+        // 씬 정리는 소멸자 한 곳이 한다. 자리를 먼저 비운 채 소멸시켜, 소멸 중의 조회가 지우는 중인 목록을 보지 않게 한다.
+        for ( unique_ptr<Scene>& scene : _listLoadedScene )
         {
-            if ( scene == nullptr )
-                continue;
-            scene->shutdown();
+            scene.reset();
         }
         _listLoadedScene.clear();
         broadcastSceneObjectsInvalidated();
         SW_LOG_INFO( "Shut down." );
     }
 
-    /**
-     * @brief 새 빈 씬을 만들어 등록하고, 활성 씬이 없으면 활성 씬으로 정합니다.
-     */
     Scene* SceneManager::createScene( string_view name )
     {
         SW_MEMORY_SCOPE( Scene );
-        unique_ptr<Scene> scene  = sw::make_unique<Scene>( name, _services );
-        Scene*            pScene = scene.get();
-
-        _listLoadedScene.push_back( std::move( scene ) );
-
-        if ( _pActiveScene == nullptr )
-        {
-            activateScene( pScene );
-            ++_sceneGeneration;
-        }
-
-        return pScene;
+        return adoptScene( sw::make_unique<Scene>( name, _services ), SceneRole::Loaded );
     }
 
     Scene* SceneManager::createEmptyActiveScene( string_view name )
     {
         SW_MEMORY_SCOPE( Scene );
-        unique_ptr<Scene> scene     = sw::make_unique<Scene>( name, _services );
-        Scene*            pScene    = scene.get();
-        Scene*            pPrevious = _pActiveScene;
+        return adoptScene( sw::make_unique<Scene>( name, _services ), SceneRole::Active );
+    }
 
+    Scene* SceneManager::adoptScene( unique_ptr<Scene> scene, SceneRole role )
+    {
+        SW_MEMORY_SCOPE( Scene );
+        Scene* const pScene = scene.get();
+        // 기본 머티리얼 · 기본 카메라 · 메시 기본값을 건다(디바이스가 없는 테스트는 건너뛴다). 머티리얼 없는 메시가 그려지려면 필요하다.
+        if ( _pRHIDevice != nullptr && pScene->initialize( _pRHIDevice ) == false )
+            SW_LOG_WARNING( "Scene '%#' could not acquire its default material", pScene->getName() );
+
+        if ( role == SceneRole::Preview )
+        {
+            _listPreviewScene.push_back( PreviewSceneEntry{ _nextPreviewKey++, std::move( scene ), ScenePreviewPolicy{} } );
+            return pScene;
+        }
+
+        Scene* const pPrevious = _pActiveScene;
         _listLoadedScene.push_back( std::move( scene ) );
+        if ( role == SceneRole::Loaded && pPrevious != nullptr )
+            return pScene;
+
         activateScene( pScene );
         ++_sceneGeneration;
-
-        if ( _pRHIDevice != nullptr )
-            pScene->initialize( _pRHIDevice );
+        if ( role == SceneRole::Loaded )
+            return pScene;
 
         broadcastSceneObjectsInvalidated();
-
-        if ( pPrevious != nullptr && pPrevious != pScene )
+        if ( pPrevious != nullptr )
             unloadScene( pPrevious );
-
         garbageCollectUnusedAssets();
-
         return pScene;
     }
 
@@ -364,14 +371,7 @@ namespace sw
         SW_LOG_INFO( "[SceneLoad] '%#' %# entities", pathStr, static_cast<uint32>( doc._listSceneObjectNode.size() ) );
 
         if ( slot->_bAccepting.load( std::memory_order_acquire ) == false )
-        {
-            if ( newScene != nullptr )
-            {
-                newScene->shutdown();
-                newScene.reset();
-            }
-            return;
-        }
+            return; // 지은 씬은 여기서 소멸하며 정리된다
 
         const bool bSuccess = ( newScene != nullptr );
         {
@@ -518,7 +518,6 @@ namespace sw
         {
             const string path = pendingScene->getSourcePath();
             SW_LOG_INFO( "Reflected types changed while '%#' was loading — loading it again", path );
-            pendingScene->shutdown();
             pendingScene.reset();
             dispatchLoad( path, std::move( _asyncLoad->_promise ) );
             return;
@@ -540,11 +539,7 @@ namespace sw
                 SW_LOG_TRACE( "Discarding completed load in favor of queued '%#'", nextPath );
                 if ( _asyncLoad != nullptr )
                     _asyncLoad->_promise.setValue( nullptr );
-                if ( pendingScene != nullptr )
-                {
-                    pendingScene->shutdown();
-                    pendingScene.reset();
-                }
+                pendingScene.reset();
                 // 대기열 요청자의 약속을 **그대로 들고 간다.** `requestLoadFuture` 를 다시 불러 약속을 새로 만들면
                 // 대기열에 넣은 쪽이 쥔 future 는 바로 위에서 nullptr 로 닫힌 것이 되어, 자기 씬이 활성이 되는데도 실패를 받는다.
                 dispatchLoad( nextPath, std::move( _queuedPromise ) );
@@ -563,31 +558,16 @@ namespace sw
         }
 
         if ( _pRHIDevice != nullptr )
-        {
-            _pRHIDevice->waitIdle();
-            pendingScene->initialize( _pRHIDevice );
-        }
+            _pRHIDevice->waitIdle(); // 이전 씬의 GPU 일이 끝난 뒤에 새 씬의 기본 머티리얼을 잡는다
 
-        Scene* const pPreviousActive = _pActiveScene;
-        activateScene( pendingScene.get() );
-        _listLoadedScene.push_back( std::move( pendingScene ) );
-        ++_sceneGeneration;
-
-        SW_LOG_INFO( "Active scene swapped to '%#'", _pActiveScene->getName() );
+        // 활성 교체 · 이전 씬 언로드 · 에셋 정리는 `adoptScene` 이 한다. 약속은 교체가 끝난 뒤에 채운다.
+        Scene* const pAdopted = adoptScene( std::move( pendingScene ), SceneRole::Active );
+        SW_LOG_INFO( "Active scene swapped to '%#'", pAdopted->getName() );
         if ( _asyncLoad != nullptr )
-            _asyncLoad->_promise.setValue( _pActiveScene );
+            _asyncLoad->_promise.setValue( pAdopted );
         // 대기열이 같은 경로를 가리키고 있었으면 그 요청자도 이 씬이 답이다.
         if ( bQueuedSatisfiedByThisLoad )
-            _queuedPromise.setValue( _pActiveScene );
-
-        broadcastSceneObjectsInvalidated();
-
-        // 이전 활성 씬을 언로드한다
-        if ( pPreviousActive != nullptr && pPreviousActive != _pActiveScene )
-            unloadScene( pPreviousActive );
-
-        // 씬을 바꾼 직후, 더 이상 참조되지 않는 이전 씬의 에셋을 정리한다.
-        garbageCollectUnusedAssets();
+            _queuedPromise.setValue( pAdopted );
     }
 
     /**
@@ -631,17 +611,8 @@ namespace sw
     Scene* SceneManager::createPreviewScene( string_view name, const ScenePreviewPolicy& policy )
     {
         SW_MEMORY_SCOPE( Scene );
-        PreviewSceneEntry entry;
-        entry._key    = _nextPreviewKey++;
-        entry._scene  = sw::make_unique<Scene>( name, _services );
-        entry._policy = policy;
-        Scene* pScene = entry._scene.get();
-        // 로드된 씬과 같이 기본 머티리얼 · 기본 카메라 · 메시 기본값을 건다(디바이스가 없는 테스트는 건너뛴다). 머티리얼 없는 메시가 그려지려면 필요하다.
-        if ( _pRHIDevice != nullptr && pScene->initialize( _pRHIDevice ) == false )
-            SW_LOG_WARNING( "Preview scene '%#' could not acquire its default material", string( name ).c_str() );
-        applyPreviewPolicy( *pScene, policy );
-        _listPreviewScene.push_back( std::move( entry ) );
-        syncPreviewPlay( *pScene, policy._bPlay );
+        Scene* const pScene = adoptScene( sw::make_unique<Scene>( name, _services ), SceneRole::Preview );
+        (void)setPreviewPolicy( pScene, policy ); // 방금 넣은 미리보기 씬이라 늘 찾는다
         return pScene;
     }
 
@@ -655,7 +626,7 @@ namespace sw
         if ( _pFocusedScene == pScene )
             _pFocusedScene = nullptr;
         syncPreviewPlay( *pScene, false ); // 씬이 살아 있는 동안 끝낸다
-        pScene->shutdown();
+        found->_scene.reset();             // 정리는 소멸자 한 곳이 한다. 목록을 옮기기 전에 소멸시킨다
         _listPreviewScene.erase( found );
         return true;
     }
@@ -938,10 +909,14 @@ namespace sw
         if ( _pFocusedScene == pScene )
             _pFocusedScene = nullptr;
 
-        pScene->shutdown();
-
-        VectorUtil::removeIf( _listLoadedScene, [pScene]( const unique_ptr<Scene>& owned )
-        { return owned.get() == pScene; } );
+        // 자리를 비운 채 소멸시킨 뒤(정리는 소멸자 한 곳) 빈 자리를 지운다 — 소멸 중의 조회가 지우는 중인 목록을 보지 않게.
+        for ( unique_ptr<Scene>& owned : _listLoadedScene )
+        {
+            if ( owned.get() == pScene )
+                owned.reset();
+        }
+        VectorUtil::removeIf( _listLoadedScene, []( const unique_ptr<Scene>& owned )
+        { return owned == nullptr; } );
     }
 
     void SceneManager::broadcastSceneObjectsInvalidated()
@@ -958,28 +933,6 @@ namespace sw
 
 namespace sw
 {
-    SubsystemInitResult SceneManager::initializeSubsystem()
-    {
-        if ( initialize( SceneEngineServices::makeFromBoundEngine() ) == false )
-            return SubsystemInitResult::Failed;
-        // 되돌리기 기록은 나간 씬의 오브젝트를 가리킨다 — 씬이 바뀌면 비운다. 다시 초기화해도 구독이 겹치지 않는다.
-        if ( _commandStackClearHandle.isValid() )
-            _onSceneObjectsInvalidated.remove( _commandStackClearHandle );
-        _commandStackClearHandle          = DelegateHandle{};
-        CommandStack* const pCommandStack = engine::findSubsystem<CommandStack>();
-        if ( pCommandStack != nullptr )
-            _commandStackClearHandle = _onSceneObjectsInvalidated.add( SW_DELEGATE_METHOD( Delegate<void()>, &CommandStack::clear, pCommandStack ) );
-        return SubsystemInitResult::Succeeded;
-    }
-
-    void SceneManager::shutdownSubsystem()
-    {
-        shutdown(); // 종료도 알린다(기록을 비운다) — 그 뒤에 구독을 뗀다
-        if ( _commandStackClearHandle.isValid() )
-            _onSceneObjectsInvalidated.remove( _commandStackClearHandle );
-        _commandStackClearHandle = DelegateHandle{};
-    }
-
     span<const utf8* const> SceneManager::getSubsystemDependencies() const
     {
         static constexpr const utf8* kArrDependency[] = { IAudioService::kSubsystemName, AssetStreamingQueue::kSubsystemName, AsyncFileIO::kSubsystemName, InputManager::kSubsystemName,

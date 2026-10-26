@@ -32,13 +32,14 @@ namespace sw
         Scene( string_view name, const SceneEngineServices& services );
         /** @brief 이름으로 씬을 만듭니다. 서비스 묶음은 바인딩된 표에서 한 번 읽습니다(`SceneEngineServices::makeFromBoundEngine`) — 테스트용입니다. 엔진 · 게임 프레임워크 코드(쿠커 · 초상화 · 넷 시뮬레이션 하니스)는 묶음을 받는 생성자를 씁니다. */
         explicit Scene( string_view name );
-        /** @brief 씬을 해제합니다. */
+        /** @brief 씬을 해제합니다. 붙들고 있던 GPU · 머티리얼 자원과 오브젝트 · 스트리밍 셀을 여기서 놓습니다(정리하는 길은 소멸 하나). */
         virtual ~Scene();
 
-        /** @brief 씬을 초기화합니다. */
-        virtual bool initialize( IRHIDevice* pRHIDevice );
-        /** @brief 붙들고 있던 GPU · 머티리얼 자원을 놓습니다. 파괴하기 전이나 비동기 로드 결과를 버릴 때 부릅니다. */
-        virtual void shutdown();
+        /**
+         * @brief 기본 머티리얼을 얻고 기본 카메라 · 메시 기본값을 겁니다.
+         * @details 매니저가 받는 씬은 받아들이는 길(`SceneManager::adoptScene`)이 부릅니다 — 매니저 밖에서 부르는 것은 단위 테스트뿐입니다.
+         */
+        bool initialize( IRHIDevice* pRHIDevice );
 
         /**
          * @brief 씬 문서(SceneDocument)의 엔티티 · 프리팹을 스폰하고 계층 구조를 만듭니다.
@@ -154,6 +155,8 @@ namespace sw
         size_t getUnresolvedEntityCount() const { return _listUnresolvedEntity.size(); }
 
     private:
+        /** @brief 붙들고 있던 GPU · 머티리얼 자원과 오브젝트를 놓습니다. 소멸자만 부릅니다(내리는 길을 소멸 하나로 둔다). */
+        void shutdown();
         /** @brief 기본 머티리얼 참조를 해제합니다. */
         void releaseDefaultMaterial();
         /** @brief 새 오브젝트에 줄 파일 id 입니다 — 이 씬이 쓴 어느 파일 id(해석하지 못한 엔티티 포함)보다 큽니다. */

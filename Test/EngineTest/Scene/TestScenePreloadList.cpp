@@ -92,7 +92,7 @@ SW_TEST_CASE( ScenePreloadListTest, RoundTripsThroughAFileAndRefusesBrokenOnes )
 SW_TEST_CASE( ScenePreloadListTest, SceneCookWritesTheListBesideTheScene )
 {
     sw::SceneManager sceneManager;
-    SW_ASSERT_TRUE( sceneManager.initialize() );
+    SW_ASSERT_TRUE( sceneManager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     const sw::string root   = test::makeTempDirectory( "preloadlist_cook_root" );
     const sw::string cooked = test::makeTempDirectory( "preloadlist_cook_out" );
@@ -124,5 +124,5 @@ SW_TEST_CASE( ScenePreloadListTest, SceneCookWritesTheListBesideTheScene )
     SW_ASSERT_TRUE( sw::ScenePreloadList::read( ::test::makeTempResourceID( listPath ), listRead ) );
     SW_EXPECT_TRUE( sw::VectorUtil::contains( listRead, sw::string( "game/demo/models/rock.mesh" ) ) );
     SW_EXPECT_TRUE( sw::VectorUtil::contains( listRead, sw::string( "game/demo/materials/rock.material" ) ) );
-    sceneManager.shutdown();
+    sceneManager.shutdownSubsystem();
 }

@@ -860,7 +860,7 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBasePublishesSceneLoadEvents )
     SW_ASSERT_TRUE( document.saveBinary( test::makeTempPath( "level_events.scene.bin" ) ) );
 
     SceneManager sceneManager;
-    SW_ASSERT_TRUE( sceneManager.initialize() );
+    SW_ASSERT_TRUE( sceneManager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
     const ScopedSceneGameService    scopedScene{ sceneManager };
     EventDispatcher                 dispatcher;
     const ScopedGameEventDispatcher scopedDispatcher{ dispatcher };
@@ -921,7 +921,7 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBasePublishesSceneLoadEvents )
     SW_EXPECT_EQUAL( missingPath, listCompleted[1]._levelName );
     SW_EXPECT_FALSE( listCompleted[1]._bSuccess );
 
-    sceneManager.shutdown();
+    sceneManager.shutdownSubsystem();
 }
 
 /**
@@ -1249,7 +1249,7 @@ SW_TEST_CASE( GameFrameworkTest, RecreatedGameInstanceKeepsTheLiveScene )
     };
 
     SceneManager sceneManager;
-    SW_ASSERT_TRUE( sceneManager.initialize() );
+    SW_ASSERT_TRUE( sceneManager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
     const ScopedSceneGameService    scopedScene{ sceneManager };
     EventDispatcher                 dispatcher;
     const ScopedGameEventDispatcher scopedDispatcher{ dispatcher };
@@ -1270,8 +1270,8 @@ SW_TEST_CASE( GameFrameworkTest, RecreatedGameInstanceKeepsTheLiveScene )
 
     BLOCK( "처음 선 인스턴스 — 활성 씬이 없으면 요청한다" )
     {
-        sceneManager.shutdown();
-        SW_ASSERT_TRUE( sceneManager.initialize() );
+        sceneManager.shutdownSubsystem();
+        SW_ASSERT_TRUE( sceneManager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
         SW_ASSERT_TRUE( sceneManager.getActiveScene() == nullptr );
         FirstSceneGameInstance       first;
         test::ScopedDefensiveTestLog expected( "the first scene file does not exist" );
@@ -1281,7 +1281,7 @@ SW_TEST_CASE( GameFrameworkTest, RecreatedGameInstanceKeepsTheLiveScene )
         engine::getSubsystem<TaskManager>().waitAll();
         first.shutdown();
     }
-    sceneManager.shutdown();
+    sceneManager.shutdownSubsystem();
 }
 
 /**
@@ -1304,7 +1304,7 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceStopsWithoutGameNetSession )
     };
 
     SceneManager sceneManager;
-    SW_ASSERT_TRUE( sceneManager.initialize() );
+    SW_ASSERT_TRUE( sceneManager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
     SubsystemScope hostServices{};
     (void)hostServices.bind( &sceneManager ); // 새 범위 — 겹치지 않는다. 세션은 일부러 걸지 않는다
     game::bindGameService( hostServices );
@@ -1318,7 +1318,7 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceStopsWithoutGameNetSession )
     SW_EXPECT_TRUE( game::findSubsystem<GameSettings>() == nullptr ); // 아무것도 걸기 전에 멈췄다
 
     game::unbindGameService();
-    sceneManager.shutdown();
+    sceneManager.shutdownSubsystem();
 }
 
 /**
@@ -1545,7 +1545,7 @@ SW_TEST_CASE( GameFrameworkTest, DontDestroyOnLoadComponentKeepsItsOwnerAcrossSc
     SW_EXPECT_TRUE( pDungeon->getObjectManager()->findGameObjectByName( hashed_string( "Villager" ) ) == nullptr );
 
     sceneManager.setWorldPlaying( false );
-    sceneManager.shutdown();
+    sceneManager.shutdownSubsystem();
 }
 
 /**

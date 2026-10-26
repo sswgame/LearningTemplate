@@ -248,7 +248,7 @@ SW_TEST_CASE( SceneTest, CookedBinaryEntityStateSurvivesFileAndIsUsedOnLoad )
 SW_TEST_CASE( SceneTest, CreateSceneSetsActiveWhenEmpty )
 {
     sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
     SW_EXPECT_NULL( manager.getActiveScene() );
     SW_EXPECT_EQUAL( size_t( 0 ), manager.getLoadedScenes().size() );
 
@@ -258,7 +258,7 @@ SW_TEST_CASE( SceneTest, CreateSceneSetsActiveWhenEmpty )
     SW_EXPECT_EQUAL( scene, manager.getActiveScene() );
     SW_EXPECT_EQUAL( size_t( 1 ), manager.getLoadedScenes().size() );
 
-    manager.shutdown();
+    manager.shutdownSubsystem();
 }
 
 /**
@@ -269,7 +269,7 @@ SW_TEST_CASE( SceneTest, CreateSceneSetsActiveWhenEmpty )
 SW_TEST_CASE( SceneTest, WorldPlayingFollowsTheActiveScene )
 {
     sw::SceneManager sceneManager;
-    SW_ASSERT_TRUE( sceneManager.initialize() );
+    SW_ASSERT_TRUE( sceneManager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
     sw::Scene* pFirst = sceneManager.createScene( "PlayFirst" );
     SW_ASSERT_NOT_NULL( pFirst );
     sw::RegisterMockComponents();
@@ -301,7 +301,7 @@ SW_TEST_CASE( SceneTest, WorldPlayingFollowsTheActiveScene )
     pLast->_pEndPlayCount                   = &shutdownEndCount;
     sceneManager.setWorldPlaying( true );
     SW_EXPECT_EQUAL( 1, pLast->_beginPlayCount );
-    sceneManager.shutdown();
+    sceneManager.shutdownSubsystem();
     SW_EXPECT_EQUAL( 1, shutdownEndCount );
     SW_EXPECT_FALSE( sceneManager.isWorldPlaying() );
 }
@@ -312,7 +312,7 @@ SW_TEST_CASE( SceneTest, WorldPlayingFollowsTheActiveScene )
 SW_TEST_CASE( SceneTest, MultipleScenesKeepFirstActive )
 {
     sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
 
     sw::Scene* first  = manager.createScene( "Level_A" );
     sw::Scene* second = manager.createScene( "Level_B" );
@@ -322,7 +322,7 @@ SW_TEST_CASE( SceneTest, MultipleScenesKeepFirstActive )
     SW_EXPECT_EQUAL( size_t( 2 ), manager.getLoadedScenes().size() );
     SW_EXPECT_STREQ( "Level_B", second->getName() );
 
-    manager.shutdown();
+    manager.shutdownSubsystem();
 }
 
 /**
@@ -331,7 +331,7 @@ SW_TEST_CASE( SceneTest, MultipleScenesKeepFirstActive )
 SW_TEST_CASE( SceneTest, CrossSceneReferenceResolvesThroughFileID )
 {
     sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
 
     sw::Scene* pSublevel = manager.createScene( "Sublevel" );
     sw::Scene* pMain     = manager.createScene( "Main" );
@@ -370,7 +370,7 @@ SW_TEST_CASE( SceneTest, CrossSceneReferenceResolvesThroughFileID )
     SW_ASSERT_NOT_NULL( pWindow );
     SW_EXPECT_TRUE( pSublevel->getOrAssignFileID( pWindow->getObjectID() ) > doorFileID );
 
-    manager.shutdown();
+    manager.shutdownSubsystem();
 }
 
 /**
@@ -380,7 +380,7 @@ SW_TEST_CASE( SceneTest, CrossSceneReferenceResolvesThroughFileID )
 SW_TEST_CASE( SceneTest, NestedPartGetsNoFileIDWhileOrdinaryObjectsDo )
 {
     sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
     sw::Scene* pScene = manager.createScene( "Nested" );
     SW_ASSERT_NOT_NULL( pScene );
     pScene->setSourcePath( "game/test/maps/nested.scene.xml" );
@@ -412,7 +412,7 @@ SW_TEST_CASE( SceneTest, NestedPartGetsNoFileIDWhileOrdinaryObjectsDo )
     registry.unregisterNestedPart( pLamp->getObjectID() );
     SW_EXPECT_TRUE( pScene->getOrAssignFileID( pLamp->getObjectID() ) != 0 );
 
-    manager.shutdown();
+    manager.shutdownSubsystem();
 }
 
 /**
@@ -421,7 +421,7 @@ SW_TEST_CASE( SceneTest, NestedPartGetsNoFileIDWhileOrdinaryObjectsDo )
 SW_TEST_CASE( SceneTest, OwnsGameObjectManager )
 {
     sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
 
     sw::Scene* scene = manager.createScene( "World" );
     SW_ASSERT_NOT_NULL( scene );
@@ -431,7 +431,7 @@ SW_TEST_CASE( SceneTest, OwnsGameObjectManager )
     SW_ASSERT_NOT_NULL( obj );
     SW_EXPECT_EQUAL( obj, scene->getObjectManager()->findGameObjectByName( sw::hashed_string( "Hero" ) ) );
 
-    manager.shutdown();
+    manager.shutdownSubsystem();
 }
 
 /**
@@ -440,7 +440,7 @@ SW_TEST_CASE( SceneTest, OwnsGameObjectManager )
 SW_TEST_CASE( SceneTest, UpdateWithoutRHIIsSafe )
 {
     sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
 
     sw::Scene* scene = manager.createScene( "TickWorld" );
     SW_ASSERT_NOT_NULL( scene );
@@ -449,7 +449,7 @@ SW_TEST_CASE( SceneTest, UpdateWithoutRHIIsSafe )
     manager.update( 0.016f );
     SW_EXPECT_EQUAL( size_t( 1 ), scene->getObjectManager()->getAllGameObjects().size() );
 
-    manager.shutdown();
+    manager.shutdownSubsystem();
 }
 
 /**
@@ -458,7 +458,7 @@ SW_TEST_CASE( SceneTest, UpdateWithoutRHIIsSafe )
 SW_TEST_CASE( SceneTest, SceneEntityLifecycleAndShutdownCleanup )
 {
     sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
 
     sw::Scene* sceneA = manager.createScene( "DungeonLevel" );
     SW_ASSERT_NOT_NULL( sceneA );
@@ -476,7 +476,7 @@ SW_TEST_CASE( SceneTest, SceneEntityLifecycleAndShutdownCleanup )
     SW_EXPECT_EQUAL( 2u, sceneA->getObjectManager()->getAllGameObjects().size() );
 
     // 셧다운 시 모든 씬 및 오브젝트 정리
-    manager.shutdown();
+    manager.shutdownSubsystem();
     SW_EXPECT_NULL( manager.getActiveScene() );
     SW_EXPECT_EQUAL( 0u, manager.getLoadedScenes().size() );
 }
@@ -514,7 +514,7 @@ SW_TEST_CASE( SceneTest, SerializeWritesPrefabSourcePath )
 SW_TEST_CASE( SceneTest, CreateEmptyActiveSceneBumpsGeneration )
 {
     sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
 
     sw::Scene* pFirst = manager.createScene( "First" );
     SW_ASSERT_NOT_NULL( pFirst );
@@ -527,7 +527,7 @@ SW_TEST_CASE( SceneTest, CreateEmptyActiveSceneBumpsGeneration )
     SW_EXPECT_TRUE( manager.getSceneGeneration() > firstGeneration );
     SW_EXPECT_STREQ( "Untitled", pEmpty->getName() );
 
-    manager.shutdown();
+    manager.shutdownSubsystem();
 }
 
 /**
@@ -1035,7 +1035,7 @@ SW_TEST_CASE( SceneTest, BinaryEntityCountIsBoundedByFileSize )
 SW_TEST_CASE( SceneTest, SavedSceneKeepsChildObjects )
 {
     sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
     sw::Scene* pScene = manager.createScene( "HierarchyWorld" );
     SW_ASSERT_NOT_NULL( pScene );
     sw::GameObjectManager* pObjects = pScene->getObjectManager();
@@ -1070,7 +1070,7 @@ SW_TEST_CASE( SceneTest, SavedSceneKeepsChildObjects )
     SW_ASSERT_NOT_NULL( pReloadedChild->getPrimarySceneComponent() );
     SW_EXPECT_TRUE( pReloadedChild->getPrimarySceneComponent()->getLocalPosition() == sw::float3( 1.0f, 2.0f, 3.0f ) );
 
-    manager.shutdown();
+    manager.shutdownSubsystem();
 }
 
 /**
@@ -1081,7 +1081,7 @@ SW_TEST_CASE( SceneTest, SavedSceneKeepsChildObjects )
 SW_TEST_CASE( SceneTest, SceneCookCountsTheScenesItCouldNotCook )
 {
     sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
     const sw::string root   = test::makeTempDirectory( "scene_cook_root" );
     const sw::string cooked = test::makeTempDirectory( "scene_cook_out" );
 
@@ -1108,7 +1108,7 @@ SW_TEST_CASE( SceneTest, SceneCookCountsTheScenesItCouldNotCook )
 SW_TEST_CASE( SceneTest, SceneCookSkipsEditorOnlyScenes )
 {
     sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
     const sw::string root   = test::makeTempDirectory( "scene_cook_editor_root" );
     const sw::string cooked = test::makeTempDirectory( "scene_cook_editor_out" );
 
@@ -1137,12 +1137,6 @@ SW_TEST_CASE( SceneTest, SceneCookSkipsEditorOnlyScenes )
  */
 SW_TEST_CASE( SceneTest, SceneIsNotReadBeforeEveryModuleRegisteredItsTypes )
 {
-    // 씬 매니저는 받은 타입 표만 본다 — 등록이 끝나기 전의 표를 넘긴다. 쿠커는 바인딩된 표를 보므로 아래에서 표를 갈아 끼운다.
-    sw::TypeRegistry        registryBeforeModuleTypes;
-    sw::SceneEngineServices earlyServices = sw::SceneEngineServices::makeFromBoundEngine();
-    earlyServices._pTypeRegistry          = &registryBeforeModuleTypes;
-    sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize( earlyServices ) );
     const sw::string root   = test::makeTempDirectory( "scene_type_gate_root" );
     const sw::string cooked = test::makeTempDirectory( "scene_type_gate_out" );
 
@@ -1160,15 +1154,19 @@ SW_TEST_CASE( SceneTest, SceneIsNotReadBeforeEveryModuleRegisteredItsTypes )
     uint32 earlyCookedCount{ 0 };
     uint32 earlyFailedCount{ 0 };
     {
-        // 쿠커가 보는 표의 타입 레지스트리도 등록이 끝나기 전의 것으로 갈아 끼운다(그것을 소유한 서브시스템 `Reflection` 을 가린다).
+        // 씬 매니저 · 쿠커가 보는 표의 타입 레지스트리를 등록이 끝나기 전의 것으로 갈아 끼운다(그것을 소유한 서브시스템 `Reflection` 을 가린다).
+        // 매니저는 초기화할 때 묶인 표를 읽으므로 가린 표 안에서 초기화하고, 그 레지스트리가 사라지기 전에 내린다.
         test::ScopedEngineServiceOverride early;
         const sw::ReflectionSubsystem&    earlyReflection = early.add( sw::make_unique<sw::ReflectionSubsystem>( sw::make_unique<sw::TypeRegistry>() ) );
         SW_ASSERT_TRUE( early.bindObject( &earlyReflection.getTypeRegistry() ) );
         SW_ASSERT_TRUE( early.bind() == nullptr );
         SW_ASSERT_FALSE( sw::engine::getSubsystem<sw::TypeRegistry>().areAllModuleTypesRegistered() );
+        sw::SceneManager manager;
+        SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
         test::ScopedDefensiveTestLog expected( "a scene read before the ModuleTypes startup step" );
         bRequestAccepted = manager.requestLoadFuture( scenePath ).isValid();
         earlyCookedCount = sw::SceneCooker::cookAllScenes( sw::SceneEngineServices::makeFromBoundEngine(), root, cooked, sw::CookStore( test::makeTempDirectory( "cook_record" ), test::makeTempDirectory( "cook_ddc" ) ), earlyFailedCount );
+        manager.shutdownSubsystem();
     }
 
     SW_EXPECT_FALSE( bRequestAccepted );
@@ -1181,13 +1179,12 @@ SW_TEST_CASE( SceneTest, SceneIsNotReadBeforeEveryModuleRegisteredItsTypes )
     SW_EXPECT_EQUAL( 1u, sw::SceneCooker::cookAllScenes( sw::SceneEngineServices::makeFromBoundEngine(), root, cooked, sw::CookStore( test::makeTempDirectory( "cook_record" ), test::makeTempDirectory( "cook_ddc" ) ), failedCount ) );
     SW_EXPECT_EQUAL( 0u, failedCount );
     SW_EXPECT_TRUE( sw::FileUtil::exists( cookedPath ) );
-    manager.shutdown();
 }
 
 /**
- * @brief [SceneTest] 씬 매니저가 받은 엔진 서비스 묶음이 그 매니저가 만든 씬 · 오브젝트 매니저 · 물리 · 오디오까지 그대로 내려간다
- * @details 씬 쪽은 전역 조회(`engine::get*()`)를 하지 않고 만들 때 받은 묶음만 쓴다. 빈 묶음을 받은 매니저는 바인딩된 표가 멀쩡해도
- *          그것을 찾아가지 않는다 — 에셋 매니저 · 물리 씬 · 오디오 엔진이 없고, 타입 표가 없으니 씬 로드를 거절한다.
+ * @brief [SceneTest] 씬 매니저가 읽은 엔진 서비스 묶음이 그 매니저가 만든 씬 · 오브젝트 매니저 · 물리 · 오디오까지 그대로 내려간다
+ * @details 씬 쪽은 전역 조회(`engine::get*()`)를 하지 않고 만들 때 받은 묶음만 쓴다. 빈 묶음으로 만든 씬은 바인딩된 표가 멀쩡해도
+ *          그것을 찾아가지 않는다 — 에셋 매니저 · 물리 씬 · 오디오 엔진이 없다.
  */
 SW_TEST_CASE( SceneTest, SceneManagerHandsItsInjectedServicesDownToScenes )
 {
@@ -1195,7 +1192,7 @@ SW_TEST_CASE( SceneTest, SceneManagerHandsItsInjectedServicesDownToScenes )
     SW_ASSERT_NOT_NULL( services._pAssetManager );
 
     sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize( services ) );
+    SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
     sw::Scene* pScene = manager.createScene( "InjectedServices" );
     SW_ASSERT_NOT_NULL( pScene );
     sw::GameObjectManager* pObjects = pScene->getObjectManager();
@@ -1204,24 +1201,16 @@ SW_TEST_CASE( SceneTest, SceneManagerHandsItsInjectedServicesDownToScenes )
     SW_EXPECT_TRUE( pScene->getEngineServices()._pDefaultAssets == services._pDefaultAssets );
     SW_EXPECT_TRUE( pObjects->findAssetManager() == services._pAssetManager );
     SW_EXPECT_TRUE( pObjects->getSubsystem<sw::SceneAudio>().findAudioService() == services._pAudioService );
-    manager.shutdown();
+    manager.shutdownSubsystem();
 
-    sw::SceneManager isolated;
-    SW_ASSERT_TRUE( isolated.initialize( sw::SceneEngineServices{} ) );
-    sw::Scene* pIsolated = isolated.createScene( "NoServices" );
-    SW_ASSERT_NOT_NULL( pIsolated );
-    sw::GameObjectManager* pIsolatedObjects = pIsolated->getObjectManager();
+    sw::Scene              isolated( "NoServices", sw::SceneEngineServices{} );
+    sw::GameObjectManager* pIsolatedObjects = isolated.getObjectManager();
     SW_ASSERT_NOT_NULL( pIsolatedObjects );
     SW_EXPECT_NULL( pIsolatedObjects->findAssetManager() );
     SW_EXPECT_NULL( pIsolatedObjects->getSubsystem<sw::SceneAudio>().findAudioService() );
     SW_EXPECT_NULL( pIsolatedObjects->getSubsystem<sw::SceneAudio>().findAudioEngine() );
     SW_EXPECT_NULL( pIsolatedObjects->getSubsystem<sw::ScenePhysics>().getScene3D() );
     SW_EXPECT_NULL( pIsolatedObjects->getSubsystem<sw::ScenePhysics>().findSettings() );
-    {
-        test::ScopedDefensiveTestLog expected( "a scene manager without a type registry" );
-        SW_EXPECT_FALSE( isolated.requestLoadFuture( "game/demo/maps/none.scene.xml" ).isValid() );
-    }
-    isolated.shutdown();
 }
 
 /**
@@ -1299,7 +1288,7 @@ SW_TEST_CASE( SceneTest, SceneCookFailsOnAComponentOfUnknownType )
 SW_TEST_CASE( SceneTest, CookedSceneKeepsAChildWrittenBeforeItsParent )
 {
     sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
     sw::Scene* pScene = manager.createScene( "CookOrderWorld" );
     SW_ASSERT_NOT_NULL( pScene );
     sw::GameObjectManager* pObjects = pScene->getObjectManager();
@@ -1341,7 +1330,7 @@ SW_TEST_CASE( SceneTest, CookedSceneKeepsAChildWrittenBeforeItsParent )
     SW_EXPECT_TRUE( pLoadedBlade->getParent() != pLoadedHero->getPrimarySceneComponent() ); // 몸통이 아니라 손(소켓)
     SW_EXPECT_TRUE( pLoadedBlade->getLocalPosition() == sw::float3( 0.0f, 1.0f, 0.0f ) );
 
-    manager.shutdown();
+    manager.shutdownSubsystem();
 }
 
 /**
@@ -1352,7 +1341,7 @@ SW_TEST_CASE( SceneTest, CookedSceneKeepsAChildWrittenBeforeItsParent )
 SW_TEST_CASE( SceneTest, MultiLineTextKeepsItsLineBreaksThroughASceneFile )
 {
     sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
     sw::Scene* pScene = manager.createScene( "LineBreakWorld" );
     SW_ASSERT_NOT_NULL( pScene );
     sw::GameObject* pSign = pScene->getObjectManager()->createGameObject( sw::hashed_string( "Sign" ) );
@@ -1387,7 +1376,7 @@ SW_TEST_CASE( SceneTest, MultiLineTextKeepsItsLineBreaksThroughASceneFile )
 SW_TEST_CASE( SceneTest, FileIDsStayTheSameAcrossSaveAndReload )
 {
     sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
     sw::Scene* pScene = manager.createScene( "StableIdWorld" );
     SW_ASSERT_NOT_NULL( pScene );
     sw::GameObjectManager* pObjects = pScene->getObjectManager();
@@ -1437,7 +1426,7 @@ SW_TEST_CASE( SceneTest, FileIDsStayTheSameAcrossSaveAndReload )
         SW_EXPECT_STREQ( before._embeddedXML.c_str(), pAfter->_embeddedXML.c_str() );
     }
 
-    manager.shutdown();
+    manager.shutdownSubsystem();
 }
 
 /**
@@ -1448,7 +1437,7 @@ SW_TEST_CASE( SceneTest, FileIDsStayTheSameAcrossSaveAndReload )
 SW_TEST_CASE( SceneTest, ChildrenOfSameNamedEntitiesFindTheirOwnParent )
 {
     sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
     sw::Scene* pScene = manager.createScene( "TwinWorld" );
     SW_ASSERT_NOT_NULL( pScene );
     sw::GameObjectManager* pObjects = pScene->getObjectManager();
@@ -1493,7 +1482,7 @@ SW_TEST_CASE( SceneTest, ChildrenOfSameNamedEntitiesFindTheirOwnParent )
     SW_EXPECT_TRUE( pLoadedArmA->getParent() != pLoadedArmB->getParent() );
     SW_EXPECT_TRUE( pLoadedArmB->getParent()->getPrimarySceneComponent()->getLocalPosition() == sw::float3( 2.0f, 0.0f, 0.0f ) );
 
-    manager.shutdown();
+    manager.shutdownSubsystem();
 }
 
 /**
@@ -1505,7 +1494,7 @@ SW_TEST_CASE( SceneTest, ChildrenOfSameNamedEntitiesFindTheirOwnParent )
 SW_TEST_CASE( SceneTest, ChildOfAMissingPrefabEntityKeepsItsParentReference )
 {
     sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
     sw::Scene* pScene = manager.createScene( "GhostParentWorld" );
     SW_ASSERT_NOT_NULL( pScene );
     sw::GameObjectManager* pObjects = pScene->getObjectManager();
@@ -1568,7 +1557,7 @@ SW_TEST_CASE( SceneTest, ChildOfAMissingPrefabEntityKeepsItsParentReference )
     SW_ASSERT_NOT_NULL( pRestoredGhost );
     SW_EXPECT_TRUE( pRestoredGun->getParent() == pRestoredGhost );
 
-    manager.shutdown();
+    manager.shutdownSubsystem();
 }
 
 /**
@@ -1582,7 +1571,7 @@ SW_TEST_CASE( SceneTest, InitializedSceneBindsSavedMeshMaterials )
     constexpr const utf8* kPath = "engine/materials/benchtextured.material";
 
     sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
     sw::Scene* pScene = manager.createScene( "PaintedWorld" );
     SW_ASSERT_NOT_NULL( pScene );
     sw::GameObjectManager* pObjects = pScene->getObjectManager();
@@ -1613,7 +1602,7 @@ SW_TEST_CASE( SceneTest, InitializedSceneBindsSavedMeshMaterials )
     SW_EXPECT_TRUE( pPaintedMesh->getMaterial() != pReloaded->getMaterial() );
     SW_EXPECT_TRUE( pPlainMesh->getMaterial() == pReloaded->getMaterial() );
 
-    manager.shutdown();
+    manager.shutdownSubsystem();
 }
 
 /**
@@ -1625,7 +1614,7 @@ SW_TEST_CASE( SceneTest, InitializedSceneBindsSavedMeshMaterials )
 SW_TEST_CASE( SceneTest, PersistentRootsCarryIntoTheNextScene )
 {
     sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
     manager.setWorldPlaying( true );
     sw::Scene* pFirst = manager.createEmptyActiveScene( "First" );
     SW_ASSERT_NOT_NULL( pFirst );
@@ -1697,7 +1686,7 @@ SW_TEST_CASE( SceneTest, PersistentRootsCarryIntoTheNextScene )
     SW_EXPECT_TRUE( pFourth->getObjectManager()->findGameObjectByID( keeperID ) == nullptr );
     manager.setWorldPlaying( false );
 
-    manager.shutdown();
+    manager.shutdownSubsystem();
 }
 
 /**
@@ -1726,7 +1715,7 @@ SW_TEST_CASE( SceneTest, PrefabInstanceWithSavedStateIsBuiltOnce )
     }
 
     sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
     sw::Scene* pScene = manager.createScene( "PrefabOnceWorld" );
     SW_ASSERT_NOT_NULL( pScene );
     sw::RegisterMockComponents();
@@ -1749,7 +1738,7 @@ SW_TEST_CASE( SceneTest, PrefabInstanceWithSavedStateIsBuiltOnce )
     SW_EXPECT_TRUE( pInstance->getComponent<sw::MockPoolLifecycleComponent>() != nullptr );
     SW_EXPECT_STREQ( prefabPath.c_str(), sw::string{ pScene->getEntityPrefabPath( pInstance->getObjectID() ) }.c_str() );
 
-    manager.shutdown();
+    manager.shutdownSubsystem();
 }
 
 /**
@@ -1760,7 +1749,7 @@ SW_TEST_CASE( SceneTest, PrefabInstanceWithSavedStateIsBuiltOnce )
 SW_TEST_CASE( SceneTest, EntityWhosePrefabIsMissingSurvivesSave )
 {
     sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
     sw::Scene* pScene = manager.createScene( "MissingPrefabWorld" );
     SW_ASSERT_NOT_NULL( pScene );
 
@@ -1797,7 +1786,7 @@ SW_TEST_CASE( SceneTest, EntityWhosePrefabIsMissingSurvivesSave )
     SW_EXPECT_STREQ( ghost._embeddedXML.c_str(), pSavedGhost->_embeddedXML.c_str() );
     SW_EXPECT_EQUAL( size_t( 2 ), saved._listSceneObjectNode.size() );
 
-    manager.shutdown();
+    manager.shutdownSubsystem();
 }
 
 /**
@@ -1888,7 +1877,7 @@ SW_TEST_CASE( SceneTest, XMLAssetsLoadWithoutEngineServices )
 SW_TEST_CASE( SceneTest, ComponentNameSurvivesSceneFilesAndCooking )
 {
     sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
     sw::Scene* pScene = manager.createScene( "NamedComponentWorld" );
     SW_ASSERT_NOT_NULL( pScene );
     sw::GameObjectManager* pObjects = pScene->getObjectManager();
@@ -1944,7 +1933,7 @@ SW_TEST_CASE( SceneTest, ComponentNameSurvivesSceneFilesAndCooking )
     SW_ASSERT_TRUE( pFromBinary->instantiate( fromBinary ) );
     Check::run( pFromBinary, "binary" );
 
-    manager.shutdown();
+    manager.shutdownSubsystem();
 }
 
 /**
@@ -1958,7 +1947,7 @@ SW_TEST_CASE( SceneTest, RepositoryScenesAndPrefabsKeepComponentNames )
     SW_ASSERT_TRUE( sw::FileUtil::collectFiles( sw::ResourcePaths::getRootFolderPath(), "", listFile, true ) );
 
     sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
     uint32 sceneCount  = 0;
     uint32 prefabCount = 0;
     for ( const sw::string& filePath : listFile )
@@ -2017,7 +2006,7 @@ SW_TEST_CASE( SceneTest, RepositoryScenesAndPrefabsKeepComponentNames )
         SW_EXPECT_TRUE_MSG( sw::SceneTestInternal::collectComponentNames( &rebuilt ) == listExpected, path.c_str() );
     }
     SW_EXPECT_TRUE_MSG( sceneCount >= 2 && prefabCount >= 1, "no repository scene or prefab was found - this check saw nothing" );
-    manager.shutdown();
+    manager.shutdownSubsystem();
 }
 
 /**
@@ -2060,7 +2049,7 @@ SW_TEST_CASE( SceneTest, BinarySceneStartsWithMagicInFileOrder )
 SW_TEST_CASE( SceneTest, PreviewScenesLiveApartFromLoadedScenes )
 {
     sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
     sw::Scene* pMain = manager.createScene( "Main" );
     SW_ASSERT_NOT_NULL( pMain );
 
@@ -2107,7 +2096,7 @@ SW_TEST_CASE( SceneTest, PreviewScenesLiveApartFromLoadedScenes )
     SW_EXPECT_TRUE( &pSecond->getObjectManager()->getSceneScope() != &pMain->getObjectManager()->getSceneScope() );
     SW_EXPECT_TRUE( &pSecond->getObjectManager()->getSubsystem<sw::ScenePhysics>() != &pMain->getObjectManager()->getSubsystem<sw::ScenePhysics>() );
 
-    manager.shutdown();
+    manager.shutdownSubsystem();
     SW_EXPECT_EQUAL( size_t( 0 ), manager.getPreviewScenes().size() );
 }
 
@@ -2117,7 +2106,7 @@ SW_TEST_CASE( SceneTest, PreviewScenesLiveApartFromLoadedScenes )
 SW_TEST_CASE( SceneTest, PreviewScenesTickByTheirOwnPolicy )
 {
     sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
     sw::RegisterMockComponents();
     sw::Scene* pMain = manager.createScene( "Main" );
 
@@ -2184,7 +2173,7 @@ SW_TEST_CASE( SceneTest, PreviewScenesTickByTheirOwnPolicy )
     SW_EXPECT_TRUE( manager.destroyPreviewScene( pPlaying ) );
     SW_EXPECT_EQUAL( 1, endCount );
 
-    manager.shutdown();
+    manager.shutdownSubsystem();
 }
 
 /**
@@ -2193,7 +2182,7 @@ SW_TEST_CASE( SceneTest, PreviewScenesTickByTheirOwnPolicy )
 SW_TEST_CASE( SceneTest, FocusedSceneFallsBackToActiveWhenDestroyed )
 {
     sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
     sw::Scene* pMain    = manager.createScene( "Main" );
     sw::Scene* pPreview = manager.createPreviewScene( "Window" );
     SW_ASSERT_NOT_NULL( pPreview );
@@ -2222,7 +2211,7 @@ SW_TEST_CASE( SceneTest, FocusedSceneFallsBackToActiveWhenDestroyed )
     sw::Scene* pOther = manager.createEmptyActiveScene( "Other" ); // 이전 활성 씬(Next)이 내려진다
     SW_EXPECT_EQUAL( pOther, manager.getFocusedScene() );
 
-    manager.shutdown();
+    manager.shutdownSubsystem();
 }
 
 /**
@@ -2231,7 +2220,7 @@ SW_TEST_CASE( SceneTest, FocusedSceneFallsBackToActiveWhenDestroyed )
 SW_TEST_CASE( SceneTest, PreviewSceneTickScalesDeltaByPolicy )
 {
     sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
     sw::RegisterMockComponents();
     manager.createScene( "Main" );
 
@@ -2255,7 +2244,7 @@ SW_TEST_CASE( SceneTest, PreviewSceneTickScalesDeltaByPolicy )
     SW_EXPECT_EQUAL( 1, pFrozenMesh->_tickCount );
     SW_EXPECT_NEAR_EQUAL( 0.0f, pFrozenMesh->_lastDeltaTime, 1e-6f );
 
-    manager.shutdown();
+    manager.shutdownSubsystem();
 }
 
 /**
@@ -2265,7 +2254,7 @@ SW_TEST_CASE( SceneTest, PreviewSceneTickScalesDeltaByPolicy )
 SW_TEST_CASE( SceneTest, PreviewObjectUndoStaysInItsScene )
 {
     sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.initializeSubsystem() == sw::SubsystemInitResult::Succeeded );
     sw::Scene* pMain    = manager.createScene( "Main" );
     sw::Scene* pPreview = manager.createPreviewScene( "Window" );
     SW_ASSERT_NOT_NULL( pMain );
@@ -2298,5 +2287,5 @@ SW_TEST_CASE( SceneTest, PreviewObjectUndoStaysInItsScene )
     windowStack.undo();
     SW_EXPECT_FALSE( pMainObject->isActive() );
 
-    manager.shutdown();
+    manager.shutdownSubsystem();
 }

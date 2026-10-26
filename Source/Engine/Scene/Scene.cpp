@@ -379,7 +379,7 @@ namespace sw
 
     Scene::~Scene()
     {
-        Scene::shutdown();
+        shutdown();
     }
 
     /**
