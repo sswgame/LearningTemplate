@@ -11,8 +11,8 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
+#include "Core/Time/FixedStepTimer.h"
 
-#include "GameFramework/Base/Foundation/Utility/Time/FixedStepTimer.h"
 #include "GameFramework/Base/Gameplay/Gimmick/GimmickCircuitDef.h"
 #include "GameFramework/Base/Gameplay/Gimmick/GimmickCircuitState.h"
 #include "GameFramework/Base/Gameplay/Gimmick/GimmickNodeRegistry.h"

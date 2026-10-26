@@ -6,7 +6,6 @@
 #include "GameFramework/Base/Actor/AI/BehaviorTree.h"
 #include "GameFramework/Base/Actor/AI/Blackboard.h"
 #include "GameFramework/Base/Actor/Navigation/NavGrid.h"
-#include "GameFramework/Base/Foundation/Utility/Time/TimerQueue.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -84,11 +83,6 @@ namespace
         const std::optional<float32> health   = context._pBlackboard->getFloat( "Health" );
         const bool                   bHealthy = health.has_value() == false || *health > 0.3f;
         return bHealthy ? BehaviorStatus::Success : BehaviorStatus::Failure;
-    }
-
-    void countTimer( int32* pCount )
-    {
-        ++*pCount;
     }
 } // namespace
 
@@ -314,58 +308,4 @@ SW_TEST_CASE( AITest, PerceptionSeesHearsAndForgets )
     SW_EXPECT_NEAR_EQUAL( 10.5f, perception.findTarget( 2u )->_lastKnownPosition._x, 1.0e-5f );
     perception.sense( eye, forward, listNothing, &grid, 1.5f );
     SW_EXPECT_TRUE( perception.findTarget( 2u ) == nullptr );
-}
-
-/**
- * @brief [AITest] 타이머 — 한 번 · 반복(긴 프레임은 따라잡는다) · 멈춤 · 지우기 · 콜백 안에서 지우기
- */
-SW_TEST_CASE( AITest, TimerQueueFiresOnceRepeatsAndPauses )
-{
-    TimerQueue        queue;
-    int32             onceCount   = 0;
-    int32             repeatCount = 0;
-    int32             pausedCount = 0;
-    const TimerHandle once        = queue.schedule( 1.0f, SW_DELEGATE_LAMBDA( TimerQueue::Callback, [&onceCount]()
-           { countTimer( &onceCount ); } ) );
-    const TimerHandle repeat      = queue.schedule( 0.5f, SW_DELEGATE_LAMBDA( TimerQueue::Callback, [&repeatCount]()
-         { countTimer( &repeatCount ); } ),
-                                                    true );
-    const TimerHandle paused      = queue.schedule( 0.5f, SW_DELEGATE_LAMBDA( TimerQueue::Callback, [&pausedCount]()
-         { countTimer( &pausedCount ); } ) );
-    SW_EXPECT_EQUAL( 0u, static_cast<uint32>( queue.schedule( 1.0f, TimerQueue::Callback{} ) ) );
-    queue.setPaused( paused, true );
-
-    (void)queue.advance( 0.4f );
-    SW_EXPECT_EQUAL( 0, onceCount + repeatCount );
-    (void)queue.advance( 0.7f ); // 1.1 초
-    SW_EXPECT_EQUAL( 1, onceCount );
-    SW_EXPECT_EQUAL( 2, repeatCount ); // 0.5 · 1.0
-    SW_EXPECT_FALSE( queue.isActive( once ) );
-    SW_EXPECT_NEAR_EQUAL( 0.4f, queue.getRemaining( repeat ), 1.0e-4f );
-    (void)queue.advance( 1.0f ); // 2.1 초 — 1.5 · 2.0
-    SW_EXPECT_EQUAL( 4, repeatCount );
-
-    SW_EXPECT_EQUAL( 0, pausedCount );
-    SW_EXPECT_NEAR_EQUAL( 0.5f, queue.getRemaining( paused ), 1.0e-4f );
-    queue.setPaused( paused, false );
-    (void)queue.advance( 0.6f );
-    SW_EXPECT_EQUAL( 1, pausedCount );
-
-    SW_EXPECT_TRUE( queue.cancel( repeat ) );
-    SW_EXPECT_FALSE( queue.cancel( repeat ) );
-    (void)queue.advance( 5.0f );
-    SW_EXPECT_EQUAL( 5, repeatCount ); // 2.5 에 한 번 더 불린 뒤 지워졌다
-
-    // 콜백이 자기 자신을 지운다.
-    TimerHandle selfHandle = 0;
-    int32       selfCount  = 0;
-    selfHandle             = queue.schedule( 0.1f, SW_DELEGATE_LAMBDA( TimerQueue::Callback, [&queue, &selfHandle, &selfCount]()
-                {
-        ++selfCount;
-        (void)queue.cancel( selfHandle );
-    } ),
-                                             true );
-    (void)queue.advance( 1.0f );
-    SW_EXPECT_EQUAL( 1, selfCount );
-    SW_EXPECT_EQUAL( static_cast<size_t>( 0 ), queue.getCount() );
 }

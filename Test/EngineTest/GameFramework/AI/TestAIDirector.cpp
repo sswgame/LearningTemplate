@@ -609,10 +609,10 @@ SW_TEST_CASE( AIDirectorTest, TraceKeepsRecentEventsInOrder )
         listEvent.insert( listEvent.end(), listStep.begin(), listStep.end() );
     }
     director.drainEvents( listEvent );
-    SW_ASSERT_TRUE( static_cast<int32>( listEvent.size() ) > AIDirector::kMaxTraceEvent );
+    SW_ASSERT_TRUE( listEvent.size() > AIDirector::kMaxTraceEvent );
     string trace;
     director.dumpTrace( trace );
-    int32   lineCount = 0;
+    uint32  lineCount = 0;
     size_t  lineStart = 0;
     float32 lastTime  = -1.0f;
     while ( lineStart < trace.size() )

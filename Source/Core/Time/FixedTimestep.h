@@ -11,6 +11,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Time/FixedStepTimer.h"
 #include "Core/Time/GameTimer.h"
 
 namespace sw
@@ -80,7 +81,7 @@ namespace sw
     private:
         GameTimer           _timer;
         FixedTimestepParams _params;
-        /** @brief 아직 고정 스텝으로 쓰지 못한 남은 시간(초)입니다. */
-        float32 _accumulator;
+        /** @brief 고정 스텝 누적기입니다. 한 프레임에 받는 시간 상한은 스텝 길이 × 프레임당 스텝 상한이다. */
+        FixedStepTimer _stepTimer;
     };
 } // namespace sw

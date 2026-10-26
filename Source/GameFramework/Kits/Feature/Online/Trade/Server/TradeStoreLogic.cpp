@@ -3,7 +3,7 @@
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeStoreLogic.h"
 
 #include "Core/Common/HashUtil.h"
-#include "Core/Network/BitStream.h"
+#include "Core/Serialization/BitStream.h"
 
 #include "GameFramework/Base/Online/Audit/ServiceAuditLog.h"
 #include "GameFramework/Base/Online/Ledger/Ledger.h"

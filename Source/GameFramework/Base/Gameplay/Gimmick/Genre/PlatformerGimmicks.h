@@ -7,12 +7,12 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Math/Math.h"
+#include "Core/Time/FixedStepTimer.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Foundation/Utility/Time/FixedStepTimer.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw

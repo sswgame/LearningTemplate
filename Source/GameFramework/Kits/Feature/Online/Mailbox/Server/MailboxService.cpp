@@ -2,7 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Mailbox/Server/MailboxService.h"
 
-#include "Core/Network/BitStream.h"
+#include "Core/Serialization/BitStream.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Observability/MetricRegistry.h"
@@ -171,7 +171,7 @@ namespace sw
         , _pStore{ nullptr }
         , _pHost{ nullptr }
         , _arrExpiredCounter{}
-        , _nextCallID{ 1 }
+        , _callIDAllocator{}
         , _nowMs{ 0 }
         , _nextSweepMs{ 0 }
         , _nextCampaignRefreshMs{ 0 }
@@ -369,7 +369,7 @@ namespace sw
 
     void MailboxService::startCall( const MailboxCall& call, PendingCall pending )
     {
-        pending._callID              = _nextCallID++;
+        pending._callID              = _callIDAllocator.allocate();
         pending._receivedNanoseconds = MonotonicClock::nowNanoseconds();
         pending._methodIndex         = MailboxMethod::toIndex( call._method );
         _listPendingCall.push_back( pending );

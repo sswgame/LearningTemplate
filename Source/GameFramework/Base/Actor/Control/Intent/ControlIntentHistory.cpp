@@ -3,7 +3,7 @@
 #include "GameFramework/Base/Actor/Control/Intent/ControlIntentHistory.h"
 
 #include "Core/File/FileUtil.h"
-#include "Core/Network/BitStream.h"
+#include "Core/Serialization/BitStream.h"
 
 namespace sw
 {

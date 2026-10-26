@@ -2,6 +2,7 @@
 
 #include "Engine/Renderer/Canvas/CanvasRenderer.h"
 
+#include "Core/Common/BitUtil.h"
 #include "Core/Common/HashUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
@@ -42,14 +43,6 @@ namespace sw
 
             /** @brief 사각형 버퍼가 모자라면 이 배율로 키운다(프레임마다 조금씩 늘 때 다시 만들기를 줄인다). */
             static constexpr float32 kQuadBufferGrowth = 1.5f;
-
-            /** @brief float 의 비트를 uint32 로 옮깁니다(루트 상수는 dword 배열이다). */
-            static uint32 toBits( float32 value )
-            {
-                uint32 bits = 0;
-                Memory::copy( &bits, &value, sizeof( bits ) );
-                return bits;
-            }
         };
     } // namespace
 } // namespace sw
@@ -201,8 +194,8 @@ namespace sw
 
             uint32 arrRoot[CanvasRendererInternal::kRootConstantCount]{};
             arrRoot[CanvasRendererInternal::kRootQuadBase]     = quadBase + batch._firstQuad;
-            arrRoot[CanvasRendererInternal::kRootTargetWidth]  = CanvasRendererInternal::toBits( static_cast<float32>( targetWidth ) );
-            arrRoot[CanvasRendererInternal::kRootTargetHeight] = CanvasRendererInternal::toBits( static_cast<float32>( targetHeight ) );
+            arrRoot[CanvasRendererInternal::kRootTargetWidth]  = BitUtil::floatToBits( static_cast<float32>( targetWidth ) );
+            arrRoot[CanvasRendererInternal::kRootTargetHeight] = BitUtil::floatToBits( static_cast<float32>( targetHeight ) );
             arrRoot[CanvasRendererInternal::kRootColorVision]  = colorVisionMode;
             for ( uint32 slot = 0; slot < shaderslot::kCanvasTextureCount; ++slot )
             {

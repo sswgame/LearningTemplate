@@ -2,7 +2,7 @@
 
 #include "Engine/Destruction/FractureNetworkSync.h"
 
-#include "Core/Network/BitStream.h"
+#include "Core/Serialization/BitStream.h"
 
 namespace sw
 {

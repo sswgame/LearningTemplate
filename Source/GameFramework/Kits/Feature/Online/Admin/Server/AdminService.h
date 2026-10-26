@@ -9,6 +9,7 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Container/IDAllocator.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Network/Message/NetRequest.h"
@@ -114,7 +115,7 @@ namespace sw
         ServiceMetrics      _metrics;
         AdminServiceConfig  _settings;
         IServiceStore*      _pStore;
-        uint64              _nextCallID;
+        IDAllocator<uint64> _callIDAllocator;
         int64               _nowMs;
         int32               _pendingSeedCount;
     };

@@ -3,7 +3,7 @@
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/MatchmakingServer.h"
 
 #include "Core/Container/VectorUtil.h"
-#include "Core/Network/BitStream.h"
+#include "Core/Serialization/BitStream.h"
 
 #include "GameFramework/Base/Online/Bus/ServerBus.h"
 #include "GameFramework/Base/Online/Identity/AccountPresence.h"

@@ -2,8 +2,8 @@
 
 #include "Core/Common/HashUtil.h"
 #include "Core/Container/deque.h"
-#include "Core/Network/BitStream.h"
 #include "Core/Network/Connection/NetHost.h"
+#include "Core/Serialization/BitStream.h"
 #include "Core/Task/TaskManager.h"
 
 #include "GameFramework/Kits/Feature/Network/NetClientServer/ReplicationClient.h"

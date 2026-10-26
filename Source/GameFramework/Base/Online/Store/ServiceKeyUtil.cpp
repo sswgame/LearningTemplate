@@ -3,7 +3,7 @@
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 
 #include "Core/Container/vector.h"
-#include "Core/Network/BitStream.h"
+#include "Core/Serialization/BitStream.h"
 
 namespace sw
 {

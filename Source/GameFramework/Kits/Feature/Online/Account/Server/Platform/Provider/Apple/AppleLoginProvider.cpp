@@ -60,8 +60,8 @@ namespace sw
         , _pSecurity{ pSecurity }
         , _pAppleHTTPClient{ pAppleHTTPClient }
         , _secretExpiresMs{ 0 }
-        , _nextVerificationID{ 1 }
-        , _nextRevocationID{ 1 }
+        , _verificationIDAllocator{}
+        , _revocationIDAllocator{}
     {
     }
 
@@ -131,7 +131,7 @@ namespace sw
         // 안쪽 OIDC 구현은 `ID 토큰|nonce` 를 읽는다. 인가 코드는 이 제공자가 들고 있다.
         const string         innerTicket = nonce.empty() ? idToken : idToken + "|" + nonce;
         PendingVerification& pending     = _listPending.emplace_back();
-        pending._outerID                 = _nextVerificationID++;
+        pending._outerID                 = _verificationIDAllocator.allocate();
         pending._code                    = std::move( code );
         pending._innerID                 = _oidc.submitVerification( AppleLoginProviderInternal::toBytes( innerTicket ), nowMs );
         return pending._outerID;
@@ -239,7 +239,7 @@ namespace sw
 
     uint64 AppleLoginProvider::submitRevocation( string_view linkSecret, int64 nowMs )
     {
-        const uint64 revocationID = _nextRevocationID++;
+        const uint64 revocationID = _revocationIDAllocator.allocate();
         const string clientSecret = makeClientSecret( nowMs );
         if ( clientSecret.empty() )
         {

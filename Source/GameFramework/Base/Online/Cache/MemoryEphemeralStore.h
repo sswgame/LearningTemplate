@@ -9,6 +9,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/IDAllocator.h"
 #include "Core/Container/map.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
@@ -82,7 +83,7 @@ namespace sw
         unordered_map<string, ScoreSetEntry> _mapScoreSet;
         unordered_map<uint64, Inbox>         _mapInbox;
         int64                                _manualTimeMs;
-        uint64                               _nextInboxID;
+        IDAllocator<uint64>                  _inboxIDAllocator;
         uint8                                _bManualTime;
     };
 } // namespace sw
@@ -114,7 +115,7 @@ namespace sw
         vector<EphemeralReply>   _listReply;
         MemoryEphemeralDatabase* _pDatabase;
         uint64                   _inboxID;
-        uint64                   _nextRequestID;
+        IDAllocator<uint64>      _requestIDAllocator;
         uint8                    _bShutdown;
     };
 } // namespace sw

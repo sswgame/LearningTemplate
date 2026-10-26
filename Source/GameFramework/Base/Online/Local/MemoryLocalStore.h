@@ -7,6 +7,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/IDAllocator.h"
 #include "Core/Container/map.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
@@ -76,7 +77,7 @@ namespace sw
         vector<LocalStoreCompletion> _listCompletion;
         LocalSealContext             _sealContext;
         MemoryLocalDatabase*         _pDatabase;
-        uint64                       _nextRequestID;
+        IDAllocator<uint64>          _requestIDAllocator;
         uint8                        _bShutdown;
     };
 } // namespace sw

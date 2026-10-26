@@ -6,6 +6,7 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Container/IDAllocator.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 
@@ -41,6 +42,6 @@ namespace sw
         unordered_map<uint64, uint64>     _mapRequestToVerification;
         vector<PlatformLoginVerification> _listDone;
         HTTPClient*                       _pHTTPClient;
-        uint64                            _nextVerificationID;
+        IDAllocator<uint64>               _verificationIDAllocator;
     };
 } // namespace sw

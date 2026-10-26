@@ -3,7 +3,7 @@
 #include "GameFramework/Kits/Feature/Online/Chat/Server/ChatServer.h"
 
 #include "Core/Container/VectorUtil.h"
-#include "Core/Network/BitStream.h"
+#include "Core/Serialization/BitStream.h"
 
 #include "GameFramework/Base/Online/Bus/ServerBus.h"
 #include "GameFramework/Kits/Feature/Online/Chat/Shared/ChatProtocol.h"

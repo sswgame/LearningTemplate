@@ -3,7 +3,7 @@
 #include "GameFramework/Base/Actor/Control/Intent/ControlIntent.h"
 
 #include "Core/Math/MathUtil.h"
-#include "Core/Network/BitStream.h"
+#include "Core/Serialization/BitStream.h"
 
 #include "GameFramework/Base/Foundation/Utility/Math/OrientationUtil.h"
 

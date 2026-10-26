@@ -34,7 +34,7 @@ namespace sw
         , _mapRequestToVerification{}
         , _listDone{}
         , _pHTTPClient{ pHTTPClient }
-        , _nextVerificationID{ 1 }
+        , _verificationIDAllocator{}
     {
     }
 
@@ -67,7 +67,7 @@ namespace sw
 
     uint64 TicketQueryLoginProvider::submitVerification( const vector<uint8>& ticketBytes, int64 nowMs )
     {
-        const uint64      verificationID = _nextVerificationID++;
+        const uint64      verificationID = _verificationIDAllocator.allocate();
         const string_view ticket( reinterpret_cast<const utf8*>( ticketBytes.data() ), ticketBytes.size() );
         if ( isQuerySafe( ticket ) == false )
         {

@@ -7,6 +7,7 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Container/IDAllocator.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
@@ -111,6 +112,6 @@ namespace sw
         TradeSnapshot                       _snapshot;
         OnlineServiceClient*                _pClient;
         AccountID                           _accountID;
-        uint64                              _nextRequestID;
+        IDAllocator<uint64>                 _requestIDAllocator;
     };
 } // namespace sw

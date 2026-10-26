@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Container/IDAllocator.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
@@ -109,7 +110,7 @@ namespace sw
         FreeTypeRasterizer()
             : _mapFace{}
             , _pLibrary{ nullptr }
-            , _nextFaceID{ 1 }
+            , _faceIDAllocator{}
         {
         }
 
@@ -169,7 +170,7 @@ namespace sw
             }
             entry._pFace            = pFace;
             entry._unitsPerEm       = static_cast<float32>( pFace->units_per_EM );
-            const FontFaceID faceID = _nextFaceID++;
+            const FontFaceID faceID = _faceIDAllocator.allocate();
             _mapFace[faceID]        = std::move( entry );
             return faceID;
         }
@@ -365,7 +366,7 @@ namespace sw
 
         unordered_map<FontFaceID, FaceEntry> _mapFace;
         FT_Library                           _pLibrary;
-        FontFaceID                           _nextFaceID;
+        IDAllocator<FontFaceID>              _faceIDAllocator;
     };
 } // namespace sw
 

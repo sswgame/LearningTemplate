@@ -3,7 +3,7 @@
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Server/LeaderboardService.h"
 
 #include "Core/Container/StringUtil.h"
-#include "Core/Network/BitStream.h"
+#include "Core/Serialization/BitStream.h"
 
 #include "GameFramework/Base/Online/Cache/EphemeralStore.h"
 #include "GameFramework/Base/Online/Cache/EphemeralStoreRouter.h"
@@ -766,8 +766,8 @@ namespace sw
         , _completionBuffer{}
         , _dependencies{}
         , _pScheduler{ nullptr }
-        , _nextQueryID{ 1 }
-        , _nextSettlementID{ 1 }
+        , _queryIDAllocator{}
+        , _settlementIDAllocator{}
         , _pendingCount{ 0 }
     {
     }
@@ -1135,7 +1135,7 @@ namespace sw
             }
             return;
         }
-        const uint64 queryID = _nextQueryID++;
+        const uint64 queryID = _queryIDAllocator.allocate();
         RankQuery&   query   = _mapQuery[queryID];
         query._read          = read;
         if ( read._operation == LeaderboardOperation::Top )
@@ -1545,7 +1545,7 @@ namespace sw
 
     void LeaderboardService::startSettlement( const LeaderboardDefinition& board, const LeaderboardSeason& season, string jobID, int64 nowMs, const SettlementDelegate& onDone )
     {
-        const uint64        settlementID = _nextSettlementID++;
+        const uint64        settlementID = _settlementIDAllocator.allocate();
         SettlementProgress& progress     = _mapSettlement[settlementID];
         progress._board                  = board;
         progress._season                 = season;

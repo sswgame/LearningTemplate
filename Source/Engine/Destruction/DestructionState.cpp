@@ -2,13 +2,14 @@
 
 #include "Engine/Destruction/DestructionState.h"
 
+#include "Core/Common/BitUtil.h"
 #include "Core/Common/Defines.h"
 #include "Core/Common/FourCcUtil.h"
 #include "Core/Common/HashUtil.h"
 #include "Core/Container/UnionFindUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Network/BitStream.h"
+#include "Core/Serialization/BitStream.h"
 
 #include "Engine/Common/EngineDefines.h"
 #include "Engine/Destruction/FractureGraph.h"
@@ -85,13 +86,6 @@ namespace sw
                 hash = HashUtil::combine( hash, value );
                 hash = ( hash ^ ( hash >> 31 ) ) * HashUtil::kSplitMixMultiplier0;
                 return hash;
-            }
-
-            static uint64 toBits( float32 value )
-            {
-                uint32 bits = 0;
-                Memory::copy( &bits, &value, sizeof( bits ) );
-                return bits;
             }
 
             /** @brief 오름차순 목록에서 값의 인덱스를 반환합니다. 없으면 -1 입니다. */
@@ -588,12 +582,12 @@ namespace sw
         uint64 hash    = HashUtil::kFnvOffset64;
         for ( size_t node = 0; node < _listNodeStrain.size(); ++node )
         {
-            hash = Internal::mixHash( hash, Internal::toBits( _listNodeStrain[node] ) );
+            hash = Internal::mixHash( hash, BitUtil::floatToBits( _listNodeStrain[node] ) );
             hash = Internal::mixHash( hash, _listNodeBroken[node] );
         }
         for ( size_t link = 0; link < _listLinkStrain.size(); ++link )
         {
-            hash = Internal::mixHash( hash, Internal::toBits( _listLinkStrain[link] ) );
+            hash = Internal::mixHash( hash, BitUtil::floatToBits( _listLinkStrain[link] ) );
             hash = Internal::mixHash( hash, _listLinkBroken[link] );
         }
         for ( const uint8 bAnchored : _listLeafAnchored )

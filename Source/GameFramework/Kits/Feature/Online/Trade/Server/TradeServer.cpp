@@ -2,7 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeServer.h"
 
-#include "Core/Network/BitStream.h"
+#include "Core/Serialization/BitStream.h"
 
 #include "GameFramework/Base/Online/Config/RemoteConfig.h"
 #include "GameFramework/Base/Online/Identity/OnlinePushRelay.h"

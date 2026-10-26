@@ -71,7 +71,7 @@ namespace sw
          */
         [[nodiscard]] static PairedAnimationSessionSnapshot makeAtElapsedTime( const PairedAnimationDef& def, uint32 sessionID, float32 elapsedSeconds );
 
-        /** @brief 바이트로 씁니다(`Core/Network/BitStream.h`). 읽는 쪽은 `readBytes` 입니다. */
+        /** @brief 바이트로 씁니다(`Core/Serialization/BitStream.h`). 읽는 쪽은 `readBytes` 입니다. */
         void writeBytes( vector<uint8>& outBytes ) const;
         /** @brief `writeBytes` 가 쓴 바이트를 읽습니다. 값이 에셋에 맞는지는 읽지 않고, 복원(`restoreSession`)이 에셋과 함께 검사합니다. */
         [[nodiscard]] static ReadResult readBytes( const vector<uint8>& bytes, PairedAnimationSessionSnapshot& outSnapshot );

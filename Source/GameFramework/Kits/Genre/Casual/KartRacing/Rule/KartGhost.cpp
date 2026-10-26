@@ -4,7 +4,7 @@
 
 #include "Core/Common/FourCcUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Network/BitStream.h"
+#include "Core/Serialization/BitStream.h"
 
 #include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartTrack.h"
 

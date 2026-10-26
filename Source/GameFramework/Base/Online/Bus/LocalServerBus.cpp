@@ -16,14 +16,14 @@ namespace sw
     LocalServerBusHub::LocalServerBusHub()
         : _mutex{}
         , _mapInbox{}
-        , _nextInboxID{ 1 }
+        , _inboxIDAllocator{}
     {
     }
 
     uint64 LocalServerBusHub::registerInbox()
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        const uint64            inboxID = _nextInboxID++;
+        const uint64            inboxID = _inboxIDAllocator.allocate();
         _mapInbox[inboxID]              = Inbox{};
         return inboxID;
     }

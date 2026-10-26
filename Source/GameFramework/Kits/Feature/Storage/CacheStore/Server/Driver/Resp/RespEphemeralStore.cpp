@@ -65,7 +65,7 @@ namespace sw
         , _nextSubscribeConnectNanoseconds{ 0 }
         , _commandBackoffMs{ 0 }
         , _subscribeBackoffMs{ 0 }
-        , _nextRequestID{ 1 }
+        , _requestIDAllocator{}
         , _subscriptionAckCount{ 0 }
         , _subscriptionSentCount{ 0 }
         , _blockingRequestID{ 0 }
@@ -111,7 +111,7 @@ namespace sw
 
     uint64 RespEphemeralStore::submit( const EphemeralRequest& request )
     {
-        const uint64 requestID      = _nextRequestID++;
+        const uint64 requestID      = _requestIDAllocator.allocate();
         Operation&   operation      = _listOperation.emplace_back();
         operation._request          = request;
         operation._reply._requestID = requestID;

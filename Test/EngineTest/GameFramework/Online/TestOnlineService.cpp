@@ -1,8 +1,8 @@
 #include "pch.h"
 
 #include "Core/Common/HashUtil.h"
-#include "Core/Network/BitStream.h"
 #include "Core/Network/Message/NetRequest.h"
+#include "Core/Serialization/BitStream.h"
 
 #include "EngineTest/GameFramework/Online/OnlineMessageTestUtil.h"
 #include "EngineTest/GameFramework/Online/OnlineMethodTableTestUtil.h"

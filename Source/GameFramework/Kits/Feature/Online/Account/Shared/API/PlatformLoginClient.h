@@ -7,6 +7,7 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Container/IDAllocator.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
@@ -93,6 +94,6 @@ namespace sw
         vector<Preset>                    _listPreset;
         vector<PlatformLoginClientResult> _listPending;
         vector<PlatformLoginClientResult> _listDone;
-        uint64                            _nextRequestID;
+        IDAllocator<uint64>               _requestIDAllocator;
     };
 } // namespace sw

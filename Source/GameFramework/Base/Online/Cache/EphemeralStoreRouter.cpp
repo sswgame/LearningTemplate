@@ -13,7 +13,7 @@ namespace sw
         , _listSubscription{}
         , _mapRequestToReply{}
         , _pStore{ nullptr }
-        , _nextSubscriptionID{ 1 }
+        , _subscriptionIDAllocator{}
     {
     }
 
@@ -116,7 +116,7 @@ namespace sw
         Subscription& subscription   = _listSubscription.emplace_back();
         subscription._channel        = string( channel );
         subscription._onMessage      = onMessage;
-        subscription._subscriptionID = _nextSubscriptionID++;
+        subscription._subscriptionID = _subscriptionIDAllocator.allocate();
         return subscription._subscriptionID;
     }
 

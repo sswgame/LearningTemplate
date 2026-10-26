@@ -96,7 +96,7 @@ namespace sw::editor
     uint32 EditorRenderViews::allocatePreviewTarget()
     {
         EditorPreviewViewTarget preview;
-        preview._id = _nextPreviewTargetID++;
+        preview._id = _previewTargetIDAllocator.allocate();
         _listPreviewTarget.push_back( preview );
         return preview._id;
     }

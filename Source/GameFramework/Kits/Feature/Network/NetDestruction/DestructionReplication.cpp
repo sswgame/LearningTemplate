@@ -4,9 +4,9 @@
 
 #include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Network/BitStream.h"
 #include "Core/Network/Connection/NetConnection.h"
 #include "Core/Network/Connection/NetHost.h"
+#include "Core/Serialization/BitStream.h"
 
 #include "Engine/Destruction/FractureComponentBase.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

@@ -13,13 +13,13 @@ namespace sw
         , _mapRequestToVerification{}
         , _listDone{}
         , _pHTTPClient{ pHTTPClient }
-        , _nextVerificationID{ 1 }
+        , _verificationIDAllocator{}
     {
     }
 
     uint64 ProfileAPILoginProvider::submitVerification( const vector<uint8>& ticketBytes, int64 nowMs )
     {
-        const uint64      verificationID = _nextVerificationID++;
+        const uint64      verificationID = _verificationIDAllocator.allocate();
         HTTPClientRequest request;
         request._url       = _settings._profileURL;
         request._timeoutMs = _settings._requestTimeoutMs;

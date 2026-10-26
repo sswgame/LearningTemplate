@@ -12,6 +12,7 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Container/IDAllocator.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
@@ -73,6 +74,6 @@ namespace sw
         vector<Subscription>                 _listSubscription;
         unordered_map<uint64, ReplyDelegate> _mapRequestToReply;
         IEphemeralStore*                     _pStore;
-        uint64                               _nextSubscriptionID;
+        IDAllocator<uint64>                  _subscriptionIDAllocator;
     };
 } // namespace sw

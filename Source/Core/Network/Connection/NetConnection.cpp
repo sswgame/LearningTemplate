@@ -3,8 +3,8 @@
 #include "Core/Network/Connection/NetConnection.h"
 
 #include "Core/Math/MathUtil.h"
-#include "Core/Network/BitStream.h"
 #include "Core/Network/Connection/NetFlowLog.h"
+#include "Core/Serialization/BitStream.h"
 
 namespace sw
 {

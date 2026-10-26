@@ -7,6 +7,7 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Container/IDAllocator.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
@@ -62,7 +63,7 @@ namespace sw
         vector<PlatformLoginVerification> _listDone;
         INetSecurityProvider*             _pProvider;
         HTTPClient*                       _pHTTPClient;
-        uint64                            _nextVerificationID;
+        IDAllocator<uint64>               _verificationIDAllocator;
         uint64                            _jwksRequestID;
         int64                             _lastFetchStartMs;
         uint32                            _fetchGeneration; ///< 끝난 받기의 횟수이다

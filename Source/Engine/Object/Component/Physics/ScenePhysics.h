@@ -17,10 +17,10 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Time/FixedStepTimer.h"
 
 #include "Engine/Object/GameObject/Service/ISceneService.h"
 #include "Engine/Physics/Collision/PhysicsContact.h"
-#include "Engine/Physics/FixedStepAccumulator.h"
 #include "Engine/Physics/IPhysicsScene.h"
 
 namespace sw
@@ -121,9 +121,9 @@ namespace sw
         /** @brief 덮어쓴 고정 스텝(초)입니다. 0 이면 엔진 설정을 씁니다. */
         float32 getFixedStepOverride() const { return _fixedStepOverride; }
         /** @brief 고정 스텝 누적기입니다. 스텝 크기 · 프레임당 상한은 설정 표에서 옵니다. */
-        const FixedStepAccumulator& getAccumulator() const { return _accumulator; }
+        const FixedStepTimer& getStepTimer() const { return _stepTimer; }
         /** @brief 마지막 프레임의 보간 비(0..1)입니다. */
-        float32 getInterpolationAlpha() const { return _accumulator.getAlpha(); }
+        float32 getInterpolationAlpha() const { return _stepTimer.getAlpha(); }
         /** @brief 지금까지 돈 고정 스텝 수입니다. */
         uint64 getStepCount() const { return _stepCount; }
         /** @brief 마지막 프레임이 낸 3D 접촉 이벤트입니다(스텝 순서). 다음 `step` 까지 그대로입니다. */
@@ -171,7 +171,7 @@ namespace sw
         vector<SweptOverlap2D>          _listSweptOverlap2D;  ///< 이번 프레임에 연속 콜라이더가 쓸고 지나간 겹침(`step` 이 비운다)
         unique_ptr<IPhysicsScene3D>     _pScene3D;
         unique_ptr<IPhysicsScene2D>     _pScene2D;
-        FixedStepAccumulator            _accumulator;
+        FixedStepTimer                  _stepTimer;
         vector<PhysicsComponent*>       _arrListComponent[3]; ///< 단계(`PhysicsComponentPhase`)마다 하나. 컴포넌트가 자기 자리(`_physicsIndex`)를 든다
         vector<PhysicsContactEvent3D>   _listFrameEvent3D;
         vector<PhysicsContactEvent2D>   _listFrameEvent2D;

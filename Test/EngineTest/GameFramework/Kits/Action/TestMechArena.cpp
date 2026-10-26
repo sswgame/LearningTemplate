@@ -2,7 +2,7 @@
 // 유도 대 직선 특수기(변형으로 무기 세트 교체), 팀 전력 게이지 · 기체 교체 · 승패, 체력 조건 스킬, 상태 바이트 왕복 · 결정성.
 #include "pch.h"
 
-#include "Core/Network/BitStream.h"
+#include "Core/Serialization/BitStream.h"
 
 #include "Engine/Net/NetMessageChannel.h"
 #include "Engine/Serialization/Fixed/FixedLayout.h"

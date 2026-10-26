@@ -22,8 +22,8 @@ namespace sw
         , _listRevokedSecret{}
         , _name{ name }
         , _linkSecret{}
-        , _nextVerificationID{ 1 }
-        , _nextRevocationID{ 1 }
+        , _verificationIDAllocator{}
+        , _revocationIDAllocator{}
         , _submittedCount{ 0 }
         , _bRevocationEnabled{ SW_FALSE }
         , _bRevocationUnavailable{ SW_FALSE }
@@ -35,7 +35,7 @@ namespace sw
         (void)nowMs;
         PendingTicket& pending  = _listPending.emplace_back();
         pending._text           = string( reinterpret_cast<const utf8*>( ticketBytes.data() ), ticketBytes.size() );
-        pending._verificationID = _nextVerificationID++;
+        pending._verificationID = _verificationIDAllocator.allocate();
         ++_submittedCount;
         return pending._verificationID;
     }
@@ -88,7 +88,7 @@ namespace sw
         (void)nowMs;
         PendingRevocation& pending = _listPendingRevocation.emplace_back();
         pending._secret            = string( linkSecret );
-        pending._revocationID      = _nextRevocationID++;
+        pending._revocationID      = _revocationIDAllocator.allocate();
         return pending._revocationID;
     }
 

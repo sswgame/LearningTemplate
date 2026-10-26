@@ -2,7 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Chat/Shared/ChatClient.h"
 
-#include "Core/Network/BitStream.h"
+#include "Core/Serialization/BitStream.h"
 
 namespace sw
 {

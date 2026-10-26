@@ -11,7 +11,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
-#include "Core/Network/BitStream.h"
+#include "Core/Serialization/BitStream.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Serialization/Fixed/FixedLayout.h"

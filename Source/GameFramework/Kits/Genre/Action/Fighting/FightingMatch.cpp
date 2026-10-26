@@ -3,7 +3,7 @@
 #include "GameFramework/Kits/Genre/Action/Fighting/FightingMatch.h"
 
 #include "Core/Math/MathUtil.h"
-#include "Core/Network/BitStream.h"
+#include "Core/Serialization/BitStream.h"
 
 #include "Engine/Reflection/ReflectionValidation.h"
 #include "Engine/Serialization/Base/SerializerUtil.h"

@@ -328,7 +328,7 @@ namespace sw
         , _brokenTicketBuffer{}
         , _pRouter{ nullptr }
         , _serverID{ 0 }
-        , _nextListID{ 1 }
+        , _lobbyListIDAllocator{}
         , _maxPartySize{ 4 }
         , _sequence{ 0 }
     {
@@ -668,7 +668,7 @@ namespace sw
                     completeLobby( step._request, MatchmakingResult::Ok, LobbySnapshot{} );
                     break;
                 }
-                const uint64 listID  = _nextListID++;
+                const uint64 listID  = _lobbyListIDAllocator.allocate();
                 PendingList& list    = _mapListIDToList[listID];
                 list._modeID         = step._request._modeID;
                 list._requestTag     = step._request._requestTag;

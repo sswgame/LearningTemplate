@@ -13,6 +13,7 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Container/IDAllocator.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
@@ -93,7 +94,7 @@ namespace sw
         INetSecurityProvider*             _pSecurity;
         HTTPClient*                       _pAppleHTTPClient;
         int64                             _secretExpiresMs;
-        uint64                            _nextVerificationID;
-        uint64                            _nextRevocationID;
+        IDAllocator<uint64>               _verificationIDAllocator;
+        IDAllocator<uint64>               _revocationIDAllocator;
     };
 } // namespace sw

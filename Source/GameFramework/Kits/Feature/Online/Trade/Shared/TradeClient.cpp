@@ -2,7 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Trade/Shared/TradeClient.h"
 
-#include "Core/Network/BitStream.h"
+#include "Core/Serialization/BitStream.h"
 
 #include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Base/Online/Service/OnlineReplyUtil.h"
@@ -17,7 +17,7 @@ namespace sw
         , _snapshot{}
         , _pClient{ nullptr }
         , _accountID{ kInvalidAccountID }
-        , _nextRequestID{ 1 }
+        , _requestIDAllocator{}
     {
     }
 
@@ -116,7 +116,7 @@ namespace sw
     {
         NetRequestOptions options;
         options._idempotencyKey     = key.isValid() ? key : NetIdempotencyKey::makeRandom();
-        const uint64      requestID = _nextRequestID++;
+        const uint64      requestID = _requestIDAllocator.allocate();
         const PendingCall pendingCall{ options._idempotencyKey, requestID, method };
         // 범위 밖 값이라 쓰지 못하면 보내지 않고 kInvalidRequest 응답으로 끝난다. 그 응답도 onResponse 를 지난다
         (void)_callTable.sendMessage<TradeProtocol::MessageTypes>( *_pClient, method, request, options, OnlineResponseDelegate::create<&TradeClient::onResponse>( this ),

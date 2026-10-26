@@ -2,7 +2,7 @@
 
 #include "GameFramework/Base/Online/Audit/ServiceAuditLog.h"
 
-#include "Core/Network/BitStream.h"
+#include "Core/Serialization/BitStream.h"
 
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 

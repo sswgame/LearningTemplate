@@ -3,8 +3,8 @@
 #include "Core/Network/Replication/NetInputWindow.h"
 
 #include "Core/Math/MathUtil.h"
-#include "Core/Network/BitStream.h"
 #include "Core/Network/Message/NetSendBudget.h"
+#include "Core/Serialization/BitStream.h"
 
 namespace sw
 {

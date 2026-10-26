@@ -7,8 +7,8 @@
 #include "Core/Common/Types.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/String/TagID.h"
+#include "Core/Time/Countdown.h"
 
-#include "GameFramework/Base/Foundation/Utility/Time/Countdown.h"
 #include "GameFramework/Base/Gameplay/Ability/AbilitySystemEvents.h"
 #include "GameFramework/GameFrameworkExports.h"
 

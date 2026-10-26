@@ -5,54 +5,42 @@
 namespace sw
 {
     InputActionBuffer::InputActionBuffer()
-        : _arrBufferedAction{}
-        , _arrCommandHistory{}
+        : _listBufferedAction{}
+        , _listCommandHistory{}
         , _elapsedSeconds{ 0.0f }
-        , _bufferedActionCount{ 0 }
-        , _bufferedActionHead{ 0 }
-        , _commandHistoryCount{ 0 }
-        , _commandHistoryHead{ 0 }
     {
     }
 
     void InputActionBuffer::clear()
     {
-        _elapsedSeconds      = 0.0f;
-        _bufferedActionCount = 0;
-        _bufferedActionHead  = 0;
-        _commandHistoryCount = 0;
-        _commandHistoryHead  = 0;
+        _elapsedSeconds = 0.0f;
+        _listBufferedAction.clear();
+        _listCommandHistory.clear();
     }
 
     void InputActionBuffer::update( float32 deltaSeconds )
     {
         _elapsedSeconds += deltaSeconds;
-        for ( uint32 index = 0; index < _bufferedActionCount; ++index )
+        for ( BufferedActionItem& item : _listBufferedAction )
         {
-            const uint32 idx = ( _bufferedActionHead + index ) % kMaxBufferedActions;
-            _arrBufferedAction[idx]._remainingTime -= deltaSeconds;
+            item._remainingTime -= deltaSeconds;
         }
-        while ( _bufferedActionCount > 0 && _arrBufferedAction[_bufferedActionHead]._remainingTime <= 0.0f )
+        while ( _listBufferedAction.empty() == false && _listBufferedAction.front()._remainingTime <= 0.0f )
         {
-            _bufferedActionHead = ( _bufferedActionHead + 1 ) % kMaxBufferedActions;
-            --_bufferedActionCount;
+            _listBufferedAction.popFront();
         }
-        while ( _commandHistoryCount > 0 && ( _elapsedSeconds - _arrCommandHistory[_commandHistoryHead]._timestamp ) > kHistorySeconds )
+        while ( _listCommandHistory.empty() == false && ( _elapsedSeconds - _listCommandHistory.front()._timestamp ) > kHistorySeconds )
         {
-            _commandHistoryHead = ( _commandHistoryHead + 1 ) % kMaxCommandHistory;
-            --_commandHistoryCount;
+            _listCommandHistory.popFront();
         }
     }
 
     void InputActionBuffer::recordTriggered( const hashed_string& action )
     {
-        const uint32 insertIdx                   = ( _commandHistoryHead + _commandHistoryCount ) % kMaxCommandHistory;
-        _arrCommandHistory[insertIdx]._action    = action;
-        _arrCommandHistory[insertIdx]._timestamp = _elapsedSeconds;
-        if ( _commandHistoryCount < kMaxCommandHistory )
-            ++_commandHistoryCount;
-        else
-            _commandHistoryHead = ( _commandHistoryHead + 1 ) % kMaxCommandHistory;
+        CommandHistoryEntry entry;
+        entry._action    = action;
+        entry._timestamp = _elapsedSeconds;
+        _listCommandHistory.push( entry );
     }
 
     void InputActionBuffer::bufferAction( const hashed_string& action, float32 expirationSeconds )
@@ -60,23 +48,19 @@ namespace sw
         if ( action.empty() )
             return;
 
-        const uint32 insertIdx                       = ( _bufferedActionHead + _bufferedActionCount ) % kMaxBufferedActions;
-        _arrBufferedAction[insertIdx]._action        = action;
-        _arrBufferedAction[insertIdx]._remainingTime = expirationSeconds;
-        if ( _bufferedActionCount < kMaxBufferedActions )
-            ++_bufferedActionCount;
-        else
-            _bufferedActionHead = ( _bufferedActionHead + 1 ) % kMaxBufferedActions;
+        BufferedActionItem item;
+        item._action        = action;
+        item._remainingTime = expirationSeconds;
+        _listBufferedAction.push( item );
     }
 
     bool InputActionBuffer::consumeBufferedAction( const hashed_string& action )
     {
-        for ( uint32 index = 0; index < _bufferedActionCount; ++index )
+        for ( BufferedActionItem& item : _listBufferedAction )
         {
-            const uint32 idx = ( _bufferedActionHead + index ) % kMaxBufferedActions;
-            if ( _arrBufferedAction[idx]._action == action && _arrBufferedAction[idx]._remainingTime > 0.0f )
+            if ( item._action == action && item._remainingTime > 0.0f )
             {
-                _arrBufferedAction[idx]._remainingTime = 0.0f;
+                item._remainingTime = 0.0f;
                 return true;
             }
         }
@@ -85,17 +69,16 @@ namespace sw
 
     bool InputActionBuffer::wasCommandSequenceTriggered( const vector<hashed_string>& listSequence, float32 maxWindowSeconds ) const
     {
-        if ( listSequence.empty() || _commandHistoryCount < listSequence.size() )
+        if ( listSequence.empty() || _listCommandHistory.size() < listSequence.size() )
             return false;
 
         const size_t seqCount = listSequence.size();
         size_t       matchIdx = seqCount;
         float32      lastTime = 0.0f;
 
-        for ( int32 index = static_cast<int32>( _commandHistoryCount ) - 1; index >= 0; --index )
+        for ( int32 index = static_cast<int32>( _listCommandHistory.size() ) - 1; index >= 0; --index )
         {
-            const uint32               historyIndex = ( _commandHistoryHead + static_cast<uint32>( index ) ) % kMaxCommandHistory;
-            const CommandHistoryEntry& historyEntry = _arrCommandHistory[historyIndex];
+            const CommandHistoryEntry& historyEntry = _listCommandHistory[static_cast<uint32>( index )];
 
             if ( matchIdx == seqCount )
             {
@@ -126,7 +109,7 @@ namespace sw
     bool InputActionBuffer::wasCommandPatternTriggered( const hashed_string& pattern, float32 maxWindowSeconds ) const
     {
         string_view patternText = pattern.view();
-        if ( patternText.empty() || _commandHistoryCount == 0 )
+        if ( patternText.empty() || _listCommandHistory.empty() )
             return false;
 
         vector<hashed_string> listExpected;

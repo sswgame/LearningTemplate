@@ -3,8 +3,8 @@
 // 버스로 와서 묵힌 제재를 바로 버린다.
 #include "pch.h"
 
-#include "Core/Network/BitStream.h"
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
+#include "Core/Serialization/BitStream.h"
 
 #include "EngineTest/GameFramework/Online/OnlineHostTestUtil.h"
 

@@ -6,10 +6,10 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/Time/FixedStepTimer.h"
 
 #include "Engine/Physics/PhysicsSystem.h"
 
-#include "GameFramework/Base/Foundation/Utility/Time/FixedStepTimer.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/CoasterTrack.h"
 

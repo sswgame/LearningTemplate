@@ -17,6 +17,7 @@
 #include "Core/Common/Defines.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/IDAllocator.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
@@ -153,7 +154,7 @@ namespace sw
         OnlineServiceHost*                           _pHost;                      ///< `onServiceTick` 이 붙잡는다. 알림을 이 서버에 붙은 계정에 바로 보낸다
         IServiceStore*                               _pStore;
         MetricRegistry*                              _pMetricRegistry; ///< 환불 결과 지표를 센다(설정에서 복사)
-        uint64                                       _nextCallID;
+        IDAllocator<uint64>                          _callIDAllocator;
         int32                                        _pendingRefundCount;
         ScheduledRun                                 _auditRun;
         uint8                                        _bAuditPending;

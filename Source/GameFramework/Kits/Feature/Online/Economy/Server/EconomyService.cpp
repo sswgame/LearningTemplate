@@ -2,7 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyService.h"
 
-#include "Core/Network/BitStream.h"
+#include "Core/Serialization/BitStream.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Observability/MetricRegistry.h"
@@ -163,7 +163,7 @@ namespace sw
         , _pHost{ nullptr }
         , _pStore{ nullptr }
         , _pMetricRegistry{ nullptr }
-        , _nextCallID{ 1 }
+        , _callIDAllocator{}
         , _pendingRefundCount{ 0 }
         , _auditRun{}
         , _bAuditPending{ SW_FALSE }
@@ -307,7 +307,7 @@ namespace sw
 
     void EconomyService::startCall( const EconomyCall& call, PendingCall pending )
     {
-        pending._callID              = _nextCallID++;
+        pending._callID              = _callIDAllocator.allocate();
         pending._receivedNanoseconds = MonotonicClock::nowNanoseconds();
         pending._accountID           = call._accountID;
         pending._methodIndex         = EconomyMethod::toIndex( call._method );

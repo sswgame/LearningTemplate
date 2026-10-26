@@ -5,18 +5,15 @@
 namespace sw
 {
     ThreadedLocalStore::ThreadedLocalStore( unique_ptr<ILocalSlotStorage> storage, const LocalSealContext& sealContext )
-        : _listQueuedRequest{}
-        , _listCompletion{}
+        : _listCompletion{}
         , _sealContext{ sealContext }
         , _storage{ std::move( storage ) }
         , _worker{}
         , _mutex{}
-        , _requestReady{}
-        , _nextRequestID{ 1 }
+        , _requestIDAllocator{}
         , _pendingCount{ 0 }
-        , _bStopping{ SW_FALSE }
     {
-        _worker = sw::thread( &ThreadedLocalStore::runWorker, this );
+        _worker.start( "LocalStore", DedicatedWorker<LocalStoreRequest>::ProcessDelegate::create<&ThreadedLocalStore::processRequest>( this ) );
     }
 
     ThreadedLocalStore::~ThreadedLocalStore()
@@ -81,57 +78,34 @@ namespace sw
 
     void ThreadedLocalStore::shutdown()
     {
-        {
-            std::scoped_lock<mutex> lock{ _mutex };
-            if ( _bStopping == SW_TRUE && _worker.joinable() == false )
-                return;
-            _bStopping = SW_TRUE;
-        }
-        _requestReady.notify_all();
-        if ( _worker.joinable() )
-            _worker.join();
+        _worker.stop();
     }
 
     uint64 ThreadedLocalStore::enqueueRequest( LocalStoreRequest request )
     {
-        std::scoped_lock<mutex> lock{ _mutex };
-        request._requestID = _nextRequestID++;
-        ++_pendingCount;
-        const uint64 requestID = request._requestID;
-        if ( _bStopping == SW_TRUE )
+        uint64 requestID = 0;
         {
-            _listCompletion.push_back( LocalStoreRequestUtil::makeCompletion( request, LocalStoreResult::IOError ) );
-            return requestID;
+            std::scoped_lock<mutex> lock{ _mutex };
+            requestID          = _requestIDAllocator.allocate();
+            request._requestID = requestID;
+            ++_pendingCount;
         }
-        _listQueuedRequest.push_back( std::move( request ) );
-        _requestReady.notify_one();
+        if ( _worker.submit( std::move( request ) ) == false )
+        {
+            // 종료한 뒤에 들어온 요청이다 — 실행하지 않고 실패로 끝낸다(submit 이 거절하면 request 는 옮겨지지 않았다).
+            std::scoped_lock<mutex> lock{ _mutex };
+            _listCompletion.push_back( LocalStoreRequestUtil::makeCompletion( request, LocalStoreResult::IOError ) );
+        }
         return requestID;
     }
 
-    void ThreadedLocalStore::runWorker()
+    void ThreadedLocalStore::processRequest( LocalStoreRequest& request, bool bStopping )
     {
-        for ( ;; )
-        {
-            LocalStoreRequest request;
-            bool              bStopping = false;
-            {
-                std::unique_lock<mutex> lock{ _mutex };
-                while ( _listQueuedRequest.empty() && _bStopping == SW_FALSE )
-                {
-                    _requestReady.wait( lock );
-                }
-                if ( _listQueuedRequest.empty() )
-                    return; // 종료하는 중이고 남은 일이 없다
-                request = std::move( _listQueuedRequest.front() );
-                _listQueuedRequest.pop_front();
-                bStopping = _bStopping == SW_TRUE;
-            }
-            // 종료하는 중에도 쓰기 · 지우기는 끝까지 한다(종료 때 세이브를 잃지 않는다) — 읽기 · 나열은 받을 사람이 없다.
-            const bool              bDropped   = bStopping && ( request._operation == LocalStoreOperation::Read || request._operation == LocalStoreOperation::List );
-            LocalStoreCompletion    completion = bDropped ? LocalStoreRequestUtil::makeCompletion( request, LocalStoreResult::IOError )
-                                                          : LocalStoreRequestUtil::execute( request, *_storage, _sealContext );
-            std::scoped_lock<mutex> lock{ _mutex };
-            _listCompletion.push_back( std::move( completion ) );
-        }
+        // 종료하는 중에도 쓰기 · 지우기는 끝까지 한다(종료 때 세이브를 잃지 않는다) — 읽기 · 나열은 받을 사람이 없다.
+        const bool              bDropped   = bStopping && ( request._operation == LocalStoreOperation::Read || request._operation == LocalStoreOperation::List );
+        LocalStoreCompletion    completion = bDropped ? LocalStoreRequestUtil::makeCompletion( request, LocalStoreResult::IOError )
+                                                      : LocalStoreRequestUtil::execute( request, *_storage, _sealContext );
+        std::scoped_lock<mutex> lock{ _mutex };
+        _listCompletion.push_back( std::move( completion ) );
     }
 } // namespace sw

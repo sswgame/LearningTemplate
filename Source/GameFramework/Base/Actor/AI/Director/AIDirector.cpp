@@ -84,7 +84,7 @@ namespace sw
         , _pickSerial{ 0 }
         , _phaseIndex{ -1 }
         , _cycle{ 0 }
-        , _traceHead{ 0 }
+
     {
     }
 
@@ -104,7 +104,6 @@ namespace sw
         _spawnDirector.initialize( _pSpawnTable, _seed ^ AIDirectorInternal::kSpawnSeedSalt );
         _eventBuffer.clear();
         _listTrace.clear();
-        _traceHead  = 0;
         _time       = 0.0f;
         _phaseTime  = 0.0f;
         _intensity  = 0.0f;
@@ -450,15 +449,7 @@ namespace sw
     void AIDirector::pushEvent( const AIDirectorEvent& event )
     {
         _eventBuffer.push( event );
-        if ( static_cast<int32>( _listTrace.size() ) < kMaxTraceEvent )
-        {
-            _listTrace.push_back( event );
-        }
-        else
-        {
-            _listTrace[static_cast<size_t>( _traceHead )] = event;
-            _traceHead                                    = ( _traceHead + 1 ) % kMaxTraceEvent;
-        }
+        _listTrace.push( event );
         if ( gv_aiDirectorTrace != 0 )
         {
             SW_LOG_INFO( "[AIDirector] t=%.2f I=%.2f %# '%#' (%#) count %# scale %.2f", event._time, event._intensity, getEnumName( event._kind ), event._id.c_str(),
@@ -543,10 +534,8 @@ namespace sw
     void AIDirector::dumpTrace( string& outText ) const
     {
         outText.clear();
-        const size_t count = _listTrace.size();
-        for ( size_t offset = 0; offset < count; ++offset )
+        for ( const AIDirectorEvent& event : _listTrace )
         {
-            const AIDirectorEvent&                 event = _listTrace[( static_cast<size_t>( _traceHead ) + offset ) % count];
             StringBuilder<constant::kMaxBuffer256> line;
             line.appendFormat( "[%.2fs] I=%.2f %# '%#'", event._time, event._intensity, getEnumName( event._kind ), event._id.c_str() );
             if ( event._source.empty() == false )
@@ -688,7 +677,6 @@ namespace sw
         _spawnDirector = std::move( spawner );
         _eventBuffer.clear();
         _listTrace.clear();
-        _traceHead = 0;
         return true;
     }
 } // namespace sw

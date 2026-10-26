@@ -2,7 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Social/Server/SocialServer.h"
 
-#include "Core/Network/BitStream.h"
+#include "Core/Serialization/BitStream.h"
 
 #include "GameFramework/Base/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/Base/Online/Identity/AccountPresence.h"

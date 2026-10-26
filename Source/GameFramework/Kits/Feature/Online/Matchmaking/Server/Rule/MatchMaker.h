@@ -14,6 +14,7 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Container/IDAllocator.h"
 #include "Core/Container/vector.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -68,6 +69,6 @@ namespace sw
         vector<MatchTicket>          _listTicket;
         vector<MatchBackfillRequest> _listBackfill; ///< 들어온 순서(오래된 것 먼저)이다
         MatchModeDefinition          _definition;
-        uint64                       _nextMatchID;
+        IDAllocator<uint64>          _matchIDAllocator;
     };
 } // namespace sw

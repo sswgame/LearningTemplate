@@ -2,7 +2,6 @@
 
 #include "Core/Diagnostics/ProfilerTimeline.h"
 #include "Core/Math/VectorMath.h"
-#include "Core/Network/BitStream.h"
 #include "Core/Network/Connection/NetConnection.h"
 #include "Core/Network/Connection/NetFlowLog.h"
 #include "Core/Network/Connection/NetHost.h"
@@ -15,6 +14,7 @@
 #include "Core/Network/Transport/NetTransport.h"
 #include "Core/Network/Transport/PlatformSocketUtil.h"
 #include "Core/Network/Transport/UDPNetTransport.h"
+#include "Core/Serialization/BitStream.h"
 
 #include "TestFramework/Harness/TestLoopbackCluster.h"
 #include "TestFramework/TestFramework.h"

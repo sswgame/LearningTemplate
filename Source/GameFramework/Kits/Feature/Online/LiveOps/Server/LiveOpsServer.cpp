@@ -3,7 +3,7 @@
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/LiveOpsServer.h"
 
 #include "Core/Common/HashUtil.h"
-#include "Core/Network/BitStream.h"
+#include "Core/Serialization/BitStream.h"
 
 #include "GameFramework/Base/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
