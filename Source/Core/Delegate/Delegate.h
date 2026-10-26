@@ -9,6 +9,7 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/Container/array.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Memory/Memory.h"
 
 namespace sw
@@ -94,8 +95,8 @@ namespace sw
 
         /**
          * @brief 두 델리게이트가 같은 대상을 가리키는지 비교합니다.
-         * @note 람다로 만든 Delegate 는 복사하면 서로 다른 인스턴스로 취급되어 항상 false 입니다. 그래서 MulticastDelegate 에서
-         *       람다를 제거할 때는 반드시 DelegateHandle 을 써야 합니다.
+         * @note 람다로 만든 Delegate 는 복사하면 서로 다른 인스턴스로 취급되어 항상 false 입니다. MulticastDelegate 의 항목은 대상이 아니라
+         *       `add` 가 돌려준 구독(`Subscription`)으로만 뗍니다.
          */
         bool operator==( const Delegate& other ) const
         {
@@ -326,7 +327,7 @@ namespace sw
 {
 
     // ------------------------------------------------------------------------------
-    // 3) DelegateHandle — add() 가 발급하고 remove(handle) 로 해제한다.
+    // 3) DelegateHandle — 멀티캐스트 항목의 발급 ID. 호출부는 핸들 대신 `add` 가 돌려주는 `Subscription` 을 든다.
     //    발급기(`allocate`)의 실체는 Engine.dll(Core OBJECT)에 하나뿐이다. 로드되는 모듈들도 같은 카운터를 보므로,
     //    모듈이 건 구독의 핸들이 엔진 쪽 핸들과 겹치지 않는다.
     // ------------------------------------------------------------------------------
@@ -349,35 +350,21 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 타입을 지운 멀티캐스트 인터페이스입니다. 항목은 핸들로만 제거합니다. */
-    class SW_API IMulticastDelegateBase
-    {
-    public:
-        IMulticastDelegateBase() = default;
-        /** @brief 가상 소멸자입니다(리스트 정리는 파생 클래스가 합니다). */
-        virtual ~IMulticastDelegateBase()                                      = default;
-        IMulticastDelegateBase( const IMulticastDelegateBase& )                = default;
-        IMulticastDelegateBase& operator=( const IMulticastDelegateBase& )     = default;
-        IMulticastDelegateBase( IMulticastDelegateBase&& ) noexcept            = default;
-        IMulticastDelegateBase& operator=( IMulticastDelegateBase&& ) noexcept = default;
-
-        /** @brief 핸들과 같은 항목을 제거합니다. */
-        virtual void remove( const DelegateHandle& handle ) = 0;
-    };
-
     /** @brief 시그니처별로 특수화하는 멀티캐스트 델리게이트입니다. */
     template <typename Signature>
     class MulticastDelegate;
 
     // ------------------------------------------------------------------------------
-    // 4) MulticastDelegate — add / remove / broadcast. broadcast 중의 remove 는 끝난 뒤로 미룬다
+    // 4) MulticastDelegate — add(구독) / broadcast. 구독이 풀리는 것은 broadcast 가 끝난 뒤로 미룬다
     // ------------------------------------------------------------------------------
     /**
      * @class MulticastDelegate
      * @brief 여러 델리게이트를 모아 두고 한꺼번에 호출하는 컨테이너입니다.
+     * @details 등록은 `add` 가 돌려주는 `Subscription` 이 소유합니다. 구독이 사라지면 항목이 빠지고, 이 객체가 먼저 사라지면 구독이 무효가 됩니다.
+     *          복사본은 항목을 가져가지만 구독은 원본에 남습니다(`broadcastSnapshot` 용 사본). 이동은 구독도 데려갑니다.
      */
     template <typename R, typename... Args>
-    class MulticastDelegate<R( Args... )> : public IMulticastDelegateBase
+    class MulticastDelegate<R( Args... )> : public SubscriptionSource
     {
         using delegate_type = Delegate<R( Args... )>;
 
@@ -411,10 +398,11 @@ namespace sw
         //
         // 그래서 생성은 깊이 0 · 빈 큐로 시작하고, 대입은 받는 쪽의 깊이를 건드리지 않는다(그 깊이는 지금 이 객체를
         // broadcast 중인 호출 스택의 것이다). 큐는 비운다. 교체되어 사라질 리스트의 핸들이기 때문이다.
+        // 구독(`Subscription`)은 복사가 데려가지 않고 이동이 데려간다(`SubscriptionSource`). 대입은 교체되는 항목의 구독을 무효화한다.
         // ------------------------------------------------------------------------------
-        /** @brief 구독 리스트만 복제합니다. broadcast 상태는 가져오지 않습니다. */
+        /** @brief 구독 리스트만 복제합니다. broadcast 상태와 구독은 가져오지 않습니다. */
         MulticastDelegate( const MulticastDelegate& other )
-            : IMulticastDelegateBase( other )
+            : SubscriptionSource( other )
             , _listDelegate{ other._listDelegate }
             , _listPendingRemove{}
             , _broadcastDepth{ 0 }
@@ -423,7 +411,7 @@ namespace sw
 
         /** @brief 구독 리스트를 넘겨받습니다. 원본은 빈 상태로 남습니다. */
         MulticastDelegate( MulticastDelegate&& other ) noexcept
-            : IMulticastDelegateBase( std::move( other ) )
+            : SubscriptionSource( std::move( other ) )
             , _listDelegate{ std::move( other._listDelegate ) }
             , _listPendingRemove{ std::move( other._listPendingRemove ) }
             , _broadcastDepth{ 0 }
@@ -438,7 +426,7 @@ namespace sw
         {
             if ( this != &other )
             {
-                IMulticastDelegateBase::operator=( other );
+                detachAllSubscriptions();
                 _listDelegate = other._listDelegate;
                 _listPendingRemove.clear();
             }
@@ -450,7 +438,7 @@ namespace sw
         {
             if ( this != &other )
             {
-                IMulticastDelegateBase::operator=( std::move( other ) );
+                SubscriptionSource::operator=( std::move( other ) );
                 _listDelegate = std::move( other._listDelegate );
                 _listPendingRemove.clear();
                 other._listDelegate.clear();
@@ -527,52 +515,21 @@ namespace sw
             }
         }
 
-        /** @brief 새 델리게이트를 등록하고 핸들을 반환합니다. */
-        DelegateHandle add( const delegate_type& newDelegate )
+        /**
+         * @brief 새 델리게이트를 등록하고 그 등록을 소유하는 구독을 반환합니다.
+         * @details 구독이 사라지면 항목이 빠집니다. 반환값을 버리면 그 자리에서 풀리므로 받지 않는 호출은 컴파일되지 않습니다(`[[nodiscard]]`).
+         */
+        [[nodiscard]] Subscription add( const delegate_type& newDelegate )
         {
-            DelegateHandle handle = DelegateHandle::allocate();
+            const DelegateHandle handle = DelegateHandle::allocate();
             _listDelegate.push_back( DelegateEntry{ handle, newDelegate } );
-            return handle;
+            return issueSubscription( handle._id );
         }
 
-        /** @brief 발급받은 핸들로 델리게이트 등록을 해제합니다. */
-        void remove( const DelegateHandle& handle ) override
-        {
-            if ( handle.isValid() == false )
-                return;
-
-            if ( _broadcastDepth > 0 )
-            {
-                // broadcast 중에 삭제되면, 남은 순회에서 이미 파괴된 객체를 호출(UAF)하지 않도록 즉시 무효화한다
-                for ( DelegateEntry& entry : _listDelegate )
-                {
-                    if ( entry._handle == handle )
-                    {
-                        entry._delegate = delegate_type{};
-                        break;
-                    }
-                }
-                _listPendingRemove.push_back( handle );
-                return;
-            }
-            removeNow( handle );
-        }
-
-        /** @brief 등록된 델리게이트 중 target 과 같은 항목을 찾아 삭제합니다. */
-        void remove( const delegate_type& target )
-        {
-            const DelegateEntry* pEntry = VectorUtil::findBy<&DelegateEntry::_delegate>( _listDelegate, target );
-            if ( pEntry == nullptr )
-                return;
-
-            // 핸들 경로와 같은 지연 제거를 거쳐야 broadcast 중에 이터레이터가 깨지지 않는다. 핸들은 복사한다 — 지우면 원소가 사라진다.
-            const DelegateHandle handle = pEntry->_handle;
-            remove( handle );
-        }
-
-        /** @brief 등록된 델리게이트를 모두 해제합니다. */
+        /** @brief 등록된 델리게이트를 모두 해제합니다. 그 구독들은 무효가 됩니다. */
         void removeAll()
         {
+            detachAllSubscriptions();
             if ( _broadcastDepth > 0 )
             {
                 for ( DelegateEntry& entry : _listDelegate )
@@ -603,12 +560,36 @@ namespace sw
             }
             for ( const DelegateHandle& handle : listHandle )
             {
-                remove( handle );
+                releaseSubscription( handle._id );
             }
             return static_cast<uint32>( listHandle.size() );
         }
 
     private:
+        /** @brief 구독 @p id 가 풀렸습니다. broadcast 중이면 그 자리에서 무효화하고 삭제는 끝난 뒤로 미룹니다. */
+        void releaseSubscription( uint64 id ) override
+        {
+            const DelegateHandle handle{ id };
+            if ( handle.isValid() == false )
+                return;
+
+            if ( _broadcastDepth > 0 )
+            {
+                // broadcast 중에 삭제되면, 남은 순회에서 이미 파괴된 객체를 호출(UAF)하지 않도록 즉시 무효화한다
+                for ( DelegateEntry& entry : _listDelegate )
+                {
+                    if ( entry._handle == handle )
+                    {
+                        entry._delegate = delegate_type{};
+                        break;
+                    }
+                }
+                _listPendingRemove.push_back( handle );
+                return;
+            }
+            removeNow( handle );
+        }
+
         /** @brief 핸들에 해당하는 항목을 즉시 제거합니다. broadcast 밖에서만 부르십시오. */
         void removeNow( const DelegateHandle& handle )
         {
