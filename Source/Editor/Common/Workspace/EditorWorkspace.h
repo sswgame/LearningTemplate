@@ -27,13 +27,12 @@ namespace sw
 
 namespace sw::editor
 {
-    /** @brief 에디터 뷰포트 카메라 북마크입니다. 위치, 회전, 타깃을 저장합니다. */
+    /** @brief 에디터 뷰포트 카메라 북마크입니다. 위치, 회전, 궤도 거리를 저장합니다. 궤도 중심은 이 셋에서 구하므로 따로 저장하지 않습니다. */
     struct CameraBookmark
     {
         string  _name;
         float3  _position{ 0.0f, 0.0f, 0.0f };
         float3  _rotation{ 0.0f, 0.0f, 0.0f };
-        float3  _orbitTarget{ 0.0f, 0.0f, 0.0f };
         float32 _orbitDistance{ 5.0f };
         bool    _bValid{ false };
     };

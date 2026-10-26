@@ -190,7 +190,6 @@ namespace sw::editor
                     CameraBookmark bm{};
                     bm._position      = _position;
                     bm._rotation      = _rotation;
-                    bm._orbitTarget   = _orbitTarget;
                     bm._orbitDistance = _orbitDistance;
                     fixed_string<constant::kMaxBuffer32> arrName;
                     formatstring( arrName.data(), arrName.capacity(), "POI %d", keyIndex + 1 );
@@ -352,7 +351,7 @@ namespace sw::editor
         _position      = bookmark._position;
         _rotation      = bookmark._rotation;
         _orbitDistance = bookmark._orbitDistance;
-        // 저장된 궤도 중심은 쓰지 않고 위치 · 회전 · 거리에서 다시 구한다(비행 전에 저장한 북마크의 옛 중심이 불변식을 깨지 않게).
+        // 궤도 중심은 저장하지 않고 위치 · 회전 · 거리에서 구한다.
         syncOrbitTargetToView();
     }
 } // namespace sw::editor
