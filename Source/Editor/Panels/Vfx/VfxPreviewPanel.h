@@ -40,7 +40,7 @@ namespace sw::editor
          * @brief 미리보기 효과가 이번 재생에서 만든 입자 수입니다(일정에서 오므로 CPU · GPU 방출기가 같다). 미리보기 씬이 없으면 false 입니다(탐침 `Editor.VfxPreviewParticleCount`).
          * @details GPU 방출기의 살아 있는 수는 GPU 버퍼에만 있어 게임 스레드가 모른다 — 그린 것은 탐침 `Editor.VfxPreviewSceneFrames` 와 캡처로 본다.
          */
-        bool findPreviewSpawnedParticleCount( uint64& outCount ) const;
+        [[nodiscard]] bool findPreviewSpawnedParticleCount( uint64& outCount ) const;
 
     private:
         /** @brief 방출기 하나의 요약(목록 표시용)입니다. */

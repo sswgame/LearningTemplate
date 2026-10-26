@@ -170,7 +170,7 @@ namespace sw::editor
          * @brief @p method 의 인자 입력란을 맞춥니다. 입력란 수를 인자 수에 맞추고, 타입이 바뀐 입력란은 기본값으로 되돌립니다.
          * @return 모든 인자를 인스펙터가 채울 수 있으면 true 입니다. 인자가 `kMaxMethodArgCount` 를 넘거나 내장 타입이 아닌 인자가 있으면 false 입니다.
          */
-        static bool prepareMethodArgs( const FunctionInfo& method, vector<InspectorMethodArgSlot>& inoutListSlot );
+        [[nodiscard]] static bool prepareMethodArgs( const FunctionInfo& method, vector<InspectorMethodArgSlot>& inoutListSlot );
         /** @brief 인자 입력란들을 호출 인자로 묶습니다. 각 값은 인자의 C++ 타입 그대로 들어갑니다. */
         static TaskArgs makeMethodArgs( const vector<InspectorMethodArgSlot>& listSlot );
         /**

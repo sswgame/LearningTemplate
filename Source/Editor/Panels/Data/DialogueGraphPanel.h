@@ -48,7 +48,7 @@ namespace sw::editor
         /** @brief 캔버스의 링크 생성과 삭제 상호작용을 처리합니다. */
         void handleCanvasInteractions();
         /** @brief 핀 번호의 연결 정보를 구합니다. 들어오는 핀과 흐름 타입 하나입니다. 이 그래프의 핀이 아니면 false 입니다. */
-        bool findGraphPin( int32 pinID, EditorGraphPinInfo& outInfo ) const;
+        [[nodiscard]] bool findGraphPin( int32 pinID, EditorGraphPinInfo& outInfo ) const;
         /** @brief 핀에 링크가 닿아 있으면 true 입니다. 핀 원을 채울지 정할 때 씁니다. */
         bool isPinLinked( int32 pinID ) const;
         /** @brief 들어오는 링크가 없는 노드를 캔버스에 문제로 넘깁니다. 시작 노드는 제외합니다. */

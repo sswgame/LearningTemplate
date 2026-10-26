@@ -54,7 +54,7 @@ namespace sw::editor
         void endCanvas();
 
         /** @brief Begin 없이 현재 에디터만 바인딩합니다. 위치를 조회할 때 씁니다. */
-        bool bind() const;
+        [[nodiscard]] bool bind() const;
         /** @brief bind() 와 짝입니다. */
         void unbind() const;
 

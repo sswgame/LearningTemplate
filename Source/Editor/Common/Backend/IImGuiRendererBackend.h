@@ -54,7 +54,7 @@ namespace sw::editor
         virtual ~IImGuiRendererBackend() = default;
 
         /** @brief RHI 디바이스에 ImGui 렌더러를 바인딩하고 초기화합니다. */
-        virtual bool initialize( IRHIDevice* pRHIDevice ) = 0;
+        [[nodiscard]] virtual bool initialize( IRHIDevice* pRHIDevice ) = 0;
         /** @brief ImGui 렌더러 리소스를 해제합니다. */
         virtual void shutdown() = 0;
         /** @brief 프레임을 시작할 때 ImGui 렌더러 상태를 갱신합니다. */

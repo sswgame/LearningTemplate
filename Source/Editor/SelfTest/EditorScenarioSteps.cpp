@@ -107,7 +107,7 @@ namespace sw::editor
              * @details 시나리오는 첫 에디터 프레임 앞에 시작하므로 켜는 곳(`EditorStateStore`)은 컨텍스트와 함께 이미 있어야 하고, 없으면(에디터가 꺼진 실행) 켠 척하지 않고 오류로 멈춘다.
              *          예전에는 검사 함수가 켜면서 결과를 버려, 켜는 곳이 아직 없던 때의 호출이 조용히 사라져 모든 클릭이 "no editor widget is marked" 로 졌다.
              */
-            static bool prepareMarks( AutomationStepContext& /*runner*/, const AutomationStep& step, string& outError )
+            [[nodiscard]] static bool prepareMarks( AutomationStepContext& /*runner*/, const AutomationStep& step, string& outError )
             {
                 if ( EditorSelfTestMarks::setEnabled( true ) )
                     return true;
@@ -358,7 +358,7 @@ namespace sw::editor
             }
 
             /** @brief 키 단계의 준비 함수입니다 - 위젯 기록을 켜고, 키 이름이 ImGui 가 아는 이름인지 봅니다(속성과 낱말 모양은 `Validation::validateKey` 가 이미 봤다). */
-            static bool prepareKey( AutomationStepContext& runner, const AutomationStep& step, string& outError )
+            [[nodiscard]] static bool prepareKey( AutomationStepContext& runner, const AutomationStep& step, string& outError )
             {
                 KeyArgs args;
                 return prepareMarks( runner, step, outError ) && parseKey( step, args, outError );
@@ -396,7 +396,7 @@ namespace sw::editor
             // EditorExpectObject: 활성 씬에 그 이름의 오브젝트가 몇 개인지 센다. 그 컴포넌트를 가진 것만 셀 수도 있다
             // ------------------------------------------------------------------------------
             /** @brief 개수 단계의 준비 함수입니다 - 위젯 기록을 켜고, `component` 가 아는 컴포넌트 타입인지 봅니다(속성과 수 형식은 `Validation::validateExpectObject` 가 이미 봤다). */
-            static bool prepareExpectObject( AutomationStepContext& runner, const AutomationStep& step, string& outError )
+            [[nodiscard]] static bool prepareExpectObject( AutomationStepContext& runner, const AutomationStep& step, string& outError )
             {
                 if ( prepareMarks( runner, step, outError ) == false )
                     return false;
@@ -1288,7 +1288,7 @@ namespace sw::editor
             }
 
             /** @brief `-gv_editorProbeOverlay` 바의 상태를 읽습니다. 씬 뷰가 없거나 그 바가 없으면 false 입니다. */
-            static bool findProbedOverlay( const EditorOverlayBarState*& pOutState, const EditorOverlayBarRuntime*& pOutRuntime )
+            [[nodiscard]] static bool findProbedOverlay( const EditorOverlayBarState*& pOutState, const EditorOverlayBarRuntime*& pOutRuntime )
             {
                 const EditorViewportClient* pClient = findSceneViewClient();
                 if ( pClient == nullptr )

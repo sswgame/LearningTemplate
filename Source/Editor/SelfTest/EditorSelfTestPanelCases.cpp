@@ -593,7 +593,7 @@ namespace sw::editor
             // 한다. 격자는 기본으로 켜져 있다.
             // ------------------------------------------------------------------------------
             /** @brief @p pDrawList 에서 텍스처가 @p textureID 인 명령의 순번과 그 정점이 덮는 사각형을 찾습니다. 없으면 false 입니다. */
-            static bool findImageCommand( const ImDrawList* pDrawList, ImTextureID textureID, int32& outCommandIndex, ImVec4& outRect )
+            [[nodiscard]] static bool findImageCommand( const ImDrawList* pDrawList, ImTextureID textureID, int32& outCommandIndex, ImVec4& outRect )
             {
                 for ( int32 commandIndex = 0; commandIndex < pDrawList->CmdBuffer.Size; ++commandIndex )
                 {

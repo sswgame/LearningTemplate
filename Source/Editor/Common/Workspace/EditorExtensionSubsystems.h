@@ -38,7 +38,7 @@ namespace sw::editor
             return make_unique<TSubsystem>();
         }
         template <typename TSubsystem>
-        static bool bind( SubsystemScope& scope, EditorSubsystem& subsystem )
+        [[nodiscard]] static bool bind( SubsystemScope& scope, EditorSubsystem& subsystem )
         {
             return scope.bind( static_cast<TSubsystem*>( &subsystem ) );
         }

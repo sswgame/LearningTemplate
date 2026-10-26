@@ -30,7 +30,7 @@ namespace sw::editor
         virtual ~ImGuiDX11RendererBackend() override = default;
 
         /** @brief D3D11 ImGui 렌더러를 초기화합니다. */
-        bool initialize( IRHIDevice* pRHIDevice ) override;
+        [[nodiscard]] bool initialize( IRHIDevice* pRHIDevice ) override;
         /** @brief D3D11 ImGui 렌더러를 종료합니다. */
         void shutdown() override;
 

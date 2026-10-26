@@ -133,7 +133,7 @@ namespace sw::editor
              * @brief @p fileText 에서 @p element 의 글 범위 [outBegin, outEnd) 를 찾습니다. 위치를 모르면 false 입니다.
              * @details 시작은 파서가 아는 원문 위치에서 `<` 로 거슬러 간다. 끝은 시작 태그가 `/>` 로 닫히면 거기, 아니면 같은 이름의 닫는 태그다.
              */
-            static bool findElementRange( string_view fileText, const XMLNode& element, string_view elementName, size_t& outBegin, size_t& outEnd )
+            [[nodiscard]] static bool findElementRange( string_view fileText, const XMLNode& element, string_view elementName, size_t& outBegin, size_t& outEnd )
             {
                 const int64 offset = element.getSourceOffset();
                 if ( offset < 0 || static_cast<size_t>( offset ) >= fileText.size() )

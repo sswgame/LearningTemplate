@@ -59,7 +59,7 @@ namespace sw::editor
         /** @brief 그래프 설정(출력 · 길이)과 고른 노드의 그리드, 처리 순서입니다. */
         void drawInspector();
         /** @brief 캔버스 프레임워크가 묻는 핀 정보입니다. 모르는 핀이면 false 입니다. */
-        bool findGraphPin( int32 pinID, EditorGraphPinInfo& outInfo );
+        [[nodiscard]] bool findGraphPin( int32 pinID, EditorGraphPinInfo& outInfo );
         /** @brief 속성 그리드가 사본을 고쳤다는 알림입니다. */
         void onGraphEdited( const PropertyInfo& prop );
 

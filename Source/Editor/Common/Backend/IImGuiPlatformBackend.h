@@ -31,7 +31,7 @@ namespace sw::editor
         virtual ~IImGuiPlatformBackend() = default;
 
         /** @brief 네이티브 창과 RHI 백엔드에 맞춰 ImGui 플랫폼 레이어를 초기화합니다. */
-        virtual bool initialize( IWindow* pWindow, RHIBackend backendType ) = 0;
+        [[nodiscard]] virtual bool initialize( IWindow* pWindow, RHIBackend backendType ) = 0;
         /** @brief ImGui 플랫폼 리소스를 해제합니다. */
         virtual void shutdown() = 0;
         /** @brief 프레임 시작 시 디스플레이 크기·입력 상태를 갱신합니다. */
