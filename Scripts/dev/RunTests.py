@@ -104,7 +104,8 @@ def selectCtestEntries(tree: BuildTree, selection: ChangedTests.TestSelection, b
     data = json.loads(listing.stdout)
     setLabelWanted = {"lint", "nogpu"} | ({"hostgpu"} if bGpu else set())
     listName: list[str] = []
-    for test in data.get("tests", []):
+    # `tests` 칸은 필수다 — 없으면 ctest 출력 모양이 바뀐 것이라 KeyError 로 멈춘다(빈 목록이면 린트 말고는 아무 테스트도 안 돌고 통과로 보인다).
+    for test in data["tests"]:
         setLabel = {label for prop in test.get("properties", []) if prop.get("name") == "LABELS" for label in prop.get("value", [])}
         listCommand = test.get("command") or [""]
         executable = Path(listCommand[0]).stem

@@ -189,8 +189,9 @@ def readBuildGraph(buildDir: Path, sourceRoot: Path) -> BuildGraph:
     graph = BuildGraph()
     mapIdName: dict[str, str] = {}
     listTargetData: list[dict] = []
-    for configuration in codemodel.get("configurations", []):
-        for targetRef in configuration.get("targets", []):
+    # `configurations` · `targets` 는 File API codemodel 의 필수 칸이다 — 없으면 KeyError 로 멈춘다(빈 그래프는 바뀐 파일을 어느 테스트에도 잇지 못한다).
+    for configuration in codemodel["configurations"]:
+        for targetRef in configuration["targets"]:
             data = json.loads((replyDir / targetRef["jsonFile"]).read_text(encoding="utf-8"))
             mapIdName[data["id"]] = data["name"]
             listTargetData.append(data)
