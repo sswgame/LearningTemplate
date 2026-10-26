@@ -130,7 +130,7 @@ namespace
             return scenario.loadFromPath( scenarioPath, error ) ? scenario.getTestOptions().makeLaunchArguments() : sw::string{};
         }
 
-        /** @brief 작업 폴더 기준 에디터 상태 폴더 경로(`Saved/Automation/EditorState/<이름>`)입니다 — 글은 `AutomationScenario.h` 상수이고 스크립트 `scenario` 가 같은 상수를 읽는다. */
+        /** @brief 실행 쓰기 루트(`AppTestUtil::getRunFolder`) 기준 에디터 상태 폴더 경로(`Saved/Automation/EditorState/<이름>`)입니다 — 글은 `AutomationScenario.h` 상수이고 스크립트 `scenario` 가 같은 상수를 읽는다. */
         static sw::string makeEditorStateRelativePath( const sw::string& name )
         {
             return sw::string( sw::kAutomationOutputFolder ) + "/" + sw::kAutomationEditorStateFolder + "/" + name;
@@ -149,9 +149,9 @@ namespace
         static sw::string makeEditorArguments( const sw::string& scenarioPath, const utf8* pSwitch )
         {
             const sw::string backend = pSwitch[0] == '-' ? sw::string( pSwitch + 1 ) : sw::string( "default" );
-            sw::string       stateFolder;
-            SW_EXPECT_TRUE( sw::FileUtil::makeAbsolutePath( makeEditorStateRelativePath( sw::getAutomationScenarioStem( scenarioPath ) + "_" + backend ), stateFolder ) );
-            SW_EXPECT_TRUE( sw::FileUtil::removeDirectory( stateFolder ) );
+            // 실행 쓰기 루트(케이스마다 다른 폴더) 아래다 — 테스트의 작업 폴더(`Bin`) 기준으로 풀면 같은 시나리오를 도는 다른 조각과 폴더가 겹친다.
+            const sw::string stateFolder = test::AppTestUtil::makeRunPath( makeEditorStateRelativePath( sw::getAutomationScenarioStem( scenarioPath ) + "_" + backend ) );
+            SW_EXPECT_TRUE( stateFolder.empty() == false && sw::FileUtil::removeDirectory( stateFolder ) );
             return makeEditorStateArguments( stateFolder );
         }
 
@@ -346,10 +346,8 @@ namespace
                 {
                     ++end;
                 }
-                sw::string stateFolder;
-                const bool bAbsolute = sw::FileUtil::makeAbsolutePath( makeEditorStateRelativePath( group + "_" + ( pSwitch + 1 ) ), stateFolder );
-                SW_EXPECT_TRUE( bAbsolute );
-                SW_EXPECT_TRUE( sw::FileUtil::removeDirectory( stateFolder ) );
+                const sw::string stateFolder = test::AppTestUtil::makeRunPath( makeEditorStateRelativePath( group + "_" + ( pSwitch + 1 ) ) );
+                SW_EXPECT_TRUE( stateFolder.empty() == false && sw::FileUtil::removeDirectory( stateFolder ) );
                 const sw::string arguments = makeEditorStateArguments( stateFolder );
                 for ( size_t index = begin; index < end; ++index )
                 {
@@ -431,10 +429,9 @@ namespace
             uint32 ranCount = 0;
             if ( listChained.empty() == false )
             {
-                const sw::string backend = pSwitch[0] == '-' ? sw::string( pSwitch + 1 ) : sw::string( "default" );
-                sw::string       stateFolder;
-                SW_EXPECT_TRUE( sw::FileUtil::makeAbsolutePath( makeEditorStateRelativePath( "chain_" + backend ), stateFolder ) );
-                SW_EXPECT_TRUE( sw::FileUtil::removeDirectory( stateFolder ) );
+                const sw::string backend     = pSwitch[0] == '-' ? sw::string( pSwitch + 1 ) : sw::string( "default" );
+                const sw::string stateFolder = test::AppTestUtil::makeRunPath( makeEditorStateRelativePath( "chain_" + backend ) );
+                SW_EXPECT_TRUE( stateFolder.empty() == false && sw::FileUtil::removeDirectory( stateFolder ) );
                 const sw::string          arguments = makeEditorStateArguments( stateFolder ) + " -scenario-keep-going";
                 sw::string                scenarioLines;
                 const test::AppRunOutcome outcome = test::AppTestUtil::runScenarioChain( makeChain( listChained, kReloadEvery ), "editor", pSwitch, scenarioLines, arguments );
@@ -452,7 +449,7 @@ namespace
 // 엔진 · 활성 게임의 시나리오는 시나리오 × 백엔드마다 독립 케이스 `AppScenarioTest.<시나리오>.<백엔드>` 다(`generateScenarioCases` — 폴더를 훑어 실행 시작에 만든다).
 // 같은 빌드가 지은 게임 팩(`Bin/Games/<게임>/`, `SW_GAMES`)의 시나리오는 `-game=<게임>` 으로 도는 `AppScenarioTest.<게임>.<시나리오>.<백엔드>` 다(Shipping 에는 팩이 없어 만들지 않는다).
 // 하나가 져도 나머지는 돌고, `--test_filter=AppScenarioTest.vfxgpulights.*` · `AppScenarioTest.HarvestValley.*` 로 골라 돌릴 수 있다. 종료 코드 0 이 통과이고 13 건너뜀 · 요구하지 않은 백엔드의 77 은 건너뜀이다.
-// 로그는 `Bin/Saved/Automation/<시나리오>_<백엔드>.log`.
+// 로그는 케이스의 실행 쓰기 루트(`build/<프리셋>/AppRuns/shard<i>of<n>/<케이스>/`)의 `Saved/Automation/<시나리오>_<백엔드>.log`.
 SW_TEST_CASE_GENERATOR( AppScenarioTest, AppScenarioTestInternal::generateScenarioCases );
 
 /**
@@ -545,8 +542,10 @@ SW_TEST_CASE_PER_PARAMETER( AppScenarioTest, RecordedPlayReplaysOnEveryBackend, 
     constexpr const utf8* kSource = "game/harvestvalley/automation/actions.scenario.xml";
     constexpr const utf8* kProbes = "Farm.FarmerX,Farm.TilledCount,Object.Z@Farmer,Pawn.Controller@Farmer";
 
-    const sw::string recordedPath = "Saved/Automation/Recorded/roundtrip_" + AppScenarioTestInternal::getBackendName( pParameter ) + ".scenario.xml";
-    (void)sw::FileUtil::tryRemoveFile( recordedPath ); // 지난 실행의 녹화를 읽지 않게 지운다
+    // App 에는 작업 폴더(실행 쓰기 루트) 기준 상대 경로를 준다(`-scenario-record` 는 `Saved/Automation/` 아래 상대 경로만 받는다). 테스트가 볼 때는 그 루트의 절대 경로다.
+    const sw::string recordedPath     = "Saved/Automation/Recorded/roundtrip_" + AppScenarioTestInternal::getBackendName( pParameter ) + ".scenario.xml";
+    const sw::string recordedDiskPath = test::AppTestUtil::makeRunPath( recordedPath );
+    (void)sw::FileUtil::tryRemoveFile( recordedDiskPath ); // 지난 실행의 녹화를 읽지 않게 지운다
     sw::string                sourceLines;
     const test::AppRunOutcome sourceOutcome =
         test::AppTestUtil::runScenario( kSource, pParameter, sourceLines, "-game=HarvestValley -scenario-record=" + recordedPath + " -scenario-record-probes=" + kProbes );
@@ -554,7 +553,7 @@ SW_TEST_CASE_PER_PARAMETER( AppScenarioTest, RecordedPlayReplaysOnEveryBackend, 
         SW_TEST_SKIP( "the backend cannot stand up on this machine or the scenario skipped itself" );
     if ( sourceOutcome == test::AppRunOutcome::Failed )
         return; // 실패는 runScenario 가 기록했다 — 녹화가 없으니 다시 돌릴 것이 없다
-    SW_EXPECT_TRUE_MSG( sw::FileUtil::exists( recordedPath ), ( recordedPath + " was not written" ).c_str() );
+    SW_EXPECT_TRUE_MSG( sw::FileUtil::exists( recordedDiskPath ), ( recordedDiskPath + " was not written" ).c_str() );
     sw::string replayLines;
     // 쓰기는 디스크 경로, 읽기는 붙인 도메인의 id 다(시나리오 입구는 리소스 id 만 받는다).
     const sw::string          replayID      = sw::ScenarioRecorder::makeReplayID( recordedPath );
@@ -585,7 +584,7 @@ SW_TEST_CASE_PER_PARAMETER( AppScenarioTest, ChainedScenariosShareOneProcess, Ap
 }
 
 // 에디터 작업 흐름 시나리오(`engine/automation/editor` 의 `.scenario.xml`)를 에디터를 켠 실행(`-EnableEditor`)으로 돌린다. 에디터 동작을 바꿨으면 이 시나리오로 확인한다.
-// 실행마다 빈 에디터 상태 폴더(`Bin/Saved/Automation/EditorState/<묶음>_<백엔드>`)로 시작하므로 사용자의 `Saved/Editor` 를 읽지도 쓰지도 않는다.
+// 실행마다 빈 에디터 상태 폴더(실행 쓰기 루트의 `Saved/Automation/EditorState/<묶음>_<백엔드>`)로 시작하므로 사용자의 `Saved/Editor` 를 읽지도 쓰지도 않는다.
 // `<묶음>.<n>.scenario.xml` 은 한 폴더를 이어 써 저장된 상태를 읽는 분기를 본다. 배포본에는 에디터가 없다.
 // 백엔드마다 한 케이스다 — 시나리오 60 개 × 백엔드 넷을 한 케이스에 두면 그 케이스 하나가 18 분을 넘겨 `AppTest_HostOnly` 시한(20 분)을 채웠다.
 // 케이스로 나눠야 `HOST_SHARDS` 가 조각마다 시한을 준다. 체인은 한 프로세스라 케이스 안에서 시나리오별로 가를 수 없지만, 단계(시나리오)마다 보고(`chain_editor_<백엔드>.<단계>.json`)가 남아

@@ -28,6 +28,18 @@ namespace sw
 {
     SW_LOG_CALLER( "Vulkan" );
 
+    namespace
+    {
+        /**
+         * @brief 파이프라인 캐시 파일(`<Bin>/Saved/ShaderCache/vk_pipeline_cache.bin`)입니다.
+         * @details 작업 폴더가 아니라 실행 파일 폴더 기준이다 — 테스트는 App 마다 작업 폴더(쓰기 루트)를 따로 주는데(`AppTestUtil::getRunFolder`) 이 캐시는 같은 빌드의 실행끼리 나누는 것이 목적이다.
+         */
+        string getVulkanPipelineCachePath()
+        {
+            return FileUtil::joinPath( FileUtil::getBinaryDirectory(), "Saved/ShaderCache/vk_pipeline_cache.bin" );
+        }
+    } // namespace
+
     static_assert( VulkanRHIRequiredVersion::makeAPIVersion( 1, 3 ) == VK_MAKE_API_VERSION( 0, 1, 3, 0 ),
                    "VulkanRHIRequiredVersion::makeAPIVersion must encode like VK_MAKE_API_VERSION" );
 
@@ -654,7 +666,7 @@ namespace sw
             return false;
 
         vector<uint8> listCacheData;
-        const string  cachePath = "Saved/ShaderCache/vk_pipeline_cache.bin";
+        const string  cachePath = getVulkanPipelineCachePath();
         // 못 읽으면 빈 캐시로 시작한다 — 파이프라인을 다시 만들 뿐이다.
         if ( FileUtil::exists( cachePath ) )
             (void)FileUtil::readFile( cachePath, listCacheData ); // 못 읽으면 빈 캐시로 시작한다(위 설명)
@@ -693,8 +705,9 @@ namespace sw
             vector<uint8> listCacheData( dataSize );
             if ( vkGetPipelineCacheData( _device, _pipelineCache, &dataSize, listCacheData.data() ) == VK_SUCCESS )
             {
-                FileUtil::ensureDirectoryExists( "Saved/ShaderCache" );
-                if ( FileUtil::writeFile( "Saved/ShaderCache/vk_pipeline_cache.bin", listCacheData.data(), static_cast<uint64>( listCacheData.size() ) ) )
+                const string cachePath = getVulkanPipelineCachePath();
+                FileUtil::ensureParentDirectoryExists( cachePath );
+                if ( FileUtil::writeFile( cachePath, listCacheData.data(), static_cast<uint64>( listCacheData.size() ) ) )
                     SW_LOG_INFO( "Saved pipeline cache (%# bytes).", static_cast<uint32>( dataSize ) );
                 else
                     SW_LOG_WARNING( "Could not save the pipeline cache - the next run builds pipelines from scratch" );

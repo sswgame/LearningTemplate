@@ -213,9 +213,10 @@ namespace
          */
         static void loadCapture( const utf8* pSwitch, const utf8* pCopySuffix, AppUICapture& outCapture )
         {
-            outCapture._backend         = pSwitch[0] == '-' ? sw::string( pSwitch + 1 ) : sw::string( "default" );
-            const sw::string imagePath  = sw::FileUtil::joinPath( kOutputFolder, "uidemo.ppm" );
-            const sw::string layoutPath = sw::FileUtil::joinPath( kOutputFolder, "uidemo.layout.txt" );
+            outCapture._backend           = pSwitch[0] == '-' ? sw::string( pSwitch + 1 ) : sw::string( "default" );
+            const sw::string outputFolder = test::AppTestUtil::makeRunPath( kOutputFolder ); // App 이 작업 폴더(실행 쓰기 루트) 기준으로 쓴 산출물
+            const sw::string imagePath    = sw::FileUtil::joinPath( outputFolder, "uidemo.ppm" );
+            const sw::string layoutPath   = sw::FileUtil::joinPath( outputFolder, "uidemo.layout.txt" );
             sw::string       error;
             sw::string       layout;
             SW_ASSERT_TRUE_MSG( sw::AutomationImageMetric::loadPpm( imagePath, outCapture._image, error ), error.c_str() );
@@ -227,9 +228,9 @@ namespace
             sw::vector<uint8> bytes;
             if ( sw::FileUtil::readFile( imagePath, bytes ) )
                 // 눈으로 볼 사본 — 실패는 writeFile 이 오류로 남긴다
-                (void)sw::FileUtil::writeFile( sw::FileUtil::joinPath( kOutputFolder, copyStem + ".ppm" ), bytes.data(), bytes.size() );
+                (void)sw::FileUtil::writeFile( sw::FileUtil::joinPath( outputFolder, copyStem + ".ppm" ), bytes.data(), bytes.size() );
             // 눈으로 볼 사본 — 실패는 writeTextFile 이 오류로 남긴다
-            (void)sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( kOutputFolder, copyStem + ".layout.txt" ), layout );
+            (void)sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( outputFolder, copyStem + ".layout.txt" ), layout );
         }
 
         /** @brief 견본의 알려진 영역을 단언합니다(백엔드 하나). */
@@ -301,7 +302,8 @@ namespace
 
 /**
  * @brief [AppUITest] UI 견본 화면이 모든 백엔드에서 같은 모양이다 — 알려진 영역(강조색 단추 · 둥근 모서리 바깥 · 자르기 밖)과 백엔드 사이 영역의 다른 화소 비율 · 가장자리 수
- * @details 산출물은 백엔드마다 `Bin/Saved/Automation/engine.uidemo/uidemo_<백엔드>.ppm` · `.layout.txt` 로 옮겨 둔다(실패를 눈으로 볼 때).
+ * @details 산출물은 백엔드마다 실행 쓰기 루트(`build/<프리셋>/AppRuns/shard<i>of<n>/<케이스>/`)의 `Saved/Automation/engine.uidemo/uidemo_<백엔드>.ppm` · `.layout.txt` 로
+ *          옮겨 둔다(실패를 눈으로 볼 때).
  */
 SW_TEST_CASE( AppUITest, DemoScreenMatchesAcrossBackends )
 {

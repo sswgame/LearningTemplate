@@ -6,6 +6,7 @@
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Process/Process.h"
 
 #include "Engine/Automation/AutomationTimeLimits.h"
 
@@ -31,6 +32,20 @@ namespace test
         return outcome == AppRunOutcome::Passed || outcome == AppRunOutcome::Failed;
     }
 
+    /**
+     * @brief App 한 판을 띄울 명령줄과 프로세스 옵션입니다. `_command` 가 비면 띄우지 못한다(실패는 이미 기록됐다).
+     * @details 옵션의 작업 폴더가 이 케이스의 실행 쓰기 루트다(`AppTestUtil::getRunFolder`). 명령줄만 따로 돌려주지 않는다 — 명령줄만 받아 띄우면
+     *          작업 폴더가 테스트의 `Bin` 이 되어 다른 조각 · `QaGoldenImages` 와 같은 `Saved/…` 에 쓴다.
+     */
+    struct AppLaunch
+    {
+        sw::string         _command{};
+        sw::ProcessOptions _options{};
+    };
+} // namespace test
+
+namespace test
+{
     /** @brief 빌드된 App 실행 파일을 찾고 띄웁니다(`AppCookTest` · `AppSmokeTest`). */
     struct AppTestUtil
     {
@@ -42,26 +57,43 @@ namespace test
         static sw::string findAppExecutablePath();
 
         /**
-         * @brief App 을 `arguments` 로 띄우는 명령줄입니다. 실행 파일을 못 찾으면 빈 문자열입니다.
+         * @brief App 을 `arguments` 로 띄우는 명령줄과 작업 폴더입니다. 실행 파일 · 실행 쓰기 루트를 못 얻으면 `_command` 가 빈다.
          * @details 경로에 공백이 있을 수 있어 첫 토큰(실행 파일 경로)은 따옴표로 감싸고, 사람이 지켜보지 않으므로 `-unattended` 를 붙인다
-         *          (에디터를 켜도 단언 대화상자를 걸지 않는다 — Debug 단언은 멈춘다).
+         *          (에디터를 켜도 단언 대화상자를 걸지 않는다 — Debug 단언은 멈춘다). 작업 폴더는 `getRunFolder` 다.
+         *          `-EnableEditor` 가 있는데 에디터 상태 폴더(`-gv_editorStateDir`)를 주지 않았으면 쓰기 루트 아래 상태 폴더를 붙인다 — 주지 않으면 에디터가
+         *          프로젝트 루트의 `Saved/Editor`(사용자의 레이아웃 · 설정)를 읽고 써 실행끼리 겹친다. 입구가 여기 하나라 케이스가 빠뜨릴 수 없다.
          */
-        static sw::string makeAppCommand( sw::string_view arguments );
+        [[nodiscard]] static AppLaunch makeAppLaunch( sw::string_view arguments );
         // 이 구성에 없는 기능이 필요한 인자(`-EnableEditor` · `-game=`)는 케이스가 `SW_TEST_REQUIRES_FEATURE` 로 먼저 선언해야 한다 — 선언이 빠졌으면 실패를 기록하고 빈 명령을 돌려준다.
 
         /**
+         * @brief 이 케이스가 띄우는 App 의 작업 폴더(실행 쓰기 루트) — `build/<프리셋>/AppRuns/shard<조각>of<조각 수>/<스위트_케이스>` 입니다. 못 만들면 실패를 기록하고 빈 글입니다.
+         * @details App 은 상대 경로 `Saved/…`(시나리오 산출물 · 보고 · 에디터 명령의 임시 파일 · BugIt · 스크린샷)를 작업 폴더에 쓴다. 폴더가 케이스와 ctest 항목
+         *          (호스트 조각 · 레이스 묶음은 조각 번호가 다르다)마다 다르므로 조각 · 레이스 묶음 · `QaGoldenImages` 가 동시에 돌아도 서로의 파일을 지우지 않는다.
+         *          한 케이스 안의 실행은 같은 폴더를 이어 쓴다(녹화 → 재생처럼 앞 실행의 산출물을 뒤 실행이 읽는다). `build/<프리셋>/` 아래라 App 이 위로 올라가
+         *          저장소의 `Resource/` 를 찾는다. 비우지 않고 케이스가 끝나도 남긴다 — 로그 · 사진을 열어 보고 `scenario-logs` 가 보고를 읽으며,
+         *          이름이 케이스마다 하나라 쌓이지 않는다(옛 `Bin/Saved` 와 같이 덮어쓴다). 케이스 밖에서 부르면 실패다 — 폴더가 케이스 이름으로 갈린다.
+         */
+        static sw::string getRunFolder();
+        /**
+         * @brief 실행 쓰기 루트 기준 상대 경로 @p relativePath(`Saved/Automation/…`)의 절대 경로입니다 — App 이 상대 경로로 쓴 산출물을 테스트가 읽는 자리.
+         * @return 절대 경로 · `..` 가 든 경로이거나 루트를 못 얻으면 실패를 기록하고 빈 글입니다.
+         */
+        static sw::string makeRunPath( sw::string_view relativePath );
+
+        /**
          * @brief App 을 `arguments` 로 한 판 돌리고 줄마다 @p onLine( process, line ) 을 부릅니다. 못 찾거나 못 띄우면 `_bLaunched` 가 false 다.
-         * @details 작업 폴더는 바꾸지 않는다 — 테스트의 작업 폴더가 `Bin` 이고 App 도 거기서 `Resource/` 를 찾아 올라간다. 시한을 넘기면 죽인다.
+         * @details 작업 폴더는 이 케이스의 실행 쓰기 루트다(`makeAppLaunch`). 시한을 넘기면 죽인다.
          *          **렌더러를 세우지 않는 실행(쿠킹 · `--check-*`)만 쓴다.** 백엔드를 고르는 실행은 `runAppOnBackend` 로 돌린다 — 종료 코드를 직접 보면
          *          요구 백엔드가 서지 못한 판을 건너뜀으로 넘길 수 있다.
          */
         template <typename TOnLine>
         static ProcessRunResult runApp( sw::string_view arguments, uint32 timeoutSeconds, TOnLine&& onLine )
         {
-            const sw::string command = makeAppCommand( arguments );
-            if ( command.empty() )
+            const AppLaunch launch = makeAppLaunch( arguments );
+            if ( launch._command.empty() )
                 return ProcessRunResult{};
-            return runProcessWithDeadline( command, sw::ProcessOptions{}, timeoutSeconds, onLine );
+            return runProcessWithDeadline( launch._command, launch._options, timeoutSeconds, onLine );
         }
 
         /**
@@ -108,7 +140,7 @@ namespace test
 
         /**
          * @brief 자동화 시나리오 @p scenarioPath 를 백엔드 스위치 @p pBackendSwitch(`-dx12` · 빈 글 = 빌드 기본)로 돌려 판정합니다(`runAppOnBackend` 와 같은 정책).
-         * @details 로그는 `Saved/Automation/<시나리오 이름 조각>_<백엔드>.log`, 보고는 `.json`. `[Scenario]` 줄은 @p outScenarioLines 에 모읍니다.
+         * @details 로그는 실행 쓰기 루트(`getRunFolder`)의 `Saved/Automation/<시나리오 이름 조각>_<백엔드>.log`, 보고는 `.json`. `[Scenario]` 줄은 @p outScenarioLines 에 모읍니다.
          *          @p extraArguments 는 명령줄 끝에 붙는다(에디터 시나리오의 `-EnableEditor`). 실패 메시지와 건너뜀 로그에는 시나리오 · 백엔드 · 종료 코드와 그 뜻 · `[Scenario]` 줄 ·
          *          통과하지 못했을 때 보고의 `failures[]` · `unhandledLogs[]` 줄이 든다(보고는 실행 전에 지우므로 지난 실행의 것을 읽지 않는다).
          *          시나리오가 `<Launch>` 로 `gv_` 개발 변수를 선언했거나 @p extraArguments 에 `-gv_` 가 있는데 이 빌드가 배포본이면 App 을 띄우지 않고
@@ -118,14 +150,14 @@ namespace test
                                                         sw::string_view extraArguments = {} );
         /**
          * @brief 시나리오 여럿을 **한 프로세스**에서 차례로 돌립니다(`-scenario=a,b,c`). 앞 단계가 통과해야 다음으로 가고, 앞 단계가 만든 상태를 이어받습니다.
-         * @param chainName 로그 · 보고 파일 이름(`Saved/Automation/chain_<이름>_<백엔드>.log` · `.<단계>.json`)
+         * @param chainName 로그 · 보고 파일 이름(실행 쓰기 루트의 `Saved/Automation/chain_<이름>_<백엔드>.log` · `.<단계>.json`)
          * @return 체인의 판정 — 체인의 종료 코드(전부 통과면 0, 아니면 처음 통과하지 못한 단계의 코드)로 정한다. `[Scenario] chain stage n/m …` 줄이 @p outScenarioLines 에 모입니다.
          * @details 통과하지 못했으면 실패 메시지에 `chain sub-results:` 로 통과하지 못한 단계(시나리오)마다 결과 · 종료 코드 · 단계 보고의 `failures[]` · `unhandledLogs[]` 를 나열한다
          *          (단계마다 보고 `<이름>_<백엔드>.<단계>.json` 이 있다 — 한 프로세스의 이점은 두고 어느 시나리오가 졌는지 가린다). 돌지 못한 단계는 `NOT RUN` 이다.
          */
         [[nodiscard]] static AppRunOutcome runScenarioChain( const sw::vector<sw::string>& listScenarioPath, const sw::string& chainName, const utf8* pBackendSwitch,
                                                              sw::string& outScenarioLines, sw::string_view extraArguments = {} );
-        /** @brief `runScenario` 가 그 시나리오 · 백엔드로 쓴 보고 경로(`Saved/Automation/<이름 조각>_<백엔드>.json`)입니다. */
+        /** @brief `runScenario` 가 그 시나리오 · 백엔드로 쓴 보고의 절대 경로(실행 쓰기 루트의 `Saved/Automation/<이름 조각>_<백엔드>.json`)입니다. */
         static sw::string makeReportPath( const sw::string& scenarioPath, const utf8* pBackendSwitch );
         /**
          * @brief 보고의 `records` 줄(`<Record>` — `frame 300 Scene.TransformHash = 12345`)을 읽습니다. 파일이 없거나 그 항목이 없으면 빈 목록입니다.
