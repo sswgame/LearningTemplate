@@ -199,9 +199,8 @@ namespace sw
         _pMemoryBudget                              = bootstrapParts._pMemoryBudget;
         if ( engine::initializeBootstrapSubsystems( _bootstrap, bootstrapParts ) == false )
         {
-            // 정렬 오류(선언 오타 · 순환)는 로거가 서기 전이다 — 표준 오류로도 낸다.
-            std::fprintf( stderr, "[Engine] bootstrap failed: %s\n", _bootstrap.getCollection().getError().c_str() );
-            SW_LOG_ERROR( "Engine bootstrap failed: %#", _bootstrap.getCollection().getError().c_str() );
+            // 정렬 오류(선언 오타 · 순환)는 로거가 서기 전일 수 있다 — 낮은 층 보고는 stderr 에 동기로 쓰고 로거가 있으면 로그에도 남긴다.
+            SW_LOW_LEVEL_ERROR( "Engine bootstrap failed: %s", _bootstrap.getCollection().getError().c_str() );
             return false;
         }
         // 크래시 보고 프로세스(`-crash-reporter=<폴더>`)는 헤드리스다 — 서비스 · 기동 단계를 세우지 않고 App 이 묶음을 보내고 끝낸다.

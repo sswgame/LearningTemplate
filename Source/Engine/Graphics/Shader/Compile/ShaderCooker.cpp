@@ -219,19 +219,7 @@ namespace sw
             {
                 if ( permutationDefine.empty() )
                     continue;
-                const size_t      eqPos = permutationDefine.find( '=' );
-                ShaderMacroDefine define;
-                if ( eqPos != string::npos )
-                {
-                    define._name  = permutationDefine.substr( 0, eqPos );
-                    define._value = permutationDefine.substr( eqPos + 1 );
-                }
-                else
-                {
-                    define._name  = permutationDefine;
-                    define._value = "1";
-                }
-                desc._listDefine.push_back( std::move( define ) );
+                desc._listDefine.push_back( ShaderMacroDefine::parse( permutationDefine ) );
             }
         }
 

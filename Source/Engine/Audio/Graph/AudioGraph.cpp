@@ -281,7 +281,7 @@ namespace sw
         {
             state = NodeState{};
         }
-        _random._state = _randomSeed;
+        _random.setSeed( _randomSeed );
     }
 
     bool AudioGraphInstance::seekToFrame( uint32 frame )
@@ -425,7 +425,7 @@ namespace sw
                     const float32 amplitude = pParameter[AudioGraphInternal::kNoiseAmplitude];
                     for ( uint32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
                     {
-                        pBuffer[frameIndex] = amplitude * ( _random.nextUnit() * 2.0f - 1.0f );
+                        pBuffer[frameIndex] = amplitude * ( _random.nextFloat() * 2.0f - 1.0f );
                     }
                     break;
                 }
@@ -478,8 +478,8 @@ namespace sw
             if ( state._framesToNextGrain <= 0.0 )
             {
                 state._framesToNextGrain += spawnInterval;
-                const float32 positionSeconds = pParameter[Internal::kGrainPosition] + pParameter[Internal::kGrainPositionJitter] * ( _random.nextUnit() * 2.0f - 1.0f );
-                const float32 pitchSemitones  = pParameter[Internal::kGrainPitch] + pParameter[Internal::kGrainPitchJitter] * ( _random.nextUnit() * 2.0f - 1.0f );
+                const float32 positionSeconds = pParameter[Internal::kGrainPosition] + pParameter[Internal::kGrainPositionJitter] * ( _random.nextFloat() * 2.0f - 1.0f );
+                const float32 pitchSemitones  = pParameter[Internal::kGrainPitch] + pParameter[Internal::kGrainPitchJitter] * ( _random.nextFloat() * 2.0f - 1.0f );
                 for ( Grain& grain : state._arrGrain )
                 {
                     if ( grain._lengthFrames != 0 )

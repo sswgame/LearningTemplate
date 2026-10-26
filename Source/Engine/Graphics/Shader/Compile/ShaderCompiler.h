@@ -3,6 +3,8 @@
  * @brief DXC 와 D3DCompiler 로 HLSL 을 여러 백엔드용으로 컴파일하는 셰이더 컴파일러 인터페이스입니다.
  */
 #pragma once
+#include "Core/Container/StringUtil.h"
+
 #include "Engine/EngineMinimal.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -123,20 +125,10 @@ namespace sw
          */
         static ShaderMacroDefine parse( string_view define )
         {
-            ShaderMacroDefine macro{};
-            const string      defineNt( define );
-            const size_t      equalPos = defineNt.find( '=' );
-            if ( equalPos == string::npos )
-            {
-                macro._name  = defineNt;
-                macro._value = "1";
-            }
-            else
-            {
-                macro._name  = defineNt.substr( 0, equalPos );
-                macro._value = defineNt.substr( equalPos + 1 );
-            }
-            return macro;
+            string_view name  = StringUtil::trim( define );
+            string_view value = "1";
+            (void)StringUtil::trySplitKeyValue( define, name, value ); // `=` 가 없으면 이름만 있는 매크로(값 1)다
+            return ShaderMacroDefine{ string( name ), string( value ) };
         }
     };
 } // namespace sw

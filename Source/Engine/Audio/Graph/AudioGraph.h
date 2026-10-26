@@ -14,6 +14,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Math/DeterministicRandom.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
@@ -197,7 +198,7 @@ namespace sw
         vector<float32>              _listBlockParameter; /**< 노드마다 이번 블록 값입니다(노드 수 × `kMaxParameterCount`). */
         vector<float32>              _listParameterValue; /**< 게임 파라미터마다 엔진이 넣은 값입니다. */
         vector<NodeState>            _listState;          /**< 노드마다의 실행 상태입니다. */
-        AudioRandom                  _random;             /**< 잡음 · 그래뉼러가 쓰는 난수입니다. */
+        DeterministicRandom64        _random;             /**< 잡음 · 그래뉼러가 쓰는 난수입니다. */
         uint64                       _randomSeed;         /**< 처음으로 되감을 때 다시 쓰는 시드입니다. */
         uint32                       _frame;              /**< 다음에 렌더할 프레임(그래프 시각)입니다. */
     };

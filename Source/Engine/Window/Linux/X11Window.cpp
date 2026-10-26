@@ -3,6 +3,7 @@
 #include "Engine/Window/Linux/X11Window.h"
 
 #include "Core/Common/PlatformOsHeaders.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 
 #include "Engine/Window/NativeWindowEvent.h"
@@ -303,8 +304,11 @@ namespace sw
         const utf8* const pKey = std::strstr( pResource, "Xft.dpi:" );
         if ( pKey == nullptr )
             return 1.0f;
-        const float32 dpi = static_cast<float32>( std::strtod( pKey + sizeof( "Xft.dpi:" ) - 1, nullptr ) );
-        return dpi > 0.0f ? dpi / kReferenceDpi : 1.0f;
+        const string_view rest{ pKey + sizeof( "Xft.dpi:" ) - 1 };
+        float32           dpi{ 0.0f };
+        if ( StringUtil::parseFloat( rest.substr( 0, rest.find( '\n' ) ), dpi ) == false || dpi <= 0.0f )
+            return 1.0f; // 줄이 숫자가 아니면 키가 없는 것과 같이 본다(위 주석)
+        return dpi / kReferenceDpi;
     }
 
     bool X11Window::processMessages()

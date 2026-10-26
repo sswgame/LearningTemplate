@@ -35,8 +35,6 @@ namespace sw
                 float32 number = fallback;
                 return StringUtil::parseFloat( value, number ) ? number : fallback;
             }
-
-            static bool toBool( string_view value ) { return StringUtil::parseBool( value, false ); }
         };
     } // namespace
 } // namespace sw
@@ -173,8 +171,11 @@ namespace sw
 
     bool UserSettingsEngineHandlers::applyMute( const UserSettingApplyParams& context )
     {
+        bool bMute{ false };
+        if ( StringUtil::tryParseBool( context._value, bMute ) == false )
+            return false;
         if ( _targets._pAudioService != nullptr )
-            _targets._pAudioService->setMute( UserSettingsEngineHandlersInternal::toBool( context._value ) );
+            _targets._pAudioService->setMute( bMute );
         return true;
     }
 
@@ -227,15 +228,21 @@ namespace sw
 
     bool UserSettingsEngineHandlers::applyInvertX( const UserSettingApplyParams& context )
     {
+        bool bInvert{ false };
+        if ( StringUtil::tryParseBool( context._value, bInvert ) == false )
+            return false;
         if ( _targets._pInputMap != nullptr )
-            _targets._pInputMap->getPlayerSettings()._bInvertX = UserSettingsEngineHandlersInternal::toBool( context._value );
+            _targets._pInputMap->getPlayerSettings()._bInvertX = bInvert;
         return true;
     }
 
     bool UserSettingsEngineHandlers::applyInvertY( const UserSettingApplyParams& context )
     {
+        bool bInvert{ false };
+        if ( StringUtil::tryParseBool( context._value, bInvert ) == false )
+            return false;
         if ( _targets._pInputMap != nullptr )
-            _targets._pInputMap->getPlayerSettings()._bInvertY = UserSettingsEngineHandlersInternal::toBool( context._value );
+            _targets._pInputMap->getPlayerSettings()._bInvertY = bInvert;
         return true;
     }
 
@@ -318,7 +325,8 @@ namespace sw
 
     bool UserSettingsEngineHandlers::applyVSync( const UserSettingApplyParams& context )
     {
-        _displayRequest._bVSync    = UserSettingsEngineHandlersInternal::toBool( context._value );
+        if ( StringUtil::tryParseBool( context._value, _displayRequest._bVSync ) == false )
+            return false;
         _displayRequest._bHasVSync = _displayRequest._bHasVSync || context._bDefault == false;
         _bDisplayDirty             = _bDisplayDirty || context._bStartup == false;
         return true;

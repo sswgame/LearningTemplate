@@ -3,11 +3,11 @@
 #include "Core/Network/Message/NetRequest.h"
 
 #include "Core/Common/HashUtil.h"
+#include "Core/Math/SecureRandom.h"
 #include "Core/Network/Message/StreamMessageEndpoint.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include <mutex>
-#include <random>
 
 SW_LOG_CALLER( "NetRequest" );
 
@@ -66,10 +66,9 @@ namespace sw
 
     NetIdempotencyKey NetIdempotencyKey::makeRandom()
     {
-        std::random_device randomDevice; // 운영체제 난수(Windows RtlGenRandom · 리눅스 getrandom)
-        NetIdempotencyKey  key;
-        key._high = ( static_cast<uint64>( randomDevice() ) << 32 ) | randomDevice();
-        key._low  = ( static_cast<uint64>( randomDevice() ) << 32 ) | randomDevice();
+        NetIdempotencyKey key;
+        key._high = SecureRandom::nextUint64();
+        key._low  = SecureRandom::nextUint64();
         if ( key.isValid() == false )
             key._low = 1;
         return key;

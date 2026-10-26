@@ -31,12 +31,12 @@ namespace sw
                 }
                 for ( const string& argument : listArgument )
                 {
-                    const string_view text     = argument;
-                    const size_t      equalPos = text.find( '=' );
-                    if ( equalPos == string_view::npos )
+                    string_view key;
+                    string_view value;
+                    if ( StringUtil::trySplitKeyValue( argument, key, value ) == false )
                         return false;
-                    const hashed_string        settingID( StringUtil::trim( text.substr( 0, equalPos ) ) );
-                    const UserSettingSetResult result = pSettings->setPendingValue( settingID, StringUtil::trim( text.substr( equalPos + 1 ) ) );
+                    const hashed_string        settingID( key );
+                    const UserSettingSetResult result = pSettings->setPendingValue( settingID, value );
                     const bool                 bTaken = result == UserSettingSetResult::Accepted || result == UserSettingSetResult::Clamped || result == UserSettingSetResult::Unchanged;
                     if ( bTaken == false )
                     {

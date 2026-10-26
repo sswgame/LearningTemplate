@@ -2,11 +2,9 @@
 
 #include "Games/Empty/BenchScene.h"
 
-#include "Core/Common/HashUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Math/XorShift32.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Character/Hit/RagdollComponent.h"
@@ -295,7 +293,7 @@ namespace sw
         , _listBenchExtra{}
         , _glassMaterial{ nullptr }
         , _listChurnInstance{}
-        , _churnRandom{ HashUtil::kGoldenRatio32 }
+        , _churnRandom{}
         , _churnFrame{ 0 }
         , _benchElapsed{ 0.0f }
         , _benchGridSide{ 0 }
@@ -1431,14 +1429,6 @@ namespace sw
         pObjects->applyTransformBatch( _listTransformWrite.data(), static_cast<uint32>( _listTransformWrite.size() ) );
     }
 
-    uint32 BenchScene::nextChurnRandom()
-    {
-        // xorshift32 입니다. 표준 난수를 쓰지 않는 이유는 **재현성**입니다. 같은 프레임 수만큼 실행하면 같은 순서가
-        // 나와야 스크린샷과 로그를 실행 사이에 비교할 수 있습니다.
-        _churnRandom = XorShift32::next( _churnRandom );
-        return _churnRandom;
-    }
-
     void BenchScene::releaseChurnInstance( const MaterialInstance* pInstance )
     {
         if ( pInstance == nullptr )
@@ -1458,18 +1448,18 @@ namespace sw
         if ( pInstance == nullptr )
             return;
 
-        if ( ( nextChurnRandom() & 1u ) != 0u )
+        if ( ( _churnRandom.nextUint() & 1u ) != 0u )
         {
             // 알파는 부모를 따라갑니다. 유리 머티리얼의 알파를 1 로 올리면 투명 경로가 이미지에서
             // 사라져서, 값을 흔든다는 사실 자체가 검증을 망가뜨립니다.
-            const float4  tint   = makeBenchColor( nextChurnRandom() );
+            const float4  tint   = makeBenchColor( _churnRandom.nextUint() );
             const bool    bGlass = ( pInstance->getParent() != nullptr ) && ( pInstance->getParent() == _glassMaterial.get() );
-            const float32 alpha  = bGlass ? ( 0.25f + 0.35f * static_cast<float32>( nextChurnRandom() & 0xFFu ) / 255.0f ) : 1.0f;
+            const float32 alpha  = bGlass ? ( 0.25f + 0.35f * static_cast<float32>( _churnRandom.nextUint() & 0xFFu ) / 255.0f ) : 1.0f;
             pInstance->setVectorParameter( hashed_string( kMaterialColorParameter ), float4{ tint._x, tint._y, tint._z, alpha } );
         }
         else
         {
-            const float32 roughness = static_cast<float32>( nextChurnRandom() & 0xFFFFu ) / 65535.0f;
+            const float32 roughness = static_cast<float32>( _churnRandom.nextUint() & 0xFFFFu ) / 65535.0f;
             pInstance->setScalarParameter( hashed_string( "_roughness" ), roughness );
         }
     }
@@ -1491,19 +1481,19 @@ namespace sw
         // 1) 값만 흔듭니다. 배치 구성은 그대로이고 머티리얼 바이트만 바뀝니다.
         for ( uint32 step = 0; step < valueChurn && _listChurnInstance.empty() == false; ++step )
         {
-            churnInstanceValue( _listChurnInstance[nextChurnRandom() % _listChurnInstance.size()].get() );
+            churnInstanceValue( _listChurnInstance[_churnRandom.nextUint() % _listChurnInstance.size()].get() );
         }
 
         // 2) 집합을 흔듭니다. 붙이면 배치가 갈리고 원소가 늘어나며, 제거하면 회수와 재사용이 실행됩니다.
         for ( uint32 step = 0; step < addChurn; ++step )
         {
-            MeshComponent* pMesh = pObjects->resolveComponent( _listBenchMesh[nextChurnRandom() % cubeCount] );
+            MeshComponent* pMesh = pObjects->resolveComponent( _listBenchMesh[_churnRandom.nextUint() % cubeCount] );
             if ( pMesh == nullptr )
                 continue;
 
             // 목록이 상한에 닿으면 제거하는 쪽으로 기웁니다. 상한이 없으면 큐브 수만큼 늘어나 이 스위치가
             // 사실상 -gv_benchMaterialInstances 와 같아지고, "붙였다 뗐다" 를 측정하지 못합니다.
-            const bool bDrop = ( _listChurnInstance.size() >= kChurnInstanceCap ) || ( ( nextChurnRandom() & 3u ) == 0u );
+            const bool bDrop = ( _listChurnInstance.size() >= kChurnInstanceCap ) || ( ( _churnRandom.nextUint() & 3u ) == 0u );
             if ( bDrop )
             {
                 const shared_ptr<MaterialInstance> dropped = pMesh->getMaterialInstance();
@@ -1531,12 +1521,12 @@ namespace sw
         const bool bShouldChurnKeywords = keywordEvery > 0 && ( _churnFrame % keywordEvery ) == 0 && _listChurnInstance.empty() == false;
         if ( bShouldChurnKeywords )
         {
-            MaterialInstance* pInstance = _listChurnInstance[nextChurnRandom() % _listChurnInstance.size()].get();
+            MaterialInstance* pInstance = _listChurnInstance[_churnRandom.nextUint() % _listChurnInstance.size()].get();
             if ( pInstance != nullptr )
             {
-                if ( ( nextChurnRandom() & 1u ) != 0u )
+                if ( ( _churnRandom.nextUint() & 1u ) != 0u )
                 {
-                    if ( ( nextChurnRandom() & 1u ) != 0u )
+                    if ( ( _churnRandom.nextUint() & 1u ) != 0u )
                         pInstance->enableKeyword( hashed_string( kChurnKeyword ) );
                     else
                         pInstance->disableKeyword( hashed_string( kChurnKeyword ) );
@@ -1544,7 +1534,7 @@ namespace sw
                 else
                 {
                     pInstance->setMultiCompile( hashed_string( kChurnFogMultiCompile ),
-                                                kArrChurnFogOption[nextChurnRandom() % SW_COUNT_OF( kArrChurnFogOption )] );
+                                                kArrChurnFogOption[_churnRandom.nextUint() % SW_COUNT_OF( kArrChurnFogOption )] );
                 }
             }
         }

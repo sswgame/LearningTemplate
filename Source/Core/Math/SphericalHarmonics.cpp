@@ -3,7 +3,6 @@
 #include "Core/Math/SphericalHarmonics.h"
 
 #include "Core/Math/MathUtil.h"
-#include "Core/Math/XorShift32.h"
 
 namespace sw
 {
@@ -77,13 +76,11 @@ namespace sw
         return result;
     }
 
-    float3 SH9Color::makeUniformSphereDirection( uint32& inoutState )
+    float3 SH9Color::makeUniformSphereDirection( DeterministicRandom32& inoutRandom )
     {
         // z 를 [-1, 1] 에서, 방위각을 [0, 2π) 에서 고르게 고르면 구 위에서 고르다(아르키메데스의 모자 상자 정리).
-        inoutState            = XorShift32::next( inoutState );
-        const float32 height  = XorShift32::toUnit24( inoutState ) * 2.0f - 1.0f;
-        inoutState            = XorShift32::next( inoutState );
-        const float32 azimuth = XorShift32::toUnit24( inoutState ) * MathUtil::kTwoPi;
+        const float32 height  = inoutRandom.nextFloat() * 2.0f - 1.0f;
+        const float32 azimuth = inoutRandom.nextFloat() * MathUtil::kTwoPi;
         const float32 ring    = MathUtil::sqrt( MathUtil::max( 1.0f - height * height, 0.0f ) );
         return float3{ ring * MathUtil::cos( azimuth ), ring * MathUtil::sin( azimuth ), height };
     }

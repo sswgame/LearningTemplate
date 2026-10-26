@@ -1037,12 +1037,6 @@ namespace sw
         return wcschr( pStr, ch );
     }
 
-    bool StringUtil::parseBool( string_view token, bool bFallback )
-    {
-        bool value{ bFallback };
-        return tryParseBool( token, value ) ? value : bFallback;
-    }
-
     bool StringUtil::tryParseBool( string_view token, bool& outValue )
     {
         const string_view trimmed    = trim( token );
@@ -1059,6 +1053,19 @@ namespace sw
             return true;
         }
         return false;
+    }
+
+    bool StringUtil::trySplitKeyValue( string_view text, string_view& outKey, string_view& outValue, utf8 separator )
+    {
+        const size_t separatorPos = text.find( separator );
+        if ( separatorPos == string_view::npos )
+            return false;
+        const string_view key = trim( text.substr( 0, separatorPos ) );
+        if ( key.empty() )
+            return false;
+        outKey   = key;
+        outValue = trim( text.substr( separatorPos + 1 ) );
+        return true;
     }
 
     bool StringUtil::parseFloat( string_view token, float32& outValue )

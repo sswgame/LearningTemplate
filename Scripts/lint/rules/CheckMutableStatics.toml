@@ -83,8 +83,6 @@
 "Source/Core/Task/TaskManager.cpp" = 5
 # Source/Core/Time — 이전 대기
 "Source/Core/Time/MonotonicClock.cpp" = 1
-# Source/Core/UUID — 이전 대기
-"Source/Core/UUID/UUID.cpp" = 1
 # Source/Editor/Common — 이전 대기
 "Source/Editor/Common/Backend/Render/ImGuiOpenGLRendererBackend.cpp" = 3
 "Source/Editor/Common/Workspace/EditorAssetTypeActions.cpp" = 1

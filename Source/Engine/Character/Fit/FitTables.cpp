@@ -27,15 +27,15 @@ namespace sw
                 outListArgument.clear();
                 for ( const string_view token : StringUtil::split( node.getAttributeText( "args" ), CharacterDataReader::kTokenSeparators, { ._bDropEmpty = true } ) )
                 {
-                    const size_t equalPosition = token.find( '=' );
-                    FitArgument  argument;
-                    const bool   bHasEqual = equalPosition != string_view::npos && equalPosition > 0;
-                    if ( bHasEqual == false || StringUtil::parseFloat( token.substr( equalPosition + 1 ), argument._value ) == false )
+                    string_view name;
+                    string_view valueText;
+                    FitArgument argument;
+                    if ( StringUtil::trySplitKeyValue( token, name, valueText ) == false || StringUtil::parseFloat( valueText, argument._value ) == false )
                     {
                         reader.addError( "Character.FitArgumentMalformed", node, string( "has malformed argument '" ) + string( token ) + "' (name=number)" );
                         continue;
                     }
-                    argument._name = hashed_string( token.substr( 0, equalPosition ) );
+                    argument._name = hashed_string( name );
                     outListArgument.push_back( argument );
                 }
             }

@@ -199,11 +199,10 @@ namespace sw
         bool           bValid = true;
         StringUtil::forEachToken( line.substr( prefixAt + string_view( kLinePrefix ).size() ), " \t", [&parsed, &bValid]( string_view token ) -> bool
         {
-            const size_t equals = token.find( '=' );
-            if ( equals == string_view::npos )
+            string_view key;
+            string_view value;
+            if ( StringUtil::trySplitKeyValue( token, key, value ) == false )
                 return true; // 머리 뒤의 다른 글(로그 꼬리)은 건너뛴다
-            const string_view key   = token.substr( 0, equals );
-            const string_view value = token.substr( equals + 1 );
             if ( key == "connections" )
                 bValid = StringUtil::parseInt( value, parsed._connectionCount );
             else if ( key == "sentPackets" )

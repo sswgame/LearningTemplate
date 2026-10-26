@@ -9,6 +9,7 @@
 #include "Core/Container/formatString.h"
 #include "Core/Diagnostics/CallStackCapture.h"
 #include "Core/Log/Logger.h"
+#include "Core/Math/SecureRandom.h"
 #include "Core/Process/ThreadCrashStack.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Time/MonotonicClock.h"
@@ -16,7 +17,6 @@
 
 #include <chrono>
 #include <cstdio>
-#include <random>
 #include <thread>
 
 #if !defined( SW_PLATFORM_WINDOWS )
@@ -106,10 +106,9 @@ namespace sw
         /** @brief 시각과 난수를 섞은 16진수 세션 ID 를 새로 만듭니다. */
         SessionIDText buildSessionIDInternal()
         {
-            const uint64       nowTicks    = static_cast<uint64>( MonotonicClock::nowNanoseconds() );
-            const uint64       wallSeconds = static_cast<uint64>( WallClock::nowUnixMilliseconds() );
-            std::random_device randomDevice;
-            const uint64       mixed = nowTicks ^ ( wallSeconds << 16 ) ^ ( static_cast<uint64>( randomDevice() ) << 32 );
+            const uint64 nowTicks    = static_cast<uint64>( MonotonicClock::nowNanoseconds() );
+            const uint64 wallSeconds = static_cast<uint64>( WallClock::nowUnixMilliseconds() );
+            const uint64 mixed       = nowTicks ^ ( wallSeconds << 16 ) ^ SecureRandom::nextUint64();
 
             SessionIDText session{};
             HexDigitUtil::writeDigits( session._arrText, mixed, HexDigitUtil::kMaxDigitCount, HexCase::Lower );

@@ -92,8 +92,9 @@ namespace sw
             /** @brief `-key=value` · `--key` · `key=value` 에서 앞의 `-` 와 `=` 뒤를 뗀 이름입니다. */
             static string_view findName( string_view argument )
             {
-                const size_t equalPos = argument.find( '=' );
-                string_view  name     = equalPos == string_view::npos ? argument : argument.substr( 0, equalPos );
+                string_view name = argument;
+                string_view value;
+                (void)StringUtil::trySplitKeyValue( argument, name, value ); // `=` 가 없으면 인자 전체가 이름이다(`--key`)
                 while ( name.empty() == false && name.front() == '-' )
                 {
                     name.remove_prefix( 1 );

@@ -38,10 +38,10 @@ namespace sw
         const bool                bExposed        = hostScope.expose<IModuleImageHost>( moduleImageHost );
         SW_ASSERT( bExposed );
         (void)bExposed;
-        // 이 범위의 서브시스템은 초기화할 일이 없다(창구는 델리게이트만 들고, 자동화 구동기는 엔진이 선 뒤 `begin` 으로 시작한다) — 로거 앞이라 표준 오류로 알린다.
+        // 이 범위의 서브시스템은 초기화할 일이 없다(창구는 델리게이트만 들고, 자동화 구동기는 엔진이 선 뒤 `begin` 으로 시작한다) — 로거 앞이라 낮은 층 보고(stderr 에 동기로)로 알린다.
         if ( hostScope.getCollection().initializeAll( SubsystemHostMask::All ) == false )
         {
-            std::fprintf( stderr, "[%s] host scope failed: %s\n", pHostName, hostScope.getCollection().getError().c_str() );
+            SW_LOW_LEVEL_ERROR( "[%s] host scope failed: %s", pHostName, hostScope.getCollection().getError().c_str() );
             return nullptr;
         }
         return &moduleImageHost;

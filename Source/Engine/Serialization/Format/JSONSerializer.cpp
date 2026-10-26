@@ -80,7 +80,11 @@ namespace sw
                 {
                     StringBuilder<constant::kMaxBuffer8192> text;
                     SerializerUtil::valueToText( text, value, typeName, context );
-                    dst.setBool( StringUtil::parseBool( text.view(), false ) );
+                    bool bValue{ false };
+                    if ( StringUtil::tryParseBool( text.view(), bValue ) )
+                        dst.setBool( bValue );
+                    else
+                        dst.setString( text.view() ); // 읽지 못한 글을 false 로 바꿔 쓰지 않는다 — 읽기가 거절하고 알린다
                     return;
                 }
 

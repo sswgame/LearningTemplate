@@ -123,13 +123,13 @@ namespace sw
                 for ( uint32 attempt = 0; outListSite.size() < nearTarget && attempt < nearTarget * FractureSiteUtil::kAttemptFactor; ++attempt )
                 {
                     const float32 angle  = random.nextRange( 0.0f, MathUtil::kPi * 2.0f );
-                    const float32 radius = MathUtil::sqrt( random.nextFloat01() ) * settings._clusterRadius;
+                    const float32 radius = MathUtil::sqrt( random.nextFloat() ) * settings._clusterRadius;
                     const float2  point  = impact + float2{ MathUtil::cos( angle ) * radius, MathUtil::sin( angle ) * radius };
                     FractureSiteUtil::addIfInside( outListSite, point, isInsideBorder );
                 }
                 for ( uint32 attempt = 0; outListSite.size() < target && attempt < target * FractureSiteUtil::kAttemptFactor; ++attempt )
                 {
-                    const float2 point{ boundsMin._x + extent._x * random.nextFloat01(), boundsMin._y + extent._y * random.nextFloat01() };
+                    const float2 point{ boundsMin._x + extent._x * random.nextFloat(), boundsMin._y + extent._y * random.nextFloat() };
                     FractureSiteUtil::addIfInside( outListSite, point, isInsideBorder );
                 }
             }

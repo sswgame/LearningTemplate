@@ -244,7 +244,7 @@ namespace sw
                         continue;
                     total += MathUtil::max( 0.0f, event._listClip[clipIndex]._weight );
                 }
-                float32 pick = _random.nextUnit() * total;
+                float32 pick = _random.nextFloat() * total;
                 for ( uint32 clipIndex = 0; clipIndex < clipCount; ++clipIndex )
                 {
                     if ( bSkipLast && static_cast<int32>( clipIndex ) == inoutState._lastRandomIndex )

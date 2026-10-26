@@ -18,6 +18,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Math/DeterministicRandom.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
@@ -497,7 +498,7 @@ namespace sw
         ParameterMap                                 _mapParameter;                   /**< 파라미터 이름에서 상태로 가는 맵입니다. */
         unordered_map<AudioEmitterID, EmitterRecord> _mapEmitter;                     /**< 에미터 id 에서 상태로 가는 맵입니다. */
         AudioListenerState                           _arrListener[kMaxListenerCount]; /**< 리스너입니다. */
-        AudioRandom                                  _random;                         /**< 컨테이너와 범위가 쓰는 난수입니다. */
+        DeterministicRandom64                        _random;                         /**< 컨테이너와 범위가 쓰는 난수입니다(시드는 `setRandomSeed`). */
         uint64                                       _renderedFrameCount;             /**< 지금까지 렌더한 프레임입니다. */
         uint64                                       _appliedPlayingID;               /**< 적용한 재생 명령의 가장 큰 id 입니다. */
         uint64                                       _playedEventCount;               /**< 재생한 이벤트 수입니다. 게시용입니다. */

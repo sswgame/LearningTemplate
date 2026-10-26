@@ -4,6 +4,7 @@
 
 #include "Core/Common/HashUtil.h"
 #include "Core/Common/StdHeaders.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Log/Logger.h"
 
@@ -28,10 +29,7 @@ namespace sw
             /** @brief 16 자리 16 진수 글을 64 비트 값으로 읽습니다. 자리 수나 글자가 틀리면 false 입니다. */
             [[nodiscard]] static bool parseHash( string_view text, uint64& outHash )
             {
-                if ( text.size() != static_cast<size_t>( kHashDigits ) )
-                    return false;
-                const auto [pEnd, error] = std::from_chars( text.data(), text.data() + text.size(), outHash, 16 );
-                return error == std::errc{} && pEnd == text.data() + text.size();
+                return text.size() == static_cast<size_t>( kHashDigits ) && StringUtil::parseUint64( text, outHash, 16 );
             }
 
             static string makeHashText( uint64 hash )

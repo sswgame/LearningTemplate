@@ -62,8 +62,7 @@ namespace sw
         // 단언이 없는 구성에서도 적지 않은 값(-1)을 경과로 내보내지 않는다 — 음수 경과는 움직임을 조용히 멈추거나 거꾸로 돌린다.
         if ( s_unscaledDeltaSeconds < 0.0f )
         {
-            std::fprintf( stderr, "\n[GameTimeScale] getUnscaledDeltaTime before setUnscaledDeltaTime (Engine::beginFrame or the test must set it)\n" );
-            std::fflush( stderr );
+            SW_LOW_LEVEL_ERROR( "[GameTimeScale] getUnscaledDeltaTime before setUnscaledDeltaTime (Engine::beginFrame or the test must set it)" ); // stderr 에 동기로 쓴 뒤 멈춘다
             std::abort();
         }
 #endif

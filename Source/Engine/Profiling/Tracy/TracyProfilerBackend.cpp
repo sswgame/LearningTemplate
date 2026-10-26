@@ -9,6 +9,7 @@
 #include "Engine/Profiling/Tracy/TracyProfilerBackend.h"
 
 #include "Core/Common/StdHeaders.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/Process/ProcessEnvironment.h"
 
 #if defined( SW_PROFILER_TRACY )
@@ -202,8 +203,10 @@ namespace sw
         string portText;
         if ( ProcessEnvironment::tryReadNonEmpty( "TRACY_PORT", portText ) == false )
             return TracyProfilerBackendInternal::kDefaultDataPort;
-        const int32 port = std::atoi( portText.c_str() );
-        if ( 0 < port && port <= TracyProfilerBackendInternal::kMaxPort )
+        int32      port{ 0 };
+        const bool bParsed  = StringUtil::parseInt( portText, port );
+        const bool bInRange = 0 < port && port <= TracyProfilerBackendInternal::kMaxPort;
+        if ( bParsed && bInRange )
             return static_cast<uint16>( port );
         return TracyProfilerBackendInternal::kDefaultDataPort;
     }

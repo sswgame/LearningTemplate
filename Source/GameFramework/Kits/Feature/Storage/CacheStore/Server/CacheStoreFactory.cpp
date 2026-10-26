@@ -154,13 +154,14 @@ namespace sw
             const size_t      ampersand = rest.find( '&' );
             const string_view argument  = rest.substr( 0, ampersand );
             rest                        = ampersand == string_view::npos ? string_view{} : rest.substr( ampersand + 1 );
-            const size_t equals         = argument.find( '=' );
-            if ( equals == string_view::npos )
+            string_view key;
+            string_view value;
+            if ( StringUtil::trySplitKeyValue( argument, key, value ) == false )
             {
-                outError = "cache endpoint: argument '" + string( argument ) + "' has no value";
+                outError = "cache endpoint: argument '" + string( argument ) + "' is not key=value";
                 return false;
             }
-            if ( CacheStoreFactoryInternal::applyQueryArgument( argument.substr( 0, equals ), argument.substr( equals + 1 ), outEndpoint, outError ) == false )
+            if ( CacheStoreFactoryInternal::applyQueryArgument( key, value, outEndpoint, outError ) == false )
                 return false;
         }
         return true;

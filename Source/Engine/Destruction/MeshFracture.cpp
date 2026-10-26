@@ -440,8 +440,8 @@ namespace sw
                 while ( static_cast<uint32>( outListSite.size() ) < target && attempt < target * FractureSiteUtil::kAttemptFactor )
                 {
                     ++attempt;
-                    const float3 point{ boundsMin._x + extent._x * random.nextFloat01(), boundsMin._y + extent._y * random.nextFloat01(),
-                                        boundsMin._z + extent._z * random.nextFloat01() };
+                    const float3 point{ boundsMin._x + extent._x * random.nextFloat(), boundsMin._y + extent._y * random.nextFloat(),
+                                        boundsMin._z + extent._z * random.nextFloat() };
                     FractureSiteUtil::addIfInside( outListSite, point, isInsideMesh );
                 }
             }

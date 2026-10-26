@@ -2069,7 +2069,7 @@ SW_TEST_CASE( StringTest, Utf8DecodeAndAppendRoundTrip )
 }
 
 /**
- * @brief [StringTest] 불리언 글은 한 표로 읽는다 — `parseBool` 은 `tryParseBool` 이 읽은 값, 읽지 못하면 폴백이다
+ * @brief [StringTest] 불리언 글은 한 표(`tryParseBool`)로 읽고, 읽지 못하면 실패를 알리며 값은 그대로다
  * @details 설정 · 텔레메트리 동의 · 개발 명령이 저마다 `== "true"` · `"on"` · `"1"` 을 비교해 같은 값이 길마다 다르게 읽혔다. 철자 표는 `tryParseBool` 하나다.
  */
 SW_TEST_CASE( StringTest, BoolTextIsReadByOneTable )
@@ -2081,22 +2081,42 @@ SW_TEST_CASE( StringTest, BoolTextIsReadByOneTable )
     {
         bool bValue{ false };
         SW_EXPECT_TRUE_MSG( sw::StringUtil::tryParseBool( pText, bValue ) && bValue, pText );
-        SW_EXPECT_TRUE_MSG( sw::StringUtil::parseBool( pText, false ), pText );
     }
     for ( const utf8* pText : arrFalse )
     {
         bool bValue{ true };
         SW_EXPECT_TRUE_MSG( sw::StringUtil::tryParseBool( pText, bValue ) && bValue == false, pText );
-        SW_EXPECT_FALSE_MSG( sw::StringUtil::parseBool( pText, true ), pText );
     }
     for ( const utf8* pText : arrUnknown )
     {
         bool bValue{ true };
         SW_EXPECT_FALSE_MSG( sw::StringUtil::tryParseBool( pText, bValue ), pText );
         SW_EXPECT_TRUE_MSG( bValue, pText ); // 읽지 못하면 값은 그대로
-        SW_EXPECT_TRUE_MSG( sw::StringUtil::parseBool( pText, true ), pText );
-        SW_EXPECT_FALSE_MSG( sw::StringUtil::parseBool( pText, false ), pText );
     }
+}
+
+/**
+ * @brief [StringTest] `키=값` 은 첫 구분자에서 나누고 앞뒤 공백을 자르며, 구분자가 없거나 키가 비면 거절하고 출력은 그대로다
+ * @details 호출부마다 `find( '=' )` 를 손으로 쓰면 빈 키(`=1`)를 받는 곳과 거절하는 곳이 갈렸다.
+ */
+SW_TEST_CASE( StringTest, KeyValueSplitsAtTheFirstSeparator )
+{
+    sw::string_view key{ "unchanged" };
+    sw::string_view value{ "unchanged" };
+    SW_EXPECT_TRUE( sw::StringUtil::trySplitKeyValue( "  name = a=b  ", key, value ) );
+    SW_EXPECT_TRUE( key == "name" );
+    SW_EXPECT_TRUE( value == "a=b" );
+    SW_EXPECT_TRUE( sw::StringUtil::trySplitKeyValue( "flag=", key, value ) );
+    SW_EXPECT_TRUE( key == "flag" && value.empty() );
+    SW_EXPECT_TRUE( sw::StringUtil::trySplitKeyValue( "Host: example.com", key, value, ':' ) );
+    SW_EXPECT_TRUE( key == "Host" && value == "example.com" );
+
+    key   = "unchanged";
+    value = "unchanged";
+    SW_EXPECT_FALSE( sw::StringUtil::trySplitKeyValue( "noSeparator", key, value ) );
+    SW_EXPECT_FALSE( sw::StringUtil::trySplitKeyValue( " = 1", key, value ) );
+    SW_EXPECT_FALSE( sw::StringUtil::trySplitKeyValue( "", key, value ) );
+    SW_EXPECT_TRUE( key == "unchanged" && value == "unchanged" );
 }
 
 #if !defined( SW_SHIPPING )

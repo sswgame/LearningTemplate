@@ -5,7 +5,6 @@
 #include "Core/Common/HashUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Math/XorShift32.h"
 
 #include "Engine/Animation/Facial/FacialLiveSource.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
@@ -142,7 +141,7 @@ namespace sw
         , _blinkElapsed{ -1.0f }
         , _blinkAmount{ 0.0f }
         , _saccadeTimer{ 0.0f }
-        , _randomState{ HashUtil::kGoldenRatio32 }
+        , _random{}
         , _bBlink{ SW_TRUE }
         , _bSaccades{ SW_TRUE }
         , _bLookAt{ SW_FALSE }
@@ -164,12 +163,12 @@ namespace sw
         Component::onBeginPlay();
         // 깜빡임 · 사카드가 캐릭터마다 다른 박자로 돌게 씨앗을 컴포넌트 id 로 섞는다(결정적).
         const uint64 mixed = getHandle().componentID() * HashUtil::kGoldenRatio64;
-        _randomState       = static_cast<uint32>( mixed ^ ( mixed >> 32 ) ) | 1u;
+        _random.setSeed( static_cast<uint32>( mixed ^ ( mixed >> 32 ) ) | 1u ); // `| 1` — 0 이 아닌 씨앗
         // 경로로 이미 읽었으면(`setFacialRigPath` · `setFacialRig`) 그대로 둔다 — 시작 전에 정한 표정 · 말하기를 지우지 않게.
         if ( _binding.isAnimationActive() == false )
             loadRig();
         bindToUnit();
-        _blinkTimer = FacialAnimationInternal::pickBetween( _rig.getBlink()._minInterval, _rig.getBlink()._maxInterval, nextRandom() );
+        _blinkTimer = FacialAnimationInternal::pickBetween( _rig.getBlink()._minInterval, _rig.getBlink()._maxInterval, _random.nextFloat() );
     }
 
     void FacialAnimationComponent::onEndPlay()
@@ -369,12 +368,6 @@ namespace sw
         return _bSpeaking == SW_TRUE;
     }
 
-    float32 FacialAnimationComponent::nextRandom()
-    {
-        _randomState = XorShift32::next( _randomState );
-        return static_cast<float32>( _randomState & 0xFFFFFFu ) / static_cast<float32>( 0x1000000u );
-    }
-
     void FacialAnimationComponent::advanceTime( float32 deltaSeconds )
     {
         // 깜빡임: 타이머가 다 되면 길이만큼 감았다 뜨고, 다음 간격을 뽑는다.
@@ -387,7 +380,7 @@ namespace sw
                 if ( _blinkElapsed >= blink._duration )
                 {
                     _blinkElapsed = -1.0f;
-                    _blinkTimer   = FacialAnimationInternal::pickBetween( blink._minInterval, blink._maxInterval, nextRandom() );
+                    _blinkTimer   = FacialAnimationInternal::pickBetween( blink._minInterval, blink._maxInterval, _random.nextFloat() );
                 }
             }
             else
@@ -412,8 +405,8 @@ namespace sw
             if ( _saccadeTimer <= 0.0f )
             {
                 const float32 amplitude = gaze._saccadeAmplitude;
-                _saccadeOffset          = float2{ ( nextRandom() * 2.0f - 1.0f ) * amplitude, ( nextRandom() * 2.0f - 1.0f ) * amplitude };
-                _saccadeTimer           = FacialAnimationInternal::pickBetween( gaze._saccadeMinInterval, gaze._saccadeMaxInterval, nextRandom() );
+                _saccadeOffset          = float2{ ( _random.nextFloat() * 2.0f - 1.0f ) * amplitude, ( _random.nextFloat() * 2.0f - 1.0f ) * amplitude };
+                _saccadeTimer           = FacialAnimationInternal::pickBetween( gaze._saccadeMinInterval, gaze._saccadeMaxInterval, _random.nextFloat() );
             }
         }
         else

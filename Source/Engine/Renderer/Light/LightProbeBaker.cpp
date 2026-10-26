@@ -91,10 +91,10 @@ namespace sw
         _input = input;
         // 방향은 한 번만 만든다 — 모든 프로브가 같은 수열을 쓴다.
         _listDirection.reserve( input._sampleCount );
-        uint32 state = Internal::kSeed;
+        DeterministicRandom32 random{ Internal::kSeed };
         for ( uint32 sampleIndex = 0; sampleIndex < input._sampleCount; ++sampleIndex )
         {
-            _listDirection.push_back( SH9Color::makeUniformSphereDirection( state ) );
+            _listDirection.push_back( SH9Color::makeUniformSphereDirection( random ) );
         }
         _weight       = 4.0f * MathUtil::kPi / static_cast<float32>( input._sampleCount );
         _grid._layout = layout;

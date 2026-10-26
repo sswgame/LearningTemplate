@@ -90,7 +90,9 @@ namespace sw::editor
                 {
                     case MaterialPropertyType::Bool:
                     {
-                        bool bVal = StringUtil::parseBool( prop._value, false );
+                        bool bVal{ false };
+                        if ( StringUtil::tryParseBool( prop._value, bVal ) == false )
+                            return drawUnreadableValue( pLabel, prop );
                         if ( ImGui::Checkbox( pLabel, &bVal ) )
                         {
                             prop._value = bVal ? "true" : "false";

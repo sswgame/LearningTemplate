@@ -361,12 +361,13 @@ namespace sw
             rest                      = lineEnd == string_view::npos ? string_view{} : rest.substr( lineEnd + 2 );
             if ( line.empty() )
                 continue;
-            const size_t colon = line.find( ':' );
-            if ( colon == string_view::npos || colon == 0 )
+            string_view name;
+            string_view value;
+            if ( StringUtil::trySplitKeyValue( line, name, value, ':' ) == false )
                 return false;
             HTTPHeader& header = _listHeader.emplace_back();
-            header._name       = string( StringUtil::trim( line.substr( 0, colon ) ) );
-            header._value      = string( StringUtil::trim( line.substr( colon + 1 ) ) );
+            header._name       = string( name );
+            header._value      = string( value );
         }
         return true;
     }

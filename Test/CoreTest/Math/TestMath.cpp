@@ -1,8 +1,10 @@
 #include "pch.h"
 
 #include "Core/Common/HashUtil.h"
+#include "Core/Math/DeterministicRandom.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
+#include "Core/Math/SecureRandom.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Math/XorShift32.h"
 
@@ -732,4 +734,62 @@ SW_TEST_CASE( MathTest, HorizontalDistanceIgnoresHeight )
     SW_EXPECT_NEAR_EQUAL( 25.0f, sw::float3::getHorizontalDistanceSquared( from, to ), 1e-5f );
     SW_EXPECT_NEAR_EQUAL( 5.0f, sw::float3::getHorizontalDistance( from, to ), 1e-5f );
     SW_EXPECT_NEAR_EQUAL( 5.0f, sw::float3::getHorizontalDistance( to, from ), 1e-5f );
+}
+
+/**
+ * @brief [MathTest] 운영체제 난수는 요청한 바이트를 모두 채우고 두 번 읽으면 다르다
+ * @details 같은 32 바이트가 두 번 나올 확률은 2^-256 이다 — 같으면 난수가 아니라 고정 값(폴백)이 나온 것이다.
+ */
+SW_TEST_CASE( MathTest, SecureRandomFillsEveryByteWithFreshValues )
+{
+    uint8 arrFirst[32]{};
+    uint8 arrSecond[32]{};
+    sw::SecureRandom::fill( arrFirst, sizeof( arrFirst ) );
+    sw::SecureRandom::fill( arrSecond, sizeof( arrSecond ) );
+    SW_EXPECT_TRUE( std::memcmp( arrFirst, arrSecond, sizeof( arrFirst ) ) != 0 );
+    const uint8 kZero[32]{};
+    SW_EXPECT_TRUE( std::memcmp( arrFirst, kZero, sizeof( arrFirst ) ) != 0 );
+    SW_EXPECT_TRUE( sw::SecureRandom::nextUint64() != sw::SecureRandom::nextUint64() );
+    sw::SecureRandom::fill( arrFirst, 0 ); // 0 바이트는 아무것도 하지 않는다
+}
+
+/**
+ * @brief [MathTest] 결정적 난수 둘은 기존 수열(xorshift32 · splitmix64)과 같은 값을 내고 범위를 지킨다 · 32 비트 씨앗 0 은 거절하고 상태를 그대로 둔다
+ * @details 게임 규칙 · 파괴 · 오디오가 저마다 들던 난수 래퍼를 합쳤다 — 수열이 바뀌면 리플레이 · 기록된 테스트 값이 깨진다.
+ */
+SW_TEST_CASE( MathTest, DeterministicRandomKeepsTheRecordedSequences )
+{
+    sw::DeterministicRandom32 random32{ 1234u };
+    uint32                    state32 = 1234u;
+    sw::DeterministicRandom64 random64{ 0u }; // splitmix64 는 씨앗 0 도 쓴다
+    uint64                    state64  = 0u;
+    bool                      bSame    = true;
+    bool                      bBounded = true;
+    for ( uint32 drawIndex = 0; drawIndex < 1000; ++drawIndex )
+    {
+        state32                = sw::XorShift32::next( state32 );
+        bSame                  = bSame && random32.nextUint() == state32;
+        bSame                  = bSame && random64.nextUint64() == sw::HashUtil::splitMix64Next( state64 );
+        const float32 unit32   = random32.nextFloat();
+        const float32 unit64   = random64.nextFloat();
+        const int32   number32 = random32.nextInt( -2, 2 );
+        const int32   number64 = random64.nextInt( -2, 2 );
+        state32                = random32.getState();
+        state64                = random64.getState();
+        bBounded               = bBounded && 0.0f <= unit32 && unit32 < 1.0f && 0.0f <= unit64 && unit64 < 1.0f;
+        bBounded               = bBounded && -2 <= number32 && number32 <= 2 && -2 <= number64 && number64 <= 2;
+    }
+    SW_EXPECT_TRUE( bSame );
+    SW_EXPECT_TRUE( bBounded );
+    SW_EXPECT_EQUAL( 7, random32.nextInt( 7, 7 ) );
+    SW_EXPECT_EQUAL( sw::DeterministicRandom32::kDefaultSeed, sw::DeterministicRandom32{}.getState() );
+
+    if constexpr ( test::ScopedAssertCapture::kAssertsAreActive )
+    {
+        const test::ScopedAssertCapture assertCapture;
+        sw::DeterministicRandom32       rejected{ 5u };
+        rejected.setSeed( 0u );
+        SW_EXPECT_EQUAL( 1u, assertCapture.getCount() );
+        SW_EXPECT_EQUAL( 5u, rejected.getState() ); // 고정점으로 바꾸지도, 다른 씨앗으로 대신하지도 않는다
+    }
 }

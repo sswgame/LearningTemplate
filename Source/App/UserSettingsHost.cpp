@@ -72,11 +72,16 @@ namespace sw
                 end = text.size();
             const string_view part = StringUtil::trim( text.substr( start, end - start ) );
             start                  = end + 1;
-            const size_t equalPos  = part.find( '=' );
-            if ( equalPos == string_view::npos )
+            if ( part.empty() )
+                continue; // 끝의 `;` 나 `;;` 는 빈 토막이다
+            string_view key;
+            string_view value;
+            if ( StringUtil::trySplitKeyValue( part, key, value ) == false )
+            {
+                SW_LOG_WARNING( "gv_userSettingsApply: '%#' is not <setting>=<value> - skipped", part );
                 continue;
-            const hashed_string        settingID( StringUtil::trim( part.substr( 0, equalPos ) ) );
-            const string_view          value  = StringUtil::trim( part.substr( equalPos + 1 ) );
+            }
+            const hashed_string        settingID( key );
             const UserSettingSetResult result = settings.setPendingValue( settingID, value );
             const bool                 bTaken = result == UserSettingSetResult::Accepted || result == UserSettingSetResult::Clamped || result == UserSettingSetResult::Unchanged;
             if ( bTaken == false )

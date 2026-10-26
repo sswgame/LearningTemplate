@@ -100,11 +100,11 @@ namespace sw
             /**
              * @brief 엔진이 할당하지 않은 블록(또는 이미 해제한 블록)을 풀려 했다고 알립니다. 해제는 하지 않습니다.
              * @details 말없이 건너뛰면 안 됩니다 — **배포본에는 헤더가 없어** 같은 호출이 진짜 이중 해제 · 남의 힙 해제가 되므로,
-             *          개발 빌드에서 조용한 버그가 배포본에서만 힙을 깹니다. 로거는 이 할당기를 쓰므로 stderr 로 직접 씁니다.
+             *          개발 빌드에서 조용한 버그가 배포본에서만 힙을 깹니다. 로그보다 아래 층이라 낮은 층 보고(Error 는 stderr 에 동기로 먼저)로 냅니다.
              */
             static void reportForeignFree( const void* pUserPtr )
             {
-                std::fprintf( stderr, "[Memory] free of a block this allocator does not own (double free or foreign pointer): %p\n", pUserPtr );
+                SW_LOW_LEVEL_ERROR( "[Memory] free of a block this allocator does not own (double free or foreign pointer): %p", pUserPtr );
             }
 
             /**

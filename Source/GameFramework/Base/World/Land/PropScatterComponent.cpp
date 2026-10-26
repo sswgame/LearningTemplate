@@ -3,8 +3,8 @@
 #include "GameFramework/Base/World/Land/PropScatterComponent.h"
 
 #include "Core/Common/HashUtil.h"
+#include "Core/Math/DeterministicRandom.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Math/XorShift32.h"
 
 #include "Engine/Environment/Terrain/TerrainComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
@@ -16,9 +16,9 @@ namespace sw
     namespace
     {
         /** @brief 자리 하나에 모델 · 크기 · 요를 정해 목록에 넣습니다. 제외 원 안이면 모델만 꺼내고 넣지 않는다. */
-        void plant( const PropScatterParams& params, const float3& position, uint32& inoutState, vector<PropScatterPlacement>& outListPlacement )
+        void plant( const PropScatterParams& params, const float3& position, DeterministicRandom32& inoutRandom, vector<PropScatterPlacement>& outListPlacement )
         {
-            const float32 pick = PropScatterMath::nextUnit( inoutState );
+            const float32 pick = inoutRandom.nextFloat();
             for ( const PropScatterExclusion& exclusion : params._listExclusion )
             {
                 const float32 deltaX = position._x - exclusion._center._x;
@@ -29,8 +29,8 @@ namespace sw
             PropScatterPlacement placement;
             placement._position   = position;
             placement._modelIndex = PropScatterMath::pickModel( params._listModel, pick );
-            placement._scale      = params._scaleMin + PropScatterMath::nextUnit( inoutState ) * ( params._scaleMax - params._scaleMin );
-            placement._yaw        = PropScatterMath::nextUnit( inoutState ) * MathUtil::kTwoPi;
+            placement._scale      = params._scaleMin + inoutRandom.nextFloat() * ( params._scaleMax - params._scaleMin );
+            placement._yaw        = inoutRandom.nextFloat() * MathUtil::kTwoPi;
             if ( placement._modelIndex >= 0 )
                 outListPlacement.push_back( placement );
         }
@@ -39,14 +39,6 @@ namespace sw
 
 namespace sw
 {
-    float32 PropScatterMath::nextUnit( uint32& inoutState )
-    {
-        if ( inoutState == 0u )
-            inoutState = 1u;
-        inoutState = XorShift32::next( inoutState );
-        return static_cast<float32>( inoutState & 0xFFFFu ) / 65535.0f;
-    }
-
     int32 PropScatterMath::pickModel( const vector<PropScatterModel>& listModel, float32 unit )
     {
         float32 totalWeight = 0.0f;
@@ -82,18 +74,18 @@ namespace sw
         }
         if ( params._spacing <= 0.0f || params._listModel.empty() )
             return;
-        uint32       state     = params._seed;
-        const float3 regionMin = params._regionMin;
-        const float3 regionMax = params._regionMax;
+        DeterministicRandom32 random{ params._seed };
+        const float3          regionMin = params._regionMin;
+        const float3          regionMax = params._regionMax;
         if ( params._mode == PropScatterMode::Fill )
         {
             for ( float32 z = regionMin._z; z <= regionMax._z; z += params._spacing )
             {
                 for ( float32 x = regionMin._x; x <= regionMax._x; x += params._spacing )
                 {
-                    const float32 offsetX = PropScatterMath::nextUnit( state ) * params._inwardJitter;
-                    const float32 offsetZ = PropScatterMath::nextUnit( state ) * params._inwardJitter;
-                    plant( params, float3{ x + offsetX, regionMin._y, z + offsetZ }, state, outListPlacement );
+                    const float32 offsetX = random.nextFloat() * params._inwardJitter;
+                    const float32 offsetZ = random.nextFloat() * params._inwardJitter;
+                    plant( params, float3{ x + offsetX, regionMin._y, z + offsetZ }, random, outListPlacement );
                 }
             }
             return;
@@ -101,21 +93,21 @@ namespace sw
         // 가장자리 — 아래 · 위 변을 x 로 걷고, 왼쪽 · 오른쪽 변을 z 로 걷는다(모서리는 아래 · 위 변이 맡는다). 안쪽으로만 흔든다.
         for ( float32 x = regionMin._x; x <= regionMax._x; x += params._spacing )
         {
-            const float32 bottomX = x + PropScatterMath::nextUnit( state ) * params._alongJitter;
-            const float32 bottomZ = regionMin._z + PropScatterMath::nextUnit( state ) * params._inwardJitter;
-            plant( params, float3{ bottomX, regionMin._y, bottomZ }, state, outListPlacement );
-            const float32 topX = x + PropScatterMath::nextUnit( state ) * params._alongJitter;
-            const float32 topZ = regionMax._z - PropScatterMath::nextUnit( state ) * params._inwardJitter;
-            plant( params, float3{ topX, regionMin._y, topZ }, state, outListPlacement );
+            const float32 bottomX = x + random.nextFloat() * params._alongJitter;
+            const float32 bottomZ = regionMin._z + random.nextFloat() * params._inwardJitter;
+            plant( params, float3{ bottomX, regionMin._y, bottomZ }, random, outListPlacement );
+            const float32 topX = x + random.nextFloat() * params._alongJitter;
+            const float32 topZ = regionMax._z - random.nextFloat() * params._inwardJitter;
+            plant( params, float3{ topX, regionMin._y, topZ }, random, outListPlacement );
         }
         for ( float32 z = regionMin._z + params._spacing; z < regionMax._z; z += params._spacing )
         {
-            const float32 leftX = regionMin._x + PropScatterMath::nextUnit( state ) * params._inwardJitter;
-            const float32 leftZ = z + PropScatterMath::nextUnit( state ) * params._alongJitter;
-            plant( params, float3{ leftX, regionMin._y, leftZ }, state, outListPlacement );
-            const float32 rightX = regionMax._x - PropScatterMath::nextUnit( state ) * params._inwardJitter;
-            const float32 rightZ = z + PropScatterMath::nextUnit( state ) * params._alongJitter;
-            plant( params, float3{ rightX, regionMin._y, rightZ }, state, outListPlacement );
+            const float32 leftX = regionMin._x + random.nextFloat() * params._inwardJitter;
+            const float32 leftZ = z + random.nextFloat() * params._alongJitter;
+            plant( params, float3{ leftX, regionMin._y, leftZ }, random, outListPlacement );
+            const float32 rightX = regionMax._x - random.nextFloat() * params._inwardJitter;
+            const float32 rightZ = z + random.nextFloat() * params._alongJitter;
+            plant( params, float3{ rightX, regionMin._y, rightZ }, random, outListPlacement );
         }
     }
 

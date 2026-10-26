@@ -19,12 +19,12 @@ namespace sw
             /** @brief 균일 구 샘플로 "방향 @p toLight 쪽 반구만 복사휘도 @p radiance" 인 하늘을 투영합니다. */
             static SH9Color projectHemisphere( const float3& toLight, const float3& radiance )
             {
-                SH9Color      result{};
-                uint32        state  = kSeed;
-                const float32 weight = 4.0f * MathUtil::kPi / static_cast<float32>( kSampleCount );
+                SH9Color              result{};
+                DeterministicRandom32 random{ kSeed };
+                const float32         weight = 4.0f * MathUtil::kPi / static_cast<float32>( kSampleCount );
                 for ( uint32 sampleIndex = 0; sampleIndex < kSampleCount; ++sampleIndex )
                 {
-                    const float3 direction = SH9Color::makeUniformSphereDirection( state );
+                    const float3 direction = SH9Color::makeUniformSphereDirection( random );
                     if ( direction.dot( toLight ) > 0.0f )
                         result.addSample( direction, radiance, weight );
                 }

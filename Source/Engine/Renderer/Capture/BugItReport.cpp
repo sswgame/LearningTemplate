@@ -167,11 +167,10 @@ namespace sw
         const string_view body = FileUtil::skipUtf8Bom( text );
         StringUtil::forEachLine( body, [&]( string_view line )
         {
-            const size_t separator = line.find( '=' );
-            if ( separator == string_view::npos )
+            string_view key;
+            string_view value;
+            if ( StringUtil::trySplitKeyValue( line, key, value ) == false )
                 return;
-            const string_view key   = StringUtil::trim( line.substr( 0, separator ) );
-            const string_view value = StringUtil::trim( line.substr( separator + 1 ) );
             if ( key == BugItReportInternal::kKeyNote )
                 outReport._note = string( value );
             else if ( key == BugItReportInternal::kKeyScene )

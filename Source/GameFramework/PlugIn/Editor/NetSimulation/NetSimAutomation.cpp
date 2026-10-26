@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Common/StdHeaders.h"
+#include "Core/Container/StringUtil.h"
 
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -62,13 +63,6 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 글 @p text 를 정수로 읽습니다. 숫자가 아니면 false 입니다. */
-            [[nodiscard]] static bool parseInt( string_view text, int32& outValue )
-            {
-                const auto [pEnd, error] = std::from_chars( text.data(), text.data() + text.size(), outValue );
-                return text.empty() == false && error == std::errc{} && pEnd == text.data() + text.size();
-            }
-
             /**
              * @brief `target` = 월드 번호(0 서버, N 클라이언트), `key` = 오브젝트 이름으로 그 월드 씬의 오브젝트 위치 한 축을 냅니다.
              * @details 세션이 돌지 않거나 · 월드나 오브젝트가 없거나 · 인자가 맞지 않으면 값을 내지 않고 이유를 글로 적는다(0 으로 지어내지 않는다).
@@ -77,7 +71,7 @@ namespace sw::editor
             [[nodiscard]] static bool readObjectAxis( const AutomationProbeQuery& query, AutomationProbeValue& outValue, bool bX )
             {
                 int32 worldIndex = 0;
-                if ( parseInt( query._target, worldIndex ) == false || query._key.empty() )
+                if ( StringUtil::parseInt( query._target, worldIndex ) == false || query._key.empty() )
                 {
                     outValue.setText( "target must be the world number and key the object name" );
                     return false;

@@ -96,7 +96,7 @@ namespace sw
     /**
      * @struct PropScatterMath
      * @brief 배치 계산입니다. 같은 입력이면 같은 배치가 나옵니다.
-     * @details 난수는 xorshift32 이며, 시드 0 은 고정점이라 1 로 바꾼다.
+     * @details 난수는 `DeterministicRandom32`(xorshift32)이며 시드 0 은 거절한다(단언 오류).
      *          위치마다 난수를 위치 흔들기 둘, 모델, 제외 판정, 크기, 요 순으로 꺼낸다. 제외된 위치는 크기와 요를 꺼내지 않는다.
      */
     struct SW_GF_API PropScatterMath
@@ -109,8 +109,6 @@ namespace sw
          *          오브젝트 회전이 요뿐이라서 노멀 맞춤은 쓰지 않는다.
          */
         static void computeRulePlacements( const PropScatterParams& params, const IPlacementSurface* pSurface, vector<PropScatterPlacement>& outListPlacement );
-        /** @brief [0, 1] 난수 하나를 꺼내고 상태를 한 걸음 나아가게 합니다. */
-        static float32 nextUnit( uint32& inoutState );
         /** @brief 비중대로 고른 모델 번호를 반환합니다. @p unit 은 [0, 1] 입니다. 모델이 없거나 비중 합이 0 이면 -1 입니다. */
         static int32 pickModel( const vector<PropScatterModel>& listModel, float32 unit );
     };
