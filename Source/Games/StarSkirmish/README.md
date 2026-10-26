@@ -48,15 +48,9 @@ cd build/Ninja-Debug/Bin
 
 전장은 씬 하나(`Resource/game/starskirmish/maps/skirmish.scene.xml`)이고 절벽은 절차 지형이라 디렉터가 플레이 시작에 만듭니다.
 
-| 무엇 | 어디 |
-|------|------|
-| 카메라, 해, 땅, 끌어 고르기 상자, 디렉터 | 씬 |
-| 절벽 구간과 유닛(건물과 자원 포함) | 프리팹 `prefabs/cliff`, `unit`. 유닛 모델은 종류마다 디렉터가 겁니다 |
-| 규칙과 상태 | 키트의 `RTSWorld`, `RTSCommanderAI`, `RTSSelection` 과 이 게임의 규칙 `SkirmishMatch`(절차 맵, 시작 유닛, AI 성향 셋 — 러시 · 운영 · 사람 상대, 정리 사냥, 승패 로그) |
-| 고르기, 명령, 생산, 건설, 부대, 속도, 알림, 스폰 | `SkirmishDirectorComponent` |
-| 모습 | 뷰 `SkirmishUnitComponent`(유닛 하나), `SkirmishDragComponent`(끌기 상자) |
-| 카메라 | GameFramework `CameraDirectorComponent` + 프리셋 `data/skirmish.cameras.xml`. 사람 쪽은 글자 키가 명령이라 WASD 를 끄고(`play`), 자동 플레이는 맵 전체가 보이게 물러선 `watch` 프리셋으로 시작하며 WASD 를 켭니다 |
-| 머티리얼 | `materials/ground`, `cliff`, `drag`(반투명). 편 색, 자원 색, 고름 표시는 디렉터가 만드는 머티리얼 인스턴스 |
+규칙과 상태는 키트의 `RTSWorld` · `RTSCommanderAI` · `RTSSelection` 과 이 게임의 순수 규칙 `SkirmishMatch`(절차 맵, 시작 유닛, AI 성향 셋 — 러시 · 운영 · 사람 상대, 정리 사냥, 승패 로그)이고, 고르기 · 명령 · 생산 · 건설 · 부대 · 속도 · 알림 · 스폰은 `SkirmishDirectorComponent` 가 합니다.
+절벽 구간과 유닛(건물 · 자원 포함)은 프리팹(`cliff`, `unit` — 유닛 모델은 종류마다 디렉터가 건다)이고 모습은 뷰 `SkirmishUnitComponent` · `SkirmishDragComponent` 입니다. 카메라는 `CameraDirectorComponent` + `data/skirmish.cameras.xml` 이며 사람 쪽은 글자 키가 명령이라 WASD 를 끄고(`play`)
+자동 플레이는 맵 전체가 보이게 물러선 `watch` 프리셋으로 시작하며 WASD 를 켭니다. 편 색 · 자원 색 · 고름 표시는 디렉터가 만드는 머티리얼 인스턴스입니다.
 
 **틱.** 디렉터는 `PrePhysics` 에서 입력과 게임 진행과 알림을 돌리고 보일 유닛(사람 쪽은 안개에 가린 적을 뺌)과 만들어 둔 모습을 비교해 새로 보인 유닛과 사라진 유닛을 쌓습니다. 틱 뒤에 그것을 만들고 지우며 효과음도 냅니다. 뷰는 `PostUpdate` 에서 디렉터를 읽어 자기 오브젝트만 맞춥니다.
 

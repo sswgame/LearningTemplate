@@ -46,16 +46,8 @@ cd build/Ninja-Debug/Bin
 
 도시는 씬 하나(`Resource/game/nilecity/maps/nile.scene.xml`)입니다. 땅은 계획기가 칠하는 절차 지형이라 씬에 두지 않고 디렉터가 플레이 시작에 만듭니다.
 
-| 무엇 | 어디 |
-|------|------|
-| 카메라, 해, 짓기 커서, 디렉터 | 씬 |
-| 땅 구간, 바위, 도로, 건물, 일꾼 | 프리팹(`prefabs/`). 디렉터가 런타임에 만들고 지웁니다 |
-| 규칙과 상태 | 키트의 `CitySimulation`, `CityCatalog` |
-| 땅 모양과 자동 계획 | `NileCityPlanner` |
-| 시뮬레이션, 자동 계획, 짓기와 허물기, 속도, 달 로그, 스폰 | `NileDirectorComponent` |
-| 모습 | 뷰 `NileBuildingComponent`, `NileWalkerComponent`, `NileCursorComponent` |
-| 카메라 | GameFramework `CameraDirectorComponent` + 프리셋 `data/nile.cameras.xml`. 초점을 맵 상자(`<Confiner>`) 안에 묶고 Q/E 회전은 받지 않습니다 |
-| 머티리얼 | 팔레트 `materials/palette.material`, 커서 `cursor.material`(반투명). 땅과 건물 종류와 일꾼 색은 디렉터가 만드는 머티리얼 인스턴스 |
+씬에는 카메라, 해, 짓기 커서, 디렉터만 있고 땅 구간 · 바위 · 도로 · 건물 · 일꾼은 프리팹을 디렉터가 런타임에 만들고 지웁니다. 규칙과 상태는 키트의 `CitySimulation` · `CityCatalog`, 땅 모양과 자동 계획은 `NileCityPlanner`, 시뮬레이션 · 짓기와 허물기 · 속도 · 달 로그 · 스폰은 `NileDirectorComponent`, 모습은 뷰(`NileBuildingComponent` · `NileWalkerComponent` · `NileCursorComponent`)입니다.
+카메라는 `CameraDirectorComponent` + `data/nile.cameras.xml`(초점을 맵 상자 `<Confiner>` 안에 묶고 Q/E 회전은 받지 않는다)이고 땅 · 건물 종류 · 일꾼 색은 디렉터가 만드는 머티리얼 인스턴스입니다.
 
 **입력.** 디렉터는 명령형 게임의 디렉터라 입력 맵을 읽을 수 있는 몇 안 되는 파일입니다(`CheckControlBoundary` 의 허용 목록). 그래도 장치를 직접 묻지 않고 액션만 읽습니다. 장치를 묻는 것은 커서 화면 위치(`getMousePositionNormalized`) 하나이고 카메라 디렉터의 `findGroundPoint` 로 땅 위의 셀로 바꿉니다.
 
