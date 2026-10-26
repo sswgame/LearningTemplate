@@ -185,7 +185,6 @@
 "Source/Engine/Resource/Pack/ResourcePakCompressionUtil.cpp" = 1
 "Source/Engine/Resource/ResourceDataKind.cpp" = 1
 "Source/Engine/Resource/ResourcePaths.cpp" = 5
-"Source/Engine/Resource/ResourcePaths.h" = 6
 # Source/Engine/Serialization — 이전 대기
 "Source/Engine/Serialization/Fixed/FixedLayout.h" = 1
 # Source/Engine/Text — 이전 대기

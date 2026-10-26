@@ -131,8 +131,8 @@ namespace sw
          * @param listPriority 우선순위 토큰 목록(예: "game", "common", "engine", "editor", "dlc/expansion1")
          * @return 우선순위를 다시 설정했으면 true 입니다.
          * @note 기존 경로 해석 캐시는 저절로 비워집니다.
-         * @warning 검색 목록 · 루트 · 호스트 제외 그룹은 락 없이 읽는다. 쓰는 API(`setSearchPriority` · `exchangeRootFolderPath` · `setHostTarget`)는 병렬 단계(워커 · 병렬 본문) 밖,
-         *          메인 스레드의 직렬 구간에서만 부른다 — 어기면 로그 단언이 남는다.
+         * @warning 검색 목록 · 루트 · 호스트 제외 그룹은 불변 표로 들고 락 없이 읽는다(쓰기는 새 표로 갈아 끼운다). 쓰는 API(`setSearchPriority` · `exchangeRootFolderPath` · `setHostTarget`)는
+         *          병렬 단계(워커 · 병렬 본문) 밖, 메인 스레드의 직렬 구간에서만 부른다 — 쓰기끼리 겹치면 나중 것이 앞 것을 지운다(로그 단언이 남는다).
          */
         static bool setSearchPriority( const vector<string>& listPriority );
 
@@ -182,13 +182,6 @@ namespace sw
          * @return 비어 있는 절대 경로입니다. 후보를 다 써도 찾지 못하면 `makeSavePath` 와 같은 경로입니다.
          */
         static string makeUniqueSavePath( string_view absoluteFolder, string_view fileName );
-
-    private:
-        static atomic<bool>   _s_bInitialize;            ///< initialize() 가 성공했는지
-        static string         _s_projectFolderPath;      ///< 프로젝트 루트
-        static string         _s_resourceRootFolderPath; ///< Resource/ 최상위 루트(유일한 기준점)
-        static vector<string> _s_listSearchPriority;     ///< 검색 우선순위 토큰 목록
-        static vector<string> _s_listResourceFolder;     ///< findLooseFile 의 검색 루트 목록
-        static vector<string> _s_listHostExcludedGroup;  ///< 이 호스트가 읽지 않는 에셋 묶음(`Texture` · `ShaderBinary` · `Audio`, 종류 표의 `_excludeGroup`)
+        // 상태(루트 · 검색 목록 · 호스트 제외 그룹)는 .cpp 의 불변 경로 표 하나다 — 쓰기는 새 표로 갈아 끼우고 읽기는 지금 표를 원자 포인터로 잡는다.
     };
 } // namespace sw
