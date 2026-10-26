@@ -3,7 +3,7 @@
 ## 이 게임으로 무엇을 배우나
 
 롤러코스터 타이쿤 장르의 게임입니다. `GF_ThemePark` 키트의 코스터 트랙 빌더, 열차 물리, 테스트 운행 평가, 손님 경영 시뮬레이션을 실제로 씁니다.
-이 게임은 **씬, 프리팹, 디렉터, 뷰 컴포넌트로 게임을 나누는 구조의 본보기**입니다. 다른 테스트 게임도 같은 구조이므로, 새 게임을 만들기 전에 이 게임을 먼저 읽으면 좋습니다.
+이 게임은 **씬, 프리팹, 디렉터, 뷰 컴포넌트로 게임을 나누는 구조의 본보기**입니다(다른 테스트 게임도 같은 구조이므로 새 게임을 만들기 전에 먼저 읽습니다).
 
 - 고정 배치는 씬에, 런타임에 생기는 것은 프리팹에 두는 방법
 - 규칙을 키트의 보통 클래스로 두고 디렉터가 돌리는 방법
@@ -23,10 +23,8 @@ cd build/Ninja-Debug/Bin
 ./App.exe -game=ThemeParkTycoon -dx12 -scenario=game/themepark/automation/shadow.scenario.xml
 ```
 
-`shadow.scenario.xml` 은 고정 카메라와 고정 해, 자동 건설을 끈 상태에서 직교 카메라가 화면 끝까지 그림자를 받는지 봅니다.
-화면 띠와 나무 줄과 가운데 영역의 어두운 픽셀 비율을 단언하고, 측정값은 보고 JSON 과 `[Scenario] metric` 로그 줄에 남습니다.
-`ctest --test-dir build/Ninja-Debug -R AppTest_HostOnly` 가 이 시나리오를 네 백엔드로 돌립니다.
-`guests.scenario.xml` 은 미리 스폰한 손님 뷰(모두 `ParkGuest`)를 `target="ParkGuest[N]"` 으로 골라 N 번째 뷰가 N 번 손님을 따르는지, 첫 손님이 정문에서 걸어 나가는지, 자동 건설이 첫 놀이기구를 짓는지 봅니다.
+`shadow.scenario.xml` 은 고정 카메라와 고정 해, 자동 건설을 끈 상태에서 직교 카메라가 화면 끝까지 그림자를 받는지 봅니다(화면 띠와 나무 줄과 가운데 영역의 어두운 픽셀 비율을 단언하고 측정값은 보고 JSON 과 `[Scenario] metric` 로그 줄에 남는다).
+`ctest --test-dir build/Ninja-Debug -R AppTest_HostOnly` 가 이 시나리오를 네 백엔드로 돌립니다. `guests.scenario.xml` 은 미리 스폰한 손님 뷰(모두 `ParkGuest`)를 `target="ParkGuest[N]"` 으로 골라 N 번째 뷰가 N 번 손님을 따르는지, 첫 손님이 정문에서 걸어 나가는지, 자동 건설이 첫 놀이기구를 짓는지 봅니다.
 
 ## 조작
 
@@ -42,13 +40,12 @@ cd build/Ninja-Debug/Bin
 | V | 고른 코스터의 맨 앞 차량에 타기와 내리기 |
 | G, F1 | 손님 생각 요약, 공원 상태를 로그로 |
 
-키 배치는 `Resource/game/themepark/data/park.input.xml` 에 있습니다.
-처음에는 가장 싼 평지 놀이기구와 코스터 하나가 지어져 있습니다. 코스터를 지으면 테스트 운행(`CoasterRideAnalyzer`)이 흥분, 강도, 멀미를 매겨 로그에 남기고, 그 값이 표 값의 기준이 됩니다.
-손님은 자기 강도 범위 밖의 놀이기구를 타지 않고, 표 값이 가치의 두 배를 넘으면 "너무 비싸다"고 합니다. 입장료가 비쌀수록 손님이 덜 옵니다.
+키 배치는 `Resource/game/themepark/data/park.input.xml` 입니다. 처음에는 가장 싼 평지 놀이기구와 코스터 하나가 지어져 있습니다. 코스터를 지으면 테스트 운행(`CoasterRideAnalyzer`)이 흥분, 강도, 멀미를 매겨 로그에 남기고 그 값이 표 값의 기준이 됩니다.
+손님은 자기 강도 범위 밖의 놀이기구를 타지 않고 표 값이 가치의 두 배를 넘으면 "너무 비싸다"고 하며, 입장료가 비쌀수록 손님이 덜 옵니다.
 
 ## 구조
 
-공원은 씬 하나(`Resource/game/themepark/maps/park.scene.xml`)입니다. 에디터에서 열면 고정 배치가 계층에 보이고, Play 를 누르면 디렉터가 공원을 열며, Stop 은 플레이 전 씬으로 돌아갑니다.
+공원은 씬 하나(`Resource/game/themepark/maps/park.scene.xml`)입니다. 에디터에서 열면 고정 배치가 계층에 보이고 Play 를 누르면 디렉터가 공원을 열며 Stop 은 플레이 전 씬으로 돌아갑니다.
 
 | 무엇 | 어디 |
 |------|------|
@@ -60,21 +57,16 @@ cd build/Ninja-Debug/Bin
 | 카메라와 나무 | GameFramework `CameraDirectorComponent` + 프리셋 `data/park.cameras.xml`, `PropScatterComponent` |
 | 머티리얼 | 팔레트 `materials/palette.material`(키트 색 텍스처), 잔디 `grass.material`. 실행 중 바뀌는 색만 머티리얼 인스턴스 |
 
-**틱.** 디렉터는 `PrePhysics` 그룹에서 시뮬레이션과 입력과 자동 건설을 돌리고, 뷰는 `PostUpdate` 그룹에서, 카메라 디렉터는 `PostPhysics` 틱 뒤에 그 결과를 읽습니다. 그룹은 차례로 돕니다.
-같은 그룹의 오브젝트는 병렬이므로 뷰는 자기 오브젝트에만 쓰고, 디렉터의 목록은 첨자 대신 `data()` 로 읽습니다.
-코스터에 타면(V) 디렉터가 `PrePhysics` 에서 카메라 디렉터에 원근 시점을 넣고(`setViewOverride`), 카메라 디렉터가 `PostPhysics` 틱 뒤에 그것을 씁니다.
-틱 안에서는 오브젝트를 만들 수 없으므로 디렉터는 지을 것과 효과음을 쌓아 두고 틱 뒤에 만듭니다. 뷰는 디렉터를 `GameObjectHandle` 로 가지고 매 프레임 찾습니다.
+**틱.** 디렉터는 `PrePhysics` 그룹에서 시뮬레이션과 입력과 자동 건설을 돌리고 뷰는 `PostUpdate`, 카메라 디렉터는 `PostPhysics` 틱 뒤에 그 결과를 읽습니다(그룹은 차례로 돈다). 같은 그룹의 오브젝트는 병렬이므로 뷰는 자기 오브젝트에만 쓰고 디렉터의 목록은 첨자 대신 `data()` 로 읽습니다.
+코스터에 타면(V) 디렉터가 `PrePhysics` 에서 카메라 디렉터에 원근 시점을 넣고(`setViewOverride`) 카메라 디렉터가 `PostPhysics` 틱 뒤에 그것을 씁니다. 틱 안에서는 오브젝트를 만들 수 없어 디렉터는 지을 것과 효과음을 쌓아 두고 틱 뒤에 만들며, 뷰는 디렉터를 `GameObjectHandle` 로 가지고 매 프레임 찾습니다.
 
-**핫 리로드와 상태 저장.** 놀이기구 운행, 손님, 돈, 평가, 난수, 입장료, 지은 배치, 코스터 열차의 위치와 속도는 디렉터의 `writeState` 로 상태 스냅샷에 실립니다.
-코스터 트랙은 배치 데이터에서 다시 만듭니다. 배치 데이터가 바뀌어 지은 것을 맞출 수 없으면 알리고 새 공원으로 시작합니다.
-나무는 흩뿌리기 컴포넌트가 핸들 목록(PROPERTY)으로 알아보므로 한 번 더 만들지 않습니다.
+**핫 리로드와 상태 저장.** 놀이기구 운행, 손님, 돈, 평가, 난수, 입장료, 지은 배치, 코스터 열차의 위치와 속도는 디렉터의 `writeState` 로 상태 스냅샷에 실립니다. 코스터 트랙은 배치 데이터에서 다시 만들고, 배치 데이터가 바뀌어 지은 것을 맞출 수 없으면 알리고 새 공원으로 시작합니다. 나무는 흩뿌리기 컴포넌트가 핸들 목록(PROPERTY)으로 알아보므로 한 번 더 만들지 않습니다.
 
 ## 데이터
 
-- `Resource/game/themepark/data/coasters.xml` 은 코스터 레이아웃(조각 목록)입니다. 세 레이아웃이 회로가 닫히고 한 바퀴를 도는지 엔진 밖 하니스로 확인했습니다.
-  Thunder Loop 는 흥분 6.2와 강도 8.2, Camel Hills 는 7.1과 7.6(에어타임), Little Dipper 는 2.6과 5.7 입니다.
+- `Resource/game/themepark/data/coasters.xml` 은 코스터 레이아웃(조각 목록)이고 회로가 닫혀 한 바퀴를 돌아야 합니다.
 - `Resource/game/themepark/data/rides.xml` 은 시작 자금, 입장료, 평지 놀이기구(손으로 매긴 평가), 코스터 배치입니다. 씬에 정문이 있으면 그 위치가 손님이 드나드는 정문입니다.
-- `Resource/game/themepark/audio/themepark.audioevents.xml` 은 사운드 이벤트(`Select`, `Built`, `Blocked`)이고 `ThemeParkTycoonGame` 이 로드합니다. 모두 `ui` 버스의 2D 소리입니다.
+- `Resource/game/themepark/audio/themepark.audioevents.xml` 은 사운드 이벤트(`Select`, `Built`, `Blocked`, 모두 `ui` 버스의 2D)이고 `ThemeParkTycoonGame` 이 로드합니다.
 - 디렉터의 PROPERTY 로 프리팹 경로, 손님 색, 카메라 리그, 정문을 정합니다. 자동 건설은 베이스의 `_bAutoPlay` 이고 `-gv_parkAutoBuild=1` 도 켭니다.
 
 ## 함정과 주의

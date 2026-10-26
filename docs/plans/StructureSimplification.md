@@ -4,247 +4,181 @@
 
 **남은 확인(통합에서 확인 · 측정):** 매니페스트 id `all-presets-compile`, `ctest-nogpu`, `ctest-lint`, `cook-pack-timing-release`, `dedicated-server-pack-exclusion`, `dev-meta-scan-time` — 각 단위 표의 "남은 것". 확인이 끝나면 통합 담당이 이 문서를 닫는다.
 
-상용 엔진(언리얼 · 유니티 · Godot) 비교에서 나온 구조 단순화 정책 네 개를 한 문서로 묶는다. 네 정책 모두 "같은 사실을 두 곳에 적어 두어서, 한쪽만 바뀌면 조용히 어긋난다"는 같은 근본 원인에서 나왔다.
-순서는 필수 설정(HC) → 팩 쿠킹(PK) → 에셋 종류 등록(AT) → 텍스트 형식(TX)이다. PK 가 끝나면 쿠커 쪽 파이썬 소비자가 사라져 AT 의 접미사 테이블 정리가 싸지고, AT 의 등록 줄 하나가 있으면 TX 의 형식 변환이 종류별 로더 하나를 바꾸는 일이 된다.
-결정의 배경은 [결정 기록](../09_Decisions.md) 5-4 "유지보수성을 위한 데이터화"(폴백 금지), 5-12 의 `구조` 행 둘, 2절 "에셋 로더 등록제" 보류(이 문서가 재개한다)다.
+상용 엔진 비교에서 나온 구조 단순화 정책 네 개를 한 문서로 묶는다. 모두 "같은 사실을 두 곳에 적어 두어서, 한쪽만 바뀌면 조용히 어긋난다"는 같은 근본 원인에서 나왔다.
+순서는 필수 설정(HC) → 팩 쿠킹(PK) → 에셋 종류 등록(AT) → 텍스트 형식(TX)이다. PK 가 끝나면 쿠커 쪽 파이썬 소비자가 사라져 AT 의 접미사 테이블 정리가 싸지고, AT 의 등록 줄 하나가 있으면 TX 의 변환이 종류별 로더 하나를 바꾸는 일이 된다.
+배경은 [결정 기록](../09_Decisions.md) 5-4 "유지보수성을 위한 데이터화"(폴백 금지), 5-12 의 `구조` 행 둘, 2절 "에셋 로더 등록제" 보류(이 문서가 재개한다)다.
 
 ## 1. 근본 원인
 
-1. **값이 없을 때 대신 쓸 값을 읽는 코드가 가진다.** `ensureConfig` 가 파일이 없으면 `T{}` 를 만들고, 게임 인스턴스는 `gamesettings.xml` 이 없어도 이어 가며, 서버는 Dev 에서만 내장 기본값으로 돈다. 필수와 선택이 호출 서명에 없으므로 호출부마다 폴백을 고를 수 있다.
-2. **쿠커가 엔진이 아닌 도구 언어로 쓰였다.** 팩을 파이썬이 쓰는 까닭은 코드에 적혀 있다 — "파이썬 표준 라이브러리에 `zlib` 이 들어 있기 때문"(`ZlibCompressionCodec.h`). 그 결과 팩 레이아웃(`PackFormat.json` 에서 C++ 헤더와 파이썬 `struct.pack` 이 따로 나옴), 셰이더 스탬프 수집 규칙, 팩 증분 기록(`.packrec`)이 C++ 과 파이썬에 두 벌이다.
-3. **에셋 종류가 늘 때마다 테이블을 하나씩 더 만들었다.** 등록 한 줄에서 파생하지 않고 종류마다 따로 적는다(5.1절).
-4. **텍스트 형식을 필요할 때마다 새로 골랐다.** 에셋 XML 과 설정 JSON 이 있는데도 `.meta` · 에디터 상태는 `key=value`(`KeyValueFile`)이고, JSON 에셋 19 종이 따로 있다(6.1절).
+1. **값이 없을 때 대신 쓸 값을 읽는 코드가 가진다.** `ensureConfig` 가 파일이 없으면 `T{}` 를 만들고, 게임 인스턴스는 `gamesettings.xml` 이 없어도 이어 가며, 서버는 Dev 에서만 내장 기본값으로 돈다. 필수와 선택이 호출 서명에 없다.
+2. **쿠커가 엔진이 아닌 도구 언어로 쓰였다.** 파이썬이 팩을 쓰는 까닭은 표준 `zlib` 때문이었고, 그 결과 팩 레이아웃 · 셰이더 스탬프 수집 규칙 · 팩 증분 기록이 C++ 과 파이썬에 두 벌이다.
+3. **에셋 종류가 늘 때마다 테이블을 하나씩 더 만들었다**(5.1절).
+4. **텍스트 형식을 필요할 때마다 새로 골랐다.** XML 에셋 · JSON 설정이 있는데도 `.meta` · 에디터 상태는 `key=value`(`KeyValueFile`)이고 JSON 에셋 19 종이 따로 있다.
 
 ## 2. 순서와 DataDriven 과의 경계
 
-[DataDriven](DataDriven.md) 은 구현중이며 이 문서와 다음처럼 겹친다. 겹치는 단위는 그 문서의 이름으로 가리키고 여기에 다시 쓰지 않는다.
+[DataDriven](DataDriven.md) 과 겹치는 단위는 그 문서의 이름으로 가리킨다.
 
-| DataDriven 단위 | 이 문서와의 관계 |
+| DataDriven 단위 | 관계 |
 |---|---|
-| D8 `LoadOutcome { Loaded, Absent, Failed }` | HC1 이 필수 설정에서 `Absent` 를 오류로 다룬다. `ConfigReadResult::Missing` 은 `Absent` 와 같은 값이라, D8 이 먼저 들어가면 그 열거를 쓰고 HC1 이 먼저면 D8 이 `ConfigReadResult` 를 이 이름으로 흡수한다. |
-| D9 폴백 인자를 받는 읽기 함수 삭제 | `KeyValueFile` 은 TX 가 통째로 지우므로 D9 의 `KeyValueFile` 부분(`getInt` · `getFloat` · `getBool`)은 하지 않는다. D9 가 먼저 끝나면 TX1 · TX2 는 이미 `readRequired` · `readOptional` 로 바뀐 호출부를 옮긴다. |
-| 7.5 절 P1 경로 상수를 `EngineDefaultAssets` 로 | HC3 의 UI 규칙 필드("비면 엔진 기본")가 쓰는 엔진 기본 경로다. P1 이 먼저면 HC3 은 그 항목을 읽기만 한다. |
-| 7.5 절 P4 테스트가 원본을 거치게 함 | HC1 · HC4 의 테스트 정리가 같은 파일(`Test/EngineTest/Config/`)을 만진다. 같은 작업자에게 맡긴다. |
-| W5 도구(`Scripts/common/Config.py` 가 `{}` 를 돌려주는 곳) | PK4 가 `CookAssets.py` 를 지우면 `readOptionalConfig` 의 쿠커 쪽 소비자가 사라진다. W5 는 남은 호출부만 본다. |
+| D8 `LoadOutcome { Loaded, Absent, Failed }` | HC1 이 필수 설정의 `Absent` 를 오류로 다룬다. `ConfigReadResult::Missing` 은 `Absent` 와 같은 값 |
+| D9 폴백 인자 읽기 함수 삭제 | `KeyValueFile` 은 TX 가 통째로 지우므로 D9 의 `KeyValueFile` 부분은 하지 않는다 |
+| 7.5 절 P1 `EngineDefaultAssets` | HC3 의 "비면 엔진 기본" 필드가 쓰는 경로 |
+| 7.5 절 P4 / W5 | HC1 · HC4 테스트 정리는 같은 파일을 만지므로 같은 작업자. PK4 가 `CookAssets.py` 를 지우면 `readOptionalConfig` 의 쿠커 소비자가 사라진다 |
 
-증분 쿠킹([결정 기록](../09_Decisions.md) 5-2)의 `CookStore` · `CookJob` 이 PK2 의 증분 판정을 맡는다. 새 판정 코드를 만들지 않는다.
-동시 빌드는 둘까지다. AT1 은 `AssetFormat.h` 를, HC3 은 `GameConfig.h` 를 바꿔 여러 모듈을 다시 빌드하므로 단독으로 돌린다.
+증분 판정은 `CookStore` · `CookJob`([결정 기록](../09_Decisions.md) 5-2)이 맡는다. 동시 빌드는 둘까지이고 AT1(`AssetFormat.h`) · HC3(`GameConfig.h`)은 단독으로 돌린다.
 
 ## 3. 필수 설정 — 폴백을 지운다 (HC)
 
+**끝**(HC1 ~ HC4, 마지막 `wt/hc4done`). 설계 결정만 남긴다.
+
 ### 3.1 현재 구조
 
-- `ConfigManager::ensureConfig<T>`(`Source/Engine/Config/ConfigManager.h`)는 설정 하나를 차례로 찾는다. Dev 는 디스크 파일, 없으면 생성 JSON(`shipping_host::k…JSON`), 그것도 없으면 `T{}` C++ 기본값(175-182 행, 경고 "using cpp defaults")이다. Shipping 은 디스크를 보지 않고 생성 JSON 만 쓴다.
-- 호출은 세 곳이다. `EngineConfig` · `GameConfig`(`ConfigManager.cpp` 200 · 204 행)와 `ServerConfig`(`ServerApp.cpp` 293 행). 서버는 Shipping 에서 파일이 없으면 멈추지만 Dev 에서는 "using built-in defaults (Dev only)" 로 `ensureConfig` 를 다시 불러 `T{}` 로 돈다.
-- `EngineConfig` 는 `T{}` 가 범위 밖이라 우연히 멈춘다(코드 주석이 그렇게 적는다). `GameConfig` 는 `T{}` 가 통과해 `_packRoot` 가 빈 채로 선다. 테스트(`TestConfigManager.cpp` 143-149 행)가 이것을 정상 동작으로 못박고, `ConfigReadResult::Missing` 의 문서 주석이 "부르는 쪽이 기본값을 쓴다"이다. 폴백이 열거의 뜻에 들어 있다.
-- 게임 하나의 설정이 두 파일이다. `Config/Game/<게임>.json`(`GameConfig` 필드 11 개 — 팩 루트, 창 제목, 렌더 파이프라인, 사용자 설정 · 텔레메트리 스키마, UI 규칙 네 개, 일시정지 메뉴 켬, 사용자 설정 기본값)과 팩의 `data/gamesettings.xml`(`GameSettings` — 시작 맵, 입력 맵, 로딩 화면 등)이다. 게임 11 개 모두 둘 다 있다. 팩 루트를 뺀 필드를 읽는 줄은 소스에 약 58 개다(이름이 겹치는 다른 구조체 포함). 경계는 [설정 문서](../07_Configuration.md) 32-33 · 42 행의 문장("팩을 마운트하기 전에 알아야 하면 프리셋")으로만 정해져 있다.
-- `GameInstanceBase::initialize` 는 `gamesettings.xml` 읽기가 실패해도 "using defaults" 추적 로그만 남기고 이어 간다(`GameInstanceBase.cpp` 163-164 행). 두 번째 폴백이다. 그 위 161-162 행은 `_packRoot` 가 비어 있으면 건너뛴다.
+(해소됨) `ensureConfig<T>` 가 디스크 → 생성 JSON → `T{}` 순으로 폴백했고, `GameInstanceBase::initialize` 도 `gamesettings.xml` 읽기 실패를 "using defaults" 로 넘겼다. 게임 설정은 `Config/Game/<게임>.json`(`GameConfig`)과 팩의 `data/gamesettings.xml`(`GameSettings`) 두 파일이었다.
 
 ### 3.2 해법
 
-- **출처를 서명에 둔다.** `ensureConfig<T>( path, generated )` 를 `loadHostConfig<T>( ConfigSource )` 로 바꾼다. `ConfigSource` 는 `disk( path )` 와 `baked( json )` 두 값뿐이고 빌드 구성이 하나를 고른다(Shipping 은 `baked`, 그 밖은 `disk`). "디스크에 없으면 생성 JSON" 이라는 연결이 호출 서명에서 사라진다.
-- **필수와 선택을 함수 이름으로 가른다.** `loadHostConfig` 는 파일이 없으면 `Absent` 가 아니라 오류이고 `[[nodiscard]]` 결과로 기동을 멈춘다. 없어도 되는 설정은 `loadOptionalConfig<T>` 가 `Absent` 를 돌려준다(D8 의 `LoadOutcome`). `T{}` 를 호출부가 만들 수 없다. `ServerApp` 의 Dev 분기는 지운다 — 개발자도 서버 설정 파일 없이 서버를 띄우지 않는다.
-- **호스트 프리셋은 팩을 찾는 값 하나다.** `GameConfig` 는 `PROPERTY( Required ) DataPath _packRoot` 만 가진다(`DataPath` 는 읽기 전에 쓰면 Debug 어서션이 나므로 `T{}` 로는 쓸 수 있는 값이 안 된다). 나머지 열 필드는 팩의 `gamesettings.xml` 로 옮긴다. 값의 원본은 팩의 한 파일이다.
-- **엔진이 읽는 필드는 엔진이 소유한 구조체가 읽는다.** `GameSettings` 는 GameFramework 에 있어 엔진이 읽을 수 없다. `gamesettings.xml` 에 `<Engine>` 요소를 두고, 엔진 소유 리플렉션 구조체(`PackEngineSettings`)가 그 요소만 읽는다. `GameSettings` 는 `<Engine>` 요소를 건너뛴다(지금도 "표준 칸 · `<custom>` · `<Defaults>` 밖의 원소는 로드 오류"라 이 요소를 명시적으로 허용해야 한다). 요소마다 읽는 계층이 하나라서 같은 필드를 두 곳이 읽지 않는다.
-- **"비면 엔진 기본" 필드는 선택 필드로 만든다.** UI 규칙 네 개(`_uiScaleSettings` 등)과 렌더 파이프라인은 빈 문자열이 "엔진 기본"을 뜻한다. `Optional<DataPath>` 로 바꾸고, 엔진 기본 경로는 `EngineDefaultAssets`(P1)가 가진다. 없음이 형식에 보인다.
-- **창 제목은 마운트 뒤에 정한다.** 창은 숨긴 채 만들어지고(`App.cpp` 의 `showWindow( false )`) 이미 `IWindow::setTitle` 이 있다. 팩 설정을 읽은 뒤 제목을 설정한다. 그 전에는 제목이 필요한 코드가 없는지를 HC3 의 첫 확인으로 한다.
-- 스키마 필드의 기본값(`PROPERTY` 초기값이 있고 파일이 키를 생략하는 것)은 이 문서가 건드리지 않는다. 그것은 DataDriven 2절의 규칙(기본값은 Def 의 초기값, 필수는 `Required`)이다. 이 문서가 지우는 것은 **파일 전체가 없을 때** 구조체 전체를 `T{}` 로 대신하는 길이다.
+- 출처는 서명에 둔다: `loadHostConfig<T>( ConfigSource )`(`disk( path )` · `baked( json )`, 빌드 구성이 고름). 파일이 없으면 오류, `[[nodiscard]]` 결과로 기동을 멈춘다. 없어도 되는 설정은 `loadOptionalConfig<T>` 가 `Absent` 를 돌려준다. `ServerApp` 의 Dev 분기는 지웠다.
+- 호스트 프리셋 `GameConfig` 는 `PROPERTY( Required ) DataPath _packRoot` 하나다. 나머지 필드는 팩의 `gamesettings.xml` 로 옮겼다.
+- 엔진이 읽는 필드는 `gamesettings.xml` 의 `<Engine>` 요소를 엔진 소유 구조체 `PackEngineSettings` 가 읽는다(`GameSettings` 는 그 요소를 건너뜀). 요소마다 읽는 계층이 하나다.
+- "비면 엔진 기본" 필드(UI 규칙 · 렌더 파이프라인)는 `Optional<DataPath>`, 창 제목은 마운트 뒤 `IWindow::setTitle`.
+- 스키마 필드의 기본값은 건드리지 않는다(DataDriven 2절). 지우는 것은 **파일 전체가 없을 때** 구조체를 `T{}` 로 대신하는 길이다.
 
 ### 3.3 대안과 기각 이유
 
-- **`GameSettings` 를 Engine 으로 옮겨 구조체 하나로 합친다.** 기각한다. 시작 맵 · 입력 맵 · 로딩 화면 · 다국어를 GameFramework 의 `GameInstanceBase` 가 적용하고, 구조체를 옮기면 `SW_GF_API` 와 키트 소비자(`bindScopedService( &_bootstrap._data )`)까지 옮겨야 한다. 요소를 가르는 쪽이 한 파일, 한 소유자를 지키면서 이동이 작다. 합쳐서 얻는 것이 크다고 확인되면 다시 본다.
-- **엔진 필드를 `gamesettings.xml` 이 아닌 두 번째 팩 파일로 둔다.** 기각한다. "원본 하나"의 반대이고 11 개 팩에 파일이 하나씩 느는 것뿐이다.
-- **`T{}` 대체를 경고에서 오류 로그로 올린다.** 기각한다. 로그는 폴백을 막지 못한다(근본 원인 1). 서명에서 해당 경로를 없앤다.
-- 언리얼은 `Base*.ini` 위에 `Default*.ini` 를 덮는 계층형이라 파일이 없어도 위 계층 값이 선다 [기억]. 이 저장소는 계층이 아니라 필수 파일 하나이므로 그 방식이 맞지 않는다. 유니티 `ProjectSettings/*.asset` · Godot `project.godot` 도 파일이 없으면 프로젝트가 열리지 않는다 [기억].
+- `GameSettings` 를 Engine 으로 옮겨 합치기 — 기각(GameFramework 의 `GameInstanceBase` 가 적용하고 `SW_GF_API` · 키트 소비자까지 옮겨야 한다). 요소를 가르는 쪽이 이동이 작다.
+- 엔진 필드를 두 번째 팩 파일로 — 기각("원본 하나"의 반대).
+- `T{}` 대체를 경고에서 오류 로그로 — 기각(로그는 폴백을 막지 못한다, 서명에서 경로를 없앤다).
+- 언리얼은 `Base*.ini` 위에 `Default*.ini` 를 덮는 계층형이라 맞지 않고, 유니티 · Godot 은 파일이 없으면 프로젝트가 열리지 않는다 [기억].
 
 ### 3.4 단위
 
 | 단위 | 내용 | 건드릴 폴더 | 선행 | 검증 | 측정 |
 |---|---|---|---|---|---|
-| HC4 | **끝(`wt/hc4` · `wt/hc4b` · `wt/hc4done`): `ConfigCatalog.py` 의 `PackEngineSettings` 항목과 `loadHostConfig` 문구, `Config/README.md` 의 폴백 · `ensureConfig` 문장, 생성 문서, `Config.py` 의 `loadToolchainConfig` 가 `{}` 대신 `None`, `GenerateShippingHostDefaults.py` 가 `_packRoot` 하나뿐인 프리셋만 굽도록 검사, `CheckGamePresets.py` 의 스키마 · 텔레메트리 경로 검사를 팩 `gamesettings.xml` 의 `<Engine>` 쪽으로 옮김(프리셋의 다른 키도 위반), CMake `VcpkgPortsToolchain.cmake` · `ThirdParty/dxc` 의 오류 무시 `string(JSON ERROR_VARIABLE)` 를 `sw_readOptionalJsonValue` 로. `FileScan.py`(읽지 못하면 멈추거나 위반으로 알림) · `AssetValidation`(`return []` 는 위반 없음이고 XML 파싱 실패는 `xml_wellformed` 가 보고)은 같은 모양이 아니라 그대로 둔다(W5 끝).** Shipping 구성 컴파일은 C++ 를 건드리지 않은 마무리라 생략했다. 생성 문서 · `Config/README.md` · `Config.py` 는 이미 현재 코드와 맞았다(`GenerateConfigReference.py` 0 changed, selftest 8 · lint-suite 47 통과). | `Scripts/generate/`, `Scripts/lint/gate/`, `Scripts/common/ConfigCatalog.py`, `docs/07_Configuration.md`, `Config/README.md`, `docs/Config/`(생성물) | HC3 | `-L lint`, 생성 문서 점검, Shipping 구성 컴파일 | 없음 |
-
-단위가 끝날 때 고칠 문서: `docs/07_Configuration.md` 32-33 · 42 행(프리셋 경계), `Config/README.md`("기본값을 쓰는 것은 파일이 없을 때뿐" 문단), `GameConfig.h` 머리 주석, 결정 기록 5-4 의 해당 항목.
+| HC4 | **끝(`wt/hc4done`).** `ConfigCatalog.py` · `Config/README.md` · 생성 문서 · `Config.py` 의 `loadToolchainConfig`(`None`) · `GenerateShippingHostDefaults.py`(`_packRoot` 하나뿐인 프리셋만) · `CheckGamePresets.py`(스키마 · 텔레메트리 검사를 `<Engine>` 쪽으로) · CMake 의 오류 무시 `string(JSON ERROR_VARIABLE)` 를 `sw_readOptionalJsonValue` 로. `FileScan.py` · `AssetValidation` 은 같은 모양이 아니라 둔다(W5 끝). Shipping 컴파일은 C++ 무변경이라 생략 | `Scripts/generate/`, `Scripts/lint/gate/`, `Scripts/common/ConfigCatalog.py`, `docs/07_Configuration.md`, `Config/README.md`, `docs/Config/` | HC3 | `-L lint`, 생성 문서 점검 | 없음 |
 
 ### 3.5 위험
 
-- **Dev 의 작업 디렉터리.** 지금은 `Config/` 가 없는 곳에서 실행해도 생성 JSON 으로 선다. HC1 뒤에는 멈춘다. 테스트 · 도구 중에 이 동작에 기댄 것이 있는지를 `AllTests` 전체로 확인한다(개별 테스트 이름을 미리 아는 것은 없다).
-- **에디터 설정 패널이 `Config/Game/*.json` 을 `GameConfig` 로 편집한다**(`TestProjectSettings.cpp` 39-61 행). HC3 에서 편집 대상이 팩 파일의 `<Engine>` 요소로 옮겨 가는지, 패널에서 필드를 빼는지를 먼저 정한다. 이 패널의 변경은 `ux-reviewer` 캡처로 본다.
-- **창 제목 시점.** 마운트 전에 제목이 필요한 호출이 있으면 HC3 에서 멈춘다(`RHISubsystem.cpp` 65 행이 `IWindow` 가 없을 때 창을 만드는 두 번째 경로다). 그 경로도 같은 설정 시점으로 맞춘다.
-- **Shipping 서버.** `kGameConfigJSON` 이 팩 루트만 생성하게 되므로, 팩을 읽지 못하면 이전보다 일찍 멈춘다. 의도한 변화다.
+- Dev 에서 `Config/` 없이 실행하면 이제 멈춘다 — `AllTests` 전체로 이 동작에 기댄 테스트 · 도구를 확인한다.
+- 에디터 설정 패널(`TestProjectSettings.cpp`)이 `Config/Game/*.json` 을 `GameConfig` 로 편집한다 — 편집 대상이 `<Engine>` 요소로 가는지 정하고 `ux-reviewer` 캡처로 본다.
+- `RHISubsystem.cpp` 가 `IWindow` 없을 때 창을 만드는 두 번째 경로도 같은 설정 시점으로 맞춘다. Shipping 서버는 팩을 못 읽으면 이전보다 일찍 멈춘다(의도).
 
 ## 4. 팩 쿠킹을 C++ 로 옮긴다 (PK)
 
 ### 4.1 현재 구조
 
-`Scripts/generate/CookAssets.py`(877 행)는 쿠킹 세 가지를 한 파일에서 부른다. 씬 · 프리팹 · GUID 레지스트리 · VAT · 내비메시는 `App --cook-scenes`, 셰이더는 `App --cook-shaders` 로 이미 C++ 이고, **파이썬이 직접 하는 것은 아래다.**
-
-| 파이썬이 하는 일 | 위치 | C++ 의 같은 일 |
-|---|---|---|
-| 팩 바이트 쓰기(`PackWriter.buildInternal`, `struct.pack` 은 `PackFormatSpec` 을 거침) | 472-620 행 | 리더 `ResourcePakReader`, 레이아웃 헤더 `ResourcePakTypes.h`. `PackFormat.json` 에서 헤더(`GeneratePackFormat.py`)와 파이썬 객체(`Scripts/common/PackFormat.py`)가 따로 나옴. 테스트도 세 번째 쓰기(`ResourcePakTestUtil::createPackFile`)를 가짐 |
-| 압축(zlib `Z_FIXED`, LZ4/Zstd 는 pip 모듈) | 120-180 행 | `ZlibCompressionCodec` · `Lz4CompressionCodec` · `ZstdCompressionCodec`(압축 가능) |
-| 셰이더 스탬프 판정(`verifyShaderCookInternal`, 수집 규칙 247-251 행) | 223-352 행 | `ShaderCookStamp.cpp` 의 `collectStampedSources`(76 행). 규칙이 두 언어에 있고 `CheckShaderStamps.py` 가 파이썬 쪽을 따로 검사함 |
-| 팩에 넣을 파일 고르기(`shouldIncludeFile` — 전역 제외 폴더 · 패턴, 규칙별 제외, 빌드 타깃 제외) | 360-413 행 | 타깃 제외는 `CookContract` X-macro 로 런타임(`ResourcePaths::setHostTarget`)이 이미 같은 테이블을 읽음 |
-| 증분 기록(`PackRecord` · `.packrec`, 키 = 해시) | 431-470 행 | `CookStore` · `CookJob` · `Saved/CookRecord/*.cookrec`([결정 기록](../09_Decisions.md) 5-2 증분 쿠킹) |
-| 팩 이름과 게임 목록(`listPackNameOfGame`, 프리셋의 `_packRoot` 를 파이썬이 읽음) | 701-790 행 | `GameSelection` |
-
-소비자는 `Scripts/dev/MakePackage.py`(`CookAssets.py --all` 호출), CMake 의 `CookAssets` 타깃(`CMake/Engine/AssetAndToolTargets.cmake` 73 행), 린트 게이트 `CheckShaderStamps.py`(커밋 훅 패턴 포함)다. `PackConfig.json` 의 설명은 "LZ4 는 pip 의 lz4, Zstd 는 pip 의 zstandard 가 있어야 쿠킹된다"고 적는다. 압축 코덱 선택이 도구 설치 상태에 매인다.
+(해소됨) `Scripts/generate/CookAssets.py` 가 팩 바이트 쓰기 · 압축 · 셰이더 스탬프 판정 · 팩 파일 고르기 · 증분 기록(`.packrec`) · 팩 이름 목록을 파이썬으로 했고, 팩 레이아웃은 `PackFormat.json` 에서 헤더와 파이썬 객체가 따로 나왔으며 테스트에 세 번째 쓰기가 있었다. 씬 · 프리팹 · 셰이더는 이미 `App --cook-*` 였다.
 
 ### 4.2 해법
 
-- **쿠킹은 엔진 언어 한 곳에서 한다.** 언리얼 `-run=cook` · `UnrealPak`, 유니티 빌드 파이프라인, Godot 내보내기 모두 엔진 쪽 언어로 쓰고 에디터 · 엔진 코드가 직접 부른다 [기억]. 이 저장소도 이미 셰이더 · 씬이 그렇다. 파이썬 스크립트는 `App` 을 찾아 부르는 얇은 호출자만 남기거나 사라진다.
-- **팩 형식은 C++ 헤더가 원본이다.** 레이아웃은 데이터가 아니라 형식이다(DataDriven 의 "코드는 형식만 가진다"는 값에 관한 말이고 레이아웃은 형식 자체다). `ResourcePakTypes.h` 의 구조체를 손으로 쓴 원본으로 두고 `static_assert`( `sizeof` · `offsetof` )로 레이아웃을 고정한다. `PackFormat.json` · `GeneratePackFormat.py` · `Scripts/common/PackFormat.py` 는 지운다. 팩을 읽고 쓰는 쪽이 같은 구조체를 쓰므로 오프셋이 어긋난 "빈 팩" 결함을 낼 수 없다.
-- **쓰기는 `PackWriter` 하나다.** 엔진의 `Engine/Resource/Pack/` 에 `ResourcePakWriter` 를 두고 쿠커와 테스트(`ResourcePakTestUtil`)가 함께 쓴다. 세 번째 쓰기를 지운다.
-- **스탬프 판정은 `ShaderCookStamp` 한 곳이다.** `verify` 를 C++ 에 더하고 `App --verify-shaders`(종료 코드와 문제 목록)로 부른다. 수집 규칙이 한 언어에만 있으므로 "두 언어가 같은 규칙인지"를 보는 `CheckShaderStamps` 게이트가 필요 없어진다. 대신 기존 `ShaderCookStampTest`(`Test/EngineTest/Graphics/TestShader.cpp`)에 `verify` 케이스를 더해 판정을 본다.
-- **증분 판정은 `CookStore` 다.** 팩 하나를 `CookJob` 으로 만들고 입력(파일 경로 · 내용 해시 · 설정)을 기록한다. `.packrec` 형식과 `kPackRecordFormatVersion` 은 지운다.
-- **팩 설정은 설정 JSON 이다.** `PackConfig.json` 은 리플렉션 `IConfig`(`PackConfig`, 필수 필드는 `Required`)로 읽는다. 파이썬 `config[...]` 의 `KeyError` 가 하던 "없으면 멈춤"을 형식이 한다.
+- 쿠킹은 엔진 언어 한 곳에서 한다(언리얼 `-run=cook` · 유니티 · Godot 모두 엔진 쪽 언어 [기억]).
+- 팩 형식 원본은 손으로 쓴 `ResourcePakTypes.h`(`static_assert` 로 레이아웃 고정). `PackFormat.json` · `GeneratePackFormat.py` · `Scripts/common/PackFormat.py` 는 지웠다.
+- 쓰기는 `Engine/Resource/Pack/` 의 `ResourcePakWriter` 하나(쿠커와 `ResourcePakTestUtil` 공용).
+- 스탬프 판정은 `ShaderCooker::verifyCookedShaders` 한 곳(`App --verify-shaders`), `CheckShaderStamps` 게이트는 필요 없어졌다.
+- 증분 판정은 `CookStore` 작업 하나, `.packrec` 은 지웠다. `PackConfig.json` 은 리플렉션 `IConfig`(모든 칸 `Required`).
 
 ### 4.3 대안과 기각 이유
 
-- **파이썬 쿠커를 두고 팩 레이아웃만 C++ 와 공유한다(지금 구조).** 기각한다. 생성 헤더와 파이썬 객체 두 가지가 이미 있고, 스탬프 규칙은 생성으로도 못 합쳤다. 언어가 둘이면 규칙이 둘이다.
-- **C++ 쓰기를 파이썬 확장 모듈로 노출한다.** 기각한다. 빌드 산출물이 하나 늘고 쿠커가 파이썬에서 불린다는 사실만 남는다. `App` 의 헤드리스 모드가 이미 같은 경로다(`HeadlessSubsystem.cpp` 107-139 행의 `--cook-scenes`).
-- **셰이더 스탬프 검사를 파이썬에 남기고 규칙만 C++ 가 생성한 JSON 으로 공유한다.** 기각한다. 규칙이 "어느 파일이 의존인가"라는 코드(include 해석)이고 데이터로 줄지 않는다.
+파이썬 쿠커 + 공유 레이아웃(지금 구조), C++ 쓰기를 파이썬 확장 모듈로 노출, 스탬프 규칙을 JSON 으로 공유 — 모두 기각(언어가 둘이면 규칙이 둘이고, 규칙이 include 해석이라는 코드라 데이터로 줄지 않는다).
 
 ### 4.4 단위
 
 | 단위 | 내용 | 건드릴 폴더 | 선행 | 검증 | 측정 |
 |---|---|---|---|---|---|
-| PK 검증 | **코드는 끝(`wt/structpk`, 빌드 없이 썼다).** PK1 `ResourcePakWriter` · 손으로 쓴 `ResourcePakTypes.h`(+`static_assert`), 테스트 도우미가 같은 쓰기. PK2 `PackCooker` · `PackConfig`(모든 칸 `Required`, JSON 키를 필드 이름으로 다시 씀) · `App --cook-packs` · `--cook-all` · `--pack-dir`, 타깃 제외는 `ResourcePaths::isExcludedForTarget`(런타임과 같은 표 · 같은 맞춤), 빌드 타깃은 쿠킹하는 호스트(서버 실행 파일이 서버 팩), 증분은 `CookStore` 작업 하나(출력이 기록 바이트면 쓰지 않게 `CookStore` 를 고침). `deflateStrategy` 는 리더의 요구였다 — 리더가 표준 zlib 이라 제약이 없어 코덱 옵션을 두지 않았다. PK3 `ShaderCooker::verifyCookedShaders`(도구 지문까지) · `App --verify-shaders`, `CheckShaderStamps` 를 지우고 `ShaderCookStampTest` 두 케이스, 커밋 훅은 셰이더 폴더(`Resource/*/shaders/`)를 고친 커밋에서 `App --verify-shaders` 를 부르고 App 이 없으면 실패(8절 권고안 그대로 — 셰이더를 고치는 사람은 App 으로 굽으므로 App 이 있다). PK4 `CookAssets.py` · `PackFormat.py` · `GeneratePackFormat.py` · `PackFormat.json` · `CheckCookContract`(파이썬 쿠커 대조 게이트, 대상이 사라짐) · 파이썬 테스트 둘을 지우고 CMake `CookAssets` · `MakePackage` 가 실행 파일 `--cook-all` 을 부른다. 팩 이름 목록(`listPackNameOfGame`)은 `MakePackage` 로 옮겼다(엔진 `PackCooker::makePackFileName` 과 같은 규칙, 어긋나면 스테이징이 빠진 팩으로 멈춘다). **남은 것**: 전 프리셋 컴파일 · `-L nogpu` · `-L lint`, 파이썬이 쓴 13 개 팩과 항목 목록 · 내용 비교(바이트는 배치가 같아도 빈 항목 처리(파이썬은 zlib 8 바이트, 지금은 0 바이트 — 리더가 거절하던 모양)에서 다를 수 있다), 무변경 재쿠킹이 쓰지 않는지, 쿠킹 · 패키징 시간 Release 3회, `MakePackage` 로 Shipping 패키지 한 벌 | 위 넷 | HC 와 무관 | 위 남은 것 | 있습니다(쿠킹 · 무변경 재쿠킹 · 패키징 시간). 파이썬 기준 시간은 옛 커밋(`85df5a61d^`)에서 잰다 |
-
-고친 문서: `Scripts/generate/README.md`, `Scripts/docs/Commands.md` · `TrapsBuild.md`, `cmake/README.md`, `docs/07_Configuration.md`, `docs/08_Verification.md`, `docs/agents/NamingScripts.md`, 결정 기록의 `cook.stamp` 항목, `ZlibCompressionCodec.h` · `ResourcePakReader.cpp` 문구, 생성 문서. `Config/README.md` 에는 압축 설명이 없었다.
+| PK 검증 | **코드는 끝(`wt/structpk`, 빌드 없이 썼다).** PK1 `ResourcePakWriter` · `ResourcePakTypes.h`. PK2 `PackCooker` · `PackConfig` · `App --cook-packs` · `--cook-all` · `--pack-dir`, 타깃 제외는 `ResourcePaths::isExcludedForTarget`(런타임과 같은 표), 증분은 `CookStore` 작업 하나(출력이 기록 바이트면 쓰지 않게 `CookStore` 를 고침). PK3 `verifyCookedShaders`(도구 지문 포함) · `App --verify-shaders`, `CheckShaderStamps` 삭제, `ShaderCookStampTest` 두 케이스, 커밋 훅은 `Resource/*/shaders/` 를 고친 커밋에서 `App --verify-shaders` 를 부르고 App 이 없으면 실패. PK4 `CookAssets.py` · `PackFormat.py` · `GeneratePackFormat.py` · `PackFormat.json` · `CheckCookContract` 삭제, CMake `CookAssets` · `MakePackage` 가 `--cook-all` 을 부름, 팩 이름 목록은 `MakePackage` 로. **남은 것**: 전 프리셋 컴파일 · `-L nogpu` · `-L lint`, 파이썬이 쓴 13 개 팩과 항목 목록 · 내용 비교(빈 항목 처리가 다를 수 있다 — 파이썬 zlib 8 바이트, 지금 0 바이트), 무변경 재쿠킹이 쓰지 않는지, 쿠킹 · 패키징 시간 Release 3회, `MakePackage` 로 Shipping 패키지 한 벌 | 위 넷 | HC 와 무관 | 위 남은 것 | 있습니다(쿠킹 · 무변경 재쿠킹 · 패키징 시간). 파이썬 기준 시간은 옛 커밋(`85df5a61d^`)에서 잰다 |
 
 ### 4.5 위험
 
-- **팩 바이트가 달라진다.** 코덱 구현이 같은 zlib 이라도 압축 결과가 파이썬과 다를 수 있다. 팩 키가 바뀌어 모든 팩이 한 번 다시 쓰인다. PK1 의 비교로 이유를 적어 두고, 항목 목록 · 내용 · CRC 가 같으면 받아들인다.
-- **셰이더 스탬프 검사가 빌드된 `App` 을 요구한다.** 커밋 훅은 지금 빌드 없이 돈다. 영향은 `Resource/*/shaders/*` 를 고치는 커밋에 한정되고, 그 사람은 셰이더를 `App` 으로 쿠킹하므로 `App` 이 이미 있다. 셰이더를 쿠킹하지 않는 리소스 작업자는 커밋된 바이너리를 받아 쓰므로 영향이 없다(커밋 유지 결정, 5-12 `구조` 행). "App 이 없으면 건너뛴다"는 두지 않는다.
-- **헤드리스 `App` 이 자기 팩을 읽는 순환.** 쿠킹은 느슨한 트리를 읽어야 한다. `--cook-scenes` 가 이미 같은 방식이다.
-- **파이썬 쪽 숨은 소비자.** `listPackNameOfGame` 을 쓰는 곳이 `MakePackage.py` 외에 있는지 PK4 에서 `grep` 으로 확인한다.
+- 코덱이 같은 zlib 이라도 압축 결과가 달라 팩 키가 바뀌고 모든 팩이 한 번 다시 쓰인다. 항목 목록 · 내용 · CRC 가 같으면 받아들인다.
+- 셰이더 스탬프 검사가 빌드된 `App` 을 요구한다 — `Resource/*/shaders/*` 를 고치는 커밋에 한정되고 "App 이 없으면 건너뛴다"는 두지 않는다(커밋 유지 결정, 5-12 `구조` 행).
+- `listPackNameOfGame` 의 다른 소비자가 없는지 `grep` 으로 확인한다.
 
 ## 5. 에셋 종류를 등록 줄 하나에서 파생한다 (AT)
 
-이 절은 결정 기록 2절 "에셋 로더 등록제(종류가 대여섯이 되면 — UE `UFactory`)" 보류를 **다시 연다.** 조건이던 대여섯 종을 넘어 지금 20 종 이상이다.
+결정 기록 2절 "에셋 로더 등록제" 보류를 다시 연다(조건이던 대여섯 종을 넘어 20 종 이상).
 
 ### 5.1 현재 구조
 
-한 종류의 사실이 여섯 곳에 따로 적힌다. 2026-10-20 에 센 값이다.
-
-| 곳 | 무엇을 적나 | 규모 |
-|---|---|---|
-| `AssetKind`(`Engine/Resource/AssetFormat.h` 19-28 행) | 쿠킹 · 포맷 이관의 종류 열거, `AssetFormatVersions` 상수 | 6 개(Material · MaterialInstance · RenderPipeline · RenderPass · Prefab · Scene) |
-| `Config/Engine/CookContract.json` | `cook_suffixes`(저작 소스 ↔ 쿠킹본, 종류), `asset_kinds`(Texture · ShaderBinary · Audio — 위와 다른 종류 목록), `target_excluded_asset_kinds` | 7 + 3 + 1 줄. 파이썬과 C++ X-macro 둘이 읽음 |
-| `SW_RESOURCE_DATA_KIND`(`ResourceDataKind.h`) | 카탈로그 파일의 경로 규칙(접두 · 포함 · 접미)과 로더 함수 | 29 줄 |
-| `IAssetCache` 와 `SW_BUILT_IN_ASSET_CACHE` | 경로 키 에셋 캐시, `getAssetKindName()` 문자열 | 등록 24 곳 |
-| `EditorAssetType`(`Editor/Common/Workspace/EditorAssetType.{h,cpp}`) | 열거 + 종류 정보 테이블(`kArrKindInfo` 20 줄) + 경로 판정 규칙(`kArrAssetMatch` 28 줄) + 확장자 배열 약 25 줄 | 사용 188 줄, 29 파일 |
-| `kExtension` 상수 | 타입마다 자기 헤더에 접미사 | 36 개 |
-
-한 종류를 더하면 이 중 몇 곳을 손으로 고쳐야 하는지가 기억에 달려 있다. `IAssetCache.h` 머리 주석이 이미 "목록이 여럿이면 한쪽만 늘어난다"고 적는다. 접미사 우선순위(`.scene.xml` 이 `.scene` 보다 먼저)도 JSON 순서와 `kArrAssetMatch` 순서 두 곳이 따로 정한다.
+(해소됨) 한 종류의 사실이 `AssetKind` 열거 · `CookContract.json`(`cook_suffixes` · `asset_kinds` · `target_excluded_asset_kinds`) · `SW_RESOURCE_DATA_KIND` · `IAssetCache`/`SW_BUILT_IN_ASSET_CACHE` · `EditorAssetType`(열거 · 정보 테이블 · 경로 판정 · 확장자 배열) · 타입별 `kExtension`(36 개) 여섯 곳에 따로 적혔다.
 
 ### 5.2 해법
 
-- **종류 정의는 `AssetTypeDef` 하나다.** 접미사 목록, 레이블, 저작 소스인지 쿠킹본인지(쿠킹 역할), 팩에서 뺄 수 있는 그룹(Texture · ShaderBinary · Audio 에 해당하는 값), 이관 버전 상수를 한 구조체에 둔다. 각 타입 헤더의 `kExtension` 은 이 정의의 접미사로 대신하고, 캐시의 `.cpp` 에 있는 `SW_BUILT_IN_ASSET_CACHE` 줄이 `SW_ASSET_TYPE( Type, def )` 한 줄로 바뀐다 — 캐시 등록이 곧 종류 등록이다.
-- **파생하는 쪽은 레지스트리를 순회한다.** 쿠커(`AssetCookPath`), 접미사 우선순위(접미사 길이가 긴 것이 먼저라는 규칙을 레지스트리가 정렬로 가진다 — JSON 순서에 기대지 않는다), 팩 제외 그룹, 이관 키(`AssetKind`), 에디터의 경로 판정이 모두 같은 목록을 읽는다. 종류를 하나 더하는 일은 등록 줄 하나다.
-- **카탈로그 종류(`ResourceDataKind`)는 같은 레지스트리에 들어올 수 있는지 AT4 에서 가른다.** 접미사 규칙이 아니라 경로 규칙(`game/` 접두 + `/data/appearance/` 포함 + `.xml` 접미 등)이라 형태가 다르다. 한 구조체에 "접미사 규칙 또는 경로 규칙"을 두는 것이 두 레지스트리를 두는 것보다 단순하면 합친다. 아니면 이 문서는 카탈로그를 따로 둔 이유를 적고 끝낸다.
-- **에디터는 표시 정보만 가진다.** 아이콘 · 색 · 패널 제목 · 임포터는 Editor 에만 있어야 하므로 `EditorAssetTypeInfo` 는 남기되, 접미사 · 캐시 이름 · 핫 리로드 경로는 엔진 레지스트리에서 읽고 표시 정보는 레이블 키로 짝짓는다. 열거 `EditorAssetType` 은 에디터 안의 분류(콘텐츠 브라우저 · 아이콘 · 패널 연결)라 남기고, 엔진 종류와의 짝은 종류 이름 열(`AssetMatchRow::_engineTypeName`)로 둔다. 엔진 종류가 에디터 표시 정보를 빠뜨리는 것은 `AssetTypeCoverageTest` 가 막는다(표시 없음을 명시한 종류는 허용). 형식으로 막지 못하는 틈은 에디터가 엔진 헤더를 모르는 경계뿐이라 테스트를 둔다.
-- **`CookContract.json` 은 줄어든다.** PK4 뒤에는 파이썬 소비자가 없으므로 `cook_suffixes` · `asset_kinds` 는 레지스트리로 옮겨 지우고, `rhi_backends`(CMake 가 필요) · `default_rhi_backend` · 타깃별 제외 그룹 이름(`target_excluded_asset_kinds`, 레지스트리의 그룹 이름을 가리키며 모르는 이름은 로드 오류)만 남는다.
+- 종류 정의는 `AssetTypeDef` 하나(접미사 목록, 레이블, 쿠킹 역할, 팩 제외 그룹, 이관 버전). `kExtension` 은 이 정의의 접미사를 가리킨다.
+- 쿠커 · 접미사 우선순위(긴 접미사 먼저, 레지스트리가 정렬로 가짐) · 팩 제외 그룹 · 이관 키 · 에디터 경로 판정이 모두 같은 레지스트리를 읽는다.
+- 에디터는 표시 정보(아이콘 · 색 · 패널 제목 · 임포터)만 가진다. 엔진 종류와의 짝은 `AssetMatchRow::_engineTypeName`, 표시 정보 누락은 `AssetTypeCoverageTest` 가 막는다.
+- `CookContract.json` 은 `rhi_backends` · `default_rhi_backend` · 타깃별 제외 그룹 이름만 남는다.
 
 ### 5.3 대안과 기각 이유
 
-- **지금처럼 두고 새 종류를 등록할 때 체크리스트를 문서화한다.** 기각한다. 체크리스트는 게이트보다도 약하다.
-- **에디터의 `EditorAssetType` 만 정리한다.** 기각한다. 에디터 테이블이 접미사 사본을 갖는 것이 근본 원인이므로(`AssetCookPath::isCookableSource( path, kind )` 주석이 이미 이 문제를 적는다), 에디터 쪽만 고치면 엔진 쪽 사본 둘이 남는다.
-- **카탈로그 종류(`ResourceDataKind`)를 같은 레지스트리에 합친다(AT4).** 기각한다(2026-10-22). 카탈로그는 접미사가 아니라 경로 규칙(접두 · 포함 · 접미 — `game/` · `/data/items.xml`)으로 고르고, 스키마 검사 로더를 들고, 키트 · 게임 모듈이 Resource 층(티어 5)에서 등록한다. 에셋 종류 표는 접미사만 보는 티어 0 의 표라 두 모양을 한 구조체에 넣으면 칸 절반이 늘 비고 층이 섞인다. 겹치는 사실은 접미사 글자 하나였다 — VfxEffect 카탈로그가 `.vfx.xml` 을 따로 적던 것을 `VfxEffectDef::kExtension` 을 가리키게 고쳤다.
-- **언리얼의 `UFactory`/`UAssetDefinition` 처럼 임포트와 표시까지 한 등록에 넣는다.** 일부만 가져온다. 언리얼 `UAssetDefinition` 은 에디터 모듈에 있고 `UClass` 가 종류 키다 [기억]. 여기서는 엔진 레지스트리를 원본으로 두고 에디터 표시 정보만 바깥에 둔다.
+- 체크리스트 문서화 — 기각(게이트보다 약하다).
+- 에디터 `EditorAssetType` 만 정리 — 기각(엔진 쪽 사본 둘이 남는다).
+- 카탈로그 종류(`ResourceDataKind`)를 같은 레지스트리에 합침(AT4) — 기각(2026-10-22). 카탈로그는 경로 규칙(접두 · 포함 · 접미)과 스키마 검사 로더를 들고 Resource 층(티어 5)에서 등록하는데, 에셋 종류 표는 접미사만 보는 티어 0 표라 한 구조체에 넣으면 칸이 절반 비고 층이 섞인다. 겹치던 접미사 글자는 `VfxEffectDef::kExtension` 을 가리키게 고쳤다.
+- 언리얼 `UFactory`/`UAssetDefinition` 처럼 임포트 · 표시까지 한 등록 — 일부만(엔진 레지스트리가 원본, 에디터 표시 정보는 바깥).
 
 ### 5.4 단위
 
-동시 빌드는 둘까지다. AT1 은 `AssetFormat.h` 를 바꿔 모든 모듈을 다시 빌드한다.
-
 | 단위 | 내용 | 건드릴 폴더 | 선행 | 검증 | 측정 |
 |---|---|---|---|---|---|
-| AT 검증 | **AT1~AT5 코드는 끝(`wt/structpk`, 빌드 없이 썼다).** AT1 `AssetTypeDef` · `AssetTypeRegistry` · `SW_ASSET_TYPE`(`Engine/Common/` — 티어 0 이라 TileMap · Navigation 도 include 한다), 접미사는 길이 내림차순 · 같으면 등록 순, 겹친 이름 · 접미사는 등록하지 않고 문제로 남김. `AssetKind` · `AssetFormatVersions` 를 지우고 판은 정의(`_formatVersion`), 이관 키는 종류 이름. 씬(`SceneDocument`) · 프리팹 · 머티리얼 · 머티리얼 인스턴스를 옮겼다(RenderPipeline · RenderPass 는 쓰는 곳이 없어 뺐다). `cook_suffixes` 를 JSON · 생성기 · 파이썬에서 지움. AT2 · AT3 `kExtension` 을 가진 엔진 타입 33 종에 정의 · 등록(글자는 `kExtension` 하나를 정의가 가리킨다). 캐시 등록과 종류 등록은 한 줄로 합치지 않고 나란히 — 캐시 없는 종류가 많다. AT4 아래 5.3절. AT5 정의의 제외 묶음(`_excludeGroup`)과 Texture · Audio · ShaderBinary 종류, `asset_kinds` 를 지우고 `target_excluded_asset_kinds` 는 묶음 이름만(`SW_TARGET_EXCLUDED_GROUP_TABLE`), `ResourcePaths` 의 호스트 · 타깃 제외가 종류 표로 판정. **남은 것**: 전 프리셋 컴파일, `AssetTypeRegistryTest` · `ResourceHostTargetTest` · 씬 · 프리팹 쿠킹 왕복, 전용 서버 팩이 텍스처 · 셰이더 바이너리 · 오디오를 빼는지, `-L lint` · `-L nogpu` | 위 폴더 | PK | 위 남은 것 | 없음 |
-
-단위가 끝날 때 고칠 문서: 결정 기록 2절의 로더 등록제 문장(이 문서가 열면서 이미 고친다), `IAssetCache.h` 머리 주석, `docs/Config/` 생성물, `CookContract.json` 의 `$schema_note`.
+| AT 검증 | **AT1~AT5 코드는 끝(`wt/structpk`, 빌드 없이 썼다).** AT1 `AssetTypeDef` · `AssetTypeRegistry` · `SW_ASSET_TYPE`(`Engine/Common/`, 티어 0), 접미사는 길이 내림차순 · 같으면 등록 순, 겹친 이름 · 접미사는 등록하지 않고 문제로 남김. `AssetKind` · `AssetFormatVersions` 삭제(판은 `_formatVersion`, 이관 키는 종류 이름). 씬 · 프리팹 · 머티리얼 · 머티리얼 인스턴스 이전. `cook_suffixes` 삭제. AT2 · AT3 `kExtension` 가진 엔진 타입 33 종 등록(캐시 등록과 종류 등록은 나란히). AT5 제외 묶음(`_excludeGroup`) · Texture · Audio · ShaderBinary 종류, `asset_kinds` 삭제, `target_excluded_asset_kinds` 는 묶음 이름만(`SW_TARGET_EXCLUDED_GROUP_TABLE`), `ResourcePaths` 제외가 종류 표로 판정. **남은 것**: 전 프리셋 컴파일, `AssetTypeRegistryTest` · `ResourceHostTargetTest` · 씬 · 프리팹 쿠킹 왕복, 전용 서버 팩이 텍스처 · 셰이더 바이너리 · 오디오를 빼는지, `-L lint` · `-L nogpu` | 위 폴더 | PK | 위 남은 것 | 없음 |
 
 ### 5.5 위험
 
-- **정적 등록이 링크에서 빠진다.** `ConfigManager.cpp` 에 "리플렉션 등록자가 링크에서 빠졌다"는 검사가 있을 만큼 알려진 위험이다. `SW_BUILT_IN_ASSET_CACHE` · `SW_RESOURCE_DATA_KIND` 가 같은 정적 등록자를 이미 쓰므로 새 위험은 아니다. `AssetTypeRegistryTest` 가 접미사 상수를 쓰는 모든 타입이 등록되어 있는지 본다.
-- **에디터 188 줄 29 파일.** AT6 은 충돌이 많다. 에디터 다른 단위(`EditorCharacterEditor` 등)와 같은 시간대에 병합하지 않는다.
-- **접미사 판정 순서.** 지금은 `kArrAssetMatch` 의 순서가 우선순위다(첫 일치). 레지스트리는 정렬 규칙(긴 접미사 우선, 같으면 등록 순)으로 대신하며, 순서에 기댄 기존 규칙(예: `.png` 가 Texture 와 SpriteClip 이미지 양쪽)은 AT6 에서 케이스로 옮긴다.
-- **모듈 언로드.** 키트 DLL 이 등록한 종류는 모듈을 내릴 때 빠져야 한다. `ResourceDataKindRegistrar` 가 이미 하는 일과 같은 등록자 패턴을 따른다.
+- 정적 등록이 링크에서 빠질 위험 — 기존 등록자와 같은 패턴이고 `AssetTypeRegistryTest` 가 접미사 상수를 쓰는 모든 타입이 등록됐는지 본다.
+- 에디터 188 줄 29 파일이라 충돌이 많다 — 다른 에디터 단위(`EditorCharacterEditor` 등)와 같은 시간대에 병합하지 않는다.
+- 접미사 판정 순서는 정렬 규칙(긴 접미사 우선)으로 대신하며 순서에 기댄 규칙(`.png` 가 Texture 와 SpriteClip 이미지 양쪽)은 케이스로 옮긴다. 키트 DLL 이 등록한 종류는 모듈 언로드 때 빠져야 한다(`ResourceDataKindRegistrar` 와 같은 패턴).
 
 ## 6. 텍스트 형식을 역할마다 하나로 (TX)
 
 ### 6.1 현재 구조
 
-텍스트 파서가 세 개다. XML(에셋), JSON(설정과 에셋 일부), `KeyValueFile`(`key=value`).
-
-- **`KeyValueFile`**(`Core/File/KeyValueFile.{h,cpp}`) 소비자는 다섯이다. `.meta` 167 개(`AssetDatabase.cpp` 307 · 446 행 — `guid` · `sourcePath` · `imported` 세 줄), 에디터 패널 가시성(`EditorDockLayout` 의 `_windowsIniPath`, `EditorLayoutStore` 의 가시성 파일), 뷰포트 오버레이 상태(`EditorViewportOverlays`), 사용자 외형 프리셋(`UserAppearancePresetStore` — 플레이어 데이터), 퍼즈 대상(`LoaderFuzzTargets`). 에디터의 `EditorAssetType::Data` 확장자 목록에도 `.ini` · `.kv` 가 있다. DataDriven D1 이 이미 `KeyValueFile::readRequired` · `readOptional` 을 더했으므로 폴백 인자 쪽 정리(D9)도 이 파일을 포함한다.
-- **JSON 에셋.** `Resource/` 의 `.json` 은 69 개(약 1.3 MB)다. 확장자 종류는 `kExtension` 상수로 19 종(`.skeleton` · `.rig` · `.bonelod` · `.bonemask` · `.animgraph` · `.retarget` · `.facial` · `.visemes` · `.sprite` · `.dialogue` · `.seq` · `.vertexanimation` · `.avatar` · `.tokens` · `.cultures` · `.strings` · `.translation` · `.locproject` · `.tm`)이고 나머지는 이름 있는 설정성 파일이다. 같은 역할인데 XML 에셋(`.material` · `.vfx.xml` · `.tilemap.xml` · `.audioevents.xml` · `.pairedanim.xml`)과 JSON 에셋이 섞여 있고, 프리팹은 `.prefab.xml` 과 `.prefab.json` 둘이 쿠킹 입력이다(`cook_suffixes`).
-- 결정 기록 5-12 의 `리소스 C-44` 행은 도구가 `Resource/` 에 두는 출처 목록(`*.sources.json`, 가장 큰 파일 309 KB)을 JSON 으로 통일했다. 그 결정은 도구 데이터 쪽 이야기라 이 문서와 충돌하지 않는다.
+(해소됨) 파서가 XML · JSON · `KeyValueFile` 셋이었다. `KeyValueFile` 소비자는 `.meta` 167 개 · 에디터 패널 가시성 · 뷰포트 오버레이 · 사용자 외형 프리셋 · 퍼즈 대상이었고, `Resource/` 의 `.json` 69 개(JSON 에셋 확장자 19 종)와 XML 에셋이 같은 역할로 섞여 있었다. 도구 출처 목록 `*.sources.json`(결정 기록 5-12 `리소스 C-44`)은 도구 데이터라 충돌하지 않는다.
 
 ### 6.2 해법
 
-- **역할 규칙.** 저작자가 편집하고 리소스 id · GUID 로 참조되며 쿠킹 대상인 데이터는 XML, 시작할 때 `ConfigManager` 가 읽는 호스트 · 도구 설정과 사용자 상태(에디터 상태, 플레이어 설정)는 JSON 이다. 역할이 모호한 파일(`tokens` · `lipsync` · `animationlod` 등)은 TX4 에서 하나씩 가르고 결과를 테이블로 남긴다.
-- **형식은 등록이 막는다**(TX7 에서 이렇게 굳혔다 — 에셋 로더 서명은 종류마다 달라 한 서명으로 모을 수 없었다). `AssetTypeRegistry::isSuffixFormatAllowed` 가 `.json` 접미사는 쿠킹 입력(`CookSource`, 지금은 `.prefab.json` 하나)으로만 받고, 그대로 읽는 접미사로 올린 종류는 표가 받지 않고 문제로 남긴다(`AssetTypeRegistryTest.JSONSuffixIsOnlyACookSource`). 아래는 처음 설계다. AT 의 `AssetTypeDef` 에 형식 필드를 두지 않고 에셋 로더가 `XMLDocument` 만 받게 한다. JSON 읽기는 `ConfigManager`/`IConfig` 에서만 닿는다. 에셋 로더가 `JSONValue` 를 손으로 읽는 경로 자체가 서명에 없다. 형식으로 못 막는 틈(에셋 폴더의 코드가 `JSONSerializer` 를 직접 부르는 것)만 마지막에 린트 게이트로 둔다.
-- **`.meta` 는 XML 이다**(에셋 곁의 에셋 메타). `<AssetMeta guid="…" sourcePath="…" imported="0"/>` 한 요소를 리플렉션 구조체가 읽고, `guid` · `sourcePath` 는 `Required` 다.
-- **에디터 · 사용자 상태는 JSON 이다.** 리플렉션 구조체 + `JSONSerializer` 로 읽고 쓴다. `Saved/Editor/` 의 파일은 git 이 무시하는 사용자 상태라 옛 형식 리더를 두지 않고 새 형식으로 다시 쓴다(결정 기록의 "옛 형식 리더를 두지 않는다"). 플레이어 외형 프리셋은 출시 전 데이터라 같은 처리를 한다 — 확인이 필요하면 8절.
-- **외부 규격은 건드리지 않는다.** `.po` · `.xlf`(번역 교환), glTF · VRM, ImGui 의 `imgui.ini` 는 엔진 형식이 아니다.
-- **옛 형식 리더를 두지 않는다.** 변환은 일회성 스크립트로 모두 다시 쓰고 스크립트는 지운다. 임포터가 쓰는 JSON(`.skeleton.json` · `.vertexanimation.json` 등)은 임포터가 XML 을 쓰게 바꾸고 커밋된 결과를 다시 임포트한다.
+- **역할 규칙**: 저작자가 편집하고 리소스 id · GUID 로 참조되며 쿠킹 대상이면 XML, 시작 때 `ConfigManager` 가 읽는 호스트 · 도구 설정과 사용자 상태는 JSON.
+- **형식은 등록이 막는다**(TX7): `AssetTypeRegistry::isSuffixFormatAllowed` 가 `.json` 접미사는 쿠킹 입력(`CookSource`, 지금은 `.prefab.json` 하나)으로만 받는다(`AssetTypeRegistryTest.JSONSuffixIsOnlyACookSource`). 에셋 로더는 `XMLDocument` 만 받고 JSON 읽기는 `ConfigManager`/`IConfig` 에서만 닿는다. 에셋 폴더 코드가 `JSONSerializer` 를 직접 부르는 틈만 린트 게이트로 둔다.
+- `.meta` 는 XML(`<AssetMeta guid sourcePath imported/>`, `guid` · `sourcePath` `Required`). 에디터 · 사용자 상태는 리플렉션 + JSON, 옛 형식 리더는 두지 않고 다시 쓴다.
+- 외부 규격(`.po` · `.xlf` · glTF · VRM · `imgui.ini`)은 건드리지 않는다. 임포터가 쓰는 JSON 은 XML 을 쓰게 바꾸고 커밋된 결과를 다시 임포트한다.
 
 ### 6.3 대안과 기각 이유
 
-- **`KeyValueFile` 만 지우고 JSON 에셋은 둔다.** 기각한다. 에셋 로더마다 JSON/XML 을 고를 수 있는 구조가 남는다(근본 원인 4). 로더 서명으로 막으려면 JSON 에셋을 옮겨야 한다.
-- **모든 것을 JSON 으로 통일한다.** 기각한다. 에셋 XML 은 리플렉션 직렬화 · 마이그레이션 · 씬 프리팹 참조가 이미 XML 로 서 있다(`AssetFormat.h`: "저작 기본 포맷은 XML 입니다").
-- **`.meta` 를 JSON 으로 한다.** 기각한다. `.meta` 는 에셋 곁에 놓이고 에셋과 함께 참조되는 쪽이라 에셋의 역할을 따른다. 유니티 `.meta` 는 YAML 로 에셋과 같은 계열이고 Godot `.import` 는 설정 텍스트다 [기억] — 둘 다 에셋 형식과 따로 쓰지는 않는다.
+`KeyValueFile` 만 지우고 JSON 에셋 유지(로더가 형식을 고를 수 있는 구조가 남는다), 전부 JSON(에셋 XML 은 직렬화 · 마이그레이션 · 참조가 이미 XML 로 선다), `.meta` 를 JSON(에셋 곁에 놓이는 에셋의 일부라 에셋 형식을 따른다 — 유니티 `.meta` 는 YAML [기억]) — 모두 기각.
 
 ### 6.4 단위
 
 | 단위 | 내용 | 건드릴 폴더 | 선행 | 검증 | 측정 |
 |---|---|---|---|---|---|
-| TX 검증 | **TX1~TX4 는 끝(`wt/structpk`, 빌드 없이 썼다).** TX1 `AssetMeta`(REFLECT, `_guid` · `_sourcePath` Required)를 `toXML` · `parseXML` 로만 읽고 쓴다 — `AssetDatabase` 와 모델 임포터가 같은 함수. `loadMetaFile` 은 `AssetMetaReadResult`(없음 · 깨짐을 가른다)이고 깨진 `.meta` 를 새 GUID 로 덮어쓰지 않는다. `.meta` 167 개를 다시 썼고 변환 스크립트가 GUID 가 모두 같음을 확인했다(스크립트는 저장소에 두지 않음). TX2 `EditorPanelVisibility`(windows.json) · `EditorViewportOverlayFile` · `UserAppearancePresetFile`(판 3)을 리플렉션 JSON 으로 — 외형 프리셋은 8절 권고안대로 옛 판 리더를 지웠다. TX3 `KeyValueFile` · 퍼즈 대상 · 케이스를 지우고 남은 무관한 두 케이스는 `TestStringTableAndGameConfig.cpp`. TX4 아래 6.5절. **남은 것**: 전 프리셋 컴파일, 에셋 레지스트리 생성 결과 비교 · GUID 복구 · 임포트 테스트, 에디터 레이아웃 저장 · 복원, 외형 프리셋 왕복, `-L lint` · `-L nogpu`, Dev 기동 `.meta` 스캔 시간 전후 | 위 폴더 | AT 검증 | 위 남은 것 | 있습니다(`.meta` 스캔 시간) |
-
-단위가 끝날 때 고칠 문서: [설정 문서](../07_Configuration.md)의 형식 문단, `AssetFormat.h` 머리 주석("JSON 은 도구 · 설정을 주고받는 데 씁니다"), 결정 기록 5-4 의 형식 항목, DataDriven 7.2절의 `KeyValueFile` 문장(D9 가 이 문서를 가리키게).
+| TX 검증 | **TX1~TX4 는 끝(`wt/structpk`, 빌드 없이 썼다).** TX1 `AssetMeta`(REFLECT)를 `toXML` · `parseXML` 로만 읽고 씀 — `AssetDatabase` 와 모델 임포터 공용. `loadMetaFile` 은 `AssetMetaReadResult`(없음 · 깨짐 구분), 깨진 `.meta` 를 새 GUID 로 덮어쓰지 않는다. `.meta` 167 개를 다시 썼고 GUID 동일을 확인했다. TX2 `EditorPanelVisibility`(windows.json) · `EditorViewportOverlayFile` · `UserAppearancePresetFile`(판 3, 옛 판 리더 삭제)을 리플렉션 JSON 으로. TX3 `KeyValueFile` · 퍼즈 대상 · 케이스 삭제(남은 무관한 두 케이스는 `TestStringTableAndGameConfig.cpp`). TX4 아래 6.5절. **남은 것**: 전 프리셋 컴파일, 에셋 레지스트리 생성 결과 비교 · GUID 복구 · 임포트 테스트, 에디터 레이아웃 저장 · 복원, 외형 프리셋 왕복, `-L lint` · `-L nogpu`, Dev 기동 `.meta` 스캔 시간 전후 | 위 폴더 | AT 검증 | 위 남은 것 | 있습니다(`.meta` 스캔 시간) |
 
 ### 6.5 JSON 분류 (TX4 가 채운다)
 
-TX4 가 `Resource/` 의 `.json` 69 개를 아래 열로 채운다. 지금까지 확인된 것은 출처 목록(`*.sources.json` 2개, 도구 데이터)이 설정 쪽이라는 것뿐이다.
+`Resource/` 의 `.json` 69 개(2026-10-22 직접 센 값).
 
 | 파일 또는 확장자 | 개수 | 역할 | 처리 |
 |---|---|---|---|
-| `.skeleton` · `.rig` · `.vertexanimation` · `.bonelod` · `.animgraph` · `.sprite` · `.bonemask` · `.retarget` · `.facial` · `.visemes` | 10 · 7 · 5 · 5 · 4 · 3 · 2 · 1 · 1 · 1 (39) | 에셋 — 임포터 산출물이거나 저작 데이터이고 리소스 id 로 참조되며 팩에 든다 | XML (TX5) |
-| `engine/animation/animationcrowd.json` · `animationlod.json` · `lipsync.json` | 3 | 에셋 — 고정 리소스 경로(`kResourcePath`)로 읽는 엔진 조정 표이고 팩에 든다. 설정이 아니다(`ConfigManager` 가 읽지 않고, 배포물에서도 팩에서 읽는다) | XML (TX5) |
-| `.strings` · `.translation` · `.locproject` · `.cultures` · `.tm` | 3 · 3 · 3 · 1 · 3 (13) | 에셋 — 지역화 문서(`.tm` 은 번역 메모리, 에디터 · 게임 팩) | XML (TX6). `.po` · `.xlf` 교환은 그대로 |
-| `.dialogue` · `.seq` | 1 · 1 | 에셋 — 대화 그래프 · 시퀀서 | XML (TX7) |
-| `.avatar` | 1 | 에셋 — VRM 임포터 산출물(`VrmAvatarImporter`) | XML (TX7, 임포터 출력도) |
-| `common/sql/*/migrations.json` | 2 | 에셋 — 키트 카탈로그(`SQLMigrationListDataKind`, 팩에 든다) | XML (TX7) |
-| `editor/theme/*.tokens.json` | 5 | 에디터 표시 데이터 — 에디터 환경설정이 이름으로 고르는 테마(`ResourceDataKind` `editortheme`, 팩에 들지 않는 editor 도메인) | JSON 으로 남긴다. 읽기 경로가 `ConfigManager` 의 엄격한 JSON 읽기인지 TX7 에서 확인 |
-| `*.sources.json` | 2 | 도구 데이터 — 출처 목록(결정 기록 5-12 `리소스 C-44`, 팩에서 뺀다) | JSON 으로 남긴다 |
-| `models_raw/**/*.clips.json` | 1 | 도구 데이터 — 모델 임포트 입력(원본 폴더, 팩에서 뺀다) | JSON 으로 남긴다 |
-| `engine/automation/allowedlogs.json` | 1 | 도구 데이터 — 자동화 시나리오의 허용 로그 목록 | JSON 으로 남긴다 |
+| `.skeleton` · `.rig` · `.vertexanimation` · `.bonelod` · `.animgraph` · `.sprite` · `.bonemask` · `.retarget` · `.facial` · `.visemes` | 39 | 에셋(임포터 산출물 · 저작 데이터, 팩에 든다) | XML (TX5) |
+| `engine/animation/` 의 `animationcrowd.json` · `animationlod.json` · `lipsync.json` | 3 | 에셋(고정 리소스 경로로 읽는 조정 표, 팩에 든다) | XML (TX5) |
+| `.strings` · `.translation` · `.locproject` · `.cultures` · `.tm` | 13 | 에셋(지역화 문서) | XML (TX6). `.po` · `.xlf` 교환은 그대로 |
+| `.dialogue` · `.seq` · `.avatar`(VRM 임포터 출력도) · `common/sql/*/migrations.json` | 1 · 1 · 1 · 2 | 에셋 | XML (TX7) |
+| `editor/theme/*.tokens.json` | 5 | 에디터 표시 데이터(팩에 들지 않음) | JSON 유지. 읽기 경로가 `ConfigManager` 의 엄격한 JSON 읽기인지 TX7 에서 확인 |
+| `*.sources.json` · `models_raw/**/*.clips.json` · `engine/automation/allowedlogs.json` | 2 · 1 · 1 | 도구 데이터 | JSON 유지 |
 
-합계 69 개(직접 센 것, 2026-10-22). 변환 스크립트는 로더를 XML 로 바꾸는 단위(TX5~TX7)가 종류마다 하나씩 만들고 변환 뒤 지운다 — 로더가 없는 채로 글자만 바꾸는 범용 변환기는 두지 않는다.
+변환 스크립트는 로더를 XML 로 바꾸는 단위(TX5~TX7)가 종류마다 하나씩 만들고 변환 뒤 지운다 — 범용 변환기는 두지 않는다.
 
 ### 6.6 위험
 
-- **데이터 재작성량.** `.meta` 167 + JSON 69 = 236 개를 다시 쓴다. GUID 보존이 가장 크다(바뀌면 씬 참조가 깨진다). TX1 의 비교가 그 검사다.
-- **XML 이 JSON 보다 크고 느리다.** 지역화 문서는 130 ~ 300 KB 로 가장 크다. 런타임은 쿠킹본이 아니라 원본을 읽는 문서가 있는지(느슨한 트리 Dev 에서만인지 팩에서도인지)를 TX6 에서 먼저 확인하고 측정한다. 측정이 나쁘면 해당 종류만 쿠킹본(바이너리)을 둔다.
-- **임포터 출력 재생성.** 커밋된 임포트 결과(`.skeleton.json` 등)를 다시 만들면 임포트 스탬프가 모두 바뀌고 diff 가 크다. 종류별 단위로 나눠 한 번에 한 종류씩 한다.
-- **D9 와 겹침.** 2절 테이블대로다.
+- 재작성량이 `.meta` 167 + JSON 69 = 236 개다. GUID 보존이 가장 크다(TX1 비교가 검사).
+- 지역화 문서는 XML 이 130 ~ 300 KB 로 크다 — 팩에서도 원본을 읽는지 TX6 에서 먼저 확인하고 측정한다. 나쁘면 그 종류만 쿠킹본(바이너리)을 둔다.
+- 커밋된 임포트 결과를 다시 만들면 임포트 스탬프가 모두 바뀌고 diff 가 크다 — 종류별로 한 번에 한 종류씩.
 
 ## 7. 하지 않는 것
 
-- **쿠킹된 셰이더 바이너리를 커밋하지 않는 것** — 계속 커밋한다(결정 기록 5-12 `구조` 행, 2026-10-20). 셰이더를 쿠킹하지 않는 리소스 작업자가 받자마자 쓰기 위해서다. PK3 의 스탬프 검사는 이 커밋된 바이너리가 소스와 맞는지 본다.
-- **백엔드 등급제**(DX12 · Vulkan 만 전 기능) — 하지 않는다(같은 행). 네 백엔드를 같은 기능으로 유지한다.
-- 외부 형식(`.po` · `.xlf` · glTF · VRM · `imgui.ini`)과 쿠킹 산출물 `assetregistry.txt`(사람이 편집하지 않는 쿠커 출력)는 6절의 대상이 아니다. 후자는 TX 가 끝난 뒤에도 남는 텍스트 줄 형식이라 필요하면 후보로 올린다.
+- 쿠킹된 셰이더 바이너리를 커밋하지 않는 것 — 계속 커밋한다(5-12 `구조` 행, 2026-10-20). PK3 스탬프 검사가 소스와 맞는지 본다.
+- 백엔드 등급제(DX12 · Vulkan 만 전 기능) — 하지 않는다(같은 행). 네 백엔드를 같은 기능으로 유지한다.
+- 외부 형식과 쿠킹 산출물 `assetregistry.txt` 는 6절의 대상이 아니다.
 
 ## 8. 사용자 결정
 
-정해졌다.
+정해졌다: 네 정책을 한다(HC → PK → AT → TX, 2026-10-20), 셰이더 바이너리는 계속 커밋, 백엔드 등급제는 하지 않는다(결정 기록 5-12).
 
-1. **네 정책을 한다**(사용자, 2026-10-20). 필수 설정(폴백 삭제와 설정 출처 하나), 팩 쿠킹의 C++ 이전, 에셋 종류의 등록 줄 하나 파생, 텍스트 형식의 역할별 하나와 `KeyValueFile` 삭제. 순서는 HC → PK → AT → TX.
-2. **쿠킹된 셰이더 바이너리는 계속 커밋한다**(사용자, 2026-10-20, 결정 기록 5-12). 계획에 넣지 않는다.
-3. **백엔드 등급제는 하지 않는다**(사용자, 2026-10-20, 결정 기록 5-12). 계획에 넣지 않는다.
-
-아직 묻지 않았고 권고안으로 진행하는 것. 뒤집을 때는 해당 단위 전에 알린다.
-
-- HC3 의 엔진 필드는 `GameSettings` 를 옮기지 않고 `<Engine>` 요소(엔진 소유 구조체)로 둔다(3.3절).
-- TX2 의 플레이어 외형 프리셋은 옛 형식 리더 없이 새 JSON 으로 다시 쓴다(출시 전 데이터이므로). **이대로 구현했다**(2026-10-22, 판 3 — 판 1 · 2 를 읽는 길을 지웠다).
-- PK3 의 커밋 훅은 빌드된 `App` 이 없으면 셰이더 파일을 고친 커밋을 막는다. **이대로 구현했다**(2026-10-22, `Resource/*/shaders/` 아래를 고친 커밋. 쿠킹 표만 고친 커밋은 빌드가 필요한 변경이라 `ShaderCookStampTest` 가 본다).
+권고안으로 진행한 것(뒤집을 때는 해당 단위 전에 알린다): HC3 의 엔진 필드는 `<Engine>` 요소로 둔다(3.3절). TX2 외형 프리셋은 옛 형식 리더 없이 새 JSON 으로(구현함, 판 3). PK3 커밋 훅은 빌드된 `App` 이 없으면 `Resource/*/shaders/` 를 고친 커밋을 막는다(구현함, 쿠킹 표만 고친 커밋은 `ShaderCookStampTest` 가 본다).

@@ -35,26 +35,21 @@ namespace sw
 - Locator-only `s_*` state used by bind/get APIs stays in the implementation
   block's anonymous namespace. This applies to `Source/` and
   `Tools/ReflectionParser/`.
-- Name the `Internal` helper after **the translation unit, not the class**. When one
-  class is split across several `.cpp` files, naming each helper after the class makes
-  them collide: unity builds (`SW_ENABLE_UNITY_BUILD`, used by the `CI-*` presets) merge
-  several `.cpp` files into one translation unit, and an anonymous namespace only hides a
-  name *per translation unit* — so the second definition is a redefinition error. So
+- Name the `Internal` helper after **the translation unit, not the class**. Unity builds (`SW_ENABLE_UNITY_BUILD`, used by the
+  `CI-*` presets) merge several `.cpp` files into one translation unit, and an anonymous namespace only hides a
+  name *per translation unit*, so helpers named after a class that is split across files collide. So
   `VulkanRHIResourceFactoryPipeline.cpp` uses `VulkanRHIResourceFactoryPipelineInternal`, not
-  `VulkanRHIResourceFactoryInternal`. Enforced by `CheckCodeConventions.py`
-  (`Naming/DuplicateInternalHelper`, full-scan only).
+  `VulkanRHIResourceFactoryInternal` (`Naming/DuplicateInternalHelper`, full-scan only).
 - The same holds for a constant declared directly in the anonymous namespace (`constexpr int32 kLimit = 4;`):
-  two `.cpp` files with the same bare name collide in a unity build. Put it inside the TU's `XxxInternal`
-  struct as `static constexpr`, or give it a name no other `.cpp` uses. Enforced by `CheckCodeConventions.py`
-  (`Naming/DuplicateAnonymousConstant`, full-scan only); constants inside a struct or a function are not affected.
+  put it inside the TU's `XxxInternal` struct as `static constexpr`, or give it a name no other `.cpp` uses
+  (`Naming/DuplicateAnonymousConstant`, full-scan only).
 - Gather a `.cpp`'s translation-unit-only helpers by **how many functions they have**:
   - **No functions** (constants only): no struct, the constants stay in the anonymous namespace.
   - **One function** (no constants, nested types, or other members): no struct either — a free function directly in the anonymous namespace.
     Give it a name unique to this file, because a bare function name has no struct to hide behind and two `.cpp` files with the same name collide in a unity build.
   - **Two or more functions, or a function together with constants**: exactly **one** `XxxInternal` struct per file, never several.
-  Enforced by `CheckCodeConventions.py` (`Naming/MultipleInternalHelper`, `Naming/LoneFunctionInternalHelper`; `Naming/DuplicateAnonymousFunction`, full-scan only,
-  `Source/` only). Files that already broke the first two when the rules were added are listed in `Scripts/lint/rules/CheckCodeConventions.toml`
-  (`internalHelperBaseline`); delete a file's line when you fix it, and do not add new files to the list.
+  Enforced by `Naming/MultipleInternalHelper`, `Naming/LoneFunctionInternalHelper` and `Naming/DuplicateAnonymousFunction` (full-scan only, `Source/` only).
+  Files that already broke the first two are listed in `Scripts/lint/rules/CheckCodeConventions.toml` (`internalHelperBaseline`); delete a file's line when you fix it, and do not add new files to the list.
 
 ### One anonymous namespace per file, at the top of its scope
 

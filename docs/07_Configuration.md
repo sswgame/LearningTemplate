@@ -28,20 +28,17 @@
 | 모듈 켜고 끄기와 의존 관계 | `*.module.json` |
 | 실행 한 번만 바꾸는 값, 디버그 스위치 | `-gv_<이름>=<값>` 과 명령줄 인자 |
 
-각 줄을 조금 더 풀면 다음과 같습니다.
+보충 설명입니다.
 
-- **엔진 시작 설정**은 창 크기, 기본 백엔드, 프레임 시간, 고정 스텝, 팩 우선순위 같은 값입니다. 구조체는 `EngineConfig` 입니다.
-- **엔진 데이터 테이블**은 물리 레이어와 재질, 내비 에이전트, 2D 정렬 레이어, 기본 에셋 경로, 셸 입력 맵입니다. `PhysicsSettings`, `NavMeshSettings`, `Render2DSettings`, `EngineDefaultAssets`, `InputMap` 이 읽습니다.
-- **게임 프리셋**(`GameConfig`)에는 팩을 찾는 팩 루트(`_packRoot`, 필수) 하나만 둡니다. 팩을 마운트하기 전에 알아야 하는 값은 그것뿐입니다.
-  게임의 나머지 설정은 팩 안의 `gamesettings.xml` 한 파일이 원본입니다. 엔진이 읽는 칸(창 제목, 렌더 파이프라인, 게임이 덧붙이는 사용자 설정 · 텔레메트리 스키마, UI 규칙, 일시정지 메뉴, 사용자 설정 기본값)은
-  `<Engine>` 요소(`PackEngineSettings`, 엔진 소유)에, 시작 씬 · 입력 맵 · 다국어 같은 게임 흐름은 나머지 표준 칸(`GameSettings`, GameFramework 소유)에 둡니다. 요소마다 읽는 계층이 하나입니다.
-  키트 데이터는 키트 자신의 데이터 파일에 둡니다.
+- **엔진 시작 설정**(`EngineConfig`)은 창 크기, 기본 백엔드, 프레임 시간, 고정 스텝, 팩 우선순위 같은 값입니다.
+- **엔진 데이터 테이블**은 물리 레이어와 재질, 내비 에이전트, 2D 정렬 레이어, 기본 에셋 경로, 셸 입력 맵입니다(`PhysicsSettings`, `NavMeshSettings`, `Render2DSettings`, `EngineDefaultAssets`, `InputMap`).
+- **게임 프리셋**(`GameConfig`)에는 팩 루트(`_packRoot`, 필수) 하나만 둡니다. 팩을 마운트하기 전에 알아야 하는 값은 그것뿐입니다.
+  나머지는 팩 안의 `gamesettings.xml` 이 원본입니다. 엔진이 읽는 칸(창 제목, 렌더 파이프라인, 사용자 설정 · 텔레메트리 스키마, UI 규칙, 일시정지 메뉴, 사용자 설정 기본값)은 `<Engine>` 요소(`PackEngineSettings`, 엔진 소유)에,
+  시작 씬 · 입력 맵 · 다국어 같은 게임 흐름은 나머지 표준 칸(`GameSettings`, GameFramework 소유)에 둡니다. 키트 데이터는 키트 자신의 데이터 파일에 둡니다.
 - **옵션 메뉴 값**은 스키마(`UserSettingsSchema`)가 팩에 실리고, 플레이어가 고른 값은 플레이어 PC의 `usersettings.json` 에 저장됩니다.
-- **에디터 상태**는 도킹, 레이아웃, 캔버스, 테마, gv 프리셋처럼 에디터가 직접 쓰는 값입니다. git이 무시하고 사람이 고치지 않습니다.
-- **개발 PC의 경로**는 LLVM, SDK, 파서 플래그 같은 값입니다. 로컬 파일은 git이 무시하고, 커밋하는 것은 시드 파일(`*.defaults.json`)뿐입니다.
-- **전용 서버 운영 값**(`ServerConfig`)은 주소, 포트, 틱, 저장소, TLS입니다. 운영자가 고치는 파일이라 배포본도 디스크에서 읽습니다.
-- **비밀**은 DB 비밀번호, 캐시 AUTH, 키 암호입니다. 설정 파일에는 그 환경 변수의 이름만 적습니다(`_secretEnvironment` 필드).
-- **빌드 형태**는 Shipping 여부, 새니타이저, 링크할 백엔드, 활성 게임입니다. Dev 에서 돌릴 게임은 실행 인자 `-game=<게임>` 으로 고르고(`Ninja-Debug` 가 게임 전부를 짓는다), `SW_ACTIVE_GAME` 은 기본 게임 · Shipping 이 굽는 게임입니다. 표는 [`BuildOptions.md`](Config/BuildOptions.md)에 있습니다.
+- **에디터 상태**(도킹, 레이아웃, 테마, gv 프리셋)와 **개발 PC의 경로**는 git이 무시하고 사람이 고치지 않습니다. 개발 PC 경로는 시드 파일(`*.defaults.json`)만 커밋합니다.
+- **전용 서버 운영 값**(`ServerConfig`)은 운영자가 고치는 파일이라 배포본도 디스크에서 읽습니다. **비밀**은 설정 파일에 그 환경 변수의 이름만 적습니다(`_secretEnvironment` 필드).
+- **빌드 형태**는 Shipping 여부, 새니타이저, 링크할 백엔드, 활성 게임입니다. Dev 에서 돌릴 게임은 실행 인자 `-game=<게임>` 으로 고르고, `SW_ACTIVE_GAME` 은 기본 게임 · Shipping 이 굽는 게임입니다. 표는 [`BuildOptions.md`](Config/BuildOptions.md)에 있습니다.
 - **모듈 켜고 끄기**는 매니페스트의 `_bEnabledByDefault` 와, 게임 매니페스트의 `_listModuleOverride` 로 정합니다(`ModuleCatalog`).
 - **전역 변수와 명령줄 인자**의 목록은 [`GlobalVariables.md`](Config/GlobalVariables.md)와 [`CommandLine.md`](Config/CommandLine.md)에 있습니다.
 
@@ -71,14 +68,13 @@
 | 그 밖의 전역 변수 | 코드 기본값 → 명령줄 → 실행 중 변경 |
 | 2D 정렬 테이블 | 엔진 `render2d.xml` → 게임 팩 `data/render2d.xml` |
 
-몇 줄은 덧붙일 것이 있습니다.
+덧붙일 것입니다.
 
 - 플레이어 해상도는 기본값이 아닐 때만 `EngineConfig` 를 이깁니다.
 - Shipping 빌드에는 `SW_SHIPPING_RHI_BACKEND` 로 링크한 백엔드 하나뿐이라 백엔드를 고를 수 없습니다.
 - `startMap` 과 `titleScene` 은 `gamesettings.xml` 의 값입니다. 에디터는 `-gv_editorStartupScene` 이 마지막 요청이 되어 이깁니다.
 - 고정 스텝은 게임의 `fixedUpdate` 와 씬 물리가 같이 쓰고, 물리는 `PhysicsSettings::_subStepCount` 로 다시 나눕니다.
-- 사용자 설정이 바꾸는 전역 변수는 옵션 메뉴에서 값을 바꾸면 그 값이 다시 이깁니다.
-- 실행 중 변경은 에디터 패널, 개발 콘솔, gv 프리셋에서 하는 변경입니다.
+- 사용자 설정이 바꾸는 전역 변수는 옵션 메뉴에서 값을 바꾸면 그 값이 다시 이깁니다. 실행 중 변경은 에디터 패널, 개발 콘솔, gv 프리셋에서 하는 변경입니다.
 - 게임 팩의 `render2d.xml` 은 엔진 것을 합치지 않고 통째로 대신합니다.
 
 배포본(Shipping)은 `EngineConfig` 와 `GameConfig` 를 CMake 구성 단계에서 실행 파일에 넣은 사본으로 읽고, 디스크의 `Config/` 를 보지 않습니다. 서버 설정만 예외입니다.
@@ -107,9 +103,3 @@
 2. `Scripts/common/ConfigCatalog.py` 에 한 줄을 추가합니다.
 3. 설정 파일 테스트(`ConfigFileSchemaTest`, `EditorConfigFileSchemaTest`, `ResourceDataSchemaTest` 중 맞는 것)의 목록에 한 줄을 추가합니다.
 4. `py -3 Scripts/generate/GenerateConfigReference.py` 로 생성 문서를 다시 만듭니다.
-
-## 상용 엔진과의 비교
-
-언리얼은 `Config/Default*.ini` 와 `UDeveloperSettings` 를 씁니다. 클래스 선언이 곧 프로젝트 설정 화면이 되고, CVar는 명령줄이 프로젝트 설정을 이기며, 사용자와 에디터 상태는 `Saved/` 에 둡니다.
-유니티는 `ProjectSettings/*.asset` 과 `SettingsProvider`, 그리고 `UserSettings/` 폴더를 씁니다.
-이 엔진도 "원본은 구조체 선언이고, 설정 화면과 문서는 거기서 만든다"는 방식을 따릅니다. 파일 형식만 JSON과 XML입니다.

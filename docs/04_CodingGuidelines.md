@@ -57,18 +57,16 @@ SW_EXTERN_GLOBAL_VARIABLE( bool, gv_useRenderThread );                // extern 
 | `buildMesh`(새 값) · `generateId` · `constructShape` | `createMesh`(소유) · `makeKey`(값) | |
 | `buildStages()`(있는 표를 다시 채움) | `rebuildStages()` · `populateRows()` | 이미 있는 상태를 다시 채우면 `rebuild` · `populate` |
 | `bool findBody( handle, PhysicsBody& out )` | `PhysicsBody* findBody( handle )` · `bool tryGetBody( handle, PhysicsBody& outBody )` | `find` 는 값이나 포인터를 돌려준다. 돌려줄 "없음"이 없을 때만 `tryGet` + out |
-| `getOrLoadTexture( path )` | `acquire( path )` | 캐시에서 가져오고 없으면 읽는다(공유 소유) |
-| `findOrAddSlot( name )` | `getOrCreateSlot( name )` | get-or-create 는 `getOrCreate` |
+| `getOrLoadTexture( path )` · `findOrAddSlot( name )` | `acquire( path )`(공유 소유) · `getOrCreateSlot( name )` | get-or-create 는 `getOrCreate` |
 | `Folder* ensureFolder( path )` | `getOrCreateFolder( path )` · `void ensureFolder( path )` | `ensure` 는 존재만 보장하고 돌려주지 않는다 |
-| `tickInput()` · `fixedUpdate()` | `update( deltaTime )`(프레임 진행) · `step( fixedDelta )`(고정 스텝) · `poll()`(입력 수집) | 기존 선언은 일괄 개명하지 않는다 |
-| `appendBoolAttr( ... )` | `appendBoolAttribute( ... )` | 함수 이름에 줄임말을 쓰지 않는다 |
+| `tickInput()` · `fixedUpdate()` | `update( deltaTime )` · `step( fixedDelta )` · `poll()` | 기존 선언은 일괄 개명하지 않는다 |
+| `appendBoolAttr( ... )` · `attr()` | `appendBoolAttribute( ... )` · `attribute()` | 줄임말은 저장소의 타입 이름이 줄일 때만 |
 | `void parse( XmlNode node, Desc& out )` | `void parse( XmlNode node, Desc& outDesc )` | out 매개변수는 채우는 것을 이름에 담는다 |
 | `bool checkValid()` | `bool isValid()` · `void assertValid()` | 술어는 질문형, `check*` 는 술어가 아니다 |
 | `name()`(짝 `setName`) | `getName()` | 맨이름 게터 금지 |
 | `Handle onLanguageChanged( callback )` | `registerLanguageChanged( callback )` | `on*` 은 "일어났다" 알림이지 등록이 아니다 |
 | `find( string_view )` + `find( const hashed_string& )` | `find( const hashed_string& )` 하나 · 키가 아닌 글은 `findStringByText( string_view )` | 리터럴 호출이 모호해진다 |
-| 매 프레임 `string resolvePresentSource()` · 이름에 `fixed_string<32>` | `string_view resolvePresentSource()`(파이프라인 선언을 가리킴) · `hashed_string` | 프레임 경로는 사본을 만들지 않고, 15자 이하는 `string` 도 힙이 없다 |
-| `attr()` | `attribute()` | 줄임말은 저장소의 타입 이름이 줄일 때만 |
+| 매 프레임 `string resolvePresentSource()` | `string_view resolvePresentSource()` · `hashed_string` | 프레임 경로는 사본을 만들지 않고, 15자 이하는 `string` 도 힙이 없다 |
 
 | 접미사 | 뜻 | 예 |
 | :--- | :--- | :--- |
@@ -93,45 +91,16 @@ SW_EXTERN_GLOBAL_VARIABLE( bool, gv_useRenderThread );                // extern 
 
 #if defined( SW_PLATFORM_WINDOWS )                  // 플랫폼 include 는 맨 뒤 분기 하나 — 분기 안에서 프로젝트 헤더, 빈 줄, 시스템 헤더
     #include "Core/Common/PlatformOsHeaders.h"
-#elif defined( SW_PLATFORM_LINUX )
-    #include "Core/Common/PlatformOsHeaders.h"
 #endif
 ```
 
-Core 폴더는 층입니다. 아래 층이 위 층을 알아야 하면 include 대신 인터페이스를 받습니다(`CheckCoreLayers.py`):
-
-```cpp
-// Source/Core/Concurrency/mutex.h — Concurrency(티어 1)는 교착 검출기(Diagnostics, 티어 10)를 include 하지 않는다
-class SW_API ILockObserver { public: virtual void recordLockAttempt( void* pLock ) = 0; … };
-ILockObserver* pObserver = mutex::getLockObserver();   // 검출기가 initialize 에서 registerLockObserver( this )
-
-// 작업 스레드 시작 — 크래시 보고기(Diagnostics/CrashHandler)가 아니라 아래층 준비를 부른다
-ThreadCrashStack::initializeCurrentThread();
-```
+Core 폴더는 층입니다. 아래 층이 위 층을 알아야 하면 include 대신 인터페이스를 받습니다(`CheckCoreLayers.py`). 예를 들어 `Concurrency`(티어 1)는 교착 검출기(`Diagnostics`, 티어 10)를 include 하지 않고 `ILockObserver` 를 받으며, 검출기가 `initialize` 에서 `registerLockObserver( this )` 로 등록합니다.
 
 `Log` 보다 아래 폴더(`CheckCoreLayers.toml` 의 `[tier]`)의 `.cpp` 는 `Logger.h` · File · String 이 없는 전용 pch(`pchLow.h`)로 컴파일됩니다.
-그래서 `SW_LOG_*` · `StringBuilder` 처럼 pch 가 몰래 넣어 주던 위 티어 선언을 쓰면 컴파일이 실패합니다. 보고는 `SW_LOW_LEVEL_*` 로 합니다.
+그래서 `SW_LOG_*` · `StringBuilder` 처럼 위 티어 선언을 쓰면 컴파일이 실패합니다. 보고는 `SW_LOW_LEVEL_*` 로 합니다.
 낮은 티어 **헤더**는 위 티어 pch 로 컴파일되는 TU 가 포함하므로 컴파일이 못 막고 `CheckCoreLayers.py` 의 로그 매크로 규칙이 막습니다.
 
-```cpp
-class Foo
-{
-public:
-    int32 _publicValue;                  // 1. public 멤버 변수
-    Foo();                               // 2. 생성자 · 소멸자 → initialize/shutdown → process → getter/setter
-    ~Foo();
-    bool initialize();
-    void shutdown();
-    void process( float32 deltaTime );
-    int32 getCount() const;
-
-private:
-    void rebuild();                      // 3. private 함수(따로 접근 지정자)
-
-private:
-    int32 _count;                        // 4. private 멤버 변수는 맨 아래
-};
-```
+클래스 멤버 순서는 public 멤버 변수, 생성자 · 소멸자, `initialize`/`shutdown`, process, getter/setter, private 함수(따로 접근 지정자), private 멤버 변수(맨 아래)입니다.
 
 플랫폼 · 컴파일러 · 빌드 타깃은 CMake 가 정의한 매크로로만 묻습니다:
 
@@ -147,7 +116,6 @@ private:
 ```cpp
 const Stopwatch stopwatch;                                  // std::chrono::steady_clock 대신
 const Deadline deadline = Deadline::afterMilliseconds( 500 );
-while ( deadline.isExpired() == false ) { … }
 const int64 nowMs = WallClock::nowUnixMilliseconds();       // 만료 · 기록 시각(서비스에는 nowMs 매개변수로)
 
 unique_ptr<Foo> pFoo = make_unique<Foo>( arg );            // 맨 new Foo 대신(소유가 형식에 드러난다)
@@ -232,15 +200,7 @@ for ( const Task* pTask : _listTask )           // 반복문은 한 줄이어도
     pTask->run();
 }
 
-while ( pollEvent( event ) )                    // 본문이 if/else 사슬이어도 그 전체를 중괄호로 감싼다
-{
-    if ( event.isQuit() )
-        return;
-    else
-        dispatch( event );
-}
-
-while ( tryAdvance() ) {}                       // 빈 본문은 `;` 가 아니라 `{}` — do-while 꼬리(`} while ( … );`)는 반복문 머리가 아니다
+while ( tryAdvance() ) {}                       // 빈 본문은 `;` 가 아니라 `{}`
 
 switch ( kind )                                 // 모든 열거자를 다루면 default: 없음
 {
@@ -250,12 +210,9 @@ switch ( kind )                                 // 모든 열거자를 다루면
 return 0;                                       // 모든 case 에서 반환하면 switch 뒤에 폴백
 
 const bool bInRange = kMin <= value && value <= kMax;   // 범위 비교는 변수를 가운데, 세 부분 이상이면 이름 붙이기
-```
 
-```cpp
 Foo::Foo()
     : _count{ 0 }                               // 선언 순서대로, 한 줄에 하나, 다음 줄은 ',' 로 시작
-    , _pCurrent{ nullptr }
     , _listValue( source.begin(), source.end() )   // 반복자 쌍만 소괄호(중괄호면 initializer_list 가 골라진다)
 {
 }
@@ -296,4 +253,3 @@ Python 파일의 모양입니다. 괄호 안 낱말은 `CheckPythonConventions` 
 | `raise SystemExit("git mv 실패")` | `sys.exit("git mv 실패")` (`exit`) |
 | `raise SystemExit(main())` · `main()` · `sys.exit(unittest.main())` | `sys.exit(main())` · 테스트는 `unittest.main()` (`mainGuard`) |
 | `argparse.ArgumentParser()` | `argparse.ArgumentParser(description="서드파티 고지 파일을 씁니다.")` (`argparse`) |
-

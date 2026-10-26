@@ -14,14 +14,12 @@ One meaning, one definition. A second copy of a value compiles, passes tests, an
   `Core/Common/Defines.h` · `Engine/Common/EngineDefines.h` `constant` (engine-wide). If two sides must agree, there is one definition and both
   read it — even when the values happen to match today. A per-side copy with a "must equal X" comment is the bug, not the fix.
 - **Well-known values have one home**: π family, √2, e → `MathUtil` (`kPi` · `kTwoPi` · `kHalfPi` · `kPi64` · `kDegreeToRadian` · `kSqrt2` ·
-  `kInvSqrt2` · `kEuler`; shaders use `common.hlsli`); gravity → `PhysicsSystem::getConfiguredGravity(Magnitude)` at run time (the physics
-  settings table; `constant::kDefaultGravity` is only its default, shaders get it through a material or root constant); golden-ratio,
-  splitmix64 and FNV-1a → `HashUtil`; four-character tags → `FourCcUtil::make( "SWHF" )` (file byte order). `CheckWellKnownConstants.py`
-  blocks the literals elsewhere.
-- **Time and byte units** → `constant::` in `Core/Common/Defines.h` (`kNanosecondsPerSecond` · `kNanosecondsPerMillisecond` · `kNanosecondsPerMicrosecond` ·
-  `kMicrosecondsPerSecond` · `kMicrosecondsPerMillisecond` · `kMillisecondsPerSecond` · `kSecondsPerMinute` · `kSecondsPerHour` · `kSecondsPerDay` ·
-  `kBytesPerKilobyte` · `kBytesPerMegabyte`). Never write `1e9`, `1'000'000'000`, `1024 * 1024` or a local `kKilobyte`; `CheckWellKnownConstants.py`
-  blocks those next to a time or byte name and notes `* 1000` / `/ 1000` there. Limits several online modules must agree on live in `OnlineLimit.h`.
+  `kInvSqrt2` · `kEuler`; shaders use `common.hlsli`); gravity → `PhysicsSystem::getConfiguredGravity(Magnitude)` at run time
+  (`constant::kDefaultGravity` is only its default); golden-ratio, splitmix64 and FNV-1a → `HashUtil`; four-character tags →
+  `FourCcUtil::make( "SWHF" )` (file byte order). `CheckWellKnownConstants.py` blocks the literals elsewhere.
+- **Time and byte units** → `constant::` in `Core/Common/Defines.h` (`kNanosecondsPerSecond`, `kMillisecondsPerSecond`, `kSecondsPerMinute`,
+  `kSecondsPerHour`, `kSecondsPerDay`, `kBytesPerKilobyte`, `kBytesPerMegabyte` and the other pairs). Never write `1e9`, `1'000'000'000`, `1024 * 1024` or a local `kKilobyte`
+  (`CheckWellKnownConstants.py`). Limits several online modules must agree on live in `OnlineLimit.h`.
 - **Sentinels** keep a domain name but take their value from `invalid_index` (`static constexpr uint32 kNotRegistered = invalid_index::kUint32;`).
   An all-bits mask (`kAllLayers`) is not a sentinel and keeps its literal.
 - **No aliases.** `static constexpr uint32 kFrameCount = constant::kMaxFrameCountInFlight;` is a second name for one concept — use the original.
