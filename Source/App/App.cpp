@@ -94,7 +94,7 @@ namespace sw
     SW_TEST_GLOBAL_VARIABLE_SHIPPED( float32, gv_fixedFrameDelta, 0.0f, "프레임마다 흘릴 고정 시간(초, 0=실시간) — 결정적 실행" );
 
     SW_AUTOMATION_PROBE( engineFramePacingState, "Engine.FramePacingState",
-                         "App loop pacing this frame: 0 Foreground, 1 Background (gv_backgroundFrameRate), 2 Minimized, 3 Automation, 4 Server",
+                         "App loop pacing this frame: 0 Foreground, 1 Background (gv_backgroundFrameRate), 2 Minimized, 3 Automation, 4 Server, 5 FullSpeed (gv_framePacing), 6 EditorIdle",
                          &AppInternal::readFramePacingState );
 } // namespace sw
 
@@ -484,13 +484,7 @@ namespace sw
             bFrameClockShown = bListenHost;
             ++frameNumber;
 
-            // 이번 프레임의 페이싱 상태를 정한다 — 실행 인자(시나리오 · 프로파일 · 리슨 포트)가 고른 상태가 창 상태(최소화 · 포커스)보다 앞선다.
-            FramePacingInputs pacingInputs;
-            pacingInputs._bAutomationRun = _pAutomationSession->isBusy() || _engine.isProfileRunActive();
-            pacingInputs._bListenHost    = bListenHost;
-            pacingInputs._bMinimized     = _pWindow->isMinimized();
-            pacingInputs._bFocused       = _pWindow->hasFocus();
-            framePacer.beginFrame( pacingInputs );
+            framePacer.markFrameStart();
 
             _devConsole.runPendingExec();
             // 프로파일 실행(-gv_profileFrames=N)과 자동화 시나리오(-scenario)는 스스로 끝난다(종료 코드는 `getExitCode`). 부모 프로세스는 표준 입력의 quit 으로 끝낸다.
@@ -536,6 +530,18 @@ namespace sw
                 // 에디터가 없으면 바로 돌아온다. 이 호출이 게임 뷰와 씬 뷰 RT, 씬 틱 여부를 확정한다.
                 SW_PROFILE_SCOPE( "GT.Editor.updateUI" );
                 _moduleHost->updateEditorUI( frameTime._deltaTime );
+            }
+
+            // 이번 프레임의 페이싱 상태를 정한다 — 에디터가 이번 프레임의 다시 그릴 까닭을 정한 뒤다. 실행 인자(`-gv_framePacing` · 시나리오 · 프로파일 · 리슨 포트)가
+            // 고른 상태가 창 · 에디터 상태(최소화 · 유휴 · 포커스)보다 앞선다.
+            {
+                FramePacingInputs pacingInputs;
+                pacingInputs._bAutomationRun = _pAutomationSession->isBusy() || _engine.isProfileRunActive();
+                pacingInputs._bListenHost    = bListenHost;
+                pacingInputs._bMinimized     = _pWindow->isMinimized();
+                pacingInputs._bFocused       = _pWindow->hasFocus();
+                pacingInputs._bEditorQuiet   = _moduleHost->getFrameState()._bEditorQuiet == SW_TRUE;
+                framePacer.beginFrame( pacingInputs );
             }
 
             // 카메라 포인터를 미리 잡아 두면 tick 안의 씬 전환이나 핫 리로드가 그 GameObject 를 파괴한 뒤 역참조하게 된다. 그래서

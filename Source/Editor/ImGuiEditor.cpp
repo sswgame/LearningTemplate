@@ -29,6 +29,7 @@
 #include "Editor/Common/GUI/EditorPanelDump.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorPlayToolbar.h"
+#include "Editor/Common/GUI/EditorRedrawUtil.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/GUI/EditorUIContext.h"
 #include "Editor/Common/Workspace/EditorCamera.h"

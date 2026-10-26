@@ -24,7 +24,7 @@
 namespace sw
 {
     /** @brief `GameAPI`/`EditorAPI` 표의 모양이 바뀔 때마다 올립니다. */
-    inline constexpr uint32 kModuleAbiVersion = 8;
+    inline constexpr uint32 kModuleAbiVersion = 9;
 
     /**
      * @brief 표의 지문입니다. 버전과 함께 바꿉니다.
@@ -36,8 +36,9 @@ namespace sw
      *        v6: 다중 월드 — `EditorAPI::getSceneViews` 로 툴 창의 미리보기 씬 뷰를 넘김(EditorAPI 19항목).
      *        v7: `GameAPI::serializeState` 가 크기 묻기 대신 호스트 할당 싱크(`StateBufferSink`)를 받음(직렬화 한 번).
      *        v8: `EditorAPI::getGameViewport` · `getSceneViewport` 가 `HostViewTarget` 하나를 채움(창 안 자리가 더해져 게임 뷰의 런타임 UI 가 포인터를 받는다).
+     *        v9: `EditorAPI::getRedrawReasons` — 에디터가 조용하면 앱 루프가 잔다(EditorAPI 20항목).
      */
-    inline constexpr auto kModuleAbiStamp = "module-abi-v8-2026-10";
+    inline constexpr auto kModuleAbiStamp = "module-abi-v9-2026-10";
 
     using PFN_GetModuleAbiVersion = uint32 ( * )();
     using PFN_GetModuleAbiStamp   = const utf8* (*)();

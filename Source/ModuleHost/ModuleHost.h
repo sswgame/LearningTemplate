@@ -50,14 +50,20 @@ namespace sw
         /** @brief 이번 프레임에 게임 모듈의 update/fixedUpdate 를 돌려야 하면 1 입니다. */
         uint8 _bGameplayActive : 1;
         /** @brief 이번 프레임에 씬 GameObject 를 틱해야 하면 1 입니다. */
-        uint8                  _bTickScene : 1;
-        [[maybe_unused]] uint8 _reserved   : 6;
+        uint8 _bTickScene : 1;
+        /**
+         * @brief 에디터가 이번 프레임에 다시 그릴 까닭이 하나도 없으면 1 입니다(`EditorAPI::getRedrawReasons` 가 0). 에디터가 없으면 0 입니다.
+         * @details 앱 루프의 페이싱(`FramePacingState::EditorIdle`)이 읽는다 — 조용한 프레임이 이어지면 창 메시지까지 잔다.
+         */
+        uint8                  _bEditorQuiet : 1;
+        [[maybe_unused]] uint8 _reserved     : 5;
 
         /** @brief 에디터가 없을 때의 답(둘 다 돈다)으로 시작합니다. */
         ModuleFrameState()
             : _views{}
             , _bGameplayActive{ SW_TRUE }
             , _bTickScene{ SW_TRUE }
+            , _bEditorQuiet{ SW_FALSE }
             , _reserved{ 0 }
         {
         }

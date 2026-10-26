@@ -3957,6 +3957,14 @@
    "source": "Source/Engine/Destruction/FractureComponentBase.cpp"
   },
   {
+   "name": "gv_framePacing",
+   "type": "FramePacingRequest",
+   "default": "Auto",
+   "kind": "일반",
+   "description": "앱 루프 페이싱 요청 (Auto=실행 방식과 창 상태대로, FullSpeed=늘 전속, WindowState=자동화여도 창 상태대로)",
+   "source": "Source/Engine/Window/FramePacer.cpp"
+  },
+  {
    "name": "gv_frontierAutoPlay",
    "type": "int32",
    "default": "0",

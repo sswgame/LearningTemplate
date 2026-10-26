@@ -292,6 +292,7 @@
 | 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
 |---|---|---|---|---|---|
 | `gv_backgroundFrameRate` | `int32` | `30` | 일반 | 포커스 없는 창의 초당 프레임 상한 (0=상한 없음) | [FramePacer.cpp](../../Source/Engine/Window/FramePacer.cpp) |
+| `gv_framePacing` | `FramePacingRequest` | `Auto` | 일반 | 앱 루프 페이싱 요청 (Auto=실행 방식과 창 상태대로, FullSpeed=늘 전속, WindowState=자동화여도 창 상태대로) | [FramePacer.cpp](../../Source/Engine/Window/FramePacer.cpp) |
 
 ## `Source/GameFramework/Base`
 

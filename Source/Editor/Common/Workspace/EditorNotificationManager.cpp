@@ -3,10 +3,60 @@
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
 
 #include "Core/Common/StdHeaders.h"
+#include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/VectorUtil.h"
+
+#include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorService.h"
+
+#include "Engine/Probe/AutomationProbe.h"
+
+#include <cstdlib>
 
 namespace sw::editor
 {
+    namespace
+    {
+        struct EditorNotificationManagerInternal
+        {
+            /** @brief 개발 명령 notify.push <초> <글> — 알림 하나를 띄운다(시나리오가 토스트가 시간이 지나 사라지는지 본다). */
+            static bool runPush( const vector<string>& listArgument, string& outReply )
+            {
+                EditorContext* pContext = editor::findSubsystem<EditorContext>();
+                if ( listArgument.size() < 2 || pContext == nullptr )
+                    return false;
+                const float32 durationSec = std::strtof( listArgument[0].c_str(), nullptr );
+                if ( durationSec <= 0.0f )
+                {
+                    outReply = "the duration must be a positive number of seconds";
+                    return false;
+                }
+                string message = listArgument[1];
+                for ( size_t index = 2; index < listArgument.size(); ++index )
+                {
+                    message += " " + listArgument[index];
+                }
+                pContext->getSubsystem<EditorNotificationManager>().push( "notify.push", message, NotificationType::Info, durationSec );
+                outReply = "pushed";
+                return true;
+            }
+
+            /** @brief 탐침 Editor.NotificationCount — 지금 떠 있는 알림 수입니다. */
+            [[nodiscard]] static bool readNotificationCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const EditorContext* pContext = editor::findSubsystem<EditorContext>();
+                if ( pContext == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pContext->getSubsystem<EditorNotificationManager>().getNotifications().size() );
+                return true;
+            }
+        };
+    } // namespace
+
+    SW_DEV_COMMAND( NotifyPush, "notify.push", "notify.push <seconds> <text>", "Show a toast notification for the given seconds (scenarios check that it goes away)",
+                    &EditorNotificationManagerInternal::runPush );
+    SW_AUTOMATION_PROBE( editorNotificationCount, "Editor.NotificationCount", "Toast notifications on screen now", &EditorNotificationManagerInternal::readNotificationCount );
+
     void EditorNotificationManager::push( string_view title, string_view message, NotificationType type,
                                           float32 durationSec, float32 progress )
     {
