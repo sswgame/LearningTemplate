@@ -49,3 +49,5 @@
 
 - **UI 전환의 곡선 위 사건은 트랙 값이 문턱을 지날 때 화면에 명령을 보냅니다**(2026-10-22, 전환의 곡선 위 사건). 시각에 붙는 `UIAnimationEvent` 는 곡선 · 키를 고치면 어긋나지만 문턱은 곡선을 따라갑니다(불투명도가 0.5 를 넘을 때 소리, 크기가 1 로 돌아올 때 다음 연출). `UIAnimationTrack::_listCurveEvent`(`UIAnimationCurveEvent` — 문턱 · 성분 · 방향 `UICurveCrossing` Rising · Falling · Either · 명령)를 `UIAnimationPlayer::fireCurveEvents` 가 처리합니다.
   재생 구간을 키 시각마다 끊어(키 사이 곡선은 한 방향) 두 끝 값으로 지남을 보고, 지난 시각은 두 끝 사이를 선형으로 나눠 사건 순서에 씁니다. 거꾸로 재생은 재생 방향의 오르내림을 봅니다. 실수가 아닌 트랙이나 없는 성분에 사건을 달면 경고하고 트랙째 뺍니다(조용히 안 보내지 않음). 움직임 줄이기 · 길이 0 은 끝까지 한 번에 가며 사이의 지남을 모두 보냅니다. `UIDocumentWriter` 는 빈 `<_listCurveEvent />` 를 쓰지 않아 옛 문서를 다시 저장해도 바뀌지 않습니다.
+
+- **출시 문화권의 번역 누락 · 낡음은 사람 눈이 아니라 `App --check-text` 헤드리스 테스트(`AppSmokeTest.TextCheckRunsHeadlessAndFindsNoMissingOrStaleTranslation`)가 매번 잡는다**(2026-10-27, 현지화 후보 정리). 일본어 화면 잘림 · RTL 배치의 눈 확인은 문화권을 바꾸는 시나리오 단계가 없어 자동화하지 않고 후보에서 뺀다(UI 자동 레이아웃 검사가 문화권을 따로 돌 수 있게 될 때 새로 연다).

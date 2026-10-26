@@ -915,6 +915,28 @@ SW_TEST_CASE( AppSmokeTest, ModelCheckRunsHeadlessThroughTheEditorModule )
 #endif
 }
 
+/**
+ * @brief [AppSmokeTest] `--check-text` 는 헤드리스로 모든 현지화 프로젝트의 원문 · 번역 표를 대조하고, 출시 문화권(`ja` 등)에 빠지거나 낡은 번역이 있으면 실패한다
+ * @details 같은 길로 에디터 모듈을 올린다. 사람 눈이 볼 수 없는 번역 누락을 통합이 매번 잡게 하는 자리다(`docs/decisions/5-7_RuntimeUI.md` 의 `--check-text` 줄).
+ *          배포본은 속성 메타가 없어 거절해야 한다.
+ */
+SW_TEST_CASE( AppSmokeTest, TextCheckRunsHeadlessAndFindsNoMissingOrStaleTranslation )
+{
+    const HeadlessRunResult result = runHeadless( "--check-text", "[GatherText] project" );
+    SW_ASSERT_TRUE_MSG( result._bLaunched, "Failed to launch App" );
+#if defined( SW_SHIPPING )
+    SW_EXPECT_TRUE( result._exitCode != 0 );
+#else
+    SW_EXPECT_TRUE_MSG( result._exitCode == 0, result._firstErrorLine.c_str() );
+    SW_EXPECT_TRUE_MSG( result._errorCount == 0, result._firstErrorLine.c_str() );
+    SW_ASSERT_TRUE_MSG( result._listMarkedLine.empty() == false, "no project was checked" );
+    for ( const string& line : result._listMarkedLine )
+    {
+        SW_EXPECT_TRUE_MSG( line.find( "OUT OF DATE" ) == string::npos, line.c_str() );
+    }
+#endif
+}
+
 #if defined( SW_DEBUG ) && !defined( SW_SHIPPING )
 /**
  * @brief [AppSmokeTest] 헤드리스 작업은 어느 것이든 종료 때 누수를 기준선과 비교한다(기준선 없는 통째 덤프가 아니다)
