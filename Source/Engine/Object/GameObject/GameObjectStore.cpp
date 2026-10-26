@@ -680,8 +680,7 @@ namespace sw
         // 이름을 intern 하므로, 오르기만 하면 스폰과 파괴를 거듭하는 이름이 전역 intern 풀을 채운다(`NameSuffixState` 설명 참고).
         StringBuilder<constant::kMaxBuffer128> sb;
         const hashed_string                    baseKey( baseView.data(), static_cast<uint32>( baseView.size() ) );
-        NameSuffixState&                       suffixState     = _mapNameSuffix[baseKey];
-        const bool                             bFirstDuplicate = suffixState._nextSuffix == 2 && suffixState._listFreeSuffix.empty();
+        NameSuffixState&                       suffixState = _mapNameSuffix[baseKey];
         for ( uint32 probeCount = 0; probeCount < 10000; ++probeCount )
         {
             uint32 nameSuffix = 0;
@@ -697,10 +696,8 @@ namespace sw
             const hashed_string candidate( sb.c_str(), sb.size() );
             if ( isNameTakenUnlocked( candidate ) == false )
             {
-                // 같은 이름으로 여럿 만드는 것은 정상 사용(총알, 스폰)이라 Info 다(언리얼 MakeUniqueObjectName 도 조용하다).
-                // 이름당 첫 중복만 남긴다. 줄마다 쓰면 로그 쓰기(개당 약 20 µs)가 생성 자체보다 비싸다. 그 뒤로는 조용히 번호를 붙인다.
-                if ( bFirstDuplicate )
-                    SW_LOG_INFO( "Duplicate name '%#' - using '%#' (further duplicates of this name are numbered silently)", requested.c_str(), candidate.c_str() );
+                // 같은 이름으로 여럿 만드는 것은 정상 사용(총알, 스폰)이라 조용히 번호를 붙인다(언리얼 MakeUniqueObjectName 도 조용하다).
+                // 로그는 쓰지 않는다 — 이 함수는 오브젝트 매니저의 잠금 안이고 잠금은 잎이라 그 안에서 로그를 쓰지 못한다(`sw::mutex` 의 잎 규칙).
                 outEntry._baseName = baseKey;
                 outEntry._suffix   = nameSuffix;
                 return candidate;

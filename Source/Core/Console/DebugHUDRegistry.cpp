@@ -152,10 +152,11 @@ namespace sw
         RegistrationResult result = RegistrationResult::Added;
         {
             std::scoped_lock<mutex> lock{ _mutex };
-            result = _registration.addLogged( pRegistration, "Debug HUD section", name, pRegistration->_order );
+            result = _registration.add( pRegistration, name, pRegistration->_order );
             if ( result == RegistrationResult::Added )
                 ++_revision;
         }
+        reportRegistrationRejected( result, "Debug HUD section", name );
         return result == RegistrationResult::Added;
     }
 

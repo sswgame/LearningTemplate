@@ -36,8 +36,9 @@ namespace sw
         RegistrationResult result = RegistrationResult::Added;
         {
             std::scoped_lock<mutex> lock{ _mutex };
-            result = _registration.addLogged( pRegistration, "Dev command", pRegistration->_pName );
+            result = _registration.add( pRegistration, pRegistration->_pName ); // 잠금은 잎이다 — 거절 로그는 놓은 뒤에 쓴다
         }
+        reportRegistrationRejected( result, "Dev command", pRegistration->_pName );
         return result == RegistrationResult::Added;
     }
 

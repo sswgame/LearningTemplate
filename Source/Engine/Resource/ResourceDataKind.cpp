@@ -80,8 +80,9 @@ namespace sw
         RegistrationResult result = RegistrationResult::Added;
         {
             std::scoped_lock<mutex> lock{ _mutex };
-            result = _registration.addLogged( pKind, "Resource data kind", pKind->_pLabel );
+            result = _registration.add( pKind, pKind->_pLabel );
         }
+        reportRegistrationRejected( result, "Resource data kind", pKind->_pLabel );
         return result == RegistrationResult::Added;
     }
 

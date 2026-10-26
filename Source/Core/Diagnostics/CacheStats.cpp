@@ -65,13 +65,17 @@ namespace sw
     CacheStatsHandle CacheStats::registerCache( string_view name )
     {
         CacheStatsInternal::Registry& registry = CacheStatsInternal::getRegistry();
-        std::scoped_lock<mutex>       lock{ registry._mutex };
-        if ( CacheStatsInternal::findIndex( registry, name ) != registry._entryCount )
+        bool                          bDuplicate{ false };
+        CacheStatsHandle              handle{};
         {
-            SW_LOG_ERROR( "Cache stats name '%#' is already registered - keeping the first", name );
-            return CacheStatsHandle{};
+            std::scoped_lock<mutex> lock{ registry._mutex };
+            bDuplicate = CacheStatsInternal::findIndex( registry, name ) != registry._entryCount;
+            if ( bDuplicate == false )
+                handle = CacheStatsHandle{ CacheStatsInternal::addEntry( registry, name ) };
         }
-        return CacheStatsHandle{ CacheStatsInternal::addEntry( registry, name ) };
+        if ( bDuplicate ) // 잠금은 잎이다 — 로그는 놓은 뒤에 쓴다
+            SW_LOG_ERROR( "Cache stats name '%#' is already registered - keeping the first", name );
+        return handle;
     }
 
     CacheStatsHandle CacheStats::getOrCreate( string_view name )

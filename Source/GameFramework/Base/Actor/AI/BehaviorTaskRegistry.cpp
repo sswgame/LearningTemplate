@@ -29,8 +29,9 @@ namespace sw
         RegistrationResult result = RegistrationResult::Added;
         {
             std::scoped_lock<mutex> lock{ _mutex };
-            result = _registration.addLogged( pEntry, "Behavior task", pEntry->_pName );
+            result = _registration.add( pEntry, pEntry->_pName );
         }
+        reportRegistrationRejected( result, "Behavior task", pEntry->_pName );
         return result == RegistrationResult::Added;
     }
 
