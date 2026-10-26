@@ -41,11 +41,18 @@ namespace sw::editor
     private:
         void onPropertyEdited( const PropertyInfo& prop );
         void savePendingChanges( bool bForce );
+        /** @brief 검색 글에 맞는 섹션 목록을 검색 글 · 섹션 등록 세대 · 타입 레지스트리 세대가 바뀐 프레임에만 다시 짓습니다. */
+        const vector<const EditorSettingsRegistration*>& getVisibleSections();
 
-        EditorPropertyGrid                _grid;
-        const EditorSettingsRegistration* _pSelected;
-        int64                             _pendingSaveNanoseconds; ///< 저장을 기다리는 첫 편집 시각(0 이면 기다리지 않는다)
-        uint32                            _visibleSectionCount;    ///< 지난 프레임 목록에 보인 섹션 수(`getVisibleSectionCount`)
-        bool                              _bModifiedOnly;
+        EditorPropertyGrid                        _grid;
+        vector<const EditorSettingsRegistration*> _listVisibleSection;    ///< 검색 글에 맞는 섹션(등록 순서)
+        string                                    _sectionFilterText;     ///< 목록을 지은 때의 검색 글
+        uint32                                    _sectionListGeneration; ///< 목록을 지은 때의 섹션 등록 세대
+        uint32                                    _sectionTypeGeneration; ///< 목록을 지은 때의 타입 레지스트리 세대
+        bool                                      _bSectionListBuilt;     ///< 한 번이라도 지었는지(세대가 0 부터라 첫 프레임을 세대로 가를 수 없다)
+        const EditorSettingsRegistration*         _pSelected;
+        int64                                     _pendingSaveNanoseconds; ///< 저장을 기다리는 첫 편집 시각(0 이면 기다리지 않는다)
+        uint32                                    _visibleSectionCount;    ///< 지난 프레임 목록에 보인 섹션 수(`getVisibleSectionCount`)
+        bool                                      _bModifiedOnly;
     };
 } // namespace sw::editor

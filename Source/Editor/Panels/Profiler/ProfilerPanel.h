@@ -117,7 +117,7 @@ namespace sw::editor
         /** @brief 프로브용입니다. 수집한 프레임 수를 반환합니다. */
         uint64 getCapturedFrameCount() const { return _scopeHistory.getCapturedFrameCount(); }
         /** @brief 프로브용입니다. 마지막으로 그린 호출 트리의 노드 수를 반환합니다. */
-        uint32 getCallTreeNodeCount() const { return static_cast<uint32>( _listCallNode.size() ); }
+        uint32 getCallTreeNodeCount() const { return _callTree.countLiveNodes(); }
 #if SW_PROFILER_TRACE_ENABLED
         /** @brief 프로브용입니다. 불러온 트레이스의 스레드 수를 반환합니다. 없으면 0 입니다. */
         uint32 getLoadedTraceThreadCount() const { return _bLoadedTrace == SW_TRUE ? static_cast<uint32>( _loadedTrace._listThread.size() ) : 0; }
@@ -159,9 +159,10 @@ namespace sw::editor
         uint64                         _timelineViewBegin; ///< 보이는 범위(확대와 이동의 결과)
         uint64                         _timelineViewEnd;
         uint32                         _timelineFrameCount; ///< 최근 프레임 수(1 · 4 · 16)
-        vector<ProfilerCallNode>       _listCallNode;       ///< 호출 트리(녹화에서 다시 합친다)
-        vector<uint32>                 _listCallRoot;       ///< 호출 트리의 루트(스레드 순서, 큰 것 먼저)
-        vector<ProfilerTimelineThread> _listCallThread;     ///< 호출 트리가 합친 이벤트(Freeze 면 그대로)
+        ProfilerCallTreeWindow         _callTree;           ///< 최근 N 프레임의 호출 트리(새 프레임만 더하고 빠진 프레임은 뺀다, Freeze 면 그대로)
+        vector<ProfilerTimelineThread> _listCallFrame;      ///< 호출 트리에 더할 한 프레임의 사건(다시 쓰는 버퍼)
+        uint64                         _callTreeFrameEnd;   ///< 호출 트리에 마지막으로 더한 프레임의 끝(같으면 새 프레임이 없다)
+        float64                        _callTreeOrderTime;  ///< 호출 트리의 정렬을 마지막으로 다시 지은 ImGui 시각(초)
         float32                        _spikeThresholdMs;   ///< Pause on spike 임계값(GT.Frame, ms)
         uint8                          _bCatalogDirty   : 1;
         uint8                          _bCollect        : 1; ///< 엔진 프로파일러를 켜 두고 수집한다

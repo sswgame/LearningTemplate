@@ -136,13 +136,19 @@ def makeSeedIndex(database: Sequence[dict], buildDir: Path | None = None, reposi
 
 
 def findSeedEntry(headerPath: str, listSeed: Sequence[tuple[str, dict]]) -> dict | None:
-    """헤더와 폴더 경로가 가장 길게 겹치는 TU 를 고른다."""
+    """
+    헤더와 폴더 경로가 가장 길게 겹치는 TU 를 고른다. 겹침은 폴더 경계까지만 센다.
+
+    길이가 같으면 헤더의 조상 폴더에 있는 TU 가 이긴다 — 안 그러면 `Source/Editor/IEditor.h` 가 하위 폴더(`Editor/Common/...`, 낮은 층)의
+    첫 TU 플래그를 받아 층 스텁 오류로 거짓 실패한다.
+    """
     bestEntry: dict | None = None
-    bestLength = -1
+    bestScore = (-1, False)
     for seedDir, entry in listSeed:
-        length = len(os.path.commonprefix([seedDir, headerPath]))
-        if length > bestLength:
-            bestLength = length
+        prefix = os.path.commonprefix([seedDir, headerPath])
+        score = (prefix.rfind("/") + 1, headerPath.startswith(seedDir))
+        if score > bestScore:
+            bestScore = score
             bestEntry = entry
     return bestEntry
 

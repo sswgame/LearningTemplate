@@ -47,6 +47,7 @@
 #include "Engine/Reflection/ReflectionContainers.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
+#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/CommandStack.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
@@ -221,6 +222,9 @@ namespace sw::editor
         , _openAllRequest{ 0 }
         , _bFavoritesOnly{ false }
         , _bShowModifiedOnly{ false }
+        , _layoutCache{}
+        , _scratchDisplay{}
+        , _layoutUseDepth{ 0 }
     {
     }
 
@@ -350,20 +354,25 @@ namespace sw::editor
             return;
 
         // 무엇을 어떤 순서로 그릴지는 `InspectorPropertyLayout` 이 정한다. 상속한 프로퍼티까지 포함하고, 카테고리는 기반 클래스부터 처음 나온 순서다.
-        const EditorListFilter         filter{ _propertyFilter.c_str() };
-        vector<InspectorPropertyGroup> listGroup;
-        InspectorPropertyLayout::collectPropertyGroups( *pTypeInfo, listDrawnName, filter, listGroup );
+        // 묶음은 (타입, 그린 이름, 검색 글, 레지스트리 세대)가 같으면 캐시한 것을 쓴다. 즐겨찾기 · 바뀐 것만 보기는 그 사본을 거른다.
+        const EditorListFilter                filter{ _propertyFilter.c_str() };
+        const vector<InspectorPropertyGroup>& listCachedGroup =
+            _layoutCache.getOrCreateGroups( *pTypeInfo, listDrawnName, filter, _propertyFilter.c_str(), TypeRegistry::getGeneration(), _layoutUseDepth == 0 );
+        vector<InspectorPropertyGroup>        listFilteredGroup;
+        const vector<InspectorPropertyGroup>* pListGroup = &listCachedGroup;
 
         // 즐겨찾기 구역이면 즐겨찾기한 프로퍼티만 타입 이름 머리 하나로 모은다.
         if ( bFavoritesOnly )
         {
-            Internal::keepFavoriteProperties( *pTypeInfo, *_pFavorites, listGroup );
-            if ( listGroup.empty() )
+            listFilteredGroup = listCachedGroup;
+            pListGroup        = &listFilteredGroup;
+            Internal::keepFavoriteProperties( *pTypeInfo, *_pFavorites, listFilteredGroup );
+            if ( listFilteredGroup.empty() )
                 return;
         }
 
         // 검색어가 아무 프로퍼티도 맞히지 못하면 그렇다고 알려 준다.
-        if ( listGroup.empty() )
+        if ( pListGroup->empty() )
         {
             if ( filter.isActive() )
                 EditorWidgets::drawNoSearchResultHint( filter.getText() );
@@ -385,11 +394,18 @@ namespace sw::editor
         // 바뀐 것만 보기이면 기본값과 같은 프로퍼티를 뺀다. 남은 것이 없는 카테고리는 머리째 감춘다.
         if ( _bShowModifiedOnly )
         {
-            Internal::removeDefaultValued( instance, defaultInstance, _isMixed, listGroup );
-            if ( listGroup.empty() )
+            if ( pListGroup != &listFilteredGroup )
+            {
+                listFilteredGroup = listCachedGroup;
+                pListGroup        = &listFilteredGroup;
+            }
+            Internal::removeDefaultValued( instance, defaultInstance, _isMixed, listFilteredGroup );
+            if ( listFilteredGroup.empty() )
                 return;
         }
-        for ( const InspectorPropertyGroup& group : listGroup )
+        // 그리는 동안 다른 그리기(프로퍼티 확장 안의 그리드 호출)가 캐시를 비우면 아래 묶음이 사라진다 — 겹을 세어 그동안은 비우지 않게 한다.
+        ++_layoutUseDepth;
+        for ( const InspectorPropertyGroup& group : *pListGroup )
         {
             const string& category = group._category;
             const auto&   props    = group._listProperty;
@@ -415,6 +431,34 @@ namespace sw::editor
                 ImGui::EndTable();
             }
         }
+        --_layoutUseDepth;
+    }
+
+    const InspectorDisplayUnit& EditorPropertyGrid::getDisplayUnit( const PropertyInfo& prop )
+    {
+        const InspectorPropertyDisplay* pDisplay = _layoutCache.findDisplay( prop );
+        if ( pDisplay != nullptr )
+            return pDisplay->_unit;
+        // 묶음 밖 — 컨테이너 원소 · 맵 값은 `makeElementProperty` 가 값으로 만든 임시라 주소로 캐시할 수 없다.
+        _scratchDisplay._unit = InspectorPropertyLayout::getDisplayUnit( prop );
+        return _scratchDisplay._unit;
+    }
+
+    const utf8* EditorPropertyGrid::getUnitNumberFormat( const PropertyInfo& prop, const utf8* pNumberFormat )
+    {
+        InspectorPropertyDisplay* pDisplay = _layoutCache.findDisplay( prop );
+        if ( pDisplay == nullptr )
+        {
+            // 묶음 밖 임시 프로퍼티 — `getDisplayUnit` 과 같은 까닭으로 부를 때마다 짓는다.
+            _scratchDisplay._unitFormat = InspectorPropertyLayout::appendUnitSuffix( pNumberFormat, InspectorPropertyLayout::getDisplayUnit( prop )._suffix );
+            return _scratchDisplay._unitFormat.c_str();
+        }
+        if ( pDisplay->_pUnitFormatBase != pNumberFormat )
+        {
+            pDisplay->_unitFormat      = InspectorPropertyLayout::appendUnitSuffix( pNumberFormat, pDisplay->_unit._suffix );
+            pDisplay->_pUnitFormatBase = pNumberFormat;
+        }
+        return pDisplay->_unitFormat.c_str();
     }
 
     void EditorPropertyGrid::drawPropertyRow( const MutableObjectAddress instance, const TypeInfo& typeInfo, const PropertyInfo& prop, bool bDisabled, bool bFavoriteTarget, const ObjectAddress defaultInstance )
@@ -429,8 +473,8 @@ namespace sw::editor
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "MultipleValues" ) );
             ImGui::SameLine();
         }
-        const string favoriteKey = bFavoriteTarget ? InspectorFavorites::makePropertyKey( typeInfo, prop ) : string{};
-        const bool   bFavorite   = bFavoriteTarget && _pFavorites->contains( favoriteKey );
+        const string& favoriteKey = _layoutCache.getLaidOutDisplay( prop )._favoriteKey; // 묶음을 지을 때 만든 키 — 행마다 string 을 짓지 않는다
+        const bool    bFavorite   = bFavoriteTarget && _pFavorites->contains( favoriteKey );
         if ( bFavorite )
         {
             ImGui::TextUnformatted( editoricon::kStar );

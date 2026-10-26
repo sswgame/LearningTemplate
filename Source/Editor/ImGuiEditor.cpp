@@ -781,14 +781,6 @@ namespace sw::editor
         _bInitialized = SW_FALSE;
     }
 
-    void ImGuiEditor::preRender( IRHIDevice* pRHIDevice )
-    {
-        if ( _bInitialized == SW_FALSE || _editorContext == nullptr )
-            return;
-
-        _editorContext->getSubsystem<EditorPanelManager>().preRenderOpenPanels( pRHIDevice );
-    }
-
     void ImGuiEditor::prepareFrameState()
     {
         if ( _editorContext == nullptr )

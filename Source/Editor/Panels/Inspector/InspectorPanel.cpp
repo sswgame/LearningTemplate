@@ -701,9 +701,8 @@ namespace sw::editor
 
         // 확장은 이 타입과 그 기반 타입들에 등록된 것 전부다(기반에서 파생 순서). 각자 자기 영역을 그리고 직접 그린 리플렉션 프로퍼티만 감춘다. 나머지 리플렉션
         // 프로퍼티는 상속한 것까지 아래에서 그린다(언리얼 Details 의 `IDetailCustomization` 과 `HideProperty`).
-        vector<IInspectorComponent*> listInspector;
-        editorContext.getSubsystem<InspectorComponentManager>().collectForType( *pTypeInfo, listInspector );
-        vector<hashed_string> listDrawnName;
+        const vector<IInspectorComponent*>& listInspector = editorContext.getSubsystem<InspectorComponentManager>().getInspectorsForType( *pTypeInfo );
+        vector<hashed_string>               listDrawnName;
         for ( IInspectorComponent* pInspector : listInspector )
         {
             pInspector->drawHeader( pComp );

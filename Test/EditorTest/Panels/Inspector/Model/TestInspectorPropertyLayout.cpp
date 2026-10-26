@@ -7,6 +7,7 @@
 #if !defined( SW_SHIPPING )
 
     #include "Editor/Common/Widgets/Model/EditorListFilter.h"
+    #include "Editor/Panels/Inspector/Model/InspectorLayoutCache.h"
     #include "Editor/Panels/Inspector/Model/InspectorPropertyLayout.h"
 
     #include "Engine/Object/Component/2D/SpriteComponent.h"
@@ -324,6 +325,46 @@ SW_TEST_CASE( InspectorPropertyLayoutTest, ElementPropertyKeepsHandleTarget )
     SW_EXPECT_TRUE( element._metadata->_tooltip == container._metadata->_tooltip );
     SW_EXPECT_EQUAL( size_t{ 0 }, element.getOffset() );
     SW_EXPECT_TRUE( element._bIsContainer == SW_FALSE );
+}
+
+/**
+ * @brief [InspectorPropertyLayoutTest] 배치 캐시는 같은 키면 지은 묶음을 그대로 주고, 검색 글 · 레지스트리 세대가 바뀔 때만 다시 짓는다
+ * @details 매 프레임 컴포넌트마다 묶음을 다시 짓던 것을 바꾼 캐시다. 모듈 리로드는 TypeInfo · PropertyInfo 주소를 바꾸므로 세대가 키에 든다.
+ *          표시 정보(단위)는 지을 때 한 번 계산하고 묶음 밖 프로퍼티(컨테이너 원소 임시)는 없다.
+ */
+SW_TEST_CASE( InspectorPropertyLayoutTest, LayoutCacheRebuildsOnlyWhenTheKeyChanges )
+{
+    const TypeInfo* pScene = SceneComponent::StaticType();
+    SW_ASSERT_NOT_NULL( pScene );
+    InspectorLayoutCache        cache;
+    const vector<hashed_string> listNoDrawn;
+
+    const vector<InspectorPropertyGroup>& first  = cache.getOrCreateGroups( *pScene, listNoDrawn, EditorListFilter{ "" }, "", 7, true );
+    const vector<InspectorPropertyGroup>& second = cache.getOrCreateGroups( *pScene, listNoDrawn, EditorListFilter{ "" }, "", 7, true );
+    SW_EXPECT_TRUE( &first == &second );
+    SW_EXPECT_EQUAL( 1u, cache.getRebuildCount() );
+    SW_EXPECT_EQUAL( 1u, countProperty( first, "_localRotation" ) );
+
+    const PropertyInfo* pRotation = pScene->findPropertyInHierarchy( hashed_string( "_localRotation" ) );
+    SW_ASSERT_NOT_NULL( pRotation );
+    const InspectorPropertyDisplay* pDisplay = cache.findDisplay( *pRotation );
+    SW_ASSERT_NOT_NULL( pDisplay );
+    SW_EXPECT_EQUAL( string( "deg" ), pDisplay->_unit._suffix );
+    SW_EXPECT_FALSE( pDisplay->_favoriteKey.empty() );
+
+    // 검색 글이 바뀌면 새 묶음, 앞의 묶음 주소는 그대로다.
+    const vector<InspectorPropertyGroup>& filtered = cache.getOrCreateGroups( *pScene, listNoDrawn, EditorListFilter{ "rotation" }, "rotation", 7, true );
+    SW_EXPECT_EQUAL( 2u, cache.getRebuildCount() );
+    SW_EXPECT_EQUAL( 0u, countProperty( filtered, "_localPosition" ) );
+    SW_EXPECT_EQUAL( 1u, countProperty( first, "_localPosition" ) );
+
+    // 세대가 바뀌면(모듈 리로드) 같은 키도 다시 짓는다.
+    (void)cache.getOrCreateGroups( *pScene, listNoDrawn, EditorListFilter{ "" }, "", 8, true );
+    SW_EXPECT_EQUAL( 3u, cache.getRebuildCount() );
+
+    // 값으로 만든 임시 프로퍼티는 묶음 밖이다.
+    PropertyInfo temporary;
+    SW_EXPECT_TRUE( cache.findDisplay( temporary ) == nullptr );
 }
 
 #endif // !SW_SHIPPING

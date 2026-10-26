@@ -198,7 +198,13 @@ namespace sw::editor
     void AudioEventBrowserPanel::drawEventList()
     {
         (void)EditorWidgets::drawSearchField( "##AudioEventFilter", _filter, nullptr, -1.0f );
-        AudioEventBrowserUtil::filterEventNames( _listEventName, string_view{ _filter.c_str() }, _listVisibleEvent );
+        // 이름 목록이나 검색 글이 바뀐 프레임에만 거르고 정렬한다.
+        if ( _bVisibleEventStale || _visibleEventFilter != _filter.c_str() )
+        {
+            AudioEventBrowserUtil::filterEventNames( _listEventName, string_view{ _filter.c_str() }, _listVisibleEvent );
+            _visibleEventFilter = _filter.c_str();
+            _bVisibleEventStale = false;
+        }
         if ( _listEventName.empty() )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorAudioEvents", "NoLibrary" ) );
@@ -358,8 +364,15 @@ namespace sw::editor
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorAudioEvents", "NoService" ) );
             return;
         }
-        AudioEngine& engine = audio.getEngine();
-        engine.collectEventNames( _listEventName );
+        AudioEngine& engine          = audio.getEngine();
+        const bool   bEventNameStale = _pEventNameEngine != &engine || _eventNameGeneration != engine.getEventLibraryGeneration();
+        if ( bEventNameStale )
+        {
+            _pEventNameEngine    = &engine;
+            _eventNameGeneration = engine.getEventLibraryGeneration();
+            engine.collectEventNames( _listEventName );
+            _bVisibleEventStale = true;
+        }
         engine.getInstanceStatuses( _listInstanceStatus );
         const AudioEngineStats stats = engine.getStats();
 

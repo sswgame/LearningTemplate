@@ -5,6 +5,7 @@
 #include "Core/Common/Defines.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/LogOnce.h"
@@ -227,34 +228,14 @@ namespace sw::editor
 
         drawVariableToolbar( gvm );
 
-        // 2) 변수 목록 수집
-        const vector<string> listAllName = gvm.collectVariableNames();
-        uint32               totalVarCount{ 0 };
-
+        // 2) 변수 목록 — 등록 세대나 검색 글이 바뀐 프레임에만 다시 짓는다.
         const EditorListFilter filter{ _searchFilter.c_str() };
+        const bool             bListStale = _listGeneration != gvm.getRegistrationGeneration() || _listFilterText != _searchFilter.c_str();
+        if ( bListStale )
+            rebuildVariableList( gvm, filter );
+        const vector<GlobalVariableInfo*>& listFiltered = _listFilteredVariable;
 
-        // 멤버 버퍼를 다시 쓴다 — 지역 `vector` 면 프레임마다 할당한다.
-        vector<GlobalVariableInfo*>& listFiltered = _listFilteredVariable;
-        listFiltered.clear();
-        listFiltered.reserve( listAllName.size() );
-
-        for ( const string& varName : listAllName )
-        {
-            // 테스트용(`SW_TEST_GLOBAL_VARIABLE`)은 벤치와 자동화 스위치이므로 여기 두지 않는다. 실행 인자로만 준다. 개수에서도 뺀다.
-            GlobalVariableInfo* pInfo = gvm.findVariable( varName );
-            if ( pInfo == nullptr || pInfo->_bTestOnly )
-                continue;
-            ++totalVarCount;
-            if ( filter.matchesAny( { pInfo->_name, pInfo->_description, pInfo->_moduleName } ) )
-                listFiltered.push_back( pInfo );
-        }
-
-        // 포인터를 담은 컨테이너를 정렬하지만 비교는 포인터 값이 아니라 (모듈, 이름) 으로 한다.
-        // 전역 변수 이름은 GlobalVariableManager 의 키이므로 유일하고, 순서가 매번 같다.
-        // NOLINTNEXTLINE(bugprone-nondeterministic-pointer-iteration-order)
-        std::sort( listFiltered.begin(), listFiltered.end(), GlobalVariablesPanelInternal::compareVariableInfo );
-
-        EditorWidgets::drawCountLabel( static_cast<uint32>( listFiltered.size() ), totalVarCount, "variables" );
+        EditorWidgets::drawCountLabel( static_cast<uint32>( listFiltered.size() ), _totalVariableCount, "variables" );
 
         drawPinnedSection( gvm );
 
@@ -269,6 +250,31 @@ namespace sw::editor
         }
 
         drawVariableTable( listFiltered );
+    }
+
+    void GlobalVariablesPanel::rebuildVariableList( const GlobalVariableManager& gvm, const EditorListFilter& filter )
+    {
+        // 세대를 먼저 읽는다 — 채우는 사이에 등록이 바뀌면 다음 프레임에 다시 짓는다.
+        _listGeneration = gvm.getRegistrationGeneration();
+        _listFilterText = _searchFilter.c_str();
+        ++_listRebuildCount;
+
+        vector<GlobalVariableInfo*>& listAll = _listFilteredVariable;
+        gvm.collectVariables( listAll );
+        _totalVariableCount = 0;
+        // 테스트용(`SW_TEST_GLOBAL_VARIABLE`)은 벤치와 자동화 스위치이므로 여기 두지 않는다. 실행 인자로만 준다. 개수에서도 뺀다.
+        (void)VectorUtil::removeIf( listAll, [this, &filter]( const GlobalVariableInfo* pInfo ) // 지운 수는 쓰지 않는다 — 남은 목록이 결과다
+        {
+            if ( pInfo->_bTestOnly )
+                return true;
+            ++_totalVariableCount;
+            return filter.matchesAny( { pInfo->_name, pInfo->_description, pInfo->_moduleName } ) == false;
+        } );
+
+        // 포인터를 담은 컨테이너를 정렬하지만 비교는 포인터 값이 아니라 (모듈, 이름) 으로 한다.
+        // 전역 변수 이름은 GlobalVariableManager 의 키이므로 유일하고, 순서가 매번 같다.
+        // NOLINTNEXTLINE(bugprone-nondeterministic-pointer-iteration-order)
+        std::sort( listAll.begin(), listAll.end(), GlobalVariablesPanelInternal::compareVariableInfo );
     }
 
     void GlobalVariablesPanel::drawVariableToolbar( GlobalVariableManager& gvm )

@@ -292,10 +292,12 @@ namespace sw
         {
             if ( pVariables == nullptr )
                 return;
-            for ( const string& name : pVariables->collectVariableNames() )
+            vector<GlobalVariableInfo*> listVariable;
+            pVariables->collectVariables( listVariable ); // 이름을 복사해 다시 찾지 않고 등록 항목을 한 번에 받는다
+            for ( const GlobalVariableInfo* pInfo : listVariable )
             {
-                if ( StringUtil::startsWith( name, partial, true ) )
-                    outListCandidate.push_back( name );
+                if ( StringUtil::startsWith( pInfo->_name, partial, true ) )
+                    outListCandidate.push_back( pInfo->_name );
             }
         };
 

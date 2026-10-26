@@ -370,3 +370,32 @@ SW_TEST_CASE( GlobalVariableTest, FoundPointerSurvivesOtherRegistrations )
     SW_EXPECT_TRUE( gvm.findVariable( "gv_watched" ) == nullptr );
     SW_EXPECT_EQUAL( 0u, gvm.getVariableCount() );
 }
+
+/**
+ * @brief 등록 세대는 등록과 모듈 해제에서만 오르고 값 변경에서는 그대로다 — 목록을 캐시하는 전역 변수 창이 이것만 보고 다시 짓는다.
+ */
+SW_TEST_CASE( GlobalVariableTest, RegistrationGenerationTracksRegisterAndUnload )
+{
+    sw::GlobalVariableManager gvm;
+    const uint64              generationEmpty = gvm.getRegistrationGeneration();
+
+    int32 gameValue{ 1 };
+    int32 coreValue{ 2 };
+    SW_ASSERT_TRUE( gvm.registerVariable( "gv_genGame", sw::GlobalVariableType::Int32, &gameValue, int32{ 1 }, "", "", "Game" ) );
+    SW_ASSERT_TRUE( gvm.registerVariable( "gv_genCore", sw::GlobalVariableType::Int32, &coreValue, int32{ 2 }, "" ) );
+    const uint64 generationRegistered = gvm.getRegistrationGeneration();
+    SW_EXPECT_TRUE( generationRegistered > generationEmpty );
+
+    sw::vector<sw::GlobalVariableInfo*> listVariable;
+    gvm.collectVariables( listVariable );
+    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( listVariable.size() ) );
+
+    SW_ASSERT_TRUE( gvm.setValueFromString( "gv_genGame", "7" ) );
+    SW_EXPECT_EQUAL( generationRegistered, gvm.getRegistrationGeneration() );
+
+    gvm.unregisterVariablesByModule( "Game" );
+    SW_EXPECT_TRUE( gvm.getRegistrationGeneration() > generationRegistered );
+    gvm.collectVariables( listVariable );
+    SW_ASSERT_EQUAL( 1u, static_cast<uint32>( listVariable.size() ) );
+    SW_EXPECT_STREQ( "gv_genCore", listVariable[0]->_name.c_str() );
+}

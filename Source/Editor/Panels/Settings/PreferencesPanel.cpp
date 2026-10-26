@@ -18,6 +18,7 @@
 
 #include "Engine/Localization/LocText.h"
 #include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Reflection/TypeRegistry.h"
 
 #include <imgui.h>
 
@@ -59,6 +60,11 @@ namespace sw::editor
     PreferencesPanel::PreferencesPanel()
         : IEditorPanel( false )
         , _grid{}
+        , _listVisibleSection{}
+        , _sectionFilterText{}
+        , _sectionListGeneration{ 0 }
+        , _sectionTypeGeneration{ 0 }
+        , _bSectionListBuilt{ false }
         , _pSelected{ nullptr }
         , _pendingSaveNanoseconds{ 0 }
         , _visibleSectionCount{ 0 }
@@ -66,9 +72,33 @@ namespace sw::editor
     {
     }
 
+    const vector<const EditorSettingsRegistration*>& PreferencesPanel::getVisibleSections()
+    {
+        using SettingsRegistry         = EditorExtensionRegistry<EditorSettingsRegistration>;
+        const uint32 listGeneration    = SettingsRegistry::getList().getGeneration();
+        const uint32 typeGeneration    = TypeRegistry::getGeneration();
+        const bool   bSameAsLastBuild  = _bSectionListBuilt && _sectionListGeneration == listGeneration && _sectionTypeGeneration == typeGeneration;
+        const bool   bListStillCurrent = bSameAsLastBuild && _sectionFilterText == _grid.getFilterText();
+        if ( bListStillCurrent )
+            return _listVisibleSection;
+
+        // 검색 글이 있으면 섹션마다 프로퍼티 묶음을 지어 본다 — 매 프레임 하면 섹션 수만큼 묶음을 짓는다.
+        _listVisibleSection.clear();
+        for ( uint32 index = 0; index < SettingsRegistry::getCount(); ++index )
+        {
+            const EditorSettingsRegistration& registration = SettingsRegistry::getAt( index );
+            if ( PreferencesPanelInternal::matchesFilter( registration, _grid.getFilterText() ) )
+                _listVisibleSection.push_back( &registration );
+        }
+        _sectionFilterText     = _grid.getFilterText();
+        _sectionListGeneration = listGeneration;
+        _sectionTypeGeneration = typeGeneration;
+        _bSectionListBuilt     = true;
+        return _listVisibleSection;
+    }
+
     void PreferencesPanel::drawContent()
     {
-        using SettingsRegistry = EditorExtensionRegistry<EditorSettingsRegistration>;
         // 체크를 먼저 둔다 — 검색 칸이 남은 폭을 다 쓰므로 뒤에 두면 창 밖으로 밀린다.
         ImGui::Checkbox( "Modified only", &_bModifiedOnly );
         EditorSelfTestMarks::note( "preferences.modifiedOnly" );
@@ -80,11 +110,9 @@ namespace sw::editor
         uint32        visibleCount{ 0 };
         bool          bSelectedVisible = false;
         ImGui::BeginChild( "##PreferenceSections", ImVec2{ listWidth, 0.0f }, ImGuiChildFlags_Borders );
-        for ( uint32 index = 0; index < SettingsRegistry::getCount(); ++index )
+        for ( const EditorSettingsRegistration* pRegistration : getVisibleSections() )
         {
-            const EditorSettingsRegistration& registration = SettingsRegistry::getAt( index );
-            if ( PreferencesPanelInternal::matchesFilter( registration, _grid.getFilterText() ) == false )
-                continue;
+            const EditorSettingsRegistration& registration = *pRegistration;
             ++visibleCount;
             if ( _pSelected == nullptr )
                 _pSelected = &registration;

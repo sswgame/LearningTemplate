@@ -6,9 +6,11 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 
 #include <variant>
@@ -234,8 +236,17 @@ namespace sw
          */
         GlobalVariableInfo* findVariable( string_view name );
 
-        /** @brief 등록된 변수 이름 목록의 스냅샷을 반환합니다(스레드 안전). */
-        vector<string> collectVariableNames() const;
+        /**
+         * @brief 등록된 변수의 포인터를 @p outListVariable 에 채웁니다(먼저 비운다, 순서 없음, 스레드 안전).
+         * @details 포인터는 `findVariable` 과 같이 그 변수가 해제될 때까지 유효합니다. 들고 있는 쪽은 `getRegistrationGeneration` 이 바뀌면 다시 채웁니다.
+         */
+        void collectVariables( vector<GlobalVariableInfo*>& outListVariable ) const;
+
+        /**
+         * @brief 등록 세대입니다. 변수를 등록하거나 해제(모듈 언로드)할 때마다 오릅니다.
+         * @details 목록을 캐시하는 쪽(전역 변수 패널)이 이것만 비교해 매 프레임 이름을 복사하지 않는다. 값 변경으로는 오르지 않는다.
+         */
+        uint64 getRegistrationGeneration() const { return _registrationGeneration.load( std::memory_order_acquire ); }
 
         /** @brief 등록된 변수 수를 반환합니다(스레드 안전). */
         uint32 getVariableCount() const;
@@ -246,6 +257,8 @@ namespace sw
          * @brief 이름 → 변수 맵입니다. **값이 `unique_ptr` 인 이유는 주소 안정성**입니다(`findVariable` 참고).
          */
         unordered_map<string, unique_ptr<GlobalVariableInfo>> _mapVariable;
+        /** @brief `_mapVariable` 에 넣거나 뺄 때마다 오른다(`getRegistrationGeneration`). 쓰기는 배타 잠금 안에서만 한다. */
+        atomic<uint64> _registrationGeneration{ 1 };
         /**
          * @brief `registerToCommandLine` 이 넘겨준 파서입니다. 나중에 등록되는 변수의 보류값을 여기서 꺼냅니다.
          * @details 소유하지 않습니다. 둘 다 `Engine` 이 들고 있고, 선언 순서상 이 매니저가 먼저 파괴됩니다. 모듈은

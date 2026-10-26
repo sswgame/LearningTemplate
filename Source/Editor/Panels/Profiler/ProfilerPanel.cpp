@@ -56,6 +56,8 @@ namespace sw::editor
             static constexpr Color kTracyErrorText{ 1.0f, 0.6f, 0.3f, 1.0f };
             static constexpr Color kFrameOffsetText{ 1.0f, 0.8f, 0.25f, 1.0f };
             static constexpr Color kCallThreadText{ 0.6f, 0.8f, 1.0f, 1.0f };
+            /** @brief 호출 트리의 형제 정렬 · 루트 목록을 다시 짓는 주기(초)입니다. 합은 프레임마다 맞고 순서만 이 주기로 바뀐다(유니티 Hierarchy 처럼 줄이 매 프레임 튀지 않는다). */
+            static constexpr float64 kCallTreeOrderSeconds = 0.25;
             template <uint32 N>
             static void formatBytes( uint64 bytes, fixed_string<N>& out )
             {
@@ -247,9 +249,10 @@ namespace sw::editor
         , _timelineViewBegin{ 0 }
         , _timelineViewEnd{ 0 }
         , _timelineFrameCount{ 4 }
-        , _listCallNode{}
-        , _listCallRoot{}
-        , _listCallThread{}
+        , _callTree{}
+        , _listCallFrame{}
+        , _callTreeFrameEnd{ 0 }
+        , _callTreeOrderTime{ -1.0 }
         , _spikeThresholdMs{ 33.3f }
         , _bCatalogDirty{ SW_TRUE }
         , _bCollect{ SW_TRUE }
@@ -1222,7 +1225,9 @@ namespace sw::editor
             if ( bRecording == false )
             {
                 timeline.clear();
-                _bCollect = SW_TRUE;
+                _callTree.reset( _timelineFrameCount );
+                _callTreeFrameEnd = 0;
+                _bCollect         = SW_TRUE;
                 profiler.setEnabled( true );
             }
             timeline.setRecording( bRecording == false );
@@ -1246,17 +1251,34 @@ namespace sw::editor
         if ( ImGui::Checkbox( "Freeze##callTree", &bFrozen ) )
             _bCallTreeFrozen = bFrozen ? SW_TRUE : SW_FALSE;
 
+        // 프레임 수는 Timeline 탭과 같이 쓴다. 창 크기가 바뀌었으면 처음부터 다시 채운다.
+        if ( _callTree.getFrameCapacity() != _timelineFrameCount )
+        {
+            _callTree.reset( _timelineFrameCount );
+            _callTreeFrameEnd = 0;
+        }
         if ( _bCallTreeFrozen == SW_FALSE )
         {
-            uint64 windowBegin{ 0 };
-            uint64 windowEnd{ 0 };
-            if ( timeline.collectRecentFrames( _timelineFrameCount, _listCallThread, windowBegin, windowEnd ) == false )
-                _listCallThread.clear();
-            ProfilerCallTree::compute( _listCallThread, _listCallNode );
-            ProfilerCallTree::sortChildrenByTotal( _listCallNode );
-            ProfilerCallTree::collectRoots( _listCallNode, _listCallRoot );
+            // 끝난 마지막 프레임 하나만 읽는다. 끝이 지난번과 같으면 새 프레임이 없다.
+            // shortcut: 두 그리기 사이에 프레임이 여럿 끝났으면 마지막 것만 더한다 — 패널이 매 프레임 그리지 않는 경우가 생기면 collectFrameBegins 로 빠진 프레임을 채운다.
+            uint64     frameBegin{ 0 };
+            uint64     frameEnd{ 0 };
+            const bool bHasFrame = timeline.collectRecentFrames( 1, _listCallFrame, frameBegin, frameEnd );
+            if ( bHasFrame && frameEnd != _callTreeFrameEnd )
+            {
+                _callTree.addFrame( _listCallFrame );
+                _callTreeFrameEnd = frameEnd;
+            }
+            const float64 now                  = ImGui::GetTime();
+            const bool    bOrderDue            = now - _callTreeOrderTime >= ProfilerPanelInternal::kCallTreeOrderSeconds;
+            const bool    bFirstRootsAvailable = _callTree.getRoots().empty() && _callTree.getFrameCount() > 0;
+            if ( bOrderDue || bFirstRootsAvailable )
+            {
+                _callTree.refreshOrder();
+                _callTreeOrderTime = now;
+            }
         }
-        if ( _listCallRoot.empty() )
+        if ( _callTree.getRoots().empty() )
         {
             ImGui::TextDisabled( "%s", bRecording ? "Waiting for frames..." : "Press Record to fold the last frames into a call tree." );
             return;
@@ -1271,16 +1293,18 @@ namespace sw::editor
         ImGui::TableSetupColumn( "Self (ms)", 0, 1.0f );
         ImGui::TableSetupColumn( "Calls", 0, 0.8f );
         ImGui::TableHeadersRow();
-        uint32 shownThread = ProfilerCallTree::kNoParent;
-        for ( const uint32 root : _listCallRoot )
+        const vector<ProfilerCallNode>& listNode       = _callTree.getNodes();
+        const vector<string>&           listThreadName = _callTree.getThreadNames();
+        uint32                          shownThread    = ProfilerCallTree::kNoParent;
+        for ( const uint32 root : _callTree.getRoots() )
         {
-            const uint32 threadIndex = _listCallNode[root]._threadIndex;
-            if ( threadIndex != shownThread && threadIndex < _listCallThread.size() )
+            const uint32 threadIndex = listNode[root]._threadIndex;
+            if ( threadIndex != shownThread && threadIndex < listThreadName.size() )
             {
                 shownThread = threadIndex;
                 ImGui::TableNextRow();
                 ImGui::TableNextColumn();
-                ImGui::TextColored( EditorColorUtil::toImVec4( ProfilerPanelInternal::kCallThreadText ), "%s", _listCallThread[threadIndex]._name.c_str() );
+                ImGui::TextColored( EditorColorUtil::toImVec4( ProfilerPanelInternal::kCallThreadText ), "%s", listThreadName[threadIndex].c_str() );
             }
             drawCallTreeNode( root );
         }
@@ -1289,9 +1313,12 @@ namespace sw::editor
 
     void ProfilerPanel::drawCallTreeNode( uint32 nodeIndex )
     {
-        const FrameProfiler*    pProfiler = &editor::getSubsystem<FrameProfiler>(); // 필수 서비스: 없으면 버그
-        const ProfilerCallNode& node      = _listCallNode[nodeIndex];
-        const utf8*             pName     = pProfiler->findScopeName( node._slot );
+        const FrameProfiler*            pProfiler = &editor::getSubsystem<FrameProfiler>(); // 필수 서비스: 없으면 버그
+        const vector<ProfilerCallNode>& listNode  = _callTree.getNodes();
+        const ProfilerCallNode&         node      = listNode[nodeIndex];
+        if ( node._callCount == 0 ) // 창을 벗어난 프레임에서만 불린 경로 — 노드는 남지만 보이지 않는다
+            return;
+        const utf8* pName = pProfiler->findScopeName( node._slot );
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
         ImGui::PushID( static_cast<int32>( nodeIndex ) );
@@ -1301,7 +1328,7 @@ namespace sw::editor
         if ( node._depth < 2 )
             treeFlags |= ImGuiTreeNodeFlags_DefaultOpen;
         const bool    bOpen      = ImGui::TreeNodeEx( pName != nullptr ? pName : "?", treeFlags );
-        const float64 frameCount = static_cast<float64>( MathUtil::max( _timelineFrameCount, 1u ) );
+        const float64 frameCount = static_cast<float64>( MathUtil::max( _callTree.getFrameCount(), 1u ) ); // 채워지는 동안은 창 크기보다 적다
         ImGui::TableNextColumn();
         ImGui::Text( "%.3f", static_cast<float64>( node._totalNanos ) / constant::kNanosecondsPerMillisecond / frameCount );
         ImGui::TableNextColumn();
@@ -1310,7 +1337,7 @@ namespace sw::editor
         ImGui::Text( "%u", node._callCount );
         if ( bOpen && bLeaf == false )
         {
-            for ( uint32 child = node._firstChild; child != ProfilerCallTree::kNoParent; child = _listCallNode[child]._nextSibling )
+            for ( uint32 child = node._firstChild; child != ProfilerCallTree::kNoParent; child = listNode[child]._nextSibling )
             {
                 drawCallTreeNode( child );
             }

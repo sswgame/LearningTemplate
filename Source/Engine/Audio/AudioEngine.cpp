@@ -38,6 +38,7 @@ namespace sw
         , _pGameMixerDesc{ nullptr }
         , _commandMutex{}
         , _libraryMutex{}
+        , _libraryGeneration{ 1 }
         , _nextPlayingID{ 1 }
         , _pMixer{ nullptr }
         , _listVoice{}
@@ -115,6 +116,7 @@ namespace sw
         {
             ScopedLock<mutex> lock{ _libraryMutex };
             _mapGameLibrary.clear();
+            _libraryGeneration.fetch_add( 1, std::memory_order_release );
         }
         _mapEmitter.clear();
         _music._pDesc.reset();
@@ -281,6 +283,7 @@ namespace sw
 
         outLibrary                   = make_shared<AudioEventLibrary>( library );
         _mapGameLibrary[libraryName] = outLibrary;
+        _libraryGeneration.fetch_add( 1, std::memory_order_release );
     }
 
     void AudioEngine::unloadEventLibrary( const hashed_string& libraryName )
@@ -289,6 +292,7 @@ namespace sw
             ScopedLock<mutex> lock{ _libraryMutex };
             if ( _mapGameLibrary.erase( libraryName ) == 0 )
                 return;
+            _libraryGeneration.fetch_add( 1, std::memory_order_release );
         }
         Command command;
         command._type = CommandType::SetLibrary;

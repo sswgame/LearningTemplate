@@ -50,7 +50,7 @@ namespace sw::editor
             }
 
             /** @brief 로그 목록에서 레벨별 줄 수를 셉니다. */
-            static ConsolePanel::LevelCounts countLevels( const vector<LogEntry>& listEntry )
+            static ConsolePanel::LevelCounts countLevels( const deque<LogEntry>& listEntry )
             {
                 ConsolePanel::LevelCounts counts;
                 for ( const LogEntry& entry : listEntry )
@@ -210,6 +210,7 @@ namespace sw::editor
     ConsolePanel::ConsolePanel()
         : _listEntry{}
         , _listDrawSnapshot{}
+        , _listTagCache{}
         , _listVisible{}
         , _listRow{}
         , _selection{}
@@ -222,6 +223,8 @@ namespace sw::editor
         , _entrySerial{ 0 }
         , _snapshotSerial{ 0 }
         , _seenErrorSerial{ 0 }
+        , _snapshotGeneration{ 1 }
+        , _tagCacheGeneration{ 0 }
         , _filterBuffer{}
         , _devConsole{}
         , _commandBuffer{}
@@ -295,12 +298,15 @@ namespace sw::editor
                 else
                 {
                     _listDrawSnapshot.insert( _listDrawSnapshot.end(), _listEntry.end() - static_cast<ptrdiff_t>( newCount ), _listEntry.end() );
-                    if ( _listDrawSnapshot.size() > _listEntry.size() )
-                        _listDrawSnapshot.erase( _listDrawSnapshot.begin(), _listDrawSnapshot.begin() + static_cast<ptrdiff_t>( _listDrawSnapshot.size() - _listEntry.size() ) );
+                    while ( _listDrawSnapshot.size() > _listEntry.size() )
+                    {
+                        _listDrawSnapshot.pop_front();
+                    }
                 }
                 _snapshotSerial = _entrySerial;
-                bNewLogs        = true;
-                _bHasNewLogs    = SW_FALSE;
+                ++_snapshotGeneration;
+                bNewLogs     = true;
+                _bHasNewLogs = SW_FALSE;
             }
         }
 
@@ -613,7 +619,8 @@ namespace sw::editor
         _listRow.clear();
         _selection.clear();
         _snapshotSerial = _entrySerial;
-        _bHasNewLogs    = SW_FALSE;
+        ++_snapshotGeneration;
+        _bHasNewLogs = SW_FALSE;
     }
 
     string ConsolePanel::formatEntryLine( const LogEntry& entry )
@@ -677,30 +684,32 @@ namespace sw::editor
     {
         if ( ImGui::BeginPopup( "##LogTagFilter" ) == false )
             return;
-        // 지금 보관하고 있는 로그에 나온 태그만 보인다(순서는 처음 나온 순서).
-        vector<string> listTag;
-        for ( const LogEntry& entry : _listDrawSnapshot )
-        {
-            const string& category = getEntryCategory( entry );
-            bool          bSeen{ false };
-            for ( const string& tag : listTag )
-            {
-                bSeen = bSeen || tag == category;
-            }
-            if ( bSeen == false )
-                listTag.push_back( category );
-        }
-        std::sort( listTag.begin(), listTag.end() );
         if ( ImGui::MenuItem( "Show All" ) )
             _tagFilter.showAll();
         ImGui::Separator();
-        for ( const string& tag : listTag )
+        for ( const string& tag : getSnapshotTags() )
         {
             bool bVisible = _tagFilter.isTagVisible( tag );
             if ( ImGui::Checkbox( tag.empty() ? "(none)" : tag.c_str(), &bVisible ) )
                 _tagFilter.setTagVisible( tag, bVisible );
         }
         ImGui::EndPopup();
+    }
+
+    const vector<string>& ConsolePanel::getSnapshotTags()
+    {
+        if ( _tagCacheGeneration == _snapshotGeneration )
+            return _listTagCache;
+        // 지금 보관하고 있는 로그에 나온 태그만 보인다.
+        _listTagCache.clear();
+        _listTagCache.reserve( _listDrawSnapshot.size() );
+        for ( const LogEntry& entry : _listDrawSnapshot )
+        {
+            _listTagCache.push_back( getEntryCategory( entry ) );
+        }
+        VectorUtil::sortUnique( _listTagCache );
+        _tagCacheGeneration = _snapshotGeneration;
+        return _listTagCache;
     }
 
     void ConsolePanel::openEntryInIde( const LogEntry& entry )

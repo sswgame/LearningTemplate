@@ -34,12 +34,10 @@ namespace sw
         virtual void shutdown() = 0;
 
         // ------------------------------------------------------------------------------
-        // 2) 프레임. updateUI 는 메인 스레드에서, preRender 와 render 와 postPresent 는 렌더 스레드에서 실행한다
+        // 2) 프레임. updateUI 는 메인 스레드에서, render 와 postPresent 는 렌더 스레드에서 실행한다
         // ------------------------------------------------------------------------------
         /** @brief 메인 스레드에서 ImGui 프레임을 갱신하고, 패널을 그리고, 플랫폼 창을 갱신합니다. */
         virtual void updateUI() = 0;
-        /** @brief UI 를 그리기 전에 패널의 GPU 작업을 합니다. */
-        virtual void preRender( IRHIDevice* pRHIDevice ) = 0;
         /** @brief 에디터 UI 의 DrawData 를 GPU 로 그립니다. */
         virtual void render( IRHIDevice* pRHIDevice ) = 0;
         /** @brief 메인 스왑체인 Present 뒤에 호출합니다. 멀티 뷰포트의 보조 창을 그립니다. */

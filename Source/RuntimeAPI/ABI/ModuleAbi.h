@@ -36,7 +36,7 @@ namespace sw
      *        v6: 다중 월드 — `EditorAPI::getSceneViews` 로 툴 창의 미리보기 씬 뷰를 넘김(EditorAPI 19항목).
      *        v7: `GameAPI::serializeState` 가 크기 묻기 대신 호스트 할당 싱크(`StateBufferSink`)를 받음(직렬화 한 번).
      *        v8: `EditorAPI::getGameViewport` · `getSceneViewport` 가 `HostViewTarget` 하나를 채움(창 안 자리가 더해져 게임 뷰의 런타임 UI 가 포인터를 받는다).
-     *        v9: `EditorAPI::getRedrawReasons` — 에디터가 조용하면 앱 루프가 잔다(EditorAPI 20항목).
+     *        v9: `EditorAPI::getRedrawReasons` 를 더하고(에디터가 조용하면 앱 루프가 잔다) 재정의하는 패널이 없던 `EditorAPI::preRender` 를 지움(EditorAPI 19항목).
      */
     inline constexpr auto kModuleAbiStamp = "module-abi-v9-2026-10";
 

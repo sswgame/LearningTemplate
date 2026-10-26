@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/RegistrationList.h"
@@ -81,8 +82,10 @@ namespace sw::editor
         /**
          * @brief 이 타입과 그 기반 타입들에 등록된 확장을 기반에서 파생 순서로 모읍니다.
          * @details 언리얼의 `IDetailCustomization` 처럼 하위 타입에도 적용된다. 게임이 만든 SceneComponent 파생에도 트랜스폼 항목이 그려진다.
+         *          타입마다 한 번 모아 두고 확장 목록이 바뀌거나(`resetTypeCache`) 타입 레지스트리 세대가 바뀔 때만 다시 모은다 — 인스펙터가 매 프레임 컴포넌트마다 부른다.
+         *          돌려준 목록은 다음 확장 목록 변경(프레임 앞의 `syncWithRegistry`, 모듈 언로드)까지 유효하다.
          */
-        void collectForType( const TypeInfo& type, vector<IInspectorComponent*>& outListInspector ) const;
+        const vector<IInspectorComponent*>& getInspectorsForType( const TypeInfo& type );
         /** @brief `SW_EDITOR_INSPECTOR` 로 등록된 확장을 모두 만들어 둡니다. */
         void registerDefaults();
         /** @brief 등록 목록과 맞춥니다. 새 항목은 만들고 사라진 항목의 확장은 지웁니다. 세대가 같으면 바로 반환합니다. */
@@ -91,8 +94,13 @@ namespace sw::editor
         uint32 releaseInspectorsWithin( const void* pBegin, const void* pEnd );
 
     private:
-        vector<InspectorComponentEntry> _listEntry;        ///< 확장은 열 개 안팎이므로 선형 탐색으로 충분하다
-        uint32                          _syncedGeneration; ///< 마지막으로 맞춘 등록 세대
+        /** @brief 타입별 확장 목록을 버리고 그 기준 세대를 @p typeGeneration 으로 둡니다. `_listEntry` 를 바꾸는 곳은 모두 바꾸기 전에 부른다. */
+        void resetTypeCache( uint32 typeGeneration );
+
+        vector<InspectorComponentEntry>                              _listEntry;           ///< 확장은 열 개 안팎이므로 선형 탐색으로 충분하다
+        unordered_map<const TypeInfo*, vector<IInspectorComponent*>> _mapTypeInspector;    ///< 타입 → 기반에서 파생 순서의 확장(`getInspectorsForType`)
+        uint32                                                       _syncedGeneration;    ///< 마지막으로 맞춘 등록 세대
+        uint32                                                       _cacheTypeGeneration; ///< `_mapTypeInspector` 를 모은 타입 레지스트리 세대
 
         /** @brief 아직 등록 목록과 맞춘 적이 없다는 표시입니다. */
         static constexpr uint32 kNotSynced = invalid_index::kUint32;

@@ -100,7 +100,7 @@ namespace sw::editor
         outListRoot.clear();
         for ( uint32 index = 0; index < static_cast<uint32>( listNode.size() ); ++index )
         {
-            if ( listNode[index]._parent == kNoParent )
+            if ( listNode[index]._parent == kNoParent && listNode[index]._callCount > 0 )
                 outListRoot.push_back( index );
         }
         std::stable_sort( outListRoot.begin(), outListRoot.end(), [&listNode]( uint32 left, uint32 right )
@@ -109,5 +109,121 @@ namespace sw::editor
                 return listNode[left]._threadIndex < listNode[right]._threadIndex;
             return listNode[left]._totalNanos > listNode[right]._totalNanos;
         } );
+    }
+
+    void ProfilerCallTreeWindow::reset( uint32 frameCapacity )
+    {
+        _frameCapacity = MathUtil::max( frameCapacity, 1u );
+        _listNode.clear();
+        _listRootNode.clear();
+        _listRoot.clear();
+        _listThreadName.clear();
+        _listFrame.clear();
+    }
+
+    void ProfilerCallTreeWindow::addFrame( const vector<ProfilerTimelineThread>& listThread )
+    {
+        // 한 프레임만 접는다. 그 트리의 노드는 부모가 늘 앞 번호라(compute 가 부모를 먼저 만든다) 순서대로 창 노드에 옮기면 부모 짝이 먼저 정해진다.
+        ProfilerCallTree::compute( listThread, _listFrameNode );
+        _listThreadMap.clear();
+        for ( const ProfilerTimelineThread& thread : listThread )
+        {
+            _listThreadMap.push_back( getOrCreateThread( thread._name ) );
+        }
+
+        vector<Contribution> listContribution;
+        listContribution.reserve( _listFrameNode.size() );
+        _listFrameMap.resize( _listFrameNode.size() );
+        for ( uint32 frameIndex = 0; frameIndex < static_cast<uint32>( _listFrameNode.size() ); ++frameIndex )
+        {
+            const ProfilerCallNode& frameNode = _listFrameNode[frameIndex];
+            const uint32            parent    = frameNode._parent == ProfilerCallTree::kNoParent ? ProfilerCallTree::kNoParent : _listFrameMap[frameNode._parent];
+            const uint32            node      = getOrCreateNode( parent, _listThreadMap[frameNode._threadIndex], frameNode._slot, frameNode._depth );
+            _listFrameMap[frameIndex]         = node;
+            _listNode[node]._totalNanos += frameNode._totalNanos;
+            _listNode[node]._selfNanos += frameNode._selfNanos;
+            _listNode[node]._callCount += frameNode._callCount;
+            listContribution.push_back( Contribution{ frameNode._totalNanos, frameNode._selfNanos, node, frameNode._callCount } );
+        }
+        _listFrame.push_back( std::move( listContribution ) );
+
+        while ( _listFrame.size() > _frameCapacity )
+        {
+            for ( const Contribution& contribution : _listFrame.front() )
+            {
+                ProfilerCallNode& node = _listNode[contribution._node];
+                node._totalNanos -= contribution._totalNanos;
+                node._selfNanos -= contribution._selfNanos;
+                node._callCount -= contribution._callCount;
+            }
+            _listFrame.pop_front();
+        }
+    }
+
+    void ProfilerCallTreeWindow::refreshOrder()
+    {
+        ProfilerCallTree::sortChildrenByTotal( _listNode );
+        ProfilerCallTree::collectRoots( _listNode, _listRoot );
+    }
+
+    uint32 ProfilerCallTreeWindow::countLiveNodes() const
+    {
+        uint32 count{ 0 };
+        for ( const ProfilerCallNode& node : _listNode )
+        {
+            if ( node._callCount > 0 )
+                ++count;
+        }
+        return count;
+    }
+
+    uint32 ProfilerCallTreeWindow::getOrCreateNode( uint32 parent, uint32 threadIndex, uint32 slot, uint16 depth )
+    {
+        uint32 lastChild = ProfilerCallTree::kNoParent;
+        if ( parent == ProfilerCallTree::kNoParent )
+        {
+            for ( const uint32 root : _listRootNode )
+            {
+                if ( _listNode[root]._threadIndex == threadIndex && _listNode[root]._slot == slot )
+                    return root;
+            }
+        }
+        else
+        {
+            for ( uint32 child = _listNode[parent]._firstChild; child != ProfilerCallTree::kNoParent; child = _listNode[child]._nextSibling )
+            {
+                if ( _listNode[child]._slot == slot )
+                    return child;
+                lastChild = child;
+            }
+        }
+
+        const uint32     nodeIndex = static_cast<uint32>( _listNode.size() );
+        ProfilerCallNode node{};
+        node._slot        = slot;
+        node._parent      = parent;
+        node._threadIndex = threadIndex;
+        node._firstChild  = ProfilerCallTree::kNoParent;
+        node._nextSibling = ProfilerCallTree::kNoParent;
+        node._depth       = depth;
+        _listNode.push_back( node );
+        if ( parent == ProfilerCallTree::kNoParent )
+            _listRootNode.push_back( nodeIndex );
+        else if ( lastChild == ProfilerCallTree::kNoParent )
+            _listNode[parent]._firstChild = nodeIndex;
+        else
+            _listNode[lastChild]._nextSibling = nodeIndex;
+        return nodeIndex;
+    }
+
+    uint32 ProfilerCallTreeWindow::getOrCreateThread( const string& name )
+    {
+        for ( uint32 index = 0; index < static_cast<uint32>( _listThreadName.size() ); ++index )
+        {
+            if ( _listThreadName[index] == name )
+                return index;
+        }
+        _listThreadName.push_back( name );
+        return static_cast<uint32>( _listThreadName.size() - 1 );
     }
 } // namespace sw::editor

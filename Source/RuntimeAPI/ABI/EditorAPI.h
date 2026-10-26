@@ -46,7 +46,6 @@ namespace sw
         bool ( *initialize )( EditorHandle editor, WindowHandle window, RHIDeviceHandle rhiDevice ){ nullptr }; /**< @brief 윈도우 및 RHI 디바이스로 에디터를 초기화합니다. */
         void ( *shutdown )( EditorHandle editor ){ nullptr };                                                   /**< @brief 에디터를 종료합니다. */
         void ( *updateUI )( EditorHandle editor ){ nullptr };                                                   /**< @brief 메인 스레드에서 에디터 UI 및 플랫폼 윈도우를 갱신합니다. */
-        void ( *preRender )( EditorHandle editor, RHIDeviceHandle rhiDevice ){ nullptr };                       /**< @brief 렌더링 직전에 호출됩니다. */
         void ( *render )( EditorHandle editor, RHIDeviceHandle rhiDevice ){ nullptr };                          /**< @brief GPU 에 에디터 UI DrawData 를 렌더링합니다. */
         void ( *postPresent )( EditorHandle editor, RHIDeviceHandle rhiDevice ){ nullptr };                     /**< @brief 렌더링 결과가 출력된 후 호출됩니다 (멀티 뷰포트 처리용). */
         void ( *abandonPendingDraw )( EditorHandle editor ){ nullptr };                                         /**< @brief 에디터 인스턴스를 없애기 직전에만 부릅니다(렌더 워커는 이미 비운 뒤). 렌더 대기 중인 draw 스냅샷 표시를 버리게 합니다. 모듈 리로드 중간에 부르면 UI 스레드와 렌더 스레드가 겹칩니다. */

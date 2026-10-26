@@ -1586,7 +1586,15 @@ namespace sw::editor
     void UIPreviewPanel::drawWidgetList( UIScreen& screen )
     {
         using Internal = UIPreviewPanelInternal;
-        UIPreviewLogic::collectWidgetRows( screen.getTree(), _listRow );
+        // 행은 위젯 번호 · 깊이 · 타입 · 이름이라 구조(붙기 · 떨어지기 · 이름)가 바뀔 때만 다시 짓는다.
+        const WidgetTree& tree       = screen.getTree();
+        const bool        bRowsStale = _pRowTree != &tree || _rowTreeGeneration != tree.getStructureGeneration();
+        if ( bRowsStale )
+        {
+            UIPreviewLogic::collectWidgetRows( tree, _listRow );
+            _pRowTree          = &tree;
+            _rowTreeGeneration = tree.getStructureGeneration();
+        }
         for ( uint32 ordinal = 0; ordinal < _listRow.size(); ++ordinal )
         {
             const UIPreviewWidgetRow& row = _listRow[ordinal];

@@ -136,7 +136,6 @@ namespace sw::editor
          */
         uint32 resetOptionalPanels( IRHIDevice* pRHIDevice );
         void   drawOpenPanels();
-        void   preRenderOpenPanels( IRHIDevice* pRHIDevice );
         void   shutdownAllPanels( IRHIDevice* pRHIDevice );
         /** @brief 포커스된 도구 문서가 dirty 이면 저장하고 true 를 반환합니다. */
         [[nodiscard]] bool saveFocusedDirtyDocument();
