@@ -404,11 +404,11 @@ namespace sw
             const string_view interpolationText = keyNode.getAttributeText( "interpolation" );
             if ( interpolationText.empty() == false )
             {
-                if ( StringUtil::equals( interpolationText, "linear", true ) )
+                if ( StringUtil::equals( interpolationText, "linear" ) )
                     key._interpolation = CurveInterpolation::Linear;
-                else if ( StringUtil::equals( interpolationText, "constant", true ) )
+                else if ( StringUtil::equals( interpolationText, "constant" ) )
                     key._interpolation = CurveInterpolation::Constant;
-                else if ( StringUtil::equals( interpolationText, "cubic", true ) )
+                else if ( StringUtil::equals( interpolationText, "cubic" ) )
                     key._interpolation = CurveInterpolation::Cubic;
                 else
                 {

@@ -45,7 +45,7 @@ namespace sw
     {
         for ( const KartItemsInternal::KindName& entry : KartItemsInternal::kArrKindName )
         {
-            if ( StringUtil::equals( text, string_view( entry._pName ), true ) )
+            if ( StringUtil::equals( text, string_view( entry._pName ) ) )
             {
                 outKind = entry._kind;
                 return true;

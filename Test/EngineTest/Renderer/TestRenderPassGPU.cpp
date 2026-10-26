@@ -541,7 +541,7 @@ namespace
             pLight->setCastShadow( false );
 
             // 정점 색은 흰색이다 — 생성기의 검증 색(무지개)이 그대로 남으면 계단 위에 색 그라데이션이 얹혀 단계 수를 셀 수 없다.
-            _mesh = sw::MeshUtil::createPrimitive( "sphere", sw::PrimitiveVertexColor::White );
+            _mesh = sw::MeshUtil::createPrimitive( "Sphere", sw::PrimitiveVertexColor::White );
             if ( _mesh == nullptr )
                 return false;
             sw::GameObject* pObject = _scene.getObjectManager()->createGameObject( sw::hashed_string( "Sphere" ) );
@@ -6901,7 +6901,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, PrototypeGridMaterialIsAnchoredTo
     {
         const sw::string                     label   = sw::string( device->getBackendName() ) + ": ";
         sw::shared_ptr<sw::Material>         grid    = sw::Material::create();
-        sw::shared_ptr<sw::Mesh>             plane   = sw::MeshUtil::createPrimitive( "plane", sw::PrimitiveVertexColor::White );
+        sw::shared_ptr<sw::Mesh>             plane   = sw::MeshUtil::createPrimitive( "Plane", sw::PrimitiveVertexColor::White );
         bool                                 bOk     = grid->initialize( device.get(), "engine/materials/prototypegrid_light.material" ) && plane != nullptr;
         sw::shared_ptr<sw::MaterialInstance> checker = bOk ? sw::MaterialInstance::create( grid.get() ) : nullptr;
         bOk                                          = checker != nullptr;

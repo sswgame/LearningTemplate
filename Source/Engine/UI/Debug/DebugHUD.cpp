@@ -821,7 +821,7 @@ namespace sw
         for ( uint32 index = 0; index < static_cast<uint32>( DebugHUDCorner::Count ); ++index )
         {
             const bool bDigit = text.size() == 1 && text[0] == static_cast<utf8>( '0' + index );
-            if ( bDigit || StringUtil::equals( text, DebugHUDInternal::kArrCornerName[index], true ) )
+            if ( bDigit || StringUtil::equals( text, DebugHUDInternal::kArrCornerName[index] ) )
             {
                 outCorner = static_cast<DebugHUDCorner>( index );
                 return true;

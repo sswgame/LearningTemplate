@@ -63,9 +63,9 @@ namespace sw
                 {        "Volume",      MaterialPropertyType::Texture3D,  4},
             };
 
-            static bool iequals( string_view value, const utf8* pExpected )
+            static bool equalsName( string_view value, const utf8* pExpected )
             {
-                return StringUtil::equals( value, pExpected, true );
+                return StringUtil::equals( value, pExpected );
             }
 
             /** @brief `_enumType` 이 가리키는 리플렉션 enum 입니다. 타입 이름은 찾기만 한다(에셋 글을 전역 이름 표에 넣지 않는다). */
@@ -79,14 +79,14 @@ namespace sw
 
             /**
              * @brief 이름 · 숫자 토큰 하나를 값으로 읽습니다. 모르는 토큰이면 false 입니다.
-             * @details 파일의 `_enumEntries` 이름(대소문자 무시)이 먼저다. 리플렉션 enum 이 있으면 `EnumInfo::tryParseText`(이름 · ValueAlias ·
+             * @details 파일의 `_enumEntries` 이름(철자 그대로)이 먼저다. 리플렉션 enum 이 있으면 `EnumInfo::tryParseText`(이름 · ValueAlias ·
              *          알려진 값의 숫자)이고, 없으면 숫자 리터럴을 받는다.
              */
             [[nodiscard]] static bool tryParseEnumToken( const MaterialProperty& prop, const EnumInfo* pInfo, string_view token, int64& outValue )
             {
                 for ( const MaterialEnumEntry& enumEntry : prop._listEnumEntry )
                 {
-                    if ( iequals( token, enumEntry._name.c_str() ) )
+                    if ( equalsName( token, enumEntry._name.c_str() ) )
                     {
                         outValue = enumEntry._value;
                         return true;
@@ -356,7 +356,7 @@ namespace sw
     {
         for ( const MaterialPackingInternal::PropertyTypeDesc& desc : MaterialPackingInternal::s_PropertyTypes )
         {
-            if ( MaterialPackingInternal::iequals( str, desc._pName ) )
+            if ( MaterialPackingInternal::equalsName( str, desc._pName ) )
             {
                 outSize = desc._size;
                 return desc._type;
@@ -447,7 +447,7 @@ namespace sw
             if ( bPlainReflectedType )
                 return reflectedType;
             // HLSL 의 bool 은 보통 "Bool" 로 보고된다
-            if ( MaterialPackingInternal::iequals( typeName, "Bool" ) )
+            if ( MaterialPackingInternal::equalsName( typeName, "Bool" ) )
                 return MaterialPropertyType::Uint;
         }
         if ( byteSize == 4 )

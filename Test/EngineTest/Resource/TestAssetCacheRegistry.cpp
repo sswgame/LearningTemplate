@@ -155,7 +155,7 @@ SW_TEST_CASE( AssetCacheRegistryTest, InternedValueTablesAreCountedAndClearedThr
 
     const sw::shared_ptr<sw::Mesh> first = sw::MeshUtil::acquirePrimitive( "Cone" );
     SW_ASSERT_NOT_NULL( first.get() );
-    SW_EXPECT_TRUE( first == sw::MeshUtil::acquirePrimitive( "cone" ) ); // 같은 기준 이름은 같은 메시
+    SW_EXPECT_TRUE( first == sw::MeshUtil::acquirePrimitive( "Cone" ) ); // 같은 이름은 같은 메시
     SW_EXPECT_TRUE( pPrimitive->getCachedCount() >= 1u );
     SW_EXPECT_FALSE( pPrimitive->isCached( "Cone" ) ); // 키가 리소스 경로가 아니다 — 핫 리로드 대상이 아니다
 

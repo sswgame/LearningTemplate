@@ -282,14 +282,15 @@ SW_TEST_CASE( ReflectionEnumInfoTest, TextParseRejectsUnknownNamesInsteadOfZero 
 
     int64 value = -1;
     SW_EXPECT_TRUE( pRole->tryParseText( "Viewport", value ) && value == 1 );
-    SW_EXPECT_TRUE( pRole->tryParseText( "viewport", value ) && value == 1 ); // 대소문자 무시
-    SW_EXPECT_TRUE( pRole->tryParseText( " 2 ", value ) && value == 2 );      // 알려진 값의 숫자
+    SW_EXPECT_FALSE( pRole->tryParseText( "viewport", value ) );         // 철자 그대로만 — 대소문자가 다르면 모르는 이름(별칭 없음)
+    SW_EXPECT_TRUE( pRole->tryParseText( " 2 ", value ) && value == 2 ); // 알려진 값의 숫자
     SW_EXPECT_FALSE( pRole->tryParseText( "Bogus", value ) );
     SW_EXPECT_FALSE( pRole->tryParseText( "99", value ) );
     SW_EXPECT_FALSE( pRole->tryParseText( "", value ) );
 
     SW_EXPECT_TRUE( pFlag->tryParseText( "Read | Write", value ) && value == 3 );
-    SW_EXPECT_TRUE( pFlag->tryParseText( "execute", value ) && value == 4 );
+    SW_EXPECT_TRUE( pFlag->tryParseText( "Execute", value ) && value == 4 );
+    SW_EXPECT_FALSE( pFlag->tryParseText( "execute", value ) );
     SW_EXPECT_FALSE( pFlag->tryParseText( "Read | Bogus", value ) );
     SW_EXPECT_FALSE( pFlag->tryParseText( "64", value ) ); // 모르는 비트
 
@@ -467,7 +468,7 @@ SW_TEST_CASE( ReflectionEnumInfoTest, CurrentEnumeratorNameWinsOverItsRedirect )
     int64 value{ -1 };
     SW_EXPECT_TRUE( info.findValueByNameHash( sw::hashed_string( "Green" ).getHash(), value ) );
     SW_EXPECT_EQUAL( int64( 1 ), value );
-    SW_EXPECT_TRUE( info.tryParseText( "green", value ) );
+    SW_EXPECT_TRUE( info.tryParseText( "Green", value ) );
     SW_EXPECT_EQUAL( int64( 1 ), value );
     SW_EXPECT_TRUE( info.tryParse( "Green", value ) );
     SW_EXPECT_EQUAL( int64( 1 ), value );

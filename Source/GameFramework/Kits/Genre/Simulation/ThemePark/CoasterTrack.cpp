@@ -93,7 +93,7 @@ namespace sw
     {
         for ( const CoasterTrackInternal::PieceName& entry : CoasterTrackInternal::kArrPieceName )
         {
-            if ( StringUtil::equals( text, string_view( entry._pName ), true ) )
+            if ( StringUtil::equals( text, string_view( entry._pName ) ) )
             {
                 outType = entry._type;
                 return true;

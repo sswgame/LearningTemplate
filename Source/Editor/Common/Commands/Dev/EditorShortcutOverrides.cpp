@@ -118,11 +118,11 @@ namespace sw::editor
             const string_view token = text.substr( begin, end - begin );
             if ( plus == string_view::npos )
                 return EditorCommandRegistry::findKeyByName( token, outShortcut._key );
-            if ( StringUtil::equals( token, "Ctrl", true ) )
+            if ( StringUtil::equals( token, "Ctrl" ) )
                 outShortcut._modifier |= commandmodifier::kCtrl;
-            else if ( StringUtil::equals( token, "Shift", true ) )
+            else if ( StringUtil::equals( token, "Shift" ) )
                 outShortcut._modifier |= commandmodifier::kShift;
-            else if ( StringUtil::equals( token, "Alt", true ) )
+            else if ( StringUtil::equals( token, "Alt" ) )
                 outShortcut._modifier |= commandmodifier::kAlt;
             else
                 return false;

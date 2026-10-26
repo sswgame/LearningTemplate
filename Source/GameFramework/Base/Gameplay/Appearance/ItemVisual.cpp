@@ -38,7 +38,7 @@ namespace sw
                 constexpr AppearancePartKind kArrKind[] = { AppearancePartKind::Skinned, AppearancePartKind::SocketPrefab, AppearancePartKind::BodyModification, AppearancePartKind::Sprite };
                 for ( const AppearancePartKind kind : kArrKind )
                 {
-                    if ( StringUtil::equals( text, string_view( getEnumName( kind ) ), true ) )
+                    if ( StringUtil::equals( text, string_view( getEnumName( kind ) ) ) )
                     {
                         outKind = kind;
                         return true;

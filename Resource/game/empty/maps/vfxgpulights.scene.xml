@@ -49,7 +49,7 @@
 					               _localScale="16,1,16"
 					               _attachOwner="None"
 					               _attachComponent="None"
-					               _meshID="plane"
+					               _meshID="Plane"
 					               _materialPath="engine/materials/prototypegrid_light.material"
 					               _boundsRadius="12"
 					               _blendMode="Opaque" />

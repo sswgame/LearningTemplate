@@ -596,7 +596,7 @@ namespace sw
          * @brief 이름 해시로 열거자 값을 찾습니다. 지금 이름에 없으면 리다이렉트 표(`_mapRedirectNameToValue`)를 한 번 봅니다.
          * @details 바이너리는 열거자를 이 해시로 저장한다. 값이 아니라 이름이 열거자의 정체성이기 때문이다.
          *          표식 값(`Invalid`, `Count`)도 받으며, 이 규칙은 `tryParseText` 와 같다. 필드에 들어 있는 값을 적힌 그대로 읽는다.
-         *          이름 해시는 대소문자를 구분하지 않는다. `hashed_string` 이 그렇고, 텍스트 읽기도 마찬가지다.
+         *          이름 해시는 대소문자를 구분하지 않는다(`hashed_string` 이 그렇다). 바이너리는 엔진이 쓴 해시라 철자가 갈릴 일이 없고, 텍스트 읽기는 철자 그대로 견준다.
          *          옛 이름(`ValueAlias` · `Removed`)은 실제 게임 데이터가 생긴 뒤 이름을 바꾸거나 지울 때 쓰는 수단이고, 그 전에는 데이터를 새 이름으로 다시 쓴다.
          */
         [[nodiscard]] bool findValueByNameHash( uint32 nameHash, int64& outValue ) const
@@ -620,7 +620,7 @@ namespace sw
             return name.empty() ? nullptr : name.c_str();
         }
 
-        /** @brief 이름을 값으로 바꿉니다. 대소문자는 무시하고, 비트플래그는 `A|B` 도 허용합니다. */
+        /** @brief 이름을 값으로 바꿉니다. 철자는 열거자 이름 그대로여야 하고(대소문자가 다르면 모르는 이름), 비트플래그는 `A|B` 도 허용합니다. */
         [[nodiscard]] bool tryParse( string_view name, int64& outValue ) const
         {
             if ( name.empty() )
@@ -628,9 +628,10 @@ namespace sw
 
             {
                 // 찾기만 한다. 열거자 이름은 등록할 때 intern 됐으므로 결과가 같고, 에셋의 모르는 문자열이 전역 이름 테이블에 들어가지 않는다.
+                // `hashed_string` 은 대소문자를 구분하지 않으므로 찾은 뒤 철자를 한 번 더 견준다 — 대소문자 무시는 이름마다 별칭을 만든다.
                 const hashed_string key = hashed_string::findInterned( name );
                 const auto          it  = _mapNameToValue.find( key );
-                if ( it != _mapNameToValue.end() )
+                if ( it != _mapNameToValue.end() && it->first.view() == name )
                 {
                     if ( isValidValue( it->second ) == false )
                         return false;
@@ -657,7 +658,7 @@ namespace sw
         }
 
         /**
-         * @brief 에셋이나 설정 텍스트를 값으로 읽습니다. 이름(대소문자 무시), 비트플래그의 `A | B`, 알려진 값의 숫자를 받습니다.
+         * @brief 에셋이나 설정 텍스트를 값으로 읽습니다. 이름(철자 그대로), 비트플래그의 `A | B`, 알려진 값의 숫자를 받습니다.
          * @details 모르는 이름이나 모르는 플래그 토큰이 하나라도 있으면 false 다. 아는 토큰만 남기거나 0 으로 읽지 않는다.
          *          에셋과 설정 텍스트를 값으로 읽는 경로는 이 함수 하나다(직렬화기, 머티리얼).
          *
@@ -713,12 +714,12 @@ namespace sw
             return false;
         }
 
-        /** @brief 이름 → 값 표 하나에서 글(대소문자 무시)로 찾습니다. 글을 intern 하지 않습니다. */
+        /** @brief 이름 → 값 표 하나에서 글(철자 그대로)로 찾습니다. 글을 intern 하지 않습니다. */
         [[nodiscard]] static bool findInMapByText( const unordered_map<hashed_string, int64>& mapNameToValue, string_view text, int64& outValue )
         {
             for ( const auto& [nameKey, enumValue] : mapNameToValue )
             {
-                if ( StringUtil::equals( text, nameKey.view(), true ) )
+                if ( text == nameKey.view() )
                 {
                     outValue = enumValue;
                     return true;
@@ -728,7 +729,7 @@ namespace sw
         }
 
         /**
-         * @brief 열거자 이름 글(대소문자 무시)로 값을 찾습니다. 지금 이름에 없을 때만 리다이렉트 표를 봅니다.
+         * @brief 열거자 이름 글(철자 그대로)로 값을 찾습니다. 지금 이름에 없을 때만 리다이렉트 표를 봅니다.
          * @details 텍스트 읽기(`tryParse` · `tryParseText` · `tryParseFlags`)가 모두 이 함수를 써서 바이너리(`findValueByNameHash`)와 같은 옛 이름을 받습니다.
          */
         [[nodiscard]] bool findValueByText( string_view text, int64& outValue ) const
@@ -738,7 +739,7 @@ namespace sw
             return findInMapByText( _mapRedirectNameToValue, text, outValue );
         }
 
-        /** @brief `A | B` 를 읽습니다. 토큰마다 알려진 이름(대소문자 무시)이어야 하며, 하나라도 모르면 false 입니다. 표식 값 검사는 부르는 쪽이 합니다. */
+        /** @brief `A | B` 를 읽습니다. 토큰마다 알려진 이름(철자 그대로)이어야 하며, 하나라도 모르면 false 입니다. 표식 값 검사는 부르는 쪽이 합니다. */
         [[nodiscard]] bool tryParseFlags( string_view text, int64& outValue ) const
         {
             int64  result{ 0 };
@@ -756,7 +757,7 @@ namespace sw
                     if ( bKnown )
                         result |= tokenValue;
                     // `None` 은 0 열거자가 없는 플래그에 `toStringFlags` 가 0 을 적는 이름이다 . 읽을 때도 0 이어야 왕복이 맞는다.
-                    if ( bKnown == false && StringUtil::equals( token, constant::reflection::kNone, true ) == false )
+                    if ( bKnown == false && token != string_view{ constant::reflection::kNone } )
                         return false;
                     bAnyToken = true;
                 }

@@ -49,7 +49,7 @@
 					               _localScale="20,1,20"
 					               _attachOwner="None"
 					               _attachComponent="None"
-					               _meshID="plane"
+					               _meshID="Plane"
 					               _materialPath="engine/materials/prototypegrid_orange.material"
 					               _boundsRadius="15"
 					               _blendMode="Opaque" />
@@ -64,7 +64,7 @@
 					               _localScale="2,2,2"
 					               _attachOwner="None"
 					               _attachComponent="None"
-					               _meshID="cube"
+					               _meshID="Cube"
 					               _materialPath="engine/materials/prototypegrid_dark.material"
 					               _boundsRadius="1.8"
 					               _blendMode="Opaque" />

@@ -144,7 +144,7 @@ namespace sw
         for ( uint8 index = static_cast<uint8>( MonsterStatus::Poison ); index <= static_cast<uint8>( MonsterStatus::Freeze ); ++index )
         {
             const MonsterStatus status = static_cast<MonsterStatus>( index );
-            if ( StringUtil::equals( text, string_view( getEnumName( status ) ), true ) )
+            if ( StringUtil::equals( text, string_view( getEnumName( status ) ) ) )
             {
                 outStatus = status;
                 return true;

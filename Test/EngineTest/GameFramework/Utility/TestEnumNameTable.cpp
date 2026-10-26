@@ -1,4 +1,4 @@
-// 열거자 이름 표 — 이름(대소문자 무시) → 열거자, 열거자 → 이름, 범위 밖, 이름 목록 글. 그리고 표를 쓰는 카탈로그가 옛 철자를 그대로 읽는지.
+// 열거자 이름 표 — 이름(철자 그대로) → 열거자, 열거자 → 이름, 범위 밖, 이름 목록 글. 그리고 표를 쓰는 카탈로그가 옛 철자를 그대로 읽는지.
 #include "pch.h"
 
 #include "Core/String/EnumNameTable.h"
@@ -24,10 +24,11 @@ namespace
     constexpr EnumNameTable<TestShade> kShadeTable{ kArrShadeName };
 } // namespace
 
-SW_TEST_CASE( EnumNameTableTest, ParsesNamesIgnoringCaseAndKeepsTheValueOnAMiss )
+SW_TEST_CASE( EnumNameTableTest, ParsesExactNamesAndKeepsTheValueOnAMiss )
 {
     TestShade shade = TestShade::Mid;
-    SW_EXPECT_TRUE( kShadeTable.parse( "DARK", shade ) );
+    SW_EXPECT_FALSE( kShadeTable.parse( "DARK", shade ) ); // 철자 그대로만 — 대소문자가 다르면 모르는 이름
+    SW_EXPECT_TRUE( kShadeTable.parse( "dark", shade ) );
     SW_EXPECT_TRUE( shade == TestShade::Dark );
     SW_EXPECT_TRUE( kShadeTable.parse( "light", shade ) );
     SW_EXPECT_TRUE( shade == TestShade::Light );
@@ -49,7 +50,8 @@ SW_TEST_CASE( EnumNameTableTest, ToStringAndJoinNamesFollowTheTable )
 SW_TEST_CASE( EnumNameTableTest, CatalogParsersKeepTheirSpellings )
 {
     HorrorItemKind kind = HorrorItemKind::None;
-    SW_EXPECT_TRUE( parseHorrorItemKind( "saveitem", kind ) );
+    SW_EXPECT_FALSE( parseHorrorItemKind( "saveitem", kind ) );
+    SW_EXPECT_TRUE( parseHorrorItemKind( "SaveItem", kind ) );
     SW_EXPECT_TRUE( kind == HorrorItemKind::SaveItem );
     SW_EXPECT_TRUE( parseHorrorItemKind( "Document", kind ) );
     SW_EXPECT_TRUE( kind == HorrorItemKind::Document ); // 마지막 열거자도 읽힌다(표 개수가 열거자를 다 덮는다)
@@ -57,7 +59,7 @@ SW_TEST_CASE( EnumNameTableTest, CatalogParsersKeepTheirSpellings )
     SW_EXPECT_EQUAL( string( toString( HorrorItemKind::Battery ) ), string( "Battery" ) );
 
     ConquestTeam team = ConquestTeam::Neutral;
-    SW_EXPECT_TRUE( parseConquestTeam( "ENEMY", team ) );
+    SW_EXPECT_TRUE( parseConquestTeam( "Enemy", team ) );
     SW_EXPECT_TRUE( team == ConquestTeam::Enemy );
     SW_EXPECT_FALSE( parseConquestTeam( "Ally", team ) );
 

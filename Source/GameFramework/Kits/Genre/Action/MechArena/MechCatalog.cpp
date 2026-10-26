@@ -91,11 +91,11 @@ namespace sw
 
     bool MechCatalog::parseRangeClass( string_view text, MechRangeClass& outRangeClass )
     {
-        if ( StringUtil::equals( text, string_view( "Near" ), true ) )
+        if ( StringUtil::equals( text, string_view( "Near" ) ) )
             outRangeClass = MechRangeClass::Near;
-        else if ( StringUtil::equals( text, string_view( "Mid" ), true ) )
+        else if ( StringUtil::equals( text, string_view( "Mid" ) ) )
             outRangeClass = MechRangeClass::Mid;
-        else if ( StringUtil::equals( text, string_view( "Far" ), true ) )
+        else if ( StringUtil::equals( text, string_view( "Far" ) ) )
             outRangeClass = MechRangeClass::Far;
         else
             return false;

@@ -118,9 +118,9 @@ namespace sw
             furniture._bShake  = false;
             StringUtil::forEachToken( search, ",; ", [&]( string_view token )
             {
-                if ( StringUtil::equals( token, string_view( "Vacuum" ), true ) )
+                if ( StringUtil::equals( token, string_view( "Vacuum" ) ) )
                     furniture._bVacuum = true;
-                else if ( StringUtil::equals( token, string_view( "Shake" ), true ) )
+                else if ( StringUtil::equals( token, string_view( "Shake" ) ) )
                     furniture._bShake = true;
                 else
                 {

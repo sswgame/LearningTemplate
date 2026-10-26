@@ -220,7 +220,7 @@ SW_TEST_CASE( CoasterTest, CamelbackGivesAirtimeAndTooTallHillStalls )
 }
 
 /**
- * @brief [CoasterTest] 레이아웃 XML 은 조각을 차례로 읽는다(종류 이름은 대소문자 무시) · 모르는 조각이 든 레이아웃은 조각을 빼고 잇지 않고 통째로 넣지 않는 오류다 · 조각 이름은 왕복한다
+ * @brief [CoasterTest] 레이아웃 XML 은 조각을 차례로 읽는다(종류 이름은 철자 그대로) · 모르는 조각이 든 레이아웃은 조각을 빼고 잇지 않고 통째로 넣지 않는 오류다 · 조각 이름은 왕복한다
  */
 SW_TEST_CASE( CoasterTest, LayoutCatalogReadsPiecesAndRejectsUnknownOnes )
 {
@@ -228,7 +228,7 @@ SW_TEST_CASE( CoasterTest, LayoutCatalogReadsPiecesAndRejectsUnknownOnes )
 <CoasterCatalog>
   <Layout id="mini" name="Mini" startHeight="2">
     <Piece type="Station" length="8"/>
-    <Piece type="liftHill" length="20" height="12"/>
+    <Piece type="LiftHill" length="20" height="12"/>
     <Piece type="TurnLeft" radius="9" angle="2.0944" bank="25"/>
   </Layout>
   <Layout id="twisted" name="Twisted">

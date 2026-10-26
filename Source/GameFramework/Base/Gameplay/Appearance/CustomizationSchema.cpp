@@ -48,7 +48,7 @@ namespace sw
                                                                 CustomizationDriveKind::MaterialColor, CustomizationDriveKind::DyeChannel, CustomizationDriveKind::PaletteSwap };
                 for ( const CustomizationDriveKind kind : kArrKind )
                 {
-                    if ( StringUtil::equals( text, string_view( getEnumName( kind ) ), true ) )
+                    if ( StringUtil::equals( text, string_view( getEnumName( kind ) ) ) )
                     {
                         outKind = kind;
                         return true;

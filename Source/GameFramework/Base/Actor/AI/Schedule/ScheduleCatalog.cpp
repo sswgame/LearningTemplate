@@ -53,7 +53,7 @@ namespace sw
             {
                 for ( const ElementPass& entry : kArrElementPass )
                 {
-                    if ( StringUtil::equals( pName, entry._pName, true ) )
+                    if ( StringUtil::equals( pName, entry._pName ) )
                         return entry._pass;
                 }
                 return -1;

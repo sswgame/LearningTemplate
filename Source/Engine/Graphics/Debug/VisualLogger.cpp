@@ -29,7 +29,7 @@ namespace sw
         {
             for ( size_t index = 0; index < SW_COUNT_OF( kArrShapeName ); ++index )
             {
-                if ( StringUtil::equals( name, string_view( kArrShapeName[index] ), true ) )
+                if ( StringUtil::equals( name, string_view( kArrShapeName[index] ) ) )
                 {
                     outShape = static_cast<VisualLogShape>( index );
                     return true;

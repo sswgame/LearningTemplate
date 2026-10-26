@@ -27,13 +27,13 @@ namespace sw
                 bool  bValid = true;
                 StringUtil::forEachToken( text, ",; \t", [&]( string_view token )
                 {
-                    if ( StringUtil::equals( token, "Standing", true ) )
+                    if ( StringUtil::equals( token, "Standing" ) )
                         mask = static_cast<uint8>( mask | ( 1u << static_cast<uint32>( FighterPosture::Standing ) ) );
-                    else if ( StringUtil::equals( token, "Crouching", true ) )
+                    else if ( StringUtil::equals( token, "Crouching" ) )
                         mask = static_cast<uint8>( mask | ( 1u << static_cast<uint32>( FighterPosture::Crouching ) ) );
-                    else if ( StringUtil::equals( token, "Airborne", true ) )
+                    else if ( StringUtil::equals( token, "Airborne" ) )
                         mask = static_cast<uint8>( mask | ( 1u << static_cast<uint32>( FighterPosture::Airborne ) ) );
-                    else if ( StringUtil::equals( token, "Stance", true ) )
+                    else if ( StringUtil::equals( token, "Stance" ) )
                         mask = static_cast<uint8>( mask | ( 1u << static_cast<uint32>( FighterPosture::Stance ) ) );
                     else
                     {

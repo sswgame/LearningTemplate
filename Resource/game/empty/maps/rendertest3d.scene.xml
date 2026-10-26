@@ -48,7 +48,7 @@
 					               _localScale="16,1,16"
 					               _attachOwner="None"
 					               _attachComponent="None"
-					               _meshID="plane"
+					               _meshID="Plane"
 					               _materialPath="engine/materials/prototypegrid_dark.material"
 					               _boundsRadius="12"
 					               _blendMode="Opaque" />
@@ -63,7 +63,7 @@
 					               _localScale="1.5,1.5,1.5"
 					               _attachOwner="None"
 					               _attachComponent="None"
-					               _meshID="cube"
+					               _meshID="Cube"
 					               _materialPath="engine/materials/prototypegrid_orange.material"
 					               _boundsRadius="1.3"
 					               _blendMode="Opaque" />
@@ -78,7 +78,7 @@
 					               _localScale="2,2,2"
 					               _attachOwner="None"
 					               _attachComponent="None"
-					               _meshID="cube"
+					               _meshID="Cube"
 					               _materialPath="engine/materials/prototypegrid_orange.material"
 					               _boundsRadius="1.8"
 					               _blendMode="Opaque" />
@@ -93,7 +93,7 @@
 					               _localScale="2,2,2"
 					               _attachOwner="None"
 					               _attachComponent="None"
-					               _meshID="cube"
+					               _meshID="Cube"
 					               _materialPath="engine/materials/prototypegrid_light.material"
 					               _boundsRadius="1.8"
 					               _blendMode="Opaque"

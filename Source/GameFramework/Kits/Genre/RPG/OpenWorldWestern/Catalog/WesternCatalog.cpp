@@ -48,11 +48,11 @@ namespace sw
                 bool  bValid = true;
                 StringUtil::forEachToken( sizes, ",; ", [&]( string_view token )
                 {
-                    if ( StringUtil::equals( token, string_view( "Small" ), true ) )
+                    if ( StringUtil::equals( token, string_view( "Small" ) ) )
                         mask |= 1u << static_cast<uint32>( WesternAnimalSize::Small );
-                    else if ( StringUtil::equals( token, string_view( "Medium" ), true ) )
+                    else if ( StringUtil::equals( token, string_view( "Medium" ) ) )
                         mask |= 1u << static_cast<uint32>( WesternAnimalSize::Medium );
-                    else if ( StringUtil::equals( token, string_view( "Large" ), true ) )
+                    else if ( StringUtil::equals( token, string_view( "Large" ) ) )
                         mask |= 1u << static_cast<uint32>( WesternAnimalSize::Large );
                     else
                     {

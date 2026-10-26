@@ -95,7 +95,7 @@ namespace sw
         constexpr EquipBreakPolicy kArrPolicy[] = { EquipBreakPolicy::UnequipTogether, EquipBreakPolicy::KeepHidden, EquipBreakPolicy::RefuseUnequip };
         for ( const EquipBreakPolicy policy : kArrPolicy )
         {
-            if ( StringUtil::equals( text, string_view( getEnumName( policy ) ), true ) )
+            if ( StringUtil::equals( text, string_view( getEnumName( policy ) ) ) )
             {
                 outPolicy = policy;
                 return true;

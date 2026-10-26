@@ -58,9 +58,9 @@ namespace sw::editor
         const string* pState = step.findAttribute( "state" );
         if ( pState == nullptr )
             return true;
-        if ( StringUtil::equals( string_view{ *pState }, "down", true ) )
+        if ( StringUtil::equals( string_view{ *pState }, "down" ) )
             inoutState = EditorPressState::Down;
-        else if ( StringUtil::equals( string_view{ *pState }, "up", true ) )
+        else if ( StringUtil::equals( string_view{ *pState }, "up" ) )
             inoutState = EditorPressState::Up;
         else
             return false;
@@ -80,11 +80,11 @@ namespace sw::editor
             const size_t      plus  = mods.find( '+', begin );
             const size_t      end   = plus == string_view::npos ? mods.size() : plus;
             const string_view token = mods.substr( begin, end - begin );
-            if ( StringUtil::equals( token, "ctrl", true ) )
+            if ( StringUtil::equals( token, "ctrl" ) )
                 outMask |= EditorModifierBit::kCtrl;
-            else if ( StringUtil::equals( token, "shift", true ) )
+            else if ( StringUtil::equals( token, "shift" ) )
                 outMask |= EditorModifierBit::kShift;
-            else if ( StringUtil::equals( token, "alt", true ) )
+            else if ( StringUtil::equals( token, "alt" ) )
                 outMask |= EditorModifierBit::kAlt;
             else
                 return false;

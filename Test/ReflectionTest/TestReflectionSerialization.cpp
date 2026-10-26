@@ -3421,8 +3421,9 @@ SW_TEST_CASE( ReflectionSerializationTest, AssetTextDoesNotGrowTheNameTable )
 
     const uint32 previousCount = sw::hashed_string::getInternedCount();
     int64        value         = -1;
-    SW_EXPECT_TRUE( pRole->tryParse( "viewport", value ) && value == 1 ); // 대소문자를 가리지 않는 답은 그대로
-    SW_EXPECT_TRUE( pFlag->tryParseText( "Read | write", value ) && value == 3 );
+    SW_EXPECT_TRUE( pRole->tryParse( "Viewport", value ) && value == 1 );
+    SW_EXPECT_FALSE( pRole->tryParse( "viewport", value ) ); // 철자 그대로만 — 대소문자가 다르면 모르는 이름
+    SW_EXPECT_TRUE( pFlag->tryParseText( "Read | Write", value ) && value == 3 );
     SW_EXPECT_FALSE( pRole->tryParse( "R8NoSuchRole", value ) );
     SW_EXPECT_FALSE( pRole->tryParseText( "R8NoSuchRoleToo", value ) );
     SW_EXPECT_FALSE( pFlag->tryParseText( "Read | R8NoSuchFlag", value ) );

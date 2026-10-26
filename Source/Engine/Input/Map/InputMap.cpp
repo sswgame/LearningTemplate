@@ -105,7 +105,7 @@ namespace sw
         for ( const BindingKindInfo& info : kArrBindingKindInfo )
         {
             // string_view 오버로드를 쓴다. `name.data()` 는 널 종료가 보장되지 않는다.
-            if ( StringUtil::equals( name, string_view{ info._pXMLName }, true ) )
+            if ( StringUtil::equals( name, string_view{ info._pXMLName } ) )
                 return info._kind;
         }
         return BindingKind::Count;

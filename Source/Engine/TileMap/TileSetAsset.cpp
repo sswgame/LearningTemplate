@@ -217,13 +217,13 @@ namespace sw
             brush._bSolid = *bSolid ? SW_TRUE : SW_FALSE;
         brush._navCost                        = static_cast<uint8>( navCost );
         const string_view outside             = node.getAttributeText( "outside" );
-        const bool        bInvalidOutsideMode = outside.empty() == false && StringUtil::equals( outside, "same", true ) == false && StringUtil::equals( outside, "empty", true ) == false;
+        const bool        bInvalidOutsideMode = outside.empty() == false && StringUtil::equals( outside, "same" ) == false && StringUtil::equals( outside, "empty" ) == false;
         if ( bInvalidOutsideMode )
         {
             SW_LOG_ERROR( "%#: outside=\"%#\" must be 'same' or 'empty'", sourceName, outside );
             return false;
         }
-        brush._bOutsideIsSame = StringUtil::equals( outside, "same", true ) ? SW_TRUE : SW_FALSE;
+        brush._bOutsideIsSame = StringUtil::equals( outside, "same" ) ? SW_TRUE : SW_FALSE;
 
         for ( XMLNode ruleNode = node.findChild(); ruleNode.isValid(); ruleNode = ruleNode.findNextSibling() )
         {
