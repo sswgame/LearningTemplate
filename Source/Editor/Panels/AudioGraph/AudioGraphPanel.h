@@ -40,10 +40,10 @@ namespace sw::editor
 
         AudioGraphPanel();
 
-        const utf8* getPanelTitle() const override { return "Audio Graph"; }
-        bool        isToolPanel() const override { return true; }
-        void        drawContent() override;
-        float2      getInitialPanelSize() const override { return float2{ 1100.0f, 640.0f }; }
+        const utf8*      getPanelTitle() const override { return "Audio Graph"; }
+        bool             isToolPanel() const override { return true; }
+        void             drawContent() override;
+        EditorTextExtent getInitialPanelSize() const override { return EditorTextExtent::ofText( 147.0f, 34.0f ); }
 
     private:
         /** @brief 입력한 경로의 파일을 사본으로 읽습니다. 읽지 못하면 사본을 비웁니다(읽기가 오류를 남긴다). 위치가 없는 파일은 처음 배치를 합니다. */

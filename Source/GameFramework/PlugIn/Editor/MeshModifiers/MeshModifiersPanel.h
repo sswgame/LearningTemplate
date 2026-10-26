@@ -40,8 +40,8 @@ namespace sw::editor
         const utf8* getPanelTitle() const override { return "Mesh Modifiers"; }
         bool        isToolPanel() const override { return true; }
         /** @brief 스택 목록 · 기즈모 · 매개변수 · 하위 스택이 세로로 길다 - 기본(640 x 420)이면 매개변수가 첫 화면 밖으로 밀린다. */
-        float2 getInitialPanelSize() const override { return float2{ 560.0f, 900.0f }; }
-        void   drawContent() override;
+        EditorTextExtent getInitialPanelSize() const override { return EditorTextExtent::ofText( 75.0f, 47.0f ); }
+        void             drawContent() override;
         /** @brief 스택을 사이드카 문서에 씁니다(닫기 · 종료 확인의 Save). */
         [[nodiscard]] bool saveDocument() override;
         bool               canSaveDocument() const override;

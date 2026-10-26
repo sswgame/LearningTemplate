@@ -44,7 +44,7 @@ namespace sw::editor
         [[nodiscard]] static bool openWindow( string_view prefabPath );
 
         /** @brief 창 제목은 종류 테이블(`EditorAssetTypeRegistry`)의 프리팹 패널 제목이다 — 콘텐츠 브라우저가 이 제목으로 연다. 오버라이드 도구(`PrefabPanel`)는 따로 둔 제목을 쓴다. */
-        float2 getInitialPanelSize() const override { return float2{ 560.0f, 520.0f }; }
+        EditorTextExtent getInitialPanelSize() const override { return EditorTextExtent::ofText( 75.0f, 27.0f ); }
 
         void               drawDocumentContent() override;
         [[nodiscard]] bool saveDocument() override;

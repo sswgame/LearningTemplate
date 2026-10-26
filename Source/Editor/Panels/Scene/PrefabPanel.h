@@ -31,8 +31,8 @@ namespace sw::editor
         /** @brief 중첩 프리팹·서브 애셋 섹션을 그립니다. */
         void drawNestedPrefabSection();
         /** @brief 프리팹 오버라이드 테이블을 그립니다. */
-        void   drawOverrideTable();
-        float2 getInitialPanelSize() const override { return float2{ 650.0f, 480.0f }; }
+        void             drawOverrideTable();
+        EditorTextExtent getInitialPanelSize() const override { return EditorTextExtent::ofText( 87.0f, 25.0f ); }
 
     private:
         void scanPrefabOverrides( const utf8* pPrefabPath );

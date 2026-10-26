@@ -5,6 +5,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
@@ -403,8 +404,7 @@ namespace sw::editor
             ImGui::OpenPopup( kPopupName );
             _bOpenCurvePopup = false;
         }
-        const float32 dpiScale = EditorThemeUtil::getDpiScale();
-        ImGui::SetNextWindowSize( ImVec2{ 560.0f * dpiScale, 520.0f * dpiScale }, ImGuiCond_Appearing );
+        EditorChrome::setNextWindowExtent( EditorTextExtent::ofText( 75.0f, 27.0f ), false );
         bool bOpen = true;
         if ( ImGui::BeginPopupModal( kPopupName, &bOpen ) == false )
             return;

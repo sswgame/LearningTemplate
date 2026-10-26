@@ -131,7 +131,7 @@ namespace sw::editor
         // 내용에 비해 작아 내부 Child 가 한 줄 높이로 눌리고, 그러면 덤프가 "내용 없음" 으로 읽는다.
         // 측정하는 것이 목적이므로 첫 사용에 넉넉한 크기를 준다(사용자가 줄이면 그대로 따른다).
         if ( EditorDockLayout::isOpeningAllPanels() )
-            ImGui::SetNextWindowSize( ImVec2{ 900.0f * EditorThemeUtil::getDpiScale(), 620.0f * EditorThemeUtil::getDpiScale() }, ImGuiCond_FirstUseEver );
+            setNextWindowExtentFirstUse( EditorTextExtent::ofText( 120.0f, 32.0f ) );
 
         const bool bNoPadding = ( flags & EditorPanelFlags::NoPadding ) != EditorPanelFlags::None;
         if ( bNoPadding )
@@ -149,18 +149,40 @@ namespace sw::editor
         ImGui::End();
     }
 
-    void EditorChrome::setNextPanelSize( const float2& size )
+    float2 EditorChrome::resolveTextExtent( const EditorTextExtent& extent )
     {
-        if ( size._x <= 0.0f || size._y <= 0.0f )
+        // 글자 너비 · 줄 높이는 글꼴(UI 배율 포함)에서 오므로 배율을 따로 곱하지 않는다. 작은 창(960×540 · 배율 1.5)에서도 닫기 단추가 화면 안에 남게 작업 영역의 90 % 로 자른다.
+        float32 width  = extent._columns > 0.0f ? extent._columns * ImGui::CalcTextSize( "0" ).x : 0.0f;
+        float32 height = extent._lines > 0.0f ? extent._lines * ImGui::GetTextLineHeightWithSpacing() : 0.0f;
+        if ( const ImGuiViewport* pViewport = ImGui::GetMainViewport() )
+        {
+            width  = MathUtil::min( width, pViewport->WorkSize.x * EditorChromeInternal::kMaxPanelViewportRatio );
+            height = MathUtil::min( height, pViewport->WorkSize.y * EditorChromeInternal::kMaxPanelViewportRatio );
+        }
+        return float2{ width, height };
+    }
+
+    void EditorChrome::setNextWindowExtent( const EditorTextExtent& extent, bool bAlways )
+    {
+        const float2 size = resolveTextExtent( extent );
+        ImGui::SetNextWindowSize( ImVec2{ size._x, size._y }, bAlways ? ImGuiCond_Always : ImGuiCond_Appearing );
+    }
+
+    void EditorChrome::setNextWindowExtentFirstUse( const EditorTextExtent& extent )
+    {
+        const float2 size = resolveTextExtent( extent );
+        ImGui::SetNextWindowSize( ImVec2{ size._x, size._y }, ImGuiCond_FirstUseEver );
+    }
+
+    void EditorChrome::setNextPanelSize( const EditorTextExtent& extent )
+    {
+        if ( extent._columns <= 0.0f || extent._lines <= 0.0f )
             return;
-        // 크기는 96 DPI 기준값이다 — 글자 · 여백처럼 UI 배율을 곱하고, 작은 창(960×540 · 배율 1.5)에서도 닫기 단추가 화면 안에 남게 작업 영역의 90 % 로 자른다.
-        const float32        dpiScale  = EditorThemeUtil::getDpiScale();
+        const float2         size      = resolveTextExtent( extent );
         const ImGuiViewport* pViewport = ImGui::GetMainViewport();
-        ImVec2               windowSize{ size._x * dpiScale, size._y * dpiScale };
+        ImVec2               windowSize{ size._x, size._y };
         if ( pViewport != nullptr )
         {
-            windowSize.x = MathUtil::min( windowSize.x, pViewport->WorkSize.x * EditorChromeInternal::kMaxPanelViewportRatio );
-            windowSize.y = MathUtil::min( windowSize.y, pViewport->WorkSize.y * EditorChromeInternal::kMaxPanelViewportRatio );
             // 처음 여는 떠 있는 창은 주 뷰포트 가운데에 연다. 위치를 정하지 않으면 모두 왼쪽 위에 열려 Hierarchy 를 덮는다. 도킹된 창에는 둘 다 걸리지 않는다.
             const ImVec2 center{ pViewport->WorkPos.x + pViewport->WorkSize.x * 0.5f, pViewport->WorkPos.y + pViewport->WorkSize.y * 0.5f };
             ImGui::SetNextWindowPos( center, ImGuiCond_FirstUseEver, ImVec2{ 0.5f, 0.5f } );
@@ -302,8 +324,11 @@ namespace sw::editor
 
         ImGui::SetNextWindowPos( ImVec2{ desc._anchorPos._x, desc._anchorPos._y }, ImGuiCond_Always,
                                  ImVec2{ desc._pivot._x, desc._pivot._y } );
-        if ( desc._size._x > 0.0f )
-            ImGui::SetNextWindowSize( ImVec2{ desc._size._x, desc._size._y } );
+        if ( desc._size._columns > 0.0f )
+        {
+            const float2 size = resolveTextExtent( desc._size );
+            ImGui::SetNextWindowSize( ImVec2{ size._x, size._y } );
+        }
         if ( desc._bgAlpha >= 0.0f )
             ImGui::SetNextWindowBgAlpha( desc._bgAlpha );
 

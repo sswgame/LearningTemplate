@@ -32,7 +32,7 @@ namespace sw::editor
 
         const utf8*        getPanelTitle() const override { return "Catalog Editor"; }
         bool               isToolPanel() const override { return true; }
-        float2             getInitialPanelSize() const override { return float2{ 1000.0f, 680.0f }; }
+        EditorTextExtent   getInitialPanelSize() const override { return EditorTextExtent::ofText( 133.0f, 36.0f ); }
         void               drawContent() override;
         [[nodiscard]] bool saveDocument() override;
         void               revertDocument() override;

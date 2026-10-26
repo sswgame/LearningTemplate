@@ -226,11 +226,11 @@ namespace sw::editor
          */
         virtual EditorPanelFlags getPanelFlags() const { return EditorPanelFlags::None; }
         /**
-         * @brief 떠 있는 창으로 처음 열 때의 크기입니다. 96 DPI 기준이며 UI 배율은 `EditorChrome::setNextPanelSize` 가 곱합니다.
+         * @brief 떠 있는 창으로 처음 열 때의 크기입니다. 글자 칸 수 · 줄 수로 적으며(`EditorTextExtent`, 픽셀 값은 만들 수 없다) 작업 영역의 90 % 까지로 잘립니다.
          * @details 기본값이 있어야 한다. 크기를 정하지 않은 도구 창은 내용 크기로 열려서, Data Table 은 높이가 100 px 라 테이블이 보이지 않고
          *          User Settings 는 값 입력란의 폭이 0 이 된다. 도킹된 창에는 적용되지 않는다.
          */
-        virtual float2 getInitialPanelSize() const { return float2{ 640.0f, 420.0f }; }
+        virtual EditorTextExtent getInitialPanelSize() const { return EditorTextExtent::ofText( 85.0f, 22.0f ); }
 
         /** @brief 편집이 생겼음을 알립니다. 제목의 미저장 표시와 종료 확인이 이 값을 봅니다. */
         void markDocumentDirty() { _bDocumentDirty = true; }

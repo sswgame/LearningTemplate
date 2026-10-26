@@ -45,7 +45,7 @@ namespace sw::editor
         PairedAnimationPanel();
 
         const utf8*        getPanelTitle() const override { return "Paired Animation"; }
-        float2             getInitialPanelSize() const override { return float2{ 900.0f, 760.0f }; }
+        EditorTextExtent   getInitialPanelSize() const override { return EditorTextExtent::ofText( 120.0f, 40.0f ); }
         void               drawDocumentContent() override;
         [[nodiscard]] bool saveDocument() override;
         bool               canSaveDocument() const override { return isDocumentLoadFailed() == false && _model.isDirty(); }

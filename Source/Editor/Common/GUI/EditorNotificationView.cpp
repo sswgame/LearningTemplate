@@ -40,9 +40,9 @@ namespace sw::editor
         if ( listNotification.empty() )
             return;
 
-        constexpr float32 toastWidth  = 300.0f;
-        constexpr float32 toastMargin = 12.0f;
-        float32           currentY    = screenHeight - toastMargin;
+        constexpr float32 toastColumns = 40.0f;
+        constexpr float32 toastMargin  = 12.0f;
+        float32           currentY     = screenHeight - toastMargin;
 
         float2 viewportPos{};
         float2 viewportSize{ screenWidth, screenHeight };
@@ -65,7 +65,7 @@ namespace sw::editor
             const Color bgColor   = EditorThemeUtil::getOverlayBgColor().withAlpha( 0.92f * alpha );
             const Color typeColor = getNotificationTypeColor( item._type ).withAlpha( alpha );
 
-            float32 posX = viewportPos._x + screenWidth - toastWidth - toastMargin;
+            float32 posX = viewportPos._x + screenWidth - EditorChrome::resolveTextExtent( EditorTextExtent::ofText( toastColumns, 0.0f ) )._x - toastMargin;
             currentY -= 75.0f;
 
             fixed_string<constant::kMaxBuffer32> windowID;
@@ -74,7 +74,7 @@ namespace sw::editor
             editor::EditorOverlayDesc toastDesc{};
             toastDesc._pID        = windowID.c_str();
             toastDesc._anchorPos  = float2{ posX, currentY };
-            toastDesc._size       = float2{ toastWidth, 0.0f };
+            toastDesc._size       = EditorTextExtent::ofText( toastColumns, 0.0f );
             toastDesc._rounding   = 6.0f;
             toastDesc._borderSize = 1.5f;
             toastDesc._bgAlpha    = bgColor._a;

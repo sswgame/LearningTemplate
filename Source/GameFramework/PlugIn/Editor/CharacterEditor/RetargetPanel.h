@@ -41,7 +41,7 @@ namespace sw::editor
         RetargetPanel();
 
         const utf8*        getPanelTitle() const override { return "Retarget Profile"; }
-        float2             getInitialPanelSize() const override { return float2{ 900.0f, 900.0f }; }
+        EditorTextExtent   getInitialPanelSize() const override { return EditorTextExtent::ofText( 120.0f, 47.0f ); }
         void               drawDocumentContent() override;
         [[nodiscard]] bool saveDocument() override;
 

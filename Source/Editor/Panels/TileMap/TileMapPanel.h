@@ -59,7 +59,7 @@ namespace sw::editor
 
     protected:
         /** @brief 왼쪽 도구 영역과 오른쪽 캔버스가 나란히 들어갈 크기로 엽니다. */
-        float2 getInitialPanelSize() const override { return float2{ 980.0f, 620.0f }; }
+        EditorTextExtent getInitialPanelSize() const override { return EditorTextExtent::ofText( 131.0f, 33.0f ); }
 
     private:
         string         captureDocumentText() const override;

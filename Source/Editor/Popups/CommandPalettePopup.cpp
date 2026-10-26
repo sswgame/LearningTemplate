@@ -186,10 +186,12 @@ namespace sw::editor
 
     void CommandPalettePopup::drawContent()
     {
+        constexpr float32 kDetailColumnCount = 24.0f; ///< 오른쪽 끝의 설명 열이 차지하는 글자 칸 수
+
         editor::EditorSearchOverlayDesc overlayDesc{};
         overlayDesc._pID          = "##CommandPalette";
         overlayDesc._pOpen        = &_bOpen;
-        overlayDesc._size         = float2{ 580.0f, 360.0f };
+        overlayDesc._size         = EditorTextExtent::ofText( 77.0f, 19.0f );
         overlayDesc._pFocusOnOpen = &_bJustOpened;
 
         if ( EditorChrome::beginSearchOverlay( overlayDesc ) )
@@ -249,7 +251,7 @@ namespace sw::editor
                     if ( entry._detail.empty() == false )
                     {
                         ImGui::SameLine();
-                        ImGui::SetCursorPosX( overlayDesc._size._x - 180.0f );
+                        ImGui::SetCursorPosX( EditorChrome::resolveTextExtent( overlayDesc._size )._x - kDetailColumnCount * ImGui::CalcTextSize( "0" ).x );
                         ImGui::TextDisabled( "%s", entry._detail.c_str() );
                     }
 

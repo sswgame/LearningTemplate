@@ -34,7 +34,7 @@ namespace sw::editor
         /** @brief 필요할 때 여는 도구라 닫힌 채 시작합니다. */
         bool isToolPanel() const override { return true; }
         /** @brief 처음 열 때의 크기입니다(96 DPI 기준). */
-        float2 getInitialPanelSize() const override { return float2{ 720.0f, 520.0f }; }
+        EditorTextExtent getInitialPanelSize() const override { return EditorTextExtent::ofText( 96.0f, 27.0f ); }
         /** @brief 도는 패키징을 끝냅니다(모듈이 언로드되기 전). */
         void shutdown( IRHIDevice* pDevice ) override;
 

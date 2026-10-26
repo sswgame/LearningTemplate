@@ -34,10 +34,10 @@ namespace sw::editor
         InputMapPanel();
         virtual ~InputMapPanel() override = default;
 
-        const utf8* getPanelTitle() const override { return "Input Map Editor"; }
-        void        drawContent() override;
-        bool        isToolPanel() const override { return true; }
-        float2      getInitialPanelSize() const override { return float2{ 960.0f, 640.0f }; }
+        const utf8*      getPanelTitle() const override { return "Input Map Editor"; }
+        void             drawContent() override;
+        bool             isToolPanel() const override { return true; }
+        EditorTextExtent getInitialPanelSize() const override { return EditorTextExtent::ofText( 128.0f, 34.0f ); }
 
         /**
          * @brief InputMap XML 을 씁니다.
