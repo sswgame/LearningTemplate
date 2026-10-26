@@ -266,7 +266,8 @@ namespace sw
             SW_EXPECT_TRUE( initResult != SessionStateInitResult::Refused );
             if ( initResult == SessionStateInitResult::Refused )
                 return false;
-            initializeTown( _town, *pState );
+            if ( initializeTown( _town, *pState ) == false )
+                return false;
             if ( pState->isFreshGame() )
             {
                 (void)_town.setObject( 0, 0, "grass" );
@@ -287,7 +288,8 @@ namespace sw
             if ( bTownFrameMismatch )
                 return false;
             CreatureTown town;
-            initializeTown( town, *pState );
+            if ( initializeTown( town, *pState ) == false )
+                return false;
             const bool bRead = town.readState( body ) && body.getRemainingBytes() == 0 && archive.getRemainingBytes() == 0;
             if ( bRead == false )
                 return false;
@@ -329,10 +331,10 @@ namespace sw
         }
 
     private:
-        static void initializeTown( CreatureTown& outTown, SessionStateComponent& state )
+        [[nodiscard]] static bool initializeTown( CreatureTown& outTown, SessionStateComponent& state )
         {
             const KitCompositionCatalogs& catalogs = KitCompositionCatalogs::get();
-            outTown.initialize( &catalogs._creatures, state.makeRefs(), kTownSize, kTownSize, CreatureTownSettings{} ); // U14 뒤 모양 — 평판 카탈로그는 공유 상태가
+            return outTown.initialize( &catalogs._creatures, state.makeRefs(), kTownSize, kTownSize, CreatureTownSettings{} ); // U14 뒤 모양 — 평판 카탈로그는 공유 상태가
         }
 
         CreatureTown _town;
