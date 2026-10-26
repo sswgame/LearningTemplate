@@ -37,10 +37,6 @@ namespace sw::editor
     {
         struct EditorFrameStepsInternal
         {
-            /// @brief 알림 뷰가 메인 뷰포트를 모를 때 쓰는 화면 크기입니다.
-            static constexpr float32 kFallbackScreenWidth  = 1920.0f;
-            static constexpr float32 kFallbackScreenHeight = 1080.0f;
-
             /** @brief 1) 단축키, 메뉴가 미룬 패널 열기 요청, 씬 세션(세대 동기화 · 미저장 확인)을 처리합니다. */
             static void runCommands( EditorContext& /*context*/ )
             {
@@ -70,7 +66,7 @@ namespace sw::editor
                 context.getSubsystem<EditorPopupManager>().drawOpenPopups();
                 EditorNotificationManager& notificationManager = context.getSubsystem<EditorNotificationManager>();
                 notificationManager.update( ImGui::GetIO().DeltaTime );
-                EditorNotificationView::draw( notificationManager, kFallbackScreenWidth, kFallbackScreenHeight );
+                EditorNotificationView::draw( notificationManager );
             }
 
             /** @brief 4) 자체 테스트(-gv_editorSelfTest, Test Runner 창)의 한 단계를 돌립니다. 실행이 없으면 아무것도 하지 않는다. */

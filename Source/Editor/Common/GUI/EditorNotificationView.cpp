@@ -34,7 +34,7 @@ namespace sw::editor
         }
     } // namespace
 
-    void EditorNotificationView::draw( const EditorNotificationManager& manager, float32 screenWidth, float32 screenHeight )
+    void EditorNotificationView::draw( const EditorNotificationManager& manager )
     {
         const vector<NotificationItem>& listNotification = manager.getNotifications();
         if ( listNotification.empty() )
@@ -42,16 +42,17 @@ namespace sw::editor
 
         constexpr float32 toastWidth  = 300.0f;
         constexpr float32 toastMargin = 12.0f;
-        float32           currentY    = screenHeight - toastMargin;
 
-        float2 viewportPos{};
-        float2 viewportSize{ screenWidth, screenHeight };
-        if ( EditorChrome::tryGetMainViewportRect( viewportPos, viewportSize ) )
-        {
-            screenWidth  = viewportSize._x;
-            screenHeight = viewportSize._y;
-            currentY     = viewportPos._y + screenHeight - toastMargin;
-        }
+        // 메인 뷰포트는 ImGui 프레임 안에서 항상 있다 — 없으면 호출 시점이 틀린 것이라 임의 크기로 계속하지 않고 멈춘다
+        float2     viewportPos{};
+        float2     viewportSize{};
+        const bool bHasViewport = EditorChrome::tryGetMainViewportRect( viewportPos, viewportSize );
+        SW_ASSERT( bHasViewport );
+        if ( bHasViewport == false )
+            return;
+        const float32 screenWidth  = viewportSize._x;
+        const float32 screenHeight = viewportSize._y;
+        float32       currentY     = viewportPos._y + screenHeight - toastMargin;
 
         for ( size_t notificationIndex = listNotification.size(); notificationIndex > 0; --notificationIndex )
         {
