@@ -1,13 +1,16 @@
 /**
  * @file EditorInputActions.cpp
- * @brief 에디터 입력 맵의 소유 · 포커스 레이어 · 액션 → 명령 실행입니다.
+ * @brief 에디터 입력 맵의 소유 · 포커스 레이어 · 키보드 주인 · 액션 → 명령 실행 · 사용자 재배치입니다.
  */
 #include "pch.h"
 
 #include "Editor/Common/Input/EditorInputActions.h"
 
+#include "Core/Container/vector.h"
+
 #include "Editor/Common/Backend/ImGuiKeyForward.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
+#include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/IEditorPanel.h"
@@ -16,7 +19,9 @@
 #include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
+#include "Engine/Input/KeyCodeUtil.h"
 #include "Engine/Input/RawInputEvent.h"
+#include "Engine/Input/ShellInputActions.h"
 
 #include <imgui.h>
 
@@ -45,10 +50,8 @@ namespace sw::editor
         // 게임 뷰가 포커스여도(F8 플레이 빠져나오기 · F9 스크린샷) 에디터 도구 창이 포커스여도 키를 본다. 셸 · UI 맵은 도구 포커스 동안 키를 보지 않는다.
         _map.setKeyboardFocusIgnored( true );
         _map.setToolKeyboardReader( true );
-        const string& mapPath = getEditorToolDefaults()._editorInputMap.get();
-        if ( _map.loadFromResource( mapPath ) == false )
+        if ( rebuildMap() == false )
         {
-            SW_LOG_ERROR( "EditorInputActions: the editor input map '%#' could not be read - the editor has no shortcuts", mapPath.c_str() );
             _map.setInputManager( nullptr );
             return SubsystemInitResult::Failed;
         }
@@ -66,15 +69,88 @@ namespace sw::editor
         _map.setInputManager( nullptr );
     }
 
-    void EditorInputActions::processFrame( float32 deltaSeconds )
+    bool EditorInputActions::rebuildMap()
     {
-        syncKeyboardOwner();
-        forwardDetachedKeyboard();
-        syncFocusedPanelLayer();
-        _map.update( deltaSeconds );
+        using MapRegistry    = EditorExtensionRegistry<EditorInputMapRegistration>;
+        _syncedMapGeneration = MapRegistry::getList().getGeneration();
+        _focusedPanelLayer   = {};
+
+        const string& basePath = getEditorToolDefaults()._editorInputMap.get();
+        if ( _map.loadFromResource( basePath ) == false )
+        {
+            SW_LOG_ERROR( "EditorInputActions: the editor input map '%#' could not be read - the editor has no shortcuts", basePath.c_str() );
+            return false;
+        }
+        bool bValid = true;
+        for ( uint32 index = 0; index < MapRegistry::getCount(); ++index )
+        {
+            const EditorInputMapRegistration& row = MapRegistry::getAt( index );
+            if ( _map.appendFromResource( row._pResourcePath ) == false )
+            {
+                SW_LOG_ERROR( "EditorInputActions: the extension input map '%#' (%#) could not be appended (listed above)", row._pResourcePath, row._pID );
+                bValid = false;
+            }
+        }
+        // 기본 맵 안의 겹침도 데이터 오류다 — 한 번 눌러 두 명령이 돈다. 더한 파일의 겹침은 `appendFromResource` 가 이미 알렸다.
+        for ( const hashed_string& action : _map.getActionNames() )
+        {
+            for ( uint32 bindIndex = 0; bindIndex < _map.getBindingCount( action ); ++bindIndex )
+            {
+                hashed_string other{};
+                if ( _map.findSameLayerInputConflict( action, bindIndex, other ) == false )
+                    continue;
+                SW_LOG_ERROR( "EditorInputActions: '%#' and '%#' share an input in layer '%#' - fix %#", action.c_str(), other.c_str(),
+                              _map.findBindingLayer( action, bindIndex ).c_str(), basePath.c_str() );
+                bValid = false;
+            }
+        }
+        if ( bValid == false )
+            return false;
+        // 사용자 재배치(옛 `Shortcuts.json` 은 읽지 않는다 — 결정 기록 5-11). 낡은 줄은 경고하고 건너뛴다.
+        if ( ShellInputActions::loadUserBindings( _map, getUserBindingsPath() ) == false )
+            SW_LOG_WARNING( "EditorInputActions: the user bindings '%#' could not be read - the default shortcuts are used", getUserBindingsPath().c_str() );
+        return true;
     }
 
-    void EditorInputActions::syncKeyboardOwner()
+    void EditorInputActions::processFrame( float32 deltaSeconds )
+    {
+        // 확장 모듈이 맵을 더하거나(로드) 뺐으면(언로드) 맵을 처음부터 다시 만든다 — 빠진 모듈의 액션이 남지 않고, 다시 올린 모듈의 액션이 두 번 더해지지 않는다.
+        if ( EditorExtensionRegistry<EditorInputMapRegistration>::getList().getGeneration() != _syncedMapGeneration && rebuildMap() == false )
+            SW_LOG_ERROR( "EditorInputActions: the editor input map could not be rebuilt after an extension module changed - see above" );
+        forwardEditorKeyboard( syncKeyboardOwner() );
+        syncFocusedPanelLayer();
+        _map.update( deltaSeconds );
+        // 글을 치는 중에는 Ctrl+S 같은 단축키도 그 글 칸의 것이다(예전 처리와 같다). 재배치 창이 키를 받는 중에도 실행하지 않는다.
+        if ( _bCommandsSuspended || ImGui::GetIO().WantTextInput )
+            return;
+        executeTriggeredCommands();
+    }
+
+    void EditorInputActions::executeTriggeredCommands()
+    {
+        const EditorCommandRegistry& registry = editor::getSubsystem<EditorContext>().getSubsystem<EditorCommandRegistry>();
+        vector<string>               listPanelCommand;
+        vector<string>               listOtherCommand;
+        for ( const EditorCommandDesc& desc : registry.getCommands() )
+        {
+            if ( desc._inputAction.empty() )
+                continue;
+            const hashed_string action( desc._inputAction.c_str() );
+            if ( _map.wasActionTriggered( action ) == false )
+                continue;
+            const bool bPanelLayer = _focusedPanelLayer.empty() == false && _map.findBindingLayer( action, 0 ) == _focusedPanelLayer;
+            ( bPanelLayer ? listPanelCommand : listOtherCommand ).push_back( desc._id );
+        }
+        // 실행은 순회가 끝난 뒤에 한다 — 명령이 등록부를 다시 만들어도(모듈 리로드) 순회 중인 목록을 읽지 않는다.
+        EditorCommandRegistry& writableRegistry = editor::getSubsystem<EditorContext>().getSubsystem<EditorCommandRegistry>();
+        const vector<string>&  listRun          = listPanelCommand.empty() ? listOtherCommand : listPanelCommand;
+        for ( const string& commandID : listRun )
+        {
+            (void)writableRegistry.execute( commandID, EditorCommandTarget::none() ); // 꺼진 명령이면 아무 일도 없다(메뉴의 회색과 같은 조건)
+        }
+    }
+
+    bool EditorInputActions::syncKeyboardOwner()
     {
         const bool               bGameViewFocused = editor::getSubsystem<EditorContext>().getSubsystem<EditorRenderViews>().isGameViewFocused();
         const bool               bEditorOwns      = EditorPlaySession::isSimulating() || ( ImGui::GetIO().WantCaptureKeyboard && bGameViewFocused == false );
@@ -85,7 +161,7 @@ namespace sw::editor
             _focusBeforeTool   = current;
             _bToolOwnsKeyboard = true;
             input.setKeyboardFocus( InputKeyboardFocus::Tool );
-            return;
+            return true;
         }
         if ( bEditorOwns == false && _bToolOwnsKeyboard )
         {
@@ -94,21 +170,13 @@ namespace sw::editor
                 input.setKeyboardFocus( _focusBeforeTool );
             _bToolOwnsKeyboard = false;
         }
+        return bEditorOwns;
     }
 
-    void EditorInputActions::forwardDetachedKeyboard()
+    void EditorInputActions::forwardEditorKeyboard( bool bEditorOwnsKeyboard )
     {
-        InputManager&          input      = editor::getSubsystem<InputManager>();
-        const ImGuiPlatformIO& platformIO = ImGui::GetPlatformIO();
-        const ImGuiViewport*   pMain      = ImGui::GetMainViewport();
-        bool                   bDetached  = false;
-        for ( const ImGuiViewport* pViewport : platformIO.Viewports )
-        {
-            bDetached = bDetached || ( pViewport != pMain && ( pViewport->Flags & ImGuiViewportFlags_IsFocused ) != 0 );
-        }
-        // 떼어 낸 게임 뷰의 키는 `GameViewPanel` 이 넘긴다 — 같은 키를 두 번 넣지 않는다.
-        const bool bGameViewFocused = editor::getSubsystem<EditorContext>().getSubsystem<EditorRenderViews>().isGameViewFocused();
-        if ( bDetached == false || bGameViewFocused )
+        InputManager& input = editor::getSubsystem<InputManager>();
+        if ( bEditorOwnsKeyboard == false )
         {
             releaseForwardedKeys( input );
             return;
@@ -153,10 +221,127 @@ namespace sw::editor
         }
         if ( focusedLayer == _focusedPanelLayer )
             return;
-        if ( _focusedPanelLayer.empty() == false )
+        if ( _focusedPanelLayer.empty() == false && _map.hasLayer( _focusedPanelLayer ) )
             _map.setLayerEnabled( _focusedPanelLayer, false );
         if ( focusedLayer.empty() == false )
             _map.setLayerEnabled( focusedLayer, true );
         _focusedPanelLayer = focusedLayer;
+    }
+
+    void EditorInputActions::formatShortcutLabel( string_view action, string& outLabel ) const
+    {
+        outLabel.clear();
+        if ( action.empty() )
+            return;
+        const hashed_string actionName( string( action ).c_str() );
+        for ( uint32 bindIndex = 0; bindIndex < _map.getBindingCount( actionName ); ++bindIndex )
+        {
+            const ActionBinding* pBinding       = _map.getBinding( actionName, bindIndex );
+            const bool           bKeyOrShortcut = pBinding != nullptr && ( pBinding->_kind == BindingKind::SingleSlot || pBinding->_kind == BindingKind::Shortcut );
+            if ( bKeyOrShortcut == false || pBinding->_arrSlot[0]._deviceKind != InputDeviceKind::Keyboard )
+                continue;
+            if ( outLabel.empty() == false )
+                outLabel += " / ";
+            const string modifierText = InputMap::formatModifierNames( pBinding->_modifierMask );
+            if ( modifierText.empty() == false )
+            {
+                outLabel += modifierText;
+                outLabel += "+";
+            }
+            outLabel += KeyCodeUtil::toName( static_cast<Key>( pBinding->_arrSlot[0]._controlIndex ) );
+        }
+    }
+
+    bool EditorInputActions::findKeyboardBinding( const hashed_string& action, uint32& outBindIndex ) const
+    {
+        for ( uint32 bindIndex = 0; bindIndex < _map.getBindingCount( action ); ++bindIndex )
+        {
+            const ActionBinding* pBinding = _map.getBinding( action, bindIndex );
+            if ( pBinding != nullptr && pBinding->_arrSlot[0]._deviceKind == InputDeviceKind::Keyboard )
+            {
+                outBindIndex = bindIndex;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool EditorInputActions::rebindShortcut( string_view action, Key key, uint8 modifierMask, hashed_string& outConflictAction )
+    {
+        const hashed_string actionName( string( action ).c_str() );
+        uint32              bindIndex = 0;
+        if ( findKeyboardBinding( actionName, bindIndex ) == false )
+            return false;
+        const ActionBinding before = *_map.getBinding( actionName, bindIndex );
+        if ( _map.rebindKeyShortcut( actionName, bindIndex, key, modifierMask ) == false )
+            return false;
+        if ( _map.findSameLayerInputConflict( actionName, bindIndex, outConflictAction ) )
+        {
+            // 겹치면 바꾸지 않는다 — 창이 바꾸기 · 취소를 묻는다.
+            (void)_map.rebindKeyShortcut( actionName, bindIndex, static_cast<Key>( before._arrSlot[0]._controlIndex ), before._modifierMask ); // 방금 있던 조합이라 늘 된다
+            return false;
+        }
+        saveUserBindings();
+        return true;
+    }
+
+    bool EditorInputActions::swapShortcut( string_view action, string_view otherAction, Key key, uint8 modifierMask )
+    {
+        const hashed_string actionName( string( action ).c_str() );
+        const hashed_string otherName( string( otherAction ).c_str() );
+        uint32              bindIndex      = 0;
+        uint32              otherBindIndex = 0;
+        if ( findKeyboardBinding( actionName, bindIndex ) == false || findKeyboardBinding( otherName, otherBindIndex ) == false )
+            return false;
+        const ActionBinding before  = *_map.getBinding( actionName, bindIndex );
+        const bool          bOther  = _map.rebindKeyShortcut( otherName, otherBindIndex, static_cast<Key>( before._arrSlot[0]._controlIndex ), before._modifierMask );
+        const bool          bAction = bOther && _map.rebindKeyShortcut( actionName, bindIndex, key, modifierMask );
+        if ( bAction )
+            saveUserBindings();
+        return bAction;
+    }
+
+    void EditorInputActions::resetShortcut( string_view action )
+    {
+        (void)_map.resetActionToDefault( hashed_string( string( action ).c_str() ) ); // 없는 액션이면 되돌릴 것도 없다
+        saveUserBindings();
+    }
+
+    void EditorInputActions::resetAllShortcuts()
+    {
+        _map.resetAllBindingsToDefault();
+        saveUserBindings();
+    }
+
+    bool EditorInputActions::isShortcutModified( string_view action ) const
+    {
+        const hashed_string  actionName( string( action ).c_str() );
+        const ActionBinding* pCurrent = _map.getBinding( actionName, 0 );
+        const ActionBinding* pDefault = _map.getDefaultBinding( actionName, 0 );
+        if ( pCurrent == nullptr || pDefault == nullptr )
+            return false;
+        return pCurrent->_kind != pDefault->_kind || pCurrent->_modifierMask != pDefault->_modifierMask || ( pCurrent->_arrSlot[0] == pDefault->_arrSlot[0] ) == false;
+    }
+
+    uint32 EditorInputActions::countModifiedShortcuts() const
+    {
+        uint32 count = 0;
+        for ( const hashed_string& action : _map.getActionNames() )
+        {
+            if ( isShortcutModified( action.view() ) )
+                ++count;
+        }
+        return count;
+    }
+
+    string EditorInputActions::getUserBindingsPath()
+    {
+        return EditorPaths::resolveEditorStateFile( kUserBindingsFileName );
+    }
+
+    void EditorInputActions::saveUserBindings() const
+    {
+        if ( ShellInputActions::saveUserBindings( _map, getUserBindingsPath() ) == false )
+            SW_LOG_WARNING( "EditorInputActions: the user bindings '%#' could not be written", getUserBindingsPath().c_str() );
     }
 } // namespace sw::editor

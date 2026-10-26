@@ -9,6 +9,7 @@
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorPopupManager.h"
 #include "Editor/Common/GUI/EditorStatusBar.h"
+#include "Editor/Common/Input/EditorInputActions.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorFrameStep.h"
 #include "Editor/Panels/Inspector/Model/InspectorComponentManager.h"
@@ -75,6 +76,7 @@ namespace sw::editor
         EditorExtensionRegistryDumpInternal::dumpIDs<EditorStatusBarItemRegistration>();
         EditorExtensionRegistryDumpInternal::dumpIDs<EditorMultiplayerTabRegistration>();
         EditorExtensionRegistryDumpInternal::dumpIDs<EditorFrameStepRegistration>();
+        EditorExtensionRegistryDumpInternal::dumpIDs<EditorInputMapRegistration>();
 
         const EditorCommandRegistry& registry = editorContext.getSubsystem<EditorCommandRegistry>();
         for ( const EditorMenu& menu : registry.getMenus() )

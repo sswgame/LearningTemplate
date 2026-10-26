@@ -3,7 +3,6 @@
 #include "Editor/Common/Asset/EditorAssetValidation.h"
 #include "Editor/Common/Commands/Play/EditorScreenshotCommands.h"
 #include "Editor/Common/EditorProfile.h"
-#include "Editor/Common/GUI/EditorCommandGUI.h"
 #include "Editor/Common/GUI/EditorDockLayout.h"
 #include "Editor/Common/GUI/EditorMenuBar.h"
 #include "Editor/Common/GUI/EditorNotificationView.h"
@@ -48,7 +47,6 @@ namespace sw::editor
             {
                 SW_EDITOR_PROFILE_SCOPE( "GT.Editor.step.commands" );
                 context.getSubsystem<EditorInputActions>().processFrame( GameTimeScale::getUnscaledDeltaTime() );
-                EditorCommandGUI::processHotkeys();
                 EditorMenuBar::processOpenPanelRequests();
                 EditorMenuBar::processSceneSession();
             }

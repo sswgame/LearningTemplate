@@ -11,13 +11,13 @@
 
 #include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
 #include "Editor/Common/Commands/Dev/EditorGlobalVariableCommands.h"
-#include "Editor/Common/Commands/Dev/EditorShortcutOverrides.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Commands/Play/EditorScreenshotCommands.h"
 #include "Editor/Common/Commands/Scene/EditorSceneFileCommands.h"
 #include "Editor/Common/Commands/Scene/EditorTransformCommands.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorMenuBar.h"
+#include "Editor/Common/Input/EditorInputActions.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -59,9 +59,7 @@ namespace sw::editor
              */
             struct GUIState
             {
-                uint32                  _syncedGeneration{ invalid_index::kUint32 }; ///< 마지막으로 맞춘 커맨드 등록 세대
-                bool                    _bHotkeysSuspended{ false };                 ///< 단축키 편집기가 조합을 받는 동안 전역 단축키를 멈춘다
-                EditorShortcutOverrides _overrides{};                                ///< 사용자 단축키 덮어쓰기(레지스트리를 다시 만들 때 입힌다)
+                uint32 _syncedGeneration{ invalid_index::kUint32 }; ///< 마지막으로 맞춘 커맨드 등록 세대
             };
 
             // ------------------------------------------------------------------------------
@@ -385,14 +383,13 @@ namespace sw::editor
             /** @brief 테이블의 항목 하나입니다. 문자열은 모두 리터럴이므로 수명을 신경 쓰지 않아도 됩니다. */
             struct CommandRow
             {
-                const utf8*           _pID;
-                const utf8*           _pLabel;
-                const utf8*           _pIcon;
-                const utf8*           _pCategory;
-                const utf8*           _pTooltip;
-                const utf8*           _pDetail;
-                EditorCommandShortcut _shortcut;
-                EditorCommandShortcut _altShortcut;
+                const utf8* _pID;
+                const utf8* _pLabel;
+                const utf8* _pIcon;
+                const utf8* _pCategory;
+                const utf8* _pTooltip;
+                const utf8* _pDetail;
+                const utf8* _pInputAction; ///< 에디터 입력 맵(`editor.input.xml`)의 액션 이름. nullptr 이면 단축키가 없다
                 void ( *_pAction )();
                 bool ( *_pEnabled )();
                 EditorCommandEdit _edit; ///< 씬을 바꾸는지(필수 — `EditorCommandEdit`)
@@ -403,162 +400,58 @@ namespace sw::editor
 
             /**
              * @brief 에디터 커맨드의 원본 테이블입니다.
-             * @details 툴팁에 단축키를 손으로 적지 않는다. `drawCommandItem` 이 이 테이블의 조합으로 만들어 붙이므로 라벨과 실제 처리가
-             *          어긋나지 않는다.
+             * @details 툴팁 · 메뉴에 단축키를 손으로 적지 않는다. `drawCommandItem` 이 입력 맵의 바인딩으로 만들어 붙이므로 라벨과 실제 처리가 어긋나지 않는다.
+             *          Exit 는 단축키를 적지 않는다 — Alt+F4 는 OS 가 창 닫기로 먼저 가로채는 조합이라 입력 맵이 처리하지 않는다.
              */
             inline static const CommandRow _s_arrCommandRow[] = {
-                {                     "scene.new",                     "New Scene",       editoricon::kFile,     "Scene",                                     "새로운 빈 씬을 생성합니다",           "Replace the active scene with an empty one",                                                                              {},                                                                        {},                                  &commandNewScene,                    nullptr, EditorCommandEdit::NoScene,  true,             "MainMenu/File", 1100},
-                {                    "scene.open",                 "Open Scene...", editoricon::kFolderOpen,     "Scene",                  "디스크에서 기존 씬 파일(.scene.xml)을 엽니다",                          "Open a .scene.xml from disk",                                 { EditorCommandKey::O, commandmodifier::kCtrl },                                                                        {},                                 &commandOpenScene,                    nullptr, EditorCommandEdit::NoScene,  true,             "MainMenu/File", 1110},
-                {                    "asset.save",                          "Save",       editoricon::kSave,     "Scene",                  "현재 포커스된 에셋 또는 활성 씬을 저장합니다",          "Save the focused asset, or the active scene",                                 { EditorCommandKey::S, commandmodifier::kCtrl },                                                                        {},      &EditorSceneFileCommands::saveFocusedOrScene,                    nullptr, EditorCommandEdit::NoScene,  true,             "MainMenu/File", 1120},
-                {               "scene.saveScene",                    "Save Scene",       editoricon::kSave,     "Scene",                        "현재 활성화된 씬을 디스크에 저장합니다", "Write the active scene, or prompt Save As if unsaved",                                                                              {},                                                                        {}, &EditorSceneFileCommands::saveActiveSceneOrPrompt,                    nullptr, EditorCommandEdit::NoScene,  true,             "MainMenu/File", 1130},
-                {              "editor.quickOpen",                 "Quick Open...",     editoricon::kSearch,    "Editor",                   "에셋, 씬, 스크립트를 빠르게 검색하여 엽니다",              "Fuzzy-search assets, scenes and scripts",                                 { EditorCommandKey::P, commandmodifier::kCtrl },                                                                        {},                       &QuickLauncherPopup::toggle,                    nullptr, EditorCommandEdit::NoScene, false,             "MainMenu/File", 1200},
-                {         "editor.commandPalette",            "Command Palette...",   editoricon::kTerminal,    "Editor",                     "에디터 명령 및 액션을 검색하여 실행합니다",                       "Search and run editor commands",       { EditorCommandKey::P, commandmodifier::kCtrl | commandmodifier::kShift },                       { EditorCommandKey::Space, commandmodifier::kCtrl },                      &CommandPalettePopup::toggle,                    nullptr, EditorCommandEdit::NoScene, false,             "MainMenu/File", 1210},
-                {                   "editor.exit",                          "Exit",       editoricon::kExit,      "File",                                           "에디터를 종료합니다",   "Close the editor after unsaved-change confirmation", { EditorCommandKey::F4, commandmodifier::kAlt | commandmodifier::kDisplayOnly },                                                                        {},             &EditorSceneFileCommands::requestExit,                    nullptr, EditorCommandEdit::NoScene,  true,             "MainMenu/File", 1300},
+                {                     "scene.new",                     "New Scene",       editoricon::kFile,     "Scene",                                     "새로운 빈 씬을 생성합니다",           "Replace the active scene with an empty one",                     nullptr,                                  &commandNewScene,                    nullptr, EditorCommandEdit::NoScene,  true,             "MainMenu/File", 1100},
+                {                    "scene.open",                 "Open Scene...", editoricon::kFolderOpen,     "Scene",                  "디스크에서 기존 씬 파일(.scene.xml)을 엽니다",                          "Open a .scene.xml from disk",                "scene.open",                                 &commandOpenScene,                    nullptr, EditorCommandEdit::NoScene,  true,             "MainMenu/File", 1110},
+                {                    "asset.save",                          "Save",       editoricon::kSave,     "Scene",                  "현재 포커스된 에셋 또는 활성 씬을 저장합니다",          "Save the focused asset, or the active scene",                "asset.save",      &EditorSceneFileCommands::saveFocusedOrScene,                    nullptr, EditorCommandEdit::NoScene,  true,             "MainMenu/File", 1120},
+                {               "scene.saveScene",                    "Save Scene",       editoricon::kSave,     "Scene",                        "현재 활성화된 씬을 디스크에 저장합니다", "Write the active scene, or prompt Save As if unsaved",                     nullptr, &EditorSceneFileCommands::saveActiveSceneOrPrompt,                    nullptr, EditorCommandEdit::NoScene,  true,             "MainMenu/File", 1130},
+                {              "editor.quickOpen",                 "Quick Open...",     editoricon::kSearch,    "Editor",                   "에셋, 씬, 스크립트를 빠르게 검색하여 엽니다",              "Fuzzy-search assets, scenes and scripts",          "editor.quickOpen",                       &QuickLauncherPopup::toggle,                    nullptr, EditorCommandEdit::NoScene, false,             "MainMenu/File", 1200},
+                {         "editor.commandPalette",            "Command Palette...",   editoricon::kTerminal,    "Editor",                     "에디터 명령 및 액션을 검색하여 실행합니다",                       "Search and run editor commands",     "editor.commandPalette",                      &CommandPalettePopup::toggle,                    nullptr, EditorCommandEdit::NoScene, false,             "MainMenu/File", 1210},
+                {                   "editor.exit",                          "Exit",       editoricon::kExit,      "File",                                           "에디터를 종료합니다",   "Close the editor after unsaved-change confirmation",                     nullptr,             &EditorSceneFileCommands::requestExit,                    nullptr, EditorCommandEdit::NoScene,  true,             "MainMenu/File", 1300},
 
-                {                     "edit.undo",                          "Undo",       editoricon::kUndo,      "Edit",                                 "마지막 편집 작업을 되돌립니다",                                   "Undo the last edit",                                 { EditorCommandKey::Z, commandmodifier::kCtrl },                                                                        {},                                      &commandUndo,                    nullptr,   EditorCommandEdit::Scene,  true,             "MainMenu/Edit", 2100},
-                {                     "edit.redo",                          "Redo",       editoricon::kRedo,      "Edit",                            "되돌린 편집 작업을 다시 실행합니다",                            "Redo the last undone edit",                                 { EditorCommandKey::Y, commandmodifier::kCtrl }, { EditorCommandKey::Z, commandmodifier::kCtrl | commandmodifier::kShift },                                      &commandRedo,                    nullptr,   EditorCommandEdit::Scene,  true,             "MainMenu/Edit", 2110},
-                {          "editor.themeSettings",      "Theme & Look and Feel...",    editoricon::kPalette,    "Editor", "에디터 테마 프리셋, 액센트 색상 및 모서리 라운딩을 설정합니다",                       "Open the theme settings dialog",                                                                              {},                                                                        {},                   &EditorMenuBar::openThemeDialog,                    nullptr, EditorCommandEdit::NoScene,  true,             "MainMenu/Edit", 2200},
+                {                     "edit.undo",                          "Undo",       editoricon::kUndo,      "Edit",                                 "마지막 편집 작업을 되돌립니다",                                   "Undo the last edit",                 "edit.undo",                                      &commandUndo,                    nullptr,   EditorCommandEdit::Scene,  true,             "MainMenu/Edit", 2100},
+                {                     "edit.redo",                          "Redo",       editoricon::kRedo,      "Edit",                            "되돌린 편집 작업을 다시 실행합니다",                            "Redo the last undone edit",                 "edit.redo",                                      &commandRedo,                    nullptr,   EditorCommandEdit::Scene,  true,             "MainMenu/Edit", 2110},
+                {          "editor.themeSettings",      "Theme & Look and Feel...",    editoricon::kPalette,    "Editor", "에디터 테마 프리셋, 액센트 색상 및 모서리 라운딩을 설정합니다",                       "Open the theme settings dialog",                     nullptr,                   &EditorMenuBar::openThemeDialog,                    nullptr, EditorCommandEdit::NoScene,  true,             "MainMenu/Edit", 2200},
 
-                {             "build.compileGame",         "Compile Game (SWGame)",     editoricon::kHammer,     "Build",       "게임 모듈(SWGame)을 라이브 코딩으로 즉시 재컴파일합니다",                      "Recompile and hot-reload SWGame",       { EditorCommandKey::F11, commandmodifier::kCtrl | commandmodifier::kAlt },                          { EditorCommandKey::F7, commandmodifier::kNone },                               &commandCompileGame,            &isCompilerIdle, EditorCommandEdit::NoScene,  true,            "MainMenu/Build", 3100},
-                {           "build.compileEditor", "Compile Editor (EditorModule)",     editoricon::kWrench,     "Build",    "에디터 모듈(EditorModule)을 라이브 코딩으로 재컴파일합니다",                               "Recompile EditorModule",                                                                              {},                                                                        {},                             &commandCompileEditor,            &isCompilerIdle, EditorCommandEdit::NoScene,  true,            "MainMenu/Build", 3110},
-                {              "build.compileAll",           "Compile All Modules",   editoricon::kBuildAll,     "Build",               "엔진 및 모든 게임/에디터 모듈을 전체 빌드합니다",                    "Build the engine and every module",       { EditorCommandKey::B, commandmodifier::kCtrl | commandmodifier::kShift },                                                                        {},                                &commandCompileAll,            &isCompilerIdle, EditorCommandEdit::NoScene,  true,            "MainMenu/Build", 3120},
-                {                  "build.cancel",                  "Cancel Build",     editoricon::kCancel,     "Build",                       "현재 진행 중인 컴파일 작업을 취소합니다",                           "Cancel the running compile",                                                                              {},                                                                        {},                               &commandCancelBuild,            &isCompilerBusy, EditorCommandEdit::NoScene,  true,            "MainMenu/Build", 3200},
+                {             "build.compileGame",         "Compile Game (SWGame)",     editoricon::kHammer,     "Build",       "게임 모듈(SWGame)을 라이브 코딩으로 즉시 재컴파일합니다",                      "Recompile and hot-reload SWGame",         "build.compileGame",                               &commandCompileGame,            &isCompilerIdle, EditorCommandEdit::NoScene,  true,            "MainMenu/Build", 3100},
+                {           "build.compileEditor", "Compile Editor (EditorModule)",     editoricon::kWrench,     "Build",    "에디터 모듈(EditorModule)을 라이브 코딩으로 재컴파일합니다",                               "Recompile EditorModule",                     nullptr,                             &commandCompileEditor,            &isCompilerIdle, EditorCommandEdit::NoScene,  true,            "MainMenu/Build", 3110},
+                {              "build.compileAll",           "Compile All Modules",   editoricon::kBuildAll,     "Build",               "엔진 및 모든 게임/에디터 모듈을 전체 빌드합니다",                    "Build the engine and every module",          "build.compileAll",                                &commandCompileAll,            &isCompilerIdle, EditorCommandEdit::NoScene,  true,            "MainMenu/Build", 3120},
+                {                  "build.cancel",                  "Cancel Build",     editoricon::kCancel,     "Build",                       "현재 진행 중인 컴파일 작업을 취소합니다",                           "Cancel the running compile",                     nullptr,                               &commandCancelBuild,            &isCompilerBusy, EditorCommandEdit::NoScene,  true,            "MainMenu/Build", 3200},
 
-                {                    "play.start",                          "Play",       editoricon::kPlay,      "Play",                                                              "",                                 "Start play-in-editor",                                                                              {},                                                                        {},                                      &commandPlay,                    nullptr, EditorCommandEdit::NoScene,  true,                     nullptr,    0},
-                {           "viewport.screenshot",                    "Screenshot",     editoricon::kCamera,  "Viewport",         "포커스가 있는 뷰(게임 뷰 · 씬 뷰)를 PNG 로 저장합니다", "Save the focused view as PNG under Saved/Screenshots",                                { EditorCommandKey::F9, commandmodifier::kNone },                                                                        {},     &EditorScreenshotCommands::captureFocusedView,                    nullptr, EditorCommandEdit::NoScene,  true,                     nullptr,    0},
-                {     "viewport.renderDocCapture",             "RenderDoc Capture",        editoricon::kBug,  "Viewport",     "다음 프레임을 RenderDoc 으로 캡처합니다(Saved/RenderDoc/)",                "Capture the next frame with RenderDoc",                               { EditorCommandKey::F12, commandmodifier::kCtrl },                                                                        {},                          &commandRenderDocCapture,      &isRenderDocAvailable, EditorCommandEdit::NoScene,  true,                     nullptr,    0},
+                {                    "play.start",                          "Play",       editoricon::kPlay,      "Play",                                                              "",                                 "Start play-in-editor",                     nullptr,                                      &commandPlay,                    nullptr, EditorCommandEdit::NoScene,  true,                     nullptr,    0},
+                {           "viewport.screenshot",                    "Screenshot",     editoricon::kCamera,  "Viewport",         "포커스가 있는 뷰(게임 뷰 · 씬 뷰)를 PNG 로 저장합니다", "Save the focused view as PNG under Saved/Screenshots",       "viewport.screenshot",     &EditorScreenshotCommands::captureFocusedView,                    nullptr, EditorCommandEdit::NoScene,  true,                     nullptr,    0},
+                {     "viewport.renderDocCapture",             "RenderDoc Capture",        editoricon::kBug,  "Viewport",     "다음 프레임을 RenderDoc 으로 캡처합니다(Saved/RenderDoc/)",                "Capture the next frame with RenderDoc", "viewport.renderDocCapture",                          &commandRenderDocCapture,      &isRenderDocAvailable, EditorCommandEdit::NoScene,  true,                     nullptr,    0},
 
-                {"clipboard.pasteComponentValues",        "Paste Component Values",       editoricon::kCopy, "Clipboard",                                                              "",  "Overwrite the selected component from the clipboard",                                                                              {},                                                                        {},                      &commandPasteComponentValues,                    nullptr,   EditorCommandEdit::Scene,  true,                     nullptr,    0},
-                { "clipboard.pasteComponentAsNew",        "Paste Component As New",       editoricon::kPlus, "Clipboard",                                                              "",      "Add the copied component to the selected object",                                                                              {},                                                                        {},                       &commandPasteComponentAsNew,                    nullptr,   EditorCommandEdit::Scene,  true,                     nullptr,    0},
-                {          "preset.loadComponent",         "Load Component Preset", editoricon::kFolderOpen,    "Preset",                                                              "",        "Apply a .preset.xml to the selected component",                                                                              {},                                                                        {},                       &commandLoadComponentPreset,                    nullptr,   EditorCommandEdit::Scene,  true,                     nullptr,    0},
-                {          "preset.saveComponent",         "Save Component Preset",       editoricon::kSave,    "Preset",                                                              "",        "Write the selected component to a preset file",                                                                              {},                                                                        {},                       &commandSaveComponentPreset,                    nullptr, EditorCommandEdit::NoScene,  true,                     nullptr,    0},
+                {"clipboard.pasteComponentValues",        "Paste Component Values",       editoricon::kCopy, "Clipboard",                                                              "",  "Overwrite the selected component from the clipboard",                     nullptr,                      &commandPasteComponentValues,                    nullptr,   EditorCommandEdit::Scene,  true,                     nullptr,    0},
+                { "clipboard.pasteComponentAsNew",        "Paste Component As New",       editoricon::kPlus, "Clipboard",                                                              "",      "Add the copied component to the selected object",                     nullptr,                       &commandPasteComponentAsNew,                    nullptr,   EditorCommandEdit::Scene,  true,                     nullptr,    0},
+                {          "preset.loadComponent",         "Load Component Preset", editoricon::kFolderOpen,    "Preset",                                                              "",        "Apply a .preset.xml to the selected component",                     nullptr,                       &commandLoadComponentPreset,                    nullptr,   EditorCommandEdit::Scene,  true,                     nullptr,    0},
+                {          "preset.saveComponent",         "Save Component Preset",       editoricon::kSave,    "Preset",                                                              "",        "Write the selected component to a preset file",                     nullptr,                       &commandSaveComponentPreset,                    nullptr, EditorCommandEdit::NoScene,  true,                     nullptr,    0},
 
-                {        "transform.snapToGround",          "Snap to Ground (Y=0)",     editoricon::kMagnet, "Transform",                                                              "",          "Snap selected objects onto the ground plane",                                                                              {},                                                                        {},    &EditorTransformCommands::snapSelectedToGround,              &hasSelection,   EditorCommandEdit::Scene,  true, commandmenu::kViewportAlign,  100},
-                {              "transform.alignX",              "Align X (Center)",      editoricon::kAlign, "Transform",                                                              "",                          "Align selected objects on X",                                                                              {},                                                                        {},                       &commandAlign<AlignAxis::X>,         &hasMultiSelection,   EditorCommandEdit::Scene,  true, commandmenu::kViewportAlign,  200},
-                {              "transform.alignY",              "Align Y (Center)",      editoricon::kAlign, "Transform",                                                              "",                          "Align selected objects on Y",                                                                              {},                                                                        {},                       &commandAlign<AlignAxis::Y>,         &hasMultiSelection,   EditorCommandEdit::Scene,  true, commandmenu::kViewportAlign,  210},
-                {              "transform.alignZ",              "Align Z (Center)",      editoricon::kAlign, "Transform",                                                              "",                          "Align selected objects on Z",                                                                              {},                                                                        {},                       &commandAlign<AlignAxis::Z>,         &hasMultiSelection,   EditorCommandEdit::Scene,  true, commandmenu::kViewportAlign,  220},
-                {         "transform.distributeX",           "Distribute X Evenly",      editoricon::kAlign, "Transform",                                                              "",                   "Evenly space selected objects on X",                                                                              {},                                                                        {},                  &commandDistribute<AlignAxis::X>,         &hasMultiSelection,   EditorCommandEdit::Scene,  true, commandmenu::kViewportAlign,  300},
-                {         "transform.distributeY",           "Distribute Y Evenly",      editoricon::kAlign, "Transform",                                                              "",                   "Evenly space selected objects on Y",                                                                              {},                                                                        {},                  &commandDistribute<AlignAxis::Y>,         &hasMultiSelection,   EditorCommandEdit::Scene,  true, commandmenu::kViewportAlign,  310},
-                {         "transform.distributeZ",           "Distribute Z Evenly",      editoricon::kAlign, "Transform",                                                              "",                   "Evenly space selected objects on Z",                                                                              {},                                                                        {},                  &commandDistribute<AlignAxis::Z>,         &hasMultiSelection,   EditorCommandEdit::Scene,  true, commandmenu::kViewportAlign,  320},
+                {        "transform.snapToGround",          "Snap to Ground (Y=0)",     editoricon::kMagnet, "Transform",                                                              "",          "Snap selected objects onto the ground plane",                     nullptr,    &EditorTransformCommands::snapSelectedToGround,              &hasSelection,   EditorCommandEdit::Scene,  true, commandmenu::kViewportAlign,  100},
+                {              "transform.alignX",              "Align X (Center)",      editoricon::kAlign, "Transform",                                                              "",                          "Align selected objects on X",                     nullptr,                       &commandAlign<AlignAxis::X>,         &hasMultiSelection,   EditorCommandEdit::Scene,  true, commandmenu::kViewportAlign,  200},
+                {              "transform.alignY",              "Align Y (Center)",      editoricon::kAlign, "Transform",                                                              "",                          "Align selected objects on Y",                     nullptr,                       &commandAlign<AlignAxis::Y>,         &hasMultiSelection,   EditorCommandEdit::Scene,  true, commandmenu::kViewportAlign,  210},
+                {              "transform.alignZ",              "Align Z (Center)",      editoricon::kAlign, "Transform",                                                              "",                          "Align selected objects on Z",                     nullptr,                       &commandAlign<AlignAxis::Z>,         &hasMultiSelection,   EditorCommandEdit::Scene,  true, commandmenu::kViewportAlign,  220},
+                {         "transform.distributeX",           "Distribute X Evenly",      editoricon::kAlign, "Transform",                                                              "",                   "Evenly space selected objects on X",                     nullptr,                  &commandDistribute<AlignAxis::X>,         &hasMultiSelection,   EditorCommandEdit::Scene,  true, commandmenu::kViewportAlign,  300},
+                {         "transform.distributeY",           "Distribute Y Evenly",      editoricon::kAlign, "Transform",                                                              "",                   "Evenly space selected objects on Y",                     nullptr,                  &commandDistribute<AlignAxis::Y>,         &hasMultiSelection,   EditorCommandEdit::Scene,  true, commandmenu::kViewportAlign,  310},
+                {         "transform.distributeZ",           "Distribute Z Evenly",      editoricon::kAlign, "Transform",                                                              "",                   "Evenly space selected objects on Z",                     nullptr,                  &commandDistribute<AlignAxis::Z>,         &hasMultiSelection,   EditorCommandEdit::Scene,  true, commandmenu::kViewportAlign,  320},
 
-                {         "prefab.applyOverrides",               "Apply Overrides",     editoricon::kPrefab,    "Prefab",                                                              "", "Write instance overrides back to the prefab template",                                                                              {},                                                                        {},                      &commandApplyPrefabOverrides, &hasPrefabInstanceSelected,   EditorCommandEdit::Scene,  true,                     nullptr,    0}
+                {         "prefab.applyOverrides",               "Apply Overrides",     editoricon::kPrefab,    "Prefab",                                                              "", "Write instance overrides back to the prefab template",                     nullptr,                      &commandApplyPrefabOverrides, &hasPrefabInstanceSelected,   EditorCommandEdit::Scene,  true,                     nullptr,    0}
             };
 
             // ------------------------------------------------------------------------------
-            // 4) ImGui 연결
+            // 4) ImGui 연결 — 메뉴 항목. 단축키 글자는 에디터 입력 맵에서 만든다
             // ------------------------------------------------------------------------------
-            static_assert( ImGuiKey_Z - ImGuiKey_A == 25, "ImGuiKey 의 문자 키가 연속이 아닙니다" );
-            static_assert( ImGuiKey_F12 - ImGuiKey_F1 == 11, "ImGuiKey 의 F 키가 연속이 아닙니다" );
-
-            /**
-             * @brief 자체 키 열거형을 ImGuiKey 로 변환합니다. 모르는 키는 ImGuiKey_None 입니다.
-             * @details 테이블이 아니라 뺄셈으로 변환한다. 그래서 양쪽 열거형이 A..Z 와 F1..F12 구간에서 연속이라는 가정에
-             *          기댄다. ImGui 쪽은 바로 위의 static_assert 가, 엔진 쪽은 `EditorCommandKey` 선언 아래의 static_assert 가
-             *          이 가정을 지킨다.
-             */
-            static ImGuiKey toImGuiKey( EditorCommandKey key )
-            {
-                const int32 keyValue = static_cast<int32>( key );
-                if ( static_cast<int32>( EditorCommandKey::A ) <= keyValue && keyValue <= static_cast<int32>( EditorCommandKey::Z ) )
-                    return static_cast<ImGuiKey>( ImGuiKey_A + ( keyValue - static_cast<int32>( EditorCommandKey::A ) ) );
-                if ( static_cast<int32>( EditorCommandKey::F1 ) <= keyValue && keyValue <= static_cast<int32>( EditorCommandKey::F12 ) )
-                    return static_cast<ImGuiKey>( ImGuiKey_F1 + ( keyValue - static_cast<int32>( EditorCommandKey::F1 ) ) );
-                if ( key == EditorCommandKey::Space )
-                    return ImGuiKey_Space;
-                for ( const ExtraKeyRow& row : kArrExtraKey )
-                {
-                    if ( row._key == key )
-                        return row._platformKey;
-                }
-                return ImGuiKey_None;
-            }
-
-            /** @brief Space 뒤에 추가한 키와 ImGuiKey 의 대응 테이블입니다. `toImGuiKey` 와 `findPressedShortcut` 이 함께 씁니다. */
-            struct ExtraKeyRow
-            {
-                EditorCommandKey _key;
-                ImGuiKey         _platformKey;
-            };
-            static constexpr ExtraKeyRow kArrExtraKey[] = {
-                {     EditorCommandKey::Num0,          ImGuiKey_0},
-                {     EditorCommandKey::Num1,          ImGuiKey_1},
-                {     EditorCommandKey::Num2,          ImGuiKey_2},
-                {     EditorCommandKey::Num3,          ImGuiKey_3},
-                {     EditorCommandKey::Num4,          ImGuiKey_4},
-                {     EditorCommandKey::Num5,          ImGuiKey_5},
-                {     EditorCommandKey::Num6,          ImGuiKey_6},
-                {     EditorCommandKey::Num7,          ImGuiKey_7},
-                {     EditorCommandKey::Num8,          ImGuiKey_8},
-                {     EditorCommandKey::Num9,          ImGuiKey_9},
-                {   EditorCommandKey::Delete,     ImGuiKey_Delete},
-                {   EditorCommandKey::Insert,     ImGuiKey_Insert},
-                {     EditorCommandKey::Home,       ImGuiKey_Home},
-                {      EditorCommandKey::End,        ImGuiKey_End},
-                {   EditorCommandKey::PageUp,     ImGuiKey_PageUp},
-                { EditorCommandKey::PageDown,   ImGuiKey_PageDown},
-                {     EditorCommandKey::Left,  ImGuiKey_LeftArrow},
-                {    EditorCommandKey::Right, ImGuiKey_RightArrow},
-                {       EditorCommandKey::Up,    ImGuiKey_UpArrow},
-                {     EditorCommandKey::Down,  ImGuiKey_DownArrow},
-                {      EditorCommandKey::Tab,        ImGuiKey_Tab},
-                {    EditorCommandKey::Enter,      ImGuiKey_Enter},
-                {   EditorCommandKey::Escape,     ImGuiKey_Escape},
-                {EditorCommandKey::Backspace,  ImGuiKey_Backspace},
-                {    EditorCommandKey::Minus,      ImGuiKey_Minus},
-                {    EditorCommandKey::Equal,      ImGuiKey_Equal},
-                {    EditorCommandKey::Comma,      ImGuiKey_Comma},
-                {   EditorCommandKey::Period,     ImGuiKey_Period},
-                {    EditorCommandKey::Slash,      ImGuiKey_Slash},
-            };
-            static_assert( sizeof( kArrExtraKey ) / sizeof( kArrExtraKey[0] ) == static_cast<size_t>( EditorCommandKey::Count ) - static_cast<size_t>( EditorCommandKey::Num0 ),
-                           "Space 뒤의 키마다 ImGuiKey 표에 한 줄" );
-
-            /** @brief 현재 눌린 수정자를 `commandmodifier` 비트로 반환합니다. */
-            static uint8 getPressedModifier()
-            {
-                const ImGuiIO& io              = ImGui::GetIO();
-                uint8          pressedModifier = commandmodifier::kNone;
-                if ( io.KeyCtrl )
-                    pressedModifier |= commandmodifier::kCtrl;
-                if ( io.KeyShift )
-                    pressedModifier |= commandmodifier::kShift;
-                if ( io.KeyAlt )
-                    pressedModifier |= commandmodifier::kAlt;
-                return pressedModifier;
-            }
-
-            /** @brief 이 조합이 이번 프레임에 정확히 눌렸으면 true 입니다. 수정자 비교는 `EditorCommandRegistry::matchesPressedModifiers` 가 맡습니다. */
-            static bool isShortcutPressed( const EditorCommandShortcut& shortcut )
-            {
-                if ( EditorCommandRegistry::isHandledShortcut( shortcut ) == false )
-                    return false;
-
-                const ImGuiKey imKey = toImGuiKey( shortcut._key );
-                if ( imKey == ImGuiKey_None )
-                    return false;
-
-                const ImGuiIO& io              = ImGui::GetIO();
-                uint8          pressedModifier = commandmodifier::kNone;
-                if ( io.KeyCtrl )
-                    pressedModifier |= commandmodifier::kCtrl;
-                if ( io.KeyShift )
-                    pressedModifier |= commandmodifier::kShift;
-                if ( io.KeyAlt )
-                    pressedModifier |= commandmodifier::kAlt;
-                if ( EditorCommandRegistry::matchesPressedModifiers( shortcut, pressedModifier, io.KeySuper ) == false )
-                    return false;
-
-                return ImGui::IsKeyPressed( imKey, false );
-            }
-
             /** @brief 커맨드 하나를 메뉴 항목으로 그립니다. 눌렸으면 커맨드를 실행합니다. */
-            static void drawCommandItem( const EditorCommandDesc& desc )
+            static void drawCommandItem( const EditorInputActions& inputActions, const EditorCommandDesc& desc )
             {
                 fixed_string<constant::kMaxBuffer128> menuLabel;
                 EditorCommandRegistry::formatMenuLabel( desc, menuLabel );
 
-                fixed_string<constant::kMaxBuffer64> shortcutLabel;
-                EditorCommandRegistry::formatShortcutLabel( desc, shortcutLabel );
+                string shortcutLabel;
+                inputActions.formatShortcutLabel( desc._inputAction, shortcutLabel );
 
                 const utf8* pShortcut = shortcutLabel.empty() ? nullptr : shortcutLabel.c_str();
                 const bool  bEnabled  = EditorCommandRegistry::isEnabled( desc, EditorCommandTarget::none() );
@@ -583,12 +476,13 @@ namespace sw::editor
             /** @brief 메뉴 하나의 항목을 구분선과 함께 그립니다. */
             static void drawMenu( const EditorCommandRegistry& registry, const EditorMenu& menu )
             {
-                const vector<EditorCommandDesc>& listCommand = registry.getCommands();
+                const EditorInputActions&        inputActions = editor::getSubsystem<EditorContext>().getSubsystem<EditorInputActions>();
+                const vector<EditorCommandDesc>& listCommand  = registry.getCommands();
                 for ( const EditorMenuItem& item : menu._listItem )
                 {
                     if ( item._bSeparatorBefore )
                         ImGui::Separator();
-                    drawCommandItem( listCommand[item._commandIndex] );
+                    drawCommandItem( inputActions, listCommand[item._commandIndex] );
                 }
             }
         };
@@ -616,37 +510,6 @@ namespace sw::editor
         return EditorCommandGUIInternal::rebuild( pBegin, pEnd );
     }
 
-    void EditorCommandGUI::setHotkeysSuspended( bool bSuspended )
-    {
-        getEditorState<EditorCommandGUIInternal::GUIState>()._bHotkeysSuspended = bSuspended;
-    }
-
-    EditorShortcutOverrides& EditorCommandGUI::getShortcutOverrides()
-    {
-        return getEditorState<EditorCommandGUIInternal::GUIState>()._overrides;
-    }
-
-    EditorUserFileResult EditorCommandGUI::loadShortcutOverrides()
-    {
-        return getShortcutOverrides().loadFromFile( EditorShortcutOverrides::getDefaultFilePath() );
-    }
-
-    bool EditorCommandGUI::findPressedShortcut( EditorCommandShortcut& outShortcut )
-    {
-        const uint8 modifier = EditorCommandGUIInternal::getPressedModifier();
-        for ( uint8 keyValue = static_cast<uint8>( EditorCommandKey::A ); keyValue < static_cast<uint8>( EditorCommandKey::Count ); ++keyValue )
-        {
-            const EditorCommandKey key   = static_cast<EditorCommandKey>( keyValue );
-            const ImGuiKey         imKey = EditorCommandGUIInternal::toImGuiKey( key );
-            if ( imKey == ImGuiKey_None || ImGui::IsKeyPressed( imKey, false ) == false )
-                continue;
-            outShortcut._key      = key;
-            outShortcut._modifier = modifier;
-            return true;
-        }
-        return false;
-    }
-
     uint32 EditorCommandGUIInternal::rebuild( const void* pExcludeBegin, const void* pExcludeEnd )
     {
         // 컨텍스트가 없으면 메뉴가 통째로 비고 단축키가 동작하지 않는다 — 조용히 반환하지 않고 필수 서비스 조회가 모든 구성에서 멈춘다.
@@ -664,8 +527,7 @@ namespace sw::editor
             desc._category        = row._pCategory;
             desc._tooltip         = row._pTooltip;
             desc._detail          = row._pDetail;
-            desc._shortcut        = row._shortcut;
-            desc._altShortcut     = row._altShortcut;
+            desc._inputAction     = row._pInputAction != nullptr ? row._pInputAction : "";
             desc._bPaletteVisible = row._bPaletteVisible;
             desc._menuPath        = row._pMenuPath != nullptr ? row._pMenuPath : "";
             desc._menuOrder       = row._menuOrder;
@@ -682,12 +544,17 @@ namespace sw::editor
         }
         // 확장 모듈과 다른 파일의 등록 항목(SW_EDITOR_COMMAND)을 테이블과 같은 레지스트리에 합친다.
         const uint32 excludedCount = EditorCommandTableUtil::appendRegistrations( registry, pExcludeBegin, pExcludeEnd );
-        // 사용자가 바꾼 단축키(Saved/Editor/Shortcuts.json)를 적용한다. 기본 조합은 각 커맨드의 _default* 에 남는다.
-        (void)guiState._overrides.applyTo( registry ); // 적용한 수는 쓰지 않는다. 충돌은 아래 validate 가 알린다
 
         string report;
         if ( registry.validate( report ) == false )
             SW_LOG_ERROR( "The editor command table is inconsistent:\n%#", report.c_str() );
+        // 명령이 가리키는 액션이 입력 맵에 없으면 그 단축키는 조용히 없는 것이 된다 — 표 · 등록 줄과 editor.input.xml 이 어긋난 것이다.
+        const InputMap& inputMap = editor::getSubsystem<EditorContext>().getSubsystem<EditorInputActions>().getInputMap();
+        for ( const EditorCommandDesc& desc : registry.getCommands() )
+        {
+            if ( desc._inputAction.empty() == false && inputMap.hasAction( hashed_string( desc._inputAction.c_str() ) ) == false )
+                SW_LOG_ERROR( "Command '%#' names input action '%#' that the editor input map does not have", desc._id.c_str(), desc._inputAction.c_str() );
+        }
         // 코드가 그리는 메뉴 경로에 테이블의 항목이 하나도 없으면 그 메뉴(툴바 팝업)가 비어 있는 채로 뜬다.
         for ( const utf8* pHostedPath : commandmenu::kArrHostedMenuPath )
         {
@@ -695,28 +562,6 @@ namespace sw::editor
                 SW_LOG_ERROR( "Menu path '%#' is drawn by code but no command row uses it - the menu is empty", pHostedPath );
         }
         return excludedCount;
-    }
-
-    void EditorCommandGUI::processHotkeys()
-    {
-        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
-        if ( getEditorState<EditorCommandGUIInternal::GUIState>()._bHotkeysSuspended )
-            return;
-        if ( ImGui::GetIO().WantTextInput )
-            return;
-
-        const EditorCommandRegistry& registry = editorContext.getSubsystem<EditorCommandRegistry>();
-        for ( const EditorCommandDesc& desc : registry.getCommands() )
-        {
-            const bool bPressed = ( EditorCommandGUIInternal::isShortcutPressed( desc._shortcut ) ||
-                                    EditorCommandGUIInternal::isShortcutPressed( desc._altShortcut ) );
-            if ( bPressed == false )
-                continue;
-
-            // 조합은 유일하다(registerDefaults 의 validate 가 보장한다). 그래서 처음 맞은 것만 실행한다.
-            (void)EditorCommandRegistry::executeDesc( desc, EditorCommandTarget::none() ); // 꺼진 명령이면 아무 일도 없다
-            return;
-        }
     }
 
     void EditorCommandGUI::drawMainMenus()

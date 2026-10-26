@@ -678,9 +678,6 @@ namespace sw::editor
         _editorContext->getSubsystem<EditorRenderViews>().setRendererBackend( _rendererBackend.get() );
 
         _editorContext->getSubsystem<EditorPanelManager>().registerDefaultPanels();
-        // 사용자 단축키(Saved/Editor/Shortcuts.json)는 레지스트리를 만들 때 적용한다. 처음 실행이면 파일이 없다.
-        if ( EditorCommandGUI::loadShortcutOverrides() == EditorUserFileResult::Missing )
-            SW_LOG_TRACE( "No shortcut overrides yet - default shortcuts" );
         EditorCommandGUI::registerDefaults();
         // 리로드 전에 기록한 오브젝트 편집을 되돌려도 이 모듈이 선택과 씬 dirty 상태를 맞춘다.
         EditorTransaction::bindObjectEditListener( editor::getSubsystem<CommandStack>() ); // 필수 - 기동 경로다
@@ -973,20 +970,29 @@ namespace sw::editor
             _platformBackend->processEvent( event );
         }
 
-        // ImGui 가 가져간 마우스는 게임으로 넘기지 않는다. 게임 뷰 위에서는 예외다. 씬 뷰 위의 입력은 에디터 카메라가 처리한다.
-        // 키보드는 늘 엔진 입력 매니저로 넘긴다 — 에디터 단축키도 그 장치를 읽는 입력 맵(`EditorInputActions`)이 판정한다. 에디터 창이 키보드를 가진 동안(Simulate 포함)
-        // 게임 · 셸 · UI 맵이 키를 보지 않는 것은 키보드 포커스 `Tool` 이 막는다(`EditorInputActions::syncKeyboardOwner`).
+        // ImGui 가 가져간 입력은 게임으로 넘기지 않는다. 게임 뷰 위에서는 예외다. 씬 뷰 위의 입력은 에디터 카메라가 처리한다.
+        // 에디터 창이 가진 키는 OS 메시지 대신 ImGui 가 받은 키로 엔진 입력 매니저에 들어간다(`EditorInputActions::forwardEditorKeyboard`) — 주 창 · 떼어 낸 창 ·
+        // 자동화가 넣은 키가 한 길로 에디터 입력 맵에 닿고, 그동안 게임 · 셸 · UI 맵은 키보드 포커스 `Tool` 로 가려진다.
         const ImGuiIO& io               = ImGui::GetIO();
         const bool     bGameViewHovered = _editorContext != nullptr && _editorContext->getSubsystem<EditorRenderViews>().isGameViewHovered();
+        const bool     bGameViewFocused = _editorContext != nullptr && _editorContext->getSubsystem<EditorRenderViews>().isGameViewFocused();
 
-        // Simulate 는 월드만 실행하므로 게임 마우스 입력을 주지 않는다. 에디터 카메라와 패널은 위의 ImGui 처리에서 이미 입력을 받았다.
+        // Simulate 는 월드만 실행하므로 게임 입력을 주지 않는다. 에디터 카메라와 패널은 위의 ImGui 처리에서 이미 입력을 받았다.
+        if ( EditorPlaySession::isSimulating() && ( event.isMouseInput() || event.isKeyboardInput() ) )
+            return true;
+
         if ( event.isMouseInput() )
         {
-            if ( EditorPlaySession::isSimulating() )
-                return true;
             if ( io.WantCaptureMouse && bGameViewHovered == false )
                 return true;
             return false;
+        }
+
+        if ( event.isKeyboardInput() )
+        {
+            const bool bKeyboardCapturedByEditor = event.isInputRelease() == false && io.WantCaptureKeyboard && bGameViewFocused == false;
+            if ( bKeyboardCapturedByEditor )
+                return true;
         }
 
         return false;
