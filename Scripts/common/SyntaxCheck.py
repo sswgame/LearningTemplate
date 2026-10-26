@@ -139,9 +139,10 @@ def parseDiagnostics(output: str, root: Path | None = None) -> list[str]:
         line = rawLine.strip()
         matched = _kFileLineRe.match(line)
         if matched:
-            fileText = normalizePath(matched["file"])
+            rawFile = matched["file"].replace("\\", "/")   # Linux 의 Path 는 `\` 를 구분자로 보지 않는다(MSVC 형식 출력)
+            fileText = normalizePath(rawFile)
             if root is not None:
-                fileText = makeRelativeLabel(root, Path(matched["file"]))
+                fileText = makeRelativeLabel(root, Path(rawFile))
             listDiagnostic.append(f"{fileText}:{matched['msvcLine'] or matched['gccLine']}: {matched['message'].strip()}")
             continue
         bare = _kBareErrorRe.search(line)
