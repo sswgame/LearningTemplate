@@ -1,6 +1,7 @@
 {
     "_uiPreviewDocument": "engine/ui/pause.ui.xml",
     "_inputReplayFile": "engine/replay/demo_01.swreplay",
+    "_editorInputMap": "editor/input/editor.input.xml",
     "_clearColor": "0.12,0.15,0.18,1.0",
     "_listBaseFont": [
         "consola.ttf",

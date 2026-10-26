@@ -210,6 +210,11 @@ kListConfigFile: tuple[ConfigFileEntry, ...] = (
         typeName="EditorToolDefaults", header="Source/Editor/Common/Config/EditorToolDefaults.h", keyStyle=kKeyStyleJsonMember,
         note="값의 정본(헤더는 형식만) — 없거나 필수 칸이 빠지면 에디터가 서지 않는다"),
     ConfigFileEntry(
+        page="", pathPattern="Resource/editor/input/editor.input.xml", layer=kLayerEditor, fileFormat="xml",
+        reader="`InputMap::loadFromResource` (에디터 단축키 입력 맵 — `EditorToolDefaults::_editorInputMap`, `EditorInputActions`)", readWhen="에디터 기동",
+        shipping="없음(에디터 팩)", bCommitted=True, ownerDoc="Source/Editor/Common/Input/EditorInputActions.h",
+        note="액션 이름 = 에디터 명령 id. 레이어 `Editor.Global` · `Editor.Panel.<패널 id>`"),
+    ConfigFileEntry(
         page="", pathPattern="Saved/Editor/EditorPreferences.json", layer=kLayerEditor, fileFormat="json",
         reader="`EditorPreferencesStore::loadAll` · `saveAll`", readWhen="에디터 기동 · 환경설정 창에서 값을 바꾼 0.5 초 뒤 · 테마 저장 때 **앱이 통째로 다시 쓴다**",
         shipping="없음(에디터 없음)", bCommitted=False, bOutsideRepo=True,

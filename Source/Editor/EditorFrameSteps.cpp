@@ -9,6 +9,7 @@
 #include "Editor/Common/GUI/EditorNotificationView.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorPopupManager.h"
+#include "Editor/Common/Input/EditorInputActions.h"
 #include "Editor/Common/SourceControl/EditorSourceControl.h"
 #include "Editor/Common/Workspace/AssetHotReload.h"
 #include "Editor/Common/Workspace/ConfigHotReload.h"
@@ -22,6 +23,7 @@
 #include "Editor/SelfTest/EditorSelfTest.h"
 
 #include "Engine/Automation/AutomationStepRegistry.h"
+#include "Engine/Config/GameTimeScale.h"
 #include "Engine/Config/PackEngineSettings.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Window/IWindow.h"
@@ -42,9 +44,10 @@ namespace sw::editor
             static constexpr float32 kFallbackScreenHeight = 1080.0f;
 
             /** @brief 1) 단축키, 메뉴가 미룬 패널 열기 요청, 씬 세션(세대 동기화 · 미저장 확인)을 처리합니다. */
-            static void runCommands( EditorContext& /*context*/ )
+            static void runCommands( EditorContext& context )
             {
                 SW_EDITOR_PROFILE_SCOPE( "GT.Editor.step.commands" );
+                context.getSubsystem<EditorInputActions>().processFrame( GameTimeScale::getUnscaledDeltaTime() );
                 EditorCommandGUI::processHotkeys();
                 EditorMenuBar::processOpenPanelRequests();
                 EditorMenuBar::processSceneSession();

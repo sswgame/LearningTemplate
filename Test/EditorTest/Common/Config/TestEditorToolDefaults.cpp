@@ -14,7 +14,7 @@ namespace
     {
         /** @brief 필수 칸(`Required`)을 모두 적은 가장 작은 파일 본문입니다. */
         static constexpr const utf8* kCompleteJSON =
-            "{ \"_uiPreviewDocument\": \"engine/ui/pause.ui.xml\", \"_inputReplayFile\": \"engine/replay/demo_01.swreplay\", \"_clearColor\": \"0.1,0.2,0.3,1.0\", "
+            "{ \"_uiPreviewDocument\": \"engine/ui/pause.ui.xml\", \"_inputReplayFile\": \"engine/replay/demo_01.swreplay\", \"_editorInputMap\": \"editor/input/editor.input.xml\", \"_clearColor\": \"0.1,0.2,0.3,1.0\", "
             "\"_listBaseFont\": [ \"a.ttf\" ], \"_listKoreanFont\": [ \"b.ttf\" ] }";
         /** @brief 앞서 읽힌 값으로 둘 맵 경로입니다. `DataPath` 는 데이터 읽기만 채우므로 파일로 넣는다. */
         static constexpr const utf8* kKeptMap = "game/empty/maps/kept.tilemap.json";
@@ -24,7 +24,7 @@ namespace
         {
             const sw::string path = sw::FileUtil::joinPath( test::makeTempDirectory( "editor_tool_defaults_kept" ), "editortooldefaults.json" );
             const sw::string text = sw::string( "{ \"_defaultMap\": \"" ) + kKeptMap +
-                                    "\", \"_uiPreviewDocument\": \"engine/ui/pause.ui.xml\", \"_inputReplayFile\": \"engine/replay/demo_01.swreplay\", \"_clearColor\": \"0.1,0.2,0.3,1.0\", \"_listBaseFont\": [ \"a.ttf\" ], "
+                                    "\", \"_uiPreviewDocument\": \"engine/ui/pause.ui.xml\", \"_inputReplayFile\": \"engine/replay/demo_01.swreplay\", \"_editorInputMap\": \"editor/input/editor.input.xml\", \"_clearColor\": \"0.1,0.2,0.3,1.0\", \"_listBaseFont\": [ \"a.ttf\" ], "
                                     "\"_listKoreanFont\": [ \"b.ttf\" ] }";
             return sw::FileUtil::writeTextFile( path, text ) && outDefaults.loadFromHostPath( path ) && outDefaults._defaultMap == kKeptMap;
         }

@@ -538,9 +538,14 @@ namespace sw
          * @brief true 면 이 맵은 키보드 포커스(`InputManager::setKeyboardFocus`)와 상관없이 키를 읽습니다. 기본은 false 이며 게임 쪽 맵이 이 값을 씁니다.
          * @details 셸 맵(개발 콘솔, 리로드 단축키)만 켠다. 콘솔이 키보드를 가진 동안에도 닫는 키와 편집 키를 받아야 하기 때문이다.
          *          패드도 같다 — 콘솔이 열린 동안 게임 맵은 패드 바인딩을 "안 눌림" 으로 보고(`InputManager::isGamepadControlVisibleToGame`), 이 맵은 장치 상태를 그대로 읽는다.
+         *          단, 키보드 포커스가 도구(`InputKeyboardFocus::Tool`)인 동안은 이 맵도 키를 보지 않는다 — 에디터 패널에 친 글자가 셸 · UI 맵의 키(콘솔 여는 `~`, UI 확인 Enter)가 되지 않게.
+         *          도구 자신의 맵만 `setToolKeyboardReader( true )` 로 그 키를 읽는다.
          */
         void setKeyboardFocusIgnored( bool bIgnored ) { _bKeyboardFocusIgnored = bIgnored ? SW_TRUE : SW_FALSE; }
         bool isKeyboardFocusIgnored() const { return _bKeyboardFocusIgnored == SW_TRUE; }
+        /** @brief true 면 키보드 포커스가 도구(`InputKeyboardFocus::Tool`)인 동안에도 키를 읽습니다(에디터 입력 맵). `setKeyboardFocusIgnored( true )` 와 함께 씁니다. */
+        void setToolKeyboardReader( bool bReads ) { _bReadsToolKeyboard = bReads ? SW_TRUE : SW_FALSE; }
+        bool isToolKeyboardReader() const { return _bReadsToolKeyboard == SW_TRUE; }
         void setDoubleClickTime( float32 seconds );
         void setDoubleClickMaxDistance( float32 pixels );
         /** @brief 클릭과 끌기를 가르는 포인터 이동 거리(픽셀)입니다. `Click` · `Drag` 트리거가 씁니다. [0, `kDragThresholdMax`] 로 묶습니다. */
@@ -791,6 +796,8 @@ namespace sw
         /** @brief 이 맵이 보는 키 하나의 눌림 상태입니다. `isKeyboardFocusIgnored` 면 장치 상태 그대로, 아니면 키보드 포커스를 따릅니다(`SlotRead::Device` 는 늘 장치 상태). */
         bool isKeyboardKeyDown( Key key, SlotRead read = SlotRead::Game ) const;
         bool wasKeyboardKeyPressed( Key key ) const;
+        /** @brief 포커스를 무시하는 맵이 지금 키보드를 보지 않아야 하면 true 입니다 — 도구 포커스 동안 도구 맵이 아닌 맵(`setToolKeyboardReader`). */
+        bool isToolKeyboardHidden() const;
         /** @brief 슬롯 하나의 눌림입니다. 키보드 슬롯은 `isKeyboardKeyDown` 과 같은 규칙을 따릅니다. */
         bool isSlotDown( const InputSlot& slot, SlotRead read = SlotRead::Game ) const;
         bool wasSlotPressed( const InputSlot& slot, SlotRead read = SlotRead::Game ) const;
@@ -873,6 +880,7 @@ namespace sw
         InputMapVirtualCursor                _virtualCursorStick; ///< 이 맵이 켜는 가상 커서(`<InputMap virtualCursor>`)
         uint8                                _bSuppressBaseActionOnChord : 1;
         uint8                                _bKeyboardFocusIgnored      : 1; /**< 키보드 포커스와 상관없이 키를 읽습니다(셸 맵). */
-        [[maybe_unused]] uint8               _reservedFlags              : 6;
+        uint8                                _bReadsToolKeyboard         : 1; /**< 도구 포커스 동안에도 키를 읽습니다(에디터 맵). */
+        [[maybe_unused]] uint8               _reservedFlags              : 5;
     };
 } // namespace sw

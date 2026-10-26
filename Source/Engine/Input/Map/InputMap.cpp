@@ -161,6 +161,7 @@ namespace sw
         , _virtualCursorStick{ InputMapVirtualCursor::Off }
         , _bSuppressBaseActionOnChord{ SW_TRUE }
         , _bKeyboardFocusIgnored{ SW_FALSE }
+        , _bReadsToolKeyboard{ SW_FALSE }
         , _reservedFlags{ 0 }
     {
     }

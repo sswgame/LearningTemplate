@@ -39,6 +39,8 @@ namespace sw::editor
 
         PROPERTY( Required )
         DataPath _inputReplayFile; ///< 입력 맵 패널의 리플레이 탭이 처음 가리키는 .swreplay 파일(리소스 경로)
+        PROPERTY( Required )
+        DataPath _editorInputMap; ///< 에디터 단축키 · 몸짓의 입력 맵(리소스 경로, `EditorInputActions` — 패널마다 레이어)
 
         PROPERTY( Required )
         float4 _clearColor{}; ///< 씬 뷰 · 게임 뷰 렌더 타깃 클리어 색

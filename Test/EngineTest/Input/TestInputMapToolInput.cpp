@@ -206,17 +206,26 @@ SW_TEST_CASE( InputMapToolInputTest, ToolFocusHidesKeysFromGameButNotFromToolMap
     sw::InputMap toolMap;
     toolMap.setInputManager( &input );
     toolMap.setKeyboardFocusIgnored( true );
+    toolMap.setToolKeyboardReader( true );
     toolMap.bind( "ToolSave", sw::Key::S );
+    // 셸 · UI 맵처럼 포커스를 무시하지만 도구 맵은 아닌 맵 — 도구 창에 친 글자가 콘솔 여는 키가 되지 않아야 한다.
+    sw::InputMap shellMap;
+    shellMap.setInputManager( &input );
+    shellMap.setKeyboardFocusIgnored( true );
+    shellMap.bind( "ShellSave", sw::Key::S );
     input.getInputMap().bind( "GameSave", sw::Key::S );
 
     input.setKeyboardFocus( sw::InputKeyboardFocus::Tool );
     TestInputMapToolInputInternal::runInputFrame( input, { sw::RawInputEvent::makeKeyDown( sw::Key::S ) } );
     toolMap.update( 0.016f );
+    shellMap.update( 0.016f );
     SW_EXPECT_FALSE( input.isKeyDown( sw::Key::S ) );
     SW_EXPECT_TRUE( input.getKeyboard()->isKeyDown( sw::Key::S ) );
     SW_EXPECT_FALSE( input.getInputMap().wasActionTriggered( "GameSave" ) );
+    SW_EXPECT_FALSE( shellMap.wasActionTriggered( "ShellSave" ) );
     SW_EXPECT_TRUE( toolMap.wasActionTriggered( "ToolSave" ) );
 
+    shellMap.setInputManager( nullptr );
     toolMap.setInputManager( nullptr );
     input.shutdown();
 }

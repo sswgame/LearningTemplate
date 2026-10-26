@@ -326,8 +326,10 @@ namespace sw
     {
         if ( _pInput == nullptr )
             return false;
-        if ( read == SlotRead::Device || _bKeyboardFocusIgnored == SW_TRUE )
+        if ( read == SlotRead::Device )
             return _pInput->getKeyboard() != nullptr && _pInput->getKeyboard()->isKeyDown( key );
+        if ( _bKeyboardFocusIgnored == SW_TRUE )
+            return isToolKeyboardHidden() == false && _pInput->getKeyboard() != nullptr && _pInput->getKeyboard()->isKeyDown( key );
         return _pInput->isKeyDown( key );
     }
 
@@ -336,8 +338,13 @@ namespace sw
         if ( _pInput == nullptr )
             return false;
         if ( _bKeyboardFocusIgnored == SW_TRUE )
-            return _pInput->getKeyboard() != nullptr && _pInput->getKeyboard()->wasKeyPressed( key );
+            return isToolKeyboardHidden() == false && _pInput->getKeyboard() != nullptr && _pInput->getKeyboard()->wasKeyPressed( key );
         return _pInput->wasKeyPressed( key );
+    }
+
+    bool InputMap::isToolKeyboardHidden() const
+    {
+        return _bReadsToolKeyboard == SW_FALSE && _pInput->getKeyboardFocus() == InputKeyboardFocus::Tool;
     }
 
     bool InputMap::isSlotDown( const InputSlot& slot, SlotRead read ) const
@@ -367,8 +374,9 @@ namespace sw
 
     bool InputMap::isSlotHiddenByConsole( const InputSlot& slot ) const
     {
+        // 포커스를 무시하는 맵(셸 · UI · 에디터)도 도구 포커스 동안의 키는 도구 자신의 맵만 본다.
         if ( _bKeyboardFocusIgnored == SW_TRUE )
-            return false;
+            return slot._deviceKind == InputDeviceKind::Keyboard && isToolKeyboardHidden();
         // 개발 콘솔이 입력을 쥔 동안 게임 맵은 키보드 바인딩과 패드 바인딩을 모두 "안 눌림" 으로 본다(패드는 셸 맵이 콘솔 조작에 쓴다).
         if ( slot._deviceKind == InputDeviceKind::Keyboard )
             return _pInput->isKeyVisibleToGame( static_cast<Key>( slot._controlIndex ) ) == false;

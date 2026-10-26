@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Editor InputMap — editor command shortcuts (EditorInputActions owns this map; Config/Editor/editortooldefaults.json _editorInputMap points here).
+  Action names are editor command ids (EditorCommandDesc::_inputAction). A command without an action has no shortcut.
+  Layers are scopes: Editor.Global is always on; Editor.Panel.<panel id> is on only while that panel window has focus, and a command
+  of the focused panel's layer wins over a global command fired by the same press. Two actions in one layer may not share an input
+  (appendFromResource rejects it). Modifiers match exactly: Ctrl+Shift+Z does not fire Ctrl+Z.
+  Extension modules append their own *.input.xml (EditorInputExtensionRegistration). The user's rebinding lives in Saved/Editor/editorbindings.xml.
+-->
+<InputMap defaultLayer="Editor.Global" doubleClickTime="0.35" doubleClickMaxDistance="6" dragThreshold="6" holdThreshold="0.4">
+	<layers>
+		<layer name="Editor.Global" priority="0" enabled="1" blockLower="0" alwaysOn="1"/>
+		<layer name="Editor.Panel.hierarchy" priority="10" enabled="0" blockLower="0"/>
+		<layer name="Editor.Panel.content_browser" priority="10" enabled="0" blockLower="0"/>
+		<layer name="Editor.Panel.scene_view" priority="10" enabled="0" blockLower="0"/>
+	</layers>
+
+	<layer name="Editor.Global">
+		<action name="scene.open" trigger="Pressed">
+			<bind source="key" modifier="Ctrl" code="O"/>
+		</action>
+		<action name="asset.save" trigger="Pressed">
+			<bind source="key" modifier="Ctrl" code="S"/>
+		</action>
+		<action name="editor.quickOpen" trigger="Pressed">
+			<bind source="key" modifier="Ctrl" code="P"/>
+		</action>
+		<action name="editor.commandPalette" trigger="Pressed">
+			<bind source="key" modifier="Ctrl+Shift" code="P"/>
+			<bind source="key" modifier="Ctrl" code="Space"/>
+		</action>
+		<action name="edit.undo" trigger="Pressed">
+			<bind source="key" modifier="Ctrl" code="Z"/>
+		</action>
+		<action name="edit.redo" trigger="Pressed">
+			<bind source="key" modifier="Ctrl" code="Y"/>
+			<bind source="key" modifier="Ctrl+Shift" code="Z"/>
+		</action>
+		<action name="build.compileGame" trigger="Pressed">
+			<bind source="key" modifier="Ctrl+Alt" code="F11"/>
+			<bind source="key" code="F7"/>
+		</action>
+		<action name="build.compileAll" trigger="Pressed">
+			<bind source="key" modifier="Ctrl+Shift" code="B"/>
+		</action>
+		<action name="viewport.screenshot" trigger="Pressed">
+			<bind source="key" code="F9"/>
+		</action>
+		<action name="viewport.renderDocCapture" trigger="Pressed">
+			<bind source="key" modifier="Ctrl" code="F12"/>
+		</action>
+		<action name="help.reportBug" trigger="Pressed">
+			<bind source="key" modifier="Ctrl+Shift" code="F12"/>
+		</action>
+		<action name="play.eject" trigger="Pressed">
+			<bind source="key" code="F8"/>
+		</action>
+	</layer>
+</InputMap>
