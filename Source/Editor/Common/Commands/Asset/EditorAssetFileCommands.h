@@ -90,5 +90,16 @@ namespace sw::editor
          *          한 번 깜빡인다.
          */
         static bool showInFileExplorer( string_view absolutePath );
+        /** @brief `showInFileExplorer` 가 실행할 명령줄입니다(경로가 비면 빈 문자열). 실행 없이 인자를 단언할 수 있게 따로 둔다. */
+        [[nodiscard]] static string makeFileExplorerCommand( string_view absolutePath );
+        /**
+         * @brief true 면 `showInFileExplorer` 가 명령을 기록만 하고 프로세스를 띄우지 않습니다(자동화 시나리오가 `explorer.dryRun` 으로 건다).
+         * @details 탐색기를 실제로 띄우면 자동 실행이 창을 남기므로, 호출 직전까지(명령줄 조립 · 횟수)만 단언하려는 장치다.
+         */
+        static void setFileExplorerDryRun( bool bDryRun );
+        /** @brief `showInFileExplorer` 가 명령을 만든 횟수입니다(드라이런 포함). */
+        [[nodiscard]] static uint32 getFileExplorerLaunchCount();
+        /** @brief 마지막으로 만든 탐색기 명령줄입니다. */
+        [[nodiscard]] static string getLastFileExplorerCommand();
     };
 } // namespace sw::editor

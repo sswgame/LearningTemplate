@@ -10,7 +10,8 @@
 제목: 실기동으로 아직 확인하지 못한 것
 옛번호: B-4
 왜 못 하는가: 리눅스와 외부 프로그램 · 실기 입력이 있어야 확인된다. 풀리는 조건은 항목마다 다르다.
-남은 것: 리눅스 X11 · dlopen 분기(CI 리눅스 잡), 실제 RenderDoc 캡처(이 PC 에 RenderDoc 이 없다), 단언 대화상자의 세 단추(모달이라 자동화가 누를 수 없다), Tracy 0.14.1 뷰어 연결(`localhost:8086` 직접 입력), 스크린샷 토스트의 "Show in Explorer" 단추(알림 매니저에 동작 단추가 없다 — 기능 추가가 먼저).
+남은 것: 리눅스 X11 · dlopen 분기(CI 리눅스 잡), 실제 RenderDoc 캡처(이 PC 에 RenderDoc 이 없다), 단언 대화상자의 세 단추(ImGui 가 아니라 OS `MessageBoxW` 이고 자동 실행에는 걸리지 않아 시나리오가 띄우지도 누르지도 못한다), Tracy 0.14.1 뷰어 연결(`localhost:8086` 직접 입력, 외부 앱).
+시나리오로 만든 것: 스크린샷 토스트의 "Show in Explorer" 단추는 `editor.toastreveal`(실행은 통합이 처음 돈다)이 맡는다.
 함정: RenderDoc 은 RHI 단계 맨 앞에서 로드하고 `ThirdParty/renderdoc` 에 원문 헤더를 두며 그 폴더의 `.clang-format` 은 `DisableFormat` 이다.
 
 ### EditorCaptureFollowUps
