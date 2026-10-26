@@ -250,6 +250,22 @@ namespace sw
         return nullptr;
     }
 
+    void AutomationScenario::bindScratchInstances()
+    {
+        for ( AutomationScratchFolder& folder : _testOptions._listScratchFolder )
+        {
+            const string instanceID = AutomationScratch::makeInstanceID( folder._scratchID );
+            for ( AutomationStep& step : _listStep )
+            {
+                for ( AutomationAttribute& attribute : step._listAttribute )
+                {
+                    attribute._value = AutomationScratch::rebaseText( attribute._value, folder._scratchID, instanceID );
+                }
+            }
+            folder._scratchID = instanceID;
+        }
+    }
+
     bool AutomationScenario::loadFromPath( string_view path, string& outError )
     {
         XMLDocument doc;

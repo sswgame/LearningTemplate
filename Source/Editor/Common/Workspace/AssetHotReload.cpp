@@ -42,8 +42,8 @@ namespace sw::editor
     {
         struct AssetHotReloadInternal
         {
-            /** @brief 감시 울타리 표지 파일의 이름입니다(`Resource/scratch/` 아래, 저장소에 넣지 않는 폴더). */
-            static constexpr const utf8* kFenceFileName = "contentfence.tmp";
+            /** @brief 감시 울타리 표지 파일 이름의 줄기입니다(`Resource/scratch/` 아래, 저장소에 넣지 않는 폴더). 이름은 `makeFenceFileName` 이 프로세스마다 다르게 짓는다. */
+            static constexpr const utf8* kFenceFileStem = "contentfence";
             /** @brief 표지 사건을 기다리는 시한(밀리초)입니다. 감시는 보통 몇 ms 안에 알린다. */
             static constexpr int64 kFenceTimeoutMilliseconds = 5000;
             /** @brief 표지 사건 뒤에 사본이 일으킨 임포트가 끝나기를 기다리는 시한(밀리초)입니다. 텍스처 압축은 큰 이미지 하나에 수십 초 걸릴 수 있다. */
@@ -72,21 +72,34 @@ namespace sw::editor
                 return true;
             }
 
+            /**
+             * @brief 울타리 표지 파일의 이름(`contentfence_p<pid>.tmp`)입니다.
+             * @details `Resource/scratch/` 는 같은 체크아웃에서 동시에 도는 에디터가 나눠 쓴다. 이름이 고정이면 한쪽이 지운 표지를 다른 쪽이 쓰다 실패하거나 남의 사건을 제 것으로 읽는다.
+             */
+            static string makeFenceFileName() { return AutomationScratch::makeInstanceID( kFenceFileStem ) + ".tmp"; }
+
             /** @brief 울타리 표지 파일의 절대 경로입니다. */
-            static string makeFenceMarkerPath() { return FileUtil::joinPath( FileUtil::joinPath( ResourcePaths::getRootFolderPath(), AutomationScratch::kScratchDomain ), kFenceFileName ); }
+            static string makeFenceMarkerPath() { return FileUtil::joinPath( FileUtil::joinPath( ResourcePaths::getRootFolderPath(), AutomationScratch::kScratchDomain ), makeFenceFileName() ); }
 
             /**
-             * @brief 감시 사건이 울타리 표지 파일의 것인지 봅니다.
-             * @details 사건의 `_directory` 는 감시 루트(리소스 루트)이고 `_filename` 은 그 아래 상대 경로(`scratch\contentfence.tmp`)다(`IFileWatcher::pushChange`).
-             *          이름만 견주면 루트 아래 표지는 한 번도 맞지 않아 울타리가 5 초마다 시한 오류를 냈다. 전체 경로로 견준다.
+             * @brief 감시 사건이 울타리 표지 파일(이 에디터 것이든 같은 체크아웃의 다른 에디터 것이든)의 것인지 봅니다. 맞으면 @p outbOwn 이 이 에디터의 표지인지입니다.
+             * @details 사건의 `_directory` 는 감시 루트(리소스 루트)이고 `_filename` 은 그 아래 상대 경로(`scratch\contentfence_p<pid>.tmp`)다(`IFileWatcher::pushChange`).
+             *          이름만 견주면 루트 아래 표지는 한 번도 맞지 않아 울타리가 5 초마다 시한 오류를 냈다. 전체 경로의 폴더로 견준다.
+             *          다른 에디터의 표지도 바뀐 파일로 세지 않는다 — 에셋이 아니다. 울타리를 푸는 것은 이 에디터의 표지뿐이다.
              */
-            static bool isFenceMarkerEvent( const FileChangeEvent& changeEvent )
+            static bool isFenceMarkerEvent( const FileChangeEvent& changeEvent, bool& outbOwn )
             {
+                outbOwn = false;
                 string_view leafName{};
                 FileUtil::getFileNamePart( changeEvent._filename, leafName );
-                if ( leafName != kFenceFileName )
+                if ( StringUtil::startsWith( leafName, kFenceFileStem ) == false )
                     return false; // 값싼 이름 검사로 대부분의 사건을 거른다
-                return FileUtil::normalizePath( FileUtil::joinPath( changeEvent._directory, changeEvent._filename ) ) == FileUtil::normalizePath( makeFenceMarkerPath() );
+                const string eventPath   = FileUtil::normalizePath( FileUtil::joinPath( changeEvent._directory, changeEvent._filename ) );
+                const string scratchRoot = FileUtil::normalizePath( FileUtil::joinPath( ResourcePaths::getRootFolderPath(), AutomationScratch::kScratchDomain ) );
+                if ( FileUtil::normalizePath( FileUtil::getDirectoryPart( eventPath ) ) != scratchRoot )
+                    return false;
+                outbOwn = eventPath == FileUtil::normalizePath( makeFenceMarkerPath() );
+                return true;
             }
 
             /** @brief 시작 차단 조건 — 시나리오 사본 폴더를 새로 만든 뒤 파일 감시가 그 쓰기를 알릴 때까지 참입니다. 에디터가 없으면 막지 않습니다. */
@@ -234,9 +247,11 @@ namespace sw::editor
     void AssetHotReload::onResourceTreeChanged( const FileChangeEvent& changeEvent )
     {
         ++_contentChangeSerial;
-        if ( AssetHotReloadInternal::isFenceMarkerEvent( changeEvent ) )
+        bool bOwnFence = false;
+        if ( AssetHotReloadInternal::isFenceMarkerEvent( changeEvent, bOwnFence ) )
         {
-            _bFenceSeen = true; // 울타리 표지 — 바뀐 파일로 세지 않는다
+            if ( bOwnFence )
+                _bFenceSeen = true; // 울타리 표지 — 바뀐 파일로 세지 않는다(다른 에디터의 표지도 세지 않지만 울타리는 풀지 않는다)
             return;
         }
         if ( _bChangedPathsUnknown )

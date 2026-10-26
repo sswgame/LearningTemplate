@@ -166,6 +166,14 @@ namespace sw
         const AutomationStep* findOtherStepAtSameFrame( const AutomationStep& step ) const;
         /** @brief 실행기와 테스트만 읽는 선언 묶음입니다(`AutomationTestOptions`). 시나리오의 단계 형식과 섞이지 않게 따로 둔다. */
         const AutomationTestOptions& getTestOptions() const { return _testOptions; }
+        /**
+         * @brief `<Scratch as>` 의 사본 id 를 이 프로세스의 이름(`AutomationScratch::makeInstanceID` — `scratch/assetmanage_p<pid>`)으로 바꾸고,
+         *        단계 속성 글 안의 옛 사본 id 도 같은 규칙(`AutomationScratch::rebaseText`)으로 바꿉니다.
+         * @details 실행기가 사본을 만들기 전에 한 번 부른다(`AutomationRunner::prepareScratchFolders`). 읽기(`parse`)는 선언한 id 를 그대로 둔다 — 시나리오를 읽기만 하는
+         *          쪽(테스트 · 도구)은 프로세스가 달라 꼬리가 맞지 않는다. `<Launch>` 값은 바꾸지 않는다 — 띄우는 쪽이 명령줄에 준 값과 같은지 실행기가 보므로
+         *          사본 id 를 기동 값에 쓰지 않는다.
+         */
+        void bindScratchInstances();
 
     private:
         /** @brief `<Load>` 요소를 읽습니다. 모르는 속성 · 틀린 값이면 false 와 이유입니다. */

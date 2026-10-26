@@ -8,7 +8,7 @@
 		"temp": "%TEMP% 안의 sw_* 폴더만"
 	},
 	"locations": [
-		{ "id": "W1", "root": "resource", "glob": "scratch/**", "what": "시나리오 Scratch 폴더(고정 이름, 시작할 때 지우고 만든다)" },
+		{ "id": "W1", "root": "resource", "glob": "scratch/**", "what": "시나리오 Scratch 폴더(<이름>_p<pid>, 시작할 때 지우고 만들며 끝난 프로세스의 것을 거둔다)와 울타리 표지 contentfence_p<pid>.tmp" },
 		{ "id": "W2", "root": "binSaved", "glob": "Automation/**", "what": "시나리오 출력 · 에디터 명령 임시 파일(W3 로그와 W4 에디터 상태 포함)" },
 		{ "id": "W5", "root": "projectSaved", "glob": "Editor/**", "what": "에디터 레이아웃 · 테마 · 설정(-gv_editorStateDir 가 없을 때)" },
 		{ "id": "W6", "root": "projectSaved", "glob": "DDC/**", "what": "파생 데이터 캐시" },
