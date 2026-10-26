@@ -740,8 +740,11 @@ namespace sw
         //    되돌리면 앞의 것이 뒤의 것 이름을 잠시 차지하고 있어서, 이 단계가 없으면 앞의 것이 영영 `Left_2` 로 남는다. 아직 차지한 오브젝트가 있으면 그대로 둔다.
         for ( const Entry& entry : _listEntry )
         {
-            GameObject* pObject     = entry._pObject;
-            const bool  bSkipRename = pObject->getManager() == nullptr || pObject->isPendingDestroy() || entry._savedName.empty() || pObject->getName() == entry._savedName;
+            GameObject* pObject = entry._pObject;
+            // 상태 읽기는 형제 순서(`_siblingIndex` PROPERTY)를 세터 없이 쓴다(리플렉션 쓰기라 형식으로 막지 못한다). 구조 세대를 여기서 올린다.
+            if ( pObject->getManager() != nullptr )
+                pObject->getManager()->notifyStructureChanged();
+            const bool bSkipRename = pObject->getManager() == nullptr || pObject->isPendingDestroy() || entry._savedName.empty() || pObject->getName() == entry._savedName;
             if ( bSkipRename )
                 continue;
             pObject->setName( entry._savedName ); // 아직 다른 오브젝트가 사용 중이면 매니저가 현재 이름(번호)을 그대로 둔다

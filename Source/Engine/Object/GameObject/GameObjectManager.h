@@ -22,6 +22,7 @@
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
+#include "Engine/Object/GameObject/Registry/TagIndex.h"
 #include "Engine/Object/GameObject/Service/ISceneService.h"
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"
 #include "Engine/Object/GameObject/Tick/ISceneFrameSystem.h"
@@ -98,7 +99,7 @@ namespace sw
 
         /**
          * @brief 살아 있는 오브젝트를 outList 에 채웁니다(부르는 쪽 버퍼 재사용).
-         * @details 같은 클래스의 findGameObjectsByTag 와 같은 규약입니다. 값 반환형은 호출마다 씬
+         * @details 값 반환형은 호출마다 씬
          *          전체를 새로 할당 · 복사하므로, 매 프레임 도는 곳이나 두 번 이상 쓰는 곳은 이쪽을
          *          씁니다. 순회만 하면 되는 곳은 forEachGameObject 가 복사조차 하지 않습니다.
          */
@@ -162,11 +163,26 @@ namespace sw
         /** @brief 비어 있지 않은 타입별 버킷 수입니다. 진단과 회귀 테스트(모듈 언로드 뒤 묘비)용입니다. */
         uint32 getTypedComponentBucketCount() const { return _store.getTypedComponentBucketCount(); }
 
-        /** @brief 태그를 가진 첫 GameObject 를 반환합니다. 없으면 nullptr 입니다. */
-        GameObject* findGameObjectByTag( TagID tag ) const { return _store.findGameObjectByTag( tag ); }
+        /**
+         * @brief 태그 → 오브젝트 색인입니다. 태그로 오브젝트를 찾는 곳은 씬을 훑지 않고 `getTagIndex().forEachObjectWithTags( required, … )` 를 씁니다.
+         * @details 카메라 · 프리미티브 레지스트리와 같은 자리입니다. 태그 컴포넌트가 등록 · 해제 · 태그 쓰기마다 칸을 맞춥니다(TagIndex.h).
+         */
+        TagIndex& getTagIndex() { return _tagIndex; }
+        /** @brief 태그 → 오브젝트 색인입니다. */
+        const TagIndex& getTagIndex() const { return _tagIndex; }
 
-        /** @brief 태그를 가진 GameObject 를 outListGameObject 에 넣습니다. */
-        void findGameObjectsByTag( TagID tag, vector<GameObject*>& outListGameObject ) const { _store.findGameObjectsByTag( tag, outListGameObject ); }
+        /**
+         * @brief 오브젝트 구조 세대입니다. 오브젝트 생성 · 파괴 표시 · 이름 · 부모 · 형제 순서 · 컴포넌트 붙이기와 떼기가 바뀔 때마다 오릅니다.
+         * @details 계층 창의 행 모델 · HUD 의 오브젝트 수처럼 구조를 매 프레임 다시 모으던 쪽이 마지막 값과 비교해 바뀔 때만 다시 짓습니다.
+         *          값은 매니저끼리 겹치지 않는다(`GameObjectStore::getStructureGeneration`). 그래서 지운 매니저와 같은 주소에 새 매니저가 생겨도 캐시가 틀리지 않는다.
+         *          읽기는 잠금이 없고 어느 스레드에서나 됩니다. 트랜스폼 · 활성 · 태그는 넣지 않습니다(트랜스폼은 `getTransformGeneration`, 태그는 `TagIndex::getGeneration`).
+         */
+        uint64 getStructureGeneration() const { return _store.getStructureGeneration(); }
+        /**
+         * @brief 구조 세대를 올립니다. 구조를 바꾸는 세터(오브젝트 생성 · 파괴 · `GameObject::setName` · `setSiblingIndex` · 부착과 떼기 · 컴포넌트 붙이기와 떼기)만 부릅니다.
+         * @details 편집 명령 쪽에서 부르지 않는다. 세터 한 곳에서 올려야 되돌리기 · 스크립트 · 게임 코드의 같은 변경을 빠뜨리지 않는다.
+         */
+        void notifyStructureChanged() { _store.notifyStructureChanged(); }
 
         /**
          * @brief 플레이를 시작합니다 — 살아 있는 오브젝트의 컴포넌트마다 onBeginPlay 를 한 번 부르고, 이후 붙는 컴포넌트는 다음 틱 단계에서 시작합니다.
@@ -570,6 +586,8 @@ namespace sw
         ComponentRegistry _componentRegistry;
         /** @brief 카메라 컴포넌트의 레지스트리입니다. */
         CameraRegistry _cameraRegistry;
+        /** @brief 태그 → 오브젝트 색인입니다(`getTagIndex`). */
+        TagIndex _tagIndex;
         /** @brief 컴포넌트 틱 디스패치(틱 레지스트리 · 그룹 포크-조인 · 선행 조건 스테이지)입니다. */
         SceneTickScheduler _tickScheduler;
         /** @brief 오브젝트 저장소(생성 · 이름 · id 표 · 조회 · 지연 파괴 · 컴포넌트 풀 · 시작 줄)입니다. 게임이 부르는 API 는 위의 전달 함수입니다. */

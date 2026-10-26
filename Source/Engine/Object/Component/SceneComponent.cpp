@@ -481,6 +481,9 @@ namespace sw
         GameObject* pOwner = getOwner();
         if ( pOwner != nullptr && pOwner->isPendingDestroy() == false )
             pOwner->refreshActiveInHierarchy();
+        // 부모가 바뀌는 길이 모두 여기를 지나므로 구조 세대도 여기 한 곳에서 올린다(`GameObjectManager::getStructureGeneration`).
+        if ( _pManager != nullptr )
+            _pManager->notifyStructureChanged();
     }
 
     void SceneComponent::markHierarchyDirtyParallel()

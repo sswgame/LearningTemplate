@@ -106,6 +106,7 @@ namespace sw
         , _primitiveRegistry{}
         , _componentRegistry{}
         , _cameraRegistry{}
+        , _tagIndex{}
         , _tickScheduler{ *this, _transformHierarchy, _primitiveRegistry, _structuralChangeBuffer }
         , _store{ *this, _tickScheduler, _structuralChangeBuffer }
         , _sceneScope{ services._pEngineSubsystems }
