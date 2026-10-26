@@ -39,7 +39,7 @@ Profiler 탭과 `net.stats` 질의, 종류별 셈(`NetMessageKindTallyTable`, �
 - 한 줄 답의 상한은 Core 의 `DebugReplyLine::kMaxBytes`(3500) 하나다(`Core/Network/DebugReplyLine.h`, 2026-10-26 `wt/linecap` · `wt/netstats`, 빌드 전). 줄일 수 있는 꼬리가 있는 줄(`net.stats`)은 `DebugReplyLine::makeCapped`(`NetStatsReport::makeLine` 이 유일한 길 — 넘으면 뒤의 항목을 빼고 ` truncated=<원래 길이>` 를 붙이고 읽는 쪽이 `_truncatedLineBytes` 로 되읽음), 길이가 정해진 줄(`net.emulation stats`)은 `makeFixed` 가 만들고, 줄일 수 없는 줄(`state.objectline` · `state.hashline`)은 `fits` 로 재서 넘으면 오류로 멈춘다(S7). Sync 탭 질의(이력 · 오브젝트 해시)는 시간 상한(`EditorSyncPreferences._clientReplyTimeoutSeconds`, 기본 10 초)을 넘으면 대기를 끝내고 오류 글을 보인다. 확인 대기: 매니페스트 id `net-stats-replicas-tests`(새 테스트 `DebugReplyLineTest.*` · `OverlongLineIsCappedAndMarkedTruncated`).
 - 복제 키트(`ReplicationServer` · 파괴 복제 · MMO)가 틱마다 자기 합을 올리는 한 줄씩(셈이 있는 `DestructionReplicationStats` 부터).
 - 탭이 보이지 않을 때도 기록하기: 지금은 탭이 보일 때와 `netplay.profile` 동안만 묻는다. 늘 묻게 하면 자식 로그에 2 Hz 줄이 쌓인다.
-- 부하 봇(`Tools/OnlineLoadBot`)을 붙여 숫자가 오르는 시나리오.
+- 부하 봇(`Tools/OnlineLoadBot`)을 붙여 숫자가 오르는 시나리오. 봇이 "online kit 'matchmaking' could not initialize" 로 서던 것(프로세스에 엔진 서비스 · 타입 레지스트리가 없어 모드 범위 검사가 실패)은 봇 `Main.cpp` 가 `ServerApp` 처럼 호스트 범위 + `Engine`(DedicatedServer)을 세워 고쳤다(`wt/loadbot`, 빌드 전). 빌드 뒤의 확인은 부하 검증 loadbot 구동기(`Scripts/qa/Load.py`)가 `--local-server` 로 돈다.
 
 ### S6 권위 겹쳐 보기 — 남은 것
 

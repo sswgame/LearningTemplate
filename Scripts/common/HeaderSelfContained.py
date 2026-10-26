@@ -31,6 +31,7 @@ import os
 import re
 import shlex
 import subprocess
+import tempfile
 from pathlib import Path
 from typing import Sequence
 
@@ -187,10 +188,35 @@ def makeSyntaxOnlyCommand(entry: dict, probeSource: Path, listExtraFlag: Sequenc
     return command
 
 
+def quoteResponseToken(token: str) -> str:
+    """응답 파일 한 칸에 쓸 인자. 공백이 있는데 따옴표로 감싸지 않은 인자만 감싼다(DB 의 `arguments` 형식은 따옴표가 없다)."""
+    bQuoted = len(token) >= 2 and token[0] == '"' and token[-1] == '"'
+    return f'"{token}"' if any(ch.isspace() for ch in token) and not bQuoted else token
+
+
+def runCompilerCommand(listToken: Sequence[str], cwd: str) -> subprocess.CompletedProcess:
+    """
+    컴파일러 명령(첫 인자가 컴파일러)을 돌린다.
+
+    Windows 는 명령 문자열을 `cmd.exe`(`shell=True`)로 돌리면 8191 자를 넘는 TU(게임·엔진 테스트의 include 경로 수백 개)가 "명령줄이 너무 깁니다" 로 못 선다.
+    그래서 컴파일러 뒤의 인자를 임시 응답 파일(`@파일`)에 쓰고 셸 없이 부른다 — 인자 글은 DB 의 것을 그대로 쓴다(clang-cl 은 응답 파일을 명령줄과 같은 Windows 규칙으로
+    읽으므로 `\\"` 같은 이스케이프 · 경로의 역슬래시가 그대로 맞는다). 그 밖의 플랫폼은 길이 한도가 크므로 셸 명령 그대로다.
+    """
+    if os.name != "nt":
+        return subprocess.run(" ".join(listToken), shell=True, capture_output=True, text=True, errors="replace", cwd=cwd)
+    compiler = listToken[0].strip('"')
+    descriptor, responsePath = tempfile.mkstemp(prefix="swCompile", suffix=".rsp")
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as responseFile:
+            responseFile.write(" ".join(quoteResponseToken(token) for token in listToken[1:]))
+        return subprocess.run([compiler, f"@{responsePath}"], capture_output=True, text=True, errors="replace", cwd=cwd)
+    finally:
+        os.remove(responsePath)
+
+
 def compileSyntaxOnly(entry: dict, probeSource: Path, buildDir: Path, listExtraFlag: Sequence[str] = ()) -> tuple[bool, str]:
     """`probeSource` 를 `entry` 의 플래그로 `-fsyntax-only` 컴파일한다. (성공 여부, 컴파일러 출력 전부)."""
-    completed = subprocess.run(" ".join(makeSyntaxOnlyCommand(entry, probeSource, listExtraFlag)), shell=True, capture_output=True,
-                               text=True, errors="replace", cwd=str(buildDir))
+    completed = runCompilerCommand(makeSyntaxOnlyCommand(entry, probeSource, listExtraFlag), str(buildDir))
     return completed.returncode == 0, (completed.stdout or "") + (completed.stderr or "")
 
 

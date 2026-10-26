@@ -5,7 +5,9 @@
  * @details - `--local-server` 는 같은 프로세스에 서버 조립(`LoadBotLocalServer` — 전용 서버와 같은 `OnlineServerRuntime`)을 띄우고 루프백 TCP(플랫폼 전송, 평문)로 붙는다.
  *            서버 시각은 UTC 벽시계, 봇 지연은 `MonotonicClock`.
  *          - `--server` 는 전용 서버(`Server` 의 온라인 서비스)에 붙는다. 그 서비스 포트는 TLS 1.3 이므로 `--tls` 를 함께 준다(신뢰 PEM 을 비우면 Dev 개발용 인증서).
- *          - 끝에 동작별 지연 백분위 표를 로그로, `--report` 면 JSON 을 파일로 쓴다. 오류율이 상한(기본 1 %)을 넘으면 종료 코드 1, 인자 · 시나리오 오류는 2.
+ *          - 끝에 동작별 지연 백분위 표를 로그로, `--report` 면 JSON 을 파일로 쓴다. 오류율이 상한(기본 1 %)을 넘으면 종료 코드 1, 인자 · 시나리오 오류는 2, 엔진 기동 실패는 3.
+ *          - 프로세스 바닥은 전용 서버(`ServerApp`)와 같은 모양이다 — 호스트 범위(모듈 이미지 창구) 위에 `Engine`(`DedicatedServer`)을 세운다. 서버 키트가 쓰는 엔진 서비스와
+ *            타입 레지스트리(설정의 범위 검사 · 리플렉션)가 이 엔진에 있다. 없이 돌리면 키트 `initialize` 가 "could not initialize" 로 멈춘다.
  */
 #include "pch.h"
 
@@ -17,16 +19,16 @@
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/String/hashed_string.h"
-#include "Core/Subsystem/SubsystemCollection.h"
+#include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Time/MonotonicClock.h"
 #include "Core/Time/WallClock.h"
 
-#include "Engine/Bootstrap/CrashHandlerSubsystem.h"
-#include "Engine/Bootstrap/DiagnosticsSubsystem.h"
-#include "Engine/Bootstrap/LoggerSubsystem.h"
-#include "Engine/Bootstrap/NamePoolSubsystem.h"
+#include "Engine/Engine.h"
+#include "Engine/Module/ModuleTypeRegistry.h"
 
 #include "GameFramework/Base/Online/Security/NetSecurity.h"
+
+#include "ModuleHost/ModuleImageHostSubsystem.h"
 
 #include "OnlineLoadBot/LoadBotLocalServer.h"
 #include "OnlineLoadBot/LoadBotRunner.h"
@@ -38,32 +40,84 @@ namespace sw
     namespace
     {
         /**
-         * @brief 프로세스 바닥 — 엔진 호스트와 같은 부트스트랩 서브시스템(진단 도구 · 이름 풀 · 로거 · 크래시 핸들러)을 세우고 역순으로 내립니다.
-         * @details 엔진 서비스(리소스 · 태스크 · 씬)와 명령줄 · 리소스 루트는 세우지 않는다 — 봇과 서버 조립은 네트워크 · 키트만 쓰고 인자는 스스로 읽는다.
+         * @brief 프로세스 바닥 — 전용 서버(`ServerApp`)와 같은 모양의 호스트 범위와 `Engine`(`DedicatedServer`)을 세우고 역순으로 내립니다.
+         * @details 호스트 범위(모듈 이미지 창구)가 엔진 범위의 부모이고, 엔진이 부트스트랩(이름 풀 · 로거 · 크래시 핸들러) · 서비스 · 기동 단계를 세운다. 서버 키트는 엔진 서비스와
+         *          타입 레지스트리를 쓰므로 키트 `initialize` 전에 엔진이 서 있어야 한다. 엔진 기동 단계 `ModuleTypes` 가 창구의 로더를 불러 서버 키트 모듈을 올리고 그 타입을 등록한다.
          *          main 의 맨 처음에 두어 hashed_string 을 든 객체가 모두 사라진 뒤에 이름 풀이 내려가게 한다(로거는 비동기라 내리지 않으면 마지막 줄을 잃는다).
+         *          게임 모듈 · 서버 설정 · 서버 서비스는 세우지 않는다 — 봇은 서버 조립(`LoadBotLocalServer`)을 스스로 연다.
          */
-        class ToolProcessScope
+        class ToolHostScope
         {
         public:
-            ToolProcessScope()
-                : _bootstrap{}
+            ToolHostScope()
+                : _host{}
+                , _engine{}
+                , _bEngineStarted{ SW_FALSE }
+                , _bLoadServerKit{ SW_FALSE }
             {
-                _bootstrap.add( make_unique<DiagnosticsSubsystem>( false ) );
-                _bootstrap.add( make_unique<NamePoolSubsystem>() );
-                _bootstrap.add( make_unique<LoggerSubsystem>() );
-                _bootstrap.add( make_unique<CrashHandlerSubsystem>( nullptr ) );
-                // 정렬 오류(선언 오타 · 순환)는 로거가 서기 전이다 — 표준 오류로 낸다.
-                if ( _bootstrap.initializeAll( SubsystemHostMask::All ) == false )
-                    std::fprintf( stderr, "OnlineLoadBot: bootstrap failed: %s\n", _bootstrap.getError().c_str() );
             }
 
-            ~ToolProcessScope() { _bootstrap.destroyAll(); }
+            ~ToolHostScope()
+            {
+                // `Engine::shutdown` 은 일부만 서도 된다. 엔진 범위가 사라진 뒤에 호스트 범위를 내린다.
+                if ( _bEngineStarted == SW_TRUE )
+                    _engine.shutdown();
+                _host.destroyAll();
+            }
 
-            ToolProcessScope( const ToolProcessScope& )            = delete;
-            ToolProcessScope& operator=( const ToolProcessScope& ) = delete;
+            ToolHostScope( const ToolHostScope& )            = delete;
+            ToolHostScope& operator=( const ToolHostScope& ) = delete;
+
+            /**
+             * @brief 호스트 범위와 엔진을 세웁니다. @p bLoadServerKit 이면 엔진의 `ModuleTypes` 단계에서 서버 키트 모듈을 올립니다(`--local-server`).
+             * @details 엔진에는 프로그램 이름만 넘긴다 — 봇 인자(`--scenario=` …)는 봇이 읽고, 엔진의 표준 인자(`-scenario` 자동화 시나리오 …)로 풀리지 않게 한다.
+             *          로거가 서기 전의 실패는 표준 오류로 알린다.
+             * @return 서지 못하면 false 입니다(폴백 없음 — 호출자가 멈춘다).
+             */
+            [[nodiscard]] bool initialize( utf8* pProgramName, bool bLoadServerKit )
+            {
+                _bLoadServerKit = bLoadServerKit ? SW_TRUE : SW_FALSE;
+                if ( ModuleImageHostSubsystem::initializeHostScope( _host, SW_DELEGATE_METHOD( ModuleTypeLoaderDelegate, &ToolHostScope::loadServerKitModules, this ), "OnlineLoadBot" ) == nullptr )
+                    return false;
+                utf8* arrProgramArgument[] = { pProgramName, nullptr };
+                _bEngineStarted            = SW_TRUE;
+                if ( _engine.initialize( 1, arrProgramArgument, EngineHostRole::DedicatedServer, &_host ) == false )
+                {
+                    std::fprintf( stderr, "OnlineLoadBot: the engine did not start (dedicated server role)\n" );
+                    return false;
+                }
+                return true;
+            }
 
         private:
-            SubsystemCollection _bootstrap;
+            /** @brief 서버 조립(`--local-server`)이 쓰는 서버 키트 모듈 — 실행 파일이 그 심볼을 쓰지 않아 링커가 import 를 버리므로 이름으로 올린다. */
+            static constexpr const utf8* kArrServerKitModule[] = { "GF_Server_Account", "GF_Server_Chat", "GF_Server_Leaderboard", "GF_Server_LiveOps",
+                                                                   "GF_Server_Matchmaking", "GF_Server_ServerDirectory", "GF_Server_Social" };
+
+            /**
+             * @brief 서버 키트 모듈을 올려 정적 등록자가 서버 조립 레지스트리에 오르게 하고, 그 모듈의 리플렉션 타입을 타입 레지스트리에 올립니다.
+             * @details 하나라도 못 올리면 false 입니다(기동 멈춤). 프로세스가 끝날 때까지 내리지 않는다. 모듈을 올릴 때마다 바로 등록한다 — 전역 등록자 머리가 그 모듈 것만 남게 한다.
+             */
+            [[nodiscard]] bool loadServerKitModules()
+            {
+                if ( _bLoadServerKit == SW_FALSE )
+                    return true;
+                for ( const utf8* pModule : kArrServerKitModule )
+                {
+                    if ( ModuleImageUtil::loadDynamicLibrary( ModuleImageUtil::findModuleLibraryPath( pModule ) ) == nullptr )
+                    {
+                        SW_LOG_ERROR( "OnlineLoadBot: cannot load the server kit module %#", pModule );
+                        return false;
+                    }
+                    engine::registerModuleTypes( pModule );
+                }
+                return true;
+            }
+
+            SubsystemScope _host;
+            Engine         _engine;
+            uint8          _bEngineStarted;
+            uint8          _bLoadServerKit;
         };
 
         /** @brief 명령줄 인자입니다. */
@@ -85,32 +139,15 @@ namespace sw
 
         struct LoadBotMainInternal
         {
-            static constexpr int32  kExitOk               = 0;
-            static constexpr int32  kExitErrorRate        = 1;
-            static constexpr int32  kExitUsage            = 2;
-            static constexpr uint16 kDefaultServerPort    = 7100;
-            static constexpr int32  kMaxPort              = 65535;
-            static constexpr int64  kIdleSleepNs          = 200000; ///< 틱 사이 — 전송을 I/O 스레드 없이 돌리므로 짧게
-            static constexpr int32  kPercentScale         = 100;
-            static constexpr int32  kSpareConnectionCount = 16;
-            /** @brief 서버 조립(`--local-server`)이 쓰는 서버 키트 모듈 — 실행 파일이 그 심볼을 쓰지 않아 링커가 import 를 버리므로 이름으로 올린다. */
-            static constexpr const utf8* kArrServerKitModule[] = { "GF_Server_Account", "GF_Server_Chat", "GF_Server_Leaderboard", "GF_Server_LiveOps",
-                                                                   "GF_Server_Matchmaking", "GF_Server_ServerDirectory", "GF_Server_Social" };
-
-            /** @brief 서버 키트 모듈을 올려 정적 등록자가 서버 조립 레지스트리에 오르게 합니다. 하나라도 못 올리면 false 와 그 이름입니다. 프로세스가 끝날 때까지 내리지 않는다. */
-            [[nodiscard]] static bool loadServerKitModules( string& outError )
-            {
-                for ( const utf8* pModule : kArrServerKitModule )
-                {
-                    if ( ModuleImageUtil::loadDynamicLibrary( ModuleImageUtil::findModuleLibraryPath( pModule ) ) == nullptr )
-                    {
-                        outError = string( "cannot load the server kit module " ) + pModule;
-                        return false;
-                    }
-                }
-                return true;
-            }
-
+            static constexpr int32    kExitOk               = 0;
+            static constexpr int32    kExitErrorRate        = 1;
+            static constexpr int32    kExitUsage            = 2;
+            static constexpr int32    kExitStartup          = 3;
+            static constexpr uint16   kDefaultServerPort    = 7100;
+            static constexpr int32    kMaxPort              = 65535;
+            static constexpr int64    kIdleSleepNs          = 200000; ///< 틱 사이 — 전송을 I/O 스레드 없이 돌리므로 짧게
+            static constexpr int32    kPercentScale         = 100;
+            static constexpr int32    kSpareConnectionCount = 16;
             [[nodiscard]] static bool readValue( string_view argument, string_view key, string& outValue )
             {
                 if ( StringUtil::startsWith( argument, key ) == false )
@@ -208,15 +245,19 @@ int32 main( int32 argc, utf8* argv[] )
 {
     using namespace sw;
     using Internal = LoadBotMainInternal;
-    const ToolProcessScope processScope;
+    ToolHostScope hostScope;
 
     LoadBotOptions options;
     string         error;
     if ( Internal::parseArguments( argc, argv, options, error ) == false )
     {
-        SW_LOG_ERROR( "OnlineLoadBot: %#", error );
+        // 엔진(로거)을 세우기 전이다 — 표준 오류로 알린다. 엔진이 키트 모듈을 올릴지(`--local-server`)를 인자가 정하므로 인자를 먼저 읽는다.
+        std::fprintf( stderr, "OnlineLoadBot: %s\n", error.c_str() );
         return Internal::kExitUsage;
     }
+    if ( hostScope.initialize( argv[0], options._bLocalServer == SW_TRUE ) == false )
+        return Internal::kExitStartup;
+
     LoadBotScenario scenario;
     if ( LoadBotScenario::loadFile( options._scenarioPath, scenario, error ) == false )
     {
@@ -237,11 +278,6 @@ int32 main( int32 argc, utf8* argv[] )
     LoadBotLocalServer           localServer;
     if ( options._bLocalServer == SW_TRUE )
     {
-        if ( Internal::loadServerKitModules( error ) == false )
-        {
-            SW_LOG_ERROR( "OnlineLoadBot: %#", error );
-            return Internal::kExitUsage;
-        }
         serverTransport = StreamTransportFactory::createPlatformTransport();
         LoadBotLocalServerSettings serverSettings;
         serverSettings._port               = options._localServerPort;
