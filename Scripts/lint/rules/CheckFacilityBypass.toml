@@ -2,7 +2,7 @@
 
 # 전체 훑기의 기준선 — 규칙별로 지금 있는 건수다(docs/plans/ReuseExistingFacilities.md 의 이전 단위가 옮기며 낮춘다). 늘면 실패한다(커밋 훅은 추가한 줄만 본다).
 [baseline]
-stdout = 15
+stdout = 10
 random = 6
 fileOpen = 2
 processSpawn = 1
@@ -14,7 +14,9 @@ numberParse = 7
 "stdout:Source/Core/LogSink/*" = "콘솔 · 파일 로그 싱크 — 로그 줄이 실제로 나가는 자리"
 "stdout:Source/Core/Common/Macros.*" = "SW_ASSERT · SW_LOW_LEVEL_* 의 구현 — Common 은 Log 보다 낮은 티어라 로거를 못 본다(CheckCoreLayers)"
 "stdout:Source/Core/Diagnostics/CrashContext.cpp" = "크래시 기록 — 비동기 로거는 크래시 직전 줄을 잃으므로 stderr 로 바로 낸다"
-"stdout:Test/TestFramework/*" = "테스트 실행기의 보고 출력 — CTest · CI 가 표준 출력을 읽는다"
+"stdout:Source/Core/Container/formatString.h" = "로거가 쓰는 포매터 자신 — 서식 오류를 로그로 알리면 같은 포매터로 되돌아 들어간다"
+"stdout:Source/Core/Diagnostics/MemoryProfiler.cpp" = "CRT 누수 검사의 보고 — 로그를 쓰면 할당이 생겨 재는 힙이 바뀐다"
+"stdout:Test/TestFramework/*" ="테스트 실행기의 보고 출력 — CTest · CI 가 표준 출력을 읽는다"
 "random:Source/Core/Math/MathUtil.cpp" = "MathUtil::getRandomBits64 의 엔진 생성기(mt19937_64) 자리 — <random> 을 모든 TU 가 읽지 않게 여기 둔다"
 "fileOpen:Source/Core/File/PlatformFileUtil.cpp" = "FileUtil 의 플랫폼 구현 — 파일을 여는 유일한 자리"
 "processSpawn:Source/Core/Process/Posix/PosixProcess.cpp" = "sw::Process 의 POSIX 구현(fork · exec)"
