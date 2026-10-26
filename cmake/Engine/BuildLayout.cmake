@@ -122,6 +122,7 @@ endif()
 # IPO — 전역 CMAKE_INTERPROCEDURAL_OPTIMIZATION (Release)
 # ------------------------------------------------------------------------------
 set(sw_ipo_supported FALSE)
+include("${CMAKE_CURRENT_LIST_DIR}/../Config/JsonValue.cmake")
 
 # `SW_ENABLE_LTO` 가 여기도 걸린다 — 이 전역 IPO 와 Shipping LTO 는 한 스위치다(빼면 OFF 를 줘도 Release 가 LTO 로 간다).
 if(SW_ENABLE_LTO AND (CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo" OR CMAKE_BUILD_TYPE STREQUAL "MinSizeRel"))
@@ -133,11 +134,21 @@ if(SW_ENABLE_LTO AND (CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE ST
 
 		# ThinLTO 링크 캐시 — 링크마다 최적화·코드 생성을 처음부터 다시 돌지 않고, 입력 비트코드와 옵션이 같은 모듈의 결과를 재사용한다(lld 가 모듈별 해시로 찾는다).
 		# 실행 파일 · DLL 여덟 개가 같은 엔진 정적 라이브러리를 링크하므로 한 폴더를 같이 쓴다(lld 의 캐시 쓰기는 원자적이라 동시 링크가 안전하다).
-		# 폴더는 빌드 폴더 아래라 `.gitignore`(/build/)가 가린다. 빌드 폴더를 지우면 같이 사라지지만 `ninja clean` 은 지우지 않으므로 빈 캐시로 재려면 폴더를 지운다.
+		# 폴더는 빌드 폴더 아래라 `.gitignore`(/build/)가 가린다. 빌드 폴더를 지우면 같이 사라지지만 `ninja clean` 은 지우지 않으므로 콜드 측정은 `Scripts/dev/RunBuildBaseline.py full` 이 `BuildCaches.json` 의 목록으로 지운다.
 		# 크기 상한 · 만료는 아래 정책이 정한다(lld 기본은 남은 디스크의 75 % · 만료 1 주일 · 정리 간격 1 시간 — 크기만 8 GB 로 조인다).
 		# clang 은 LLD 가 필수라(`Clang.cmake`) 이 옵션을 알아듣는다. 다른 컴파일러(IPO 가 되더라도)에는 주지 않는다.
 		if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-			set(sw_lto_cache_dir "${CMAKE_BINARY_DIR}/LTOCache")
+			# 캐시 폴더 이름은 `BuildCaches.json` 이 정한다 — 콜드 측정(`RunBuildBaseline.py`)이 같은 파일로 이 폴더를 지운다. 빌드 폴더 밖이면 구성을 세운다.
+			set(sw_build_caches_file "${CMAKE_CURRENT_LIST_DIR}/../Config/BuildCaches.json")
+			set_property(DIRECTORY "${CMAKE_SOURCE_DIR}" APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${sw_build_caches_file}")
+			sw_requireJsonValue(sw_lto_cache_base "${sw_build_caches_file}" cold_clear lto_link_cache base)
+			sw_requireJsonValue(sw_lto_cache_name "${sw_build_caches_file}" cold_clear lto_link_cache path)
+
+			if(NOT sw_lto_cache_base STREQUAL "build")
+				message(FATAL_ERROR "[BuildConfig] ${sw_build_caches_file}: cold_clear.lto_link_cache.base must be 'build' (got '${sw_lto_cache_base}')")
+			endif()
+
+			set(sw_lto_cache_dir "${CMAKE_BINARY_DIR}/${sw_lto_cache_name}")
 			set(sw_lto_cache_policy "cache_size_bytes=8g:prune_after=168h")
 
 			# 링크 풀(`BuildOptions.cmake` 5 — 코어 수 / 4, 2 ~ 4 개)이 동시에 여는 링크 수를 정한다. ThinLTO 백엔드는 링크마다 코어 수만큼 스레드를 띄우므로

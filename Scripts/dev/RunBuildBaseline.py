@@ -9,7 +9,7 @@
 
 | 시나리오 | 무엇을 재나 | 어디서 |
 | --- | --- | --- |
-| `full` | `clean` 뒤 기본 타깃 전체 | `build/<프리셋>-Baseline`(따로 구성) |
+| `full` | `clean` + 캐시 지우기(`cmake/Config/BuildCaches.json` 의 `cold_clear`: 링크 캐시 · 쿠킹 기록 · DDC …) 뒤 기본 타깃 전체 | `build/<프리셋>-Baseline`(따로 구성) |
 | `header` | 헤더 하나의 mtime 을 올린 뒤 증분 빌드(`--header`, 기본 `Core/Container/vector.h`) | 같은 폴더 |
 | `cpp` | `.cpp` 하나의 mtime 을 올린 뒤 증분 빌드(`--source`) | 같은 폴더 |
 | `worktree` | 새 워크트리(같은 커밋)에서 구성 + 빌드 | `<워크트리 루트>/baseline-bench`, 첫 회는 데우기라 세지 않는다 |
@@ -39,6 +39,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
+from common.BuildCaches import clearColdCaches  # noqa: E402
 from common.BuildTree import BuildTree, kTestBuildTargets  # noqa: E402
 from common.Host import runGit  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
@@ -141,6 +142,9 @@ def measureLocalScenarios(repositoryRoot: Path, preset: str, listScenario: list[
         result = ScenarioResult(preset, "full")
         for repeat in range(args.repeat):
             runTimed(tree.buildCommand(["clean"]))
+            # `clean` 은 출력이 아닌 캐시(링크 · 쿠킹 기록 · DDC)를 지우지 않는다 — 목록(`cmake/Config/BuildCaches.json`)의 것을 지워 콜드로 만든다. 목록을 못 읽으면 멈춘다.
+            for removed in clearColdCaches(tree.path, repositoryRoot):
+                print(f"[Baseline] 캐시를 지웠다: {removed}", flush=True)
             result.listSecond.append(runTimed(buildCommand))
             print(f"[Baseline] {preset} full #{repeat + 1}: {result.listSecond[-1]:.1f} s", flush=True)
         listResult.append(result)
