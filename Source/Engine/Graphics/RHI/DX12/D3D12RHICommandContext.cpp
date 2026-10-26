@@ -59,8 +59,9 @@ namespace sw
         ID3D12CommandAllocator* pAllocator = _pDevice->currentAllocator();
         if ( pAllocator == nullptr || _pCmdList == nullptr )
             return;
-        pAllocator->Reset();
-        commandListForRecord()->Reset( pAllocator, nullptr );
+        // 얼로케이터 · 리스트 리셋이 실패하면(GPU 가 아직 쓰는 얼로케이터, 장치 분실) 닫힌 리스트에 기록하게 된다 — 이어 갈 수 없어 멈춘다.
+        requireHr( pAllocator->Reset(), "ID3D12CommandAllocator::Reset" );
+        requireHr( commandListForRecord()->Reset( pAllocator, nullptr ), "ID3D12GraphicsCommandList::Reset" );
         _pState->_bRecording             = SW_TRUE;
         _pState->_boundNativeGraphicsPSO = 0;                     // 새 리스트에는 아직 아무 PSO 도 안 걸렸다. 캐시를 무효로 한다.
         _pState->_arrSlotState[0]        = D3D12SlotTableState{}; // 새 리스트에는 슬롯 테이블도 없다. 첫 드로우가 다시 굳힌다.

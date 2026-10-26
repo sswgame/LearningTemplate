@@ -568,8 +568,14 @@ namespace sw
                     return DxcOutcome::NoOutput;
 
                 // 기본 처리기를 연 파일을 적는 처리기로 감싼다. 소유권은 includeHandler 로 넘기고, 기록은 pIncludeRecorder 로 읽는다(둘 다 이 호출 안에서만 산다).
+                // 기본 처리기가 없으면 #include 가 모두 실패해 원인이 엉뚱한 "파일 없음" 으로 보인다 — 여기서 이유를 남기고 멈춘다.
                 DxcComPtr<IDxcIncludeHandler> defaultIncludeHandler;
-                utils->CreateDefaultIncludeHandler( dxcAddressOf( defaultIncludeHandler ) );
+                const HRESULT                 hrInclude = utils->CreateDefaultIncludeHandler( dxcAddressOf( defaultIncludeHandler ) );
+                if ( FAILED( hrInclude ) || defaultIncludeHandler == nullptr )
+                {
+                    SW_LOG_ERROR( "DXC CreateDefaultIncludeHandler failed: 0x%#", hrInclude );
+                    return DxcOutcome::NoOutput;
+                }
                 RecordingDxcInclude*          pIncludeRecorder = make_unique<RecordingDxcInclude>( std::move( defaultIncludeHandler ) ).release();
                 DxcComPtr<IDxcIncludeHandler> includeHandler;
                 includeHandler.Attach( pIncludeRecorder );

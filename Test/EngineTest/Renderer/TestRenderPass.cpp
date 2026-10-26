@@ -31,6 +31,7 @@
 #include "Engine/Renderer/Graph/RenderGraph.h"
 #include "Engine/Renderer/Module/ModuleRenderPassRegistry.h"
 #include "Engine/Renderer/Pipeline/RenderPassAsset.h"
+#include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAssetCache.h"
@@ -509,6 +510,39 @@ SW_TEST_CASE( RenderPassTest, GPUTimestampPassCapacityMatchesSlotLayout )
     SW_EXPECT_EQUAL( 0u, sw::FrameRendererUtil::countUntimedGPUPass( kCapacity ) );
     SW_EXPECT_EQUAL( 1u, sw::FrameRendererUtil::countUntimedGPUPass( kCapacity + 1u ) );
     SW_EXPECT_EQUAL( 6u, sw::FrameRendererUtil::countUntimedGPUPass( 36 ) );
+}
+
+/**
+ * @brief [RenderPassTest] 입력 계약은 에뮬 백엔드(DX11 · GL)의 같은 텍스처 슬롯을 나눠 쓰는 두 역할을 함께 읽지 않는다
+ * @details 슬롯 표는 getEmulatedTextureSlot 하나다. 계약이 같은 슬롯의 두 역할을 허락하면 그 패스는 실행이 하나만 걸어 다른 하나가
+ *          조용히 빠진다(파이프라인 로드도 같은 규칙으로 거절하지만, 계약 표 자체가 그 조합을 허락하지 않아야 XML 로 쓸 길이 없다).
+ */
+SW_TEST_CASE( RenderPassTest, InputContractsNeverShareAnEmulatedTextureSlot )
+{
+    for ( uint32 typeIndex = 1; typeIndex < sw::kRenderPassTypeCount; ++typeIndex )
+    {
+        const sw::RenderPassInputSignature* pContract = sw::findRenderPassInputSignature( static_cast<sw::RenderPassType>( typeIndex ) );
+        if ( pContract == nullptr )
+            continue;
+        sw::vector<sw::RenderPassInputRole> listRole;
+        for ( uint32 index = 0; index < pContract->_requiredCount; ++index )
+        {
+            listRole.push_back( pContract->_arrRequired[index] );
+        }
+        for ( uint32 index = 0; index < pContract->_optionalCount; ++index )
+        {
+            listRole.push_back( pContract->_arrOptional[index] );
+        }
+        for ( size_t first = 0; first < listRole.size(); ++first )
+        {
+            for ( size_t second = first + 1; second < listRole.size(); ++second )
+            {
+                const bool bShared = listRole[first] != listRole[second] &&
+                                     sw::getEmulatedTextureSlot( listRole[first] ) == sw::getEmulatedTextureSlot( listRole[second] );
+                SW_EXPECT_FALSE_MSG( bShared, ( "같은 에뮬 슬롯의 두 역할을 읽는 패스 타입 " + sw::to_string( typeIndex ) ).c_str() );
+            }
+        }
+    }
 }
 
 /**

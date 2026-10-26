@@ -646,16 +646,23 @@ namespace sw
             return 0;
         }
 
-        vkBindBufferMemory( _device, buffer, memory, 0 );
-
-        if ( pInitialData != nullptr )
+        // 메모리를 붙이지 못한 버퍼 · 초기 값을 쓰지 못한 버퍼는 돌려주지 않는다 — 빈 버퍼로 그리면 조용히 0 을 읽는다.
+        bool bReady = isVkSuccess( vkBindBufferMemory( _device, buffer, memory, 0 ), "vkBindBufferMemory" );
+        if ( bReady && pInitialData != nullptr )
         {
             void* pMapped{ nullptr };
-            if ( vkMapMemory( _device, memory, 0, sizeBytes, 0, &pMapped ) == VK_SUCCESS && pMapped != nullptr )
+            bReady = isVkSuccess( vkMapMemory( _device, memory, 0, sizeBytes, 0, &pMapped ), "vkMapMemory (initial data)" ) && pMapped != nullptr;
+            if ( bReady )
             {
                 Memory::copy( pMapped, pInitialData, sizeBytes );
                 vkUnmapMemory( _device, memory );
             }
+        }
+        if ( bReady == false )
+        {
+            vkDestroyBuffer( _device, buffer, nullptr );
+            vkFreeMemory( _device, memory, nullptr );
+            return 0;
         }
 
         VulkanBufferRecord record{};

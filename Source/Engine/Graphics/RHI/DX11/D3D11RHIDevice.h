@@ -12,6 +12,7 @@
 
 #include "Engine/Common/EnginePlatformHeaders.h"
 #include "Engine/Config/RHIBackendType.h"
+#include "Engine/Graphics/RHI/DX/RHIDxResultCheck.h"
 #include "Engine/Graphics/RHI/DX11/D3D11ImmediateContext.h"
 #include "Engine/Graphics/RHI/DX11/D3D11RHISwapChain.h"
 #include "Engine/Graphics/RHI/IRHIContextThreadBinding.h"

@@ -120,7 +120,8 @@ namespace sw
             return;
         }
 
-        _pActiveFrameList->Close();
+        // Close 실패는 기록 중 잘못된 명령이 있었다는 뜻이다 — 제출하면 장치가 제거되므로 이유와 함께 멈춘다(아래 Close 도 같다).
+        requireHr( _pActiveFrameList->Close(), "ID3D12GraphicsCommandList::Close (frame segment)" );
         releaseOnlineBlocksDeferred( _frameStreamState );
         _listPendingSubmit.push_back( _pActiveFrameList );
         _listPendingSubmit.push_back( pList );
@@ -172,7 +173,7 @@ namespace sw
         {
             if ( slot._bListOpen == SW_FALSE || slot._copyCommandList == nullptr )
                 continue;
-            slot._copyCommandList->Close();
+            requireHr( slot._copyCommandList->Close(), "ID3D12GraphicsCommandList::Close (structured upload)" );
             slot._bListOpen = SW_FALSE;
             // 이 얼로케이터의 기록이 모두 끝났다고 믿어도 되는 펜스는 **이 제출 뒤 첫 Signal** 이다. 주의: 리스트를 **열 때** 적으면, 프레임 제출 뒤 ·
             // Signal 전에 연 복사(다음 프레임에 제출된다)가 한 프레임 이른 펜스를 달고, 세 프레임 뒤 그 펜스만 기다리고 얼로케이터를 Reset 한다 —
@@ -398,7 +399,9 @@ namespace sw
         entry._allocator->SetName( arrName );
         swprintf_s( arrName, L"PoolList%u", entryIndex );
         entry._list->SetName( arrName );
-        entry._list->Close();
+        // 빈 리스트 닫기가 실패하면 장치가 쓸 수 없는 상태다 — 빈 쌍을 돌려줘 부르는 쪽이 생성 실패로 다룬다.
+        if ( isHrSuccess( entry._list->Close(), "ID3D12GraphicsCommandList::Close (pool entry)" ) == false )
+            entry = D3D12CommandListEntry{};
         return entry;
     }
 
@@ -617,7 +620,7 @@ namespace sw
                                                              _timestampReadback.Get(), sizeof( uint64 ) * ( base + runStart ) );
                     }
                 }
-                _pActiveFrameList->Close();
+                requireHr( _pActiveFrameList->Close(), "ID3D12GraphicsCommandList::Close (end frame)" );
                 _listPendingSubmit.push_back( _pActiveFrameList );
                 _frameStreamState._bRecording = SW_FALSE;
                 releaseOnlineBlocksDeferred( _frameStreamState );

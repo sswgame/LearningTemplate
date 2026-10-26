@@ -5,6 +5,7 @@
 #include "Core/Common/PlatformOsHeaders.h"
 
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
+#include "Engine/Graphics/RHI/Vulkan/VulkanResultCheck.h"
 
 #include <vulkan/vulkan.h>
 
@@ -76,7 +77,8 @@ namespace sw
         if ( _entry._buffer == VK_NULL_HANDLE )
             return;
 
-        vkResetCommandBuffer( _entry._buffer, 0 );
+        // 리셋 · 시작 · 끝이 실패하면(장치 분실 · 메모리 부족) 이 리스트로 기록할 길이 없다 — 이어 가면 다음 제출이 검증 오류 · 크래시라 멈춘다.
+        requireVk( vkResetCommandBuffer( _entry._buffer, 0 ), "vkResetCommandBuffer (command list)" );
         // 이 쌍의 슬롯 세트들은 GPU 가 다 읽었다(재사용 풀은 펜스 통과분만 담는다). 커맨드 버퍼처럼 풀 그룹도 통째로 비운다.
         if ( _entry._pDescriptorPoolSet != nullptr )
             _pDevice->resetDescriptorPoolSet( *_entry._pDescriptorPoolSet );
@@ -84,8 +86,7 @@ namespace sw
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-        if ( vkBeginCommandBuffer( _entry._buffer, &beginInfo ) != VK_SUCCESS )
-            return;
+        requireVk( vkBeginCommandBuffer( _entry._buffer, &beginInfo ), "vkBeginCommandBuffer (command list)" );
 
         _bEntryDirty = SW_TRUE;
 
@@ -115,6 +116,6 @@ namespace sw
             vkCmdEndRenderPass( _entry._buffer );
             _state._bRenderPassActive = SW_FALSE;
         }
-        vkEndCommandBuffer( _entry._buffer );
+        requireVk( vkEndCommandBuffer( _entry._buffer ), "vkEndCommandBuffer (command list)" );
     }
 } // namespace sw

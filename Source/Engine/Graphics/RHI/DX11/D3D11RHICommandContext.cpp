@@ -671,8 +671,9 @@ namespace sw
         if ( _bAnnotationQueried == false )
         {
             _bAnnotationQueried = true;
-            if ( _pContext != nullptr )
-                _pContext->QueryInterface( IID_PPV_ARGS( _annotation.GetAddressOf() ) );
+            // 주석 인터페이스는 선택이다(디버그 도구가 없으면 없다) — 실패는 "이벤트 마커를 남기지 않는다" 이고 오류가 아니다.
+            if ( _pContext != nullptr && FAILED( _pContext->QueryInterface( IID_PPV_ARGS( _annotation.GetAddressOf() ) ) ) )
+                _annotation.Reset();
         }
         return _annotation.Get();
     }

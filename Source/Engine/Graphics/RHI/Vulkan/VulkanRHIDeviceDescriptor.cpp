@@ -239,13 +239,14 @@ namespace sw
             allocMem.memoryTypeIndex = memoryTypeIndex;
             if ( vkAllocateMemory( _device, &allocMem, nullptr, &_dummyUBOMemory ) != VK_SUCCESS )
                 return false;
-            vkBindBufferMemory( _device, _dummyUBO, _dummyUBOMemory, 0 );
+            if ( isVkSuccess( vkBindBufferMemory( _device, _dummyUBO, _dummyUBOMemory, 0 ), "vkBindBufferMemory (dummy UBO)" ) == false )
+                return false;
+            // 빈 슬롯이 읽는 값이다 — 0 으로 채우지 못하면 쓰레기를 읽으므로 초기화를 실패시킨다.
             void* pMapped{ nullptr };
-            if ( vkMapMemory( _device, _dummyUBOMemory, 0, kDummyUboSize, 0, &pMapped ) == VK_SUCCESS && pMapped != nullptr )
-            {
-                Memory::set( pMapped, 0, static_cast<size_t>( kDummyUboSize ) );
-                vkUnmapMemory( _device, _dummyUBOMemory );
-            }
+            if ( isVkSuccess( vkMapMemory( _device, _dummyUBOMemory, 0, kDummyUboSize, 0, &pMapped ), "vkMapMemory (dummy UBO)" ) == false || pMapped == nullptr )
+                return false;
+            Memory::set( pMapped, 0, static_cast<size_t>( kDummyUboSize ) );
+            vkUnmapMemory( _device, _dummyUBOMemory );
         }
 
         return true;
@@ -289,7 +290,8 @@ namespace sw
         allocMem.memoryTypeIndex = memoryTypeIndex;
         if ( vkAllocateMemory( _device, &allocMem, nullptr, &_bindlessDummyMemory ) != VK_SUCCESS )
             return false;
-        vkBindImageMemory( _device, _bindlessDummyImage, _bindlessDummyMemory, 0 );
+        if ( isVkSuccess( vkBindImageMemory( _device, _bindlessDummyImage, _bindlessDummyMemory, 0 ), "vkBindImageMemory (bindless dummy image)" ) == false )
+            return false;
 
         VkImageViewCreateInfo viewInfo{};
         viewInfo.sType                       = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -448,7 +450,7 @@ namespace sw
         for ( VkDescriptorPool pool : poolSet._listPool )
         {
             if ( pool != VK_NULL_HANDLE )
-                vkResetDescriptorPool( _device, pool, 0 );
+                requireVk( vkResetDescriptorPool( _device, pool, 0 ), "vkResetDescriptorPool" ); // 사양상 늘 VK_SUCCESS — 어기면 드라이버 결함이라 멈춘다
         }
         poolSet._cursor = 0;
     }

@@ -524,7 +524,12 @@ namespace sw
             return 0;
         }
 
-        vkBindImageMemory( _pDevice->_device, record._image, record._memory, 0 );
+        if ( isVkSuccess( vkBindImageMemory( _pDevice->_device, record._image, record._memory, 0 ), "vkBindImageMemory (Texture2D)" ) == false )
+        {
+            vkDestroyImage( _pDevice->_device, record._image, nullptr );
+            vkFreeMemory( _pDevice->_device, record._memory, nullptr );
+            return 0;
+        }
 
         VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT;
         if ( desc._bIsDepthStencil != SW_FALSE )

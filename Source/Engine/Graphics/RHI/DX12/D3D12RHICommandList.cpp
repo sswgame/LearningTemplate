@@ -88,8 +88,9 @@ namespace sw
 
     void D3D12RHICommandList::endCommandList()
     {
+        // Close 실패는 기록 중 잘못된 명령이 있었다는 뜻이다 — 그 리스트를 제출하면 장치가 제거되므로 이유와 함께 멈춘다.
         if ( _entry._list != nullptr )
-            _entry._list->Close();
+            requireHr( _entry._list->Close(), "ID3D12GraphicsCommandList::Close (command list)" );
         // 이 리스트가 확정한 슬롯 테이블(온라인 블록)은 제출 뒤 GPU 가 읽는다. 얼로케이터처럼 펜스 뒤에 돌려준다.
         if ( _pDevice != nullptr )
             _pDevice->releaseOnlineBlocksDeferred( _state );

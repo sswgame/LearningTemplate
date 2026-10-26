@@ -2,6 +2,8 @@
 
 #include "Engine/Graphics/RHI/DX11/D3D11RHISwapChain.h"
 
+#include "Engine/Graphics/RHI/DX/RHIDxResultCheck.h"
+
 #if defined( SW_PLATFORM_WINDOWS )
 
 namespace sw
@@ -55,7 +57,9 @@ namespace sw
         if ( backBuffer == nullptr )
             return;
 
-        pDevice->CreateRenderTargetView( backBuffer.Get(), nullptr, _backBufferRtv.GetAddressOf() );
+        // 뷰를 못 만들면 _backBufferRtv 가 비어 있고 백버퍼 패스가 대상 없이 열린다 — 오류로 남긴다(장치 분실이면 다음 Present 가 분실로 처리한다).
+        if ( isHrSuccess( pDevice->CreateRenderTargetView( backBuffer.Get(), nullptr, _backBufferRtv.GetAddressOf() ), "CreateRenderTargetView (back buffer)" ) == false )
+            _backBufferRtv.Reset();
     }
 
     void D3D11RHISwapChain::releaseBackBufferRtv()

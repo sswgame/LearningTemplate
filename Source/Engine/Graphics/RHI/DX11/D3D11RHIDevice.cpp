@@ -282,9 +282,10 @@ namespace sw
 
     RHIBufferHandle D3D11RHIDevice::storeBufferWithSrv( Microsoft::WRL::ComPtr<ID3D11Buffer> buffer, const D3D11_SHADER_RESOURCE_VIEW_DESC& srvDesc )
     {
+        // 뷰를 만들지 못한 버퍼는 등록하지 않는다 — 뷰 없이 등록하면 셰이더가 그 버퍼를 조용히 0 으로 읽는다.
         Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> srv;
-        if ( buffer != nullptr )
-            _device->CreateShaderResourceView( buffer.Get(), &srvDesc, srv.GetAddressOf() );
+        if ( buffer == nullptr || isHrSuccess( _device->CreateShaderResourceView( buffer.Get(), &srvDesc, srv.GetAddressOf() ), "CreateShaderResourceView (buffer)" ) == false )
+            return 0;
         return storeBuffer( std::move( buffer ), std::move( srv ) );
     }
 

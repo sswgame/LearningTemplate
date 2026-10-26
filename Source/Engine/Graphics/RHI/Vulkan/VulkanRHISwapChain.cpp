@@ -200,13 +200,16 @@ namespace sw
     bool VulkanRHISwapChain::create( VkPhysicalDevice physicalDevice, VkDevice device, uint32 width, uint32 height )
     {
         _bSurfaceEmpty = false;
-        VkSurfaceCapabilitiesKHR capabilities;
-        vkGetPhysicalDeviceSurfaceCapabilitiesKHR( physicalDevice, _surface, &capabilities );
+        // 서피스 질의가 실패하면(서피스 분실 · 메모리 부족) 쓰레기 능력 · 빈 포맷 목록으로 스왑체인을 고르지 않고 실패로 돌려준다(재생성 경로가 다시 부른다).
+        VkSurfaceCapabilitiesKHR capabilities{};
+        if ( isVkSuccess( vkGetPhysicalDeviceSurfaceCapabilitiesKHR( physicalDevice, _surface, &capabilities ), "vkGetPhysicalDeviceSurfaceCapabilitiesKHR" ) == false )
+            return false;
 
-        uint32 formatCount;
-        vkGetPhysicalDeviceSurfaceFormatsKHR( physicalDevice, _surface, &formatCount, nullptr );
-        vector<VkSurfaceFormatKHR> formats( formatCount );
-        vkGetPhysicalDeviceSurfaceFormatsKHR( physicalDevice, _surface, &formatCount, formats.data() );
+        vector<VkSurfaceFormatKHR> listFormat;
+        const bool                 bFormatsRead = enumerateVk( listFormat, "vkGetPhysicalDeviceSurfaceFormatsKHR", [physicalDevice, this]( uint32* pCount, VkSurfaceFormatKHR* pData )
+                        { return vkGetPhysicalDeviceSurfaceFormatsKHR( physicalDevice, _surface, pCount, pData ); } );
+        if ( bFormatsRead == false || listFormat.empty() )
+            return false;
 
         // 백버퍼 포맷은 요청값(constant::kBackBufferFormat)이지 보장이 아니다. 서피스가 B8G8R8A8 만 줄 수 있다.
         // 언리얼 FVulkanSwapChain 과 같은 규칙이다: 요청 → 대체 → 첫 번째 순으로 고르고, 채택한 값을 반환한다
@@ -215,11 +218,11 @@ namespace sw
         const VkFormat requestedFormat = VulkanRHIDeviceInternal::toVulkanTextureFormat( _requestedFormat );
         const VkFormat arrPreferred[]  = { requestedFormat, VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM };
 
-        VkSurfaceFormatKHR surfaceFormat   = formats[0];
+        VkSurfaceFormatKHR surfaceFormat   = listFormat[0];
         bool               bFoundPreferred = false;
         for ( const VkFormat preferred : arrPreferred )
         {
-            for ( const VkSurfaceFormatKHR& availableFormat : formats )
+            for ( const VkSurfaceFormatKHR& availableFormat : listFormat )
             {
                 if ( availableFormat.format == preferred && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR )
                 {
@@ -244,11 +247,10 @@ namespace sw
         VkPresentModeKHR presentMode = VK_PRESENT_MODE_FIFO_KHR;
         if ( _bRequestedVSync == false )
         {
-            uint32 presentModeCount{ 0 };
-            vkGetPhysicalDeviceSurfacePresentModesKHR( physicalDevice, _surface, &presentModeCount, nullptr );
-            vector<VkPresentModeKHR> listPresentMode( presentModeCount );
-            if ( presentModeCount > 0 )
-                vkGetPhysicalDeviceSurfacePresentModesKHR( physicalDevice, _surface, &presentModeCount, listPresentMode.data() );
+            vector<VkPresentModeKHR> listPresentMode;
+            if ( enumerateVk( listPresentMode, "vkGetPhysicalDeviceSurfacePresentModesKHR", [physicalDevice, this]( uint32* pCount, VkPresentModeKHR* pData )
+            { return vkGetPhysicalDeviceSurfacePresentModesKHR( physicalDevice, _surface, pCount, pData ); } ) == false )
+                return false;
 
             for ( const VkPresentModeKHR mode : listPresentMode )
             {
@@ -341,9 +343,9 @@ namespace sw
         if ( vkCreateSwapchainKHR( device, &createInfo, nullptr, &_swapChain ) != VK_SUCCESS )
             return false;
 
-        vkGetSwapchainImagesKHR( device, _swapChain, &imageCount, nullptr );
-        _listImage.resize( imageCount );
-        vkGetSwapchainImagesKHR( device, _swapChain, &imageCount, _listImage.data() );
+        if ( enumerateVk( _listImage, "vkGetSwapchainImagesKHR", [device, this]( uint32* pCount, VkImage* pData )
+        { return vkGetSwapchainImagesKHR( device, _swapChain, pCount, pData ); } ) == false )
+            return false;
 
         _imageFormat            = static_cast<uint32>( surfaceFormat.format );
         _actualBackBufferFormat = ( surfaceFormat.format == requestedFormat )

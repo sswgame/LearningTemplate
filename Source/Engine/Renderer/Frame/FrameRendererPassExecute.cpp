@@ -1065,22 +1065,32 @@ namespace sw
         if ( material != kInvalidDescriptorIndex )
             context._pCmd->bindShaderResource( material, shaderslot::kEngineGBufferMaterialTexture );
 
-        // 슬롯 테이블은 binding.hlsli 의 Bindless::sampleIndex 와 같아야 한다: [shadow|source, albedo|ao|light2dCookie, normal|bloom|autoExposure, depth|shadow].
-        // 한 슬롯을 나눠 쓰는 것들은 같은 패스에서 함께 읽히지 않는다(알베도 · 노멀은 Lighting · SSAO, AO · 반해상도 블룸은 Bloom, 쿠키는 빛 받는 스프라이트 — 2D 패스엔 알베도 · AO 가 없다,
-        // 자동 노출은 톤맵하는 패스 — Tonemap · 후처리 체인 Present 는 노멀 · 반해상도 블룸을 읽지 않는다).
-        const RHIDescriptorIndex slot0 = ( shadow != kInvalidDescriptorIndex ) ? shadow : source;
-        const RHIDescriptorIndex slot1 = ( albedo != kInvalidDescriptorIndex ) ? albedo : ( ao != kInvalidDescriptorIndex ? ao : cookie );
-        const RHIDescriptorIndex slot2 = ( normal != kInvalidDescriptorIndex ) ? normal : ( bloom != kInvalidDescriptorIndex ? bloom : expo );
-        const RHIDescriptorIndex slot3 = ( depth != kInvalidDescriptorIndex ) ? depth : shadow;
+        // 슬롯 표는 getEmulatedTextureSlot(RenderPassInputSignature.h) 하나다: [source|shadow, albedo|ao(+cookie · TAA 이력), normal|bloom(+autoExposure), depth].
+        // 선언한 입력이 같은 슬롯의 두 역할을 함께 읽는 파이프라인은 로드(RenderPipelineAsset::validate)가 거절했다. 그래서 여기서는 슬롯마다
+        // 등록된 것이 하나뿐이라는 것이 불변식이다 — 우선순위로 하나를 고르지 않는다(둘이면 하나가 조용히 빠진다). 코드가 거는 쿠키 · 노출 ·
+        // TAA 이력은 선언 검증 밖이라 이 단언이 지킨다.
+        auto pickOne = []( RHIDescriptorIndex first, RHIDescriptorIndex second, RHIDescriptorIndex third ) -> RHIDescriptorIndex
+        {
+            const uint32 presentCount = ( first != kInvalidDescriptorIndex ? 1u : 0u ) + ( second != kInvalidDescriptorIndex ? 1u : 0u ) +
+                                        ( third != kInvalidDescriptorIndex ? 1u : 0u );
+            SW_ASSERT( presentCount <= 1 );
+            if ( first != kInvalidDescriptorIndex )
+                return first;
+            return second != kInvalidDescriptorIndex ? second : third;
+        };
+        const RHIDescriptorIndex slot0 = pickOne( source, shadow, kInvalidDescriptorIndex );
+        const RHIDescriptorIndex slot1 = pickOne( albedo, ao, cookie );
+        const RHIDescriptorIndex slot2 = pickOne( normal, bloom, expo );
 
-        if ( shadow != kInvalidDescriptorIndex || source != kInvalidDescriptorIndex )
+        if ( slot0 != kInvalidDescriptorIndex )
             context._pCmd->bindShaderResource( slot0, 0 );
         if ( slot1 != kInvalidDescriptorIndex )
             context._pCmd->bindShaderResource( slot1, 1 );
         if ( slot2 != kInvalidDescriptorIndex )
             context._pCmd->bindShaderResource( slot2, 2 );
-        if ( depth != kInvalidDescriptorIndex || shadow != kInvalidDescriptorIndex )
-            context._pCmd->bindShaderResource( slot3, 3 );
+        // t3 은 깊이만이다. 깊이가 없을 때 그림자 맵을 대신 걸던 것은 지웠다 — 셰이더는 그림자를 t0 에서만 읽는다.
+        if ( depth != kInvalidDescriptorIndex )
+            context._pCmd->bindShaderResource( depth, 3 );
     }
 
     FrameRenderer::PresentTarget FrameRenderer::resolvePresentTarget() const

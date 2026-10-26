@@ -225,7 +225,9 @@ namespace sw
         if ( FAILED( _device->CreateCommandList( 0, D3D12_COMMAND_LIST_TYPE_DIRECT, _arrCommandAllocator[0].Get(), nullptr, IID_PPV_ARGS( _commandList.GetAddressOf() ) ) ) )
             return false;
 
-        _commandList->Close();
+        // 갓 만든 리스트는 열린 채라 닫아 둔다(첫 프레임이 Reset 으로 연다). 빈 리스트 닫기가 실패하면 장치가 쓸 수 없는 상태다.
+        if ( isHrSuccess( _commandList->Close(), "ID3D12GraphicsCommandList::Close (initial)" ) == false )
+            return false;
         _frameStreamState._bRecording = SW_FALSE;
         _frameRing.reset();
 
@@ -327,7 +329,7 @@ namespace sw
                 std::scoped_lock<mutex> uploadLock{ _uploadSlotMutex };
                 flushPendingUploads( true );
             }
-            _commandList->Close();
+            requireHr( _commandList->Close(), "ID3D12GraphicsCommandList::Close (resize)" );
             ID3D12CommandList* arrCommandList[] = { _commandList.Get() };
             if ( _commandQueue != nullptr )
                 _commandQueue->ExecuteCommandLists( 1, arrCommandList );
