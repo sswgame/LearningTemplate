@@ -111,7 +111,7 @@ SW_TEST_CASE( ServerDirectoryStreamTest, ListBeforeLoginAssignAfterLoginAndMaint
     descriptor._capacity = 10;
     SW_ASSERT_TRUE( registration.initialize( server._host.getEphemeralRouter(), descriptor ) );
     registration.setState( ServerState::Open );
-    registration.update( 0 );
+    registration.update( UnixMilliseconds{ 0 } );
 
     ServerDirectoryClient   directoryClient;
     test::OnlineTestClients clients( network );
@@ -152,7 +152,7 @@ SW_TEST_CASE( ServerDirectoryStreamTest, ListBeforeLoginAssignAfterLoginAndMaint
     MaintenanceWindow window;
     window._scope      = MaintenanceWindow::kScopeAll;
     window._messageKey = "notice.maintenance";
-    directory._service.setMaintenance( window, 1, "", 0, 1 );
+    directory._service.setMaintenance( window, 1, "", UnixMilliseconds{ 0 }, 1 );
     test::updateAll( { &server }, clients, 10 );
     SW_ASSERT_EQUAL( directoryClient.getLastStatus()._listMaintenance.size(), size_t( 1 ) ); // 알림이 왔다
     SW_EXPECT_TRUE( directoryClient.getLastStatus()._listMaintenance[0]._messageKey == "notice.maintenance" );
@@ -189,7 +189,7 @@ SW_TEST_CASE( ServerDirectoryStreamTest, MaintenanceSetOnAnotherServerIsPushedTo
 
     MaintenanceWindow window;
     window._scope = "game";
-    firstDirectory._service.setMaintenance( window, 1, "", 0, 1 ); // 첫 번째 서버의 GM 도구가 건다
+    firstDirectory._service.setMaintenance( window, 1, "", UnixMilliseconds{ 0 }, 1 ); // 첫 번째 서버의 GM 도구가 건다
     test::updateAll( { &first, &second }, clients, 10, 10 );
     SW_ASSERT_EQUAL( directoryClient.getLastStatus()._listMaintenance.size(), size_t( 1 ) ); // 버스 → 다시 읽기 → 알림
     SW_EXPECT_TRUE( directoryClient.getLastStatus()._listMaintenance[0]._scope == "game" );

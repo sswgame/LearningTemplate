@@ -68,7 +68,7 @@ SW_TEST_CASE( OnlineServerKitsTest, AccountMailboxTradeAndAdminAssembleAndShutDo
     Internal::addOption( Internal::addKit( settings, "admin" ), "seedAdmin", "1:super" );
     OnlineServerRuntime runtime;
     string              error;
-    SW_ASSERT_TRUE_MSG( runtime.initialize( settings, Internal::kStartMs, error ), error.c_str() );
+    SW_ASSERT_TRUE_MSG( runtime.initialize( settings, UnixMilliseconds{ Internal::kStartMs }, error ), error.c_str() );
     const OnlineServerKitContext& context = runtime.getContext();
     SW_EXPECT_TRUE( context._kits.find<IAccountDirectory>() != nullptr ); // 계정 키트가 내놓았다
     const bool bAccountExposed = context._kits.find<IAccountPresence>() != nullptr && context._kits.find<IAccountSessionControl>() != nullptr && context._kits.find<const IAccountNameIndex>() != nullptr;
@@ -80,7 +80,7 @@ SW_TEST_CASE( OnlineServerKitsTest, AccountMailboxTradeAndAdminAssembleAndShutDo
     SW_EXPECT_TRUE( listKitName[0] == "account" ); // 신원을 내놓는 키트가 먼저
     for ( int32 tickIndex = 0; tickIndex < 5; ++tickIndex )
     {
-        runtime.update( Internal::kStartMs + tickIndex * 100 );
+        runtime.update( UnixMilliseconds{ Internal::kStartMs + tickIndex * 100 } );
     }
     runtime.shutdown();
 }
@@ -108,7 +108,7 @@ SW_TEST_CASE( OnlineServerKitsTest, AssemblyDoesNotLeanOnTheNameOrderOfIndepende
         (void)Internal::addKit( settings, "admin" );
         OnlineServerRuntime runtime;
         string              error;
-        SW_ASSERT_TRUE_MSG( runtime.initialize( settings, Internal::kStartMs, error ), error.c_str() );
+        SW_ASSERT_TRUE_MSG( runtime.initialize( settings, UnixMilliseconds{ Internal::kStartMs }, error ), error.c_str() );
         vector<string> listKitName;
         runtime.collectKitNames( listKitName );
         SW_ASSERT_EQUAL( listKitName.size(), size_t( 8 ) );
@@ -117,7 +117,7 @@ SW_TEST_CASE( OnlineServerKitsTest, AssemblyDoesNotLeanOnTheNameOrderOfIndepende
         SW_EXPECT_TRUE( bAdminBeforeTrade == ( bReverse == SW_FALSE ) );
         for ( int32 tickIndex = 0; tickIndex < 3; ++tickIndex )
         {
-            runtime.update( Internal::kStartMs + tickIndex * 100 );
+            runtime.update( UnixMilliseconds{ Internal::kStartMs + tickIndex * 100 } );
         }
         runtime.shutdown();
     }
@@ -133,7 +133,7 @@ SW_TEST_CASE( OnlineServerKitsTest, StartupStopsOnUnknownOptionsAndMissingDepend
         Internal::addOption( Internal::addKit( settings, "account" ), "ticketKey", "abc" ); // 철자가 틀린 옵션
         OnlineServerRuntime runtime;
         string              error;
-        SW_EXPECT_FALSE( runtime.initialize( settings, Internal::kStartMs, error ) );
+        SW_EXPECT_FALSE( runtime.initialize( settings, UnixMilliseconds{ Internal::kStartMs }, error ) );
         SW_EXPECT_TRUE( error.find( "ticketKey" ) != string::npos );
     }
     {
@@ -143,7 +143,7 @@ SW_TEST_CASE( OnlineServerKitsTest, StartupStopsOnUnknownOptionsAndMissingDepend
         Internal::addOption( Internal::addKit( settings, "chat" ), "bannedWords", "none" ); // 계정 키트 없이 채팅
         OnlineServerRuntime runtime;
         string              error;
-        SW_EXPECT_FALSE( runtime.initialize( settings, Internal::kStartMs, error ) );
+        SW_EXPECT_FALSE( runtime.initialize( settings, UnixMilliseconds{ Internal::kStartMs }, error ) );
         SW_EXPECT_TRUE( error.find( "needs kit 'account'" ) != string::npos );
     }
     {
@@ -153,7 +153,7 @@ SW_TEST_CASE( OnlineServerKitsTest, StartupStopsOnUnknownOptionsAndMissingDepend
         (void)Internal::addKit( settings, "economy" ); // 카탈로그 없이 경제
         OnlineServerRuntime runtime;
         string              error;
-        SW_EXPECT_FALSE( runtime.initialize( settings, Internal::kStartMs, error ) );
+        SW_EXPECT_FALSE( runtime.initialize( settings, UnixMilliseconds{ Internal::kStartMs }, error ) );
         SW_EXPECT_TRUE( error.find( "currencyCatalog" ) != string::npos );
     }
     {
@@ -162,7 +162,7 @@ SW_TEST_CASE( OnlineServerKitsTest, StartupStopsOnUnknownOptionsAndMissingDepend
         OnlineServerRuntimeConfig    settings  = Internal::makeSettings( transport.get(), 7465 );
         OnlineServerRuntime          runtime;
         string                       error;
-        SW_EXPECT_FALSE( runtime.initialize( settings, Internal::kStartMs, error ) ); // 키트를 하나도 적지 않았다
+        SW_EXPECT_FALSE( runtime.initialize( settings, UnixMilliseconds{ Internal::kStartMs }, error ) ); // 키트를 하나도 적지 않았다
         SW_EXPECT_TRUE( error.find( "_listKit" ) != string::npos );
     }
 }

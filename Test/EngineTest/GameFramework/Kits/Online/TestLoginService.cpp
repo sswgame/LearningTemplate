@@ -186,7 +186,7 @@ namespace
             return listCompletion.empty() ? LoginCompletion{} : listCompletion.back();
         }
 
-        LoginResult registerAccount( const LoginCredential& credential, int64 nowMs, uint64* pOutAccountID = nullptr )
+        LoginResult registerAccount( const LoginCredential& credential, UnixMilliseconds nowMs, uint64* pOutAccountID = nullptr )
         {
             _service->registerAccount( credential, nowMs, _nextTag++ );
             const LoginCompletion completion = settle();
@@ -195,7 +195,7 @@ namespace
             return completion._result;
         }
 
-        LoginResult login( const LoginCredential& credential, uint64 clientKey, int64 nowMs, LoginGrant& outGrant )
+        LoginResult login( const LoginCredential& credential, uint64 clientKey, UnixMilliseconds nowMs, LoginGrant& outGrant )
         {
             _service->login( credential, AccountClientInfo{}, clientKey, nowMs, _nextTag++ );
             const LoginCompletion completion = settle();
@@ -203,7 +203,7 @@ namespace
             return completion._result;
         }
 
-        LoginResult resumeSession( const LoginSessionToken& token, uint64 clientKey, int64 nowMs, LoginGrant& outGrant )
+        LoginResult resumeSession( const LoginSessionToken& token, uint64 clientKey, UnixMilliseconds nowMs, LoginGrant& outGrant )
         {
             _service->resumeSession( token, AccountClientInfo{}, clientKey, nowMs, _nextTag++ );
             const LoginCompletion completion = settle();
@@ -211,7 +211,7 @@ namespace
             return completion._result;
         }
 
-        LoginResult validateSession( const LoginSessionToken& token, int64 nowMs, AccountIdentity& outIdentity, LoginRevokeReason* pOutRevokeReason = nullptr )
+        LoginResult validateSession( const LoginSessionToken& token, UnixMilliseconds nowMs, AccountIdentity& outIdentity, LoginRevokeReason* pOutRevokeReason = nullptr )
         {
             _service->validateSession( token, nowMs, _nextTag++ );
             const LoginCompletion completion = settle();
@@ -221,13 +221,13 @@ namespace
             return completion._result;
         }
 
-        LoginResult logout( const LoginSessionToken& token, int64 nowMs )
+        LoginResult logout( const LoginSessionToken& token, UnixMilliseconds nowMs )
         {
             _service->logout( token, nowMs, _nextTag++ );
             return settle()._result;
         }
 
-        LoginResult issueGameTicket( const LoginSessionToken& token, const hashed_string& serverID, int64 nowMs, NetGameTicket& outTicket )
+        LoginResult issueGameTicket( const LoginSessionToken& token, const hashed_string& serverID, UnixMilliseconds nowMs, NetGameTicket& outTicket )
         {
             _service->issueGameTicket( token, serverID, nowMs, _nextTag++ );
             const LoginCompletion completion = settle();
@@ -235,25 +235,25 @@ namespace
             return completion._result;
         }
 
-        LoginResult revokeAccountSessions( uint64 accountID, int64 nowMs )
+        LoginResult revokeAccountSessions( uint64 accountID, UnixMilliseconds nowMs )
         {
             _service->revokeAccountSessions( accountID, LoginRevokeReason::Administrative, nowMs, _nextTag++ );
             return settle()._result;
         }
 
-        void markDisconnected( uint64 sessionID, int64 nowMs )
+        void markDisconnected( uint64 sessionID, UnixMilliseconds nowMs )
         {
             _service->markDisconnected( sessionID, nowMs );
             (void)settle();
         }
 
-        void refreshOnlineSessions( int64 nowMs, int32 maxCount )
+        void refreshOnlineSessions( UnixMilliseconds nowMs, int32 maxCount )
         {
             _service->refreshOnlineSessions( nowMs, maxCount );
             (void)settle();
         }
 
-        LoginResult guestLogin( uint8 secretSeed, int64 nowMs, LoginGrant& outGrant, const AccountClientInfo& clientInfo = AccountClientInfo{} )
+        LoginResult guestLogin( uint8 secretSeed, UnixMilliseconds nowMs, LoginGrant& outGrant, const AccountClientInfo& clientInfo = AccountClientInfo{} )
         {
             uint8 arrSecret[LoginConstant::kDeviceSecretSize];
             for ( int32 byteIndex = 0; byteIndex < LoginConstant::kDeviceSecretSize; ++byteIndex )
@@ -267,7 +267,7 @@ namespace
         }
 
         /** @brief 외부 로그인 — 제공자 확인은 다음 `tick` 에 끝나고 저장 일이 그 자리에서 돈다. */
-        LoginResult platformLogin( string_view provider, string_view ticketText, int64 nowMs, LoginGrant& outGrant )
+        LoginResult platformLogin( string_view provider, string_view ticketText, UnixMilliseconds nowMs, LoginGrant& outGrant )
         {
             const vector<uint8> ticket( reinterpret_cast<const uint8*>( ticketText.data() ), reinterpret_cast<const uint8*>( ticketText.data() ) + ticketText.size() );
             _service->platformLogin( provider, ticket, AccountClientInfo{}, 1, nowMs, _nextTag++ );
@@ -277,7 +277,7 @@ namespace
             return completion._result;
         }
 
-        LoginResult linkCredential( const LoginSessionToken& token, const LoginCredential& credential, int64 nowMs, AccountIdentity& outIdentity )
+        LoginResult linkCredential( const LoginSessionToken& token, const LoginCredential& credential, UnixMilliseconds nowMs, AccountIdentity& outIdentity )
         {
             _service->linkCredential( token, credential, nowMs, _nextTag++ );
             const LoginCompletion completion = settle();
@@ -285,7 +285,7 @@ namespace
             return completion._result;
         }
 
-        LoginResult linkPlatform( const LoginSessionToken& token, string_view provider, string_view ticketText, int64 nowMs )
+        LoginResult linkPlatform( const LoginSessionToken& token, string_view provider, string_view ticketText, UnixMilliseconds nowMs )
         {
             const vector<uint8> ticket( reinterpret_cast<const uint8*>( ticketText.data() ), reinterpret_cast<const uint8*>( ticketText.data() ) + ticketText.size() );
             _service->linkPlatform( token, provider, ticket, nowMs, _nextTag++ );
@@ -293,13 +293,13 @@ namespace
             return settle()._result;
         }
 
-        LoginResult unlinkPlatform( const LoginSessionToken& token, string_view provider, int64 nowMs )
+        LoginResult unlinkPlatform( const LoginSessionToken& token, string_view provider, UnixMilliseconds nowMs )
         {
             _service->unlinkPlatform( token, provider, nowMs, _nextTag++ );
             return settle()._result;
         }
 
-        LoginResult listLinks( const LoginSessionToken& token, int64 nowMs, AccountLinkSummary& outSummary )
+        LoginResult listLinks( const LoginSessionToken& token, UnixMilliseconds nowMs, AccountLinkSummary& outSummary )
         {
             _service->listLinks( token, nowMs, _nextTag++ );
             const LoginCompletion completion = settle();
@@ -307,7 +307,7 @@ namespace
             return completion._result;
         }
 
-        LoginResult requestDeletion( const LoginSessionToken& token, int64 nowMs, int64& outDueMs )
+        LoginResult requestDeletion( const LoginSessionToken& token, UnixMilliseconds nowMs, int64& outDueMs )
         {
             _service->requestDeletion( token, nowMs, _nextTag++ );
             const LoginCompletion completion = settle();
@@ -315,19 +315,19 @@ namespace
             return completion._result;
         }
 
-        LoginResult cancelDeletion( const LoginSessionToken& token, int64 nowMs )
+        LoginResult cancelDeletion( const LoginSessionToken& token, UnixMilliseconds nowMs )
         {
             _service->cancelDeletion( token, nowMs, _nextTag++ );
             return settle()._result;
         }
 
-        void purgeDueDeletions( int64 nowMs )
+        void purgeDueDeletions( UnixMilliseconds nowMs )
         {
             _service->purgeDueDeletions( nowMs, 16 );
             (void)settle();
         }
 
-        LoginResult revokeAccountSessions( uint64 accountID, LoginRevokeReason reason, int64 nowMs )
+        LoginResult revokeAccountSessions( uint64 accountID, LoginRevokeReason reason, UnixMilliseconds nowMs )
         {
             _service->revokeAccountSessions( accountID, reason, nowMs, _nextTag++ );
             return settle()._result;
@@ -385,7 +385,7 @@ namespace
         ~LinkSecretFixture() { _fixture->_service->setSecretVault( nullptr ); }
 
         /** @brief 철회 한 바퀴 — 대기열 읽기, 제공자 철회, 항목 지우기가 끝나도록 서비스와 저장소를 번갈아 돌립니다. */
-        void spinRevocation( int64 nowMs )
+        void spinRevocation( UnixMilliseconds nowMs )
         {
             for ( int32 round = 0; round < 4; ++round )
             {
@@ -406,31 +406,31 @@ SW_TEST_CASE( LoginServiceTest, RegisterLoginAndValidate )
     using Internal = TestLoginServiceInternal;
     LoginFixture fixture;
     uint64       accountID = 0;
-    SW_ASSERT_TRUE( fixture->registerAccount( Internal::makeCredential( "Alice_01", "correct horse" ), 0, &accountID ) == LoginResult::Ok );
-    SW_EXPECT_TRUE( fixture->registerAccount( Internal::makeCredential( "alice_01", "other password" ), 0 ) == LoginResult::NameTaken ); // 대소문자 무시
-    SW_EXPECT_TRUE( fixture->registerAccount( Internal::makeCredential( "a!", "correct horse" ), 0 ) == LoginResult::InvalidName );
-    SW_EXPECT_TRUE( fixture->registerAccount( Internal::makeCredential( "bob", "short" ), 0 ) == LoginResult::InvalidPassword );
+    SW_ASSERT_TRUE( fixture->registerAccount( Internal::makeCredential( "Alice_01", "correct horse" ), UnixMilliseconds{ 0 }, &accountID ) == LoginResult::Ok );
+    SW_EXPECT_TRUE( fixture->registerAccount( Internal::makeCredential( "alice_01", "other password" ), UnixMilliseconds{ 0 } ) == LoginResult::NameTaken ); // 대소문자 무시
+    SW_EXPECT_TRUE( fixture->registerAccount( Internal::makeCredential( "a!", "correct horse" ), UnixMilliseconds{ 0 } ) == LoginResult::InvalidName );
+    SW_EXPECT_TRUE( fixture->registerAccount( Internal::makeCredential( "bob", "short" ), UnixMilliseconds{ 0 } ) == LoginResult::InvalidPassword );
 
     AccountIdentity identity;
     SW_EXPECT_FALSE( fixture->findIdentity( accountID, identity ) ); // 디렉터리는 붙어 있는 계정만
 
     LoginGrant grant;
-    SW_ASSERT_TRUE( fixture->login( Internal::makeCredential( "ALICE_01", "correct horse" ), 1, 1000, grant ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( fixture->login( Internal::makeCredential( "ALICE_01", "correct horse" ), 1, UnixMilliseconds{ 1000 }, grant ) == LoginResult::Ok );
     SW_EXPECT_EQUAL( accountID, grant._identity._accountID );
     SW_EXPECT_EQUAL( string( "Alice_01" ), grant._identity._displayName ); // 가입 때 친 글자 그대로
     SW_EXPECT_TRUE( fixture->isAccountOnline( accountID ) );
 
-    SW_EXPECT_TRUE( fixture->validateSession( grant._token, 2000, identity ) == LoginResult::Ok );
+    SW_EXPECT_TRUE( fixture->validateSession( grant._token, UnixMilliseconds{ 2000 }, identity ) == LoginResult::Ok );
     SW_EXPECT_EQUAL( accountID, identity._accountID );
     SW_EXPECT_TRUE( fixture->findIdentityByDisplayName( "alice_01", identity ) );
     SW_EXPECT_TRUE( fixture->findIdentity( accountID, identity ) );
 
     LoginSessionToken tampered = grant._token;
     tampered._arrSecret[5] ^= 0x01;
-    SW_EXPECT_TRUE( fixture->validateSession( tampered, 2000, identity ) == LoginResult::InvalidToken );
+    SW_EXPECT_TRUE( fixture->validateSession( tampered, UnixMilliseconds{ 2000 }, identity ) == LoginResult::InvalidToken );
     LoginSessionToken unknown = grant._token;
     unknown._sessionID ^= 0x10;
-    SW_EXPECT_TRUE( fixture->validateSession( unknown, 2000, identity ) == LoginResult::InvalidToken );
+    SW_EXPECT_TRUE( fixture->validateSession( unknown, UnixMilliseconds{ 2000 }, identity ) == LoginResult::InvalidToken );
 
     AccountResumeRequest resume; // 재접속 요청에 실어 와이어로 왕복한 토큰도 그대로 통한다
     resume._token = grant._token;
@@ -439,32 +439,32 @@ SW_TEST_CASE( LoginServiceTest, RegisterLoginAndValidate )
     BitReader            reader( writer.getBytes().data(), writer.getByteCount() );
     AccountResumeRequest readBack;
     SW_ASSERT_TRUE( AccountProtocol::MessageTypes::read( reader, readBack ) == FixedReadResult::Ok );
-    SW_EXPECT_TRUE( fixture->validateSession( readBack._token, 2000, identity ) == LoginResult::Ok );
+    SW_EXPECT_TRUE( fixture->validateSession( readBack._token, UnixMilliseconds{ 2000 }, identity ) == LoginResult::Ok );
     BitReader truncated( writer.getBytes().data(), writer.getByteCount() - 1 );
     SW_EXPECT_TRUE( AccountProtocol::MessageTypes::read( truncated, readBack ) == FixedReadResult::Truncated );
 
-    SW_EXPECT_TRUE( fixture->logout( grant._token, 3000 ) == LoginResult::Ok );
+    SW_EXPECT_TRUE( fixture->logout( grant._token, UnixMilliseconds{ 3000 } ) == LoginResult::Ok );
     SW_EXPECT_FALSE( fixture->isAccountOnline( accountID ) );
-    SW_EXPECT_TRUE( fixture->validateSession( grant._token, 3000, identity ) == LoginResult::InvalidToken );
+    SW_EXPECT_TRUE( fixture->validateSession( grant._token, UnixMilliseconds{ 3000 }, identity ) == LoginResult::InvalidToken );
 }
 
 SW_TEST_CASE( LoginServiceTest, WrongPasswordLocksAndUnknownAccountLooksTheSame )
 {
     using Internal = TestLoginServiceInternal;
     LoginFixture fixture;
-    SW_ASSERT_TRUE( fixture->registerAccount( Internal::makeCredential( "carol", "password123" ), 0 ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( fixture->registerAccount( Internal::makeCredential( "carol", "password123" ), UnixMilliseconds{ 0 } ) == LoginResult::Ok );
     LoginGrant  grant;
     const int32 hashCountBefore = fixture->_crypto._passwordHashCount;
-    SW_EXPECT_TRUE( fixture->login( Internal::makeCredential( "nobody", "password123" ), 1, 0, grant ) == LoginResult::WrongCredentials );
+    SW_EXPECT_TRUE( fixture->login( Internal::makeCredential( "nobody", "password123" ), 1, UnixMilliseconds{ 0 }, grant ) == LoginResult::WrongCredentials );
     SW_EXPECT_EQUAL( hashCountBefore + 1, fixture->_crypto._passwordHashCount ); // 없는 계정도 해시를 한 번 돌린다
     for ( int32 attempt = 0; attempt < 4; ++attempt )
     {
-        SW_EXPECT_TRUE( fixture->login( Internal::makeCredential( "carol", "wrong-pass" ), 2 + static_cast<uint64>( attempt ), 100, grant ) == LoginResult::WrongCredentials );
+        SW_EXPECT_TRUE( fixture->login( Internal::makeCredential( "carol", "wrong-pass" ), 2 + static_cast<uint64>( attempt ), UnixMilliseconds{ 100 }, grant ) == LoginResult::WrongCredentials );
     }
-    SW_EXPECT_TRUE( fixture->login( Internal::makeCredential( "carol", "wrong-pass" ), 9, 100, grant ) == LoginResult::AccountLocked );
-    SW_EXPECT_TRUE( fixture->login( Internal::makeCredential( "carol", "password123" ), 10, 200, grant ) == LoginResult::AccountLocked ); // 맞아도 잠금 동안은
+    SW_EXPECT_TRUE( fixture->login( Internal::makeCredential( "carol", "wrong-pass" ), 9, UnixMilliseconds{ 100 }, grant ) == LoginResult::AccountLocked );
+    SW_EXPECT_TRUE( fixture->login( Internal::makeCredential( "carol", "password123" ), 10, UnixMilliseconds{ 200 }, grant ) == LoginResult::AccountLocked ); // 맞아도 잠금 동안은
     SW_EXPECT_EQUAL( fixture._settings._lockoutMs - 100, grant._retryAfterMs );
-    SW_EXPECT_TRUE( fixture->login( Internal::makeCredential( "carol", "password123" ), 11, 100 + fixture._settings._lockoutMs, grant ) == LoginResult::Ok );
+    SW_EXPECT_TRUE( fixture->login( Internal::makeCredential( "carol", "password123" ), 11, UnixMilliseconds{ 100 + fixture._settings._lockoutMs }, grant ) == LoginResult::Ok );
 }
 
 SW_TEST_CASE( LoginServiceTest, AttemptsAreRateLimitedPerClient )
@@ -474,13 +474,13 @@ SW_TEST_CASE( LoginServiceTest, AttemptsAreRateLimitedPerClient )
     LoginGrant   grant;
     for ( int32 attempt = 0; attempt < fixture._settings._attemptBurst; ++attempt )
     {
-        SW_EXPECT_TRUE( fixture->login( Internal::makeCredential( "ghost", "whatever1" ), 77, 0, grant ) == LoginResult::WrongCredentials );
+        SW_EXPECT_TRUE( fixture->login( Internal::makeCredential( "ghost", "whatever1" ), 77, UnixMilliseconds{ 0 }, grant ) == LoginResult::WrongCredentials );
     }
     const int32 hashCountBefore = fixture->_crypto._passwordHashCount;
-    SW_EXPECT_TRUE( fixture->login( Internal::makeCredential( "ghost", "whatever1" ), 77, 0, grant ) == LoginResult::RateLimited );
+    SW_EXPECT_TRUE( fixture->login( Internal::makeCredential( "ghost", "whatever1" ), 77, UnixMilliseconds{ 0 }, grant ) == LoginResult::RateLimited );
     SW_EXPECT_EQUAL( fixture._settings._attemptRefillMs, grant._retryAfterMs );
-    SW_EXPECT_EQUAL( hashCountBefore, fixture->_crypto._passwordHashCount );                                                             // 맡기지도 않았다
-    SW_EXPECT_TRUE( fixture->login( Internal::makeCredential( "ghost", "whatever1" ), 78, 0, grant ) == LoginResult::WrongCredentials ); // 다른 주소는 따로
+    SW_EXPECT_EQUAL( hashCountBefore, fixture->_crypto._passwordHashCount );                                                                                 // 맡기지도 않았다
+    SW_EXPECT_TRUE( fixture->login( Internal::makeCredential( "ghost", "whatever1" ), 78, UnixMilliseconds{ 0 }, grant ) == LoginResult::WrongCredentials ); // 다른 주소는 따로
 }
 
 SW_TEST_CASE( LoginServiceTest, DuplicateLoginKicksTheOldSessionOrIsRejected )
@@ -488,42 +488,42 @@ SW_TEST_CASE( LoginServiceTest, DuplicateLoginKicksTheOldSessionOrIsRejected )
     using Internal = TestLoginServiceInternal;
     LoginFixture fixture;
     uint64       accountID = 0;
-    SW_ASSERT_TRUE( fixture->registerAccount( Internal::makeCredential( "dave", "password123" ), 0, &accountID ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( fixture->registerAccount( Internal::makeCredential( "dave", "password123" ), UnixMilliseconds{ 0 }, &accountID ) == LoginResult::Ok );
     LoginGrant first;
     LoginGrant second;
-    SW_ASSERT_TRUE( fixture->login( Internal::makeCredential( "dave", "password123" ), 1, 0, first ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( fixture->login( Internal::makeCredential( "dave", "password123" ), 1, UnixMilliseconds{ 0 }, first ) == LoginResult::Ok );
     vector<LoginEvent> listEvent;
     fixture->drainEvents( listEvent );
-    SW_ASSERT_TRUE( fixture->login( Internal::makeCredential( "dave", "password123" ), 2, 10, second ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( fixture->login( Internal::makeCredential( "dave", "password123" ), 2, UnixMilliseconds{ 10 }, second ) == LoginResult::Ok );
     SW_EXPECT_EQUAL( first._token._sessionID, second._replacedSessionID );
     listEvent.clear();
     fixture->drainEvents( listEvent );
     SW_EXPECT_EQUAL( 1, Internal::countEvents( listEvent, LoginEvent::Kind::Revoked ) ); // 이 서버에 붙어 있던 옛 세션 — 바인딩이 그 연결을 닫는다
     AccountIdentity   identity;
     LoginRevokeReason reason = LoginRevokeReason::None;
-    SW_EXPECT_TRUE( fixture->validateSession( first._token, 20, identity, &reason ) == LoginResult::Revoked );
+    SW_EXPECT_TRUE( fixture->validateSession( first._token, UnixMilliseconds{ 20 }, identity, &reason ) == LoginResult::Revoked );
     SW_EXPECT_TRUE( reason == LoginRevokeReason::DuplicateLogin );
-    SW_EXPECT_TRUE( fixture->validateSession( second._token, 20, identity ) == LoginResult::Ok );
+    SW_EXPECT_TRUE( fixture->validateSession( second._token, UnixMilliseconds{ 20 }, identity ) == LoginResult::Ok );
 
     fixture._settings._duplicatePolicy = LoginDuplicatePolicy::RejectNew;
     fixture.restart();
     LoginGrant third;
-    SW_EXPECT_TRUE( fixture->login( Internal::makeCredential( "dave", "password123" ), 3, 30, third ) == LoginResult::AlreadyLoggedIn ); // second 가 붙어 있다
-    fixture->markDisconnected( second._token._sessionID, 40 );
-    SW_EXPECT_TRUE( fixture->login( Internal::makeCredential( "dave", "password123" ), 3, 50, third ) == LoginResult::Ok ); // 끊긴 세션은 밀어낸다
+    SW_EXPECT_TRUE( fixture->login( Internal::makeCredential( "dave", "password123" ), 3, UnixMilliseconds{ 30 }, third ) == LoginResult::AlreadyLoggedIn ); // second 가 붙어 있다
+    fixture->markDisconnected( second._token._sessionID, UnixMilliseconds{ 40 } );
+    SW_EXPECT_TRUE( fixture->login( Internal::makeCredential( "dave", "password123" ), 3, UnixMilliseconds{ 50 }, third ) == LoginResult::Ok ); // 끊긴 세션은 밀어낸다
 }
 
 SW_TEST_CASE( LoginServiceTest, ResumeWithinGraceRotatesTheTokenAndExpiresAfter )
 {
     using Internal = TestLoginServiceInternal;
     LoginFixture fixture;
-    SW_ASSERT_TRUE( fixture->registerAccount( Internal::makeCredential( "erin", "password123" ), 0 ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( fixture->registerAccount( Internal::makeCredential( "erin", "password123" ), UnixMilliseconds{ 0 } ) == LoginResult::Ok );
     LoginGrant grant;
-    SW_ASSERT_TRUE( fixture->login( Internal::makeCredential( "erin", "password123" ), 1, 0, grant ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( fixture->login( Internal::makeCredential( "erin", "password123" ), 1, UnixMilliseconds{ 0 }, grant ) == LoginResult::Ok );
     vector<LoginEvent> listEvent;
     fixture->drainEvents( listEvent );
     listEvent.clear();
-    fixture->markDisconnected( grant._token._sessionID, 1000 );
+    fixture->markDisconnected( grant._token._sessionID, UnixMilliseconds{ 1000 } );
     fixture->drainEvents( listEvent );
     SW_EXPECT_EQUAL( 1, Internal::countEvents( listEvent, LoginEvent::Kind::Disconnected ) );
     SW_EXPECT_FALSE( fixture->isAccountOnline( grant._identity._accountID ) );
@@ -531,17 +531,17 @@ SW_TEST_CASE( LoginServiceTest, ResumeWithinGraceRotatesTheTokenAndExpiresAfter 
     SW_EXPECT_FALSE( fixture->findIdentityByDisplayName( "erin", identity ) ); // 오프라인은 디렉터리에 없다
 
     LoginGrant resumed;
-    SW_ASSERT_TRUE( fixture->resumeSession( grant._token, 1, 1000 + fixture._settings._reconnectGraceMs - 1, resumed ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( fixture->resumeSession( grant._token, 1, UnixMilliseconds{ 1000 + fixture._settings._reconnectGraceMs - 1 }, resumed ) == LoginResult::Ok );
     SW_EXPECT_EQUAL( grant._token._sessionID, resumed._token._sessionID ); // 같은 세션
     SW_EXPECT_EQUAL( string( "erin" ), resumed._identity._displayName );
-    SW_EXPECT_TRUE( fixture->validateSession( grant._token, 5000, identity ) == LoginResult::InvalidToken ); // 옛 비밀은 죽었다
-    SW_EXPECT_TRUE( fixture->validateSession( resumed._token, 5000, identity ) == LoginResult::Ok );
+    SW_EXPECT_TRUE( fixture->validateSession( grant._token, UnixMilliseconds{ 5000 }, identity ) == LoginResult::InvalidToken ); // 옛 비밀은 죽었다
+    SW_EXPECT_TRUE( fixture->validateSession( resumed._token, UnixMilliseconds{ 5000 }, identity ) == LoginResult::Ok );
     SW_EXPECT_TRUE( fixture->isAccountOnline( grant._identity._accountID ) );
 
-    fixture->markDisconnected( resumed._token._sessionID, 10000 );
+    fixture->markDisconnected( resumed._token._sessionID, UnixMilliseconds{ 10000 } );
     LoginGrant late;
-    SW_EXPECT_TRUE( fixture->resumeSession( resumed._token, 1, 10000 + fixture._settings._reconnectGraceMs, late ) == LoginResult::Expired );
-    SW_EXPECT_TRUE( fixture->validateSession( resumed._token, fixture._settings._sessionLifetimeMs, identity ) == LoginResult::Expired );
+    SW_EXPECT_TRUE( fixture->resumeSession( resumed._token, 1, UnixMilliseconds{ 10000 + fixture._settings._reconnectGraceMs }, late ) == LoginResult::Expired );
+    SW_EXPECT_TRUE( fixture->validateSession( resumed._token, UnixMilliseconds{ fixture._settings._sessionLifetimeMs }, identity ) == LoginResult::Expired );
 }
 
 /**
@@ -554,10 +554,10 @@ SW_TEST_CASE( LoginServiceTest, ResumeWithUnreadableIdentityFailsAndKeepsTheToke
     using Internal = TestLoginServiceInternal;
     LoginFixture fixture;
     uint64       accountID = 0;
-    SW_ASSERT_TRUE( fixture->registerAccount( Internal::makeCredential( "gwen", "password123" ), 0, &accountID ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( fixture->registerAccount( Internal::makeCredential( "gwen", "password123" ), UnixMilliseconds{ 0 }, &accountID ) == LoginResult::Ok );
     LoginGrant grant;
-    SW_ASSERT_TRUE( fixture->login( Internal::makeCredential( "gwen", "password123" ), 1, 0, grant ) == LoginResult::Ok );
-    fixture->markDisconnected( grant._token._sessionID, 1000 );
+    SW_ASSERT_TRUE( fixture->login( Internal::makeCredential( "gwen", "password123" ), 1, UnixMilliseconds{ 0 }, grant ) == LoginResult::Ok );
+    fixture->markDisconnected( grant._token._sessionID, UnixMilliseconds{ 1000 } );
 
     const hashed_string profileTable{ "login_account_id" };
     const string        profileKey = ServiceKeyUtil::makeHex64( accountID );
@@ -572,7 +572,7 @@ SW_TEST_CASE( LoginServiceTest, ResumeWithUnreadableIdentityFailsAndKeepsTheToke
     LoginGrant failed;
     {
         SW_TEST_DEFENSIVE_SCOPE( "a corrupt account profile is reported while resuming" );
-        SW_EXPECT_TRUE( fixture->resumeSession( grant._token, 1, 2000, failed ) == LoginResult::StoreUnavailable );
+        SW_EXPECT_TRUE( fixture->resumeSession( grant._token, 1, UnixMilliseconds{ 2000 }, failed ) == LoginResult::StoreUnavailable );
     }
     SW_EXPECT_EQUAL( uint64{ 0 }, failed._identity._accountID );
 
@@ -582,7 +582,7 @@ SW_TEST_CASE( LoginServiceTest, ResumeWithUnreadableIdentityFailsAndKeepsTheToke
         SW_ASSERT_TRUE( fixture._database.commit( restore ) == ServiceStoreResult::Ok );
     }
     LoginGrant resumed;
-    SW_EXPECT_TRUE( fixture->resumeSession( grant._token, 1, 3000, resumed ) == LoginResult::Ok ); // 실패한 시도가 비밀을 바꾸지 않았다
+    SW_EXPECT_TRUE( fixture->resumeSession( grant._token, 1, UnixMilliseconds{ 3000 }, resumed ) == LoginResult::Ok ); // 실패한 시도가 비밀을 바꾸지 않았다
     SW_EXPECT_EQUAL( string( "gwen" ), resumed._identity._displayName );
 }
 
@@ -590,14 +590,14 @@ SW_TEST_CASE( LoginServiceTest, SessionsSurviveAServiceRestart )
 {
     using Internal = TestLoginServiceInternal;
     LoginFixture fixture;
-    SW_ASSERT_TRUE( fixture->registerAccount( Internal::makeCredential( "frank", "password123" ), 0 ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( fixture->registerAccount( Internal::makeCredential( "frank", "password123" ), UnixMilliseconds{ 0 } ) == LoginResult::Ok );
     LoginGrant grant;
-    SW_ASSERT_TRUE( fixture->login( Internal::makeCredential( "frank", "password123" ), 1, 0, grant ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( fixture->login( Internal::makeCredential( "frank", "password123" ), 1, UnixMilliseconds{ 0 }, grant ) == LoginResult::Ok );
 
     fixture.restart(); // 프로세스가 죽었다 — markDisconnected 도 못 불렸다(저장소에는 "붙어 있음")
     SW_EXPECT_EQUAL( 0, fixture->getOnlineCount() );
     LoginGrant resumed;
-    SW_ASSERT_TRUE( fixture->resumeSession( grant._token, 1, 5000, resumed ) == LoginResult::Ok ); // 토큰이 있으면 넘겨받는다
+    SW_ASSERT_TRUE( fixture->resumeSession( grant._token, 1, UnixMilliseconds{ 5000 }, resumed ) == LoginResult::Ok ); // 토큰이 있으면 넘겨받는다
     SW_EXPECT_TRUE( fixture->isAccountOnline( grant._identity._accountID ) );
 }
 
@@ -608,19 +608,19 @@ SW_TEST_CASE( LoginServiceTest, TwoServersLoggingInTheSameAccountLastOneWins )
     LoginServiceConfig    settings;
     LoginNode             serverA{ &database, 11u, settings };
     LoginNode             serverB{ &database, 12u, settings };
-    SW_ASSERT_TRUE( serverA.registerAccount( Internal::makeCredential( "gina", "password123" ), 0 ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( serverA.registerAccount( Internal::makeCredential( "gina", "password123" ), UnixMilliseconds{ 0 } ) == LoginResult::Ok );
 
     LoginGrant onA;
     LoginGrant onB;
-    SW_ASSERT_TRUE( serverA.login( Internal::makeCredential( "gina", "password123" ), 1, 0, onA ) == LoginResult::Ok );
-    SW_ASSERT_TRUE( serverB.login( Internal::makeCredential( "gina", "password123" ), 2, 10, onB ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( serverA.login( Internal::makeCredential( "gina", "password123" ), 1, UnixMilliseconds{ 0 }, onA ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( serverB.login( Internal::makeCredential( "gina", "password123" ), 2, UnixMilliseconds{ 10 }, onB ) == LoginResult::Ok );
     SW_EXPECT_EQUAL( onA._token._sessionID, onB._replacedSessionID );
     SW_EXPECT_TRUE( serverA.isAccountOnline( onA._identity._accountID ) ); // A 는 아직 모른다
 
     vector<LoginEvent> listEvent;
     serverA.drainEvents( listEvent );
     listEvent.clear();
-    serverA.refreshOnlineSessions( 20, 16 );
+    serverA.refreshOnlineSessions( UnixMilliseconds{ 20 }, 16 );
     serverA.drainEvents( listEvent );
     SW_ASSERT_EQUAL( size_t( 1 ), listEvent.size() );
     SW_EXPECT_TRUE( listEvent[0]._kind == LoginEvent::Kind::Revoked && listEvent[0]._reason == LoginRevokeReason::DuplicateLogin );
@@ -633,33 +633,33 @@ SW_TEST_CASE( LoginServiceTest, AdministrativeRevokeEndsTheSessionAndTellsTheBin
     using Internal = TestLoginServiceInternal;
     LoginFixture fixture;
     uint64       accountID = 0;
-    SW_ASSERT_TRUE( fixture->registerAccount( Internal::makeCredential( "kate", "password123" ), 0, &accountID ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( fixture->registerAccount( Internal::makeCredential( "kate", "password123" ), UnixMilliseconds{ 0 }, &accountID ) == LoginResult::Ok );
     LoginGrant grant;
-    SW_ASSERT_TRUE( fixture->login( Internal::makeCredential( "kate", "password123" ), 1, 0, grant ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( fixture->login( Internal::makeCredential( "kate", "password123" ), 1, UnixMilliseconds{ 0 }, grant ) == LoginResult::Ok );
     vector<LoginEvent> listEvent;
     fixture->drainEvents( listEvent );
     listEvent.clear();
-    SW_EXPECT_TRUE( fixture->revokeAccountSessions( accountID, 100 ) == LoginResult::Ok );
+    SW_EXPECT_TRUE( fixture->revokeAccountSessions( accountID, UnixMilliseconds{ 100 } ) == LoginResult::Ok );
     fixture->drainEvents( listEvent );
     SW_ASSERT_EQUAL( size_t( 1 ), listEvent.size() );
     SW_EXPECT_TRUE( listEvent[0]._kind == LoginEvent::Kind::Revoked && listEvent[0]._reason == LoginRevokeReason::Administrative );
     SW_EXPECT_FALSE( fixture->isAccountOnline( accountID ) );
     AccountIdentity   identity;
     LoginRevokeReason reason = LoginRevokeReason::None;
-    SW_EXPECT_TRUE( fixture->validateSession( grant._token, 200, identity, &reason ) == LoginResult::Revoked );
+    SW_EXPECT_TRUE( fixture->validateSession( grant._token, UnixMilliseconds{ 200 }, identity, &reason ) == LoginResult::Revoked );
     SW_EXPECT_TRUE( reason == LoginRevokeReason::Administrative );
-    SW_EXPECT_TRUE( fixture->revokeAccountSessions( accountID, 300 ) == LoginResult::Ok ); // 세션이 없어도 된다
+    SW_EXPECT_TRUE( fixture->revokeAccountSessions( accountID, UnixMilliseconds{ 300 } ) == LoginResult::Ok ); // 세션이 없어도 된다
 }
 
 SW_TEST_CASE( LoginServiceTest, GameTicketIsSignedBoundToServerAndExpires )
 {
     using Internal = TestLoginServiceInternal;
     LoginFixture fixture;
-    SW_ASSERT_TRUE( fixture->registerAccount( Internal::makeCredential( "hank", "password123" ), 0 ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( fixture->registerAccount( Internal::makeCredential( "hank", "password123" ), UnixMilliseconds{ 0 } ) == LoginResult::Ok );
     LoginGrant grant;
-    SW_ASSERT_TRUE( fixture->login( Internal::makeCredential( "hank", "password123" ), 1, 0, grant ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( fixture->login( Internal::makeCredential( "hank", "password123" ), 1, UnixMilliseconds{ 0 }, grant ) == LoginResult::Ok );
     NetGameTicket ticket;
-    SW_ASSERT_TRUE( fixture->issueGameTicket( grant._token, "zone-1", 100, ticket ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( fixture->issueGameTicket( grant._token, "zone-1", UnixMilliseconds{ 100 }, ticket ) == LoginResult::Ok );
 
     // 게임 서버 — 같은 주 키만 있고 저장소는 없다.
     TestLoginCrypto      gameCrypto{ 99u };
@@ -684,45 +684,45 @@ SW_TEST_CASE( LoginServiceTest, GameTicketIsSignedBoundToServerAndExpires )
     wrongKey.initialize( &gameCrypto, arrOtherKey );
     SW_EXPECT_FALSE( wrongKey.verifyTicket( ticket._arrToken, NetGameTicket::kTokenSize, "zone-1", 200, claim ) );
 
-    fixture->markDisconnected( grant._token._sessionID, 400 );
+    fixture->markDisconnected( grant._token._sessionID, UnixMilliseconds{ 400 } );
     NetGameTicket afterExpiry;
-    SW_EXPECT_TRUE( fixture->issueGameTicket( grant._token, "zone-1", 400 + fixture._settings._reconnectGraceMs, afterExpiry ) == LoginResult::Expired );
+    SW_EXPECT_TRUE( fixture->issueGameTicket( grant._token, "zone-1", UnixMilliseconds{ 400 + fixture._settings._reconnectGraceMs }, afterExpiry ) == LoginResult::Expired );
 }
 
 SW_TEST_CASE( LoginServiceTest, StoreFailureNeverLeavesAHalfSession )
 {
     using Internal = TestLoginServiceInternal;
     LoginFixture fixture;
-    SW_ASSERT_TRUE( fixture->registerAccount( Internal::makeCredential( "iris", "password123" ), 0 ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( fixture->registerAccount( Internal::makeCredential( "iris", "password123" ), UnixMilliseconds{ 0 } ) == LoginResult::Ok );
     const uint64 hashBefore = fixture._database.computeContentHash();
     LoginGrant   grant;
     fixture._database.armFault( ServiceStoreFault::RejectCommit );
-    SW_EXPECT_TRUE( fixture->login( Internal::makeCredential( "iris", "password123" ), 1, 0, grant ) == LoginResult::StoreUnavailable );
+    SW_EXPECT_TRUE( fixture->login( Internal::makeCredential( "iris", "password123" ), 1, UnixMilliseconds{ 0 }, grant ) == LoginResult::StoreUnavailable );
     SW_EXPECT_EQUAL( hashBefore, fixture._database.computeContentHash() ); // 세션도 링크도 없다
     SW_EXPECT_EQUAL( 0, fixture->getOnlineCount() );
 
     fixture._database.armFault( ServiceStoreFault::LoseCommitReply ); // 세션은 생겼지만 클라이언트는 모른다
-    SW_EXPECT_TRUE( fixture->login( Internal::makeCredential( "iris", "password123" ), 1, 10, grant ) == LoginResult::StoreUnavailable );
+    SW_EXPECT_TRUE( fixture->login( Internal::makeCredential( "iris", "password123" ), 1, UnixMilliseconds{ 10 }, grant ) == LoginResult::StoreUnavailable );
     SW_EXPECT_EQUAL( 0, fixture->getOnlineCount() );
     LoginGrant retry;
-    SW_ASSERT_TRUE( fixture->login( Internal::makeCredential( "iris", "password123" ), 1, 20, retry ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( fixture->login( Internal::makeCredential( "iris", "password123" ), 1, UnixMilliseconds{ 20 }, retry ) == LoginResult::Ok );
     SW_EXPECT_TRUE( retry._replacedSessionID != 0 ); // 유령 세션을 밀어냈다
     AccountIdentity identity;
-    SW_EXPECT_TRUE( fixture->validateSession( retry._token, 30, identity ) == LoginResult::Ok );
+    SW_EXPECT_TRUE( fixture->validateSession( retry._token, UnixMilliseconds{ 30 }, identity ) == LoginResult::Ok );
 }
 
 SW_TEST_CASE( LoginServiceTest, ChangedHashParamsRehashOnNextLogin )
 {
     using Internal = TestLoginServiceInternal;
     LoginFixture fixture;
-    SW_ASSERT_TRUE( fixture->registerAccount( Internal::makeCredential( "jack", "password123" ), 0 ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( fixture->registerAccount( Internal::makeCredential( "jack", "password123" ), UnixMilliseconds{ 0 } ) == LoginResult::Ok );
     fixture._settings._passwordHashParams._iterationCount = 3;
     fixture.restart();
     LoginGrant  grant;
     const int32 hashCountBefore = fixture->_crypto._passwordHashCount;
-    SW_ASSERT_TRUE( fixture->login( Internal::makeCredential( "jack", "password123" ), 1, 0, grant ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( fixture->login( Internal::makeCredential( "jack", "password123" ), 1, UnixMilliseconds{ 0 }, grant ) == LoginResult::Ok );
     SW_EXPECT_EQUAL( hashCountBefore + 2, fixture->_crypto._passwordHashCount ); // 옛 매개변수로 확인 + 새 매개변수로 다시
-    SW_ASSERT_TRUE( fixture->login( Internal::makeCredential( "jack", "password123" ), 1, 10, grant ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( fixture->login( Internal::makeCredential( "jack", "password123" ), 1, UnixMilliseconds{ 10 }, grant ) == LoginResult::Ok );
     SW_EXPECT_EQUAL( hashCountBefore + 3, fixture->_crypto._passwordHashCount ); // 이제 한 번
 }
 
@@ -739,9 +739,9 @@ SW_TEST_CASE( LoginServiceTest, RealCryptoHashesWithArgon2idAndSignsTickets )
     service.initialize( &store, &crypto, settings, Internal::kMasterKey );
     vector<LoginCompletion> listCompletion;
 
-    service.registerAccount( Internal::makeCredential( "liam", "password123" ), 0, 1 );
-    service.login( Internal::makeCredential( "liam", "wrong-pass" ), AccountClientInfo{}, 1, 10, 2 );
-    service.login( Internal::makeCredential( "liam", "password123" ), AccountClientInfo{}, 1, 20, 3 );
+    service.registerAccount( Internal::makeCredential( "liam", "password123" ), UnixMilliseconds{ 0 }, 1 );
+    service.login( Internal::makeCredential( "liam", "wrong-pass" ), AccountClientInfo{}, 1, UnixMilliseconds{ 10 }, 2 );
+    service.login( Internal::makeCredential( "liam", "password123" ), AccountClientInfo{}, 1, UnixMilliseconds{ 20 }, 3 );
     (void)store.pollCompletions();
     service.drainCompletions( listCompletion );
     SW_ASSERT_EQUAL( size_t( 3 ), listCompletion.size() );
@@ -751,7 +751,7 @@ SW_TEST_CASE( LoginServiceTest, RealCryptoHashesWithArgon2idAndSignsTickets )
     const LoginSessionToken token = listCompletion[2]._grant._token;
 
     listCompletion.clear();
-    service.issueGameTicket( token, "zone-1", 30, 4 );
+    service.issueGameTicket( token, "zone-1", UnixMilliseconds{ 30 }, 4 );
     (void)store.pollCompletions();
     service.drainCompletions( listCompletion );
     SW_ASSERT_EQUAL( size_t( 1 ), listCompletion.size() );
@@ -772,17 +772,17 @@ SW_TEST_CASE( LoginServiceTest, GuestLoginIsStablePerDevice )
 {
     LoginFixture fixture;
     LoginGrant   first;
-    SW_ASSERT_TRUE( fixture->guestLogin( 1, 0, first ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( fixture->guestLogin( 1, UnixMilliseconds{ 0 }, first ) == LoginResult::Ok );
     SW_EXPECT_TRUE( first._bCreated == SW_TRUE );
     SW_EXPECT_TRUE( first._identity._bGuest == SW_TRUE );
     SW_EXPECT_TRUE( StringUtil::startsWith( first._identity._displayName, "Guest-" ) );
     LoginGrant again;
-    SW_ASSERT_TRUE( fixture->guestLogin( 1, 100, again ) == LoginResult::Ok ); // 같은 장치 → 같은 계정
+    SW_ASSERT_TRUE( fixture->guestLogin( 1, UnixMilliseconds{ 100 }, again ) == LoginResult::Ok ); // 같은 장치 → 같은 계정
     SW_EXPECT_TRUE( again._bCreated == SW_FALSE );
     SW_EXPECT_EQUAL( first._identity._accountID, again._identity._accountID );
     SW_EXPECT_EQUAL( first._token._sessionID, again._replacedSessionID ); // 새 로그인이 옛 세션을 밀어낸다
     LoginGrant other;
-    SW_ASSERT_TRUE( fixture->guestLogin( 2, 200, other ) == LoginResult::Ok ); // 다른 장치 → 다른 계정
+    SW_ASSERT_TRUE( fixture->guestLogin( 2, UnixMilliseconds{ 200 }, other ) == LoginResult::Ok ); // 다른 장치 → 다른 계정
     SW_EXPECT_NOT_EQUAL( first._identity._accountID, other._identity._accountID );
     SW_EXPECT_EQUAL( 2, fixture._database.countRecords( hashed_string( "account_guest" ) ) ); // 비밀이 아니라 다이제스트가 키
 }
@@ -792,9 +792,9 @@ SW_TEST_CASE( LoginServiceTest, LinkingKeepsTheAccountAndClearsGuest )
     using Internal = TestLoginServiceInternal;
     LoginFixture fixture;
     LoginGrant   guest;
-    SW_ASSERT_TRUE( fixture->guestLogin( 3, 0, guest ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( fixture->guestLogin( 3, UnixMilliseconds{ 0 }, guest ) == LoginResult::Ok );
     AccountIdentity linked;
-    SW_ASSERT_TRUE( fixture->linkCredential( guest._token, Internal::makeCredential( "Mina", "password123" ), 10, linked ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( fixture->linkCredential( guest._token, Internal::makeCredential( "Mina", "password123" ), UnixMilliseconds{ 10 }, linked ) == LoginResult::Ok );
     SW_EXPECT_EQUAL( guest._identity._accountID, linked._accountID );
     SW_EXPECT_TRUE( linked._bGuest == SW_FALSE );
     SW_EXPECT_EQUAL( string( "Mina" ), linked._displayName );
@@ -802,15 +802,15 @@ SW_TEST_CASE( LoginServiceTest, LinkingKeepsTheAccountAndClearsGuest )
     SW_EXPECT_TRUE( fixture->findIdentityByDisplayName( "mina", online ) ); // 디렉터리 이름 색인도 바뀐다
 
     LoginGrant byName;
-    SW_ASSERT_TRUE( fixture->login( Internal::makeCredential( "mina", "password123" ), 1, 20, byName ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( fixture->login( Internal::makeCredential( "mina", "password123" ), 1, UnixMilliseconds{ 20 }, byName ) == LoginResult::Ok );
     SW_EXPECT_EQUAL( guest._identity._accountID, byName._identity._accountID );
     LoginGrant byDevice; // 연동 뒤에도 같은 장치는 비밀번호 없이(기본 설정)
-    SW_ASSERT_TRUE( fixture->guestLogin( 3, 30, byDevice ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( fixture->guestLogin( 3, UnixMilliseconds{ 30 }, byDevice ) == LoginResult::Ok );
     SW_EXPECT_EQUAL( guest._identity._accountID, byDevice._identity._accountID );
     SW_EXPECT_TRUE( byDevice._identity._bGuest == SW_FALSE );
 
     AccountIdentity again;
-    SW_EXPECT_TRUE( fixture->linkCredential( byDevice._token, Internal::makeCredential( "mina2", "password123" ), 40, again ) == LoginResult::AlreadyLinked ); // 이름은 하나
+    SW_EXPECT_TRUE( fixture->linkCredential( byDevice._token, Internal::makeCredential( "mina2", "password123" ), UnixMilliseconds{ 40 }, again ) == LoginResult::AlreadyLinked ); // 이름은 하나
 }
 
 SW_TEST_CASE( LoginServiceTest, LinkingAnAlreadyUsedNameOrSubjectFails )
@@ -819,19 +819,19 @@ SW_TEST_CASE( LoginServiceTest, LinkingAnAlreadyUsedNameOrSubjectFails )
     LoginFixture              fixture;
     FakePlatformLoginProvider provider{ "fake" };
     SW_ASSERT_TRUE( fixture->_service->registerPlatformProvider( &provider ) );
-    SW_ASSERT_TRUE( fixture->registerAccount( Internal::makeCredential( "taken", "password123" ), 0 ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( fixture->registerAccount( Internal::makeCredential( "taken", "password123" ), UnixMilliseconds{ 0 } ) == LoginResult::Ok );
     LoginGrant other;
-    SW_ASSERT_TRUE( fixture->platformLogin( "fake", "subject:s-1", 0, other ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( fixture->platformLogin( "fake", "subject:s-1", UnixMilliseconds{ 0 }, other ) == LoginResult::Ok );
     LoginGrant guest;
-    SW_ASSERT_TRUE( fixture->guestLogin( 4, 0, guest ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( fixture->guestLogin( 4, UnixMilliseconds{ 0 }, guest ) == LoginResult::Ok );
 
     const uint64    before = fixture._database.computeContentHash();
     AccountIdentity identity;
-    SW_EXPECT_TRUE( fixture->linkCredential( guest._token, Internal::makeCredential( "TAKEN", "password123" ), 10, identity ) == LoginResult::AlreadyLinked );
-    SW_EXPECT_TRUE( fixture->linkPlatform( guest._token, "fake", "subject:s-1", 10 ) == LoginResult::AlreadyLinked ); // 다른 계정 것 — 합치지 않는다
-    SW_EXPECT_EQUAL( before, fixture._database.computeContentHash() );                                                // 아무것도 안 바뀜
-    SW_EXPECT_TRUE( fixture->linkPlatform( guest._token, "fake", "reject", 10 ) == LoginResult::ProviderRejected );
-    SW_EXPECT_TRUE( fixture->linkPlatform( guest._token, "none", "subject:x", 10 ) == LoginResult::ProviderUnavailable );
+    SW_EXPECT_TRUE( fixture->linkCredential( guest._token, Internal::makeCredential( "TAKEN", "password123" ), UnixMilliseconds{ 10 }, identity ) == LoginResult::AlreadyLinked );
+    SW_EXPECT_TRUE( fixture->linkPlatform( guest._token, "fake", "subject:s-1", UnixMilliseconds{ 10 } ) == LoginResult::AlreadyLinked ); // 다른 계정 것 — 합치지 않는다
+    SW_EXPECT_EQUAL( before, fixture._database.computeContentHash() );                                                                    // 아무것도 안 바뀜
+    SW_EXPECT_TRUE( fixture->linkPlatform( guest._token, "fake", "reject", UnixMilliseconds{ 10 } ) == LoginResult::ProviderRejected );
+    SW_EXPECT_TRUE( fixture->linkPlatform( guest._token, "none", "subject:x", UnixMilliseconds{ 10 } ) == LoginResult::ProviderUnavailable );
 }
 
 SW_TEST_CASE( LoginServiceTest, PlatformLoginCreatesThenReuses )
@@ -845,20 +845,20 @@ SW_TEST_CASE( LoginServiceTest, PlatformLoginCreatesThenReuses )
     }
 
     LoginGrant first;
-    SW_ASSERT_TRUE( fixture->platformLogin( "fake", "subject:u-77:Hero Name!", 0, first ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( fixture->platformLogin( "fake", "subject:u-77:Hero Name!", UnixMilliseconds{ 0 }, first ) == LoginResult::Ok );
     SW_EXPECT_TRUE( first._bCreated == SW_TRUE );
     SW_EXPECT_TRUE( first._identity._bGuest == SW_FALSE );
     SW_EXPECT_TRUE( StringUtil::startsWith( first._identity._displayName, "HeroName-" ) ); // 제공자 이름의 ASCII 영숫자 + id 꼬리
     LoginGrant again;
-    SW_ASSERT_TRUE( fixture->platformLogin( "fake", "subject:u-77", 100, again ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( fixture->platformLogin( "fake", "subject:u-77", UnixMilliseconds{ 100 }, again ) == LoginResult::Ok );
     SW_EXPECT_TRUE( again._bCreated == SW_FALSE );
     SW_EXPECT_EQUAL( first._identity._accountID, again._identity._accountID );
 
     LoginGrant failed;
-    SW_EXPECT_TRUE( fixture->platformLogin( "fake", "reject", 200, failed ) == LoginResult::ProviderRejected );
-    SW_EXPECT_TRUE( fixture->platformLogin( "fake", "down", 200, failed ) == LoginResult::ProviderUnavailable );
-    SW_EXPECT_TRUE( fixture->platformLogin( "steam", "subject:u-77", 200, failed ) == LoginResult::ProviderUnavailable ); // 올리지 않은 제공자
-    SW_EXPECT_EQUAL( 4, provider.getSubmittedCount() );                                                                   // 없는 제공자는 맡기지도 않는다
+    SW_EXPECT_TRUE( fixture->platformLogin( "fake", "reject", UnixMilliseconds{ 200 }, failed ) == LoginResult::ProviderRejected );
+    SW_EXPECT_TRUE( fixture->platformLogin( "fake", "down", UnixMilliseconds{ 200 }, failed ) == LoginResult::ProviderUnavailable );
+    SW_EXPECT_TRUE( fixture->platformLogin( "steam", "subject:u-77", UnixMilliseconds{ 200 }, failed ) == LoginResult::ProviderUnavailable ); // 올리지 않은 제공자
+    SW_EXPECT_EQUAL( 4, provider.getSubmittedCount() );                                                                                       // 없는 제공자는 맡기지도 않는다
 }
 
 SW_TEST_CASE( LoginServiceTest, MultipleLinksAndTheLastMethodCannotBeUnlinked )
@@ -869,26 +869,26 @@ SW_TEST_CASE( LoginServiceTest, MultipleLinksAndTheLastMethodCannotBeUnlinked )
     SW_ASSERT_TRUE( fixture->_service->registerPlatformProvider( &google ) );
     SW_ASSERT_TRUE( fixture->_service->registerPlatformProvider( &kakao ) );
     LoginGrant grant;
-    SW_ASSERT_TRUE( fixture->platformLogin( "google", "subject:g-1", 0, grant ) == LoginResult::Ok );
-    SW_ASSERT_TRUE( fixture->linkPlatform( grant._token, "kakao", "subject:k-1", 10 ) == LoginResult::Ok );
-    SW_EXPECT_TRUE( fixture->linkPlatform( grant._token, "kakao", "subject:k-2", 10 ) == LoginResult::AlreadyLinked ); // 제공자마다 하나
+    SW_ASSERT_TRUE( fixture->platformLogin( "google", "subject:g-1", UnixMilliseconds{ 0 }, grant ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( fixture->linkPlatform( grant._token, "kakao", "subject:k-1", UnixMilliseconds{ 10 } ) == LoginResult::Ok );
+    SW_EXPECT_TRUE( fixture->linkPlatform( grant._token, "kakao", "subject:k-2", UnixMilliseconds{ 10 } ) == LoginResult::AlreadyLinked ); // 제공자마다 하나
 
     AccountLinkSummary summary;
-    SW_ASSERT_TRUE( fixture->listLinks( grant._token, 20, summary ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( fixture->listLinks( grant._token, UnixMilliseconds{ 20 }, summary ) == LoginResult::Ok );
     SW_ASSERT_EQUAL( size_t( 2 ), summary._listProvider.size() );
     SW_EXPECT_EQUAL( string( "google" ), summary._listProvider[0]._name );
     SW_EXPECT_EQUAL( string( "kakao" ), summary._listProvider[1]._name );
     SW_EXPECT_EQUAL( 2, summary.getLoginMethodCount() );
 
     LoginGrant viaKakao; // 둘 다 같은 계정으로 들어온다
-    SW_ASSERT_TRUE( fixture->platformLogin( "kakao", "subject:k-1", 30, viaKakao ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( fixture->platformLogin( "kakao", "subject:k-1", UnixMilliseconds{ 30 }, viaKakao ) == LoginResult::Ok );
     SW_EXPECT_EQUAL( grant._identity._accountID, viaKakao._identity._accountID );
 
-    SW_EXPECT_TRUE( fixture->unlinkPlatform( viaKakao._token, "naver", 40 ) == LoginResult::NotLinked );
-    SW_ASSERT_TRUE( fixture->unlinkPlatform( viaKakao._token, "google", 40 ) == LoginResult::Ok );
-    SW_EXPECT_TRUE( fixture->unlinkPlatform( viaKakao._token, "kakao", 50 ) == LoginResult::LastLoginMethod );
+    SW_EXPECT_TRUE( fixture->unlinkPlatform( viaKakao._token, "naver", UnixMilliseconds{ 40 } ) == LoginResult::NotLinked );
+    SW_ASSERT_TRUE( fixture->unlinkPlatform( viaKakao._token, "google", UnixMilliseconds{ 40 } ) == LoginResult::Ok );
+    SW_EXPECT_TRUE( fixture->unlinkPlatform( viaKakao._token, "kakao", UnixMilliseconds{ 50 } ) == LoginResult::LastLoginMethod );
     LoginGrant newAccount; // 풀린 주체는 이제 새 계정이 된다
-    SW_ASSERT_TRUE( fixture->platformLogin( "google", "subject:g-1", 60, newAccount ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( fixture->platformLogin( "google", "subject:g-1", UnixMilliseconds{ 60 }, newAccount ) == LoginResult::Ok );
     SW_EXPECT_TRUE( newAccount._bCreated == SW_TRUE );
     SW_EXPECT_NOT_EQUAL( grant._identity._accountID, newAccount._identity._accountID );
 }
@@ -912,19 +912,19 @@ SW_TEST_CASE( LoginServiceTest, OldBuildIsToldToUpdate )
     oldClient._build    = "1.8.5";
     oldClient._platform = "windows";
     LoginGrant grant;
-    SW_EXPECT_TRUE( fixture->guestLogin( 5, 0, grant, oldClient ) == LoginResult::UpdateRequired );
+    SW_EXPECT_TRUE( fixture->guestLogin( 5, UnixMilliseconds{ 0 }, grant, oldClient ) == LoginResult::UpdateRequired );
     SW_EXPECT_EQUAL( string( "https://store.example/game" ), grant._storeURL );
     SW_EXPECT_EQUAL( 0, fixture._database.countRecords( hashed_string( "account_guest" ) ) ); // 일을 맡기지 않았다
 
     AccountClientInfo behind = oldClient;
     behind._build            = "1.9.9";
-    SW_ASSERT_TRUE( fixture->guestLogin( 5, 10, grant, behind ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( fixture->guestLogin( 5, UnixMilliseconds{ 10 }, grant, behind ) == LoginResult::Ok );
     SW_EXPECT_TRUE( grant._bUpdateRecommended == SW_TRUE );
     SW_EXPECT_EQUAL( string( "https://store.example/game" ), grant._storeURL );
 
     AccountClientInfo current = oldClient;
     current._build            = "1.10.0";
-    SW_ASSERT_TRUE( fixture->guestLogin( 5, 20, grant, current ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( fixture->guestLogin( 5, UnixMilliseconds{ 20 }, grant, current ) == LoginResult::Ok );
     SW_EXPECT_TRUE( grant._bUpdateRecommended == SW_FALSE );
     SW_EXPECT_TRUE( grant._storeURL.empty() );
 }
@@ -934,14 +934,14 @@ SW_TEST_CASE( LoginServiceTest, SuspendedAccountCannotLoginAndIsKicked )
     using Internal = TestLoginServiceInternal;
     LoginFixture fixture;
     uint64       accountID = 0;
-    SW_ASSERT_TRUE( fixture->registerAccount( Internal::makeCredential( "rule_breaker", "password123" ), 0, &accountID ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( fixture->registerAccount( Internal::makeCredential( "rule_breaker", "password123" ), UnixMilliseconds{ 0 }, &accountID ) == LoginResult::Ok );
     LoginGrant grant;
-    SW_ASSERT_TRUE( fixture->login( Internal::makeCredential( "rule_breaker", "password123" ), 1, 0, grant ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( fixture->login( Internal::makeCredential( "rule_breaker", "password123" ), 1, UnixMilliseconds{ 0 }, grant ) == LoginResult::Ok );
     vector<LoginEvent> listEvent;
     fixture->drainEvents( listEvent );
 
     TestLoginServiceInternal::writeSanction( fixture._database, accountID, ServiceSanctionKind::Suspend, 5000 );
-    SW_ASSERT_TRUE( fixture->revokeAccountSessions( accountID, LoginRevokeReason::Sanctioned, 100 ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( fixture->revokeAccountSessions( accountID, LoginRevokeReason::Sanctioned, UnixMilliseconds{ 100 } ) == LoginResult::Ok );
     listEvent.clear();
     fixture->drainEvents( listEvent );
     SW_ASSERT_EQUAL( size_t( 1 ), listEvent.size() );
@@ -950,16 +950,16 @@ SW_TEST_CASE( LoginServiceTest, SuspendedAccountCannotLoginAndIsKicked )
     SW_EXPECT_FALSE( fixture->isAccountOnline( accountID ) );
 
     LoginGrant refused;
-    SW_EXPECT_TRUE( fixture->login( Internal::makeCredential( "rule_breaker", "password123" ), 2, 200, refused ) == LoginResult::AccountSuspended );
+    SW_EXPECT_TRUE( fixture->login( Internal::makeCredential( "rule_breaker", "password123" ), 2, UnixMilliseconds{ 200 }, refused ) == LoginResult::AccountSuspended );
     SW_EXPECT_EQUAL( int64( 5000 ), refused._sanctionUntilMs );
     SW_EXPECT_EQUAL( string( "sanction.cheat" ), refused._sanctionReasonCode );
-    SW_EXPECT_TRUE( fixture->login( Internal::makeCredential( "rule_breaker", "wrong-pass" ), 3, 200, refused ) == LoginResult::WrongCredentials ); // 비밀번호가 먼저
+    SW_EXPECT_TRUE( fixture->login( Internal::makeCredential( "rule_breaker", "wrong-pass" ), 3, UnixMilliseconds{ 200 }, refused ) == LoginResult::WrongCredentials ); // 비밀번호가 먼저
     LoginGrant after;
-    SW_EXPECT_TRUE( fixture->login( Internal::makeCredential( "rule_breaker", "password123" ), 4, 5000, after ) == LoginResult::Ok ); // 끝나면 다시
+    SW_EXPECT_TRUE( fixture->login( Internal::makeCredential( "rule_breaker", "password123" ), 4, UnixMilliseconds{ 5000 }, after ) == LoginResult::Ok ); // 끝나면 다시
 
     TestLoginServiceInternal::writeSanction( fixture._database, accountID, ServiceSanctionKind::Ban, ServiceSanctionState::kPermanentMs );
     LoginGrant resumed;
-    SW_EXPECT_TRUE( fixture->resumeSession( after._token, 4, 6000, resumed ) == LoginResult::AccountSuspended ); // 재접속도 막는다
+    SW_EXPECT_TRUE( fixture->resumeSession( after._token, 4, UnixMilliseconds{ 6000 }, resumed ) == LoginResult::AccountSuspended ); // 재접속도 막는다
 }
 
 SW_TEST_CASE( LoginServiceTest, DeletionWaitsForTheGraceThenErasesTheAccountButKeepsAudit )
@@ -969,42 +969,42 @@ SW_TEST_CASE( LoginServiceTest, DeletionWaitsForTheGraceThenErasesTheAccountButK
     FakePlatformLoginProvider provider{ "fake" };
     SW_ASSERT_TRUE( fixture->_service->registerPlatformProvider( &provider ) );
     LoginGrant guest;
-    SW_ASSERT_TRUE( fixture->guestLogin( 6, 0, guest ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( fixture->guestLogin( 6, UnixMilliseconds{ 0 }, guest ) == LoginResult::Ok );
     AccountIdentity identity;
-    SW_ASSERT_TRUE( fixture->linkCredential( guest._token, Internal::makeCredential( "leaver", "password123" ), 10, identity ) == LoginResult::Ok );
-    SW_ASSERT_TRUE( fixture->linkPlatform( guest._token, "fake", "subject:leave-1", 20 ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( fixture->linkCredential( guest._token, Internal::makeCredential( "leaver", "password123" ), UnixMilliseconds{ 10 }, identity ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( fixture->linkPlatform( guest._token, "fake", "subject:leave-1", UnixMilliseconds{ 20 } ) == LoginResult::Ok );
     const uint64 accountID = guest._identity._accountID;
 
     int64 dueMs = 0;
-    SW_ASSERT_TRUE( fixture->requestDeletion( guest._token, 100, dueMs ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( fixture->requestDeletion( guest._token, UnixMilliseconds{ 100 }, dueMs ) == LoginResult::Ok );
     SW_EXPECT_EQUAL( 100 + fixture._settings._deletionGraceMs, dueMs );
     SW_EXPECT_FALSE( fixture->isAccountOnline( accountID ) ); // 요청이 세션을 끊는다
     AccountIdentity ignored;
-    SW_EXPECT_TRUE( fixture->validateSession( guest._token, 110, ignored ) == LoginResult::Revoked );
+    SW_EXPECT_TRUE( fixture->validateSession( guest._token, UnixMilliseconds{ 110 }, ignored ) == LoginResult::Revoked );
 
     // 유예 안 — 로그인은 되고(예약 시각을 알려 준다) 취소할 수 있다.
     LoginGrant during;
-    SW_ASSERT_TRUE( fixture->login( Internal::makeCredential( "leaver", "password123" ), 1, 200, during ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( fixture->login( Internal::makeCredential( "leaver", "password123" ), 1, UnixMilliseconds{ 200 }, during ) == LoginResult::Ok );
     SW_EXPECT_EQUAL( dueMs, during._deletionDueMs );
-    fixture->purgeDueDeletions( dueMs - 1 ); // 아직
-    SW_ASSERT_TRUE( fixture->cancelDeletion( during._token, 300 ) == LoginResult::Ok );
-    fixture->purgeDueDeletions( dueMs + 1 ); // 취소된 예약 — 지우지 않는다
+    fixture->purgeDueDeletions( UnixMilliseconds{ dueMs - 1 } ); // 아직
+    SW_ASSERT_TRUE( fixture->cancelDeletion( during._token, UnixMilliseconds{ 300 } ) == LoginResult::Ok );
+    fixture->purgeDueDeletions( UnixMilliseconds{ dueMs + 1 } ); // 취소된 예약 — 지우지 않는다
     LoginGrant kept;
-    SW_ASSERT_TRUE( fixture->login( Internal::makeCredential( "leaver", "password123" ), 1, dueMs + 2, kept ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( fixture->login( Internal::makeCredential( "leaver", "password123" ), 1, UnixMilliseconds{ dueMs + 2 }, kept ) == LoginResult::Ok );
     SW_EXPECT_EQUAL( int64( 0 ), kept._deletionDueMs );
 
     // 다시 요청하고 유예가 지나면 지운다 — 이름 · 장치 · 외부 연결이 모두 풀린다. 감사 줄은 남는다.
     int64 secondDueMs = 0;
-    SW_ASSERT_TRUE( fixture->requestDeletion( kept._token, dueMs + 10, secondDueMs ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( fixture->requestDeletion( kept._token, UnixMilliseconds{ dueMs + 10 }, secondDueMs ) == LoginResult::Ok );
     const int32 auditBefore = fixture._database.countRecords( ServiceAuditLog::getTable() );
-    fixture->purgeDueDeletions( secondDueMs );
+    fixture->purgeDueDeletions( UnixMilliseconds{ secondDueMs } );
     SW_EXPECT_EQUAL( auditBefore + 1, fixture._database.countRecords( ServiceAuditLog::getTable() ) );
     LoginGrant gone;
-    SW_EXPECT_TRUE( fixture->login( Internal::makeCredential( "leaver", "password123" ), 1, secondDueMs + 1, gone ) == LoginResult::WrongCredentials );
-    SW_ASSERT_TRUE( fixture->platformLogin( "fake", "subject:leave-1", secondDueMs + 1, gone ) == LoginResult::Ok );
+    SW_EXPECT_TRUE( fixture->login( Internal::makeCredential( "leaver", "password123" ), 1, UnixMilliseconds{ secondDueMs + 1 }, gone ) == LoginResult::WrongCredentials );
+    SW_ASSERT_TRUE( fixture->platformLogin( "fake", "subject:leave-1", UnixMilliseconds{ secondDueMs + 1 }, gone ) == LoginResult::Ok );
     SW_EXPECT_TRUE( gone._bCreated == SW_TRUE ); // 같은 외부 주체는 새 계정
     SW_EXPECT_NOT_EQUAL( accountID, gone._identity._accountID );
-    SW_ASSERT_TRUE( fixture->guestLogin( 6, secondDueMs + 1, gone ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( fixture->guestLogin( 6, UnixMilliseconds{ secondDueMs + 1 }, gone ) == LoginResult::Ok );
     SW_EXPECT_TRUE( gone._bCreated == SW_TRUE );
     SW_EXPECT_EQUAL( 0, fixture._database.countRecords( hashed_string( "account_deletion" ) ) );
 }
@@ -1014,7 +1014,7 @@ SW_TEST_CASE( LoginServiceTest, LinkSecretsAreSealedAndRevokedAfterAccountDeleti
     LinkSecretFixture fixture;
     LoginFixture&     login = fixture._fixture;
     LoginGrant        grant;
-    SW_ASSERT_TRUE( login->platformLogin( "apple", "subject:a-1:Apple User", 0, grant ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( login->platformLogin( "apple", "subject:a-1:Apple User", UnixMilliseconds{ 0 }, grant ) == LoginResult::Ok );
     const uint64 accountID = grant._identity._accountID;
 
     // 연동 비밀은 암호화된 채로만 저장소에 있다(평문이 없다).
@@ -1029,26 +1029,26 @@ SW_TEST_CASE( LoginServiceTest, LinkSecretsAreSealedAndRevokedAfterAccountDeleti
     SW_EXPECT_EQUAL( login._database.countRecords( hashed_string( "login_revoke_queue" ) ), 0 );
 
     // 철회 대기열이 비어 있는 동안에는 제공자에 아무것도 부르지 않는다.
-    fixture.spinRevocation( 1000 );
+    fixture.spinRevocation( UnixMilliseconds{ 1000 } );
     SW_EXPECT_EQUAL( fixture._provider.getRevokedSecrets().size(), size_t( 0 ) );
 
     // 탈퇴 정리가 비밀을 칸에서 철회 대기열로 옮긴다.
     int64 dueMs = 0;
-    SW_ASSERT_TRUE( login->requestDeletion( grant._token, 100, dueMs ) == LoginResult::Ok );
-    login->purgeDueDeletions( dueMs );
+    SW_ASSERT_TRUE( login->requestDeletion( grant._token, UnixMilliseconds{ 100 }, dueMs ) == LoginResult::Ok );
+    login->purgeDueDeletions( UnixMilliseconds{ dueMs } );
     SW_EXPECT_EQUAL( login._database.countRecords( secretTable ), 0 );
     SW_ASSERT_EQUAL( login._database.countRecords( hashed_string( "login_revoke_queue" ) ), 1 );
 
     // 제공자에 닿지 못하면 대기열에 남아 다음 주기에 다시 한다.
     fixture._provider.setRevocationUnavailable( true );
     const int64 scanMs = login._settings._revocationScanMs;
-    fixture.spinRevocation( dueMs + 1 );
+    fixture.spinRevocation( UnixMilliseconds{ dueMs + 1 } );
     SW_EXPECT_EQUAL( fixture._provider.getRevokedSecrets().size(), size_t( 0 ) );
     SW_EXPECT_EQUAL( login._database.countRecords( hashed_string( "login_revoke_queue" ) ), 1 );
     fixture._provider.setRevocationUnavailable( false );
-    fixture.spinRevocation( dueMs + 1 + scanMs / 2 ); // 주기 전에는 읽지 않는다
+    fixture.spinRevocation( UnixMilliseconds{ dueMs + 1 + scanMs / 2 } ); // 주기 전에는 읽지 않는다
     SW_EXPECT_EQUAL( fixture._provider.getRevokedSecrets().size(), size_t( 0 ) );
-    fixture.spinRevocation( dueMs + 1 + scanMs );
+    fixture.spinRevocation( UnixMilliseconds{ dueMs + 1 + scanMs } );
     SW_ASSERT_EQUAL( fixture._provider.getRevokedSecrets().size(), size_t( 1 ) );
     SW_EXPECT_EQUAL( fixture._provider.getRevokedSecrets()[0], string( "refresh-token-1" ) );
     SW_EXPECT_EQUAL( login._database.countRecords( hashed_string( "login_revoke_queue" ) ), 0 ); // 철회가 끝나 항목을 지웠다
@@ -1061,13 +1061,13 @@ SW_TEST_CASE( LoginServiceTest, UnlinkingAProviderQueuesItsLinkSecretForRevocati
     LinkSecretFixture fixture;
     LoginFixture&     login = fixture._fixture;
     LoginGrant        grant;
-    SW_ASSERT_TRUE( login->guestLogin( 9, 0, grant ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( login->guestLogin( 9, UnixMilliseconds{ 0 }, grant ) == LoginResult::Ok );
     AccountIdentity identity;
-    SW_ASSERT_TRUE( login->linkCredential( grant._token, Internal::makeCredential( "applefan", "password123" ), 10, identity ) == LoginResult::Ok );
-    SW_ASSERT_TRUE( login->linkPlatform( grant._token, "apple", "subject:a-2", 20 ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( login->linkCredential( grant._token, Internal::makeCredential( "applefan", "password123" ), UnixMilliseconds{ 10 }, identity ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( login->linkPlatform( grant._token, "apple", "subject:a-2", UnixMilliseconds{ 20 } ) == LoginResult::Ok );
     SW_ASSERT_EQUAL( login._database.countRecords( hashed_string( "login_account_secret" ) ), 1 ); // 연동할 때도 비밀을 남긴다
 
-    SW_ASSERT_TRUE( login->unlinkPlatform( grant._token, "apple", 30 ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( login->unlinkPlatform( grant._token, "apple", UnixMilliseconds{ 30 } ) == LoginResult::Ok );
     SW_EXPECT_EQUAL( login._database.countRecords( hashed_string( "login_account_secret" ) ), 0 );
     SW_ASSERT_EQUAL( login._database.countRecords( hashed_string( "login_revoke_queue" ) ), 1 );
 
@@ -1079,12 +1079,12 @@ SW_TEST_CASE( LoginServiceTest, UnlinkingAProviderQueuesItsLinkSecretForRevocati
     const int64 firstMs = 100000; // 외부 로그인 도우미의 update 가 연 첫 읽기 주기(빈 대기열)보다 뒤
     {
         SW_TEST_DEFENSIVE_SCOPE( "the service logs that the queue entry cannot be opened" );
-        fixture.spinRevocation( firstMs );
+        fixture.spinRevocation( UnixMilliseconds{ firstMs } );
     }
     SW_EXPECT_EQUAL( fixture._provider.getRevokedSecrets().size(), size_t( 0 ) );
     SW_EXPECT_EQUAL( login._database.countRecords( hashed_string( "login_revoke_queue" ) ), 1 );
     login->_service->setSecretVault( &fixture._vault );
-    fixture.spinRevocation( firstMs + login._settings._revocationScanMs );
+    fixture.spinRevocation( UnixMilliseconds{ firstMs + login._settings._revocationScanMs } );
     SW_EXPECT_EQUAL( fixture._provider.getRevokedSecrets().size(), size_t( 1 ) );
     SW_EXPECT_EQUAL( login._database.countRecords( hashed_string( "login_revoke_queue" ) ), 0 );
 }
@@ -1099,7 +1099,7 @@ SW_TEST_CASE( LoginServiceTest, ALinkSecretWithoutAVaultIsDroppedInsteadOfStored
     LoginGrant grant;
     {
         SW_TEST_DEFENSIVE_SCOPE( "the service logs that the link secret cannot be stored" );
-        SW_ASSERT_TRUE( fixture->platformLogin( "apple", "subject:a-3", 0, grant ) == LoginResult::Ok ); // 로그인은 성공이다
+        SW_ASSERT_TRUE( fixture->platformLogin( "apple", "subject:a-3", UnixMilliseconds{ 0 }, grant ) == LoginResult::Ok ); // 로그인은 성공이다
     }
     SW_EXPECT_EQUAL( fixture._database.countRecords( hashed_string( "login_account_secret" ) ), 0 );
 }

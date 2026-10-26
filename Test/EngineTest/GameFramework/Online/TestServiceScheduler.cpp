@@ -98,7 +98,7 @@ SW_TEST_CASE( ServiceSchedulerTest, TwoServersRunEachOccurrenceOnce )
     SW_ASSERT_TRUE( schedulerA.registerJob( Internal::makeDaily( 10 * 60 ), &handlerA ) );
     SW_ASSERT_TRUE( schedulerB.registerJob( Internal::makeDaily( 10 * 60 ), &handlerB ) );
 
-    const int64 nowMs = Internal::kDay * Internal::kDayMs + 11 * Internal::kHourMs;
+    const UnixMilliseconds nowMs{ Internal::kDay * Internal::kDayMs + 11 * Internal::kHourMs };
     schedulerA.update( nowMs );
     schedulerB.update( nowMs );
     SW_EXPECT_EQUAL( size_t( 0 ), handlerA._listRun.size() ); // 처리기는 완료를 거둘 때 불린다
@@ -106,7 +106,7 @@ SW_TEST_CASE( ServiceSchedulerTest, TwoServersRunEachOccurrenceOnce )
     frontB.pollCompletions();
     SW_EXPECT_EQUAL( size_t( 1 ), handlerA._listRun.size() + handlerB._listRun.size() );
     SW_ASSERT_EQUAL( size_t( 1 ), handlerA._listRun.size() );
-    SW_EXPECT_EQUAL( nowMs - Internal::kHourMs, handlerA._listRun[0]._occurrenceMs );
+    SW_EXPECT_EQUAL( ( nowMs - Internal::kHourMs ).count(), handlerA._listRun[0]._occurrenceMs.count() );
 
     schedulerA.completeRun( handlerA._listRun[0], true );
     frontA.pollCompletions();
@@ -133,7 +133,7 @@ SW_TEST_CASE( ServiceSchedulerTest, RestartAfterDaysRunsOnlyTheLatestOccurrence 
         ServiceScheduler    scheduler;
         scheduler.initialize( &front, 1 );
         SW_ASSERT_TRUE( scheduler.registerJob( Internal::makeDaily( 10 * 60 ), &handler ) );
-        scheduler.update( firstMs );
+        scheduler.update( UnixMilliseconds{ firstMs } );
         front.pollCompletions();
         SW_ASSERT_EQUAL( size_t( 1 ), handler._listRun.size() );
         scheduler.completeRun( handler._listRun[0], true );
@@ -144,17 +144,17 @@ SW_TEST_CASE( ServiceSchedulerTest, RestartAfterDaysRunsOnlyTheLatestOccurrence 
     ServiceScheduler    scheduler;
     scheduler.initialize( &front, 1 );
     SW_ASSERT_TRUE( scheduler.registerJob( Internal::makeDaily( 10 * 60 ), &handler ) );
-    scheduler.update( firstMs ); // 이미 끝난 회차
+    scheduler.update( UnixMilliseconds{ firstMs } ); // 이미 끝난 회차
     front.pollCompletions();
     SW_EXPECT_EQUAL( size_t( 0 ), handler._listRun.size() );
 
     const int64 laterMs = firstMs + 3 * Internal::kDayMs;
-    scheduler.update( laterMs ); // 사흘 꺼져 있었다 — 밀린 둘은 건너뛰고 최근 하나만
+    scheduler.update( UnixMilliseconds{ laterMs } ); // 사흘 꺼져 있었다 — 밀린 둘은 건너뛰고 최근 하나만
     front.pollCompletions();
-    scheduler.update( laterMs + 1000 );
+    scheduler.update( UnixMilliseconds{ laterMs + 1000 } );
     front.pollCompletions();
     SW_ASSERT_EQUAL( size_t( 1 ), handler._listRun.size() );
-    SW_EXPECT_EQUAL( laterMs - Internal::kHourMs, handler._listRun[0]._occurrenceMs );
+    SW_EXPECT_EQUAL( laterMs - Internal::kHourMs, handler._listRun[0]._occurrenceMs.count() );
 }
 
 SW_TEST_CASE( ServiceSchedulerTest, ExpiredLeaseIsTakenOverByAnotherServer )
@@ -172,7 +172,7 @@ SW_TEST_CASE( ServiceSchedulerTest, ExpiredLeaseIsTakenOverByAnotherServer )
     SW_ASSERT_TRUE( schedulerA.registerJob( Internal::makeDaily( 10 * 60 ), &handlerA ) );
     SW_ASSERT_TRUE( schedulerB.registerJob( Internal::makeDaily( 10 * 60 ), &handlerB ) );
 
-    const int64 nowMs = Internal::kDay * Internal::kDayMs + 11 * Internal::kHourMs;
+    const UnixMilliseconds nowMs{ Internal::kDay * Internal::kDayMs + 11 * Internal::kHourMs };
     schedulerA.update( nowMs ); // A 가 차지하고 끝을 알리지 못한 채 멈췄다
     frontA.pollCompletions();
     SW_ASSERT_EQUAL( size_t( 1 ), handlerA._listRun.size() );
@@ -183,7 +183,7 @@ SW_TEST_CASE( ServiceSchedulerTest, ExpiredLeaseIsTakenOverByAnotherServer )
     schedulerB.update( nowMs + Internal::kHourMs ); // 임대가 지났다 — 이어받는다
     frontB.pollCompletions();
     SW_ASSERT_EQUAL( size_t( 1 ), handlerB._listRun.size() );
-    SW_EXPECT_EQUAL( handlerA._listRun[0]._occurrenceMs, handlerB._listRun[0]._occurrenceMs );
+    SW_EXPECT_EQUAL( handlerA._listRun[0]._occurrenceMs.count(), handlerB._listRun[0]._occurrenceMs.count() );
 
     const uint64 commitsBefore = database.getCommitCount();
     schedulerA.completeRun( handlerA._listRun[0], true ); // 늦게 깨어난 A 의 끝 알림은 판이 낡아 적히지 않는다

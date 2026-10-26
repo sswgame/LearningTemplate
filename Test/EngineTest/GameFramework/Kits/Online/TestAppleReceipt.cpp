@@ -217,7 +217,7 @@ namespace
         FakeAppStoreHandler    _handler;
         test::FakeHTTPSFixture _https;
         AppleReceiptValidator  _validator;
-        int64                  _nowMs; ///< 서버 루프의 시각 대신 — 테스트 인증서가 실제 시각으로 만들어지므로 벽시계를 한 번 읽어 고정한다
+        UnixMilliseconds       _nowMs; ///< 서버 루프의 시각 대신 — 테스트 인증서가 실제 시각으로 만들어지므로 벽시계를 한 번 읽어 고정한다
 
         static AppleReceiptSettings makeSettings( FakeAppStoreHandler& handler, const TestPKI& pki, const test::FakeHTTPSFixture& https, bool bMarkers )
         {
@@ -255,7 +255,7 @@ namespace
             while ( listResult.size() < count && deadline.isExpired() == false )
             {
                 _https.pump();
-                _validator.update( UnixMilliseconds{ _nowMs } );
+                _validator.update( _nowMs );
                 _validator.pollCompletions( listResult );
             }
             return listResult;
@@ -271,7 +271,7 @@ namespace
             return nullptr;
         }
 
-        vector<ReceiptRefundNotice> collectRefunds( int64 nowMs, size_t count, int64 waitMilliseconds )
+        vector<ReceiptRefundNotice> collectRefunds( UnixMilliseconds nowMs, size_t count, int64 waitMilliseconds )
         {
             vector<ReceiptRefundNotice>     listNotice;
             vector<ReceiptValidationResult> listIgnored;
@@ -279,7 +279,7 @@ namespace
             while ( listNotice.size() < count && deadline.isExpired() == false )
             {
                 _https.pump();
-                _validator.update( UnixMilliseconds{ nowMs } );
+                _validator.update( nowMs );
                 _validator.pollCompletions( listIgnored );
                 _validator.pollRefunds( listNotice );
             }
@@ -301,15 +301,15 @@ namespace
 SW_TEST_CASE( AppleReceiptTest, SignedTransactionsAreVerifiedAgainstTheAppleRootAndMapped )
 {
     AppleFixture fixture;
-    fixture._validator.submitValidation( makeRequest( "3001", 1 ), UnixMilliseconds{ fixture._nowMs } );
-    fixture._validator.submitValidation( makeRequest( "3002", 2 ), UnixMilliseconds{ fixture._nowMs } );
-    fixture._validator.submitValidation( makeRequest( "3005", 3 ), UnixMilliseconds{ fixture._nowMs } );
-    fixture._validator.submitValidation( makeRequest( "4040", 4 ), UnixMilliseconds{ fixture._nowMs } );
+    fixture._validator.submitValidation( makeRequest( "3001", 1 ), fixture._nowMs );
+    fixture._validator.submitValidation( makeRequest( "3002", 2 ), fixture._nowMs );
+    fixture._validator.submitValidation( makeRequest( "3005", 3 ), fixture._nowMs );
+    fixture._validator.submitValidation( makeRequest( "4040", 4 ), fixture._nowMs );
     {
         SW_TEST_DEFENSIVE_SCOPE( "the provider logs the transactions that do not verify" );
-        fixture._validator.submitValidation( makeRequest( "3003", 5 ), UnixMilliseconds{ fixture._nowMs } );
-        fixture._validator.submitValidation( makeRequest( "3004", 6 ), UnixMilliseconds{ fixture._nowMs } );
-        fixture._validator.submitValidation( makeRequest( "3006", 7 ), UnixMilliseconds{ fixture._nowMs } );
+        fixture._validator.submitValidation( makeRequest( "3003", 5 ), fixture._nowMs );
+        fixture._validator.submitValidation( makeRequest( "3004", 6 ), fixture._nowMs );
+        fixture._validator.submitValidation( makeRequest( "3006", 7 ), fixture._nowMs );
         const vector<ReceiptValidationResult> listResult = fixture.collect( 7 );
         SW_ASSERT_EQUAL( listResult.size(), size_t( 7 ) );
         SW_EXPECT_TRUE( fixture._handler._bAuthValid == SW_TRUE ); // ES256 · kid · iss · aud · bid
@@ -334,9 +334,9 @@ SW_TEST_CASE( AppleReceiptTest, SignedTransactionsAreVerifiedAgainstTheAppleRoot
 SW_TEST_CASE( AppleReceiptTest, MalformedReceiptsAreRefusedWithoutAskingApple )
 {
     AppleFixture fixture;
-    fixture._validator.submitValidation( makeRequest( "3001/../x", 1 ), UnixMilliseconds{ fixture._nowMs } );
-    fixture._validator.submitValidation( makeRequest( "", 2 ), UnixMilliseconds{ fixture._nowMs } );
-    fixture._validator.submitValidation( makeRequest( "123456789012345678901", 3 ), UnixMilliseconds{ fixture._nowMs } );
+    fixture._validator.submitValidation( makeRequest( "3001/../x", 1 ), fixture._nowMs );
+    fixture._validator.submitValidation( makeRequest( "", 2 ), fixture._nowMs );
+    fixture._validator.submitValidation( makeRequest( "123456789012345678901", 3 ), fixture._nowMs );
     const vector<ReceiptValidationResult> listResult = fixture.collect( 3 );
     SW_ASSERT_EQUAL( listResult.size(), size_t( 3 ) );
     for ( const ReceiptValidationResult& result : listResult )
@@ -352,12 +352,12 @@ SW_TEST_CASE( AppleReceiptTest, AnAuthorizationApplesRefusesIsRetriedAndTheToken
     fixture._handler._authFailuresLeft = 1;
     {
         SW_TEST_DEFENSIVE_SCOPE( "the provider logs that apple rejected its token" );
-        fixture._validator.submitValidation( makeRequest( "3001", 1 ), UnixMilliseconds{ fixture._nowMs } );
+        fixture._validator.submitValidation( makeRequest( "3001", 1 ), fixture._nowMs );
         const vector<ReceiptValidationResult> listFirst = fixture.collect( 1 );
         SW_ASSERT_EQUAL( listFirst.size(), size_t( 1 ) );
         SW_EXPECT_TRUE( listFirst[0]._status == ReceiptStatus::Retry ); // 우리 설정 문제 — 플레이어 탓이 아니다
     }
-    fixture._validator.submitValidation( makeRequest( "3001", 2 ), UnixMilliseconds{ fixture._nowMs } );
+    fixture._validator.submitValidation( makeRequest( "3001", 2 ), fixture._nowMs );
     const vector<ReceiptValidationResult> listSecond = fixture.collect( 1 );
     SW_ASSERT_EQUAL( listSecond.size(), size_t( 1 ) );
     SW_EXPECT_TRUE( listSecond[0]._status == ReceiptStatus::Valid );
@@ -384,7 +384,7 @@ SW_TEST_CASE( AppleReceiptTest, TheNotificationHistoryNotifiesEachRefundOnceAcro
 SW_TEST_CASE( AppleReceiptTest, MarkersAreRequiredUnlessTheSettingTurnsThemOff )
 {
     TestPKI                plainPki( "", "" );                       // 애플 표지가 없는 사슬
-    const int64            nowMs = WallClock::nowUnixMilliseconds(); // 테스트 인증서가 실제 시각으로 만들어진다
+    const UnixMilliseconds nowMs = WallClock::nowUnixMilliseconds(); // 테스트 인증서가 실제 시각으로 만들어진다
     FakeAppStoreHandler    handler;
     test::FakeHTTPSFixture https( &handler );
     AppleReceiptValidator  strict( AppleFixture::makeSettings( handler, plainPki, https, true ), &NetSecurity::getProvider(), &https._client );
@@ -392,13 +392,13 @@ SW_TEST_CASE( AppleReceiptTest, MarkersAreRequiredUnlessTheSettingTurnsThemOff )
     handler._pForeignPKI = &plainPki;
     {
         SW_TEST_DEFENSIVE_SCOPE( "the strict provider logs the transaction without the Apple markers" );
-        strict.submitValidation( makeRequest( "3001", 1 ), UnixMilliseconds{ nowMs } );
+        strict.submitValidation( makeRequest( "3001", 1 ), nowMs );
         vector<ReceiptValidationResult> listStrict;
         const Deadline                  deadline = Deadline::afterMilliseconds( 10000 );
         while ( listStrict.empty() && deadline.isExpired() == false )
         {
             https.pump();
-            strict.update( UnixMilliseconds{ nowMs } );
+            strict.update( nowMs );
             strict.pollCompletions( listStrict );
         }
         SW_ASSERT_EQUAL( listStrict.size(), size_t( 1 ) );
@@ -406,13 +406,13 @@ SW_TEST_CASE( AppleReceiptTest, MarkersAreRequiredUnlessTheSettingTurnsThemOff )
     }
     strict.shutdown();
     AppleReceiptValidator lenient( AppleFixture::makeSettings( handler, plainPki, https, false ), &NetSecurity::getProvider(), &https._client );
-    lenient.submitValidation( makeRequest( "3001", 2 ), UnixMilliseconds{ nowMs } );
+    lenient.submitValidation( makeRequest( "3001", 2 ), nowMs );
     vector<ReceiptValidationResult> listLenient;
     const Deadline                  deadline = Deadline::afterMilliseconds( 10000 );
     while ( listLenient.empty() && deadline.isExpired() == false )
     {
         https.pump();
-        lenient.update( UnixMilliseconds{ nowMs } );
+        lenient.update( nowMs );
         lenient.pollCompletions( listLenient );
     }
     SW_ASSERT_EQUAL( listLenient.size(), size_t( 1 ) );
@@ -424,7 +424,7 @@ SW_TEST_CASE( NetSecurityCertificateChainTest, ChainsAreVerifiedAgainstTheRootsT
     INetSecurityProvider& security = NetSecurity::getProvider();
     TestPKI               pki( "1.2.840.113635.100.6.11.1", "1.2.840.113635.100.6.2.1" );
     TestPKI               other( "1.2.840.113635.100.6.11.1", "1.2.840.113635.100.6.2.1" );
-    const int64           nowSeconds = WallClock::nowUnixMilliseconds() / 1000;
+    const int64           nowSeconds = WallClock::nowUnixMilliseconds().toSeconds();
     NetPublicKey          leafKey;
     SW_EXPECT_TRUE( security.verifyCertificateChain( pki.makeChainDer(), pki._rootPem, nowSeconds, "1.2.840.113635.100.6.11.1", "1.2.840.113635.100.6.2.1", leafKey ) );
     SW_EXPECT_TRUE( leafKey._algorithm == NetSignatureAlgorithm::EcdsaP256Sha256 );

@@ -123,7 +123,7 @@ namespace
     public:
         vector<AccountID> _listRevoked{};
 
-        void revokeAccountSessions( AccountID accountID, string_view reasonCode, int64 nowMs ) override
+        void revokeAccountSessions( AccountID accountID, string_view reasonCode, UnixMilliseconds nowMs ) override
         {
             (void)reasonCode;
             (void)nowMs;
@@ -139,7 +139,7 @@ namespace
         vector<string>                           _listCall{};
         ServerDirectoryControlResult             _nextResult{ ServerDirectoryControlResult::Ok };
 
-        void setMaintenance( const ServerDirectoryMaintenanceChange& change, AccountID actorID, string_view memo, int64 nowMs, uint64 requestTag ) override
+        void setMaintenance( const ServerDirectoryMaintenanceChange& change, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag ) override
         {
             (void)actorID;
             (void)memo;
@@ -148,7 +148,7 @@ namespace
             _listPending.push_back( ServerDirectoryControlCompletion{ requestTag, _nextResult } );
         }
 
-        void clearMaintenance( string_view scope, AccountID actorID, string_view memo, int64 nowMs, uint64 requestTag ) override
+        void clearMaintenance( string_view scope, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag ) override
         {
             (void)actorID;
             (void)memo;
@@ -157,7 +157,7 @@ namespace
             _listPending.push_back( ServerDirectoryControlCompletion{ requestTag, _nextResult } );
         }
 
-        void postNotice( const ServerDirectoryNoticeChange& change, AccountID actorID, int64 nowMs, uint64 requestTag ) override
+        void postNotice( const ServerDirectoryNoticeChange& change, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag ) override
         {
             (void)actorID;
             (void)nowMs;
@@ -165,7 +165,7 @@ namespace
             _listPending.push_back( ServerDirectoryControlCompletion{ requestTag, _nextResult } );
         }
 
-        void removeNotice( uint64 noticeID, AccountID actorID, int64 nowMs, uint64 requestTag ) override
+        void removeNotice( uint64 noticeID, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag ) override
         {
             (void)noticeID;
             (void)actorID;
@@ -188,7 +188,7 @@ namespace
         vector<LiveEventControlCompletion> _listPending{};
         vector<string>                     _listPutJSON{};
 
-        void putEventJSON( string_view definitionJSON, AccountID actorID, string_view memo, int64 nowMs, uint64 requestTag ) override
+        void putEventJSON( string_view definitionJSON, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag ) override
         {
             (void)actorID;
             (void)memo;
@@ -197,7 +197,7 @@ namespace
             _listPending.push_back( LiveEventControlCompletion{ requestTag, LiveEventControlResult::Ok } );
         }
 
-        void removeEvent( string_view eventID, AccountID actorID, string_view memo, int64 nowMs, uint64 requestTag ) override
+        void removeEvent( string_view eventID, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag ) override
         {
             (void)eventID;
             (void)actorID;
@@ -471,8 +471,8 @@ SW_TEST_CASE( AdminServiceTest, MaintenanceAndNoticeCommandsAreForwardedAfterThe
     AdminServiceConfig    settings;
     settings._pDirectoryControl = &control;
     SW_ASSERT_TRUE( service.initialize( &store, settings ) );
-    service.seedRole( AdminFixture::kOperator, AdminRole::Operator, 1 );
-    service.seedRole( AdminFixture::kSupport, AdminRole::Support, 1 );
+    service.seedRole( AdminFixture::kOperator, AdminRole::Operator, UnixMilliseconds{ 1 } );
+    service.seedRole( AdminFixture::kSupport, AdminRole::Support, UnixMilliseconds{ 1 } );
     (void)store.pollCompletions();
 
     AdminRequest maintenance;
@@ -488,10 +488,10 @@ SW_TEST_CASE( AdminServiceTest, MaintenanceAndNoticeCommandsAreForwardedAfterThe
     AdminReplyCapture set;
     AdminReplyCapture denied;
     AdminReplyCapture posted;
-    service.submitCall( AdminFixture::kOperator, AdminMethod::kSetMaintenance, maintenance, NetIdempotencyKey{ 1, 1 }, 5000, set.makeDelegate() );
-    service.submitCall( AdminFixture::kSupport, AdminMethod::kSetMaintenance, maintenance, NetIdempotencyKey{ 1, 2 }, 5000, denied.makeDelegate() );
+    service.submitCall( AdminFixture::kOperator, AdminMethod::kSetMaintenance, maintenance, NetIdempotencyKey{ 1, 1 }, UnixMilliseconds{ 5000 }, set.makeDelegate() );
+    service.submitCall( AdminFixture::kSupport, AdminMethod::kSetMaintenance, maintenance, NetIdempotencyKey{ 1, 2 }, UnixMilliseconds{ 5000 }, denied.makeDelegate() );
     control._nextResult = ServerDirectoryControlResult::Ok;
-    service.submitCall( AdminFixture::kOperator, AdminMethod::kPostNotice, notice, NetIdempotencyKey{ 1, 3 }, 5000, posted.makeDelegate() );
+    service.submitCall( AdminFixture::kOperator, AdminMethod::kPostNotice, notice, NetIdempotencyKey{ 1, 3 }, UnixMilliseconds{ 5000 }, posted.makeDelegate() );
     (void)store.pollCompletions();    // 등급 확인이 끝나 넘긴다
     SW_EXPECT_EQUAL( set._count, 0 ); // 아직 서버 디렉터리 키트의 완료 전이다
     SW_EXPECT_EQUAL( denied._count, 1 );
@@ -499,16 +499,16 @@ SW_TEST_CASE( AdminServiceTest, MaintenanceAndNoticeCommandsAreForwardedAfterThe
     SW_ASSERT_EQUAL( control._listCall.size(), size_t( 2 ) );
     SW_EXPECT_EQUAL( control._listCall[0], string( "set:game" ) );
     SW_EXPECT_EQUAL( control._listCall[1], string( "post:notice.event" ) );
-    service.update( 5000 );
+    service.update( UnixMilliseconds{ 5000 } );
     SW_EXPECT_EQUAL( set._count, 1 );
     SW_EXPECT_TRUE( set._reply._result == AdminResult::Ok );
     SW_EXPECT_TRUE( posted._reply._result == AdminResult::Ok );
 
     control._nextResult = ServerDirectoryControlResult::NotFound;
     AdminReplyCapture removed;
-    service.submitCall( AdminFixture::kOperator, AdminMethod::kRemoveNotice, notice, NetIdempotencyKey{ 1, 4 }, 5000, removed.makeDelegate() );
+    service.submitCall( AdminFixture::kOperator, AdminMethod::kRemoveNotice, notice, NetIdempotencyKey{ 1, 4 }, UnixMilliseconds{ 5000 }, removed.makeDelegate() );
     (void)store.pollCompletions();
-    service.update( 5000 );
+    service.update( UnixMilliseconds{ 5000 } );
     SW_EXPECT_TRUE( removed._reply._result == AdminResult::NotFound );
     service.shutdown();
     store.shutdown();
@@ -524,12 +524,12 @@ SW_TEST_CASE( AdminServiceTest, LiveEventCommandsGoToTheLiveOpsKit )
     AdminServiceConfig    settings;
     settings._pLiveEventControl = &control;
     SW_ASSERT_TRUE( service.initialize( &store, settings ) );
-    service.seedRole( AdminFixture::kOperator, AdminRole::Operator, 1 );
-    service.seedRole( AdminFixture::kViewer, AdminRole::Viewer, 1 );
+    service.seedRole( AdminFixture::kOperator, AdminRole::Operator, UnixMilliseconds{ 1 } );
+    service.seedRole( AdminFixture::kViewer, AdminRole::Viewer, UnixMilliseconds{ 1 } );
     (void)store.pollCompletions();
 
     AdminReplyCapture listed;
-    service.submitCall( AdminFixture::kViewer, AdminMethod::kListLiveEvents, AdminRequest{}, NetIdempotencyKey{}, 5000, listed.makeDelegate() );
+    service.submitCall( AdminFixture::kViewer, AdminMethod::kListLiveEvents, AdminRequest{}, NetIdempotencyKey{}, UnixMilliseconds{ 5000 }, listed.makeDelegate() );
     (void)store.pollCompletions();
     SW_ASSERT_EQUAL( listed._count, 1 ); // 목록은 넘기지 않고 바로 답한다
     SW_ASSERT_EQUAL( listed._reply._listLiveEvent.size(), size_t( 1 ) );
@@ -540,22 +540,22 @@ SW_TEST_CASE( AdminServiceTest, LiveEventCommandsGoToTheLiveOpsKit )
     put._memo      = "season";
     AdminReplyCapture denied;
     AdminReplyCapture putDone;
-    service.submitCall( AdminFixture::kViewer, AdminMethod::kPutLiveEvent, put, NetIdempotencyKey{ 2, 1 }, 5000, denied.makeDelegate() );
-    service.submitCall( AdminFixture::kOperator, AdminMethod::kPutLiveEvent, put, NetIdempotencyKey{ 2, 2 }, 5000, putDone.makeDelegate() );
+    service.submitCall( AdminFixture::kViewer, AdminMethod::kPutLiveEvent, put, NetIdempotencyKey{ 2, 1 }, UnixMilliseconds{ 5000 }, denied.makeDelegate() );
+    service.submitCall( AdminFixture::kOperator, AdminMethod::kPutLiveEvent, put, NetIdempotencyKey{ 2, 2 }, UnixMilliseconds{ 5000 }, putDone.makeDelegate() );
     (void)store.pollCompletions();
     SW_EXPECT_TRUE( denied._reply._result == AdminResult::Forbidden );
     SW_EXPECT_EQUAL( putDone._count, 0 );
     SW_ASSERT_EQUAL( control._listPutJSON.size(), size_t( 1 ) );
-    service.update( 5000 );
+    service.update( UnixMilliseconds{ 5000 } );
     SW_EXPECT_TRUE( putDone._reply._result == AdminResult::Ok );
 
     AdminRequest remove;
     remove._eventID = "nope";
     remove._memo    = "cleanup";
     AdminReplyCapture removed;
-    service.submitCall( AdminFixture::kOperator, AdminMethod::kRemoveLiveEvent, remove, NetIdempotencyKey{ 2, 3 }, 5000, removed.makeDelegate() );
+    service.submitCall( AdminFixture::kOperator, AdminMethod::kRemoveLiveEvent, remove, NetIdempotencyKey{ 2, 3 }, UnixMilliseconds{ 5000 }, removed.makeDelegate() );
     (void)store.pollCompletions();
-    service.update( 5000 );
+    service.update( UnixMilliseconds{ 5000 } );
     SW_EXPECT_TRUE( removed._reply._result == AdminResult::NotFound );
     service.shutdown();
     store.shutdown();
@@ -571,7 +571,7 @@ SW_TEST_CASE( AdminServiceTest, ServiceRevokesSessionsAfterSuspendOnce )
     AdminServiceConfig    settings;
     settings._pSessionControl = &sessions;
     SW_ASSERT_TRUE( service.initialize( &store, settings ) );
-    service.seedRole( AdminFixture::kOperator, AdminRole::Operator, 1 );
+    service.seedRole( AdminFixture::kOperator, AdminRole::Operator, UnixMilliseconds{ 1 } );
     (void)store.pollCompletions();
     AdminRequest suspend;
     suspend._accountID    = AdminFixture::kPlayer;
@@ -580,10 +580,10 @@ SW_TEST_CASE( AdminServiceTest, ServiceRevokesSessionsAfterSuspendOnce )
     suspend._memo         = "ticket-9";
     AdminReplyCapture first;
     AdminReplyCapture retry;
-    service.submitCall( AdminFixture::kOperator, AdminMethod::kSetSanction, suspend, NetIdempotencyKey{ 1, 2 }, 5000, first.makeDelegate() );
-    service.submitCall( AdminFixture::kOperator, AdminMethod::kSetSanction, suspend, NetIdempotencyKey{ 1, 2 }, 5000, retry.makeDelegate() );
+    service.submitCall( AdminFixture::kOperator, AdminMethod::kSetSanction, suspend, NetIdempotencyKey{ 1, 2 }, UnixMilliseconds{ 5000 }, first.makeDelegate() );
+    service.submitCall( AdminFixture::kOperator, AdminMethod::kSetSanction, suspend, NetIdempotencyKey{ 1, 2 }, UnixMilliseconds{ 5000 }, retry.makeDelegate() );
     (void)store.pollCompletions();
-    service.update( 5000 );
+    service.update( UnixMilliseconds{ 5000 } );
     SW_EXPECT_TRUE( first._reply._result == AdminResult::Ok );
     SW_EXPECT_TRUE( retry._reply._bReplayed == SW_TRUE );
     SW_ASSERT_EQUAL( sessions._listRevoked.size(), size_t( 1 ) ); // 재시도 응답에서 다시 끊지 않는다
@@ -606,7 +606,7 @@ SW_TEST_CASE( AdminServiceTest, SanctionChangeIsPublishedOnceOnTheBus )
     AdminServiceConfig settings;
     settings._pBus = &adminBus;
     SW_ASSERT_TRUE( service.initialize( &store, settings ) );
-    service.seedRole( AdminFixture::kSupport, AdminRole::Support, 1 );
+    service.seedRole( AdminFixture::kSupport, AdminRole::Support, UnixMilliseconds{ 1 } );
     (void)store.pollCompletions();
 
     AdminRequest mute;
@@ -617,9 +617,9 @@ SW_TEST_CASE( AdminServiceTest, SanctionChangeIsPublishedOnceOnTheBus )
     AdminReplyCapture first;
     AdminReplyCapture retry;
     AdminReplyCapture lookup;
-    service.submitCall( AdminFixture::kSupport, AdminMethod::kSetSanction, mute, NetIdempotencyKey{ 3, 4 }, 5000, first.makeDelegate() );
-    service.submitCall( AdminFixture::kSupport, AdminMethod::kSetSanction, mute, NetIdempotencyKey{ 3, 4 }, 5000, retry.makeDelegate() );
-    service.submitCall( AdminFixture::kSupport, AdminMethod::kLookupAccount, mute, NetIdempotencyKey{ 3, 5 }, 5000, lookup.makeDelegate() );
+    service.submitCall( AdminFixture::kSupport, AdminMethod::kSetSanction, mute, NetIdempotencyKey{ 3, 4 }, UnixMilliseconds{ 5000 }, first.makeDelegate() );
+    service.submitCall( AdminFixture::kSupport, AdminMethod::kSetSanction, mute, NetIdempotencyKey{ 3, 4 }, UnixMilliseconds{ 5000 }, retry.makeDelegate() );
+    service.submitCall( AdminFixture::kSupport, AdminMethod::kLookupAccount, mute, NetIdempotencyKey{ 3, 5 }, UnixMilliseconds{ 5000 }, lookup.makeDelegate() );
     (void)store.pollCompletions();
     SW_EXPECT_TRUE( first._reply._result == AdminResult::Ok );
     SW_EXPECT_TRUE( retry._reply._bReplayed == SW_TRUE );

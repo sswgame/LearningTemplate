@@ -4,6 +4,7 @@
 #include "pch.h"
 
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
+#include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Kits/Feature/Online/Chat/Shared/ChatProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Shared/MatchmakingProtocol.h"
@@ -21,10 +22,10 @@ namespace
 {
     struct OnlineLoadBotTestInternal
     {
-        static constexpr int64  kTickMs        = 10;
-        static constexpr int64  kServerStartMs = 1000000; ///< 서비스 시각(가짜 UTC) — 실행기 시각과 따로
-        static constexpr int32  kMaxTickCount  = 60000;   ///< 가짜 10 분
-        static constexpr uint16 kServerPort    = 7520;
+        static constexpr int64            kTickMs = 10;
+        static constexpr UnixMilliseconds kServerStartMs{ 1000000 }; ///< 서비스 시각(가짜 UTC) — 실행기 시각과 따로
+        static constexpr int32            kMaxTickCount = 60000;     ///< 가짜 10 분
+        static constexpr uint16           kServerPort   = 7520;
 
         /** @brief 봇 12 — 모두 들어간 뒤 말하고(늘리기 2 초 < 기다림 3 초), 모두 다 말한 뒤 떠난다(말하기 끝 < 마지막 기다림). */
         static constexpr const utf8* kChatAndMatchScenario = R"({

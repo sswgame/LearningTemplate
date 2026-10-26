@@ -162,11 +162,11 @@ namespace test
             SW_ASSERT_TRUE_MSG( SQLMigrationRunner::loadMigrations( ::test::makeTempResourceID( folder ), driverName, listMigration, error ), error.c_str() );
             SW_ASSERT_EQUAL( size_t( 2 ), listMigration.size() );
             SW_EXPECT_TRUE( listMigration[0]._sql.find( '\r' ) == string::npos ); // 줄 끝을 맞춘다 — 체크섬이 체크아웃마다 같다
-            SW_ASSERT_TRUE_MSG( SQLMigrationRunner::apply( connection, listMigration, 100, error ), error.c_str() );
+            SW_ASSERT_TRUE_MSG( SQLMigrationRunner::apply( connection, listMigration, UnixMilliseconds{ 100 }, error ), error.c_str() );
             SW_EXPECT_TRUE( hasTable( connection, first ) );
             SW_EXPECT_TRUE( hasTable( connection, second ) );
             SW_EXPECT_FALSE( hasTable( connection, "common_only_must_not_run" ) );
-            SW_ASSERT_TRUE_MSG( SQLMigrationRunner::apply( connection, listMigration, 200, error ), error.c_str() ); // 두 번째는 아무것도 안 한다
+            SW_ASSERT_TRUE_MSG( SQLMigrationRunner::apply( connection, listMigration, UnixMilliseconds{ 200 }, error ), error.c_str() ); // 두 번째는 아무것도 안 한다
 
             // 세 번째가 깨졌다 — 넷째도 적용되지 않는다(한 트랜잭션).
             const string third  = fixture.makeTableName( "third" );
@@ -176,7 +176,7 @@ namespace test
             writeMigration( folder, SQLMigrationRunner::kListFileName, R"(<SQLMigrationList><Migration _name="0001_first" /><Migration _name="0002_second" /><Migration _name="0003_third" /><Migration _name="0004_broken" /></SQLMigrationList>)" );
             listMigration.clear();
             SW_ASSERT_TRUE( SQLMigrationRunner::loadMigrations( ::test::makeTempResourceID( folder ), driverName, listMigration, error ) );
-            SW_EXPECT_FALSE( SQLMigrationRunner::apply( connection, listMigration, 300, error ) );
+            SW_EXPECT_FALSE( SQLMigrationRunner::apply( connection, listMigration, UnixMilliseconds{ 300 }, error ) );
             SW_EXPECT_FALSE( hasTable( connection, third ) );
             SW_EXPECT_FALSE( hasTable( connection, fourth ) );
 
@@ -187,7 +187,7 @@ namespace test
             listMigration.clear();
             SW_ASSERT_TRUE( SQLMigrationRunner::loadMigrations( ::test::makeTempResourceID( folder ), driverName, listMigration, error ) );
             error.clear();
-            SW_EXPECT_FALSE( SQLMigrationRunner::apply( connection, listMigration, 400, error ) );
+            SW_EXPECT_FALSE( SQLMigrationRunner::apply( connection, listMigration, UnixMilliseconds{ 400 }, error ) );
             SW_EXPECT_TRUE( error.find( "changed after it was applied" ) != string::npos );
             SW_EXPECT_FALSE( hasTable( connection, third ) );
 

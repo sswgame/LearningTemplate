@@ -91,7 +91,7 @@ SW_TEST_CASE( MatchmakingStreamTest, PartyLobbyAndQueueOverTheWire )
     descriptor._capacity = 10;
     SW_ASSERT_TRUE( registration.initialize( server._host.getEphemeralRouter(), descriptor ) );
     registration.setState( ServerState::Open );
-    registration.update( 0 );
+    registration.update( UnixMilliseconds{ 0 } );
 
     MatchmakingClient clientA;
     MatchmakingClient clientB;

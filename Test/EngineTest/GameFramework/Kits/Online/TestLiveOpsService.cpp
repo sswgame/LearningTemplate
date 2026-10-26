@@ -77,7 +77,7 @@ namespace
             (void)_store.pollCompletions();
         }
 
-        void step( int64 nowMs )
+        void step( UnixMilliseconds nowMs )
         {
             for ( int32 round = 0; round < 4; ++round )
             {
@@ -97,7 +97,7 @@ namespace
             _service.drainCompletions( _listCompletion );
         }
 
-        int32 countActive( int64 nowMs ) const
+        int32 countActive( UnixMilliseconds nowMs ) const
         {
             vector<LiveEventState> listEvent;
             _service.computeActiveEvents( 1, "kr", 100, nowMs, true, listEvent );
@@ -109,11 +109,11 @@ namespace
 SW_TEST_CASE( LiveOpsServiceTest, PutEventIsSeenAfterReloadAndOnOtherServer )
 {
     using Internal = LiveOpsServiceTestInternal;
-    MemoryServiceDatabase database;
-    LocalServerBusHub     hub;
-    LiveOpsNode           first( &database, &hub, 1 );
-    LiveOpsNode           second( &database, &hub, 2 );
-    const int64           nowMs = Internal::kMonday20261005 + Internal::kHour;
+    MemoryServiceDatabase  database;
+    LocalServerBusHub      hub;
+    LiveOpsNode            first( &database, &hub, 1 );
+    LiveOpsNode            second( &database, &hub, 2 );
+    const UnixMilliseconds nowMs{ Internal::kMonday20261005 + Internal::kHour };
     first.step( nowMs );
     second.step( nowMs ); // 첫 다시 읽기 — 빈 표
     SW_EXPECT_EQUAL( second.countActive( nowMs ), 0 );
@@ -130,7 +130,7 @@ SW_TEST_CASE( LiveOpsServiceTest, PutEventIsSeenAfterReloadAndOnOtherServer )
     SW_EXPECT_EQUAL( second.countActive( nowMs + 1 ), 1 );
     SW_EXPECT_EQUAL( second._stateChangeCount, 1 );
     SW_EXPECT_TRUE( second._service.isEventActive( "halloween", 1, "kr", 100, nowMs + 1 ) );
-    SW_EXPECT_FALSE( second._service.isEventActive( "halloween", 1, "kr", 100, Internal::kMonday20261005 + 7 * Internal::kDay ) );
+    SW_EXPECT_FALSE( second._service.isEventActive( "halloween", 1, "kr", 100, UnixMilliseconds{ Internal::kMonday20261005 + 7 * Internal::kDay } ) );
 
     first._service.removeEvent( "halloween", 7, "", nowMs + 2, 2 );
     first.step( nowMs + 2 );
@@ -142,10 +142,10 @@ SW_TEST_CASE( LiveOpsServiceTest, PutEventIsSeenAfterReloadAndOnOtherServer )
 SW_TEST_CASE( LiveOpsServiceTest, GmEventControlTakesAndListsJSONDefinitions )
 {
     using Internal = LiveOpsServiceTestInternal;
-    MemoryServiceDatabase database;
-    LocalServerBusHub     hub;
-    LiveOpsNode           node( &database, &hub, 1 );
-    const int64           nowMs = Internal::kMonday20261005 + Internal::kHour;
+    MemoryServiceDatabase  database;
+    LocalServerBusHub      hub;
+    LiveOpsNode            node( &database, &hub, 1 );
+    const UnixMilliseconds nowMs{ Internal::kMonday20261005 + Internal::kHour };
     node.step( nowMs );
     ILiveEventControl& control = node._service;
     control.putEventJSON( LiveOpsProtocol::writeEventJSON( Internal::makeHalloween() ), 7, "json", nowMs, 1 );
@@ -180,17 +180,17 @@ SW_TEST_CASE( LiveOpsServiceTest, BoundaryRaisesStateChangeWithoutReload )
     evening._activeMinuteOfDay = 20 * 60;
     evening._activeDurationMs  = Internal::kHour;
     const int64 eveningMs      = Internal::kMonday20261005 + 20 * Internal::kHour;
-    node._service.putEvent( evening, 0, "", eveningMs - 60000, 1 );
-    node.step( eveningMs - 60000 ); // 19:59 — 닫혀 있다
+    node._service.putEvent( evening, 0, "", UnixMilliseconds{ eveningMs - 60000 }, 1 );
+    node.step( UnixMilliseconds{ eveningMs - 60000 } ); // 19:59 — 닫혀 있다
     SW_EXPECT_EQUAL( node._stateChangeCount, 0 );
-    node.step( eveningMs ); // 20:00 — 열림
+    node.step( UnixMilliseconds{ eveningMs } ); // 20:00 — 열림
     SW_EXPECT_EQUAL( node._stateChangeCount, 1 );
-    SW_EXPECT_EQUAL( node.countActive( eveningMs ), 1 );
-    node.step( eveningMs + Internal::kHour / 2 );
+    SW_EXPECT_EQUAL( node.countActive( UnixMilliseconds{ eveningMs } ), 1 );
+    node.step( UnixMilliseconds{ eveningMs + Internal::kHour / 2 } );
     SW_EXPECT_EQUAL( node._stateChangeCount, 1 );
-    node.step( eveningMs + Internal::kHour ); // 21:00 — 닫힘
+    node.step( UnixMilliseconds{ eveningMs + Internal::kHour } ); // 21:00 — 닫힘
     SW_EXPECT_EQUAL( node._stateChangeCount, 2 );
-    node.step( eveningMs + Internal::kDay ); // 다음 날 20:00 — 다시
+    node.step( UnixMilliseconds{ eveningMs + Internal::kDay } ); // 다음 날 20:00 — 다시
     SW_EXPECT_EQUAL( node._stateChangeCount, 3 );
 }
 
@@ -218,7 +218,7 @@ SW_TEST_CASE( LiveOpsServiceTest, ParameterResolvesRemoteConfigAndKillSwitchHide
     definition._listParameter.push_back( LiveEventParameter{ "bonus", "@event.bonus" } );
     definition._listParameter.push_back( LiveEventParameter{ "label", "spooky" } );
     definition._listParameter.push_back( LiveEventParameter{ "missing", "@event.nope" } );
-    const int64 nowMs = Internal::kMonday20261005 + Internal::kHour;
+    const UnixMilliseconds nowMs{ Internal::kMonday20261005 + Internal::kHour };
     node._service.putEvent( definition, 0, "", nowMs, 1 );
     node.step( nowMs );
     string value;
@@ -253,10 +253,10 @@ SW_TEST_CASE( LiveOpsServiceTest, ParameterResolvesRemoteConfigAndKillSwitchHide
 SW_TEST_CASE( LiveOpsServiceTest, StoreFailureOnPutLeavesNothing )
 {
     using Internal = LiveOpsServiceTestInternal;
-    MemoryServiceDatabase database;
-    LocalServerBusHub     hub;
-    LiveOpsNode           node( &database, &hub, 1 );
-    const int64           nowMs = Internal::kMonday20261005;
+    MemoryServiceDatabase  database;
+    LocalServerBusHub      hub;
+    LiveOpsNode            node( &database, &hub, 1 );
+    const UnixMilliseconds nowMs{ Internal::kMonday20261005 };
     node.step( nowMs );
     const uint64 hashBefore = database.computeContentHash();
     database.armFault( ServiceStoreFault::RejectCommit );

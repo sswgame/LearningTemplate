@@ -35,7 +35,7 @@ namespace
             (void)_store.pollCompletions();
         }
 
-        void step( int64 nowMs )
+        void step( UnixMilliseconds nowMs )
         {
             for ( int32 round = 0; round < 3; ++round )
             {
@@ -45,13 +45,13 @@ namespace
             _dispatcher.drainCompletions( _listCompletion );
         }
 
-        void registerDevice( AccountID accountID, string_view providerID, string_view token, int64 nowMs )
+        void registerDevice( AccountID accountID, string_view providerID, string_view token, UnixMilliseconds nowMs )
         {
             PushDeviceRegistration registration;
             registration._providerID   = string( providerID );
             registration._token        = string( token );
             registration._locale       = "ko-KR";
-            registration._registeredMs = nowMs;
+            registration._registeredMs = nowMs.count();
             _dispatcher.registerDevice( accountID, registration, 1 );
             step( nowMs );
         }
@@ -71,21 +71,21 @@ SW_TEST_CASE( PushDispatcherTest, SendsToEveryDeviceAndDropsInvalidTokens )
 {
     MemoryServiceDatabase database;
     PushNode              node( &database );
-    node.registerDevice( 1, "fake", "token-phone", 0 );
-    node.registerDevice( 1, "fake", "token-tablet", 0 );
-    node.registerDevice( 1, "fake", "token-phone", 10 ); // 같은 토큰 — 덮음
-    node.registerDevice( 1, "apns", "token-ios", 10 );   // 이 빌드에 없는 제공자 — 등록은 되지만 보내지 않는다
+    node.registerDevice( 1, "fake", "token-phone", UnixMilliseconds{ 0 } );
+    node.registerDevice( 1, "fake", "token-tablet", UnixMilliseconds{ 0 } );
+    node.registerDevice( 1, "fake", "token-phone", UnixMilliseconds{ 10 } ); // 같은 토큰 — 덮음
+    node.registerDevice( 1, "apns", "token-ios", UnixMilliseconds{ 10 } );   // 이 빌드에 없는 제공자 — 등록은 되지만 보내지 않는다
     SW_EXPECT_EQUAL( database.countRecords( hashed_string( "liveops_device" ) ), 3 );
     node._provider.scriptResult( "token-tablet", PushDeliveryStatus::InvalidToken );
 
-    SW_ASSERT_TRUE( node._dispatcher.notifyAccount( 1, makePushMessage(), 100 ) );
-    node.step( 100 );
+    SW_ASSERT_TRUE( node._dispatcher.notifyAccount( 1, makePushMessage(), UnixMilliseconds{ 100 } ) );
+    node.step( UnixMilliseconds{ 100 } );
     SW_EXPECT_EQUAL( node._provider.getSent().size(), size_t( 2 ) );
     SW_EXPECT_EQUAL( node._dispatcher.getStats()._invalidTokenCount, uint64( 1 ) );
     SW_EXPECT_EQUAL( database.countRecords( hashed_string( "liveops_device" ) ), 2 );
 
-    SW_ASSERT_TRUE( node._dispatcher.notifyAccount( 1, makePushMessage(), 200 ) );
-    node.step( 200 );
+    SW_ASSERT_TRUE( node._dispatcher.notifyAccount( 1, makePushMessage(), UnixMilliseconds{ 200 } ) );
+    node.step( UnixMilliseconds{ 200 } );
     SW_EXPECT_EQUAL( node._provider.getSent().size(), size_t( 3 ) ); // 태블릿은 지워졌다
     SW_EXPECT_STREQ( node._provider.getSent().back()._deviceToken.c_str(), "token-phone" );
     SW_EXPECT_STREQ( node._provider.getSent().back()._message._deepLink.c_str(), "mailbox" );
@@ -97,30 +97,30 @@ SW_TEST_CASE( PushDispatcherTest, TransientFailuresBackOffThenGiveUp )
 {
     MemoryServiceDatabase database;
     PushNode              node( &database );
-    node.registerDevice( 1, "fake", "token-a", 0 );
+    node.registerDevice( 1, "fake", "token-a", UnixMilliseconds{ 0 } );
     node._provider.scriptResult( "token-a", PushDeliveryStatus::Transient, 2 );
-    SW_ASSERT_TRUE( node._dispatcher.notifyAccount( 1, makePushMessage(), 0 ) );
-    node.step( 0 ); // 1 차 실패 → 1 초 뒤
-    node.step( 999 );
+    SW_ASSERT_TRUE( node._dispatcher.notifyAccount( 1, makePushMessage(), UnixMilliseconds{ 0 } ) );
+    node.step( UnixMilliseconds{ 0 } ); // 1 차 실패 → 1 초 뒤
+    node.step( UnixMilliseconds{ 999 } );
     SW_EXPECT_EQUAL( node._provider.getSent().size(), size_t( 1 ) );
-    node.step( 1000 ); // 2 차 실패 → 2 초 뒤
-    node.step( 2999 );
+    node.step( UnixMilliseconds{ 1000 } ); // 2 차 실패 → 2 초 뒤
+    node.step( UnixMilliseconds{ 2999 } );
     SW_EXPECT_EQUAL( node._provider.getSent().size(), size_t( 2 ) );
-    node.step( 3000 ); // 3 차 성공
+    node.step( UnixMilliseconds{ 3000 } ); // 3 차 성공
     SW_EXPECT_EQUAL( node._provider.getSent().size(), size_t( 3 ) );
     SW_EXPECT_EQUAL( node._dispatcher.getStats()._deliveredCount, uint64( 1 ) );
 
     node._provider.scriptResult( "token-a", PushDeliveryStatus::RateLimited, 1, 5000 ); // 제공자가 늦추라 한 시간이 물러남보다 길면 그만큼
-    SW_ASSERT_TRUE( node._dispatcher.notifyAccount( 1, makePushMessage(), 4000 ) );
-    node.step( 4000 );
-    node.step( 8999 );
+    SW_ASSERT_TRUE( node._dispatcher.notifyAccount( 1, makePushMessage(), UnixMilliseconds{ 4000 } ) );
+    node.step( UnixMilliseconds{ 4000 } );
+    node.step( UnixMilliseconds{ 8999 } );
     SW_EXPECT_EQUAL( node._provider.getSent().size(), size_t( 4 ) );
-    node.step( 9000 );
+    node.step( UnixMilliseconds{ 9000 } );
     SW_EXPECT_EQUAL( node._provider.getSent().size(), size_t( 5 ) );
 
     node._provider.scriptResult( "token-a", PushDeliveryStatus::Transient, 99 );
-    SW_ASSERT_TRUE( node._dispatcher.notifyAccount( 1, makePushMessage(), 10000 ) );
-    for ( int64 nowMs = 10000; nowMs <= 60000; nowMs += 1000 )
+    SW_ASSERT_TRUE( node._dispatcher.notifyAccount( 1, makePushMessage(), UnixMilliseconds{ 10000 } ) );
+    for ( UnixMilliseconds nowMs = UnixMilliseconds{ 10000 }; nowMs <= UnixMilliseconds{ 60000 }; nowMs += 1000 )
     {
         node.step( nowMs );
     }
@@ -133,16 +133,16 @@ SW_TEST_CASE( PushDispatcherTest, AccountRateLimit )
 {
     MemoryServiceDatabase database;
     PushNode              node( &database );
-    node.registerDevice( 1, "fake", "token-a", 0 );
+    node.registerDevice( 1, "fake", "token-a", UnixMilliseconds{ 0 } );
     for ( int32 index = 0; index < 6; ++index )
     {
-        SW_EXPECT_TRUE( node._dispatcher.notifyAccount( 1, makePushMessage(), 0 ) );
+        SW_EXPECT_TRUE( node._dispatcher.notifyAccount( 1, makePushMessage(), UnixMilliseconds{ 0 } ) );
     }
-    SW_EXPECT_FALSE( node._dispatcher.notifyAccount( 1, makePushMessage(), 0 ) );
+    SW_EXPECT_FALSE( node._dispatcher.notifyAccount( 1, makePushMessage(), UnixMilliseconds{ 0 } ) );
     SW_EXPECT_EQUAL( node._dispatcher.getStats()._rateLimitedCount, uint64( 1 ) );
-    SW_EXPECT_TRUE( node._dispatcher.notifyAccount( 2, makePushMessage(), 0 ) ); // 계정마다 따로
-    SW_EXPECT_TRUE( node._dispatcher.notifyAccount( 1, makePushMessage(), PushDispatcherConfig{}._accountRefillIntervalMs ) );
-    node.step( 0 );
+    SW_EXPECT_TRUE( node._dispatcher.notifyAccount( 2, makePushMessage(), UnixMilliseconds{ 0 } ) ); // 계정마다 따로
+    SW_EXPECT_TRUE( node._dispatcher.notifyAccount( 1, makePushMessage(), UnixMilliseconds{ PushDispatcherConfig{}._accountRefillIntervalMs } ) );
+    node.step( UnixMilliseconds{ 0 } );
     SW_EXPECT_EQUAL( node._provider.getSent().size(), size_t( 7 ) ); // 계정 2 는 기기가 없다
 }
 
@@ -153,10 +153,10 @@ SW_TEST_CASE( PushDispatcherTest, DeviceLimitEvictsTheOldestAndUnregister )
     const hashed_string   table( "liveops_device" );
     for ( int32 index = 0; index < PushLimit::kMaxDevicePerAccount; ++index )
     {
-        node.registerDevice( 1, "fake", "token-" + std::to_string( index ), 100 + index );
+        node.registerDevice( 1, "fake", "token-" + std::to_string( index ), UnixMilliseconds{ 100 + index } );
     }
     SW_EXPECT_EQUAL( database.countRecords( table ), PushLimit::kMaxDevicePerAccount );
-    node.registerDevice( 1, "fake", "token-new", 500 ); // 한도 — 가장 오래된 token-0 을 밀어낸다
+    node.registerDevice( 1, "fake", "token-new", UnixMilliseconds{ 500 } ); // 한도 — 가장 오래된 token-0 을 밀어낸다
     SW_EXPECT_EQUAL( database.countRecords( table ), PushLimit::kMaxDevicePerAccount );
     ServiceRecord record;
     SW_EXPECT_TRUE( database.readRecord( table, PushNotificationDispatcher::makeDeviceKey( 1, "fake", "token-0" ), record ) == ServiceStoreResult::NotFound );
@@ -169,7 +169,7 @@ SW_TEST_CASE( PushDispatcherTest, DeviceLimitEvictsTheOldestAndUnregister )
     broken._providerID = "Bad Provider";
     broken._token      = "x";
     node._dispatcher.registerDevice( 1, broken, 9 );
-    node.step( 600 );
+    node.step( UnixMilliseconds{ 600 } );
     SW_ASSERT_EQUAL( node._listCompletion.size(), size_t( 3 ) );
     SW_EXPECT_TRUE( node._listCompletion[0]._result == LiveOpsResult::Invalid ); // 규칙 밖은 맡기기 전에
     SW_EXPECT_EQUAL( node._listCompletion[0]._requestTag, uint64( 9 ) );

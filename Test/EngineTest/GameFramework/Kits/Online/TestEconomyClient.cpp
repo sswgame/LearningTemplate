@@ -142,7 +142,7 @@ namespace
         EconomyServerSide     _server;
         EconomyClientSide     _player;
         AccountID             _playerID;
-        int64                 _nowMs;
+        UnixMilliseconds      _nowMs;
 
         EconomyRig()
             : _network{ 43u }
@@ -158,7 +158,7 @@ namespace
         void step()
         {
             _nowMs += 20;
-            _player._client.update( _nowMs );
+            _player._client.update( _nowMs.count() );
             _server._host.update( _nowMs );
         }
 

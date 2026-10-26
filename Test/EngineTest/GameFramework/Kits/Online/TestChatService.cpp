@@ -103,7 +103,7 @@ namespace
 
         ~ChatNode() { _service.shutdown(); }
 
-        void step( int64 nowMs )
+        void step( UnixMilliseconds nowMs )
         {
             for ( int32 round = 0; round < 4; ++round )
             {
@@ -172,20 +172,20 @@ SW_TEST_CASE( ChatServiceTest, JoinRulesChannelLimitAndDeliveryWithEcho )
     node._directory._mapOnline[10] = "alice";
     node._directory._mapOnline[11] = "bob";
 
-    node._service.joinChannel( 10, "world.kr", 0, 1 );
-    node._service.joinChannel( 11, "world.kr", 0, 2 );
-    node._service.joinChannel( 10, "guild.0000000000000005", 0, 3 ); // 클라이언트는 길드에 못 들어간다
-    node._service.joinChannel( 10, "World.KR", 0, 4 );               // 규칙 밖
-    node.step( 0 );
+    node._service.joinChannel( 10, "world.kr", UnixMilliseconds{ 0 }, 1 );
+    node._service.joinChannel( 11, "world.kr", UnixMilliseconds{ 0 }, 2 );
+    node._service.joinChannel( 10, "guild.0000000000000005", UnixMilliseconds{ 0 }, 3 ); // 클라이언트는 길드에 못 들어간다
+    node._service.joinChannel( 10, "World.KR", UnixMilliseconds{ 0 }, 4 );               // 규칙 밖
+    node.step( UnixMilliseconds{ 0 } );
     SW_ASSERT_EQUAL( node._listCompletion.size(), size_t( 4 ) );
     SW_EXPECT_TRUE( node._listCompletion[0]._reply._result == ChatResult::Ok );
     SW_EXPECT_TRUE( node._listCompletion[2]._reply._result == ChatResult::NotJoinable );
     SW_EXPECT_TRUE( node._listCompletion[3]._reply._result == ChatResult::Invalid );
-    SW_EXPECT_TRUE( node._service.addMember( 10, "guild.0000000000000005", 0 ) == ChatResult::Ok ); // 서버 시스템은 넣는다
+    SW_EXPECT_TRUE( node._service.addMember( 10, "guild.0000000000000005", UnixMilliseconds{ 0 } ) == ChatResult::Ok ); // 서버 시스템은 넣는다
 
     node._listCompletion.clear();
-    node._service.sendMessage( 10, "world.kr", "hello", 100, 5 );
-    node.step( 100 );
+    node._service.sendMessage( 10, "world.kr", "hello", UnixMilliseconds{ 100 }, 5 );
+    node.step( UnixMilliseconds{ 100 } );
     SW_ASSERT_EQUAL( node._listCompletion.size(), size_t( 1 ) );
     SW_EXPECT_TRUE( node._listCompletion[0]._reply._result == ChatResult::Ok );
     SW_EXPECT_EQUAL( node._listCompletion[0]._method, ChatMethod::kSend );
@@ -194,22 +194,22 @@ SW_TEST_CASE( ChatServiceTest, JoinRulesChannelLimitAndDeliveryWithEcho )
     SW_EXPECT_EQUAL( node.countDelivery( 10 ), 1 ); // 보낸 이도 받는다(다른 창)
 
     node._listCompletion.clear();
-    node._service.sendMessage( 10, "custom.other", "hi", 200, 6 ); // 들어가지 않은 채널
+    node._service.sendMessage( 10, "custom.other", "hi", UnixMilliseconds{ 200 }, 6 ); // 들어가지 않은 채널
     node._service.leaveChannel( 11, "world.kr", 7 );
-    node._service.sendMessage( 11, "world.kr", "bye", 200, 8 );
-    node.step( 200 );
+    node._service.sendMessage( 11, "world.kr", "bye", UnixMilliseconds{ 200 }, 8 );
+    node.step( UnixMilliseconds{ 200 } );
     SW_ASSERT_EQUAL( node._listCompletion.size(), size_t( 3 ) );
     SW_EXPECT_TRUE( node._listCompletion[0]._reply._result == ChatResult::NotMember );
     SW_EXPECT_TRUE( node._listCompletion[2]._reply._result == ChatResult::NotMember );
 
     for ( int32 index = 0; index < ChatLimit::kMaxChannelPerMember; ++index ) // bob 은 world 를 나갔다 — 열여섯이 차면 다음은 거절
     {
-        (void)node._service.addMember( 11, string( "custom.c" ) + static_cast<utf8>( 'a' + index ), 300 );
+        (void)node._service.addMember( 11, string( "custom.c" ) + static_cast<utf8>( 'a' + index ), UnixMilliseconds{ 300 } );
     }
-    SW_EXPECT_TRUE( node._service.addMember( 11, "custom.zz", 300 ) == ChatResult::TooManyChannels );
-    SW_EXPECT_TRUE( node._service.addMember( 10, "custom.zz", 300 ) == ChatResult::Ok );
-    SW_EXPECT_TRUE( node._service.addMember( 10, "custom.yy", 300 ) == ChatResult::Ok );
-    SW_EXPECT_TRUE( node._service.addMember( 99, "custom.zz", 300 ) == ChatResult::TargetOffline ); // 이 서버에 없는 계정
+    SW_EXPECT_TRUE( node._service.addMember( 11, "custom.zz", UnixMilliseconds{ 300 } ) == ChatResult::TooManyChannels );
+    SW_EXPECT_TRUE( node._service.addMember( 10, "custom.zz", UnixMilliseconds{ 300 } ) == ChatResult::Ok );
+    SW_EXPECT_TRUE( node._service.addMember( 10, "custom.yy", UnixMilliseconds{ 300 } ) == ChatResult::Ok );
+    SW_EXPECT_TRUE( node._service.addMember( 99, "custom.zz", UnixMilliseconds{ 300 } ) == ChatResult::TargetOffline ); // 이 서버에 없는 계정
 }
 
 SW_TEST_CASE( ChatServiceTest, MuteIsReadBeforeTheFirstSendAndRefreshedByTheBus )
@@ -219,13 +219,13 @@ SW_TEST_CASE( ChatServiceTest, MuteIsReadBeforeTheFirstSendAndRefreshedByTheBus 
     LocalServerBusHub hub;
     ChatNode          node( &database, &hub, 1 );
     node._directory._mapOnline[10] = "alice";
-    node._service.joinChannel( 10, "world.kr", 0, 1 );
+    node._service.joinChannel( 10, "world.kr", UnixMilliseconds{ 0 }, 1 );
     for ( int32 index = 0; index < 5; ++index ) // 제재 첫 읽기를 기다려 넷이 줄을 서고, 다섯째는 바로 거절
     {
-        node._service.sendMessage( 10, "world.kr", string( "can you hear me " ) + static_cast<utf8>( '0' + index ), 100, static_cast<uint64>( 2 + index ) );
+        node._service.sendMessage( 10, "world.kr", string( "can you hear me " ) + static_cast<utf8>( '0' + index ), UnixMilliseconds{ 100 }, static_cast<uint64>( 2 + index ) );
     }
     SW_ASSERT_EQUAL( node._listCompletion.size(), size_t( 0 ) );
-    node.step( 100 );
+    node.step( UnixMilliseconds{ 100 } );
     SW_ASSERT_EQUAL( node._listCompletion.size(), size_t( 6 ) );
     SW_EXPECT_TRUE( node._listCompletion[0]._reply._result == ChatResult::Ok ); // join
     SW_EXPECT_TRUE( node._listCompletion[1]._reply._result == ChatResult::RateLimited );
@@ -239,15 +239,15 @@ SW_TEST_CASE( ChatServiceTest, MuteIsReadBeforeTheFirstSendAndRefreshedByTheBus 
 
     ChatServiceTestInternal::writeChatMute( database, 10, 0 ); // GM 이 풀었다 — 묵힌 값(60 초) 안이라 아직 금지
     node._listCompletion.clear();
-    node._service.sendMessage( 10, "world.kr", "still muted?", 200, 20 );
-    node.step( 200 );
+    node._service.sendMessage( 10, "world.kr", "still muted?", UnixMilliseconds{ 200 }, 20 );
+    node.step( UnixMilliseconds{ 200 } );
     SW_EXPECT_TRUE( node.getLastResult() == ChatResult::Muted );
 
     ChatServiceTestInternal::publishSanctionChanged( hub, 10 ); // GM 서버가 알렸다 — 다시 읽는다
     node._listCompletion.clear();
-    node.step( 300 );
-    node._service.sendMessage( 10, "world.kr", "free at last", 300, 21 );
-    node.step( 300 );
+    node.step( UnixMilliseconds{ 300 } );
+    node._service.sendMessage( 10, "world.kr", "free at last", UnixMilliseconds{ 300 }, 21 );
+    node.step( UnixMilliseconds{ 300 } );
     SW_EXPECT_TRUE( node.getLastResult() == ChatResult::Ok );
     SW_EXPECT_EQUAL( node.countDelivery( 10 ), 1 );
 }
@@ -260,28 +260,28 @@ SW_TEST_CASE( ChatServiceTest, FilterAndSpamApplyToChannelMessages )
     settings._bannedWordsPath = FileUtil::joinPath( ResourcePaths::getProjectFolderPath(), "Config/Server/chat_banned_words.txt" );
     ChatNode node( &database, &hub, 1, settings );
     node._directory._mapOnline[10] = "alice";
-    node._service.joinChannel( 10, "world.kr", 0, 1 );
-    node.step( 0 );
+    node._service.joinChannel( 10, "world.kr", UnixMilliseconds{ 0 }, 1 );
+    node.step( UnixMilliseconds{ 0 } );
 
     node._listCompletion.clear();
-    node._service.sendMessage( 10, "world.kr", "you BADWORD", 0, 2 );
-    node.step( 0 );
+    node._service.sendMessage( 10, "world.kr", "you BADWORD", UnixMilliseconds{ 0 }, 2 );
+    node.step( UnixMilliseconds{ 0 } );
     SW_ASSERT_EQUAL( node._listCompletion.size(), size_t( 1 ) );
     SW_EXPECT_STREQ( node._listCompletion[0]._reply._message._text.c_str(), "you *******" );
 
     for ( int32 index = 0; index < 4; ++index )
     {
-        node._service.sendMessage( 10, "world.kr", string( "msg" ) + static_cast<utf8>( 'a' + index ), 10, static_cast<uint64>( 10 + index ) );
+        node._service.sendMessage( 10, "world.kr", string( "msg" ) + static_cast<utf8>( 'a' + index ), UnixMilliseconds{ 10 }, static_cast<uint64>( 10 + index ) );
     }
-    node._service.sendMessage( 10, "world.kr", "one too many", 10, 20 ); // 몰아 쓰기 5 개(앞 글 하나 포함)를 넘었다
-    node.step( 10 );
+    node._service.sendMessage( 10, "world.kr", "one too many", UnixMilliseconds{ 10 }, 20 ); // 몰아 쓰기 5 개(앞 글 하나 포함)를 넘었다
+    node.step( UnixMilliseconds{ 10 } );
     SW_ASSERT_EQUAL( node._listCompletion.size(), size_t( 6 ) );
     SW_EXPECT_TRUE( node._listCompletion[4]._reply._result == ChatResult::Ok );
     SW_EXPECT_TRUE( node.getLastResult() == ChatResult::RateLimited );
     SW_EXPECT_TRUE( node._listCompletion.back()._reply._retryAfterMs > 0 );
 
-    node._service.sendMessage( 10, "world.kr", "", 5000, 21 ); // 빈 글
-    node.step( 5000 );
+    node._service.sendMessage( 10, "world.kr", "", UnixMilliseconds{ 5000 }, 21 ); // 빈 글
+    node.step( UnixMilliseconds{ 5000 } );
     SW_EXPECT_TRUE( node.getLastResult() == ChatResult::Invalid );
 }
 
@@ -295,39 +295,39 @@ SW_TEST_CASE( ChatServiceTest, WhisperLocalBlockedAndAcrossServers )
     first._directory._mapOnline[11]  = "bob";
     second._directory._mapOnline[20] = "carol";
     first._presence.setOnline( AccountIdentity{ "carol", 20, SW_FALSE }, 2 ); // 계정 서버(K14)가 쓴 접속 상태 — carol 은 서버 2
-    first.step( 0 );
-    second.step( 0 );
+    first.step( UnixMilliseconds{ 0 } );
+    second.step( UnixMilliseconds{ 0 } );
 
-    first._service.sendWhisper( 10, 11, "psst", 100, 1 );
-    first.step( 100 );
+    first._service.sendWhisper( 10, 11, "psst", UnixMilliseconds{ 100 }, 1 );
+    first.step( UnixMilliseconds{ 100 } );
     SW_EXPECT_EQUAL( first.countDelivery( 11 ), 1 );
     SW_EXPECT_TRUE( first.getLastResult() == ChatResult::Ok );
     SW_EXPECT_STREQ( first._listCompletion.back()._reply._message._channelID.c_str(), ChatChannelID::makeWhisper( 10, 11 ).c_str() );
 
     first._policy._listBlock.push_back( { 11, 10 } ); // bob 이 alice 를 막았다
-    first._service.sendWhisper( 10, 11, "psst again", 200, 2 );
-    first.step( 200 );
+    first._service.sendWhisper( 10, 11, "psst again", UnixMilliseconds{ 200 }, 2 );
+    first.step( UnixMilliseconds{ 200 } );
     SW_EXPECT_EQUAL( first.countDelivery( 11 ), 1 );           // 더 받지 않는다
     SW_EXPECT_TRUE( first.getLastResult() == ChatResult::Ok ); // 보낸 이는 모른다
 
-    first._service.sendWhisper( 10, 20, "hello carol", 300, 3 ); // 다른 서버
-    first.step( 300 );
-    second.step( 300 );
+    first._service.sendWhisper( 10, 20, "hello carol", UnixMilliseconds{ 300 }, 3 ); // 다른 서버
+    first.step( UnixMilliseconds{ 300 } );
+    second.step( UnixMilliseconds{ 300 } );
     SW_EXPECT_TRUE( first.getLastResult() == ChatResult::Ok );
     SW_EXPECT_EQUAL( second.countDelivery( 20 ), 1 );
     SW_ASSERT_EQUAL( second._listDelivery.size(), size_t( 1 ) );
     SW_EXPECT_STREQ( second._listDelivery[0]._message._senderName.c_str(), "alice" );
 
     second._policy._listBlock.push_back( { 20, 10 } ); // carol 이 alice 를 막았다 — 받는 서버가 버린다
-    first._service.sendWhisper( 10, 20, "are you there", 400, 4 );
-    first.step( 400 );
-    second.step( 400 );
+    first._service.sendWhisper( 10, 20, "are you there", UnixMilliseconds{ 400 }, 4 );
+    first.step( UnixMilliseconds{ 400 } );
+    second.step( UnixMilliseconds{ 400 } );
     SW_EXPECT_TRUE( first.getLastResult() == ChatResult::Ok );
     SW_EXPECT_EQUAL( second.countDelivery( 20 ), 1 );
 
-    first._service.sendWhisper( 10, 99, "nobody", 500, 5 ); // 접속 기록이 없다
-    first._service.sendWhisper( 10, 10, "myself", 500, 6 ); // 자기에게
-    first.step( 500 );
+    first._service.sendWhisper( 10, 99, "nobody", UnixMilliseconds{ 500 }, 5 ); // 접속 기록이 없다
+    first._service.sendWhisper( 10, 10, "myself", UnixMilliseconds{ 500 }, 6 ); // 자기에게
+    first.step( UnixMilliseconds{ 500 } );
     SW_ASSERT_TRUE( first._listCompletion.size() >= 2 );
     SW_EXPECT_TRUE( first._listCompletion[first._listCompletion.size() - 2]._reply._result == ChatResult::Invalid );
     SW_EXPECT_TRUE( first.getLastResult() == ChatResult::TargetOffline );
@@ -342,25 +342,25 @@ SW_TEST_CASE( ChatServiceTest, ChannelMessagesCrossServersAndLeavingUnsubscribes
     ChatNode              second( &database, &hub, 2 );
     first._directory._mapOnline[10]  = "alice";
     second._directory._mapOnline[20] = "carol";
-    first._service.joinChannel( 10, "world.kr", 0, 1 );
-    second._service.joinChannel( 20, "world.kr", 0, 1 );
-    first.step( 0 );
-    second.step( 0 );
+    first._service.joinChannel( 10, "world.kr", UnixMilliseconds{ 0 }, 1 );
+    second._service.joinChannel( 20, "world.kr", UnixMilliseconds{ 0 }, 1 );
+    first.step( UnixMilliseconds{ 0 } );
+    second.step( UnixMilliseconds{ 0 } );
 
-    first._service.sendMessage( 10, "world.kr", "hi all", 100, 2 );
-    first.step( 100 );
-    second.step( 100 );
-    first.step( 100 ); // 자기 서버가 낸 버스 메시지가 돌아와도 두 번 전하지 않는다
+    first._service.sendMessage( 10, "world.kr", "hi all", UnixMilliseconds{ 100 }, 2 );
+    first.step( UnixMilliseconds{ 100 } );
+    second.step( UnixMilliseconds{ 100 } );
+    first.step( UnixMilliseconds{ 100 } ); // 자기 서버가 낸 버스 메시지가 돌아와도 두 번 전하지 않는다
     SW_EXPECT_EQUAL( second.countDelivery( 20 ), 1 );
     SW_EXPECT_EQUAL( first.countDelivery( 10 ), 1 );
 
     second._service.removeAccount( 20 ); // carol 이 떠났다 — 서버 2 는 채널 주제를 푼다
-    second.step( 200 );
+    second.step( UnixMilliseconds{ 200 } );
     SW_EXPECT_EQUAL( second._service.getLocalMemberCount( "world.kr" ), 0 );
-    first._service.sendMessage( 10, "world.kr", "anyone?", 300, 3 );
-    first.step( 300 );
+    first._service.sendMessage( 10, "world.kr", "anyone?", UnixMilliseconds{ 300 }, 3 );
+    first.step( UnixMilliseconds{ 300 } );
     second._directory._mapOnline[21] = "dave"; // 같은 서버의 다른 계정은 채널에 없다
-    second.step( 300 );
+    second.step( UnixMilliseconds{ 300 } );
     SW_EXPECT_EQUAL( second.countDelivery( 20 ), 1 ); // 더 받지 않는다
     SW_EXPECT_EQUAL( second.countDelivery( 21 ), 0 );
 }
@@ -373,19 +373,19 @@ SW_TEST_CASE( ChatServiceTest, HistoryIsWrittenInBatchesAndReadNewestFirst )
     node._directory._mapOnline[10] = "alice";
     node._directory._mapOnline[11] = "bob";
     node._directory._mapOnline[12] = "eve";
-    node._service.joinChannel( 10, "world.kr", 0, 1 );
-    node.step( 0 );
+    node._service.joinChannel( 10, "world.kr", UnixMilliseconds{ 0 }, 1 );
+    node.step( UnixMilliseconds{ 0 } );
     for ( int32 index = 0; index < 5; ++index )
     {
-        node._service.sendMessage( 10, "world.kr", string( "line " ) + static_cast<utf8>( '0' + index ), 1000 * ( index + 1 ), static_cast<uint64>( 10 + index ) );
+        node._service.sendMessage( 10, "world.kr", string( "line " ) + static_cast<utf8>( '0' + index ), UnixMilliseconds{ 1000 * ( index + 1 ) }, static_cast<uint64>( 10 + index ) );
     }
-    node._service.sendWhisper( 10, 11, "secret", 5500, 16 );
-    node.step( 6000 );
+    node._service.sendWhisper( 10, 11, "secret", UnixMilliseconds{ 5500 }, 16 );
+    node.step( UnixMilliseconds{ 6000 } );
     SW_EXPECT_EQUAL( node._service.getQueuedHistoryCount(), 0 );
 
     node._listCompletion.clear();
     node._service.readHistory( 10, "world.kr", "", 3, 50 );
-    node.step( 6000 );
+    node.step( UnixMilliseconds{ 6000 } );
     SW_ASSERT_EQUAL( node._listCompletion.size(), size_t( 1 ) );
     const ChatCompletion firstPage = node._listCompletion[0];
     SW_ASSERT_EQUAL( firstPage._reply._listHistory.size(), size_t( 3 ) );
@@ -395,7 +395,7 @@ SW_TEST_CASE( ChatServiceTest, HistoryIsWrittenInBatchesAndReadNewestFirst )
 
     node._listCompletion.clear();
     node._service.readHistory( 10, "world.kr", firstPage._reply._nextCursor, 3, 51 );
-    node.step( 6000 );
+    node.step( UnixMilliseconds{ 6000 } );
     SW_ASSERT_EQUAL( node._listCompletion[0]._reply._listHistory.size(), size_t( 2 ) );
     SW_EXPECT_STREQ( node._listCompletion[0]._reply._listHistory[1]._text.c_str(), "line 0" );
     SW_EXPECT_TRUE( node._listCompletion[0]._reply._nextCursor.empty() );
@@ -406,7 +406,7 @@ SW_TEST_CASE( ChatServiceTest, HistoryIsWrittenInBatchesAndReadNewestFirst )
     node._service.readHistory( 12, whisperKey, "", 3, 53 ); // 두 사람이 아니다
     node._service.readHistory( 11, whisperKey, "", 3, 54 ); // 받은 사람
     node._service.readHistory( 10, "world.kr", "", 0, 55 ); // 개수 0
-    node.step( 6000 );                                      // 바로 거절한 셋이 먼저, 저장소 읽기가 뒤에
+    node.step( UnixMilliseconds{ 6000 } );                  // 바로 거절한 셋이 먼저, 저장소 읽기가 뒤에
     SW_ASSERT_EQUAL( node._listCompletion.size(), size_t( 4 ) );
     SW_EXPECT_TRUE( node._listCompletion[0]._reply._result == ChatResult::NotMember );
     SW_EXPECT_TRUE( node._listCompletion[1]._reply._result == ChatResult::NotMember );
@@ -417,7 +417,7 @@ SW_TEST_CASE( ChatServiceTest, HistoryIsWrittenInBatchesAndReadNewestFirst )
     database.armFault( ServiceStoreFault::RejectRead );
     node._listCompletion.clear();
     node._service.readHistory( 10, "world.kr", "", 3, 56 );
-    node.step( 6000 );
+    node.step( UnixMilliseconds{ 6000 } );
     SW_EXPECT_TRUE( node.getLastResult() == ChatResult::Unavailable );
 }
 
@@ -430,10 +430,10 @@ SW_TEST_CASE( ChatServiceTest, CorruptHistoryRecordFailsTheRead )
     LocalServerBusHub     hub;
     ChatNode              node( &database, &hub, 1 );
     node._directory._mapOnline[10] = "alice";
-    node._service.joinChannel( 10, "world.kr", 0, 1 );
-    node.step( 0 );
-    node._service.sendMessage( 10, "world.kr", "kept", 1000, 2 );
-    node.step( 1000 );
+    node._service.joinChannel( 10, "world.kr", UnixMilliseconds{ 0 }, 1 );
+    node.step( UnixMilliseconds{ 0 } );
+    node._service.sendMessage( 10, "world.kr", "kept", UnixMilliseconds{ 1000 }, 2 );
+    node.step( UnixMilliseconds{ 1000 } );
 
     ServiceTransaction transaction;
     transaction.put( hashed_string{ "chat_history" }, "world.kr/ffffffffffffffff.ffffffffffffffff.ffffffffffffffff", vector<uint8>{ 1, 2, 3 } );
@@ -442,7 +442,7 @@ SW_TEST_CASE( ChatServiceTest, CorruptHistoryRecordFailsTheRead )
     SW_TEST_DEFENSIVE_SCOPE( "a corrupt durable history record is logged" );
     node._listCompletion.clear();
     node._service.readHistory( 10, "world.kr", "", 10, 3 );
-    node.step( 1000 );
+    node.step( UnixMilliseconds{ 1000 } );
     SW_ASSERT_EQUAL( node._listCompletion.size(), size_t( 1 ) );
     SW_EXPECT_TRUE( node._listCompletion[0]._reply._result == ChatResult::Unavailable );
     SW_EXPECT_TRUE( node._listCompletion[0]._reply._listHistory.empty() );
@@ -457,24 +457,24 @@ SW_TEST_CASE( ChatServiceTest, HistoryPastRetentionIsTrimmedAndFailedWritesAreDr
     settings._historyTrimEvery   = 1; // 모든 쓰기가 그 채널을 정리한다
     ChatNode node( &database, &hub, 1, settings );
     node._directory._mapOnline[10] = "alice";
-    node._service.joinChannel( 10, "world.kr", 0, 1 );
-    node.step( 0 );
-    node._service.sendMessage( 10, "world.kr", "old", 0, 2 );
-    node.step( 0 );
-    node._service.sendMessage( 10, "world.kr", "new", 5000, 3 );
-    node.step( 5000 );
+    node._service.joinChannel( 10, "world.kr", UnixMilliseconds{ 0 }, 1 );
+    node.step( UnixMilliseconds{ 0 } );
+    node._service.sendMessage( 10, "world.kr", "old", UnixMilliseconds{ 0 }, 2 );
+    node.step( UnixMilliseconds{ 0 } );
+    node._service.sendMessage( 10, "world.kr", "new", UnixMilliseconds{ 5000 }, 3 );
+    node.step( UnixMilliseconds{ 5000 } );
 
     node._listCompletion.clear();
     node._service.readHistory( 10, "world.kr", "", 10, 4 );
-    node.step( 5000 );
+    node.step( UnixMilliseconds{ 5000 } );
     SW_ASSERT_EQUAL( node._listCompletion.size(), size_t( 1 ) );
     SW_ASSERT_EQUAL( node._listCompletion[0]._reply._listHistory.size(), size_t( 1 ) );
     SW_EXPECT_STREQ( node._listCompletion[0]._reply._listHistory[0]._text.c_str(), "new" );
 
     SW_TEST_DEFENSIVE_SCOPE( "a rejected history commit is logged and dropped" );
     database.armFault( ServiceStoreFault::RejectCommit );
-    node._service.sendMessage( 10, "world.kr", "lost", 6000, 5 );
-    node.step( 6000 );
+    node._service.sendMessage( 10, "world.kr", "lost", UnixMilliseconds{ 6000 }, 5 );
+    node.step( UnixMilliseconds{ 6000 } );
     SW_EXPECT_TRUE( node.getLastResult() == ChatResult::Ok ); // 말하기는 됐다 — 기록만 최선 노력
     SW_EXPECT_EQUAL( node._service.getQueuedHistoryCount(), 0 );
     SW_EXPECT_EQUAL( node._service.getPendingCount(), 0 );
@@ -488,7 +488,7 @@ SW_TEST_CASE( ChatServiceTest, ShutdownCancelsPendingPresenceFinds )
     ChatNode              node( &database, &hub, 1 );
     node._directory._mapOnline[10] = "alice";
     node._presence.setOnline( AccountIdentity{ "carol", 20, SW_FALSE }, 2 );
-    node._service.sendWhisper( 10, 20, "hello carol", 100, 1 ); // 다른 서버 — 제재를 읽은 뒤 접속 상태 찾기를 맡긴다
+    node._service.sendWhisper( 10, 20, "hello carol", UnixMilliseconds{ 100 }, 1 ); // 다른 서버 — 제재를 읽은 뒤 접속 상태 찾기를 맡긴다
     (void)node._store.pollCompletions();
     SW_ASSERT_EQUAL( node._presence.getLivePendingCount(), 1 );
     node._service.shutdown();
@@ -568,14 +568,14 @@ SW_TEST_CASE( ChatServiceTest, ReportSnapshotsTheMessageAndItsContext )
     node._directory._mapOnline[10] = "alice";
     node._directory._mapOnline[11] = "bob";
     node._directory._mapOnline[12] = "eve";
-    node._service.joinChannel( 10, "world.kr", 0, 1 );
-    node._service.joinChannel( 11, "world.kr", 0, 2 );
-    node.step( 0 );
+    node._service.joinChannel( 10, "world.kr", UnixMilliseconds{ 0 }, 1 );
+    node._service.joinChannel( 11, "world.kr", UnixMilliseconds{ 0 }, 2 );
+    node.step( UnixMilliseconds{ 0 } );
     for ( int32 index = 0; index < 3; ++index )
     {
-        node._service.sendMessage( 10, "world.kr", string( "line " ) + static_cast<utf8>( '0' + index ), 1000 * ( index + 1 ), static_cast<uint64>( 10 + index ) );
+        node._service.sendMessage( 10, "world.kr", string( "line " ) + static_cast<utf8>( '0' + index ), UnixMilliseconds{ 1000 * ( index + 1 ) }, static_cast<uint64>( 10 + index ) );
     }
-    node.step( 4000 ); // 기록이 저장소에 쓰인다
+    node.step( UnixMilliseconds{ 4000 } ); // 기록이 저장소에 쓰인다
     ChatMessage reported;
     for ( const ChatDelivery& delivery : node._listDelivery )
     {
@@ -591,16 +591,16 @@ SW_TEST_CASE( ChatServiceTest, ReportSnapshotsTheMessageAndItsContext )
     request._serverID  = reported._serverID;
     request._sequence  = reported._sequence;
     node._listCompletion.clear();
-    node._service.reportMessage( 11, request, 5000, 20 ); // bob 이 신고한다
-    node._service.reportMessage( 10, request, 5000, 21 ); // alice 가 자기 메시지를 신고한다
-    node._service.reportMessage( 12, request, 5000, 22 ); // eve 는 채널에 없다
+    node._service.reportMessage( 11, request, UnixMilliseconds{ 5000 }, 20 ); // bob 이 신고한다
+    node._service.reportMessage( 10, request, UnixMilliseconds{ 5000 }, 21 ); // alice 가 자기 메시지를 신고한다
+    node._service.reportMessage( 12, request, UnixMilliseconds{ 5000 }, 22 ); // eve 는 채널에 없다
     ChatReportRequest missing = request;
     missing._sequence         = reported._sequence + 100;
-    node._service.reportMessage( 11, missing, 5000, 23 );
+    node._service.reportMessage( 11, missing, UnixMilliseconds{ 5000 }, 23 );
     ChatReportRequest badReason = request;
     badReason._reason           = "Not A Code";
-    node._service.reportMessage( 11, badReason, 5000, 24 );
-    node.step( 5000 );
+    node._service.reportMessage( 11, badReason, UnixMilliseconds{ 5000 }, 24 );
+    node.step( UnixMilliseconds{ 5000 } );
     SW_ASSERT_EQUAL( node._listCompletion.size(), size_t( 5 ) );
     SW_EXPECT_TRUE( node._listCompletion[0]._reply._result == ChatResult::NotMember ); // 바로 거절한 둘이 먼저
     SW_EXPECT_TRUE( node._listCompletion[1]._reply._result == ChatResult::Invalid );

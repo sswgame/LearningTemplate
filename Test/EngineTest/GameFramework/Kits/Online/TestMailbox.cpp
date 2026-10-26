@@ -68,12 +68,12 @@ namespace
             return balance._amount;
         }
 
-        MailboxResult claim( const string& mailKey, int64 nowMs = 2000, const ILedgerPolicy* pPolicy = nullptr )
+        MailboxResult claim( const string& mailKey, UnixMilliseconds nowMs = UnixMilliseconds{ 2000 }, const ILedgerPolicy* pPolicy = nullptr )
         {
             MailboxClaimInput input;
             input._mailKey   = mailKey;
             input._accountID = kOwner;
-            input._nowMs     = nowMs;
+            input._nowMs     = nowMs.count();
             input._pPolicy   = pPolicy;
             MailboxReply reply;
             return MailboxStoreLogic::claim( _database, input, reply );
@@ -124,7 +124,7 @@ SW_TEST_CASE( MailboxTest, ListShowsNewestFirstAndHidesExpired )
     SW_ASSERT_EQUAL( reply._listMail.size(), size_t( 2 ) );
     SW_EXPECT_EQUAL( reply._listMail[0]._mailKey, newer );
     SW_EXPECT_EQUAL( reply._listMail[1]._mailKey, older );
-    SW_EXPECT_TRUE( fixture.claim( expired, 5000 ) == MailboxResult::Expired );
+    SW_EXPECT_TRUE( fixture.claim( expired, UnixMilliseconds{ 5000 } ) == MailboxResult::Expired );
 }
 
 SW_TEST_CASE( MailboxTest, ClaimFromMintAndFromEscrow )
@@ -185,7 +185,7 @@ SW_TEST_CASE( MailboxTest, CapExceededKeepsTheMail )
     MailFixture     fixture;
     MailboxSmallCap cap;
     const string    mailKey = fixture.send( "big", LedgerHolder::makeMint(), 60 );
-    SW_EXPECT_TRUE( fixture.claim( mailKey, 2000, &cap ) == MailboxResult::CapExceeded );
+    SW_EXPECT_TRUE( fixture.claim( mailKey, UnixMilliseconds{ 2000 }, &cap ) == MailboxResult::CapExceeded );
     MailboxRequest request;
     MailboxReply   reply;
     SW_ASSERT_TRUE( MailboxStoreLogic::listMail( fixture._database, MailFixture::kOwner, 2000, {}, request, reply ) == MailboxResult::Ok );
@@ -252,7 +252,7 @@ SW_TEST_CASE( MailboxTest, CampaignIsClaimedOncePerAccount )
     MailboxReply after;
     SW_ASSERT_TRUE( MailboxStoreLogic::listMail( fixture._database, MailFixture::kOwner, 2000, listCampaign, request, after ) == MailboxResult::Ok );
     SW_EXPECT_TRUE( after._listMail.empty() );
-    SW_EXPECT_TRUE( fixture.claim( reply._listMail[0]._mailKey, 9000 ) == MailboxResult::Expired );
+    SW_EXPECT_TRUE( fixture.claim( reply._listMail[0]._mailKey, UnixMilliseconds{ 9000 } ) == MailboxResult::Expired );
 }
 
 SW_TEST_CASE( MailboxTest, ClaimAllTakesEveryAttachmentAndSkipsCapped )
@@ -300,7 +300,7 @@ SW_TEST_CASE( MailboxTest, ServiceClaimNeedsAKeyAndSweepsOnItsPeriod )
     SW_ASSERT_TRUE( service.initialize( &store, settings ) );
     const string mailKey = fixture.send( "svc", LedgerHolder::makeMint(), 7, 1000, 4000 );
 
-    MailboxCall claimCall{ 2000 };
+    MailboxCall claimCall{ UnixMilliseconds{ 2000 } };
     claimCall._method           = MailboxMethod::kClaim;
     claimCall._accountID        = MailFixture::kOwner;
     claimCall._request._mailKey = mailKey;
@@ -312,14 +312,14 @@ SW_TEST_CASE( MailboxTest, ServiceClaimNeedsAKeyAndSweepsOnItsPeriod )
     MailboxReplyCapture claimed;
     service.submitCall( claimCall, claimed.makeDelegate() );
     (void)store.pollCompletions();
-    service.update( 2000 );
+    service.update( UnixMilliseconds{ 2000 } );
     SW_ASSERT_EQUAL( claimed._count, 1 );
     SW_EXPECT_TRUE( claimed._reply._result == MailboxResult::Ok );
     SW_EXPECT_EQUAL( fixture.gold( MailFixture::kOwner ), int64( 7 ) );
 
     (void)fixture.send( "expire", LedgerHolder::makeMint(), 3, 1000, 4000 );
-    (void)store.pollCompletions(); // 앞 틱의 쓸기 · 캠페인 일이 끝났다(호스트가 서비스 틱 전에 하는 일)
-    service.update( 5000 );        // 주기 — 쓸기 일을 맡긴다
+    (void)store.pollCompletions();              // 앞 틱의 쓸기 · 캠페인 일이 끝났다(호스트가 서비스 틱 전에 하는 일)
+    service.update( UnixMilliseconds{ 5000 } ); // 주기 — 쓸기 일을 맡긴다
     (void)store.pollCompletions();
     SW_EXPECT_EQUAL( fixture._database.countRecords( ServiceMail::getExpiryTable() ), 0 );
     SW_EXPECT_EQUAL( fixture._database.countRecords( ServiceMail::getMailTable() ), 1 ); // 받은 "svc" 만 남는다(받은 우편은 쓸기 대상이 아니다)

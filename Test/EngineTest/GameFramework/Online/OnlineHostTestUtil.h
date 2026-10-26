@@ -18,6 +18,7 @@
 #include "Core/Network/Message/NetRequest.h"
 #include "Core/Network/Message/StreamMessageEndpoint.h"
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
+#include "Core/Time/TimePoint.h"
 
 #include "EngineTest/GameFramework/Online/OnlineMethodTableTestUtil.h"
 
@@ -275,7 +276,7 @@ namespace test
         /** @brief 호스트 틱(전송 · 저장소 완료 · 캐시 라우터 · 버스 · 서비스) 뒤 가짜 접속 상태의 결과를 알립니다. */
         void update( int64 nowMs )
         {
-            _host.update( nowMs );
+            _host.update( sw::UnixMilliseconds{ nowMs } ); // 테스트 클라이언트와 같은 틱 시각을 서버 시각으로 쓴다
             _presence.update();
         }
     };

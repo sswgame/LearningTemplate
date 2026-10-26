@@ -110,7 +110,7 @@ SW_TEST_CASE( EditorNetPlaySessionTest, DedicatedServerAndTwoClientsConnectPause
         SW_TEST_SKIP( "Server is not built next to the working directory (run from Bin)" );
 
     const string traceDirectory =
-        FileUtil::joinPath( FileUtil::getTempDirectory(), "sw_netplay_" + to_string( Process::getCurrentProcessID() ) + "_" + to_string( WallClock::nowUnixMilliseconds() ) );
+        FileUtil::joinPath( FileUtil::getTempDirectory(), "sw_netplay_" + to_string( Process::getCurrentProcessID() ) + "_" + to_string( WallClock::nowUnixMilliseconds().count() ) );
     EditorNetPlaySettings settings;
     settings._mode                 = EditorNetMode::DedicatedServer;
     settings._clientCount          = 2;

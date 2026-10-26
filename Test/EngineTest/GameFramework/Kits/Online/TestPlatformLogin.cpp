@@ -34,7 +34,7 @@ using namespace sw;
 
 namespace
 {
-    constexpr int64 kNowMs = 1000000; ///< 테스트 벽시계(초로 1000)
+    constexpr UnixMilliseconds kNowMs{ 1000000 }; ///< 테스트 벽시계(초로 1000)
 
     /** @brief 가짜 제공자 서버 — `/jwks`(바꿀 수 있다) · `/profile`(Bearer good | bad) · `/token`(PKCE 확인 뒤 정한 토큰). `_bDown` 이면 모두 503. */
     class FakeIssuerHandler final : public IHTTPRequestHandler
@@ -207,7 +207,7 @@ namespace
         unique_ptr<ITLSContext> _clientContext;
         HTTPServer              _server;
         HTTPClient              _client;
-        int64                   _nowMs;
+        UnixMilliseconds        _nowMs;
 
         IssuerFixture()
             : _network{ 11u }
@@ -464,7 +464,7 @@ SW_TEST_CASE( PlatformLoginTest, PcLoopbackPkceFlowGetsAnIDTokenWithNonce )
     client.getHTTPClient().registerTLSContext( "localhost", fixture._clientContext.get() );
 
     const SigningKey key       = Internal::makeKey( "k1", NetSignatureAlgorithm::EcdsaP256Sha256 );
-    const uint64     requestID = client.beginLogin( "google", kNowMs );
+    const uint64     requestID = client.beginLogin( "google", kNowMs.count() );
     SW_ASSERT_FALSE( browser._lastURL.empty() );
     SW_EXPECT_EQUAL( string( "select_account" ), Internal::findQuery( browser._lastURL, "prompt" ) ); // 설정의 쿼리를 지킨다
     SW_EXPECT_EQUAL( string( "S256" ), Internal::findQuery( browser._lastURL, "code_challenge_method" ) );
@@ -479,18 +479,18 @@ SW_TEST_CASE( PlatformLoginTest, PcLoopbackPkceFlowGetsAnIDTokenWithNonce )
     HTTPClient&       browserClient = fixture._client;
     HTTPClientRequest forged;
     forged._url = redirectUri + "?code=" + fixture._handler._expectedCode + "&state=forged";
-    (void)browserClient.submitRequest( forged, kNowMs );
+    (void)browserClient.submitRequest( forged, kNowMs.count() );
     HTTPClientRequest redirect;
     redirect._url = redirectUri + "?code=" + fixture._handler._expectedCode + "&state=" + HTTPUtil::encodePercent( state );
-    (void)browserClient.submitRequest( redirect, kNowMs );
+    (void)browserClient.submitRequest( redirect, kNowMs.count() );
     vector<PlatformLoginClientResult> listResult;
     vector<HTTPClientResponse>        listPage;
     for ( const Deadline deadline = Deadline::afterMilliseconds( 10000 ); listResult.empty() && deadline.isExpired() == false; )
     {
         fixture._server.update();
-        browserClient.update( kNowMs );
+        browserClient.update( kNowMs.count() );
         (void)browserClient.pollResponses( listPage );
-        client.update( kNowMs );
+        client.update( kNowMs.count() );
         (void)client.pollResults( listResult );
         std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
     }
@@ -508,18 +508,18 @@ SW_TEST_CASE( PlatformLoginTest, PcLoopbackPkceFlowGetsAnIDTokenWithNonce )
     SW_EXPECT_EQUAL( 1, rejectedPageCount );
 
     // 사용자가 거절했다 — 취소로 끝난다.
-    (void)client.beginLogin( "google", kNowMs );
+    (void)client.beginLogin( "google", kNowMs.count() );
     const string      secondState = Internal::findQuery( browser._lastURL, "state" );
     HTTPClientRequest denied;
     denied._url = redirectUri + "?error=access_denied&state=" + HTTPUtil::encodePercent( secondState );
-    (void)browserClient.submitRequest( denied, kNowMs );
+    (void)browserClient.submitRequest( denied, kNowMs.count() );
     listResult.clear();
     for ( const Deadline deadline = Deadline::afterMilliseconds( 10000 ); listResult.empty() && deadline.isExpired() == false; )
     {
         fixture._server.update();
-        browserClient.update( kNowMs );
+        browserClient.update( kNowMs.count() );
         (void)browserClient.pollResponses( listPage );
-        client.update( kNowMs );
+        client.update( kNowMs.count() );
         (void)client.pollResults( listResult );
         std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
     }
@@ -529,9 +529,9 @@ SW_TEST_CASE( PlatformLoginTest, PcLoopbackPkceFlowGetsAnIDTokenWithNonce )
 
     // 모르는 제공자 · 시한
     listResult.clear();
-    (void)client.beginLogin( "apple", kNowMs );
-    (void)client.beginLogin( "google", kNowMs );
-    client.update( kNowMs + settings._timeoutMs );
+    (void)client.beginLogin( "apple", kNowMs.count() );
+    (void)client.beginLogin( "google", kNowMs.count() );
+    client.update( ( kNowMs + settings._timeoutMs ).count() );
     (void)client.pollResults( listResult );
     SW_ASSERT_EQUAL( size_t( 2 ), listResult.size() );
     SW_EXPECT_TRUE( listResult[0]._bSucceeded == SW_FALSE );

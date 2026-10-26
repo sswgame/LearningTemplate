@@ -170,7 +170,7 @@ namespace
             while ( listResult.size() < count && deadline.isExpired() == false )
             {
                 _https.pump();
-                _provider.update( _https._nowMs );
+                _provider.update( UnixMilliseconds{ _https._nowMs } );
                 (void)_provider.pollResults( listResult );
             }
             return listResult;
@@ -181,8 +181,8 @@ namespace
 SW_TEST_CASE( FcmPushProviderTest, TheTokenIsRequestedOnceSignedWithTheKeyAndCached )
 {
     FcmFixture fixture;
-    fixture._provider.send( 1, "device-a", "ko-KR", makeMessage(), fixture._https._nowMs );
-    fixture._provider.send( 2, "device-b", "ko-KR", makeMessage(), fixture._https._nowMs ); // 토큰을 기다리는 중에 온 두 번째도 같은 토큰 요청을 쓴다
+    fixture._provider.send( 1, "device-a", "ko-KR", makeMessage(), UnixMilliseconds{ fixture._https._nowMs } );
+    fixture._provider.send( 2, "device-b", "ko-KR", makeMessage(), UnixMilliseconds{ fixture._https._nowMs } ); // 토큰을 기다리는 중에 온 두 번째도 같은 토큰 요청을 쓴다
     const vector<PushDeliveryResult> listFirst = fixture.collect( 2 );
     SW_ASSERT_EQUAL( listFirst.size(), size_t( 2 ) );
     SW_EXPECT_TRUE( fixture._handler._bAssertionValid == SW_TRUE );
@@ -194,13 +194,13 @@ SW_TEST_CASE( FcmPushProviderTest, TheTokenIsRequestedOnceSignedWithTheKeyAndCac
     }
     SW_EXPECT_EQUAL( fixture._handler._lastAuthorization, sw::string( "Bearer tok-1" ) );
 
-    fixture._provider.send( 3, "device-a", "", makeMessage(), fixture._https._nowMs );
+    fixture._provider.send( 3, "device-a", "", makeMessage(), UnixMilliseconds{ fixture._https._nowMs } );
     SW_ASSERT_EQUAL( fixture.collect( 1 ).size(), size_t( 1 ) );
     SW_EXPECT_EQUAL( fixture._handler._tokenHits, 1 ); // 캐시된 토큰이다
 
     // 토큰은 만료 1 분 전에 다시 받는다.
     fixture._https._nowMs += 3600000 - 30000;
-    fixture._provider.send( 4, "device-a", "", makeMessage(), fixture._https._nowMs );
+    fixture._provider.send( 4, "device-a", "", makeMessage(), UnixMilliseconds{ fixture._https._nowMs } );
     SW_ASSERT_EQUAL( fixture.collect( 1 ).size(), size_t( 1 ) );
     SW_EXPECT_EQUAL( fixture._handler._tokenHits, 2 );
 }
@@ -209,7 +209,7 @@ SW_TEST_CASE( FcmPushProviderTest, ATopicMessageGoesOutOnceToTheTopic )
 {
     FcmFixture fixture;
     SW_EXPECT_TRUE( fixture._provider.supportsTopics() );
-    fixture._provider.sendToTopic( 9, "liveops.kr", makeMessage(), fixture._https._nowMs );
+    fixture._provider.sendToTopic( 9, "liveops.kr", makeMessage(), UnixMilliseconds{ fixture._https._nowMs } );
     const vector<PushDeliveryResult> listResult = fixture.collect( 1 );
     SW_ASSERT_EQUAL( listResult.size(), size_t( 1 ) );
     SW_EXPECT_TRUE( listResult[0]._status == PushDeliveryStatus::Delivered );
@@ -220,7 +220,7 @@ SW_TEST_CASE( FcmPushProviderTest, ATopicMessageGoesOutOnceToTheTopic )
     // 토픽 이름 규칙 밖은 서버에 묻지 않고 거절한다.
     {
         SW_TEST_DEFENSIVE_SCOPE( "the invalid topic is logged" );
-        fixture._provider.sendToTopic( 10, "bad topic!", makeMessage(), fixture._https._nowMs );
+        fixture._provider.sendToTopic( 10, "bad topic!", makeMessage(), UnixMilliseconds{ fixture._https._nowMs } );
     }
     const vector<PushDeliveryResult> listBad = fixture.collect( 1 );
     SW_ASSERT_EQUAL( listBad.size(), size_t( 1 ) );
@@ -232,10 +232,10 @@ SW_TEST_CASE( FcmPushProviderTest, StatusCodesBecomeDeliveryStatuses )
 {
     FcmFixture                    fixture;
     const PushNotificationMessage message = makeMessage();
-    fixture._provider.send( 1, "dead", "", message, fixture._https._nowMs );
-    fixture._provider.send( 2, "slow", "", message, fixture._https._nowMs );
-    fixture._provider.send( 3, "boom", "", message, fixture._https._nowMs );
-    fixture._provider.send( 4, "bad", "", message, fixture._https._nowMs );
+    fixture._provider.send( 1, "dead", "", message, UnixMilliseconds{ fixture._https._nowMs } );
+    fixture._provider.send( 2, "slow", "", message, UnixMilliseconds{ fixture._https._nowMs } );
+    fixture._provider.send( 3, "boom", "", message, UnixMilliseconds{ fixture._https._nowMs } );
+    fixture._provider.send( 4, "bad", "", message, UnixMilliseconds{ fixture._https._nowMs } );
     const vector<PushDeliveryResult> listResult = fixture.collect( 4 );
     SW_ASSERT_EQUAL( listResult.size(), size_t( 4 ) );
     for ( const PushDeliveryResult& result : listResult )
@@ -281,13 +281,13 @@ SW_TEST_CASE( FcmPushProviderTest, ARejectedAccessTokenIsDroppedAndTheNextMessag
     fixture._handler._authFailuresLeft = 1;
     {
         SW_TEST_DEFENSIVE_SCOPE( "the provider warns that the access token was rejected" );
-        fixture._provider.send( 1, "device-a", "", makeMessage(), fixture._https._nowMs );
+        fixture._provider.send( 1, "device-a", "", makeMessage(), UnixMilliseconds{ fixture._https._nowMs } );
         const vector<PushDeliveryResult> listFirst = fixture.collect( 1 );
         SW_ASSERT_EQUAL( listFirst.size(), size_t( 1 ) );
         SW_EXPECT_TRUE( listFirst[0]._status == PushDeliveryStatus::Rejected ); // 401 · 403
     }
     SW_EXPECT_EQUAL( fixture._handler._tokenHits, 1 );
-    fixture._provider.send( 2, "device-a", "", makeMessage(), fixture._https._nowMs );
+    fixture._provider.send( 2, "device-a", "", makeMessage(), UnixMilliseconds{ fixture._https._nowMs } );
     const vector<PushDeliveryResult> listSecond = fixture.collect( 1 );
     SW_ASSERT_EQUAL( listSecond.size(), size_t( 1 ) );
     SW_EXPECT_TRUE( listSecond[0]._status == PushDeliveryStatus::Delivered );
@@ -301,12 +301,12 @@ SW_TEST_CASE( FcmPushProviderTest, ATokenServerThatFailsMakesTheDeliveryRetryOrS
     fixture._handler._tokenStatus = 503;
     {
         SW_TEST_DEFENSIVE_SCOPE( "the provider warns that the access token request failed" );
-        fixture._provider.send( 1, "device-a", "", makeMessage(), fixture._https._nowMs );
+        fixture._provider.send( 1, "device-a", "", makeMessage(), UnixMilliseconds{ fixture._https._nowMs } );
         const vector<PushDeliveryResult> listDown = fixture.collect( 1 );
         SW_ASSERT_EQUAL( listDown.size(), size_t( 1 ) );
         SW_EXPECT_TRUE( listDown[0]._status == PushDeliveryStatus::Transient ); // 곧 나아질 수 있다
         fixture._handler._tokenStatus = 400;                                    // invalid_grant — 키가 틀렸다
-        fixture._provider.send( 2, "device-a", "", makeMessage(), fixture._https._nowMs );
+        fixture._provider.send( 2, "device-a", "", makeMessage(), UnixMilliseconds{ fixture._https._nowMs } );
         const vector<PushDeliveryResult> listKey = fixture.collect( 1 );
         SW_ASSERT_EQUAL( listKey.size(), size_t( 1 ) );
         SW_EXPECT_TRUE( listKey[0]._status == PushDeliveryStatus::Rejected );

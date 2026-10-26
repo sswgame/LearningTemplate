@@ -31,7 +31,7 @@ namespace
             settings._connection  = _path;
             settings._workerCount = 2;
             string error;
-            _bReady = _store.initialize( "sqlite", settings, SQLServiceStore::kMigrationFolder, 0, error );
+            _bReady = _store.initialize( "sqlite", settings, SQLServiceStore::kMigrationFolder, UnixMilliseconds{ 0 }, error );
             SW_EXPECT_TRUE_MSG( _bReady, error.c_str() );
         }
 
@@ -109,14 +109,14 @@ SW_TEST_CASE( ServiceStoreSQLiteTest, DataAndVersionsSurviveARestart )
     int32              completedCount = 0;
     {
         SQLServiceStore store;
-        SW_ASSERT_TRUE_MSG( store.initialize( "sqlite", settings, SQLServiceStore::kMigrationFolder, 0, error ), error.c_str() );
+        SW_ASSERT_TRUE_MSG( store.initialize( "sqlite", settings, SQLServiceStore::kMigrationFolder, UnixMilliseconds{ 0 }, error ), error.c_str() );
         store.submit( make_unique<SQLiteStorePutWork>( true, &record, &result, &completedCount ) );
         settle( store, completedCount, 1 );
         SW_EXPECT_TRUE( result == ServiceStoreResult::Ok );
         store.shutdown();
     }
     SQLServiceStore store; // 다시 띄운다 — 마이그레이션은 이미 적용됐고 데이터는 그대로다
-    SW_ASSERT_TRUE_MSG( store.initialize( "sqlite", settings, SQLServiceStore::kMigrationFolder, 0, error ), error.c_str() );
+    SW_ASSERT_TRUE_MSG( store.initialize( "sqlite", settings, SQLServiceStore::kMigrationFolder, UnixMilliseconds{ 0 }, error ), error.c_str() );
     store.submit( make_unique<SQLiteStorePutWork>( false, &record, &result, &completedCount ) );
     settle( store, completedCount, 2 );
     SW_EXPECT_TRUE( result == ServiceStoreResult::Ok );
@@ -131,15 +131,15 @@ SW_TEST_CASE( ServiceStoreSQLiteTest, DataAndVersionsSurviveARestart )
 SW_TEST_CASE( ServiceStoreSQLiteTest, FactoryPicksTheDriverByNameAndFailsLoudly )
 {
     string                    error;
-    unique_ptr<IServiceStore> memory = ServiceStoreFactory::createServiceStore( "memory", "", "", 1, 0, error );
+    unique_ptr<IServiceStore> memory = ServiceStoreFactory::createServiceStore( "memory", "", "", 1, UnixMilliseconds{ 0 }, error );
     SW_EXPECT_NOT_NULL( memory );
 
-    unique_ptr<IServiceStore> sqlite = ServiceStoreFactory::createServiceStore( "sqlite", test::makeTempPath( "factory.db" ), "", 1, 0, error );
+    unique_ptr<IServiceStore> sqlite = ServiceStoreFactory::createServiceStore( "sqlite", test::makeTempPath( "factory.db" ), "", 1, UnixMilliseconds{ 0 }, error );
     SW_EXPECT_TRUE_MSG( sqlite != nullptr, error.c_str() );
     if ( sqlite != nullptr )
         sqlite->shutdown();
 
-    unique_ptr<IServiceStore> unknown = ServiceStoreFactory::createServiceStore( "mysql", "x", "", 1, 0, error );
+    unique_ptr<IServiceStore> unknown = ServiceStoreFactory::createServiceStore( "mysql", "x", "", 1, UnixMilliseconds{ 0 }, error );
     SW_EXPECT_NULL( unknown );
     SW_EXPECT_TRUE( error.find( "no SQL driver 'mysql'" ) != string::npos );
 }
@@ -161,6 +161,6 @@ SW_TEST_CASE( ServiceStoreSQLiteTest, ServerRuntimeOpensTheSQLiteStoreThroughThe
     settings._listenAddress                        = NetAddress::makeLoopback( 7453 );
     OnlineServerRuntime runtime;
     string              error;
-    SW_EXPECT_TRUE_MSG( runtime.initialize( settings, 1000, error ), error.c_str() );
+    SW_EXPECT_TRUE_MSG( runtime.initialize( settings, UnixMilliseconds{ 1000 }, error ), error.c_str() );
     runtime.shutdown();
 }

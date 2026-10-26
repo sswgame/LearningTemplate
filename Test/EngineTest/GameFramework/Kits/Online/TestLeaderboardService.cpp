@@ -80,31 +80,31 @@ SW_TEST_CASE( LeaderboardServiceTest, BestKeepsHighestAndTopListsWithNames )
     BoardNode               node( &database, &cacheDatabase );
     SW_ASSERT_TRUE( node._service.registerBoard( Internal::makeBoard( "kills", LeaderboardUpdate::Best ) ) );
     SW_EXPECT_FALSE( node._service.registerBoard( Internal::makeBoard( "Kills", LeaderboardUpdate::Best ) ) ); // id 규칙
-    node._service.submitScore( "kills", 1, "alice", 10, 0, 1 );
-    node._service.submitScore( "kills", 2, "bob", 30, 0, 2 );
-    node._service.submitScore( "kills", 3, "carol", 20, 0, 3 );
-    node._service.submitScore( "kills", 2, "bob", 5, 0, 4 ); // 더 낮다 — 그대로 30
+    node._service.submitScore( "kills", 1, "alice", 10, UnixMilliseconds{ 0 }, 1 );
+    node._service.submitScore( "kills", 2, "bob", 30, UnixMilliseconds{ 0 }, 2 );
+    node._service.submitScore( "kills", 3, "carol", 20, UnixMilliseconds{ 0 }, 3 );
+    node._service.submitScore( "kills", 2, "bob", 5, UnixMilliseconds{ 0 }, 4 ); // 더 낮다 — 그대로 30
     node.step();
     SW_EXPECT_EQUAL( node.getLast()._score, int64( 30 ) );
 
-    node._service.readTop( "kills", 0, 2, 0, 5 );
+    node._service.readTop( "kills", 0, 2, UnixMilliseconds{ 0 }, 5 );
     node.step();
     SW_ASSERT_EQUAL( node.getLast()._listEntry.size(), size_t( 2 ) );
     SW_EXPECT_EQUAL( node.getLast()._listEntry[0]._accountID, AccountID( 2 ) );
     SW_EXPECT_STREQ( node.getLast()._listEntry[0]._displayName.c_str(), "bob" );
     SW_EXPECT_EQUAL( node.getLast()._listEntry[1]._rank, 2 );
 
-    node._service.readAround( "kills", 1, 1, 0, 6 );
+    node._service.readAround( "kills", 1, 1, UnixMilliseconds{ 0 }, 6 );
     node.step();
     SW_ASSERT_EQUAL( node.getLast()._listEntry.size(), size_t( 2 ) ); // 2 등 carol, 3 등 alice(아래가 없다)
     SW_EXPECT_EQUAL( node.getLast()._listEntry[1]._accountID, AccountID( 1 ) );
     SW_EXPECT_EQUAL( node.getLast()._listEntry[1]._rank, 3 );
-    node._service.readAround( "kills", 9, 1, 0, 7 ); // 점수 없음
+    node._service.readAround( "kills", 9, 1, UnixMilliseconds{ 0 }, 7 ); // 점수 없음
     node.step();
     SW_EXPECT_TRUE( node.getLast()._result == LeaderboardResult::NotRanked );
-    node._service.readTop( "nope", 0, 2, 0, 8 );
-    node._service.readTop( "kills", 0, LeaderboardLimit::kMaxPage + 1, 0, 9 );
-    node._service.submitScore( "kills", 1, "alice", LeaderboardLimit::kMaxAbsScore + 1, 0, 10 );
+    node._service.readTop( "nope", 0, 2, UnixMilliseconds{ 0 }, 8 );
+    node._service.readTop( "kills", 0, LeaderboardLimit::kMaxPage + 1, UnixMilliseconds{ 0 }, 9 );
+    node._service.submitScore( "kills", 1, "alice", LeaderboardLimit::kMaxAbsScore + 1, UnixMilliseconds{ 0 }, 10 );
     node.step();
     SW_ASSERT_TRUE( node._listCompletion.size() >= size_t( 3 ) );
     const size_t lastIndex = node._listCompletion.size() - 1;
@@ -121,13 +121,13 @@ SW_TEST_CASE( LeaderboardServiceTest, ScoresOfRanksOnlyTheGivenAccounts )
     MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     BoardNode               node( &database, &cacheDatabase );
     SW_ASSERT_TRUE( node._service.registerBoard( Internal::makeBoard( "kills", LeaderboardUpdate::Best ) ) );
-    node._service.submitScore( "kills", 1, "alice", 10, 0, 1 );
-    node._service.submitScore( "kills", 2, "bob", 30, 0, 2 );
-    node._service.submitScore( "kills", 3, "carol", 20, 0, 3 );
-    node._service.submitScore( "kills", 4, "dave", 20, 0, 4 );
+    node._service.submitScore( "kills", 1, "alice", 10, UnixMilliseconds{ 0 }, 1 );
+    node._service.submitScore( "kills", 2, "bob", 30, UnixMilliseconds{ 0 }, 2 );
+    node._service.submitScore( "kills", 3, "carol", 20, UnixMilliseconds{ 0 }, 3 );
+    node._service.submitScore( "kills", 4, "dave", 20, UnixMilliseconds{ 0 }, 4 );
     node.step();
 
-    node._service.readScoresOf( "kills", { 4, 1, 3, 9, 3 }, 0, 5 ); // 9 는 점수가 없고 3 은 두 번 왔다
+    node._service.readScoresOf( "kills", { 4, 1, 3, 9, 3 }, UnixMilliseconds{ 0 }, 5 ); // 9 는 점수가 없고 3 은 두 번 왔다
     node.step();
     SW_ASSERT_TRUE( node.getLast()._result == LeaderboardResult::Ok );
     const vector<LeaderboardEntry>& listEntry = node.getLast()._listEntry;
@@ -139,8 +139,8 @@ SW_TEST_CASE( LeaderboardServiceTest, ScoresOfRanksOnlyTheGivenAccounts )
     SW_EXPECT_EQUAL( listEntry[2]._accountID, AccountID( 1 ) );
     SW_EXPECT_EQUAL( listEntry[2]._rank, 3 );
 
-    node._service.readScoresOf( "nope", { 1 }, 0, 6 );
-    node._service.readScoresOf( "kills", {}, 0, 7 );
+    node._service.readScoresOf( "nope", { 1 }, UnixMilliseconds{ 0 }, 6 );
+    node._service.readScoresOf( "kills", {}, UnixMilliseconds{ 0 }, 7 );
     node.step();
     const size_t lastIndex = node._listCompletion.size() - 1;
     SW_EXPECT_TRUE( node._listCompletion[lastIndex - 1]._result == LeaderboardResult::UnknownBoard );
@@ -153,7 +153,7 @@ SW_TEST_CASE( LeaderboardServiceTest, JoinedAccountStatsAreKeptInMemoryForMatchm
     SystemMonotonicClock    cacheClock;
     MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     BoardNode               node( &database, &cacheDatabase );
-    node._service.changeStat( 7, "p", "mmr_duo", 1700, LeaderboardUpdate::Latest, 0, 1 );
+    node._service.changeStat( 7, "p", "mmr_duo", 1700, LeaderboardUpdate::Latest, UnixMilliseconds{ 0 }, 1 );
     node.step();
     int64 value = 0;
     SW_EXPECT_TRUE( node._service.findStat( 7, "mmr_duo", value ) == AccountStatLookup::NotLoaded ); // 접속하지 않았다
@@ -163,7 +163,7 @@ SW_TEST_CASE( LeaderboardServiceTest, JoinedAccountStatsAreKeptInMemoryForMatchm
     SW_ASSERT_TRUE( node._service.findStat( 7, "mmr_duo", value ) == AccountStatLookup::Found );
     SW_EXPECT_EQUAL( value, int64( 1700 ) );
     SW_EXPECT_TRUE( node._service.findStat( 7, "wins", value ) == AccountStatLookup::Missing );
-    node._service.changeStat( 7, "p", "mmr_duo", 1750, LeaderboardUpdate::Latest, 0, 2 );
+    node._service.changeStat( 7, "p", "mmr_duo", 1750, LeaderboardUpdate::Latest, UnixMilliseconds{ 0 }, 2 );
     node.step();
     SW_ASSERT_TRUE( node._service.findStat( 7, "mmr_duo", value ) == AccountStatLookup::Found );
     SW_EXPECT_EQUAL( value, int64( 1750 ) ); // 바뀐 통계가 메모리에도 들어간다
@@ -181,18 +181,18 @@ SW_TEST_CASE( LeaderboardServiceTest, AscendingSumAndLatest )
     SW_ASSERT_TRUE( node._service.registerBoard( Internal::makeBoard( "lap_time", LeaderboardUpdate::Best, LeaderboardOrder::Ascending ) ) );
     SW_ASSERT_TRUE( node._service.registerBoard( Internal::makeBoard( "gold_earned", LeaderboardUpdate::Sum ) ) );
     SW_ASSERT_TRUE( node._service.registerBoard( Internal::makeBoard( "last_level", LeaderboardUpdate::Latest ) ) );
-    node._service.submitScore( "lap_time", 1, "a", 9000, 0, 1 );
-    node._service.submitScore( "lap_time", 2, "b", 8500, 0, 2 );
-    node._service.submitScore( "lap_time", 1, "a", 8000, 0, 3 ); // 더 빠르다 — 바뀐다
-    node._service.submitScore( "gold_earned", 1, "a", 100, 0, 4 );
-    node._service.submitScore( "gold_earned", 1, "a", 50, 0, 5 );
+    node._service.submitScore( "lap_time", 1, "a", 9000, UnixMilliseconds{ 0 }, 1 );
+    node._service.submitScore( "lap_time", 2, "b", 8500, UnixMilliseconds{ 0 }, 2 );
+    node._service.submitScore( "lap_time", 1, "a", 8000, UnixMilliseconds{ 0 }, 3 ); // 더 빠르다 — 바뀐다
+    node._service.submitScore( "gold_earned", 1, "a", 100, UnixMilliseconds{ 0 }, 4 );
+    node._service.submitScore( "gold_earned", 1, "a", 50, UnixMilliseconds{ 0 }, 5 );
     node.step();
     SW_EXPECT_EQUAL( node.getLast()._score, int64( 150 ) );
-    node._service.submitScore( "last_level", 1, "a", 7, 0, 6 );
-    node._service.submitScore( "last_level", 1, "a", 3, 0, 7 ); // 늘 덮는다
+    node._service.submitScore( "last_level", 1, "a", 7, UnixMilliseconds{ 0 }, 6 );
+    node._service.submitScore( "last_level", 1, "a", 3, UnixMilliseconds{ 0 }, 7 ); // 늘 덮는다
     node.step();
     SW_EXPECT_EQUAL( node.getLast()._score, int64( 3 ) );
-    node._service.readTop( "lap_time", 0, 2, 0, 8 );
+    node._service.readTop( "lap_time", 0, 2, UnixMilliseconds{ 0 }, 8 );
     node.step();
     SW_ASSERT_EQUAL( node.getLast()._listEntry.size(), size_t( 2 ) );
     SW_EXPECT_EQUAL( node.getLast()._listEntry[0]._accountID, AccountID( 1 ) );
@@ -208,13 +208,13 @@ SW_TEST_CASE( LeaderboardServiceTest, DailyBoardStartsEmptyAfterReset )
     MemoryEphemeralDatabase cacheDatabase{ cacheClock };
     BoardNode               node( &database, &cacheDatabase );
     SW_ASSERT_TRUE( node._service.registerBoard( Internal::makeBoard( "daily_runs", LeaderboardUpdate::Sum, LeaderboardOrder::Descending, LeaderboardReset::Daily ) ) );
-    node._service.submitScore( "daily_runs", 1, "a", 3, Internal::kMonday20261005Ms + 1000, 1 );
+    node._service.submitScore( "daily_runs", 1, "a", 3, UnixMilliseconds{ Internal::kMonday20261005Ms + 1000 }, 1 );
     node.step();
-    node._service.readTop( "daily_runs", 0, 10, Internal::kMonday20261005Ms + 2000, 2 );
+    node._service.readTop( "daily_runs", 0, 10, UnixMilliseconds{ Internal::kMonday20261005Ms + 2000 }, 2 );
     node.step();
     SW_EXPECT_EQUAL( node.getLast()._listEntry.size(), size_t( 1 ) );
     SW_EXPECT_EQUAL( node.getLast()._periodID, uint64( Internal::kMonday20261005Ms ) );
-    node._service.readTop( "daily_runs", 0, 10, Internal::kMonday20261005Ms + Internal::kDayMs, 3 ); // 다음 날
+    node._service.readTop( "daily_runs", 0, 10, UnixMilliseconds{ Internal::kMonday20261005Ms + Internal::kDayMs }, 3 ); // 다음 날
     node.step();
     SW_EXPECT_EQUAL( node.getLast()._listEntry.size(), size_t( 0 ) );
     SW_EXPECT_EQUAL( node.getLast()._periodID, uint64( Internal::kMonday20261005Ms + Internal::kDayMs ) );
@@ -234,7 +234,7 @@ SW_TEST_CASE( LeaderboardServiceTest, LostCacheIsRebuiltFromStoreWithTheSameOrde
         {
             const int64 score = static_cast<int64>( accountID * 7 % 307 );
             bestScore         = std::max( bestScore, score );
-            node._service.submitScore( "kills", accountID, "p", score, 0, accountID );
+            node._service.submitScore( "kills", accountID, "p", score, UnixMilliseconds{ 0 }, accountID );
         }
         node.step();
     }
@@ -242,8 +242,8 @@ SW_TEST_CASE( LeaderboardServiceTest, LostCacheIsRebuiltFromStoreWithTheSameOrde
     MemoryEphemeralDatabase emptyCache{ emptyCacheClock }; // 캐시 서버가 비었다
     BoardNode               node( &database, &emptyCache );
     SW_ASSERT_TRUE( node._service.registerBoard( Internal::makeBoard( "kills", LeaderboardUpdate::Best ) ) );
-    node._service.readTop( "kills", 0, 3, 0, 1 );
-    node._service.readTop( "kills", 0, 1, 0, 2 ); // 다시 채우는 동안 줄을 선다
+    node._service.readTop( "kills", 0, 3, UnixMilliseconds{ 0 }, 1 );
+    node._service.readTop( "kills", 0, 1, UnixMilliseconds{ 0 }, 2 ); // 다시 채우는 동안 줄을 선다
     node.step();
     SW_ASSERT_EQUAL( node._listCompletion.size(), size_t( 2 ) );
     SW_ASSERT_EQUAL( node._listCompletion[0]._listEntry.size(), size_t( 3 ) );
@@ -251,12 +251,12 @@ SW_TEST_CASE( LeaderboardServiceTest, LostCacheIsRebuiltFromStoreWithTheSameOrde
     SW_EXPECT_EQUAL( node._listCompletion[1]._listEntry[0]._accountID, node._listCompletion[0]._listEntry[0]._accountID );
 
     const uint64 commitBefore = database.getCommitCount();
-    node._service.readTop( "kills", 0, 1, 0, 3 ); // 준비 표시가 있다 — 다시 채우지 않는다
-    node._service.submitScore( "kills", 301, "late", 1000, 0, 4 );
+    node._service.readTop( "kills", 0, 1, UnixMilliseconds{ 0 }, 3 ); // 준비 표시가 있다 — 다시 채우지 않는다
+    node._service.submitScore( "kills", 301, "late", 1000, UnixMilliseconds{ 0 }, 4 );
     node.step();
     SW_EXPECT_EQUAL( node._service.getPendingCount(), 0 );
     SW_EXPECT_EQUAL( database.getCommitCount(), commitBefore + 1 );
-    node._service.readTop( "kills", 0, 1, 0, 5 );
+    node._service.readTop( "kills", 0, 1, UnixMilliseconds{ 0 }, 5 );
     node.step();
     SW_EXPECT_EQUAL( node.getLast()._listEntry[0]._accountID, AccountID( 301 ) );
 }
@@ -271,11 +271,11 @@ SW_TEST_CASE( LeaderboardServiceTest, StatFeedsLinkedBoardAndStoreFailure )
     LeaderboardDefinition   linked = Internal::makeBoard( "total_wins", LeaderboardUpdate::Latest );
     linked._sourceStat             = "wins";
     SW_ASSERT_TRUE( node._service.registerBoard( linked ) );
-    node._service.changeStat( 1, "alice", "wins", 1, LeaderboardUpdate::Sum, 0, 1 );
-    node._service.changeStat( 1, "alice", "wins", 1, LeaderboardUpdate::Sum, 0, 2 );
+    node._service.changeStat( 1, "alice", "wins", 1, LeaderboardUpdate::Sum, UnixMilliseconds{ 0 }, 1 );
+    node._service.changeStat( 1, "alice", "wins", 1, LeaderboardUpdate::Sum, UnixMilliseconds{ 0 }, 2 );
     node.step();
     SW_EXPECT_EQUAL( node.getLast()._score, int64( 2 ) );
-    node._service.readTop( "total_wins", 0, 1, 0, 3 );
+    node._service.readTop( "total_wins", 0, 1, UnixMilliseconds{ 0 }, 3 );
     node.step();
     SW_ASSERT_EQUAL( node.getLast()._listEntry.size(), size_t( 1 ) );
     SW_EXPECT_EQUAL( node.getLast()._listEntry[0]._score, int64( 2 ) );
@@ -285,13 +285,13 @@ SW_TEST_CASE( LeaderboardServiceTest, StatFeedsLinkedBoardAndStoreFailure )
     SW_ASSERT_EQUAL( node.getLast()._listStat.size(), size_t( 1 ) );
     SW_EXPECT_STREQ( node.getLast()._listStat[0]._name.c_str(), "wins" );
     SW_EXPECT_EQUAL( node.getLast()._listStat[0]._value, int64( 2 ) );
-    node._service.changeStat( 1, "alice", "Bad Name", 1, LeaderboardUpdate::Sum, 0, 5 );
+    node._service.changeStat( 1, "alice", "Bad Name", 1, LeaderboardUpdate::Sum, UnixMilliseconds{ 0 }, 5 );
     node.step();
     SW_EXPECT_TRUE( node.getLast()._result == LeaderboardResult::Invalid );
 
     const uint64 hashBefore = database.computeContentHash();
     database.armFault( ServiceStoreFault::RejectCommit );
-    node._service.submitScore( "total_wins", 2, "bob", 9, 0, 6 );
+    node._service.submitScore( "total_wins", 2, "bob", 9, UnixMilliseconds{ 0 }, 6 );
     node.step();
     SW_EXPECT_TRUE( node.getLast()._result == LeaderboardResult::Unavailable );
     SW_EXPECT_EQUAL( database.computeContentHash(), hashBefore );
