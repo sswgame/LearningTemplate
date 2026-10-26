@@ -506,7 +506,7 @@ namespace sw
                         outText.append( _pCulture->formatDecimal( value, 0, 0 ) );
                     else if ( style == "currency" )
                         outText.append( _pCulture->formatCurrency( value, {} ) );
-                    else if ( style.substr( 0, kCurrencySkeleton.size() ) == kCurrencySkeleton )
+                    else if ( StringUtil::startsWith( style, kCurrencySkeleton ) )
                         outText.append( _pCulture->formatCurrency( value, style.substr( kCurrencySkeleton.size() ) ) );
                     else if ( style.empty() )
                         outText.append( pArgument->_kind == TextArgumentKind::Integer ? _pCulture->formatInteger( pArgument->_integer ) : _pCulture->formatDecimal( value, 0, 3 ) );

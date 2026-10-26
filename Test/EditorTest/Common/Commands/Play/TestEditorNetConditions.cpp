@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Network/Transport/NetEmulation.h"
 
 #include "Editor/Common/Commands/Play/EditorNetConditions.h"
@@ -65,7 +66,7 @@ SW_TEST_CASE( EditorNetConditionsTest, LinkCommandCarriesThePanelValues )
     settings._bandwidthKilobytesPerSecond = 64;
     const string command                  = EditorNetConditionsUtil::makeLinkCommand( EditorNetLinkDirection::Up, settings );
     const string prefix                   = "net.emulation up ";
-    SW_ASSERT_TRUE( command.rfind( prefix, 0 ) == 0 );
+    SW_ASSERT_TRUE( StringUtil::startsWith( command, prefix ) );
 
     NetEmulationConditions parsed;
     string                 error;

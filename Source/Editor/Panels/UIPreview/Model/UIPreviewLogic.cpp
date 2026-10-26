@@ -3,6 +3,7 @@
 #include "Editor/Panels/UIPreview/Model/UIPreviewLogic.h"
 
 #include "Core/Common/Defines.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/formatString.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/fixed_string.h"
@@ -172,8 +173,7 @@ namespace sw::editor
             if ( isPseudoLanguage( code ) == false && code.empty() == false )
                 listReal.push_back( code );
         }
-        std::sort( listReal.begin(), listReal.end() );
-        listReal.erase( std::unique( listReal.begin(), listReal.end() ), listReal.end() );
+        VectorUtil::sortUnique( listReal );
         for ( const string& code : listReal )
         {
             outListCode.push_back( code );

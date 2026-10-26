@@ -6,6 +6,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Module/ModuleImageUtil.h"
 #include "Core/String/fixed_string.h"
@@ -60,8 +61,7 @@ namespace sw
             /** @brief 컴파일러가 연 파일 목록을 정렬하고 중복을 없앱니다(`ShaderCompileResult::_listIncludedFile` 의 규칙). */
             [[nodiscard]] static vector<string> sortUniqueIncludedFile( vector<string> listFile )
             {
-                std::sort( listFile.begin(), listFile.end() );
-                listFile.erase( std::unique( listFile.begin(), listFile.end() ), listFile.end() );
+                VectorUtil::sortUnique( listFile );
                 return listFile;
             }
 

@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Server/LeaderboardService.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Network/BitStream.h"
 
 #include "GameFramework/Base/Online/Cache/EphemeralStore.h"
@@ -1440,8 +1441,7 @@ namespace sw
             return;
         }
         vector<AccountID> listUnique = listAccountID;
-        std::sort( listUnique.begin(), listUnique.end() );
-        listUnique.erase( std::unique( listUnique.begin(), listUnique.end() ), listUnique.end() ); // 같은 계정을 두 번 세지 않는다
+        VectorUtil::sortUnique( listUnique ); // 같은 계정을 두 번 세지 않는다
         const uint64 periodID = computePeriodID( *pBoard, nowMs );
         ++_pendingCount;
         _dependencies._pStore->submit(

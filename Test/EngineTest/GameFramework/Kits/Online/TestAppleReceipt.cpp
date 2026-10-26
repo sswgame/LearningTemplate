@@ -3,6 +3,7 @@
 // 알림 기록의 REFUND 를 쪽 넘김까지 읽어 한 번씩 알림. 보안 제공자의 사슬 확인(`verifyCertificateChain`)도 여기서 직접 본다.
 #include "pch.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/String/Base64Util.h"
 #include "Core/Time/MonotonicClock.h"
@@ -122,7 +123,7 @@ namespace
                 return;
             }
             const sw::string transactionPrefix = "/inApps/v1/transactions/";
-            if ( request._path.rfind( transactionPrefix, 0 ) == 0 )
+            if ( sw::StringUtil::startsWith( request._path, transactionPrefix ) )
             {
                 ++_transactionHits;
                 if ( _authFailuresLeft > 0 )

@@ -422,8 +422,7 @@ namespace sw
 
                 listLine.push_back( formatHex64( computeToolchainFingerprint() ) + " " + string( kToolchainKey ) );
 
-                std::sort( listLine.begin(), listLine.end() );
-                listLine.erase( std::unique( listLine.begin(), listLine.end() ), listLine.end() ); // 같은 헤더를 다른 이름으로 열었어도 한 줄이다
+                VectorUtil::sortUnique( listLine ); // 같은 헤더를 다른 이름으로 열었어도 한 줄이다
 
                 string text{ kCookStampHeader };
                 text += '\n';

@@ -461,7 +461,7 @@ namespace sw
     void MonsterBattle::applyDamage( int32 side, int32 amount, MonsterBattleEvent::Kind kind, const hashed_string& id )
     {
         MonsterInstance& target = getActiveMutable( side );
-        const int32      dealt  = MathUtil::min( MathUtil::max( 0, amount ), target._hp );
+        const int32      dealt  = MathUtil::clamp( amount, 0, target._hp );
         target._hp -= dealt;
         pushEvent( kind, side, dealt, id );
     }

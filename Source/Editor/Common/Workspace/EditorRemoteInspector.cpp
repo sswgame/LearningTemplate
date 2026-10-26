@@ -4,6 +4,7 @@
 
 #include "Core/Console/DevCommandsEnabled.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 
 #include "Engine/Observability/DebugChannel.h"
 
@@ -227,8 +228,7 @@ namespace sw::editor
             if ( name.empty() == false )
                 outListName.emplace_back( name );
         }
-        std::sort( outListName.begin(), outListName.end() );
-        outListName.erase( std::unique( outListName.begin(), outListName.end() ), outListName.end() );
+        VectorUtil::sortUnique( outListName );
     }
 
     bool EditorRemoteInspector::parseObjectRows( string_view treeBody, vector<EditorRemoteObjectRow>& outListRow )

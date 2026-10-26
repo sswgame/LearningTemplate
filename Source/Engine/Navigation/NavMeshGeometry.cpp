@@ -4,6 +4,7 @@
 
 #include "Core/Common/HashUtil.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Physics/Collision/PhysicsShape.h"
@@ -387,8 +388,7 @@ namespace sw
             }
         }
         // 여러 셀에 걸친 삼각형은 한 번만 남긴다. 정렬한 뒤 겹친 것을 지운다.
-        std::sort( outListTriangle.begin(), outListTriangle.end() );
-        outListTriangle.erase( std::unique( outListTriangle.begin(), outListTriangle.end() ), outListTriangle.end() );
+        VectorUtil::sortUnique( outListTriangle );
     }
 
     uint64 NavMeshGeometry::computeHash() const

@@ -2,6 +2,7 @@
 
 #include "Core/Common/BitUtil.h"
 #include "Core/Container/LittleEndianUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Math/MathUtil.h"
 
@@ -127,8 +128,7 @@ namespace
                 const uint32  bitsZ  = BitUtil::floatToBits( worldZ );
                 outListKey.push_back( ( static_cast<uint64>( bitsZ ) << 32 ) | bitsY );
             }
-            std::sort( outListKey.begin(), outListKey.end() );
-            outListKey.erase( std::unique( outListKey.begin(), outListKey.end() ), outListKey.end() );
+            VectorUtil::sortUnique( outListKey );
         }
 
         /** @brief 삼각형 목록이 xz 로 덮는 넓이의 합입니다(겹치거나 빠지면 청크 넓이와 다르다). */

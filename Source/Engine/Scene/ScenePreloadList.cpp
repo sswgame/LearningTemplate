@@ -3,6 +3,7 @@
 #include "Engine/Scene/ScenePreloadList.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Object/Component/Component.h"
@@ -65,8 +66,7 @@ namespace sw
                 }, true );
             }
         } );
-        std::sort( outListPath.begin(), outListPath.end() );
-        outListPath.erase( std::unique( outListPath.begin(), outListPath.end() ), outListPath.end() );
+        VectorUtil::sortUnique( outListPath );
     }
 
     bool ScenePreloadList::write( string_view diskPath, const vector<string>& listPath )

@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Network/NetMMO/MMOReplicator.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Network/BitStream.h"
 #include "Core/Network/Connection/NetConnection.h"
 #include "Core/Network/Connection/NetHost.h"
@@ -314,8 +315,7 @@ namespace sw
             if ( entityIter != _mapEntity.end() )
                 listRank.emplace_back( float3::getHorizontalDistance( center, entityIter->second._position ), entityID );
         }
-        std::sort( listRank.begin(), listRank.end() );
-        listRank.erase( std::unique( listRank.begin(), listRank.end() ), listRank.end() ); // 반경 안의 엔티티와 항상 보이는 엔티티가 겹친 항목을 제거한다
+        VectorUtil::sortUnique( listRank ); // 반경 안의 엔티티와 항상 보이는 엔티티가 겹친 항목을 제거한다
         // 신뢰 메시지 하나에 묶어 보낸다. 엔티티마다 신뢰 창 슬롯과 헤더를 쓰지 않으려는 것이며, Core 가 64 KB까지 조각으로 나눠 전송한다. 전송이 받아들여져야 보이는 목록에 넣는다.
         vector<uint32>& listEnter = scratch._listEnter;
         listEnter.clear();
