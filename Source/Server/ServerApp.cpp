@@ -53,6 +53,8 @@
 
 #include "sw/config/ConfigConstants.h"
 
+#include <cstdio>
+
 namespace sw
 {
     /** @brief `-gv_serverExitAfterTicks=N`: N 틱을 돈 뒤 스스로 정상 종료합니다(기동과 종료 테스트용). Shipping 에도 등록하며, 배포 서버 산출물을 같은 테스트가 실행합니다. */
@@ -97,6 +99,23 @@ namespace sw
             }
         };
         const ServerImageMarker s_serverImageMarker{};
+
+        /**
+         * @brief 호스트 범위의 종료 신호 처리기(POSIX SIGTERM · SIGINT, Windows 콘솔 제어)입니다. 엔진보다 먼저 걸고 엔진 종료가 끝난 뒤 뗀다.
+         * @details 걸지 못해도 서버는 선다(표준 입력 `quit` 로 끝낸다) — 로거가 서기 전이라 표준 오류로 알린다. 떼기는 건 것이 없으면 아무것도 하지 않는다.
+         */
+        class ShutdownSignalSubsystem final : public ISubsystem
+        {
+        public:
+            SubsystemInitResult initializeSubsystem() override
+            {
+                if ( ShutdownSignal::install() == false )
+                    std::fprintf( stderr, "[ServerApp] Shutdown signal handlers are not installed - stop the server with the 'quit' console command\n" );
+                return SubsystemInitResult::Succeeded;
+            }
+            void        shutdownSubsystem() override { ShutdownSignal::uninstall(); }
+            const utf8* getSubsystemName() const override { return "ShutdownSignal"; }
+        };
     } // namespace
 
     ServerApp::ServerApp()
@@ -133,11 +152,10 @@ namespace sw
         , _droppedTickCount{ 0 }
         , _pendingStepCount{ 0 }
         , _nextProcessSampleMs{ 0 }
+        , _hostParts{}
         , _bReady{ SW_FALSE }
-        , _bSignalHandlerInstalled{ SW_FALSE }
         , _bPaused{ SW_FALSE }
         , _bRestartServerServices{ SW_FALSE }
-        , _bCrashReportsStarted{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -160,6 +178,11 @@ namespace sw
     {
         _startNanoseconds = MonotonicClock::nowNanoseconds();
         // 호스트 범위를 먼저 세운다 — 엔진 범위의 부모다. 엔진의 `ModuleTypes` 단계가 여기서 모듈 이미지 창구를 찾아 서버 대상 모듈을 올린다(`loadModuleImages`).
+        // 종료 신호 처리기도 이 범위에 둔다 — 엔진 종료가 끝날 때까지 걸려 있어야 하고, 기동 중에 온 신호는 깃발로 남아 루프 첫 바퀴가 정상 종료한다.
+        {
+            SW_MEMORY_SCOPE( EngineMisc );
+            _host.addSubsystem( make_unique<ShutdownSignalSubsystem>() );
+        }
         _pModuleImageHost = ModuleImageHostSubsystem::initializeHostScope( _host, SW_DELEGATE_METHOD( ModuleTypeLoaderDelegate, &ServerApp::loadModuleImages, this ), "ServerApp" );
         if ( _pModuleImageHost == nullptr )
             return false;
@@ -175,27 +198,17 @@ namespace sw
         if ( loadServerConfig() == false )
             return false;
         _tickNanoseconds = constant::kNanosecondsPerSecond / static_cast<int64>( _pServerConfig->_tickRateHz );
-        if ( initializeObservability() == false )
-            return false;
-        collectPreviousCrashes();
-        // 게임 인스턴스를 만들기 전에 묶는다 — 게임과 키트가 기동하며 서버 지표 · 상태 레지스트리에 자기 것을 올릴 수 있게 한다.
-        _serverServiceContext._serverConfigPath = _serverConfigPath;
-        _serverServiceContext._pServerConfig    = _pServerConfig;
-        _serverServiceContext._pConfigManager   = _engine.getConfigManager();
-        _serverServiceContext._pMetricRegistry  = _metricRegistry.get();
-        _serverServiceContext._pHealthRegistry  = _healthRegistry.get();
-        const bool bContextBound                = _host.bind( &_serverServiceContext ); // 게임 · 키트(네트워크 세션)가 `engine::findSubsystem<ServerServiceContext>()` 로 찾는다
-        SW_ASSERT( bContextBound );
-        (void)bContextBound;
-
-        if ( _moduleHost == nullptr )
-            _moduleHost = make_unique<ModuleHost>();
-        if ( _moduleHost->initializeDedicatedServer( _moduleReload.getLiveReloadManager() ) == false )
+        // 호스트 부품(관측 · 크래시 묶음 · 서버 문맥 · 게임 · 개발 콘솔 · 디버그 채널 · 표준 입력)을 의존 순서로 세운다. App 과 같은 표(`HostPart`)이고,
+        // 내리는 것은 `shutdown` 의 역순 한 줄이다.
+        if ( startHostParts( _hostParts, kArrServerHostPart, SW_DELEGATE_METHOD( HostPartStartDelegate, &ServerApp::startHostPart, this ),
+                             SW_DELEGATE_METHOD( HostPartStopDelegate, &ServerApp::stopHostPart, this ) ) == false )
         {
-            SW_LOG_ERROR( "The game module could not be started on the dedicated server" );
+            SW_LOG_ERROR( "Host parts failed to start: %#", _hostParts.getError().c_str() );
             return false;
         }
-        // 게임 인스턴스 뒤에 시작한다. 서비스가 게임이 정한 상태(게임 서비스 등)를 볼 수 있게 하고, 종료는 그 반대 순서다.
+        SW_LOG_INFO( "Host parts up: %#", describeHostPartOrder( _hostParts ).c_str() );
+        // 서버 서비스는 부품이 아니다 — 모듈 리로드마다 멈췄다 다시 서는 수명이다(결정 기록 5-7). 게임 뒤에 시작해 서비스가 게임이 정한 상태를 보게 하고,
+        // `shutdown` 이 부품보다 먼저 멈춘다.
         if ( startServerServices() == false )
             return false;
         // 게임 포트가 접속 티켓을 요구하는데 확인할 조립이 서지 않았으면 모든 접속을 거절하는 서버가 된다 — 그런 서버로 뜨지 않는다.
@@ -205,19 +218,6 @@ namespace sw
             return false;
         }
 
-        _bSignalHandlerInstalled = ShutdownSignal::install() ? SW_TRUE : SW_FALSE;
-        if ( _bSignalHandlerInstalled == SW_FALSE )
-            SW_LOG_WARNING( "Shutdown signal handlers are not installed - stop the server with the 'quit' console command" );
-        if ( _pServerConfig->_bConsoleInput )
-            _console.start();
-#if SW_DEV_COMMANDS_ENABLED
-        _devConsole = make_unique<DevConsole>();
-#endif
-
-#if !defined( SW_SHIPPING )
-        if ( startDebugTools() == false )
-            return false;
-#endif
         _bReady = SW_TRUE;
         // 여기부터 모든 줄에 `[tick=N]`이 붙는다. N 은 끝낸 틱 수이며, 지금 도는 틱의 0 기준 번호다. 멀티 프로세스 재생의 Output Log 가 서버 줄을 틱 기준으로 맞춰 본다.
         Logger::setClockNumber( LogClock::Tick, _tickCount );
@@ -273,6 +273,119 @@ namespace sw
         }
         SW_LOG_INFO( "Server config: %#", path.c_str() );
         return true;
+    }
+
+    bool ServerApp::startHostPart( HostPartID id )
+    {
+        switch ( id )
+        {
+            case HostPartID::Observability:
+            {
+                return initializeObservability();
+            }
+            case HostPartID::CrashReports:
+            {
+                collectPreviousCrashes();
+                return true;
+            }
+            case HostPartID::ServiceContext:
+            {
+                // 게임 인스턴스를 만들기 전에 건다(의존 선언) — 게임과 키트가 기동하며 서버 지표 · 상태 레지스트리에 자기 것을 올리고 게임 포트를 연다.
+                _serverServiceContext._serverConfigPath = _serverConfigPath;
+                _serverServiceContext._pServerConfig    = _pServerConfig;
+                _serverServiceContext._pConfigManager   = _engine.getConfigManager();
+                _serverServiceContext._pMetricRegistry  = _metricRegistry.get();
+                _serverServiceContext._pHealthRegistry  = _healthRegistry.get();
+                return _host.bind( &_serverServiceContext ); // 게임 · 키트(네트워크 세션)가 `engine::findSubsystem<ServerServiceContext>()` 로 찾는다
+            }
+            case HostPartID::Game:
+            {
+                if ( _moduleHost == nullptr )
+                    _moduleHost = make_unique<ModuleHost>();
+                const bool bStarted = _moduleHost->initializeDedicatedServer( _moduleReload.getLiveReloadManager() );
+                if ( bStarted == false )
+                    SW_LOG_ERROR( "The game module could not be started on the dedicated server" );
+                return bStarted;
+            }
+            case HostPartID::StandardInput:
+            {
+                if ( _pServerConfig->_bConsoleInput )
+                    _console.start();
+                return true;
+            }
+            case HostPartID::DevConsole:
+#if SW_DEV_COMMANDS_ENABLED
+                _devConsole = make_unique<DevConsole>();
+#endif
+                return true;
+            case HostPartID::DebugChannel:
+#if !defined( SW_SHIPPING )
+                return startDebugTools();
+#else
+                return true;
+#endif
+            case HostPartID::BackendSwitcher:
+            case HostPartID::UserSettings:
+            case HostPartID::RuntimeUIHooks:
+            {
+                break;
+            }
+        }
+        SW_LOG_ERROR( "Host part %# is not a dedicated server part", HostPart::getName( id ) );
+        return false;
+    }
+
+    void ServerApp::stopHostPart( HostPartID id )
+    {
+        switch ( id )
+        {
+            case HostPartID::Observability:
+            {
+                // 운영 엔드포인트는 게임을 내리는 동안에도 비우는 중(/readyz 503)을 알리다가 마지막에 닫는다. 로그를 남기므로 엔진(로거)보다 먼저 닫는다.
+                shutdownObservability();
+                return;
+            }
+            case HostPartID::CrashReports:
+            {
+                engine::getSubsystem<CrashReportService>().shutdown(); // 묶을 폴더가 없어 초기화하지 않았어도 된다
+                return;
+            }
+            case HostPartID::ServiceContext:
+            {
+                _host.unbind<ServerServiceContext>(); // 게임과 모듈이 내려간 뒤 — 레지스트리를 지우기 전
+                return;
+            }
+            case HostPartID::Game:
+            {
+                _moduleHost->shutdown();
+                _moduleHost.reset();
+                return;
+            }
+            case HostPartID::StandardInput:
+            {
+                _console.stop(); // 읽기 스레드를 멈추고, 줄 버퍼도 엔진 종료의 누수 보고 전에 해제한다
+                return;
+            }
+            case HostPartID::DevConsole:
+#if SW_DEV_COMMANDS_ENABLED
+                _devConsole.reset();
+#endif
+                return;
+            case HostPartID::DebugChannel:
+#if !defined( SW_SHIPPING )
+                if ( _debugChannel != nullptr )
+                    _debugChannel->shutdown();
+                _debugChannel.reset();
+                _debugTransport.reset();
+#endif
+                return;
+            case HostPartID::BackendSwitcher:
+            case HostPartID::UserSettings:
+            case HostPartID::RuntimeUIHooks:
+            {
+                return;
+            }
+        }
     }
 
     bool ServerApp::initializeObservability()
@@ -343,7 +456,6 @@ namespace sw
         CrashReportService& crashReports  = engine::getSubsystem<CrashReportService>();
         const string        reportsFolder = FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::trimTrailingSlashes( crashFolder ) ), CrashReportService::kReportsFolderName );
         crashReports.initialize( crashFolder, reportsFolder, CrashHandler::getSessionID() );
-        _bCrashReportsStarted = SW_TRUE;
         // 서버의 보내기 동의는 플레이어 설정이 아니라 운영 설정의 몫이다. 그 설정이 생기기 전에는 기계 안에만 둔다(클라이언트 기본값과 같다).
         crashReports.setConsent( CrashReportConsent::Local );
         const uint32               newCount = crashReports.collectNewCrashes();
@@ -628,44 +740,25 @@ namespace sw
 
     void ServerApp::shutdown()
     {
-        _console.stop(); // 읽기 스레드를 멈추고, 줄 버퍼도 엔진 종료의 누수 보고 전에 해제한다
-
-#if !defined( SW_SHIPPING )
-        if ( _debugChannel != nullptr )
-            _debugChannel->shutdown();
-        _debugChannel.reset();
-        _debugTransport.reset();
-#endif
-#if SW_DEV_COMMANDS_ENABLED
-        _devConsole.reset();
-#endif
-        // 서버 서비스는 모듈 코드다. 모듈을 언로드하기 전에, 시작의 반대 순서로 게임보다 먼저 멈춘다.
+        // 서버 서비스는 모듈 코드이고 부품이 아니다(결정 기록 5-7) — 부품(게임 · 모듈)이 내려가기 전에 멈춘다.
         if ( _serverServices != nullptr )
         {
             _serverServices->stopAll();
             _serverServices.reset();
         }
-        // 게임과 모듈 인스턴스를 엔진보다 먼저 종료한다(App::shutdown 과 같은 순서).
-        if ( _moduleHost != nullptr )
-        {
-            _moduleHost->shutdown();
-            _moduleHost.reset();
-        }
-        _host.unbind<ServerServiceContext>(); // 게임과 모듈이 내려간 뒤 — 레지스트리를 지우기 전
-        if ( _bCrashReportsStarted == SW_TRUE && engine::areEngineServicesBound() )
-            engine::getSubsystem<CrashReportService>().shutdown();
-        _bCrashReportsStarted = SW_FALSE;
-        // 운영 엔드포인트는 게임을 종료하는 동안에도 비우는 중(/readyz 503)임을 알리다가 마지막에 닫는다. 로그를 남기므로 엔진(로거)보다 먼저 닫는다.
-        shutdownObservability();
+        _reloadStopsServices.reset();
+        // 호스트 부품을 선 순서의 역순으로 내린다 — 표준 입력 · 디버그 채널 · 개발 콘솔, 게임(엔진보다 먼저), 서버 문맥, 크래시 묶음, 마지막에 관측.
+        // 순서는 `HostPart` 의 의존 선언이 정한다(App 과 같은 표). 헤드리스 부팅 · 기동 실패면 선 것만 내린다.
+        _hostParts.destroyAll();
+        // 헤드리스 부팅은 이미지만 올리고 부품(게임)을 세우지 않는다 — 이미지를 쥔 모듈 호스트는 엔진(모듈 이미지 종료 단계)보다 먼저 놓는다.
+        _moduleHost.reset();
         // 로거는 엔진 종료와 함께 종료된다. 마지막 줄은 그 앞에 남긴다(테스트와 운영 도구가 이 줄로 정상 종료를 확인한다).
         SW_LOG_INFO( "Dedicated server shutdown complete" );
         _engine.shutdown();
-        // 엔진 범위가 사라졌다 — 이제 호스트 범위를 내린다(모듈 이미지 창구 소멸).
+        // 엔진 범위가 사라졌다 — 이제 호스트 범위를 내린다(모듈 이미지 창구 소멸, 종료 신호 처리기 떼기).
         _host.destroyAll();
         _pModuleImageHost = nullptr;
         Logger::clearClockNumber();
-        if ( _bSignalHandlerInstalled == SW_TRUE )
-            ShutdownSignal::uninstall();
         // Windows 창 닫기와 시스템 종료 처리기가 이것을 기다린다.
         ShutdownSignal::notifyShutdownComplete();
     }

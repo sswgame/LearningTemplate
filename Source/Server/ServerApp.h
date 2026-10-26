@@ -5,8 +5,9 @@
  *          모듈 호스트와 매니페스트 해석, 호스트 범위 세우기(`ModuleImageHostSubsystem::initializeHostScope`), 핫 리로드 구동기(`ModuleReloadDriver` — 개발 명령 `module.reload` 와
  *          탐침 `Module.*` 도 따라온다), 표준 입력 명령 채널(`StandardInputCommands` — 종료 낱말 `quit` · `stop`)입니다.
  *
- *          기동 순서는 다음과 같다. 엔진(`EngineHostRole::DedicatedServer`, 기동 테이블의 Client 단계를 건너뛴다), 서버 설정, 게임 인스턴스(창과 디바이스는 nullptr),
- *          종료 신호 처리기, 콘솔 입력, "Dedicated server ready" 로그, 고정 틱 루프, 종료 요청, 역순 종료, "Dedicated server shutdown complete" 로그다.
+ *          기동 순서는 다음과 같다. 호스트 범위(모듈 이미지 창구 · 종료 신호 처리기), 엔진(`EngineHostRole::DedicatedServer`, 기동 테이블의 Client 단계를 건너뛴다), 서버 설정,
+ *          호스트 부품(`HostPart` 의 의존 선언 순서 — 관측, 크래시 묶음, 서버 문맥, 게임 인스턴스(창과 디바이스는 nullptr), 개발 콘솔, 디버그 채널, 표준 입력), 서버 서비스,
+ *          "Dedicated server ready" 로그, 고정 틱 루프, 종료 요청, 서버 서비스 멈춤, 부품 역순 종료, "Dedicated server shutdown complete" 로그, 엔진 종료, 호스트 범위 종료다.
  *          한 틱은 게임 고정 스텝 하나이며, 델타는 항상 `1 / _tickRateHz` 다. 그래서 서버 시뮬레이션이 실제 시계의 흔들림을 받지 않는다.
  *          다음 틱 마감까지 잠을 자고, 밀리면 `_maxCatchUpTicks` 까지 잠 없이 몰아서 돌고 그 이상은 버린다(경고를 남긴다).
  *
@@ -30,6 +31,7 @@
 #include "Engine/Module/ModuleCatalog.h"
 #include "Engine/Observability/ServerServiceRegistry.h"
 
+#include "ModuleHost/HostPart.h"
 #include "ModuleHost/ModuleReloadDriver.h"
 #include "ModuleHost/StandardInputCommands.h"
 
@@ -78,6 +80,10 @@ namespace sw
         /** @brief 기동 단계 `ModuleTypes` 의 호스트 로더입니다. 서버 대상 모듈의 이미지를 로드합니다(App::loadModuleImages 에 해당합니다). */
         [[nodiscard]] bool loadModuleImages();
         [[nodiscard]] bool loadServerConfig();
+        /** @brief 호스트 부품 하나를 세웁니다(`kArrServerHostPart` — 순서는 `HostPart` 의 의존 선언이 정한다). */
+        [[nodiscard]] bool startHostPart( HostPartID id );
+        /** @brief `startHostPart` 가 세운 부품 하나를 내립니다. 부품 집합이 역순으로 부릅니다. */
+        void stopHostPart( HostPartID id );
         /** @brief 지표와 상태 레지스트리를 만들고, 설정이 켜면 운영 HTTP 엔드포인트를 엽니다. 켰는데 열지 못하면 false 를 반환합니다(기동 실패). */
         [[nodiscard]] bool initializeObservability();
         void               shutdownObservability();
@@ -109,7 +115,9 @@ namespace sw
     private:
         /**
          * @brief 호스트 범위입니다 — 엔진 범위의 부모이고, 엔진보다 먼저 서서 나중에 사라집니다(그래서 `_engine` 보다 앞에 선언한다).
-         * @details 모듈 이미지 창구(`ModuleImageHostSubsystem`)와 리로드 구동기(빌려 건다)를 듭니다 — 엔진의 `ModuleTypes` · `ModuleImages` 단계가 창구를 찾아 부릅니다.
+         * @details 모듈 이미지 창구(`ModuleImageHostSubsystem`)와 리로드 구동기(빌려 건다), 종료 신호 처리기를 듭니다 — 엔진의 `ModuleTypes` · `ModuleImages` 단계가 창구를 찾아 부릅니다.
+         *          종료 신호 처리기는 엔진 종료가 끝날 때까지 걸려 있어야 한다(Windows 창 닫기 처리기가 `notifyShutdownComplete` 를 기다린다).
+         *          게임이 서 있는 동안은 서버 문맥(`_serverServiceContext`)도 빌려 건다.
          *          서버 서비스 관리자(`_serverServices`)는 이 범위에 넣지 않습니다. 모듈 리로드마다 멈췄다 다시 시작하는 수명이라 범위의 초기화 · 종료 한 쌍과 맞지 않기 때문입니다(결정 기록 5-3).
          */
         SubsystemScope _host;
@@ -149,12 +157,15 @@ namespace sw
         uint32                            _droppedTickCount;    ///< 밀려 버린 틱 수(누적)
         uint32                            _pendingStepCount;    ///< 일시정지 중 더 돌 틱 수(`step N`)
         int64                             _nextProcessSampleMs; ///< 프로세스 지표를 다시 읽을 단조 밀리초
+        /**
+         * @brief 엔진 뒤에 서고 엔진 앞에 내려가는 호스트 부품(관측 · 크래시 묶음 · 서버 문맥 · 게임 · 표준 입력 · 개발 콘솔 · 디버그 채널)입니다.
+         * @details 순서는 `HostPart` 의 의존 선언이 정한다(App 과 같은 표). 부품의 몸통이 위 멤버를 쓰므로 맨 뒤에 둔다(소멸이 먼저다).
+         */
+        SubsystemCollection _hostParts;
 
-        uint8                  _bReady                  : 1;
-        uint8                  _bSignalHandlerInstalled : 1;
-        uint8                  _bPaused                 : 1; ///< Dev `pause`. 게임 틱을 멈춘다(콘솔, 종료 신호, 네트워크 스레드는 돈다).
-        [[maybe_unused]] uint8 _bRestartServerServices  : 1; ///< 모듈 리로드로 서버 서비스를 멈췄다. 다음 틱에 다시 시작한다
-        uint8                  _bCrashReportsStarted    : 1; ///< 크래시 보고 서비스를 이 서버가 초기화했다(종료 때 내린다)
-        [[maybe_unused]] uint8 _reserved                : 3;
+        uint8                  _bReady                 : 1;
+        uint8                  _bPaused                : 1; ///< Dev `pause`. 게임 틱을 멈춘다(콘솔, 종료 신호, 네트워크 스레드는 돈다).
+        [[maybe_unused]] uint8 _bRestartServerServices : 1; ///< 모듈 리로드로 서버 서비스를 멈췄다. 다음 틱에 다시 시작한다
+        [[maybe_unused]] uint8 _reserved               : 5;
     };
 } // namespace sw

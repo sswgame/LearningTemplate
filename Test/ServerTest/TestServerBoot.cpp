@@ -14,6 +14,8 @@
 #include "Engine/Scene/AuthorityGhost.h"
 #include "Engine/Scene/SceneStateHash.h"
 
+#include "ModuleHost/HostPart.h"
+
 #include "TestFramework/Harness/TestProcessRun.h"
 #include "TestFramework/TestFramework.h"
 
@@ -302,6 +304,9 @@ SW_TEST_CASE( ServerBootTest, StartsTicksAndExitsWithoutWindowOrGPU )
     SW_EXPECT_TRUE_MSG( run._output.find( "[tick=60] - Dedicated server shutdown requested (TickLimit) after 60 ticks" ) != string::npos,
                         "the shutdown line does not carry the server tick" );
     SW_EXPECT_TRUE_MSG( run._output.substr( 0, skippedLine ).find( "[tick=" ) == string::npos, "a startup line carries a tick tag before the server is ready" );
+    // 호스트 부품은 의존 선언(`HostPart`)이 정한 순서로 섰다 — 엔진 init-sequence 테스트가 같은 표로 같은 순서를 단언한다(종료는 그 역순).
+    const string partLine = "Host parts up: " + describeDeclaredHostPartOrder( kArrServerHostPart );
+    SW_EXPECT_TRUE_MSG( run._output.find( partLine ) != string::npos, partLine.c_str() );
 }
 
 /**
