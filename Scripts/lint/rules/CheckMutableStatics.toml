@@ -134,7 +134,7 @@
 "Source/Engine/Graphics/Shader/Compile/ShaderCookStamp.cpp" = 2
 "Source/Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.cpp" = 1
 # Source/Engine/Input — 이전 대기
-"Source/Engine/Input/Linux/InputManagerX11.cpp" = 14
+"Source/Engine/Input/Linux/InputManagerX11.cpp" = 5
 "Source/Engine/Input/Windows/InputManagerWin32.cpp" = 5
 # Source/Engine/Localization — 이전 대기
 "Source/Engine/Localization/StringTable.cpp" = 1

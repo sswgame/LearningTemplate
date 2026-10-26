@@ -2,7 +2,6 @@
 
 #include "Core/Common/PlatformOsHeaders.h"
 
-#include "Engine/Common/EngineParallel.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Window/MainWindowSubsystem.h"
@@ -20,10 +19,10 @@
     #include "Engine/Input/Linux/LinuxGamepadDevice.h"
     #include "Engine/Window/IWindow.h"
     #include "Engine/Window/Linux/Wayland/WaylandInputEvent.h"
+    #include "Engine/Window/Linux/X11Window.h"
     #include "Engine/Window/NativeWindowEvent.h"
 
     #include <X11/XKBlib.h>
-    #include <X11/cursorfont.h>
     #include <linux/input-event-codes.h>
 
     #include "Core/Common/X11MacroUndef.h"
@@ -33,90 +32,22 @@ namespace sw
     namespace
     {
         /**
-         * @brief 텍스트 입력(XIM/XIC)과 접근성(XKB) 상태를 창 수명 주기와 따로 지연 초기화해 보관합니다.
-         * @note XIM 은 "on-the-spot", "root-window" 스타일 입력기의 커밋 문자열은 받지만, 조합(preedit)
-         *       후보 창을 직접 그려 주는 완전한 프리에딧 렌더링은 구현하지 않았습니다.
+         * @brief 접근성(XKB) · 포커스 상태와 X11 · Wayland 이벤트 변환을 모읍니다.
+         * @details 창마다의 네이티브 자원(입력기 · 입력 문맥 · 커서)은 창(`X11Window`)이 소유하고 창과 함께 내린다 — 여기 정적 칸으로 두면
+         *          창을 다시 만들 때 옛 창 · Display 를 가리키는 캐시가 남는다.
          */
         struct X11InputInternal
         {
-            static inline XIM    s_pInputMethod{ nullptr };
-            static inline XIC    s_pInputContext{ nullptr };
-            static inline void*  s_pImDisplay{ nullptr };                                                ///< XIC 를 만들 때 쓴 Display* 입니다.
-            static inline Window s_imWindow{ 0 };                                                        ///< XIC 의 XNClientWindow 입니다. 창이 바뀌면 반드시 XIC 를 다시 만들어야 합니다.
-            static inline Cursor s_invisibleCursor{ 0 };                                                 ///< X11 None(리소스 없음)입니다. X11MacroUndef.h 가 None 매크로를 지우므로 리터럴 0 을 씁니다.
-            static inline void*  s_pCursorDisplay{ nullptr };                                            ///< s_invisibleCursor 를 만든 Display* 입니다(다르면 다시 만듭니다).
-            static inline Cursor s_arrShapeCursor[static_cast<size_t>( CursorShape::NotAllowed ) + 1]{}; ///< 모양마다 만든 글꼴 커서입니다(0 이면 아직 없음)
-            static inline void*  s_pShapeCursorDisplay{ nullptr };                                       ///< s_arrShapeCursor 를 만든 Display* 입니다
-            static inline bool   s_bAccessibilityDisabled{ false };
+            static inline bool s_bAccessibilityDisabled{ false };
             /** @brief 창이 X11 포커스를 가지고 있는지 나타냅니다(FocusIn/FocusOut 으로 갱신). 보조 폴링을 건너뛸지 정하는 데 씁니다. */
             static inline bool   s_bWindowFocused{ false };
             static inline uint32 s_prevXkbEnabledControls{ 0 };
-            /** @brief 감지 가능한 자동 반복을 켜 둔 Display* 입니다(Display 마다 한 번). */
-            static inline void* s_pAutoRepeatDisplay{ nullptr };
-
-            /** @brief 누르고 있는 키가 Release/Press 쌍 대신 Press 만 되풀이하도록 X 서버에 요청합니다(Display 마다 한 번). */
-            static void enableDetectableAutoRepeat( Display* pDisplay )
-            {
-                if ( pDisplay == nullptr || s_pAutoRepeatDisplay == pDisplay )
-                    return;
-                Bool bSupported = 0;
-                XkbSetDetectableAutoRepeat( pDisplay, 1, &bSupported ); // 1 == True. X11MacroUndef.h 가 True 매크로를 지운다.
-                s_pAutoRepeatDisplay = pDisplay;
-            }
-
-            /** @brief 활성 창에 대한 XIC 를 지연 생성해 반환합니다(실패하면 nullptr). */
-            static XIC getOrCreateInputContext()
-            {
-                // XIM/XIC 칸은 창 메시지 처리(`postTextInput` ← `processNativeEvent`, 창을 만든 메인 스레드)에서만 닿는다 — 워커에서 오면 검사 뒤 채우기가 겹친다.
-                SW_ASSERT( engine::isOnPoolWorker() == false );
-                MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
-                IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
-                if ( pWindow == nullptr )
-                    return nullptr;
-
-                Display* pDisplay  = nullptr;
-                Window   x11Window = 0;
-                if ( tryGetX11( pWindow, pDisplay, x11Window ) == false )
-                    return nullptr;
-
-                // Display 만 비교하면 안 된다. 같은 X 서버에서 창을 다시 만들면(에디터 창 재생성, 테스트가
-                // 창을 반복해서 생성하고 파괴할 때) 캐시된 XIC 가 이미 파괴된 Window 를 XNClientWindow 로 가리키고 있어
-                // 텍스트 입력이 조용히 죽는다. 창까지 함께 비교해야 한다.
-                const bool bCachedContextReusable = s_pInputContext != nullptr && s_pImDisplay == pDisplay && s_imWindow == x11Window;
-                if ( bCachedContextReusable )
-                    return s_pInputContext;
-
-                if ( s_pInputContext != nullptr )
-                {
-                    XDestroyIC( s_pInputContext );
-                    s_pInputContext = nullptr;
-                }
-                if ( s_pInputMethod != nullptr )
-                {
-                    XCloseIM( s_pInputMethod );
-                    s_pInputMethod = nullptr;
-                }
-
-                XSetLocaleModifiers( "" );
-                s_pInputMethod = XOpenIM( pDisplay, nullptr, nullptr, nullptr );
-                if ( s_pInputMethod == nullptr )
-                    return nullptr;
-
-                s_pInputContext = XCreateIC( s_pInputMethod,
-                                             XNInputStyle, XIMPreeditNothing | XIMStatusNothing,
-                                             XNClientWindow, x11Window,
-                                             XNFocusWindow, x11Window,
-                                             nullptr );
-                s_pImDisplay    = pDisplay;
-                s_imWindow      = x11Window;
-                return s_pInputContext;
-            }
 
             /**
              * @brief X11 창이면 서버 연결과 창 ID 를 담고 true 입니다. X11 호출(`XQueryPointer` 등)은 이 함수로 얻은 값으로만 한다.
              * @details Wayland 창의 `getNativeDisplay` 는 wl_display* 라 `Display*` 로 읽으면 죽는다(`IWindow::tryGetX11Surface`). X11 창이 아니거나 연결이 아직 없으면 false 이고 출력은 비어 있다.
-             *          이 입력 관리자는 창 종류를 가르지 않는다 — X11 서버 호출(보조 폴링 · 가운데 되돌리기 · AccessX 억제)은 이 함수가 true 일 때만 하고, false 인 창(Wayland)에는
-             *          그 동작이 해당 없음이라 건너뛰는 것이 정상이다. 창이 스스로 하는 동작(커서 모양 · 포인터 묶기 · 커서 숨기기)은 `IWindow` 의 질의로 가르고 안 되면 한 번 오류로 알린다.
+             *          이 입력 관리자는 창 종류를 가르지 않는다 — X11 서버 호출(보조 폴링 · 가운데 되돌리기 · 포인터 잡기 · AccessX 억제)은 이 함수가 true 일 때만 하고, false 인 창(Wayland)에는
+             *          그 동작이 해당 없음이라 건너뛰는 것이 정상이다. 창이 스스로 하는 동작(커서 모양 · 커서 숨기기 — 두 창 모두, 포인터 묶기 — Wayland)은 `IWindow` 의 질의로 가르고 안 되면 한 번 오류로 알린다.
              */
             [[nodiscard]] static bool tryGetX11( const IWindow* pWindow, Display*& pOutDisplay, Window& outWindow )
             {
@@ -238,114 +169,17 @@ namespace sw
                 }
             }
 
-            /** @brief 텍스트 입력: XIC 로 커밋된 UTF-8 문자열을 얻어 큐에 넣습니다(완전한 프리에딧 후보 창 렌더링은 구현하지 않음). */
+            /** @brief 텍스트 입력: 창의 입력기(XIM)가 커밋한 UTF-8 문자열을 얻어 큐에 넣습니다(완전한 프리에딧 후보 창 렌더링은 구현하지 않음). */
             static void postTextInput( InputManager& manager, const XEvent& xev )
             {
-                XIC pInputContext = getOrCreateInputContext();
-                if ( pInputContext == nullptr )
+                MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
+                X11Window*           pX11Window  = X11Window::tryCast( pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr );
+                if ( pX11Window == nullptr )
                     return;
                 fixed_string<constant::kMaxBuffer32> utf8Buf;
-                KeySym                               lookupKeySym{};
-                Status                               lookupStatus{};
-                const int32                          byteCount = Xutf8LookupString( pInputContext, const_cast<XKeyPressedEvent*>( &xev.xkey ),
-                                                                                    utf8Buf.data(), static_cast<int32>( utf8Buf.capacity() ), &lookupKeySym, &lookupStatus );
-                if ( ( lookupStatus == XLookupChars || lookupStatus == XLookupBoth ) && byteCount > 0 )
-                {
-                    utf8Buf.data()[byteCount] = '\0';
-                    const string_view svText( utf8Buf.data(), static_cast<size_t>( byteCount ) );
-                    manager.postRawEvent( RawInputEvent::makeTextInput( svText ) );
-                }
-            }
-
-            /** @brief 1x1 완전 투명 픽스맵으로 "보이지 않는 커서" 를 만들어 캐시합니다. */
-            static Cursor getOrCreateInvisibleCursor( Display* pDisplay, Window x11Window )
-            {
-                // 커서 칸은 `setCursorVisiblePlatform` ← `syncMouseLock`(프레임 시작, 메인 스레드)에서만 닿는다 — `PlayerControllerComponent` 는 `_pMouse` 의 플래그만 바꾼다.
-                SW_ASSERT( engine::isOnPoolWorker() == false );
-                // 커서도 Display 소유 리소스다. 다른 Display 에서 그대로 쓰면 잘못된 리소스 id 가 된다.
-                if ( s_invisibleCursor != 0 && s_pCursorDisplay == pDisplay )
-                    return s_invisibleCursor;
-                if ( s_invisibleCursor != 0 && s_pCursorDisplay != nullptr )
-                {
-                    XFreeCursor( static_cast<Display*>( s_pCursorDisplay ), s_invisibleCursor );
-                    s_invisibleCursor = 0;
-                }
-
-                XColor      dummyColor{};
-                const uint8 arrPixelData[1] = { 0 };
-                Pixmap      pixmap          = XCreateBitmapFromData( pDisplay, x11Window, reinterpret_cast<const utf8*>( arrPixelData ), 1, 1 );
-                s_invisibleCursor           = XCreatePixmapCursor( pDisplay, pixmap, pixmap, &dummyColor, &dummyColor, 0, 0 );
-                XFreePixmap( pDisplay, pixmap );
-                s_pCursorDisplay = pDisplay;
-                return s_invisibleCursor;
-            }
-
-            /** @brief 모양의 X11 글꼴 커서 번호(`XC_*`)입니다. */
-            static uint32 getFontCursorID( CursorShape shape )
-            {
-                switch ( shape )
-                {
-                    case CursorShape::Arrow:
-                        return XC_left_ptr;
-                    case CursorShape::Hand:
-                        return XC_hand2;
-                    case CursorShape::TextBeam:
-                        return XC_xterm;
-                    case CursorShape::ResizeHorizontal:
-                        return XC_sb_h_double_arrow;
-                    case CursorShape::ResizeVertical:
-                        return XC_sb_v_double_arrow;
-                    case CursorShape::NotAllowed:
-                        return XC_X_cursor;
-                }
-                return XC_left_ptr;
-            }
-
-            /** @brief 모양의 글꼴 커서를 만들어 캐시합니다(Display 가 바뀌면 다시 만든다 — 옛 Display 의 리소스는 그 Display 와 함께 사라졌다). */
-            static Cursor getOrCreateShapeCursor( Display* pDisplay, CursorShape shape )
-            {
-                if ( s_pShapeCursorDisplay != pDisplay )
-                {
-                    for ( Cursor& cursor : s_arrShapeCursor )
-                    {
-                        cursor = 0;
-                    }
-                    s_pShapeCursorDisplay = pDisplay;
-                }
-                Cursor& cached = s_arrShapeCursor[static_cast<size_t>( shape )];
-                if ( cached == 0 )
-                    cached = XCreateFontCursor( pDisplay, getFontCursorID( shape ) );
-                return cached;
-            }
-
-            /** @brief XIM/XIC 와 커서를 해제합니다. 창이나 Display 가 사라지기 전에 불러야 합니다. */
-            static void releaseAll()
-            {
-                for ( Cursor& cursor : s_arrShapeCursor )
-                {
-                    if ( cursor != 0 && s_pShapeCursorDisplay != nullptr )
-                        XFreeCursor( static_cast<Display*>( s_pShapeCursorDisplay ), cursor );
-                    cursor = 0;
-                }
-                s_pShapeCursorDisplay = nullptr;
-                if ( s_pInputContext != nullptr )
-                {
-                    XDestroyIC( s_pInputContext );
-                    s_pInputContext = nullptr;
-                }
-                if ( s_pInputMethod != nullptr )
-                {
-                    XCloseIM( s_pInputMethod );
-                    s_pInputMethod = nullptr;
-                }
-                s_pImDisplay = nullptr;
-                s_imWindow   = 0;
-
-                if ( s_invisibleCursor != 0 && s_pCursorDisplay != nullptr )
-                    XFreeCursor( static_cast<Display*>( s_pCursorDisplay ), s_invisibleCursor );
-                s_invisibleCursor = 0;
-                s_pCursorDisplay  = nullptr;
-                s_bWindowFocused  = false;
+                const uint32                         byteCount = pX11Window->readCommittedText( &xev.xkey, utf8Buf.data(), static_cast<uint32>( utf8Buf.capacity() ) );
+                if ( byteCount > 0 )
+                    manager.postRawEvent( RawInputEvent::makeTextInput( string_view( utf8Buf.data(), byteCount ) ) );
             }
         };
     } // namespace
@@ -480,10 +314,7 @@ namespace sw
             case KeyPress:
             case KeyRelease:
             {
-                // 누르고 있으면 X 서버는 기본으로 Release/Press 쌍을 반복해서 보낸다(자동 반복). 그대로 받으면 누르고 있는 동안
-                // 눌림과 뗌 엣지가 계속 생긴다. 감지 가능한 자동 반복을 켜면 반복 이벤트는 Press 만 온다.
-                X11InputInternal::enableDetectableAutoRepeat( pXev->xany.display );
-
+                // 반복 이벤트는 Press 만 온다 — 창이 연결을 열 때 감지 가능한 자동 반복을 켠다(`X11Window::initializeWindow`).
                 const KeySym keySym = XLookupKeysym( const_cast<XKeyEvent*>( &pXev->xkey ), 0 );
                 const Key    key    = InputKeyTable::mapX11KeySym( static_cast<uint64>( keySym ) );
                 const bool   bDown  = ( pXev->type == KeyPress );
@@ -577,21 +408,9 @@ namespace sw
         IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
         if ( pWindow == nullptr )
             return;
-        Display* pDisplay  = nullptr;
-        Window   x11Window = 0;
-        if ( X11InputInternal::tryGetX11( pWindow, pDisplay, x11Window ) == false )
-        {
-            // X11 이 아닌 창은 스스로 커서를 숨긴다(Wayland `wl_pointer.set_cursor`). 못 하면 커서가 그대로 보이므로 한 번 오류로 알린다.
-            if ( pWindow->setCursorVisible( bVisible ) == false && X11InputInternal::markUnsupportedReported( X11InputInternal::kUnsupportedCursorVisibleBit ) )
-                SW_LOG_ERROR( "This window cannot hide or show the cursor (Wayland needs a pointer device and a cursor theme) - the cursor stays as it is" );
-            return;
-        }
-
-        if ( bVisible )
-            XUndefineCursor( pDisplay, x11Window );
-        else
-            XDefineCursor( pDisplay, x11Window, X11InputInternal::getOrCreateInvisibleCursor( pDisplay, x11Window ) );
-        XFlush( pDisplay );
+        // 창이 스스로 커서를 숨긴다(X11 투명 커서 · Wayland `wl_pointer.set_cursor`). 못 하면 커서가 그대로 보이므로 한 번 오류로 알린다.
+        if ( pWindow->setCursorVisible( bVisible ) == false && X11InputInternal::markUnsupportedReported( X11InputInternal::kUnsupportedCursorVisibleBit ) )
+            SW_LOG_ERROR( "This window cannot hide or show the cursor (Wayland needs a pointer device and a cursor theme) - the cursor stays as it is" );
     }
 
     void InputManager::applyCursorShapePlatform()
@@ -600,21 +419,12 @@ namespace sw
         IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
         if ( pWindow == nullptr )
             return;
-        Display* pDisplay  = nullptr;
-        Window   x11Window = 0;
-        if ( X11InputInternal::tryGetX11( pWindow, pDisplay, x11Window ) == false )
-        {
-            // X11 이 아닌 창은 스스로 모양을 바꾼다(Wayland `wp_cursor_shape_manager_v1`). 컴포지터에 그 확장이 없으면 못 바꾸고, 기본 화살표를 청한 것이면 이미 그 모양이라 알릴 일이 없다.
-            // 다른 모양을 청했는데 못 바꾸는 것은 오류로 한 번 알린다(조용히 건너뛰지 않는다).
-            const bool bApplied     = pWindow->supportsCursorShape() && pWindow->setCursorShape( _cursorShape );
-            const bool bNeedsReport = bApplied == false && _cursorShape != CursorShape::Arrow;
-            if ( bNeedsReport && X11InputInternal::markUnsupportedReported( X11InputInternal::kUnsupportedCursorShapeBit ) )
-                SW_LOG_ERROR( "This window cannot change the cursor shape (Wayland needs the compositor's cursor-shape-v1) - the cursor keeps its current shape" );
-            return;
-        }
-
-        XDefineCursor( pDisplay, x11Window, X11InputInternal::getOrCreateShapeCursor( pDisplay, _cursorShape ) );
-        XFlush( pDisplay );
+        // 창이 스스로 모양을 바꾼다(X11 글꼴 커서 · Wayland `wp_cursor_shape_manager_v1`). 컴포지터에 그 확장이 없으면 못 바꾸고, 기본 화살표를 청한 것이면 이미 그 모양이라 알릴 일이 없다.
+        // 다른 모양을 청했는데 못 바꾸는 것은 오류로 한 번 알린다(조용히 건너뛰지 않는다).
+        const bool bApplied     = pWindow->supportsCursorShape() && pWindow->setCursorShape( _cursorShape );
+        const bool bNeedsReport = bApplied == false && _cursorShape != CursorShape::Arrow;
+        if ( bNeedsReport && X11InputInternal::markUnsupportedReported( X11InputInternal::kUnsupportedCursorShapeBit ) )
+            SW_LOG_ERROR( "This window cannot change the cursor shape (Wayland needs the compositor's cursor-shape-v1) - the cursor keeps its current shape" );
     }
 
     void InputManager::applyMouseLockMode()
@@ -748,9 +558,8 @@ namespace sw
 
     void InputManager::restoreWindowsAccessibilityShortcuts()
     {
-        // 이 함수는 InputManager::shutdown 이 부르는 유일한 플랫폼 훅이라, XIM/XIC 와 커서 해제도 여기서 한다.
-        // Display 가 닫히기 전에 해제해야 X 리소스가 남지 않는다.
-        X11InputInternal::releaseAll();
+        // 이 함수는 InputManager::shutdown 이 부르는 유일한 플랫폼 훅이다. 입력기 · 커서는 창이 소유하고 창과 함께 내리므로 여기서는 포커스 기록만 지운다.
+        X11InputInternal::s_bWindowFocused = false;
 
         MainWindowSubsystem* pWindowHost       = engine::findSubsystem<MainWindowSubsystem>();
         IWindow*             pWindow           = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
