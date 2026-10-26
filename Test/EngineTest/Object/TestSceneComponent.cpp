@@ -561,6 +561,47 @@ SW_TEST_CASE( SceneComponentTest, TickWriteToOwnSlotIsHiddenUntilAfterTheTick )
     SW_EXPECT_TRUE( manager.getPrimitiveRegistry().hasDirty() );
 }
 
+/**
+ * @brief [SceneComponentTest] 월드 변경 번호는 월드가 다시 합성될 때만 오른다 — 같은 값 쓰기는 그대로, 부모 이동 · 병렬 틱의 칸 쓰기는 오른다
+ * @details 물리 바디 · 내비 장애물은 이 번호를 지난번 값과 비교해 같으면 행렬을 풀지 않는다. 번호가 빠지는 쓰기 경로(틱 대기 적용)가 있으면 그
+ *          소비자는 움직임을 놓치고, 같은 값 쓰기에 번호가 오르면 서 있는 바디마다 일을 다시 한다.
+ */
+SW_TEST_CASE( SceneComponentTest, WorldVersionRisesOnlyWhenTheWorldIsRecomposed )
+{
+    sw::GameObjectManager manager;
+    sw::SceneComponent*   pParent = manager.createGameObject( sw::hashed_string( "VersionParent" ) )->addComponent<sw::SceneComponent>();
+    sw::SceneComponent*   pChild  = manager.createGameObject( sw::hashed_string( "VersionChild" ) )->addComponent<sw::SceneComponent>();
+    SW_ASSERT_TRUE( pParent != nullptr && pChild != nullptr );
+    SW_ASSERT_TRUE( pChild->attachToComponent( pParent ) );
+    pParent->setLocalPosition( sw::float3( 1.0f, 0.0f, 0.0f ) );
+    const uint32 parentBefore = pParent->getWorldTransformVersion();
+    const uint32 childBefore  = pChild->getWorldTransformVersion();
+
+    // 같은 값을 다시 쓰면 아무것도 합성하지 않는다. 읽기만 해서도 오르지 않는다.
+    pParent->setLocalPosition( sw::float3( 1.0f, 0.0f, 0.0f ) );
+    SW_EXPECT_EQUAL( parentBefore, pParent->getWorldTransformVersion() );
+    SW_EXPECT_EQUAL( childBefore, pChild->getWorldTransformVersion() );
+
+    // 부모만 움직여도 자식의 월드가 바뀐다.
+    pParent->setLocalPosition( sw::float3( 2.0f, 0.0f, 0.0f ) );
+    SW_EXPECT_TRUE( pParent->getWorldTransformVersion() != parentBefore );
+    SW_EXPECT_TRUE( pChild->getWorldTransformVersion() != childBefore );
+
+    // 병렬 틱의 자기 칸 쓰기(틱 대기 → 틱 뒤 적용)도 같은 번호를 올린다.
+    sw::RegisterMockComponents();
+    sw::GameObject*             pMoverObj = manager.createGameObject( sw::hashed_string( "VersionMover" ) );
+    sw::MockTickSceneComponent* pMover    = pMoverObj->addComponent<sw::MockTickSceneComponent>();
+    SW_ASSERT_NOT_NULL( pMover );
+    pMover->_bWriteLocalOnTick = SW_TRUE;
+    pMover->_tickLocalPos      = sw::float3( 5.0f, 0.0f, 0.0f );
+    manager.update( 0.016f );
+    const uint32 moverBefore = pMover->getWorldTransformVersion();
+    pMover->_tickLocalPos    = sw::float3( 6.0f, 0.0f, 0.0f );
+    manager.update( 0.016f );
+    SW_EXPECT_NEAR_EQUAL( 6.0f, pMover->getWorldPosition()._x, 1e-6f );
+    SW_EXPECT_TRUE( pMover->getWorldTransformVersion() != moverBefore );
+}
+
 namespace
 {
     /** @brief 틱 큐 건 하나와 그것을 낸 틱의 주인 오브젝트 id(순서 키)입니다. */

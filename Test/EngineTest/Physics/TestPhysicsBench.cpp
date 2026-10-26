@@ -4,6 +4,9 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Object/Component/Physics/RigidBodyComponent.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/PhysicsSettings.h"
 #include "Engine/Physics/PhysicsSystem.h"
@@ -73,6 +76,21 @@ namespace
             pScene->step( kBox2DStep );
             outListSample.push_back( stopwatch.getElapsedMicroseconds() );
         }
+    }
+
+    /** @brief 상자 강체 컴포넌트 하나를 가진 오브젝트를 만듭니다. */
+    sw::RigidBodyComponent* spawnBenchBox( sw::GameObjectManager& manager, const sw::float3& position, sw::PhysicsBodyType type )
+    {
+        sw::GameObject*         pObject = manager.createGameObject( sw::hashed_string( "BenchBox" ) );
+        sw::RigidBodyComponent* pBody   = pObject != nullptr ? pObject->addComponent<sw::RigidBodyComponent>() : nullptr;
+        if ( pBody == nullptr )
+            return nullptr;
+        sw::PhysicsShapeDesc3D box;
+        box._halfExtents = sw::float3{ 0.4f, 0.4f, 0.4f };
+        pBody->setShape( box );
+        pBody->setBodyType( type );
+        pBody->setLocalPosition( position );
+        return pBody;
     }
 } // namespace
 
@@ -175,4 +193,61 @@ SW_TEST_CASE( PhysicsBenchTest, JoltStepWithAndWithoutCloth )
         }
         test::logBenchSamples( bWithCloth ? "Jolt step  500 dynamic boxes + 4 pinned cloths (21 x 21)" : "Jolt step  500 dynamic boxes", listSample );
     }
+}
+
+/**
+ * @brief [PhysicsBenchTest] 씬 물리 프레임(`ScenePhysics::step`, 컴포넌트 길 전체) — 정적 강체 10000 개 + 동적 강체 1000 개(900 개는 잠듦)
+ * @details 정적 · 잠든 바디가 프레임마다 내는 비용을 잰다. 바깥 이동은 트랜스폼의 월드 변경 번호로 알고, 스텝 뒤 자세는 백엔드가 깨어 있다고 한
+ *          바디만 읽으므로 이 비용은 바디 수가 아니라 깨어 있는 바디 수를 따라야 한다. 깨어 있는 100 개는 프레임마다 옆으로 미는 속도를 받는다.
+ *          정적 바디는 위쪽(y = 50) 격자에 두어 동적 바디와 겹치지 않는다. 데우기 동안 바닥 위 900 개가 잠든다. 값은 Release 로 읽는다(측정은 통합).
+ */
+SW_TEST_CASE( PhysicsBenchTest, SceneFrameWithManyStaticAndSleepingBodies )
+{
+    constexpr uint32  kStaticSide        = 100; // 100 × 100 = 10000
+    constexpr uint32  kSleeperSide       = 30;  // 30 × 30 = 900
+    constexpr uint32  kAwakeCount        = 100;
+    constexpr uint32  kWarmupFrameCount  = 90; // 바닥 위 상자가 잠들 때까지(잠들기 0.5 초 + 여유)
+    constexpr uint32  kMeasureFrameCount = 60;
+    constexpr float32 kFrame             = 1.0f / 60.0f;
+
+    sw::GameObjectManager   manager;
+    sw::RigidBodyComponent* pFloor = spawnBenchBox( manager, sw::float3{ 0.0f, -0.5f, 0.0f }, sw::PhysicsBodyType::Static );
+    SW_ASSERT_NOT_NULL( pFloor );
+    sw::PhysicsShapeDesc3D floorShape;
+    floorShape._halfExtents = sw::float3{ 200.0f, 0.5f, 200.0f };
+    pFloor->setShape( floorShape );
+    for ( uint32 index = 0; index < kStaticSide * kStaticSide; ++index )
+    {
+        const sw::float3 position{ static_cast<float32>( index % kStaticSide ) * 2.0f - 100.0f, 50.0f, static_cast<float32>( index / kStaticSide ) * 2.0f - 100.0f };
+        SW_ASSERT_NOT_NULL( spawnBenchBox( manager, position, sw::PhysicsBodyType::Static ) );
+    }
+    for ( uint32 index = 0; index < kSleeperSide * kSleeperSide; ++index )
+    {
+        const sw::float3 position{ static_cast<float32>( index % kSleeperSide ) * 2.0f - 30.0f, 0.4f, static_cast<float32>( index / kSleeperSide ) * 2.0f - 30.0f };
+        SW_ASSERT_NOT_NULL( spawnBenchBox( manager, position, sw::PhysicsBodyType::Dynamic ) );
+    }
+    sw::vector<sw::RigidBodyComponent*> listAwake;
+    for ( uint32 index = 0; index < kAwakeCount; ++index )
+    {
+        const sw::float3 position{ static_cast<float32>( index ) * 2.0f - 100.0f, 0.4f, 60.0f };
+        listAwake.push_back( spawnBenchBox( manager, position, sw::PhysicsBodyType::Dynamic ) );
+        SW_ASSERT_NOT_NULL( listAwake.back() );
+    }
+
+    manager.beginPlay();
+    sw::vector<int64> listSample;
+    for ( uint32 frameIndex = 0; frameIndex < kWarmupFrameCount + kMeasureFrameCount; ++frameIndex )
+    {
+        for ( sw::RigidBodyComponent* pAwake : listAwake )
+        {
+            pAwake->setLinearVelocity( sw::float3{ 0.0f, 0.0f, frameIndex % 120 < 60 ? 1.0f : -1.0f } );
+        }
+        const sw::Stopwatch stopwatch;
+        manager.update( kFrame );
+        if ( kWarmupFrameCount <= frameIndex )
+            listSample.push_back( stopwatch.getElapsedMicroseconds() );
+    }
+    manager.endPlay();
+    SW_EXPECT_EQUAL( static_cast<size_t>( kMeasureFrameCount ), listSample.size() );
+    test::logBenchSamples( "Scene frame  10000 static + 1000 dynamic rigid bodies (900 asleep)", listSample );
 }
