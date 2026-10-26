@@ -1,10 +1,10 @@
 # 이미 있는 기능으로 옮기기
 
-> 상태: 구현중 · 선행: 없음 · 영역: quality · 옛번호: 없음 · 진행: 9/16
+> 상태: 구현중 · 선행: 없음 · 영역: quality · 옛번호: 없음 · 진행: 11/16
 
 > 질문: Core · Engine 에 이미 있는 기능을 두고 직접 구현하거나 C 런타임을 직접 부르는 곳은 몇 군데이고, 어떤 순서로 옮기는가?
 > 독자: 아래 단위를 맡는 작업자와 단위를 나눠 주는 통합 담당.
-> 결론: 게이트가 세는 직접 호출은 64건에서 22건으로 줄었고, 남은 22건은 다른 작업자 브랜치에 이미 고쳐져 병합을 기다린다. 남은 단위는 병합 뒤 정리 넷, 게이트 합치기, 16진 쓰기, containsName 별칭이다.
+> 결론: 게이트가 세는 직접 호출은 64건에서 22건으로 줄었고, 남은 22건은 다른 작업자 브랜치에 이미 고쳐져 병합을 기다린다. 남은 단위는 병합 뒤 정리 넷과 게이트 합치기로, 모두 통합 몫이다.
 
 쓸 것과 쓰지 말 것의 표는 [ExistingFacilities](../agents/ExistingFacilities.md) 한 곳에 있습니다. 새로 늘지 않게 막는 게이트는 `Scripts/lint/gate/CheckFacilityBypass.py` 이고, 규칙마다 형식으로 막지 못하는 이유(`whyNotType`)를 적었습니다. 기준선과 허용 목록은 `Scripts/lint/rules/CheckFacilityBypass.toml` 에 있습니다.
 
@@ -46,6 +46,11 @@
   - EditorLogCommands: 로그 줄 안에서 경로를 찾습니다.
   - AssetImportStamp: 조상 키를 걸어 올라갑니다.
 - PackCooker 의 `splitPath` 는 이름이 FileUtil 과 같아도 경로를 마디 목록으로 나누는 다른 일입니다.
+- **16진 쓰기의 정본은 `Core/String/HexUtil.h` 입니다**(HexEncode). 손 표를 둔 곳 가운데 일곱은 남았습니다.
+  - UUID · Color · LogContext · StringUtil: Core/String 보다 낮은 층이라 HexUtil 을 볼 수 없습니다.
+  - CrashContext: 고정 버퍼에 할당 없이 씁니다.
+  - HTTPTypes · ProfilerTraceExport: 다른 작업자가 고치는 파일이라 병합 뒤 옮깁니다.
+- **정본 Util 을 이름만 바꿔 넘기는 별칭은 두지 않습니다**(ContainsNameAlias). `AppearanceXMLUtil::containsName` 은 목록에 넣기 전 중복 검사 다섯 자리를 `CheckContainsPushBack` 에서 가리고 있었습니다. 그 다섯을 순서를 지키는 집합으로 고치고 별칭을 지웠습니다. 다시 재어 찾은 `VectorUtil::contains` 별칭 셋(isEqualKey · isOnStack · containsPairedSessionID)도 지웠습니다. 정책을 이름 붙인 것(캐시 키 · 키 비교 규칙 · 임포트 폴더 이름)은 별칭이 아니라 둡니다.
 
 ## 3. 단위를 나눈 규칙
 
@@ -71,15 +76,3 @@ numberParse 일곱. `wt/corebase` 가 `StringUtil::parse*` 로 옮겼다. 병합
 ### ReuseExistingFacilities.GateMerge
 `wt/corebase` 의 `CheckCoreBypassCalls`(parse · random · stderr)와 이 브랜치의 `CheckFacilityBypass`(stdout · random · fileOpen · processSpawn · numberParse)가 같은 일을 한다. 병합 뒤 `CheckFacilityBypass` 하나로 합친다. corebase 쪽의 모양(`random_device` · `stderr` · `from_chars`)과 허용 목록 줄을 규칙 표로 옮기고 다른 게이트를 지운다.
 
-### ReuseExistingFacilities.HexEncode
-`"0123456789abcdef"` 표를 둔 손 16진 쓰기 21 곳을 `Core/String/HexUtil.h` 로 옮긴다.
-- Core: UUID · LogContext · CrashContext · ModuleBuildID · Color
-- Engine: SceneStateHash · ShaderCookStamp · ProfilerTraceExport · SerializeReflectAny
-- GameFramework: HTTPTypes · LedgerTypes · OpenSSLNetSecurityProvider · ServiceKeyUtil · LoginStoreLogic · GuildService
-- Editor: ModelImportMaterial · EditorScenarioSteps
-- Test: OnlineMessageTestUtil
-
-Core/Log(티어 5)는 Core/String(티어 6)을 못 보므로 LogContext 는 허용 목록이 맞는지 먼저 본다.
-
-### ReuseExistingFacilities.ContainsNameAlias
-`AppearanceXMLUtil::containsName` 은 `VectorUtil::contains` 의 별칭이다. 남은 다섯 호출(AppearanceDatabase 둘 · AppearanceResolver · AppearanceSelection · CharacterAppearanceComponent)은 목록에 넣기 전 중복 검사라 그대로 옮기면 `CheckContainsPushBack` 이 잡는다. 별칭이 게이트를 비켜 가게 하고 있었다. 다섯을 넣은 순서를 지키는 집합 곁 목록으로 고친 뒤 별칭을 지운다. AppearanceResolver 의 숨김 영역은 순서에 뜻이 없는지 먼저 본다.
