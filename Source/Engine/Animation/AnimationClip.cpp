@@ -78,11 +78,15 @@ namespace sw
                     (void)readRaw( &value, sizeof( value ) ); // 실패는 _bFailed 에 남고 값은 0 이다. 호출자가 끝에 _bFailed 를 확인한다.
                     return value;
                 }
-                float32 readFloat()
+                /** @brief 유한한 실수만 받습니다. NaN · 무한대는 깨진 파일로 보고 실패 상태가 되며 0 입니다(NaN 은 시각 비교를 모두 빠져나간다). */
+                float32 readFiniteFloat()
                 {
                     float32 value = 0.0f;
                     (void)readRaw( &value, sizeof( value ) ); // 실패는 _bFailed 에 남고 값은 0 이다. 호출자가 끝에 _bFailed 를 확인한다.
-                    return value;
+                    if ( MathUtil::isFinite( value ) )
+                        return value;
+                    _bFailed = true;
+                    return 0.0f;
                 }
                 string readString()
                 {
@@ -329,7 +333,7 @@ namespace sw
         }
         const uint32 flags      = reader.readUint();
         _bLoop                  = ( flags & AnimationClipInternal::kFlagLoop ) != 0 ? SW_TRUE : SW_FALSE;
-        _duration               = reader.readFloat();
+        _duration               = reader.readFiniteFloat();
         _name                   = hashed_string( reader.readString() );
         const uint32 trackCount = reader.readUint();
         if ( reader.canHold( trackCount, sizeof( uint32 ) ) )
@@ -355,8 +359,8 @@ namespace sw
             {
                 AnimationNotifyEvent event{};
                 event._name     = hashed_string( reader.readString() );
-                event._time     = reader.readFloat();
-                event._duration = reader.readFloat();
+                event._time     = reader.readFiniteFloat();
+                event._duration = reader.readFiniteFloat();
                 _notifyTrack.addEvent( event );
             }
         }
@@ -373,8 +377,8 @@ namespace sw
                 curve._listKey.resize( keyCount );
                 for ( AnimationClipCurveKey& key : curve._listKey )
                 {
-                    key._time  = reader.readFloat();
-                    key._value = reader.readFloat();
+                    key._time  = reader.readFiniteFloat();
+                    key._value = reader.readFiniteFloat();
                 }
                 _listCurve.push_back( std::move( curve ) );
             }

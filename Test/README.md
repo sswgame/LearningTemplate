@@ -231,13 +231,13 @@ py -3 -m Scripts perf --app build/Ninja-Release/Bin/App.exe [--record]
 **soak** 는 `-gv_profileSeconds=<초>` 동안 App이 돌다 끝나게 하고 프라이빗 메모리, 작업 집합, 핸들, GDI와 USER 개체 수를 잽니다. 판정은 워밍업 뒤의 최소제곱 기울기(MB/분, 개/분)입니다(두 점만 보면 캐시 채우기 계단을 누수로 오해한다).
 **성능 기준은 기계마다**(호스트, CPU, 백엔드) `Test/QA/Perf/<게임>.json` 에 저장되고 여러 번 돌린 중앙값이 `기준 × (1 + 허용 오차) + 바닥` 을 넘으면 실패입니다.
 
-**로더 퍼징.** `EngineTest` 의 `LoaderFuzzTest`(nogpu)가 씨앗을 고정한 변이로 로더(`EngineTest/LoaderFuzzTargets.cpp`, 씨앗은 저장소의 실제 파일)를 퍼징하고 엔진 단언도 결함으로 셉니다. 찾은 결함은 그 로더 스위트에 회귀 테스트로 둡니다. 오래 돌리려면:
+**로더 퍼징.** `EngineTest` 의 `LoaderFuzzTest`(nogpu)가 씨앗을 고정한 변이로 로더와 받은 바이트의 디코더(넷 패킷 · 스트림 프레임 · HTTP · HPACK · JWT · 고정 배치형 · 상태 코덱, `EngineTest/LoaderFuzzTargets.cpp`, 씨앗은 저장소의 실제 파일과 만든 바이트)를 퍼징하고 엔진 단언도 결함으로 셉니다. 키트의 디코더는 키트마다 `EngineTest/Fuzz/KitFuzzTargets<키트>.cpp` 가 표에 올립니다(키트가 꺼지면 그 파일이 빠진다). 찾은 결함은 그 스위트에 회귀 테스트로 둡니다. 오래 돌리려면:
 
 ```powershell
 $env:SW_FUZZ_ITERATIONS=20000; $env:SW_FUZZ_TRACE=1; cd build/Ninja-Debug/Bin; ../TestBin/EngineTest.exe --test_filter=LoaderFuzzTest.*
 ```
 
-커버리지 안내 퍼징(libFuzzer)은 `FuzzTest/` 의 `LoaderFuzzer` 가 같은 목록으로 하며 Linux 전용(`SW_ENABLE_FUZZING`, 프리셋 `CI-Fuzz`, `.github/workflows/fuzz.yml` 이 밤마다)입니다 — Windows 의 `clang_rt.fuzzer` 는 정적 런타임(/MT)뿐이라 /MD 엔진과 링크되지 않습니다.
+커버리지 안내 퍼징(libFuzzer)은 `FuzzTest/` 의 `LoaderFuzzer` 가 같은 목록(키트 대상은 빼고 — 키트를 링크하지 않는다)으로 하며 Linux 전용(`SW_ENABLE_FUZZING`, 프리셋 `CI-Fuzz`, `.github/workflows/fuzz.yml` 이 밤마다)입니다 — Windows 의 `clang_rt.fuzzer` 는 정적 런타임(/MT)뿐이라 /MD 엔진과 링크되지 않습니다.
 
 ## 확장하는 법
 

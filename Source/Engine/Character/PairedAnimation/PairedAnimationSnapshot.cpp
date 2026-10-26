@@ -12,6 +12,7 @@ namespace sw
     {
         /** @brief 단계는 두 비트로 씁니다(`PairedAnimationRoleStage` 의 값이 넷입니다). */
         constexpr int32 kPairedSnapshotStageBits = 2;
+        static_assert( static_cast<uint32>( PairedAnimationRoleStage::Exited ) < ( 1u << kPairedSnapshotStageBits ), "every role stage must fit in the stage bits" );
         /** @brief 역할 하나가 쓰는 비트 수입니다(단계 + 진입 시각). 읽기가 역할 수를 남은 비트와 맞춰 볼 때 씁니다. */
         constexpr int32 kPairedSnapshotRoleBits = kPairedSnapshotStageBits + 32;
     } // namespace
@@ -70,9 +71,10 @@ namespace sw
         if ( reader.readUint32() != kMagic )
             return ReadResult::WrongMagic;
         PairedAnimationSessionSnapshot snapshot{};
-        snapshot._sessionID       = static_cast<uint32>( reader.readVarUint() );
-        snapshot._anchorTime      = reader.readFloat();
-        snapshot._nextNotifyIndex = static_cast<uint32>( reader.readVarUint() );
+        snapshot._sessionID = reader.readVarUint32();
+        if ( reader.readFiniteFloat( snapshot._anchorTime ) == false )
+            return ReadResult::Truncated;
+        snapshot._nextNotifyIndex = reader.readVarUint32();
         const uint64 roleCount    = reader.readVarUint();
         // 역할 수가 남은 비트로 채울 수 있는 만큼이어야 한다 - 깨진 바이트가 큰 수를 말해도 그만큼 잡지 않는다.
         const bool bRoleCountFits = reader.hasOverflowed() == false && roleCount <= static_cast<uint64>( reader.getBitsRemaining() ) / static_cast<uint64>( kPairedSnapshotRoleBits );
@@ -81,8 +83,13 @@ namespace sw
         snapshot._listRole.resize( static_cast<size_t>( roleCount ) );
         for ( PairedAnimationRoleSnapshot& role : snapshot._listRole )
         {
-            role._stage           = static_cast<PairedAnimationRoleStage>( reader.readBits( kPairedSnapshotStageBits ) );
-            role._entryAnchorTime = reader.readFloat();
+            // 2 비트가 지금 단계 넷을 꼭 담지만, 단계가 늘고 비트가 늘면 빈 번호가 생긴다 — 열거자 밖 번호는 캐스트하지 않고 거절한다.
+            const uint32 stage = reader.readBits( kPairedSnapshotStageBits );
+            if ( stage > static_cast<uint32>( PairedAnimationRoleStage::Exited ) )
+                return ReadResult::Truncated;
+            role._stage = static_cast<PairedAnimationRoleStage>( stage );
+            if ( reader.readFiniteFloat( role._entryAnchorTime ) == false )
+                return ReadResult::Truncated;
         }
         if ( reader.hasOverflowed() )
             return ReadResult::Truncated;

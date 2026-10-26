@@ -257,7 +257,7 @@ namespace sw
             if ( response._errorCode == OnlineError::kUpdateRequired && AccountProtocol::MessageTypes::read( detail, updateDetail ) == FixedReadResult::Ok )
                 reply._grant._storeURL = std::move( updateDetail._storeURL ); // 상세가 없거나 깨졌으면 상점 주소만 빈다. 결과 코드는 위에서 이미 정했다
             else if ( response._errorCode == OnlineError::kRateLimited )
-                reply._grant._retryAfterMs = static_cast<int64>( detail.readVarUint() );
+                reply._grant._retryAfterMs = detail.readVarUint63();
         }
         else
         {

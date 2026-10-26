@@ -91,11 +91,11 @@ namespace
 
         static float3 readPosition( const vector<uint8>& bytes )
         {
-            BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-            float3    position{};
-            position._x = reader.readFloat();
-            position._y = reader.readFloat();
-            position._z = reader.readFloat();
+            BitReader  reader( bytes.data(), static_cast<int32>( bytes.size() ) );
+            float3     position{};
+            const bool bRead = reader.readFiniteFloat( position._x ) && reader.readFiniteFloat( position._y ) && reader.readFiniteFloat( position._z );
+            SW_ASSERT( bRead ); // 테스트가 쓴 바이트다 — 못 읽으면 코덱이 어긋났다
+            (void)bRead;
             return position;
         }
     };

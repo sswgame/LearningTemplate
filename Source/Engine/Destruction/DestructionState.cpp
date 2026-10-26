@@ -72,9 +72,14 @@ namespace sw
                 uint64 index = 0;
                 for ( uint64 entry = 0; entry < valueCount; ++entry )
                 {
-                    index += reader.readVarUint();
-                    const float32 value = reader.readFloat();
-                    if ( index >= count || reader.hasOverflowed() )
+                    // 간격은 남은 칸 안이어야 한다 — 더해 보고 비교하면 큰 간격이 uint64 를 감아 앞 칸으로 돌아온다. 첫 칸 뒤의 간격 0 은 같은 칸을 두 번 쓴 것이다.
+                    const uint64 step       = reader.readVarUint();
+                    const bool   bValidStep = ( entry == 0 || step > 0 ) && step < static_cast<uint64>( count ) - index;
+                    if ( bValidStep == false )
+                        return false;
+                    index += step;
+                    float32 value{ 0.0f };
+                    if ( reader.readFiniteFloat( value ) == false )
                         return false;
                     outListValue[static_cast<size_t>( index )] = value;
                 }
@@ -656,8 +661,8 @@ namespace sw
         const bool   bGraphShapeMismatch = nodeCount != graph._listNode.size() || linkCount != graph._listLink.size() || leafCount != graph._leafCount;
         if ( bGraphShapeMismatch )
             return false;
-        const uint32 eventCount  = static_cast<uint32>( reader.readVarUint() );
-        const uint32 nextGroupID = static_cast<uint32>( reader.readVarUint() );
+        const uint32 eventCount  = reader.readVarUint32();
+        const uint32 nextGroupID = reader.readVarUint32();
 
         vector<uint8>   listNodeBroken;
         vector<uint8>   listLinkBroken;
@@ -682,8 +687,8 @@ namespace sw
         for ( uint64 groupIndex = 0; groupIndex < groupCount; ++groupIndex )
         {
             DestructionGroup group;
-            group._id                = static_cast<uint32>( reader.readVarUint() );
-            group._parentID          = static_cast<uint32>( reader.readVarUint() );
+            group._id                = reader.readVarUint32();
+            group._parentID          = reader.readVarUint32();
             group._bAnchored         = reader.readBits( 1 ) != 0 ? SW_TRUE : SW_FALSE;
             const uint64 activeCount = reader.readVarUint();
             const bool   bBadGroup   = reader.hasOverflowed() || activeCount == 0 || activeCount > graph._listNode.size() || group._id == 0 || group._id >= nextGroupID;

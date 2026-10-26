@@ -153,10 +153,10 @@ namespace sw
                 if ( reader.readBytes( record._arrSalt, LoginConstant::kSaltSize ) == false ||
                      reader.readBytes( record._arrPasswordHash, LoginConstant::kPasswordHashSize ) == false )
                     return false;
-                record._params._memoryKiB      = static_cast<uint32>( reader.readVarUint() );
-                record._params._iterationCount = static_cast<uint32>( reader.readVarUint() );
-                record._params._parallelism    = static_cast<uint32>( reader.readVarUint() );
-                record._failedCount            = static_cast<int32>( reader.readVarUint() );
+                record._params._memoryKiB      = reader.readVarUint32();
+                record._params._iterationCount = reader.readVarUint32();
+                record._params._parallelism    = reader.readVarUint32();
+                record._failedCount            = reader.readVarUint31();
                 record._lockedUntilMs          = reader.readVarInt();
                 if ( reader.hasOverflowed() )
                     return false;
@@ -220,7 +220,7 @@ namespace sw
                 record._issuedAtMs       = reader.readVarInt();
                 record._expiresAtMs      = reader.readVarInt();
                 record._resumeDeadlineMs = reader.readVarInt();
-                record._rotation         = static_cast<uint32>( reader.readVarUint() );
+                record._rotation         = reader.readVarUint32();
                 if ( reader.readBytes( record._arrTokenDigest, LoginConstant::kDigestSize ) == false )
                     return false;
                 const uint32 revokeReason = reader.readBits( 8 );

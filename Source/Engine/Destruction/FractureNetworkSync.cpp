@@ -88,17 +88,17 @@ namespace sw
         for ( uint64 index = 0; index < poseCount && reader.hasOverflowed() == false; ++index )
         {
             FractureGroupPose pose;
-            pose._groupID = static_cast<uint32>( reader.readVarUint() );
+            pose._groupID = reader.readVarUint32();
             pose._bGone   = reader.readBits( 1 ) != 0 ? SW_TRUE : SW_FALSE;
             if ( pose._bGone == SW_FALSE )
             {
-                pose._position._x = reader.readFloat();
-                pose._position._y = reader.readFloat();
-                pose._position._z = reader.readFloat();
-                pose._rotation._x = reader.readFloat();
-                pose._rotation._y = reader.readFloat();
-                pose._rotation._z = reader.readFloat();
-                pose._rotation._w = reader.readFloat();
+                // 유한하지 않은 값은 읽기가 넘침으로 표시한다 — 아래에서 PoseTruncated 로 거절된다.
+                const bool bFinite = reader.readFiniteFloat( pose._position._x ) && reader.readFiniteFloat( pose._position._y ) &&
+                                     reader.readFiniteFloat( pose._position._z ) && reader.readFiniteFloat( pose._rotation._x ) &&
+                                     reader.readFiniteFloat( pose._rotation._y ) && reader.readFiniteFloat( pose._rotation._z ) &&
+                                     reader.readFiniteFloat( pose._rotation._w );
+                if ( bFinite == false )
+                    break;
             }
             outListPose.push_back( pose );
         }

@@ -178,17 +178,21 @@ namespace sw
         int32 stage{ 0 };
         if ( reader.readInt( 0, BrZoneInternal::kMaxPhaseBits, phaseIndex ) == false || reader.readInt( 0, 2, stage ) == false )
             return false;
-        const float32 stageRemaining = reader.readFloat();
-        const float32 centerX        = reader.readFloat();
-        const float32 centerY        = reader.readFloat();
-        const float32 radius         = reader.readFloat();
-        const float32 fromX          = reader.readFloat();
-        const float32 fromY          = reader.readFloat();
-        const float32 fromRadius     = reader.readFloat();
-        const float32 nextX          = reader.readFloat();
-        const float32 nextY          = reader.readFloat();
-        const float32 nextRadius     = reader.readFloat();
-        if ( reader.hasOverflowed() )
+        float32    stageRemaining{ 0.0f };
+        float32    centerX{ 0.0f };
+        float32    centerY{ 0.0f };
+        float32    radius{ 0.0f };
+        float32    fromX{ 0.0f };
+        float32    fromY{ 0.0f };
+        float32    fromRadius{ 0.0f };
+        float32    nextX{ 0.0f };
+        float32    nextY{ 0.0f };
+        float32    nextRadius{ 0.0f };
+        const bool bFinite = reader.readFiniteFloat( stageRemaining ) && reader.readFiniteFloat( centerX ) && reader.readFiniteFloat( centerY ) &&
+                             reader.readFiniteFloat( radius ) && reader.readFiniteFloat( fromX ) && reader.readFiniteFloat( fromY ) &&
+                             reader.readFiniteFloat( fromRadius ) && reader.readFiniteFloat( nextX ) && reader.readFiniteFloat( nextY ) &&
+                             reader.readFiniteFloat( nextRadius );
+        if ( bFinite == false )
             return false;
         _phaseIndex     = phaseIndex;
         _stage          = static_cast<BrZoneStage>( stage );

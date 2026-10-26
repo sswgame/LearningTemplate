@@ -599,7 +599,7 @@ namespace sw
                 if ( reader.readBits( 8 ) != LeaderboardServiceInternal::kFormatVersion )
                     return;
                 _entry._score = reader.readVarInt();
-                _entry._rank  = static_cast<int32>( reader.readVarInt() );
+                _entry._rank  = reader.readVarInt32();
                 _result       = reader.hasOverflowed() ? LeaderboardResult::Unavailable : LeaderboardResult::Ok;
             }
 

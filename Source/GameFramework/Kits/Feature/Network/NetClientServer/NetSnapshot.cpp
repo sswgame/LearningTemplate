@@ -156,13 +156,13 @@ namespace sw
     bool NetSnapshot::readDelta( BitReader& reader, const NetSnapshot* pBaseline, NetSnapshot& outSnapshot )
     {
         SW_ASSERT( pBaseline != &outSnapshot );
-        outSnapshot._tick           = static_cast<uint32>( reader.readVarUint() );
-        const uint32   baselineCode = static_cast<uint32>( reader.readVarUint() );
+        outSnapshot._tick           = reader.readVarUint32();
+        const uint32   baselineCode = reader.readVarUint32();
         NetOwnerState& ownerState   = outSnapshot._ownerState;
         ownerState._bPresent        = reader.readBool() ? SW_TRUE : SW_FALSE;
         if ( ownerState._bPresent == SW_TRUE )
         {
-            ownerState._inputTick = static_cast<uint32>( reader.readVarUint() );
+            ownerState._inputTick = reader.readVarUint32();
             if ( reader.readBlob( ownerState._buffer, kMaxEntityBytes ) == false )
                 return false;
         }
@@ -171,7 +171,7 @@ namespace sw
             ownerState._inputTick = 0;
             ownerState._buffer.clear();
         }
-        outSnapshot._firstMissingInputTick = static_cast<uint32>( reader.readVarUint() );
+        outSnapshot._firstMissingInputTick = reader.readVarUint32();
         if ( baselineCode != 0 && ( pBaseline == nullptr || pBaseline->_tick != baselineCode - 1u ) )
             return false; // 기준이 없으므로 서버가 곧 다른 기준으로 다시 보낸다
         // 기준에서 시작한다. 벡터 복사 대입은 이미 있는 원소에 대입하므로 @p outSnapshot 의 엔티티 버퍼 용량을 재사용한다.
@@ -188,7 +188,7 @@ namespace sw
             vector<uint32> listRemoved( static_cast<size_t>( removedCount ) );
             for ( uint32& entityID : listRemoved )
             {
-                entityID = static_cast<uint32>( reader.readVarUint() );
+                entityID = reader.readVarUint32();
             }
             if ( reader.hasOverflowed() )
                 return false;
@@ -200,8 +200,8 @@ namespace sw
         const size_t baselineCount = outSnapshot._listEntity.size(); // [0, baselineCount) 는 id 오름차순이다
         while ( reader.readBool() )
         {
-            const uint32          entityID = static_cast<uint32>( reader.readVarUint() );
-            const uint32          typeID   = static_cast<uint32>( reader.readVarUint() );
+            const uint32          entityID = reader.readVarUint32();
+            const uint32          typeID   = reader.readVarUint32();
             NetEntityState* const pBegin   = outSnapshot._listEntity.data();
             NetEntityState* const pEnd     = pBegin + baselineCount;
             NetEntityState*       pEntity  = std::lower_bound( pBegin, pEnd, entityID, &NetSnapshotInternal::isEntityBefore );

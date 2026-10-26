@@ -7,6 +7,7 @@
 #include "Core/Math/VectorMath.h"
 
 #include <cstring>
+#include <limits>
 
 namespace sw
 {
@@ -272,7 +273,21 @@ namespace sw
         return true;
     }
 
-    float32 BitReader::readFloat()
+    bool BitReader::readFiniteFloat( float32& outValue )
+    {
+        const float32 value = readFloatBits();
+        if ( hasOverflowed() )
+            return false;
+        if ( MathUtil::isFinite( value ) == false )
+        {
+            _bOverflow = SW_TRUE; // 쓰는 쪽은 유한한 값만 보내므로 깨진(또는 꾸민) 데이터다
+            return false;
+        }
+        outValue = value;
+        return true;
+    }
+
+    float32 BitReader::readFloatBits()
     {
         return BitUtil::bitsToFloat( readBits( 32 ) );
     }
@@ -319,10 +334,63 @@ namespace sw
         return value;
     }
 
+    uint32 BitReader::readVarUint32()
+    {
+        const uint64 value = readVarUint();
+        if ( hasOverflowed() )
+            return 0;
+        if ( value > static_cast<uint64>( 0xFFFFFFFFu ) )
+        {
+            _bOverflow = SW_TRUE; // 쓰는 쪽은 uint32 만 쓰므로 깨진 데이터다 — 잘라 읽으면 다른 값이 된다
+            return 0;
+        }
+        return static_cast<uint32>( value );
+    }
+
+    int32 BitReader::readVarUint31()
+    {
+        const uint64 value = readVarUint();
+        if ( hasOverflowed() )
+            return 0;
+        if ( value > static_cast<uint64>( std::numeric_limits<int32>::max() ) )
+        {
+            _bOverflow = SW_TRUE; // 쓰는 쪽은 음수가 아닌 int32 만 쓰므로 깨진 데이터다 — 자르면 음수 번호가 된다
+            return 0;
+        }
+        return static_cast<int32>( value );
+    }
+
+    int64 BitReader::readVarUint63()
+    {
+        const uint64 value = readVarUint();
+        if ( hasOverflowed() )
+            return 0;
+        if ( value > static_cast<uint64>( std::numeric_limits<int64>::max() ) )
+        {
+            _bOverflow = SW_TRUE; // 쓰는 쪽은 음수가 아닌 int64 만 쓰므로 깨진 데이터다
+            return 0;
+        }
+        return static_cast<int64>( value );
+    }
+
     int64 BitReader::readVarInt()
     {
         const uint64 zigZag = readVarUint();
         return static_cast<int64>( zigZag >> 1 ) ^ -static_cast<int64>( zigZag & 1u );
+    }
+
+    int32 BitReader::readVarInt32()
+    {
+        const int64 value = readVarInt();
+        if ( hasOverflowed() )
+            return 0;
+        const bool bInRange = std::numeric_limits<int32>::min() <= value && value <= std::numeric_limits<int32>::max();
+        if ( bInRange == false )
+        {
+            _bOverflow = SW_TRUE; // 쓰는 쪽은 int32 만 쓰므로 깨진 데이터다
+            return 0;
+        }
+        return static_cast<int32>( value );
     }
 
     bool BitReader::hasBytes( int32 byteCount ) const

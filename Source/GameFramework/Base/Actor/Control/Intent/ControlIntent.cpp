@@ -122,8 +122,8 @@ namespace sw
         {
             bRead = bRead && Internal::readValue( reader, kAxisSteps, Internal::kAxisMaxStep, analog );
         }
-        _buttonDown      = static_cast<uint32>( reader.readVarUint() );
-        _buttonTriggered = static_cast<uint32>( reader.readVarUint() );
+        _buttonDown      = reader.readVarUint32();
+        _buttonTriggered = reader.readVarUint32();
         _bTriggerLook    = reader.readBool();
         _triggerYaw      = 0.0f;
         _triggerPitch    = 0.0f;

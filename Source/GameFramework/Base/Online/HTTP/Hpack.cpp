@@ -135,10 +135,11 @@ namespace sw
             return false;
         }
         const uint32 prefixMax = ( 1u << prefixBits ) - 1u;
-        uint32       value     = static_cast<uint32>( *pCursor++ ) & prefixMax;
+        // 64 비트로 모아 uint32 를 넘는지 본다 — 32 비트로 모으면 자리 28 의 7 비트가 위로 잘리고 더하기가 감겨 작은 값이 된다.
+        uint64 value = static_cast<uint64>( *pCursor++ ) & prefixMax;
         if ( value < prefixMax )
         {
-            outValue = value;
+            outValue = static_cast<uint32>( value );
             return true;
         }
         uint32 shift = 0;
@@ -155,12 +156,17 @@ namespace sw
                 return false;
             }
             const uint8 byte = *pCursor++;
-            value += static_cast<uint32>( byte & 0x7Fu ) << shift;
+            value += static_cast<uint64>( byte & 0x7Fu ) << shift;
+            if ( value > static_cast<uint64>( 0xFFFFFFFFu ) )
+            {
+                outError = "HPACK integer is too large";
+                return false;
+            }
             shift += 7;
             if ( ( byte & 0x80u ) == 0 )
                 break;
         }
-        outValue = value;
+        outValue = static_cast<uint32>( value );
         return true;
     }
 

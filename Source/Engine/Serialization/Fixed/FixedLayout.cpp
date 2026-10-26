@@ -146,7 +146,7 @@ namespace sw
 
     FixedReadResult FixedCodecUtil::readBoundedFloat32( BitReader& reader, const float64 minValue, const float64 maxValue, float32& outValue )
     {
-        const float32 value   = reader.readFloat();
+        const float32 value   = reader.readFloatBits(); // 범위 비교가 NaN 을 거짓으로 걸러 낸다
         const float64 widened = static_cast<float64>( value );
         if ( ( minValue <= widened && widened <= maxValue ) == false )
             return FixedReadResult::OutOfRange;

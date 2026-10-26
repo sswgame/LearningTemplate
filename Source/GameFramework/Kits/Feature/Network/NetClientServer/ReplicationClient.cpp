@@ -87,8 +87,8 @@ namespace sw
         (void)context; // 클라이언트가 받는 쪽이므로 상대는 서버 하나뿐이다
         // 기준 틱을 먼저 읽어 보고 그 스냅샷을 찾는다.
         BitReader    peek         = body;
-        const uint32 tick         = static_cast<uint32>( peek.readVarUint() );
-        const uint32 baselineCode = static_cast<uint32>( peek.readVarUint() );
+        const uint32 tick         = peek.readVarUint32();
+        const uint32 baselineCode = peek.readVarUint32();
         if ( peek.hasOverflowed() )
             return NetHandleResult::Malformed;
         if ( _listSnapshot.hasNewest() && tick <= _listSnapshot.getNewestTick() )

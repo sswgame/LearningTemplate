@@ -152,11 +152,12 @@ namespace
     private:
         static float3 readPosition( const vector<uint8>& buffer )
         {
-            BitReader     reader( buffer.data(), static_cast<int32>( buffer.size() ) );
-            const float32 x = reader.readFloat();
-            const float32 y = reader.readFloat();
-            const float32 z = reader.readFloat();
-            return float3{ x, y, z };
+            BitReader  reader( buffer.data(), static_cast<int32>( buffer.size() ) );
+            float3     position{};
+            const bool bRead = reader.readFiniteFloat( position._x ) && reader.readFiniteFloat( position._y ) && reader.readFiniteFloat( position._z );
+            SW_ASSERT( bRead ); // 테스트가 쓴 바이트다 — 못 읽으면 코덱이 어긋났다
+            (void)bRead;
+            return position;
         }
 
         ReplicationClient           _client;

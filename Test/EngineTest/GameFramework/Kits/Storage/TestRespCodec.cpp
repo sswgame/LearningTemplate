@@ -117,6 +117,9 @@ SW_TEST_CASE( RespCodecTest, MalformedOrOversizedFramesAreErrors )
     SW_EXPECT_TRUE( parseOne( "$3\r\nabcd\r\n" ) == RespParseResult::Error ); // 몸 뒤가 CRLF 가 아니다
     SW_EXPECT_TRUE( parseOne( "$3\r\nab" ) == RespParseResult::NeedMore );
     SW_EXPECT_TRUE( parseOne( "*9\r\n*9\r\n*9\r\n*9\r\n*9\r\n*9\r\n*9\r\n*9\r\n*9\r\n*9\r\n" ) == RespParseResult::Error ); // 중첩 8 넘음
+    // 상한 안의 큰 개수는 받은 바이트만큼만 잡고 나머지를 기다린다. 받은 원소가 깨졌으면 기다리지 않고 오류다.
+    SW_EXPECT_TRUE( parseOne( "*1048576\r\n+OK\r\n" ) == RespParseResult::NeedMore );
+    SW_EXPECT_TRUE( parseOne( "*1048576\r\n+OK\r\n?\r\n" ) == RespParseResult::Error );
 
     RespParser          parser;
     const vector<uint8> broken = makeBytes( "?\r\n+OK\r\n" );

@@ -72,10 +72,10 @@ namespace sw
             return false;
         descriptor._port         = static_cast<uint16>( reader.readBits( 16 ) );
         descriptor._portCount    = static_cast<uint8>( reader.readBits( 8 ) );
-        descriptor._buildVersion = static_cast<uint32>( reader.readVarUint() );
-        descriptor._capacity     = static_cast<int32>( reader.readVarInt() );
+        descriptor._buildVersion = reader.readVarUint32();
+        descriptor._capacity     = reader.readVarInt32();
         outStatus._heartbeatMs   = reader.readVarInt();
-        outStatus._load          = static_cast<int32>( reader.readVarInt() );
+        outStatus._load          = reader.readVarInt32();
         const uint32 state       = reader.readBits( 8 );
         // 포트 수 0 이나 상한 밖은 배정이 없는 포트를 알리게 된다 — 1 로 맞추지 않고 기록을 거절한다.
         const bool bPortCountInRange = 1 <= descriptor._portCount && descriptor._portCount <= ServerDescriptor::kMaxPortCount;
