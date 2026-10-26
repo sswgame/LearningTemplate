@@ -351,6 +351,7 @@ namespace sw
             return false;
         }
         _pRouter      = pRouter;
+        _replyOwner   = pRouter != nullptr ? pRouter->openReplyOwner() : Subscription{};
         _serverID     = serverID;
         _maxPartySize = maxPartySize;
         _updater.initialize( pRouter );
@@ -360,13 +361,7 @@ namespace sw
     void PartyLobbyService::shutdown()
     {
         _updater.shutdown();
-        if ( _pRouter != nullptr )
-        {
-            for ( const auto& [requestID, step] : _mapRequestToStep )
-            {
-                _pRouter->cancel( requestID );
-            }
-        }
+        _replyOwner.reset(); // 기다리던 캐시 답이 이 객체를 부르지 않게 지운다
         _mapRequestToStep.clear();
         _mapListIDToList.clear();
         _pRouter = nullptr;
@@ -401,7 +396,7 @@ namespace sw
     {
         if ( _pRouter == nullptr )
             return;
-        const uint64 requestID = _pRouter->submit( cacheRequest, EphemeralStoreRouter::ReplyDelegate::create<&PartyLobbyService::onStepReply>( this ) );
+        const uint64 requestID = _pRouter->submit( cacheRequest, EphemeralStoreRouter::ReplyDelegate::create<&PartyLobbyService::onStepReply>( this ), _replyOwner );
         PendingStep& step      = _mapRequestToStep[requestID];
         step._request          = request;
         step._kind             = kind;
@@ -412,7 +407,7 @@ namespace sw
     void PartyLobbyService::submitFireAndForget( const EphemeralRequest& cacheRequest )
     {
         if ( _pRouter != nullptr )
-            (void)_pRouter->submit( cacheRequest, EphemeralStoreRouter::ReplyDelegate{} );
+            _pRouter->submit( cacheRequest );
     }
 
     void PartyLobbyService::createParty( AccountID accountID, uint64 requestTag )

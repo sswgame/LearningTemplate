@@ -30,6 +30,7 @@ namespace sw
     void ServerRegistryReader::initialize( EphemeralStoreRouter* pRouter, string_view kind, int64 refreshPeriodMs )
     {
         _pRouter           = pRouter;
+        _replyOwner        = pRouter != nullptr ? pRouter->openReplyOwner() : Subscription{};
         _kind              = string( kind );
         _refreshPeriodMs   = refreshPeriodMs;
         _bRefreshRequested = SW_TRUE;
@@ -37,16 +38,7 @@ namespace sw
 
     void ServerRegistryReader::shutdown()
     {
-        if ( _pRouter != nullptr )
-        {
-            // 라우터가 이 객체보다 오래 산다 — 기다리던 답이 사라진 객체를 부르지 않게 취소한다.
-            if ( _indexRequestID != 0 )
-                _pRouter->cancel( _indexRequestID );
-            for ( const auto& [requestID, serverID] : _mapRequestToServer )
-            {
-                _pRouter->cancel( requestID );
-            }
-        }
+        _replyOwner.reset(); // 라우터가 이 객체보다 오래 산다 — 기다리던 답이 사라진 객체를 부르지 않게 지운다
         _pRouter          = nullptr;
         _indexRequestID   = 0;
         _outstandingCount = 0;
@@ -77,7 +69,7 @@ namespace sw
         _mapRequestToServer.clear();
         _outstandingCount = 1;
         _indexRequestID   = _pRouter->submit( EphemeralRequest::makeScoreRange( ServerRecord::makeIndexKey( _kind ), 0, kMaxServerCount ),
-                                              EphemeralStoreRouter::ReplyDelegate::create<&ServerRegistryReader::onIndexReply>( this ) );
+                                              EphemeralStoreRouter::ReplyDelegate::create<&ServerRegistryReader::onIndexReply>( this ), _replyOwner );
     }
 
     void ServerRegistryReader::onIndexReply( const EphemeralReply& reply )
@@ -97,7 +89,7 @@ namespace sw
             if ( ServerRecord::parseMember( member._member, serverID ) == false )
                 continue;
             const uint64 requestID         = _pRouter->submit( EphemeralRequest::makeGet( ServerRecord::makeRecordKey( serverID ) ),
-                                                               EphemeralStoreRouter::ReplyDelegate::create<&ServerRegistryReader::onRecordReply>( this ) );
+                                                               EphemeralStoreRouter::ReplyDelegate::create<&ServerRegistryReader::onRecordReply>( this ), _replyOwner );
             _mapRequestToServer[requestID] = serverID;
             ++_outstandingCount;
         }
@@ -122,8 +114,7 @@ namespace sw
         else if ( bServerRecordExpired )
         {
             // 기록이 시한으로 사라졌다 — 서버가 죽었다. 색인의 낡은 멤버를 지운다(어느 읽는 쪽이 지워도 같다).
-            (void)_pRouter->submit( EphemeralRequest::makeScoreRemove( ServerRecord::makeIndexKey( _kind ), ServerRecord::makeMember( serverID ) ),
-                                    EphemeralStoreRouter::ReplyDelegate{} );
+            _pRouter->submit( EphemeralRequest::makeScoreRemove( ServerRecord::makeIndexKey( _kind ), ServerRecord::makeMember( serverID ) ) );
         }
         if ( _outstandingCount == 0 )
             finishRefresh();

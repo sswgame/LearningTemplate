@@ -18,6 +18,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 
 #include "GameFramework/Base/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/Base/Online/Cache/EphemeralStore.h"
@@ -131,6 +132,7 @@ namespace sw
         vector<DeferredFound>                     _listDeferred;         ///< 캐시 없이 끝난 찾기이다. 맡긴 함수 안에서 부르지 않고 다음 `tick` 에 알린다
         OnlinePresenceConfig                      _settings;
         OnlineServiceHost*                        _pHost;
+        Subscription                              _replyOwner; ///< 라우터 답의 주인 몫(`attach` 가 열고 `detach` 가 놓는다)
         uint64                                    _serverID;
         IDAllocator<uint64>                       _lookupIDAllocator;
         int64                                     _nextRefreshMs;

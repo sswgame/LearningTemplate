@@ -12,6 +12,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Memory/Memory.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -87,5 +88,6 @@ namespace sw
 
         unordered_map<uint64, unique_ptr<Operation>> _mapRequestToOperation;
         EphemeralStoreRouter*                        _pRouter;
+        Subscription                                 _replyOwner; ///< 라우터 답의 주인 몫(`initialize` 가 열고 `shutdown` 이 놓는다)
     };
 } // namespace sw

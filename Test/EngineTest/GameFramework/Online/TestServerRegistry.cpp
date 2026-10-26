@@ -72,9 +72,10 @@ namespace
         /** @brief 종류 색인의 멤버 수입니다. */
         static size_t countIndexMembers( RegistryNode& node )
         {
-            IndexRecorder recorder;
+            IndexRecorder      recorder;
+            const Subscription replyOwner = node._router.openReplyOwner();
             (void)node._router.submit( EphemeralRequest::makeScoreRange( ServerRecord::makeIndexKey( "game" ), 0, 64 ),
-                                       EphemeralStoreRouter::ReplyDelegate::create<&IndexRecorder::onReply>( &recorder ) );
+                                       EphemeralStoreRouter::ReplyDelegate::create<&IndexRecorder::onReply>( &recorder ), replyOwner );
             (void)node._router.pump();
             SW_EXPECT_TRUE( recorder._bAnswered == SW_TRUE );
             return recorder._listMember.size();

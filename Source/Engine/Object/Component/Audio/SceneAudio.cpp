@@ -84,50 +84,49 @@ namespace sw
         return &_pAudioService->getEngine();
     }
 
-    void SceneAudio::addListener( AudioListenerComponent* pListener )
+    Subscription SceneAudio::addListener( AudioListenerComponent* pListener )
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        (void)_listener.addLogged( pListener, "Audio listener" );
+        if ( _listener.addLogged( pListener, "Audio listener" ) != RegistrationResult::Added )
+            return {};
+        return issueSubscription( reinterpret_cast<uint64>( pListener ) );
     }
 
-    void SceneAudio::removeListener( AudioListenerComponent* pListener )
-    {
-        std::scoped_lock<mutex> lock{ _mutex };
-        (void)_listener.remove( pListener ); // 등록돼 있지 않았으면 할 일이 없다
-    }
-
-    void SceneAudio::addEmitter( AudioEmitterComponent* pEmitter )
+    Subscription SceneAudio::addEmitter( AudioEmitterComponent* pEmitter )
     {
         std::scoped_lock<mutex> lock{ _mutex };
         if ( pEmitter == nullptr )
         {
             reportRegistrationRejected( RegistrationResult::NullItem, "Audio emitter", string_view{} );
-            return;
+            return {};
         }
-        (void)_emitter.add( pEmitter ); // 이미 올라 있으면 할 일이 없다
+        if ( _emitter.add( pEmitter ) == false )
+            return {}; // 이미 올라 있다 — 먼저 받은 구독이 쥔다
+        return issueSubscription( reinterpret_cast<uint64>( pEmitter ) );
     }
 
-    void SceneAudio::removeEmitter( AudioEmitterComponent* pEmitter )
+    Subscription SceneAudio::addReverbZone( AudioReverbZoneComponent* pZone )
     {
+        std::scoped_lock<mutex> lock{ _mutex };
+        if ( _zone.addLogged( pZone, "Audio reverb zone" ) != RegistrationResult::Added )
+            return {};
+        return issueSubscription( reinterpret_cast<uint64>( pZone ) );
+    }
+
+    void SceneAudio::releaseSubscription( uint64 id )
+    {
+        void* const                  pItem    = reinterpret_cast<void*>( id ); // 주소로만 찾는다 — 든 목록을 찾기 전에는 역참조하지 않는다
+        AudioEmitterComponent* const pEmitter = static_cast<AudioEmitterComponent*>( pItem );
         {
             std::scoped_lock<mutex> lock{ _mutex };
-            (void)_emitter.remove( pEmitter ); // 등록돼 있지 않았으면 할 일이 없다
+            if ( _listener.remove( static_cast<AudioListenerComponent*>( pItem ) ) || _zone.remove( static_cast<AudioReverbZoneComponent*>( pItem ) ) )
+                return;
+            if ( _emitter.remove( pEmitter ) == false )
+                return;
         }
         AudioEngine* pEngine = findAudioEngine();
-        if ( pEngine != nullptr && pEmitter != nullptr )
+        if ( pEngine != nullptr )
             pEngine->removeEmitter( pEmitter->getEmitterID() );
-    }
-
-    void SceneAudio::addReverbZone( AudioReverbZoneComponent* pZone )
-    {
-        std::scoped_lock<mutex> lock{ _mutex };
-        (void)_zone.addLogged( pZone, "Audio reverb zone" );
-    }
-
-    void SceneAudio::removeReverbZone( AudioReverbZoneComponent* pZone )
-    {
-        std::scoped_lock<mutex> lock{ _mutex };
-        (void)_zone.remove( pZone ); // 등록돼 있지 않았으면 할 일이 없다
     }
 
     void SceneAudio::update( float32 deltaSeconds, const CameraComponent* pCamera, const IPhysicsQueryScene3D* pScene3D, const IPhysicsQueryScene2D* pScene2D )

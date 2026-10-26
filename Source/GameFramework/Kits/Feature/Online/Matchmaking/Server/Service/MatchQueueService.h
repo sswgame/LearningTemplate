@@ -20,6 +20,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Memory/Memory.h"
 
 #include "GameFramework/Base/Online/Bus/ServerBusTopic.h"
@@ -210,6 +211,7 @@ namespace sw
         EventBuffer<MatchQueueNotification>        _notificationBuffer;
         EventBuffer<MatchQueueTopicChange>         _topicBuffer;
         MatchQueueDependencies                     _dependencies;
+        Subscription                               _replyOwner; ///< 라우터 답의 주인 몫(`initialize` 가 열고 `shutdown` 이 놓는다)
         uint64                                     _nextLookupTag;
         uint32                                     _sequence;
         uint32                                     _lobbySequence;

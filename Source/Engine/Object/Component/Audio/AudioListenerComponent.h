@@ -6,6 +6,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Delegate/Subscription.h"
 
 #include "Engine/Audio/AudioSpatial.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -57,5 +58,7 @@ namespace sw
         uint32 _listenerIndex;
         PROPERTY( Category = "Listener", DisplayName = "Mode", Tooltip = "World3D (camera axes) or Screen2D (screen-plane panning, no elevation)" )
         AudioSpatialMode _mode;
+        /** @brief 씬 오디오 등록 구독입니다(`onRegister` 가 받고 `onUnregister` 가 놓는다). */
+        Subscription _sceneAudioSubscription;
     };
 } // namespace sw

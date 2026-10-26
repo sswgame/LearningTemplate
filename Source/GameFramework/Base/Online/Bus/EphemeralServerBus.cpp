@@ -72,8 +72,7 @@ namespace sw
         LittleEndianUtil::appendUint64( envelopeBytes, _nextSequence++ );
         envelopeBytes.insert( envelopeBytes.end(), pData, pData + size );
         // 발행 답(받은 수)은 쓰지 않는다 — 최대 한 번 배달. 빈 델리게이트면 라우터가 답을 버린다.
-        (void)_pRouter->submit( EphemeralRequest::makePublish( EphemeralServerBusInternal::makeChannel( topic ), std::move( envelopeBytes ) ),
-                                EphemeralStoreRouter::ReplyDelegate{} );
+        _pRouter->submit( EphemeralRequest::makePublish( EphemeralServerBusInternal::makeChannel( topic ), std::move( envelopeBytes ) ) );
     }
 
     void EphemeralServerBus::subscribe( string_view topic )

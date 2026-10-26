@@ -45,7 +45,7 @@ namespace sw
      * @class IEngineFrameObserver
      * @brief `Engine::registerFrameObserver` 로 붙는 프레임 관찰자입니다. 게임 스레드에서만 불립니다.
      * @details 종료 코드를 돌려주는 두 함수는 끝나지 않았으면 `kRunning` 을 돌려줍니다. 루프는 처음으로 `kRunning` 이 아닌 값을 낸 관찰자의 코드로 끝냅니다.
-     *          관찰자의 수명은 붙인 쪽이 쥐며, 없애기 전에 `Engine::unregisterFrameObserver` 로 뗍니다.
+     *          관찰자의 수명은 붙인 쪽이 쥐며, 없애기 전에 `Engine::registerFrameObserver` 가 돌려준 구독을 놓습니다.
      */
     class IEngineFrameObserver
     {

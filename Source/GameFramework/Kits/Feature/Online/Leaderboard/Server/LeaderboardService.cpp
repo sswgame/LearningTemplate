@@ -781,21 +781,12 @@ namespace sw
     {
         SW_ASSERT( dependencies._pStore != nullptr && dependencies._pRouter != nullptr );
         _dependencies = dependencies;
+        _replyOwner   = dependencies._pRouter->openReplyOwner();
     }
 
     void LeaderboardService::shutdown()
     {
-        if ( _dependencies._pRouter != nullptr )
-        {
-            for ( const auto& [requestID, read] : _mapReadyRequestToRead )
-            {
-                _dependencies._pRouter->cancel( requestID );
-            }
-            for ( const auto& [requestID, queryID] : _mapRequestToQuery )
-            {
-                _dependencies._pRouter->cancel( requestID );
-            }
-        }
+        _replyOwner.reset(); // 기다리던 캐시 답이 이 객체를 부르지 않게 지운다
         _mapReadyRequestToRead.clear();
         _mapRequestToQuery.clear();
         _mapNameRequestToIndex.clear();
@@ -1005,11 +996,10 @@ namespace sw
         // 기간 보드의 정렬 집합은 기간이 끝나면 캐시가 지우게 한다. 기간마다 이 프로세스에서 한 번만 건다(점수 쓰기마다 요청이 늘지 않게).
         const int64 retentionMs = computeRankRetentionMs( *pBoard, periodID, nowMs );
         if ( retentionMs > 0 && _uniqueExpiringRankKeys.insert( rankKey ).second )
-            (void)_dependencies._pRouter->submit( EphemeralRequest::makeExpire( rankKey, retentionMs ), EphemeralStoreRouter::ReplyDelegate{} );
+            _dependencies._pRouter->submit( EphemeralRequest::makeExpire( rankKey, retentionMs ) );
         if ( displayName.empty() == false )
-            (void)_dependencies._pRouter->submit( EphemeralRequest::makeSet( LeaderboardServiceInternal::makeNameKey( accountID ),
-                                                                             vector<uint8>( reinterpret_cast<const uint8*>( displayName.data() ), reinterpret_cast<const uint8*>( displayName.data() ) + displayName.size() ), LeaderboardLimit::kNameTtlMs ),
-                                                  EphemeralStoreRouter::ReplyDelegate{} );
+            _dependencies._pRouter->submit( EphemeralRequest::makeSet( LeaderboardServiceInternal::makeNameKey( accountID ),
+                                                                       vector<uint8>( reinterpret_cast<const uint8*>( displayName.data() ), reinterpret_cast<const uint8*>( displayName.data() ) + displayName.size() ), LeaderboardLimit::kNameTtlMs ) );
     }
 
     int64 LeaderboardService::computeRankRetentionMs( const LeaderboardDefinition& definition, uint64 periodID, int64 nowMs ) const
@@ -1052,8 +1042,7 @@ namespace sw
         const auto waitIt = _mapRankKeyToWaitingRead.find( rankKey );
         if ( waitIt != _mapRankKeyToWaitingRead.end() )
             _mapRankKeyToLateWrite[rankKey].push_back( LeaderboardScoreRow{ accountID, cacheScore } ); // 다시 채우는 중이므로 채운 뒤에 한 번 더 싣는다. 이전 값을 덮기 위해서이다
-        (void)_dependencies._pRouter->submit( EphemeralRequest::makeScoreSet( rankKey, ServiceKeyUtil::makeHex64( accountID ), cacheScore ),
-                                              EphemeralStoreRouter::ReplyDelegate{} );
+        _dependencies._pRouter->submit( EphemeralRequest::makeScoreSet( rankKey, ServiceKeyUtil::makeHex64( accountID ), cacheScore ) );
     }
 
     void LeaderboardService::readTop( string_view boardID, int32 offset, int32 count, int64 nowMs, uint64 requestTag )
@@ -1106,7 +1095,7 @@ namespace sw
             return;
         }
         const uint64 requestID            = _dependencies._pRouter->submit( EphemeralRequest::makeGet( LeaderboardServiceInternal::makeReadyKey( rankKey ) ),
-                                                                            EphemeralStoreRouter::ReplyDelegate::create<&LeaderboardService::onReadyReply>( this ) );
+                                                                            EphemeralStoreRouter::ReplyDelegate::create<&LeaderboardService::onReadyReply>( this ), _replyOwner );
         _mapReadyRequestToRead[requestID] = read;
     }
 
@@ -1141,12 +1130,12 @@ namespace sw
         if ( read._operation == LeaderboardOperation::Top )
         {
             const uint64 requestID        = _dependencies._pRouter->submit( EphemeralRequest::makeScoreRange( rankKey, read._offset, read._count ),
-                                                                            EphemeralStoreRouter::ReplyDelegate::create<&LeaderboardService::onRangeReply>( this ) );
+                                                                            EphemeralStoreRouter::ReplyDelegate::create<&LeaderboardService::onRangeReply>( this ), _replyOwner );
             _mapRequestToQuery[requestID] = queryID;
             return;
         }
         const uint64 requestID        = _dependencies._pRouter->submit( EphemeralRequest::makeScoreRank( rankKey, ServiceKeyUtil::makeHex64( read._accountID ) ),
-                                                                        EphemeralStoreRouter::ReplyDelegate::create<&LeaderboardService::onRankReply>( this ) );
+                                                                        EphemeralStoreRouter::ReplyDelegate::create<&LeaderboardService::onRankReply>( this ), _replyOwner );
         _mapRequestToQuery[requestID] = queryID;
     }
 
@@ -1179,20 +1168,17 @@ namespace sw
         const LeaderboardOrder       order  = pBoard != nullptr ? pBoard->_order : LeaderboardOrder::Descending;
         for ( const LeaderboardScoreRow& row : listScore )
         {
-            (void)_dependencies._pRouter->submit( EphemeralRequest::makeScoreSet( rankKey, ServiceKeyUtil::makeHex64( row._accountID ), toCacheScore( order, row._score ) ),
-                                                  EphemeralStoreRouter::ReplyDelegate{} );
+            _dependencies._pRouter->submit( EphemeralRequest::makeScoreSet( rankKey, ServiceKeyUtil::makeHex64( row._accountID ), toCacheScore( order, row._score ) ) );
         }
         for ( const LeaderboardScoreRow& row : listLateWrite ) // 다시 채우는 동안 쓴 점수이다. 영속 저장소에서 읽은 이전 값을 덮으며 이미 캐시 점수이다
         {
-            (void)_dependencies._pRouter->submit( EphemeralRequest::makeScoreSet( rankKey, ServiceKeyUtil::makeHex64( row._accountID ), row._score ),
-                                                  EphemeralStoreRouter::ReplyDelegate{} );
+            _dependencies._pRouter->submit( EphemeralRequest::makeScoreSet( rankKey, ServiceKeyUtil::makeHex64( row._accountID ), row._score ) );
         }
         // 기간 보드면 다시 채운 집합과 준비 표시도 기간이 끝나면 사라지게 한다(0 이면 만료 없음).
         const int64 retentionMs = pBoard != nullptr ? computeRankRetentionMs( *pBoard, listWaiting.front()._periodID, listWaiting.front()._nowMs ) : 0;
         if ( retentionMs > 0 )
-            (void)_dependencies._pRouter->submit( EphemeralRequest::makeExpire( rankKey, retentionMs ), EphemeralStoreRouter::ReplyDelegate{} );
-        (void)_dependencies._pRouter->submit( EphemeralRequest::makeSet( LeaderboardServiceInternal::makeReadyKey( rankKey ), vector<uint8>{ 1 }, retentionMs ),
-                                              EphemeralStoreRouter::ReplyDelegate{} );
+            _dependencies._pRouter->submit( EphemeralRequest::makeExpire( rankKey, retentionMs ) );
+        _dependencies._pRouter->submit( EphemeralRequest::makeSet( LeaderboardServiceInternal::makeReadyKey( rankKey ), vector<uint8>{ 1 }, retentionMs ) );
         // 캐시는 맡긴 순서대로 응답한다. 아래 읽기는 위 쓰기 뒤에 처리된다
         for ( const PendingRead& read : listWaiting )
         {
@@ -1223,7 +1209,7 @@ namespace sw
         const int32 count             = myIndex + radius + 1 - offset;
         query._read._offset           = offset;
         const uint64 requestID        = _dependencies._pRouter->submit( EphemeralRequest::makeScoreRange( makeRankKey( query._read._boardID, query._read._periodID ), offset, count ),
-                                                                        EphemeralStoreRouter::ReplyDelegate::create<&LeaderboardService::onRangeReply>( this ) );
+                                                                        EphemeralStoreRouter::ReplyDelegate::create<&LeaderboardService::onRangeReply>( this ), _replyOwner );
         _mapRequestToQuery[requestID] = queryID;
     }
 
@@ -1259,7 +1245,7 @@ namespace sw
         {
             const uint64 requestID = _dependencies._pRouter->submit(
                 EphemeralRequest::makeGet( LeaderboardServiceInternal::makeNameKey( query._listEntry[static_cast<size_t>( entryIndex )]._accountID ) ),
-                EphemeralStoreRouter::ReplyDelegate::create<&LeaderboardService::onNameReply>( this ) );
+                EphemeralStoreRouter::ReplyDelegate::create<&LeaderboardService::onNameReply>( this ), _replyOwner );
             _mapRequestToQuery[requestID]     = queryID;
             _mapNameRequestToIndex[requestID] = entryIndex;
             ++query._outstandingNameCount;

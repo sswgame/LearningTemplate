@@ -128,6 +128,8 @@ namespace sw
         /** @brief 호스트 범위의 자동화 구동기입니다(`_host` 소유 — 빌려 쓴다). `-scenario` 가 있을 때만 `begin` 으로 시작합니다. */
         AutomationSession* _pAutomationSession;
         Engine             _engine;
+        /** @brief 자동화 구동기를 엔진 프레임 관찰자로 붙인 구독입니다. 엔진보다 뒤에 선언해 먼저 사라진다(`shutdown` 이 엔진 종료 전에 놓는다). */
+        Subscription _automationFrameSubscription;
         /** @brief 모듈 핫 리로드입니다(Engine 가 아니라 런처의 일 — Server 와 같은 구동기). 자신을 `_host` 에 겁니다. Shipping 에서는 아무것도 하지 않습니다. */
         ModuleReloadDriver _moduleReload;
         /** @brief 게임 창의 개발 콘솔(`~`)과 표준 입력 명령 채널입니다. Shipping 에서는 아무것도 하지 않습니다. */

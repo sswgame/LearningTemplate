@@ -56,8 +56,9 @@ namespace sw
         const bool bCannotAttachPresence = pHost == nullptr || pHost->getEphemeralRouter() == nullptr || pHost->getServerBus() == nullptr;
         if ( bCannotAttachPresence )
             return; // 서버가 한 대이므로 이 프로세스의 계정 디렉터리로 충분하다
-        _pHost    = pHost;
-        _serverID = pHost->getServerBus()->getServerID();
+        _pHost      = pHost;
+        _replyOwner = pHost->getEphemeralRouter()->openReplyOwner();
+        _serverID   = pHost->getServerBus()->getServerID();
         for ( const auto& [accountID, identity] : _mapAccountToIdentity )
         {
             writeAccountEntries( identity, false );
@@ -66,20 +67,13 @@ namespace sw
 
     void OnlinePresence::shutdown()
     {
-        if ( _pHost != nullptr ) // 호스트가 살아 있으면 라우터에 맡긴 요청을 회수해서, 그 요청이 이 객체를 부르지 않게 한다
-        {
-            EphemeralStoreRouter* pRouter = _pHost->getEphemeralRouter();
-            for ( const auto& [requestID, pending] : _mapRequestToPending )
-            {
-                pRouter->cancel( requestID );
-            }
-        }
         detach();
         _mapAccountToIdentity.clear();
     }
 
     void OnlinePresence::detach()
     {
+        _replyOwner.reset(); // 라우터에 맡긴 요청의 답이 이 객체를 부르지 않게 한다
         _pHost = nullptr;
         _mapRequestToPending.clear();
         _listDeferred.clear();
@@ -109,8 +103,7 @@ namespace sw
         {
             // 표시 이름이 바뀌었으면(연동) 이전 이름의 기록을 지운다. 내 것일 때만 지운다.
             const AccountIdentity& previous = identityIt->second;
-            (void)_pHost->getEphemeralRouter()->submit( EphemeralRequest::makeCompareAndErase( makeNameKey( previous._displayName ), makeNameBytes( previous ) ),
-                                                        EphemeralStoreRouter::ReplyDelegate{} );
+            _pHost->getEphemeralRouter()->submit( EphemeralRequest::makeCompareAndErase( makeNameKey( previous._displayName ), makeNameBytes( previous ) ) );
         }
         _mapAccountToIdentity[identity._accountID] = identity;
         if ( _pHost != nullptr )
@@ -128,9 +121,8 @@ namespace sw
             return;
         // 내 것일 때만 지운다. 같은 계정이 다른 서버에 새로 접속했으면 그쪽 기록이 남는다.
         EphemeralStoreRouter* pRouter = _pHost->getEphemeralRouter();
-        (void)pRouter->submit( EphemeralRequest::makeCompareAndErase( makeAccountKey( accountID ), makeServerBytes() ), EphemeralStoreRouter::ReplyDelegate{} );
-        (void)pRouter->submit( EphemeralRequest::makeCompareAndErase( makeNameKey( identity._displayName ), makeNameBytes( identity ) ),
-                               EphemeralStoreRouter::ReplyDelegate{} );
+        pRouter->submit( EphemeralRequest::makeCompareAndErase( makeAccountKey( accountID ), makeServerBytes() ) );
+        pRouter->submit( EphemeralRequest::makeCompareAndErase( makeNameKey( identity._displayName ), makeNameBytes( identity ) ) );
     }
 
     void OnlinePresence::update( int64 nowMs )
@@ -266,7 +258,7 @@ namespace sw
 
     void OnlinePresence::submitPending( const EphemeralRequest& request, PendingOperation&& pending )
     {
-        const uint64 requestID = _pHost->getEphemeralRouter()->submit( request, EphemeralStoreRouter::ReplyDelegate::create<&OnlinePresence::onCacheReply>( this ) );
+        const uint64 requestID = _pHost->getEphemeralRouter()->submit( request, EphemeralStoreRouter::ReplyDelegate::create<&OnlinePresence::onCacheReply>( this ), _replyOwner );
         _mapRequestToPending.emplace( requestID, std::move( pending ) );
     }
 
@@ -280,8 +272,8 @@ namespace sw
         {
             // 새로 접속했으므로 다른 서버의 이전 기록을 덮는다. 새 로그인이 이긴다.
             EphemeralStoreRouter* pRouter = _pHost->getEphemeralRouter();
-            (void)pRouter->submit( EphemeralRequest::makeSet( accountKey, serverBytes, _settings._ttlMs ), EphemeralStoreRouter::ReplyDelegate{} );
-            (void)pRouter->submit( EphemeralRequest::makeSet( nameKey, nameBytes, _settings._ttlMs ), EphemeralStoreRouter::ReplyDelegate{} );
+            pRouter->submit( EphemeralRequest::makeSet( accountKey, serverBytes, _settings._ttlMs ) );
+            pRouter->submit( EphemeralRequest::makeSet( nameKey, nameBytes, _settings._ttlMs ) );
             return;
         }
         PendingOperation accountPending;
@@ -367,13 +359,11 @@ namespace sw
         // 비교가 어긋났다. 키가 없거나(캐시가 비었거나 시한이 지났다) 다른 서버의 값이다. "없을 때만" 다시 기록해서 다른 서버의 값은 덮지 않는다.
         const AccountIdentity& identity = identityIt->second;
         if ( pending._pendingKind == PendingKind::RefreshAccount )
-            (void)_pHost->getEphemeralRouter()->submit(
-                EphemeralRequest::makeSet( makeAccountKey( identity._accountID ), makeServerBytes(), _settings._ttlMs, EphemeralCondition::IfAbsent ),
-                EphemeralStoreRouter::ReplyDelegate{} );
+            _pHost->getEphemeralRouter()->submit(
+                EphemeralRequest::makeSet( makeAccountKey( identity._accountID ), makeServerBytes(), _settings._ttlMs, EphemeralCondition::IfAbsent ) );
         else
-            (void)_pHost->getEphemeralRouter()->submit(
-                EphemeralRequest::makeSet( makeNameKey( identity._displayName ), makeNameBytes( identity ), _settings._ttlMs, EphemeralCondition::IfAbsent ),
-                EphemeralStoreRouter::ReplyDelegate{} );
+            _pHost->getEphemeralRouter()->submit(
+                EphemeralRequest::makeSet( makeNameKey( identity._displayName ), makeNameBytes( identity ), _settings._ttlMs, EphemeralCondition::IfAbsent ) );
     }
 
     vector<uint8> OnlinePresence::makeServerBytes() const

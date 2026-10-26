@@ -6,7 +6,7 @@
 #include "TestFramework/TestFramework.h"
 
 // 캐시 앞 나눠 쓰기 — 답은 맡긴 쪽 델리게이트로만, 같은 채널 구독 둘은 앞에 한 번, 델리게이트 안에서 구독 해지, 내릴 때 기다리던 요청은 Unavailable 한 번,
-// 취소한 요청은 답이 와도 · 내릴 때도 부르지 않는다.
+// 주인 몫을 놓은 요청은 답이 와도 · 내릴 때도 부르지 않는다.
 
 using namespace sw;
 
@@ -39,12 +39,13 @@ SW_TEST_CASE( EphemeralStoreRouterTest, RepliesGoOnlyToTheirOwnDelegate )
     EphemeralStoreRouter    router;
     router.initialize( &store );
 
-    RouterRecorder first;
-    RouterRecorder second;
-    (void)router.submit( EphemeralRequest::makeSet( "k1", vector<uint8>{ 1 }, 0 ), EphemeralStoreRouter::ReplyDelegate::create<&RouterRecorder::onReply>( &first ) );
-    (void)router.submit( EphemeralRequest::makeGet( "k1" ), EphemeralStoreRouter::ReplyDelegate::create<&RouterRecorder::onReply>( &second ) );
-    (void)router.submit( EphemeralRequest::makeErase( "nothing" ), EphemeralStoreRouter::ReplyDelegate{} );
-    SW_EXPECT_EQUAL( router.getPendingCount(), 3 );
+    RouterRecorder     first;
+    RouterRecorder     second;
+    const Subscription owner = router.openReplyOwner();
+    (void)router.submit( EphemeralRequest::makeSet( "k1", vector<uint8>{ 1 }, 0 ), EphemeralStoreRouter::ReplyDelegate::create<&RouterRecorder::onReply>( &first ), owner );
+    (void)router.submit( EphemeralRequest::makeGet( "k1" ), EphemeralStoreRouter::ReplyDelegate::create<&RouterRecorder::onReply>( &second ), owner );
+    router.submit( EphemeralRequest::makeErase( "nothing" ) ); // 답을 보지 않는 쓰기 — 기다리는 답에 들지 않는다
+    SW_EXPECT_EQUAL( router.getPendingCount(), 2 );
 
     (void)router.pump();
     SW_ASSERT_EQUAL( first._listReply.size(), size_t( 1 ) );
@@ -90,7 +91,8 @@ SW_TEST_CASE( EphemeralStoreRouterTest, ShutdownAnswersPendingRequestsOnceWithUn
     {
         EphemeralStoreRouter router;
         router.initialize( &store );
-        (void)router.submit( EphemeralRequest::makeGet( "k" ), EphemeralStoreRouter::ReplyDelegate::create<&RouterRecorder::onReply>( &recorder ) );
+        const Subscription owner = router.openReplyOwner();
+        (void)router.submit( EphemeralRequest::makeGet( "k" ), EphemeralStoreRouter::ReplyDelegate::create<&RouterRecorder::onReply>( &recorder ), owner );
         router.shutdown();
         router.shutdown();
     }
@@ -98,24 +100,27 @@ SW_TEST_CASE( EphemeralStoreRouterTest, ShutdownAnswersPendingRequestsOnceWithUn
     SW_EXPECT_TRUE( recorder._listReply[0]._result == EphemeralResult::Unavailable );
 }
 
-SW_TEST_CASE( EphemeralStoreRouterTest, CancelledRequestsAreNeverAnswered )
+SW_TEST_CASE( EphemeralStoreRouterTest, RequestsOfAReleasedOwnerAreNeverAnswered )
 {
     SystemMonotonicClock    clock;
     MemoryEphemeralDatabase database{ clock };
     MemoryEphemeralStore    store( &database );
     EphemeralStoreRouter    router;
     router.initialize( &store );
-    RouterRecorder recorder;
-    const uint64   answeredID = router.submit( EphemeralRequest::makeGet( "a" ), EphemeralStoreRouter::ReplyDelegate::create<&RouterRecorder::onReply>( &recorder ) );
-    const uint64   droppedID  = router.submit( EphemeralRequest::makeGet( "b" ), EphemeralStoreRouter::ReplyDelegate::create<&RouterRecorder::onReply>( &recorder ) );
-    router.cancel( droppedID );
-    router.cancel( 9999 ); // 없는 요청 — 아무것도 하지 않는다
+    RouterRecorder     recorder;
+    const Subscription keptOwner    = router.openReplyOwner();
+    Subscription       droppedOwner = router.openReplyOwner();
+    const uint64       answeredID   = router.submit( EphemeralRequest::makeGet( "a" ), EphemeralStoreRouter::ReplyDelegate::create<&RouterRecorder::onReply>( &recorder ), keptOwner );
+    (void)router.submit( EphemeralRequest::makeGet( "b" ), EphemeralStoreRouter::ReplyDelegate::create<&RouterRecorder::onReply>( &recorder ), droppedOwner );
+    droppedOwner.reset(); // 그 몫으로 맡긴 답만 지워진다
     (void)router.pump();
     SW_ASSERT_EQUAL( recorder._listReply.size(), size_t( 1 ) );
     SW_EXPECT_EQUAL( recorder._listReply[0]._requestID, answeredID );
 
-    const uint64 pendingID = router.submit( EphemeralRequest::makeGet( "c" ), EphemeralStoreRouter::ReplyDelegate::create<&RouterRecorder::onReply>( &recorder ) );
-    router.cancel( pendingID ); // 주인이 먼저 내려간다
+    {
+        const Subscription lateOwner = router.openReplyOwner();
+        (void)router.submit( EphemeralRequest::makeGet( "c" ), EphemeralStoreRouter::ReplyDelegate::create<&RouterRecorder::onReply>( &recorder ), lateOwner );
+    } // 주인이 먼저 내려간다
     router.shutdown();
     SW_EXPECT_EQUAL( recorder._listReply.size(), size_t( 1 ) ); // 내릴 때의 Unavailable 도 오지 않는다
     SW_EXPECT_EQUAL( router.getPendingCount(), 0 );

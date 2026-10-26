@@ -317,17 +317,12 @@ namespace sw
     {
         SW_ASSERT( dependencies._pStore != nullptr );
         _dependencies = dependencies;
+        _replyOwner   = dependencies._pRouter != nullptr ? dependencies._pRouter->openReplyOwner() : Subscription{};
     }
 
     void SocialService::shutdown()
     {
-        if ( _dependencies._pRouter != nullptr )
-        {
-            for ( const auto& [cacheRequestID, read] : _mapCacheRequestToRead )
-            {
-                _dependencies._pRouter->cancel( cacheRequestID );
-            }
-        }
+        _replyOwner.reset(); // 기다리던 접속 상태 답이 이 객체를 부르지 않게 지운다
         _mapCacheRequestToRead.clear();
         _mapQuery.clear();
         _mapAccountToLocal.clear();
@@ -488,7 +483,7 @@ namespace sw
                 continue;
             }
             const uint64 cacheRequestID            = _dependencies._pRouter->submit( EphemeralRequest::makeGet( SocialServiceInternal::makePresenceKey( link._otherID ) ),
-                                                                                     EphemeralStoreRouter::ReplyDelegate::create<&SocialService::onPresenceReply>( this ) );
+                                                                                     EphemeralStoreRouter::ReplyDelegate::create<&SocialService::onPresenceReply>( this ), _replyOwner );
             _mapCacheRequestToRead[cacheRequestID] = PresenceRead{ queryID, link._otherID };
             ++query._outstandingCount;
         }
@@ -514,7 +509,7 @@ namespace sw
             localIt->second._activity.clear();
             publishPresence( accountID, localIt->second );
             if ( _dependencies._pRouter != nullptr )
-                (void)_dependencies._pRouter->submit( EphemeralRequest::makeErase( SocialServiceInternal::makePresenceKey( accountID ) ), EphemeralStoreRouter::ReplyDelegate{} );
+                _dependencies._pRouter->submit( EphemeralRequest::makeErase( SocialServiceInternal::makePresenceKey( accountID ) ) );
         }
         _mapAccountToLocal.erase( localIt );
     }
@@ -562,9 +557,8 @@ namespace sw
             return false;
         if ( _dependencies._pRouter == nullptr )
             return true;
-        (void)_dependencies._pRouter->submit( EphemeralRequest::makeSet( SocialServiceInternal::makePresenceKey( presence._accountID ), std::move( bytes ),
-                                                                         SocialServiceInternal::kPresenceTtlMs ),
-                                              EphemeralStoreRouter::ReplyDelegate{} );
+        _dependencies._pRouter->submit( EphemeralRequest::makeSet( SocialServiceInternal::makePresenceKey( presence._accountID ), std::move( bytes ),
+                                                                   SocialServiceInternal::kPresenceTtlMs ) );
         return true;
     }
 

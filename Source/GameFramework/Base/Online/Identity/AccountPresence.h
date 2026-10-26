@@ -69,8 +69,8 @@ namespace sw
         /** @brief 만든 중계 봉투(`OnlinePushRelayRegistry::makeRelay`)를 그 계정의 서버로 넘깁니다. 서버 여럿이 아니면 false. */
         virtual bool relayRemotePush( const OnlinePushRelay& relay ) = 0;
         /**
-         * @brief 요청한 찾기를 취소합니다. 그 델리게이트는 불리지 않습니다. 델리게이트 주인이 이 인터페이스보다 먼저 종료할 때 자기 `shutdown` 에서 부릅니다
-         *        (캐시 라우터의 `cancel` 과 같은 계약). 끝났거나 모르는 id 면 아무것도 하지 않는다.
+         * @brief 요청한 찾기를 취소합니다. 그 델리게이트는 불리지 않습니다. 델리게이트 주인이 이 인터페이스보다 먼저 종료할 때 자기 `shutdown` 에서 부릅니다.
+         *        끝났거나 모르는 id 면 아무것도 하지 않는다.
          */
         virtual void cancel( uint64 requestID ) = 0;
     };

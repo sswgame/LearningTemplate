@@ -222,6 +222,7 @@ namespace sw
         EventBuffer<LobbyStartRequest>      _lobbyStartBuffer;
         EventBuffer<uint64>                 _brokenTicketBuffer;
         EphemeralStoreRouter*               _pRouter;
+        Subscription                        _replyOwner; ///< 라우터 답의 주인 몫(`initialize` 가 열고 `shutdown` 이 놓는다)
         uint64                              _serverID;
         IDAllocator<uint64>                 _lobbyListIDAllocator;
         int32                               _maxPartySize;
