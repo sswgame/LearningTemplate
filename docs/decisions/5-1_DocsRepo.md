@@ -29,3 +29,5 @@
 - **작업자 보고에는 "같은 결함 후보" 절을 필수로 둔다**(사용자 결정 2026-10-25 — 위치 · 모양 · 확인 수준 · 네 칸 분류 · 읽지 않은 범위). 고칠 수 있는 같은 모양은 작업자가 같은 브랜치에서 고치고, 큰 것은 통합 담당이 `NEXT.md` 로 모았다가 `Candidates-<영역>.md` 로 내린다. 보고 끝에 흘려 쓴 "다른 곳에도 있을 수 있다"는 인계되지 않아 사라졌다. 틀은 `plans/WorkerRules.md` 5절.
 
 - **CarriedOverChecks 의 "겹침 도구" 항목을 지웠다**(2026-10-27 재측정). 맡은 경로를 적고 겹침을 묻는 `py -3 -m Scripts claims`(`Scripts/dev/RunClaims.py`)가 이미 같은 일을 하고, 사용자 지시 근거도 끝내 찾지 못했다. 나머지 후보(측정 · shaderdoc · 리눅스 CI · 안정화 뒤 개발)는 빌드 · GPU · 사용자 판단 대기라 문서에 남긴다.
+
+- **후보 문서의 "도구 없음 · 수동" 서술 대조**(2026-10-27). Candidates-*.md 9개와 활성 계획을 grep 해 `Scripts --help` 와 견줬다. 남은 수동 서술(IntellisenseAnnotationCheck 의 VS 눈 확인, LinuxManualChecks 의 XTest · yad)은 사람 입력이 필요해 맞다. 이미 있는 도구로 되는 일은 겹침 도구뿐이었고, C-74 의 측정은 VerifyBatch 에 항목이 있어 후보 문서가 그 id 를 가리키게 했다(기준선 `--record` 항목은 초안만 문서에 둔다).
