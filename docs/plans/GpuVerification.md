@@ -90,6 +90,7 @@ Debug 빌드 · 테스트는 아직 돌리지 않았다. 병합 뒤 Shipping 으
 
 - **허용 목록은 하나입니다.** `Resource/engine/automation/allowedlogs.json` 의 항목마다 로그 id(`SW_LOG_WARNING_ID` · `SW_LOG_ERROR_ID`), 범위(`scenario` 나 `suite` 중 정확히 하나), 사유(`reason`), 처리 계획 문서 이름(`plan`)이 모두 있어야 읽힙니다. 비었거나 `TODO`, 와일드카드 id, 중복 항목은 읽기 오류(11)입니다. 시나리오 실행기와 호스트 테스트 스위트(`HostLogJudge`)가 같은 목록을 읽습니다.
 - **로그 id 가 없는 줄은 목록으로 가릴 수 없습니다.** 소스에 id 를 붙입니다. 시나리오가 일부러 만드는 줄만 `<ExpectLog contains>` 로 선언합니다.
+- **조립 문장 (2026-10-27 재측정).** id 없는 Warning · Error 호출 3524개 가운데 서식 구멍(`%#` 등)이 낀 조립 문장이 2975개라 한꺼번에 올릴 수 없다(GameFramework/Base 363 · Kits 342, Engine/Graphics 295, Editor/Common 292, Engine/Object 171 …). 구조로는 `CheckExpectLogPhrases` 의 `ExpectLog/AssembledLine` 이 시나리오가 `contains` 로 선언하는 id 없는 조립 문장을 실패로 센다(지금 시나리오 98곳 중 0건). 나머지는 시나리오가 그 줄을 내는 순간 실행기가 처리하지 않은 로그(15)로 세므로, 그때 해당 호출에 id 를 붙인다.
 - **래칫:** 목록에 있으나 끝까지 도는 시나리오에서 더 나오지 않는 항목은 `py -3 -m Scripts scenario-logs --check` 가 실패로 셉니다. 처리하지 않은 로그(15)로 끝난 보고가 있어도 실패입니다.
 - **처음 채울 때:** 시나리오 보고(`-scenario-report`)를 모은 뒤 `py -3 -m Scripts scenario-logs --regen` 이 id 있는 줄을 `reason` · `plan` 이 `TODO` 인 초안 항목으로 더하고 사람이 채웁니다. id 없는 줄은 표로 찍히고 소스 쪽을 먼저 고칩니다.
 - **남은 일:** 허용 목록은 `gpu-verifier` 의 첫 보고를 받아 채우므로 지금 비어 있습니다(Warning · Error 를 남기는 시나리오는 15 로 끝난다). `plan` 칸이 가리키는 문서가 실제로 있는지는 기계가 확인하지 않습니다.
