@@ -45,6 +45,38 @@ namespace sw
                 outValue = computeValue( step, stepsPerUnit );
                 return true;
             }
+
+            /** @brief 이동 칸 둘이 길이 1 안(칸으로 x² + y² ≤ 127²)인가. 축마다 ±127 만 보면 대각선이 √2 까지 나온다. */
+            static bool isMoveStepInside( int32 stepX, int32 stepY ) { return stepX * stepX + stepY * stepY <= kAxisMaxStep * kAxisMaxStep; }
+
+            /** @brief 이동 두 축을 칸으로 바꿉니다. 길면 길이 1 로 줄이고, 반올림이 원 밖으로 밀면(0.7071 → 90 칸 둘) 0 쪽으로 버린다. */
+            static void computeMoveSteps( const float2& move, int32& outStepX, int32& outStepY )
+            {
+                float2        clamped = move;
+                const float32 length  = MathUtil::sqrt( move._x * move._x + move._y * move._y );
+                if ( length > 1.0f )
+                    clamped = float2{ move._x / length, move._y / length };
+                outStepX = computeStep( clamped._x, ControlIntent::kAxisSteps, kAxisMaxStep );
+                outStepY = computeStep( clamped._y, ControlIntent::kAxisSteps, kAxisMaxStep );
+                if ( isMoveStepInside( outStepX, outStepY ) )
+                    return;
+                // 0 쪽으로 버린 칸은 길이가 늘지 않으므로 길이 1 이하 입력이면 늘 원 안이다.
+                outStepX = static_cast<int32>( clamped._x * ControlIntent::kAxisSteps );
+                outStepY = static_cast<int32>( clamped._y * ControlIntent::kAxisSteps );
+            }
+
+            /** @brief 이동 두 칸을 읽습니다. 축마다 범위 밖이거나 길이가 1 을 넘으면 false 이고 @p outMove 는 그대로입니다. */
+            [[nodiscard]] static bool readMove( BitReader& reader, float2& outMove )
+            {
+                int32 stepX{ 0 };
+                int32 stepY{ 0 };
+                if ( reader.readInt( -kAxisMaxStep, kAxisMaxStep, stepX ) == false || reader.readInt( -kAxisMaxStep, kAxisMaxStep, stepY ) == false )
+                    return false;
+                if ( isMoveStepInside( stepX, stepY ) == false )
+                    return false;
+                outMove = float2{ computeValue( stepX, ControlIntent::kAxisSteps ), computeValue( stepY, ControlIntent::kAxisSteps ) };
+                return true;
+            }
         };
     } // namespace
 } // namespace sw
@@ -90,8 +122,11 @@ namespace sw
     {
         using Internal = ControlIntentInternal;
         // 칸은 `computeStep` 이 ±maxStep 으로 자른 뒤라 범위 밖이 없다. 그래도 실패하면 스트림이 어긋나므로 멈춘다.
-        bool bWritten = Internal::writeValue( writer, _move._x, kAxisSteps, Internal::kAxisMaxStep ) &&
-                        Internal::writeValue( writer, _move._y, kAxisSteps, Internal::kAxisMaxStep ) &&
+        int32 moveStepX{ 0 };
+        int32 moveStepY{ 0 };
+        Internal::computeMoveSteps( _move, moveStepX, moveStepY );
+        bool bWritten = writer.writeInt( moveStepX, -Internal::kAxisMaxStep, Internal::kAxisMaxStep ) &&
+                        writer.writeInt( moveStepY, -Internal::kAxisMaxStep, Internal::kAxisMaxStep ) &&
                         Internal::writeValue( writer, _moveUp, kAxisSteps, Internal::kAxisMaxStep ) &&
                         Internal::writeValue( writer, MathUtil::wrapAngle( _controlYaw ), kAngleStepsPerRadian, Internal::kYawMaxStep ) &&
                         Internal::writeValue( writer, _controlPitch, kAngleStepsPerRadian, Internal::kPitchMaxStep );
@@ -113,8 +148,7 @@ namespace sw
     bool ControlIntent::read( BitReader& reader )
     {
         using Internal = ControlIntentInternal;
-        bool bRead     = Internal::readValue( reader, kAxisSteps, Internal::kAxisMaxStep, _move._x ) &&
-                     Internal::readValue( reader, kAxisSteps, Internal::kAxisMaxStep, _move._y ) &&
+        bool bRead     = Internal::readMove( reader, _move ) &&
                      Internal::readValue( reader, kAxisSteps, Internal::kAxisMaxStep, _moveUp ) &&
                      Internal::readValue( reader, kAngleStepsPerRadian, Internal::kYawMaxStep, _controlYaw ) &&
                      Internal::readValue( reader, kAngleStepsPerRadian, Internal::kPitchMaxStep, _controlPitch );
@@ -143,11 +177,13 @@ namespace sw
     void ControlIntent::quantize()
     {
         using Internal = ControlIntentInternal;
-        _move._x       = Internal::quantizeValue( _move._x, kAxisSteps, Internal::kAxisMaxStep );
-        _move._y       = Internal::quantizeValue( _move._y, kAxisSteps, Internal::kAxisMaxStep );
-        _moveUp        = Internal::quantizeValue( _moveUp, kAxisSteps, Internal::kAxisMaxStep );
-        _controlYaw    = Internal::quantizeValue( MathUtil::wrapAngle( _controlYaw ), kAngleStepsPerRadian, Internal::kYawMaxStep );
-        _controlPitch  = Internal::quantizeValue( _controlPitch, kAngleStepsPerRadian, Internal::kPitchMaxStep );
+        int32 moveStepX{ 0 };
+        int32 moveStepY{ 0 };
+        Internal::computeMoveSteps( _move, moveStepX, moveStepY );
+        _move         = float2{ Internal::computeValue( moveStepX, kAxisSteps ), Internal::computeValue( moveStepY, kAxisSteps ) };
+        _moveUp       = Internal::quantizeValue( _moveUp, kAxisSteps, Internal::kAxisMaxStep );
+        _controlYaw   = Internal::quantizeValue( MathUtil::wrapAngle( _controlYaw ), kAngleStepsPerRadian, Internal::kYawMaxStep );
+        _controlPitch = Internal::quantizeValue( _controlPitch, kAngleStepsPerRadian, Internal::kPitchMaxStep );
         for ( float32& analog : _arrAnalog )
         {
             analog = Internal::quantizeValue( analog, kAxisSteps, Internal::kAxisMaxStep );

@@ -266,6 +266,42 @@ SW_TEST_CASE( ControlTest, IntentRoundTripsThroughBits )
 }
 
 /**
+ * @brief [ControlTest] 이동 길이는 1 을 넘지 않는다 — 대각선 입력은 원 안으로 쓰이고, 축마다 범위 안이어도 길이가 1 을 넘는 바이트는 read 가 거절한다
+ */
+SW_TEST_CASE( ControlTest, IntentMoveLengthStaysWithinOne )
+{
+    // 길이 1 대각선은 반올림하면 90 칸 둘(길이 1.002)이 된다. 쓰는 쪽은 원 안으로 버린다.
+    ControlIntent diagonal;
+    diagonal._move = float2{ 0.70710678f, 0.70710678f };
+    diagonal.quantize();
+    SW_EXPECT_TRUE( diagonal._move._x * diagonal._move._x + diagonal._move._y * diagonal._move._y <= 1.0f );
+
+    // 길이 √2 는 길이 1 로 줄여 쓴다.
+    ControlIntent tooLong;
+    tooLong._move = float2{ 1.0f, 1.0f };
+    BitWriter writer;
+    SW_ASSERT_TRUE( tooLong.write( writer ) );
+    ControlIntent decoded;
+    BitReader     reader( writer.getBytes().data(), writer.getByteCount() );
+    SW_ASSERT_TRUE( decoded.read( reader ) );
+    SW_EXPECT_TRUE( decoded._move._x * decoded._move._x + decoded._move._y * decoded._move._y <= 1.0f );
+    SW_EXPECT_NEAR_EQUAL( decoded._move._x, decoded._move._y, 1.0e-6f );
+
+    // 손으로 만든 바이트: 축마다 127 칸(범위 안)이지만 길이 √2. 예전에는 true 였다.
+    BitWriter forged;
+    SW_ASSERT_TRUE( forged.writeInt( 127, -127, 127 ) );
+    SW_ASSERT_TRUE( forged.writeInt( 127, -127, 127 ) );
+    for ( int32 cell = 0; cell < 64; ++cell )
+    {
+        forged.writeBool( false );
+    }
+    ControlIntent rejected;
+    BitReader     forgedReader( forged.getBytes().data(), forged.getByteCount() );
+    SW_EXPECT_FALSE( rejected.read( forgedReader ) );
+    SW_EXPECT_TRUE( rejected == ControlIntent{} );
+}
+
+/**
  * @brief [ControlTest] 플레이어(키 W → 입력 맵 Move)와 AI(곧장 앞의 목적지)가 같은 의도를 내면 두 폰의 자리가 매 프레임 비트까지 같다
  */
 SW_TEST_CASE( ControlTest, PlayerAndAIWithTheSameIntentMoveTheSame )
