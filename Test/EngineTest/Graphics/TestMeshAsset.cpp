@@ -57,11 +57,22 @@ namespace
         return listVertex;
     }
 
-    /** @brief 메시 로드가 끝날 때까지 기다리고(같은 로드 블록을 이 스레드가 돕는다) 씬 프레임의 도착 단계를 한 번 돌립니다. */
-    void waitForMeshArrival( sw::GameObjectManager& manager, const sw::string& path )
+    /**
+     * @brief 컴포넌트의 메시 로드가 끝날 때까지 씬 프레임의 도착 단계를 돌립니다.
+     * @details `acquire` 가 돌아와도 컴포넌트의 로드 블록이 끝났다는 보장은 없다 — 워커는 메시를 캐시에 넣고 진행 중 표에서 뺀 **뒤에** 블록을 끝내므로,
+     *          그 틈의 `acquire` 는 캐시에서 새 블록을 받아 먼저 돌아온다. 그래서 컴포넌트 쪽 상태를 기다린다(시한 10 초).
+     */
+    void waitForMeshArrival( sw::GameObjectManager& manager, const sw::MeshComponent& component, const sw::string& path )
     {
-        (void)sw::MeshCache::acquire( path ); // 결과는 컴포넌트가 받는다 — 여기서는 로드가 끝나기만 기다린다
-        manager.getPrimitiveRegistry().updateAssetWaiters( 0.0f );
+        (void)sw::MeshCache::acquire( path ); // 아직 아무도 읽지 않았으면 이 스레드가 읽는다 — 결과는 컴포넌트가 받는다
+        const sw::Stopwatch stopwatch;
+        do
+        {
+            manager.getPrimitiveRegistry().updateAssetWaiters( 0.0f );
+            if ( component.isMeshLoading() == false )
+                return;
+            std::this_thread::yield();
+        } while ( stopwatch.getElapsedMilliseconds() < 10'000 );
     }
 
     struct TestMeshLODInternal
@@ -322,7 +333,7 @@ SW_TEST_CASE( MeshAssetTest, MeshComponentResolvesMeshAssetPath )
     SW_ASSERT_TRUE( sw::SerializerUtil::applyPropertyText( *pMeshID, sw::MutableObjectAddress{ pMesh }, ::test::makeTempResourceID( path ), context ) );
     pMesh->onPropertyChanged( pMeshID->_name );
     // 에셋은 워커가 읽는다 — 다 읽을 때까지 메시가 없고(그리지 않는다), 씬 프레임의 도착 단계가 넣는다.
-    waitForMeshArrival( manager, ::test::makeTempResourceID( path ) );
+    waitForMeshArrival( manager, *pMesh, ::test::makeTempResourceID( path ) );
     SW_EXPECT_FALSE( pMesh->isMeshLoading() );
     SW_ASSERT_NOT_NULL( pMesh->getRawMesh() );
     SW_EXPECT_EQUAL( 6u, pMesh->getRawMesh()->getVertexCount() );
@@ -337,7 +348,7 @@ SW_TEST_CASE( MeshAssetTest, MeshComponentResolvesMeshAssetPath )
         test::ScopedDefensiveTestLog expected( "a missing mesh asset leaves the component without a mesh" );
         const sw::string             missingPath = test::makeTempPath( "missing.mesh" );
         pMesh->setMeshID( ::test::makeTempResourceID( missingPath ) );
-        waitForMeshArrival( manager, ::test::makeTempResourceID( missingPath ) );
+        waitForMeshArrival( manager, *pMesh, ::test::makeTempResourceID( missingPath ) );
     }
     SW_EXPECT_EQUAL( size_t( 0 ), manager.getPrimitiveRegistry().countAssetWaiters() );
     SW_EXPECT_NULL( pMesh->getRawMesh() );
