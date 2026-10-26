@@ -93,11 +93,14 @@ namespace sw
         const RigidBody2DComponent* pBodyB = findConnectedBody();
         const PhysicsBodyHandle     bodyA  = pBodyA != nullptr ? pBodyA->getBodyHandle() : PhysicsBodyHandle{};
         const PhysicsBodyHandle     bodyB  = pBodyB != nullptr ? pBodyB->getBodyHandle() : PhysicsBodyHandle{};
-        // 이은 바디가 바뀌었거나(다시 지어짐) 사라졌으면 관절을 다시 짓는다.
-        const bool bBodiesChanged = bodyA != _jointBodyA || bodyB != _jointBodyB || pScene->isJointValid( _joint ) == false;
+        // 이은 바디가 바뀌었거나(다시 지어짐) 사라졌으면 관절을 다시 짓는다. 관절이 사라지는 길은 이 컴포넌트와 이은 바디의 삭제(핸들이 바뀐다)뿐이라
+        // 프레임마다 백엔드에 묻지 않고 Debug 에서만 확인한다(3D `JointComponent` 와 같은 근거).
+        const bool bBodiesChanged = bodyA != _jointBodyA || bodyB != _jointBodyB;
+        SW_ASSERT( _joint.isValid() == false || bBodiesChanged || pScene->isJointValid( _joint ) );
         if ( _joint.isValid() && bBodiesChanged )
             releasePhysics( physics );
-        if ( _joint.isValid() || pScene->isBodyValid( bodyA ) == false )
+        // 바디가 있는지는 핸들로 안다 — 강체 컴포넌트가 바디를 놓으면 핸들을 비운다(3D `JointComponent` 와 같은 근거).
+        if ( _joint.isValid() || bodyA.isValid() == false )
             return;
         if ( _bJointCreateFailed )
         {
@@ -106,8 +109,9 @@ namespace sw
                 return; // 같은 입력으로 이미 실패했다 — 설정(requestRebuild)이나 바디가 바뀔 때까지 기다린다
             _bJointCreateFailed = false;
         }
-        if ( pBodyB != nullptr && pScene->isBodyValid( bodyB ) == false )
+        if ( pBodyB != nullptr && bodyB.isValid() == false )
             return; // 부모 바디가 아직 없다 — 다음 프레임
+        SW_ASSERT( pScene->isBodyValid( bodyA ) && ( pBodyB == nullptr || pScene->isBodyValid( bodyB ) ) );
 
         float3     position{};
         quaternion rotation{};

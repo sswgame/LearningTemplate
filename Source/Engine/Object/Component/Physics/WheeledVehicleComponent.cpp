@@ -98,10 +98,15 @@ namespace sw
             releasePhysics( physics );
         const RigidBodyComponent* pBody   = getOwner()->getComponent<RigidBodyComponent>();
         const PhysicsBodyHandle   chassis = pBody != nullptr ? pBody->getBodyHandle() : PhysicsBodyHandle{};
-        // 차체가 다시 지어졌거나 사라졌으면 차를 다시 짓는다(차체를 지우면 백엔드가 차도 지운다).
-        if ( _vehicle.isValid() && ( chassis != _vehicleChassis || pScene->isVehicleValid( _vehicle ) == false ) )
+        // 차체가 다시 지어졌거나 사라졌으면 차를 다시 짓는다(차체를 지우면 백엔드가 차도 지운다). 차가 사라지는 길은 이 컴포넌트와 차체 삭제(차체
+        // 핸들이 바뀐다)뿐이라 프레임마다 백엔드에 묻지 않고 Debug 에서만 확인한다.
+        const bool bChassisChanged = chassis != _vehicleChassis;
+        SW_ASSERT( _vehicle.isValid() == false || bChassisChanged || pScene->isVehicleValid( _vehicle ) );
+        if ( _vehicle.isValid() && bChassisChanged )
             releasePhysics( physics );
-        if ( _vehicle.isValid() == false && pScene->isBodyValid( chassis ) )
+        // 차체가 있는지는 핸들로 안다 — 강체 컴포넌트가 바디를 놓으면 핸들을 비운다.
+        SW_ASSERT( chassis.isValid() == false || pScene->isBodyValid( chassis ) );
+        if ( _vehicle.isValid() == false && chassis.isValid() )
         {
             _vehicle        = pScene->createWheeledVehicle( chassis, makeVehicleDesc() );
             _vehicleChassis = chassis;
