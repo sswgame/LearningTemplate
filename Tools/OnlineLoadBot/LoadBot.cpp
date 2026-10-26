@@ -187,14 +187,14 @@ namespace sw
             _bFinished = SW_TRUE; // 시나리오가 끊지 않았는데 끊겼다(로그아웃 뒤 · 서버가 닫음) — 더 돌 수 없다
     }
 
-    bool LoadBot::update( int64 nowMs )
+    bool LoadBot::update( MonotonicMilliseconds nowMs )
     {
         if ( _bFinished == SW_TRUE )
             return false;
         if ( _bConnecting == SW_TRUE )
             return true; // 열림 · 닫힘을 기다린다
         if ( _bConnectionOpen == SW_TRUE )
-            _client.update( MonotonicMilliseconds{ nowMs } ); // 실행기 시각은 시작부터 잰 단조 경과다(MonotonicClock 또는 수동 시계)
+            _client.update( nowMs );
         drainNotifications();
         pollAccountReplies();
         switch ( _awaitKind )
@@ -268,7 +268,7 @@ namespace sw
         }
     }
 
-    void LoadBot::startStep( const LoadBotStep& step, int64 nowMs )
+    void LoadBot::startStep( const LoadBotStep& step, MonotonicMilliseconds nowMs )
     {
         _pendingAction  = step._action;
         _requestStartUs = _pRunner->getNowUs();
@@ -529,7 +529,7 @@ namespace sw
         }
     }
 
-    void LoadBot::pollMatchResult( int64 nowMs )
+    void LoadBot::pollMatchResult( MonotonicMilliseconds nowMs )
     {
         _listMatchAssignment.clear();
         _matchmakingClient.drainMatchResults( _matchmakingLease, _listMatchAssignment );

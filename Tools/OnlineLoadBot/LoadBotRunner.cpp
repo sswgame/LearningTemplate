@@ -93,7 +93,7 @@ namespace sw
         _pTransport = nullptr;
     }
 
-    void LoadBotRunner::setManualClock( int64 nowMs )
+    void LoadBotRunner::setManualClock( MonotonicMilliseconds nowMs )
     {
         if ( _bManualClock == SW_FALSE )
             _manualStartMs = nowMs;
@@ -108,9 +108,9 @@ namespace sw
         return _startUs > 0 ? MonotonicClock::nowMicroseconds() - _startUs : 0;
     }
 
-    int64 LoadBotRunner::getNowMs() const
+    MonotonicMilliseconds LoadBotRunner::getNowMs() const
     {
-        return getNowUs() / LoadBotRunnerInternal::kMicrosecondsPerMs;
+        return kRunStart + getNowUs() / LoadBotRunnerInternal::kMicrosecondsPerMs;
     }
 
     int64 LoadBotRunner::computeLaunchMs( int32 botIndex ) const
@@ -125,12 +125,12 @@ namespace sw
             return false;
         if ( _bManualClock == SW_FALSE && _startUs == 0 )
             _startUs = MonotonicClock::nowMicroseconds();
-        const int64 nowMs = getNowMs();
+        const MonotonicMilliseconds nowMs = getNowMs();
         (void)_pTransport->pollIO( 0 );
         (void)_endpoint.pump( *this );
         _requestClient.update();
 
-        while ( _launchedCount < getBotCount() && computeLaunchMs( _launchedCount ) <= nowMs )
+        while ( _launchedCount < getBotCount() && kRunStart + computeLaunchMs( _launchedCount ) <= nowMs )
         {
             _listBot[static_cast<size_t>( _launchedCount )]->start();
             ++_launchedCount;
@@ -143,7 +143,7 @@ namespace sw
 
         const int64 endMs     = static_cast<int64>( _scenario._rampUpSeconds + _scenario._durationSeconds ) * LoadBotRunnerInternal::kMillisecondsPerSecond;
         const bool  bAllDone  = _launchedCount == getBotCount() && runningCount == 0;
-        const bool  bTimedOut = nowMs >= endMs;
+        const bool  bTimedOut = nowMs >= kRunStart + endMs;
         return bAllDone == false && bTimedOut == false;
     }
 

@@ -78,11 +78,12 @@ namespace
             bool  bRunning  = true;
             while ( bRunning && tickCount < kMaxTickCount )
             {
-                const int64 nowMs = tickCount * kTickMs;
-                runner.setManualClock( nowMs );
-                serverClock.setMilliseconds( MonotonicMilliseconds{ nowMs } );
+                const int64                 elapsedMs = tickCount * kTickMs;
+                const MonotonicMilliseconds tickTime{ elapsedMs }; // 실행기 · 서버 캐시가 같은 가짜 단조 시각을 쓴다
+                runner.setManualClock( tickTime );
+                serverClock.setMilliseconds( tickTime );
                 bRunning = runner.update();
-                server.update( kServerStartMs + nowMs );
+                server.update( kServerStartMs + elapsedMs );
                 ++tickCount;
             }
             SW_EXPECT_FALSE( bRunning ); // 시한 전에 모두 끝났다
