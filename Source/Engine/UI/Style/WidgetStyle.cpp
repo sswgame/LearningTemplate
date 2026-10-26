@@ -11,76 +11,99 @@ namespace sw
 {
     namespace
     {
+        /** @brief 멤버 형식의 float32 성분 수입니다. 수치가 아닌 형식(폰트 · 글)은 0 입니다. */
+        template <typename T>
+        constexpr uint32 kWidgetStyleComponentCount = 0;
+        template <>
+        constexpr uint32 kWidgetStyleComponentCount<float32> = 1;
+        template <>
+        constexpr uint32 kWidgetStyleComponentCount<float2> = 2;
+        template <>
+        constexpr uint32 kWidgetStyleComponentCount<float4> = 4;
+        static_assert( sizeof( float2 ) == 2 * sizeof( float32 ) && sizeof( float4 ) == 4 * sizeof( float32 ), "vector members are read as contiguous float32 components" );
+
         struct WidgetStyleInternal
         {
             using Table = UIStyleFieldTable;
 
-            /** @brief 필드마다 플래그입니다. `UIStyleField` 순서(`WidgetStyle` PROPERTY 선언 순서)입니다. */
-            static constexpr uint32 kArrFlags[] = {
-                0,                                         // BackgroundColor
-                0,                                         // CornerRadius
-                0,                                         // BorderWidth
-                0,                                         // BorderColor
-                0,                                         // ShadowColor
-                0,                                         // ShadowOffset
-                0,                                         // ShadowBlur
-                Table::kAffectsLayout,                     // Padding
-                Table::kAffectsLayout | Table::kInherited, // Font
-                Table::kAffectsLayout | Table::kInherited, // FontSize
-                Table::kInherited,                         // TextColor
-                Table::kInherited,                         // TextOutlineColor
-                Table::kInherited,                         // TextOutlineWidth
-                0,                                         // FocusRingColor
-                Table::kAffectsSubtree,                    // Opacity
-                0,                                         // Transition
+            /** @brief 서술자 표의 한 줄입니다. 수치 필드는 `WidgetStyle` 안의 오프셋과 성분 수로 읽고 쓰고 견줍니다(성분 수 0 은 수치가 아닌 필드). */
+            struct FieldRow
+            {
+                uint32 _flags{ 0 };
+                uint32 _offset{ 0 };
+                uint32 _componentCount{ 0 };
             };
-            static_assert( SW_COUNT_OF( kArrFlags ) == static_cast<size_t>( UIStyleField::Count ), "UIStyleField and the flag table differ" );
+
+// 줄 하나에 멤버 이름을 한 번만 적는다 — 오프셋과 성분 수가 같은 멤버에서 나와 서로 어긋날 수 없다.
+#define SW_UI_STYLE_FIELD_ROW( member, flags )                                                                                     \
+    FieldRow                                                                                                                       \
+    {                                                                                                                              \
+        flags, static_cast<uint32>( offsetof( WidgetStyle, member ) ), kWidgetStyleComponentCount<decltype( WidgetStyle::member )> \
+    }
+
+            /** @brief 필드마다 한 줄입니다. `UIStyleField` 순서(`WidgetStyle` PROPERTY 선언 순서)입니다. */
+            static constexpr FieldRow kArrRow[] = {
+                SW_UI_STYLE_FIELD_ROW( _backgroundColor, 0 ),
+                SW_UI_STYLE_FIELD_ROW( _cornerRadius, 0 ),
+                SW_UI_STYLE_FIELD_ROW( _borderWidth, 0 ),
+                SW_UI_STYLE_FIELD_ROW( _borderColor, 0 ),
+                SW_UI_STYLE_FIELD_ROW( _shadowColor, 0 ),
+                SW_UI_STYLE_FIELD_ROW( _shadowOffset, 0 ),
+                SW_UI_STYLE_FIELD_ROW( _shadowBlur, 0 ),
+                SW_UI_STYLE_FIELD_ROW( _padding, Table::kAffectsLayout ),
+                SW_UI_STYLE_FIELD_ROW( _font, Table::kAffectsLayout | Table::kInherited ),
+                SW_UI_STYLE_FIELD_ROW( _fontSize, Table::kAffectsLayout | Table::kInherited ),
+                SW_UI_STYLE_FIELD_ROW( _textColor, Table::kInherited ),
+                SW_UI_STYLE_FIELD_ROW( _textOutlineColor, Table::kInherited ),
+                SW_UI_STYLE_FIELD_ROW( _textOutlineWidth, Table::kInherited ),
+                SW_UI_STYLE_FIELD_ROW( _focusRingColor, 0 ),
+                SW_UI_STYLE_FIELD_ROW( _opacity, Table::kAffectsSubtree ),
+                SW_UI_STYLE_FIELD_ROW( _transition, 0 ),
+            };
+#undef SW_UI_STYLE_FIELD_ROW
+            static_assert( SW_COUNT_OF( kArrRow ) == static_cast<size_t>( UIStyleField::Count ), "UIStyleField and the descriptor table differ" );
+
+            /** @brief 수치가 아닌 줄 수입니다. `isSameValue` 가 따로 견주는 필드(Font · Transition)와 같은 수여야 합니다(아래 static_assert). */
+            static constexpr uint32 countNonNumericRows()
+            {
+                uint32 count = 0;
+                for ( const FieldRow& row : kArrRow )
+                {
+                    count += row._componentCount == 0 ? 1u : 0u;
+                }
+                return count;
+            }
+
+            static const FieldRow& getRow( UIStyleField field ) { return kArrRow[static_cast<uint32>( field )]; }
 
             static bool isSameFont( const FontSpec& lhs, const FontSpec& rhs ) { return lhs._family == rhs._family && lhs._weight == rhs._weight && lhs._slant == rhs._slant; }
 
-            /** @brief 필드 하나의 값이 같으면 true 입니다. */
+            /** @brief 필드 하나의 값이 같으면 true 입니다. 수치 필드는 표의 성분을 하나씩 견줍니다(`float4 ==` 와 같은 성분별 `==`). */
             static bool isSameValue( const WidgetStyle& lhs, const WidgetStyle& rhs, UIStyleField field )
             {
-                switch ( field )
+                const uint32 componentCount = getRow( field )._componentCount;
+                if ( componentCount > 0 )
                 {
-                    case UIStyleField::BackgroundColor:
-                        return lhs._backgroundColor == rhs._backgroundColor;
-                    case UIStyleField::CornerRadius:
-                        return lhs._cornerRadius == rhs._cornerRadius;
-                    case UIStyleField::BorderWidth:
-                        return lhs._borderWidth == rhs._borderWidth;
-                    case UIStyleField::BorderColor:
-                        return lhs._borderColor == rhs._borderColor;
-                    case UIStyleField::ShadowColor:
-                        return lhs._shadowColor == rhs._shadowColor;
-                    case UIStyleField::ShadowOffset:
-                        return lhs._shadowOffset == rhs._shadowOffset;
-                    case UIStyleField::ShadowBlur:
-                        return lhs._shadowBlur == rhs._shadowBlur;
-                    case UIStyleField::Padding:
-                        return lhs._padding == rhs._padding;
-                    case UIStyleField::Font:
-                        return isSameFont( lhs._font, rhs._font );
-                    case UIStyleField::FontSize:
-                        return lhs._fontSize == rhs._fontSize;
-                    case UIStyleField::TextColor:
-                        return lhs._textColor == rhs._textColor;
-                    case UIStyleField::TextOutlineColor:
-                        return lhs._textOutlineColor == rhs._textOutlineColor;
-                    case UIStyleField::TextOutlineWidth:
-                        return lhs._textOutlineWidth == rhs._textOutlineWidth;
-                    case UIStyleField::FocusRingColor:
-                        return lhs._focusRingColor == rhs._focusRingColor;
-                    case UIStyleField::Opacity:
-                        return lhs._opacity == rhs._opacity;
-                    case UIStyleField::Transition:
-                        return lhs._transition == rhs._transition;
-                    case UIStyleField::Count:
-                        return true;
+                    float32 arrLeft[4]{ 0.0f, 0.0f, 0.0f, 0.0f };
+                    float32 arrRight[4]{ 0.0f, 0.0f, 0.0f, 0.0f };
+                    UIStyleFieldTable::readComponents( lhs, field, arrLeft );
+                    UIStyleFieldTable::readComponents( rhs, field, arrRight );
+                    for ( uint32 component = 0; component < componentCount; ++component )
+                    {
+                        if ( arrLeft[component] != arrRight[component] )
+                            return false;
+                    }
+                    return true;
                 }
-                return true;
+                if ( field == UIStyleField::Font )
+                    return isSameFont( lhs._font, rhs._font );
+                return lhs._transition == rhs._transition; // 수치가 아닌 나머지 하나(아래 static_assert 가 지킨다)
             }
         };
+        // 클래스 본문 안에서는 멤버 constexpr 함수를 상수식에 못 쓰므로 정의가 끝난 뒤에 확인한다.
+        static_assert( WidgetStyleInternal::kArrRow[static_cast<size_t>( UIStyleField::Font )]._componentCount == 0 &&
+                           WidgetStyleInternal::kArrRow[static_cast<size_t>( UIStyleField::Transition )]._componentCount == 0 && WidgetStyleInternal::countNonNumericRows() == 2,
+                       "Font and Transition must be the only non-numeric style fields; a new one needs its own comparison in isSameValue" );
     } // namespace
 } // namespace sw
 
@@ -89,7 +112,31 @@ namespace sw
     uint32 UIStyleFieldTable::getFlags( UIStyleField field )
     {
         const uint32 index = static_cast<uint32>( field );
-        return index < static_cast<uint32>( UIStyleField::Count ) ? WidgetStyleInternal::kArrFlags[index] : 0u;
+        return index < static_cast<uint32>( UIStyleField::Count ) ? WidgetStyleInternal::kArrRow[index]._flags : 0u;
+    }
+
+    uint32 UIStyleFieldTable::getComponentCount( UIStyleField field )
+    {
+        const uint32 index = static_cast<uint32>( field );
+        return index < static_cast<uint32>( UIStyleField::Count ) ? WidgetStyleInternal::kArrRow[index]._componentCount : 0u;
+    }
+
+    void UIStyleFieldTable::readComponents( const WidgetStyle& style, UIStyleField field, float32 ( &outArr )[4] )
+    {
+        const uint32 componentCount = getComponentCount( field );
+        if ( componentCount == 0 )
+            return;
+        const uint8* pBase = reinterpret_cast<const uint8*>( &style );
+        std::memcpy( outArr, pBase + WidgetStyleInternal::getRow( field )._offset, componentCount * sizeof( float32 ) );
+    }
+
+    void UIStyleFieldTable::writeComponents( WidgetStyle& style, UIStyleField field, const float32 ( &arr )[4] )
+    {
+        const uint32 componentCount = getComponentCount( field );
+        if ( componentCount == 0 )
+            return;
+        uint8* pBase = reinterpret_cast<uint8*>( &style );
+        std::memcpy( pBase + WidgetStyleInternal::getRow( field )._offset, arr, componentCount * sizeof( float32 ) );
     }
 
     void UIStyleFieldTable::storeFloat4( const float4& value, float32 ( &outArr )[4] )

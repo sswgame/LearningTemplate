@@ -24,214 +24,6 @@ namespace sw
         {
             static constexpr utf8 kAllName[] = "all";
 
-            /** @brief 필드의 성분 수입니다(보간되지 않는 필드는 0). */
-            static uint32 findComponentCount( UIStyleField field )
-            {
-                switch ( field )
-                {
-                    case UIStyleField::BackgroundColor:
-                    case UIStyleField::CornerRadius:
-                    case UIStyleField::BorderColor:
-                    case UIStyleField::ShadowColor:
-                    case UIStyleField::Padding:
-                    case UIStyleField::TextColor:
-                    case UIStyleField::TextOutlineColor:
-                    case UIStyleField::FocusRingColor:
-                        return 4;
-                    case UIStyleField::ShadowOffset:
-                        return 2;
-                    case UIStyleField::BorderWidth:
-                    case UIStyleField::ShadowBlur:
-                    case UIStyleField::FontSize:
-                    case UIStyleField::TextOutlineWidth:
-                    case UIStyleField::Opacity:
-                        return 1;
-                    case UIStyleField::Font:
-                    case UIStyleField::Transition:
-                    case UIStyleField::Count:
-                        return 0;
-                }
-                return 0;
-            }
-
-            static void readFloat4( const float4& value, float32 ( &outArr )[4] )
-            {
-                outArr[0] = value._x;
-                outArr[1] = value._y;
-                outArr[2] = value._z;
-                outArr[3] = value._w;
-            }
-
-            /** @brief 필드의 값을 성분으로 읽습니다. */
-            static void readField( const WidgetStyle& style, UIStyleField field, float32 ( &outArr )[4] )
-            {
-                switch ( field )
-                {
-                    case UIStyleField::BackgroundColor:
-                    {
-                        readFloat4( style._backgroundColor, outArr );
-                        break;
-                    }
-                    case UIStyleField::CornerRadius:
-                    {
-                        readFloat4( style._cornerRadius, outArr );
-                        break;
-                    }
-                    case UIStyleField::BorderColor:
-                    {
-                        readFloat4( style._borderColor, outArr );
-                        break;
-                    }
-                    case UIStyleField::ShadowColor:
-                    {
-                        readFloat4( style._shadowColor, outArr );
-                        break;
-                    }
-                    case UIStyleField::Padding:
-                    {
-                        readFloat4( style._padding, outArr );
-                        break;
-                    }
-                    case UIStyleField::TextColor:
-                    {
-                        readFloat4( style._textColor, outArr );
-                        break;
-                    }
-                    case UIStyleField::TextOutlineColor:
-                    {
-                        readFloat4( style._textOutlineColor, outArr );
-                        break;
-                    }
-                    case UIStyleField::FocusRingColor:
-                    {
-                        readFloat4( style._focusRingColor, outArr );
-                        break;
-                    }
-                    case UIStyleField::ShadowOffset:
-                    {
-                        outArr[0] = style._shadowOffset._x;
-                        outArr[1] = style._shadowOffset._y;
-                        break;
-                    }
-                    case UIStyleField::BorderWidth:
-                    {
-                        outArr[0] = style._borderWidth;
-                        break;
-                    }
-                    case UIStyleField::ShadowBlur:
-                    {
-                        outArr[0] = style._shadowBlur;
-                        break;
-                    }
-                    case UIStyleField::FontSize:
-                    {
-                        outArr[0] = style._fontSize;
-                        break;
-                    }
-                    case UIStyleField::TextOutlineWidth:
-                    {
-                        outArr[0] = style._textOutlineWidth;
-                        break;
-                    }
-                    case UIStyleField::Opacity:
-                    {
-                        outArr[0] = style._opacity;
-                        break;
-                    }
-                    case UIStyleField::Font:
-                    case UIStyleField::Transition:
-                    case UIStyleField::Count:
-                    {
-                        break;
-                    }
-                }
-            }
-
-            /** @brief 성분을 필드에 씁니다. */
-            static void writeField( WidgetStyle& style, UIStyleField field, const float32 ( &arr )[4] )
-            {
-                const float4 value{ arr[0], arr[1], arr[2], arr[3] };
-                switch ( field )
-                {
-                    case UIStyleField::BackgroundColor:
-                    {
-                        style._backgroundColor = value;
-                        break;
-                    }
-                    case UIStyleField::CornerRadius:
-                    {
-                        style._cornerRadius = value;
-                        break;
-                    }
-                    case UIStyleField::BorderColor:
-                    {
-                        style._borderColor = value;
-                        break;
-                    }
-                    case UIStyleField::ShadowColor:
-                    {
-                        style._shadowColor = value;
-                        break;
-                    }
-                    case UIStyleField::Padding:
-                    {
-                        style._padding = value;
-                        break;
-                    }
-                    case UIStyleField::TextColor:
-                    {
-                        style._textColor = value;
-                        break;
-                    }
-                    case UIStyleField::TextOutlineColor:
-                    {
-                        style._textOutlineColor = value;
-                        break;
-                    }
-                    case UIStyleField::FocusRingColor:
-                    {
-                        style._focusRingColor = value;
-                        break;
-                    }
-                    case UIStyleField::ShadowOffset:
-                    {
-                        style._shadowOffset = float2{ arr[0], arr[1] };
-                        break;
-                    }
-                    case UIStyleField::BorderWidth:
-                    {
-                        style._borderWidth = arr[0];
-                        break;
-                    }
-                    case UIStyleField::ShadowBlur:
-                    {
-                        style._shadowBlur = arr[0];
-                        break;
-                    }
-                    case UIStyleField::FontSize:
-                    {
-                        style._fontSize = arr[0];
-                        break;
-                    }
-                    case UIStyleField::TextOutlineWidth:
-                    {
-                        style._textOutlineWidth = arr[0];
-                        break;
-                    }
-                    case UIStyleField::Opacity:
-                    {
-                        style._opacity = arr[0];
-                        break;
-                    }
-                    case UIStyleField::Font:
-                    case UIStyleField::Transition:
-                    case UIStyleField::Count:
-                    {
-                        break;
-                    }
-                }
-            }
-
             /** @brief 채널의 지금 값입니다. */
             static void evaluateChannel( const UIStyleTransitionState::Channel& channel, float32 ( &outArr )[4] )
             {
@@ -419,7 +211,7 @@ namespace sw
 
     bool UIStyleTransitionSpec::isInterpolable( UIStyleField field )
     {
-        return UIStyleTransitionInternal::findComponentCount( field ) > 0;
+        return UIStyleFieldTable::getComponentCount( field ) > 0;
     }
 
     bool UIStyleTransition::findParentChannel( const Widget& widget, UIStyleField field, const float32 ( &newArr )[4], UIStyleTransitionState::Channel& outChannel )
@@ -431,7 +223,7 @@ namespace sw
         {
             if ( channel._field != field )
                 continue;
-            const uint32 componentCount = UIStyleTransitionInternal::findComponentCount( field );
+            const uint32 componentCount = UIStyleFieldTable::getComponentCount( field );
             for ( uint32 component = 0; component < componentCount; ++component )
             {
                 if ( channel._arrTo[component] != newArr[component] )
@@ -452,7 +244,7 @@ namespace sw
         {
             float32 arrValue[4]{ 0.0f, 0.0f, 0.0f, 0.0f };
             Internal::evaluateChannel( channel, arrValue );
-            Internal::writeField( state._shown._value, channel._field, arrValue );
+            UIStyleFieldTable::writeComponents( state._shown._value, channel._field, arrValue );
             state._shown._setMask |= UIStyleFieldTable::makeBit( channel._field ); // 새 스타일이 정하지 않은 필드도 옮기는 동안은 정한 것으로 보인다
         }
         WidgetTree* pTree = widget.getTree();
@@ -463,13 +255,12 @@ namespace sw
     bool UIStyleTransition::makeChannel( Widget& widget, const UIComputedStyle& oldStyle, const UIComputedStyle& newStyle, UIStyleField field, const UIStyleTransitionSpec& spec,
                                          uint32 oldStates, uint32 newStates, bool bHaveFrom, float32 ( &inoutFrom )[4], UIStyleTransitionState::Channel& outChannel )
     {
-        using Internal                               = UIStyleTransitionInternal;
         const UIStyleTransitionSpec::Entry* pEntry   = spec.findEntry( field );
         const bool                          bOwnSpec = pEntry != nullptr && pEntry->_duration > 0.0f;
         // 새 값: 시트가 정했으면 그 값, 아니면 위젯이 자기 필드로 그리는 값이다(읽지 못하는 위젯은 바로 바뀐다).
         UIStyleTransitionState::Channel channel{};
         if ( newStyle.has( field ) )
-            Internal::readField( newStyle._value, field, channel._arrTo );
+            UIStyleFieldTable::readComponents( newStyle._value, field, channel._arrTo );
         else if ( widget.tryGetOwnStyleField( field, newStates, channel._arrTo ) == false )
             return false;
         UIStyleTransitionState::Channel mirrored{};
@@ -489,7 +280,7 @@ namespace sw
         {
             // 옛 값: 옛 스타일이 정했으면 그 값, 아니면 위젯이 자기 필드로 그리던 값이다. 진행 중이던 채널의 지금 값이 있으면 그것이 우선이다.
             if ( bHaveFrom == false && oldStyle.has( field ) )
-                Internal::readField( oldStyle._value, field, inoutFrom );
+                UIStyleFieldTable::readComponents( oldStyle._value, field, inoutFrom );
             else if ( bHaveFrom == false && widget.tryGetOwnStyleField( field, oldStates, inoutFrom ) == false )
                 return false;
             channel._field    = field;
@@ -581,7 +372,7 @@ namespace sw
                     std::copy( std::begin( channel._arrTo ), std::end( channel._arrTo ), std::begin( arrValue ) );
                 else
                     Internal::evaluateChannel( channel, arrValue );
-                Internal::writeField( state._shown._value, channel._field, arrValue );
+                UIStyleFieldTable::writeComponents( state._shown._value, channel._field, arrValue );
                 changedFields |= UIStyleFieldTable::makeBit( channel._field );
             }
             VectorUtil::removeIf( state._listChannel, Internal::isFinished ); // 끝난 채널은 한 번에 지운다(남은 순서는 그대로)

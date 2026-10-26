@@ -91,6 +91,7 @@ namespace sw
      * @struct UIStyleFieldTable
      * @brief 필드마다 바뀌면 무엇을 다시 하는지, 물려받는지를 정의한 서술자 표입니다(CSS 의 상속 속성과 레이아웃에 닿는 속성에 해당).
      * @details 이름은 표에 두지 않는다 — `WidgetStyle` 리플렉션의 PROPERTY 이름을 읽는다(`tryFindField`).
+     *          줄마다 플래그 · 멤버 오프셋 · 성분 수가 있어 수치 필드의 읽기 · 쓰기 · 같음 · 성분 수는 표에서 나온다. 수치가 아닌 필드(폰트 · 전환)는 성분 수가 0 이다.
      */
     struct SW_API UIStyleFieldTable
     {
@@ -100,6 +101,12 @@ namespace sw
 
         /** @brief 필드 하나의 플래그(`kAffectsLayout` · `kAffectsSubtree` · `kInherited`)입니다. */
         static uint32 getFlags( UIStyleField field );
+        /** @brief 필드의 float32 성분 수입니다(4 · 2 · 1, 보간되지 않는 필드는 0). */
+        static uint32 getComponentCount( UIStyleField field );
+        /** @brief 수치 필드의 값을 성분으로 읽습니다. 성분 수 뒤의 칸과 수치가 아닌 필드는 건드리지 않습니다. */
+        static void readComponents( const WidgetStyle& style, UIStyleField field, float32 ( &outArr )[4] );
+        /** @brief 성분을 수치 필드에 씁니다. 수치가 아닌 필드는 건드리지 않습니다. */
+        static void writeComponents( WidgetStyle& style, UIStyleField field, const float32 ( &arr )[4] );
         /** @brief `WidgetStyle` 의 PROPERTY 이름(`_backgroundColor`, 대소문자 무시)에 해당하는 필드를 찾습니다. 없으면 false 입니다. */
         [[nodiscard]] static bool tryFindField( string_view name, UIStyleField& outField );
         /** @brief 4성분 값을 `tryGetOwnStyleField` 의 출력 배열 `[x, y, z, w]` 에 옮깁니다. */

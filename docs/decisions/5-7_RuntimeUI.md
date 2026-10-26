@@ -49,3 +49,5 @@
 
 - **UI 전환의 곡선 위 사건은 트랙 값이 문턱을 지날 때 화면에 명령을 보냅니다**(2026-10-22, 전환의 곡선 위 사건). 시각에 붙는 `UIAnimationEvent` 는 곡선 · 키를 고치면 어긋나지만 문턱은 곡선을 따라갑니다(불투명도가 0.5 를 넘을 때 소리, 크기가 1 로 돌아올 때 다음 연출). `UIAnimationTrack::_listCurveEvent`(`UIAnimationCurveEvent` — 문턱 · 성분 · 방향 `UICurveCrossing` Rising · Falling · Either · 명령)를 `UIAnimationPlayer::fireCurveEvents` 가 처리합니다.
   재생 구간을 키 시각마다 끊어(키 사이 곡선은 한 방향) 두 끝 값으로 지남을 보고, 지난 시각은 두 끝 사이를 선형으로 나눠 사건 순서에 씁니다. 거꾸로 재생은 재생 방향의 오르내림을 봅니다. 실수가 아닌 트랙이나 없는 성분에 사건을 달면 경고하고 트랙째 뺍니다(조용히 안 보내지 않음). 움직임 줄이기 · 길이 0 은 끝까지 한 번에 가며 사이의 지남을 모두 보냅니다. `UIDocumentWriter` 는 빈 `<_listCurveEvent />` 를 쓰지 않아 옛 문서를 다시 저장해도 바뀌지 않습니다.
+
+- **UI 스타일 필드의 읽기 · 쓰기 · 같음 · 성분 수는 서술자 표(`UIStyleFieldTable`)의 오프셋 · 성분 수 칸에서 나옵니다**(2026-10-27, 감사 SD #6). 필드 하나에 switch 넷(성분 수 · 읽기 · 쓰기 · 같음)이 따로 있어 필드를 더할 때 넷을 맞춰 고쳐야 했습니다. 5-4 의 "필드마다 한 줄" 표에 `offsetof` 와 멤버 형식에서 나온 성분 수를 더했고(줄 하나에 멤버 이름을 한 번만 적음) 수치가 아닌 Font · Transition 만 `isSameValue` 가 따로 견주며 `static_assert` 가 그 둘뿐임을 지킵니다. 언리얼 `FProperty` 오프셋 · Godot 테마 항목 표와 같은 자리이고 리플렉션 `PropertyInfo` 를 런타임에 훑는 안은 프레임마다 도는 경로라 기각했습니다.
