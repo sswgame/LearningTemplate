@@ -4,6 +4,7 @@
 
 #include "Core/Common/HashUtil.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Math/DeterministicMathUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Spatial/PositionWelder.h"
@@ -475,7 +476,7 @@ namespace sw
                     const float32 y      = 1.0f - 2.0f * ( static_cast<float32>( direction ) + 0.5f ) / static_cast<float32>( maxPoint );
                     const float32 radius = MathUtil::sqrt( MathUtil::max( 0.0f, 1.0f - y * y ) );
                     const float32 angle  = goldenAngle * static_cast<float32>( direction );
-                    const float3  axis{ MathUtil::cos( angle ) * radius, y, MathUtil::sin( angle ) * radius };
+                    const float3  axis{ DeterministicMathUtil::cos( angle ) * radius, y, DeterministicMathUtil::sin( angle ) * radius };
                     size_t        best      = 0;
                     float32       bestValue = -MathUtil::kMaxFloat;
                     for ( size_t index = 0; index < listUnique.size(); ++index )

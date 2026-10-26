@@ -120,6 +120,8 @@ namespace sw
         bool isSleeping() const;
         /** @brief 소켓 부착이 물리로 뗄 때 쓰는 얼굴입니다(`SocketBindingComponent` 가 같은 오브젝트의 강체를 찾아 건다). */
         ISocketPhysicsBody& getSocketPhysicsBody() { return _socketPhysics; }
+        /** @brief 상태 해시에 트랜스폼과 선속도 · 각속도를 접습니다. */
+        void foldStateHash( StateHashBuilder& inoutBuilder ) const override;
 
     protected:
         void beginPhysicsFrame( ScenePhysics& physics ) override;

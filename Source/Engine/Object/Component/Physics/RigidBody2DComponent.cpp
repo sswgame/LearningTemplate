@@ -4,6 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Common/StateHashBuilder.h"
 #include "Engine/Object/Component/ComponentNameValidation.h"
 #include "Engine/Object/Component/Physics/ScenePhysics.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -169,6 +170,13 @@ namespace sw
     {
         const IPhysicsBodyScene2D* pScene = findScene();
         return pScene != nullptr && pScene->isBodySleeping( _body );
+    }
+
+    void RigidBody2DComponent::foldStateHash( StateHashBuilder& inoutBuilder ) const
+    {
+        PhysicsComponent::foldStateHash( inoutBuilder );
+        inoutBuilder.addFloat2( _lastLinearVelocity );
+        inoutBuilder.addFloat( _lastAngularVelocity );
     }
 
     void RigidBody2DComponent::createBody( ScenePhysics& physics, IPhysicsBodyScene2D& scene, const float2& position, float32 angle, const float3& scale )

@@ -1,9 +1,10 @@
 /**
  * @file Engine/Scene/SceneStateHash.h
  * @brief 활성 씬의 상태 해시와 틱별 해시 이력입니다 — 두 프로세스의 상태가 처음 어긋난 틱을 찾는 데 씁니다(서버 디버깅 S7).
- * @details 해시는 이름이 있는 오브젝트를 이름 순으로 돌며 (이름, 활성, 월드 위치 비트)를 접습니다. 같은 씬을 같은 입력으로 돌린 두 프로세스는 같은 틱에 같은 값을 냅니다.
- *          오브젝트 ID 는 넣지 않습니다(프로세스마다 다를 수 있다). 값의 범위는 씬 트랜스폼까지입니다 — 키트별 상태(파괴 해시 · 롤백 상태 바이트)는 같은 이력에
- *          다른 이름의 해시로 더하는 자리가 이 이력의 확장입니다.
+ * @details 해시는 이름이 있는 오브젝트마다 (이름, 활성, 컴포넌트마다 `Component::foldStateHash` 가 접은 상태)를 오브젝트 해시로 만들고 (이름, 해시) 정수 순으로 접습니다.
+ *          트랜스폼(`SceneComponent`) · 속도(강체 · 캐릭터 컨트롤러 · 내비 에이전트) · 난수 상태는 그 컴포넌트가 넣는다 — 새 시뮬레이션 상태는 컴포넌트가 재정의해 더한다.
+ *          실수는 `StateHashBuilder` 가 -0.0 · NaN 을 정규화해 접는다. 같은 씬을 같은 입력으로 돌린 두 프로세스는 같은 틱에 같은 값을 냅니다.
+ *          오브젝트 ID 는 넣지 않습니다(프로세스마다 다를 수 있다). 비용은 프로파일 구간 `GT.StateHash.collect` 와 카운터 `GT.StateHash.objects` 로 잰다.
  *          이력은 엔진 서비스(`StateHashHistory`) 하나이고 게임 스레드만 씁니다. 용량 0(기본)이면 꺼져 있어 해시를 계산하지 않습니다(`-gv_stateHashHistory=N`).
  *          전용 서버는 자기 틱 번호로, 클라이언트(App)는 서버가 알린 틱 번호(`GameNetSession::tryGetServerTick`)로 남겨 두 이력의 틱이 같은 뜻이다.
  *          개발 명령 `state.hash`(지금 값)와 `state.hashes <from> <count>`(이력)가 같은 줄 형식으로 답하고, `parseReport` 가 그 글을 되읽습니다.
@@ -29,7 +30,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 오브젝트 하나의 해시입니다(이름 + 활성 + 월드 위치 비트). 어긋난 틱에서 어느 오브젝트가 다른지 짚는 데 씁니다. */
+    /** @brief 오브젝트 하나의 해시입니다(이름 + 활성 + 컴포넌트 상태). 어긋난 틱에서 어느 오브젝트가 다른지 짚는 데 씁니다. */
     struct SceneObjectHash
     {
         string _name{};
@@ -42,9 +43,9 @@ namespace sw
     /** @struct SceneStateHash @brief 씬 상태 해시 계산입니다. */
     struct SW_API SceneStateHash
     {
-        /** @brief 매니저의 오브젝트(이름 있는 것만)를 이름 순으로 접은 해시입니다. 오브젝트가 없으면 빈 해시 값입니다. */
+        /** @brief `collectObjects` 의 (이름, 오브젝트 해시)를 그 순서로 접은 해시입니다. 오브젝트가 없으면 빈 해시 값입니다. */
         static uint64 compute( const GameObjectManager& manager );
-        /** @brief 이름 있는 오브젝트마다 해시 하나를 (이름, 해시) 순으로 채웁니다. `compute` 가 접는 값과 같은 칸을 오브젝트별로 접은 것입니다. */
+        /** @brief 이름 있는 오브젝트마다 해시 하나를 (이름, 해시) 순으로 채웁니다. `compute` 가 이 목록을 접습니다. */
         static void collectObjects( const GameObjectManager& manager, vector<SceneObjectHash>& outListObject );
         /** @brief 한 줄에 하나(`<16자리 16진 해시> <이름>`)로 씁니다. 이름은 줄 끝까지입니다. */
         static void writeObjectReport( const vector<SceneObjectHash>& listObject, string& outText );

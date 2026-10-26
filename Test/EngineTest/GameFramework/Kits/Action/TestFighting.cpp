@@ -2,6 +2,9 @@
 // 잡기 풀기 창, 횡이동 대 직선 · 추적, 라운드(시간 초과 · K.O. · 레이지 · 무승부), 롤백 저장 → 복원 → 재진행 결정성, 롤백(고정 배치형) 옮기기 · 거절, 세이브(자기 기술형) 왕복, 라운드 시간 · 대기 프레임 수.
 #include "pch.h"
 
+#include "Core/Common/HashUtil.h"
+#include "Core/Process/ProcessEnvironment.h"
+
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Serialization/Fixed/FixedLayout.h"
 #include "Engine/Serialization/Format/Archive.h"
@@ -13,6 +16,9 @@
 #include "GameFramework/Kits/Genre/Action/Fighting/FightingMatch.h"
 
 #include "TestFramework/TestFramework.h"
+
+#include <cinttypes>
+#include <cstdio>
 
 using namespace sw;
 
@@ -711,6 +717,50 @@ SW_TEST_CASE( FightingTest, RollbackSaveLoadResimulatesIdentically )
     vector<uint8> afterBroken;
     match.saveState( afterBroken );
     SW_EXPECT_TRUE( afterBroken == firstFinal );
+}
+
+/**
+ * @brief [FightingTest] 같은 입력열 600 프레임의 롤백 상태 해시는 기록해 둔 값이다 — Debug · Release · Shipping 이 모두 같은 수를 내야 한다
+ * @details 한 프로세스 안의 재시뮬레이션이 같은 것(앞 케이스)으로는 컴파일러 · 최적화(FMA 축약 · libm 판)가 계산을 바꾸는 것을 못 본다(`DestructionDamageTest` 와 같은 모양).
+ *          범위는 같은 플랫폼 안의 구성 간 결정성이다(결정 D7-8). 대전 계산을 일부러 바꾸면 새 값을 적고 커밋 메시지에 이유를 적는다.
+ *          새 값은 환경 변수 `SW_FIGHTING_PRINT_GOLDEN=1` 로 돌려 출력에서 읽는다.
+ */
+SW_TEST_CASE( FightingTest, RollbackHashMatchesTheRecordedValueOnEveryBuild )
+{
+    FightingFixture fixture;
+    SW_ASSERT_TRUE( fixture._bLoaded );
+    const FighterDef& tester = *fixture.findTester();
+
+    constexpr int32 kFrameCount = 600;
+    GameRandom      random( 9091u );
+    FightingMatch   match;
+    SW_ASSERT_TRUE( match.initialize( tester, tester ) );
+    vector<uint8>         listInput( 2 );
+    vector<uint8>         stateBytes;
+    vector<FightingEvent> listEvent;
+    uint64                hash = HashUtil::kFnvOffset64;
+    for ( int32 frame = 0; frame < kFrameCount; ++frame )
+    {
+        for ( uint8& input : listInput )
+        {
+            InputFrame frameInput;
+            frameInput._direction = static_cast<uint8>( random.nextInt( 1, 9 ) );
+            frameInput._buttons   = random.nextInt( 0, 9 ) < 3 ? static_cast<uint16>( 1u << random.nextInt( 0, 3 ) ) : 0;
+            input                 = FightingMatch::encodeInput( frameInput );
+        }
+        match.advanceFrame( listInput );
+        listEvent.clear();
+        match.drainEvents( listEvent );
+        match.saveState( stateBytes );
+        hash = HashUtil::appendBytes64( hash, stateBytes.data(), stateBytes.size() );
+    }
+    string     printText;
+    const bool bPrint = ProcessEnvironment::tryRead( "SW_FIGHTING_PRINT_GOLDEN", printText ) && printText == "1";
+    if ( bPrint )
+        std::fprintf( stdout, "golden = 0x%016" PRIX64 "ull\n", hash );
+    // 기록값 — 통합이 Windows Debug 에서 `SW_FIGHTING_PRINT_GOLDEN=1` 로 처음 떠서 적는다(작업자는 테스트를 돌리지 않는다). 0 이면 아직 적지 않은 것이다.
+    constexpr uint64 kRecordedHash = 0ull;
+    SW_EXPECT_TRUE_MSG( kRecordedHash == hash, "fighting rollback hash differs from the recorded value - a compiler or build setting changed the arithmetic" );
 }
 
 /**

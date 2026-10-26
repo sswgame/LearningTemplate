@@ -99,6 +99,8 @@ namespace sw
         float32 getBodyMass() const;
         /** @brief 바디가 잠들었는지입니다. */
         bool isSleeping() const;
+        /** @brief 상태 해시에 트랜스폼과 선속도 · 각속도를 접습니다. */
+        void foldStateHash( StateHashBuilder& inoutBuilder ) const override;
 
     protected:
         void beginPhysicsFrame( ScenePhysics& physics ) override;

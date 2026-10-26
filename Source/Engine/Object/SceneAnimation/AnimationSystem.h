@@ -499,10 +499,11 @@ namespace sw
         /** @brief LOD 테이블을 정합니다(테스트, 게임). 정하지 않으면 처음 판정할 때 `AnimationLODSettings::kResourcePath` 를 읽습니다. */
         void                        setLODSettings( const AnimationLODSettings& settings );
         const AnimationLODSettings& getLODSettings() const { return _lodSettings; }
-        /** @brief 지난 판정에서 포즈 하나를 만드는 데 든 평균 시간(마이크로초, 지수 이동 평균)입니다. 예산 배분이 씁니다. */
+        /**
+         * @brief 지난 판정에서 포즈 하나를 만드는 데 든 평균 시간(마이크로초, 지수 이동 평균)입니다.
+         * @details 측정 보기 전용이다 — 예산 배분은 표의 단가(`AnimationLODSettings::_unitCostMicroseconds`)를 쓴다. 단가를 고칠 때 이 값과 견준다.
+         */
         float32 getAverageEvaluationMicroseconds() const { return _averageEvaluationMicroseconds; }
-        /** @brief 평균 비용을 정합니다(테스트에서 측정 대신 정한 값으로 예산을 돌릴 때 씁니다). 0 이면 다시 측정합니다. */
-        void setAverageEvaluationMicroseconds( float32 microseconds ) { _averageEvaluationMicroseconds = microseconds; }
         /** @brief 지난 판정에서 예산 배분 뒤의 예상 비용(마이크로초)입니다. */
         float32 getExpectedEvaluationMicroseconds() const { return _expectedEvaluationMicroseconds; }
         /** @brief 지난 평가에서 실제로 포즈를 만든 유닛 수입니다. */

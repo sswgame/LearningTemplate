@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Action/Fighting/FightingMatch.h"
 
+#include "Core/Math/DeterministicMathUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Serialization/BitStream.h"
 
@@ -361,10 +362,11 @@ namespace sw
         const float32         angle   = step * static_cast<float32>( fighter._sidestepSign );
         const float32         relX    = fighter._x - other._x;
         const float32         relZ    = fighter._z - other._z;
-        const float32         cosA    = MathUtil::cos( angle );
-        const float32         sinA    = MathUtil::sin( angle );
-        fighter._x                    = other._x + relX * cosA - relZ * sinA;
-        fighter._z                    = other._z + relX * sinA + relZ * cosA;
+        // 롤백 TU 라 libm 대신 `DeterministicMathUtil` 이다 — 끝 비트가 구성마다 달라지면 재시뮬레이션이 어긋난다.
+        const float32 cosA = DeterministicMathUtil::cos( angle );
+        const float32 sinA = DeterministicMathUtil::sin( angle );
+        fighter._x         = other._x + relX * cosA - relZ * sinA;
+        fighter._z         = other._z + relX * sinA + relZ * cosA;
         --fighter._stateFrames;
         if ( fighter._stateFrames <= 0 )
             enterState( player, FighterState::Neutral, 0 );

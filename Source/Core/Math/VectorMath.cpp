@@ -2,6 +2,7 @@
 
 #include "Core/Math/VectorMath.h"
 
+#include "Core/Math/DeterministicMathUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 
@@ -400,12 +401,12 @@ namespace sw
         const float32 dotProduct   = dot( other );
         const bool    isUnitLength = MathUtil::nearEqual( lengthSquaredA, 1.f ) && MathUtil::nearEqual( lengthSquaredB, 1.f );
         if ( isUnitLength )
-            return MathUtil::acos( MathUtil::clamp( dotProduct, -1.0f, 1.0f ) );
+            return DeterministicMathUtil::acos( MathUtil::clamp( dotProduct, -1.0f, 1.0f ) );
 
         const float32 length = MathUtil::sqrt( lengthSquaredA ) * MathUtil::sqrt( lengthSquaredB );
         if ( length <= MathUtil::kEpsilon )
             return 0.0f;
-        return MathUtil::acos( MathUtil::clamp( dotProduct / length, -1.0f, 1.0f ) );
+        return DeterministicMathUtil::acos( MathUtil::clamp( dotProduct / length, -1.0f, 1.0f ) );
     }
 
     bool float3::operator==( const float3& other ) const noexcept

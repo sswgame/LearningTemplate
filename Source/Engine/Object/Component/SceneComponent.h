@@ -103,6 +103,9 @@ namespace sw
          */
         virtual void onTeleported() {}
 
+        /** @brief 상태 해시에 월드 위치 · 로컬 회전 · 로컬 스케일을 접습니다. */
+        void foldStateHash( StateHashBuilder& inoutBuilder ) const override;
+
         /** @brief 로컬 위치를 설정합니다. */
         void setLocalPosition( const float3& pos );
         /** @brief 로컬 위치를 반환합니다. */

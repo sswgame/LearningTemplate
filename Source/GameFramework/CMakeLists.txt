@@ -32,6 +32,16 @@ sw_addModuleLibrary(GameFramework
 	UNITY_BATCH 8
 	REFLECTION_HEADERS ${listGameFrameworkHeader}
 )
+# 결정적 시뮬레이션 키트(`GF_MechArena` 의 판 걸음)가 부르는 Base 의 줄 밖 실수 함수 — 부르는 TU 만 표시하면 여기 축약이 구성마다 비트를 바꾼다
+# (`sw_markDeterministicSources`). 격투(`GF_Fighting`)가 부르는 Base(FrameData · InputCommandBuffer · RoundSeries)는 실수 계산이 없어 넣지 않는다.
+sw_markDeterministicSources(GameFramework
+	Base/Actor/Combat/Health/ResourceGauge.cpp
+	Base/Actor/Combat/Health/Vitality.cpp
+	Base/Actor/Combat/LockOnSelector.cpp
+	Base/Actor/Combat/Weapon/Weapon.cpp
+	Base/Foundation/Utility/Math/RayMath.cpp
+	Base/Foundation/Utility/Random/GameRandom.cpp
+)
 # 로컬 저장의 장치 키(Base/Online/Local/LocalDeviceKeyProvider)는 Windows DPAPI 로 감싼다.
 if(WIN32)
 	target_link_libraries(GameFramework PRIVATE crypt32)

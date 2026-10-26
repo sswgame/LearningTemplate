@@ -86,6 +86,8 @@ namespace sw
      * @struct AnimationLODSettings
      * @brief LOD 표(데이터)입니다(`engine/animation/animationlod.xml`). 단계는 `_minScreenSize` 가 줄어드는 순이고 마지막 단계는 0 이어야 합니다(`validate`).
      * @details `_offscreenUpdateRateDivisor` 가 0 이면 화면 밖 유닛은 포즈를 만들지 않습니다(시간 · 알림은 흐릅니다). `_budgetMilliseconds` 가 0 이면 예산을 보지 않습니다.
+     *          예산 배분의 입력은 결정적 비용 모형(유닛 수 × `_unitCostMicroseconds`)이다 — 벽시계 측정값으로 배분하면 같은 입력이 기계 · 부하마다 다른 갱신 주기
+     *          (그래서 다른 포즈 프레임)가 된다. 예산을 켜면 단가가 필수다(`validate`).
      *          `_vertexAnimationScreenSize` 보다 작은 군중 유닛은 정점 애니메이션(VAT)으로 그립니다(0 이면 쓰지 않음).
      *          파일은 리플렉션 구조체로 읽는다(`ConfigManager::readConfigXMLElement` — 모르는 속성 · 자식 · 읽지 못한 값 · 범위 밖 숫자는 오류). 칸 표는 PROPERTY 가 기준이다.
      */
@@ -105,6 +107,8 @@ namespace sw
         uint32 _maxUpdateRateDivisor{ 16 };
         PROPERTY( Min = 0.0, Units = ms, Tooltip = "Animation budget per frame (0: unlimited)" )
         float32 _budgetMilliseconds{ 0.0f };
+        PROPERTY( Min = 0.0, Tooltip = "Modelled cost of one pose evaluation in microseconds - the budget divides by this, never by measured time (required when the budget is on)" )
+        float32 _unitCostMicroseconds{ 0.0f };
         PROPERTY( Min = 0.0, Tooltip = "Crowd units smaller than this on screen are drawn with vertex animation (0: never)" )
         float32 _vertexAnimationScreenSize{ 0.0f };
 

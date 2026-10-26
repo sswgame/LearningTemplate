@@ -97,6 +97,8 @@ namespace sw
         const float3& getDesiredVelocity() const { return _desiredVelocity; }
         /** @brief 군중 안의 자리(발)입니다. 등록 전이면 오브젝트 자리입니다. */
         const float3& getAgentPosition() const { return _agentPosition; }
+        /** @brief 상태 해시에 군중 자리 · 실제 속도 · 이동 상태를 접습니다. */
+        void foldStateHash( StateHashBuilder& inoutBuilder ) const override;
         /** @brief 다음 모퉁이입니다. */
         const float3& getNextCorner() const { return _nextCorner; }
         /** @brief 군중에 들어가 내비메시 위에 있으면 true 입니다. */

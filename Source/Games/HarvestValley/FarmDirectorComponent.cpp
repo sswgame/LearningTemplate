@@ -6,6 +6,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Common/StateHashBuilder.h"
 #include "Engine/Config/GameAutoplay.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
@@ -261,6 +262,12 @@ namespace sw
         }
         updateCameraFocus();
         logStatus( false );
+    }
+
+    void FarmDirectorComponent::foldStateHash( StateHashBuilder& inoutBuilder ) const
+    {
+        GameDirectorComponent::foldStateHash( inoutBuilder );
+        inoutBuilder.addUint32( _random.getState() );
     }
 
     void FarmDirectorComponent::writeState( Archive& outArchive ) const
