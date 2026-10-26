@@ -528,6 +528,7 @@ namespace sw
         pInfo->_pEnumTextParser              = type == GlobalVariableType::Enum ? &_enumTextParser : nullptr;
 
         const auto [iter, bInserted] = _mapVariable.emplace( strName, std::move( pInfo ) );
+        _registrationGeneration.fetch_add( 1, std::memory_order_release );
 
         // 모듈(EditorModule · SWGame)이 선언한 변수는 커맨드라인 파싱이 **이미 끝난 뒤** 여기로 온다. 그 값은
         // CommandLineManager 의 보류표에 남아 있으므로 등록 직후 꺼내 적용한다. 이것이 없으면 `-gv_editorPanelDump=25` 같은
@@ -591,6 +592,8 @@ namespace sw
             else
                 ++it;
         }
+        // 지운 것이 없어도 올린다 — 언로드는 드물고, 캐시한 포인터를 버리게 하는 쪽이 안전하다.
+        _registrationGeneration.fetch_add( 1, std::memory_order_release );
     }
 
     /**
@@ -696,6 +699,17 @@ namespace sw
             listName.push_back( name );
         }
         return listName;
+    }
+
+    void GlobalVariableManager::collectVariables( vector<GlobalVariableInfo*>& outListVariable ) const
+    {
+        std::shared_lock<std::shared_mutex> lock{ _mutex };
+        outListVariable.clear();
+        outListVariable.reserve( _mapVariable.size() );
+        for ( const auto& [name, pInfo] : _mapVariable )
+        {
+            outListVariable.push_back( pInfo.get() );
+        }
     }
 
     /**
