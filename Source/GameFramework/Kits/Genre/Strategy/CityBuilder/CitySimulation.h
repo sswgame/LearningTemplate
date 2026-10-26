@@ -28,17 +28,31 @@ namespace sw
     class Archive;
     class Wallet;
 
-    /** @brief 도시 규칙의 수치입니다. 시간 단위는 게임 초입니다. */
-    struct CitySettings
+    /**
+     * @brief 도시 규칙의 수치입니다. 시간 단위는 게임 초입니다.
+     * @details 범위는 필드의 `PROPERTY( Min · Max )` 이고, 벗어난 값은 `CitySimulation::initialize` 가 오류로 거절한다(`ConfigRangeUtil`). 값을 조용히 맞추지 않는다(폴백 금지 원칙).
+     */
+    REFLECT()
+    struct SW_KIT_API CitySettings
     {
-        float32       _walkerSpeed{ 2.5f };         ///< 셀 / 초
-        float32       _workerRatio{ 0.4f };         ///< 인구 중 일하는 사람의 비율
-        float32       _serviceDuration{ 30.0f };    ///< 서비스를 받은 뒤 그 효과가 남아 있는 시간(초)
-        float32       _immigrationInterval{ 1.5f }; ///< 빈 집 하나에 한 사람이 들어오는 간격
-        float32       _evolveDelay{ 3.0f };         ///< 조건이 이만큼 이어져야 집 단계가 오르내린다
-        float32       _wagePerWorkerPerMonth{ 0.5f };
-        float32       _fixedStep{ 0.25f };
-        int32         _serviceReach{ 2 };       ///< 일꾼이 지나는 셀에서 이 거리 안의 집에 서비스를 준다
+        REFLECT_BODY();
+        PROPERTY( Min = 0.0 )
+        float32 _walkerSpeed{ 2.5f }; ///< 셀 / 초
+        PROPERTY( Min = 0.0, Max = 1.0 )
+        float32 _workerRatio{ 0.4f }; ///< 인구 중 일하는 사람의 비율
+        PROPERTY( Min = 0.0 )
+        float32 _serviceDuration{ 30.0f }; ///< 서비스를 받은 뒤 그 효과가 남아 있는 시간(초)
+        PROPERTY( Min = 0.0 )
+        float32 _immigrationInterval{ 1.5f }; ///< 빈 집 하나에 한 사람이 들어오는 간격
+        PROPERTY( Min = 0.0 )
+        float32 _evolveDelay{ 3.0f }; ///< 조건이 이만큼 이어져야 집 단계가 오르내린다
+        PROPERTY( Min = 0.0 )
+        float32 _wagePerWorkerPerMonth{ 0.5f };
+        PROPERTY( Min = 0.001 )
+        float32 _fixedStep{ 0.25f };
+        PROPERTY( Min = 0 )
+        int32 _serviceReach{ 2 }; ///< 일꾼이 지나는 셀에서 이 거리 안의 집에 서비스를 준다
+        PROPERTY( Min = 0 )
         int32         _goodsPerFourPeople{ 1 }; ///< 한 달에 네 사람이 먹는 물자 수
         uint32        _randomSeed{ 3100u };     ///< 범람과 일꾼의 갈림길 선택에 쓰는 난수 시드
         hashed_string _currency{ "Deben" };     ///< 빌린 지갑에서 쓰는 통화
@@ -174,10 +188,11 @@ namespace sw
         /**
          * @brief 빈 도시를 엽니다. 돈은 빌린 지갑(@p refs 의 지갑, 통화는 `CitySettings::_currency`)에서 나가고 들어옵니다.
          * @details 지갑이 없으면 알리고, 건설과 도로 놓기는 모두 돈 부족으로 거절된다. 달 결산에서 돈이 모자라면 지갑이 빚(`Wallet::charge`)을 진다.
+         * @return 크기가 1 이상이고 설정이 `PROPERTY( Min · Max )` 범위 안이면 true 입니다. 밖이면 오류를 남기고 false 이며 상태를 바꾸지 않습니다(값을 조용히 맞추지 않는다).
          */
-        void initialize( const CityCatalog* pCatalog, int32 width, int32 height, const CitySettings& settings, const SessionStateRefs& refs );
-        void setTerrain( int32 x, int32 y, CityTerrain terrain );
-        void fillTerrain( int32 minX, int32 minY, int32 maxX, int32 maxY, CityTerrain terrain );
+        [[nodiscard]] bool initialize( const CityCatalog* pCatalog, int32 width, int32 height, const CitySettings& settings, const SessionStateRefs& refs );
+        void               setTerrain( int32 x, int32 y, CityTerrain terrain );
+        void               fillTerrain( int32 minX, int32 minY, int32 maxX, int32 maxY, CityTerrain terrain );
         /**
          * @brief 공유 땅을 빌립니다. 도시 셀 (0, 0) 이 땅 셀 @p origin 에 해당합니다. 이후 도로와 건물은 놓기 전에 땅을 얻고(건물은 막힘, 도로는 막히지 않음) 허물면 반납합니다.
          * @details 지형(`setTerrain`)은 땅 테이블과 무관하다. 이미 놓인 도로와 건물은 땅을 얻지 않으므로 건설하기 전에 호출해야 한다. @p pLand 가 nullptr 이면 빌린 땅을 반납한다.

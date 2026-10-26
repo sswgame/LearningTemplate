@@ -451,8 +451,7 @@ namespace sw
                 pState->getWallet().add( "Deben", LandCompositionCatalogs::kStartingDeben );
                 pState->getWallet().add( "Minerals", LandCompositionCatalogs::kStartingMinerals );
             }
-            initializeCity( _city, *pState );
-            return true;
+            return initializeCity( _city, *pState );
         }
 
         bool readState( Archive& archive ) override
@@ -470,7 +469,8 @@ namespace sw
             if ( bInvalidCityHeader )
                 return false;
             CitySimulation city;
-            initializeCity( city, *pState );
+            if ( initializeCity( city, *pState ) == false )
+                return false;
             const bool bInvalidCityBody = city.readState( body ) == false || body.getRemainingBytes() != 0 || archive.getRemainingBytes() != 0;
             if ( bInvalidCityBody )
                 return false;
@@ -506,10 +506,12 @@ namespace sw
         }
 
     private:
-        static void initializeCity( CitySimulation& outCity, SessionStateComponent& state )
+        [[nodiscard]] static bool initializeCity( CitySimulation& outCity, SessionStateComponent& state )
         {
-            outCity.initialize( &LandCompositionCatalogs::get()._city, LandCompositionCatalogs::kLandSize, LandCompositionCatalogs::kLandSize, CitySettings{}, state.makeRefs() );
+            if ( outCity.initialize( &LandCompositionCatalogs::get()._city, LandCompositionCatalogs::kLandSize, LandCompositionCatalogs::kLandSize, CitySettings{}, state.makeRefs() ) == false )
+                return false;
             outCity.bindLand( &state.getLand(), int2{ 0, 0 } );
+            return true;
         }
 
         CitySimulation _city;
