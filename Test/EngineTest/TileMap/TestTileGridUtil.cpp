@@ -113,7 +113,7 @@ SW_TEST_CASE( TileGridUtilTest, NavCostsDriveTheGridPathfinder )
     SW_EXPECT_EQUAL( 5, static_cast<int32>( listCost[10] ) );
 
     sw::NavGrid grid;
-    grid.initialize( 5, 3, 1.0f, sw::float3{ 0.0f, 0.0f, 0.0f } );
+    SW_ASSERT_TRUE( grid.initialize( 5, 3, 1.0f, sw::float3{ 0.0f, 0.0f, 0.0f } ) );
     for ( int32 y = 0; y < 3; ++y )
     {
         for ( int32 x = 0; x < 5; ++x )

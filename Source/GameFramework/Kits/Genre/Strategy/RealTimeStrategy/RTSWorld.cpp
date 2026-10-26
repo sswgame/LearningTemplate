@@ -68,8 +68,8 @@ namespace sw
         }
         _pCatalog = pCatalog;
         _settings = settings;
-        _grid.initialize( width, height, 1.0f, float3{ 0.0f, 0.0f, 0.0f } );
-        _airGrid.initialize( _grid.getWidth(), _grid.getHeight(), 1.0f, float3{ 0.0f, 0.0f, 0.0f } );
+        if ( _grid.initialize( width, height, 1.0f, float3{ 0.0f, 0.0f, 0.0f } ) == false || _airGrid.initialize( width, height, 1.0f, float3{ 0.0f, 0.0f, 0.0f } ) == false )
+            return false;
         _listUnit.clear();
         _listGeneration.clear();
         _listFreeSlot.clear();

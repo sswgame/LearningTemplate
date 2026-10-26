@@ -112,7 +112,8 @@ namespace
                                             _areaGraph.loadFromXMLText( kGhostAreaXML, "GhostHuntTest" ) == false;
             if ( bCatalogLoadFailed )
                 return false;
-            _bag.initialize( nullptr, 8 );
+            if ( _bag.initialize( nullptr, 8 ) == false )
+                return false;
             SessionStateRefs refs;
             refs._pFlags     = &_flags;
             refs._pInventory = &_bag;

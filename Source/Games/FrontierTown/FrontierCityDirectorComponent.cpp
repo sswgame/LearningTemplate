@@ -162,7 +162,8 @@ namespace sw
         const InputManager* pInput       = game::findSubsystem<InputManager>();
         const bool          bFastForward = isAutoPlayOn() || ( pInput != nullptr && UIInputMapView( pInput->getInputMap(), game::findSubsystem<UISystem>() )
                                                                                .isActionDown( hashed_string( FrontierTownData::kFastForwardAction ) ) );
-        pState->getClock().setTimeScale( bFastForward ? _fastTimeScale : 1.0f );
+        if ( pState->getClock().setTimeScale( bFastForward ? _fastTimeScale : 1.0f ) == false )
+            return;
         _city.update( deltaTime );
         for ( const WorldClockEvent& clockEvent : pState->getClockEvents() )
         {

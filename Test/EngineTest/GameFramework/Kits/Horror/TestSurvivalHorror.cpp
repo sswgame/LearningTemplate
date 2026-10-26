@@ -26,7 +26,7 @@ namespace
         Inventory     _box;
         GameFlags     _flags; ///< 빌려 주는 플래그
 
-        HorrorTestContainers() { _box.initialize( nullptr, 32 ); }
+        HorrorTestContainers() { SW_EXPECT_TRUE( _box.initialize( nullptr, 32 ) ); }
 
         SessionStateRefs makeRefs()
         {
@@ -139,7 +139,7 @@ SW_TEST_CASE( SurvivalHorrorTest, GridPlacesRotatesFindsFreeSpotsAndStacks )
     HorrorCatalog catalog;
     SW_ASSERT_TRUE( catalog.loadFromXMLText( kHorrorTestXML, "SurvivalHorrorTest" ) );
     GridInventory grid;
-    grid.initialize( catalog.makeShapeLookup(), 3, 3 );
+    SW_ASSERT_TRUE( grid.initialize( catalog.makeShapeLookup(), 3, 3 ) );
 
     const int32 rifle = grid.placeItem( "rifle", 1, 0, 0, false );
     SW_EXPECT_TRUE( rifle > 0 );

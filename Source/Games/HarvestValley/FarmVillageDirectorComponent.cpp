@@ -97,7 +97,8 @@ namespace sw
             SW_LOG_WARNING( "[Village] the village nav grid needs _navWidth, _navHeight and _navCellSize - the villagers stay home" );
             return false;
         }
-        _navGrid.initialize( _navWidth, _navHeight, _navCellSize, _navOrigin );
+        if ( _navGrid.initialize( _navWidth, _navHeight, _navCellSize, _navOrigin ) == false )
+            return false;
         vector<string_view> listObstacleName;
         StringUtil::forEachToken( string_view{ _navObstacleNames }, ", ", [&listObstacleName]( string_view token )
         { listObstacleName.push_back( token ); } );

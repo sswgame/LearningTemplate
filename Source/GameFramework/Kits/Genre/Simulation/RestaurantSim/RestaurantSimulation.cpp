@@ -984,7 +984,8 @@ namespace sw
         {
             const float32 unit     = GameHash::toUnitFloat( GameHash::hashCoord( day, shopIndex, _settings._randomSeed ) );
             const float32 modifier = MathUtil::max( 0.1f, 1.0f + _settings._marketVolatility * ( unit * 2.0f - 1.0f ) );
-            _market.setPriceModifier( listShop[static_cast<size_t>( shopIndex )]._id, modifier, 1.0f );
+            if ( _market.setPriceModifier( listShop[static_cast<size_t>( shopIndex )]._id, modifier, 1.0f ) == false )
+                SW_LOG_ERROR( "RestaurantSimulation: the market could not price shop %#", static_cast<int32>( shopIndex ) );
         }
     }
 

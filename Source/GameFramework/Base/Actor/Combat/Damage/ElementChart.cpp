@@ -40,9 +40,15 @@ namespace sw
         return VectorUtil::contains( _listElement, element );
     }
 
-    void ElementChart::setMultiplier( const hashed_string& attack, const hashed_string& defend, float32 multiplier )
+    bool ElementChart::setMultiplier( const hashed_string& attack, const hashed_string& defend, float32 multiplier )
     {
-        _mapRule[attack][defend] = MathUtil::max( 0.0f, multiplier );
+        if ( multiplier < 0.0f )
+        {
+            SW_LOG_ERROR( "ElementChart: refused multiplier %# for %# -> %# - it must not be negative", multiplier, attack.c_str(), defend.c_str() );
+            return false;
+        }
+        _mapRule[attack][defend] = multiplier;
+        return true;
     }
 
     void ElementChart::addStatusChance( const ElementStatusChance& statusChance )
@@ -113,7 +119,8 @@ namespace sw
             // 규칙 줄은 배율을 적으려고 있는 것이다 — 빠진 배율을 1 로 두지 않는다.
             const std::optional<float32> multiplier = node.readRequiredAttribute<float32>( "multiplier" );
             if ( multiplier.has_value() )
-                setMultiplier( attack, defend, *multiplier );
+                if ( setMultiplier( attack, defend, *multiplier ) == false )
+                    SW_LOG_WARNING( "%#: rule '%#' -> '%#' has a negative multiplier - skipped", sourceName, attack.c_str(), defend.c_str() );
         }
 
         for ( XMLNode node = root.findChild( "Status" ); node; node = node.findNextSibling( "Status" ) )

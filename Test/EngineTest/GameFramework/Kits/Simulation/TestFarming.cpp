@@ -161,7 +161,7 @@ SW_TEST_CASE( FarmingTest, ShippingBinSellsFromTheBorrowedBagAtTheEndOfTheDay )
     catalog.fillItemCatalog( items, 99 );
     SW_ASSERT_NOT_NULL( items.find( "turnip_seed" ) );
     Inventory bag;
-    bag.initialize( &items, 8 );
+    SW_ASSERT_TRUE( bag.initialize( &items, 8 ) );
     Wallet          wallet;
     FarmShippingBin bin;
     SW_EXPECT_EQUAL( 5, bag.addItem( "turnip", 5 ) );
@@ -188,7 +188,7 @@ SW_TEST_CASE( FarmingTest, StateRoundTripContinuesTheSameFarm )
     ItemCatalog items;
     catalog.fillItemCatalog( items, 99 );
     Inventory bag;
-    bag.initialize( &items, 8 );
+    SW_ASSERT_TRUE( bag.initialize( &items, 8 ) );
 
     FarmField field;
     field.initialize( 4, 3, &catalog );
@@ -257,7 +257,7 @@ SW_TEST_CASE( FarmingTest, TwoFarmsShareOneBorrowedWallet )
     CropCatalog catalog;
     SW_ASSERT_TRUE( catalog.loadFromXMLText( kFarmingTestCropXML, "FarmingTest" ) );
     Inventory bag;
-    bag.initialize( nullptr, 8 );
+    SW_ASSERT_TRUE( bag.initialize( nullptr, 8 ) );
     Wallet          shared;
     FarmShippingBin north;
     FarmShippingBin south;

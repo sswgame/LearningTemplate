@@ -96,7 +96,7 @@ namespace
         /** @brief 원정이 빌릴 우주선 창고를 새로 엽니다. */
         Inventory& openShipStorage()
         {
-            _shipStorage.initialize( &_itemCatalog, 64 );
+            SW_EXPECT_TRUE( _shipStorage.initialize( &_itemCatalog, 64 ) );
             return _shipStorage;
         }
 

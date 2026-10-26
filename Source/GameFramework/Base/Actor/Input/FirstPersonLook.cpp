@@ -44,10 +44,16 @@ namespace sw
         _pitch = MathUtil::clamp( pitch, -_maxPitch, _maxPitch );
     }
 
-    void FirstPersonLook::setMaxPitch( float32 maxPitch )
+    bool FirstPersonLook::setMaxPitch( float32 maxPitch )
     {
-        _maxPitch = MathUtil::clamp( maxPitch, 0.0f, MathUtil::kPi * 0.5f );
+        if ( maxPitch < 0.0f || maxPitch > MathUtil::kPi * 0.5f )
+        {
+            SW_LOG_ERROR( "FirstPersonLook: refused max pitch %# - it must be within [0, pi/2]", maxPitch );
+            return false;
+        }
+        _maxPitch = maxPitch;
         _pitch    = MathUtil::clamp( _pitch, -_maxPitch, _maxPitch );
+        return true;
     }
 
     float3 FirstPersonLook::getFlatRight() const

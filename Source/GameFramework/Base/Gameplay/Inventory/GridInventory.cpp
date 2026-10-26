@@ -20,13 +20,19 @@ namespace sw
     {
     }
 
-    void GridInventory::initialize( const ShapeDelegate& shapeLookup, int32 width, int32 height )
+    bool GridInventory::initialize( const ShapeDelegate& shapeLookup, int32 width, int32 height )
     {
+        if ( width < 1 || height < 1 )
+        {
+            SW_LOG_ERROR( "GridInventory: refused %# x %# cells - both must be at least 1", width, height );
+            return false;
+        }
         _shapeLookup = shapeLookup;
-        _topology    = GridTopology( MathUtil::max( 1, width ), MathUtil::max( 1, height ) );
+        _topology    = GridTopology( width, height );
         _listItem.clear();
         _listCell.assign( static_cast<size_t>( _topology.getCellCount() ), -1 );
         ++_revision;
+        return true;
     }
 
     bool GridInventory::growGrid( int32 width, int32 height )

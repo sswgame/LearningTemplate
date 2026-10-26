@@ -233,7 +233,8 @@ namespace sw
         /** @brief 잠금 조건을 평가할 쪽입니다. 없으면 조건이 있는 항목은 항상 잠겨 있습니다. */
         void setConditionEvaluator( const IShopConditionEvaluator* pEvaluator ) { _pConditionEvaluator = pEvaluator; }
         /** @brief 가격 배율입니다. 평판, 할인, 그날의 매입률(리썰 컴퍼니)에 씁니다. 사기와 팔기를 따로 정합니다. */
-        void setPriceModifier( const hashed_string& shopID, float32 buyModifier, float32 sellModifier );
+        /** @details 음수이거나 없는 가게이면 false 입니다(음수는 오류를 남기고 0 으로 자르지 않습니다). */
+        [[nodiscard]] bool setPriceModifier( const hashed_string& shopID, float32 buyModifier, float32 sellModifier );
         /** @brief 이 가게가 @p category 를 더 이상 사들이지 않게 합니다. */
         void refuseCategory( const hashed_string& shopID, const hashed_string& category );
 

@@ -22,12 +22,18 @@ namespace sw
     {
     }
 
-    void Inventory::initialize( const ItemCatalog* pCatalog, int32 slotCount, float32 maxWeight )
+    bool Inventory::initialize( const ItemCatalog* pCatalog, int32 slotCount, float32 maxWeight )
     {
+        if ( slotCount < 0 || maxWeight < 0.0f )
+        {
+            SW_LOG_ERROR( "Inventory: refused %# slots and max weight %# - neither may be negative", slotCount, maxWeight );
+            return false;
+        }
         _pCatalog = pCatalog;
-        _listSlot.assign( static_cast<size_t>( MathUtil::max( 0, slotCount ) ), InventorySlot{} );
-        _maxWeight = MathUtil::max( 0.0f, maxWeight );
+        _listSlot.assign( static_cast<size_t>( slotCount ), InventorySlot{} );
+        _maxWeight = maxWeight;
         ++_revision;
+        return true;
     }
 
     void Inventory::resize( int32 slotCount, vector<InventorySlot>& outListOverflow )
@@ -58,10 +64,16 @@ namespace sw
         ++_revision;
     }
 
-    void Inventory::setMaxWeight( float32 maxWeight )
+    bool Inventory::setMaxWeight( float32 maxWeight )
     {
-        _maxWeight = MathUtil::max( 0.0f, maxWeight );
+        if ( maxWeight < 0.0f )
+        {
+            SW_LOG_ERROR( "Inventory: refused max weight %# - it must not be negative", maxWeight );
+            return false;
+        }
+        _maxWeight = maxWeight;
         ++_revision;
+        return true;
     }
 
     float32 Inventory::getItemWeight( const hashed_string& itemID ) const

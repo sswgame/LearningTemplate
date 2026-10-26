@@ -99,8 +99,7 @@ namespace sw
             return false;
 
         player._loadout.initialize( _pCatalog );
-        player._inventory.initialize( _pItemCatalog, playerSettings._slotCount, player._loadout.computeCarryLimit() );
-        return true;
+        return player._inventory.initialize( _pItemCatalog, playerSettings._slotCount, player._loadout.computeCarryLimit() );
     }
 
     void BrMatch::start()

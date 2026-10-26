@@ -50,7 +50,7 @@ SW_TEST_CASE( EconomyMirrorTest, InventoryCountsFollowLedgerAndReportOverflow )
     ItemCatalog items;
     SW_ASSERT_TRUE( items.loadFromXMLText( R"(<ItemCatalog><Item id="potion" maxStack="10"/><Item id="sword"/></ItemCatalog>)", "items" ) );
     Inventory inventory;
-    inventory.initialize( &items, 2 );
+    SW_ASSERT_TRUE( inventory.initialize( &items, 2 ) );
     SW_ASSERT_EQUAL( inventory.addItem( "sword", 1 ), 1 );
     const int32 overflow = EconomyMirror::applyToInventory( {
                                                                 LedgerBalance{ "item.potion", 15, 0 }

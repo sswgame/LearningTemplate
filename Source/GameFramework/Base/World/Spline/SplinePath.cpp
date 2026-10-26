@@ -84,12 +84,12 @@ namespace sw
                 break;
             }
         }
-        if ( segmentCount <= 0 )
+        if ( segmentCount <= 0 || samplesPerSegment < 1 ) // 표본 수 1 미만은 맞추지 않고 거절한다
             return false;
 
         _listControlPoint       = listControlPoint;
         _segmentCount           = segmentCount;
-        const int32 sampleCount = MathUtil::max( 1, samplesPerSegment );
+        const int32 sampleCount = samplesPerSegment;
         const int32 tableCount  = segmentCount * sampleCount + ( bClosed ? 0 : 1 );
         _listTablePoint.reserve( static_cast<size_t>( tableCount ) );
         for ( int32 tableIndex = 0; tableIndex < tableCount; ++tableIndex )

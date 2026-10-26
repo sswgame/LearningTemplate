@@ -47,8 +47,8 @@ namespace sw
 
         void addElement( const hashed_string& element );
         bool hasElement( const hashed_string& element ) const;
-        /** @brief 쌍의 배율을 둡니다(같은 쌍이면 바꾼다). 음수는 0 으로 자릅니다. */
-        void setMultiplier( const hashed_string& attack, const hashed_string& defend, float32 multiplier );
+        /** @brief 쌍의 배율을 둡니다(같은 쌍이면 바꾼다). 음수이면 오류를 남기고 false 입니다(0 으로 자르지 않습니다). */
+        [[nodiscard]] bool setMultiplier( const hashed_string& attack, const hashed_string& defend, float32 multiplier );
         /** @brief 상태이상 확률을 더합니다. 한 속성에 여럿을 둘 수 있고, 적은 순서대로 굴립니다. */
         void addStatusChance( const ElementStatusChance& statusChance );
 

@@ -59,7 +59,7 @@ namespace
         {
             _bLoaded = _itemCatalog.loadFromXMLText( kShopItemXML, "ShopTest" ) && _shopCatalog.loadFromXMLText( kShopXML, "ShopTest" );
             _shop.initialize( &_shopCatalog, &_itemCatalog );
-            _inventory.initialize( &_itemCatalog, 4 );
+            _bLoaded = _bLoaded && _inventory.initialize( &_itemCatalog, 4 );
         }
     };
 
@@ -239,7 +239,7 @@ SW_TEST_CASE( ShopTest, SellingFloodsThePriceAndItRecoversDaily )
 {
     ShopScene scene;
     SW_ASSERT_TRUE( scene._bLoaded );
-    scene._inventory.initialize( &scene._itemCatalog, 4 );
+    SW_ASSERT_TRUE( scene._inventory.initialize( &scene._itemCatalog, 4 ) );
     SW_EXPECT_EQUAL( 20, scene._inventory.addItem( idScrap(), 20 ) );
 
     // 고철 20 Credits, 한 개마다 시세 −0.1: 20 + 18 + 16 = 54.
@@ -267,9 +267,10 @@ SW_TEST_CASE( ShopTest, SellingFloodsThePriceAndItRecoversDaily )
     SW_EXPECT_EQUAL( 20, scene._shop.computeSellTotal( idCompany(), idScrap(), 1 ) );
 
     // 가격 배율 — 그날의 매입률 0.3 (리썰 컴퍼니), 평판 할인 0.8.
-    scene._shop.setPriceModifier( idCompany(), 1.0f, 0.3f );
+    SW_ASSERT_TRUE( scene._shop.setPriceModifier( idCompany(), 1.0f, 0.3f ) );
     SW_EXPECT_EQUAL( 6, scene._shop.computeSellTotal( idCompany(), idScrap(), 1 ) );
-    scene._shop.setPriceModifier( idGeneral(), 0.8f, 1.0f );
+    SW_ASSERT_TRUE( scene._shop.setPriceModifier( idGeneral(), 0.8f, 1.0f ) );
+    SW_EXPECT_FALSE( scene._shop.setPriceModifier( idGeneral(), -1.0f, 1.0f ) ); // 음수 배율은 맞추지 않고 거절한다
     SW_EXPECT_EQUAL( 16, scene._shop.computeBuyPrice( idGeneral(), idPotion() ) );
 }
 

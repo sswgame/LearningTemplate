@@ -110,7 +110,7 @@ namespace
         /** @brief 파티가 빌릴 공유 상태 — 부를 때마다 가방 · 지갑을 새로 엽니다. */
         SessionStateRefs makeRefs()
         {
-            _inventory.initialize( &_itemCatalog, 20 );
+            SW_EXPECT_TRUE( _inventory.initialize( &_itemCatalog, 20 ) );
             _wallet.clear();
             SessionStateRefs refs;
             refs._pInventory = &_inventory;

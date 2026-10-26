@@ -389,7 +389,7 @@ SW_TEST_CASE( GameFrameworkUtilTest, RayPlaneAndFirstPersonMoveDirection )
     SW_EXPECT_NEAR_EQUAL( 1.0f, diagonal.getLength(), 1.0e-4f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, diagonal._y, 1.0e-6f );
     SW_EXPECT_NEAR_EQUAL( -0.3f, look.computeCameraEuler()._x, 1.0e-6f );
-    look.setMaxPitch( 0.2f );
+    SW_ASSERT_TRUE( look.setMaxPitch( 0.2f ) );
     SW_EXPECT_NEAR_EQUAL( 0.2f, look.getPitch(), 1.0e-6f );
 }
 

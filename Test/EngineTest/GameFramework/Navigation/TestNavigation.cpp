@@ -20,7 +20,7 @@ namespace
     /** @brief 20 × 20, 칸 1 m. x = 10 에 벽(y 0..15), 위쪽 y 16..19 가 틈이다. */
     void makeWallGrid( NavGrid& grid )
     {
-        grid.initialize( 20, 20, 1.0f, float3{ 0.0f, 0.0f, 0.0f } );
+        SW_ASSERT_TRUE( grid.initialize( 20, 20, 1.0f, float3{ 0.0f, 0.0f, 0.0f } ) );
         grid.setAreaCost( 10, 0, 10, 15, kNavBlockedCost );
     }
 
@@ -63,7 +63,7 @@ namespace
 SW_TEST_CASE( NavigationTest, GridConvertsCellsAndChecksLineOfSight )
 {
     NavGrid grid;
-    grid.initialize( 10, 8, 2.0f, float3{ -10.0f, 1.0f, 4.0f } );
+    SW_ASSERT_TRUE( grid.initialize( 10, 8, 2.0f, float3{ -10.0f, 1.0f, 4.0f } ) );
     SW_EXPECT_TRUE( grid.computeCell( float3{ -9.5f, 0.0f, 4.1f } ) == ( int2{ 0, 0 } ) );
     SW_EXPECT_TRUE( grid.computeCell( float3{ -11.0f, 0.0f, 4.0f } ) == ( int2{ -1, 0 } ) );
     const float3 center = grid.computeCellCenter( int2{ 3, 2 } );
@@ -83,7 +83,7 @@ SW_TEST_CASE( NavigationTest, GridConvertsCellsAndChecksLineOfSight )
 
     // 대각선으로 붙은 두 막힌 칸 사이는 지나지 못한다.
     NavGrid diagonal;
-    diagonal.initialize( 4, 4, 1.0f, float3{} );
+    SW_ASSERT_TRUE( diagonal.initialize( 4, 4, 1.0f, float3{} ) );
     diagonal.setBlocked( 1, 2, true );
     diagonal.setBlocked( 2, 1, true );
     SW_EXPECT_FALSE( diagonal.hasLineOfSight( int2{ 1, 1 }, int2{ 2, 2 } ) );
@@ -136,7 +136,7 @@ SW_TEST_CASE( NavigationTest, PathfinderFindsCheapestPathAroundWalls )
 
     // 도로 — 값 2 인 띠(y = 0)를 깔면 곧은 길(값 10)보다 그쪽으로 간다.
     NavGrid road;
-    road.initialize( 20, 6, 1.0f, float3{} );
+    SW_ASSERT_TRUE( road.initialize( 20, 6, 1.0f, float3{} ) );
     road.setAreaCost( 0, 0, 19, 0, 2 );
     query._start   = int2{ 0, 3 };
     query._goal    = int2{ 19, 3 };
@@ -156,7 +156,7 @@ SW_TEST_CASE( NavigationTest, PathfinderFindsCheapestPathAroundWalls )
 SW_TEST_CASE( NavigationTest, PathfinderReturnsPartialPathsWithinBudget )
 {
     NavGrid grid;
-    grid.initialize( 16, 16, 1.0f, float3{} );
+    SW_ASSERT_TRUE( grid.initialize( 16, 16, 1.0f, float3{} ) );
     // (10..14, 10..14) 를 둘러싼 고리 — 안쪽 (12,12) 는 닿을 수 없다.
     grid.setAreaCost( 10, 10, 14, 10, kNavBlockedCost );
     grid.setAreaCost( 10, 14, 14, 14, kNavBlockedCost );
@@ -190,7 +190,7 @@ SW_TEST_CASE( NavigationTest, PathfinderReturnsPartialPathsWithinBudget )
     SW_EXPECT_TRUE( listCell.back()._x > 0 ); // 그래도 목적지 쪽으로 몇 칸은 간다
 
     NavGrid smallGrid;
-    smallGrid.initialize( 5, 5, 1.0f, float3{} );
+    SW_ASSERT_TRUE( smallGrid.initialize( 5, 5, 1.0f, float3{} ) );
     query._goal          = int2{ 4, 4 };
     query._maxExpansions = 0;
     SW_EXPECT_TRUE( pathfinder.findPath( smallGrid, query, listCell ) == GridPathResult::Found );
@@ -246,7 +246,7 @@ SW_TEST_CASE( NavigationTest, FlowFieldMatchesPathCostAndLeadsToGoal )
 
     // 갇힌 칸.
     NavGrid boxed;
-    boxed.initialize( 6, 6, 1.0f, float3{} );
+    SW_ASSERT_TRUE( boxed.initialize( 6, 6, 1.0f, float3{} ) );
     boxed.setAreaCost( 3, 0, 3, 5, kNavBlockedCost );
     FlowField boxedField;
     (void)boxedField.computeToCell( boxed, int2{ 0, 0 } );

@@ -25,12 +25,20 @@ namespace sw
     // ------------------------------------------------------------------------------
     // PlatformTileMap
     // ------------------------------------------------------------------------------
-    void PlatformTileMap::initialize( int32 width, int32 height, float32 tileSize, const float2& origin )
+    bool PlatformTileMap::initialize( int32 width, int32 height, float32 tileSize, const float2& origin )
     {
+        // 타일 크기가 0 이하이거나 크기가 음수이면 맞추지 않고 거절한다(예전에는 `max( 1.0e-3f, tileSize )` 로 조용히 맞췄다).
+        const bool bInvalid = tileSize <= 0.0f || width < 0 || height < 0;
+        if ( bInvalid )
+        {
+            SW_LOG_ERROR( "PlatformTileMap: refused %# x %# tiles of size %# - the size must be positive and the counts must not be negative", width, height, tileSize );
+            return false;
+        }
         _topology = GridTopology( width, height );
-        _tileSize = MathUtil::max( 1.0e-3f, tileSize );
+        _tileSize = tileSize;
         _origin   = origin;
         _listTile.assign( static_cast<size_t>( _topology.getCellCount() ), PlatformTile::Empty );
+        return true;
     }
 
     void PlatformTileMap::setTile( int32 x, int32 y, PlatformTile tile )
@@ -50,7 +58,7 @@ namespace sw
         }
     }
 
-    void PlatformTileMap::loadFromText( string_view text, float32 tileSize, const float2& origin )
+    bool PlatformTileMap::loadFromText( string_view text, float32 tileSize, const float2& origin )
     {
         vector<string_view> listLine;
         StringUtil::forEachLine( text, [&]( string_view line )
@@ -63,7 +71,8 @@ namespace sw
         {
             width = MathUtil::max( width, static_cast<int32>( line.size() ) );
         }
-        initialize( width, static_cast<int32>( listLine.size() ), tileSize, origin );
+        if ( initialize( width, static_cast<int32>( listLine.size() ), tileSize, origin ) == false )
+            return false;
         for ( size_t row = 0; row < listLine.size(); ++row )
         {
             const int32 y = _topology._height - 1 - static_cast<int32>( row );
@@ -82,6 +91,7 @@ namespace sw
                 setTile( static_cast<int32>( column ), y, tile );
             }
         }
+        return true;
     }
 
     PlatformTile PlatformTileMap::getTile( int32 x, int32 y ) const

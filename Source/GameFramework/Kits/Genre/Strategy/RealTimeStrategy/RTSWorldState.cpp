@@ -317,7 +317,8 @@ namespace sw
         // 격자는 땅과 서 있는 건물, 자원의 발자국으로 다시 칠한다(`repaintGrid`). 같은 데이터에서 나오므로 저장하지 않는다.
         const float32 cellSize = _grid.getCellSize();
         const float3  origin   = _grid.getOrigin();
-        _grid.initialize( width, height, cellSize, origin );
+        if ( _grid.initialize( width, height, cellSize, origin ) == false )
+            return false;
         repaintGrid();
         restoreAgents( listFlowFieldOrder );
         rebuildBuckets();

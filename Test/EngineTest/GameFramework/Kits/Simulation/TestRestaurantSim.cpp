@@ -109,7 +109,7 @@ namespace
 
         void initialize( RestaurantSimulation& sim, const RestaurantSettings& settings, RestaurantTestBorrowed& outBorrowed ) const
         {
-            outBorrowed._pantry.initialize( &_items, 40 );
+            SW_ASSERT_TRUE( outBorrowed._pantry.initialize( &_items, 40 ) );
             SW_EXPECT_TRUE( outBorrowed._clock.initialize( WorldClockSettings{} ) );
             outBorrowed._reputation.initialize( &_reputation );
             sim.initialize( &_catalog, &_recipes, &_items, &_shops, &_curve, outBorrowed.makeRefs(), outBorrowed._pantry, settings );
@@ -248,7 +248,7 @@ SW_TEST_CASE( RestaurantSimTest, IngredientsUseOldestFirstAndSpoil )
     RestaurantTestWorld world;
     SW_ASSERT_TRUE( world.load() );
     Inventory inventory;
-    inventory.initialize( &world._items, 8 );
+    SW_ASSERT_TRUE( inventory.initialize( &world._items, 8 ) );
     IngredientStock stock;
     stock.initialize( &inventory );
 

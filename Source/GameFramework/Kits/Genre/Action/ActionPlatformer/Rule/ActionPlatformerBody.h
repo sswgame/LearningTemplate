@@ -35,8 +35,8 @@ namespace sw
          * @brief 글자로 칠합니다. 기반 `PlatformTileMap::loadFromText` 의 글자에 더해 'D' 는 흙(기반 지형에서는 벽), 'O' 는 갈고리 지점(칸 가운데이며, 기반 지형에서는 빈 칸)입니다.
          * @param outMap 기반 몸이 쓸 칸 지형(이 글로 함께 채운다)
          */
-        void loadFromText( string_view text, float32 tileSize, const float2& origin, PlatformTileMap& outMap );
-        void addGrapplePoint( const float2& point ) { _listGrapplePoint.push_back( point ); }
+        [[nodiscard]] bool loadFromText( string_view text, float32 tileSize, const float2& origin, PlatformTileMap& outMap );
+        void               addGrapplePoint( const float2& point ) { _listGrapplePoint.push_back( point ); }
 
         bool isDirt( int32 x, int32 y ) const;
         bool isDirtAt( const float2& worldPosition ) const;

@@ -15,13 +15,21 @@ namespace sw
     {
     }
 
-    void NavGrid::initialize( int32 width, int32 height, float32 cellSize, const float3& origin )
+    bool NavGrid::initialize( int32 width, int32 height, float32 cellSize, const float3& origin )
     {
-        _topology = GridTopology( MathUtil::max( 1, width ), MathUtil::max( 1, height ) );
-        _cellSize = cellSize > 0.0f ? cellSize : 1.0f;
+        // 칸 수가 1 미만이거나 칸 크기가 0 이하이면 맞추지 않고 거절한다(예전에는 `max( 1, … )` · 크기 1.0 으로 조용히 바꿨다).
+        const bool bInvalid = width < 1 || height < 1 || cellSize <= 0.0f;
+        if ( bInvalid )
+        {
+            SW_LOG_ERROR( "NavGrid: refused %# x %# cells of size %# - both counts must be at least 1 and the size must be positive", width, height, cellSize );
+            return false;
+        }
+        _topology = GridTopology( width, height );
+        _cellSize = cellSize;
         _origin   = origin;
         _listCost.assign( static_cast<size_t>( _topology.getCellCount() ), kNavDefaultCost );
         ++_revision;
+        return true;
     }
 
     void NavGrid::setCost( int32 x, int32 y, uint8 cost )

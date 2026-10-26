@@ -98,7 +98,8 @@ namespace sw
         _flags.clear();
         _questLog.initialize( settings._pQuestCatalog );
         _reputation.initialize( settings._pReputationCatalog );
-        _inventory.initialize( settings._pItemCatalog, settings._inventorySlotCount );
+        if ( _inventory.initialize( settings._pItemCatalog, settings._inventorySlotCount ) == false )
+            return SessionStateInitResult::Refused;
         _weather.initialize( settings._pWeatherCatalog, settings._weatherSeed, _clock.getSeasonName() );
         _bWeather = settings._pWeatherCatalog != nullptr ? SW_TRUE : SW_FALSE;
         _land.initialize( settings._landWidth, settings._landHeight, settings._landCellSize, settings._landOrigin );

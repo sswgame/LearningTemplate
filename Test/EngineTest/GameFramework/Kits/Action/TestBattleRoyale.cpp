@@ -454,7 +454,7 @@ SW_TEST_CASE( BattleRoyaleTest, ArmorBackpackAndAmmoReload )
 
     // 가방 — 무게 한도 = 20 + 용량. 짐이 새 한도를 넘으면 작은 가방으로 못 바꾼다.
     Inventory inventory;
-    inventory.initialize( &itemCatalog, 20, loadout.computeCarryLimit() );
+    SW_ASSERT_TRUE( inventory.initialize( &itemCatalog, 20, loadout.computeCarryLimit() ) );
     SW_EXPECT_NEAR_EQUAL( 20.0f, inventory.getMaxWeight(), 0.001f );
     SW_EXPECT_EQUAL( 40, inventory.addItem( "ammo556", 100 ) ); // 0.5 × 40 = 20
     SW_EXPECT_TRUE( loadout.tryEquipBackpack( "bag3", inventory ) );

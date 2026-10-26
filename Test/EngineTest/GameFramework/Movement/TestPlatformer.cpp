@@ -34,7 +34,7 @@ namespace
 
         PlatformerScene()
         {
-            _map.loadFromText( kPlatformerLevelText, 1.0f, float2{ 0.0f, 0.0f } );
+            SW_EXPECT_TRUE( _map.loadFromText( kPlatformerLevelText, 1.0f, float2{ 0.0f, 0.0f } ) );
             _motor.setSettings( PlatformerSettings{} );
             _motor.setPosition( float2{ 5.5f, 1.45f } );
         }

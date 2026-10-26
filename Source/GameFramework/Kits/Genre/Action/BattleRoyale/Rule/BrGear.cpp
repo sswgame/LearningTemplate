@@ -60,8 +60,9 @@ namespace sw
         const float32 limit = computeCarryLimit( itemID );
         if ( inoutInventory.computeWeight() > limit )
             return false;
+        if ( inoutInventory.setMaxWeight( limit ) == false )
+            return false;
         _backpackID = itemID;
-        inoutInventory.setMaxWeight( limit );
         return true;
     }
 
