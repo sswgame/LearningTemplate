@@ -23,7 +23,7 @@
 | - | [GpuVerification](docs/plans/GpuVerification.md) — Linux 와 GPU 검증 구조의 남은 일 (2026-10-18) | 구현중 | 1/3 | 없음 | quality | C-41, E-8 |
 | - | [LeakDetection](docs/plans/LeakDetection.md) — 누수 탐지 | 구현중 | 0/4 | 없음 | engine | 없음 |
 | - | [MsdfGlyphs](docs/plans/MsdfGlyphs.md) — MSDF 글리프 | 구현중 | 4/5 | 없음 | ui | G-10 |
-| - | [OnlineKits](docs/plans/OnlineKits.md) — 온라인 키트 마감 계획 (2026-10-21) | 구현중 | 29/34 | 없음 | network | D7-5 |
+| - | [OnlineKits](docs/plans/OnlineKits.md) — 온라인 키트 마감 계획 (2026-10-21) | 구현중 | 1/6 | 없음 | network | D7-5 |
 | - | [PackedTypes](docs/plans/PackedTypes.md) — 저장 전용 압축 타입 | 구현중 | 3/6 | 없음 | graphics | 없음 |
 | - | [PreloadAndLod](docs/plans/PreloadAndLod.md) — 프리로딩 · LOD · 사전 준비 | 구현중 | 10/11 | 없음 | gameplay | D4-7 |
 | - | [RhiAsyncUploads](docs/plans/RhiAsyncUploads.md) — RHI 비동기 업로드 · 머티리얼 초기화 · PSO 준비 상태 | 구현중 | 8/15 | 없음 | graphics | 없음 |

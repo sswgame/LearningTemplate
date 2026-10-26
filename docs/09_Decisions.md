@@ -67,29 +67,6 @@
 - **`CheckConfigReference` 를 파일 단위로 나누기**: 커밋 훅의 바닥은 트리 전체 게이트 여섯이 각자 `Source/` 를 읽는 값(1 ~ 1.4 s)이라 하나만 0 으로 만들어도 같은 높이로 남는다. 소스 게이트는 `SourceScan`(한 번 걷고 코어 수만큼 프로세스에 나눠 읽음)으로 옮기고 무거운 `CheckNameReferences` · `CheckKitNamespaces` 는 CI 로 넘겼다. [측정: 단독 5 회 중앙값 · 2026-10-11 · 7a5fe1016]
 - **비소스 린트 게이트(Python · CMake · 문서 · 텍스트)의 공유 훑기**: 읽기가 값이 아니다 — 열둘의 합 15.2 s 중 걷기 · 읽기는 1 s 미만이라 전부 공유해도 CPU 합 3~4 s 만 준다. 덩어리는 `CheckVerifyPending`(케이스마다 `Test/` 전체 글에 정규식을 돌려 단독 52 s)이니 그 정규식을 먼저 본다. [측정: 단독 순차 1 회 · 2026-10-25 · 233d5ef35]
 
-## 4. 옛 이름 → 지금 이름 (`git log` 을 읽을 때)
-
-이름만 바뀐 것은 적지 않습니다. 별칭을 두지 않으므로(5-4) 코드에 옛 이름이 남지 않고, `git log -S '<옛 이름>'`(커밋 메시지 속 용어는 `git log --grep`)으로 찾습니다.
-여기에는 뜻이 바뀌었거나, 여러 곳으로 나뉘었거나, 개념이 없어져 `git log` 만으로는 이유가 보이지 않는 것만 둡니다.
-
-| 옛 이름 | 지금 이름 | 남긴 이유 |
-|---|---|---|
-| `EngineLoop` · `_engineLoop` | `Engine` · `_engine`(네임스페이스 `engine` 은 그대로 — 5-3) | `Engine` 이 이제 클래스 이름이다 |
-| Overworld `PlayerController` | `OverworldTileMover` | `PlayerController` 는 조종자(`PlayerControllerComponent`)의 뜻으로 쓴다. 의도를 받는 몸은 조종자가 아니다 |
-| `RtsAiController` · `SrpgAiController` | `RTSCommanderAI` · `SRPGCommanderAI` | 명령형 장르의 AI 는 폰을 조종하지 않는다 |
-| `InputSnapshot` · `InputHistoryBuffer` · `InputReplay::play` | 삭제 — 행동 층은 `ControlIntent` · `ControlIntentHistory`, 재생은 `InputManager::attachVirtualInput`(가상 입력 원천) | 입력 기록 개념이 없어졌다 |
-| `GameStateComponent` 등 `GameState*` | `SessionState*` | 언리얼의 GameState 와 뜻이 다르다 |
-| 지연 로드(`bindDelayLoadImports` · `DelayLoad.cmake` · `CheckDelayLoadSites`) | 없음 — `ModuleShadowCopy::writeShadowCopy`, 게이트 `CheckNoDelayLoad` | 개념을 제거했다 |
-| `FileUtil::fileExists` · `directoryExists` | `exists`(파일 · 폴더 모두) · `isDirectory` · `isRegularFile`(파일만) | 같은 질문의 뜻이 바뀌었다 |
-| `transformNormal` | `transformVector`(방향 변환) | 법선 변환(역전치)이 아니다 |
-| `EditorThemePreset` · `editor::style::kOk` 등 색 상수 | 토큰 파일 `Resource/editor/theme/<이름>.tokens.json` · `EditorThemeUtil::get*Color()` | 테마가 코드 열거에서 데이터로 옮겨 갔다 |
-| `Engine/Object/Animation/` | `Engine/Object/SceneAnimation/` | 애니메이션 데이터 폴더 `Engine/Animation/` 과 구분한다 |
-| `Engine/DevTools/` | `Editor/Common/Localization/` · `Engine/Input/` · 명령마다 소유 코드 옆(`*DevCommands.cpp` 등) | 여러 곳으로 나뉘었다 |
-| `PhysicsTypes.h` 의 핸들 | `Engine/Common/PhysicsHandle.h` | 컴포넌트 모델 코어가 Physics 를 include 하지 않게 하려는 것이다 |
-| `initialize` 설정 `*Settings` · 카탈로그 `*Settings` | 서비스 · 호스트 설정은 `*Config`, 카탈로그 항목은 `*Def`(C-26 ③) | 한 이름이 뜻에 따라 둘로 나뉘었다 |
-
-일부러 둔 용어: stamp · kit · cook · orphan · chord · pin.
-
 ## 5. 영역별 결정
 
 결정마다 결정한 날 · 근거 · 상용 엔진의 방식을 적고, 코드와 헤더 주석에 반영된 결정은 한두 문장으로만 적습니다(자세한 계약은 그 코드의 헤더 주석). 결정을 바꾸려면 여기 적힌 근거와 상용 엔진의 방식을 먼저 확인하고 같은 커밋에서 그 영역 파일을 고칩니다.
