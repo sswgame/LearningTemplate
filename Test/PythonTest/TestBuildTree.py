@@ -13,7 +13,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "Scripts"))
 
-from common.BuildTree import addBuildTreeArguments, BuildTree, BuildTreeError, kMapConfigPreset, readConfigPresets  # noqa: E402
+from common.BuildTree import addBuildTreeArguments, BuildTree, BuildTreeError, kMapConfigPreset, readConfigPresets, readServerPresets  # noqa: E402
 
 
 def makeRepositoryInternal(root: Path) -> None:
@@ -105,6 +105,17 @@ class BuildTreeTest(unittest.TestCase):
         (self.root / "CMakePresets.json").write_text(json.dumps({"configurePresets": [
             {"name": "Ninja-Debug"}, {"name": "Ninja-Debug-ASAN"}, {"name": "Ninja-Shipping"}, {"name": "WSL-Release"}]}), encoding="utf-8")
         self.assertEqual({"Debug": "Ninja-Debug", "Shipping": "Ninja-Shipping"}, readConfigPresets(self.root))
+
+    def testServerPresetsAreReadApartFromTheConfigTable(self) -> None:
+        (self.root / "CMakePresets.json").write_text(json.dumps({"configurePresets": [
+            {"name": "Ninja-Shipping"}, {"name": "Ninja-Shipping-Server"}, {"name": "Ninja-Debug-Server"}]}), encoding="utf-8")
+        self.assertEqual({"Shipping": "Ninja-Shipping"}, readConfigPresets(self.root))
+        self.assertEqual({"Shipping": "Ninja-Shipping-Server", "Debug": "Ninja-Debug-Server"}, readServerPresets(self.root))
+
+    def testServerPresetsStopLoudlyWithoutAny(self) -> None:
+        (self.root / "CMakePresets.json").write_text(json.dumps({"configurePresets": [{"name": "Ninja-Debug"}]}), encoding="utf-8")
+        with self.assertRaises(SystemExit):
+            readServerPresets(self.root)
 
     def testConfigPresetsStopLoudlyWithoutAny(self) -> None:
         (self.root / "CMakePresets.json").write_text(json.dumps({"configurePresets": [{"name": "WSL-Release"}]}), encoding="utf-8")
