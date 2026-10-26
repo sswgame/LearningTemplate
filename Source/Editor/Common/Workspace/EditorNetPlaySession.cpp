@@ -294,8 +294,10 @@ namespace sw::editor
         const string port       = to_string( _port );
         // 사용자가 적은 추가 인자(백엔드 스위치)는 공백으로 나눈다 — 셸이 아니므로 그 글이 명령을 늘리지 못한다.
         const vector<string> listUserClientArgument = ProcessCommand::splitArgumentLine( settings._clientArguments );
-        vector<string>       listClientArgument{ "-gv_netConnectAddress=127.0.0.1:" + port, "-gv_standardInputCommands=1",
-                                           "-gv_stateHashHistory=" + to_string( kServerStateHashHistoryTicks ) }; // 클라이언트도 서버 틱 번호로 해시를 남긴다(S7)
+        // 클라이언트도 서버 틱 번호로 해시를 남긴다(S7). 포커스는 한 창만 가지므로 나머지 클라이언트가 배경 상한에 걸리지 않게 전속을 명시로 고른다
+        // (`FramePacingState::FullSpeed`). 리슨 호스트는 넷 역할로 이미 전속(`Server`)이다.
+        vector<string> listClientArgument{ "-gv_netConnectAddress=127.0.0.1:" + port, "-gv_standardInputCommands=1",
+                                           "-gv_stateHashHistory=" + to_string( kServerStateHashHistoryTicks ), "-gv_framePacing=FullSpeed" };
         listClientArgument.insert( listClientArgument.end(), listUserClientArgument.begin(), listUserClientArgument.end() );
 
         // 서버를 먼저 띄운다. 클라이언트는 서버가 늦게 떠도 연결 시한 안에서 다시 시도하지만, 서버가 먼저 떠 있으면 첫 시도에 연결된다.

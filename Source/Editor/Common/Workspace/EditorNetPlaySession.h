@@ -8,7 +8,7 @@
  *          |---|---|
  *          | 서버 | `-gv_netListenPort=<포트>` (+ 트레이스면 `-gv_traceSaveOnExit=<폴더>/server.trace.json`) |
  *          | 전용 서버만 | `-gv_debugChannelPort=<TCP 포트> -gv_debugChannelToken=<세션마다 새 토큰> -gv_stateHashHistory=<kServerStateHashHistoryTicks>` — Inspector · Sync 탭이 이 채널로 붙는다(`getDebugChannelPort`) |
- *          | 클라이언트 | `-gv_netConnectAddress=127.0.0.1:<포트> -gv_standardInputCommands=1 -gv_stateHashHistory=<kServerStateHashHistoryTicks>`(서버 틱 번호로 해시를 남긴다) (+ `-gv_traceSaveOnExit=<폴더>/clientN.trace.json`) |
+ *          | 클라이언트 | `-gv_netConnectAddress=127.0.0.1:<포트> -gv_standardInputCommands=1 -gv_stateHashHistory=<kServerStateHashHistoryTicks> -gv_framePacing=FullSpeed`(서버 틱 번호로 해시를 남기고, 포커스 없이도 전속) (+ `-gv_traceSaveOnExit=<폴더>/clientN.trace.json`) |
  *          | `App` 마다(창 배치를 켜면) | `-W=<너비> -H=<높이> -WinX=<x> -WinY=<y>` — 리슨 호스트 · 클라이언트 순서로 나란히(`makeWindowArguments`) |
  *
  *          - 로그: 프로세스마다 읽기 스레드가 줄을 모은다. `update` 가 게임 스레드에서 `[Server]`, `[Client1]` 같은 태그를 붙여 에디터 로그에 다시 쓰므로
