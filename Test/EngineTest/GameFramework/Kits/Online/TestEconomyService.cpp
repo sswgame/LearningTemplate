@@ -79,7 +79,7 @@ namespace
             seed._reason     = "test.grant";
             seed._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), LedgerHolder::makeAccount( kPlayer ), "cur.gold", 100 } );
             LedgerTransferOutcome outcome;
-            (void)Ledger::executeTransfer( _database, seed, outcome );
+            (void)Ledger::executeTransfer( _database, seed, outcome ); // 테스트 준비 — 결과는 outcome 에 남고 뒤 단언이 잔액으로 드러낸다
         }
 
         ~EconomyServiceFixture()

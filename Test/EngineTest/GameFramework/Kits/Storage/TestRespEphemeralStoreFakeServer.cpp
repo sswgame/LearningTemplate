@@ -38,8 +38,8 @@ namespace
             return settings;
         }
 
-        static bool initializeStore( RespEphemeralStore& store, test::FakeRespServer& server, const RespStoreConfig& settings,
-                                     unique_ptr<ITLSContext> tlsContext = nullptr )
+        [[nodiscard]] static bool initializeStore( RespEphemeralStore& store, test::FakeRespServer& server, const RespStoreConfig& settings,
+                                                   unique_ptr<ITLSContext> tlsContext = nullptr )
         {
             string     error;
             const bool bInitialized = store.initialize( server.createClientTransport(), makeTransportSettings(), settings, std::move( tlsContext ), error );
@@ -77,8 +77,8 @@ namespace
             LoopbackStreamConditions conditions;
             conditions._maxChunkBytes = 3;
             _network.setConditions( conditions );
-            (void)RespStoreHarness::initializeStore( _store, _server, RespStoreHarness::makeSettings( _server.getAddress() ) );
-            (void)RespStoreHarness::initializeStore( _secondStore, _server, RespStoreHarness::makeSettings( _server.getAddress() ) );
+            (void)RespStoreHarness::initializeStore( _store, _server, RespStoreHarness::makeSettings( _server.getAddress() ) );       // 테스트 준비 — 실패하면 뒤 단언이 드러낸다
+            (void)RespStoreHarness::initializeStore( _secondStore, _server, RespStoreHarness::makeSettings( _server.getAddress() ) ); // 테스트 준비 — 실패하면 뒤 단언이 드러낸다
         }
 
         IEphemeralStore& getStore() { return _store; }
@@ -132,7 +132,7 @@ SW_TEST_CASE( RespEphemeralStoreFakeServerTest, DroppedConnectionAnswersEveryPen
     server.setHoldReplies( true );
     for ( int32 index = 0; index < 5; ++index )
     {
-        (void)store.submit( EphemeralRequest::makeGet( "k" ) );
+        (void)store.submit( EphemeralRequest::makeGet( "k" ) ); // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
     }
     vector<EphemeralReply> listReply;
     SW_EXPECT_EQUAL( 0, RespStoreHarness::collectReplies( store, 5, 50, listReply ) ); // 서버가 붙잡고 있다

@@ -654,7 +654,7 @@ SW_TEST_CASE( VfxComponentTest, SceneSnapshotCarriesOneBatchPerEmitterFarFirst )
     if ( cpuTarget.isApplied() == false )
         SW_TEST_SKIP( "gv_vfxSimulation is a development-build switch (Shipping simulates these emitters on the GPU)" );
     sw::Scene scene( "VfxSnapshot" );
-    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+    SW_EXPECT_TRUE( scene.pickActiveGameCamera() );
     const float32     arrDistance[3] = { 5.0f, 20.0f, 12.0f };
     sw::VfxComponent* arrVfx[3]{};
     for ( uint32 index = 0; index < 3; ++index )
@@ -703,7 +703,7 @@ SW_TEST_CASE( VfxComponentTest, SceneSnapshotCarriesOneBatchPerEmitterFarFirst )
 SW_TEST_CASE( VfxComponentTest, ParticlesInterleaveWithTransparentMeshes )
 {
     sw::Scene scene( "VfxInterleave" );
-    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+    SW_EXPECT_TRUE( scene.pickActiveGameCamera() );
     sw::GameObjectManager* pObjects = scene.getObjectManager();
     SW_ASSERT_NOT_NULL( pObjects );
 
@@ -774,7 +774,7 @@ SW_TEST_CASE( VfxComponentTest, TrailSampleDrivesRibbonMeshAndLights )
     if ( cpuTarget.isApplied() == false )
         SW_TEST_SKIP( "gv_vfxSimulation is a development-build switch (Shipping simulates these emitters on the GPU)" );
     sw::Scene scene( "VfxTrail" );
-    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+    SW_EXPECT_TRUE( scene.pickActiveGameCamera() );
     sw::VfxComponent* pVfx = scene.getObjectManager()->createGameObject( sw::hashed_string( "Trail" ) )->addComponent<sw::VfxComponent>();
     SW_ASSERT_NOT_NULL( pVfx );
     pVfx->setEffectPath( "engine/vfx/trail.vfx.xml" );
@@ -1032,7 +1032,7 @@ SW_TEST_CASE( VfxComponentTest, EmittersPickTheirSimulationTarget )
     const sw::ScopedVfxSimulationTarget gpuTarget( "GPU" );
     (void)gpuTarget; // Shipping 에서는 적용되지 않는다 — GPU 고정이라 기대가 같다
     sw::Scene scene( "VfxTarget" );
-    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+    SW_EXPECT_TRUE( scene.pickActiveGameCamera() );
     sw::VfxComponent* pSparks = scene.getObjectManager()->createGameObject( sw::hashed_string( "Sparks" ) )->addComponent<sw::VfxComponent>();
     SW_ASSERT_NOT_NULL( pSparks );
     pSparks->setEffectPath( sw::kVfxSampleEffectPath );
@@ -1081,7 +1081,7 @@ SW_TEST_CASE( VfxComponentTest, EmittersPickTheirSimulationTarget )
 SW_TEST_CASE( VfxComponentTest, GPUMeshEmitterPublishesInstanceSlots )
 {
     sw::Scene scene( "VfxGPUMesh" );
-    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+    SW_EXPECT_TRUE( scene.pickActiveGameCamera() );
     sw::VfxComponent* pVfx = scene.getObjectManager()->createGameObject( sw::hashed_string( "GPUDebris" ) )->addComponent<sw::VfxComponent>();
     SW_ASSERT_NOT_NULL( pVfx );
     pVfx->setEffectPath( "engine/vfx/gpudebris.vfx.xml" );

@@ -128,8 +128,8 @@ namespace
         ParryDuel        duel;
         ActionCombatRig  rig;
         ActionEnemyBrain brain;
-        (void)rig.initialize( &scene._catalog, &scene._moves, "umbrella" );
-        (void)brain.initialize( scene._catalog.findPattern( "gunner" ), -1 );
+        (void)rig.initialize( &scene._catalog, &scene._moves, "umbrella" );   // 테스트 준비 — 실패하면 뒤 단언이 드러낸다
+        (void)brain.initialize( scene._catalog.findPattern( "gunner" ), -1 ); // 테스트 준비 — 실패하면 뒤 단언이 드러낸다
         const float2             playerPosition{ 4.0f, 6.0f };
         float2                   enemyPosition{ 14.0f, 6.0f };
         bool                     bParryPressed = false;

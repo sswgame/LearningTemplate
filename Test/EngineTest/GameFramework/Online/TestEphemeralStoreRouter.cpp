@@ -41,9 +41,9 @@ SW_TEST_CASE( EphemeralStoreRouterTest, RepliesGoOnlyToTheirOwnDelegate )
 
     RouterRecorder first;
     RouterRecorder second;
-    (void)router.submit( EphemeralRequest::makeSet( "k1", vector<uint8>{ 1 }, 0 ), EphemeralStoreRouter::ReplyDelegate::create<&RouterRecorder::onReply>( &first ) );
-    (void)router.submit( EphemeralRequest::makeGet( "k1" ), EphemeralStoreRouter::ReplyDelegate::create<&RouterRecorder::onReply>( &second ) );
-    (void)router.submit( EphemeralRequest::makeErase( "nothing" ), EphemeralStoreRouter::ReplyDelegate{} );
+    (void)router.submit( EphemeralRequest::makeSet( "k1", vector<uint8>{ 1 }, 0 ), EphemeralStoreRouter::ReplyDelegate::create<&RouterRecorder::onReply>( &first ) ); // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
+    (void)router.submit( EphemeralRequest::makeGet( "k1" ), EphemeralStoreRouter::ReplyDelegate::create<&RouterRecorder::onReply>( &second ) );                       // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
+    (void)router.submit( EphemeralRequest::makeErase( "nothing" ), EphemeralStoreRouter::ReplyDelegate{} );                                                           // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
     SW_EXPECT_EQUAL( router.getPendingCount(), 3 );
 
     (void)router.pump();
@@ -70,12 +70,12 @@ SW_TEST_CASE( EphemeralStoreRouterTest, TwoSubscribersShareOneChannelAndCanLeave
     second._pRouter            = &router;
     second._subscriptionToDrop = firstID; // 두 번째가 받는 동안 첫 번째를 뺀다 — 이번 메시지는 둘 다 받는다(복사본)
 
-    (void)publisher.submit( EphemeralRequest::makePublish( "chan:a", vector<uint8>{ 7 } ) );
+    (void)publisher.submit( EphemeralRequest::makePublish( "chan:a", vector<uint8>{ 7 } ) ); // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
     (void)router.pump();
     SW_EXPECT_EQUAL( first._listMessage.size(), size_t( 1 ) );
     SW_EXPECT_EQUAL( second._listMessage.size(), size_t( 1 ) );
 
-    (void)publisher.submit( EphemeralRequest::makePublish( "chan:a", vector<uint8>{ 8 } ) );
+    (void)publisher.submit( EphemeralRequest::makePublish( "chan:a", vector<uint8>{ 8 } ) ); // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
     (void)router.pump();
     SW_EXPECT_EQUAL( first._listMessage.size(), size_t( 1 ) );  // 빠졌다
     SW_EXPECT_EQUAL( second._listMessage.size(), size_t( 2 ) ); // 채널은 아직 열려 있다 — 앞에는 한 번만 구독했다
@@ -89,7 +89,7 @@ SW_TEST_CASE( EphemeralStoreRouterTest, ShutdownAnswersPendingRequestsOnceWithUn
     {
         EphemeralStoreRouter router;
         router.initialize( &store );
-        (void)router.submit( EphemeralRequest::makeGet( "k" ), EphemeralStoreRouter::ReplyDelegate::create<&RouterRecorder::onReply>( &recorder ) );
+        (void)router.submit( EphemeralRequest::makeGet( "k" ), EphemeralStoreRouter::ReplyDelegate::create<&RouterRecorder::onReply>( &recorder ) ); // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
         router.shutdown();
         router.shutdown();
     }

@@ -1622,7 +1622,7 @@ SW_TEST_CASE( NetworkTest, MalformedMessageIsCountedNotForwarded )
     pair.run( 0.3 );
     CountingHandler  handler( NetMessageRange::kGame, 0x81 );
     NetMessageRouter router;
-    router.registerHandler( &handler );
+    SW_EXPECT_TRUE( router.registerHandler( &handler ) );
     NetMessageWriter messageWriter;
     (void)messageWriter.begin( 0x81 ); // 몸(가변 정수)이 없다
     SW_ASSERT_TRUE( messageWriter.send( pair.getClient( 0 ), 0, NetChannelType::ReliableOrdered ) );
@@ -1676,7 +1676,7 @@ SW_TEST_CASE( NetworkTest, RouterTellsHandlersAboutConnectionsBeforeTheirMessage
     SW_ASSERT_TRUE( pair.getClient( 0 ).connect( NetAddress::makeLoopback( 4000 ) ) );
     ConnectionTracker tracker;
     NetMessageRouter  router;
-    router.registerHandler( &tracker );
+    SW_EXPECT_TRUE( router.registerHandler( &tracker ) );
     pair.run( 0.3 );
     NetMessageWriter messageWriter;
     messageWriter.begin( 0x80 ).writeVarUint( 1 );

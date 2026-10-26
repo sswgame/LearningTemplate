@@ -55,7 +55,7 @@ namespace
         vector<SRPGEvent> _listEvent;
         DrainLease        _eventLease; ///< 이벤트를 꺼내는 표(`initialize` 가 쥔다)
 
-        bool initialize( int32 width, int32 height, const SRPGSettings& settings = SRPGSettings{}, uint32 seed = 7 )
+        [[nodiscard]] bool initialize( int32 width, int32 height, const SRPGSettings& settings = SRPGSettings{}, uint32 seed = 7 )
         {
             if ( _catalog.loadFromXMLText( kSRPGTestXML, "TacticsSRPGTest" ) == false )
                 return false;
@@ -615,7 +615,7 @@ SW_TEST_CASE( TacticsSRPGTest, LevelUpDevelopmentAndRogueliteCampaign )
     {
         SRPGCombatResult result;
         battle._field.findUnit( hunter )->_bAttacked = SW_FALSE;
-        (void)SRPGCombat::executeAttack( battle._field, hunter, 1, prey, result );
+        (void)SRPGCombat::executeAttack( battle._field, hunter, 1, prey, result ); // 결과는 result 로 넘긴다
     }
     SW_ASSERT_TRUE( battle._field.findUnit( prey )->_bAlive == SW_FALSE );
     SW_EXPECT_EQUAL( 40, static_cast<int32>( battle._field.findUnit( hunter )->_pilotLevel.getTotalXp() ) ); // 10 + 30, 같은 레벨

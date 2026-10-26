@@ -74,7 +74,7 @@ SW_TEST_CASE( ParallaxLayerTest, RepeatSizeWrapsTheLayerAroundTheCamera )
 SW_TEST_CASE( ParallaxLayerTest, LayerFollowsTheGameCameraAndRestoresOnEndPlay )
 {
     sw::Scene scene( "ParallaxScene" );
-    SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
+    SW_ASSERT_TRUE( scene.pickActiveGameCamera() );
     sw::CameraComponent* pCamera = scene.getActiveGameCamera();
     SW_ASSERT_NOT_NULL( pCamera );
     pCamera->setLocalPosition( sw::float3{ 20.0f, 0.0f, -10.0f } );

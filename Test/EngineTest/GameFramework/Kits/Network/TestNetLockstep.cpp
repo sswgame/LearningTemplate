@@ -117,7 +117,7 @@ namespace
             , _startDelayTicks{ startDelayTicks }
             , _localFrame{ 0 }
         {
-            world.getRouter().registerHandler( &_session );
+            SW_EXPECT_TRUE( world.getRouter().registerHandler( &_session ) );
         }
 
         void onTickEnd( NetSimWorld& world, float32 deltaTime ) override
@@ -309,8 +309,8 @@ namespace
             , _hash{ sw::HashUtil::kFnvOffset32 }
             , _bStarted{ false }
         {
-            world.getRouter().registerHandler( &_session );
-            world.getRouter().registerHandler( this );
+            SW_EXPECT_TRUE( world.getRouter().registerHandler( &_session ) );
+            SW_EXPECT_TRUE( world.getRouter().registerHandler( this ) );
         }
 
         uint8           getMessageRangeBase() const override { return NetMessageRange::kGame; }
@@ -340,7 +340,7 @@ namespace
             (void)deltaTime;
             if ( _bStarted == false )
                 return;
-            (void)_session.submitLocalInput( vector<uint8>{ static_cast<uint8>( static_cast<uint32>( _session.getLocalPlayer() * 40 ) + world.getLocalTick() ) } );
+            (void)_session.submitLocalInput( vector<uint8>{ static_cast<uint8>( static_cast<uint32>( _session.getLocalPlayer() * 40 ) + world.getLocalTick() ) } ); // 예약이 찼으면 이 틱의 입력만 빠진다 — 테스트는 양쪽이 같은 입력을 받는지만 본다
             vector<vector<uint8>> listInput;
             while ( _session.tryAdvance( listInput ) )
             {
@@ -503,7 +503,7 @@ SW_TEST_CASE( NetLockstepTest, LockstepPlayersAdvanceIdenticallyAndDetectDesyncs
         for ( int32 index = 0; index < 3; ++index )
         {
             LockstepSession& session = listSession[static_cast<size_t>( index )];
-            (void)session.submitLocalInput( vector<uint8>{ static_cast<uint8>( session.getLocalPlayer() * 50 + frame / 2 ) } );
+            (void)session.submitLocalInput( vector<uint8>{ static_cast<uint8>( session.getLocalPlayer() * 50 + frame / 2 ) } ); // 예약이 찼으면 이 틱의 입력만 빠진다 — 테스트는 양쪽이 같은 입력을 받는지만 본다
             vector<vector<uint8>> listInput;
             while ( session.tryAdvance( listInput ) )
             {

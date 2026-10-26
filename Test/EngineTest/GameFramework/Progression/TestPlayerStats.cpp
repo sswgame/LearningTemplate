@@ -119,7 +119,7 @@ SW_TEST_CASE( PlayerStatsTest, ProfileFileRoundTripsAndDropsRemovedStats )
     PlayerStats loaded;
     loaded.initialize( &catalog );
     int32 changeCount = 0;
-    (void)loaded.registerChangeListener( SW_DELEGATE_LAMBDA( PlayerStats::ChangeDelegate, [&changeCount]( const StatChange& )
+    (void)loaded.registerChangeListener( SW_DELEGATE_LAMBDA( PlayerStats::ChangeDelegate, [&changeCount]( const StatChange& ) // 핸들은 쓰지 않는다 — 테스트 동안 살아 있다
     { ++changeCount; } ) );
     SW_ASSERT_TRUE( loaded.loadFromFile( path ) );
     SW_EXPECT_EQUAL( 0, changeCount );

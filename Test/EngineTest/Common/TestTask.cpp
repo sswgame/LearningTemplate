@@ -95,7 +95,7 @@ SW_TEST_CASE( TaskTest, InitializerListArgsKeepValueTypes )
 SW_TEST_CASE( TaskTest, GeneralTaskDAG )
 {
     sw::TaskManager& taskMgr = sw::engine::getSubsystem<sw::TaskManager>();
-    taskMgr.initialize();
+    SW_ASSERT_TRUE( taskMgr.getWorkerCount() > 0 ); // 하네스가 세운 매니저다 — 다시 initialize 하면 이미 섰다고 false 다
 
     sw::s_taskExecOrder = 0;
     sw::s_orderA        = 0;
@@ -132,7 +132,7 @@ SW_TEST_CASE( TaskTest, GeneralTaskDAG )
 SW_TEST_CASE( TaskTest, ArbitraryArgsTask )
 {
     sw::TaskManager& taskMgr = sw::engine::getSubsystem<sw::TaskManager>();
-    taskMgr.initialize();
+    SW_ASSERT_TRUE( taskMgr.getWorkerCount() > 0 ); // 하네스가 세운 매니저다 — 다시 initialize 하면 이미 섰다고 false 다
 
     int32        dummyVar = 42;
     sw::TaskArgs args =
@@ -177,7 +177,7 @@ SW_TEST_CASE( TaskTest, ArbitraryArgsTask )
 SW_TEST_CASE( TaskTest, ParallelTask )
 {
     sw::TaskManager& taskMgr = sw::engine::getSubsystem<sw::TaskManager>();
-    taskMgr.initialize();
+    SW_ASSERT_TRUE( taskMgr.getWorkerCount() > 0 ); // 하네스가 세운 매니저다 — 다시 initialize 하면 이미 섰다고 false 다
 
     constexpr uint32                      kElementCount = 100;
     static sw::vector<sw::atomic<uint32>> s_results( kElementCount );
@@ -215,7 +215,7 @@ SW_TEST_CASE( TaskTest, ParallelTask )
 SW_TEST_CASE( TaskTest, StagedTask )
 {
     sw::TaskManager& taskMgr = sw::engine::getSubsystem<sw::TaskManager>();
-    taskMgr.initialize();
+    SW_ASSERT_TRUE( taskMgr.getWorkerCount() > 0 ); // 하네스가 세운 매니저다 — 다시 initialize 하면 이미 섰다고 false 다
 
     static sw::atomic<uint32> s_stageProgress{ 0 };
     s_stageProgress = 0;
@@ -258,7 +258,7 @@ SW_TEST_CASE( TaskTest, StagedTask )
 SW_TEST_CASE( TaskTest, TaskChainingThen )
 {
     sw::TaskManager& taskMgr = sw::engine::getSubsystem<sw::TaskManager>();
-    taskMgr.initialize();
+    SW_ASSERT_TRUE( taskMgr.getWorkerCount() > 0 ); // 하네스가 세운 매니저다 — 다시 initialize 하면 이미 섰다고 false 다
 
     static sw::mutex         s_chainMutex;
     static sw::vector<int32> s_executionOrder;
@@ -316,7 +316,7 @@ SW_TEST_CASE( TaskTest, TaskChainingThen )
 SW_TEST_CASE( TaskTest, WorkStealingParallelTask )
 {
     sw::TaskManager& taskMgr = sw::engine::getSubsystem<sw::TaskManager>();
-    taskMgr.initialize();
+    SW_ASSERT_TRUE( taskMgr.getWorkerCount() > 0 ); // 하네스가 세운 매니저다 — 다시 initialize 하면 이미 섰다고 false 다
 
     constexpr uint32   count = 50;
     sw::atomic<uint32> totalSum{ 0 };
@@ -344,7 +344,7 @@ SW_TEST_CASE( TaskTest, WorkStealingParallelTask )
 SW_TEST_CASE( TaskTest, TaskCombinatorWhenAll )
 {
     sw::TaskManager& taskMgr = sw::engine::getSubsystem<sw::TaskManager>();
-    taskMgr.initialize();
+    SW_ASSERT_TRUE( taskMgr.getWorkerCount() > 0 ); // 하네스가 세운 매니저다 — 다시 initialize 하면 이미 섰다고 false 다
 
     sw::atomic<int32> completedCount{ 0 };
     bool              whenAllExecuted{ false };
@@ -382,7 +382,7 @@ SW_TEST_CASE( TaskTest, TaskCombinatorWhenAll )
 SW_TEST_CASE( TaskTest, TaskCombinatorWhenAny )
 {
     sw::TaskManager& taskMgr = sw::engine::getSubsystem<sw::TaskManager>();
-    taskMgr.initialize();
+    SW_ASSERT_TRUE( taskMgr.getWorkerCount() > 0 ); // 하네스가 세운 매니저다 — 다시 initialize 하면 이미 섰다고 false 다
 
     bool whenAnyExecuted{ false };
 
@@ -412,7 +412,7 @@ SW_TEST_CASE( TaskTest, TaskCombinatorWhenAny )
 SW_TEST_CASE( TaskTest, CancellationTokenAndCancellation )
 {
     sw::TaskManager& taskMgr = sw::engine::getSubsystem<sw::TaskManager>();
-    taskMgr.initialize();
+    SW_ASSERT_TRUE( taskMgr.getWorkerCount() > 0 ); // 하네스가 세운 매니저다 — 다시 initialize 하면 이미 섰다고 false 다
 
     bool bTaskExecuted{ false };
     bool bChainedTaskExecuted{ false };
@@ -455,7 +455,7 @@ SW_TEST_CASE( TaskTest, CancellationTokenAndCancellation )
 SW_TEST_CASE( TaskTest, WaitAllWithTimeout )
 {
     sw::TaskManager& taskMgr = sw::engine::getSubsystem<sw::TaskManager>();
-    taskMgr.initialize();
+    SW_ASSERT_TRUE( taskMgr.getWorkerCount() > 0 ); // 하네스가 세운 매니저다 — 다시 initialize 하면 이미 섰다고 false 다
 
     sw::atomic<bool> bCompleted{ false };
 
@@ -684,7 +684,7 @@ SW_TEST_CASE( TaskTest, TaskFutureDeepContinuationChainStress )
 SW_TEST_CASE( TaskTest, TaskFutureWhenAllMassiveConcurrencyStress )
 {
     sw::TaskManager& taskMgr = sw::engine::getSubsystem<sw::TaskManager>();
-    taskMgr.initialize();
+    SW_ASSERT_TRUE( taskMgr.getWorkerCount() > 0 ); // 하네스가 세운 매니저다 — 다시 initialize 하면 이미 섰다고 false 다
 
     constexpr int32 kTaskCount = 64;
 
@@ -748,7 +748,7 @@ SW_TEST_CASE( TaskTest, TaskFutureWhenAllMassiveConcurrencyStress )
 SW_TEST_CASE( TaskTest, TaskFutureWhenAnyRaceStress )
 {
     sw::TaskManager& taskMgr = sw::engine::getSubsystem<sw::TaskManager>();
-    taskMgr.initialize();
+    SW_ASSERT_TRUE( taskMgr.getWorkerCount() > 0 ); // 하네스가 세운 매니저다 — 다시 initialize 하면 이미 섰다고 false 다
 
     constexpr int32 kRacers = 32;
 
@@ -879,7 +879,7 @@ SW_TEST_CASE( TaskTest, InvalidFutureThenStaysInvalid )
 SW_TEST_CASE( TaskTest, ParallelGroupWakesWorkersOnce )
 {
     sw::TaskManager& taskMgr = sw::engine::getSubsystem<sw::TaskManager>();
-    taskMgr.initialize();
+    SW_ASSERT_TRUE( taskMgr.getWorkerCount() > 0 ); // 하네스가 세운 매니저다 — 다시 initialize 하면 이미 섰다고 false 다
 
     // 워커를 재운다 — 스핀 예산(수십 us)이 지나야 잠들므로 넉넉히 기다린다.
     std::this_thread::sleep_for( std::chrono::milliseconds( 5 ) );
@@ -915,7 +915,7 @@ SW_TEST_CASE( TaskTest, ParallelGroupWakesWorkersOnce )
 SW_TEST_CASE( TaskTest, HighPriorityTaskJumpsTheQueue )
 {
     sw::TaskManager& taskMgr = sw::engine::getSubsystem<sw::TaskManager>();
-    taskMgr.initialize();
+    SW_ASSERT_TRUE( taskMgr.getWorkerCount() > 0 ); // 하네스가 세운 매니저다 — 다시 initialize 하면 이미 섰다고 false 다
     const uint32 workerCount = taskMgr.getWorkerCount();
     SW_ASSERT_TRUE( workerCount >= 1 );
 
@@ -997,7 +997,7 @@ SW_TEST_CASE( TaskTest, HighPriorityTaskJumpsTheQueue )
 SW_TEST_CASE( TaskTest, WaitStageLeavesNoActiveTaskBehind )
 {
     sw::TaskManager& taskMgr = sw::engine::getSubsystem<sw::TaskManager>();
-    taskMgr.initialize();
+    SW_ASSERT_TRUE( taskMgr.getWorkerCount() > 0 ); // 하네스가 세운 매니저다 — 다시 initialize 하면 이미 섰다고 false 다
 
     static sw::atomic<uint32> s_touchCount{ 0 };
     s_touchCount = 0;
@@ -1038,7 +1038,7 @@ SW_TEST_CASE( TaskTest, StageDispatchDoesNotAllocate )
     sw::MemoryProfiler* pMemory = sw::MemoryProfiler::getActive();
     SW_ASSERT_NOT_NULL( pMemory );
     sw::TaskManager& taskMgr = sw::engine::getSubsystem<sw::TaskManager>();
-    taskMgr.initialize();
+    SW_ASSERT_TRUE( taskMgr.getWorkerCount() > 0 ); // 하네스가 세운 매니저다 — 다시 initialize 하면 이미 섰다고 false 다
 
     static sw::atomic<uint32> s_dispatchTouch{ 0 };
     s_dispatchTouch = 0;
@@ -1110,7 +1110,7 @@ SW_TEST_CASE( TaskTest, StageDispatchDoesNotAllocate )
 SW_TEST_CASE( TaskTest, RunParallelSplitsOnlyAboveThreshold )
 {
     sw::TaskManager& taskMgr = sw::engine::getSubsystem<sw::TaskManager>();
-    taskMgr.initialize();
+    SW_ASSERT_TRUE( taskMgr.getWorkerCount() > 0 ); // 하네스가 세운 매니저다 — 다시 initialize 하면 이미 섰다고 false 다
 
     static sw::atomic<uint32> s_callCount{ 0 };
     static sw::atomic<uint32> s_arrHit[4096];

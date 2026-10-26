@@ -753,7 +753,7 @@ namespace
          * @details 한 파일은 한 종류여야 한다 — 엔진 표와 레지스트리가 같이 맞거나 레지스트리 종류가 둘 이상 맞으면 @p outConflict 에 이유를 적고 false 를 반환합니다.
          *          맞는 종류가 없으면 true 를 반환하며 @p outKind 의 `_pLoad` 가 nullptr 입니다.
          */
-        static bool findKind( sw::string_view resourceID, ResolvedKind& outKind, sw::string& outConflict )
+        [[nodiscard]] static bool findKind( sw::string_view resourceID, ResolvedKind& outKind, sw::string& outConflict )
         {
             outKind = ResolvedKind{};
             outConflict.clear();

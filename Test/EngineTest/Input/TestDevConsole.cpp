@@ -49,8 +49,8 @@ namespace
 
         ConsoleVariableFixture()
         {
-            (void)_manager.registerVariable( "gv_testSpeed", GlobalVariableType::Float, &_speed, 1.5f, "test speed" );
-            (void)_manager.registerVariable( "gv_testSpawnCount", GlobalVariableType::Int32, &_count, int32{ 3 }, "test count" );
+            (void)_manager.registerVariable( "gv_testSpeed", GlobalVariableType::Float, &_speed, 1.5f, "test speed" );            // 테스트 준비 — 실패하면 뒤 단언이 드러낸다
+            (void)_manager.registerVariable( "gv_testSpawnCount", GlobalVariableType::Int32, &_count, int32{ 3 }, "test count" ); // 테스트 준비 — 실패하면 뒤 단언이 드러낸다
         }
     };
 
@@ -65,14 +65,14 @@ namespace
         DevConsoleController _controller;
         bool                 _bFrameOpen{ false };
 
-        bool initialize()
+        [[nodiscard]] bool initialize()
         {
             if ( _input.initialize() == false || ResourcePaths::initialize() == false )
                 return false;
             _pShellMap = Engine::createShellInputMap( test::getEngineDefaultAssets()._shellInputMap.get() );
             _pShellMap->setInputManager( &_input );
             _pShellMap->setLayerEnabled( InputMapDefaults::kTitleLayerName, false ); // `Engine::updateShellActions` 와 같다
-            (void)_controller.initialize( &_input, nullptr );
+            (void)_controller.initialize( &_input, nullptr );                        // 테스트 준비 — 실패하면 뒤 단언이 드러낸다
             return _pShellMap->hasAction( InputMapDefaults::kDevConsoleToggleAction );
         }
 
@@ -304,9 +304,9 @@ SW_TEST_CASE( DevConsoleTest, HistoryWalksBothWays )
     test::ScopedLogSuppressor suppressor;
     ConsoleVariableFixture    fixture;
     DevConsole                console{ &fixture._manager };
-    (void)console.submit( "gv_testSpeed 1" );
-    (void)console.submit( "gv_testSpeed 2" );
-    (void)console.submit( "gv_testSpeed 2" );
+    (void)console.submit( "gv_testSpeed 1" ); // 기록 수만 본다 — 결과는 아래 단언이 history 로 드러낸다
+    (void)console.submit( "gv_testSpeed 2" ); // 기록 수만 본다 — 결과는 아래 단언이 history 로 드러낸다
+    (void)console.submit( "gv_testSpeed 2" ); // 기록 수만 본다 — 결과는 아래 단언이 history 로 드러낸다
     SW_ASSERT_EQUAL( size_t( 2 ), console.getHistory().size() );
 
     string line;

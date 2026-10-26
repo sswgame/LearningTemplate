@@ -103,7 +103,7 @@ SW_TEST_CASE( FontServiceTest, MissingFamilyWarnsOnceAndIsSkipped )
     const sw::FontFaceID face       = fixture._fontService->findFaceForCodepoint( chain, 0x0627u, glyphIndex ); // 아랍 알리프 — 어느 면에도 없다
     SW_EXPECT_EQUAL( chain._arrFace[0], face );
     SW_EXPECT_EQUAL( 0u, glyphIndex );
-    (void)fixture._fontService->findFaceForCodepoint( chain, 0x0627u, glyphIndex );
+    (void)fixture._fontService->findFaceForCodepoint( chain, 0x0627u, glyphIndex ); // 면을 미리 열거나 경고 횟수만 본다(위 설명)
     SW_EXPECT_EQUAL( 2u, fixture._fontService->getWarnedOnceCount() );
 }
 

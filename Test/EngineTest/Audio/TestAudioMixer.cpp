@@ -31,7 +31,7 @@ namespace
 </AudioMixerDesc>)";
 
         /** @brief 직류 클립 둘(0.5 · 0.25)을 넣은 엔진을 기본 그래프로 만듭니다. */
-        static bool initializeEngine( sw::AudioEngine& engine, const sw::AudioMixerDesc& desc )
+        [[nodiscard]] static bool initializeEngine( sw::AudioEngine& engine, const sw::AudioMixerDesc& desc )
         {
             if ( engine.initialize( desc, sw::AudioChannelLayout::Stereo ) == false )
                 return false;

@@ -28,7 +28,7 @@ namespace
         unordered_map<AccountID, string> _mapName{};
         const OnlineServiceHost*         _pHost{ nullptr };
 
-        bool findIdentity( AccountID accountID, AccountIdentity& outIdentity ) const override
+        [[nodiscard]] bool findIdentity( AccountID accountID, AccountIdentity& outIdentity ) const override
         {
             const auto nameIt = _mapName.find( accountID );
             if ( nameIt == _mapName.end() || isAccountOnline( accountID ) == false )
@@ -38,7 +38,7 @@ namespace
             return true;
         }
 
-        bool findIdentityByDisplayName( string_view displayName, AccountIdentity& outIdentity ) const override
+        [[nodiscard]] bool findIdentityByDisplayName( string_view displayName, AccountIdentity& outIdentity ) const override
         {
             (void)displayName;
             (void)outIdentity;

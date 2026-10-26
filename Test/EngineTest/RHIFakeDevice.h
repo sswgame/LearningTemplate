@@ -85,7 +85,7 @@ namespace test
     class FakeRHIDevice final : public sw::IRHIDevice
     {
     public:
-        bool                     initializeInternal( const sw::RHISwapChainDesc& ) override { return true; }
+        [[nodiscard]] bool       initializeInternal( const sw::RHISwapChainDesc& ) override { return true; }
         void                     shutdownInternal() override { _listShutdownStep.push_back( "shutdownInternal" ); }
         void                     waitIdleInternal() override { _listShutdownStep.push_back( "waitIdleInternal" ); }
         void                     detachCommandRecordingInternal() override { _listShutdownStep.push_back( "detachCommandRecordingInternal" ); }

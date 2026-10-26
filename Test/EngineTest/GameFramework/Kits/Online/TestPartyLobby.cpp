@@ -54,8 +54,8 @@ namespace
         /** @brief 캐시에 키가 있는가입니다(테스트가 기록 · 색인을 직접 본다). */
         bool hasKey( string_view key )
         {
-            MemoryEphemeralStore probe{ _pCacheDatabase }; // 따로 앞 하나 — 라우터의 답을 가져가지 않는다
-            (void)probe.submit( EphemeralRequest::makeGet( key ) );
+            MemoryEphemeralStore probe{ _pCacheDatabase };          // 따로 앞 하나 — 라우터의 답을 가져가지 않는다
+            (void)probe.submit( EphemeralRequest::makeGet( key ) ); // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
             vector<EphemeralReply> listReply;
             (void)probe.pollReplies( listReply );
             return listReply.size() == 1 && listReply[0]._result == EphemeralResult::Ok;

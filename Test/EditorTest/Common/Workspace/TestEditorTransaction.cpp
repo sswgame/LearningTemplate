@@ -364,7 +364,7 @@ SW_TEST_CASE( EditorTransactionTest, UndoOfDestroyBringsBackTheWholeSubtree )
 
 /**
  * @brief [EditorTransactionTest] 지운 계층을 되돌리면 자식은 **원래** 부모에 붙는다 — 그사이 같은 이름으로 생긴 오브젝트가 아니라
- * @details 엔진은 쓸 만한 게임 카메라가 없으면 프레임마다 "GameCamera" 를 만든다(`Scene::ensureDefaultCameras`). 하나뿐인 게임 카메라를 자식째 지우면
+ * @details 엔진은 쓸 만한 게임 카메라가 없으면 프레임마다 "GameCamera" 를 만든다(`Scene::pickActiveGameCamera`). 하나뿐인 게임 카메라를 자식째 지우면
  *          다음 프레임에 새 "GameCamera" 가 생기고, 되돌리면 원래 것은 `GameCamera_2` 로 돌아온다 — 자식이 이름으로 부모를 찾으면 **새 것**에 붙는다
  *          (저장하면 게임 카메라 둘이 굳는다). 되돌리기는 같은 실행의 스냅샷이라 부모의 런타임 id 로 찾는다.
  */

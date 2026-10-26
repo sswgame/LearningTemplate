@@ -49,7 +49,7 @@ namespace test
         ~PostgresTestSchema()
         {
             if ( _admin != nullptr )
-                (void)_admin->executeScript( "DROP SCHEMA " + _schemaName + " CASCADE" );
+                (void)_admin->executeScript( "DROP SCHEMA " + _schemaName + " CASCADE" ); // 이미 실패한 트랜잭션의 정리다 — 원래 오류를 돌려준다
         }
 
         PostgresTestSchema( const PostgresTestSchema& )            = delete;

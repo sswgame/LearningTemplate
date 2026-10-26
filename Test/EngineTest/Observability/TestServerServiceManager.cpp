@@ -42,7 +42,7 @@ namespace
     public:
         static constexpr const utf8* kName = TIndex == 0 ? "test.first" : ( TIndex == 1 ? "test.second" : "test.failing" );
 
-        bool initialize( const ServerServiceContext& context, string& outError ) override
+        [[nodiscard]] bool initialize( const ServerServiceContext& context, string& outError ) override
         {
             (void)context;
             ServerServiceTestLog::add( kName, "init" );

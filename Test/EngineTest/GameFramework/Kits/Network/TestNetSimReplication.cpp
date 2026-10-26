@@ -35,7 +35,7 @@ namespace
             , _pTable{ pTable }
         {
             SW_EXPECT_TRUE( _server.initialize( &world.getPeers(), pTable->_settings, pTable->_pPolicy ) );
-            world.getRouter().registerHandler( &_server );
+            SW_EXPECT_TRUE( world.getRouter().registerHandler( &_server ) );
         }
 
         void onTickEnd( NetSimWorld& world, float32 deltaTime ) override
@@ -76,7 +76,7 @@ namespace
             ReplicationClientConfig settings;
             settings._tickInterval = kReplicationTickSeconds;
             SW_EXPECT_TRUE( _client.initialize( &world.getPeers(), settings ) );
-            world.getRouter().registerHandler( &_client );
+            SW_EXPECT_TRUE( world.getRouter().registerHandler( &_client ) );
         }
 
         void onTickBegin( NetSimWorld& world, float32 deltaTime ) override

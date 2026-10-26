@@ -39,7 +39,7 @@ namespace test
         {
         }
 
-        bool                       initialize( sw::IStreamHandler* pHandler, const sw::StreamTransportConfig& settings ) override { return _inner->initialize( pHandler, settings ); }
+        [[nodiscard]] bool         initialize( sw::IStreamHandler* pHandler, const sw::StreamTransportConfig& settings ) override { return _inner->initialize( pHandler, settings ); }
         void                       shutdown() override { _inner->shutdown(); }
         bool                       listen( const sw::NetAddress& bindAddress ) override { return _inner->listen( bindAddress ); }
         uint16                     getListenPort() const override { return _inner->getListenPort(); }
@@ -78,7 +78,7 @@ namespace test
             sw::StreamTransportConfig settings;
             settings._ioThreadCount      = 0;
             settings._idleTimeoutSeconds = 0.0;
-            (void)_transport->initialize( this, settings );
+            (void)_transport->initialize( this, settings ); // 테스트 준비 — 실패하면 뒤 단언이 드러낸다
             (void)_transport->listen( sw::NetAddress::makeLoopback( 0 ) );
         }
 
@@ -428,7 +428,7 @@ namespace test
                 for ( size_t index = 1; index < listArgument.size(); ++index )
                 {
                     const sw::string key( listArgument[index].getText() );
-                    (void)findEntry( key );
+                    (void)findEntry( key ); // 만료된 키를 지운다(만료도 바뀜이다)
                     connection._mapWatchedVersion[key] = readKeyVersion( key );
                 }
                 replySimple( outBytes, "OK" );

@@ -436,7 +436,7 @@ SW_TEST_CASE( MatchQueueTest, PartyLeaderQueuesTheWholePartyAsOneTeam )
     node.step( 0 );
     // 파티 id 는 계정 색인에서 — 수락에 필요하다
     MemoryEphemeralStore probe{ &cacheDatabase };
-    (void)probe.submit( EphemeralRequest::makeGet( PartyLobbyService::makeAccountPartyKey( 10 ) ) );
+    (void)probe.submit( EphemeralRequest::makeGet( PartyLobbyService::makeAccountPartyKey( 10 ) ) ); // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
     vector<EphemeralReply> listReply;
     (void)probe.pollReplies( listReply );
     uint64 partyID = 0;

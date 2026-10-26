@@ -166,7 +166,7 @@ namespace
      */
     [[nodiscard]] bool setMainViewFromScene( sw::RenderFramePacket& packet, sw::Scene& scene, const sw::IRHIDevice& device )
     {
-        if ( scene.ensureDefaultCameras() == false )
+        if ( scene.pickActiveGameCamera() == false )
             return false;
         const sw::CameraComponent* pCamera = scene.getActiveGameCamera();
         if ( pCamera == nullptr )
@@ -235,7 +235,7 @@ namespace
         /** @brief 카메라 · 주광 · 큐브 · 바닥을 채웁니다. 하나라도 못 만들면 false 입니다. */
         bool populate()
         {
-            if ( _scene.ensureDefaultCameras() == false )
+            if ( _scene.pickActiveGameCamera() == false )
                 return false;
             sw::GameObject* pLightObject = _scene.getObjectManager()->createGameObject( sw::hashed_string( "KeyLight" ) );
             if ( pLightObject != nullptr )
@@ -363,7 +363,7 @@ namespace
 
         bool populate()
         {
-            if ( _scene.ensureDefaultCameras() == false )
+            if ( _scene.pickActiveGameCamera() == false )
                 return false;
             sw::GameObject* pLightObject = _scene.getObjectManager()->createGameObject( sw::hashed_string( "KeyLight" ) );
             if ( pLightObject == nullptr || pLightObject->addComponent<sw::DirectionalLightComponent>() == nullptr )
@@ -529,7 +529,7 @@ namespace
         bool populate( const sw::shared_ptr<sw::Material>& material )
         {
             _material = material;
-            if ( _material == nullptr || _scene.ensureDefaultCameras() == false )
+            if ( _material == nullptr || _scene.pickActiveGameCamera() == false )
                 return false;
             sw::GameObject*                pLightObject = _scene.getObjectManager()->createGameObject( sw::hashed_string( "KeyLight" ) );
             sw::DirectionalLightComponent* pLight       = pLightObject != nullptr ? pLightObject->addComponent<sw::DirectionalLightComponent>() : nullptr;
@@ -965,7 +965,7 @@ SW_TEST_CASE( RenderPassGPUTest, FrameRendererInitializeAndExecuteSmoke )
     SW_EXPECT_TRUE( renderer.getGraph().getNodeCount() > 0 );
 
     sw::Scene scene( "FrameRendererSmokeScene" );
-    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+    SW_EXPECT_TRUE( scene.pickActiveGameCamera() );
     sw::shared_ptr<sw::Mesh> cube = sw::MeshUtil::createUnitCube();
     sw::GameObject*          go   = scene.getObjectManager()->createGameObject( sw::hashed_string( "Cube" ) );
     SW_ASSERT_NOT_NULL( go );
@@ -1015,7 +1015,7 @@ SW_TEST_CASE( RenderPassGPUTest, ShaderRecompileRebuildsPipelineStates )
 
     // 재생성 뒤에도 여전히 그릴 수 있어야 한다 (레이아웃·폴백 버퍼·콜백이 같이 재구축됐는지).
     sw::Scene scene( "ShaderRecompileScene" );
-    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+    SW_EXPECT_TRUE( scene.pickActiveGameCamera() );
     sw::shared_ptr<sw::Mesh> cube = sw::MeshUtil::createUnitCube();
     sw::GameObject*          pObj = scene.getObjectManager()->createGameObject( sw::hashed_string( "Cube" ) );
     SW_ASSERT_NOT_NULL( pObj );
@@ -1043,7 +1043,7 @@ SW_TEST_CASE( RenderPassGPUTest, ShaderRecompileKeepsTaaHistory )
     sw::FrameRenderer renderer;
     SW_ASSERT_TRUE( renderer.initialize( device.get(), ::test::getEngineDefaultAssets()._defaultDeferredPipeline.c_str() ) );
     sw::Scene scene( "TaaHistoryScene" );
-    SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
+    SW_ASSERT_TRUE( scene.pickActiveGameCamera() );
 
     device->beginFrame();
     SW_EXPECT_TRUE( renderer.execute( device.get(), scene ) );
@@ -1077,7 +1077,7 @@ SW_TEST_CASE( RenderPassGPUTest, GPUSceneBufferReusedAcrossPackets )
     SW_EXPECT_TRUE( renderer.initialize( device.get() ) );
 
     sw::Scene scene( "GpuSceneReuseScene" );
-    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+    SW_EXPECT_TRUE( scene.pickActiveGameCamera() );
     sw::shared_ptr<sw::Mesh> cube = sw::MeshUtil::createUnitCube();
     sw::GameObject*          go   = scene.getObjectManager()->createGameObject( sw::hashed_string( "Cube" ) );
     SW_ASSERT_NOT_NULL( go );
@@ -1139,7 +1139,7 @@ SW_TEST_CASE( RenderPassGPUTest, MaterialLifetimeFollowsPacket )
     SW_EXPECT_TRUE( renderer.initialize( device.get() ) );
 
     sw::Scene scene( "MaterialLifetimeScene" );
-    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+    SW_EXPECT_TRUE( scene.pickActiveGameCamera() );
     sw::shared_ptr<sw::Mesh> cube = sw::MeshUtil::createUnitCube();
     sw::GameObject*          go   = scene.getObjectManager()->createGameObject( sw::hashed_string( "Cube" ) );
     SW_ASSERT_NOT_NULL( go );
@@ -1276,7 +1276,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, FrameRendererDeferredPipelinePara
         SW_EXPECT_TRUE( renderer.isReady() );
 
         sw::Scene scene( "DeferredParallelScene" );
-        SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+        SW_EXPECT_TRUE( scene.pickActiveGameCamera() );
         sw::shared_ptr<sw::Mesh> cube = sw::MeshUtil::createUnitCube();
         for ( uint32 objectIndex = 0; objectIndex < 4; ++objectIndex )
         {
@@ -1372,7 +1372,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, MaterialPermutationDrivesBatchPSO
 
         sw::Scene scene( "MaterialPermutationPSOScene" );
         if ( bOk )
-            bOk = scene.ensureDefaultCameras();
+            bOk = scene.pickActiveGameCamera();
 
         sw::shared_ptr<sw::Mesh> mesh;
         if ( bOk )
@@ -1496,7 +1496,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, SpriteDrawsWithTheSpriteShader, t
         {
             sw::Scene scene( "SpriteScene" );
             if ( bOk )
-                bOk = scene.ensureDefaultCameras();
+                bOk = scene.pickActiveGameCamera();
             sw::SpriteComponent* pSprite = nullptr;
             if ( bOk )
             {
@@ -1556,7 +1556,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, ParticlesDrawInTheTransparentPass
         bool              bOk   = renderer.initialize( device.get() ) && renderer.isReady();
         const sw::string  label = sw::string( device->getBackendName() );
         sw::Scene         scene( "ParticleScene" );
-        bOk                                = bOk && scene.ensureDefaultCameras();
+        bOk                                = bOk && scene.pickActiveGameCamera();
         const sw::CameraComponent* pCamera = bOk ? scene.getActiveGameCamera() : nullptr;
         sw::VfxComponent*          pVfx    = nullptr;
         if ( pCamera != nullptr )
@@ -1631,7 +1631,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, MainPassCullsWithCameraFrustumNot
 
         sw::Scene scene( "CameraFrustumCullScene" );
         if ( bOk )
-            bOk = scene.ensureDefaultCameras();
+            bOk = scene.pickActiveGameCamera();
 
         sw::shared_ptr<sw::Mesh> sharedMesh;
         if ( bOk )
@@ -1719,7 +1719,7 @@ SW_TEST_CASE( RenderPassGPUTest, TransparentOrderMatchesAcrossBackends )
 
         sw::Scene scene( "TransparentOrderScene" );
         if ( bOk )
-            bOk = scene.ensureDefaultCameras();
+            bOk = scene.pickActiveGameCamera();
 
         // 메시와 머티리얼 인스턴스를 **공유**한다 — 그래야 한 배치에 투명 인스턴스가 여럿 들어가고,
         // 배치 안의 정렬이 실제로 검사된다. 따로 주면 배치가 하나씩 갈려 검사할 순서가 없다.
@@ -1843,7 +1843,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, GPUGeneratedCommandsDrawOnlyVisib
 
         sw::Scene scene( "GpuCullVisibleScene" );
         if ( bOk )
-            bOk = scene.ensureDefaultCameras();
+            bOk = scene.pickActiveGameCamera();
 
         // **메시 하나를 모두가 공유한다** — 배치 키에 메시가 들어가므로 배치가 하나로 묶이고, 그래야
         // 한 배치 안에서 일부만 컬링되는 상황이 만들어진다(배치마다 인스턴스가 하나면 검사할 게 없다).
@@ -1943,7 +1943,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, PerBatchMaterialColorsReachShader
 
         sw::Scene scene( "PerBatchMaterialColorScene" );
         if ( bOk )
-            bOk = scene.ensureDefaultCameras();
+            bOk = scene.pickActiveGameCamera();
         // 빛은 씬 데이터로 둔다 — 라이트가 없으면 앰비언트만 남아(키 라이트 폴백 없음, D2-13) 두 큐브가 다 검게 그려져 색을 가를 수 없다.
         if ( bOk )
         {
@@ -2084,7 +2084,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, MultiBatchPassKeepsPerBatchConsta
 
         sw::Scene scene( "MultiBatchScene" );
         if ( bOk )
-            bOk = scene.ensureDefaultCameras();
+            bOk = scene.pickActiveGameCamera();
 
         // 같은 기하지만 **다른 Mesh 객체** 두 개 — 배치 키가 갈려 한 패스에서 드로우가 둘이 된다.
         sw::shared_ptr<sw::Mesh> meshLeft;
@@ -2178,7 +2178,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, InstanceAnimationKeepsInstancesRe
 
         sw::Scene scene( "InstanceAnimationScene" );
         if ( bOk )
-            bOk = scene.ensureDefaultCameras();
+            bOk = scene.pickActiveGameCamera();
 
         constexpr uint32         kAnimationMeshCount = 3;
         sw::shared_ptr<sw::Mesh> arrMesh[kAnimationMeshCount];
@@ -2268,7 +2268,7 @@ SW_TEST_CASE( RenderPassGPUTest, FrameRendererParityAllBackends )
 
         sw::Scene scene( "FrameRendererParityScene" );
         if ( bOk )
-            bOk = scene.ensureDefaultCameras();
+            bOk = scene.pickActiveGameCamera();
 
         // 메시를 **여러 개** 만든다 — 배치 키에 메시가 들어가므로 곧 배치 수이고, 배치가 하나뿐이면
         // 인스턴스 시작 오프셋이 늘 0 이라 인다이렉트 드로우의 백엔드 차이를 전혀 측정하지 못한다
@@ -2417,7 +2417,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, ViewModeSelectsDistinctPipelineSt
 
         sw::Scene scene( "ViewModeScene" );
         if ( bOk )
-            bOk = scene.ensureDefaultCameras();
+            bOk = scene.pickActiveGameCamera();
 
         sw::shared_ptr<sw::Mesh> mesh;
         if ( bOk )
@@ -2558,7 +2558,7 @@ SW_TEST_CASE( RenderPassGPUTest, RendererSurvivesDeviceRecreate )
 
     constexpr const utf8* kGlassMaterial = "engine/materials/glassmaterial.material";
     sw::Scene             scene( "DeviceRecreateScene" );
-    SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
+    SW_ASSERT_TRUE( scene.pickActiveGameCamera() );
     sw::shared_ptr<sw::Mesh> cube = sw::MeshUtil::createUnitCube();
     sw::GameObject*          go   = scene.getObjectManager()->createGameObject( sw::hashed_string( "Cube" ) );
     SW_ASSERT_NOT_NULL( go );
@@ -2802,7 +2802,7 @@ SW_TEST_CASE( RenderPassGPUTest, DeferredPipelineDrawsGeometry )
     SW_EXPECT_TRUE_MSG( presented.empty() == false, "디퍼드 파이프라인에 Present 패스 입력이 없다" );
 
     sw::Scene scene( "DeferredPipelineScene" );
-    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+    SW_EXPECT_TRUE( scene.pickActiveGameCamera() );
     sw::shared_ptr<sw::Mesh> cube = sw::MeshUtil::createUnitCube();
     sw::GameObject*          go   = scene.getObjectManager()->createGameObject( sw::hashed_string( "Cube" ) );
     SW_ASSERT_NOT_NULL( go );
@@ -2911,7 +2911,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, MergedSceneDrawsMatchPerBatch, te
 
         sw::Scene scene( "MergedDrawScene" );
         if ( bOk )
-            bOk = scene.ensureDefaultCameras();
+            bOk = scene.pickActiveGameCamera();
 
         // 메시 종류가 곧 배치 수다 — 여섯 도형 × 둘 = 배치 여섯(같은 메시는 한 배치). 정점 풀 시작이 배치마다 다르다.
         sw::shared_ptr<sw::Mesh> arrMesh[]  = { sw::MeshUtil::createUnitCube(), sw::MeshUtil::createSphere(), sw::MeshUtil::createCone(),
@@ -3049,7 +3049,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, AmbientOcclusionReachesBloom, tes
 
         sw::Scene scene( "AmbientOcclusionScene" );
         if ( bOk )
-            bOk = scene.ensureDefaultCameras();
+            bOk = scene.pickActiveGameCamera();
         // 바닥 위의 큐브 — 맞닿는 자리와 실루엣에서 깊이·노멀이 꺾여 SSAO 가 값을 낸다.
         sw::shared_ptr<sw::Mesh> cube  = sw::MeshUtil::createUnitCube();
         sw::shared_ptr<sw::Mesh> floor = sw::MeshUtil::createPlane();
@@ -3242,7 +3242,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, MorphPoolIdentityMatchesRest, tes
 
         sw::Scene scene( "MorphPoolIdentityScene" );
         if ( bOk )
-            bOk = scene.ensureDefaultCameras();
+            bOk = scene.pickActiveGameCamera();
 
         // 메시를 **여럿** 둔다 — 풀 시작 오프셋(g_MorphVertexBase)이 배치마다 달라야 "오프셋 + vid" 가 실제로 검증된다.
         constexpr uint32         kMeshCount = 3;
@@ -3460,7 +3460,7 @@ SW_TEST_CASE( RenderPassGPUTest, SkinnedMeshFollowsPaletteLikeCPUSkinning )
 
         sw::Scene skinnedScene( "SkinnedCubeScene" );
         sw::Scene staticScene( "CpuSkinnedCubeScene" );
-        bOk                                 = bOk && skinnedScene.ensureDefaultCameras() && staticScene.ensureDefaultCameras();
+        bOk                                 = bOk && skinnedScene.pickActiveGameCamera() && staticScene.pickActiveGameCamera();
         sw::SkeletalMeshComponent* pSkinned = nullptr;
         sw::MeshComponent*         pStatic  = nullptr;
         if ( bOk )
@@ -3669,7 +3669,7 @@ SW_TEST_CASE( RenderPassGPUTest, MorphWeightsDeformBeforeSkinningLikeCPU )
 
         sw::Scene morphScene( "MorphCubeScene" );
         sw::Scene staticScene( "CpuMorphCubeScene" );
-        bOk                                 = bOk && morphScene.ensureDefaultCameras() && staticScene.ensureDefaultCameras();
+        bOk                                 = bOk && morphScene.pickActiveGameCamera() && staticScene.pickActiveGameCamera();
         sw::SkeletalMeshComponent* pSkinned = nullptr;
         sw::MeshComponent*         pStatic  = nullptr;
         if ( bOk )
@@ -4232,7 +4232,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, DeferredPresentCopiesTheTonemapRe
     for ( test::RHITestDevice& device : sweep )
     {
         sw::Scene scene( "DeferredPresentScene" );
-        bool      bOk = scene.ensureDefaultCameras();
+        bool      bOk = scene.pickActiveGameCamera();
         if ( bOk )
         {
             sw::GameObject* pLightObject = scene.getObjectManager()->createGameObject( sw::hashed_string( "KeyLight" ) );
@@ -4348,7 +4348,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, FusedPostChainMatchesStaged, test
     {
         // 씬은 한 번만 만든다 — 두 파이프라인이 **같은 입력**을 받아야 비교가 성립한다.
         sw::Scene scene( "FusedPostChainScene" );
-        bool      bOk = scene.ensureDefaultCameras();
+        bool      bOk = scene.pickActiveGameCamera();
 
         // **밝아야 한다.** `postchain.hlsl` 은 블룸 뒤에 `saturate` 를 한다 — 나눈 판이 중간 타깃(UNORM8)에
         // 쓰면서 자르던 것을 재현하는 것이다. 블룸이 1 을 넘는 픽셀이 없으면 그 자름은 아무 일도 하지
@@ -5084,7 +5084,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, AlphaCutoffClipsTheShadowDepth, t
         {
             const utf8* pCase = bCutoff ? "on" : "off";
             sw::Scene   scene{ "AlphaCutoffShadow" };
-            SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
+            SW_ASSERT_TRUE( scene.pickActiveGameCamera() );
             sw::GameObject* pLightObject = scene.getObjectManager()->createGameObject( sw::hashed_string( "KeyLight" ) );
             SW_ASSERT_TRUE( pLightObject != nullptr && pLightObject->addComponent<sw::DirectionalLightComponent>() != nullptr );
 
@@ -5295,7 +5295,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, CPUAndGPUParticleSimulationsDrawT
             // 대상은 효과를 읽을 때 정해진다(VfxComponent) — 읽기 전에 바꾼다.
             bOk = variables.setValueFromString( "gv_vfxSimulation", arrTarget[targetIndex] );
             sw::Scene scene( "ParticleCompareScene" );
-            bOk                                = bOk && scene.ensureDefaultCameras();
+            bOk                                = bOk && scene.pickActiveGameCamera();
             const sw::CameraComponent* pCamera = bOk ? scene.getActiveGameCamera() : nullptr;
             sw::GameObject*            pObject = pCamera != nullptr ? scene.getObjectManager()->createGameObject( sw::hashed_string( "Effect" ) ) : nullptr;
             sw::VfxComponent*          pVfx    = pObject != nullptr ? pObject->addComponent<sw::VfxComponent>() : nullptr;
@@ -5514,7 +5514,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, NormalsStayPerpendicularUnderNonU
                 const sw::string label = backendName + " " + normalCase._pName + ( bWithMaterial ? " forwardlit: " : " gbuffer: " );
 
                 sw::Scene scene( "NonUniformScaleScene" );
-                SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
+                SW_ASSERT_TRUE( scene.pickActiveGameCamera() );
                 sw::GameObjectManager* pObjectManager = scene.getObjectManager();
                 sw::GameObject*        pParent        = pObjectManager->createGameObject( sw::hashed_string( "Stretch" ) );
                 SW_ASSERT_NOT_NULL( pParent );
@@ -5794,7 +5794,7 @@ SW_TEST_CASE( RenderPassGPUTest, MaterialTexturesAreSampledLinearWrap )
         bool        bOk{ false };
         {
             sw::Scene scene( "MaterialSamplerScene" );
-            SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
+            SW_ASSERT_TRUE( scene.pickActiveGameCamera() );
             sw::GameObject*    pObject = scene.getObjectManager()->createGameObject( sw::hashed_string( "CheckerQuad" ) );
             sw::MeshComponent* pMesh   = ( pObject != nullptr ) ? pObject->addComponent<sw::MeshComponent>() : nullptr;
             SW_ASSERT_NOT_NULL( pMesh );
@@ -5910,7 +5910,7 @@ SW_TEST_CASE( RenderPassGPUTest, EngineTextureSlotsAreSampledLinearClamp )
         const sw::string label = sw::string( device->getBackendName() ) + ": ";
 
         sw::Scene scene( "EngineSamplerScene" );
-        bool      bOk = scene.ensureDefaultCameras();
+        bool      bOk = scene.pickActiveGameCamera();
         if ( bOk )
         {
             // 밝은 면이 있어야 블룸이 퍼진다. 그림자는 끈다 — 에뮬 백엔드는 그림자 비교를 다르게 한다(이 테스트의 대상이 아니다).
@@ -6068,7 +6068,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, SpriteFramesAndTintsArePerInstanc
             {
                 pCamera->setRole( sw::CameraRole::Game );
                 pCamera->setLocalPosition( sw::float3{ 0.0f, 0.0f, -4.0f } );
-                bOk = scene.ensureDefaultCameras();
+                bOk = scene.pickActiveGameCamera();
             }
             for ( const SpriteCase& spriteCase : kArrCase )
             {
@@ -6250,7 +6250,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, HalfResolutionAttachmentCoversIts
         const sw::string label = sw::string( device->getBackendName() ) + ": ";
 
         sw::Scene                scene( "HalfResolutionScene" );
-        bool                     bOk        = scene.ensureDefaultCameras();
+        bool                     bOk        = scene.pickActiveGameCamera();
         constexpr uint32         kCubeCount = 3;
         sw::shared_ptr<sw::Mesh> arrMesh[kCubeCount];
         for ( uint32 index = 0; index < kCubeCount && bOk; ++index )
@@ -6803,7 +6803,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, PrototypeGridMaterialIsAnchoredTo
         for ( uint32 shiftIndex = 0; shiftIndex < 2 && bOk; ++shiftIndex )
         {
             sw::Scene scene{ "PrototypeGridScene" };
-            bOk                       = scene.ensureDefaultCameras();
+            bOk                       = scene.pickActiveGameCamera();
             sw::GameObject*    pFloor = bOk ? scene.getObjectManager()->createGameObject( sw::hashed_string( "Floor" ) ) : nullptr;
             sw::MeshComponent* pMesh  = pFloor != nullptr ? pFloor->addComponent<sw::MeshComponent>() : nullptr;
             bOk                       = pMesh != nullptr;
@@ -7290,7 +7290,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, ExtraViewSortsTransparencyFromIts
         // 씬 하나 — 큐브 일곱과 기본 카메라. 캡처 카메라의 자리 · 방향은 기준 렌더에서 주 카메라로 다시 쓴다.
         auto populate = []( sw::Scene& scene, sw::shared_ptr<sw::Mesh>& outMesh, sw::shared_ptr<sw::Material>& outGlass, sw::shared_ptr<sw::Material>& outTint ) -> bool
         {
-            if ( scene.ensureDefaultCameras() == false )
+            if ( scene.pickActiveGameCamera() == false )
                 return false;
             outMesh                 = sw::MeshUtil::createUnitCube();
             outGlass                = sw::Material::create();
@@ -7761,7 +7761,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, OcclusionCullingUsesTheLastFrameD
             bOk = pOcclusion->setValueAsBool( caseIndex != 0 );
             sw::FrameRenderer renderer;
             sw::Scene         scene( "OcclusionScene" );
-            bOk                                = bOk && renderer.initialize( device.get(), test::getEngineDefaultAssets()._defaultDeferredPipeline.get() ) && renderer.isReady() && scene.ensureDefaultCameras();
+            bOk                                = bOk && renderer.initialize( device.get(), test::getEngineDefaultAssets()._defaultDeferredPipeline.get() ) && renderer.isReady() && scene.pickActiveGameCamera();
             sw::shared_ptr<sw::Mesh>     cube  = bOk ? sw::MeshUtil::createUnitCube() : nullptr;
             sw::shared_ptr<sw::Material> red   = sw::Material::create();
             sw::shared_ptr<sw::Material> blue  = sw::Material::create();
@@ -7960,7 +7960,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, CrowdSharingAndVertexAnimationMat
         if ( renderer.initialize( device.get() ) == false || renderer.isReady() == false )
             return result;
         sw::Scene scene( "CrowdScene" );
-        if ( scene.ensureDefaultCameras() == false )
+        if ( scene.pickActiveGameCamera() == false )
             return result;
         sw::GameObjectManager& manager = *scene.getObjectManager();
         for ( uint32 index = 0; index < 3; ++index )
@@ -8260,7 +8260,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, PixelArtSpritesSnapToTheAssetPixe
             pCamera->setRole( sw::CameraRole::Game );
             pCamera->setLocalPosition( sw::float3{ 0.0f, 0.0f, -4.0f } );
             pPixel = pCameraObject->addComponent<sw::PixelPerfectCameraComponent>();
-            bOk    = pPixel != nullptr && scene.ensureDefaultCameras();
+            bOk    = pPixel != nullptr && scene.pickActiveGameCamera();
         }
         if ( bOk )
         {
@@ -8426,7 +8426,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, Light2DFalloffAndShadowOnEveryBac
             pCaster->setSize( sw::float2{ 0.2f, 1.0f } );
             pCaster->setActive( false );
 
-            bOk = scene.ensureDefaultCameras();
+            bOk = scene.pickActiveGameCamera();
             scene.getObjectManager()->flushSceneTransforms();
             sw::engine::getSubsystem<sw::AssetManager>().getAssetCache<sw::MaterialCache>().initializePending( device.get() );
         }

@@ -32,7 +32,7 @@ namespace
         {
         }
 
-        bool                   initialize( IStreamHandler* pHandler, const StreamTransportConfig& settings ) override { return _inner->initialize( pHandler, settings ); }
+        [[nodiscard]] bool     initialize( IStreamHandler* pHandler, const StreamTransportConfig& settings ) override { return _inner->initialize( pHandler, settings ); }
         void                   shutdown() override { _inner->shutdown(); }
         bool                   listen( const NetAddress& bindAddress ) override { return _inner->listen( bindAddress ); }
         uint16                 getListenPort() const override { return _inner->getListenPort(); }

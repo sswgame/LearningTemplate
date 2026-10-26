@@ -166,7 +166,7 @@ SW_TEST_CASE( LocalizationManagerTest, ReloadChangedFilePicksUpNewTextAndKeepsOl
     SW_EXPECT_STREQ( "신비의 섬", pHeld );
 
     uint32 notifiedCount{ 0 };
-    (void)loc.registerLanguageChangedCallback( [&notifiedCount]( sw::string_view, sw::string_view )
+    (void)loc.registerLanguageChangedCallback( [&notifiedCount]( sw::string_view, sw::string_view ) // 핸들은 쓰지 않는다 — 테스트 동안 살아 있다
     { ++notifiedCount; } );
     const uint32 revisionBefore = loc.getTextRevision();
 

@@ -33,7 +33,7 @@ SW_TEST_CASE( TileMapRendererTest, TilesDrawRepaintAndBuildColliders )
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::Scene scene( "TileMapScene" );
-    SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
+    SW_ASSERT_TRUE( scene.pickActiveGameCamera() );
     sw::GameObjectManager* pManager = scene.getObjectManager();
     sw::GameObject*        pObject  = pManager->createGameObject( sw::hashed_string( "Level" ) );
     SW_ASSERT_NOT_NULL( pObject );
@@ -110,7 +110,7 @@ SW_TEST_CASE( TileMapRendererTest, LargeLayerBuildsOnlyPaintedChunks )
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::Scene scene( "TileMapChunkScene" );
-    SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
+    SW_ASSERT_TRUE( scene.pickActiveGameCamera() );
     sw::GameObjectManager* pManager = scene.getObjectManager();
     sw::GameObject*        pObject  = pManager->createGameObject( sw::hashed_string( "BigLevel" ) );
     SW_ASSERT_NOT_NULL( pObject );
@@ -158,7 +158,7 @@ SW_TEST_CASE( TileMapRendererTest, EditorPreviewDrawsWithoutPlay )
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::Scene scene( "TileMapPreviewScene" );
-    SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
+    SW_ASSERT_TRUE( scene.pickActiveGameCamera() );
     sw::GameObjectManager* pManager = scene.getObjectManager();
     sw::GameObject*        pObject  = pManager->createGameObject( sw::hashed_string( "PreviewLevel" ) );
     SW_ASSERT_NOT_NULL( pObject );

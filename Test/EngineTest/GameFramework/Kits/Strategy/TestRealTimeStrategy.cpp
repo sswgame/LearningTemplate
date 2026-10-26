@@ -50,7 +50,7 @@ namespace
         Wallet           _arrWallet[4]; ///< 플레이어마다 빌려 주는 지갑
         int32            _walletCount{ 0 };
 
-        bool initialize( int32 width = 48, int32 height = 48 )
+        [[nodiscard]] bool initialize( int32 width = 48, int32 height = 48 )
         {
             if ( _catalog.loadFromXMLText( kRTSTestXML, "RealTimeStrategyTest" ) == false )
                 return false;

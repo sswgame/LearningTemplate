@@ -512,7 +512,7 @@ SW_TEST_CASE( AbilitySystemTest, DamageExecutionMitigatesByArmorAndKillsExactlyO
     spec.setSetByCallerMagnitude( "Damage", 30.0f );
 
     int32 hitCount = 0;
-    (void)pTarget->registerGameplayEvent( CombatAttributeSet::getHitEventTag(), SW_DELEGATE_LAMBDA( AbilitySystemComponent::GameplayEventDelegate, [&hitCount]( const GameplayEventData& payload )
+    (void)pTarget->registerGameplayEvent( CombatAttributeSet::getHitEventTag(), SW_DELEGATE_LAMBDA( AbilitySystemComponent::GameplayEventDelegate, [&hitCount]( const GameplayEventData& payload ) // 핸들은 쓰지 않는다 — 테스트 동안 살아 있다
     {
         (void)payload;
         ++hitCount;
@@ -824,7 +824,7 @@ SW_TEST_CASE( AbilitySystemTest, CatalogXMLGrantsAnAbilitySetAndRunsADataOnlyAbi
     SW_EXPECT_NEAR_EQUAL( 100.0f, pAbilitySystem->getAttributeValue( "Stamina" ).value(), 0.001f );
 
     int32 healCueCount = 0;
-    (void)pAbilitySystem->registerGameplayCue( SW_DELEGATE_LAMBDA( AbilitySystemComponent::GameplayCueDelegate, [&healCueCount]( const GameplayCueEvent& cue )
+    (void)pAbilitySystem->registerGameplayCue( SW_DELEGATE_LAMBDA( AbilitySystemComponent::GameplayCueDelegate, [&healCueCount]( const GameplayCueEvent& cue ) // 핸들은 쓰지 않는다 — 테스트 동안 살아 있다
     {
         if ( cue._cueTag == "GameplayCue.Heal"_tag && cue._phase == GameplayCuePhase::Executed )
             ++healCueCount;

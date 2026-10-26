@@ -59,7 +59,7 @@
 SW_TEST_CASE( GPUSceneTest, BuildBatchesAndSortTransparent )
 {
     sw::Scene scene( "GpuSceneBatchTest" );
-    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+    SW_EXPECT_TRUE( scene.pickActiveGameCamera() );
 
     sw::GameObjectManager* objects = scene.getObjectManager();
     SW_ASSERT_NOT_NULL( objects );
@@ -125,7 +125,7 @@ SW_TEST_CASE( GPUSceneTest, BuildBatchesAndSortTransparent )
 SW_TEST_CASE( GPUSceneTest, MeshInstanceBatchRendersWithoutComponents )
 {
     sw::Scene scene( "GpuSceneInstanceBatch" );
-    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+    SW_EXPECT_TRUE( scene.pickActiveGameCamera() );
     sw::GameObjectManager* objects = scene.getObjectManager();
     SW_ASSERT_NOT_NULL( objects );
     sw::shared_ptr<sw::Mesh> cube = sw::MeshUtil::createUnitCube();
@@ -199,7 +199,7 @@ SW_TEST_CASE( GPUSceneTest, MeshInstanceBatchRendersWithoutComponents )
 SW_TEST_CASE( GPUSceneTest, TransparentOrderChangeKeepsOpaqueSlots )
 {
     sw::Scene scene( "GpuSceneTransparentTail" );
-    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+    SW_EXPECT_TRUE( scene.pickActiveGameCamera() );
 
     sw::GameObjectManager* objects = scene.getObjectManager();
     SW_ASSERT_NOT_NULL( objects );
@@ -278,7 +278,7 @@ SW_TEST_CASE( GPUSceneTest, TransparentOrderChangeKeepsOpaqueSlots )
 SW_TEST_CASE( GPUSceneTest, InstanceRingKeepsPublishedImmutableAndCatchesUp )
 {
     sw::Scene scene( "GpuSceneInstanceRing" );
-    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+    SW_EXPECT_TRUE( scene.pickActiveGameCamera() );
 
     sw::GameObjectManager* objects = scene.getObjectManager();
     SW_ASSERT_NOT_NULL( objects );
@@ -448,7 +448,7 @@ SW_TEST_CASE( GPUSceneTest, InstanceRingStandalone )
 SW_TEST_CASE( GPUSceneTest, PrimitiveRegistryTracksChanges )
 {
     sw::Scene scene( "GpuScenePrimitiveRegistry" );
-    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+    SW_EXPECT_TRUE( scene.pickActiveGameCamera() );
 
     sw::GameObjectManager* objects = scene.getObjectManager();
     SW_ASSERT_NOT_NULL( objects );
@@ -531,7 +531,7 @@ SW_TEST_CASE( GPUSceneTest, PrimitiveRegistryTracksChanges )
 SW_TEST_CASE( GPUSceneTest, AncestorToggleReachesGrandchildMeshOnly )
 {
     sw::Scene scene( "GpuSceneAncestorToggle" );
-    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+    SW_EXPECT_TRUE( scene.pickActiveGameCamera() );
     sw::GameObjectManager* objects = scene.getObjectManager();
     SW_ASSERT_NOT_NULL( objects );
     sw::shared_ptr<sw::Mesh> cube = sw::MeshUtil::createUnitCube();
@@ -580,7 +580,7 @@ SW_TEST_CASE( GPUSceneTest, AncestorToggleReachesGrandchildMeshOnly )
 SW_TEST_CASE( GPUSceneTest, DisabledMeshComponentIsNotDrawn )
 {
     sw::Scene scene( "GpuSceneDisabledMesh" );
-    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+    SW_EXPECT_TRUE( scene.pickActiveGameCamera() );
     sw::GameObjectManager*   objects = scene.getObjectManager();
     sw::shared_ptr<sw::Mesh> cube    = sw::MeshUtil::createUnitCube();
 
@@ -617,7 +617,7 @@ SW_TEST_CASE( GPUSceneTest, DisabledMeshComponentIsNotDrawn )
 SW_TEST_CASE( GPUSceneTest, CullingRadiusFollowsWorldScale )
 {
     sw::Scene scene( "GpuSceneScaledBounds" );
-    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+    SW_EXPECT_TRUE( scene.pickActiveGameCamera() );
     sw::GameObjectManager* objects = scene.getObjectManager();
     SW_ASSERT_NOT_NULL( objects );
 
@@ -657,7 +657,7 @@ SW_TEST_CASE( GPUSceneTest, CullingRadiusFollowsWorldScale )
 SW_TEST_CASE( GPUSceneTest, TransformOnlyChangeKeepsBatches )
 {
     sw::Scene scene( "GpuSceneTransformOnly" );
-    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+    SW_EXPECT_TRUE( scene.pickActiveGameCamera() );
 
     sw::GameObjectManager* objects = scene.getObjectManager();
     SW_ASSERT_NOT_NULL( objects );
@@ -737,7 +737,7 @@ SW_TEST_CASE( GPUSceneTest, TransformOnlyChangeKeepsBatches )
 SW_TEST_CASE( GPUSceneTest, MirroredTransformSplitsBatchAndReversesCulling )
 {
     sw::Scene scene( "GpuSceneMirrored" );
-    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+    SW_EXPECT_TRUE( scene.pickActiveGameCamera() );
     sw::GameObjectManager* objects = scene.getObjectManager();
     SW_ASSERT_NOT_NULL( objects );
 
@@ -800,7 +800,7 @@ SW_TEST_CASE( GPUSceneTest, MirroredTransformSplitsBatchAndReversesCulling )
 SW_TEST_CASE( GPUSceneTest, TransparentDifferentKeysStaySeparate )
 {
     sw::Scene scene( "GpuSceneTransparentKeys" );
-    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+    SW_EXPECT_TRUE( scene.pickActiveGameCamera() );
     sw::GameObjectManager* objects = scene.getObjectManager();
     SW_ASSERT_NOT_NULL( objects );
 
@@ -849,7 +849,7 @@ SW_TEST_CASE( GPUSceneTest, TransparentDifferentKeysStaySeparate )
 SW_TEST_CASE( GPUSceneTest, MaterialElementIDsPersistAcrossBuildsAndAreFreed )
 {
     sw::Scene scene( "MaterialElementIdScene" );
-    SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
+    SW_ASSERT_TRUE( scene.pickActiveGameCamera() );
 
     sw::shared_ptr<sw::Mesh>     mesh      = sw::MeshUtil::createUnitCube();
     sw::shared_ptr<sw::Material> materialA = sw::Material::create();
@@ -969,7 +969,7 @@ SW_TEST_CASE( GPUSceneTest, PerBatchMaterialElementsAreDistinct )
     }
 
     sw::Scene scene( "PerBatchMaterialScene" );
-    SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
+    SW_ASSERT_TRUE( scene.pickActiveGameCamera() );
 
     // 메시도 따로 만든다 — 배치 키에 메시가 들어가므로 배치가 갈린다.
     sw::shared_ptr<sw::Mesh> meshA = sw::MeshUtil::createUnitCube();
@@ -1043,7 +1043,7 @@ SW_TEST_CASE( GPUSceneTest, PermutationSplitsBatchesAcrossMaterials )
     SW_ASSERT_TRUE( materialPlain->getPermutationHash() != materialSwitched->getPermutationHash() );
 
     sw::Scene scene( "PermutationSplitScene" );
-    SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
+    SW_ASSERT_TRUE( scene.pickActiveGameCamera() );
 
     // 메시는 **하나를 공유한다**. 메시가 다르면 어차피 배치가 갈려서 퍼뮤테이션 때문에 갈린 것인지 알 수 없다.
     sw::shared_ptr<sw::Mesh> mesh = sw::MeshUtil::createUnitCube();
@@ -1174,7 +1174,7 @@ SW_TEST_CASE( GPUSceneTest, FrustumPlanesFromViewProj )
 SW_TEST_CASE( GPUSceneTest, PartialCollectUpdatesOnlyTheMovedPrimitive )
 {
     sw::Scene scene( "PartialCollectScene" );
-    SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
+    SW_ASSERT_TRUE( scene.pickActiveGameCamera() );
 
     sw::shared_ptr<sw::Mesh> mesh = sw::MeshUtil::createUnitCube();
     SW_ASSERT_NOT_NULL( mesh.get() );
@@ -1243,7 +1243,7 @@ SW_TEST_CASE( GPUSceneTest, PartialCollectUpdatesOnlyTheMovedPrimitive )
 SW_TEST_CASE( GPUSceneTest, SwappedMeshesAndVisibilityTogglesKeepBatchesValid )
 {
     sw::Scene scene( "MeshSwapScene" );
-    SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
+    SW_ASSERT_TRUE( scene.pickActiveGameCamera() );
 
     const sw::shared_ptr<sw::Mesh> cube = sw::MeshUtil::createUnitCube();
     SW_ASSERT_NOT_NULL( cube.get() );
@@ -1345,7 +1345,7 @@ SW_TEST_CASE( GPUSceneTest, SwappedMeshesAndVisibilityTogglesKeepBatchesValid )
 SW_TEST_CASE( GPUSceneTest, InstancesStayLiveAfterPublishWhenObjectsMove )
 {
     sw::Scene scene( "MoveAfterPublishScene" );
-    SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
+    SW_ASSERT_TRUE( scene.pickActiveGameCamera() );
 
     sw::shared_ptr<sw::Mesh> mesh = sw::MeshUtil::createUnitCube();
     SW_ASSERT_NOT_NULL( mesh.get() );
@@ -1396,7 +1396,7 @@ SW_TEST_CASE( GPUSceneTest, InstancesStayLiveAfterPublishWhenObjectsMove )
 SW_TEST_CASE( GPUSceneTest, MovingOneObjectMarksOnlyItsInstanceRun )
 {
     sw::Scene scene( "DirtyRunScene" );
-    SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
+    SW_ASSERT_TRUE( scene.pickActiveGameCamera() );
 
     sw::shared_ptr<sw::Mesh> mesh = sw::MeshUtil::createUnitCube();
     SW_ASSERT_NOT_NULL( mesh.get() );
@@ -1471,7 +1471,7 @@ SW_TEST_CASE( GPUSceneTest, CPUSnapshotCarriesShaderPermutations )
     SW_ASSERT_TRUE( materialGlass->loadFromFile( "engine/materials/glassmaterial.material" ) );
 
     sw::Scene scene( "SnapshotPermutationScene" );
-    SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
+    SW_ASSERT_TRUE( scene.pickActiveGameCamera() );
 
     sw::shared_ptr<sw::Mesh> mesh = sw::MeshUtil::createUnitCube();
     SW_ASSERT_NOT_NULL( mesh.get() );
@@ -1541,7 +1541,7 @@ SW_TEST_CASE( GPUSceneTest, InstancePermutationChangeRebuildsBatches )
     SW_ASSERT_TRUE( material->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) );
 
     sw::Scene scene( "InstancePermutationScene" );
-    SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
+    SW_ASSERT_TRUE( scene.pickActiveGameCamera() );
 
     // 메시도 부모 머티리얼도 **같다**. 다른 것은 인스턴스뿐이다.
     sw::shared_ptr<sw::Mesh> mesh = sw::MeshUtil::createUnitCube();
@@ -1616,7 +1616,7 @@ SW_TEST_CASE( GPUSceneTest, InstanceOnlyMeshUsesInstanceParent )
     SW_ASSERT_TRUE( parent->loadFromFile( ::test::getEngineDefaultAssets()._defaultMaterial.c_str() ) );
 
     sw::Scene scene( "InstanceOnlyMeshScene" );
-    SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
+    SW_ASSERT_TRUE( scene.pickActiveGameCamera() );
     SW_ASSERT_TRUE( scene.getMaterial() == nullptr ); // 이 케이스는 씬 기본 머티리얼이 없는 씬을 전제로 한다
 
     sw::shared_ptr<sw::Mesh> mesh = sw::MeshUtil::createUnitCube();
@@ -1653,7 +1653,7 @@ SW_TEST_CASE( GPUSceneTest, InstanceOnlyMeshUsesInstanceParent )
 SW_TEST_CASE( GPUSceneTest, ReusedCandidateSlotsCarryNoStaleData )
 {
     sw::Scene scene( "GpuSceneSlotReuse" );
-    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+    SW_EXPECT_TRUE( scene.pickActiveGameCamera() );
 
     sw::GameObjectManager* objects = scene.getObjectManager();
     SW_ASSERT_NOT_NULL( objects );
@@ -1728,7 +1728,7 @@ SW_TEST_CASE( GPUSceneTest, ReusedCandidateSlotsCarryNoStaleData )
 SW_TEST_CASE( GPUSceneTest, PrimitiveRegistryCountsEachMarkOnce )
 {
     sw::Scene scene( "GpuScenePrimitiveRegistryOnce" );
-    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+    SW_EXPECT_TRUE( scene.pickActiveGameCamera() );
     sw::GameObjectManager* pObjects = scene.getObjectManager();
     SW_ASSERT_NOT_NULL( pObjects );
 
@@ -1818,7 +1818,7 @@ SW_TEST_CASE( GPUSceneTest, PrimitiveRegistryCountsEachMarkOnce )
 SW_TEST_CASE( GPUSceneTest, PrimitiveRegistryDirtyBitsCrossWordBoundaries )
 {
     sw::Scene scene( "GpuSceneDirtyWords" );
-    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+    SW_EXPECT_TRUE( scene.pickActiveGameCamera() );
     sw::GameObjectManager* pObjects = scene.getObjectManager();
     SW_ASSERT_NOT_NULL( pObjects );
     sw::shared_ptr<sw::Mesh> cube = sw::MeshUtil::createUnitCube();
@@ -1891,7 +1891,7 @@ SW_TEST_CASE( GPUSceneTest, PrimitiveRegistryDirtyBitsCrossWordBoundaries )
 SW_TEST_CASE( GPUSceneTest, PrimitiveRegistrySeparatesTransformOnlyChanges )
 {
     sw::Scene scene( "GpuSceneTransformOnly" );
-    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+    SW_EXPECT_TRUE( scene.pickActiveGameCamera() );
     sw::GameObjectManager* pObjects = scene.getObjectManager();
     SW_ASSERT_NOT_NULL( pObjects );
     sw::shared_ptr<sw::Mesh> cube = sw::MeshUtil::createUnitCube();
@@ -1965,7 +1965,7 @@ SW_TEST_CASE( GPUSceneTest, ParallelCollectMatchesSerial )
     auto runScene = [&]( uint32 primitiveCount )
     {
         sw::Scene scene( "GpuSceneParallelCollect" );
-        SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+        SW_EXPECT_TRUE( scene.pickActiveGameCamera() );
         sw::GameObjectManager* pObjects = scene.getObjectManager();
         SW_ASSERT_NOT_NULL( pObjects );
         sw::shared_ptr<sw::Mesh> cube = sw::MeshUtil::createUnitCube();
@@ -2030,7 +2030,7 @@ SW_TEST_CASE( GPUSceneTest, IncrementalTransparentTailMatchesFreshBuild )
     auto runScene = [&]( bool bMerge )
     {
         sw::Scene scene( "GpuSceneTailEquivalence" );
-        SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+        SW_EXPECT_TRUE( scene.pickActiveGameCamera() );
         sw::GameObjectManager* pObjects = scene.getObjectManager();
         SW_ASSERT_NOT_NULL( pObjects );
         sw::shared_ptr<sw::Mesh> cube = sw::MeshUtil::createUnitCube();
@@ -2203,7 +2203,7 @@ namespace
         sw::shared_ptr<sw::Mesh>     _cube{ sw::MeshUtil::createUnitCube() };
         sw::shared_ptr<sw::Material> _glass{ sw::Material::create() };
 
-        bool initialize() { return _scene.ensureDefaultCameras() && _glass->loadFromFile( "engine/materials/glassmaterial.material" ); }
+        [[nodiscard]] bool initialize() { return _scene.pickActiveGameCamera() && _glass->loadFromFile( "engine/materials/glassmaterial.material" ); }
 
         sw::MeshComponent* addMesh( const utf8* pName, const sw::float3& position, uint32 sortKey )
         {
@@ -2246,7 +2246,7 @@ SW_TEST_CASE( GPUSceneTest, SpriteFrameAndTintRideTheInstanceWithoutSplittingThe
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::Scene scene( "GpuSceneSprites" );
-    SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
+    SW_ASSERT_TRUE( scene.pickActiveGameCamera() );
     sw::GameObjectManager* objects = scene.getObjectManager();
     SW_ASSERT_NOT_NULL( objects );
 
@@ -2306,7 +2306,7 @@ SW_TEST_CASE( GPUSceneTest, SpriteInstanceBatchEntriesCarryFrameTintAndHide )
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::Scene scene( "GpuSceneSpriteBatch" );
-    SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
+    SW_ASSERT_TRUE( scene.pickActiveGameCamera() );
     sw::GameObjectManager* objects = scene.getObjectManager();
     SW_ASSERT_NOT_NULL( objects );
     sw::SpriteComponent* pSprite = spawnQuadrantSprite( *objects, "WorldSprite", 3.0f );
@@ -2366,7 +2366,7 @@ SW_TEST_CASE( GPUSceneTest, SpriteInstanceBatchEntriesCarryFrameTintAndHide )
 SW_TEST_CASE( GPUSceneTest, SkinPalettesSurviveAUnitLeavingTheFrame )
 {
     sw::Scene scene( "GpuSceneSkinPalette" );
-    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+    SW_EXPECT_TRUE( scene.pickActiveGameCamera() );
     sw::GameObjectManager* objects = scene.getObjectManager();
     SW_ASSERT_NOT_NULL( objects );
     sw::shared_ptr<sw::Mesh> cube = sw::MeshUtil::createUnitCube();
@@ -2535,7 +2535,7 @@ SW_TEST_CASE( GPUSceneTest, MaterialCbIsAMergeKeyOnlyWhenTheShaderBindsIt )
 SW_TEST_CASE( GPUSceneTest, MeshSwapOfSingleInstanceBatchKeepsTheBatches )
 {
     sw::Scene scene( "MeshSwapScene" );
-    SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
+    SW_ASSERT_TRUE( scene.pickActiveGameCamera() );
 
     sw::vector<sw::MeshComponent*> listComp;
     for ( uint32 index = 0; index < 8; ++index )

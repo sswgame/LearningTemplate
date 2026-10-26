@@ -43,10 +43,10 @@ namespace test
             _network.setConditions( conditions );
             sw::StreamTransportConfig transportSettings;
             transportSettings._ioThreadCount = 0;
-            (void)_server.initialize( _serverTransport.get(), serverSettings );
-            (void)_client.initialize( _clientTransport.get(), clientSettings );
-            (void)_serverTransport->initialize( &_server, transportSettings );
-            (void)_clientTransport->initialize( &_client, transportSettings );
+            (void)_server.initialize( _serverTransport.get(), serverSettings ); // 테스트 준비 — 실패하면 뒤 단언이 드러낸다
+            (void)_client.initialize( _clientTransport.get(), clientSettings ); // 테스트 준비 — 실패하면 뒤 단언이 드러낸다
+            (void)_serverTransport->initialize( &_server, transportSettings );  // 테스트 준비 — 실패하면 뒤 단언이 드러낸다
+            (void)_clientTransport->initialize( &_client, transportSettings );  // 테스트 준비 — 실패하면 뒤 단언이 드러낸다
             (void)_serverTransport->listen( sw::NetAddress::makeLoopback( 0 ) );
             _clientHandle = _client.connect( sw::NetAddress::makeLoopback( _serverTransport->getListenPort() ) );
         }

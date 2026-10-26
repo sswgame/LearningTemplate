@@ -849,8 +849,8 @@ SW_TEST_CASE( OnlineServiceHostTest, EphemeralRepliesReachOnlyTheSubmittingServi
     OnlineServiceHostConfig settings = HostRig::makeSettings();
     settings._pEphemeralStore        = &hostCache;
     HostRig rig( settings );
-    (void)writer.submit( EphemeralRequest::makeSet( "a", vector<uint8>{ 1 }, 0 ) );
-    (void)writer.submit( EphemeralRequest::makeSet( "b", vector<uint8>{ 2, 2 }, 0 ) );
+    (void)writer.submit( EphemeralRequest::makeSet( "a", vector<uint8>{ 1 }, 0 ) );    // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
+    (void)writer.submit( EphemeralRequest::makeSet( "b", vector<uint8>{ 2, 2 }, 0 ) ); // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
     rig._serviceA._cacheKeyToRead   = "a";
     rig._serviceB._cacheKeyToRead   = "b";
     rig._serviceA._bReadCacheOnTick = true;

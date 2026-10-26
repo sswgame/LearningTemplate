@@ -113,7 +113,7 @@ SW_TEST_CASE( LogContextTest, OnlyLinesWithAContextCarryTheTag )
     LogContextCaptureOutput*            pCapture = output.get();
     SW_ASSERT_TRUE( logger.addOutput( std::move( output ) ) );
     LogContextEntryCapture entryCapture;
-    (void)logger.registerLogWrittenListener( LogWrittenDelegate::create<&LogContextEntryCapture::onLog>( &entryCapture ) );
+    (void)logger.registerLogWrittenListener( LogWrittenDelegate::create<&LogContextEntryCapture::onLog>( &entryCapture ) ); // 핸들은 쓰지 않는다 — 테스트 동안 살아 있다
 
     logger.writeLog( LogLevel::Info, "Test", "Probe", "plain line", __FILE__, __LINE__ );
     LogContext context;

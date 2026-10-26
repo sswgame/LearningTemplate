@@ -45,7 +45,7 @@ namespace
                 --_interferenceCount;
                 vector<uint8> listInterfering = oldBytes;
                 listInterfering.push_back( 0xEE );
-                (void)_pOtherFront->submit( EphemeralRequest::makeSet( "mm/test", listInterfering, 0 ) );
+                (void)_pOtherFront->submit( EphemeralRequest::makeSet( "mm/test", listInterfering, 0 ) ); // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
             }
             outNewBytes = oldBytes;
             outNewBytes.push_back( _appended );

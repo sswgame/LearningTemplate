@@ -71,7 +71,7 @@ namespace
         AdventureDungeonState   _state;
         GameFlags               _flags;
 
-        bool initialize()
+        [[nodiscard]] bool initialize()
         {
             if ( _areaGraph.loadFromXMLText( kAdventureAreaXML, "ActionAdventureTest" ) == false )
                 return false;

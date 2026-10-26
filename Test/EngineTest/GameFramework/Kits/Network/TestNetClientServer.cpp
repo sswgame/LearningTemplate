@@ -665,7 +665,7 @@ SW_TEST_CASE( NetClientServerTest, ReconnectOnSameSlotResetsHandlerState )
     ReplicationServer server;
     SW_ASSERT_TRUE( server.initialize( &serverHost, ReplicationServerConfig{}, nullptr ) );
     NetMessageRouter router;
-    router.registerHandler( &server );
+    SW_EXPECT_TRUE( router.registerHandler( &server ) );
     float64    time   = 0.0;
     const auto runAll = [&]( float64 seconds )
     {
@@ -833,8 +833,8 @@ SW_TEST_CASE( NetClientServerTest, OversizedInputIsRejectedAtTheSender )
     SW_EXPECT_TRUE( liveClient.initialize( &clientHost, ReplicationClientConfig{} ) );
     NetMessageRouter serverRouter;
     NetMessageRouter clientRouter;
-    serverRouter.registerHandler( &liveServer );
-    clientRouter.registerHandler( &liveClient );
+    SW_EXPECT_TRUE( serverRouter.registerHandler( &liveServer ) );
+    SW_EXPECT_TRUE( clientRouter.registerHandler( &liveClient ) );
     float64 time = 0.0;
     for ( int32 frame = 0; frame < 30; ++frame )
     {
@@ -903,8 +903,8 @@ SW_TEST_CASE( NetClientServerTest, InputBurstLossLeavesNoGap )
     SW_EXPECT_TRUE( client.initialize( &clientHost, ReplicationClientConfig{} ) );
     NetMessageRouter serverRouter;
     NetMessageRouter clientRouter;
-    serverRouter.registerHandler( &server );
-    clientRouter.registerHandler( &client );
+    SW_EXPECT_TRUE( serverRouter.registerHandler( &server ) );
+    SW_EXPECT_TRUE( clientRouter.registerHandler( &client ) );
 
     // 30 Hz 틱 · 60 Hz 프레임. 서버는 입력을 24 틱 늦게 꺼낸다 — 끊김이 끝난 뒤 다시 온 입력이 꺼내기 전에 닿는다.
     const uint32  popDelay     = 24;

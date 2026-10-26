@@ -73,7 +73,7 @@ namespace
         static size_t countIndexMembers( RegistryNode& node )
         {
             IndexRecorder recorder;
-            (void)node._router.submit( EphemeralRequest::makeScoreRange( ServerRecord::makeIndexKey( "game" ), 0, 64 ),
+            (void)node._router.submit( EphemeralRequest::makeScoreRange( ServerRecord::makeIndexKey( "game" ), 0, 64 ), // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
                                        EphemeralStoreRouter::ReplyDelegate::create<&IndexRecorder::onReply>( &recorder ) );
             (void)node._router.pump();
             SW_EXPECT_TRUE( recorder._bAnswered == SW_TRUE );

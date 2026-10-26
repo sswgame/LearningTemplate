@@ -92,7 +92,7 @@ SW_TEST_CASE( RenderPassTest, UnitCubeMeshComponent )
 SW_TEST_CASE( RenderPassTest, EditorAndGameCameras )
 {
     sw::Scene scene( "CameraTestScene" );
-    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+    SW_EXPECT_TRUE( scene.pickActiveGameCamera() );
 
     sw::CameraComponent* gameCam = scene.getActiveGameCamera();
     SW_EXPECT_TRUE( gameCam != nullptr );

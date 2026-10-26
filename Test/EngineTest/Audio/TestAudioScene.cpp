@@ -53,7 +53,7 @@ namespace
 </AudioEventLibrary>)";
 
         /** @brief 이 테스트의 그래프 · 라이브러리 · 직류 클립(스테레오 1.0, 길이 1 초 0.5)을 올린 엔진입니다. */
-        static bool initializeEngine( sw::AudioEngine& engine )
+        [[nodiscard]] static bool initializeEngine( sw::AudioEngine& engine )
         {
             sw::AudioMixerDesc mixerDesc;
             if ( mixerDesc.loadFromXMLText( kMixerXML ) == false || engine.initialize( mixerDesc, sw::AudioChannelLayout::Stereo ) == false )

@@ -22,7 +22,7 @@ namespace test
     struct EphemeralStoreContract
     {
         /** @brief 요청 하나를 맡기고 그 답을 기다립니다(RESP 는 소켓 왕복 — 10 초 상한). 답을 받았으면 true 입니다. */
-        static bool executeRequest( sw::IEphemeralStore& store, const sw::EphemeralRequest& request, sw::EphemeralReply& outReply )
+        [[nodiscard]] static bool executeRequest( sw::IEphemeralStore& store, const sw::EphemeralRequest& request, sw::EphemeralReply& outReply )
         {
             const uint64                   requestID = store.submit( request );
             const sw::Deadline             deadline  = sw::Deadline::afterMilliseconds( 10000 );

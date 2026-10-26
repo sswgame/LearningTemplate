@@ -183,7 +183,7 @@ namespace
             , _listEntity{}
         {
             SW_EXPECT_TRUE( _server.initialize( &world.getPeers(), ReplicationServerConfig{} ) );
-            world.getRouter().registerHandler( &_server );
+            SW_EXPECT_TRUE( world.getRouter().registerHandler( &_server ) );
             for ( uint32 index = 0; index < NetCompressionBenchInternal::kEntityCount; ++index )
             {
                 NetEntityState entity{ vector<uint8>( NetCompressionBenchInternal::kStateBytes, 0 ), index + 1, 1 + index % 4 };
@@ -246,7 +246,7 @@ namespace
             ReplicationClientConfig settings;
             settings._tickInterval = 1.0f / 60.0f;
             SW_EXPECT_TRUE( _client.initialize( &world.getPeers(), settings ) );
-            world.getRouter().registerHandler( &_client );
+            SW_EXPECT_TRUE( world.getRouter().registerHandler( &_client ) );
         }
 
         void onTickBegin( NetSimWorld& world, float32 deltaTime ) override

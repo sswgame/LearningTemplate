@@ -61,7 +61,7 @@ namespace
         const sw::FontFaceChain chain = fontService.getFaceChain( sw::FontSpec{} );
         // 대체 면을 미리 연다 — 판이 측정하는 것은 글리프마다의 일이지 글꼴 파일 열기가 아니다.
         uint32 warmGlyphIndex = 0;
-        (void)fontService.findFaceForCodepoint( chain, GlyphBenchInternal::kHangulFirst, warmGlyphIndex );
+        (void)fontService.findFaceForCodepoint( chain, GlyphBenchInternal::kHangulFirst, warmGlyphIndex ); // 면을 미리 열거나 경고 횟수만 본다(위 설명)
 
         sw::vector<int64> listMicro;
         uint32            codepointCursor = 1;

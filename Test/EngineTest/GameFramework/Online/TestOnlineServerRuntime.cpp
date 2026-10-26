@@ -56,12 +56,12 @@ namespace
     class TestDirectory final : public IAccountDirectory
     {
     public:
-        bool findIdentity( AccountID accountID, AccountIdentity& outIdentity ) const override
+        [[nodiscard]] bool findIdentity( AccountID accountID, AccountIdentity& outIdentity ) const override
         {
             outIdentity._accountID = accountID;
             return true;
         }
-        bool findIdentityByDisplayName( string_view displayName, AccountIdentity& outIdentity ) const override
+        [[nodiscard]] bool findIdentityByDisplayName( string_view displayName, AccountIdentity& outIdentity ) const override
         {
             outIdentity._displayName = string( displayName );
             return false;
@@ -75,7 +75,7 @@ namespace
     public:
         static constexpr const utf8* kName = "test.provider";
 
-        bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
+        [[nodiscard]] bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
         {
             (void)entry;
             (void)outError;
@@ -102,7 +102,7 @@ namespace
     public:
         static constexpr const utf8* kName = "test.consumer";
 
-        bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
+        [[nodiscard]] bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
         {
             (void)context;
             string failStage;

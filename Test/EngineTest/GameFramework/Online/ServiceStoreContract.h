@@ -103,7 +103,7 @@ namespace test
     struct ServiceStoreContract
     {
         /** @brief 일 하나를 맡기고 거둘 때까지 기다립니다(SQL 은 풀 워커 — 10 초 상한). 정확히 한 번 거뒀으면 true 입니다. */
-        static bool executeWork( sw::IServiceStore& store, ServiceStoreContractWork::RunFunction pRun, ServiceStoreContractContext& context )
+        [[nodiscard]] static bool executeWork( sw::IServiceStore& store, ServiceStoreContractWork::RunFunction pRun, ServiceStoreContractContext& context )
         {
             int32 completedCount = 0;
             store.submit( sw::make_unique<ServiceStoreContractWork>( pRun, &context, &completedCount ) );
@@ -120,7 +120,7 @@ namespace test
          * @brief @p submitter 문맥 안에서 일 하나를 맡기고, 문맥 **밖에서** 거둡니다 — 저장소가 맡긴 쪽 문맥을 잡아 `run`(저장소 스레드) · `complete` 에
          *        다시 거는지 본다. 정확히 한 번 거뒀으면 true 입니다.
          */
-        static bool executeLogContextWork( sw::IServiceStore& store, const sw::LogContext& submitter, sw::LogContext& outSeenInRun, sw::LogContext& outSeenInComplete )
+        [[nodiscard]] static bool executeLogContextWork( sw::IServiceStore& store, const sw::LogContext& submitter, sw::LogContext& outSeenInRun, sw::LogContext& outSeenInComplete )
         {
             int32 completedCount = 0;
             {

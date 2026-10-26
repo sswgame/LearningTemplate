@@ -35,7 +35,7 @@ namespace
             }
             TerrainHeightfield field;
             const float32      extent = static_cast<float32>( resolution - 1 );
-            (void)field.initialize( data, float3{}, float2{ extent, extent }, 0.0f, 10.0f );
+            (void)field.initialize( data, float3{}, float2{ extent, extent }, 0.0f, 10.0f ); // 테스트 준비 — 실패하면 뒤 단언이 드러낸다
             return field;
         }
 

@@ -84,7 +84,7 @@ namespace
                        _database.finishLoad( &_items );
             }
 
-            bool resolve( const utf8* pPreset, ResolvedAppearance& outResolved ) const
+            [[nodiscard]] bool resolve( const utf8* pPreset, ResolvedAppearance& outResolved ) const
             {
                 CharacterAppearanceSpec spec;
                 if ( _database.getPresets().expand( hashed_string( pPreset ), 0u, _database.getSlotTable(), _database.getSets(), _database.getSchemas(), spec ) == false )

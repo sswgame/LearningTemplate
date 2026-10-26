@@ -499,7 +499,7 @@ SW_TEST_CASE( AssetStreamingTest, HighPriorityRequestOvertakesAnEarlierNormalOne
 {
     SW_ASSERT_TRUE( sw::engine::areEngineServicesBound() );
     sw::TaskManager& taskMgr = sw::engine::getSubsystem<sw::TaskManager>();
-    taskMgr.initialize();
+    SW_ASSERT_TRUE( taskMgr.getWorkerCount() > 0 ); // 하네스가 세운 매니저다 — 다시 initialize 하면 이미 섰다고 false 다
     const uint32 workerCount = taskMgr.getWorkerCount();
     SW_ASSERT_TRUE( workerCount >= 1 );
 

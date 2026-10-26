@@ -67,7 +67,7 @@ namespace
                 _listCrate.push_back( spawnBox( manager, name.c_str(), position, float3{ 0.5f, 0.5f, 0.5f }, PhysicsBodyType::Dynamic ) );
             }
             SW_EXPECT_TRUE( _server.initialize( &world.getPeers(), ReplicationServerConfig{}, nullptr ) );
-            world.getRouter().registerHandler( &_server );
+            SW_EXPECT_TRUE( world.getRouter().registerHandler( &_server ) );
         }
 
         void onTickEnd( NetSimWorld& world, float32 deltaTime ) override
@@ -117,7 +117,7 @@ namespace
             ReplicationClientConfig settings;
             settings._tickInterval = kTickSeconds;
             SW_EXPECT_TRUE( _client.initialize( &world.getPeers(), settings ) );
-            world.getRouter().registerHandler( &_client );
+            SW_EXPECT_TRUE( world.getRouter().registerHandler( &_client ) );
         }
 
         void onTickBegin( NetSimWorld& world, float32 deltaTime ) override
@@ -245,7 +245,7 @@ namespace
             , _advancedCount{ 0 }
             , _bStarted{ false }
         {
-            world.getRouter().registerHandler( &_session );
+            SW_EXPECT_TRUE( world.getRouter().registerHandler( &_session ) );
         }
 
         void onHostEvent( NetSimWorld& world, const NetHostEvent& event ) override
@@ -264,7 +264,7 @@ namespace
             (void)deltaTime;
             if ( _bStarted == false )
                 return;
-            (void)_session.submitLocalInput( vector<uint8>{ static_cast<uint8>( world.getLocalTick() ) } );
+            (void)_session.submitLocalInput( vector<uint8>{ static_cast<uint8>( world.getLocalTick() ) } ); // 예약이 찼으면 이 틱의 입력만 빠진다 — 테스트는 양쪽이 같은 입력을 받는지만 본다
             vector<vector<uint8>> listInput;
             while ( _session.tryAdvance( listInput ) )
             {

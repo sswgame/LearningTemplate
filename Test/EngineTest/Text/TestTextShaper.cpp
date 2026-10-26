@@ -21,7 +21,7 @@ namespace
         static constexpr const utf8* kAllPath    = "test/fonts/all.ttf";
 
         /** @brief 모든 코드 포인트를 가진 가족 하나("All")의 카탈로그로 시작합니다. */
-        static bool initializeAllCoverage( sw::test::FakeFontServiceFixture& fixture )
+        [[nodiscard]] static bool initializeAllCoverage( sw::test::FakeFontServiceFixture& fixture )
         {
             sw::FontCatalogDesc catalog{};
             catalog._defaultFamily = "All";
@@ -30,7 +30,7 @@ namespace
         }
 
         /** @brief 라틴(고른 가족) · 한글(기본 가족) 카탈로그로 시작합니다. 둘 다 공백을 가진다. */
-        static bool initializeLatinHangul( sw::test::FakeFontServiceFixture& fixture )
+        [[nodiscard]] static bool initializeLatinHangul( sw::test::FakeFontServiceFixture& fixture )
         {
             sw::test::FakeFontFaceConfig latin{};
             latin.addRange( 0x20u, 0x7Eu );

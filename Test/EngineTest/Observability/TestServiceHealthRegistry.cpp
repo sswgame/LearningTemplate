@@ -62,7 +62,7 @@ SW_TEST_CASE( ServiceHealthRegistryTest, ReportListsEveryCheck )
 {
     ServiceHealthRegistry health;
     const int32           store = health.registerCheck( "service_store", true );
-    (void)health.registerCheck( "ephemeral_store", false );
+    (void)health.registerCheck( "ephemeral_store", false ); // 핸들은 쓰지 않는다 — 테스트 동안 살아 있다
     health.setCheck( store, HealthState::Degraded, "pending=12000" );
     health.markTick( 10 );
     string text;

@@ -41,7 +41,7 @@ namespace
         VoxelBlockCatalog _catalog;
         VoxelWorld        _world;
 
-        bool initialize( int32 chunkCountX, int32 chunkCountZ )
+        [[nodiscard]] bool initialize( int32 chunkCountX, int32 chunkCountZ )
         {
             if ( _catalog.loadFromXMLText( kVoxelTestBlockXML, "VoxelTest" ) == false )
                 return false;

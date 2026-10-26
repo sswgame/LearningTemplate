@@ -61,7 +61,7 @@ namespace
             , _pTable{ pTable }
         {
             SW_EXPECT_TRUE( _server.initialize( &world.getPeers(), pTable->_settings, makeMMOCellGrid() ) );
-            world.getRouter().registerHandler( &_server );
+            SW_EXPECT_TRUE( world.getRouter().registerHandler( &_server ) );
         }
 
         void onHostEvent( NetSimWorld& world, const NetHostEvent& event ) override
@@ -110,7 +110,7 @@ namespace
             , _mapLastStamp{}
             , _regressionCount{ 0 }
         {
-            world.getRouter().registerHandler( &_view ); // 갱신 확인은 보내지 않는다 — 서버가 연결 계층의 전달 통지로 판정한다
+            SW_EXPECT_TRUE( world.getRouter().registerHandler( &_view ) ); // 갱신 확인은 보내지 않는다 — 서버가 연결 계층의 전달 통지로 판정한다
         }
 
         void onTickBegin( NetSimWorld& world, float32 deltaTime ) override

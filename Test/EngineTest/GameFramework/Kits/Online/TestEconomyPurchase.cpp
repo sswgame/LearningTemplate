@@ -52,7 +52,7 @@ namespace
             request._reason     = "test.grant";
             request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), LedgerHolder::makeAccount( kBuyer ), pAsset, amount } );
             LedgerTransferOutcome outcome;
-            (void)Ledger::executeTransfer( _database, request, outcome );
+            (void)Ledger::executeTransfer( _database, request, outcome ); // 테스트 준비 — 결과는 outcome 에 남고 뒤 단언이 잔액으로 드러낸다
         }
 
         /** @brief 환불 회수 — 계정 → 소각, 빚 허용. */
@@ -64,7 +64,7 @@ namespace
             request._bAllowDebt = SW_TRUE;
             request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeAccount( kBuyer ), LedgerHolder::makeSink(), pAsset, amount } );
             LedgerTransferOutcome outcome;
-            (void)Ledger::executeTransfer( _database, request, outcome );
+            (void)Ledger::executeTransfer( _database, request, outcome ); // 테스트 준비 — 결과는 outcome 에 남고 뒤 단언이 잔액으로 드러낸다
         }
 
         int64 readAmount( const utf8* pAsset )

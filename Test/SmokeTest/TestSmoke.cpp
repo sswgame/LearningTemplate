@@ -203,7 +203,7 @@ namespace sw
         class HandlerOnlyWindow final : public sw::IWindow
         {
         public:
-            bool                  initializeWindow( const utf8*, uint32, uint32 ) override { return true; }
+            [[nodiscard]] bool    initializeWindow( const utf8*, uint32, uint32 ) override { return true; }
             void                  destroy() override {}
             bool                  processMessages() override { return true; }
             sw::NativeSurfaceKind getSurfaceKind() const override { return sw::NativeSurfaceKind::Win32; } // 표면을 만들지 않는 창 — 종류는 쓰이지 않는다
@@ -1807,7 +1807,7 @@ SW_TEST_CASE( ModuleAPITest, FullGameSceneAndComponentLifecycle )
         api.bindService( nullptr );
 
     sw::engine::getSubsystem<sw::SceneManager>().shutdown();
-    sw::engine::getSubsystem<sw::SceneManager>().initialize();
+    SW_EXPECT_TRUE( sw::engine::getSubsystem<sw::SceneManager>().initialize() );
 
     sw::engine::unregisterModuleTypes( "SWGame" );
     SW_EXPECT_TRUE( sw::ModuleImageUtil::unloadModuleImage( "SWGame", handle ) );
@@ -2039,7 +2039,7 @@ SW_TEST_CASE( ModuleAPITest, GameModuleRepeatedReloadCycle )
             api.bindService( nullptr );
 
         sw::engine::getSubsystem<sw::SceneManager>().shutdown();
-        sw::engine::getSubsystem<sw::SceneManager>().initialize();
+        SW_EXPECT_TRUE( sw::engine::getSubsystem<sw::SceneManager>().initialize() );
 
         sw::engine::unregisterModuleTypes( "SWGame" );
         SW_EXPECT_TRUE( sw::ModuleImageUtil::unloadModuleImage( "SWGame", handle ) );
@@ -2184,7 +2184,7 @@ SW_TEST_CASE( ModuleAPITest, UnloadChildReleasesTheChannelsItsImageCreated )
     if ( api.bindService != nullptr )
         api.bindService( nullptr );
     sw::engine::getSubsystem<sw::SceneManager>().shutdown();
-    sw::engine::getSubsystem<sw::SceneManager>().initialize();
+    SW_EXPECT_TRUE( sw::engine::getSubsystem<sw::SceneManager>().initialize() );
 
     sw::EventDispatcher& dispatcher = sw::engine::getSubsystem<sw::EventDispatcher>();
     SW_ASSERT_TRUE_MSG( dispatcher.countChannelsCreatedWithin( pFrameworkBegin, pFrameworkEnd ) > 0,

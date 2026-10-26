@@ -44,7 +44,7 @@ namespace
         }
 
         /** @brief 모든 코드 포인트를 가진 가족 하나의 글꼴 시스템을 시작합니다. */
-        static bool initializeAllCoverage( sw::test::FakeFontServiceFixture& fixture )
+        [[nodiscard]] static bool initializeAllCoverage( sw::test::FakeFontServiceFixture& fixture )
         {
             sw::FontCatalogDesc catalog{};
             catalog._defaultFamily = "All";

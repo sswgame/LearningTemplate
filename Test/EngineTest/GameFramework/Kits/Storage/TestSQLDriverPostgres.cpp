@@ -59,7 +59,7 @@ SW_TEST_CASE( SQLDriverPostgresTest, ConcurrentSerializableWritersReportASeriali
     if ( result == SQLResult::Ok )
         result = other->executeScript( "COMMIT" );
     else
-        (void)other->executeScript( "ROLLBACK" );
+        (void)other->executeScript( "ROLLBACK" ); // 이미 실패한 트랜잭션의 정리다 — 원래 오류를 돌려준다
     SW_EXPECT_TRUE( result == SQLResult::SerializationFailure );
     SW_EXPECT_TRUE( other->isAlive() );
 }

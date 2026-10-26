@@ -35,7 +35,7 @@ namespace
             // 테스트 준비 — 깨진 항목은 카탈로그가 경고로 남기고, 상품 · 통화가 없으면 아래 단언이 실패한다
             (void)_offers.loadFromXMLText( R"(<OfferCatalog><Offer id="gem_100"><Product store="fake" id="gem100"/><Grant asset="cur.gem_paid" amount="100"/></Offer></OfferCatalog>)",
                                            "offer" );
-            (void)_registry.registerValidator( &_fake );
+            (void)_registry.registerValidator( &_fake ); // 실패(이름 없음 · 중복)는 등록이 오류로 남긴다
         }
 
         ReceiptValidationResult validate( const utf8* pPayload, uint64 accountID )

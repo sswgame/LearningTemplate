@@ -68,7 +68,7 @@ namespace test
              * @brief 명령줄 @p arguments 가 고른 백엔드(`-dx11` · `-dx12` · `-vk` · `-gl` 토큰)입니다. 스위치가 없으면(빌드 기본 · 배포본) false 다.
              * @details 스위치 철자는 쿠킹 표의 명령줄 이름이다(`TestRunOptions::getBackendName`).
              */
-            static bool findBackendSwitch( sw::string_view arguments, sw::RHIBackend& outBackend )
+            [[nodiscard]] static bool findBackendSwitch( sw::string_view arguments, sw::RHIBackend& outBackend )
             {
                 for ( const sw::RHIBackend backend : { sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL } )
                 {
