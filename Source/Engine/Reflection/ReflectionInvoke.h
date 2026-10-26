@@ -35,8 +35,7 @@ namespace sw
     /** @brief 이벤트 필드 타입 하나의 묶기 · 풀기 · 부르기 · 인자 표입니다. `ReflectEventOpsOf<필드 타입>::kOps` 가 만듭니다. */
     struct ReflectEventOps
     {
-        DelegateHandle ( *_pBind )( void* pEvent, const ReflectEventHandler& handler );
-        void ( *_pUnbind )( void* pEvent, const DelegateHandle& handle );
+        Subscription ( *_pBind )( void* pEvent, const ReflectEventHandler& handler ); ///< 붙이고 그 구독을 돌려준다(구독이 사라지면 뗀다)
         ReflectCallResult ( *_pBroadcast )( void* pEvent, const vector<ReflectValue>& listArg );
         bool ( *_pIsBound )( const void* pEvent );
         const ReflectTypeOps* const* _ppParameterType; ///< 인자 자리마다 변환 표
@@ -56,7 +55,7 @@ namespace sw
         static constexpr const ReflectTypeOps* kArrParameterType[sizeof...( Args ) + 1] = { &ReflectTypeOpsOf<std::decay_t<Args>>::kOps..., nullptr };
 
         /** @brief 받는 쪽을 붙입니다. 인자는 값으로 복사해 `ReflectValue` 로 넘깁니다. */
-        static DelegateHandle bind( void* pEvent, const ReflectEventHandler& handler )
+        static Subscription bind( void* pEvent, const ReflectEventHandler& handler )
         {
             const auto adapter = [handler]( Args... args )
             {
@@ -68,8 +67,6 @@ namespace sw
             return static_cast<EventType*>( pEvent )->add( Delegate<void( Args... )>::create( adapter ) );
         }
 
-        static void unbind( void* pEvent, const DelegateHandle& handle ) { static_cast<EventType*>( pEvent )->remove( handle ); }
-
         static bool isBound( const void* pEvent ) { return static_cast<const EventType*>( pEvent )->isBound(); }
 
         static ReflectCallResult broadcast( void* pEvent, const vector<ReflectValue>& listArg )
@@ -77,7 +74,7 @@ namespace sw
             return broadcastWith( pEvent, listArg, std::index_sequence_for<Args...>{} );
         }
 
-        static constexpr ReflectEventOps kOps{ &bind, &unbind, &broadcast, &isBound, kArrParameterType, kParameterCount };
+        static constexpr ReflectEventOps kOps{ &bind, &broadcast, &isBound, kArrParameterType, kParameterCount };
 
     private:
         /** @brief 인자마다 그 타입으로 바꾼 뒤 부릅니다. 하나라도 못 바꾸면 부르지 않습니다. */
@@ -122,10 +119,8 @@ namespace sw
         /** @brief 인자를 그 함수의 C++ 타입대로 바꿔 묶습니다(`call` 의 앞 절반). 호출기를 직접 부를 때 씁니다. */
         static ReflectCallResult makeArguments( const FunctionInfo& function, const vector<ReflectValue>& listArg, TaskArgs& outArgs );
 
-        /** @brief 이벤트에 받는 쪽을 붙이고 핸들을 돌려줍니다(풀 때 씁니다). 표가 없으면 빈 핸들입니다. */
-        static DelegateHandle bindEvent( const EventInfo& event, void* pInstance, const ReflectEventHandler& handler );
-        /** @brief 붙인 것을 뗍니다. */
-        static void unbindEvent( const EventInfo& event, void* pInstance, const DelegateHandle& handle );
+        /** @brief 이벤트에 받는 쪽을 붙이고 그 구독을 돌려줍니다(구독이 사라지면 뗀다. 이벤트를 가진 객체가 먼저 사라지면 무효). 표가 없으면 빈 구독입니다. */
+        [[nodiscard]] static Subscription bindEvent( const EventInfo& event, void* pInstance, const ReflectEventHandler& handler );
         /** @brief 이벤트를 부릅니다 — 인자는 이벤트 타입대로 바꿉니다. */
         static ReflectCallResult broadcastEvent( const EventInfo& event, void* pInstance, const vector<ReflectValue>& listArg );
         /** @brief 붙은 받는 쪽이 하나라도 있으면 true 입니다. */
@@ -139,10 +134,10 @@ namespace sw
         /**
          * @brief 이벤트가 불리면 @p pTarget 의 함수를 부르게 묶습니다(기믹 배선 · 비주얼 스크립팅). 함수는 부를 때마다 이름으로 찾습니다 —
          *        모듈을 다시 올려도 묶음이 옛 코드를 가리키지 않습니다.
-         * @warning @p pTarget 의 수명은 부르는 쪽이 지킵니다. 먼저 사라지면 돌려받은 핸들로 떼십시오.
-         * @return 넘길 수 없으면(`canBindEventToFunction`) 빈 핸들입니다
+         * @warning @p pTarget 의 수명은 부르는 쪽이 지킵니다. 돌려받은 구독을 @p pTarget 과 같은 수명에 두십시오(구독이 사라지면 뗀다).
+         * @return 넘길 수 없으면(`canBindEventToFunction`) 빈 구독입니다
          */
-        static DelegateHandle bindEventToFunction( const EventInfo& event, void* pSource, const TypeInfo& targetType, const hashed_string& functionName,
-                                                   void* pTarget );
+        [[nodiscard]] static Subscription bindEventToFunction( const EventInfo& event, void* pSource, const TypeInfo& targetType, const hashed_string& functionName,
+                                                               void* pTarget );
     };
 } // namespace sw

@@ -32,7 +32,6 @@ namespace sw
         , _listRange{}
         , _mutex{}
         , _wakeWord{ 0 }
-        , _bStopping{ false }
         , _nextRangeIndex{ 0 }
         , _workerCount{ workerCount < 2 ? 2u : workerCount }
     {
@@ -45,7 +44,10 @@ namespace sw
 
     Box2DWorkerPool::~Box2DWorkerPool()
     {
-        _bStopping.store( true, std::memory_order_release );
+        for ( sw::thread& thread : _listThread )
+        {
+            thread.request_stop(); // 워드를 올리기 전에 — 깨어난 일꾼이 정지를 본다
+        }
         _wakeWord.fetch_add( 1, std::memory_order_release );
         Futex::wakeAll( _wakeWord );
         for ( sw::thread& thread : _listThread )
@@ -146,17 +148,17 @@ namespace sw
         return true;
     }
 
-    void Box2DWorkerPool::runWorker( uint32 workerIndex )
+    void Box2DWorkerPool::runWorker( uint32 workerIndex, ThreadStopToken stopToken )
     {
         ThreadName::setCurrentThreadName( "Box2DWorker" );
-        while ( _bStopping.load( std::memory_order_acquire ) == false )
+        while ( stopToken.stop_requested() == false )
         {
             const uint32 seenWake = _wakeWord.load( std::memory_order_acquire );
             if ( tryRunOne( workerIndex ) )
                 continue;
             const int64 spinEnd = MonotonicClock::nowNanoseconds() + Box2DWorkerPoolInternal::kSpinNanoseconds;
             bool        bRan    = false;
-            while ( MonotonicClock::nowNanoseconds() < spinEnd && _bStopping.load( std::memory_order_acquire ) == false )
+            while ( MonotonicClock::nowNanoseconds() < spinEnd && stopToken.stop_requested() == false )
             {
                 if ( tryRunOne( workerIndex ) )
                 {

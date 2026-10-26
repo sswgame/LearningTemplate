@@ -139,7 +139,7 @@ namespace sw
         string               _reportsFolder;
         string               _currentSessionID;
         string               _reporterExecutable;
-        DelegateHandle       _settingHandle;
+        Subscription         _settingSubscription; ///< 동의 설정의 변경 통보 구독(`bindConsentSetting` ~ `shutdown`)
         UserSettingsManager* _pSettings;
         CrashReportConsent   _consent;
         uint8                _bInitialized;

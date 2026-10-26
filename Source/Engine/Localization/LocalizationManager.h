@@ -12,6 +12,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/ISubsystem.h"
 
@@ -53,7 +54,7 @@ namespace sw
      *          의사 문화권(`qps_ploc`, `qps_plocm`, 문화권 테이블의 `pseudo`)은 원문을 변환해 만든 테이블이고 Dev 빌드에서만 고를 수 있습니다.
      *          조회가 돌려주는 `const utf8*` 는 추가 전용 저장소(`StringTable.cpp`)에 있어 다시 읽기와 언어 변경 뒤에도 유효합니다.
      */
-    class SW_API LocalizationManager : public ISubsystem
+    class SW_API LocalizationManager : public ISubsystem, private SubscriptionSource
     {
     public:
         /** @brief 서브시스템 이름입니다. 초기화 · 종료할 것이 없고 수명(서비스 범위 — 엔진 범위보다 먼저 서고 나중에 사라진다)만 컬렉션이 정한다. */
@@ -208,10 +209,11 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 5) 언어 변경 이벤트 알림
         // ------------------------------------------------------------------------------
-        /** @brief 텍스트가 바뀔 때(언어 변경, 같은 언어의 다시 읽기이며 이때는 두 인자가 같습니다) 부를 콜백을 등록하고 ID 를 반환합니다. */
-        uint32 registerLanguageChangedCallback( LanguageChangedCallback callback );
-        /** @brief 등록된 콜백을 해제합니다. */
-        void unregisterLanguageChangedCallback( uint32 callbackID );
+        /**
+         * @brief 텍스트가 바뀔 때(언어 변경, 같은 언어의 다시 읽기이며 이때는 두 인자가 같습니다) 부를 콜백을 등록하고 그 구독을 돌려줍니다.
+         * @details 구독이 사라지면 뗍니다. 어느 스레드에서나 부를 수 있습니다(등록 표는 `_mutex`, 구독 목록은 출처 잠금). 빈 콜백은 오류 없이 빈 구독입니다.
+         */
+        [[nodiscard]] Subscription registerLanguageChangedCallback( LanguageChangedCallback callback );
 
     private:
         /** @brief 로드한 프로젝트 하나입니다. 읽은 문서와 그 파일 경로를 가집니다. */
@@ -237,6 +239,8 @@ namespace sw
         const utf8* findByHash( uint64 keyHash ) const;
         /** @brief 텍스트 버전을 올리고 콜백을 부릅니다. */
         void notifyLanguageChanged( string_view oldLanguage, string_view newLanguage );
+        /** @brief 콜백 구독 @p id 가 풀렸습니다. 표에서 지웁니다(`_mutex`). */
+        void releaseSubscription( uint64 id ) override;
 
     private:
         mutable std::shared_mutex                      _mutex;
@@ -250,12 +254,12 @@ namespace sw
         unordered_map<string, unique_ptr<StringTable>> _mapLanguageTable;
         map<string, LocalizationCultureStatistics>     _mapCultureStatistic;
         vector<string>                                 _listLookupCulture;
-        unordered_map<uint32, LanguageChangedCallback> _mapCallback;
+        unordered_map<uint64, LanguageChangedCallback> _mapCallback; ///< 구독 번호 → 콜백
 
         mutable std::mutex  _missingMutex;
         mutable set<string> _uniqueMissingKey;
 
         std::atomic<uint32> _textRevision;
-        uint32              _nextCallbackID;
+        uint64              _nextCallbackID;
     };
 } // namespace sw

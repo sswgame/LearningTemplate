@@ -67,10 +67,9 @@ namespace sw
     private:
         void onLogWritten( const LogEntry& entry );
 
-        vector<AutomationLogLine> _listLogLine; ///< 시나리오 동안 남은 로그(상한 `kMaxLogLine`)
-        mutable mutex             _mutex;       ///< `_listLogLine` 을 보호합니다.
-        DelegateHandle            _listenerHandle;
-        atomic<uint32>            _frameIndex; ///< 로그 줄에 적을 프레임(로그 스레드가 읽는다)
-        bool                      _bListening;
+        vector<AutomationLogLine> _listLogLine;          ///< 시나리오 동안 남은 로그(상한 `kMaxLogLine`)
+        mutable mutex             _mutex;                ///< `_listLogLine` 을 보호합니다.
+        Subscription              _listenerSubscription; ///< 전역 로그 리스너 구독(`start` ~ `stop`). 비어 있으면 듣지 않는다
+        atomic<uint32>            _frameIndex;           ///< 로그 줄에 적을 프레임(로그 스레드가 읽는다)
     };
 } // namespace sw

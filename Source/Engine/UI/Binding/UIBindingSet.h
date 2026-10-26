@@ -121,7 +121,7 @@ namespace sw
         UIBindingValue readSetting( const ActiveBinding& binding, Widget& widget, const UIBindingContext& context );
         /** @brief 사용자 입력을 설정의 보류 값으로 넣습니다. */
         void writeSetting( ActiveBinding& binding, const Widget& widget );
-        /** @brief 사용자 설정 변경 통보를 등록합니다(다른 서비스면 기존 것을 해제합니다). */
+        /** @brief 사용자 설정 변경 통보를 등록합니다(다른 서비스면 기존 구독을 풉니다). */
         void registerSettingsListener( UserSettingsManager* pSettings );
         /** @brief 바인딩 하나의 소스 값을 읽어(변환기와 형식 적용) 위젯 필드에 씁니다. 필드가 바뀌었으면 true 입니다. */
         [[nodiscard]] bool apply( ActiveBinding& binding, const UIBindingContext& context );
@@ -135,9 +135,10 @@ namespace sw
         vector<string>        _listError;
         UIScreen*             _pScreen;
         UIViewModel*          _pViewModel;
-        UserSettingsManager*  _pSettings;        ///< 변경 통보를 등록한 설정 서비스입니다(설정 바인딩이 없으면 nullptr).
-        DelegateHandle        _settingsListener; ///< 그 통보의 핸들입니다.
-        uint64                _seenSerial;       ///< 마지막 `update` 가 본 뷰모델 알림 번호입니다.
+        Subscription          _viewModelSubscription; ///< 뷰모델의 관찰자 등록입니다. 뷰모델이 지워지면 알림(`onViewModelDestroyed`)이 풉니다
+        UserSettingsManager*  _pSettings;             ///< 변경 통보를 등록한 설정 서비스입니다(설정 바인딩이 없으면 nullptr).
+        Subscription          _settingsSubscription;  ///< 그 통보의 구독입니다.
+        uint64                _seenSerial;            ///< 마지막 `update` 가 본 뷰모델 알림 번호입니다.
         uint32                _writeCount;
         uint32                _polledCount;
         bool                  _bBound;           ///< 식을 해석해 연결했는지 나타냅니다(뷰모델이나 식이 바뀌면 다시 연결합니다).

@@ -80,8 +80,6 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         /** @brief Logger 콜백입니다. 어느 스레드에서 호출해도 뮤텍스로 보호해 항목을 추가합니다. */
         void onLogWritten( const LogEntry& entry );
-        /** @brief Logger 구독을 제거합니다. */
-        void unsubscribe();
         /** @brief 필터를 통과한 로그 포인터 목록을 다시 만듭니다. */
         void updateFilteredEntries( const string& filterStr );
         /** @brief 로그 행의 카테고리를 반환합니다. 로그를 쓴 위치(`SW_LOG_CALLER`)이고, 없으면 모듈 태그입니다. 태그 필터와 팝업이 이 이름을 씁니다. */
@@ -115,11 +113,11 @@ namespace sw::editor
         EditorLogTagFilter                    _tagFilter;
         uint32                                _cachedTagRevision;
         mutex                                 _entriesMutex;
-        DelegateHandle                        _logListenerHandle;
-        uint64                                _errorSerial;     ///< 받은 오류 행의 누계. `_entriesMutex` 가 보호한다
-        uint64                                _entrySerial;     ///< 받은 행의 누계. `_entriesMutex` 가 보호한다
-        uint64                                _snapshotSerial;  ///< 그리기용 복사본이 따라잡은 누계. UI 스레드만 쓴다
-        uint64                                _seenErrorSerial; ///< Error Pause 가 마지막으로 확인한 누계
+        Subscription                          _logListenerSubscription; ///< 전역 로그 리스너. 소멸자 · `shutdown` 이 항목보다 먼저 푼다(콜백이 항목을 만진다)
+        uint64                                _errorSerial;             ///< 받은 오류 행의 누계. `_entriesMutex` 가 보호한다
+        uint64                                _entrySerial;             ///< 받은 행의 누계. `_entriesMutex` 가 보호한다
+        uint64                                _snapshotSerial;          ///< 그리기용 복사본이 따라잡은 누계. UI 스레드만 쓴다
+        uint64                                _seenErrorSerial;         ///< Error Pause 가 마지막으로 확인한 누계
         fixed_string<constant::kMaxBuffer128> _filterBuffer;
         DevConsole                            _devConsole;
         fixed_string<constant::kMaxBuffer512> _commandBuffer;

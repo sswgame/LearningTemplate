@@ -27,7 +27,6 @@ namespace sw
         , _lastExitCode{ 0 }
         , _lastDurationSec{ 0.0f }
         , _bIsCompiling{ false }
-        , _bCancelRequested{ false }
     {
     }
 
@@ -59,7 +58,6 @@ namespace sw
             _targetName = string( targetName );
         }
 
-        _bCancelRequested.store( false, std::memory_order_relaxed );
         _bBlockedByLoadedBinary.store( 0, std::memory_order_relaxed );
         _bIsCompiling.store( true, std::memory_order_relaxed );
         _buildState.store( BuildState::Compiling, std::memory_order_relaxed );
@@ -85,7 +83,7 @@ namespace sw
         if ( _bIsCompiling.load( std::memory_order_relaxed ) == false )
             return;
 
-        _bCancelRequested.store( true, std::memory_order_relaxed );
+        _workerThread.request_stop(); // 빌드 스레드가 결과를 "취소" 로 적는다
 
         std::scoped_lock<mutex> lock( _mutex );
         if ( _pCurrentProcess != nullptr )
@@ -149,7 +147,7 @@ namespace sw
         }
     }
 
-    bool ModuleCompiler::recordBuildResult( const string& targetDisplayName )
+    bool ModuleCompiler::recordBuildResult( const string& targetDisplayName, const ThreadStopToken& stopToken )
     {
         int32 exitCode = -1;
         {
@@ -167,7 +165,7 @@ namespace sw
         _lastDurationSec.store( durationSec, std::memory_order_relaxed );
         _lastExitCode.store( exitCode, std::memory_order_relaxed );
 
-        if ( _bCancelRequested.load( std::memory_order_relaxed ) )
+        if ( stopToken.stop_requested() )
         {
             _buildState.store( BuildState::Failed, std::memory_order_relaxed );
             SW_LOG_WARNING( "Compilation was cancelled by user." );
@@ -193,7 +191,7 @@ namespace sw
         return false;
     }
 
-    void ModuleCompiler::runBuildThread( const string& targetName, MemoryTag memoryTag )
+    void ModuleCompiler::runBuildThread( const string& targetName, MemoryTag memoryTag, ThreadStopToken stopToken )
     {
         // 이 스레드의 할당은 빌드를 요청한 쪽의 용도로 센다.
         const ScopedMemoryTag threadMemoryTag{ memoryTag };
@@ -232,7 +230,7 @@ namespace sw
         }
 
         relayBuildOutput();
-        const bool bSucceeded = recordBuildResult( targetDisplayName );
+        const bool bSucceeded = recordBuildResult( targetDisplayName, stopToken );
         notifyBuildFinished( bSucceeded, targetName );
         _bIsCompiling.store( false, std::memory_order_relaxed );
     }

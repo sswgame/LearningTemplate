@@ -9,6 +9,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 
 #include "GameFramework/Base/Online/Bus/ServerBus.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -19,7 +20,7 @@ namespace sw
      * @class LocalServerBusHub
      * @brief 프로세스 안 버스들의 배달부입니다.
      */
-    class SW_GF_API LocalServerBusHub
+    class SW_GF_API LocalServerBusHub : private SubscriptionSource
     {
     public:
         LocalServerBusHub();
@@ -27,10 +28,10 @@ namespace sw
         LocalServerBusHub( const LocalServerBusHub& )            = delete;
         LocalServerBusHub& operator=( const LocalServerBusHub& ) = delete;
 
-        uint64 registerInbox();
-        void   unregisterInbox( uint64 inboxID );
-        void   subscribe( uint64 inboxID, string_view topic );
-        void   unsubscribe( uint64 inboxID, string_view topic );
+        /** @brief 받은편지함을 만들고 그 구독을 돌려줍니다. 구독이 사라지면 받은편지함도 지웁니다. 번호는 @p outInboxID 로 받아 아래 함수에 넘깁니다. */
+        [[nodiscard]] Subscription registerInbox( uint64& outInboxID );
+        void                       subscribe( uint64 inboxID, string_view topic );
+        void                       unsubscribe( uint64 inboxID, string_view topic );
         /** @brief @p message 를 그 주제를 구독한 받은편지함마다 넣습니다. 받은 수입니다. */
         int32 deliver( const ServerBusMessage& message );
         int32 takeMessages( uint64 inboxID, vector<ServerBusMessage>& outListMessage );
@@ -41,6 +42,9 @@ namespace sw
             vector<ServerBusMessage> _listMessage{};
             vector<string>           _listTopic{};
         };
+
+        /** @brief 받은편지함 @p id 의 구독이 풀렸습니다. 받은편지함을 지웁니다(`_mutex`). */
+        void releaseSubscription( uint64 id ) override;
 
         mutable mutex                _mutex;
         unordered_map<uint64, Inbox> _mapInbox;
@@ -71,6 +75,7 @@ namespace sw
         LocalServerBusHub* _pHub;
         uint64             _serverID;
         uint64             _inboxID;
+        Subscription       _inboxSubscription; ///< 허브의 받은편지함. 버스가 사라지면 지운다
         uint64             _nextSequence;
     };
 } // namespace sw
