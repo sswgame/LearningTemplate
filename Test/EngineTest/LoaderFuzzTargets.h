@@ -1,7 +1,10 @@
 /**
  * @file LoaderFuzzTargets.h
- * @brief 로더 퍼징 대상 표 — 바이트 하나를 받아 엔진 로더 하나에 먹이는 함수와, 그 로더의 씨앗(저장소의 실제 파일 · 만든 바이트)입니다.
+ * @brief 퍼징 대상 표 — 바이트 하나를 받아 로더 · 받은 바이트의 디코더 하나에 먹이는 함수와, 그 대상의 씨앗(저장소의 실제 파일 · 만든 바이트)입니다.
  * @details 시드 고정 변이 퍼저(`LoaderFuzzTest`, CI 의 nogpu)가 이 표를 돈다. 대상을 하나 더하는 것은 이 표에 한 줄을 더하는 것이다.
+ *          Core · Engine · GameFramework 의 대상은 `LoaderFuzzTargets.cpp` 의 표에 적는다. 키트의 대상은 키트마다 따로 둔 파일
+ *          (`Fuzz/KitFuzzTargets<키트>.cpp`)이 `LoaderFuzzTargetRegistrar` 로 올린다 — 키트가 꺼지면 그 키트 헤더를 include 하는 파일이 빠지므로
+ *          (`sw_excludeSourcesOfInactiveKits`) 표에 직접 적을 수 없다. 리눅스 `LoaderFuzzer` 는 키트를 링크하지 않아 표의 대상만 돈다.
  *          함수 모양이 libFuzzer 의 `LLVMFuzzerTestOneInput` 과 같아 그대로 붙일 수 있다 — 다만 Windows 의 `clang_rt.fuzzer` 는 정적 CRT(/MT)
  *          빌드뿐이라 동적 CRT(/MD) 인 엔진과 링크되지 않는다(LNK2038). 커버리지 안내 퍼징은 리눅스 `LoaderFuzzer`(`SW_ENABLE_FUZZING`, 프리셋 CI-Fuzz,
  *          밤마다 `.github/workflows/fuzz.yml`)가 같은 표를 돈다.
@@ -11,6 +14,8 @@
 #include "Core/Container/span.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+
+#include "Engine/Observability/ServiceFactoryList.h"
 
 namespace test
 {
@@ -28,8 +33,23 @@ namespace test
         LoaderSeedFunc _pfnCollectSeed;
         bool           _bText; ///< 텍스트 형식이면 true — 변이기가 숫자 · 구두점을 노리는 변이를 섞는다
     };
+} // namespace test
 
-    /** @brief 대상 표 전체입니다. */
+namespace test
+{
+    /**
+     * @brief 키트 대상 하나를 정적 초기화 때 올립니다. 이름 공간 범위의 객체로 둔다(`static const LoaderFuzzTargetRegistrar s_registrar{ … };`).
+     * @details 노드는 등록기 자신이고 목록(`ServiceFactoryList`)은 잇기만 한다 — 정적 초기화 중에도 할당 없이 안전하다(`OnlineProtocolEntry` 와 같은 모양).
+     *          표는 처음 `getLoaderFuzzTargets` 를 부를 때(테스트 실행 시작 · 퍼저 기동 — 정적 초기화가 끝난 뒤) 한 번 만든다.
+     */
+    struct LoaderFuzzTargetRegistrar : public sw::ServiceFactoryNode
+    {
+        explicit LoaderFuzzTargetRegistrar( const LoaderFuzzTarget& target );
+
+        LoaderFuzzTarget _target;
+    };
+
+    /** @brief 대상 표 전체입니다. 기본 표의 순서 뒤에 올린 키트 대상이 이름 순으로 옵니다(정적 초기화 순서와 무관하게 같은 표). */
     sw::vector_reference<const LoaderFuzzTarget> getLoaderFuzzTargets();
 
     /** @brief 추적 모드가 마지막 입력을 남기는 자리(임시 폴더의 `sw_fuzz_last_<대상>.bin`)입니다. */
