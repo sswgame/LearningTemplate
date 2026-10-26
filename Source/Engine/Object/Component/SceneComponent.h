@@ -152,6 +152,12 @@ namespace sw
          * @details localTRS * parentWorld (행 벡터). 병렬 틱 구간에서는 캐시만 반환합니다.
          */
         float4x4 getWorldMatrix() const;
+        /**
+         * @brief 월드 행렬 변경 번호입니다(`SceneTransformPage::_arrWorldVersion`). 월드가 다시 합성될 때마다 오릅니다(부모가 움직여도).
+         * @details 트랜스폼을 따르는 쪽은 지난번 번호와 같으면 행렬을 읽거나 풀지 않는다. 더티면 `getWorldMatrix` 처럼 먼저 합성하고 읽는다
+         *          (병렬 틱 중에는 캐시의 번호). 같은 칸을 쓰는 동안만 비교할 수 있다 — 다른 컴포넌트의 번호와는 견주지 않는다.
+         */
+        uint32 getWorldTransformVersion() const;
 
         /**
          * @brief 카메라 기준 상대 위치와 계층 월드 회전, 스케일로 만든 행렬입니다.

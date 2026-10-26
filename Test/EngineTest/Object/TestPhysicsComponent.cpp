@@ -11,6 +11,7 @@
 #include "Engine/Object/Component/Physics/ScenePhysics.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Scene/SceneStateHash.h"
 
 #include "EngineTest/TestGameObjectMocks.h"
 
@@ -149,6 +150,48 @@ namespace
 
         uint32 _errorCount{ 0 };
     };
+
+    /** @brief 3D 상자 더미와 2D 상자 몇 개를 떨어뜨려 일부가 잠들 때까지 돌리고 씬 상태 해시를 냅니다. */
+    uint64 runSettlingScene()
+    {
+        sw::GameObjectManager manager;
+        spawnBody( manager, "Floor", sw::float3{ 0.0f, -0.5f, 0.0f }, sw::float3{ 20.0f, 0.5f, 20.0f }, sw::PhysicsBodyType::Static );
+        for ( uint32 boxIndex = 0; boxIndex < 12; ++boxIndex )
+        {
+            const sw::float3 position{ static_cast<float32>( boxIndex % 4 ) * 1.2f - 2.0f, 0.6f + static_cast<float32>( boxIndex / 4 ) * 1.1f,
+                                       static_cast<float32>( boxIndex % 3 ) * 0.2f };
+            spawnBody( manager, "Crate", position, sw::float3{ 0.5f, 0.5f, 0.5f }, sw::PhysicsBodyType::Dynamic );
+        }
+        sw::RigidBodyComponent* pMover = spawnBody( manager, "Mover", sw::float3{ -6.0f, 0.5f, 0.0f }, sw::float3{ 0.5f, 0.5f, 0.5f }, sw::PhysicsBodyType::Kinematic );
+        for ( uint32 boxIndex = 0; boxIndex < 4; ++boxIndex )
+        {
+            sw::GameObject*           pObject = manager.createGameObject( sw::hashed_string( "Crate2D" ) );
+            sw::RigidBody2DComponent* pBody   = pObject->addComponent<sw::RigidBody2DComponent>();
+            sw::PhysicsShapeDesc2D    box;
+            box._halfExtents = sw::float2{ 0.4f, 0.4f };
+            pBody->setShape( box );
+            pBody->setLocalPosition( sw::float3{ static_cast<float32>( boxIndex ) * 0.3f, 1.0f + static_cast<float32>( boxIndex ) * 0.9f, 0.0f } );
+        }
+        sw::GameObject*           pFloor2D = manager.createGameObject( sw::hashed_string( "Floor2D" ) );
+        sw::RigidBody2DComponent* pBody2D  = pFloor2D->addComponent<sw::RigidBody2DComponent>();
+        sw::PhysicsShapeDesc2D    floorBox;
+        floorBox._halfExtents = sw::float2{ 20.0f, 0.5f };
+        pBody2D->setShape( floorBox );
+        pBody2D->setBodyType( sw::PhysicsBodyType::Static );
+        pBody2D->setLocalPosition( sw::float3{ 0.0f, -0.5f, 0.0f } );
+
+        manager.beginPlay();
+        for ( uint32 frameIndex = 0; frameIndex < 240; ++frameIndex )
+        {
+            // 키네마틱 바디가 더미 쪽으로 밀고 들어갔다가 선다 — 잠든 바디가 다시 깨는 길도 지난다.
+            if ( frameIndex < 120 )
+                pMover->setLocalPosition( sw::float3{ -6.0f + static_cast<float32>( frameIndex ) * 0.03f, 0.5f, 0.0f } );
+            manager.update( kFrame );
+        }
+        const uint64 hash = sw::SceneStateHash::compute( manager );
+        manager.endPlay();
+        return hash;
+    }
 
 } // namespace
 
@@ -395,4 +438,57 @@ SW_TEST_CASE( PhysicsComponentTest, PostPhysicsTickSeesThisFramesBodyPose )
     }
     SW_EXPECT_TRUE( listEndY[4] < listEndY[0] ); // 떨어지고 있다
     manager.endPlay();
+}
+
+/**
+ * @brief [PhysicsComponentTest] 잠든 동적 바디와 정적 바디는 스텝 뒤 자세를 읽히지 않고 트랜스폼도 다시 쓰이지 않는다 — 깨우거나 코드가 옮기면 다시 따른다
+ * @details 물리는 트랜스폼의 월드 변경 번호로 바깥 이동을 알고, 백엔드의 움직인 바디 목록(`getMovedBodies`)에 든 바디만 자세를 읽는다. 잠든 바디가
+ *          트랜스폼을 계속 쓰면 번호가 오르고, 정적 바디의 이동을 번호가 놓치면 바닥이 제자리에 남는다.
+ */
+SW_TEST_CASE( PhysicsComponentTest, SleepingAndStaticBodiesAreLeftAloneUntilMoved )
+{
+    sw::GameObjectManager   manager;
+    sw::RigidBodyComponent* pFloor = spawnBody( manager, "Floor", sw::float3{ 0.0f, -0.5f, 0.0f }, sw::float3{ 10.0f, 0.5f, 10.0f }, sw::PhysicsBodyType::Static );
+    sw::RigidBodyComponent* pCrate = spawnBody( manager, "Crate", sw::float3{ 0.0f, 1.0f, 0.0f }, sw::float3{ 0.5f, 0.5f, 0.5f }, sw::PhysicsBodyType::Dynamic );
+    SW_ASSERT_TRUE( pFloor != nullptr && pCrate != nullptr );
+    manager.beginPlay();
+    test::updateFrames( manager, 300 ); // 떨어져 자리 잡고 잠든다(5 초)
+    SW_ASSERT_TRUE( pCrate->isSleeping() );
+    const sw::IPhysicsScene3D* pScene = manager.getSubsystem<sw::ScenePhysics>().findScene3D();
+    SW_ASSERT_NOT_NULL( pScene );
+
+    const uint32     crateVersion = pCrate->getWorldTransformVersion();
+    const uint32     floorVersion = pFloor->getWorldTransformVersion();
+    const sw::float3 restPosition = pCrate->getWorldPosition();
+    test::updateFrames( manager, 30 );
+    SW_EXPECT_EQUAL( crateVersion, pCrate->getWorldTransformVersion() );
+    SW_EXPECT_EQUAL( floorVersion, pFloor->getWorldTransformVersion() );
+    const sw::vector<sw::PhysicsBodyHandle>& listMoved = pScene->getMovedBodies();
+    SW_EXPECT_TRUE( std::find( listMoved.begin(), listMoved.end(), pCrate->getBodyHandle() ) == listMoved.end() );
+    SW_EXPECT_TRUE( std::find( listMoved.begin(), listMoved.end(), pFloor->getBodyHandle() ) == listMoved.end() );
+
+    // 깨우면 다시 따른다.
+    pCrate->setLinearVelocity( sw::float3{ 0.0f, 3.0f, 0.0f } );
+    pCrate->wake();
+    test::updateFrames( manager, 5 );
+    SW_EXPECT_TRUE( pCrate->getWorldTransformVersion() != crateVersion );
+    SW_EXPECT_TRUE( pCrate->getWorldPosition()._y > restPosition._y + 0.05f );
+
+    // 코드가 정적 바닥을 옮기면(번호가 오른다) 바디도 옮겨진다 — 상자 아래에 바닥이 없어 떨어진다.
+    test::updateFrames( manager, 120 );
+    pFloor->setLocalPosition( sw::float3{ 30.0f, -0.5f, 0.0f } );
+    test::updateFrames( manager, 60 );
+    SW_EXPECT_TRUE( pCrate->getWorldPosition()._y < -1.0f );
+    manager.endPlay();
+}
+
+/**
+ * @brief [PhysicsComponentTest] 같은 입력이면 같은 결과 — 움직인 바디만 읽는 길(잠들기 · 깨기 · 키네마틱 멈춤)을 지나도 두 번 돌린 씬 상태 해시가 같다
+ * @details 바디 자세를 읽는 순서는 백엔드가 핸들 순으로 고정한 목록(`getMovedBodies`)이다. 2D 의 일꾼 수에 따른 같음은 `PhysicsScene2DTest` 가 본다.
+ */
+SW_TEST_CASE( PhysicsComponentTest, SameInputGivesTheSameSceneHash )
+{
+    const uint64 first  = runSettlingScene();
+    const uint64 second = runSettlingScene();
+    SW_EXPECT_EQUAL( first, second );
 }

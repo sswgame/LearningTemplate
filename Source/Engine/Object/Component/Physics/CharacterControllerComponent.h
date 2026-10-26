@@ -113,11 +113,10 @@ namespace sw
         float3                  _pendingLaunch;           ///< 0 이 아니면 다음 스텝에 쏜다(`_commandLock`)
         float3                  _airVelocity;             ///< 발사 · 떠난 바닥의 수평 속도 — 땅에 다시 닿으면 0
         float3                  _previousPosition;
-        float3                  _writtenPosition;
-        quaternion              _writtenRotation;
+        float3                  _worldScale;    ///< 트랜스폼의 월드 배율(변경 번호가 바뀔 때만 다시 읽는다)
+        quaternion              _worldRotation; ///< 트랜스폼의 월드 회전(바닥이 돈 각을 얹어 쓴다). 변경 번호가 같으면 그대로다
         float32                 _verticalSpeed;
         float32                 _pendingJumpSpeed; ///< 0 이 아니면 다음 스텝에 준다(`_commandLock`)
         float32                 _pendingGroundYaw; ///< 마지막 쓰기 뒤 디딘 바닥이 위 축 둘레로 돈 각(rad) — 다음 트랜스폼 쓰기에 얹는다
-        bool                    _bHasWritten;
     };
 } // namespace sw

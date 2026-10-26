@@ -67,7 +67,14 @@ namespace sw
         virtual void setBodyEnabled( PhysicsBodyHandle body, bool bEnabled ) = 0;
         virtual bool isBodyEnabled( PhysicsBodyHandle body ) const           = 0;
 
-        virtual bool getBodyTransform( PhysicsBodyHandle body, Vector& outPosition, Rotation& outRotation ) const = 0;
+        /**
+         * @brief 마지막 `step` 동안 깨어 있던(움직였을 수 있는) 바디입니다. 핸들 순서이고 다음 `step` 까지 그대로입니다.
+         * @details 스텝 앞이나 뒤에 깨어 있던 바디를 모두 든다 — 이 스텝에 잠든 바디(마지막으로 조금 움직였다)와 이 스텝에 깨어난 바디가 빠지지 않는다.
+         *          정적 바디와 내내 잠든 바디는 들지 않는다. 바디 자세를 읽는 쪽(`ScenePhysics`)은 이 목록만 돌아 잠든 · 정적 바디마다 스텝마다
+         *          백엔드를 부르지 않는다(Jolt `GetActiveBodies`, Box2D 바디 이동 이벤트, 유니티 · 언리얼의 활성 바디 목록과 같은 자리).
+         */
+        virtual const vector<PhysicsBodyHandle>& getMovedBodies() const                                                                       = 0;
+        virtual bool                             getBodyTransform( PhysicsBodyHandle body, Vector& outPosition, Rotation& outRotation ) const = 0;
         /** @brief 바디를 그 위치로 옮깁니다(순간이동). 그 사이를 쓸지 않고 바디를 깨웁니다. */
         virtual void setBodyTransform( PhysicsBodyHandle body, const Vector& position, const Rotation& rotation ) = 0;
         /** @brief 키네마틱 바디가 @p deltaTime 뒤에 목표 자세에 닿도록 속도를 줍니다(밀린 동적 바디가 그 속도를 받는다). */

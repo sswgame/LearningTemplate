@@ -44,20 +44,22 @@ namespace sw
         , _body{}
         , _command{}
         , _commandLock{}
+        , _movedStep{ 0 }
         , _previousPosition{}
         , _currentPosition{}
         , _kinematicStartPosition{}
         , _kinematicTargetPosition{}
         , _lastLinearVelocity{}
-        , _writtenPosition{}
-        , _writtenRotation{}
+        , _worldPosition{}
+        , _worldRotation{}
+        , _worldScale{ 1.0f, 1.0f, 1.0f }
         , _previousAngle{ 0.0f }
         , _currentAngle{ 0.0f }
         , _kinematicStartAngle{ 0.0f }
         , _kinematicTargetAngle{ 0.0f }
         , _lastAngularVelocity{ 0.0f }
         , _appliedBodyType{ PhysicsBodyType::Dynamic }
-        , _bHasWritten{ false }
+        , _bRestPoseWritten{ false }
     {
     }
 
@@ -201,6 +203,15 @@ namespace sw
         _currentAngle            = angle;
         _kinematicStartAngle     = angle;
         _kinematicTargetAngle    = angle;
+        _bRestPoseWritten        = false;
+        physics.bindBodyOwner( *this );
+    }
+
+    void RigidBody2DComponent::readWorldPose2D( float2& outPosition, float32& outAngle )
+    {
+        PhysicsComponentUtil::readWorldPose( *this, _worldPosition, _worldRotation, _worldScale );
+        outPosition = float2{ _worldPosition._x, _worldPosition._y };
+        outAngle    = PhysicsComponentUtil::getAngle2D( _worldRotation );
     }
 
     void RigidBody2DComponent::beginPhysicsFrame( ScenePhysics& physics )
@@ -216,18 +227,16 @@ namespace sw
         if ( consumeRebuild() )
             releasePhysics( physics );
 
-        float3     position3{};
-        quaternion rotation{};
-        float3     scale{};
-        PhysicsComponentUtil::readWorldPose( *this, position3, rotation, scale );
-        const float2  position{ position3._x, position3._y };
-        const float32 angle = PhysicsComponentUtil::getAngle2D( rotation );
-        if ( _body.isValid() == false || pScene->isBodyValid( _body ) == false )
+        // 트랜스폼의 바깥 변화는 칸의 변경 번호로 안다 — 같으면 월드 행렬을 풀지 않는다(3D 강체와 같은 규칙).
+        const bool bTransformChanged = consumeTransformChange();
+        float2     position{};
+        float32    angle = 0.0f;
+        // 바디는 이 컴포넌트만 지운다(씬을 내릴 때는 `ScenePhysics::onSceneCleared` 가 먼저 놓게 한다) — 프레임마다 백엔드에 묻지 않고 Debug 에서만 확인한다.
+        SW_ASSERT( _body.isValid() == false || pScene->isBodyValid( _body ) );
+        if ( _body.isValid() == false )
         {
-            createBody( physics, *pScene, position, angle, scale );
-            _writtenPosition = position3;
-            _writtenRotation = rotation;
-            _bHasWritten     = true;
+            readWorldPose2D( position, angle );
+            createBody( physics, *pScene, position, angle, _worldScale );
             (void)consumeTeleport();
             return;
         }
@@ -239,13 +248,18 @@ namespace sw
         }
 
         const bool bTeleported = consumeTeleport();
-        const bool bMoved      = bTeleported || PhysicsComponentUtil::hasMoved( position3, rotation, _writtenPosition, _writtenRotation );
+        const bool bMoved      = bTeleported || bTransformChanged;
+        if ( bMoved )
+            readWorldPose2D( position, angle );
         if ( _bodyType == PhysicsBodyType::Kinematic && bTeleported == false )
         {
-            _kinematicStartPosition  = _currentPosition;
-            _kinematicStartAngle     = _currentAngle;
-            _kinematicTargetPosition = position;
-            _kinematicTargetAngle    = angle;
+            _kinematicStartPosition = _currentPosition;
+            _kinematicStartAngle    = _currentAngle;
+            if ( bMoved )
+            {
+                _kinematicTargetPosition = position;
+                _kinematicTargetAngle    = angle;
+            }
         }
         else if ( bMoved )
         {
@@ -259,8 +273,6 @@ namespace sw
             _kinematicStartAngle     = angle;
             _kinematicTargetAngle    = angle;
         }
-        _writtenPosition = position3;
-        _writtenRotation = rotation;
 
         PhysicsBodyCommand<PhysicsDimension2D> command;
         {
@@ -288,6 +300,11 @@ namespace sw
             return;
         if ( _bodyType == PhysicsBodyType::Kinematic )
         {
+            // 서 있는 키네마틱 바디는 스텝마다 백엔드를 부르지 않는다(3D 강체와 같은 규칙).
+            const bool bResting = _kinematicStartPosition == _kinematicTargetPosition && _kinematicStartAngle == _kinematicTargetAngle &&
+                                  _movedStep != physics.getStepCount();
+            if ( bResting )
+                return;
             const float32 fraction = static_cast<float32>( stepIndex + 1 ) / static_cast<float32>( stepCount );
             const float2  target   = float2::lerp( _kinematicStartPosition, _kinematicTargetPosition, fraction );
             const float32 angle    = MathUtil::lerpAngle( _kinematicStartAngle, _kinematicTargetAngle, fraction );
@@ -309,21 +326,18 @@ namespace sw
             pScene->addTorque( _body, torque );
     }
 
-    void RigidBody2DComponent::postPhysicsStep( ScenePhysics& physics )
+    void RigidBody2DComponent::readSteppedPose( const IPhysicsBodyScene2D& scene, uint64 stepCount )
     {
-        IPhysicsBodyScene2D* pScene = physics.findScene2D();
-        if ( pScene == nullptr || _body.isValid() == false )
-            return;
         _previousPosition = _currentPosition;
         _previousAngle    = _currentAngle;
-        (void)pScene->getBodyTransform( _body, _currentPosition, _currentAngle );
-        _lastLinearVelocity  = pScene->getLinearVelocity( _body );
-        _lastAngularVelocity = pScene->getAngularVelocity( _body );
+        (void)scene.getBodyTransform( _body, _currentPosition, _currentAngle );
+        _lastLinearVelocity  = scene.getLinearVelocity( _body );
+        _lastAngularVelocity = scene.getAngularVelocity( _body );
+        _movedStep           = stepCount;
     }
 
     void RigidBody2DComponent::endPhysicsFrame( ScenePhysics& physics, float32 alpha )
     {
-        (void)physics;
         {
             std::scoped_lock<SpinLock> lock{ _commandLock };
             _command._force  = float2{};
@@ -331,27 +345,34 @@ namespace sw
         }
         if ( _body.isValid() == false || _bodyType != PhysicsBodyType::Dynamic )
             return;
+        // 마지막 스텝에 잠들어 있었으면 보간할 사이가 없다 — 그 자세를 한 번 쓴 뒤로는 깰 때까지 쓰지 않는다(3D 강체와 같은 규칙).
+        const bool bMovedLastStep = _movedStep == physics.getStepCount();
+        if ( bMovedLastStep == false )
+        {
+            _previousPosition = _currentPosition;
+            _previousAngle    = _currentAngle;
+            if ( _bRestPoseWritten )
+                return;
+        }
         const float32 weight   = _bInterpolate ? alpha : 1.0f;
         const float2  position = float2::lerp( _previousPosition, _currentPosition, weight );
         const float32 angle    = MathUtil::lerpAngle( _previousAngle, _currentAngle, weight );
-        float3        current{};
-        quaternion    rotation{};
-        float3        scale{};
-        PhysicsComponentUtil::readWorldPose( *this, current, rotation, scale );
-        PhysicsComponentUtil::writeWorldPose( *this, float3{ position._x, position._y, current._z }, replaceRigidBody2DAngle( rotation, angle ),
-                                              _writtenPosition, _writtenRotation );
-        _bHasWritten = true;
+        // Z 와 Z 둘레 밖의 회전은 트랜스폼의 것이다 — 변경 번호가 같으면 지난번에 읽은 값 그대로다.
+        PhysicsComponentUtil::writeWorldPose( *this, float3{ position._x, position._y, _worldPosition._z },
+                                              replaceRigidBody2DAngle( _worldRotation, angle ), _worldScale );
+        markTransformSynced();
+        _bRestPoseWritten = bMovedLastStep == false;
     }
 
     void RigidBody2DComponent::releasePhysics( ScenePhysics& physics )
     {
         if ( _body.isValid() == false )
             return;
+        physics.unbindBodyOwner( *this );
         IPhysicsBodyScene2D* pScene = physics.findScene2D();
         if ( pScene != nullptr )
             pScene->destroyBody( _body );
-        _body        = PhysicsBodyHandle{};
-        _bHasWritten = false;
+        _body = PhysicsBodyHandle{};
     }
 } // namespace sw
 

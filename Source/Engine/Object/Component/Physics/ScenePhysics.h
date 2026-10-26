@@ -7,7 +7,8 @@
  *          Godot Area2D 처럼 물리 월드 하나), 에디터 시각화가 훑을 콜라이더 목록(`getColliders2D`)과 연속 콜라이더가 쓸어 낸 겹침(`queueSweptOverlap2D`)을 이 서비스가 듭니다.
  *
  *          프레임 하나: 누적기가 스텝 수 n 을 정한다 → 컴포넌트 `beginPhysicsFrame` → 연속 콜라이더 쓸기(`sweepContinuousColliders2D` — 모든 콜라이더가
- *          이번 자리로 옮겨진 뒤라 상대의 이동을 안다) → n 번(`prePhysicsStep` → 3D · 2D 씬 step → `postPhysicsStep`,
+ *          이번 자리로 옮겨진 뒤라 상대의 이동을 안다) → n 번(`prePhysicsStep` → 3D · 2D 씬 step → 그 스텝에 깨어 있던 바디의 주인 강체만
+ *          자세를 읽는다(`getMovedBodies` · `bindBodyOwner`) → `postPhysicsStep`,
  *          이벤트를 모은다) → `endPhysicsFrame( alpha )`(보간한 자세를 트랜스폼에 쓴다) → 모은 이벤트를 두 오브젝트의 켜진 컴포넌트에
  *          나눠 준다(막는 접촉은 `onCollision*`, 트리거나 겹침 전용 바디가 낀 겹침은 `onOverlap*` — `PhysicsContactEvent::isOverlap`). 이벤트의 사용자 값은 오브젝트 id 입니다 — 컴포넌트가 아닌 코드(래그돌 빌더)가
  *          만든 바디도 사용자 값에 오브젝트 id 를 실으면 그 오브젝트가 이벤트를 받습니다.
@@ -32,6 +33,8 @@ namespace sw
     class IPhysicsDebugRenderer;
     class PhysicsComponent;
     class PhysicsSystem;
+    class RigidBody2DComponent;
+    class RigidBodyComponent;
 
     /**
      * @brief 연속 콜라이더가 한 프레임에 쓸고 지나간 상대 하나입니다(`BoxCollider2DComponent` 의 연속 판정).
@@ -139,6 +142,17 @@ namespace sw
         uint32 getComponentCount() const;
 
         /**
+         * @brief 강체 컴포넌트를 자기 바디(`getBodyHandle`)의 주인으로 적습니다. 바디를 만든 직후에 부릅니다.
+         * @details 스텝마다 백엔드가 깨어 있던 바디 목록(`getMovedBodies`)을 주면 그 바디의 주인만 자세를 읽는다 — 정적 · 잠든 바디는 스텝마다
+         *          불리지 않는다. 주인 표는 바디 핸들의 칸 번호로 찾고, 주인의 핸들과 세대까지 같을 때만 부른다.
+         */
+        void bindBodyOwner( RigidBodyComponent& owner );
+        void bindBodyOwner( RigidBody2DComponent& owner );
+        /** @brief 바디를 놓기 전에 주인 표에서 뺍니다. 그 칸의 주인이 @p owner 가 아니면 아무것도 하지 않습니다. */
+        void unbindBodyOwner( const RigidBodyComponent& owner );
+        void unbindBodyOwner( const RigidBody2DComponent& owner );
+
+        /**
          * @brief 이 씬의 파괴 오브젝트들이 든 떨어진 덩어리 바디 수입니다(`gv_destructionMaxDebrisBodies` 예산).
          * @details 씬마다 따로 센다 — 한 프로세스에 월드가 여럿이면(가상 서버 하니스) 한 월드의 파편이 다른 월드의 예산을 먹지 않게.
          */
@@ -161,6 +175,9 @@ namespace sw
         void sweepContinuousColliders2D();
         /** @brief 설정 표의 스텝 크기 · 상한을 누적기에 한 번 맞춥니다. */
         void configureOnce();
+        /** @brief 씬 @p scene 이 마지막 스텝에 움직였다고 한 바디마다 주인(@p listOwner)의 `readSteppedPose` 를 부릅니다(.cpp 에서만 쓴다). */
+        template <typename TOwner, typename TScene>
+        void readMovedBodies( const vector<TOwner*>& listOwner, const TScene& scene );
         /** @brief 받은 물리 서비스가 있고 올라와 있으면 그것, 아니면 nullptr 입니다. */
         PhysicsSystem* findInitializedPhysicsSystem() const;
 
@@ -173,6 +190,8 @@ namespace sw
         unique_ptr<IPhysicsScene2D>     _pScene2D;
         FixedStepTimer                  _stepTimer;
         vector<PhysicsComponent*>       _arrListComponent[3]; ///< 단계(`PhysicsComponentPhase`)마다 하나. 컴포넌트가 자기 자리(`_physicsIndex`)를 든다
+        vector<RigidBodyComponent*>     _listBodyOwner3D;     ///< 3D 바디 핸들의 칸 번호 → 주인 강체(없으면 nullptr, `bindBodyOwner`)
+        vector<RigidBody2DComponent*>   _listBodyOwner2D;     ///< 2D 바디 핸들의 칸 번호 → 주인 강체
         vector<PhysicsContactEvent3D>   _listFrameEvent3D;
         vector<PhysicsContactEvent2D>   _listFrameEvent2D;
         uint64                          _stepCount;

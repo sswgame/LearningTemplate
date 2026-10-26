@@ -6,7 +6,8 @@
  *
  *          1. `beginPhysicsFrame` — 시작 전이면 아무것도 하지 않고, 시작했으면 바디를 만들거나(처음) 트랜스폼의 바깥 변화(코드가 옮김 ·
  *             `teleportTo`)를 바디로 옮깁니다.
- *          2. 고정 스텝마다 `prePhysicsStep`(키네마틱 목표 · 캐릭터 이동) → 씬 step → `postPhysicsStep`(바디 자세 기록).
+ *          2. 고정 스텝마다 `prePhysicsStep`(키네마틱 목표 · 캐릭터 이동) → 씬 step → 그 스텝에 깨어 있던 강체만 자세 기록(`ScenePhysics` 가
+ *             백엔드의 `getMovedBodies` 를 돈다 — 정적 · 잠든 바디는 부르지 않는다) → `postPhysicsStep`.
  *          3. `endPhysicsFrame( alpha )` — 마지막 두 스텝 사이를 보간한 자세를 트랜스폼에 씁니다(유니티 Rigidbody interpolation).
  *
  *          바디는 플레이 중에만 있습니다(편집 중에는 시뮬레이션하지 않는다). 컴포넌트를 끄거나 플레이가 끝나면 백엔드 객체를 놓습니다(`releasePhysics`).
@@ -82,6 +83,20 @@ namespace sw
             _bRebuildPending    = false;
             return bRebuild;
         }
+        /**
+         * @brief 마지막으로 맞춘 뒤 월드 트랜스폼이 바뀌었는지(칸의 변경 번호, `getWorldTransformVersion`) 보고 지금 번호로 맞춥니다.
+         * @details 바뀌지 않았으면 월드 행렬을 풀지 않는다 — 정적 · 잠든 바디 대부분이 이 비교 하나로 끝난다. 자기 쓰기는 `markTransformSynced` 로
+         *          맞춰 두므로 바깥(코드 · 부모)이 옮긴 것만 참이다.
+         */
+        bool consumeTransformChange()
+        {
+            const uint32 version    = getWorldTransformVersion();
+            const bool   bChanged   = version != _syncedTransformVersion;
+            _syncedTransformVersion = version;
+            return bChanged;
+        }
+        /** @brief 이 컴포넌트가 트랜스폼에 쓴 뒤 부릅니다 — 자기 쓰기를 다음 프레임에 바깥 이동으로 보지 않게. */
+        void markTransformSynced() { _syncedTransformVersion = getWorldTransformVersion(); }
 
         /** @brief 물리 프레임 시작 — 백엔드 객체를 만들거나 트랜스폼의 바깥 변화를 옮깁니다. */
         virtual void beginPhysicsFrame( ScenePhysics& physics ) { (void)physics; }
@@ -116,7 +131,8 @@ namespace sw
 
     private:
         ScenePhysics*         _pScenePhysics;
-        uint32                _physicsIndex; ///< `ScenePhysics` 의 단계 목록 자리. 없으면 `kNotRegistered`
+        uint32                _physicsIndex;           ///< `ScenePhysics` 의 단계 목록 자리. 없으면 `kNotRegistered`
+        uint32                _syncedTransformVersion; ///< 마지막으로 맞춘 월드 변경 번호(`consumeTransformChange`). 처음 0 — 칸의 번호는 받을 때 1 이상이라 첫 비교는 "바뀜"
         PhysicsComponentPhase _phase;
         bool                  _bRebuildPending;  ///< 게임 스레드에서만 읽고 쓴다(속성 변경 → 다음 물리 프레임)
         atomic<bool>          _bTeleportPending; ///< 틱 중 다른 워커가 세울 수 있어 원자값이다
@@ -154,11 +170,12 @@ namespace sw
     {
         /** @brief 월드 행렬을 자리 · 회전 · 배율로 풉니다. */
         static void readWorldPose( const SceneComponent& component, float3& outPosition, quaternion& outRotation, float3& outScale );
-        /** @brief 자리 · 회전(배율은 지금 것)을 월드 트랜스폼으로 쓰고, 쓴 뒤의 값을 다시 읽어 돌려줍니다(오일러 왕복 오차까지 같은 값으로 비교하려고). */
-        static void writeWorldPose( SceneComponent& component, const float3& position, const quaternion& rotation, float3& outWrittenPosition,
-                                    quaternion& outWrittenRotation );
-        /** @brief 두 자세가 다른지입니다(1 mm · 0.06 도 넘게). */
-        static bool hasMoved( const float3& position, const quaternion& rotation, const float3& otherPosition, const quaternion& otherRotation );
+        /**
+         * @brief 자리 · 회전 · 배율을 월드 트랜스폼으로 씁니다. 부모가 없으면 행렬을 만들어 다시 풀지 않고 로컬 값에 바로 씁니다.
+         * @details 배율은 부르는 쪽이 들고 있는 값이다(트랜스폼 변경 번호가 같으면 지난번에 읽은 배율 그대로). 쓴 값을 다시 읽어 비교하지 않는다 —
+         *          바깥 이동은 변경 번호가 알린다(`PhysicsComponent::consumeTransformChange`).
+         */
+        static void writeWorldPose( SceneComponent& component, const float3& position, const quaternion& rotation, const float3& scale );
         /** @brief Z 축 둘레 각입니다(2D 물리의 회전). */
         static float32 getAngle2D( const quaternion& rotation );
         /** @brief Z 축 둘레 각의 회전입니다. */

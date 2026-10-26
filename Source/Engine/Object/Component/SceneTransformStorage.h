@@ -28,6 +28,11 @@ namespace sw
      *
      *          값을 `SceneComponent` 안에 두지 않는 이유는 틱 뒤 적용과 렌더 수집이 8000 개를 돌 때 오브젝트마다 캐시 라인 서너 개를 건너다니고,
      *          행렬 하나를 읽으려고 컴포넌트 전체를 끌어오게 되기 때문이다.
+     *
+     *          **월드 변경 번호(`_arrWorldVersion`).** 트랜스폼을 따르는 소비자(물리 바디 · 내비 장애물)는 지난번에 본 번호와 정수 하나로 비교해,
+     *          같으면 행렬을 읽거나 풀지 않는다(매 프레임 폴링 대신). 알림 리스너로 하지 않은 이유: 더티 트랜스폼마다 간접 호출이 붙고 큐브
+     *          20,000 개 벤치의 `GT.Frame` 이 그 경로를 지난다(EnginePartition 6.3). 칸을 다시 받아도 번호를 0 으로 되돌리지 않는 것은, 옛 번호를
+     *          든 소비자가 같은 칸의 새 주인을 "안 바뀜"으로 보지 않게 하려는 것이다.
      */
     struct alignas( 64 ) SceneTransformPage
     {
@@ -92,6 +97,7 @@ namespace sw
         float3          _arrPendingScale[kSlotCount];     ///< 틱 중에 쓴 로컬 스케일(적용 전)
         SceneComponent* _arrOwner[kSlotCount];            ///< 슬롯을 쓰는 컴포넌트다. 빈 슬롯이면 nullptr 이다
         uint32          _arrPrimitiveIndex[kSlotCount];   ///< 렌더 프리미티브 번호(`PrimitiveRegistry`). 없으면 `SceneTransformStorage::kNoPrimitive`
+        uint32          _arrWorldVersion[kSlotCount];     ///< 월드 변경 번호. 월드를 쓰는 `composeWorld` · `initializeSlot` 만 올리고 0 으로 되돌리지 않는다(아래 설명)
         uint8           _arrPendingMask[kSlotCount];      ///< 적용을 기다리는 틱 대기 값(`LocalValueBit` 조합). 슬롯의 주인 오브젝트를 틱하는 스레드만 쓴다
         uint8           _arrFlag[kSlotCount];             ///< `SlotFlag` 조합
     };

@@ -40,6 +40,8 @@ namespace sw
         , _listBody{}
         , _listChunkBatch{}
         , _lastOwnerWorld{ float4x4::Identity }
+        , _pLastOwnerRoot{ nullptr }
+        , _lastOwnerVersion{ 0 }
         , _elapsedSeconds{ 0.0f }
         , _bLoaded{ SW_FALSE }
         , _bChunkBuildQueued{ SW_FALSE }
@@ -88,9 +90,16 @@ namespace sw
         if ( _listChunkBatch.empty() )
             return;
         _elapsedSeconds += deltaTime;
-        // 오브젝트가 움직였으면 모든 칸을 다시 놓는다(타일맵은 대개 서 있다 — 행렬 비교 한 번).
-        const float4x4 ownerWorld = getOwnerWorld();
-        if ( Memory::compare( &ownerWorld, &_lastOwnerWorld, sizeof( ownerWorld ) ) != 0 )
+        // 오브젝트가 움직였으면 모든 칸을 다시 놓는다. 타일맵은 대개 서 있다 — 장면 컴포넌트와 월드 변경 번호가 그대로면 행렬도 읽지 않는다.
+        // 번호가 바뀌어도 행렬이 같으면(같은 값으로 다시 합성) 칸을 다시 놓지 않도록 행렬 비교는 남긴다.
+        const GameObject*     pOwner         = getOwner();
+        const SceneComponent* pRoot          = ( pOwner != nullptr ) ? pOwner->getPrimarySceneComponent() : nullptr;
+        const uint32          version        = ( pRoot != nullptr ) ? pRoot->getWorldTransformVersion() : 0u;
+        const bool            bSameTransform = pRoot == _pLastOwnerRoot && version == _lastOwnerVersion;
+        _pLastOwnerRoot                      = pRoot;
+        _lastOwnerVersion                    = version;
+        const float4x4 ownerWorld            = bSameTransform ? _lastOwnerWorld : getOwnerWorld();
+        if ( bSameTransform == false && Memory::compare( &ownerWorld, &_lastOwnerWorld, sizeof( ownerWorld ) ) != 0 )
         {
             _lastOwnerWorld = ownerWorld;
             for ( int32 chunkIndex = 0; chunkIndex < _chunkGrid.getChunkCount(); ++chunkIndex )

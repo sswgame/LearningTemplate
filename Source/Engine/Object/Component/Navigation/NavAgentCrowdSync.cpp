@@ -94,10 +94,17 @@ namespace sw
             // 컨트롤러 · 폰 이동이 옮긴 자리를 받아들인다(SteerOnly 는 군중이 낸 속도를 조종자가 의도로 바꿔 폰이 걸었다).
             crowd.syncAgentPosition( agent._crowdAgentID, currentPosition );
         }
-        else if ( agent._bHasWritten == SW_TRUE && float3::getHorizontalDistance( currentPosition, agent._writtenPosition ) > Internal::kTeleportDistance )
+        else
         {
-            crowd.teleportAgent( agent._crowdAgentID, currentPosition );
-            agent._bDestinationDirty = agent._bHasDestination;
+            // 마지막 쓰기 뒤 월드 변경 번호가 그대로면 바깥이 옮기지 않았다 — 거리를 재지 않는다. 번호가 바뀌었어도 작은 밀림은 순간이동이 아니므로 거리 문턱은 남긴다.
+            const bool bMovedOutside = pScene != nullptr && pScene->getWorldTransformVersion() != agent._writtenTransformVersion;
+            const bool bTeleported   = agent._bHasWritten == SW_TRUE && bMovedOutside &&
+                                     float3::getHorizontalDistance( currentPosition, agent._writtenPosition ) > Internal::kTeleportDistance;
+            if ( bTeleported )
+            {
+                crowd.teleportAgent( agent._crowdAgentID, currentPosition );
+                agent._bDestinationDirty = agent._bHasDestination;
+            }
         }
         agent._bWarpPending = SW_FALSE;
         if ( agent._bParamsDirty == SW_TRUE )
@@ -196,5 +203,8 @@ namespace sw
             rotation._y            = MathUtil::wrapAngle( rotation._y + MathUtil::clamp( delta, -maxTurn, maxTurn ) );
             pScene->setLocalRotation( rotation );
         }
+        // 자기 쓰기(자리 · 회전) 뒤의 번호를 적어 다음 갱신이 그것을 바깥 이동으로 보지 않게 한다.
+        if ( agent._driveMode == NavAgentDriveMode::Transform && pScene != nullptr )
+            agent._writtenTransformVersion = pScene->getWorldTransformVersion();
     }
 } // namespace sw

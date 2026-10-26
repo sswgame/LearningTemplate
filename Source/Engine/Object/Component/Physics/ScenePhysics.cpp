@@ -9,6 +9,8 @@
 #include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/Physics/PhysicsComponent.h"
+#include "Engine/Object/Component/Physics/RigidBody2DComponent.h"
+#include "Engine/Object/Component/Physics/RigidBodyComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"
@@ -24,6 +26,28 @@ namespace sw
         struct ScenePhysicsInternal
         {
             static constexpr uint32 kPhaseCount = static_cast<uint32>( PhysicsComponentPhase::Count );
+
+            /** @brief @p owner 를 자기 바디 핸들의 칸 번호 자리에 적습니다. */
+            template <typename TOwner>
+            static void bindOwner( vector<TOwner*>& listOwner, TOwner& owner )
+            {
+                const PhysicsBodyHandle body = owner.getBodyHandle();
+                if ( body.isValid() == false )
+                    return;
+                const uint32 index = body.getSlot().index();
+                if ( index >= listOwner.size() )
+                    listOwner.resize( static_cast<size_t>( index ) + 1, nullptr );
+                listOwner[index] = &owner;
+            }
+
+            /** @brief @p owner 가 자기 바디 칸의 주인이면 지웁니다. */
+            template <typename TOwner>
+            static void unbindOwner( vector<TOwner*>& listOwner, const TOwner& owner )
+            {
+                const uint32 index = owner.getBodyHandle().getSlot().index();
+                if ( index < listOwner.size() && listOwner[index] == &owner )
+                    listOwner[index] = nullptr;
+            }
         };
     } // namespace
 } // namespace sw
@@ -42,6 +66,8 @@ namespace sw
         , _pScene2D{}
         , _stepTimer{}
         , _arrListComponent{}
+        , _listBodyOwner3D{}
+        , _listBodyOwner2D{}
         , _listFrameEvent3D{}
         , _listFrameEvent2D{}
         , _stepCount{ 0 }
@@ -80,6 +106,8 @@ namespace sw
         }
         _pScene3D.reset();
         _pScene2D.reset();
+        _listBodyOwner3D.clear();
+        _listBodyOwner2D.clear();
         _listFrameEvent3D.clear();
         _listFrameEvent2D.clear();
         _listSweptOverlap2D.clear();
@@ -231,6 +259,39 @@ namespace sw
         pComponent->_physicsIndex = PhysicsComponent::kNotRegistered;
     }
 
+    void ScenePhysics::bindBodyOwner( RigidBodyComponent& owner )
+    {
+        ScenePhysicsInternal::bindOwner( _listBodyOwner3D, owner );
+    }
+
+    void ScenePhysics::bindBodyOwner( RigidBody2DComponent& owner )
+    {
+        ScenePhysicsInternal::bindOwner( _listBodyOwner2D, owner );
+    }
+
+    void ScenePhysics::unbindBodyOwner( const RigidBodyComponent& owner )
+    {
+        ScenePhysicsInternal::unbindOwner( _listBodyOwner3D, owner );
+    }
+
+    void ScenePhysics::unbindBodyOwner( const RigidBody2DComponent& owner )
+    {
+        ScenePhysicsInternal::unbindOwner( _listBodyOwner2D, owner );
+    }
+
+    template <typename TOwner, typename TScene>
+    void ScenePhysics::readMovedBodies( const vector<TOwner*>& listOwner, const TScene& scene )
+    {
+        for ( const PhysicsBodyHandle body : scene.getMovedBodies() )
+        {
+            const uint32 index  = body.getSlot().index();
+            TOwner*      pOwner = index < listOwner.size() ? listOwner[index] : nullptr;
+            // 칸 번호가 같아도 세대가 다르면 다른 바디다(파괴 · 래그돌이 만든 주인 없는 바디도 이 목록에 든다).
+            if ( pOwner != nullptr && pOwner->getBodyHandle() == body )
+                pOwner->readSteppedPose( scene, _stepCount );
+        }
+    }
+
     uint32 ScenePhysics::getComponentCount() const
     {
         uint32 count = 0;
@@ -289,6 +350,11 @@ namespace sw
                 _listFrameEvent2D.insert( _listFrameEvent2D.end(), listEvent.begin(), listEvent.end() );
             }
             ++_stepCount;
+            // 자세는 이 스텝에 깨어 있던 바디의 주인만 읽는다 — 정적 · 잠든 바디마다 백엔드 세 번(자세 · 두 속도)을 부르지 않는다.
+            if ( _pScene3D != nullptr )
+                readMovedBodies( _listBodyOwner3D, *_pScene3D );
+            if ( _pScene2D != nullptr )
+                readMovedBodies( _listBodyOwner2D, *_pScene2D );
             for ( uint32 phase = 0; phase < ScenePhysicsInternal::kPhaseCount; ++phase )
             {
                 vector<PhysicsComponent*>& listComponent = _arrListComponent[phase];

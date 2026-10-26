@@ -248,6 +248,12 @@ namespace sw
         return _pTransformPage->_arrWorldMatrix[getPageIndex()];
     }
 
+    uint32 SceneComponent::getWorldTransformVersion() const
+    {
+        ensureWorldCache();
+        return _pTransformPage->_arrWorldVersion[getPageIndex()];
+    }
+
     void SceneComponent::ensureWorldCache() const
     {
         // 병렬 틱 중에는 캐시만 읽는다(워커가 계층을 고쳐 쓰면 안 된다).

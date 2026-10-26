@@ -145,6 +145,8 @@ namespace sw
         float2            _bodyHalfExtent;    ///< 바디를 만든 반 크기(바뀌면 다시 만든다)
         float2            _sweepOrigin;       ///< 다음 물리 프레임의 출발점 — 시작할 때의 자리, 그 뒤로는 지난 프레임의 중심
         float2            _frameFromCenter;   ///< 이번 물리 프레임의 출발점(순간이동했거나 출발점이 없으면 도착점과 같다)
+        float2            _bodyOffsetPos;     ///< 바디 상자를 잰 때의 `_offsetPos`(세터가 표시를 남기지 않아 값으로 비교한다)
+        float2            _bodyOffsetScale;   ///< 바디 상자를 잰 때의 `_offsetScale`
         int32             _bodyLayer;         ///< 바디를 만든 레이어
         bool              _bBodyTrigger;      ///< 바디를 만든 트리거 여부
         bool              _bSweepOriginValid; ///< `_sweepOrigin` 이 있는지(시작 전 · 바디를 놓은 뒤에는 없다 — 다시 켠 콜라이더는 꺼진 자리에서 쓸리지 않는다)

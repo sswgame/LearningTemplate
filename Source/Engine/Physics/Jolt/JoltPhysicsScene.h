@@ -166,6 +166,8 @@ namespace sw
         void              setBodyEnabled( PhysicsBodyHandle body, bool bEnabled ) override;
         bool              isBodyEnabled( PhysicsBodyHandle body ) const override;
 
+        const vector<PhysicsBodyHandle>& getMovedBodies() const override { return _listMovedBody; }
+
         bool getBodyTransform( PhysicsBodyHandle body, float3& outPosition, quaternion& outRotation ) const override;
         void setBodyTransform( PhysicsBodyHandle body, const float3& position, const quaternion& rotation ) override;
         void moveKinematic( PhysicsBodyHandle body, const float3& targetPosition, const quaternion& targetRotation, float32 deltaTime ) override;
@@ -351,6 +353,8 @@ namespace sw
         static bool isEarlierReport( const ContactReport& lhs, const ContactReport& rhs );
         /** @brief 스텝 동안 모은 알림을 정렬해 추적기에 넣고 이벤트를 냅니다. */
         void flushContactReports();
+        /** @brief 지금 깨어 있는 강체를 `_listMovedBody` 에 붙입니다(스텝 앞 · 뒤에 한 번씩). */
+        void appendActiveBodies();
 
         PhysicsSettings                           _settings;
         JoltBroadPhaseLayers                      _broadPhaseLayers;
@@ -371,6 +375,8 @@ namespace sw
         PhysicsContactTracker<PhysicsDimension3D> _contactTracker;
         vector<PhysicsContactEvent3D>             _listContactEvent;
         vector<ContactReport>                     _listContactReport; ///< 스텝 중 잡 스레드가 `_reportMutex` 를 쥐고 붙인다
+        vector<PhysicsBodyHandle>                 _listMovedBody;     ///< 마지막 스텝 앞 · 뒤에 깨어 있던 바디(`getMovedBodies`, 핸들 순)
+        JPH::BodyIDVector                         _listActiveBodyID;  ///< `appendActiveBodies` 가 다시 쓰는 버퍼(할당을 재사용한다)
         mutex                                     _reportMutex;
         uint32                                    _bodyCount;
     };

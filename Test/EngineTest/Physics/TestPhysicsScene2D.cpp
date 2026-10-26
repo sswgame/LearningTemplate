@@ -89,6 +89,58 @@ namespace
             scene.step( kStep2D );
         }
     }
+
+    /** @brief 움직인 바디 목록(스텝마다 0 으로 끊는다)과 마지막 자세를 담은 한 번의 실행입니다. */
+    struct MovedBodyRun
+    {
+        sw::vector<uint64>     _listMovedPacked;
+        sw::vector<sw::float2> _listFinalPosition;
+        uint32                 _staticSeenCount{ 0 };
+        bool                   _bAllSleeping{ false };
+        bool                   _bLastStepEmpty{ false };
+    };
+
+    /** @brief 바닥 위에 떨어뜨린 상자 열 개를 일꾼 @p workerCount 로 스텝하며 움직인 바디 목록을 모읍니다. */
+    MovedBodyRun runMovedBodies( uint32 workerCount )
+    {
+        constexpr uint32    kBoxCount  = 10;
+        constexpr uint32    kStepCount = 360; // 떨어져 자리 잡고 잠들 때까지(6 초)
+        MovedBodyRun        run;
+        sw::PhysicsSettings settings               = makeSettings();
+        settings._workerCount2D                    = workerCount;
+        sw::unique_ptr<sw::IPhysicsScene2D> pScene = sw::engine::getSubsystem<sw::PhysicsSystem>().createScene2D( settings );
+        if ( pScene == nullptr )
+            return run;
+        const sw::PhysicsBodyHandle       floor = addBody( *pScene, makeBox( sw::float2{ 20.0f, 0.5f } ), sw::float2{ 0.0f, -0.5f }, sw::PhysicsBodyType::Static );
+        sw::vector<sw::PhysicsBodyHandle> listBox;
+        for ( uint32 boxIndex = 0; boxIndex < kBoxCount; ++boxIndex )
+        {
+            const sw::float2 position{ static_cast<float32>( boxIndex ) * 2.0f - 9.0f, 1.0f + 0.1f * static_cast<float32>( boxIndex ) };
+            listBox.push_back( addBody( *pScene, makeBox( sw::float2{ 0.4f, 0.4f } ), position, sw::PhysicsBodyType::Dynamic ) );
+        }
+        for ( uint32 stepIndex = 0; stepIndex < kStepCount; ++stepIndex )
+        {
+            pScene->step( kStep2D );
+            for ( const sw::PhysicsBodyHandle body : pScene->getMovedBodies() )
+            {
+                run._listMovedPacked.push_back( body.packed() );
+                if ( body == floor )
+                    ++run._staticSeenCount;
+            }
+            run._listMovedPacked.push_back( 0 );
+        }
+        run._bLastStepEmpty = pScene->getMovedBodies().empty();
+        run._bAllSleeping   = true;
+        for ( const sw::PhysicsBodyHandle body : listBox )
+        {
+            sw::float2 position{};
+            float32    angle = 0.0f;
+            (void)pScene->getBodyTransform( body, position, angle );
+            run._listFinalPosition.push_back( position );
+            run._bAllSleeping = run._bAllSleeping && pScene->isBodySleeping( body );
+        }
+        return run;
+    }
 } // namespace
 
 /**
@@ -544,4 +596,33 @@ SW_TEST_CASE( PhysicsScene2DTest, CompoundOfBuiltShapesKeepsChildOffsets )
     SW_TEST_DEFENSIVE_SCOPE( "a compound of a destroyed shape is rejected" );
     const sw::PhysicsShapeHandle arrStale[1] = { lowerShape };
     SW_EXPECT_FALSE( pScene->createCompoundShape( sw::span<const sw::PhysicsShapeHandle>{ arrStale, 1 } ).isValid() );
+}
+
+/**
+ * @brief [PhysicsScene2DTest] 움직인 바디 목록(`getMovedBodies`) — 정적 바디는 들지 않고, 모두 잠들면 비고, 일꾼 수(1 · 4)가 달라도 스텝마다 같은 목록 · 같은 자세다
+ * @details 강체 컴포넌트는 이 목록에 든 바디만 스텝 뒤 자세를 읽는다. 목록이 일꾼 수를 따라 달라지면(이벤트 순서) 같은 입력이 다른 결과를 낸다.
+ */
+SW_TEST_CASE( PhysicsScene2DTest, MovedBodiesAreTheAwakeBodiesForAnyWorkerCount )
+{
+    const MovedBodyRun single = runMovedBodies( 1 );
+    const MovedBodyRun multi  = runMovedBodies( 4 );
+    SW_ASSERT_EQUAL( static_cast<size_t>( 10 ), single._listFinalPosition.size() );
+    SW_EXPECT_EQUAL( 0u, single._staticSeenCount );
+    SW_EXPECT_TRUE( single._listMovedPacked.size() > 360u ); // 떨어지는 동안은 상자가 목록에 있다
+    SW_EXPECT_TRUE( single._bAllSleeping );
+    SW_EXPECT_TRUE( single._bLastStepEmpty );
+
+    SW_ASSERT_EQUAL( single._listMovedPacked.size(), multi._listMovedPacked.size() );
+    uint32 mismatchCount = 0;
+    for ( size_t index = 0; index < single._listMovedPacked.size(); ++index )
+    {
+        if ( single._listMovedPacked[index] != multi._listMovedPacked[index] )
+            ++mismatchCount;
+    }
+    for ( size_t index = 0; index < single._listFinalPosition.size(); ++index )
+    {
+        if ( ( single._listFinalPosition[index] == multi._listFinalPosition[index] ) == false )
+            ++mismatchCount;
+    }
+    SW_EXPECT_EQUAL( 0u, mismatchCount );
 }

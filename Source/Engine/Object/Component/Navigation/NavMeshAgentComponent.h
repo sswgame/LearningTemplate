@@ -165,8 +165,9 @@ namespace sw
         NavLinkTraversal  _linkTraversal;   ///< 건너는 오프 메시 링크(`_bOnOffMeshLink`)
         hashed_string     _linkType;        ///< 건너는 링크의 종류 이름
         NavCrowdAgentID   _crowdAgentID;
-        uint32            _navIndex;   ///< `SceneNavigation` 의 목록 자리
-        uint32            _crowdIndex; ///< 든 군중(에이전트 종류) 자리
+        uint32            _navIndex;                ///< `SceneNavigation` 의 목록 자리
+        uint32            _crowdIndex;              ///< 든 군중(에이전트 종류) 자리
+        uint32            _writtenTransformVersion; ///< 마지막으로 오브젝트에 쓴 뒤의 월드 변경 번호 — 같으면 바깥이 옮기지 않았다(거리 판정을 건너뜀)
         NavMoveStatus     _moveStatus;
         uint8             _bHasDestination   : 1;
         uint8             _bDestinationDirty : 1; ///< 다음 갱신에 군중에 넣을 목적지 · 멈춤

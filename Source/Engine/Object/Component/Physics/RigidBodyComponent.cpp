@@ -58,20 +58,20 @@ namespace sw
         , _body{}
         , _command{}
         , _commandLock{}
+        , _movedStep{ 0 }
         , _previousPosition{}
         , _currentPosition{}
-        , _writtenPosition{}
+        , _worldScale{ 1.0f, 1.0f, 1.0f }
         , _kinematicStartPosition{}
         , _kinematicTargetPosition{}
         , _lastLinearVelocity{}
         , _lastAngularVelocity{}
         , _previousRotation{}
         , _currentRotation{}
-        , _writtenRotation{}
         , _kinematicStartRotation{}
         , _kinematicTargetRotation{}
         , _appliedBodyType{ PhysicsBodyType::Dynamic }
-        , _bHasWritten{ false }
+        , _bRestPoseWritten{ false }
     {
     }
 
@@ -232,9 +232,8 @@ namespace sw
         _kinematicStartRotation  = rotation;
         _kinematicTargetPosition = position;
         _kinematicTargetRotation = rotation;
-        _writtenPosition         = position;
-        _writtenRotation         = rotation;
-        _bHasWritten             = true;
+        _bRestPoseWritten        = false;
+        physics.bindBodyOwner( *this );
     }
 
     void RigidBodyComponent::beginPhysicsFrame( ScenePhysics& physics )
@@ -250,13 +249,16 @@ namespace sw
         if ( consumeRebuild() )
             releasePhysics( physics );
 
+        // 트랜스폼의 바깥 변화(코드 · 부모가 옮김)는 칸의 변경 번호로 안다 — 같으면 월드 행렬을 풀지 않는다(정적 · 잠든 바디 대부분).
+        const bool bTransformChanged = consumeTransformChange();
         float3     position{};
         quaternion rotation{};
-        float3     scale{};
-        PhysicsComponentUtil::readWorldPose( *this, position, rotation, scale );
-        if ( _body.isValid() == false || pScene->isBodyValid( _body ) == false )
+        // 바디는 이 컴포넌트만 지운다(씬을 내릴 때는 `ScenePhysics::onSceneCleared` 가 먼저 놓게 한다) — 프레임마다 백엔드에 묻지 않고 Debug 에서만 확인한다.
+        SW_ASSERT( _body.isValid() == false || pScene->isBodyValid( _body ) );
+        if ( _body.isValid() == false )
         {
-            createBody( physics, *pScene, position, rotation, scale );
+            PhysicsComponentUtil::readWorldPose( *this, position, rotation, _worldScale );
+            createBody( physics, *pScene, position, rotation, _worldScale );
             (void)consumeTeleport();
             return;
         }
@@ -267,15 +269,20 @@ namespace sw
             _appliedBodyType = _bodyType;
         }
 
-        // 트랜스폼의 바깥 변화 — 우리가 지난 프레임에 쓴 자세와 다르면 코드가 옮긴 것이다.
         const bool bTeleported = consumeTeleport();
-        const bool bMoved      = bTeleported || PhysicsComponentUtil::hasMoved( position, rotation, _writtenPosition, _writtenRotation );
+        const bool bMoved      = bTeleported || bTransformChanged;
+        if ( bMoved )
+            PhysicsComponentUtil::readWorldPose( *this, position, rotation, _worldScale );
         if ( _bodyType == PhysicsBodyType::Kinematic && bTeleported == false )
         {
-            _kinematicStartPosition  = _currentPosition;
-            _kinematicStartRotation  = _currentRotation;
-            _kinematicTargetPosition = position;
-            _kinematicTargetRotation = rotation;
+            // 목표는 트랜스폼이다 — 옮겨지지 않았으면 지난 목표가 곧 트랜스폼이다.
+            _kinematicStartPosition = _currentPosition;
+            _kinematicStartRotation = _currentRotation;
+            if ( bMoved )
+            {
+                _kinematicTargetPosition = position;
+                _kinematicTargetRotation = rotation;
+            }
         }
         else if ( bMoved )
         {
@@ -289,8 +296,6 @@ namespace sw
             _kinematicTargetPosition = position;
             _kinematicTargetRotation = rotation;
         }
-        _writtenPosition = position;
-        _writtenRotation = rotation;
 
         PhysicsBodyCommand<PhysicsDimension3D> command;
         {
@@ -318,6 +323,12 @@ namespace sw
             return;
         if ( _bodyType == PhysicsBodyType::Kinematic )
         {
+            // 서 있는 키네마틱 바디(목표가 지금 자리이고 지난 스텝에 잠들어 있었다)는 스텝마다 백엔드를 부르지 않는다. 지난 스텝에 깨어 있었으면
+            // 남은 속도를 0 으로 돌리려고 한 번 더 부른다.
+            const bool bResting = _kinematicStartPosition == _kinematicTargetPosition && _kinematicStartRotation == _kinematicTargetRotation &&
+                                  _movedStep != physics.getStepCount();
+            if ( bResting )
+                return;
             // 프레임의 새 자세까지를 스텝 수로 나눠 간다 — 스텝마다 같은 목표로 가면 첫 스텝에 다 가고 나머지는 서 있다.
             const float32    fraction = static_cast<float32>( stepIndex + 1 ) / static_cast<float32>( stepCount );
             const float3     target   = float3::lerp( _kinematicStartPosition, _kinematicTargetPosition, fraction );
@@ -340,21 +351,18 @@ namespace sw
             pScene->addTorque( _body, torque );
     }
 
-    void RigidBodyComponent::postPhysicsStep( ScenePhysics& physics )
+    void RigidBodyComponent::readSteppedPose( const IPhysicsBodyScene3D& scene, uint64 stepCount )
     {
-        IPhysicsBodyScene3D* pScene = physics.findScene3D();
-        if ( pScene == nullptr || _body.isValid() == false )
-            return;
         _previousPosition = _currentPosition;
         _previousRotation = _currentRotation;
-        (void)pScene->getBodyTransform( _body, _currentPosition, _currentRotation );
-        _lastLinearVelocity  = pScene->getLinearVelocity( _body );
-        _lastAngularVelocity = pScene->getAngularVelocity( _body );
+        (void)scene.getBodyTransform( _body, _currentPosition, _currentRotation );
+        _lastLinearVelocity  = scene.getLinearVelocity( _body );
+        _lastAngularVelocity = scene.getAngularVelocity( _body );
+        _movedStep           = stepCount;
     }
 
     void RigidBodyComponent::endPhysicsFrame( ScenePhysics& physics, float32 alpha )
     {
-        (void)physics;
         {
             // 힘 · 토크는 한 프레임짜리다.
             std::scoped_lock<SpinLock> lock{ _commandLock };
@@ -363,22 +371,32 @@ namespace sw
         }
         if ( _body.isValid() == false || _bodyType != PhysicsBodyType::Dynamic )
             return;
+        // 마지막 스텝에 잠들어 있었으면(움직인 바디 목록에 없었다) 보간할 사이가 없다. 그 자세를 한 번 쓴 뒤로는 깰 때까지 트랜스폼을 건드리지 않는다.
+        const bool bMovedLastStep = _movedStep == physics.getStepCount();
+        if ( bMovedLastStep == false )
+        {
+            _previousPosition = _currentPosition;
+            _previousRotation = _currentRotation;
+            if ( _bRestPoseWritten )
+                return;
+        }
         const float32    weight   = _bInterpolate ? alpha : 1.0f;
         const float3     position = float3::lerp( _previousPosition, _currentPosition, weight );
         const quaternion rotation = quaternion::slerp( _previousRotation, _currentRotation, weight );
-        PhysicsComponentUtil::writeWorldPose( *this, position, rotation, _writtenPosition, _writtenRotation );
-        _bHasWritten = true;
+        PhysicsComponentUtil::writeWorldPose( *this, position, rotation, _worldScale );
+        markTransformSynced();
+        _bRestPoseWritten = bMovedLastStep == false;
     }
 
     void RigidBodyComponent::releasePhysics( ScenePhysics& physics )
     {
         if ( _body.isValid() == false )
             return;
+        physics.unbindBodyOwner( *this );
         IPhysicsBodyScene3D* pScene = physics.findScene3D();
         if ( pScene != nullptr )
             pScene->destroyBody( _body );
-        _body        = PhysicsBodyHandle{};
-        _bHasWritten = false;
+        _body = PhysicsBodyHandle{};
     }
 } // namespace sw
 

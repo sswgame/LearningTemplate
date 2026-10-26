@@ -126,6 +126,55 @@ SW_TEST_CASE( NavMeshDynamicTest, ObstacleRebakesOnlyTheTouchedTilesAndPathsFoll
 }
 
 /**
+ * @brief [NavMeshDynamicTest] 서 있는 장애물은 다시 뚫지 않고, 모양을 바꾸면 그 자리에서 다시 뚫고, 문턱 아래 이동도 쌓이면 다시 뚫는다
+ * @details 장애물은 따르는 트랜스폼의 월드 변경 번호와 모양 더티가 그대로면 부피를 다시 만들지 않고 건너뛴다. 모양 더티를 번호 비교가 가리거나,
+ *          작은 이동마다 번호만 맞추고 뚫은 자리를 잊으면 장애물이 옛 자리에 남는다.
+ */
+SW_TEST_CASE( NavMeshDynamicTest, StandingObstacleIsSkippedUntilItsShapeOrPoseChanges )
+{
+    using Internal = NavMeshDynamicTestInternal;
+    sw::GameObjectManager manager;
+    sw::SceneNavigation&  navigation = manager.getSubsystem<sw::SceneNavigation>();
+    navigation.setSettings( navtest::makeSettings() );
+    Internal::spawnFloorAndSurface( manager );
+    manager.beginPlay();
+    manager.update( Internal::kFrame );
+
+    sw::GameObject*               pBlock    = manager.createGameObject( sw::hashed_string( "Block" ) );
+    sw::SceneComponent*           pRoot     = pBlock->addComponent<sw::SceneComponent>();
+    sw::NavMeshObstacleComponent* pObstacle = pBlock->addComponent<sw::NavMeshObstacleComponent>();
+    pObstacle->setHalfExtents( sw::float3{ 1.0f, 1.0f, 6.0f } );
+    pObstacle->setCenter( sw::float3{ 0.0f, 1.0f, 0.0f } );
+    Internal::updateAndFlush( manager );
+    const uint32 rebakedAfterPlace = navigation.getRebakedTileCount();
+    SW_ASSERT_TRUE( rebakedAfterPlace > 0 );
+
+    // 그대로 서 있으면 몇 프레임이 지나도 다시 베이크하지 않는다.
+    for ( uint32 frameIndex = 0; frameIndex < 3; ++frameIndex )
+    {
+        Internal::updateAndFlush( manager );
+    }
+    SW_EXPECT_EQUAL( rebakedAfterPlace, navigation.getRebakedTileCount() );
+
+    // 자세는 그대로 두고 모양만 바꿔도 다시 뚫는다.
+    pObstacle->setHalfExtents( sw::float3{ 1.0f, 1.0f, 7.0f } );
+    Internal::updateAndFlush( manager );
+    const uint32 rebakedAfterShape = navigation.getRebakedTileCount();
+    SW_EXPECT_TRUE( rebakedAfterShape > rebakedAfterPlace );
+
+    // 문턱(0.25 m) 아래로 조금씩 가면 그때마다는 그대로지만, 뚫은 자리에서 문턱을 넘으면 다시 뚫는다.
+    pRoot->setLocalPosition( sw::float3{ 0.1f, 0.0f, 0.0f } );
+    Internal::updateAndFlush( manager );
+    pRoot->setLocalPosition( sw::float3{ 0.2f, 0.0f, 0.0f } );
+    Internal::updateAndFlush( manager );
+    SW_EXPECT_EQUAL( rebakedAfterShape, navigation.getRebakedTileCount() );
+    pRoot->setLocalPosition( sw::float3{ 0.3f, 0.0f, 0.0f } );
+    Internal::updateAndFlush( manager );
+    SW_EXPECT_TRUE( navigation.getRebakedTileCount() > rebakedAfterShape );
+    manager.endPlay();
+}
+
+/**
  * @brief [NavMeshDynamicTest] 기하 소스 — 소스가 낸 기둥은 경로를 돌게 하고, 기둥을 치우고 그 자리를 알리면(`invalidateArea`) 그 타일을 다시 모아 베이크해 곧은 경로가 된다
  */
 SW_TEST_CASE( NavMeshDynamicTest, GeometrySourceChangeRebakesThatArea )

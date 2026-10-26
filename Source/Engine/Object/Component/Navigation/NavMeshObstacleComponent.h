@@ -27,6 +27,7 @@ namespace sw
 
 namespace sw
 {
+    class SceneComponent;
     class SceneNavigation;
 
     /** @class NavMeshObstacleComponent @brief 파일 머리말 참고. */
@@ -69,12 +70,22 @@ namespace sw
         PROPERTY( Category = "Obstacle", Tooltip = "Offset from the object origin", Units = m )
         float3 _center;
 
-        AABB    _carvedBounds; ///< 지금 내비메시에 뚫린 자리(마지막으로 알린 것)
-        float3  _carvedPosition;
-        float32 _carvedYaw;
-        uint32  _navIndex;
-        uint8   _bCarved     : 1; ///< 내비메시가 이 장애물을 품고 있다
-        uint8   _bShapeDirty : 1; ///< 모양을 바꿨다 — 다음 갱신에 다시 뚫는다
-        uint8   _reserved    : 6;
+        /**
+         * @brief 따르는 트랜스폼(칸의 변경 번호)이나 모양이 바뀌었으면 `_volume` 을 지금 자세로 다시 만들고 true 입니다.
+         * @details 그대로면 아무것도 만들지 않고 false 다 — 서 있는 장애물은 프레임마다 행렬 · 부피를 다시 만들지 않는다(`NavTileRebaker::updateObstacles`).
+         *          오브젝트나 씬 컴포넌트가 없으면 부피를 비우고 false 다.
+         */
+        bool refreshVolume();
+
+        NavConvexVolume       _volume;       ///< 마지막으로 만든 지금 자세의 뚫는 부피(버퍼를 다시 쓴다)
+        const SceneComponent* _pSeenScene;   ///< `_volume` 을 만든 씬 컴포넌트(비교만 한다 — 번호는 같은 칸끼리만 견준다)
+        AABB                  _carvedBounds; ///< 지금 내비메시에 뚫린 자리(마지막으로 알린 것)
+        float3                _carvedPosition;
+        float32               _carvedYaw;
+        uint32                _navIndex;
+        uint32                _seenTransformVersion; ///< `_volume` 을 만든 때의 월드 변경 번호(`SceneComponent::getWorldTransformVersion`)
+        uint8                 _bCarved     : 1;      ///< 내비메시가 이 장애물을 품고 있다
+        uint8                 _bShapeDirty : 1;      ///< 모양을 바꿨다 — 다음 갱신에 다시 뚫는다
+        uint8                 _reserved    : 6;
     };
 } // namespace sw

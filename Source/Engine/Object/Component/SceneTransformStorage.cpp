@@ -122,6 +122,7 @@ namespace sw
         page._arrPrimitiveIndex[pageIndex]   = kNoPrimitive;
         page._arrPendingMask[pageIndex]      = 0;
         page._arrFlag[pageIndex]             = SceneTransformPage::kNotifyOwner;
+        ++page._arrWorldVersion[pageIndex]; // 월드를 항등으로 썼다. 0 으로 되돌리지 않는다(`_arrWorldVersion` 설명)
     }
 
     void SceneTransformStorage::composeWorld( SceneTransformPage& page, uint32 pageIndex, const float4x4* pParentWorld, const double3* pParentLwc )
@@ -168,5 +169,7 @@ namespace sw
             world = localTrs;
             lwc   = double3( static_cast<float64>( position._x ), static_cast<float64>( position._y ), static_cast<float64>( position._z ) );
         }
+        // 월드를 쓰는 곳이 여기 하나라(세터 · 틱 대기 적용 · 쓰기 큐 배치 · 플러시 모두 이리 온다) 병렬 틱 경로도 번호를 빠뜨리지 않는다.
+        ++page._arrWorldVersion[pageIndex];
     }
 } // namespace sw

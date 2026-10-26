@@ -71,6 +71,8 @@ namespace sw
         , _bodyHalfExtent{}
         , _sweepOrigin{}
         , _frameFromCenter{}
+        , _bodyOffsetPos{}
+        , _bodyOffsetScale{}
         , _bodyLayer{ 0 }
         , _bBodyTrigger{ false }
         , _bSweepOriginValid{ false }
@@ -218,22 +220,39 @@ namespace sw
         if ( pScene == nullptr )
             return;
 
+        // 트랜스폼(칸의 월드 변경 번호) · 상자 값 · 레이어 · 트리거가 바디를 만든 때와 같으면 상자를 다시 재지 않는다 — 서 있는 콜라이더는 이 비교로 끝난다.
+        // 이번 프레임의 출발점은 지난 중심 그대로라 움직인 콜라이더로도 보지 않는다(`hasMovedThisFrame`).
+        const bool bTransformChanged = consumeTransformChange();
+        const bool bTeleported       = consumeTeleport();
+        const bool bRebuild          = consumeRebuild();
+        // 바디는 이 컴포넌트만 지운다(씬을 내릴 때는 `ScenePhysics::onSceneCleared` 가 먼저 놓게 한다) — 프레임마다 백엔드에 묻지 않고 Debug 에서만 확인한다.
+        SW_ASSERT( _body.isValid() == false || pScene->isBodyValid( _body ) );
+        const bool bSameInput = _body.isValid() && bTransformChanged == false && bTeleported == false && bRebuild == false && _bodyOffsetPos == _offsetPos &&
+                                _bodyOffsetScale == _offsetScale && _bodyLayer == _colliderType && _bBodyTrigger == _bTrigger;
+        if ( bSameInput )
+        {
+            _frameFromCenter   = _bodyCenter;
+            _sweepOrigin       = _bodyCenter;
+            _bSweepOriginValid = true;
+            return;
+        }
+
         float2 minB{};
         float2 maxB{};
         getBounds( minB, maxB );
+        _bodyOffsetPos   = _offsetPos;
+        _bodyOffsetScale = _offsetScale;
         const float2 center{ ( minB._x + maxB._x ) * 0.5f, ( minB._y + maxB._y ) * 0.5f };
         const float2 halfExtents{ MathUtil::max( ( maxB._x - minB._x ) * 0.5f, BoxCollider2DComponentInternal::kMinHalfExtent ),
                                   MathUtil::max( ( maxB._y - minB._y ) * 0.5f, BoxCollider2DComponentInternal::kMinHalfExtent ) };
 
-        // 순간이동 표시는 이번 맞춤에서 쓰고 지운다 — 바디가 새로 들어도 남겨 두면 다음 이동을 잘못 건너뛴다.
-        const bool bTeleported = consumeTeleport();
+        // 순간이동 표시는 위에서 쓰고 지웠다 — 바디가 새로 들어도 남겨 두면 다음 이동을 잘못 건너뛴다.
         // 이번 프레임의 출발점 — 시작한 자리 또는 지난 프레임의 중심이다. 순간이동했거나 출발점이 없으면 제자리다(쓸지 않고, 움직인 상대로도 보지 않는다).
         // 쓸기는 여기서 하지 않는다 — 모든 콜라이더가 이번 자리로 옮겨진 뒤 씬 물리가 부른다(`ScenePhysics::sweepContinuousColliders2D`).
         _frameFromCenter = ( _bSweepOriginValid && bTeleported == false ) ? _sweepOrigin : center;
         // 크기 · 레이어 · 트리거가 바뀌면 다시 만든다 — 세터는 표시를 남기지 않으므로 매 프레임 바디를 만든 값과 비교한다.
-        const bool bShapeChanged = _body.isValid() &&
-                                   ( _bodyHalfExtent != halfExtents || _bodyLayer != _colliderType || _bBodyTrigger != _bTrigger || pScene->isBodyValid( _body ) == false );
-        if ( consumeRebuild() || bShapeChanged )
+        const bool bShapeChanged = _body.isValid() && ( _bodyHalfExtent != halfExtents || _bodyLayer != _colliderType || _bBodyTrigger != _bTrigger );
+        if ( bRebuild || bShapeChanged )
         {
             releasePhysics( physics );
             createBody( physics, center, halfExtents );

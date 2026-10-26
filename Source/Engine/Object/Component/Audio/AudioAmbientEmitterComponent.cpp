@@ -23,5 +23,13 @@ namespace sw
         _shape       = shape;
         _halfExtents = halfExtents;
         _radius      = radius;
+        // 소리 자리는 모양도 따른다 — 트랜스폼 번호가 그대로여도 다음 갱신에 다시 구하게 한다(0 은 칸이 낼 수 없는 번호).
+        _seenTransformVersion = 0;
+    }
+
+    void AudioAmbientEmitterComponent::onPropertyChanged( hashed_string propertyName )
+    {
+        AudioEmitterComponent::onPropertyChanged( propertyName );
+        _seenTransformVersion = 0; // `setShape` 과 같은 이유 — 인스펙터가 모양을 바꿨을 수 있다
     }
 } // namespace sw

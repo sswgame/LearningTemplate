@@ -32,12 +32,11 @@ namespace sw
         , _pendingLaunch{}
         , _airVelocity{}
         , _previousPosition{}
-        , _writtenPosition{}
-        , _writtenRotation{}
+        , _worldScale{ 1.0f, 1.0f, 1.0f }
+        , _worldRotation{}
         , _verticalSpeed{ 0.0f }
         , _pendingJumpSpeed{ 0.0f }
         , _pendingGroundYaw{ 0.0f }
-        , _bHasWritten{ false }
     {
     }
 
@@ -108,11 +107,16 @@ namespace sw
         if ( consumeRebuild() )
             releasePhysics( physics );
 
-        float3     position{};
-        quaternion rotation{};
-        float3     scale{};
-        PhysicsComponentUtil::readWorldPose( *this, position, rotation, scale );
-        if ( _character.isValid() == false )
+        // 트랜스폼의 바깥 변화는 칸의 변경 번호로 안다 — 같으면 월드 행렬을 풀지 않는다.
+        const bool bTransformChanged = consumeTransformChange();
+        const bool bCreate           = _character.isValid() == false;
+        const bool bTeleported       = consumeTeleport();
+        const bool bUnchanged        = bCreate == false && bTransformChanged == false && bTeleported == false;
+        if ( bUnchanged )
+            return;
+        float3 position{};
+        PhysicsComponentUtil::readWorldPose( *this, position, _worldRotation, _worldScale );
+        if ( bCreate )
         {
             PhysicsCharacterDesc3D desc;
             desc._position      = position;
@@ -128,24 +132,14 @@ namespace sw
             _state              = PhysicsCharacterState3D{};
             _state._position    = position;
             _previousPosition   = position;
-            _writtenPosition    = position;
-            _writtenRotation    = rotation;
             _verticalSpeed      = 0.0f;
-            _bHasWritten        = true;
-            (void)consumeTeleport();
             return;
         }
-        const bool bTeleported = consumeTeleport();
-        if ( bTeleported || PhysicsComponentUtil::hasMoved( position, rotation, _writtenPosition, _writtenRotation ) )
-        {
-            pScene->setCharacterPosition( _character, position );
-            _state._position  = position;
-            _previousPosition = position;
-            if ( bTeleported )
-                _verticalSpeed = 0.0f;
-        }
-        _writtenPosition = position;
-        _writtenRotation = rotation;
+        pScene->setCharacterPosition( _character, position );
+        _state._position  = position;
+        _previousPosition = position;
+        if ( bTeleported )
+            _verticalSpeed = 0.0f;
     }
 
     void CharacterControllerComponent::prePhysicsStep( ScenePhysics& physics, float32 fixedDeltaTime, uint32 stepIndex, uint32 stepCount )
@@ -214,17 +208,19 @@ namespace sw
         if ( _character.isValid() == false )
             return;
         const float3 position = float3::lerp( _previousPosition, _state._position, alpha );
-        float3       current{};
-        quaternion   rotation{};
-        float3       scale{};
-        PhysicsComponentUtil::readWorldPose( *this, current, rotation, scale );
+        // 회전 · 배율은 트랜스폼의 것이다. 이 프레임 시작 뒤에 누가 옮겼을 때만 다시 읽는다(자리는 아래에서 캐릭터 자리로 덮는다 — 전에도 그랬다).
+        if ( consumeTransformChange() )
+        {
+            float3 current{};
+            PhysicsComponentUtil::readWorldPose( *this, current, _worldRotation, _worldScale );
+        }
         if ( _pendingGroundYaw != 0.0f )
         {
-            rotation          = quaternion::concatenate( rotation, quaternion::makeFromAxisAngle( float3{ 0.0f, 1.0f, 0.0f }, _pendingGroundYaw ) ).normalize();
+            _worldRotation    = quaternion::concatenate( _worldRotation, quaternion::makeFromAxisAngle( float3{ 0.0f, 1.0f, 0.0f }, _pendingGroundYaw ) ).normalize();
             _pendingGroundYaw = 0.0f;
         }
-        PhysicsComponentUtil::writeWorldPose( *this, position, rotation, _writtenPosition, _writtenRotation );
-        _bHasWritten = true;
+        PhysicsComponentUtil::writeWorldPose( *this, position, _worldRotation, _worldScale );
+        markTransformSynced();
     }
 
     void CharacterControllerComponent::releasePhysics( ScenePhysics& physics )
@@ -234,8 +230,7 @@ namespace sw
         IPhysicsScene3D* pScene = physics.findScene3D();
         if ( pScene != nullptr )
             pScene->destroyCharacter( _character );
-        _character   = PhysicsCharacterHandle{};
-        _bHasWritten = false;
+        _character = PhysicsCharacterHandle{};
     }
 } // namespace sw
 
