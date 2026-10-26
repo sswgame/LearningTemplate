@@ -14,6 +14,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Probe/AutomationProbe.h"
 #include "Engine/Resource/ResourcePaths.h"
+#include "Engine/Serialization/XML/XMLWriter.h"
 
 namespace sw
 {
@@ -28,58 +29,17 @@ namespace sw
             static constexpr uint32      kTailFrameCount = 10; ///< 마지막 입력 뒤 `Pass` 까지의 프레임입니다.
             static constexpr uint32      kTimeoutMargin  = 60;
 
-            /** @brief XML 속성 값으로 쓸 수 있게 특수 문자를 바꿉니다. 제어 문자는 버립니다. */
-            static void appendEscaped( string& outText, string_view text )
-            {
-                for ( const utf8 character : text )
-                {
-                    switch ( character )
-                    {
-                        case '&':
-                        {
-                            outText += "&amp;";
-                            break;
-                        }
-                        case '<':
-                        {
-                            outText += "&lt;";
-                            break;
-                        }
-                        case '>':
-                        {
-                            outText += "&gt;";
-                            break;
-                        }
-                        case '"':
-                        {
-                            outText += "&quot;";
-                            break;
-                        }
-                        default:
-                        {
-                            if ( static_cast<uint8>( character ) >= 0x20 )
-                                outText.push_back( character );
-                            break;
-                        }
-                    }
-                }
-            }
+            /** @brief 단계 값의 소수 자리입니다. */
+            static constexpr int32 kValueDecimals = 4;
+            /** @brief 고정 프레임 시간의 소수 자리입니다. 넷째 자리에서 자르면(1/60 → 0.0167) 재생이 프레임마다 0.2 % 더 흘러 위치 검사점이 어긋난다. */
+            static constexpr int32 kFixedDeltaDecimals = 7;
 
-            /**
-             * @brief 고정 프레임 시간을 씁니다. 소수 일곱째 자리까지 쓴다. 넷째 자리에서 자르면(1/60 → 0.0167) 재생이 프레임마다 0.2 % 더 흘러 위치 검사점이 어긋난다.
-             */
-            static void appendFixedDelta( string& outText, float32 value )
+            /** @brief 실수 속성 하나를 소수 @p decimals 자리까지 씁니다. */
+            static void writeFloatAttribute( XMLWriter& writer, string_view name, float32 value, int32 decimals = kValueDecimals )
             {
-                utf8 arrDigit[constant::kMaxBuffer32]{};
-                (void)StringUtil::formatNumber( arrDigit, constant::kMaxBuffer32, value, 7 ); // 쓴 길이는 널 종료로 대신한다
-                outText += arrDigit;
-            }
-
-            static void appendFloat( string& outText, float32 value )
-            {
-                utf8 arrDigit[constant::kMaxBuffer32]{};
-                (void)StringUtil::formatNumber( arrDigit, constant::kMaxBuffer32, value, 4 ); // 쓴 길이는 널 종료로 대신한다
-                outText += arrDigit;
+                utf8         arrDigit[constant::kMaxBuffer32]{};
+                const uint32 length = StringUtil::formatNumber( arrDigit, constant::kMaxBuffer32, value, decimals );
+                writer.attribute( name, string_view{ arrDigit, length } );
             }
 
             /** @brief 슬롯을 시나리오 글로 바꿉니다. 다시 읽을 수 없는 이름(엔진 서비스 없이 `Unknown` 등)이면 false 입니다. */
@@ -226,19 +186,19 @@ namespace sw
             }
 
             /** @brief 열린 구간을 `ActionAxis` 하나로 닫아 그 구간의 첫 프레임 본문에 씁니다. */
-            static void closeStickRun( vector<string>& inoutListBody, StickTrack& inoutTrack, uint32 endFrame, ScenarioRecordOutput& outResult )
+            static void closeStickRun( vector<unique_ptr<XMLWriter>>& inoutListBody, StickTrack& inoutTrack, uint32 endFrame, ScenarioRecordOutput& outResult )
             {
                 if ( inoutTrack._bOpen == false )
                     return;
                 inoutTrack._bOpen = false;
-                string& body      = inoutListBody[inoutTrack._runStart];
-                body += "<ActionAxis name=\"";
-                appendEscaped( body, inoutTrack._pAction->view() );
-                body += "\" x=\"";
-                appendFloat( body, inoutTrack._arrValue[0] );
-                body += "\" y=\"";
-                appendFloat( body, inoutTrack._arrValue[1] );
-                body += "\" frames=\"" + to_string( endFrame > inoutTrack._runStart ? endFrame - inoutTrack._runStart : 1u ) + "\" device=\"gamepad\"/>";
+                XMLWriter& writer = *inoutListBody[inoutTrack._runStart];
+                writer.beginElement( "ActionAxis" );
+                writer.attribute( "name", inoutTrack._pAction->view() );
+                writeFloatAttribute( writer, "x", inoutTrack._arrValue[0] );
+                writeFloatAttribute( writer, "y", inoutTrack._arrValue[1] );
+                writer.attributeInt( "frames", endFrame > inoutTrack._runStart ? endFrame - inoutTrack._runStart : 1u );
+                writer.attribute( "device", "gamepad" );
+                writer.endElement();
                 ++outResult._writtenStepCount;
             }
 
@@ -246,7 +206,7 @@ namespace sw
              * @brief 이번 프레임(@p frameIndex)에 값이 바뀐 액션 스틱마다 앞 구간을 닫고, 새 값이 0 이 아니면 새 구간을 엽니다.
              * @details 재생의 `ActionAxis` 는 구간 끝에 두 축을 0 으로 되돌리고, 같은 프레임에 시작하는 다음 구간이 그 뒤에 값을 낸다(단계는 파일 순서로 준비된다).
              */
-            static void advanceStickRuns( vector<string>& inoutListBody, vector<StickTrack>& inoutListTrack, uint32 frameIndex, ScenarioRecordOutput& outResult )
+            static void advanceStickRuns( vector<unique_ptr<XMLWriter>>& inoutListBody, vector<StickTrack>& inoutListTrack, uint32 frameIndex, ScenarioRecordOutput& outResult )
             {
                 for ( StickTrack& track : inoutListTrack )
                 {
@@ -270,7 +230,7 @@ namespace sw
             }
 
             /** @brief 슬롯 하나의 누름 · 뗌 단계를 씁니다. 액션의 단추면 액션 단계로, 글로 못 쓰는 슬롯이면 건너뛴 이벤트로 셉니다. */
-            static void appendSlotStep( string& outBody, const ScenarioRecordSettings& settings, ScenarioRecordOutput& outResult, const utf8* pKind, const InputSlot& slot )
+            static void writeSlotStep( XMLWriter& writer, const ScenarioRecordSettings& settings, ScenarioRecordOutput& outResult, const utf8* pKind, const InputSlot& slot )
             {
                 string slotText;
                 // 액션의 단추면 액션 단계로 쓴다 — 키 배치를 바꿔도 녹화가 산다.
@@ -278,11 +238,10 @@ namespace sw
                 const utf8*          pDeviceName = toDeviceName( slot._deviceKind );
                 if ( pAction != nullptr && pDeviceName != nullptr )
                 {
-                    outBody += string_view{ pKind } == "Press" ? "<ActionPress name=\"" : "<ActionRelease name=\"";
-                    appendEscaped( outBody, pAction->view() );
-                    outBody += "\" device=\"";
-                    outBody += pDeviceName;
-                    outBody += "\"/>";
+                    writer.beginElement( string_view{ pKind } == "Press" ? "ActionPress" : "ActionRelease" );
+                    writer.attribute( "name", pAction->view() );
+                    writer.attribute( "device", pDeviceName );
+                    writer.endElement();
                     ++outResult._writtenStepCount;
                     return;
                 }
@@ -291,11 +250,9 @@ namespace sw
                     ++outResult._skippedEventCount;
                     return;
                 }
-                outBody += "<";
-                outBody += pKind;
-                outBody += " slot=\"";
-                appendEscaped( outBody, slotText );
-                outBody += "\"/>";
+                writer.beginElement( pKind );
+                writer.attribute( "slot", slotText );
+                writer.endElement();
                 ++outResult._writtenStepCount;
             }
 
@@ -314,19 +271,19 @@ namespace sw
             };
 
             /** @brief 액션 스틱이 아닌 패드 축 이벤트를 `GamepadAxis` 단계로 씁니다. */
-            static void appendGamepadAxisStep( string& outBody, const RawInputEvent& event, ScenarioRecordOutput& outResult )
+            static void writeGamepadAxisStep( XMLWriter& writer, const RawInputEvent& event, ScenarioRecordOutput& outResult )
             {
-                outBody += "<GamepadAxis axis=\"" + to_string( static_cast<uint32>( event._payload._gamepadData._axisIndex ) ) + "\" value=\"";
-                appendFloat( outBody, event._payload._gamepadData._axisValue );
-                outBody += "\"";
+                writer.beginElement( "GamepadAxis" );
+                writer.attributeInt( "axis", event._payload._gamepadData._axisIndex );
+                writeFloatAttribute( writer, "value", event._payload._gamepadData._axisValue );
                 if ( event._deviceIndex != 0 )
-                    outBody += " pad=\"" + to_string( static_cast<uint32>( event._deviceIndex ) ) + "\"";
-                outBody += "/>";
+                    writer.attributeInt( "pad", event._deviceIndex );
+                writer.endElement();
                 ++outResult._writtenStepCount;
             }
 
             /** @brief 글자 입력 이벤트를 `Text` 단계로 씁니다. */
-            static void appendTextStep( string& outBody, const RawInputEvent& event, ScenarioRecordOutput& outResult )
+            static void writeTextStep( XMLWriter& writer, const RawInputEvent& event, ScenarioRecordOutput& outResult )
             {
                 const utf8* pText  = event._payload._textData._arrUtf8;
                 size_t      length = 0;
@@ -334,45 +291,38 @@ namespace sw
                 {
                     ++length;
                 }
-                outBody += "<Text value=\"";
-                appendEscaped( outBody, string_view{ pText, length } );
-                outBody += "\"/>";
+                writer.beginElement( "Text" );
+                writer.attribute( "value", string_view{ pText, length } );
+                writer.endElement();
                 ++outResult._writtenStepCount;
             }
 
             /** @brief 위치와 이동량은 프레임 끝의 값 하나로 씁니다. 눌림보다 뒤에 오지만 같은 프레임이라 실행기는 한 번에 적용한다. */
-            static void appendAccumulatedSteps( string& outBody, const FrameAccumulator& accumulator, const ScenarioRecordSettings& settings, ScenarioRecordOutput& outResult )
+            static void writeAccumulatedSteps( XMLWriter& writer, const FrameAccumulator& accumulator, const ScenarioRecordSettings& settings, ScenarioRecordOutput& outResult )
             {
                 if ( accumulator._bHasPosition )
                 {
-                    outBody += "<MousePosition x=\"";
-                    appendFloat( outBody, toFraction( accumulator._positionX, settings._clientWidth ) );
-                    outBody += "\" y=\"";
-                    appendFloat( outBody, toFraction( accumulator._positionY, settings._clientHeight ) );
-                    outBody += "\"/>";
+                    writer.beginElement( "MousePosition" );
+                    writeFloatAttribute( writer, "x", toFraction( accumulator._positionX, settings._clientWidth ) );
+                    writeFloatAttribute( writer, "y", toFraction( accumulator._positionY, settings._clientHeight ) );
+                    writer.endElement();
                     ++outResult._writtenStepCount;
                 }
                 if ( accumulator._bHasWheel )
                 {
-                    outBody += "<Wheel";
+                    writer.beginElement( "Wheel" );
                     if ( accumulator._wheelX != 0.0f )
-                    {
-                        outBody += " x=\"";
-                        appendFloat( outBody, accumulator._wheelX );
-                        outBody += "\"";
-                    }
-                    outBody += " y=\"";
-                    appendFloat( outBody, accumulator._wheelY );
-                    outBody += "\"/>";
+                        writeFloatAttribute( writer, "x", accumulator._wheelX );
+                    writeFloatAttribute( writer, "y", accumulator._wheelY );
+                    writer.endElement();
                     ++outResult._writtenStepCount;
                 }
                 if ( accumulator._bHasDelta )
                 {
-                    outBody += "<MouseDelta x=\"";
-                    appendFloat( outBody, accumulator._deltaX );
-                    outBody += "\" y=\"";
-                    appendFloat( outBody, accumulator._deltaY );
-                    outBody += "\"/>";
+                    writer.beginElement( "MouseDelta" );
+                    writeFloatAttribute( writer, "x", accumulator._deltaX );
+                    writeFloatAttribute( writer, "y", accumulator._deltaY );
+                    writer.endElement();
                     ++outResult._writtenStepCount;
                 }
             }
@@ -383,8 +333,8 @@ namespace sw
              *          건너뛰면 두 번째 누름이 사라진다. 재생은 원시 Down 둘을 낸다. DoubleClick 이벤트 자체를 읽는 쪽은 없다 — 입력 관리자는 Down 으로 다루고,
              *          입력 맵(DoubleClicked)과 ImGui 는 누름 간격으로 스스로 판정한다. 그 이벤트를 읽는 코드가 생기면 VirtualInputScript 에 DoubleClick 단계를 더한다.
              */
-            static void appendFrameSteps( string& outBody, const InputReplayFrame& frame, const ScenarioRecordSettings& settings, vector<StickTrack>& inoutListTrack,
-                                          ScenarioRecordOutput& outResult )
+            static void writeFrameSteps( XMLWriter& writer, const InputReplayFrame& frame, const ScenarioRecordSettings& settings, vector<StickTrack>& inoutListTrack,
+                                         ScenarioRecordOutput& outResult )
             {
                 FrameAccumulator accumulator{};
                 for ( const RawInputEvent& event : frame._listRawEvent )
@@ -396,33 +346,33 @@ namespace sw
                         case RawInputEventType::KeyDown:
                         {
                             if ( event._bRepeat == SW_FALSE )
-                                appendSlotStep( outBody, settings, outResult, "Press", InputSlot::fromKey( event._payload._keyData._key ) );
+                                writeSlotStep( writer, settings, outResult, "Press", InputSlot::fromKey( event._payload._keyData._key ) );
                             break;
                         }
                         case RawInputEventType::KeyUp:
                         {
-                            appendSlotStep( outBody, settings, outResult, "Release", InputSlot::fromKey( event._payload._keyData._key ) );
+                            writeSlotStep( writer, settings, outResult, "Release", InputSlot::fromKey( event._payload._keyData._key ) );
                             break;
                         }
                         case RawInputEventType::MouseButtonDown:
                         case RawInputEventType::MouseDoubleClick:
                         {
-                            appendSlotStep( outBody, settings, outResult, "Press", InputSlot::fromMouseButton( event._payload._mouseData._button ) );
+                            writeSlotStep( writer, settings, outResult, "Press", InputSlot::fromMouseButton( event._payload._mouseData._button ) );
                             break;
                         }
                         case RawInputEventType::MouseButtonUp:
                         {
-                            appendSlotStep( outBody, settings, outResult, "Release", InputSlot::fromMouseButton( event._payload._mouseData._button ) );
+                            writeSlotStep( writer, settings, outResult, "Release", InputSlot::fromMouseButton( event._payload._mouseData._button ) );
                             break;
                         }
                         case RawInputEventType::GamepadButtonDown:
                         {
-                            appendSlotStep( outBody, settings, outResult, "Press", InputSlot::fromGamepadButton( event._payload._gamepadData._button, event._deviceIndex ) );
+                            writeSlotStep( writer, settings, outResult, "Press", InputSlot::fromGamepadButton( event._payload._gamepadData._button, event._deviceIndex ) );
                             break;
                         }
                         case RawInputEventType::GamepadButtonUp:
                         {
-                            appendSlotStep( outBody, settings, outResult, "Release", InputSlot::fromGamepadButton( event._payload._gamepadData._button, event._deviceIndex ) );
+                            writeSlotStep( writer, settings, outResult, "Release", InputSlot::fromGamepadButton( event._payload._gamepadData._button, event._deviceIndex ) );
                             break;
                         }
                         case RawInputEventType::MouseMove:
@@ -460,12 +410,12 @@ namespace sw
                         {
                             // 액션의 스틱이면 값 구간을 ActionAxis 로 쓴다(advanceStickRuns) — 스틱 배치를 바꿔도 녹화가 산다.
                             if ( trackStickAxis( event, settings, inoutListTrack ) == false )
-                                appendGamepadAxisStep( outBody, event, outResult );
+                                writeGamepadAxisStep( writer, event, outResult );
                             break;
                         }
                         case RawInputEventType::TextInput:
                         {
-                            appendTextStep( outBody, event, outResult );
+                            writeTextStep( writer, event, outResult );
                             break;
                         }
                         case RawInputEventType::None:
@@ -483,7 +433,7 @@ namespace sw
                         }
                     }
                 }
-                appendAccumulatedSteps( outBody, accumulator, settings, outResult );
+                writeAccumulatedSteps( writer, accumulator, settings, outResult );
             }
         };
     } // namespace
@@ -525,12 +475,14 @@ namespace sw
     {
         using Internal = ScenarioRecorderInternal;
 
-        ScenarioRecordOutput         result;
-        vector<string>               listFrameBody( listFrame.size() );
+        ScenarioRecordOutput          result;
+        vector<unique_ptr<XMLWriter>> listFrameBody;
+        listFrameBody.reserve( listFrame.size() );
         vector<Internal::StickTrack> listStickTrack;
         for ( size_t index = 0; index < listFrame.size(); ++index )
         {
-            Internal::appendFrameSteps( listFrameBody[index], listFrame[index], settings, listStickTrack, result );
+            listFrameBody.push_back( make_unique<XMLWriter>() );
+            Internal::writeFrameSteps( *listFrameBody[index], listFrame[index], settings, listStickTrack, result );
             Internal::advanceStickRuns( listFrameBody, listStickTrack, static_cast<uint32>( index ), result );
         }
         // 녹화가 끝날 때 기울어 있던 스틱은 마지막 녹화 프레임 다음에 놓는다(재생이 끝 뒤까지 기울인 채 남기지 않는다).
@@ -538,66 +490,69 @@ namespace sw
         {
             Internal::closeStickRun( listFrameBody, track, static_cast<uint32>( listFrame.size() ), result );
         }
-        string body;
         uint32 lastFrame = settings._firstFrame;
         for ( size_t index = 0; index < listFrameBody.size(); ++index )
         {
-            if ( listFrameBody[index].empty() )
-                continue;
-            const uint32 frame = settings._firstFrame + static_cast<uint32>( index );
-            body += "\t<At frame=\"" + to_string( frame ) + "\">" + listFrameBody[index] + "</At>\n";
-            lastFrame = frame;
+            if ( listFrameBody[index]->isEmpty() == false )
+                lastFrame = settings._firstFrame + static_cast<uint32>( index );
         }
         // 검사점은 마지막 녹화 프레임(값을 읽은 프레임)에 둔다 — 재생도 그 프레임의 씬 틱 뒤에 같은 값을 내야 한다.
         const bool   bCheckpoints    = settings._listCheckpoint.empty() == false && listFrame.empty() == false;
         const uint32 checkpointFrame = settings._firstFrame + static_cast<uint32>( listFrame.size() ) - ( listFrame.empty() ? 0u : 1u );
         const uint32 passFrame       = bCheckpoints ? checkpointFrame + 1 : lastFrame + Internal::kTailFrameCount;
 
-        string& text = result._xmlText;
-        text         = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n";
-        text += bCheckpoints ? "<!-- 녹화한 입력과 끝 프레임의 검사점입니다. 같은 입력이면 같은 값이 나와야 합니다(결정적 재생). -->\n"
-                             : "<!-- scenario.record 로 녹화한 입력입니다. 기대(Expect) 단계는 손으로 더합니다. -->\n";
-        text += "<Scenario name=\"";
-        Internal::appendEscaped( text, settings._name );
-        text += "\" fixedDelta=\"";
-        Internal::appendFixedDelta( text, settings._fixedDelta > 0.0f ? settings._fixedDelta : 1.0f / 60.0f );
-        text += "\" timeoutFrames=\"" + to_string( passFrame + Internal::kTimeoutMargin ) + "\" startAfter=\"" + string( settings._bStartWhenScenePlaying ? "ScenePlaying" : "Immediately" ) + "\" input=\"exclusive\">\n";
-        text += body;
+        XMLWriter writer{ result._xmlText };
+        writer.declaration();
+        writer.comment( bCheckpoints ? "녹화한 입력과 끝 프레임의 검사점입니다. 같은 입력이면 같은 값이 나와야 합니다(결정적 재생)."
+                                     : "scenario.record 로 녹화한 입력입니다. 기대(Expect) 단계는 손으로 더합니다." );
+        writer.whitespace( "\n" );
+        writer.beginElement( "Scenario" );
+        writer.attribute( "name", settings._name );
+        Internal::writeFloatAttribute( writer, "fixedDelta", settings._fixedDelta > 0.0f ? settings._fixedDelta : 1.0f / 60.0f, Internal::kFixedDeltaDecimals );
+        writer.attributeInt( "timeoutFrames", passFrame + Internal::kTimeoutMargin );
+        writer.attribute( "startAfter", settings._bStartWhenScenePlaying ? "ScenePlaying" : "Immediately" );
+        writer.attribute( "input", "exclusive" );
+        for ( size_t index = 0; index < listFrameBody.size(); ++index )
+        {
+            if ( listFrameBody[index]->isEmpty() )
+                continue;
+            writer.whitespace( "\n\t" );
+            writer.beginElement( "At" );
+            writer.attributeInt( "frame", settings._firstFrame + static_cast<uint32>( index ) );
+            // 프레임 본문은 따로 쓴 조각이다 — 스틱 구간은 앞 프레임의 본문에 나중에 닫힌다.
+            writer.fragment( *listFrameBody[index] );
+            writer.endElement();
+        }
         if ( bCheckpoints )
         {
-            text += "\t<At frame=\"" + to_string( checkpointFrame ) + "\">";
+            writer.whitespace( "\n\t" );
+            writer.beginElement( "At" );
+            writer.attributeInt( "frame", checkpointFrame );
             for ( const ScenarioRecordCheckpoint& checkpoint : settings._listCheckpoint )
             {
-                text += "<Expect probe=\"";
-                Internal::appendEscaped( text, checkpoint._probe );
-                text += "\"";
+                writer.beginElement( "Expect" );
+                writer.attribute( "probe", checkpoint._probe );
                 if ( checkpoint._target.empty() == false )
-                {
-                    text += " target=\"";
-                    Internal::appendEscaped( text, checkpoint._target );
-                    text += "\"";
-                }
+                    writer.attribute( "target", checkpoint._target );
                 if ( checkpoint._key.empty() == false )
-                {
-                    text += " key=\"";
-                    Internal::appendEscaped( text, checkpoint._key );
-                    text += "\"";
-                }
-                text += checkpoint._bText ? " is=\"" : " near=\"";
-                Internal::appendEscaped( text, checkpoint._value );
-                text += "\"";
+                    writer.attribute( "key", checkpoint._key );
+                writer.attribute( checkpoint._bText ? "is" : "near", checkpoint._value );
                 if ( checkpoint._bText == false )
-                {
-                    text += " tolerance=\"";
-                    Internal::appendFloat( text, settings._checkpointTolerance );
-                    text += "\"";
-                }
-                text += "/>";
+                    Internal::writeFloatAttribute( writer, "tolerance", settings._checkpointTolerance );
+                writer.endElement();
             }
-            text += "</At>\n";
+            writer.endElement();
         }
-        text += "\t<At frame=\"" + to_string( passFrame ) + "\"><Pass/></At>\n";
-        text += "</Scenario>\n";
+        writer.whitespace( "\n\t" );
+        writer.beginElement( "At" );
+        writer.attributeInt( "frame", passFrame );
+        writer.beginElement( "Pass" );
+        writer.endElement();
+        writer.endElement();
+        writer.whitespace( "\n" );
+        writer.endElement();
+        writer.whitespace( "\n" );
+        SW_ASSERT( writer.isComplete() );
         return result;
     }
 
