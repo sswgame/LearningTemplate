@@ -17,6 +17,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
@@ -196,6 +197,7 @@ namespace sw
         bool _bAutoGetUp;
 
         RagdollAnimationBinding        _binding;
+        Subscription                   _bindingRegistration; ///< 유닛 단계 작업 등록 구독(놓으면 유닛에서 빠진다)
         shared_ptr<const PhysicsAsset> _asset;
         PhysicsRagdoll                 _ragdoll;
         vector<hashed_string>          _listBoneName;

@@ -8,6 +8,7 @@
 #include "Core/Container/ComponentHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 
@@ -155,6 +156,7 @@ namespace sw
         string _facialRigPath;
 
         FacialAnimationBinding                      _binding;
+        Subscription                                _bindingRegistration; ///< 유닛 단계 작업 등록 구독(놓으면 유닛에서 빠진다)
         FacialRig                                   _rig;
         LipSyncSettings                             _lipSync;
         VisemeTrack                                 _speechTrack;

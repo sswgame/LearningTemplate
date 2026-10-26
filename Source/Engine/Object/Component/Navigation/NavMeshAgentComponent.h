@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
@@ -165,8 +166,9 @@ namespace sw
         NavLinkTraversal  _linkTraversal;   ///< 건너는 오프 메시 링크(`_bOnOffMeshLink`)
         hashed_string     _linkType;        ///< 건너는 링크의 종류 이름
         NavCrowdAgentID   _crowdAgentID;
-        uint32            _navIndex;   ///< `SceneNavigation` 의 목록 자리
-        uint32            _crowdIndex; ///< 든 군중(에이전트 종류) 자리
+        uint32            _navIndex;        ///< `SceneNavigation` 의 목록 자리
+        Subscription      _navRegistration; ///< `SceneNavigation` 등록 구독(`onRegister` 가 받고 `onUnregister` 가 놓는다)
+        uint32            _crowdIndex;      ///< 든 군중(에이전트 종류) 자리
         NavMoveStatus     _moveStatus;
         uint8             _bHasDestination   : 1;
         uint8             _bDestinationDirty : 1; ///< 다음 갱신에 군중에 넣을 목적지 · 멈춤

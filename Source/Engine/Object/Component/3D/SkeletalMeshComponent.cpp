@@ -111,6 +111,7 @@ namespace sw
         , _listSkinPalette{}
         , _listDependency{}
         , _listTask{}
+        , _phaseTaskSource{ *this }
         , _listLeaderBone{}
         , _leader{}
         , _pLeaderSkeletonForMap{ nullptr }
@@ -174,14 +175,14 @@ namespace sw
         MeshComponent::onRegister( manager );
         _pAnimationSystem = &manager.getSubsystem<AnimationSystem>();
         _pAnimationSystem->registerUnit( this );
-        _pAnimationSystem->registerLODClient( &_lodClient );
-        _updatePhase = SkeletalMeshComponentInternal::makeUpdatePhase( getHandle().componentID() );
+        _lodRegistration = _pAnimationSystem->registerLODClient( &_lodClient );
+        _updatePhase     = SkeletalMeshComponentInternal::makeUpdatePhase( getHandle().componentID() );
     }
 
     void SkeletalMeshComponent::onUnregister( GameObjectManager& manager )
     {
         leaveCrowd( &manager.getSubsystem<AnimationSystem>().getCrowd() );
-        manager.getSubsystem<AnimationSystem>().unregisterLODClient( &_lodClient );
+        _lodRegistration.reset();
         manager.getSubsystem<AnimationSystem>().unregisterUnit( this );
         _pAnimationSystem = nullptr;
         MeshComponent::onUnregister( manager );
@@ -455,15 +456,17 @@ namespace sw
         notifyOrderChanged();
     }
 
-    void SkeletalMeshComponent::registerAnimationPhaseTask( IAnimationPhaseTask* pTask )
+    Subscription SkeletalMeshComponent::registerAnimationPhaseTask( IAnimationPhaseTask* pTask )
     {
-        if ( pTask == nullptr || VectorUtil::contains( _listTask, pTask ) )
-            return;
+        // 등록 순서가 단계 안의 실행 순서라 vector 를 둔다. 구독 하나가 등록 하나다 — 같은 작업을 두 번 올리면 두 번 돈다(쥔 쪽이 하나만 든다).
+        if ( pTask == nullptr )
+            return {};
         _listTask.push_back( pTask );
         _bPoseDirty = SW_TRUE;
+        return _phaseTaskSource.issue( pTask );
     }
 
-    void SkeletalMeshComponent::unregisterAnimationPhaseTask( IAnimationPhaseTask* pTask )
+    void SkeletalMeshComponent::detachAnimationPhaseTask( IAnimationPhaseTask* pTask )
     {
         if ( VectorUtil::removeFirst( _listTask, pTask ) == 0 )
             return;

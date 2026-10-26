@@ -454,6 +454,7 @@ namespace sw
         UIStyleSheetCache                  _styleSheetCache;
         Subscription                       _documentCacheRegistration;   ///< 문서 캐시의 에셋 캐시 등록 구독(`initializeSubsystem` 이 받고 `shutdownSubsystem` 이 놓는다)
         Subscription                       _styleSheetCacheRegistration; ///< 스타일 시트 캐시의 에셋 캐시 등록 구독
+        Subscription                       _uiKeyBindingRegistration;    ///< UI 행동 맵의 키 바인딩 대상 구독(`UserSettingsManager::addKeyBindingInputMap`)
         UIThemeController                  _theme;
         vector<string>                     _listReopenDocument; ///< 모듈 다시 로드로 닫은 문서 화면입니다(다음 update 가 다시 엽니다).
         UIBindingConverterRegistry         _bindingConverters;

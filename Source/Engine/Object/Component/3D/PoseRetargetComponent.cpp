@@ -61,7 +61,7 @@ namespace sw
     PoseRetargetComponent::~PoseRetargetComponent()
     {
         if ( _pUnit != nullptr )
-            _pUnit->unregisterAnimationPhaseTask( &_binding );
+            _bindingRegistration.reset();
     }
 
     void PoseRetargetComponent::onBeginPlay()
@@ -79,7 +79,7 @@ namespace sw
     {
         setSource( nullptr );
         if ( _pUnit != nullptr )
-            _pUnit->unregisterAnimationPhaseTask( &_binding );
+            _bindingRegistration.reset();
         _pUnit = nullptr;
         Component::onEndPlay();
     }
@@ -144,10 +144,10 @@ namespace sw
         if ( pUnit == _pUnit )
             return;
         if ( _pUnit != nullptr )
-            _pUnit->unregisterAnimationPhaseTask( &_binding );
+            _bindingRegistration.reset();
         _pUnit = pUnit;
         if ( _pUnit != nullptr )
-            _pUnit->registerAnimationPhaseTask( &_binding );
+            _bindingRegistration = _pUnit->registerAnimationPhaseTask( &_binding );
     }
 
     bool PoseRetargetComponent::isRetargeting() const

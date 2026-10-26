@@ -7,6 +7,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 
 #include "Engine/Animation/Graph/AnimationGraphAsset.h"
 #include "Engine/Animation/Graph/AnimationGraphPlayer.h"
@@ -183,6 +184,7 @@ namespace sw
         vector<AnimationFiredNotify> _listFiredNotify; ///< 이번 틱에 울린 알림(받는 쪽이 있을 때만 모은다)
         IAnimationNotifyListener*    _pNotifyListener;
         SpriteAnimatorLODClient      _lodClient;
+        Subscription                 _lodRegistration; ///< LOD 클라이언트 등록 구독(`onRegister` 가 받고 `onUnregister` 가 놓는다)
         PROPERTY( Category = "Playback", DisplayName = "Current Frame", Tooltip = "Current playback frame index within the animation", Min = 0.0 )
         int32 _currentFrame;
         PROPERTY( Category = "Playback", DisplayName = "Total Frames", Tooltip = "Frame count of the active animation, taken from the sprite clip", ReadOnly )

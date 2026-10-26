@@ -79,13 +79,12 @@ namespace sw
     {
         Component::onRegister( manager );
         _pSceneNavigation = &manager.getSubsystem<SceneNavigation>();
-        _pSceneNavigation->registerAgent( this );
+        _navRegistration  = _pSceneNavigation->registerAgent( this );
     }
 
     void NavMeshAgentComponent::onUnregister( GameObjectManager& manager )
     {
-        if ( _pSceneNavigation != nullptr )
-            _pSceneNavigation->unregisterAgent( this );
+        _navRegistration.reset();
         _pSceneNavigation = nullptr;
         Component::onUnregister( manager );
     }

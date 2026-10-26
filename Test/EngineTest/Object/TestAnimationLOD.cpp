@@ -345,8 +345,8 @@ SW_TEST_CASE( AnimationLODTest, FrustumVisibilityAcrossViews )
     SW_ASSERT_NOT_NULL( pUnit );
     manager.flushSceneTransforms();
     TestAnimationLODInternal::CountingTask task( 0.1f );
-    pUnit->registerAnimationPhaseTask( &task );
-    AnimationSystem& system = manager.getSubsystem<AnimationSystem>();
+    sw::Subscription                       taskRegistration = pUnit->registerAnimationPhaseTask( &task );
+    AnimationSystem&                       system           = manager.getSubsystem<AnimationSystem>();
     system.setLODSettings( AnimationLODSettings::makeDefault() );
     system.evaluate( 0.016f ); // 처음은 포즈가 더러워 늘 만든다(뷰도 아직 없다)
 
@@ -373,7 +373,7 @@ SW_TEST_CASE( AnimationLODTest, FrustumVisibilityAcrossViews )
     system.evaluate( 0.016f );
     SW_EXPECT_TRUE( pUnit->isVisibleHint() );
     SW_EXPECT_EQUAL( 1u, pUnit->getAnimationLODState()._updateRateDivisor );
-    pUnit->unregisterAnimationPhaseTask( &task );
+    taskRegistration.reset();
 }
 
 /**
@@ -386,8 +386,8 @@ SW_TEST_CASE( AnimationLODTest, PendingViewWarmsUnitsOfTheNextCut )
     SW_ASSERT_NOT_NULL( pUnit );
     manager.flushSceneTransforms();
     TestAnimationLODInternal::CountingTask task( 0.1f );
-    pUnit->registerAnimationPhaseTask( &task );
-    AnimationSystem& system = manager.getSubsystem<AnimationSystem>();
+    sw::Subscription                       taskRegistration = pUnit->registerAnimationPhaseTask( &task );
+    AnimationSystem&                       system           = manager.getSubsystem<AnimationSystem>();
     system.setLODSettings( AnimationLODSettings::makeDefault() );
     system.evaluate( 0.016f );
     system.setLODViews( vector<AnimationLODView>{ TestAnimationLODInternal::makeForwardView( float3{}, float3{ 0.0f, 0.0f, 1.0f } ) } );
@@ -403,7 +403,7 @@ SW_TEST_CASE( AnimationLODTest, PendingViewWarmsUnitsOfTheNextCut )
     system.clearPendingLODView();
     system.evaluate( 0.016f );
     SW_EXPECT_FALSE( pUnit->isVisibleHint() );
-    pUnit->unregisterAnimationPhaseTask( &task );
+    taskRegistration.reset();
 }
 
 /**
@@ -416,8 +416,8 @@ SW_TEST_CASE( AnimationLODTest, HiddenUnitSkipsPoseUntilShown )
     SW_ASSERT_NOT_NULL( pUnit );
     manager.flushSceneTransforms();
     TestAnimationLODInternal::CountingTask task( 0.1f );
-    pUnit->registerAnimationPhaseTask( &task );
-    AnimationSystem& system = manager.getSubsystem<AnimationSystem>();
+    sw::Subscription                       taskRegistration = pUnit->registerAnimationPhaseTask( &task );
+    AnimationSystem&                       system           = manager.getSubsystem<AnimationSystem>();
     system.setLODSettings( AnimationLODSettings::makeDefault() );
     system.evaluate( 0.016f ); // 처음은 포즈가 더러워 늘 만든다
     system.setLODViews( vector<AnimationLODView>{ TestAnimationLODInternal::makeForwardView( float3{}, float3{ 0.0f, 0.0f, 1.0f } ) } );
@@ -440,7 +440,7 @@ SW_TEST_CASE( AnimationLODTest, HiddenUnitSkipsPoseUntilShown )
     system.evaluate( 0.016f );
     SW_EXPECT_TRUE( pUnit->isVisibleHint() );
     SW_EXPECT_EQUAL( before + 2u, pUnit->getPoseEvaluationCount() );
-    pUnit->unregisterAnimationPhaseTask( &task );
+    taskRegistration.reset();
 }
 
 /**
@@ -456,8 +456,8 @@ SW_TEST_CASE( AnimationLODTest, UpdateRateFromScreenSizeInterpolates )
         SW_ASSERT_NOT_NULL( pUnit );
         manager.flushSceneTransforms();
         TestAnimationLODInternal::CountingTask task( 0.2f );
-        pUnit->registerAnimationPhaseTask( &task );
-        AnimationSystem& system = manager.getSubsystem<AnimationSystem>();
+        sw::Subscription                       taskRegistration = pUnit->registerAnimationPhaseTask( &task );
+        AnimationSystem&                       system           = manager.getSubsystem<AnimationSystem>();
         system.setLODSettings( TestAnimationLODInternal::makeTwoLevelSettings( bInterpolate ) );
         system.setLODViews( vector<AnimationLODView>{ TestAnimationLODInternal::makeForwardView( float3{}, float3{ 0.0f, 0.0f, 1.0f } ) } );
 
@@ -493,7 +493,7 @@ SW_TEST_CASE( AnimationLODTest, UpdateRateFromScreenSizeInterpolates )
         {
             SW_EXPECT_EQUAL( 0u, movedSkippedFrameCount );
         }
-        pUnit->unregisterAnimationPhaseTask( &task );
+        taskRegistration.reset();
     }
 }
 

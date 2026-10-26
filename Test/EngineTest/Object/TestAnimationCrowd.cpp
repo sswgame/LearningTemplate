@@ -491,7 +491,7 @@ SW_TEST_CASE( AnimationCrowdTest, ReaderTasksAndLeaderFollowersShareBuckets )
     system.setCrowdSettings( AnimationCrowdSettings{} );
     SkeletalMeshComponent* pBody = TestAnimationCrowdInternal::createCharacter( manager, "Body", skeleton, bodyMesh, folder, "Wave", 0.27f );
     SW_ASSERT_NOT_NULL( pBody );
-    pBody->registerAnimationPhaseTask( &reader );
+    sw::Subscription readerRegistration = pBody->registerAnimationPhaseTask( &reader );
 
     GameObject*            pPartObject = manager.createGameObject( hashed_string( "Cloth" ) );
     SkeletalMeshComponent* pPart       = pPartObject != nullptr ? pPartObject->addComponent<SkeletalMeshComponent>() : nullptr;
@@ -517,7 +517,7 @@ SW_TEST_CASE( AnimationCrowdTest, ReaderTasksAndLeaderFollowersShareBuckets )
     SW_EXPECT_EQUAL( skeleton->getBoneCount(), reader._seenBoneCount ); // 읽기 작업은 묶음의 모델 공간을 읽었다
 
     // 부품이 포즈를 쓰는 작업을 받으면 혼자 평가한다(리더 포즈를 옮기고 자기 작업을 더한다).
-    pPart->registerAnimationPhaseTask( &writer );
+    sw::Subscription writerRegistration = pPart->registerAnimationPhaseTask( &writer );
     system.evaluate( 0.05f );
     SW_EXPECT_TRUE( pBody->getCrowdMode() == AnimationCrowdMode::Shared );
     SW_EXPECT_TRUE( pPart->getCrowdMode() == AnimationCrowdMode::Solo );
@@ -542,7 +542,7 @@ SW_TEST_CASE( AnimationCrowdTest, TaskThatWritesOnlyWhileActiveBlocksSharingOnly
     system.setCrowdSettings( AnimationCrowdSettings{} );
     SkeletalMeshComponent* pBody = TestAnimationCrowdInternal::createCharacter( manager, "Body", skeleton, mesh, folder, "Wave", 0.27f );
     SW_ASSERT_NOT_NULL( pBody );
-    pBody->registerAnimationPhaseTask( &sometimesWriter );
+    sw::Subscription sometimesWriterRegistration = pBody->registerAnimationPhaseTask( &sometimesWriter );
 
     system.evaluate( 0.0f );
     SW_EXPECT_TRUE( pBody->getCrowdMode() == AnimationCrowdMode::Shared ); // 쉬는 동안은 포즈를 읽기만 한다

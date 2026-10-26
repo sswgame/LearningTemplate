@@ -156,7 +156,7 @@ namespace sw
     FacialAnimationComponent::~FacialAnimationComponent()
     {
         if ( _pUnit != nullptr )
-            _pUnit->unregisterAnimationPhaseTask( &_binding );
+            _bindingRegistration.reset();
     }
 
     void FacialAnimationComponent::onBeginPlay()
@@ -175,7 +175,7 @@ namespace sw
     void FacialAnimationComponent::onEndPlay()
     {
         if ( _pUnit != nullptr )
-            _pUnit->unregisterAnimationPhaseTask( &_binding );
+            _bindingRegistration.reset();
         _pUnit = nullptr;
         Component::onEndPlay();
     }
@@ -227,10 +227,10 @@ namespace sw
         if ( pUnit == _pUnit )
             return;
         if ( _pUnit != nullptr )
-            _pUnit->unregisterAnimationPhaseTask( &_binding );
+            _bindingRegistration.reset();
         _pUnit = pUnit;
         if ( _pUnit != nullptr )
-            _pUnit->registerAnimationPhaseTask( &_binding );
+            _bindingRegistration = _pUnit->registerAnimationPhaseTask( &_binding );
         else if ( pOwner != nullptr )
             SW_LOG_WARNING( "'%#': facial animation has no SkeletalMeshComponent on its object", pOwner->getName().c_str() );
     }

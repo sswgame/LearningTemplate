@@ -79,9 +79,10 @@ namespace sw
         _bStartupApplied    = false;
     }
 
-    void UserSettingsManager::addKeyBindingInputMap( InputMap& inputMap )
+    Subscription UserSettingsManager::addKeyBindingInputMap( InputMap& inputMap )
     {
-        _engineHandlers.addBindingInputMap( inputMap );
+        if ( _engineHandlers.addBindingInputMap( inputMap ) == false )
+            return {}; // 이미 더했다 — 먼저 받은 구독이 쥔다
         // 이 맵의 액션을 고치는 설정은 맵이 없던 기동 적용에서 건너뛰었다 — 지금 확정 값을 넣는다.
         const vector<UserSettingDef>& listSetting = _schema.getSettings();
         for ( uint32 settingIndex = 0; settingIndex < static_cast<uint32>( _listState.size() ); ++settingIndex )
@@ -90,11 +91,12 @@ namespace sw
             if ( def._type == UserSettingType::KeyBinding && inputMap.hasAction( def._action ) )
                 (void)applyToTarget( settingIndex, _listState[settingIndex]._committedValue, true ); // 못 넣은 키는 핸들러가 경고한다 — 값은 저장된 그대로다
         }
+        return issueSubscription( reinterpret_cast<uint64>( &inputMap ) );
     }
 
-    void UserSettingsManager::removeKeyBindingInputMap( const InputMap& inputMap )
+    void UserSettingsManager::releaseSubscription( uint64 id )
     {
-        _engineHandlers.removeBindingInputMap( inputMap );
+        _engineHandlers.removeBindingInputMap( *reinterpret_cast<const InputMap*>( id ) ); // 주소로만 찾는다 — 역참조하지 않는다
     }
 
     // ------------------------------------------------------------------------------

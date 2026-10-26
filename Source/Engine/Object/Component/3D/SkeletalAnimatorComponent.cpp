@@ -203,6 +203,7 @@ namespace sw
         , _listFiredNotify{}
         , _listActivePlayable{}
         , _listRootMotionModifier{}
+        , _rootMotionModifierSource{ _listRootMotionModifier }
         , _curves{}
         , _scratchPose{}
         , _scratchTrackPose{}
@@ -242,7 +243,7 @@ namespace sw
     SkeletalAnimatorComponent::~SkeletalAnimatorComponent()
     {
         if ( _pUnit != nullptr )
-            _pUnit->unregisterAnimationPhaseTask( &_binding );
+            _bindingRegistration.reset();
     }
 
     void SkeletalAnimatorComponent::onBeginPlay()
@@ -384,7 +385,7 @@ namespace sw
     void SkeletalAnimatorComponent::onEndPlay()
     {
         if ( _pUnit != nullptr )
-            _pUnit->unregisterAnimationPhaseTask( &_binding );
+            _bindingRegistration.reset();
         _pUnit = nullptr;
         Component::onEndPlay();
     }
@@ -413,10 +414,10 @@ namespace sw
         if ( pUnit == _pUnit )
             return;
         if ( _pUnit != nullptr )
-            _pUnit->unregisterAnimationPhaseTask( &_binding );
+            _bindingRegistration.reset();
         _pUnit = pUnit;
         if ( _pUnit != nullptr )
-            _pUnit->registerAnimationPhaseTask( &_binding );
+            _bindingRegistration = _pUnit->registerAnimationPhaseTask( &_binding );
         else
             SW_LOG_WARNING( "'%#': skeletal animator has no SkeletalMeshComponent on its object", pOwner != nullptr ? pOwner->getName().c_str() : "(no owner)" );
     }
@@ -773,16 +774,13 @@ namespace sw
         _pNotifyListener->onAnimationNotifiesFired( frame );
     }
 
-    void SkeletalAnimatorComponent::registerRootMotionModifier( IRootMotionModifier* pModifier )
+    Subscription SkeletalAnimatorComponent::registerRootMotionModifier( IRootMotionModifier* pModifier )
     {
-        // 수정자는 캐릭터 하나에 붙은 컴포넌트가 하나씩 올린다(수 개 이하). 호출 순서가 등록 순서라 vector 를 두며 선형 중복 검사는 비용이 없다.
-        if ( pModifier != nullptr && VectorUtil::contains( _listRootMotionModifier, pModifier ) == false )
-            _listRootMotionModifier.push_back( pModifier );
-    }
-
-    void SkeletalAnimatorComponent::unregisterRootMotionModifier( IRootMotionModifier* pModifier )
-    {
-        VectorUtil::removeFirst( _listRootMotionModifier, pModifier );
+        // 수정자는 캐릭터 하나에 붙은 컴포넌트가 하나씩 올린다(수 개 이하). 호출 순서가 등록 순서라 vector 를 둔다. 구독 하나가 등록 하나다.
+        if ( pModifier == nullptr )
+            return {};
+        _listRootMotionModifier.push_back( pModifier );
+        return _rootMotionModifierSource.issue( pModifier );
     }
 
     void SkeletalAnimatorComponent::applyRootMotion( SkeletalMeshComponent& unit )

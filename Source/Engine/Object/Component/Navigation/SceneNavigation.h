@@ -129,18 +129,15 @@ namespace sw
         /** @brief 갱신 한 번 — 파일 머리말의 순서입니다. 게임 스레드에서 매니저가 부릅니다. */
         void update( float32 deltaTime ) override;
 
-        void registerAgent( NavMeshAgentComponent* pAgent );
-        void unregisterAgent( NavMeshAgentComponent* pAgent );
+        // 컴포넌트 등록은 구독을 돌려준다. 컴포넌트가 들고 `onUnregister` 에서 놓으면 빠진다. nullptr 이거나 이미 등록했으면 빈 구독이다.
+        [[nodiscard]] Subscription registerAgent( NavMeshAgentComponent* pAgent );
         /** @brief 에이전트를 군중에서 뺍니다(등록은 지킨다 — 플레이를 다시 시작하면 다시 든다). */
-        void releaseAgent( NavMeshAgentComponent* pAgent );
-        void registerSurface( NavMeshSurfaceComponent* pSurface );
-        void unregisterSurface( NavMeshSurfaceComponent* pSurface );
-        void registerObstacle( NavMeshObstacleComponent* pObstacle );
-        void unregisterObstacle( NavMeshObstacleComponent* pObstacle );
+        void                       releaseAgent( NavMeshAgentComponent* pAgent );
+        [[nodiscard]] Subscription registerSurface( NavMeshSurfaceComponent* pSurface );
+        [[nodiscard]] Subscription registerObstacle( NavMeshObstacleComponent* pObstacle );
         /** @brief 기하 소스를 올리고 그 구독을 돌려줍니다. 구독이 사라지면 빠집니다. nullptr 이거나 이미 올라 있으면 빈 구독입니다. */
         [[nodiscard]] Subscription registerGeometrySource( INavGeometrySource* pSource );
-        void                       registerLink( NavMeshLinkComponent* pLink );
-        void                       unregisterLink( NavMeshLinkComponent* pLink );
+        [[nodiscard]] Subscription registerLink( NavMeshLinkComponent* pLink );
         /** @brief 지금 자세의 번호가 @p linkID 인 링크 컴포넌트입니다(에이전트가 건너는 링크의 종류 찾기). 없으면 nullptr 입니다. 링크 수만큼 훑습니다. */
         const NavMeshLinkComponent* findLink( uint32 linkID ) const;
 
@@ -235,8 +232,23 @@ namespace sw
         vector<NavMeshSurfaceComponent*>   _listSurface;
         vector<NavMeshObstacleComponent*>  _listObstacle;
         vector<NavMeshLinkComponent*>      _listLink; ///< 링크 컴포넌트(등록 · 해제는 `_navIndex` 로 O(1)). 순회는 매 갱신 `applyLinkStates` 의 켜짐 표지 확인과 `findLink`(에이전트가 링크에 오른 첫 갱신) 뿐이다. 링크는 문 · 사다리 · 점프 지점이라 씬당 수십 ~ 수백이어서 선형으로 충분하다. 수천이 되면 껐다 켠 링크만 모으는 목록과 id 색인으로 바꾼다
-        /** @brief 기하 소스 등록 구독이 풀렸습니다(@p id 는 소스 주소). 순서를 지키며 뺍니다. */
+        /** @brief 등록 구독의 종류입니다. 구독 id 는 등록한 주소에 이 값을 더한 것이다(주소는 8 바이트 정렬이라 아래 3 비트가 빈다). */
+        enum class RegistrationKind : uint64
+        {
+            GeometrySource = 0,
+            Agent,
+            Surface,
+            Obstacle,
+            Link,
+        };
+        static constexpr uint64    kRegistrationKindMask = 7;
+        [[nodiscard]] Subscription issueRegistration( const void* pItem, RegistrationKind kind );
+        /** @brief 등록 구독이 풀렸습니다. 종류에 맞춰 뺍니다(기하 소스는 순서를 지키며, 나머지는 각자의 해제). */
         void releaseSubscription( uint64 id ) override;
+        void unregisterAgent( NavMeshAgentComponent* pAgent );
+        void unregisterSurface( NavMeshSurfaceComponent* pSurface );
+        void unregisterObstacle( NavMeshObstacleComponent* pObstacle );
+        void unregisterLink( NavMeshLinkComponent* pLink );
 
         RegistrationList<INavGeometrySource> _listGeometrySource;  ///< 등록 순서(빼도 순서 유지) — 한 주인을 여러 소스가 맡으면 먼저 등록한 것이 이긴다. 순서가 뜻이라 순서를 버리는 `IndexedPtrList` 로 바꾸지 않는다(소스가 수천이 되면 순서 보존 색인이 필요하다)
         vector<hashed_string>                _listFailedAgentType; ///< 모르는 종류 — 오류를 한 번만

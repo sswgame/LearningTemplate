@@ -130,10 +130,11 @@ namespace sw
         /** @brief 의존 목록(핸들)입니다. 리더를 포함합니다. */
         const vector<TComponentHandle<SkeletalMeshComponent>>& getAnimationDependencies() const { return _listDependency; }
 
-        /** @brief 단계에 끼어드는 작업을 등록합니다(소유하지 않습니다). 같은 작업은 한 번만 등록됩니다. */
-        void registerAnimationPhaseTask( IAnimationPhaseTask* pTask );
-        /** @brief 작업을 해제합니다. 그 작업에 `onAnimationUnitDetached` 를 알립니다. */
-        void unregisterAnimationPhaseTask( IAnimationPhaseTask* pTask );
+        /**
+         * @brief 단계에 끼어드는 작업을 등록하고 그 구독을 돌려줍니다(소유하지 않습니다). 구독을 놓으면 빠지고 그 작업에 `onAnimationUnitDetached` 를 알립니다.
+         * @details nullptr 이면 빈 구독입니다. 구독 하나가 등록 하나입니다. 유닛이 먼저 사라지면 구독은 무효가 됩니다(알리지 않는다).
+         */
+        [[nodiscard]] Subscription registerAnimationPhaseTask( IAnimationPhaseTask* pTask );
         /**
          * @brief 등록한 작업의 에셋이 아직 읽히는 중이라고 알립니다(애니메이터가 클립을 요청한 직후). 유닛은 모든 작업이 준비될 때까지 그리지 않고, 준비되면 디더로 나타납니다.
          * @details 캐릭터 스폰의 "애니메이션이 준비된 뒤 나타난다" 규칙이다 — 애니메이션 없이 기본 자세로 서 있는 프레임이 화면에 나오지 않는다.
@@ -256,6 +257,24 @@ namespace sw
         void enterCrowdBucket( AnimationCrowd& crowd, AnimationCrowdBucket& bucket, bool bVisible );
         /** @brief 묶음 참조와 사본을 해제합니다(@p pCrowd 가 있으면 사본을 풀에 반환합니다). */
         void leaveCrowd( AnimationCrowd* pCrowd );
+        /** @brief 작업을 뗍니다. 그 작업에 `onAnimationUnitDetached` 를 알립니다(작업 구독이 풀릴 때). */
+        void detachAnimationPhaseTask( IAnimationPhaseTask* pTask );
+
+        /** @brief 단계 작업 등록의 출처입니다. 구독이 풀리면 그 작업을 뗍니다. 리플렉션 클래스라 기반을 더하지 않고 멤버로 둔다. */
+        class PhaseTaskSource final : public SubscriptionSource
+        {
+        public:
+            explicit PhaseTaskSource( SkeletalMeshComponent& unit )
+                : _unit{ unit }
+            {
+            }
+            [[nodiscard]] Subscription issue( IAnimationPhaseTask* pTask ) { return issueSubscription( reinterpret_cast<uint64>( pTask ) ); }
+
+        private:
+            void releaseSubscription( uint64 id ) override { _unit.detachAnimationPhaseTask( reinterpret_cast<IAnimationPhaseTask*>( id ) ); }
+
+            SkeletalMeshComponent& _unit;
+        };
 
         PROPERTY( Category = "Animation", DisplayName = "Skeleton", AssetPath, AssetType = "Skeleton", Tooltip = "Skeleton asset; empty uses a one-bone implicit skeleton" )
         string _skeletonPath;
@@ -270,13 +289,15 @@ namespace sw
         vector<float4x4>                                _listSkinPalette;
         vector<TComponentHandle<SkeletalMeshComponent>> _listDependency;
         vector<IAnimationPhaseTask*>                    _listTask;
-        vector<int32>                                   _listLeaderBone; ///< 내 본에서 리더 본으로 가는 인덱스다(-1 이면 없음)
+        PhaseTaskSource                                 _phaseTaskSource; ///< `_listTask` 의 등록 구독을 내준다
+        vector<int32>                                   _listLeaderBone;  ///< 내 본에서 리더 본으로 가는 인덱스다(-1 이면 없음)
         TComponentHandle<SkeletalMeshComponent>         _leader;
         const Skeleton*                                 _pLeaderSkeletonForMap; ///< `_listLeaderBone` 을 만든 리더 스켈레톤이다(동일성만 확인한다)
         AnimationSystem*                                _pAnimationSystem;
         AnimationFrameContext                           _frameContext;
         uint32                                          _poseEvaluationCount;
         SkeletalMeshLODClient                           _lodClient;
+        Subscription                                    _lodRegistration; ///< LOD 클라이언트 등록 구독(`onRegister` 가 받고 `onUnregister` 가 놓는다)
         AnimationLODState                               _lodState;
         shared_ptr<const SkeletonBoneLOD>               _boneLOD;
         vector<vector<uint8>>                           _listBoneLODMask;      ///< 본 LOD 단계 n + 1 의 본 마스크

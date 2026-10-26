@@ -7,6 +7,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/ComponentHandle.h"
 #include "Core/Container/string.h"
+#include "Core/Delegate/Subscription.h"
 
 #include "Engine/Animation/Retarget/PoseRetargeter.h"
 #include "Engine/Animation/Retarget/RetargetProfile.h"
@@ -87,6 +88,7 @@ namespace sw
         string _profilePath;
 
         PoseRetargetBinding                     _binding;
+        Subscription                            _bindingRegistration; ///< 유닛 단계 작업 등록 구독(놓으면 유닛에서 빠진다)
         RetargetProfile                         _profile;
         PoseRetargeter                          _retargeter;
         Pose                                    _targetReference;

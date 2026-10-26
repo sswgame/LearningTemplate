@@ -359,12 +359,15 @@ namespace sw
         uint8                  _bMergeParts      : 1;
         [[maybe_unused]] uint8 _reservedProperty : 7;
 
-        CharacterAppearanceSocketTask           _socketTask;
-        CharacterAppearanceProportionTask       _proportionTask;
-        BoneProportion                          _bodyProportion;       ///< 체형 축이 정한 본 비율(`applyBodyShapes`)
-        vector<BodyMorphWeight>                 _listShapeMorph;       ///< 체형 축이 정한 몸 모프 가중치 — 구울 때 해석의 모프에 더한다
-        shared_ptr<const BodyShapeSet>          _bodyShapeSet;         ///< 쥐고 있는 체형 축 데이터(핫 리로드 판정)
-        uint32                                  _seenShapeReloadCount; ///< `applyBodyShapes` 가 본 `SharedAssetCache<BodyShapeSet>` 의 다시 읽은 횟수
+        CharacterAppearanceSocketTask     _socketTask;
+        CharacterAppearanceProportionTask _proportionTask;
+        // 작업보다 뒤에 선언한다 — 먼저 사라지며 풀리고, 풀릴 때 작업에 `onAnimationUnitDetached` 를 알린다.
+        Subscription                            _socketTaskRegistration;     ///< 소켓 작업의 유닛 등록 구독
+        Subscription                            _proportionTaskRegistration; ///< 비율 작업의 유닛 등록 구독
+        BoneProportion                          _bodyProportion;             ///< 체형 축이 정한 본 비율(`applyBodyShapes`)
+        vector<BodyMorphWeight>                 _listShapeMorph;             ///< 체형 축이 정한 몸 모프 가중치 — 구울 때 해석의 모프에 더한다
+        shared_ptr<const BodyShapeSet>          _bodyShapeSet;               ///< 쥐고 있는 체형 축 데이터(핫 리로드 판정)
+        uint32                                  _seenShapeReloadCount;       ///< `applyBodyShapes` 가 본 `SharedAssetCache<BodyShapeSet>` 의 다시 읽은 횟수
         AppearanceSocketRig                     _rig;
         AppearanceSocketSetCache                _socketCache;
         CharacterAppearanceState                _state;      ///< 펼친 프리셋과 해석 결과. 장비 · 데이터 · 입력의 버전으로 다시 해석할지 정한다

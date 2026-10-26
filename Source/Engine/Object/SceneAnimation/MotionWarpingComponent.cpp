@@ -28,7 +28,7 @@ namespace sw
         : _binding{ *this }
         , _listTarget{}
         , _listWindow{}
-        , _animator{}
+        , _animatorRegistration{}
     {
         setCanEverTick( false );
     }
@@ -57,18 +57,12 @@ namespace sw
         SkeletalAnimatorComponent* pAnimator = pOwner != nullptr ? pOwner->getComponent<SkeletalAnimatorComponent>() : nullptr;
         if ( pAnimator == nullptr )
             return;
-        pAnimator->registerRootMotionModifier( &_binding );
-        _animator = TComponentHandle<SkeletalAnimatorComponent>{ pAnimator };
+        _animatorRegistration = pAnimator->registerRootMotionModifier( &_binding );
     }
 
     void MotionWarpingComponent::unbindFromAnimator()
     {
-        const GameObject*          pOwner    = getOwner();
-        GameObjectManager*         pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        SkeletalAnimatorComponent* pAnimator = ( pManager != nullptr && _animator.isValid() ) ? pManager->resolveComponent( _animator ) : nullptr;
-        _animator                            = TComponentHandle<SkeletalAnimatorComponent>{};
-        if ( pAnimator != nullptr )
-            pAnimator->unregisterRootMotionModifier( &_binding );
+        _animatorRegistration.reset(); // 애니메이터가 먼저 사라졌으면 구독이 이미 무효다
     }
 
     void MotionWarpingComponent::setWarpTarget( const hashed_string& name, const float3& position, float32 yaw )

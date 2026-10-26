@@ -133,7 +133,7 @@ namespace sw
      * @details **게임 스레드 전용**이다. 대상 적용은 게임 스레드에서 일어나고, 창과 스왑체인 변경은 화면 요청으로 미뤄 호스트가 프레임 맨 앞에서
      *          처리한다(`consumeDisplayRequest`). 모듈이 등록한 통보와 핸들러는 모듈을 언로드하기 전에 제거한다(IModuleUnloadListener).
      */
-    class SW_API UserSettingsManager : public IModuleUnloadListener, public ISubsystem
+    class SW_API UserSettingsManager : public IModuleUnloadListener, public ISubsystem, private SubscriptionSource
     {
     public:
         UserSettingsManager();
@@ -152,10 +152,9 @@ namespace sw
          * @brief 키 바인딩 설정의 대상 맵을 더합니다(런타임 UI 의 행동 맵 등). 그 맵에 액션이 있는 키 바인딩 설정의 확정 값을 바로 넣습니다.
          * @details 키 바인딩 설정의 대상은 그 액션을 가진 맵이다 — 게임 맵(`UserSettingsTargets::_pInputMap`)을 먼저 보고, 없으면 더한 맵을 차례로 본다.
          *          겹침 검사의 문맥(레이어)도 그 맵에서 읽는다. 언리얼 Enhanced Input 의 사용자 설정이 등록된 모든 매핑 컨텍스트의 키를 바꾸는 것과 같다.
-         *          맵의 주인이 내려가기 전에 `removeKeyBindingInputMap` 으로 뗀다.
+         *          돌려준 구독이 사라지면 뗀다 — 맵의 주인이 구독을 맵보다 먼저 놓는다. 이미 더한 맵이면 빈 구독이다.
          */
-        void addKeyBindingInputMap( InputMap& inputMap );
-        void removeKeyBindingInputMap( const InputMap& inputMap );
+        [[nodiscard]] Subscription addKeyBindingInputMap( InputMap& inputMap );
 
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
         static constexpr const utf8* kSubsystemName = "UserSettings";
@@ -313,6 +312,9 @@ namespace sw
         uint32      onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped ) override;
 
     private:
+        /** @brief 키 바인딩 대상 맵의 구독이 풀렸습니다(@p id 는 맵 주소). 맵을 뗍니다. */
+        void releaseSubscription( uint64 id ) override;
+
         /** @brief 설정 하나의 값 상태입니다. `UserSettingsSchema::getSettings` 와 같은 순번입니다. */
         struct SettingState
         {

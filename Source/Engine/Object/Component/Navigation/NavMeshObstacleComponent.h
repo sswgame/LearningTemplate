@@ -8,6 +8,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Math/Math.h"
 
 #include "Engine/Navigation/NavMeshGeometry.h"
@@ -69,12 +70,13 @@ namespace sw
         PROPERTY( Category = "Obstacle", Tooltip = "Offset from the object origin", Units = m )
         float3 _center;
 
-        AABB    _carvedBounds; ///< 지금 내비메시에 뚫린 자리(마지막으로 알린 것)
-        float3  _carvedPosition;
-        float32 _carvedYaw;
-        uint32  _navIndex;
-        uint8   _bCarved     : 1; ///< 내비메시가 이 장애물을 품고 있다
-        uint8   _bShapeDirty : 1; ///< 모양을 바꿨다 — 다음 갱신에 다시 뚫는다
-        uint8   _reserved    : 6;
+        AABB         _carvedBounds; ///< 지금 내비메시에 뚫린 자리(마지막으로 알린 것)
+        float3       _carvedPosition;
+        float32      _carvedYaw;
+        uint32       _navIndex;
+        Subscription _navRegistration; ///< `SceneNavigation` 등록 구독(`onRegister` 가 받고 `onUnregister` 가 놓는다)
+        uint8        _bCarved     : 1; ///< 내비메시가 이 장애물을 품고 있다
+        uint8        _bShapeDirty : 1; ///< 모양을 바꿨다 — 다음 갱신에 다시 뚫는다
+        uint8        _reserved    : 6;
     };
 } // namespace sw
