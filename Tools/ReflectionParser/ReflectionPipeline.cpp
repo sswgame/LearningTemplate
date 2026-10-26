@@ -3,6 +3,7 @@
 #include "ReflectionParser/ReflectionPipeline.h"
 
 #include "Core/Concurrency/atomic.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
@@ -548,8 +549,7 @@ namespace sw
             (void)GeneratedFileUtil::readStampDependencies( paths._stampPath, listDependency ); // 스탬프가 없으면(첫 빌드) 더할 의존이 없다
         }
         listTarget.push_back( FileUtil::joinPath( _pOptions->_outputDir, config._emitFlagOpsHeader ) );
-        std::sort( listDependency.begin(), listDependency.end() );
-        listDependency.erase( std::unique( listDependency.begin(), listDependency.end() ), listDependency.end() );
+        VectorUtil::sortUnique( listDependency );
 
         // 목표는 이 단계의 모든 산출물(CMake 의 OUTPUT 과 같은 목록), 의존은 스탬프들의 합. 경로는 절대 · 슬래시.
         string text;

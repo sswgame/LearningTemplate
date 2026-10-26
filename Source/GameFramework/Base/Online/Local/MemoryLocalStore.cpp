@@ -2,6 +2,7 @@
 
 #include "GameFramework/Base/Online/Local/MemoryLocalStore.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 
 namespace sw
@@ -48,7 +49,7 @@ namespace sw
         std::scoped_lock<mutex> lock{ _mutex };
         for ( const auto& [slot, entry] : _mapSlot )
         {
-            if ( slot.compare( 0, groupPrefix.size(), groupPrefix ) != 0 )
+            if ( StringUtil::startsWith( slot, groupPrefix ) == false )
                 continue;
             LocalSlotInfo& slotInfo = outListSlotInfo.emplace_back();
             slotInfo._slot          = slot;

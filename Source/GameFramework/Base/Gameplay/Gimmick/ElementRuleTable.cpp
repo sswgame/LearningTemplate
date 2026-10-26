@@ -245,11 +245,11 @@ namespace sw
 
     bool ElementRuleTable::readStepRule( const XMLNode& node, ElementStepRule& outRule, string_view sourceName ) const
     {
-        if ( ElementRuleTableInternal::isNamed( node, "Expire" ) )
+        if ( XMLReadUtil::isElement( node.getName(), "Expire" ) )
             outRule._kind = ElementStepRuleKind::Expire;
-        else if ( ElementRuleTableInternal::isNamed( node, "Convert" ) )
+        else if ( XMLReadUtil::isElement( node.getName(), "Convert" ) )
             outRule._kind = ElementStepRuleKind::Convert;
-        else if ( ElementRuleTableInternal::isNamed( node, "Spread" ) )
+        else if ( XMLReadUtil::isElement( node.getName(), "Spread" ) )
             outRule._kind = ElementStepRuleKind::Spread;
         else
         {
@@ -295,7 +295,7 @@ namespace sw
         // 이름은 앞에서 선언한 것만 가리킬 수 있다. 그래서 플래그, 재질, 상태를 먼저 모두 읽고 규칙을 읽는다.
         for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
         {
-            if ( ElementRuleTableInternal::isNamed( child, "Flag" ) )
+            if ( XMLReadUtil::isElement( child.getName(), "Flag" ) )
             {
                 if ( addFlag( hashed_string( string( child.getAttributeText( "id" ) ).c_str() ) ) < 0 )
                 {
@@ -303,7 +303,7 @@ namespace sw
                     bValid = false;
                 }
             }
-            else if ( ElementRuleTableInternal::isNamed( child, "Status" ) )
+            else if ( XMLReadUtil::isElement( child.getName(), "Status" ) )
             {
                 const string_view kindText = child.getAttributeText( "kind" );
                 ElementStatusKind kind{ ElementStatusKind::Age };
@@ -373,9 +373,9 @@ namespace sw
         }
         for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
         {
-            const bool bKnown = ElementRuleTableInternal::isNamed( child, "Flag" ) || ElementRuleTableInternal::isNamed( child, "Status" ) ||
-                                ElementRuleTableInternal::isNamed( child, "Material" ) || ElementRuleTableInternal::isNamed( child, "Stimulus" ) ||
-                                ElementRuleTableInternal::isNamed( child, "Step" );
+            const bool bKnown = XMLReadUtil::isElement( child.getName(), "Flag" ) || XMLReadUtil::isElement( child.getName(), "Status" ) ||
+                                XMLReadUtil::isElement( child.getName(), "Material" ) || XMLReadUtil::isElement( child.getName(), "Stimulus" ) ||
+                                XMLReadUtil::isElement( child.getName(), "Step" );
             if ( bKnown == false )
             {
                 SW_LOG_WARNING( "%#: unknown element <%#> in <ElementRules>", sourceName, child.getName() );

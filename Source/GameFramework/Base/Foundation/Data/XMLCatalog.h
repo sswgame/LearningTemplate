@@ -15,7 +15,8 @@ namespace sw
     /**
      * @struct XMLCatalogLoader
      * @brief `XMLCatalog` 가 부르는 문서 열기와 루트 찾기의 몸통입니다. 템플릿 밖에 두어서 카탈로그 헤더가 XML 헤더를 끌어오지 않게 합니다.
-     * @details 실패 경고 문구는 `XMLReadUtil::loadRootOrWarn` 와 `parseRoot` 와 같다. 루트 읽기가 0 개이거나 false 이면 실패이다.
+     * @details 실패 경고는 `XMLReadUtil::loadRootOrWarn` · `parseRootOrWarn` 이 낸다. 루트 읽기가 0 개이거나 false 이면 실패이다.
+     *          `GameDataXML::loadFile` · `loadText`(다른 카탈로그를 함께 받는 문맥 버전 포함)도 이 몸통을 쓴다 — 문서 열기 · 루트 찾기는 여기 하나다.
      */
     struct SW_GF_API XMLCatalogLoader
     {
@@ -25,6 +26,11 @@ namespace sw
         [[nodiscard]] static bool loadFile( void* pCatalog, ReadRootFunction pReadRoot, string_view path, const utf8* pRootName );
         /** @brief XML 문자열 버전입니다. 테스트와 에디터 미리보기가 씁니다. */
         [[nodiscard]] static bool loadText( void* pCatalog, ReadRootFunction pReadRoot, string_view xmlText, string_view sourceName, const utf8* pRootName );
+
+        /** @brief 루트 읽기가 읽은 항목 수를 성공 여부로 바꿉니다. 0 이면 실패입니다. */
+        static constexpr bool isLoaded( uint32 loadedCount ) { return loadedCount > 0; }
+        /** @brief 루트 읽기의 성공 여부를 그대로 반환합니다. */
+        static constexpr bool isLoaded( bool bLoaded ) { return bLoaded; }
     };
 } // namespace sw
 
@@ -65,9 +71,7 @@ namespace sw
         [[nodiscard]] static bool readRoot( void* pCatalog, const XMLNode& root, string_view sourceName )
         {
             TCatalog& catalog = static_cast<TCatalog&>( *static_cast<XMLCatalog*>( pCatalog ) );
-            return isLoaded( catalog.loadRoot( root, sourceName ) );
+            return XMLCatalogLoader::isLoaded( catalog.loadRoot( root, sourceName ) );
         }
-        static constexpr bool isLoaded( uint32 loadedCount ) { return loadedCount > 0; }
-        static constexpr bool isLoaded( bool bLoaded ) { return bLoaded; }
     };
 } // namespace sw

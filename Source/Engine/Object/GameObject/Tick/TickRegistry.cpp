@@ -7,6 +7,7 @@
 #include "Engine/Object/GameObject/Tick/TickRegistry.h"
 
 #include "Core/Common/HashUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
 #include "Engine/Object/Component/Component.h"
@@ -1036,8 +1037,7 @@ namespace sw
                     candidate._externalGroup = externalGroup;
             }
         }
-        std::sort( _listReferencedObjectID.begin(), _listReferencedObjectID.end() );
-        _listReferencedObjectID.erase( std::unique( _listReferencedObjectID.begin(), _listReferencedObjectID.end() ), _listReferencedObjectID.end() );
+        VectorUtil::sortUnique( _listReferencedObjectID );
 
         TickRegistryInternal::PrerequisiteGraph graph;
         TickRegistryInternal::buildPrerequisiteGraph( listCandidate, candidateIndex, graph );

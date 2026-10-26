@@ -49,21 +49,6 @@ namespace sw
 
 namespace sw
 {
-    bool GameDataXML::loadFileWith( void* pCall, ReadRootFunction pReadRoot, string_view path, const utf8* pRootName )
-    {
-        XMLDocument doc;
-        XMLNode     root;
-        string      sourceName;
-        return XMLReadUtil::loadRootOrWarn( doc, path, pRootName, root, sourceName ) && pReadRoot( pCall, root, sourceName );
-    }
-
-    bool GameDataXML::loadTextWith( void* pCall, ReadRootFunction pReadRoot, string_view xmlText, string_view sourceName, const utf8* pRootName )
-    {
-        XMLDocument doc;
-        XMLNode     root;
-        return XMLReadUtil::parseRootOrWarn( doc, xmlText, sourceName, pRootName, root ) && pReadRoot( pCall, root, sourceName );
-    }
-
     bool GameDataXML::readFields( const XMLNode& node, void* pInstance, const TypeInfo& typeInfo, string_view sourceName, std::initializer_list<string_view> listHandRead,
                                   AcceptAttributeFunction pfnHandRead )
     {

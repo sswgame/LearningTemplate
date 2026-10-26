@@ -8,6 +8,7 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/Container/string.h"
 
 #include "GameFramework/Base/Online/Bus/MixedBuildCodec.h"
@@ -159,7 +160,7 @@ namespace sw
         bool matchesTopic( string_view topic ) const
         {
             const string_view prefix( _pPrefix );
-            return topic.size() > prefix.size() && topic.substr( 0, prefix.size() ) == prefix;
+            return topic.size() > prefix.size() && StringUtil::startsWith( topic, prefix );
         }
         bool matches( const ServerBusMessage& message ) const { return matchesTopic( message._topic ); }
 

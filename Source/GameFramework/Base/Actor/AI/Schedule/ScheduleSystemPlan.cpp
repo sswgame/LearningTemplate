@@ -7,6 +7,7 @@
 
 #include "Core/Common/HashUtil.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
@@ -127,8 +128,7 @@ namespace sw
             listBoundary.push_back( candidate._startMinute );
             listBoundary.push_back( candidate._endMinute );
         }
-        std::sort( listBoundary.begin(), listBoundary.end() );
-        listBoundary.erase( std::unique( listBoundary.begin(), listBoundary.end() ), listBoundary.end() );
+        VectorUtil::sortUnique( listBoundary );
 
         int32 currentWinner = -2;
         int32 runStart      = 0;
