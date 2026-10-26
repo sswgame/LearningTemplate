@@ -597,6 +597,9 @@ namespace sw
 
     bool FrameRenderer::drawsBatchInPass( RenderPassType passType, const GPUMeshBatch& batch ) const
     {
+        // 변형 풀이 받지 못한 메시(상한 초과 · 버퍼 실패)는 어느 패스에서도 그리지 않는다 — 바인드 · 레스트 포즈로 대신 그리지 않는다(풀이 오류를 남겼다).
+        if ( batch._bDeformRefused != SW_FALSE )
+            return false;
         if ( FrameRendererUtil::filtersBatchesByMaterial( passType ) == false )
             return true;
         const GPUShaderPermutation* pPermutation =

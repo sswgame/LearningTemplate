@@ -9,6 +9,7 @@
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
+#include "Engine/Graphics/Mesh/MeshVertexAnimation.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Profiling/FrameProfiler.h"
@@ -87,6 +88,11 @@ namespace sw
             if ( batch._morphVertexBase != base )
                 _bBatchTablesDirty = SW_TRUE; // 표가 이 값을 든다. 바뀌면 다시 올린다
             batch._morphVertexBase = base;
+            // 모프 · 스킨이 필요한데 풀에 없다(상한 초과 · 버퍼 실패, 풀이 오류를 남겼다) — 레스트 포즈로 대신 그리지 않고 이 배치를 거른다.
+            // VAT 메시는 모프 풀이 아니라 VAT 풀이 판정한다(assignVertexAnimationBases).
+            const Mesh* pMesh        = batch._mesh.get();
+            const bool  bNeedsDeform = pMesh != nullptr && pMesh->findVertexAnimation() == nullptr && ( pMesh->hasSkin() || pMesh->isGPUMorphEnabled() );
+            batch._bDeformRefused    = ( bNeedsDeform && meshBase == GPUMeshMorphPool::kInvalidBase ) ? SW_TRUE : SW_FALSE;
         }
     }
 
@@ -98,6 +104,12 @@ namespace sw
             if ( batch._vertexAnimationBase != base )
                 _bBatchTablesDirty = SW_TRUE; // 표가 이 값을 든다. 바뀌면 다시 올린다
             batch._vertexAnimationBase = base;
+            // VAT 가 있는데 풀에 없다(상한 초과 · 버퍼 실패, 풀이 오류를 남겼다) — 바인드 포즈로 대신 그리지 않고 이 배치를 거른다.
+            const Mesh*                pMesh       = batch._mesh.get();
+            const MeshVertexAnimation* pAnimation  = ( pMesh != nullptr ) ? pMesh->findVertexAnimation() : nullptr;
+            const bool                 bNeedsTable = pAnimation != nullptr && pAnimation->isEmpty() == false;
+            if ( bNeedsTable && base == GPUVertexAnimationPool::kInvalidBase )
+                batch._bDeformRefused = SW_TRUE;
         }
     }
 

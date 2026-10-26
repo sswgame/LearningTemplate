@@ -53,7 +53,7 @@ namespace sw
         void release( IRHIDevice* pDevice );
 
     private:
-        /// @brief 풀 상한(원소 수, 원소 하나 = 16바이트이며 256MB)입니다. 넘는 테이블은 싣지 않고 그 메시는 바인드 포즈로 그립니다.
+        /// @brief 풀 상한(원소 수, 원소 하나 = 16바이트이며 256MB)입니다. 넘는 테이블은 싣지 않고 오류를 남기며 그 메시는 그리지 않습니다(바인드 포즈로 대신 그리지 않는다).
         static constexpr uint32 kMaxElementCount = 16u * 1024u * 1024u;
 
         RHIStructuredBufferSlot                           _table;

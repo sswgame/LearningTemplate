@@ -47,8 +47,13 @@ namespace sw
                     slot.release( pDevice );
                     return;
                 }
-                if ( slot.ensureCapacity( pDevice, kElementStride, elementCount, kReadUsage, true, false, pData ) )
-                    slot.upload( pDevice, pData, elementCount * kElementStride );
+                // 못 만들면 오류다 — 그 버퍼를 읽는 구간은 디스패치되지 않고(isDispatchable · isSkinDispatchable) 그 메시들은 그리지 않는다(baseOf).
+                if ( slot.ensureCapacity( pDevice, kElementStride, elementCount, kReadUsage, true, false, pData ) == false )
+                {
+                    SW_LOG_ERROR( "Could not create a mesh deform buffer (%# float4) - the meshes that need it are not drawn", elementCount );
+                    return;
+                }
+                slot.upload( pDevice, pData, elementCount * kElementStride );
             }
         };
     } // namespace
@@ -63,11 +68,13 @@ namespace sw
 
     uint32 GPUMeshMorphPool::baseOf( const Mesh* pMesh ) const
     {
+        // 결과 구간은 디스패치가 채울 때만 내준다. 버퍼를 못 만들어 디스패치되지 않는 구간을 내주면 정점 셰이더가 비어 있는 결과를 읽는다 —
+        // kInvalidBase 를 받은 배치는 그리지 않는다(GPUMeshBatch::_bDeformRefused). 레스트 포즈로 대신 그리지 않는다.
         const auto morphIt = _mapMorphEntry.find( pMesh );
         if ( morphIt != _mapMorphEntry.end() && morphIt->second._base != kInvalidBase )
-            return morphIt->second._base;
+            return isDispatchable() ? morphIt->second._base : kInvalidBase;
         const auto skinIt = _mapSkinBase.find( pMesh );
-        return ( skinIt != _mapSkinBase.end() ) ? skinIt->second : kInvalidBase;
+        return ( skinIt != _mapSkinBase.end() && isSkinDispatchable() ) ? skinIt->second : kInvalidBase;
     }
 
     bool GPUMeshMorphPool::isSkinDispatchable() const
@@ -244,7 +251,8 @@ namespace sw
             const uint32 count = pMesh->getDrawVertexCount(); // LOD 0 뒤의 낮은 단계 정점까지 변형한다
             if ( _skinVertexBase + resultOffset + count > kMaxPoolVertices )
             {
-                SW_LOG_WARNING( "The morph pool is full (%# vertices) - the remaining skinned meshes are drawn in the bind pose.", kMaxPoolVertices );
+                // 상한 초과는 오류다 — 이 메시는 풀에 없고(baseOf = kInvalidBase) 그 배치는 그리지 않는다(바인드 포즈로 대신 그리지 않는다).
+                SW_LOG_ERROR( "Mesh deform pool limit exceeded (%# vertices, skinned mesh needs %#) - that mesh is not drawn", kMaxPoolVertices, count );
                 continue;
             }
             GPUSkinInstanceRow row{};
@@ -284,18 +292,19 @@ namespace sw
         {
             if ( _skinPalette.ensureCapacity( pDevice, GPUMeshMorphPoolInternal::kElementStride, _skinBoneCount * shaderslot::kSkinFloat4PerBone + ( _skinMorphWeightCount + 3u ) / 4u,
                                               GPUMeshMorphPoolInternal::kReadUsage, true, false, nullptr ) == false )
-                SW_LOG_WARNING( "Failed to create the skin palette buffer (%# bones) - GPU skinning has no palette.", _skinBoneCount );
+                SW_LOG_ERROR( "Failed to create the skin palette buffer (%# bones) - skinned meshes are not drawn", _skinBoneCount );
         }
         else
         {
             _skinPalette.release( pDevice );
         }
 
-        // 버퍼나 UAV 를 못 받으면(백엔드 · 드라이버가 거절) 모프는 꺼진다. 그리기는 레스트 포즈로 살아 있다.
+        // 버퍼나 UAV 를 못 받으면(장치 메모리 부족 · 드라이버 거절) 디스패치가 돌지 않고 baseOf 가 kInvalidBase 를 내 변형 메시는 그리지 않는다.
+        // 레스트 포즈로 대신 그리지 않는다. 백엔드가 GPU 변형을 아예 못 하면 능력 질의(_bGPUMeshMorph)가 풀을 만들지 않는다 — 그쪽은 실패가 아니다.
         if ( bMorphBuffer == false )
-            SW_LOG_WARNING( "Failed to create the morph result buffer (%# vertices) - morphing is off.", _vertexCount );
+            SW_LOG_ERROR( "Failed to create the morph result buffer (%# vertices) - deformed meshes are not drawn", _vertexCount );
         else if ( _morph._uav == kInvalidDescriptorIndex )
-            SW_LOG_WARNING( "Failed to bind a UAV to the morph result buffer - morphing is off on this backend." );
+            SW_LOG_ERROR( "Failed to bind a UAV to the morph result buffer - deformed meshes are not drawn" );
     }
 
     bool GPUMeshMorphPool::updateMorphMeshes( IRHIDevice* pDevice, const vector<Mesh*>& listMorphMesh )
@@ -441,7 +450,7 @@ namespace sw
             entry._base = _morphAllocator.allocate( entry._count );
             if ( entry._base == SpanAllocator::kInvalidOffset )
             {
-                // 예산 초과. 이 메시는 풀에 넣지 않는다 — `baseOf` 가 kInvalidBase 를 반환하고 셰이더는 레스트 포즈로 그린다.
+                // 상한 초과는 오류다. 이 메시는 풀에 넣지 않는다 — `baseOf` 가 kInvalidBase 를 반환하고 그 배치는 그리지 않는다(레스트 포즈로 대신 그리지 않는다).
                 entry._base = kInvalidBase;
                 if ( entry._slot != kInvalidBase )
                 {
@@ -449,7 +458,7 @@ namespace sw
                     entry._slot = kInvalidBase;
                 }
                 if ( bWarnedFull == false )
-                    SW_LOG_WARNING( "The morph pool is full (%# vertices) - the remaining meshes are drawn in the rest pose.", kMaxPoolVertices );
+                    SW_LOG_ERROR( "Mesh deform pool limit exceeded (%# vertices) - the remaining morph meshes are not drawn", kMaxPoolVertices );
                 bWarnedFull = true;
                 continue;
             }

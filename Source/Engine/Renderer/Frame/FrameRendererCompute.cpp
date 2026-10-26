@@ -180,8 +180,8 @@ namespace sw
             _deform._meshMorphPool.uploadSkinPalettes( _pDevice, _gpuScene.getSkinPalettes(), _gpuScene.findSkinPaletteRows(), _gpuScene.findMorphWeights() );
         }
 
-        // 배치에 구간을 기록해 둔다. upload() 가 배치 테이블(g_SwBatches)에 싣는다. 풀에 들어가지 못한 메시는 kInvalidBase 라
-        // 셰이더가 레스트 포즈로 그린다.
+        // 배치에 구간을 기록해 둔다. upload() 가 배치 테이블(g_SwBatches)에 싣는다. 풀에 들어가지 못한 메시(상한 초과 · 버퍼 실패)는
+        // kInvalidBase 와 _bDeformRefused 를 받아 그리지 않는다 — 레스트 포즈로 대신 그리지 않는다(풀이 오류를 남겼다).
         _gpuScene.assignMorphBases( _deform._meshMorphPool );
         {
             SW_PROFILE_SCOPE( "RT.Deform.rebuildVertexAnimationPool" );
