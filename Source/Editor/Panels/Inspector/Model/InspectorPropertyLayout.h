@@ -91,8 +91,11 @@ namespace sw::editor
         static void collectPropertyGroups( const TypeInfo& type, const vector<hashed_string>& listDrawnName, const EditorListFilter& filter,
                                            vector<InspectorPropertyGroup>& outListGroup );
 
-        /** @brief 프로퍼티의 표시 이름을 반환합니다. DisplayName, 첫 별칭, 이름 순으로 찾습니다. */
-        static const utf8* getPropertyLabel( const PropertyInfo& prop );
+        /**
+         * @brief 프로퍼티의 표시 이름을 반환합니다. `DisplayName` 이 있으면 그것, 없으면 이름을 다듬은 것(`EditorDisplayNameUtil`, `_boundsRadius` → "Bounds Radius")입니다.
+         * @details 옛 이름(`Alias`)은 쓰지 않는다 — 이름을 바꾸기 전의 읽기 키라 이름표로 보이면 옛 이름이 나온다.
+         */
+        [[nodiscard]] static string getPropertyLabel( const PropertyInfo& prop );
         /**
          * @brief 프로퍼티 편집의 되돌리기 이름("Edit <표시 이름>")을 만듭니다. 이름이 비었거나 ImGui 라벨 조각("##…")이면 "Edit Property" 입니다.
          * @details 위젯 라벨("##value")을 되돌리기 이름으로 쓰면 History 목록에서 "##" 뒤가 숨겨져 모든 항목이 "Edit" 로 보인다.

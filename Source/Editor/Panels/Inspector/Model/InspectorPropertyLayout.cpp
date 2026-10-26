@@ -35,6 +35,7 @@ namespace sw::editor
     #include "Core/Math/MathUtil.h"
     #include "Core/Container/StringUtil.h"
 
+    #include "Editor/Common/Widgets/Model/EditorDisplayNameUtil.h"
     #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 
 namespace sw::editor
@@ -53,8 +54,8 @@ namespace sw::editor
                 if ( drawnName == prop._name )
                     return;
             }
-            if ( filter.matchesAny( { string_view{ prop._name.c_str() }, string_view{ getPropertyLabel( prop ) },
-                                      string_view{ prop._metadata->_category.c_str() } } ) == false )
+            const string label = getPropertyLabel( prop );
+            if ( filter.matchesAny( { string_view{ prop._name.c_str() }, string_view{ label }, string_view{ prop._metadata->_category.c_str() } } ) == false )
                 return;
 
             const string_view       category = prop._metadata->_category.empty() ? string_view{ "General" } : string_view{ prop._metadata->_category.c_str() };
@@ -76,13 +77,9 @@ namespace sw::editor
         }, true );
     }
 
-    const utf8* InspectorPropertyLayout::getPropertyLabel( const PropertyInfo& prop )
+    string InspectorPropertyLayout::getPropertyLabel( const PropertyInfo& prop )
     {
-        if ( prop._metadata->_displayName.empty() == false )
-            return prop._metadata->_displayName.c_str();
-        if ( prop._listAlias.empty() == false && prop._listAlias.front().empty() == false )
-            return prop._listAlias.front().c_str();
-        return prop._name.c_str();
+        return EditorDisplayNameUtil::chooseLabel( prop._metadata->_displayName, prop._name.c_str() );
     }
 
     string InspectorPropertyLayout::makeUndoLabel( const utf8* pPropertyLabel )

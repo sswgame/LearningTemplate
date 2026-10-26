@@ -437,7 +437,7 @@ namespace sw::editor
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "FavoriteProperty" ) );
             ImGui::SameLine();
         }
-        ImGui::TextUnformatted( InspectorPropertyLayout::getPropertyLabel( prop ) );
+        ImGui::TextUnformatted( InspectorPropertyLayout::getPropertyLabel( prop ).c_str() );
         EditorWidgets::drawTooltip( prop._metadata->_tooltip.c_str() );
         // 시나리오가 행 메뉴를 오른쪽 클릭으로 열 수 있게 이름 글에 레이블을 남긴다(`inspector.label.<타입>.<프로퍼티>`).
         fixed_string<constant::kMaxBuffer128> labelMark;
@@ -881,7 +881,7 @@ namespace sw::editor
                     return;
                 ImGui::PushID( nestedProp._name.c_str() );
                 ImGui::AlignTextToFramePadding();
-                ImGui::BulletText( "%s", InspectorPropertyLayout::getPropertyLabel( nestedProp ) );
+                ImGui::BulletText( "%s", InspectorPropertyLayout::getPropertyLabel( nestedProp ).c_str() );
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth( -FLT_MIN );
                 ImGui::BeginDisabled( editState == PropertyEditState::Disabled );

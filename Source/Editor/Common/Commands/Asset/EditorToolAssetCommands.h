@@ -29,7 +29,7 @@ namespace sw::editor
         string _componentName; ///< 화면에 보이는 이름(타입의 표시 이름)이다
         string _componentKey;  ///< 어느 컴포넌트인지 나타내는 키(`ComponentStableKey`). 같은 타입이 둘이어도 구분된다
         string _propertyName;  ///< 프로퍼티 이름. 되돌리기가 찾는 키다
-        string _propertyLabel; ///< 화면에 보이는 이름이다. `DisplayName` 메타를 쓰고, 없으면 프로퍼티 이름을 쓴다. 인스펙터와 같다
+        string _propertyLabel; ///< 화면에 보이는 이름이다. `DisplayName` 메타를 쓰고, 없으면 프로퍼티 이름을 다듬어 쓴다(`EditorDisplayNameUtil`). 인스펙터와 같다
         string _defaultValue;
         string _overriddenValue;
         bool   _bModified{ false };

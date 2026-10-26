@@ -105,14 +105,14 @@ namespace sw::editor
         const bool bUntrackableEdit = value.get() == nullptr || size == 0 || size > 512;
         if ( bUntrackableEdit )
             return;
-        trackActiveItemEdit( InspectorPropertyLayout::getPropertyLabel( prop ) );
+        trackActiveItemEdit( InspectorPropertyLayout::getPropertyLabel( prop ).c_str() );
     }
 
     void InspectorPropertyUndo::trackString( string* pPtr, const PropertyInfo& prop )
     {
         if ( pPtr == nullptr )
             return;
-        trackActiveItemEdit( InspectorPropertyLayout::getPropertyLabel( prop ) );
+        trackActiveItemEdit( InspectorPropertyLayout::getPropertyLabel( prop ).c_str() );
     }
 
     void InspectorPropertyUndo::trackLastItem( const utf8* pPropertyLabel )
@@ -123,7 +123,7 @@ namespace sw::editor
     void InspectorPropertyUndo::recordImmediateEdit( const PropertyInfo& prop )
     {
         EditorContext& editorContext = editor::getSubsystem<EditorContext>();
-        getFinishedEdits().push_back( captureSelectionBeforeEdit( editorContext, InspectorPropertyLayout::getPropertyLabel( prop ) ) );
+        getFinishedEdits().push_back( captureSelectionBeforeEdit( editorContext, InspectorPropertyLayout::getPropertyLabel( prop ).c_str() ) );
     }
 
     void InspectorPropertyUndo::commitFinishedEdits()
