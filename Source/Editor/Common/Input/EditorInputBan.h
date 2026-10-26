@@ -2,7 +2,7 @@
  * @file EditorInputBan.h
  * @brief 패널 티어(Panels · AssetActions · Viewport)에서 imgui.h 끝에 붙는 헤더입니다. ImGui 입력 · 팝업 · 끌어 놓기 함수를 `[[deprecated]]` 로 다시 선언합니다.
  * @details 이 티어들은 `Source/Editor/CMakeLists.txt` 가 ImGui 의 사용자 헤더 자리(`IMGUI_INCLUDE_IMGUI_USER_H` + `IMGUI_USER_H_FILENAME`)에 이 파일을 두고
- *          사용 중단 경고를 오류로 올린다(`SW_EDITOR_INPUT_BAN`, 남은 호출이 0 이 된 티어부터 켠다 — EditorUX 10-5 I4). imgui.h 가 선언을 다 마친 뒤에 붙으므로
+ *          사용 중단 경고를 오류로 올린다(`SW_EDITOR_INPUT_BAN`, 기본 ON — 세 층의 남은 호출이 0 이 되어 I4 에 켰다). imgui.h 가 선언을 다 마친 뒤에 붙으므로
  *          이 파일은 imgui.h 를 include 하지 않는다(프로젝트 헤더가 서드파티 헤더를 include 하지 않는 규칙과도 맞는다). 패널이 imgui.h 를 include 하는 순간 금지가 따라온다.
  *          패널이 아래 함수를 부르면 컴파일이 멈춘다. 대신 쓸 곳: 단축키 · 단추 · 몸짓은 에디터 입력 맵(`EditorInputActions`, `editor.input.xml`),
  *          맥락 메뉴 · 끌어 놓기는 `EditorInputGUI`(`Common/Input`). 어댑터 자신(`Common/Input`, 티어 4)과 OS 입력을 ImGui 로 넣는 `Common/Backend` 는 이 헤더를 받지 않는다.

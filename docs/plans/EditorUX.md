@@ -290,21 +290,26 @@ ImGui 의 `BeginPopupContextItem` · `BeginPopupContextWindow` 는 **뗄 때** �
 
 1. 형식: 티어별 오브젝트 라이브러리(`EditorTier<N>View`)가 이미 따로 컴파일되므로 `Panels` · `AssetActions`(티어 6) · `Viewport`(티어 5) 부분에만 `EditorInputBan.h` 를 붙입니다(구현은 강제 include 대신 imgui.h 의 사용자 헤더 자리 `IMGUI_USER_H_FILENAME` — imgui.h 가 선언을 마친 끝에 붙어 프로젝트 헤더가 imgui.h 를 include 하지 않는다). 이 헤더가 10-2 의 ImGui 입력 · 팝업 · 끌어 놓기 함수를 `[[deprecated("Common/Input 을 쓴다")]]` 로 다시 선언하고, 그 부분의 경고를 오류로 올립니다(clang-cl · MSVC `/we4996`, clang · gcc `-Werror=deprecated-declarations`). 패널이 부르면 컴파일이 멈춥니다. 어댑터 자신(`Common/Input`, 티어 4)은 받지 않습니다. 남은 호출이 0 이 된 티어부터 켭니다(I4).
    다른 후보 둘은 버렸습니다: 패널이 `imgui.h` 를 include 하지 못하게 하는 래퍼는 패널이 그리기 함수 수백 개를 다 감싸야 하고, 패널에 액션 핸들만 주는 인터페이스는 같은 이유로 그리기를 막는다.
-2. 린트: 함수 재선언으로 막지 못하는 `ImGuiIO` 입력 필드 읽기(`io.KeyCtrl` · `io.MouseDown` · `io.MouseDelta` · `io.MouseWheel` …)만 셉니다. **형식으로 못 막는 이유**: 같은 `ImGui::GetIO()` 가 입력이 아닌 필드(`DisplaySize` · `Fonts` · `DeltaTime` · `ConfigFlags`)에도 쓰여 함수 하나를 막으면 그것까지 막고, 구조체 필드는 `[[deprecated]]` 로 다시 선언할 수 없다. 기준선은 전체 건수(`[baseline] total`, 지금 87 — 10-2 의 75 보다 넓게 `MousePos` 까지 센다)이고 늘면 실패, 줄면 낮춥니다. 커밋 훅은 추가한 줄의 읽기를 바로 막으므로 파일별 상한은 두지 않았습니다(기존 기준선 게이트 틀 `BaselineSourceGate` 를 그대로 쓴다). 허용은 이유와 함께: `Common/Backend`(OS 입력을 ImGui 로 넣는 곳), `Common/Input`(어댑터 자신), `Panels/Scene/GameViewPanel.cpp`(게임으로 넘기는 전달). 이유를 쓸 수 없는 규칙은 두지 않습니다.
+2. 린트: 함수 재선언으로 막지 못하는 `ImGuiIO` 입력 필드 읽기(`io.KeyCtrl` · `io.MouseDown` · `io.MouseDelta` · `io.MouseWheel` …)만 셉니다. **형식으로 못 막는 이유**: 같은 `ImGui::GetIO()` 가 입력이 아닌 필드(`DisplaySize` · `Fonts` · `DeltaTime` · `ConfigFlags`)에도 쓰여 함수 하나를 막으면 그것까지 막고, 구조체 필드는 `[[deprecated]]` 로 다시 선언할 수 없다. 기준선(`[baseline] total`)은 처음 87(10-2 의 75 보다 넓게 `MousePos` 까지 센다)에서 I4 에 0 이 됐습니다 — 하나라도 생기면 실패합니다(기존 기준선 게이트 틀 `BaselineSourceGate` 를 그대로 쓴다). 허용은 이유와 함께: `Common/Backend`(OS 입력을 ImGui 로 넣는 곳), `Common/Input`(어댑터 자신). 게임 뷰의 게임 입력 전달도 어댑터의 포인터 상태를 읽어 예외가 없어졌습니다. 이유를 쓸 수 없는 규칙은 두지 않습니다.
 
-**폴더 이동과의 순서.** 새 파일은 이동이 건드리지 않는 곳에 둡니다: ImGui 없는 형식은 `Common/Commands`, ImGui 어댑터는 새 폴더 `Common/Input`(층 표 `GenerateEditorLayers.toml` 에 티어 4 한 줄). 기존 세 파일(`Common/Input/EditorCommandGUI.*` · `EditorContextMenuExtension.h` · `EditorPopupManager.*`)을 `Common/Input` 으로 옮기면 `Viewport/EditorViewportClient.cpp` · `EditorViewportToolbar.cpp` 의 include 도 바뀌므로 **옮김은 I3f(뷰포트)와 같은 작업자가** 합니다.
+**폴더 이동과의 순서.** 새 파일은 이동이 건드리지 않는 곳에 둡니다: ImGui 없는 형식은 `Common/Commands`, ImGui 어댑터는 새 폴더 `Common/Input`(층 표 `GenerateEditorLayers.toml` 에 티어 4 한 줄). 기존 `Common/GUI` 의 `EditorCommandGUI.*` · `EditorPopupManager.*` 는 `Common/Input` 으로 옮겼고 `EditorContextMenuExtension.h` 는 명령 등록에 합쳐 지웠습니다(I3g).
 
 ### 10-5. 구현 단위와 순서
 
 파일 영역이 겹치지 않게 나눴습니다. IE → I0 → I1 은 차례로, I2 는 I0 와 함께, I3 들은 I1 뒤에 서로 나란히 할 수 있습니다.
 
-상태(2026-10-27): 첫 안(범위 · 몸짓 바인딩 형식을 `Common/Commands` 에 새로 만드는 것)은 엔진 입력 맵과 겹쳐 버리고 아래로 다시 나눴습니다. **IE · I0 · I1 · I2 를 구현했습니다**(브랜치 `wt/inputlayer`, 통합 빌드 · EngineTest `TestInputMapToolInput` · EditorTest · 시나리오 `shortcuts` 확인 전). I3 · I4 가 남았습니다. 구현하며 정한 것:
+상태(2026-10-27): 첫 안(범위 · 몸짓 바인딩 형식을 `Common/Commands` 에 새로 만드는 것)은 엔진 입력 맵과 겹쳐 버리고 아래로 다시 나눴습니다. **IE · I0 ~ I4 를 모두 구현했습니다**(브랜치 `wt/inputlayer`, 단위마다 한 커밋. 통합 빌드 · EngineTest · EditorTest · 시나리오 `shortcuts` · `workflow` · `contentbrowser` 확인 전). 금지 티어 세 층의 ImGui 입력 함수 호출은 0 이고 `SW_EDITOR_INPUT_BAN` 은 기본 ON(기존 빌드 폴더는 캐시가 OFF 를 들고 있어 `-DSW_EDITOR_INPUT_BAN=ON` 으로 다시 구성한다), 린트 기준선은 0 입니다. 구현하며 정한 것:
 - `<bind modifier>` 는 왼쪽 수정 키 Chord 가 아니라 수정 키 마스크 Shortcut(`modifier="Ctrl+Shift"`, 정확 일치)이다 — 셸 · UI 맵의 수정 키 바인딩도 오른쪽 수정 키에 듣고, 다른 수정 키를 함께 누르면 발화하지 않는다.
 - 에디터 맵은 `Resource/editor/input/editor.input.xml`(에디터 팩, `EditorToolDefaults::_editorInputMap`)이고 확장은 `SW_EDITOR_INPUT_MAP` 으로 맵을 더한다. 사용자 재배치는 `Saved/Editor/editorbindings.xml` — 셸 맵과 같은 형식에 `modifier` 속성을 더했다.
 - 키 길: 에디터 창이 키보드를 가지면 `ImGuiEditor::processEvent` 는 OS 키 누름을 넘기지 않고, `EditorInputActions` 가 ImGui 가 받은 키를 입력 매니저에 넣으며 키보드 포커스를 `Tool` 로 둔다(주 창 · 떼어 낸 창 · 자동화 `EditorKey` 가 한 길). 게임 뷰가 포커스면 OS 키가 그대로 간다. 셸 · UI 맵은 `Tool` 포커스 동안 키를 보지 않는다(`InputMap::setToolKeyboardReader`).
 - 포커스 패널 → 레이어는 패널을 그리는 `EditorPanelManager` 를 고치지 않고 `EditorInputActions` 가 프레임마다 `isWindowFocused` 로 읽는다.
 - 단축키 창의 지우기(Backspace)는 없앴다(재배치 형식은 바인딩마다 키를 바꾸지 바인딩을 없애지 못한다). Exit 의 표시 전용 Alt+F4 글자도 없앴다.
-- 확장 맥락 메뉴 항목(`SW_EDITOR_CONTEXT_MENU_ENTRY`)과 세 파일 옮김은 I3(패널 · 뷰포트 전환)과 함께 한다 — 지금 그것을 쓰는 곳이 Hierarchy · ContentBrowser · 뷰포트다.
+- 확장 맥락 메뉴 항목은 코어와 같은 `SW_EDITOR_CONTEXT_COMMAND` 다(I3g — `EditorContextMenuExtension.h` 삭제, 테마파크 항목도 옮김). `EditorCommandGUI` · `EditorPopupManager` 는 `Common/Input` 으로 옮겼다(같은 티어 4).
+- 메뉴에서 고른 명령은 다음 프레임 첫머리에 실행한다(`EditorInputActions::queueCommand`) — 그리는 중인 목록(컴포넌트 카드 · 행)이 명령 뒤에 남지 않는다.
+- 맥락 메뉴는 둘이다: 대상이 id 로 풀리는 것(오브젝트 · 컴포넌트 · 에셋 · 뷰포트)은 명령 등록부의 `drawContextMenuFor`, 대상이 그 프레임의 주소인 행 메뉴(속성 행 · 로그 행 · 표 칸 · 시간 배율)는 R1 만 맞춘 `beginItemContextMenu`. 메뉴 항목의 시나리오 표식은 `menu.<명령 id>` 다.
+- 뷰포트 비행은 모드 레이어 `Editor.Viewport.Fly`(우선순위 20, 아래를 막는다)를 오른쪽 단추를 누른 동안 켜서 가른다 — 같은 W 가 기즈모 모드(`Editor.Panel.scene_view`)와 겹치지 않는다. 패널 레이어는 포커스로 켜지므로 W · F · 숫자 키는 씬 뷰가 포커스일 때만 듣는다(예전에는 호버로도 들었다).
+- 콘텐츠 브라우저 대상 id 는 절대 경로를 페이로드 이름 표에 올린 값이다. 컴포넌트 메뉴는 메인 · 미리보기 카드 · 계층 창 행이 같다(미리보기 카드에도 복사 · 옮기기 · 프리셋이 생겼다).
+- 남긴 것: 목록 위젯(`EditorWidgets`)의 화살표 · Enter 와 빠른 실행 창의 Enter 는 글을 치는 동안 듣는 편집 키라 입력 맵(글 입력 중 멈춤)에 두지 않았다. `imgui_internal.h` 의 다른 겹(`IsKeyPressed( key, flags, owner )`)은 금지 헤더가 다시 선언하지 않는다.
 
 | 단위 | 파일 영역 | 할 일 | 선행 |
 |---|---|---|---|

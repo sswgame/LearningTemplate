@@ -326,10 +326,10 @@ endforeach()
 # 2-1) 패널 티어의 ImGui 입력 함수 금지(EditorUX 10-4 · 10-5 I2 — 형식이 먼저, 린트는 형식이 못 막는 `ImGuiIO` 필드 읽기만)
 #      금지 층(Panels · AssetActions · Viewport)이 든 티어의 View 부분은 imgui.h 끝(사용자 헤더 자리)에 `Common/Input/EditorInputBan.h` 를 붙이고
 #      사용 중단 경고를 오류로 올린다 — 패널이 `ImGui::IsKeyPressed` · `OpenPopup` · `BeginDragDropSource` … 를 부르면 컴파일이 멈춘다.
-#      남은 호출이 0 이 된 티어부터 켠다(I4). 그때까지 꺼 둔다. 그 티어에 금지 층이 아닌 층이 섞이면 그 층까지 막히므로 구성에서 멈춘다.
+#      세 층(Panels 6 · AssetActions 6 · Viewport 5)의 남은 호출이 0 이 되어 기본으로 켠다(I4). 그 티어에 금지 층이 아닌 층이 섞이면 그 층까지 막히므로 구성에서 멈춘다.
 #      켤 때 확인할 것: View 부분이 EditorModule 의 PCH 를 다시 쓰면(`sw_addModulePart`) 정의가 PCH 와 같아야 한다.
 # ------------------------------------------------------------------------------
-option(SW_EDITOR_INPUT_BAN "Panel tiers fail to compile when they call ImGui input/popup/drag functions directly (EditorInputBan.h)" OFF)
+option(SW_EDITOR_INPUT_BAN "Panel tiers fail to compile when they call ImGui input/popup/drag functions directly (EditorInputBan.h)" ON)
 set(listEditorInputBanLayer Panels AssetActions Viewport)
 if(SW_EDITOR_INPUT_BAN)
 	foreach(tier IN LISTS SW_EDITOR_TIER_LIST)

@@ -12,8 +12,8 @@ ImGui 입력 **함수**(`IsKeyPressed` · `OpenPopup` · `BeginDragDropSource` �
   - 왜 형식으로 못 막는가: 필드는 함수가 아니라 `[[deprecated]]` 로 다시 선언할 수 없고, 필드를 내주는 `ImGui::GetIO()` 는 입력이 아닌 필드
     (`DisplaySize` · `Fonts` · `DeltaTime` · `ConfigFlags`)에도 쓰여 함수째 막으면 그것까지 막힌다.
 
-예외(`rules/CheckEditorInputCalls.toml` 의 `[exemption]`, 경로 앞머리 → 이유): OS 입력을 ImGui 로 넣는 `Common/Backend`, 어댑터 자신 `Common/Input`,
-게임으로 넘기는 `Panels/Scene/GameViewPanel.cpp`. 예외 경로에 읽기가 하나도 없으면 낡은 예외로 실패한다.
+예외(`rules/CheckEditorInputCalls.toml` 의 `[exemption]`, 경로 앞머리 → 이유): OS 입력을 ImGui 로 넣는 `Common/Backend`, 어댑터 자신 `Common/Input`.
+예외 경로에 읽기가 하나도 없으면 낡은 예외로 실패한다.
 
 기준선은 지금 건수다(`[baseline] total`). 커밋 훅은 추가한 줄에 걸친 읽기만, 전체 훑기는 기준선을 넘을 때만 실패한다(`LintGate.BaselineSourceGate`).
 

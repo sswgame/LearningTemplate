@@ -15,6 +15,7 @@
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorDebugHUDControls.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -42,13 +43,13 @@ namespace sw::editor
         /** @brief 보조 창에서 게임으로 넘기는 단추입니다(ImGui 번호와 게임 단추의 짝). 순서가 `_forwardedButtonMask` 의 비트다. */
         struct ForwardedButton
         {
-            ImGuiMouseButton _imguiButton;
-            MouseButton      _button;
+            EditorMouseButton _editorButton;
+            MouseButton       _button;
         };
         constexpr ForwardedButton kForwardedButtons[] = {
-            {  ImGuiMouseButton_Left,   MouseButton::Left},
-            { ImGuiMouseButton_Right,  MouseButton::Right},
-            {ImGuiMouseButton_Middle, MouseButton::Middle}
+            {  EditorMouseButton::Left,   MouseButton::Left},
+            { EditorMouseButton::Right,  MouseButton::Right},
+            {EditorMouseButton::Middle, MouseButton::Middle}
         };
 
         /** @brief 런타임 UI 가 고른 OS 커서 모양을 ImGui 커서 모양으로 바꿉니다(에디터에서는 ImGui 가 OS 커서를 쥔다). */
@@ -121,26 +122,27 @@ namespace sw::editor
         const bool           bHovered      = ImGui::IsWindowHovered( ImGuiHoveredFlags_RootAndChildWindows );
         if ( bDetached == false && _forwardedButtonMask == 0 )
             return; // 주 창에 있으면 주 창의 메시지가 게임으로 간다(`ImGuiEditor::processEvent`)
-        const ImGuiIO& io       = ImGui::GetIO();
-        const int32    x        = static_cast<int32>( MathUtil::round( io.MousePos.x - pMainViewport->Pos.x ) );
-        const int32    y        = static_cast<int32>( MathUtil::round( io.MousePos.y - pMainViewport->Pos.y ) );
-        const bool     bForward = bDetached && bHovered;
-        if ( bForward && ( io.MouseDelta.x != 0.0f || io.MouseDelta.y != 0.0f ) )
+        // 포인터 상태는 어댑터 한 곳에서 읽는다(패널 티어는 ImGui 입력 함수를 부르지 않는다 — EditorInputBan.h).
+        const EditorPointerState pointer  = EditorInputGUI::readPointer();
+        const int32              x        = static_cast<int32>( MathUtil::round( pointer._position._x - pMainViewport->Pos.x ) );
+        const int32              y        = static_cast<int32>( MathUtil::round( pointer._position._y - pMainViewport->Pos.y ) );
+        const bool               bForward = bDetached && bHovered;
+        if ( bForward && ( pointer._delta._x != 0.0f || pointer._delta._y != 0.0f ) )
             (void)input.postRawEvent( RawInputEvent::makeMouseMove( x, y ) ); // 큐가 차면 이 프레임의 이동만 잃는다 — 다음 이동이 위치를 다시 준다
         for ( uint32 index = 0; index < static_cast<uint32>( std::size( kForwardedButtons ) ); ++index )
         {
             const ForwardedButton& button       = kForwardedButtons[index];
             const uint8            bit          = static_cast<uint8>( 1u << index );
-            const bool             bPressedHere = bForward && ImGui::IsMouseClicked( button._imguiButton );
+            const bool             bPressedHere = bForward && pointer.wasPressed( button._editorButton );
             if ( bPressedHere && input.postRawEvent( RawInputEvent::makeMouseButtonDown( button._button, x, y ) ) )
                 _forwardedButtonMask = static_cast<uint8>( _forwardedButtonMask | bit );
             // 뗌은 넣은 누름의 짝이면 패널 밖이어도 넣는다 — 안 넣으면 게임에서 단추가 눌린 채 남는다.
-            const bool bReleasedForwarded = ( _forwardedButtonMask & bit ) != 0 && ImGui::IsMouseReleased( button._imguiButton );
+            const bool bReleasedForwarded = ( _forwardedButtonMask & bit ) != 0 && pointer.wasReleased( button._editorButton );
             if ( bReleasedForwarded && input.postRawEvent( RawInputEvent::makeMouseButtonUp( button._button, x, y ) ) )
                 _forwardedButtonMask = static_cast<uint8>( _forwardedButtonMask & ~bit );
         }
-        if ( bForward && io.MouseWheel != 0.0f )
-            (void)input.postRawEvent( RawInputEvent::makeMouseWheel( io.MouseWheel ) );
+        if ( bForward && pointer._wheel != 0.0f )
+            (void)input.postRawEvent( RawInputEvent::makeMouseWheel( pointer._wheel ) );
     }
 
     void GameViewPanel::onPanelCollapsed()

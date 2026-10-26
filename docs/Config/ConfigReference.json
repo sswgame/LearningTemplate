@@ -5270,7 +5270,7 @@
   {
    "name": "SW_EDITOR_INPUT_BAN",
    "type": "BOOL",
-   "default": "OFF",
+   "default": "ON",
    "choices": [],
    "description": "Panel tiers fail to compile when they call ImGui input/popup/drag functions directly (EditorInputBan.h)",
    "presets": []

@@ -2,12 +2,11 @@
 # 이 게이트는 형식(EditorInputBan.h 의 [[deprecated]] 재선언)이 못 막는 ImGuiIO 입력 필드 읽기만 센다 — 필드는 함수가 아니라 다시 선언할 수 없고,
 # 필드를 내주는 GetIO() 는 입력이 아닌 필드(DisplaySize · Fonts · DeltaTime)에도 쓰여 함수째 막을 수 없다.
 
-# 전체 훑기의 기준선 — 지금 있는 건수다(패널을 입력 맵 · EditorInputGUI 로 옮기며 낮춘다, EditorUX 10-5 I3). 늘면 실패한다(커밋 훅은 추가한 줄만 본다).
+# 전체 훑기의 기준선 — 0 이다(EditorUX 10-5 I4 — 패널 · 위젯 · 뷰포트가 모두 입력 맵 · EditorInputGUI 로 옮겼다). 하나라도 생기면 실패한다.
 [baseline]
-total = 87
+total = 0
 
 # 읽어도 되는 경로 앞머리 → 이유.
 [exemption]
 "Source/Editor/Common/Backend/" = "OS 입력을 ImGui 로 넣고(플랫폼 백엔드) ImGui 가 받은 키를 엔진 입력으로 옮기는 자리 — 입력 맵보다 아래다"
 "Source/Editor/Common/Input/" = "어댑터 자신 — 맥락 메뉴의 끌기 거리(MouseDragMaxDistanceSqr)처럼 입력 맵이 모르는 ImGui 상태를 읽는 유일한 자리"
-"Source/Editor/Panels/Scene/GameViewPanel.cpp" = "떼어 낸 게임 뷰의 마우스 · 휠을 게임 입력(InputManager)으로 넘기는 전달 — 에디터 입력이 아니라 게임 입력이다"
