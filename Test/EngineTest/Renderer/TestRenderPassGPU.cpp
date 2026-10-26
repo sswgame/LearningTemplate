@@ -6207,9 +6207,14 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, HalfResolutionAttachmentCoversIts
 {
     sw::string pipelineText;
     SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( "engine/pipeline/forwardpipelinestaged.xml", pipelineText ) );
-    const sw::string bloomDecl = "<RenderPassAttachment _name=\"BloomColor\"";
-    SW_ASSERT_TRUE( pipelineText.find( bloomDecl ) != sw::string::npos );
-    pipelineText              = sw::StringUtil::replace( pipelineText, bloomDecl, bloomDecl + " _resolutionDivisor=\"2\"" );
+    // 장면 색 · 깊이와 후처리 사슬을 모두 나눈다 — 꺼지면 원본을 가리키는 패스(블룸 · 외곽선)는 출력과 원본의 형식 · 나눗수가 같아야 해서(검증 3-6)
+    // BloomColor 만 나눌 수 없다. 원본 크기 SceneColor 는 나누지 않은 파이프라인으로 따로 그려 견준다.
+    for ( const utf8* pName : { "SceneColor", "SceneDepth", "DepthOfFieldColor", "MotionBlurColor", "BloomColor", "OutlineColor" } )
+    {
+        const sw::string declaration = sw::string( "<RenderPassAttachment _name=\"" ) + pName + "\"";
+        SW_ASSERT_TRUE( pipelineText.find( declaration ) != sw::string::npos );
+        pipelineText = sw::StringUtil::replace( pipelineText, declaration, declaration + " _resolutionDivisor=\"2\"" );
+    }
     const sw::string halfPath = test::makeTempPath( "halfbloomforwardpipeline.xml" );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( halfPath, pipelineText ) );
 
@@ -6282,8 +6287,18 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, HalfResolutionAttachmentCoversIts
             {
                 bOk = renderSceneFrame( renderer, device.get(), scene );
             }
-            bOk = bOk && sceneColor.readTransient( renderer, "SceneColor" ) && bloomColor.readTransient( renderer, "BloomColor" );
+            bOk = bOk && bloomColor.readTransient( renderer, "BloomColor" );
             SW_EXPECT_TRUE_MSG( bOk, ( label + "그리거나 되읽지 못했다" ).c_str() );
+
+            // 견줄 원본 크기 SceneColor — 나누지 않은 같은 파이프라인으로 같은 장면을 그린다.
+            sw::FrameRenderer referenceRenderer;
+            bOk = bOk && referenceRenderer.initialize( device.get(), "engine/pipeline/forwardpipelinestaged.xml" ) && referenceRenderer.isReady();
+            for ( uint32 frameIndex = 0; frameIndex < kWarmupFrameCount && bOk; ++frameIndex )
+            {
+                bOk = renderSceneFrame( referenceRenderer, device.get(), scene );
+            }
+            bOk = bOk && sceneColor.readTransient( referenceRenderer, "SceneColor" );
+            SW_EXPECT_TRUE_MSG( bOk, ( label + "원본 크기 SceneColor 를 그리거나 되읽지 못했다" ).c_str() );
         }
         if ( bOk == false )
             continue;
