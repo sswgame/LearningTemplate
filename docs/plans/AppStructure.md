@@ -23,6 +23,7 @@
 | A5 | App · Server 중복을 `Source/ModuleHost` 한 곳으로: 호스트 범위 세우기(`ModuleImageHostSubsystem::initializeHostScope`), 리로드 소유(Server 도 `module.reload` · `Module.*` 를 얻는다), 표준 입력 명령 채널(`StandardInputCommands`) |
 | A6 | 낡은 주석 정리 |
 | A7 | 남은 활성 창 `IWindow::getActiveWindow` · `setActiveWindow` 를 범위로(2026-10-24). 엔진 범위 서브시스템 `MainWindowSubsystem`(`Engine/Window`)이 주 창을 **소유**한다 — 만드는 쪽이 `adopt` 로 넘기고 엔진 종료 때 RHI 가 내려간 뒤 파괴한다. 읽는 쪽은 `engine::findSubsystem<MainWindowSubsystem>()` / `editor::findSubsystem<…>()` 로 찾고 서비스가 없는 호스트(서버 · 테스트 하네스)에서는 "창 없음". `App::_window` 는 관찰 포인터 `_pWindow` 가 되고 `~IWindow` 의 전역 끊기가 사라졌다(소유자가 하나라 죽은 포인터를 읽을 길이 없다). 서비스 목록의 선택 행(`EngineServiceList.xxx`). `WindowTest.MainWindowSubsystemOwnsTheWindow` |
+| A8 | (2026-10-27, 감사 SC #3 · #10 · #13, 실행 미확인) 손으로 두 벌 적던 종료 순서를 호스트 부품 표(`ModuleHost/HostPart.h`)의 의존 선언으로 — App · Server 가 엔진 뒤에 세우고 앞에서 역순으로 내린다, bool 셋 삭제, 종료 신호는 서버 호스트 범위로. 리로드 콜백은 `Subscription`(배치 직전은 목록) · `DrainReason`. 서버 문맥 정적 칸 삭제(호스트 범위 `bind`). 확인: `EngineInitSequenceTest.HostPartsStartInTheDeclaredOrder`, `ServerBootTest.StartsTicksAndExitsWithoutWindowOrGPU`, `ModuleHostTest.ShutdownDetachesEveryCallbackItRegistered`, `GameNetSessionTest` |
 
 ## 3. 남은 것
 
