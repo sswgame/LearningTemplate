@@ -1,0 +1,9 @@
+# CheckScriptRepoPaths 의 규칙 데이터 — 게이트는 Scripts/lint/selftest/CheckScriptRepoPaths.py.
+
+# 저장소에 없어도 되는 경로 → 이유. 키가 .py 로 끝나면 그 스크립트 전체, 아니면 그 글자 하나다. 대상이 사라지면 기반이 "낡은 예외" 로 알린다.
+[exemption]
+"Resource/engine/shaders/probe.hlsl" = "CheckShaderConventions 셀프테스트가 임시 저장소에 만드는 가상 셰이더 경로다"
+"Resource/engine/shaders/probe.hlsli" = "CheckShaderConventions 셀프테스트가 임시 저장소에 만드는 가상 셰이더 경로다"
+"Scripts/lint/conventions/LineRules.py" = "규칙마다 badSampleFile 로 Source/Probe/… 가상 파일을 적는다 — 셀프테스트 조각이 임시 저장소에 만드는 경로다"
+"Scripts/lint/conventions/Model.py" = "규칙 모델의 기본 조각 경로(Source/Probe/Sample.cpp)다 — 임시 저장소의 가상 파일이다"
+"Scripts/lint/selftest/CheckCodeConventionsSelfTest.py" = "규칙 조각을 Source/Probe/… 가상 파일로 임시 저장소에 만드는 셀프테스트다"
