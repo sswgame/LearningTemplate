@@ -2,6 +2,9 @@
 
 #include "Editor/Common/GUI/EditorRedrawUtil.h"
 
+#include "Editor/Common/Commands/Scene/EditorLightProbeBakeSession.h"
+#include "Editor/Common/Commands/Scene/EditorReflectionProbeBakeSession.h"
+#include "Editor/Common/Workspace/AssetHotReload.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
@@ -28,12 +31,19 @@ namespace sw::editor
         const bool bRunning = ( EditorPlaySession::isPlayerActive() || EditorPlaySession::isSimulating() ) && EditorPlaySession::isPaused() == false;
         const bool bToast   = pContext->getSubsystem<EditorNotificationManager>().getNotifications().empty() == false;
         const bool bAnimate = pContext->getSubsystem<EditorRenderViews>().isAnimationRequested();
-        uint32     reasons  = 0;
+        // 프레임 단계가 나르는 일 — 워커가 끝내도 창 메시지가 오지 않으므로 끝날 때까지 깨어 있는다.
+        const EditorLightProbeBakeSession* const      pLightBake        = editor::findSubsystem<EditorLightProbeBakeSession>();
+        const EditorReflectionProbeBakeSession* const pReflectionBake   = editor::findSubsystem<EditorReflectionProbeBakeSession>();
+        const bool                                    bLightBaking      = pLightBake != nullptr && pLightBake->isRunning();
+        const bool                                    bReflectionBaking = pReflectionBake != nullptr && pReflectionBake->isRunning();
+        const bool                                    bWorking          = pContext->getSubsystem<AssetHotReload>().isImportBusy() || bLightBaking || bReflectionBaking;
+        uint32                                        reasons           = 0;
         reasons |= bInput ? static_cast<uint32>( EditorRedrawReason::Input ) : 0u;
         reasons |= bActive ? static_cast<uint32>( EditorRedrawReason::ActiveItem ) : 0u;
         reasons |= bRunning ? static_cast<uint32>( EditorRedrawReason::Simulation ) : 0u;
         reasons |= bToast ? static_cast<uint32>( EditorRedrawReason::Notification ) : 0u;
         reasons |= bAnimate ? static_cast<uint32>( EditorRedrawReason::Animation ) : 0u;
+        reasons |= bWorking ? static_cast<uint32>( EditorRedrawReason::BackgroundWork ) : 0u;
         return reasons;
     }
 } // namespace sw::editor

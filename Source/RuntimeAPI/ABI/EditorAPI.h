@@ -25,12 +25,13 @@ namespace sw
      */
     enum class EditorRedrawReason : uint32
     {
-        None         = 0,
-        Input        = 1u << 0, ///< ImGui 가 이번 프레임에 입력 이벤트를 받았거나 마우스 단추가 눌려 있다
-        ActiveItem   = 1u << 1, ///< 끌기 · 글 입력 · 창 옮기기 · 끌어 놓기처럼 잡고 있는 항목이 있다
-        Simulation   = 1u << 2, ///< 에디터 플레이 · 시뮬레이션이 돈다
-        Notification = 1u << 3, ///< 알림 토스트 · 진행 막대가 떠 있다(시간이 지나면 사라진다)
-        Animation    = 1u << 4, ///< 패널이 연속 프레임을 청했다(틱하는 미리보기 씬 등, `EditorRenderViews::requestAnimationFrame`)
+        None           = 0,
+        Input          = 1u << 0, ///< ImGui 가 이번 프레임에 입력 이벤트를 받았거나 마우스 단추가 눌려 있다
+        ActiveItem     = 1u << 1, ///< 끌기 · 글 입력 · 창 옮기기 · 끌어 놓기처럼 잡고 있는 항목이 있다
+        Simulation     = 1u << 2, ///< 에디터 플레이 · 시뮬레이션이 돈다
+        Notification   = 1u << 3, ///< 알림 토스트 · 진행 막대가 떠 있다(시간이 지나면 사라진다)
+        Animation      = 1u << 4, ///< 패널이 연속 프레임을 청했다(틱하는 미리보기 씬 · 읽는 중인 썸네일, `EditorRenderViews::requestAnimationFrame`)
+        BackgroundWork = 1u << 5, ///< 프레임마다 나아가는 일이 있다(원본 임포트 · 라이트 · 반사 프로브 굽기) — 워커가 끝내도 창 메시지는 오지 않는다
     };
 
     // ------------------------------------------------------------------------------
