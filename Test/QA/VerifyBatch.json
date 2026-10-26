@@ -719,6 +719,11 @@
       "source": "docs/plans/BuildSpeed.md 12절", "result_doc": "docs/plans/BuildSpeed.md 12절"
     },
     {
+      "id": "build-speed-lto-cache", "title": "Shipping ThinLTO 링크 캐시 — 빈 캐시 전체 · 캐시 찬 전체 · 엔진 cpp 하나 고친 증분의 링크 시간과 최대 메모리", "kind": "measure", "config": "Shipping", "platform": "windows", "gpu": "none", "pending": true,
+      "need_command": "LTOCache 폴더를 지우고 clean 뒤 전체 빌드, 캐시를 두고 clean 뒤 전체 빌드, 엔진 cpp 하나를 고친 증분의 세 판을 .ninja_log 링크 항목별로 재는 명령이 없다(다른 빌드가 없을 때만)",
+      "source": "docs/plans/BuildSpeed.md 13절", "result_doc": "docs/plans/BuildSpeed.md 13절"
+    },
+    {
       "id": "container-hash-tag-bench", "title": "구조 최적화 B ③ — 해시 태그 전 · 후(ContainerBenchTest.*) 번갈아 3 ~ 5회", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "none", "pending": true,
       "need_command": "벤치 커밋과 해시 태그 커밋을 번갈아 지은 CoreTest 두 벌이 필요하다. CoreTest.exe --test_filter=ContainerBenchTest.* --load_suites=only",
       "source": "docs/plans/StructuralOptimization.md B 표", "result_doc": "docs/plans/StructuralOptimization.md B 표"
