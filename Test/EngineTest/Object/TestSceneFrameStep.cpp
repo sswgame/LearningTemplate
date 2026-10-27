@@ -185,9 +185,9 @@ SW_TEST_CASE( SceneFrameStepTest, EveryStepUpdatesItsRegisteredServicesOnce )
     using StepIndexSequence = std::make_integer_sequence<uint32, static_cast<uint32>( sw::SceneFrameStep::Count )>;
     registerSceneFrameStepCountServices( StepIndexSequence{} );
 
-    sw::GameObjectManager manager;
-    sw::SceneFrameStep    lastStep = sw::SceneFrameStep::Count;
-    manager.setFrameStepObserver( sw::GameObjectManager::FrameStepObserver( [&lastStep]( sw::SceneFrameStep step )
+    sw::GameObjectManager  manager;
+    sw::SceneFrameStep     lastStep             = sw::SceneFrameStep::Count;
+    const sw::Subscription observerSubscription = manager.bindFrameStepObserver( sw::GameObjectManager::FrameStepObserver( [&lastStep]( sw::SceneFrameStep step )
     { lastStep = step; } ) );
     checkSceneFrameStepCountServices( manager, &lastStep, 0, StepIndexSequence{} );
 

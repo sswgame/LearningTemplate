@@ -6,9 +6,9 @@
  */
 #include "pch.h"
 
-#include "Editor/Common/Commands/Dev/EditorShortcutOverrides.h"
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
-#include "Editor/Common/GUI/EditorCommandGUI.h"
+#include "Editor/Common/Input/EditorInputActions.h"
+#include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Panels/Settings/ModulesPanel.h"
 #include "Editor/Panels/Settings/PreferencesPanel.h"
 #include "Editor/Panels/Settings/ShortcutsPanel.h"
@@ -43,7 +43,7 @@ namespace sw::editor
         /** @brief 사용자 단축키 덮어쓰기 수입니다. 기본과 다른 커맨드의 수입니다. */
         [[nodiscard]] bool readShortcutOverrideCount( const GameObjectManager* /*pManager*/, float64& outValue )
         {
-            outValue = static_cast<float64>( EditorCommandGUI::getShortcutOverrides().getOverrides().size() );
+            outValue = static_cast<float64>( editor::getSubsystem<EditorContext>().getSubsystem<EditorInputActions>().countModifiedShortcuts() );
             return true;
         }
 

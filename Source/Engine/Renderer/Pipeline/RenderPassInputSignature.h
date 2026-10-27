@@ -110,5 +110,5 @@ namespace sw
      * @brief 풀스크린 패스 타입의 입력 계약을 반환합니다(`RenderPassTypeInfo` 의 항목). 메시 패스(Shadow, GBuffer, ForwardOpaque, Transparent …)는 nullptr 입니다.
      * @details 메시 패스의 입력은 지오메트리 드로우가 정하고(그림자, 인스턴스, 머티리얼), 선언은 그래프 순서용입니다.
      */
-    const RenderPassInputSignature* findRenderPassInputSignature( RenderPassType type );
+    SW_API const RenderPassInputSignature* findRenderPassInputSignature( RenderPassType type );
 } // namespace sw

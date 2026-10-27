@@ -75,7 +75,7 @@ SW_TEST_CASE( InputMapToolInputTest, ClickAndDragSplitOnDragThreshold )
     sw::InputManager input;
     SW_ASSERT_TRUE( input.initialize() );
     sw::InputMap& inputMap = input.getInputMap();
-    inputMap.setDragThreshold( 6.0f );
+    SW_EXPECT_TRUE( inputMap.setDragThreshold( 6.0f ) );
     inputMap.bind( "ContextMenu", sw::MouseButton::Right, sw::ActionTrigger::Click );
     inputMap.bind( "Pan", sw::MouseButton::Right, sw::ActionTrigger::Drag );
 

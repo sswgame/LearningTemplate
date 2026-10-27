@@ -515,8 +515,9 @@ namespace sw
         if ( prop._bIsBitField == SW_TRUE )
         {
             // 파서가 측정한 바이트를 박지 않는다 — 파서는 Debug 정의를 모르고 측정한다(`PropertyInfo::resolveBitField` 설명).
-            emit.linef( "p.resolveBitField( sizeof( %# ), []( void* pInstance ) { static_cast<%#*>( pInstance )->%# = static_cast<PropDecl>( 1 ); } );",
+            emit.linef( "if ( p.resolveBitField( sizeof( %# ), []( void* pInstance ) { static_cast<%#*>( pInstance )->%# = static_cast<PropDecl>( 1 ); } ) == false )",
                         typeInfo._fullyQualifiedName, typeInfo._fullyQualifiedName, prop._memberName );
+            emit.linef( "    SW_ASSERT( false && \"bit field %# not found in this build layout\" );", prop._memberName );
         }
         if ( prop._repNotify.empty() == false )
         {

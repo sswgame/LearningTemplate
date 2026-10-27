@@ -9,8 +9,6 @@ SWCOOK 5
 1b01b3ffca6adc17 provokingvertex.hlsl
 290a618172c57239 computetexturewrite.hlsl?engine:lightgridcommon.hlsli
 290a618172c57239 waterwaveprobe.hlsl?engine:lightgridcommon.hlsli
-38b79117a2d60dd9 computetexturewrite.hlsl?engine:binding.hlsli
-38b79117a2d60dd9 waterwaveprobe.hlsl?engine:binding.hlsli
 4287b12f99c98c10 samplecompute.hlsl
 645e405601714e5d computetexturewrite.hlsl?engine:instancedata.hlsli
 645e405601714e5d waterwaveprobe.hlsl?engine:instancedata.hlsli
@@ -24,3 +22,5 @@ ab37247694eea95c samplecompute.hlsl?engine:bindingslots.hlsli
 ab37247694eea95c waterwaveprobe.hlsl?engine:bindingslots.hlsli
 b484bbfa333f977c waterwaveprobe.hlsl?engine:gerstner.hlsli
 b536aa3df9bce513 @toolchain
+e6010df30400f70a computetexturewrite.hlsl?engine:binding.hlsli
+e6010df30400f70a waterwaveprobe.hlsl?engine:binding.hlsli

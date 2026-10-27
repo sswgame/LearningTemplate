@@ -908,6 +908,13 @@ static float4 PassTexture::sampleGbufferMaterialSlot( float2 uv )
         #endif
 }
 
+/**
+ * @brief 에뮬 백엔드(DX11 · GL)의 슬롯 표에 없는 엔진 텍스처 인덱스를 읽었을 때 내는 오류 색(자홍)입니다.
+ * @details 표에 없는 인덱스를 슬롯 0 으로 읽지 않는다 — 그러면 그림자 · 원본 색이 엉뚱한 자리에 조용히 나온다. 이 색이 보이면
+ *          그 인덱스를 표(C++ getEmulatedTextureSlot — RenderPassInputSignature.h, 아래 sampleIndex 는 같은 표를 손으로 따른다)에 더해야 한다. 셰이더에는 멈출 길이 없어 눈에 띄는 값으로 낸다.
+ */
+static const float4 kUnmappedEngineTextureColor = float4( 1, 0, 1, 1 );
+
 static float4 Bindless::sampleIndex( uint index, float2 uv )
 {
     if ( index == kInvalidIndex )
@@ -923,7 +930,7 @@ static float4 Bindless::sampleIndex( uint index, float2 uv )
         return g_SwSlot3.Sample( g_SwSlot3Sampler, uv );
     if ( index == g_GBufferMaterialIndex )
         return PassTexture::sampleGbufferMaterialSlot( uv );
-    return g_SwSlot0.Sample( g_SwSlot0Sampler, uv );
+    return kUnmappedEngineTextureColor;
 }
 /**
  * @brief 씬 깊이의 2x2 이웃을 **텍스처 연산 한 번**으로 읽습니다 (`GatherRed`).
@@ -952,7 +959,7 @@ static float4 Bindless::sampleIndexWith( uint index, uint samplerId, float2 uv )
         return Bindless::sampleSlotWith( g_SwSlot3, samplerId, uv );
     if ( index == g_GBufferMaterialIndex )
         return Bindless::sampleSlotWith( g_SwSlotGBufferMaterial, samplerId, uv );
-    return Bindless::sampleSlotWith( g_SwSlot0, samplerId, uv );
+    return kUnmappedEngineTextureColor;
 }
         #else
 /** @brief 슬롯 텍스처를 샘플러 없이 가장 가까운 텍셀 하나로 읽습니다(점 샘플 · 클램프) — 결합 샘플러가 선형으로 묶인 OpenGL 에서 점 샘플을 얻는 길이다. */
@@ -984,7 +991,7 @@ static float4 Bindless::sampleIndexWith( uint index, uint samplerId, float2 uv )
         return Bindless::sampleSlotPoint( g_SwSlot3, uv );
     if ( index == g_GBufferMaterialIndex )
         return Bindless::sampleSlotPoint( g_SwSlotGBufferMaterial, uv );
-    return Bindless::sampleSlotPoint( g_SwSlot0, uv );
+    return kUnmappedEngineTextureColor;
 }
         #endif
 /**

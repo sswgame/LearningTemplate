@@ -6225,7 +6225,7 @@ SW_TEST_CASE_PER_PARAMETER( RenderPassGPUTest, R8MaskTextureSamplesAsRedOnEveryB
         {
             pCamera->setRole( sw::CameraRole::Game );
             pCamera->setLocalPosition( sw::float3{ 0.0f, 0.0f, -4.0f } );
-            bOk = scene.ensureDefaultCameras();
+            bOk = scene.pickActiveGameCamera();
         }
         sw::GameObject*      pObj    = bOk ? scene.getObjectManager()->createGameObject( sw::hashed_string( "Mask" ) ) : nullptr;
         sw::SpriteComponent* pSprite = ( pObj != nullptr ) ? pObj->addComponent<sw::SpriteComponent>() : nullptr;

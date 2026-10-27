@@ -541,7 +541,7 @@ namespace sw
         ConnectionState& connection = _mapConnection[handle.packed()];
         connection                  = ConnectionState{};
         connection._remoteKey       = OnlineServiceHostInternal::makeRemoteKey( remote );
-        connection._openedMs        = _nowMs;
+        connection._openedMs        = _nowMs.count();
         connection._bAdminListener  = _listenerTransport->isAdminConnection( handle ) ? SW_TRUE : SW_FALSE;
         // 주소마다 동시 연결 상한 — 전송의 `_maxConnections` 는 전체 상한이라 한 주소가 슬롯을 다 잡을 수 있다. 닫힘(`onEndpointClosed`)이 수를 되돌린다.
         const int32 remoteCount = ++_mapRemoteConnectionCount[connection._remoteKey];
@@ -555,13 +555,13 @@ namespace sw
     void OnlineServiceHost::closeExpiredHelloConnections()
     {
         // Hello 를 끝내지 않은 연결은 짧은 기한 안에 닫는다 — 전송의 쉼 시한(60 초)까지 슬롯을 잡아 두는 열기만 하는 연결을 막는다.
-        if ( _nowMs < _nextHelloSweepMs )
+        if ( _nowMs.count() < _nextHelloSweepMs )
             return;
-        _nextHelloSweepMs = _nowMs + OnlineServiceHostInternal::kHelloSweepIntervalMs;
+        _nextHelloSweepMs = _nowMs.count() + OnlineServiceHostInternal::kHelloSweepIntervalMs;
         _listHandleScratch.clear();
         for ( auto& [packed, connection] : _mapConnection )
         {
-            const bool bExpired = connection._bHelloDone == SW_FALSE && connection._bClosing == SW_FALSE && _nowMs - connection._openedMs > _settings._helloTimeoutMs;
+            const bool bExpired = connection._bHelloDone == SW_FALSE && connection._bClosing == SW_FALSE && _nowMs.count() - connection._openedMs > _settings._helloTimeoutMs;
             if ( bExpired == false )
                 continue;
             connection._bClosing = SW_TRUE;
