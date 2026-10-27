@@ -94,8 +94,10 @@ namespace sw
 
 } // namespace sw
 
-// 편집기에서만 인자 키 완성 · 오타 오류를 준다 — clangd(.clangd 가 SW_REFLECT_INTELLISENSE 를 정의)와 Visual Studio IntelliSense(__INTELLISENSE__).
-// 빌드와 생성기는 읽지 않는다.
-#if !defined( __REFLECT_PARSER__ ) && ( defined( SW_REFLECT_INTELLISENSE ) || defined( __INTELLISENSE__ ) )
+// 편집기에서만 인자 키 완성 · 오타 오류를 준다 — clangd(.clangd 가 SW_REFLECT_INTELLISENSE 를 정의)만 읽는다. 빌드와 생성기는 읽지 않는다.
+// Visual Studio IntelliSense(EDG, __INTELLISENSE__)는 읽지 않는다 — 풀이가 MS 호환 모드의 dependent base 찾기 · `_Pragma( "clang diagnostic" )` ·
+// static_assert 안의 제네릭 람다 지역 클래스에 기대는데 EDG 가 받는지는 사람이 VS 를 열어 봐야만 알 수 있다(오류 목록이 자동화로 안 나온다).
+// 그쪽은 매크로가 빈 것으로 보인다(언리얼 UPROPERTY 가 IntelliSense 에 빈 매크로인 것과 같다).
+#if !defined( __REFLECT_PARSER__ ) && defined( SW_REFLECT_INTELLISENSE )
     #include "Engine/Reflection/ReflectionIntellisense.h"
 #endif

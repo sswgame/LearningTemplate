@@ -6,7 +6,6 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
-#include "Core/Memory/Memory.h"
 
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
@@ -202,8 +201,8 @@ namespace sw::editor
 {
     ProjectSettingsDocument::ProjectSettingsDocument()
         : _pType{ nullptr }
-        , _pCurrent{ nullptr }
-        , _pDefault{ nullptr }
+        , _current{}
+        , _default{}
         , _path{}
         , _elementName{}
         , _savedText{}
@@ -216,34 +215,15 @@ namespace sw::editor
         shutdown();
     }
 
-    void* ProjectSettingsDocument::createInstance( const TypeInfo& type )
-    {
-        const FunctionInfo* pConstructor      = type.findMethod( hashed_string( "$ctor" ) );
-        const bool          bNotConstructible = pConstructor == nullptr || pConstructor->_invoker.isBound() == false || type._destroyInstance == nullptr;
-        if ( bNotConstructible )
-            return nullptr;
-        void* pInstance = Memory::allocateAligned( type._size, alignof( std::max_align_t ) );
-        pConstructor->_invoker( pInstance, TaskArgs{} );
-        return pInstance;
-    }
-
-    void ProjectSettingsDocument::destroyInstance( const TypeInfo& type, void* pInstance )
-    {
-        if ( pInstance == nullptr )
-            return;
-        type._destroyInstance( pInstance );
-        Memory::freeAligned( pInstance );
-    }
-
     ConfigReadResult ProjectSettingsDocument::open( const TypeInfo& type, string_view absolutePath, string_view elementName )
     {
         shutdown();
         _pType       = &type;
         _path        = string( absolutePath );
         _elementName = string( elementName );
-        _pCurrent    = createInstance( type );
-        _pDefault    = createInstance( type );
-        if ( _pCurrent == nullptr || _pDefault == nullptr )
+        _current     = ReflectedInstance::create( type );
+        _default     = ReflectedInstance::create( type );
+        if ( _current.isValid() == false || _default.isValid() == false )
         {
             SW_LOG_ERROR( "Project settings: %# has no default constructor in the reflection table", type._name.c_str() );
             shutdown();
@@ -255,14 +235,9 @@ namespace sw::editor
 
     void ProjectSettingsDocument::shutdown()
     {
-        if ( _pType != nullptr )
-        {
-            destroyInstance( *_pType, _pCurrent );
-            destroyInstance( *_pType, _pDefault );
-        }
+        _current.reset();
+        _default.reset();
         _pType      = nullptr;
-        _pCurrent   = nullptr;
-        _pDefault   = nullptr;
         _readResult = ConfigReadResult::Missing;
         _path.clear();
         _elementName.clear();
@@ -287,7 +262,7 @@ namespace sw::editor
 
     ConfigReadResult ProjectSettingsDocument::revert()
     {
-        if ( _pType == nullptr || _pCurrent == nullptr )
+        if ( _pType == nullptr || _current.isValid() == false )
             return ConfigReadResult::Invalid;
         if ( FileUtil::isRegularFile( _path ) == false )
         {
@@ -303,16 +278,15 @@ namespace sw::editor
             return _readResult;
         }
         // 새 인스턴스에 읽어 성공했을 때만 바꾼다 — 틀린 파일이 현재 편집을 반쯤 덮지 않게.
-        void* pFresh = createInstance( *_pType );
-        if ( pFresh == nullptr )
+        ReflectedInstance fresh = ReflectedInstance::create( *_pType );
+        if ( fresh.isValid() == false )
         {
             _readResult = ConfigReadResult::Invalid;
             return _readResult;
         }
-        const ConfigReadResult result = readInto( pFresh, fileText );
+        const ConfigReadResult result = readInto( fresh.get(), fileText );
         if ( result != ConfigReadResult::Loaded )
         {
-            destroyInstance( *_pType, pFresh );
             // 요소 모드에서 요소가 없으면 기본값으로 시작한다 — 저장하면 그 요소를 넣는다.
             if ( result == ConfigReadResult::Missing )
                 resetToDefault();
@@ -320,8 +294,7 @@ namespace sw::editor
             _savedText  = makeDifferenceText();
             return _readResult;
         }
-        destroyInstance( *_pType, _pCurrent );
-        _pCurrent   = pFresh;
+        _current    = std::move( fresh );
         _readResult = ConfigReadResult::Loaded;
         _savedText  = makeDifferenceText();
         return _readResult;
@@ -334,7 +307,7 @@ namespace sw::editor
 
     void ProjectSettingsDocument::resetToDefault()
     {
-        if ( _pType == nullptr || _pCurrent == nullptr )
+        if ( _pType == nullptr || _current.isValid() == false )
             return;
         // 바탕 층은 값의 원본이 파일이다 — 기본값으로 되돌리기는 파일 값으로 되돌리기다(헤더의 형식은 값이 아니다).
         const bool bRevertToFile = isBaseLayer() && FileUtil::isRegularFile( _path );
@@ -343,11 +316,10 @@ namespace sw::editor
             (void)revert(); // 읽지 못하면 revert 가 상태를 Invalid 로 남기고 저장을 막는다
             return;
         }
-        void* pFresh = createInstance( *_pType );
-        if ( pFresh == nullptr )
+        ReflectedInstance fresh = ReflectedInstance::create( *_pType );
+        if ( fresh.isValid() == false )
             return;
-        destroyInstance( *_pType, _pCurrent );
-        _pCurrent = pFresh;
+        _current = std::move( fresh );
         // 읽지 못한 파일은 기본값으로 덮어 고치라는 뜻이다 — 저장을 막던 상태를 해제한다.
         if ( _readResult == ConfigReadResult::Invalid )
             _readResult = ConfigReadResult::Missing;
@@ -355,14 +327,14 @@ namespace sw::editor
 
     string ProjectSettingsDocument::makeDifferenceText() const
     {
-        if ( _pType == nullptr || _pCurrent == nullptr )
+        if ( _pType == nullptr || _current.isValid() == false )
             return {};
         return isElementMode() ? makeDifferenceElement() : makeDifferenceJSON();
     }
 
     string ProjectSettingsDocument::makeDifferenceJSON() const
     {
-        const string fullText = JSONSerializer::serialize( _pCurrent, *_pType );
+        const string fullText = JSONSerializer::serialize( _current.get(), *_pType );
         JSONDocument fullDocument;
         if ( fullDocument.parse( fullText ) == false || fullDocument.getRoot().isObject() == false )
             return {};
@@ -370,7 +342,7 @@ namespace sw::editor
         if ( isBaseLayer() )
             return fullDocument.dump( 4 );
         vector<string> listEqual;
-        if ( _pDefault != nullptr && ConfigManager::collectEqualKeys( _pCurrent, _pDefault, *_pType, fullText, listEqual ) == false )
+        if ( _default.isValid() && ConfigManager::collectEqualKeys( _current.get(), _default.get(), *_pType, fullText, listEqual ) == false )
             return {};
         JSONDocument    document;
         const JSONValue root = document.makeObject();
@@ -383,9 +355,9 @@ namespace sw::editor
         // 지금 값과 기본값을 같은 직렬화기로 쓰고, 기본값과 글이 같은 속성 · 자식을 뺀다(JSON 쪽 `collectEqualKeys` 와 같은 규칙).
         XMLDocument current;
         XMLDocument defaults;
-        if ( current.parse( XMLSerializer::serialize( _pCurrent, *_pType ) ) == false )
+        if ( current.parse( XMLSerializer::serialize( _current.get(), *_pType ) ) == false )
             return {};
-        const bool    bHasDefault = _pDefault != nullptr && defaults.parse( XMLSerializer::serialize( _pDefault, *_pType ) );
+        const bool    bHasDefault = _default.isValid() && defaults.parse( XMLSerializer::serialize( _default.get(), *_pType ) );
         const XMLNode currentRoot = current.getRoot();
         const XMLNode defaultRoot = bHasDefault ? defaults.getRoot() : XMLNode{};
         XMLDocument   difference;
@@ -409,7 +381,7 @@ namespace sw::editor
 
     uint32 ProjectSettingsDocument::countNonDefaultKeys() const
     {
-        if ( _pType == nullptr || _pCurrent == nullptr )
+        if ( _pType == nullptr || _current.isValid() == false )
             return 0;
         if ( isElementMode() )
         {
@@ -426,7 +398,7 @@ namespace sw::editor
 
     bool ProjectSettingsDocument::isModified() const
     {
-        return _pCurrent != nullptr && makeDifferenceText() != _savedText;
+        return _current.isValid() && makeDifferenceText() != _savedText;
     }
 
     bool ProjectSettingsDocument::saveElement( const string& elementText ) const
@@ -439,11 +411,10 @@ namespace sw::editor
             return false;
         }
         // 쓸 요소가 다음 기동에서 읽히는지 먼저 본다 — 필수 필드가 빠진 요소(Reset to Default 뒤)는 쓰지 않는다.
-        void* pCheck = createInstance( *_pType );
-        if ( pCheck == nullptr )
+        const ReflectedInstance check = ReflectedInstance::create( *_pType );
+        if ( check.isValid() == false )
             return false;
-        const bool bReadable = ConfigManager::readConfigXMLElement( pCheck, *_pType, elementText, _path.c_str() );
-        destroyInstance( *_pType, pCheck );
+        const bool bReadable = ConfigManager::readConfigXMLElement( check.get(), *_pType, elementText, _path.c_str() );
         if ( bReadable == false )
         {
             SW_LOG_WARNING( "Project settings: the edited <%#> would not load - not saved", _elementName.c_str() );
@@ -456,11 +427,10 @@ namespace sw::editor
             return false;
         }
         // 바꾼 글을 다시 읽어 같은 요소인지 본다 — 원문에서 위치를 잘못 잡았으면(속성 값 안의 `>` 등) 파일을 쓰지 않는다.
-        void* pReread = createInstance( *_pType );
-        if ( pReread == nullptr )
+        const ReflectedInstance reread = ReflectedInstance::create( *_pType );
+        if ( reread.isValid() == false )
             return false;
-        const bool bSame = readInto( pReread, newText ) == ConfigReadResult::Loaded && XMLSerializer::serialize( pReread, *_pType ) == XMLSerializer::serialize( _pCurrent, *_pType );
-        destroyInstance( *_pType, pReread );
+        const bool bSame = readInto( reread.get(), newText ) == ConfigReadResult::Loaded && XMLSerializer::serialize( reread.get(), *_pType ) == XMLSerializer::serialize( _current.get(), *_pType );
         if ( bSame == false )
         {
             SW_LOG_WARNING( "Project settings: rewriting <%#> in %# did not round-trip - not saved", _elementName.c_str(), _path.c_str() );
@@ -471,7 +441,7 @@ namespace sw::editor
 
     bool ProjectSettingsDocument::save()
     {
-        if ( _pCurrent == nullptr || isLoadFailed() )
+        if ( _current.isValid() == false || isLoadFailed() )
             return false;
         const string text   = makeDifferenceText();
         bool         bSaved = false;

@@ -5,6 +5,7 @@
 #include "Engine/Navigation/NavMeshAsset.h"
 #include "Engine/Navigation/NavMeshGeometry.h"
 #include "Engine/Navigation/NavMeshSettings.h"
+#include "Engine/Object/Component/Navigation/NavMeshObstacleComponent.h"
 
 #include "EngineTest/NavMeshTestUtil.h"
 
@@ -89,6 +90,41 @@ SW_TEST_CASE( NavMeshTileCacheTest, LayerPacksRoundTripThroughInstall )
     SW_ASSERT_TRUE( pLoaded->initialize( settings._listAgentType.front(), settings, sw::NavMeshBakeUtil::computeBakeBounds( geometry ) ) );
     SW_ASSERT_TRUE( sw::NavMeshBakeUtil::installTiles( *pLoaded, listPack ) );
     SW_EXPECT_EQUAL( pBaked->getPolygonCount(), pLoaded->getPolygonCount() );
+}
+
+/**
+ * @brief [NavMeshTileCacheTest] Y 축으로 돌린 오브젝트의 긴 상자 장애물은 오브젝트 +X 축 쪽을 막고 그와 직각인 쪽은 열어 둔다 — 요 부호(`computeBoxYaw` ↔ Detour yRadians)가 맞다
+ * @details 회전 +40° 와 -40° 를 둘 다 본다(부호가 뒤집히면 막는 쪽이 거울로 바뀌어 둘 중 하나가 틀린다). 바닥 20 m, 상자는 반 길이 7 m · 반 폭 0.6 m.
+ */
+SW_TEST_CASE( NavMeshTileCacheTest, RotatedBoxFollowsObjectAxis )
+{
+    using Internal                     = TestNavMeshTileCacheInternal;
+    const sw::NavMeshSettings settings = Internal::makeCacheSettings();
+    sw::NavMeshGeometry       geometry;
+    navtest::addFloor( geometry, -10.0f, -10.0f, 10.0f, 10.0f );
+    const sw::float3         tightExtent{ 0.3f, 1.0f, 0.3f };
+    const sw::NavQueryFilter filter = settings.makeDefaultFilter();
+
+    for ( const float32 degrees : { 40.0f, -40.0f } )
+    {
+        sw::unique_ptr<sw::INavMesh> pNavMesh = navtest::bake( settings, geometry );
+        SW_ASSERT_NOT_NULL( pNavMesh.get() );
+        const sw::float4x4       world = sw::float4x4::makeRotationY( sw::MathUtil::toRadian( degrees ) );
+        sw::NavCacheObstacleDesc box;
+        box._center      = sw::float3{ 0.0f, 0.5f, 0.0f };
+        box._halfExtents = sw::float3{ 7.0f, 0.5f, 0.6f };
+        box._yaw         = sw::NavMeshObstacleComponent::computeBoxYaw( world );
+        SW_ASSERT_TRUE( pNavMesh->addCacheObstacle( box ) != 0 );
+        Internal::settle( *pNavMesh );
+
+        // 오브젝트 +X 축 위 4 m 는 상자 안이라 막히고, 그 축에 직각인 4 m 는 상자 밖이라 걸을 수 있다.
+        const sw::float3 axisX = sw::float3::transformVector( sw::float3{ 1.0f, 0.0f, 0.0f }, world );
+        const sw::float3 alongAxis{ axisX._x * 4.0f, 0.0f, axisX._z * 4.0f };
+        const sw::float3 acrossAxis{ -axisX._z * 4.0f, 0.0f, axisX._x * 4.0f };
+        sw::NavLocation  location;
+        SW_EXPECT_FALSE( pNavMesh->findNearestPoint( alongAxis, tightExtent, filter, location ) );
+        SW_EXPECT_TRUE( pNavMesh->findNearestPoint( acrossAxis, tightExtent, filter, location ) );
+    }
 }
 
 /**

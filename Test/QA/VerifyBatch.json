@@ -247,33 +247,30 @@
     {
       "id": "ability-arena-ai-control-scenarios", "title": "AbilityArena ai · control 시나리오가 내비메시 이동으로도 통과", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
       "covered": ["game/abilityarena/automation/ai.scenario.xml", "game/abilityarena/automation/control.scenario.xml"], "covered_by": "app-scenarios-release",
-      "source": "docs/plans/Candidates-engine.md NavMeshExtensions", "result_doc": "docs/plans/Candidates-engine.md NavMeshExtensions 절을 지운다"
+      "source": "docs/decisions/5-6_ObjectsInput.md 3D 내비메시 확장의 실행 확인(2026-10-27)", "result_doc": "Test/QA/VerifyBatch.json 통과하면 이 일회성 항목을 지운다"
     },
     {
       "id": "game-pack-scenarios", "title": "게임 팩 시나리오를 네 백엔드로(AppScenarioTest.<게임>.<시나리오>.<백엔드>)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
       "covered": ["AppScenarioTest.<게임>.*"], "covered_by": "app-scenarios-release",
-      "source": "docs/plans/Candidates-engine.md MultiGamePackVerification", "result_doc": "docs/plans/Candidates-engine.md MultiGamePackVerification 절을 지운다",
+      "source": "docs/decisions/5-2_Build.md 게임 여럿 빌드 · 선택 실행의 네 백엔드 확인(2026-10-27)", "result_doc": "Test/QA/VerifyBatch.json 통과하면 이 일회성 항목을 지운다",
       "note": "게임 팩은 Bin/Games 에 있어야 한다(Release -DSW_GAMES=ALL). 팩이 없으면 케이스가 건너뛰므로 로그의 건너뜀 줄을 본다."
     },
     {
       "id": "assertdialog-scenario", "title": "assertdialog 시나리오(단언 대화상자)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
       "covered": ["engine/automation/editor/assertdialog.scenario.xml"], "covered_by": "app-scenarios-release",
-      "source": "docs/plans/Candidates-engine.md StructureMoveTests", "result_doc": "docs/plans/Candidates-engine.md StructureMoveTests 절을 지운다"
+      "source": "docs/decisions/5-2_Build.md 구조 리팩토링 이동의 남은 확인(2026-10-27)", "result_doc": "Test/QA/VerifyBatch.json 통과하면 이 일회성 항목을 지운다"
     },
     {
-      "id": "standard-input-commands", "title": "-gv_standardInputCommands 시나리오", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": false,
-      "need_command": "표준 입력 명령 시나리오가 저장소에 없다",
-      "source": "docs/plans/Candidates-engine.md StructureMoveTests", "result_doc": "docs/plans/Candidates-engine.md StructureMoveTests 절을 지운다"
+      "id": "standard-input-commands", "title": "-gv_standardInputCommands(netplay 가 띄운 클라이언트의 표준 입력 명령)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": true,
+      "covered": ["engine/automation/editor/netconditions.scenario.xml"], "covered_by": "app-scenarios-release",
+      "source": "docs/decisions/5-2_Build.md 구조 리팩토링 이동의 남은 확인(2026-10-27)", "result_doc": "Test/QA/VerifyBatch.json 통과하면 이 일회성 항목을 지운다",
+      "note": "netconditions 가 netplay.command 로 클라이언트(-gv_standardInputCommands=1) 표준 입력에 명령을 보낸다 — 그 시나리오가 통과하면 이 길도 돈다."
     },
     {
       "id": "foliage-navmesh-tests", "title": "막는 식생 · 장애물 캐시 테스트", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 20,
       "filter": "FoliageTest.BlockingLayerAddsNavObstaclePerInstance,NavMeshTileCacheTest.*",
-      "source": "docs/plans/Candidates-engine.md NavMeshExtensions", "result_doc": "docs/plans/Candidates-engine.md NavMeshExtensions 절을 지운다"
-    },
-    {
-      "id": "navmesh-obstacle-yaw-and-time", "title": "장애물 캐시의 상자 요 부호와 GT.Navigation.* 시간 견주기(직사각 장애물 장면)", "kind": "measure", "config": "Release", "platform": "windows", "gpu": "exclusive", "pending": false,
-      "need_command": "직사각 장애물 장면 · 측정이 필요하고 시나리오 · 케이스가 없다(없으면 테스트부터 만든다)",
-      "source": "docs/plans/Candidates-engine.md NavMeshExtensions", "result_doc": "docs/plans/Candidates-engine.md NavMeshExtensions 절을 지운다"
+      "source": "docs/decisions/5-6_ObjectsInput.md 3D 내비메시 확장의 실행 확인(2026-10-27)", "result_doc": "Test/QA/VerifyBatch.json 통과하면 이 일회성 항목을 지운다",
+      "note": "NavMeshTileCacheTest.RotatedBoxFollowsObjectAxis 가 장애물 캐시 상자의 요 부호를 본다."
     },
     {
       "id": "shooter3d-keyrebind-scenario", "title": "shooter3d/rebind 시나리오(점프 키 Space→J 다시 잡기, 패드 A 는 그대로)", "kind": "covered", "config": "Release", "platform": "windows", "gpu": "shared", "pending": false,

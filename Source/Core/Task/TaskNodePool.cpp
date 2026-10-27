@@ -95,6 +95,11 @@ namespace sw
         if ( pNode == nullptr )
             return;
         pNode->_successors.clearAndRelease();
+        // `whenAny` 트리거의 숨은 후속(사이클 검사가 따라간다)이 쥔 참조를 놓는다 — 노드가 더 이상 어느 목록에도 없어 검사가 닿지 않는다.
+        TaskNode* const pAnyOfSuccessor = pNode->_pAnyOfSuccessor;
+        pNode->_pAnyOfSuccessor         = nullptr;
+        if ( pAnyOfSuccessor != nullptr )
+            pAnyOfSuccessor->release();
         pNode->_callable    = std::monostate{};
         pNode->_parentStage = nullptr;
 #if !defined( SW_SHIPPING )

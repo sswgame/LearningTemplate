@@ -6,7 +6,6 @@
 "Source/Editor/ImGuiEditor.cpp" = "ImGui 의 할당 · 해제 콜백(ImGui::SetAllocatorFunctions) — 콜백이 void* 를 돌려주고 ImGui 가 소유한다"
 "Source/Editor/Common/Asset/ImageUtil.cpp" = "이미지 라이브러리의 할당 · 재할당 · 해제 콜백 — 라이브러리가 소유한다"
 "Source/Editor/Common/Asset/ModelImportGeometry.cpp" = "cgltf 의 할당 · 해제 콜백(cgltf_options) — 라이브러리가 소유한다"
-"Source/Editor/Panels/ProjectSettings/Model/ProjectSettingsDocument.cpp" = "리플렉션이 만든 형식 소거 인스턴스(생성자 호출 · _destroyInstance 짝) — 인스턴스 소유 형식이 없다(후보 Candidates-engine.md 의 \"리플렉션 인스턴스 소유 형식\")"
 "Source/Core/String/hashed_string.h" = "락 없이 읽는 엔트리 청크 표(atomic<Entry*>)에 올리는 블록 — 표가 atomic 포인터라 소유 형식을 담을 수 없다"
 "Source/Engine/Animation/Codec/ACL/ACLAnimationCodec.cpp" = "ACL 의 allocator 인터페이스(allocate · deallocate 가상 함수) — 라이브러리가 소유한다"
 "Source/Engine/Compression/ZlibCompressionCodec.cpp" = "zlib 의 zalloc · zfree 콜백 — 라이브러리가 소유한다"
@@ -16,4 +15,3 @@
 "Source/Engine/Object/GameObject/GameObject.cpp" = "컴포넌트 저장소 — 풀이 못 낸 타입의 힙 블록을 형식 소거 컴포넌트가 쥐고 파괴 경로(Component::_pPoolEntry)가 푼다"
 "Source/Engine/Physics/Jolt/JoltPhysicsBackend.cpp" = "Jolt 의 할당 · 정렬 할당 · 해제 콜백(RegisterDefaultAllocator 대체) — 라이브러리가 소유한다"
 "Source/Engine/Serialization/XML/XMLDocument.cpp" = "pugixml 의 전역 할당 함수 등록(&Memory::allocate · &Memory::free) — 라이브러리가 소유한다"
-"Source/Engine/UI/Document/UIDocumentLoader.cpp" = "리플렉션이 같은 함수 안에서 생성자를 부른 뒤 unique_ptr<Widget> 로 소유를 넘긴다 — 블록은 그 사이에만 맨 포인터다"

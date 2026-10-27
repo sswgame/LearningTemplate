@@ -6,6 +6,7 @@
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/ReflectionValidation.h"
 
@@ -28,9 +29,12 @@ namespace sw
 
     uint32 ObjectValidation::reportGameObject( const GameObject& object, const bool bLog )
     {
-        ValidationContext context;
-        const uint32      issueCount = validateGameObject( object, context );
-        ValidationIssueLog::get().replaceIssues( object.getObjectID(), context.getIssues() );
+        ValidationContext        context;
+        const uint32             issueCount = validateGameObject( object, context );
+        GameObjectManager* const pManager   = object.getManager();
+        // 결과는 오브젝트가 사는 월드의 표다. 매니저 밖에서 만든 오브젝트는 둘 월드가 없어 결과 수만 돌려준다(로그는 아래가 남긴다).
+        if ( pManager != nullptr )
+            pManager->getSubsystem<SceneValidationIssues>().getLog().replaceIssues( object.getObjectID(), context.getIssues() );
         if ( bLog )
         {
             for ( const ValidationIssue& issue : context.getIssues() )
@@ -41,5 +45,21 @@ namespace sw
             }
         }
         return issueCount;
+    }
+
+    SW_SCENE_SERVICE( SceneValidationIssues, DestroyPost )
+
+    SceneValidationIssues::SceneValidationIssues( GameObjectManager& /*manager*/ )
+        : _log{}
+    {
+    }
+
+    void SceneValidationIssues::update( float32 /*deltaTime*/ )
+    {
+    }
+
+    void SceneValidationIssues::onSceneCleared()
+    {
+        _log.clear();
     }
 } // namespace sw

@@ -595,7 +595,13 @@ namespace sw
                 } );
 
                 TaskHandle triggerTask = emplaceTask( "whenAny_Trigger", triggerDelegate );
-                TaskHandle mutTask     = task;
+                // 트리거 → 후속은 목록 간선이 아니다(후속을 한 번만 풀어야 한다). 사이클 검사가 보도록 숨은 후속 칸에 적는다 — 아래 `runBefore` 의 잠금이 공개한다.
+                if ( triggerTask.isValid() )
+                {
+                    nextTask.getNode()->retain();
+                    triggerTask.getNode()->_pAnyOfSuccessor = nextTask.getNode();
+                }
+                TaskHandle mutTask = task;
                 // 트리거는 방금 만든 노드라 사이클이 될 수 없다. 걸리지 않는 경우는 트리거가 비었을 때(매니저가 멈추는 중)뿐이다.
                 const bool bLinked = mutTask.runBefore( triggerTask );
                 SW_LOG_ASSERT( bLinked || triggerTask.isValid() == false, "whenAny: a fresh trigger cannot form a dependency cycle." );

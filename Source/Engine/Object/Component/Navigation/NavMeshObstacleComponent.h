@@ -51,6 +51,11 @@ namespace sw
         [[nodiscard]] bool makeCacheObstacle( NavCacheObstacleDesc& outDesc ) const;
         /** @brief 지금 자세의 월드 경계입니다. */
         [[nodiscard]] bool computeWorldBounds( AABB& outBounds ) const;
+        /**
+         * @brief 월드 행렬 @p world 의 +X 축이 XZ 평면에서 향하는 각입니다 — 장애물 캐시 상자의 요(`NavCacheObstacleDesc::_yaw`, Detour `addBoxObstacle` 의 yRadians).
+         * @details Detour 는 요 a 인 상자의 +X 축을 월드 (cos a, -sin a) 에 둔다. 그래서 축 (x, z) 의 요는 atan2( -z, x ) 다(`NavMeshTileCacheTest.RotatedBoxFollowsObjectAxis` 가 맞춘다).
+         */
+        static float32 computeBoxYaw( const float4x4& world );
 
         NavObstacleShape getShape() const { return _shape; }
         void             setShape( NavObstacleShape shape );

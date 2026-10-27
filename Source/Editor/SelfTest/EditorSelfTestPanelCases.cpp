@@ -28,6 +28,7 @@
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Serialization/ObjectValidation.h"
 #include "Engine/Reflection/ReflectionValidation.h"
 #include "Engine/Resource/ResourcePaths.h"
 
@@ -355,7 +356,7 @@ namespace sw::editor
             }
 
             // ------------------------------------------------------------------------------
-            // mapCheck.selectsIssueObject: 결과 행을 누르면 그 오브젝트가 선택된다. 검증 결과는 ValidationIssueLog::replaceIssues 로 넣는다
+            // mapCheck.selectsIssueObject: 결과 행을 누르면 그 오브젝트가 선택된다. 검증 결과는 SceneValidationIssues 의 표에 replaceIssues 로 넣는다
             // ------------------------------------------------------------------------------
             struct MapCheckProbe
             {
@@ -389,7 +390,7 @@ namespace sw::editor
                     issue._sourceLabel = kObjectName;
                     issue._typeName    = hashed_string( "sw::PointLightComponent" );
                     issue._severity    = ValidationSeverity::Error;
-                    ValidationIssueLog::get().replaceIssues( probe._objectID, { issue } );
+                    pManager->getSubsystem<SceneValidationIssues>().getLog().replaceIssues( probe._objectID, { issue } );
                     editor::getMainSceneSelection().clearObjectSelection();
                     (void)pContext->getSubsystem<EditorPanelManager>().setPanelOpen( MapCheckPanel::kPanelID, true );
                     pContext->getSubsystem<EditorWorkspace>().requestOpenPanel<MapCheckPanel>();
@@ -409,7 +410,7 @@ namespace sw::editor
                 }
                 (void)context.expect( bSelected, "clicking the issue row did not select its object" );
 
-                ValidationIssueLog::get().removeSource( probe._objectID );
+                pManager->getSubsystem<SceneValidationIssues>().getLog().removeSource( probe._objectID );
                 editor::getMainSceneSelection().clearObjectSelection();
                 GameObject* pObject = pManager->findGameObjectByID( probe._objectID );
                 if ( pObject != nullptr )

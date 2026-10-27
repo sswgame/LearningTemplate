@@ -5,6 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Memory/MemoryBlock.h"
 #include "Core/Task/TaskTypes.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -481,11 +482,12 @@ namespace sw
         const FunctionInfo* pCtor = type.findMethod( s_ctor );
         if ( pCtor == nullptr || pCtor->_invoker.isBound() == false )
             return {};
-        void* pMemory = Memory::allocate( type._size );
-        if ( pMemory == nullptr )
+        // 블록은 생성자를 부르는 동안만 `MemoryBlock` 이 쥐고, 다 만든 위젯은 `unique_ptr<Widget>` 이 소유한다(가상 소멸자 · `Memory::free` 짝).
+        MemoryBlock block = MemoryBlock::allocate( type._size );
+        if ( block.get() == nullptr )
             return {};
-        (void)pCtor->_invoker( pMemory, TaskArgs{} );
-        return unique_ptr<Widget>( static_cast<Widget*>( pMemory ) );
+        (void)pCtor->_invoker( block.get(), TaskArgs{} );
+        return unique_ptr<Widget>( static_cast<Widget*>( block.release() ) );
     }
 
     unique_ptr<Widget> UIDocumentLoader::instantiate( const UIDocumentAsset& document, UIDocumentCache& cache, vector<UIBindingDesc>& outListBinding,
