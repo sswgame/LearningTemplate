@@ -1,6 +1,6 @@
 # 엔진 후보
 
-> 상태: 후보 · 선행: 없음 · 영역: engine · 옛번호: C-4, C-7, C-22, C-34, C-47, C-49, C-63, C-64, C-65, C-69, C-71, C-72, D1-4, D1-6, D1-8, G-17, H-2 · 진행: 해당없음
+> 상태: 후보 · 선행: 없음 · 영역: engine · 옛번호: C-4, C-22, C-34, C-47, C-49, C-63, C-64, C-65, C-69, C-71, C-72, D1-4, D1-6, D1-8, G-17, H-2 · 진행: 해당없음
 
 엔진 구조 · 물리 · 내비게이션 · 모듈 영역에서 아직 착수하지 않은 일의 목록입니다. 착수하면 그 절을 계획 문서로 옮기고 여기서 지웁니다. 순서는 [로드맵](Roadmap.md)이 가집니다.
 
@@ -12,13 +12,6 @@
 - 구조 이동 S21 · S22(nogpu · 단언 대화상자 · 표준 입력 명령), 게임 팩 네 백엔드, 3D 내비메시 확장(막는 식생 · 장애물 캐시 요 부호 · AbilityArena 내비 이동) — 실행 대기(통합): 매니페스트 id `ctest-nogpu`, `assertdialog-scenario`, `standard-input-commands`, `game-pack-scenarios`, `foliage-navmesh-tests`, `ability-arena-ai-control-scenarios`.
 
 ## 조건부
-
-### PerfConditionalCandidates
-제목: 측정해서 이기면 하는 성능 후보 묶음
-옛번호: C-7
-왜 필요한가: 병렬 틱 임계값의 교차점, GameObject 레이아웃, 적응형 틱 임계값, 스폰 비용(~1.1 us, 잠금 여섯), 시퀀서 성능 수치.
-착수 조건: 측정해서 이기면. TickItem 인라인 재시도는 오브젝트의 틱 부기 49 B 를 먼저 줄여야 합니다.
-남은 것: 무버 일괄 틱의 다음 단계는 무버 데이터를 타입 배열(SoA)로 옮겨 일괄 함수가 컴포넌트를 읽지 않게 하는 것(일괄 틱은 `GT.Frame` p99 0.75 배로 들어갔고 더 줄일 필요가 보이면). 파괴 잎 셰이프는 Physics 에 셰이프 직렬화 함수가 생기면 쿠킹 때 Jolt 셰이프를 `.fracture` 에 싣는 안을 다시 봅니다.
 
 ### MetalMobileConsole
 제목: macOS(Metal RHI) · 모바일 · 콘솔 백엔드
