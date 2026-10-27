@@ -3,6 +3,7 @@
 #include "Core/Network/Transport/Linux/EpollStreamTransport.h"
 
 #include "Core/Common/PlatformOsHeaders.h"
+#include "Core/Concurrency/OnceInit.h"
 #include "Core/Concurrency/ThreadName.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
@@ -121,8 +122,8 @@ namespace sw
         vector<uint32>                      _listFreeIndex;
         vector<unique_ptr<EpollLoop>>       _listLoop;
         int32                               _loopCount{ 0 };
-        StreamTransportConfig               _settings{};
-        IStreamHandler*                     _pHandler{ nullptr };
+        OnceInit<StreamTransportConfig>     _settings;                        ///< initialize 가 I/O 스레드를 띄우기 전에 한 번 정한다(shutdown 이 비운다).
+        OnceInit<IStreamHandler*>           _pHandler;                        ///< 위와 같다.
         int64                               _manualNextSweepNanoseconds{ 0 }; ///< `pollIO` 로 도는 루프 0 의 다음 시한 점검 시각.
         int32                               _listenFd{ -1 };
         atomic<uint32>                      _nextLoop{ 0 };
@@ -181,12 +182,12 @@ namespace sw
             EpollConnection&  connection = *_listConnection[index];
             ScopedLock<mutex> connectionLock{ connection._mutex };
             connection._sendQueue.clear();
-            connection._sendQueue.configure( _settings._sendHighWatermarkBytes, _settings._sendLowWatermarkBytes, _settings._maxQueuedSendBytes );
+            connection._sendQueue.configure( _settings->_sendHighWatermarkBytes, _settings->_sendLowWatermarkBytes, _settings->_maxQueuedSendBytes );
             connection._remote                 = remote;
             connection._fd                     = fd;
             connection._loopIndex              = static_cast<int32>( _nextLoop.fetch_add( 1, std::memory_order_relaxed ) % static_cast<uint32>( _loopCount ) );
             connection._lastReceiveNanoseconds = MonotonicClock::nowNanoseconds();
-            connection._deadlineNanoseconds    = connection._lastReceiveNanoseconds + Internal::toNanoseconds( _settings._connectTimeoutSeconds );
+            connection._deadlineNanoseconds    = connection._lastReceiveNanoseconds + Internal::toNanoseconds( _settings->_connectTimeoutSeconds );
             connection._closeReason            = StreamCloseReason::None;
             connection._state                  = state;
             connection._bAccepted              = bAccepted ? SW_TRUE : SW_FALSE;
@@ -332,7 +333,7 @@ namespace sw
                     fd     = connection._fd;
                     handle = StreamConnectionHandle::make( index, connection._generation );
                 }
-                const ssize_t received = ::recv( fd, pScratch, static_cast<size_t>( _settings._receiveChunkBytes ), 0 );
+                const ssize_t received = ::recv( fd, pScratch, static_cast<size_t>( _settings->_receiveChunkBytes ), 0 );
                 if ( received > 0 )
                 {
                     {
@@ -352,7 +353,7 @@ namespace sw
                     {
                         connection._state               = EpollConnectionState::Closing;
                         connection._closeReason         = StreamCloseReason::RemoteClose;
-                        connection._deadlineNanoseconds = MonotonicClock::nowNanoseconds() + Internal::toNanoseconds( _settings._closeLingerSeconds );
+                        connection._deadlineNanoseconds = MonotonicClock::nowNanoseconds() + Internal::toNanoseconds( _settings->_closeLingerSeconds );
                     }
                     (void)flushLocked( connection );
                     return;
@@ -383,7 +384,7 @@ namespace sw
                     closeFdLocked( connection, StreamCloseReason::ConnectFailed, true );
                     return;
                 }
-                Internal::setNoDelay( connection._fd, _settings._bTCPNoDelay == SW_TRUE );
+                Internal::setNoDelay( connection._fd, _settings->_bTCPNoDelay == SW_TRUE );
                 connection._state                  = EpollConnectionState::Open;
                 connection._lastReceiveNanoseconds = MonotonicClock::nowNanoseconds();
                 handle                             = StreamConnectionHandle::make( index, connection._generation );
@@ -485,12 +486,12 @@ namespace sw
                         continue;
                     return; // EAGAIN 이나 그 밖의 오류다(EMFILE 은 로그를 남긴다).
                 }
-                if ( _bStopping.load( std::memory_order_acquire ) || _openCount.load( std::memory_order_relaxed ) >= _settings._maxConnections )
+                if ( _bStopping.load( std::memory_order_acquire ) || _openCount.load( std::memory_order_relaxed ) >= _settings->_maxConnections )
                 {
                     Internal::closeAbortive( fd );
                     continue;
                 }
-                Internal::setNoDelay( fd, _settings._bTCPNoDelay == SW_TRUE );
+                Internal::setNoDelay( fd, _settings->_bTCPNoDelay == SW_TRUE );
                 EpollConnection*             pConnection = nullptr;
                 const NetAddress             address     = Internal::makeNetAddress( remote );
                 const StreamConnectionHandle handle      = allocateConnection( fd, address, true, EpollConnectionState::Open, pConnection );
@@ -517,7 +518,7 @@ namespace sw
                         listIndex.push_back( index );
                 }
             }
-            const int64 idleNanoseconds = Internal::toNanoseconds( _settings._idleTimeoutSeconds );
+            const int64 idleNanoseconds = Internal::toNanoseconds( _settings->_idleTimeoutSeconds );
             const bool  bStopping       = _bStopping.load( std::memory_order_acquire );
             for ( const uint32 index : listIndex )
             {
@@ -627,8 +628,8 @@ namespace sw
         State& state = *_state;
         if ( pHandler == nullptr || state._bInitialized == SW_TRUE )
             return false;
-        state._settings  = settings;
-        state._pHandler  = pHandler;
+        state._settings.set( settings );
+        state._pHandler.set( pHandler );
         state._loopCount = settings._ioThreadCount > 0 ? settings._ioThreadCount : 1;
         state._bThreaded = settings._ioThreadCount > 0 ? SW_TRUE : SW_FALSE;
         for ( int32 index = 0; index < state._loopCount; ++index )
@@ -726,6 +727,8 @@ namespace sw
         state._listLoop.clear();
         state._listenPort   = 0;
         state._bInitialized = SW_FALSE;
+        state._settings.reset(); // I/O 스레드를 모두 합류한 뒤 — 다시 initialize 할 수 있게 비운다
+        state._pHandler.reset();
     }
 
     bool EpollStreamTransport::listen( const NetAddress& bindAddress )
@@ -740,7 +743,7 @@ namespace sw
         (void)setsockopt( fd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof( reuse ) );
         sockaddr_in local              = EpollStreamTransportInternal::makeNativeAddress( bindAddress );
         socklen_t   length             = sizeof( local );
-        const bool  bListenSetupFailed = bind( fd, reinterpret_cast<const sockaddr*>( &local ), sizeof( local ) ) != 0 || ::listen( fd, state._settings._listenBacklog ) != 0 ||
+        const bool  bListenSetupFailed = bind( fd, reinterpret_cast<const sockaddr*>( &local ), sizeof( local ) ) != 0 || ::listen( fd, state._settings->_listenBacklog ) != 0 ||
                                         getsockname( fd, reinterpret_cast<sockaddr*>( &local ), &length ) != 0;
         if ( bListenSetupFailed )
         {
@@ -831,7 +834,7 @@ namespace sw
             {
                 pConnection->_state               = EpollConnectionState::Closing;
                 pConnection->_closeReason         = StreamCloseReason::LocalClose;
-                pConnection->_deadlineNanoseconds = MonotonicClock::nowNanoseconds() + EpollStreamTransportInternal::toNanoseconds( _state->_settings._closeLingerSeconds );
+                pConnection->_deadlineNanoseconds = MonotonicClock::nowNanoseconds() + EpollStreamTransportInternal::toNanoseconds( _state->_settings->_closeLingerSeconds );
                 pConnection->_bReceivePaused      = SW_FALSE;
                 pConnection->_bReadPending        = SW_TRUE; // 상대의 FIN 을 읽어야 끝난다.
             }
