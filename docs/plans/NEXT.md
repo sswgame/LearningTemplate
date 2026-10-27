@@ -54,3 +54,20 @@
 - `perf-frame` · `load-baseline-suite` · `load-auto-render-scale` — 남은 일 1 · 2 가 들어간 뒤.
 - `rhi-native-context-guard` · `rhi-transfer-dx12-u5`(DX12 Debug 디버그 레이어), `host-write-snapshot` — 명령이 생기면.
 - CI: push 뒤 `py -3 -m Scripts ci-jobs --summary` 한 번 — Wayland 잡(`wayland-ci-job`, wlwin2 의 `PosixProcessEnvironment.cpp` · 커서 모양 · 소수 배율 첫 컴파일)과 `CheckSourceGlob`(skipgate) 위반 여부.
+
+### 끊긴 작업(2026-10-27 새벽, 사용량 한도로 작업자 전원 중단 — 7시 이후 재개)
+
+main 은 통합 R 그대로다. 아래는 워크트리 브랜치에만 있고 병합되지 않았다. 중단된 작업자는 `SendMessage` 로 이어 시킬 수 있다(작업은 저장돼 있다).
+
+| 묶음 | 브랜치 | 상태 |
+|---|---|---|
+| 통합 S | `wt/integ-s` | 끝 브랜치 병합 중 중단. 이어서 병합 → 빌드 → `verify-batch` Debug/Shipping/Release → push. subs 소비자(UserSettingsManager · Telemetry · CrashReport · UIBindingSet · TestUserSettings · ReflectionInvoke)를 `Subscription` 에 맞춰 고친다. `HeaderSelfContained.py` 중복 수정은 loadbot 것을 취한다 |
+| 구독 · 잠금 · 오류 | `wt/subs` `wt/lockfmt` `wt/errh` `wt/hostlife` `wt/onlinelife` `wt/corebase` `wt/corelib` `wt/jsonwriter` `wt/procargs` `wt/clk` | 대부분 끝, 후속(등록 형태 · ScopedLock/GUARDED_BY · 가능한 실패 동사) 중단 |
+| 입력 계층 | `wt/inputlayer` `wt/rclick` `wt/reuse` | I0–I2 끝, I3a–g · I4 중단 |
+| 그래픽스 | `wt/gfxc` `wt/taabypass` `wt/gfprobe` | gfxc ea6559434 끝. 셰이더 소스 패치(scratchpad `gfxc-shader-cook-batch.patch`)는 통합이 적용 → `App --cook-shaders` → `--verify-shaders`. 후속: DDS 비트마스크 표를 `DdsFormats.json` 으로, 블렌드 모드 대소문자 별칭 읽기 제거 |
+| 중단 | `wt/finitefloat` `wt/determ` `wt/edperf` `wt/unixloop` `wt/netsec` `wt/candnet` | 이어 시킨다. `wt/netsec` 212995371(평문 UDP 정책)은 사용자가 병합을 승인함(아래 결정) |
+| **따로 병합할 준비 브랜치(사용자 지시: 통합 S 에서 병합하지 않는다)** | `wt/resid` `wt/cand-engine` `wt/cand-gameplay` `wt/cand-quality` | 모두 기준 `wt/integ-s` 5ec9eabbe. 각 브랜치 보고(후보별 결과 · 충돌 가능 파일 · 통합 확인)는 작업자 보고에 있음. 겹치는 파일은 `Test/QA/VerifyBatch.json` · `Scripts/qa/PerfCompare.py` · `docs/decisions/5-2·5-8` · `Candidates-*.md`(끝 추가라 풀기 쉽다). 병합 순서 권고: cand-quality → cand-engine → cand-gameplay → resid(호출처 대량 수정이라 마지막). 병합 뒤 통합이 `normal-maps-reimport` · `shared-module-unload-tests` · `log-gate-cleanup-tests` 를 돌린다. 작업자(worker)에게는 `SendMessage` 가 없어 직접 소통은 안 된다 |
+| **작업 구조 변경(사용자 결정 2026-10-27)** | — | 앞으로는 병렬 작업자 + 통합 대기를 쓰지 않고, 한 에이전트가 일을 몰아서 단계별로 나눠 진행한다(단계마다 코드 → 린트 → 문법 검사 → 커밋, 빌드 · 검증은 새 일마다 하지 않고 맡은 묶음이 다 끝난 뒤 같은 에이전트가 한 번에 하고 병합 · push 까지 한다). 다음 세션 첫 일: CLAUDE.md 원칙 2 · `WorkerRules.md` · `11_Workflow.md` · `12_Agents.md` 를 이 구조로 고친다. 지금 도는 작업자 · 준비 브랜치는 그대로 마무리 |
+| **별도 병합 필요(S 목록에 없음)** | `wt/verifycmd` | 측정대기 계획 문서 63개 전부 닫음(매니페스트 201→151, 문서 삭제 · 결정은 5-2~5-11 로 이전). 병합 뒤 통합: `status-board --write`(지운 문서 링크 약 30곳), NEXT.md 5번 줄의 지운 `Vfx.md` 링크 정리, 셰이더 5개 주석(지운 문서를 가리킴)을 다음 쿠킹 때 같이 고침, 새 perf-compare 케이스 · `cook-pack-timing-release` · `write-snapshot` 인자를 첫 실행에서 확인. 겹침: VerifyBatch.json · PerfCompare.py(cand-gameplay) · Candidates-*.md · Roadmap.md. 최신 `e8ad2aa91`: `need_command` 25→5(남은 5개는 cand-gameplay · cand-engine 매니페스트가 이미 닫아 둘 다 병합하면 0). 병합 뒤 `need_command` 가 0 이면 `plans --check` 가 데이터의 `need_command` 를 거절하게 막는 것이 구조적 마무리 |
+
+사용자 결정(2026-10-27): 장르 키트 21개(232 파일)는 앞으로 쓰므로 유지, Steam/Epic SDK 와 H-3 운영 문서는 보류. 말 모델은 BlendSwap "Horse Rigged All Gaits"(CC0 표기, 라이선스·클립은 받아서 확인)를 사용자가 받아 `models_raw/` 에 넣는다. 평문 UDP 정책(wt/netsec 212995371)은 병합 승인됨 — 통합 S 가 병합한다(Shipping 에서 평문 LAN 파티 불가). 사용자 영향: Shortcuts.json 초기화, `<bind modifier>` 형식, 레이아웃 dockspace v7→v8, foliageDensity/reduceFlashing 설정 제거.
