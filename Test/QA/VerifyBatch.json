@@ -1003,6 +1003,12 @@
       "tool": "app", "args": ["--import-textures"],
       "source": "docs/plans/Candidates-quality.md ImageIntakeChecks", "result_doc": "docs/plans/Candidates-quality.md ImageIntakeChecks",
       "note": "Resource/engine/textures/surfaces/*_normal.dds 열 장과 textures_raw/import.stamp 가 바뀐다 — 돌린 뒤 git status 로 그 열 장과 스탬프만 바뀌었는지 보고 커밋한다."
+    },
+    {
+      "id": "shared-module-unload-tests", "title": "공용 모듈을 매니저가 shutdown 에서 내린다(SmokeTest 의 모듈 호스트 · 리로드 · 모듈 API 케이스)", "kind": "test", "config": "Debug", "platform": "windows", "gpu": "none", "pending": true, "timeout_minutes": 30,
+      "filter": "ModuleHostTest.*,ArchitectureTest.*,ModuleAPITest.*",
+      "source": "docs/plans/Candidates-quality.md LogGateRemainders", "result_doc": "docs/plans/Candidates-quality.md LogGateRemainders",
+      "note": "모두 통과해야 하고, 로그에서 `already registered` · `registered twice` · `already defined` 줄이 `ArchitectureTest.LiveReload*` 안에서 사라졌는지 센다(표식 없는 줄이 0 이어야 한다). 남으면 SWGame 단독 등록 케이스가 지연 로드로 올린 GameFramework 이미지 몫이다."
     }
   ]
 }

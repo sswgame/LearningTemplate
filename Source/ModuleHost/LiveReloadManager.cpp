@@ -162,6 +162,7 @@ namespace sw
                 unloadModule( moduleRecord );
             }
             clearRecords();
+            unloadSharedModules();
             return;
         }
 
@@ -177,6 +178,7 @@ namespace sw
                 unloadModule( context );
             }
             clearRecords();
+            unloadSharedModules();
             return;
         }
 
@@ -188,6 +190,7 @@ namespace sw
                 unloadModule( mapIt->second );
         }
         clearRecords();
+        unloadSharedModules();
     }
 
     bool LiveReloadManager::loadSharedModule( string_view moduleName )
@@ -201,9 +204,9 @@ namespace sw
                 return false;
             }
         }
-        for ( const string& loadedName : _listSharedModule )
+        for ( const SharedImage& loaded : _listSharedModule )
         {
-            if ( LiveReloadManagerInternal::isSameModuleName( loadedName, moduleName ) )
+            if ( LiveReloadManagerInternal::isSameModuleName( loaded._name, moduleName ) )
                 return true;
         }
 
@@ -239,7 +242,7 @@ namespace sw
             return false;
         }
         engine::registerModuleTypes( moduleName );
-        _listSharedModule.push_back( string{ moduleName } );
+        _listSharedModule.push_back( SharedImage{ string{ moduleName }, pSharedHandle } );
         SW_LOG_INFO( "Shared module loaded: %#", moduleName );
         return true;
     }
@@ -248,9 +251,9 @@ namespace sw
     {
         // 공용 모듈(GameFramework)은 키트 · 게임보다 오래 산다는 전제가 그 함수 정적(데이터 표 캐시 · 카탈로그 · 서비스 표)의 근거다.
         // 리로드 대상(_mapModule)에 오르는 길은 여기 하나뿐이므로, 공용 모듈을 내리거나 다시 올리는 길을 여기서 막는다.
-        for ( const string& sharedName : _listSharedModule )
+        for ( const SharedImage& shared : _listSharedModule )
         {
-            if ( LiveReloadManagerInternal::isSameModuleName( sharedName, moduleName ) )
+            if ( LiveReloadManagerInternal::isSameModuleName( shared._name, moduleName ) )
             {
                 SW_LOG_ERROR( "Shared module %# outlives the modules that link it and cannot be registered for reload or unload", moduleName );
                 return false;
@@ -881,6 +884,28 @@ namespace sw
 
         ModuleShadowCopy::removeArtifacts( context._tempModulePath );
         context._tempModulePath.clear();
+    }
+
+    void LiveReloadManager::unloadSharedModules()
+    {
+        if ( _listSharedModule.empty() )
+            return;
+        // 서비스가 이미 내려갔으면 등록을 제 이름으로 해제할 곳이 없다 — 이미지를 두면 정적 등록이 남은 채로 프로세스가 끝난다(예전 동작).
+        if ( engine::areEngineServicesBound() == false )
+        {
+            _listSharedModule.clear();
+            return;
+        }
+        drainTasksBeforeUnload();
+        for ( auto it = _listSharedModule.rbegin(); it != _listSharedModule.rend(); ++it )
+        {
+            SW_LOG_INFO( "Unloading shared module %# (handle=%#)", it->_name.c_str(), it->_pHandle );
+            engine::unregisterModuleTypes( it->_name );
+            if ( ModuleImageUtil::releaseImageCode( it->_name, it->_pHandle ) )
+                ModuleImageUtil::unloadDynamicLibrary( it->_pHandle );
+            it->_pHandle = nullptr;
+        }
+        _listSharedModule.clear();
     }
 
     bool LiveReloadManager::drainTasksBeforeUnload()

@@ -1869,8 +1869,8 @@ SW_TEST_CASE( ModuleAPITest, GameFrameworkKitsModuleTypeRegistration )
 /**
  * @brief [ModuleAPITest] 자식 프로세스 역할: 공용 모듈을 먼저 올리면 GameFramework 의 타입이 제 이름으로 남는다. 그냥 실행하면 건너뛴다.
  * @details `ModuleHost` 의 순서를 그대로 밟는다 — 공용 모듈 → 키트 → SWGame 등록, SWGame 서비스 묶기(공용 모듈을 먼저 올리지 않으면 여기서
- *          GameFramework 가 지연 로드로 **처음** 올라온다), 그리고 `bindGameAPI` 끝의 인자 없는 등록. 프로세스마다 한 번뿐인 일이라(이미지는 내려가지 않는다)
- *          앞선 케이스가 SWGame 을 올린 이 프로세스에서는 측정할 수 없어 자식에서 측정한다.
+ *          GameFramework 가 지연 로드로 **처음** 올라온다), 그리고 `bindGameAPI` 끝의 인자 없는 등록. 프로세스마다 한 번뿐인 일이라(지연 로드로 올라온 이미지는
+ *          아무도 내리지 않는다) 앞선 케이스가 SWGame 을 올린 이 프로세스에서는 측정할 수 없어 자식에서 측정한다. `loadSharedModule` 로 올린 이미지는 매니저가 `shutdown` 에서 내린다.
  */
 SW_TEST_CASE( ModuleAPITest, SharedModuleChildKeepsItsRegistrations )
 {

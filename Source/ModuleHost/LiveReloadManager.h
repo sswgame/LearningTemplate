@@ -109,7 +109,7 @@ namespace sw
          *          그 정적 레지스트리(타입, 컴포넌트 팩토리, 전역 변수)가 그때 등록을 모으는 모듈(SWGame 이나 첫 키트)의 이름으로 들어간다.
          *          그러면 SWGame 의 팩토리 캐시를 덮어써서 그 뒤에 만든 씬에 SWGame 컴포넌트가 없어지고, 첫 SWGame 리로드가 공용 모듈의 컴포넌트와 타입을 모든
          *          씬에서 지운다. 공용 모듈은 다시 로드되지 않으므로 돌아오지도 않는다. 그래서 그 모듈을 링크하는 모듈을 등록하기 **전에** 이 함수를 부른다.
-         *          로드하기 전에 엔진 ABI 스탬프를 대조한다. 이미지는 프로세스가 끝날 때까지 둔다(의존 모듈의 import 가 그 이미지를 가리킨다).
+         *          로드하기 전에 엔진 ABI 스탬프를 대조한다. 이미지는 리로드하지 않고, 이 매니저가 `shutdown` 에서 그것을 링크하는 모듈을 모두 내린 뒤 마지막에 내린다(의존 모듈의 import 가 그 이미지를 가리킨다).
          * @return 로드했거나 이 매니저가 이미 로드했으면 true 입니다. 파일이 없으면(그 모듈을 쓰지 않는 구성) 아무것도 하지 않고 true 를 반환합니다.
          */
         [[nodiscard]] bool loadSharedModule( string_view moduleName );
@@ -224,6 +224,13 @@ namespace sw
             string       _moduleName;
             CallbackSlot _slot;
         };
+        /** @brief `loadSharedModule` 이 올린 공용 모듈 이미지입니다. */
+        struct SharedImage
+        {
+            string _name;
+            void*  _pHandle{ nullptr }; ///< 섀도 복사 없이 원본 경로로 올린 이미지
+        };
+
         /** @brief 배치 직전 콜백 목록의 항목입니다. */
         struct BeforeCommitBatchEntry
         {
@@ -266,6 +273,13 @@ namespace sw
         void populateShadowCopyParams( const ModuleRecord& context, ShadowCopyParams& outParams ) const;
         /** @brief 모듈 핸들을 언로드합니다. */
         void unloadModule( ModuleRecord& context );
+        /**
+         * @brief `loadSharedModule` 로 올린 공용 모듈을 올린 순서의 거꾸로 내립니다(등록을 제 이름으로 해제하고 이미지를 놓는다).
+         * @details 공용 모듈은 그것을 링크하는 모듈보다 오래 살아야 하므로 `shutdown` 이 리로드 대상을 모두 내린 **뒤에** 부른다. 이미지는 프로세스 전역이라 매니저가 놓지 않으면
+         *          다음 매니저(테스트 · 재기동)가 같은 모듈을 다시 올리며 정적 등록(데이터 종류 · 탐침 · 단계 · 개발 명령 · 서비스 팩토리)이 이름 중복으로 거절된다.
+         *          엔진 서비스가 이미 내려갔으면 등록을 해제할 곳이 없어 이미지를 그대로 둔다(프로세스 끝까지).
+         */
+        void unloadSharedModules();
         /**
          * @brief 언로드하기 전에 워커와 태스크를 비웁니다.
          * @return 제한 시간 안에 비웠으면 true. 실패하면 그래프를 깨진 상태로 표시하고 false 를 반환합니다.
@@ -329,7 +343,7 @@ namespace sw
 
         stable_unordered_map<string, ModuleRecord> _mapModule;        ///< 이름 집합은 `_dependencyGraph` 와 같다(`getOrCreateRecord` · `clearRecords`). 컨텍스트 주소가 고정이다
         ModuleDependencyGraph                      _dependencyGraph;  ///< 모듈 이름 → 의존 모듈 이름. 연쇄 교체 대상과 순서를 계산한다
-        vector<string>                             _listSharedModule; ///< `loadSharedModule` 로 올린 공용 모듈 이름(내리지 않는다)
+        vector<SharedImage>                        _listSharedModule; ///< `loadSharedModule` 로 올린 공용 모듈(올린 순서 — 리로드 대상을 모두 내린 뒤 `shutdown` 이 거꾸로 내린다)
         unique_ptr<IFileWatcher>                   _fileWatcher;      ///< 모듈 폴더(하위 폴더 없이)를 본다. 첫 `registerModule` 이 시작한다
         string                                     _buildStampPath;   ///< 바깥 빌드의 성공 스탬프(`Bin/Modules/` + `config::kFileModuleBuildStamp`). 감시를 시작할 때 정한다
         FileStamp                                  _seenBuildStamp;   ///< 마지막으로 본 스탬프. 이것과 달라지면 바깥 빌드가 끝난 것이다

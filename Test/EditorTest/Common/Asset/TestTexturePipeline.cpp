@@ -845,6 +845,33 @@ namespace sw::editor
         SW_EXPECT_FALSE_MSG( match.hasError(), match._error.c_str() );
         SW_EXPECT_EQUAL( sw::string( "Normal_Maps" ), match._rule._name );
         SW_EXPECT_EQUAL( SW_FALSE, match._rule._bInvertGreen );
+        // 2D 쪽도 같은 규약이다 — 규칙은 3D · 2D 를 가르지 않으므로 2D 원본(`_n`)도 초록을 뒤집지 않는다.
+        SW_EXPECT_EQUAL( SW_FALSE, config.findMatchingRule( "game/empty/textures_raw/twod/tiles_n.png" )._rule._bInvertGreen );
+    }
+
+    /**
+     * @brief [EditorTexturePipelineTest] 2D 노멀 아틀라스(`tiles_n.dds`)의 초록은 스프라이트의 +Y(위)다 — `sprite2dlit.hlsl` 의 규약과 같다
+     * @details 셰이더는 초록을 스프라이트 +Y 월드 방향(`_bitangent`)에 곱하고 스프라이트 사각형의 v 는 위가 0 이다(`makeSpriteVertex`). 그래서 솟은 타일의 윗 테두리(이미지 맨 윗줄)는
+     *          초록이 128 보다 크고 아랫 테두리(셀 맨 아랫줄)는 작아야 빛이 위에서 올 때 윗 테두리가 밝다. 데이터가 반대면 2D 빛의 요철이 거꾸로 보인다.
+     *          변이: 아틀라스의 초록을 `255 - g` 로 구우면 진다.
+     */
+    SW_TEST_CASE( EditorTexturePipelineTest, Repository2DNormalAtlasIsGreenUp )
+    {
+        SW_TEST_REQUIRES_FEATURE( SourceResources ); // game/empty/ 팩은 Shipping 에 없다
+        SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+        const sw::string path = FileUtil::normalizeSeparators( sw::ResourcePaths::getRootFolderPath() ) + "/game/empty/textures/twod/tiles_n.dds";
+        DDSImageData     atlas;
+        SW_ASSERT_TRUE( DDSLoader::loadFromDiskFile( path, atlas ) );
+        SW_ASSERT_TRUE( atlas.isValid() );
+        constexpr uint32 kCellSize = 16; // 타일 한 칸(맨 왼쪽 위 셀을 본다)
+        constexpr uint32 kProbeX   = 8;
+        constexpr uint32 kGreen    = 1; // BGRA · RGBA 모두 두 번째 바이트다
+        SW_ASSERT_TRUE( atlas._width >= kCellSize && atlas._height >= kCellSize );
+        SW_ASSERT_EQUAL( static_cast<size_t>( atlas._width ) * atlas._height * 4, atlas._bytes.size() );
+        const auto greenAt = [&atlas]( uint32 x, uint32 y )
+        { return atlas._bytes[( static_cast<size_t>( y ) * atlas._width + x ) * 4 + kGreen]; };
+        SW_EXPECT_TRUE( greenAt( kProbeX, 0 ) > 128 );
+        SW_EXPECT_TRUE( greenAt( kProbeX, kCellSize - 1 ) < 128 );
     }
 
     /**
