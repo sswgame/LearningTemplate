@@ -79,8 +79,8 @@ namespace sw
         , _settings{}
         , _mutex{}
         , _pTransport{ nullptr }
-        , _pMetricRegistry{ nullptr }
-        , _pHealthRegistry{ nullptr }
+        , _pMetricRegistry{}
+        , _pHealthRegistry{}
     {
     }
 
@@ -94,12 +94,13 @@ namespace sw
     {
         if ( pTransport == nullptr )
             return false;
-        _settings        = settings;
-        _pMetricRegistry = pMetricRegistry;
-        _pHealthRegistry = pHealthRegistry;
+        _settings.set( settings );
+        _pMetricRegistry.set( pMetricRegistry );
+        _pHealthRegistry.set( pHealthRegistry );
         if ( pTransport->initialize( this, transportSettings ) == false )
         {
             SW_LOG_ERROR( "Ops HTTP endpoint could not start its stream transport" );
+            shutdown();
             return false;
         }
         _pTransport = pTransport;
@@ -120,6 +121,10 @@ namespace sw
         if ( _pTransport != nullptr )
             _pTransport->shutdown();
         _pTransport = nullptr;
+        // 설정 · 레지스트리는 initialize 가 한 번 정한다 — 다시 시작할 수 있게 전송을 멈춘 뒤 비운다.
+        _settings.reset();
+        _pMetricRegistry.reset();
+        _pHealthRegistry.reset();
         ScopedLock<mutex> lock{ _mutex };
         _listConnection.clear();
     }
@@ -186,10 +191,10 @@ namespace sw
             const size_t headEnd = pConnection->_buffer.find( OpsHTTPEndpointInternal::kHeadEnd );
             if ( headEnd != string::npos )
             {
-                (void)makeResponse( string_view( pConnection->_buffer ).substr( 0, headEnd ), _pMetricRegistry, _pHealthRegistry,
+                (void)makeResponse( string_view( pConnection->_buffer ).substr( 0, headEnd ), _pMetricRegistry.get(), _pHealthRegistry.get(),
                                     OpsHTTPEndpointInternal::nowMonotonicMs(), response );
             }
-            else if ( static_cast<int32>( pConnection->_buffer.size() ) > _settings._maxRequestBytes )
+            else if ( static_cast<int32>( pConnection->_buffer.size() ) > _settings->_maxRequestBytes )
             {
                 // 돌려주는 것은 상태 코드다 — 응답은 response 에 담긴다
                 (void)OpsHTTPEndpointInternal::writeResponse( 431, OpsHTTPEndpointInternal::kTextContentType, "request head too large\n", response );

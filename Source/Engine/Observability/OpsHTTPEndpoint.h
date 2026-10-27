@@ -9,6 +9,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/OnceInit.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
@@ -73,11 +74,11 @@ namespace sw
 
         Connection* findConnection( uint64 packedHandle ) SW_REQUIRES_LOCK( _mutex );
 
-        vector<Connection> _listConnection SW_GUARDED_BY( _mutex );
-        OpsHTTPEndpointConfig              _settings;
-        mutex                              _mutex;
-        IStreamTransport*                  _pTransport;
-        const MetricRegistry*              _pMetricRegistry;
-        const ServiceHealthRegistry*       _pHealthRegistry;
+        vector<Connection> _listConnection     SW_GUARDED_BY( _mutex );
+        OnceInit<OpsHTTPEndpointConfig>        _settings;
+        mutex                                  _mutex;
+        IStreamTransport*                      _pTransport;
+        OnceInit<const MetricRegistry*>        _pMetricRegistry;
+        OnceInit<const ServiceHealthRegistry*> _pHealthRegistry;
     };
 } // namespace sw
