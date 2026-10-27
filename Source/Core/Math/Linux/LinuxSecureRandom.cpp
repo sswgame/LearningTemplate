@@ -20,8 +20,7 @@ namespace sw
             {
                 if ( errno == EINTR )
                     continue;
-                SW_LOW_LEVEL_ERROR( "getrandom failed (%s) - no OS randomness, stopping instead of using a predictable value", std::strerror( errno ) );
-                std::abort();
+                SW_LOW_LEVEL_FATAL( "getrandom failed (%s) - no OS randomness, refusing a predictable value", std::strerror( errno ) );
             }
             pOutBytes += written;
             byteCount -= static_cast<size_t>( written );

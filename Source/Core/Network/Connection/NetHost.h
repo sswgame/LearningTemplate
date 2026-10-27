@@ -448,6 +448,7 @@ namespace sw
         vector<NetReceivedDatagram>                   _listReceived;           ///< `update` 스레드 전용. 잠금 밖에서 받은 배치(버퍼를 다시 쓴다).
         OutgoingBatch                                 _flushBatch;             ///< `update` 스레드 전용. 잠금 밖에서 보내는 배치.
         vector<FinishedConnect>                       _listDeliver;            ///< `update` 스레드 전용.
+        vector<string> _listDeferredWarning           SW_GUARDED_BY( _mutex ); ///< 잠금 안(`handlePacket`)에서 모은 경고. `update` 가 잠금을 놓은 뒤 쓴다.
         BitWriter _plainWriter                        SW_GUARDED_BY( _mutex ); ///< 암호화에서 NetConnection 이 쓴 평문 패킷.
         NetConnectCredentials _credentials            SW_GUARDED_BY( _mutex ); ///< 클라이언트 전용. 지금 연결에 제시하는 자격.
         NetHostConfig _settings                       SW_GUARDED_BY( _mutex );

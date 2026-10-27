@@ -8,23 +8,23 @@
 // 1) Core_JSON — 파싱·탐색과 대소문자 무시 키
 // ------------------------------------------------------------------------------
 /**
- * @brief [JSONDocumentTest] 파싱·탐색과 대소문자 무시 키
+ * @brief [JSONDocumentTest] 파싱·탐색 — 키는 철자 그대로 찾는다
  */
-SW_TEST_CASE( JSONDocumentTest, ParseAndNavigateIgnoreCaseKeys )
+SW_TEST_CASE( JSONDocumentTest, ParseAndNavigateKeysBySpelling )
 {
     sw::JSONDocument doc;
     SW_EXPECT_TRUE( doc.parse( R"({"Name":"Demo","_score":12,"Items":[{"id":1},{"id":2}]})" ) );
 
     sw::JSONValue root = doc.getRoot();
     SW_EXPECT_TRUE( root.isObject() );
-    SW_EXPECT_EQUAL( sw::string( "Demo" ), root.get( "name" ).asString() );
-    SW_EXPECT_EQUAL( 12, root.get( "_SCORE" ).read<int64>().value() );
+    SW_EXPECT_EQUAL( sw::string( "Demo" ), root.get( "Name" ).asString() );
+    SW_EXPECT_EQUAL( 12, root.get( "_score" ).read<int64>().value() );
     SW_EXPECT_TRUE( root.get( "missing" ).isValid() == false );
 
-    sw::JSONValue items = root.get( "items" );
+    sw::JSONValue items = root.get( "Items" );
     SW_EXPECT_TRUE( items.isArray() );
     SW_EXPECT_EQUAL( 2u, static_cast<uint32>( items.size() ) );
-    SW_EXPECT_EQUAL( 1, items.at( 0 ).get( "ID" ).read<int64>().value() );
+    SW_EXPECT_EQUAL( 1, items.at( 0 ).get( "id" ).read<int64>().value() );
     SW_EXPECT_EQUAL( 2, items.at( 1 ).get( "id" ).read<int64>().value() );
 }
 

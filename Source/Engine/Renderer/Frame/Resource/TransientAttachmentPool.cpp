@@ -17,6 +17,7 @@ namespace sw
         , _clearedMutex{}
         , _width{ 0 }
         , _height{ 0 }
+        , _allocationCount{ 0 }
     {
     }
 

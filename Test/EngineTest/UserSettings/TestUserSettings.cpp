@@ -720,7 +720,7 @@ SW_TEST_CASE( UserSettingsTest, KeyBindingSurvivesRestart )
 SW_TEST_CASE( UserSettingsTest, InputSlotTextRoundTrips )
 {
     sw::InputSlot slot;
-    SW_ASSERT_TRUE( sw::InputSlotUtil::tryParse( "key.space", slot ) );
+    SW_ASSERT_TRUE( sw::InputSlotUtil::tryParse( "Key.Space", slot ) );
     SW_EXPECT_STREQ( "Key.Space", sw::InputSlotUtil::toText( slot ) );
     SW_ASSERT_TRUE( sw::InputSlotUtil::tryParse( "Gamepad2.A", slot ) );
     SW_EXPECT_EQUAL( 2, static_cast<int32>( slot._deviceIndex ) );

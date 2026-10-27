@@ -837,8 +837,8 @@ SW_TEST_CASE( RenderPassTest, PipelineValidationCatchesInconsistencies )
         // MRT 없는 G버퍼의 단독 PSO 슬롯은 없다 — 네 백엔드가 모두 MRT 를 보장한다.
         SW_EXPECT_TRUE( removedTypeIsRejected( "GBufferAlbedo" ) );
         SW_EXPECT_TRUE( removedTypeIsRejected( "GBufferNormal" ) );
-        // 철자 대소문자는 리플렉션이 무시하므로 "ToneMap" 은 "Tonemap" 으로 읽힌다 — 의도된 관용이다.
-        SW_EXPECT_TRUE( removedTypeIsRejected( "ToneMap" ) == false );
+        // 철자는 리플렉션이 그대로만 읽으므로 "ToneMap" 은 "Tonemap" 의 별칭이 아니다 — 모르는 타입으로 거절된다.
+        SW_EXPECT_TRUE( removedTypeIsRejected( "ToneMap" ) );
     }
 
     // 6) 엔진 내부 PSO 슬롯은 XML 패스 타입으로 쓸 수 없다. executePass 에 실행 코드가 없다 — XML 이 받아 주면 그 패스는

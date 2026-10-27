@@ -5,3 +5,9 @@
 # 전체 훑기의 기준선 — 지금 있는 건수다. 늘면 실패한다(커밋 훅은 추가한 줄만 본다).
 [baseline]
 total = 0
+
+# 검사하지 않는 파일의 경로 앞머리 → 이유. 앞머리에 맞는 파일을 훑지 못하면(옮기거나 지웠다) 기반이 "낡은 예외" 로 실패시킨다.
+[exemption]
+"Source/Editor/Common/GUI/EditorChrome." = "크기를 ImGui 로 넘기는 구현 파일이다 — 칸 · 줄 수를 픽셀로 바꾸는 곳이라 숫자가 있어도 된다"
+"Source/Editor/Common/GUI/EditorTextExtentImGui." = "크기를 ImGui 로 넘기는 구현 파일이다 — 칸 · 줄 수를 픽셀로 바꾸는 곳이라 숫자가 있어도 된다"
+"Source/Editor/SelfTest/" = "테스트가 만드는 가짜 창이다 — 재현성을 위해 픽셀을 고정한다"

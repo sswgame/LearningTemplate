@@ -256,7 +256,7 @@ namespace sw
             const MoveFrameData*     pMove = slot._listMoveID.empty() ? nullptr : _pMoveCatalog->find( slot._listMoveID.front() );
             if ( pMove == nullptr )
                 return;
-            (void)findLockTarget( pilotIndex );
+            (void)findLockTarget( pilotIndex ); // 고르는 부수 효과만 쓴다 — 대상이 없으면 앞으로 친다
             if ( pilot._melee.start( *pMove ) == false )
                 return;
             pilot._comboStage   = 0;

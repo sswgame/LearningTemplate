@@ -99,9 +99,10 @@ namespace sw
         // 그 id 로 등록된 것이 아직 있으면(삭제 대기 포함) 쓰지 않는다. 이전 오브젝트의 지연 파괴가 id 로 정리하는 항목을 새 오브젝트의 항목까지 지우게 된다.
         if ( findRegisteredUnlocked( objectID ) != nullptr )
         {
-            SW_LOG_WARNING( "createGameObjectWithID: id %# is still registered, so '%#' gets a new id. Handles to the old object will not follow it.",
-                            objectID, name.c_str() );
-            return createGameObjectUnlocked( name, allocateID() );
+            GameObject* pRenamed = createGameObjectUnlocked( name, allocateID() );
+            lock.unlock(); // 잠금은 잎이다 — 로그는 놓은 뒤에 쓴다
+            SW_LOG_WARNING( "createGameObjectWithID: id %# is still registered, so '%#' gets a new id. Handles to the old object will not follow it.", objectID, name.c_str() );
+            return pRenamed;
         }
 
         _s_nextObjectID.fetch_max( objectID + 1, std::memory_order_relaxed );

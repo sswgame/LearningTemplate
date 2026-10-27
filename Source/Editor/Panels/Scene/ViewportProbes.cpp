@@ -266,7 +266,7 @@ namespace sw::editor
         }
 
         /** @brief `-gv_editorProbeOverlay` 바의 상태를 읽습니다. 씬 뷰가 없거나 그 바가 없으면 false 입니다. */
-        bool findProbedOverlay( const EditorOverlayBarState*& pOutState, const EditorOverlayBarRuntime*& pOutRuntime )
+        [[nodiscard]] bool findProbedOverlay( const EditorOverlayBarState*& pOutState, const EditorOverlayBarRuntime*& pOutRuntime )
         {
             const EditorViewportClient* pClient = findSceneViewClient();
             if ( pClient == nullptr )

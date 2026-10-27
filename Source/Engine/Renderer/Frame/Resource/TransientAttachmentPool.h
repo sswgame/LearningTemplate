@@ -152,6 +152,6 @@ namespace sw
         mutable mutex         _clearedMutex;
         uint32                _width;
         uint32                _height;
-        uint32                _allocationCount{ 0 };
+        uint32                _allocationCount;
     };
 } // namespace sw

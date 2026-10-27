@@ -85,11 +85,11 @@ namespace sw::editor
         hashed_string                         _editLibraryName; ///< `_editLibrary` 를 읽은 리소스 경로(저장할 곳)입니다. 비면 고치기 중이 아닙니다.
         hashed_string                         _editEvent;       ///< 사본에서 고치는 이벤트 이름(복제한 새 이벤트일 수 있다)
         fixed_string<constant::kMaxBuffer128> _filter;
-        bool                                  _bOnlySelectedEvent;          ///< 재생 중 목록을 고른 이벤트로 거른다.
-        bool                                  _bEditDirty;                  ///< 사본을 고친 뒤 아직 저장하지 않았다.
-        const AudioEngine*                    _pEventNameEngine{ nullptr }; ///< `_listEventName` 을 모은 엔진(엔진이 새로 뜨면 세대가 다시 1 부터라 함께 본다)
-        uint32                                _eventNameGeneration{ 0 };    ///< `_listEventName` 을 모은 때의 `AudioEngine::getEventLibraryGeneration`
-        string                                _visibleEventFilter;          ///< `_listVisibleEvent` 를 거른 검색 글
-        bool                                  _bVisibleEventStale{ true };  ///< 이름 목록이 바뀌어 다시 걸러야 한다
+        bool                                  _bOnlySelectedEvent;  ///< 재생 중 목록을 고른 이벤트로 거른다.
+        bool                                  _bEditDirty;          ///< 사본을 고친 뒤 아직 저장하지 않았다.
+        const AudioEngine*                    _pEventNameEngine;    ///< `_listEventName` 을 모은 엔진(엔진이 새로 뜨면 세대가 다시 1 부터라 함께 본다)
+        uint32                                _eventNameGeneration; ///< `_listEventName` 을 모은 때의 `AudioEngine::getEventLibraryGeneration`
+        string                                _visibleEventFilter;  ///< `_listVisibleEvent` 를 거른 검색 글
+        bool                                  _bVisibleEventStale;  ///< 이름 목록이 바뀌어 다시 걸러야 한다
     };
 } // namespace sw::editor

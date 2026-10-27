@@ -347,6 +347,8 @@ namespace sw::editor
     UIPreviewPanel::UIPreviewPanel()
         : IEditorPanel( false )
         , _listRow{}
+        , _pRowTree{ nullptr }
+        , _rowTreeGeneration{ 0 }
         , _listLanguage{}
         , _listBaseline{}
         , _listPaletteType{}

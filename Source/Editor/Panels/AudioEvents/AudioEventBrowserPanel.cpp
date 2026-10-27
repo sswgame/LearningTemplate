@@ -74,6 +74,10 @@ namespace sw::editor
         , _filter{}
         , _bOnlySelectedEvent{ false }
         , _bEditDirty{ false }
+        , _pEventNameEngine{ nullptr }
+        , _eventNameGeneration{ 0 }
+        , _visibleEventFilter{}
+        , _bVisibleEventStale{ true }
     {
     }
 

@@ -72,7 +72,7 @@ namespace sw
              * @brief 프로퍼티 트랙이 가리키는 컴포넌트와 숫자 프로퍼티를 찾습니다. 못 찾거나 숫자가 아니면 false 를 반환합니다.
              * @details 숫자 여부는 내장 타입 표의 갈래(`ReflectBuiltinClass::Number` — 정수 · 실수 · 성분이 하나인 압축 타입)로 가른다. 값은 `ReflectValueUtil::readNumber` · `writeNumber` 로만 읽고 쓴다.
              */
-            static bool findTrackProperty( GameObject* pTarget, const SequenceKeyTrack& track, Component*& pOutComponent, const PropertyInfo*& pOutProperty )
+            [[nodiscard]] static bool findTrackProperty( GameObject* pTarget, const SequenceKeyTrack& track, Component*& pOutComponent, const PropertyInfo*& pOutProperty )
             {
                 pOutComponent    = nullptr;
                 pOutProperty     = nullptr;

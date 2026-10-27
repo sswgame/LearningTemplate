@@ -33,7 +33,7 @@ namespace sw
     {
         if ( pNode == nullptr || pNode->_pName == nullptr )
             return false;
-        ScopedLock<mutex>    lock{ _mutex };
+        UniqueLock<mutex>    lock{ _mutex };
         ServiceFactoryNode** ppLink = &_pHead;
         while ( *ppLink != nullptr )
         {
@@ -44,6 +44,7 @@ namespace sw
             {
                 if ( RegistrationReloadScope::isActive() == false )
                 {
+                    lock.unlock(); // 잠금은 잎이다 — 거절 로그는 놓은 뒤에 쓴다
                     reportRegistrationRejected( RegistrationResult::DuplicateName, pListName, pNode->_pName );
                     return false;
                 }

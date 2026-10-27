@@ -44,7 +44,7 @@ namespace sw::editor
             }
 
             /** @brief 입력 큐가 에디터 컨텍스트에 있으므로 에디터가 없는 실행은 오류로 멈춘다. */
-            static bool prepare( AutomationStepContext& /*runner*/, const AutomationStep& step, string& outError )
+            [[nodiscard]] static bool prepare( AutomationStepContext& /*runner*/, const AutomationStep& step, string& outError )
             {
                 if ( EditorSelfTestMarks::setEnabled( true ) )
                     return true;
