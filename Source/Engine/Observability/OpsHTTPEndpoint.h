@@ -77,7 +77,7 @@ namespace sw
         vector<Connection> _listConnection     SW_GUARDED_BY( _mutex );
         OnceInit<OpsHTTPEndpointConfig>        _settings;
         mutex                                  _mutex;
-        IStreamTransport*                      _pTransport;
+        OnceInit<IStreamTransport*>            _pTransport;
         OnceInit<const MetricRegistry*>        _pMetricRegistry;
         OnceInit<const ServiceHealthRegistry*> _pHealthRegistry;
     };
