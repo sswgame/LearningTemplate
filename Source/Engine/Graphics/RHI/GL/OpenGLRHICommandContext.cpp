@@ -868,10 +868,17 @@ namespace sw
         GLuint buf = _pDevice->resolveGlBuffer( argumentBuffer );
         if ( buf == 0 )
             return;
+        // dispatchCompute 와 같다 — 간접 디스패치도 **컴퓨트 PSO** 의 프로그램으로 한다. 앞서 그래픽스 PSO 가 건 프로그램이 남아 있으면
+        // GL_INVALID_OPERATION("no active compute program")이 난다(D3D · Vulkan 은 컴퓨트 PSO 를 따로 걸어 이 차이가 없다).
+        const OpenGLRHIDevice::OpenGLPipelineStateRecord* pPSO = _pDevice->_pipelineStates.get( _pDevice->_recordingState._boundComputePSO );
+        if ( pPSO == nullptr || pPSO->_program == 0 )
+            return;
+        glUseProgram( pPSO->_program );
         glBindBuffer( GL_DISPATCH_INDIRECT_BUFFER, buf );
         if ( glad_glDispatchComputeIndirect != nullptr )
             glDispatchComputeIndirect( static_cast<GLintptr>( argumentBufferOffset ) );
         glBindBuffer( GL_DISPATCH_INDIRECT_BUFFER, 0 );
+        glMemoryBarrier( GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_TEXTURE_FETCH_BARRIER_BIT | GL_TEXTURE_UPDATE_BARRIER_BIT | GL_PIXEL_BUFFER_BARRIER_BIT );
     }
 
     void OpenGLRHICommandContext::prepareTextureForShaderRead( RHITextureHandle texture )

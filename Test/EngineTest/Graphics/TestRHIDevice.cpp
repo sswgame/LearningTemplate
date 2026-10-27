@@ -1561,10 +1561,37 @@ SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, ComputeShaderDispatchAndIndirectComma
         const sw::RHITextureHandle rt   = pResource->createTexture2D( desc );
         SW_ASSERT_TRUE( rt != 0 );
 
+        // 디스패치도 컴퓨트 PSO 를 건 뒤에 한다(GL 은 컴퓨트 프로그램 없이 디스패치하면 GL_INVALID_OPERATION). 대상은 RW 텍스처 하나 —
+        // ComputeTextureUavWriteIsReadable 과 같은 프로브다. 그래픽스 패스를 사이에 두므로 디스패치마다 컴퓨트 상태를 다시 건다.
+        constexpr uint32   kUavSize = 8;
+        sw::RHITextureDesc uavDesc{};
+        uavDesc._width                       = kUavSize;
+        uavDesc._height                      = kUavSize;
+        uavDesc._mipLevels                   = 1;
+        uavDesc._format                      = sw::RHIFormat::R8G8B8A8_UNORM;
+        uavDesc._bIsShaderResource           = SW_TRUE;
+        uavDesc._bIsUnorderedAccess          = SW_TRUE;
+        const sw::RHITextureHandle uavTarget = pResource->createTexture2D( uavDesc );
+        SW_ASSERT_TRUE( uavTarget != 0 );
+        const sw::RHIDescriptorIndex uav = pResource->registerBindlessTextureUav( uavTarget );
+        SW_ASSERT_TRUE( uav != sw::kInvalidDescriptorIndex );
+        const sw::RHIPipelineStateHandle computePSO = pResource->createComputePipelineState( test::getEngineDefaultAssets()._shaderProbeComputeTextureWrite.get() );
+        SW_ASSERT_TRUE( computePSO != 0 );
+        // 네이티브(DX12/Vulkan)는 배열 인덱스, 에뮬(DX11/GL)은 u4 슬롯의 서수 0.
+        const uint32 arrRoot[4] = { rhiDevice->supportsNativeBindlessSampling() ? static_cast<uint32>( uav ) : 0u, kUavSize, kUavSize, 0u };
+
         sw::unique_ptr<sw::IRHICommandList> cmdList = rhiDevice->createCommandList();
         if ( cmdList != nullptr )
         {
+            const auto bindCompute = [&]()
+            {
+                cmdList->setComputePipelineState( computePSO );
+                cmdList->bindComputeUav( uav, sw::shaderslot::kComputeTextureUav0 );
+                cmdList->setComputeRootConstants( 0, 4, arrRoot, 0 );
+            };
             cmdList->beginCommandList();
+            cmdList->prepareTextureForUnorderedAccess( uavTarget );
+            bindCompute();
             cmdList->dispatchCompute( 4, 1, 1 );
             cmdList->transitionBuffer( argBuf, sw::RHIBufferState::IndirectArgument );
             beginOffscreenRenderPass( *cmdList, rt, desc );
@@ -1572,18 +1599,23 @@ SW_TEST_CASE_PER_PARAMETER( RHIDeviceTest, ComputeShaderDispatchAndIndirectComma
             cmdList->drawIndirect( argBuf, 0 );
             cmdList->drawIndirect( argBuf, 0, 1 ); // 멀티는 drawCount 만 다른 같은 호출이다
             cmdList->endRenderPass();
+            bindCompute();
             cmdList->dispatchCompute( 2, 1, 1 );
             beginOffscreenRenderPass( *cmdList, rt, desc );
             cmdList->setPipelineState( pso );
             cmdList->drawIndirect( argBuf, 0 );
             cmdList->endRenderPass();
-            cmdList->dispatchIndirect( argBuf, 0 );
+            bindCompute();
+            cmdList->dispatchIndirect( argBuf, 0 ); // 인자 (3, 1, 0) — z 가 0 이라 스레드 그룹이 없다(호출 경로만 본다)
             cmdList->endCommandList();
 
             rhiDevice->executeCommandList( cmdList.get() );
             rhiDevice->waitIdle();
         }
 
+        pResource->destroyPipelineState( computePSO );
+        pResource->unregisterBindlessResource( uav );
+        pResource->destroyTexture( uavTarget );
         pResource->destroyTexture( rt );
         pResource->destroyPipelineState( pso );
         pResource->destroyBuffer( argBuf );
